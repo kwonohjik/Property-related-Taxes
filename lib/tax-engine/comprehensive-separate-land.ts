@@ -7,7 +7,8 @@
  * - 누진세율 3단계: 0.5% / 0.6% / 0.7%
  * - 재산세 비율 안분 공제 (전액 차감 아님)
  * - 농어촌특별세 20%
- * - 세부담 상한 없음 (주택분·종합합산 토지와 다름)
+ * - 세부담 상한 150% (종부세법 §15② — KoreanLaw 축자 검증 2026-06-12.
+ *   종전 "상한 없음"은 드리프트였음. previousYearTotalTax 입력 시에만 적용)
  *
  * 2-레이어 아키텍처 Layer 2:
  *   DB 직접 호출 없음 — 세율 데이터는 내부 상수 사용 (DB fallback 구조)
@@ -18,7 +19,31 @@ import { COMPREHENSIVE_LAND_CONST, PROPERTY_CONST, PROPERTY_SEPARATE_CONST } fro
 import type {
   SeparateAggregateLandForComprehensive,
   SeparateAggregateLandTaxResult,
+  TaxCapResult,
 } from "./types/comprehensive.types";
+
+/**
+ * 별도합산 토지분 세부담 상한 (종합부동산세법 §15② — 150% 단일 상한).
+ * 종합합산 applyAggregateLandTaxCap와 동형. previousYearTotalTax 미입력 시 undefined(상한 미적용).
+ */
+export function applySeparateLandTaxCap(
+  comprehensiveTax: number,
+  propertyTaxAmount: number,
+  previousYearTotalTax: number | undefined,
+): TaxCapResult | undefined {
+  if (previousYearTotalTax === undefined) return undefined;
+  const capAmount = Math.floor(
+    (previousYearTotalTax * Math.round(COMPREHENSIVE_LAND_CONST.SEPARATE_TAX_CAP_RATE * 100)) / 100,
+  );
+  const cappedTax = Math.max(Math.min(comprehensiveTax, capAmount - propertyTaxAmount), 0);
+  return {
+    previousYearTotalTax,
+    capRate: COMPREHENSIVE_LAND_CONST.SEPARATE_TAX_CAP_RATE,
+    capAmount,
+    cappedTax,
+    isApplied: cappedTax < comprehensiveTax,
+  };
+}
 
 // ============================================================
 // 세율 적용 함수 (종합부동산세법 §14②)
@@ -188,6 +213,7 @@ export function applySeparateLandPropertyTaxCredit(
 export function calculateSeparateAggregateLandTax(
   lands: SeparateAggregateLandForComprehensive[],
   fairMarketRatio: number = COMPREHENSIVE_LAND_CONST.SEPARATE_FAIR_MARKET_RATIO,
+  previousYearTotalTax?: number,
 ): SeparateAggregateLandTaxResult {
   // 빈 배열 처리
   if (lands.length === 0) {
@@ -240,8 +266,16 @@ export function calculateSeparateAggregateLandTax(
     denominatorStdTax,
   );
 
-  // 결정세액 (재산세 공제 후, 음수 방어)
-  const determinedTax = Math.max(calculatedTax - credit.creditAmount, 0);
+  // 세부담상한 전 종부세액 (재산세 공제 후, 음수 방어) — ③
+  const comprehensiveTaxAfterCredit = Math.max(calculatedTax - credit.creditAmount, 0);
+
+  // 세부담상한 (§15② 150% — previousYearTotalTax 입력 시만)
+  const taxCap = applySeparateLandTaxCap(
+    comprehensiveTaxAfterCredit,
+    totalPropertyTaxAmount,
+    previousYearTotalTax,
+  );
+  const determinedTax = taxCap ? taxCap.cappedTax : comprehensiveTaxAfterCredit;
 
   // 농어촌특별세 (결정세액 × 20%)
   const ruralSpecialTax = Math.floor(
@@ -259,9 +293,16 @@ export function calculateSeparateAggregateLandTax(
     progressiveDeduction,
     calculatedTax,
     propertyTaxCredit: credit,
+    taxCap,
     determinedTax,
     ruralSpecialTax,
     totalTax: determinedTax + ruralSpecialTax,
+    // ── 납부할세액 카드 echo (전 모드 공통) ──
+    propertyFairMarketRatio: landFMR,
+    taxBeforeCap: comprehensiveTaxAfterCredit,
+    currentYearTotalEquivalent: taxCap
+      ? totalPropertyTaxAmount + comprehensiveTaxAfterCredit
+      : undefined,
   };
 }
 

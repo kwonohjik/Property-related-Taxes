@@ -7,8 +7,62 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import type { ComprehensiveFormData } from "@/lib/stores/comprehensive-wizard-store";
+import type { ComprehensiveFormData, LandParcelForm } from "@/lib/stores/comprehensive-wizard-store";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
+
+/**
+ * 토지 필지 모드 검증 (⑧ — API/Zod와 동기화). 통과 시 null, 오류 시 메시지.
+ * Zod(서버)가 최종 차단하나, UI 통과↔차단 모순 방지를 위해 클라에서 선검증.
+ */
+export function validateLandParcels(formData: ComprehensiveFormData): string | null {
+  const year = parseInt(formData.assessmentYear) || new Date().getFullYear();
+  const checkKind = (
+    enabled: boolean,
+    mode: string,
+    parcels: LandParcelForm[],
+    priorMode: string,
+    label: string,
+  ): string | null => {
+    if (!enabled || mode !== "parcels") return null;
+    const valid = parcels.filter(
+      (p) => parseDecimal(p.area) > 0 && parseAmount(p.officialPricePerSqm) > 0,
+    );
+    if (valid.length === 0) {
+      return `${label} 필지 모드에서는 면적·당해 공시지가를 입력한 필지가 1개 이상 필요합니다.`;
+    }
+    for (const p of valid) {
+      if (!p.jurisdiction.trim()) return `${label}: 모든 필지에 시군구를 입력하세요.`;
+      const share = parseDecimal(p.shareRatio);
+      if (share <= 0 || share > 100) return `${label}: 지분율은 0 초과 100 이하여야 합니다.`;
+    }
+    if (priorMode === "auto") {
+      if (year < 2022) {
+        return `${label}: 직전연도 자동 계산은 2022년 이후 귀속만 지원합니다. 직접 입력을 사용하세요.`;
+      }
+      const withPrior = valid.filter((p) => parseAmount(p.priorOfficialPricePerSqm) > 0).length;
+      if (withPrior !== valid.length) {
+        return `${label}: 직전연도 공시지가는 전 필지를 입력해야 합니다 (일부만 입력 불가).`;
+      }
+    }
+    return null;
+  };
+  return (
+    checkKind(
+      formData.hasAggregateLand,
+      formData.landAggregateMode,
+      formData.landAggregateParcels,
+      formData.landAggregatePriorMode,
+      "종합합산 토지",
+    ) ??
+    checkKind(
+      formData.hasSeparateLand,
+      formData.landSeparateMode,
+      formData.landSeparateParcels,
+      formData.landSeparatePriorMode,
+      "별도합산 토지",
+    )
+  );
+}
 
 // 임대주택 합산배제 유형 (rentalInfo 필드 구성에 사용)
 const RENTAL_TYPES = new Set([
@@ -117,9 +171,30 @@ export async function callComprehensiveApi(
     return base;
   });
 
-  // 종합합산 토지
+  // 토지 필지 → 엔진 LandParcelInput 변환 (지분율 % → 0~1, priorMode=auto만 직전 공시지가 전송)
+  const aggParcelsMode = formData.hasAggregateLand && formData.landAggregateMode === "parcels";
+  const sepParcelsMode = formData.hasSeparateLand && formData.landSeparateMode === "parcels";
+  const toParcels = (form: typeof formData.landAggregateParcels, priorAuto: boolean) =>
+    form
+      .filter((p) => parseDecimal(p.area) > 0 && parseAmount(p.officialPricePerSqm) > 0)
+      .map((p) => ({
+        parcelId: p.id,
+        jurisdiction: p.jurisdiction.trim(),
+        name: p.name || undefined,
+        area: parseDecimal(p.area),
+        shareRatio: (parseDecimal(p.shareRatio) || 100) / 100, // % → 0~1
+        officialPricePerSqm: parseAmount(p.officialPricePerSqm),
+        priorOfficialPricePerSqm: priorAuto
+          ? parseAmount(p.priorOfficialPricePerSqm) || undefined
+          : undefined,
+      }));
+
+  // 종합합산 토지 — 필지 모드 우선 (집계와 상호배타)
+  const landAggregateParcels = aggParcelsMode
+    ? toParcels(formData.landAggregateParcels, formData.landAggregatePriorMode === "auto")
+    : undefined;
   const landAggregate =
-    formData.hasAggregateLand && parseAmount(formData.landAggregate.totalOfficialValue) > 0
+    !aggParcelsMode && formData.hasAggregateLand && parseAmount(formData.landAggregate.totalOfficialValue) > 0
       ? {
           totalOfficialValue: parseAmount(formData.landAggregate.totalOfficialValue),
           propertyTaxBase: parseAmount(formData.landAggregate.propertyTaxBase),
@@ -129,10 +204,18 @@ export async function callComprehensiveApi(
             : undefined,
         }
       : undefined;
+  // 종합합산 필지 모드 + direct 서브모드: 직전 총세액 직접입력
+  const landAggregatePreviousYearTotalTax =
+    aggParcelsMode && formData.landAggregatePriorMode === "direct" && formData.landAggregate.previousYearTotalTax
+      ? parseAmount(formData.landAggregate.previousYearTotalTax) || undefined
+      : undefined;
 
-  // 별도합산 토지
+  // 별도합산 토지 — 필지 모드 우선
+  const landSeparateParcels = sepParcelsMode
+    ? toParcels(formData.landSeparateParcels, formData.landSeparatePriorMode === "auto")
+    : undefined;
   const landSeparate =
-    formData.hasSeparateLand && formData.landSeparate.length > 0
+    !sepParcelsMode && formData.hasSeparateLand && formData.landSeparate.length > 0
       ? formData.landSeparate
           .filter((l) => parseAmount(l.publicPrice) > 0)
           .map((l) => ({
@@ -141,6 +224,10 @@ export async function callComprehensiveApi(
             propertyTaxBase: parseAmount(l.propertyTaxBase),
             propertyTaxAmount: parseAmount(l.propertyTaxAmount),
           }))
+      : undefined;
+  const landSeparatePreviousYearTotalTax =
+    sepParcelsMode && formData.landSeparatePriorMode === "direct" && formData.landSeparatePreviousYearTotalTax
+      ? parseAmount(formData.landSeparatePreviousYearTotalTax) || undefined
       : undefined;
 
   // 세부담상한 capMode 파생 (3중 패턴)
@@ -181,6 +268,11 @@ export async function callComprehensiveApi(
     properties,
     landAggregate,
     landSeparate,
+    // 토지 필지 모드 (⑬ body spread — 집계와 상호배타)
+    landAggregateParcels,
+    landSeparateParcels,
+    landAggregatePreviousYearTotalTax,
+    landSeparatePreviousYearTotalTax,
     isMultiHouseInAdjustedArea: formData.isMultiHouseInAdjustedArea,
   };
 

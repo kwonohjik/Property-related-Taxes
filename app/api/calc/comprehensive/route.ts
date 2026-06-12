@@ -117,6 +117,11 @@ function toEngineInput(
     isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,
     landAggregate: schema.landAggregate,
     landSeparate: schema.landSeparate,
+    // 토지 필지 모드 (숫자·문자열만 — Date 변환 불요)
+    landAggregateParcels: schema.landAggregateParcels,
+    landSeparateParcels: schema.landSeparateParcels,
+    landAggregatePreviousYearTotalTax: schema.landAggregatePreviousYearTotalTax,
+    landSeparatePreviousYearTotalTax: schema.landSeparatePreviousYearTotalTax,
     targetDate: schema.targetDate,
   };
 }

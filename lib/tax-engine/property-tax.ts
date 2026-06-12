@@ -181,6 +181,23 @@ function calcProgressiveHousingTax(taxBase: number, brackets: HousingBracket[]):
 }
 
 /**
+ * 주택 일반 표준세율 적용 구간(세율·누진공제) 조회 — 종부세 카드 산식 표시용(single-source).
+ * 종부세 §4의3 재산세 안분은 표준세율(일반) 기준이므로 일반 구간만 노출한다.
+ * UI는 이 헬퍼로 "과표 × 세율 − 누진공제" 라벨을 표시(dual-truth 차단 — 세율 하드코딩 금지).
+ */
+export function getHousingStandardRateBracket(
+  taxBase: number,
+): { rate: number; deduction: number } {
+  for (const bracket of HOUSING_GENERAL_BRACKETS) {
+    if (bracket.max === undefined || taxBase <= bracket.max) {
+      return { rate: bracket.rate, deduction: bracket.deduction };
+    }
+  }
+  const last = HOUSING_GENERAL_BRACKETS[HOUSING_GENERAL_BRACKETS.length - 1];
+  return { rate: last.rate, deduction: last.deduction };
+}
+
+/**
  * 주택 재산세 산출세액 계산
  *
  * @param taxBase      과세표준 (원)

@@ -318,5 +318,11 @@ export function calculateAggregateLandTax(
     determinedTax,
     ruralSpecialTax,
     totalTax: determinedTax + ruralSpecialTax,
+    // ── 납부할세액 카드 echo (전 모드 공통) ──
+    propertyFairMarketRatio: landFMR,                 // 재산세 FMR 0.70
+    taxBeforeCap: comprehensiveTaxAfterCredit,        // ③
+    currentYearTotalEquivalent: taxCap
+      ? propertyTaxAmount + comprehensiveTaxAfterCredit // ④가 = ②ⓐ + ③
+      : undefined,
   };
 }

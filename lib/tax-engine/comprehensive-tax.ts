@@ -36,6 +36,10 @@ import {
 import { calculatePropertyTax, calcHousingTax } from "./property-tax";
 import { calculateSeparateAggregateLandTax } from "./comprehensive-separate-land";
 import {
+  buildAggregateLandFromParcels,
+  buildSeparateLandFromParcels,
+} from "./comprehensive-land-adapter";
+import {
   applyAggregationExclusion,
   validateRentalExclusion,
   validateOtherExclusion,
@@ -356,12 +360,14 @@ export function calculateComprehensiveTax(
   //   (§9③ 괄호 "§122에 따라 세부담 상한을 적용받는 경우 그 상한 세액").
   //   ⓐ = min(부과 재산세, 직전 재산세상당액 × §122 구간 상한율). 2024+ 폐지 → null이면 미적용.
   let aValue = totalPropertyTaxAmount;
+  // 교재 ②ⓐ echo: §122 단서 상한율 (자동모드만 산정 — 비자동/2024+ 폐지 시 null)
+  let priorPropertyTaxCapPct: number | null = null;
   if (previousYearEquivalent) {
-    const capPct = getHousingTaxCapPct(input.assessmentYear, includedAssessedValue);
-    if (capPct !== null) {
+    priorPropertyTaxCapPct = getHousingTaxCapPct(input.assessmentYear, includedAssessedValue);
+    if (priorPropertyTaxCapPct !== null) {
       aValue = Math.min(
         aValue,
-        Math.floor((previousYearEquivalent.propertyTaxEquiv * capPct) / 100),
+        Math.floor((previousYearEquivalent.propertyTaxEquiv * priorPropertyTaxCapPct) / 100),
       );
     }
   }
@@ -372,6 +378,10 @@ export function calculateComprehensiveTax(
     denominatorStdTax,
     calculatedTax,
   );
+  // 교재 p.186~187 카드 echo (계산 무변경 — 이미 산출된 중간값 노출)
+  propertyTaxCredit.propertyFairMarketRatio = propertyFMR;
+  propertyTaxCredit.propertyTaxBaseAmount = aggregatedPropertyTaxBase;
+  propertyTaxCredit.priorPropertyTaxCapPct = priorPropertyTaxCapPct;
   const taxAfterPropertyCredit = Math.max(
     calculatedTax - propertyTaxCredit.creditAmount,
     0,
@@ -465,13 +475,28 @@ export function calculateComprehensiveTax(
   const totalHousingTax = determinedHousingTax + housingRuralSpecialTax;
 
   // ── Step A: 종합합산 토지분 (토지 FMR 연도별 — 시행령 §2의4②: 2021=95%, 2022~=100%) ──
-  const aggregateLandTax = input.landAggregate
-    ? calculateAggregateLandTax(input.landAggregate, yearParams.fairMarketRatioLand)
-    : undefined;
+  //   필지 모드(landAggregateParcels) 우선 — 지자체 합산 재산세(§122 Min) + 직전연도 상당액 자동계산 후
+  //   기존 calculateAggregateLandTax 시그니처 무변경 호출 + 분해 echo 부착 (어댑터).
+  const aggregateLandTax = input.landAggregateParcels?.length
+    ? buildAggregateLandFromParcels(
+        input.landAggregateParcels,
+        input.assessmentYear,
+        yearParams.fairMarketRatioLand,
+        input.landAggregatePreviousYearTotalTax,
+      )
+    : input.landAggregate
+      ? calculateAggregateLandTax(input.landAggregate, yearParams.fairMarketRatioLand)
+      : undefined;
 
-  // ── Step B: 별도합산 토지분 (토지 FMR 연도별 동일) ──
-  const separateLandTax =
-    input.landSeparate && input.landSeparate.length > 0
+  // ── Step B: 별도합산 토지분 (토지 FMR 연도별 동일 + §15② 세부담상한 G-3) ──
+  const separateLandTax = input.landSeparateParcels?.length
+    ? buildSeparateLandFromParcels(
+        input.landSeparateParcels,
+        input.assessmentYear,
+        yearParams.fairMarketRatioLand,
+        input.landSeparatePreviousYearTotalTax,
+      )
+    : input.landSeparate && input.landSeparate.length > 0
       ? calculateSeparateAggregateLandTax(input.landSeparate, yearParams.fairMarketRatioLand)
       : undefined;
 

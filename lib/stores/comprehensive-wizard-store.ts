@@ -72,6 +72,26 @@ export interface SeparateLandEntry {
 }
 
 // ============================================================
+// 토지 필지 폼 (납부할세액 카드 — 종합합산·별도합산 공용, 문자열 UI 필드)
+// ============================================================
+
+export interface LandParcelForm {
+  id: string;
+  jurisdiction: string;            // 시군구 (재산세 관내 합산 그룹)
+  name: string;                    // 필지명 (선택)
+  jibun: string;                   // 지번 주소 (공시지가 조회용, 선택)
+  area: string;                    // 총면적 (㎡, decimal)
+  shareRatio: string;              // 지분율 (%, decimal — 기본 "100")
+  officialPricePerSqm: string;     // 당해 개별공시지가 (원/㎡)
+  priorOfficialPricePerSqm: string; // 직전연도 개별공시지가 (원/㎡, 자동 세부담상한용)
+}
+
+/** 토지 입력 방식 — summary(집계 직접입력, 기본) | parcels(필지별 자동계산) */
+export type LandInputMode = "summary" | "parcels";
+/** 직전연도(세부담상한) 서브모드 — none(생략) | auto(직전 공시지가) | direct(총액 직접입력) */
+export type LandPriorMode = "none" | "auto" | "direct";
+
+// ============================================================
 // 전체 폼 상태
 // ============================================================
 
@@ -98,6 +118,14 @@ export interface ComprehensiveFormData {
   landAggregate: AggregateLandForm;
   hasSeparateLand: boolean;        // 별도합산 토지 보유 여부
   landSeparate: SeparateLandEntry[];
+  // 필지 모드 (납부할세액 카드 — 집계 입력과 상호배타)
+  landAggregateMode: LandInputMode;      // 기본 "summary"
+  landSeparateMode: LandInputMode;       // 기본 "summary"
+  landAggregateParcels: LandParcelForm[];
+  landSeparateParcels: LandParcelForm[];
+  landAggregatePriorMode: LandPriorMode; // 기본 "none"
+  landSeparatePriorMode: LandPriorMode;
+  landSeparatePreviousYearTotalTax: string; // 별도합산 직전연도 총세액 직접입력 (direct 서브모드)
 
   // ── Step 5: 세부담 상한 ──
   previousYearTotalTax: string;    // 전년도 종부세+재산세 합계 (원) — 직접입력 모드
@@ -167,6 +195,13 @@ const defaultFormData: ComprehensiveFormData = {
   landAggregate: { ...DEFAULT_LAND_AGGREGATE },
   hasSeparateLand: false,
   landSeparate: [],
+  landAggregateMode: "summary",
+  landSeparateMode: "summary",
+  landAggregateParcels: [],
+  landSeparateParcels: [],
+  landAggregatePriorMode: "none",
+  landSeparatePriorMode: "none",
+  landSeparatePreviousYearTotalTax: "",
   previousYearTotalTax: "",
   previousYearCapMode: "direct",
   previousYearAutoAssessedValue: "",
@@ -198,6 +233,11 @@ interface ComprehensiveWizardState {
   addSeparateLand: () => void;
   removeSeparateLand: (id: string) => void;
   updateSeparateLand: (id: string, data: Partial<SeparateLandEntry>) => void;
+
+  // ── 토지 필지 액션 (kind: aggregate | separate) ──
+  addLandParcel: (kind: "aggregate" | "separate") => void;
+  removeLandParcel: (kind: "aggregate" | "separate", id: string) => void;
+  updateLandParcel: (kind: "aggregate" | "separate", id: string, data: Partial<LandParcelForm>) => void;
 
   // ── 결과 ──
   setResult: (result: ComprehensiveTaxResult | null) => void;
@@ -282,6 +322,46 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
           },
         })),
 
+      addLandParcel: (kind) =>
+        set((state) => {
+          const key = kind === "aggregate" ? "landAggregateParcels" : "landSeparateParcels";
+          const newParcel: LandParcelForm = {
+            id: String(Date.now()) + String(Math.random()).slice(2, 5),
+            jurisdiction: "",
+            name: "",
+            jibun: "",
+            area: "",
+            shareRatio: "100",
+            officialPricePerSqm: "",
+            priorOfficialPricePerSqm: "",
+          };
+          return {
+            formData: { ...state.formData, [key]: [...state.formData[key], newParcel] },
+          };
+        }),
+
+      removeLandParcel: (kind, id) =>
+        set((state) => {
+          const key = kind === "aggregate" ? "landAggregateParcels" : "landSeparateParcels";
+          return {
+            formData: {
+              ...state.formData,
+              [key]: state.formData[key].filter((p) => p.id !== id),
+            },
+          };
+        }),
+
+      updateLandParcel: (kind, id, data) =>
+        set((state) => {
+          const key = kind === "aggregate" ? "landAggregateParcels" : "landSeparateParcels";
+          return {
+            formData: {
+              ...state.formData,
+              [key]: state.formData[key].map((p) => (p.id === id ? { ...p, ...data } : p)),
+            },
+          };
+        }),
+
       setResult: (result) => set({ result }),
 
       reset: () => {
@@ -336,6 +416,15 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
             state.formData.previousYearAutoAssessedValue ?? "";
           state.formData.previousYearAutoIsOneHouse =
             state.formData.previousYearAutoIsOneHouse ?? false;
+          // 토지 필지 모드 — 구 세션 누락 시 집계 모드 보존 (기존 동작)
+          state.formData.landAggregateMode = state.formData.landAggregateMode ?? "summary";
+          state.formData.landSeparateMode = state.formData.landSeparateMode ?? "summary";
+          state.formData.landAggregateParcels = state.formData.landAggregateParcels ?? [];
+          state.formData.landSeparateParcels = state.formData.landSeparateParcels ?? [];
+          state.formData.landAggregatePriorMode = state.formData.landAggregatePriorMode ?? "none";
+          state.formData.landSeparatePriorMode = state.formData.landSeparatePriorMode ?? "none";
+          state.formData.landSeparatePreviousYearTotalTax =
+            state.formData.landSeparatePreviousYearTotalTax ?? "";
         }
       },
     },

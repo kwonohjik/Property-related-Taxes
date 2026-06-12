@@ -19,10 +19,11 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { callComprehensiveApi } from "@/lib/calc/comprehensive-api";
+import { callComprehensiveApi, validateLandParcels } from "@/lib/calc/comprehensive-api";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PropertyListInput } from "@/components/calc/PropertyListInput";
+import { LandParcelSection } from "@/components/calc/comprehensive/LandParcelSection";
 import { ExclusionInfoInput } from "@/components/calc/ExclusionInfoInput";
 import { ComprehensiveTaxResultView } from "@/components/calc/results/ComprehensiveTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -100,6 +101,7 @@ function Step2Properties() {
       <PropertyListInput
         properties={formData.properties}
         isCorporate={(formData.taxpayerType ?? "individual") !== "individual"}
+        referenceDate={`${formData.assessmentYear}-06-01`}
         onAdd={addProperty}
         onRemove={removeProperty}
         onUpdate={updateProperty}
@@ -165,53 +167,58 @@ function Step4Land() {
         checked={formData.hasAggregateLand}
         onCheckedChange={(v) => updateFormData({ hasAggregateLand: v })}
       >
-        <CurrencyInput
-          label="공시지가 합산 (원)"
-          value={formData.landAggregate.totalOfficialValue}
-          onChange={(v) =>
-            updateFormData({
-              landAggregate: { ...formData.landAggregate, totalOfficialValue: v },
-            })
-          }
-          placeholder="0"
-          required
-          hint="인별 종합합산 토지 공시지가 합산액"
-        />
-        <CurrencyInput
-          label="재산세 과세표준 (원)"
-          value={formData.landAggregate.propertyTaxBase}
-          onChange={(v) =>
-            updateFormData({
-              landAggregate: { ...formData.landAggregate, propertyTaxBase: v },
-            })
-          }
-          placeholder="0"
-          required
-          hint="비율 안분 공제 계산용 — 재산세 고지서에서 확인"
-        />
-        <CurrencyInput
-          label="재산세 부과세액 (원)"
-          value={formData.landAggregate.propertyTaxAmount}
-          onChange={(v) =>
-            updateFormData({
-              landAggregate: { ...formData.landAggregate, propertyTaxAmount: v },
-            })
-          }
-          placeholder="0"
-          required
-          hint="재산세 고지서의 부과세액"
-        />
-        <CurrencyInput
-          label="전년도 세액 (원, 선택)"
-          value={formData.landAggregate.previousYearTotalTax}
-          onChange={(v) =>
-            updateFormData({
-              landAggregate: { ...formData.landAggregate, previousYearTotalTax: v },
-            })
-          }
-          placeholder="0"
-          hint="전년도 종합합산 토지 세부담 상한 계산용 (미입력 시 상한 생략)"
-        />
+        <LandParcelSection kind="aggregate" />
+        {formData.landAggregateMode === "summary" && (
+          <>
+            <CurrencyInput
+              label="공시지가 합산 (원)"
+              value={formData.landAggregate.totalOfficialValue}
+              onChange={(v) =>
+                updateFormData({
+                  landAggregate: { ...formData.landAggregate, totalOfficialValue: v },
+                })
+              }
+              placeholder="0"
+              required
+              hint="인별 종합합산 토지 공시지가 합산액"
+            />
+            <CurrencyInput
+              label="재산세 과세표준 (원)"
+              value={formData.landAggregate.propertyTaxBase}
+              onChange={(v) =>
+                updateFormData({
+                  landAggregate: { ...formData.landAggregate, propertyTaxBase: v },
+                })
+              }
+              placeholder="0"
+              required
+              hint="비율 안분 공제 계산용 — 재산세 고지서에서 확인"
+            />
+            <CurrencyInput
+              label="재산세 부과세액 (원)"
+              value={formData.landAggregate.propertyTaxAmount}
+              onChange={(v) =>
+                updateFormData({
+                  landAggregate: { ...formData.landAggregate, propertyTaxAmount: v },
+                })
+              }
+              placeholder="0"
+              required
+              hint="재산세 고지서의 부과세액"
+            />
+            <CurrencyInput
+              label="전년도 세액 (원, 선택)"
+              value={formData.landAggregate.previousYearTotalTax}
+              onChange={(v) =>
+                updateFormData({
+                  landAggregate: { ...formData.landAggregate, previousYearTotalTax: v },
+                })
+              }
+              placeholder="0"
+              hint="전년도 종합합산 토지 세부담 상한 계산용 (미입력 시 상한 생략)"
+            />
+          </>
+        )}
       </ToggleCard>
 
       <hr className="border-muted" />
@@ -224,6 +231,8 @@ function Step4Land() {
         checked={formData.hasSeparateLand}
         onCheckedChange={(v) => updateFormData({ hasSeparateLand: v })}
       >
+        <LandParcelSection kind="separate" />
+        {formData.landSeparateMode === "summary" && (
         <div className="space-y-3">
             {formData.landSeparate.map((land, index) => (
               <div key={land.id} className="rounded-md border p-4 space-y-3">
@@ -270,6 +279,7 @@ function Step4Land() {
               + 토지 추가
             </button>
         </div>
+        )}
       </ToggleCard>
     </div>
   );
@@ -483,6 +493,13 @@ export default function ComprehensiveTaxPage() {
     const capMode = formData.previousYearCapMode ?? "direct";
     if (!isCorporateSpecial && capMode === "auto" && !formData.previousYearAutoAssessedValue) {
       setError("자동 계산 모드에서는 직전연도 공시가격 합계를 입력해야 합니다.");
+      return;
+    }
+
+    // 토지 필지 모드 validation (⑧ — API/Zod와 동기화: UI 통과↔차단 모순 금지)
+    const landError = validateLandParcels(formData);
+    if (landError) {
+      setError(landError);
       return;
     }
 

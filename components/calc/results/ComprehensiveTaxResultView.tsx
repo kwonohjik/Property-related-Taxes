@@ -26,6 +26,10 @@ import {
 } from "@/lib/print/comprehensive-print-sections";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { ComprehensiveFilingFormSection } from "@/components/calc/results/comprehensive-filing";
+import {
+  HousingPayableTaxCalcCard,
+  LandPayableTaxCalcCard,
+} from "@/components/calc/results/comprehensive-payable-calc";
 
 // ============================================================
 // 포맷 헬퍼
@@ -601,6 +605,10 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
     s.add("filing-form-buppyo3");
     if (result.taxCap) s.add("filing-form-buppyo5");
     if (result.previousYearEquivalent) s.add("filing-form-buppyo5sub");
+    // 산출근거 카드 — 주택분 계산이 있으면 항상 가용(비대상도 "납세의무 없음" 표기)
+    s.add("housing-payable-calc");
+    if (result.aggregateLandTax) s.add("land-agg-payable-calc");
+    if (result.separateLandTax) s.add("land-sep-payable-calc");
     return s;
   }, [result]);
 
@@ -670,6 +678,31 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
           previousYearTotalTaxDirect={previousYearTotalTaxDirect}
         />
       </PrintSection>
+
+      {/* 산출근거 — 교재(계산 사례) "주택분 종합부동산세 납부할세액의 계산" 형식 (기본 접힘) */}
+      <PrintSection id="housing-payable-calc" selectedIds={selectedPrintIds}>
+        <HousingPayableTaxCalcCard result={result} />
+      </PrintSection>
+
+      {/* 토지분 산출근거 — 종합합산·별도합산 (필지 모드 시 풀 분해, 집계 모드 시 축약) */}
+      {result.aggregateLandTax && (
+        <PrintSection id="land-agg-payable-calc" selectedIds={selectedPrintIds}>
+          <LandPayableTaxCalcCard
+            kind="aggregate"
+            result={result.aggregateLandTax}
+            assessmentYear={parseInt(result.assessmentDate.slice(0, 4))}
+          />
+        </PrintSection>
+      )}
+      {result.separateLandTax && (
+        <PrintSection id="land-sep-payable-calc" selectedIds={selectedPrintIds}>
+          <LandPayableTaxCalcCard
+            kind="separate"
+            result={result.separateLandTax}
+            assessmentYear={parseInt(result.assessmentDate.slice(0, 4))}
+          />
+        </PrintSection>
+      )}
 
       {/* 과세기준일 및 법령 정보 */}
       <div className="text-xs text-muted-foreground space-y-0.5">

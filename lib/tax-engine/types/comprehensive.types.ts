@@ -220,6 +220,84 @@ export interface SeparateAggregateLandForComprehensive {
   propertyTaxAmount: number; // 재산세 부과세액 (property-tax.ts에서 전달)
 }
 
+// ============================================================
+// 토지분 "납부할세액의 계산" 카드 — 필지별 입력 + 자동계산 (교재 사례10·11)
+// Design: docs/02-design/features/comprehensive-land-payable-calc.engine.design.md
+// ============================================================
+
+/**
+ * 토지 필지 1건 (종합합산·별도합산 공용).
+ * shareRatio는 0~1 (API에서 % → /100 변환 완료). 직전 공시지가는 자동계산(세부담상한) 옵트인.
+ */
+export interface LandParcelInput {
+  parcelId: string;
+  jurisdiction: string;              // 재산세 관내 합산 그룹 (지방세법 §113) — trim 동일 = 동일 그룹
+  name?: string;                     // 표시용 ("송파구-1")
+  area: number;                      // ㎡
+  shareRatio: number;                // 지분율 (0~1)
+  officialPricePerSqm: number;       // 당해 개별공시지가 (원/㎡)
+  priorOfficialPricePerSqm?: number; // 직전연도 (전 필지 존재 시 자동계산 활성)
+}
+
+/** ②ⓐ ≪지역≫ 블록 echo — 당해연도 (§122 Min 포함) */
+export interface LandJurisdictionPropertyTax {
+  jurisdiction: string;
+  parcels: {
+    parcelId: string;
+    name?: string;
+    area: number;
+    shareRatio: number;
+    pricePerSqm: number;
+    officialValue: number;           // floor(area × shareRatio × pricePerSqm)
+  }[];
+  officialValueSum: number;          // 공시가격 합산
+  propertyTaxBase: number;           // × 70% (floor)
+  appliedRate: number;               // 재산세 표준세율 (0.005/0.004 등)
+  progressiveDeduction: number;      // 재산세 누진공제
+  standardTax: number;               // 세부담 상한 적용 전
+  priorStandardTax?: number;         // 직전연도 재산세상당 (자동계산 시)
+  capAmount?: number;                // 직전 × 150% (§122)
+  imposedTax: number;                // Min(상한전, 상한액) — 직전 부재 시 = standardTax
+}
+
+/** ④나① 직전연도 지자체 분해 — slim(§122 Min 미적용: 시행령 §6/§7 §122 제외) */
+export interface LandPriorJurisdictionTax {
+  jurisdiction: string;
+  parcels: {
+    parcelId: string;
+    name?: string;
+    area: number;
+    shareRatio: number;
+    pricePerSqm: number;
+    officialValue: number;
+  }[];
+  officialValueSum: number;
+  propertyTaxBase: number;
+  appliedRate: number;
+  progressiveDeduction: number;
+  standardTax: number;               // 표준세율 재산세상당 (Min 없음)
+}
+
+/** ④나 토지 직전연도 총세액상당액 (자동계산 시만 — 종부세법 §15·시행령 §6/§7) */
+export interface LandPreviousYearEquivalent {
+  propertyTaxEquiv: number;          // 나① = Σ perJurisdiction.standardTax
+  comprehensiveTaxEquiv: number;     // 나② = ⓐ − ⓑ (≥0)
+  total: number;                     // 나 = ① + ②
+  detail: {
+    officialValueSum: number;        // 직전 공시 합산
+    basicDeduction: number;          // 5억 / 80억
+    fairMarketRatio: number;         // getComprehensiveParams(y−1).fairMarketRatioLand
+    taxBase: number;                 // 종부세 과표 (trunc10k)
+    appliedRate: number;
+    progressiveDeduction: number;
+    calculatedTax: number;           // 나②ⓐ
+    stdTaxNumerator: number;         // 나②ⓑ 분자 (누진공제 없음)
+    stdTaxDenominator: number;       // 나②ⓑ 분모 (누진 1회)
+    creditAmount: number;            // 나②ⓑ
+    perJurisdiction: LandPriorJurisdictionTax[];
+  };
+}
+
 /**
  * 종합부동산세 전체 입력 타입
  */
@@ -282,8 +360,17 @@ export interface ComprehensiveTaxInput {
   previousYearAuto?: PreviousYearAutoInput;  // 직전연도 상당액 자동계산 (주택분, 시행령 §5②)
 
   // ── 토지분 (선택) ──
-  landAggregate?: AggregateLandTaxInput;                     // 종합합산 토지
-  landSeparate?: SeparateAggregateLandForComprehensive[];    // 별도합산 토지 목록
+  landAggregate?: AggregateLandTaxInput;                     // 종합합산 토지 (집계 직접입력)
+  landSeparate?: SeparateAggregateLandForComprehensive[];    // 별도합산 토지 목록 (집계 직접입력)
+
+  // ── 토지분 필지 모드 (납부할세액 카드 — 집계 입력과 상호배타, Zod refine) ──
+  //   필지별 입력 → orchestrator가 지자체 관내 합산 재산세(§122 Min) + 직전연도 상당액 자동계산.
+  //   직전연도 자동계산: priorOfficialPricePerSqm 전 필지 존재 시 활성 (Zod 전부-or-전무).
+  //   assessmentYear ≤ 2021 시 자동계산 미산출(historical 2020 부재 — Zod 1차·orchestrator 2차 차단).
+  landAggregateParcels?: LandParcelInput[];
+  landSeparateParcels?: LandParcelInput[];
+  landAggregatePreviousYearTotalTax?: number; // 종합합산 직전연도 총세액 직접입력 (direct 서브모드)
+  landSeparatePreviousYearTotalTax?: number;  // 별도합산 직전연도 총세액 직접입력 (G-3 — 직접 서브모드)
 
   // ── 계산 기준일 오버라이드 (테스트용) ──
   targetDate?: string;  // YYYY-MM-DD (기본값: assessmentYear-06-01)
@@ -336,6 +423,10 @@ export interface PropertyTaxCredit {
   comprehensiveTaxBase: number;  // ⑤/⑨ 과세표준 표준세율 재산세액
   ratio: number;                 // 안분 비율 (≤ 1.0)
   creditAmount: number;          // ⑪ 공제할 재산세액
+  // ── 교재 p.186~187 "납부할세액의 계산" 카드 echo (계산 무변경 — 중간값 노출) ──
+  propertyFairMarketRatio?: number;   // 재산세 공정시장가액비율 (②ⓐ "× 45%" — getPropertyFmrForProration)
+  propertyTaxBaseAmount?: number;     // 재산세 과세표준 (②ⓐ 공시가격 × FMR — aggregatedPropertyTaxBase)
+  priorPropertyTaxCapPct?: number | null; // 재산세 세부담상한율 (②ⓐ §122 단서 — 자동모드만, 2024+/비자동=null)
 }
 
 /**
@@ -358,6 +449,8 @@ export interface PreviousYearEquivalentResult {
     creditAmount: number;          // 부표 ⑩ 공제할 재산세액
     oneHouseDeductionRate: number; // 부표 ⑪ 세액공제율
     oneHouseDeductionAmount: number; // 부표 ⑪ 세액공제액
+    propertyFairMarketRatio?: number; // 직전연도 재산세 FMR (교재 ⑤나 "× 60%" — getPropertyFmrForProration)
+    propertyTaxBaseAmount?: number;   // 직전연도 재산세 과세표준 (교재 ⑤나 "= 8.4억" — assessedValue × FMR)
   };
 }
 
@@ -400,6 +493,13 @@ export interface AggregateLandTaxResult {
   determinedTax: number;         // 결정세액 (상한 적용 후)
   ruralSpecialTax: number;       // 농어촌특별세 (결정세액 × 20%)
   totalTax: number;              // 종합합산 토지 총납부세액 (결정세액 + 농특세)
+
+  // ── 납부할세액 카드 echo (필지 모드 — 미설정 시 카드 축약, 집계 모드 회귀 0) ──
+  perJurisdiction?: LandJurisdictionPropertyTax[];      // ②ⓐ 지자체 분해
+  previousYearEquivalent?: LandPreviousYearEquivalent;  // ④나 직전연도 분해
+  propertyFairMarketRatio?: number;                     // 재산세 FMR (0.70) — ②ⓐⓑⓒ bullet
+  taxBeforeCap?: number;                                // ③ = calculatedTax − creditAmount (clamp 0)
+  currentYearTotalEquivalent?: number;                  // ④가 = ②ⓐ + ③ (taxCap 존재 시)
 }
 
 /**
@@ -430,12 +530,21 @@ export interface SeparateAggregateLandTaxResult {
     creditAmount: number;
   };
 
-  // 별도합산은 세부담 상한 없음
+  // 세부담 상한 (종부세법 §15② — 150%, 전년도 미입력 시 undefined)
+  //   G-3: 종전 "별도합산은 세부담 상한 없음"은 드리프트 — KoreanLaw §15② 검증(2026-06-12)으로 추가
+  taxCap?: TaxCapResult;
 
   // 결정세액 · 농특세
   determinedTax: number;         // 결정세액
   ruralSpecialTax: number;       // 농어촌특별세 (결정세액 × 20%)
   totalTax: number;              // 별도합산 토지 총납부세액
+
+  // ── 납부할세액 카드 echo (필지 모드 — 미설정 시 카드 축약, 집계 모드 회귀 0) ──
+  perJurisdiction?: LandJurisdictionPropertyTax[];
+  previousYearEquivalent?: LandPreviousYearEquivalent;
+  propertyFairMarketRatio?: number;
+  taxBeforeCap?: number;
+  currentYearTotalEquivalent?: number;
 }
 
 // ============================================================
