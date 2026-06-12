@@ -121,6 +121,41 @@ export function EstimatedValuationBreakdown({
           </p>
         )}
       </div>
+      {result.swapComparison && (
+        <SwapComparisonBlock result={result} />
+      )}
+    </div>
+  );
+}
+
+// ── SwapComparisonBlock (B-2 §97②2호 단서) ──
+
+export function SwapComparisonBlock({ result }: { result: StockTransferResult }) {
+  const cmp = result.swapComparison;
+  if (!cmp) return null;
+  const applied = result.swapApplied === true;
+  return (
+    <div
+      className={`mt-2 rounded-lg border px-4 py-3 space-y-1 text-xs ${
+        applied
+          ? "border-fuchsia-300 bg-fuchsia-50/70 text-fuchsia-800"
+          : "border-slate-200 bg-slate-50/60 text-slate-600"
+      }`}
+    >
+      <p className="font-semibold">
+        {applied ? "§97②2호 단서 적용 — 실제 필요경비 선택" : "§97②2호 단서 비교 — 본문(개산공제) 적용"}
+      </p>
+      <div className="font-mono space-y-0.5">
+        <p>가목 (환산취득가 + 개산공제) = {fmt(cmp.estimatedSide)}</p>
+        <p>나목 (자본적지출 + 양도비) = {fmt(cmp.directSide)}</p>
+      </div>
+      {applied ? (
+        <p>
+          나목이 더 크므로 실제 필요경비를 적용합니다. 양도차익 계산에서 환산취득가는 차감되지 않습니다 (양도차익 = 양도가액 − 실제 필요경비).
+        </p>
+      ) : (
+        <p>가목이 나목 이상이므로 환산취득가 + 개산공제를 필요경비로 적용합니다.</p>
+      )}
     </div>
   );
 }
@@ -167,6 +202,7 @@ const RULE_BADGE: Record<string, string> = {
   "단기30%": "bg-rose-100 text-rose-700 border-rose-200",
   "거래정지우회": "bg-amber-100 text-amber-700 border-amber-200",
   "취득일거래정지우회": "bg-amber-100 text-amber-700 border-amber-200",
+  "§97②단서swap": "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
   "KOTC중소중견비과세": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "KOTC벤처비과세": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "월할가산": "bg-sky-100 text-sky-700 border-sky-200",

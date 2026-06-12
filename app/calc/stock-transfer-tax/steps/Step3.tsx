@@ -72,6 +72,8 @@ export function Step3({ form, onChange }: Step3Props) {
   // 필요경비 방식은 acquisitionMode에서 자동 도출 (소령 §163⑥4) — 사용자 선택 없음.
   // 실가 → 실제 경비 입력 / 비실가(환산·매매사례·액면가) → 개산공제 1% 자동.
   const expenseLocked = isEstimatedAcquisition(acquisitionMode);
+  // [B-2] §97②2호 단서 — 환산·액면가 모드는 실비를 비교용으로 선택 입력 (sale_case 제외 — 구조적 배제)
+  const swapEligibleMode = acquisitionMode === "estimated" || acquisitionMode === "face_value";
   const filingType = form.filingType || "preliminary";
 
   const filingDeadline = useMemo(
@@ -156,8 +158,10 @@ export function Step3({ form, onChange }: Step3Props) {
               </p>
               <p className="text-xs text-emerald-700">
                 소령 §163⑥4 — 취득가액을 추계(환산·매매사례·액면가)로 산정한 경우 필요경비는
-                <strong> 취득기준시가 × 1%</strong>의 개산공제로 자동 적용됩니다. 실가 모드로 변경 시
-                실제 경비 입력이 가능해집니다 (Step 2 취득가액 방식 변경).
+                <strong> 취득기준시가 × 1%</strong>의 개산공제로 자동 적용됩니다.
+                {swapEligibleMode
+                  ? " 다만 실제 경비(자본적지출·양도비)가 (환산취득가+개산공제)를 초과하면 §97②2호 단서에 따라 실제 경비를 필요경비로 합니다 — 아래에 선택 입력하세요."
+                  : " 실가 모드로 변경 시 실제 경비 입력이 가능해집니다 (Step 2 취득가액 방식 변경)."}
               </p>
             </div>
           ) : (
@@ -178,7 +182,16 @@ export function Step3({ form, onChange }: Step3Props) {
               hint="증권거래세 + 매매수수료 + 계약서 작성비 + 기타 (원)"
               value={form.actualExpenses}
               onChange={(v) => onChange({ actualExpenses: v })}
-              placeholder="291,200"
+            />
+          )}
+
+          {/* [B-2] 환산·액면가 모드 — §97②2호 단서 비교용 선택 입력 (sale_case 제외) */}
+          {expenseLocked && swapEligibleMode && (
+            <CurrencyInput
+              label="실제 필요경비 합계 (선택 — §97②2호 단서 비교)"
+              hint="증권거래세·매매수수료 등 양도비(§163⑤)와 자본적지출(§163③). (환산취득가+개산공제)보다 크면 이 금액이 필요경비로 적용됩니다."
+              value={form.actualExpenses}
+              onChange={(v) => onChange({ actualExpenses: v })}
             />
           )}
 

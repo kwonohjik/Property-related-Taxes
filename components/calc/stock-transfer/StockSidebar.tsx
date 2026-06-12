@@ -202,8 +202,9 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
         items.push({ label: "취득가액", value: acqPrice });
       }
 
-      // 필요경비 (실가 모드)
-      const expenses = (formData.expenseMode || "actual") === "actual"
+      // 필요경비 (실가 모드만 — [B-2] 환산 모드 실비는 §97②2호 단서 비교 입력이라 차감 확정 전 → 결과 도착 후 표시)
+      const isActualAcq = (formData.acquisitionMode || "actual") === "actual";
+      const expenses = isActualAcq && (formData.expenseMode || "actual") === "actual"
         ? parseAmount(formData.actualExpenses)
         : null;
       if (expenses && expenses > 0) {

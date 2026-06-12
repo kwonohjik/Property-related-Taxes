@@ -555,7 +555,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     form.acquisitionMode === "face_value";
   const resolvedExpenseMode: "actual" | "estimated" = isEstimatedAcq ? "estimated" : "actual";
   body.expenseMode = resolvedExpenseMode;
-  if (resolvedExpenseMode === "actual") {
+  // [B-2] actualExpenses는 expenseMode 무관 항상 전송 — 환산 모드에서도 §97②2호 단서 비교 입력
+  //   (이전: actual일 때만 전송 → 환산 모드 실비 silent strip). sale_case는 엔진 게이트 미진입(무해).
+  {
     const exp = parseIntOrUndef(form.actualExpenses);
     if (exp !== undefined) body.actualExpenses = exp;
   }
