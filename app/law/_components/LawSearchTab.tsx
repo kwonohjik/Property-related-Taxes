@@ -5,6 +5,7 @@ import type { LawSearchItem, LawArticleResult } from "@/lib/korean-law/types";
 import { HighlightedText } from "./HighlightedText";
 import { ApplicableLawPanel } from "./ApplicableLawPanel";
 import { CurrentLawBadge } from "./LawCurrencyBadge";
+import { LawArticleBody } from "./LawArticleBody";
 
 /** 법령 검색 + 조문 열람 탭 */
 export function LawSearchTab({
@@ -263,7 +264,7 @@ export function LawSearchTab({
               </a>
             )}
           </header>
-          <pre className="whitespace-pre-wrap text-sm leading-relaxed">{article.fullText}</pre>
+          <LawArticleBody text={article.fullText} />
         </article>
       )}
     </div>
