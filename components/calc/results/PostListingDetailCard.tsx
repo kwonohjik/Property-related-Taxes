@@ -55,8 +55,28 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           취득연도 1주당 가중평균 ={" "}
           <strong>{post.acquisitionYearPerShareValue.toLocaleString()}</strong>
         </p>
+        {post.monthlyAccrualDetail && (
+          <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 my-1 space-y-0.5 text-rose-800">
+            <p className="font-medium">월할 가산 보정 (소칙 §81④ 1호 — 같은 사업연도 취득·상장)</p>
+            <p>
+              전전사업연도 1주당 가중평균 ={" "}
+              <strong>{post.monthlyAccrualDetail.prePriorYearPerShareValue.toLocaleString()}</strong>
+            </p>
+            <p>
+              보유월수 = <strong>{post.monthlyAccrualDetail.holdingMonths}</strong>개월
+              {" "}(취득일~상장일, 1개월 미만 절상)
+            </p>
+            <p>
+              보정 상장일 평가액 = 직전 {post.acquisitionYearPerShareValue.toLocaleString()}
+              {" "}+ (직전 − 전전) × 보유월수 ÷ 직전사업연도 월수(
+              {post.monthlyAccrualDetail.priorBizYearMonths}) ={" "}
+              <strong>{post.monthlyAccrualDetail.adjustedListingYearPerShareValue.toLocaleString()}</strong>
+            </p>
+          </div>
+        )}
         <p>
-          환산비율 = 취득연도 ÷ 상장연도 ={" "}
+          환산비율 ={" "}
+          {post.monthlyAccrualDetail ? "취득연도 ÷ 보정 상장일 평가액" : "취득연도 ÷ 상장연도"} ={" "}
           <strong>{post.conversionRatio.toFixed(5)}</strong>
         </p>
         <p className="font-medium">

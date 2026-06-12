@@ -14,17 +14,21 @@
  *   PDF 사례 48 입력 일자 2009-08-21(상장)~2009-09-21 일치.
  *
  * 비상장 평가: (순손익가치 ÷ 10%) × 3/5 + 순자산가치 × 2/5
- *   (시행령 §165④1 본칙 — 부동산과다보유 가중치 반전은 PR-2에서)
+ *   (시행령 §165④1 본칙 — 부동산과다보유법인 §94①4 다목은 가중치 2:3 반전, calcUnlistedPerShareWeighted에 구현)
  *   80% 하한은 양도일 평가에만 적용. 환산비율 분자·분모에는 미적용.
  *
  * 환원율 10% 위임 체인 (Phase A 정정):
  *   소령 §165④1 가목 → 시행규칙 §81② → 상증법 시행규칙 §17 → 연간 100분의 10
  *   ※ v3 "시행규칙 §82" 인용은 오류 (소법 시행규칙 §82 = "신축주택·미분양주택 요건")
  *
- * 소칙 §81④ 월할 가산 (§165⑨ 위임):
- *   취득일 평가 = 상장일 평가인 동일 사업연도 케이스
- *   양도당시 기준시가 = 직전 사업연도 기준시가 + (직전 − 전전) × (보유월수 / 직전 사업연도 월수)
- *   1개월 미만은 1개월로 본다.
+ * 소칙 §81④ 월할 가산 (§165⑤ 후단 → §165⑨ 준용, 2단 조건):
+ *   [1단] §165⑤ 후단 트리거 — 취득일 §4항 평가액 == 상장일 §4항 평가액
+ *   [2단] §81④ 1호/2호 구분 (monthlyAccrualToggle):
+ *     1호(ON, 동일 사업연도 취득·상장): 상장일 평가액을 아래 보정값으로 교체(= 환산식 분모 교체)
+ *       보정 평가액 = 직전 사업연도 평가 + (직전 − 전전) × (보유월수 ÷ 직전 사업연도 월수)
+ *       ※ 1개월 미만의 월수는 1개월로 본다 (calcAccrualMonths 절상)
+ *     2호(OFF): 보정 없음 — 상장일 평가액 그대로
+ *   monthlyAccrualApplied = true는 1호 보정 실제 발동 시에만 (감지 아님).
  *
  * 사례 48 본칙 anchor:
  *   상장일 직전 사업연도 평가 = 61,570 × 3/5 + 5,352 × 2/5 = 39,083
@@ -34,6 +38,7 @@
  *   취득가액         = 5,824 × 5,000 = 29,120,000
  */
 
+import { differenceInMonths, addMonths } from "date-fns";
 import type {
   StockTransferInput,
   PostListingValuationResult,
@@ -136,6 +141,16 @@ export function calcUnlistedPerShareWeighted(
     ? (netIncomeValue * 2) / 5 + (netAssetValue * 3) / 5
     : (netIncomeValue * 3) / 5 + (netAssetValue * 2) / 5;
   return Math.floor(weighted);
+}
+
+/**
+ * §81④ 보유월수 — 취득일부터 상장일까지의 개월수.
+ * "1개월 미만의 월수는 1개월로 본다"(소칙 §81④ 본문) → 끝수 절상, 최소 1개월.
+ */
+export function calcAccrualMonths(acquisitionDate: Date, listingDate: Date): number {
+  const fullMonths = differenceInMonths(listingDate, acquisitionDate);
+  const hasRemainder = addMonths(acquisitionDate, fullMonths) < listingDate;
+  return Math.max(1, fullMonths + (hasRemainder ? 1 : 0));
 }
 
 /**
@@ -250,26 +265,93 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     };
   }
 
-  // 월할 가산 분기 (소칙 §81④)
-  // 취득일 평가 = 상장일 평가인 경우 → 월할 보정 적용
-  // PR-1 범위: 월할 가산 플래그만 기록, 실제 산식은 PR-2에서
-  // 현재는 취득·상장 평가액이 동일한지만 확인
-  const monthlyAccrualApplied = acquisitionYearPerShareValue === listingYearPerShareValue;
-  if (monthlyAccrualApplied) {
+  // ──────────────────────────────────────────────────────────
+  // 소칙 §81④ 월할 가산 분기 (§165⑤ 후단 준용)
+  // 트리거(§165⑤ 후단): 취득일 §4항 평가액 == 상장일 §4항 평가액
+  //   - 토글 OFF → §81④ 2호: 보정 없음 (상장일 평가액 그대로)
+  //   - 토글 ON  → §81④ 1호: 직전·전전 차액을 보유월수로 안분해 분모(상장일 평가액) 보정
+  // ──────────────────────────────────────────────────────────
+  const valuesEqual = acquisitionYearPerShareValue === listingYearPerShareValue;
+  const accrualToggle = postListingDetail?.monthlyAccrualToggle === true;
+  const hasPrePrior =
+    typeof input.prePriorYearNetIncomePerShare === "number" &&
+    typeof input.prePriorYearNetAssetPerShare === "number" &&
+    input.listingDate instanceof Date;
+
+  let denominator = listingYearPerShareValue; // 환산식 분모 (기본 = 현행)
+  let monthlyAccrualApplied = false;
+  let monthlyAccrualDetail: PostListingValuationResult["monthlyAccrualDetail"];
+
+  if (!valuesEqual && accrualToggle) {
+    // C-7: 평가액 상이 — §81④ 미적용 (토글 잔존)
+    warnings.push(
+      "취득일·상장일 직전 사업연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다.",
+    );
+  } else if (valuesEqual && !accrualToggle) {
+    // C-2: §81④ 2호 — 동일 사업연도 취득·상장이 아니므로 보정 없음
     appliedRules.push(STOCK.ENFORCEMENT_RULE_81_4_MONTHLY_ACCRUAL);
     warnings.push(
-      "취득일 직전과 상장일 직전 비상장 평가액이 동일합니다. " +
-      "소칙 §81④ 월할 가산 적용 대상 — PR-2에서 월할 보정값 적용 예정."
+      "취득일·상장일 직전 사업연도 평가액이 동일하나 동일 사업연도 취득·상장(토글)이 아니므로 " +
+        "소칙 §81④ 2호에 따라 상장일 평가액을 그대로 적용합니다.",
     );
+  } else if (valuesEqual && accrualToggle && !hasPrePrior) {
+    // C-4: 1호 보정에 필요한 전전연도 평가 또는 상장일 미입력 — 엔진 방어 (validate 1차 차단)
+    appliedRules.push(STOCK.ENFORCEMENT_RULE_81_4_MONTHLY_ACCRUAL);
+    warnings.push(
+      "소칙 §81④ 1호 월할 가산에 필요한 전전사업연도 평가(또는 상장일)가 입력되지 않아 " +
+        "보정을 적용하지 못했습니다.",
+    );
+  } else if (valuesEqual && accrualToggle && hasPrePrior) {
+    // C-3·C-5·C-6: §81④ 1호 월할 보정 발동
+    const prePrior = calcUnlistedPerShareWeighted(
+      input.prePriorYearNetIncomePerShare!,
+      input.prePriorYearNetAssetPerShare!,
+      isHeavyRE,
+    );
+    const holdingMonths = calcAccrualMonths(input.acquisitionDate, input.listingDate!);
+    const priorBizYearMonths = input.priorBizYearMonths ?? 12;
+    const prior = acquisitionYearPerShareValue; // 트리거상 분자·분모 원값 동일
+    // 분수 정수 연산 1회 floor — 음수 차이(C-5)도 방향 일관
+    const adjusted = Math.floor(
+      (prior * priorBizYearMonths + (prior - prePrior) * holdingMonths) / priorBizYearMonths,
+    );
+
+    if (adjusted <= 0) {
+      // C-6: 보정 평가액 0 이하 → 환산 불가 (보정 미발동)
+      warnings.push("소칙 §81④ 월할 보정 평가액이 0 이하입니다. 환산 불가.");
+      return {
+        listingYearPerShareValue,
+        acquisitionYearPerShareValue,
+        conversionRatio: 0,
+        finalPerShareValue: 0,
+        totalAcquisitionPrice: 0,
+        monthlyAccrualApplied: false,
+        appliedRules,
+        warnings,
+        detail: detailExtended,
+      };
+    }
+
+    denominator = adjusted;
+    monthlyAccrualApplied = true;
+    monthlyAccrualDetail = {
+      prePriorYearPerShareValue: prePrior,
+      holdingMonths,
+      priorBizYearMonths,
+      adjustedListingYearPerShareValue: adjusted,
+    };
+    appliedRules.push(STOCK.ENFORCEMENT_RULE_81_4_MONTHLY_ACCRUAL);
   }
 
-  // 환산비율 = 취득일 직전 평가 / 상장일 직전 평가
-  // 부동소수점 정밀도: 비율 계산은 부동소수 그대로 유지, 최종 1주당만 floor
-  const conversionRatio = acquisitionYearPerShareValue / listingYearPerShareValue;
+  // 환산비율 = 취득일 직전 평가 / (보정된) 상장일 직전 평가
+  // 부동소수점 정밀도: 비율은 부동소수 echo, 최종 1주당만 floor
+  const conversionRatio = acquisitionYearPerShareValue / denominator;
 
   // 1주당 취득기준시가 = floor(상장일 1개월 종가평균 × 환산비율)
-  const rawPerShare = listingDatePriceAvg1Month * conversionRatio;
-  const finalPerShareValue = Math.floor(rawPerShare);
+  //   보정 경로는 분수 정수 연산(분모 교체 — 1원 오차 방지), 비보정 경로는 기존 부동소수 곱 유지(사례 48 불변)
+  const finalPerShareValue = monthlyAccrualApplied
+    ? Math.floor((listingDatePriceAvg1Month * acquisitionYearPerShareValue) / denominator)
+    : Math.floor(listingDatePriceAvg1Month * conversionRatio);
 
   const totalAcquisitionPrice = finalPerShareValue * shareCount;
 
@@ -280,6 +362,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     finalPerShareValue,
     totalAcquisitionPrice,
     monthlyAccrualApplied,
+    monthlyAccrualDetail,
     appliedRules,
     warnings,
     detail: detailExtended,

@@ -436,6 +436,14 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (lyNA !== undefined) body.listingYearNetAssetPerShare = lyNA;
     if (ayNI !== undefined) body.acquisitionYearNetIncomePerShare = ayNI;
     if (ayNA !== undefined) body.acquisitionYearNetAssetPerShare = ayNA;
+    // 소칙 §81④ 1호 월할 가산 — 전전연도 평가(빈값 undefined → 엔진 C-4 방어) + 직전사업연도 월수
+    // ⚠ parseAmount(빈값 0) 금지 — 0이면 엔진 C-4 차단 우회 + 오보정
+    const ppNI = parseFloatOrUndef(form.prePriorYearNetIncomePerShare);
+    const ppNA = parseFloatOrUndef(form.prePriorYearNetAssetPerShare);
+    if (ppNI !== undefined) body.prePriorYearNetIncomePerShare = ppNI;
+    if (ppNA !== undefined) body.prePriorYearNetAssetPerShare = ppNA;
+    const pbm = parseIntOrUndef(form.priorBizYearMonths);
+    if (pbm !== undefined) body.priorBizYearMonths = pbm; // 미입력 시 엔진 ?? 12 fallback
   } else if (acquisitionMode === "face_value") {
     const faceVal = parseIntOrUndef(form.faceValuePerShare);
     if (faceVal !== undefined) body.faceValuePerShare = faceVal;

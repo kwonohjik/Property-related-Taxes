@@ -175,4 +175,79 @@ describe("LO-PRE-1: route.ts split 모드 — API 경로 회귀 보호", () => {
     // 산출세액 = 7,500,000 × 10% = 750,000
     expect(item0.calculatedTax).toBe(750_000);
   });
+
+  // ============================================================
+  // 소칙 §81④ 월할 가산 — API 경로 ⑬⑭ silent strip 방어
+  // prePriorYear* 3필드 + monthlyAccrualToggle가 Zod·route·coerce를 통과해
+  // 엔진 monthlyAccrualDetail로 echo되는지 (TS 미감지 strip 회귀 보호)
+  // ============================================================
+  it("LO-PRE-3: §81④ 전전연도 3필드 + 토글이 API 경로로 엔진까지 전파 (monthlyAccrualDetail echo)", async () => {
+    const body = {
+      marketType: "kosdaq",
+      isMajorShareholder: true,
+      selfShareRatio: 0.05,
+      selfMarketCap: 6_000_000_000,
+      isLargestShareholderGroup: false,
+      combinedShareRatio: 0,
+      combinedMarketCap: 0,
+      priorYearEndDate: "2022-12-31",
+      isQualifyingBlockShareholder: false,
+      isHeavyRealEstateForRate: false,
+      isHeavyRealEstateForValuation: false,
+      isSmallMediumEnterprise: true,
+      isMidsizeEnterprise: false,
+      isListedSmallShareholder: false,
+      isVentureCompany: false,
+      isKOTCTrading: false,
+      acquisitionDate: "2024-03-15",
+      transferDate: "2025-02-26",
+      shareCount: 5_000,
+      totalIssuedShares: 100_000,
+      acquisitionCause: "purchase",
+      transferPriceMode: "actual",
+      transferActualInputMode: "per_share",
+      perShareTransferPrice: 8_950,
+      acquisitionMode: "estimated",
+      acquiredBeforeListing: true,
+      listingDate: "2024-10-20", // m=8
+      listingDatePriceAvg1Month: 8_001,
+      listingYearNetIncomePerShare: 50_000,
+      listingYearNetAssetPerShare: 5_000,
+      acquisitionYearNetIncomePerShare: 50_000,
+      acquisitionYearNetAssetPerShare: 5_000,
+      // ★ ⑬⑭ strip 대상 — 전전연도 평가 + 월수 + 토글
+      prePriorYearNetIncomePerShare: 40_000,
+      prePriorYearNetAssetPerShare: 4_000,
+      priorBizYearMonths: 12,
+      postListingDetail: { unlistedDetailMode: "simple", monthlyAccrualToggle: true },
+      tradingHaltAtTransfer: false,
+      bookLost: false,
+      expenseMode: "estimated",
+      filingType: "preliminary",
+      filingDate: "2025-08-31",
+      isElectronicFiling: false,
+      filingViolation: "none",
+      isFraudulent: false,
+      isInternationalTransaction: false,
+      realEstateGroupBasicDeductionUsed: 0,
+    };
+
+    const req = new Request("http://localhost/api/calc/stock-transfer", {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json", "x-forwarded-for": "127.0.0.1" },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const res = await POST(req as any);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+
+    // §81④ 1호 보정 발동 — 전전 3필드가 엔진까지 전파됐다는 증거
+    const post = json.result.postListingDetail;
+    expect(post?.monthlyAccrualApplied).toBe(true);
+    expect(post?.monthlyAccrualDetail?.prePriorYearPerShareValue).toBe(25_600);
+    expect(post?.monthlyAccrualDetail?.holdingMonths).toBe(8);
+    expect(post?.monthlyAccrualDetail?.adjustedListingYearPerShareValue).toBe(36_266);
+  });
 });

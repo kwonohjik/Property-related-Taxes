@@ -195,6 +195,14 @@ export type StockTransferInput = {
   acquisitionYearNetIncomePerShare?: number;
   acquisitionYearNetAssetPerShare?: number;
 
+  // 소칙 §81④ 1호 월할 가산 (§165⑤ 후단 준용 — 취득·상장 평가액 동일 + 동일 사업연도)
+  /** 취득일이 속하는 사업연도의 전전사업연도 1주당 순손익가치 (전 모드 직접 입력) */
+  prePriorYearNetIncomePerShare?: number;
+  /** 전전사업연도 1주당 순자산가치 */
+  prePriorYearNetAssetPerShare?: number;
+  /** 직전사업연도의 월수 (1~12, 미입력 시 12 — 사업연도 변경 법인 대응) */
+  priorBizYearMonths?: number;
+
   /** 장부분실 §99①4 (face_value 모드 — 양/취 모두 액면가) */
   bookLost: boolean;
   faceValuePerShare?: number;
@@ -720,8 +728,22 @@ export type PostListingValuationResult = {
   finalPerShareValue: number;
   /** 총 환산취득가 = 1주당 × 주식수 */
   totalAcquisitionPrice: number;
-  /** 월할 가산 적용 여부 (시행규칙 §81④) */
+  /**
+   * 월할 가산 적용 여부 (시행규칙 §81④).
+   * PR-2 의미 재정의: "평가액 동일 감지"(PR-1) → "1호 보정 실제 발동" (C-3·C-5만 true).
+   */
   monthlyAccrualApplied: boolean;
+  /** §81④ 1호 보정 상세 (보정 발동 시만 — 결과 카드 산식 표시용) */
+  monthlyAccrualDetail?: {
+    /** 전전사업연도 가중평균 평가액 (H-04 재사용, 80% 하한 미적용) */
+    prePriorYearPerShareValue: number;
+    /** 절상 후 보유월수 m (취득일~상장일, 1개월 미만 절상) */
+    holdingMonths: number;
+    /** 분모 월수 d (echo) */
+    priorBizYearMonths: number;
+    /** 보정 상장일 평가액 = floor((직전×d + (직전−전전)×m) / d) — 환산식 새 분모 */
+    adjustedListingYearPerShareValue: number;
+  };
   appliedRules: string[];
   warnings: string[];
 

@@ -235,6 +235,11 @@ export const stockTransferInputSchema = z.object({
   acquisitionYearNetIncomePerShare: z.number().optional(),
   acquisitionYearNetAssetPerShare: z.number().optional(),
 
+  // 소칙 §81④ 1호 월할 가산 (전전사업연도 평가 + 직전사업연도 월수)
+  prePriorYearNetIncomePerShare: z.number().optional(),
+  prePriorYearNetAssetPerShare: z.number().optional(),
+  priorBizYearMonths: z.number().int().min(1).max(12).optional(),
+
   // 장부분실 §99①4
   bookLost: z.boolean(),
   faceValuePerShare: z.number().min(0).optional(),
