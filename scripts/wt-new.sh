@@ -11,10 +11,15 @@
 #   scripts/wt-new.sh <name> [branch] [base]
 #     <name>   worktree 폴더명·slot 추적 키 (영숫자/-/_/+)
 #     [branch] 새 브랜치명           (기본 feat/<name>)
-#     [base]   분기 기준 commit-ish  (기본 master)
+#     [base]   분기 기준 commit-ish  (기본 origin/master — fetch로 최신화 후 분기)
+#
+#   기본 base를 origin/master로 두는 이유: 로컬 master ref가 동시 세션 worktree에
+#   점유되면 PR 머지 후에도 갱신되지 않아 stale → 그 stale master에서 분기하면
+#   방금 머지한 변경이 빠진다. origin/master(+fetch)는 항상 최신 원격을 가리킨다.
 #
 #   예) scripts/wt-new.sh gift-fix
-#       scripts/wt-new.sh acq-rate feat/acq-rate-12 master
+#       scripts/wt-new.sh acq-rate feat/acq-rate-12 origin/master
+#       scripts/wt-new.sh hotfix feat/hotfix HEAD   # 명시 base는 그대로 존중(fetch 생략)
 #
 # 정리: scripts/wt-rm.sh <name>
 #
@@ -25,7 +30,8 @@ cd "$REPO_ROOT"
 
 NAME="${1:-}"
 BRANCH="${2:-}"
-BASE="${3:-master}"
+BASE_ARG="${3:-}"
+BASE="${BASE_ARG:-origin/master}"
 
 if [[ -z "$NAME" ]]; then
   echo "usage: scripts/wt-new.sh <name> [branch] [base]" >&2
@@ -68,6 +74,16 @@ if [[ ! -d "$REPO_ROOT/node_modules" ]]; then
 fi
 if [[ ! -f "$REPO_ROOT/.env.local" ]]; then
   echo "⚠ 메인 repo에 .env.local 없음 — 링크 생략 (키 없이 graceful 통과)" >&2
+fi
+
+# ── 기본 base(origin/master)면 추적 ref 신선화 — 동시 세션의 PR 머지 즉시 반영 ──
+#   명시 base($3)를 준 경우는 의도 존중 → fetch 생략.
+if [[ -z "$BASE_ARG" ]]; then
+  if git fetch --quiet origin master 2>/dev/null; then
+    echo "  ✓ origin/master fetch (최신 반영)"
+  else
+    echo "⚠ origin/master fetch 실패(오프라인?) — 현재 추적 ref로 진행" >&2
+  fi
 fi
 
 # ── ① worktree 생성 ──
