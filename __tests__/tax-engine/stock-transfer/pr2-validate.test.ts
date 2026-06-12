@@ -132,8 +132,9 @@ describe("MS-2c: konex + sale_case → validate error", () => {
   });
 });
 
-describe("CA-6: split + capital_adjustments → validate error", () => {
-  it("CA-6-01: 단건 모드 전용 error", () => {
+describe("CA-6: split + capital_adjustments → 허용 (A-2 재anchor)", () => {
+  // [A-2] split + 자본조정은 더 이상 차단 아님 — lot별 희석 전처리로 지원.
+  it("CA-6-01: 단건 모드 전용 차단 제거 (capitalAdjustments error 없음)", () => {
     const errors = validateAllSteps(baseForm({
       acquisitionMode: "actual",
       lotsMode: "split",
@@ -143,8 +144,10 @@ describe("CA-6: split + capital_adjustments → validate error", () => {
       transferLots: [{ id: "T1", transferDate: "2024-06-01", shareCount: "1000", perShareTransferPrice: "200000" }],
       capitalAdjustments: [makeAdj({})],
     }));
-    const hit = errors.some((e) => e.field === "capitalAdjustments" && e.message.includes("단건 모드 전용"));
-    expect(hit).toBe(true);
+    const hit = errors.some(
+      (e) => e.field === "capitalAdjustments" && e.severity === "error" && e.message.includes("단건 모드 전용"),
+    );
+    expect(hit).toBe(false);
   });
 });
 

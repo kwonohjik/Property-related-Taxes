@@ -39,6 +39,7 @@ import {
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { buildPr2Detail } from "./stock-transfer-pr2-detail";
+import { applyCapitalAdjustmentsToLots } from "./lot-capital-adjustments";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
 import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
@@ -126,13 +127,24 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   // split 모드 사전 계산 (lot 매칭 — STEP 2/3/5/8 분기에서 사용)
   // ──────────────────────────────────────────────────────────
   let lotMatchingDetail: LotMatchingDetail | undefined;
+  let lotCapitalAdjustmentsDetail: StockTransferResult["lotCapitalAdjustmentsDetail"];
   if (isSplitMode(input)) {
     const isMajorAndNonSME =
       !input.isSmallMediumEnterprise &&
       (classification.taxCategory === "listed_major" ||
         classification.taxCategory === "unlisted_major");
+    // [A-2] 자본조정 lot 전처리 — 발생일 이전 보유 lot만 희석 (allocateLots 직전)
+    let effectiveLots = input.acquisitionLots!;
+    if (input.capitalAdjustments && input.capitalAdjustments.length > 0) {
+      const ca = applyCapitalAdjustmentsToLots(effectiveLots, input.capitalAdjustments);
+      effectiveLots = ca.adjustedLots;
+      lotCapitalAdjustmentsDetail = ca.perLotApplied;
+      warnings.push(...ca.warnings);
+      // 자본조정 규칙은 warnings로 전달 — 단일모드(pr2-detail.ts) 패턴 일치, appliedRules union 미변경
+      for (const r of ca.appliedRules) if (!warnings.includes(r)) warnings.push(r);
+    }
     lotMatchingDetail = allocateLots(
-      input.acquisitionLots!,
+      effectiveLots,
       input.transferLots!,
       input.costAllocationMethod!,
       isMajorAndNonSME,
@@ -380,7 +392,11 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   }
 
   // STEP 3.5 + 3.7: PR-2 detail (매매사례가액 + 자본조정) — sibling helper
-  const pr2 = buildPr2Detail(input, shareCount, acquisitionPrice, acquisitionMode);
+  // [A-2 STEP1-1] split 모드는 자본조정이 lot 전처리에서 이미 반영됨 → buildPr2Detail 글로벌 display 제외(이중적용 차단)
+  const pr2Input = isSplitMode(input)
+    ? { ...input, capitalAdjustments: undefined }
+    : input;
+  const pr2 = buildPr2Detail(pr2Input, shareCount, acquisitionPrice, acquisitionMode);
   const marketSampleDetail = pr2.marketSampleDetail;
   const capitalAdjustmentsDetail = pr2.capitalAdjustmentsDetail;
   warnings.push(...pr2.warningsDelta);
@@ -557,6 +573,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     warnings,
     appliedRules,
     lotMatchingDetail,
+    lotCapitalAdjustmentsDetail,
     // Round 4 C-02·C-04: 취득 후 상장 환산 echo (UI 결과 카드 게이트용)
     acquiredBeforeListing: input.acquiredBeforeListing,
     postListingDetail,

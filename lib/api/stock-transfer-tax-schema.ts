@@ -332,17 +332,7 @@ export function addStockRefines(
       }
     }
 
-    // R-2 자본조정 — split 모드와 결합 차단
-    if (data.capitalAdjustments && data.capitalAdjustments.length > 0) {
-      const hasSplit = (data.acquisitionLots && data.acquisitionLots.length > 0) || (data.transferLots && data.transferLots.length > 0);
-      if (hasSplit) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["capitalAdjustments"],
-          message: "자본조정(무상증자·감자)은 단건 모드 전용입니다 (분할 매수 + 자본조정 결합은 후속 PR)",
-        });
-      }
-    }
+    // [A-2] R-2 자본조정 — split 모드 결합 허용 (lot별 희석 전처리로 지원). split 차단 제거.
 
     // 기타자산 입력 시 관련 필드 최소 1개 필수
     if (data.marketType === "other_asset") {
@@ -394,6 +384,8 @@ export function addStockRefines(
       (data.transferLots && data.transferLots.length > 0) ||
       data.costAllocationMethod !== undefined;
     if (isSplit) {
+      // [A-2] 자본조정 존재 시 raw 수량 정합 검증 면제(희석은 엔진 전처리) — 아래 게이트에서 사용
+      const hasCapitalAdjustments = !!(data.capitalAdjustments && data.capitalAdjustments.length > 0);
       // 양쪽 lot 배열 모두 ≥ 1
       if (!data.acquisitionLots || data.acquisitionLots.length === 0) {
         ctx.addIssue({
@@ -476,7 +468,9 @@ export function addStockRefines(
           }
         }
         // 매수 lot별 매칭 합 ≤ lot 수량
-        if (data.acquisitionLots) {
+        // [A-2] 자본조정(무상증자) 시 lot 주식수가 희석 전(raw)이라 매칭(희석 후)과 단위 불일치 →
+        //   엔진 matchSpecific의 lot 잔여 가드에 위임(초과 시 warning·skip). 정적 검증 면제.
+        if (data.acquisitionLots && !hasCapitalAdjustments) {
           for (const acq of data.acquisitionLots) {
             const sum = data.specificMatchings
               .filter((m) => m.acquisitionLotId === acq.id)
@@ -492,9 +486,10 @@ export function addStockRefines(
         }
       }
       // 매도 수량 합 ≤ 매수 수량 합
+      // [A-2] 자본조정 시 매수 수량이 희석 전이라 무상증자로 매도>매수가 정당 → 엔진 allocateLots 가드에 위임.
       const totalTrn = data.transferLots?.reduce((s, l) => s + l.shareCount, 0) ?? 0;
       const totalAcq = data.acquisitionLots?.reduce((s, l) => s + l.shareCount, 0) ?? 0;
-      if (totalTrn > totalAcq) {
+      if (totalTrn > totalAcq && !hasCapitalAdjustments) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["transferLots"],

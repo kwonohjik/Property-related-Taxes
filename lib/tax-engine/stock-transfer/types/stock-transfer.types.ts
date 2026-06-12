@@ -566,6 +566,22 @@ export type StockTransferResult = {
     warnings: string[];
   };
 
+  // [A-2] 분할 모드 lot별 자본조정 detail (단일 모드 capitalAdjustmentsDetail과 별개)
+  lotCapitalAdjustmentsDetail?: {
+    lotId?: string;
+    beforeShares: number;
+    afterShares: number;
+    baseTotalCost: number;
+    adjustedPerShareCost: number;
+    appliedTypes: (
+      | "bonus_capital_reserve"
+      | "bonus_retained_earnings"
+      | "reduction_proportional"
+      | "reduction_capital_return"
+    )[];
+    skippedReasons: string[];
+  }[];
+
   // 기본공제 그룹
   basicDeductionGroup: "real_estate_and_other_asset" | "stock";
 
