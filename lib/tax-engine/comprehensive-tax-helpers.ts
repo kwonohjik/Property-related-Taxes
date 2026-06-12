@@ -103,11 +103,20 @@ export function applyOneHouseDeduction(
     deductionAmount = Math.floor(taxAfterPropertyCredit * combinedRate);
   }
 
+  // 신고서 ⑦(고령자)·⑧(장기보유) 분리 — 80% 상한 발동 시에도 원 비율(senior:longTerm)로 안분 + 잔액 흡수.
+  //   합 = deductionAmount 보장 (feedback_floor_residual_absorption). combined=0이면 둘 다 0.
+  const rateSum = seniorRate + longTermRate;
+  const seniorAmount =
+    rateSum > 0 ? Math.floor((deductionAmount * seniorRate) / rateSum) : 0;
+  const longTermAmount = deductionAmount - seniorAmount;
+
   return {
     seniorRate,
     longTermRate,
     combinedRate,
     deductionAmount,
+    seniorAmount,
+    longTermAmount,
     isMaxCapApplied: combined > COMPREHENSIVE_CONST.ONE_HOUSE_MAX_CREDIT_RATE,
     apportionmentRatio,
   };

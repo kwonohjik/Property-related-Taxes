@@ -102,6 +102,18 @@ function toEngineInput(
       : undefined,
     assessmentYear: schema.assessmentYear,
     previousYearTotalTax: schema.previousYearTotalTax,
+    previousYearAuto: schema.previousYearAuto
+      ? {
+          assessedValue: schema.previousYearAuto.assessedValue,
+          isOneHouseOwner: schema.previousYearAuto.isOneHouseOwner,
+          birthDate: schema.previousYearAuto.birthDate
+            ? parseDate(schema.previousYearAuto.birthDate)
+            : undefined,
+          acquisitionDate: schema.previousYearAuto.acquisitionDate
+            ? parseDate(schema.previousYearAuto.acquisitionDate)
+            : undefined,
+        }
+      : undefined,
     isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,
     landAggregate: schema.landAggregate,
     landSeparate: schema.landSeparate,
