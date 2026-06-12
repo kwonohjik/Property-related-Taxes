@@ -116,3 +116,80 @@ describe("사례12 직전연도 자동계산 — 별지 5호서식 부표 (C12-A
     expect(direct.determinedHousingTax).toBe(auto.determinedHousingTax);
   });
 });
+
+describe("사례12 케이스 매트릭스 — 경계·회귀 (C12-A5·A6 + M-04·05·10·11·12)", () => {
+  // C12-A6: 사례1 회귀 — 비1주택은 재산세 FMR 60% 불변 (G-1 전후 동일)
+  it("C12-A6 (M-07): 2022 비1주택 9.5억 → 안분 504,000 / 결정 756,000 (FMR 60% 불변)", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      properties: [{ propertyId: "p1", assessedValue: 950_000_000, exclusionType: "none" }],
+    });
+    expect(result.propertyTaxCredit.creditAmount).toBe(504_000); // 2.1억×60%×0.4%
+    expect(result.determinedHousingTax).toBe(756_000);
+    expect(result.oneHouseExtraDeduction).toBeUndefined();
+  });
+
+  // C12-A5 (M-05): 2021 1주택 — 재산세 FMR 60% (특례 없음, 종부세 FMR 95%)
+  it("C12-A5 (M-05): 2021 1주택 14억 → 종부세 FMR 95% / 안분 재산세 FMR 60%", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2021,
+      isOneHouseOwner: true,
+      birthDate: new Date("1955-03-01"),
+      acquisitionDate: new Date("2012-01-01"),
+      properties: [{ propertyId: "p1", assessedValue: 1_400_000_000, exclusionType: "none" }],
+    });
+    expect(result.fairMarketRatio).toBe(0.95);                          // 종부세 FMR
+    expect(result.taxBase).toBe(285_000_000);                          // (14억−11억)×95%
+    expect(result.propertyTaxCredit.comprehensiveTaxBase).toBe(684_000); // ⑤ 2.85억×60%×0.4% (45% 아님)
+    expect(result.propertyTaxCredit.propertyTaxBase).toBe(2_730_000);   // ⑥ 14억×60%
+  });
+
+  // M-04: 세부담상한 실제 발동 (직접입력 극소값)
+  it("M-04: 직접입력 150,000 → 상한 225,000 초과 → 결정 0", () => {
+    const result = calculateComprehensiveTax({ ...case12Input(), previousYearTotalTax: 150_000 });
+    expect(result.taxCap?.capAmount).toBe(225_000);
+    expect(result.taxCap?.isApplied).toBe(true);
+    expect(result.determinedHousingTax).toBe(0);
+  });
+
+  // M-10: 법인 — 1세대1주택 분기 미진입 (FMR 60%)
+  it("M-10: 법인(corporate_general) 15억 → 재산세 FMR 60% / 세액공제 없음", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      taxpayerType: "corporate_general",
+      properties: [{ propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" }],
+    });
+    expect(result.oneHouseDeduction).toBeUndefined();
+    expect(result.oneHouseExtraDeduction).toBeUndefined();
+    expect(result.basicDeduction).toBe(600_000_000); // 법인 일반공제
+  });
+
+  // M-11: 과세표준 0 (기본공제 이하)
+  it("M-11: 2022 1주택 10억 → 과표 0 (11억 공제 이하) → 납세의무 없음", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2022,
+      isOneHouseOwner: true,
+      properties: [{ propertyId: "p1", assessedValue: 1_000_000_000, exclusionType: "none" }],
+    });
+    expect(result.isSubjectToHousingTax).toBe(false);
+    expect(result.determinedHousingTax).toBe(0);
+  });
+
+  // M-12: Min 발동 — 직전 재산세상당×130% < 당해 부과 재산세 → ⓐ 축소
+  it("M-12: 직전 공시 5억(자동) → §122 Min 130% 발동 → ⓐ 741,000으로 축소", () => {
+    const result = calculateComprehensiveTax({
+      ...case12Input(),
+      previousYearAuto: {
+        assessedValue: 500_000_000, // 직전 5억 (1주택)
+        isOneHouseOwner: true,
+        birthDate: new Date("1955-03-01"),
+        acquisitionDate: new Date("2012-01-01"),
+      },
+    });
+    // 직전 재산세상당 = calcHousingTax(5억×60%=3억) = 3억×0.25%−18만 = 570,000
+    // ⓐ = min(2,070,000, floor(570,000×130/100)=741,000) = 741,000
+    expect(result.propertyTaxCredit.totalPropertyTax).toBe(741_000);
+  });
+});
