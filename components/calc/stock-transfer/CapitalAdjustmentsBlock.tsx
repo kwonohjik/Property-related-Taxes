@@ -26,7 +26,10 @@ function emptyAdjustment(): CapitalAdjustmentForm {
 }
 
 export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBlockProps) {
-  const isSplit = (form.lotsMode || "single") === "split";
+  // [A-2] 엔진 split(lot 희석) 모드 = 분할 양도(split) OR 취득 다건(lots-only). 둘 다 lot별 희석 적용.
+  const isLotMode =
+    (form.lotsMode || "single") === "split" ||
+    (form.acquisitionActualInputMode || "per_share") === "lots";
 
   const rows = form.capitalAdjustments || [];
 
@@ -58,15 +61,13 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
             무상증자·무상감자 (자본조정) — 법§17② 단서 + 집행기준 97-163-12
           </p>
         </div>
-        {!isSplit && (
-          <button
-            type="button"
-            onClick={add}
-            className="rounded border border-violet-300 bg-white px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
-          >
-            + 행 추가
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={add}
+          className="rounded border border-violet-300 bg-white px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
+        >
+          + 행 추가
+        </button>
       </div>
 
       {/* 도움말 카드 */}
@@ -81,20 +82,25 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
           자본준비금 무상증자 (§17②2호 가목 단서 (1)·(2)) /
           비례감자·결손보전 (형식감자)
         </p>
-        <p className="text-slate-500">총 취득원가는 불변. 1주당 표시 단가만 환산.</p>
+        <p className="text-slate-500">
+          {isLotMode
+            ? "각 매수 lot의 총취득원가는 불변. 1주당 단가 환산이 매칭·양도차익에 반영됩니다."
+            : "총 취득원가는 불변. 1주당 표시 단가만 환산."}
+        </p>
       </div>
 
-      {isSplit && (
-        <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          분할 매수 모드에서는 자본조정을 사용할 수 없습니다 (단건 모드 전용 — 후속 PR).
+      {isLotMode && (
+        <div className="rounded border border-violet-200 bg-violet-50/70 px-3 py-2 text-xs text-violet-700">
+          매수 다건/분할 모드: 발생일 이전 보유한 매수 lot만 희석됩니다. 무상주 보유기간은 원주 취득일로 통산되며(집행기준 97-163-12),
+          각 lot의 총취득원가는 불변·1주당 단가만 환산됩니다. 배정 수량은 매수 당시(원주) 기준으로 입력하세요.
         </div>
       )}
 
-      {!isSplit && rows.length === 0 && (
+      {rows.length === 0 && (
         <p className="text-xs text-slate-500">자본조정 없음. 필요 시 &quot;+ 행 추가&quot;를 누르세요.</p>
       )}
 
-      {!isSplit && sorted.length > 0 && (
+      {sorted.length > 0 && (
         <div className="space-y-3">
           {sorted.map((r) => {
             const idx = r._idx;
@@ -152,7 +158,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
                     <DecimalInput
                       value={r.ratio}
                       onChange={(v) => update(idx, { ratio: v })}
-                      placeholder="예: 0.5 (1주당 0.5주 무상)"
+                      placeholder="1주당 비율 (무상증자 배정·감자 비율)"
                     />
                   </div>
                 </div>

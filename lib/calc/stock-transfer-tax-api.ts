@@ -477,8 +477,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (form.transferMarketSampleCounterparty) body.transferMarketSampleCounterparty = form.transferMarketSampleCounterparty;
   }
 
-  // R-2 자본조정 — 단건 모드 전용 (split + adjustments는 Zod refine에서 차단)
-  if (form.capitalAdjustments && form.capitalAdjustments.length > 0 && form.lotsMode !== "split") {
+  // [A-2] R-2 자본조정 — 단일·분할 공통 전송 (분할은 엔진이 lot별 희석 전처리). strip 조건 제거.
+  if (form.capitalAdjustments && form.capitalAdjustments.length > 0) {
     body.capitalAdjustments = form.capitalAdjustments
       .filter((a) => a.eventDate && a.ratio)
       .map((a) => ({

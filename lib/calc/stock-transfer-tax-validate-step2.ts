@@ -65,13 +65,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
 
   // 분할 모드 호환성 (Plan v2.2 — UI 사전 차단 외 이중 검증)
   if (lotsMode === "split") {
-    if (form.capitalAdjustments && form.capitalAdjustments.length > 0) {
-      errors.push({
-        field: "capitalAdjustments",
-        message: "자본조정(무상증자·감자)은 단건 모드 전용입니다 (분할 매수 + 자본조정 결합은 후속 PR)",
-        severity: "error",
-      });
-    }
+    // [A-2] split + 자본조정 차단 제거 — lot별 희석 전처리로 지원.
     if (acquisitionMode !== "actual") {
       errors.push({
         field: "acquisitionMode",
@@ -142,9 +136,11 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             errors.push({ field: `acquisitionLots[${i}].preMergerAcquisitionDate`, message: `매수 lot #${i + 1} (합병·분할): 종전 주식 취득일을 입력하세요 (§104②3)`, severity: "error" });
           }
         });
+        // [A-2] 자본조정(무상증자) 시 매수 수량이 희석 전이라 매도>매수가 정당 → 엔진 allocateLots 가드에 위임
+        const hasCapitalAdj = !!(form.capitalAdjustments && form.capitalAdjustments.length > 0);
         const totalAcqLots = form.acquisitionLots.reduce((s, l) => s + parseI(l.shareCount), 0);
         const transferShareCount = parseI(form.shareCount);
-        if (transferShareCount > totalAcqLots) {
+        if (transferShareCount > totalAcqLots && !hasCapitalAdj) {
           errors.push({
             field: "acquisitionLots",
             message: `양도 주식수(${transferShareCount})가 매수 lot 합계(${totalAcqLots})를 초과합니다. 매수 lot을 추가하거나 양도 주식수를 줄이세요.`,
@@ -154,9 +150,11 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
       }
       // [A-1] 개별법(specific): 합성 단일 매도에 대한 매수 lot별 배정 합계 = 양도 주식수
       if (form.costAllocationMethod === "specific") {
+        // [A-2] 자본조정 시 배정·lot 수량이 희석 전/후 단위 불일치 → 매칭 무결성은 엔진 matchSpecific에 위임
+        const hasCapitalAdj = !!(form.capitalAdjustments && form.capitalAdjustments.length > 0);
         const transferShareCount = parseI(form.shareCount);
         const matchSum = form.specificMatchings.reduce((s, m) => s + parseI(m.shareCount), 0);
-        if (matchSum !== transferShareCount) {
+        if (matchSum !== transferShareCount && !hasCapitalAdj) {
           errors.push({
             field: "specificMatchings",
             message: `개별법: 매수 lot별 배정 합계(${matchSum})가 양도 주식수(${transferShareCount})와 일치해야 합니다`,
@@ -164,17 +162,19 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           });
         }
         // 매수 lot별 배정 ≤ lot 보유 수량
-        form.specificMatchings.forEach((m) => {
-          const lot = form.acquisitionLots.find((l) => l.id === m.acquisitionLotId);
-          const alloc = parseI(m.shareCount);
-          if (lot && alloc > parseI(lot.shareCount)) {
-            errors.push({
-              field: "specificMatchings",
-              message: `개별법: 매수 lot에 배정한 수량(${alloc})이 해당 lot 보유 수량(${parseI(lot.shareCount)})을 초과합니다`,
-              severity: "error",
-            });
-          }
-        });
+        if (!hasCapitalAdj) {
+          form.specificMatchings.forEach((m) => {
+            const lot = form.acquisitionLots.find((l) => l.id === m.acquisitionLotId);
+            const alloc = parseI(m.shareCount);
+            if (lot && alloc > parseI(lot.shareCount)) {
+              errors.push({
+                field: "specificMatchings",
+                message: `개별법: 매수 lot에 배정한 수량(${alloc})이 해당 lot 보유 수량(${parseI(lot.shareCount)})을 초과합니다`,
+                severity: "error",
+              });
+            }
+          });
+        }
       }
     } else {
       if (isEmpty(form.perShareAcquisitionPrice) || parseI(form.perShareAcquisitionPrice) < 0) {
@@ -377,13 +377,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
 
   // ── R-2 자본조정 ──
   if (form.capitalAdjustments && form.capitalAdjustments.length > 0) {
-    if ((form.lotsMode || "single") === "split") {
-      errors.push({
-        field: "capitalAdjustments",
-        message: "자본조정(무상증자·감자)은 단건 모드 전용입니다 (분할 매수 + 자본조정 결합은 후속 PR)",
-        severity: "error",
-      });
-    }
+    // [A-2] split 차단 제거 (단일·분할 공통). 분할은 lot별 희석 전처리로 지원.
+    const isSplit = (form.lotsMode || "single") === "split";
     const acqDateStr = form.acquisitionDate;
     const trnDateStr = form.transferDate;
     form.capitalAdjustments.forEach((adj, idx) => {
@@ -399,7 +394,9 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
       }
       if (isEmpty(adj.eventDate)) {
         errors.push({ field: `capitalAdjustments[${idx}].eventDate`, message: `자본조정 #${idx + 1}: 발생일을 입력하세요`, severity: "error" });
-      } else {
+      } else if (!isSplit) {
+        // [A-2 STEP13-17] 폼-전역 취득일·양도일 대비 검증은 단일 모드 전용.
+        //   분할 모드는 lot별 취득일이라 글로벌 날짜 비교 부적합 → 엔진이 lot별 skip-with-warning 처리.
         if (!isEmpty(acqDateStr) && adj.eventDate <= acqDateStr) {
           errors.push({ field: `capitalAdjustments[${idx}].eventDate`, message: `자본조정 #${idx + 1}: 발생일이 취득일 이전입니다 — 종전 보유자에게만 영향`, severity: "error" });
         }

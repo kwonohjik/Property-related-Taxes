@@ -23,7 +23,7 @@
 | # | 항목 | 현행 (실측) | 스코프 요약 | 규모 |
 |---|---|---|---|---|
 | A-1 | **취득 다건 + 양도 단건 모드 개별법(specific)** | `AcquisitionLotsMatrix.tsx:92` 라디오 disabled · `validate-step2.ts:155-161` 차단 · Zod Refine 3(`stock-transfer-tax-schema.ts:387-393`) 차단 · `api.ts:400` "본 모드 미지원" 주석. **엔진은 기지원** — `lot-allocation.ts:178-186 matchSpecific` + 분할 모드 api 배선(`api.ts:586-592`) 완비 | 합성 단건 양도 lot(`__synth_single_transfer__`)에 대한 매수 lot별 주식수 배정 UI(매칭 매트릭스) + api 매핑 + validate·Zod Refine 3 차단 해제(3중 패턴 동시). 엔진 0줄 예상 | 중 (UI 위주) |
-| A-2 | **분할 매수 모드 + 자본조정 조합** | `CapitalAdjustmentsBlock.tsx:89` "단건 모드 전용 — 후속 PR" amber 안내 | 자본조정(무상증자·형식감자 단가 환산)을 **lot별 취득일 기준**으로 적용 — 엔진 capital-adjustments가 lot 배열을 받도록 확장. 조정 기준일 < lot 취득일 분기 전수 설계 필요 | 대 (엔진 확장) |
+| A-2 | **분할 매수 모드 + 자본조정 조합** ✅**완료(PR-γ)** | `applyCapitalAdjustmentsToLots`(신규)·발생일>취득일 lot만 희석·총원가 불변·정밀도 A(floor)·수량검증 엔진위임·결과 lot 희석표. 9 anchor+E2E | 대 (엔진 확장) |
 
 ### Track B — 법령 기능 갭 (니치 — B-1③ 제외 각자 KoreanLaw 선행 검증 필수)
 
@@ -55,7 +55,7 @@
 ```
 PR-α  D-1 800줄 선제 분할 ──────────┐ ✅완료(본 시리즈) — 798→584줄, aggregate 추출
 PR-β  A-1 단건 개별법 (엔진 0줄)    │ ✅완료(본 시리즈) — UI/api/validate/Zod 차단 해제
-PR-γ  A-2 분할+자본조정 ←──────────┘ D-1 선행 필수 (엔진 확장)
+PR-γ  A-2 분할+자본조정 ←──────────┘ ✅완료(본 시리즈) — applyCapitalAdjustmentsToLots
 PR-δ  C-1 취득일 거래정지           D-1 선행 권장
 PR-ε  B-2 §97② swap 판정 (KoreanLaw만으로 종결 가능성 있음 — 조기 처리해 주석 부채 제거)
 이후  B-3 → C-2 → B-5 → B-4 → C-3 → B-1①② → D-2 (수요·빈도 낮은 순)

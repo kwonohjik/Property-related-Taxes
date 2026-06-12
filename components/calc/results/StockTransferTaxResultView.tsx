@@ -35,6 +35,7 @@ import {
 } from "@/lib/print/stock-transfer-print-sections";
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
+import { LotCapitalAdjustmentsCard } from "@/components/calc/results/LotCapitalAdjustmentsCard";
 import { PostListingDetailCard } from "@/components/calc/results/PostListingDetailCard";
 import { CaseFortyNineFormulaCard } from "@/components/calc/stock-transfer/CaseFortyNineFormulaCard";
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
@@ -461,6 +462,11 @@ export function StockTransferTaxResultView({
 
       {/* 분할 매수·분할 양도 매칭 상세 (split 모드만) */}
       {result.lotMatchingDetail && <LotMatchingDetailCard detail={result.lotMatchingDetail} />}
+
+      {/* [A-2] lot별 자본조정 희석 상세 (split/다건 + capitalAdjustments) */}
+      {result.lotCapitalAdjustmentsDetail && (
+        <LotCapitalAdjustmentsCard detail={result.lotCapitalAdjustmentsDetail} />
+      )}
 
       {/* 취득 후 상장 환산 상세 — Phase H ⑦ + P2 G-03 분리 */}
       <PostListingDetailCard result={result} />
