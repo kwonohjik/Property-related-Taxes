@@ -275,7 +275,7 @@ export const CHAIN_LABELS: Record<ChainType, string> = {
  * 체인 결과 단위 섹션. UI는 각 섹션을 탭·카드로 표현.
  */
 export interface ChainSection {
-  kind: "laws" | "articles" | "decisions" | "annexes" | "citations" | "note";
+  kind: "laws" | "articles" | "decisions" | "annexes" | "citations" | "note" | "diff";
   heading: string;
   laws?: LawSearchItem[];
   articles?: LawArticleResult[];
@@ -283,6 +283,8 @@ export interface ChainSection {
   annexes?: AnnexItem[];
   citations?: Array<{ raw: string; valid: boolean; lawName?: string; articleNo?: string; reason?: string }>;
   note?: string;
+  /** kind "diff" — 조문 신구대조 (amendment_track 체인) */
+  diff?: ArticleDiff;
 }
 
 export interface ChainResult {
@@ -474,6 +476,37 @@ export const applicableLawInputSchema = z.object({
     .regex(/^\d{4}[-./]?\d{1,2}[-./]?\d{1,2}$/, "기준일 형식 오류: YYYYMMDD 또는 YYYY-MM-DD"),
 });
 export type ApplicableLawInput = z.infer<typeof applicableLawInputSchema>;
+
+// ────────────────────────────────────────────────────────────────────────────
+// v3 — 두 시점 신구대조 (time_travel)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 라인 단위 diff 1줄 — 추가/삭제/유지 */
+export interface DiffLine {
+  kind: "add" | "remove" | "keep";
+  text: string;
+}
+
+/** 한 시점의 조문 스냅샷 */
+export interface ArticleSnapshot {
+  version: LawVersionEntry;
+  title: string;
+  fullText: string;
+}
+
+/** 조문 신구대조 결과 */
+export interface ArticleDiff {
+  lawName: string;
+  articleNo: string;
+  /** 이전(과거) 시점 스냅샷 — 조문 미존재 시 null */
+  before: ArticleSnapshot | null;
+  /** 이후(최신) 시점 스냅샷 — 조문 미존재 시 null */
+  after: ArticleSnapshot | null;
+  /** before → after 라인 diff */
+  diff: DiffLine[];
+  /** 본문이 동일한지 (둘 다 존재하고 변경 없음) */
+  identical: boolean;
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // 5. 에러 envelope

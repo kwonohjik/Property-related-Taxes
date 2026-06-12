@@ -65,6 +65,30 @@ const ROUTER_PATTERNS: Pattern[] = [
     },
   },
 
+  // 0-b. 조문 개정 신구대조 — "소득세법 89조 개정", "상증법 제22조 신구대조"
+  //    법령명 + 조문번호 + (개정|신구대조|연혁) 모두 있으면 조문 팝업 대신
+  //    개정 추적 체인(최근 개정 전후 diff)으로 라우팅. 조문번호를 query에 보존해야
+  //    체인이 신구대조를 산출할 수 있다(extractPrimaryTerm은 조문을 버림).
+  {
+    name: "amendment_article",
+    priority: 0,
+    patterns: [
+      /([가-힣·\s]{1,28}?(?:법률|법|시행령|시행규칙|령|규칙|조례|규정))\s*제?\s*(\d{1,4})\s*조(?:\s*의\s*(\d+))?[^가-힣]*(?:.*?)?(개정|신구대조|연혁|변경\s*이력)/,
+    ],
+    extract: (query, m) => {
+      const lawName = resolveLawAlias(m[1].trim());
+      const articleNo = m[3] ? `제${m[2]}조의${m[3]}` : `제${m[2]}조`;
+      return {
+        tool: "run_chain",
+        params: { type: "amendment_track", query: `${lawName} ${articleNo}` },
+        reason: `법령명 + 조문번호 + 개정 키워드 → 개정 추적 체인(최근 개정 신구대조)`,
+        chainType: "amendment_track",
+        targetTab: "chain",
+        confidence: "high",
+      };
+    },
+  },
+
   // 1. 특정 조문 조회 — "민법 제750조", "소득세법 제89조의2"
   {
     name: "specific_article",

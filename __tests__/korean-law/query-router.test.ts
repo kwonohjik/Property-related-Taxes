@@ -119,10 +119,13 @@ describe('Query Router — 특정 조문 조회 ("제" 생략)', () => {
     expect(r.params.articleNo).toBe("제77조");
   });
 
-  it('"지방세법 3조 개정" → 조문 조회가 개정추적보다 우선', () => {
+  it('"지방세법 3조 개정" → 조문+개정 키워드 → 신구대조 체인 (v3 Phase B 동작 변경)', () => {
+    // PR#148 시점: 조문 조회 우선(get_law_text). v3 Phase B에서 "조문 + 개정" 조합은
+    // amendment_article(priority 0)이 선점 → 최근 개정 신구대조 체인으로 라우팅(조문 보존).
     const r = routeQuery("지방세법 3조 개정");
-    expect(r.tool).toBe("get_law_text");
-    expect(r.patternName).toBe("specific_article_no_je");
+    expect(r.tool).toBe("run_chain");
+    expect(r.patternName).toBe("amendment_article");
+    expect(r.params.query).toContain("제3조");
   });
 
   it('"예산 100조" → 법령명 접미사 없음 → fallback (오탐 가드)', () => {
