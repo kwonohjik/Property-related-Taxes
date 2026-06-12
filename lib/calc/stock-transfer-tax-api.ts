@@ -224,6 +224,10 @@ export function buildExitTaxApiBody(form: StockTransferFormData): Record<string,
 
     // ── 재전입 환급 §118의17①1호 ──
     reenteredWithin5Years: form.etReenteredWithin5Years,
+
+    // ── 납부유예 이자상당액 §118의16④·§178의12③ (빈값 undefined → 안내만) ──
+    deferralInterestDays: parseIntOrUndef(form.etDeferralInterestDays),
+    deferralInterestDailyRate: parseFloatOrUndef(form.etDeferralInterestDailyRate),
   };
 
   // 경정청구용 실양도 — 입력값 있을 때만 포함 (자동 안분 fallback 금지)

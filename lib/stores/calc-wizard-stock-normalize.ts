@@ -307,6 +307,8 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     etHasFiledHoldingsReport: boolField("etHasFiledHoldingsReport", defaults.etHasFiledHoldingsReport),
     etTotalFaceValue: strField("etTotalFaceValue"),
     etReenteredWithin5Years: boolField("etReenteredWithin5Years", defaults.etReenteredWithin5Years),
+    etDeferralInterestDays: strField("etDeferralInterestDays"),
+    etDeferralInterestDailyRate: strField("etDeferralInterestDailyRate"),
 
     // ── PR-4A 해외주식 전용 필드 (③ 동기화 지점 — sessionStorage 마이그레이션 호환) ──
     yearsResidentInKorea: strField("yearsResidentInKorea"),

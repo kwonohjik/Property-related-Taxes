@@ -427,6 +427,9 @@ async function handleExitTax(body: unknown): Promise<NextResponse> {
     totalFaceValue: coerced.totalFaceValue as number | undefined,
     // [B-1②b] 재전입 환급 §118의17①1호 (bool — Date 무관)
     reenteredWithin5Years: (coerced.reenteredWithin5Years as boolean | undefined) ?? false,
+    // [B-1②a] 납부유예 이자상당액 §118의16④·§178의12③
+    deferralInterestDays: coerced.deferralInterestDays as number | undefined,
+    deferralInterestDailyRate: coerced.deferralInterestDailyRate as number | undefined,
   };
 
   try {

@@ -123,6 +123,18 @@ export type ExitTaxInput = {
    * true 시 납부세액 환급(납부 완료) 또는 납부유예 취소(유예 중) 예정액 정보성 산출.
    */
   reenteredWithin5Years: boolean;
+
+  // ── 납부유예 이자상당액 §118의16④·시행령 §178의12③ ──
+  /**
+   * 납부유예 일수 (유예 시작 ~ 실제 납부일). 미입력 시 이자상당액 미산출(안내만).
+   * §178의12③ 계산식: 이자상당액 = 유예세액 × 일수 × 1일당 이자율.
+   */
+  deferralInterestDays?: number;
+  /**
+   * 1일당 이자율 (소수 — 예: 0.000022 = 1일 10만분의 22). 국세기본법 시행령 §43의3②(연도별 변동) — 사용자 입력.
+   * deferralInterestDays와 함께 입력 시 이자상당액 산출.
+   */
+  deferralInterestDailyRate?: number;
 };
 
 // ============================================================
@@ -188,8 +200,13 @@ export type ExitTaxResult = {
   deferralYears: number;
   /** 유예 세액 (납부유예 신청 시 = incomeTax) */
   deferredTaxAmount: number;
-  /** v1 이자상당액 안내 메시지 (미계산) */
+  /** 이자상당액 안내 메시지 (일수·이자율 미입력 시) */
   deferralInterestNote: string;
+  /**
+   * [B-1②a] 납부유예 이자상당액 (§118의16④·시행령 §178의12③) — 일수·1일당 이자율 입력 시 산출.
+   * = floor(유예세액 × 일수 × 1일당 이자율). 미입력 시 undefined(안내만).
+   */
+  deferralInterest?: number;
 
   // ── 경정청구 계산 (납부유예 후 실양도 시) ──
   /** §118의12 조정공제액 (실양도가 < 출국일 시가 시) */

@@ -312,8 +312,9 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   // ──────────────────────────────────────────────────────────
   let deferralYears = 0;
   let deferredTaxAmount = 0;
-  const deferralInterestNote =
-    "납부유예 이자상당액은 실제 납부 시 관할 세무서에서 별도 계산합니다 (§118의16④)";
+  let deferralInterest: number | undefined;
+  let deferralInterestNote =
+    "납부유예 이자상당액은 실제 납부 시 관할 세무서에서 별도 계산합니다 (§118의16④·시행령 §178의12③)";
 
   if (input.deferralRequested) {
     // 10년 연장 사유 분기 (§118의16 + 대통령령)
@@ -326,6 +327,15 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     warnings.push(`납부유예 ${deferralYears}년 신청 — 납세담보 제공 또는 납세관리인 신고 필수 (§118의16①)`);
     if (deferralYears === 10) {
       warnings.push("10년 유예 사유 해당 여부는 관할 세무서 확인 필요 (§118의16 + 대통령령)");
+    }
+
+    // 이자상당액 §118의16④·시행령 §178의12③ — 일수·1일당 이자율 입력 시 산출
+    // = floor(유예세액 × 일수 × 1일당 이자율). 1일당 이자율은 국기령 §43의3②(연도별 변동·사용자 입력).
+    const days = input.deferralInterestDays;
+    const rate = input.deferralInterestDailyRate;
+    if (days != null && days > 0 && rate != null && rate > 0) {
+      deferralInterest = Math.floor(deferredTaxAmount * days * rate);
+      deferralInterestNote = `이자상당액 = 유예세액 ${deferredTaxAmount.toLocaleString()} × ${days}일 × ${rate} (국기령 §43의3② 1일당 이자율)`;
     }
   }
 
@@ -483,6 +493,7 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     deferralYears,
     deferredTaxAmount,
     deferralInterestNote,
+    deferralInterest,
 
     adjustmentDeduction,
     foreignTaxCreditApplied,

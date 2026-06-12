@@ -212,6 +212,13 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
               value={result.deferredTaxAmount}
               sub="유예기간 동안 이자상당액 추가 부담"
             />
+            {result.deferralInterest !== undefined && (
+              <Row
+                label="이자상당액 (§118의16④·§178의12③)"
+                value={result.deferralInterest}
+                sub="유예세액 × 일수 × 1일당 이자율"
+              />
+            )}
             {result.deferralInterestNote && (
               <p className="text-xs text-slate-400 px-1 leading-relaxed">
                 {result.deferralInterestNote}
