@@ -71,7 +71,7 @@
 | 영역 | 파일 | 상태 |
 |---|---|---|
 | 엔진 본체 | `lib/tax-engine/comprehensive-tax.ts` (518줄) Step 0~9 | 사례1/4/9 anchor 통과 |
-| 연도 파라미터 | `lib/tax-engine/comprehensive-historical.ts` (202줄) | 2021(FMR 95%)·2022(60%, 6억/11억, 0.6%) 보유 |
+| 연도 파라미터 | `lib/tax-engine/data/comprehensive-historical.ts` (202줄) | 2021(FMR 95%)·2022(60%, 6억/11억, 0.6%) 보유 (`:121~124`) |
 | 재산세 안분 | `comprehensive-tax-helpers.ts:157~209` §4의3 표준세율 산식 | 구현됨 — 단 재산세 FMR **60% 고정** (`comprehensive-tax.ts:320·331`) |
 | 세부담상한 | `types/comprehensive.types.ts:210·266·303` `previousYearTotalTax?` | **직접입력만** — 상당액 자동계산 없음 |
 | 결과뷰 | `components/calc/results/ComprehensiveTaxResultView.tsx` (668줄, PrintSelectionPanel :590) | 서식 채널 없음 |
@@ -85,11 +85,11 @@
 
 | ID | 갭 | 현행 | 수정 방향 | 사례12 영향 |
 |---|---|---|---|---|
-| G-1·G-2 | 재산세 안분의 재산세 FMR이 60% 고정 (`comprehensive-tax.ts:320·331`) | ⓑ 576,000 / ⓒ 2,970,000 산출 (오답) | `getPropertyFairMarketRatio(year, isOneHouseOwner)` 헬퍼 신설 — 2021~2023 1주택 45%(지방세법 시행령 §109의2, **연도 경계 KoreanLaw 검증 필요**), 그 외 60% | 미수정 시 납부세액 259,200 (정답 302,400) — **Pre-Do anchor C12-A2로 실증 후 확정** |
+| G-1·G-2 | 재산세 안분의 재산세 FMR이 60% 고정 (`comprehensive-tax.ts:320·331`) | ⓑ 576,000 / ⓒ 2,970,000 산출 (오답) | `getPropertyFairMarketRatio(year, isOneHouseOwner)` 헬퍼 신설 — **2022 1주택 = 45% (사례12 해당연도 산식 실측 확정), 2021 = 60% (사례12 직전연도 산식 p.194 실측 확정 — 특례 없음)**, 2023+ 1주택 = 공시가격 구간별 43~45% (지방세법 시행령 §109의2 — **KoreanLaw 검증 필요**, 구간 인자로 `assessedValue` 시그니처 포함 여부 Design에서 확정), 그 외 60% | 미수정 시 납부세액 259,200 (정답 302,400) — **Pre-Do anchor C12-A2로 실증 후 확정** |
 | G-3 | ⓐ(해당연도 재산세액)를 `calculatePropertyTax` 결과로 사용 — property-tax는 2021~2023 1주택 45% 미인지 | ⓐ 2,970,000 (오답) | ⓐ는 comprehensive 엔진이 연도별 FMR로 직접 계산. property-tax 호출은 물건별 echo 용도로 유지 (property-tax.ts 무변경 → 재산세 anchor 회귀 0) | ⓐ 2,070,000 |
-| G-4 | 직전연도 상당액 자동계산 모듈 부재 | `previousYearTotalTax` 직접입력만 | `calcPreviousYearEquivalentTax()` 순수 함수 신설 + `previousYearInput?: { assessedValue, isOneHouseOwner, birthDate?, acquisitionDate? }` 옵트인. 직전연도 파라미터는 `getComprehensiveParams(year−1)` 재사용. **듀얼 모드** — 직접입력 경로 완전 보존 | 별지 5호 부표 ①~⑫ + ⑭⑮⑯ 충족 |
-| G-5 | ⓐ의 Min(상한 전, 직전×130%) 산식 미구현 | 없음 | 직전연도 입력 있을 때만 Min 적용, 미입력 시 현행 동작 유지. **130% 산식의 법령 근거(§9③ vs 시행령 vs 집행기준) KoreanLaw 확인 필요** | 사례12에선 Min이 좌변 선택 → 수치 영향 0, 서식 산식 재현에 필요 |
-| G-6 | 서식 칸 echo 부족 | — | `taxAfterPropertyCredit`(신고서 ⑥), `taxBeforeCap`(별지5호 ⑬), `previousYearEquivalent{propertyTaxEquiv, comprehensiveTaxEquiv, total}`, `currentYearTotalEquivalent`(⑲), `oneHouseDeduction.{seniorAmount, longTermAmount}` 분리 echo. **모두 Record/number — Map 금지** (`feedback_engine_result_map_json_loss`) | 신고서 ⑥⑦⑧, 별지5호 ⑬⑭~⑲ |
+| G-4 | 직전연도 상당액 자동계산 모듈 부재 | `previousYearTotalTax` 직접입력만 | `calcPreviousYearEquivalentTax()` 순수 함수 신설 + `previousYearAuto?: { assessedValue, isOneHouseOwner, birthDate?, acquisitionDate? }` 옵트인. 직전연도 파라미터는 `getComprehensiveParams(year−1)` 재사용. **듀얼 모드** — 직접입력 경로 완전 보존. **v1 범위: 직전연도 단일 주택군(일반/1주택) 가정 — 직전연도 다주택 중과 세율 분기는 미지원, 직접입력 모드로 유도** (안내 문구) | 별지 5호 부표 ①~⑫ + ⑭⑮⑯ 충족 |
+| G-5 | ⓐ의 Min(상한 전, 직전×130%) 산식 미구현 | 없음 | 직전연도 입력 있을 때만 Min 적용, 미입력 시 현행 동작 유지. **근거 재해석(설계 검토 E-2): 2022년 당시 지방세법 §122 주택 세부담상한(105/110/130% 구간 — 공시 6억 초과 130%). 현행 property-tax는 §122 단서로 주택 배제(현행법) → 과세연도 ≤2022 한정 comprehensive 직접 적용, 2023+ Min 생략. KoreanLaw §122 신구대조로 확정** | 사례12에선 Min이 좌변 선택 → 수치 영향 0, 서식 산식 재현에 필요 |
+| G-6 | 서식 칸 echo 부족 | — | `taxAfterPropertyCredit`(신고서 ⑥), `taxBeforeCap`(별지5호 ⑬), `previousYearEquivalent{propertyTaxEquiv, comprehensiveTaxEquiv, total, detail}`, `currentYearTotalEquivalent`(⑲), `oneHouseDeduction.{seniorAmount, longTermAmount}` 분리, `oneHouseExtraDeduction`(b3 ⑤·b5 ③ — UI params 파생 금지). **모두 Record/number — Map 금지** (`feedback_engine_result_map_json_loss`) | 신고서 ⑥⑦⑧, 별지5호 ⑬⑭~⑲, 3호부표 ⑤ |
 
 **보류 판단**: 메모리 YA-5 후속("표준세율산식≠현행과표비율 607,894 vs 504,000")은 사례1(일반, 60%) 영역의 별도 논점 — 본 작업의 G-1과 분기 조건이 달라 직접 충돌 없음. Design 단계에서 관계를 1회 재확인하고 별도 PR 유지.
 
@@ -120,7 +120,7 @@
 | M-02 | 직접입력 동치 | 2022 | ✓ | 직접 3,243,000 | 45% | M-01과 결정세액 동일 |
 | M-03 | 직전연도 미입력 | 2022 | ✓ | — | 45% | 상한 생략 + Min 생략, 302,400 |
 | M-04 | 상한 실제 발동 | 2022 | ✓ | 직접 극소값 | 45% | cappedTax < 302,400 |
-| M-05 | 2021년 1주택 | 2021 | ✓ | — | 45%(검증 필요) | 종부세 FMR 95% |
+| M-05 | 2021년 1주택 | 2021 | ✓ | — | **60%** (사례12 p.194 실측 — 특례 없음) | 종부세 FMR 95% |
 | M-06 | 2024년+ 1주택 | 2024 | ✓ | — | 60% | 공제 12억, 현행 세율 |
 | M-07 | 2022 일반(비1주택) | 2022 | ✗ | — | 60% | 사례1 분기 = 회귀 0 |
 | M-08 | 다주택 중과 | 2022 | ✗ | — | 60% | 중과세율표 |
@@ -128,6 +128,7 @@
 | M-10 | 법인 | 2022 | n/a | — | 60% | 1주택 분기 미진입 |
 | M-11 | 과세표준 0 | 2022 | ✓ | — | 45% | 납세의무 없음 |
 | M-12 | Min 발동 (재산세 급증) | 2022 | ✓ | 자동 | 45% | ⓐ = 직전×130% 측 선택 |
+| M-13 | 2023+ 1주택 구간별 FMR | 2023 | ✓ | — | 43/44/45% (§10 P0 확정 후) | KoreanLaw 검증 후 anchor 확정 — 미확정 시 Do 보류 항목 |
 
 ### UI (10행) — 인적사항 미입력 빈칸 / 주민번호 마스킹 / 직접입력 모드 시 별지 5호 부표 비활성 / 초과세액 0 표시 / 토지 없음 빈칸+공제금액 고정 기재 / 면적 미입력 / 1주택 미적용 "—" / 법인 라벨 / 중과세율 표시 / 농특세 표시 조건 (상세: UI design 문서)
 
@@ -135,14 +136,18 @@
 
 ## 6. Pre-Do anchor (Do 진입 전 우선 실행 — 실패 확보 → 디자인 환류)
 
+> 신규 테스트 파일: `__tests__/tax-engine/comprehensive-case12.test.ts` (기존 flat 구조 — `comprehensive/` 하위 디렉터리 없음)
+
 | ID | 대상 | 기대값 | 현행 예상 |
 |---|---|---|---|
 | C12-A1 | 안분 단위: ⓑ/ⓒ/ⓓ (FMR 45%) | 432,000 / 2,070,000 / 432,000 | **실패 예상** (576,000/2,970,000) — G-1 실증 |
 | C12-A2 | 통합: calculatedTax·creditAmount·세액공제·결정세액·농특세 | 1,440,000 / 432,000 / 705,600 / 302,400 / 60,480 | **실패 예상** — 수정 전 실측으로 §3 영향 주장 확정 |
 | C12-A3 | `calcPreviousYearEquivalentTax` 단위 | 2,730,000 / 513,000 / 3,243,000 | 신규 (모듈 부재) |
 | C12-A4 | 상한 통합: capAmount·isApplied | 4,864,500 / false | 신규 |
-| C12-A5 | 2021년 1주택 안분 FMR 분기 | 45% 적용 검증 | §109의2 연도 경계 확인 후 확정 |
-| C12-A6 | 사례1 회귀 불변 | creditAmount 504,000 / 결정 756,000 | 통과 유지 (비1주택 분기) |
+| C12-A5 | 2021년 1주택 안분 FMR 분기 | **60% 적용** (p.194 직전연도 산식 ⑧=684,000 = 2.85억×60%×0.4%) | 신규 — G-1 분기표의 2021 경계 검증 |
+| C12-A6 | 사례1 회귀 anchor **신규 작성** — 기존 YA-1은 `calculatedTax 1,260,000`만 검증 (`comprehensive-year-aware.test.ts:34`), 공제액 anchor 부재 | creditAmount 504,000 (손계산 2.1억×60%×0.4%) / 결정 756,000 | G-1 수정 전후 불변이어야 함 (비1주택 분기) |
+
+> 케이스 매트릭스 보조 anchor **C12-B1~B6**(직접입력 동치·미입력·상한 발동·2024+·법인·Min 발동)는 엔진 설계 §1 케이스 인벤토리에 정의 — Phase H(커밋 3)에서 작성.
 
 ---
 
@@ -163,7 +168,7 @@
 
 - **인적사항(U-4)**: ⑤⑦만 (로컬 state — ①~④·⑧~⑭ 무영향)
 - **과세면적(U-6)**: ①②⑤⑦ (API 미전송 — ⑧ 차단 금지)
-- **직전연도 자동계산(U-5+G-4)**: **①~⑭ 전부** — 특히 ⑫(Zod `previousYearInput` 객체) ⑬(body spread) ⑭(route `birthDate`·`acquisitionDate` Date 변환 — `date-coerce` 필수). ⑧: 자동 모드 시 직전연도 공시가격 필수, 직접 모드 시 기존 검증 유지 — 모순 금지
+- **직전연도 자동계산(U-5+G-4)**: **①~⑭ 전부** — 특히 ⑫(Zod `previousYearAuto` 객체) ⑬(body spread) ⑭(route `birthDate`·`acquisitionDate` Date 변환 — `date-coerce` 필수). ⑧: 자동 모드 시 직전연도 공시가격 필수, 직접 모드 시 기존 검증 유지 — 모순 금지
 - **echo 필드(G-6)**: ⑦(결과 카드 = 서식 칸) — UI 자체 재계산 금지, 엔진 echo 단일 진실 (`feedback_ui_engine_dual_truth_avoidance`)
 
 ---
@@ -183,9 +188,10 @@
 
 | 우선 | 대상 | 확인 내용 |
 |---|---|---|
-| P0 | 지방세법 시행령 §109의2 | 1세대1주택 재산세 FMR 45% **적용 연도 경계** (2021 시작? 2023 종료?) — G-1 분기 확정 |
+| P0 | 지방세법 시행령 §109의2 | 1세대1주택 재산세 FMR 특례 — **2022 단년 한시(45%)인지, 2023 이후 공시가격 구간별(43/44/45%)로 지속되는지 + 구간 경계** (2021=60%·2022 1주택=45%는 사례12 실측으로 확정) — G-1 분기·시그니처 확정 |
 | P0 | 종부세법 시행규칙 별지 목록 (`get_annexes`) | 신고서 본체 별지 번호 + 3호 부표·5호·5호 부표의 2022년 당시판 vs 현행판 — **서식은 2022년판(사례 재현) 기준, 현행판 차이는 주석 환류** |
-| P1 | 종부세법 §9③·시행령 §4의3 | 안분 산식 축자 + ⓐ Min(직전×130%)의 법령 근거 위치 |
+| P1 | 종부세법 §9③·시행령 §4의3 | 안분 산식 축자 + **조문 드리프트 확정**: 타입 주석 §4의2(`comprehensive.types.ts:312`) vs 엔진 주석 §4의3(`comprehensive-tax.ts:313`) — 둘 중 정답으로 통일 (`feedback_engine_comment_vs_impl_drift`) |
+| P1 | 지방세법 §122 **2022년 당시 조문** (time_travel 신구대조) | ⓐ Min의 근거 = 구 §122 주택 세부담상한 구간(105/110/130%) 가설 확정 + 현행 단서(주택 배제)와의 연도 경계 |
 | P1 | 종부세법 §10·시행령 §5의3 | 세부담상한 직전연도 상당액 산식 (별지 5호 부표 재현 산식과 대조) |
 | P2 | 종부세법 §9 세액공제·농특세법 §7① | 공제율 구간 기산·농특세 과세표준 기준 |
 
@@ -196,7 +202,7 @@
 | 범주 | 항목 | 처리 |
 |---|---|---|
 | PDF 오기 의심 | 별지 5호 ⑲ 인쇄값 판독 불일치 (2,145,600으로 보이나 산식 ⑧+⑬=2,372,400, p.187 본문도 2,372,400) | **산식 기준 2,372,400 채택**. Design 단계 고해상 재판독 1회 — 오기 확정 시 주석 명기 |
-| 법령 인용 차이 | ⓐ Min 130% 산식 근거 미확인 / §109의2 연도 경계 | §10 P0·P1 — 확인 전 단정 금지 |
+| 법령 인용 차이 | ⓐ Min = 구 지방세법 §122 주택 세부담상한 **가설** (설계 E-2 — 신구대조 확정 전 단정 금지) / §109의2 2023+ 구간별 지속 여부 / 안분 §4의2 vs §4의3 드리프트 | §10 P0·P1 |
 | 판독 차이 | 별지 5호 (2)표 칸 번호(⑪/⑫), 농특세 ㉑ 참조식 | Design에서 **셀 번호 매핑표 동결** 후 변수명 1:1 |
 | 설계 갈림길 | ⓐ 계산 주체 (property-tax 결과 vs comprehensive 직접) | comprehensive 직접 계산 채택 — property-tax 무변경으로 회귀 차단 |
 | 회귀 미검증 | 사례4(1주택 27억)의 안분 공제 변화 — calculatedTax anchor는 통과하나 공제액이 G-1로 변동 | 사례집 원본 pdf9~10에서 사례4 공제액 실측 후 anchor 추가 (**확인 필요**) |
