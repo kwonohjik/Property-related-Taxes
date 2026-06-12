@@ -259,6 +259,8 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     usedEstimatedAcquisition = true;
 
     if (input.acquiredBeforeListing) {
+      // [C-3] 거래정지(양도)+취득후상장은 법령상 양립 불가(§165⑤ 양도일 §3항 전제 ↔ §52의2③ 거래정지 제외).
+      //   validate G-5 + Zod refine 이중 차단 → 본 분기는 거래정지 미동반 전제(post-listing 先行 안전).
       // 취득 후 상장 — §165⑤ 본문 (1주당 취득기준시가) + 시령 §176의2②1호 환산 (D-2 정정)
       // §165⑤: 1주당 취득기준시가 = 상장일 이후 1개월 종가평균 × (취득연도/상장연도 가중평균)
       // §176의2②1호: 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가)
@@ -293,14 +295,36 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
       acquisitionPrice = unlistedResult.totalAcquisitionPrice;
       // 개산공제 기준 = 취득기준시가 총액
       estimatedBase = unlistedResult.acquisitionStdPriceTotal;
+      // [C-2] 비상장 분기와 동일 passthrough — full/사례49/순자산단독/§165⑨ 결과 카드 정합
       valuationDetail = {
-        method: "weighted_avg",
+        method:
+          unlistedResult.method === "acq_face_value_only"
+            ? "acq_face_value_only"
+            : unlistedResult.method === "net_asset_only"
+              ? "net_asset_only"
+              : "weighted_avg",
         netAssetFloorApplied: unlistedResult.netAssetFloorApplied,
         netAssetFloorValue: unlistedResult.netAssetFloorValue,
         finalPerShareValue: unlistedResult.perShareValue,
+        weightedAvgPerShare: unlistedResult.weightedAvgRaw !== undefined
+          ? Math.floor(unlistedResult.weightedAvgRaw)
+          : undefined,
+        acqFaceValuePerShare: input.acqFaceValuePerShare,
+        niPerShare: unlistedResult.netIncomeValue,
+        naPerShare: unlistedResult.netAssetValue,
+        isHeavyRE: input.isHeavyRealEstateForValuation,
+        netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
+        acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
+        section1659Detail: unlistedResult.section1659Detail,
       };
       if (unlistedResult.netAssetFloorApplied) {
         appliedRules.push("80%하한");
+      }
+      if (unlistedResult.netAssetOnlyReason) {
+        appliedRules.push("80%하한미적용");
+      }
+      if (unlistedResult.section1659Detail) {
+        appliedRules.push("월할가산");
       }
       warnings.push(...unlistedResult.warnings);
       for (const rule of unlistedResult.appliedRules) {

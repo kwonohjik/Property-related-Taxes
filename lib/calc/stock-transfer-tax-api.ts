@@ -497,9 +497,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   body.tradingHaltAtAcquisition = form.tradingHaltAtAcquisition; // [C-1] default: false
 
   // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가 혼합
-  // 활성 조건: marketType==="unlisted" + acquisitionMode==="estimated" + acqFaceValueOnly===true
+  // 활성 조건: (marketType==="unlisted" || 거래정지) + estimated + acqFaceValueOnly===true
+  // [C-2] 거래정지(양도) 상장주식도 §165③→§165④ 비상장 보충평가 → 사례49 허용(silent strip 해소)
   if (
-    form.marketType === "unlisted" &&
+    (form.marketType === "unlisted" || form.tradingHaltAtTransfer) &&
     form.acquisitionMode === "estimated" &&
     form.acqFaceValueOnly === true &&
     form.acqFaceValuePerShare
@@ -515,9 +516,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   }
 
   // [unlisted-direct-calc] 비상장 §165④ full 모드 — adapter로 4 필드 자동 합성
-  // 활성 조건: marketType === "unlisted" (즉 !isListed) + estimated 모드 + unlistedValuationMode === "full"
+  // 활성 조건: (marketType === "unlisted" || 거래정지) + estimated 모드 + unlistedValuationMode === "full"
+  // [C-2] 거래정지(양도) 상장주식도 비상장 보충평가 → full 결산서 허용(silent strip 해소)
   // [E-6] isNetAssetOnly === true 시 NI 호출 skip + body NI 미설정 (엔진이 isNetAssetOnly 시 NI 값 무시)
-  if (form.marketType === "unlisted" && form.unlistedValuationMode === "full") {
+  if ((form.marketType === "unlisted" || form.tradingHaltAtTransfer) && form.unlistedValuationMode === "full") {
     const niSkip = shouldSkipNetIncome(form);
     const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
     if (!niSkip) body.transferYearNetIncomePerShare = reduced.transferNi;

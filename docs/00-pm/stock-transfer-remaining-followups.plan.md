@@ -40,8 +40,8 @@
 | # | 항목 | 현행 (실측) | 스코프 요약 | 규모 |
 |---|---|---|---|---|
 | C-1 | **취득일 거래정지** ✅**완료(PR-δ)** | `tradingHaltAtAcquisition` + `calcAcquisitionStdPerShareSupplementary` — 혼합 환산(분자=§165④ 보충평가·분모=종가평균). §165⑤ 비적용 판정(예규 4회 미발견). exempt mirror·14지점·anchor 11+E2E 2 | 완료 |
-| C-2 | **거래정지 + full(V2)·사례 49 확장** | `EstimatedUnlistedBlock simpleOnly` 고정 — api full/사례49 게이트가 `marketType === "unlisted"` 한정이라 silent 미반영 차단 목적 (engine.design §4 D1-1·2) | api 게이트를 상장+거래정지 조합으로 확장 + simpleOnly 해제 | 중 |
-| C-3 | **거래정지 + §165⑤(취득 후 상장) 교차** | validate G-5가 모드 무관 차단 (PL-VALIDATE-7 반전 anchor) | 엔진 분기 우선순위(`stock-transfer-tax.ts:247` post-listing 선행) 재설계 — 법령상 조합 가능성 KoreanLaw 선판정 | 중~대 |
+| C-2 | **거래정지 + full(V2)·사례 49 확장** ✅**완료(PR-ι)** | api 게이트 2곳 `|| tradingHaltAtTransfer` + Step2 simpleOnly 제거 + 공유 헬퍼 `validateUnlistedValuationFields`(simple/full/사례49+§165⑨). **Do 발견: 거래정지 분기 method passthrough**(weighted_avg 하드코딩→사례49/§165⑨ echo 정합·numeric 0). anchor·E2E | 완료 |
+| C-3 | **거래정지 + §165⑤(취득 후 상장) 교차** ✅**완료(PR-ι)** | **법령상 양립 불가 확정**(§165⑤ 양도일 §3항 전제 ↔ 상증령 §52의2③ 거래정지 제외). 엔진 재설계 **불요**(로드맵 전제 기각). **Zod refine 신규**(서버 방어 갭 — validate만 있던 것 C-1 패턴 정합) + G-5 메시지 법령 근거 보강 | 완료 |
 
 ### Track D — 기술 부채
 
@@ -58,7 +58,7 @@ PR-β  A-1 단건 개별법 (엔진 0줄)    │ ✅완료(본 시리즈) — UI
 PR-γ  A-2 분할+자본조정 ←──────────┘ ✅완료(본 시리즈) — applyCapitalAdjustmentsToLots
 PR-δ  C-1 취득일 거래정지           ✅완료 — 혼합 환산 + acquisitionSideOnly UI
 PR-ε  B-2 §97② swap 판정      ✅완료 — 적용 판정·STEP4 swap 비교·api strip 해제
-이후  B-3 ✅완료 → B-4 ✅완료(PR-η) → B-5 ✅완료(PR-θ) → C-2 → C-3 → B-1①② → D-2 (수요·빈도 낮은 순)
+이후  B-3 ✅완료 → B-4 ✅완료(PR-η) → B-5 ✅완료(PR-θ) → C-2·C-3 ✅완료(PR-ι) → B-1①② → D-2 (수요·빈도 낮은 순)
 ```
 
 - **A-1을 최우선 기능 PR로 권고**: 사용자에게 disabled 라디오로 상시 노출 중 + 엔진 기지원이라 UI·배선만으로 완결(저위험).
