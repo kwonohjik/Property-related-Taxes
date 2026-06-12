@@ -384,14 +384,8 @@ export function addStockRefines(
       // (Refine 2 폐기) total + lots 조합 차단 제거 — 2026-05-18 사용자 요청.
       // API 변환에서 perShareTransferPrice를 Math.round(transferTotalPrice / shareCount)로 역산.
       // UI 안내 카드(Step2)에서 잔돈 오차 가능 사전 고지.
-      // Refine 3 — specific 차단 (UI disabled의 방어선)
-      if (data.costAllocationMethod === "specific") {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["costAllocationMethod"],
-          message: "취득 다건 입력 모드에서는 개별법(specific)을 지원하지 않습니다 (fifo 또는 moving_avg)",
-        });
-      }
+      // (Refine 3 폐기 — A-1) specific 차단 제거 → 합성 매도 lot 1건에 대한 매수 lot별 매칭 지원.
+      //   무결성(매칭 합 = 합성 매도 수량, 매수 lot별 ≤ 잔여)은 아래 isSplit 매칭 무결성 체크가 담당.
     }
 
     // 분할 매수·분할 양도 호환성 게이트 (Plan v2.2)

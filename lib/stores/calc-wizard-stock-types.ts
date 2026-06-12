@@ -99,6 +99,13 @@ export interface SpecificMatchingForm {
 }
 
 /**
+ * 취득 다건 + 양도 단건 모드(lots-only)에서 API가 합성하는 단일 매도 lot의 sentinel ID.
+ * 개별법(specific)에서 specificMatchings.transferLotId가 이 값을 가리킨다.
+ * api.ts(합성)·AcquisitionLotsMatrix(매칭 입력)·validate(합계 검증) 단일 소스 (A-1).
+ */
+export const SYNTH_SINGLE_TRANSFER_ID = "__synth_single_transfer__";
+
+/**
  * 매수 lot 빈 row 팩토리 — SplitLotsBlock, AcquisitionLotsMatrix, Step2 자동 1행 추가에서 공유.
  * R-12 (계획서) 해결.
  */

@@ -45,11 +45,7 @@ import { calcSplitModeTax } from "./lot-allocation-tax";
 import { buildExemptResult } from "./stock-transfer-exempt-result";
 import { applyExemptZeroing } from "./apply-exempt-zeroing";
 import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
-import {
-  calcSecuritiesTransactionTax,
-  sumSecuritiesTransactionTax,
-  type SecuritiesTransactionTaxTotal,
-} from "./securities-transaction-tax";
+import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
 
 // ============================================================
 // split 모드 판정 헬퍼
@@ -96,7 +92,12 @@ export function calculateStockTransferTax(
   return calculateStockTransferTaxInternal(input as StockTransferInput);
 }
 
-function calculateStockTransferTaxInternal(input: StockTransferInput): StockTransferResult {
+/**
+ * 단건 내부 계산 — foreign/exit 라우팅 없이 일반 주식 파이프라인만 실행.
+ * 다자산 합산 엔진(`stock-transfer-aggregate.ts`)이 종목별로 재사용.
+ * @internal 외부(API·UI)는 오버로드된 `calculateStockTransferTax`를 사용.
+ */
+export function calculateStockTransferTaxInternal(input: StockTransferInput): StockTransferResult {
   const warnings: string[] = [];
   const appliedRules: StockTransferResult["appliedRules"] = [];
 
@@ -574,225 +575,10 @@ function calculateStockTransferTaxInternal(input: StockTransferInput): StockTran
 // [GAP-B] buildExemptResult + calcTransferPriceSimple → stock-transfer-exempt-result.ts로 분리
 //         800줄 정책 준수. import 후 그대로 호출.
 
-// ============================================================
-// 다자산 합산 결과 타입
-// ============================================================
+// [D-1] 다자산 합산 엔진 → stock-transfer-aggregate.ts로 분리 (800줄 정책).
+//       외부 import 경로 보존을 위해 re-export (import 무변경).
+export {
+  calculateStockTransferTaxAggregate,
+  type StockTransferAggregateResult,
+} from "./stock-transfer-aggregate";
 
-export interface StockTransferAggregateResult {
-  /** 종목별 단건 결과 배열 */
-  items: StockTransferResult[];
-  /** 합산 양도소득금액 */
-  totalTransferIncome: number;
-  /**
-   * 그룹별 기본공제 합계
-   * - stock: §103②2호 그룹 (주식 §94①3 가·나목)
-   * - real_estate_and_other_asset: §103②1호 그룹 (기타자산 §94①4)
-   */
-  basicDeductionByGroup: {
-    stock: number;
-    real_estate_and_other_asset: number;
-  };
-  /** 합산 과세표준 (그룹별 기본공제 1회 적용 후) */
-  totalTaxBase: number;
-  /** 합산 산출세액 */
-  totalCalculatedTax: number;
-  /** 합산 가산세 */
-  totalUnderReportPenalty: number;
-  /** 합산 전자신고 공제 (전체 1회) */
-  electronicFilingCredit: number;
-  /** 합산 최종세액 */
-  totalFinalTax: number;
-  /** 합산 지방소득세 */
-  totalLocalIncomeTax: number;
-  /**
-   * 종목별 증권거래세 정보성 echo 합산 (Phase 2 — B-E1).
-   * 이미 floor된 종목별 값의 단순합 — 안분·잔액흡수 비해당.
-   * 비과세 종목 echo도 포함 (증권거래세는 양도세 비과세와 독립).
-   * ⚠️ 현재 aggregate UI 소비자 없음(다자산 UI 미연결) — 향후 연결 시 14지점 재점검 대상.
-   */
-  totalSecuritiesTransactionTax: SecuritiesTransactionTaxTotal;
-}
-
-/**
- * 다자산 합산 계산 — §103② 기본공제 그룹별 1회 한도 적용
- *
- * "aggregate" 모드:
- *   1. 각 종목 단건 계산 (realEstateGroupBasicDeductionUsed 연동)
- *   2. 그룹별 기본공제를 250만원 한도 내에서 배분
- *   3. 합산 세액은 단건 세액 합계 (그룹별 기본공제 중복 없음)
- *
- * "each_item" 모드:
- *   - 각 종목 그대로 합산 (기본공제 중복 가능 — 단건 계산 보조용)
- */
-export function calculateStockTransferTaxAggregate(
-  inputs: StockTransferInput[],
-  deductionMode: "each_item" | "aggregate" = "aggregate",
-): StockTransferAggregateResult {
-  const BASIC_DEDUCTION_LIMIT = 2_500_000;
-
-  if (deductionMode === "each_item" || inputs.length === 1) {
-    // 단건 또는 each_item 모드 — 개별 계산 합산
-    const items = inputs.map((input) => calculateStockTransferTaxInternal(input));
-    const totalTransferIncome = items.reduce((s, r) => s + r.transferIncome, 0);
-    const totalCalculatedTax = items.reduce((s, r) => s + r.calculatedTax, 0);
-    const totalUnderReportPenalty = items.reduce((s, r) => s + r.underReportPenalty, 0);
-    const electronicFilingCredit = items.some((r) => r.electronicFilingCredit > 0)
-      ? 20_000
-      : 0;
-    // 결정세액 10원 미만 절사 — 단건 finalizeStockTax·aggregate 분기와 대칭
-    // (구성요소가 모두 10배수라 현재 실수치 불변이나, 향후 변경 대비 정합 유지)
-    const totalFinalTax = Math.max(
-      0,
-      floorTen(totalCalculatedTax + totalUnderReportPenalty - electronicFilingCredit),
-    );
-    const totalLocalIncomeTax = Math.floor((totalCalculatedTax * 0.10) / 10) * 10;
-
-    return {
-      items,
-      totalTransferIncome,
-      basicDeductionByGroup: {
-        stock: items
-          .filter((r) => r.basicDeductionGroup === "stock")
-          .reduce((s, r) => s + r.basicDeduction, 0),
-        real_estate_and_other_asset: items
-          .filter((r) => r.basicDeductionGroup === "real_estate_and_other_asset")
-          .reduce((s, r) => s + r.basicDeduction, 0),
-      },
-      totalTaxBase: items.reduce((s, r) => s + r.taxBase, 0),
-      totalCalculatedTax,
-      totalUnderReportPenalty,
-      electronicFilingCredit,
-      totalFinalTax,
-      totalLocalIncomeTax,
-      totalSecuritiesTransactionTax: sumSecuritiesTransactionTax(items),
-    };
-  }
-
-  // "aggregate" 모드 — §103② 그룹별 기본공제 1회 한도 배분
-  // STEP 1: 각 종목 기본공제 최대 소진으로 단건 계산 (순수 소득금액 파악)
-  const rawItems = inputs.map((input) =>
-    calculateStockTransferTaxInternal({
-      ...input,
-      // 부동산 그룹은 이미 소진됨으로 처리 → 실질적 기본공제 0
-      realEstateGroupBasicDeductionUsed: BASIC_DEDUCTION_LIMIT,
-    }),
-  );
-
-  // STEP 2: 그룹별 소득금액 합산
-  const stockGroupIncome = rawItems
-    .filter((r) => r.basicDeductionGroup === "stock")
-    .reduce((s, r) => s + r.transferIncome, 0);
-
-  const otherAssetGroupIncome = rawItems
-    .filter((r) => r.basicDeductionGroup === "real_estate_and_other_asset")
-    .reduce((s, r) => s + r.transferIncome, 0);
-
-  const stockBasicDeduction = Math.min(Math.max(0, stockGroupIncome), BASIC_DEDUCTION_LIMIT);
-  const otherAssetBasicDeduction = Math.min(
-    Math.max(0, otherAssetGroupIncome),
-    BASIC_DEDUCTION_LIMIT,
-  );
-
-  // STEP 3: 종목별 기본공제 순차 배분 후 재계산
-  //
-  // §103② 기본공제는 그룹별 연간 1회 250만원.
-  // 입력 순서 기준 앞 종목부터 최대 소진.
-  //
-  // 주식 그룹(그룹2):
-  //   - 엔진 내부 calcBasicDeduction은 "stock" 그룹을 항상 min(income, 250만) 적용
-  //   - realEstateGroupBasicDeductionUsed로 제어 불가 (별도 그룹)
-  //   - 해결: 첫 종목은 input 그대로(기본공제 full), 나머지는 transferIncome을
-  //     "이전 소진량만큼 빼서" 과표를 조정한 결과를 rawItems[i] 기반으로 패치
-  //
-  // 기타자산 그룹(그룹1):
-  //   - realEstateGroupBasicDeductionUsed로 직접 제어 가능
-
-  let stockUsed = 0;        // 주식 그룹 기본공제 누적 사용량
-  let otherAssetUsed = 0;   // 기타자산 그룹 누적 사용량
-
-  const processedItems = inputs.map((input, i) => {
-    const r = rawItems[i];
-    if (r.isExempt) return r;
-
-    const income = r.transferIncome;
-
-    if (r.basicDeductionGroup === "stock") {
-      // 이 종목에서 실제 적용할 기본공제
-      const remaining = Math.max(0, BASIC_DEDUCTION_LIMIT - stockUsed);
-      const deductThis = Math.min(Math.max(0, income), remaining);
-      stockUsed += deductThis;
-
-      if (stockUsed - deductThis === 0 || deductThis > 0) {
-        // 기본공제 잔여분 있음 → input 그대로 계산 (엔진이 min(income, 250만) 적용)
-        return calculateStockTransferTaxInternal(input);
-      } else {
-        // 기본공제 소진 → rawItems[i]가 이미 realEstateGroupBasicDeductionUsed=LIMIT으로 계산됨
-        // 하지만 주식 그룹은 그 영향 안 받음 → rawItems[i]에는 basicDeduction=min(income,250만) 포함
-        // → 수동 패치: rawItems[i] 결과에서 basicDeduction을 0으로, taxBase를 income으로 재조정
-        // → 세율·산출세액을 다시 applyStockTaxRate로 계산
-        const taxBaseWithoutDeduction = Math.floor(Math.max(0, income));
-        const rateResult = applyStockTaxRate(
-          taxBaseWithoutDeduction,
-          r.taxCategory,
-          input.isSmallMediumEnterprise,
-          r.isShortTermHolding,
-          r.isExempt, // 비과세 분기 산식 echo
-        );
-        const newCalculatedTax = floorTen(rateResult.calculatedTax);
-        const newFinalize = finalizeStockTax(newCalculatedTax, input);
-        return {
-          ...r,
-          basicDeduction: 0,
-          taxBase: taxBaseWithoutDeduction,
-          appliedRate: rateResult.appliedRate,
-          progressiveDeduction: rateResult.progressiveDeduction,
-          calculatedTax: newCalculatedTax,
-          underReportPenalty: newFinalize.underReportPenalty,
-          latePaymentPenalty: newFinalize.latePaymentPenalty,
-          electronicFilingCredit: newFinalize.electronicFilingCredit,
-          finalTax: newFinalize.finalTax,
-          localIncomeTax: newFinalize.localIncomeTax,
-        };
-      }
-    } else {
-      // 기타자산 그룹: realEstateGroupBasicDeductionUsed로 직접 제어
-      const adjustedInput: StockTransferInput = {
-        ...input,
-        realEstateGroupBasicDeductionUsed: otherAssetUsed,
-      };
-      const recalc = calculateStockTransferTaxInternal(adjustedInput);
-      otherAssetUsed += recalc.basicDeduction;
-      return recalc;
-    }
-  });
-
-  const totalTransferIncome = processedItems.reduce((s, r) => s + r.transferIncome, 0);
-  const totalCalculatedTax = processedItems.reduce((s, r) => s + r.calculatedTax, 0);
-  const totalUnderReportPenalty = processedItems.reduce((s, r) => s + r.underReportPenalty, 0);
-
-  // 전자신고 공제는 합산 1회
-  const anyElectronic = inputs.some((inp) => inp.isElectronicFiling);
-  const electronicFilingCredit = anyElectronic && totalCalculatedTax > 0 ? 20_000 : 0;
-
-  const totalFinalTax = Math.max(
-    0,
-    floorTen(totalCalculatedTax + totalUnderReportPenalty - electronicFilingCredit),
-  );
-  const totalLocalIncomeTax = Math.floor((totalCalculatedTax * 0.10) / 10) * 10;
-
-  return {
-    items: processedItems,
-    totalTransferIncome,
-    basicDeductionByGroup: {
-      stock: stockBasicDeduction,
-      real_estate_and_other_asset: otherAssetBasicDeduction,
-    },
-    totalTaxBase: processedItems.reduce((s, r) => s + r.taxBase, 0),
-    totalCalculatedTax,
-    totalUnderReportPenalty,
-    electronicFilingCredit,
-    totalFinalTax,
-    totalLocalIncomeTax,
-    totalSecuritiesTransactionTax: sumSecuritiesTransactionTax(processedItems),
-  };
-}

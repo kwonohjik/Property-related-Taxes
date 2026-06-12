@@ -43,6 +43,7 @@ export type {
 export {
   createEmptyAcquisitionLot,
   createEmptyExitTaxHolding,
+  SYNTH_SINGLE_TRANSFER_ID,
 } from "./calc-wizard-stock-types";
 
 // 본 store 내부에서 타입 사용을 위해 import 형태로 재바인딩
