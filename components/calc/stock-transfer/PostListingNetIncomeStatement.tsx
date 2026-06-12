@@ -154,7 +154,7 @@ export function YearColumn({
       </FieldCard>
       <FieldCard
         label="23. 환원율"
-        hint="기획재정부장관이 고시하는 이자율 (%) — 시행규칙 §81② → 상증령 §17"
+        hint="상증법 시행규칙 §17 — 연 10% 고정 (소령 §165④1가목 → 소칙 §81② 위임). 고시값 아닌 시행규칙 정액. 다른 값 직접 입력 시 우선."
       >
         <DecimalInput
           value={getField(form, rateKey) || "10"}
