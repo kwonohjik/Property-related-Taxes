@@ -220,6 +220,19 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
           </>
         )}
 
+        {/* ── 재전입 환급 §118의17①1호 ── */}
+        {result.reentryRefund && (
+          <>
+            <Divider />
+            <p className="text-xs font-semibold text-emerald-600 pt-1">재전입 환급 (§118의17①1호)</p>
+            <Row
+              label={result.reentryRefund.isDeferralCancel ? "납부유예 취소 예정액" : "환급 예정액"}
+              value={result.reentryRefund.amount}
+            />
+            <p className="text-xs text-slate-400 px-1 leading-relaxed">{result.reentryRefund.note}</p>
+          </>
+        )}
+
         {/* ── 경정 후 조정 (실양도 완료 시) ── */}
         {(hasAdjDeduction || hasForeignCredit || hasDomesticCredit) && (
           <>

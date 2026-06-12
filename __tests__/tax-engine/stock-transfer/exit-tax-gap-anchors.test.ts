@@ -49,6 +49,7 @@ function makeBaseInput(overrides?: Partial<ExitTaxInput>): ExitTaxInput {
     deferralReason: "none",
     foreignTaxExclusionReason: "none",
     hasFiledHoldingsReport: true,
+    reenteredWithin5Years: false,
     ...overrides,
   };
 }

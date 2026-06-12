@@ -271,6 +271,20 @@ export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
         </div>
       </ToggleCard>
 
+      {/* ── 섹션 6.5: 재전입 환급 (§118의17①1호) ── */}
+      <ToggleCard
+        title="5년 이내 재입국 거주자 (§118의17①1호)"
+        description="출국일부터 5년 이내에 국외전출자 국내주식등을 양도하지 않고 국내에 다시 입국하여 거주자가 된 경우 — 납부세액 환급(납부 완료) 또는 납부유예 취소(유예 중) 예정액을 정보성으로 산출합니다. 실제 신청은 사유 발생일부터 1년 이내."
+        checked={form.etReenteredWithin5Years}
+        onCheckedChange={(v) => onChange({ etReenteredWithin5Years: v })}
+        tone="emerald"
+        trailing={
+          <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+            §118의17
+          </span>
+        }
+      />
+
       {/* ── 섹션 7: 외국납부세액 (§118의13) ── */}
       <ToggleCard
         title="외국납부세액 있음 (§118의13)"
