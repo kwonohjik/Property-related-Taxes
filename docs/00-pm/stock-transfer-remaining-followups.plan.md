@@ -39,7 +39,7 @@
 
 | # | 항목 | 현행 (실측) | 스코프 요약 | 규모 |
 |---|---|---|---|---|
-| C-1 | **취득일 거래정지** | `tradingHaltAtAcquisition` grep 0건 — 양도일(`tradingHaltAtTransfer`)만 구현 | 취득일 이전 1개월 거래정지 시 취득 기준시가도 비상장 보충 평가. 신규 입력 1필드 = **14지점 전수** | 중 |
+| C-1 | **취득일 거래정지** ✅**완료(PR-δ)** | `tradingHaltAtAcquisition` + `calcAcquisitionStdPerShareSupplementary` — 혼합 환산(분자=§165④ 보충평가·분모=종가평균). §165⑤ 비적용 판정(예규 4회 미발견). exempt mirror·14지점·anchor 11+E2E 2 | 완료 |
 | C-2 | **거래정지 + full(V2)·사례 49 확장** | `EstimatedUnlistedBlock simpleOnly` 고정 — api full/사례49 게이트가 `marketType === "unlisted"` 한정이라 silent 미반영 차단 목적 (engine.design §4 D1-1·2) | api 게이트를 상장+거래정지 조합으로 확장 + simpleOnly 해제 | 중 |
 | C-3 | **거래정지 + §165⑤(취득 후 상장) 교차** | validate G-5가 모드 무관 차단 (PL-VALIDATE-7 반전 anchor) | 엔진 분기 우선순위(`stock-transfer-tax.ts:247` post-listing 선행) 재설계 — 법령상 조합 가능성 KoreanLaw 선판정 | 중~대 |
 
@@ -56,7 +56,7 @@
 PR-α  D-1 800줄 선제 분할 ──────────┐ ✅완료(본 시리즈) — 798→584줄, aggregate 추출
 PR-β  A-1 단건 개별법 (엔진 0줄)    │ ✅완료(본 시리즈) — UI/api/validate/Zod 차단 해제
 PR-γ  A-2 분할+자본조정 ←──────────┘ ✅완료(본 시리즈) — applyCapitalAdjustmentsToLots
-PR-δ  C-1 취득일 거래정지           D-1 선행 권장
+PR-δ  C-1 취득일 거래정지           ✅완료 — 혼합 환산 + acquisitionSideOnly UI
 PR-ε  B-2 §97② swap 판정 (KoreanLaw만으로 종결 가능성 있음 — 조기 처리해 주석 부채 제거)
 이후  B-3 → C-2 → B-5 → B-4 → C-3 → B-1①② → D-2 (수요·빈도 낮은 순)
 ```

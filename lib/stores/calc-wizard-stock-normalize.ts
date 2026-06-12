@@ -144,6 +144,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     listingDatePriceAvg1Month: strField("listingDatePriceAvg1Month"),
     acquiredBeforeListing: boolField("acquiredBeforeListing", defaults.acquiredBeforeListing),
     tradingHaltAtTransfer: boolField("tradingHaltAtTransfer", defaults.tradingHaltAtTransfer),
+    tradingHaltAtAcquisition: boolField("tradingHaltAtAcquisition", defaults.tradingHaltAtAcquisition),
     transferYearNetIncomePerShare: strField("transferYearNetIncomePerShare"),
     transferYearNetAssetPerShare: strField("transferYearNetAssetPerShare"),
     listingYearNetIncomePerShare: strField("listingYearNetIncomePerShare"),

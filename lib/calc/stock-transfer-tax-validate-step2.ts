@@ -52,6 +52,25 @@ function validateUnlistedSimpleFields(
 }
 
 /**
+ * [C-1] 취득일 거래정지 — 취득측 보충 평가 필수 필드 검증 (소령 §165③·§165④).
+ * validateUnlistedSimpleFields의 취득측 서브셋.
+ * - netAssetOnlyReason 있으면 NI 면제
+ * - acqFaceValueOnly 잔존값 **무관하게 필수** — UI(acquisitionSideOnly)도 무조건 렌더·엔진도 미참조 (3중 정합)
+ */
+function validateAcquisitionSideUnlistedFields(
+  form: StockTransferFormData,
+  errors: StockValidationError[],
+): void {
+  const niSkip = (form.netAssetOnlyReason ?? "") !== "";
+  if (!niSkip && isEmpty(form.acquisitionYearNetIncomePerShare)) {
+    errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요 (취득일 거래정지 — 소령 §165③·§165④)", severity: "error" });
+  }
+  if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
+    errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요 (취득일 거래정지 — 소령 §165③·§165④)", severity: "error" });
+  }
+}
+
+/**
  * Step 2 국내주식 검증 본체 — 양도가액·취득가액·환산 입력
  * (해외주식 분기는 호출 전 제거됨)
  */
@@ -219,8 +238,13 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
       if (form.tradingHaltAtTransfer && !form.acquiredBeforeListing) {
         validateUnlistedSimpleFields(form, errors);
       }
+      // [C-1] 취득일 거래정지 — 취득측 보충 평가 필수 (양도정지 ON이면 C-6이 양·취 모두 커버 — 중복 방지)
+      if (form.tradingHaltAtAcquisition && !form.tradingHaltAtTransfer && !form.acquiredBeforeListing) {
+        validateAcquisitionSideUnlistedFields(form, errors);
+      }
       if (!form.acquiredBeforeListing && !form.tradingHaltAtTransfer) {
-        if (isEmpty(form.acquisitionDatePriceAvg1Month)) {
+        // [C-1] 취득정지 시 분자(취득일 종가평균)는 법령상 무효·엔진 미사용 → 필수 면제 (G-6 패턴 mirror)
+        if (!form.tradingHaltAtAcquisition && isEmpty(form.acquisitionDatePriceAvg1Month)) {
           errors.push({
             field: "acquisitionDatePriceAvg1Month",
             message: "취득일 직전 1개월 종가 평균을 입력하세요 (시행령 §163⑨ 환산비율 분자)",
@@ -238,6 +262,14 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           errors.push({
             field: "tradingHaltAtTransfer",
             message: "거래정지 + 취득 후 상장 조합은 지원하지 않습니다. 거래정지 토글을 해제하거나 취득 후 상장 토글을 해제하세요.",
+            severity: "error",
+          });
+        }
+        // [C-1 M-4] 취득일 거래정지 + 취득 후 상장 — 취득 당시 비상장이면 취득일 거래정지 개념 불성립 (Zod refine과 동일 문구)
+        if (form.tradingHaltAtAcquisition) {
+          errors.push({
+            field: "tradingHaltAtAcquisition",
+            message: "취득 당시 비상장 주식은 취득일 거래정지 대상이 아닙니다. 취득일 거래정지 토글 또는 취득 후 상장 토글을 해제하세요.",
             severity: "error",
           });
         }
