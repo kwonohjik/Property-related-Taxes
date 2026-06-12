@@ -159,6 +159,50 @@ describe("케이스 18 — 거래정지·관리종목 비상장 보충 평가 �
     const result = calculateStockTransferTax(input);
     expect(result.appliedRules).toContain("거래정지우회");
   });
+
+  // A-TH — 거래정지 §165③ 우회 수치 anchor (활성화 PR Pre-Do — 현행 엔진 실측 고정)
+  // 설계: docs/02-design/features/stock-transfer-trading-halt-165-3.engine.design.md §3
+  // 공통: kosdaq 대주주(중소)·estimated·halt ON·양도가 50,000×1,000 = 50,000,000
+  function haltInput(overrides: Partial<StockTransferInput> = {}): StockTransferInput {
+    return baseInput({
+      marketType: "kosdaq",
+      isMajorShareholder: true,
+      selfShareRatio: 0.03,
+      isSmallMediumEnterprise: true,
+      acquisitionMode: "estimated",
+      acquiredBeforeListing: false,
+      tradingHaltAtTransfer: true,
+      perShareTransferPrice: 50_000,
+      shareCount: 1_000,
+      expenseMode: "estimated",
+      // 양도연도 평가 (양도기준시가)
+      transferYearNetIncomePerShare: 30_000,
+      transferYearNetAssetPerShare: 10_000,
+      // 취득연도 평가 (취득기준시가)
+      acquisitionYearNetIncomePerShare: 15_000,
+      acquisitionYearNetAssetPerShare: 5_000,
+      ...overrides,
+    });
+  }
+
+  it("A-TH-1: 거래정지 우회 환산취득가 — 양도std 22,000·취득std 11,000 → 25,000,000", () => {
+    const result = calculateStockTransferTax(haltInput());
+    expect(result.appliedRules).toContain("거래정지우회");
+    // 양도기준시가 = floor(30,000×3/5 + 10,000×2/5) = 22,000 (80% 하한 8,000 미발동)
+    // 취득기준시가 = floor(15,000×3/5 + 5,000×2/5) = 11,000
+    // 환산취득가 = floor(50,000,000 × 11,000 / 22,000) = 25,000,000
+    expect(result.acquisitionPrice).toBe(25_000_000);
+  });
+
+  it("A-TH-2: 80% 하한 발동 — 양도std 24,000 → 환산 22,916,666 + '80%하한'", () => {
+    // 양도연도 NI 5,000/NA 30,000 → 가중 15,000 < 하한 floor(30,000×0.8)=24,000 → 하한 채택
+    const result = calculateStockTransferTax(
+      haltInput({ transferYearNetIncomePerShare: 5_000, transferYearNetAssetPerShare: 30_000 }),
+    );
+    expect(result.appliedRules).toContain("80%하한");
+    // 환산취득가 = floor(50,000,000 × 11,000 / 24,000) = 22,916,666
+    expect(result.acquisitionPrice).toBe(22_916_666);
+  });
 });
 
 // ============================================================

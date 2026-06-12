@@ -20,15 +20,18 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { EstimatedUnlistedNetIncomeStatement } from "./EstimatedUnlistedNetIncomeStatement";
 import { EstimatedUnlistedNetAssetStatement } from "./EstimatedUnlistedNetAssetStatement";
-import {
-  adaptUnlistedFlatToApiBody,
-  shouldSkipNetIncome,
-} from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
+import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 
 interface EstimatedUnlistedBlockProps {
   form: StockTransferFormData;
   onChange: (patch: Partial<StockTransferFormData>) => void;
+  /**
+   * simple 전용 모드 (거래정지 §165③ 우회 등 — full(V2)·사례 49 토글 숨김).
+   * api.ts full/사례49 게이트가 marketType==="unlisted" 한정이라
+   * 상장+거래정지 조합에서 선택 시 silent 미반영 방지.
+   */
+  simpleOnly?: boolean;
 }
 
 const NET_ASSET_ONLY_REASON_OPTIONS = [
@@ -55,12 +58,12 @@ const NET_ASSET_ONLY_REASON_OPTIONS = [
   },
 ];
 
-export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBlockProps) {
+export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false }: EstimatedUnlistedBlockProps) {
   const netAssetOnlyReason = form.netAssetOnlyReason || "";
   const isNetAssetOnly = netAssetOnlyReason !== "";
   const isHeavyRE = form.isHeavyRealEstateForValuation;
-  // 3중 패턴 default — store factory와 일치 (default: "simple")
-  const mode = form.unlistedValuationMode || "simple";
+  // 3중 패턴 default — store factory와 일치 (default: "simple"). simpleOnly 시 강제 simple.
+  const mode = simpleOnly ? "simple" : (form.unlistedValuationMode || "simple");
 
   // full 모드 — adapter가 계산한 4 값을 미리보기에 주입 (UI·adapter 단일 진실)
   const fullReduced = useMemo(() => {
@@ -194,6 +197,9 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
       </div>
 
       {/* [unlisted-direct-calc] 모드 토글 — simple(직접 입력) vs full(행-수준 계산) */}
+      {/* simpleOnly(거래정지 우회 등)에서는 full(V2)·사례49 숨김 — api 게이트 unlisted 한정 silent 미반영 방지 */}
+      {!simpleOnly && (
+      <>
       <FieldCard
         label="입력 방식"
         hint="간이는 1주당 가액을 직접 입력, 행-수준 계산은 상증령 §54·§55 산식으로 자동 산출"
@@ -242,6 +248,8 @@ export function EstimatedUnlistedBlock({ form, onChange }: EstimatedUnlistedBloc
         <p className="ml-4 text-xs text-amber-600">
           ⚠️ 양/취 모두 액면가 적용은 acquisitionMode = &quot;액면가&quot; 모드(별도)를 사용하세요. 본 토글은 취득시점만 액면가를 적용하는 사례 49 전용입니다.
         </p>
+      )}
+      </>
       )}
 
       {/* 순자산 단독 사유 선택 */}

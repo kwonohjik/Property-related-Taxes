@@ -324,15 +324,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           </ToggleCard>
         )}
 
-        {/* 거래정지 토글 (Round 4 C-06 — 후속 PR 예정) */}
-        <ToggleCard
-          checked={form.tradingHaltAtTransfer}
-          onCheckedChange={(v) => onChange({ tradingHaltAtTransfer: v })}
-          title="양도일 거래정지·관리종목 지정"
-          description="소령 §165③ — 거래정지 시 1개월 종가평균 대신 비상장 보충 평가 사용 (※ 후속 PR 예정)"
-          tone="rose"
-          disabled
-        />
+        {/* 거래정지 §165③ 토글은 Step2 상장 환산 분기 레벨로 이동·활성화 (엔진 분기 순서 일치) */}
       </div>
     </ToggleCard>
   );

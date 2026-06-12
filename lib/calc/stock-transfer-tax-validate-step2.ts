@@ -25,6 +25,33 @@ function parseI(s: string): number {
 }
 
 /**
+ * 비상장 보충적 평가 simple 모드 필수 필드 검증 (소령 §165④).
+ * 비상장 본칙 분기 + 상장 거래정지 우회 분기(§165③) 공유 — 단일 소스.
+ * - netAssetOnlyReason 있으면 NI 면제 / acqFaceValueOnly 있으면 취득연도 면제
+ */
+function validateUnlistedSimpleFields(
+  form: StockTransferFormData,
+  errors: StockValidationError[],
+): void {
+  const niSkip = (form.netAssetOnlyReason ?? "") !== "";
+  const acqFaceValueOnly = form.acqFaceValueOnly === true;
+  if (!niSkip && isEmpty(form.transferYearNetIncomePerShare)) {
+    errors.push({ field: "transferYearNetIncomePerShare", message: "양도연도 1주당 순손익가치를 입력하세요 (소령 §165④)", severity: "error" });
+  }
+  if (isEmpty(form.transferYearNetAssetPerShare)) {
+    errors.push({ field: "transferYearNetAssetPerShare", message: "양도연도 1주당 순자산가치를 입력하세요", severity: "error" });
+  }
+  if (!acqFaceValueOnly) {
+    if (!niSkip && isEmpty(form.acquisitionYearNetIncomePerShare)) {
+      errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요", severity: "error" });
+    }
+    if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
+      errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요", severity: "error" });
+    }
+  }
+}
+
+/**
  * Step 2 국내주식 검증 본체 — 양도가액·취득가액·환산 입력
  * (해외주식 분기는 호출 전 제거됨)
  */
@@ -140,32 +167,40 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
   } else if (acquisitionMode === "estimated") {
     const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
     if (isListed) {
-      const transferAvg = parseI(form.transferDatePriceAvg1Month);
-      const mode = form.transferStdInputMode || "direct";
-      if (mode === "direct") {
-        if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
-          errors.push({
-            field: "transferDatePriceAvg1Month",
-            message: "양도일 직전 1개월 종가 평균을 직접 입력하세요 (§163⑨ 환산 분모 — '일자별 입력' 모드 사용 가능)",
-            severity: "error",
-          });
+      // G-6: 거래정지 시 §163⑨ 분모(1개월 종가평균)는 법령상 무효·엔진 미사용 → 검증 면제
+      if (!form.tradingHaltAtTransfer) {
+        const transferAvg = parseI(form.transferDatePriceAvg1Month);
+        const mode = form.transferStdInputMode || "direct";
+        if (mode === "direct") {
+          if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
+            errors.push({
+              field: "transferDatePriceAvg1Month",
+              message: "양도일 직전 1개월 종가 평균을 직접 입력하세요 (§163⑨ 환산 분모 — '일자별 입력' 모드 사용 가능)",
+              severity: "error",
+            });
+          }
+        } else {
+          const hasAnyClose = form.transferPriceClosing?.some((s) => !isEmpty(s) && parseI(s) > 0);
+          if (!hasAnyClose) {
+            errors.push({
+              field: "transferPriceClosing",
+              message: "일자별 입력 모드: 양도일 직전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분모 자동 산정용)",
+              severity: "error",
+            });
+          }
+          if (transferAvg <= 0) {
+            errors.push({
+              field: "transferDatePriceAvg1Month",
+              message: "일자별 입력에서 자동 평균 산정 실패 — 종가 값을 확인하세요",
+              severity: "error",
+            });
+          }
         }
-      } else {
-        const hasAnyClose = form.transferPriceClosing?.some((s) => !isEmpty(s) && parseI(s) > 0);
-        if (!hasAnyClose) {
-          errors.push({
-            field: "transferPriceClosing",
-            message: "일자별 입력 모드: 양도일 직전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분모 자동 산정용)",
-            severity: "error",
-          });
-        }
-        if (transferAvg <= 0) {
-          errors.push({
-            field: "transferDatePriceAvg1Month",
-            message: "일자별 입력에서 자동 평균 산정 실패 — 종가 값을 확인하세요",
-            severity: "error",
-          });
-        }
+      }
+
+      // C-6: 거래정지 우회(§165③) — 취득 후 상장이 아니면 비상장 보충 평가 필수 (자동 fallback 금지)
+      if (form.tradingHaltAtTransfer && !form.acquiredBeforeListing) {
+        validateUnlistedSimpleFields(form, errors);
       }
       if (!form.acquiredBeforeListing && !form.tradingHaltAtTransfer) {
         if (isEmpty(form.acquisitionDatePriceAvg1Month)) {
@@ -181,10 +216,11 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         if (isEmpty(form.listingDate)) {
           errors.push({ field: "listingDate", message: "상장일을 입력하세요 (소령 §165⑤)", severity: "error" });
         }
-        if (form.tradingHaltAtTransfer && detailMode !== "simple") {
+        // G-5: 거래정지 + 취득 후 상장 조합은 미지원 (모드 무관) — 엔진은 post-listing 우선이라 거래정지 침묵 무시
+        if (form.tradingHaltAtTransfer) {
           errors.push({
             field: "tradingHaltAtTransfer",
-            message: "거래정지 + 취득 후 상장 상세 입력 조합은 후속 PR 예정입니다. simple 모드를 사용하거나 거래정지 토글을 해제하세요.",
+            message: "거래정지 + 취득 후 상장 조합은 지원하지 않습니다. 거래정지 토글을 해제하거나 취득 후 상장 토글을 해제하세요.",
             severity: "error",
           });
         }
@@ -245,20 +281,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         }
       }
       if (valuationMode === "simple") {
-        if (!niSkip && isEmpty(form.transferYearNetIncomePerShare)) {
-          errors.push({ field: "transferYearNetIncomePerShare", message: "양도연도 1주당 순손익가치를 입력하세요 (소령 §165④)", severity: "error" });
-        }
-        if (isEmpty(form.transferYearNetAssetPerShare)) {
-          errors.push({ field: "transferYearNetAssetPerShare", message: "양도연도 1주당 순자산가치를 입력하세요", severity: "error" });
-        }
-        if (!acqFaceValueOnly) {
-          if (!niSkip && isEmpty(form.acquisitionYearNetIncomePerShare)) {
-            errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요", severity: "error" });
-          }
-          if (isEmpty(form.acquisitionYearNetAssetPerShare)) {
-            errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요", severity: "error" });
-          }
-        }
+        // 단일 소스 — 거래정지 우회 분기(§165③)와 공유 (C-6)
+        validateUnlistedSimpleFields(form, errors);
       } else {
         if (!niSkip) {
           if (isEmpty(form.niShareCountEUTransfer) || parseI(form.niShareCountEUTransfer) <= 0) {

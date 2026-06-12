@@ -58,9 +58,16 @@ export function EstimatedValuationBreakdown({
   const detail = result.valuationDetail;
   if (!detail) return null;
 
+  const isTradingHaltBypass = result.appliedRules?.includes("거래정지우회");
+
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4 space-y-2">
       <p className="font-semibold text-amber-800 text-sm">환산취득가 산식 분해 (소령 §165⑤)</p>
+      {isTradingHaltBypass && (
+        <p className="text-xs text-rose-700">
+          양도일 거래정지·관리종목 — 소령 §165③에 따라 1개월 종가평균 대신 비상장 보충 평가(§165④)로 환산했습니다.
+        </p>
+      )}
       <div className="space-y-1 text-xs text-amber-700 font-mono">
         {detail.method === "post_listing_conversion" && detail.weightedAvgPerShare !== undefined && (
           <>

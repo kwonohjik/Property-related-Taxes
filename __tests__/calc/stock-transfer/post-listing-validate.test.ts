@@ -117,29 +117,29 @@ describe("PL-VALIDATE — 취득 후 상장 모드별 매트릭스", () => {
     expect(fields).toContain("naLiabTotalRow8Acq");
   });
 
-  it("PL-VALIDATE-6 — Round 4 H-03 조합 차단: tradingHalt + acquiredBeforeListing + mode!==simple", () => {
+  it("PL-VALIDATE-6 — 거래정지 + 취득 후 상장 조합 차단 (full 모드 — 문구 갱신)", () => {
     const form: StockTransferFormData = {
       ...simpleModeForm(),
       unlistedDetailMode: "full",
       tradingHaltAtTransfer: true,   // 거래정지 ON
-      // mode = "full" 이면서 acquiredBeforeListing=true → 차단
     };
     const errors = validateStep2(form);
     const haltError = errors.find((e) => e.field === "tradingHaltAtTransfer");
     expect(haltError).toBeDefined();
-    expect(haltError?.message).toContain("후속 PR");
+    expect(haltError?.message).toContain("지원하지 않습니다");
   });
 
-  it("PL-VALIDATE-7 — simple 모드 + tradingHalt 조합은 통과 (Case 6 범위 외 아님)", () => {
+  it("PL-VALIDATE-7 — 거래정지 + 취득 후 상장 조합은 simple 모드도 차단 (G-5 모드 무관 재산정)", () => {
+    // PR-§165③: 엔진은 post-listing 우선이라 거래정지 침묵 무시 → 모드 무관 차단으로 통일
     const form: StockTransferFormData = {
       ...simpleModeForm(),
       unlistedDetailMode: "simple",
       tradingHaltAtTransfer: true,
     };
     const errors = validateStep2(form);
-    // simple 모드는 H-03 조합 차단 미적용
     const haltError = errors.find((e) => e.field === "tradingHaltAtTransfer");
-    expect(haltError).toBeUndefined();
+    expect(haltError).toBeDefined();
+    expect(haltError?.message).toContain("지원하지 않습니다");
   });
 
   it("PL-VALIDATE-8 — acquiredBeforeListing=false 시 unlistedDetailMode 무관 통과", () => {
@@ -154,5 +154,38 @@ describe("PL-VALIDATE — 취득 후 상장 모드별 매트릭스", () => {
       ["listingDate", "niShareCountListing", "naAssetTotalRow1Listing", "tradingHaltAtTransfer"].includes(e.field),
     );
     expect(postListingErrors).toHaveLength(0);
+  });
+
+  // ── 거래정지 §165③ 우회 validate (활성화 PR) ──
+  it("A-TH-4 — 거래정지 ON + 평가 미입력 → 비상장 평가 필수 차단 (C-6)", () => {
+    const form: StockTransferFormData = {
+      ...simpleModeForm(),
+      acquiredBeforeListing: false,
+      tradingHaltAtTransfer: true,
+      transferYearNetIncomePerShare: "",
+      transferYearNetAssetPerShare: "",
+      acquisitionYearNetIncomePerShare: "",
+      acquisitionYearNetAssetPerShare: "",
+    };
+    const errors = validateStep2(form);
+    const fields = errors.map((e) => e.field);
+    expect(fields).toContain("transferYearNetAssetPerShare");
+    expect(fields).toContain("acquisitionYearNetAssetPerShare");
+  });
+
+  it("A-TH-5 — 거래정지 ON + §163⑨ 분모 미입력 → 분모 오류 면제 (G-6)", () => {
+    const form: StockTransferFormData = {
+      ...simpleModeForm(),
+      acquiredBeforeListing: false,
+      tradingHaltAtTransfer: true,
+      transferDatePriceAvg1Month: "", // 분모 비움 — 거래정지 시 무효·미사용
+      transferYearNetIncomePerShare: "30000",
+      transferYearNetAssetPerShare: "10000",
+      acquisitionYearNetIncomePerShare: "15000",
+      acquisitionYearNetAssetPerShare: "5000",
+    };
+    const errors = validateStep2(form);
+    const denomError = errors.find((e) => e.field === "transferDatePriceAvg1Month");
+    expect(denomError).toBeUndefined();
   });
 });

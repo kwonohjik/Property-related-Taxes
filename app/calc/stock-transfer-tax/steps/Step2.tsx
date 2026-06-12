@@ -9,6 +9,7 @@
 
 import { useMemo } from "react";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { PostListingValuationCard } from "@/components/calc/stock-transfer/PostListingValuationCard";
@@ -351,8 +352,25 @@ export function Step2({ form, onChange }: Step2Props) {
           {/* 환산 — 상장 */}
           {acquisitionMode === "estimated" && isListed && (
             <div className="space-y-4">
-              {/* 일반 상장 환산 (시행령 §163⑨) — 취득 후 상장 분기가 아닐 때만 노출 */}
-              {!form.acquiredBeforeListing && (
+              {/* 거래정지·관리종목 §165③ 토글 (분기 선두 — 엔진 분기 순서 일치) */}
+              {form.kiwoomTradingHalt && !form.tradingHaltAtTransfer && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50/70 px-4 py-2 text-xs text-amber-800">
+                  ⚠ 키움 조회에서 거래정지·관리종목이 감지되었습니다 — 해당 시 아래 토글을 켜세요.
+                </div>
+              )}
+              <ToggleCard
+                checked={form.tradingHaltAtTransfer}
+                onCheckedChange={(v) => onChange({ tradingHaltAtTransfer: v })}
+                title="양도일 거래정지·관리종목 지정 (소령 §165③)"
+                description="양도일 이전 1개월 내 거래정지·관리종목 기간이 포함되면 1개월 종가평균 대신 비상장 보충 평가로 환산합니다. ※ 관리종목이라도 적정 시가로 정상 매매 중이면(상증령 §52의2③ 단서) 토글을 켜지 마세요."
+                tone="rose"
+              >
+                {/* 거래정지 우회 — 비상장 보충 평가(simple 전용) */}
+                <EstimatedUnlistedBlock form={form} onChange={onChange} simpleOnly />
+              </ToggleCard>
+
+              {/* 일반 상장 환산 (시행령 §163⑨) — 거래정지·취득 후 상장 분기가 아닐 때만 노출 */}
+              {!form.tradingHaltAtTransfer && !form.acquiredBeforeListing && (
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-4">
                   <p className="text-sm font-semibold text-emerald-800">
                     환산취득가 (시행령 §163⑨) — 양도가 × (취득시 기준시가 / 양도시 기준시가)
@@ -363,7 +381,7 @@ export function Step2({ form, onChange }: Step2Props) {
                     hint="모법 §99①3 — 환산비율의 분모"
                     value={form.transferDatePriceAvg1Month}
                     onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-                    placeholder="50,000"
+                    placeholder="양도일 직전 1개월 종가평균 (1주당)"
                   />
                   <CurrencyInput
                     label="취득시 1주당 기준시가 (취득일 직전 1개월 종가평균)"
@@ -371,7 +389,7 @@ export function Step2({ form, onChange }: Step2Props) {
                     hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
                     value={form.acquisitionDatePriceAvg1Month}
                     onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
-                    placeholder="30,000"
+                    placeholder="취득일 직전 1개월 종가평균 (1주당)"
                   />
                   <p className="text-xs text-emerald-700">
                     ※ 환산 모드에서는 시행령 §163⑥4에 따라 개산공제(취득기준시가 × 1%)가 자동
@@ -380,8 +398,10 @@ export function Step2({ form, onChange }: Step2Props) {
                 </div>
               )}
 
-              {/* 취득 후 상장 환산 (사례 48 핵심) — 내부에 transferDatePriceAvg1Month 입력 포함 */}
-              <PostListingValuationCard form={form} onChange={onChange} />
+              {/* 취득 후 상장 환산 (사례 48 핵심) — 거래정지 신규 진입 시 숨김(U1-1: 잔존 ON은 유지해 차단 메시지 실행 가능) */}
+              {(!form.tradingHaltAtTransfer || form.acquiredBeforeListing) && (
+                <PostListingValuationCard form={form} onChange={onChange} />
+              )}
             </div>
           )}
 
