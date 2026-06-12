@@ -448,7 +448,7 @@ export interface LotMatchingDetail {
   shortTermGain: number;
   /** 장기 sub-lot 차익 합 */
   longTermGain: number;
-  /** moving_avg 가중평균 단가 (해당 모드만) */
+  /** [B-3] moving_avg 이동평균 단가 — 마지막 매도 적용 단가(echo). 매도별 단가는 matched[].perShareBuyPrice */
   weightedAvgPerShare?: number;
   warnings: string[];
 }

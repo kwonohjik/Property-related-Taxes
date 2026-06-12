@@ -126,7 +126,7 @@ export function AcquisitionLotsMatrix({
             {
               value: "moving_avg",
               label: "이동평균법",
-              description: "전체 매수 lot 가중평균 단가 (총평균법)",
+              description: "매도 시점까지 취득분으로 평균단가 재계산",
             },
             {
               value: "specific",
@@ -275,9 +275,9 @@ export function AcquisitionLotsMatrix({
         </p>
         {summary.weightedAvg !== null && summary.weightedAvg > 0 && (
           <p className="text-xs mt-1 text-sky-700">
-            가중평균 단가:{" "}
+            참고용 평균단가:{" "}
             <strong>{summary.weightedAvg.toLocaleString()}</strong>{" "}
-            (이동평균 모드 적용 시 참고)
+            — 실제 이동평균은 매도 순서·시점에 따라 달라질 수 있습니다 (정확한 값은 계산 결과 참조)
           </p>
         )}
       </div>

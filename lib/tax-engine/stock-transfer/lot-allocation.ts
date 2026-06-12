@@ -9,13 +9,16 @@
  *  - 소득세법 §104①11호 가목 1)·2) — 단기 30% / 누진 (대주주 + 비SME)
  *  - 소령 §163⑨ — 상속/증여 lot의 평가가액 (사용자 직접 입력)
  *
- * 산정방법 (KoreanLaw 검색 NOT_FOUND — 명문 부재):
+ * 산정방법 (KoreanLaw 검색 NOT_FOUND — 양도세 명문 부재):
  *  - 시행령 §162의2는 지하수개발권 조문 (FIFO와 무관)
- *  - 동일종목 분할매수의 취득가 산정 방법은 명문 규정 없음 — 납세자 입증책임
+ *  - 동일종목 분할매수의 취득가 산정 방법은 양도세 명문 규정 없음 — 납세자 입증책임
+ *  - "이동평균법" 표준 정의: 법인세법 시행령 §74①1마(참조 — 법인 재고자산 평가,
+ *    개인 양도세 직접 근거 아님). "취득할 때마다 장부시재금액÷장부시재수량 평균단가".
  *  - 본 모듈은 사용자 선택 3종 지원:
  *    1. specific (개별법) — 매도 lot당 매수 lot 명시 매칭 (입증 가능 시)
  *    2. fifo (선입선출법) — lot.acquisitionDate ASC 순차 차감
- *    3. moving_avg (총평균법) — 전체 매수 lot 가중평균. 진정 이동평균은 후속 PR
+ *    3. moving_avg (이동평균법) — 각 매도 시점까지 취득분으로 평균단가 재계산 [B-3].
+ *       단가는 매도 시점별 이동평균, 보유기간(§104②)은 FIFO lot startDate (하이브리드).
  *
  * 본 모듈은 helpers.ts의 calcHoldingPeriod()를 사용하지 않고 lot별 §104② 기산점을 자체 계산.
  * (single 모드는 stock-transfer-tax.ts에서 기존 calcHoldingPeriod() 사용 유지)
@@ -165,15 +168,8 @@ export function allocateLots(
   }));
 
   let matched: MatchedSubLot[] = [];
-
-  // 가중평균 단가 (moving_avg 모드만 사용)
-  const weightedAvgPerShare =
-    method === "moving_avg"
-      ? Math.floor(
-          acquisitionLots.reduce((s, l) => s + l.shareCount * l.perShareAcquisitionPrice, 0) /
-            totalBuyShares,
-        )
-      : undefined;
+  // [B-3] moving_avg는 매도 시점별 이동평균 → matchMovingAvg가 echo용 최종 잔고 평균을 반환
+  let weightedAvgPerShare: number | undefined;
 
   if (method === "specific") {
     if (!specificMatchings || specificMatchings.length === 0) {
@@ -184,16 +180,14 @@ export function allocateLots(
       };
     }
     matched = matchSpecific(remainingAcqLots, transferLots, specificMatchings, isMajorAndNonSME, isSME, warnings);
+  } else if (method === "moving_avg") {
+    // [B-3] 진정 이동평균법 — 단가는 매도 시점 이동평균, 보유기간은 FIFO lot startDate
+    const r = matchMovingAvg(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings);
+    matched = r.matched;
+    weightedAvgPerShare = r.finalMovingAvgPrice;
   } else {
-    // fifo / moving_avg — 둘 다 lot.acquisitionDate ASC + 매도일 ASC FIFO 매칭
-    matched = matchFifo(
-      remainingAcqLots,
-      transferLots,
-      isMajorAndNonSME,
-      isSME,
-      weightedAvgPerShare,
-      warnings,
-    );
+    // fifo — lot.acquisitionDate ASC + 매도일 ASC FIFO 매칭 (lot 단가)
+    matched = matchFifo(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings);
   }
 
   // 합계 산출
@@ -275,7 +269,6 @@ function matchFifo(
   trnLots: TransferLot[],
   isMajorAndNonSME: boolean,
   isSME: boolean,
-  weightedAvgPerShare: number | undefined,
   warnings: string[],
 ): MatchedSubLot[] {
   // lot.acquisitionDate ASC (실제 매수일 — §104② 기산일 아님)
@@ -301,9 +294,7 @@ function matchFifo(
 
       const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
       const isShortTerm = holdingDays < 365;
-      // moving_avg 모드: 단가는 가중평균, 그 외 lot 단가
-      const perShareBuyPrice =
-        weightedAvgPerShare !== undefined ? weightedAvgPerShare : acq.perShareAcquisitionPrice;
+      const perShareBuyPrice = acq.perShareAcquisitionPrice;
       const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * matchedShares;
       const { appliedRate, subLotTax } = applySubLotRate(
         perLotGain,
@@ -331,4 +322,98 @@ function matchFifo(
     }
   }
   return matched;
+}
+
+// ============================================================
+// [B-3] 진정 이동평균법 매칭 — 단가 트랙(이동평균) + 보유기간 트랙(FIFO)
+// ============================================================
+
+/**
+ * 진정 이동평균법 (법인세령 §74①1마 표준 정의 참조 — 양도세 명문 부재).
+ *
+ * - 단가: 각 매도 시점까지 취득된(취득일 <= 매도일) lot의 잔고 가중평균(이동평균).
+ *   매수 발생마다 갱신, 매도 시 그 시점 평균단가로 원가 차감(평균 보존).
+ * - 보유기간(§104②): 단가와 독립 — FIFO lot.startDate로 단기/장기 판정(하이브리드).
+ *   매도분이 여러 lot에 걸치면 sub-lot 분할(단가는 공통 이동평균, startDate는 lot별).
+ *
+ * @returns matched + finalMovingAvgPrice (echo용 — 최종 잔고 평균, 전량 매도 시 마지막 매도 단가)
+ */
+function matchMovingAvg(
+  acqLots: RemainingAcqLot[],
+  trnLots: TransferLot[],
+  isMajorAndNonSME: boolean,
+  isSME: boolean,
+  warnings: string[],
+): { matched: MatchedSubLot[]; finalMovingAvgPrice: number | undefined } {
+  const sortedAcq = [...acqLots].sort(
+    (a, b) => a.acquisitionDate.getTime() - b.acquisitionDate.getTime(),
+  );
+  const sortedTrn = [...trnLots].sort((a, b) => a.transferDate.getTime() - b.transferDate.getTime());
+
+  const matched: MatchedSubLot[] = [];
+  // 이동평균 단가 트랙
+  let balanceQty = 0;
+  let balanceCost = 0;
+  let nextAcqToAbsorb = 0; // 잔고에 아직 반영 안 된 매수 lot 포인터
+  // 보유기간 FIFO 트랙 (lot 잔여 차감)
+  let fifoIdx = 0;
+  let lastMovingAvgPrice: number | undefined;
+
+  for (const trn of sortedTrn) {
+    // 그 매도일 이전(<=)에 취득된 lot을 잔고에 누적 반영 (법인세령 "취득할 때마다")
+    while (
+      nextAcqToAbsorb < sortedAcq.length &&
+      sortedAcq[nextAcqToAbsorb].acquisitionDate.getTime() <= trn.transferDate.getTime()
+    ) {
+      const lot = sortedAcq[nextAcqToAbsorb];
+      balanceQty += lot.shareCount;
+      balanceCost += lot.shareCount * lot.perShareAcquisitionPrice;
+      nextAcqToAbsorb += 1;
+    }
+    const movingAvgPrice = balanceQty > 0 ? Math.floor(balanceCost / balanceQty) : 0;
+    lastMovingAvgPrice = movingAvgPrice;
+
+    let remainingSaleShares = trn.shareCount;
+    // 보유기간: FIFO lot에서 차감하며 sub-lot 분할. 단가는 movingAvgPrice 공통.
+    while (remainingSaleShares > 0 && fifoIdx < sortedAcq.length) {
+      const acq = sortedAcq[fifoIdx];
+      if (acq.remaining <= 0) {
+        fifoIdx += 1;
+        continue;
+      }
+      const matchedShares = Math.min(remainingSaleShares, acq.remaining);
+      acq.remaining -= matchedShares;
+      remainingSaleShares -= matchedShares;
+
+      const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
+      const isShortTerm = holdingDays < 365;
+      const perLotGain = (trn.perShareTransferPrice - movingAvgPrice) * matchedShares;
+      const { appliedRate, subLotTax } = applySubLotRate(perLotGain, isShortTerm, isMajorAndNonSME, isSME);
+      matched.push({
+        saleDate: trn.transferDate,
+        saleShares: matchedShares,
+        perShareSalePrice: trn.perShareTransferPrice,
+        acquisitionDate: acq.startDate,
+        buyShares: matchedShares,
+        perShareBuyPrice: movingAvgPrice, // 이동평균 공통
+        holdingDays,
+        isShortTerm,
+        perLotGain,
+        appliedRate,
+        subLotTax,
+      });
+      if (acq.remaining === 0) fifoIdx += 1;
+    }
+    if (remainingSaleShares > 0) {
+      warnings.push(`매도 lot 수량 매칭 부족: 잔여 ${remainingSaleShares}주`);
+    }
+    // 잔고 차감 (매도수량 × 이동평균단가 — 평균 보존, max(0) 가드)
+    const soldQty = trn.shareCount - remainingSaleShares;
+    balanceQty = Math.max(0, balanceQty - soldQty);
+    balanceCost = Math.max(0, balanceCost - soldQty * movingAvgPrice);
+  }
+
+  // echo: 마지막 매도에 적용된 이동평균단가 (매도에 실제 적용된 단가 대표 —
+  //   단일/일괄 매도면 그 시점 잔고평균 = 총평균. 잔고 평균이 아니라 매도 적용 단가라 floor 잔차 무관)
+  return { matched, finalMovingAvgPrice: lastMovingAvgPrice };
 }

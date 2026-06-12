@@ -15,7 +15,7 @@ import type { LotMatchingDetail } from "@/lib/tax-engine/stock-transfer/types/st
 const METHOD_LABEL: Record<LotMatchingDetail["method"], string> = {
   specific: "개별법",
   fifo: "선입선출법 (FIFO)",
-  moving_avg: "이동평균법 (총평균)",
+  moving_avg: "이동평균법",
 };
 
 const CAUSE_LABEL_FOR_DATE: Record<string, string> = {
@@ -57,7 +57,8 @@ export function LotMatchingDetailCard({ detail }: Props) {
         ⓘ 산정방법은 납세자 입증책임 — 세법 명문 부재 (KoreanLaw 검증 2026-05-18 / §104②·§163)
         {detail.method === "moving_avg" && detail.weightedAvgPerShare !== undefined && (
           <span className="ml-1">
-            · 가중평균 단가 <strong>{detail.weightedAvgPerShare.toLocaleString()}원</strong>
+            · 이동평균 단가 (마지막 매도 적용) <strong>{detail.weightedAvgPerShare.toLocaleString()}</strong>
+            <span className="ml-1 text-violet-500">— 매도별 단가는 아래 표 매수단가 열 참조</span>
           </span>
         )}
       </p>
