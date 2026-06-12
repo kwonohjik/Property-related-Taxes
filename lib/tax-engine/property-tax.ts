@@ -95,6 +95,20 @@ export function calcTaxBase(
 
   const isHousing = objectType === "housing";
 
+  // 시행령 §109①2호 단서 — 2022년 납세의무 성립 1세대1주택 단일 비율 45% (제32747호, 9억 초과 포함)
+  if (
+    isHousing &&
+    opts?.isOneHousehold === true &&
+    opts.taxYear === PROPERTY_CONST.ONE_HOUSE_FMR_2022_YEAR
+  ) {
+    const fairMarketRatio = PROPERTY_CONST.ONE_HOUSE_FMR_2022_RATIO;
+    return {
+      taxBase: applyRate(publishedPrice, fairMarketRatio),
+      fairMarketRatio,
+      legalBasis: PROPERTY.FAIR_MARKET_RATIO_ONE_HOUSE,
+    };
+  }
+
   // 시행령 §109①2호 단서 — 2026년 납세의무 성립 1세대1주택 구간별 비율 (법령 명시값, DB보다 우선)
   if (
     isHousing &&

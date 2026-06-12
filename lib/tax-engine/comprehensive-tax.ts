@@ -25,11 +25,12 @@
  */
 
 import { applyRate, truncateToTenThousand } from "./tax-utils";
-import { COMPREHENSIVE_CONST, PROPERTY_CONST } from "./legal-codes";
+import { COMPREHENSIVE_CONST } from "./legal-codes";
 import {
   getComprehensiveParams,
   isComprehensiveYearSupported,
   isMultiHouseRate,
+  getPropertyFmrForProration,
   COMPREHENSIVE_MIN_SUPPORTED_YEAR,
 } from "./data/comprehensive-historical";
 import { calculatePropertyTax, calcHousingTax } from "./property-tax";
@@ -53,6 +54,10 @@ import {
   applyAggregateLandTaxCap,
   calculateAggregateLandTax,
 } from "./comprehensive-land-aggregate";
+import {
+  calcPreviousYearEquivalent,
+  getHousingTaxCapPct,
+} from "./comprehensive-prior-year";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   ComprehensiveBracket,
@@ -70,7 +75,7 @@ import type {
  * 주택분 누진세율 적용 (종합부동산세법 §9①) — 연도별 세율표를 매개변수로 받음.
  * 세율표는 getComprehensiveParams(year)의 general/multi 중 호출부가 선택해 전달.
  */
-function calcHousingTaxAmount(
+export function calcHousingTaxAmount(
   taxBase: number,
   brackets: ComprehensiveBracket[],
 ): {
@@ -310,14 +315,26 @@ export function calculateComprehensiveTax(
     isMultiHouseRateApplied = useMultiRate;
   }
 
+  // ── Step 5.5: 직전연도 종합부동산세상당액 (세부담상한 — 시행령 §5②, 별지 5호서식 부표) ──
+  //   previousYearAuto 입력 시에만 산출. previousYearTotalTax(직접입력)와 상호배타(Zod refine).
+  const previousYearEquivalent =
+    !isCorporate && input.previousYearAuto
+      ? calcPreviousYearEquivalent(input.previousYearAuto, input.assessmentYear)
+      : undefined;
+
   // ── Step 6: 재산세 비율 안분 공제 (종합부동산세법 §9③·시행령 §4의3) ──
   //   ★ GAP-1: §9⑥⑧ "제1항·제3항·제4항에 따라 산출된 세액" → 재산세 공제(§9③)를 세액공제(§9⑥)보다 선적용.
   //
-  // ⑤ = 종부세 과세표준 × 재산세FMR(60%) × 0.4% (주택 최고세율, 누진공제 없음)
-  //   = taxBase × PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING × 0.004
-  //   분수 정수: taxBase × 60 × 4 / (100 × 1000)  = taxBase × 240 / 100_000
+  // ⑤ = 종부세 과세표준 × 재산세FMR × 0.4% (주택 최고세율, 누진공제 없음)
+  //   = taxBase × propertyFMR × 0.004 (분수 정수: taxBase × round(FMR×100) × 4 / 100_000)
   //   (× 0.004 float 직접 곱 시 floor 1원 부족 — memory feedback_applyrate_fractional_rate_one_won_error)
-  const propertyFMR = PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING; // 0.60
+  //
+  // ★ 재산세 FMR 연도·1세대1주택 분기 (지방세법 시행령 §109①2호 단서):
+  //   2022 1세대1주택(주택 1채) = 45%, 그 외 60%. 게이트는 재산세 부과(:169 isOneHousehold)와 동일 —
+  //   ⓐ(부과)와 ⑤⑥(표준세율 상당액)의 FMR 정합 보장 (사례12 ⑤=432,000·⑥=2,070,000).
+  const isOneHouseSingleForFmr =
+    !isCorporate && input.isOneHouseOwner && input.properties.length === 1;
+  const propertyFMR = getPropertyFmrForProration(input.assessmentYear, isOneHouseSingleForFmr);
   // 0.004 = 4/1000, propertyFMR = 60/100 → 합산 numerator = taxBase × 60 × 4 / 100_000
   const numeratorStdTaxEq = Math.floor(
     (taxBase * Math.round(propertyFMR * 100) * 4) / 100_000,
@@ -335,9 +352,22 @@ export function calculateComprehensiveTax(
     includedAssessedValue,
     false, // 일반 표준세율 강제 — 특례세율 배제
   ).tax;
-  // ⓐ = totalPropertyTaxAmount (부과세액 합계). 공제 상한 = 산출세액(calculatedTax — §9③ 공제는 산출세액에서)
+  // ⓐ = 부과세액 합계. G-5: 직전연도 자동계산 시 구 §122 단서 Min 적용
+  //   (§9③ 괄호 "§122에 따라 세부담 상한을 적용받는 경우 그 상한 세액").
+  //   ⓐ = min(부과 재산세, 직전 재산세상당액 × §122 구간 상한율). 2024+ 폐지 → null이면 미적용.
+  let aValue = totalPropertyTaxAmount;
+  if (previousYearEquivalent) {
+    const capPct = getHousingTaxCapPct(input.assessmentYear, includedAssessedValue);
+    if (capPct !== null) {
+      aValue = Math.min(
+        aValue,
+        Math.floor((previousYearEquivalent.propertyTaxEquiv * capPct) / 100),
+      );
+    }
+  }
+  // 공제 상한 = 산출세액(calculatedTax — §9③ 공제는 산출세액에서)
   const propertyTaxCredit = calculatePropertyTaxCreditProration(
-    totalPropertyTaxAmount,
+    aValue,
     numeratorStdTaxEq,
     denominatorStdTax,
     calculatedTax,
@@ -398,23 +428,35 @@ export function calculateComprehensiveTax(
     useMultiRate && yearParams.taxCapRateMultiHouseAdjusted !== undefined
       ? yearParams.taxCapRateMultiHouseAdjusted
       : yearParams.taxCapRateGeneral;
+  // 세부담상한 전년도 총세액: 직접입력 우선, 없으면 직전연도 자동계산 결과(시행령 §5②)
+  const prevTotalForCap = input.previousYearTotalTax ?? previousYearEquivalent?.total;
   const taxCap =
     taxpayerType === "corporate_special"
       ? undefined
       : applyTaxCap(
           comprehensiveTaxAfterCredit,
-          totalPropertyTaxAmount,
-          input.previousYearTotalTax,
+          aValue, // ⓐ(Min 후) — 별지5호 ⑲ = ⑧(ⓐ) + ⑬(taxBeforeCap) 정합
+          prevTotalForCap,
           capRate,
         );
 
-  if (input.previousYearTotalTax === undefined && taxpayerType !== "corporate_special") {
+  if (prevTotalForCap === undefined && taxpayerType !== "corporate_special") {
     warnings.push(
       "전년도 재산세·종부세 고지서의 합계 세액을 입력하시면 세부담 상한이 자동 적용됩니다.",
     );
   }
 
   const determinedHousingTax = taxCap ? taxCap.cappedTax : comprehensiveTaxAfterCredit;
+
+  // ── 서식 칸 echo ──
+  // 3호부표 ⑤·5호 ③ 1세대1주택 추가공제 = 기본공제 − 일반공제 (1세대1주택 취급 시만)
+  const oneHouseExtraDeduction = oneHouseTreatment
+    ? Math.max(basicDeduction - yearParams.basicDeductionGeneral, 0)
+    : undefined;
+  // 별지5호 ⑲ 해당연도 총세액상당액 = ⓐ + 세부담상한 전 종부세액 (taxCap 산정 시만)
+  const currentYearTotalEquivalent = taxCap
+    ? aValue + comprehensiveTaxAfterCredit
+    : undefined;
 
   // ── Step 9: 농어촌특별세 ──
   const housingRuralSpecialTax = Math.floor(
@@ -471,10 +513,15 @@ export function calculateComprehensiveTax(
     progressiveDeduction,
     calculatedTax,
     isMultiHouseRateApplied,
+    oneHouseExtraDeduction,
+    taxAfterPropertyCredit,
+    taxBeforeCap: comprehensiveTaxAfterCredit,
+    currentYearTotalEquivalent,
     oneHouseDeduction,
     section8para4Detail,
     propertyTaxCredit,
     taxCap,
+    previousYearEquivalent,
     determinedHousingTax,
     housingRuralSpecialTax,
     totalHousingTax,

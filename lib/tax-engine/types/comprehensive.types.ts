@@ -223,6 +223,18 @@ export interface SeparateAggregateLandForComprehensive {
 /**
  * 종합부동산세 전체 입력 타입
  */
+/**
+ * 직전연도 종합부동산세상당액 자동계산 입력 (세부담상한 — 시행령 §5②).
+ * previousYearTotalTax(직접입력)와 상호배타. 별지 제5호서식 부표를 재현하기 위한 입력.
+ * v1 범위: 직전연도 단일 주택군(일반/1세대1주택). 직전연도 다주택 중과는 직접입력 모드 사용.
+ */
+export interface PreviousYearAutoInput {
+  assessedValue: number;        // 직전연도 공시가격 합산 (합산배제 후, 원)
+  isOneHouseOwner: boolean;     // 직전연도 1세대1주택 여부
+  birthDate?: Date;             // 고령자 공제 (직전연도 과세기준일 6.1 기준 재판정)
+  acquisitionDate?: Date;       // 장기보유 공제 (동일)
+}
+
 export interface ComprehensiveTaxInput {
   // ── 주택 목록 ──
   properties: ComprehensiveProperty[];
@@ -263,7 +275,11 @@ export interface ComprehensiveTaxInput {
   isMultiHouseInAdjustedArea?: boolean;
 
   // ── 세부담 상한 (선택 — 미입력 시 상한 생략) ──
+  //   두 방식 상호배타 (Zod refine 차단):
+  //   (1) previousYearTotalTax: 전년도 총세액 직접 입력
+  //   (2) previousYearAuto: 직전연도 공시가격으로 상당액 자동 계산 (별지 5호서식 부표)
   previousYearTotalTax?: number;  // 전년도 총세액 (종부세 + 재산세, 농특세 제외)
+  previousYearAuto?: PreviousYearAutoInput;  // 직전연도 상당액 자동계산 (주택분, 시행령 §5②)
 
   // ── 토지분 (선택) ──
   landAggregate?: AggregateLandTaxInput;                     // 종합합산 토지
@@ -285,6 +301,9 @@ export interface OneHouseDeductionResult {
   longTermRate: number;       // 장기보유 공제율 (0 | 0.2 | 0.4 | 0.5)
   combinedRate: number;       // 합산 공제율 (최대 0.80)
   deductionAmount: number;    // 공제 금액 (원, Math.floor) — GAP-1: 재산세 안분 공제 후 세액 기준 (§9⑥)
+  // 신고서 ⑦(고령자)·⑧(장기보유) 분리 echo — 80% 상한 발동 시에도 합 = deductionAmount (잔액 흡수).
+  seniorAmount: number;       // 고령자 공제액 = floor(base × seniorRate 안분 후)
+  longTermAmount: number;     // 장기보유 공제액 = deductionAmount − seniorAmount
   isMaxCapApplied: boolean;   // 80% 상한 적용 여부
   /**
    * §8④ 의제 시 §9⑦⑨ 공시가격 안분 비율 echo (결과뷰 산식 표시용 — 미적용 시 undefined).
@@ -308,14 +327,38 @@ export interface TaxCapResult {
 }
 
 /**
- * 재산세 비율 안분 공제 결과 (종합부동산세법 시행령 §4의2)
+ * 재산세 비율 안분 공제 결과 (종합부동산세법 시행령 §4의3)
+ *   — §4의3 = 주택분 공제 재산세 계산식, §4의2 = 1세대1주택자 범위 (KoreanLaw 축자 정정).
  */
 export interface PropertyTaxCredit {
-  totalPropertyTax: number;      // 재산세 부과세액 합계
-  propertyTaxBase: number;       // 재산세 과세표준 합계
-  comprehensiveTaxBase: number;  // 종부세 과세표준
+  totalPropertyTax: number;      // ⓐ 재산세 부과세액 합계 (별지 3호부표 ⑧·5호 ⑧)
+  propertyTaxBase: number;       // ⑥/⑩ 총 표준세율 재산세액 (역사적 명명 — 라벨은 서식 기준)
+  comprehensiveTaxBase: number;  // ⑤/⑨ 과세표준 표준세율 재산세액
   ratio: number;                 // 안분 비율 (≤ 1.0)
-  creditAmount: number;          // 공제할 재산세액
+  creditAmount: number;          // ⑪ 공제할 재산세액
+}
+
+/**
+ * 직전연도 종합부동산세상당액 계산 결과 (시행령 §5② — 별지 제5호서식 부표 ①~⑫ echo).
+ * previousYearAuto 입력 시에만 산출. 세부담상한 ⑭⑮⑯에 사용.
+ */
+export interface PreviousYearEquivalentResult {
+  propertyTaxEquiv: number;        // ⑭(5호)/⑦(부표) 직전연도 재산세상당액 (표준세율 재계산)
+  comprehensiveTaxEquiv: number;   // ⑮(5호)/⑫(부표) 직전연도 종합부동산세상당액
+  total: number;                   // ⑯ = propertyTaxEquiv + comprehensiveTaxEquiv
+  detail: {
+    assessedValue: number;         // 부표 ① 직전연도 공시가격
+    basicDeduction: number;        // 부표 ② 공제금액 (1주택 시 추가공제 포함)
+    fairMarketRatio: number;       // 부표 ③ 공정시장가액비율 (2021 = 0.95)
+    taxBase: number;               // 부표 ④ 종부세 과세표준
+    appliedRate: number;           // 부표 ⑤ 세율
+    calculatedTax: number;         // 부표 ⑥ 재산세공제전 종부세액
+    stdTaxNumerator: number;       // 부표 ⑧ 과세표준 표준세율 재산세액
+    stdTaxDenominator: number;     // 부표 ⑨ 총표준세율 재산세액
+    creditAmount: number;          // 부표 ⑩ 공제할 재산세액
+    oneHouseDeductionRate: number; // 부표 ⑪ 세액공제율
+    oneHouseDeductionAmount: number; // 부표 ⑪ 세액공제액
+  };
 }
 
 // ============================================================
@@ -425,8 +468,14 @@ export interface ComprehensiveTaxResult {
   // ── 주택분 세율 적용 ──
   appliedRate: number;            // 적용 세율
   progressiveDeduction: number;   // 누진공제
-  calculatedTax: number;          // 산출세액
+  calculatedTax: number;          // 산출세액 (신고서 ④ / 별지5호 ⑦ — 재산세 공제 전)
   isMultiHouseRateApplied: boolean; // 다주택 중과세율 적용 여부 (echo — 결과뷰 안내)
+
+  // ── 서식 칸 echo (신고서·별지 5호) ──
+  oneHouseExtraDeduction?: number; // 3호부표 ⑤·5호 ③ 1세대1주택 추가공제 (basicDeduction − 일반공제, 1주택 시만)
+  taxAfterPropertyCredit: number;  // 신고서 ⑥ = calculatedTax − 공제 재산세액 (음수 시 0)
+  taxBeforeCap: number;            // 별지5호 ⑬ = taxAfterPropertyCredit − 세액공제 (세부담상한 전 종부세액)
+  currentYearTotalEquivalent?: number; // 별지5호 ⑲ = ⓐ + taxBeforeCap (taxCap 존재 시만)
 
   // ── 1세대1주택 세액공제 (isOneHouseOwner=true 일 때만) ──
   oneHouseDeduction?: OneHouseDeductionResult;
@@ -446,6 +495,7 @@ export interface ComprehensiveTaxResult {
 
   // ── 세부담 상한 (전년도 미입력 시 undefined) ──
   taxCap?: TaxCapResult;
+  previousYearEquivalent?: PreviousYearEquivalentResult; // 직전연도 자동계산 모드일 때만 (별지 5호서식 부표)
 
   // ── 주택분 최종 세액 ──
   determinedHousingTax: number;   // 결정세액 (상한 적용 후)

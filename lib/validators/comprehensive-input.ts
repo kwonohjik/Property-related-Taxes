@@ -336,6 +336,25 @@ export const comprehensiveTaxInputSchema = z.object({
     .optional(),
 
   /**
+   * 직전연도 종합부동산세상당액 자동계산 입력 (세부담상한 — 시행령 §5②, 별지 5호서식 부표).
+   * previousYearTotalTax(직접입력)와 상호배타 (하단 refine 차단).
+   */
+  previousYearAuto: z
+    .object({
+      assessedValue: z.number().int().nonnegative(),
+      isOneHouseOwner: z.boolean(),
+      birthDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+        .optional(),
+      acquisitionDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+        .optional(),
+    })
+    .optional(),
+
+  /**
    * 종합합산 토지 정보 (선택)
    * 종합합산 토지 보유자만 입력
    */
@@ -371,6 +390,14 @@ export const comprehensiveTaxInputSchema = z.object({
     message:
       "1세대1주택자와 부부 공동명의 특례(§10의2)는 동시에 선택할 수 없습니다. 부부 공동명의 1주택이면 특례만 선택하세요.",
     path: ["isJointOwnershipSpecialCase"],
+  },
+).refine(
+  // 세부담상한: 전년도 총세액 직접입력과 직전연도 자동계산은 상호배타
+  (v) => !(v.previousYearTotalTax !== undefined && v.previousYearAuto !== undefined),
+  {
+    message:
+      "전년도 총세액 직접 입력과 직전연도 공시가격 자동 계산은 동시에 사용할 수 없습니다. 하나만 선택하세요.",
+    path: ["previousYearAuto"],
   },
 );
 

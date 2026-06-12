@@ -164,7 +164,7 @@ function PropertyCard({
         />
       </div>
 
-      {/* 전용면적 + 수도권 여부 */}
+      {/* 전용면적 + 토지 과세면적 + 수도권 여부 */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">
@@ -181,6 +181,25 @@ function PropertyCard({
           <p className="text-xs text-muted-foreground">합산배제 요건 판정에 사용</p>
         </div>
 
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            토지 과세면적 (㎡)
+            <span className="ml-1 text-xs font-normal text-muted-foreground">선택</span>
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={property.landArea ?? ""}
+            onChange={(e) => onUpdate({ landArea: e.target.value.replace(/[^0-9.]/g, "") })}
+            placeholder=""
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <p className="text-xs text-muted-foreground">과세표준 명세서 기재용 (엔진 미사용)</p>
+        </div>
+      </div>
+
+      {/* 수도권 여부 */}
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">수도권 여부</label>
           <select
