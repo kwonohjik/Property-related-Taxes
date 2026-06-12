@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { LawSearchItem, LawArticleResult } from "@/lib/korean-law/types";
 import { HighlightedText } from "./HighlightedText";
+import { ApplicableLawPanel } from "./ApplicableLawPanel";
 
 /** 법령 검색 + 조문 열람 탭 */
 export function LawSearchTab({
@@ -10,12 +11,18 @@ export function LawSearchTab({
   initialArticleNo,
   autoSearch,
   inlineArticleAutoLoad = true,
+  applicable,
+  applicableNonce,
 }: {
   initialQuery?: string;
   initialArticleNo?: string;
   autoSearch?: number;
   /** 라우팅으로 조문번호가 들어왔을 때 인라인으로 자동 조회할지. 팝업 표시 경로에서는 false로 억제. */
   inlineArticleAutoLoad?: boolean;
+  /** 행위시법 라우팅 파라미터 (applicable_law) */
+  applicable?: { lawName?: string; articleNo?: string; baseDate?: string };
+  /** 행위시법 자동조회 nonce */
+  applicableNonce?: number;
 } = {}) {
   const [query, setQuery] = useState(initialQuery ?? "소득세법");
   const [articleNo, setArticleNo] = useState(initialArticleNo ?? "제89조");
@@ -144,6 +151,13 @@ export function LawSearchTab({
           {loading ? "조회 중..." : "조문 본문 보기"}
         </button>
       </div>
+
+      <ApplicableLawPanel
+        routedLawName={applicable?.lawName}
+        routedArticleNo={applicable?.articleNo}
+        routedBaseDate={applicable?.baseDate}
+        autoRun={applicableNonce}
+      />
 
       <div className="rounded-md border bg-muted/20">
         <button

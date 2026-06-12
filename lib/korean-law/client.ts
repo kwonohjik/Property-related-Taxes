@@ -25,6 +25,8 @@ export { getDecisionText } from "./client-decisions-text";
 
 export { getAnnexes } from "./client-annexes";
 
+export { getApplicableLaw } from "./applicable-law";
+
 export { resolveLawAlias, isAlias } from "./aliases";
 export type {
   LawSearchItem,

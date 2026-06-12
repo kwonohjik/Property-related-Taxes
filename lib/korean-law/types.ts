@@ -195,7 +195,8 @@ export type RouterTool =
   | "get_decision_text"
   | "get_annexes"
   | "run_chain"
-  | "verify_citations";
+  | "verify_citations"
+  | "applicable_law";
 
 export interface RouteResult {
   tool: RouterTool;
@@ -400,6 +401,79 @@ export const chainInputSchema = z.object({
   rawText: z.string().optional(),
 });
 export type ChainInput = z.infer<typeof chainInputSchema>;
+
+// ────────────────────────────────────────────────────────────────────────────
+// v3 — 행위시법 판단 (applicable_law)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 법령 버전 1건 — 법제처 `lawSearch.do?target=eflaw` 응답의 (MST, 시행일자) 쌍.
+ * 같은 MST가 단계 시행으로 여러 시행일자 행을 가질 수 있어 쌍 단위로 다룬다.
+ */
+export interface LawVersionEntry {
+  /** 법령일련번호 */
+  mst: string;
+  /** 시행일자 YYYYMMDD */
+  efYd: string;
+  /** 공포일자 YYYYMMDD */
+  ancYd: string;
+  /** 공포번호 */
+  ancNo: string;
+  /** 제개정구분명 (일부개정·전부개정·타법개정 등) */
+  rrCls: string;
+  /** 현행연혁코드 (현행 | 연혁 | 시행예정) */
+  statusLabel: string;
+}
+
+/** 부칙 발췌 1건 — 특정 공포번호 부칙에서 추린 적용례·경과조치 라인 */
+export interface TransitionExcerpt {
+  ancNo: string;
+  /** 부칙 공포일자 YYYYMMDD */
+  ancYd: string;
+  lines: string[];
+  /**
+   * 발췌 라인이 조회 조문(제N조)을 직접 언급하는지.
+   * true = 해당 조문 전용 경과규정 / false = 그 밖의 일반 경과조치(참고용).
+   * 세금 앱 정확성: 조문 무관 경과규정을 해당 조문에 적용되는 것처럼 오인시키지 않기 위함.
+   */
+  articleSpecific: boolean;
+}
+
+/** 행위시법 판단 결과 */
+export interface ApplicableLawResult {
+  lawName: string;
+  articleNo: string;
+  /** 기준일 YYYYMMDD */
+  baseDate: string;
+  /** 기준일에 시행 중이던 버전 */
+  version: LawVersionEntry;
+  /** 그 버전의 조문 본문 (조문 미존재 시 null) */
+  article: { title: string; fullText: string } | null;
+  /** 오늘 기준 현행 버전 (식별 실패 시 null) */
+  currentVersion: LawVersionEntry | null;
+  /** 적용 버전이 곧 현행 버전인지 */
+  isCurrentVersion: boolean;
+  /** 적용 시점 조문 본문이 현행과 동일한지 (비교 실패 시 null) */
+  sameAsCurrentText: boolean | null;
+  /** 기준일 이후 ~ 오늘 사이 시행된 개정 버전들 (경과규정 추적 대상) */
+  laterVersions: LawVersionEntry[];
+  /** 부칙 적용례·경과조치 발췌 */
+  transitionExcerpts: TransitionExcerpt[];
+  /** 법제처 현행 조문 링크 */
+  sourceUrl: string;
+}
+
+export const applicableLawInputSchema = z.object({
+  lawName: z.string().min(1).max(100).refine(
+    (v) => HANGUL_OR_KNOWN_EN.test(v),
+    "법령명은 한글로 입력해 주세요."
+  ),
+  articleNo: z.string().min(1).max(30).describe("예: '제89조', '89', '18의2'"),
+  baseDate: z
+    .string()
+    .regex(/^\d{4}[-./]?\d{1,2}[-./]?\d{1,2}$/, "기준일 형식 오류: YYYYMMDD 또는 YYYY-MM-DD"),
+});
+export type ApplicableLawInput = z.infer<typeof applicableLawInputSchema>;
 
 // ────────────────────────────────────────────────────────────────────────────
 // 5. 에러 envelope

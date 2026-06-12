@@ -35,6 +35,16 @@ export function LawResearchClient() {
   // 팝업으로 조문을 띄우는 경로에서는 법령·조문 탭의 인라인 자동조회를 억제(이중 fetch 방지).
   const openingArticlePopup = routed?.tool === "get_law_text";
 
+  // 행위시법 라우팅 → 법령·조문 탭의 ApplicableLawPanel 자동 조회.
+  const isApplicableLaw = routed?.tool === "applicable_law";
+  const applicableParams = isApplicableLaw
+    ? {
+        lawName: extractQueryParam(routed, "lawName"),
+        articleNo: extractQueryParam(routed, "articleNo"),
+        baseDate: extractQueryParam(routed, "baseDate"),
+      }
+    : undefined;
+
   const initialLawQuery = extractQueryParam(routed, "q") ?? extractQueryParam(routed, "lawName");
   const initialArticleNo = extractQueryParam(routed, "articleNo");
   const initialDecisionQuery = extractQueryParam(routed, "q");
@@ -60,8 +70,10 @@ export function LawResearchClient() {
           <LawSearchTab
             initialQuery={initialLawQuery}
             initialArticleNo={initialArticleNo}
-            autoSearch={routed?.targetTab === "law" ? routeNonce : 0}
+            autoSearch={routed?.targetTab === "law" && !isApplicableLaw ? routeNonce : 0}
             inlineArticleAutoLoad={!openingArticlePopup}
+            applicable={applicableParams}
+            applicableNonce={isApplicableLaw ? routeNonce : 0}
           />
         </TabsContent>
         <TabsContent value="decision" keepMounted>

@@ -22,6 +22,44 @@ describe("Query Router — 패턴 레지스트리", () => {
     expect(ROUTER_PATTERN_NAMES).toContain("penalty_action");
     expect(ROUTER_PATTERN_NAMES).toContain("search_decisions");
     expect(ROUTER_PATTERN_NAMES).toContain("annex");
+    expect(ROUTER_PATTERN_NAMES).toContain("applicable_law");
+  });
+});
+
+describe("Query Router — 행위시법 (applicable_law)", () => {
+  it('"2021년 시행 소득세법 89조" → applicable_law, baseDate YYYY0101', () => {
+    const r = routeQuery("2021년 시행 소득세법 89조");
+    expect(r.tool).toBe("applicable_law");
+    expect(r.patternName).toBe("applicable_law");
+    expect(r.params.lawName).toBe("소득세법");
+    expect(r.params.articleNo).toBe("제89조");
+    expect(r.params.baseDate).toBe("20210101");
+    expect(r.confidence).toBe("high");
+    expect(r.targetTab).toBe("law");
+  });
+
+  it('"2020.5.1 당시 소득세법 제89조" → 점 날짜(정규화 후 공백) 처리', () => {
+    const r = routeQuery("2020.5.1 당시 소득세법 제89조");
+    expect(r.tool).toBe("applicable_law");
+    expect(r.params.baseDate).toBe("20200501");
+  });
+
+  it('"2022년 당시 상증법 22조" → 별칭 해석', () => {
+    const r = routeQuery("2022년 당시 상증법 22조");
+    expect(r.tool).toBe("applicable_law");
+    expect(r.params.lawName).toBe("상속세및증여세법");
+    expect(r.params.baseDate).toBe("20220101");
+  });
+
+  it('시점신호 없는 "소득세법 제89조" → applicable_law 아님(기존 유지)', () => {
+    const r = routeQuery("소득세법 제89조");
+    expect(r.tool).toBe("get_law_text");
+    expect(r.patternName).toBe("specific_article");
+  });
+
+  it('"2021년 양도소득세 개정"(시점신호 없음) → amendment_track 유지', () => {
+    const r = routeQuery("2021년 양도소득세 개정");
+    expect(r.chainType).toBe("amendment_track");
   });
 });
 
