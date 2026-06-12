@@ -17,7 +17,9 @@ import path from "path";
 
 const API_BASE = "https://www.law.go.kr/DRF";
 const CACHE_DIR = path.resolve(process.cwd(), ".legal-cache");
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7일
+// 법령 조문은 개정이 드묾 + 법제처 DRF API는 주말·공휴일·야간에 접속 차단되는 경향 →
+// TTL을 길게(30일) 잡아 만료로 인한 주말 실패를 줄인다. (개정 반영 지연은 stale fallback 안내로 보완)
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
 
 /**
  * 법제처 Open API 인증키 (OC)
@@ -153,11 +155,14 @@ interface LawServiceResponse {
 
 // ── 캐시 유틸 ─────────────────────────────────────────────────────────────
 
-async function readCache<T>(key: string): Promise<T | null> {
+/**
+ * @param allowStale true면 TTL 만료 캐시도 반환 (법제처 접속 차단 시 fallback 용).
+ */
+async function readCache<T>(key: string, allowStale = false): Promise<T | null> {
   const file = path.join(CACHE_DIR, `${key}.json`);
   try {
     const stat = await fs.stat(file);
-    if (Date.now() - stat.mtimeMs > CACHE_TTL_MS) return null;
+    if (!allowStale && Date.now() - stat.mtimeMs > CACHE_TTL_MS) return null;
     const text = await fs.readFile(file, "utf-8");
     return JSON.parse(text) as T;
   } catch {
@@ -285,28 +290,35 @@ export async function searchLaw(lawName: string): Promise<LawSearchResult | null
     법령일련번호: string;
     공포일자: string;
   };
-  const data = await fetchLawApi("lawSearch.do", {
-    target: "law",
-    query: lawName,
-    display: "5",
-  }) as { LawSearch?: { law?: LawEntry | LawEntry[] } };
+  try {
+    const data = await fetchLawApi("lawSearch.do", {
+      target: "law",
+      query: lawName,
+      display: "5",
+    }) as { LawSearch?: { law?: LawEntry | LawEntry[] } };
 
-  // 법제처 API는 결과 1건 시 배열 대신 단일 객체를 반환 (XML→JSON 변환 특성)
-  const laws = normalizeArray<LawEntry>(data?.LawSearch?.law);
-  // 정확한 법령명 우선, 없으면 첫 번째
-  const match =
-    laws.find((l) => l["법령명한글"] === lawName) ?? laws[0];
+    // 법제처 API는 결과 1건 시 배열 대신 단일 객체를 반환 (XML→JSON 변환 특성)
+    const laws = normalizeArray<LawEntry>(data?.LawSearch?.law);
+    // 정확한 법령명 우선, 없으면 첫 번째
+    const match =
+      laws.find((l) => l["법령명한글"] === lawName) ?? laws[0];
 
-  if (!match) return null;
+    if (!match) return null;
 
-  const result: LawSearchResult = {
-    lawName: match["법령명한글"],
-    lawId: match["법령ID"],
-    mst: match["법령일련번호"],
-    promulgationDate: match["공포일자"],
-  };
-  await writeCache(cacheKey, result);
-  return result;
+    const result: LawSearchResult = {
+      lawName: match["법령명한글"],
+      lawId: match["법령ID"],
+      mst: match["법령일련번호"],
+      promulgationDate: match["공포일자"],
+    };
+    await writeCache(cacheKey, result);
+    return result;
+  } catch (err) {
+    // 법제처 접속 차단(주말·공휴일·점검) → TTL 만료 캐시라도 반환
+    const stale = await readCache<LawSearchResult>(cacheKey, true);
+    if (stale) return stale;
+    throw err;
+  }
 }
 
 /**
@@ -317,6 +329,24 @@ export async function searchLaw(lawName: string): Promise<LawSearchResult | null
  *
  * articleNo 예: "제18조의3", "제111조", "제89조"
  */
+/** 조문단위 배열에서 특정 조문을 추출해 LawArticle 로 구성 (없으면 null) */
+function buildArticleFromUnits(
+  units: LawServiceUnit[],
+  lawName: string,
+  articleNo: string
+): LawArticle | null {
+  const unit = findArticleUnit(units, articleNo);
+  if (!unit) return null;
+  const fullText = extractUnitText(unit);
+  if (!fullText) return null;
+  // 제목: API의 조문제목(괄호 안 "세율"만) 우선. 없으면 헤더 "제N조(제목)"에서 괄호 추출,
+  // 그것도 없으면 첫 줄 → articleNo. (헤더 전체를 title로 쓰면 본문 첫 줄과 중복 표시됨)
+  const cleanTitle = typeof unit.조문제목 === "string" ? unit.조문제목.trim() : "";
+  const titleLine = normalizeContent(unit.조문내용).split("\n")[0] ?? "";
+  const title = cleanTitle || parseTitleFromHeader(titleLine) || titleLine || articleNo;
+  return { title, fullText, lawName, articleNo };
+}
+
 export async function fetchArticle(
   mst: string,
   lawName: string,
@@ -326,42 +356,37 @@ export async function fetchArticle(
   const cached = await readCache<LawArticle>(cacheKey);
   if (cached) return cached;
 
-  // 법령 전체 조문단위 캐시
   const lawCacheKey = `law_units_${mst}`;
-  let units = await readCache<LawServiceUnit[]>(lawCacheKey);
+  try {
+    // 법령 전체 조문단위 캐시
+    let units = await readCache<LawServiceUnit[]>(lawCacheKey);
+    if (!units) {
+      const data = await fetchLawApi("lawService.do", {
+        target: "law",
+        MST: mst,
+      }) as LawServiceResponse;
+      // 단일 객체·배열·undefined 를 모두 배열로 정규화
+      units = normalizeArray(data?.법령?.조문?.조문단위);
+      if (units.length === 0) return null;
+      await writeCache(lawCacheKey, units);
+    }
 
-  if (!units) {
-    const data = await fetchLawApi("lawService.do", {
-      target: "law",
-      MST: mst,
-    }) as LawServiceResponse;
-
-    // 단일 객체·배열·undefined 를 모두 배열로 정규화
-    units = normalizeArray(data?.법령?.조문?.조문단위);
-    if (units.length === 0) return null;
-    await writeCache(lawCacheKey, units);
+    const result = buildArticleFromUnits(units, lawName, articleNo);
+    if (!result) return null;
+    await writeCache(cacheKey, result);
+    return result;
+  } catch (err) {
+    // 법제처 접속 차단(주말·공휴일·점검) → 만료 캐시라도 반환:
+    //   ① 조문 단위 캐시 → ② 법령 전체 units 캐시에서 재추출
+    const staleArticle = await readCache<LawArticle>(cacheKey, true);
+    if (staleArticle) return staleArticle;
+    const staleUnits = await readCache<LawServiceUnit[]>(lawCacheKey, true);
+    if (staleUnits) {
+      const rebuilt = buildArticleFromUnits(staleUnits, lawName, articleNo);
+      if (rebuilt) return rebuilt;
+    }
+    throw err;
   }
-
-  const unit = findArticleUnit(units, articleNo);
-  if (!unit) return null;
-
-  const fullText = extractUnitText(unit);
-  if (!fullText) return null;
-
-  // 제목: API의 조문제목(괄호 안 "세율"만) 우선. 없으면 헤더 "제N조(제목)"에서 괄호 추출,
-  // 그것도 없으면 첫 줄 → articleNo. (헤더 전체를 title로 쓰면 본문 첫 줄과 중복 표시됨)
-  const cleanTitle = typeof unit.조문제목 === "string" ? unit.조문제목.trim() : "";
-  const titleLine = normalizeContent(unit.조문내용).split("\n")[0] ?? "";
-  const title = cleanTitle || parseTitleFromHeader(titleLine) || titleLine || articleNo;
-
-  const result: LawArticle = {
-    title,
-    fullText,
-    lawName,
-    articleNo,
-  };
-  await writeCache(cacheKey, result);
-  return result;
 }
 
 /** MST 캐시 무효화 (법령 개정 후 강제 재조회 시) */

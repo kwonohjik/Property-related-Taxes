@@ -17,7 +17,8 @@ import {
 
 export const API_BASE = "https://www.law.go.kr/DRF";
 export const CACHE_DIR = path.resolve(process.cwd(), ".legal-cache");
-export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// 법제처 DRF API는 주말·공휴일·야간에 접속 차단되는 경향 → TTL 30일로 만료 실패 완화
+export const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 // ────────────────────────────────────────────────────────────────────────────
 // 에러 클래스
@@ -118,11 +119,12 @@ export function safeCacheKey(str: string): string {
   return str.replace(/[^a-zA-Z0-9가-힣_-]/g, "_");
 }
 
-export async function readCache<T>(key: string): Promise<T | null> {
+/** @param allowStale true면 TTL 만료 캐시도 반환 (법제처 접속 차단 시 fallback) */
+export async function readCache<T>(key: string, allowStale = false): Promise<T | null> {
   const file = path.join(CACHE_DIR, `${key}.json`);
   try {
     const stat = await fs.stat(file);
-    if (Date.now() - stat.mtimeMs > CACHE_TTL_MS) return null;
+    if (!allowStale && Date.now() - stat.mtimeMs > CACHE_TTL_MS) return null;
     return JSON.parse(await fs.readFile(file, "utf-8")) as T;
   } catch {
     return null;
