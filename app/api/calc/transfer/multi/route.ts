@@ -20,6 +20,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
@@ -99,16 +100,16 @@ export async function POST(request: NextRequest) {
     const base: Omit<TransferTaxInput, "annualBasicDeductionUsed" | "skipBasicDeduction" | "skipLossFloor"> = {
       propertyType: p.propertyType,
       transferPrice: p.transferPrice,
-      transferDate: new Date(p.transferDate),
+      transferDate: toDate(p.transferDate, "transferDate"),
       acquisitionPrice: p.acquisitionPrice,
-      acquisitionDate: new Date(p.acquisitionDate),
+      acquisitionDate: toDate(p.acquisitionDate, "acquisitionDate"),
       // ⑭ 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용 (per-asset 단건 엔진 honor)
-      assetContractDate: p.assetContractDate ? new Date(p.assetContractDate) : undefined,
+      assetContractDate: toOptionalDate(p.assetContractDate),
       // P5 모드 2 (⑭): 보유 감면주택 주택수 제외 — 세대 단위 공통이라 전 자산 주입
       specialHouseExclusions: (data.specialHouseExclusions ?? []).map((e) => ({
         article: e.article,
-        houseAcquisitionDate: e.houseAcquisitionDate ? new Date(e.houseAcquisitionDate) : undefined,
-        houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
+        houseAcquisitionDate: toOptionalDate(e.houseAcquisitionDate),
+        houseContractDate: toOptionalDate(e.houseContractDate),
         requirementsConfirmed: e.requirementsConfirmed,
       })),
       expenses: p.expenses,
@@ -128,13 +129,13 @@ export async function POST(request: NextRequest) {
       isNonBusinessLand: p.isNonBusinessLand,
       isSuccessorRightToMoveIn: p.isSuccessorRightToMoveIn,
       acquisitionCause: p.acquisitionCause,
-      decedentAcquisitionDate: p.decedentAcquisitionDate ? new Date(p.decedentAcquisitionDate) : undefined,
-      donorAcquisitionDate: p.donorAcquisitionDate ? new Date(p.donorAcquisitionDate) : undefined,
+      decedentAcquisitionDate: toOptionalDate(p.decedentAcquisitionDate),
+      donorAcquisitionDate: toOptionalDate(p.donorAcquisitionDate),
       isOneHousehold: p.isOneHousehold,
       temporaryTwoHouse: p.temporaryTwoHouse
         ? {
-            previousAcquisitionDate: new Date(p.temporaryTwoHouse.previousAcquisitionDate),
-            newAcquisitionDate: new Date(p.temporaryTwoHouse.newAcquisitionDate),
+            previousAcquisitionDate: toDate(p.temporaryTwoHouse.previousAcquisitionDate, "temporaryTwoHouse.previousAcquisitionDate"),
+            newAcquisitionDate: toDate(p.temporaryTwoHouse.newAcquisitionDate, "temporaryTwoHouse.newAcquisitionDate"),
           }
         : undefined,
       // 감면 매핑 — 단건 route와 공용 (rental §97 시리즈 Date 변환 포함, 2026-06-11)
@@ -142,18 +143,18 @@ export async function POST(request: NextRequest) {
       nonBusinessLandDetails: p.nonBusinessLandDetails
         ? {
             ...p.nonBusinessLandDetails,
-            acquisitionDate: new Date(p.nonBusinessLandDetails.acquisitionDate),
-            transferDate: new Date(p.nonBusinessLandDetails.transferDate),
+            acquisitionDate: toDate(p.nonBusinessLandDetails.acquisitionDate, "nonBusinessLandDetails.acquisitionDate"),
+            transferDate: toDate(p.nonBusinessLandDetails.transferDate, "nonBusinessLandDetails.transferDate"),
             businessUsePeriods: p.nonBusinessLandDetails.businessUsePeriods.map((bp) => ({
-              startDate: new Date(bp.startDate),
-              endDate: new Date(bp.endDate),
+              startDate: toDate(bp.startDate, "businessUsePeriods.startDate"),
+              endDate: toDate(bp.endDate, "businessUsePeriods.endDate"),
               usageType: bp.usageType,
             })),
             gracePeriods: p.nonBusinessLandDetails.gracePeriods.map((g) => ({
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               type: g.type as any,
-              startDate: new Date(g.startDate),
-              endDate: new Date(g.endDate),
+              startDate: toDate(g.startDate, "gracePeriods.startDate"),
+              endDate: toDate(g.endDate, "gracePeriods.endDate"),
             })),
           }
         : undefined,
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
             id: h.id,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             region: h.region as any,
-            acquisitionDate: new Date(h.acquisitionDate),
+            acquisitionDate: toDate(h.acquisitionDate, "houses.acquisitionDate"),
             officialPrice: h.officialPrice,
             isInherited: h.isInherited,
             isLongTermRental: h.isLongTermRental,
@@ -172,20 +173,20 @@ export async function POST(request: NextRequest) {
           }))
         : undefined,
       sellingHouseId: p.sellingHouseId,
-      marriageMerge: p.marriageMerge ? { marriageDate: new Date(p.marriageMerge.marriageDate) } : undefined,
-      parentalCareMerge: p.parentalCareMerge ? { mergeDate: new Date(p.parentalCareMerge.mergeDate) } : undefined,
+      marriageMerge: p.marriageMerge ? { marriageDate: toDate(p.marriageMerge.marriageDate, "marriageMerge.marriageDate") } : undefined,
+      parentalCareMerge: p.parentalCareMerge ? { mergeDate: toDate(p.parentalCareMerge.mergeDate, "parentalCareMerge.mergeDate") } : undefined,
       rentalReductionDetails: p.rentalReductionDetails
         ? {
             ...p.rentalReductionDetails,
-            registrationDate: new Date(p.rentalReductionDetails.registrationDate),
-            rentalStartDate: new Date(p.rentalReductionDetails.rentalStartDate),
-            transferDate: new Date(p.rentalReductionDetails.transferDate),
+            registrationDate: toDate(p.rentalReductionDetails.registrationDate, "rentalReductionDetails.registrationDate"),
+            rentalStartDate: toDate(p.rentalReductionDetails.rentalStartDate, "rentalReductionDetails.rentalStartDate"),
+            transferDate: toDate(p.rentalReductionDetails.transferDate, "rentalReductionDetails.transferDate"),
             vacancyPeriods: p.rentalReductionDetails.vacancyPeriods.map((v) => ({
-              startDate: new Date(v.startDate),
-              endDate: new Date(v.endDate),
+              startDate: toDate(v.startDate, "vacancyPeriods.startDate"),
+              endDate: toDate(v.endDate, "vacancyPeriods.endDate"),
             })),
             rentHistory: p.rentalReductionDetails.rentHistory.map((r) => ({
-              contractDate: new Date(r.contractDate),
+              contractDate: toDate(r.contractDate, "rentHistory.contractDate"),
               monthlyRent: r.monthlyRent,
               deposit: r.deposit,
               contractType: r.contractType,
@@ -195,20 +196,20 @@ export async function POST(request: NextRequest) {
       newHousingDetails: p.newHousingDetails
         ? {
             ...p.newHousingDetails,
-            acquisitionDate: new Date(p.newHousingDetails.acquisitionDate),
-            transferDate: new Date(p.newHousingDetails.transferDate),
+            acquisitionDate: toDate(p.newHousingDetails.acquisitionDate, "newHousingDetails.acquisitionDate"),
+            transferDate: toDate(p.newHousingDetails.transferDate, "newHousingDetails.transferDate"),
           }
         : undefined,
       acquisitionMethod: p.acquisitionMethod,
       appraisalValue: p.appraisalValue,
       isSelfBuilt: p.isSelfBuilt,
       buildingType: p.buildingType,
-      constructionDate: p.constructionDate ? new Date(p.constructionDate) : undefined,
+      constructionDate: toOptionalDate(p.constructionDate),
       extensionFloorArea: p.extensionFloorArea,
       pre1990Land: p.pre1990Land
         ? {
-            acquisitionDate: new Date(p.pre1990Land.acquisitionDate),
-            transferDate: new Date(p.pre1990Land.transferDate),
+            acquisitionDate: toDate(p.pre1990Land.acquisitionDate, "pre1990Land.acquisitionDate"),
+            transferDate: toDate(p.pre1990Land.transferDate, "pre1990Land.transferDate"),
             areaSqm: p.pre1990Land.areaSqm,
             pricePerSqm_1990: p.pre1990Land.pricePerSqm_1990,
             pricePerSqm_atTransfer: p.pre1990Land.pricePerSqm_atTransfer,
@@ -220,18 +221,16 @@ export async function POST(request: NextRequest) {
         : undefined,
       parcels: p.parcels?.map((parcel) => ({
         ...parcel,
-        acquisitionDate: new Date(parcel.acquisitionDate),
-        replottingConfirmDate: parcel.replottingConfirmDate ? new Date(parcel.replottingConfirmDate) : undefined,
+        acquisitionDate: toDate(parcel.acquisitionDate, "parcels.acquisitionDate"),
+        replottingConfirmDate: toOptionalDate(parcel.replottingConfirmDate),
       })),
       // 자산별 가산세 — 단건 엔진이 자산별 결정세액 기준으로 계산.
       filingPenaltyDetails: p.filingPenaltyDetails,
       delayedPaymentDetails: p.delayedPaymentDetails
         ? {
             unpaidTax: p.delayedPaymentDetails.unpaidTax,
-            paymentDeadline: new Date(p.delayedPaymentDetails.paymentDeadline),
-            actualPaymentDate: p.delayedPaymentDetails.actualPaymentDate
-              ? new Date(p.delayedPaymentDetails.actualPaymentDate)
-              : undefined,
+            paymentDeadline: toDate(p.delayedPaymentDetails.paymentDeadline, "delayedPaymentDetails.paymentDeadline"),
+            actualPaymentDate: toOptionalDate(p.delayedPaymentDetails.actualPaymentDate),
           }
         : undefined,
       // ⑭ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — Date 변환 (단건 route 패턴 동일)
@@ -240,7 +239,7 @@ export async function POST(request: NextRequest) {
             applyException: p.rentalHousingException.applyException,
             scenario: p.rentalHousingException.scenario,
             rentalUnits: p.rentalHousingException.rentalUnits.map((u) => ({
-              registrationDate: new Date(u.registrationDate),
+              registrationDate: toDate(u.registrationDate, "rentalUnits.registrationDate"),
               rentalType: u.rentalType,
               rentalAcquisitionType: u.rentalAcquisitionType,
               isApartment: u.isApartment,
@@ -250,9 +249,7 @@ export async function POST(request: NextRequest) {
               rentalAutoTermination: u.rentalAutoTermination,
               requirementsConfirmed: u.requirementsConfirmed,
             })),
-            priorResidenceTransferDate: p.rentalHousingException.priorResidenceTransferDate
-              ? new Date(p.rentalHousingException.priorResidenceTransferDate)
-              : undefined,
+            priorResidenceTransferDate: toOptionalDate(p.rentalHousingException.priorResidenceTransferDate),
             standardPriceAtAcquisition: p.rentalHousingException.standardPriceAtAcquisitionForPhrp,
             standardPriceAtPriorTransfer: p.rentalHousingException.standardPriceAtPriorTransfer,
             standardPriceAtTransfer: p.rentalHousingException.standardPriceAtTransferForPhrp,

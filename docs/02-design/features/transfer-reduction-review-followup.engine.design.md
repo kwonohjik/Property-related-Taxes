@@ -64,7 +64,35 @@ function failIfStdPriceMissingOver5Y(
 
 ---
 
-## F-2 — reduction-windows.ts 단일 출처 (P2)
+## F-2 — 시한 표 드리프트 방지 anchor (P2) — 범위 조정 (Do 중 환류 2026-06-12)
+
+### ⚠ 전수 실측으로 단일 상수 모듈화 보류 결정
+당초 `reduction-windows.ts` 단일 상수로 3계층 통합을 설계했으나, Do 착수 전 전수 비교에서
+**시한의 의미·값이 용도별로 다른 조문**을 발견 → 억지 통합은 정확성 훼손 위험(법령 정확성 최우선):
+
+| 조문 | period-check | evaluator | WINDOWS(모드2) | 통합 가능? |
+|---|---|---|---|---|
+| §98·98의2·98의5·98의7·99의2 | [from,to] 일치 | 동일 상수 | 동일 | ✅ |
+| §98의3 | 거주자 [2009-02-12,~] | **거주자/비거주자 2-트랙** | 거주자만 | ⚠ 변형 |
+| §98의6 | `()=>true` 낙관(임대계약일 미보유) | **임대계약 60개월 기준** | `[2011-03-29,2011-12-31]`(취득) | ❌ 의미 상이 |
+
+→ 단일 상수는 §98의6에서 **서로 다른 값**(낙관 / 임대 / 2011-03-29)을 하나로 강제하게 되어
+   부적절. §98의3 2-트랙도 evaluator 전용.
+
+### 대체 작업 — 일치 조문만 드리프트 anchor
+값이 일치해야 하는 5조문(§98·98의2·98의5·98의7·99의2 + §98의3 거주자)의 evaluator export 상수 ↔
+`SPECIAL_HOUSE_EXCLUSION_WINDOWS` 윈도우가 **일치하는지** 단위 테스트로 고정. 한쪽 수정 시 다른 쪽
+드리프트를 즉시 탐지. period-check은 D() 리터럴(비-export)이라 anchor 대상 외 — 별도 변경 드뭄.
+
+### anchor 파일
+`__tests__/tax-engine/transfer-tax/reduction-window-consistency.test.ts` (신규).
+
+---
+
+## F-2(보류) — reduction-windows.ts 단일 출처 (참고 — 미채택)
+
+> 아래는 당초 설계. §98의6·§98의3 변형으로 **미채택**. 향후 §98의6 임대 기준을 별도 필드로
+> 분리하는 큰 리팩터링 시 재검토.
 
 ### 모듈 설계
 
@@ -144,8 +172,14 @@ export const REDUCTION_ACQUISITION_WINDOWS: Partial<
   외 호출자(다필지 등) 방어). 제거하지 않는다.
 - anchor: 기존 §99의3 테스트 전수 통과(동작 무변경).
 
-## F-6 — calcReductions options 객체화 + assetContractDate (P4, 선택)
+## F-6 — 다필지 assetContractDate 전달 (P4) — 1줄 추가 완료 (Do 중 환류)
 
-- 단독 1줄 추가 금지(positional 17개 순서 위험). `calcReductions` 시그니처를 options 객체로
-  리팩터링하는 작업과 동반할 때만 다필지 호출(`transfer-tax-rate-calc.ts:483`)에 전달 추가.
-- 호출부 **2곳**(rate-calc.ts:483 · finalize.ts:198 — 실측) 동시 교체 + 전 양도세 anchor 회귀 0.
+### ⚠ "positional 순서 위험" 우려는 과대평가 (실측 정정)
+`calcReductions` 시그니처 실측(`transfer-tax-reductions-calc.ts`): `assetContractDate`는 **15번째
+(마지막) optional positional 인자**. finalize.ts:215는 전달, rate-calc.ts:483(다필지)만 누락.
+**마지막 인자 1개 추가**는 중간 삽입이 아니므로 순서 어긋남이 없다 → options 리팩터링 없이 안전하게
+1줄 추가(`input.assetContractDate`). numeric 영향은 다필지=토지/주택감면 양립 불가로 사실상 0이나
+메인 경로와 인자 일관성 확보.
+
+### anchor
+별도 anchor 불요(numeric 0) — 전 양도세 회귀 0으로 충분.

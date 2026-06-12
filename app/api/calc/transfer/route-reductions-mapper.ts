@@ -141,9 +141,17 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
           : undefined,
       } as TransferReduction;
     }
-    // §99의3 (Phase 2, 2026-05-06) + Phase 1 stub 잔여: Zod schema에 본 요건 필드가
-    // 모두 정의되어 있으므로 r 그대로 통과. string 일자 필드(contractDate993 등)는
-    // transfer-tax.ts의 STEP 4.6 §99의3 분기에서 new Date() 변환.
+    // §99의3 (Phase 2): string 일자 → Date 변환 (⑭ 경로 일원화 — F-5).
+    // 다른 조문과 달리 엔진 내부(evalNew993)가 coerceOptionalDate로 string도 수용했으나, 일관성을
+    // 위해 mapper에서 변환한다. 엔진의 coerceOptionalDate fallback은 비-route 호출자(테스트 등)
+    // 방어로 유지(이중 안전 — Date도 그대로 통과).
+    if (r.type === "new_99_3") {
+      return {
+        ...r,
+        contractDate993: r.contractDate993 ? new Date(r.contractDate993) : undefined,
+        usageApprovalDate993: r.usageApprovalDate993 ? new Date(r.usageApprovalDate993) : undefined,
+      } as TransferReduction;
+    }
     return r;
   });
 }
