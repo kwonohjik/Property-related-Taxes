@@ -63,6 +63,25 @@ describe("Query Router — 행위시법 (applicable_law)", () => {
   });
 });
 
+describe("Query Router — 조문 영향 분석 (impact_map)", () => {
+  it('"소득세법 89조 영향" → impact_map', () => {
+    const r = routeQuery("소득세법 89조 영향");
+    expect(r.tool).toBe("impact_map");
+    expect(r.patternName).toBe("impact_map");
+    expect(r.params.lawName).toBe("소득세법");
+    expect(r.params.articleNo).toBe("제89조");
+  });
+  it('"상증법 제22조 파급" → 별칭 해석 + impact_map', () => {
+    const r = routeQuery("상증법 제22조 파급");
+    expect(r.tool).toBe("impact_map");
+    expect(r.params.lawName).toBe("상속세및증여세법");
+  });
+  it('"소득세법 89조"(키워드 없음) → impact_map 아님', () => {
+    const r = routeQuery("소득세법 89조");
+    expect(r.tool).toBe("get_law_text");
+  });
+});
+
 describe("Query Router — 특정 조문 조회", () => {
   it('"민법 제750조" → get_law_text', () => {
     const r = routeQuery("민법 제750조");

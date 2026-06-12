@@ -89,6 +89,27 @@ const ROUTER_PATTERNS: Pattern[] = [
     },
   },
 
+  // 0-c. 조문 영향 분석 — "소득세법 89조 영향", "상증법 제22조 파급"
+  //    법령명 + 조문번호 + (영향|파급) → 인용 역추적(조문 모달 + 영향 분석 자동 실행).
+  {
+    name: "impact_map",
+    priority: 0,
+    patterns: [
+      /([가-힣·\s]{1,28}?(?:법률|법|시행령|시행규칙|령|규칙|조례|규정))\s*제?\s*(\d{1,4})\s*조(?:\s*의\s*(\d+))?[^가-힣]*(?:.*?)?(영향|파급|인용\s*현황)/,
+    ],
+    extract: (query, m) => {
+      const lawName = resolveLawAlias(m[1].trim());
+      const articleNo = m[3] ? `제${m[2]}조의${m[3]}` : `제${m[2]}조`;
+      return {
+        tool: "impact_map",
+        params: { lawName, articleNo },
+        reason: `법령명 + 조문번호 + 영향 키워드 → 조문 인용 역추적(영향 그래프)`,
+        targetTab: "law",
+        confidence: "high",
+      };
+    },
+  },
+
   // 1. 특정 조문 조회 — "민법 제750조", "소득세법 제89조의2"
   {
     name: "specific_article",

@@ -15,25 +15,32 @@ export function LawResearchClient() {
   const [activeTab, setActiveTab] = useState<string>("law");
   const [routeNonce, setRouteNonce] = useState(0);
   const [routed, setRouted] = useState<RouteResult | null>(null);
-  const [articleModal, setArticleModal] = useState<{ lawName: string; articleNo: string } | null>(
-    null,
-  );
+  const [articleModal, setArticleModal] = useState<{
+    lawName: string;
+    articleNo: string;
+    autoImpact?: boolean;
+  } | null>(null);
 
   function handleRoute(route: RouteResult) {
     setRouted(route);
     setActiveTab(route.targetTab ?? "law");
     setRouteNonce((n) => n + 1);
-    // 특정 조문 조회 라우팅 → 본문을 팝업으로 즉시 표시 (탭 하단 인라인 대신).
-    if (route.tool === "get_law_text" && route.params.lawName && route.params.articleNo) {
+    // 특정 조문 조회·영향 분석 라우팅 → 본문을 팝업으로 즉시 표시.
+    if (
+      (route.tool === "get_law_text" || route.tool === "impact_map") &&
+      route.params.lawName &&
+      route.params.articleNo
+    ) {
       setArticleModal({
         lawName: String(route.params.lawName),
         articleNo: String(route.params.articleNo),
+        autoImpact: route.tool === "impact_map",
       });
     }
   }
 
   // 팝업으로 조문을 띄우는 경로에서는 법령·조문 탭의 인라인 자동조회를 억제(이중 fetch 방지).
-  const openingArticlePopup = routed?.tool === "get_law_text";
+  const openingArticlePopup = routed?.tool === "get_law_text" || routed?.tool === "impact_map";
 
   // 행위시법 라우팅 → 법령·조문 탭의 ApplicableLawPanel 자동 조회.
   const isApplicableLaw = routed?.tool === "applicable_law";
@@ -102,6 +109,7 @@ export function LawResearchClient() {
         <ArticleModal
           lawName={articleModal.lawName}
           articleNo={articleModal.articleNo}
+          autoImpact={articleModal.autoImpact}
           onClose={() => setArticleModal(null)}
         />
       )}

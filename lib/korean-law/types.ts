@@ -196,7 +196,8 @@ export type RouterTool =
   | "get_annexes"
   | "run_chain"
   | "verify_citations"
-  | "applicable_law";
+  | "applicable_law"
+  | "impact_map";
 
 export interface RouteResult {
   tool: RouterTool;
@@ -561,6 +562,40 @@ export const citeCheckInputSchema = z.object({
   caseNo: z.string().min(1).max(50),
 });
 export type CiteCheckInput = z.infer<typeof citeCheckInputSchema>;
+
+// ────────────────────────────────────────────────────────────────────────────
+// v3 — 조문 영향 그래프 (impact_map)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 영향 그래프의 한 도메인 그룹 (역방향 인용) */
+export interface ImpactGroup {
+  domain: DecisionDomain;
+  label: string;
+  /** 이 조문을 본문에 인용한 결정 상위 N건 */
+  items: DecisionSearchItem[];
+  /** 해당 도메인 전체 인용 수 (표시 N건과 별개) */
+  totalCount: number;
+}
+
+/** 조문 영향 그래프 결과 */
+export interface ImpactMapResult {
+  lawName: string;
+  articleNo: string;
+  /** 검색에 사용한 인용 표기 (예: "소득세법 제89조") */
+  citationQuery: string;
+  groups: ImpactGroup[];
+  /** 전 도메인 합산 인용 수 */
+  totalCitations: number;
+}
+
+export const impactMapInputSchema = z.object({
+  lawName: z.string().min(1).max(100).refine(
+    (v) => HANGUL_OR_KNOWN_EN.test(v),
+    "법령명은 한글로 입력해 주세요."
+  ),
+  articleNo: z.string().min(1).max(30),
+});
+export type ImpactMapInput = z.infer<typeof impactMapInputSchema>;
 
 // ────────────────────────────────────────────────────────────────────────────
 // 5. 에러 envelope

@@ -29,6 +29,8 @@ export { getApplicableLaw } from "./applicable-law";
 
 export { checkPrecedentStatus } from "./cite-check";
 
+export { buildImpactMap } from "./impact-map";
+
 export { resolveLawAlias, isAlias } from "./aliases";
 export type {
   LawSearchItem,

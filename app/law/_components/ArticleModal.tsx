@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { LawArticleResult } from "@/lib/korean-law/types";
 import { CurrentLawBadge } from "./LawCurrencyBadge";
+import { ArticleImpactMap } from "./ArticleImpactMap";
 
 /**
  * 참조조문 칩 클릭 시 자동 로드되는 조문 본문 모달.
@@ -16,10 +17,13 @@ export function ArticleModal({
   lawName,
   articleNo,
   onClose,
+  autoImpact = false,
 }: {
   lawName: string;
   articleNo: string;
   onClose: () => void;
+  /** 라우팅(impact_map)으로 열렸을 때 영향 분석 자동 실행 */
+  autoImpact?: boolean;
 }) {
   const [article, setArticle] = useState<LawArticleResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,6 +117,9 @@ export function ArticleModal({
                 법제처 원문 ↗
               </a>
             )}
+            <div className="mt-4 border-t pt-3">
+              <ArticleImpactMap lawName={lawName} articleNo={articleNo} autoRun={autoImpact} />
+            </div>
           </>
         )}
         {!loading && !error && !article && (
