@@ -16,7 +16,10 @@ export type ExitTaxHolding = {
   id: string;
   /** 종목명 (표시용) */
   stockName: string;
-  /** 시장 분류 (§118의9①: §94①3가·나목 대상) */
+  /**
+   * 시장 분류. §118의9① 범위 = §94①3가·나목(상장·비상장 주식) + §94①4다·라목(기타자산: 과점주주·부동산과다보유법인).
+   * 기타자산 다·라목은 §94①4의 주식이므로 "unlisted"로 입력 — 출국일 시가 × 주수 − 취득가 + §118의11 동일 세율(별도 분기 불요).
+   */
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted";
   /** 보유 주식 수 (정수) */
   shareCount: number;

@@ -90,3 +90,29 @@ describe("B-1②a 납부유예 이자상당액 §118의16④·§178의12③", ()
     expect(r.deferralInterest).toBeUndefined();
   });
 });
+
+describe("B-1②c 기타자산 §94①4다·라 — §118의9① 범위·동일 계산", () => {
+  it("B1-OTHER-1: 과점주주·부동산과다보유(비상장 입력) → 출국일 시가 × 주수 − 취득가 + §118의11", () => {
+    // 기타자산 다·라목은 §94①4 주식 → unlisted로 입력, 출국일 시가 사용자 산정.
+    const r = calculateExitTax(
+      base({
+        holdings: [
+          {
+            id: "h1",
+            stockName: "과점주주비상장",
+            marketType: "unlisted",
+            shareCount: 100,
+            acquisitionDate: new Date("2020-01-01"),
+            perShareAcquisitionPrice: 20_000,
+            departureDayValuationMode: "unlisted_std",
+            unlistedStdPricePerShare: 50_000, // 사용자 산정(부동산과다보유 가중치 반영)
+          },
+        ],
+      }),
+    );
+    // 양도차익 = 100 × (50,000 − 20,000) = 3,000,000 → 기본공제 250만 → 과표 500,000 → 20% = 100,000
+    expect(r.holdingDetails[0].transferGain).toBe(3_000_000);
+    expect(r.taxBase).toBe(500_000);
+    expect(r.incomeTax).toBe(100_000); // §118의11 동일 세율(별도 §55 누진 아님)
+  });
+});
