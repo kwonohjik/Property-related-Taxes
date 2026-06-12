@@ -36,6 +36,9 @@ test.describe("법령 리서치 — 조문 팝업", () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(/소득세법/)).toBeVisible();
     await expect(dialog.getByText(/제77조/)).toBeVisible();
+
+    // v3 Phase E — 현행성 라벨 [현행] (조문 본문 로드 성공 시). 법제처 API 의존이라 관대하게.
+    await expect(dialog.getByText("[현행]")).toBeVisible({ timeout: 30_000 });
   });
 
   test("POPUP-2: '민법 제750조'(제 포함) → 동일하게 팝업 표시", async ({ page }) => {

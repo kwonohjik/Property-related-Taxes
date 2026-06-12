@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { LawSearchItem, LawArticleResult } from "@/lib/korean-law/types";
 import { HighlightedText } from "./HighlightedText";
 import { ApplicableLawPanel } from "./ApplicableLawPanel";
+import { CurrentLawBadge } from "./LawCurrencyBadge";
 
 /** 법령 검색 + 조문 열람 탭 */
 export function LawSearchTab({
@@ -250,8 +251,11 @@ export function LawSearchTab({
       {article && (
         <article className="rounded-md border bg-card p-4">
           <header className="mb-2">
-            <h3 className="text-base font-semibold">
-              {article.lawName} {article.title}
+            <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold">
+              <span>
+                {article.lawName} {article.title}
+              </span>
+              <CurrentLawBadge />
             </h3>
             {article.sourceUrl && (
               <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline">

@@ -118,7 +118,14 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 
 **로컬 저장소**: IndexedDB(Dexie). 비로그인 sessionStorage 보존→로그인 후 마이그레이션. zustand `result`는 partialize 제외. Store 마이그: `lib/stores/calc-wizard-migration.ts`. 상세: [lib/storage/CLAUDE.md](lib/storage/CLAUDE.md).
 
-**법령 리서치 (`/law`)**: 법제처 Open API 직접 호출(`KOREAN_LAW_OC`). Routes `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain}/route.ts`. Client barrel `lib/korean-law/client.ts`(5파일). 별칭 52종 `aliases.ts`. 캐시 `.legal-cache/` 7일 TTL.
+**법령 리서치 (`/law`)**: 법제처 Open API 직접 호출(`KOREAN_LAW_OC`). Routes `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain,route-router,applicable-law}/route.ts`. Client barrel `lib/korean-law/client.ts`(5파일). 별칭 52종 `aliases.ts`. 캐시 `.legal-cache/` 7일 TTL.
+
+- **통합 검색 + Query Router**(`lib/korean-law/router/query-router.ts`): 자연어 질의를 정규식 패턴으로 도구 자동 라우팅. 우선순위 0=행위시법(`applicable_law`)·개정신구대조(`amendment_article`), 1=조문(제 포함), 2=조문(제 생략), 10~=개정·판례·별표 등. `UnifiedSearchBar`→`/api/law/route-router`→`LawResearchClient` 탭 전환.
+- **v4.4 고도화(korean-law-mcp 동급)**:
+  - **행위시법**(`applicable-law.ts`): 기준일 시행 조문 + 부칙 경과규정. 법제처 `target=eflaw`(시행일자별)·연혁. `ApplicableLawPanel`. 부칙 발췌는 조문 전용(`articleSpecific`) 우선. "2021년 시행 소득세법 89조".
+  - **신구대조**(`time-travel.ts`): `compareLatestAmendment`(distinct MST 거슬러 실제 변경 탐색)·LCS `diffLines`. `amendment_track` 체인 `diff` 섹션 + `LawDiffView`. "소득세법 89조 개정".
+  - **현행성 라벨**: 조문 표시 지점에 `CurrentLawBadge`([현행]). 과거 시점은 행위시법 [연혁].
+- 구조화 참조조문(`parsers/ref-parser.ts` `LawRef[]`)·시나리오 8종(`scenarios/`)·판례 17도메인(`DECISION_DOMAINS`).
 
 **키움 OpenAPI 자동조회**: 주식 시세 자동조회(양도·상속·증여 공용). 시점 4종·인프라·법령 인용 정정: [lib/kiwoom/CLAUDE.md](lib/kiwoom/CLAUDE.md).
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { LawArticleResult } from "@/lib/korean-law/types";
+import { CurrentLawBadge } from "./LawCurrencyBadge";
 
 /**
  * 참조조문 칩 클릭 시 자동 로드되는 조문 본문 모달.
@@ -69,8 +70,11 @@ export function ArticleModal({
       >
         <header className="mb-3 flex items-start justify-between gap-2">
           <div>
-            <h3 className="text-base font-semibold">
-              {lawName} {articleNo}
+            <h3 className="flex items-center gap-2 text-base font-semibold">
+              <span>
+                {lawName} {articleNo}
+              </span>
+              {!loading && !error && article && <CurrentLawBadge />}
             </h3>
             {article?.title && (
               <p className="mt-0.5 text-sm text-muted-foreground">{article.title}</p>
