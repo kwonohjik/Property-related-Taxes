@@ -261,6 +261,23 @@ export const separateLandItemSchema = z.object({
 });
 
 // ============================================================
+// 토지 필지 스키마 (납부할세액 카드 — 종합합산·별도합산 공용)
+// ============================================================
+
+export const landParcelSchema = z.object({
+  parcelId: z.string().min(1),
+  jurisdiction: z.string().min(1, { message: "시군구를 입력하세요." }),
+  name: z.string().optional(),
+  area: z.number().positive({ message: "면적은 0보다 커야 합니다." }),
+  shareRatio: z
+    .number()
+    .gt(0, { message: "지분율은 0보다 커야 합니다." })
+    .lte(1, { message: "지분율은 100% 이하여야 합니다." }),
+  officialPricePerSqm: z.number().int().nonnegative(),
+  priorOfficialPricePerSqm: z.number().int().nonnegative().optional(),
+});
+
+// ============================================================
 // 종합부동산세 전체 입력 스키마 (메인)
 // ============================================================
 
@@ -368,6 +385,12 @@ export const comprehensiveTaxInputSchema = z.object({
     .array(separateLandItemSchema)
     .optional(),
 
+  /** 토지 필지 모드 (납부할세액 카드 — 집계 입력과 상호배타) */
+  landAggregateParcels: z.array(landParcelSchema).optional(),
+  landSeparateParcels: z.array(landParcelSchema).optional(),
+  landAggregatePreviousYearTotalTax: z.number().int().nonnegative().optional(),
+  landSeparatePreviousYearTotalTax: z.number().int().nonnegative().optional(),
+
   /**
    * 조정대상지역 2주택 이상 여부 (구 §9①3호·§10② — 2022 귀속 이하에서만 유효)
    * 2023+ 연도 요청에서는 엔진이 무시 (주택 수 3 이상만 중과)
@@ -399,6 +422,25 @@ export const comprehensiveTaxInputSchema = z.object({
       "전년도 총세액 직접 입력과 직전연도 공시가격 자동 계산은 동시에 사용할 수 없습니다. 하나만 선택하세요.",
     path: ["previousYearAuto"],
   },
+).refine(
+  // 종합합산: 집계 입력(landAggregate)과 필지 모드(landAggregateParcels) 상호배타
+  (v) => !(v.landAggregate !== undefined && (v.landAggregateParcels?.length ?? 0) > 0),
+  { message: "종합합산 토지는 집계 입력과 필지별 입력을 동시에 사용할 수 없습니다.", path: ["landAggregateParcels"] },
+).refine(
+  // 별도합산: 동일 상호배타
+  (v) => !((v.landSeparate?.length ?? 0) > 0 && (v.landSeparateParcels?.length ?? 0) > 0),
+  { message: "별도합산 토지는 집계 입력과 필지별 입력을 동시에 사용할 수 없습니다.", path: ["landSeparateParcels"] },
+).refine(
+  // 필지 모드 자동 세부담상한: priorOfficialPricePerSqm 전부-or-전무 (자동 안분 fallback 금지)
+  (v) => {
+    const check = (arr?: z.infer<typeof landParcelSchema>[]) => {
+      if (!arr || arr.length === 0) return true;
+      const withPrior = arr.filter((p) => p.priorOfficialPricePerSqm !== undefined && p.priorOfficialPricePerSqm > 0).length;
+      return withPrior === 0 || withPrior === arr.length;
+    };
+    return check(v.landAggregateParcels) && check(v.landSeparateParcels);
+  },
+  { message: "직전연도 공시지가는 전 필지를 입력하거나 전부 비워야 합니다 (일부만 입력 불가).", path: ["landAggregateParcels"] },
 );
 
 // ============================================================

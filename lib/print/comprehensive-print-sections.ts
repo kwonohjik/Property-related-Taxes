@@ -38,7 +38,10 @@ export type ComprehensivePrintSectionId =
   | "filing-form-main"
   | "filing-form-buppyo3"
   | "filing-form-buppyo5"
-  | "filing-form-buppyo5sub";
+  | "filing-form-buppyo5sub"
+  | "housing-payable-calc"
+  | "land-agg-payable-calc"
+  | "land-sep-payable-calc";
 
 /** 종부세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type ComprehensivePrintSectionNode = GenericNode<ComprehensivePrintSectionId>;
@@ -109,6 +112,27 @@ export const COMPREHENSIVE_PRINT_SECTIONS: ComprehensivePrintSectionGroup[] = [
       {
         id: "filing-form-buppyo5sub",
         label: "직전연도 종합부동산세상당액 계산서 (부표)",
+        channel: SCREEN,
+      },
+    ],
+  },
+  {
+    id: "group:payable-calc",
+    label: "산출근거 (계산 사례 형식)",
+    children: [
+      {
+        id: "housing-payable-calc",
+        label: "주택분 종합부동산세 납부할세액의 계산",
+        channel: SCREEN,
+      },
+      {
+        id: "land-agg-payable-calc",
+        label: "종합합산토지분 납부할세액의 계산",
+        channel: SCREEN,
+      },
+      {
+        id: "land-sep-payable-calc",
+        label: "별도합산토지분 납부할세액의 계산",
         channel: SCREEN,
       },
     ],

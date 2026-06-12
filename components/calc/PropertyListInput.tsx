@@ -56,6 +56,8 @@ interface Props {
   properties: PropertyEntry[];
   /** 법인 여부 — 법인은 §8④ 의제 비노출 (Step1 매트릭스와 동일 정책) */
   isCorporate?: boolean;
+  /** 과세기준일(`${과세연도}-06-01`) — 공시가격 조회 연도 자동 매핑용 */
+  referenceDate?: string;
   onAdd: () => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, data: Partial<PropertyEntry>) => void;
@@ -70,6 +72,7 @@ function PropertyCard({
   property,
   canRemove,
   isCorporate,
+  referenceDate,
   onRemove,
   onUpdate,
 }: {
@@ -77,6 +80,7 @@ function PropertyCard({
   property: PropertyEntry;
   canRemove: boolean;
   isCorporate: boolean;
+  referenceDate?: string;
   onRemove: () => void;
   onUpdate: (data: Partial<PropertyEntry>) => void;
 }) {
@@ -158,6 +162,7 @@ function PropertyCard({
           totalPrice={property.assessedValue}
           onTotalPriceChange={(v) => onUpdate({ assessedValue: v })}
           jibun={property.jibun}
+          referenceDate={referenceDate}
           enableLookup={true}
           label=""
           required
@@ -339,7 +344,7 @@ function PropertyCard({
 // 메인 컴포넌트
 // ============================================================
 
-export function PropertyListInput({ properties, isCorporate = false, onAdd, onRemove, onUpdate }: Props) {
+export function PropertyListInput({ properties, isCorporate = false, referenceDate, onAdd, onRemove, onUpdate }: Props) {
   const totalAssessedValue = properties.reduce(
     (sum, p) => sum + parseAmount(p.assessedValue),
     0,
@@ -355,6 +360,7 @@ export function PropertyListInput({ properties, isCorporate = false, onAdd, onRe
           property={property}
           canRemove={properties.length > 1}
           isCorporate={isCorporate}
+          referenceDate={referenceDate}
           onRemove={() => onRemove(property.id)}
           onUpdate={(data) => onUpdate(property.id, data)}
         />

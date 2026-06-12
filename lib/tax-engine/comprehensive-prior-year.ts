@@ -116,6 +116,8 @@ export function calcPreviousYearEquivalent(
       creditAmount,
       oneHouseDeductionRate,
       oneHouseDeductionAmount,
+      propertyFairMarketRatio: propertyFMR, // 교재 ⑤나 "× 60%" echo
+      propertyTaxBaseAmount: propertyTaxBase, // 교재 ⑤나 "= 8.4억" echo
     },
   };
 }

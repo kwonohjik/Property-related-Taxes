@@ -249,8 +249,10 @@ describe("calculateSeparateAggregateLandTax — 통합 계산", () => {
     expect(result.ruralSpecialTax).toBe(Math.floor(result.determinedTax * 0.2));
   });
 
-  // T15: 세부담 상한 없음 — SeparateAggregateLandTaxResult에 taxCap 필드 없음
-  it("T15: 세부담 상한 없음 — 결과 객체에 taxCap 속성 없음", () => {
+  // T15: 세부담 상한 — 종부세법 §15② 150% (KoreanLaw 검증 2026-06-12, G-3)
+  //   종전 "별도합산은 상한 없음"은 드리프트였음. previousYearTotalTax 미입력 시 taxCap=undefined,
+  //   입력 시 §15② 150% 적용.
+  it("T15: 세부담 상한 §15② — prev 미입력 undefined / 입력 시 150% 적용", () => {
     const lands: SeparateAggregateLandForComprehensive[] = [
       {
         landId: "L1",
@@ -259,10 +261,14 @@ describe("calculateSeparateAggregateLandTax — 통합 계산", () => {
         propertyTaxAmount: 30_000_000,
       },
     ];
-    const result = calculateSeparateAggregateLandTax(lands);
-    expect(result.isSubjectToTax).toBe(true);
-    // taxCap 속성이 존재하지 않음을 확인
-    expect("taxCap" in result).toBe(false);
+    // prev 미입력 → 상한 미적용 (기존 사용자 경로 회귀 0)
+    const noCap = calculateSeparateAggregateLandTax(lands);
+    expect(noCap.isSubjectToTax).toBe(true);
+    expect(noCap.taxCap).toBeUndefined();
+    // prev 입력 → 150% 상한 적용
+    const capped = calculateSeparateAggregateLandTax(lands, 1.0, 50_000_000);
+    expect(capped.taxCap?.capRate).toBe(1.5);
+    expect(capped.taxCap?.capAmount).toBe(Math.floor(50_000_000 * 1.5)); // 75,000,000
   });
 
   // T16: 복수 토지 인별 합산

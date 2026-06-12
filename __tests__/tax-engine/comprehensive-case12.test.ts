@@ -115,6 +115,23 @@ describe("사례12 직전연도 자동계산 — 별지 5호서식 부표 (C12-A
     const direct = calculateComprehensiveTax({ ...case12Input(), previousYearTotalTax: 3_243_000 });
     expect(direct.determinedHousingTax).toBe(auto.determinedHousingTax);
   });
+
+  // C12-A5: 교재 p.186~187 카드 echo (E-1~E-4 — 계산 무변경 중간값 노출)
+  it("C12-A5: 납부할세액 카드 echo — 재산세FMR 45%/과표 6.75억/상한율 130%/직전FMR 60%", () => {
+    const r = calculateComprehensiveTax({ ...case12Input(), previousYearAuto: case12PriorAuto() });
+    // ②ⓐ echo
+    expect(r.propertyTaxCredit.propertyFairMarketRatio).toBe(0.45);       // "× 45%"
+    expect(r.propertyTaxCredit.propertyTaxBaseAmount).toBe(675_000_000);  // 15억 × 45% = 6.75억
+    expect(r.propertyTaxCredit.priorPropertyTaxCapPct).toBe(130);         // §122 단서 130%
+    // 세부담상한액 = 직전 재산세상당 × 130% = 3,549,000 (교재 ②ⓐ)
+    expect(
+      Math.floor((r.previousYearEquivalent!.propertyTaxEquiv * r.propertyTaxCredit.priorPropertyTaxCapPct!) / 100),
+    ).toBe(3_549_000);
+    // ⑤나 echo
+    expect(r.previousYearEquivalent?.detail.propertyFairMarketRatio).toBe(0.6); // "× 60%"
+    // ⑤가 = ②ⓐ + ④ = 2,070,000 + 302,400
+    expect(r.currentYearTotalEquivalent).toBe(2_372_400);
+  });
 });
 
 describe("사례12 케이스 매트릭스 — 경계·회귀 (C12-A5·A6 + M-04·05·10·11·12)", () => {

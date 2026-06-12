@@ -17,7 +17,7 @@ import {
   type ComprehensivePrintSectionId,
 } from "@/lib/print/comprehensive-print-sections";
 
-// 설계 §2.4 기준 leaf 7종 + 사례12 신고서 서식 4종 = 11종
+// 설계 §2.4 기준 leaf 7종 + 사례12 신고서 서식 4종 + 산출근거 카드 3종(주택+토지2) = 14종
 const ALL_LEAVES: ComprehensivePrintSectionId[] = [
   "aggregation-exclusion",
   "housing-tax-base",
@@ -30,6 +30,9 @@ const ALL_LEAVES: ComprehensivePrintSectionId[] = [
   "filing-form-buppyo3",
   "filing-form-buppyo5",
   "filing-form-buppyo5sub",
+  "housing-payable-calc",
+  "land-agg-payable-calc",
+  "land-sep-payable-calc",
 ];
 
 const PDF_LEAVES: ComprehensivePrintSectionId[] = ["housing-tax"];
@@ -92,8 +95,8 @@ describe("종부세 선택 출력 레지스트리 — Pre-Do anchor (PR-E)", () 
     expect(selectPdfSections(new Set(), available)).toEqual([]);
   });
 
-  it("트리: 그룹 5개 + 모든 leaf가 정확히 한 그룹에 1회 등장", () => {
-    expect(COMPREHENSIVE_PRINT_SECTIONS).toHaveLength(6);
+  it("트리: 그룹 7개 + 모든 leaf가 정확히 한 그룹에 1회 등장", () => {
+    expect(COMPREHENSIVE_PRINT_SECTIONS).toHaveLength(7); // 산출근거 3 leaf는 group:payable-calc 1개로 묶임
     const seen = new Map<string, number>();
     for (const g of COMPREHENSIVE_PRINT_SECTIONS) {
       expect(g.id.startsWith("group:")).toBe(true);
