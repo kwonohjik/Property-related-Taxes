@@ -325,6 +325,16 @@ export function addStockRefines(
       });
     }
 
+    // [C-3] 양도일 거래정지 + 취득 후 상장 — 법령상 양립 불가(서버 방어, validate G-5 미러)
+    // §165⑤은 양도일에 §3항 주식(상장+정상거래) 전제. 거래정지는 상증령 §52의2③로 §3항 제외 → §165⑤ 불성립.
+    if (data.tradingHaltAtTransfer && data.acquiredBeforeListing) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["tradingHaltAtTransfer"],
+        message: "양도일 거래정지·관리종목 주식은 §3항 주식이 아니어서(상증령 §52의2③ 제외) 취득 후 상장(§165⑤) 환산 대상이 아닙니다. 거래정지 또는 취득 후 상장 중 하나만 선택하세요.",
+      });
+    }
+
     // [C-1 M-4] 취득일 거래정지 + 취득 후 상장 — 취득 당시 비상장이면 취득일 거래정지 개념 불성립
     // (validate G-5 패턴과 동일 문구 — 기존 G-5는 validate만 차단·Zod 부재 = 기존 갭, 신규 필드만 완전 방어)
     if (data.tradingHaltAtAcquisition && data.acquiredBeforeListing) {

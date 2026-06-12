@@ -126,7 +126,7 @@ describe("PL-VALIDATE — 취득 후 상장 모드별 매트릭스", () => {
     const errors = validateStep2(form);
     const haltError = errors.find((e) => e.field === "tradingHaltAtTransfer");
     expect(haltError).toBeDefined();
-    expect(haltError?.message).toContain("지원하지 않습니다");
+    expect(haltError?.message).toContain("§52의2③");
   });
 
   it("PL-VALIDATE-7 — 거래정지 + 취득 후 상장 조합은 simple 모드도 차단 (G-5 모드 무관 재산정)", () => {
@@ -139,7 +139,7 @@ describe("PL-VALIDATE — 취득 후 상장 모드별 매트릭스", () => {
     const errors = validateStep2(form);
     const haltError = errors.find((e) => e.field === "tradingHaltAtTransfer");
     expect(haltError).toBeDefined();
-    expect(haltError?.message).toContain("지원하지 않습니다");
+    expect(haltError?.message).toContain("§52의2③");
   });
 
   it("PL-VALIDATE-8 — acquiredBeforeListing=false 시 unlistedDetailMode 무관 통과", () => {

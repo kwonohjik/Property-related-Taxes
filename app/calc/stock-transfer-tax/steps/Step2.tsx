@@ -370,8 +370,8 @@ export function Step2({ form, onChange }: Step2Props) {
                 description="양도일 이전 1개월 내 거래정지·관리종목 기간이 포함되면 1개월 종가평균 대신 비상장 보충 평가로 환산합니다. ※ 관리종목이라도 적정 시가로 정상 매매 중이면(상증령 §52의2③ 단서) 토글을 켜지 마세요."
                 tone="rose"
               >
-                {/* 거래정지 우회 — 비상장 보충 평가(simple 전용) */}
-                <EstimatedUnlistedBlock form={form} onChange={onChange} simpleOnly />
+                {/* [C-2] 거래정지 우회 — 비상장 보충 평가(simple·full·사례49 전체. api 게이트 거래정지 포함 확장) */}
+                <EstimatedUnlistedBlock form={form} onChange={onChange} />
               </ToggleCard>
 
               {/* [C-1] 취득일 거래정지 — 양도정지 ON 시 숨김(양도정지 블록이 양·취 모두 수집), 취득후상장 ON 시 숨김(M-4) */}

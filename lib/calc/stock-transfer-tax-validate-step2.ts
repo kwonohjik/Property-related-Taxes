@@ -52,6 +52,60 @@ function validateUnlistedSimpleFields(
 }
 
 /**
+ * [C-2] 비상장 보충 평가 전체 모드 검증 (simple/full/사례49 + B-4 §165⑨).
+ * 비상장 본칙 경로와 거래정지(양도) 우회 경로(§165③→§165④) 공유 — dual-truth 방지.
+ */
+function validateUnlistedValuationFields(
+  form: StockTransferFormData,
+  errors: StockValidationError[],
+): void {
+  const niSkip = (form.netAssetOnlyReason ?? "") !== "";
+  const valuationMode = form.unlistedValuationMode || "simple";
+  const acqFaceValueOnly = form.acqFaceValueOnly === true;
+  if (acqFaceValueOnly) {
+    if (isEmpty(form.acqFaceValuePerShare) || parseI(form.acqFaceValuePerShare) <= 0) {
+      errors.push({ field: "acqFaceValuePerShare", message: "취득시점 액면가를 입력하세요 (§99①4 후단)", severity: "error" });
+    }
+  }
+  if (valuationMode === "simple") {
+    validateUnlistedSimpleFields(form, errors);
+  } else {
+    if (!niSkip) {
+      if (isEmpty(form.niShareCountEUTransfer) || parseI(form.niShareCountEUTransfer) <= 0) {
+        errors.push({ field: "niShareCountEUTransfer", message: "양도연도 NI 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
+      }
+      if (!acqFaceValueOnly && (isEmpty(form.niShareCountEUAcq) || parseI(form.niShareCountEUAcq) <= 0)) {
+        errors.push({ field: "niShareCountEUAcq", message: "취득연도 NI 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
+      }
+    }
+    if (isEmpty(form.naShareCountEUTransfer) || parseI(form.naShareCountEUTransfer) <= 0) {
+      errors.push({ field: "naShareCountEUTransfer", message: "양도연도 NA 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
+    }
+    if (!acqFaceValueOnly && (isEmpty(form.naShareCountEUAcq) || parseI(form.naShareCountEUAcq) <= 0)) {
+      errors.push({ field: "naShareCountEUAcq", message: "취득연도 NA 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
+    }
+  }
+
+  // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 동일사업연도 토글 ON 시 (M-4 차단 / M-7 경고)
+  if (form.unlistedSameBizYearToggle) {
+    if (isEmpty(form.prePriorYearNetIncomePerShare)) {
+      errors.push({ field: "prePriorYearNetIncomePerShare", message: "전전사업연도 1주당 순손익가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
+    }
+    if (isEmpty(form.prePriorYearNetAssetPerShare)) {
+      errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
+    }
+    if (valuationMode === "simple") {
+      const heavyRE = form.isHeavyRealEstateForValuation;
+      const transferEval = calcUnlistedPerShareWeighted(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE);
+      const acqEval = calcUnlistedPerShareWeighted(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE);
+      if (transferEval > 0 && transferEval !== acqEval) {
+        errors.push({ field: "unlistedSameBizYearToggle", message: "양도연도·취득연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
+      }
+    }
+  }
+}
+
+/**
  * [C-1] 취득일 거래정지 — 취득측 보충 평가 필수 필드 검증 (소령 §165③·§165④).
  * validateUnlistedSimpleFields의 취득측 서브셋.
  * - netAssetOnlyReason 있으면 NI 면제
@@ -235,8 +289,9 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
       }
 
       // C-6: 거래정지 우회(§165③) — 취득 후 상장이 아니면 비상장 보충 평가 필수 (자동 fallback 금지)
+      // [C-2] 공유 헬퍼 — simple/full/사례49+§165⑨ 전체 모드 검증(simpleOnly 해제로 거래정지도 전체 노출)
       if (form.tradingHaltAtTransfer && !form.acquiredBeforeListing) {
-        validateUnlistedSimpleFields(form, errors);
+        validateUnlistedValuationFields(form, errors);
       }
       // [C-1] 취득일 거래정지 — 취득측 보충 평가 필수 (양도정지 ON이면 C-6이 양·취 모두 커버 — 중복 방지)
       if (form.tradingHaltAtAcquisition && !form.tradingHaltAtTransfer && !form.acquiredBeforeListing) {
@@ -257,11 +312,12 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         if (isEmpty(form.listingDate)) {
           errors.push({ field: "listingDate", message: "상장일을 입력하세요 (소령 §165⑤)", severity: "error" });
         }
-        // G-5: 거래정지 + 취득 후 상장 조합은 미지원 (모드 무관) — 엔진은 post-listing 우선이라 거래정지 침묵 무시
+        // G-5: 거래정지(양도) + 취득 후 상장 = 법령상 양립 불가 (§165⑤ 양도일 §3항 전제 ↔ §52의2③ 거래정지 제외).
+        // [C-3] validate + Zod refine 이중 차단 — 엔진 post-listing 先行으로 거래정지 침묵 무시 방지.
         if (form.tradingHaltAtTransfer) {
           errors.push({
             field: "tradingHaltAtTransfer",
-            message: "거래정지 + 취득 후 상장 조합은 지원하지 않습니다. 거래정지 토글을 해제하거나 취득 후 상장 토글을 해제하세요.",
+            message: "양도일 거래정지·관리종목 주식은 §3항 주식이 아니어서(상증령 §52의2③ 제외) 취득 후 상장(§165⑤) 환산 대상이 아닙니다. 거래정지 또는 취득 후 상장 중 하나만 선택하세요.",
             severity: "error",
           });
         }
@@ -328,55 +384,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         }
       }
     } else {
-      // 비상장 보충적 평가
-      const niSkip = (form.netAssetOnlyReason ?? "") !== "";
-      const valuationMode = form.unlistedValuationMode || "simple";
-      const acqFaceValueOnly = form.acqFaceValueOnly === true;
-      if (acqFaceValueOnly) {
-        if (isEmpty(form.acqFaceValuePerShare) || parseI(form.acqFaceValuePerShare) <= 0) {
-          errors.push({ field: "acqFaceValuePerShare", message: "취득시점 액면가를 입력하세요 (§99①4 후단)", severity: "error" });
-        }
-      }
-      if (valuationMode === "simple") {
-        // 단일 소스 — 거래정지 우회 분기(§165③)와 공유 (C-6)
-        validateUnlistedSimpleFields(form, errors);
-      } else {
-        if (!niSkip) {
-          if (isEmpty(form.niShareCountEUTransfer) || parseI(form.niShareCountEUTransfer) <= 0) {
-            errors.push({ field: "niShareCountEUTransfer", message: "양도연도 NI 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
-          }
-          if (!acqFaceValueOnly && (isEmpty(form.niShareCountEUAcq) || parseI(form.niShareCountEUAcq) <= 0)) {
-            errors.push({ field: "niShareCountEUAcq", message: "취득연도 NI 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
-          }
-        }
-        if (isEmpty(form.naShareCountEUTransfer) || parseI(form.naShareCountEUTransfer) <= 0) {
-          errors.push({ field: "naShareCountEUTransfer", message: "양도연도 NA 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
-        }
-        if (!acqFaceValueOnly && (isEmpty(form.naShareCountEUAcq) || parseI(form.naShareCountEUAcq) <= 0)) {
-          errors.push({ field: "naShareCountEUAcq", message: "취득연도 NA 사업연도말 발행주식수 필수 (full 모드)", severity: "error" });
-        }
-      }
-
-      // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 동일사업연도 토글 ON 시 (M-4 차단 / M-7 경고)
-      // post-listing(acquiredBeforeListing)의 monthlyAccrualToggle 블록과 별개 — 양도연도↔취득연도 비교
-      if (form.unlistedSameBizYearToggle) {
-        // M-4: 전전사업연도 평가 필수 (자동 fallback 금지 — 미입력 시 차단)
-        if (isEmpty(form.prePriorYearNetIncomePerShare)) {
-          errors.push({ field: "prePriorYearNetIncomePerShare", message: "전전사업연도 1주당 순손익가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
-        }
-        if (isEmpty(form.prePriorYearNetAssetPerShare)) {
-          errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
-        }
-        // M-7 경고: simple 모드 양도·취득 평가액 상이 시 토글 무의미 (full은 합성 산출 — 엔진 warning 위임)
-        if (valuationMode === "simple") {
-          const heavyRE = form.isHeavyRealEstateForValuation;
-          const transferEval = calcUnlistedPerShareWeighted(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE);
-          const acqEval = calcUnlistedPerShareWeighted(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE);
-          if (transferEval > 0 && transferEval !== acqEval) {
-            errors.push({ field: "unlistedSameBizYearToggle", message: "양도연도·취득연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
-          }
-        }
-      }
+      // 비상장 보충적 평가 — [C-2] 공유 헬퍼(거래정지 우회 C-6과 dual-truth 방지)
+      validateUnlistedValuationFields(form, errors);
     }
   } else if (acquisitionMode === "face_value") {
     if (form.acqFaceValueOnly === true) {
