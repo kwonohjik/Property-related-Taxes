@@ -495,6 +495,9 @@ export function handleMultiParcelBranch(
     input.acquisitionDate,
     input.standardPriceAtAcquisition,
     input.standardPriceAtTransfer,
+    // F-6: §97의2·§97의5 시한·하이브리드 contractDate fallback — 메인 경로(finalize)와 동일 인자.
+    // (마지막 positional 인자 — 순서 어긋남 없음. 다필지=토지라 numeric 영향은 사실상 없으나 일관성 확보)
+    input.assetContractDate,
   );
   const mpDeterminedTax = truncateToWon(Math.max(0, mpTaxResult.calculatedTax - mpReduction));
   const mpPenaltyBase = effectiveInput.acquisitionMethod === "appraisal"

@@ -8,8 +8,35 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
+
+/**
+ * 하이브리드 4조문(§99의2·§98의3·§98의5·§98의6·§98의7) 공용 — 취득 후 5년 경과 양도 시 5년 발생분
+ * 기준시가 안분(조특령 §40① 준용)에 필요한 취득시·5년시점 기준시가(자산-수준 fallback 없음) 필수 (F-1).
+ *
+ * ⚠ §99의3(:44·50)·§99(:103)의 **무조건 필수**와 다르다 — 그 둘은 차감(income_deduction) 전용이라
+ * 기준시가가 항상 필요하지만, 하이브리드는 5년 이내 양도가 세액감면 경로라 기준시가가 불요하다.
+ * 따라서 반드시 5년 분기 조건부로만 차단한다(5년 내 미입력 사용자를 오차단하면 UI↔validate 모순).
+ * 일자 미입력 시 낙관 통과(일자 자체는 step0 검증 영역).
+ */
+function failIfStdPriceMissingOver5Y(
+  fail: (message: string) => ValidationIssue,
+  asset: AssetForm,
+  form: TransferFormData,
+  stdAcq: string | undefined,
+  std5Y: string | undefined,
+  articleLabel: string,
+): ValidationIssue | null {
+  if (!asset.acquisitionDate || !form.transferDate) return null;
+  if (isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate))) return null;
+  if (parseAmount(stdAcq || "0") <= 0)
+    return fail(`${articleLabel} 적용: 취득 후 5년 경과 양도는 취득시 기준시가를 입력하세요 (5년 발생분 안분 — 미입력 시 감면이 적용되지 않습니다).`);
+  if (parseAmount(std5Y || "0") <= 0)
+    return fail(`${articleLabel} 적용: 취득 후 5년 경과 양도는 취득 5년 시점 기준시가를 입력하세요.`);
+  return null;
+}
 
 export function validateStep2Reductions(step: number, form: TransferFormData): ValidationIssue | null {
   // step 2: 감면·공제 (구 step 4)
@@ -134,6 +161,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (!(parseDecimal(r.floorAreaSqm983 || "") > 0))
               return fail("§98의3 적용: 수도권과밀억제권역 주택은 연면적(전용면적, ㎡)을 입력하세요 (149㎡ 이내 한정).");
           }
+          // 5년 경과 양도 시 안분용 기준시가 필수 (F-1).
+          const i983 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition983, r.standardPriceAt5Years983, "§98의3");
+          if (i983) return i983;
         }
         // P3 §98의5 (2026-06-12): 계약일·인하율 필수 (⑧).
         if (r.type === "unsold_98_5") {
@@ -141,6 +171,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§98의5 적용: 최초 매매계약일을 입력하세요 (~2011.4.30).");
           if (!(parseDecimal(r.priceReductionRatePct985 || "") > 0))
             return fail("§98의5 적용: 분양가격 인하율(%)을 입력하세요 — (최초 공시 분양가 − 매매가) ÷ 최초 분양가 × 100.");
+          // 5년 경과 양도 시 안분용 기준시가 필수 (F-1).
+          const i985 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition985, r.standardPriceAt5Years985, "§98의5");
+          if (i985) return i985;
         }
         // P3 §98의6 (2026-06-12): 계약일·기준시가 합계·면적 + 2호 임대 일자 필수 (⑧).
         if (r.type === "unsold_98_6") {
@@ -156,6 +189,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (!r.rentalStartDate986)
               return fail("§98의6 2호 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
           }
+          // 5년 경과 양도 시 안분용 기준시가 필수 (안분용 — stdPriceSumAtBase986과 별개 — F-1).
+          const i986 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition986, r.standardPriceAt5Years986, "§98의6");
+          if (i986) return i986;
         }
         // P2 §98의7 9억↓ 미분양 (2026-06-11): 계약일·취득가 필수 (⑧).
         // 자격 토글 4종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
@@ -164,19 +200,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§98의7 적용: 최초 매매계약일을 입력하세요 (2012.9.24~2012.12.31).");
           if (parseAmount(r.acquisitionPrice987 || "0") <= 0)
             return fail("§98의7 적용: 취득가액을 입력하세요 (9억원 이하 — 취득세·부대비용 제외).");
-          // 취득 후 5년 경과 양도 = 5년 발생분 기준시가 안분(조특령 §40① 준용) 경로 → 취득시·5년시점
-          // 기준시가 필수 (자산-수준 fallback 없음). 미입력 시 엔진이 부적격 처리해 감면이 조용히
-          // 미적용되므로 미리 차단 (M-4). 5년 이내 양도는 세액감면 경로라 기준시가 불요.
-          if (
-            asset.acquisitionDate &&
-            form.transferDate &&
-            !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate))
-          ) {
-            if (parseAmount(r.standardPriceAtAcquisition987 || "0") <= 0)
-              return fail("§98의7 적용: 취득 후 5년 경과 양도는 취득시 기준시가를 입력하세요 (5년 발생분 안분 — 미입력 시 감면이 적용되지 않습니다).");
-            if (parseAmount(r.standardPriceAt5Years987 || "0") <= 0)
-              return fail("§98의7 적용: 취득 후 5년 경과 양도는 취득 5년 시점 기준시가를 입력하세요.");
-          }
+          // 취득 후 5년 경과 양도 시 안분용 기준시가 필수 (M-4 → F-1 헬퍼 단일화).
+          const i987 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition987, r.standardPriceAt5Years987, "§98의7");
+          if (i987) return i987;
         }
         // P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): 유형별 일자 + 취득가·면적 필수 (⑧).
         // 자격 토글은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
@@ -191,6 +217,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§99의2 적용: 실거래 취득가액을 입력하세요 (6억 이하 OR 85㎡ 이하 판정에 필요).");
           if (!(parseDecimal(r.exclusiveAreaSqm992 || "") > 0))
             return fail("§99의2 적용: 연면적(공동주택·오피스텔은 전용면적, ㎡)을 입력하세요.");
+          // 5년 경과 양도 시 안분용 기준시가 필수 (5년 분기는 houseType 무관 공통 — F-1).
+          const i992 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition992, r.standardPriceAt5Years992, "§99의2");
+          if (i992) return i992;
         }
         // §98의9 수도권 밖 준공후미분양 (2026-06-11): 취득일·취득가·전용면적 필수 (⑧).
         // 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).

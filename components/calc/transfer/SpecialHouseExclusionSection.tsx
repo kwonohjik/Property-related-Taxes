@@ -87,6 +87,13 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
                   주택 수 제외가 적용되지 않습니다.
                 </p>
               )}
+              {it.article === "unsold_98_3" && (
+                <p className="mt-1 text-[10px] text-amber-700">
+                  비거주자는 2009.3.16~2010.2.11 취득(계약)분만 해당합니다 — 2009.2.12~3.15 취득분은
+                  거주자에게만 적용됩니다 (조특법 §98의3①). 아래 요건 확인 토글은 본인 거주 구분에 따른
+                  취득기간 충족을 포함해 확인한 것으로 간주됩니다.
+                </p>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium">감면주택 취득일</label>
