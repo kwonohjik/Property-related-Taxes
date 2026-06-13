@@ -7,6 +7,10 @@
  */
 import { useState } from "react";
 import type { NtsReportModel, NtsReportInstance } from "@/lib/calc/nts-report-adapter";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { ReportSection1Category } from "./ReportSection1Category";
 import { ReportSection2Overview } from "./ReportSection2Overview";
 import { ReportEvalTable } from "./ReportEvalTable";
@@ -61,9 +65,10 @@ export function NtsBuildingStdPriceReport({ model }: { model: NtsReportModel }) 
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="mb-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground print:hidden"
+        aria-expanded={open}
+        className={`mb-2 ${expandToggleClass("slate")}`}
       >
-        {open ? "▲ 국세청 「건물 기준시가 계산서」 접기" : "▼ 국세청 「건물 기준시가 계산서」 펼치기 (인쇄 서식)"}
+        {expandToggleLabel(open)} · 국세청 「건물 기준시가 계산서」 (인쇄 서식)
       </button>
       <div className={`${open ? "block" : "hidden print:block"} bg-white p-3 text-black`}>
         {model.instances.map((inst, i) => (

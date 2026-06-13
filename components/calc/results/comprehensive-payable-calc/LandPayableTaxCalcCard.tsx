@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Calculator } from "lucide-react";
+import { Calculator } from "lucide-react";
 import type {
   AggregateLandTaxResult,
   SeparateAggregateLandTaxResult,
@@ -18,6 +18,7 @@ import type { LandKind } from "@/lib/tax-engine/comprehensive-land-parcels";
 import { getLandStandardRateBracket } from "@/lib/tax-engine/comprehensive-land-parcels";
 import { won, eok, pct, StepLine, Bullet, GaNaDaLine } from "./payable-calc-helpers";
 import { CurrentJurisdictionBlock, LandPriorYearBreakdown } from "./land-payable-sections";
+import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
 
 type LandResult = AggregateLandTaxResult | SeparateAggregateLandTaxResult;
 
@@ -58,7 +59,7 @@ export function LandPayableTaxCalcCard({
           {title}
           <span className="text-xs font-normal text-gray-500 dark:text-gray-400">— 교재(계산 사례) 형식</span>
         </span>
-        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        <span className={expandToggleClass("sky")}>{expandToggleLabel(expanded)}</span>
       </button>
 
       <div className={expanded ? "block" : "hidden print:block"}>

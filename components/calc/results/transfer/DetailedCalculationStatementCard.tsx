@@ -277,7 +277,7 @@ function ItemRow({ item }: { item: StatementItem }) {
                 className="print:hidden inline-flex h-4 w-4 items-center justify-center rounded text-[10px] text-muted-foreground hover:text-foreground"
                 aria-label={open ? "자산별 닫기" : "자산별 펼치기"}
               >
-                {open ? "▼" : "▶"}
+                {open ? "▲" : "▼"}
               </button>
             )}
             <p className="font-medium text-sm">{item.label}</p>

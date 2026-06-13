@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import type { LotMatchingDetail } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 
 const METHOD_LABEL: Record<LotMatchingDetail["method"], string> = {
   specific: "개별법",
@@ -44,13 +45,11 @@ export function LotMatchingDetailCard({ detail }: Props) {
             {METHOD_LABEL[detail.method]}
           </span>
         </h3>
-        <button
-          type="button"
+        <ExpandToggleButton
+          open={expanded}
           onClick={() => setExpanded((e) => !e)}
-          className="text-xs text-violet-700 hover:text-violet-900"
-        >
-          {expanded ? "▲ 접기" : "▼ 펼치기"}
-        </button>
+          tone="violet"
+        />
       </div>
 
       <p className="text-xs text-violet-700 mb-3">

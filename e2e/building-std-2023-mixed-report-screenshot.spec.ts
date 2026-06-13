@@ -72,7 +72,7 @@ test("마.주거+상업 복합 — 계산서 양식 보고서 스크린샷(200,5
   await expect(result).toContainText("200,540,000");
 
   // 국세청 계산서 양식 펼치기
-  await page.getByRole("button", { name: /국세청.*계산서.*펼치기/ }).click();
+  await page.getByRole("button", { name: /국세청.*계산서/ }).click();
   const report = page.getByTestId("nts-bsp-report");
   await expect(report).toBeVisible();
   await expect(page.getByTestId("nts-bsp-6-no11")).toContainText("200,540,000");

@@ -13,8 +13,9 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
+import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FilingFormPersonalInfoPanel } from "./FilingFormPersonalInfoPanel";
 import { ComprehensiveFilingFormMain } from "./ComprehensiveFilingFormMain";
@@ -71,11 +72,7 @@ export function ComprehensiveFilingFormSection({
             — 화면에서 펼쳐 확인·인쇄 가능
           </span>
         </span>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4" />
-        ) : (
-          <ChevronDown className="h-4 w-4" />
-        )}
+        <span className={expandToggleClass("blue")}>{expandToggleLabel(expanded)}</span>
       </button>
 
       {/* 현행판 상이 안내 */}

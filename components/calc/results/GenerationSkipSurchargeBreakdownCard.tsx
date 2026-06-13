@@ -17,6 +17,7 @@
 
 import { useState } from "react";
 import type { GenerationSkipSurchargeDetail } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 
 function Amt({ val }: { val: number }) {
   return <span className="font-mono">{val.toLocaleString()}</span>;
@@ -71,15 +72,11 @@ export function GenerationSkipSurchargeBreakdownCard({
           <p className="text-base font-bold text-rose-700 dark:text-rose-300 font-mono">
             + {detail.additionalSurcharge.toLocaleString()}
           </p>
-          <button
-            type="button"
+          <ExpandToggleButton
+            open={expanded}
             onClick={() => setExpanded((p) => !p)}
-            className="text-xs text-rose-600 dark:text-rose-300 hover:text-rose-800 transition-colors print:hidden"
-            aria-expanded={expanded}
-            aria-label={`산출근거 ${expanded ? "닫기" : "펼치기"}`}
-          >
-            {expanded ? "▼ 접기" : "▶ 펼치기"}
-          </button>
+            tone="rose"
+          />
         </div>
       </div>
 
@@ -269,7 +266,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
               aria-expanded={expanded}
               aria-label={`${label} 산출근거 ${expanded ? "닫기" : "펼치기"}`}
             >
-              {expanded ? "▼ 산출근거" : "▶ 산출근거"}
+              {expanded ? "▲ 산출근거" : "▼ 산출근거"}
             </button>
           )}
         </div>

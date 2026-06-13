@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 import { cn } from "@/lib/utils";
 import type {
   AggregateTransferResult,
@@ -329,11 +330,7 @@ function PropertyBreakdownAccordion({
           <span className="text-sm font-medium">
             {breakdown.isExempt ? "0" : formatKRW(breakdown.taxBaseShare)}
           </span>
-          {open ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
+          <span className={expandToggleClass("slate")}>{expandToggleLabel(open)}</span>
         </div>
       </div>
 
