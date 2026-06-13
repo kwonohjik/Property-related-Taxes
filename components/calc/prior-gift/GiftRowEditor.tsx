@@ -13,7 +13,6 @@ import { useState } from "react";
 import {
   CurrencyInput,
   parseAmount,
-  formatKRW,
 } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -35,7 +34,6 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import {
-  isNonHeirRelation,
   deriveIsHeirFromHeir,
   deriveBeneficiaryTypeFromHeir,
   deriveDoneeRelationFromHeir,
@@ -261,7 +259,7 @@ export function GiftRowEditor({
                 <option key={h.id} value={h.id}>
                   {donorSummaryLabel(h)}
                   {h.name ? ` (${h.name})` : ""}
-                  {h.relation !== "corporate" && isNonHeirRelation(h.relation)
+                  {h.relation !== "corporate" && !deriveIsHeirFromHeir(h)
                     ? " — 비상속인"
                     : ""}
                 </option>
@@ -764,13 +762,6 @@ export function GiftRowEditor({
         </>
       )}
 
-      {/* 요약 미리보기 */}
-      {gift.giftAmount > 0 && (
-        <div className="rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 flex justify-between">
-          <span>증여가액</span>
-          <span className="font-medium">{formatKRW(gift.giftAmount)}</span>
-        </div>
-      )}
     </div>
   );
 }

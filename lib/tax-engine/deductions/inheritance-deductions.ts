@@ -452,9 +452,13 @@ export function calcInheritanceDeductions(
   const itemizedTotal = basicDeduction + personalDeductionTotal;
   // §21② 배우자가 단독으로 상속받는 경우 → 일괄공제 배제, 기초+인적공제만 적용.
   //    상속인이 배우자 1인(다른 순위 상속인·공동상속인 부존재 또는 전원 상속포기)인 경우.
-  //    수유자(legatee)·영리법인 수증자(corporate)는 상속인이 아니므로 제외하고 판정.
+  //    수유자(legatee)·영리법인 수증자(corporate)·명시 비상속인(isHeir===false, 예: 며느리 "기타")은
+  //    상속인이 아니므로 제외하고 판정 (법정상속분 게이트 inheritance-legal-share.ts:38과 통일).
   const realHeirs = input.heirs.filter(
-    (h) => h.relation !== "legatee" && h.relation !== "corporate",
+    (h) =>
+      h.relation !== "legatee" &&
+      h.relation !== "corporate" &&
+      h.isHeir !== false,
   );
   const isSpouseSoleHeir =
     realHeirs.length > 0 && realHeirs.every((h) => h.relation === "spouse");

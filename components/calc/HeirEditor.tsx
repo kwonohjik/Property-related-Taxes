@@ -23,6 +23,7 @@ import {
   SPECIAL_RELATIONS,
 } from "@/components/calc/inheritance/heir-relation-meta";
 import { isCohabitDeductionEligibleRelation } from "@/lib/tax-engine/deductions/inheritance-cohabit-helpers";
+import { deriveIsHeirFromHeir } from "@/lib/calc/prior-gift-donee-derive";
 import { CohabitRequirementBlock } from "@/components/calc/inheritance/CohabitRequirementBlock";
 import { SubstituteHeirPanel } from "@/components/calc/inheritance/SubstituteHeirPanel";
 import { parseResidentNumber } from "@/lib/calc/resident-number";
@@ -103,6 +104,15 @@ export function changeHeirRelation(heir: Heir, newRelation: HeirRelation): Heir 
     next.substituteForRelation = undefined;
     next.substituteRole = undefined;
     next.substituteAncestorName = undefined;
+  }
+
+  // 상속인 여부(isHeir)는 "기타(other)" 전용 명시값 — 관계 전이 시 정리.
+  //   진입: 기본 비상속인(false, handleAdd와 동일) — 며느리·사위 등 §13①2호 5년.
+  //   이탈: relation 추론 복원(undefined) — false 잔존 시 자녀 등이 비상속인 처리되는 치명 경로 차단(T-4).
+  if (newRelation === "other") {
+    next.isHeir = false;
+  } else {
+    next.isHeir = undefined;
   }
 
   return next;
@@ -457,6 +467,19 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
             </div>
           )}
         </>
+      )}
+
+      {/* 상속인 여부 — "기타(other)" 전용 (대습 아닌 일반 기타).
+       *   며느리·사위 등은 비상속인(OFF, §13①2호 5년) / 4촌 이내 방계혈족(민법 §1000①4호 4순위)은 상속인(ON, 10년).
+       *   checked는 deriveIsHeirFromHeir derive — 기존 데이터(isHeir 미설정)=ON 표시로 표시↔실제 일치. */}
+      {isSubstituteEligible && !heir.substituteGroupId && (
+        <ToggleCard
+          tone="violet"
+          title="상속인 여부"
+          description="ON: 민법상 상속인(4촌 이내 방계혈족 등) — §13①1호 10년 합산·법정상속분 포함 / OFF: 비상속인(며느리·사위 등) — §13①2호 5년 합산"
+          checked={deriveIsHeirFromHeir(heir)}
+          onCheckedChange={(v) => set({ isHeir: v })}
+        />
       )}
 
       {/* 대습상속인 (민법 §1001·§1003②) — "기타(other)" 전용 */}

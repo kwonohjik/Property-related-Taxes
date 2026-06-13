@@ -150,7 +150,13 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
 
   /** 상속인 추가 (relation 확정 후 호출) — 추가 후 자동 선택 (E-1) */
   const handleAdd = (relation: HeirRelation) => {
-    const newHeir: Heir = { id: generateHeirId(), relation };
+    const newHeir: Heir = {
+      id: generateHeirId(),
+      relation,
+      // "기타(other)"는 기본 비상속인(§13①2호 5년·법정상속분 제외) — 며느리·사위 등.
+      //   4촌 이내 방계혈족(4순위 상속인)은 편집 카드 "상속인 여부" 토글 ON으로 전환.
+      ...(relation === "other" ? { isHeir: false } : {}),
+    };
     onChange([...heirs, newHeir]);
     setSelectedHeirId(newHeir.id);  // 추가 직후 자동 선택
     setShowAddPanel(false);
