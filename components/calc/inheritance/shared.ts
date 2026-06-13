@@ -264,6 +264,38 @@ export const STEPS = [
  *
  * 참조 변경이 없으면 원본 객체 참조를 그대로 반환(불필요한 리렌더 방지).
  */
+/**
+ * migrateLegacyOtherHeirs — sessionStorage/이력 복원 시 기존 "기타(other)" Heir 정규화.
+ *
+ * "기타(other)"가 과거에는 isHeir 미설정으로 저장되어 relation 추론상 상속인(§13①1호 10년)으로
+ * 처리되던 것을, 신규 추가 기본값(isHeir=false, 비상속인 §13①2호 5년)과 일치시킨다.
+ *
+ * 보존 규칙 (덮어쓰지 않음):
+ *   - 대습상속인(substituteGroupId 보유) → 상속인 유지 (isHeir 미설정 = 추론 상속인).
+ *   - 명시값(isHeir === true 4촌 방계 / === false) → 사용자 선택 보존.
+ *   - relation !== "other" → 무관.
+ *
+ * 복원 직후 1회 적용(InheritanceTaxForm). 참조 변경 없으면 원본 반환(불필요 리렌더 방지).
+ */
+export function migrateLegacyOtherHeirs<T extends { heirs?: Heir[] }>(
+  form: T,
+): T {
+  if (!form.heirs) return form;
+  let changed = false;
+  const heirs = form.heirs.map((h) => {
+    if (
+      h.relation === "other" &&
+      h.isHeir === undefined &&
+      !h.substituteGroupId
+    ) {
+      changed = true;
+      return { ...h, isHeir: false };
+    }
+    return h;
+  });
+  return changed ? { ...form, heirs } : form;
+}
+
 export function pruneOrphanHeirReferences(form: FormState): FormState {
   const heirIds = new Set(form.heirs.map((h) => h.id));
 

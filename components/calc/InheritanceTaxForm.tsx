@@ -64,6 +64,7 @@ import {
   INITIAL_FORM,
   STEPS,
   pruneOrphanHeirReferences,
+  migrateLegacyOtherHeirs,
 } from "@/components/calc/inheritance/shared";
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import {
@@ -296,9 +297,12 @@ export function InheritanceTaxForm() {
       // normalizeRestoredFormDates로 V2 비상장주식의 Date 필드를 Date 객체로 복원.
       // (validateUnlistedStockV2의 instanceof Date 검사가 string에서 false → 진행 불가 버그 방지)
       const normalized = normalizeRestoredFormDates(parsed);
+      // 과거 저장된 "기타(other)" 상속인(isHeir 미설정)을 비상속인(false)으로 정규화 —
+      // 신규 추가 기본값과 일치(§13①2호 5년). 대습·명시값은 보존(4촌 방계는 토글 ON 복구).
+      const migrated = migrateLegacyOtherHeirs(normalized);
       // 저장된 이력에 삭제된 상속인을 참조하는 고아 협의분할·doneeId가 남아 있을 수
       // 있으므로 복원 직후 정리(연쇄 삭제 미적용 시기에 저장된 레코드 healing).
-      setForm((prev) => pruneOrphanHeirReferences({ ...prev, ...normalized }));
+      setForm((prev) => pruneOrphanHeirReferences({ ...prev, ...migrated }));
       setStep(0);
     } catch {
       // JSON 파싱 실패 시 무시 (빈 폼 유지)
