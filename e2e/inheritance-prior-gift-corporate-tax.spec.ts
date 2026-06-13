@@ -66,12 +66,13 @@ test.describe("영리법인 사전증여 ⑩a 산출세액 자동표시", () => 
 
     // 사전증여 1건 추가
     await page.getByRole("button", { name: /사전증여 추가/ }).click();
-    const giftCard = page.locator(".border.rounded-lg.p-4").last();
+    const giftCard = page.getByTestId("prior-gift-edit-dialog");
+    await expect(giftCard).toBeVisible({ timeout: 5_000 });
 
     // 증여일 2021-08-10
-    await giftCard.getByLabel("연도").fill("2021");
-    await giftCard.getByLabel("월").fill("8");
-    await giftCard.getByLabel("일").fill("10");
+    await giftCard.getByRole("textbox", { name: "연도" }).fill("2021");
+    await giftCard.getByRole("textbox", { name: "월" }).fill("8");
+    await giftCard.getByRole("textbox", { name: "일" }).fill("10");
 
     // 증여재산가액 700m 먼저 입력
     const amountInput = giftCard.getByPlaceholder("금액 입력").first();
@@ -101,11 +102,12 @@ test.describe("영리법인 사전증여 ⑩a 산출세액 자동표시", () => 
     await addLandAndGotoStep3(page);
 
     await page.getByRole("button", { name: /사전증여 추가/ }).click();
-    const giftCard = page.locator(".border.rounded-lg.p-4").last();
+    const giftCard = page.getByTestId("prior-gift-edit-dialog");
+    await expect(giftCard).toBeVisible({ timeout: 5_000 });
 
-    await giftCard.getByLabel("연도").fill("2021");
-    await giftCard.getByLabel("월").fill("8");
-    await giftCard.getByLabel("일").fill("10");
+    await giftCard.getByRole("textbox", { name: "연도" }).fill("2021");
+    await giftCard.getByRole("textbox", { name: "월" }).fill("8");
+    await giftCard.getByRole("textbox", { name: "일" }).fill("10");
 
     // 가액 입력 전 영리법인 수증자 먼저 선택 (computeTaxPatch 가액0 → cgct undefined, 0 잔재 방지)
     const doneeSelect = giftCard.getByTestId("gift-donee-select");

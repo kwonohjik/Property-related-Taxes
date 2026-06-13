@@ -9,6 +9,8 @@ import type {
   DonorRelation,
   GiftDonorRelation,
   GiftPriorPropertyCategory,
+  Heir,
+  HeirRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /**
@@ -112,6 +114,29 @@ export const GIFT_PRIOR_CATEGORY_LABELS: Record<
   deposit: "11 금융재산 (예금)",
   other: "12 기타재산",
 };
+
+// ============================================================
+// 수증자(Heir) 요약 라벨 — GiftRowEditor·PriorGiftTableView 공용 (단일 진실)
+// dual-truth 회피: 라벨 도출을 한 곳에서만 정의 (feedback_ui_engine_dual_truth_avoidance)
+// ============================================================
+
+export const HEIR_RELATION_LABEL: Record<HeirRelation, string> = {
+  spouse: "배우자",
+  child: "자녀",
+  lineal_ascendant: "직계존속",
+  sibling: "형제자매",
+  other: "기타",
+  legatee: "수유자",
+  corporate: "영리법인",
+};
+
+/** 수증자 Heir → 요약 라벨. 영리법인은 영리/비영리 분기(isForProfit). */
+export function donorSummaryLabel(h: Heir): string {
+  if (h.relation === "corporate") {
+    return h.isForProfit === false ? "비영리법인" : "영리법인";
+  }
+  return HEIR_RELATION_LABEL[h.relation];
+}
 
 // ============================================================
 // 헬퍼

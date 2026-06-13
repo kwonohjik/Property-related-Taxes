@@ -234,3 +234,19 @@ export async function calcAndWaitResult(
   ).toBe(true);
   await expect(page.getByText(resultText).first()).toBeVisible({ timeout });
 }
+
+/**
+ * 사전증여 편집 모달 닫기 (PriorGiftInput 테이블+모달 전환, 2026-06-13).
+ *
+ * 사전증여 추가/행 클릭 시 GiftRowEditor가 Dialog 모달로 열린다.
+ * 모달이 열린 채 "다음"/"계산하기"를 누르면 backdrop이 클릭을 가로채므로,
+ * 단계 이동·계산 전 반드시 호출. 모달이 닫혀 있으면 no-op.
+ * onUpdate 실시간 반영이라 닫아도 입력값은 유지된다.
+ */
+export async function closePriorGiftModal(page: Page) {
+  const dialog = page.getByTestId("prior-gift-edit-dialog");
+  if (await dialog.isVisible().catch(() => false)) {
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+}

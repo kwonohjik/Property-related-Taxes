@@ -60,14 +60,24 @@ async function proceedToStep3(page: Page) {
   await nextSteps(page, 1);
 }
 
-/** Step3: 사전증여 1건 추가 + 금액 입력 */
+/** 사전증여 편집 모달 닫기 (테이블+모달 전환 후 — 계산/다음 진행 전 backdrop 제거) */
+async function closePriorGiftModal(page: Page) {
+  const dialog = page.getByTestId("prior-gift-edit-dialog");
+  if (await dialog.isVisible().catch(() => false)) {
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+}
+
+/** Step3: 사전증여 1건 추가 + 금액 입력 (추가 직후 편집 모달 자동 오픈 — 모달 scope 입력) */
 async function addPriorGift(page: Page) {
   await page.getByRole("button", { name: /사전증여 추가/ }).click();
 
-  // 사전증여 카드 컨테이너 (마지막 추가된 것)
-  const giftCard = page.locator(".border.rounded-lg.p-4").last();
+  // 추가 직후 자동 오픈된 편집 모달 (테이블+모달 전환 후 — 입력은 모달 내부)
+  const giftCard = page.getByTestId("prior-gift-edit-dialog");
+  await expect(giftCard).toBeVisible({ timeout: 5_000 });
 
-  // 증여일 2020-01-01 (카드 scope — 값 커밋 검증 포함)
+  // 증여일 2020-01-01 (모달 scope — 값 커밋 검증 포함)
   await fillDateAndVerify(
     page,
     { year: "2020", month: "1", day: "1" },
@@ -82,6 +92,8 @@ async function addPriorGift(page: Page) {
 
 /** Step3 → Step4(공제) → 계산하기 → 결과 대기 */
 async function proceedToResult(page: Page) {
+  // 편집 모달 열려 있으면 닫기 (backdrop 제거 후 단계 이동 가능)
+  await closePriorGiftModal(page);
   // Step4(공제·세액공제)
   await nextSteps(page, 1);
   // 계산 API 응답 명시 대기 + ok 가드 + 결과 노출 (병렬 경합 타이밍 의존 제거)

@@ -15,8 +15,8 @@ import {
   addHeir,
   addLandAsset,
   calcAndWaitResult,
-  fillAndVerify,
   fillDateAndVerify,
+  closePriorGiftModal,
 } from "./_helpers/tax-flow";
 
 /** Step0 → Step3 사전증여까지 이동 + 사전증여 행 1건 추가 후 반환 */
@@ -101,7 +101,8 @@ test.describe("조특법 특례 사전증여 상속 UI (§30의5⑨·§30의6⑤
     await gotoStep3WithPriorGift(page);
 
     // 증여일 입력 (2012-01-01 — 12년 전, §13 10년 cutoff 도과)
-    const giftCard = page.locator(".border.rounded-lg.p-4").last();
+    const giftCard = page.getByTestId("prior-gift-edit-dialog");
+    await expect(giftCard).toBeVisible({ timeout: 5_000 });
     await fillDateAndVerify(
       page,
       { year: "2012", month: "1", day: "1" },
@@ -133,7 +134,8 @@ test.describe("조특법 특례 사전증여 상속 UI (§30의5⑨·§30의6⑤
     await allInputs.nth(1).fill("28500000");
     await expect(allInputs.nth(1)).toHaveValue(/28500000|28,500,000/);
 
-    // Step4: 공제·세액공제 → 계산
+    // Step4: 공제·세액공제 → 계산 (편집 모달 닫고 이동)
+    await closePriorGiftModal(page);
     await page.getByRole("button", { name: /^다음/ }).click();
 
     // 계산 실행 + 결과 대기

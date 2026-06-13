@@ -12,6 +12,7 @@
 import { test, expect } from "@playwright/test";
 import { fillDateAndVerify, calcAndWaitResult,
   addHeir,
+  closePriorGiftModal,
 } from "./_helpers/tax-flow";
 
 test.describe("상속세 §53의2 혼인·출산 증여재산공제", () => {
@@ -30,10 +31,13 @@ test.describe("상속세 §53의2 혼인·출산 증여재산공제", () => {
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step3 (사전증여)
 
-    // Step3: 사전증여 추가
+    // Step3: 사전증여 추가 (추가 직후 편집 모달 자동 오픈)
     await page.getByRole("button", { name: /사전증여 추가/ }).click();
+    await expect(page.getByTestId("prior-gift-edit-dialog")).toBeVisible({
+      timeout: 5_000,
+    });
 
-    // 증여일 2023-6-10 (마지막 DateInput = 사전증여 행)
+    // 증여일 2023-6-10 (모달 내부 DateInput = 사전증여 행)
     await page.getByRole("textbox", { name: "연도" }).last().fill("2023");
     await page.getByRole("textbox", { name: "월" }).last().fill("6");
     await page.getByRole("textbox", { name: "일" }).last().fill("10");
@@ -54,7 +58,8 @@ test.describe("상속세 §53의2 혼인·출산 증여재산공제", () => {
       .getByRole("textbox")
       .fill("100000000");
 
-    // 계산 진행 (Step3→4→계산)
+    // 계산 진행 (편집 모달 닫고 Step3→4→계산)
+    await closePriorGiftModal(page);
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step4
     await calcAndWaitResult(page);
 

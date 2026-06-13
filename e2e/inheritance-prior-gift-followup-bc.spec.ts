@@ -10,7 +10,7 @@
  * UI 설계: docs/02-design/features/inheritance-prior-gift-followup-3items.ui.design.md
  */
 import { test, expect } from "@playwright/test";
-import { addHeir } from "./_helpers/tax-flow";
+import { addHeir, closePriorGiftModal } from "./_helpers/tax-flow";
 
 async function gotoStep3WithChild(page: import("@playwright/test").Page) {
   await page.goto("/calc/inheritance-tax");
@@ -29,10 +29,13 @@ async function gotoStep3WithChild(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step3 (사전증여)
 
-  // Step3: 사전증여 추가
+  // Step3: 사전증여 추가 (추가 직후 편집 모달 자동 오픈)
   await page.getByRole("button", { name: /사전증여 추가/ }).click();
+  await expect(page.getByTestId("prior-gift-edit-dialog")).toBeVisible({
+    timeout: 5_000,
+  });
 
-  // 증여일 2023-6-10
+  // 증여일 2023-6-10 (모달 내부 — .last())
   await page.getByRole("textbox", { name: "연도" }).last().fill("2023");
   await page.getByRole("textbox", { name: "월" }).last().fill("6");
   await page.getByRole("textbox", { name: "일" }).last().fill("10");
@@ -67,7 +70,8 @@ test.describe("상속세 사전증여 후속 B·C", () => {
     await expect(taxBaseInput).toBeVisible();
     await taxBaseInput.fill("50000000");
 
-    // 계산 진행 (다음 → 결과까지)
+    // 계산 진행 (편집 모달 닫고 다음 → 결과까지)
+    await closePriorGiftModal(page);
     await page.getByRole("button", { name: /^다음/ }).click();
     // 결과/후속 단계 도달 — 크래시 없이 진행됨을 확인
     await expect(page.getByText("과세표준 산정 방식")).toHaveCount(0);
@@ -87,7 +91,8 @@ test.describe("상속세 사전증여 후속 B·C", () => {
     // 토글 ON
     await minorToggle.click();
 
-    // 자동 도출 모드(기본)이므로 계산 진행 가능
+    // 자동 도출 모드(기본)이므로 계산 진행 가능 (편집 모달 닫고 다음)
+    await closePriorGiftModal(page);
     await page.getByRole("button", { name: /^다음/ }).click();
     await expect(page.getByText("증여 당시 미성년이었음")).toHaveCount(0);
   });
