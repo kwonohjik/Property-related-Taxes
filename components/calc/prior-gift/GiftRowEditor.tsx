@@ -25,6 +25,7 @@ import {
   GIFT_DONOR_LIST,
   GIFT_PRIOR_CATEGORY_LIST,
   GIFT_PRIOR_CATEGORY_LABELS,
+  donorSummaryLabel,
 } from "@/components/calc/prior-gift/meta";
 import type {
   PriorGift,
@@ -32,7 +33,6 @@ import type {
   GiftDonorRelation,
   GiftPriorPropertyCategory,
   Heir,
-  HeirRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import {
   isNonHeirRelation,
@@ -46,22 +46,15 @@ import { GiftTaxBaseModeBlock } from "@/components/calc/prior-gift/GiftTaxBaseMo
 import { MinorAtGiftToggleBlock } from "@/components/calc/prior-gift/MinorAtGiftToggleBlock";
 
 // ============================================================
-// 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실
+// 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실,
+// 요약 라벨(donorSummaryLabel)은 meta.ts 단일 진실 (PriorGiftTableView 공용).
 // ============================================================
-
-const HEIR_RELATION_LABEL: Record<HeirRelation, string> = {
-  spouse: "배우자",
-  child: "자녀",
-  lineal_ascendant: "직계존속",
-  sibling: "형제자매",
-  other: "기타",
-  legatee: "수유자",
-  corporate: "영리법인",
-};
 
 export interface GiftRowEditorProps {
   gift: PriorGift;
   index: number;
+  /** 모달 내부 렌더 시 헤더부(번호·배지·삭제) 숨김 — DialogTitle·푸터와 중복 방지 */
+  hideHeader?: boolean;
   /** 상속세 모드: 상속인 여부 선택 표시 / 증여세 모드: 숨김 */
   showIsHeir: boolean;
   /** 증여세 모드: donor·⑤·⑦·⑫ Phase A 필드 표시 */
@@ -81,6 +74,7 @@ export interface GiftRowEditorProps {
 export function GiftRowEditor({
   gift,
   index,
+  hideHeader = false,
   showIsHeir,
   showGiftPhaseA,
   showSpecialType = false,
@@ -161,39 +155,47 @@ export function GiftRowEditor({
   }
 
   return (
-    <div className="border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
-            증여 {index + 1}
-          </span>
-          {gift.sourceCalculationId && (
-            <span
-              className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5"
-              title="이 사전증여는 저장된 증여세 이력에서 자동 입력되었습니다. 필드를 수정하면 배지가 사라집니다."
-            >
-              📋 이력 기반
+    <div
+      className={
+        hideHeader
+          ? "space-y-3"
+          : "border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900"
+      }
+    >
+      {/* 헤더 — 모달 내부(hideHeader)에서는 DialogTitle·푸터 삭제 버튼과 중복이라 숨김 */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm text-gray-700 dark:text-gray-200">
+              증여 {index + 1}
             </span>
-          )}
-          {isCorporate && (
-            <span
-              className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5"
-              title="영리법인 사전증여 — 상증법 §13①2호 5년 합산 · §3의2② + 집행기준 28-0-1 면제"
-              aria-label="영리법인 사전증여 — 상증법 §13① · §3의2② · 집행기준 28-0-1"
-            >
-              🏢 영리법인
-            </span>
-          )}
+            {gift.sourceCalculationId && (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5"
+                title="이 사전증여는 저장된 증여세 이력에서 자동 입력되었습니다. 필드를 수정하면 배지가 사라집니다."
+              >
+                📋 이력 기반
+              </span>
+            )}
+            {isCorporate && (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5"
+                title="영리법인 사전증여 — 상증법 §13①2호 5년 합산 · §3의2② + 집행기준 28-0-1 면제"
+                aria-label="영리법인 사전증여 — 상증법 §13① · §3의2② · 집행기준 28-0-1"
+              >
+                🏢 영리법인
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            삭제
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-        >
-          삭제
-        </button>
-      </div>
+      )}
 
       {/* 영리법인 토글 폐지 (donee-phase2) — 영리법인 여부는 Step1에서 결정,
        * 수증인은 아래 드롭다운에서 영리법인 포함 통일 선택. */}
@@ -243,12 +245,6 @@ export function GiftRowEditor({
        */}
       {showIsHeir && (heirs ?? []).length > 0 && (() => {
         const matchedHeir = (heirs ?? []).find((h) => h.id === gift.doneeId);
-        const summaryLabel = (h: Heir): string => {
-          if (h.relation === "corporate") {
-            return h.isForProfit === false ? "비영리법인" : "영리법인";
-          }
-          return HEIR_RELATION_LABEL[h.relation];
-        };
         return (
           <div className="space-y-1">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -263,7 +259,7 @@ export function GiftRowEditor({
               <option value="">선택 안 함 (인별 배부 생략)</option>
               {(heirs ?? []).map((h) => (
                 <option key={h.id} value={h.id}>
-                  {summaryLabel(h)}
+                  {donorSummaryLabel(h)}
                   {h.name ? ` (${h.name})` : ""}
                   {h.relation !== "corporate" && isNonHeirRelation(h.relation)
                     ? " — 비상속인"
@@ -278,7 +274,7 @@ export function GiftRowEditor({
                 data-testid="gift-donee-summary"
                 className="rounded-md bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 px-3 py-2 text-[11px] text-violet-700 dark:text-violet-300"
               >
-                {summaryLabel(matchedHeir)}
+                {donorSummaryLabel(matchedHeir)}
                 {matchedHeir.name ? ` (${matchedHeir.name})` : ""}
                 {" · "}
                 {deriveBeneficiaryTypeFromHeir(matchedHeir) === "heir"

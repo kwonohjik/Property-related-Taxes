@@ -12,7 +12,14 @@
 import { useMemo, useState } from "react";
 import { PriorGiftHistoryModal } from "@/components/calc/gift/PriorGiftHistoryModal";
 import { GiftRowEditor } from "@/components/calc/prior-gift/GiftRowEditor";
+import { PriorGiftTableView } from "@/components/calc/prior-gift/PriorGiftTableView";
 import { AggregationSummary } from "@/components/calc/prior-gift/AggregationSummary";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   hasUserEditedFields,
   makeEmptyGift,
@@ -67,9 +74,17 @@ export function PriorGiftInput({
   allowCorporateImport,
 }: PriorGiftInputProps) {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const handleAdd = () => onChange([...gifts, makeEmptyGift()]);
+  // 편집 모달 대상 — PriorGift에 행 id가 없어 index 기반 (UI ephemeral, zustand 금지)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  // 추가 직후 자동 선택(E-1) → Dialog 자동 오픈. 새 항목은 항상 배열 끝에 push.
+  const handleAdd = () => {
+    onChange([...gifts, makeEmptyGift()]);
+    setSelectedIndex(gifts.length);
+  };
   const handleAddFromHistory = (priorGift: PriorGift) => {
     onChange([...gifts, priorGift]);
+    setSelectedIndex(gifts.length);
   };
 
   const handleUpdate = (index: number, updated: PriorGift) => {
@@ -83,9 +98,16 @@ export function PriorGiftInput({
     onChange(next);
   };
 
+  // 삭제는 모달 내부에서만 호출(테이블에 인라인 삭제 없음) → 항상 모달 닫힘(E-2).
   const handleRemove = (index: number) => {
     onChange(gifts.filter((_, i) => i !== index));
+    setSelectedIndex(null);
   };
+
+  const selectedGift =
+    selectedIndex !== null && selectedIndex < gifts.length
+      ? gifts[selectedIndex]
+      : null;
 
   // PR 1 (2026-05-22): 상속세 모드 모달 활성화 — currentDeathDate 기준
   const canLookup =
@@ -182,23 +204,66 @@ export function PriorGiftInput({
         />
       )}
 
-      {gifts.length > 0 && (
-        <div className="space-y-3">
-          {gifts.map((g, i) => (
-            <GiftRowEditor
-              key={i}
-              gift={g}
-              index={i}
-              showIsHeir={mode === "inheritance"}
-              showGiftPhaseA={mode === "gift"}
-              showSpecialType={mode === "inheritance"}
-              onUpdate={(updated) => handleUpdate(i, updated)}
-              onRemove={() => handleRemove(i)}
-              heirs={heirs}
-            />
-          ))}
-        </div>
-      )}
+      {/* 요약 테이블 (행 클릭 → 편집 모달) */}
+      <PriorGiftTableView
+        gifts={gifts}
+        selectedIndex={selectedIndex}
+        onSelect={(index) => setSelectedIndex(index)}
+        mode={mode}
+        heirs={heirs}
+      />
+
+      {/* 편집 모달 — 행 클릭 또는 추가 직후 자동 오픈. GiftRowEditor 본문 그대로(hideHeader). */}
+      <Dialog
+        open={selectedGift !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedIndex(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg w-full p-0" showCloseButton={false}>
+          <DialogHeader className="px-4 pt-4 pb-0">
+            <DialogTitle>
+              증여 {selectedIndex !== null ? selectedIndex + 1 : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div
+            className="max-h-[80vh] overflow-y-auto px-4 pb-4 pt-3"
+            data-testid="prior-gift-edit-dialog"
+          >
+            {selectedGift && selectedIndex !== null && (
+              <GiftRowEditor
+                gift={selectedGift}
+                index={selectedIndex}
+                hideHeader
+                showIsHeir={mode === "inheritance"}
+                showGiftPhaseA={mode === "gift"}
+                showSpecialType={mode === "inheritance"}
+                onUpdate={(updated) => handleUpdate(selectedIndex, updated)}
+                onRemove={() => handleRemove(selectedIndex)}
+                heirs={heirs}
+              />
+            )}
+          </div>
+          <div className="border-t px-4 py-3 flex justify-between">
+            <button
+              type="button"
+              onClick={() =>
+                selectedIndex !== null && handleRemove(selectedIndex)
+              }
+              className="px-4 py-2 rounded-md text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+            >
+              삭제
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedIndex(null)}
+              className="px-4 py-2 rounded-md text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <button
         type="button"

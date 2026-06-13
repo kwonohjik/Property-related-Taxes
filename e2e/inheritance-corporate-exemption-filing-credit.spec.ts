@@ -22,6 +22,7 @@ import {
   nextSteps,
   calcAndWaitResult,
   addHeir,
+  closePriorGiftModal,
 } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 2024-06-10 + 자녀1 + 영리법인 → Step1 */
@@ -45,7 +46,8 @@ async function addLandAndGotoStep3(page: Page) {
 /** Step3: 영리법인 사전증여 7억 추가 */
 async function addCorporatePriorGift(page: Page) {
   await page.getByRole("button", { name: /사전증여 추가/ }).click();
-  const giftCard = page.locator(".border.rounded-lg.p-4").last();
+  const giftCard = page.getByTestId("prior-gift-edit-dialog");
+  await expect(giftCard).toBeVisible({ timeout: 5_000 });
   await fillDateAndVerify(
     page,
     { year: "2021", month: "8", day: "10" },
@@ -63,6 +65,7 @@ async function addCorporatePriorGift(page: Page) {
 
 /** Step4 → 계산하기 → 결과 대기 */
 async function gotoResult(page: Page) {
+  await closePriorGiftModal(page); // 편집 모달 닫기 (backdrop 제거)
   await page.getByRole("button", { name: /^다음/ }).click(); // Step4
   await calcAndWaitResult(page);
 }
