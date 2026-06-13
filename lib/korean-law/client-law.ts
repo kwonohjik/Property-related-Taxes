@@ -22,7 +22,6 @@ import {
   safeCacheKey,
   readCache,
   writeCache,
-  strip,
   toArray,
 } from "./client-core";
 import type { LawSearchItem, LawArticleResult, DecisionDomain } from "./types";
@@ -94,6 +93,24 @@ export async function searchLawMany(
   const cached = await readCache<LawSearchItem[]>(cacheKey);
   if (cached) return cached;
 
+  try {
+    return await searchLawManyLive(resolved, limit, mode, sort, options, cacheKey);
+  } catch (err) {
+    // 법제처 접속 차단(주말·공휴일·점검) → TTL 만료 캐시라도 반환
+    const stale = await readCache<LawSearchItem[]>(cacheKey, true);
+    if (stale) return stale;
+    throw err;
+  }
+}
+
+async function searchLawManyLive(
+  resolved: string,
+  limit: number,
+  mode: "name" | "fallback" | "content",
+  sort: LawSearchSort,
+  options: { ancYd?: string; efYd?: string },
+  cacheKey: string
+): Promise<LawSearchItem[]> {
   const searchDisplay = Math.max(limit, 20);
   let entries = mode === "content" ? [] : await doLawNameSearch(resolved, searchDisplay, "1");
 

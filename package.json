@@ -19,6 +19,7 @@
     "test:gift": "vitest run gift property-valuation",
     "seed:tax-rates": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates.ts && tsx --env-file=.env.local scripts/seed-transfer-tax-rates-historical.ts",
     "seed:tax-rates:historical": "tsx --env-file=.env.local scripts/seed-transfer-tax-rates-historical.ts",
+    "warmup:legal": "tsx --env-file=.env.local scripts/warmup-legal-cache.ts",
     "verify:legal": "tsx --env-file=.env.local scripts/verify-legal-codes.ts",
     "verify:legal:refresh": "tsx --env-file=.env.local scripts/verify-legal-codes.ts --clear",
     "check:legal-coverage": "tsx scripts/check-legal-coverage.ts",
