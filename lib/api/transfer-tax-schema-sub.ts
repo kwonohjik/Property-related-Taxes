@@ -94,17 +94,14 @@ export const nonBusinessLandDetailsSchema = z.object({
   revenueTest: revenueTestSchema.optional(),
 });
 
-export const rentHistorySchema = z.object({
-  contractDate: z.string().date(),
-  monthlyRent: z.number().int().nonnegative(),
-  deposit: z.number().int().nonnegative(),
-  contractType: z.enum(["jeonse", "monthly", "semi_jeonse"]),
-});
-
-export const vacancyPeriodSchema = z.object({
-  startDate: z.string().date(),
-  endDate: z.string().date(),
-});
+// rentHistorySchema·vacancyPeriodSchema는 reductions와 공유하는 leaf로 분리
+// (순환 import → ESM 초기화 TDZ 방지). 본 파일 내부(rentalReductionDetailsSchema)에서
+// 직접 참조하므로 import하고, 하위 호환 위해 동일 이름으로 re-export한다.
+import {
+  rentHistorySchema,
+  vacancyPeriodSchema,
+} from "./transfer-tax-schema-rental";
+export { rentHistorySchema, vacancyPeriodSchema };
 
 export const rentalReductionDetailsSchema = z.object({
   isRegisteredLandlord: z.boolean(),

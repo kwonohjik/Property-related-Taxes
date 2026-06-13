@@ -6,7 +6,8 @@
  */
 
 import { z } from "zod";
-import { rentHistorySchema, vacancyPeriodSchema } from "./transfer-tax-schema-sub";
+// 공용 leaf에서 직접 import — sub와의 순환(ESM 초기화 TDZ) 방지
+import { rentHistorySchema, vacancyPeriodSchema } from "./transfer-tax-schema-rental";
 
 /**
  * 장기임대 §97 시리즈 공통 필드 (Phase 2 — 2026-06-11).
