@@ -7,14 +7,14 @@
  *   → 1년전 열의 상단 연도 input과 하단 ① 첫 입력의 x좌표·너비가 일치.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { addHeir } from "./_helpers/tax-flow";
 
 async function gotoV2FormalValuationCard(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2024");
   await page.getByLabel("월").first().fill("3");
   await page.getByLabel("일").first().fill("31");
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child"); // 2단계 picker + 모달 RRN 자동입력·닫기 (raw 패턴 마이그레이션)
   await page.getByRole("button", { name: /^다음/ }).click();
   await page.getByRole("button", { name: /주식·지분 추가/ }).click();
   await page.getByRole("button", { name: /비상장주식/ }).click();

@@ -11,7 +11,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
+import { addHeir, closeHeirEditModal, closeStockModal } from "./_helpers/tax-flow";
 
 /** 상속세 Step0(상속개시일 + 자녀 1명, RRN) → Step1(상속재산) 이동 */
 async function gotoStockStep(page: Page) {
@@ -33,6 +33,8 @@ async function addStock(page: Page, kind: "listed" | "unlisted") {
   await page
     .getByText(kind === "listed" ? "상장주식" : "비상장주식", { exact: true })
     .click();
+  // 추가 직후 편집 모달 자동 오픈(E-1) → backdrop이 다음 추가·검증을 막으므로 닫는다.
+  await closeStockModal(page);
 }
 
 test.describe("주식 입력 탭 — 입력 순서 + 하단 추가 버튼", () => {

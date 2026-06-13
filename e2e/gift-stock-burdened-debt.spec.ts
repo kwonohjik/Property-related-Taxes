@@ -15,6 +15,7 @@ import {
   calcAndWaitResult,
   nextSteps,
   addHeir,
+  closeStockModal,
 } from "./_helpers/tax-flow";
 
 type PageT = Parameters<typeof fillDateAndVerify>[0];
@@ -67,6 +68,7 @@ test.describe("주식 부담부증여 §47① 채무인수", () => {
     const reqPromise = page.waitForRequest(
       (req) => req.url().includes("/api/calc/gift") && req.method() === "POST",
     );
+    await closeStockModal(page); // 모달 열린 채 "다음"은 backdrop에 막힘 (테이블+모달 전환)
     await nextSteps(page, 2); // Step1 → 2 → 3
     await calcAndWaitResult(page, { taxType: "gift" });
     const req = await reqPromise;
@@ -132,6 +134,7 @@ test.describe("주식 부담부증여 §47① 채무인수", () => {
       .fill("500000000");
 
     // Step3: 가업승계 특례 선택 + 영위기간 15
+    await closeStockModal(page); // 모달 닫고 단계 이동 (테이블+모달 전환)
     await nextSteps(page, 2);
     await page.getByText("가업승계 증여세 과세특례 (§30의6)").click();
     await page.getByPlaceholder("영위 기간 입력").fill("15");

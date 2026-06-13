@@ -44,22 +44,15 @@ import {
   countHiddenExpandable,
   resolveAssetToggleVisibility,
 } from "@/lib/calc/asset-toggle-visibility";
-import { resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
+import { shouldShowMajorShareholderChip } from "@/lib/calc/stock-valuation";
+import {
+  STOCK_CATEGORY_ICONS,
+  STOCK_CATEGORY_LABELS,
+  type StockCategory,
+} from "@/components/calc/inheritance/stock/stock-category-meta";
 import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
-// ============================================================
-// PR-E: 카테고리 라벨·아이콘 매핑 (EstateStockChipsHeader 전달용)
-// ============================================================
-
-const CATEGORY_ICONS = {
-  listed_stock: "📈",
-  unlisted_stock: "📊",
-} as const;
-
-const CATEGORY_LABELS = {
-  listed_stock: "상장주식",
-  unlisted_stock: "비상장주식",
-} as const;
+// 카테고리 라벨·아이콘은 stock-category-meta 단일 출처 import (PR-E 로컬 매핑 추출).
 
 // ============================================================
 // Props
@@ -132,17 +125,9 @@ function EstateCommonAttributesSectionInner({
   const hiddenExpandableCount = countHiddenExpandable(visibility);
   const [showExpanded, setShowExpanded] = useState(false);
 
-  /**
-   * §22② 최대주주 토글 표시 조건 (D-3, F-1):
-   *   - 상장주식: 항상 표시
-   *   - 비상장주식 simple(V1): 표시
-   *   - 비상장주식 formal(V2): skip — UnlistedStockV2Card 내부 토글이 담당 (S-4 중복 방지)
-   */
-  const showSection22Toggle =
-    item.category === "listed_stock" ||
-    (item.category === "unlisted_stock" && resolveUnlistedDisplayMode(item) === "simple");
-
-  // PR-E: chip-major-shareholder 칩은 동일 분기 — V1(상장·simple)만 노출, V2(formal)는 미노출
+  // §22② 최대주주 토글·칩 표시 조건 — shouldShowMajorShareholderChip 단일 출처 (D-3, F-1).
+  //   상장: 항상 / 비상장 simple(V1): 표시 / 비상장 formal(V2): skip(V2Card 내부 토글 담당 S-4).
+  const showSection22Toggle = shouldShowMajorShareholderChip(item);
   const showMajorShareholderChip = showSection22Toggle;
 
   return (
@@ -154,8 +139,8 @@ function EstateCommonAttributesSectionInner({
         heirs={heirs}
         effectiveValuation={effectiveValuation}
         showMajorShareholderChip={showMajorShareholderChip}
-        icon={CATEGORY_ICONS[item.category as keyof typeof CATEGORY_ICONS] ?? "📊"}
-        categoryLabel={CATEGORY_LABELS[item.category as keyof typeof CATEGORY_LABELS] ?? "주식"}
+        icon={STOCK_CATEGORY_ICONS[item.category as StockCategory] ?? "📊"}
+        categoryLabel={STOCK_CATEGORY_LABELS[item.category as StockCategory] ?? "주식"}
         index={0}
       />
 
