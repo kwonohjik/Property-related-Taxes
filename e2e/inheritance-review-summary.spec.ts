@@ -54,6 +54,8 @@ test.describe("상속세 계산 직전 입력 요약 카드", () => {
     // 배우자 등록 → 배우자공제 적용 예정
     await expect(card.getByText("배우자공제")).toBeVisible();
 
+    // 그룹 D(납부 방법) 헤더 클릭 → 펼침
+    await page.getByRole("button", { name: /납부 방법/ }).click();
     // 연부연납 토글 ON → 납부 방법 칩 반영
     await page.getByText("연부연납 신청 (상증법 §71)").click();
     await expect(card.getByText("연부연납")).toBeVisible();

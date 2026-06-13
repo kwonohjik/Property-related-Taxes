@@ -45,7 +45,10 @@ test.describe("물납 (§73)", () => {
     await addLandAsset(page);
     await gotoStep4(page);
 
-    // Step4 끝 — 물납 신청 토글 노출
+    // 그룹 D(납부 방법) 헤더 클릭 → 펼침 (디폴트 접힘 대응)
+    await page.getByRole("button", { name: /납부 방법/ }).click();
+
+    // Step4 — 물납 신청 토글 노출
     const toggle = page.getByText("물납 신청 (상증법 §73)");
     await expect(toggle).toBeVisible();
     await toggle.click(); // ON → 펼침

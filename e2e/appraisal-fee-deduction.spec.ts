@@ -38,6 +38,9 @@ test.describe("감정평가수수료 공제 — UI", () => {
     test.setTimeout(90_000);
     await gotoInheritanceStep4(page);
 
+    // 체크리스트 칩 "감정평가수수료 §25" 클릭 → 입력 섹션 노출
+    await page.getByText("감정평가수수료 §25").click();
+
     await expect(
       page.getByText("감정평가수수료 공제 (§25①2호·시행령 §20의3)"),
     ).toBeVisible();
@@ -53,6 +56,9 @@ test.describe("감정평가수수료 공제 — UI", () => {
   }) => {
     test.setTimeout(90_000);
     await gotoInheritanceStep4(page);
+
+    // 체크리스트 칩 "감정평가수수료 §25" 클릭 → 입력 섹션 노출
+    await page.getByText("감정평가수수료 §25").click();
 
     // 3호 유형재산 700만 (한도 500만 cap) — eligibility 무관.
     // 감정평가수수료 섹션 스코프 내 5번째 입력란(부동산·비상장·법인수·기관수·유형재산 순)

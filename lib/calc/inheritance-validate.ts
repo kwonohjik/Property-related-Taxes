@@ -446,6 +446,9 @@ export function validateInheritanceTaxInput(
 
   // §30 단기재상속 교차검증 — 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback)
   // 신규 재산별 배열 모델 + legacy 단일 분수 모델 모두 처리.
+  // ⑧ 체크리스트 "shortTermReinherit" 비활성 시 buildInput에서 필드 전부 undefined 전달.
+  //    → shortTermCreditInput.shortTermReinheritAssets == null → hasArrayAssets = false
+  //    → 아래 검증 블록 완전 통과 (UI 통과 ↔ validate 차단 모순 없음, CLAUDE.md ⑧).
   const shortTermCreditInput = input.creditInput;
   if (shortTermCreditInput) {
     const assets = shortTermCreditInput.shortTermReinheritAssets;
@@ -503,6 +506,9 @@ export function validateInheritanceTaxInput(
   }
 
   // §29 외국납부세액공제 교차검증 (상증령 §21①)
+  // ⑧ 체크리스트 "foreignTax" 비활성 시 buildInput에서 foreignTaxPaid·foreignInheritanceTaxBase
+  //    모두 undefined 전달 → 아래 if(base != null) / if(paid == null) 분기 전부 미진입.
+  //    UI 통과 ↔ validate 차단 모순 없음 (CLAUDE.md ⑧).
   const foreignCreditInput = input.creditInput;
   if (foreignCreditInput) {
     const base = foreignCreditInput.foreignInheritanceTaxBase;

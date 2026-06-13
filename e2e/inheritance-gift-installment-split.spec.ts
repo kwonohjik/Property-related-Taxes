@@ -66,6 +66,9 @@ test.describe("분납 §70② (상속·증여)", () => {
     await inhAddLand(page, "10000000"); // 30억
     await inhGotoStep4(page);
 
+    // 그룹 D(납부 방법) 헤더 클릭 → 펼침 (디폴트 접힘 대응)
+    await page.getByRole("button", { name: /납부 방법/ }).click();
+
     // 분납 토글 노출 + ON
     const toggle = page.getByText("분납 신청 (상증법 §70②)");
     await expect(toggle).toBeVisible();
@@ -87,6 +90,9 @@ test.describe("분납 §70② (상속·증여)", () => {
     await inhStep0(page);
     await inhAddLand(page, "10000000");
     await inhGotoStep4(page);
+
+    // 그룹 D(납부 방법) 헤더 클릭 → 펼침 (디폴트 접힘 대응)
+    await page.getByRole("button", { name: /납부 방법/ }).click();
 
     // 연부연납 ON → 분납 배타 안내 노출
     await page.getByText("연부연납 신청 (상증법 §71)").click();

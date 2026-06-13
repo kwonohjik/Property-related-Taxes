@@ -41,7 +41,10 @@ test.describe("외국납부세액공제 §29 — 결과 ▼펼침 산식", () =>
 
     await gotoStep4WithLand(page);
 
-    // Step4 — 외국납부세액공제 섹션 (CurrencyInput hideLabel → aria-label 보존)
+    // Step4: 체크리스트 칩 "외국납부세액공제 §29" 클릭 → 입력 섹션 노출
+    await page.getByText("외국납부세액공제 §29").click();
+
+    // 입력 섹션 노출 확인 후 입력 (CurrencyInput hideLabel → aria-label 보존)
     await expect(page.getByText("외국납부세액공제 (§29)")).toBeVisible();
     await page.getByLabel("외국에서 납부한 상속세액").fill("100000000");
     await page.getByLabel("국외 상속재산 과세표준").fill("500000000");
