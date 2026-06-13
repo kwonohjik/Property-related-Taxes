@@ -37,6 +37,7 @@ import {
 } from "./EstateBodyHelpers";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { VariantBodyProps } from "./types";
+import { RtmsSimilarSalesModal } from "./RtmsSimilarSalesModal";
 
 // ============================================================
 // §23의2 자산 유형 옵션 — 정적 정의 (Tailwind JIT purge 안전)
@@ -240,7 +241,14 @@ export function EstateBodyRealEstate({
       </p>
 
       {/* 평가액 입력 — 시가·감정가액·매매사례가액 아코디언 (D-6 안 가: 보충평가 위, 우선순위 순) */}
-      <ValuationAccordionFields item={item} set={set} />
+      <ValuationAccordionFields
+        item={item}
+        set={set}
+        cat={cat}
+        valuationDate={valuationDate}
+        mode={mode}
+        estateSigunguCode={item.estateSigunguCode}
+      />
 
       {/* 보충적 평가 (StandardPriceInput) — 토글 펼침, 우선순위 최후 (D-2 라벨). 값>0이면 초기 ON(비파괴) */}
       <ToggleCard
@@ -319,19 +327,65 @@ interface RealEstateAdvancedFieldsProps {
 // ValuationAccordionFields — 시가·감정가액·매매사례가액 아코디언 (D-1·D-6 안 가)
 //   각 필드 ToggleCard(card·emerald). 값>0이면 초기 펼침(비파괴). 평가방식 라디오 대체.
 //   엔진 우선순위(resolveValuationMethod): market > appraised > similar > standard.
+//
+// RTMS 자동조회 (아파트 전용):
+//   - cat === "real_estate_apartment" 시 "자동조회" 버튼 추가
+//   - 버튼 disabled 조건: 주소 미입력 OR 면적 미입력 OR 공시가격 미입력
+//   - mirror-pattern 준수: useEffect→store 미러링 금지
+//     수동 수정 시 onChange에서 직접 set({ similarSalesSource: undefined })
 // ============================================================
+
+interface ValuationAccordionFieldsProps {
+  item: EstateItem;
+  set: (patch: Partial<EstateItem>) => void;
+  cat: "real_estate_land" | "real_estate_building" | "real_estate_apartment";
+  /** 평가기준일 YYYY-MM-DD (RTMS 쿼리용) */
+  valuationDate?: string;
+  /** 세목 (RTMS 평가기간 산정용) */
+  mode: "inheritance" | "gift";
+  /** 시군구코드 5자리 (RTMS lawdCd 파생용) */
+  estateSigunguCode?: string;
+}
 
 function ValuationAccordionFields({
   item,
   set,
-}: {
-  item: EstateItem;
-  set: (patch: Partial<EstateItem>) => void;
-}) {
+  cat,
+  valuationDate,
+  mode,
+  estateSigunguCode,
+}: ValuationAccordionFieldsProps) {
   // 필드별 초기 펼침 (값>0이면 ON) — mount 1회. OFF로 닫아도 store 값 보존(비파괴).
   const [marketOpen, setMarketOpen] = useState((item.marketValue ?? 0) > 0);
   const [appraisedOpen, setAppraisedOpen] = useState((item.appraisedValue ?? 0) > 0);
   const [similarOpen, setSimilarOpen] = useState((item.similarSalesValue ?? 0) > 0);
+
+  // RTMS 모달 열림 상태 (아파트 전용)
+  const [rtmsModalOpen, setRtmsModalOpen] = useState(false);
+
+  // 버튼 활성화 조건
+  const hasAddress = !!(item.estateAddress?.jibun || item.estateAddress?.road || item.estateAddress?.pnu);
+  const hasSigunguCode = !!(estateSigunguCode && estateSigunguCode.length >= 5);
+  const hasArea = !!(item.areaSqm && item.areaSqm > 0);
+  const hasStandardPrice = !!(item.standardPrice && item.standardPrice > 0);
+
+  const rtmsDisabled = !hasAddress || !hasSigunguCode || !hasArea || !hasStandardPrice;
+
+  const rtmsDisabledReason = !hasAddress
+    ? "소재지를 먼저 입력해주세요"
+    : !hasSigunguCode
+      ? "주소를 재검색하여 시군구코드를 확인하세요"
+      : !hasArea
+        ? "전용면적(㎡)을 먼저 입력해주세요"
+        : !hasStandardPrice
+          ? "주택 기준시가(공동주택가격)를 먼저 입력해주세요"
+          : "";
+
+  // 단지명: item.name 또는 estateAddress.building 또는 빈 문자열
+  const aptName =
+    item.name ||
+    item.estateAddress?.building ||
+    "";
 
   return (
     <div className="space-y-2">
@@ -375,23 +429,101 @@ function ValuationAccordionFields({
         />
       </ToggleCard>
 
-      {/* 매매사례가액 (신규) — 시행령 §49④ */}
+      {/* 매매사례가액 — 시행령 §49④. 아파트일 때 RTMS 자동조회 버튼 추가 */}
       <ToggleCard
         tone="emerald"
         size="sm"
         title="매매사례가액 (유사매매사례)"
         description="면적·용도·기준시가 유사한 다른 재산 매매가 (시행령 §49④). 해당 재산 시가·감정가 있으면 미적용(§49② 단서)."
         checked={similarOpen}
-        onCheckedChange={setSimilarOpen}
+        onCheckedChange={(v) => {
+          setSimilarOpen(v);
+          // ToggleCard OFF 시 값 초기화하지 않음 (비파괴 원칙)
+        }}
       >
-        <CurrencyInput
-          label="매매사례가액 (유사매매사례)"
-          value={item.similarSalesValue != null ? String(item.similarSalesValue) : ""}
-          onChange={(v) => set({ similarSalesValue: parseAmount(v) || undefined })}
-          placeholder="없으면 빈칸"
-          hideLabel
-        />
+        <div className="space-y-2">
+          {/* 금액 입력 + 자동조회 버튼 (아파트 전용 인라인) */}
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <CurrencyInput
+                label="매매사례가액 (유사매매사례)"
+                value={item.similarSalesValue != null ? String(item.similarSalesValue) : ""}
+                onChange={(v) => {
+                  const amount = parseAmount(v) || undefined;
+                  // 수동 수정 시 출처 배지 제거 (mirror-pattern 준수 — useEffect 금지)
+                  if (item.similarSalesSource !== undefined) {
+                    set({ similarSalesValue: amount, similarSalesSource: undefined });
+                  } else {
+                    set({ similarSalesValue: amount });
+                  }
+                }}
+                placeholder="없으면 빈칸"
+                hideLabel
+              />
+            </div>
+
+            {/* 아파트 전용 자동조회 버튼 */}
+            {cat === "real_estate_apartment" && (
+              <button
+                type="button"
+                disabled={rtmsDisabled}
+                title={rtmsDisabled ? rtmsDisabledReason : "RTMS 실거래가 자동조회 (국토교통부)"}
+                onClick={() => setRtmsModalOpen(true)}
+                className={[
+                  "shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                  rtmsDisabled
+                    ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500"
+                    : "border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-300 dark:hover:bg-sky-900/60",
+                ].join(" ")}
+              >
+                자동조회
+              </button>
+            )}
+          </div>
+
+          {/* disabled 사유 안내 (아파트 전용) */}
+          {cat === "real_estate_apartment" && rtmsDisabled && (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+              ⚠️ {rtmsDisabledReason}
+            </p>
+          )}
+
+          {/* RTMS 자동조회 출처 배지 */}
+          {item.similarSalesSource === "rtms_auto" && (
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
+                RTMS 자동조회
+              </span>
+              <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                국토교통부 실거래가 공개시스템 · 직접 금액 수정 시 배지 제거
+              </span>
+            </div>
+          )}
+        </div>
       </ToggleCard>
+
+      {/* RTMS 모달 (아파트 전용) */}
+      {cat === "real_estate_apartment" && rtmsModalOpen && valuationDate && (
+        <RtmsSimilarSalesModal
+          open={rtmsModalOpen}
+          onOpenChange={setRtmsModalOpen}
+          aptName={aptName}
+          sigunguCode={estateSigunguCode ?? ""}
+          targetExclusiveAreaM2={item.areaSqm}
+          targetStandardPrice={item.standardPrice}
+          targetUmdNm={item.estateAddress?.jibun
+            ? item.estateAddress.jibun.split(" ").slice(-2, -1)[0]
+            : undefined}
+          valuationDate={valuationDate}
+          taxType={mode}
+          onSelect={({ amount }) => {
+            // 자동채움 — mirror-pattern 준수: useEffect 금지, 명시적 set
+            set({ similarSalesValue: amount, similarSalesSource: "rtms_auto" });
+            setSimilarOpen(true);
+            setRtmsModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

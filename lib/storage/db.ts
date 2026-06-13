@@ -1,6 +1,7 @@
 import Dexie, { type Table } from "dexie";
 import type { UserProfile, CalculationRecord, Client } from "./types";
 import { migrateReductionReclassification } from "./migrations/reduction-reclassification";
+import type { RtmsTradeRecord } from "@/lib/calc/rtms-similar-sales-filter";
 
 /**
  * Vworld reverseGeocoding 캐시 (PR-RD-5b, 2026-05-25).
@@ -29,6 +30,25 @@ export interface ReverseGeocodeCacheRecord {
 }
 
 /**
+ * RTMS 실거래가 조회 캐시 (v6, 2026-06-13).
+ *
+ * PK = `rtms_${lawdCd}_${baseDate}_${taxType}` (기간 단위 캐시 — §9 D5).
+ * TTL = 7일 (실거래가는 매일 변경되지 않음, vworld TTL과 통일).
+ * 공공데이터포털 일 쿼터(10,000건) 절약 — 동일 조회 재요청 차단.
+ */
+export interface RtmsSalesCacheRecord {
+  /** PK = `rtms_${lawdCd}_${baseDate}_${taxType}` */
+  id: string;
+  lawdCd: string;
+  baseDate: string;   // "YYYY-MM-DD" 평가기준일
+  taxType: "inheritance" | "gift";
+  records: RtmsTradeRecord[];
+  months: string[];   // 조회한 YYYYMM 목록
+  createdAt: number;
+  expiresAt: number;
+}
+
+/**
  * KoreanTaxCalc 로컬 저장소.
  *
  * 인덱스 설계:
@@ -43,6 +63,7 @@ class LocalTaxDB extends Dexie {
   calculations!: Table<CalculationRecord, string>;
   clients!: Table<Client, string>;
   reverseGeocodeCache!: Table<ReverseGeocodeCacheRecord, string>;
+  rtmsSalesCache!: Table<RtmsSalesCacheRecord, string>;
 
   constructor() {
     super("KoreanTaxCalcLocal");
@@ -112,6 +133,18 @@ class LocalTaxDB extends Dexie {
       clients: "id, userId, name, lastUsedAt, [userId+name], [userId+createdAt], [userId+lastUsedAt]",
       reverseGeocodeCache: "id, expiresAt",
     });
+
+    // v6 (2026-06-13): RTMS 실거래가 조회 캐시 테이블 신규 추가.
+    // 기존 5 테이블 schema 변경 없음 — 신규 rtmsSalesCache 테이블만 추가.
+    // 공공데이터포털 일 쿼터(10,000건) 절약 + 7일 TTL.
+    this.version(6).stores({
+      userProfile: "id, updatedAt",
+      calculations:
+        "id, userId, taxType, createdAt, [userId+createdAt], [userId+taxType+createdAt], [userId+linkedCalculationId], [userId+clientId+createdAt]",
+      clients: "id, userId, name, lastUsedAt, [userId+name], [userId+createdAt], [userId+lastUsedAt]",
+      reverseGeocodeCache: "id, expiresAt",
+      rtmsSalesCache: "id, expiresAt",
+    });
   }
 }
 
@@ -119,17 +152,22 @@ export const db = new LocalTaxDB();
 
 /** 테스트용 — 모든 테이블 초기화 */
 export async function resetLocalDB(): Promise<void> {
+  // Dexie transaction 오버로드는 최대 6인자 — 배열 형태로 전달
   await db.transaction(
     "rw",
-    db.userProfile,
-    db.calculations,
-    db.clients,
-    db.reverseGeocodeCache,
+    [
+      db.userProfile,
+      db.calculations,
+      db.clients,
+      db.reverseGeocodeCache,
+      db.rtmsSalesCache,
+    ],
     async () => {
       await db.userProfile.clear();
       await db.calculations.clear();
       await db.clients.clear();
       await db.reverseGeocodeCache.clear();
+      await db.rtmsSalesCache.clear();
     },
   );
 }

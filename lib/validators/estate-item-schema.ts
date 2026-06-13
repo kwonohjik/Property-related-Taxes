@@ -21,6 +21,12 @@ const baseItemSchema = z.object({
   marketValue: z.number().nonnegative().optional(),
   appraisedValue: z.number().nonnegative().optional(),
   similarSalesValue: z.number().nonnegative().optional(), // 유사매매사례가액 (시행령 §49④) — baseItemSchema 추가 → 9멤버 .extend 전파
+  /**
+   * 유사매매사례가액 출처 메타 (§9 D8 — 1필드만).
+   * "manual": 사용자 수동 입력 / "rtms_auto": RTMS 자동조회 후 선택
+   * 엔진 미소비 — UI 표시 전용. baseItemSchema 추가 → discriminatedUnion 9멤버 자동 전파.
+   */
+  similarSalesSource: z.enum(["manual", "rtms_auto"]).optional(),
   standardPrice: z.number().nonnegative().optional(),
   // 상속개시자료 요약 4표 (2026-05-28) — Table A 비고/수량 열
   valuationMethod: z
