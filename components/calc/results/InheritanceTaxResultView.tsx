@@ -150,37 +150,8 @@ export function InheritanceTaxResultView({
         pdfBusy={pdfBusy}
       />
 
-      {/* 핵심 결과 카드 */}
-      <PrintSection id="core-result" selectedIds={selectedPrintIds}>
-      <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
-        <p className="text-sm font-medium text-muted-foreground mb-1">상속세 결정세액</p>
-        <p className="text-xl font-bold tracking-tight">{formatKRW(result.finalTax)}</p>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-          <div>
-            <span>산출세액</span>
-            <p className="font-semibold text-foreground text-base mt-0.5">
-              {formatKRW(result.computedTax)}
-            </p>
-          </div>
-          {result.generationSkipSurcharge > 0 && (
-            <div>
-              <span>세대생략 할증</span>
-              <p className="font-semibold text-amber-600 dark:text-amber-400 text-base mt-0.5">
-                + {formatKRW(result.generationSkipSurcharge)}
-              </p>
-            </div>
-          )}
-          {result.totalTaxCredit > 0 && (
-            <div>
-              <span>세액공제 합계</span>
-              <p className="font-semibold text-blue-600 dark:text-blue-400 text-base mt-0.5">
-                - {formatKRW(result.totalTaxCredit)}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-      </PrintSection>
+      {/* 핵심 결과 카드 제거 (2026-06-13) — 아래 "상속세 과세 요약"이 결정세액·산출세액·
+          세액공제를 더 상세히 제공하여 중복. PDF(ResultPdfDocument)는 결정세액 자체 보유. */}
 
       {/* 과세 요약 */}
       <PrintSection id="tax-summary" selectedIds={selectedPrintIds}>

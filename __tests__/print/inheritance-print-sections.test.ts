@@ -18,7 +18,6 @@ import {
 
 // 설계 §1·§2 기준 leaf 19종 (§74 징수유예 + 비과세 내역 exemption-detail 추가. 부표3·별지5·별지1은 화면 단일 카드 → deduction-besshi 1 leaf 통합)
 const ALL_LEAVES: PrintSectionId[] = [
-  "core-result",
   "tax-summary",
   "exemption-detail",
   "cultural-heritage-deferral",
@@ -109,12 +108,12 @@ describe("선택 출력 레지스트리 — Pre-Do anchor", () => {
       "tax-summary",
       "heir-allocation-summary",
       "filing-form-9",
-      "core-result",
+      "source-data",
     ]);
-    // 화면 전용 노드(core-result) 선택은 PDF에서 제외, pdf 채널(filing-form-9·tax-summary)은 포함
+    // 화면 전용 노드(source-data) 선택은 PDF에서 제외, pdf 채널(filing-form-9·tax-summary)은 포함
     expect(
       selectPdfSections(
-        new Set(["core-result", "filing-form-9", "tax-summary"]),
+        new Set(["source-data", "filing-form-9", "tax-summary"]),
         available
       ).sort()
     ).toEqual(["filing-form-9", "tax-summary"]);
