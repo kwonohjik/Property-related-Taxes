@@ -90,6 +90,13 @@ export interface EstateItem extends EstateLocationFields {
   appraisedValue?: number;
   /** 유사매매사례가액 (상증법 시행령 §49①·④ — "시가로 본다"). market·appraised 존재 시 §49② 단서로 배제(if-chain 자연 후순위). */
   similarSalesValue?: number;
+  /**
+   * 유사매매사례가액 출처 메타 — §9 D8 (1필드만, similarSalesCandidates 금지).
+   * "manual": 사용자 수동 입력 (기존 동작)
+   * "rtms_auto": RTMS 자동조회 후 사용자가 선택하여 채움
+   * 엔진(resolveValuationMethod)은 이 필드를 소비하지 않음 — UI 표시·출처 추적 전용.
+   */
+  similarSalesSource?: "manual" | "rtms_auto";
   /** 상장주식: 전후 2개월 일평균 종가 */
   listedStockAvgPrice?: number;
   listedStockShares?: number;
