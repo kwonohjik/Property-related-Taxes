@@ -233,7 +233,7 @@ test("계산서 서식 — 양도 양도당시·취득당시 2벌 + ⑪ (BSP-06)
 
   await expect(page.getByTestId("bsp-result")).toBeVisible();
   // 국세청 계산서 서식 — 펼치기
-  await page.getByRole("button", { name: /국세청.*계산서.*펼치기/ }).click();
+  await page.getByRole("button", { name: /국세청.*계산서/ }).click();
   await expect(page.getByText("양도당시 기준시가 계산")).toBeVisible();
   await expect(page.getByText("취득당시 기준시가 계산")).toBeVisible();
   // ⑪ 양도당시 90,000,000 / 취득당시 82,200,000
@@ -278,7 +278,7 @@ test("계산서 서식 — 상속 복합 작성례(3) ⑪ 200,540,000", async ({
   await page.getByRole("button", { name: "기준시가 계산하기" }).click();
 
   await expect(page.getByTestId("bsp-result")).toBeVisible();
-  await page.getByRole("button", { name: /국세청.*계산서.*펼치기/ }).click();
+  await page.getByRole("button", { name: /국세청.*계산서/ }).click();
   await expect(page.getByTestId("nts-bsp-6-no11")).toContainText("200,540,000");
   // Ⅲ 지상1 조정률 번호 "0.9(9)" 표기
   await expect(page.getByTestId("nts-bsp-3-row0")).toContainText("0.9(9)");

@@ -73,7 +73,7 @@ test("(1) 양도건물 계산서 — 양도당시 217,230,000 / 취득당시 154
   await expect(result).toBeVisible();
 
   // 계산서 펼치기 — 양도당시 ⑪ 217,230,000 / 취득당시 154,960,000
-  await page.getByRole("button", { name: /국세청.*계산서.*펼치기/ }).click();
+  await page.getByRole("button", { name: /국세청.*계산서/ }).click();
   const report = page.getByTestId("nts-bsp-report");
   await expect(report).toBeVisible();
   await expect(page.getByTestId("nts-bsp-6-no11").first()).toContainText("217,230,000");

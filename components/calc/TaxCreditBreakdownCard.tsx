@@ -339,11 +339,11 @@ function CreditRow({ label, amount, lawRef, highlight, formula }: CreditRowProps
             <button
               type="button"
               onClick={() => setExpanded((p) => !p)}
-              className="text-[10px] text-gray-500 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
+              className="text-[10px] text-gray-500 hover:text-violet-700 dark:hover:text-violet-300 transition-colors print:hidden"
               aria-expanded={expanded}
               aria-label={`${label} 산출근거 ${expanded ? "닫기" : "펼치기"}`}
             >
-              {expanded ? "▼ 산출근거" : "▶ 산출근거"}
+              {expanded ? "▲ 산출근거" : "▼ 산출근거"}
             </button>
           )}
         </div>

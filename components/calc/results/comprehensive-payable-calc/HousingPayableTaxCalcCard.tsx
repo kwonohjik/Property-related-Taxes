@@ -12,10 +12,11 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Calculator } from "lucide-react";
+import { Calculator } from "lucide-react";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 import { getHousingStandardRateBracket } from "@/lib/tax-engine/property-tax";
 import { won, eok, pct, StepLine, Bullet, GaNaDaLine } from "./payable-calc-helpers";
+import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
 
 export function HousingPayableTaxCalcCard({ result }: { result: ComprehensiveTaxResult }) {
   const [expanded, setExpanded] = useState(false);
@@ -42,7 +43,7 @@ export function HousingPayableTaxCalcCard({ result }: { result: ComprehensiveTax
             — 교재(계산 사례) 형식 산출근거
           </span>
         </span>
-        {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        <span className={expandToggleClass("emerald")}>{expandToggleLabel(expanded)}</span>
       </button>
 
       {/* 본문 — CSS-only 인쇄 노출 */}

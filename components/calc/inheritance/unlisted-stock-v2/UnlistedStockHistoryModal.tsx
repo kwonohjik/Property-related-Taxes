@@ -29,6 +29,10 @@ import {
 } from "@/components/ui/dialog";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
 import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
+import {
   filterUnlistedStockCandidates,
   candidateToUnlistedStockInput,
   type UnlistedStockCandidate,
@@ -173,10 +177,11 @@ export function UnlistedStockHistoryModal({
             <button
               type="button"
               onClick={() => setShowOtherCorp((v) => !v)}
-              className="text-xs font-semibold text-gray-600 hover:text-gray-900"
+              aria-expanded={showOtherCorp}
+              className={expandToggleClass("slate")}
               data-testid="other-corp-toggle"
             >
-              ▼ 다른 법인 ({otherCorp.length}건) {showOtherCorp ? "접기" : "펼치기"}
+              {expandToggleLabel(showOtherCorp)} · 다른 법인 ({otherCorp.length}건)
             </button>
             {showOtherCorp && (
               <ul className="space-y-2">

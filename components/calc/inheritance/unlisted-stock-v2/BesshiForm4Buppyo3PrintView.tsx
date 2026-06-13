@@ -22,6 +22,10 @@
  */
 
 import { useState } from "react";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type {
   UnlistedStockValuationInput,
@@ -121,7 +125,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           className="flex-1 text-left text-[12px] font-semibold text-gray-700 hover:text-gray-900"
         >
           📄 별지 제4호 부표3 비상장주식 평가서 (인쇄 미리보기){" "}
-          <span className="text-[10px] text-gray-500">{open ? "접기" : "펼치기"}</span>
+          <span className={expandToggleClass("slate")}>{expandToggleLabel(open)}</span>
         </button>
         <UnlistedStockBesshiPdfDownloadButton input={safe} />
       </div>
