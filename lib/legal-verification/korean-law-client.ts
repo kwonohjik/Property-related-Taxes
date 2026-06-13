@@ -30,7 +30,7 @@ const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
  * extractUnitText·normalizeContent·title 추출 로직을 바꿀 때마다 이 값을 올릴 것.
  * raw 캐시(law_units_*)는 파서 무관이라 버전 없이 유지 — 재파싱은 오프라인에서도 동작.
  */
-const ARTICLE_CACHE_VERSION = 2;
+export const ARTICLE_CACHE_VERSION = 2;
 
 /**
  * 법제처 Open API 인증키 (OC)
