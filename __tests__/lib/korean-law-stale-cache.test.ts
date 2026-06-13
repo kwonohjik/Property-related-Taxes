@@ -8,11 +8,20 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import fs from "fs/promises";
 import path from "path";
-import { fetchArticle, searchLaw } from "../../lib/legal-verification/korean-law-client";
+import {
+  fetchArticle,
+  searchLaw,
+  ARTICLE_CACHE_VERSION,
+} from "../../lib/legal-verification/korean-law-client";
 
 const CACHE_DIR = path.resolve(process.cwd(), ".legal-cache");
 const MST = "TESTSTALE99";
-const articleFile = path.join(CACHE_DIR, `article_${MST}_제1조.json`);
+// fetchArticle 캐시 키는 파서 버전 suffix(_v{ARTICLE_CACHE_VERSION})를 포함한다.
+// suffix를 빠뜨리면 stale fallback이 캐시를 못 찾아 OC 미설정 throw로 떨어진다.
+const articleFile = path.join(
+  CACHE_DIR,
+  `article_${MST}_제1조_v${ARTICLE_CACHE_VERSION}.json`
+);
 const searchFile = path.join(CACHE_DIR, "search_테스트스테일법.json");
 
 const cleanup = async () => {

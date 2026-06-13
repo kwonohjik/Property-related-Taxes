@@ -21,7 +21,7 @@ import {
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
-import { resolveLTHDStartDate } from "./transfer-tax-finalize";
+import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import {
   parseDeductionRules,
   parseProgressiveRate,
