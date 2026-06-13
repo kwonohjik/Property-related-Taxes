@@ -295,3 +295,42 @@ export interface RtmsAptTradeResponse {
 ### 9.4 Pre-Do anchor (구현 착수 전 1건 우선)
 
 `single-source-engine-helper`·`pre-do-anchor-verification` 정책: Do 진입 전 `filterSimilarSales` T-4(면적 ±5% 경계: 89.09㎡ 통과 / 89.19㎡ 제외) anchor를 먼저 작성·실행해 ±5% 산식과 "가장 가까운 날" 정렬을 환류 검증한다. ±20%(폐기) 흔적이 남지 않았는지 grep 확인.
+
+---
+
+## 10. 2차 설계 검토 — 추가 정정 (BINDING, §9에 보충)
+
+1차 검토(§9)는 엔진↔UI 계약 발산을 다뤘다. 2차는 **각 문서 내부의 오류·누락·구현 함정**을 적대적으로 점검한 결과다. 실측 근거를 병기한다.
+
+### 10.1 신규 실질 결함 (구현 전 반드시 반영)
+
+| # | 결함 | 실측 근거 | **정정 결정 (BINDING)** |
+|---|------|-----------|------------------------|
+| **P1. 잘못된 법령 인용 (법령 정확성)** | UI 초안 §0에 "시행규칙 §15① 공시가격 **±20%**(§15의3 준용)" — 법적 근거 없는 인용 | KoreanLaw MST 284609 §15③1호다목 = **±5%**(엔진·재검토 2회 독립 확인) | UI §0 정정 완료. **legal-codes 상수·코드 주석·결과 카드 어디에도 ±20%/§15① 금지.** 공동주택가격 임계는 §15③1호다목 ±5% 단일 |
+| **P2. RTMS 페이지네이션 누락 (데이터 유실)** | 엔진 §3.1이 `numOfRows=100&pageNo=1`만 — 루프 없음. LAWD_CD는 **시군구(구) 전체** 거래 반환 → 한 달 수백~수천 건 가능 | `standard-price/route.ts:110-158 callNedAllPages`는 전체 페이지 수집 루프 보유 | apt-trade 라우트는 **월별 전체 페이지 수집**(`callNedAllPages` 패턴 차용, `numOfRows=1000` + totalCount까지 루프). 100건 단발 호출 금지 |
+| **P3. 단지 식별 불충분 (동명 단지 오매칭)** | 필터 §5 Step5가 `normalizeAptName`만 비교. LAWD_CD=시군구 범위라 **같은 구 내 동일 단지명**(예: "래미안")이 다른 동에 존재 가능 | RTMS raw에 `umdNm`(읍면동)·`jibun` 존재(엔진 §3.2). 필터는 미사용 | 필터 매칭에 **`umdNm`(읍면동) 일치 추가**, 가능 시 `jibun` 보조. §15③1호가목 "동일한 공동주택단지" 정밀화. criteria에 `targetUmdNm?`·`targetJibun?` 추가 |
+| **P4. 면적 필드 의미 미확정** | UI가 `item.areaSqm`을 `targetExclusiveAreaM2`로 전달. `areaSqm`은 범용 "area in sqm" — 전용/공급 미구분 | `inheritance-gift.types.ts:251 areaSqm?: number`(주석 없음) | 아파트 ±5% 비교는 **전용면적** 기준(RTMS `excluUseAr`=전용). UI 위젯에 "전용면적(㎡)" 라벨 + hint 명시. `areaSqm`이 전용면적임을 보장하지 못하면 별도 전용면적 입력 안내. Do에서 의미 확정 |
+| **P5. env 감지 메커니즘 미정** | UI §5.5는 `/api/address/apt-trade?healthcheck=1` 제안, 엔진 §4.6은 키 없으면 **HTTP 500 `API_KEY_MISSING`** 반환 — 둘 다 §9 D2 `configMissing` envelope와 불일치 | 엔진 §4.6 vs UI §5.5 vs §9 D2 3중 불일치 | **env 미설정 = HTTP 200 + `{success:false, configMissing:true}`**(에러 아님). 버튼은 주소 있으면 활성, 클릭 후 `configMissing`이면 모달에 안내. `healthcheck` 파라미터·500 에러 폐기. (별도 사전감지 불필요 — lazy) |
+| **P6. 평가일·세목 데이터흐름 미명시** | UI 모달이 `evaluationDate`·`mode`를 받으나, 자산-카드(`EstateBodyRealEstate`)가 폼-전역 사망일/증여일·taxType에 접근하는 경로 미서술 | `EstateBodyRealEstate.tsx:39`는 `VariantBodyProps`(types)만 수신 — date/mode 미포함 추정 | Do에서 `VariantBodyProps`에 `valuationDate`·`mode` props threading 필요 여부 grep 확인 후 추가. 자산 카드는 평가일 미보유 가능 → 상위(Step/Calculator)에서 주입 |
+
+### 10.2 잔여 stale 참조 (본 부록이 override — 코드 작성 시 무시)
+
+§9·§10이 BINDING이며, 아래 초안 서술은 **본 부록 기준으로 구현**한다(문서 본문 미수정, 혼동 방지용 명시):
+
+- **필드 수**: 본문 §2.1·§3·§6(Phase1 step4)·엔진 §6에 `similarSalesCandidates` 잔존 → **무효**(§9 D8: `similarSalesSource` 1필드만).
+- **파일명**: 본문 §2.1·§6.5의 `lib/calc/rtms-lookup.ts` → **무효**(§9 D5: Mediator `rtms-similar-sales-lookup.ts` + 순수 `rtms-similar-sales-filter.ts`).
+- **함수명**: UI `filterSimilarSalesLocal` → **무효**(§9 D4: `filterSimilarSales`).
+- **env명**: UI §5.5 disabledReason 문자열·§8.3의 `RTMS_SERVICE_KEY` → **무효**(§9 D6: `MOLIT_RTMS_API_KEY`). 사용자 노출 문자열도 교체.
+- **공시가격 임계**: UI §3 와이어프레임·§6.2 ±20% 표기 → **무효**(§9 D7·§10 P1: ±5%). 와이어프레임 "공시가격차이 %" 배지는 Phase 2에서만 의미.
+- **캐시 키**: 엔진 §7.1 `lawdCd:dealYmd`(per-month) vs UI §7 `pnu_YYYY_MM` → **무효**(§9 D5: Mediator `rtms_${lawdCd}_${baseDate}_${taxType}` 기간 단위). 단, P2 페이지네이션은 라우트 내부 처리이므로 캐시는 기간 응답 전체 1엔트리.
+
+### 10.3 적정 확인 (검토 결과 문제 없음 — 변경 불요)
+
+- 거래금액 "만원" 단위 → `×10_000` 정수 환산: RTMS 관례 정확. ✓
+- `getRTMSDataSvcAptTradeDev`(상세) 엔드포인트: 등기일·거래유형 포함 상세본 — 적절. ✓ (단 https 사용)
+- 평가기간 `addMonths` 계산(180일 아님): 월 경계 정확. 테스트 주석의 "~180일"은 비유 표현일 뿐 구현은 `addMonths`. ✓
+- 자동 단정 금지(추천만, §15③1호단서 공시가격-최소 tie-break은 Phase 2): "추천≠법적 최종선택, 사용자 확정" 원칙으로 Phase 1 date-기준 추천 허용. ✓
+
+### 10.4 Do 진입 게이트 (갱신)
+
+§9.4 anchor에 추가: 구현 착수 전 grep 확인 — ①`±20%`/`§15①`/`§15의3` 흔적 0건 ②`similarSalesCandidates` 미생성 ③`RTMS_SERVICE_KEY` 미사용(`MOLIT_RTMS_API_KEY`만) ④`areaSqm` 전용면적 의미 ⑤`VariantBodyProps` date/mode threading.
