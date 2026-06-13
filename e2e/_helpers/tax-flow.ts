@@ -216,7 +216,7 @@ export async function calcAndWaitResult(
   const taxType = opts.taxType ?? "inheritance";
   const resultText =
     opts.resultText ??
-    (taxType === "gift" ? "증여세 결정세액" : "상속세 결정세액");
+    (taxType === "gift" ? "증여세 결정세액" : "상속세 과세 요약");
   const timeout = opts.timeout ?? 30_000;
 
   const calcResponse = page.waitForResponse(

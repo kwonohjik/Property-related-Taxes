@@ -150,6 +150,6 @@ test.describe("상속세 그 밖의 인적공제 §20 (P0+P2)", () => {
 
     // 검증 오류 노출 + 결과 미표시 (차단)
     await expect(page.getByText(/성별을 입력하세요/)).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("상속세 결정세액")).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "상속세 과세 요약" })).not.toBeVisible();
   });
 });

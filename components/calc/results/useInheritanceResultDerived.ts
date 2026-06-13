@@ -59,7 +59,6 @@ export function useInheritanceResultDerived({
     const hasHeirs = !!heirs && heirs.length > 0;
     const hasAlloc = !!result.heirAllocationResult && hasHeirs;
     const items = estateItems ?? [];
-    s.add("core-result");
     s.add("tax-summary");
     if (result.exemptionDetail && result.exemptionDetail.itemResults.length > 0)
       s.add("exemption-detail");

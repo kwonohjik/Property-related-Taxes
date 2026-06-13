@@ -153,5 +153,5 @@ test("DA-4: 비거주자 선택 후 계산 → 오류 없이 결과 표시", asy
   await calcAndWaitResult(page);
 
   // 결과 페이지 정상 표시 확인
-  await expect(page.getByText("상속세 결정세액")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "상속세 과세 요약" })).toBeVisible();
 });

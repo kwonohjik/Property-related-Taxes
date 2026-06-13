@@ -22,9 +22,8 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 16종 (오타 방지·exact 매칭) */
+/** 선택 가능 leaf 15종 (오타 방지·exact 매칭) — core-result(핵심 결과 카드) 제거 2026-06-13 */
 export type PrintSectionId =
-  | "core-result"
   | "tax-summary"
   | "exemption-detail"
   | "cultural-heritage-deferral"
@@ -60,7 +59,7 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
     id: "group:summary",
     label: "계산 요약",
     children: [
-      { id: "core-result", label: "핵심 결과 (결정세액)", channel: SCREEN },
+      // core-result(핵심 결과 카드) 제거 2026-06-13 — 과세 요약과 중복, 화면 효용 낮음
       // 서버 PDF(PR-2): 현존 ResultPdfDocument 상속세 섹션으로 표현 가능 → pdf 채널
       { id: "tax-summary", label: "상속세 과세 요약", channel: SCREEN_PDF },
       { id: "exemption-detail", label: "비과세 적용 내역 (금양임야·묘토·족보)", channel: SCREEN },

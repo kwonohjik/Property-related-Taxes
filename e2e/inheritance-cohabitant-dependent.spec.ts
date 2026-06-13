@@ -172,6 +172,6 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
     await expect(page.getByText(/성별을 입력하세요/)).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.getByText("상속세 결정세액")).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "상속세 과세 요약" })).not.toBeVisible();
   });
 });
