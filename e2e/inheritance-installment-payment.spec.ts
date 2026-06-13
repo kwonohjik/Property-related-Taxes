@@ -47,7 +47,10 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     await addLandAsset(page);
     await gotoStep4(page);
 
-    // Step4 끝 — 연부연납 신청 토글 노출
+    // 그룹 D(납부 방법) 헤더 클릭 → 펼침 (디폴트 접힘 대응)
+    await page.getByRole("button", { name: /납부 방법/ }).click();
+
+    // Step4 — 연부연납 신청 토글 노출
     const toggle = page.getByText("연부연납 신청 (상증법 §71)");
     await expect(toggle).toBeVisible();
     await toggle.click(); // ON → 펼침(희망기간·가업·미래율)
@@ -95,6 +98,8 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     await addLandAsset(page);
     await gotoStep4(page);
 
+    // 그룹 D(납부 방법) 헤더 클릭 → 펼침 (디폴트 접힘 대응)
+    await page.getByRole("button", { name: /납부 방법/ }).click();
     await page.getByText("연부연납 신청 (상증법 §71)").click(); // ON
     await calcAndWaitResult(page);
 

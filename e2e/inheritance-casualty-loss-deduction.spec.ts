@@ -34,8 +34,9 @@ test.describe("상속세 재해손실공제 §23", () => {
     // Step1 → 2 → 3 → 4
     await nextSteps(page, 3);
 
-    // Step4: 재해손실공제 신청 토글 ON
-    await page.getByText("재해손실공제 신청 (상증법 §23)").click();
+    // Step4: 체크리스트 칩 "재해손실공제 §23" 클릭 → casualtyLossEnabled=true → CasualtyLossSection 렌더
+    // (칩 클릭 = casualtyLossEnabled 직접 토글 = 내부 토글 클릭과 동일 효과)
+    await page.getByText("재해손실공제 §23").click();
 
     // 재난 발생일 2024-7-1 (상속개시 2024-6-1 이후, 신고기한 2024-12-31 이내 — §23 요건)
     const dateField = page.getByTestId("casualty-disaster-date");

@@ -59,6 +59,7 @@ import {
   deriveCohabitHouseStdPrice,
 } from "@/lib/calc/inheritance-deduction-suggest";
 import { resolveFamilyBusinessHeirId } from "@/lib/tax-engine/deductions/family-business";
+import { isManualItemActive } from "@/lib/calc/inheritance-deduction-checklist";
 import {
   type FormState,
   INITIAL_FORM,
@@ -441,17 +442,31 @@ export function InheritanceTaxForm() {
       cohabitHouseRightType: form.estateItems.find((i) => i.isCohabitantHouse === true)
         ?.cohabitHouseRightType,
       farmingAssetValue: autoOrManual(form.farmingAssetValue, autos.farming.value),
-      familyBusinessValue: parseAmount(form.familyBusinessValue) || undefined,
-      familyBusinessYears: form.familyBusinessYears
-        ? parseInt(form.familyBusinessYears, 10)
+      // ④ 체크리스트 게이팅 — isManualItemActive(form, key) false이면 undefined (값 보존, 계산 제외)
+      // 자동 항목(spouse/financial/cohabit/farming)은 게이트 없음(법정 강행 공제)
+      familyBusinessValue: isManualItemActive(form, "familyBusiness")
+        ? parseAmount(form.familyBusinessValue) || undefined
         : undefined,
+      familyBusinessYears:
+        isManualItemActive(form, "familyBusiness") && form.familyBusinessYears
+          ? parseInt(form.familyBusinessYears, 10)
+          : undefined,
       // Phase D·E 신규 — 종합사례 PDF
-      familyBusinessDirectAmount: parseAmount(form.familyBusinessDirectAmount) || undefined,
+      familyBusinessDirectAmount: isManualItemActive(form, "familyBusiness")
+        ? parseAmount(form.familyBusinessDirectAmount) || undefined
+        : undefined,
       cohabitDirectAmount: parseAmount(form.cohabitDirectAmount) || undefined,
-      legateeAmountNonHeir: autoOrManual(form.legateeAmountNonHeir, legateeAuto),
-      priorGiftDeductionTotal: parseAmount(form.priorGiftDeductionTotal) || undefined,
-      disasterLossDeduction: parseAmount(form.disasterLossDeduction) || undefined,
+      legateeAmountNonHeir: isManualItemActive(form, "legatee")
+        ? autoOrManual(form.legateeAmountNonHeir, legateeAuto)
+        : undefined,
+      priorGiftDeductionTotal: isManualItemActive(form, "priorGiftDeduction")
+        ? parseAmount(form.priorGiftDeductionTotal) || undefined
+        : undefined,
+      disasterLossDeduction: isManualItemActive(form, "disasterAdjust")
+        ? parseAmount(form.disasterLossDeduction) || undefined
+        : undefined,
       // ④⑬ §23 재해손실공제 — 토글 OFF → undefined (3-state, feedback_three_state_optional_mode_toggle)
+      // casualtyLoss는 casualtyLossEnabled 단일 진실 (isManualItemActive("casualtyLoss") = casualtyLossEnabled)
       // API max(0,loss−comp) fallback은 엔진이 처리 (⑧ validate와 동일 로직 3중 패턴)
       casualtyLoss: form.casualtyLossEnabled
         ? {
@@ -466,15 +481,15 @@ export function InheritanceTaxForm() {
       // form.farming: undefined(legacy) | FarmingInheritanceInput(활성)
       farming: form.farming,
       // 가업상속공제 요건 입력 (2026-05-21, §18의2 + 상증령 §15)
-      // form.familyBusiness: undefined(legacy) | FamilyBusinessInheritanceInput(활성)
       // H-3 fix: heirId=undefined 시 자연인 1명이면 자동선택 fallback (resolveFamilyBusinessHeirId).
       //   UI display fallback(FamilyBusinessHeirSelector effectiveHeirId)과 동일 규칙 — 3중 패턴.
-      familyBusiness: form.familyBusiness
-        ? {
-            ...form.familyBusiness,
-            heirId: resolveFamilyBusinessHeirId(form.heirs, form.familyBusiness.heirId),
-          }
-        : undefined,
+      familyBusiness:
+        isManualItemActive(form, "familyBusiness") && form.familyBusiness
+          ? {
+              ...form.familyBusiness,
+              heirId: resolveFamilyBusinessHeirId(form.heirs, form.familyBusiness.heirId),
+            }
+          : undefined,
       // §21① 단서 — 완전 무신고 시 일괄공제 5억 고정 (2026-06-07)
       isUnfiled: form.isUnfiled || undefined,
       // G4 §23의2① 주택부수토지 면적한도 차감 (Phase 3 — 3필드 전부 또는 전무)
@@ -493,16 +508,27 @@ export function InheritanceTaxForm() {
     // 영리법인 §3의2② 산출세액 상당액 진입 fallback (phase2-후속): cgct 미설정 + 가액 → autoCompute.
     // 표시 fallback(GiftRowEditor)과 동일 산식 — mirror 3중 single-source. store는 불변(엔진 전달용 정제).
     const normalizedPriorGifts = applyCorporateGiftTaxFallback(form.priorGifts);
+    // ④ creditInput — 수동 항목은 isManualItemActive 게이팅 (⑧ validate와 동기화).
+    // foreignTax / shortTermReinherit 비활성 시 해당 필드 undefined → validate §29·§30 검증 통과.
+    // validate.ts의 if(foreignCreditInput) / if(shortTermCreditInput) 분기가 undefined를 무시하므로
+    // UI 통과 ↔ validate 차단 모순 없음 (CLAUDE.md ⑧ 3중 패턴 충족).
     const creditInput: InheritanceTaxCreditInput = {
       priorGifts: normalizedPriorGifts,
-      foreignTaxPaid: parseAmount(form.foreignTaxPaid) || undefined,
-      foreignInheritanceTaxBase:
-        parseAmount(form.foreignInheritanceTaxBase) || undefined,
+      // §29 외국납부세액공제 — 체크리스트 "foreignTax" 비활성 시 undefined
+      foreignTaxPaid: isManualItemActive(form, "foreignTax")
+        ? parseAmount(form.foreignTaxPaid) || undefined
+        : undefined,
+      foreignInheritanceTaxBase: isManualItemActive(form, "foreignTax")
+        ? parseAmount(form.foreignInheritanceTaxBase) || undefined
+        : undefined,
+      // §30 단기재상속 — 체크리스트 "shortTermReinherit" 비활성 시 undefined
       // §30 banding 자동 도출 — 1차 상속개시일 (2차 = deathDate)
-      shortTermReinheritPriorDeathDate:
-        form.shortTermReinheritPriorDeathDate || undefined,
+      shortTermReinheritPriorDeathDate: isManualItemActive(form, "shortTermReinherit")
+        ? form.shortTermReinheritPriorDeathDate || undefined
+        : undefined,
       // §30 재상속분 재산 배열 — 빈 행/0가액 제외 (검토 #4-12)
       shortTermReinheritAssets: (() => {
+        if (!isManualItemActive(form, "shortTermReinherit")) return undefined;
         const rows = form.shortTermReinheritAssets
           .map((a) => ({
             name: a.name.trim() || undefined,
@@ -511,15 +537,19 @@ export function InheritanceTaxForm() {
           .filter((a) => a.priorValue > 0);
         return rows.length > 0 ? rows : undefined;
       })(),
-      shortTermReinheritYears: form.shortTermReinheritYears
-        ? parseInt(form.shortTermReinheritYears, 10)
+      shortTermReinheritYears:
+        isManualItemActive(form, "shortTermReinherit") && form.shortTermReinheritYears
+          ? parseInt(form.shortTermReinheritYears, 10)
+          : undefined,
+      shortTermReinheritTaxPaid: isManualItemActive(form, "shortTermReinherit")
+        ? parseAmount(form.shortTermReinheritTaxPaid) || undefined
         : undefined,
-      shortTermReinheritTaxPaid:
-        parseAmount(form.shortTermReinheritTaxPaid) || undefined,
-      shortTermReinheritAssetValue:
-        parseAmount(form.shortTermReinheritAssetValue) || undefined,
-      shortTermReinheritPriorEstateValue:
-        parseAmount(form.shortTermReinheritPriorEstateValue) || undefined,
+      shortTermReinheritAssetValue: isManualItemActive(form, "shortTermReinherit")
+        ? parseAmount(form.shortTermReinheritAssetValue) || undefined
+        : undefined,
+      shortTermReinheritPriorEstateValue: isManualItemActive(form, "shortTermReinherit")
+        ? parseAmount(form.shortTermReinheritPriorEstateValue) || undefined
+        : undefined,
       isFiledOnTime: form.isFiledOnTime,
     };
     // 종합사례 PDF — debtItems 입력 시 legacy debts·funeralExpense는 0으로 (엔진 분기 통일)

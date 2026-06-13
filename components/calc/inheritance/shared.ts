@@ -67,6 +67,18 @@ export interface FormState extends AppraisalFeeFormFields {
   /** 재해손실공제 (§24 종합한도 분자 보정) — §54 재해로 멸실·훼손된 상속재산 손실액 */
   disasterLossDeduction: string;
 
+  /**
+   * Step4 공제 체크리스트 노출 override (3-state per key).
+   * - undefined(키 없음): 기본 동작(hasValue 또는 autoDetected로 결정)
+   * - true: 강제 노출 (미감지 자동항목의 "직접 입력" 켜기, 수동항목 체크)
+   * - false: 강제 숨김 (수동항목 체크 해제 — 값 보존, 계산에서 제외)
+   *
+   * 자동 항목(spouse/financial/cohabit/farming)은 autoDetected=true이면
+   * false 설정이 무효(법정 강행 공제 누락 방지).
+   * feedback_three_state_optional_mode_toggle
+   */
+  deductionChecklistOverrides: Partial<Record<import("@/lib/calc/inheritance-deduction-checklist").DeductionChecklistKey, boolean>>;
+
   // §23 재해손실공제 (신규, 2026-06-07) — 상속세 과세가액 직접 공제
   /** §23 재해손실공제 신청 여부 (토글 ON/OFF) */
   casualtyLossEnabled: boolean;
@@ -198,6 +210,7 @@ export const INITIAL_FORM: FormState = {
   legateeAmountNonHeir: "",
   priorGiftDeductionTotal: "",
   disasterLossDeduction: "",
+  deductionChecklistOverrides: {},
   // §23 재해손실공제 초기값
   casualtyLossEnabled: false,
   casualtyLossValue: "",
