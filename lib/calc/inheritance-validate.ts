@@ -333,6 +333,12 @@ export function validateInheritanceTaxInput(
 ): string | null {
   if (!input.deathDate) return "상속개시일을 입력하세요.";
   if (input.estateItems.length === 0) return "상속재산을 1개 이상 입력하세요.";
+
+  // ⑧ 장례비 음수 가드 (상증령 §9②) — Zod min(0) 통과 후에도 방어적 검증
+  if (input.funeralExpense < 0) return "일반 장례비는 0원 이상이어야 합니다.";
+  if (input.funeralBonganExpense !== undefined && input.funeralBonganExpense < 0) {
+    return "봉안시설·자연장지 비용은 0원 이상이어야 합니다.";
+  }
   if (input.heirs.length === 0)
     return "상속인·수유자를 1명 이상 등록하세요. (협의분할·법정상속분 안분의 기준)";
 

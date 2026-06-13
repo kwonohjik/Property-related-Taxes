@@ -73,6 +73,8 @@ export async function POST(req: NextRequest) {
     deathDate: parsedData.deathDate,
     estateItems: parsedData.estateItems as InheritanceTaxInput["estateItems"],
     funeralExpense: parsedData.funeralExpense ?? 0,
+    // §9②2호: 봉안시설·자연장지 별도 금액. undefined이면 엔진이 legacy boolean 경로로 fallback.
+    funeralBonganExpense: parsedData.funeralBonganExpense,
     funeralIncludesBongan: parsedData.funeralIncludesBongan ?? false,
     debts: parsedData.debts ?? 0,
     debtItems: parsedData.debtItems as InheritanceTaxInput["debtItems"],

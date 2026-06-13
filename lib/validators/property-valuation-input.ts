@@ -454,7 +454,11 @@ export const inheritanceTaxInputSchema = z.object({
     void ctx;
   }),
   // legacy debts·funeralExpense — debtItems 입력 시 우선
-  funeralExpense: z.number().min(0).max(15_000_000).optional().default(0),
+  // §9②1호: 일반 장례비 — 한도 초과 입력도 허용, 엔진이 clamp[500만,1천만] 적용
+  funeralExpense: z.number().min(0).max(1_000_000_000).optional().default(0),
+  // §9②2호: 봉안시설·자연장지 — 한도 초과 입력도 허용, 엔진이 min(실제,500만) 적용
+  funeralBonganExpense: z.number().min(0).max(1_000_000_000).optional(),
+  // @deprecated funeralBonganExpense 사용. legacy 이력 복원 하위호환용.
   funeralIncludesBongan: z.boolean().optional().default(false),
   debts: z.number().nonnegative().optional().default(0),
   // 종합사례 PDF Phase A0·A

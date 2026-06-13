@@ -32,7 +32,14 @@ export interface FormState extends AppraisalFeeFormFields {
   presumedItems: PresumedInheritanceItem[];
   // Step 2 — 비과세·장례·채무 (legacy + 신규 debtItems)
   exemptionItems: ExemptionCheckedItem[];
+  /** 일반 장례비(식대·제수 등, 봉안 제외) — 상증령 §9②1호. clamp [500만, 1천만] */
   funeralExpense: string;
+  /** 봉안시설·자연장지 비용 — 상증령 §9②2호. min(실제, 500만). 미입력이면 "" */
+  funeralBonganExpense: string;
+  /**
+   * @deprecated funeralBonganExpense 사용. legacy 이력 복원 하위호환용.
+   * funeralBonganExpense === "" 이고 true이면 구 로직 fallback.
+   */
   funeralIncludesBongan: boolean;
   debts: string;
   /**
@@ -193,6 +200,7 @@ export const INITIAL_FORM: FormState = {
   presumedItems: [],
   exemptionItems: [],
   funeralExpense: "",
+  funeralBonganExpense: "",
   funeralIncludesBongan: false,
   debts: "",
   debtItems: undefined,

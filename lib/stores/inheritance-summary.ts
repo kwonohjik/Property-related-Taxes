@@ -45,6 +45,8 @@ export interface InheritanceSummaryFormInput {
   /** legacy 합산 채무 (debtItems undefined 또는 빈 배열일 때 사용) */
   debts: string;
   funeralExpense: string;
+  /** §9②2호: 봉안시설·자연장지 비용 — 빈 문자열이면 미입력(legacy fallback) */
+  funeralBonganExpense?: string;
   funeralIncludesBongan: boolean;
   priorGifts: PriorGift[];
   /**
@@ -161,11 +163,20 @@ export function computeInheritanceSummary(
     funeralApplied =
       Math.min(funeralMeal, 10_000_000) + Math.min(funeralBongan, 5_000_000);
   } else {
-    // legacy 경로 — 엔진 calcFuneralExpenseDeduction과 동일 FUNERAL_MIN(500만) 최소 보장 적용
+    // legacy/simple 경로 — funeralBonganExpense 있으면 §9②분리, 없으면 boolean compat
     totalDebts = parseAmountRaw(form.debts);
     const funeralRaw = parseAmountRaw(form.funeralExpense);
-    const funeralMaxLimit = form.funeralIncludesBongan ? 15_000_000 : 10_000_000;
-    funeralApplied = Math.max(Math.min(funeralRaw, funeralMaxLimit), FUNERAL_MIN);
+    if (form.funeralBonganExpense !== undefined && form.funeralBonganExpense !== "") {
+      // 신규 분리 경로: §9②1호 clamp[500만,1천만] + §9②2호 min(실제,500만)
+      const mealApplied = Math.min(Math.max(funeralRaw, FUNERAL_MIN), 10_000_000);
+      const bonganRaw = parseAmountRaw(form.funeralBonganExpense);
+      const bonganApplied = Math.min(Math.max(bonganRaw, 0), 5_000_000);
+      funeralApplied = mealApplied + bonganApplied;
+    } else {
+      // legacy boolean 경로
+      const funeralMaxLimit = form.funeralIncludesBongan ? 15_000_000 : 10_000_000;
+      funeralApplied = Math.max(Math.min(funeralRaw, funeralMaxLimit), FUNERAL_MIN);
+    }
   }
 
   // ── B6: 파생 담보채무 합산 (§14 자동공제) — 사이드바 totalDebts 포함 (설계 §3-4) ──

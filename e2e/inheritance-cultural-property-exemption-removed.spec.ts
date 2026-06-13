@@ -10,7 +10,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { addHeir } from "./_helpers/tax-flow";
+import { addHeir, addLandAsset } from "./_helpers/tax-flow";
 
 /** Step0(상속인) → Step1(토지 자산) → Step2(비과세) — 단계 네비 버튼으로 결정적 이동 */
 async function gotoExemptionStep(page: Page) {
@@ -19,24 +19,12 @@ async function gotoExemptionStep(page: Page) {
   await page.getByLabel("월").first().fill("5");
   await page.getByLabel("일").first().fill("15");
   await addHeir(page, "heir", "child");
-  await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
+  await page.getByRole("button", { name: /^다음/ }).click(); // Step0 → Step1
+  await addLandAsset(page, { area: "100", unitPrice: "1000000" });
+  await page.getByRole("button", { name: /^다음/ }).click(); // Step1 → Step2
 
-  // Step1: 토지 1건 (이후 단계 진입 위해 자산 ≥1 필요)
-  await page
-    .getByRole("button", { name: /재산 추가|상속재산 추가/ })
-    .first()
-    .click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
-  await page.getByPlaceholder("면적 입력").fill("100");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
-
-  // 비과세·장례비 단계로 직접 이동
-  await page.getByRole("button", { name: /비과세.*단계로 이동/ }).click();
-  await expect(page.getByText(/비과세.*해당 여부/)).toBeVisible();
-
-  // 비과세 마스터 토글 "여" — 선택 시 '과세가액 불산입' 그룹 헤더 노출(상속세)
-  await page.getByRole("button", { name: "여", exact: true }).first().click();
+  // 마스터 토글 제거 — 체크리스트 패널이 바로 노출
+  await expect(page.getByText(/비과세.*불산입 선택/)).toBeVisible();
   await expect(page.getByText("과세가액 불산입").first()).toBeVisible();
 }
 
@@ -58,7 +46,8 @@ test.describe("문화재 비과세 룰 제거 (§12 2호 삭제 정정)", () => 
     test.setTimeout(60_000);
     await gotoExemptionStep(page);
 
-    await expect(page.getByText("국가·지자체 유증 재산")).toBeVisible(); // §12 1호
-    await expect(page.getByText("공익신탁 출연 재산")).toBeVisible(); // §17
+    // 체크리스트 칩(축약 라벨)으로 노출 확인 — 입력 섹션은 디폴트 접힘
+    await expect(page.getByRole("button", { name: /국가·지자체 유증/ }).first()).toBeVisible(); // §12 1호
+    await expect(page.getByRole("button", { name: /공익신탁 출연/ }).first()).toBeVisible(); // §17
   });
 });

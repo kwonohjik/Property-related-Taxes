@@ -1,11 +1,19 @@
 "use client";
 
 /**
- * ExemptionChecklist — 비과세 항목 체크리스트
- * 상속세·증여세 계산 마법사 내 비과세 단계에서 사용
+ * ExemptionChecklist — 비과세·과세가액 불산입 체크리스트 (재구성)
  *
- * 사용자가 해당되는 비과세 항목을 선택하고 금액을 입력하면
- * 해당 항목의 비과세 금액과 리스크 경고를 표시합니다.
+ * 개선:
+ *  - 마스터 "여" 선택 후 상단 체크리스트 패널(ExemptionChecklistPanel) 노출
+ *  - 체크된 항목만 입력 섹션 렌더 (기존 여/부 토글 → 칩 체크로 교체)
+ *  - 입력 섹션을 §12 / §16·§17 그룹 접이식 카드로 묶음 (디폴트 접힘)
+ *  - 칩 체크 시 해당 그룹 자동 펼침 (onClick 직접 — useEffect 미러링 금지)
+ *
+ * 정책:
+ *  - useEffect → store 미러링 절대 금지 (feedback_useeffect_store_mirror_forbidden)
+ *  - native checkbox/radio 신규 금지
+ *  - 800줄 정책: 패널은 ExemptionChecklistPanel.tsx에 분리됨
+ *  - 엔진/계산 로직 변경 없음 — exemptionItems[] 구조 무변경
  */
 
 import { useState } from "react";
@@ -26,21 +34,19 @@ import {
   HeirAllocationInput,
   hasDistributableHeir,
 } from "@/components/calc/inheritance/HeirAllocationInput";
+import { ExemptionChecklistPanel } from "./ExemptionChecklistPanel";
 import { cn } from "@/lib/utils";
 
 // ============================================================
-// 개별 항목 행
+// 개별 항목 입력 섹션 (펼침 영역만 — 체크된 항목 전용)
 // ============================================================
 
 interface ExemptionRowProps {
   rule: ExemptionRule;
-  checked: boolean;
   amount: number;
   areaM2: number | undefined;
-  onToggle: (ruleId: string) => void;
   onAmountChange: (ruleId: string, amount: number) => void;
   onAreaChange: (ruleId: string, areaM2: number | undefined) => void;
-  // 작업4: 비과세 협의분할 (상속세 전용)
   isInheritance: boolean;
   heirs: Heir[];
   heirAllocations: HeirAllocation[] | undefined;
@@ -50,46 +56,10 @@ interface ExemptionRowProps {
   ) => void;
 }
 
-function YesNoButtons({ checked, onChange }: { checked: boolean; onChange: (yes: boolean) => void }) {
-  const base = "px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors min-w-[44px]";
-  return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      <button
-        type="button"
-        onClick={() => onChange(true)}
-        aria-pressed={checked}
-        className={cn(
-          base,
-          checked
-            ? "bg-violet-600 text-white border-violet-600 shadow-sm"
-            : "bg-white text-gray-600 border-violet-200 hover:bg-violet-50",
-        )}
-      >
-        여
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange(false)}
-        aria-pressed={!checked}
-        className={cn(
-          base,
-          !checked
-            ? "bg-gray-700 text-white border-gray-700 shadow-sm"
-            : "bg-white text-gray-600 border-violet-200 hover:bg-violet-50",
-        )}
-      >
-        부
-      </button>
-    </div>
-  );
-}
-
 function ExemptionRow({
   rule,
-  checked,
   amount,
   areaM2,
-  onToggle,
   onAmountChange,
   onAreaChange,
   isInheritance,
@@ -102,131 +72,219 @@ function ExemptionRow({
   const canDistribute = isInheritance && hasDistributableHeir(heirs);
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border p-3 transition-colors",
-        checked
-          ? "border-violet-300 bg-violet-50/70 ring-1 ring-violet-200/50"
-          : "border-violet-200/70 bg-violet-50/40",
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0 space-y-1">
-          <p className={cn("text-sm font-semibold", checked ? "text-violet-900" : "text-gray-800 dark:text-gray-100")}>
-            {rule.name}
-          </p>
-          <span className="text-xs text-gray-400 dark:text-gray-500">{rule.lawRef}</span>
-          <p className="text-xs text-gray-600 dark:text-gray-300">{rule.description}</p>
-        </div>
-        <YesNoButtons checked={checked} onChange={(yes) => { if (yes !== checked) onToggle(rule.id); }} />
+    <div className="rounded-lg border border-sky-200/70 bg-sky-50/40 dark:border-sky-800/50 dark:bg-sky-950/20 p-3 space-y-2">
+      {/* 항목 헤더 */}
+      <div className="space-y-0.5">
+        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+          {rule.name}
+        </p>
+        <span className="text-xs text-gray-400 dark:text-gray-500">{rule.lawRef}</span>
+        <p className="text-xs text-gray-600 dark:text-gray-300">{rule.description}</p>
       </div>
 
-      {checked && (
-        <div className="mt-3 pl-3 border-l-2 border-violet-300 space-y-2">
-          {/* 금액 입력 (사회통념 타입 제외하고 모두 표시). 금액 한도(고정)만 라벨에 1회 표기 */}
-          {rule.limitType !== "social_norm" && (
-            <div>
-              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                해당 자산 가액
-                {rule.limitType === "fixed" && rule.limitAmount && (
-                  <span className="ml-1 text-amber-600">
-                    (최대 {rule.limitAmount.toLocaleString()})
-                  </span>
-                )}
-              </label>
-              <CurrencyInput
-                label=""
-                value={amount > 0 ? String(amount) : ""}
-                onChange={(v) => onAmountChange(rule.id, parseInt(v.replace(/,/g, "") || "0", 10))}
-                placeholder="금액 입력"
-              />
-            </div>
-          )}
-
-          {/* 면적 입력 (금양임야·묘토). 면적 한도는 여기 라벨에 1회만 표기(단일 출처) */}
-          {rule.limitType === "area" && (
-            <div>
-              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                해당 면적 (㎡)
-                {rule.limitAreaM2 && (
-                  <span className="ml-1 text-gray-400">한도 {rule.limitAreaM2.toLocaleString()}㎡</span>
-                )}
-              </label>
-              <DecimalInput
-                value={areaM2 != null ? String(areaM2) : ""}
-                thousandSeparator
-                onChange={(v) => {
-                  const n = parseDecimal(v);
-                  onAreaChange(rule.id, n > 0 ? n : undefined);
-                }}
-                placeholder="분묘에 속한 면적 (㎡)"
-              />
-              {areaM2 != null && rule.limitAreaM2 != null && areaM2 > rule.limitAreaM2 && (
-                <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-                  한도 초과 — 초과 면적 비율만큼 가액이 안분 과세됩니다.
-                </p>
+      <div className="pl-3 border-l-2 border-sky-300 dark:border-sky-700 space-y-2">
+        {/* 금액 입력 (사회통념 타입 제외하고 모두 표시) */}
+        {rule.limitType !== "social_norm" && (
+          <div>
+            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+              해당 자산 가액
+              {rule.limitType === "fixed" && rule.limitAmount && (
+                <span className="ml-1 text-amber-600">
+                  (최대 {rule.limitAmount.toLocaleString()})
+                </span>
               )}
-            </div>
-          )}
+            </label>
+            <CurrencyInput
+              label=""
+              value={amount > 0 ? String(amount) : ""}
+              onChange={(v) => onAmountChange(rule.id, parseInt(v.replace(/,/g, "") || "0", 10))}
+              placeholder="금액 입력"
+            />
+          </div>
+        )}
 
-          {/* 적용 요건·제외 사유 — 기본 접힘 */}
-          {hasDetails && (
-            <div>
-              <button
-                type="button"
-                onClick={() => setDetailsOpen((o) => !o)}
-                aria-expanded={detailsOpen}
-                data-testid={`exemption-row-${rule.id}-details-toggle`}
-                className="text-xs text-violet-600 hover:text-violet-800 dark:text-violet-400 font-medium"
-              >
-                {detailsOpen ? "▾" : "▸"} 적용 요건·제외 사유 자세히
-              </button>
-              {detailsOpen && (
-                <div className="mt-2 space-y-2">
-                  {rule.requirements.length > 0 && (
-                    <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 list-disc list-inside">
-                      {rule.requirements.map((req, i) => (
-                        <li key={i}>{req}</li>
+        {/* 면적 입력 (금양임야·묘토). 면적 한도는 여기 라벨에 1회만 표기(단일 출처) */}
+        {rule.limitType === "area" && (
+          <div>
+            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+              해당 면적 (㎡)
+              {rule.limitAreaM2 && (
+                <span className="ml-1 text-gray-400">한도 {rule.limitAreaM2.toLocaleString()}㎡</span>
+              )}
+            </label>
+            <DecimalInput
+              value={areaM2 != null ? String(areaM2) : ""}
+              thousandSeparator
+              onChange={(v) => {
+                const n = parseDecimal(v);
+                onAreaChange(rule.id, n > 0 ? n : undefined);
+              }}
+              placeholder="분묘에 속한 면적 (㎡)"
+            />
+            {areaM2 != null && rule.limitAreaM2 != null && areaM2 > rule.limitAreaM2 && (
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                한도 초과 — 초과 면적 비율만큼 가액이 안분 과세됩니다.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* 적용 요건·제외 사유 — 기본 접힘 */}
+        {hasDetails && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setDetailsOpen((o) => !o)}
+              aria-expanded={detailsOpen}
+              data-testid={`exemption-row-${rule.id}-details-toggle`}
+              className="text-xs text-sky-600 hover:text-sky-800 dark:text-sky-400 font-medium"
+            >
+              {detailsOpen ? "▾" : "▸"} 적용 요건·제외 사유 자세히
+            </button>
+            {detailsOpen && (
+              <div className="mt-2 space-y-2">
+                {rule.requirements.length > 0 && (
+                  <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1 list-disc list-inside">
+                    {rule.requirements.map((req, i) => (
+                      <li key={i}>{req}</li>
+                    ))}
+                  </ul>
+                )}
+                {rule.exclusions.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
+                      적용 제외 사유:
+                    </p>
+                    <ul className="text-xs text-red-500 dark:text-red-400 space-y-0.5 list-disc list-inside">
+                      {rule.exclusions.map((ex, i) => (
+                        <li key={i}>{ex}</li>
                       ))}
                     </ul>
-                  )}
-                  {rule.exclusions.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
-                        적용 제외 사유:
-                      </p>
-                      <ul className="text-xs text-red-500 dark:text-red-400 space-y-0.5 list-disc list-inside">
-                        {rule.exclusions.map((ex, i) => (
-                          <li key={i}>{ex}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
-          {/* 협의분할 — 상속인별 귀속 (작업4, 상속세 전용). 미설정 시 법정상속분 */}
-          {canDistribute && (
-            <ToggleCard
-              tone="violet"
-              title="협의분할 (상속인별 분배)"
-              description="비과세 재산을 상속인별로 나눠 귀속시킵니다. 미설정 시 법정상속분으로 안분."
-              checked={heirAllocations !== undefined}
-              onCheckedChange={(on) =>
-                onHeirAllocationsChange(rule.id, on ? [] : undefined)
-              }
-            >
-              <HeirAllocationInput
-                allocations={heirAllocations}
-                expectedTotal={amount}
-                heirs={heirs}
-                onChange={(allocs) => onHeirAllocationsChange(rule.id, allocs)}
-                heading={null}
-              />
-            </ToggleCard>
-          )}
+        {/* 협의분할 — 상속인별 귀속 (상속세 전용). 미설정 시 법정상속분 */}
+        {canDistribute && (
+          <ToggleCard
+            tone="violet"
+            title="협의분할 (상속인별 분배)"
+            description="비과세 재산을 상속인별로 나눠 귀속시킵니다. 미설정 시 법정상속분으로 안분."
+            checked={heirAllocations !== undefined}
+            onCheckedChange={(on) =>
+              onHeirAllocationsChange(rule.id, on ? [] : undefined)
+            }
+          >
+            <HeirAllocationInput
+              allocations={heirAllocations}
+              expectedTotal={amount}
+              heirs={heirs}
+              onChange={(allocs) => onHeirAllocationsChange(rule.id, allocs)}
+              heading={null}
+            />
+          </ToggleCard>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 그룹 접이식 섹션
+// ============================================================
+
+interface ExemptionGroupSectionProps {
+  title: string;
+  subtitle: string;
+  rules: ExemptionRule[];
+  checkedMap: Map<string, ExemptionCheckedItem>;
+  isOpen: boolean;
+  onToggleOpen: () => void;
+  onAmountChange: (ruleId: string, amount: number) => void;
+  onAreaChange: (ruleId: string, areaM2: number | undefined) => void;
+  isInheritance: boolean;
+  heirs: Heir[];
+  onHeirAllocationsChange: (ruleId: string, allocs: HeirAllocation[] | undefined) => void;
+  tone: "sky" | "violet";
+}
+
+function ExemptionGroupSection({
+  title,
+  subtitle,
+  rules,
+  checkedMap,
+  isOpen,
+  onToggleOpen,
+  onAmountChange,
+  onAreaChange,
+  isInheritance,
+  heirs,
+  onHeirAllocationsChange,
+  tone,
+}: ExemptionGroupSectionProps) {
+  const checkedRules = rules.filter((r) => checkedMap.has(r.id));
+  const checkedCount = checkedRules.length;
+
+  if (checkedCount === 0) return null;
+
+  const borderClass = tone === "sky"
+    ? "border-sky-200 dark:border-sky-800"
+    : "border-violet-200 dark:border-violet-800";
+  const bgClass = tone === "sky"
+    ? "bg-sky-50/40 dark:bg-sky-950/20"
+    : "bg-violet-50/40 dark:bg-violet-950/20";
+  const headerClass = tone === "sky"
+    ? "text-sky-700 dark:text-sky-300"
+    : "text-violet-700 dark:text-violet-300";
+  const badgeClass = tone === "sky"
+    ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
+    : "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300";
+
+  return (
+    <div className={cn("rounded-lg border p-3 space-y-2", borderClass, bgClass)}>
+      {/* 그룹 헤더 — 클릭 시 토글 (feedback_result_expand_toggle_standard) */}
+      <button
+        type="button"
+        onClick={onToggleOpen}
+        aria-expanded={isOpen}
+        className="flex items-center justify-between w-full text-left gap-2"
+      >
+        <div className="flex items-center gap-2">
+          <span className={cn("text-xs font-semibold", headerClass)}>
+            {title}
+          </span>
+          <span className="text-[10px] font-normal text-gray-400 dark:text-gray-500">
+            {subtitle}
+          </span>
+          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", badgeClass)}>
+            {checkedCount}개 선택
+          </span>
+        </div>
+        <span className="text-gray-400 dark:text-gray-500 text-xs">
+          {isOpen ? "▾" : "▸"}
+        </span>
+      </button>
+
+      {/* 체크된 항목 입력 섹션 */}
+      {isOpen && (
+        <div className="space-y-2 pt-1">
+          {checkedRules.map((rule) => (
+            <ExemptionRow
+              key={rule.id}
+              rule={rule}
+              amount={checkedMap.get(rule.id)?.claimedAmount ?? 0}
+              areaM2={checkedMap.get(rule.id)?.claimedAreaM2}
+              onAmountChange={onAmountChange}
+              onAreaChange={onAreaChange}
+              isInheritance={isInheritance}
+              heirs={heirs}
+              heirAllocations={checkedMap.get(rule.id)?.heirAllocations}
+              onHeirAllocationsChange={onHeirAllocationsChange}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -241,7 +299,7 @@ interface ExemptionChecklistProps {
   category: ExemptionCategory;
   value: ExemptionCheckedItem[];
   onChange: (items: ExemptionCheckedItem[]) => void;
-  /** 협의분할 분배 대상 상속인 (상속세 전용, 작업4). 미전달 시 협의분할 토글 미노출 */
+  /** 협의분할 분배 대상 상속인 (상속세 전용). 미전달 시 협의분할 토글 미노출 */
   heirs?: Heir[];
 }
 
@@ -255,6 +313,7 @@ export function ExemptionChecklist({
 
   const checkedMap = new Map(value.map((v) => [v.ruleId, v]));
 
+  // 항목 체크 토글 (존재 = 체크, 부재 = 미체크)
   const handleToggle = (ruleId: string) => {
     if (checkedMap.has(ruleId)) {
       onChange(value.filter((v) => v.ruleId !== ruleId));
@@ -286,23 +345,7 @@ export function ExemptionChecklist({
     );
   };
 
-  // 금양임야·묘토 합산 2억원 한도 안내 노출 여부 (상증령 §8③ 단서)
-  const showGraveGroupNotice =
-    category === "inheritance" &&
-    value.some((v) => v.ruleId === "inh_forest_burial" || v.ruleId === "inh_grave_land");
-
-  // 마스터 토글: 이미 선택된 항목이 있으면 자동 "여", 없으면 기본 "부"
-  const [masterYes, setMasterYes] = useState<boolean>(value.length > 0);
-
-  if (rules.length === 0) return null;
-
-  const handleMasterChange = (yes: boolean) => {
-    setMasterYes(yes);
-    // "부" 선택 시 기존에 선택된 모든 항목 초기화
-    if (!yes && value.length > 0) onChange([]);
-  };
-
-  // 비과세(§12·§46)와 과세가액 불산입(§16·§17·§48)은 법령상 별개 개념 — 섹션 분리.
+  // 비과세/불산입 그룹 분리
   const nonTaxableRules = rules.filter(
     (r) => getExemptionTreatment(r) === "non_taxable",
   );
@@ -310,98 +353,91 @@ export function ExemptionChecklist({
     (r) => getExemptionTreatment(r) === "not_included",
   );
 
-  const selectedCount = (groupRules: ExemptionRule[]) =>
-    groupRules.filter((r) => checkedMap.has(r.id)).length;
+  // 금양임야·묘토 합산 2억원 한도 안내 노출 여부
+  const showGraveGroupNotice =
+    category === "inheritance" &&
+    value.some((v) => v.ruleId === "inh_forest_burial" || v.ruleId === "inh_grave_land");
 
-  const renderGroup = (groupRules: ExemptionRule[]) => (
-    <div className="space-y-2">
-      {groupRules.map((rule) => (
-        <ExemptionRow
-          key={rule.id}
-          rule={rule}
-          checked={checkedMap.has(rule.id)}
-          amount={checkedMap.get(rule.id)?.claimedAmount ?? 0}
-          areaM2={checkedMap.get(rule.id)?.claimedAreaM2}
-          onToggle={handleToggle}
-          onAmountChange={handleAmountChange}
-          onAreaChange={handleAreaChange}
-          isInheritance={isInheritance}
-          heirs={heirs}
-          heirAllocations={checkedMap.get(rule.id)?.heirAllocations}
-          onHeirAllocationsChange={handleHeirAllocationsChange}
-        />
-      ))}
-    </div>
-  );
+  // 그룹 접이식 상태 (로컬 useState — 칩 클릭 시 자동 펼침)
+  // 초기값: 해당 그룹에 체크된 항목이 있으면 펼침, 없으면 접힘
+  const hasNontaxableChecked = nonTaxableRules.some((r) => checkedMap.has(r.id));
+  const hasNotIncludedChecked = notIncludedRules.some((r) => checkedMap.has(r.id));
+
+  const [nontaxableOpen, setNontaxableOpen] = useState<boolean>(hasNontaxableChecked);
+  const [notIncludedOpen, setNotIncludedOpen] = useState<boolean>(hasNotIncludedChecked);
+
+  if (rules.length === 0) return null;
 
   const isInheritance = category === "inheritance";
   const masterTitle = isInheritance
-    ? "비과세·과세가액 불산입 해당 여부"
-    : "비과세 해당 여부";
+    ? "비과세·과세가액 불산입 선택"
+    : "비과세 항목 선택";
   const masterDesc = isInheritance
-    ? "해당되는 비과세 또는 과세가액 불산입 항목이 있으면 “여”를 선택하세요."
-    : "해당되는 비과세 항목이 있으면 “여”를 선택하세요.";
-  const nonTaxableSubtitle = isInheritance ? "상증법 §12" : "상증법 §46·§46의2";
+    ? "해당되는 비과세 또는 과세가액 불산입 항목을 체크하면 아래에 입력란이 열립니다. (없으면 건너뛰기)"
+    : "해당되는 비과세 항목을 체크하면 아래에 입력란이 열립니다. (없으면 건너뛰기)";
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-violet-200/70 bg-violet-50/40 p-3">
-        <div className="min-w-0 space-y-0.5">
+      {/* 통합 카드: 제목 + 안내 + 칩 패널 (마스터 토글 제거 — 항목 직접 선택) */}
+      <div className="rounded-lg border border-violet-200/70 bg-violet-50/40 p-3 space-y-3">
+        <div className="space-y-0.5">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             {masterTitle}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400">{masterDesc}</p>
         </div>
-        <YesNoButtons checked={masterYes} onChange={handleMasterChange} />
+        <ExemptionChecklistPanel
+          items={value}
+          onToggle={(ruleId) => {
+            handleToggle(ruleId);
+          }}
+          onNontaxableGroupOpen={() => setNontaxableOpen(true)}
+          onNotIncludedGroupOpen={() => setNotIncludedOpen(true)}
+        />
       </div>
 
-      {masterYes && (
-        <>
+          {/* 입력 섹션 — 체크된 항목만 그룹 접이식 */}
           {nonTaxableRules.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                  비과세
-                  <span className="ml-1 font-normal text-gray-400">
-                    {nonTaxableSubtitle}
-                  </span>
-                </h4>
-                <span className="text-xs text-gray-400">
-                  {selectedCount(nonTaxableRules) > 0
-                    ? `${selectedCount(nonTaxableRules)}개 선택됨`
-                    : "없으면 건너뛰기"}
-                </span>
-              </div>
-              {renderGroup(nonTaxableRules)}
-            </div>
+            <ExemptionGroupSection
+              title="비과세"
+              subtitle="상증법 §12"
+              rules={nonTaxableRules}
+              checkedMap={checkedMap}
+              isOpen={nontaxableOpen}
+              onToggleOpen={() => setNontaxableOpen((o) => !o)}
+              onAmountChange={handleAmountChange}
+              onAreaChange={handleAreaChange}
+              isInheritance={isInheritance}
+              heirs={heirs}
+              onHeirAllocationsChange={handleHeirAllocationsChange}
+              tone="sky"
+            />
           )}
 
           {notIncludedRules.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                  과세가액 불산입
-                  <span className="ml-1 font-normal text-gray-400">
-                    상증법 §16·§17
-                  </span>
-                </h4>
-                <span className="text-xs text-gray-400">
-                  {selectedCount(notIncludedRules) > 0
-                    ? `${selectedCount(notIncludedRules)}개 선택됨`
-                    : "없으면 건너뛰기"}
-                </span>
-              </div>
-              {renderGroup(notIncludedRules)}
-            </div>
+            <ExemptionGroupSection
+              title="과세가액 불산입"
+              subtitle="상증법 §16·§17"
+              rules={notIncludedRules}
+              checkedMap={checkedMap}
+              isOpen={notIncludedOpen}
+              onToggleOpen={() => setNotIncludedOpen((o) => !o)}
+              onAmountChange={handleAmountChange}
+              onAreaChange={handleAreaChange}
+              isInheritance={isInheritance}
+              heirs={heirs}
+              onHeirAllocationsChange={handleHeirAllocationsChange}
+              tone="violet"
+            />
           )}
 
+          {/* 금양임야·묘토 합산 2억원 한도 안내 */}
           {showGraveGroupNotice && (
             <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-xs text-violet-800 dark:text-violet-300">
               금양임야와 묘토의 비과세 합계는 <strong>2억원 한도</strong>입니다 (상증령 §8③ 단서). 족보·제구는 별도 <strong>1천만원 한도</strong>가 적용됩니다.
             </div>
           )}
-        </>
-      )}
     </div>
   );
 }
+

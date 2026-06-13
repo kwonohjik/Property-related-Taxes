@@ -1379,10 +1379,21 @@ export interface InheritanceTaxInput {
   deathDate: string; // ISO date YYYY-MM-DD
   estateItems: EstateItem[];
   /**
-   * 장례비 (최대 1,500만원, 봉안시설 추가 시 +500만)
+   * 일반 장례비(식대·제수 등, 봉안 제외) — 상증령 §9②1호.
+   * 한도: min(max(expense,5,000,000), 10,000,000) — 500만 미만이면 500만 보장, 1천만 초과면 1천만.
    * @deprecated debtItems(category="funeral") 사용 권장
    */
   funeralExpense: number;
+  /**
+   * 봉안시설·자연장지 비용 — 상증령 §9②2호.
+   * 한도: min(bonganExpense, 5,000,000). 별도 최소 보장 없음.
+   * funeralIncludesBongan=true인 legacy 입력에서 이 필드가 없으면 엔진이 구 로직으로 fallback.
+   */
+  funeralBonganExpense?: number;
+  /**
+   * @deprecated funeralBonganExpense 사용. legacy 하위호환 — funeralBonganExpense 없고 true이면
+   * 구 로직(식대+봉안 통합한도 1,500만, 식대 최소 500만)으로 fallback.
+   */
   funeralIncludesBongan: boolean;
   /**
    * 공과금·사적채무 합계
