@@ -1,5 +1,5 @@
 /**
- * E2E: 비과세(§12)/과세가액 불산입(§16·§17) 결과 화면 구분 표시 (작업1) — 2026-06-09
+ * E2E: 비과세(§12)/과세가액 불산입(§16·§17) 결과 화면 구분 표시 (작업1) — 2026-06-13
  *
  * 정책: [[feedback_browser_verify_with_playwright]]
  *
@@ -7,14 +7,15 @@
  *  - 공익법인 출연(§16 불산입) + 족보·제구(§12 비과세) 혼재 입력 → 결과 화면
  *  - ExemptionSummaryCard 헤더 "과세제외 내역" + 비과세/과세가액 불산입 2그룹 분리
  *  - 과세 요약 카드에 "과세가액 불산입 차감" 행 분리 노출
+ *
+ * 체크리스트 UI 업데이트 (2026-06-13):
+ *  - 항목 "여" 클릭 대신 체크리스트 칩 클릭으로 선택
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { nextSteps, calcAndWaitResult,
-  addHeir,
-} from "./_helpers/tax-flow";
+import { nextSteps, calcAndWaitResult, addHeir, addLandAsset } from "./_helpers/tax-flow";
 
-/** Step0(상속인) → Step1(토지 10억) → Step2(비과세) — 단계 네비 버튼으로 결정적 이동 */
+/** Step0(상속인) → Step1(토지 10억) → Step2(비과세, 마스터 여) */
 async function gotoExemptionStep(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await page.getByLabel("연도").first().fill("2026");
@@ -23,19 +24,14 @@ async function gotoExemptionStep(page: Page) {
   await addHeir(page, "heir", "child");
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
-  // Step1: 토지 1건 (보충적 평가 1,000㎡ × 100만 = 10억 — 비과세 클램프 회피)
-  await page
-    .getByRole("button", { name: /재산 추가|상속재산 추가/ })
-    .first()
-    .click();
-  await page.getByRole("button", { name: /토지/ }).first().click();
-  await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
-  await page.getByPlaceholder("면적 입력").fill("1000");
-  await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  // Step1: 토지 1건 (보충적 평가 1,000㎡ × 100만 = 10억)
+  await addLandAsset(page, { area: "1000", unitPrice: "1000000" });
 
-  await page.getByRole("button", { name: /비과세.*단계로 이동/ }).click();
-  await expect(page.getByText(/비과세.*해당 여부/)).toBeVisible();
-  await page.getByRole("button", { name: "여", exact: true }).first().click(); // 마스터 토글
+  // Step2 진입
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await expect(page.getByText(/비과세.*불산입 선택/)).toBeVisible();
+  // 마스터 토글 "여"
+  await expect(page.getByText(/비과세.*불산입 선택/)).toBeVisible();
 }
 
 test.describe("비과세/과세가액 불산입 결과 구분 표시 (작업1)", () => {
@@ -45,19 +41,18 @@ test.describe("비과세/과세가액 불산입 결과 구분 표시 (작업1)",
     test.setTimeout(60_000);
     await gotoExemptionStep(page);
 
-    // 공익법인 출연 재산(§16 과세가액 불산입) — 여 + 1억
-    const publicRow = page
-      .locator("div.rounded-lg.border")
-      .filter({ hasText: "공익법인 출연 재산" });
-    await publicRow.getByRole("button", { name: "여", exact: true }).click();
-    await publicRow.getByPlaceholder("금액 입력").fill("100000000");
+    // 공익법인 출연 재산(§16 과세가액 불산입) — 칩 클릭 → 금액 입력
+    await page.getByRole("button", { name: /공익법인 출연/ }).first().click();
+    // 과세가액 불산입 그룹이 펼쳐짐
+    await expect(page.getByText("공익법인 출연 재산")).toBeVisible();
+    await page.getByPlaceholder("금액 입력").first().fill("100000000");
 
-    // 족보·제구(§12 비과세) — 여 + 500만
-    const ritualRow = page
-      .locator("div.rounded-lg.border")
-      .filter({ hasText: "족보·제구" });
-    await ritualRow.getByRole("button", { name: "여", exact: true }).click();
-    await ritualRow.getByPlaceholder("금액 입력").fill("5000000");
+    // 족보·제구(§12 비과세) — 칩 클릭 → 금액 입력
+    await page.getByRole("button", { name: /족보·제구/ }).first().click();
+    // 비과세 그룹이 펼쳐짐 — rule.name 포함 텍스트로 확인
+    await expect(page.getByText("족보·제구 (族譜·祭具)")).toBeVisible();
+    // 족보·제구 입력 섹션에서 금액 입력
+    await page.getByPlaceholder("금액 입력").last().fill("5000000");
 
     // Step3(사전증여) → Step4(공제) → 계산 → 결과
     await nextSteps(page, 2);

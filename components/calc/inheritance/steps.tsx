@@ -228,28 +228,31 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
         />
       ) : (
         <>
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              장례비 (§14①3호)
-            </h3>
+          {/* 장례비 — 식대 + 봉안·자연장지를 하나의 범주 카드로 묶어 합산 공제임을 명확히 */}
+          <div className="rounded-lg border border-violet-200 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-950/20 p-3 space-y-3">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
+                장례비 (§14①3호)
+              </h3>
+              <span className="text-[11px] text-violet-600 dark:text-violet-400">
+                — 아래 두 항목을 합산해 공제합니다 (각 한도 별도)
+              </span>
+            </div>
+            {/* 상증령 §9②1호: 일반 장례비(봉안 제외) — clamp [500만, 1천만] */}
             <CurrencyInput
-              label="장례비용"
+              label="① 일반 장례비(식대·제수 등)"
               value={form.funeralExpense}
               onChange={(v) => set({ funeralExpense: v })}
-              hint={
-                form.funeralIncludesBongan
-                  ? "최대 1,500만원 한도 (식대 1,000만 + 봉안 500만)"
-                  : "최대 1,000만원 한도 (식대만)"
-              }
-              placeholder="금액 입력 (원)"
+              hint="한도: 500만원 미만이면 500만원 인정, 1,000만원 초과분은 공제 불가 (상증령 §9②1호)"
+              placeholder="없으면 빈칸"
             />
-            <ToggleCard
-              tone="violet"
-              size="sm"
-              title="봉안시설 이용"
-              description="추가 +500만원"
-              checked={form.funeralIncludesBongan}
-              onCheckedChange={(v) => set({ funeralIncludesBongan: v })}
+            {/* 상증령 §9②2호: 봉안시설·자연장지 비용 — min(실제, 500만) */}
+            <CurrencyInput
+              label="② 봉안시설·자연장지 비용"
+              value={form.funeralBonganExpense}
+              onChange={(v) => set({ funeralBonganExpense: v })}
+              hint="한도: 500만원 초과분은 공제 불가. 이용하지 않으면 빈칸 (상증령 §9②2호)"
+              placeholder="없으면 빈칸"
             />
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">

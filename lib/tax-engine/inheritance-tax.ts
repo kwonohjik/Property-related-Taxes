@@ -178,8 +178,12 @@ export function calcInheritanceTax(
       lawRef: INH.DEBT_DEDUCTION,
     });
   } else {
-    // Legacy 경로 — funeralExpense + debts
-    const fd = calcFuneralExpenseDeduction(input.funeralExpense, input.funeralIncludesBongan);
+    // Legacy/Simple 경로 — funeralExpense + funeralBonganExpense (or funeralIncludesBongan compat)
+    // funeralBonganExpense 가 제공되면 §9②분리 적용, 없으면 legacy boolean 호환
+    const fd =
+      input.funeralBonganExpense !== undefined
+        ? calcFuneralExpenseDeduction(input.funeralExpense, input.funeralBonganExpense)
+        : calcFuneralExpenseDeduction(input.funeralExpense, input.funeralIncludesBongan);
     funeralDeduction = fd.deduction;
     allBreakdown.push(...fd.breakdown);
     nonFuneralDebts = input.debts;
@@ -339,8 +343,11 @@ export function calcInheritanceTax(
         }
         funeralAmount = Math.min(meal, 10_000_000) + Math.min(bongan, 5_000_000);
       } else {
-        // legacy fallback
-        const fd = calcFuneralExpenseDeduction(input.funeralExpense, input.funeralIncludesBongan);
+        // legacy/simple fallback — funeralBonganExpense 우선, 없으면 boolean 호환
+        const fd =
+          input.funeralBonganExpense !== undefined
+            ? calcFuneralExpenseDeduction(input.funeralExpense, input.funeralBonganExpense)
+            : calcFuneralExpenseDeduction(input.funeralExpense, input.funeralIncludesBongan);
         funeralAmount = fd.deduction;
       }
       // 정확 분자: + 장례비 (deductedBeforeAggregation에서 장례비 분 환산)

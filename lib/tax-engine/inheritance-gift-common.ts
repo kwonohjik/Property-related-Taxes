@@ -483,38 +483,94 @@ export function capFuneralRowAmounts(
 }
 
 /**
- * 장례비 공제 계산 (§14 ③)
+ * 장례비 공제 계산 — 상증령 §9② 분리 적용 (single-source, debtItems 경로와 통일).
  *
- * @param expense 실제 지출한 장례비 (봉안 비용 포함 or 별도)
- * @param includesBongan 봉안시설·자연장지 이용 여부
+ * 상증령 §9②:
+ *   1호: 일반 장례비(봉안 제외) — 500만 미만이면 500만, 1천만 초과이면 1천만. → clamp [500만, 1천만]
+ *   2호: 봉안시설·자연장지 — 500만 초과이면 500만. → min(실제, 500만). 0원이면 0원.
+ *
+ * @param mealExpense  일반 장례비(봉안 제외) — 상증령 §9②1호
+ * @param bonganExpense 봉안시설·자연장지 비용 — 상증령 §9②2호 (미제공 시 0 처리)
+ *
+ * Legacy overload (하위호환):
+ *   calcFuneralExpenseDeduction(expense, includesBongan_boolean) 형태로 호출 시
+ *   bonganExpense가 boolean이면 구 로직(통합한도) 적용.
+ *   신규 호출에서는 숫자 두 개를 넘겨야 함.
  */
 export function calcFuneralExpenseDeduction(
-  expense: number,
-  includesBongan: boolean,
+  mealExpense: number,
+  bonganExpenseOrLegacyFlag: number | boolean,
 ): { deduction: number; breakdown: CalculationStep[] } {
-  const maxLimit = FUNERAL_GENERAL_MAX + (includesBongan ? FUNERAL_BONGAN_EXTRA : 0);
+  // legacy 하위호환: boolean이 넘어오면 구 로직 (통합 한도)
+  if (typeof bonganExpenseOrLegacyFlag === "boolean") {
+    const includesBongan = bonganExpenseOrLegacyFlag;
+    const maxLimit = FUNERAL_GENERAL_MAX + (includesBongan ? FUNERAL_BONGAN_EXTRA : 0);
+    const capped = Math.min(mealExpense, maxLimit);
+    const deduction = Math.max(capped, FUNERAL_MIN);
+    return {
+      deduction,
+      breakdown: [
+        { label: "장례비 지출액", amount: mealExpense, lawRef: INH.DEBT_DEDUCTION },
+        { label: `장례비 공제 한도 (${includesBongan ? "봉안 포함 1,500만" : "일반 1,000만"})`, amount: maxLimit },
+        {
+          label: "장례비 공제 확정액",
+          amount: deduction,
+          lawRef: INH.DEBT_DEDUCTION,
+          note: mealExpense < FUNERAL_MIN ? "최소 500만원 인정" : undefined,
+        },
+      ],
+    };
+  }
 
-  // 실제 지출액 vs 한도 중 작은 값, 최소 500만원 보장
-  const capped = Math.min(expense, maxLimit);
-  const deduction = Math.max(capped, FUNERAL_MIN);
+  // 신규 경로: 상증령 §9②1호 + 2호 분리 적용
+  const bonganExpense = bonganExpenseOrLegacyFlag;
+  // 1호: 일반 장례비 clamp [500만, 1천만]
+  const mealApplied = Math.min(Math.max(mealExpense, FUNERAL_MIN), FUNERAL_GENERAL_MAX);
+  // 2호: 봉안 min(실제, 500만)
+  const bonganApplied = Math.min(Math.max(bonganExpense, 0), FUNERAL_BONGAN_EXTRA);
+  const deduction = mealApplied + bonganApplied;
 
   const breakdown: CalculationStep[] = [
     {
-      label: "장례비 지출액",
-      amount: expense,
+      label: "일반 장례비(식대·제수) 지출액",
+      amount: mealExpense,
       lawRef: INH.DEBT_DEDUCTION,
     },
     {
-      label: `장례비 공제 한도 (${includesBongan ? "봉안 포함 1,500만" : "일반 1,000만"})`,
-      amount: maxLimit,
-    },
-    {
-      label: "장례비 공제 확정액",
-      amount: deduction,
+      label: "일반 장례비 공제액 (한도 500만~1,000만)",
+      amount: mealApplied,
       lawRef: INH.DEBT_DEDUCTION,
-      note: expense < FUNERAL_MIN ? "최소 500만원 인정" : undefined,
+      note:
+        mealExpense < FUNERAL_MIN
+          ? "최소 500만원 인정 (상증령 §9②1호)"
+          : mealExpense > FUNERAL_GENERAL_MAX
+            ? "1,000만원 한도 적용 (상증령 §9②1호)"
+            : undefined,
     },
   ];
+  if (bonganExpense > 0) {
+    breakdown.push(
+      {
+        label: "봉안시설·자연장지 비용 지출액",
+        amount: bonganExpense,
+        lawRef: INH.DEBT_DEDUCTION,
+      },
+      {
+        label: "봉안시설·자연장지 공제액 (한도 500만)",
+        amount: bonganApplied,
+        lawRef: INH.DEBT_DEDUCTION,
+        note:
+          bonganExpense > FUNERAL_BONGAN_EXTRA
+            ? "500만원 한도 적용 (상증령 §9②2호)"
+            : undefined,
+      },
+    );
+  }
+  breakdown.push({
+    label: "장례비 공제 확정액",
+    amount: deduction,
+    lawRef: INH.DEBT_DEDUCTION,
+  });
 
   return { deduction, breakdown };
 }

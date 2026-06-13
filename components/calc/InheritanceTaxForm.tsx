@@ -560,6 +560,11 @@ export function InheritanceTaxForm() {
       deathDate: form.deathDate,
       estateItems: allItems,
       funeralExpense: usesDebtItems ? 0 : parseAmount(form.funeralExpense),
+      // §9②2호: 봉안시설·자연장지 별도 금액. 빈 문자열이면 undefined(legacy boolean 경로 유지)
+      funeralBonganExpense:
+        usesDebtItems || form.funeralBonganExpense === ""
+          ? undefined
+          : parseAmount(form.funeralBonganExpense) || undefined,
       funeralIncludesBongan: usesDebtItems ? false : form.funeralIncludesBongan,
       debts: usesDebtItems ? 0 : parseAmount(form.debts),
       debtItems: usesDebtItems ? form.debtItems : undefined,

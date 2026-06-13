@@ -71,6 +71,8 @@ export async function callInheritanceTaxAPI(
     estateItems: input.estateItems,
     // legacy + 신규 (debtItems 우선)
     funeralExpense: input.funeralExpense ?? 0,
+    // §9②2호: 봉안시설·자연장지 별도 금액 (신규 경로)
+    funeralBonganExpense: input.funeralBonganExpense,
     funeralIncludesBongan: input.funeralIncludesBongan ?? false,
     debts: input.debts ?? 0,
     debtItems: input.debtItems,
