@@ -10,7 +10,7 @@
  * Plan: docs/00-pm/listed-stock-besshi-form-replica.plan.md §8
  */
 import { test, expect, type Page } from "@playwright/test";
-import { fillDateAndVerify, addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
+import { fillDateAndVerify, addHeir, closeHeirEditModal, closeStockModal } from "./_helpers/tax-flow";
 
 async function gotoStep0(page: Page) {
   await page.goto("/calc/inheritance-tax");
@@ -37,6 +37,7 @@ test.describe("LS-BESSHI: 상장주식 평가조서(갑·을) 결과뷰 표시",
     await gotoStep0(page);
     await openListedStockCard(page);
     await fillBase(page, 8452, 100);
+    await closeStockModal(page); // 모달 닫고 단계 이동 (테이블+모달 전환)
 
     // 결과뷰까지 진행 (단계는 환경별로 다를 수 있음 — 결과뷰 전환 버튼 패턴 시도)
     // 다음 버튼 4회 또는 "계산하기" 버튼

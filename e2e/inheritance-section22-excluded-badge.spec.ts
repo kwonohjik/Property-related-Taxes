@@ -24,6 +24,7 @@ import {
   nextSteps,
   calcAndWaitResult,
   addHeir,
+  closeStockModal,
 } from "./_helpers/tax-flow";
 
 /**
@@ -55,6 +56,8 @@ async function gotoStep1WithListedStock(page: Page) {
  * Step1 → Step2 → Step3 → Step4(공제) → "계산하기" → 결과 화면 대기
  */
 async function proceedToResult(page: Page) {
+  // 주식 편집 모달이 열려 있으면 닫기 — backdrop이 "다음"을 막음 (테이블+모달 전환)
+  await closeStockModal(page);
   // Step2(비과세·장례비) → Step3(사전증여) → Step4(공제·세액공제)
   await nextSteps(page, 3);
   // 계산 API 응답 명시 대기 + 결과 노출

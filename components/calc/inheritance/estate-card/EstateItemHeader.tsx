@@ -31,6 +31,11 @@ export interface EstateItemHeaderProps {
    * estate-asset-table-view.ui.design.md §5.3.
    */
   hideTitle?: boolean;
+  /**
+   * 삭제 버튼 숨김. EstateStockChipsHeader처럼 onRemove가 noop이거나(주식 카드 자체 삭제는
+   * 호출자 담당) 모달 푸터가 삭제를 별도 제공할 때 사용 — 중복 삭제 버튼 제거. 기본 false.
+   */
+  hideRemove?: boolean;
 }
 
 export function EstateItemHeader({
@@ -47,6 +52,7 @@ export function EstateItemHeader({
   onRemove,
   onChangeCategory,
   hideTitle = false,
+  hideRemove = false,
 }: EstateItemHeaderProps) {
   return (
     <div
@@ -95,18 +101,20 @@ export function EstateItemHeader({
           <Settings className="h-3.5 w-3.5" aria-hidden />
           <span>옵션{advancedBadgeCount > 0 ? ` (${advancedBadgeCount})` : ""}</span>
         </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          data-testid={`estate-card-remove-${itemId}`}
-          aria-label="자산 삭제"
-          className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-        >
-          <span className="inline-flex items-center gap-1">
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            삭제
-          </span>
-        </button>
+        {!hideRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            data-testid={`estate-card-remove-${itemId}`}
+            aria-label="자산 삭제"
+            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            <span className="inline-flex items-center gap-1">
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              삭제
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

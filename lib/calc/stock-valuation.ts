@@ -13,7 +13,28 @@
  * NOTE: marketValue(시가 직접 입력)가 있으면 해당 값이 우선 (AN-2 보존).
  */
 
-export {
+import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import {
   resolveUnlistedDisplayMode,
   computeStockValuation,
 } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
+
+// re-export 보존 (기존 import 사이트 호환)
+export { resolveUnlistedDisplayMode, computeStockValuation };
+
+/**
+ * §22② 최대주주 칩·토글 노출 여부 — 단일 진실 술어 (stock-item-table-view).
+ *
+ *   - 상장주식: 항상 노출
+ *   - 비상장 simple(V1): 노출
+ *   - 비상장 formal(V2): 미노출 — UnlistedStockV2Card 내부 토글이 담당 (S-4 중복 방지)
+ *
+ * EstateCommonAttributesSection(§22 토글·major-shareholder 칩) + StockItemTableView(행 배지)
+ * 양쪽이 import — dual-truth 회피 ([[single-source-engine-helper]]).
+ */
+export function shouldShowMajorShareholderChip(item: EstateItem): boolean {
+  return (
+    item.category === "listed_stock" ||
+    (item.category === "unlisted_stock" && resolveUnlistedDisplayMode(item) === "simple")
+  );
+}

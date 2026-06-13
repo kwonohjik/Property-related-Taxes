@@ -9,7 +9,7 @@
  * 진입 경로: inheritance-unlisted-capital-increase-section56-5.spec.ts와 동일 헬퍼 재사용
  */
 import { test, expect, type Page, type Locator } from "@playwright/test";
-import { addHeir } from "./_helpers/tax-flow";
+import { addHeir, closeStockModal } from "./_helpers/tax-flow";
 
 async function gotoV2FormalValuationCard(page: Page) {
   await page.goto("/calc/inheritance-tax");
@@ -77,13 +77,17 @@ test.describe("비상장주식 V2 — 필수 입력 검증 차단·인라인 경
     // 인라인 경고 즉시 표시 확인 (납입금액)
     await expect(page.getByText("1주당 납입금액을 입력해야 합니다. (§56⑤)").first()).toBeVisible({ timeout: 5_000 });
 
-    // 다음 버튼 클릭 → 차단 에러 메시지 표시 (validateStep Step 1)
+    // 모달 닫고 "다음" → validateStep Step1 차단 (테이블+모달 전환: backdrop이 다음을 막음)
+    await closeStockModal(page);
     await page.getByRole("button", { name: /^다음/ }).click();
     // 에러 메시지는 "비상장주식" 포함 (validateUnlistedStockV2 반환 형식)
     await expect(
       page.getByText(/주식수를 1 이상 입력해야 합니다/).first(),
     ).toBeVisible({ timeout: 5_000 });
 
+    // 차단으로 Step1 잔류 — 행 클릭으로 모달 재오픈 후 누락 필드 입력
+    await page.getByTestId("stock-card").first().click();
+    await expect(page.getByTestId("stock-edit-dialog")).toBeVisible();
     // 주식수·납입금액 입력 후 인라인 경고 사라짐 확인
     await page.getByPlaceholder("증가·감소 주식수").fill("1000");
     await page.getByPlaceholder("1주당 납입·지급금액").fill("5000");
@@ -124,7 +128,8 @@ test.describe("비상장주식 V2 — 필수 입력 검증 차단·인라인 경
     await expect(page.locator("p.text-destructive", { hasText: "주식수를 1 이상 입력해야 합니다." })).not.toBeVisible({ timeout: 3_000 });
     await expect(page.locator("p.text-destructive", { hasText: "1주당 납입금액을 입력해야 합니다." })).not.toBeVisible({ timeout: 3_000 });
 
-    // 다음 버튼 클릭 → 에러 없이 다음 단계로 진행
+    // 모달 닫고 "다음" → 에러 없이 다음 단계로 진행 (테이블+모달 전환)
+    await closeStockModal(page);
     await page.getByRole("button", { name: /^다음/ }).click();
     // Step 2(비과세·장례비)로 이동 — "비과세" 텍스트 확인
     await expect(page.getByText(/비과세|장례비|장례/).first()).toBeVisible({ timeout: 8_000 });

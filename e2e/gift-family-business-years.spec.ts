@@ -24,6 +24,7 @@ import {
   calcAndWaitResult,
   fillDateAndVerify,
   nextSteps,
+  closeStockModal,
 } from "./_helpers/tax-flow";
 
 type PageT = Parameters<typeof fillDateAndVerify>[0];
@@ -57,6 +58,7 @@ async function setupFamilyBusinessStep3(page: PageT) {
     avgPrice: "1000000",
   });
 
+  await closeStockModal(page); // 추가 직후 모달 자동 오픈 → backdrop 닫기 (테이블+모달 전환)
   await nextSteps(page, 2); // Step1 → Step2 → Step3
 
   // Step3: 가업승계 선택 → 영위기간 필드 노출

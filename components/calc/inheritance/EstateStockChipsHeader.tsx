@@ -120,9 +120,10 @@ export function EstateStockChipsHeader({
         onToggleAdvanced={() => setAdvancedOpen((v) => !v)}
         advancedBadgeCount={advancedBadgeCount}
         onRemove={() => {
-          // 주식 카드 자체 삭제는 호출자(StockValuationForm)가 담당 — 본 헤더는 삭제 미노출
+          // 주식 카드 자체 삭제는 호출자(StockValuationForm 모달 푸터)가 담당 — 본 헤더는 삭제 미노출
           // EstateItemHeader 시그니처 호환 위해 noop
         }}
+        hideRemove
       />
       <EstateChipInlineExpand
         expandedKey={inlineExpandedKey}

@@ -20,7 +20,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { fillDateAndVerify, nextSteps, calcAndWaitResult,
-  addHeir,
+  addHeir, closeStockModal,
 } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일 + 자녀 1명 → Step1 */
@@ -77,6 +77,8 @@ test.describe("비상장 간편 주식 — grossEstate 배선 + 협의분할 토
     const previewDigits = previewTotal.replace(/[^0-9]/g, "");
     expect(Number(previewDigits)).toBeGreaterThan(0);
 
+    // 미리보기 캡처 후 모달 닫기 — backdrop이 "다음"을 막음 (테이블+모달 전환)
+    await closeStockModal(page);
     // Step1 → Step2 → Step3 → Step4 (다음 3회) → 계산하기
     await nextSteps(page, 3);
     await calcAndWaitResult(page);

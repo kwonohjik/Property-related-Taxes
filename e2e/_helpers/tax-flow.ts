@@ -250,3 +250,19 @@ export async function closePriorGiftModal(page: Page) {
     await expect(dialog).toHaveCount(0);
   }
 }
+
+/**
+ * 주식 편집 모달(StockItemEditor) 닫기 — stock-item-table-view 전환.
+ *
+ * 주식 추가/행 클릭 시 StockItemEditor가 Dialog 모달로 열린다(추가 직후 자동 오픈 E-1).
+ * 모달이 열린 채 "다음"/"계산하기"/다른 추가 버튼을 누르면 backdrop이 클릭을 가로채므로,
+ * 단계 이동·계산·추가 전 반드시 호출. 모달이 닫혀 있으면 no-op.
+ * onUpdate 실시간 반영이라 닫아도 입력값은 유지된다.
+ */
+export async function closeStockModal(page: Page) {
+  const dialog = page.getByTestId("stock-edit-dialog");
+  if (await dialog.isVisible().catch(() => false)) {
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+}
