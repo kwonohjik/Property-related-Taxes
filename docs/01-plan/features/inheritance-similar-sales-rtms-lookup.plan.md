@@ -1,0 +1,297 @@
+# Plan — 아파트 유사매매사례가액 RTMS 자동조회
+
+> 작성일: 2026-06-13  
+> 관련 설계: `docs/02-design/features/inheritance-similar-sales-rtms-lookup.engine.design.md`  
+> UI 설계: `docs/02-design/features/inheritance-similar-sales-rtms-lookup.ui.design.md` (UI 시니어 담당)
+
+---
+
+## 1. 배경 및 목표
+
+### 1.1 현황
+
+`EstateItem.similarSalesValue` (타입: `number | undefined`, Zod: `z.number().nonnegative().optional()`)는 사용자가 금액을 직접 입력한다.  
+`resolveValuationMethod` (`property-valuation.ts:58-64`)가 `similarSalesValue > 0` 이면 `"similar_sales"` 로 파생한다.
+
+### 1.2 목표
+
+같은 아파트 단지의 유사 동·호 실거래가를 국토교통부 RTMS(실거래가 공개시스템 API)로 자동조회하여, 사용자가 수동으로 입력 보조로 제공한다.  
+엔진의 `resolveValuationMethod` / `resolveValuationAmount` 로직은 건드리지 않는다. 자동조회는 순수하게 `similarSalesValue` 필드에 값을 채워주는 "입력 보조"다.
+
+### 1.3 법령 근거 (KoreanLaw MCP 검증 완료 — 2026-06-13)
+
+| 조문 | 내용 | 출처 |
+|------|------|------|
+| 상증령 §49①1호 | 해당 재산 매매가액: 매매계약일 기준 평가기간 내 | MST 283637 §49① |
+| 상증령 §49①1호가목 | 특수관계인 거래 등 객관적으로 부당한 거래가 제외 | 상동 |
+| 상증령 §49②1호 | 시가 가액이 둘 이상이면 평가기준일 가장 가까운 날 적용. 가액이 둘 이상이면 평균 | 상동 |
+| 상증령 §49②단서 | 해당 재산 매매가액이 있으면 §49④ 유사 재산 시가 배제 | 상동 |
+| 상증령 §49④ | "재정경제부령으로 정하는 해당 재산과 면적·위치·용도·종목 및 기준시가가 동일하거나 유사한 다른 재산"의 가액을 시가로 본다 | 상동 |
+| 상증령 §49①(본문) | 평가기간: 상속 — 전후 6개월 / 증여 — 전 6개월~후 3개월 | 상동 |
+| 시행규칙 §15③1호 | 공동주택 유사재산 3요건: ①동일 공동주택단지 ②전용면적 차이 ±5% 이내 ③공동주택가격 차이 ±5% 이내 | MST 284609 §15③ |
+| 시행규칙 §15③1호단서 | 둘 이상인 경우 공동주택가격 차이가 가장 작은 주택 적용 | 상동 |
+
+**평가기간 상세** (상증령 §49① 본문, KoreanLaw 검증):
+- 상속: 상속개시일(사망일) 전후 각 6개월
+- 증여: 증여일 전 6개월 ~ 증여일 후 3개월
+
+---
+
+## 2. 범위
+
+### 2.1 In-Scope
+
+- `category === "real_estate_apartment"` 인 자산에 한정
+- RTMS API 프록시 라우트 신설: `app/api/address/apt-trade/route.ts`
+- 순수 필터 함수 신설: `lib/calc/rtms-similar-sales-filter.ts`
+- 신규 env: `MOLIT_RTMS_API_KEY`
+- `EstateItem` 타입에 메타 필드 추가: `similarSalesSource?`, `similarSalesCandidates?`
+- Zod `baseItemSchema` 확장 (신규 필드)
+- 클라이언트 헬퍼: `lib/calc/rtms-lookup.ts` (Dexie 캐시 7일 TTL)
+
+### 2.2 Out-of-Scope
+
+- 아파트 외 자산(토지, 단독주택, 건물 등) RTMS 조회
+- 임대차 거래(전세/월세) 조회 (매매 전용)
+- RTMS 응답에서 공시가격 자동조회 (후보별 vworld 재조회 — Phase 2 과제, 아래 §4.2 케이스 매트릭스 참고)
+- 자동 단정·자동 채움 (후보 리스트 반환, 최종 선택은 사용자)
+- 특수관계인 자동 판별 (수동 경고만)
+
+---
+
+## 3. 현행 코드 anchor (실측 완료)
+
+| 위치 | 확인 내용 |
+|------|----------|
+| `lib/tax-engine/types/inheritance-gift.types.ts:92` | `EstateItem.similarSalesValue?: number` |
+| `lib/validators/estate-item-schema.ts:23` | `similarSalesValue: z.number().nonnegative().optional()` |
+| `lib/tax-engine/property-valuation.ts:58-64` | `resolveValuationMethod`: `similarSalesValue > 0` → `"similar_sales"` |
+| `lib/tax-engine/property-valuation.ts:185-218` | `evaluateApartment` — `resolveValuationAmount` → `applyCollateralFloor` |
+| `app/api/address/standard-price/route.ts:110-158` | `callNedAllPages` 패턴 (전체 페이지 수집) |
+| `app/api/address/standard-price/route.ts:71-88` | `getLegalDongCode` (vworld addr API) |
+| `lib/calc/vworld-reverse-geocode.ts:58-126` | Dexie 캐시 7일 TTL + error 객체 fallback 패턴 |
+
+---
+
+## 4. 핵심 설계 결정사항
+
+### 4.1 외부 API 선택
+
+| 항목 | 결정 |
+|------|------|
+| API | 국토교통부 실거래가 공개시스템 (공공데이터포털) |
+| 엔드포인트 | `http://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev` |
+| 파라미터 | `LAWD_CD`(법정동코드 앞 5자리) + `DEAL_YMD`(YYYYMM) + `serviceKey` |
+| env 변수 | `MOLIT_RTMS_API_KEY` (vworld와 별도 발급) |
+| 미설정 시 | 자동조회 버튼 비활성, 수동입력 유지 (기존 env graceful 통과 패턴 동일) |
+| 무료 쿼터 | 개발계정 일 10,000건 |
+| 거래금액 단위 | 응답값 "만원" 단위 → 원 환산 시 `× 10,000` |
+
+### 4.2 공시가격 ±5% 비교 — 케이스 매트릭스 (가장 까다로운 부분)
+
+시행규칙 §15③1호다목: 공동주택가격 차이 ±5% 이내. 대상 아파트 공시가격은 vworld standard-price API로 이미 조회 가능 (`EstateItem.standardPrice`). **문제: RTMS 응답에 공시가격 없음 → 후보별 공시가격을 어떻게 확보하는가.**
+
+| 케이스 | 상황 | 처리 방법 | 비고 |
+|--------|------|-----------|------|
+| **A. 대상 공시가격 미입력** | `standardPrice` undefined | 공시가격 필터 건너뜀. 면적 ±5%만 적용. 결과에 경고: "공동주택가격 미입력 — §15③1호다목 공시가격 ±5% 필터 미적용" | 보수적 운용 — 필터 완화 |
+| **B. 대상 공시가격 입력, 후보 공시가격 미확보 (Phase 1)** | `standardPrice` 있음, RTMS에 공시가격 없음 | 후보별 공시가격 조회 생략. 면적 ±5%만 적용 + 경고: "공시가격 ±5% 필터 미적용 (후보 공시가격 미확보). 직접 확인 권장." | Phase 1 현실적 절충 |
+| **C. 후보별 vworld 재조회 (Phase 2)** | Phase 2 과제 — 각 후보 동·호별 PNU 구성 후 vworld 공동주택가격 조회 | 캐시 활용 최적화 필요. 네트워크 N×요청 비용 | Phase 1 Out-of-Scope |
+| **D. 단지명 + 면적만 매칭 후 표시** | Phase 1 기본 동작 | 단지명 일치 + 전용면적 ±5% 후보 반환. 결과 카드에 "공시가격 필터: 미적용" 명시 | Phase 1 |
+
+**Phase 1 결정**: 공시가격 ±5% 필터는 Phase 1에서 **소프트(경고) 적용** — 대상 `standardPrice`가 있으면 필터 적용, 없으면 경고만. 후보별 공시가격은 Phase 2에서 vworld 재조회로 구현.
+
+### 4.3 자동 단정 금지 원칙
+
+엔진·필터는 후보 리스트를 반환한다. §49② 가장 가까운 날 기준 추천값 1건을 `recommendedValue`로 노출하되, 최종 채움은 사용자가 UI에서 선택 버튼으로 수행한다.
+
+### 4.4 특수관계인 경고
+
+§49①1호가목: 특수관계인 거래는 시가 인정 제외. RTMS 응답에 거래 당사자 정보 없음 → 자동 판별 불가. 조회 결과 카드 하단에 고정 경고: "특수관계인 간 거래(상증령 §49①1호가목)는 시가 인정 제외입니다. 직접 확인 필요."
+
+---
+
+## 5. 케이스 매트릭스 — 필터 분기 전수
+
+### 5.1 평가기간 필터 (§49①·§49②)
+
+| 거래유형 | 평가기준일 | 매매계약일 유효 범위 | 비고 |
+|---------|-----------|---------------------|------|
+| 상속 | 사망일 | 사망일 -6개월 ~ +6개월 | §49①1호 기준일: 매매계약일 |
+| 증여 | 증여일 | 증여일 -6개월 ~ +3개월 | §49①1호·② |
+
+### 5.2 면적 ±5% 필터 (시행규칙 §15③1호나목)
+
+| 케이스 | 조건 | 통과 |
+|--------|------|------|
+| F-A | `|후보.전용면적 - 대상.전용면적| / 대상.전용면적 × 100 ≤ 5` | 통과 |
+| F-B | 초과 | 제외 |
+| F-C | 대상 전용면적 미입력 (`undefined`) | 면적 필터 건너뜀 + 경고 |
+| F-D | 후보 전용면적 0 또는 없음 | 제외 |
+
+### 5.3 공시가격 ±5% 필터 (시행규칙 §15③1호다목)
+
+| 케이스 | 대상 `standardPrice` | 후보 공시가격 | 처리 |
+|--------|---------------------|-------------|------|
+| G-A | 있음 | 있음 (Phase 2) | `|후보가격 - 대상가격| / 대상가격 × 100 ≤ 5` 통과/제외 |
+| G-B | 있음 | 없음 (Phase 1) | 경고만 — 결과에 포함 |
+| G-C | 없음 | — | 경고만 — 결과에 포함 |
+
+### 5.4 가장 가까운 날 정렬 + 평균 (§49②)
+
+| 케이스 | 상황 | 처리 |
+|--------|------|------|
+| H-A 후보 0건 | 평가기간 내 거래 없음 | `candidates: []`, `recommendedValue: null`, 경고 |
+| H-B 후보 1건 | | `recommendedValue = 해당 거래가` |
+| H-C 후보 다건, 가장 가까운 날 1건 | | `recommendedValue = 해당 거래가` |
+| H-D 후보 다건, 가장 가까운 날 동일 거래일 복수 | | `recommendedValue = 평균` (원 미만 절사) |
+| H-E 후보 다건, 서로 다른 날짜 복수 | | 전체 후보 정렬 반환. `recommendedValue = 가장 가까운 날 거래가(H-C/H-D)` |
+
+### 5.5 단지명 매칭
+
+| 케이스 | 처리 |
+|--------|------|
+| 단지명 완전일치 | 포함 |
+| 단지명 공백·특수문자 정규화 후 일치 | 포함 |
+| 단지명 불일치 | 제외 (LAWD_CD 동일 동내 다른 단지) |
+| 단지명 없음 (RTMS 응답 누락) | 제외 |
+
+### 5.6 기타 엣지케이스
+
+| 케이스 | 처리 |
+|--------|------|
+| LAWD_CD 5자리 추출 불가 (주소 미입력) | 조회 불가 오류 반환 |
+| MOLIT_RTMS_API_KEY 미설정 | `API_KEY_MISSING` 오류 — UI 버튼 비활성 |
+| RTMS 응답 HTTP 오류 | `RTMS_FETCH_FAILED` 오류 + graceful fallback |
+| 거래금액 0 또는 음수 | 제외 |
+| 후보 거래일이 `undefined` | 평가기간 필터 제외 |
+
+---
+
+## 6. 단계(Phase) 계획
+
+### Phase 1 — 기본 자동조회 (현재 설계 범위)
+
+1. `MOLIT_RTMS_API_KEY` env 추가 + graceful 처리
+2. `app/api/address/apt-trade/route.ts` — RTMS 프록시 (LAWD_CD + 다개월 수집)
+3. `lib/calc/rtms-similar-sales-filter.ts` — 순수 필터 함수 (면적±5%, 평가기간, 가장가까운날)
+4. `EstateItem` + Zod 타입 확장 (`similarSalesSource`, `similarSalesCandidates`)
+5. `lib/calc/rtms-lookup.ts` — 클라이언트 헬퍼 + Dexie 캐시
+6. UI: "유사매매사례 자동조회" 버튼 → 후보 리스트 모달 → 선택 시 `similarSalesValue` 채움 (UI 시니어 담당)
+7. 경고 표시: 특수관계인, 공시가격 필터 미적용, 후보 0건 등
+
+### Phase 2 — 공시가격 ±5% 자동 적용
+
+- 후보별 vworld standard-price 재조회 (단지 내 동·호별 PNU 구성)
+- `filterSimilarSales` 함수에 `targetStandardPrice` + 후보 공시가격 배열 연동
+- 캐시 최적화 (단지별 일괄 캐시)
+
+---
+
+## 7. 리스크
+
+| 리스크 | 대응 |
+|--------|------|
+| RTMS 공공데이터포털 API 일 쿼터 초과 | Dexie 캐시 7일 TTL — 동일 `LAWD_CD`+`DEAL_YMD` 재조회 차단 |
+| 단지명 표기 불일치 (공백, 특수문자) | 정규화(공백·특수문자 제거) 후 비교 |
+| 거래금액 만원 단위 환산 오류 | `× 10_000` (정수) — `parseAmount` 등 소수 연산 금지 |
+| 평가기간 계산 오류 (월별 경계) | `date-fns addMonths` 사용. `lib/api/date-coerce.ts` 패턴 준수 |
+| RTMS에 공시가격 없어 §15③1호다목 불완전 적용 | Phase 1: 경고 표시. Phase 2: vworld 재조회 |
+| 특수관계인 거래 포함 위험 | 고정 경고 UI, 자동 배제 불가 명시 |
+
+---
+
+## 8. 열린 질문
+
+1. **단지명 추출**: `EstateItem.name`(사용자 입력 자산명) vs 별도 단지명 필드(`aptComplexName?`) — 사용자가 표준명을 모를 수 있음. RTMS 응답의 `aptNm`(단지명)과 비교하는 기준을 어떻게 제공할 것인가? (Phase 1: 조회 시 RTMS 응답 단지명 목록에서 선택 UI로 해결)
+2. **LAWD_CD 5자리 추출**: `estateAddress.jibun` 또는 vworld 역지오코딩 결과의 법정동코드 10자리에서 앞 5자리 슬라이싱 — 기존 `getLegalDongCode` 함수 재사용 가능 여부 (route-to-route 직접 호출 금지, 공통 유틸 분리 필요).
+3. **다개월 수집 범위**: 평가기간 최대 12개월(상속 ±6개월) → 최대 13개월치 RTMS 월별 호출. 캐시가 없으면 최대 13회 요청. 프록시에서 병렬 fetch 여부 결정 필요.
+
+---
+
+## 9. 계약 정합성 교차 검토 및 조정 결정 (BINDING — Do 단계 단일 진실)
+
+엔진 설계(`*.engine.design.md`)와 UI 설계(`*.ui.design.md`)를 병렬 작성한 결과 10건의 계약 발산이 확인되었다. 아래 결정이 두 설계 문서보다 **우선**한다. 두 문서에서 본 부록과 충돌하는 서술은 본 부록 기준으로 구현한다.
+
+검토 방법: 두 설계 문서 실측 비교 + 법령(시행규칙 §15③1호다목 MST 284609) 재확인.
+
+### 9.1 결정 표
+
+| # | 항목 | 엔진 설계 | UI 설계 | **조정 결정** | 근거 |
+|---|------|-----------|---------|--------------|------|
+| D1 | 거래금액 필드명 | `dealAmountWon`(원) | `dealAmount`(원) | **`dealAmountWon`**(원, 정수) | 단위 명시(만원 혼동 차단). 둘 다 원 단위 합의 — 명칭만 통일 |
+| D2 | 라우트 응답 envelope | `AptTradeRouteResponse{trades, months, errors?}` \| `{error}` | `RtmsAptTradeResponse{success, records, configMissing?}` | **`{ success, records, configMissing?, error?, months? }`** (UI envelope 채택 + `records: RtmsTradeRecord[]`) | UI가 `configMissing`로 버튼 비활성 판단 필요. 레코드 타입은 엔진 `RtmsTradeRecord` 채택 |
+| D3 | 라우트 요청 파라미터 | `lawdCd + baseDate + taxType`(스마트: 라우트가 다개월 자동 산출) | `sigunguCode + year + month`(덤브: 단일 월) | **`?lawdCd&baseDate&taxType`** (엔진 스마트 라우트 채택) | 1회 호출로 평가기간 전체 수집·부분성공(`Promise.allSettled`). `lawdCd = sigunguCode.slice(0,5)`는 Mediator가 파생. `aptName`은 라우트 미사용(필터 함수가 처리) |
+| D4 | 순수 필터 함수명 | `filterSimilarSales` | `filterSimilarSalesLocal`(혼재) | **`filterSimilarSales`** | 단일 명칭. `filterSimilarSalesLocal` 폐기 |
+| D5 | 파일 구성 | `rtms-lookup.ts`(fetch) + `rtms-similar-sales-filter.ts`(순수) | `rtms-similar-sales-lookup.ts`(all-in-one) | **3파일**: ①`app/api/address/apt-trade/route.ts`(프록시) ②`lib/calc/rtms-similar-sales-filter.ts`(순수 필터+rank+average) ③`lib/calc/rtms-similar-sales-lookup.ts`(Mediator: fetch+Dexie 캐시, ②를 import) | 순수 필터 분리(테스트 용이) + Mediator 명칭은 UI 채택. 엔진의 `rtms-lookup.ts` 명칭 폐기 |
+| D6 | env 변수명 | `MOLIT_RTMS_API_KEY` | `RTMS_SERVICE_KEY` | **`MOLIT_RTMS_API_KEY`** | 국토부 출처 명시. `.env.local.example` 1곳만 등록 |
+| **D7** | **공시가격 ±% 임계** | **±5%**(시행규칙 §15③1호다목 정확) + Phase 1 미적용·경고 | **±20%**(추정값) | **±5%** (UI ±20% 폐기) + Phase 1 미적용·경고만 | **법령 정확성 — §15③1호다목은 공동주택가격 차이 ≤ 5%. ±20%는 법적 근거 없음. RTMS에 후보 공시가격 부재 → Phase 1은 필터 미적용·경고, Phase 2에서 vworld 재조회로 ±5% 적용** |
+| D8 | `EstateItem` 신규 필드 수 | 2개(`similarSalesSource` + `similarSalesCandidates`) | 1개(`similarSalesSource`) | **1개**(`similarSalesSource?: "manual" \| "rtms_auto"`) | `similarSalesCandidates`는 엔진 미소비 + sessionStorage/DB 비대화. 후보 재표시는 Dexie `rtmsSalesCache`(거래 원본)로 충분 → 모달 재개 시 `filterSimilarSales` 재실행. EstateItem에 후보 배열 영속 금지 |
+| D9 | 필터 criteria `targetAptName` | 있음(`targetAptName`) | **누락** | **필수 포함** (`SimilarSalesFilterCriteria.targetAptName`) | 단지명 정규화 비교가 필터 핵심. UI criteria 누락은 갭 — 추가 |
+| D10 | criteria 날짜 타입 | `valuationDate: string`("YYYY-MM-DD") | `evaluationDate: Date` | **`valuationDate: Date`** (명칭 엔진, 타입 UI) | 순수 클라이언트 함수이므로 `Date` 안전. 라우트 경유 없음 → date-coerce 불필요. 필드명 `valuationDate`로 통일 |
+
+### 9.2 확정 계약 타입 (Do 단계 기준)
+
+```typescript
+// lib/calc/rtms-similar-sales-filter.ts
+export interface RtmsTradeRecord {
+  aptName: string;
+  dealDate: string;          // "YYYY-MM-DD" (매매계약일, §49②1호)
+  exclusiveAreaM2: number;   // 전용면적(㎡)
+  dealAmountWon: number;     // 거래금액(원, 만원×10_000 정수)
+  floor: number;
+  buildYear: number;
+  jibun: string;
+  lawdCd: string;            // 5자리
+}
+
+export interface SimilarSalesFilterCriteria {
+  targetAptName: string;            // D9 — 필수
+  targetExclusiveAreaM2?: number;   // 미입력 시 면적필터 skip + 경고
+  targetStandardPrice?: number;     // Phase 1: 경고만(후보 공시가격 부재). Phase 2: ±5% 적용
+  valuationDate: Date;              // D10
+  taxType: "inheritance" | "gift";
+}
+
+export interface SimilarSalesCandidate {
+  trade: RtmsTradeRecord;
+  daysFromValuationDate: number;    // 절대 일수
+  areaDiffRatePct: number;          // |후보-대상|×100/대상
+  stdPriceDiffRatePct?: number;     // Phase 1: undefined
+  isWithinPeriod: boolean;
+  isRecommended: boolean;           // §49② 가장 가까운 날
+}
+
+export interface SimilarSalesFilterResult {
+  candidates: SimilarSalesCandidate[];   // 단지명+기간+면적±5% 통과
+  outOfPeriod: SimilarSalesCandidate[];  // 기간 외(참고)
+  recommendedValue: number | null;       // §49② 가장 가까운 날(복수 시 평균, floor)
+  appliedCriteria: { areaMin: number; areaMax: number; periodStart: string; periodEnd: string };
+  stdPriceFilterApplied: boolean;        // Phase 1: false
+  warnings: string[];                    // 면적/공시가격 미적용·특수관계·후보0건
+}
+
+// app/api/address/apt-trade/route.ts 응답 (D2)
+export interface RtmsAptTradeResponse {
+  success: boolean;
+  records: RtmsTradeRecord[];
+  months?: string[];
+  configMissing?: boolean;   // env 미설정 → 버튼 비활성
+  error?: string;
+}
+```
+
+### 9.3 확정 파일 목록 (D5)
+
+| 파일 | 레이어 | 담당 |
+|------|--------|------|
+| `app/api/address/apt-trade/route.ts` | API 프록시 (`?lawdCd&baseDate&taxType`, 다개월 `Promise.allSettled`, 만원→원, env graceful `configMissing`) | 엔진 |
+| `lib/calc/rtms-similar-sales-filter.ts` | 순수 함수 (`filterSimilarSales` + rank + average, 정수연산) | 엔진 |
+| `lib/calc/rtms-similar-sales-lookup.ts` | Mediator (fetch + Dexie 캐시 `rtms_${lawdCd}_${baseDate}_${taxType}`, `filterSimilarSales` import) | UI |
+| `components/calc/.../RtmsSimilarSalesModal.tsx` 외 (Button·Badge) | UI 위젯 | UI |
+| `__tests__/.../similar-sales-filter.test.ts` | T-1~T-8 anchor (±5% 경계 포함) | 엔진 |
+
+**기존 수정**: `EstateItem`(+`similarSalesSource` **1필드만**) · `estate-item-schema.ts`(baseItemSchema +1필드, **`similarSalesCandidates` 추가 안 함**) · `legal-codes/inheritance-gift.ts`(VALUATION +5상수, **±5% 근거는 §15③1호다목**) · `lib/storage/db.ts`(`rtmsSalesCache` 테이블 + version↑) · `.env.local.example`(`MOLIT_RTMS_API_KEY`).
+
+### 9.4 Pre-Do anchor (구현 착수 전 1건 우선)
+
+`single-source-engine-helper`·`pre-do-anchor-verification` 정책: Do 진입 전 `filterSimilarSales` T-4(면적 ±5% 경계: 89.09㎡ 통과 / 89.19㎡ 제외) anchor를 먼저 작성·실행해 ±5% 산식과 "가장 가까운 날" 정렬을 환류 검증한다. ±20%(폐기) 흔적이 남지 않았는지 grep 확인.
