@@ -20,6 +20,17 @@ const CACHE_DIR = path.resolve(process.cwd(), ".legal-cache");
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7일
 
 /**
+ * 조문 파싱 산출물(article_*) 캐시 버전.
+ *
+ * fetchArticle은 raw 응답이 아니라 extractUnitText/normalizeContent를 거친 **파싱 결과**를
+ * 캐시한다 → 파서를 고쳐도 TTL(7일) 동안 구버전 산출물이 그대로 서빙되는 함정.
+ * (실사례: 표 콤마 뭉갬·<img> 잔존 수정 후에도 11:55에 기록된 stale 캐시가 깨진 본문 노출)
+ * extractUnitText·normalizeContent·title 추출 로직을 바꿀 때마다 이 값을 올릴 것.
+ * raw 캐시(law_units_*)는 파서 무관이라 버전 없이 유지 — 재파싱은 오프라인에서도 동작.
+ */
+const ARTICLE_CACHE_VERSION = 2;
+
+/**
  * 법제처 Open API 인증키 (OC)
  *
  * 발급 방법:
@@ -322,7 +333,7 @@ export async function fetchArticle(
   lawName: string,
   articleNo: string
 ): Promise<LawArticle | null> {
-  const cacheKey = `article_${mst}_${safeCacheKey(articleNo)}`;
+  const cacheKey = `article_${mst}_${safeCacheKey(articleNo)}_v${ARTICLE_CACHE_VERSION}`;
   const cached = await readCache<LawArticle>(cacheKey);
   if (cached) return cached;
 
