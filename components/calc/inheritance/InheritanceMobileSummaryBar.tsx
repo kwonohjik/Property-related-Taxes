@@ -16,8 +16,10 @@
  */
 
 import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import {
   computeInheritanceSummary,
@@ -66,12 +68,7 @@ export function InheritanceMobileSummaryBar({
           <span className="font-mono text-sm font-bold tabular-nums text-indigo-700 dark:text-indigo-300">
             {formatKRW(headlineValue)}
           </span>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 shrink-0 text-indigo-700 transition-transform dark:text-indigo-300",
-              open && "rotate-180",
-            )}
-          />
+          <span className={expandToggleClass("blue")}>{expandToggleLabel(open)}</span>
         </span>
       </button>
 

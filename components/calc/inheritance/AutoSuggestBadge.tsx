@@ -18,6 +18,10 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import type { DeductionSuggestion } from "@/lib/calc/inheritance-deduction-suggest";
 
 export interface AutoSuggestBadgeProps {
@@ -87,9 +91,10 @@ export function AutoSuggestBadge({
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="text-[10px] text-emerald-700 dark:text-emerald-300 underline print:hidden"
+              aria-expanded={open}
+              className={expandToggleClass("emerald")}
             >
-              {open ? "▲ 접기" : "▼ 산식"}
+              {expandToggleLabel(open)} · 산식
             </button>
           )}
           {isEmpty && (

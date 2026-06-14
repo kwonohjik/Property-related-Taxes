@@ -160,7 +160,7 @@ export function UnlistedStockHistoryModal({
         {data.loaded && sameCorp.length > 0 && (
           <section className="space-y-2" data-testid="same-corp-section">
             <h3 className="text-xs font-semibold text-indigo-700">
-              ▼ 동일 법인 ({sameCorp.length}건)
+              동일 법인 ({sameCorp.length}건)
             </h3>
             <ul className="space-y-2">
               {sameCorp.map((c) => (

@@ -19,7 +19,10 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { cn } from "@/lib/utils";
 
 export type Step4GroupTone = "emerald" | "amber" | "violet" | "sky";
@@ -126,13 +129,7 @@ export function Step4DeductionGroup({
             </span>
           )}
         </span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 transition-transform",
-            t.title,
-            isOpen ? "rotate-180" : "",
-          )}
-        />
+        <span className={expandToggleClass(tone)}>{expandToggleLabel(isOpen)}</span>
       </button>
 
       {/* 본문 — 펼침 시 표시. 인쇄 시 접혀 있어도 항상 표시(print:block). */}
