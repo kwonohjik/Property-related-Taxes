@@ -320,8 +320,7 @@ export function PresumedInheritanceInput({
       {/* 요약 테이블 또는 빈 안내 */}
       {items.length === 0 ? (
         <p className="text-xs text-muted-foreground italic px-2">
-          상속개시 전 2년 이내 처분·인출·차입 중 사용처가 불명한 금액이 있으면 입력하세요.
-          1년 이내 2억원 OR 2년 이내 5억원 임계 발동.
+          해당하는 항목이 있으면 위 버튼으로 추가하세요.
         </p>
       ) : (
         <PresumedTable items={items} selectedId={selectedId} onSelect={setSelectedId} />
