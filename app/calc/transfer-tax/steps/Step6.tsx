@@ -6,6 +6,10 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 
 // ============================================================
 // Step 6: 가산세 (선택 입력)
@@ -112,9 +116,10 @@ export function Step6({
                   <button
                     type="button"
                     onClick={() => setShowAdvanced((p) => !p)}
-                    className="text-xs text-muted-foreground underline underline-offset-2"
+                    aria-expanded={showAdvanced}
+                    className={expandToggleClass("slate")}
                   >
-                    {showAdvanced ? "고급 설정 접기 ▲" : "고급 설정 (이자상당액 가산액) ▼"}
+                    {expandToggleLabel(showAdvanced)} · 고급 설정 (이자상당액 가산액)
                   </button>
                   {showAdvanced && (
                     <div className="mt-2">

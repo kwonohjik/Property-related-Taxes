@@ -1,17 +1,58 @@
+"use client";
+
 /**
  * 대주주 판정 보조 hint 카드 (Phase C — 2026-05-19)
  *
  * 교재 §3장 이미지 50·51 Check Point ④·⑧·⑨·⑩·⑪·⑫·⑬·⑭·⑮ 9건을
  * 3 그룹(시총 산정 / 발행주식총수 / 특수관계인 합산)으로 분류하여
- * collapsible UI(`<details>`)로 노출.
+ * 펼치기/접기 표준 토글(ExpandToggleButton)로 노출.
  *
  * - 엔진 자동 가산 없음 — 사용자가 본인·합산 시총·지분율에 사전 합산 입력 책임.
  * - 각 hint에 LawArticleModal 배지 연계 (조문/해석례 출처).
- * - 토글 신설은 메모리 [[feedback_no_silent_apportion_fallback]] 정신상 폐기
- *   (자동 가산 로직 없는 토글은 책임 소재만 모호하게 함).
+ * - 토글 표준: native <details> → useState + expandToggleClass (전 영역 토글 통일).
  */
 
+import { useState, type ReactNode } from "react";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
+
+// 카드 외곽 tone 정적 매핑 (feedback_tailwind_static_tone_mapping — dynamic bg-${tone} 금지)
+type HintTone = "sky" | "emerald" | "rose" | "amber";
+const HINT_CARD_TONE: Record<HintTone, string> = {
+  sky: "border-sky-200 bg-sky-50/40",
+  emerald: "border-emerald-200 bg-emerald-50/40",
+  rose: "border-rose-200 bg-rose-50/40",
+  amber: "border-amber-200 bg-amber-50/40",
+};
+
+/** 공통 collapsible hint 카드 — native <details> 대체 표준 토글. */
+function CollapsibleHintCard({
+  tone,
+  summary,
+  children,
+}: {
+  tone: HintTone;
+  summary: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`rounded-lg border p-3 text-xs ${HINT_CARD_TONE[tone]}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={expandToggleClass(tone)}
+      >
+        {expandToggleLabel(open)} · {summary}
+      </button>
+      {open && <div className="mt-2">{children}</div>}
+    </div>
+  );
+}
 
 // ────────────────────────────────────────────────────────────────
 // Group A — 시총 산정 hint (sky tone)
@@ -20,11 +61,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export function MarketCapHintsCard() {
   return (
-    <details className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-xs">
-      <summary className="cursor-pointer select-none font-semibold text-sky-800">
-        💡 시가총액 산정 시 포함/제외 항목 (4건)
-      </summary>
-      <ul className="mt-2 space-y-2 pl-2 text-sky-900">
+    <CollapsibleHintCard tone="sky" summary="💡 시가총액 산정 시 포함/제외 항목 (4건)">
+      <ul className="space-y-2 pl-2 text-sky-900">
         <li className="flex items-start gap-2">
           <span className="font-medium text-sky-700">무상증자:</span>
           <span className="flex-1">
@@ -58,7 +96,7 @@ export function MarketCapHintsCard() {
       <p className="mt-3 rounded-md bg-sky-100/70 px-2 py-1 text-[10px] text-sky-700">
         ※ 본 앱은 자동 가산하지 않습니다 — 위 항목이 해당되면 시가총액 입력값에 사전 반영해 주세요.
       </p>
-    </details>
+    </CollapsibleHintCard>
   );
 }
 
@@ -69,11 +107,8 @@ export function MarketCapHintsCard() {
 
 export function IssuedSharesHintsCard() {
   return (
-    <details className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 text-xs">
-      <summary className="cursor-pointer select-none font-semibold text-emerald-800">
-        💡 발행주식총수 산정 시 포함 항목 (2건)
-      </summary>
-      <ul className="mt-2 space-y-2 pl-2 text-emerald-900">
+    <CollapsibleHintCard tone="emerald" summary="💡 발행주식총수 산정 시 포함 항목 (2건)">
+      <ul className="space-y-2 pl-2 text-emerald-900">
         <li className="flex items-start gap-2">
           <span className="font-medium text-emerald-700">자기주식:</span>
           <span className="flex-1">
@@ -92,7 +127,7 @@ export function IssuedSharesHintsCard() {
       <p className="mt-3 rounded-md bg-emerald-100/70 px-2 py-1 text-[10px] text-emerald-700">
         ※ 본 앱은 자동 가산하지 않습니다 — 위 항목을 포함한 총 발행주식수를 입력해 주세요.
       </p>
-    </details>
+    </CollapsibleHintCard>
   );
 }
 
@@ -102,11 +137,8 @@ export function IssuedSharesHintsCard() {
 
 export function SpecialEntityHintsCard() {
   return (
-    <details className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 text-xs">
-      <summary className="cursor-pointer select-none font-semibold text-rose-800">
-        💡 합병·분할·간접투자·세율 부칙 안내 (4건)
-      </summary>
-      <ul className="mt-2 space-y-2 pl-2 text-rose-900">
+    <CollapsibleHintCard tone="rose" summary="💡 합병·분할·간접투자·세율 부칙 안내 (4건)">
+      <ul className="space-y-2 pl-2 text-rose-900">
         <li className="flex items-start gap-2">
           <span className="font-medium text-rose-700">상장 전환:</span>
           <span className="flex-1">
@@ -142,7 +174,7 @@ export function SpecialEntityHintsCard() {
       <p className="mt-3 rounded-md bg-rose-100/70 px-2 py-1 text-[10px] text-rose-700">
         ※ 위 케이스 해당 시 본인·합산 시총·지분율 입력값에 사전 반영해 주세요.
       </p>
-    </details>
+    </CollapsibleHintCard>
   );
 }
 
@@ -153,11 +185,8 @@ export function SpecialEntityHintsCard() {
 
 export function CombinedShareHintsCard() {
   return (
-    <details className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-xs">
-      <summary className="cursor-pointer select-none font-semibold text-amber-800">
-        💡 특수관계인 합산 시 포함 항목 (3건)
-      </summary>
-      <ul className="mt-2 space-y-2 pl-2 text-amber-900">
+    <CollapsibleHintCard tone="amber" summary="💡 특수관계인 합산 시 포함 항목 (3건)">
+      <ul className="space-y-2 pl-2 text-amber-900">
         <li className="flex items-start gap-2">
           <span className="font-medium text-amber-700">대차주식:</span>
           <span className="flex-1">
@@ -183,6 +212,6 @@ export function CombinedShareHintsCard() {
       <p className="mt-3 rounded-md bg-amber-100/70 px-2 py-1 text-[10px] text-amber-700">
         ※ 본 앱은 자동 가산하지 않습니다 — 위 항목 해당 시 합산 시총·지분율 입력값에 사전 반영해 주세요.
       </p>
-    </details>
+    </CollapsibleHintCard>
   );
 }

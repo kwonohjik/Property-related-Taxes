@@ -20,6 +20,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -151,6 +155,7 @@ export function FamilyBusinessInheritanceHistoryModal({
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<FamilyBusinessInheritanceCandidate[]>([]);
   const [warnings, setWarnings] = useState<FbLookupWarning[]>([]);
+  const [warningsOpen, setWarningsOpen] = useState(false);
 
   // 모달 오픈 시점에만 fetch
   useEffect(() => {
@@ -256,24 +261,31 @@ export function FamilyBusinessInheritanceHistoryModal({
 
         {/* 경고 영역 — 손상/미적용 사례 */}
         {!loading && warnings.length > 0 && (
-          <details className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
-            <summary className="cursor-pointer font-medium">
-              제외된 이력 {warnings.length}건 보기
-            </summary>
-            <ul className="mt-2 space-y-1">
-              {Object.entries(warningsByReason).map(([reason, ws]) => (
-                <li key={reason}>
-                  <span className="text-gray-500">[{reason}]</span> {ws.length}건
-                  <ul className="ml-4 text-[11px] text-gray-600">
-                    {ws.slice(0, 3).map((w, i) => (
-                      <li key={i}>· {w.message}</li>
-                    ))}
-                    {ws.length > 3 && <li>... 외 {ws.length - 3}건</li>}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </details>
+          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+            <button
+              type="button"
+              onClick={() => setWarningsOpen((o) => !o)}
+              aria-expanded={warningsOpen}
+              className={expandToggleClass("slate")}
+            >
+              {expandToggleLabel(warningsOpen)} · 제외된 이력 {warnings.length}건
+            </button>
+            {warningsOpen && (
+              <ul className="mt-2 space-y-1">
+                {Object.entries(warningsByReason).map(([reason, ws]) => (
+                  <li key={reason}>
+                    <span className="text-gray-500">[{reason}]</span> {ws.length}건
+                    <ul className="ml-4 text-[11px] text-gray-600">
+                      {ws.slice(0, 3).map((w, i) => (
+                        <li key={i}>· {w.message}</li>
+                      ))}
+                      {ws.length > 3 && <li>... 외 {ws.length - 3}건</li>}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
 
         <DialogFooter>
