@@ -20,7 +20,11 @@
  * 상장 3시장 근거: §157④ / 비상장 근거: §167의8①2호
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -100,6 +104,7 @@ interface MajorShareholderBlockProps {
 }
 
 export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockProps) {
+  const [thresholdHistoryOpen, setThresholdHistoryOpen] = useState(false);
   // 엔진 함수로 시기별 임계 산출
   // 상장(kospi/kosdaq/konex) + 비상장(unlisted) 모두 자동 판정 지원
   // 기타자산(other_asset)은 §94①4 별도 트랙 — null 반환
@@ -337,16 +342,23 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
 
         {/* 시기별 임계 이력 펼침 — 상장 3시장 + 비상장에만 표시 */}
         {threshold && (
-          <details className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
-            <summary className="text-xs font-medium text-slate-700 cursor-pointer select-none">
-              시기별 기준 이력 보기
-            </summary>
-            <div className="mt-3">
-              <MajorThresholdTimeline
-                marketType={form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted"}
-              />
-            </div>
-          </details>
+          <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
+            <button
+              type="button"
+              onClick={() => setThresholdHistoryOpen((o) => !o)}
+              aria-expanded={thresholdHistoryOpen}
+              className={expandToggleClass("slate")}
+            >
+              {expandToggleLabel(thresholdHistoryOpen)} · 시기별 기준 이력 보기
+            </button>
+            {thresholdHistoryOpen && (
+              <div className="mt-3">
+                <MajorThresholdTimeline
+                  marketType={form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted"}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {/* 본인 단독 지분율 — 입력 방식 선택 */}

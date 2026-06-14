@@ -18,7 +18,6 @@
 import { useState } from "react";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 
 interface Props {
@@ -169,7 +168,7 @@ export function KiwoomMarketCapHelper({
           </div>
           <div className="rounded border border-emerald-300 bg-white p-2 space-y-1.5">
             <p className="text-[10px] text-emerald-700 border-b border-emerald-100 pb-1">
-              ▼ 시총 산식 검증 (시행령 §157①)
+              시총 산식 검증 (시행령 §157①)
             </p>
             <div className="space-y-0.5 font-mono text-[11px]">
               <div className="flex justify-between">

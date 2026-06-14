@@ -17,6 +17,10 @@
  */
 
 import { useState } from "react";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
 import { preTransferAutoFillDates } from "./PostListingClosingPriceTable";
@@ -207,9 +211,10 @@ export function KiwoomAutoFetchButton({
           <button
             type="button"
             onClick={() => setShowDetail((v) => !v)}
-            className="text-xs text-emerald-800 underline hover:text-emerald-900"
+            aria-expanded={showDetail}
+            className={expandToggleClass("emerald")}
           >
-            {showDetail ? "▲ 일자별 종가 숨기기" : "▼ 일자별 종가 상세 보기 (검증용)"}
+            {expandToggleLabel(showDetail)} · 일자별 종가 (검증용)
           </button>
           {showDetail && (
             <div className="rounded border border-emerald-300 bg-white p-2 space-y-1 max-h-96 overflow-y-auto">

@@ -20,9 +20,11 @@ import { useMemo, useState } from "react";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-reduction";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import { New993InputForm } from "@/components/calc/transfer/New993InputForm";
 import { Rental973InputForm } from "@/components/calc/transfer/rental/Rental973InputForm";
@@ -425,7 +427,7 @@ function GroupCategorySection({
       >
         <div>
           <span className="text-sm font-semibold">
-            {isOpen ? "▼" : "▶"} {schema.title}
+            <span className={expandToggleClass("slate")}>{expandToggleLabel(isOpen)}</span> {schema.title}
           </span>
           <span className="ml-2 text-xs text-muted-foreground">{schema.subtitle}</span>
         </div>
