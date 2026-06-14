@@ -73,7 +73,7 @@ function TotalStockValue({ items }: StockTotal) {
   if (total === 0 || items.length === 0) return null;
 
   return (
-    <div className="rounded-md border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 flex justify-between items-center">
+    <div className="flex-1 rounded-md border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 flex justify-between items-center">
       <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
         주식 합계 (예상)
       </span>
@@ -293,24 +293,26 @@ export function StockValuationForm({
             취소
           </button>
         </div>
-      ) : (
-        // 하단 추가 버튼 — uncontrolled(증여세 등)는 항상, controlled(상속 헤더 버튼)는
-        // 목록이 있을 때만(빈 목록은 헤더 버튼 단독 → 추가 트리거 중복·E2E strict 위반 회피).
-        (!isAddControlled || items.length > 0) && (
+      ) : null}
+
+      {/* 추가 버튼 + 합계 — 한 행(좌: 추가, 우: 주식 합계 예상). 추가 버튼/합계 어느 한쪽만 있으면 전체폭. */}
+      <div className="flex items-center gap-3">
+        <TotalStockValue items={items} />
+        {/* 하단 추가 버튼 — uncontrolled(증여세 등)는 항상, controlled(상속 헤더 버튼)는
+            목록이 있을 때만(빈 목록은 헤더 버튼 단독 → 추가 트리거 중복·E2E strict 위반 회피).
+            컴팩트 알약 · 우측 끝 정렬(ml-auto). */}
+        {!showAddPanel && (!isAddControlled || items.length > 0) && (
           <button
             type="button"
             onClick={() => setShowAddPanel(true)}
             data-testid="stock-add-bottom"
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+            className="shrink-0 ml-auto inline-flex items-center gap-1 rounded-full border border-indigo-200 dark:border-indigo-700 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-300 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
           >
-            <span className="text-lg">+</span>
+            <span className="text-sm">+</span>
             주식·지분 추가
           </button>
-        )
-      )}
-
-      {/* 합계 */}
-      <TotalStockValue items={items} />
+        )}
+      </div>
     </div>
   );
 }
