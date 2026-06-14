@@ -24,6 +24,10 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
+import {
   deriveFBDecedentShareholding,
   deriveFBDecedentCEO,
 } from "@/lib/tax-engine/deductions/family-business";
@@ -190,9 +194,9 @@ export function FbDecedentRequirementsSection({
           <button
             type="button"
             onClick={() => setOpenShare((v) => !v)}
-            className="text-[10px] text-amber-600 dark:text-amber-400 underline underline-offset-2"
+            className={expandToggleClass("amber")}
           >
-            {openShare ? "▲ 수동 보정 접기" : "▼ 수동 보정 (자동과 다른 경우만)"}
+            {expandToggleLabel(openShare)} · 수동 보정
           </button>
           {openShare && (
             <div className="mt-1.5 space-y-1" data-testid="fb-override-decedent-share">
@@ -280,9 +284,9 @@ export function FbDecedentRequirementsSection({
           <button
             type="button"
             onClick={() => setOpenCEO((v) => !v)}
-            className="text-[10px] text-amber-600 dark:text-amber-400 underline underline-offset-2"
+            className={expandToggleClass("amber")}
           >
-            {openCEO ? "▲ 수동 보정 접기" : "▼ 수동 보정 (자동과 다른 경우만 — 2호 승계 등)"}
+            {expandToggleLabel(openCEO)} · 수동 보정 (2호 승계 등)
           </button>
           {openCEO && (
             <div className="mt-1.5 space-y-1" data-testid="fb-override-decedent-ceo">

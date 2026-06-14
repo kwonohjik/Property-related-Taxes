@@ -28,6 +28,10 @@
  */
 
 import { useMemo, useState } from "react";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { EstateStockChipsHeader } from "@/components/calc/inheritance/EstateStockChipsHeader";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
@@ -170,11 +174,9 @@ function EstateCommonAttributesSectionInner({
             onClick={() => setShowExpanded((v) => !v)}
             aria-expanded={showExpanded}
             aria-controls={`expandable-common-${item.id}`}
-            className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
+            className={expandToggleClass("sky")}
           >
-            {showExpanded
-              ? "▲ 적용 옵션 접기"
-              : `▼ 더 많은 적용 옵션 보기 (${hiddenExpandableCount}개)`}
+            {expandToggleLabel(showExpanded)} · 적용 옵션 ({hiddenExpandableCount}개)
           </button>
           {showExpanded && (
             <div id={`expandable-common-${item.id}`} className="space-y-2">

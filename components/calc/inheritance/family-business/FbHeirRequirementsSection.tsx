@@ -19,6 +19,10 @@ import { differenceInYears, parseISO } from "date-fns";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
+import {
   calcInheritanceFilingDeadline,
   deriveFBHeirIsAdult,
   deriveFBHeirOfficerByDeadline,
@@ -163,9 +167,9 @@ export function FbHeirRequirementsSection({
             <button
               type="button"
               onClick={() => setOpenAdult((v) => !v)}
-              className="text-[10px] text-sky-600 dark:text-sky-400 underline underline-offset-2"
+              className={expandToggleClass("sky")}
             >
-              {openAdult ? "▲ 수동 보정 접기" : "▼ 수동 보정 (자동과 다른 경우만)"}
+              {expandToggleLabel(openAdult)} · 수동 보정
             </button>
             {openAdult && (
               <div className="mt-1.5 space-y-1" data-testid="fb-override-adult">
@@ -239,9 +243,9 @@ export function FbHeirRequirementsSection({
             <button
               type="button"
               onClick={() => setOpenEngagement((v) => !v)}
-              className="text-[10px] text-sky-600 dark:text-sky-400 underline underline-offset-2"
+              className={expandToggleClass("sky")}
             >
-              {openEngagement ? "▲ 수동 보정 접기" : "▼ 수동 보정 (자동과 다른 경우만)"}
+              {expandToggleLabel(openEngagement)} · 수동 보정
             </button>
             {openEngagement && (
               <div className="mt-1.5 space-y-1" data-testid="fb-override-engagement">
@@ -300,9 +304,9 @@ export function FbHeirRequirementsSection({
             <button
               type="button"
               onClick={() => setOpenOfficer((v) => !v)}
-              className="text-[10px] text-sky-600 dark:text-sky-400 underline underline-offset-2"
+              className={expandToggleClass("sky")}
             >
-              {openOfficer ? "▲ 수동 보정 접기" : "▼ 수동 보정 (자동과 다른 경우만)"}
+              {expandToggleLabel(openOfficer)} · 수동 보정
             </button>
             {openOfficer && (
               <div className="mt-1.5 space-y-1" data-testid="fb-override-officer">
@@ -361,9 +365,9 @@ export function FbHeirRequirementsSection({
             <button
               type="button"
               onClick={() => setOpenCEO((v) => !v)}
-              className="text-[10px] text-sky-600 dark:text-sky-400 underline underline-offset-2"
+              className={expandToggleClass("sky")}
             >
-              {openCEO ? "▲ 수동 보정 접기" : "▼ 수동 보정 (자동과 다른 경우만)"}
+              {expandToggleLabel(openCEO)} · 수동 보정
             </button>
             {openCEO && (
               <div className="mt-1.5 space-y-1" data-testid="fb-override-ceo">

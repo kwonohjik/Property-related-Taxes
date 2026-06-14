@@ -336,7 +336,7 @@ export function PriorGiftHistoryModal({
               {candidates.length > 0 ? (
                 <div className="space-y-2">
                   <h4 className="text-xs font-semibold text-violet-700">
-                    ▼ 사전증여 이력 — {candidates.length}건
+                    사전증여 이력 — {candidates.length}건
                   </h4>
                   <div className="space-y-3">
                     {candidates.map((c) => (

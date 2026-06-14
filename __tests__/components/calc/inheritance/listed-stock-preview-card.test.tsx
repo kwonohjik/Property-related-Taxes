@@ -67,18 +67,19 @@ describe("ListedStockBesshiPreviewCard", () => {
       <ListedStockBesshiPreviewCard item={buildItem()} valuationDate="2022-07-06" />,
     );
     // hidden 클래스 — 화면에서는 보이지 않음. testid는 DOM에는 있어도 hidden
-    expect(getByTestId("ls-besshi-preview-toggle").textContent).toContain("▶");
+    // 표준 토글: 닫힘 라벨 "▼ 펼치기" (ExpandToggleButton 통일)
+    expect(getByTestId("ls-besshi-preview-toggle").textContent).toContain("펼치기");
     // Page1·Page2 자체는 hidden div 안 — 토글 ON 후 보임
     expect(queryByTestId("ls-besshi-p1-section")).toBeTruthy(); // DOM에는 존재
   });
 
-  it("토글 클릭 → 펼침 (▼)", () => {
+  it("토글 클릭 → 펼침 (펼치기 → 접기 라벨)", () => {
     const { getByTestId } = render(
       <ListedStockBesshiPreviewCard item={buildItem()} valuationDate="2022-07-06" />,
     );
     const toggle = getByTestId("ls-besshi-preview-toggle");
-    expect(toggle.textContent).toContain("▶");
+    expect(toggle.textContent).toContain("펼치기");
     fireEvent.click(toggle);
-    expect(toggle.textContent).toContain("▼");
+    expect(toggle.textContent).toContain("접기");
   });
 });

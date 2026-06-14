@@ -117,7 +117,7 @@ describe("KiwoomValuationResultCard — A-1.6 결과 카드 분리", () => {
     expect(screen.getByText(/삼성전자/)).toBeTruthy();
     expect(screen.getByText(/평가구간/)).toBeTruthy();
     expect(screen.getByText(/61,465/)).toBeTruthy();
-    expect(screen.getByText(/일자별 종가 상세 보기/)).toBeTruthy();
+    expect(screen.getByText(/일자별 종가/)).toBeTruthy();
   });
 
   it("showError=false 시 error 텍스트는 본 카드에서 미노출 (부모 위임)", () => {

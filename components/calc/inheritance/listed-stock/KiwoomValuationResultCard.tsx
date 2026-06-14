@@ -13,6 +13,10 @@
 
 import React from "react";
 import type { KiwoomValuationInfo } from "./useKiwoomValuationFetch";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 
 interface Props {
   info: KiwoomValuationInfo | null;
@@ -85,9 +89,10 @@ export function KiwoomValuationResultCard({
       <button
         type="button"
         onClick={onToggleDetail}
-        className="text-xs text-emerald-800 underline hover:text-emerald-900"
+        aria-expanded={showDetail}
+        className={expandToggleClass("emerald")}
       >
-        {showDetail ? "▲ 일자별 종가 숨기기" : "▼ 일자별 종가 상세 보기 (검증용)"}{" "}
+        {expandToggleLabel(showDetail)} · 일자별 종가 (검증용)
       </button>
 
       {showDetail && (

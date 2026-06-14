@@ -16,8 +16,11 @@
  */
 
 import { useState } from "react";
-import { X } from "lucide-react";
 import { EstimatedValuePreview } from "@/components/calc/property-valuation-preview";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCategorySection";
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
@@ -126,11 +129,9 @@ export function EstateItemAdvancedPanel({
             type="button"
             onClick={() => setShowHiddenExpandable((v) => !v)}
             aria-expanded={showHiddenExpandable}
-            className="text-xs text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-300 py-1"
+            className={expandToggleClass("slate")}
           >
-            {showHiddenExpandable
-              ? "▲ 추가 옵션 접기"
-              : `▼ 추가 옵션 (${hiddenItems.length}개)`}
+            {expandToggleLabel(showHiddenExpandable)} · 추가 옵션 ({hiddenItems.length}개)
           </button>
           {showHiddenExpandable && (
             <div className="space-y-2">

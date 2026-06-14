@@ -31,6 +31,10 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
+import {
   HeirAllocationInput,
   hasDistributableHeir,
 } from "@/components/calc/inheritance/HeirAllocationInput";
@@ -139,7 +143,7 @@ function ExemptionRow({
               data-testid={`exemption-row-${rule.id}-details-toggle`}
               className="text-xs text-sky-600 hover:text-sky-800 dark:text-sky-400 font-medium"
             >
-              {detailsOpen ? "▾" : "▸"} 적용 요건·제외 사유 자세히
+              {detailsOpen ? "▲" : "▼"} 적용 요건·제외 사유 자세히
             </button>
             {detailsOpen && (
               <div className="mt-2 space-y-2">
@@ -263,8 +267,8 @@ function ExemptionGroupSection({
             {checkedCount}개 선택
           </span>
         </div>
-        <span className="text-gray-400 dark:text-gray-500 text-xs">
-          {isOpen ? "▾" : "▸"}
+        <span className={expandToggleClass(tone)}>
+          {expandToggleLabel(isOpen)}
         </span>
       </button>
 

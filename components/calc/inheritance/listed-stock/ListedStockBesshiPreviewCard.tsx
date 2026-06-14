@@ -13,6 +13,10 @@
  */
 
 import React, { useMemo, useState } from "react";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { Page1CoverSection } from "./besshi/Page1CoverSection";
 import { Page2DailyClosingTable } from "./besshi/Page2DailyClosingTable";
 import { evaluateListedStock } from "@/lib/tax-engine/property-valuation-stock";
@@ -60,10 +64,14 @@ export function ListedStockBesshiPreviewCard({ item, valuationDate }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full text-left text-sm font-semibold text-sky-900 py-1 print:hidden"
+        aria-expanded={open}
+        className="w-full flex items-center gap-2 text-left py-1"
         data-testid="ls-besshi-preview-toggle"
       >
-        {open ? "▼" : "▶"} 상장주식 평가조서(갑·을) 미리보기
+        <span className={expandToggleClass("sky")}>{expandToggleLabel(open)}</span>
+        <span className="text-sm font-semibold text-sky-900">
+          상장주식 평가조서(갑·을) 미리보기
+        </span>
       </button>
       <div className={open ? "block mt-3 space-y-3" : "hidden print:block mt-3 space-y-3"}>
         <Page1CoverSection besshi={besshi} />
