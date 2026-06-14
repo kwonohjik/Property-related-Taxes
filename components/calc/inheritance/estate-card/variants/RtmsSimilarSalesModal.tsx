@@ -23,6 +23,10 @@
 
 import { useState, useCallback } from "react";
 import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -208,6 +212,7 @@ export function RtmsSimilarSalesModal({
   const [status, setStatus] = useState<ModalStatus>("idle");
   const [candidates, setCandidates] = useState<SimilarSalesCandidate[]>([]);
   const [outOfPeriod, setOutOfPeriod] = useState<SimilarSalesCandidate[]>([]);
+  const [outOfPeriodOpen, setOutOfPeriodOpen] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState<string | undefined>(undefined);
@@ -531,24 +536,31 @@ export function RtmsSimilarSalesModal({
 
               {/* 평가기간 외 참고 거래 */}
               {outOfPeriod.length > 0 && (
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700">
-                    평가기간 외 거래 {outOfPeriod.length}건 (참고용 — 시가 불인정 가능)
-                  </summary>
-                  <div className="mt-2 space-y-2 opacity-70">
-                    {outOfPeriod.map((c) => {
-                      const key = tradeKey(c);
-                      return (
-                        <CandidateRow
-                          key={key}
-                          candidate={c}
-                          isSelected={selectedIds.has(key)}
-                          onToggle={() => handleToggle(key)}
-                        />
-                      );
-                    })}
-                  </div>
-                </details>
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setOutOfPeriodOpen((o) => !o)}
+                    aria-expanded={outOfPeriodOpen}
+                    className={expandToggleClass("slate")}
+                  >
+                    {expandToggleLabel(outOfPeriodOpen)} · 평가기간 외 거래 {outOfPeriod.length}건 (참고용 — 시가 불인정 가능)
+                  </button>
+                  {outOfPeriodOpen && (
+                    <div className="mt-2 space-y-2 opacity-70">
+                      {outOfPeriod.map((c) => {
+                        const key = tradeKey(c);
+                        return (
+                          <CandidateRow
+                            key={key}
+                            candidate={c}
+                            isSelected={selectedIds.has(key)}
+                            onToggle={() => handleToggle(key)}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}

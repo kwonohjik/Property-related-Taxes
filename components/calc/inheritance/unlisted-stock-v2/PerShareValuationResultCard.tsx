@@ -10,7 +10,11 @@
  * UI Design: docs/02-design/features/inheritance-unlisted-stock-valuation.ui.design.md §7
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
@@ -25,6 +29,7 @@ function fmt(n: number): string {
 }
 
 export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShareValuationResultCardProps) {
+  const [rulesOpen, setRulesOpen] = useState(false);
   const result = useMemo(() => {
     try {
       // 최소 입력 검증
@@ -289,14 +294,27 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
 
       {/* 적용 규칙 */}
       {result.appliedRules.length > 0 && (
-        <details className="text-[10px] text-gray-600">
-          <summary className="cursor-pointer hover:text-gray-800">적용 규칙 ({result.appliedRules.length}건)</summary>
-          <ul className="list-disc ml-4 mt-1 space-y-0.5">
+        <div className="text-[10px] text-gray-600">
+          <button
+            type="button"
+            onClick={() => setRulesOpen((o) => !o)}
+            aria-expanded={rulesOpen}
+            className={expandToggleClass("slate")}
+          >
+            {expandToggleLabel(rulesOpen)} · 적용 규칙 ({result.appliedRules.length}건)
+          </button>
+          <ul
+            className={
+              rulesOpen
+                ? "list-disc ml-4 mt-1 space-y-0.5"
+                : "hidden print:block list-disc ml-4 mt-1 space-y-0.5"
+            }
+          >
             {result.appliedRules.map((r, i) => (
               <li key={i}>{r}</li>
             ))}
           </ul>
-        </details>
+        </div>
       )}
 
       {/* PR-E·F (UI 통합 v3) — 자동 판정 결과 echo 라인 */}

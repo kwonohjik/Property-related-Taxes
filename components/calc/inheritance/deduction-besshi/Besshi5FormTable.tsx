@@ -5,7 +5,12 @@
  * 출력 전용. `buildBesshi5Data` 결과만 소비. ③=netFinancial · ④=cappedDeduction · ⑤=financialDeduction.
  */
 
+import { useState } from "react";
 import type { Besshi5Data } from "@/lib/calc/deduction-besshi-data";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { B5, B5_COLS, B5_LIMIT_TABLE, PAPER_FOOTER, HANDWRITE_NOTE } from "./deduction-besshi-constants";
 
@@ -71,6 +76,7 @@ function FinancialTable({ rows, totalLabel, total, totalTestId, rowPrefix }: {
 }
 
 export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
+  const [limitOpen, setLimitOpen] = useState(false);
   return (
     <div className="bg-white p-3 text-black print:bg-white print:text-black" data-testid="b5-root">
       <p className="text-[9px] text-gray-600">{B5.subtitle}</p>
@@ -124,9 +130,22 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
       </table>
 
       {/* 한도액 표 (작성방법) */}
-      <details className="mt-2 text-[9px] text-gray-600 print:open">
-        <summary className="cursor-pointer print:hidden">④ 한도액 산정표 보기</summary>
-        <table className="mt-1 w-full table-fixed border-collapse">
+      <div className="mt-2 text-[9px] text-gray-600">
+        <button
+          type="button"
+          onClick={() => setLimitOpen((o) => !o)}
+          aria-expanded={limitOpen}
+          className={expandToggleClass("slate")}
+        >
+          {expandToggleLabel(limitOpen)} · ④ 한도액 산정표
+        </button>
+        <table
+          className={
+            limitOpen
+              ? "mt-1 w-full table-fixed border-collapse"
+              : "hidden print:table mt-1 w-full table-fixed border-collapse"
+          }
+        >
           <ColGroup widths={B5_COLS.limit} />
           <tbody>
             {B5_LIMIT_TABLE.map((r, i) => (
@@ -137,7 +156,7 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
             ))}
           </tbody>
         </table>
-      </details>
+      </div>
 
       <p className="mt-2 text-[8px] text-gray-500">{HANDWRITE_NOTE}</p>
       <p className="mt-1 text-right text-[8px] text-gray-500">{PAPER_FOOTER}</p>

@@ -18,6 +18,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -215,6 +219,7 @@ export function PriorGiftHistoryModal({
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<PriorGiftCandidate[]>([]);
   const [warnings, setWarnings] = useState<LookupWarning[]>([]);
+  const [warningsOpen, setWarningsOpen] = useState(false);
 
   // 모달 오픈 시점에만 fetch — setState는 모두 Promise 콜백 내부에서 (cascading render 방지)
   useEffect(() => {
@@ -362,19 +367,26 @@ export function PriorGiftHistoryModal({
               )}
 
               {warnings.length > 0 && (
-                <details className="rounded-md border border-amber-200 bg-amber-50/40 p-3">
-                  <summary className="text-xs font-semibold text-amber-700 cursor-pointer">
-                    ⚠️ 제외된 이력 {warnings.length}건 (펼침)
-                  </summary>
-                  <ul className="mt-2 space-y-1 text-[11px] text-amber-700">
-                    {warnings.slice(0, 20).map((w, i) => (
-                      <li key={`${w.calculationId}-${i}`}>• {w.message}</li>
-                    ))}
-                    {warnings.length > 20 && (
-                      <li className="text-amber-600">(외 {warnings.length - 20}건)</li>
-                    )}
-                  </ul>
-                </details>
+                <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3">
+                  <button
+                    type="button"
+                    onClick={() => setWarningsOpen((o) => !o)}
+                    aria-expanded={warningsOpen}
+                    className={expandToggleClass("amber")}
+                  >
+                    {expandToggleLabel(warningsOpen)} · ⚠️ 제외된 이력 {warnings.length}건
+                  </button>
+                  {warningsOpen && (
+                    <ul className="mt-2 space-y-1 text-[11px] text-amber-700">
+                      {warnings.slice(0, 20).map((w, i) => (
+                        <li key={`${w.calculationId}-${i}`}>• {w.message}</li>
+                      ))}
+                      {warnings.length > 20 && (
+                        <li className="text-amber-600">(외 {warnings.length - 20}건)</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
               )}
             </>
           )}
