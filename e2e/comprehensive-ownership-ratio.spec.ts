@@ -214,7 +214,7 @@ test.describe("종합부동산세 공유지분(사례3) — 폼→결과 전수 
  * comprehensive-reduction-rate.spec.ts의 R-1 최소 재검증.
  */
 test.describe("사례2 감면율 회귀 (지분율 위젯 추가 후)", () => {
-  test("REGR-2: 사례2 감면율 25% — 납부할세액 294,924 + bullet 존재 (지분율 위젯 추가 후 회귀)", async ({
+  test("REGR-2: 사례2 감면율 25% — 납부할세액 294,923 + bullet 존재 (지분율 위젯 추가 후 회귀)", async ({
     page,
   }) => {
     test.setTimeout(120_000);
@@ -243,7 +243,7 @@ test.describe("사례2 감면율 회귀 (지분율 위젯 추가 후)", () => {
     await page.getByPlaceholder("0").first().fill("900000000");
     await calcAndWait(page);
 
-    await expect(page.getByText(/294,924/).first()).toBeVisible({
+    await expect(page.getByText(/294,923/).first()).toBeVisible({
       timeout: 30_000,
     });
 
@@ -258,8 +258,8 @@ test.describe("사례2 감면율 회귀 (지분율 위젯 추가 후)", () => {
     await expect(card).toContainText("과세 공시가격");
     await expect(card).toContainText("7.5억원");
 
-    // Step6: 납부할세액 294,924
-    await expect(page.getByTestId("payable-step6")).toContainText("294,924원");
+    // Step6: 납부할세액 294,923
+    await expect(page.getByTestId("payable-step6")).toContainText("294,923원");
 
     // 지분율 bullet 미노출 (지분율 100% = 단독)
     await expect(page.getByTestId("payable-step1-ownership")).not.toBeVisible();

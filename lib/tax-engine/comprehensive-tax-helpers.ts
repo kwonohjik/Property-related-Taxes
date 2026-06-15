@@ -8,7 +8,7 @@
  */
 
 import { differenceInYears } from "date-fns";
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { safeMultiplyThenDivide, safeMulDivRound } from "./tax-utils";
 import {
   COMPREHENSIVE_CONST,
   COMPREHENSIVE_EXCL_CONST,
@@ -249,9 +249,8 @@ export function calculatePropertyTaxCreditProration(
   }
 
   const ratio = Math.min(numeratorStdTaxEq / denominatorStdTaxSum, 1.0);
-  const creditRaw = Math.floor(
-    safeMultiplyThenDivide(propertyTaxAmount, numeratorStdTaxEq, denominatorStdTaxSum),
-  );
+  // ②ⓓ 공제할 재산세액 = round-half-up(ⓐ × ⑤ / ⑥) — §4의3 절사 미규정, 교재·실무 반올림
+  const creditRaw = safeMulDivRound(propertyTaxAmount, numeratorStdTaxEq, denominatorStdTaxSum);
   const creditAmount = Math.min(creditRaw, calculatedTax);
 
   return {
