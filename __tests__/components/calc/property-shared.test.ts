@@ -84,6 +84,37 @@ describe("주택 previousYearTax 미전송 (§122 단서, R1 회귀)", () => {
   });
 });
 
+describe("주택 직전연도 공시가격 전송 — 과세표준상한제 §110③", () => {
+  it("주택: 값>0 입력 시 priorYearPublishedPrice 전송", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({
+        objectType: "housing",
+        publishedPrice: "700,000,000",
+        priorYearPublishedPrice: "500,000,000",
+      }),
+    );
+    expect(body.priorYearPublishedPrice).toBe(500_000_000);
+  });
+
+  it("주택: 미입력 시 priorYearPublishedPrice 미전송 (상한 미적용)", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({ objectType: "housing", publishedPrice: "700,000,000" }),
+    );
+    expect(body.priorYearPublishedPrice).toBeUndefined();
+  });
+
+  it("건축물: 직전연도 공시가격 입력해도 미전송 (주택 전용)", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({
+        objectType: "building",
+        publishedPrice: "700,000,000",
+        priorYearPublishedPrice: "500,000,000",
+      }),
+    );
+    expect(body.priorYearPublishedPrice).toBeUndefined();
+  });
+});
+
 describe("분리과세 옵션 정리 (R1 회귀)", () => {
   it("엔진 비해당 옵션(대중·간이 골프장, 기타) 미노출 — 선택 시 무조건 422였던 경로", () => {
     const values = SEPARATED_TYPE_OPTIONS.map((o) => o.value);

@@ -63,6 +63,12 @@ export interface PropertyTaxInput {
   /** 공시가격 (원) — 주택공시가격·개별공시지가·기준시가 등 */
   publishedPrice: number;
 
+  /**
+   * 직전연도 시가표준액(공시가격, 원) — 주택 과세표준상한제(지방세법 §110③) 계산용.
+   * 미입력 시 상한 미작동(시행령 §109의2① 단서). objectType==="housing" 외에는 무시.
+   */
+  priorYearPublishedPrice?: number;
+
   /** 1세대 1주택 특례 적용 여부 (지방세법 §111③) — 주택 전용 */
   isOneHousehold?: boolean;
 
@@ -175,8 +181,20 @@ export interface PropertyTaxResult {
   publishedPrice: number;
   /** 공정시장가액비율 (주택 0.60 / 토지·건축물 0.70) */
   fairMarketRatio: number;
-  /** 과세표준 = 공시가격 × 공정시장가액비율 → 천원 절사 (지방세법 §110) */
+  /** 과세표준 = 공시가격 × 공정시장가액비율 → 천원 절사 (지방세법 §110). 주택은 §110③ 과세표준상한 적용 후 값 */
   taxBase: number;
+
+  // ── 과세표준상한 (주택, 지방세법 §110③ — housing 적용 시에만) ──
+  /** 과세표준상한 적용 전 당해연도 과세표준 (= calcTaxBase 원값) */
+  taxBaseBeforeCap?: number;
+  /** §110③ 과세표준상한 실제 적용 여부 (상한액 < 당해 과세표준일 때만 true) */
+  taxBaseCapApplied?: boolean;
+  /** 과세표준상한액 = 직전연도 과세표준 상당액 + (당해 과세표준 × 5%) */
+  taxBaseCapLimit?: number;
+  /** 직전연도 과세표준 상당액 = 직전 시가표준액 × 당해 공정시장가액비율 (시행령 §109의2①) */
+  priorYearTaxBaseEquivalent?: number;
+  /** 과세표준상한율 (시행령 §109의2② — 0.05) */
+  taxBaseCapRate?: number;
 
   // ── 산출세액 ──
   /** 적용 세율 (소수, 예: 0.001 = 0.1%) */

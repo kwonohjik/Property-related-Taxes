@@ -1,0 +1,67 @@
+/**
+ * 재산세 주택 과세표준상한제 (§110③) E2E
+ *
+ * 대상:
+ * 1. 주택 당해 7억 + 직전 5억 → "과세표준상한 적용" 카드 + 과세표준 321,000,000
+ * 2. 주택 당해 7억 + 직전 미입력 → 상한 카드 미표시
+ * 3. 건축물 선택 → 직전연도 공시가격 입력란 미노출
+ *
+ * 실행: E2E_PORT=3100 npx playwright test e2e/property-tax-base-cap.spec.ts
+ * (비-worktree 기본 포트 3000: npx playwright test e2e/property-tax-base-cap.spec.ts)
+ */
+
+import { test, expect, type Page } from "@playwright/test";
+
+/** 라벨 텍스트를 가진 컨테이너 내부의 숫자 input 반환 */
+function amountInputByLabel(page: Page, labelText: string | RegExp) {
+  return page
+    .locator("div")
+    .filter({ hasText: labelText })
+    .locator('input[inputmode="numeric"]')
+    .last();
+}
+
+async function calcAndWait(page: Page) {
+  const calcResponse = page.waitForResponse(
+    (r) => r.url().includes("/api/calc/property") && r.request().method() === "POST",
+    { timeout: 30_000 },
+  );
+  await page.getByRole("button", { name: /재산세 계산하기/ }).click();
+  const resp = await calcResponse;
+  expect(resp.ok(), `재산세 계산 API 비정상 ${resp.status()}`).toBe(true);
+  await expect(page.getByText("총 납부세액").first()).toBeVisible({ timeout: 30_000 });
+}
+
+test.describe("재산세 주택 과세표준상한제 §110③", () => {
+  test("1: 당해 7억 + 직전 5억 → 과세표준상한 적용 (3.21억)", async ({ page }) => {
+    await page.goto("/calc/property-tax");
+
+    // objectType 기본 housing. 공시가격 7억 (StandardPriceInput 총액)
+    await amountInputByLabel(page, /^공시가격/).fill("700000000");
+    // 직전연도 공시가격 5억 (신규 필드)
+    await amountInputByLabel(page, /직전연도 공시가격/).fill("500000000");
+
+    await page.getByRole("button", { name: /^다음$/ }).click();
+    await calcAndWait(page);
+
+    await expect(page.getByText(/과세표준상한 적용/)).toBeVisible();
+    await expect(page.getByText("321,000,000").first()).toBeVisible();
+  });
+
+  test("2: 당해 7억 + 직전 미입력 → 상한 카드 미표시", async ({ page }) => {
+    await page.goto("/calc/property-tax");
+    await amountInputByLabel(page, /^공시가격/).fill("700000000");
+
+    await page.getByRole("button", { name: /^다음$/ }).click();
+    await calcAndWait(page);
+
+    await expect(page.getByText(/과세표준상한 적용/)).toHaveCount(0);
+  });
+
+  test("3: 건축물 선택 → 직전연도 공시가격 입력란 미노출", async ({ page }) => {
+    await page.goto("/calc/property-tax");
+    await page.getByText("건축물 (비주거용)").click();
+
+    await expect(page.getByText(/직전연도 공시가격/)).toHaveCount(0);
+  });
+});
