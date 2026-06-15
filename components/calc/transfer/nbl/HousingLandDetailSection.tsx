@@ -3,6 +3,7 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -45,6 +46,7 @@ export function HousingLandDetailSection({
       <SectionHeader
         title="주택 부속토지 세부 정보"
         description="§168-12 주택 부속토지 배율 판정"
+        action={<LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />}
       />
 
       <FieldCard label="수도권 여부" badge={badge ?? undefined}>

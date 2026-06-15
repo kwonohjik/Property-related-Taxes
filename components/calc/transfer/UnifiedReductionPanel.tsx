@@ -21,6 +21,7 @@ import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-sto
 import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-reduction";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import {
   expandToggleClass,
   expandToggleLabel,
@@ -72,6 +73,22 @@ interface UnifiedReductionPanelProps {
 }
 
 // 순수 기본값·토글 헬퍼는 UnifiedReductionPanel-defaults.ts로 분리 (800줄 정책, 2026-06-11)
+
+// 카테고리별 검증 통과 조문 배지 (펼침 children 상단 — 헤더 button 내부는 링크 불가)
+const CATEGORY_LAW_BADGES: Record<
+  ReductionCategory,
+  { legalBasis: string; label: string }[]
+> = {
+  rental: [
+    { legalBasis: "조세특례제한법 §97", label: "§97 장기임대주택" },
+    { legalBasis: "조세특례제한법 §97의3", label: "§97의3" },
+    { legalBasis: "조세특례제한법 §97의4", label: "§97의4" },
+    { legalBasis: "조세특례제한법 §97의5", label: "§97의5" },
+  ],
+  new_housing: [{ legalBasis: "조세특례제한법 §99", label: "§99 시리즈 신축주택" }],
+  unsold_housing: [{ legalBasis: "조세특례제한법 §98", label: "§98 시리즈 미분양주택" }],
+  standalone: [],
+};
 
 // ============================================================================
 // 시한 검증 컨텍스트
@@ -441,6 +458,13 @@ function GroupCategorySection({
       </button>
       {isOpen && (
         <div className="border-t border-border px-4 py-3 space-y-2">
+          {CATEGORY_LAW_BADGES[category].length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {CATEGORY_LAW_BADGES[category].map((b) => (
+                <LawArticleModal key={b.legalBasis} legalBasis={b.legalBasis} label={b.label} />
+              ))}
+            </div>
+          )}
           {/* Round 9 (2026-05-06): 매매계약일 입력 — 펼침 활성화 시에만 노출.
               3개 그룹(장기임대·신축·미분양) 펼침 영역 상단에 표시되며, 자산-수준 단일 필드를 공유.
               어느 그룹에서 입력하든 즉시 동기화. */}

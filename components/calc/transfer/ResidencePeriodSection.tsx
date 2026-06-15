@@ -10,6 +10,7 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { Plus, Trash2 } from "lucide-react";
@@ -73,6 +74,10 @@ export function ResidencePeriodSection({
       <p className="text-xs text-violet-700">
         거주기간은 1세대1주택 비과세·표2 장특공제 판정에 사용됩니다.
       </p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="소득세법 §89①3호" label="§89①3호 비과세" />
+        <LawArticleModal legalBasis="소득세법 §95②" label="§95② 표2 장특공제" />
+      </div>
       <ToggleCard
         variant="card"
         tone="violet"

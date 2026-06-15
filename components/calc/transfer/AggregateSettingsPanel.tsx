@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import {
   Select,
@@ -59,7 +60,10 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
 
       {/* 기본공제 배분 전략 */}
       <div className="space-y-3">
-        <Label>기본공제 배분 전략 (소득세법 §103)</Label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Label>기본공제 배분 전략 (소득세법 §103)</Label>
+          <LawArticleModal legalBasis="소득세법 §103" label="§103 기본공제" />
+        </div>
         <RadioGroup
           value={form.basicDeductionAllocation}
           onValueChange={(v) =>

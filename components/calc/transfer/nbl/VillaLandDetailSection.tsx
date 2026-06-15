@@ -3,6 +3,7 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -20,6 +21,7 @@ export function VillaLandDetailSection({
       <SectionHeader
         title="별장 부속토지 세부 정보"
         description="§168-13 별장 판정"
+        action={<LawArticleModal legalBasis="소득세법 시행령 §168의13" label="§168의13 별장" />}
       />
 
       <FieldCard label="별장 사용기간">

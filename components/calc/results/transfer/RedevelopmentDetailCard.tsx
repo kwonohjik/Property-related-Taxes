@@ -18,6 +18,7 @@
  */
 
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 interface Props {
   detail: RedevelopmentResult;
@@ -78,6 +79,27 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <div className="text-xs text-violet-700">
             분양가 <span className="font-mono font-semibold">{fmt(salePriceTotal)}</span>
           </div>
+        )}
+      </div>
+
+      {/* 근거 조문 배지행 (분기별) */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {successorMemberApplied ? (
+          <LawArticleModal legalBasis="소득세법 시행령 §162 ① 4호" label="시행령 §162①4호" />
+        ) : isRightSubject ? (
+          <>
+            <LawArticleModal legalBasis="소득세법 시행령 §166 ①" label="시행령 §166①" />
+            <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 단서" />
+            <LawArticleModal legalBasis="소득세법 §94 ① 2호" label="§94①2호" />
+            <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호 가목" />
+          </>
+        ) : (
+          <>
+            <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
+            <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
+            <LawArticleModal legalBasis="소득세법 §95 ③" label="§95③" />
+            <LawArticleModal legalBasis="소득세법 시행령 §160" label="시행령 §160" />
+          </>
         )}
       </div>
 

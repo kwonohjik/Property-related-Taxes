@@ -14,6 +14,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold988Form = Extract<AssetReductionForm, { type: "unsold_98_8" }>;
@@ -48,6 +49,12 @@ function SectionShell({
 export function Unsold988InputForm({ value, onChange }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="조세특례제한법 §98의8①" label="§98의8① 준공후미분양 차감" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §98의7" label="조특령 §98의7" />
+        <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
+      </div>
+
       <SectionShell num="①" title="최초 매매계약 정보" tone="sky">
         <div>
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>

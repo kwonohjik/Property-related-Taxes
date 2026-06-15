@@ -3,6 +3,7 @@
 import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import {
   Select,
   SelectContent,
@@ -55,6 +56,7 @@ export function GracePeriodSection({
       <SectionHeader
         title="부득이한 사유 유예기간 (§168-14①)"
         description="해당 기간은 사업용 사용 기간에 가산됩니다."
+        action={<LawArticleModal legalBasis="소득세법 시행령 §168의14①" label="§168의14① 유예" />}
       />
 
       {periods.length === 0 && (

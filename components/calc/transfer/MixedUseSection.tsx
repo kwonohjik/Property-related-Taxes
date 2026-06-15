@@ -9,6 +9,7 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { MixedUseAreaInputs } from "./mixed-use/MixedUseAreaInputs";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
 import { MixedUseResidencyInput } from "./mixed-use/MixedUseResidencyInput";
@@ -39,6 +40,7 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
         tone="amber"
         title="겸용주택 분리계산"
         description="주택+상가 복합건물 (§160①단서)"
+        trailing={<LawArticleModal legalBasis="소득세법 시행령 §160①" label="§160①단서 겸용주택" />}
         checked={!!asset.isMixedUseHouse}
         onCheckedChange={(checked) => {
           onChange({
@@ -53,6 +55,7 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
         tone="amber"
         title="보유 중 일부 용도변경"
         description="취득시 자산 구성이 양도시와 다른 경우 (§166⑥ + 집행기준 99-164-10)"
+        trailing={<LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />}
         checked={!!asset.hasPartialUsageChange}
         disabled={!asset.isMixedUseHouse}
         disabledReason="겸용주택 분리계산 활성화 시 사용 가능"
@@ -157,6 +160,7 @@ export function MixedUseExpandedPanel({
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">5</span>
           <p className="text-xs font-semibold text-rose-700">부수토지 배율 지역</p>
+          <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
         </div>
         <ToggleCard
           tone="rose"

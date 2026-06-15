@@ -10,6 +10,7 @@
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm, CarryoverEstimationMode } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -91,6 +92,9 @@ export function CarryoverEstimationSection({
             <br />
             개산공제 = 취득시 기준시가 × 3% (소득세법 시행령 §163⑥)
           </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
+          </div>
 
           <FieldCard
             label="취득시 기준시가"

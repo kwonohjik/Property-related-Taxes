@@ -14,6 +14,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 interface Props {
   asset: AssetForm;
@@ -47,13 +48,17 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
             §47
           </span>
           <p className="text-xs font-semibold text-violet-800">
             10년 이내 사전증여 (상증법 §47② 합산·§58 기납부세액공제)
           </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="상속세및증여세법 §47 ②" label="상증법 §47②" />
+            <LawArticleModal legalBasis="상속세및증여세법 §58" label="상증법 §58" />
+          </div>
         </div>
         <button
           type="button"

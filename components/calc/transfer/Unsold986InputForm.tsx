@@ -13,6 +13,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold986Form = Extract<AssetReductionForm, { type: "unsold_98_6" }>;
@@ -49,6 +50,12 @@ export function Unsold986InputForm({ value, onChange }: Props) {
   const isBuyerRented = value.hoType986 === "buyer_rented";
   return (
     <div className="mt-2 ml-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="조세특례제한법 §98의6①" label="§98의6① 준공후미분양 50%" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §98의5" label="조특령 §98의5" />
+        <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
+      </div>
+
       <SectionShell num="①" title="적용 유형" tone="sky">
         <RadioCardGroup<Unsold986Form["hoType986"]>
           name="unsold986-ho"

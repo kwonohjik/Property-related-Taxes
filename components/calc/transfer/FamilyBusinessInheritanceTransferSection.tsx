@@ -27,6 +27,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { FamilyBusinessInheritanceHistoryModal } from "./FamilyBusinessInheritanceHistoryModal";
 import type { FamilyBusinessInheritancePrefill } from "@/lib/calc/family-business-inheritance-lookup";
@@ -142,6 +143,14 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
     >
       {isOn && fb && (
         <div className="space-y-3 mt-2">
+
+          {/* 의제 취득가액 근거 조문 */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="소득세법 §97의2 ④" label="§97의2④" />
+            <LawArticleModal legalBasis="소득세법 시행령 §163의2 ③" label="시행령 §163의2③" />
+            <LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />
+            <LawArticleModal legalBasis="상속세및증여세법 §18의2" label="상증법 §18의2" />
+          </div>
 
           {/* K10 — 상속세 이력에서 prefill */}
           <div className="flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2">

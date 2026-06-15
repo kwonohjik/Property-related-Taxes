@@ -10,6 +10,7 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -42,6 +43,7 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
       tone="violet"
       title="조특법 감면주택 보유 — 주택 수 제외 (§89①3호 의제)"
       description="§98 시리즈·§99·§99의2 감면주택을 보유 중 다른 주택을 양도하는 경우, 1세대1주택 비과세 판정 주택 수에서 감면주택을 제외합니다. 다주택 중과세율 주택 수는 변하지 않습니다."
+      trailing={<LawArticleModal legalBasis="소득세법 §89①3호" label="§89①3호 비과세" />}
       checked={enabled}
       onCheckedChange={(on) =>
         onChange(

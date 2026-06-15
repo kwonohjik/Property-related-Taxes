@@ -23,6 +23,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -74,6 +75,11 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
       description="취득일 당시 실거래가 확인 불가 시 기준시가 비율로 환산 (소득세법 §114⑦, 시행령 §176조의2②2호)"
     >
       <div className="space-y-4">
+        {/* 환산취득가 근거 조문 (§164⑧ 환산 관련은 관례 검토중 — 텍스트만 유지) */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 §114 ⑦" label="§114⑦" />
+          <LawArticleModal legalBasis="소득세법 시행령 §176조의2 ② 2호" label="§176의2②2호" />
+        </div>
         {/* 호별고시 시점 분기 */}
         <div>
           <p className="mb-2 text-xs font-semibold text-amber-700">취득 시점 구분</p>

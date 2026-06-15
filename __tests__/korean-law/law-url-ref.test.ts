@@ -70,6 +70,35 @@ describe("parseLawRef — 단일 ref (회귀 보존)", () => {
     });
   });
 
+  // ── 양도세 약칭·표기 (2026-06-15, feat/transfer-law-citation-popup) ──
+  it("TC-T1 소법 §97의2④2호 → 소득세법 (약칭 보강)", () => {
+    expect(parseLawRef("소법 §97의2④2호")).toEqual({
+      lawName: "소득세법",
+      articleNum: "97의2",
+    });
+  });
+
+  it("TC-T2 소령 §166⑥ → 소득세법 시행령 (약칭 보강)", () => {
+    expect(parseLawRef("소령 §166⑥")).toEqual({
+      lawName: "소득세법 시행령",
+      articleNum: "166",
+    });
+  });
+
+  it("TC-T3 소득세법시행령 §168조의14 → §+조 중복표기 흡수", () => {
+    expect(parseLawRef("소득세법시행령 §168조의14")).toEqual({
+      lawName: "소득세법 시행령",
+      articleNum: "168의14",
+    });
+  });
+
+  it("TC-T6 조특령 §98의5② → 조세특례제한법 시행령", () => {
+    expect(parseLawRef("조특령 §98의5②")).toEqual({
+      lawName: "조세특례제한법 시행령",
+      articleNum: "98의5",
+    });
+  });
+
   // ── 현행 실패 실증 (Pre-Do anchor 핵심) ──
   it("C-7 상증령 §15 → 시행령 정식명 (현행 실패 예상)", () => {
     expect(parseLawRef("상증령 §15")).toEqual({
@@ -99,6 +128,11 @@ describe("parseLawRefsForModal — 복합 인용 분해", () => {
     expect(parseLawRefsForModal("상증규 §17의3⑤ + §56⑤")).toEqual([
       { lawName: "상속세및증여세법 시행규칙", articleNum: "17의3" },
     ]);
+  });
+
+  it("TC-T5 법령명 없는 단독 §104의3 → skip(빈 배열, 회귀 보존)", () => {
+    // 양도세는 법령명 생략 단독 § 흔함 — 링크하려면 legalBasis에 법령명 명시 필요
+    expect(parseLawRefsForModal("§104의3")).toEqual([]);
   });
 });
 

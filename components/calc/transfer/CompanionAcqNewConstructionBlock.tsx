@@ -14,6 +14,7 @@
  */
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 interface BlockProps {
   fixedAcquisitionPrice: string;
@@ -30,6 +31,9 @@ export function CompanionAcqNewConstructionBlock(props: BlockProps) {
         required
         hint="자기가 신축한 건축물의 실제 신축비용 총액 (건축비·재료비·노무비 등). 토지 취득가액은 별도 자산으로 입력"
       />
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="소득세법 §97 ① 1호" label="§97①1호" />
+      </div>
     </div>
   );
 }

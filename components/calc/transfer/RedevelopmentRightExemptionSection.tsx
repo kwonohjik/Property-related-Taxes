@@ -28,6 +28,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 interface Props {
   asset: AssetForm;
@@ -99,6 +100,11 @@ export function RedevelopmentRightExemptionSection({
         <p className="mt-1">
           1세대1입주권 비과세 요건(§89①4호 가목)은 아래 카드에서 확인하세요. 비과세 적용 시 전액 비과세이며, 양도가액이 12억을 초과하면 초과분만 과세됩니다.
         </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 단서" />
+          <LawArticleModal legalBasis="소득세법 §94 ① 2호" label="§94①2호" />
+          <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호 가목" />
+        </div>
       </div>
 
       {/* §⑥ violet: 1세대1입주권 비과세 카드 */}
@@ -106,6 +112,11 @@ export function RedevelopmentRightExemptionSection({
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">⑥</span>
           <p className="text-xs font-semibold text-violet-700">1세대1입주권 비과세 요건 (§89①4호 가목)</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호 가목" />
+          <LawArticleModal legalBasis="소득세법 §89 ① 3호" label="§89①3호 가목" />
+          <LawArticleModal legalBasis="소득세법 시행령 §154" label="시행령 §154" />
         </div>
 
         <ToggleCard
@@ -161,6 +172,10 @@ export function RedevelopmentRightExemptionSection({
                   비과세 요건 충족 시 전액 비과세가 아닌 12억 초과분에 대해 과세됩니다 (§95③ + 시행령 §160 준용).
                   안분 상세는 결과 화면에서 확인하세요.
                 </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <LawArticleModal legalBasis="소득세법 §95 ③" label="§95③" />
+                  <LawArticleModal legalBasis="소득세법 시행령 §160" label="시행령 §160" />
+                </div>
               </div>
             )}
 
@@ -179,7 +194,7 @@ export function RedevelopmentRightExemptionSection({
             {warningState.holdingWarning && (
               <p>
                 · 보유 월수 {asset.redevPriorHouseHoldingMonths}개월 — §89①3호 가목 보유 24개월 미만.
-                비과세 적용 시 사후 가산세(§115 가산세 + 국세기본법 §47의2~5 무신고·과소신고 가산세) 리스크가 있습니다.
+                비과세 적용 시 사후 가산세(국세기본법 §47의2~5 무신고·과소신고 가산세) 리스크가 있습니다.
               </p>
             )}
             {warningState.residenceWarning && (

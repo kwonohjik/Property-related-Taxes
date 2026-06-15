@@ -128,6 +128,10 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           <span className="font-semibold"> 다음 &ldquo;보유 상황&rdquo; 단계의 &ldquo;세대·주택 현황&rdquo;</span> 입력(1세대 여부 + 보유 주택 수 1채)에 따라 결정됩니다.
           1세대1주택이 아니면 분기별 양도차익 전체가 과세대상입니다 (12억 안분 미적용).
         </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 §95 ③" label="§95③" />
+          <LawArticleModal legalBasis="소득세법 시행령 §160" label="시행령 §160" />
+        </div>
       </div>
       )}
 
@@ -136,6 +140,11 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
           <p className="text-xs font-semibold text-sky-700">양도 대상 (시행령 §166)</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 시행령 §166" label="시행령 §166" />
+          <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 단서" />
+          <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호" />
         </div>
         <RadioCardGroup
           name={`redevSubject-${asset.assetId}`}
@@ -214,6 +223,12 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">4</span>
           <p className="text-xs font-semibold text-violet-700">재개발 일정·금액 (시행령 §166②1호)</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
+          <LawArticleModal legalBasis="소득세법 시행령 §166 ④" label="시행령 §166④" />
+          <LawArticleModal legalBasis="소득세법 §97 ①" label="§97①" />
+          <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
         </div>
 
         <RadioCardGroup
@@ -442,7 +457,7 @@ function SettlementAnnouncementDateField({
   return (
     <FieldCard
       label="소유권이전 고시일"
-      hint="도시정비법 §86 소유권이전 고시일. 양도일(NTS 집행기준 + 소법 §95④)은 다음날로 자동 산정됩니다."
+      hint="도시정비법 §86 소유권이전 고시일. 양도일(NTS 집행기준 + 시행령 §162①9호)은 다음날로 자동 산정됩니다."
     >
       <div className="space-y-2">
         <DateInput value={announcementDate} onChange={handleAnnouncementChange} />

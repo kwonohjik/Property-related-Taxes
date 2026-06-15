@@ -3,6 +3,7 @@
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface ForestDetailSectionProps {
@@ -19,6 +20,7 @@ export function ForestDetailSection({
       <SectionHeader
         title="임야 세부 정보"
         description="§168-9 임야 판정"
+        action={<LawArticleModal legalBasis="소득세법 시행령 §168의9" label="§168의9 임야" />}
       />
 
       <ToggleCard

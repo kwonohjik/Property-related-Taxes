@@ -4,6 +4,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import {
   Select,
@@ -40,6 +41,7 @@ export function PastureDetailSection({
       <SectionHeader
         title="목장용지 세부 정보"
         description="§168-10 목장용지 판정"
+        action={<LawArticleModal legalBasis="소득세법 시행령 §168의10" label="§168의10 목장용지" />}
       />
 
       <ToggleCard

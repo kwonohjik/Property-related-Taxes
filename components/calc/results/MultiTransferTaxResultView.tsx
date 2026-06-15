@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ArrowRight } from "lucide-react";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { cn } from "@/lib/utils";
 import type {
   AggregateTransferResult,
@@ -128,6 +129,9 @@ function ReductionRecalculationSection({
         <h3 className="text-sm font-medium">
           감면세액 합산 재계산 (조특법 §127의2 + §133)
         </h3>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="조세특례제한법 §133" label="§133 종합한도" />
+        </div>
         <p className="text-xs text-muted-foreground">
           산출세액 × (감면대상 양도소득금액 / 과세표준)으로 재계산한 뒤 유형별 연간 한도를 적용합니다.
         </p>
