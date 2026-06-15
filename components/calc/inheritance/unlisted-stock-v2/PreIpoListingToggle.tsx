@@ -21,6 +21,7 @@
 
 import { useMemo, useState } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -140,6 +141,10 @@ export function PreIpoListingToggle({
         >
           {isOn && value && (
             <div className="space-y-3 mt-2" data-testid="pre-ipo-listing-form">
+              <div className="flex flex-wrap gap-1.5">
+                <LawArticleModal legalBasis="상증법 §63" label="§63②" />
+                <LawArticleModal legalBasis="상증령 §57" label="상증령 §57" />
+              </div>
               {/* ⓪ 준비 유형 (§63②1호/2호) — 날짜 필드 앞 (라벨이 유형 의존) */}
               <div data-testid="pre-ipo-preparation-type">
                 <RadioCardGroup
