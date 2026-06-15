@@ -10,6 +10,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   OBJECT_TYPE_LABELS,
   BUILDING_TYPE_LABELS,
+  FIRE_HAZARD_OPTIONS,
   type FormState,
 } from "./shared";
 
@@ -154,6 +155,21 @@ export function Step0({
             options={BUILDING_TYPE_LABELS.map(([value, label]) => ({ value, label }))}
             value={form.buildingType}
             onChange={(v) => onChange({ buildingType: v })}
+          />
+        </div>
+      )}
+
+      {/* 화재위험 등급 (건축물 전용) — 소방분 중과 §146③2호·2의2호 */}
+      {form.objectType === "building" && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">화재위험 등급 (소방분 지역자원시설세 중과)</label>
+          <RadioCardGroup
+            name="fireHazardClass"
+            tone="rose"
+            layout="stack"
+            options={FIRE_HAZARD_OPTIONS}
+            value={form.fireHazardClass}
+            onChange={(v) => onChange({ fireHazardClass: v })}
           />
         </div>
       )}

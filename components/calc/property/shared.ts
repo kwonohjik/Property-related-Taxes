@@ -21,6 +21,23 @@ export const BUILDING_TYPE_LABELS: [string, string][] = [
   ["factory", "공장 (0.5%)"],
 ];
 
+/** 화재위험 건축물 등급 — 소방분 지역자원시설세 중과 (지방세법 §146③2호·2의2호, 시행령 §138) */
+export const FIRE_HAZARD_OPTIONS: { value: string; label: string; description: string }[] = [
+  { value: "none", label: "일반", description: "화재위험 건축물 아님 (중과 없음)" },
+  {
+    value: "fire_hazard",
+    label: "화재위험 건축물 (소방분 ×2)",
+    description:
+      "주거용 아닌 4~10층·학원·극장·유흥장·숙박·공장·창고·주유소·위험물시설 등 (시행령 §138①)",
+  },
+  {
+    value: "large_fire_hazard",
+    label: "대형 화재위험 건축물 (소방분 ×3)",
+    description:
+      "주거용 아닌 11층↑·대형마트·백화점·호텔·복합상영관·3만㎡↑ 복합건축물 등. 대형 요건 충족 시 선택 (시행령 §138②)",
+  },
+];
+
 export const ZONING_DISTRICT_LABELS: [string, string][] = [
   ["residential", "주거지역"],
   ["commercial", "상업지역"],
@@ -59,6 +76,8 @@ export interface FormState {
   isOneHousehold: boolean;
   isUrbanArea: boolean;
   buildingType: string;
+  /** 화재위험 건축물 등급 — 소방분 중과(§146③2호·2의2호) (건축물 전용) */
+  fireHazardClass: string;
   previousYearTax: string;
   landTaxType: "comprehensive_aggregate" | "separate_aggregate" | "separated" | "";
   saZoningDistrict: string;
@@ -82,6 +101,7 @@ export const INITIAL_FORM: FormState = {
   isOneHousehold: false,
   isUrbanArea: false,
   buildingType: "general",
+  fireHazardClass: "none",
   previousYearTax: "",
   landTaxType: "",
   saZoningDistrict: "",
@@ -161,6 +181,10 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
 
   if (form.objectType === "building") {
     body.buildingType = form.buildingType;
+    // 화재위험 중과 (§146③2호·2의2호) — building + ≠none 만 전송
+    if (form.fireHazardClass && form.fireHazardClass !== "none") {
+      body.fireHazardClass = form.fireHazardClass;
+    }
   }
 
   if (form.objectType === "land" && form.landTaxType) {

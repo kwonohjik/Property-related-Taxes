@@ -7,7 +7,26 @@
 
 import { applyRate } from "./tax-utils";
 import { PROPERTY, PROPERTY_CONST } from "./legal-codes";
-import type { PropertyTaxInput, PropertySurtaxDetail } from "./types/property.types";
+import type {
+  PropertyTaxInput,
+  PropertySurtaxDetail,
+  FireHazardClass,
+} from "./types/property.types";
+
+/**
+ * 화재위험 등급 → 소방분 중과 배율 (지방세법 §146③2호·2의2호, 시행령 §138).
+ * 단일 진실 — UI·결과뷰는 이 헬퍼/배율을 import (dual-truth 차단).
+ */
+export function resolveFireHazardMultiplier(fireHazardClass?: FireHazardClass): number {
+  switch (fireHazardClass) {
+    case "large_fire_hazard":
+      return PROPERTY_CONST.LARGE_FIRE_HAZARD_MULTIPLIER; // 3
+    case "fire_hazard":
+      return PROPERTY_CONST.FIRE_HAZARD_MULTIPLIER; // 2
+    default:
+      return 1; // none / undefined
+  }
+}
 
 /** 소방분 지역자원시설세 초과누진 구간 */
 interface ResourceTaxBracket {
@@ -56,6 +75,7 @@ function calcRegionalResourceTax(standardPrice: number): number {
  * @param publishedPrice 공시가격 (지역자원시설세 계산 기준 — 건축물)
  * @param objectType     물건 유형
  * @param isUrbanArea    도시지역 여부 (도시지역분 과세)
+ * @param fireHazardClass 화재위험 등급 (building 전용 — 소방분 ×2/×3 중과, §146③2호·2의2호)
  * @returns { surtax, totalSurtax, legalBasis }
  */
 export function calcSurtax(
@@ -64,6 +84,7 @@ export function calcSurtax(
   publishedPrice: number,
   objectType: PropertyTaxInput["objectType"],
   isUrbanArea: boolean,
+  fireHazardClass?: FireHazardClass,
 ): {
   surtax: PropertySurtaxDetail;
   totalSurtax: number;
@@ -80,16 +101,24 @@ export function calcSurtax(
     ? applyRate(taxBase, PROPERTY_CONST.URBAN_AREA_TAX_RATE)
     : 0;
 
-  // 지역자원시설세 = 건축물 시가표준액 기준 누진 (건축물만 해당)
-  const regionalResourceTax =
+  // 지역자원시설세 = §146③1호 base(건축물 시가표준액 누진) × 화재위험 중과 배율(§146③2호·2의2호)
+  const baseFireTax =
     objectType === "building"
       ? Math.max(0, calcRegionalResourceTax(publishedPrice))
       : 0;
+  const fireHazardMultiplier =
+    objectType === "building" ? resolveFireHazardMultiplier(fireHazardClass) : 1;
+  const regionalResourceTax = baseFireTax * fireHazardMultiplier; // 정수 곱 — floor 불요
 
   const surtax: PropertySurtaxDetail = {
     localEducationTax,
     urbanAreaTax,
     regionalResourceTax,
+    // building + 중과(×2/×3) 시에만 echo 노출 (none·비건축물은 undefined → 결과 카드 게이트)
+    ...(objectType === "building" && fireHazardMultiplier > 1 && {
+      regionalResourceTaxBeforeSurcharge: baseFireTax,
+      fireHazardMultiplier,
+    }),
   };
 
   const totalSurtax = localEducationTax + urbanAreaTax + regionalResourceTax;
@@ -97,6 +126,8 @@ export function calcSurtax(
   const legalBasis: string[] = [PROPERTY.LOCAL_EDUCATION_TAX];
   if (isUrbanArea) legalBasis.push(PROPERTY.URBAN_AREA_TAX);
   if (objectType === "building") legalBasis.push(PROPERTY.REGIONAL_RESOURCE_TAX);
+  if (objectType === "building" && fireHazardMultiplier > 1)
+    legalBasis.push(PROPERTY.FIRE_HAZARD_SURCHARGE);
 
   return { surtax, totalSurtax, legalBasis };
 }

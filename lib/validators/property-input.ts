@@ -45,6 +45,11 @@ export const propertyTaxInputSchema = z
       .enum(["general", "golf_course", "luxury", "factory"])
       .optional(),
 
+    /** 화재위험 건축물 등급 — 소방분 중과(§146③2호·2의2호, objectType==="building" 시 유효) */
+    fireHazardClass: z
+      .enum(["none", "fire_hazard", "large_fire_hazard"])
+      .optional(),
+
     /** 전년도 재산세 납부세액 (원, 세부담상한 계산용) */
     previousYearTax: z
       .number()
@@ -127,6 +132,18 @@ export const propertyTaxInputSchema = z
         code: z.ZodIssueCode.custom,
         path: ["buildingType"],
         message: "buildingType은 objectType이 'building'일 때만 사용합니다.",
+      });
+    }
+    // fireHazardClass는 objectType==="building" 일 때만 유효 (화재위험 중과 §146③2호·2의2호)
+    if (
+      data.fireHazardClass &&
+      data.fireHazardClass !== "none" &&
+      data.objectType !== "building"
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["fireHazardClass"],
+        message: "fireHazardClass는 objectType이 'building'일 때만 적용됩니다.",
       });
     }
     // isOneHousehold는 objectType==="housing" 일 때만 유효
