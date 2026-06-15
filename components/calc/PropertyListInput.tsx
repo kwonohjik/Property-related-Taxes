@@ -10,7 +10,7 @@
  * - SelectOnFocusProvider 전역 적용으로 개별 onFocus 추가 불필요
  */
 
-import { parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount, formatKRW, CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -209,6 +209,66 @@ function PropertyCard({
           </p>
         </div>
       </div>
+
+      {/* ⑤ 사례6: 건물·부속토지 소유자 분리 (시가표준액 비율 안분) — 공시가격·지분율 직후 */}
+      <ToggleCard
+        tone="amber"
+        title="건물·부속토지 소유자 분리"
+        description="주택의 건물과 부속토지 소유자가 다른 경우(부속토지만 또는 건물만 소유), 공시가격을 건물·토지 시가표준액 비율로 안분합니다 (종부세법 §8④1호)"
+        checked={property.appurtenantSplitEnabled}
+        onCheckedChange={(v) => onUpdate({ appurtenantSplitEnabled: v })}
+      >
+        <div className="space-y-3">
+          {/* 소유 부분 */}
+          <RadioCardGroup<"land" | "building">
+            name={`appurtenant-part-${property.id}`}
+            tone="amber"
+            layout="inline"
+            value={(property.appurtenantOwnedPart as "land" | "building") || "land"}
+            onChange={(v) => onUpdate({ appurtenantOwnedPart: v })}
+            options={[
+              { value: "land", label: "토지만 소유", testId: `appurtenant-land-${property.id}` },
+              { value: "building", label: "건물만 소유", testId: `appurtenant-building-${property.id}` },
+            ]}
+          />
+          {/* 당해연도 시가표준액 */}
+          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+            <p className="text-xs font-semibold text-amber-700">당해연도 시가표준액</p>
+            <div className="grid grid-cols-2 gap-3">
+              <CurrencyInput label="토지" value={property.landStdValue} onChange={(v) => onUpdate({ landStdValue: v })} hideUnit />
+              <CurrencyInput label="건물" value={property.buildingStdValue} onChange={(v) => onUpdate({ buildingStdValue: v })} hideUnit />
+            </div>
+          </div>
+          {/* 직전연도 시가표준액 (세부담상한 자동계산용) */}
+          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+            <p className="text-xs font-semibold text-amber-700">
+              직전연도 시가표준액 <span className="font-normal text-muted-foreground">(세부담상한 자동계산 시)</span>
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <CurrencyInput label="토지" value={property.priorLandStdValue} onChange={(v) => onUpdate({ priorLandStdValue: v })} hideUnit />
+              <CurrencyInput label="건물" value={property.priorBuildingStdValue} onChange={(v) => onUpdate({ priorBuildingStdValue: v })} hideUnit />
+            </div>
+          </div>
+          {/* 안분비율 자동 표시 — 양 시가표준액 >0 시만 (0-division 가드) */}
+          {(() => {
+            const land = parseAmount(property.landStdValue);
+            const bldg = parseAmount(property.buildingStdValue);
+            const total = land + bldg;
+            if (total <= 0) return null;
+            const ownLand = (property.appurtenantOwnedPart || "land") === "land";
+            const num = ownLand ? land : bldg;
+            const pct = ((num / total) * 100).toFixed(2);
+            return (
+              <p
+                className="text-xs text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-3 py-2"
+                data-testid={`appurtenant-ratio-${property.id}`}
+              >
+                안분비율: {pct}% ({ownLand ? "토지" : "건물"} {formatKRW(num)} / 전체 {formatKRW(total)})
+              </p>
+            );
+          })()}
+        </div>
+      </ToggleCard>
 
       {/* 전용면적 + 토지 과세면적 + 수도권 여부 */}
       <div className="grid grid-cols-2 gap-3">

@@ -54,8 +54,8 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
         .nth(1)
         .selectOption("non_metro");
 
-      // 주택2 §8④ ToggleCard ON (두 번째 switch — 주택2 카드)
-      await page.getByRole("switch").nth(1).click();
+      // 주택2 §8④ ToggleCard ON (마지막 주택의 마지막 switch — 분리 토글 추가에 견고)
+      await page.getByRole("switch").last().click();
       // 지방 저가주택 (§8④4호) 라디오 선택
       await page.getByRole("radio", { name: /지방 저가주택/ }).check();
 
@@ -105,8 +105,8 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
         .locator('select:has(option[value="non_metro"])')
         .nth(1)
         .selectOption("non_metro");
-      // 주택2 §8④ ON (Step2 두 번째 switch) → 지방저가
-      await page.getByRole("switch").nth(1).click();
+      // 주택2 §8④ ON (마지막 주택의 마지막 switch — 분리 토글 추가에 견고) → 지방저가
+      await page.getByRole("switch").last().click();
       await page.getByRole("radio", { name: /지방 저가주택/ }).check();
 
       await clickNext(page); // Step2 → Step3
@@ -129,8 +129,8 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
 
       await clickNext(page); // Step1 → Step2 (기본 2024·개인)
 
-      // 주택1 기본 location=수도권. §8④ ToggleCard ON (첫 switch)
-      await page.getByRole("switch").first().click();
+      // 주택1 기본 location=수도권. §8④ ToggleCard ON (단일 주택의 마지막 switch — 분리 토글 추가에 견고)
+      await page.getByRole("switch").last().click();
 
       // 지방 저가주택 라디오가 disabled (수도권이므로)
       await expect(

@@ -51,6 +51,13 @@ export interface PropertyEntry {
   reductionRate: string;           // 감면율 % (예: "25" → 25% → 0.25). 빈 문자열 = 감면 없음
   // ── 공유지분율 (⑤ UI 시니어 담당, 여기는 타입만) ──
   ownershipRatio: string;          // 지분율 % (예: "70" → 70% → 0.7). 디폴트 "100"(단독)
+  // ── 건물·부속토지 소유자 분리 시가표준액 안분 (사례6, ⑤ UI 시니어 담당) ──
+  appurtenantSplitEnabled: boolean; // 분리 토글
+  appurtenantOwnedPart: string;     // "land" | "building" (디폴트 "land")
+  landStdValue: string;             // 당해 토지 시가표준액 (원)
+  buildingStdValue: string;         // 당해 건물 시가표준액 (원)
+  priorLandStdValue: string;        // 직전 토지 시가표준액 (세부담상한 자동모드용)
+  priorBuildingStdValue: string;    // 직전 건물 시가표준액
 }
 
 // ============================================================
@@ -181,6 +188,13 @@ function makeProperty(): PropertyEntry {
     rentalFeeRate: "",
     reductionRate: "",  // 지자체 조례 재산세 감면율 % (빈 문자열 = 감면 없음)
     ownershipRatio: "100",  // 공유지분율 % (디폴트 100 = 단독 소유)
+    // 사례6: 건물·부속토지 소유자 분리 (디폴트 OFF)
+    appurtenantSplitEnabled: false,
+    appurtenantOwnedPart: "land",
+    landStdValue: "",
+    buildingStdValue: "",
+    priorLandStdValue: "",
+    priorBuildingStdValue: "",
   };
 }
 
@@ -420,6 +434,13 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
               // ③ normalize: 지자체 조례 재산세 감면율 — 구 세션 누락 시 빈문자열 (감면 없음)
               reductionRate: p.reductionRate ?? "",
               ownershipRatio: p.ownershipRatio ?? "100",
+              // ③ normalize: 사례6 건물·부속토지 분리 — 구 세션 누락 시 기본값
+              appurtenantSplitEnabled: p.appurtenantSplitEnabled ?? false,
+              appurtenantOwnedPart: p.appurtenantOwnedPart ?? "land",
+              landStdValue: p.landStdValue ?? "",
+              buildingStdValue: p.buildingStdValue ?? "",
+              priorLandStdValue: p.priorLandStdValue ?? "",
+              priorBuildingStdValue: p.priorBuildingStdValue ?? "",
             }));
           }
           // 세부담상한 모드 — 구 세션 누락 시 "direct" (기존 동작 보존)

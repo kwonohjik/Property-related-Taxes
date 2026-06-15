@@ -64,7 +64,7 @@ test.describe("종합부동산세 사례5 — 부부특례+지방저가+직전 �
       .locator('select:has(option[value="non_metro"])')
       .nth(1)
       .selectOption("non_metro");
-    await page.getByRole("switch").nth(1).click(); // 주택2 §8④ ON
+    await page.getByRole("switch").last().click(); // 주택2 §8④ ON (마지막 주택의 마지막 switch — 분리 토글 추가에 견고)
     await page.getByRole("radio", { name: /지방 저가주택/ }).check();
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4

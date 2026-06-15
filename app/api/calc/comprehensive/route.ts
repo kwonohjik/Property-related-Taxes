@@ -90,6 +90,8 @@ function toEngineInput(
       reductionRate: p.reductionRate,
       // ⑭ pass-through: 공유지분율 (Zod optional → 엔진 optional, 미입력=단독100%)
       ownershipRatio: p.ownershipRatio,
+      // ⑭ pass-through: 건물·부속토지 시가표준액 안분 (사례6 — enum·숫자, Date 변환 불요)
+      appurtenantSplit: p.appurtenantSplit,
       rentalInfo,
       otherInfo,
     };
@@ -128,6 +130,8 @@ function toEngineInput(
           // ⑭ pass-through: 직전 §8④ 안분 (사례5)
           priorSection8Para4Value:
             schema.previousYearAuto.priorSection8Para4Value,
+          // ⑭ pass-through: 직전 건물·부속토지 시가표준액 안분 (사례6 — 당해와 독립)
+          appurtenantSplit: schema.previousYearAuto.appurtenantSplit,
         }
       : undefined,
     isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,

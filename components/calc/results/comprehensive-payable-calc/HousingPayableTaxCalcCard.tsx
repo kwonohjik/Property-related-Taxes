@@ -18,6 +18,7 @@ import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { getHousingStandardRateBracket } from "@/lib/tax-engine/property-tax";
 import { won, eok, pct, StepLine, Bullet, GaNaDaLine } from "./payable-calc-helpers";
 import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 
 export function HousingPayableTaxCalcCard({
   result,
@@ -64,7 +65,7 @@ export function HousingPayableTaxCalcCard({
           ) : (
             <div className="space-y-1">
               <Step1 result={result} properties={properties} />
-              <Step2 result={result} yr={yr} />
+              <Step2 result={result} yr={yr} properties={properties} />
               <Step3 result={result} isCorporateSpecial={isCorporateSpecial} />
               <Step4 result={result} />
               <Step5 result={result} yr={yr} pyr={pyr} isCorporateSpecial={isCorporateSpecial} />
@@ -99,6 +100,15 @@ function Step1({
   const hasReduction =
     result.effectiveIncludedAssessedValue != null &&
     result.effectiveIncludedAssessedValue < result.includedAssessedValue;
+  // 사례6: 건물·부속토지 시가표준액 안분 (form 직접 — result echo 역산 불가)
+  const apProp = properties?.[0];
+  const apLand = parseAmount(apProp?.landStdValue ?? "");
+  const apBldg = parseAmount(apProp?.buildingStdValue ?? "");
+  const apTotal = apLand + apBldg;
+  const apOwnLand = (apProp?.appurtenantOwnedPart ?? "land") === "land";
+  const apNum = apOwnLand ? apLand : apBldg;
+  const hasAppurtenant = !!apProp?.appurtenantSplitEnabled && apTotal > 0 && apNum > 0;
+  const apPct = hasAppurtenant ? ((apNum / apTotal) * 100).toFixed(2) : "0";
   return (
     <div>
       <StepLine
@@ -114,6 +124,12 @@ function Step1({
       {hasOwnershipRatio && (
         <Bullet testId="payable-step1-ownership">
           공시가격 × 지분율({ownershipRatioNum}%) = 안분 공시가격 : {eok(result.effectiveIncludedAssessedValue ?? result.includedAssessedValue)}
+        </Bullet>
+      )}
+      {/* 사례6: 건물·부속토지 시가표준액 비율 안분 */}
+      {hasAppurtenant && (
+        <Bullet testId="payable-step1-appurtenant">
+          공시가격 합산 {eok(result.includedAssessedValue)} × ({apOwnLand ? "토지" : "건물"} 시가표준액 {eok(apNum)} / 전체 {eok(apTotal)} = {apPct}%) = 안분 공시가격 {eok(result.effectiveIncludedAssessedValue ?? result.includedAssessedValue)}
         </Bullet>
       )}
       {/* 조례 감면 적용 시: 원공시 합산 × (1−감면율) = 과세 공시가격 */}
@@ -138,7 +154,15 @@ function Step1({
 // ════════════════════════════════════════════════════════════
 // ② 공제할 재산세액
 // ════════════════════════════════════════════════════════════
-function Step2({ result, yr }: { result: ComprehensiveTaxResult; yr: string }) {
+function Step2({
+  result,
+  yr,
+  properties,
+}: {
+  result: ComprehensiveTaxResult;
+  yr: string;
+  properties?: PropertyEntry[];
+}) {
   const c = result.propertyTaxCredit;
   const fmr = c.propertyFairMarketRatio ?? 0;
   const ptBase = c.propertyTaxBaseAmount ?? 0;
@@ -150,6 +174,30 @@ function Step2({ result, yr }: { result: ComprehensiveTaxResult; yr: string }) {
     showCapRow && result.previousYearEquivalent
       ? Math.floor((result.previousYearEquivalent.propertyTaxEquiv * capPct!) / 100)
       : 0;
+
+  // 사례6: 건물·부속토지 시가표준액 안분 — ⓐ는 100% 지분 재산세로 세부담상한 적용 후 안분 (교재 ②ⓐ)
+  const apProp = properties?.[0];
+  const apLand = parseAmount(apProp?.landStdValue ?? "");
+  const apBldg = parseAmount(apProp?.buildingStdValue ?? "");
+  const apTotal = apLand + apBldg;
+  const apOwnLand = (apProp?.appurtenantOwnedPart ?? "land") === "land";
+  const apNum = apOwnLand ? apLand : apBldg;
+  const hasAppurtenant = !!apProp?.appurtenantSplitEnabled && apTotal > 0 && apNum > 0;
+  // 100% 지분 재산세 (안분 전): 과세표준 = 원공시 × FMR, 표준세율 누진 1회
+  const p100Base = Math.floor((result.includedAssessedValue * Math.round(fmr * 100)) / 100);
+  const p100Bracket = getHousingStandardRateBracket(p100Base);
+  const p100Tax = Math.max(Math.floor(p100Base * p100Bracket.rate) - p100Bracket.deduction, 0);
+  // 직전 100% 지분 재산세 = 안분 직전 재산세상당액 ÷ 직전 안분비율 (세부담상한 비교용)
+  const apPriorLand = parseAmount(apProp?.priorLandStdValue ?? "");
+  const apPriorBldg = parseAmount(apProp?.priorBuildingStdValue ?? "");
+  const apPriorTotal = apPriorLand + apPriorBldg;
+  const apPriorNum = apOwnLand ? apPriorLand : apPriorBldg;
+  const prior100 =
+    showCapRow && result.previousYearEquivalent && apPriorNum > 0
+      ? Math.round((result.previousYearEquivalent.propertyTaxEquiv * apPriorTotal) / apPriorNum)
+      : 0;
+  const capLimit100 = prior100 > 0 ? Math.floor((prior100 * (capPct ?? 0)) / 100) : 0;
+  const p100AfterCap = capLimit100 > 0 ? Math.min(p100Tax, capLimit100) : p100Tax;
 
   return (
     <div>
@@ -164,24 +212,52 @@ function Step2({ result, yr }: { result: ComprehensiveTaxResult; yr: string }) {
         indent={1}
         testId="payable-step2-a"
       />
-      <Bullet indent={2}>
-        재산세 과세표준 : {eok(result.includedAssessedValue)} × {pct(fmr)}(재산세 공정시장가액비율) ={" "}
-        {eok(ptBase)}
-      </Bullet>
-      <Bullet indent={2}>
-        세부담 상한 적용 전 재산세 : {eok(ptBase)} × {pct(bracket.rate)}(세율) − {won(bracket.deduction)}
-        (누진공제액) = {won(c.propertyTaxBase)}
-      </Bullet>
-      {showCapRow && result.previousYearEquivalent && (
-        <Bullet indent={2}>
-          재산세 세부담 상한액 : 직전연도 재산세상당액 {won(result.previousYearEquivalent.propertyTaxEquiv)}{" "}
-          × {capPct}% = {won(capLimit)}
-        </Bullet>
+      {hasAppurtenant ? (
+        <>
+          {/* 사례6: 100% 지분 재산세로 세부담상한 적용 후 시가표준액 비율 안분 (교재 ②ⓐ) */}
+          <Bullet indent={2}>
+            재산세 과세표준(100% 지분) : {eok(result.includedAssessedValue)} × {pct(fmr)}(재산세 공정시장가액비율) = {eok(p100Base)}
+          </Bullet>
+          <Bullet indent={2}>
+            세부담 상한 적용 전 재산세(100% 지분) : {eok(p100Base)} × {pct(p100Bracket.rate)}(세율) − {won(p100Bracket.deduction)}(누진공제액) = {won(p100Tax)}
+          </Bullet>
+          {prior100 > 0 && (
+            <>
+              <Bullet indent={2}>직전연도(100% 지분) 재산세액 : {won(prior100)}</Bullet>
+              <Bullet indent={2}>
+                재산세 세부담 상한액 : {won(prior100)} × {capPct}% = {won(capLimit100)}
+              </Bullet>
+              <Bullet indent={2}>
+                세부담 상한후 재산세(100% 지분) : {won(p100AfterCap)} [= Min({won(p100Tax)}, {won(capLimit100)})]
+              </Bullet>
+            </>
+          )}
+          <Bullet indent={2}>
+            부과된 재산세액 : {won(p100AfterCap)} × ({apOwnLand ? "토지" : "건물"} 시가표준액 {eok(apNum)} / 전체 {eok(apTotal)}) = {won(c.totalPropertyTax)}
+          </Bullet>
+        </>
+      ) : (
+        <>
+          <Bullet indent={2}>
+            재산세 과세표준 : {eok(result.includedAssessedValue)} × {pct(fmr)}(재산세 공정시장가액비율) ={" "}
+            {eok(ptBase)}
+          </Bullet>
+          <Bullet indent={2}>
+            세부담 상한 적용 전 재산세 : {eok(ptBase)} × {pct(bracket.rate)}(세율) − {won(bracket.deduction)}
+            (누진공제액) = {won(c.propertyTaxBase)}
+          </Bullet>
+          {showCapRow && result.previousYearEquivalent && (
+            <Bullet indent={2}>
+              재산세 세부담 상한액 : 직전연도 재산세상당액 {won(result.previousYearEquivalent.propertyTaxEquiv)}{" "}
+              × {capPct}% = {won(capLimit)}
+            </Bullet>
+          )}
+          <Bullet indent={2}>
+            부과된 재산세액 : {won(c.totalPropertyTax)}
+            {showCapRow ? `[= Min(${won(c.propertyTaxBase)}, ${won(capLimit)})]` : ""}
+          </Bullet>
+        </>
       )}
-      <Bullet indent={2}>
-        부과된 재산세액 : {won(c.totalPropertyTax)}
-        {showCapRow ? `[= Min(${won(c.propertyTaxBase)}, ${won(capLimit)})]` : ""}
-      </Bullet>
 
       {/* ⓑ 종합부동산세 과세표준의 표준세율재산세액 (누진공제 없음) */}
       <StepLine
@@ -207,7 +283,7 @@ function Step2({ result, yr }: { result: ComprehensiveTaxResult; yr: string }) {
         testId="payable-step2-c"
       />
       <Bullet indent={2}>
-        {eok(result.includedAssessedValue)} × {pct(fmr)}(재산세 공정시장가액비율) × {pct(bracket.rate)} −{" "}
+        {eok(result.effectiveIncludedAssessedValue ?? result.includedAssessedValue)} × {pct(fmr)}(재산세 공정시장가액비율) × {pct(bracket.rate)} −{" "}
         {won(bracket.deduction)} = {won(c.propertyTaxBase)}
       </Bullet>
 

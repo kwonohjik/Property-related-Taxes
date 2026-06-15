@@ -182,6 +182,18 @@ export type Section8Para4Type =
 // ============================================================
 
 /**
+ * 건물·부속토지 소유자 분리 시 시가표준액 비율 안분 (사례6 / 종부세법 §8④1호 "다른 주택의 부속토지").
+ * 납세자가 토지(또는 건물)만 소유 → 주택 공시가격을 건물·토지 시가표준액 비율로 안분.
+ * 안분비율 = ownedPart==="land" ? land/(land+building) : building/(land+building).
+ * ★ 분수(num/den)로 엔진에 전달(applyEffectiveFactor) — 사전 비율 라운딩 0.
+ */
+export interface AppurtenantSplitInput {
+  ownedPart: "land" | "building";  // 납세자 소유 부분 (사례6 = "land")
+  landStandardValue: number;       // 토지 시가표준액 (원)
+  buildingStandardValue: number;   // 건물 시가표준액 (원)
+}
+
+/**
  * 개별 주택 입력 (공시가격, 합산배제 정보 포함)
  */
 export interface ComprehensiveProperty {
@@ -204,6 +216,12 @@ export interface ComprehensiveProperty {
    * 교재 사례3 "공유지분이 있는 경우" 기반.
    */
   ownershipRatio?: number;
+  /**
+   * 건물·부속토지 소유자 분리 시 시가표준액 비율 안분 (사례6). 미입력 = 분리 없음(비율 1).
+   * effectiveFactor(감면 × 지분)에 시가표준액 안분비율을 추가 결합(applyEffectiveFactor 4번째 인자).
+   * 공유지분(ownershipRatio)과 직교 — 공존 가능(부속토지를 공유).
+   */
+  appurtenantSplit?: AppurtenantSplitInput;
   /**
    * §8④ 1세대1주택자 의제 특례 유형 (미입력 = "none").
    * 의제 성립(일반주택 정확히 1채 + 특례주택 ≥ 1)·세액공제 안분(§9⑦⑨)·세율 주택 수 제외(령 §4의3③) 판정에 사용.
@@ -359,6 +377,12 @@ export interface PreviousYearAutoInput {
    * ※ 당해 §8④ 안분(15억/17억)과 별개 — 직전 공시 기준.
    */
   priorSection8Para4Value?: number;
+  /**
+   * 직전연도 건물·부속토지 시가표준액 비율 안분 (사례6). 미입력 = 분리 없음.
+   * ★ 당해 appurtenantSplit과 독립 — 시가표준액 연도 변동(당해 8억/2억 → 직전 7.8억/2.6억)으로
+   *   안분비율이 다름(당해 0.8 ≠ 직전 0.75). ownershipRatio(공유지분, 연도 불변)와 구분.
+   */
+  appurtenantSplit?: AppurtenantSplitInput;
 }
 
 export interface ComprehensiveTaxInput {

@@ -23,7 +23,7 @@ import { getPropertyFmrForProration } from "./data/comprehensive-historical";
 import { isMultiHouseRate } from "./data/comprehensive-historical";
 import { calcHousingTax } from "./property-tax";
 import { calcHousingTaxAmount } from "./comprehensive-tax";
-import { getSeniorRate, getLongTermRate, applyEffectiveFactor } from "./comprehensive-tax-helpers";
+import { getSeniorRate, getLongTermRate, applyEffectiveFactor, toAppurtenantFraction } from "./comprehensive-tax-helpers";
 import { COMPREHENSIVE_CONST } from "./legal-codes";
 import type {
   PreviousYearAutoInput,
@@ -53,6 +53,8 @@ export function calcPreviousYearEquivalent(
   // 직전연도 공시가격에 해당연도 감면율+지분율을 effectiveFactor로 결합 (종부세 과표·②ⓒ분모용)
   const rate = auto.reductionRate ?? 0;
   const ratio = auto.ownershipRatio;
+  // 사례6: 직전 건물·부속토지 시가표준액 안분 분수 (당해와 독립 — 직전 시가표준액 기준)
+  const appurtenant = toAppurtenantFraction(auto.appurtenantSplit);
   // 직전 주택군 — priorHouseValues 우선, 미입력 시 [assessedValue] 단일(하위호환).
   // priorSum = 종부세 과표·ⓑ분모용 합산(단일 원천 — assessedValue와의 이중 입력 불일치 차단).
   const priorHouses =
@@ -60,7 +62,7 @@ export function calcPreviousYearEquivalent(
       ? auto.priorHouseValues
       : [auto.assessedValue];
   const priorSum = priorHouses.reduce((a, b) => a + b, 0);
-  const effectiveAssessedValue = applyEffectiveFactor(priorSum, rate, ratio);
+  const effectiveAssessedValue = applyEffectiveFactor(priorSum, rate, ratio, appurtenant);
 
   // ── (1) 재산세 공제 전 종부세액 ──
   // ② 공제금액 (1주택 시 추가공제 포함 합계)
@@ -99,7 +101,7 @@ export function calcPreviousYearEquivalent(
     return sum + calcHousingTax(base, v, false).tax; // 표준세율 강제
   }, 0);
   // D-5 (C 지점): 지분·감면 결합 effectiveFactor 후 곱 (④나① = 표준세율 재산세 × factor)
-  const propertyTaxEquiv = applyEffectiveFactor(propertyTaxEquivRaw, rate, ratio);
+  const propertyTaxEquiv = applyEffectiveFactor(propertyTaxEquivRaw, rate, ratio, appurtenant);
 
   // ②ⓒ 분모(총표준세율재산세액)도 감면후 유효 공시가격 기준 (D 지점 연쇄)
   // 교재 ④나②ⓑ 분모 = 990,000 = 6.75억 × 60% × 표준세율 (9억×(1−25%))

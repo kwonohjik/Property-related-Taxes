@@ -19,7 +19,7 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { callComprehensiveApi, validateLandParcels } from "@/lib/calc/comprehensive-api";
+import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit } from "@/lib/calc/comprehensive-api";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PropertyListInput } from "@/components/calc/PropertyListInput";
@@ -543,6 +543,13 @@ export default function ComprehensiveTaxPage() {
         setError("자동 계산 모드에서는 직전연도 공시가격 합계를 입력해야 합니다.");
         return;
       }
+    }
+
+    // 사례6: 건물·부속토지 분리 시가표준액 검증 (⑧ — 분리 ON 시 시가표준액 미입력 침묵 누락 차단)
+    const splitError = validateAppurtenantSplit(formData);
+    if (splitError) {
+      setError(splitError);
+      return;
     }
 
     // 토지 필지 모드 validation (⑧ — API/Zod와 동기화: UI 통과↔차단 모순 금지)
