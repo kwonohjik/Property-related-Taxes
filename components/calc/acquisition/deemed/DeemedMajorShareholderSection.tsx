@@ -1,6 +1,6 @@
 /**
  * 간주취득 — 과점주주 패널 (Step 1-D-A)
- * 지방세법 §7의2①
+ * 지방세법 §7⑤
  */
 
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -45,7 +45,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold text-amber-700">과점주주 간주취득 상세</p>
         <TaxHelp
-          title="과점주주 간주취득 (지방세법 §7의2①)"
+          title="과점주주 간주취득 (지방세법 §7⑤)"
           summary="법인 주식·지분을 취득해 과점주주(50% 초과)가 되면, 법인 보유 자산 취득으로 간주 과세"
           details={`## 개요
 주주 1인 + 특수관계인 지분 합계 50% 초과 → 과점주주 성립
@@ -104,7 +104,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
           disabled={isExemptCase}
         />
         <p className="text-xs text-muted-foreground mt-1">
-          법인이 보유한 토지·건물 등 과세대상 자산의 시가표준액 합계 (§7의2① 본문)
+          법인이 보유한 토지·건물 등 과세대상 자산의 시가표준액 합계 (§7⑤ 본문)
         </p>
       </div>
 
@@ -134,7 +134,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
           disabled={isExemptCase}
         />
         <p className="text-xs text-muted-foreground mt-1">
-          과점주주 요건: 주주 1인 + 특수관계인 지분 합계 50% 초과 (§7의2①)
+          과점주주 요건: 주주 1인 + 특수관계인 지분 합계 50% 초과 (§7⑤)
         </p>
       </div>
 

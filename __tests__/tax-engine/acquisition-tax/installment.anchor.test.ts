@@ -1,7 +1,7 @@
 /**
  * 취득세 연부취득 Anchor 테스트
  *
- * 지방세법 §6 제17호 (연부취득 정의), §10의5 (과세표준), §20⑤ (취득시기)
+ * 지방세법 §6 제20호 (연부취득 정의), §10의3 (유상승계 과세표준), 시행령 §20⑤ (취득시기)
  *
  * 검증 시나리오:
  * [AT-INST-01] 정상 3회차 연부취득 — 합산 과세표준 3.5억
@@ -260,7 +260,7 @@ describe("[AT-INST-05] 연부취득 신고기한 스케줄 — 지급일 + 60일
     expect(timingResult.acquisitionDate).toBe("2026-06-01");
     // 잔금 신고기한: 2026-06-01 + 60일 = 2026-07-31
     expect(timingResult.filingDeadline).toBe("2026-07-31");
-    expect(timingResult.legalBasis).toContain("§20조 제5항");
+    expect(timingResult.legalBasis).toContain("시행령 §20⑤");
   });
 
   it("label 미입력 시 '1회차', '2회차' 등 자동 라벨 부여", () => {

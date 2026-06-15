@@ -311,7 +311,7 @@ export function AcquisitionSidebar({ form, currentStep, onStepClick }: Props) {
     }
   } else if (summary.isInstallment && summary.installmentCount) {
     // 연부취득 사이드바 요약
-    summaryItems.push({ label: "취득 방식", value: "연부취득 (§10의5)" });
+    summaryItems.push({ label: "취득 방식", value: "연부취득 (§10의3)" });
     summaryItems.push({ label: "회차 수", value: `${summary.installmentCount}회차` });
     if (summary.acquisitionValue) {
       summaryItems.push({ label: "회차 합계", value: summary.acquisitionValue });

@@ -4,7 +4,7 @@
  * InstallmentResultCard — 연부취득 신고 일정 카드
  *
  * 설계 문서: docs/02-design/features/acquisition-tax-installment.sync-points.md (동기화 지점 ⑦)
- * 법령 근거: 지방세법 §10의5, §20⑤ (각 회차 지급일 + 60일 이내 신고)
+ * 법령 근거: 지방세법 §10의3(연부 과세표준=유상승계)·시행령 §20⑤(취득시기)·§20①(신고 60일)
  *
  * 표시 내용:
  *  - 각 회차 지급일, 신고기한 (지급일 + 60일), D-day
@@ -13,6 +13,7 @@
  */
 
 import { differenceInDays, parseISO } from "date-fns";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
 // ============================================================
@@ -113,17 +114,19 @@ export function InstallmentResultCard({
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
       {/* 헤더 */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
           연
         </span>
-        <p className="text-sm font-semibold text-amber-800">연부취득 신고 일정 (§10의5·§20⑤)</p>
+        <p className="text-sm font-semibold text-amber-800">연부취득 신고 일정</p>
+        <LawArticleModal legalBasis="지방세법 §10의3" label="§10의3" />
+        <LawArticleModal legalBasis="지방세법 시행령 §20⑤" label="시행령 §20⑤" />
       </div>
 
       {/* 과세표준 결정 방식 안내 */}
       <div className="text-xs text-amber-700 space-y-1">
-        <p>각 회차 지급액을 합산하여 과세표준 결정 (지방세법 §10의5)</p>
-        <p>각 회차 지급일로부터 <strong>60일 이내</strong> 신고·납부 의무 (§20⑤)</p>
+        <p>각 회차 지급액을 합산하여 과세표준 결정 (지방세법 §10의3 유상승계)</p>
+        <p>각 회차 지급일로부터 <strong>60일 이내</strong> 신고·납부 의무 (시행령 §20⑤·§20①)</p>
       </div>
 
       {/* 회차별 신고기한 표 */}

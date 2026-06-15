@@ -194,7 +194,7 @@ export function Step0({
             <option value="reconstruction">개축</option>
             <option value="reclamation">공유수면 매립·간척</option>
           </optgroup>
-          <optgroup label="간주취득 (지방세법 §7의2)">
+          <optgroup label="간주취득 (지방세법 §7④⑤·§10의6)">
             <option value="deemed_major_shareholder">간주취득 — 과점주주</option>
             <option value="deemed_land_category">간주취득 — 지목변경</option>
             <option value="deemed_renovation">간주취득 — 건물 개수(改修)</option>
@@ -204,7 +204,7 @@ export function Step0({
         {/* 간주취득 안내 배너 */}
         {isDeemed && (
           <div className="rounded-md bg-violet-100 border border-violet-200 px-3 py-2 text-xs text-violet-800 space-y-1">
-            <p className="font-semibold">§7의2 간주취득 — 실제 소유권 이전 없이 과세</p>
+            <p className="font-semibold">간주취득 — 실제 소유권 이전 없이 과세 (§7④⑤·§10의6)</p>
             <p>중과세 없음. 다음 단계에서 유형별 세부 정보를 입력합니다.</p>
           </div>
         )}
@@ -228,7 +228,7 @@ export function Step0({
       {!isDeemed && form.acquisitionCause === "purchase" && (
         <ToggleCard
           tone="amber"
-          title="연부취득 (2년 이상 분할 지급, §10의5)"
+          title="연부취득 (2년 이상 분할 지급, §10의3)"
           description="매매대금을 2년 이상에 걸쳐 분할 지급하는 방식. 각 회차 지급일마다 별도 신고 의무 발생."
           checked={form.isInstallmentAcquisition ?? false}
           onCheckedChange={(v) => {
@@ -248,10 +248,10 @@ export function Step0({
           }}
           trailing={
             <TaxHelp
-              title="연부취득 (지방세법 §10의5·§20⑤)"
+              title="연부취득 (지방세법 §10의3·시행령 §20⑤)"
               summary="매매대금을 2년 이상 분할 지급하는 취득. 각 회차마다 별도 신고 의무."
-              details={`## 연부취득이란 (§6 17호)\n매매대금을 취득일부터 **2년 이상**에 걸쳐 분할 지급하는 매매 방식입니다.\n\n## 취득 시기 (§20⑤)\n각 회차 지급일이 **각각의 취득 시기**입니다.\n계약금 지급일, 중도금 지급일, 잔금 지급일 모두 별개의 취득일이 됩니다.\n\n## 신고·납부 의무 (§20⑤)\n각 회차 지급일부터 **60일 이내**에 취득세를 신고·납부해야 합니다.\n미신고·지연 시 가산세가 부과됩니다.\n\n## 과세표준 (§10의5)\n각 회차의 **사실상 지급액**이 과세표준입니다.\n이 계산기는 모든 회차 합산을 간이 계산합니다.\n\n## 주의사항\n- 분할 지급 기간이 2년 미만이면 연부취득 요건 미충족\n  → 잔금 지급일 기준 일반 매매로 처리됨\n- 등기는 잔금 납부 후 일괄 처리 가능\n- 실무상 각 회차 납부 증빙 보관 필수`}
-              legalBasis="지방세법 §10의5 / §20⑤"
+              details={`## 연부취득이란 (§6 20호)\n매매대금을 취득일부터 **2년 이상**에 걸쳐 분할 지급하는 매매 방식입니다.\n\n## 취득 시기 (시행령 §20⑤)\n각 회차 지급일이 **각각의 취득 시기**입니다.\n계약금 지급일, 중도금 지급일, 잔금 지급일 모두 별개의 취득일이 됩니다.\n\n## 신고·납부 의무 (§20①)\n각 회차 지급일부터 **60일 이내**에 취득세를 신고·납부해야 합니다.\n미신고·지연 시 가산세가 부과됩니다.\n\n## 과세표준 (§10의3 유상승계)\n각 회차의 **사실상 지급액**이 과세표준입니다.\n이 계산기는 모든 회차 합산을 간이 계산합니다.\n\n## 주의사항\n- 분할 지급 기간이 2년 미만이면 연부취득 요건 미충족\n  → 잔금 지급일 기준 일반 매매로 처리됨\n- 등기는 잔금 납부 후 일괄 처리 가능\n- 실무상 각 회차 납부 증빙 보관 필수`}
+              legalBasis="지방세법 §10의3"
             />
           }
         >

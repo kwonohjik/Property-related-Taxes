@@ -51,7 +51,7 @@ export function Step1({
     return (
       <div className="space-y-4">
         <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-800">
-          <span className="font-semibold">간주취득 (§7의2)</span> — 유형별 상세 정보를 입력하세요.
+          <span className="font-semibold">간주취득 (§7④⑤·§10의6)</span> — 유형별 상세 정보를 입력하세요.
           계산 완료 후 결과에서 산식과 세액을 확인할 수 있습니다.
         </div>
         {form.acquisitionCause === "deemed_major_shareholder" && (

@@ -123,7 +123,7 @@ export function HouseCountVerifier({ result }: Props) {
           {/* 신탁 주택 */}
           {detail.trustedHouseCount && detail.trustedHouseCount > 0 && (
             <div className="rounded bg-sky-50/70 border border-sky-200 p-2 text-xs">
-              신탁재산 위탁자 주택: {detail.trustedHouseCount}채 가산 (§13의3①1호)
+              신탁재산 위탁자 주택: {detail.trustedHouseCount}채 가산 (§13의3 1호)
             </div>
           )}
 

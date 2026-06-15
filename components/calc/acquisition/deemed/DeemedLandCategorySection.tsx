@@ -1,6 +1,6 @@
 /**
  * 간주취득 — 지목변경 패널 (Step 1-D-B)
- * 지방세법 §7의2②
+ * 지방세법 §7④
  */
 
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -35,7 +35,7 @@ export function DeemedLandCategorySection({ form, set }: Props) {
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold text-sky-700">지목변경 간주취득 상세</p>
         <TaxHelp
-          title="지목변경 간주취득 (지방세법 §7의2②)"
+          title="지목변경 간주취득 (지방세법 §7④)"
           summary="지목 변경으로 시가표준액이 증가하면, 증가분 가치에 해당하는 취득으로 간주 과세"
           details={`## 개요
 공간정보관리법상 지목 변경 + 시가표준액 증가 시 과세
