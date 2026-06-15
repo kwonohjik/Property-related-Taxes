@@ -1,6 +1,6 @@
 /**
  * 간주취득 — 건물 개수(改修) 패널 (Step 1-D-C)
- * 지방세법 §7의2③
+ * 지방세법 §10의6③
  */
 
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -35,7 +35,7 @@ export function DeemedRenovationSection({ form, set }: Props) {
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold text-violet-700">건물 개수 간주취득 상세</p>
         <TaxHelp
-          title="건물 개수 간주취득 (지방세법 §7의2③)"
+          title="건물 개수 간주취득 (지방세법 §10의6③)"
           summary="구조변경·용도변경·대수선으로 시가표준액이 증가하면 증가분에 취득세 과세"
           details={`## 개수 3종
 - **구조변경**: 건물 구조 변경 (목조→철근콘크리트 등)

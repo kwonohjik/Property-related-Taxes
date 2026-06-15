@@ -200,7 +200,7 @@ function calcInstallmentTaxBase(
       warnings.push(
         `특수관계인 간 연부취득으로, 합산금액(${totalInstallment.toLocaleString()}이 ` +
         `시가표준액의 70%(${Math.floor(stdValue * ACQUISITION_CONST.RELATED_PARTY_MIN_RATIO).toLocaleString()}에 미달합니다. ` +
-        `과세관청이 시가인정액으로 과세표준을 경정할 수 있습니다 (§10의2).`
+        `과세관청이 시가인정액으로 과세표준을 경정할 수 있습니다 (§10의3②).`
       );
     }
   }
@@ -217,7 +217,7 @@ function calcInstallmentTaxBase(
   warnings.push(
     `연부취득(일괄 신고 기준): ${installments.length}회차 합산 ` +
     `${totalInstallment.toLocaleString()}원을 과세표준으로 사용합니다. ` +
-    `각 회차마다 지급일로부터 60일 이내 별도 신고·납부 의무가 있습니다 (§10의5, §20⑤).`
+    `각 회차마다 지급일로부터 60일 이내 별도 신고·납부 의무가 있습니다 (§10의3, 시행령 §20⑤).`
   );
 
   return {
@@ -230,7 +230,7 @@ function calcInstallmentTaxBase(
 }
 
 // ============================================================
-// 유상취득 과세표준 (§10)
+// 유상승계취득 과세표준 (§10의3)
 // ============================================================
 
 function calcOnerousTaxBase(
@@ -253,12 +253,12 @@ function calcOnerousTaxBase(
     taxBase: rawTaxBase,
     rawTaxBase,
     warnings,
-    legalBasis: input.reportedPrice > 0 ? ACQUISITION.TAX_BASE : ACQUISITION.STANDARD_VALUE,
+    legalBasis: ACQUISITION.ONEROUS_TAX_BASE,
   };
 }
 
 // ============================================================
-// 무상취득 과세표준 (§10의3)
+// 무상취득 과세표준 (§10의2)
 // ============================================================
 
 function calcGratuitousTaxBase(
@@ -274,14 +274,14 @@ function calcGratuitousTaxBase(
   );
 
   if (!useStandardPrice && input.marketValue && input.marketValue > 0) {
-    // 시가인정액(매매사례가액·감정가) 사용 — 지방세법 §10의3(무상취득 시가표준액 특례)
+    // 시가인정액(매매사례가액·감정가) 사용 — 지방세법 §10의2(무상취득 과세표준)
     warnings.push(`무상취득 — 시가인정액(${input.marketValue.toLocaleString()} 적용`);
     return {
       method: "recognized_market",
       taxBase: input.marketValue,
       rawTaxBase: input.marketValue,
       warnings,
-      legalBasis: ACQUISITION.STANDARD_VALUE, // §10의3 (§10의2 특수관계인 조항 아님)
+      legalBasis: ACQUISITION.GRATUITOUS_TAX_BASE, // §10의2 무상취득
     };
   }
 
@@ -299,12 +299,12 @@ function calcGratuitousTaxBase(
     taxBase: rawTaxBase,
     rawTaxBase,
     warnings,
-    legalBasis: ACQUISITION.STANDARD_VALUE,
+    legalBasis: ACQUISITION.GRATUITOUS_TAX_BASE,
   };
 }
 
 // ============================================================
-// 특수관계인 거래 과세표준 (§10의2)
+// 특수관계인 거래 과세표준 (§10의3②)
 // ============================================================
 
 function calcRelatedPartyTaxBase(
@@ -358,7 +358,7 @@ function calcRelatedPartyTaxBase(
 }
 
 // ============================================================
-// 원시취득 과세표준 (§10 + 시행령 §18)
+// 원시취득 과세표준 (§10의4)
 // ============================================================
 
 function calcOriginalAcquisitionTaxBase(
@@ -372,7 +372,7 @@ function calcOriginalAcquisitionTaxBase(
       taxBase: input.constructionCost,
       rawTaxBase: input.constructionCost,
       warnings,
-      legalBasis: ACQUISITION.TAX_BASE,
+      legalBasis: ACQUISITION.ORIGINAL_TAX_BASE,
     };
   }
 
@@ -390,12 +390,12 @@ function calcOriginalAcquisitionTaxBase(
     taxBase: standardPriceResult.standardValue,
     rawTaxBase: standardPriceResult.standardValue,
     warnings,
-    legalBasis: ACQUISITION.STANDARD_VALUE,
+    legalBasis: ACQUISITION.ORIGINAL_TAX_BASE,
   };
 }
 
 // ============================================================
-// 부담부증여 과세표준 (§10의4)
+// 부담부증여 과세표준 (§10의2⑥)
 // ============================================================
 
 function calcBurdenedGiftTaxBase(

@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * 간주취득 결과 카드 (지방세법 §7의2)
+ * 간주취득 결과 카드 (지방세법 §7④⑤ 과점주주·지목변경, §10의6③ 개수)
  * - 과점주주·지목변경·건물개수 각 유형별 한국어 산식 표시
  * - 비과세(상장법인 등) 시 사유 표시
  */
 
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 
 // ============================================================
@@ -83,15 +84,15 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
 
   const typeLabel = DEEMED_TYPE_LABELS[detail.type] ?? detail.type;
   const legalBasisLabel =
-    detail.type === "major_shareholder" ? "지방세법 §7의2①" :
-    detail.type === "land_category"     ? "지방세법 §7의2②" :
-                                          "지방세법 §7의2③";
+    detail.type === "major_shareholder" ? "지방세법 §7⑤" :
+    detail.type === "land_category"     ? "지방세법 §7④" :
+                                          "지방세법 §10의6③";
 
   // 비과세
   if (!detail.isSubjectToTax) {
     const nonTaxReason =
       result.acquisitionCause === "deemed_major_shareholder"
-        ? "상장법인 주주의 과점주주 간주취득 적용 제외 (§7의2① 단서)"
+        ? "상장법인 주주의 과점주주 간주취득 적용 제외 (§7⑤·지방세기본법 §46)"
         : "변경·개수 후 시가표준액이 변경·개수 전 이하 — 과세 대상 없음";
 
     return (
@@ -101,7 +102,7 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
           <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs text-violet-800 font-medium">
             {typeLabel}
           </span>
-          <span className="text-xs text-muted-foreground">{legalBasisLabel}</span>
+          <LawArticleModal legalBasis={legalBasisLabel} />
           <span className="ml-auto inline-flex items-center rounded-full border border-emerald-400 bg-emerald-100 px-2.5 py-0.5 text-xs text-emerald-700 font-semibold">
             비과세
           </span>

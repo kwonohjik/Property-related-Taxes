@@ -4,7 +4,7 @@
  * InstallmentPaymentsSection — 연부취득 회차 입력 섹션
  *
  * 설계 문서: docs/02-design/features/acquisition-tax-installment.sync-points.md
- * 법령 근거: 지방세법 §6 17호, §10의5, §20⑤
+ * 법령 근거: 지방세법 §6 20호, §10의3(과세표준), 시행령 §20⑤(취득시기)
  *
  * - amber 섹션 카드 (연부취득 tone)
  * - 회차별 라벨·지급일·지급액 입력

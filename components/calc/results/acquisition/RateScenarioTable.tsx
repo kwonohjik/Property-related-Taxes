@@ -158,7 +158,7 @@ export function RateScenarioTable({ result, isRegulatedArea, isCorporation, acqu
         </table>
       </div>
       <div className="px-4 py-2 bg-muted/10 border-t text-xs text-muted-foreground">
-        * 사치성 재산 중과(§13①) / 세율특례(§15) 적용 시 위 표와 다를 수 있음
+        * 사치성 재산 중과(§13⑤) / 세율특례(§15) 적용 시 위 표와 다를 수 있음
       </div>
     </div>
   );

@@ -42,7 +42,7 @@ export const ACQUISITION_CAUSE_LABELS: [string, string][] = [
   ["extension", "증축"],
   ["reconstruction", "개축"],
   ["reclamation", "공유수면 매립·간척"],
-  // 간주취득 3종 (지방세법 §7의2)
+  // 간주취득 3종 (지방세법 §7④⑤·§10의6)
   ["deemed_major_shareholder", "간주취득 — 과점주주"],
   ["deemed_land_category",     "간주취득 — 지목변경"],
   ["deemed_renovation",        "간주취득 — 건물 개수(改修)"],
@@ -298,7 +298,7 @@ export interface FormState {
   /** 사실상 사용 개시일 (YYYY-MM-DD) — 사용승인 이전 실거주 시 취득시기로 봄 */
   actualUsageDate?: string;
 
-  // ─── [간주취득] 과점주주 (지방세법 §7의2①) — 6개 필드 ───
+  // ─── [간주취득] 과점주주 (지방세법 §7⑤) — 6개 필드 ───
   /** 상장법인 여부 (true이면 비과세) */
   deemedMajorIsListed?: boolean;
   /** 법인 설립 시 발행 주식 취득 여부 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함) */
@@ -312,7 +312,7 @@ export interface FormState {
   /** 과점주주 도달일 (YYYY-MM-DD) */
   deemedMajorShareholderDate?: string;
 
-  // ─── [간주취득] 지목변경 (지방세법 §7의2②) — 5개 필드 ───
+  // ─── [간주취득] 지목변경 (지방세법 §7④) — 5개 필드 ───
   /** 변경 전 지목 (한국어 코드: "전", "답", "대" 등) */
   deemedLandPrevCategory?: string;
   /** 변경 후 지목 */
@@ -326,7 +326,7 @@ export interface FormState {
   /** 변경 후 시가표준액 (CurrencyInput 문자열) */
   deemedLandNewStandardValue?: string;
 
-  // ─── [간주취득] 건물 개수 (지방세법 §7의2③) — 5개 필드 ───
+  // ─── [간주취득] 건물 개수 (지방세법 §10의6③) — 5개 필드 ───
   /** 개수 유형 */
   deemedRenovationType?: "structural_change" | "use_change" | "major_repair";
   /** 개수 완료일(사용승인일) (YYYY-MM-DD) */
@@ -338,7 +338,7 @@ export interface FormState {
   /** 개수 후 시가표준액 (CurrencyInput 문자열) */
   deemedRenovationNewStandardValue?: string;
 
-  // ─── [연부취득] §10의5 ───
+  // ─── [연부취득] §10의3 (유상승계 과세표준) ───
   /** 연부취득 여부 — 매매(purchase) + ON 시 회차 입력 섹션 활성화 */
   isInstallmentAcquisition?: boolean;
   /** 연부 매매계약일 (YYYY-MM-DD) — 2년 이상 검증 기준점 */
