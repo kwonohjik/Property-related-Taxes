@@ -39,6 +39,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
 import {
   evaluateFamilyBusinessEligibility,
@@ -221,6 +222,11 @@ export function FamilyBusinessEligibilitySection({
         checked={isActive}
         onCheckedChange={(v) => (v ? handleToggleOn() : handleToggleOff())}
       />
+
+      <div className="flex flex-wrap gap-1.5 px-1">
+        <LawArticleModal legalBasis="상증법 §18의2" label="§18의2 가업상속공제" />
+        <LawArticleModal legalBasis="상증령 §15" label="상증령 §15 요건" />
+      </div>
 
       {familyBusiness && (
         <div className="rounded-md border border-amber-200 bg-amber-50/30 dark:bg-amber-950/10 dark:border-amber-800 p-3 space-y-4">

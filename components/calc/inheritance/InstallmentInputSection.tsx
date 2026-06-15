@@ -10,6 +10,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
@@ -33,6 +34,11 @@ export function InstallmentInputSection({
 }) {
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        <LawArticleModal legalBasis="상증법 §70" label="§70 분납" />
+        <LawArticleModal legalBasis="상증법 §71" label="§71 연부연납" />
+        <LawArticleModal legalBasis="상증법 §72" label="§72 가산금" />
+      </div>
       {/* 분납 (§70②) — 연부연납과 배타 */}
       <ToggleCard
         tone="sky"

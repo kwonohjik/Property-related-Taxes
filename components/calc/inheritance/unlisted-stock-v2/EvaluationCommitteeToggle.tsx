@@ -16,6 +16,7 @@
 
 import { useState } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -117,6 +118,9 @@ export function EvaluationCommitteeToggle({ value, onChange, sectionNum = 8 }: E
             className="space-y-3 mt-2"
             data-testid="evaluation-committee-form"
           >
+            <div className="flex flex-wrap gap-1.5">
+              <LawArticleModal legalBasis="상증령 §54" label="상증령 §54⑥" />
+            </div>
             <RadioCardGroup
               name="evaluation-committee-method"
               tone="emerald"

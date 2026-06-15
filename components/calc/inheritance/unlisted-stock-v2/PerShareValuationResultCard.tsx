@@ -11,6 +11,8 @@
  */
 
 import { useMemo, useState } from "react";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { parseLawRefsForModal } from "@/lib/utils/law-url";
 import {
   expandToggleClass,
   expandToggleLabel,
@@ -385,7 +387,18 @@ function ResultRow({ cellNum, label, value, hint, law, emphasized }: ResultRowPr
       <div>
         <div className={`${emphasized ? "font-bold text-indigo-900" : ""}`}>{label}</div>
         {hint && <div className="text-[10px] text-gray-500">{hint}</div>}
-        {law && <div className="text-[10px] text-indigo-600 italic">{law}</div>}
+        {law && (
+          <div className="text-[10px] text-indigo-600 italic flex flex-wrap items-center gap-1">
+            <span>{law}</span>
+            {parseLawRefsForModal(law).map((r, i) => (
+              <LawArticleModal
+                key={i}
+                legalBasis={`${r.lawName} §${r.articleNum}`}
+                label={`§${r.articleNum}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
       <span className={`font-mono ${emphasized ? "text-indigo-900 font-bold text-sm" : "text-indigo-800"}`}>
         {value}

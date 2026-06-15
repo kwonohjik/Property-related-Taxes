@@ -25,6 +25,7 @@
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetCategory, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FamilyBusinessCategory } from "@/lib/tax-engine/types/inheritance-family-business.types";
 
@@ -136,6 +137,10 @@ export function FamilyBusinessCategorySection({
           <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
             가업 자산 분류
           </p>
+          <div className="flex flex-wrap gap-1.5">
+            <LawArticleModal legalBasis="상증법 §18의2" label="§18의2 가업상속공제" />
+            <LawArticleModal legalBasis="상증령 §15" label="상증령 §15 가업상속재산" />
+          </div>
           <RadioCardGroup<FamilyBusinessCategory>
             name={`family-business-${item.id}`}
             layout="stack"

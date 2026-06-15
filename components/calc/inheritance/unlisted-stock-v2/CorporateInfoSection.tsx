@@ -13,6 +13,7 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleChip } from "@/components/calc/inputs/ToggleChip";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
@@ -302,11 +303,12 @@ export function CorporateInfoSection({
         {/* 평가방식 분기 (상증령 §54·§55) */}
         <div className="space-y-1.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-            평가방식 분기{" "}
-            <span className="font-normal normal-case tracking-normal text-sky-600 dark:text-sky-400">
-              상증령 §54·§55
-            </span>
+            평가방식 분기
           </p>
+          <div className="flex flex-wrap gap-1.5">
+            <LawArticleModal legalBasis="상증령 §54" label="상증령 §54 평가방법" />
+            <LawArticleModal legalBasis="상증령 §55" label="상증령 §55 순손익·순자산" />
+          </div>
           <div className="flex flex-wrap gap-1.5">
             <ToggleChip
               tone="amber"
@@ -339,11 +341,12 @@ export function CorporateInfoSection({
         {/* 할증 (상증법 §63③ · 상증령 §53) */}
         <div className="space-y-1.5 border-t border-violet-100 dark:border-violet-900 pt-2">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
-            할증{" "}
-            <span className="font-normal normal-case tracking-normal text-violet-600 dark:text-violet-400">
-              상증법 §63③ · 상증령 §53
-            </span>
+            할증
           </p>
+          <div className="flex flex-wrap gap-1.5">
+            <LawArticleModal legalBasis="상증법 §63" label="상증법 §63③ 할증평가" />
+            <LawArticleModal legalBasis="상증령 §53" label="상증령 §53 최대주주·할증배제" />
+          </div>
           <div className="flex flex-wrap gap-1.5">
             <ToggleChip
               tone="violet"

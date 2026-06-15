@@ -20,6 +20,7 @@ import { Fragment } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { getNextFocusableInput } from "@/components/providers/EnterKeyNavigationProvider";
 import { fiscalYearMonths } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 import type { FiscalYearAdjustment } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
@@ -163,6 +164,10 @@ export function FiscalYearAdjustmentTable({
       <p className="text-[11px] text-emerald-700/80">
         평가기준일 이전 1·2·3년차 사업연도. 가중치 ×3·×2·×1로 가중평균 후 ÷ 환원율(10%) = 1주당 순손익가치 ⑤
       </p>
+      <div className="flex flex-wrap gap-1.5">
+        <LawArticleModal legalBasis="상증령 §56" label="상증령 §56①④ 순손익액 산정" />
+        <LawArticleModal legalBasis="상증규 §17의3" label="상증규 §17의3② 1년미만 연환산" />
+      </div>
 
       {/* 사업연도 라벨 + 개시일·종료일 헤더 (하단 입력표와 동일 grid 트랙으로 정렬) */}
       <div className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 border-l-2 border-transparent pl-1.5 text-[11px] font-semibold text-gray-700">

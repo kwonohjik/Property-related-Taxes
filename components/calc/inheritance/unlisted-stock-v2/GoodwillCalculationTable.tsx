@@ -22,6 +22,7 @@
  */
 
 import type { UnlistedGoodwillResult } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export interface GoodwillCalculationTableProps {
   goodwill: UnlistedGoodwillResult;
@@ -47,7 +48,9 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
           isExcluded ? "bg-rose-200 text-rose-800" : "bg-amber-200 text-amber-800"
         }`}>{sectionNum}</span>
         <p className={`text-xs font-semibold ${isExcluded ? "text-rose-800" : "text-amber-800"}`}>
-          영업권 평가 (별지 5쪽 + 상증령 §59 ② + 상증규 §19 ①)
+          영업권 평가 (별지 5쪽 + 상증령 §59 ② + 상증규 §19 ①){" "}
+          <LawArticleModal legalBasis="상증령 §59" label="§59" />{" "}
+          <LawArticleModal legalBasis="상증규 §19" label="규§19" />
         </p>
       </div>
 

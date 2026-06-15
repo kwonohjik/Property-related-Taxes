@@ -18,6 +18,7 @@
 import { useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CohabitReasonList } from "./CohabitReasonList";
 import { calcCohabitYears } from "@/lib/tax-engine/deductions/inheritance-cohabit-helpers";
 import type { CohabitReason } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -84,6 +85,11 @@ export function CohabitRequirementBlock({
         <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
           §23의2①1호 동거기간 검증 (선택 입력)
         </p>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <LawArticleModal legalBasis="상증법 §23의2" label="§23의2 동거주택공제" />
+        <LawArticleModal legalBasis="상증령 §20의2" label="상증령 §20의2 부득이사유" />
       </div>
 
       <p className="text-[11px] text-violet-600 dark:text-violet-400 leading-relaxed">

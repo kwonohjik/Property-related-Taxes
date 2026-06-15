@@ -14,6 +14,7 @@
 import { useMemo } from "react";
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { evaluateFarmingEligibilityForHeir } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import type {
   FarmingHeirAssessment,
@@ -65,6 +66,10 @@ export function HeirAssessmentCard({
         >
           {evalResult.eligible ? "✓ 자격 충족" : "⚠️ 미충족"}
         </span>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <LawArticleModal legalBasis="상증령 §16" label="상증령 §16③·⑭ 영농 상속인 요건" />
       </div>
 
       <ToggleCard

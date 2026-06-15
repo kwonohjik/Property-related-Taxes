@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { parseLawRef, buildLawUrl } from "@/lib/utils/law-url";
+import { parseLawRef, buildLawUrl, extractClauseMarkers } from "@/lib/utils/law-url";
 
 interface Props {
   legalBasis: string;
@@ -23,12 +23,23 @@ type FetchState =
   | { status: "ok"; content: string }
   | { status: "error"; message: string };
 
+/** 항(項) 번호 동그라미 숫자 — 본문을 항 단위로 분할해 인용 항을 강조(G-5) */
+const CLAUSE_MARKERS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮";
+
 // 법령 원문에 포함된 <img> 태그를 실제 이미지로 렌더링
 // law.go.kr API는 <img src="...">ASCII표 텍스트</img> 형태로 반환하므로
 // 개구 태그~닫힘 태그 사이 텍스트 표현은 이미지로 대체
-function LawContent({ content }: { content: string }) {
+export function LawContent({
+  content,
+  highlight,
+}: {
+  content: string;
+  /** 강조할 항(項) 마커 집합 (예: new Set(["③"])) — 인용 항을 본문에서 시각 강조 */
+  highlight?: Set<string>;
+}) {
   // <img ...>...</img> (텍스트 내용 포함) 또는 단독 <img ...> 기준으로 분리
   const parts = content.split(/(<img\b[^>]*>[\s\S]*?<\/img>|<img\b[^>]*>)/gi);
+  const hi = highlight && highlight.size > 0 ? highlight : null;
 
   return (
     <div className="text-xs leading-relaxed font-sans bg-muted/50 rounded-md p-3 max-h-[70vh] overflow-y-auto space-y-2">
@@ -48,10 +59,40 @@ function LawContent({ content }: { content: string }) {
         }
         const text = part.trim();
         if (!text) return null;
+        // 강조 대상 없으면 기존 단일 <pre> (회귀 보존)
+        if (!hi) {
+          return (
+            <pre key={i} className="whitespace-pre-wrap break-words font-sans">
+              {text}
+            </pre>
+          );
+        }
+        // 항(①~⑮) 경계로 분할 후 인용 항만 강조 (해당 항 안의 호도 함께 강조됨)
+        const clauses = text.split(new RegExp(`(?=[${CLAUSE_MARKERS}])`));
         return (
-          <pre key={i} className="whitespace-pre-wrap break-words font-sans">
-            {text}
-          </pre>
+          <div key={i} className="space-y-1">
+            {clauses.map((clause, j) => {
+              const t = clause.trim();
+              if (!t) return null;
+              const marker = [...t][0];
+              const isHighlighted =
+                CLAUSE_MARKERS.includes(marker) && hi.has(marker);
+              return (
+                <pre
+                  key={j}
+                  data-clause={CLAUSE_MARKERS.includes(marker) ? marker : undefined}
+                  data-highlighted={isHighlighted || undefined}
+                  className={
+                    isHighlighted
+                      ? "whitespace-pre-wrap break-words font-sans rounded border-l-2 border-amber-400 bg-amber-100 py-0.5 pl-2 dark:border-amber-600 dark:bg-amber-900/40"
+                      : "whitespace-pre-wrap break-words font-sans"
+                  }
+                >
+                  {clause}
+                </pre>
+              );
+            })}
+          </div>
         );
       })}
     </div>
@@ -72,6 +113,11 @@ export function LawArticleModal({ legalBasis, label, className }: Props) {
   const [state, setState] = useState<FetchState>({ status: "idle" });
 
   const ref = parseLawRef(legalBasis);
+  // 인용 항(項) 마커 — 본문 하이라이트용 (label 우선, 없으면 legalBasis). G-5.
+  const highlightMarkers = useMemo(
+    () => new Set(extractClauseMarkers(label ?? legalBasis)),
+    [label, legalBasis],
+  );
 
   async function handleOpen() {
     setOpen(true);
@@ -122,7 +168,9 @@ export function LawArticleModal({ legalBasis, label, className }: Props) {
             <p className="text-sm text-muted-foreground animate-pulse">조문 조회 중...</p>
           )}
 
-          {state.status === "ok" && <LawContent content={state.content} />}
+          {state.status === "ok" && (
+            <LawContent content={state.content} highlight={highlightMarkers} />
+          )}
 
           {state.status === "error" && (
             <div className="space-y-2 text-sm">

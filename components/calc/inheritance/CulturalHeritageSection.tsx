@@ -11,6 +11,7 @@
  */
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -59,7 +60,7 @@ export function CulturalHeritageSection({ item, onUpdate }: CulturalHeritageSect
       }
     >
       <p className="mb-1 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
-        §74① 해당 호
+        §74① 해당 호 <LawArticleModal legalBasis="상증법 §74" label="§74" />
       </p>
       <RadioCardGroup<HeritageType>
         name={`cultural-heritage-${item.id}`}
