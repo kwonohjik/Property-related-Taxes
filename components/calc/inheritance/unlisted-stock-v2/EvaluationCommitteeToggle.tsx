@@ -156,6 +156,7 @@ export function EvaluationCommitteeToggle({ value, onChange, sectionNum = 8 }: E
             >
               <CurrencyInput
                 label="신청 평가액"
+                hideLabel
                 value={String(value.taxpayerPerShareValuation || "")}
                 onChange={handleTaxpayerChange}
                 hideUnit
