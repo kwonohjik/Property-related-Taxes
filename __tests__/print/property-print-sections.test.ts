@@ -17,7 +17,7 @@ import {
   type PropertyPrintSectionId,
 } from "@/lib/print/property-print-sections";
 
-// 설계 §2.3 기준 leaf 7종
+// 설계 §2.3 기준 leaf 9종 (납세의무자 §107 통합으로 taxpayer·co-ownership 추가)
 const ALL_LEAVES: PropertyPrintSectionId[] = [
   "tax-base",
   "computed-tax",
@@ -26,6 +26,8 @@ const ALL_LEAVES: PropertyPrintSectionId[] = [
   "installment",
   "warnings",
   "legal-basis",
+  "taxpayer",
+  "co-ownership",
 ];
 
 const PDF_LEAVES: PropertyPrintSectionId[] = ["computed-tax"];
@@ -47,7 +49,7 @@ describe("재산세 선택 출력 레지스트리 — Pre-Do anchor (PR-D)", () 
     }
   });
 
-  it("PD-prop-3: flattenPrintSectionIds는 7개 유니크 leaf, group: 접두 없음", () => {
+  it("PD-prop-3: flattenPrintSectionIds는 9개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);
@@ -88,8 +90,8 @@ describe("재산세 선택 출력 레지스트리 — Pre-Do anchor (PR-D)", () 
     expect(selectPdfSections(new Set(), available)).toEqual([]);
   });
 
-  it("트리: 그룹 2개 + 모든 leaf가 정확히 한 그룹에 1회 등장", () => {
-    expect(PROPERTY_PRINT_SECTIONS).toHaveLength(2);
+  it("트리: 그룹 3개 + 모든 leaf가 정확히 한 그룹에 1회 등장", () => {
+    expect(PROPERTY_PRINT_SECTIONS).toHaveLength(3);
     const seen = new Map<string, number>();
     for (const g of PROPERTY_PRINT_SECTIONS) {
       expect(g.id.startsWith("group:")).toBe(true);

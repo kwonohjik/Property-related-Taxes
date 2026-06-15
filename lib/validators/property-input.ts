@@ -131,6 +131,39 @@ export const propertyTaxInputSchema = z
         ownerType: z.enum(["individual", "corporation"]).optional(),
       })
       .optional(),
+
+    /**
+     * 납세의무자(지방세법 §107) 판정 입력 — 선택.
+     * 미입력 시 납세의무자 판정 생략(계산 100% 불변).
+     * TS 미감지 strip 주의 — grep 자가 점검 필수.
+     */
+    taxpayerInfo: z
+      .object({
+        /** 공부상 소유자 식별자 (§107②1호 fallback) */
+        registeredOwner: z.string().min(1, { message: "공부상 소유자를 입력하세요." }),
+        /** 사실상 소유자 — 공부와 불일치 시 납세의무자(§107①본문) */
+        actualOwner: z.string().optional(),
+        /** 신탁재산 여부 (§107②5호) */
+        isTrust: z.boolean().optional(),
+        /** 신탁 유형 */
+        trustType: z.enum(["self", "other"]).optional(),
+        /** 위탁자(신탁 설정자) */
+        settlor: z.string().optional(),
+        /** 상속 미등기 여부 (§107②2호) */
+        isInheritanceUnregistered: z.boolean().optional(),
+        /** 상속인 목록 */
+        heirs: z.array(z.string()).optional(),
+        /** 공유 지분 목록 (§107①1호) */
+        coOwnershipShares: z
+          .array(
+            z.object({
+              ownerId: z.string().min(1),
+              shareRatio: z.number().positive().max(1),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
   })
   .superRefine((data, ctx) => {
     // buildingType은 objectType==="building" 일 때만 유효

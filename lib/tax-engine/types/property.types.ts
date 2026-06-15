@@ -14,6 +14,11 @@
  *   - property-tax.ts                 (메인 통합 엔진)
  */
 
+import type {
+  PropertyTaxpayerType,
+  CoOwnershipShare,
+} from "./property-object.types";
+
 // ============================================================
 // 1. 입력 타입 — PropertyTaxInput
 // ============================================================
@@ -158,6 +163,29 @@ export interface PropertyTaxInput {
     demolished?: boolean;
     demolishedDate?: string;
   };
+
+  /**
+   * 납세의무자(지방세법 §107) 판정 입력 — 선택. 미입력 시 납세의무자 판정 생략(계산 100% 불변).
+   * 특수 케이스(신탁·상속 미등기·공유·사실상소유자 불일치)에만 추가 필드 입력.
+   */
+  taxpayerInfo?: {
+    /** 공부상 소유자 식별자 (§107②1호 fallback) */
+    registeredOwner: string;
+    /** 사실상 소유자 — 공부와 불일치 시 납세의무자(§107①본문) */
+    actualOwner?: string;
+    /** 신탁재산 여부 (§107②5호) */
+    isTrust?: boolean;
+    /** 신탁 유형 (자익/타익) */
+    trustType?: "self" | "other";
+    /** 위탁자(신탁 설정자) — isTrust 시 납세의무자(§107②5호, 현행법) */
+    settlor?: string;
+    /** 상속 미등기 여부 (§107②2호) */
+    isInheritanceUnregistered?: boolean;
+    /** 상속인 목록 (상속 미등기 시) */
+    heirs?: string[];
+    /** 공유 지분 목록 (§107①1호) — 2인 이상 시 지분별 안분 */
+    coOwnershipShares?: CoOwnershipShare[];
+  };
 }
 
 // ============================================================
@@ -192,6 +220,39 @@ export interface InstallmentInfo {
   firstPayment: number;
   /** 2차 납부액 (9월) */
   secondPayment: number;
+}
+
+/**
+ * 납세의무자 판정 결과 (지방세법 §107) — taxpayerInfo 입력 시에만 PropertyTaxResult에 포함.
+ */
+export interface PropertyTaxpayerInfo {
+  /** 납세의무자 유형 (§107 각 호) */
+  type: PropertyTaxpayerType;
+  /** 납세의무자 식별자 (공유는 대표=지분 최대자) */
+  name: string;
+  /** 법령 근거 */
+  legalBasis: string;
+  /** 납세의무자 판정 관련 경고 (공유 대표·신탁 위탁자 미입력 등) */
+  warnings: string[];
+}
+
+/**
+ * 공유재산 지분별 세액 안분 (지방세법 §107①1호) — co_owner + 지분 2인 이상 시.
+ * 본세(determinedTax)와 부가세 포함 고지액(totalPayable) 두 기준을 모두 제공.
+ */
+export interface PropertyCoOwnershipDistribution {
+  distributions: Array<{
+    /** 공유자 식별자 */
+    ownerId: string;
+    /** 지분율 */
+    shareRatio: number;
+    /** 본세(determinedTax) 지분 안분액 (원) — floor 잔액은 마지막 공유자 흡수 */
+    taxAmount: number;
+    /** 부가세 포함 고지액(totalPayable) 지분 안분액 (원) */
+    totalAmount: number;
+  }>;
+  /** 안분 합산 오차 (본세 기준, 0이어야 정상) */
+  roundingDiff: number;
 }
 
 /**
@@ -258,6 +319,12 @@ export interface PropertyTaxResult {
   warnings: string[];
   /** 계산 기준일 */
   targetDate: string;
+
+  // ── 납세의무자 (지방세법 §107) — taxpayerInfo 입력 시에만 ──
+  /** 납세의무자 판정 결과 */
+  taxpayer?: PropertyTaxpayerInfo;
+  /** 공유재산 지분별 안분 (co_owner + 지분 2인 이상) */
+  coOwnershipDistribution?: PropertyCoOwnershipDistribution;
 }
 
 // ============================================================

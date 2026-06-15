@@ -185,6 +185,11 @@ export interface PropertyObjectInput {
   isTrust?: boolean;
   /** 신탁 유형 (자익/타익) */
   trustType?: "self" | "other";
+  /**
+   * 위탁자(신탁 설정자) 식별자 — §107②5호 신탁재산 납세의무자.
+   * isTrust=true 시 필수. 미입력 시 warning + 공부상 소유자(registeredOwner) 사용.
+   */
+  settlor?: string;
 
   // ── 상속 ──
   /** 상속 미등기 여부 */
@@ -280,15 +285,16 @@ export interface CoOwnershipShare {
 }
 
 /**
- * 납세의무자 유형 8종 (지방세법 §107)
+ * 납세의무자 유형 9종 (지방세법 §107)
  */
 export type PropertyTaxpayerType =
-  | "registered_owner"        // 공부상 소유자 (원칙)
-  | "actual_owner"            // 사실상 소유자
-  | "co_owner"                // 공유자 (지분별 안분)
-  | "trustee"                 // 신탁 수탁자 (§107의2)
-  | "beneficiary"             // 신탁 수익자
-  | "heir_representative"     // 상속 미등기 주된 상속인 (§107②)
+  | "registered_owner"        // 공부상 소유자 (원칙, §107①본문)
+  | "actual_owner"            // 사실상 소유자 (§107①본문)
+  | "co_owner"                // 공유자 (지분별 안분, §107①1호)
+  | "truster"                 // 신탁재산 위탁자 (§107②5호, 2020.12.29 개정 — 현행법)
+  | "trustee"                 // 신탁 수탁자 (구법·예외적 케이스, 미사용)
+  | "beneficiary"             // 신탁 수익자 (미사용)
+  | "heir_representative"     // 상속 미등기 주된 상속인 (§107②2호)
   | "construction_contractor" // 건설 중 건축물 건축주
   | "lessee";                 // 지상권자·임차인
 

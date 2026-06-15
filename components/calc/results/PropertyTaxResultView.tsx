@@ -12,7 +12,11 @@
  * - 분납 안내
  */
 
-import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
+import type {
+  PropertyTaxResult,
+  PropertyTaxpayerInfo,
+  PropertyCoOwnershipDistribution,
+} from "@/lib/tax-engine/types/property.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -34,6 +38,129 @@ interface Props {
   result: PropertyTaxResult;
   /** 저장된 계산 id — 서버 PDF 선택 출력(PR-D)용. 미저장/비로그인 시 undefined */
   savedId?: string;
+}
+
+/** 납세의무자 유형 한국어 라벨 */
+const TAXPAYER_TYPE_LABEL: Record<string, string> = {
+  registered_owner:        "공부상 소유자 (§107①본문)",
+  actual_owner:            "사실상 소유자 (§107①본문)",
+  co_owner:                "공유자 — 지분별 납세 (§107①1호)",
+  truster:                 "신탁 위탁자 (§107②5호)",
+  trustee:                 "신탁 수탁자",
+  beneficiary:             "신탁 수익자",
+  heir_representative:     "주된 상속인 — 상속 미등기 (§107②2호)",
+  construction_contractor: "건축주 — 건설 중 건축물",
+  lessee:                  "지상권자·임차인",
+};
+
+/** 납세의무자 판정 결과 서브섹션 */
+function TaxpayerSection({ taxpayer }: { taxpayer: PropertyTaxpayerInfo }) {
+  const typeLabel = TAXPAYER_TYPE_LABEL[taxpayer.type] ?? taxpayer.type;
+  return (
+    <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          §
+        </span>
+        <p className="text-xs font-semibold text-sky-700">납세의무자 유형</p>
+      </div>
+      <div className="rounded-md border border-sky-200 bg-white/60 divide-y text-sm">
+        <div className="flex items-start justify-between py-2 px-3">
+          <span className="text-muted-foreground">납세의무자</span>
+          <span className="font-medium">{taxpayer.name || "(미입력)"}</span>
+        </div>
+        <div className="flex items-start justify-between py-2 px-3">
+          <span className="text-muted-foreground">판정 유형</span>
+          <span className="font-medium text-right">{typeLabel}</span>
+        </div>
+        <div className="flex items-start justify-between py-2 px-3">
+          <span className="text-muted-foreground">법령 근거</span>
+          <span className="text-right text-xs">{taxpayer.legalBasis}</span>
+        </div>
+      </div>
+      {taxpayer.warnings.length > 0 && (
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-2 space-y-0.5">
+          {taxpayer.warnings.map((w, i) => (
+            <p key={i} className="text-xs text-amber-800">
+              ⚠ {w}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 공유 지분 안분 표 */
+function CoOwnershipTable({
+  distribution,
+  determinedTax,
+  totalPayable,
+}: {
+  distribution: PropertyCoOwnershipDistribution;
+  determinedTax: number;
+  totalPayable: number;
+}) {
+  return (
+    <div className="rounded-md border overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40">
+          <tr>
+            <th className="text-left py-2 px-3 font-medium text-muted-foreground">
+              공유자
+            </th>
+            <th className="text-right py-2 px-3 font-medium text-muted-foreground whitespace-nowrap">
+              지분율
+            </th>
+            <th className="text-right py-2 px-3 font-medium text-muted-foreground whitespace-nowrap">
+              본세 안분액
+            </th>
+            <th className="text-right py-2 px-3 font-medium text-muted-foreground whitespace-nowrap">
+              고지액 안분액
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {distribution.distributions.map((d, i) => (
+            <tr key={i} className="hover:bg-muted/20 transition-colors">
+              <td className="py-2 px-3 font-medium">
+                {d.ownerId || `공유자 ${i + 1}`}
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+                {(d.shareRatio * 100).toFixed(2).replace(/\.?0+$/, "")}%
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+                {formatKRW(d.taxAmount)}
+              </td>
+              <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+                {formatKRW(d.totalAmount)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot className="bg-primary/5 border-t-2 border-foreground">
+          <tr>
+            <td className="py-2 px-3 font-bold">합계</td>
+            <td className="py-2 px-3 text-right font-bold font-mono tabular-nums whitespace-nowrap">
+              100%
+            </td>
+            <td className="py-2 px-3 text-right font-bold font-mono tabular-nums whitespace-nowrap text-primary">
+              {formatKRW(determinedTax)}
+            </td>
+            <td className="py-2 px-3 text-right font-bold font-mono tabular-nums whitespace-nowrap text-primary">
+              {formatKRW(totalPayable)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+      {distribution.roundingDiff !== 0 && (
+        <p className="text-[11px] text-muted-foreground px-3 py-1 border-t">
+          안분 오차 {formatKRW(Math.abs(distribution.roundingDiff))}원이
+          마지막 공유자에게 흡수됩니다 (floor 잔액 흡수 원칙).
+        </p>
+      )}
+    </div>
+  );
 }
 
 function TaxRow({
@@ -93,6 +220,9 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
     legalBasis,
   } = result;
 
+  const taxpayer = result.taxpayer;
+  const coOwnershipDistribution = result.coOwnershipDistribution;
+
   const capApplied = determinedTax < calculatedTaxBeforeCap;
 
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -135,8 +265,10 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
     if (installment.eligible) s.add("installment");
     if (warnings.length > 0) s.add("warnings");
     if (legalBasis.length > 0) s.add("legal-basis");
+    if (taxpayer) s.add("taxpayer");
+    if (coOwnershipDistribution) s.add("co-ownership");
     return s;
-  }, [installment, warnings, legalBasis]);
+  }, [installment, warnings, legalBasis, taxpayer, coOwnershipDistribution]);
 
   return (
     <div className="space-y-6">
@@ -348,6 +480,34 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
               <div className="font-semibold">{formatKRW(installment.secondPayment)}</div>
             </div>
           </div>
+        </section>
+        </PrintSection>
+      )}
+
+      {/* ─── 납세의무자 판정 (taxpayerInfo 입력 시에만) ─── */}
+      {taxpayer && (
+        <PrintSection id="taxpayer" selectedIds={selectedPrintIds}>
+        <section className="space-y-1">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            납세의무자 판정
+          </h3>
+          <TaxpayerSection taxpayer={taxpayer} />
+        </section>
+        </PrintSection>
+      )}
+
+      {/* ─── 공유 지분 안분 (co_owner + 공유자 2인 이상 시에만) ─── */}
+      {coOwnershipDistribution && (
+        <PrintSection id="co-ownership" selectedIds={selectedPrintIds}>
+        <section className="space-y-1">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            공유 지분별 세액 안분 (지방세법 §107①1호)
+          </h3>
+          <CoOwnershipTable
+            distribution={coOwnershipDistribution}
+            determinedTax={determinedTax}
+            totalPayable={totalPayable}
+          />
         </section>
         </PrintSection>
       )}
