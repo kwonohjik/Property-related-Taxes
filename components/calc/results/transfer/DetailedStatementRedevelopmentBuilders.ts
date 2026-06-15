@@ -276,7 +276,7 @@ export function buildRedevLthdFormula(
   const months = detail.holdingMonths % 12;
   const pct = (detail.lthdRate * 100).toFixed(0);
 
-  // 거주월수 귀속 메모 (사례 45 — §155⑰ + 해석례 2020-386)
+  // 거주월수 귀속 메모 (사례 45 — §154⑧ 거주·보유기간 통산 + 해석례 2020-386)
   const attr = redev.lthdResidenceAttribution;
   let residenceMemo = "";
   if (attr) {

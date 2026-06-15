@@ -267,11 +267,12 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         </div>
       )}
 
-      {/* LTHD 거주월수 귀속 박스 (§155⑰ + 해석례 2020-386 — 사례 45) */}
+      {/* LTHD 거주월수 귀속 박스 (§154⑧ + 해석례 2020-386 — 사례 45) */}
       {lthdResidenceAttribution && (
         <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3 text-[11px] text-emerald-900 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">시행령 §155⑰ + 해석례 2020-386</span>
+            <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">해석례 2020-386</span>
+            <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
             <span className="font-semibold">장기보유공제 거주월수 귀속 분리</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">

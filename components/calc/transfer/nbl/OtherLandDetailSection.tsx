@@ -88,13 +88,21 @@ export function OtherLandDetailSection({
       />
 
       {isLikelyBareground && (
-        <div className="rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-          건물가액이 토지가액의 2% 미만 — 나대지로 추정됩니다 (§168-11⑥).
+        <div className="rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 space-y-1">
+          <p>건물가액이 토지가액의 2% 미만 — 건축물 부속토지로 보지 않아 재산세 별도합산에서 제외(종합합산)되어 비사업용으로 판정됩니다.</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="소득세법 §104의3 ① 4호 나목" label="§104의3①4호나목" />
+            <LawArticleModal legalBasis="지방세법 시행령 §101 ① 2호 나목" label="지방세법시행령 §101①2호나목" />
+          </div>
         </div>
       )}
 
-      <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground">
-        건물가액이 토지가액의 2% 미만이면 나대지로 추정됩니다 (§168-11⑥).
+      <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground space-y-1">
+        <p>건물가액이 토지가액의 2% 미만이면 건축물 부속토지로 보지 않아 재산세 별도합산에서 제외(종합합산)되어 비사업용으로 판정됩니다.</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 §104의3 ① 4호 나목" label="§104의3①4호나목" />
+          <LawArticleModal legalBasis="지방세법 시행령 §101 ① 2호 나목" label="지방세법시행령 §101①2호나목" />
+        </div>
       </div>
     </div>
   );

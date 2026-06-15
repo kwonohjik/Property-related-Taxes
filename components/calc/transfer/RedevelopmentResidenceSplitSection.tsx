@@ -4,7 +4,7 @@
  * RedevelopmentResidenceSplitSection — 재개발 1세대1주택 거주월수 분리 입력
  *
  * 분리 사유: RedevelopmentBlock 800줄 정책 (사례 46 추가 대비, 2026-05-14).
- * 시행령 §155⑰ (거주기간 통산) + 사전법령해석재산 2020-386 (청산금분 신축거주만).
+ * 시행령 §154⑧ (거주기간 통산) + 사전법령해석재산 2020-386 (청산금분 신축거주만).
  * 가시성: 1세대1주택 + householdHousingCount === 1 일 때만 노출.
  *
  * 정책 준수:
@@ -15,6 +15,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
 
 interface Props {
@@ -75,13 +76,14 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
         </p>
       </div>
       <p className="text-[11px] text-emerald-800 leading-relaxed">
-        시행령 §155⑰ — 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.
+        <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
+        {" "}— 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.
         사전법령해석재산 2020-386 — 청산금납부분 LTHD 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
       </p>
 
       <ResidencePeriodGroup
         label="종전주택 거주기간"
-        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§155⑰ 통산 산식 prior)."
+        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§154⑧ 통산 산식 prior)."
         startValue={asset.redevPriorResidenceStartDate}
         endValue={asset.redevPriorResidenceEndDate}
         monthsValue={asset.redevPriorHouseResidenceMonths}
