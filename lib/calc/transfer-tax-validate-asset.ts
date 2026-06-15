@@ -434,10 +434,20 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
 
   if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
 
-  const isAppraisal = asset.isAppraisalAcquisition === true;
-  const isEstimated = !isAppraisal && asset.useEstimatedAcquisition === true;
+  const isSalesCase = asset.isSalesCaseAcquisition === true;
+  const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;
+  const isEstimated = !isSalesCase && !isAppraisal && asset.useEstimatedAcquisition === true;
   const hasPre1990 = (asset.pre1990Enabled ?? false) && asset.assetKind === "land";
   const isParcelMode = asset.parcelMode === true && asset.assetKind === "land";
+
+  // 0) 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 similarSalesValue 필수
+  if (isSalesCase) {
+    if (!asset.similarSalesValue || parseAmount(asset.similarSalesValue) <= 0)
+      return `${label}: 매매사례가액을 입력하세요.`;
+    // 개산공제 base: 취득시 기준시가(standardPriceAtAcq) 필수 — 0 허용(입력 없으면 개산공제 0)
+    // 단, 아예 검증 차단보다는 사용자 확인 유도 힌트만 제공 (추계는 기준시가 불확실 케이스가 많음)
+    return null;
+  }
 
   // 1) 다필지 모드는 별도 검증
   if (isParcelMode) return validateParcelMode(asset);

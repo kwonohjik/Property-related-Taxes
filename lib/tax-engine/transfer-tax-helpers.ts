@@ -343,7 +343,10 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     const flooredGain = input.skipLossFloor ? totalGain : Math.max(0, totalGain);
     const totalDeduction = splitResult.land.appraisalDeduction + splitResult.building.appraisalDeduction;
     const totalExpenses = splitResult.land.directExpenses + splitResult.building.directExpenses;
-    const usedEstimated = input.useEstimatedAcquisition || input.acquisitionMethod === "appraisal";
+    const usedEstimated =
+      input.useEstimatedAcquisition ||
+      input.acquisitionMethod === "appraisal" ||
+      input.acquisitionMethod === "salesCase";
     return {
       gain: flooredGain,
       usedEstimated,
@@ -380,6 +383,16 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
     acquisitionCostBase = appraisal;
     estimatedBase = appraisal;
+    estimatedDeduction = deduction;
+    usedEstimated = true;
+  } else if (input.acquisitionMethod === "salesCase") {
+    // 매매사례가액 모드(소득세법 시행령 §176의2③1호 — 취득가액 추계 1순위):
+    // §163⑫(§97①1호나목 매매사례가액)·§97②2호·§163⑥에 따라 환산취득가·감정가액과
+    // 동일하게 필요경비 개산공제(취득시 기준시가 × 3%)를 자동 적용한다.
+    const salesCase = input.similarSalesValue ?? input.acquisitionPrice;
+    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
+    acquisitionCostBase = salesCase;
+    estimatedBase = salesCase;
     estimatedDeduction = deduction;
     usedEstimated = true;
   } else {

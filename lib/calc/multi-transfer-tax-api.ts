@@ -75,8 +75,9 @@ export function buildPropertyPayload(form: TransferFormData) {
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (단건 callTransferTaxAPI와 동일 규칙).
   // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 deprecated — 더 이상 사용하지 않음.
-  const isAppraisal = primary?.isAppraisalAcquisition === true;
-  const isEstimated = !isAppraisal && (primary?.useEstimatedAcquisition ?? false);
+  const isSalesCase = primary?.isSalesCaseAcquisition === true;
+  const isAppraisal = !isSalesCase && primary?.isAppraisalAcquisition === true;
+  const isEstimated = !isSalesCase && !isAppraisal && (primary?.useEstimatedAcquisition ?? false);
   const acquisitionCause = primary?.acquisitionCause ?? "purchase";
 
   // §97② 단서 swap 분리 입력 — 단건과 동일: 두 필드 중 하나라도 입력되면 분리 전송.
@@ -95,20 +96,22 @@ export function buildPropertyPayload(form: TransferFormData) {
     propertyType: primaryKind,
     transferPrice: parseAmount(form.contractTotalPrice),
     transferDate: form.transferDate,
-    acquisitionPrice: (isEstimated || isAppraisal) ? 0 : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
+    acquisitionPrice: (isEstimated || isAppraisal || isSalesCase) ? 0 : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
     acquisitionDate: primary?.acquisitionDate ?? "",
     // 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary?.assetContractDate || undefined,
-    expenses: (isEstimated || isAppraisal) ? 0 : parseAmount(primary?.directExpenses ?? "0"),
+    expenses: (isEstimated || isAppraisal || isSalesCase) ? 0 : parseAmount(primary?.directExpenses ?? "0"),
     // §97② 단서 swap — 둘 다 0이면 undefined로 보내 swap 비활성 (단건과 동일 게이트)
     capitalExpenditure: (capEx || effectiveTransferExpense) ? capEx : undefined,
     transferExpense: (capEx || effectiveTransferExpense) ? (effectiveTransferExpense || undefined) : undefined,
-    useEstimatedAcquisition: isEstimated,
+    useEstimatedAcquisition: isSalesCase ? false : isEstimated,
     standardPriceAtAcquisition: isEstimated ? parseAmount(primary?.standardPriceAtAcq ?? "") : undefined,
     standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
-    acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual",
+    acquisitionMethod: isSalesCase ? "salesCase" : isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual",
     // 감정가 모드 — 단건과 동일하게 자산 카드의 취득가 입력란(fixedAcquisitionPrice)이 감정가
     appraisalValue: isAppraisal ? parseAmount(primary?.fixedAcquisitionPrice ?? "0") : undefined,
+    // ④⑬ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
+    similarSalesValue: isSalesCase ? (parseAmount(primary?.similarSalesValue ?? "") || undefined) : undefined,
     isSelfBuilt: primary?.isSelfBuilt || undefined,
     buildingType: primary?.buildingType || undefined,
     constructionDate: primary?.isSelfBuilt && primary?.constructionDate ? primary.constructionDate : undefined,

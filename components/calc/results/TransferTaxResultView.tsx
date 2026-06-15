@@ -289,7 +289,7 @@ export function TransferTaxResultView({
               필요경비 swap 적용 — 소득세법 §97② 2호 단서
             </p>
             <p className="text-xs text-amber-800">
-              환산취득가(또는 감정가액) + 개산공제 {formatKRW(result.swapComparison.estimatedSide)}
+              환산취득가(또는 감정가액·매매사례가액) + 개산공제 {formatKRW(result.swapComparison.estimatedSide)}
               {" < "}자본적지출 + 양도비 {formatKRW(result.swapComparison.directSide)}
             </p>
             <p className="text-xs text-amber-800">

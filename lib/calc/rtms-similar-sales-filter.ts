@@ -69,12 +69,12 @@ export interface SimilarSalesFilterCriteria {
   targetStandardPrice?: number;
   /** 평가기준일 (Date) */
   valuationDate: Date;
-  /** 세목 — 평가기간 산정 */
-  taxType: "inheritance" | "gift";
+  /** 세목 — 평가기간 산정 (상속·증여=상증령 §49 / 양도=소득세법 시행령 §176의2③) */
+  taxType: "inheritance" | "gift" | "transfer";
   /**
-   * 신고일 (선택) — 상증령 §49④ 괄호
+   * 신고일 (선택) — 상증령 §49④ 괄호 (상속·증여 전용)
    * 입력 시 후 기간 상한을 min(평가기간상한, 신고일)로 절단.
-   * 통상 신고 전 시뮬레이션이므로 미입력이 기본.
+   * 통상 신고 전 시뮬레이션이므로 미입력이 기본. 양도는 적용 안 함.
    */
   reportDate?: Date;
 }
@@ -188,13 +188,18 @@ export function filterSimilarSales(
   const { valuationDate, taxType, reportDate, targetExclusiveAreaM2, targetStandardPrice } = criteria;
 
   // ── 평가기간 산출 ───────────────────────────────
-  // 상속: 기준일 ±6개월 / 증여: -6개월~+3개월 (addMonths — 180일 근사 아님)
-  const periodStart = addMonths(valuationDate, -6);
+  // 상속(상증령 §49①): 기준일 전후 6개월
+  // 증여(상증령 §49①): 전 6개월 ~ 후 3개월
+  // 양도(소득세법 시행령 §176의2③1호): 취득일 전후 각 3개월
+  // (addMonths — 180일 근사 아님)
+  const monthsBefore = taxType === "transfer" ? 3 : 6;
   const monthsAfter = taxType === "inheritance" ? 6 : 3;
+  const periodStart = addMonths(valuationDate, -monthsBefore);
   let periodEnd = addMonths(valuationDate, monthsAfter);
 
-  // §49④ 신고일 절단 (P7): 신고일 입력 시 후 상한 = min(기간 상한, 신고일)
-  if (reportDate !== undefined && reportDate < periodEnd) {
+  // §49④ 신고일 절단 (P7): 상속·증여만 — 신고일 입력 시 후 상한 = min(기간 상한, 신고일)
+  // 양도는 §176의2③에 신고일 절단 규정 없음 → reportDate 무시.
+  if (taxType !== "transfer" && reportDate !== undefined && reportDate < periodEnd) {
     periodEnd = reportDate;
   }
 

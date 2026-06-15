@@ -121,6 +121,13 @@ export function CompanionAcquisitionCauseSection({
         <CompanionAcqPurchaseBlock
           acquisitionDate={asset.acquisitionDate}
           onAcquisitionDateChange={(v) => onChange({ acquisitionDate: v })}
+          isSalesCaseAcquisition={asset.isSalesCaseAcquisition}
+          onIsSalesCaseAcquisitionChange={(v) => onChange({ isSalesCaseAcquisition: v })}
+          similarSalesValue={asset.similarSalesValue}
+          onSimilarSalesValueChange={(v) => onChange({ similarSalesValue: v })}
+          similarSalesSource={asset.similarSalesSource}
+          onSimilarSalesSourceChange={(v) => onChange({ similarSalesSource: v })}
+          acquisitionSigunguCode={asset.acquisitionSigunguCode}
           useEstimatedAcquisition={asset.useEstimatedAcquisition}
           onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
           isAppraisalAcquisition={asset.isAppraisalAcquisition}
