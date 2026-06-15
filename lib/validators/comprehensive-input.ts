@@ -211,6 +211,17 @@ export const comprehensivePropertySchema = z
     /** 건물·부속토지 소유자 분리 시가표준액 안분 (사례6). 미입력 = 분리 없음. */
     appurtenantSplit: appurtenantSplitSchema.optional(),
 
+    /**
+     * 재산세 부과세액 직접입력 (비율 안분 공제 ⓐ). 미입력 = 자동계산(하위호환).
+     * 다가구 구별 면적안분 합산·세부담상한·감면 적용 실부과액 (사례7·8·9).
+     * 엔진은 effectiveFactor 후곱 없이 원값 사용 — 이미 감면·지분·세부담상한 반영.
+     */
+    propertyTaxAmount: z
+      .number()
+      .int({ message: "재산세 부과세액은 정수(원)여야 합니다." })
+      .nonnegative({ message: "재산세 부과세액은 0 이상이어야 합니다." })
+      .optional(),
+
     /** 임대주택 합산배제 상세 정보 */
     rentalInfo: rentalExclusionInfoSchema.optional(),
 

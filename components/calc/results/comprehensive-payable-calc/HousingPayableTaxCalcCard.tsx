@@ -183,6 +183,9 @@ function Step2({
   const apOwnLand = (apProp?.appurtenantOwnedPart ?? "land") === "land";
   const apNum = apOwnLand ? apLand : apBldg;
   const hasAppurtenant = !!apProp?.appurtenantSplitEnabled && apTotal > 0 && apNum > 0;
+  // 사례7·8·9: 재산세 부과세액 직접입력 시 ⓐ는 고지서 실부과액 합계 — 자동계산 산식 대신 직접입력 표시
+  const hasManualPropertyTax =
+    properties?.some((p) => p.propertyTaxAmount && parseAmount(p.propertyTaxAmount) > 0) ?? false;
   // 100% 지분 재산세 (안분 전): 과세표준 = 원공시 × FMR, 표준세율 누진 1회
   const p100Base = Math.floor((result.includedAssessedValue * Math.round(fmr * 100)) / 100);
   const p100Bracket = getHousingStandardRateBracket(p100Base);
@@ -212,7 +215,11 @@ function Step2({
         indent={1}
         testId="payable-step2-a"
       />
-      {hasAppurtenant ? (
+      {hasManualPropertyTax ? (
+        <Bullet indent={2}>
+          재산세 부과세액(고지서 기재) 직접입력 합계 : {won(c.totalPropertyTax)}
+        </Bullet>
+      ) : hasAppurtenant ? (
         <>
           {/* 사례6: 100% 지분 재산세로 세부담상한 적용 후 시가표준액 비율 안분 (교재 ②ⓐ) */}
           <Bullet indent={2}>

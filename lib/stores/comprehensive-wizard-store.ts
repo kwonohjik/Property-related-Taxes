@@ -58,6 +58,8 @@ export interface PropertyEntry {
   buildingStdValue: string;         // 당해 건물 시가표준액 (원)
   priorLandStdValue: string;        // 직전 토지 시가표준액 (세부담상한 자동모드용)
   priorBuildingStdValue: string;    // 직전 건물 시가표준액
+  // ── 재산세 부과세액 직접입력 (비율 안분 공제 ⓐ, 사례7·8·9) ──
+  propertyTaxAmount: string;        // 재산세 부과세액 (원). 빈 문자열 = 자동계산(하위호환)
 }
 
 // ============================================================
@@ -195,6 +197,7 @@ function makeProperty(): PropertyEntry {
     buildingStdValue: "",
     priorLandStdValue: "",
     priorBuildingStdValue: "",
+    propertyTaxAmount: "",  // 재산세 부과세액 직접입력 (빈 문자열 = 자동계산)
   };
 }
 
@@ -441,6 +444,8 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
               buildingStdValue: p.buildingStdValue ?? "",
               priorLandStdValue: p.priorLandStdValue ?? "",
               priorBuildingStdValue: p.priorBuildingStdValue ?? "",
+              // ③ normalize: 재산세 부과세액 직접입력 — 구 세션 누락 시 빈문자열(자동계산)
+              propertyTaxAmount: p.propertyTaxAmount ?? "",
             }));
           }
           // 세부담상한 모드 — 구 세션 누락 시 "direct" (기존 동작 보존)

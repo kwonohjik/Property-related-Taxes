@@ -184,28 +184,36 @@ export function calculateComprehensiveTax(
     const isExcluded = exclusionResult?.isExcluded ?? false;
 
     let propTax = 0;
-    try {
-      const ptResult = calculatePropertyTax(
-        {
-          objectType: "housing",
-          publishedPrice: prop.assessedValue,
-          // 재산세 1세대1주택 특례세율은 개인 전용 — 법인은 일반세율
-          isOneHousehold: !isCorporate && input.isOneHouseOwner && input.properties.length === 1,
-          targetDate: assessmentDateStr,
-        },
-        rates,
-      );
-      propTax = ptResult.determinedTax;
-    } catch {
-      warnings.push(
-        `주택(${prop.propertyId}) 재산세 계산 오류 — 비율 안분 공제에서 제외됩니다.`,
-      );
-    }
+    // D-2 (B 지점): 지분후·감면후·안분후 실부과 재산세 = 비율 안분 공제 ⓐ
+    let imposedTax: number;
+    if (prop.propertyTaxAmount !== undefined) {
+      // 사례7·8·9: 재산세 부과세액 직접입력. 이미 감면·지분·세부담상한(105/110/130%)·
+      // 다가구 면적안분이 반영된 고지서 실부과액 → applyEffectiveFactor 후곱 금지(이중적용 방지).
+      // 자동계산 propTax는 산출 생략 (override 경로는 effectiveFactor와 직교).
+      imposedTax = prop.propertyTaxAmount;
+    } else {
+      try {
+        const ptResult = calculatePropertyTax(
+          {
+            objectType: "housing",
+            publishedPrice: prop.assessedValue,
+            // 재산세 1세대1주택 특례세율은 개인 전용 — 법인은 일반세율
+            isOneHousehold: !isCorporate && input.isOneHouseOwner && input.properties.length === 1,
+            targetDate: assessmentDateStr,
+          },
+          rates,
+        );
+        propTax = ptResult.determinedTax;
+      } catch {
+        warnings.push(
+          `주택(${prop.propertyId}) 재산세 계산 오류 — 비율 안분 공제에서 제외됩니다.`,
+        );
+      }
 
-    // D-2 (B 지점): 지분후·감면후·안분후 실부과 재산세 = floor(propTax × effectiveFactor × 안분)
-    // propTax는 100% 지분 기준 determinedTax — 지분·감면·시가표준액 안분을 후 곱으로 결합
-    // (사례6: 100% 재산세 2,970,000 × (토지 8억/전체 10억) = 부과 2,376,000)
-    const imposedTax = applyEffectiveFactor(propTax, rate, ratio, appurtenant);
+      // propTax는 100% 지분 기준 determinedTax — 지분·감면·시가표준액 안분을 후 곱으로 결합
+      // (사례6: 100% 재산세 2,970,000 × (토지 8억/전체 10억) = 부과 2,376,000)
+      imposedTax = applyEffectiveFactor(propTax, rate, ratio, appurtenant);
+    }
     // 합산배제 주택은 비율안분 합계에 포함하지 않음
     if (!isExcluded) {
       totalPropertyTaxAmount += imposedTax;

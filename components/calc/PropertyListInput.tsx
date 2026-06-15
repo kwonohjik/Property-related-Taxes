@@ -270,6 +270,26 @@ function PropertyCard({
         </div>
       </ToggleCard>
 
+      {/* ⑤ 사례7·8·9: 재산세 부과세액 직접입력 (비율 안분 공제 ⓐ) */}
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-1.5">
+        <p className="text-xs font-semibold text-sky-700">
+          재산세 부과세액 (직접입력){" "}
+          <span className="font-normal text-muted-foreground">선택</span>
+        </p>
+        <CurrencyInput
+          label="재산세 부과세액"
+          hideLabel
+          value={property.propertyTaxAmount}
+          onChange={(v) => onUpdate({ propertyTaxAmount: v })}
+          hideUnit
+        />
+        <p className="text-xs text-muted-foreground">
+          재산세 고지서의 부과세액을 입력하면 비율 안분 공제(ⓐ)에 그대로 사용됩니다.
+          다가구주택 구별 합산액, 세부담 상한·감면이 적용된 실부과액에 사용. 비워두면
+          공시가격으로 자동 계산됩니다.
+        </p>
+      </div>
+
       {/* 전용면적 + 토지 과세면적 + 수도권 여부 */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
