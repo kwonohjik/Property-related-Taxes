@@ -115,7 +115,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
           1
         </span>
         <p className="text-xs font-semibold text-amber-700">
-          양도일 직전 1개월 종가 (소령 §99①3 · §163⑨ 분모 — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일, 휴일·주말은 빈칸으로 두면 자동 제외)
+          양도일 직전 1개월 종가 (소령 §99①3 분모 — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일, 휴일·주말은 빈칸으로 두면 자동 제외)
         </p>
       </div>
 
@@ -177,7 +177,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
           거래일 <strong>{preview.tradingDays}</strong>일 · 종가합계{" "}
           <strong>{preview.sum.toLocaleString()}</strong> · 1개월 종가평균{" "}
           <strong className="text-amber-900">{preview.avg.toLocaleString()}</strong>
-          {" "}→ transferDatePriceAvg1Month에 자동 mirror됨 (§163⑨ 환산 분모)
+          {" "}→ transferDatePriceAvg1Month에 자동 mirror됨 (§99①3 환산 분모)
         </div>
       )}
     </div>

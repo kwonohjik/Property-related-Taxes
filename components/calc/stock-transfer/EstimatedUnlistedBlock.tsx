@@ -23,6 +23,7 @@ import { EstimatedUnlistedNetAssetStatement } from "./EstimatedUnlistedNetAssetS
 import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 interface EstimatedUnlistedBlockProps {
   form: StockTransferFormData;
@@ -196,6 +197,15 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           비상장 보충적 평가 — 시행령 §165④1
           {isHeavyRE && " (가중치 반전 적용 — §165⑤ 부동산과다보유)"}
         </p>
+        <div className="flex flex-wrap gap-1.5 mt-1 mb-1">
+          <LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="§165④1" />
+          {isNetAssetOnly && (
+            <LawArticleModal legalBasis="소득세법 시행령 §165 ④ 3호" label="§165④3" />
+          )}
+          {isHeavyRE && (
+            <LawArticleModal legalBasis="소득세법 시행령 §165 ⑤" label="§165⑤" />
+          )}
+        </div>
         <p className="text-xs mt-1">
           {isNetAssetOnly
             ? "순자산가치 단독 평가 (§165④3) — 80% 하한 미적용"
@@ -213,6 +223,12 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       <FieldCard
         label="입력 방식"
         hint="간이는 1주당 가액을 직접 입력, 행-수준 계산은 상증령 §54·§55 산식으로 자동 산출"
+        trailing={
+          <div className="flex flex-wrap gap-1">
+            <LawArticleModal legalBasis="상속세 및 증여세법 시행령 §54" label="상증령§54" />
+            <LawArticleModal legalBasis="상속세 및 증여세법 시행령 §55" label="상증령§55" />
+          </div>
+        }
       >
         <RadioCardGroup
           name="unlistedValuationMode"
@@ -239,6 +255,9 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       </FieldCard>
 
       {/* [사례 49] 취득시 장부분실 액면가 ToggleCard (§99①4 후단) */}
+      <div className="flex flex-wrap gap-1.5 mb-1">
+        <LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4 후단" />
+      </div>
       <ToggleCard
         tone="amber"
         title="취득시점 장부분실 — 액면가 적용 (§99①4 후단)"
@@ -246,6 +265,9 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         checked={form.acqFaceValueOnly ?? false}
         onCheckedChange={(v) => onChange({ acqFaceValueOnly: v })}
       >
+        <div className="flex flex-wrap gap-1 mb-1">
+          <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥ 4호" label="§163⑥4" />
+        </div>
         <CurrencyInput
           label="1주당 액면가"
           required

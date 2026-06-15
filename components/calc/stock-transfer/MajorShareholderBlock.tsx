@@ -21,6 +21,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import {
   expandToggleClass,
   expandToggleLabel,
@@ -255,7 +256,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
         {priorYearEndTradingStatus && !priorYearEndTradingStatus.isTrading && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             <p className="font-semibold">
-              ⚠️ 비거래일 입력 — 직전거래일 종가 적용 필요 (§157①, 교재 49 (3) ①)
+              ⚠️ 비거래일 입력 — 직전거래일 종가 적용 필요 (<LawArticleModal legalBasis="소득세법 시행령 §157 ①" label="§157①" />, 교재 49 (3) ①)
             </p>
             <p className="mt-1 text-amber-800">
               <strong>{form.priorYearEndDate}</strong>은 {priorYearEndTradingStatus.reason}입니다.
@@ -313,8 +314,12 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
         {/* 동적 임계 박스 — 직전 사업연도 종료일 + 시장 선택 후 자동 표시 */}
         {threshold && form.priorYearEndDate && (
           <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
-            <p className="font-semibold text-violet-900 mb-1">
-              현재 적용 기준 ({form.marketType === "unlisted" ? "§167의8①2호" : "§157④"})
+            <p className="font-semibold text-violet-900 mb-1 flex items-center gap-1">
+              현재 적용 기준 (
+              {form.marketType === "unlisted"
+                ? <LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호" />
+                : <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157④" />}
+              )
             </p>
             <p className="text-violet-800">
               지분율 <strong>{(threshold.shareRatioThreshold * 100).toFixed(1)}%</strong> ·
@@ -328,8 +333,9 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               )}~ 적용
             </p>
             {form.marketType === "unlisted" && threshold.isVentureRule && (
-              <p className="text-xs text-violet-700 mt-1 font-semibold">
-                ✓ 자동 적용 중 — 비상장 벤처기업 시총 기준 <strong>40억</strong> (시행령 §167의8①2호 나목)
+              <p className="text-xs text-violet-700 mt-1 font-semibold flex items-center gap-1 flex-wrap">
+                ✓ 자동 적용 중 — 비상장 벤처기업 시총 기준 <strong>40억</strong>{" "}
+                (<LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호 나목" />)
               </p>
             )}
             {form.marketType === "unlisted" && !threshold.isVentureRule && (
@@ -589,9 +595,13 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                     ? `✓ ${reason} → 대주주 해당`
                     : "✗ 대주주 미해당"}
                 </p>
-                <p className="text-xs">
+                <p className="text-xs flex items-center gap-1 flex-wrap">
                   시총 기준 {(marketCapThreshold / 100_000_000).toFixed(0)}억 / 지분율 기준 {(shareRatioThreshold * 100).toFixed(1)}%
-                  {" "}({form.marketType === "unlisted" ? "§167의8①2호" : "§157"})
+                  {" "}(
+                  {form.marketType === "unlisted"
+                    ? <LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호" />
+                    : <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157" />}
+                  )
                 </p>
               </div>
             );

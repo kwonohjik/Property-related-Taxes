@@ -12,6 +12,7 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface OtherAssetBlockProps {
@@ -33,9 +34,10 @@ export function OtherAssetBlock({ form, onChange }: OtherAssetBlockProps) {
       label="기타자산 해당 여부 (§94①4)"
       hint="과점주주 또는 부동산과다보유법인 주식 — 기타자산으로 분류 시 §55 누진세율 적용"
       trailing={
-        <span className="text-xs text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded">
-          §94①4·§94②
-        </span>
+        <div className="flex flex-wrap gap-1">
+          <LawArticleModal legalBasis="소득세법 §94 ① 4호" label="§94①4" />
+          <LawArticleModal legalBasis="소득세법 §94 ②" label="§94②" />
+        </div>
       }
     >
       {/* §94② 우선순위 안내 */}
@@ -43,8 +45,9 @@ export function OtherAssetBlock({ form, onChange }: OtherAssetBlockProps) {
         <div className="mb-3 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800">
           <p className="font-medium">§94② 우선순위 적용</p>
           <p className="text-xs mt-1">
-            §94①3(상장·비상장)과 §94①4(기타자산)를 동시에 충족하면 제4호(기타자산)가 우선 적용됩니다.
-            기본공제도 부동산 그룹(§103②)에 합산됩니다.
+            <LawArticleModal legalBasis="소득세법 §94 ① 3호" label="§94①3" />(상장·비상장)과{" "}
+            <LawArticleModal legalBasis="소득세법 §94 ① 4호" label="§94①4" />(기타자산)를 동시에 충족하면 제4호(기타자산)가 우선 적용됩니다.
+            기본공제도 부동산 그룹(<LawArticleModal legalBasis="소득세법 §103 ②" label="§103②" />)에 합산됩니다.
           </p>
         </div>
       )}

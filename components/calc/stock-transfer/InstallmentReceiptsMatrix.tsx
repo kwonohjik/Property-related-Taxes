@@ -18,6 +18,7 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export type InstallmentReceiptRow = {
   receiptDate: string;
@@ -79,14 +80,14 @@ export function InstallmentReceiptsMatrix({
     <div className="space-y-3">
       {/* 법령 안내 */}
       <div className="rounded-lg border border-fuchsia-200/70 bg-fuchsia-50/60 px-3 py-2 text-xs text-fuchsia-700 leading-relaxed">
-        <span className="font-semibold">§178의5②</span> 장기할부조건 양도: 각 수령일의 기준환율(외국환거래법)을
+        <LawArticleModal legalBasis="소득세법 시행령 §178의5 ②" label="§178의5②" /> 장기할부조건 양도: 각 수령일의 기준환율(외국환거래법)을
         수령액에 적용하여 원화 환산 후 합산합니다. 수령 건수는 2건 이상이어야 합니다.
       </div>
 
       {/* 행 헤더 */}
       <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 px-1 text-xs font-semibold text-slate-500">
         <span className="w-6 text-center">#</span>
-        <span>수령일 (§178의5②)</span>
+        <span>수령일 (<LawArticleModal legalBasis="소득세법 시행령 §178의5 ②" label="§178의5②" />)</span>
         <span>수령액 ({currency})</span>
         <span>기준환율 (KRW/{currency})</span>
         <span className="w-20 text-right">원화 환산</span>
@@ -158,8 +159,8 @@ export function InstallmentReceiptsMatrix({
       {/* 합계 미리보기 */}
       {hasAllKrw && (
         <div className="rounded bg-fuchsia-100/60 border border-fuchsia-200 px-3 py-2 flex items-center justify-between text-xs">
-          <span className="text-fuchsia-700 font-medium">
-            §178의5② 원화 환산 합계 ({rows.length}건)
+          <span className="text-fuchsia-700 font-medium flex items-center gap-1">
+            <LawArticleModal legalBasis="소득세법 시행령 §178의5 ②" label="§178의5②" /> 원화 환산 합계 ({rows.length}건)
           </span>
           <span className="text-fuchsia-800 font-bold tabular-nums">
             {totalKrw.toLocaleString()}

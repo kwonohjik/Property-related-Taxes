@@ -17,6 +17,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -155,7 +156,11 @@ export function AcquisitionLotsMatrix({
 
       {/* 매수 lot 행 목록 */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-amber-800">매수 lot (취득 정보)</h3>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-sm font-semibold text-amber-800">매수 lot (취득 정보)</h3>
+          <LawArticleModal legalBasis="소득세법 §104 ②" label="§104②" />
+          <LawArticleModal legalBasis="소득세법 §97의2" label="§97의2" />
+        </div>
         {lots.length === 0 ? (
           <p className="text-xs text-amber-700 bg-amber-100/60 rounded p-3">
             매수 행 추가부터 시작하세요.

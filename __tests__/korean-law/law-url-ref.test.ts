@@ -135,6 +135,56 @@ describe("parseLawRef — 단일 ref (회귀 보존)", () => {
       articleNum: "15",
     });
   });
+
+  // ── 주식양도세 신규 약칭·가지번호 (Pre-Do anchor — aliases 보강 검증) ──
+  it("TC-S1 증권거래세법 §8① → 신규 약칭", () => {
+    expect(parseLawRef("증권거래세법 §8①")).toEqual({
+      lawName: "증권거래세법",
+      articleNum: "8",
+    });
+  });
+
+  it("TC-S2 증권거래세법 시행령 §5 1호 → 시행령 (호 무시)", () => {
+    expect(parseLawRef("증권거래세법 시행령 §5 1호")).toEqual({
+      lawName: "증권거래세법 시행령",
+      articleNum: "5",
+    });
+  });
+
+  it("TC-S3 국고금 관리법 §47① → 신규 약칭 (공백 정식명)", () => {
+    expect(parseLawRef("국고금 관리법 §47①")).toEqual({
+      lawName: "국고금 관리법",
+      articleNum: "47",
+    });
+  });
+
+  it("TC-S4 소득세법 시행령 §167의8①2호 → 비상장 대주주 가지번호", () => {
+    expect(parseLawRef("소득세법 시행령 §167의8①2호")).toEqual({
+      lawName: "소득세법 시행령",
+      articleNum: "167의8",
+    });
+  });
+
+  it("TC-S5 소득세법 시행령 §176의2②1호 → 환산취득가 가지번호", () => {
+    expect(parseLawRef("소득세법 시행령 §176의2②1호")).toEqual({
+      lawName: "소득세법 시행령",
+      articleNum: "176의2",
+    });
+  });
+
+  it("TC-S6 조특법 §14①7호 → K-OTC 비과세", () => {
+    expect(parseLawRef("조특법 §14①7호")).toEqual({
+      lawName: "조세특례제한법",
+      articleNum: "14",
+    });
+  });
+
+  it("TC-S7 상속세 및 증여세법 시행규칙 §17 → 띄움형 붙임 정식명 정규화", () => {
+    expect(parseLawRef("상속세 및 증여세법 시행규칙 §17")).toEqual({
+      lawName: "상속세및증여세법 시행규칙",
+      articleNum: "17",
+    });
+  });
 });
 
 describe("parseLawRefsForModal — 복합 인용 분해", () => {
@@ -184,5 +234,9 @@ describe("extractClauseMarkers — 항(項) 마커 추출 (G-5 하이라이트)"
 
   it("CM-5 중복 제거·등장 순서 보존", () => {
     expect(extractClauseMarkers("상증령 §16③⑭ + §16③")).toEqual(["③", "⑭"]);
+  });
+
+  it("CM-S1 §104①11 가목 → 항 ① 추출 (주식 세율 — label 하이라이트)", () => {
+    expect(extractClauseMarkers("§104①11 가목")).toEqual(["①"]);
   });
 });

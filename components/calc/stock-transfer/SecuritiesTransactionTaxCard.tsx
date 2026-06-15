@@ -21,6 +21,7 @@ import React from "react";
 import type {
   SecuritiesTransactionTaxResult,
 } from "@/lib/tax-engine/stock-transfer/securities-transaction-tax";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 // ============================================================
 // Props
@@ -136,13 +137,15 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
   return (
     <div className="rounded-xl border border-sky-200 bg-sky-50 dark:bg-sky-900/20 dark:border-sky-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-sky-200 dark:border-sky-700">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-sm font-bold text-sky-800 dark:text-sky-200">
             증권거래세 (정보용)
           </h3>
           <span className="text-[10px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full">
             양도소득세와 별도 납부
           </span>
+          <LawArticleModal legalBasis="증권거래세법 시행령 §5" label="증거세령§5" />
+          <LawArticleModal legalBasis="농어촌특별세법 §5 ① 5호" label="농특법§5①5호" />
         </div>
         <p className="text-xs text-sky-600 mt-0.5">
           {stx.rateReference}

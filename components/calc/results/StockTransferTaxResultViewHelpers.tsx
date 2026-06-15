@@ -10,6 +10,7 @@
  */
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export function fmt(n: number): string {
   return n.toLocaleString();
@@ -229,20 +230,51 @@ const RULE_BADGE: Record<string, string> = {
   "로트이동평균": "bg-violet-100 text-violet-700 border-violet-200",
 };
 
+// ── RuleBadges → legalBasis 매핑 (UI 레이어, 엔진 무변경) ──
+// 기존 RULE_BADGE(tone)와 별개. appliedRules 20종 전수(Record 강제 — 누락 시 컴파일 에러).
+// 대주주 판정 세부 3종(F15F16·판정기준일·본인미보유)은 §157/§167의8 세부 항 모호 → 링크 보류("", tone 배지만).
+const RULE_BADGE_LAW_MAP: Record<
+  NonNullable<StockTransferResult["appliedRules"]>[number],
+  string
+> = {
+  "§94②우선": "소득세법 §94②",
+  "80%하한": "소득세법 시행령 §165④1",
+  "80%하한미적용": "소득세법 시행령 §165④1",
+  "단기30%": "소득세법 §104①11",
+  "거래정지우회": "소득세법 시행령 §165③",
+  "취득일거래정지우회": "소득세법 시행령 §165③",
+  "§97②단서swap": "소득세법 §97②",
+  "KOTC중소중견비과세": "소득세법 §94①3 나목 단서",
+  "KOTC벤처비과세": "조세특례제한법 §14①7호",
+  "월할가산": "소득세법 시행규칙 §81④",
+  "의제취득일적용": "소득세법 시행령 §162⑦3호",
+  "장부분실액면가": "소득세법 §99①4",
+  "기타자산우선§55누진": "소득세법 §55①",
+  "기본공제부동산그룹합산": "소득세법 §103②",
+  "로트개별법": "소득세법 시행령 §162⑤",
+  "로트선입선출": "소득세법 시행령 §162⑤",
+  "로트이동평균": "소득세법 시행령 §162⑤",
+  "F15F16대차사모펀드자동가산": "",
+  "판정기준일특수분기": "",
+  "본인미보유강제합산": "",
+};
+
 export function RuleBadges({ appliedRules }: { appliedRules: StockTransferResult["appliedRules"] }) {
   if (!appliedRules || appliedRules.length === 0) return null;
+  const badgeCls = "px-2 py-0.5 rounded border text-xs font-medium";
   return (
     <div className="flex flex-wrap gap-2">
-      {appliedRules.map((rule) => (
-        <span
-          key={rule}
-          className={`px-2 py-0.5 rounded border text-xs font-medium ${
-            RULE_BADGE[rule] ?? "bg-slate-100 text-slate-600 border-slate-200"
-          }`}
-        >
-          {rule}
-        </span>
-      ))}
+      {appliedRules.map((rule) => {
+        const tone = RULE_BADGE[rule] ?? "bg-slate-100 text-slate-600 border-slate-200";
+        const legalBasis = RULE_BADGE_LAW_MAP[rule];
+        return legalBasis ? (
+          <LawArticleModal key={rule} legalBasis={legalBasis} label={rule} className={`${badgeCls} ${tone}`} />
+        ) : (
+          <span key={rule} className={`${badgeCls} ${tone}`}>
+            {rule}
+          </span>
+        );
+      })}
     </div>
   );
 }

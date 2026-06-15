@@ -85,21 +85,21 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
       tone="amber"
     >
       <div className="mt-4 space-y-4" onKeyDown={handleEnterNext} data-enter-nav="off">
-        {/* 환산 산식 안내 (violet) — §165⑤ + §163⑨ 합성 */}
+        {/* 환산 산식 안내 (violet) — §165⑤ + §176의2②1호 합성 */}
         <div className="rounded-lg border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm">
-          <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ + §163⑨ 합성)</p>
+          <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ + §176의2②1호 합성)</p>
           <div className="text-violet-700 space-y-1 text-xs font-mono">
             <p>[§165⑤] 1주당 취득기준시가 = 상장일 이후 1개월 종가평균 × (취득연도 평가 ÷ 상장연도 평가)</p>
-            <p>[§163⑨] 환산취득가 = 양도가 × (1주당 취득기준시가 ÷ 1주당 양도기준시가)</p>
+            <p>[§176의2②1호] 환산취득가 = 양도가 × (1주당 취득기준시가 ÷ 1주당 양도기준시가)</p>
             <p>1주당 평가 = 순손익가치×3/5 + 순자산가치×2/5 {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}</p>
           </div>
         </div>
 
-        {/* ★ §163⑨ 분모 — 양도일 직전 1개월 종가 평균 (강조) */}
-        {/* §163⑨ 분모 입력 — direct(단일 숫자) vs daily(일자별 평균) 모드 선택 */}
+        {/* ★ 양도시 기준시가 분모 — 양도일 직전 1개월 종가 평균 §99①3 (강조) */}
+        {/* §99①3 분모 입력 — direct(단일 숫자) vs daily(일자별 평균) 모드 선택 */}
         <FieldCard
           label="입력 방식"
-          hint="양도일 직전 1개월 종가 평균 (1주당, §163⑨ 분모) — direct(단일 숫자) vs daily(일자별 자동 평균)"
+          hint="양도일 직전 1개월 종가 평균 (1주당, §99①3 분모) — direct(단일 숫자) vs daily(일자별 자동 평균)"
         >
           <RadioCardGroup
             name="transferStdInputMode"
