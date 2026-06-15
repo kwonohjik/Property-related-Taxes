@@ -22,10 +22,11 @@
  *   TC-16: 농림지역 7배
  *   TC-17: 자연환경보전지역 7배
  *
- * [P4-10] 철거 6개월 경계 테스트 3건
+ * [P4-10] 철거 1년(유예기간) 경계 테스트 (지방세법 시행령 §103의2 1호)
  *   TC-18: 철거 후 5개월 — 별도합산 유지
- *   TC-19: 철거 후 6개월 정확 — 별도합산 유지 (경계 이내)
- *   TC-20: 철거 후 6개월 + 1일 → 종합합산 전환
+ *   TC-19: 철거 후 6개월 — 별도합산 유지 (1년 이내)
+ *   TC-20: 철거 후 13개월(1년 초과) → 종합합산 전환
+ *   TC-20b: 철거 후 8개월(1년 이내) → 별도합산 유지 (구 6개월 유예 버그 회귀)
  *
  * [P4-11] 복수 토지 합산 테스트
  *   TC-21: 2필지 합산 — 누진 효과 검증
@@ -34,7 +35,7 @@
  * [P4-14] 분리·별도·종합 통합 테스트 3건 (reason에 법령 상수 포함)
  *   TC-23: 건축물 없음 → 종합합산 이관
  *   TC-24: 공장용지 기준면적 이내 → 별도합산
- *   TC-25: 철거 후 유예기간 초과 → 종합합산, reason에 §101③ 포함
+ *   TC-25: 철거 후 유예기간(1년) 초과 → 종합합산, reason에 §103의2 포함
  */
 
 import { describe, it, expect } from "vitest";
@@ -258,7 +259,7 @@ describe("P4-09: 용도지역별 기준면적 배율 7종", () => {
 // [P4-10] 철거 6개월 경계 테스트 (TC-18~20)
 // ============================================================
 
-describe("P4-10: 철거 후 6개월 경계값", () => {
+describe("P4-10: 철거 후 1년(유예기간) 경계값 (§103의2 1호)", () => {
   const TAX_BASE_DATE = "2025-06-01"; // 과세기준일
 
   it("TC-18: 철거 후 5개월 → 유예기간 이내 → 별도합산 유지", () => {
@@ -287,25 +288,42 @@ describe("P4-10: 철거 후 6개월 경계값", () => {
     expect(elapsed).toBe(6); // 정확히 6개월
 
     const check = isSeparateAggregateLand(land);
-    // 6개월 이하(<=6) → 유지 (> 6 초과만 이관)
+    // 1년(12개월) 이내 → 유지
     expect(check.isSeparateAggregate).toBe(true);
   });
 
-  it("TC-20: 철거 후 7개월(6개월+1개월 초과) → 별도합산 자격 상실 → 종합합산", () => {
-    // 철거일: 2024-11-01 → 과세기준일 2025-06-01까지 7개월
+  it("TC-20: 철거 후 13개월(1년 초과) → 별도합산 자격 상실 → 종합합산", () => {
+    // 철거일: 2024-05-01 → 과세기준일 2025-06-01까지 13개월
     const land = makeLand({
       demolished: true,
-      demolishedDate: "2024-11-01",
+      demolishedDate: "2024-05-01",
       taxBaseDate: TAX_BASE_DATE,
       buildingFloorArea: 100,
     });
-    const elapsed = calcElapsedMonths("2024-11-01", TAX_BASE_DATE);
-    expect(elapsed).toBe(7);
+    const elapsed = calcElapsedMonths("2024-05-01", TAX_BASE_DATE);
+    expect(elapsed).toBe(13);
 
     const check = isSeparateAggregateLand(land);
     expect(check.isSeparateAggregate).toBe(false);
     expect(check.excessArea).toBe(land.landArea);
     expect(check.legalBasis).toContain(PROPERTY_SEPARATE.DEMOLISHED_GRACE);
+  });
+
+  it("TC-20b: 철거 후 8개월(1년 이내) → 별도합산 유지 (구 6개월 유예 버그 회귀 — §103의2 1호 1년)", () => {
+    // 철거일: 2024-10-01 → 과세기준일 2025-06-01까지 8개월
+    // 구 graceMonths=6 기준이면 종합합산 오판정 → 현 1년 기준은 별도합산 유지
+    const land = makeLand({
+      demolished: true,
+      demolishedDate: "2024-10-01",
+      taxBaseDate: TAX_BASE_DATE,
+      buildingFloorArea: 100,
+    });
+    const elapsed = calcElapsedMonths("2024-10-01", TAX_BASE_DATE);
+    expect(elapsed).toBe(8);
+
+    const check = isSeparateAggregateLand(land);
+    expect(check.demolishedGraceApplied).toBe(true);
+    expect(check.isSeparateAggregate).toBe(true);
   });
 });
 
@@ -411,17 +429,17 @@ describe("P4-14: 통합 — legalBasis에 법령 상수 포함 검증", () => {
     expect(check.legalBasis).toBe(PROPERTY_SEPARATE.BASE_AREA_FACTORY);
   });
 
-  it("TC-25: 철거 후 유예기간 초과 → 종합합산, legalBasis에 §101③ 포함", () => {
+  it("TC-25: 철거 후 유예기간(1년) 초과 → 종합합산, legalBasis에 §103의2 포함", () => {
     const land = makeLand({
       demolished: true,
-      demolishedDate: "2024-11-01",
+      demolishedDate: "2024-05-01",
       taxBaseDate: "2025-06-01",
       buildingFloorArea: 100,
     });
     const check = isSeparateAggregateLand(land);
     expect(check.isSeparateAggregate).toBe(false);
     expect(check.legalBasis).toBe(PROPERTY_SEPARATE.DEMOLISHED_GRACE);
-    expect(check.legalBasis).toContain("§101③");
+    expect(check.legalBasis).toContain("§103의2");
   });
 });
 

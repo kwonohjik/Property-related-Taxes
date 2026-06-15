@@ -1,6 +1,7 @@
 "use client";
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { FormState } from "./shared";
 
 interface Props {
@@ -16,8 +17,9 @@ export function Step3({ form, onChange }: Props) {
         <h2 className="text-lg font-semibold">입력 확인</h2>
         <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-3 space-y-1">
           <p className="text-sm font-medium text-sky-900">
-            주택은 세부담상한이 적용되지 않습니다 (지방세법 §122 단서)
+            주택은 세부담상한이 적용되지 않습니다
           </p>
+          <LawArticleModal legalBasis="지방세법 §122" label="§122 단서" />
           <p className="text-xs text-muted-foreground">
             2024년부터 주택 세부담상한제가 폐지되어 전년도 납부세액 입력이
             필요하지 않습니다. 아래 &ldquo;재산세 계산하기&rdquo;를 눌러
@@ -40,10 +42,10 @@ export function Step3({ form, onChange }: Props) {
           placeholder="미입력 시 세부담상한 미적용"
         />
         <p className="text-xs text-muted-foreground">
-          세부담상한(지방세법 §122, 토지·건축물 150%) 적용을 위해 전년도
-          납부세액을 입력하세요. 미입력 시 상한 없이 산출세액을 그대로
-          적용합니다.
+          세부담상한(토지·건축물 150%) 적용을 위해 전년도 납부세액을
+          입력하세요. 미입력 시 상한 없이 산출세액을 그대로 적용합니다.
         </p>
+        <LawArticleModal legalBasis="지방세법 §122" label="§122" />
       </div>
     </div>
   );

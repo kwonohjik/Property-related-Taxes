@@ -1,6 +1,7 @@
 "use client";
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { FormState } from "./shared";
 
 interface Props {
@@ -31,8 +32,9 @@ export function Step1({ form, onChange }: Props) {
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">토지 과세 유형</h2>
       <p className="text-sm text-muted-foreground">
-        보유 토지의 과세 유형을 선택하세요 (지방세법 §106).
+        보유 토지의 과세 유형을 선택하세요.
       </p>
+      <LawArticleModal legalBasis="지방세법 §106" label="지방세법 §106" />
       <RadioCardGroup
         name="landTaxType"
         tone="sky"

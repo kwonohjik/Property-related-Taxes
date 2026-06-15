@@ -4,6 +4,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ZONING_DISTRICT_LABELS, type FormState } from "./shared";
 
 interface Props {
@@ -16,9 +17,9 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
     <div className="space-y-5">
       <h2 className="text-lg font-semibold">별도합산과세 상세 정보</h2>
       <p className="text-sm text-muted-foreground">
-        기준면적(건물 바닥면적 × 용도지역 배율) 판정에 필요한 정보를 입력하세요
-        (지방세법 시행령 §101).
+        기준면적(건물 바닥면적 × 용도지역 배율) 판정에 필요한 정보를 입력하세요.
       </p>
+      <LawArticleModal legalBasis="지방세법 시행령 §101" label="시행령 §101" />
 
       {/* 용도지역 */}
       <div className="space-y-2">
@@ -67,8 +68,9 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
             unit="㎡"
           />
           <p className="text-xs text-muted-foreground">
-            기준면적 = 건물 바닥면적 × 용도지역 배율 (지방세법 시행령 §101②)
+            기준면적 = 건물 바닥면적 × 용도지역 배율
           </p>
+          <LawArticleModal legalBasis="지방세법 시행령 §101" label="§101②" />
         </div>
       )}
 
@@ -92,7 +94,7 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       <ToggleCard
         tone="sky"
         title="건축물 철거 완료"
-        description="6개월 이내 특례 적용 가능"
+        description="철거·멸실 후 1년 이내 별도합산 유지 특례"
         checked={form.saDemolished}
         onCheckedChange={(v) => onChange({ saDemolished: v })}
       />
@@ -105,9 +107,9 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
             onChange={(v) => onChange({ saDemolishedDate: v })}
           />
           <p className="text-xs text-muted-foreground">
-            철거일부터 과세기준일(6월 1일)까지 6개월 이내이면 별도합산 유지 특례 적용
-            (지방세법 시행령 §101③)
+            철거·멸실일부터 1년 이내이면 별도합산 유지 특례 적용
           </p>
+          <LawArticleModal legalBasis="지방세법 시행령 §103의2" label="§103의2 1호" />
         </div>
       )}
     </div>
