@@ -536,3 +536,73 @@ describe("calculatePropertyTax — 과세표준상한 통합 (§110③)", () => 
     expect(withPrior.taxBaseBeforeCap).toBeUndefined();
   });
 });
+
+// ============================================================
+// FH: 화재위험 건축물 소방분 중과 (§146③2호·2의2호, 시행령 §138)
+//   base 소방분(§146③1호) × 2(화재위험)/3(대형 화재위험)
+// ============================================================
+
+describe("calcSurtax — 화재위험 건축물 소방분 중과 (§146③2호·2의2호)", () => {
+  it("FH-1: 건축물 1억 / 화재위험(×2) → 184,600 + echo", () => {
+    // base = 49,100 + (1억 − 6,400만) × 12/10,000 = 92,300
+    const { surtax } = calcSurtax(0, 0, 100_000_000, "building", false, "fire_hazard");
+    expect(surtax.regionalResourceTax).toBe(184_600);
+    expect(surtax.regionalResourceTaxBeforeSurcharge).toBe(92_300);
+    expect(surtax.fireHazardMultiplier).toBe(2);
+  });
+
+  it("FH-2: 건축물 1억 / 대형 화재위험(×3) → 276,900", () => {
+    const { surtax } = calcSurtax(0, 0, 100_000_000, "building", false, "large_fire_hazard");
+    expect(surtax.regionalResourceTax).toBe(276_900);
+    expect(surtax.fireHazardMultiplier).toBe(3);
+  });
+
+  it("FH-3: 건축물 1억 / 일반(none) → 92,300 · echo undefined (회귀)", () => {
+    const { surtax } = calcSurtax(0, 0, 100_000_000, "building", false, "none");
+    expect(surtax.regionalResourceTax).toBe(92_300);
+    expect(surtax.regionalResourceTaxBeforeSurcharge).toBeUndefined();
+    expect(surtax.fireHazardMultiplier).toBeUndefined();
+  });
+
+  it("FH-4: 건축물 1억 / 미지정(undefined) → none 동치 92,300", () => {
+    const { surtax } = calcSurtax(0, 0, 100_000_000, "building", false);
+    expect(surtax.regionalResourceTax).toBe(92_300);
+    expect(surtax.fireHazardMultiplier).toBeUndefined();
+  });
+
+  it("FH-5: 주택 / 화재위험 지정 → 무시 (소방분 0·echo undefined)", () => {
+    const { surtax } = calcSurtax(0, 0, 700_000_000, "housing", false, "fire_hazard");
+    expect(surtax.regionalResourceTax).toBe(0);
+    expect(surtax.fireHazardMultiplier).toBeUndefined();
+  });
+
+  it("FH-6: 건축물 0원 / 화재위험(×2) → 0 · echo 노출(배율 2) 경계", () => {
+    const { surtax } = calcSurtax(0, 0, 0, "building", false, "fire_hazard");
+    expect(surtax.regionalResourceTax).toBe(0);
+    expect(surtax.regionalResourceTaxBeforeSurcharge).toBe(0);
+    expect(surtax.fireHazardMultiplier).toBe(2);
+  });
+});
+
+describe("calculatePropertyTax — 화재위험 중과 통합 (§146③2호·2의2호)", () => {
+  it("FH-INT-1: 건축물 1억 / 대형 화재위험 → 지역자원시설세 276,900", () => {
+    const result = calculatePropertyTax({
+      objectType: "building",
+      publishedPrice: 100_000_000,
+      buildingType: "general",
+      fireHazardClass: "large_fire_hazard",
+    });
+    expect(result.surtax.regionalResourceTax).toBe(276_900);
+    expect(result.surtax.fireHazardMultiplier).toBe(3);
+  });
+
+  it("FH-INT-2: 건축물 1억 / 미지정 → 중과 없음 92,300 (회귀)", () => {
+    const result = calculatePropertyTax({
+      objectType: "building",
+      publishedPrice: 100_000_000,
+      buildingType: "general",
+    });
+    expect(result.surtax.regionalResourceTax).toBe(92_300);
+    expect(result.surtax.fireHazardMultiplier).toBeUndefined();
+  });
+});

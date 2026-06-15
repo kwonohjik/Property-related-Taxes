@@ -43,6 +43,14 @@ export type PropertyObjectType =
 export type BuildingTaxType = "general" | "golf_course" | "luxury" | "factory";
 
 /**
+ * 화재위험 건축물 등급 — 소방분 지역자원시설세 중과 (지방세법 §146③2호·2의2호, 시행령 §138)
+ * - none             : 중과 없음 (×1)
+ * - fire_hazard       : 화재위험 건축물 — §146③2호 ×2 (시행령 §138①: 4~10층·학원·극장·유흥장·숙박·공장·창고·주유소·위험물 등)
+ * - large_fire_hazard : 대형 화재위험 건축물 — §146③2의2호 ×3 (시행령 §138②: 11층↑·대형마트·백화점·호텔·복합상영관·3만㎡↑ 복합건축물 등)
+ */
+export type FireHazardClass = "none" | "fire_hazard" | "large_fire_hazard";
+
+/**
  * 토지 재산세 과세 유형 (지방세법 §106)
  * - comprehensive_aggregate : 종합합산과세대상 (§106①1호)
  * - separate_aggregate      : 별도합산과세대상 (§106①2호) — P4 구현
@@ -77,6 +85,12 @@ export interface PropertyTaxInput {
 
   /** 건축물 세율 구분 — objectType==="building" 일 때 필수 */
   buildingType?: BuildingTaxType;
+
+  /**
+   * 화재위험 건축물 등급 — 소방분 지역자원시설세 중과 (지방세법 §146③2호·2의2호).
+   * objectType==="building" 전용. 미지정/"none"=중과 없음(×1).
+   */
+  fireHazardClass?: FireHazardClass;
 
   /**
    * 전년도 재산세 납부세액 (원) — 세부담상한 계산에 사용
@@ -152,8 +166,12 @@ export interface PropertySurtaxDetail {
   localEducationTax: number;
   /** 도시지역분 = 과세표준 × 0.14% (지방세법 §112, 도시지역만) */
   urbanAreaTax: number;
-  /** 지역자원시설세 (지방세법 §146, 건축물 시가표준액 기준) */
+  /** 지역자원시설세 — 화재위험 중과 적용 후 최종 (지방세법 §146) */
   regionalResourceTax: number;
+  /** 중과 전 §146③1호 base 소방분 (building + 화재위험 중과 시에만 노출) */
+  regionalResourceTaxBeforeSurcharge?: number;
+  /** 화재위험 중과 배율 — 2(§146③2호) 또는 3(§146③2의2호) (building + 중과 시에만) */
+  fireHazardMultiplier?: number;
 }
 
 /**
