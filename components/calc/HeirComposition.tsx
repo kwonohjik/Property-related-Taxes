@@ -318,7 +318,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
         }}
       >
         <DialogContent
-          className="sm:max-w-2xl w-full p-0"
+          className="sm:max-w-[min(50.4rem,calc(100%-2rem))] w-full p-0"
           showCloseButton={false}
         >
           <DialogHeader className="px-4 pt-4 pb-0">
