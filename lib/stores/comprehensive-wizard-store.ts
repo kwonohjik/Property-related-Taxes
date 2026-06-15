@@ -47,6 +47,8 @@ export interface PropertyEntry {
   isActuallyUsedAsDaycare: boolean;
   isProvidedToEmployee: boolean;
   rentalFeeRate: string;           // 사원용: 임대료율 (%)
+  // ── 지자체 조례 재산세 감면 (T-08 ⑤ UI 시니어 담당, 여기는 타입만) ──
+  reductionRate: string;           // 감면율 % (예: "25" → 25% → 0.25). 빈 문자열 = 감면 없음
 }
 
 // ============================================================
@@ -173,6 +175,7 @@ function makeProperty(): PropertyEntry {
     isActuallyUsedAsDaycare: false,
     isProvidedToEmployee: false,
     rentalFeeRate: "",
+    reductionRate: "",  // 지자체 조례 재산세 감면율 % (빈 문자열 = 감면 없음)
   };
 }
 
@@ -407,6 +410,8 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
               inheritanceShareRatio: p.inheritanceShareRatio ?? "",
               // 서식 표시 전용 — 구 세션 누락 시 빈문자열
               landArea: p.landArea ?? "",
+              // ③ normalize: 지자체 조례 재산세 감면율 — 구 세션 누락 시 빈문자열 (감면 없음)
+              reductionRate: p.reductionRate ?? "",
             }));
           }
           // 세부담상한 모드 — 구 세션 누락 시 "direct" (기존 동작 보존)

@@ -129,6 +129,8 @@ export async function callComprehensiveApi(
         s84Type === "inherited_house" && p.inheritanceShareRatio
           ? parseFloat(p.inheritanceShareRatio)
           : undefined,
+      // ⑬ T-08: 지자체 조례 재산세 감면율 (0~1). UI 입력 %(0~100) → /100 변환. 미입력·빈 문자열은 undefined
+      reductionRate: p.reductionRate ? parseFloat(p.reductionRate) / 100 : undefined,
     };
 
     // 임대주택 합산배제 상세
@@ -243,6 +245,12 @@ export async function callComprehensiveApi(
           // 생년월일·취득일은 기본정보에서 재사용 (중복 입력 금지)
           birthDate: formData.birthDate || undefined,
           acquisitionDate: formData.acquisitionDate || undefined,
+          // ⑬ T-08: 해당연도 감면율 — 법령 원칙3 (직전연도 자동 계산 시에도 해당연도 감면율 적용)
+          // properties[0].reductionRate 기준 (1주택 단일 물건 케이스 전제 — 다주택은 직접입력 모드 권장)
+          // UI 입력 %(0~100) → /100 변환 (Zod .max(1) 동기)
+          reductionRate: formData.properties[0]?.reductionRate
+            ? parseFloat(formData.properties[0].reductionRate) / 100
+            : undefined,
         }
       : undefined;
 

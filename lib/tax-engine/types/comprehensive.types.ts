@@ -191,6 +191,13 @@ export interface ComprehensiveProperty {
   location?: "metro" | "non_metro";  // 수도권 여부 (합산배제 판정 시 필요)
   exclusionType?: ExclusionType;     // 합산배제 유형 (미입력 시 "none")
   /**
+   * 지자체 조례 재산세 감면율 (0~1. 25% → 0.25. 미입력 = 감면 없음).
+   * 종부세 과세표준·재산세공제·세부담상한에 공시가격 × (1−rate) 반영.
+   * 법령 원칙: 해당연도 종부세 계산 시 감면비율을 공시가격에 적용
+   * (교재 사례2 "일반적인 1주택자로 재산세 감면된 경우").
+   */
+  reductionRate?: number;
+  /**
    * §8④ 1세대1주택자 의제 특례 유형 (미입력 = "none").
    * 의제 성립(일반주택 정확히 1채 + 특례주택 ≥ 1)·세액공제 안분(§9⑦⑨)·세율 주택 수 제외(령 §4의3③) 판정에 사용.
    * 요건(취득일·상속개시일·지분율)은 UI·Zod 검증 전용 — 엔진은 유형 지정을 신뢰 (자동 요건 판정은 후속).
@@ -311,6 +318,13 @@ export interface PreviousYearAutoInput {
   isOneHouseOwner: boolean;     // 직전연도 1세대1주택 여부
   birthDate?: Date;             // 고령자 공제 (직전연도 과세기준일 6.1 기준 재판정)
   acquisitionDate?: Date;       // 장기보유 공제 (동일)
+  /**
+   * 직전연도 자동계산용 감면율 (0~1).
+   * 법령 원칙3: 세부담상한 계산 시 직전연도 재산세상당액·종합부동산세상당액은
+   * 직전연도 감면 여부와 무관하게 "해당연도 감면비율"을 적용한다.
+   * → 해당연도와 동일한 감면율을 전달할 것.
+   */
+  reductionRate?: number;
 }
 
 export interface ComprehensiveTaxInput {
@@ -567,8 +581,15 @@ export interface ComprehensiveTaxResult {
   }[];
 
   // ── 주택분 합산 과세 ──
-  totalAssessedValue: number;     // 합산배제 전 공시가격 합계
-  includedAssessedValue: number;  // 합산배제 후 과세 대상 공시가격 합계
+  totalAssessedValue: number;     // 합산배제 전 공시가격 합계 (감면전 원공시)
+  includedAssessedValue: number;  // 합산배제 후 과세 대상 공시가격 합계 (감면전)
+  /**
+   * 감면후 과세 공시가격 합산 (부표3 ③칸).
+   * reductionRate 입력 시 = Σ floor(assessedValue × (1−rate)).
+   * 감면율 미적용 시 = includedAssessedValue와 동일.
+   * 과세표준·재산세 비율안분공제 ②ⓒ 분모 산정에 사용.
+   */
+  effectiveIncludedAssessedValue: number;
   basicDeduction: number;         // 기본공제 (9억 or 12억)
   fairMarketRatio: number;        // 공정시장가액비율 (0.60)
   taxBase: number;                // 과세표준 (만원 미만 절사)

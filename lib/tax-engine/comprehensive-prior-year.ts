@@ -32,8 +32,12 @@ import type {
 /**
  * 직전연도 종합부동산세상당액 계산.
  *
- * @param auto        직전연도 자동계산 입력 (공시가격·1주택 여부·연령·취득일)
+ * @param auto        직전연도 자동계산 입력 (공시가격·1주택 여부·연령·취득일·감면율)
  * @param currentYear 당해 과세귀속연도 (직전연도 = currentYear − 1)
+ *
+ * 법령 원칙3: 세부담상한 직전연도 상당액 계산 시, 직전연도 감면 여부와 무관하게
+ * "해당연도 감면비율"을 적용한다 (교재 사례2 ④나① 1,530,000 × (1−25%) = 1,147,500).
+ * → auto.reductionRate에 해당연도 감면율을 전달할 것 (PreviousYearAutoInput.reductionRate).
  */
 export function calcPreviousYearEquivalent(
   auto: PreviousYearAutoInput,
@@ -44,6 +48,11 @@ export function calcPreviousYearEquivalent(
   // 직전연도 과세기준일 = 직전연도 6월 1일 (연령·보유기간 재판정)
   const priorAssessmentDate = new Date(py, 5, 1);
 
+  // D 지점: 감면율 적용 — 직전연도 공시가격에 해당연도 감면율 적용 (종부세 과표·②ⓒ분모용)
+  const rate = auto.reductionRate ?? 0;
+  const effectiveAssessedValue =
+    rate > 0 ? Math.floor(auto.assessedValue * (1 - rate)) : auto.assessedValue;
+
   // ── (1) 재산세 공제 전 종부세액 ──
   // ② 공제금액 (1주택 시 추가공제 포함 합계)
   const basicDeduction = auto.isOneHouseOwner
@@ -51,8 +60,9 @@ export function calcPreviousYearEquivalent(
     : p.basicDeductionGeneral;
   // ③ 공정시장가액비율 (2021 = 0.95)
   const fairMarketRatio = p.fairMarketRatioHousing;
-  // ④ 종부세 과세표준 = trunc10k(floor((① − ②) × ③))
-  const afterDeduction = Math.max(auto.assessedValue - basicDeduction, 0);
+  // ④ 종부세 과세표준 = trunc10k(floor((감면후 ① − ②) × ③))
+  // D 지점: effectiveAssessedValue 기준으로 taxBase 산정
+  const afterDeduction = Math.max(effectiveAssessedValue - basicDeduction, 0);
   const taxBase = truncateToTenThousand(Math.floor(afterDeduction * fairMarketRatio));
   // ⑤⑥ 일반 누진세율 (v1: 단일 주택군 — 다주택 미지원)
   const { calculatedTax, appliedRate } = calcHousingTaxAmount(
@@ -63,22 +73,36 @@ export function calcPreviousYearEquivalent(
   // ── (2) 종합부동산세 상당액 ──
   // 직전연도 재산세 FMR (2021 1주택 특례 없음 → 60%, getPropertyFmrForProration이 분기)
   const propertyFMR = getPropertyFmrForProration(py, auto.isOneHouseOwner);
-  // ⑦ 재산세상당액 = 직전연도 공시가격 표준세율 재산세 (전체)
-  const propertyTaxBase = Math.floor(
+  // ⑦ 재산세상당액 = 직전연도 공시가격 표준세율 재산세 (감면전 원공시 기준으로 먼저 산출)
+  //   C 지점: 표준세율 산출 후 × (1−rate) = 감면후 재산세상당액 (교재 1,530,000 × 0.75 = 1,147,500)
+  //   ★ assessedValue 자체를 줄이는 게 아님 — 후 곱 방식이 법령 정합
+  const propertyTaxBaseRaw = Math.floor(
     (auto.assessedValue * Math.round(propertyFMR * 100)) / 100,
   );
-  const propertyTaxEquiv = calcHousingTax(
-    propertyTaxBase,
+  const propertyTaxEquivRaw = calcHousingTax(
+    propertyTaxBaseRaw,
     auto.assessedValue,
     false, // 표준세율 강제
   ).tax;
-  // ⑧ 과세표준 표준세율 재산세액 = 과표 × FMR × 0.4% (분수 정수)
+  // C 지점: 감면율 후 곱 (④나① = 표준세율 재산세 × (1−rate))
+  const propertyTaxEquiv = rate > 0 ? Math.floor(propertyTaxEquivRaw * (1 - rate)) : propertyTaxEquivRaw;
+
+  // ②ⓒ 분모(총표준세율재산세액)도 감면후 유효 공시가격 기준 (D 지점 연쇄)
+  // 교재 ④나②ⓑ 분모 = 990,000 = 6.75억 × 60% × 표준세율 (9억×(1−25%))
+  const propertyTaxBase = Math.floor(
+    (effectiveAssessedValue * Math.round(propertyFMR * 100)) / 100,
+  );
+  // ⑧ 과세표준 표준세율 재산세액 = 과표(종부세 과표) × FMR × 0.4% (분수 정수)
   const stdTaxNumerator = Math.floor(
     (taxBase * Math.round(propertyFMR * 100) * 4) / 100_000,
   );
-  // ⑨ 총표준세율 재산세액 = ⑦ 동일 베이스
-  const stdTaxDenominator = propertyTaxEquiv;
-  // ⑩ 공제할 재산세액 = floor(⑦ × ⑧ / ⑨), ⑥ 상한
+  // ⑨ 총표준세율 재산세액 = 감면후 유효 공시기준 표준세율 재산세 (D 지점: effectiveAssessedValue 기준)
+  const stdTaxDenominator = calcHousingTax(
+    propertyTaxBase,
+    effectiveAssessedValue,
+    false, // 표준세율 강제
+  ).tax;
+  // ⑩ 공제할 재산세액 = floor(propertyTaxEquiv × ⑧ / ⑨), ⑥ 상한
   const creditRaw =
     stdTaxDenominator > 0
       ? Math.floor((propertyTaxEquiv * stdTaxNumerator) / stdTaxDenominator)
@@ -105,7 +129,7 @@ export function calcPreviousYearEquivalent(
     comprehensiveTaxEquiv,
     total: propertyTaxEquiv + comprehensiveTaxEquiv,
     detail: {
-      assessedValue: auto.assessedValue,
+      assessedValue: auto.assessedValue,  // echo는 원공시 유지 (납세자 확인용)
       basicDeduction,
       fairMarketRatio,
       taxBase,
@@ -116,8 +140,8 @@ export function calcPreviousYearEquivalent(
       creditAmount,
       oneHouseDeductionRate,
       oneHouseDeductionAmount,
-      propertyFairMarketRatio: propertyFMR, // 교재 ⑤나 "× 60%" echo
-      propertyTaxBaseAmount: propertyTaxBase, // 교재 ⑤나 "= 8.4억" echo
+      propertyFairMarketRatio: propertyFMR,     // 교재 ⑤나 "× 60%" echo
+      propertyTaxBaseAmount: propertyTaxBase,   // 교재 ⑤나 감면후 재산세 과세표준 echo
     },
   };
 }

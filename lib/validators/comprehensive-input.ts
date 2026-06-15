@@ -184,6 +184,16 @@ export const comprehensivePropertySchema = z
       .max(100, { message: "지분율은 100% 이하여야 합니다." })
       .optional(),
 
+    /**
+     * 지자체 조례 재산세 감면율 (0~1, 예: 25% → 0.25).
+     * 미입력 시 0으로 처리 (감면 없음). T-07 ⑨ 동기화.
+     */
+    reductionRate: z
+      .number()
+      .min(0, { message: "재산세 감면율은 0 이상이어야 합니다." })
+      .max(1, { message: "재산세 감면율은 1(100%) 이하여야 합니다." })
+      .optional(),
+
     /** 임대주택 합산배제 상세 정보 */
     rentalInfo: rentalExclusionInfoSchema.optional(),
 
@@ -367,6 +377,15 @@ export const comprehensiveTaxInputSchema = z.object({
       acquisitionDate: z
         .string()
         .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
+        .optional(),
+      /**
+       * 해당연도 감면율 (법령 원칙3 — 직전연도 감면 여부와 무관하게 해당연도 감면율 적용).
+       * 0~1 범위. 미입력 시 0 처리. T-07 ⑩ 동기화.
+       */
+      reductionRate: z
+        .number()
+        .min(0, { message: "재산세 감면율은 0 이상이어야 합니다." })
+        .max(1, { message: "재산세 감면율은 1(100%) 이하여야 합니다." })
         .optional(),
     })
     .optional(),

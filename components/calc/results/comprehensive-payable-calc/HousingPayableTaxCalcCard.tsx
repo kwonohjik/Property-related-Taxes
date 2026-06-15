@@ -38,10 +38,7 @@ export function HousingPayableTaxCalcCard({ result }: { result: ComprehensiveTax
       >
         <span className="flex items-center gap-2">
           <Calculator className="h-4 w-4" />
-          주택분 종합부동산세 납부할세액의 계산
-          <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
-            — 교재(계산 사례) 형식 산출근거
-          </span>
+          종합부동산세 납부할 세액 산출 근거
         </span>
         <span className={expandToggleClass("emerald")}>{expandToggleLabel(expanded)}</span>
       </button>
@@ -50,7 +47,7 @@ export function HousingPayableTaxCalcCard({ result }: { result: ComprehensiveTax
       <div className={expanded ? "block" : "hidden print:block"}>
         <div className="px-4 pb-4 pt-1 text-sm">
           <p className="mb-2 font-bold text-emerald-900 dark:text-emerald-100">
-            [주택분 종합부동산세 납부할세액의 계산]
+            [종합부동산세 납부할 세액 산출 근거]
           </p>
 
           {!result.isSubjectToHousingTax ? (
@@ -78,6 +75,10 @@ export function HousingPayableTaxCalcCard({ result }: { result: ComprehensiveTax
 // ════════════════════════════════════════════════════════════
 function Step1({ result }: { result: ComprehensiveTaxResult }) {
   const hasPd = result.progressiveDeduction > 0;
+  // 감면율이 적용된 경우: effectiveIncludedAssessedValue < includedAssessedValue
+  const hasReduction =
+    result.effectiveIncludedAssessedValue != null &&
+    result.effectiveIncludedAssessedValue < result.includedAssessedValue;
   return (
     <div>
       <StepLine
@@ -87,8 +88,15 @@ function Step1({ result }: { result: ComprehensiveTaxResult }) {
         strong
         testId="payable-step1"
       />
+      {/* 조례 감면 적용 시: 원공시 합산 × (1−감면율) = 감면후 공시가격 */}
+      {hasReduction && (
+        <Bullet>
+          감면후 공시가격 합산 : 원공시 합산 {eok(result.includedAssessedValue)} × (1−감면율) ={" "}
+          {eok(result.effectiveIncludedAssessedValue)}
+        </Bullet>
+      )}
       <Bullet>
-        종합부동산세 과세표준 : ({eok(result.includedAssessedValue)} − {eok(result.basicDeduction)})
+        종합부동산세 과세표준 : ({eok(result.effectiveIncludedAssessedValue ?? result.includedAssessedValue)} − {eok(result.basicDeduction)})
         × {pct(result.fairMarketRatio)}(공정시장가액비율) = {eok(result.taxBase)}
       </Bullet>
       <Bullet>

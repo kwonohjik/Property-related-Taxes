@@ -40,7 +40,7 @@ function renderExpanded(input: ComprehensiveTaxInput) {
   const result = calculateComprehensiveTax(input);
   render(<HousingPayableTaxCalcCard result={result} />);
   // 기본 접힘 → 헤더 클릭 펼침
-  fireEvent.click(screen.getByRole("button", { name: /주택분 종합부동산세 납부할세액의 계산/ }));
+  fireEvent.click(screen.getByRole("button", { name: /종합부동산세 납부할 세액 산출 근거/ }));
   return result;
 }
 
@@ -49,7 +49,7 @@ describe("HousingPayableTaxCalcCard — 사례12 칸별 anchor", () => {
     const result = calculateComprehensiveTax(case12());
     render(<HousingPayableTaxCalcCard result={result} />);
     expect(
-      screen.getByRole("button", { name: /주택분 종합부동산세 납부할세액의 계산/ }),
+      screen.getByRole("button", { name: /종합부동산세 납부할 세액 산출 근거/ }),
     ).toBeTruthy();
   });
 
@@ -170,7 +170,7 @@ describe("HousingPayableTaxCalcCard — 전 시나리오 분기", () => {
       properties: [{ propertyId: "p1", assessedValue: 1_000_000_000, exclusionType: "none" }],
     });
     render(<HousingPayableTaxCalcCard result={result} />);
-    fireEvent.click(screen.getByRole("button", { name: /납부할세액의 계산/ }));
+    fireEvent.click(screen.getByRole("button", { name: /납부할 세액 산출 근거/ }));
     expect(screen.getByTestId("housing-payable-calc").textContent).toContain("납세의무가 없습니다");
     expect(screen.queryByTestId("payable-step1")).toBeNull();
   });

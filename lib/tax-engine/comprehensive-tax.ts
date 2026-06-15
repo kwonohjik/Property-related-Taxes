@@ -160,11 +160,21 @@ export function calculateComprehensiveTax(
     aggregationExclusion.propertyResults.map((r) => [r.propertyId, r]),
   );
   const propertyResults: ComprehensiveTaxResult["properties"] = [];
-  let totalPropertyTaxAmount = 0;  // ⓐ: 부과세액 합계 (determinedTax)
+  let totalPropertyTaxAmount = 0;  // ⓐ: 부과세액 합계 (determinedTax, 감면후)
   let totalAssessedValueFromLoop = 0;
+  // A 지점: 감면후 유효 공시가격 합산 (과세표준·②ⓒ 분모용)
+  // 합산배제 전 전체 합산 (합산배제 판정 후 Step 2에서 exclusion 차감)
+  let effectiveTotalFromLoop = 0;
 
   for (const prop of input.properties) {
     totalAssessedValueFromLoop += prop.assessedValue;
+    const rate = (prop.reductionRate ?? 0);
+    // 감면후 유효 공시가격: rate > 0이면 floor(assessedValue × (1−rate)), 아니면 원공시
+    // 합산배제 요건 판정은 원공시(assessedValue) 기준 — R-5 분리
+    const effectiveAssessedValue =
+      rate > 0 ? Math.floor(prop.assessedValue * (1 - rate)) : prop.assessedValue;
+    effectiveTotalFromLoop += effectiveAssessedValue;
+
     const exclusionResult = exclusionMap.get(prop.propertyId);
     const isExcluded = exclusionResult?.isExcluded ?? false;
 
@@ -188,8 +198,10 @@ export function calculateComprehensiveTax(
     }
 
     // 합산배제 주택은 비율안분 합계에 포함하지 않음
+    // B 지점: 감면율이 있으면 floor(propTax × (1−rate)) 적용 (②ⓐ 감면후 재산세)
     if (!isExcluded) {
-      totalPropertyTaxAmount += propTax;
+      const imposedTax = rate > 0 ? Math.floor(propTax * (1 - rate)) : propTax;
+      totalPropertyTaxAmount += imposedTax;
     }
 
     propertyResults.push({
@@ -203,6 +215,22 @@ export function calculateComprehensiveTax(
   // ── Step 2: 합산배제 후 공시가격 합산 ──
   const totalAssessedValue = totalAssessedValueFromLoop;
   const includedAssessedValue = totalAssessedValue - aggregationExclusion.totalExcludedValue;
+  // A 지점 계속: 합산배제 후 감면후 유효 공시가격
+  // 합산배제된 주택의 effectiveAssessedValue도 빼야 하는데, 합산배제는 원공시 기준이므로
+  // effectiveTotalFromLoop에서 합산배제 주택의 effectiveAssessedValue를 빼야 함.
+  // 단순 근사: 합산배제 totalExcludedValue는 원공시 기준 — 감면후 effectiveTotalFromLoop에서
+  // 합산배제된 주택들의 effectiveAssessedValue를 별도로 차감.
+  let effectiveExcludedValue = 0;
+  for (const prop of input.properties) {
+    const exclusionResult = exclusionMap.get(prop.propertyId);
+    if (exclusionResult?.isExcluded) {
+      const rate = (prop.reductionRate ?? 0);
+      effectiveExcludedValue +=
+        rate > 0 ? Math.floor(prop.assessedValue * (1 - rate)) : prop.assessedValue;
+    }
+  }
+  // 감면후 합산배제 후 과세 공시가격 (과세표준·②ⓒ 분모에 사용)
+  const effectiveIncludedAssessedValue = effectiveTotalFromLoop - effectiveExcludedValue;
 
   // ── §8④ 1세대1주택자 의제 특례 (per-property section8para4Type) ──
   //   합산배제(§8②) 주택은 §8④ 대상 아님 → excludedIdSet 제외 (D2-8). 의제는 개인 전용.
@@ -269,7 +297,8 @@ export function calculateComprehensiveTax(
         : oneHouseTreatment
           ? yearParams.basicDeductionOneHouse
           : yearParams.basicDeductionGeneral;
-  const afterBasicDeduction = Math.max(includedAssessedValue - basicDeduction, 0);
+  // A 지점: 감면후 유효 공시가격 기준으로 기본공제 차감 (과세표준 산정)
+  const afterBasicDeduction = Math.max(effectiveIncludedAssessedValue - basicDeduction, 0);
 
   // ── Step 4: 공정시장가액비율 (연도별) + 만원 미만 절사 ──
   const fairMarketRatio = yearParams.fairMarketRatioHousing;
@@ -348,12 +377,13 @@ export function calculateComprehensiveTax(
   //   ★ Σ 각 주택별 세액이 아님 — 국세청 작성방법 ⑦ 및 사례5 실측
   //     (17억 × 60% × 0.4% − 630,000 = 3,450,000. Σ per-house는 3,120,000으로 불일치)
   //     1주택은 양 방식 동치 — 사례1 anchor 504,000 무변경.
+  // A 지점: ②ⓒ 분모(총표준세율재산세액)도 감면후 유효 공시가격 기준 (교재 사례2 ②ⓒ 1,170,000 = 7.5억×60%×표준세율)
   const aggregatedPropertyTaxBase = Math.floor(
-    (includedAssessedValue * Math.round(propertyFMR * 100)) / 100,
+    (effectiveIncludedAssessedValue * Math.round(propertyFMR * 100)) / 100,
   );
   const denominatorStdTax = calcHousingTax(
     aggregatedPropertyTaxBase,
-    includedAssessedValue,
+    effectiveIncludedAssessedValue,
     false, // 일반 표준세율 강제 — 특례세율 배제
   ).tax;
   // ⓐ = 부과세액 합계. G-5: 직전연도 자동계산 시 구 §122 단서 Min 적용
@@ -361,9 +391,10 @@ export function calculateComprehensiveTax(
   //   ⓐ = min(부과 재산세, 직전 재산세상당액 × §122 구간 상한율). 2024+ 폐지 → null이면 미적용.
   let aValue = totalPropertyTaxAmount;
   // 교재 ②ⓐ echo: §122 단서 상한율 (자동모드만 산정 — 비자동/2024+ 폐지 시 null)
+  // §122 구간 판정: 감면후 유효 공시가격 기준 (과세표준과 동일 축)
   let priorPropertyTaxCapPct: number | null = null;
   if (previousYearEquivalent) {
-    priorPropertyTaxCapPct = getHousingTaxCapPct(input.assessmentYear, includedAssessedValue);
+    priorPropertyTaxCapPct = getHousingTaxCapPct(input.assessmentYear, effectiveIncludedAssessedValue);
     if (priorPropertyTaxCapPct !== null) {
       aValue = Math.min(
         aValue,
@@ -530,6 +561,7 @@ export function calculateComprehensiveTax(
     properties: propertyResults,
     totalAssessedValue,
     includedAssessedValue,
+    effectiveIncludedAssessedValue,  // T-04 echo: 감면후 과세 공시가격 합산 (부표3 ③칸)
     basicDeduction,
     fairMarketRatio,
     taxBase,
