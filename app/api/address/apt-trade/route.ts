@@ -250,12 +250,14 @@ async function fetchRtmsMonth(
     const xml = await res.text();
 
     // 오류 응답 감지 (resultCode 비정상)
-    if (xml.includes("<resultCode>") && !xml.includes("<resultCode>00</resultCode>")) {
-      const codeMatch = xml.match(/<resultCode>([^<]+)<\/resultCode>/);
-      const msgMatch  = xml.match(/<resultMsg>([^<]+)<\/resultMsg>/);
+    // 성공 코드: "00"(legacy) 또는 "000"(RTMSDataSvcAptTradeDev) — 두 형식 모두 허용
+    const codeMatch = xml.match(/<resultCode>([^<]*)<\/resultCode>/);
+    const resultCode = codeMatch?.[1]?.trim();
+    if (resultCode && resultCode !== "00" && resultCode !== "000") {
+      const msgMatch = xml.match(/<resultMsg>([^<]+)<\/resultMsg>/);
       return {
         records: allRecords,
-        error: `RTMS API 오류 (${dealYmd}): ${codeMatch?.[1] ?? "?"} — ${msgMatch?.[1] ?? ""}`,
+        error: `RTMS API 오류 (${dealYmd}): ${resultCode} — ${msgMatch?.[1] ?? ""}`,
       };
     }
 
