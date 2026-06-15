@@ -201,7 +201,7 @@ export function DebtAllocationInput({
           if (!open) setSelectedItemId(null);
         }}
       >
-        <DialogContent className="sm:max-w-lg w-full p-0" showCloseButton={false}>
+        <DialogContent className="sm:max-w-2xl w-full p-0" showCloseButton={false}>
           <DialogHeader className="px-4 pt-4 pb-0">
             <DialogTitle>
               {selectedItem
