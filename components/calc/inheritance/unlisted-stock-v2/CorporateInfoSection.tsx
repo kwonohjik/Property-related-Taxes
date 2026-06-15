@@ -173,103 +173,118 @@ export function CorporateInfoSection({
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
           <p className="text-xs font-semibold text-sky-700">평가대상 비상장법인 (별지 1쪽)</p>
         </div>
-        <FieldCard label="법인명" required>
-          <input
-            type="text"
-            value={corpName}
-            onChange={(e) => onChange({ corpName: e.target.value })}
-            placeholder="법인명 입력"
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
-            data-testid="unlisted-v2-corp-name"
-          />
-        </FieldCard>
-        <FieldCard label="사업자등록번호" hint="000-00-00000 형식으로 자동 입력 (선택)">
-          <input
-            type="text"
-            value={businessRegistrationNumber ?? ""}
-            onChange={(e) => {
-              const formatted = formatBizRegNo(e.target.value);
-              onChange({ businessRegistrationNumber: formatted });
-            }}
-            placeholder="사업자등록번호 (선택)"
-            maxLength={12}
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
-            data-testid="unlisted-v2-biz-reg-no"
-          />
-        </FieldCard>
-        <FieldCard label="대표자">
-          <input
-            type="text"
-            value={representative ?? ""}
-            onChange={(e) => onChange({ representative: e.target.value })}
-            placeholder="대표자 이름 (선택)"
-            className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
-          />
-        </FieldCard>
-        <FieldCard label="사업개시일" required>
-          <DateInput
-            value={dateToStr(businessStartDate)}
-            onChange={(s) => onChange({ businessStartDate: strToDate(s) })}
-          />
-        </FieldCard>
-        <FieldCard
-          label="평가기준일"
-          required
-          hint={evaluationDate ? undefined : evaluationDateFallback ? `상속개시일·증여일(${evaluationDateFallback}) 자동 적용 — 수정 가능` : "상속개시일 또는 증여일"}
-        >
-          <DateInput
-            value={dateToStr(evaluationDate) || evaluationDateFallback || ""}
-            onChange={(s) => onChange({ evaluationDate: strToDate(s) })}
-          />
-        </FieldCard>
-        <FieldCard label="1주당 액면가액" required unit="원">
-          <CurrencyInput
-            label="액면가"
-            value={String(faceValuePerShare || "")}
-            onChange={(v) => onChange({ faceValuePerShare: Number(v.replace(/,/g, "")) || 0 })}
-            placeholder="1주당 액면가액"
-            hideUnit
-          />
-        </FieldCard>
-        <FieldCard label="발행주식총수" required unit="주" hint="평가기준일 현재">
-          <CurrencyInput
-            label="발행주식총수"
-            value={String(totalShares || "")}
-            onChange={(v) => onChange({ totalShares: Number(v.replace(/,/g, "")) || 0 })}
-            placeholder="발행주식총수"
-            hideUnit
-          />
-        </FieldCard>
-        <FieldCard
-          label="자본금"
-          unit="원"
-          hint={
-            capital
-              ? "제1쪽 1번"
-              : faceValuePerShare > 0 && totalShares > 0
-                ? `액면가(${faceValuePerShare.toLocaleString()}) × 발행주식총수(${totalShares.toLocaleString()}) 자동 계산 — 수정 가능`
-                : "제1쪽 1번 (선택)"
-          }
-        >
-          <CurrencyInput
+        {/* 행 1 — 법인명·사업자등록번호·대표자 (3열, 라벨 상단 stacked) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <FieldCard label="법인명" required stacked>
+            <input
+              type="text"
+              value={corpName}
+              onChange={(e) => onChange({ corpName: e.target.value })}
+              placeholder="법인명 입력"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
+              data-testid="unlisted-v2-corp-name"
+            />
+          </FieldCard>
+          <FieldCard label="사업자등록번호" stacked>
+            <input
+              type="text"
+              value={businessRegistrationNumber ?? ""}
+              onChange={(e) => {
+                const formatted = formatBizRegNo(e.target.value);
+                onChange({ businessRegistrationNumber: formatted });
+              }}
+              placeholder="사업자등록번호 (선택)"
+              maxLength={12}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
+              data-testid="unlisted-v2-biz-reg-no"
+            />
+          </FieldCard>
+          <FieldCard label="대표자" stacked>
+            <input
+              type="text"
+              value={representative ?? ""}
+              onChange={(e) => onChange({ representative: e.target.value })}
+              placeholder="대표자 이름 (선택)"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900"
+            />
+          </FieldCard>
+        </div>
+        {/* 행 2 — 사업개시일·평가기준일·보유 주식수 (3열, 라벨 상단 stacked) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <FieldCard label="사업개시일" required stacked>
+            <DateInput
+              value={dateToStr(businessStartDate)}
+              onChange={(s) => onChange({ businessStartDate: strToDate(s) })}
+            />
+          </FieldCard>
+          <FieldCard
+            label="평가기준일"
+            required
+            stacked
+            hint={evaluationDate ? undefined : evaluationDateFallback ? `상속개시일·증여일(${evaluationDateFallback}) 자동 적용 — 수정 가능` : "상속개시일 또는 증여일"}
+          >
+            <DateInput
+              value={dateToStr(evaluationDate) || evaluationDateFallback || ""}
+              onChange={(s) => onChange({ evaluationDate: strToDate(s) })}
+            />
+          </FieldCard>
+          <FieldCard label="보유 주식수" required stacked unit="주" hint="피상속인·수증인 소유">
+            <CurrencyInput
+              label="보유 주식수"
+              hideLabel
+              value={String(ownedShares || "")}
+              onChange={(v) => onChange({ ownedShares: Number(v.replace(/,/g, "")) || 0 })}
+              placeholder="보유 주식수"
+              hideUnit
+            />
+          </FieldCard>
+        </div>
+        {/* 행 3 — 1주당 액면가액·발행주식총수·자본금 (3열, 라벨 상단 stacked, 내부 CurrencyInput 라벨 숨김으로 중복 제거) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <FieldCard label="1주당 액면가액" required stacked unit="원">
+            <CurrencyInput
+              label="1주당 액면가액"
+              hideLabel
+              value={String(faceValuePerShare || "")}
+              onChange={(v) => onChange({ faceValuePerShare: Number(v.replace(/,/g, "")) || 0 })}
+              placeholder="1주당 액면가액"
+              hideUnit
+            />
+          </FieldCard>
+          <FieldCard label="발행주식총수" required stacked unit="주" hint="평가기준일 현재">
+            <CurrencyInput
+              label="발행주식총수"
+              hideLabel
+              value={String(totalShares || "")}
+              onChange={(v) => onChange({ totalShares: Number(v.replace(/,/g, "")) || 0 })}
+              placeholder="발행주식총수"
+              hideUnit
+            />
+          </FieldCard>
+          <FieldCard
             label="자본금"
-            value={capitalDisplay}
-            onChange={(v) => onChange({ capital: Number(v.replace(/,/g, "")) || 0 })}
-            placeholder="자본금"
-            hideUnit
-          />
-        </FieldCard>
+            stacked
+            unit="원"
+            hint={
+              capital
+                ? "제1쪽 1번"
+                : faceValuePerShare > 0 && totalShares > 0
+                  ? `액면가(${faceValuePerShare.toLocaleString()}) × 발행주식총수(${totalShares.toLocaleString()}) 자동 계산 — 수정 가능`
+                  : "제1쪽 1번 (선택)"
+            }
+          >
+            <CurrencyInput
+              label="자본금"
+              hideLabel
+              value={capitalDisplay}
+              onChange={(v) => onChange({ capital: Number(v.replace(/,/g, "")) || 0 })}
+              placeholder="자본금"
+              hideUnit
+            />
+          </FieldCard>
+        </div>
         {/* 자본금 변동사항 (증자·감자) — 발행주식총수·자본금 바로 아래에 임베드 (sectionNum 미전달 → 번호 없음) */}
         <CapitalChangeTable capitalChanges={capitalChanges} onChange={onCapitalChangesChange} />
-        <FieldCard label="보유 주식수" required unit="주" hint="피상속인·수증인 소유">
-          <CurrencyInput
-            label="보유주식"
-            value={String(ownedShares || "")}
-            onChange={(v) => onChange({ ownedShares: Number(v.replace(/,/g, "")) || 0 })}
-            placeholder="보유 주식수"
-            hideUnit
-          />
-        </FieldCard>
       </div>
 
       {/* 부동산과다보유 토글 */}
