@@ -139,6 +139,13 @@ const section8para4TypeSchema = z.enum([
   "regional_low_price",    // 4호 지방 저가주택
 ]);
 
+/** 건물·부속토지 소유자 분리 시가표준액 안분 (사례6) — 당해·직전 공용 */
+const appurtenantSplitSchema = z.object({
+  ownedPart: z.enum(["land", "building"]),
+  landStandardValue: z.number().int().nonnegative(),
+  buildingStandardValue: z.number().int().nonnegative(),
+});
+
 export const comprehensivePropertySchema = z
   .object({
     /** 주택 식별자 */
@@ -200,6 +207,9 @@ export const comprehensivePropertySchema = z
       .min(0, { message: "지분율은 0 이상이어야 합니다." })
       .max(1, { message: "지분율은 1(100%) 이하여야 합니다." })
       .optional(),
+
+    /** 건물·부속토지 소유자 분리 시가표준액 안분 (사례6). 미입력 = 분리 없음. */
+    appurtenantSplit: appurtenantSplitSchema.optional(),
 
     /** 임대주택 합산배제 상세 정보 */
     rentalInfo: rentalExclusionInfoSchema.optional(),
@@ -408,6 +418,8 @@ export const comprehensiveTaxInputSchema = z.object({
       taxableHouseCount: z.number().int().positive().optional(),
       /** 직전 §8④ 특례주택 공시 합(원) — §9⑦⑨ 고령자 공제 안분 분자(사례5). 미입력=안분 미적용. */
       priorSection8Para4Value: z.number().int().nonnegative().optional(),
+      /** 직전 건물·부속토지 시가표준액 안분 (사례6) — 당해와 독립(시가표준액 연도 변동). */
+      appurtenantSplit: appurtenantSplitSchema.optional(),
     })
     .optional(),
 

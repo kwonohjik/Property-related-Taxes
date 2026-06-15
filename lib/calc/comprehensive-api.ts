@@ -64,6 +64,32 @@ export function validateLandParcels(formData: ComprehensiveFormData): string | n
   );
 }
 
+/**
+ * 사례6 건물·부속토지 소유자 분리 검증 (⑧ — API/UI 동기화). 분리 ON 시 시가표준액 필수.
+ * 미입력 시 callComprehensiveApi가 appurtenantSplit를 strip → 안분 미적용 침묵 누락 → 여기서 차단
+ * (UI 통과↔validate 차단 모순 방지 — API strip 게이트(>0)와 동일 조건).
+ */
+export function validateAppurtenantSplit(formData: ComprehensiveFormData): string | null {
+  const taxpayerType = formData.taxpayerType ?? "individual";
+  const capMode = formData.previousYearCapMode ?? "direct";
+  const autoMode = taxpayerType !== "corporate_special" && capMode === "auto";
+  for (const p of formData.properties) {
+    if (!p.appurtenantSplitEnabled) continue;
+    if (parseAmount(p.landStdValue) <= 0 || parseAmount(p.buildingStdValue) <= 0) {
+      return "건물·부속토지 소유자 분리 시 당해연도 토지·건물 시가표준액을 모두 입력해야 합니다.";
+    }
+    // 직전 시가표준액은 세부담상한 자동계산 모드에서만 사용 → 그때만 필수 (자동 안분 fallback 금지)
+    if (
+      autoMode &&
+      (parseAmount(p.priorLandStdValue) <= 0 ||
+        parseAmount(p.priorBuildingStdValue) <= 0)
+    ) {
+      return "세부담상한 자동계산 시 직전연도 토지·건물 시가표준액을 모두 입력해야 합니다.";
+    }
+  }
+  return null;
+}
+
 // 임대주택 합산배제 유형 (rentalInfo 필드 구성에 사용)
 const RENTAL_TYPES = new Set([
   "private_construction_rental",
@@ -135,6 +161,18 @@ export async function callComprehensiveApi(
       ownershipRatio:
         p.ownershipRatio && parseFloat(p.ownershipRatio) !== 100
           ? parseFloat(p.ownershipRatio) / 100
+          : undefined,
+      // ⑬ 사례6: 건물·부속토지 시가표준액 안분 (당해). 분리 ON + 양 시가표준액 >0 시만 전송(빈값 = strip).
+      appurtenantSplit:
+        p.appurtenantSplitEnabled &&
+        parseAmount(p.landStdValue) > 0 &&
+        parseAmount(p.buildingStdValue) > 0
+          ? {
+              ownedPart:
+                p.appurtenantOwnedPart === "building" ? "building" : "land",
+              landStandardValue: parseAmount(p.landStdValue),
+              buildingStandardValue: parseAmount(p.buildingStdValue),
+            }
           : undefined,
     };
 
@@ -296,6 +334,25 @@ export async function callComprehensiveApi(
           taxableHouseCount: priorHouseValues?.length,
           // ⑬ 직전 §8④ 안분 (사례5) — §9⑦⑨ 고령자 공제 안분 분자 도출용 (자동 도출)
           priorSection8Para4Value: priorS84Sum > 0 ? priorS84Sum : undefined,
+          // ⑬ 사례6: 직전 건물·부속토지 시가표준액 안분 — properties[0] 기준(ownershipRatio collapse 패턴),
+          //   ★ 직전 시가표준액에서 독립 도출(당해 0.8 ≠ 직전 0.75). 분리 ON + 직전 양 시가표준액 >0 시만.
+          appurtenantSplit:
+            formData.properties[0]?.appurtenantSplitEnabled &&
+            parseAmount(formData.properties[0].priorLandStdValue) > 0 &&
+            parseAmount(formData.properties[0].priorBuildingStdValue) > 0
+              ? {
+                  ownedPart:
+                    formData.properties[0].appurtenantOwnedPart === "building"
+                      ? "building"
+                      : "land",
+                  landStandardValue: parseAmount(
+                    formData.properties[0].priorLandStdValue,
+                  ),
+                  buildingStandardValue: parseAmount(
+                    formData.properties[0].priorBuildingStdValue,
+                  ),
+                }
+              : undefined,
         }
       : undefined;
 

@@ -52,6 +52,7 @@ import {
   calculatePropertyTaxCreditProration,
   calculatePostManagementPenalty,
   applyEffectiveFactor,
+  toAppurtenantFraction,
 } from "./comprehensive-tax-helpers";
 import {
   calcAggregateLandTaxBase,
@@ -171,10 +172,12 @@ export function calculateComprehensiveTax(
     totalAssessedValueFromLoop += prop.assessedValue;
     const rate = (prop.reductionRate ?? 0);
     const ratio = prop.ownershipRatio;
-    // D-1 (A-1 지점): 감면후·지분후 유효 공시가격 = floor(assessedValue × effectiveFactor(rate, ratio))
-    // effectiveFactor = ownershipRatio × (1 − reductionRate). 기본값: ratio=1(단독), rate=0(감면없음)
+    // 사례6: 건물·부속토지 시가표준액 비율 안분 분수 (미입력 시 undefined → 비율 1)
+    const appurtenant = toAppurtenantFraction(prop.appurtenantSplit);
+    // D-1 (A-1 지점): 감면후·지분후·안분후 유효 공시가격 = floor(assessedValue × effectiveFactor(rate, ratio) × 안분)
+    // effectiveFactor = ownershipRatio × (1 − reductionRate) × (시가표준액 안분). 기본값: ratio=1(단독), rate=0(감면없음), 안분=1
     // 합산배제 요건 판정은 원공시(assessedValue) 기준 — R-5 분리 유지
-    const effectiveAssessedValue = applyEffectiveFactor(prop.assessedValue, rate, ratio);
+    const effectiveAssessedValue = applyEffectiveFactor(prop.assessedValue, rate, ratio, appurtenant);
     effectiveTotalFromLoop += effectiveAssessedValue;
 
     const exclusionResult = exclusionMap.get(prop.propertyId);
@@ -199,9 +202,10 @@ export function calculateComprehensiveTax(
       );
     }
 
-    // D-2 (B 지점): 지분후·감면후 실부과 재산세 = floor(propTax × effectiveFactor(rate, ratio))
-    // propTax는 100% 지분 기준 determinedTax — 지분·감면을 후 곱으로 결합
-    const imposedTax = applyEffectiveFactor(propTax, rate, ratio);
+    // D-2 (B 지점): 지분후·감면후·안분후 실부과 재산세 = floor(propTax × effectiveFactor × 안분)
+    // propTax는 100% 지분 기준 determinedTax — 지분·감면·시가표준액 안분을 후 곱으로 결합
+    // (사례6: 100% 재산세 2,970,000 × (토지 8억/전체 10억) = 부과 2,376,000)
+    const imposedTax = applyEffectiveFactor(propTax, rate, ratio, appurtenant);
     // 합산배제 주택은 비율안분 합계에 포함하지 않음
     if (!isExcluded) {
       totalPropertyTaxAmount += imposedTax;
@@ -228,12 +232,13 @@ export function calculateComprehensiveTax(
   for (const prop of input.properties) {
     const exclusionResult = exclusionMap.get(prop.propertyId);
     if (exclusionResult?.isExcluded) {
-      // D-3 (A-2 지점): 합산배제 주택도 지분·감면 결합 effectiveFactor 적용
+      // D-3 (A-2 지점): 합산배제 주택도 지분·감면·시가표준액 안분 결합 effectiveFactor 적용
       // ★ 누락 시 합산배제+지분 동시 케이스에서 effectiveIncludedAssessedValue 과대 계산 오류
       effectiveExcludedValue += applyEffectiveFactor(
         prop.assessedValue,
         prop.reductionRate,
         prop.ownershipRatio,
+        toAppurtenantFraction(prop.appurtenantSplit),
       );
     }
   }

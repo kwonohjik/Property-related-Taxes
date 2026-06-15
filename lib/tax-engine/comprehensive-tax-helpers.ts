@@ -19,6 +19,7 @@ import type {
   PropertyTaxCredit,
   PostManagementViolationInput,
   PostManagementPenaltyResult,
+  AppurtenantSplitInput,
 } from "./types/comprehensive.types";
 
 // ============================================================
@@ -58,10 +59,34 @@ export function applyEffectiveFactor(
   base: number,
   reductionRate?: number,
   ownershipRatio?: number,
+  appurtenant?: { num: number; den: number },
 ): number {
   const ratioBp = BigInt(Math.round((ownershipRatio ?? 1) * 10000));
   const rateBp = BigInt(Math.round((reductionRate ?? 0) * 10000));
-  return Number((BigInt(Math.round(base)) * ratioBp * (10000n - rateBp)) / 100000000n);
+  // 시가표준액 안분(사례6): 분수(num/den) 그대로 fold — 비율 사전 라운딩 0 (8/10·7.8/10.4 정확).
+  // 미전달 시 num=den=1 → 곱셈 항등(기존 동작 보존).
+  const num = appurtenant ? BigInt(appurtenant.num) : 1n;
+  const den = appurtenant ? BigInt(appurtenant.den) : 1n;
+  return Number(
+    (BigInt(Math.round(base)) * ratioBp * (10000n - rateBp) * num) /
+      (100000000n * den),
+  );
+}
+
+/**
+ * AppurtenantSplitInput → 시가표준액 안분 분수 {num, den} | undefined.
+ * 안분비율 = ownedPart==="land" ? land/(land+building) : building/(land+building).
+ * den ≤ 0(시가표준액 합 0)은 undefined 반환(안분 미적용 방어). num=0(소유 부분 시가표준액 0)은
+ * 비정상 입력 — validation(⑧)이 소유 부분 > 0 보장. comprehensive-tax.ts·comprehensive-prior-year.ts 공용.
+ */
+export function toAppurtenantFraction(
+  s?: AppurtenantSplitInput,
+): { num: number; den: number } | undefined {
+  if (!s) return undefined;
+  const den = s.landStandardValue + s.buildingStandardValue;
+  if (den <= 0) return undefined;
+  const num = s.ownedPart === "land" ? s.landStandardValue : s.buildingStandardValue;
+  return { num, den };
 }
 
 // ============================================================
