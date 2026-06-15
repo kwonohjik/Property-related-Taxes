@@ -29,7 +29,7 @@ async function fillParcel(
   await prior.fill(data.prior);
 }
 
-test.describe("종합합산토지분 납부할세액의 계산 카드", () => {
+test.describe("종합합산토지분 종합부동산세 납부할 세액 산출 근거 카드", () => {
   test("L-1: 사례10 필지 3건 → 카드 ①~⑤ 값 + 기본 접힘", async ({ page }) => {
     test.setTimeout(120_000);
     const consoleErrors: string[] = [];
@@ -75,7 +75,7 @@ test.describe("종합합산토지분 납부할세액의 계산 카드", () => {
     // 기본 접힘
     await expect(page.getByTestId("land-agg-payable-step5")).toBeHidden();
     // 펼침
-    await card.getByRole("button", { name: /종합합산토지분 종합부동산세 납부할세액의 계산/ }).click();
+    await card.getByRole("button", { name: /종합합산토지분 종합부동산세 납부할 세액 산출 근거/ }).click();
 
     await expect(page.getByTestId("land-agg-payable-step1")).toContainText("13,000,000원");
     await expect(page.getByTestId("land-agg-payable-step2-a")).toContainText("5,800,000원");

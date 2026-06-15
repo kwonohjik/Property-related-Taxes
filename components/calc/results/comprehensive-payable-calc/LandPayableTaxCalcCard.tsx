@@ -40,8 +40,8 @@ export function LandPayableTaxCalcCard({
   const pyr = String(assessmentYear - 1).slice(2);
   const title =
     kind === "aggregate"
-      ? "종합합산토지분 종합부동산세 납부할세액의 계산"
-      : "별도합산토지분 종합부동산세 납부할세액의 계산";
+      ? "종합합산토지분 종합부동산세 납부할 세액 산출 근거"
+      : "별도합산토지분 종합부동산세 납부할 세액 산출 근거";
   const testPrefix = kind === "aggregate" ? "land-agg" : "land-sep";
 
   return (
@@ -57,7 +57,6 @@ export function LandPayableTaxCalcCard({
         <span className="flex items-center gap-2">
           <Calculator className="h-4 w-4" />
           {title}
-          <span className="text-xs font-normal text-gray-500 dark:text-gray-400">— 교재(계산 사례) 형식</span>
         </span>
         <span className={expandToggleClass("sky")}>{expandToggleLabel(expanded)}</span>
       </button>

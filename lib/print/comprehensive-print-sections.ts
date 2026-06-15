@@ -118,21 +118,21 @@ export const COMPREHENSIVE_PRINT_SECTIONS: ComprehensivePrintSectionGroup[] = [
   },
   {
     id: "group:payable-calc",
-    label: "산출근거 (계산 사례 형식)",
+    label: "산출 근거",
     children: [
       {
         id: "housing-payable-calc",
-        label: "주택분 종합부동산세 납부할세액의 계산",
+        label: "주택분 종합부동산세 납부할 세액 산출 근거",
         channel: SCREEN,
       },
       {
         id: "land-agg-payable-calc",
-        label: "종합합산토지분 납부할세액의 계산",
+        label: "종합합산토지분 종합부동산세 납부할 세액 산출 근거",
         channel: SCREEN,
       },
       {
         id: "land-sep-payable-calc",
-        label: "별도합산토지분 납부할세액의 계산",
+        label: "별도합산토지분 종합부동산세 납부할 세액 산출 근거",
         channel: SCREEN,
       },
     ],

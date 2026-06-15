@@ -43,7 +43,7 @@ async function calcAndWait(page: Page): Promise<void> {
   expect(resp.ok(), `계산 API 비정상 ${resp.status()}`).toBe(true);
 }
 
-test.describe("주택분 종합부동산세 납부할세액의 계산 카드", () => {
+test.describe("종합부동산세 납부할 세액 산출 근거 카드(주택분)", () => {
   test("P-1: 사례12 → 카드 기본 접힘 → 펼침 → 교재 ①~⑥ 값", async ({ page }) => {
     test.setTimeout(120_000);
     const consoleErrors: string[] = [];
@@ -78,7 +78,7 @@ test.describe("주택분 종합부동산세 납부할세액의 계산 카드", (
     expect(order, "산출근거 카드가 신고서 서식 뒤에 위치").toBe(1);
 
     // 펼침
-    await card.getByRole("button", { name: /주택분 종합부동산세 납부할세액의 계산/ }).click();
+    await card.getByRole("button", { name: /종합부동산세 납부할 세액 산출 근거/ }).click();
 
     await expect(page.getByTestId("payable-step1")).toContainText("1,440,000원");
     await expect(page.getByTestId("payable-step2")).toContainText("432,000원");

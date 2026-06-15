@@ -36,7 +36,7 @@ function sepResult() {
 describe("LandPayableTaxCalcCard — 사례10 종합합산", () => {
   function renderExpanded() {
     render(<LandPayableTaxCalcCard kind="aggregate" result={aggResult()} assessmentYear={2022} />);
-    fireEvent.click(screen.getByRole("button", { name: /종합합산토지분 종합부동산세 납부할세액의 계산/ }));
+    fireEvent.click(screen.getByRole("button", { name: /종합합산토지분 종합부동산세 납부할 세액 산출 근거/ }));
   }
 
   it("기본 접힘 → 토글 버튼", () => {

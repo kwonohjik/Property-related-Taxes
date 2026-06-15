@@ -86,6 +86,8 @@ function toEngineInput(
       // ⑭ §8④ 의제 유형 (요건 필드 newHouseAcquisitionDate·inheritanceOpenDate·inheritanceShareRatio는
       //    UI·Zod 검증 전용 — 엔진 input에 없으므로 매핑하지 않음)
       section8para4Type: p.section8para4Type ?? "none",
+      // ⑭ T-09 pass-through: 지자체 조례 재산세 감면율 (Zod optional → 엔진 optional)
+      reductionRate: p.reductionRate,
       rentalInfo,
       otherInfo,
     };
@@ -112,6 +114,8 @@ function toEngineInput(
           acquisitionDate: schema.previousYearAuto.acquisitionDate
             ? parseDate(schema.previousYearAuto.acquisitionDate)
             : undefined,
+          // ⑭ T-09 pass-through: 해당연도 감면율 (법령 원칙3)
+          reductionRate: schema.previousYearAuto.reductionRate,
         }
       : undefined,
     isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,
