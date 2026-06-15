@@ -90,6 +90,30 @@ export function validateAppurtenantSplit(formData: ComprehensiveFormData): strin
   return null;
 }
 
+/**
+ * 트랙 A 다가구주택 면적안분 검증 (⑧ — API/UI 동기화).
+ * multiFamilyEnabled ON 시 유효 행(area>0) 1개 이상, 각 area>0, Σ>0 강제.
+ * UI 통과↔validate 차단 모순 방지 (자동 안분 fallback 금지 정책 — CLAUDE.md §2).
+ */
+export function validateMultiFamily(formData: ComprehensiveFormData): string | null {
+  for (const p of formData.properties) {
+    if (!p.multiFamilyEnabled) continue;
+    if (p.floorUnits.length === 0) {
+      return "다가구주택 층별 면적 입력 시 구별(층별) 행을 1개 이상 추가해야 합니다.";
+    }
+    for (const u of p.floorUnits) {
+      if (parseDecimal(u.area) <= 0) {
+        return `다가구주택 구별 면적은 0㎡ 초과여야 합니다 (미입력 또는 0 불가). 입력란: "${u.label || "행"}".`;
+      }
+    }
+    const totalArea = p.floorUnits.reduce((s, u) => s + parseDecimal(u.area), 0);
+    if (totalArea <= 0) {
+      return "다가구주택 구별 면적 합계가 0㎡입니다. 면적을 입력해 주세요.";
+    }
+  }
+  return null;
+}
+
 // 임대주택 합산배제 유형 (rentalInfo 필드 구성에 사용)
 const RENTAL_TYPES = new Set([
   "private_construction_rental",
@@ -178,6 +202,16 @@ export async function callComprehensiveApi(
       propertyTaxAmount: p.propertyTaxAmount
         ? parseAmount(p.propertyTaxAmount)
         : undefined,
+      // ⑬ 트랙 A: 다가구주택 층별 면적안분. ON + 유효 행(area>0) 1개 이상 시만 전송. 빈값 = strip.
+      floorUnits:
+        p.multiFamilyEnabled && p.floorUnits.some((u) => parseDecimal(u.area) > 0)
+          ? p.floorUnits
+              .filter((u) => parseDecimal(u.area) > 0)
+              .map((u, i) => ({
+                label: u.label.trim() || `구분${i + 1}`,
+                area: parseDecimal(u.area),
+              }))
+          : undefined,
     };
 
     // 임대주택 합산배제 상세

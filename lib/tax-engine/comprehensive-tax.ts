@@ -34,6 +34,7 @@ import {
   COMPREHENSIVE_MIN_SUPPORTED_YEAR,
 } from "./data/comprehensive-historical";
 import { calculatePropertyTax, calcHousingTax } from "./property-tax";
+import { calcMultiFamilyHousingTax } from "./multi-family-housing-tax";
 import { calculateSeparateAggregateLandTax } from "./comprehensive-separate-land";
 import {
   buildAggregateLandFromParcels,
@@ -186,11 +187,29 @@ export function calculateComprehensiveTax(
     let propTax = 0;
     // D-2 (B 지점): 지분후·감면후·안분후 실부과 재산세 = 비율 안분 공제 ⓐ
     let imposedTax: number;
+    // 트랙 A: 다가구 구별 면적안분 echo (floorUnits 입력 시만 — 결과 카드 ⑦)
+    let multiFamilyBreakdown: ComprehensiveTaxResult["properties"][number]["multiFamilyBreakdown"];
     if (prop.propertyTaxAmount !== undefined) {
       // 사례7·8·9: 재산세 부과세액 직접입력. 이미 감면·지분·세부담상한(105/110/130%)·
       // 다가구 면적안분이 반영된 고지서 실부과액 → applyEffectiveFactor 후곱 금지(이중적용 방지).
       // 자동계산 propTax는 산출 생략 (override 경로는 effectiveFactor와 직교).
       imposedTax = prop.propertyTaxAmount;
+    } else if (prop.floorUnits && prop.floorUnits.length > 0) {
+      // 트랙 A (사례7): 다가구 1동 통합공시를 구별 면적안분 후 누진세율 개별 적용·합산.
+      // calculatePropertyTax 단일 경로 재사용 → FMR·누진·주택 세부담상한 패스스루 일치(drift 0).
+      const isOneHouseholdForProp =
+        !isCorporate && input.isOneHouseOwner && input.properties.length === 1;
+      const mf = calcMultiFamilyHousingTax(
+        prop.assessedValue,
+        prop.floorUnits,
+        isOneHouseholdForProp,
+        assessmentDateStr,
+        rates,
+      );
+      propTax = mf.total;
+      multiFamilyBreakdown = mf.perUnit;
+      // 통합공시(100% 지분) 기준 → 지분·감면·시가표준액 안분 후 곱 (단일 경로와 동일)
+      imposedTax = applyEffectiveFactor(propTax, rate, ratio, appurtenant);
     } else {
       try {
         const ptResult = calculatePropertyTax(
@@ -225,6 +244,7 @@ export function calculateComprehensiveTax(
       isExcluded,
       // 감면후 실부과 재산세 — 최상위 totalPropertyTax("재산세 참고")·grandTotal 집계용
       propertyTax: imposedTax,
+      multiFamilyBreakdown,
     });
   }
 
