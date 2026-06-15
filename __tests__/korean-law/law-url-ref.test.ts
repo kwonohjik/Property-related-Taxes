@@ -6,7 +6,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { parseLawRef, parseLawRefsForModal } from "@/lib/utils/law-url";
+import {
+  parseLawRef,
+  parseLawRefsForModal,
+  extractClauseMarkers,
+} from "@/lib/utils/law-url";
 
 describe("parseLawRef — 단일 ref (회귀 보존)", () => {
   it("C-1 정식명 + §", () => {
@@ -95,5 +99,27 @@ describe("parseLawRefsForModal — 복합 인용 분해", () => {
     expect(parseLawRefsForModal("상증규 §17의3⑤ + §56⑤")).toEqual([
       { lawName: "상속세및증여세법 시행규칙", articleNum: "17의3" },
     ]);
+  });
+});
+
+describe("extractClauseMarkers — 항(項) 마커 추출 (G-5 하이라이트)", () => {
+  it("CM-1 단일 항 §63③", () => {
+    expect(extractClauseMarkers("§63③ 할증평가")).toEqual(["③"]);
+  });
+
+  it("CM-2 복수 항 상증령 §56①④", () => {
+    expect(extractClauseMarkers("상증령 §56①④ 순손익액")).toEqual(["①", "④"]);
+  });
+
+  it("CM-3 항 없음 §8 보험금 → 빈 배열(강조 없음, 전체 표시)", () => {
+    expect(extractClauseMarkers("§8 보험금")).toEqual([]);
+  });
+
+  it("CM-4 §22② 금융재산공제", () => {
+    expect(extractClauseMarkers("§22② 금융재산공제")).toEqual(["②"]);
+  });
+
+  it("CM-5 중복 제거·등장 순서 보존", () => {
+    expect(extractClauseMarkers("상증령 §16③⑭ + §16③")).toEqual(["③", "⑭"]);
   });
 });

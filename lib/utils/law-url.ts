@@ -96,3 +96,20 @@ export function buildLawUrl(legalBasis: string): string {
   const name = namePart ? resolveLawAlias(namePart) : "";
   return name ? `https://www.law.go.kr/법령/${encodeURIComponent(name)}` : "";
 }
+
+/** 항(項) 번호 동그라미 숫자 ①~⑮ (법령 본문 항 마커) */
+const CLAUSE_MARKERS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮";
+
+/**
+ * 인용 문자열에서 항(項) 마커(①~⑮) 추출 — 조문 팝업 본문 하이라이트용 (G-5).
+ *   "§63③ 할증평가" → ["③"] · "상증령 §56①④" → ["①","④"] · "§8 보험금" → []
+ * 등장 순서 보존·중복 제거. 호(N호)는 인용 항 블록에 포함되므로 별도 추출하지 않는다.
+ */
+export function extractClauseMarkers(text: string): string[] {
+  if (!text) return [];
+  const found: string[] = [];
+  for (const ch of text) {
+    if (CLAUSE_MARKERS.includes(ch) && !found.includes(ch)) found.push(ch);
+  }
+  return found;
+}
