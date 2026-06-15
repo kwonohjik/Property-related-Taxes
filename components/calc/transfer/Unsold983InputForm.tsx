@@ -12,6 +12,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold983Form = Extract<AssetReductionForm, { type: "unsold_98_3" }>;
@@ -47,6 +48,11 @@ export function Unsold983InputForm({ value, onChange }: Props) {
   const isSelfBuilt = value.houseType983 === "self_built";
   return (
     <div className="mt-2 ml-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="조세특례제한법 §98의3①" label="§98의3① 서울 밖 미분양" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §98의3" label="조특령 §98의3" />
+      </div>
+
       <SectionShell num="①" title="주체·취득 유형·시기" tone="sky">
         <RadioCardGroup<Unsold983Form["residencyType983"]>
           name="unsold983-residency"

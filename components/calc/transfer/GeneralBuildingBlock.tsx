@@ -28,6 +28,7 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
 
 // §168의12 배율표 기준 용도지역 선택지
@@ -241,15 +242,21 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         <p className="text-xs text-violet-700">
           소득세법 시행령 §176의2② (환산취득가) · §104의3 (비사업용토지 판정)
         </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
+        </div>
       </div>
       <div className="space-y-3">
 
         {/* 부담부증여 모드 안내 — §159 자동 산정으로 취득가액 산정 방식 라디오/실거래가/증축 토글 모두 숨김 */}
         {isBurdenedGift && (
           <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 text-xs space-y-1.5">
-            <p className="font-semibold text-fuchsia-900">
-              부담부증여 §159 자동 산정 — 취득가액 산정 방식 선택 불필요
-            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="font-semibold text-fuchsia-900">
+                부담부증여 §159 자동 산정 — 취득가액 산정 방식 선택 불필요
+              </p>
+              <LawArticleModal legalBasis="소득세법 시행령 §159" label="§159 부담부증여" />
+            </div>
             <p className="text-fuchsia-800">
               부담부증여(소득세법 시행령 §159)는 양도가/취득가 모두 <b>채무비율 × 자산별 기준시가</b>로
               엔진이 자동 산정합니다. 실거래가/환산취득가/증축 모드 선택·일괄 취득가 입력이 모두 무의미하므로
@@ -305,6 +312,9 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">②</span>
             <p className="text-xs font-semibold text-emerald-700">양도시 기준시가 (토지·건물 안분 비율)</p>
           </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
+          </div>
           <p className="text-[11px] text-emerald-600">
             {isEstimated
               ? "환산취득가 분모 + 양도가액 안분 기준. 취득 기준시가는 아래 ③ 섹션에서 별도 입력."
@@ -335,6 +345,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             <div className="flex items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">③</span>
               <p className="text-xs font-semibold text-amber-700">취득시 기준시가 (환산 분자 + 개산공제 기준)</p>
+              <LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />
             </div>
 
             <LandPriceLookupField
@@ -363,7 +374,10 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             {/* 부담부증여 §159①1호 단서 안내 — 사용자 입력 실거래가 무시 */}
             {asset.transferType === "burdened_gift" && (
               <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-800 space-y-0.5">
-                <p className="font-semibold">부담부증여 §159①1호 단서</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="font-semibold">부담부증여 §159①1호 단서</p>
+                  <LawArticleModal legalBasis="소득세법 시행령 §159①" label="§159① 부담부증여" />
+                </div>
                 <p>
                   양도가액이 채무액(=기준시가 모드와 동치)으로 의제되므로
                   취득가액도 <b>취득시 기준시가 × 채무비율</b>로 환산됩니다.
@@ -389,6 +403,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             <FieldCard
               label="증축일"
               hint="건축물대장 사용승인일 또는 실제 사용일 (영 §162①4호)"
+              trailing={<LawArticleModal legalBasis="소득세법 시행령 §162①" label="§162①4호 취득시기" />}
             >
               <DateInput
                 value={asset.gbExtensionDate}
@@ -557,6 +572,10 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             <p className="text-xs font-semibold text-rose-700">비사업용토지 판정</p>
             <span className="text-[10px] text-rose-500">(§104의3·§168의12)</span>
           </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
+            <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
+          </div>
           <p className="text-[11px] text-rose-600">
             부수토지 한도 = 수평투영면적 × 용도지역 배율. 초과분에만 +10%p 중과.
           </p>
@@ -653,6 +672,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           <FieldCard
             label="변경 당시 다주택자(중과대상)였습니까?"
             hint="'예' 선택 시 변경일 이전 보유기간은 장기보유특별공제에서 배제됩니다 (사전법규재산 2022-684·881 / 서울행법 2012구단26961)."
+            trailing={<LawArticleModal legalBasis="소득세법 §95②" label="§95② 표1 장특공제" />}
           >
             <RadioCardGroup
               name="gbWasMultiHouseAtConversion"

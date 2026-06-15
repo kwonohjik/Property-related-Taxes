@@ -21,6 +21,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
 
 interface Props {
@@ -103,10 +104,23 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
         <p className="text-xs text-fuchsia-700">
           납세의무자: <b>증여자</b> · 양도가액 = 인수 채무액 · 보유기간 = 증여자 당초 취득일~증여일
         </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159" />
+        </div>
       </div>
 
       {/* ① 평가 모드 라디오 */}
-      <FieldCard label="양도(증여) 평가 유형" hint="상증법 §60~§66. 사례 34는 기준시가 모드.">
+      <FieldCard
+        label="양도(증여) 평가 유형"
+        hint="상증법 §60~§66. 사례 34는 기준시가 모드."
+        trailing={
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />
+            <LawArticleModal legalBasis="상속세및증여세법 §62" label="상증법 §62" />
+            <LawArticleModal legalBasis="상속세및증여세법 §66" label="상증법 §66" />
+          </div>
+        }
+      >
         <RadioCardGroup
           name="bgValuationMode"
           layout="stack"
@@ -126,6 +140,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
         <FieldCard
           label="임대보증금 총액"
           hint="채무로 인수 + 임대평가 환산에도 사용 (상증령 §50⑦)"
+          trailing={<LawArticleModal legalBasis="상속세및증여세법 시행령 §50 ⑦" label="상증령 §50⑦" />}
         >
           <CurrencyInput label=""
             hideUnit
@@ -188,13 +203,14 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
 
       {/* ④ 증여재산 평가용 건물 기준시가 (상증법 §61 — 층별 가감율 적용) */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
             §61
           </span>
           <p className="text-xs font-semibold text-emerald-800">
             증여재산 평가 — 양도시 건물 기준시가 (층별 가감율 적용)
           </p>
+          <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
         </div>
         <FieldCard
           label="건물기준시가(상속 증여시)"
@@ -211,13 +227,19 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
 
       {/* ⑤ Phase 3 — 증여세 통합 입력 (수증자 정보) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 space-y-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
             §53
           </span>
           <p className="text-xs font-semibold text-violet-800">
             증여세 통합 입력 (수증자 정보 — 상증법 §53·§56·§57·§69)
           </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="상속세및증여세법 §53" label="상증법 §53" />
+            <LawArticleModal legalBasis="상속세및증여세법 §56" label="상증법 §56" />
+            <LawArticleModal legalBasis="상속세및증여세법 §57" label="상증법 §57" />
+            <LawArticleModal legalBasis="상속세및증여세법 §69" label="상증법 §69" />
+          </div>
         </div>
         <p className="text-[11px] text-violet-700">
           무상이전분(증여가액 C − 채무액 B)에 대한 증여세 동시 산출. 수증자가 별도 신고·납부.

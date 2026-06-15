@@ -18,6 +18,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { DateInput } from "@/components/ui/date-input";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
 
 interface Props {
@@ -180,6 +181,10 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">5</span>
           <p className="text-xs font-semibold text-rose-700">환산 기준시가</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
+          <LawArticleModal legalBasis="소득세법 시행령 §176의2 ② 2호" label="시행령 §176의2②2호" />
         </div>
 
         <FieldCard
@@ -378,6 +383,10 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">5</span>
           <p className="text-xs font-semibold text-amber-700">토지 출자 — §166③ 비율 환산 (사례 37)</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
+          <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
         </div>
         <p className="text-[11px] text-amber-700">
           환산취득가 = floor(권리가액 × <strong>취득당시 토지기준시가</strong> / <strong>관리처분 직전 토지기준시가</strong>)

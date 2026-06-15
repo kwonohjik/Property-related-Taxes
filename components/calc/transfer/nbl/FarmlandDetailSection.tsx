@@ -4,6 +4,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -21,6 +22,7 @@ export function FarmlandDetailSection({
       <SectionHeader
         title="농지 세부 정보"
         description="§168-8 농지 판정 — 자경 기간 및 의제자경 사유를 입력하세요."
+        action={<LawArticleModal legalBasis="소득세법 시행령 §168의8" label="§168의8 농지" />}
       />
 
       {/* 자경 여부 — farmingSelf === false 이면 자경기간 전체 0 처리 */}

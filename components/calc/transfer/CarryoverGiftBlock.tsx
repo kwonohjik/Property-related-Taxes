@@ -19,6 +19,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CarryoverGiftExclusionSection } from "./CarryoverGiftExclusionSection";
 import { CarryoverEstimationSection } from "./CarryoverEstimationSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -80,9 +81,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-4">
       {/* 헤더 */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm font-semibold text-amber-800">이월과세(증여) 정보</p>
         <LegalBadge text="소득세법 §97조의2" />
+        <LawArticleModal legalBasis="소득세법 §97의2" label="§97의2" />
       </div>
 
       {/* ① 증여 기본 정보 */}
@@ -95,7 +97,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         <FieldCard
           label="증여 등기접수일"
           hint="소득세법 §97조의2 ③ — 이월과세 적용기간 기산일 (등기부 기재일)"
-          trailing={<LegalBadge text="§97조의2 ③" />}
+          trailing={<LawArticleModal legalBasis="소득세법 §97의2 ③" label="§97의2③" />}
         >
           <DateInput
             value={c.giftRegistryDate}
@@ -184,7 +186,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         <FieldCard
           label="증여세 상당액"
           hint="소득세법 §163의2: 증여세 × (해당 자산가액 ÷ 증여재산총액). 미신고 시 0 입력."
-          trailing={<LegalBadge text="§163의2" />}
+          trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
         >
           <CurrencyInput
             label=""
@@ -201,7 +203,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
               ? "증여자가 보유기간 중 지출한 자본적 지출액 (소득세법 §97조의2 ① 2호 후단)"
               : "2024.1.1. 이후 양도분부터 적용 (2023.12.31. 신설)"
           }
-          trailing={<LegalBadge text="§97조의2 ① 2호" />}
+          trailing={<LawArticleModal legalBasis="소득세법 §97의2 ① 2호" label="§97의2①2호" />}
         >
           <CurrencyInput
             label=""

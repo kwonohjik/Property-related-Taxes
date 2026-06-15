@@ -22,6 +22,7 @@ import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import { SalesCaseSection } from "./SalesCaseSection";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
@@ -359,6 +360,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           <p className="text-sm font-semibold text-violet-900">
             취득가액 — 재개발 §166②1호 자동 산정
           </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
+            <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
+          </div>
           <p className="text-xs text-violet-800">
             재개발/재건축 양도에서 인가후 분의 분양가(= 권리가액 + 청산금 납부액 또는 권리가액 − 청산금 수령액)는
             아래 <b>§166②1호 재개발 일정·금액</b> 섹션의 입력값에서 엔진이 자동 산정합니다.

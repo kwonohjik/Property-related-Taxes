@@ -8,6 +8,7 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold984Form = Extract<AssetReductionForm, { type: "unsold_98_4" }>;
@@ -20,6 +21,11 @@ interface Props {
 export function Unsold984InputForm({ value, onChange }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="조세특례제한법 §98의4" label="§98의4 비거주자 주택취득" />
+        <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
+      </div>
+
       <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
         <p className="text-xs font-semibold text-rose-700">① 적용 주체</p>
         <ToggleCard

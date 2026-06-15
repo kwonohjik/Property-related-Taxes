@@ -20,6 +20,7 @@
 
 import Link from "next/link";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { FamilyBusinessCgtDetail } from "@/lib/tax-engine/transfer-tax-family-business";
 
 interface Props {
@@ -78,6 +79,10 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
         <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
           의제 취득가액 = 피상속인 원취득가액 × {(appliedRate * 100).toFixed(2)}% + 상속개시일 평가액 × {((1 - appliedRate) * 100).toFixed(2)}%
         </p>
+        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+          <LawArticleModal legalBasis="소득세법 §97의2④" label="§97의2④ 가업상속 의제" />
+          <LawArticleModal legalBasis="상속세및증여세법 §18의2⑩" label="§18의2⑩ 상속세 상당액 공제" />
+        </div>
       </div>
 
       {/* 산식 표 */}

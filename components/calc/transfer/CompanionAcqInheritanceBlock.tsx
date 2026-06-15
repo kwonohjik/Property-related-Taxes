@@ -19,6 +19,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -107,12 +108,16 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
             value={props.decedentAcquisitionDate}
             onChange={props.onDecedentAcquisitionDateChange}
           />
-          <p className="text-[11px] text-muted-foreground">단기보유 통산용 (소득세법 §95④)</p>
+          <p className="text-[11px] text-muted-foreground">단기보유 통산용 (소득세법 §104②1호)</p>
         </div>
       </div>
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">상속 취득가액 산정</label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />
+          <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
+        </div>
         <div className="flex gap-2">
           <button
             type="button"

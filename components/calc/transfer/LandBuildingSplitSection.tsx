@@ -9,6 +9,7 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 interface Props {
   useEstimatedAcquisition: boolean;
@@ -40,6 +41,9 @@ export function LandBuildingSplitSection(props: Props) {
         양도가액만 알고 취득가액을 모르는 경우, 양도가액만 입력하고 나머지는 비워두세요.
         비워둔 항목은 기준시가 비율로 자동 안분됩니다.
       </p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
+      </div>
 
       <div className="grid grid-cols-2 gap-2">
         <FieldCard label="토지 양도가액" hint="소득령 §166⑥">

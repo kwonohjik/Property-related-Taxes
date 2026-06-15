@@ -3,6 +3,7 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import {
   Select,
@@ -33,6 +34,7 @@ export function OtherLandDetailSection({
       <SectionHeader
         title="나대지·잡종지 세부 정보"
         description="§168-11 기타 토지 판정"
+        action={<LawArticleModal legalBasis="소득세법 시행령 §168의11①" label="§168의11① 기타토지" />}
       />
 
       <FieldCard label="재산세 과세 분류">

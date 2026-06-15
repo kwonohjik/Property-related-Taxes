@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type New99Form = Extract<AssetReductionForm, { type: "new_99" }>;
@@ -52,6 +53,12 @@ export function New99InputForm({ value, onChange }: Props) {
   const periodEndLabel = value.isNationalHousing99 ? "1999.12.31" : "1999.6.30";
   return (
     <div className="mt-2 ml-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="조세특례제한법 §99①" label="§99① 신축주택 감면" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §99" label="조특령 §99" />
+        <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
+      </div>
+
       <SectionShell num="①" title="취득 유형·시기" tone="amber">
         <RadioCardGroup
           name="new99-acquisition-type"

@@ -14,6 +14,7 @@ import { useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type New994Rural = Extract<AssetReductionForm, { type: "new_99_4_rural" }>;
@@ -48,6 +49,11 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
 
   return (
     <div className="mt-2 ml-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="조세특례제한법 §99의4①" label="§99의4① 농어촌·고향주택" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §99의4" label="조특령 §99의4" />
+      </div>
+
       {/* ① 취득 정보 */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">

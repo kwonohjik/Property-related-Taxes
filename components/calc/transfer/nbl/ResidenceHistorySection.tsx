@@ -4,6 +4,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { SigunguSelect } from "./shared/SigunguSelect";
 import type { AssetForm, ResidenceHistoryInput } from "@/lib/stores/calc-wizard-store";
@@ -113,6 +114,7 @@ export function ResidenceHistorySection({
         <FieldCard
           label="직선거리 (km)"
           hint="거주지 이력 미입력 시 대체 판정에 사용됩니다. (소득령 §168-8)"
+          trailing={<LawArticleModal legalBasis="소득세법 시행령 §168의8" label="§168의8 농지" />}
         >
           <DecimalInput
             value={asset.nblFarmerResidenceDistance}

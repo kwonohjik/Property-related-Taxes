@@ -6,6 +6,7 @@
  */
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
 interface Props {
@@ -16,7 +17,10 @@ interface Props {
 export function CarryoverGiftExclusionSection({ exclusionDeclared, onChange }: Props) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold text-rose-700">이월과세 적용배제 선언 (해당 시 선택)</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <p className="text-xs font-semibold text-rose-700">이월과세 적용배제 선언 (해당 시 선택)</p>
+        <LawArticleModal legalBasis="소득세법 §97의2 ②" label="§97의2②" />
+      </div>
 
       <ToggleCard
         tone="rose"

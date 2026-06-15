@@ -11,6 +11,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 
 // ============================================================================
@@ -36,6 +37,10 @@ export function New993InputForm({
   return (
     <div className="mt-2 ml-7 rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
       <p className="text-xs font-semibold text-primary">조특법 §99의3 신축주택 과세특례 입력</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="조세특례제한법 §99의3" label="§99의3 신축주택" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §99" label="조특령 §99" />
+      </div>
 
       {/* Round 9 정정 (2026-05-06): 1호(주건업) 시한 기준은 상단 "매매계약일"을 재사용. 본 폼에서는 입력 X. */}
       {value.acquisitionType993 === "from_builder" && (

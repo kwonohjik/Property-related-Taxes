@@ -6,6 +6,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 
@@ -295,6 +296,9 @@ export function MixedUseStandardPriceInputs({
                 <p>
                   두 값 중 하나라도 미입력이면 계산을 진행할 수 없습니다 (시행령 §166⑥ + 집행기준 99-164-10).
                 </p>
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
+                </div>
               </div>
             )}
             {asset.hasPartialUsageChange && asset.partialChangeDirection === "commercial_to_house" && (

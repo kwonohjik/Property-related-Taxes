@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold992Form = Extract<AssetReductionForm, { type: "unsold_99_2" }>;
@@ -52,6 +53,12 @@ export function Unsold992InputForm({ value, onChange }: Props) {
   const houseType = value.houseType992;
   return (
     <div className="mt-2 ml-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="조세특례제한법 §99의2①" label="§99의2① 신축·미분양·1세대1주택" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §99의2" label="조특령 §99의2" />
+        <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
+      </div>
+
       <SectionShell num="①" title="대상 주택 유형" tone="sky">
         <RadioCardGroup<Unsold992Form["houseType992"]>
           name="unsold992-house-type"
