@@ -266,11 +266,18 @@ function Step2({
         </>
       )}
 
-      {/* 다가구 구별 안분 명세 (트랙 A) — floorUnits 자동 산정 주택만 (manual·단일 ⓐ와 직교, multiFamilyBreakdown 존재 시만) */}
+      {/* 트랙 A: 다가구 구별 안분 명세 — floorUnits 자동 산정 주택만 (manual·단일 ⓐ와 직교, multiFamilyBreakdown 존재 시만) */}
       {result.properties
         .filter((rp) => rp.multiFamilyBreakdown && rp.multiFamilyBreakdown.length > 0)
         .map((rp, pi) => (
           <MultiFamilyBreakdownRow key={rp.propertyId ?? pi} rp={rp} />
+        ))}
+
+      {/* 트랙 B: 주택 세부담상한 산식 (housingTaxCapDetail 존재 시만) — 조건 블록 밖 배치 필수 (Track A 교훈) */}
+      {result.properties
+        .filter((rp) => rp.housingTaxCapDetail != null)
+        .map((rp, pi) => (
+          <HousingTaxCapDetailRow key={(rp.propertyId ?? pi) + "-cap"} rp={rp} />
         ))}
 
       {/* ⓑ 종합부동산세 과세표준의 표준세율재산세액 (누진공제 없음) */}
@@ -644,6 +651,52 @@ function MultiFamilyBreakdownRow({
               </span>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// 트랙 B: 주택 세부담상한 산식 명세 (ExpandToggleButton 펼침)
+// ════════════════════════════════════════════════════════════
+function HousingTaxCapDetailRow({
+  rp,
+}: {
+  rp: ComprehensiveTaxResult["properties"][number];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const d = rp.housingTaxCapDetail;
+  if (!d) return null;
+  return (
+    <div className="ml-8 mt-1">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1 text-xs text-sky-700 hover:underline"
+      >
+        <span className={expandToggleClass("sky")}>{expandToggleLabel(expanded)}</span>
+        주택 세부담상한 산식
+      </button>
+      {expanded && (
+        <div className="mt-1 rounded-md border border-sky-200 bg-sky-50/40 px-3 py-2 text-xs text-sky-900 space-y-0.5">
+          {/* 당해 표준세율 재산세 */}
+          <div>당해 표준세율 재산세: {won(d.standardTax)}</div>
+          {/* 직전 표준세율 재산세 + 세부담상한 */}
+          {d.capPct != null && d.capAmount != null ? (
+            <>
+              <div>
+                직전 표준세율 재산세: {won(d.priorStandardTax)} → 세부담상한 {d.capPct}% = {won(d.capAmount)}
+              </div>
+              <div>
+                세부담상한 적용: min({won(d.standardTax)}, {won(d.capAmount)}) = {won(d.cappedTax)}
+              </div>
+            </>
+          ) : (
+            <div>세부담상한 미적용 (2024년 폐지 · 과세표준상한제)</div>
+          )}
+          {/* 감면·지분 적용 후 부과세액 */}
+          <div>감면·지분 적용 후 부과세액 ⓐ: {won(d.imposedTax)}</div>
         </div>
       )}
     </div>

@@ -15,6 +15,7 @@ import { describe, it, expect } from "vitest";
 import { calculateComprehensiveTax } from "../../lib/tax-engine/comprehensive-tax";
 import { calcMultiFamilyHousingTax } from "../../lib/tax-engine/multi-family-housing-tax";
 import { calculatePropertyTax } from "../../lib/tax-engine/property-tax";
+import { buildHousingPropertyTaxWithCap } from "../../lib/tax-engine/comprehensive-housing-tax-cap";
 import type { ComprehensiveTaxInput } from "../../lib/tax-engine/types/comprehensive.types";
 
 const SEOCHO_FLOORS = [
@@ -142,5 +143,103 @@ describe("회귀 (AUTO-R): floorUnits 미입력 시 단일 공시 자동계산 �
     expect(result.calculatedTax).toBe(2_280_000);
     expect(result.propertyTaxCredit.creditAmount).toBe(781_357);
     expect(result.properties[0].multiFamilyBreakdown).toBeUndefined();
+  });
+});
+
+// ════════════════════════════════════════════════════════════
+// 트랙 B — 주택 세부담상한 (priorAssessedValue) — 사례8·9
+// ════════════════════════════════════════════════════════════
+
+describe("사례8 자동 (priorAssessedValue): 주택 세부담상한 → ⓐ 4,379,700 (AUTO-B1·B2)", () => {
+  const input: ComprehensiveTaxInput = {
+    assessmentYear: 2022,
+    isOneHouseOwner: false,
+    isMultiHouseInAdjustedArea: true,
+    properties: [
+      { propertyId: "seocho", assessedValue: 2_000_000_000, reductionRate: 0.3, priorAssessedValue: 1_500_000_000 },
+      { propertyId: "gangnam", assessedValue: 1_000_000_000, priorAssessedValue: 800_000_000 },
+    ],
+    previousYearTotalTax: 22_173_882,
+  };
+
+  it("⑤ 16,747,099 · ① 18,960,000 · ⓓ 2,212,901 (수동입력 없이 priorAssessedValue 자동)", () => {
+    const result = calculateComprehensiveTax(input);
+    expect(result.calculatedTax).toBe(18_960_000);
+    expect(result.propertyTaxCredit.creditAmount).toBe(2_212_901);
+    expect(result.determinedHousingTax).toBe(16_747_099);
+  });
+
+  it("housingTaxCapDetail echo — 서초 130% cap 발동 (4,170,000 → 3,861,000 → ×0.7 = 2,702,700)", () => {
+    const result = calculateComprehensiveTax(input);
+    const seocho = result.properties.find((p) => p.propertyId === "seocho")!;
+    expect(seocho.housingTaxCapDetail).toBeDefined();
+    expect(seocho.housingTaxCapDetail!.standardTax).toBe(4_170_000);
+    expect(seocho.housingTaxCapDetail!.priorStandardTax).toBe(2_970_000);
+    expect(seocho.housingTaxCapDetail!.capPct).toBe(130);
+    expect(seocho.housingTaxCapDetail!.capAmount).toBe(3_861_000);
+    expect(seocho.housingTaxCapDetail!.cappedTax).toBe(3_861_000);
+    expect(seocho.housingTaxCapDetail!.imposedTax).toBe(2_702_700);
+    // 강남 cap 발동 (감면 없음): 1,770,000 → min(·, 1,290,000 × 130% = 1,677,000)
+    const gangnam = result.properties.find((p) => p.propertyId === "gangnam")!;
+    expect(gangnam.housingTaxCapDetail!.imposedTax).toBe(1_677_000);
+  });
+});
+
+describe("사례9 자동 (priorAssessedValue): 3주택 세부담상한 → ⑤ 25,546,712 (AUTO-B3)", () => {
+  it("안양 110% 구간 포함 (직전 420,000 × 110% = 462,000)", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      properties: [
+        { propertyId: "seocho", assessedValue: 2_000_000_000, reductionRate: 0.3, priorAssessedValue: 1_500_000_000 },
+        { propertyId: "gangnam", assessedValue: 1_000_000_000, priorAssessedValue: 800_000_000 },
+        { propertyId: "anyang", assessedValue: 500_000_000, priorAssessedValue: 400_000_000 },
+      ],
+      previousYearTotalTax: 35_630_694,
+    });
+    expect(result.calculatedTax).toBe(28_080_000);
+    expect(result.propertyTaxCredit.creditAmount).toBe(2_533_288);
+    expect(result.determinedHousingTax).toBe(25_546_712);
+    const anyang = result.properties.find((p) => p.propertyId === "anyang")!;
+    expect(anyang.housingTaxCapDetail!.capPct).toBe(110);
+    expect(anyang.housingTaxCapDetail!.imposedTax).toBe(462_000);
+  });
+});
+
+describe("buildHousingPropertyTaxWithCap 헬퍼: §122 단서 · 시행령 §118", () => {
+  it("서초 2022: 당해 4,170,000 / 직전표준 2,970,000 × 130% = 3,861,000 → cap 발동", () => {
+    const cap = buildHousingPropertyTaxWithCap(
+      4_170_000, 1_500_000_000, 2022, 2_000_000_000, false, "2021-06-01",
+    );
+    expect(cap.priorStandardTax).toBe(2_970_000);
+    expect(cap.capPct).toBe(130);
+    expect(cap.capAmount).toBe(3_861_000);
+    expect(cap.cappedTax).toBe(3_861_000);
+  });
+
+  it("AUTO-C2: 2024+ 세부담상한 폐지 → capPct null · 상한 미적용(당해 표준세율 그대로)", () => {
+    const cap = buildHousingPropertyTaxWithCap(
+      5_000_000, 400_000_000, 2024, 500_000_000, false, "2023-06-01",
+    );
+    expect(cap.capPct).toBeNull();
+    expect(cap.capAmount).toBeNull();
+    expect(cap.cappedTax).toBe(5_000_000);
+  });
+});
+
+describe("우선순위 (AUTO-C1 확장): priorAssessedValue도 propertyTaxAmount에 양보", () => {
+  it("propertyTaxAmount + priorAssessedValue 동시 → 직접입력 우선 · housingTaxCapDetail 미생성", () => {
+    const result = calculateComprehensiveTax({
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      isMultiHouseInAdjustedArea: true,
+      properties: [
+        { propertyId: "seocho", assessedValue: 2_000_000_000, reductionRate: 0.3, propertyTaxAmount: 2_702_700, priorAssessedValue: 1_500_000_000 },
+        { propertyId: "gangnam", assessedValue: 1_000_000_000, propertyTaxAmount: 1_677_000, priorAssessedValue: 800_000_000 },
+      ],
+      previousYearTotalTax: 22_173_882,
+    });
+    expect(result.determinedHousingTax).toBe(16_747_099);
+    expect(result.properties[0].housingTaxCapDetail).toBeUndefined();
   });
 });

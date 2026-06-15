@@ -364,6 +364,33 @@ function PropertyCard({
         </div>
       </ToggleCard>
 
+      {/* ⑤ 트랙 B: 직전연도 공시가격 (주택 세부담상한 자동계산 — §122 layer-1) */}
+      <ToggleCard
+        tone="sky"
+        title="직전연도 공시가격 (주택 세부담상한)"
+        description="전년도 주택공시가격 입력 시 105%/110%/130% 세부담상한을 자동 계산하여 재산세 부과세액(ⓐ)을 산정합니다."
+        checked={property.priorAssessedTaxCapEnabled ?? false}
+        onCheckedChange={(v) =>
+          onUpdate({
+            priorAssessedTaxCapEnabled: v,
+            priorAssessedValue: v ? property.priorAssessedValue : "",
+          })
+        }
+      >
+        <div className="space-y-2">
+          <CurrencyInput
+            label="직전연도 주택공시가격"
+            hideLabel
+            value={property.priorAssessedValue}
+            onChange={(v) => onUpdate({ priorAssessedValue: v })}
+            hideUnit
+          />
+          <p className="text-xs text-muted-foreground">
+            전년도 주택공시가격 — 105%/110%/130% 세부담상한 자동 산정용. 세부담상한 산식은 결과 카드에서 표시됩니다.
+          </p>
+        </div>
+      </ToggleCard>
+
       {/* ⑤ 사례7·8·9: 재산세 부과세액 직접입력 (비율 안분 공제 ⓐ) */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-1.5">
         <p className="text-xs font-semibold text-sky-700">

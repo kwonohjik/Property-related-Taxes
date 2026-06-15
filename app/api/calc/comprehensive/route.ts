@@ -96,6 +96,8 @@ function toEngineInput(
       propertyTaxAmount: p.propertyTaxAmount,
       // ⑭ pass-through: 다가구주택 층별 면적 (트랙 A — 숫자·문자열, Date 변환 불요)
       floorUnits: p.floorUnits,
+      // ⑭ pass-through: 트랙 B 직전연도 공시가격 (숫자, Date 변환 불요)
+      priorAssessedValue: p.priorAssessedValue,
       rentalInfo,
       otherInfo,
     };
