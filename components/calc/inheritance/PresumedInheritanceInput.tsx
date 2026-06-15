@@ -333,7 +333,7 @@ export function PresumedInheritanceInput({
           if (!open) setSelectedId(null);
         }}
       >
-        <DialogContent className="sm:max-w-lg w-full p-0" showCloseButton={false}>
+        <DialogContent className="sm:max-w-2xl w-full p-0" showCloseButton={false}>
           <DialogHeader className="px-4 pt-4 pb-0">
             <DialogTitle>
               {selectedItem ? `${CATEGORY_META[selectedItem.category].label} 편집` : "추정상속재산 편집"}
