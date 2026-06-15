@@ -19,6 +19,7 @@ import { differenceInYears } from "date-fns";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CohabitantTableView } from "@/components/calc/CohabitantTableView";
 import {
   Dialog,
@@ -248,6 +249,11 @@ export function CohabitantDependentSection({
         >
           + 동거가족 추가
         </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <LawArticleModal legalBasis="상증법 §20" label="§20 그 밖의 인적공제" />
+        <LawArticleModal legalBasis="상증령 §18" label="상증령 §18① 동거가족" />
       </div>
 
       {/* 요약 테이블 (deps 0명이면 미표시) */}

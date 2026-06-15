@@ -12,6 +12,7 @@
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { RadioOptionVisibility } from "@/lib/calc/asset-toggle-visibility";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -59,6 +60,12 @@ export function DeemedCategorySection({
       <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
         간주상속재산 분류 (§8·§9·§10)
       </p>
+      <div className="flex flex-wrap gap-1.5">
+        <LawArticleModal legalBasis="상증법 §8" label="§8 보험금" />
+        <LawArticleModal legalBasis="상증법 §9" label="§9 신탁재산" />
+        <LawArticleModal legalBasis="상증법 §10" label="§10 퇴직금" />
+        <LawArticleModal legalBasis="상증령 §19" label="상증령 §19① 금융재산" />
+      </div>
       <RadioCardGroup<"none" | "insurance" | "trust" | "retirement">
         name={`deemed-${item.id}`}
         layout="inline"

@@ -31,6 +31,8 @@ import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveT
 import { formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { parseLawRefsForModal } from "@/lib/utils/law-url";
 import {
   GIFT_PRINT_SECTIONS,
   type GiftPrintSectionId,
@@ -89,6 +91,10 @@ function InstallmentGuide({ finalTax }: { finalTax: number }) {
         <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
           연부연납 안내 (상증법 §71)
         </h4>
+        <div className="flex flex-wrap gap-1 mt-1">
+          <LawArticleModal legalBasis="상증법 §71" label="§71 연부연납" />
+          <LawArticleModal legalBasis="상증법 §70" label="§70 분납" />
+        </div>
         <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
           결정세액 2천만원 초과 시 최대 5년 분할납부 가능
         </p>
@@ -358,6 +364,9 @@ export function GiftTaxResultView({
             <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
               사전증여 합산 내역 (§47)
             </h3>
+            <div className="flex flex-wrap gap-1 mt-1">
+              <LawArticleModal legalBasis="상증법 §47" label="§47 증여세 과세가액" />
+            </div>
           </div>
           <ul className="divide-y divide-border">
             {priorGifts.map((pg, i) => (
@@ -461,6 +470,11 @@ export function GiftTaxResultView({
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                   일반 증여 스트림 (§47·§53·§56)
                 </h3>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <LawArticleModal legalBasis="상증법 §47" label="§47 과세가액" />
+                  <LawArticleModal legalBasis="상증법 §53" label="§53 증여재산공제" />
+                  <LawArticleModal legalBasis="상증법 §56" label="§56 세율" />
+                </div>
               </div>
               <div className="divide-y divide-border">
                 <Row label="일반 증여 산출세액" value={formatKRW(result.ordinaryStreamTax)} highlight />
@@ -479,6 +493,10 @@ export function GiftTaxResultView({
               <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
                 조특법 과세특례 스트림 (§30의5·§30의6)
               </h3>
+              <div className="flex flex-wrap gap-1 mt-1">
+                <LawArticleModal legalBasis="조특법 §30의5" label="조특법 §30의5 창업자금" />
+                <LawArticleModal legalBasis="조특법 §30의6" label="조특법 §30의6 가업승계" />
+              </div>
             </div>
             <div className="divide-y divide-border">
               {(result.specialStreamDebt ?? 0) > 0 && (
@@ -677,12 +695,21 @@ export function GiftTaxResultView({
         </PrintSection>
       )}
 
-      {/* 근거 조문 */}
+      {/* 근거 조문 — 클릭 시 해당 조문 팝업 (파싱 실패 시 텍스트 배지 fallback) */}
       {result.appliedLaws.length > 0 && (
-        <div className="flex flex-wrap">
-          {result.appliedLaws.map((law) => (
-            <LawBadge key={law} law={law} />
-          ))}
+        <div className="flex flex-wrap gap-1">
+          {result.appliedLaws.map((law) => {
+            const refs = parseLawRefsForModal(law);
+            return refs.length > 0
+              ? refs.map((r, i) => (
+                  <LawArticleModal
+                    key={`${law}-${i}`}
+                    legalBasis={`${r.lawName} §${r.articleNum}`}
+                    label={refs.length > 1 ? `§${r.articleNum}` : law}
+                  />
+                ))
+              : <LawBadge key={law} law={law} />;
+          })}
         </div>
       )}
 

@@ -22,6 +22,7 @@ import { useMemo } from "react";
 
 import { CurrencyInput, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import {
   calcCorporateStockAdjustedValue,
   getExcessCashRatioByDate,
@@ -97,6 +98,11 @@ export function CorporateNonBusinessAssetsSection({
         <p className="text-[10px] text-amber-700 dark:text-amber-300">
           ⓘ 산식: 평가가액 × (총자산 − 사업무관자산 합) / 총자산. 총자산 미입력 시 차감 미적용 (legacy).
         </p>
+        <div className="flex flex-wrap gap-1.5">
+          <LawArticleModal legalBasis="상증령 §15" label="상증령 §15⑤2호" />
+          <LawArticleModal legalBasis="상증령 §16" label="상증령 §16⑤2호" />
+          <LawArticleModal legalBasis="소득세법 §104의3" label="소득세법 §104의3 비사업용토지" />
+        </div>
       </div>
 
       <CurrencyInput

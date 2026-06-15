@@ -20,6 +20,7 @@
 
 import { useMemo, useState } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -33,7 +34,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   applyEstimatedProfit,
-  ESTIMATED_PROFIT_REASON_LABEL,
   type EstimatedProfitInput,
   type EstimatedProfitReasonCode,
 } from "@/lib/tax-engine/property-valuation/estimated-profit-section-56-2";
@@ -139,6 +139,10 @@ export function EstimatedProfitToggle({
         >
           {isOn && value && (
             <div className="space-y-3 mt-2" data-testid="estimated-profit-form">
+              <div className="flex flex-wrap gap-1.5">
+                <LawArticleModal legalBasis="상증령 §56" label="상증령 §56② 추정이익 갈음" />
+                <LawArticleModal legalBasis="상증규 §17의3" label="상증규 §17의3 사유·환원율" />
+              </div>
               {/* ① §17의3① 사유 */}
               <RadioCardGroup
                 name="estimated-profit-reason"

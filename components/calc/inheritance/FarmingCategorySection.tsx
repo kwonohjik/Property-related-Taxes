@@ -19,6 +19,7 @@
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { twoYearsBefore } from "@/lib/calc/inheritance-deduction-suggest";
@@ -123,6 +124,10 @@ export function FarmingCategorySection({
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
             영농 자산 분류
           </p>
+          <div className="flex flex-wrap gap-1.5">
+            <LawArticleModal legalBasis="상증법 §18의3" label="§18의3 영농상속공제" />
+            <LawArticleModal legalBasis="상증령 §16" label="상증령 §16 영농상속재산" />
+          </div>
           <RadioCardGroup<FarmingCategory>
             name={`farming-${item.id}`}
             layout="stack"

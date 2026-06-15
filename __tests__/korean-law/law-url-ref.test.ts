@@ -37,6 +37,35 @@ describe("parseLawRef — 단일 ref (회귀 보존)", () => {
     });
   });
 
+  // ── Phase 3 후속 선별 링크 신규 조문 패턴 (2026-06-15) ──
+  it("C-12 조특법 §30의5 (창업자금 특례) + 뒤 설명 무시", () => {
+    expect(parseLawRef("조특법 §30의5 창업자금")).toEqual({
+      lawName: "조세특례제한법",
+      articleNum: "30의5",
+    });
+  });
+
+  it("C-13 소득세법 §104의3 (비사업용토지) — 본법 약칭+가지번호", () => {
+    expect(parseLawRef("소득세법 §104의3 비사업용토지")).toEqual({
+      lawName: "소득세법",
+      articleNum: "104의3",
+    });
+  });
+
+  it("C-14 상증령 §20의2 (동거주택 부득이사유) — 시행령 가지번호", () => {
+    expect(parseLawRef("상증령 §20의2 부득이사유")).toEqual({
+      lawName: "상속세및증여세법 시행령",
+      articleNum: "20의2",
+    });
+  });
+
+  it("C-15 상증규 §17의3 (추정이익 사유) — 시행규칙 가지번호", () => {
+    expect(parseLawRef("상증규 §17의3 사유·환원율")).toEqual({
+      lawName: "상속세및증여세법 시행규칙",
+      articleNum: "17의3",
+    });
+  });
+
   // ── 현행 실패 실증 (Pre-Do anchor 핵심) ──
   it("C-7 상증령 §15 → 시행령 정식명 (현행 실패 예상)", () => {
     expect(parseLawRef("상증령 §15")).toEqual({

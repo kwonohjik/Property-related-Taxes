@@ -17,6 +17,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
 import { HeirAllocationInput } from "./HeirAllocationInput";
 
@@ -62,6 +63,10 @@ export function DebtItemEditor({ item, heirs, onUpdate }: DebtItemEditorProps) {
       )}
 
       {/* §22 순금융재산 차감 채무 — financial 카테고리만 활성 (상증령 §19④) */}
+      <div className="flex flex-wrap gap-1.5">
+        <LawArticleModal legalBasis="상증법 §22" label="§22 금융재산공제" />
+        <LawArticleModal legalBasis="상증령 §19" label="상증령 §19 금융재산·채무" />
+      </div>
       <ToggleCard
         tone="rose"
         size="sm"
