@@ -133,6 +133,26 @@ export function Step0({
         </div>
       )}
 
+      {/* 주택 건축물 부분 시가표준액 — 건물분 소방분 §146④ 단서 (주택 전용·선택) */}
+      {form.objectType === "housing" && (
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            주택 건축물 부분 시가표준액{" "}
+            <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            재산세 고지서·주택가격 공시의 건물분 가액. 입력 시 건물분 소방분(지역자원시설세, 지방세법 §146④ 단서)이
+            산출됩니다. 미입력 시 미산출.
+          </p>
+          <CurrencyInput
+            label=""
+            value={form.housingBuildingValue}
+            onChange={(v) => onChange({ housingBuildingValue: v })}
+            placeholder="금액 입력 (원)"
+          />
+        </div>
+      )}
+
       {/* 1세대1주택 (주택 전용) */}
       {form.objectType === "housing" && (
         <ToggleCard

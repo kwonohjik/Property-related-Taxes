@@ -606,3 +606,76 @@ describe("calculatePropertyTax — 화재위험 중과 통합 (§146③2호·2�
     expect(result.surtax.fireHazardMultiplier).toBeUndefined();
   });
 });
+
+// ============================================================
+// HB: 주택 건축물분 소방분 (§146④ 단서) — 건물분 × FMR → §146③1호 6구간
+// ============================================================
+
+describe("calcSurtax — 주택 건축물분 소방분 (§146④ 단서)", () => {
+  it("HB-1: 주택 건물분 과세표준 9천만(=1.5억×60%) → base 80,300", () => {
+    const { surtax } = calcSurtax(0, 0, 0, "housing", false, undefined, 90_000_000);
+    expect(surtax.housingFireServiceTaxBase).toBe(90_000_000);
+    // 49,100 + (90,000,000 − 64,000,000) × 12/10,000 = 80,300
+    expect(surtax.regionalResourceTax).toBe(80_300);
+  });
+
+  it("HB-2: 주택 소방분 과세표준 미전달(undefined) → 0 · echo undefined (회귀)", () => {
+    const { surtax } = calcSurtax(0, 0, 0, "housing", false, undefined, undefined);
+    expect(surtax.regionalResourceTax).toBe(0);
+    expect(surtax.housingFireServiceTaxBase).toBeUndefined();
+  });
+
+  it("HB-4: 건축물 → 7번째 인자 무시·기존 publishedPrice 경로(92,300) 불변", () => {
+    const { surtax } = calcSurtax(0, 0, 100_000_000, "building", false, undefined, 90_000_000);
+    expect(surtax.regionalResourceTax).toBe(92_300);
+    expect(surtax.housingFireServiceTaxBase).toBeUndefined();
+  });
+
+  it("HB-5: 주택 소방분 + fireHazardClass 지정 → 중과 미적용(배율 1)", () => {
+    const { surtax } = calcSurtax(0, 0, 0, "housing", false, "large_fire_hazard", 90_000_000);
+    expect(surtax.regionalResourceTax).toBe(80_300);
+    expect(surtax.fireHazardMultiplier).toBeUndefined();
+  });
+
+  it("HB-7: 주택 건물분 과세표준 0 → 0 · echo 0 노출 (경계)", () => {
+    const { surtax } = calcSurtax(0, 0, 0, "housing", false, undefined, 0);
+    expect(surtax.regionalResourceTax).toBe(0);
+    expect(surtax.housingFireServiceTaxBase).toBe(0);
+  });
+});
+
+describe("calculatePropertyTax — 주택 건물분 소방분 통합 (§146④ 단서)", () => {
+  it("HB-INT-1: 주택 건물분 1.5억 / 일반 60% → 소방분 80,300", () => {
+    const result = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 300_000_000,
+      housingBuildingValue: 150_000_000,
+      isOneHousehold: false,
+    });
+    expect(result.surtax.housingFireServiceTaxBase).toBe(90_000_000);
+    expect(result.surtax.regionalResourceTax).toBe(80_300);
+  });
+
+  it("HB-INT-2: 주택 건물분 미입력 → 소방분 0 (회귀)", () => {
+    const result = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 300_000_000,
+      isOneHousehold: false,
+    });
+    expect(result.surtax.regionalResourceTax).toBe(0);
+    expect(result.surtax.housingFireServiceTaxBase).toBeUndefined();
+  });
+
+  it("HB-INT-3: 1세대1주택 2026 / publishedPrice 7억(45%) / 건물분 1억 → 과세표준 4,500만 · 소방분 30,100", () => {
+    const result = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 700_000_000,
+      housingBuildingValue: 100_000_000,
+      isOneHousehold: true,
+      targetDate: "2026-06-01",
+    });
+    // 100,000,000 × 45% = 45,000,000 → 24,100 + (45,000,000 − 39,000,000) × 10/10,000 = 30,100
+    expect(result.surtax.housingFireServiceTaxBase).toBe(45_000_000);
+    expect(result.surtax.regionalResourceTax).toBe(30_100);
+  });
+});

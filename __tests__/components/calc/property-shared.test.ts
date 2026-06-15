@@ -146,6 +146,37 @@ describe("건축물 화재위험 등급 전송 — 소방분 중과 §146③2호
   });
 });
 
+describe("주택 건축물 부분 시가표준액 전송 — 건물분 소방분 §146④ 단서", () => {
+  it("주택: 값>0 입력 시 housingBuildingValue 전송", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({
+        objectType: "housing",
+        publishedPrice: "300,000,000",
+        housingBuildingValue: "150,000,000",
+      }),
+    );
+    expect(body.housingBuildingValue).toBe(150_000_000);
+  });
+
+  it("주택: 미입력 시 미전송 (소방분 미산출)", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({ objectType: "housing", publishedPrice: "300,000,000" }),
+    );
+    expect(body.housingBuildingValue).toBeUndefined();
+  });
+
+  it("건축물: 건물분 입력해도 미전송 (주택 전용)", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({
+        objectType: "building",
+        publishedPrice: "100,000,000",
+        housingBuildingValue: "150,000,000",
+      }),
+    );
+    expect(body.housingBuildingValue).toBeUndefined();
+  });
+});
+
 describe("분리과세 옵션 정리 (R1 회귀)", () => {
   it("엔진 비해당 옵션(대중·간이 골프장, 기타) 미노출 — 선택 시 무조건 422였던 경로", () => {
     const values = SEPARATED_TYPE_OPTIONS.map((o) => o.value);

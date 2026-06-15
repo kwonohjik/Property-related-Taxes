@@ -73,6 +73,8 @@ export interface FormState {
   publishedPrice: string;
   /** 직전연도 공시가격 — 주택 과세표준상한제(§110③) 계산용 (주택 전용·선택) */
   priorYearPublishedPrice: string;
+  /** 주택 건축물 부분 시가표준액 — 주택 건물분 소방분(§146④ 단서) 과세표준 (주택 전용·선택) */
+  housingBuildingValue: string;
   isOneHousehold: boolean;
   isUrbanArea: boolean;
   buildingType: string;
@@ -98,6 +100,7 @@ export const INITIAL_FORM: FormState = {
   objectType: "housing",
   publishedPrice: "",
   priorYearPublishedPrice: "",
+  housingBuildingValue: "",
   isOneHousehold: false,
   isUrbanArea: false,
   buildingType: "general",
@@ -131,6 +134,13 @@ export function validateStep(step: number, form: FormState): string | null {
       parseAmount(form.priorYearPublishedPrice) === null
     )
       return "직전연도 공시가격을 올바른 금액으로 입력하세요.";
+    // 주택 건축물 부분 시가표준액: 선택 입력 — 입력 시 형식만 검증, 미입력 통과(소방분 미산출)
+    if (
+      form.objectType === "housing" &&
+      form.housingBuildingValue &&
+      parseAmount(form.housingBuildingValue) === null
+    )
+      return "주택 건축물 부분 시가표준액을 올바른 금액으로 입력하세요.";
   }
   if (step === 1 && form.objectType === "land") {
     if (!form.landTaxType) return "토지 과세 유형을 선택하세요.";
@@ -176,6 +186,11 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
     const priorPrice = parseAmount(form.priorYearPublishedPrice);
     if (priorPrice !== null && priorPrice > 0) {
       body.priorYearPublishedPrice = priorPrice;
+    }
+    // 주택 건물분 소방분(§146④ 단서) — 건축물 부분 시가표준액 (값>0 시에만 전송)
+    const bldgValue = parseAmount(form.housingBuildingValue);
+    if (bldgValue !== null && bldgValue > 0) {
+      body.housingBuildingValue = bldgValue;
     }
   }
 
