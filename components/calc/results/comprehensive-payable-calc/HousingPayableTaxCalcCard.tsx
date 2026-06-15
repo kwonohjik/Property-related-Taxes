@@ -14,11 +14,18 @@
 import { useState } from "react";
 import { Calculator } from "lucide-react";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
+import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { getHousingStandardRateBracket } from "@/lib/tax-engine/property-tax";
 import { won, eok, pct, StepLine, Bullet, GaNaDaLine } from "./payable-calc-helpers";
 import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
 
-export function HousingPayableTaxCalcCard({ result }: { result: ComprehensiveTaxResult }) {
+export function HousingPayableTaxCalcCard({
+  result,
+  properties,
+}: {
+  result: ComprehensiveTaxResult;
+  properties?: PropertyEntry[];
+}) {
   const [expanded, setExpanded] = useState(false);
 
   const yr = result.assessmentDate.slice(0, 4);
@@ -56,7 +63,7 @@ export function HousingPayableTaxCalcCard({ result }: { result: ComprehensiveTax
             </p>
           ) : (
             <div className="space-y-1">
-              <Step1 result={result} />
+              <Step1 result={result} properties={properties} />
               <Step2 result={result} yr={yr} />
               <Step3 result={result} isCorporateSpecial={isCorporateSpecial} />
               <Step4 result={result} />
@@ -73,8 +80,21 @@ export function HousingPayableTaxCalcCard({ result }: { result: ComprehensiveTax
 // ════════════════════════════════════════════════════════════
 // ① 재산세공제전 종합부동산세액
 // ════════════════════════════════════════════════════════════
-function Step1({ result }: { result: ComprehensiveTaxResult }) {
+function Step1({
+  result,
+  properties,
+}: {
+  result: ComprehensiveTaxResult;
+  properties?: PropertyEntry[];
+}) {
   const hasPd = result.progressiveDeduction > 0;
+  // 지분율 — form 값 직접 사용 (result echo로는 역산 불가 — engine.design §2)
+  // 단일 주택 기준: 첫 번째 주택의 지분율 사용
+  const ownershipRatioStr = properties?.[0]?.ownershipRatio ?? "100";
+  const ownershipRatioNum = parseFloat(ownershipRatioStr);
+  const hasOwnershipRatio =
+    !isNaN(ownershipRatioNum) && ownershipRatioNum < 100 && ownershipRatioNum >= 0;
+
   // 감면율이 적용된 경우: effectiveIncludedAssessedValue < includedAssessedValue
   const hasReduction =
     result.effectiveIncludedAssessedValue != null &&
@@ -88,10 +108,18 @@ function Step1({ result }: { result: ComprehensiveTaxResult }) {
         strong
         testId="payable-step1"
       />
-      {/* 조례 감면 적용 시: 원공시 합산 × (1−감면율) = 감면후 공시가격 */}
+      {/* 지분율 적용 시 — 지분 → 감면 순으로 독립 2줄
+          includedAssessedValue = 원공시 합산(지분 전), effectiveIncludedAssessedValue = 지분·감면 후
+          지분만 적용 시: effective = 원공시 × 지분율 */}
+      {hasOwnershipRatio && (
+        <Bullet testId="payable-step1-ownership">
+          공시가격 × 지분율({ownershipRatioNum}%) = 안분 공시가격 : {eok(result.effectiveIncludedAssessedValue ?? result.includedAssessedValue)}
+        </Bullet>
+      )}
+      {/* 조례 감면 적용 시: 원공시 합산 × (1−감면율) = 과세 공시가격 */}
       {hasReduction && (
         <Bullet>
-          감면후 공시가격 합산 : 원공시 합산 {eok(result.includedAssessedValue)} × (1−감면율) ={" "}
+          과세 공시가격 : 공시가격 합산 {eok(result.includedAssessedValue)} × (1−감면율) ={" "}
           {eok(result.effectiveIncludedAssessedValue)}
         </Bullet>
       )}

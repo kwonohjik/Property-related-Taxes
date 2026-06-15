@@ -57,8 +57,8 @@ async function fillCase2ThroughStep4(page: Page): Promise<void> {
   // Step2: 공시가격 10억 + 감면율 25% 입력
   // CurrencyInput placeholder="금액 입력" — 공시가격 총액
   await page.getByPlaceholder("금액 입력").first().fill("1000000000");
-  // DecimalInput placeholder="숫자 입력" — 재산세 감면율 (%)
-  await page.getByPlaceholder("숫자 입력").first().fill("25");
+  // DecimalInput: nth(0)=지분율(기본100 유지), nth(1)=재산세 감면율(%)
+  await page.getByPlaceholder("숫자 입력").nth(1).fill("25");
   await clickNext(page); // → Step3
   await clickNext(page); // → Step4
   await clickNext(page); // → Step5
@@ -116,10 +116,11 @@ test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 
     // Step1: 재산세공제전 종부세액 = 540,000
     await expect(page.getByTestId("payable-step1")).toContainText("540,000원");
 
-    // Step1 영역(StepLine + 형제 Bullet들)에서 감면후 공시가격 bullet 확인
+    // Step1 영역(StepLine + 형제 Bullet들)에서 과세 공시가격 bullet 확인
     // Bullet은 StepLine의 형제이므로 housing-payable-calc 카드 전체에서 검색
     // eok() 함수가 750,000,000 → "7.5억원"으로 렌더링
-    await expect(card).toContainText("감면후 공시가격");
+    // [라벨 변경] "감면후 공시가격" → "과세 공시가격" (지분+감면 모든 케이스 정확한 중립어)
+    await expect(card).toContainText("과세 공시가격");
     await expect(card).toContainText("7.5억원");
 
     // Step2: 공제할 재산세액 = 245,076
@@ -208,9 +209,9 @@ test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 
       .getByRole("button", { name: /종합부동산세 납부할 세액 산출 근거/ })
       .click();
 
-    // 감면후 공시가격 bullet 미노출 (hasReduction = false)
+    // 과세 공시가격 bullet 미노출 (hasReduction = false)
     await expect(page.getByTestId("payable-step1")).not.toContainText(
-      "감면후 공시가격",
+      "과세 공시가격",
     );
   });
 });
@@ -269,13 +270,13 @@ test.describe("종합부동산세 사례12 회귀 (감면율 기능 추가 후)"
       timeout: 30_000,
     });
 
-    // 감면후 공시가격 bullet 미노출 (사례12는 감면율 없음)
+    // 과세 공시가격 bullet 미노출 (사례12는 감면율/지분 없음)
     const card = page.getByTestId("housing-payable-calc");
     await card
       .getByRole("button", { name: /종합부동산세 납부할 세액 산출 근거/ })
       .click();
     await expect(page.getByTestId("payable-step1")).not.toContainText(
-      "감면후 공시가격",
+      "과세 공시가격",
     );
     await expect(page.getByTestId("payable-step6")).toContainText("302,400원");
 

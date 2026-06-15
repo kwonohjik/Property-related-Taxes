@@ -88,6 +88,8 @@ function toEngineInput(
       section8para4Type: p.section8para4Type ?? "none",
       // ⑭ T-09 pass-through: 지자체 조례 재산세 감면율 (Zod optional → 엔진 optional)
       reductionRate: p.reductionRate,
+      // ⑭ pass-through: 공유지분율 (Zod optional → 엔진 optional, 미입력=단독100%)
+      ownershipRatio: p.ownershipRatio,
       rentalInfo,
       otherInfo,
     };
@@ -116,6 +118,8 @@ function toEngineInput(
             : undefined,
           // ⑭ T-09 pass-through: 해당연도 감면율 (법령 원칙3)
           reductionRate: schema.previousYearAuto.reductionRate,
+          // ⑭ pass-through: 해당연도 지분율 (법령 원칙3)
+          ownershipRatio: schema.previousYearAuto.ownershipRatio,
         }
       : undefined,
     isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,

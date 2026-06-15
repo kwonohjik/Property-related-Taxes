@@ -22,6 +22,49 @@ import type {
 } from "./types/comprehensive.types";
 
 // ============================================================
+// 유효계수 헬퍼 (지분율 × 감면 후 계수)
+// ============================================================
+
+/**
+ * 유효계수 = ownershipRatio × (1 − reductionRate).
+ *
+ * 지분율과 감면율을 단일 곱으로 통합하는 헬퍼.
+ * 두 계수가 동일 위치(공시가격·재산세에 곱셈)에 적용되므로
+ * 교환법칙으로 단일 floor로 합산 가능.
+ *
+ * 기본값:
+ *   ownershipRatio ?? 1  → 단독 소유(100%) 그대로 보존 (기존 동작 보존)
+ *   reductionRate ?? 0   → 감면 없음 (기존 동작 보존)
+ *
+ * @param reductionRate  지자체 조례 재산세 감면율 (0~1, 미입력=0)
+ * @param ownershipRatio 공유지분율 (0~1, 미입력=1)
+ */
+export function effectiveFactor(
+  reductionRate?: number,
+  ownershipRatio?: number,
+): number {
+  return (ownershipRatio ?? 1) * (1 - (reductionRate ?? 0));
+}
+
+/**
+ * 공시가격·재산세 base에 결합계수(ownershipRatio × (1 − reductionRate))를 적용해 floor 정수 반환.
+ *
+ * ★ 부동소수 곱 금지 — 0.7 같은 float는 1,500,000,000 × 0.7 = 1,049,999,999.99 → floor 1원 부족
+ *   (memory feedback_applyrate_fractional_rate_one_won_error). 만분율(basis point) 정수 + BigInt로
+ *   곱 후 1회 정수 나눗셈(floor). base 2조 등 overflow도 BigInt로 안전.
+ *   (effectiveFactor float는 가드 판정 등 비정밀 용도로만 — 금액 곱셈은 반드시 이 함수)
+ */
+export function applyEffectiveFactor(
+  base: number,
+  reductionRate?: number,
+  ownershipRatio?: number,
+): number {
+  const ratioBp = BigInt(Math.round((ownershipRatio ?? 1) * 10000));
+  const rateBp = BigInt(Math.round((reductionRate ?? 0) * 10000));
+  return Number((BigInt(Math.round(base)) * ratioBp * (10000n - rateBp)) / 100000000n);
+}
+
+// ============================================================
 // T-06: 1세대1주택 세액공제
 // ============================================================
 

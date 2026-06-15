@@ -194,6 +194,13 @@ export const comprehensivePropertySchema = z
       .max(1, { message: "재산세 감면율은 1(100%) 이하여야 합니다." })
       .optional(),
 
+    /** 공유지분율 (0~1). 미입력 시 1(단독 100%) 처리. 공시가격·재산세 안분. */
+    ownershipRatio: z
+      .number()
+      .min(0, { message: "지분율은 0 이상이어야 합니다." })
+      .max(1, { message: "지분율은 1(100%) 이하여야 합니다." })
+      .optional(),
+
     /** 임대주택 합산배제 상세 정보 */
     rentalInfo: rentalExclusionInfoSchema.optional(),
 
@@ -386,6 +393,12 @@ export const comprehensiveTaxInputSchema = z.object({
         .number()
         .min(0, { message: "재산세 감면율은 0 이상이어야 합니다." })
         .max(1, { message: "재산세 감면율은 1(100%) 이하여야 합니다." })
+        .optional(),
+      /** 직전연도 자동계산용 지분율 (해당연도 지분율 적용). 미입력 1(단독). */
+      ownershipRatio: z
+        .number()
+        .min(0, { message: "지분율은 0 이상이어야 합니다." })
+        .max(1, { message: "지분율은 1(100%) 이하여야 합니다." })
         .optional(),
     })
     .optional(),
