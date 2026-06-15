@@ -10,6 +10,7 @@
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface CompanyTypeBlockProps {
@@ -58,6 +59,9 @@ export function CompanyTypeBlock({ form, onChange }: CompanyTypeBlockProps) {
 
       {/* K-OTC 거래 토글 (§94①3 나목 단서) */}
       <div className="mt-4">
+        <div className="flex flex-wrap gap-1.5 mb-1">
+          <LawArticleModal legalBasis="소득세법 §94 ① 3호 나목" label="§94①3 나목 단서" />
+        </div>
         <ToggleCard
           checked={form.isKOTCTrading}
           onCheckedChange={(v) => onChange({ isKOTCTrading: v })}
@@ -82,6 +86,9 @@ export function CompanyTypeBlock({ form, onChange }: CompanyTypeBlockProps) {
 
       {/* 벤처기업 토글 (조특법 §14①7호 — K-OTC 벤처 비대주주 비과세) */}
       <div className="mt-3">
+        <div className="flex flex-wrap gap-1.5 mb-1">
+          <LawArticleModal legalBasis="조세특례제한법 §14 ① 7호" label="조특법§14①7호" />
+        </div>
         <ToggleCard
           checked={form.isVentureCompany}
           onCheckedChange={(v) => onChange({ isVentureCompany: v })}

@@ -10,16 +10,31 @@ import { readFileSync, readdirSync, statSync, existsSync } from "fs";
 import { join, relative } from "path";
 
 const CWD = process.cwd();
-const ROOTS = ["components/calc/inheritance", "components/calc/gift"];
-const RESULTS_DIRS = [
-  "components/calc/results/inheritance",
-  "components/calc/results/allocation-breakdown",
-];
-const RESULTS_FILES = [
-  "InheritanceTaxResultView.tsx", "GiftTaxResultView.tsx",
-  "InheritanceFilingFormTable.tsx", "GiftTaxFilingFormTable.tsx", "GiftTaxValuationFormTable.tsx",
-  "HeirAllocationSummaryTable.tsx", "BundledAllocationCard.tsx", "DebtAllocationResultCard.tsx",
-].map((f) => `components/calc/results/${f}`);
+// 세목 인자화: node scripts/extract-law-citations.mjs <tax>  (기본 inheritance-gift)
+const TAX = process.argv[2] || "inheritance-gift";
+const CONFIG = {
+  "inheritance-gift": {
+    ROOTS: ["components/calc/inheritance", "components/calc/gift"],
+    RESULTS_DIRS: ["components/calc/results/inheritance", "components/calc/results/allocation-breakdown"],
+    RESULTS_FILES: [
+      "InheritanceTaxResultView.tsx", "GiftTaxResultView.tsx",
+      "InheritanceFilingFormTable.tsx", "GiftTaxFilingFormTable.tsx", "GiftTaxValuationFormTable.tsx",
+      "HeirAllocationSummaryTable.tsx", "BundledAllocationCard.tsx", "DebtAllocationResultCard.tsx",
+    ].map((f) => `components/calc/results/${f}`),
+  },
+  "stock-transfer": {
+    ROOTS: ["components/calc/stock-transfer"],
+    RESULTS_DIRS: [],
+    RESULTS_FILES: [
+      "StockTransferTaxResultView.tsx", "StockTransferTaxResultViewHelpers.tsx",
+      "PostListingDetailCard.tsx", "StockTransferPenaltySection.tsx",
+      "ListedStockBesshiResultSection.tsx", "UnlistedStockBesshiResultSection.tsx",
+      "ForeignStockResultCard.tsx", "UnlistedStockSimpleValuationSection.tsx",
+    ].map((f) => `components/calc/results/${f}`)
+      .concat(["components/calc/stock-transfer/StockFilingFormTableHelpers.ts"]),
+  },
+};
+const { ROOTS, RESULTS_DIRS, RESULTS_FILES } = CONFIG[TAX] ?? CONFIG["inheritance-gift"];
 
 function walk(dir, acc = []) {
   if (!existsSync(dir)) return acc;

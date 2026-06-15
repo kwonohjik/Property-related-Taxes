@@ -14,10 +14,10 @@
  *
  * 기존 안내 카드 3종 보존:
  *  1. 단기 30% (§104②)
- *  2. inheritance 1985.12.31. 이전 의제취득일 (시행령 §162①)
+ *  2. inheritance 1985.12.31. 이전 의제취득일 (시행령 §162⑦3호)
  *  3. gift 수증일 안내 (§97의2 미적용)
  *
- * 의제취득일 자동 적용 (시행령 §162①):
+ * 의제취득일 자동 적용 (시행령 §162⑦3호):
  *  - 1985.12.31. 이전 입력 시 onChange 시점에 자동 1986-01-01 patch
  *  - 원래 입력값은 component local state로 보관하여 안내 메시지에 표시
  */
@@ -26,6 +26,7 @@ import { useState } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 const DEEMED_CUTOFF = "1985-12-31";
@@ -88,6 +89,10 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
       <div className="flex items-center gap-2 mb-1">
         <span className="text-amber-800 font-semibold text-sm">📋 취득 정보</span>
       </div>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        <LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />
+        <LawArticleModal legalBasis="소득세법 §104 ②" label="§104②" />
+      </div>
 
       {/* 취득일 (single column) */}
       <FieldCard label={dateLabel} required hint={dateHint}>
@@ -95,7 +100,8 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
         {acqOriginal && form.acquisitionDate === DEEMED_DATE && (
           <p className="mt-2 rounded-md border border-amber-300 bg-amber-100/70 px-2 py-1.5 text-xs text-amber-900">
             ⓘ 입력하신 {acqOriginal}은 1985.12.31. 이전이므로 의제취득일{" "}
-            <strong>1986.1.1.</strong>로 자동 변경되었습니다. (시행령 §162①)
+            <strong>1986.1.1.</strong>로 자동 변경되었습니다.{" "}
+            (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
           </p>
         )}
       </FieldCard>
@@ -137,12 +143,13 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             {decedentOriginal && form.decedentAcquisitionDate === DEEMED_DATE && (
               <p className="mt-2 rounded-md border border-amber-400 bg-amber-200/70 px-2 py-1.5 text-xs text-amber-900">
                 ⓘ 입력하신 피상속인 취득일 {decedentOriginal}은 1985.12.31. 이전이므로
-                의제취득일 <strong>1986.1.1.</strong>로 자동 변경되었습니다. (시행령 §162①)
+                의제취득일 <strong>1986.1.1.</strong>로 자동 변경되었습니다.{" "}
+                (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
               </p>
             )}
           </FieldCard>
           <p className="text-xs text-amber-800">
-            ⓘ 1985.12.31. 이전 취득 주식: 의제취득일 1986.1.1. 자동 적용 (시행령 §162①)
+            ⓘ 1985.12.31. 이전 취득 주식: 의제취득일 1986.1.1. 자동 적용 (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
           </p>
         </div>
       )}
@@ -171,7 +178,8 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             {preMergerOriginal && form.preMergerAcquisitionDate === DEEMED_DATE && (
               <p className="mt-2 rounded-md border border-amber-400 bg-amber-200/70 px-2 py-1.5 text-xs text-amber-900">
                 ⓘ 입력하신 종전 주식 취득일 {preMergerOriginal}은 1985.12.31. 이전이므로
-                의제취득일 <strong>1986.1.1.</strong>로 자동 변경되었습니다. (시행령 §162①)
+                의제취득일 <strong>1986.1.1.</strong>로 자동 변경되었습니다.{" "}
+                (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
               </p>
             )}
           </FieldCard>

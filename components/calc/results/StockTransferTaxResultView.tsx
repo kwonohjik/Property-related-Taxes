@@ -17,6 +17,7 @@
  */
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
 import { StockTaxpayerHeaderCard } from "@/components/calc/stock-transfer/StockTaxpayerHeaderCard";
 import { KiwoomFetchSourceBadge } from "@/components/calc/KiwoomFetchSourceBadge";
@@ -97,6 +98,23 @@ const TAX_CATEGORY_LABEL: Record<StockTransferResult["taxCategory"], string> = {
   exit_tax: "국외전출세 (§118의9~§118의16)",
 };
 
+// 분류 배지 → legalBasis 매핑 (TAX_CATEGORY_LABEL은 법령명 없는 §라 별도 매핑). 13종 전수(Record 강제).
+const CATEGORY_LAW_MAP: Record<StockTransferResult["taxCategory"], string> = {
+  listed_major: "소득세법 §94①3 가목",
+  listed_non_major_in_market: "소득세법 §94①3 가목",
+  listed_otc_non_major: "소득세법 §94①3 가목",
+  listed_off_market_non_major: "소득세법 §94①3 가목",
+  unlisted_major: "소득세법 §94①3 나목",
+  unlisted_non_major: "소득세법 §94①3 나목",
+  kotc_sme_mid_exempt: "소득세법 §94①3 나목 단서",
+  kotc_venture_exempt: "조세특례제한법 §14①7호",
+  other_asset_block_shareholder: "소득세법 §94①4 다목",
+  other_asset_heavy_re: "소득세법 §94①4 라목",
+  out_of_scope_foreign: "소득세법 §94①3 다목",
+  foreign_stock: "소득세법 §94①3 다목",
+  exit_tax: "소득세법 §118의9",
+};
+
 /**
  * 양도가액 산식 카드 — per_share / total 분기 표시.
  * exchange 모드(transferPriceBreakdown 존재) 또는 split 모드는 표시 안 함.
@@ -161,6 +179,7 @@ export function StockTransferTaxResultView({
   acqFaceValueOnly = false,
 }: StockTransferTaxResultViewProps) {
   const categoryLabel = TAX_CATEGORY_LABEL[result.taxCategory] ?? result.taxCategory;
+  const categoryLegalBasis = CATEGORY_LAW_MAP[result.taxCategory] ?? "";
 
   // 신고서 양식 헤더용 양도인·과세연도 메타 (디자인 §4.2)
   // — StockTaxpayerHeaderCard와 동일한 데이터 소스를 사용하되 PDF 인쇄용 표 헤더에도 전달
@@ -245,9 +264,17 @@ export function StockTransferTaxResultView({
 
         {/* 분류 배지 */}
         <div className="flex flex-wrap gap-2">
-          <span className="px-3 py-1 rounded-full border text-sm bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
-            {categoryLabel}
-          </span>
+          {categoryLegalBasis ? (
+            <LawArticleModal
+              legalBasis={categoryLegalBasis}
+              label={categoryLabel}
+              className="px-3 py-1 rounded-full border text-sm bg-emerald-100 text-emerald-700 border-emerald-200 font-medium"
+            />
+          ) : (
+            <span className="px-3 py-1 rounded-full border text-sm bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
+              {categoryLabel}
+            </span>
+          )}
         </div>
 
         {/* 양도가액 산식 (per_share / total 분기) */}
@@ -355,9 +382,17 @@ export function StockTransferTaxResultView({
 
       {/* 분류 배지 */}
       <div className="flex flex-wrap gap-2">
-        <span className="px-3 py-1 rounded-full border text-sm bg-sky-100 text-sky-700 border-sky-200 font-medium">
-          {categoryLabel}
-        </span>
+        {categoryLegalBasis ? (
+          <LawArticleModal
+            legalBasis={categoryLegalBasis}
+            label={categoryLabel}
+            className="px-3 py-1 rounded-full border text-sm bg-sky-100 text-sky-700 border-sky-200 font-medium"
+          />
+        ) : (
+          <span className="px-3 py-1 rounded-full border text-sm bg-sky-100 text-sky-700 border-sky-200 font-medium">
+            {categoryLabel}
+          </span>
+        )}
         <span className="px-3 py-1 rounded-full border text-sm bg-slate-100 text-slate-600 border-slate-200">
           적용 조문: {result.appliedSection94}
         </span>

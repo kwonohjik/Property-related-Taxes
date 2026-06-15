@@ -11,6 +11,8 @@
  * 활성 조건: result.acqFaceValueOnly === true (Step4에서 prop 전달).
  */
 
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+
 interface CaseFortyNineFormulaCardProps {
   transferPrice: number;
   acqFaceValuePerShare: number;
@@ -54,12 +56,12 @@ export function CaseFortyNineFormulaCard({
       className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/60 p-4 space-y-4 text-sm"
     >
       <p className="font-semibold text-fuchsia-900">
-        사례 49 산식 풀어쓰기 (소득세법 §99①4 후단 + 시행령 §165④ 혼합)
+        사례 49 산식 풀어쓰기 (<LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4 후단" /> + <LawArticleModal legalBasis="소득세법 시행령 §165 ④" label="§165④" /> 혼합)
       </p>
 
       {/* 양도기준시가 */}
       <section className="space-y-1">
-        <p className="font-semibold text-fuchsia-800">① 양도기준시가 (시행령 §165④1)</p>
+        <p className="font-semibold text-fuchsia-800">① 양도기준시가 (<LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="§165④1" />)</p>
         {isNetAssetOnly ? (
           <p className="text-fuchsia-700">
             순자산가치 단독 평가 (§165④3) = 1주당 순자산가치 ={" "}
@@ -94,7 +96,7 @@ export function CaseFortyNineFormulaCard({
       {/* 취득기준시가 */}
       <section className="space-y-1">
         <p className="font-semibold text-fuchsia-800">
-          ② 취득기준시가 (소득세법 §99①4 후단 — 장부분실 액면가)
+          ② 취득기준시가 (<LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4 후단" /> — 장부분실 액면가)
         </p>
         <p className="text-fuchsia-700">
           = 1주당 액면가 × 주식수 = {acqFaceValuePerShare.toLocaleString()} ×{" "}
@@ -106,7 +108,7 @@ export function CaseFortyNineFormulaCard({
       {/* 환산취득가 */}
       <section className="space-y-1">
         <p className="font-semibold text-fuchsia-800">
-          ③ 환산취득가 (§99①4 후단 + §165④ 혼합)
+          ③ 환산취득가 (<LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4" /> 후단 + <LawArticleModal legalBasis="소득세법 시행령 §165 ④" label="§165④" /> 혼합)
         </p>
         <p className="text-fuchsia-700">= 양도가 × (1주당 액면가 ÷ 양도기준시가)</p>
         <p className="text-fuchsia-700">
@@ -119,7 +121,7 @@ export function CaseFortyNineFormulaCard({
       {/* 개산공제 */}
       <section className="space-y-1">
         <p className="font-semibold text-fuchsia-800">
-          ④ 개산공제 (시행령 §163⑥4 — 1% 자동 적용)
+          ④ 개산공제 (<LawArticleModal legalBasis="소득세법 시행령 §163 ⑥ 4호" label="§163⑥4" /> — 1% 자동 적용)
         </p>
         <p className="text-fuchsia-700">
           = 취득기준시가 × 1% = {acquisitionStdPriceTotal.toLocaleString()} × 1% ={" "}

@@ -14,6 +14,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export interface MonthlyAccrual81SectionProps {
   /** 평가액 동일 판정 후 노출 여부 (활성 우선 — 부모가 계산해 전달) */
@@ -59,6 +60,9 @@ export function MonthlyAccrual81Section({
       tone="rose"
     >
       <div className="space-y-3">
+        <div className="flex flex-wrap gap-1.5">
+          <LawArticleModal legalBasis="소득세법 시행규칙 §81 ④ 1호" label="소칙§81④1호" />
+        </div>
         <CurrencyInput
           label="전전사업연도 1주당 순손익가치"
           hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순손익가치 (원, §81④ 1호)"
