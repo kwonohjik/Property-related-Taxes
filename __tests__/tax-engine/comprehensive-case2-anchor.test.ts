@@ -207,6 +207,15 @@ describe("사례2-A — 감면율 0.25 적용 anchor", () => {
     expect(r.taxBeforeCap).toBe(294_924);
     expect(r.determinedHousingTax).toBe(294_924);
   });
+
+  it("CASE2-A11: 재산세 참고·종합합계 감면후 반영 (버그 회귀 — 최상위 totalPropertyTax/grandTotal)", () => {
+    const r = calculateComprehensiveTax(case2WithReduction());
+    // 최상위 totalPropertyTax("재산세 참고") = 감면후 실부과 = floor(1,770,000 × 0.75) = 1,327,500
+    // (이전 버그: propertyResults.propertyTax에 감면전 propTax 저장 → 1,770,000 표시)
+    expect(r.totalPropertyTax).toBe(1_327_500);
+    // 종합 납부 합계 = 종부세결정 294,924 + 주택분 농특세 58,984 + 재산세(감면후) 1,327,500
+    expect(r.grandTotal).toBe(1_681_408);
+  });
 });
 
 // ──────────────────────────────────────────────────────────────
