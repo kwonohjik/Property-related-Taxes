@@ -706,6 +706,13 @@ export function calculatePropertyTax(
   const calculatedTaxBeforeCap = calculatedTax;
   const determinedTax = capResult.determinedTax;
 
+  // 주택 건물분 소방분 과세표준 = 건물분가액 × FMR (§146④ 단서).
+  //   fairMarketRatio는 calcTaxBase(Step 1) 반환값 — §110③ 상한과 무관(ratio 자체 불변).
+  const housingFireServiceTaxBase =
+    input.objectType === "housing" && input.housingBuildingValue != null
+      ? applyRate(input.housingBuildingValue, fairMarketRatio)
+      : undefined;
+
   // ── Step 4: 부가세 합산 (도시지역분은 상한 적용 후 effectiveTaxBase 기준) ──
   const surtaxResult = calcSurtax(
     determinedTax,
@@ -714,6 +721,7 @@ export function calculatePropertyTax(
     input.objectType,
     input.isUrbanArea ?? false,
     input.fireHazardClass, // 화재위험 중과 (building 외에는 calcSurtax 내부 게이트로 무영향)
+    housingFireServiceTaxBase, // 주택 건물분 소방분 과세표준 (§146④ 단서)
   );
   legalBasis.push(...surtaxResult.legalBasis);
 

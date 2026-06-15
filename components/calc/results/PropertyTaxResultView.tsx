@@ -297,6 +297,13 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
                   sub
                 />
               </>
+            ) : surtax.housingFireServiceTaxBase != null ? (
+              <TaxRow
+                label="지역자원시설세 (주택 건물분, §146④ 단서)"
+                amount={surtax.regionalResourceTax}
+                note={`소방분 과세표준 ${surtax.housingFireServiceTaxBase.toLocaleString()} = 건물분 × 공정시장가액비율 ${formatRate(fairMarketRatio)}`}
+                sub
+              />
             ) : (
               <TaxRow
                 label="지역자원시설세"

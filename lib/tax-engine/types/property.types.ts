@@ -93,6 +93,12 @@ export interface PropertyTaxInput {
   fireHazardClass?: FireHazardClass;
 
   /**
+   * 주택 건축물 부분 시가표준액 (원) — 주택 소방분 지역자원시설세 과세표준(지방세법 §146④ 단서, §4② 지자체장 산정).
+   * objectType==="housing" 전용·선택. 미입력 시 주택 소방분 미산출. 주택공시가격(publishedPrice=토지+건물)과 별개.
+   */
+  housingBuildingValue?: number;
+
+  /**
    * 전년도 재산세 납부세액 (원) — 세부담상한 계산에 사용
    * 미입력 시 세부담상한 생략 + warnings에 안내 추가
    */
@@ -172,6 +178,8 @@ export interface PropertySurtaxDetail {
   regionalResourceTaxBeforeSurcharge?: number;
   /** 화재위험 중과 배율 — 2(§146③2호) 또는 3(§146③2의2호) (building + 중과 시에만) */
   fireHazardMultiplier?: number;
+  /** 주택 건물분 소방분 과세표준 = 건물분가액 × 공정시장가액비율 (지방세법 §146④ 단서, housing 산출 시에만) */
+  housingFireServiceTaxBase?: number;
 }
 
 /**
