@@ -197,10 +197,10 @@ export function calculateComprehensiveTax(
       );
     }
 
+    // B 지점: 감면율이 있으면 floor(propTax × (1−rate)) 적용 (감면후 실부과 재산세)
+    const imposedTax = rate > 0 ? Math.floor(propTax * (1 - rate)) : propTax;
     // 합산배제 주택은 비율안분 합계에 포함하지 않음
-    // B 지점: 감면율이 있으면 floor(propTax × (1−rate)) 적용 (②ⓐ 감면후 재산세)
     if (!isExcluded) {
-      const imposedTax = rate > 0 ? Math.floor(propTax * (1 - rate)) : propTax;
       totalPropertyTaxAmount += imposedTax;
     }
 
@@ -208,7 +208,8 @@ export function calculateComprehensiveTax(
       propertyId: prop.propertyId,
       assessedValue: prop.assessedValue,
       isExcluded,
-      propertyTax: propTax,
+      // 감면후 실부과 재산세 — 최상위 totalPropertyTax("재산세 참고")·grandTotal 집계용
+      propertyTax: imposedTax,
     });
   }
 
