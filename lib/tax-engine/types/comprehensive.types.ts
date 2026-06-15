@@ -352,6 +352,13 @@ export interface PreviousYearAutoInput {
    * 직전연도 세율 주택 수 (3주택 이상 중과 판정). 미입력 = priorHouseValues.length ?? 1.
    */
   taxableHouseCount?: number;
+  /**
+   * 직전연도 §8④ 특례주택(지방저가·상속·일시적2주택 등) 공시가격 합(원).
+   * §9⑦⑨: 1세대1주택+§8④ 고령자·장기보유 공제는 (산출세액 − §8④분 안분) × 공제율.
+   * 미입력 = §8④ 없음 → 안분 미적용(전체에 공제율). 입력 시 안분 분자 main = priorSum − 이 값.
+   * ※ 당해 §8④ 안분(15억/17억)과 별개 — 직전 공시 기준.
+   */
+  priorSection8Para4Value?: number;
 }
 
 export interface ComprehensiveTaxInput {

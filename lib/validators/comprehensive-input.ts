@@ -406,6 +406,8 @@ export const comprehensiveTaxInputSchema = z.object({
       isMultiHouseInAdjustedArea: z.boolean().optional(),
       /** 직전연도 세율 주택 수 (3주택 이상 중과). 미입력=priorHouseValues.length ?? 1. */
       taxableHouseCount: z.number().int().positive().optional(),
+      /** 직전 §8④ 특례주택 공시 합(원) — §9⑦⑨ 고령자 공제 안분 분자(사례5). 미입력=안분 미적용. */
+      priorSection8Para4Value: z.number().int().nonnegative().optional(),
     })
     .optional(),
 
