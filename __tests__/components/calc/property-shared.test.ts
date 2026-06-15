@@ -115,6 +115,37 @@ describe("주택 직전연도 공시가격 전송 — 과세표준상한제 §11
   });
 });
 
+describe("건축물 화재위험 등급 전송 — 소방분 중과 §146③2호·2의2호", () => {
+  it("건축물: 대형 화재위험 → fireHazardClass 전송", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({
+        objectType: "building",
+        publishedPrice: "100,000,000",
+        fireHazardClass: "large_fire_hazard",
+      }),
+    );
+    expect(body.fireHazardClass).toBe("large_fire_hazard");
+  });
+
+  it("건축물: 일반(none) → 미전송", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({ objectType: "building", publishedPrice: "100,000,000", fireHazardClass: "none" }),
+    );
+    expect(body.fireHazardClass).toBeUndefined();
+  });
+
+  it("주택: 화재위험 지정해도 미전송 (건축물 전용)", () => {
+    const body = buildPropertyTaxRequestBody(
+      makeForm({
+        objectType: "housing",
+        publishedPrice: "700,000,000",
+        fireHazardClass: "fire_hazard",
+      }),
+    );
+    expect(body.fireHazardClass).toBeUndefined();
+  });
+});
+
 describe("분리과세 옵션 정리 (R1 회귀)", () => {
   it("엔진 비해당 옵션(대중·간이 골프장, 기타) 미노출 — 선택 시 무조건 422였던 경로", () => {
     const values = SEPARATED_TYPE_OPTIONS.map((o) => o.value);

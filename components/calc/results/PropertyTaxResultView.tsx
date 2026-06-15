@@ -280,14 +280,31 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
               sub
             />
           )}
-          {surtax.regionalResourceTax > 0 && (
-            <TaxRow
-              label="지역자원시설세"
-              amount={surtax.regionalResourceTax}
-              note="건축물 시가표준액 누진"
-              sub
-            />
-          )}
+          {surtax.regionalResourceTax > 0 &&
+            (surtax.fireHazardMultiplier ? (
+              <>
+                <TaxRow
+                  label="소방분 (기본세율 §146③1호)"
+                  amount={surtax.regionalResourceTaxBeforeSurcharge!}
+                  note="건축물 시가표준액 누진"
+                  sub
+                />
+                <TaxRow
+                  label={`화재위험 중과 ×${surtax.fireHazardMultiplier} (지방세법 §146③${
+                    surtax.fireHazardMultiplier === 3 ? "2의2호" : "2호"
+                  })`}
+                  amount={surtax.regionalResourceTax}
+                  sub
+                />
+              </>
+            ) : (
+              <TaxRow
+                label="지역자원시설세"
+                amount={surtax.regionalResourceTax}
+                note="건축물 시가표준액 누진"
+                sub
+              />
+            ))}
           <TaxRow label="부가세 합계" amount={totalSurtax} />
         </div>
       </section>

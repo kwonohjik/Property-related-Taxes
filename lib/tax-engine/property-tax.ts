@@ -713,6 +713,7 @@ export function calculatePropertyTax(
     input.publishedPrice,
     input.objectType,
     input.isUrbanArea ?? false,
+    input.fireHazardClass, // 화재위험 중과 (building 외에는 calcSurtax 내부 게이트로 무영향)
   );
   legalBasis.push(...surtaxResult.legalBasis);
 
