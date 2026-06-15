@@ -75,6 +75,10 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
     publishedPrice,
     fairMarketRatio,
     taxBase,
+    taxBaseBeforeCap,
+    taxBaseCapApplied,
+    taxBaseCapLimit,
+    priorYearTaxBaseEquivalent,
     appliedRate,
     calculatedTax,
     calculatedTaxBeforeCap,
@@ -182,6 +186,40 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
             highlight
           />
         </div>
+
+        {/* 주택 과세표준상한제 (지방세법 §110③) — 상한 적용 시에만 */}
+        {taxBaseCapApplied &&
+          taxBaseBeforeCap != null &&
+          taxBaseCapLimit != null &&
+          priorYearTaxBaseEquivalent != null && (
+            <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+                  §
+                </span>
+                <p className="text-xs font-semibold text-sky-700">
+                  과세표준상한 적용 (지방세법 §110③)
+                </p>
+              </div>
+              <div className="rounded-md border border-sky-200 bg-white/60 divide-y">
+                <TaxRow label="당해연도 과세표준" amount={taxBaseBeforeCap} sub />
+                <TaxRow
+                  label="직전연도 과세표준 상당액"
+                  amount={priorYearTaxBaseEquivalent}
+                  sub
+                />
+                <TaxRow
+                  label="과세표준상한율 가산 (당해 과세표준의 5%)"
+                  amount={taxBaseCapLimit - priorYearTaxBaseEquivalent}
+                  sub
+                />
+                <TaxRow label="과세표준상한액" amount={taxBaseCapLimit} highlight />
+              </div>
+              <p className="text-[11px] text-sky-700">
+                당해연도 과세표준이 과세표준상한액보다 커서, 과세표준을 상한액으로 제한합니다.
+              </p>
+            </div>
+          )}
       </section>
       </PrintSection>
 

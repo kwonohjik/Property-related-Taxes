@@ -112,6 +112,26 @@ export function Step0({
         )}
       </div>
 
+      {/* 직전연도 공시가격 — 과세표준상한제 §110③ (주택 전용·선택) */}
+      {form.objectType === "housing" && (
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            직전연도 공시가격{" "}
+            <span className="text-muted-foreground font-normal text-xs">(선택)</span>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            입력 시 과세표준 급등분에 과세표준상한(지방세법 §110③: 직전연도 과세표준 + 5%)이 적용됩니다.
+            미입력 시 상한 미적용.
+          </p>
+          <CurrencyInput
+            label=""
+            value={form.priorYearPublishedPrice}
+            onChange={(v) => onChange({ priorYearPublishedPrice: v })}
+            placeholder="금액 입력 (원)"
+          />
+        </div>
+      )}
+
       {/* 1세대1주택 (주택 전용) */}
       {form.objectType === "housing" && (
         <ToggleCard

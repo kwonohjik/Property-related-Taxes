@@ -19,6 +19,7 @@ import {
   applyTaxCap,
   calcSurtax,
   calculatePropertyTax,
+  applyHousingTaxBaseCap,
 } from "../../lib/tax-engine/property-tax";
 
 // ============================================================
@@ -439,5 +440,99 @@ describe("2026 1세대1주택 공정시장가액비율 — 시행령 §109①2�
     });
     expect(special.fairMarketRatio).toBe(0.43);
     expect(special.taxBase).toBe(86_000_000);
+  });
+});
+
+// ============================================================
+// T24~: 주택 과세표준상한제 (지방세법 §110③, 시행령 §109의2)
+//   과세표준상한액 = 직전연도 과세표준 상당액 + (당해 과세표준 × 5%)
+// ============================================================
+
+describe("applyHousingTaxBaseCap — 과세표준상한 순수 함수 (§110③)", () => {
+  it("AC-1: 직전 5억 / 당해 7억 / 일반 60% → 상한 작동 (4.2억 → 3.21억)", () => {
+    // currentTaxBase = 700,000,000 × 60% = 420,000,000
+    const cap = applyHousingTaxBaseCap(420_000_000, 0.6, 500_000_000);
+    expect(cap.taxBaseBeforeCap).toBe(420_000_000);
+    // priorEquiv = 500,000,000 × 60% = 300,000,000
+    expect(cap.priorYearTaxBaseEquivalent).toBe(300_000_000);
+    // capIncrement = 420,000,000 × 5% = 21,000,000 → 상한액 321,000,000
+    expect(cap.taxBaseCapLimit).toBe(321_000_000);
+    expect(cap.cappedTaxBase).toBe(321_000_000);
+    expect(cap.taxBaseCapApplied).toBe(true);
+    expect(cap.taxBaseCapRate).toBe(0.05);
+  });
+
+  it("AC-2: 직전 미입력(undefined) → 상한 미작동 (당해값 동치)", () => {
+    const cap = applyHousingTaxBaseCap(420_000_000, 0.6, undefined);
+    expect(cap.priorYearTaxBaseEquivalent).toBe(420_000_000);
+    expect(cap.cappedTaxBase).toBe(420_000_000);
+    expect(cap.taxBaseCapApplied).toBe(false);
+  });
+
+  it("AC-3: 완만 상승(당해 ≤ 직전×1.05) → 상한 미도달", () => {
+    // 직전 4억×60%=2.4억, 당해 2.5억×60%=1.5억... 직전이 더 큼 → 미도달
+    const cap = applyHousingTaxBaseCap(150_000_000, 0.6, 400_000_000);
+    expect(cap.taxBaseCapApplied).toBe(false);
+    expect(cap.cappedTaxBase).toBe(150_000_000);
+  });
+});
+
+describe("calculatePropertyTax — 과세표준상한 통합 (§110③)", () => {
+  it("AC-INT-1: 주택 당해 7억 / 직전 5억 / 일반 → taxBase 321,000,000", () => {
+    const result = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 700_000_000,
+      priorYearPublishedPrice: 500_000_000,
+      isOneHousehold: false,
+    });
+    expect(result.taxBaseBeforeCap).toBe(420_000_000);
+    expect(result.taxBaseCapLimit).toBe(321_000_000);
+    expect(result.taxBase).toBe(321_000_000);
+    expect(result.taxBaseCapApplied).toBe(true);
+    // 세율: 3.21억은 4구간(3억 초과) → 321,000,000 × 0.004 - 630,000 = 1,284,000 - 630,000 = 654,000
+    expect(result.calculatedTax).toBe(654_000);
+  });
+
+  it("AC-INT-2: 주택 당해 7억 / 직전 미입력 → 상한 미적용 taxBase 420,000,000", () => {
+    const result = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 700_000_000,
+      isOneHousehold: false,
+    });
+    expect(result.taxBase).toBe(420_000_000);
+    expect(result.taxBaseCapApplied).toBe(false);
+  });
+
+  it("AC-INT-3: 1세대1주택 2026 / 당해 7억 / 직전 5억 → 45% 양쪽 적용 taxBase 240,750,000", () => {
+    const result = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 700_000_000,
+      priorYearPublishedPrice: 500_000_000,
+      isOneHousehold: true,
+      targetDate: "2026-06-01",
+    });
+    // 당해 = 700,000,000 × 45% = 315,000,000 / 직전 = 500,000,000 × 45% = 225,000,000
+    // 증가분 = 315,000,000 × 5% = 15,750,000 → 상한액 240,750,000
+    expect(result.taxBaseBeforeCap).toBe(315_000_000);
+    expect(result.taxBaseCapLimit).toBe(240_750_000);
+    expect(result.taxBase).toBe(240_750_000);
+    expect(result.taxBaseCapApplied).toBe(true);
+  });
+
+  it("AC-INT-4: 건축물 — priorYearPublishedPrice 무시·기존 결과 불변(회귀)", () => {
+    const withPrior = calculatePropertyTax({
+      objectType: "building",
+      publishedPrice: 700_000_000,
+      priorYearPublishedPrice: 500_000_000,
+      buildingType: "general",
+    });
+    const without = calculatePropertyTax({
+      objectType: "building",
+      publishedPrice: 700_000_000,
+      buildingType: "general",
+    });
+    expect(withPrior.taxBase).toBe(without.taxBase);
+    expect(withPrior.taxBaseCapApplied).toBeUndefined();
+    expect(withPrior.taxBaseBeforeCap).toBeUndefined();
   });
 });

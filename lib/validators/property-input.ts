@@ -27,6 +27,13 @@ export const propertyTaxInputSchema = z
       .int({ message: "공시가격은 원 단위 정수여야 합니다." })
       .nonnegative({ message: "공시가격은 0원 이상이어야 합니다." }),
 
+    /** 직전연도 공시가격 (원, 주택 과세표준상한제 §110③ 계산용 — 주택 전용) */
+    priorYearPublishedPrice: z
+      .number()
+      .int({ message: "직전연도 공시가격은 원 단위 정수여야 합니다." })
+      .nonnegative({ message: "직전연도 공시가격은 0원 이상이어야 합니다." })
+      .optional(),
+
     /** 1세대 1주택 특례 여부 (주택 전용) */
     isOneHousehold: z.boolean().optional(),
 
@@ -128,6 +135,14 @@ export const propertyTaxInputSchema = z
         code: z.ZodIssueCode.custom,
         path: ["isOneHousehold"],
         message: "isOneHousehold는 objectType이 'housing'일 때만 적용됩니다.",
+      });
+    }
+    // priorYearPublishedPrice는 objectType==="housing" 일 때만 유효 (과세표준상한제 §110③)
+    if (data.priorYearPublishedPrice != null && data.objectType !== "housing") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["priorYearPublishedPrice"],
+        message: "priorYearPublishedPrice는 objectType이 'housing'일 때만 적용됩니다.",
       });
     }
     // landTaxType은 objectType==="land" 일 때 필수

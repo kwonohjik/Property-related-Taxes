@@ -19,6 +19,7 @@
  */
 
 import { applyRate } from "./tax-utils";
+import { calcSurtax } from "./property-tax-surtax";
 import { PROPERTY, PROPERTY_CONST, PROPERTY_CAL, COMPREHENSIVE_LAND } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
@@ -35,7 +36,6 @@ import {
 import type {
   PropertyTaxInput,
   PropertyTaxResult,
-  PropertySurtaxDetail,
   InstallmentInfo,
 } from "./types/property.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -141,6 +141,53 @@ export function calcTaxBase(
   const taxBase = applyRate(publishedPrice, fairMarketRatio);
 
   return { taxBase, fairMarketRatio, legalBasis };
+}
+
+// ============================================================
+// P1-04b: applyHousingTaxBaseCap — 주택 과세표준상한제 (§110③)
+// ============================================================
+
+/**
+ * 주택 과세표준상한제 (지방세법 §110③, 시행령 §109의2)
+ *
+ * 과세표준상한액 = 직전연도 과세표준 상당액 + (당해 과세표준 × 과세표준상한율 5%)
+ *   · 직전연도 과세표준 상당액 = 직전 시가표준액 × 당해 공정시장가액비율 (시행령 §109의2①)
+ *   · 직전 시가표준액 없으면 당해 과세표준 동치 → 상한 미작동 (시행령 §109의2① 단서)
+ * 주택의 당해 과세표준이 상한액보다 크면 상한액으로 한다.
+ *
+ * @param taxBase                 당해연도 과세표준 (calcTaxBase 산정값)
+ * @param fairMarketRatio         당해 공정시장가액비율 (calcTaxBase 반환값 — 동일 비율 재사용)
+ * @param priorYearPublishedPrice 직전연도 시가표준액 (미입력/음수 시 상한 미작동)
+ */
+export function applyHousingTaxBaseCap(
+  taxBase: number,
+  fairMarketRatio: number,
+  priorYearPublishedPrice?: number,
+): {
+  cappedTaxBase: number;
+  taxBaseBeforeCap: number;
+  taxBaseCapApplied: boolean;
+  taxBaseCapLimit: number;
+  priorYearTaxBaseEquivalent: number;
+  taxBaseCapRate: number;
+} {
+  const priorYearTaxBaseEquivalent =
+    priorYearPublishedPrice != null && priorYearPublishedPrice >= 0
+      ? applyRate(priorYearPublishedPrice, fairMarketRatio)
+      : taxBase; // 직전 미입력 → 당해값 동치 (상한 미작동)
+
+  const capIncrement = applyRate(taxBase, PROPERTY_CONST.TAX_BASE_CAP_RATE);
+  const taxBaseCapLimit = priorYearTaxBaseEquivalent + capIncrement;
+  const cappedTaxBase = Math.min(taxBase, taxBaseCapLimit);
+
+  return {
+    cappedTaxBase,
+    taxBaseBeforeCap: taxBase,
+    taxBaseCapApplied: cappedTaxBase < taxBase,
+    taxBaseCapLimit,
+    priorYearTaxBaseEquivalent,
+    taxBaseCapRate: PROPERTY_CONST.TAX_BASE_CAP_RATE,
+  };
 }
 
 // ============================================================
@@ -345,100 +392,10 @@ export function applyTaxCap(
 }
 
 // ============================================================
-// P1-08: calcSurtax — 부가세 합산
+// P1-08: calcSurtax — 부가세 합산 (property-tax-surtax.ts 로 분리)
 // ============================================================
 
-/** 소방분 지역자원시설세 초과누진 구간 */
-interface ResourceTaxBracket {
-  /** 구간 상한 (원). undefined = 최고 구간 */
-  upTo?: number;
-  /** 직전 구간까지의 누계세액 (법정 표 기재값) */
-  base: number;
-  /** 구간 초과금액에 적용하는 세율 분자 (10,000분의 N) */
-  perTenThousand: number;
-}
-
-/**
- * 소방분 지역자원시설세 6구간 초과누진 (건축물 시가표준액 기준, 지방세법 §146③1호)
- *
- * 600만원 이하 4/10,000부터 6,400만원 초과 12/10,000까지.
- * base = 직전 구간 상한까지의 법정 누계세액 (예: 1,300만 초과 구간 5,900원).
- */
-const REGIONAL_RESOURCE_BRACKETS: ResourceTaxBracket[] = [
-  { upTo: 6_000_000,  base: 0,      perTenThousand: 4 },
-  { upTo: 13_000_000, base: 2_400,  perTenThousand: 5 },
-  { upTo: 26_000_000, base: 5_900,  perTenThousand: 6 },
-  { upTo: 39_000_000, base: 13_700, perTenThousand: 8 },
-  { upTo: 64_000_000, base: 24_100, perTenThousand: 10 },
-  {                   base: 49_100, perTenThousand: 12 },
-];
-
-function calcRegionalResourceTax(standardPrice: number): number {
-  let lowerBound = 0;
-  for (const bracket of REGIONAL_RESOURCE_BRACKETS) {
-    if (bracket.upTo === undefined || standardPrice <= bracket.upTo) {
-      // "초과금액의 10,000분의 N" — 분수 정수 연산 (applyRate의 소수 곱은 1원 오차 발생)
-      const excess = standardPrice - lowerBound;
-      return bracket.base + Math.floor((excess * bracket.perTenThousand) / 10_000);
-    }
-    lowerBound = bracket.upTo;
-  }
-  /* istanbul ignore next — 마지막 구간 upTo가 undefined이므로 도달 불가 */
-  return 0;
-}
-
-/**
- * 부가세 합산 계산 (지방세법 §151, §112, §146)
- *
- * @param determinedTax  확정 재산세 (세부담상한 적용 후)
- * @param taxBase        과세표준 (도시지역분 계산 기준)
- * @param publishedPrice 공시가격 (지역자원시설세 계산 기준 — 건축물)
- * @param objectType     물건 유형
- * @param isUrbanArea    도시지역 여부 (도시지역분 과세)
- * @returns { surtax, totalSurtax, legalBasis }
- */
-export function calcSurtax(
-  determinedTax: number,
-  taxBase: number,
-  publishedPrice: number,
-  objectType: PropertyTaxInput["objectType"],
-  isUrbanArea: boolean,
-): {
-  surtax: PropertySurtaxDetail;
-  totalSurtax: number;
-  legalBasis: string[];
-} {
-  // 지방교육세 = 재산세 × 20%
-  const localEducationTax = applyRate(
-    determinedTax,
-    PROPERTY_CONST.LOCAL_EDUCATION_TAX_RATE,
-  );
-
-  // 도시지역분 = 과세표준 × 0.14% (도시지역 한정)
-  const urbanAreaTax = isUrbanArea
-    ? applyRate(taxBase, PROPERTY_CONST.URBAN_AREA_TAX_RATE)
-    : 0;
-
-  // 지역자원시설세 = 건축물 시가표준액 기준 누진 (건축물만 해당)
-  const regionalResourceTax =
-    objectType === "building"
-      ? Math.max(0, calcRegionalResourceTax(publishedPrice))
-      : 0;
-
-  const surtax: PropertySurtaxDetail = {
-    localEducationTax,
-    urbanAreaTax,
-    regionalResourceTax,
-  };
-
-  const totalSurtax = localEducationTax + urbanAreaTax + regionalResourceTax;
-
-  const legalBasis: string[] = [PROPERTY.LOCAL_EDUCATION_TAX];
-  if (isUrbanArea) legalBasis.push(PROPERTY.URBAN_AREA_TAX);
-  if (objectType === "building") legalBasis.push(PROPERTY.REGIONAL_RESOURCE_TAX);
-
-  return { surtax, totalSurtax, legalBasis };
-}
+export { calcSurtax }; // property-tax-surtax.ts 에서 import — 하위 호환 re-export
 
 // ============================================================
 // P1-09: calculatePropertyTax — 메인 엔트리
@@ -475,6 +432,21 @@ export function calculatePropertyTax(
     });
   legalBasis.push(taxBaseLegal);
 
+  // ── Step 1.5: 주택 과세표준상한제 (지방세법 §110③) — housing 전용 ──
+  //   세율 과표·도시지역분·결과 taxBase·종부세 export 모두 effectiveTaxBase(상한 적용 후)로 일관.
+  //   단, 9억 특례 판정용 publishedPrice는 원본 유지(calcHousingTax 2번째 인자).
+  let effectiveTaxBase = taxBase;
+  let taxBaseCap: ReturnType<typeof applyHousingTaxBaseCap> | undefined;
+  if (input.objectType === "housing") {
+    taxBaseCap = applyHousingTaxBaseCap(
+      taxBase,
+      fairMarketRatio,
+      input.priorYearPublishedPrice,
+    );
+    effectiveTaxBase = taxBaseCap.cappedTaxBase;
+    if (taxBaseCap.taxBaseCapApplied) legalBasis.push(PROPERTY.TAX_BASE_CAP);
+  }
+
   // ── Step 2: 세율 적용 ──
   let calculatedTax: number;
   let appliedRate: number;
@@ -483,7 +455,7 @@ export function calculatePropertyTax(
   switch (input.objectType) {
     case "housing": {
       const housingResult = calcHousingTax(
-        taxBase,
+        effectiveTaxBase,
         input.publishedPrice,
         input.isOneHousehold ?? false,
       );
@@ -734,10 +706,10 @@ export function calculatePropertyTax(
   const calculatedTaxBeforeCap = calculatedTax;
   const determinedTax = capResult.determinedTax;
 
-  // ── Step 4: 부가세 합산 ──
+  // ── Step 4: 부가세 합산 (도시지역분은 상한 적용 후 effectiveTaxBase 기준) ──
   const surtaxResult = calcSurtax(
     determinedTax,
-    taxBase,
+    effectiveTaxBase,
     input.publishedPrice,
     input.objectType,
     input.isUrbanArea ?? false,
@@ -753,7 +725,14 @@ export function calculatePropertyTax(
   return {
     publishedPrice: input.publishedPrice,
     fairMarketRatio,
-    taxBase,
+    taxBase: effectiveTaxBase,
+    ...(taxBaseCap && {
+      taxBaseBeforeCap: taxBaseCap.taxBaseBeforeCap,
+      taxBaseCapApplied: taxBaseCap.taxBaseCapApplied,
+      taxBaseCapLimit: taxBaseCap.taxBaseCapLimit,
+      priorYearTaxBaseEquivalent: taxBaseCap.priorYearTaxBaseEquivalent,
+      taxBaseCapRate: taxBaseCap.taxBaseCapRate,
+    }),
     appliedRate,
     calculatedTax,
     calculatedTaxBeforeCap,
