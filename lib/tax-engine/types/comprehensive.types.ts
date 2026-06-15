@@ -231,6 +231,13 @@ export interface ComprehensiveProperty {
    */
   propertyTaxAmount?: number;
   /**
+   * 다가구주택 구별(층) 면적(㎡) — 트랙 A 자동화 (사례7). 입력 시 통합공시(assessedValue)를
+   * 면적비율로 구별 안분 후 각 구분에 calculatePropertyTax(누진세율)를 개별 적용·합산하여 ⓐ 산정.
+   * 우선순위: propertyTaxAmount(직접입력) > floorUnits(다가구) > 단일 assessedValue(기존 자동).
+   * 면적 소수 허용. area>0·합>0 검증(UI ⑧). 부동산공시법 §17 + 국토부 「개별주택가격 조사·산정지침」 고시.
+   */
+  floorUnits?: { label: string; area: number }[];
+  /**
    * §8④ 1세대1주택자 의제 특례 유형 (미입력 = "none").
    * 의제 성립(일반주택 정확히 1채 + 특례주택 ≥ 1)·세액공제 안분(§9⑦⑨)·세율 주택 수 제외(령 §4의3③) 판정에 사용.
    * 요건(취득일·상속개시일·지분율)은 UI·Zod 검증 전용 — 엔진은 유형 지정을 신뢰 (자동 요건 판정은 후속).
@@ -644,6 +651,8 @@ export interface ComprehensiveTaxResult {
     assessedValue: number;
     isExcluded: boolean;
     propertyTax: number;      // 개별 주택 재산세 (자동 계산)
+    /** 트랙 A 다가구 구별 안분 echo (floorUnits 입력 시만) — 결과 카드 ⑦ */
+    multiFamilyBreakdown?: { label: string; apportionedAssessedValue: number; tax: number }[];
   }[];
 
   // ── 주택분 합산 과세 ──

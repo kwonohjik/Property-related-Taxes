@@ -222,6 +222,21 @@ export const comprehensivePropertySchema = z
       .nonnegative({ message: "재산세 부과세액은 0 이상이어야 합니다." })
       .optional(),
 
+    /**
+     * 다가구주택 층별(구별) 면적 목록 (트랙 A, 사례7 이상).
+     * multiFamilyEnabled ON + 1개 이상 행 입력 시 전송. 빈값 = 자동계산.
+     * area는 양수(㎡). ⑧ validate: 전송 시 rows≥1·area>0·Σ>0 (자동 안분 fallback 금지).
+     */
+    floorUnits: z
+      .array(
+        z.object({
+          label: z.string(),
+          area: z.number().positive({ message: "구별 면적은 0㎡ 초과여야 합니다." }),
+        }),
+      )
+      .min(1, { message: "다가구주택 층별 면적 행이 1개 이상 필요합니다." })
+      .optional(),
+
     /** 임대주택 합산배제 상세 정보 */
     rentalInfo: rentalExclusionInfoSchema.optional(),
 

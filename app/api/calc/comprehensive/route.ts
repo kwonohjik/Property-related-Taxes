@@ -94,6 +94,8 @@ function toEngineInput(
       appurtenantSplit: p.appurtenantSplit,
       // ⑭ pass-through: 재산세 부과세액 직접입력 (사례7·8·9 — 숫자, Date 변환 불요)
       propertyTaxAmount: p.propertyTaxAmount,
+      // ⑭ pass-through: 다가구주택 층별 면적 (트랙 A — 숫자·문자열, Date 변환 불요)
+      floorUnits: p.floorUnits,
       rentalInfo,
       otherInfo,
     };

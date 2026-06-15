@@ -19,7 +19,7 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit } from "@/lib/calc/comprehensive-api";
+import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily } from "@/lib/calc/comprehensive-api";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PropertyListInput } from "@/components/calc/PropertyListInput";
@@ -549,6 +549,13 @@ export default function ComprehensiveTaxPage() {
     const splitError = validateAppurtenantSplit(formData);
     if (splitError) {
       setError(splitError);
+      return;
+    }
+
+    // 트랙 A: 다가구주택 면적안분 검증 (⑧ — multiFamilyEnabled ON 시 행·면적·합계 필수)
+    const multiFamilyError = validateMultiFamily(formData);
+    if (multiFamilyError) {
+      setError(multiFamilyError);
       return;
     }
 

@@ -10,13 +10,14 @@
  * - SelectOnFocusProvider 전역 적용으로 개별 onFocus 추가 불필요
  */
 
+import { useMemo } from "react";
 import { parseAmount, formatKRW, CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 
 // §8④ 1세대1주택자 의제 특례 유형
@@ -92,6 +93,19 @@ function PropertyCard({
     lng: "",
     lat: "",
   };
+
+  // ⑤ 다가구주택 라이브 안분 미리보기 (useMemo — useEffect→store 미러링 금지 정책)
+  const multiFamilyPreview = useMemo(() => {
+    if (!property.multiFamilyEnabled || property.floorUnits.length === 0) return [];
+    const totalArea = property.floorUnits.reduce((s, u) => s + parseDecimal(u.area), 0);
+    const assessed = parseAmount(property.assessedValue);
+    if (totalArea <= 0 || assessed <= 0) return [];
+    return property.floorUnits.map((u, i) => {
+      const area = parseDecimal(u.area);
+      const apportioned = Math.floor((assessed * area) / totalArea);
+      return { label: u.label.trim() || `구분${i + 1}`, area, apportioned };
+    });
+  }, [property.multiFamilyEnabled, property.floorUnits, property.assessedValue]);
 
   return (
     <div className="rounded-lg border bg-card p-4 space-y-4">
@@ -267,6 +281,86 @@ function PropertyCard({
               </p>
             );
           })()}
+        </div>
+      </ToggleCard>
+
+      {/* ⑤ 트랙 A: 다가구주택 층별 면적안분 (violet ToggleCard) */}
+      <ToggleCard
+        tone="violet"
+        title="다가구주택 층별(구별) 면적 입력"
+        description="다가구주택의 구별(층별) 전용면적을 입력하면 통합 공시가격을 면적 비율로 안분하여 각 구의 재산세를 자동 계산합니다. 계산된 합계액이 재산세 부과세액(ⓐ)으로 사용됩니다."
+        checked={property.multiFamilyEnabled ?? false}
+        onCheckedChange={(v) =>
+          onUpdate({
+            multiFamilyEnabled: v,
+            floorUnits: v ? (property.floorUnits.length > 0 ? property.floorUnits : [{ label: "", area: "" }]) : [],
+          })
+        }
+      >
+        <div className="space-y-3">
+          {/* 구별 면적 행 */}
+          {property.floorUnits.map((unit, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={unit.label}
+                onChange={(e) => {
+                  const next = property.floorUnits.map((u, i) =>
+                    i === idx ? { ...u, label: e.target.value } : u,
+                  );
+                  onUpdate({ floorUnits: next });
+                }}
+                placeholder={`구분${idx + 1}`}
+                className="w-24 min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-violet-400"
+                onFocus={(e) => e.target.select()}
+              />
+              <DecimalInput
+                value={unit.area}
+                placeholder="전용면적"
+                onChange={(v) => {
+                  const next = property.floorUnits.map((u, i) =>
+                    i === idx ? { ...u, area: v } : u,
+                  );
+                  onUpdate({ floorUnits: next });
+                }}
+              />
+              <span className="shrink-0 text-xs text-muted-foreground">㎡</span>
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdate({ floorUnits: property.floorUnits.filter((_, i) => i !== idx) });
+                }}
+                className="ml-auto shrink-0 rounded p-1 text-xs text-muted-foreground hover:text-destructive"
+                aria-label={`${unit.label || `구분${idx + 1}`} 삭제`}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          {/* 행 추가 버튼 */}
+          <button
+            type="button"
+            onClick={() =>
+              onUpdate({
+                floorUnits: [...property.floorUnits, { label: "", area: "" }],
+              })
+            }
+            className="w-full rounded-md border border-dashed border-violet-300 bg-violet-50/40 py-1.5 text-xs text-violet-700 hover:bg-violet-100/60"
+          >
+            + 구별(층별) 추가
+          </button>
+          {/* 라이브 안분 미리보기 */}
+          {multiFamilyPreview.length > 0 && (
+            <div className="rounded-md border border-violet-200 bg-violet-50/60 px-3 py-2 text-xs text-violet-800">
+              <span className="font-semibold">안분 공시가격 미리보기: </span>
+              {multiFamilyPreview.map((v, i) => (
+                <span key={i}>
+                  {i > 0 && " · "}
+                  {v.label} {formatKRW(v.apportioned)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </ToggleCard>
 

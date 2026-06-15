@@ -266,6 +266,13 @@ function Step2({
         </>
       )}
 
+      {/* 다가구 구별 안분 명세 (트랙 A) — floorUnits 자동 산정 주택만 (manual·단일 ⓐ와 직교, multiFamilyBreakdown 존재 시만) */}
+      {result.properties
+        .filter((rp) => rp.multiFamilyBreakdown && rp.multiFamilyBreakdown.length > 0)
+        .map((rp, pi) => (
+          <MultiFamilyBreakdownRow key={rp.propertyId ?? pi} rp={rp} />
+        ))}
+
       {/* ⓑ 종합부동산세 과세표준의 표준세율재산세액 (누진공제 없음) */}
       <StepLine
         badge="ⓑ"
@@ -606,6 +613,43 @@ function PriorYearBreakdown({
 // ════════════════════════════════════════════════════════════
 // ⑥ 납부할세액 (결정세액 — 엔진 단일 진실, ≥0 클램프)
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+// 다가구 구별 안분 명세 (트랙 A — ExpandToggleButton 펼침)
+// ════════════════════════════════════════════════════════════
+function MultiFamilyBreakdownRow({
+  rp,
+}: {
+  rp: ComprehensiveTaxResult["properties"][number];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const bd = rp.multiFamilyBreakdown ?? [];
+  if (bd.length === 0) return null;
+  return (
+    <div className="ml-8 mt-1">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1 text-xs text-violet-700 hover:underline"
+      >
+        <span className={expandToggleClass("violet")}>{expandToggleLabel(expanded)}</span>
+        다가구 구별 안분 명세 ({bd.length}개 구)
+      </button>
+      {expanded && (
+        <div className="mt-1 rounded-md border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900 space-y-0.5">
+          {bd.map((row, i) => (
+            <div key={i} className="flex justify-between">
+              <span>{row.label}</span>
+              <span>
+                안분 공시 {won(row.apportionedAssessedValue)} → 재산세 {won(row.tax)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Step6({ result, yr }: { result: ComprehensiveTaxResult; yr: string }) {
   const excess = result.taxCap
     ? Math.max(0, (result.currentYearTotalEquivalent ?? 0) - result.taxCap.capAmount)

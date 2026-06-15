@@ -60,6 +60,9 @@ export interface PropertyEntry {
   priorBuildingStdValue: string;    // 직전 건물 시가표준액
   // ── 재산세 부과세액 직접입력 (비율 안분 공제 ⓐ, 사례7·8·9) ──
   propertyTaxAmount: string;        // 재산세 부과세액 (원). 빈 문자열 = 자동계산(하위호환)
+  // ── 다가구주택 면적안분 (트랙 A, 사례7 이상) ──
+  multiFamilyEnabled: boolean;      // 다가구 층별 면적 입력 ON/OFF
+  floorUnits: { label: string; area: string }[]; // 구별 면적 행 (area = DecimalInput 문자열)
 }
 
 // ============================================================
@@ -198,6 +201,8 @@ function makeProperty(): PropertyEntry {
     priorLandStdValue: "",
     priorBuildingStdValue: "",
     propertyTaxAmount: "",  // 재산세 부과세액 직접입력 (빈 문자열 = 자동계산)
+    multiFamilyEnabled: false,  // 다가구 층별 면적 입력 OFF
+    floorUnits: [],              // 구별 면적 행 (빈 배열 = 미입력)
   };
 }
 
@@ -446,6 +451,9 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
               priorBuildingStdValue: p.priorBuildingStdValue ?? "",
               // ③ normalize: 재산세 부과세액 직접입력 — 구 세션 누락 시 빈문자열(자동계산)
               propertyTaxAmount: p.propertyTaxAmount ?? "",
+              // ③ normalize: 다가구주택 면적안분 (트랙 A) — 구 세션 누락 시 기본값
+              multiFamilyEnabled: p.multiFamilyEnabled ?? false,
+              floorUnits: p.floorUnits ?? [],
             }));
           }
           // 세부담상한 모드 — 구 세션 누락 시 "direct" (기존 동작 보존)
