@@ -51,6 +51,7 @@ import {
   applyTaxCap,
   calculatePropertyTaxCreditProration,
   calculatePostManagementPenalty,
+  applyEffectiveFactor,
 } from "./comprehensive-tax-helpers";
 import {
   calcAggregateLandTaxBase,
@@ -169,10 +170,11 @@ export function calculateComprehensiveTax(
   for (const prop of input.properties) {
     totalAssessedValueFromLoop += prop.assessedValue;
     const rate = (prop.reductionRate ?? 0);
-    // 감면후 유효 공시가격: rate > 0이면 floor(assessedValue × (1−rate)), 아니면 원공시
-    // 합산배제 요건 판정은 원공시(assessedValue) 기준 — R-5 분리
-    const effectiveAssessedValue =
-      rate > 0 ? Math.floor(prop.assessedValue * (1 - rate)) : prop.assessedValue;
+    const ratio = prop.ownershipRatio;
+    // D-1 (A-1 지점): 감면후·지분후 유효 공시가격 = floor(assessedValue × effectiveFactor(rate, ratio))
+    // effectiveFactor = ownershipRatio × (1 − reductionRate). 기본값: ratio=1(단독), rate=0(감면없음)
+    // 합산배제 요건 판정은 원공시(assessedValue) 기준 — R-5 분리 유지
+    const effectiveAssessedValue = applyEffectiveFactor(prop.assessedValue, rate, ratio);
     effectiveTotalFromLoop += effectiveAssessedValue;
 
     const exclusionResult = exclusionMap.get(prop.propertyId);
@@ -197,8 +199,9 @@ export function calculateComprehensiveTax(
       );
     }
 
-    // B 지점: 감면율이 있으면 floor(propTax × (1−rate)) 적용 (감면후 실부과 재산세)
-    const imposedTax = rate > 0 ? Math.floor(propTax * (1 - rate)) : propTax;
+    // D-2 (B 지점): 지분후·감면후 실부과 재산세 = floor(propTax × effectiveFactor(rate, ratio))
+    // propTax는 100% 지분 기준 determinedTax — 지분·감면을 후 곱으로 결합
+    const imposedTax = applyEffectiveFactor(propTax, rate, ratio);
     // 합산배제 주택은 비율안분 합계에 포함하지 않음
     if (!isExcluded) {
       totalPropertyTaxAmount += imposedTax;
@@ -225,9 +228,13 @@ export function calculateComprehensiveTax(
   for (const prop of input.properties) {
     const exclusionResult = exclusionMap.get(prop.propertyId);
     if (exclusionResult?.isExcluded) {
-      const rate = (prop.reductionRate ?? 0);
-      effectiveExcludedValue +=
-        rate > 0 ? Math.floor(prop.assessedValue * (1 - rate)) : prop.assessedValue;
+      // D-3 (A-2 지점): 합산배제 주택도 지분·감면 결합 effectiveFactor 적용
+      // ★ 누락 시 합산배제+지분 동시 케이스에서 effectiveIncludedAssessedValue 과대 계산 오류
+      effectiveExcludedValue += applyEffectiveFactor(
+        prop.assessedValue,
+        prop.reductionRate,
+        prop.ownershipRatio,
+      );
     }
   }
   // 감면후 합산배제 후 과세 공시가격 (과세표준·②ⓒ 분모에 사용)

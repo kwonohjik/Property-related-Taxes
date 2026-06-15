@@ -198,6 +198,13 @@ export interface ComprehensiveProperty {
    */
   reductionRate?: number;
   /**
+   * 공유지분율 (0~1. 70% → 0.7. 미입력 = 단독 소유(1.0) — 기존 동작 보존).
+   * 지분율에 비례하여 종부세 과세표준·재산세·세부담상한에 반영.
+   * effectiveFactor(reductionRate, ownershipRatio) 헬퍼로 감면율과 결합.
+   * 교재 사례3 "공유지분이 있는 경우" 기반.
+   */
+  ownershipRatio?: number;
+  /**
    * §8④ 1세대1주택자 의제 특례 유형 (미입력 = "none").
    * 의제 성립(일반주택 정확히 1채 + 특례주택 ≥ 1)·세액공제 안분(§9⑦⑨)·세율 주택 수 제외(령 §4의3③) 판정에 사용.
    * 요건(취득일·상속개시일·지분율)은 UI·Zod 검증 전용 — 엔진은 유형 지정을 신뢰 (자동 요건 판정은 후속).
@@ -325,6 +332,11 @@ export interface PreviousYearAutoInput {
    * → 해당연도와 동일한 감면율을 전달할 것.
    */
   reductionRate?: number;
+  /**
+   * 직전연도 자동계산용 공유지분율 (0~1. 미입력 = 단독 소유(1.0) — 기존 동작 보존).
+   * 해당연도와 동일한 지분율을 전달할 것 (법령 원칙: effectiveFactor 결합 적용).
+   */
+  ownershipRatio?: number;
 }
 
 export interface ComprehensiveTaxInput {

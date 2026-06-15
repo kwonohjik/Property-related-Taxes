@@ -131,6 +131,11 @@ export async function callComprehensiveApi(
           : undefined,
       // ⑬ T-08: 지자체 조례 재산세 감면율 (0~1). UI 입력 %(0~100) → /100 변환. 미입력·빈 문자열은 undefined
       reductionRate: p.reductionRate ? parseFloat(p.reductionRate) / 100 : undefined,
+      // ⑬ 공유지분율 (0~1). UI 입력 %(0~100) → /100. 미입력·빈 문자열·"100"은 undefined/1 (엔진 ??1=단독)
+      ownershipRatio:
+        p.ownershipRatio && parseFloat(p.ownershipRatio) !== 100
+          ? parseFloat(p.ownershipRatio) / 100
+          : undefined,
     };
 
     // 임대주택 합산배제 상세
@@ -251,6 +256,12 @@ export async function callComprehensiveApi(
           reductionRate: formData.properties[0]?.reductionRate
             ? parseFloat(formData.properties[0].reductionRate) / 100
             : undefined,
+          // ⑬ 해당연도 지분율 — properties[0] 기준(원칙3). "100"·미입력은 단독(undefined)
+          ownershipRatio:
+            formData.properties[0]?.ownershipRatio &&
+            parseFloat(formData.properties[0].ownershipRatio) !== 100
+              ? parseFloat(formData.properties[0].ownershipRatio) / 100
+              : undefined,
         }
       : undefined;
 

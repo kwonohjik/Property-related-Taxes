@@ -140,10 +140,13 @@ export function ComprehensiveFilingFormBuppyo3({ result, landArea, buildingArea 
               <td className="border border-gray-300"></td>
             </tr>
 
-            {/* ③ 감면후 공시가격 — 조례 감면 적용 시 effectiveIncludedAssessedValue, 미적용 시 includedAssessedValue */}
+            {/* ③ 과세 공시가격 — 지분·감면 반영 후 실제 과세 기준 공시가격
+                지분 적용: 공시가격 × 지분율 → effectiveIncludedAssessedValue
+                감면 적용: 공시가격 × (1−감면율) → effectiveIncludedAssessedValue
+                미적용: includedAssessedValue (원 공시가격 합산) */}
             <tr className={BESSHI_ROW}>
               <td className={`border border-gray-300 ${BESSHI_CELL_NO}`}>③</td>
-              <td className={`border border-gray-300 ${BESSHI_CELL_LABEL}`}>감면후 공시가격</td>
+              <td className={`border border-gray-300 ${BESSHI_CELL_LABEL}`}>과세 공시가격</td>
               <td
                 className={`border border-gray-300 ${BESSHI_CELL_AMOUNT}`}
                 data-besshi-cell={besshiTestId("comp-b3-", "③", "housing")}

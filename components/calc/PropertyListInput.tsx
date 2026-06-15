@@ -169,23 +169,45 @@ function PropertyCard({
         />
       </div>
 
-      {/* ⑤ 재산세 감면율 (지자체 조례) — 공시가격 직후 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-3 space-y-1.5">
-        <p className="text-xs font-semibold text-sky-700">
-          지자체 조례 재산세 감면율 (%) <span className="font-normal text-muted-foreground">선택</span>
-        </p>
-        <DecimalInput
-          value={property.reductionRate ?? ""}
-          onChange={(v) => {
-            // ⑧ validation: 0~100% 범위 제한 (Zod .max(1) 동기)
-            const num = parseFloat(v);
-            if (v !== "" && (isNaN(num) || num < 0 || num > 100)) return;
-            onUpdate({ reductionRate: v });
-          }}
-        />
-        <p className="text-xs text-muted-foreground">
-          지자체 조례에 의한 재산세 감면율. 감면 없으면 입력 불필요.
-        </p>
+      {/* ⑤ 지분율(%) + 재산세 감면율(%) — 공시가격 직후, 나란히 배치 */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* 지분율 */}
+        <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-3 space-y-1.5">
+          <p className="text-xs font-semibold text-sky-700">
+            지분율 (%)
+          </p>
+          <DecimalInput
+            value={property.ownershipRatio ?? "100"}
+            onChange={(v) => {
+              // ⑧ validation: 0~100% 범위 제한
+              const num = parseFloat(v);
+              if (v !== "" && (isNaN(num) || num < 0 || num > 100)) return;
+              onUpdate({ ownershipRatio: v });
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            단독 소유면 100. 공유지분만 변경.
+          </p>
+        </div>
+
+        {/* 재산세 감면율 */}
+        <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-3 space-y-1.5">
+          <p className="text-xs font-semibold text-sky-700">
+            재산세 감면율 (%) <span className="font-normal text-muted-foreground">선택</span>
+          </p>
+          <DecimalInput
+            value={property.reductionRate ?? ""}
+            onChange={(v) => {
+              // ⑧ validation: 0~100% 범위 제한 (Zod .max(1) 동기)
+              const num = parseFloat(v);
+              if (v !== "" && (isNaN(num) || num < 0 || num > 100)) return;
+              onUpdate({ reductionRate: v });
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            지자체 조례에 의한 재산세 감면율. 감면 없으면 입력 불필요.
+          </p>
+        </div>
       </div>
 
       {/* 전용면적 + 토지 과세면적 + 수도권 여부 */}

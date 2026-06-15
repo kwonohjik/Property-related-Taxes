@@ -681,7 +681,7 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
 
       {/* 산출근거 — 교재(계산 사례) "주택분 종합부동산세 납부할세액의 계산" 형식 (기본 접힘) */}
       <PrintSection id="housing-payable-calc" selectedIds={selectedPrintIds}>
-        <HousingPayableTaxCalcCard result={result} />
+        <HousingPayableTaxCalcCard result={result} properties={formData.properties} />
       </PrintSection>
 
       {/* 토지분 산출근거 — 종합합산·별도합산 (필지 모드 시 풀 분해, 집계 모드 시 축약) */}
