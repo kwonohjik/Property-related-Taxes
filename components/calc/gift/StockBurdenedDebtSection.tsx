@@ -22,6 +22,7 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 interface StockBurdenedDebtSectionProps {
   item: EstateItem;
@@ -65,6 +66,7 @@ export function StockBurdenedDebtSection({
         <FieldCard
           label="수증자 인수 채무액 (§47①)"
           unit="원"
+          badge={<LawArticleModal legalBasis="상증법 §47" label="§47①" />}
           hint="수증자가 실제로 인수한 채무액 (주식 질권부 채무 등). 증여세 과세가액에서 차감됩니다. 가업승계 특례 자산이면 특례 과세가액에서 차감됩니다."
         >
           <CurrencyInput
