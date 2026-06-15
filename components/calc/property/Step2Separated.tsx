@@ -1,6 +1,7 @@
 "use client";
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SEPARATED_TYPE_OPTIONS, type FormState } from "./shared";
 
 interface Props {
@@ -19,8 +20,9 @@ export function Step2Separated({ form, onChange }: Props) {
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">분리과세 토지 유형</h2>
       <p className="text-sm text-muted-foreground">
-        해당하는 분리과세 토지 유형을 선택하세요 (지방세법 시행령 §102).
+        해당하는 분리과세 토지 유형을 선택하세요.
       </p>
+      <LawArticleModal legalBasis="지방세법 시행령 §102" label="시행령 §102" />
 
       <RadioCardGroup
         name="stSeparatedType"
@@ -51,13 +53,13 @@ export function Step2Separated({ form, onChange }: Props) {
         </div>
       )}
 
-      <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+      <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 space-y-1">
         <p className="text-xs text-amber-800">
-          대중형·간이 골프장 부속토지는 분리과세 대상이 아닙니다 (지방세법
-          §106①3호 — 회원제 골프장만 해당). 영업용 건축물 부속토지 요건을
-          충족하면 &ldquo;토지 분류&rdquo; 단계에서 별도합산과세대상으로
-          입력하세요.
+          대중형·간이 골프장 부속토지는 분리과세 대상이 아닙니다 (회원제
+          골프장만 해당). 영업용 건축물 부속토지 요건을 충족하면 &ldquo;토지
+          분류&rdquo; 단계에서 별도합산과세대상으로 입력하세요.
         </p>
+        <LawArticleModal legalBasis="지방세법 §106" label="§106①3호" />
       </div>
     </div>
   );
