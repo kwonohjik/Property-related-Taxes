@@ -86,7 +86,7 @@ interface AcquisitionTimingInput {
   actualUsageDate?: string;
   /** 간주취득 완료일 (과점주주 취득일 / 지목변경일 / 개수 완료일) */
   deemedAcquisitionDate?: string;
-  /** 연부취득 회차 목록 (§20⑤ — 각 지급일이 취득시기) */
+  /** 연부취득 회차 목록 (시행령 §20⑤ — 각 지급일이 취득시기) */
   installments?: InstallmentPayment[];
 }
 
@@ -107,7 +107,7 @@ export function determineAcquisitionTiming(
 
   // ── 유상취득 (매매·교환·공매경매·현물출자) ──
   if (["purchase", "exchange", "auction", "in_kind_investment"].includes(cause)) {
-    // 연부취득: §20⑤ — 각 연부금 지급일이 취득시기 (마지막 회차 = 실질 취득 완료일)
+    // 연부취득: 시행령 §20⑤ — 각 연부금 지급일이 취득시기 (마지막 회차 = 실질 취득 완료일)
     if (input.installments && input.installments.length >= 2) {
       const lastPayment = input.installments[input.installments.length - 1];
       const acquisitionDate = lastPayment.paymentDate;
@@ -120,7 +120,7 @@ export function determineAcquisitionTiming(
       }));
 
       warnings.push(
-        `연부취득: 취득시기는 각 연부금 지급일입니다 (§20⑤). ` +
+        `연부취득: 취득시기는 각 연부금 지급일입니다 (시행령 §20⑤). ` +
         `신고기한은 각 지급일로부터 60일 이내입니다.`
       );
       filingSchedule.forEach(s => {

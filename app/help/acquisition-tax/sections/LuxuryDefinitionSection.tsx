@@ -1,8 +1,8 @@
-/** §3 사치성 재산 5종 정의·판정 기준 — 지방세법 §13① */
+/** §3 사치성 재산 5종 정의·판정 기준 — 지방세법 §13⑤ */
 export function LuxuryDefinitionSection() {
   return (
     <section id="luxury-definition" className="space-y-4">
-      <h2 className="text-lg font-bold text-foreground">3. 사치성 재산 5종 (§13①)</h2>
+      <h2 className="text-lg font-bold text-foreground">3. 사치성 재산 5종 (§13⑤)</h2>
       <p className="text-sm text-muted-foreground">
         5종 사치성 재산 취득 시 <strong>표준세율 + 중과기준세율(2%) × 400%(=8%p)</strong> 적용.
       </p>
@@ -25,7 +25,7 @@ export function LuxuryDefinitionSection() {
             <td className="border border-border px-3 py-2 font-medium text-muted-foreground line-through">별장</td>
             <td className="border border-border px-3 py-2 text-muted-foreground">상시 주거 외 휴양·피서용</td>
             <td className="border border-border px-3 py-2 text-xs text-destructive font-medium">
-              2023.3.14 이후 취득분 폐지 (§13① 2호 삭제)
+              2023.3.14 이후 취득분 폐지 (§13⑤ 1호 삭제)
             </td>
           </tr>
           <tr>
@@ -54,7 +54,7 @@ export function LuxuryDefinitionSection() {
       </table>
 
       <div className="rounded-md bg-amber-50/60 border border-amber-200 p-3 text-xs text-amber-800 space-y-1">
-        <p><strong>별장 폐지 주의 (v4 D1)</strong>: 2023.3.14 이후 별장 중과 폐지는 §13① 한정.</p>
+        <p><strong>별장 폐지 주의 (v4 D1)</strong>: 2023.3.14 이후 별장 중과 폐지는 §13⑤ 한정.</p>
         <p>§13의2 다주택 중과와 별개 — 별장은 주택 아니므로 다주택 카운트에 포함 안 됨.</p>
         <p><strong>사치성 + 다주택 중복</strong>: 다주택 중과세율에 8%p 추가 (최대 20%) — §13의2③</p>
       </div>

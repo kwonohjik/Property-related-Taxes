@@ -214,8 +214,8 @@ export function isFarmland(propertyType: PropertyObjectType): boolean {
 }
 
 /**
- * 사치성 재산 여부 판단 (지방세법 §13①)
- * - 골프장, 고급주택, 별장, 고급선박, 고급오락장
+ * 사치성 재산 여부 판단 (지방세법 §13⑤)
+ * - 골프장, 고급주택, 고급오락장, 고급선박 (별장 §13⑤1호는 2023.3.14 삭제)
  * - 실제 판단은 물건의 면적·가액·용도에 따라 다름 → 외부 입력으로 처리
  */
 export function isLuxuryProperty(

@@ -77,13 +77,13 @@ export function Step4({
               summary="과밀억제권역 내 본점·주사무소 신증축은 표준세율+4%p. 산업단지는 제외."
               details={`## 과밀억제권역 대도시 법인 중과 (지방세법 §13①②)
 
-## §13① — 본점·주사무소 신증축 (1호)
+## §13① — 본점·주사무소 신증축
 과밀억제권역 내 본점·주사무소 용도로 부동산을 신축·증축:
 - **세율: 표준세율 + 중과기준세율(2%) × 200% = 표준세율 + 4%p**
 - 예: 토지 4% → 8%, 건물 신축 2.8% → 6.8%
 
-## §13① — 비도시형 공장 신증설 (2호)
-산업단지 외 지역에 공장 신증설:
+## §13① — 공장 신설·증설 (산업단지·공업지역 제외)
+과밀억제권역 내 산업단지 외 지역에 공장 신설·증설:
 - 토지 매매: 4% + 4%p = **8%**
 - 건물 원시취득: 2.8% + 4%p = **6.8%**
 - 토지·건물 분리 과세
@@ -117,7 +117,7 @@ export function Step4({
             <ToggleCard
               tone="rose"
               size="sm"
-              title="본점·주사무소 신증축 용도 (§13①1호)"
+              title="본점·주사무소 신증축 용도 (§13①)"
               description="과밀억제권역 내 본점·주사무소 신증축 → 표준세율 + 4%p"
               checked={form.isHeadquarterNewBuild}
               onCheckedChange={(v) => set("isHeadquarterNewBuild", v)}
@@ -127,8 +127,8 @@ export function Step4({
           {/* 비도시형 공장 */}
           <ToggleCard
             tone="rose"
-            title="비도시형 공장 신증설 (§13①2호)"
-            description="산업단지 외 비도시형 공장 신증설 — 토지·건물 세율 분리 적용"
+            title="공장 신설·증설 (§13①)"
+            description="과밀억제권역 내 산업단지 외 공장 신설·증설 — 토지·건물 세율 분리 적용"
             checked={form.isNonUrbanFactory}
             onCheckedChange={(v) => set("isNonUrbanFactory", v)}
           >
@@ -222,12 +222,15 @@ export function Step4({
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-xs font-medium">과점주주 도달일 (선택)</p>
                   <TaxHelp
-                    title="과점주주 도달일 (지방세법시행령 §28의3①)"
-                    summary="과점주주 도달 시점을 법인 설립 시점으로 간주하여 5년을 기산합니다."
-                    details={`## 과점주주 도달일 (지방세법시행령 §28의3①)
-과점주주가 된 날부터 소급하여 5년 이내에 법인이 설립된 것으로 간주합니다.
-따라서 과점주주 도달일이 기준이 되어 5년 이내 취득으로 처리됩니다.`}
-                    legalBasis="지방세법시행령 제28조의3 제1항"
+                    title="과점주주 도달일 (지방세법 시행령 §27②③)"
+                    summary="휴면법인 인수는 최초로 과점주주가 된 때 이루어진 것으로 보며(§27②), 그 시점 이후 5년 이내 부동산 취득이 대도시 법인 중과 대상입니다(§27③)."
+                    details={`## 휴면법인 인수 시점 (지방세법 시행령 §27②)
+휴면법인의 인수는 그 법인의 **과점주주(지방세기본법 §46제2호)가 최초로 된 때** 이루어진 것으로 봅니다.
+
+## 5년 기산 (지방세법 시행령 §27③)
+대도시 법인 설립·설치·전입 이후 **5년 이내**에 취득하는 부동산이 §13② 대도시 법인 중과 대상입니다.
+따라서 과점주주 도달일(= 휴면법인 인수일)이 기준이 되어 5년 이내 취득으로 처리됩니다.`}
+                    legalBasis="지방세법 시행령 제27조"
                   />
                 </div>
                 <DateInput
@@ -247,7 +250,23 @@ export function Step4({
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">2</span>
-          <p className="text-xs font-semibold text-violet-700">세율특례 §15 (9종)</p>
+          <p className="text-xs font-semibold text-violet-700">세율특례 §15① (7호)</p>
+          <TaxHelp
+            title="세율특례 §15① (7호)"
+            summary="해당 사유는 표준세율에서 중과기준세율(2%)을 뺀 세율 적용. §13②(대도시 법인) 동시 시 (표준세율−2%)×3."
+            details={`## 세율특례 7호 (지방세법 §15①)
+- 1호 환매등기 병행 매매의 환매
+- 2호 상속 1가구 1주택·감면대상 농지 (가목·나목)
+- 3호 법인 적격합병 (법인세법 §44②③)
+- 4호 공유물·합유물 분할·공유권 해소 지분이전
+- 5호 건축물의 이전
+- 6호 민법상 재산분할
+- 7호 그 밖의 형식적 취득 — 벌채용 입목 (시행령 §30①)
+
+## 산식
+표준세율 − 중과기준세율(2%). §13②(대도시 법인) 동시 적용 시 (표준세율 − 2%) × 3. §13①(본점·공장) 중과 대상이면 §15 배제.`}
+            legalBasis="지방세법 제15조"
+          />
         </div>
         <p className="text-xs text-muted-foreground">
           해당 시 기본세율에서 중과기준세율(2%) 차감 적용
@@ -266,15 +285,13 @@ export function Step4({
             value={form.specialRateType}
             onChange={(v) => set("specialRateType", v)}
             options={[
-              { value: "redemption", label: "환매권 행사 (§15①1호)" },
-              { value: "inheritance_one_house", label: "상속 1가구 1주택 (§15①2호)" },
-              { value: "corp_merger", label: "법인 적격합병·적격분할 (§15①3·4호)" },
-              { value: "co_ownership_split", label: "공유물·합유물·총유물 분할 (§15①5호)" },
-              { value: "building_relocation", label: "건물 이전 (§15①6호 전단)" },
+              { value: "redemption", label: "환매등기 병행 매매의 환매 (§15①1호)" },
+              { value: "inheritance_one_house", label: "상속 1가구 1주택 (§15①2호 가목)" },
+              { value: "corp_merger", label: "법인 적격합병 (§15①3호)" },
+              { value: "co_ownership_split", label: "공유물·합유물 분할 (§15①4호)" },
+              { value: "building_relocation", label: "건축물 이전 (§15①5호)" },
               { value: "divorce_division", label: "이혼 재산분할 (§15①6호)" },
-              { value: "hoyu_division", label: "가류 공유물 분할 (§15①7호)" },
-              { value: "timber", label: "임목 취득 (§15①8호)" },
-              { value: "leasing", label: "임차권 취득 후 소유 (§15①9호)" },
+              { value: "timber", label: "입목 취득 — 벌채용 원목 (§15①7호·시행령 §30①)" },
             ]}
           />
 
@@ -285,7 +302,7 @@ export function Step4({
                 tone="violet"
                 size="sm"
                 title="1가구 1주택 충족"
-                description="상속인이 상속 개시일 현재 1가구 1주택자인 경우 (지법 §15①2호)"
+                description="상속인이 상속 개시일 현재 1가구 1주택자인 경우 (지법 §15①2호 가목)"
                 checked={form.isOneHouseHousehold}
                 onCheckedChange={(v) => set("isOneHouseHousehold", v)}
               />
@@ -293,7 +310,7 @@ export function Step4({
                 tone="violet"
                 size="sm"
                 title="자경농지 상속 특례"
-                description="피상속인이 자경한 농지 상속 (§11①5 단서 — 3%→2%)"
+                description="피상속인이 자경한 농지 상속 (§15①2호 나목 — 지특법 §6① 감면대상 농지)"
                 checked={form.isSelfCultivatedFarmlandInheritance}
                 onCheckedChange={(v) => set("isSelfCultivatedFarmlandInheritance", v)}
               />

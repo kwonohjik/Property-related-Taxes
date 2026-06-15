@@ -115,7 +115,7 @@ export function getBasicRate(
     return { rate: 0.028, isLinearInterpolation: false, legalBasis: ACQUISITION.BASIC_RATE };
   }
   if (acquisitionCause === "deemed_land_category" || acquisitionCause === "deemed_major_shareholder") {
-    // 지목변경(§7의2②) 및 과점주주(§7의2①): 2% 적용
+    // 지목변경(§7④) 및 과점주주(§7⑤): 2% 적용
     // 과점주주는 법인 보유 자산 종류별 표준세율 적용이 원칙이나,
     // 현행 UI가 단일 자산가치를 입력받으므로 임시 2% 적용.
     // (TODO: 자산 종류별 입력 구현 후 종류별 세율로 개선)

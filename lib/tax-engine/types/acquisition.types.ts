@@ -19,7 +19,7 @@
 /**
  * 법정 지목 28종 (공간정보의 구축 및 관리 등에 관한 법률 §67)
  *
- * 지방세법 §7의2② 지목변경 간주취득 판정에 사용.
+ * 지방세법 §7④ 지목변경 간주취득 판정에 사용.
  * 28개 지목 전부를 열거하여 문자열 오타를 컴파일 타임에 차단.
  */
 export type LandCategory =
@@ -146,7 +146,7 @@ export type AcquisitionExemptionType =
  * 간주취득 전용 입력
  */
 export interface DeemedAcquisitionInput {
-  // 과점주주 (지방세법 §7의2①)
+  // 과점주주 (지방세법 §7⑤)
   majorShareholder?: {
     corporateAssetValue: number;    // 법인 보유 과세대상 자산 시가표준액 합계
     prevShareRatio: number;         // 취득 전 지분율 (0~1)
@@ -165,7 +165,7 @@ export interface DeemedAcquisitionInput {
      */
     isFoundingShare?: boolean;
   };
-  // 지목변경 (지방세법 §7의2②)
+  // 지목변경 (지방세법 §7④)
   landCategory?: {
     prevCategory: LandCategory;     // 변경 전 지목 (법정 28종)
     newCategory: LandCategory;      // 변경 후 지목 (법정 28종)
@@ -183,7 +183,7 @@ export interface DeemedAcquisitionInput {
      */
     registrationDate?: string;
   };
-  // 건물 개수(改修) (지방세법 §7의2③)
+  // 건물 개수(改修) (지방세법 §10의6③ 과세표준)
   renovation?: {
     renovationType: "structural_change" | "use_change" | "major_repair";
     prevStandardValue: number;      // 개수 전 시가표준액
@@ -270,7 +270,7 @@ export interface AcquisitionTaxInput {
   houseCountAfter?: number;
   /** 조정대상지역 여부 (취득일 기준) */
   isRegulatedArea?: boolean;
-  /** 사치성 재산 여부 (골프장·별장·고급주택·고급오락장·고급선박) — 지방세법 §13① */
+  /** 사치성 재산 여부 (골프장·고급주택·고급오락장·고급선박; 별장 §13⑤1호는 2023.3.14 삭제) — 지방세법 §13⑤ */
   isLuxuryProperty?: boolean;
 
   // ─── 감면 ───
@@ -360,15 +360,15 @@ export interface AcquisitionTaxInput {
   /** [P2-3] 과점주주 도달일 (YYYY-MM-DD) — 휴면법인 5년 기산 시점 */
   majorShareholderDate?: string;
 
-  // ─── [P2] 세율특례 §15 ───
-  /** [P2-1] 세율특례 사유 (9종) — §15 적용 시 basicRate - 2% */
+  // ─── [P2] 세율특례 §15① ───
+  /** [P2-1] 세율특례 사유 (7종) — §15① 적용 시 basicRate - 2% */
   specialRateType?:
     | "redemption" | "inheritance_one_house" | "corp_merger"
     | "co_ownership_split" | "building_relocation" | "divorce_division"
-    | "hoyu_division" | "timber" | "leasing";
-  /** [P2-1] 상속 1가구 1주택 여부 (§15①2 특례 적용) */
+    | "timber";
+  /** [P2-1] 상속 1가구 1주택 여부 (§15①2호 가목 특례 적용) */
   isOneHouseHousehold?: boolean;
-  /** [P2-1] 상속 자경농지 여부 (§15 + §11①5 단서 세율 적용) */
+  /** [P2-1] 상속 자경농지 여부 (§15①2호 나목 — 지특법 §6① 감면대상 농지 상속) */
   isSelfCultivatedFarmlandInheritance?: boolean;
 
   // ─── [P2] 자경농지 50% 감면 지특법 §6 ───
@@ -709,7 +709,7 @@ export interface AcquisitionTaxResult {
   // ─── 연부취득 회차별 신고 스케줄 ───
   /**
    * 연부취득 회차별 신고 스케줄 (각 회차 지급일 + 60일)
-   * 연부취득인 경우에만 포함됨 (지방세법 §10의5, §20⑤)
+   * 연부취득인 경우에만 포함됨 (지방세법 §10의3, 시행령 §20⑤)
    */
   installmentFilingSchedule?: Array<{
     paymentDate: string;          // 회차 지급일 (YYYY-MM-DD)

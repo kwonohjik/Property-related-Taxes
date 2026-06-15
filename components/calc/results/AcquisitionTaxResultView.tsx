@@ -111,19 +111,17 @@ function TaxRow({
 
 function SpecialRateDetailCard({ detail }: { detail: NonNullable<AcquisitionTaxResult["specialRateDetail"]> }) {
   const specialTypeLabels: Record<string, string> = {
-    redemption: "환매권 행사",
+    redemption: "환매등기 병행 매매의 환매",
     inheritance_one_house: "상속 1가구1주택",
-    corp_merger: "법인 적격합병·분할",
-    co_ownership_split: "공유물 분할",
-    building_relocation: "건물 이전",
+    corp_merger: "법인 적격합병",
+    co_ownership_split: "공유물·합유물 분할",
+    building_relocation: "건축물 이전",
     divorce_division: "이혼 재산분할",
-    hoyu_division: "가류 공유물 분할",
-    timber: "임목 취득",
-    leasing: "임차권 → 소유",
+    timber: "입목 취득(벌채용 원목)",
   };
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-3 text-sm">
-      <p className="font-semibold text-violet-800 mb-1">세율특례 적용 (지방세법 §15)</p>
+      <p className="font-semibold text-violet-800 mb-1">세율특례 적용 (지방세법 §15①)</p>
       <div className="space-y-1 text-muted-foreground text-xs">
         <p>특례 사유: {specialTypeLabels[detail.type] ?? detail.type}</p>
         <p>특례 전 세율: {formatRate(detail.basicRate)} → 적용 세율: {formatRate(detail.appliedRate)}</p>

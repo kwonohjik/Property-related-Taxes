@@ -331,11 +331,11 @@ export const acquisitionTaxInputSchema = z.object({
   ]).optional(),
   majorShareholderDate: dateStrOrEmpty,
 
-  // ─── [P2] 세율특례 §15 ───
+  // ─── [P2] 세율특례 §15① (7호) ───
   specialRateType: z.enum([
     "redemption", "inheritance_one_house", "corp_merger",
     "co_ownership_split", "building_relocation", "divorce_division",
-    "hoyu_division", "timber", "leasing",
+    "timber",
   ]).optional(),
   isOneHouseHousehold: z.boolean().optional(),
   isSelfCultivatedFarmlandInheritance: z.boolean().optional(),

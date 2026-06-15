@@ -49,7 +49,7 @@ export function DeemedLandCategorySection({ form, set }: Props) {
 
 ## 취득 시기 (지방세법 §20)
 사실상 지목변경 완료일과 공부 등록일 중 빠른 날`}
-          legalBasis="지방세법 제7조의2 제2항"
+          legalBasis="지방세법 제7조 제4항"
         />
       </div>
 

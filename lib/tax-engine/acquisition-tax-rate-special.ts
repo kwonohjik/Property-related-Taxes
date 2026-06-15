@@ -1,7 +1,7 @@
 /**
- * 취득세 세율특례 모듈 — 지방세법 §15
+ * 취득세 세율특례 모듈 — 지방세법 §15①
  *
- * 9종 세율특례 적용 순수 함수.
+ * 7종 세율특례 적용 순수 함수 (지방세법 §15①1호~7호).
  * DB 직접 호출 없음 — 매개변수로 basicRate 수신.
  *
  * § 15 세율특례 구조:
@@ -23,15 +23,13 @@ import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
 /**
  * 세율특례 사유 유형 (지방세법 §15①)
  *
- * - redemption:            §15①1 — 환매권 행사
- * - inheritance_one_house: §15①2 — 상속으로 인한 1가구 1주택 취득
- * - corp_merger:           §15①3 — 법인 합병
- * - co_ownership_split:    §15①4 — 공유물 협의분할
- * - building_relocation:   §15①5 — 건축물 이전
- * - divorce_division:      §15①6 — 이혼에 따른 재산분할
- * - hoyu_division:         §15①7 — 호유(互有) 분할
- * - timber:                §15①8 — 입목 취득
- * - leasing:               §15①9 — 임대 목적 취득
+ * - redemption:            §15①1호 — 환매등기 병행 부동산 매매의 환매
+ * - inheritance_one_house: §15①2호 — 상속으로 인한 1가구 1주택·감면농지 취득
+ * - corp_merger:           §15①3호 — 법인세법 §44②③ 적격합병으로 인한 취득
+ * - co_ownership_split:    §15①4호 — 공유물·합유물 분할·공유권 해소 지분이전
+ * - building_relocation:   §15①5호 — 건축물의 이전으로 인한 취득
+ * - divorce_division:      §15①6호 — 민법상 재산분할로 인한 취득
+ * - timber:                §15①7호 — 그 밖의 형식적 취득(시행령 §30①: 벌채용 입목)
  */
 export type SpecialRateType =
   | "redemption"
@@ -40,9 +38,7 @@ export type SpecialRateType =
   | "co_ownership_split"
   | "building_relocation"
   | "divorce_division"
-  | "hoyu_division"
-  | "timber"
-  | "leasing";
+  | "timber";
 
 // ============================================================
 // 세율특례 적용 결과 타입
@@ -95,21 +91,17 @@ const SPECIAL_RATE_LEGAL_BASIS: Record<SpecialRateType, string> = {
   co_ownership_split:    ACQUISITION.SPECIAL_RATE_CO_OWNERSHIP_SPLIT,
   building_relocation:   ACQUISITION.SPECIAL_RATE_BUILDING_RELOCATION,
   divorce_division:      ACQUISITION.SPECIAL_RATE_DIVORCE_DIVISION,
-  hoyu_division:         ACQUISITION.SPECIAL_RATE_HOYU_DIVISION,
   timber:                ACQUISITION.SPECIAL_RATE_TIMBER,
-  leasing:               ACQUISITION.SPECIAL_RATE_LEASING,
 };
 
 const SPECIAL_RATE_LABEL: Record<SpecialRateType, string> = {
   redemption:            "환매권 행사에 따른 취득",
   inheritance_one_house: "상속 1가구 1주택 취득",
   corp_merger:           "법인 합병에 따른 취득",
-  co_ownership_split:    "공유물 협의분할에 따른 취득",
+  co_ownership_split:    "공유물·합유물 분할에 따른 취득",
   building_relocation:   "건축물 이전에 따른 취득",
   divorce_division:      "이혼 재산분할에 따른 취득",
-  hoyu_division:         "호유(互有) 분할에 따른 취득",
-  timber:                "입목 취득",
-  leasing:               "임대 목적 취득",
+  timber:                "입목 취득(벌채용 원목)",
 };
 
 // ============================================================
@@ -222,9 +214,7 @@ const VALID_SPECIAL_RATE_TYPES: ReadonlySet<string> = new Set<SpecialRateType>([
   "co_ownership_split",
   "building_relocation",
   "divorce_division",
-  "hoyu_division",
   "timber",
-  "leasing",
 ]);
 
 export function isValidSpecialRateType(value: string | undefined): value is SpecialRateType {
