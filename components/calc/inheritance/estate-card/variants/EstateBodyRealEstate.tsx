@@ -17,7 +17,9 @@
 import { useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { EstateBodySection } from "./EstateBodySection";
+import { RealEstateBurdenedGiftField } from "./RealEstateBurdenedGiftField";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import {
   resolveSigunguCode,
@@ -599,6 +601,7 @@ function CollateralLeaseFields({
         <FieldCard
           label="월 임대료 (원)"
           unit="원"
+          badge={<LawArticleModal legalBasis="상증법 §61" label="§61⑤" />}
           hint="임대 부동산 §61⑤ — (월세×12÷12%)+임대보증금이 보충평가(공시지가)보다 크면 평가액으로 채택"
         >
           <CurrencyInput
@@ -632,11 +635,17 @@ function CollateralLeaseFields({
         />
       </FieldCard>
 
-      {/* 신용보증기관 보증액 (§63② 차감 — 저당0 시 disabled, D-UI2) */}
+      {/* 신용보증기관 보증액 (상증령 §63② 차감 — 저당0 시 disabled, D-UI2) */}
       <FieldCard
         label="신용보증기관 보증액 (원)"
         unit="원"
-        hint="신용보증기금 등이 보증한 금액 — 저당 담보채권액에서 차감 (§63②, §66 1호 저당분 한정). 저당권 입력 시에만 적용."
+        badge={
+          <span className="flex gap-1">
+            <LawArticleModal legalBasis="상증령 §63" label="상증령 §63②" />
+            <LawArticleModal legalBasis="상증법 §66" label="§66" />
+          </span>
+        }
+        hint="신용보증기금 등이 보증한 금액 — 저당 담보채권액에서 차감 (상증령 §63②, §66 1호 저당분 한정). 저당권 입력 시에만 적용."
       >
         <CurrencyInput
           label="신용보증기관 보증액 (원)"
@@ -649,22 +658,12 @@ function CollateralLeaseFields({
         />
       </FieldCard>
 
-      {/* §47① 부담부증여 수증자 인수 채무액 — 증여 모드 전용 */}
+      {/* §47① 부담부증여 수증자 인수 채무액 — 증여 모드 전용 (RealEstateBurdenedGiftField로 분리) */}
       {mode === "gift" && (
-        <FieldCard
-          label="수증자 인수 채무액 (§47①)"
-          unit="원"
-          hint="수증자가 실제로 인수한 채무액. 증여세 과세가액에서 차감됩니다 (상증법 §47①). §66 평가용 저당권·임대보증금과 별개 — 같은 금액을 양쪽에 입력해도 됩니다."
-        >
-          <CurrencyInput
-            label="수증자 인수 채무액 (§47①)"
-            value={item.assumedDebtForGift != null ? String(item.assumedDebtForGift) : ""}
-            onChange={(v) => set({ assumedDebtForGift: parseAmount(v) || undefined })}
-            placeholder="없으면 빈칸"
-            hideLabel
-            hideUnit
-          />
-        </FieldCard>
+        <RealEstateBurdenedGiftField
+          value={item.assumedDebtForGift}
+          onChange={(v) => set({ assumedDebtForGift: v })}
+        />
       )}
 
       {/* §47③ 객관적 입증 토글 — 증여 모드 + 채무 입력 시 노출 */}

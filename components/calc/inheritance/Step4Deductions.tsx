@@ -407,6 +407,9 @@ export function Step4({
           <EmptyGroupNotice />
         ) : (
           <>
+            <div className="flex flex-wrap gap-1.5">
+              <LawArticleModal legalBasis="상속세및증여세법 §24" label="§24 공제 적용 한도" />
+            </div>
             {/* 상속외자 유증 §19·§24 분자 차감 */}
             {manualActive.legatee && (
               <CurrencyInput
@@ -484,6 +487,8 @@ export function Step4({
             </p>
             <LawArticleModal legalBasis="상속세및증여세법 §69" label="§69 신고세액공제" />
             <LawArticleModal legalBasis="상속세및증여세법 §21" label="§21 일괄공제" />
+            <LawArticleModal legalBasis="상속세및증여세법 §18" label="§18 기초공제" />
+            <LawArticleModal legalBasis="상속세및증여세법 §20" label="§20 인적공제" />
           </div>
           <RadioCardGroup
             name="filing-status"

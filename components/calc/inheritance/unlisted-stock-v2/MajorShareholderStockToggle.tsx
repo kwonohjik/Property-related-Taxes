@@ -11,6 +11,7 @@
  */
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export interface MajorShareholderStockToggleProps {
   /** §22② 최대주주 해당 여부 (true=배제) */
@@ -39,6 +40,10 @@ export function MajorShareholderStockToggle({
         ⓘ 상증법 <strong>§22②</strong> — 최대주주가 보유한 주식은 금융재산 상속공제 대상에서{" "}
         <strong>제외</strong>됩니다. (§63③ 할증평가 ×120%는 별도 개념)
       </p>
+      <div className="flex flex-wrap gap-1.5">
+        <LawArticleModal legalBasis="상증법 §22" label="§22② 금융재산 상속공제" />
+        <LawArticleModal legalBasis="상증법 §63" label="§63③ 할증평가" />
+      </div>
 
       <ToggleCard
         tone="violet"

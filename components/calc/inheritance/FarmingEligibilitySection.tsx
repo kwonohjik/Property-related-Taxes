@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { evaluateFarmingEligibility } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
 import { ResidenceCheckPreviewCard } from "./ResidenceCheckPreviewCard";
@@ -214,6 +215,11 @@ export function FarmingEligibilitySection({
         checked={isActive}
         onCheckedChange={(v) => (v ? handleToggleOn() : handleToggleOff())}
       />
+
+      <div className="flex flex-wrap gap-1.5 px-1">
+        <LawArticleModal legalBasis="상증법 §18의3" label="§18의3 영농상속공제" />
+        <LawArticleModal legalBasis="상증령 §16" label="시행령 §16 요건" />
+      </div>
 
       {farming && (
         <div className="rounded-md border border-violet-200 bg-violet-50/30 dark:bg-violet-950/10 dark:border-violet-800 p-3 space-y-4">
