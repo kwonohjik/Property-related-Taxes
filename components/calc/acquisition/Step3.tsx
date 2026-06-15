@@ -85,7 +85,7 @@ export function Step3({
         <div className={infoBannerCls}>
           주택 이외 물건은 다주택 중과 조건이 적용되지 않습니다.
           <br />
-          기본세율이 자동 적용됩니다. 사치성 재산 중과(§13①)만 해당될 수 있습니다.
+          기본세율이 자동 적용됩니다. 사치성 재산 중과(§13⑤)만 해당될 수 있습니다.
         </div>
       )}
 
@@ -191,7 +191,7 @@ export function Step3({
 
 ## 적용 효과
 중과 배제 → 다주택이어도 기본세율(1~4%) 적용.
-단, 사치성 재산 중과(§13①)는 별도 적용.`}
+단, 사치성 재산 중과(§13⑤)는 별도 적용.`}
               legalBasis="지방세법시행령 제28조의2 제1항 제1호"
             />
           }
@@ -414,7 +414,7 @@ export function Step3({
         <ToggleCard
           tone="rose"
           title="부담부증여 — 배우자·직계존비속 관계"
-          description="배우자·직계존비속 간 부담부증여는 전체 무상취득으로 처리 (지방세법 §7④)"
+          description="배우자·직계존비속 간 부담부증여는 전체 무상취득으로 처리 (지방세법 §7⑫ 단서·§7⑪)"
           checked={form.giftRelation === "spouse_or_lineal"}
           onCheckedChange={(v) => set("giftRelation", v ? "spouse_or_lineal" : "other")}
         />

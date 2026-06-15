@@ -40,7 +40,7 @@ function formatRate(r: number) {
 
 function getSurchargeTypeLabel(rateType: AcquisitionTaxResult["rateType"], surchargeReason?: string): string {
   if (rateType === "surcharge_corporate") return "법인 주택 취득 중과 (지방세법 §13의2)";
-  if (rateType === "surcharge_luxury") return "사치성 재산 중과 (지방세법 §13①)";
+  if (rateType === "surcharge_luxury") return "사치성 재산 중과 (지방세법 §13⑤)";
   if (rateType === "surcharge_regulated") {
     if (surchargeReason?.includes("3주택") || surchargeReason?.includes("3house")) {
       return "조정대상지역 3주택 이상 취득 중과 (지방세법 §13의2)";

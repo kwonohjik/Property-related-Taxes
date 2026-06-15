@@ -1,8 +1,8 @@
-/** §4 세율특례 9종 (§15) + §15+§13② 동시 적용 분기 */
+/** §4 세율특례 7종 (§15①) + §15+§13② 동시 적용 분기 */
 export function SpecialRateSection() {
   return (
     <section id="special-rate" className="space-y-4">
-      <h2 className="text-lg font-bold text-foreground">4. 세율특례 9종 (§15)</h2>
+      <h2 className="text-lg font-bold text-foreground">4. 세율특례 7종 (§15①)</h2>
       <p className="text-sm text-muted-foreground">
         아래 사유에 해당하면 <strong>기본세율 − 중과기준세율(2%)</strong> 적용.
         §13②(대도시 법인 중과) 동시 적용 시 <strong>(기본세율 − 2%) × 3</strong>.
@@ -18,15 +18,13 @@ export function SpecialRateSection() {
         </thead>
         <tbody className="text-muted-foreground">
           {[
-            ["환매권 행사", "4% − 2% = 2%", "§15①1호"],
-            ["상속 1가구 1주택", "2.8% − 2% = 0.8%", "§15①2호"],
+            ["환매등기 병행 매매의 환매", "4% − 2% = 2%", "§15①1호"],
+            ["상속 1가구 1주택·감면농지", "2.8% − 2% = 0.8%", "§15①2호"],
             ["법인 적격합병", "4% − 2% = 2%", "§15①3호"],
-            ["적격분할 취득", "4% − 2% = 2%", "§15①4호"],
-            ["공유물·합유물 분할", "4% − 4% = 0% (하한 0)", "§15①5호"],
+            ["공유물·합유물 분할", "2.3% − 2% = 0.3%", "§15①4호"],
+            ["건축물 이전", "2.8% − 2% = 0.8%", "§15①5호"],
             ["이혼 재산분할", "기본세율 − 2%", "§15①6호"],
-            ["건물 이전", "2.8% − 2% = 0.8%", "§15①6호 전단"],
-            ["가류 공유물 분할", "3% − 2% = 1%", "§15①7호"],
-            ["임목 취득", "2% − 2% = 0%", "§15①8호"],
+            ["입목 취득(벌채용 원목)", "2% − 2% = 0%", "§15①7호·시행령 §30①"],
           ].map(([cause, rate, basis], i) => (
             <tr key={i} className={i % 2 === 0 ? "" : "bg-muted/20"}>
               <td className="border border-border px-3 py-2">{cause}</td>

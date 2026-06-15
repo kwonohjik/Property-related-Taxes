@@ -61,7 +61,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
 
 ## 과세표준
 법인 보유 과세대상 자산 시가표준액 × 과세 지분율(증가분)`}
-          legalBasis="지방세법 제7조의2 제1항"
+          legalBasis="지방세법 제7조 제5항"
         />
       </div>
 

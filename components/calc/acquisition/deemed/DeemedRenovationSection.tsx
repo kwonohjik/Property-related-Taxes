@@ -51,7 +51,7 @@ export function DeemedRenovationSection({ form, set }: Props) {
 
 ## 취득 시기 (지방세법 §20)
 사용승인일과 사실상 사용개시일 중 빠른 날`}
-          legalBasis="지방세법 제7조의2 제3항, 건축법 제2조 제1항 제9호"
+          legalBasis="지방세법 제10조의6 제3항, 건축법 제2조 제1항 제9호"
         />
       </div>
 
