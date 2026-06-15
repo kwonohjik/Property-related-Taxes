@@ -35,6 +35,7 @@ import {
 } from "./data/comprehensive-historical";
 import { calculatePropertyTax, calcHousingTax } from "./property-tax";
 import { calcMultiFamilyHousingTax } from "./multi-family-housing-tax";
+import { buildHousingPropertyTaxWithCap } from "./comprehensive-housing-tax-cap";
 import { calculateSeparateAggregateLandTax } from "./comprehensive-separate-land";
 import {
   buildAggregateLandFromParcels,
@@ -189,11 +190,74 @@ export function calculateComprehensiveTax(
     let imposedTax: number;
     // 트랙 A: 다가구 구별 면적안분 echo (floorUnits 입력 시만 — 결과 카드 ⑦)
     let multiFamilyBreakdown: ComprehensiveTaxResult["properties"][number]["multiFamilyBreakdown"];
+    // 트랙 B: 주택 세부담상한 echo (priorAssessedValue 입력 시만 — 결과 카드 ⑦)
+    let housingTaxCapDetail: ComprehensiveTaxResult["properties"][number]["housingTaxCapDetail"];
     if (prop.propertyTaxAmount !== undefined) {
       // 사례7·8·9: 재산세 부과세액 직접입력. 이미 감면·지분·세부담상한(105/110/130%)·
       // 다가구 면적안분이 반영된 고지서 실부과액 → applyEffectiveFactor 후곱 금지(이중적용 방지).
       // 자동계산 propTax는 산출 생략 (override 경로는 effectiveFactor와 직교).
       imposedTax = prop.propertyTaxAmount;
+    } else if (
+      prop.floorUnits &&
+      prop.floorUnits.length > 0 &&
+      prop.priorAssessedValue != null
+    ) {
+      // R-6 결합 (사례789엔 미발생, 가드): 다가구 Σ를 당해 표준세율로 삼아 §122 세부담상한 적용.
+      const isOneHouseholdForProp =
+        !isCorporate && input.isOneHouseOwner && input.properties.length === 1;
+      const mf = calcMultiFamilyHousingTax(
+        prop.assessedValue,
+        prop.floorUnits,
+        isOneHouseholdForProp,
+        assessmentDateStr,
+        rates,
+      );
+      multiFamilyBreakdown = mf.perUnit;
+      const cap = buildHousingPropertyTaxWithCap(
+        mf.total,
+        prop.priorAssessedValue,
+        input.assessmentYear,
+        prop.assessedValue,
+        isOneHouseholdForProp,
+        `${input.assessmentYear - 1}-06-01`,
+        rates,
+      );
+      propTax = cap.cappedTax;
+      imposedTax = applyEffectiveFactor(propTax, rate, ratio, appurtenant);
+      housingTaxCapDetail = { ...cap, imposedTax };
+    } else if (prop.priorAssessedValue != null) {
+      // 트랙 B (사례8·9): 주택 세부담상한 §122 단서. 당해 표준세율(감면전) → min(직전표준 × 105/110/130%)
+      //   → 감면·지분 후곱. 시행령 §118 제3호(당해 감면을 직전에도 적용)와 대수적 동일.
+      const isOneHouseholdForProp =
+        !isCorporate && input.isOneHouseOwner && input.properties.length === 1;
+      let curStd = 0;
+      try {
+        curStd = calculatePropertyTax(
+          {
+            objectType: "housing",
+            publishedPrice: prop.assessedValue,
+            isOneHousehold: isOneHouseholdForProp,
+            targetDate: assessmentDateStr,
+          },
+          rates,
+        ).determinedTax;
+      } catch {
+        warnings.push(
+          `주택(${prop.propertyId}) 재산세 계산 오류 — 비율 안분 공제에서 제외됩니다.`,
+        );
+      }
+      const cap = buildHousingPropertyTaxWithCap(
+        curStd,
+        prop.priorAssessedValue,
+        input.assessmentYear,
+        prop.assessedValue,
+        isOneHouseholdForProp,
+        `${input.assessmentYear - 1}-06-01`,
+        rates,
+      );
+      propTax = cap.cappedTax;
+      imposedTax = applyEffectiveFactor(propTax, rate, ratio, appurtenant);
+      housingTaxCapDetail = { ...cap, imposedTax };
     } else if (prop.floorUnits && prop.floorUnits.length > 0) {
       // 트랙 A (사례7): 다가구 1동 통합공시를 구별 면적안분 후 누진세율 개별 적용·합산.
       // calculatePropertyTax 단일 경로 재사용 → FMR·누진·주택 세부담상한 패스스루 일치(drift 0).
@@ -245,6 +309,7 @@ export function calculateComprehensiveTax(
       // 감면후 실부과 재산세 — 최상위 totalPropertyTax("재산세 참고")·grandTotal 집계용
       propertyTax: imposedTax,
       multiFamilyBreakdown,
+      housingTaxCapDetail,
     });
   }
 

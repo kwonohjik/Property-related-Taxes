@@ -141,7 +141,7 @@ buildHousingPropertyTaxWithCap(prop, year, standardTax, rates)   // standardTax=
 - 순서: **당해 표준세율 → 세부담상한(직전 기준) → 감면 후곱**. (사례8 서초: 4,170,000 → min(·, 2,970,000×130%=3,861,000)=3,861,000 → ×0.7 = 2,702,700 ✓)
 - 직전 표준세율은 `calcPreviousYearEquivalent`의 `Σcalc` 패턴 재사용(주택별 분리·헬퍼화).
 - 2024+ → `pct=null` → 상한 미적용(현행 정책 유지).
-- ★ **cap 기준 = 감면전 표준세율**, 감면은 cap 후곱. 동일 감면율 가정 시 `min(C, P·pct)·g = min(C·g, P·pct·g)` — 감면후 비교와 **대수적 동일**(g가 공통 인수). 직전≠당해 감면율이면 결과 상이 → 직전 감면율 별도 입력 안 함(당해 `reductionRate` 재사용 가정 명시). 엔진 layer-2(§9③)는 prior-year.ts:104에서 effectiveFactor **후** 사용 → **§122 시행령 "직전 재산세액 상당액"=감면후 여부 확인 필요**(설계 STEP 6 KoreanLaw · R-9).
+- ★ **cap 기준 = 감면전 표준세율**, 감면은 cap 후곱. 동일 감면율 가정 시 `min(C, P·pct)·g = min(C·g, P·pct·g)` — 감면후 비교와 **대수적 동일**(g가 공통 인수). ✅ **시행령 §118 제3호 확인(R-9 해결)**: "직전 재산세액 상당액"은 당해 감면을 직전에도 동일 적용(직전 감면율=당해 감면율 명문화) → "직전≠당해 감면율" 엣지 부존재. 본 설계(감면전 cap + 후곱)가 §118과 대수적 동일·법령 정합. 직전 표준세율=직전 공시+직전 연도 법령(§118 제2호 가목 본문).
 - ★ `standardTax` 입력 분기(R-6 결합): 단일 주택 = `calculatePropertyTax(당해 공시).determinedTax`, **다가구** = `calcMultiFamilyHousingTax(...).total`. 사례789는 분리(7=다가구·상한 무발동 / 8·9=단일·상한 발동)이나 결합 가드 유지.
 - ★ 재산세 FMR = `getPropertyFmrForProration`(당해 comprehensive-tax.ts:391·직전 prior-year.ts:94) — 종부세 FMR(95%) 아님.
 
@@ -246,7 +246,7 @@ buildHousingPropertyTaxWithCap(prop, year, standardTax, rates)   // standardTax=
 | R-6 | MEDIUM | 다가구 + 세부담상한 결합 시 "1동 전체 기준 상한"(구별 아님) — 트랙 A 합산액에 트랙 B 적용 순서 |
 | R-7 | LOW | 2024+ 폐지 연도 분기(`getHousingTaxCapPct` null) — 사례789는 2022라 무관하나 가드 유지 |
 | R-8 | LOW | `propertyTaxAmount` 수동입력 **제거 금지** — 자동이 못 잡는 기타 케이스(특수 감면 등) 안전판 |
-| R-9 | **HIGH** | §122 시행령 "직전 재산세액 상당액" 기준이 **감면전 표준세율**인지 **감면후 실부과액**인지 본문 확인 필요(설계 STEP 6 KoreanLaw). 동일 감면율 가정 시 결과 동일하나(§4 대수 증명), 직전≠당해 감면율 케이스 정합성 결정 — 현재 설계는 감면전 기준 + 당해 감면율 후곱 |
+| R-9 | ✅ **해결** | 지방세법 시행령 §118 **제3호** 확인(KoreanLaw 2026-06-16): "직전 재산세액 상당액"은 **당해 연도 감면을 직전에도 동일 적용**해 산출(직전 감면율=당해 감면율 명문화). → 감면전 cap + 후곱 = §118과 대수적 동일, "직전≠당해 감면율" 엣지 부존재. 직전 표준세율=직전 공시+직전 법령(§118 제2호 가목 본문) |
 
 ---
 

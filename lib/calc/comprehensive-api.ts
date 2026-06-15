@@ -91,6 +91,22 @@ export function validateAppurtenantSplit(formData: ComprehensiveFormData): strin
 }
 
 /**
+ * 트랙 B 주택 세부담상한 직전 공시가격 검증 (⑧ — API/UI 동기화).
+ * priorAssessedTaxCapEnabled ON 시 priorAssessedValue > 0 필수.
+ * 자동 안분 fallback 금지 — 미입력은 검증 오류로 차단 (CLAUDE.md §2).
+ * UI 통과↔validate 차단 모순 방지 (API strip 게이트(>0)와 동일 조건).
+ */
+export function validatePriorAssessedValue(formData: ComprehensiveFormData): string | null {
+  for (const p of formData.properties) {
+    if (!p.priorAssessedTaxCapEnabled) continue;
+    if (parseAmount(p.priorAssessedValue) <= 0) {
+      return "직전연도 공시가격(세부담상한) 입력 시 직전연도 주택공시가격을 입력해야 합니다.";
+    }
+  }
+  return null;
+}
+
+/**
  * 트랙 A 다가구주택 면적안분 검증 (⑧ — API/UI 동기화).
  * multiFamilyEnabled ON 시 유효 행(area>0) 1개 이상, 각 area>0, Σ>0 강제.
  * UI 통과↔validate 차단 모순 방지 (자동 안분 fallback 금지 정책 — CLAUDE.md §2).
@@ -211,6 +227,11 @@ export async function callComprehensiveApi(
                 label: u.label.trim() || `구분${i + 1}`,
                 area: parseDecimal(u.area),
               }))
+          : undefined,
+      // ⑬ 트랙 B: 주택 세부담상한 직전 공시가격. ON + >0 시만 전송. 빈값 = strip(상한 미적용).
+      priorAssessedValue:
+        p.priorAssessedTaxCapEnabled && parseAmount(p.priorAssessedValue) > 0
+          ? parseAmount(p.priorAssessedValue)
           : undefined,
     };
 

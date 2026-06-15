@@ -238,6 +238,14 @@ export interface ComprehensiveProperty {
    */
   floorUnits?: { label: string; area: number }[];
   /**
+   * 직전연도 주택공시가격(원) — 트랙 B 자동화 (사례8·9, §122 단서 세부담상한).
+   * 입력 시 ⓐ = applyEffectiveFactor(min(당해 표준세율, 직전 표준세율 × 105/110/130%), 감면·지분).
+   * 직전 표준세율은 직전 공시 + 직전 연도 법령(시행령 §118 제2호 가목 본문)으로 산출.
+   * 우선순위: propertyTaxAmount > {floorUnits | priorAssessedValue} > 단일 assessedValue.
+   * 2024+ 세부담상한 폐지(과세표준상한제 §110③) → getHousingTaxCapPct null → 상한 미적용.
+   */
+  priorAssessedValue?: number;
+  /**
    * §8④ 1세대1주택자 의제 특례 유형 (미입력 = "none").
    * 의제 성립(일반주택 정확히 1채 + 특례주택 ≥ 1)·세액공제 안분(§9⑦⑨)·세율 주택 수 제외(령 §4의3③) 판정에 사용.
    * 요건(취득일·상속개시일·지분율)은 UI·Zod 검증 전용 — 엔진은 유형 지정을 신뢰 (자동 요건 판정은 후속).
@@ -653,6 +661,15 @@ export interface ComprehensiveTaxResult {
     propertyTax: number;      // 개별 주택 재산세 (자동 계산)
     /** 트랙 A 다가구 구별 안분 echo (floorUnits 입력 시만) — 결과 카드 ⑦ */
     multiFamilyBreakdown?: { label: string; apportionedAssessedValue: number; tax: number }[];
+    /** 트랙 B 주택 세부담상한 echo (priorAssessedValue 입력 시만) — 결과 카드 ⑦ */
+    housingTaxCapDetail?: {
+      standardTax: number;        // 당해 표준세율(감면전·cap전)
+      priorStandardTax: number;   // 직전 표준세율(감면전)
+      capPct: number | null;      // 105 | 110 | 130 | null(2024+)
+      capAmount: number | null;   // floor(직전표준 × capPct/100)
+      cappedTax: number;          // min(standardTax, capAmount) — 감면전
+      imposedTax: number;         // applyEffectiveFactor(cappedTax, 감면·지분) = ⓐ
+    };
   }[];
 
   // ── 주택분 합산 과세 ──
