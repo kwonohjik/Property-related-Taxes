@@ -240,12 +240,29 @@ export async function callComprehensiveApi(
   // 세부담상한 capMode 파생 (3중 패턴)
   const capMode = formData.previousYearCapMode ?? "direct";
 
+  // ⑬ 직전연도 주택별 공시 (당해 2주택+ 다주택 케이스) — 재산세 주택별 합산용.
+  //   미입력/단일은 undefined → 엔진 [assessedValue] fallback. 입력 시 합산을 assessedValue로(단일 원천).
+  const priorHouseValues =
+    formData.previousYearAutoHouseValues &&
+    formData.previousYearAutoHouseValues.length > 0
+      ? formData.previousYearAutoHouseValues
+          .map((v) => parseAmount(v))
+          .filter((v) => v > 0)
+      : undefined;
+  const priorSum =
+    priorHouseValues && priorHouseValues.length > 0
+      ? priorHouseValues.reduce((a, b) => a + b, 0)
+      : undefined;
+
   // previousYearAuto: 자동 모드일 때만 구성 (직접 모드는 undefined — 상호배타)
   // 날짜는 문자열 그대로 전송 — route.ts Zod coerceDates가 Date 변환 담당
   const previousYearAuto =
-    !isCorporate && capMode === "auto" && formData.previousYearAutoAssessedValue
+    !isCorporate &&
+    capMode === "auto" &&
+    (formData.previousYearAutoAssessedValue || priorSum)
       ? {
-          assessedValue: parseAmount(formData.previousYearAutoAssessedValue),
+          // priorHouseValues 있으면 합산(priorSum)을 assessedValue로(단일 원천), 없으면 단일 입력값
+          assessedValue: priorSum ?? parseAmount(formData.previousYearAutoAssessedValue),
           isOneHouseOwner: formData.previousYearAutoIsOneHouse,
           // 생년월일·취득일은 기본정보에서 재사용 (중복 입력 금지)
           birthDate: formData.birthDate || undefined,
@@ -262,6 +279,11 @@ export async function callComprehensiveApi(
             parseFloat(formData.properties[0].ownershipRatio) !== 100
               ? parseFloat(formData.properties[0].ownershipRatio) / 100
               : undefined,
+          // ⑬ 직전연도 다주택 중과 (사례4) — 주택별 공시·조정2주택·주택수
+          priorHouseValues,
+          isMultiHouseInAdjustedArea:
+            formData.previousYearAutoIsMultiAdjusted || undefined,
+          taxableHouseCount: priorHouseValues?.length,
         }
       : undefined;
 

@@ -373,14 +373,53 @@ function Step5TaxCap() {
             <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 space-y-3">
               <p className="text-xs font-semibold text-sky-700">직전연도 공시가격 정보</p>
 
-              <CurrencyInput
-                label="직전연도 공시가격 합계 (원)"
-                value={formData.previousYearAutoAssessedValue}
-                onChange={(v) => updateFormData({ previousYearAutoAssessedValue: v })}
-                placeholder="0"
-                required
-                hint="직전연도 6월 1일 기준 보유 주택 공시가격 합계"
-              />
+              {formData.properties.length <= 1 ? (
+                /* 당해 1주택 — 직전 공시 합계 단일 입력 */
+                <CurrencyInput
+                  label="직전연도 공시가격 합계 (원)"
+                  value={formData.previousYearAutoAssessedValue}
+                  onChange={(v) =>
+                    updateFormData({ previousYearAutoAssessedValue: v })
+                  }
+                  placeholder="0"
+                  required
+                  hint="직전연도 6월 1일 기준 보유 주택 공시가격 합계"
+                />
+              ) : (
+                /* 당해 2주택+ — 직전 주택별 공시 입력 (재산세 주택별 합산) */
+                <div className="space-y-2">
+                  {formData.properties.map((p, i) => (
+                    <CurrencyInput
+                      key={p.id}
+                      label={`주택 ${i + 1} 직전연도 공시가격 (원)`}
+                      value={formData.previousYearAutoHouseValues[i] ?? ""}
+                      onChange={(v) => {
+                        const next = [...formData.previousYearAutoHouseValues];
+                        next[i] = v;
+                        updateFormData({ previousYearAutoHouseValues: next });
+                      }}
+                      placeholder="0"
+                      required
+                    />
+                  ))}
+                  <p className="text-xs text-sky-700">
+                    재산세상당액은 주택별로 계산 후 합산됩니다 (누진세율).
+                  </p>
+                </div>
+              )}
+
+              {/* 직전연도 조정대상지역 2주택 — 당해 < 2023(중과 존재) 이고 다주택일 때 */}
+              {showMultiHouseCap && formData.properties.length > 1 && (
+                <ToggleCard
+                  tone="rose"
+                  title="직전연도 조정대상지역 2주택 이상"
+                  description={`직전연도 종합부동산세상당액에 중과세율 적용\n${year - 1} 귀속 기준 — 당해연도 1세대1주택 의제(일시적 2주택 등)와 별개`}
+                  checked={formData.previousYearAutoIsMultiAdjusted}
+                  onCheckedChange={(v) =>
+                    updateFormData({ previousYearAutoIsMultiAdjusted: v })
+                  }
+                />
+              )}
 
               <ToggleCard
                 tone="violet"
@@ -392,7 +431,6 @@ function Step5TaxCap() {
 
               <div className="rounded-md bg-muted/30 border px-3 py-2 text-xs text-muted-foreground">
                 <p>생년월일·취득일은 기본정보(1단계)에서 자동으로 사용됩니다.</p>
-                <p className="mt-0.5">직전연도 다주택인 경우 직접입력 방식을 사용해 주세요.</p>
               </div>
             </div>
           )}
@@ -491,9 +529,20 @@ export default function ComprehensiveTaxPage() {
     const taxpayerType = formData.taxpayerType ?? "individual";
     const isCorporateSpecial = taxpayerType === "corporate_special";
     const capMode = formData.previousYearCapMode ?? "direct";
-    if (!isCorporateSpecial && capMode === "auto" && !formData.previousYearAutoAssessedValue) {
-      setError("자동 계산 모드에서는 직전연도 공시가격 합계를 입력해야 합니다.");
-      return;
+    if (!isCorporateSpecial && capMode === "auto") {
+      // 당해 2주택+ = 주택별 직전공시(previousYearAutoHouseValues), 1주택 = 단일 합계
+      const isMultiHouse = formData.properties.length > 1;
+      const filledHouseValues = formData.previousYearAutoHouseValues.filter(
+        (v) => v && v.trim() !== "" && v.trim() !== "0",
+      ).length;
+      if (isMultiHouse && filledHouseValues < formData.properties.length) {
+        setError("자동 계산 모드에서는 직전연도 주택별 공시가격을 모두 입력해야 합니다.");
+        return;
+      }
+      if (!isMultiHouse && !formData.previousYearAutoAssessedValue) {
+        setError("자동 계산 모드에서는 직전연도 공시가격 합계를 입력해야 합니다.");
+        return;
+      }
     }
 
     // 토지 필지 모드 validation (⑧ — API/Zod와 동기화: UI 통과↔차단 모순 금지)

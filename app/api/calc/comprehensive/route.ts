@@ -120,6 +120,11 @@ function toEngineInput(
           reductionRate: schema.previousYearAuto.reductionRate,
           // ⑭ pass-through: 해당연도 지분율 (법령 원칙3)
           ownershipRatio: schema.previousYearAuto.ownershipRatio,
+          // ⑭ pass-through: 직전연도 다주택 중과 (사례4) — 숫자·boolean·배열 (Date 변환 불요)
+          priorHouseValues: schema.previousYearAuto.priorHouseValues,
+          isMultiHouseInAdjustedArea:
+            schema.previousYearAuto.isMultiHouseInAdjustedArea,
+          taxableHouseCount: schema.previousYearAuto.taxableHouseCount,
         }
       : undefined,
     isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,
