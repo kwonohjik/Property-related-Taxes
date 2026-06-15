@@ -323,8 +323,11 @@ export function computeTransferSummary(
         0
       );
   // 취득가액 합계: 지분 모드 자산은 100% 기준 입력 × ratio 적용으로 합산
+  // salesCase 모드는 similarSalesValue를 취득가액으로 사용
   const totalAcqPrice = formData.assets.reduce((acc, a) => {
-    const raw = parseRaw(a.fixedAcquisitionPrice);
+    const raw = a.isSalesCaseAcquisition
+      ? parseRaw(a.similarSalesValue)
+      : parseRaw(a.fixedAcquisitionPrice);
     const n = parseFloat(a.ownershipNumerator || "100");
     const d = parseFloat(a.ownershipDenominator || "100");
     const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;

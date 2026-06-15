@@ -31,6 +31,7 @@ import {
   type RadioCardOption,
 } from "@/components/calc/inputs/RadioCardGroup";
 import {
+  buildAddressPatch,
   isFishingAsset,
   makePatcher,
   resolvePropertyKind,
@@ -171,55 +172,32 @@ export function EstateBodyRealEstate({
           value={addrValue}
           onChange={async (v) => {
             setAddrValue(v);
-            const parts = [v.road || v.jibun, v.building, v.detail].filter(Boolean);
-            const auto = parts.join(" ").trim();
-            const hasAddress = v.road || v.jibun || v.building || v.detail || v.pnu;
-            const estateAddress = hasAddress
-              ? {
-                  road: v.road || undefined,
-                  jibun: v.jibun || undefined,
-                  building: v.building || undefined,
-                  detail: v.detail || undefined,
-                  pnu: v.pnu || undefined,
-                }
-              : undefined;
-            const latNum = v.lat ? parseFloat(v.lat) : NaN;
-            const lngNum = v.lng ? parseFloat(v.lng) : NaN;
-            const estateLatLng =
-              Number.isFinite(latNum) && Number.isFinite(lngNum)
-                ? { lat: latNum, lng: lngNum }
-                : undefined;
             const fishing = isFishingAsset(item);
 
-            const patch: Partial<EstateItem> = { estateAddress };
-            if (estateLatLng) {
-              if (fishing) patch.fishingAnchorLatLng = estateLatLng;
-              else patch.estateLatLng = estateLatLng;
-            }
-            if (auto) patch.name = auto;
-            set(patch);
+            // 시·군·구 코드를 먼저 확정(await)한 뒤 전체 패치를 단일 set 으로 적용.
+            // (기존 2차 set 은 진입 시점 stale item 을 merge 해 estateAddress 를 덮어쓰는
+            //  race 버그가 있었음 — buildAddressPatch + 단일 set 으로 차단)
+            const latNum = v.lat ? parseFloat(v.lat) : NaN;
+            const lngNum = v.lng ? parseFloat(v.lng) : NaN;
+            const hasCoord = Number.isFinite(latNum) && Number.isFinite(lngNum);
 
-            // 시·군·구 코드 자동 추출 (PNU 우선 → Vworld API fallback)
-            if (v.pnu || estateLatLng) {
+            let sigunguCode: string | undefined;
+            if (v.pnu || hasCoord) {
               try {
                 const outcome = await resolveSigunguCode(
                   v.pnu || undefined,
-                  estateLatLng?.lat,
-                  estateLatLng?.lng,
+                  hasCoord ? latNum : undefined,
+                  hasCoord ? lngNum : undefined,
                 );
                 if (!isReverseGeocodeError(outcome)) {
-                  const codePatch: Partial<EstateItem> = {};
-                  if (fishing) {
-                    codePatch.fishingAnchorSigunguCode = outcome.sigunguCode;
-                  } else {
-                    codePatch.estateSigunguCode = outcome.sigunguCode;
-                  }
-                  set(codePatch);
+                  sigunguCode = outcome.sigunguCode;
                 }
               } catch {
                 /* 네트워크 실패 silent */
               }
             }
+
+            set(buildAddressPatch(v, { fishing, sigunguCode }));
           }}
         />
       </FieldCard>

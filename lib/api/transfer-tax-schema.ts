@@ -139,8 +139,10 @@ const propertyBaseShape = {
   parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
   rentalReductionDetails: rentalReductionDetailsSchema.optional(),
   newHousingDetails: newHousingDetailsSchema.optional(),
-  acquisitionMethod: z.enum(["actual", "estimated", "appraisal"]).optional(),
+  acquisitionMethod: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),
   appraisalValue: z.number().int().nonnegative().optional(),
+  // ⑫ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
+  similarSalesValue: z.number().int().nonnegative().optional(),
   isSelfBuilt: z.boolean().optional(),
   buildingType: z.enum(["new", "extension"]).optional(),
   constructionDate: z.string().date().optional(),

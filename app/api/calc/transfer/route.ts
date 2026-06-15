@@ -278,6 +278,8 @@ export async function POST(request: NextRequest) {
     // §114조의2 가산세 판정 필드
     acquisitionMethod: data.acquisitionMethod,
     appraisalValue: data.appraisalValue,
+    // ⑭ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달 (TypeScript 미감지 영역)
+    similarSalesValue: data.similarSalesValue,
     isSelfBuilt: data.isSelfBuilt,
     buildingType: data.buildingType,
     constructionDate: toOptionalDate(data.constructionDate),

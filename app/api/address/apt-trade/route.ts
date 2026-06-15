@@ -38,9 +38,49 @@ export interface RtmsAptTradeResponse {
   error?: string;
 }
 
-/** RTMS XML 응답 단건 raw 구조 */
+/**
+ * 공동주택 계열 물건 종류 (RTMS endpoint·단지명 필드가 종류별로 분리됨).
+ * - apt:  아파트 매매 (RTMSDataSvcAptTradeDev)  — 단지명 aptNm
+ * - rh:   연립다세대 매매 (RTMSDataSvcRHTrade)   — 단지명 mhouseNm
+ * - offi: 오피스텔 매매 (RTMSDataSvcOffiTrade)   — 단지명 offiNm
+ */
+export type RtmsPropertyType = "apt" | "rh" | "offi";
+
+interface PropertyTypeConfig {
+  endpoint: string;
+  /** 단지/건물명 XML 태그 — 종류별 상이 (실측 확정: APT=aptNm, RH/OFFI는 활용신청 후 실측) */
+  nameField: string;
+  label: string;
+}
+
+const PROPERTY_TYPE_CONFIG: Record<RtmsPropertyType, PropertyTypeConfig> = {
+  apt: {
+    endpoint:
+      "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev",
+    nameField: "aptNm",
+    label: "아파트",
+  },
+  rh: {
+    endpoint:
+      "https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade",
+    nameField: "mhouseNm",
+    label: "연립·다세대",
+  },
+  offi: {
+    endpoint:
+      "https://apis.data.go.kr/1613000/RTMSDataSvcOffiTrade/getRTMSDataSvcOffiTrade",
+    nameField: "offiNm",
+    label: "오피스텔",
+  },
+};
+
+function isRtmsPropertyType(v: string): v is RtmsPropertyType {
+  return v === "apt" || v === "rh" || v === "offi";
+}
+
+/** RTMS XML 응답 단건 raw 구조 (단지명은 nameField 로 추출되어 complexName 으로 정규화) */
 interface RtmsRawItem {
-  aptNm?: string;       // 단지명
+  complexName?: string; // 단지/건물명 (apt: aptNm / rh: mhouseNm / offi: offiNm)
   dealYear?: string;    // 계약년
   dealMonth?: string;   // 계약월
   dealDay?: string;     // 계약일
@@ -62,8 +102,6 @@ interface RtmsRawItem {
 // 상수
 // ──────────────────────────────────────────────────────────────
 
-const RTMS_BASE_URL =
-  "https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev";
 const NUM_OF_ROWS = 1000; // 페이지당 최대 (P2 전체 페이지 수집)
 
 // ──────────────────────────────────────────────────────────────
@@ -71,16 +109,19 @@ const NUM_OF_ROWS = 1000; // 페이지당 최대 (P2 전체 페이지 수집)
 // ──────────────────────────────────────────────────────────────
 
 /**
- * 평가기준일 + 세목 → 조회 대상 월 목록 (YYYYMM 배열)
- * 상속: 전후 6개월 → 최대 13개월 / 증여: -6~+3 → 최대 10개월
+ * 평가기준일(또는 양도세 취득일) + 세목 → 조회 대상 월 목록 (YYYYMM 배열)
+ * - 상속(상증령 §49①): 평가기준일 전후 6개월 → 최대 13개월
+ * - 증여(상증령 §49①): 전 6개월 ~ 후 3개월 → 최대 10개월
+ * - 양도(소득세법 시행령 §176의2③1호): 취득일 전후 각 3개월 → 최대 7개월
  */
 function buildQueryMonths(
   baseDate: Date,
-  taxType: "inheritance" | "gift",
+  taxType: "inheritance" | "gift" | "transfer",
 ): string[] {
+  const monthsBefore = taxType === "transfer" ? 3 : 6;
   const monthsAfter = taxType === "inheritance" ? 6 : 3;
   const months: string[] = [];
-  for (let m = -6; m <= monthsAfter; m++) {
+  for (let m = -monthsBefore; m <= monthsAfter; m++) {
     months.push(format(addMonths(baseDate, m), "yyyyMM"));
   }
   // 중복 제거 (월 경계에서 동일 월이 두 번 나오는 경우 방어)
@@ -121,6 +162,7 @@ function parseDealingType(
 function parseRtmsXml(
   xml: string,
   lawdCd: string,
+  nameField: string,
 ): { items: RtmsRawItem[]; totalCount: number } {
   // totalCount 추출
   const totalMatch = xml.match(/<totalCount>(\d+)<\/totalCount>/);
@@ -140,7 +182,7 @@ function parseRtmsXml(
     };
 
     items.push({
-      aptNm:      get("aptNm"),
+      complexName: get(nameField),
       dealYear:   get("dealYear"),
       dealMonth:  get("dealMonth"),
       dealDay:    get("dealDay"),
@@ -170,7 +212,7 @@ function normalizeRawItem(
   raw: RtmsRawItem,
   lawdCd: string,
 ): RtmsTradeRecord | null {
-  if (!raw.aptNm) return null;
+  if (!raw.complexName) return null;
 
   const year  = raw.dealYear?.trim()  ?? "";
   const month = (raw.dealMonth?.trim() ?? "").padStart(2, "0");
@@ -190,8 +232,8 @@ function normalizeRawItem(
   const buildYear = parseInt(raw.buildYear ?? "0", 10) || 0;
 
   return {
-    aptName:           raw.aptNm,
-    aptNameNormalized: normalizeAptName(raw.aptNm),
+    aptName:           raw.complexName,
+    aptNameNormalized: normalizeAptName(raw.complexName),
     dealDate,
     exclusiveAreaM2,
     dealAmountWon,
@@ -214,6 +256,7 @@ async function fetchRtmsMonth(
   lawdCd: string,
   dealYmd: string,
   apiKey: string,
+  config: PropertyTypeConfig,
 ): Promise<{ records: RtmsTradeRecord[]; error?: string }> {
   const allRecords: RtmsTradeRecord[] = [];
   let pageNo = 1;
@@ -229,7 +272,7 @@ async function fetchRtmsMonth(
 
     let res: Response;
     try {
-      res = await fetch(`${RTMS_BASE_URL}?${params}`, {
+      res = await fetch(`${config.endpoint}?${params}`, {
         cache: "no-store",
         headers: { Accept: "application/xml" },
       });
@@ -261,7 +304,7 @@ async function fetchRtmsMonth(
       };
     }
 
-    const { items, totalCount } = parseRtmsXml(xml, lawdCd);
+    const { items, totalCount } = parseRtmsXml(xml, lawdCd, config.nameField);
 
     for (const raw of items) {
       const normalized = normalizeRawItem(raw, lawdCd);
@@ -290,6 +333,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<RtmsAptTra
   const lawdCd   = searchParams.get("lawdCd")?.trim()  ?? "";
   const baseDate = searchParams.get("baseDate")?.trim() ?? "";
   const taxType  = searchParams.get("taxType")?.trim()  ?? "";
+  // 물건 종류 — 미지정 시 apt (기존 호출 하위호환)
+  const propertyTypeRaw = searchParams.get("propertyType")?.trim() ?? "apt";
 
   // env 미설정 — HTTP 200 + configMissing:true (P5 — 500 에러 금지)
   const apiKey = process.env.MOLIT_RTMS_API_KEY;
@@ -319,21 +364,33 @@ export async function GET(request: NextRequest): Promise<NextResponse<RtmsAptTra
     });
   }
 
-  if (taxType !== "inheritance" && taxType !== "gift") {
+  if (taxType !== "inheritance" && taxType !== "gift" && taxType !== "transfer") {
     return NextResponse.json({
       success: false,
       records: [],
-      error: 'taxType은 "inheritance" 또는 "gift"이어야 합니다.',
+      error: 'taxType은 "inheritance"·"gift"·"transfer" 중 하나이어야 합니다.',
     });
   }
 
+  if (!isRtmsPropertyType(propertyTypeRaw)) {
+    return NextResponse.json({
+      success: false,
+      records: [],
+      error: 'propertyType은 "apt"·"rh"·"offi" 중 하나이어야 합니다.',
+    });
+  }
+  const config = PROPERTY_TYPE_CONFIG[propertyTypeRaw];
+
   // 평가기간 → 조회 월 목록 산출 (§4.2)
   const baseDateObj = new Date(baseDate + "T00:00:00.000Z");
-  const months = buildQueryMonths(baseDateObj, taxType as "inheritance" | "gift");
+  const months = buildQueryMonths(
+    baseDateObj,
+    taxType as "inheritance" | "gift" | "transfer",
+  );
 
   // 병렬 fetch + 부분 성공 허용 (Promise.allSettled)
   const results = await Promise.allSettled(
-    months.map((m) => fetchRtmsMonth(lawdCd, m, apiKey)),
+    months.map((m) => fetchRtmsMonth(lawdCd, m, apiKey, config)),
   );
 
   const allRecords: RtmsTradeRecord[] = [];

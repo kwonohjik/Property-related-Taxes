@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   fetchRtmsSimilarSales,
   filterSimilarSales,
@@ -42,7 +43,15 @@ import {
   averageAmount,
   isRtmsLookupError,
 } from "@/lib/calc/rtms-similar-sales-lookup";
+import type { RtmsPropertyType } from "@/lib/calc/rtms-similar-sales-lookup";
 import type { SimilarSalesCandidate } from "@/lib/calc/rtms-similar-sales-filter";
+
+// 물건 종류 옵션 (공동주택 계열 — RTMS 종류별 endpoint)
+const PROPERTY_TYPE_OPTIONS: { value: RtmsPropertyType; label: string }[] = [
+  { value: "apt", label: "아파트" },
+  { value: "rh", label: "연립·다세대" },
+  { value: "offi", label: "오피스텔" },
+];
 
 // ──────────────────────────────────────────────────────────────
 // 타입
@@ -61,10 +70,12 @@ export interface RtmsSimilarSalesModalProps {
   targetStandardPrice?: number;
   /** 대상 아파트 읍면동명 (optional — 있으면 단지 매칭 정밀화) */
   targetUmdNm?: string;
-  /** 평가기준일 (YYYY-MM-DD) */
+  /** 평가기준일(상속·증여) 또는 취득일(양도) (YYYY-MM-DD) */
   valuationDate: string;
-  /** 세목 — 평가기간 산정 */
-  taxType: "inheritance" | "gift";
+  /** 세목 — 평가기간 산정 (상속·증여=상증령 §49 / 양도=소득세법 시행령 §176의2③) */
+  taxType: "inheritance" | "gift" | "transfer";
+  /** 물건 종류 초기값 (apt/rh/offi — 기본 apt). 사용자가 모달 내 라디오로 변경 가능. */
+  initialPropertyType?: RtmsPropertyType;
   /** 자동채움 콜백 — 사용자가 "이 금액으로 채우기" 클릭 시 호출 */
   onSelect: (result: { amount: number }) => void;
 }
@@ -207,8 +218,12 @@ export function RtmsSimilarSalesModal({
   targetUmdNm,
   valuationDate,
   taxType,
+  initialPropertyType,
   onSelect,
 }: RtmsSimilarSalesModalProps) {
+  const [propertyType, setPropertyType] = useState<RtmsPropertyType>(
+    initialPropertyType ?? "apt",
+  );
   const [status, setStatus] = useState<ModalStatus>("idle");
   const [candidates, setCandidates] = useState<SimilarSalesCandidate[]>([]);
   const [outOfPeriod, setOutOfPeriod] = useState<SimilarSalesCandidate[]>([]);
@@ -240,7 +255,12 @@ export function RtmsSimilarSalesModal({
     setSelectedIds(new Set());
     setHasQueried(true);
 
-    const outcome = await fetchRtmsSimilarSales(lawdCd, valuationDate, taxType);
+    const outcome = await fetchRtmsSimilarSales(
+      lawdCd,
+      valuationDate,
+      taxType,
+      propertyType,
+    );
 
     if (isRtmsLookupError(outcome)) {
       if (outcome.code === "API_KEY_MISSING") {
@@ -279,7 +299,7 @@ export function RtmsSimilarSalesModal({
     } else {
       setStatus("ready");
     }
-  }, [aptName, sigunguCode, targetExclusiveAreaM2, targetStandardPrice, targetUmdNm, valuationDate, taxType, reportDate]);
+  }, [aptName, sigunguCode, targetExclusiveAreaM2, targetStandardPrice, targetUmdNm, valuationDate, taxType, reportDate, propertyType]);
 
   // 행 선택 토글
   const handleToggle = useCallback((tradeKey: string) => {
@@ -337,8 +357,19 @@ export function RtmsSimilarSalesModal({
     onOpenChange(v);
   }, [onOpenChange]);
 
-  const taxLabel = taxType === "inheritance" ? "상속" : "증여";
-  const periodLabel = taxType === "inheritance" ? "전후 6개월" : "전 6개월~후 3개월";
+  const isTransfer = taxType === "transfer";
+  const taxLabel =
+    taxType === "inheritance" ? "상속" : taxType === "gift" ? "증여" : "양도";
+  const periodLabel =
+    taxType === "inheritance"
+      ? "전후 6개월"
+      : taxType === "gift"
+        ? "전 6개월~후 3개월"
+        : "취득일 전후 3개월";
+  const legalRef = isTransfer
+    ? "소득세법 시행령 §176의2③1호 — 취득일 전후 각 3개월 유사 매매사례"
+    : "상속세 및 증여세법 시행령 §49④ — 면적·용도·기준시가 유사 매매사례";
+  const dateLabel = isTransfer ? "(취득일)" : "(평가기준일)";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -352,7 +383,7 @@ export function RtmsSimilarSalesModal({
             id="rtms-modal-description"
             className="text-xs text-muted-foreground"
           >
-            상속세 및 증여세법 시행령 §49④ — 면적·용도·기준시가 유사 매매사례
+            {legalRef}
           </p>
         </DialogHeader>
 
@@ -382,7 +413,7 @@ export function RtmsSimilarSalesModal({
               <div>
                 <span className="text-gray-500 dark:text-gray-400">기준일</span>
                 <span className="ml-1.5 font-medium">{valuationDate}</span>
-                <span className="ml-1 text-gray-400">(평가기준일)</span>
+                <span className="ml-1 text-gray-400">{dateLabel}</span>
               </div>
               <div>
                 <span className="text-gray-500 dark:text-gray-400">조회범위</span>
@@ -393,20 +424,36 @@ export function RtmsSimilarSalesModal({
             </div>
           </div>
 
-          {/* 신고일 입력 (선택 — §49④ 신고일 절단, P7) */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/20 px-4 py-3 space-y-2">
-            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              신고일 (선택 — §49④)
+          {/* 물건 종류 선택 (사용자 명시 선택 — RTMS 종류별 endpoint) */}
+          <div className="rounded-lg border border-sky-200 bg-sky-50/40 dark:border-sky-800 dark:bg-sky-900/15 px-4 py-3 space-y-2">
+            <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
+              물건 종류
             </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              신고일 입력 시 그 이후 거래는 유사매매사례에서 제외됩니다 (상증령 §49④ 괄호).
-              통상 신고 전 시뮬레이션이므로 미입력이 기본입니다.
-            </p>
-            <DateInput
-              value={reportDate}
-              onChange={setReportDate}
+            <RadioCardGroup<RtmsPropertyType>
+              name="rtms-property-type"
+              layout="inline"
+              value={propertyType}
+              onChange={setPropertyType}
+              options={PROPERTY_TYPE_OPTIONS}
             />
           </div>
+
+          {/* 신고일 입력 (선택 — §49④ 신고일 절단, P7) — 상속·증여 전용 */}
+          {!isTransfer && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/20 px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                신고일 (선택 — §49④)
+              </p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                신고일 입력 시 그 이후 거래는 유사매매사례에서 제외됩니다 (상증령 §49④ 괄호).
+                통상 신고 전 시뮬레이션이므로 미입력이 기본입니다.
+              </p>
+              <DateInput
+                value={reportDate}
+                onChange={setReportDate}
+              />
+            </div>
+          )}
 
           {/* 조회 버튼 */}
           <Button

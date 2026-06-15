@@ -6,6 +6,10 @@
 import { MIXED_USE_DEFAULTS, migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
 import { RESIDENCE_DEFAULTS, migrateResidenceFields } from "./calc-wizard-asset-residence";
 import { CARRYOVER_DEFAULTS, migrateCarryoverFields } from "./calc-wizard-asset-carryover";
+import {
+  applyPhase3Normalize,
+  migrateGeneralBuildingFields,
+} from "./calc-wizard-asset-migrate-phase3";
 import type { AssetForm } from "./calc-wizard-asset";
 
 /** 장기임대주택 거주주택 비과세 특례 초기값 (소령 §155⑳) */
@@ -94,6 +98,10 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     donorAcquisitionDate: "",
     useEstimatedAcquisition: false,
     isAppraisalAcquisition: false,
+    isSalesCaseAcquisition: false,
+    similarSalesValue: "",
+    similarSalesSource: undefined,
+    acquisitionSigunguCode: "",
     isSelfBuilt: false,
     buildingType: "",
     constructionDate: "",
@@ -745,75 +753,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   delete (a as Record<string, unknown>).gbBuildingFloors;
   // 일반건물 NBL 판정 필드 (2026-05-10)
   if (a.gbZoneType === undefined) a.gbZoneType = "";
-  if (a.gbIsMetropolitan === undefined) a.gbIsMetropolitan = false;
-  if (a.gbIsUnregistered === undefined) a.gbIsUnregistered = false;
-  // ── 일반건물 건물 취득원인 마이그레이션 (M-1·M-2, 사례 32 이후 PR) ──
-  // M-1: legacy gbIsSelfBuilt=true → gbBuildingAcquisitionCause="newConstruction" 자동 변환 후 삭제
-  if ((a as Record<string, unknown>).gbIsSelfBuilt === true) {
-    if (a.gbBuildingAcquisitionCause === undefined) {
-      a.gbBuildingAcquisitionCause = "newConstruction";
-    }
-  }
-  delete (a as Record<string, unknown>).gbIsSelfBuilt;
-  // M-2: general_building + gbBuildingAcquisitionCause 미입력 시 acquisitionCause 값 복사
-  // (사례 31 호환 데이터: 단일 취득원인이었던 경우 건물도 같은 원인으로 추정)
-  const validBuildingCauses = ["purchase", "inheritance", "gift", "newConstruction"];
-  if (
-    a.assetKind === "general_building" &&
-    (!a.gbBuildingAcquisitionCause ||
-      !validBuildingCauses.includes(a.gbBuildingAcquisitionCause as string))
-  ) {
-    // acquisitionCause 중 건물 카드에 허용된 원인이면 그대로 사용
-    const ac = a.acquisitionCause as string;
-    // "carryover_gift"는 건물 카드 미지원 → "purchase" fallback
-    if (validBuildingCauses.includes(ac)) {
-      a.gbBuildingAcquisitionCause = ac;
-    } else {
-      a.gbBuildingAcquisitionCause = "purchase";
-    }
-  }
-  if (a.gbBuildingAcquisitionDate === undefined) a.gbBuildingAcquisitionDate = "";
-  // ③ 사례 33 일괄 모드: 토지·건물 일괄 취득 시 필요경비 (신규 필드 — bundledExpenses 분리, 2026-05-11)
-  if (a.gbBundledAcquisitionExpenses === undefined) a.gbBundledAcquisitionExpenses = "";
-  // ③ 사례 33: 증축 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
-  // normalize 책임: 저장→로드 시 누락 필드 초기화.
-  // onChange 책임(별도): 토글 OFF 시 폼 상태 유지 (재토글 ON 복원). normalize 아님.
-  if (a.gbHasExtension === undefined) a.gbHasExtension = false;
-  if (a.gbExtensionDate === undefined) a.gbExtensionDate = "";
-  if (a.gbExtensionArea === undefined) a.gbExtensionArea = "";
-  if (a.gbTransferExtensionBuildingStdPrice === undefined) a.gbTransferExtensionBuildingStdPrice = "";
-  if (a.gbAcquisitionExtensionBuildingStdPrice === undefined) a.gbAcquisitionExtensionBuildingStdPrice = "";
-  if (a.gbExtensionAcquisitionCause === undefined) a.gbExtensionAcquisitionCause = "newConstruction";
-  // ③ 사례 33 확장: gbExtensionAcquisitionMode + 실가 2필드 마이그레이션
-  if (a.gbExtensionAcquisitionMode === undefined) a.gbExtensionAcquisitionMode = "estimated";
-  if (a.gbExtensionActualAcquisitionPrice === undefined) a.gbExtensionActualAcquisitionPrice = "";
-  if (a.gbExtensionActualExpenses === undefined) a.gbExtensionActualExpenses = "";
-  // ── 사례 35: 주택→상가 용도변경 normalize (강제 초기화 금지 — null=미선택 보존) ──
-  if (a.gbHouseToCommercialConversion === undefined) a.gbHouseToCommercialConversion = false;
-  if (a.gbConversionDate === undefined) a.gbConversionDate = "";
-  if (a.gbWasMultiHouseAtConversion === undefined) a.gbWasMultiHouseAtConversion = null;
-  // 사례 35 후속-1
-  if (a.gbHasFirstDisclosure === undefined) a.gbHasFirstDisclosure = false;
-  if (a.gbFirstDisclosurePrice === undefined) a.gbFirstDisclosurePrice = "";
-  if (a.gbFirstDisclosureLandStdPrice === undefined) a.gbFirstDisclosureLandStdPrice = "";
-  if (a.gbFirstDisclosureBuildingStdPrice === undefined) a.gbFirstDisclosureBuildingStdPrice = "";
-  // gbHasExtension=false 인 legacy 데이터에 나머지 필드가 잘못 저장된 경우 정리
-  // (신규 데이터에서는 발생하지 않으나 구형 마이그레이션 방어)
-  if (a.gbHasExtension === false) {
-    a.gbExtensionDate = "";
-    a.gbExtensionArea = "";
-    a.gbTransferExtensionBuildingStdPrice = "";
-    a.gbAcquisitionExtensionBuildingStdPrice = "";
-    a.gbExtensionAcquisitionCause = "newConstruction";
-    a.gbExtensionAcquisitionMode = "estimated";
-    a.gbExtensionActualAcquisitionPrice = "";
-    a.gbExtensionActualExpenses = "";
-  }
-  // gbExtensionAcquisitionMode === "estimated" 시 실가 2필드 reset (정합성)
-  if (a.gbExtensionAcquisitionMode === "estimated") {
-    a.gbExtensionActualAcquisitionPrice = "";
-    a.gbExtensionActualExpenses = "";
-  }
+  // ── 일반건물 취득원인·증축·용도변경 normalize — 별도 모듈 (800줄 정책) ──
+  migrateGeneralBuildingFields(a);
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {
@@ -828,27 +769,7 @@ export function migrateAsset(raw: unknown): AssetForm {
     if (rhe.standardPriceAtPriorTransfer === undefined) rhe.standardPriceAtPriorTransfer = undefined;
     if (rhe.standardPriceAtTransferForPhrp === undefined) rhe.standardPriceAtTransferForPhrp = undefined;
   }
-  // ── 부담부증여 transferType 마이그레이션 (Phase 2, 2026-05-12) ──
-  // legacy: acquisitionCause === "burdened_gift" → transferType === "burdened_gift" 로 이전.
-  // 의미: "취득원인" 라디오에 끼워둔 burdened_gift는 양도 시점의 거래 형태로 이동.
-  // 당초 취득은 "증여"로 추정(보수적 fallback) — 사용자가 매매·상속 등 정확한 원인으로 재입력 가능.
-  if (a.transferType === undefined || a.transferType === null) {
-    if (a.acquisitionCause === "burdened_gift") {
-      a.transferType = "burdened_gift";
-      a.acquisitionCause = "gift"; // 보수적 fallback (사용자 재입력 권장)
-    } else {
-      a.transferType = "regular";
-    }
-  }
-  // ── Phase 3 (2026-05-12) — 증여세 통합 + 사전증여 5필드 fallback ──
-  // 이전 세션 sessionStorage rehydrate 시 신규 필드가 undefined여서 콘솔 에러 또는 빈 폼 렌더 위험.
-  if (a.bgDonorRelation === undefined) a.bgDonorRelation = "";
-  if (a.bgIsMinorDonee === undefined) a.bgIsMinorDonee = false;
-  if (a.bgIsGenerationSkip === undefined) a.bgIsGenerationSkip = false;
-  if (a.bgIsFiledOnTime === undefined) a.bgIsFiledOnTime = true;
-  if (!Array.isArray(a.bgPriorGifts)) a.bgPriorGifts = [];
-  if (a.bgGiftBuildingStdPriceAtTransfer === undefined) a.bgGiftBuildingStdPriceAtTransfer = "";
-  // 가업상속공제 §97의2④ — 미사용이면 undefined 유지 (3중 패턴: factory=undefined)
-  if (a.familyBusinessInheritance === null) a.familyBusinessInheritance = undefined;
+  // ── Phase 2·3 + 매매사례가액 신규 필드 normalize — 별도 모듈 (800줄 정책, 2026-06-15) ──
+  applyPhase3Normalize(a);
   return a as unknown as AssetForm;
 }
