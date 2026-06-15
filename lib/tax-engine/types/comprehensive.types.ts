@@ -223,6 +223,14 @@ export interface ComprehensiveProperty {
    */
   appurtenantSplit?: AppurtenantSplitInput;
   /**
+   * 재산세 부과세액 직접입력 (비율 안분 공제 ⓐ). 미입력 = calculatePropertyTax 자동계산(하위호환).
+   * 다가구주택 구별 면적안분 합산·주택 세부담상한(105/110/130%) 적용분·감면 실부과액 등
+   * 엔진 자동계산이 재현하지 못하는 고지서 실부과액을 ⓐ로 주입할 때 사용 (교재 사례7·8·9).
+   * ★ 이미 감면·지분·세부담상한이 반영된 실부과액이므로 applyEffectiveFactor 후곱 금지(이중적용 방지).
+   * 토지분 AggregateLandTaxInput.propertyTaxAmount와 동일 의미 — 명명 통일.
+   */
+  propertyTaxAmount?: number;
+  /**
    * §8④ 1세대1주택자 의제 특례 유형 (미입력 = "none").
    * 의제 성립(일반주택 정확히 1채 + 특례주택 ≥ 1)·세액공제 안분(§9⑦⑨)·세율 주택 수 제외(령 §4의3③) 판정에 사용.
    * 요건(취득일·상속개시일·지분율)은 UI·Zod 검증 전용 — 엔진은 유형 지정을 신뢰 (자동 요건 판정은 후속).

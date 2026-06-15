@@ -92,6 +92,8 @@ function toEngineInput(
       ownershipRatio: p.ownershipRatio,
       // ⑭ pass-through: 건물·부속토지 시가표준액 안분 (사례6 — enum·숫자, Date 변환 불요)
       appurtenantSplit: p.appurtenantSplit,
+      // ⑭ pass-through: 재산세 부과세액 직접입력 (사례7·8·9 — 숫자, Date 변환 불요)
+      propertyTaxAmount: p.propertyTaxAmount,
       rentalInfo,
       otherInfo,
     };

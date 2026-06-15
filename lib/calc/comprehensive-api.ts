@@ -174,6 +174,10 @@ export async function callComprehensiveApi(
               buildingStandardValue: parseAmount(p.buildingStdValue),
             }
           : undefined,
+      // ⑬ 사례7·8·9: 재산세 부과세액 직접입력 (비율 안분 공제 ⓐ). 빈 문자열 = strip(자동계산).
+      propertyTaxAmount: p.propertyTaxAmount
+        ? parseAmount(p.propertyTaxAmount)
+        : undefined,
     };
 
     // 임대주택 합산배제 상세
