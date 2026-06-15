@@ -3,13 +3,13 @@
  *
  * T01: 공부상 소유자 원칙
  * T02: 사실상 소유자 ≠ 공부상 소유자 → 사실상 소유자
- * T03: 신탁재산 → 수탁자
+ * T03: 신탁재산 → 위탁자 (truster, §107②5호 — 2020.12.29 개정, 구법 수탁자 아님)
  * T04: 상속 미등기 → 주된 상속인 (연대납세 warning)
  * T05: 공유재산 → co_owner (지분 최대자)
  * T06: distributeCoOwnershipTax — 2인 공유 안분
  * T07: distributeCoOwnershipTax — 3인 공유 안분 + 잔여 처리
  * T08: distributeCoOwnershipTax — 지분 합계 >1 → 에러
- * T09: 신탁 수탁자 정보 없음 → warning + 공부상 소유자
+ * T09: 신탁 위탁자 정보 없음 → warning + 공부상 소유자
  */
 
 import { describe, it, expect } from "vitest";
@@ -46,17 +46,17 @@ describe("determineTaxpayer — 납세의무자 확정", () => {
     expect(result.warnings.length).toBeGreaterThan(0);
   });
 
-  it("T03: 신탁재산 + 수탁자 정보 있음 → trustee", () => {
+  it("T03: 신탁재산 + 위탁자 정보 있음 → truster (§107②5호, 2020.12.29 개정)", () => {
     const result = determineTaxpayer({
       ...BASE,
       isTrust: true,
-      actualOwner: "KB부동산신탁",
+      settlor: "홍길동위탁", // 위탁자(신탁 설정자) — 현행법상 납세의무자
     });
-    expect(result.type).toBe("trustee");
-    expect(result.name).toBe("KB부동산신탁");
+    expect(result.type).toBe("truster");
+    expect(result.name).toBe("홍길동위탁");
   });
 
-  it("T09: 신탁재산이지만 수탁자 정보 없음 → warning + registered_owner", () => {
+  it("T09: 신탁재산이지만 위탁자 정보 없음 → warning + registered_owner", () => {
     const result = determineTaxpayer({
       ...BASE,
       isTrust: true,

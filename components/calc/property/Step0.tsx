@@ -7,11 +7,15 @@ import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { useState } from "react";
 import {
   OBJECT_TYPE_LABELS,
   BUILDING_TYPE_LABELS,
   FIRE_HAZARD_OPTIONS,
   type FormState,
+  type OwnershipType,
+  type CoOwnerItem,
 } from "./shared";
 
 interface Props {
@@ -202,6 +206,228 @@ export function Step0({
         checked={form.isUrbanArea}
         onCheckedChange={(v) => onChange({ isUrbanArea: v })}
       />
+
+      {/* 소유 형태 (선택) — 납세의무자 판정(지방세법 §107) */}
+      <OwnershipSection form={form} onChange={onChange} />
+    </div>
+  );
+}
+
+// ============================================================
+// 소유 형태 섹션 — 접이식 (선택 입력)
+// ============================================================
+
+const OWNERSHIP_OPTIONS: { value: OwnershipType; label: string; description: string }[] = [
+  { value: "co",      label: "공유",        description: "§107①1호 — 각 공유자가 지분별 납세의무" },
+  { value: "trust",   label: "신탁",        description: "§107②5호 — 위탁자가 납세의무자 (2020.12.29 개정)" },
+  { value: "inherit", label: "상속 미등기", description: "§107②2호 — 주된 상속인이 납세의무자" },
+];
+
+function OwnershipSection({
+  form,
+  onChange,
+}: {
+  form: FormState;
+  onChange: (d: Partial<FormState>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  function handleOpen(v: boolean) {
+    setOpen(v);
+    if (!v) {
+      // 섹션 닫으면 납세의무자 입력 초기화 (taxpayerInfo 미전송)
+      onChange({
+        ownershipType: undefined,
+        registeredOwner: "",
+        actualOwner: "",
+        settlor: "",
+        coOwners: undefined,
+        heirsText: "",
+      });
+    }
+  }
+
+  return (
+    <ToggleCard
+      tone="sky"
+      title="소유 형태"
+      description="단독 소유 외 공유·신탁·상속 미등기 시 납세의무자 판정 (지방세법 §107)"
+      checked={open}
+      onCheckedChange={handleOpen}
+    >
+      <div className="space-y-4 pt-1">
+        {/* 소유 형태 선택 */}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-sky-700">특수 소유 형태</label>
+          <RadioCardGroup
+            name="ownershipType"
+            tone="sky"
+            layout="stack"
+            options={OWNERSHIP_OPTIONS}
+            value={form.ownershipType ?? ""}
+            onChange={(v) => onChange({ ownershipType: v as OwnershipType })}
+          />
+        </div>
+
+        {/* 공부상 소유자 — 모든 소유형태 공통 */}
+        {form.ownershipType && (
+          <FieldCard
+            label="공부상 소유자"
+            hint="등기부·과세대장 기재 소유자 성명 또는 식별자"
+          >
+            <input
+              type="text"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              value={form.registeredOwner}
+              onChange={(e) => onChange({ registeredOwner: e.target.value })}
+              placeholder="성명 또는 식별자"
+            />
+          </FieldCard>
+        )}
+
+        {/* 공유 — coOwners 배열 입력 */}
+        {form.ownershipType === "co" && (
+          <CoOwnerList
+            coOwners={form.coOwners}
+            onChange={(coOwners) => onChange({ coOwners })}
+          />
+        )}
+
+        {/* 신탁 — 위탁자 입력 */}
+        {form.ownershipType === "trust" && (
+          <FieldCard
+            label="위탁자 (신탁 설정자)"
+            hint="§107②5호 — 신탁재산의 납세의무자. 성명 또는 식별자"
+          >
+            <input
+              type="text"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              value={form.settlor}
+              onChange={(e) => onChange({ settlor: e.target.value })}
+              placeholder="위탁자 성명 또는 식별자"
+            />
+          </FieldCard>
+        )}
+
+        {/* 상속 미등기 — 상속인 목록 */}
+        {form.ownershipType === "inherit" && (
+          <FieldCard
+            label="상속인 목록"
+            hint="쉼표로 구분 입력 (예: 홍길동, 홍길순). §107②2호 — 주된 상속인(지분 최대자)을 납세의무자로 설정"
+          >
+            <input
+              type="text"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              value={form.heirsText}
+              onChange={(e) => onChange({ heirsText: e.target.value })}
+              placeholder="홍길동, 홍길순"
+            />
+          </FieldCard>
+        )}
+
+        {/* 사실상 소유자 — 단독·공유 모드에서 공부와 다를 때 입력 (§107①본문) */}
+        {(form.ownershipType === "co" || form.ownershipType === "inherit") && (
+          <FieldCard
+            label="사실상 소유자 (선택)"
+            hint="공부상 소유자와 다를 때만 입력. §107①본문 — 사실상 소유자가 납세의무자 원칙"
+          >
+            <input
+              type="text"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              value={form.actualOwner}
+              onChange={(e) => onChange({ actualOwner: e.target.value })}
+              placeholder="사실상 소유자 성명 (공부와 동일하면 비워두세요)"
+            />
+          </FieldCard>
+        )}
+      </div>
+    </ToggleCard>
+  );
+}
+
+// ============================================================
+// 공유자 목록 서브 컴포넌트
+// ============================================================
+
+function CoOwnerList({
+  coOwners,
+  onChange,
+}: {
+  coOwners: CoOwnerItem[] | undefined;
+  onChange: (v: CoOwnerItem[] | undefined) => void;
+}) {
+  const list = coOwners ?? [];
+
+  function addRow() {
+    const next = [...list, { id: "", ratio: "" }];
+    onChange(next);
+  }
+
+  function updateRow(idx: number, patch: Partial<CoOwnerItem>) {
+    const next = list.map((r, i) => (i === idx ? { ...r, ...patch } : r));
+    onChange(next);
+  }
+
+  function removeRow(idx: number) {
+    const next = list.filter((_, i) => i !== idx);
+    // 빈 배열이 되면 undefined(OFF)가 아닌 [](ON빈) 유지 — 3-state 정책
+    onChange(next);
+  }
+
+  // 지분 합계 표시
+  const totalRatio = list.reduce((s, c) => {
+    const r = parseFloat(c.ratio);
+    return s + (isNaN(r) ? 0 : r);
+  }, 0);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-sky-700">
+          공유자 목록 <span className="text-muted-foreground font-normal">(지분율 합계: {(totalRatio * 100).toFixed(1)}%)</span>
+        </label>
+        <button
+          type="button"
+          onClick={addRow}
+          className="text-xs text-sky-700 hover:text-sky-900 font-medium border border-sky-300 rounded px-2 py-0.5"
+        >
+          + 공유자 추가
+        </button>
+      </div>
+      {list.length === 0 && (
+        <p className="text-xs text-muted-foreground">공유자를 추가하세요.</p>
+      )}
+      {list.map((row, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <input
+            type="text"
+            className="flex-1 rounded border border-input bg-background px-2 py-1.5 text-sm"
+            value={row.id}
+            onChange={(e) => updateRow(idx, { id: e.target.value })}
+            placeholder="공유자 성명/식별자"
+            aria-label={`공유자 ${idx + 1} 식별자`}
+          />
+          <input
+            type="text"
+            className="w-24 rounded border border-input bg-background px-2 py-1.5 text-sm text-right"
+            value={row.ratio}
+            onChange={(e) => updateRow(idx, { ratio: e.target.value })}
+            placeholder="지분율 (0~1)"
+            aria-label={`공유자 ${idx + 1} 지분율`}
+          />
+          <button
+            type="button"
+            onClick={() => removeRow(idx)}
+            className="text-xs text-muted-foreground hover:text-destructive"
+            aria-label={`공유자 ${idx + 1} 삭제`}
+          >
+            ✕
+          </button>
+        </div>
+      ))}
+      {totalRatio > 1 + 1e-9 && (
+        <p className="text-xs text-red-600">지분율 합계가 100%를 초과합니다.</p>
+      )}
     </div>
   );
 }

@@ -25,7 +25,7 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 7종 (오타 방지·exact 매칭) */
+/** 선택 가능 leaf 9종 (오타 방지·exact 매칭) */
 export type PropertyPrintSectionId =
   | "tax-base"
   | "computed-tax"
@@ -33,7 +33,9 @@ export type PropertyPrintSectionId =
   | "total-payable"
   | "installment"
   | "warnings"
-  | "legal-basis";
+  | "legal-basis"
+  | "taxpayer"
+  | "co-ownership";
 
 /** 재산세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type PropertyPrintSectionNode = GenericNode<PropertyPrintSectionId>;
@@ -53,6 +55,14 @@ export const PROPERTY_PRINT_SECTIONS: PropertyPrintSectionGroup[] = [
       { id: "computed-tax", label: "산출세액", channel: SCREEN_PDF },
       { id: "surtax", label: "부가세", channel: SCREEN },
       { id: "total-payable", label: "총 납부세액", channel: SCREEN },
+    ],
+  },
+  {
+    id: "group:taxpayer",
+    label: "납세의무자",
+    children: [
+      { id: "taxpayer", label: "납세의무자 판정", channel: SCREEN },
+      { id: "co-ownership", label: "공유 지분 안분", channel: SCREEN },
     ],
   },
   {

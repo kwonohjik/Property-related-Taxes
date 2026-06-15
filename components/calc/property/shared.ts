@@ -3,6 +3,25 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 
 // ============================================================
+// 소유 형태 (납세의무자 §107) — 폼 전용 enum
+// ============================================================
+
+/**
+ * 소유 형태 라디오 선택 (UI 전용 — 엔진 taxpayerInfo 매핑 시 분기)
+ * - "sole"    : 단독 소유 (기본, taxpayerInfo 미전송)
+ * - "co"      : 공유 (coOwnershipShares 배열)
+ * - "trust"   : 신탁 (isTrust=true + settlor)
+ * - "inherit" : 상속 미등기 (isInheritanceUnregistered + heirs)
+ */
+export type OwnershipType = "sole" | "co" | "trust" | "inherit";
+
+/** 공유 지분 항목 (UI 입력용) */
+export interface CoOwnerItem {
+  id: string;        // 공유자 식별자 (성명·등록번호 등)
+  ratio: string;     // 지분율 (소수점 문자열, "0.5" = 50%)
+}
+
+// ============================================================
 // 상수
 // ============================================================
 
@@ -91,6 +110,24 @@ export interface FormState {
   saDemolishedDate: string;
   stSeparatedType: string;
   stFactoryLocation: string;
+
+  // ── 납세의무자(§107) 입력 — 선택 섹션 ──
+  /**
+   * 소유 형태 라디오.
+   * "sole"=단독(기본, taxpayerInfo 미전송), "co"=공유, "trust"=신탁, "inherit"=상속미등기.
+   * undefined = 섹션 접힘(미입력, taxpayerInfo 미전송).
+   */
+  ownershipType: OwnershipType | undefined;
+  /** 공부상 소유자 성명/식별자 (registeredOwner) */
+  registeredOwner: string;
+  /** 사실상 소유자 — 공부와 불일치 시 입력 (actualOwner) */
+  actualOwner: string;
+  /** 위탁자 성명/식별자 (신탁재산, §107②5호) */
+  settlor: string;
+  /** 공유자 목록 (3-state: undefined=OFF / []=ON빈 / [...]=데이터) */
+  coOwners: CoOwnerItem[] | undefined;
+  /** 상속인 목록 (쉼표 구분 단일 텍스트, 편의 입력) */
+  heirsText: string;
 }
 
 export const INITIAL_FORM: FormState = {
@@ -116,6 +153,13 @@ export const INITIAL_FORM: FormState = {
   saDemolishedDate: "",
   stSeparatedType: "",
   stFactoryLocation: "",
+  // 납세의무자(§107) 초기값 — 섹션 접힘(미입력)
+  ownershipType: undefined,
+  registeredOwner: "",
+  actualOwner: "",
+  settlor: "",
+  coOwners: undefined,
+  heirsText: "",
 };
 
 // ============================================================
@@ -141,6 +185,41 @@ export function validateStep(step: number, form: FormState): string | null {
       parseAmount(form.housingBuildingValue) === null
     )
       return "주택 건축물 부분 시가표준액을 올바른 금액으로 입력하세요.";
+
+    // ── 소유 형태(§107) 일관성 검증 — ownershipType 입력 시에만 (미입력=납세의무자 판정 생략, 차단 아님) ──
+    if (form.ownershipType && form.ownershipType !== "sole") {
+      // 공부상 소유자는 필수 (모든 비단독 모드)
+      if (!form.registeredOwner.trim())
+        return "소유 형태를 입력할 때는 공부상 소유자 성명을 입력하세요.";
+
+      if (form.ownershipType === "co") {
+        // 공유: coOwners 배열 ON이면 최소 1명, 지분합 ≤ 1
+        if (form.coOwners !== undefined) {
+          if (form.coOwners.length === 0)
+            return "공유자 목록을 추가하거나 소유 형태를 단독으로 변경하세요.";
+          const totalRatio = form.coOwners.reduce((s, c) => {
+            const r = parseFloat(c.ratio);
+            return s + (isNaN(r) ? 0 : r);
+          }, 0);
+          if (totalRatio > 1 + 1e-9)
+            return `공유 지분 합계(${(totalRatio * 100).toFixed(2)}%)가 100%를 초과합니다.`;
+          const hasInvalid = form.coOwners.some(
+            (c) => !c.id.trim() || isNaN(parseFloat(c.ratio)) || parseFloat(c.ratio) <= 0,
+          );
+          if (hasInvalid) return "공유자 식별자와 지분율을 모두 입력하세요.";
+        }
+      }
+
+      if (form.ownershipType === "trust") {
+        // 신탁: 위탁자 입력 권장 (경고만, 차단 아님 — API에서 경고 포함)
+        // UI 통과↔validate 차단 모순 금지 → 차단하지 않음
+      }
+
+      if (form.ownershipType === "inherit") {
+        // 상속 미등기: 상속인 텍스트 비어있으면 경고만 (API에서 경고 포함)
+        // 차단하지 않음 (UI 통과↔validate 차단 모순 금지)
+      }
+    }
   }
   if (step === 1 && form.objectType === "land") {
     if (!form.landTaxType) return "토지 과세 유형을 선택하세요.";
@@ -254,6 +333,44 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
     const prevTax = parseAmount(form.previousYearTax);
     if (prevTax !== null && prevTax > 0) {
       body.previousYearTax = prevTax;
+    }
+  }
+
+  // ── 납세의무자(§107) — ownershipType 입력 시에만 전송 ──
+  // 미입력(undefined / "sole") → taxpayerInfo 미포함 → 엔진 납세의무자 판정 생략
+  if (form.ownershipType && form.ownershipType !== "sole") {
+    const registeredOwner = form.registeredOwner.trim();
+    if (registeredOwner) {
+      const info: Record<string, unknown> = { registeredOwner };
+
+      if (form.ownershipType === "co" && form.coOwners && form.coOwners.length > 0) {
+        info.coOwnershipShares = form.coOwners
+          .filter((c) => c.id.trim() && !isNaN(parseFloat(c.ratio)) && parseFloat(c.ratio) > 0)
+          .map((c) => ({ ownerId: c.id.trim(), shareRatio: parseFloat(c.ratio) }));
+      }
+
+      if (form.ownershipType === "trust") {
+        info.isTrust = true;
+        const settlor = form.settlor.trim();
+        if (settlor) info.settlor = settlor;
+      }
+
+      if (form.ownershipType === "inherit") {
+        info.isInheritanceUnregistered = true;
+        const heirs = form.heirsText
+          .split(/[,，、]/)
+          .map((h) => h.trim())
+          .filter(Boolean);
+        if (heirs.length > 0) info.heirs = heirs;
+      }
+
+      // 사실상 소유자 불일치
+      const actualOwner = form.actualOwner.trim();
+      if (actualOwner && actualOwner !== registeredOwner) {
+        info.actualOwner = actualOwner;
+      }
+
+      body.taxpayerInfo = info;
     }
   }
 

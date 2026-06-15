@@ -33,6 +33,7 @@ import {
   calculateComprehensiveAggregateTax,
   applyBurdenCap,
 } from "./property-tax-comprehensive-aggregate";
+import { determineTaxpayer, buildTaxpayerOutcome } from "./property-taxpayer";
 import type {
   PropertyTaxInput,
   PropertyTaxResult,
@@ -423,6 +424,12 @@ export function calculatePropertyTax(
     input.targetDate ?? new Date().toISOString().slice(0, 10);
   const taxYear = parseInt(targetDate.slice(0, 4), 10);
 
+  // ── Step 0: 납세의무자 판정 (지방세법 §107) — taxpayerInfo 입력 시에만 (미입력 시 계산 100% 불변) ──
+  const taxpayerResult = input.taxpayerInfo
+    ? determineTaxpayer(input.taxpayerInfo)
+    : undefined;
+  const coShares = input.taxpayerInfo?.coOwnershipShares;
+
   // ── Step 1: 과세표준 계산 (DB rates 전달 → 공정시장가액비율 DB 우선,
   //            2026 1세대1주택은 시행령 §109①2호 단서 구간별 비율 우선) ──
   const { taxBase, fairMarketRatio, legalBasis: taxBaseLegal } =
@@ -541,6 +548,7 @@ export function calculatePropertyTax(
           legalBasis: [...new Set(legalBasis)],
           warnings,
           targetDate,
+          ...buildTaxpayerOutcome(taxpayerResult, coShares, determinedTaxSep, totalPayableSep),
         };
       }
 
@@ -614,6 +622,7 @@ export function calculatePropertyTax(
           legalBasis: [...new Set(legalBasis)],
           warnings,
           targetDate,
+          ...buildTaxpayerOutcome(taxpayerResult, coShares, capResult.determinedTax, totalPayableSep),
         };
       }
 
@@ -667,6 +676,7 @@ export function calculatePropertyTax(
           legalBasis: [...new Set(legalBasis)],
           warnings,
           targetDate,
+          ...buildTaxpayerOutcome(taxpayerResult, coShares, determinedTaxComp, totalPayableComp),
         };
       }
 
@@ -755,6 +765,7 @@ export function calculatePropertyTax(
     legalBasis: [...new Set(legalBasis)],
     warnings,
     targetDate,
+    ...buildTaxpayerOutcome(taxpayerResult, coShares, determinedTax, totalPayable),
   };
 }
 

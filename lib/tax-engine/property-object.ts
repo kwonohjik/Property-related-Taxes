@@ -116,7 +116,6 @@ export function determinePropertyTaxObject(
   const taxpayerResult = determineTaxpayer({
     registeredOwner: input.registeredOwner,
     actualOwner: input.actualOwner,
-    ownerType: input.ownerType,
     isTrust: input.isTrust,
     trustType: input.trustType,
     isInheritanceUnregistered: input.isInheritanceUnregistered,
