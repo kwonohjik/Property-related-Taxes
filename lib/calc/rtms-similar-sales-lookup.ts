@@ -12,8 +12,16 @@
 
 import { db } from "@/lib/storage/db";
 import type { RtmsSalesCacheRecord } from "@/lib/storage/db";
-import type { RtmsAptTradeResponse } from "@/app/api/address/apt-trade/route";
+import type {
+  RtmsAptTradeResponse,
+  RtmsPropertyType,
+} from "@/app/api/address/apt-trade/route";
 import type { RtmsTradeRecord, SimilarSalesCandidate } from "./rtms-similar-sales-filter";
+
+export type { RtmsPropertyType } from "@/app/api/address/apt-trade/route";
+
+/** RTMS 조회 세목 — 평가기간 산정 (상속·증여=상증령 §49 / 양도=소득세법 시행령 §176의2③) */
+export type RtmsTaxType = "inheritance" | "gift" | "transfer";
 
 // re-export 순수 필터 함수들 (UI가 직접 소비)
 export {
@@ -68,9 +76,10 @@ export function isRtmsLookupError(o: RtmsLookupOutcome): o is RtmsLookupError {
 function makeCacheKey(
   lawdCd: string,
   baseDate: string,
-  taxType: "inheritance" | "gift",
+  taxType: RtmsTaxType,
+  propertyType: RtmsPropertyType,
 ): string {
-  return `rtms_${lawdCd}_${baseDate}_${taxType}`;
+  return `rtms_${propertyType}_${lawdCd}_${baseDate}_${taxType}`;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -80,16 +89,18 @@ function makeCacheKey(
 /**
  * RTMS 거래 조회 + Dexie 캐시 (기간 단위 캐시 — §9 D5).
  *
- * @param lawdCd   5자리 법정동코드 (시군구 코드 앞 5자리)
- * @param baseDate 평가기준일 "YYYY-MM-DD"
- * @param taxType  세목 (평가기간 산정)
+ * @param lawdCd       5자리 법정동코드 (시군구 코드 앞 5자리)
+ * @param baseDate     평가기준일(상속·증여) 또는 취득일(양도) "YYYY-MM-DD"
+ * @param taxType      세목 (평가기간 산정)
+ * @param propertyType 물건 종류 (apt/rh/offi — 기본 apt)
  */
 export async function fetchRtmsSimilarSales(
   lawdCd: string,
   baseDate: string,
-  taxType: "inheritance" | "gift",
+  taxType: RtmsTaxType,
+  propertyType: RtmsPropertyType = "apt",
 ): Promise<RtmsLookupOutcome> {
-  const cacheKey = makeCacheKey(lawdCd, baseDate, taxType);
+  const cacheKey = makeCacheKey(lawdCd, baseDate, taxType, propertyType);
   const now = Date.now();
 
   // 1. 캐시 조회
@@ -107,7 +118,7 @@ export async function fetchRtmsSimilarSales(
   }
 
   // 2. API 호출
-  const params = new URLSearchParams({ lawdCd, baseDate, taxType });
+  const params = new URLSearchParams({ lawdCd, baseDate, taxType, propertyType });
   let res: Response;
   try {
     res = await fetch(`/api/address/apt-trade?${params}`, { method: "GET" });
@@ -140,6 +151,7 @@ export async function fetchRtmsSimilarSales(
     lawdCd,
     baseDate,
     taxType,
+    propertyType,
     records: data.records,
     months: data.months ?? [],
     createdAt: now,

@@ -37,11 +37,13 @@ export interface ReverseGeocodeCacheRecord {
  * 공공데이터포털 일 쿼터(10,000건) 절약 — 동일 조회 재요청 차단.
  */
 export interface RtmsSalesCacheRecord {
-  /** PK = `rtms_${lawdCd}_${baseDate}_${taxType}` */
+  /** PK = `rtms_${propertyType}_${lawdCd}_${baseDate}_${taxType}` */
   id: string;
   lawdCd: string;
-  baseDate: string;   // "YYYY-MM-DD" 평가기준일
-  taxType: "inheritance" | "gift";
+  baseDate: string;   // "YYYY-MM-DD" 평가기준일(상속·증여) 또는 취득일(양도)
+  taxType: "inheritance" | "gift" | "transfer";
+  /** 물건 종류 (apt/rh/offi) — 기존 캐시 호환 위해 optional */
+  propertyType?: "apt" | "rh" | "offi";
   records: RtmsTradeRecord[];
   months: string[];   // 조회한 YYYYMM 목록
   createdAt: number;

@@ -10,7 +10,7 @@
  * Plan: docs/00-pm/inheritance-section22-major-shareholder-toggle.plan.md §3
  */
 
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToggleChip } from "@/components/calc/inputs/ToggleChip";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export interface MajorShareholderStockToggleProps {
@@ -45,18 +45,21 @@ export function MajorShareholderStockToggle({
         <LawArticleModal legalBasis="상증법 §63" label="§63③ 할증평가" />
       </div>
 
-      <ToggleCard
-        tone="violet"
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        title="최대주주에 해당"
-        description="ON = 공제 대상 제외 · OFF = 공제 대상 포함"
-      >
+      <div className="flex flex-wrap gap-1.5">
+        <ToggleChip
+          tone="violet"
+          label="최대주주에 해당"
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+          title="ON = 공제 대상 제외 · OFF = 공제 대상 포함"
+        />
+      </div>
+      {checked && (
         <div className="rounded border border-violet-300 bg-violet-100/60 p-2 text-[11px] text-violet-900">
           ✓ §22 순금융재산 <strong>제안값</strong>에 반영됨 — §22 입력 단계에서{" "}
           <strong>[적용]</strong> 버튼으로 반영하세요.
         </div>
-      </ToggleCard>
+      )}
     </div>
   );
 }

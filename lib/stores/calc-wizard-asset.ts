@@ -43,8 +43,10 @@ import type { BurdenedGiftFormSlice } from "./calc-wizard-asset-bg";
 export type { BurdenedGiftFormSlice } from "./calc-wizard-asset-bg";
 import type { RedevelopmentFormSlice } from "./calc-wizard-asset-redev";
 export type { RedevelopmentFormSlice } from "./calc-wizard-asset-redev";
+import type { InheritanceAcquisitionFormSlice } from "./calc-wizard-asset-inheritance-acq";
+export type { InheritanceAcquisitionFormSlice } from "./calc-wizard-asset-inheritance-acq";
 
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice {
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice {
   assetId: string;
   assetLabel: string;
   /**
@@ -250,6 +252,18 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 매매 감정가액 사용 여부 (소득세법 §97 + 시행령 §163⑥). useEstimatedAcquisition과 상호 배타.
    *  true 시 fixedAcquisitionPrice를 감정가액으로 해석, 개산공제 자동 적용. */
   isAppraisalAcquisition: boolean;
+  /** 매매사례가액(추계) 취득 모드 — 소득세법 시행령 §176의2③1호.
+   *  useEstimatedAcquisition·isAppraisalAcquisition 모두 false 일 때 매매사례가액 모드 선택 가능.
+   *  3중 배타: isSalesCaseAcquisition=true 이면 다른 두 모드는 false 강제. */
+  isSalesCaseAcquisition: boolean;
+  /** 매매사례가액 (원) — isSalesCaseAcquisition=true 시 엔진으로 전달.
+   *  RTMS 자동조회 onSelect 콜백으로만 자동채움. 수동 수정 시 similarSalesSource 제거. */
+  similarSalesValue: string;
+  /** RTMS 자동조회 출처 배지 — "rtms_auto" | undefined. 수동 수정 시 제거. */
+  similarSalesSource: "rtms_auto" | undefined;
+  /** 취득 주소의 시군구코드 (5자리) — RtmsSimilarSalesModal sigunguCode prop.
+   *  주소 AddressSearch onChange → resolveSigunguCode()로 파생. NBL 전용 nblLandSigunguCode와 별개. */
+  acquisitionSigunguCode: string;
   /** 본인이 신축·증축한 건물 여부 (§114조의2 가산세). acquisitionCause === "purchase" + 매매·housing/building 전용 */
   isSelfBuilt: boolean;
   /** 신축·증축 구분 */
@@ -468,40 +482,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   // ── NBL 부득이한 사유 ──
   nblGracePeriods: GracePeriodInput[];
 
-  // ── 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨) ──
-  /**
-   * 의제취득일(1985.1.1.) 기준 자동 분기 결과 (UI read-only).
-   * - "pre-deemed": 상속개시일 < 1985-01-01 → max(환산가액, 실가×물가상승률)
-   * - "post-deemed": 상속개시일 ≥ 1985-01-01 → 상속세 신고가액
-   * - null: 상속개시일 미입력 또는 미적용
-   */
-  inheritanceMode: "pre-deemed" | "post-deemed" | null;
-  /** 상속개시일 (YYYY-MM-DD, 피상속인 사망일) */
-  inheritanceStartDate: string;
-  /** 피상속인 실지취득가액 입증 가능 여부 (case A 전용) */
-  hasDecedentActualPrice: boolean;
-  /** 피상속인 실지취득가액 (원 단위 문자열, hasDecedentActualPrice=true 시) */
-  decedentAcquisitionPrice: string;
-  /** 상속세 신고가액 (원 단위 문자열, case B) */
-  inheritanceReportedValue: string;
-  /** 상속세 신고 시 적용한 평가방법 (case B) */
-  inheritanceValuationMethod:
-    | "market_value"
-    | "appraisal"
-    | "auction_public_sale"
-    | "similar_sale"
-    | "supplementary"
-    | "";
-  /** 평가 근거 메모 (감정평가서 번호·매매사례 일자 등, 선택) */
-  inheritanceValuationEvidence: string;
-  /** 보충적평가 보조계산 사용 여부 (case B + supplementary 선택 시) */
-  useSupplementaryHelper: boolean;
-  /** 보조계산: 토지 면적 (㎡) */
-  supplementaryLandArea: string;
-  /** 보조계산: 개별공시지가 (원/㎡) */
-  supplementaryLandUnitPrice: string;
-  /** 보조계산: 건물 공시가격 (원 총액) */
-  supplementaryBuildingValue: string;
+  // ── 상속 부동산 취득가액 의제 — InheritanceAcquisitionFormSlice (calc-wizard-asset-inheritance-acq.ts) ──
 
   // ── 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳) ──
   rentalHousingException: {

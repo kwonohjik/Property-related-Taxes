@@ -216,10 +216,12 @@ export interface TransferTaxInput {
   wasMultiHouseAtConversion?: boolean;
 
   // ── §114조의2 가산세 판정용 필드 ──
-  /** 취득가 산정 방식 (actual: 실거래가, estimated: 환산취득가, appraisal: 감정가액) */
-  acquisitionMethod?: "actual" | "estimated" | "appraisal";
+  /** 취득가 산정 방식 (actual 실거래가 / estimated 환산 / appraisal 감정 / salesCase 매매사례가액 §176의2③1호) */
+  acquisitionMethod?: "actual" | "estimated" | "appraisal" | "salesCase";
   /** 감정가액 (acquisitionMethod === "appraisal" 시) */
   appraisalValue?: number;
+  /** 매매사례가액 (acquisitionMethod === "salesCase" 시 — §176의2③1호 추계 취득가액) */
+  similarSalesValue?: number;
   /** 본인 신축·증축 여부 */
   isSelfBuilt?: boolean;
   /** 신축(new) / 증축(extension) */

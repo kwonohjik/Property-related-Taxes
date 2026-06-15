@@ -171,6 +171,7 @@ export function EstimatedProfitToggle({
                   >
                     <CurrencyInput
                       label={`평가기관 ${idx + 1} 추정이익`}
+                      hideLabel
                       value={String(est || "")}
                       onChange={(raw) => handleEstimateChange(idx, raw)}
                       hideUnit

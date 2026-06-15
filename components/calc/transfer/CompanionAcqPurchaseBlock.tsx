@@ -17,129 +17,16 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
 import { cn } from "@/lib/utils";
-import { Pre1990LandValuationInput, type Pre1990FormSlice } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
-import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { SalesCaseSection } from "./SalesCaseSection";
+import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 
 const MIN_ACQ_DATE = "1985-01-01";
-
-/**
- * assetKind → StandardPriceInput propertyKind 변환
- * "housing" → house_individual, "land" → land, 그 외 → building_non_residential
- */
-function toPropertyKind(
-  assetKind?: string,
-): "land" | "building_non_residential" | "house_individual" | "house_apart" {
-  if (assetKind === "housing") return "house_individual";
-  if (assetKind === "land") return "land";
-  return "building_non_residential";
-}
-
-interface BlockProps {
-  acquisitionDate: string;
-  onAcquisitionDateChange: (v: string) => void;
-  /**
-   * Round 9 (2026-05-06): 매매계약일 (분양/매매계약 + 계약금 납부 기준일).
-   * 신축·미분양·임대 감면 13개 조문(§99·§99의3·§98 시리즈·§97의2·§97의5·§99의2)의 시한 판정 1차 기준.
-   * 주택 자산만 의미 있음. 미입력 시 acquisitionDate fallback.
-   */
-  assetContractDate?: string;
-  onAssetContractDateChange?: (v: string) => void;
-  useEstimatedAcquisition: boolean;
-  onUseEstimatedChange: (v: boolean) => void;
-  /** 감정가액 모드 — 자산-수준 (Step1↔Step3 통합 후) */
-  isAppraisalAcquisition?: boolean;
-  onIsAppraisalAcquisitionChange?: (v: boolean) => void;
-  /**
-   * 일반건물 증축 여부 — "쌍방+일방 (증축 있음)" 4번째 라디오 옵션 전용.
-   * assetKind === "general_building" 시만 사용. 이 값이 true이면
-   * useEstimatedAcquisition=true·isAppraisalAcquisition=false 와 함께
-   * "원취득 실가 + 증축분 환산" 모드를 표시한다.
-   */
-  gbHasExtension?: boolean;
-  onGbHasExtensionChange?: (v: boolean) => void;
-  /**
-   * 증축분 취득방식 — "actual" | "estimated" | "" (미선택).
-   * assetKind === "general_building" + gbHasExtension === true 시만 사용.
-   */
-  gbExtensionAcquisitionMode?: string;
-  onGbExtensionAcquisitionModeChange?: (v: string) => void;
-  fixedAcquisitionPrice: string;
-  onFixedAcquisitionPriceChange: (v: string) => void;
-  /** 환산취득가 분자: 취득시 기준시가 총액 (원) */
-  standardPriceAtAcq: string;
-  onStandardPriceAtAcqChange: (v: string) => void;
-  /** 환산취득가 분모: 양도시 기준시가 총액 (원) */
-  standardPriceAtTransfer: string;
-  onStandardPriceAtTransferChange: (v: string) => void;
-  /** 양도일 (양도시 기준시가 조회 연도 계산용) */
-  transferDate?: string;
-  /** 공시가격 조회용 지번 주소 */
-  jibun?: string;
-  /** 자산 종류 — 공시가격 API 선택 및 토지 면적 계산용 */
-  assetKind?: string;
-  /** 취득 당시 면적 (㎡) — 취득시 기준시가 자동계산, Pre1990 환산용 */
-  acquisitionArea?: string;
-  onAcquisitionAreaChange?: (v: string) => void;
-  /** 양도 당시 면적 (㎡) — 양도시 기준시가 자동계산용 */
-  transferArea?: string;
-  onTransferAreaChange?: (v: string) => void;
-  /** 1990 이전 취득 토지 환산 슬라이스 */
-  pre1990Form?: Pre1990FormSlice;
-  onPre1990Change?: (patch: Partial<Pre1990FormSlice>) => void;
-  /** 취득시 기준시가 ㎡당 단가 (외부 저장 — 없으면 내부 state fallback) */
-  standardPricePerSqmAtAcq?: string;
-  onStandardPricePerSqmAtAcqChange?: (v: string) => void;
-  /** 양도시 기준시가 ㎡당 단가 (외부 저장 — 없으면 내부 state fallback) */
-  standardPricePerSqmAtTransfer?: string;
-  onStandardPricePerSqmAtTransferChange?: (v: string) => void;
-  /** 신축·증축 자산-수준 4필드 (Step1↔Step3 통합 후) */
-  isSelfBuilt?: boolean;
-  onIsSelfBuiltChange?: (v: boolean) => void;
-  buildingType?: "new" | "extension" | "";
-  onBuildingTypeChange?: (v: "new" | "extension" | "") => void;
-  constructionDate?: string;
-  onConstructionDateChange?: (v: string) => void;
-  extensionFloorArea?: string;
-  onExtensionFloorAreaChange?: (v: string) => void;
-  /** 토지/건물 취득일 분리 (housing·building 공통) */
-  hasSeperateLandAcquisitionDate?: boolean;
-  onHasSeperateLandAcquisitionDateChange?: (v: boolean) => void;
-  landAcquisitionDate?: string;
-  onLandAcquisitionDateChange?: (v: string) => void;
-  landSplitMode?: "apportioned" | "actual";
-  onLandSplitModeChange?: (v: "apportioned" | "actual") => void;
-  landTransferPrice?: string;
-  onLandTransferPriceChange?: (v: string) => void;
-  buildingTransferPrice?: string;
-  onBuildingTransferPriceChange?: (v: string) => void;
-  landAcquisitionPrice?: string;
-  onLandAcquisitionPriceChange?: (v: string) => void;
-  buildingAcquisitionPrice?: string;
-  onBuildingAcquisitionPriceChange?: (v: string) => void;
-  landDirectExpenses?: string;
-  onLandDirectExpensesChange?: (v: string) => void;
-  buildingDirectExpenses?: string;
-  onBuildingDirectExpensesChange?: (v: string) => void;
-  landStandardPriceAtTransfer?: string;
-  onLandStandardPriceAtTransferChange?: (v: string) => void;
-  buildingStandardPriceAtTransfer?: string;
-  onBuildingStandardPriceAtTransferChange?: (v: string) => void;
-  /**
-   * 개별주택가격 미공시 취득 §164⑤ 3-시점 모드.
-   * 환산취득가 + hasSeperateLandAcquisitionDate === true 일 때만 표시.
-   * asset·onAssetChange와 함께 제공해야 한다.
-   */
-  asset?: AssetForm;
-  onAssetChange?: (patch: Partial<AssetForm>) => void;
-  /** 토지·건물 소유자 분리 — 본인 소유 부분 (소령 §166⑥, §168②) */
-  selfOwns?: "both" | "building_only" | "land_only";
-  onSelfOwnsChange?: (v: "both" | "building_only" | "land_only") => void;
-}
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
 
@@ -488,13 +375,14 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <label className="block text-sm font-medium">취득가액 산정 방식</label>
         <div className={cn(
           "grid gap-2",
-          props.assetKind === "general_building" ? "grid-cols-2" : "grid-cols-3",
+          props.assetKind === "general_building" ? "grid-cols-2" : "grid-cols-4",
         )}>
           <button
             type="button"
             onClick={() => {
               props.onUseEstimatedChange(false);
               props.onIsAppraisalAcquisitionChange?.(false);
+              props.onIsSalesCaseAcquisitionChange?.(false);
               // 일반건물: 다른 옵션 선택 시 gbHasExtension reset (정합성 유지)
               if (props.assetKind === "general_building") {
                 props.onGbHasExtensionChange?.(false);
@@ -502,7 +390,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             }}
             className={cn(
               "rounded-md border-2 p-2 text-left transition-all",
-              !props.useEstimatedAcquisition && !props.isAppraisalAcquisition && !isMixedExtension
+              !props.useEstimatedAcquisition && !props.isAppraisalAcquisition && !props.isSalesCaseAcquisition && !isMixedExtension
                 ? "border-primary bg-primary/5 text-primary"
                 : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
               isMixedExtension && "opacity-60",
@@ -518,6 +406,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             onClick={() => {
               props.onUseEstimatedChange(true);
               props.onIsAppraisalAcquisitionChange?.(false);
+              props.onIsSalesCaseAcquisitionChange?.(false);
               // 일반건물: 다른 옵션 선택 시 gbHasExtension reset (정합성 유지)
               if (props.assetKind === "general_building") {
                 props.onGbHasExtensionChange?.(false);
@@ -543,6 +432,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               onClick={() => {
                 props.onUseEstimatedChange(false);
                 props.onIsAppraisalAcquisitionChange?.(true);
+                props.onIsSalesCaseAcquisitionChange?.(false);
               }}
               className={cn(
                 "rounded-md border-2 p-2 text-left transition-all",
@@ -554,6 +444,28 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               <div className="text-sm font-semibold">감정가액</div>
               <div className="text-[11px] text-muted-foreground leading-tight">
                 개산공제 자동 적용
+              </div>
+            </button>
+          )}
+          {/* 매매사례가액(추계) — §176의2③1호. 일반건물에서는 미표시 */}
+          {props.assetKind !== "general_building" && props.onIsSalesCaseAcquisitionChange && (
+            <button
+              type="button"
+              onClick={() => {
+                props.onUseEstimatedChange(false);
+                props.onIsAppraisalAcquisitionChange?.(false);
+                props.onIsSalesCaseAcquisitionChange!(true);
+              }}
+              className={cn(
+                "rounded-md border-2 p-2 text-left transition-all",
+                props.isSalesCaseAcquisition
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
+              )}
+            >
+              <div className="text-sm font-semibold">매매사례가액</div>
+              <div className="text-[11px] text-muted-foreground leading-tight">
+                §176의2③1호 추계
               </div>
             </button>
           )}
@@ -607,42 +519,61 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
 
       {!props.useEstimatedAcquisition ? (
         <>
-          <CurrencyInput
-            label={
-              isMixedExtension
-                ? "토지·건물 일괄 취득가액 (원)"
-                : props.isAppraisalAcquisition
-                  ? "감정가액 (원)"
-                  : "취득가액 (원)"
-            }
-            value={props.fixedAcquisitionPrice}
-            onChange={props.onFixedAcquisitionPriceChange}
-            required
-            hint={
-              isMixedExtension
-                ? "엔진이 양도시 기준시가 비율로 토지·건물1에 자동 안분합니다. 일괄 금액 그대로 입력하세요."
-                : props.isAppraisalAcquisition
-                  ? "공인감정기관의 감정가액. 소득세법 시행령 §163⑥에 따라 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
-                  : undefined
-            }
-          />
-          {/* 사례 33 일괄 모드: 토지+건물1 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 §97① 가목)
-              엔진은 취득시 기준시가 비율로 토지·건물1에 자동 안분. */}
-          {isMixedExtension && props.asset && props.onAssetChange && (
-            <CurrencyInput
-              label="토지·건물 일괄 취득 시 필요경비 (원)"
-              value={props.asset.gbBundledAcquisitionExpenses ?? ""}
-              onChange={(v) => props.onAssetChange!({ gbBundledAcquisitionExpenses: v })}
-              hint="일괄 취득 당시 발생한 중개수수료·취득세·인지대 등 부대비용. 엔진이 취득시 기준시가 비율로 토지·건물1에 자동 안분합니다. 없으면 비워두세요."
+          {/* 매매사례가액 추계(§176의2③1호) 모드 */}
+          {props.isSalesCaseAcquisition ? (
+            <SalesCaseSection
+              similarSalesValue={props.similarSalesValue ?? ""}
+              onSimilarSalesValueChange={props.onSimilarSalesValueChange ?? (() => {})}
+              similarSalesSource={props.similarSalesSource}
+              onSimilarSalesSourceChange={props.onSimilarSalesSourceChange}
+              acquisitionSigunguCode={props.acquisitionSigunguCode}
+              acquisitionAddress={props.asset?.addressJibun || props.asset?.addressRoad}
+              acquisitionArea={props.acquisitionArea}
+              acquisitionDate={props.acquisitionDate}
+              buildingName={props.asset?.buildingName}
+              standardPriceAtAcq={props.standardPriceAtAcq}
+              onStandardPriceAtAcqChange={props.onStandardPriceAtAcqChange}
             />
-          )}
-          {props.isAppraisalAcquisition && (
-            <CurrencyInput
-              label="취득시 기준시가 (원) — 개산공제 base"
-              value={props.standardPriceAtAcq}
-              onChange={props.onStandardPriceAtAcqChange}
-              hint="필요경비 개산공제 = 이 금액의 3%. 미입력 시 0% 적용."
-            />
+          ) : (
+            <>
+              <CurrencyInput
+                label={
+                  isMixedExtension
+                    ? "토지·건물 일괄 취득가액 (원)"
+                    : props.isAppraisalAcquisition
+                      ? "감정가액 (원)"
+                      : "취득가액 (원)"
+                }
+                value={props.fixedAcquisitionPrice}
+                onChange={props.onFixedAcquisitionPriceChange}
+                required
+                hint={
+                  isMixedExtension
+                    ? "엔진이 양도시 기준시가 비율로 토지·건물1에 자동 안분합니다. 일괄 금액 그대로 입력하세요."
+                    : props.isAppraisalAcquisition
+                      ? "공인감정기관의 감정가액. 소득세법 시행령 §163⑥에 따라 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
+                      : undefined
+                }
+              />
+              {/* 사례 33 일괄 모드: 토지+건물1 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 §97① 가목)
+                  엔진은 취득시 기준시가 비율로 토지·건물1에 자동 안분. */}
+              {isMixedExtension && props.asset && props.onAssetChange && (
+                <CurrencyInput
+                  label="토지·건물 일괄 취득 시 필요경비 (원)"
+                  value={props.asset.gbBundledAcquisitionExpenses ?? ""}
+                  onChange={(v) => props.onAssetChange!({ gbBundledAcquisitionExpenses: v })}
+                  hint="일괄 취득 당시 발생한 중개수수료·취득세·인지대 등 부대비용. 엔진이 취득시 기준시가 비율로 토지·건물1에 자동 안분합니다. 없으면 비워두세요."
+                />
+              )}
+              {props.isAppraisalAcquisition && (
+                <CurrencyInput
+                  label="취득시 기준시가 (원) — 개산공제 base"
+                  value={props.standardPriceAtAcq}
+                  onChange={props.onStandardPriceAtAcqChange}
+                  hint="필요경비 개산공제 = 이 금액의 3%. 미입력 시 0% 적용."
+                />
+              )}
+            </>
           )}
         </>
       ) : isMixedUse ? (

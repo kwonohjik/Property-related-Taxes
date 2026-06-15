@@ -99,8 +99,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (Step1↔Step3 통합 후).
   // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 더 이상 사용하지 않음.
-  const isAppraisal = primary.isAppraisalAcquisition === true;
-  const isEstimated = !isAppraisal && primary.useEstimatedAcquisition;
+  const isSalesCase = primary.isSalesCaseAcquisition === true;
+  const isAppraisal = !isSalesCase && primary.isAppraisalAcquisition === true;
+  const isEstimated = !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
   const hasPre1990 = (primary.pre1990Enabled ?? false) && primary.assetKind === "land";
   // §164⑤ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)해도 PHD 경로는 표준시가 직접 입력 불요.
@@ -327,7 +328,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     totalPropertyTransferPrice: primaryFractional ? totalContractPrice : undefined,
     transferDate: receiveOnlyTransferDate || form.transferDate,
     acquisitionPrice:
-      hasPre1990 || isEstimated || isAppraisal || parcelModeActive
+      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive
         ? 0
         : isRedevelopment
           ? // 재개발 + 실가 모드 — 두 경로 분기:
@@ -347,7 +348,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary.assetContractDate || undefined,
     expenses:
-      hasPre1990 || isEstimated || isAppraisal || parcelModeActive
+      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive
         ? 0
         : primaryFractional
           ? applyRatio(parseAmount(primary.directExpenses), primaryRatio)
@@ -370,7 +371,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : undefined,
     // 겸용주택은 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회 위해 false 송신
     // 상업용건물·일반건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
-    useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed ? false
+    // 매매사례가액 추계(salesCase)는 useEstimatedAcquisition과 별개 경로 — false 송신
+    useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed || isSalesCase ? false
       : isCommercialBuilding ? primary.useEstimatedAcquisition
       : isGeneralBuilding ? primary.useEstimatedAcquisition
       : isCarryoverGeneral ? true
@@ -391,8 +393,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           : undefined,
     acquisitionMethod: hasPre1990 || isMixed
       ? ("actual" as const)
+      : isSalesCase ? "salesCase"
       : (isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual"),
     appraisalValue: !isMixed && isAppraisal ? parseAmount(primary.fixedAcquisitionPrice) : undefined,
+    // ④⑬ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
+    similarSalesValue: isSalesCase ? parseAmount(primary.similarSalesValue) || undefined : undefined,
     isSelfBuilt: !isMixed && primary.isSelfBuilt || undefined,
     buildingType: primary.buildingType || undefined,
     constructionDate:

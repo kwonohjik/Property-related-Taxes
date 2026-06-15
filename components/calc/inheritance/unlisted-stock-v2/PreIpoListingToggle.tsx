@@ -168,36 +168,43 @@ export function PreIpoListingToggle({
                 />
               </div>
 
-              {/* ① 공모가격 */}
-              <FieldCard
-                label="공모가격 (1주당)"
-                hint="자본시장법상 금융위원회 기준 공모가격 (§57①1호)"
-              >
-                <CurrencyInput
-                  label="공모가격"
-                  value={String(value.publicOfferingPrice || "")}
-                  onChange={(raw) => patch({ publicOfferingPrice: parseAmount(raw) })}
-                  hideUnit
-                  data-testid="pre-ipo-offering-price"
-                />
-              </FieldCard>
+              {/* ①② 공모가격 + 유가증권 신고일 (2열 stacked) / ③ 상장일 단독 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* ① 공모가격 */}
+                <FieldCard
+                  stacked
+                  label="공모가격 (1주당)"
+                  hint="자본시장법상 금융위원회 기준 공모가격 (§57①1호)"
+                >
+                  <CurrencyInput
+                    label="공모가격"
+                    hideLabel
+                    value={String(value.publicOfferingPrice || "")}
+                    onChange={(raw) => patch({ publicOfferingPrice: parseAmount(raw) })}
+                    hideUnit
+                    data-testid="pre-ipo-offering-price"
+                  />
+                </FieldCard>
 
-              {/* ② 유가증권 신고일 */}
-              <FieldCard
-                label={`유가증권 신고일 (미신고 시 ${isAssoc ? "등록신청일" : "거래소 상장신청일"})`}
-                hint={`기업공개·상장신청을 위해 금융위원회에 유가증권 신고를 한 날 (§57①②). 유가증권 신고 없이 ${isAssoc ? "등록신청" : "상장신청"}만 한 경우 그 신청일.`}
-              >
-                <DateInput
-                  value={toDateStr(value.securitiesFilingDate)}
-                  onChange={(s) => {
-                    const d = fromDateStr(s);
-                    if (d) patch({ securitiesFilingDate: d });
-                  }}
-                />
-              </FieldCard>
+                {/* ② 유가증권 신고일 */}
+                <FieldCard
+                  stacked
+                  label={`유가증권 신고일 (미신고 시 ${isAssoc ? "등록신청일" : "거래소 상장신청일"})`}
+                  hint={`기업공개·상장신청을 위해 금융위원회에 유가증권 신고를 한 날 (§57①②). 유가증권 신고 없이 ${isAssoc ? "등록신청" : "상장신청"}만 한 경우 그 신청일.`}
+                >
+                  <DateInput
+                    value={toDateStr(value.securitiesFilingDate)}
+                    onChange={(s) => {
+                      const d = fromDateStr(s);
+                      if (d) patch({ securitiesFilingDate: d });
+                    }}
+                  />
+                </FieldCard>
+              </div>
 
-              {/* ③ terminal — 거래소 상장일 / 협회 등록일 (선택) */}
+              {/* ③ terminal — 거래소 상장일 / 협회 등록일 (선택) — 단독 행 */}
               <FieldCard
+                stacked
                 label={isAssoc ? "한국금융투자협회 등록일 (선택)" : "거래소 최초 상장일 (선택)"}
                 hint={`아직 ${terminalLabel.replace(" 전", "")} 전이면 비워두세요 (미입력 시 ${terminalLabel}으로 간주).`}
               >

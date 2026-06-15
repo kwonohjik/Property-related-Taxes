@@ -13,7 +13,7 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToggleChip } from "@/components/calc/inputs/ToggleChip";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { CapitalChangeTable } from "./CapitalChangeTable";
@@ -287,77 +287,118 @@ export function CorporateInfoSection({
         <CapitalChangeTable capitalChanges={capitalChanges} onChange={onCapitalChangesChange} />
       </div>
 
-      {/* 부동산과다보유 토글 */}
-      <ToggleCard
-        tone="amber"
-        title="부동산과다보유법인 (상증령 §54① 본문 괄호)"
-        description="자산총액 중 토지·건물·부동산권리 ≥ 50%인 법인 (소법 §94①4호다목) — 가중치 반전"
-        checked={isRealEstateHeavy}
-        onCheckedChange={(on) => onChange({ isRealEstateHeavy: on })}
-      >
-        <p className="text-[11px] text-amber-800 mt-1">
-          가중치 반전: 일반 <span className="font-mono">(순손익×3 + 순자산×2)/5</span> →
-          부동산과다 <span className="font-mono">(순손익×2 + 순자산×3)/5</span>
-        </p>
-      </ToggleCard>
-
-      {/* §54④ 순자산 단독 평가 사유 */}
-      <ToggleCard
-        tone="rose"
-        title="순자산가치만 평가 (상증령 §54④)"
-        description="ON: 5가지 사유 중 선택 — 가중평균 대신 1주당 순자산가치 적용"
-        checked={!!netAssetOnlyReason}
-        onCheckedChange={(on) => {
-          if (on) onChange({ netAssetOnlyReason: "lt3y" });
-          else onChange({ netAssetOnlyReason: undefined });
-        }}
-      >
-        <div className="space-y-2">
-          <p className="text-[11px] text-rose-700 dark:text-rose-300">
-            ※ KoreanLaw 검증: 4호 삭제 → 5호 (주식 80%). 1·2·6호 무조건 / 3·5호 단서 (가중평균 &lt; 순자산일 때만)
-          </p>
-          <RadioCardGroup<UnlistedNetAssetOnlyReason>
-            name="v2-netAssetOnlyReason"
-            tone="rose"
-            options={NET_ASSET_ONLY_OPTIONS}
-            value={netAssetOnlyReason ?? ""}
-            onChange={(next) => onChange({ netAssetOnlyReason: next })}
-            layout="stack"
-          />
-        </div>
-      </ToggleCard>
-
-      {/* §55③ 결손법인 영업권 자동 배제 */}
-      <ToggleCard
-        tone="amber"
-        title="평가기준일 직전 3년 계속 결손법인 (상증령 §55③ 3호)"
-        description="ON: 영업권 평가액 자동 0 처리 (§55③ 3호 자동 배제)"
-        checked={isContinuousLossLastThreeYears}
-        onCheckedChange={(on) => onChange({ isContinuousLossLastThreeYears: on })}
-      />
-
-      {/* 최대주주 + 회사 규모 */}
+      {/* 2. 평가 분기·할증 선택 (칩 그룹 — 평가방식 분기 / 할증 2개 sub-header) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">2</span>
-          <p className="text-xs font-semibold text-violet-700">최대주주 할증평가 (상증법 §63③ + 상증령 §53)</p>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">2</span>
+            <p className="text-xs font-semibold text-violet-700">평가 분기·할증 선택</p>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            해당되는 항목을 체크하면 아래에 옵션·입력란이 열립니다. (없으면 건너뛰기)
+          </p>
         </div>
-        <ToggleCard
-          tone="violet"
-          title="최대주주 등 해당 여부"
-          description="상증령 §53④ — 보유주식 가장 많은 1인 + §53⑤ 평가기준일 소급 1년 내 양도·증여 합산"
-          checked={isMaxShareholder}
-          onCheckedChange={(on) => onChange({ isMaxShareholder: on })}
-        />
+
+        {/* 평가방식 분기 (상증령 §54·§55) */}
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+            평가방식 분기{" "}
+            <span className="font-normal normal-case tracking-normal text-sky-600 dark:text-sky-400">
+              상증령 §54·§55
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <ToggleChip
+              tone="amber"
+              label="부동산과다보유법인"
+              checked={isRealEstateHeavy}
+              onCheckedChange={(on) => onChange({ isRealEstateHeavy: on })}
+              title="상증령 §54① 본문 괄호 — 자산총액 중 토지·건물·부동산권리 ≥ 50% 법인(소법 §94①4호다목). 가중치 반전."
+            />
+            <ToggleChip
+              tone="rose"
+              label="순자산가치만 평가"
+              checked={!!netAssetOnlyReason}
+              onCheckedChange={(on) =>
+                onChange({ netAssetOnlyReason: on ? "lt3y" : undefined })
+              }
+              title="상증령 §54④ — 5가지 사유 중 선택. 가중평균 대신 1주당 순자산가치 적용."
+            />
+            <ToggleChip
+              tone="amber"
+              label="3년 계속 결손법인"
+              checked={isContinuousLossLastThreeYears}
+              onCheckedChange={(on) =>
+                onChange({ isContinuousLossLastThreeYears: on })
+              }
+              title="상증령 §55③ 3호 — ON 시 영업권 평가액 자동 0 처리(자동 배제)."
+            />
+          </div>
+        </div>
+
+        {/* 할증 (상증법 §63③ · 상증령 §53) */}
+        <div className="space-y-1.5 border-t border-violet-100 dark:border-violet-900 pt-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+            할증{" "}
+            <span className="font-normal normal-case tracking-normal text-violet-600 dark:text-violet-400">
+              상증법 §63③ · 상증령 §53
+            </span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <ToggleChip
+              tone="violet"
+              label="최대주주 등 해당"
+              checked={isMaxShareholder}
+              onCheckedChange={(on) => onChange({ isMaxShareholder: on })}
+              title="상증령 §53④ — 보유주식 가장 많은 1인 + §53⑤ 평가기준일 소급 1년 내 양도·증여 합산. 해당 시 ×120% 할증(§63③)."
+            />
+          </div>
+        </div>
+
+        {/* 펼침 영역 — 활성 칩별 옵션·입력 (미니 헤더로 소속 명시) */}
+        {isRealEstateHeavy && (
+          <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-900/20 p-2.5 space-y-1">
+            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+              부동산과다보유법인 — 가중치 반전
+            </p>
+            <p className="text-[11px] text-amber-800 dark:text-amber-200">
+              일반 <span className="font-mono">(순손익×3 + 순자산×2)/5</span> → 부동산과다{" "}
+              <span className="font-mono">(순손익×2 + 순자산×3)/5</span>
+            </p>
+          </div>
+        )}
+        {netAssetOnlyReason && (
+          <div className="rounded-md border border-rose-200 bg-rose-50/60 dark:border-rose-800 dark:bg-rose-900/20 p-2.5 space-y-2">
+            <p className="text-[11px] font-semibold text-rose-700 dark:text-rose-300">
+              순자산가치만 평가 — 사유 선택 (상증령 §54④)
+            </p>
+            <p className="text-[11px] text-rose-700 dark:text-rose-300">
+              ※ KoreanLaw 검증: 4호 삭제 → 5호 (주식 80%). 1·2·6호 무조건 / 3·5호 단서 (가중평균 &lt; 순자산일 때만)
+            </p>
+            <RadioCardGroup<UnlistedNetAssetOnlyReason>
+              name="v2-netAssetOnlyReason"
+              tone="rose"
+              options={NET_ASSET_ONLY_OPTIONS}
+              value={netAssetOnlyReason ?? ""}
+              onChange={(next) => onChange({ netAssetOnlyReason: next })}
+              layout="stack"
+            />
+          </div>
+        )}
         {isMaxShareholder && (
-          <RadioCardGroup<"small" | "medium" | "large">
-            name="v2-companySize"
-            tone="violet"
-            options={COMPANY_SIZE_OPTIONS}
-            value={companySize}
-            onChange={(next) => onChange({ companySize: next })}
-            layout="stack"
-          />
+          <div className="rounded-md border border-violet-200 bg-violet-50/60 dark:border-violet-800 dark:bg-violet-900/20 p-2.5 space-y-2">
+            <p className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">
+              최대주주 — 회사 규모 (할증 배제 판정)
+            </p>
+            <RadioCardGroup<"small" | "medium" | "large">
+              name="v2-companySize"
+              tone="violet"
+              options={COMPANY_SIZE_OPTIONS}
+              value={companySize}
+              onChange={(next) => onChange({ companySize: next })}
+              layout="stack"
+            />
+          </div>
         )}
       </div>
     </div>

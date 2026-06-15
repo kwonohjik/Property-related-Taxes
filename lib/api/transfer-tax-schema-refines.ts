@@ -21,8 +21,9 @@ export function addPropertyRefines(
     decedentAcquisitionDate?: string;
     donorAcquisitionDate?: string;
     annualBasicDeductionUsed?: number;
-    acquisitionMethod?: "actual" | "estimated" | "appraisal";
+    acquisitionMethod?: "actual" | "estimated" | "appraisal" | "salesCase";
     appraisalValue?: number;
+    similarSalesValue?: number;
     isSelfBuilt?: boolean;
     buildingType?: "new" | "extension";
     extensionFloorArea?: number;
@@ -114,6 +115,14 @@ export function addPropertyRefines(
       code: z.ZodIssueCode.custom,
       path: ["appraisalValue"],
       message: "감정가액 방식 선택 시 감정가액을 입력하세요",
+    });
+  }
+  // ⑩ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 similarSalesValue 필수
+  if (data.acquisitionMethod === "salesCase" && !data.similarSalesValue) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["similarSalesValue"],
+      message: "매매사례가액 추계 방식 선택 시 매매사례가액을 입력하세요",
     });
   }
   if (data.isSelfBuilt && data.buildingType === "extension" && !data.extensionFloorArea) {

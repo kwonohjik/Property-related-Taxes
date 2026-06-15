@@ -7,6 +7,10 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import {
+  resolveSigunguCode,
+  isReverseGeocodeError,
+} from "@/lib/calc/vworld-reverse-geocode";
 import { ParcelListInput } from "@/components/calc/inputs/ParcelListInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CompanionSaleModeBlock, type BundledSaleMode } from "./CompanionSaleModeBlock";
@@ -216,7 +220,7 @@ export function CompanionAssetCard({
             lng: asset.longitude ?? null,
             lat: asset.latitude ?? null,
           } satisfies AddressValue}
-          onChange={(v) => {
+          onChange={async (v) => {
             const patch: Parameters<typeof onChange>[0] = {
               addressRoad: v.road,
               addressJibun: v.jibun,
@@ -233,6 +237,25 @@ export function CompanionAssetCard({
                 .join(" ")
                 .trim();
               if (auto) patch.assetLabel = auto;
+            }
+            // RTMS 매매사례가액 자동조회용 시군구코드 파생 (취득가액 추계 모드).
+            // ⚠️ 시군구코드를 먼저 확정(await)한 뒤 단일 patch 로 적용 — stale-closure race 차단.
+            const latNum = v.lat ? parseFloat(v.lat) : NaN;
+            const lngNum = v.lng ? parseFloat(v.lng) : NaN;
+            const hasCoord = Number.isFinite(latNum) && Number.isFinite(lngNum);
+            if (v.pnu || hasCoord) {
+              try {
+                const outcome = await resolveSigunguCode(
+                  v.pnu || undefined,
+                  hasCoord ? latNum : undefined,
+                  hasCoord ? lngNum : undefined,
+                );
+                if (!isReverseGeocodeError(outcome)) {
+                  patch.acquisitionSigunguCode = outcome.sigunguCode;
+                }
+              } catch {
+                /* 네트워크 실패 silent */
+              }
             }
             onChange(patch);
           }}
