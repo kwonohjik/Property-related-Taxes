@@ -46,9 +46,9 @@ describe("G-7 (사례5): 다주택 재산세 안분 ⑥ = 합산 단일 누진 �
     expect(result.calculatedTax).toBe(2_280_000);          // 사례5 ① (pdf11)
 
     // ★ G-7 핵심: ⑥ 분모는 합산 단일 누진 3,450,000
-    expect(result.propertyTaxCredit.creditAmount).toBe(781_356);   // pdf12 ④
+    expect(result.propertyTaxCredit.creditAmount).toBe(781_357);   // pdf12 ④
     expect(result.calculatedTax - result.propertyTaxCredit.creditAmount).toBe(
-      1_498_644,                                            // pdf12 ③ 상한 적용 전 종부세
+      1_498_643,                                            // pdf12 ③ 상한 적용 전 종부세
     );
   });
 });
@@ -261,8 +261,8 @@ describe("SC-C: §10의2 부부 공동명의 특례 — 1세대1주택자 의제
 
     expect(result.basicDeduction).toBe(1_100_000_000);
     expect(result.calculatedTax).toBe(2_280_000);                       // pdf11 ①
-    expect(result.propertyTaxCredit.creditAmount).toBe(781_356);        // pdf12 ④
-    expect(result.calculatedTax - result.propertyTaxCredit.creditAmount).toBe(1_498_644); // pdf12 ③
+    expect(result.propertyTaxCredit.creditAmount).toBe(781_357);        // pdf12 ④
+    expect(result.calculatedTax - result.propertyTaxCredit.creditAmount).toBe(1_498_643); // pdf12 ③
     expect(result.isJointOwnershipApplied).toBe(true);
   });
 
@@ -308,14 +308,14 @@ describe("D2: §8④ 1세대1주택자 의제 — 안분·주택 수 제외", ()
 
     expect(result.basicDeduction).toBe(1_100_000_000); // 2022 1세대1주택 의제 11억
     expect(result.calculatedTax).toBe(2_280_000);
-    expect(result.propertyTaxCredit.creditAmount).toBe(781_356);
+    expect(result.propertyTaxCredit.creditAmount).toBe(781_357);
     expect(result.oneHouseDeduction?.seniorRate).toBe(0.4);
     expect(result.oneHouseDeduction?.longTermRate).toBe(0);
     expect(result.oneHouseDeduction?.apportionmentRatio).toEqual({
       mainHouseAssessedValue: 1_500_000_000,
       totalAssessedValue: 1_700_000_000,
     });
-    expect(result.oneHouseDeduction?.deductionAmount).toBe(528_933); // floor(1,498,644 × 15억/17억 × 0.4)
+    expect(result.oneHouseDeduction?.deductionAmount).toBe(528_932); // floor(1,498,643 × 15억/17억 × 0.4) — base round 반영
     expect(result.section8para4Detail?.appliedTypes).toEqual(["regional_low_price"]);
     expect(result.determinedHousingTax).toBe(969_711);
   });
@@ -334,11 +334,11 @@ describe("D2: §8④ 1세대1주택자 의제 — 안분·주택 수 제외", ()
 
     expect(result.basicDeduction).toBe(1_100_000_000); // §8④ 의제 11억
     expect(result.calculatedTax).toBe(8_520_000);
-    expect(result.propertyTaxCredit.creditAmount).toBe(2_055_876); // PDF 2,055,877은 반올림 — 법령 floor
+    expect(result.propertyTaxCredit.creditAmount).toBe(2_055_877); // PDF 2,055,877 round (§4의3 절사 미규정 — 교재·실무 반올림, safeMulDivRound)
     expect(result.oneHouseDeduction).toBeUndefined();  // 연령·보유 미입력 → 공제 없음
     expect(result.isMultiHouseRateApplied).toBe(false); // 라목 제외 → 1채 → 일반세율
     expect(result.section8para4Detail?.appliedTypes).toEqual(["temporary_two_house"]);
-    expect(result.determinedHousingTax).toBe(6_464_124);
+    expect(result.determinedHousingTax).toBe(6_464_123);
   });
 
   // D2-3: §8④3호 상속주택 직접 산식 (사례집 부재 — 엔진 anchor)
@@ -358,13 +358,13 @@ describe("D2: §8④ 1세대1주택자 의제 — 안분·주택 수 제외", ()
 
     expect(result.basicDeduction).toBe(1_200_000_000);
     expect(result.calculatedTax).toBe(1_920_000);
-    expect(result.propertyTaxCredit.creditAmount).toBe(716_487);
+    expect(result.propertyTaxCredit.creditAmount).toBe(716_488);
     expect(result.oneHouseDeduction?.apportionmentRatio).toEqual({
       mainHouseAssessedValue: 1_200_000_000,
       totalAssessedValue: 1_800_000_000,
     });
     expect(result.oneHouseDeduction?.deductionAmount).toBe(641_873);
-    expect(result.determinedHousingTax).toBe(561_640);
+    expect(result.determinedHousingTax).toBe(561_639);
   });
 
   // D2-4: 상속주택 나목(무전제) 주택 수 제외 — 의제 미성립(일반 2채)이어도 세율 주택 수에서 제외

@@ -13,8 +13,8 @@ import { test, expect, type Page } from "@playwright/test";
  *   - effectiveIncludedAssessedValue = 750,000,000 (10억 × 0.75)
  *   - taxBase = 90,000,000
  *   - calculatedTax(Step1) = 540,000
- *   - propertyTaxCredit.creditAmount(Step2) = 245,076
- *   - determinedHousingTax(Step6) = 294,924
+ *   - propertyTaxCredit.creditAmount(Step2) = 245,077
+ *   - determinedHousingTax(Step6) = 294,923
  *   - housingRuralSpecialTax = 58,984
  *   - comp-b3-③-housing = 750,000,000
  *
@@ -70,15 +70,15 @@ async function fillCase2ThroughStep4(page: Page): Promise<void> {
 
 test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 전수 검증", () => {
   /**
-   * R-1: 사례2 핵심 anchor — 납부할세액 294,924 + 감면후 공시가격 7.5억 bullet
+   * R-1: 사례2 핵심 anchor — 납부할세액 294,923 + 감면후 공시가격 7.5억 bullet
    *
    * 검증:
-   * - 결과 화면 노출 (294,924 텍스트)
+   * - 결과 화면 노출 (294,923 텍스트)
    * - 산출근거 카드 펼침 → Step1 감면후 공시가격 750,000,000 bullet
-   * - Step6 최종 납부할세액 294,924
+   * - Step6 최종 납부할세액 294,923
    * - 과세표준 90,000,000 (주택분 과세표준 계산 섹션)
    */
-  test("R-1: 사례2 — 납부할세액 294,924 + 감면후 공시가격 bullet 검증", async ({
+  test("R-1: 사례2 — 납부할세액 294,923 + 감면후 공시가격 bullet 검증", async ({
     page,
   }) => {
     test.setTimeout(120_000);
@@ -97,7 +97,7 @@ test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 
     await calcAndWait(page);
 
     // 결과 화면 노출 확인
-    await expect(page.getByText(/294,924/).first()).toBeVisible({
+    await expect(page.getByText(/294,923/).first()).toBeVisible({
       timeout: 30_000,
     });
 
@@ -123,11 +123,11 @@ test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 
     await expect(card).toContainText("과세 공시가격");
     await expect(card).toContainText("7.5억원");
 
-    // Step2: 공제할 재산세액 = 245,076
-    await expect(page.getByTestId("payable-step2")).toContainText("245,076원");
+    // Step2: 공제할 재산세액 = 245,077
+    await expect(page.getByTestId("payable-step2")).toContainText("245,077원");
 
-    // Step6: 납부할세액 = 294,924
-    await expect(page.getByTestId("payable-step6")).toContainText("294,924원");
+    // Step6: 납부할세액 = 294,923
+    await expect(page.getByTestId("payable-step6")).toContainText("294,923원");
 
     expect(consoleErrors, `콘솔 에러: ${consoleErrors.join("\n")}`).toEqual([]);
   });
@@ -156,7 +156,7 @@ test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 
     await page.getByPlaceholder("0").first().fill("900000000");
     await calcAndWait(page);
 
-    await expect(page.getByText(/294,924/).first()).toBeVisible({
+    await expect(page.getByText(/294,923/).first()).toBeVisible({
       timeout: 30_000,
     });
 

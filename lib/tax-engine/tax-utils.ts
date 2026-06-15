@@ -114,6 +114,21 @@ export function safeMultiplyThenDivide(a: number, b: number, c: number): number 
 }
 
 /**
+ * (a × b) ÷ c — round-half-up(소수 0.5 이상 올림). BigInt로 overflow·정밀도 안전.
+ * 안분 산식이 floor 아닌 반올림인 경우(종부세 재산세 공제 §4의3 — 시행령 절사 미규정,
+ * 교재·실무 반올림. 상속세 안분 bigIntRoundDiv과 동일 round-half-up).
+ * floor로 하면 PDF 교재와 1원 차이 발생(memory bigint-round-half-up).
+ */
+export function safeMulDivRound(a: number, b: number, c: number): number {
+  if (c === 0) return 0;
+  const numer = BigInt(Math.round(a)) * BigInt(Math.round(b));
+  const denom = BigInt(Math.round(c));
+  const q = numer / denom;
+  const r = numer - q * denom;
+  return r * 2n >= denom ? Number(q) + 1 : Number(q);
+}
+
+/**
  * [P0-4] 비율 안분 계산 — amount × (numerator / denominator)
  * - denominator === 0 → 0 반환 (division by zero 방어)
  * - 비율 상한 1.0 적용: numerator > denominator 여도 amount 초과 불가

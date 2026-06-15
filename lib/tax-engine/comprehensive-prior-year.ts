@@ -16,7 +16,7 @@
  * v1 범위: 직전연도 단일 주택군(일반/1세대1주택). 다주택 중과 직전연도는 직접입력 모드 사용.
  */
 
-import { truncateToTenThousand } from "./tax-utils";
+import { truncateToTenThousand, safeMulDivRound } from "./tax-utils";
 import { PROPERTY_CONST } from "./legal-codes";
 import { getComprehensiveParams } from "./data/comprehensive-historical";
 import { getPropertyFmrForProration } from "./data/comprehensive-historical";
@@ -103,10 +103,10 @@ export function calcPreviousYearEquivalent(
     effectiveAssessedValue,
     false, // 표준세율 강제
   ).tax;
-  // ⑩ 공제할 재산세액 = floor(propertyTaxEquiv × ⑧ / ⑨), ⑥ 상한
+  // ⑩ 공제할 재산세액 = round-half-up(propertyTaxEquiv × ⑧ / ⑨), ⑥ 상한 (§4의3 교재·실무 반올림)
   const creditRaw =
     stdTaxDenominator > 0
-      ? Math.floor((propertyTaxEquiv * stdTaxNumerator) / stdTaxDenominator)
+      ? safeMulDivRound(propertyTaxEquiv, stdTaxNumerator, stdTaxDenominator)
       : 0;
   const creditAmount = Math.min(creditRaw, calculatedTax);
   // ⑥ − ⑩ (재산세 공제 후)

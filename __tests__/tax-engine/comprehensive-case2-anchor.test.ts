@@ -187,34 +187,31 @@ describe("사례2-A — 감면율 0.25 적용 anchor", () => {
     expect(r.propertyTaxCredit.comprehensiveTaxBase).toBe(216_000);
   });
 
-  it("CASE2-A8: ②ⓓ 공제할 재산세액 = floor(1,327,500 × 216,000/1,170,000) = 245,076 (교재 245,077 — 안분 floor 1원, tolerance)", () => {
+  it("CASE2-A8: ②ⓓ 공제할 재산세액 = round(1,327,500 × 216,000/1,170,000) = 245,077 (교재 정합)", () => {
     const r = calculateComprehensiveTax(case2WithReduction());
-    // 정확값 245,076.92… → 엔진 floor 245,076. 교재는 반올림 245,077.
-    // 기존 토지 사례10(creditAmount 4,361,983)도 floor 컨벤션 → floor 유지(프로젝트 일관).
-    expect(r.propertyTaxCredit.creditAmount).toBe(245_076);
+    // 정확값 245,076.92 → round-half-up 245,077 = 교재. §4의3 시행령 절사 미규정 → 교재·실무 반올림(safeMulDivRound).
+    expect(r.propertyTaxCredit.creditAmount).toBe(245_077);
   });
 
-  it("CASE2-A9: ④나② 직전연도 종부세상당액 = 229,296 (교재 229,295 — 안분 floor 1원, tolerance)", () => {
+  it("CASE2-A9: ④나② 직전연도 종부세상당액 = 229,295 (교재 정합)", () => {
     const r = calculateComprehensiveTax(case2WithReduction());
-    // 직전연도 안분공제도 floor → 198,204(교재 round 198,205). 427,500 − 198,204 = 229,296.
-    expect(r.previousYearEquivalent?.comprehensiveTaxEquiv).toBe(229_296);
+    // 직전연도 안분공제 round → 198,205(= 교재). 427,500 − 198,205 = 229,295.
+    expect(r.previousYearEquivalent?.comprehensiveTaxEquiv).toBe(229_295);
   });
 
-  it("CASE2-A10: ③/⑤ 납부할세액 = ① − ②ⓓ = 540,000 − 245,076 = 294,924 (교재 294,923 — floor 누적 1원, tolerance)", () => {
+  it("CASE2-A10: ③/⑤ 납부할세액 = ① − ②ⓓ = 540,000 − 245,077 = 294,923 (교재 정합)", () => {
     const r = calculateComprehensiveTax(case2WithReduction());
-    // 세부담상한 미적용(④=0)이므로 taxBeforeCap = determinedHousingTax.
-    // 교재 ⑤ 294,923 vs 엔진 floor 294,924 — 안분공제 floor 차이 1원. floor 유지 정책(사용자 승인 2026-06-15).
-    expect(r.taxBeforeCap).toBe(294_924);
-    expect(r.determinedHousingTax).toBe(294_924);
+    // 세부담상한 미적용(④=0)이므로 taxBeforeCap = determinedHousingTax. 안분 round로 교재 ⑤ 294,923 정확 일치.
+    expect(r.taxBeforeCap).toBe(294_923);
+    expect(r.determinedHousingTax).toBe(294_923);
   });
 
   it("CASE2-A11: 재산세 참고·종합합계 감면후 반영 (버그 회귀 — 최상위 totalPropertyTax/grandTotal)", () => {
     const r = calculateComprehensiveTax(case2WithReduction());
     // 최상위 totalPropertyTax("재산세 참고") = 감면후 실부과 = floor(1,770,000 × 0.75) = 1,327,500
-    // (이전 버그: propertyResults.propertyTax에 감면전 propTax 저장 → 1,770,000 표시)
     expect(r.totalPropertyTax).toBe(1_327_500);
-    // 종합 납부 합계 = 종부세결정 294,924 + 주택분 농특세 58,984 + 재산세(감면후) 1,327,500
-    expect(r.grandTotal).toBe(1_681_408);
+    // 종합 납부 합계 = 종부세결정 294,923 + 주택분 농특세 58,984 + 재산세(감면후) 1,327,500
+    expect(r.grandTotal).toBe(1_681_407);
   });
 });
 
