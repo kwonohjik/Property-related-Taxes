@@ -400,6 +400,12 @@ export const comprehensiveTaxInputSchema = z.object({
         .min(0, { message: "지분율은 0 이상이어야 합니다." })
         .max(1, { message: "지분율은 1(100%) 이하여야 합니다." })
         .optional(),
+      /** 직전연도 주택별 공시가격(원) — 재산세 주택별 합산용 (사례4 다주택). 미입력=단일. */
+      priorHouseValues: z.array(z.number().int().nonnegative()).optional(),
+      /** 직전연도 조정대상지역 2주택 (중과세율 분기). 당해 isMultiHouseInAdjustedArea와 별개. */
+      isMultiHouseInAdjustedArea: z.boolean().optional(),
+      /** 직전연도 세율 주택 수 (3주택 이상 중과). 미입력=priorHouseValues.length ?? 1. */
+      taxableHouseCount: z.number().int().positive().optional(),
     })
     .optional(),
 

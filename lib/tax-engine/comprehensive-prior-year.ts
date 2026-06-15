@@ -20,6 +20,7 @@ import { truncateToTenThousand, safeMulDivRound } from "./tax-utils";
 import { PROPERTY_CONST } from "./legal-codes";
 import { getComprehensiveParams } from "./data/comprehensive-historical";
 import { getPropertyFmrForProration } from "./data/comprehensive-historical";
+import { isMultiHouseRate } from "./data/comprehensive-historical";
 import { calcHousingTax } from "./property-tax";
 import { calcHousingTaxAmount } from "./comprehensive-tax";
 import { getSeniorRate, getLongTermRate, applyEffectiveFactor } from "./comprehensive-tax-helpers";
@@ -52,7 +53,14 @@ export function calcPreviousYearEquivalent(
   // 직전연도 공시가격에 해당연도 감면율+지분율을 effectiveFactor로 결합 (종부세 과표·②ⓒ분모용)
   const rate = auto.reductionRate ?? 0;
   const ratio = auto.ownershipRatio;
-  const effectiveAssessedValue = applyEffectiveFactor(auto.assessedValue, rate, ratio);
+  // 직전 주택군 — priorHouseValues 우선, 미입력 시 [assessedValue] 단일(하위호환).
+  // priorSum = 종부세 과표·ⓑ분모용 합산(단일 원천 — assessedValue와의 이중 입력 불일치 차단).
+  const priorHouses =
+    auto.priorHouseValues && auto.priorHouseValues.length > 0
+      ? auto.priorHouseValues
+      : [auto.assessedValue];
+  const priorSum = priorHouses.reduce((a, b) => a + b, 0);
+  const effectiveAssessedValue = applyEffectiveFactor(priorSum, rate, ratio);
 
   // ── (1) 재산세 공제 전 종부세액 ──
   // ② 공제금액 (1주택 시 추가공제 포함 합계)
@@ -65,26 +73,31 @@ export function calcPreviousYearEquivalent(
   // D 지점: effectiveAssessedValue 기준으로 taxBase 산정
   const afterDeduction = Math.max(effectiveAssessedValue - basicDeduction, 0);
   const taxBase = truncateToTenThousand(Math.floor(afterDeduction * fairMarketRatio));
-  // ⑤⑥ 일반 누진세율 (v1: 단일 주택군 — 다주택 미지원)
+  // ⑤⑥ 누진세율 — 직전연도 다주택 중과 분기 (시행령 §5② 직전연도 세법 적용)
+  //   조정 2주택(≤2022) 또는 3주택 이상 → housingBracketsMulti. 미입력 = 일반(하위호환).
+  const houseCount =
+    auto.taxableHouseCount ?? auto.priorHouseValues?.length ?? 1;
+  const useMulti = isMultiHouseRate(
+    py,
+    houseCount,
+    auto.isMultiHouseInAdjustedArea ?? false,
+  );
   const { calculatedTax, appliedRate } = calcHousingTaxAmount(
     taxBase,
-    p.housingBracketsGeneral,
+    useMulti ? p.housingBracketsMulti : p.housingBracketsGeneral,
   );
 
   // ── (2) 종합부동산세 상당액 ──
   // 직전연도 재산세 FMR (2021 1주택 특례 없음 → 60%, getPropertyFmrForProration이 분기)
   const propertyFMR = getPropertyFmrForProration(py, auto.isOneHouseOwner);
-  // ⑦ 재산세상당액 = 직전연도 공시가격 표준세율 재산세 (감면전 원공시 기준으로 먼저 산출)
-  //   C 지점: 표준세율 산출 후 × (1−rate) = 감면후 재산세상당액 (교재 1,530,000 × 0.75 = 1,147,500)
-  //   ★ assessedValue 자체를 줄이는 게 아님 — 후 곱 방식이 법령 정합
-  const propertyTaxBaseRaw = Math.floor(
-    (auto.assessedValue * Math.round(propertyFMR * 100)) / 100,
-  );
-  const propertyTaxEquivRaw = calcHousingTax(
-    propertyTaxBaseRaw,
-    auto.assessedValue,
-    false, // 표준세율 강제
-  ).tax;
+  // ⑦ 재산세상당액 = 직전연도 표준세율 재산세 (감면전 원공시 기준으로 먼저 산출)
+  //   ★ 주택별 합산 — 누진세율이므로 합산 단일(priorSum) ≠ 주택별 합산. 교재 사례4 나① 4,740,000
+  //     = 12억(2,250,000) + 13억(2,490,000). 단일 25억(5,370,000) 아님.
+  //   C 지점: 표준세율 산출 후 × factor = 감면후 재산세상당액 (교재 1,530,000 × 0.75 = 1,147,500)
+  const propertyTaxEquivRaw = priorHouses.reduce((sum, v) => {
+    const base = Math.floor((v * Math.round(propertyFMR * 100)) / 100);
+    return sum + calcHousingTax(base, v, false).tax; // 표준세율 강제
+  }, 0);
   // D-5 (C 지점): 지분·감면 결합 effectiveFactor 후 곱 (④나① = 표준세율 재산세 × factor)
   const propertyTaxEquiv = applyEffectiveFactor(propertyTaxEquivRaw, rate, ratio);
 
@@ -130,7 +143,7 @@ export function calcPreviousYearEquivalent(
     comprehensiveTaxEquiv,
     total: propertyTaxEquiv + comprehensiveTaxEquiv,
     detail: {
-      assessedValue: auto.assessedValue,  // echo는 원공시 유지 (납세자 확인용)
+      assessedValue: priorSum,  // echo = 직전 공시 합산 (priorHouseValues 입력 시도 정확)
       basicDeduction,
       fairMarketRatio,
       taxBase,

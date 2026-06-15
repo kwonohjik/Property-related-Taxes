@@ -337,6 +337,21 @@ export interface PreviousYearAutoInput {
    * 해당연도와 동일한 지분율을 전달할 것 (법령 원칙: effectiveFactor 결합 적용).
    */
   ownershipRatio?: number;
+  /**
+   * 직전연도 주택별 공시가격(원) — 재산세상당액 주택별 합산용 (누진세율이므로 합산 단일 ≠ 주택별 합산).
+   * 미입력 = [assessedValue] 단일 1채로 처리 (하위호환). 입력 시 종부세 과표용 합산도 Σ로 자동 도출.
+   */
+  priorHouseValues?: number[];
+  /**
+   * 직전연도 조정대상지역 2주택 여부 (≤2022 중과 2축). 미입력 = false.
+   * 직전연도 종부세상당액 세율을 일반→다주택 중과로 분기 (시행령 §5② — 직전연도 세법 적용).
+   * ※ 당해연도 ComprehensiveTaxInput.isMultiHouseInAdjustedArea(상한율·당해 세율)와는 별개.
+   */
+  isMultiHouseInAdjustedArea?: boolean;
+  /**
+   * 직전연도 세율 주택 수 (3주택 이상 중과 판정). 미입력 = priorHouseValues.length ?? 1.
+   */
+  taxableHouseCount?: number;
 }
 
 export interface ComprehensiveTaxInput {

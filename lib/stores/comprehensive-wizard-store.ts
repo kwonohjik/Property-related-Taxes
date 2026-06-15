@@ -135,8 +135,10 @@ export interface ComprehensiveFormData {
   previousYearTotalTax: string;    // 전년도 종부세+재산세 합계 (원) — 직접입력 모드
   /** 세부담 상한 계산 방식 (3중 패턴) */
   previousYearCapMode: "direct" | "auto"; // "direct"(기본) = 전년도 총세액 직접 입력, "auto" = 공시가격으로 자동 계산
-  previousYearAutoAssessedValue: string;  // 자동 모드: 직전연도 공시가격 합산 (원)
+  previousYearAutoAssessedValue: string;  // 자동 모드: 직전연도 공시가격 합산 (원) — 당해 1주택 시
   previousYearAutoIsOneHouse: boolean;    // 자동 모드: 직전연도 1세대1주택 여부
+  previousYearAutoHouseValues: string[];  // 자동 모드: 직전연도 주택별 공시가격 (원) — 당해 2주택+ 시 (재산세 주택별 합산)
+  previousYearAutoIsMultiAdjusted: boolean; // 자동 모드: 직전연도 조정대상지역 2주택 (중과세율 분기) — 당해 isMultiHouseInAdjustedArea와 별개
 
   // ── 연도별 세법 (과세연도 < 2023 일 때만 유효) ──
   /** 조정대상지역 2주택 이상 여부 (구 §9①3호·§10② — 2022 귀속 이하에서만 의미 있음)
@@ -212,6 +214,8 @@ const defaultFormData: ComprehensiveFormData = {
   previousYearCapMode: "direct",
   previousYearAutoAssessedValue: "",
   previousYearAutoIsOneHouse: false,
+  previousYearAutoHouseValues: [],
+  previousYearAutoIsMultiAdjusted: false,
   isMultiHouseInAdjustedArea: false,
 };
 
@@ -425,6 +429,10 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
             state.formData.previousYearAutoAssessedValue ?? "";
           state.formData.previousYearAutoIsOneHouse =
             state.formData.previousYearAutoIsOneHouse ?? false;
+          state.formData.previousYearAutoHouseValues =
+            state.formData.previousYearAutoHouseValues ?? [];
+          state.formData.previousYearAutoIsMultiAdjusted =
+            state.formData.previousYearAutoIsMultiAdjusted ?? false;
           // 토지 필지 모드 — 구 세션 누락 시 집계 모드 보존 (기존 동작)
           state.formData.landAggregateMode = state.formData.landAggregateMode ?? "summary";
           state.formData.landSeparateMode = state.formData.landSeparateMode ?? "summary";
