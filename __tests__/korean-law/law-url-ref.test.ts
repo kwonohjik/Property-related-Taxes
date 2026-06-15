@@ -99,6 +99,35 @@ describe("parseLawRef — 단일 ref (회귀 보존)", () => {
     });
   });
 
+  // ── 별도과제 정정 인용 (PR#202 — 비사업용·재개발 통산 근거 교정) ──
+  it("TC-T7 소득세법 §104의3①4호나목 → 호·목 무시 조문번호", () => {
+    expect(parseLawRef("소득세법 §104의3①4호나목")).toEqual({
+      lawName: "소득세법",
+      articleNum: "104의3",
+    });
+  });
+
+  it("TC-T8 지방세법 시행령 §101①단서 → 지방세 시행령 (단서 무시)", () => {
+    expect(parseLawRef("지방세법 시행령 §101①단서")).toEqual({
+      lawName: "지방세법 시행령",
+      articleNum: "101",
+    });
+  });
+
+  it("TC-T9 지방세법 시행령 §101①2호나목 → 호·목 무시", () => {
+    expect(parseLawRef("지방세법 시행령 §101①2호나목")).toEqual({
+      lawName: "지방세법 시행령",
+      articleNum: "101",
+    });
+  });
+
+  it("TC-T10 소득세법 시행령 §154⑧ → 재개발 거주통산 정정 근거", () => {
+    expect(parseLawRef("소득세법 시행령 §154⑧")).toEqual({
+      lawName: "소득세법 시행령",
+      articleNum: "154",
+    });
+  });
+
   // ── 현행 실패 실증 (Pre-Do anchor 핵심) ──
   it("C-7 상증령 §15 → 시행령 정식명 (현행 실패 예상)", () => {
     expect(parseLawRef("상증령 §15")).toEqual({

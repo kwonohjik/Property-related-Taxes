@@ -65,7 +65,7 @@ export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput 
    */
   residencePeriodMonths?: number;
   /**
-   * 종전주택 거주개월수 (시행령 §155⑰ 통산 prior 분량).
+   * 종전주택 거주개월수 (시행령 §154⑧ 통산 prior 분량).
    * 사례 45 — 기존건물분 LTHD 표2 거주분 = prior + new (통산).
    */
   priorHouseResidenceMonths?: number;
@@ -505,7 +505,7 @@ function runOriginalMember(
     lthdResidencePart: preApprovalLthdAmt.residencePart,
   };
 
-  // 인가후 기존건물분 거주기간 — §155⑰ 통산 (prior + new)
+  // 인가후 기존건물분 거주기간 — §154⑧ 통산 (prior + new)
   // 표시용 거주월수만 통산 적용. 입주일·퇴거일은 종전·신축 어느 한쪽도 단독 대표값이 아니므로 미부착.
   const postApprovalResidenceMonths =
     priorMonths !== undefined || newMonths !== undefined
@@ -527,7 +527,7 @@ function runOriginalMember(
     expenses: isApt ? (redevelopment.postApprovalExpenses ?? 0) : 0,
     // 인가후 분 입주일 = 종전주택 입주일 (없으면 신축주택 입주일 fallback)
     // 인가후 분 퇴거일 = 신축주택 퇴거일 (없으면 종전주택 퇴거일 fallback)
-    // §155⑰ 통산 거주 — 가장 이른 입주~가장 늦은 퇴거 구간 표시.
+    // §154⑧ 통산 거주 — 가장 이른 입주~가장 늦은 퇴거 구간 표시.
     residenceStartDate: isApt ? (priorResStart || newResStart) : undefined,
     residenceEndDate: isApt ? (newResEnd || priorResEnd) : undefined,
     residenceMonths: isApt ? postApprovalResidenceMonths : undefined,

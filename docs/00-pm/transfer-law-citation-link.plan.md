@@ -220,10 +220,12 @@
 3. `CompanionAcqGiftBlock:39` — `§95④` → `§104②2호`(증여 단기보유, §97의2① 증여자 취득일).
 4. `CompanionAcqInheritanceBlock:110` — `§95④` → `§104②1호`(상속 단기보유, 피상속인 취득일).
 
-### 별도 과제 3건 (UI+엔진 일괄 정정 필요 — 후속 PR)
-1. **§155⑰** (재개발 거주통산) — 현행 §155⑰ **삭제 확인**(KoreanLaw 본문). §154⑧(멸실 재건축 거주·보유기간 통산)이 유력 대체나 amendment 확정 필요. 분포: UI(`RedevelopmentResidenceSplitSection`·`RedevelopmentDetailCard`) + 엔진 6곳(`redevelopment.ts`·`redevelopment-lthd.ts`·`transfer-tax-redevelopment.ts`·`types/transfer-redevelopment.types.ts`) + `legal-codes/transfer.ts:639` 상수 `REDEV_RESIDENCE_AGGREGATION`. ※UI만 정정 시 드리프트 → 일괄 필요(이번엔 UI 정정 원복하여 §155⑰ 일관 유지).
-2. **§168-11⑥** (2% 나대지) — §168의11⑥은 복합용도 부속토지 면적안분 산식. "건물가액<토지 2%→나대지"는 지방세법 시행령 준용. 분포: UI `OtherLandDetailSection:90,95` + 엔진 `non-business-land/other-land.ts:5,25`.
-3. **§168의11①1호** (무허가건축물) — §168의11①1호=체육시설용 토지(단서 없음). 무허가건축물 비사업용 근거는 §104의3①4호 계열. 분포: UI `GeneralBuildingBlock:569` + 엔진 `general-building-valuation.ts:563`.
+### 별도 과제 3건 ✅ 정정 완료 (후속 브랜치 `feat/transfer-law-citation-followup`)
+KoreanLaw 본문으로 정확 근거 확정 후 UI+엔진 일괄 정정. anchor TC-T7~T10 추가. 계산 로직 무변경(인용 문자열·주석·UI 텍스트만).
+1. **§155⑰**(재개발 거주통산) → **소득세법 시행령 §154⑧**(거주·보유기간 통산, 1호 멸실 재건축 — 정비사업 신축주택 포섭). 현행 §155⑰=삭제 확인. UI 2곳(배지 링크화) + 엔진 6곳 + `legal-codes:639` 상수 `REDEV_RESIDENCE_AGGREGATION` + `DetailedStatementRedevelopmentBuilders` 1곳 = **20건**.
+2. **§168-11⑥**(2% 나대지) → **소득세법 §104의3①4호나목 + 지방세법 시행령 §101①2호나목**("건축물 시가표준액 < 부속토지 2% → 재산세 별도합산 제외 → 비사업용"). §168의11⑥=복합용도 면적안분(무관). UI `OtherLandDetailSection`(배지 2종×2박스) + 엔진 `other-land.ts` 주석.
+3. **§168의11①1호**(무허가건축물) → **소득세법 §104의3①4호나목 + 지방세법 시행령 §101①단서**("허가 안 받은 건축물 부속토지 별도합산 제외"). §168의11①1호=체육시설용(무관). UI `GeneralBuildingBlock`(배지 2종) + 엔진 `general-building-valuation.ts` 주석.
+- 검증: 잔여 오류 grep 0 · tsc 0 · eslint 0 · anchor 26(TC-T7~10 포함).
 
 ### 전역 사안 (단독 정정 금지 — 별도 결정)
 - §164⑤/§164⑦ (주택 PHD 환산, memory `feedback_164_5_phd`) · §164⑧/§164⑥ (상업용) · §98 의제취득(§162⑥⑦ 정밀, 위임 본칙 인용 허용).

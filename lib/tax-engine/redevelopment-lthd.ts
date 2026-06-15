@@ -53,7 +53,7 @@ export interface RedevelopmentLthdInput {
   residencePeriodMonths?: number;
 
   /**
-   * 종전주택 거주개월수 (시행령 §155⑰ 통산 산식의 prior 분량).
+   * 종전주택 거주개월수 (시행령 §154⑧ 통산 산식의 prior 분량).
    * 기존건물분(인가전+인가후 비청산) LTHD 표2 거주분 = prior + new (통산).
    */
   priorHouseResidenceMonths?: number;
@@ -121,7 +121,7 @@ export function computeRedevelopmentLthd(
       ? false
       : (input.isOneHouseSingle ?? false);
 
-  // ─ 거주월수 귀속 분리 (사례 45 — 시행령 §155⑰ + 사전법령해석재산 2020-386) ─
+  // ─ 거주월수 귀속 분리 (사례 45 — 시행령 §154⑧ + 사전법령해석재산 2020-386) ─
   // 신규 두 필드(prior/new)가 모두 undefined 시 legacy fallback:
   //   기존건물분 = residencePeriodMonths 단일값
   //   청산금분   = 0 (해석례 보수적 적용 — 신축거주 입력 없으면 표1 강등)
@@ -220,7 +220,7 @@ function computeAptLthd(args: {
   settlementDirection: "pay" | "receive";
   settlementSaleDate?: Date;
   isOneHouseSingle: boolean;
-  /** 기존건물분 거주월수 (= prior + new, §155⑰ 통산) */
+  /** 기존건물분 거주월수 (= prior + new, §154⑧ 통산) */
   existingResidenceMonths: number;
   /** 청산금분 거주월수 (= new, 해석례 2020-386) */
   payResidenceMonths: number;
@@ -241,7 +241,7 @@ function computeAptLthd(args: {
 
   // ─ §166⑤2호나목: 기존건물분 (preApproval + postApprovalExistingHouse) = 취득일 ~ 신축양도일 ─
   // 묶음 동일 보유기간 → 동일 LTHD율 (분배법칙으로 분기별 산출해도 합계 동일)
-  // 거주분 = §155⑰ 통산 (prior + new)
+  // 거주분 = §154⑧ 통산 (prior + new)
   const existingHolding = calculateHoldingPeriod(acquisitionDate, transferDate);
   const existingMonths = existingHolding.years * 12 + existingHolding.months;
   const existingSplit = computeLthdRateSplit(existingHolding.years, isOneHouseSingle, existingResidenceYears);

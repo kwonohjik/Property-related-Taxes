@@ -210,7 +210,9 @@ export type GeneralBuildingInput = {
   isMetropolitan?: boolean;
   /**
    * 무허가(미등재) 건축물 여부.
-   * true 시 배율 계산 없이 토지 전체 비사업용 (§168의11①1호 단서).
+   * true 시 배율 계산 없이 토지 전체 비사업용.
+   * 근거: 지방세법 시행령 §101①단서(무허가건축물 부속토지 재산세 별도합산 제외)
+   *       + 소득세법 §104의3①4호나목 → 비사업용.
    */
   isUnregistered?: boolean;
   // ── 사례 35: 주택→상가 용도변경 (사전법규재산 2022-684·881) ──
@@ -560,7 +562,8 @@ export function buildGeneralBuildingAssetCards(
    *   초과분 면적(nonBusinessArea)·비율(nonBusinessRatio) 계산 → 토지 카드 분할 중과.
    */
 
-  // 무허가건축물: 배율 무관 토지 전체 비사업용 (§168의11①1호 단서)
+  // 무허가건축물: 배율 무관 토지 전체 비사업용
+  // 근거: 지방세법 시행령 §101①단서(무허가건축물 부속토지 재산세 별도합산 제외) + 소득세법 §104의3①4호나목 → 비사업용
   let appliedMultiplier: number;
   let multiplierDetail: string;
   let allowedLandArea: number;

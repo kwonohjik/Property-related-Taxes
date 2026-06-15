@@ -309,7 +309,7 @@ function applyHighValueAllocation(
   const nontaxableGain = redevRaw.total.gain - Math.floor(redevRaw.total.gain * taxableRatio);
   const taxableGainTotal = Math.floor(redevRaw.total.gain * taxableRatio);
 
-  // LTHD 거주월수 귀속 메타 (사전법령해석재산 2020-386 + §155⑰ 노출)
+  // LTHD 거주월수 귀속 메타 (사전법령해석재산 2020-386 + §154⑧ 노출)
   const prior = redevInfo.priorHouseResidenceMonths ?? 0;
   const newMonths = redevInfo.newHouseResidenceMonths ?? 0;
   const existingResidenceMonths =
