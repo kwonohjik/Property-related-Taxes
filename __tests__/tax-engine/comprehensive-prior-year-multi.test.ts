@@ -103,3 +103,54 @@ describe("PY-M1: 단일 물건 자동 — 하위호환 (priorHouseValues 미입�
     expect(rNone.previousYearEquivalent?.detail.appliedRate).toBeLessThan(0.02);
   });
 });
+
+// ============================================================
+// PY-S5 (사례5): 부부 §10의2 + 지방저가 §8④4호 + 직전 §8④ 안분 고령자 공제
+// ============================================================
+
+describe("PY-S5 (사례5): 직전 §8④ 안분 고령자 공제 — 종부세상당액 1,182,306", () => {
+  const input: ComprehensiveTaxInput = {
+    assessmentYear: 2022,
+    isOneHouseOwner: false,
+    isJointOwnershipSpecialCase: true,
+    birthDate: new Date("1952-01-01"), // 당해 70세 / 직전 2021.6.1 = 69세(30%)
+    acquisitionDate: new Date("2018-01-01"), // 보유 4년 → 장기 0
+    properties: [
+      { propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" },
+      {
+        propertyId: "p2",
+        assessedValue: 200_000_000,
+        location: "non_metro",
+        exclusionType: "none",
+        section8para4Type: "regional_low_price",
+      },
+    ],
+    previousYearAuto: {
+      assessedValue: 1_495_000_000,
+      priorHouseValues: [1_300_000_000, 195_000_000], // 성동 13억, 세종 1.95억
+      priorSection8Para4Value: 195_000_000, // 직전 세종(지방저가) — 안분 분자 = 14.95억 − 1.95억 = 13억
+      isOneHouseOwner: true,
+      birthDate: new Date("1952-01-01"), // api.ts가 formData.birthDate 자동 전달 — 직전 69세 30%
+      acquisitionDate: new Date("2018-01-01"),
+    },
+  };
+
+  it("당해 ① 2,280,000 · ⑤ 969,711 (PDF 일치)", () => {
+    const r = calculateComprehensiveTax(input);
+    expect(r.calculatedTax).toBe(2_280_000);
+    expect(r.determinedHousingTax).toBe(969_711);
+  });
+
+  it("직전 재산세상당액 2,635,500 · 직전 종부세 ⓐ 2,402,000 (PDF 일치)", () => {
+    const r = calculateComprehensiveTax(input);
+    expect(r.previousYearEquivalent?.propertyTaxEquiv).toBe(2_635_500);
+    expect(r.previousYearEquivalent?.detail.calculatedTax).toBe(2_402_000);
+  });
+
+  it("직전 종부세상당액 = §9⑦ §8④ 안분(13억/14.95억 × 69세 30%) → 1,182,306", () => {
+    // PDF 1,599,590(고령자 미반영 단순화)·현행 1,119,713(안분 누락) 모두 부정합 — 세부담상한 미적용이라 ⑤ 무관
+    const r = calculateComprehensiveTax(input);
+    expect(r.previousYearEquivalent?.comprehensiveTaxEquiv).toBe(1_182_305);
+    expect(r.taxCap?.isApplied).toBe(false);
+  });
+});

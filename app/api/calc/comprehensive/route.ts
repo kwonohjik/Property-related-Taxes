@@ -125,6 +125,9 @@ function toEngineInput(
           isMultiHouseInAdjustedArea:
             schema.previousYearAuto.isMultiHouseInAdjustedArea,
           taxableHouseCount: schema.previousYearAuto.taxableHouseCount,
+          // ⑭ pass-through: 직전 §8④ 안분 (사례5)
+          priorSection8Para4Value:
+            schema.previousYearAuto.priorSection8Para4Value,
         }
       : undefined,
     isMultiHouseInAdjustedArea: schema.isMultiHouseInAdjustedArea,

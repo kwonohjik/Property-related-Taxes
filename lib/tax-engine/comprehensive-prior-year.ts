@@ -16,7 +16,7 @@
  * v1 범위: 직전연도 단일 주택군(일반/1세대1주택). 다주택 중과 직전연도는 직접입력 모드 사용.
  */
 
-import { truncateToTenThousand, safeMulDivRound } from "./tax-utils";
+import { truncateToTenThousand, safeMulDivRound, safeMultiplyThenDivide } from "./tax-utils";
 import { PROPERTY_CONST } from "./legal-codes";
 import { getComprehensiveParams } from "./data/comprehensive-historical";
 import { getPropertyFmrForProration } from "./data/comprehensive-historical";
@@ -134,7 +134,17 @@ export function calcPreviousYearEquivalent(
       COMPREHENSIVE_CONST.ONE_HOUSE_MAX_CREDIT_RATE,
     );
   }
-  const oneHouseDeductionAmount = Math.floor(afterPropertyCredit * oneHouseDeductionRate);
+  // §9⑦⑨: 직전 §8④ 해당 1세대1주택 고령자·장기보유 공제는 §8④분(공시 안분) 제외 후 공제율.
+  //   당해 applyOneHouseDeduction과 동일 정수연산(safeMultiplyThenDivide 단일식). main = priorSum − §8④ 공시.
+  const priorS84 = auto.priorSection8Para4Value ?? 0;
+  const oneHouseDeductionAmount =
+    priorS84 > 0 && priorS84 < priorSum && oneHouseDeductionRate > 0
+      ? safeMultiplyThenDivide(
+          afterPropertyCredit * Math.round(oneHouseDeductionRate * 100),
+          priorSum - priorS84,
+          priorSum * 100,
+        )
+      : Math.floor(afterPropertyCredit * oneHouseDeductionRate); // §8④ 없음 = 전체(기존)
   // ⑫ 종합부동산세 상당액 = ⑥ − ⑩ − ⑪
   const comprehensiveTaxEquiv = Math.max(afterPropertyCredit - oneHouseDeductionAmount, 0);
 

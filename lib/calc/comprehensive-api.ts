@@ -254,6 +254,16 @@ export async function callComprehensiveApi(
       ? priorHouseValues.reduce((a, b) => a + b, 0)
       : undefined;
 
+  // ⑬ 직전 §8④ 안분 분자(사례5) — 당해 §8④ 주택 인덱스 ↔ 직전 주택별 공시 매핑 (UI 추가 입력 없음).
+  //   ★ filter 전 원본(previousYearAutoHouseValues) 인덱싱 — priorHouseValues는 .filter(v>0)로
+  //     인덱스 시프트되므로 properties[i] 대응 깨짐.
+  const priorRawValues = formData.previousYearAutoHouseValues ?? [];
+  const priorS84Sum = formData.properties.reduce((sum, p, i) => {
+    const isS84 = (p.section8para4Type ?? "none") !== "none";
+    const v = priorRawValues[i] ? parseAmount(priorRawValues[i]) : 0;
+    return isS84 ? sum + v : sum;
+  }, 0);
+
   // previousYearAuto: 자동 모드일 때만 구성 (직접 모드는 undefined — 상호배타)
   // 날짜는 문자열 그대로 전송 — route.ts Zod coerceDates가 Date 변환 담당
   const previousYearAuto =
@@ -284,6 +294,8 @@ export async function callComprehensiveApi(
           isMultiHouseInAdjustedArea:
             formData.previousYearAutoIsMultiAdjusted || undefined,
           taxableHouseCount: priorHouseValues?.length,
+          // ⑬ 직전 §8④ 안분 (사례5) — §9⑦⑨ 고령자 공제 안분 분자 도출용 (자동 도출)
+          priorSection8Para4Value: priorS84Sum > 0 ? priorS84Sum : undefined,
         }
       : undefined;
 
