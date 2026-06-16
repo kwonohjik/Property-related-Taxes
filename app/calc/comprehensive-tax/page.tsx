@@ -650,7 +650,7 @@ export default function ComprehensiveTaxPage() {
           {/* 오류 메시지 */}
           {error && (
             <div className="rounded-md bg-red-50 border border-red-200 p-3">
-              <p className="text-sm text-red-700">{error}</p>
+              <p className="text-sm text-red-700 whitespace-pre-line">{error}</p>
             </div>
           )}
 

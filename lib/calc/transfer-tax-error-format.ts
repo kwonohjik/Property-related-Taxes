@@ -109,8 +109,8 @@ const MESSAGE_PATTERNS: { test: RegExp; replace: string | ((m: RegExpMatchArray)
   { test: /^Invalid input$/i, replace: "입력값이 유효하지 않습니다" },
 ];
 
-/** 한 메시지를 한국어로 변환 */
-function translateMessage(msg: string): string {
+/** 한 메시지를 한국어로 변환 (종합부동산세 등 타 세목 포맷터에서 재사용) */
+export function translateMessage(msg: string): string {
   for (const { test, replace } of MESSAGE_PATTERNS) {
     const match = msg.match(test);
     if (match) {

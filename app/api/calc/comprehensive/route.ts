@@ -211,6 +211,9 @@ export async function POST(req: NextRequest) {
           code: "INVALID_INPUT",
           message: "입력값이 올바르지 않습니다.",
           details: parsed.error.flatten().fieldErrors,
+          // 위치 보존: properties[] 배열의 주택 인덱스(몇 번째 주택)를 살려
+          // 클라이언트가 "주택 N · 항목: 사유"로 표시. flatten은 인덱스를 소실하므로 issues 병행.
+          issues: parsed.error.issues.map((i) => ({ path: i.path, message: i.message })),
         },
       },
       { status: 400 },

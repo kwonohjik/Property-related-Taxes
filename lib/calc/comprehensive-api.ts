@@ -10,6 +10,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { ComprehensiveFormData, LandParcelForm } from "@/lib/stores/comprehensive-wizard-store";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 import { resolveCorporateHousingClass } from "@/lib/tax-engine/comprehensive-corporate-class";
+import { formatComprehensiveErrors } from "./comprehensive-error-format";
 
 /**
  * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
@@ -477,7 +478,14 @@ export async function callComprehensiveApi(
 
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.error?.message ?? "계산 요청 실패");
+    const err = json?.error;
+    // 위치 보존 issues가 있으면 "주택 N · 항목: 사유"로 펼쳐 표시 (어디서 막혔는지 명시)
+    if (Array.isArray(err?.issues) && err.issues.length > 0) {
+      throw new Error(
+        formatComprehensiveErrors(err.issues, err.message ?? "입력값이 올바르지 않습니다."),
+      );
+    }
+    throw new Error(err?.message ?? "계산 요청 실패");
   }
   return json.data as ComprehensiveTaxResult;
 }
