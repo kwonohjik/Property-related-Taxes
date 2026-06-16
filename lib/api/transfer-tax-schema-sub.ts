@@ -30,55 +30,10 @@ export const temporaryTwoHouseSchema = z.object({
   newAcquisitionDate: z.string().date(),
 });
 
-export const businessUsePeriodSchema = z.object({
-  startDate: z.string().date(),
-  endDate: z.string().date(),
-  usageType: z.string().min(1),
-});
-
-export const gracePeriodSchema = z.object({
-  type: z.enum([
-    "inheritance",
-    "legal_restriction",
-    "sale_contract",
-    "construction",
-    "unavoidable",
-    "preparation",
-    "land_replotting",
-  ]),
-  startDate: z.string().date(),
-  endDate: z.string().date(),
-});
-
-export const LAND_TYPE_VALUES = [
-  "farmland", "paddy", "field", "orchard",
-  "forest", "pasture", "vacant_lot",
-  "building_site", "housing_site",
-  "villa_land", "other_land", "miscellaneous", "other",
-] as const;
-
-export const ZONE_TYPE_VALUES = [
-  "residential", "exclusive_residential", "general_residential", "semi_residential",
-  "commercial", "industrial", "green", "management",
-  "agriculture_forest", "natural_env", "unplanned", "undesignated",
-] as const;
-
-export const REVENUE_BUSINESS_TYPES = [
-  "car_driving_school",
-  "sports_facility",
-  "youth_facility",
-  "tourist_lodging",
-  "resort_business",
-  "transportation",
-  "default",
-  "none",
-] as const;
-
-export const revenueTestSchema = z.object({
-  businessType: z.enum(REVENUE_BUSINESS_TYPES),
-  annualRevenue: z.number().nonnegative(),
-  landValue:     z.number().positive(),
-});
+// (제거 2026-06-16) 구 nonBusinessLandDetailsSchema 전용 leaf —
+//   businessUsePeriodSchema·gracePeriodSchema·LAND_TYPE_VALUES·ZONE_TYPE_VALUES·
+//   REVENUE_BUSINESS_TYPES·revenueTestSchema 는 raw 스키마(아래) 전환으로 dead → 삭제.
+//   §168의11② 수입금액비율 후속 구현 시 raw 스키마에 직접 재정의.
 
 // ─── NBL 정밀판정 raw 페이로드 (⑫) — store nbl* 평면 1:1 ──────────
 // 아키텍처 B: 클라이언트가 raw 평면을 전송 → route가 mapAssetToNblInput로 nested+Date 변환.
