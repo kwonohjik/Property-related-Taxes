@@ -175,12 +175,19 @@ export function buildOtherLand(
   parseNumber: ParseNumber,
 ): OtherLandUsage | undefined {
   if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
+  const relatedBusinessType = asString(a.nblOtherRelatedBusinessType) || undefined;
   return {
     propertyTaxType:                (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"],
     hasBuilding:                    false,
     buildingStandardValue:          parseNumber(asString(a.nblOtherBuildingValue)),
     landStandardValue:              parseNumber(asString(a.nblOtherLandValue)),
     isRelatedToResidenceOrBusiness: asBool(a.nblOtherIsRelatedToResidence),
+    // §168의11① 호별 면적기준 (갭 3a)
+    relatedBusinessType:            relatedBusinessType as OtherLandUsage["relatedBusinessType"],
+    standardAreaLimit:              parseNumber(asString(a.nblOtherStandardAreaLimit)),
+    maxAnnualArea:                  parseNumber(asString(a.nblOtherMaxAnnualArea)),
+    youthCapacity:                  parseNumber(asString(a.nblOtherYouthCapacity)),
+    minGarageArea:                  parseNumber(asString(a.nblOtherMinGarageArea)),
   };
 }
 

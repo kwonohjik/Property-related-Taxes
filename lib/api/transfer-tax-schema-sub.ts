@@ -120,6 +120,12 @@ export const nonBusinessLandRawSchema = z.object({
   nblOtherBuildingValue: z.string().optional(),
   nblOtherLandValue: z.string().optional(),
   nblOtherIsRelatedToResidence: z.boolean().optional(),
+  // §168의11① 호별 면적기준 (갭 3a)
+  nblOtherRelatedBusinessType: z.string().optional(),
+  nblOtherStandardAreaLimit: z.string().optional(),
+  nblOtherMaxAnnualArea: z.string().optional(),
+  nblOtherYouthCapacity: z.string().optional(),
+  nblOtherMinGarageArea: z.string().optional(),
   // §168의11② 수입금액비율 (기타토지 특정 업종)
   nblRevenueBusinessType: z.string().optional(),
   nblRevenueCurrentRevenue: z.string().optional(),

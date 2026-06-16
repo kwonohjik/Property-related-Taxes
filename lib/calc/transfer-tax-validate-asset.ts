@@ -443,6 +443,19 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       return `${label}: 비사업용 토지 정밀판정 — 용도지역을 선택하세요.`;
     if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
       return `${label}: 비사업용 토지 판정을 위해 토지 면적(㎡)을 입력하세요.`;
+    // §168의11① 호별 면적기준 — 면적인자 요구 호 선택 시 해당 면적인자 필수 (자동 안분 fallback 금지)
+    if (asset.nblLandType === "other_land") {
+      const bt = asset.nblOtherRelatedBusinessType;
+      const needsStandardArea = bt === "sports" || bt === "parking_attached" || bt === "reserve_forces" || bt === "resort";
+      if (needsStandardArea && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
+        return `${label}: 선택한 호의 기준면적(㎡)을 입력하세요. (§168의11① 별표·설치기준면적)`;
+      if (bt === "hatchang" && (!asset.nblOtherMaxAnnualArea || parseDecimal(asset.nblOtherMaxAnnualArea) <= 0))
+        return `${label}: 하치장 — 매년 최대 사용면적(㎡)을 입력하세요. (§168의11①7호)`;
+      if (bt === "youth_training" && (!asset.nblOtherYouthCapacity || parseDecimal(asset.nblOtherYouthCapacity) <= 0))
+        return `${label}: 청소년수련시설 — 수용정원(명)을 입력하세요. (§168의11①4호)`;
+      if (bt === "parking_garage" && (!asset.nblOtherMinGarageArea || parseDecimal(asset.nblOtherMinGarageArea) <= 0))
+        return `${label}: 업무용자동차 주차장 — 최저차고기준면적(㎡)을 입력하세요. (§168의11①2호나목)`;
+    }
     // §168의11② 수입금액비율 — 업종 선택 시 당해 수입금액·토지가액 필수
     if (asset.nblLandType === "other_land" && asset.nblRevenueBusinessType) {
       if (!asset.nblRevenueCurrentRevenue || parseAmount(asset.nblRevenueCurrentRevenue) <= 0)

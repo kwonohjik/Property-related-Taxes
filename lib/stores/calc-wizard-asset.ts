@@ -46,8 +46,10 @@ import type { RedevelopmentFormSlice } from "./calc-wizard-asset-redev";
 export type { RedevelopmentFormSlice } from "./calc-wizard-asset-redev";
 import type { InheritanceAcquisitionFormSlice } from "./calc-wizard-asset-inheritance-acq";
 export type { InheritanceAcquisitionFormSlice } from "./calc-wizard-asset-inheritance-acq";
+import type { NblOtherFormSlice } from "./calc-wizard-asset-nbl-other";
+export type { NblOtherFormSlice } from "./calc-wizard-asset-nbl-other";
 
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice {
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice {
   assetId: string;
   assetLabel: string;
   /**
@@ -477,25 +479,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   nblVillaIsEupMyeon: boolean;
   nblVillaIsRuralHousing: boolean;
   nblVillaIsAfter20150101: boolean;
-  nblOtherPropertyTaxType: "" | "exempt" | "comprehensive" | "separate" | "special_sum";
-  nblOtherBuildingValue: string;
-  nblOtherLandValue: string;
-  nblOtherIsRelatedToResidence: boolean;
-  // §168의11② 수입금액비율 (기타토지 특정 업종)
-  nblRevenueBusinessType:
-    | ""
-    | "parking_operation"
-    | "mineral_spring"
-    | "fish_farm_other"
-    | "block_stone_pipe_mfg"
-    | "landscaping_floriculture"
-    | "vehicle_repair_academy"
-    | "agriculture_academy"
-    | "wholesale_retail";
-  nblRevenueCurrentRevenue: string;
-  nblRevenueCurrentLandValue: string;
-  nblRevenuePriorRevenue: string;
-  nblRevenuePriorLandValue: string;
+  // nblOther*·nblRevenue* (기타토지 §168의11) 일체는 NblOtherFormSlice로 분리 (calc-wizard-asset-nbl-other.ts).
 
   // ── NBL 부득이한 사유 ──
   nblGracePeriods: GracePeriodInput[];
