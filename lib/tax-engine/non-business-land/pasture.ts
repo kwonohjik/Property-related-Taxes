@@ -152,7 +152,7 @@ export function judgePasture(
     resolvedStandardArea = getLivestockStandardArea(p.livestockType, p.livestockCount);
     if (resolvedStandardArea > 0) {
       warnings.push(
-        `기준면적 미입력 — 축종(${p.livestockType}) × 사육두수(${p.livestockCount}두) = ${resolvedStandardArea}㎡ 자동 산출 (축산법 시행규칙 별표2)`,
+        `기준면적 미입력 — 축종(${p.livestockType}) × 사육두수(${p.livestockCount}두) = ${resolvedStandardArea}㎡ 자동 산출 (소득세법 시행령 별표 1의3 §168조의10③)`,
       );
     }
   }
