@@ -3,7 +3,8 @@
 > worktree `feat/property-tax-cap-recompute` (slot 2 → dev 3002 / e2e 3102, base origin/master ae9e318c)
 > 선행: `property-vessel-fire-heir-cap.plan.md` A-3 절 · engine.design.md §4 (A-1·A-2 worktree)
 > 방침 확정(2026-06-16 사용자): **전체 calc 연도화** (비주택 5종 세율 함수 연도 파라미터화 + 역사 세율표)
-> 상태: Plan (Do 미착수)
+> 상태: **Do 완료 (P1~P6)** — b38bbaf1(역사표)·911f5fbc(건축물·선박)·725c8fc3(토지 종합·별도)·de09af43(recompute 엔진)·4ea09cc4(UI+E2E)·P6(통합 anchor).
+> 잔여 후속: 분리과세 calc 연도화(classify 3함수 파급), 결과뷰 recompute 모드 라벨(taxCapDetail echo), §118 나·다·라목.
 
 ## 0. 배경 · 조사 결과 (실측)
 
