@@ -100,6 +100,14 @@ export function mapAssetToNblInput(
   const isMetropolitanArea: boolean | undefined =
     metroRaw === "yes" ? true : metroRaw === "no" ? false : undefined;
 
+  // 공동소유 지분 (대법원 2015두39439) — engine.ts applyCoOwnershipRatio가 소비.
+  // residenceHistories만 있어도, ratio≠1만 있어도 ownerProfile 생성.
+  const ownershipRatio = parseOwnershipRatio(asset, parseNumber);
+  const ownerProfile =
+    residenceHistories.length > 0 || ownershipRatio !== 1
+      ? { residenceHistories, ...(ownershipRatio !== 1 ? { ownershipRatio } : {}) }
+      : undefined;
+
   return {
     landType, landArea, zoneType, acquisitionDate, transferDate,
     farmingSelf:             asBool(asset.nblFarmingSelf),
@@ -112,7 +120,7 @@ export function mapAssetToNblInput(
     unconditionalExemption:  buildUnconditionalExemption(asset, parseDate),
     urbanIncorporationDate,
     isMetropolitanArea,
-    ...(residenceHistories.length > 0 ? { ownerProfile: { residenceHistories } } : {}),
+    ...(ownerProfile ? { ownerProfile } : {}),
     businessUsePeriods,
     gracePeriods,
     housingFootprint: parseNumber(asString(asset.nblHousingFootprint)),

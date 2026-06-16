@@ -9,6 +9,7 @@ import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toEngineReductions, toRentalHousingExceptionApi } from "@/lib/calc/transfer-tax-api-helpers";
+import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 
 const isHousingLike = (pt: string) =>
   pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
@@ -19,27 +20,8 @@ export function buildPropertyPayload(form: TransferFormData) {
   const reductions = toEngineReductions(primary?.reductions ?? [], primary?.acquisitionCause ?? "purchase");
   const primaryKind = primary?.assetKind ?? "";
 
-  // v1.2: form.nbl* → primary.nbl* (asset 단위 읽기)
-  const nblDetails =
-    primaryKind === "land" &&
-    primary?.nblLandType &&
-    primary?.nblZoneType &&
-    primary?.acquisitionArea
-      ? {
-          landType: primary.nblLandType,
-          landArea: parseFloat(primary.acquisitionArea),
-          zoneType: primary.nblZoneType,
-          acquisitionDate: primary.acquisitionDate ?? "",
-          transferDate: form.transferDate,
-          farmingSelf: primary.nblFarmingSelf || undefined,
-          farmerResidenceDistance: primary.nblFarmerResidenceDistance
-            ? parseFloat(primary.nblFarmerResidenceDistance)
-            : undefined,
-          businessUsePeriods: (primary.nblBusinessUsePeriods ?? []).filter(
-            (p) => p.startDate && p.endDate,
-          ),
-        }
-      : undefined;
+  // ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (단건 API와 동일 공용 빌더 — drift 차단)
+  const nblRaw = primary ? buildNonBusinessLandRaw(primary, form.transferDate) : undefined;
 
   const housesPayload =
     isHousingLike(primaryKind) && form.houses.length > 0
@@ -154,7 +136,7 @@ export function buildPropertyPayload(form: TransferFormData) {
           },
         }
       : {}),
-    ...(nblDetails ? { nonBusinessLandDetails: nblDetails } : {}),
+    ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
     ...(form.parentalCareMergeDate

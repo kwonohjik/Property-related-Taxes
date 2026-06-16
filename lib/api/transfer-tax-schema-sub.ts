@@ -80,18 +80,106 @@ export const revenueTestSchema = z.object({
   landValue:     z.number().positive(),
 });
 
-export const nonBusinessLandDetailsSchema = z.object({
-  landType: z.enum(LAND_TYPE_VALUES),
-  landArea: z.number().positive(),
-  zoneType: z.enum(ZONE_TYPE_VALUES),
-  acquisitionDate: z.string().date(),
-  transferDate: z.string().date(),
-  farmingSelf: z.boolean().optional(),
-  farmerResidenceDistance: z.number().nonnegative().optional(),
-  businessUsePeriods: z.array(businessUsePeriodSchema).default([]),
-  gracePeriods: z.array(gracePeriodSchema).default([]),
-  buildingFootprint: z.number().positive().optional(),
-  revenueTest: revenueTestSchema.optional(),
+// ─── NBL 정밀판정 raw 페이로드 (⑫) — store nbl* 평면 1:1 ──────────
+// 아키텍처 B: 클라이언트가 raw 평면을 전송 → route가 mapAssetToNblInput로 nested+Date 변환.
+// 날짜는 z.string()(빈 문자열 허용) — route의 toOptionalDate/toDate가 변환(z.string().date()는 ""거부).
+
+/** raw 기간 항목 (사업용/축산/별장 공용 — usageType·type·description 모두 optional 수용) */
+const nblPeriodRawSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  usageType: z.string().optional(),
+  type: z.string().optional(),
+  description: z.string().optional(),
+});
+
+/** raw 유예기간 항목 (type=문자열 — 엔진이 GracePeriodType로 캐스팅) */
+const nblGracePeriodRawSchema = z.object({
+  type: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  description: z.string().optional(),
+});
+
+/** raw 거주이력 항목 */
+const nblResidenceHistoryRawSchema = z.object({
+  sigunguCode: z.string().optional(),
+  sigunguName: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  hasResidentRegistration: z.boolean(),
+});
+
+/** NBL 지목 — UI 노출 6값 (빌더가 nblLandType truthy시만 전송하므로 "" 미포함) */
+export const NBL_UI_LAND_TYPE_VALUES = [
+  "farmland", "forest", "pasture", "housing_site", "villa_land", "other_land",
+] as const;
+
+export const nonBusinessLandRawSchema = z.object({
+  // 필수 (빌더 가드: nblUseDetailedJudgment && nblLandType && nblZoneType && acquisitionArea && acquisitionDate)
+  nblUseDetailedJudgment: z.boolean(),
+  nblLandType: z.enum(NBL_UI_LAND_TYPE_VALUES),
+  nblZoneType: z.string(),
+  acquisitionArea: z.string(),
+  acquisitionDate: z.string(),
+  transferDate: z.string(),
+  // 공통
+  nblUrbanIncorporationDate: z.string().optional(),
+  nblIsMetropolitanArea: z.string().optional(),
+  nblOwnershipRatio: z.string().optional(),
+  nblFarmerResidenceDistance: z.string().optional(),
+  nblLandSigunguCode: z.string().optional(),
+  nblLandSigunguName: z.string().optional(),
+  // 농지
+  nblFarmingSelf: z.boolean().optional(),
+  nblFarmlandIsWeekendFarm: z.boolean().optional(),
+  nblFarmlandIsConversionApproved: z.boolean().optional(),
+  nblFarmlandConversionDate: z.string().optional(),
+  nblFarmlandIsMarginalFarm: z.boolean().optional(),
+  nblFarmlandIsReclaimedLand: z.boolean().optional(),
+  nblFarmlandIsPublicProjectUse: z.boolean().optional(),
+  nblFarmlandIsSickElderlyRental: z.boolean().optional(),
+  // 임야
+  nblForestHasPlan: z.boolean().optional(),
+  nblForestIsPublicInterest: z.boolean().optional(),
+  nblForestIsProtected: z.boolean().optional(),
+  nblForestIsSuccessor: z.boolean().optional(),
+  nblForestInheritedWithin3Years: z.boolean().optional(),
+  nblForestInheritanceDate: z.string().optional(),
+  // 목장
+  nblPastureIsLivestockOperator: z.boolean().optional(),
+  nblPastureLivestockType: z.string().optional(),
+  nblPastureLivestockCount: z.string().optional(),
+  nblPastureLivestockPeriods: z.array(nblPeriodRawSchema).optional(),
+  nblPastureInheritanceDate: z.string().optional(),
+  nblPastureIsSpecialOrgUse: z.boolean().optional(),
+  // 주택부속
+  nblHousingFootprint: z.string().optional(),
+  // 별장
+  nblVillaUsePeriods: z.array(nblPeriodRawSchema).optional(),
+  nblVillaIsEupMyeon: z.boolean().optional(),
+  nblVillaIsRuralHousing: z.boolean().optional(),
+  nblVillaIsAfter20150101: z.boolean().optional(),
+  // 기타토지
+  nblOtherPropertyTaxType: z.string().optional(),
+  nblOtherBuildingValue: z.string().optional(),
+  nblOtherLandValue: z.string().optional(),
+  nblOtherIsRelatedToResidence: z.boolean().optional(),
+  // 무조건 의제 (§168의14③)
+  nblExemptInheritBefore2007: z.boolean().optional(),
+  nblExemptInheritDate: z.string().optional(),
+  nblExemptLongOwned20y: z.boolean().optional(),
+  nblExemptAncestor8YearFarming: z.boolean().optional(),
+  nblExemptPublicExpropriation: z.boolean().optional(),
+  nblExemptPublicNoticeDate: z.string().optional(),
+  nblExemptFactoryAdjacent: z.boolean().optional(),
+  nblExemptJongjoongOwned: z.boolean().optional(),
+  nblExemptJongjoongAcqDate: z.string().optional(),
+  nblExemptUrbanFarmlandJongjoong: z.boolean().optional(),
+  // 배열
+  nblBusinessUsePeriods: z.array(nblPeriodRawSchema).optional(),
+  nblResidenceHistories: z.array(nblResidenceHistoryRawSchema).optional(),
+  nblGracePeriods: z.array(nblGracePeriodRawSchema).optional(),
 });
 
 // rentHistorySchema·vacancyPeriodSchema는 reductions와 공유하는 leaf로 분리
