@@ -71,6 +71,26 @@ describe("buildBuppyo3Data — 부표3 (가·나·다·라)", () => {
     expect(d.funeralTotal).toBe(10_000_000);
   });
 
+  it("E-1d 식대 500만 미만 → 마지막 식대 행에 최소 500만 보정 (300만→500만, ⑰계 500만)", () => {
+    const debts: DebtItem[] = [
+      { id: "1", category: "funeral", name: "장례식장", amount: 3_000_000 },
+    ];
+    const d = buildBuppyo3Data(mkResult(baseDeduction), debts);
+    expect(d.funeralRows.length).toBe(1);
+    expect(d.funeralRows[0].amount).toBe(5_000_000); // §9②1호 최소 500만
+    expect(d.funeralTotal).toBe(5_000_000);
+  });
+
+  it("E-1e 봉안만 입력(식대 행 없음) → 식대 최소 500만 합성 행 + 봉안 (200만), ⑰계 700만", () => {
+    const debts: DebtItem[] = [
+      { id: "1", category: "funeral", name: "봉안당", amount: 2_000_000, isBongan: true },
+    ];
+    const d = buildBuppyo3Data(mkResult(baseDeduction), debts);
+    expect(d.funeralRows.length).toBe(2); // 합성 식대 행 + 봉안 행
+    expect(d.funeralRows[0].amount).toBe(5_000_000); // 합성 식대 최소
+    expect(d.funeralTotal).toBe(7_000_000);
+  });
+
   it("E-2 일괄공제 채택 → ⑱ null, ㉓ = lumpSumDeduction (R-1)", () => {
     const d = buildBuppyo3Data(
       mkResult({ ...baseDeduction, basicDeduction: 200_000_000, lumpSumDeduction: 500_000_000, totalDeduction: 500_000_000, chosenMethod: "lump_sum", lumpSumComparisonDetail: { selectedMethod: "lump_sum" } }),

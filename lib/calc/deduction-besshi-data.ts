@@ -29,6 +29,7 @@ import type {
 import {
   capFuneralRowAmounts,
   calcFuneralExpenseDeduction,
+  FUNERAL_MIN,
 } from "@/lib/tax-engine/inheritance-gift-common";
 import { toCollateralDebtItems } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { COLLATERAL_FINANCIAL_DEBT_ROW_LABEL } from "@/lib/tax-engine/inheritance-tax-financial-rows";
@@ -153,6 +154,11 @@ export function buildBuppyo3Data(
     detail: (d.name.trim() || DEBT_CATEGORY_LABEL.funeral) + (d.isBongan ? " (봉안시설)" : ""),
     amount: cappedFuneralAmounts[i],
   }));
+  // §9②1호 식대 최소 500만: 식대 행이 하나도 없으면(봉안만/채무만) capFuneralRowAmounts가
+  // 보정할 행이 없으므로 합성 행 추가 → 별지서식 합계 = 엔진 funeralDeduction 정합.
+  if (!useLegacy && !funeralItems.some((d) => !d.isBongan)) {
+    funeralRows = [{ detail: "장례비", amount: FUNERAL_MIN }, ...funeralRows];
+  }
 
   // legacy fallback (debtItems 미입력 — funeralExpense/debts 단일 행)
   if (useLegacy) {
@@ -160,10 +166,10 @@ export function buildBuppyo3Data(
       legacy!.funeralExpense,
       legacy!.funeralIncludesBongan,
     ).deduction;
-    funeralRows =
-      legacy!.funeralExpense > 0
-        ? [{ detail: "장례비" + (legacy!.funeralIncludesBongan ? " (봉안시설)" : ""), amount: legacyFuneralDeduction }]
-        : [];
+    // 식대 최소 500만은 funeralExpense=0이어도 항상 적용 → 행 표시 (엔진 정합).
+    funeralRows = [
+      { detail: "장례비" + (legacy!.funeralIncludesBongan ? " (봉안시설)" : ""), amount: legacyFuneralDeduction },
+    ];
     debtRows = legacy!.debts > 0 ? [{ kindLabel: "채무·공과금", amount: legacy!.debts }] : [];
     utilityRows = [];
   }

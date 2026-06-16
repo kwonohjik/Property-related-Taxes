@@ -165,12 +165,13 @@ export function calcInheritanceTax(
         nonFuneralDebts += di.amount;
       }
     }
-    funeralDeduction = Math.min(funeralMeal, 10_000_000) + Math.min(funeralBongan, 5_000_000);
+    // 상증령 §9②: 식대 clamp[500만,1천만] + 봉안 min(실제,500만). 단일진실 헬퍼로 통일.
+    funeralDeduction = calcFuneralExpenseDeduction(funeralMeal, funeralBongan).deduction;
     allBreakdown.push({
-      label: "장례비 (식대 한도 1천만 + 봉안 한도 5백만)",
+      label: "장례비 (식대 한도 500만~1천만 + 봉안 한도 5백만)",
       amount: -funeralDeduction,
       lawRef: INH.DEBT_DEDUCTION,
-      note: `식대 ${funeralMeal.toLocaleString()} → ${Math.min(funeralMeal, 10_000_000).toLocaleString()}, 봉안 ${funeralBongan.toLocaleString()} → ${Math.min(funeralBongan, 5_000_000).toLocaleString()}`,
+      note: `식대 ${funeralMeal.toLocaleString()} → ${Math.min(Math.max(funeralMeal, 5_000_000), 10_000_000).toLocaleString()}, 봉안 ${funeralBongan.toLocaleString()} → ${Math.min(funeralBongan, 5_000_000).toLocaleString()}`,
     });
     allBreakdown.push({
       label: "공과금·채무 차감",
@@ -341,7 +342,7 @@ export function calcInheritanceTax(
             else meal += di.amount;
           }
         }
-        funeralAmount = Math.min(meal, 10_000_000) + Math.min(bongan, 5_000_000);
+        funeralAmount = calcFuneralExpenseDeduction(meal, bongan).deduction;
       } else {
         // legacy/simple fallback — funeralBonganExpense 우선, 없으면 boolean 호환
         const fd =
