@@ -16,6 +16,8 @@
 
 import { applyRate, truncateToThousand } from "./tax-utils";
 import { PROPERTY } from "./legal-codes";
+import { getCurrentPropertyRateSet } from "./data/property-rate-history";
+import type { PropertyRateSet } from "./data/property-rate-history";
 
 // ============================================================
 // P5-02: 타입 정의
@@ -133,12 +135,8 @@ export interface SeparateTaxationResult {
 
 /** 분리과세 공정시장가액비율 (70%) */
 const FAIR_MARKET_RATIO = 0.70;
-/** 저율 세율 (0.07%) */
-const RATE_LOW   = 0.0007;
-/** 일반 세율 (0.2%) */
-const RATE_STD   = 0.002;
-/** 중과 세율 (4%) */
-const RATE_HEAVY = 0.04;
+// 분리 세율(저율 0.0007·일반 0.002·중과 0.04)은 역사표 PropertyRateSet.landSeparated*로 이관
+// (§111①1호 다목, Track A). 미러 검증: property-rate-history-anchor·sep-rateset-anchor A-4.
 
 // ============================================================
 // P5-03: 저율(0.07%) 판정 — 농지·목장·보전산지
@@ -159,12 +157,15 @@ type ClassifyPartial = {
  * 2. 목장용지 (isLivestockFarm)
  * 3. 보전산지 (isProtectedForest)
  */
-function classifyLowRate(input: SeparateTaxationInput): ClassifyPartial {
+function classifyLowRate(
+  input: SeparateTaxationInput,
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
+): ClassifyPartial {
   if (input.isFarmland) {
     return {
       isApplicable: true,
       category: "low_rate",
-      appliedRate: RATE_LOW,
+      appliedRate: rateSet.landSeparatedLow,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.LOW_RATE_FARMLAND,
         matchedCondition: "농지원부 등재 + 사실상 자경 농지 (전·답·과수원)",
@@ -177,7 +178,7 @@ function classifyLowRate(input: SeparateTaxationInput): ClassifyPartial {
     return {
       isApplicable: true,
       category: "low_rate",
-      appliedRate: RATE_LOW,
+      appliedRate: rateSet.landSeparatedLow,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.LOW_RATE_LIVESTOCK,
         matchedCondition: "축산업 등록 목장용지 (기준면적 이내)",
@@ -190,7 +191,7 @@ function classifyLowRate(input: SeparateTaxationInput): ClassifyPartial {
     return {
       isApplicable: true,
       category: "low_rate",
-      appliedRate: RATE_LOW,
+      appliedRate: rateSet.landSeparatedLow,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.LOW_RATE_FOREST,
         matchedCondition: "공익용 보전산지 또는 임업후계림",
@@ -217,6 +218,7 @@ function classifyLowRate(input: SeparateTaxationInput): ClassifyPartial {
 function classifyStandard(
   input: SeparateTaxationInput,
   warnings: string[],
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): ClassifyPartial {
   if (input.isFactoryLand) {
     if (input.factoryLocation === "urban") {
@@ -228,7 +230,7 @@ function classifyStandard(
     return {
       isApplicable: true,
       category: "standard",
-      appliedRate: RATE_STD,
+      appliedRate: rateSet.landSeparatedGeneral,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.STANDARD_FACTORY,
         matchedCondition: "산업단지·지정 공업지역 내 공장용지 (기준면적 이내)",
@@ -241,7 +243,7 @@ function classifyStandard(
     return {
       isApplicable: true,
       category: "standard",
-      appliedRate: RATE_STD,
+      appliedRate: rateSet.landSeparatedGeneral,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.STANDARD_SALT_FIELD,
         matchedCondition: "염화나트륨 생산에 직접 사용되는 염전",
@@ -254,7 +256,7 @@ function classifyStandard(
     return {
       isApplicable: true,
       category: "standard",
-      appliedRate: RATE_STD,
+      appliedRate: rateSet.landSeparatedGeneral,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.STANDARD_TERMINAL,
         matchedCondition: "여객·화물터미널 또는 공영주차장 부속토지",
@@ -281,6 +283,7 @@ function classifyStandard(
 function classifyHeavy(
   input: SeparateTaxationInput,
   warnings: string[],
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): ClassifyPartial {
   if (input.isGolfCourse) {
     if (!input.golfCourseType) {
@@ -296,7 +299,7 @@ function classifyHeavy(
       return {
         isApplicable: true,
         category: "heavy",
-        appliedRate: RATE_HEAVY,
+        appliedRate: rateSet.landSeparatedHigh,
         reasoning: {
           legalBasis: PROPERTY.SEPARATE.HEAVY_GOLF_MEMBER,
           matchedCondition: "회원제 골프장 부속토지 (체육시설법상 회원제)",
@@ -317,7 +320,7 @@ function classifyHeavy(
     return {
       isApplicable: true,
       category: "heavy",
-      appliedRate: RATE_HEAVY,
+      appliedRate: rateSet.landSeparatedHigh,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.HEAVY_ENTERTAINMENT,
         matchedCondition: "고급오락장(카지노·유흥주점 등) 부속토지",
@@ -346,19 +349,20 @@ function classifyHeavy(
  */
 export function classifySeparateTaxation(
   input: SeparateTaxationInput,
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): SeparateTaxationResult {
   const warnings: string[] = [];
 
   // 1. 중과(4%) 우선
-  const heavyResult = classifyHeavy(input, warnings);
+  const heavyResult = classifyHeavy(input, warnings, rateSet);
   if (heavyResult) return { ...heavyResult, warnings };
 
   // 2. 저율(0.07%)
-  const lowRateResult = classifyLowRate(input);
+  const lowRateResult = classifyLowRate(input, rateSet);
   if (lowRateResult) return { ...lowRateResult, warnings };
 
   // 3. 일반(0.2%)
-  const standardResult = classifyStandard(input, warnings);
+  const standardResult = classifyStandard(input, warnings, rateSet);
   if (standardResult) return { ...standardResult, warnings };
 
   // 4. 분리과세 비해당
@@ -467,7 +471,8 @@ export function isExcludedFromComprehensiveTax(
  */
 export function calculateSeparateTax(
   input: SeparateTaxationInput,
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): SeparateTaxationResult {
-  const classification = classifySeparateTaxation(input);
+  const classification = classifySeparateTaxation(input, rateSet);
   return calculateSeparateTaxationTax(classification, input.assessedValue);
 }
