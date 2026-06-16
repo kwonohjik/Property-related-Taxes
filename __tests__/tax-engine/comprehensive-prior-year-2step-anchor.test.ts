@@ -102,4 +102,31 @@ describe("Phase A — 직전 공시 2단계 통합 Pre-Do anchor", () => {
     // (2) 종부세 최종 영향: priorAssessedValue 유무 차이 실측 (예상 금지 — 실측값으로 단정)
     expect(rWith.determinedHousingTax).toBe(rNo.determinedHousingTax);
   });
+
+  // A-사례8통합: 다주택+감면 — 통합 변환이 만드는 input(priorAssessedValue 주택별 §122 +
+  //   previousYearAuto §10·집계 §122 단서, reductionRate=properties[0]).
+  //   §122 이중 제거 회귀 방어: 주택별 §122가 있으면 집계 §122 단서 스킵 → 교재 정답 ⑤ 16,747,099 보존.
+  //   (집계 단서가 previousYearAuto.reductionRate 스칼라로 ⓓ를 왜곡하던 17,001,297 차단.)
+  it("A-사례8통합: 다주택+감면 §122 이중 제거 → ⑤ 16,747,099 (교재 보존)", () => {
+    const input: ComprehensiveTaxInput = {
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      isMultiHouseInAdjustedArea: true,
+      properties: [
+        { propertyId: "seocho", assessedValue: 2_000_000_000, reductionRate: 0.3, priorAssessedValue: 1_500_000_000 },
+        { propertyId: "gangnam", assessedValue: 1_000_000_000, priorAssessedValue: 800_000_000 },
+      ],
+      previousYearAuto: {
+        assessedValue: 2_300_000_000,
+        priorHouseValues: [1_500_000_000, 800_000_000],
+        isOneHouseOwner: false,
+        isMultiHouseInAdjustedArea: true,
+        reductionRate: 0.3,
+      },
+    };
+    const r = calculateComprehensiveTax(input);
+    expect(r.calculatedTax).toBe(18_960_000); // ① 산출세액 (중과 2.2%)
+    expect(r.propertyTaxCredit.creditAmount).toBe(2_212_901); // ⓓ (주택별 §122만)
+    expect(r.determinedHousingTax).toBe(16_747_099); // ⑤ (집계 §122 단서 스킵 — 교재 보존)
+  });
 });

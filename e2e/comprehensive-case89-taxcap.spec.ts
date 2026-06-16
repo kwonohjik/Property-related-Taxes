@@ -8,7 +8,7 @@ import { test, expect, type Page } from "@playwright/test";
  *   서초 공시 20억·감면30%·직전 15억 → ⓐ 2,702,700 (당해 4,170,000 → min(·, 2,970,000×130%=3,861,000) ×0.7)
  *   강남 공시 10억·직전 8억 → ⓐ 1,677,000 / ⑤ = 16,747,099
  *
- * 검증 경로: UI(직전 공시 sky 토글 + CurrencyInput) → API body priorAssessedValue
+ * 검증 경로: UI(2단계 cap-mode-auto + 각 주택 직전공시 getByLabel) → API body priorAssessedValue
  *   → 엔진 buildHousingPropertyTaxWithCap → 결과 ⓐ·⑤ + 세부담상한 산식 echo
  *
  * worktree: E2E_PORT=3102 npx playwright test e2e/comprehensive-case89-taxcap.spec.ts
@@ -49,27 +49,25 @@ test.describe("종합부동산세 사례8 — 주택 세부담상한 자동(prio
     await page.getByRole("radio", { name: "2022" }).check();
     await clickNext(page);
 
-    // ★ Step2: 공시·감면율(nth 기반)을 sky 토글 전에 먼저 입력.
-    //   sky 토글 ON 시 priorAssessedValue CurrencyInput(placeholder "금액 입력")이 추가돼 nth 시프트 →
-    //   공시 nth 충돌 회피 위해 토글 전 입력. priorAssessedValue는 getByLabel(aria-label)로 선택.
+    // ★ Step2: 공시·감면율(nth 기반)을 cap-mode-auto 전에 먼저 입력.
+    //   cap-mode-auto ON 시 priorAssessedValue 입력란이 추가돼 nth 시프트 →
+    //   공시 nth 충돌 회피 위해 모드 전 입력. priorAssessedValue는 getByLabel(aria-label)로 선택.
     //   서초 공시 20억(금액 nth0), 감면율 30%(숫자 nth1)
     await page.getByPlaceholder("금액 입력").nth(0).fill("2000000000");
     await page.getByPlaceholder("숫자 입력").nth(1).fill("30");
-    // 주택2(강남) 추가 후 공시 10억 (금액 nth2 = 강남 공시, 아직 sky 미토글이라 공시/부과재산세만)
+    // 주택2(강남) 추가 후 공시 10억 (금액 nth2 = 강남 공시, "금액 입력"이 주택1=공시·재산세부과세액 2개라 nth2)
     await page.getByRole("button", { name: /주택 추가/ }).click();
     await page.getByPlaceholder("금액 입력").nth(2).fill("1000000000");
-    // 양쪽 "직전연도 공시가격 (주택 세부담상한)" sky 토글 ON + 직전 공시(getByLabel — aria-label)
-    await page.getByText("직전연도 공시가격 (주택 세부담상한)").nth(0).click();
-    await page.getByText("직전연도 공시가격 (주택 세부담상한)").nth(1).click();
-    await page.getByLabel("직전연도 주택공시가격").nth(0).fill("1500000000"); // 서초
-    await page.getByLabel("직전연도 주택공시가격").nth(1).fill("800000000"); // 강남
+    // 세부담상한 모드 ② auto (주택 목록 상단·직전 공시 단일 입력원) → 각 주택 직전공시 노출
+    await page.getByTestId("cap-mode-auto").click();
+    // 당해 조정대상지역 2주택 토글 ON (중과 2.2%) — 모드 섹션 첫 switch (2022<2023)
+    await page.getByRole("switch").first().click();
+    // 직전 공시 입력 (getByLabel — placeholder nth 충돌 회피)
+    await page.getByLabel("직전연도 공시가격").nth(0).fill("1500000000"); // 서초
+    await page.getByLabel("직전연도 공시가격").nth(1).fill("800000000"); // 강남
 
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
-
-    // Step5: 당해 조정대상지역 2주택 토글 ON (중과 2.2%) — Step5 첫 switch
-    await page.getByRole("switch").first().click();
     await calcAndWait(page);
 
     // 결과: 납부할세액 16,747,099

@@ -32,8 +32,8 @@
 
 ## 3. UI 위젯 (⑤ — `components/calc/PropertyListInput.tsx`)
 
-- 직전공시 입력을 카드 하단(:370)에서 **당해 공시(`StandardPriceInput` :177) 직하**로 이동. 동일 `StandardPriceInput`에 `referenceDate={(year-1)+"-06-01"}` 전달 → 직전연도 조회.
-- 모드 라디오(`RadioCardGroup` tone="sky", 2택)·세대속성 토글(`ToggleCard`)을 **주택 목록 상단**(첫 주택 카드 전)에 배치 — 모드가 각 카드 직전공시 표시를 제어(U1, UI 순서 준수). ② 모드일 때만 각 주택 카드 직전공시 `StandardPriceInput` 노출. 5단계 `Step5TaxCap`(page.tsx:334~449) **삭제**.
+- 직전공시 입력을 카드 하단(:370)에서 **당해 공시(`StandardPriceInput` :177) 직하**로 이동. 동일 `StandardPriceInput`에 `referenceDate={(year-1)+"-06-01"}` 전달 → 직전연도 조회. **(Do) `hideLabel` prop 신규** 추가 — CurrencyInput이 `hideLabel`일 때만 `aria-label`을 붙이므로(분리 `<label>`은 htmlFor 미연결) E2E `getByLabel("직전연도 공시가격")` 안정화. 시각 라벨은 sky 카드 헤더 `<p>`가 담당.
+- 모드 라디오(`RadioCardGroup` tone="sky", 2택)·세대속성 토글(`ToggleCard`)을 **주택 목록 상단**(첫 주택 카드 전)에 배치 — 모드가 각 카드 직전공시 표시를 제어(U1, UI 순서 준수). ② 모드일 때만 각 주택 카드 직전공시 `StandardPriceInput` 노출. **(Do 정정) 5단계에 있던 당해 조정대상지역 2주택 토글(`isMultiHouseInAdjustedArea`, 2022 이하)·corporate_special(§9②3호) 세부담상한 미적용 안내도 함께 2단계 상단으로 이전** — 설계 누락분, Step2Properties에서 `deriveCorporateClass`로 분기. 5단계 `Step5TaxCap`(page.tsx:334~449) **삭제**.
 - 합산배제 주택(C9' 확정 시) 직전공시 노출 정책: 합산배제 주택 카드에도 직전공시 입력란 + hint("직전 재산세상당액 합산용 — 당해 합산배제와 별개").
 
 ## 4. API 변환 (④⑬ — `lib/calc/comprehensive-api.ts`)
@@ -60,8 +60,9 @@
 
 - `previousYearAutoHouseValues[i]` → `properties[i].priorAssessedValue` (다주택)
 - `previousYearAutoAssessedValue` → `properties[0].priorAssessedValue` (1주택)
-- `previousYearTotalTax`(direct) 보유자 → ② 전환 + 직전공시 재입력 안내(역산 불가)
-- `currentStep` 4→3 재매핑(`STEP_MIGRATION`)
+- **(Do 정정) `previousYearTotalTax`(direct) 보유자 → `"none"`** (②auto 전환 아님 — 직전 세액은 종부세+재산세 합계라 재산세만으론 역산 불가 → 세부담상한 미적용이 안전. ②로 전환하면 priorAssessedValue 없이 validation 차단되어 사용자 멈춤). 신규 기본도 `"none"`.
+- 구 제거 필드(`previousYearTotalTax`·`previousYearAutoAssessedValue`·`previousYearAutoHouseValues`) `delete`로 정리
+- `currentStep ≥ 4` → 3 재매핑(구 4=세부담상한·5=결과 → 3=토지, 마지막 입력 단계로 clamp)
 
 ## 9. E2E
 
@@ -69,15 +70,23 @@
 - ★ **단계 재매핑(5→4) 회귀**: 기존 종부세 E2E가 5단계 가정 시 전부 영향 → 4단계 인덱스로 갱신·baseline 대조(메모리 `feedback_blocking_validation_full_e2e_regression`).
 - ★ 합산배제·토지 E2E 단계 인덱스 시프트 점검.
 
-## 10. 동기화 지점 체크리스트 (8/14)
+**(Do 완료)**:
+- 신규 spec N-2(사례8 16,747,099 보존)·N-3(none 미노출·auto 전환 노출)·N-4(auto 혼재 차단) 통과.
+- 기존 종부세 E2E 21개 전부 4단계로 갱신·통과: cap-mode 사용 8개(직전공시 `getByLabel("직전연도 공시가격")`·cap-mode-auto Step2 이동·당해공시는 클릭 전 입력) + 단계수 의존 10개(clickNext −1·Step5 참조 Step2 이동) + 신규 3개.
+- ★ **잠복 셀렉터 버그 동반 정정**(단계수 무관, 커밋 c5b4534f "재산세 부과세액" CurrencyInput 추가 후): 주택 카드 `placeholder="금액 입력"`이 공시+부과재산세 **2개** → 다주택 `nth(1)`로 주택2 공시 채우던 spec이 주택1 부과재산세 칸을 채워 주택2 공시 0이 되던 버그. **주택2 공시 = nth(2)**(공시 짝수 인덱스 0/2/4). CPT-YA-E2E-3(3주택 28,080,000)·S8-E2E-1/2(969,711)·case5·PYM-E1 정정 — 기대 numeric 보존(임의 변경 아님).
+- ★ Step5 직접 참조 검증(tax-year-aware 당해 조정대상지역 토글 노출/미노출·corporation 세부담상한 미적용) → Step2로 이동. corporation은 "전년도 총세액" 라벨 폐지 → cap-mode-auto/직전공시 부재 검증으로 대체.
+- ★ case12-filing F-3: 주택분 직접입력 모드(cap-mode-direct) 완전 제거로 "⑯=직접입력값 3,243,000" 재현 불가 → none 모드 전환 + 해당 단언 제거(임의값 발명 금지). F-2도 직접입력 fill 제거.
 
-- [ ] ① 폼 상태: capMode enum·제거 필드 정리
-- [ ] ② initial: 제거 필드
-- [ ] ③ normalize/migration: AutoHouseValues→priorAssessedValue·currentStep 4→3
-- [ ] ④ API 변환: previousYearAuto 11필드 파생·direct 제거
-- [ ] ⑤ UI 위젯: 직전공시 재배치·모드 2택·5단계 삭제
-- [ ] ⑥ 사이드바: 합계 유지
-- [ ] ⑦ 결과뷰: capMode enum 동기화
-- [ ] ⑧ validation: ② 전 주택 필수·refine 제거 모순 차단
-- [ ] ⑫ Zod: refine ⑫·direct↔auto 제거
-- [ ] tsc 0 · `vitest run comprehensive*` · E2E 4단계 갱신
+## 10. 동기화 지점 체크리스트 (8/14) — Do 완료
+
+- [x] ① 폼 상태: `previousYearCapMode "none"|"auto"`·제거 필드 4개(priorAssessedTaxCapEnabled·previousYearTotalTax·AutoAssessedValue·AutoHouseValues) 정리
+- [x] ② initial: `defaultFormData` capMode "none"·제거 필드 삭제
+- [x] ③ normalize/migration: `onRehydrateStorage` AutoHouseValues[i]→properties[i].priorAssessedValue·direct→none·currentStep≥4→3·구필드 delete
+- [x] ④ API 변환: `capMode==="auto"` 게이트로 priorAssessedValue 전송·previousYearAuto 파생·previousYearTotalTax undefined·하위호환 분기 제거
+- [x] ⑤ UI 위젯: 직전공시 당해 직하 `StandardPriceInput`(hideLabel)·모드 2택+세대속성+당해 조정2주택 2단계 상단·5단계 삭제
+- [x] ⑥ 사이드바: 합계 유지(변경 없음)
+- [x] ⑦ 결과뷰: capMode "none"|"auto" 동기화·previousYearTotalTaxDirect 제거
+- [x] ⑧ validation: `validatePriorAssessedValue` auto 전 주택 필수(2단계 handleNext)·refine ⑫ 제거
+- [x] ⑫ Zod: refine ⑫·direct↔auto 상호배타 제거(엔진 호환 위해 previousYearTotalTax·previousYearAuto 스키마 유지)
+- [x] tsc 0 · `vitest run comprehensive` 375 · 신규 E2E 3종 + 기존 8종 갱신 통과 (나머지 단계수 의존 10종 갱신 진행)
+- [x] ★ Do 추가: 엔진 §122 이중 적용 수정 (engine.design 「Do 단계 환류」) — 다주택+감면 교재 정답 보존

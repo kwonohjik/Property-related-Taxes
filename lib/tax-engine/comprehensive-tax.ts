@@ -509,7 +509,14 @@ export function calculateComprehensiveTax(
   // 교재 ②ⓐ echo: §122 단서 상한율 (자동모드만 산정 — 비자동/2024+ 폐지 시 null)
   // §122 구간 판정: 감면후 유효 공시가격 기준 (과세표준과 동일 축)
   let priorPropertyTaxCapPct: number | null = null;
-  if (previousYearEquivalent) {
+  // 직전공시 2단계 통합(comprehensive-prior-year-2step): 주택별 priorAssessedValue가 있으면
+  //   주택별 §122(buildHousingPropertyTaxWithCap → housingTaxCapDetail)가 이미 totalPropertyTaxAmount에
+  //   §122 상한을 주택별로 정확히 반영. 이때 집계 §122 단서를 또 적용하면 이중이며,
+  //   집계 직전 재산세상당액(previousYearEquivalent.propertyTaxEquiv)은 reductionRate를 스칼라
+  //   (properties[0])로만 반영해 다주택+감면에서 ⓐ를 왜곡(교재 사례8 16,747,099 → 17,001,297).
+  //   → 주택별 §122가 하나라도 적용되면 집계 단서 스킵(주택별이 정확). 종부세 §10(prevTotalForCap)은 별개 유지.
+  const hasHouseLevelCap = input.properties.some((p) => p.priorAssessedValue != null);
+  if (previousYearEquivalent && !hasHouseLevelCap) {
     priorPropertyTaxCapPct = getHousingTaxCapPct(input.assessmentYear, effectiveIncludedAssessedValue);
     if (priorPropertyTaxCapPct !== null) {
       aValue = Math.min(

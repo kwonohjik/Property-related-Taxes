@@ -56,20 +56,23 @@ describe("Phase B — 변환 priorAssessedValue → previousYearAuto 파생", ()
       ],
     };
     await callComprehensiveApi(formData);
-    // allPriorAssessed=false → 기존 previousYearAutoHouseValues(빈) 경로 → previousYearAuto 미생성
+    // allPriorAssessed=false(일부 미입력) → priorSum undefined → previousYearAuto 미생성 (⑧ validation 차단 대상)
     expect(capturedBody?.previousYearAuto).toBeUndefined();
   });
 
-  it("B-3: direct 모드 → previousYearAuto 미생성 (priorAssessedValue는 §122 layer-1만)", async () => {
+  it("B-3: none 모드 → previousYearAuto·priorAssessedValue 모두 미전송 (세부담상한 미적용)", async () => {
     const formData = {
       ...defaultFormData,
       assessmentYear: "2022",
-      previousYearCapMode: "direct" as const,
+      previousYearCapMode: "none" as const,
       properties: [
         { ...makeProperty(), assessedValue: "1300000000", priorAssessedValue: "1200000000" },
       ],
     };
     await callComprehensiveApi(formData);
     expect(capturedBody?.previousYearAuto).toBeUndefined();
+    // none 모드: priorAssessedValue 입력돼 있어도 §122 layer-1 strip (모드가 전송 일괄 제어)
+    const props = capturedBody?.properties as Array<Record<string, unknown>> | undefined;
+    expect(props?.[0]?.priorAssessedValue).toBeUndefined();
   });
 });

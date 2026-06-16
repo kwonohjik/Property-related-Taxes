@@ -4,7 +4,8 @@ import { test, expect, type Page } from "@playwright/test";
  * 종합부동산세 사례12 — 신고서 서식 4종 재현 E2E (전수 셀 검증)
  *
  * 국세청 2022 사례집 사례12 (1세대1주택, 공시 15억/14억, 67세, '12.1.1 취득)
- * 마법사 5단계 → 직전연도 자동계산 모드 → 결과 서식 펼침 → 전 칸 값 검증 + 콘솔 에러 0.
+ * 마법사 4단계(직전연도 2단계 통합) → 2단계 직전연도 자동계산 모드(cap-mode-auto) →
+ *   결과 서식 펼침 → 전 칸 값 검증 + 콘솔 에러 0.
  *
  * worktree: E2E_PORT=3101 npx playwright test e2e/comprehensive-case12-filing.spec.ts
  */
@@ -27,8 +28,11 @@ async function calcAndWait(page: Page): Promise<void> {
   expect(resp.ok(), `계산 API 비정상 ${resp.status()}`).toBe(true);
 }
 
-/** Step1~Step4 공통 입력 (1세대1주택 + 공시 15억) */
-async function fillCase12ThroughStep4(page: Page): Promise<void> {
+/**
+ * Step1 + Step2 공시 입력 (1세대1주택 + 공시 15억)까지 진행하고 Step2에 머무름.
+ * cap-mode 선택·직전공시 입력은 각 테스트가 Step2에서 수행 (직전공시 2단계 통합).
+ */
+async function fillCase12ToStep2(page: Page): Promise<void> {
   await page.goto(PAGE);
   await page.getByRole("radio", { name: "2022" }).check();
   await page.getByRole("switch").first().click();
@@ -38,12 +42,10 @@ async function fillCase12ThroughStep4(page: Page): Promise<void> {
   await page.getByLabel("연도").nth(1).fill("2012");
   await page.getByLabel("월").nth(1).fill("1");
   await page.getByLabel("일").nth(1).fill("1");
-  await clickNext(page);
+  await clickNext(page); // → Step2
+  // 당해 공시 먼저 입력 (cap-mode-auto 전 → 직전공시 미노출, placeholder nth 안정)
   await page.getByPlaceholder("금액 입력").first().fill("1500000000");
   await page.getByPlaceholder("0.00").first().fill("168");
-  await clickNext(page); // → Step3
-  await clickNext(page); // → Step4
-  await clickNext(page); // → Step5
 }
 
 /** data-besshi-cell 셀 텍스트 단언 헬퍼 */
@@ -65,12 +67,15 @@ test.describe("종합부동산세 사례12 신고서 서식 재현 (전수)", ()
     });
     page.on("pageerror", (e) => consoleErrors.push(`pageerror: ${e.message}`));
 
-    await fillCase12ThroughStep4(page);
+    await fillCase12ToStep2(page);
 
-    // Step5: 직전연도 자동계산 모드 + 공시 14억 + 직전 1주택
+    // Step2: 직전연도 자동계산 모드 + 직전공시 14억 + 직전 1세대1주택
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByPlaceholder("0").first().fill("1400000000");
-    await page.getByRole("switch").last().click();
+    await page.getByLabel("직전연도 공시가격").nth(0).fill("1400000000");
+    // 단일주택 auto switch: [0]당해 조정2주택 [1]직전 1세대1주택 → 직전 1세대1주택 = nth(1)
+    await page.getByRole("switch").nth(1).click();
+    await clickNext(page); // → Step3
+    await clickNext(page); // → Step4
     await calcAndWait(page);
 
     await expect(page.getByText(/302,400/).first()).toBeVisible({ timeout: 30_000 });
@@ -121,25 +126,29 @@ test.describe("종합부동산세 사례12 신고서 서식 재현 (전수)", ()
 
   test("F-2: 인적사항 미입력 → 서식 렌더 오류 0", async ({ page }) => {
     test.setTimeout(120_000);
-    await fillCase12ThroughStep4(page);
-    await page.getByPlaceholder("0").first().fill("3243000"); // 직접입력
+    await fillCase12ToStep2(page);
+    // 세부담상한 적용 안 함(none 기본) — 직전공시 없이 바로 계산
+    await clickNext(page); // → Step3
+    await clickNext(page); // → Step4
     await calcAndWait(page);
     await expect(page.getByText(/302,400/).first()).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: /신고서 서식/ }).click();
     await expectCell(page, "comp-main-⑩-housing", "302,400");
   });
 
-  test("F-3: 직접입력 모드 → 별지 5호부표 미가용 + ⑯ 직접입력값", async ({ page }) => {
+  test("F-3: 세부담상한 적용 안 함(none) → 별지 5호부표(직전연도) 미가용", async ({ page }) => {
     test.setTimeout(120_000);
-    await fillCase12ThroughStep4(page);
-    await page.getByPlaceholder("0").first().fill("3243000");
+    await fillCase12ToStep2(page);
+    // 세부담상한 적용 안 함(none 기본) — 직전공시·직접입력 모두 없음(직접입력 모드 제거됨)
+    await clickNext(page); // → Step3
+    await clickNext(page); // → Step4
     await calcAndWait(page);
     await expect(page.getByText(/302,400/).first()).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole("button", { name: /신고서 서식/ }).click();
+    // 직전공시 미입력(none) → 직전연도 별지 5호부표 미렌더
     await expect(
       page.locator('[data-besshi-cell="comp-b5sub-⑫-housing"]'),
     ).toHaveCount(0);
-    await expectCell(page, "comp-b5-⑯-housing", "3,243,000");
   });
 });

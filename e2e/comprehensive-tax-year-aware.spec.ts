@@ -3,10 +3,10 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * 종합부동산세 과세연도별 세법 E2E (Phase D)
  *
- * 마법사 5단계: Step1(과세연도·1주택) → Step2(주택) → Step3(합산배제) → Step4(토지) → Step5(세부담·계산)
+ * 마법사 4단계: Step1(과세연도·1주택) → Step2(주택) → Step3(합산배제) → Step4(토지·계산)
  *
  * - CPT-YA-E2E-1: 2022 선택 + 사례1(공시 9.5억) → 산출세액 1,260,000
- * - CPT-YA-E2E-2: 2022 → Step5 조정대상지역 ToggleCard 노출 / 2024 → 미노출
+ * - CPT-YA-E2E-2: 2022 → Step2(주택) 조정대상지역 ToggleCard 노출 / 2024 → 미노출
  * - CPT-YA-E2E-3: 2022 + 3주택 합산 29억 → 다주택 중과 배지 + 산출 28,080,000
  *
  * worktree: E2E_PORT=3100 npx playwright test e2e/comprehensive-tax-year-aware.spec.ts
@@ -42,8 +42,7 @@ test.describe("종합부동산세 과세연도별 세법", () => {
     await page.getByPlaceholder("금액 입력").first().fill("950000000");
     await page.getByPlaceholder("0.00").first().fill("84");
     await clickNext(page); // Step2 → Step3
-    await clickNext(page); // Step3 → Step4
-    await clickNext(page); // Step4 → Step5
+    await clickNext(page); // Step3 → Step4(토지·계산)
     await calcAndWait(page);
 
     // 2022 세율(0.6%) 산출세액 = 1,260,000 (현행 0.5%면 150,000)
@@ -52,38 +51,28 @@ test.describe("종합부동산세 과세연도별 세법", () => {
     });
   });
 
-  // 2022 → Step5에 조정대상지역 ToggleCard 노출
-  test("CPT-YA-E2E-2a: 2022 → Step5 조정대상지역 ToggleCard 노출", async ({
+  // 2022 → Step2(주택 목록)에 조정대상지역 2주택(당해연도) ToggleCard 노출
+  test("CPT-YA-E2E-2a: 2022 → Step2 조정대상지역 2주택(당해연도) ToggleCard 노출", async ({
     page,
   }) => {
     test.setTimeout(90_000);
     await page.goto(PAGE);
     await page.getByRole("radio", { name: "2022" }).check();
-    await clickNext(page); // → Step2
-    await page.getByPlaceholder("금액 입력").first().fill("1500000000");
-    await page.getByPlaceholder("0.00").first().fill("84");
-    await clickNext(page); // → Step3
-    await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
+    await clickNext(page); // → Step2 (주택 목록 — 당해 조정대상지역 2주택 토글이 cap-mode 위)
     await expect(
-      page.getByText(/조정대상지역 2주택/).first(),
+      page.getByText(/조정대상지역 2주택 이상 \(당해연도\)/).first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  // 2024 → 조정대상지역 ToggleCard 미노출 (별도 test — sessionStorage 격리)
-  test("CPT-YA-E2E-2b: 2024 → Step5 조정대상지역 ToggleCard 미노출", async ({
+  // 2024 → 조정대상지역 2주택(당해연도) ToggleCard 미노출 (별도 test — sessionStorage 격리)
+  test("CPT-YA-E2E-2b: 2024 → Step2 조정대상지역 2주택(당해연도) ToggleCard 미노출", async ({
     page,
   }) => {
     test.setTimeout(90_000);
     await page.goto(PAGE);
     await page.getByRole("radio", { name: "2024" }).check();
-    await clickNext(page); // → Step2
-    await page.getByPlaceholder("금액 입력").first().fill("1500000000");
-    await page.getByPlaceholder("0.00").first().fill("84");
-    await clickNext(page); // → Step3
-    await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
-    await expect(page.getByText(/조정대상지역 2주택/)).toHaveCount(0);
+    await clickNext(page); // → Step2 (주택 목록)
+    await expect(page.getByText(/조정대상지역 2주택 이상 \(당해연도\)/)).toHaveCount(0);
   });
 
   test("CPT-YA-E2E-3: 2022 3주택 합산 29억 → 다주택 중과 배지", async ({
@@ -96,17 +85,18 @@ test.describe("종합부동산세 과세연도별 세법", () => {
     await clickNext(page); // → Step2
 
     // 주택 3채: 14억 + 10억 + 5억 = 29억
-    await page.getByPlaceholder("금액 입력").first().fill("1400000000");
-    await page.getByPlaceholder("0.00").first().fill("84");
+    //   각 주택 카드에 "금액 입력" placeholder가 2개(공시가격·재산세 부과세액)이므로
+    //   공시가격은 nth 0·2·4 (부과재산세 nth 1·3·5는 미입력). 면적("0.00")은 주택당 1개 → nth 0·1·2.
+    await page.getByPlaceholder("금액 입력").nth(0).fill("1400000000");
+    await page.getByPlaceholder("0.00").nth(0).fill("84");
     await page.getByRole("button", { name: /주택 추가/ }).click();
-    await page.getByPlaceholder("금액 입력").nth(1).fill("1000000000");
+    await page.getByPlaceholder("금액 입력").nth(2).fill("1000000000");
     await page.getByPlaceholder("0.00").nth(1).fill("84");
     await page.getByRole("button", { name: /주택 추가/ }).click();
-    await page.getByPlaceholder("금액 입력").nth(2).fill("500000000");
+    await page.getByPlaceholder("금액 입력").nth(4).fill("500000000");
     await page.getByPlaceholder("0.00").nth(2).fill("84");
     await clickNext(page); // → Step3
-    await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
+    await clickNext(page); // → Step4(토지·계산)
     await calcAndWait(page);
 
     // 3주택 → 다주택 중과세율 자동 적용 + 산출세액 28,080,000
@@ -136,7 +126,7 @@ test.describe("종합부동산세 과세연도별 세법", () => {
     await landAmounts.nth(0).fill("1000000000"); // 공시지가 합산 10억
     await landAmounts.nth(1).fill("700000000");  // 재산세 과세표준 7억
     await landAmounts.nth(2).fill("2000000");    // 재산세 부과세액 200만
-    await clickNext(page); // → Step5
+    // Step4(토지)가 마지막 → 계산
     await calcAndWait(page);
 
     // 과세표준 = (10억 − 5억) × 95% = 475,000,000 + FMR note 95.00% 표시

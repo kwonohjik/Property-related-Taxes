@@ -65,10 +65,9 @@ test.describe("종합부동산세 사례7 — 다가구 면적안분 자동(floo
     await expect(page.getByText(/320,000,000/).first()).toBeVisible();
 
     await clickNext(page); // → Step3
-    await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
+    await clickNext(page); // → Step4(토지·계산)
 
-    // Step5: 전년도 미입력(세부담상한 생략 → ⑤=taxBeforeCap)
+    // 세부담상한 모드 미사용(기본 none) → ⑤=taxBeforeCap
     await calcAndWait(page);
 
     // 결과: 납부할세액 560,595

@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * 종합부동산세 — "주택분 종합부동산세 납부할세액의 계산" 산출근거 카드 E2E.
  *
- * 사례12(1세대1주택, 공시 15억/14억, 67세, '12.1.1 취득, 직전연도 자동) →
+ * 사례12(1세대1주택, 공시 15억/14억, 67세, '12.1.1 취득, 2단계 직전연도 자동) →
  * 결과 탭 "신고서 서식" 바로 아래 카드 기본 접힘 → 펼침 → 교재 ①~⑥ 값 검증.
  *
  * worktree: E2E_PORT=3101 npx playwright test e2e/comprehensive-payable-calc.spec.ts
@@ -15,7 +15,7 @@ async function clickNext(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 
-async function fillCase12ThroughStep4(page: Page): Promise<void> {
+async function fillCase12ToStep2(page: Page): Promise<void> {
   await page.goto(PAGE);
   await page.getByRole("radio", { name: "2022" }).check();
   await page.getByRole("switch").first().click();
@@ -25,12 +25,10 @@ async function fillCase12ThroughStep4(page: Page): Promise<void> {
   await page.getByLabel("연도").nth(1).fill("2012");
   await page.getByLabel("월").nth(1).fill("1");
   await page.getByLabel("일").nth(1).fill("1");
-  await clickNext(page);
+  await clickNext(page); // → Step2
+  // 당해 공시 먼저 입력 (cap-mode-auto 전 → 직전공시 미노출, placeholder nth 안정)
   await page.getByPlaceholder("금액 입력").first().fill("1500000000");
   await page.getByPlaceholder("0.00").first().fill("168");
-  await clickNext(page); // → Step3
-  await clickNext(page); // → Step4
-  await clickNext(page); // → Step5
 }
 
 async function calcAndWait(page: Page): Promise<void> {
@@ -52,12 +50,15 @@ test.describe("종합부동산세 납부할 세액 산출 근거 카드(주택�
     });
     page.on("pageerror", (e) => consoleErrors.push(`pageerror: ${e.message}`));
 
-    await fillCase12ThroughStep4(page);
+    await fillCase12ToStep2(page);
 
-    // Step5: 직전연도 자동계산 모드 + 공시 14억 + 직전 1주택
+    // Step2: 직전연도 자동계산 모드 + 직전공시 14억 + 직전 1세대1주택
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByPlaceholder("0").first().fill("1400000000");
-    await page.getByRole("switch").last().click();
+    await page.getByLabel("직전연도 공시가격").nth(0).fill("1400000000");
+    // 단일주택 auto switch: [0]당해 조정2주택 [1]직전 1세대1주택 → 직전 1세대1주택 = nth(1)
+    await page.getByRole("switch").nth(1).click();
+    await clickNext(page); // → Step3
+    await clickNext(page); // → Step4
     await calcAndWait(page);
 
     await expect(page.getByText(/302,400/).first()).toBeVisible({ timeout: 30_000 });
@@ -89,9 +90,11 @@ test.describe("종합부동산세 납부할 세액 산출 근거 카드(주택�
     await expect(page.getByTestId("payable-step5-na")).toContainText("3,243,000원");
     await expect(page.getByTestId("payable-step5-na-2")).toContainText("513,000원");
     await expect(page.getByTestId("payable-step6")).toContainText("302,400원");
-    // ②ⓐ 세부담상한액 3,549,000 + 재산세 FMR 45% echo
-    await expect(card).toContainText("3,549,000원");
+    // ②ⓐ 재산세 FMR 45% echo (상시 노출)
     await expect(card).toContainText("× 45%");
+    // 트랙 B 세부담상한 산식 echo 펼침 → 직전 재산세 2,730,000 × 130% = 3,549,000 (직전공시 2단계 통합 후에도 동일)
+    await card.getByText(/주택 세부담상한 산식/).first().click();
+    await expect(card).toContainText("3,549,000원");
     // ⑥ 농특세 미표기
     await expect(card).not.toContainText("농어촌특별세");
 

@@ -86,7 +86,7 @@ export function validateLandParcels(formData: ComprehensiveFormData): string | n
  */
 export function validateAppurtenantSplit(formData: ComprehensiveFormData): string | null {
   const corporateClass = deriveCorporateClass(formData);
-  const capMode = formData.previousYearCapMode ?? "direct";
+  const capMode = formData.previousYearCapMode ?? "none";
   const autoMode = corporateClass !== "corporate_special" && capMode === "auto";
   for (const p of formData.properties) {
     if (!p.appurtenantSplitEnabled) continue;
@@ -106,17 +106,21 @@ export function validateAppurtenantSplit(formData: ComprehensiveFormData): strin
 }
 
 /**
- * 트랙 B 주택 세부담상한 직전 공시가격 검증 (⑧ — API/UI 동기화).
- * priorAssessedTaxCapEnabled ON 시 priorAssessedValue > 0 필수.
- * 자동 안분 fallback 금지 — 미입력은 검증 오류로 차단 (CLAUDE.md §2).
- * UI 통과↔validate 차단 모순 방지 (API strip 게이트(>0)와 동일 조건).
+ * 주택 세부담상한 직전 공시가격 검증 (⑧ — API/UI 동기화).
+ * auto 모드 시 전 주택 priorAssessedValue > 0 필수 — 변환은 전 주택 입력 시만 priorHouseValues를
+ *   파생하므로 혼재(일부 미입력)는 침묵 누락. 자동 안분 fallback 금지(CLAUDE.md §2).
+ * none 모드·corporate_special(상한 미적용)은 직전공시 불필요(미입력 허용).
  */
 export function validatePriorAssessedValue(formData: ComprehensiveFormData): string | null {
-  for (const p of formData.properties) {
-    if (!p.priorAssessedTaxCapEnabled) continue;
-    if (parseAmount(p.priorAssessedValue) <= 0) {
-      return "직전연도 공시가격(세부담상한) 입력 시 직전연도 주택공시가격을 입력해야 합니다.";
-    }
+  const corporateClass = deriveCorporateClass(formData);
+  if (corporateClass === "corporate_special") return null;
+  const capMode = formData.previousYearCapMode ?? "none";
+  if (capMode !== "auto") return null;
+  const missing = formData.properties.some(
+    (p) => parseAmount(p.priorAssessedValue) <= 0,
+  );
+  if (missing) {
+    return "세부담상한 자동계산 모드에서는 모든 주택의 직전연도 공시가격을 입력해야 합니다.";
   }
   return null;
 }
@@ -189,6 +193,10 @@ export async function callComprehensiveApi(
   const taxpayerType = formData.taxpayerType ?? "individual";
   const isCorporate = taxpayerType !== "individual";
 
+  // 세부담상한 모드 — "none"(기본, 미적용) | "auto"(직전 공시가격 자동계산).
+  //   직전공시(priorAssessedValue)는 auto 모드일 때만 §122 layer-1·§10 layer-2에 전송(단일 입력원).
+  const capMode = formData.previousYearCapMode ?? "none";
+
   const properties = formData.properties.map((p) => {
     // §8④ 유형: 법인 시 strip. "none"은 undefined로 (엔진 기본값과 일치)
     const s84Type =
@@ -248,9 +256,10 @@ export async function callComprehensiveApi(
                 area: parseDecimal(u.area),
               }))
           : undefined,
-      // ⑬ 트랙 B: 주택 세부담상한 직전 공시가격. ON + >0 시만 전송. 빈값 = strip(상한 미적용).
+      // ⑬ 주택 세부담상한 직전 공시가격 (단일 입력원). auto 모드 + >0 시만 전송 → §122 layer-1.
+      //   빈값/none 모드 = strip(상한 미적용). 모드가 표시·전송을 일괄 제어(2단계 통합).
       priorAssessedValue:
-        p.priorAssessedTaxCapEnabled && parseAmount(p.priorAssessedValue) > 0
+        capMode === "auto" && parseAmount(p.priorAssessedValue) > 0
           ? parseAmount(p.priorAssessedValue)
           : undefined,
     };
@@ -354,41 +363,27 @@ export async function callComprehensiveApi(
       ? parseAmount(formData.landSeparatePreviousYearTotalTax) || undefined
       : undefined;
 
-  // 세부담상한 capMode 파생 (3중 패턴)
-  const capMode = formData.previousYearCapMode ?? "direct";
-
-  // ⑬ 직전연도 주택별 공시 (당해 2주택+ 다주택 케이스) — 재산세 주택별 합산용.
-  //   미입력/단일은 undefined → 엔진 [assessedValue] fallback. 입력 시 합산을 assessedValue로(단일 원천).
-  // Phase B 통합(comprehensive-prior-year-2step): auto 모드 + 전 주택 priorAssessedValue 입력 시
-  //   주택별 직전공시(priorAssessedValue)를 단일 소스로 파생. 미입력 주택 있으면 기존
-  //   previousYearAutoHouseValues 경로(하위호환). 혼재 차단은 ⑧ validation(전 주택 필수).
+  // ⑬ 직전연도 주택별 공시 (재산세 주택별 합산용) — 직전 공시 단일 입력원(priorAssessedValue).
+  //   auto 모드 + 전 주택 입력 시 priorHouseValues 파생, 합산을 assessedValue로(단일 원천).
+  //   미입력/none은 undefined → 엔진 [assessedValue] fallback. 혼재 차단은 ⑧ validation(전 주택 필수).
   const priorAssessedVals = formData.properties.map(
     (p) => parseAmount(p.priorAssessedValue) || 0,
   );
   const allPriorAssessed =
     priorAssessedVals.length > 0 && priorAssessedVals.every((v) => v > 0);
   const priorHouseValues =
-    capMode === "auto" && allPriorAssessed
-      ? priorAssessedVals
-      : formData.previousYearAutoHouseValues &&
-          formData.previousYearAutoHouseValues.length > 0
-        ? formData.previousYearAutoHouseValues
-            .map((v) => parseAmount(v))
-            .filter((v) => v > 0)
-        : undefined;
+    capMode === "auto" && allPriorAssessed ? priorAssessedVals : undefined;
   const priorSum =
     priorHouseValues && priorHouseValues.length > 0
       ? priorHouseValues.reduce((a, b) => a + b, 0)
       : undefined;
 
   // ⑬ 직전 §8④ 안분 분자(사례5) — 당해 §8④ 주택 인덱스 ↔ 직전 주택별 공시 매핑 (UI 추가 입력 없음).
-  //   ★ filter 전 원본(previousYearAutoHouseValues) 인덱싱 — priorHouseValues는 .filter(v>0)로
-  //     인덱스 시프트되므로 properties[i] 대응 깨짐.
-  // Phase B: §8④ 안분 인덱싱도 통합 소스 추종 (auto+전 주택 priorAssessedValue 시 그 값)
+  //   filter 전 원본(properties[i].priorAssessedValue) 인덱싱으로 properties[i] 대응 유지.
   const priorRawValues =
     capMode === "auto" && allPriorAssessed
       ? formData.properties.map((p) => p.priorAssessedValue)
-      : (formData.previousYearAutoHouseValues ?? []);
+      : [];
   const priorS84Sum = formData.properties.reduce((sum, p, i) => {
     const isS84 = (p.section8para4Type ?? "none") !== "none";
     const v = priorRawValues[i] ? parseAmount(priorRawValues[i]) : 0;
@@ -398,12 +393,10 @@ export async function callComprehensiveApi(
   // previousYearAuto: 자동 모드일 때만 구성 (직접 모드는 undefined — 상호배타)
   // 날짜는 문자열 그대로 전송 — route.ts Zod coerceDates가 Date 변환 담당
   const previousYearAuto =
-    !isCorporate &&
-    capMode === "auto" &&
-    (formData.previousYearAutoAssessedValue || priorSum)
+    !isCorporate && capMode === "auto" && priorSum
       ? {
-          // priorHouseValues 있으면 합산(priorSum)을 assessedValue로(단일 원천), 없으면 단일 입력값
-          assessedValue: priorSum ?? parseAmount(formData.previousYearAutoAssessedValue),
+          // 직전 공시 단일 입력원: 주택별 priorAssessedValue 합산(priorSum)을 assessedValue로
+          assessedValue: priorSum,
           isOneHouseOwner: formData.previousYearAutoIsOneHouse,
           // 생년월일·취득일은 기본정보에서 재사용 (중복 입력 금지)
           birthDate: formData.birthDate || undefined,
@@ -466,11 +459,9 @@ export async function callComprehensiveApi(
       : (formData.isJointOwnershipSpecialCase ?? false),  // ③ normalize fallback (3중 일치)
     birthDate: isCorporate ? undefined : formData.birthDate || undefined,
     acquisitionDate: isCorporate ? undefined : formData.acquisitionDate || undefined,
-    // 직접 모드 시만 previousYearTotalTax 전송, 자동 모드 시 strip (Zod 상호배타)
-    previousYearTotalTax:
-      capMode === "direct" && formData.previousYearTotalTax
-        ? parseAmount(formData.previousYearTotalTax) || undefined
-        : undefined,
+    // 직전 세액 직접입력 제거(§10 분모는 종부세+재산세 합계라 재산세만으론 역산 불가).
+    //   엔진은 previousYearAuto(직전 공시→상당액 자동 산출)만 사용. Zod·엔진 호환 위해 키 유지.
+    previousYearTotalTax: undefined,
     // 자동 모드 시만 previousYearAuto 전송 (⑬ body spread)
     previousYearAuto,
     properties,

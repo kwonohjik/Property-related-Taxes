@@ -243,10 +243,10 @@ export const comprehensivePropertySchema = z
       .optional(),
 
     /**
-     * 직전연도 주택공시가격 (트랙 B, 사례8·9).
-     * §122 layer-1 세부담상한 전용 — priorAssessedTaxCapEnabled ON 시 전송.
-     * 정수(원), 양의 정수. 빈값/0 = strip(세부담상한 미적용).
-     * ⑧ validate: ON 시 >0 필수 (자동 안분 fallback 금지 정책).
+     * 직전연도 주택공시가격 (직전 공시 단일 입력원, 2단계 통합).
+     * §122 layer-1 + §10 layer-2(변환이 previousYearAuto로 파생) — capMode "auto" 시 전송.
+     * 정수(원), 양의 정수. 빈값/0/none 모드 = strip(세부담상한 미적용).
+     * ⑧ validate: auto 모드 시 전 주택 >0 필수 (자동 안분 fallback 금지 정책).
      */
     priorAssessedValue: z
       .number()
@@ -534,14 +534,6 @@ export const comprehensiveTaxInputSchema = z.object({
   {
     message: "법인 세부 유형의 요건 충족 여부를 선택해주세요 (시행령 §4의4).",
     path: ["corporateHousingType"],
-  },
-).refine(
-  // 세부담상한: 전년도 총세액 직접입력과 직전연도 자동계산은 상호배타
-  (v) => !(v.previousYearTotalTax !== undefined && v.previousYearAuto !== undefined),
-  {
-    message:
-      "전년도 총세액 직접 입력과 직전연도 공시가격 자동 계산은 동시에 사용할 수 없습니다. 하나만 선택하세요.",
-    path: ["previousYearAuto"],
   },
 ).refine(
   // 종합합산: 집계 입력(landAggregate)과 필지 모드(landAggregateParcels) 상호배타

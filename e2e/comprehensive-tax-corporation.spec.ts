@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * 종합부동산세 법인 §9② E2E (Phase B → §4의4 자동판정 전환 후)
  *
- * 마법사 5단계: Step1(과세연도·납세의무자) → Step2(주택) → Step3(합산배제) → Step4(토지) → Step5(세부담·계산)
+ * 마법사 4단계: Step1(과세연도·납세의무자) → Step2(주택·세부담상한 모드) → Step3(합산배제) → Step4(토지·계산)
  *
  * - CPT-CORP-E2E-1: 법인 선택 → 1세대1주택 ToggleCard 숨김 + 법인 세부유형 Select 노출
  * - CPT-CORP-E2E-2: 2024 + 법인(기본 general_corp → §9②3호) + 공시 20억 1채 → 32,400,000 + 단일세율 배지 + 기본공제 적용 없음
@@ -75,20 +75,20 @@ test.describe("종합부동산세 법인 §9②", () => {
         page.getByText(/§9②3호 법인 주택분 특례/),
       ).toBeVisible({ timeout: 5_000 });
 
-      await clickNext(page); // Step1 → Step2
+      await clickNext(page); // Step1 → Step2 (주택·세부담상한 모드)
+
+      // Step2: corporate_special → 세부담상한 모드(직전공시) 섹션 숨김 + 상한 미적용 안내 표시
+      //   (세부담상한 5단계 제거 후 직전공시 입력은 2단계로 통합 — 법인 §9②3호는 미노출)
+      await expect(page.getByText(/세부담 상한 미적용/)).toBeVisible({ timeout: 5_000 });
+      await expect(page.getByTestId("cap-mode-auto")).toHaveCount(0);
+      await expect(page.getByLabel("직전연도 공시가격")).toHaveCount(0);
 
       // Step2: 공시가격 20억 주택 1채
       await page.getByPlaceholder("금액 입력").first().fill("2000000000");
       await page.getByPlaceholder("0.00").first().fill("84");
 
       await clickNext(page); // Step2 → Step3
-      await clickNext(page); // Step3 → Step4
-      await clickNext(page); // Step4 → Step5
-
-      // Step5: corporate_special → 전년도 세액 입력란 숨김 + 상한 미적용 안내 표시
-      await expect(page.getByText(/세부담 상한 미적용/)).toBeVisible({ timeout: 5_000 });
-      await expect(page.getByLabel(/전년도 총세액/)).toHaveCount(0);
-
+      await clickNext(page); // Step3 → Step4(토지·계산)
       await calcAndWait(page);
 
       // 결과: 산출세액 32,400,000 (과표 20억 × 60% = 12억 × 2.7%)

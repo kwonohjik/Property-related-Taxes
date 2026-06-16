@@ -62,6 +62,8 @@ interface Props {
   isCorporate?: boolean;
   /** 과세기준일(`${과세연도}-06-01`) — 공시가격 조회 연도 자동 매핑용 */
   referenceDate?: string;
+  /** 세부담상한 모드 — "auto"일 때만 각 주택 카드에 직전연도 공시가격 입력 노출 (2단계 통합) */
+  capMode: "none" | "auto";
   onAdd: () => void;
   onRemove: (id: string) => void;
   onUpdate: (id: string, data: Partial<PropertyEntry>) => void;
@@ -77,6 +79,7 @@ function PropertyCard({
   canRemove,
   isCorporate,
   referenceDate,
+  capMode,
   onRemove,
   onUpdate,
 }: {
@@ -85,9 +88,15 @@ function PropertyCard({
   canRemove: boolean;
   isCorporate: boolean;
   referenceDate?: string;
+  capMode: "none" | "auto";
   onRemove: () => void;
   onUpdate: (data: Partial<PropertyEntry>) => void;
 }) {
+  // 직전연도 공시가격 조회용 기준일 (당해 referenceDate의 연도 − 1) — 같은 지번으로 직전연도 조회
+  const priorReferenceDate = (() => {
+    const y = parseInt(referenceDate?.slice(0, 4) ?? "", 10);
+    return Number.isFinite(y) ? `${y - 1}-06-01` : undefined;
+  })();
   const addressValue: AddressValue = {
     road: property.road,
     jibun: property.jibun,
@@ -185,6 +194,27 @@ function PropertyCard({
           required
         />
       </div>
+
+      {/* ⑤ 직전연도 공시가격 (세부담상한 자동계산 — 모드 ② 시만, 당해 공시 직하·referenceDate=year-1) */}
+      {capMode === "auto" && (
+        <div className="space-y-1.5 rounded-lg border border-sky-200 bg-sky-50/70 p-3">
+          <p className="text-xs font-semibold text-sky-700">
+            세부담상한 자동계산 — 직전연도 공시가격
+          </p>
+          <StandardPriceInput
+            propertyKind="house_apart"
+            totalPrice={property.priorAssessedValue}
+            onTotalPriceChange={(v) => onUpdate({ priorAssessedValue: v })}
+            jibun={property.jibun}
+            referenceDate={priorReferenceDate}
+            enableLookup={true}
+            label="직전연도 공시가격"
+            hideLabel
+            required
+            hint="직전연도 6월 1일 기준 — 105%/110%/130% 세부담상한 자동 산정용. 같은 지번으로 직전연도가 조회됩니다."
+          />
+        </div>
+      )}
 
       {/* ⑤ 지분율(%) + 재산세 감면율(%) — 공시가격 직후, 나란히 배치 */}
       <div className="grid grid-cols-2 gap-3">
@@ -364,33 +394,6 @@ function PropertyCard({
               ))}
             </div>
           )}
-        </div>
-      </ToggleCard>
-
-      {/* ⑤ 트랙 B: 직전연도 공시가격 (주택 세부담상한 자동계산 — §122 layer-1) */}
-      <ToggleCard
-        tone="sky"
-        title="직전연도 공시가격 (주택 세부담상한)"
-        description="전년도 주택공시가격 입력 시 105%/110%/130% 세부담상한을 자동 계산하여 재산세 부과세액(ⓐ)을 산정합니다."
-        checked={property.priorAssessedTaxCapEnabled ?? false}
-        onCheckedChange={(v) =>
-          onUpdate({
-            priorAssessedTaxCapEnabled: v,
-            priorAssessedValue: v ? property.priorAssessedValue : "",
-          })
-        }
-      >
-        <div className="space-y-2">
-          <CurrencyInput
-            label="직전연도 주택공시가격"
-            hideLabel
-            value={property.priorAssessedValue}
-            onChange={(v) => onUpdate({ priorAssessedValue: v })}
-            hideUnit
-          />
-          <p className="text-xs text-muted-foreground">
-            전년도 주택공시가격 — 105%/110%/130% 세부담상한 자동 산정용. 세부담상한 산식은 결과 카드에서 표시됩니다.
-          </p>
         </div>
       </ToggleCard>
 
@@ -600,7 +603,7 @@ function PropertyCard({
 // 메인 컴포넌트
 // ============================================================
 
-export function PropertyListInput({ properties, isCorporate = false, referenceDate, onAdd, onRemove, onUpdate }: Props) {
+export function PropertyListInput({ properties, isCorporate = false, referenceDate, capMode, onAdd, onRemove, onUpdate }: Props) {
   const totalAssessedValue = properties.reduce(
     (sum, p) => sum + parseAmount(p.assessedValue),
     0,
@@ -617,6 +620,7 @@ export function PropertyListInput({ properties, isCorporate = false, referenceDa
           canRemove={properties.length > 1}
           isCorporate={isCorporate}
           referenceDate={referenceDate}
+          capMode={capMode}
           onRemove={() => onRemove(property.id)}
           onUpdate={(data) => onUpdate(property.id, data)}
         />

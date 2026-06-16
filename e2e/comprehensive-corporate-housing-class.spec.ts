@@ -64,8 +64,7 @@ test.describe("종부세 법인 §9②1·2호 자동판정 (§4의4)", () => {
     await page.getByPlaceholder("0.00").first().fill("84");
 
     await clickNext(page); // → Step3
-    await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
+    await clickNext(page); // → Step4(토지·계산)
 
     // 계산하기 → C-15 차단 (요건 미응답)
     await page.getByRole("button", { name: /계산하기/ }).click();

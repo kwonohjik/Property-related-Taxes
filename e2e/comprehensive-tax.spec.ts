@@ -4,6 +4,8 @@ import { test, expect, type Page } from "@playwright/test";
  * 종합부동산세 마법사 E2E (GAP-4)
  *
  * 폼 → 계산 → 결과 전체 경로 런타임 검증.
+ * 마법사 4단계: Step1(기본·1주택) → Step2(주택) → Step3(합산배제) → Step4(토지·계산)
+ *
  * - CPT-E2E-1: 주택분 단독 (1세대1주택 아님)
  * - CPT-E2E-2: 1세대1주택 + 고령자·장기보유 세액공제 (ToggleCard switch)
  * - CPT-E2E-3: 종합합산 토지 포함 (Step4 ToggleCard)
@@ -50,9 +52,7 @@ test.describe("종합부동산세 마법사", () => {
 
     // Step3: 합산배제 없음 (스킵)
     await clickNext(page);
-    // Step4: 토지 없음 (스킵)
-    await clickNext(page);
-    // Step5: 계산
+    // Step4(토지): 토지 없음 → 계산
     await calcAndWait(page);
 
     await expect(page.getByText(/과세표준/).first()).toBeVisible({
@@ -82,8 +82,7 @@ test.describe("종합부동산세 마법사", () => {
     await page.getByPlaceholder("금액 입력").first().fill("1300000000");
     await page.getByPlaceholder("0.00").first().fill("84");
     await clickNext(page);
-    await clickNext(page); // Step3 스킵
-    await clickNext(page); // Step4 스킵
+    await clickNext(page); // Step3 스킵 → Step4(토지)
     await calcAndWait(page);
 
     await expect(
@@ -114,7 +113,7 @@ test.describe("종합부동산세 마법사", () => {
     await landAmounts.nth(0).fill("800000000"); // 공시지가 합산 8억
     await landAmounts.nth(1).fill("800000000"); // 재산세 과세표준 8억
     await landAmounts.nth(2).fill("3000000");   // 재산세 부과세액 300만
-    await clickNext(page); // Step5
+    // Step4(토지)가 마지막 → 계산
     await calcAndWait(page);
 
     await expect(page.getByText(/종합합산 토지/).first()).toBeVisible({

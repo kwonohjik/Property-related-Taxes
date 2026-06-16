@@ -86,7 +86,7 @@ previousYearAuto = (capMode==="auto" && !isCorporate && priorVals.length === pro
 
 - **혼재 차단(필수)**: ② 모드 시 일부 주택만 직전공시 입력하면 `priorVals.length < properties.length` → `previousYearAuto` 미생성(§10 누락) → **부정확**. 자동 안분 금지 정책 → **전 주택 직전공시 필수**(⑧ validation, ui.design).
 - **(D2) 합산배제 주택 처리**: `exclusionType≠none` 주택의 직전공시를 `priorHouseValues`에 포함할지·`taxableHouseCount`(직전 중과 주택수)에 산입할지는 **현행 엔진/변환 동작 실측 후 확정**(추정 금지). 현행 변환(`api:361`)은 `previousYearAutoHouseValues` 전체를 필터 없이 전송 → C9' anchor로 합산배제 혼재 케이스의 직전 재산세상당액·중과 판정을 실측해 통합 변환이 동일 동작하도록 정합. "전 주택 필수"가 합산배제 주택까지 포함하면 그 카드에도 직전공시 입력란 노출(ui.design 반영).
-- `reductionRate`/`ownershipRatio`/`appurtenantSplit`을 `properties[0]` 기준으로 두는 현행 단순화 유지(다주택 이질 시 한계 — 기존과 동일, 본 통합 범위 밖).
+- `reductionRate`/`ownershipRatio`/`appurtenantSplit`을 `properties[0]` 기준으로 두는 현행 단순화 유지(다주택 이질 시 한계 — 기존과 동일). ★ 이 단순화가 §122 **집계** 단서(`comprehensive-tax.ts:512`)의 직전 재산세상당액을 왜곡 → 다주택+감면에서 ⓐ 오차를 유발함이 Do에서 규명됨 → 「Do 단계 환류」로 §122 이중 적용 수정(주택별 §122 우선).
 - **(STEP 11) Zod refine 제거**: ⑫(priorAssessedValue ↔ previousYearAuto.priorHouseValues 상호배타, `comprehensive-input.ts:566~579`) + direct↔auto(:538) 제거 — 단일 입력원이라 중복/배타 불필요. §10의2·법인 요건·토지 상호배타 refine은 **유지**.
 
 ## 테스트 약속
@@ -100,3 +100,19 @@ previousYearAuto = (capMode==="auto" && !isCorporate && priorVals.length === pro
 ## UI 통합 위임
 
 → `comprehensive-prior-year-2step.ui.design.md` (STEP 12). 2단계 위젯 재배치·모드 2택·StandardPriceInput year-1·5단계 제거·마이그레이션·8 동기화 지점.
+
+## Do 단계 환류 — §122 이중 적용 수정 (엔진 1줄 변경)
+
+**발견**: Phase A는 사례4(**감면 없음**)로 "§122 ⓐ 감액 → 종부세 보존"(§위 line 13·83)을 실증했으나, **다주택+감면 사례8**은 통합 후 ⑤ 16,747,099(교재) → 17,001,297로 왜곡됨이 Do의 E2E(`comprehensive-prior-year-2step.spec.ts` N-2)·throwaway probe 2회로 드러남. Pre-Do anchor가 감면 케이스를 포함하지 않아 놓친 부분.
+
+**근본 원인 — §122 이중 적용**: 통합 cap-mode-auto가 동일 직전공시에서 두 §122 경로를 모두 활성화:
+1. **주택별 §122** — `priorAssessedValue` → `buildHousingPropertyTaxWithCap` → `housingTaxCapDetail`. `totalPropertyTaxAmount`에 §122 상한을 **주택별로 정확히** 반영(reductionRate는 imposedTax 단계에서 주택별 적용).
+2. **집계 §122 단서** — `previousYearAuto` → `previousYearEquivalent` → `comprehensive-tax.ts:512` `min(ⓐ, previousYearEquivalent.propertyTaxEquiv × 상한율)`. 집계 직전 재산세상당액은 `reductionRate`를 `properties[0]` 스칼라로만 반영(line 89 한계) → 다주택+감면 ⓐ를 2,212,901 → 1,958,703으로 왜곡.
+
+기존엔 트랙B(주택별만) **XOR** 5단계 auto(집계만) 배타라 이중이 없었음 → 통합이 둘을 합치며 노출.
+
+**수정** (`comprehensive-tax.ts` — "엔진 무변경" 전제의 예외, 통합이 노출한 이중 적용 버그): `const hasHouseLevelCap = input.properties.some(p => p.priorAssessedValue != null)` 도입, **주택별 §122가 하나라도 있으면 집계 §122 단서를 스킵**(주택별이 정확). 종부세 §10(`prevTotalForCap`, line 589)은 `previousYearEquivalent.total`을 별개로 계속 사용 → 사례4 §10(직전 종부세상당액 39,556,223) 보존.
+
+**영향 범위**: `priorAssessedValue` **AND** `previousYearAuto` 둘 다인 경우만(= 통합 cap-mode-auto). 기존 단위 테스트는 배타 조합이라 무영향(`npx vitest run comprehensive` 375 통과). 단일주택+감면(reduction-rate·ownership-ratio)도 교재 정답 보존(E2E 8종 실측, 변경 0건). 회귀 방어 anchor `A-사례8통합`(⑤ 16,747,099·ⓓ 2,212,901·① 18,960,000) 추가.
+
+**교훈**: Pre-Do anchor에 **감면·지분율 등 `properties[0]` 단순화가 노출되는 케이스**를 포함해야 했음 (사례4=감면없음만으론 §122 이중을 못 잡음). [[feedback_pre_anchor_verification]] [[feedback_numeric_impact_verify_before_bug_claim]]
