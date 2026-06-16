@@ -51,3 +51,23 @@ export function resolveBasisTax(
   }
   return input.previousYearTax;
 }
+
+/**
+ * recompute 모드 직전연도 단일세율 (결과 echo recomputeDetail.appliedRate용).
+ * 건축물=buildingType별, 선박·항공기=vesselAircraft, 누진 토지(종합합산 등)=undefined.
+ */
+export function recomputePriorYearAppliedRate(
+  input: PropertyTaxInput,
+  priorYear: number,
+): number | undefined {
+  const rs = getPropertyRateSet(priorYear);
+  switch (input.objectType) {
+    case "building":
+      return calcBuildingTax(0, input.buildingType, rs).appliedRate;
+    case "vessel":
+    case "aircraft":
+      return rs.vesselAircraft;
+    default:
+      return undefined; // land(종합합산 누진 등) — 단일세율 없음
+  }
+}

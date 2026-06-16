@@ -42,6 +42,7 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import { resolveBasisTax } from "./property-tax-recompute";
+import { buildCapEcho } from "./property-tax-cap-echo";
 
 // ============================================================
 // DB 세율 조회 헬퍼 — 공정시장가액비율 (정부 매년 고시)
@@ -551,6 +552,7 @@ export function calculatePropertyTax(
           legalBasis: [...new Set(legalBasis)],
           warnings,
           targetDate,
+          ...buildCapEcho(input, input.previousYearTax, taxYear - 1),
           ...buildTaxpayerOutcome(taxpayerResult, coShares, determinedTaxSep, totalPayableSep),
         };
       }
@@ -625,6 +627,7 @@ export function calculatePropertyTax(
           legalBasis: [...new Set(legalBasis)],
           warnings,
           targetDate,
+          ...buildCapEcho(input, input.previousYearTax, taxYear - 1),
           ...buildTaxpayerOutcome(taxpayerResult, coShares, capResult.determinedTax, totalPayableSep),
         };
       }
@@ -639,9 +642,10 @@ export function calculatePropertyTax(
         } = calcTaxBase(input.publishedPrice, "land", rates);
         legalBasis.push(taxBaseLegal);
         const grossTaxComp = calculateComprehensiveAggregateTax(comprehensiveTaxBase);
+        const basisComp = resolveBasisTax(input, taxYear - 1);
         const { taxAfterCap: determinedTaxComp, appliedCapRate: capRateComp } = applyBurdenCap(
           grossTaxComp,
-          resolveBasisTax(input, taxYear - 1),
+          basisComp,
         );
 
         legalBasis.push(PROPERTY_CAL.RATE_COMPREHENSIVE);
@@ -679,6 +683,7 @@ export function calculatePropertyTax(
           legalBasis: [...new Set(legalBasis)],
           warnings,
           targetDate,
+          ...buildCapEcho(input, basisComp, taxYear - 1),
           ...buildTaxpayerOutcome(taxpayerResult, coShares, determinedTaxComp, totalPayableComp),
         };
       }
@@ -709,10 +714,11 @@ export function calculatePropertyTax(
   }
 
   // ── Step 3: 세부담상한 (주택은 §122 단서로 미적용) ──
+  const basisMain = resolveBasisTax(input, taxYear - 1);
   const capResult = applyTaxCap(
     calculatedTax,
     input.objectType,
-    resolveBasisTax(input, taxYear - 1),
+    basisMain,
   );
   warnings.push(...capResult.warnings);
   legalBasis.push(capResult.legalBasis);
@@ -769,6 +775,7 @@ export function calculatePropertyTax(
     legalBasis: [...new Set(legalBasis)],
     warnings,
     targetDate,
+    ...buildCapEcho(input, basisMain, taxYear - 1),
     ...selectTaxpayerOutcome(taxpayerResult, input, coShares, determinedTax, totalPayable),
   };
 }

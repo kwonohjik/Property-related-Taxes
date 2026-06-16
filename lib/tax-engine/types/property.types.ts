@@ -360,6 +360,21 @@ export interface PropertyTaxResult {
   taxCapRate: number;
   /** 세부담상한 적용 후 확정세액 */
   determinedTax: number;
+  /** 세부담상한 산정 모드 — direct(직전 세액 직접입력) | recompute(직전 과표 재산정, §118 본문). 미적용 시 undefined */
+  taxCapMode?: "direct" | "recompute";
+  /** 세부담상한(§122) 기준 직전연도 세액상당액 (cap 비교 기준값) */
+  taxCapBasisTax?: number;
+  /** recompute 모드 재산정 상세 (direct·미적용 시 undefined) */
+  recomputeDetail?: {
+    /** 직전 연도 (taxYear - 1) */
+    priorYear: number;
+    /** 직전 과세표준 (= previousYearTaxBase) */
+    priorTaxBase: number;
+    /** 직전 단일세율 (건축물·선박·항공기). 누진 토지는 undefined */
+    appliedRate?: number;
+    /** 재산정 직전 세액상당액 (= taxCapBasisTax) */
+    recomputedTax: number;
+  };
 
   // ── 부가세 ──
   /** 부가세 상세 */
