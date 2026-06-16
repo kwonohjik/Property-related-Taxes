@@ -129,4 +129,38 @@ describe("Phase A — 직전 공시 2단계 통합 Pre-Do anchor", () => {
     expect(r.propertyTaxCredit.creditAmount).toBe(2_212_901); // ⓓ (주택별 §122만)
     expect(r.determinedHousingTax).toBe(16_747_099); // ⑤ (집계 §122 단서 스킵 — 교재 보존)
   });
+
+  // A-C9'합산배제: 다주택 중 1채 합산배제(미분양) + 직전공시 전체(auto). 당해는 합산배제로
+  //   1주택 과세이나 직전은 priorHouseValues 2개 전체로 세부담상한 분모를 산정(직전 보유 = 직전 과세
+  //   가정 — 현행 동작 보존, engine.design C9'/D2). §10 상한이 직전 2주택 기준이라 당해 1주택보다 커 미발동.
+  //   ★ 통합 변환(B-4)이 합산배제 주택 직전공시를 priorHouseValues에 포함시킨 동작과 정합.
+  it("A-C9'합산배제: 당해 1주택 과세 vs 직전 2주택 세부담상한 분모 (현행 동작 고정)", () => {
+    const input: ComprehensiveTaxInput = {
+      assessmentYear: 2022,
+      isOneHouseOwner: false,
+      properties: [
+        { propertyId: "p1", assessedValue: 1_300_000_000, priorAssessedValue: 1_200_000_000 },
+        {
+          propertyId: "p2",
+          assessedValue: 1_400_000_000,
+          exclusionType: "unsold_housing",
+          // 미분양 합산배제 3요건(comprehensive-exclusion.ts): isFirstSale + 모집공고일 + 취득일(≥공고일)
+          otherInfo: { isFirstSale: true, recruitmentNoticeDate: "2019-01-01", acquisitionDate: "2019-06-01" },
+          priorAssessedValue: 1_300_000_000,
+        },
+      ],
+      previousYearAuto: {
+        assessedValue: 2_500_000_000,
+        priorHouseValues: [1_200_000_000, 1_300_000_000],
+        isOneHouseOwner: false,
+        taxableHouseCount: 2,
+      },
+    };
+    const r = calculateComprehensiveTax(input);
+    expect(r.properties.find((p) => p.propertyId === "p2")?.isExcluded).toBe(true); // 합산배제 판정
+    expect(r.calculatedTax).toBe(2_760_000); // ① 당해 1주택(p1 13억)만 과세 (p2 배제)
+    expect(r.previousYearEquivalent?.total).toBe(21_996_223); // 직전 2주택 분모(priorHouseValues 전체)
+    expect(r.taxCap?.isApplied).toBe(false); // §10 상한(직전 2주택×150%=32,994,334)이 당해보다 커 미발동
+    expect(r.determinedHousingTax).toBe(1_752_000); // ⑤
+  });
 });
