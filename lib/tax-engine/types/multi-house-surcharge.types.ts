@@ -133,6 +133,8 @@ export interface HouseInfo {
   acquisitionPrice?: number;
   /** 비수도권 준공 후 미분양 해당 여부 (소형 신축 특례 ⑬) */
   isUnsoldNewHouse?: boolean;
+  /** 준공일 — 가목 소형신축 3호(2024.1.10~2027.12.31 준공) 검증용. 미제공 시 가목 미발동(보수적) */
+  completionDate?: Date;
   // ── 계약·법적 취득 ──
   /**
    * 매매계약 체결일.

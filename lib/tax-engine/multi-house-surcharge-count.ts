@@ -318,10 +318,14 @@ export function isSmallNewHouseSpecial(house: HouseInfo): boolean {
   const acqDate = house.acquisitionDate;
   const isCapital = house.isCapitalArea ?? house.region === "capital";
 
-  // 소형 신축주택 (2024.1.10 ~ 2027.12.31, 전용 60㎡ 이하, 아파트 제외)
+  // 소형 신축주택 (소령 §167의3①12가목: 취득·준공 모두 2024.1.10~2027.12.31, 전용 60㎡ 이하, 아파트 제외, 취득가 수도권 6억/비수도권 3억 이하)
+  // 가목 3호 준공일 검증 — completionDate 미제공 시 미발동(보수적)
   if (
     acqDate >= new Date("2024-01-10") &&
     acqDate <= new Date("2027-12-31") &&
+    !!house.completionDate &&
+    house.completionDate >= new Date("2024-01-10") &&
+    house.completionDate <= new Date("2027-12-31") &&
     (house.exclusiveArea ?? 0) <= 60 &&
     !house.isApartment &&
     house.acquisitionPrice <= (isCapital ? 600_000_000 : 300_000_000)

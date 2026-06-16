@@ -224,6 +224,7 @@ describe("MH-18: ⑬ 소형 신축/미분양 특례", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       acquisitionDate: new Date("2025-03-01"), // 2024.1.10~2027.12.31
+      completionDate: new Date("2025-03-01"), // 가목 3호 준공일 윈도우 내
       isApartment: false,
       exclusiveArea: 55,           // 60㎡ 이하
       acquisitionPrice: 250_000_000, // 비수도권 3억 이하

@@ -78,3 +78,59 @@ describe("Pre-Do #1-나: 준공후미분양 7억·2026.12.31 (§167의3①12나�
     expect(r.effectiveHouseCount).toBe(2);
   });
 });
+
+describe("Pre-Do #1-가: 소형신축 준공일 검증 (§167의3①12가목 3호)", () => {
+  it("가목 요건 + 준공일 2023-12 (윈도우 밖) → 미배제·산입 (현행 FAIL: 준공일 미검증)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING });
+    const smallNew = makeHouse("h2", {
+      region: "non_capital",
+      isApartment: false,
+      acquisitionDate: new Date("2025-03-01"), // 취득 윈도우 내
+      acquisitionPrice: 250_000_000, // 비수도권 3억 이하
+      exclusiveArea: 55, // ≤ 60㎡
+      completionDate: new Date("2023-12-01"), // 준공 윈도우 밖 (< 2024-01-10)
+    });
+    const input = makeInput([selling, smallNew], {
+      sellingHouseId: "h1",
+      transferDate: new Date("2026-01-01"),
+    });
+
+    const r = determineMultiHouseSurcharge(
+      input,
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionNone,
+      true,
+    );
+
+    expect(r.excludedHouses.find((e) => e.reason === "small_new_house")).toBeUndefined();
+    expect(r.effectiveHouseCount).toBe(2);
+  });
+
+  it("가목 요건 + 준공일 2025-02 (윈도우 내) → small_new_house 배제 (가드)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING });
+    const smallNew = makeHouse("h2", {
+      region: "non_capital",
+      isApartment: false,
+      acquisitionDate: new Date("2025-03-01"),
+      acquisitionPrice: 250_000_000,
+      exclusiveArea: 55,
+      completionDate: new Date("2025-02-01"), // 준공 윈도우 내
+    });
+    const input = makeInput([selling, smallNew], {
+      sellingHouseId: "h1",
+      transferDate: new Date("2026-01-01"),
+    });
+
+    const r = determineMultiHouseSurcharge(
+      input,
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionNone,
+      true,
+    );
+
+    expect(r.excludedHouses.find((e) => e.reason === "small_new_house")?.houseId).toBe("h2");
+    expect(r.effectiveHouseCount).toBe(1);
+  });
+});
