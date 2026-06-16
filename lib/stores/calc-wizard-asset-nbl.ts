@@ -48,6 +48,14 @@ export interface HouseEntry {
   isApartment: boolean;
   isOfficetel: boolean;
   isUnsoldHousing: boolean;
+  /** 취득가액(원, 문자열) — 소형신축·준공후미분양 특례 가액 기준 (§167의3①12가·나목) */
+  acquisitionPrice?: string;
+  /** 전용면적(㎡, 문자열) — 소형신축 60㎡·미분양 85㎡ 판정 */
+  exclusiveArea?: string;
+  /** 준공후미분양 여부 (나목 §167의3①12나목) */
+  isUnsoldNewHouse?: boolean;
+  /** 준공일 (가목 3호 §167의3①12가목 — 2024.1.10~2027.12.31 준공). 미입력 시 가목 미발동 */
+  completionDate?: string;
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
   /**

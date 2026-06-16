@@ -32,6 +32,11 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isApartment: h.isApartment,
     isOfficetel: h.isOfficetel,
     isUnsoldHousing: h.isUnsoldHousing,
+    // ⑬ 소형신축·준공후미분양 특례 (§167의3①12가·나목) — completionDate는 Date 변환
+    acquisitionPrice: h.acquisitionPrice,
+    exclusiveArea: h.exclusiveArea,
+    isUnsoldNewHouse: h.isUnsoldNewHouse,
+    completionDate: toOptionalDate(h.completionDate),
     inheritedDate: toOptionalDate(h.inheritedDate),
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),

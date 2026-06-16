@@ -279,6 +279,10 @@ export function HousesListSection({
       isApartment: false,
       isOfficetel: false,
       isUnsoldHousing: false,
+      acquisitionPrice: "",
+      exclusiveArea: "",
+      isUnsoldNewHouse: false,
+      completionDate: "",
     };
     onChange({ houses: [...houses, newHouse] });
     // 추가 즉시 편집 모달 오픈
