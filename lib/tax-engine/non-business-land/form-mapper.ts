@@ -12,8 +12,10 @@ import type {
   GracePeriodType,
   OwnerResidenceHistory,
   LandType,
+  LocationInfo,
   ZoneType,
 } from "./types";
+import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
 import {
   asString, asBool, asArray,
   mapBusinessUsePeriods,
@@ -61,6 +63,16 @@ export function mapAssetToNblInput(
   const landType = asString(asset.nblLandType) as LandType;
   const zoneType = (asString(asset.nblZoneType) || "undesignated") as ZoneType;
   const landArea  = parseNumber(asString(asset.acquisitionArea)) ?? 0;
+
+  // 토지 소재지 시·군·구 → 재촌 매칭(§168의8②·§168의9②). 빈값=undefined(자동 fallback 금지).
+  // 연접 시·군·구는 SIGUNGU_CODES(5자리 충전)에서 해석 — 동일/연접 시군구 재촌 인정.
+  const landSigunguCode = asString(asset.nblLandSigunguCode);
+  const landLocation: LocationInfo | undefined = landSigunguCode
+    ? { sigunguCode: landSigunguCode }
+    : undefined;
+  const adjacentSigunguCodes: string[] | undefined = landSigunguCode
+    ? lookupSigungu(landSigunguCode)?.adjacentCodes
+    : undefined;
 
   // 사업용 사용기간
   const businessUsePeriods = mapBusinessUsePeriods(
@@ -122,6 +134,8 @@ export function mapAssetToNblInput(
     unconditionalExemption:  buildUnconditionalExemption(asset, parseDate),
     urbanIncorporationDate,
     isMetropolitanArea,
+    ...(landLocation ? { landLocation } : {}),
+    ...(adjacentSigunguCodes && adjacentSigunguCodes.length > 0 ? { adjacentSigunguCodes } : {}),
     ...(ownerProfile ? { ownerProfile } : {}),
     businessUsePeriods,
     gracePeriods,
