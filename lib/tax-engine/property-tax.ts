@@ -40,6 +40,7 @@ import type {
 } from "./types/property.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
+import { getPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import { resolveBasisTax } from "./property-tax-recompute";
 import { buildCapEcho } from "./property-tax-cap-echo";
@@ -563,7 +564,7 @@ export function calculatePropertyTax(
           assessedValue: input.publishedPrice,
           ...(input.separateTaxationItem ?? {}),
         };
-        const sepResult = calculateSeparateTax(sepInput);
+        const sepResult = calculateSeparateTax(sepInput, getPropertyRateSet(taxYear));
 
         warnings.push(...sepResult.warnings);
         if (sepResult.reasoning.legalBasis) {
