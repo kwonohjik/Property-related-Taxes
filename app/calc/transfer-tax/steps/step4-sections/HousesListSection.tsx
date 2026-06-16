@@ -283,6 +283,7 @@ export function HousesListSection({
       exclusiveArea: "",
       isUnsoldNewHouse: false,
       completionDate: "",
+      isSpouseOwned: false,
     };
     onChange({ houses: [...houses, newHouse] });
     // 추가 즉시 편집 모달 오픈
@@ -408,6 +409,7 @@ export function HousesListSection({
             <HouseEntryEditor
               house={editingHouse}
               onUpdate={(patch) => updateHouse(editingHouse.id, patch)}
+              showSpouseOwned={!!form.marriageDate}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

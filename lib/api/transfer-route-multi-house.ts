@@ -37,6 +37,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     exclusiveArea: h.exclusiveArea,
     isUnsoldNewHouse: h.isUnsoldNewHouse,
     completionDate: toOptionalDate(h.completionDate),
+    isSpouseOwned: h.isSpouseOwned,
     inheritedDate: toOptionalDate(h.inheritedDate),
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),

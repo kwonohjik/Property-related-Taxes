@@ -34,12 +34,13 @@ const EXCLUDED_REASON_LABEL: Record<string, string> = {
   officetel_pre2022: "2022년 이전 취득 오피스텔",
   small_new_house: "소형 신축·미분양 특례",
   population_decline_second_home: "인구감소지역 세컨드홈 특례",
+  spouse_marriage_subtraction: "혼인합가 배우자 주택 차감 (3주택·§167의3⑨)",
 };
 
 // 배제 사유 레이블 매핑
 const EXCLUSION_REASON_LABEL: Record<string, string> = {
   temporary_two_house: "일시적 2주택 특례",
-  marriage_merge: "혼인합가 특례 (5년 이내)",
+  marriage_merge: "혼인합가 1세대1주택 의제 (2주택·10년)",
   parental_care_merge: "동거봉양 합가 특례 (10년 이내)",
   pre_designation_contract: "조정대상지역 공고일 이전 매매계약",
   only_one_remaining: "배제 후 유일한 1주택",

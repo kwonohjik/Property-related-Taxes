@@ -125,6 +125,8 @@ export function determineSurchargeExclusion(
   suspensionRules: SurchargeSpecialRulesData | null,
   regulatedAreaHistory: RegulatedAreaHistory | null,
   excludedHouseIds: Set<string>,
+  /** #2a: 오케스트레이터 Step 1.5에서 §167의3⑨ 차감이 적용됐는지 — 배제 2(§155⑤) 오염 방지 */
+  marriageSubtractionApplied: boolean,
 ): {
   isExcluded: boolean;
   exclusionReasons: ExclusionReason[];
@@ -153,13 +155,17 @@ export function determineSurchargeExclusion(
     }
   }
 
-  // 배제 2: 혼인합가 5년 이내 (§155 ⑤)
-  if (input.marriageMerge) {
-    const yearsFromMarriage = differenceInYears(input.transferDate, input.marriageMerge.marriageDate);
-    if (yearsFromMarriage < 5) {
+  // 배제 2: 혼인합가 1세대1주택 의제 (§167의10①15호 → §155⑤, 2주택 10년)
+  // ⑨ 차감으로 3→2가 된 경우(marriageSubtractionApplied)는 §155 비해당 → 배제 제외(본인 2주택 중과).
+  if (input.marriageMerge && effectiveHouseCount === 2 && !marriageSubtractionApplied) {
+    const m = input.marriageMerge.marriageDate;
+    if (
+      input.transferDate >= m &&
+      input.transferDate <= addYears(m, MULTI_HOUSE.MARRIAGE_MERGE_YEARS_2HOUSE)
+    ) {
       exclusionReasons.push({
         type: "marriage_merge",
-        detail: `혼인합가 후 ${yearsFromMarriage}년 (5년 이내)`,
+        detail: `혼인일(${m.toISOString().slice(0, 10)}) 10년내 먼저 양도 — 1세대1주택 의제 중과 배제 (${MULTI_HOUSE.MARRIAGE_MERGE_2HOUSE_BASIS})`,
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }

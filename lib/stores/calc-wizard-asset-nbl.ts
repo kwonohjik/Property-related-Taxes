@@ -87,6 +87,8 @@ export interface HouseEntry {
   isUnsoldNewHouse?: boolean;
   /** 준공일 (가목 3호 §167의3①12가목 — 2024.1.10~2027.12.31 준공). 미입력 시 가목 미발동 */
   completionDate?: string;
+  /** #2a 배우자 단독 보유 주택 여부 (§167의3⑨ 3주택↑ 혼인 5년내 차감 대상). 혼인합가일 입력 시에만 의미 */
+  isSpouseOwned?: boolean;
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
   /**
