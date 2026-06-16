@@ -176,3 +176,86 @@ describe("갭 3a — §168의11① 호별 면적기준 정밀판정", () => {
     expect(r.areaProportioning).toBeUndefined();
   });
 });
+
+// ============================================================
+// F2 Phase A — 별표3(체육시설)·별표6(예비군) 자동 기준면적 lookup
+// 별표3·6 정본 실측(KoreanLaw mst=286379 §83의4①④⑨⑩ · 별표3·6).
+// ============================================================
+describe("F2 Phase A — 별표3·6 자동 기준면적 (체육시설·예비군)", () => {
+  // [Pre-Do] 별표3 실외 축구장 11,000㎡ 자동 lookup → 초과분 비사업용.
+  it("AT-F2-SPORTS-SOCCER: 체육시설 축구장 12,000㎡ · 별표3 기준 11,000 → 초과 1,000 비사업용", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 12000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsFacilityType: "soccer",
+        } as never,
+      }),
+      R,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.businessArea).toBe(11000);
+    expect(r.areaProportioning?.nonBusinessArea).toBe(1000);
+  });
+
+  // 별표3 실내 수영장 1,000㎡ lookup.
+  it("AT-F2-SPORTS-SWIM: 실내 수영장 1,500㎡ · 별표3 기준 1,000 → 초과 500 비사업용", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1500,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsFacilityType: "swimming",
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(1000);
+    expect(r.areaProportioning?.nonBusinessArea).toBe(500);
+  });
+
+  // 별표6 예비군 부대편성 le2400 [전술교육장 30,000 + 사격장 2,475] = 32,475 합산.
+  it("AT-F2-RESERVE: 예비군 le2400 [전술교육장+사격장] 50,000㎡ → 기준 32,475 초과", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 50000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "reserve_forces",
+          reserveForcesUnitSize: "le2400",
+          reserveForcesFacilities: ["tactical", "range"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(32475);
+  });
+
+  // fallback: sports 종목 미선택 + standardAreaLimit 직접입력 유지 (3중 fallback).
+  it("AT-F2-SPORTS-FALLBACK: sports 종목 미선택 + standardAreaLimit 3,000 → 직접입력 유지", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 5000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          standardAreaLimit: 3000,
+        },
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(3000);
+    expect(r.areaProportioning?.nonBusinessArea).toBe(2000);
+  });
+});
