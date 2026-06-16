@@ -364,6 +364,18 @@ export function isTaxIncentiveRentalHousingExempt(house: HouseInfo): boolean {
 // Step 2: 주택 수 산정 (소령 §167-3)
 // ============================================================
 
+/**
+ * 분양권/입주권이 주택 수에 산입되는지 (소령 §167의4②1호·§167의11②1호).
+ * 2021.1.1 이후 취득분만 산입, VALUE지역(지방) 가액 3억 이하는 미산입.
+ * (#2b 혼인 차감 Step 1.5와 산입 판정 단일화)
+ */
+export function isPresaleRightCounted(right: PresaleRight, presaleStartDate: Date): boolean {
+  if (right.acquisitionDate < presaleStartDate) return false;
+  const rc = right.regionCriteria ?? (right.region === "capital" ? "REGION" : "VALUE");
+  if (rc === "VALUE" && (right.rightValue ?? Infinity) <= MULTI_HOUSE.PRESALE_LOW_VALUE_CAP) return false;
+  return true;
+}
+
 export function countEffectiveHouses(
   houses: HouseInfo[],
   transferDate: Date,
@@ -497,15 +509,9 @@ export function countEffectiveHouses(
     count++;
   }
 
-  // 분양권/입주권: 산정시작일(2021.1.1) 이후 취득분 포함
+  // 분양권/입주권: 산정시작일(2021.1.1) 이후 + VALUE 3억↓ 배제 (isPresaleRightCounted 단일화)
   for (const right of presaleRights) {
-    if (right.acquisitionDate < presaleStartDate) continue; // 2021.1.1 전 미산입
-    // §167의4②1호·§167의11②1호: VALUE지역(지방) 분양권/입주권 가액 3억 이하 → 미산입
-    const rc = right.regionCriteria ?? (right.region === "capital" ? "REGION" : "VALUE");
-    if (rc === "VALUE" && (right.rightValue ?? Infinity) <= MULTI_HOUSE.PRESALE_LOW_VALUE_CAP) {
-      continue;
-    }
-    count++;
+    if (isPresaleRightCounted(right, presaleStartDate)) count++;
   }
 
   return { count, excluded };

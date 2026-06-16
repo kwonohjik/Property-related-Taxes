@@ -183,6 +183,8 @@ export interface PresaleRightEntry {
   regionCriteria?: "REGION" | "VALUE";
   /** 가액(원, 문자열) — 분양권 공급가격/입주권 종전주택가격 */
   rightValue?: string;
+  /** #2b 배우자 단독 보유 분양권/입주권 (§167의4⑤ 3↑ 혼인 5년내 차감 대상). 혼인합가일 입력 시에만 의미 */
+  isSpouseOwned?: boolean;
 }
 
 /** 비사업용 토지(NBL) 필드 초기값 상수 — makeDefaultAsset에서 spread 사용 (800줄 분리, 2026-06-15) */

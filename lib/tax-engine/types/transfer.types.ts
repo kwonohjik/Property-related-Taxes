@@ -628,6 +628,7 @@ export interface TransferTaxResult {
     exclusionReasons: ExclusionReason[];
     isRegulatedAtTransfer: boolean;
     warnings: string[];
+    excludedPresaleRights?: Array<{ id: string; reason: string }>; // #2b §167의4⑤ 배우자 분양권/입주권 차감
   };
   /**
    * 비사업용 토지 판정 상세 결과 (nonBusinessLandDetails 제공 시만 포함)

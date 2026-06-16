@@ -732,6 +732,7 @@ export function buildMultiHouseSurchargeDetail(
     exclusionReasons: result.exclusionReasons,
     isRegulatedAtTransfer: result.isRegulatedAtTransfer,
     warnings: result.warnings,
+    excludedPresaleRights: result.excludedPresaleRights,
   };
 }
 

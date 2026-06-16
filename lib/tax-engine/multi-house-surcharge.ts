@@ -109,6 +109,7 @@ export function isRegulatedAreaAtDate(
 
 import {
   countEffectiveHouses,
+  isPresaleRightCounted,
   isGroupExcludable,
   getGroupExcludeReason,
   determineSurchargeExclusion,
@@ -144,20 +145,24 @@ export function determineMultiHouseSurcharge(
 
   const rawHouseCount = input.houses.length + input.presaleRights.length;
 
-  // ── Step 1.5 (#2a): 혼인 합가 §167의3⑨ 배우자 주택수 차감 (3주택 전용) ──
-  // §167의10②는 §167의3②~⑧·⑩만 준용(⑨ 미포함) → ⑨는 3주택 전용.
-  // 2주택 혼인은 §155⑤(→§167의10①15호) 전면배제(determineSurchargeExclusion 배제2)로 처리.
+  // ── Step 1.5 (#2a·#2b): 혼인 합가 §167의3⑨/§167의4⑤ 배우자 주택·분양권 차감 (3↑ 전용) ──
+  // §167의10②·§167의11③은 §167의3②~⑧·⑩만 준용(⑨ 미포함) → 차감은 3주택(+권) 전용.
+  // 2주택(+권) 혼인은 §155⑤·§156의2/3(→§167의10①15호·§167의11①13호) 전면배제(배제2)로 처리.
   let marriageSubtractionApplied = false;
+  const excludedPresaleRights: Array<{ id: string; reason: "spouse_marriage_subtraction" }> = [];
   if (input.marriageMerge && effectiveHouseCount >= 3) {
     const m = input.marriageMerge.marriageDate;
     const within5y =
       input.transferDate >= m &&
       input.transferDate <= addYears(m, MULTI_HOUSE.MARRIAGE_SUBTRACT_YEARS_3HOUSE);
-    // 단서: 혼인 5년내 신규주택 취득 시 그 취득일 이후 양도분에는 미적용
-    const acquiredAfterMarriage = input.houses.some(
-      (h) => h.acquisitionDate > m && h.acquisitionDate <= input.transferDate,
-    );
+    // 단서: 혼인 5년내 신규 주택·분양권·입주권 취득 시 그 취득일 이후 양도분에는 미적용
+    const acquiredAfterMarriage =
+      input.houses.some((h) => h.acquisitionDate > m && h.acquisitionDate <= input.transferDate) ||
+      input.presaleRights.some(
+        (r) => r.acquisitionDate > m && r.acquisitionDate <= input.transferDate,
+      );
     if (within5y && !acquiredAfterMarriage) {
+      // (a) §167의3⑨ 배우자 보유 주택 차감
       const excludedIds = new Set(excludedHouses.map((e) => e.houseId));
       const spouseCounted = input.houses.filter(
         (h) => h.isSpouseOwned && h.id !== input.sellingHouseId && !excludedIds.has(h.id),
@@ -169,6 +174,16 @@ export function determineMultiHouseSurcharge(
           reason: "spouse_marriage_subtraction",
           detail: `혼인일(${m.toISOString().slice(0, 10)}) 5년내 배우자 보유 주택 차감 (${MULTI_HOUSE.MARRIAGE_SUBTRACT_3HOUSE_BASIS})`,
         });
+        marriageSubtractionApplied = true;
+      }
+      // (b) §167의4⑤ 배우자 보유 분양권/입주권 차감 (산입분만 — isPresaleRightCounted)
+      const presaleStartDate = new Date(houseCountRules.presaleRightStartDate);
+      const spouseRights = input.presaleRights.filter(
+        (r) => r.isSpouseOwned && isPresaleRightCounted(r, presaleStartDate),
+      );
+      for (const sr of spouseRights) {
+        effectiveHouseCount -= 1;
+        excludedPresaleRights.push({ id: sr.id, reason: "spouse_marriage_subtraction" });
         marriageSubtractionApplied = true;
       }
     }
@@ -194,6 +209,7 @@ export function determineMultiHouseSurcharge(
       effectiveHouseCount,
       rawHouseCount,
       excludedHouses,
+      excludedPresaleRights,
       isRegulatedAtTransfer,
       surchargeApplicable: false,
       surchargeType: "none",
@@ -209,6 +225,7 @@ export function determineMultiHouseSurcharge(
       effectiveHouseCount,
       rawHouseCount,
       excludedHouses,
+      excludedPresaleRights,
       isRegulatedAtTransfer,
       surchargeApplicable: false,
       surchargeType: "none",
@@ -245,6 +262,7 @@ export function determineMultiHouseSurcharge(
         effectiveHouseCount,
         rawHouseCount,
         excludedHouses,
+        excludedPresaleRights,
         isRegulatedAtTransfer,
         surchargeApplicable: false,
         surchargeType: "none",
@@ -278,6 +296,7 @@ export function determineMultiHouseSurcharge(
       effectiveHouseCount,
       rawHouseCount,
       excludedHouses,
+      excludedPresaleRights,
       isRegulatedAtTransfer,
       surchargeApplicable: false,
       surchargeType: "none",
@@ -295,6 +314,7 @@ export function determineMultiHouseSurcharge(
     effectiveHouseCount,
     rawHouseCount,
     excludedHouses,
+    excludedPresaleRights,
     isRegulatedAtTransfer,
     surchargeApplicable: !isSuspended,
     surchargeType,

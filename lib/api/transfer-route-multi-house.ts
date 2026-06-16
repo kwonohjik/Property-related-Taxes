@@ -97,6 +97,7 @@ export function mapPresaleRightsToEngine(
     region: r.region,
     regionCriteria: r.regionCriteria,
     rightValue: r.rightValue,
+    isSpouseOwned: r.isSpouseOwned,
   }));
 }
 

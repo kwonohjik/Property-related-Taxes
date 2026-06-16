@@ -382,6 +382,7 @@ export function HousesListSection({
       <PresaleRightsSection
         rights={form.presaleRights}
         onChange={(presaleRights) => onChange({ presaleRights })}
+        showSpouseOwned={!!form.marriageDate}
       />
 
       {/* ── 양도 주택 3주택+ 전용 배제 특례 (householdHousingCount≥3 시) ── */}
