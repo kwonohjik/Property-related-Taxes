@@ -75,4 +75,29 @@ describe("Phase B — 변환 priorAssessedValue → previousYearAuto 파생", ()
     const props = capturedBody?.properties as Array<Record<string, unknown>> | undefined;
     expect(props?.[0]?.priorAssessedValue).toBeUndefined();
   });
+
+  it("B-4(C9'): 합산배제 주택 + 직전공시 → priorHouseValues 합산배제 포함 · taxableHouseCount 전체", async () => {
+    // 다주택 중 1채 합산배제(미분양) + auto 모드. 직전공시는 합산배제 여부와 무관하게 전체 전송
+    //   (직전 보유 주택 = 직전 과세 가정 — 현행 변환 동작 보존, engine.design C9'/D2).
+    const formData = {
+      ...defaultFormData,
+      assessmentYear: "2022",
+      previousYearCapMode: "auto" as const,
+      properties: [
+        { ...makeProperty(), assessedValue: "1300000000", priorAssessedValue: "1200000000" },
+        {
+          ...makeProperty(),
+          exclusionType: "unsold_housing",
+          assessedValue: "1400000000",
+          priorAssessedValue: "1300000000",
+        },
+      ],
+    };
+    await callComprehensiveApi(formData);
+    const auto = (capturedBody?.previousYearAuto ?? {}) as Record<string, unknown>;
+    // 합산배제 주택 직전공시도 priorHouseValues·합산·주택수에 포함 (필터 없음)
+    expect(auto.priorHouseValues).toEqual([1_200_000_000, 1_300_000_000]);
+    expect(auto.assessedValue).toBe(2_500_000_000);
+    expect(auto.taxableHouseCount).toBe(2);
+  });
 });
