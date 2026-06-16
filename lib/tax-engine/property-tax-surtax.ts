@@ -104,15 +104,16 @@ export function calcSurtax(
     ? applyRate(taxBase, PROPERTY_CONST.URBAN_AREA_TAX_RATE)
     : 0;
 
-  // 지역자원시설세 — 건축물(2호)·주택(3호) 분기 (§146③1호 base + §146③2호·2의2호 중과)
+  // 지역자원시설세 — 건축물·선박(§146③1호 시가표준액)·주택(§146④ 단서 건물분) 분기
+  //   §146④: 제3항 대상은 §104 2·3·5호 = 건축물·선박. 항공기는 비대상(0).
   const baseFireTax =
-    objectType === "building"
-      ? Math.max(0, calcRegionalResourceTax(publishedPrice))               // 2호: 시가표준액 직접
+    objectType === "building" || objectType === "vessel"
+      ? Math.max(0, calcRegionalResourceTax(publishedPrice))               // §146③1호: 건축물·선박 시가표준액 직접
       : objectType === "housing" && housingFireServiceTaxBase != null
-        ? Math.max(0, calcRegionalResourceTax(housingFireServiceTaxBase))  // 3호: 건물분 × FMR (§146④ 단서)
+        ? Math.max(0, calcRegionalResourceTax(housingFireServiceTaxBase))  // §146④ 단서: 주택 건물분 × FMR
         : 0;
   const fireHazardMultiplier =
-    objectType === "building" ? resolveFireHazardMultiplier(fireHazardClass) : 1; // 주택 중과 없음(§138 주거용 제외)
+    objectType === "building" ? resolveFireHazardMultiplier(fireHazardClass) : 1; // 화재위험 중과는 건축물만(§146③2호·2의2호) — 선박·주택 ×1
   const regionalResourceTax = baseFireTax * fireHazardMultiplier; // 정수 곱 — floor 불요
 
   const surtax: PropertySurtaxDetail = {
@@ -134,7 +135,8 @@ export function calcSurtax(
 
   const legalBasis: string[] = [PROPERTY.LOCAL_EDUCATION_TAX];
   if (isUrbanArea) legalBasis.push(PROPERTY.URBAN_AREA_TAX);
-  if (objectType === "building") legalBasis.push(PROPERTY.REGIONAL_RESOURCE_TAX);
+  if (objectType === "building" || objectType === "vessel")
+    legalBasis.push(PROPERTY.REGIONAL_RESOURCE_TAX); // §146③1호 — 건축물·선박
   if (objectType === "building" && fireHazardMultiplier > 1)
     legalBasis.push(PROPERTY.FIRE_HAZARD_SURCHARGE);
   // 주택 소방분 산출 시 근거 push (§146④ 단서 — building의 §146과 구분)

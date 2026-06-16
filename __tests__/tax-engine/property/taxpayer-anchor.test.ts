@@ -141,3 +141,63 @@ describe("A-3: taxpayerInfo 미입력 → 기존 세액·과세표준 완전 불
     expect(result.coOwnershipDistribution).toBeUndefined();
   });
 });
+
+// ============================================================
+// 주된 상속자 §107②2호 · 시행규칙 §53 — 지분 최대 → 동률 시 연장자
+//   현재: heirs[0] 고정(객체 반환) → H-1·H-2 실패해야 정상 (Pre-Do)
+// ============================================================
+
+describe("주된 상속자 §53: 지분 최대 → 동률 시 연장자(이른 생년)", () => {
+  const BASE = { isInheritanceUnregistered: true, registeredOwner: "공부상소유자" };
+
+  it("H-1 지분 최대자 (A:0.5/B:0.3/C:0.2 → A)", () => {
+    const r = determineTaxpayer({
+      ...BASE,
+      heirs: [
+        { name: "A", shareRatio: 0.5 },
+        { name: "B", shareRatio: 0.3 },
+        { name: "C", shareRatio: 0.2 },
+      ],
+    } as Parameters<typeof determineTaxpayer>[0]);
+    expect(r.type).toBe("heir_representative");
+    expect(r.name).toBe("A");
+  });
+
+  it("H-2 동률이면 연장자 (A:0.4/1970, B:0.4/1965 → B)", () => {
+    const r = determineTaxpayer({
+      ...BASE,
+      heirs: [
+        { name: "A", shareRatio: 0.4, birthDate: "1970-03-15" },
+        { name: "B", shareRatio: 0.4, birthDate: "1965-06-20" },
+        { name: "C", shareRatio: 0.2 },
+      ],
+    } as Parameters<typeof determineTaxpayer>[0]);
+    expect(r.name).toBe("B");
+  });
+
+  it("H-3 지분 미입력 → heirs[0] fallback + warning", () => {
+    const r = determineTaxpayer({
+      ...BASE,
+      heirs: [{ name: "A" }, { name: "B" }],
+    } as Parameters<typeof determineTaxpayer>[0]);
+    expect(r.name).toBe("A");
+    expect(r.warnings.length).toBeGreaterThan(0);
+  });
+
+  it("H-4 지분 일부만 입력 → fallback(heirs[0]) + warning", () => {
+    const r = determineTaxpayer({
+      ...BASE,
+      heirs: [{ name: "A", shareRatio: 0.5 }, { name: "B" }],
+    } as Parameters<typeof determineTaxpayer>[0]);
+    expect(r.name).toBe("A");
+    expect(r.warnings.length).toBeGreaterThan(0);
+  });
+
+  it("H-7 상속인 0명 → registeredOwner fallback (회귀)", () => {
+    const r = determineTaxpayer({
+      ...BASE,
+      heirs: [],
+    } as Parameters<typeof determineTaxpayer>[0]);
+    expect(r.type).toBe("registered_owner");
+  });
+});

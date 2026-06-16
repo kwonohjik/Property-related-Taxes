@@ -8,6 +8,8 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DateInput } from "@/components/ui/date-input";
 import { useState } from "react";
 import {
   OBJECT_TYPE_LABELS,
@@ -263,7 +265,7 @@ function OwnershipSection({
         actualOwner: "",
         settlor: "",
         coOwners: undefined,
-        heirsText: "",
+        heirs: [],
         installmentBuyer: "",
         projectOperator: "",
         importer: "",
@@ -337,19 +339,68 @@ function OwnershipSection({
           </FieldCard>
         )}
 
-        {/* 상속 미등기 — 상속인 목록 */}
+        {/* 상속 미등기 — 상속인 목록 (§107②2호 주된 상속자: 지분 최대 → 동률 시 연장자) */}
         {form.ownershipType === "inherit" && (
           <FieldCard
             label="상속인 목록"
-            hint="쉼표로 구분 입력 (예: 홍길동, 홍길순). §107②2호 — 주된 상속인(지분 최대자)을 납세의무자로 설정"
+            hint="§107②2호 — 주된 상속자는 민법상 지분 최대자(동률 시 연장자, 시행규칙 §53). 지분·생년 미입력 시 첫 상속인을 적용합니다."
           >
-            <input
-              type="text"
-              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
-              value={form.heirsText}
-              onChange={(e) => onChange({ heirsText: e.target.value })}
-              placeholder="홍길동, 홍길순"
-            />
+            <div className="space-y-2">
+              {form.heirs.map((h, i) => (
+                <div key={i} className="flex flex-wrap items-end gap-2">
+                  <input
+                    type="text"
+                    className="min-w-[7rem] flex-1 rounded border border-input bg-background px-3 py-2 text-sm"
+                    value={h.name}
+                    onChange={(e) => {
+                      const next = [...form.heirs];
+                      next[i] = { ...next[i], name: e.target.value };
+                      onChange({ heirs: next });
+                    }}
+                    placeholder="상속인 성명"
+                  />
+                  <DecimalInput
+                    className="w-24"
+                    value={h.shareRatio}
+                    onChange={(v) => {
+                      const next = [...form.heirs];
+                      next[i] = { ...next[i], shareRatio: v };
+                      onChange({ heirs: next });
+                    }}
+                    placeholder="지분 0~1"
+                  />
+                  <DateInput
+                    value={h.birthDate}
+                    onChange={(v) => {
+                      const next = [...form.heirs];
+                      next[i] = { ...next[i], birthDate: v };
+                      onChange({ heirs: next });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="rounded px-2 py-2 text-sm text-rose-600 hover:bg-rose-50"
+                    onClick={() =>
+                      onChange({ heirs: form.heirs.filter((_, j) => j !== i) })
+                    }
+                    aria-label="상속인 삭제"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="rounded border border-dashed border-input px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted/40"
+                onClick={() =>
+                  onChange({
+                    heirs: [...form.heirs, { name: "", shareRatio: "", birthDate: "" }],
+                  })
+                }
+              >
+                + 상속인 추가
+              </button>
+            </div>
           </FieldCard>
         )}
 

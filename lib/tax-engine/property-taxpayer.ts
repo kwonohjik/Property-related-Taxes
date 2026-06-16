@@ -28,6 +28,7 @@ import type {
   PropertyObjectInput,
   CoOwnershipShare,
   PropertyTaxpayerType,
+  PropertyHeir,
 } from "./types/property-object.types";
 import type {
   PropertyTaxInput,
@@ -60,6 +61,38 @@ export interface CoOwnershipDistribution {
   }>;
   /** 안분 검증 — 합산 오차 (소수점 절사로 인한 잔여분) */
   roundingDiff: number;
+}
+
+// ============================================================
+// 주된 상속자 선택 (§107②2호, 지방세법 시행규칙 §53)
+// ============================================================
+
+/**
+ * 주된 상속자 선택 (지방세법 시행규칙 §53).
+ * 1) 전원 지분 입력: 민법상 지분 최대자 → 동률이면 연장자(이른 생년)
+ * 2) 지분 일부/전부 미입력, 또는 동률+생년 미입력: 첫 상속인 fallback (자동 균등분배 금지)
+ */
+function selectMainHeir(
+  heirs: PropertyHeir[],
+): { mainHeir: PropertyHeir; reason: string } {
+  const allHaveShare = heirs.every((h) => h.shareRatio != null);
+  if (!allHaveShare) {
+    return { mainHeir: heirs[0], reason: "상속지분 미입력 — 첫 상속인 적용" };
+  }
+  const maxShare = Math.max(...heirs.map((h) => h.shareRatio as number));
+  const tied = heirs.filter((h) => h.shareRatio === maxShare);
+  if (tied.length === 1) {
+    return { mainHeir: tied[0], reason: "상속지분 최대" };
+  }
+  // 동률 → 연장자(이른 생년). 동률자 전원 생년 입력 시에만.
+  const allHaveBirth = tied.every((h) => h.birthDate);
+  if (allHaveBirth) {
+    const eldest = tied.reduce((a, b) =>
+      (a.birthDate as string) <= (b.birthDate as string) ? a : b,
+    );
+    return { mainHeir: eldest, reason: "지분 동률 — 연장자" };
+  }
+  return { mainHeir: heirs[0], reason: "지분 동률·생년 미입력 — 첫 상속인 적용" };
 }
 
 // ============================================================
@@ -209,7 +242,7 @@ export function determineTaxpayer(
     };
   }
 
-  // ── 3순위: 상속 미등기 → 주된 상속인 (§107②2호) ──
+  // ── 3순위: 상속 미등기 → 주된 상속자 (§107②2호, 시행규칙 §53) ──
   if (input.isInheritanceUnregistered) {
     const heirs = input.heirs ?? [];
     if (heirs.length === 0) {
@@ -217,18 +250,18 @@ export function determineTaxpayer(
         "상속 미등기 재산이지만 상속인 정보가 없습니다. 공부상 소유자로 처리합니다.",
       );
     } else {
-      // 상속인이 여럿이면 첫 번째를 주된 상속인으로 처리 (법 상 연대납세의무)
-      // TODO(M-03): heirs에 상속분(shareRatio) 정보 추가 시 → 지분 최대자를 주된 상속인으로 선택
-      const mainHeir = heirs[0];
+      // 시행규칙 §53: 민법상 지분 최대자 → 동률이면 연장자(이른 생년).
+      // 지분/생년 미입력 시 첫 상속인 fallback (자동 균등분배 금지).
+      const { mainHeir, reason } = selectMainHeir(heirs);
       if (heirs.length > 1) {
         warnings.push(
-          `상속인이 ${heirs.length}명입니다. 주된 상속인(${mainHeir})을 납세의무자로 하며, ` +
+          `상속인이 ${heirs.length}명입니다. 주된 상속자(${mainHeir.name})를 납세의무자로 하며(${reason}), ` +
           "나머지 상속인은 연대납세의무가 있습니다.",
         );
       }
       return {
         type: "heir_representative",
-        name: mainHeir,
+        name: mainHeir.name,
         legalBasis: PROPERTY.TAXPAYER_HEIR,
         warnings,
       };

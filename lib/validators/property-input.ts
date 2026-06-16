@@ -151,8 +151,16 @@ export const propertyTaxInputSchema = z
         settlor: z.string().optional(),
         /** 상속 미등기 여부 (§107②2호) */
         isInheritanceUnregistered: z.boolean().optional(),
-        /** 상속인 목록 */
-        heirs: z.array(z.string()).optional(),
+        /** 상속인 목록 (§107②2호 주된 상속자 판정 — 성명·지분·생년) */
+        heirs: z
+          .array(
+            z.object({
+              name: z.string().min(1),
+              shareRatio: z.number().positive().max(1).optional(),
+              birthDate: z.string().optional(),
+            }),
+          )
+          .optional(),
         /** 공유 지분 목록 (§107①1호) */
         coOwnershipShares: z
           .array(
