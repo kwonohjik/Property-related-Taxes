@@ -88,3 +88,9 @@ export function getPropertyRateSet(year: number): PropertyRateSet {
   const applicable = fromYears.find((y) => year >= y) ?? fromYears[fromYears.length - 1];
   return PROPERTY_RATE_HISTORY[applicable];
 }
+
+/** 현행(최신 fromYear) 세율 세트 — 일반 계산(당해연도)·calc 기본 인자용 */
+export function getCurrentPropertyRateSet(): PropertyRateSet {
+  const fromYears = Object.keys(PROPERTY_RATE_HISTORY).map(Number);
+  return PROPERTY_RATE_HISTORY[Math.max(...fromYears)];
+}

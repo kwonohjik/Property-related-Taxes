@@ -39,6 +39,8 @@ import type {
   PropertyTaxResult,
 } from "./types/property.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import { getCurrentPropertyRateSet } from "./data/property-rate-history";
+import type { PropertyRateSet } from "./data/property-rate-history";
 
 // ============================================================
 // DB 세율 조회 헬퍼 — 공정시장가액비율 (정부 매년 고시)
@@ -303,6 +305,7 @@ export function calcHousingTax(
 export function calcBuildingTax(
   taxBase: number,
   buildingType: PropertyTaxInput["buildingType"] = "general",
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): {
   tax: number;
   appliedRate: number;
@@ -314,15 +317,15 @@ export function calcBuildingTax(
   switch (buildingType) {
     case "golf_course":
     case "luxury":
-      rate = PROPERTY_CONST.BUILDING_LUXURY_RATE;
+      rate = rateSet.buildingLuxury;
       legalBasis = PROPERTY.BUILDING_LUXURY_RATE;
       break;
     case "factory":
-      rate = 0.005;
+      rate = rateSet.buildingFactory;
       legalBasis = PROPERTY.BUILDING_FACTORY_RATE;
       break;
     default:
-      rate = PROPERTY_CONST.BUILDING_GENERAL_RATE;
+      rate = rateSet.buildingGeneral;
       legalBasis = PROPERTY.BUILDING_GENERAL_RATE;
   }
 
@@ -688,9 +691,10 @@ export function calculatePropertyTax(
 
     case "vessel":
     case "aircraft": {
-      // 선박·항공기: 시가표준액 × 0.3% (지방세법 §111①4)
-      calculatedTax = applyRate(taxBase, 0.003);
-      appliedRate = 0.003;
+      // 선박·항공기: 시가표준액 × 0.3% (지방세법 §111①4호 — 역사 세율표)
+      const vesselRate = getCurrentPropertyRateSet().vesselAircraft;
+      calculatedTax = applyRate(taxBase, vesselRate);
+      appliedRate = vesselRate;
       legalBasis.push(PROPERTY.VESSEL_AIRCRAFT_RATE);
       break;
     }
