@@ -38,7 +38,7 @@ export const NBL = {
   /** 시행령 §168조의14 ③ — 무조건 사업용 의제 (7가지 사유) */
   UNCONDITIONAL:  "시행령 §168조의14 ③",
   /** 시행령 §168조의11 ② + 기획재정부령 §83의5 — 수입금액 비율 테스트 (업종별 기준) */
-  REVENUE_TEST:   "시행령 §168조의11 ② + 기획재정부령 §83의5",
+  REVENUE_TEST:   "시행령 §168조의11 ② + 시행규칙 §83조의4",
 
   // ── v2 엔진 전용 정확 조문 상수 (PDF p.1695~1707 매핑) ──
   CATEGORY:                       "시행령 §168조의7",
@@ -63,50 +63,56 @@ export const NBL = {
 } as const;
 
 /**
- * 업종별 수입금액 비율 기준 (소득세법 시행령 §168조의11 ② + 기획재정부령 §83의5)
+ * 업종별 수입금액비율 기준 (소득세법 시행령 §168조의11② + 시행규칙 §83조의4)
  *
- * 연간 수입금액 ÷ 양도당시 토지가액 ≥ 기준비율 이면 사업용으로 인정.
- * 기준에 미달하면 해당 기간은 비사업용 사용기간으로 간주.
+ * §168의11②: 수입금액비율 = max(① 당해 수입÷당해 토지가액, ② (당해+직전 수입)÷(당해+직전 토지가액)).
+ * 비율 ≥ 율이면 해당 토지 사업용 인정(§104의3①4호다목). 적용 대상: §168의11①2호다목·10호·11호다목·12호.
+ * 율 근거(KoreanLaw 본문 검증 2026-06-16): 시행규칙 §83조의4 ⑥(주차장 3%)·⑬(광천지·양어장 4%)·⑮(12호 20/7/10/7/10%).
+ * ⚠️ 체육시설(1호)·청소년수련(4호)·휴양업(6호)은 면적기준 — 수입금액비율 대상 아님.
  */
 export const NBL_REVENUE_THRESHOLDS = {
-  /** 자동차운전학원·자동차정비학원 등 자동차학원: 10% */
-  CAR_DRIVING_SCHOOL: 0.10,
-  /** 체육시설업 (골프장 외): 10% */
-  SPORTS_FACILITY:    0.10,
-  /** 청소년수련시설: 10% */
-  YOUTH_FACILITY:     0.10,
-  /** 관광숙박업·국제회의업: 7% */
-  TOURIST_LODGING:    0.07,
-  /** 전문휴양업·종합휴양업: 7% */
-  RESORT_BUSINESS:    0.07,
-  /** 창고업·운수업·주차장업: 3% */
-  TRANSPORTATION:     0.03,
-  /** 그 밖의 업종 (기본): 3% */
-  DEFAULT:            0.03,
-  /** 적용 대상 아님 (수입금액 테스트 생략) */
-  NONE:               0,
+  /** 2호다목 주차장운영업용: 3% (§83의4⑥) */
+  PARKING_OPERATION:        0.03,
+  /** 10호 광천지: 4% (§83의4⑬) */
+  MINERAL_SPRING:           0.04,
+  /** 11호다목 양어장·지소 기타: 4% (§83의4⑬) */
+  FISH_FARM_OTHER:          0.04,
+  /** 12호 블록·석물·토관 제조업용: 20% (§83의4⑮1) */
+  BLOCK_STONE_PIPE_MFG:     0.20,
+  /** 12호 조경작물식재·화훼판매시설업용: 7% (§83의4⑮2) */
+  LANDSCAPING_FLORICULTURE: 0.07,
+  /** 12호 자동차·중장비 정비/운전 학원용: 10% (§83의4⑮3) */
+  VEHICLE_REPAIR_ACADEMY:   0.10,
+  /** 12호 농업 학원용: 7% (§83의4⑮4) */
+  AGRICULTURE_ACADEMY:      0.07,
+  /** 12호 도소매업용(§83의4⑭): 10% (§83의4⑮5) */
+  WHOLESALE_RETAIL:         0.10,
+  /** 수입금액비율 비적용 (면적기준 등 다른 판정) */
+  NONE:                     0,
 } as const;
 
 export type NblRevenueBusinessType =
-  | "car_driving_school"
-  | "sports_facility"
-  | "youth_facility"
-  | "tourist_lodging"
-  | "resort_business"
-  | "transportation"
-  | "default"
+  | "parking_operation"
+  | "mineral_spring"
+  | "fish_farm_other"
+  | "block_stone_pipe_mfg"
+  | "landscaping_floriculture"
+  | "vehicle_repair_academy"
+  | "agriculture_academy"
+  | "wholesale_retail"
   | "none";
 
 export function getNblRevenueThreshold(type: NblRevenueBusinessType): number {
   switch (type) {
-    case "car_driving_school": return NBL_REVENUE_THRESHOLDS.CAR_DRIVING_SCHOOL;
-    case "sports_facility":    return NBL_REVENUE_THRESHOLDS.SPORTS_FACILITY;
-    case "youth_facility":     return NBL_REVENUE_THRESHOLDS.YOUTH_FACILITY;
-    case "tourist_lodging":    return NBL_REVENUE_THRESHOLDS.TOURIST_LODGING;
-    case "resort_business":    return NBL_REVENUE_THRESHOLDS.RESORT_BUSINESS;
-    case "transportation":     return NBL_REVENUE_THRESHOLDS.TRANSPORTATION;
-    case "default":            return NBL_REVENUE_THRESHOLDS.DEFAULT;
-    case "none":               return NBL_REVENUE_THRESHOLDS.NONE;
+    case "parking_operation":        return NBL_REVENUE_THRESHOLDS.PARKING_OPERATION;
+    case "mineral_spring":           return NBL_REVENUE_THRESHOLDS.MINERAL_SPRING;
+    case "fish_farm_other":          return NBL_REVENUE_THRESHOLDS.FISH_FARM_OTHER;
+    case "block_stone_pipe_mfg":     return NBL_REVENUE_THRESHOLDS.BLOCK_STONE_PIPE_MFG;
+    case "landscaping_floriculture": return NBL_REVENUE_THRESHOLDS.LANDSCAPING_FLORICULTURE;
+    case "vehicle_repair_academy":   return NBL_REVENUE_THRESHOLDS.VEHICLE_REPAIR_ACADEMY;
+    case "agriculture_academy":      return NBL_REVENUE_THRESHOLDS.AGRICULTURE_ACADEMY;
+    case "wholesale_retail":         return NBL_REVENUE_THRESHOLDS.WHOLESALE_RETAIL;
+    case "none":                     return NBL_REVENUE_THRESHOLDS.NONE;
   }
 }
 

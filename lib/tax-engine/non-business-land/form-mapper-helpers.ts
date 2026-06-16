@@ -14,7 +14,9 @@ import type {
   VillaUsage,
   OtherLandUsage,
   LandType,
+  RevenueTestInput,
 } from "./types";
+import type { NblRevenueBusinessType } from "../legal-codes";
 
 // ============================================================
 // Raw 입력 타입 (store 필드 그대로)
@@ -177,5 +179,23 @@ export function buildOtherLand(
     buildingStandardValue:          parseNumber(asString(a.nblOtherBuildingValue)),
     landStandardValue:              parseNumber(asString(a.nblOtherLandValue)),
     isRelatedToResidenceOrBusiness: asBool(a.nblOtherIsRelatedToResidence),
+  };
+}
+
+/** §168의11② 수입금액비율 입력 (기타토지 + 업종 선택 시). 미선택/none이면 undefined. */
+export function buildRevenueTest(
+  a: Record<string, unknown>,
+  landType: LandType,
+  parseNumber: ParseNumber,
+): RevenueTestInput | undefined {
+  if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
+  const bt = asString(a.nblRevenueBusinessType);
+  if (!bt || bt === "none") return undefined;
+  return {
+    businessType:     bt as NblRevenueBusinessType,
+    currentRevenue:   parseNumber(asString(a.nblRevenueCurrentRevenue)) ?? 0,
+    currentLandValue: parseNumber(asString(a.nblRevenueCurrentLandValue)) ?? 0,
+    priorRevenue:     parseNumber(asString(a.nblRevenuePriorRevenue)),
+    priorLandValue:   parseNumber(asString(a.nblRevenuePriorLandValue)),
   };
 }

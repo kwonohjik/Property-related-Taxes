@@ -42,6 +42,30 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
         </div>
       )}
 
+      {/* §168의11② 수입금액비율 (해당 시) */}
+      {judgment.revenueTestDetail && (
+        <div className={`px-4 py-3 border-b ${judgment.revenueTestDetail.pass
+          ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800"
+          : "bg-muted/20 border-border"}`}>
+          <p className="text-xs font-semibold text-foreground mb-1">§168의11② 수입금액비율</p>
+          <p className="text-xs text-muted-foreground">{judgment.revenueTestDetail.detail}</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs mt-1.5">
+            <span className="text-muted-foreground">당해 비율</span>
+            <span className="font-mono text-right">{(judgment.revenueTestDetail.ratioCurrent * 100).toFixed(2)}%</span>
+            {judgment.revenueTestDetail.ratioCombined !== undefined && (
+              <>
+                <span className="text-muted-foreground">합산 비율(당해+직전)</span>
+                <span className="font-mono text-right">{(judgment.revenueTestDetail.ratioCombined * 100).toFixed(2)}%</span>
+              </>
+            )}
+            <span className="text-muted-foreground">적용 비율(큰 값)</span>
+            <span className="font-mono text-right">{(judgment.revenueTestDetail.actualRatio * 100).toFixed(2)}%</span>
+            <span className="text-muted-foreground">기준 비율</span>
+            <span className="font-mono text-right">{(judgment.revenueTestDetail.threshold * 100).toFixed(0)}%</span>
+          </div>
+        </div>
+      )}
+
       {/* ③ 기간 분석 */}
       {judgment.totalOwnershipDays > 0 && (
         <div className="px-4 py-3 bg-muted/20 border-b border-border">

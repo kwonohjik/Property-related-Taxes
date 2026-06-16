@@ -443,6 +443,13 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       return `${label}: 비사업용 토지 정밀판정 — 용도지역을 선택하세요.`;
     if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
       return `${label}: 비사업용 토지 판정을 위해 토지 면적(㎡)을 입력하세요.`;
+    // §168의11② 수입금액비율 — 업종 선택 시 당해 수입금액·토지가액 필수
+    if (asset.nblLandType === "other_land" && asset.nblRevenueBusinessType) {
+      if (!asset.nblRevenueCurrentRevenue || parseAmount(asset.nblRevenueCurrentRevenue) <= 0)
+        return `${label}: 수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.`;
+      if (!asset.nblRevenueCurrentLandValue || parseAmount(asset.nblRevenueCurrentLandValue) <= 0)
+        return `${label}: 수입금액비율 업종 선택 시 당해 토지가액을 입력하세요.`;
+    }
   }
 
   const isSalesCase = asset.isSalesCaseAcquisition === true;

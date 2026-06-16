@@ -101,5 +101,20 @@ export const NBL_DEFAULTS = {
   nblOtherBuildingValue: "",
   nblOtherLandValue: "",
   nblOtherIsRelatedToResidence: false,
+  // §168의11② 수입금액비율 (기타토지 — 2호다목·10·11다·12호 특정 업종)
+  nblRevenueBusinessType: "" as
+    | ""
+    | "parking_operation"
+    | "mineral_spring"
+    | "fish_farm_other"
+    | "block_stone_pipe_mfg"
+    | "landscaping_floriculture"
+    | "vehicle_repair_academy"
+    | "agriculture_academy"
+    | "wholesale_retail",
+  nblRevenueCurrentRevenue: "",
+  nblRevenueCurrentLandValue: "",
+  nblRevenuePriorRevenue: "",
+  nblRevenuePriorLandValue: "",
   nblGracePeriods: [] as GracePeriodInput[],
 } as const satisfies Record<string, unknown>;

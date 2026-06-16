@@ -478,6 +478,21 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   nblOtherBuildingValue: string;
   nblOtherLandValue: string;
   nblOtherIsRelatedToResidence: boolean;
+  // §168의11② 수입금액비율 (기타토지 특정 업종)
+  nblRevenueBusinessType:
+    | ""
+    | "parking_operation"
+    | "mineral_spring"
+    | "fish_farm_other"
+    | "block_stone_pipe_mfg"
+    | "landscaping_floriculture"
+    | "vehicle_repair_academy"
+    | "agriculture_academy"
+    | "wholesale_retail";
+  nblRevenueCurrentRevenue: string;
+  nblRevenueCurrentLandValue: string;
+  nblRevenuePriorRevenue: string;
+  nblRevenuePriorLandValue: string;
 
   // ── NBL 부득이한 사유 ──
   nblGracePeriods: GracePeriodInput[];
