@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
+import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import {
   calculateTransferTaxAggregate,
   type TransferTaxItemInput,
@@ -207,26 +208,8 @@ export async function POST(request: NextRequest) {
       houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
       requirementsConfirmed: e.requirementsConfirmed,
     })),
-    nonBusinessLandDetails: data.nonBusinessLandDetails
-      ? {
-          ...data.nonBusinessLandDetails,
-          landType: data.nonBusinessLandDetails.landType,
-          zoneType: data.nonBusinessLandDetails.zoneType,
-          acquisitionDate: new Date(data.nonBusinessLandDetails.acquisitionDate),
-          transferDate: new Date(data.nonBusinessLandDetails.transferDate),
-          businessUsePeriods: data.nonBusinessLandDetails.businessUsePeriods.map((p) => ({
-            startDate: new Date(p.startDate),
-            endDate: new Date(p.endDate),
-            usageType: p.usageType,
-          })),
-          gracePeriods: data.nonBusinessLandDetails.gracePeriods.map((g) => ({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            type: g.type as any,
-            startDate: new Date(g.startDate),
-            endDate: new Date(g.endDate),
-          })),
-        }
-      : undefined,
+    // ⑭ NBL 정밀판정: raw 평면 → mapAssetToNblInput(nested + Date 일괄) 공용 헬퍼
+    nonBusinessLandDetails: buildNblEngineInput(data.nonBusinessLandRaw),
     houses: data.houses
       ? data.houses.map((h) => ({
           id: h.id,

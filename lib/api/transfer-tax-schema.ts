@@ -10,7 +10,7 @@
 import { z } from "zod";
 import {
   temporaryTwoHouseSchema,
-  nonBusinessLandDetailsSchema,
+  nonBusinessLandRawSchema,
   rentalReductionDetailsSchema,
   newHousingDetailsSchema,
   pre1990LandSchema,
@@ -132,7 +132,7 @@ const propertyBaseShape = {
   isOneHousehold: z.boolean(),
   temporaryTwoHouse: temporaryTwoHouseSchema.optional(),
   reductions: z.array(reductionSchema).default([]),
-  nonBusinessLandDetails: nonBusinessLandDetailsSchema.optional(),
+  nonBusinessLandRaw: nonBusinessLandRawSchema.optional(),
   houses: z.array(houseSchema).optional(),
   sellingHouseId: z.string().optional(),
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),

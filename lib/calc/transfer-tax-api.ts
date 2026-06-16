@@ -15,6 +15,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload } from "./transfer-tax-api-helpers";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import {
   buildInheritedAcquisitionPayload,
@@ -44,27 +45,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // ── 대표 자산 감면 (자산별 reductions 배열에서 빌드) ──
   const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause);
 
-  // ── 비사업용 토지 상세 — asset 단위 읽기 (v1.2: form.nbl* → primary.nbl*) ──
-  const nblDetails =
-    primary.assetKind === "land" &&
-    primary.nblLandType &&
-    primary.nblZoneType &&
-    primary.acquisitionArea
-      ? {
-          landType: primary.nblLandType,
-          landArea: parseFloat(primary.acquisitionArea),   // nblLandArea 폐지, acquisitionArea 재사용
-          zoneType: primary.nblZoneType,
-          acquisitionDate: primary.acquisitionDate,
-          transferDate: form.transferDate,
-          farmingSelf: primary.nblFarmingSelf || undefined,
-          farmerResidenceDistance: primary.nblFarmerResidenceDistance
-            ? parseFloat(primary.nblFarmerResidenceDistance)
-            : undefined,
-          businessUsePeriods: (primary.nblBusinessUsePeriods ?? []).filter(
-            (p) => p.startDate && p.endDate,
-          ),
-        }
-      : undefined;
+  // ── ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (서버 buildNblEngineInput이 nested+Date 변환) ──
+  const nblRaw = buildNonBusinessLandRaw(primary, form.transferDate);
 
   // ── 다른 보유 주택 목록 ──
   const housesPayload =
@@ -489,7 +471,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           },
         }
       : {}),
-    ...(nblDetails ? { nonBusinessLandDetails: nblDetails } : {}),
+    ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
     ...(form.parentalCareMergeDate
