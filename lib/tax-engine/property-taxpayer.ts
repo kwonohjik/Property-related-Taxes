@@ -8,10 +8,15 @@
  * - distributeCoOwnershipTax(): 공유재산 지분별 안분
  *
  * 납세의무자 확정 우선순위 (지방세법 §107 현행 — MST 282559):
- *   §107① 본문: 과세기준일 현재 사실상 소유자 (원칙)
- *   §107①1호: 공유재산 → 지분권자
- *   §107②2호: 상속 미등기 → 행안부령 주된 상속인
  *   §107②5호: 신탁재산 → 위탁자 (2020.12.29 개정, 구법 수탁자 아님)
+ *   §107②4호: 국가 등과 연부 매매 + 무상사용 → 매수계약자
+ *   §107②6호: 환지 체비지·보류지 → 사업시행자
+ *   §107②7호: 외국인 항공기·선박 임차 수입 → 수입자
+ *   §107②3호: 종중재산 미신고 → 공부상 소유자
+ *   §107②8호: 파산재단 재산 → 공부상 소유자
+ *   §107① 본문: 과세기준일 현재 사실상 소유자 (원칙)
+ *   §107②2호: 상속 미등기 → 행안부령 주된 상속인
+ *   §107①1호: 공유재산 → 지분권자
  *   §107③: 소유권 귀속 불명 → 사용자
  *   §107②1호: 매매 미신고 사실상소유자 불명 → 공부상 소유자 (fallback)
  */
@@ -76,6 +81,12 @@ export function determineTaxpayer(
     | "isInheritanceUnregistered"
     | "heirs"
     | "coOwnershipShares"
+    | "isClanProperty"
+    | "installmentBuyer"
+    | "projectOperator"
+    | "importer"
+    | "isBankruptcyEstate"
+    | "ownershipUnclearUser"
   >,
 ): TaxpayerResult {
   const warnings: string[] = [];
@@ -96,6 +107,56 @@ export function determineTaxpayer(
         warnings,
       };
     }
+  }
+
+  // ── 연부 매수계약자 (§107②4호) — 국가 등과 연부매매 + 무상 사용권 ──
+  if (input.installmentBuyer) {
+    return {
+      type: "installment_buyer",
+      name: input.installmentBuyer,
+      legalBasis: PROPERTY.TAXPAYER_INSTALLMENT_BUYER,
+      warnings,
+    };
+  }
+
+  // ── 환지 체비지·보류지 사업시행자 (§107②6호) ──
+  if (input.projectOperator) {
+    return {
+      type: "project_operator",
+      name: input.projectOperator,
+      legalBasis: PROPERTY.TAXPAYER_PROJECT_OPERATOR,
+      warnings,
+    };
+  }
+
+  // ── 외국인 항공기·선박 임차 수입자 (§107②7호) ──
+  if (input.importer) {
+    return {
+      type: "importer",
+      name: input.importer,
+      legalBasis: PROPERTY.TAXPAYER_IMPORTER,
+      warnings,
+    };
+  }
+
+  // ── 종중재산 미신고 → 공부상 소유자 (§107②3호) ──
+  if (input.isClanProperty) {
+    return {
+      type: "registered_owner",
+      name: input.registeredOwner,
+      legalBasis: PROPERTY.TAXPAYER_CLAN,
+      warnings,
+    };
+  }
+
+  // ── 파산재단 재산 → 공부상 소유자 (§107②8호) ──
+  if (input.isBankruptcyEstate) {
+    return {
+      type: "registered_owner",
+      name: input.registeredOwner,
+      legalBasis: PROPERTY.TAXPAYER_BANKRUPTCY,
+      warnings,
+    };
   }
 
   // ── 2순위: 사실상 소유자 ≠ 공부상 소유자 (§107①본문) ──
@@ -155,6 +216,16 @@ export function determineTaxpayer(
       type: "co_owner",
       name: maxShareOwner.ownerId,
       legalBasis: PROPERTY.TAXPAYER_CO_OWNER, // "지방세법 §107①1호"
+      warnings,
+    };
+  }
+
+  // ── 소유권 귀속 불명 → 사용자 (§107③) ──
+  if (input.ownershipUnclearUser) {
+    return {
+      type: "user",
+      name: input.ownershipUnclearUser,
+      legalBasis: PROPERTY.TAXPAYER_USER,
       warnings,
     };
   }

@@ -185,6 +185,18 @@ export interface PropertyTaxInput {
     heirs?: string[];
     /** 공유 지분 목록 (§107①1호) — 2인 이상 시 지분별 안분 */
     coOwnershipShares?: CoOwnershipShare[];
+    /** 종중재산 미신고 (§107②3호) → 공부상 소유자 */
+    isClanProperty?: boolean;
+    /** 연부 매매계약자 (§107②4호) — 국가 등과 연부매매 + 무상 사용권 */
+    installmentBuyer?: string;
+    /** 환지 체비지·보류지 사업시행자 (§107②6호) */
+    projectOperator?: string;
+    /** 외국인 항공기·선박 수입자 (§107②7호) */
+    importer?: string;
+    /** 파산재단 재산 (§107②8호) → 공부상 소유자 */
+    isBankruptcyEstate?: boolean;
+    /** 소유권 귀속 불명 시 사용자 (§107③) */
+    ownershipUnclearUser?: string;
   };
 }
 
