@@ -665,7 +665,7 @@ describe("MH-22: ⑭ 인구감소지역 세컨드홈 → 주택 수 산정 배�
     expect(count).toBe(1);
     expect(excluded).toHaveLength(1);
     expect(excluded[0].reason).toBe("population_decline_second_home");
-    expect(excluded[0].detail).toContain("§167의3 ① 2호의2");
+    expect(excluded[0].detail).toContain("§167의3①12 다·라목");
   });
 
   it("인구감소지역이지만 세컨드홈 미등록 → 산정 포함", () => {

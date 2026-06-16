@@ -12,6 +12,7 @@
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -109,12 +110,13 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           onUpdate({
             isPopulationDeclineArea: v,
             isSecondHomeRegistered: v ? house.isSecondHomeRegistered : undefined,
+            populationAreaType: v ? house.populationAreaType : undefined,
           })
         }
         title="인구감소지역 소재 주택"
-        description="소령 §167의3① 2호의2 — 세컨드홈 특례 시 주택 수 제외"
+        description="소령 §167의3①12 다·라목 — 세컨드홈 특례 시 주택 수 제외 (2026.1.1~)"
       >
-        <div className="pt-1">
+        <div className="space-y-2 pt-1">
           <ToggleCard
             variant="chip"
             tone="rose"
@@ -122,6 +124,20 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
             onCheckedChange={(v) => onUpdate({ isSecondHomeRegistered: v })}
             title="세컨드홈 특례 등록"
           />
+          <div className="space-y-1">
+            <label className="block text-[11px] text-muted-foreground font-medium">지역 유형 (가액 한도)</label>
+            <RadioCardGroup
+              name={`house-pop-area-${house.id}`}
+              layout="inline"
+              tone="rose"
+              value={house.populationAreaType ?? "interest"}
+              onChange={(v) => onUpdate({ populationAreaType: v as "decline" | "interest" })}
+              options={[
+                { value: "decline", label: "인구감소지역(다목·9억)" },
+                { value: "interest", label: "인구감소관심지역(라목·4억)" },
+              ]}
+            />
+          </div>
         </div>
       </ToggleCard>
     </div>

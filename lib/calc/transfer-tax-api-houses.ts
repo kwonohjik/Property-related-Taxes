@@ -91,6 +91,7 @@ export function buildHousesPayload(
       isRedevelopmentZone: h.isRedevelopmentZone,
       isPopulationDeclineArea: h.isPopulationDeclineArea,
       isSecondHomeRegistered: h.isPopulationDeclineArea ? h.isSecondHomeRegistered : undefined,
+      populationAreaType: h.isPopulationDeclineArea ? h.populationAreaType : undefined,
       // ④⑬ 장기임대 9유형 매트릭스 — isLongTermRental=true && rentalType 설정 시에만 전달
       ...(h.isLongTermRental && h.rentalType
         ? {

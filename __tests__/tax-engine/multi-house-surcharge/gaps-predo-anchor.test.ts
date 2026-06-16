@@ -134,3 +134,68 @@ describe("Pre-Do #1-가: 소형신축 준공일 검증 (§167의3①12가목 3�
     expect(r.effectiveHouseCount).toBe(1);
   });
 });
+
+describe("Pre-Do #3: 인구감소 세컨드홈 가액한도 (§167의3①12 다·라목)", () => {
+  it("라목(관심지역) 기준시가 5억 (>4억) → 산입 (현행 FAIL: 한도 미검증)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING });
+    const second = makeHouse("h2", {
+      region: "non_capital",
+      isPopulationDeclineArea: true,
+      isSecondHomeRegistered: true,
+      populationAreaType: "interest",
+      officialPrice: 500_000_000, // > 4억 한도
+    });
+    const input = makeInput([selling, second], { sellingHouseId: "h1" });
+    const r = determineMultiHouseSurcharge(
+      input,
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionNone,
+      true,
+    );
+    expect(r.excludedHouses.find((e) => e.reason === "population_decline_second_home")).toBeUndefined();
+    expect(r.effectiveHouseCount).toBe(2);
+  });
+
+  it("다목(수도권밖 인구감소지역) 기준시가 8억 (≤9억) → 배제 (가드)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING });
+    const second = makeHouse("h2", {
+      region: "non_capital",
+      isPopulationDeclineArea: true,
+      isSecondHomeRegistered: true,
+      populationAreaType: "decline",
+      officialPrice: 800_000_000, // ≤ 9억
+    });
+    const input = makeInput([selling, second], { sellingHouseId: "h1" });
+    const r = determineMultiHouseSurcharge(
+      input,
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionNone,
+      true,
+    );
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("population_decline_second_home");
+    expect(r.effectiveHouseCount).toBe(1);
+  });
+
+  it("다목 기준시가 10억 (>9억) → 산입 (현행 FAIL: 한도 미검증)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING });
+    const second = makeHouse("h2", {
+      region: "non_capital",
+      isPopulationDeclineArea: true,
+      isSecondHomeRegistered: true,
+      populationAreaType: "decline",
+      officialPrice: 1_000_000_000, // > 9억
+    });
+    const input = makeInput([selling, second], { sellingHouseId: "h1" });
+    const r = determineMultiHouseSurcharge(
+      input,
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionNone,
+      true,
+    );
+    expect(r.excludedHouses.find((e) => e.reason === "population_decline_second_home")).toBeUndefined();
+    expect(r.effectiveHouseCount).toBe(2);
+  });
+});

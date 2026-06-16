@@ -72,6 +72,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isRedevelopmentZone: h.isRedevelopmentZone,
     isPopulationDeclineArea: h.isPopulationDeclineArea,
     isSecondHomeRegistered: h.isSecondHomeRegistered,
+    populationAreaType: h.populationAreaType,
     // P2 특수 배제 (selling-house 3주택+)
     isMortgageExecution: h.isMortgageExecution,
     isEmployeeHousing: h.isEmployeeHousing,

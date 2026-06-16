@@ -248,6 +248,7 @@ export const houseSchema = z.object({
   isRedevelopmentZone: z.boolean().optional(),
   isPopulationDeclineArea: z.boolean().optional(),
   isSecondHomeRegistered: z.boolean().optional(),
+  populationAreaType: z.enum(["decline", "interest"]).optional(),
   // ── P2 특수 배제 (selling-house 3주택+) ──
   isMortgageExecution: z.boolean().optional(),
   isEmployeeHousing: z.boolean().optional(),

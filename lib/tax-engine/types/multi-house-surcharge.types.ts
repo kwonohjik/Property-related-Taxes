@@ -169,6 +169,12 @@ export interface HouseInfo {
   isPopulationDeclineArea?: boolean;
   /** 세컨드홈 특례 등록 여부 (인구감소지역 1주택 특례 신청) */
   isSecondHomeRegistered?: boolean;
+  /**
+   * 인구감소지역 유형 (소령 §167의3①12 다·라목, 2026.1.1~).
+   * "decline" 다목(인구감소지역, 수도권 밖 9억), "interest" 라목(인구감소관심지역, 4억).
+   * 미제공 시 4억 한도(보수적).
+   */
+  populationAreaType?: "decline" | "interest";
   // ── 2주택 배제 관련 ──
   /**
    * 취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 여부.

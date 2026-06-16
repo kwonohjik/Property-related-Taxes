@@ -473,17 +473,25 @@ export function countEffectiveHouses(
       continue;
     }
 
-    // 배제 7: ⑭ 인구감소지역 세컨드홈 특례 (소령 §167-3 ① 2호의2)
+    // 배제 7: ⑭ 인구감소지역/관심지역 세컨드홈 특례 (소령 §167의3①12 다·라목)
     const isPopDecline =
       house.isPopulationDeclineArea ??
       (house.regionCode ? classifyPopulationDeclineArea(house.regionCode).isDeclineArea : false);
     if (isPopDecline && house.isSecondHomeRegistered) {
-      excluded.push({
-        houseId: house.id,
-        reason: "population_decline_second_home",
-        detail: `인구감소지역 세컨드홈 특례 (${MULTI_HOUSE.SECOND_HOME_DEPOPULATION}) — 주택 수 산정 배제`,
-      });
-      continue;
+      // 가액 한도: 다목(수도권 밖 인구감소지역) 9억, 라목(관심지역)·그 외 4억
+      const popCap =
+        house.region === "non_capital" && house.populationAreaType === "decline"
+          ? MULTI_HOUSE.POP_DECLINE_PRICE_CAP_NONCAPITAL
+          : MULTI_HOUSE.POP_DECLINE_PRICE_CAP_DEFAULT;
+      if (house.officialPrice <= popCap) {
+        excluded.push({
+          houseId: house.id,
+          reason: "population_decline_second_home",
+          detail: `인구감소지역 세컨드홈 특례 (${MULTI_HOUSE.SECOND_HOME_DEPOPULATION}) — 기준시가 ${house.officialPrice.toLocaleString()} ≤ ${popCap.toLocaleString()}, 주택 수 산정 배제`,
+        });
+        continue;
+      }
+      // 한도 초과 → 배제 미적용, 일반 산입 (fall through)
     }
 
     count++;
