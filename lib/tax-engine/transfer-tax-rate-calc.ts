@@ -271,8 +271,11 @@ export function calcTax(
   // T-2: 비사업용 토지 누진 + 10%p (§104①8호)
   if (input.isNonBusinessLand && surchargeRates.non_business_land) {
     const additionalRate = surchargeRates.non_business_land.additionalRate;
+    // §168의11⑤⑥ 부분 면적안분 — 중과분(+10%p)만 비사업용 면적비율로 안분(누진 기본세액은 전체 taxBase)
+    const ratio = input.nonBusinessLandAreaRatio ?? 1;
     const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
-    const surchargeAmount = applyRate(taxBase, additionalRate);
+    const surchargedBase = applyRate(taxBase, ratio); // ratio=1이면 surchargedBase=taxBase (회귀)
+    const surchargeAmount = applyRate(surchargedBase, additionalRate);
     const nblTax = progressiveTax + surchargeAmount;
 
     // §104① 후단 — 하나의 자산이 둘 이상의 호에 해당하면 큰 산출세액을 적용.
@@ -298,7 +301,7 @@ export function calcTax(
       calculatedTax: nblTax,
       surchargeType: "non_business_land",
       surchargeRate: roundRate(additionalRate),
-      appliedRate: roundRate(baseRate + additionalRate),
+      appliedRate: roundRate(baseRate + additionalRate * ratio), // 실효 가산율(면적비율 반영)
       progressiveDeduction: deduction,
       surchargeSuspended: false,
     };

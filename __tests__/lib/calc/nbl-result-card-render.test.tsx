@@ -36,4 +36,23 @@ describe("[NBL-CARD] ⑦ 판정 상세 렌더 (raw→engine→judgment→card)",
     // 판정 사유가 실데이터로 채워짐 (빈 문자열 아님)
     expect(judgment.judgmentReason.length).toBeGreaterThan(0);
   });
+
+  it("F3: 목장 기준면적 초과 → 부분안분 안내문(비사업용 비율·§168의11⑤⑥) 렌더", () => {
+    const input = buildNblEngineInput({
+      nblUseDetailedJudgment: true,
+      nblLandType: "pasture",
+      nblZoneType: "residential",
+      acquisitionArea: "1500", // 한우 100두 × 10㎡ = 기준 1,000㎡ 초과
+      acquisitionDate: "2020-01-01",
+      transferDate: "2025-01-01",
+      nblPastureIsLivestockOperator: true,
+      nblPastureLivestockType: "hanwoo",
+      nblPastureLivestockCount: "100",
+    } as never);
+    const judgment = judgeNonBusinessLand(input!, DEFAULT_NON_BUSINESS_LAND_RULES);
+    const { container } = render(<NonBusinessLandResultCard judgment={judgment} />);
+    expect(judgment.areaProportioning).toBeDefined();
+    expect(container.textContent).toMatch(/기준면적 초과분/);
+    expect(container.textContent).toMatch(/§168의11⑤⑥/);
+  });
 });
