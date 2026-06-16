@@ -207,6 +207,11 @@ export const houseSchema = z.object({
   isApartment: z.boolean().default(false),
   isOfficetel: z.boolean().default(false),
   isUnsoldHousing: z.boolean().default(false),
+  // ⑬ 소형신축·준공후미분양 특례 (§167의3①12가·나목)
+  acquisitionPrice: z.number().int().nonnegative().optional(),
+  exclusiveArea: z.number().nonnegative().optional(),
+  isUnsoldNewHouse: z.boolean().optional(),
+  completionDate: z.string().date().optional(),
   // 상속 5년 배제 기산 (소령 §167의3①7호)
   inheritedDate: z.string().date().optional(),
   // 장기임대 legacy 등록 경로 (등록사업자 + 등록일 2종 + 임대기간 5년↑)
@@ -243,6 +248,7 @@ export const houseSchema = z.object({
   isRedevelopmentZone: z.boolean().optional(),
   isPopulationDeclineArea: z.boolean().optional(),
   isSecondHomeRegistered: z.boolean().optional(),
+  populationAreaType: z.enum(["decline", "interest"]).optional(),
   // ── P2 특수 배제 (selling-house 3주택+) ──
   isMortgageExecution: z.boolean().optional(),
   isEmployeeHousing: z.boolean().optional(),
@@ -259,6 +265,8 @@ export const presaleRightSchema = z.object({
   type: z.enum(["presale_right", "redevelopment_right"]),
   acquisitionDate: z.string().date(),
   region: z.enum(["capital", "non_capital"]),
+  regionCriteria: z.enum(["REGION", "VALUE"]).optional(),
+  rightValue: z.number().int().nonnegative().optional(),
 });
 
 

@@ -61,6 +61,11 @@ export function buildHousesPayload(
       isApartment: h.isApartment,
       isOfficetel: h.isOfficetel,
       isUnsoldHousing: h.isUnsoldHousing,
+      // ⑬ 소형신축·준공후미분양 특례 (§167의3①12가·나목)
+      acquisitionPrice: parseAmount(h.acquisitionPrice || "") || undefined,
+      exclusiveArea: h.exclusiveArea ? parseFloat(h.exclusiveArea) : undefined,
+      isUnsoldNewHouse: h.isUnsoldNewHouse,
+      completionDate: h.completionDate || undefined,
       // 상속 5년 배제 — isInherited=true 일 때만 기산일 전달
       inheritedDate: h.isInherited ? h.inheritedDate || undefined : undefined,
       // 장기임대 legacy 등록 경로 — isLongTermRental=true 일 때만 등록정보 전달
@@ -86,6 +91,7 @@ export function buildHousesPayload(
       isRedevelopmentZone: h.isRedevelopmentZone,
       isPopulationDeclineArea: h.isPopulationDeclineArea,
       isSecondHomeRegistered: h.isPopulationDeclineArea ? h.isSecondHomeRegistered : undefined,
+      populationAreaType: h.isPopulationDeclineArea ? h.populationAreaType : undefined,
       // ④⑬ 장기임대 9유형 매트릭스 — isLongTermRental=true && rentalType 설정 시에만 전달
       ...(h.isLongTermRental && h.rentalType
         ? {

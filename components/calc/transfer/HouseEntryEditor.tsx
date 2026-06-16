@@ -94,6 +94,34 @@ function BasicInfoSection({ house, onUpdate }: Props) {
         hint="취득 시 공동·개별주택가격 (원)"
       />
 
+      {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) */}
+      <CurrencyInput
+        label="취득가액"
+        value={house.acquisitionPrice ?? ""}
+        onChange={(v) => onUpdate({ acquisitionPrice: v })}
+        hint="소형신축·준공후미분양 특례 가액 기준 (원)"
+      />
+
+      {/* 전용면적 */}
+      <div className="space-y-1">
+        <label className="block text-[11px] text-muted-foreground font-medium">전용면적 (㎡)</label>
+        <DecimalInput
+          value={house.exclusiveArea ?? ""}
+          onChange={(v) => onUpdate({ exclusiveArea: v })}
+          placeholder="전용면적 ㎡"
+        />
+      </div>
+
+      {/* 준공일 (가목 소형신축 3호) */}
+      <div className="space-y-1">
+        <label className="block text-[11px] text-muted-foreground font-medium">준공일</label>
+        <DateInput
+          value={house.completionDate ?? ""}
+          onChange={(v) => onUpdate({ completionDate: v })}
+        />
+        <p className="text-[10px] text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
+      </div>
+
       {/* 특례 chip */}
       <div className="space-y-1">
         <label className="block text-[11px] text-muted-foreground font-medium">특례 구분</label>
@@ -118,6 +146,13 @@ function BasicInfoSection({ house, onUpdate }: Props) {
             checked={house.isUnsoldHousing}
             onCheckedChange={(v) => onUpdate({ isUnsoldHousing: v })}
             title="미분양주택"
+          />
+          <ToggleCard
+            variant="chip"
+            tone="sky"
+            checked={house.isUnsoldNewHouse ?? false}
+            onCheckedChange={(v) => onUpdate({ isUnsoldNewHouse: v })}
+            title="준공후미분양"
           />
         </div>
       </div>

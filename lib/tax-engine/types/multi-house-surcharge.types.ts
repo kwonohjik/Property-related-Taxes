@@ -133,6 +133,8 @@ export interface HouseInfo {
   acquisitionPrice?: number;
   /** 비수도권 준공 후 미분양 해당 여부 (소형 신축 특례 ⑬) */
   isUnsoldNewHouse?: boolean;
+  /** 준공일 — 가목 소형신축 3호(2024.1.10~2027.12.31 준공) 검증용. 미제공 시 가목 미발동(보수적) */
+  completionDate?: Date;
   // ── 계약·법적 취득 ──
   /**
    * 매매계약 체결일.
@@ -167,6 +169,12 @@ export interface HouseInfo {
   isPopulationDeclineArea?: boolean;
   /** 세컨드홈 특례 등록 여부 (인구감소지역 1주택 특례 신청) */
   isSecondHomeRegistered?: boolean;
+  /**
+   * 인구감소지역 유형 (소령 §167의3①12 다·라목, 2026.1.1~).
+   * "decline" 다목(인구감소지역, 수도권 밖 9억), "interest" 라목(인구감소관심지역, 4억).
+   * 미제공 시 4억 한도(보수적).
+   */
+  populationAreaType?: "decline" | "interest";
   // ── 2주택 배제 관련 ──
   /**
    * 취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 여부.
@@ -211,6 +219,10 @@ export interface PresaleRight {
   type: "presale_right" | "redevelopment_right";
   acquisitionDate: Date;
   region: "capital" | "non_capital";
+  /** 지역기준 (REGION 수도권·광역시·세종 / VALUE 지방). 미제공 시 region 폴백. 3억 이하 배제는 VALUE만 */
+  regionCriteria?: "REGION" | "VALUE";
+  /** 가액(원) — 분양권 공급계약서상 공급가격(선택품목 제외)/입주권 종전주택가격(도시정비법§74①5). §167의4②1호·§167의11②1호 3억 배제 */
+  rightValue?: number;
 }
 
 /** 다주택 중과세 판정 입력 */

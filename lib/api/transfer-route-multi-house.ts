@@ -32,6 +32,11 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isApartment: h.isApartment,
     isOfficetel: h.isOfficetel,
     isUnsoldHousing: h.isUnsoldHousing,
+    // ⑬ 소형신축·준공후미분양 특례 (§167의3①12가·나목) — completionDate는 Date 변환
+    acquisitionPrice: h.acquisitionPrice,
+    exclusiveArea: h.exclusiveArea,
+    isUnsoldNewHouse: h.isUnsoldNewHouse,
+    completionDate: toOptionalDate(h.completionDate),
     inheritedDate: toOptionalDate(h.inheritedDate),
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),
@@ -67,6 +72,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isRedevelopmentZone: h.isRedevelopmentZone,
     isPopulationDeclineArea: h.isPopulationDeclineArea,
     isSecondHomeRegistered: h.isSecondHomeRegistered,
+    populationAreaType: h.populationAreaType,
     // P2 특수 배제 (selling-house 3주택+)
     isMortgageExecution: h.isMortgageExecution,
     isEmployeeHousing: h.isEmployeeHousing,
@@ -88,6 +94,8 @@ export function mapPresaleRightsToEngine(
     type: r.type,
     acquisitionDate: new Date(r.acquisitionDate),
     region: r.region,
+    regionCriteria: r.regionCriteria,
+    rightValue: r.rightValue,
   }));
 }
 

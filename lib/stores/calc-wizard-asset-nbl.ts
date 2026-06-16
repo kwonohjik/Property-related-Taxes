@@ -48,6 +48,14 @@ export interface HouseEntry {
   isApartment: boolean;
   isOfficetel: boolean;
   isUnsoldHousing: boolean;
+  /** 취득가액(원, 문자열) — 소형신축·준공후미분양 특례 가액 기준 (§167의3①12가·나목) */
+  acquisitionPrice?: string;
+  /** 전용면적(㎡, 문자열) — 소형신축 60㎡·미분양 85㎡ 판정 */
+  exclusiveArea?: string;
+  /** 준공후미분양 여부 (나목 §167의3①12나목) */
+  isUnsoldNewHouse?: boolean;
+  /** 준공일 (가목 3호 §167의3①12가목 — 2024.1.10~2027.12.31 준공). 미입력 시 가목 미발동 */
+  completionDate?: string;
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
   /**
@@ -120,10 +128,12 @@ export interface HouseEntry {
   litigationAcquisitionDate?: string;
   /** 정비구역(재개발·재건축) 지정 주택 — 기준시가 1억↓ 소형 배제에서 제외(정비구역은 산입) */
   isRedevelopmentZone?: boolean;
-  /** 인구감소지역 소재 주택 — 소령 §167의3① 2호의2 (세컨드홈 특례) */
+  /** 인구감소지역 소재 주택 — 소령 §167의3①12 다·라목 (세컨드홈 특례) */
   isPopulationDeclineArea?: boolean;
   /** 세컨드홈 특례 등록 여부 — 인구감소지역 주택 수 제외 신청 */
   isSecondHomeRegistered?: boolean;
+  /** 인구감소지역 유형 (다목 decline 9억 / 라목 interest 4억) — 가액한도 구분 */
+  populationAreaType?: "decline" | "interest";
 }
 
 /**
@@ -136,6 +146,10 @@ export interface PresaleRightEntry {
   type: "presale_right" | "redevelopment_right";
   acquisitionDate: string;
   region: "capital" | "non_capital";
+  /** 지역기준 (REGION 수도권·광역시·세종 / VALUE 지방) — 3억 배제 판정 (§167의4②1호) */
+  regionCriteria?: "REGION" | "VALUE";
+  /** 가액(원, 문자열) — 분양권 공급가격/입주권 종전주택가격 */
+  rightValue?: string;
 }
 
 /** 비사업용 토지(NBL) 필드 초기값 상수 — makeDefaultAsset에서 spread 사용 (800줄 분리, 2026-06-15) */

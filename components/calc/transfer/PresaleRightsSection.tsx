@@ -11,6 +11,7 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -90,19 +91,41 @@ export function PresaleRightsSection({ rights, onChange }: Props) {
                 />
               </div>
               <div className="space-y-1">
-                <span className="block text-[11px] text-muted-foreground font-medium">지역</span>
+                <span className="block text-[11px] text-muted-foreground font-medium">지역 구분</span>
                 <RadioCardGroup
                   name={`presale-region-${r.id}`}
                   layout="inline"
                   tone="rose"
-                  value={r.region}
-                  onChange={(v) => update(r.id, { region: v as "capital" | "non_capital" })}
+                  value={
+                    r.region === "capital"
+                      ? "capital"
+                      : r.regionCriteria === "REGION"
+                        ? "metro"
+                        : "local"
+                  }
+                  onChange={(v) =>
+                    update(
+                      r.id,
+                      v === "capital"
+                        ? { region: "capital", regionCriteria: "REGION" }
+                        : v === "metro"
+                          ? { region: "non_capital", regionCriteria: "REGION" }
+                          : { region: "non_capital", regionCriteria: "VALUE" },
+                    )
+                  }
                   options={[
                     { value: "capital", label: "수도권" },
-                    { value: "non_capital", label: "지방" },
+                    { value: "metro", label: "광역시·세종" },
+                    { value: "local", label: "그 외 지방" },
                   ]}
                 />
               </div>
+              <CurrencyInput
+                label="가액(공급가격)"
+                value={r.rightValue ?? ""}
+                onChange={(v) => update(r.id, { rightValue: v })}
+                hint="분양권 공급가격/입주권 종전주택가격 — 그 외 지방 3억 이하 시 주택 수 제외 (원)"
+              />
             </div>
           ))}
         </div>

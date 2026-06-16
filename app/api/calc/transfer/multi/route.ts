@@ -22,6 +22,7 @@ import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
+import { mapHousesToEngine } from "@/lib/api/transfer-route-multi-house";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
@@ -143,20 +144,8 @@ export async function POST(request: NextRequest) {
       reductions: mapReductionsToEngine(p.reductions),
       // ⑭ NBL 정밀판정: 단건 route와 동일 공용 헬퍼 (raw 평면 → nested + Date)
       nonBusinessLandDetails: buildNblEngineInput(p.nonBusinessLandRaw),
-      houses: p.houses
-        ? p.houses.map((h) => ({
-            id: h.id,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            region: h.region as any,
-            acquisitionDate: toDate(h.acquisitionDate, "houses.acquisitionDate"),
-            officialPrice: h.officialPrice,
-            isInherited: h.isInherited,
-            isLongTermRental: h.isLongTermRental,
-            isApartment: h.isApartment,
-            isOfficetel: h.isOfficetel,
-            isUnsoldHousing: h.isUnsoldHousing,
-          }))
-        : undefined,
+      // ⑭ 다건도 단건과 동일 공용 헬퍼 — P2 특례(인구감소·부득이사유·장기임대 등) + ⑬ 소형신축/미분양 전 필드 도달 (선재 strip 갭 해소)
+      houses: mapHousesToEngine(p.houses),
       sellingHouseId: p.sellingHouseId,
       marriageMerge: p.marriageMerge ? { marriageDate: toDate(p.marriageMerge.marriageDate, "marriageMerge.marriageDate") } : undefined,
       parentalCareMerge: p.parentalCareMerge ? { mergeDate: toDate(p.parentalCareMerge.mergeDate, "parentalCareMerge.mergeDate") } : undefined,
