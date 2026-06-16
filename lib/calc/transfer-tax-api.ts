@@ -14,6 +14,7 @@ import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-a
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload } from "./transfer-tax-api-helpers";
+import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
@@ -48,35 +49,27 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // ── ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (서버 buildNblEngineInput이 nested+Date 변환) ──
   const nblRaw = buildNonBusinessLandRaw(primary, form.transferDate);
 
-  // ── 다른 보유 주택 목록 ──
-  const housesPayload =
-    isHousingLike(primary.assetKind) && form.houses.length > 0
-      ? [
-          {
-            id: "selling",
-            region: form.sellingHouseRegion,
-            acquisitionDate: primary.acquisitionDate,
-            officialPrice: parseAmount(primary.standardPriceAtTransfer) || 0,
-            isInherited: false,
-            isLongTermRental: false,
-            isApartment: false,
-            isOfficetel: false,
-            isUnsoldHousing: false,
-          },
-          ...form.houses
-            .filter((h) => h.acquisitionDate)
-            .map((h) => ({
-              id: h.id,
-              region: h.region,
-              acquisitionDate: h.acquisitionDate,
-              officialPrice: parseInt(h.officialPrice) || 0,
-              isInherited: h.isInherited,
-              isLongTermRental: h.isLongTermRental,
-              isApartment: h.isApartment,
-              isOfficetel: h.isOfficetel,
-              isUnsoldHousing: h.isUnsoldHousing,
-            })),
-        ]
+  // ── 다른 보유 주택 목록 (④⑬ 헬퍼로 위임 — transfer-tax-api-houses.ts) ──
+  // 분양권/입주권만 있고 다른 주택은 없는 경우(양도주택 + 분양권)도 정밀 판정되도록 게이트 확장.
+  const housesPayload = buildHousesPayload(
+    primary,
+    form.sellingHouseRegion,
+    form.houses,
+    form.presaleRights.length,
+    form.sellingHouseExclusion,
+  );
+
+  // ── 세대 보유 분양권·입주권 (취득일 입력분만 — 2021.1.1 이후 취득분 주택수 산입) ──
+  const presaleRightsPayload =
+    isHousingLike(primary.assetKind) && form.presaleRights.length > 0
+      ? form.presaleRights
+          .filter((p) => p.acquisitionDate)
+          .map((p) => ({
+            id: p.id,
+            type: p.type,
+            acquisitionDate: p.acquisitionDate,
+            region: p.region,
+          }))
       : undefined;
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (Step1↔Step3 통합 후).
@@ -473,10 +466,13 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       : {}),
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
+    ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
+    // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
+    ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     ...(form.enablePenalty && form.filingType !== "correct"
       ? {
           filingPenaltyDetails: {

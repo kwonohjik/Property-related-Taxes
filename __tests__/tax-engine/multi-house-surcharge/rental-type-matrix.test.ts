@@ -1,0 +1,99 @@
+/**
+ * 장기임대 9유형(가~자목) 매트릭스 — 대표 유형 anchor + 필드 누락 회귀
+ *
+ * rentalType 설정 시 엔진(isLongTermRentalHousingExempt)이 유형별 정밀검사 수행.
+ * 요건 충족 → long_term_rental 배제 / 필수 필드 누락 → 미배제(주택 수 산입) 검증.
+ */
+
+import { describe, it, expect } from "vitest";
+import { determineMultiHouseSurcharge } from "@/lib/tax-engine/multi-house-surcharge";
+import {
+  defaultRules,
+  mockRegulatedHistory,
+  suspensionNone,
+  makeHouse,
+  makeInput,
+} from "../_helpers/multi-house-mock";
+
+const SELLING = "11680";
+
+/** 양도주택(h1) + 임대주택(h2) 입력 — h2가 배제되면 effectiveHouseCount=1 */
+function inputWith(h2Overrides: Parameters<typeof makeHouse>[1], transferDate = new Date("2024-06-01")) {
+  const h1 = makeHouse("h1", { regionCode: SELLING });
+  const h2 = makeHouse("h2", { isLongTermRental: true, ...h2Overrides });
+  return makeInput([h1, h2], { sellingHouseId: "h1", transferDate });
+}
+
+function run(input: ReturnType<typeof inputWith>) {
+  return determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
+}
+
+describe("RT-E 마목: 장기일반 매입임대 10년(2020.8.18 이전 등록 8년)", () => {
+  const qualifying = {
+    rentalType: "E" as const,
+    isRegisteredRental: true,
+    rentalRegistrationDate: new Date("2019-01-01"),
+    businessRegistrationDate: new Date("2019-01-01"),
+    rentalPeriodYears: 8,
+    rentalStartOfficialPrice: 500_000_000, // ≤6억(수도권)
+    rentIncreaseUnder5Pct: true,
+  };
+
+  it("요건 충족 → long_term_rental 배제 (effectiveHouseCount 1)", () => {
+    const r = run(inputWith(qualifying));
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
+    expect(r.effectiveHouseCount).toBe(1);
+  });
+
+  it("5%룰 미충족(rentIncreaseUnder5Pct 누락) → 미배제 (effectiveHouseCount 2)", () => {
+    const r = run(inputWith({ ...qualifying, rentIncreaseUnder5Pct: false }));
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+    expect(r.effectiveHouseCount).toBe(2);
+  });
+});
+
+describe("RT-G 사목: 자진·자동 말소 후 양도", () => {
+  const qualifying = {
+    rentalType: "G" as const,
+    isRegisteredRental: true,
+    rentalRegistrationDate: new Date("2019-01-01"),
+    businessRegistrationDate: new Date("2019-01-01"),
+    rentalCancellationDate: new Date("2021-01-01"), // ≥2020.8.18
+    hasHalfDutyPeriodMet: true,
+    isSoldWithin1YearOfCancellation: true,
+  };
+
+  it("요건 충족 → 배제", () => {
+    const r = run(inputWith(qualifying));
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
+  });
+
+  it("의무기간 1/2 미충족 → 미배제", () => {
+    const r = run(inputWith({ ...qualifying, hasHalfDutyPeriodMet: false }));
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+  });
+});
+
+describe("RT-H 아목: 단기 매입임대 6년(2025.6.4~, 아파트 제외)", () => {
+  const qualifying = {
+    rentalType: "H" as const,
+    isApartment: false, // 아파트 제외
+    isRegisteredRental: true,
+    rentalRegistrationDate: new Date("2025-07-01"), // ≥2025.6.4
+    businessRegistrationDate: new Date("2025-07-01"),
+    rentalPeriodYears: 6,
+    rentalStartOfficialPrice: 300_000_000, // ≤4억(수도권)
+    rentIncreaseUnder5Pct: true,
+  };
+  const td = new Date("2032-01-01");
+
+  it("요건 충족 → 배제", () => {
+    const r = run(inputWith(qualifying, td));
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
+  });
+
+  it("아파트(isApartment=true)면 아목 미해당 → 미배제", () => {
+    const r = run(inputWith({ ...qualifying, isApartment: true }, td));
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+  });
+});

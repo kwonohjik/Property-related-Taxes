@@ -3,6 +3,8 @@
  * calc-wizard-asset.ts 800줄 정책에 따라 분리 (2026-05-11).
  */
 
+import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
+
 /** 비사업용 토지 사업용 사용기간 항목 (폼 문자열 버전) */
 export interface NblBusinessUsePeriod {
   startDate: string;
@@ -46,6 +48,94 @@ export interface HouseEntry {
   isApartment: boolean;
   isOfficetel: boolean;
   isUnsoldHousing: boolean;
+  /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
+  inheritedDate?: string;
+  /**
+   * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
+   * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.
+   * (가~자목 9유형 세부 매트릭스는 후속 과제 — rentalType 미노출.)
+   */
+  isRegisteredRental?: boolean;
+  /** 임대사업자 등록일 */
+  rentalRegistrationDate?: string;
+  /** 사업자 등록일 */
+  businessRegistrationDate?: string;
+  /** 임대기간(년) — 5년 이상이면 legacy 배제 충족 */
+  rentalPeriodYears?: string;
+  /** 임대사업자 말소일 (양도일 이전 말소 시 임대 배제 해제) */
+  rentalCancelledDate?: string;
+
+  // ── 장기임대 9유형 매트릭스 (가~자목) — 신규 18필드 ──
+  /**
+   * 장기임대주택 유형 (가~자목).
+   * 설정 시 엔진이 유형별 정밀 검사(isLongTermRentalHousingExempt) 수행.
+   * 미설정 시 legacy boolean 경로.
+   */
+  rentalType?: RentalHousingType;
+  /** 임대료 증가율 5% 이하 충족 여부 — A·C·E·F·H·I */
+  rentIncreaseUnder5Pct?: boolean;
+  /** 국민주택규모(85㎡ 이하) 여부 — B */
+  isNationalSizeHousing?: boolean;
+  /** 같은 시·군 내 2호 이상 보유 여부 — B·C·F·I */
+  hasMinimum2Units?: boolean;
+  /** 같은 시·군 내 5호 이상 보유 여부 — D */
+  hasMinimum5UnitsInCity?: boolean;
+  /** 대지면적 (㎡, 폼 문자열) — C·D·F·I (298㎡ 이하 요건) */
+  rentalLandArea?: string;
+  /** 연면적 (㎡, 폼 문자열) — C·D·F·I (149㎡ 이하 요건) */
+  rentalTotalFloorArea?: string;
+  /** 분양전환 여부 — C·F */
+  isConvertedToSale?: boolean;
+  /** 최초 분양계약일 (YYYY-MM-DD) — D */
+  firstSaleContractDate?: string;
+  /** 취득 당시 공시가격 (원, 폼 문자열) — B·D */
+  acquisitionOfficialPrice?: string;
+  /** 임대개시 당시 공시가격 (원, 폼 문자열) — A·C·E·F·H·I */
+  rentalStartOfficialPrice?: string;
+  /** 임대의무기간 1/2 이상 충족 여부 — G */
+  hasHalfDutyPeriodMet?: boolean;
+  /** 말소일 이후 1년 이내 양도 여부 — G */
+  isSoldWithin1YearOfCancellation?: boolean;
+  /** 자진·자동 말소일 (YYYY-MM-DD) — G (rentalCancelledDate와 별개) */
+  rentalCancellationDate?: string;
+  /** 2018.9.14 이후 조정지역 취득 제외 해당 여부 — E·H */
+  isExcluded918Rule?: boolean;
+  /** 2020.7.11 이후 등록 아파트 제외 해당 여부 — D·E */
+  isExcludedAfter20200711Apt?: boolean;
+  /** 단기→장기 변경신고 제외 해당 여부 — E·F */
+  isExcludedShortToLongChange?: boolean;
+  /** 계약금 지급 증빙 보유 여부 — H (조정지역 2018.9.14 취득 예외) */
+  hasContractDepositProof?: boolean;
+
+  // ── P2 특수 배제 사유 (다른 보유 주택 기준 — 2주택 전용·인구감소) ──
+  /** 부득이한 사유(취학·근무·질병) 취득 주택 — 소령 §167의10①3호 (기준시가 3억↓·1년↑ 거주) */
+  isUnavoidableReason?: boolean;
+  /** 부득이한 사유 주택 거주기간(년) — 1년 이상 요건 */
+  unavoidableResidenceYears?: string;
+  /** 부득이한 사유 해소일 (YYYY-MM-DD) — 해소 후 3년 이내 양도 시 배제 유지 */
+  unavoidableReasonResolvedDate?: string;
+  /** 소송으로 취득/소송 진행 중 주택 — 소령 §167의10①8호 */
+  isLitigationHousing?: boolean;
+  /** 소송 취득일 (YYYY-MM-DD) — 3년 이내면 배제 (미입력=소송 진행 중) */
+  litigationAcquisitionDate?: string;
+  /** 정비구역(재개발·재건축) 지정 주택 — 기준시가 1억↓ 소형 배제에서 제외(정비구역은 산입) */
+  isRedevelopmentZone?: boolean;
+  /** 인구감소지역 소재 주택 — 소령 §167의3① 2호의2 (세컨드홈 특례) */
+  isPopulationDeclineArea?: boolean;
+  /** 세컨드홈 특례 등록 여부 — 인구감소지역 주택 수 제외 신청 */
+  isSecondHomeRegistered?: boolean;
+}
+
+/**
+ * 세대 보유 분양권·입주권 항목 (폼 문자열 버전).
+ * 소령 §167의11·§167의3①: 2021.1.1 이후 취득분은 주택 수 산정에 포함.
+ */
+export interface PresaleRightEntry {
+  id: string;
+  /** 분양권 / 입주권(재개발·재건축 조합원입주권) */
+  type: "presale_right" | "redevelopment_right";
+  acquisitionDate: string;
+  region: "capital" | "non_capital";
 }
 
 /** 비사업용 토지(NBL) 필드 초기값 상수 — makeDefaultAsset에서 spread 사용 (800줄 분리, 2026-06-15) */

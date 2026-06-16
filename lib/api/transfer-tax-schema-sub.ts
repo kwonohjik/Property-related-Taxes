@@ -201,6 +201,58 @@ export const houseSchema = z.object({
   isApartment: z.boolean().default(false),
   isOfficetel: z.boolean().default(false),
   isUnsoldHousing: z.boolean().default(false),
+  // 상속 5년 배제 기산 (소령 §167의3①7호)
+  inheritedDate: z.string().date().optional(),
+  // 장기임대 legacy 등록 경로 (등록사업자 + 등록일 2종 + 임대기간 5년↑)
+  isRegisteredRental: z.boolean().optional(),
+  rentalRegistrationDate: z.string().date().optional(),
+  businessRegistrationDate: z.string().date().optional(),
+  rentalPeriodYears: z.number().nonnegative().optional(),
+  rentalCancelledDate: z.string().date().optional(),
+  // ── ⑨⑫ 장기임대 9유형 매트릭스 (가~자목) 18필드 ──
+  rentalType: z.enum(["A", "B", "C", "D", "E", "F", "G", "H", "I"]).optional(),
+  rentIncreaseUnder5Pct: z.boolean().optional(),
+  isNationalSizeHousing: z.boolean().optional(),
+  hasMinimum2Units: z.boolean().optional(),
+  hasMinimum5UnitsInCity: z.boolean().optional(),
+  rentalLandArea: z.number().nonnegative().optional(),
+  rentalTotalFloorArea: z.number().nonnegative().optional(),
+  isConvertedToSale: z.boolean().optional(),
+  firstSaleContractDate: z.string().date().optional(),
+  acquisitionOfficialPrice: z.number().int().nonnegative().optional(),
+  rentalStartOfficialPrice: z.number().int().nonnegative().optional(),
+  hasHalfDutyPeriodMet: z.boolean().optional(),
+  isSoldWithin1YearOfCancellation: z.boolean().optional(),
+  rentalCancellationDate: z.string().date().optional(),
+  isExcluded918Rule: z.boolean().optional(),
+  isExcludedAfter20200711Apt: z.boolean().optional(),
+  isExcludedShortToLongChange: z.boolean().optional(),
+  hasContractDepositProof: z.boolean().optional(),
+  // ── P2 특수 배제 (other-house 2주택·인구감소) ──
+  isUnavoidableReason: z.boolean().optional(),
+  unavoidableResidenceYears: z.number().nonnegative().optional(),
+  unavoidableReasonResolvedDate: z.string().date().optional(),
+  isLitigationHousing: z.boolean().optional(),
+  litigationAcquisitionDate: z.string().date().optional(),
+  isRedevelopmentZone: z.boolean().optional(),
+  isPopulationDeclineArea: z.boolean().optional(),
+  isSecondHomeRegistered: z.boolean().optional(),
+  // ── P2 특수 배제 (selling-house 3주택+) ──
+  isMortgageExecution: z.boolean().optional(),
+  isEmployeeHousing: z.boolean().optional(),
+  freeProvisionYears: z.number().nonnegative().optional(),
+  isTaxSpecialExemption: z.boolean().optional(),
+  isCulturalHeritage: z.boolean().optional(),
+  isDayCareCenter: z.boolean().optional(),
+  dayCareOperationYears: z.number().nonnegative().optional(),
+});
+
+// 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11)
+export const presaleRightSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(["presale_right", "redevelopment_right"]),
+  acquisitionDate: z.string().date(),
+  region: z.enum(["capital", "non_capital"]),
 });
 
 

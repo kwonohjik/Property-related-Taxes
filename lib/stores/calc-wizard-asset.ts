@@ -20,6 +20,7 @@ export type {
   ResidenceHistoryInput,
   GracePeriodInput,
   HouseEntry,
+  PresaleRightEntry,
 } from "./calc-wizard-asset-nbl";
 import type { NblBusinessUsePeriod, ResidenceHistoryInput, GracePeriodInput } from "./calc-wizard-asset-nbl";
 

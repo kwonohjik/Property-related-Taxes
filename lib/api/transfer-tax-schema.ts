@@ -15,6 +15,7 @@ import {
   newHousingDetailsSchema,
   pre1990LandSchema,
   houseSchema,
+  presaleRightSchema,
   reductionSchema,
   filingPenaltyDetailsSchema,
   delayedPaymentDetailsSchema,
@@ -134,9 +135,19 @@ const propertyBaseShape = {
   reductions: z.array(reductionSchema).default([]),
   nonBusinessLandRaw: nonBusinessLandRawSchema.optional(),
   houses: z.array(houseSchema).optional(),
+  presaleRights: z.array(presaleRightSchema).optional(),
   sellingHouseId: z.string().optional(),
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
   parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
+  // 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9)
+  gracePeriod: z
+    .object({
+      contractDate: z.string().date(),
+      isLandPermitArea: z.boolean(),
+      hasTenantInResidence: z.boolean(),
+      areaDesignatedDate: z.string().date().optional(),
+    })
+    .optional(),
   rentalReductionDetails: rentalReductionDetailsSchema.optional(),
   newHousingDetails: newHousingDetailsSchema.optional(),
   acquisitionMethod: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),

@@ -100,6 +100,67 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: `보유 감면주택 ${i + 1}: 감면주택의 취득일(또는 매매계약일)을 입력하세요.` });
     }
 
+    // ⑧ 세대 보유 주택 목록 — 행별 첫 오류 1건씩 (자동 안분 fallback 금지: 미입력=차단)
+    const houses = form.houses ?? [];
+    for (let i = 0; i < houses.length; i++) {
+      const h = houses[i];
+      const label = `보유 주택 ${i + 1}`;
+      const firstError = (() => {
+        if (!h.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
+        if (!h.officialPrice || parseAmount(h.officialPrice) <= 0)
+          return `${label}: 기준시가(공시가격)를 입력하세요.`;
+        // 상속주택 5년 배제는 상속개시일이 있어야 기산 (소령 §167의3①7호) — 미입력 시 배제 미발동 → 차단
+        if (h.isInherited && !h.inheritedDate)
+          return `${label}: 상속주택이면 상속개시일을 입력하세요. (상속 5년 중과배제 판정 기준)`;
+        // 장기임대 등록 경로: 등록사업자 선택 시 등록일 2종·임대기간 필수
+        if (h.isLongTermRental && h.isRegisteredRental) {
+          if (!h.rentalRegistrationDate) return `${label}: 임대사업자 등록일을 입력하세요.`;
+          if (!h.businessRegistrationDate) return `${label}: 사업자 등록일을 입력하세요.`;
+          if (!h.rentalPeriodYears || parseFloat(h.rentalPeriodYears) <= 0)
+            return `${label}: 임대기간(년)을 입력하세요.`;
+        }
+        // 장기임대 9유형: 유형별 필수 입력값(가액·면적·날짜) — 미입력 시 엔진 오판정
+        // (특히 면적 미입력 → 엔진 0 간주 → 298㎡ 이하 통과 → 과대 적용). exact 비교(.includes(t)=정확매칭).
+        if (h.isLongTermRental && h.rentalType) {
+          const t = h.rentalType;
+          if (["A", "C", "E", "F", "H", "I"].includes(t) && !h.rentalStartOfficialPrice)
+            return `${label}: 임대개시 당시 공시가격을 입력하세요.`;
+          if (["B", "D"].includes(t) && !h.acquisitionOfficialPrice)
+            return `${label}: 취득 당시 공시가격을 입력하세요.`;
+          if (["C", "D", "F", "I"].includes(t) && (!h.rentalLandArea || !h.rentalTotalFloorArea))
+            return `${label}: 대지면적·연면적(㎡)을 입력하세요.`;
+          if (t === "D" && !h.firstSaleContractDate)
+            return `${label}: 최초 분양계약일을 입력하세요.`;
+          if (t === "G" && !h.rentalCancellationDate)
+            return `${label}: 자진·자동 말소일을 입력하세요.`;
+        }
+        // P2 부득이한 사유: 거주기간(년) 필수 (엔진 ≥1년 판정 — 미입력 시 0 간주로 배제 미발동)
+        if (h.isUnavoidableReason && (!h.unavoidableResidenceYears || parseFloat(h.unavoidableResidenceYears) <= 0))
+          return `${label}: 부득이한 사유 주택의 거주기간(년)을 입력하세요.`;
+        return null;
+      })();
+      if (firstError) issues.push({ step, message: firstError });
+    }
+
+    // ⑧ 양도 주택 3주택+ 전용 배제 특례 — 사원주택/어린이집 선택 시 기간(년) 필수
+    const se = form.sellingHouseExclusion;
+    if (se?.isEmployeeHousing && (!se.freeProvisionYears || parseFloat(se.freeProvisionYears) <= 0))
+      issues.push({ step, message: "양도 주택 사원용 주택: 무상 제공 기간(년)을 입력하세요." });
+    if (se?.isDayCareCenter && (!se.dayCareOperationYears || parseFloat(se.dayCareOperationYears) <= 0))
+      issues.push({ step, message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
+
+    // ⑧ 세대 보유 분양권·입주권 — 각 행 취득일 필수 (자동 안분 fallback 금지)
+    const presaleRights = form.presaleRights ?? [];
+    for (let i = 0; i < presaleRights.length; i++) {
+      if (!presaleRights[i].acquisitionDate)
+        issues.push({ step, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });
+    }
+
+    // ⑧ 다주택 중과 한시 유예 — 입력(ON) 시 매매계약일 필수 (조건B 기산).
+    // houses 0건이면 엔진이 gracePeriod를 소비하지 않고 위젯도 숨김 → 검증도 houses>0 게이트(보이지 않는 필드 차단 방지).
+    if (houses.length > 0 && form.gracePeriod && !form.gracePeriod.contractDate)
+      issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
+
     // 1세대1주택 + housing 자산 + interval 모드 거주 구간 검증 — 구간별 첫 오류 1건씩
     const primary = form.assets?.[0];
     if (form.isOneHousehold && primary && primary.assetKind === "housing"

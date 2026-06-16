@@ -30,6 +30,7 @@ import {
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import {
   propertySchema as inputSchema,
@@ -208,23 +209,13 @@ export async function POST(request: NextRequest) {
       houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
       requirementsConfirmed: e.requirementsConfirmed,
     })),
-    // ⑭ NBL 정밀판정: raw 평면 → mapAssetToNblInput(nested + Date 일괄) 공용 헬퍼
+    // ⑭ NBL 정밀판정: raw 평면 → mapAssetToNblInput(nested + Date 일괄) 공용 헬퍼 (origin/master #223·#224)
     nonBusinessLandDetails: buildNblEngineInput(data.nonBusinessLandRaw),
-    houses: data.houses
-      ? data.houses.map((h) => ({
-          id: h.id,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          region: h.region as any,
-          acquisitionDate: new Date(h.acquisitionDate),
-          officialPrice: h.officialPrice,
-          isInherited: h.isInherited,
-          isLongTermRental: h.isLongTermRental,
-          isApartment: h.isApartment,
-          isOfficetel: h.isOfficetel,
-          isUnsoldHousing: h.isUnsoldHousing,
-        }))
-      : undefined,
+    // ⑭ 다주택 중과 houses[]·presaleRights — Date 변환 + 9유형/P2 필드 매핑 헬퍼 (800줄 정책)
+    houses: mapHousesToEngine(data.houses),
+    presaleRights: mapPresaleRightsToEngine(data.presaleRights),
     sellingHouseId: data.sellingHouseId,
+    gracePeriod: mapGracePeriodToEngine(data.gracePeriod),
     marriageMerge: data.marriageMerge
       ? { marriageDate: new Date(data.marriageMerge.marriageDate) }
       : undefined,

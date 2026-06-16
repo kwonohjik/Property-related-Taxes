@@ -190,6 +190,7 @@ export function calculateTransferTax(
       marriageMerge: workingInput.marriageMerge,
       parentalCareMerge: workingInput.parentalCareMerge,
       presaleRights: workingInput.presaleRights ?? [],
+      gracePeriod: workingInput.gracePeriod,
     };
     multiHouseSurchargeResult = determineMultiHouseSurcharge(
       mhInput,
