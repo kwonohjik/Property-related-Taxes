@@ -28,7 +28,10 @@ import {
   deriveCollateralDebts,
   sumCollateralDebt,
 } from "@/lib/tax-engine/inheritance-collateral-debt";
-import { FUNERAL_MIN } from "@/lib/tax-engine/inheritance-gift-common";
+import {
+  FUNERAL_MIN,
+  calcFuneralExpenseDeduction,
+} from "@/lib/tax-engine/inheritance-gift-common";
 
 // ────────────────────────────────────────────────────
 // 입력 — InheritanceTaxForm.shared 의 FormState 부분 집합
@@ -160,8 +163,8 @@ export function computeInheritanceSummary(
         totalDebts += di.amount;
       }
     }
-    funeralApplied =
-      Math.min(funeralMeal, 10_000_000) + Math.min(funeralBongan, 5_000_000);
+    // 상증령 §9②: 식대 clamp[500만,1천만] + 봉안 min(실제,500만). 엔진과 동일 단일진실 헬퍼.
+    funeralApplied = calcFuneralExpenseDeduction(funeralMeal, funeralBongan).deduction;
   } else {
     // legacy/simple 경로 — funeralBonganExpense 있으면 §9②분리, 없으면 boolean compat
     totalDebts = parseAmountRaw(form.debts);

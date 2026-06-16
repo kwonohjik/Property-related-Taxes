@@ -469,7 +469,7 @@ export function capFuneralRowAmounts(
 ): number[] {
   let mealBudget = FUNERAL_GENERAL_MAX;
   let bonganBudget = FUNERAL_BONGAN_EXTRA;
-  return rows.map((r) => {
+  const applied = rows.map((r) => {
     const raw = Math.max(r.amount, 0);
     if (r.isBongan) {
       const allowed = Math.min(raw, bonganBudget);
@@ -480,6 +480,18 @@ export function capFuneralRowAmounts(
     mealBudget -= allowed;
     return allowed;
   });
+  // §9②1호 최소 500만: 식대(비봉안) 인정합이 500만 미만이면 부족분을 마지막 식대 행에 흡수.
+  // (식대 행이 하나도 없으면 보정 불가 — 호출부에서 합성 행으로 처리)
+  const mealApplied = FUNERAL_GENERAL_MAX - mealBudget;
+  if (mealApplied < FUNERAL_MIN) {
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (!rows[i].isBongan) {
+        applied[i] += FUNERAL_MIN - mealApplied;
+        break;
+      }
+    }
+  }
+  return applied;
 }
 
 /**

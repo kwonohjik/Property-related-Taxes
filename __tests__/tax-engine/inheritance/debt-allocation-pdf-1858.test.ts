@@ -119,10 +119,13 @@ describe("채무·공과·장례비 협의분할 PDF 책 1858 재현 (IDA)", () 
     );
     const baseDebtOnlyResult = calcInheritanceTax(baselineDebtOnly);
 
-    // 장례 차감 효과 = 15M (식대 한도 10M + 봉안 한도 5M)
+    // 장례 차감 순효과 = 10M.
+    //   result 장례공제 = 식대 한도 10M + 봉안 한도 5M = 15M
+    //   baseline 장례공제 = 식대 최소 500만 (§9②1호: 장례 미입력이어도 debtItems 경로면 500만 항상 공제)
+    //   → 순효과 15M − 5M = 10M
     const funeralEffect =
       baseDebtOnlyResult.taxableEstateValue - result.taxableEstateValue;
-    expect(funeralEffect).toBe(15_000_000);
+    expect(funeralEffect).toBe(10_000_000);
   });
 
   // ── 상속인별 채무 분담 검증 (heirAllocations 자체) ──
