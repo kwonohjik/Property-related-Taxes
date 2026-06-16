@@ -218,9 +218,15 @@ export function calculateTransferTax(
       workingInput.nonBusinessLandDetails,
       parsedRates.nonBusinessLandJudgmentRules,
     );
-    // [I5 수정] 판정 결과로 isNonBusinessLand 덮어씀 — 입력 플래그와 다를 때 step 경고 기록
+    // 판정 결과로 isNonBusinessLand override + §168의11⑤⑥ 면적안분 비율(F3) 항상 주입
+    // (입력 플래그=true·판정=true 케이스도 부분안분이 반영되도록 if 밖에서 갱신)
+    effectiveInput = {
+      ...workingInput,
+      isNonBusinessLand: nonBusinessLandJudgment.isNonBusinessLand,
+      nonBusinessLandAreaRatio: nonBusinessLandJudgment.surcharge.nonBusinessAreaRatio,
+    };
+    // [I5] 입력 플래그와 판정 결과가 다를 때만 step 경고 기록
     if (nonBusinessLandJudgment.isNonBusinessLand !== workingInput.isNonBusinessLand) {
-      effectiveInput = { ...workingInput, isNonBusinessLand: nonBusinessLandJudgment.isNonBusinessLand };
       steps.push({
         label: "비사업용 토지 판정 (엔진 재판정)",
         formula: `입력 플래그(${workingInput.isNonBusinessLand ? "비사업용" : "사업용"}) → 정밀 판정 결과: ${nonBusinessLandJudgment.isNonBusinessLand ? "비사업용" : "사업용"}`,

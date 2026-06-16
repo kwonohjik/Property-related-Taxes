@@ -123,7 +123,7 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
             <span className="font-mono text-right text-red-600">{area.nonBusinessArea.toFixed(1)} ㎡</span>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
-            면적 안분은 기준면적 초과 여부 판정 결과입니다. 양도세 중과세는 판정 결과(사업용·비사업용)를 기준으로 적용되며, 초과분만의 부분 안분 중과는 반영되지 않습니다.
+            기준면적 초과분(비사업용 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다. (§168의11⑤⑥)
           </p>
         </div>
       )}

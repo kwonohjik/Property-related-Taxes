@@ -260,6 +260,8 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
     surcharge: {
       surchargeType: "non_business_land",
       additionalRate: isNonBusinessLand ? 0.10 : 0,
+      // §168의11⑤⑥ 부분 면적안분 — 면적안분 산출 시 그 비율, 없으면 전량(1)
+      nonBusinessAreaRatio: isNonBusinessLand ? (categoryResult?.areaProportioning?.nonBusinessRatio ?? 1) : 0,
       longTermDeductionExcluded: isNonBusinessLand,
       basicDeductionApplied: true,
     },
@@ -290,6 +292,8 @@ function makeSurchargeResult(
     surcharge: {
       surchargeType: "non_business_land",
       additionalRate: isNonBusinessLand ? 0.10 : 0,
+      // 레거시 팩토리(면적안분 정보 없음) — 비사업용이면 전량(1)
+      nonBusinessAreaRatio: isNonBusinessLand ? 1 : 0,
       longTermDeductionExcluded: isNonBusinessLand,
       basicDeductionApplied: true,
     },

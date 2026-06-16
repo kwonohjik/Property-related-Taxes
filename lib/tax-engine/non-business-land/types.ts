@@ -440,6 +440,8 @@ export interface NonBusinessLandJudgment {
   surcharge: {
     surchargeType: "non_business_land";
     additionalRate: number;
+    /** 비사업용 면적 비율 (부분 안분 중과 — 면적안분 없으면 1) §168의11⑤⑥ */
+    nonBusinessAreaRatio: number;
     longTermDeductionExcluded: boolean;
     basicDeductionApplied: boolean;
   };
