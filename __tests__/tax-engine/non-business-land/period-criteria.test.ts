@@ -1,7 +1,8 @@
 /**
  * Phase B-4 유닛 테스트 — period-criteria.ts
  *
- * PDF p.1695 "기간기준 3가지 중 하나 충족" + 현행법 §168-6 OR 판정.
+ * 소득세법 시행령 §168조의6 — 소유기간 버킷별 "비사업용 기간 = 가·나·다 AND" 판정.
+ * isBusiness = NOT(가 AND 나 AND 다). (갭 3d에서 구 OR-semantics → 법령정합 재구현)
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -13,7 +14,7 @@ import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-l
 
 const d = (iso: string) => new Date(iso);
 
-describe("meetsPeriodCriteria 3기준 OR 판정", () => {
+describe("meetsPeriodCriteria §168조의6 버킷별 가·나·다 판정", () => {
   it("① 직전 3년 중 730일 이상 사업용 → PASS", () => {
     const r = meetsPeriodCriteria(
       [{ start: d("2019-01-01"), end: d("2022-01-01") }], // 직전 3년 전체
@@ -26,16 +27,19 @@ describe("meetsPeriodCriteria 3기준 OR 판정", () => {
     expect(r.bizInLast3).toBeGreaterThanOrEqual(730);
   });
 
-  it("② 직전 5년 중 1095일 이상 사업용 → PASS (① 미충족)", () => {
-    // 15년 보유, 2017~2020 사업용 3년 (직전 5년 = 2017~2022)
+  it("② 15년 보유·사업용 3년(20%) → 비사업용 (§168조의6 1호 가·나·다 법령정합 재정렬)", () => {
+    // 구 OR-semantics는 '직전5년 1095일 사업 → 사업용'으로 PASS 판정했으나, §168조의6 1호는
+    // 가(직전5년 비사업 731일>730)·나(직전3년 비사업 731일>365)·다(전체 비사업 4383일>40% 2191)
+    // 모두 충족 → 비사업용. 15년 보유에 20%만 사업이므로 명백히 비사업용.
     const r = meetsPeriodCriteria(
       [{ start: d("2017-01-01"), end: d("2020-01-01") }],
       d("2007-01-01"),
       d("2022-01-01"),
       "farmland",
     );
-    expect(r.meets).toBe(true);
-    expect(r.criteriaUsed).toBe("5y-3y");
+    expect(r.meets).toBe(false);
+    expect(r.criteriaUsed).toBe("none");
+    expect(r.ownershipBucket).toBe(1);
     expect(r.bizInLast3).toBeLessThan(730);
     expect(r.bizInLast5).toBeGreaterThanOrEqual(1095);
   });
@@ -68,8 +72,11 @@ describe("meetsPeriodCriteria 3기준 OR 판정", () => {
     expect(r.criteria.rule80Percent).toBe(false);
   });
 
-  it("경계 — 직전 3년 중 정확히 730일 → PASS", () => {
-    // 2020-01-01 ~ 2021-12-31 = 정확히 730일
+  it("경계 — 약 8년 보유·직전3년 730일 사업(전체 25%) → 비사업용 (§168조의6 1호 법령정합 재정렬)", () => {
+    // 2020-01-01 ~ 2021-12-31 = 정확히 730일 사업. 약 8년(2920일) 보유.
+    // 구 OR-semantics는 '직전3년 730일(2년) 사업 → 사업용'으로 PASS했으나, §168조의6 1호는
+    // 직전3년 창(1096일) 중 비사업 366일>365(나목), 직전5년 비사업 1096일>730(가목),
+    // 전체 비사업 2190일>40%(1168, 다목) 모두 충족 → 비사업용. 전체 25%만 사업.
     const r = meetsPeriodCriteria(
       [{ start: d("2020-01-01"), end: d("2021-12-31") }],
       d("2015-01-01"),
@@ -77,7 +84,8 @@ describe("meetsPeriodCriteria 3기준 OR 판정", () => {
       "farmland",
     );
     expect(r.bizInLast3).toBe(730);
-    expect(r.meets).toBe(true);
+    expect(r.ownershipBucket).toBe(1);
+    expect(r.meets).toBe(false);
   });
 
   it("경계 — 직전 3년 중 729일 → FAIL (①)", () => {
