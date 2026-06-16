@@ -53,6 +53,7 @@ import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybr
 import {
   parseRatesFromMap,
   checkExemption,
+  meetsOneHouseHoldingResidence,
   calcTransferGain,
   calcOneHouseProration,
   calcLongTermHoldingDeduction,
@@ -191,6 +192,13 @@ export function calculateTransferTax(
       parentalCareMerge: workingInput.parentalCareMerge,
       presaleRights: workingInput.presaleRights ?? [],
       gracePeriod: workingInput.gracePeriod,
+      // §154① 보유·거주 요건 precompute (배제2 §155⑤ 의제 게이트). 미산정 시 undefined → 엔진 충족 간주
+      sellingHouseMeetsOneHouseRequirements: parsedRates.oneHouseSpecialRules
+        ? meetsOneHouseHoldingResidence(
+            workingInput,
+            parsedRates.oneHouseSpecialRules.one_house_exemption,
+          )
+        : undefined,
     };
     multiHouseSurchargeResult = determineMultiHouseSurcharge(
       mhInput,

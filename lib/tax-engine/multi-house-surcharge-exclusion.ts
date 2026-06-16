@@ -157,7 +157,14 @@ export function determineSurchargeExclusion(
 
   // 배제 2: 혼인합가 1세대1주택 의제 (§167의10①15호 → §155⑤, 2주택 10년)
   // ⑨ 차감으로 3→2가 된 경우(marriageSubtractionApplied)는 §155 비해당 → 배제 제외(본인 2주택 중과).
-  if (input.marriageMerge && effectiveHouseCount === 2 && !marriageSubtractionApplied) {
+  // §154① 게이트: 15호는 "§154① 요건 모두 충족하는 주택"에 한정 → 양도 주택 보유·거주 요건 미충족 시 배제 부적용.
+  //   미제공(?? true)은 충족 간주(직접 호출 하위호환); 파이프라인은 transfer-tax.ts에서 precompute해 주입.
+  if (
+    input.marriageMerge &&
+    effectiveHouseCount === 2 &&
+    !marriageSubtractionApplied &&
+    (input.sellingHouseMeetsOneHouseRequirements ?? true)
+  ) {
     const m = input.marriageMerge.marriageDate;
     if (
       input.transferDate >= m &&

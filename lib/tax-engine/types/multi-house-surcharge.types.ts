@@ -271,6 +271,11 @@ export interface MultiHouseSurchargeInput {
   marriageMerge?: {
     marriageDate: Date;
   };
+  /**
+   * §154① 보유·거주 요건 충족 여부 (양도 주택) — §155⑤ 1세대1주택 의제 중과배제(배제2) 게이트.
+   * 파이프라인이 precompute(transfer-tax.ts). 미제공 시 충족 간주(직접 호출 하위호환).
+   */
+  sellingHouseMeetsOneHouseRequirements?: boolean;
   /** 동거봉양 합가 정보 */
   parentalCareMerge?: {
     mergeDate: Date;
