@@ -214,6 +214,22 @@ export interface PresaleRight {
 }
 
 /** 다주택 중과세 판정 입력 */
+/**
+ * 다주택 중과 한시 유예 조건부 판정 입력 (2022.5.10 ~ 2026.5.9).
+ * 미제공 시 suspended_until 날짜 기준 blanket 판정. 제공 시 정밀 조건 판정.
+ * (엔진 입력·TransferTaxInput·폼 변환에서 공유 — 폼 계층은 Date 대신 string 사용.)
+ */
+export interface MultiHouseGracePeriodInput {
+  /** 매매계약 체결일 — 조건A: ≤ 2026.5.9 이어야 유예 가능 */
+  contractDate: Date;
+  /** 토지거래허가구역 여부 — 조건C 판정용 */
+  isLandPermitArea: boolean;
+  /** 임차인 거주 여부 — 조건C 판정용 (토지허가+임차인 → 무기한 연장) */
+  hasTenantInResidence: boolean;
+  /** 해당 조정대상지역 최초 지정일 — 2025.10.16 이후 신규 지정 → 잔금 기한 6개월(기본 4개월) */
+  areaDesignatedDate?: Date;
+}
+
 export interface MultiHouseSurchargeInput {
   /** 세대 보유 전체 주택 목록 */
   houses: HouseInfo[];
@@ -243,19 +259,7 @@ export interface MultiHouseSurchargeInput {
    * 미제공 시 suspended_until 날짜 기준으로만 판단 (기존 동작 유지).
    * 제공 시 계약일(조건A) + 잔금기한(조건B) + 토지허가구역(조건C) 종합 판정.
    */
-  gracePeriod?: {
-    /** 매매계약 체결일 — 조건A: ≤ 2026.5.9 이어야 유예 가능 */
-    contractDate: Date;
-    /** 토지거래허가구역 여부 — 조건C 판정용 */
-    isLandPermitArea: boolean;
-    /** 임차인 거주 여부 — 조건C 판정용 (토지허가+임차인 → 무기한 연장) */
-    hasTenantInResidence: boolean;
-    /**
-     * 해당 조정대상지역 최초 지정일.
-     * 2025.10.16 이후 신규 지정 지역 → 잔금 기한 6개월 (기본 4개월).
-     */
-    areaDesignatedDate?: Date;
-  };
+  gracePeriod?: MultiHouseGracePeriodInput;
 }
 
 /** 산정에서 제외된 주택과 사유 */

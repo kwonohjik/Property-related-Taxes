@@ -560,6 +560,9 @@ function checkGracePeriodExemption(
 ): boolean {
   const { contractDate, isLandPermitArea, hasTenantInResidence, areaDesignatedDate } = gracePeriod;
 
+  // 한시 유예는 2022.5.10 ~ 2026.5.9 사이 매매계약에만 적용 — 하한·상한 모두 검증.
+  // (하한 누락 시 유예 시행 전 계약도 조건B/C 충족 시 잘못 배제 — 적대적 리뷰 적발)
+  if (contractDate < new Date(SURCHARGE_EXCLUSION_WINDOW.start)) return false;
   if (contractDate > GRACE_PERIOD_END) return false;
 
   const isNewlyDesignated = areaDesignatedDate && areaDesignatedDate >= GRACE_NEW_DESIGNATION_DATE;

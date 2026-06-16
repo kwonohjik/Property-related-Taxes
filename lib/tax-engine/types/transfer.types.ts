@@ -11,6 +11,7 @@
 import type {
   HouseInfo,
   PresaleRight,
+  MultiHouseGracePeriodInput,
   ExcludedHouse,
   ExclusionReason,
 } from "../multi-house-surcharge";
@@ -199,6 +200,8 @@ export interface TransferTaxInput {
   };
   /** 양도 주택 ID (houses 제공 시) */
   sellingHouseId?: string;
+  /** 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 한시 배제 2022.5.10~2026.5.9). houses + 유예 윈도우 활성 시 mhInput.gracePeriod로 전달(STEP 0.5). */
+  gracePeriod?: MultiHouseGracePeriodInput;
   /**
    * 비사업용 토지 상세 정보 (선택)
    * 제공 시 judgeNonBusinessLand()로 정밀 판정 후 isNonBusinessLand 덮어씀.

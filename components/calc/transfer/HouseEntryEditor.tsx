@@ -20,6 +20,8 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
+import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
 // ============================================================
@@ -254,6 +256,9 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
               양도일 이전 말소된 경우 임대 배제 특례가 해제될 수 있습니다.
             </p>
           </div>
+
+          {/* 9유형(가~자목) 매트릭스 — 유형 선택 시 유형별 요건 정밀 판정 */}
+          <HouseEntryRentalTypeSection house={house} onUpdate={onUpdate} />
         </div>
       </ToggleCard>
     </div>
@@ -270,6 +275,7 @@ export function HouseEntryEditor({ house, onUpdate }: Props) {
       <BasicInfoSection house={house} onUpdate={onUpdate} />
       <InheritanceSection house={house} onUpdate={onUpdate} />
       <LongTermRentalSection house={house} onUpdate={onUpdate} />
+      <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
     </div>
   );
 }

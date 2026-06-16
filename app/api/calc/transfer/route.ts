@@ -29,6 +29,7 @@ import {
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import {
   propertySchema as inputSchema,
@@ -227,21 +228,11 @@ export async function POST(request: NextRequest) {
           })),
         }
       : undefined,
-    houses: data.houses
-      ? data.houses.map((h) => ({
-          id: h.id,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          region: h.region as any,
-          acquisitionDate: new Date(h.acquisitionDate),
-          officialPrice: h.officialPrice,
-          isInherited: h.isInherited,
-          isLongTermRental: h.isLongTermRental,
-          isApartment: h.isApartment,
-          isOfficetel: h.isOfficetel,
-          isUnsoldHousing: h.isUnsoldHousing,
-        }))
-      : undefined,
+    // ⑭ 다주택 중과 houses[]·presaleRights·gracePeriod — Date 변환 헬퍼로 분리 (800줄 정책)
+    houses: mapHousesToEngine(data.houses),
+    presaleRights: mapPresaleRightsToEngine(data.presaleRights),
     sellingHouseId: data.sellingHouseId,
+    gracePeriod: mapGracePeriodToEngine(data.gracePeriod),
     marriageMerge: data.marriageMerge
       ? { marriageDate: new Date(data.marriageMerge.marriageDate) }
       : undefined,

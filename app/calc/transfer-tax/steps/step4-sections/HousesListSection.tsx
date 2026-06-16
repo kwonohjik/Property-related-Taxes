@@ -29,6 +29,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
+import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
+import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 
 // ============================================================
@@ -292,9 +294,12 @@ export function HousesListSection({
     onChange({ houses: houses.map((h) => (h.id === id ? { ...h, ...patch } : h)) });
   }
 
-  // gracePeriod 노출 조건: 1세대 + 주택수 2채 이상
+  // gracePeriod 노출 조건: 1세대 + 주택수 2채 이상 + (보유 주택 OR 분양권·입주권) 1건 이상.
+  // 보유 항목 0건이면 엔진이 gracePeriod를 소비하지 않으므로(houses[] 경로 전용 — rate-calc:307·helpers:783)
+  // 위젯·API 전송(housesPayload && gracePeriod)·엔진 사용을 일치시켜 침묵 무시(silent omission) 차단.
   const householdCount = parseInt(form.householdHousingCount || "1", 10);
-  const showGracePeriod = form.isOneHousehold && householdCount >= 2;
+  const hasMultiHouseEntries = houses.length > 0 || form.presaleRights.length > 0;
+  const showGracePeriod = form.isOneHousehold && householdCount >= 2 && hasMultiHouseEntries;
 
   return (
     <div className="space-y-3">
@@ -367,6 +372,20 @@ export function HousesListSection({
           </div>
         )}
       </div>
+
+      {/* ── 분양권·입주권 ── */}
+      <PresaleRightsSection
+        rights={form.presaleRights}
+        onChange={(presaleRights) => onChange({ presaleRights })}
+      />
+
+      {/* ── 양도 주택 3주택+ 전용 배제 특례 (householdHousingCount≥3 시) ── */}
+      {householdCount >= 3 && (
+        <SellingHouseExclusionSection
+          value={form.sellingHouseExclusion}
+          onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}
+        />
+      )}
 
       {/* ── gracePeriod 섹션 (조건부) ── */}
       {showGracePeriod && (

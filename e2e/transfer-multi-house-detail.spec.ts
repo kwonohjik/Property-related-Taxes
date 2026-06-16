@@ -1,222 +1,169 @@
 /**
  * transfer-multi-house-detail.spec.ts
  *
- * 양도세 마법사 → Step 4 보유 상황 → 다른 보유 주택 상세 입력 UI E2E
+ * 양도세 마법사 → Step 4(보유 상황) → "다른 보유 주택 목록" 테이블+모달 + 중과 한시 유예 UI E2E
  *
- * 검증 시나리오:
- *  1. 주택 추가 → 모달 오픈 → 기본 정보(지역·취득일·공시가격) 입력
- *  2. 상속 토글 ON → 상속개시일 입력
- *  3. 장기임대 토글 ON → 임대사업자 등록 ON → 등록일·사업자등록일·임대기간 입력
- *  4. 미분양주택 chip 토글
- *  5. 테이블로 돌아와 배지 확인
- *  6. gracePeriod 토글 (1세대 + 2주택 조건) ON → 매매계약일 입력
- *  7. 계산 → 결과 다주택 중과세 판정 상세 카드 확인
+ * 섹션 노출 조건: 주(主)자산이 housing-like(기본 "housing") + householdHousingCount >= 2.
+ * → 보유 상황 단계로 이동 후 "2채" 버튼 클릭으로 섹션을 띄운다.
+ *
+ * 셀렉터 전략 (견고성):
+ *  - ToggleCard는 <label>이 <Switch role=switch>와 title을 함께 감싼다.
+ *    accessible name이 title에 연결되지 않으므로, data-slot="toggle-card" 카드를
+ *    title 텍스트(hasText)로 찾아 내부 switch를 클릭한다.
+ *  - ON 시 children(상속개시일 등)이 렌더되므로 가시성으로 상태를 검증한다.
  *
  * 실행: E2E_PORT=3103 npx playwright test e2e/transfer-multi-house-detail.spec.ts
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page, type Locator } from "@playwright/test";
 
-// ============================================================
-// 헬퍼: 날짜 입력 (DateInput — 연/월/일 분리 input)
-// ============================================================
-
-async function fillDate(
-  page: import("@playwright/test").Page,
-  label: string,
-  yyyy: string,
-  mm: string,
-  dd: string,
-) {
-  // DateInput은 label 주변에 연/월/일 세 input을 렌더한다.
-  // 각 placeholder 또는 aria-label로 접근
-  const container = page.getByText(label, { exact: false }).first().locator("..").locator("..");
-  const inputs = container.getByRole("textbox");
-  await inputs.nth(0).fill(yyyy);
-  await inputs.nth(1).fill(mm);
-  await inputs.nth(2).fill(dd);
+/** 보유 상황(Step 4)으로 이동 + 주택수 2채 설정 → "다른 보유 주택 목록" 섹션 노출 */
+async function gotoHoldingStepWithTwoHouses(page: Page) {
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  // 스텝퍼 자유 이동(onStepClick=setStep) — Step1 미입력이어도 이동 가능
+  await page.getByRole("button", { name: "보유 상황" }).first().click();
+  // 세대 보유 주택 수 "2채" 버튼 클릭
+  await page.getByRole("button", { name: "2채", exact: true }).click();
+  // 섹션 노출 확인 (SectionHeader + 내부 <p> 2곳 매칭 → first)
+  await expect(page.getByText("다른 보유 주택 목록", { exact: false }).first()).toBeVisible();
 }
 
-// ============================================================
-// 테스트
-// ============================================================
+/**
+ * ToggleCard 토글 — Switch는 aria-labelledby로 "title + description"을 accessible name으로 가진다.
+ * title 부분문자열 정규식으로 직접 타게팅(중첩 카드도 정확히 구분).
+ */
+async function toggleCardByTitle(scope: Locator | Page, title: string) {
+  await scope.getByRole("switch", { name: new RegExp(title) }).click();
+}
 
 test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/calc/transfer-tax");
-    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  });
+  test("주택 추가 모달: 기본정보·상속·장기임대 섹션 + 신규 필드 렌더", async ({ page }) => {
+    await gotoHoldingStepWithTwoHouses(page);
 
-  test("주택 추가 모달 오픈 + 기본 정보 입력", async ({ page }) => {
-    // Step 1 최소 입력 후 보유 상황 단계로 이동
-    // 양도일 입력 (DateInput)
-    const dateInputs = page.locator("[placeholder='연도'], [data-slot='date-year']").first();
-    await page.locator("label").filter({ hasText: "양도일" }).first().waitFor({ timeout: 5000 }).catch(() => null);
+    // 주택 추가 → 모달 자동 오픈
+    await page.getByRole("button", { name: /주택 추가/ }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 3000 });
 
-    // 보유 상황 단계 버튼으로 직접 이동
-    await page.getByRole("button", { name: "보유 상황" }).click();
+    // ① 기본정보: 3섹션 헤더 존재
+    await expect(dialog.getByText("기본 정보", { exact: false })).toBeVisible();
+    await expect(dialog.getByText("상속 정보", { exact: false })).toBeVisible();
+    await expect(dialog.getByText("장기임대 정보", { exact: false })).toBeVisible();
 
-    // 1세대 여부 확인 (기본 ON)
-    // 주택 수를 2로 설정하여 주택 목록 표시
-    const housingCountInput = page.getByRole("textbox").filter({ hasText: /2|주택 수/ }).first();
-    // 더 안정적인 방법: 주택 수 필드를 label로 찾기
-    const countField = page.getByLabel(/세대.*주택.*수|보유.*주택.*수/i).first();
-    if (await countField.isVisible().catch(() => false)) {
-      await countField.fill("2");
-    }
+    // 지역: 지방 선택 (RadioCardGroup label 텍스트 클릭)
+    await dialog.getByText("지방", { exact: true }).click();
 
-    // "다른 보유 주택 목록" 섹션 확인
-    await expect(page.getByText("다른 보유 주택 목록", { exact: false })).toBeVisible();
+    // 미분양주택 chip 토글 → ON
+    await toggleCardByTitle(dialog, "미분양주택");
 
-    // "주택 추가" 버튼 클릭
-    await page.getByRole("button", { name: /\+ 주택 추가/ }).click();
+    // ② 상속 토글 ON → 상속개시일 라벨(children) 노출 (exact: 설명문 substring 충돌 회피)
+    await toggleCardByTitle(dialog, "상속주택");
+    await expect(dialog.getByText("상속개시일", { exact: true })).toBeVisible();
 
-    // 모달이 열려야 함
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3000 });
-    await expect(page.getByText("주택 1 정보 입력", { exact: false })).toBeVisible();
+    // ③ 장기임대 토글 ON → 등록사업자 토글 노출
+    await toggleCardByTitle(dialog, "장기임대 등록주택");
+    await expect(dialog.getByText("임대사업자 정식 등록", { exact: true })).toBeVisible();
 
-    // ① 기본정보 섹션 확인
-    await expect(page.getByText("기본 정보", { exact: false })).toBeVisible();
+    // 등록사업자 ON → 등록일 2종 + 임대기간 노출
+    await toggleCardByTitle(dialog, "임대사업자 정식 등록");
+    await expect(dialog.getByText("임대사업자 등록일", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("사업자 등록일", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("임대기간 (년)", { exact: true })).toBeVisible();
 
-    // 지역: 지방 선택
-    await page.getByRole("radio", { name: "지방" }).first().click();
-
-    // 공시가격 입력
-    await page.getByLabel("공시가격").fill("300000000");
-
-    // 아파트 chip 토글
-    const aptChip = page.getByRole("switch", { name: "아파트" });
-    await aptChip.click();
-    await expect(aptChip).toBeChecked();
-
-    // 미분양주택 chip 토글
-    const unsoldChip = page.getByRole("switch", { name: "미분양주택" });
-    await unsoldChip.click();
-    await expect(unsoldChip).toBeChecked();
-
-    // 모달 닫기
-    await page.getByRole("button", { name: "완료" }).click();
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
-
-    // 테이블에 주택 1행 + 미분양 배지 확인
-    await expect(page.getByText("주택 추가", { exact: false })).toBeVisible();
-  });
-
-  test("상속 토글 ON → 상속개시일 노출", async ({ page }) => {
-    // 보유 상황 단계
-    await page.getByRole("button", { name: "보유 상황" }).click();
-
-    await expect(page.getByText("다른 보유 주택 목록", { exact: false })).toBeVisible();
-
-    // 주택 추가
-    await page.getByRole("button", { name: /\+ 주택 추가/ }).click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3000 });
-
-    // ② 상속 섹션
-    await expect(page.getByText("상속 정보", { exact: false })).toBeVisible();
-
-    // 상속주택 토글 ON
-    const inheritedSwitch = page.getByRole("switch", { name: "상속주택" });
-    await inheritedSwitch.click();
-    await expect(inheritedSwitch).toBeChecked();
-
-    // 상속개시일 DateInput 노출 확인
-    await expect(page.getByText("상속개시일", { exact: false })).toBeVisible();
-
-    // 완료
-    await page.getByRole("button", { name: "완료" }).click();
-  });
-
-  test("장기임대 토글 ON → 등록사업자 + 임대기간 입력", async ({ page }) => {
-    // 보유 상황 단계
-    await page.getByRole("button", { name: "보유 상황" }).click();
-    await expect(page.getByText("다른 보유 주택 목록", { exact: false })).toBeVisible();
-
-    // 주택 추가
-    await page.getByRole("button", { name: /\+ 주택 추가/ }).click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3000 });
-
-    // ③ 장기임대 섹션
-    await expect(page.getByText("장기임대 정보", { exact: false })).toBeVisible();
-
-    // 장기임대 토글 ON
-    const rentalSwitch = page.getByRole("switch", { name: "장기임대 등록주택" });
-    await rentalSwitch.click();
-    await expect(rentalSwitch).toBeChecked();
-
-    // 등록사업자 토글 노출 확인
-    await expect(page.getByText("임대사업자 정식 등록", { exact: false })).toBeVisible();
-
-    // 등록사업자 ON
-    const registeredSwitch = page.getByRole("switch", { name: "임대사업자 정식 등록" });
-    await registeredSwitch.click();
-    await expect(registeredSwitch).toBeChecked();
-
-    // 임대등록일 노출
-    await expect(page.getByText("임대사업자 등록일", { exact: false })).toBeVisible();
-
-    // 임대기간 필드 노출
-    await expect(page.getByText("임대기간 (년)", { exact: false })).toBeVisible();
-
-    // 임대기간 입력
-    const periodInput = page.getByPlaceholder("임대기간 입력");
+    // 임대기간 입력 (DecimalInput — placeholder)
+    const periodInput = dialog.getByPlaceholder("임대기간 입력");
     await periodInput.fill("8");
     await expect(periodInput).toHaveValue("8");
 
-    // 완료
-    await page.getByRole("button", { name: "완료" }).click();
+    // 완료 → 모달 닫힘
+    await dialog.getByRole("button", { name: "완료" }).click();
+    await expect(dialog).not.toBeVisible({ timeout: 3000 });
+
+    // 테이블에 신규 행(편집 버튼) + 특례 배지 표시 — 테이블 스코프로 한정
+    const housesTable = page.getByRole("table").first();
+    await expect(housesTable.getByRole("button", { name: /편집/ })).toBeVisible();
+    await expect(housesTable.getByText("미분양", { exact: true })).toBeVisible();
+    await expect(housesTable.getByText("상속", { exact: true })).toBeVisible();
+    await expect(housesTable.getByText("장기임대", { exact: true })).toBeVisible();
   });
 
-  test("gracePeriod 토글 ON → 매매계약일 입력", async ({ page }) => {
-    // 보유 상황 단계
-    await page.getByRole("button", { name: "보유 상황" }).click();
+  test("중과 한시 유예(gracePeriod) 토글 ON → 매매계약일·토지거래허가 노출", async ({ page }) => {
+    await gotoHoldingStepWithTwoHouses(page);
 
-    // gracePeriod 노출 조건: 1세대 + 주택수 2채. 기본 householdHousingCount를 2로 설정
-    // 주택수 필드 직접 입력 (보유 상황 단계에 있음)
-    const householdSection = page.getByText("세대 보유 주택 수", { exact: false }).first();
-    if (await householdSection.isVisible().catch(() => false)) {
-      // 주택수 입력 필드를 찾아 2로 설정
-      const householdInput = page.getByRole("textbox").filter({ hasText: "" }).nth(1);
-      await page.locator("input[type='text']").filter({ hasText: "" }).first();
-    }
+    // gracePeriod 노출 조건: 1세대 + 주택수 2 + 보유 항목 1건 이상.
+    // → 주택을 1건 추가(모달 즉시 닫기)하여 houses.length > 0 충족시킨다.
+    await page.getByRole("button", { name: /주택 추가/ }).click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3000 });
+    await page.getByRole("dialog").getByRole("button", { name: "완료" }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
 
-    // gracePeriod 섹션 노출 확인 (1세대 + 주택수 2 조건)
-    const gracePeriodToggle = page.getByRole("switch", { name: /중과세.*한시.*유예|중과.*유예/i });
-    if (await gracePeriodToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await gracePeriodToggle.click();
-      await expect(gracePeriodToggle).toBeChecked();
+    // gracePeriod 섹션: 1세대(기본 ON) + 주택수 2 + houses>0 → 노출
+    await expect(page.getByText("중과세 한시 유예 조건 입력", { exact: false })).toBeVisible();
 
-      // 매매계약일 노출 확인
-      await expect(page.getByText("매매계약일", { exact: false })).toBeVisible();
+    // 토글 ON
+    await toggleCardByTitle(page, "중과세 한시 유예 조건 입력");
 
-      // 토지거래허가구역 chip 확인
-      await expect(page.getByRole("switch", { name: "토지거래허가구역" })).toBeVisible();
-    } else {
-      // gracePeriod 섹션이 노출되지 않는 경우 — 주택수 조건 미충족 (스킵)
-      test.info().annotations.push({
-        type: "skip_reason",
-        description: "gracePeriod 섹션 노출 조건(주택수 2↑) 미충족 — 수동 확인 필요",
-      });
-    }
+    // 세부 조건 노출
+    await expect(page.getByText("매매계약일", { exact: false })).toBeVisible();
+    await expect(page.getByText("토지거래허가구역", { exact: false })).toBeVisible();
   });
 
-  test("결과 화면 다주택 중과세 판정 상세 카드 존재", async ({ page }) => {
-    // 간단한 2주택 시나리오: Step1 최소 입력 → 계산 API 호출
-    // Step1 양도일 입력
-    const yearInputs = page.locator("[aria-label*='연도'], label:has-text('양도일')").first();
+  test("장기임대 9유형 선택(마목) → 유형별 요건 필드 노출", async ({ page }) => {
+    await gotoHoldingStepWithTwoHouses(page);
+    await page.getByRole("button", { name: /주택 추가/ }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 3000 });
 
-    // 계산하기 버튼 직접 클릭하여 결과 페이지 진입 시도
-    // (완전한 입력 없이도 결과뷰 구조 확인)
-    await page.getByRole("button", { name: "보유 상황" }).click();
-    await page.getByRole("button", { name: /감면|감면·공제/ }).click();
-    await page.getByRole("button", { name: /가산세/ }).click();
-    await page.getByRole("button", { name: /계산하기/ }).click();
+    // 장기임대 등록주택 ON → rentalType 선택 노출
+    await dialog.getByRole("switch", { name: /장기임대 등록주택/ }).click();
+    await expect(dialog.getByText("장기임대주택 유형", { exact: false })).toBeVisible();
 
-    // 결과뷰 또는 validation 오류 중 하나
-    const hasResult = await page.getByText("다주택 중과세 판정 상세", { exact: false }).isVisible({ timeout: 5000 }).catch(() => false);
-    const hasError = await page.getByText("입력", { exact: false }).isVisible({ timeout: 500 }).catch(() => false);
+    // 마목(장기일반 매입임대 10년) 선택 — RadioCardGroup 옵션 텍스트 클릭
+    await dialog.getByText("장기일반 매입임대", { exact: false }).click();
 
-    // 어느 쪽이든 크래시 없이 UI가 살아있음을 확인
-    expect(hasResult || hasError).toBe(true);
+    // 마목 유형별 필드 노출: 임대개시 공시가격 · 5%룰 · 결격 사유
+    await expect(dialog.getByText("임대개시 당시 공시가격", { exact: false })).toBeVisible();
+    await expect(dialog.getByText("임대료 증액 5% 이하 충족", { exact: false })).toBeVisible();
+  });
+
+  test("모달 ④ 특수 배제 — 부득이한 사유 토글 ON → 거주기간 노출", async ({ page }) => {
+    await gotoHoldingStepWithTwoHouses(page);
+    await page.getByRole("button", { name: /주택 추가/ }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 3000 });
+
+    await expect(dialog.getByText("특수 배제 사유", { exact: false })).toBeVisible();
+    await dialog.getByRole("switch", { name: /부득이한 사유 취득 주택/ }).click();
+    await expect(dialog.getByText("거주기간 (년)", { exact: false })).toBeVisible();
+    await expect(dialog.getByText("사유 해소일", { exact: false })).toBeVisible();
+  });
+
+  test("양도 주택 3주택+ 전용 배제 특례 — 주택수 3채 시 섹션 노출", async ({ page }) => {
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.getByRole("button", { name: "보유 상황" }).first().click();
+    // 주택수 3채 이상
+    await page.getByRole("button", { name: "3채 이상", exact: true }).click();
+
+    await expect(page.getByText("양도 주택 중과배제 특례", { exact: false })).toBeVisible();
+    // 사원용 주택 토글 ON → 무상 제공 기간 노출
+    await page.getByRole("switch", { name: /사원용 주택/ }).click();
+    await expect(page.getByText("무상 제공 기간 (년)", { exact: false })).toBeVisible();
+  });
+
+  test("분양권·입주권 추가 → 종류·취득일·지역 입력 노출", async ({ page }) => {
+    await gotoHoldingStepWithTwoHouses(page);
+
+    // 분양권·입주권 섹션 노출 확인
+    await expect(page.getByText("분양권·입주권", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText(/2021\.1\.1 이후 취득/)).toBeVisible();
+
+    // 추가 (houses "+ 주택 추가"와 구분되는 "+ 추가")
+    await page.getByRole("button", { name: "+ 추가", exact: true }).click();
+
+    // 입력 행 노출: 종류 RadioCardGroup 옵션(조합원입주권 — exact: 힌트 문구 substring 충돌 회피)·삭제 버튼
+    await expect(page.getByText("조합원입주권", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /분양권·입주권 1 삭제/ })).toBeVisible();
   });
 });

@@ -10,13 +10,14 @@ import {
   makeDefaultAsset,
   migrateAsset,
 } from "./calc-wizard-asset";
-import type { AssetForm, HouseEntry, PriorReductionUsageItem, SpecialHouseExclusionFormItem } from "./calc-wizard-asset";
+import type { AssetForm, HouseEntry, PresaleRightEntry, PriorReductionUsageItem, SpecialHouseExclusionFormItem } from "./calc-wizard-asset";
 
 export type {
   NblBusinessUsePeriod,
   ResidenceHistoryInput,
   GracePeriodInput,
   HouseEntry,
+  PresaleRightEntry,
   AssetReductionForm,
   ReductionType,
   PriorReductionUsageItem,
@@ -95,7 +96,38 @@ export interface TransferFormData {
   marriageDate: string;
   parentalCareMergeDate: string;
   houses: HouseEntry[];
+  /** 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11) */
+  presaleRights: PresaleRightEntry[];
   sellingHouseRegion: "capital" | "non_capital";
+  /**
+   * 다주택 중과세 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9).
+   * 폼-전역 단수 객체 — undefined면 유예 윈도우 blanket 판정, 객체면 정밀 조건 판정.
+   * 3-state: undefined(미입력) / 객체(입력). 날짜는 폼 문자열(YYYY-MM-DD).
+   */
+  gracePeriod?: {
+    contractDate: string;
+    isLandPermitArea: boolean;
+    hasTenantInResidence: boolean;
+    areaDesignatedDate?: string;
+  };
+  /**
+   * 양도(selling) 주택의 3주택+ 전용 중과배제 특례 (소령 §167의10 — 양도 주택 자체가 배제 항목 해당).
+   * 양도 주택을 기술하므로 폼-전역. effectiveHouseCount≥3에서만 의미. 날짜·연수는 폼 문자열.
+   */
+  sellingHouseExclusion?: {
+    /** 저당권 실행·채권변제 취득 (취득 후 3년 이내) */
+    isMortgageExecution?: boolean;
+    /** 사원용 주택 (10년 이상 무상 제공) */
+    isEmployeeHousing?: boolean;
+    freeProvisionYears?: string;
+    /** 조세특례제한법 특례 적용 주택 */
+    isTaxSpecialExemption?: boolean;
+    /** 국가유산(문화재) 주택 */
+    isCulturalHeritage?: boolean;
+    /** 어린이집 운영 주택 (5년 이상) */
+    isDayCareCenter?: boolean;
+    dayCareOperationYears?: string;
+  };
 
   // ── Step 4 (구 Step5): 감면·공제 ──
   /** 당해 연도 기사용 기본공제 (사람 단위, 연간 한도 250만원) */
@@ -158,6 +190,7 @@ const defaultFormData: TransferFormData = {
   marriageDate: "",
   parentalCareMergeDate: "",
   houses: [],
+  presaleRights: [],
   sellingHouseRegion: "capital",
   annualBasicDeductionUsed: "0",
   priorReductionUsage: [],
