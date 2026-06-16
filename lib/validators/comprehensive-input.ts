@@ -18,6 +18,8 @@ const exclusionTypeSchema = z.enum([
   "public_support_rental",
   "public_construction_rental",
   "public_purchase_rental",
+  "private_short_term_rental_6y_construction",
+  "private_short_term_rental_6y_purchase",
   "unsold_housing",
   "daycare_housing",
   "employee_housing",
@@ -39,6 +41,8 @@ const rentalRegistrationTypeSchema = z.enum([
   "public_support",
   "public_construction",
   "public_purchase",
+  "private_short_term_6y_construction",
+  "private_short_term_6y_purchase",
 ]);
 
 const rentalExclusionInfoSchema = z.object({

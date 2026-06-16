@@ -19,6 +19,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
+import { toRegistrationType } from "@/lib/calc/comprehensive-api";
 
 // §8④ 1세대1주택자 의제 특례 유형
 type Section8Para4Type =
@@ -40,6 +41,8 @@ const EXCLUSION_TYPE_OPTIONS: [string, string][] = [
   ["public_support_rental", "공공지원민간임대 (시행령 §3①3호)"],
   ["public_construction_rental", "공공건설임대 (시행령 §3①4호)"],
   ["public_purchase_rental", "공공매입임대 (시행령 §3①5호)"],
+  ["private_short_term_rental_6y_construction", "민간건설 단기민간임대 6년 (시행령 §3①10호)"],
+  ["private_short_term_rental_6y_purchase", "민간매입 단기민간임대 6년 (시행령 §3①11호)"],
   ["unsold_housing", "미분양주택 (시행령 §4①1호)"],
   ["daycare_housing", "가정어린이집용 (시행령 §4①2호)"],
   ["employee_housing", "사원용 주택 (시행령 §4①3호)"],
@@ -468,7 +471,18 @@ function PropertyCard({
         <label className="block text-sm font-medium">합산배제 신청 유형</label>
         <select
           value={property.exclusionType}
-          onChange={(e) => onUpdate({ exclusionType: e.target.value })}
+          onChange={(e) => {
+            const v = e.target.value;
+            // 단기 2종 선택 시 rentalRegistrationType 자동 매칭 (단일 출처 toRegistrationType — UI 설계 §3)
+            const isShort =
+              v === "private_short_term_rental_6y_construction" ||
+              v === "private_short_term_rental_6y_purchase";
+            onUpdate(
+              isShort
+                ? { exclusionType: v, rentalRegistrationType: toRegistrationType(v) }
+                : { exclusionType: v },
+            );
+          }}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {EXCLUSION_TYPE_OPTIONS.map(([value, label]) => (

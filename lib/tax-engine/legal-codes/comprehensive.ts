@@ -207,6 +207,10 @@ export const COMPREHENSIVE_EXCL = {
   PUBLIC_CONSTRUCTION_RENTAL:    "종합부동산세법 §8②1호, 시행령 §3①1호",
   /** 종합부동산세법 §8②1호, 시행령 §3①2호 — 공공매입임대주택 합산배제 (5년) */
   PUBLIC_PURCHASE_RENTAL:        "종합부동산세법 §8②1호, 시행령 §3①2호",
+  /** 종합부동산세법 §8②1호, 시행령 §3①10호 — 단기민간임대 건설(6년) 합산배제 */
+  PRIVATE_SHORT_TERM_RENTAL_6Y_CONSTRUCTION: "종합부동산세법 §8②1호, 시행령 §3①10호",
+  /** 종합부동산세법 §8②1호, 시행령 §3①11호 — 단기민간임대 매입(6년) 합산배제 */
+  PRIVATE_SHORT_TERM_RENTAL_6Y_PURCHASE:     "종합부동산세법 §8②1호, 시행령 §3①11호",
 
   // ── 기타 합산배제 주택 근거 (시행령 §4) ──
   /** 종합부동산세법 §8②2호, 시행령 §4①1호 — 미분양주택 합산배제 (신축 5년) */
@@ -229,6 +233,8 @@ export const COMPREHENSIVE_EXCL = {
   NO_RENTAL_REGISTRATION:        "임대사업자 미등록 — 민간임대주택에 관한 특별법 §5",
   /** 전용면적 초과 (85㎡ 초과) */
   AREA_EXCEEDED:                 "국민주택 규모(85㎡) 초과",
+  /** 건설 단기(§3①10호) 전용면적 초과 (149㎡) — 기존 AREA_EXCEEDED(85㎡)와 분리(회귀 0) */
+  AREA_EXCEEDED_149:             "전용면적 149㎡ 초과 — 시행령 §3①10호",
   /** 공시가격 가격 기준 초과 */
   PRICE_EXCEEDED:                "합산배제 가격 기준 초과 (시행령 §3①)",
   /** 임대료 증가율 5% 초과 */
@@ -268,12 +274,20 @@ export const COMPREHENSIVE_EXCL_CONST = {
   PUBLIC_SUPPORT_PRICE_METRO:      900_000_000,
   /** 공공지원민간임대 비수도권 공시가격 상한 (3억) */
   PUBLIC_SUPPORT_PRICE_NON_METRO:  300_000_000,
+  /** 단기민간임대 건설 공시가격 상한 (6억, 수도권 무관) — §3①10호가목 */
+  SHORT_TERM_6Y_PRICE_CONSTRUCTION:       600_000_000,
+  /** 단기민간임대 매입 수도권 공시가격 상한 (4억) — §3①11호가목1). 한국세정신문·세무해설 2차 확인 (법령 표 원문 대조 권장) */
+  SHORT_TERM_6Y_PRICE_PURCHASE_METRO:     400_000_000,
+  /** 단기민간임대 매입 비수도권 공시가격 상한 (2억) — §3①11호가목1). 2차 확인 */
+  SHORT_TERM_6Y_PRICE_PURCHASE_NON_METRO: 200_000_000,
 
   // ── 면적 기준 ──
   /** 국민주택 규모 상한 (전용 85㎡) */
   AREA_LIMIT_NATIONAL_HOUSING:     85,
   /** 읍·면 지역 면적 상한 (전용 100㎡) */
   AREA_LIMIT_RURAL:                100,
+  /** 단기민간임대 건설 전용면적 상한 (149㎡) — §3①10호가목. 매입(11호)은 면적조건 없음 */
+  SHORT_TERM_6Y_AREA_CONSTRUCTION: 149,
 
   // ── 임대료 기준 ──
   /** 임대료 증가율 상한 (5%) */
@@ -286,7 +300,7 @@ export const COMPREHENSIVE_EXCL_CONST = {
   MANDATORY_PERIOD_LONG:           10,
   /** 건설·매입·2005 이전 구법 임대 의무기간 (5년) — 시행령 §3①1·2·3호 */
   MANDATORY_PERIOD_SHORT:          5,
-  /** 단기민간임대주택(민간임대주택법 §2⑥의2) 의무기간 (6년) — 시행령 §3①10·11호. (현재 registrationType enum 미대응 — 후속 확장) */
+  /** 단기민간임대주택(민간임대주택법 §2⑥의2) 의무기간 (6년) — 시행령 §3①10·11호 */
   MANDATORY_PERIOD_SHORT_TERM_6Y:  6,
 
   // ── 미분양주택 합산배제 기간 ──
