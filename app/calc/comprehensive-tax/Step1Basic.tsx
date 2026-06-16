@@ -19,6 +19,66 @@ import {
   COMPREHENSIVE_SUPPORTED_YEARS,
   getComprehensiveParams,
 } from "@/lib/tax-engine/data/comprehensive-historical";
+import {
+  resolveCorporateHousingClass,
+  requiredCorporateReqKey,
+} from "@/lib/tax-engine/comprehensive-corporate-class";
+import type {
+  CorporateHousingType,
+  CorporateHousingClass,
+} from "@/lib/tax-engine/types/comprehensive-corporate.types";
+import type { ComprehensiveFormData } from "@/lib/stores/comprehensive-wizard-store";
+
+// ============================================================
+// 법인 세부 유형 (시행령 §4의4) — Select 옵션·조건 요건 라벨·도출 배지
+// ============================================================
+
+const CORP_TYPE_OPTIONS: { value: CorporateHousingType; label: string }[] = [
+  { value: "public_housing_operator", label: "공공주택사업자 (시행령 §4의4①1호)" },
+  { value: "housing_association", label: "주택조합 (시행령 §4의4①3호)" },
+  { value: "redevelopment_operator", label: "정비사업시행자 (시행령 §4의4①4호)" },
+  { value: "private_rental_operator", label: "민간건설임대사업자 2호 이상 (시행령 §4의4①5호)" },
+  { value: "urban_dev_operator", label: "도시개발·재정비 시행자 (시행령 §4의4①5의2호)" },
+  { value: "social_enterprise", label: "사회적기업·사회적협동조합 (시행령 §4의4①6호)" },
+  { value: "clan", label: "종중 (시행령 §4의4①7호)" },
+  { value: "public_interest_corp", label: "공익법인등 (상속세 및 증여세법 §16)" },
+  { value: "general_corp", label: "그 외 일반법인 (§9②3호)" },
+];
+
+/** 조건부 유형의 요건 질문·결과 라벨 (reqKey별) */
+const CORP_REQ_LABEL: Record<string, { question: string; met: string; unmet: string }> = {
+  corpHoldsQualifyingRentalHousingOnly: {
+    question: "민간건설임대주택 2호 이상 + 적격 주택만 보유 (시행령 §4의4①5·5의2호 가·나·다목)",
+    met: "충족 → §9②1호 일반 누진세율",
+    unmet: "미충족 → §9②3호 단일세율",
+  },
+  corpMeetsSocialEnterpriseRequirements: {
+    question: "설립목적(구성원 공동사용·주거지원) + 적격 주택만 보유 (시행령 §4의4①6호 가·나목)",
+    met: "충족 → §9②1호 일반 누진세율",
+    unmet: "미충족 → §9②3호 단일세율",
+  },
+  corpHoldsOnlyPublicPurposeHousing: {
+    question: "직접 공익목적사업에 사용하는 주택만 보유 (§9②1호)",
+    met: "충족 → §9②1호 일반 누진세율",
+    unmet: "미충족 → §9②2호 주택 수 분기",
+  },
+};
+
+/** 도출 §9② class 배지 라벨 */
+const CORP_CLASS_BADGE: Record<CorporateHousingClass, { ho: string; desc: string }> = {
+  corporate_general: {
+    ho: "§9②1호",
+    desc: "일반 누진세율(주택 수 무관·2주택 이하 표) · 기본공제 9억 · 세부담상한 적용",
+  },
+  corporate_public: {
+    ho: "§9②2호",
+    desc: "§9① 각호(주택 수 분기) · 기본공제 9억 · 세부담상한 적용",
+  },
+  corporate_special: {
+    ho: "§9②3호",
+    desc: "단일 비례세율 · 기본공제 0 · 세부담상한 미적용 (§10 단서)",
+  },
+};
 
 // ============================================================
 // 연도별 세법 요약 힌트 카드
@@ -88,6 +148,16 @@ export function Step1Basic() {
   const params = getComprehensiveParams(selectedYear);
   // 법인 여부 파생 (dual-truth 금지 — 별도 isCorporate store 필드 없음)
   const isCorporate = formData.taxpayerType !== "individual";
+  // §9② class 도출 (엔진 헬퍼 단일 진실) — 세부유형+조건 → corporate_general/public/special
+  const corporateClass: CorporateHousingClass | undefined = isCorporate
+    ? resolveCorporateHousingClass(formData.corporateHousingType, {
+        corpHoldsOnlyPublicPurposeHousing: formData.corpHoldsOnlyPublicPurposeHousing,
+        corpHoldsQualifyingRentalHousingOnly: formData.corpHoldsQualifyingRentalHousingOnly,
+        corpMeetsSocialEnterpriseRequirements: formData.corpMeetsSocialEnterpriseRequirements,
+      })
+    : undefined;
+  const corpReqKey = isCorporate ? requiredCorporateReqKey(formData.corporateHousingType) : null;
+  const corpReqValue = corpReqKey ? formData[corpReqKey] : undefined;
   // §8④ 의제 지정 주택 존재 여부 (Step2에서 지정 — 개인 전용). 1세대1주택·부부특례 미선택이어도 의제로 공제 적용.
   const hasSection8para4 =
     !isCorporate &&
@@ -103,12 +173,8 @@ export function Step1Basic() {
   }
 
   function handleTaxpayerTypeToggle(v: string) {
-    if (v === "corporate") {
-      // 법인 선택 → corporate_special 기본 (하위 라디오에서 변경 가능)
-      updateFormData({ taxpayerType: "corporate_special" });
-    } else {
-      updateFormData({ taxpayerType: "individual" });
-    }
+    // 법인 선택 → taxpayerType "corporate" (세부유형은 store 기본 general_corp 유지, Select에서 변경)
+    updateFormData({ taxpayerType: v === "corporate" ? "corporate" : "individual" });
   }
 
   return (
@@ -161,47 +227,77 @@ export function Step1Basic() {
         />
       </div>
 
-      {/* 법인 선택 시: 하위 법인 유형 RadioCardGroup + 안내 카드 */}
+      {/* 법인 선택 시: 세부 유형 Select + 조건 요건 + 도출 배지 (시행령 §4의4 자동판정) */}
       {isCorporate && (
         <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3">
-          <p className="text-xs font-semibold text-violet-800">법인 유형 선택</p>
-          <RadioCardGroup
-            name="taxpayerTypeCorporate"
-            tone="violet"
-            layout="stack"
-            value={formData.taxpayerType}
-            onChange={(v) =>
-              updateFormData({
-                taxpayerType: v as "corporate_special" | "corporate_general" | "corporate_public",
-              })
-            }
-            options={[
-              {
-                value: "corporate_special",
-                label: "일반 법인 — 단일세율 (§9②3호)",
-                description: `기본공제 0원 · ${(params.corporateRate2HouseOrLess * 100).toFixed(1)}%/${(params.corporateRate3HouseOrMore * 100).toFixed(1)}% 비례세율 · 세부담상한 미적용`,
-              },
-              {
-                value: "corporate_general",
-                label: "공공주택사업자 등 (§9②1호 — 일반 누진세율)",
-                description: "주택 수 무관 일반 누진세율 적용 · 세부담상한 적용",
-              },
-              {
-                value: "corporate_public",
-                label: "공익법인등 (§9②2호)",
-                description: "주택 수 기준 일반/다주택 누진세율 · 세부담상한 적용",
-              },
-            ]}
-          />
-          <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900 space-y-0.5">
-            <p className="font-semibold">§9②3호 법인 계산 특례</p>
-            <p>기본공제: 0원 (§8①2호 — 법인 적용 없음)</p>
-            <p>
-              세율: 2주택 이하 {(params.corporateRate2HouseOrLess * 100).toFixed(1)}% /{" "}
-              3주택 이상 (≤{selectedYear <= 2022 ? "2022 조정 2주택 포함" : "현행"}) {(params.corporateRate3HouseOrMore * 100).toFixed(1)}%
-            </p>
-            <p>세부담 상한: 미적용 (§10 단서)</p>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-violet-800">
+              법인 세부 유형 <span className="text-destructive">*</span>
+            </label>
+            <select
+              aria-label="법인 세부 유형"
+              value={formData.corporateHousingType}
+              onChange={(e) =>
+                updateFormData({ corporateHousingType: e.target.value as CorporateHousingType })
+              }
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {CORP_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {/* 조건부 요건 (충족/미충족) — 해당 유형만 노출, 무기본(미선택 시 계산 차단) */}
+          {corpReqKey && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-violet-800">
+                {CORP_REQ_LABEL[corpReqKey].question} <span className="text-destructive">*</span>
+              </label>
+              <RadioCardGroup
+                name="corpReq"
+                tone="violet"
+                layout="inline"
+                value={corpReqValue === undefined ? "" : corpReqValue ? "met" : "unmet"}
+                onChange={(v) =>
+                  updateFormData({ [corpReqKey]: v === "met" } as Partial<ComprehensiveFormData>)
+                }
+                options={[
+                  { value: "met", label: "충족", description: CORP_REQ_LABEL[corpReqKey].met },
+                  { value: "unmet", label: "미충족", description: CORP_REQ_LABEL[corpReqKey].unmet },
+                ]}
+              />
+            </div>
+          )}
+
+          {/* 도출 결과 배지 + §4의4② 안내 (조건부 유형 미응답 시 안내 우선) */}
+          {corpReqKey && corpReqValue === undefined ? (
+            <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+              요건 충족 여부를 선택하면 적용 세율 특례(§9② 호)가 결정됩니다.
+            </div>
+          ) : corporateClass ? (
+            <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900 space-y-1">
+              <p className="font-semibold">
+                적용: {CORP_CLASS_BADGE[corporateClass].ho} 법인 주택분 특례
+              </p>
+              <p>{CORP_CLASS_BADGE[corporateClass].desc}</p>
+              {corporateClass === "corporate_special" && (
+                <p>
+                  세율: 2주택 이하 {(params.corporateRate2HouseOrLess * 100).toFixed(1)}% / 3주택 이상{" "}
+                  {(params.corporateRate3HouseOrMore * 100).toFixed(1)}%
+                  {selectedYear <= 2022 ? " (≤2022 조정 2주택 포함)" : ""}
+                </p>
+              )}
+              {(corporateClass === "corporate_general" ||
+                corporateClass === "corporate_public") && (
+                <p className="text-violet-700">
+                  ⓘ 시행령 §4의4② — 보유현황 신고기간(§8③)에 관할세무서장에게 서류 제출이 필요합니다.
+                </p>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
 

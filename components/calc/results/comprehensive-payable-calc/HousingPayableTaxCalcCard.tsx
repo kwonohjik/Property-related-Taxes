@@ -31,7 +31,7 @@ export function HousingPayableTaxCalcCard({
 
   const yr = result.assessmentDate.slice(0, 4);
   const pyr = String(Number(yr) - 1);
-  const isCorporateSpecial = result.taxpayerType === "corporate_special";
+  const isCorporateSpecial = result.corporateHousingClass === "corporate_special";
 
   return (
     <div

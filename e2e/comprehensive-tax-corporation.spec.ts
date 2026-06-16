@@ -1,14 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /**
- * 종합부동산세 법인 §9② E2E (Phase B)
+ * 종합부동산세 법인 §9② E2E (Phase B → §4의4 자동판정 전환 후)
  *
  * 마법사 5단계: Step1(과세연도·납세의무자) → Step2(주택) → Step3(합산배제) → Step4(토지) → Step5(세부담·계산)
  *
- * - CPT-CORP-E2E-1: 법인 선택 → 1세대1주택 ToggleCard 숨김 + 법인 유형 RadioCardGroup 노출
- * - CPT-CORP-E2E-2: 2024 + 법인(§9②3호) + 공시 20억 1채 → 계산 → "32,400,000" + "§9② 법인 단일세율" 배지 + 기본공제 "적용 없음"
+ * - CPT-CORP-E2E-1: 법인 선택 → 1세대1주택 ToggleCard 숨김 + 법인 세부유형 Select 노출
+ * - CPT-CORP-E2E-2: 2024 + 법인(기본 general_corp → §9②3호) + 공시 20억 1채 → 32,400,000 + 단일세율 배지 + 기본공제 적용 없음
  *
- * worktree: E2E_PORT=3100 npx playwright test e2e/comprehensive-tax-corporation.spec.ts
+ * worktree: E2E_PORT=3102 npx playwright test e2e/comprehensive-tax-corporation.spec.ts
  */
 
 const PAGE = "/calc/comprehensive-tax";
@@ -31,7 +31,7 @@ async function calcAndWait(page: Page): Promise<void> {
 
 test.describe("종합부동산세 법인 §9②", () => {
   test(
-    "CPT-CORP-E2E-1: 법인 선택 → 1세대1주택 ToggleCard 숨김 + 법인 유형 노출",
+    "CPT-CORP-E2E-1: 법인 선택 → 1세대1주택 ToggleCard 숨김 + 법인 세부유형 Select 노출",
     async ({ page }) => {
       test.setTimeout(60_000);
       await page.goto(PAGE);
@@ -45,21 +45,21 @@ test.describe("종합부동산세 법인 §9②", () => {
       // 1세대1주택 ToggleCard 숨김 확인
       await expect(page.getByText(/1세대 1주택자/)).toHaveCount(0);
 
-      // 법인 유형 RadioCardGroup 노출 확인
+      // 법인 세부유형 Select(native) 노출 확인 — 9종 옵션
       await expect(
-        page.getByRole("radio", { name: /일반 법인.*단일세율.*§9②3호/ }),
+        page.locator('select:has(option[value="general_corp"])'),
       ).toBeVisible({ timeout: 5_000 });
       await expect(
-        page.getByRole("radio", { name: /공공주택사업자.*§9②1호/ }),
+        page.locator('select:has(option[value="public_interest_corp"])'),
       ).toBeVisible();
       await expect(
-        page.getByRole("radio", { name: /공익법인등.*§9②2호/ }),
+        page.locator('select:has(option[value="public_housing_operator"])'),
       ).toBeVisible();
     },
   );
 
   test(
-    "CPT-CORP-E2E-2: 2024 + 법인(§9②3호) + 공시 20억 → 32,400,000 + 배지 + 적용 없음",
+    "CPT-CORP-E2E-2: 2024 + 법인(기본 general_corp → §9②3호) + 공시 20억 → 32,400,000 + 배지 + 적용 없음",
     async ({ page }) => {
       test.setTimeout(90_000);
       await page.goto(PAGE);
@@ -67,13 +67,13 @@ test.describe("종합부동산세 법인 §9②", () => {
       // Step1: 2024 선택
       await page.getByRole("radio", { name: "2024" }).check();
 
-      // 납세의무자 유형 → 법인
+      // 납세의무자 유형 → 법인 (세부유형 기본 general_corp)
       await page.getByRole("radio", { name: "법인" }).check();
 
-      // 법인 유형 — 일반 법인(§9②3호) 기본 선택 확인 후 유지
+      // 기본 general_corp → 도출 §9②3호 배지 노출 확인
       await expect(
-        page.getByRole("radio", { name: /일반 법인.*단일세율.*§9②3호/ }),
-      ).toBeChecked({ timeout: 5_000 });
+        page.getByText(/§9②3호 법인 주택분 특례/),
+      ).toBeVisible({ timeout: 5_000 });
 
       await clickNext(page); // Step1 → Step2
 
@@ -91,7 +91,7 @@ test.describe("종합부동산세 법인 §9②", () => {
 
       await calcAndWait(page);
 
-      // 결과: 산출세액 32,400,000 표시 (20억 × 2.7% = 54,000,000 → 과표 20억 × 60% = 12억 × 2.7% = 32,400,000)
+      // 결과: 산출세액 32,400,000 (과표 20억 × 60% = 12억 × 2.7%)
       await expect(
         page.getByText(/32,400,000/).first(),
       ).toBeVisible({ timeout: 30_000 });

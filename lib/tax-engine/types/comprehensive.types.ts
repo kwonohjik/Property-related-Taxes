@@ -10,23 +10,26 @@
  *   Layer 2 (Pure Engine):  lib/tax-engine/comprehensive-tax.ts
  */
 
+// 법인 §9② 세부 유형·class·조건요건 — 별도 파일(800줄 정책). 로컬 사용 + 하위호환 re-export
+import type {
+  CorporateHousingClass,
+  CorporateHousingType,
+  CorporateHousingReqs,
+} from "./comprehensive-corporate.types";
+export type { CorporateHousingClass, CorporateHousingType, CorporateHousingReqs };
+
 // ============================================================
 // -1. 납세의무자 유형 (종합부동산세법 §9②)
 // ============================================================
 
 /**
- * 납세의무자 유형 (§9② 세율 분기)
+ * 납세의무자 유형 (§9② 세율 분기 진입)
  *
- * - individual:         개인 (기본, §9① 각호 누진세율)
- * - corporate_special:  법인 §9②3호 — 단일세율(가/나목)·기본공제 0(§8①2호)·세부담상한 배제(§10 단서)
- * - corporate_general:  법인 §9②1호 — §9①1호 general 표 고정·기본공제 9억(6억)·상한 적용
- * - corporate_public:   법인 §9②2호 (공익법인 등) — §9① 각호(주택 수 분기)·기본공제 9억(6억)·상한 적용
+ * - individual: 개인 (기본, §9① 각호 누진세율)
+ * - corporate:  법인 또는 법인으로 보는 단체. 세부 §9② class 는 corporateHousingType +
+ *               조건 플래그로 resolveCorporateHousingClass() 가 도출 (단일 진실).
  */
-export type ComprehensiveTaxpayerType =
-  | "individual"
-  | "corporate_special"
-  | "corporate_general"
-  | "corporate_public";
+export type ComprehensiveTaxpayerType = "individual" | "corporate";
 
 // ============================================================
 // 0. 연도별 세율 구간 (과세연도별 세법 파라미터 — comprehensive-historical.ts)
@@ -418,13 +421,19 @@ export interface ComprehensiveTaxInput {
 
   // ── 납세의무자 유형 (미입력 시 "individual" — 기존 anchor 무변경) ──
   /**
-   * 납세의무자 유형 (§9②).
-   * - undefined / "individual": 개인 (기본값, 기존 동작 보존)
-   * - "corporate_special":  §9②3호 단일세율, 기본공제 0, 상한 배제
-   * - "corporate_general":  §9②1호 general 표 고정
-   * - "corporate_public":   §9②2호 §9①각호 분기
+   * 납세의무자 유형 (§9②). undefined / "individual" = 개인. "corporate" = 법인.
+   * 법인 세부 §9② class 는 corporateHousingType + 조건 플래그로 도출 (resolveCorporateHousingClass).
    */
   taxpayerType?: ComprehensiveTaxpayerType;
+
+  /** 법인 세부 유형 (시행령 §4의4 자동판정 입력). corporate일 때 필수(미입력 시 엔진 general_corp 방어) */
+  corporateHousingType?: CorporateHousingType;
+  /** 공익법인: 직접 공익목적사업용 주택만 보유 (§9②1호ⓐ vs 2호). public_interest_corp일 때 필수 */
+  corpHoldsOnlyPublicPurposeHousing?: boolean;
+  /** 민간건설임대/도시개발: 민간건설임대 2호↑ + §4의4①5·5의2호 가·나·다목 주택만. private_rental/urban_dev일 때 필수 */
+  corpHoldsQualifyingRentalHousingOnly?: boolean;
+  /** 사회적기업: §4의4①6호 가·나목(설립목적 + 적격 주택만). social_enterprise일 때 필수 */
+  corpMeetsSocialEnterpriseRequirements?: boolean;
 
   // ── 1세대1주택자 여부 ──
   isOneHouseOwner: boolean;
@@ -739,8 +748,12 @@ export interface ComprehensiveTaxResult {
   // ── 메타 ──
   assessmentDate: string;         // 과세기준일 (YYYY-06-01)
   isOneHouseOwner: boolean;
-  /** 납세의무자 유형 echo — 결과뷰 배지·라벨 표시용 (§9②) */
+  /** 납세의무자 유형 echo (individual | corporate) */
   taxpayerType: ComprehensiveTaxpayerType;
+  /** 법인 세부 유형 echo (§4의4) — 결과뷰 라벨 */
+  corporateHousingType?: CorporateHousingType;
+  /** 도출된 §9② class — 결과뷰 배지·산식 분기 단일원천 (개인이면 undefined) */
+  corporateHousingClass?: CorporateHousingClass;
   /** §10의2 부부 공동명의 1주택자 특례 적용 여부 echo — 결과뷰 배지·기본공제 라벨용 */
   isJointOwnershipApplied: boolean;
   warnings: string[];             // 경고 메시지 (v1.3 scope 한계 등)
