@@ -420,8 +420,10 @@ export function calculatePropertyTax(
 ): PropertyTaxResult {
   const warnings: string[] = [];
   const legalBasis: string[] = [PROPERTY.TAX_BASE, PROPERTY.TAX_BASE_DATE];
+  // 미입력 시 과세기준일 6월 1일(지방세법 §114) — 현재 연도 기준.
+  //   taxYear는 연도만 사용하므로 FMR 등 계산은 불변, 표시·기준일만 정확화.
   const targetDate =
-    input.targetDate ?? new Date().toISOString().slice(0, 10);
+    input.targetDate ?? `${new Date().getFullYear()}-06-01`;
   const taxYear = parseInt(targetDate.slice(0, 4), 10);
 
   // ── Step 0: 납세의무자 판정 (지방세법 §107) — taxpayerInfo 입력 시에만 (미입력 시 계산 100% 불변) ──

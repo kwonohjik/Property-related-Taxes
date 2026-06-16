@@ -679,3 +679,42 @@ describe("calculatePropertyTax — 주택 건물분 소방분 통합 (§146④ �
     expect(result.surtax.regionalResourceTax).toBe(30_100);
   });
 });
+
+// ============================================================
+// 과세기준일 6/1 default (지방세법 §114)
+// ============================================================
+
+describe("calculatePropertyTax — 과세기준일 6/1 default (지방세법 §114)", () => {
+  it("targetDate 미입력 → 현재 연도 6월 1일", () => {
+    const result = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 100_000_000,
+    });
+    const year = new Date().getFullYear();
+    expect(result.targetDate).toBe(`${year}-06-01`);
+  });
+
+  it("targetDate 명시 입력 → 입력값 그대로 (default 미적용)", () => {
+    const result = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 100_000_000,
+      targetDate: "2025-06-01",
+    });
+    expect(result.targetDate).toBe("2025-06-01");
+  });
+
+  it("미입력 default라도 taxYear 파생 동일 → 세액 불변 (현재 연도 6/1 명시와 동일)", () => {
+    const year = new Date().getFullYear();
+    const implicit = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 100_000_000,
+    });
+    const explicit = calculatePropertyTax({
+      objectType: "housing",
+      publishedPrice: 100_000_000,
+      targetDate: `${year}-06-01`,
+    });
+    expect(implicit.determinedTax).toBe(explicit.determinedTax);
+    expect(implicit.totalPayable).toBe(explicit.totalPayable);
+  });
+});
