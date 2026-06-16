@@ -11,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { SigunguSelect } from "./shared/SigunguSelect";
 import { UnconditionalExemptionSection } from "./UnconditionalExemptionSection";
 import { ResidenceHistorySection } from "./ResidenceHistorySection";
 import { GracePeriodSection } from "./GracePeriodSection";
@@ -132,9 +134,22 @@ export function NblSectionContainer({
           </FieldCard>
         </div>
 
-        {/* 3. 거주 이력 (농지·임야·목장 공통) */}
+        {/* 3. 재촌 판정 (농지·임야·목장 공통) — 토지 소재지 → 거주 이력 순 */}
         {(asset.nblLandType === "farmland" || asset.nblLandType === "forest" || asset.nblLandType === "pasture") && (
-          <div className="mt-3">
+          <div className="mt-3 space-y-3">
+            <div data-testid="nbl-land-sigungu">
+              <FieldCard
+                label="토지 소재지 (시·군·구)"
+                hint="재촌 판정 — 거주지와 동일/연접 시·군·구 매칭에 사용됩니다."
+                trailing={<LawArticleModal legalBasis="소득세법 시행령 §168의8" label="§168의8②·9②" />}
+              >
+                <SigunguSelect
+                  code={asset.nblLandSigunguCode}
+                  name={asset.nblLandSigunguName}
+                  onChange={(c, n) => onAssetChange({ nblLandSigunguCode: c, nblLandSigunguName: n })}
+                />
+              </FieldCard>
+            </div>
             <ResidenceHistorySection asset={asset} onAssetChange={onAssetChange} />
           </div>
         )}
