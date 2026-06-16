@@ -21,6 +21,7 @@ import type {
 } from "./types";
 import {
   checkIncorporationGrace,
+  getPeriodJudgmentDate,
   meetsPeriodCriteria,
   type PeriodCriteriaResult,
 } from "./period-criteria";
@@ -36,9 +37,10 @@ function getLivestockPeriods(input: NonBusinessLandInput): DateInterval[] {
     return p.livestockPeriods.map((x) => ({ start: x.startDate, end: x.endDate }));
   }
   // 영위 기간 배열이 없으면 isLivestockOperator=true인 경우 전체 보유로 간주
+  // (§168조의14② 양도일 의제 시 의제일까지 축산영위 간주 — §168조의6 기간기준 일관)
   if (p.isLivestockOperator) {
     const ownershipStart = getOwnershipStart(input.acquisitionDate);
-    return [{ start: ownershipStart, end: input.transferDate }];
+    return [{ start: ownershipStart, end: getPeriodJudgmentDate(input) }];
   }
   return [];
 }
@@ -73,11 +75,13 @@ export function judgePasture(
   const appliedLaws: string[] = [NBL.PASTURE];
   const warnings: string[] = [];
   const ownershipStart = getOwnershipStart(input.acquisitionDate);
-  const totalOwnershipDays = Math.max(0, differenceInDays(input.transferDate, ownershipStart));
+  // §168조의14② 양도일 의제 — §168조의6 기간기준 전용 (도시지역·편입유예는 실제 양도일)
+  const pjDate = getPeriodJudgmentDate(input);
+  const totalOwnershipDays = Math.max(0, differenceInDays(pjDate, ownershipStart));
 
   // ── Step 3-1: 축산업 영위기간 기간기준 ──────────────────────────
   const livestockPeriods = getLivestockPeriods(input);
-  const r1 = meetsPeriodCriteria(livestockPeriods, input.acquisitionDate, input.transferDate, "pasture", rules, input.gracePeriods);
+  const r1 = meetsPeriodCriteria(livestockPeriods, input.acquisitionDate, pjDate, "pasture", rules, input.gracePeriods);
 
   steps.push({
     id: "pasture_livestock",
@@ -91,8 +95,8 @@ export function judgePasture(
     // ── Step 3-1-1: 거주·사업관련 목장 (지역·면적 면제) ──────
     const related = isRelatedPasture(input);
     if (related.applies) {
-      const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
-      const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "pasture", rules, input.gracePeriods);
+      const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
+      const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "pasture", rules, input.gracePeriods);
       if (r2.meets) {
         appliedLaws.push(NBL.PASTURE_RELATED);
         steps.push({

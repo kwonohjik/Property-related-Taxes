@@ -22,6 +22,7 @@ import { PastureDetailSection } from "./PastureDetailSection";
 import { HousingLandDetailSection } from "./HousingLandDetailSection";
 import { VillaLandDetailSection } from "./VillaLandDetailSection";
 import { OtherLandDetailSection } from "./OtherLandDetailSection";
+import { DeemedTransferSection } from "./DeemedTransferSection";
 
 const LAND_TYPE_OPTIONS = [
   { value: "farmland",     label: "농지 (전·답·과수원)" },
@@ -193,6 +194,13 @@ export function NblSectionContainer({
         <div className="mt-3">
           <GracePeriodSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
         </div>
+
+        {/* 7. 양도일 의제 (§168의14②) — 기간기준 5지목 (주택부수토지는 §168의6 미적용이라 제외) */}
+        {asset.nblLandType && asset.nblLandType !== "housing_site" && (
+          <div className="mt-3">
+            <DeemedTransferSection asset={asset} onAssetChange={onAssetChange} />
+          </div>
+        )}
       </div>
     </div>
   );

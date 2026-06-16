@@ -299,12 +299,29 @@ export interface RevenueTestResult {
 // 입력 (NonBusinessLandInput)
 // ============================================================
 
+/**
+ * 양도일 의제 사유 (소득세법 시행령 §168조의14② + 시행규칙 §83조의5②).
+ * 의제일을 양도일로 보아 **§168조의6 기간기준만** 재판정한다.
+ * 지목·도시지역·편입유예·무조건의제(§168조의14③)는 실제 양도일 유지.
+ */
+export type DeemedTransferReason =
+  | "none" // 의제 없음 (실제 양도일)
+  | "auction" // §168의14②1호 민사집행법 경매 → 최초 경매기일
+  | "public_sale" // §168의14②2호 국세징수법 공매 → 최초 공매일
+  | "kamco_consignment" // §83의5②1호 캠코 매각위임 → 매각 위임일
+  | "newspaper_public_offering" // §83의5②2호 신문공고 → 최초 공고일
+  | "republication"; // §83의5②3호 재공고 → 최초 공고일
+
 export interface NonBusinessLandInput {
   landType: LandType;
   landArea: number;
   zoneType: ZoneType;
   acquisitionDate: Date;
   transferDate: Date;
+
+  // §168조의14② 양도일 의제 (경매·공매·신문공고) — §168조의6 기간기준에만 적용
+  deemedTransferReason?: DeemedTransferReason;
+  deemedTransferDate?: Date;
 
   // 농지
   farmingSelf?: boolean;
@@ -413,6 +430,9 @@ export interface NonBusinessLandJudgment {
   };
 
   areaProportioning?: AreaProportioning;
+
+  /** §168조의14② 양도일 의제 (경매·공매·신문공고) — 기간기준 판정 기준일 */
+  deemedTransfer?: { reason: DeemedTransferReason; date: Date };
 
   /** §168의11② 수입금액비율 테스트 결과 (기타토지 + revenueTest 제공 시) */
   revenueTestDetail?: RevenueTestResult;

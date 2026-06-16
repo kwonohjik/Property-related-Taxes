@@ -187,6 +187,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblExemptUrbanFarmlandJongjoong: false,
     nblExemptInong: false,
     nblExemptInongDate: "",
+    nblDeemedTransferReason: "none",
+    nblDeemedTransferDate: "",
     nblUrbanIncorporationDate: "",
     nblIsMetropolitanArea: "",
     nblOwnershipRatio: "",

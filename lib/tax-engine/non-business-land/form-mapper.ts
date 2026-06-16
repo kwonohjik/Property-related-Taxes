@@ -8,6 +8,7 @@
 
 import type {
   NonBusinessLandInput,
+  DeemedTransferReason,
   GracePeriod,
   GraceReasonCode,
   OwnerResidenceHistory,
@@ -129,6 +130,9 @@ export function mapAssetToNblInput(
 
   return {
     landType, landArea, zoneType, acquisitionDate, transferDate,
+    // §168조의14② 양도일 의제 (기간기준 전용)
+    deemedTransferReason: (asString(asset.nblDeemedTransferReason) || "none") as DeemedTransferReason,
+    deemedTransferDate:   parseDate(asString(asset.nblDeemedTransferDate)),
     farmingSelf:             asBool(asset.nblFarmingSelf),
     farmerResidenceDistance: parseNumber(asString(asset.nblFarmerResidenceDistance)),
     farmlandDeeming:         buildFarmlandDeeming(asset),

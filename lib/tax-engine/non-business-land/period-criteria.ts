@@ -31,6 +31,7 @@ import type {
   DateInterval,
   GracePeriod,
   LandCategoryGroup,
+  NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
 } from "./types";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "./types";
@@ -81,6 +82,24 @@ const THREE_YEARS_DAYS = 3 * 365; // 1095 — 소유기간 차감 3년·버킷2 
 const FIVE_YEARS_DAYS = 5 * 365; // 1825 — 버킷1 경계
 // 주의: 버킷 경계(5.0년/3.0년)·"소유기간 차감 N년"의 윤년 ±1일 환산은 달력연(addYears)
 // 대안과 갈릴 수 있다 → 확인 필요(집행기준 1건). 현행 실증 divergence는 모두 버킷 내부라 무영향.
+
+/**
+ * §168조의14② 양도일 의제 — 경매·공매·신문공고로 양도가 지연된 경우 의제일을
+ * 양도일로 보아 §168조의6(기간기준)만 재판정한다. 지목·도시지역·편입유예·무조건의제는
+ * 실제 양도일 유지(호출자가 이 헬퍼를 §168조의6 판정 경로에만 적용).
+ */
+export function getPeriodJudgmentDate(
+  input: Pick<NonBusinessLandInput, "deemedTransferReason" | "deemedTransferDate" | "transferDate">,
+): Date {
+  if (
+    input.deemedTransferReason &&
+    input.deemedTransferReason !== "none" &&
+    input.deemedTransferDate
+  ) {
+    return input.deemedTransferDate;
+  }
+  return input.transferDate;
+}
 
 /**
  * 기준 ③ 임계비율 결정.

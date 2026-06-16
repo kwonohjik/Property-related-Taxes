@@ -81,6 +81,8 @@ export const nonBusinessLandRawSchema = z.object({
   acquisitionDate: z.string(),
   transferDate: z.string(),
   // 공통
+  nblDeemedTransferReason: z.string().optional(),
+  nblDeemedTransferDate: z.string().optional(),
   nblUrbanIncorporationDate: z.string().optional(),
   nblIsMetropolitanArea: z.string().optional(),
   nblOwnershipRatio: z.string().optional(),

@@ -442,6 +442,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   nblExemptInong: boolean;
   nblExemptInongDate: string;
 
+  // ── NBL 양도일 의제 (§168조의14②) ──
+  nblDeemedTransferReason: string; // none|auction|public_sale|kamco_consignment|newspaper_public_offering|republication
+  nblDeemedTransferDate: string;
+
   // ── NBL 도시편입·수도권·공동상속 ──
   nblUrbanIncorporationDate: string;
   nblIsMetropolitanArea: "" | "yes" | "no" | "unknown";

@@ -21,7 +21,7 @@ import type {
   PropertyTaxType,
   RevenueTestResult,
 } from "./types";
-import { meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
+import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
 import { computeAreaProportioning } from "./utils/area-proportioning";
 import { NBL_AREA_MULTIPLIER } from "./data/area-standards";
@@ -93,7 +93,9 @@ export function judgeOtherLand(
   const warnings: string[] = [];
 
   const ownershipStart = getOwnershipStart(input.acquisitionDate);
-  const totalOwnershipDays = Math.max(0, differenceInDays(input.transferDate, ownershipStart));
+  // §168조의14② 양도일 의제 — §168조의6 기간기준 전용
+  const pjDate = getPeriodJudgmentDate(input);
+  const totalOwnershipDays = Math.max(0, differenceInDays(pjDate, ownershipStart));
 
   const o = input.otherLand;
   if (!o) {
@@ -133,7 +135,7 @@ export function judgeOtherLand(
 
   // ── Step 3-1: 재산세 종합합산이 아닌 토지 + 기간기준 ───────────────
   const isNonComprehensive = effectiveTaxType !== "comprehensive";
-  const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
+  const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
 
   // ── §168의11② 수입금액비율 (2호다목·10·11다·12호 특정 업종) ──────────
   let revenueTestDetail: RevenueTestResult | undefined;
@@ -148,7 +150,7 @@ export function judgeOtherLand(
     });
     if (revenueTestDetail.pass) {
       appliedLaws.push(NBL.REVENUE_TEST);
-      const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules, input.gracePeriods);
+      const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
       return buildPass(`수입금액비율 충족 (${revenueTestDetail.businessType})`, steps, appliedLaws, warnings, {
         r, totalOwnershipDays, revenueTestDetail,
       });
@@ -156,7 +158,7 @@ export function judgeOtherLand(
   }
 
   if (isNonComprehensive) {
-    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules, input.gracePeriods);
+    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
     if (r.meets) {
       steps.push({
         id: "other_tax_type_criteria",
@@ -193,7 +195,7 @@ export function judgeOtherLand(
   const isRelated = isRecognizedHo || o.isRelatedToResidenceOrBusiness;
 
   if (isRelated) {
-    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules, input.gracePeriods);
+    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
     const legalBasis = resolveAreaLegalBasis(relatedType);
 
     if (!r.meets) {
@@ -261,7 +263,7 @@ export function judgeOtherLand(
     detail: "거주·사업과 직접 관련 플래그 미설정",
     legalBasis: NBL.OTHER_LAND_BUSINESS,
   });
-  const dummyR = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules, input.gracePeriods);
+  const dummyR = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
   return buildFail("종합합산 + 거주·사업관련 미해당 → 비사업용", steps, appliedLaws, warnings, {
     r: dummyR, totalOwnershipDays, revenueTestDetail,
   });
