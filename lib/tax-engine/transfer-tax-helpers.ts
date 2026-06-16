@@ -180,6 +180,25 @@ interface ExemptionResult {
   exemptReason?: string;
 }
 
+/**
+ * §154① 보유·거주 핵심 요건 (단서 각호 제외).
+ * 보유 2년(rule.minHoldingYears) + 취득 당시 조정대상지역이면 거주 2년(rule.regulatedAreaMinResidenceYears).
+ * §155⑤(혼인 합가) 1세대1주택 의제 중과배제(§167의10①15호) 게이트에 재사용 — checkExemption과 단일 진실.
+ */
+export function meetsOneHouseHoldingResidence(
+  input: TransferTaxInput,
+  rule: OneHouseSpecialRulesData["one_house_exemption"],
+): boolean {
+  const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+  const isPrePolicy = input.acquisitionDate < new Date(rule.prePolicyDate);
+  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+  const meetsResidence =
+    !input.wasRegulatedAtAcquisition ||
+    (isPrePolicy && !input.wasRegulatedAtAcquisition) ||
+    residenceYears >= rule.regulatedAreaMinResidenceYears;
+  return holding.years >= rule.minHoldingYears && meetsResidence;
+}
+
 export function checkExemption(
   input: TransferTaxInput,
   oneHouseRules: OneHouseSpecialRulesData,
@@ -189,8 +208,6 @@ export function checkExemption(
   if (!input.isOneHousehold || input.propertyType !== "housing") {
     return { isExempt: false, isPartialExempt: false };
   }
-
-  const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
 
   // E-3: 일시적 2주택
   if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
@@ -223,20 +240,8 @@ export function checkExemption(
     return { isExempt: false, isPartialExempt: false };
   }
 
-  // E-4: 2017.8.3 이전 취득 경과규정
-  const prePolicyDate = new Date(rule.prePolicyDate);
-  const isPrePolicy = input.acquisitionDate < prePolicyDate;
-  const isRegulatedAtAcquisition = input.wasRegulatedAtAcquisition;
-
-  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
-  const meetsResidence =
-    !input.wasRegulatedAtAcquisition ||
-    (isPrePolicy && !isRegulatedAtAcquisition) ||
-    residenceYears >= rule.regulatedAreaMinResidenceYears;
-
-  const meetsHolding = holding.years >= rule.minHoldingYears;
-
-  if (!meetsHolding || !meetsResidence) {
+  // E-4: §154① 보유·거주 요건 (2017.8.3 이전 경과규정 포함) — meetsOneHouseHoldingResidence로 단일화
+  if (!meetsOneHouseHoldingResidence(input, rule)) {
     return { isExempt: false, isPartialExempt: false };
   }
 
