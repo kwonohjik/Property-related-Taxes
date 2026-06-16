@@ -8,16 +8,17 @@ import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 
 /**
  * 소유 형태 라디오 선택 (UI 전용 — 엔진 taxpayerInfo 매핑 시 분기)
- * - "sole"       : 단독 소유 (기본, taxpayerInfo 미전송)
- * - "co"         : 공유 (coOwnershipShares 배열)
- * - "trust"      : 신탁 (isTrust=true + settlor)
- * - "inherit"    : 상속 미등기 (isInheritanceUnregistered + heirs)
- * - "clan"       : 종중재산 미신고 §107②3호 → registered_owner(공부상 소유자, isClanProperty=true)
- * - "installment": 연부 매수계약자 §107②4호 → installment_buyer
- * - "project"    : 환지 체비지·보류지 사업시행자 §107②6호 → project_operator
- * - "import"     : 외국인 항공기·선박 수입자 §107②7호 → importer
- * - "bankruptcy" : 파산재단 §107②8호 → registered_owner(공부상 소유자, isBankruptcyEstate=true)
- * - "unclear"    : 소유권 귀속 불명 시 사용자 §107③ → ownershipUnclearUser
+ * - "sole"        : 단독 소유 (기본, taxpayerInfo 미전송)
+ * - "co"          : 공유 (coOwnershipShares 배열)
+ * - "trust"       : 신탁 (isTrust=true + settlor)
+ * - "inherit"     : 상속 미등기 (isInheritanceUnregistered + heirs)
+ * - "clan"        : 종중재산 미신고 §107②3호 → registered_owner(공부상 소유자, isClanProperty=true)
+ * - "installment" : 연부 매수계약자 §107②4호 → installment_buyer
+ * - "project"     : 환지 체비지·보류지 사업시행자 §107②6호 → project_operator
+ * - "import"      : 외국인 항공기·선박 수입자 §107②7호 → importer
+ * - "bankruptcy"  : 파산재단 §107②8호 → registered_owner(공부상 소유자, isBankruptcyEstate=true)
+ * - "unclear"     : 소유권 귀속 불명 시 사용자 §107③ → ownershipUnclearUser
+ * - "house_split" : 주택 건물·부속토지 소유자 분리 §107①2호 → isHouseSplit=true (주택 전용)
  */
 export type OwnershipType =
   | "sole"
@@ -29,7 +30,8 @@ export type OwnershipType =
   | "project"
   | "import"
   | "bankruptcy"
-  | "unclear";
+  | "unclear"
+  | "house_split";
 
 /** 공유 지분 항목 (UI 입력용) */
 export interface CoOwnerItem {
@@ -152,6 +154,15 @@ export interface FormState {
   importer: string;
   /** 소유권 귀속 불명 시 사용자 성명/식별자 (§107③) */
   unclearUser: string;
+
+  // ── §107①2호: 주택 건물·부속토지 소유자 분리 (house_split 모드 전용) ──
+  /** 건물 소유자 성명/식별자 (§107①2호, house_split 모드) */
+  buildingOwner: string;
+  /** 부속토지 소유자 성명/식별자 (§107①2호, house_split 모드) */
+  landOwner: string;
+  /** 부속토지 시가표준액 문자열 (원, §4① 개별공시지가 × 면적 — house_split 모드) */
+  landStdValue: string;
+  // ※ 건축물 시가표준액은 기존 housingBuildingValue 필드 재사용 (단일 필드 양방향 read/write)
 }
 
 export const INITIAL_FORM: FormState = {
@@ -188,6 +199,10 @@ export const INITIAL_FORM: FormState = {
   projectOperator: "",
   importer: "",
   unclearUser: "",
+  // §107①2호 house_split 초기값
+  buildingOwner: "",
+  landOwner: "",
+  landStdValue: "",
 };
 
 // ============================================================
@@ -216,8 +231,8 @@ export function validateStep(step: number, form: FormState): string | null {
 
     // ── 소유 형태(§107) 일관성 검증 — ownershipType 입력 시에만 (미입력=납세의무자 판정 생략, 차단 아님) ──
     if (form.ownershipType && form.ownershipType !== "sole") {
-      // 공부상 소유자는 필수 (모든 비단독 모드)
-      if (!form.registeredOwner.trim())
+      // 공부상 소유자는 필수 (house_split 제외 — 건물주·토지주가 대체)
+      if (form.ownershipType !== "house_split" && !form.registeredOwner.trim())
         return "소유 형태를 입력할 때는 공부상 소유자 성명을 입력하세요.";
 
       if (form.ownershipType === "co") {
@@ -246,6 +261,21 @@ export function validateStep(step: number, form: FormState): string | null {
       if (form.ownershipType === "inherit") {
         // 상속 미등기: 상속인 텍스트 비어있으면 경고만 (API에서 경고 포함)
         // 차단하지 않음 (UI 통과↔validate 차단 모순 금지)
+      }
+
+      // ── §107①2호: 건물·부속토지 소유자 분리 — 시가표준액 안분 필수 차단 ──
+      // 기타 6종 fallback과 달리, house_split 안분 비율은 두 시가표준액이 없으면 계산 불가.
+      if (form.ownershipType === "house_split") {
+        if (!form.buildingOwner.trim())
+          return "건물 소유자 성명을 입력하세요.";
+        if (!form.landOwner.trim())
+          return "부속토지 소유자 성명을 입력하세요.";
+        const bldgVal = parseAmount(form.housingBuildingValue);
+        if (!bldgVal || bldgVal <= 0)
+          return "건축물 시가표준액을 입력하세요 (§107①2호 안분 필수).";
+        const landVal = parseAmount(form.landStdValue);
+        if (!landVal || landVal <= 0)
+          return "부속토지 시가표준액을 입력하세요 (§107①2호 안분 필수).";
       }
 
       // 기타 6종(clan·installment·project·import·bankruptcy·unclear) —
@@ -372,6 +402,25 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
   // ── 납세의무자(§107) — ownershipType 입력 시에만 전송 ──
   // 미입력(undefined / "sole") → taxpayerInfo 미포함 → 엔진 납세의무자 판정 생략
   if (form.ownershipType && form.ownershipType !== "sole") {
+    // ── §107①2호: 건물·부속토지 소유자 분리 (house_split 전용 분기) ──
+    if (form.ownershipType === "house_split") {
+      const buildingOwner = form.buildingOwner.trim();
+      const landOwner = form.landOwner.trim();
+      if (buildingOwner || landOwner) {
+        body.taxpayerInfo = {
+          registeredOwner: buildingOwner || landOwner, // 형식 충족 (대표는 엔진이 시가표준액으로 판정)
+          isHouseSplit: true,
+          buildingOwner: buildingOwner || undefined,
+          landOwner: landOwner || undefined,
+          landStdValue: parseAmount(form.landStdValue) ?? undefined,
+        };
+        // 건축물 시가표준액 — 기존 housingBuildingValue 재사용 (§146④와 동일 필드)
+        const bldgValue = parseAmount(form.housingBuildingValue);
+        if (bldgValue !== null && bldgValue > 0) {
+          body.housingBuildingValue = bldgValue;
+        }
+      }
+    } else {
     const registeredOwner = form.registeredOwner.trim();
     if (registeredOwner) {
       const info: Record<string, unknown> = { registeredOwner };
@@ -440,6 +489,7 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
 
       body.taxpayerInfo = info;
     }
+    } // end else (house_split 이외)
   }
 
   return body;

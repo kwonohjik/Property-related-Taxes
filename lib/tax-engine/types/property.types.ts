@@ -197,6 +197,23 @@ export interface PropertyTaxInput {
     isBankruptcyEstate?: boolean;
     /** 소유권 귀속 불명 시 사용자 (§107③) */
     ownershipUnclearUser?: string;
+
+    // ── §107①2호: 주택 건물·부속토지 소유자 분리 ──
+    /**
+     * 주택 건물·부속토지 소유자 분리 여부 (지방세법 §107①2호).
+     * true 시 buildingOwner·landOwner·landStdValue 모두 입력 필수.
+     * 건물 시가표준액은 PropertyTaxInput.housingBuildingValue(§146④ 재사용) — 여기 넣지 않음.
+     */
+    isHouseSplit?: boolean;
+    /** 건축물 소유자 식별자 (§107①2호) */
+    buildingOwner?: string;
+    /** 부속토지 소유자 식별자 (§107①2호) */
+    landOwner?: string;
+    /**
+     * 부속토지 시가표준액 (원, §4① 개별공시지가 × 면적).
+     * §107①2호 안분 기준. objectType==="housing" 전용.
+     */
+    landStdValue?: number;
   };
 }
 
@@ -265,6 +282,36 @@ export interface PropertyCoOwnershipDistribution {
   }>;
   /** 안분 합산 오차 (본세 기준, 0이어야 정상) */
   roundingDiff: number;
+}
+
+/**
+ * §107①2호 주택 건물·부속토지 소유자 분리 세액 안분 결과.
+ * objectType==="housing" + taxpayerInfo.isHouseSplit===true 시에만 PropertyTaxResult에 포함.
+ *
+ * 안분 알고리즘 (BigInt 전체 연산 — overflow 방지):
+ *   buildingTaxAmount = floor(determinedTax × buildingStdValue / sum)
+ *   landTaxAmount     = determinedTax − buildingTaxAmount  (잔액 흡수)
+ *   동일 패턴으로 totalPayable 안분
+ */
+export interface PropertyHouseSplitDistribution {
+  /** 건축물 소유자 식별자 */
+  buildingOwner: string;
+  /** 건축물 시가표준액 (원, §4② — housingBuildingValue 재사용) */
+  buildingStdValue: number;
+  /** 건축물 소유자 귀속 본세 (determinedTax 안분액, 원) */
+  buildingTaxAmount: number;
+  /** 건축물 소유자 귀속 고지액 (totalPayable 안분액, 원) */
+  buildingTotalAmount: number;
+  /** 부속토지 소유자 식별자 */
+  landOwner: string;
+  /** 부속토지 시가표준액 (원, §4① 개별공시지가 × 면적) */
+  landStdValue: number;
+  /** 부속토지 소유자 귀속 본세 (determinedTax 잔액 흡수, 원) */
+  landTaxAmount: number;
+  /** 부속토지 소유자 귀속 고지액 (totalPayable 잔액 흡수, 원) */
+  landTotalAmount: number;
+  /** 건물 안분 비율 = buildingStdValue / (buildingStdValue + landStdValue) — 표시용 */
+  buildingRatio: number;
 }
 
 /**
@@ -337,6 +384,12 @@ export interface PropertyTaxResult {
   taxpayer?: PropertyTaxpayerInfo;
   /** 공유재산 지분별 안분 (co_owner + 지분 2인 이상) */
   coOwnershipDistribution?: PropertyCoOwnershipDistribution;
+  /**
+   * §107①2호 주택 건물·부속토지 소유자 분리 세액 안분.
+   * objectType==="housing" + taxpayerInfo.isHouseSplit===true + 시가표준액 양쪽 입력 시에만 존재.
+   * 대표 납세의무자(taxpayer.type)는 시가표준액 큰 쪽(building_owner 또는 land_owner).
+   */
+  houseSplitDistribution?: PropertyHouseSplitDistribution;
 }
 
 // ============================================================
