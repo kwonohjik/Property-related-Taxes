@@ -16,6 +16,7 @@ import type {
   PropertyTaxResult,
   PropertyTaxpayerInfo,
   PropertyCoOwnershipDistribution,
+  PropertyHouseSplitDistribution,
 } from "@/lib/tax-engine/types/property.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useState, useMemo } from "react";
@@ -56,6 +57,9 @@ const TAXPAYER_TYPE_LABEL: Record<string, string> = {
   project_operator:        "체비지·보류지 사업시행자 (§107②6호)",
   importer:                "외국인 수입 항공기·선박 수입자 (§107②7호)",
   user:                    "사용자 — 소유권 불명 (§107③)",
+  // §107①2호: 주택 건물·부속토지 소유자 분리 안분
+  building_owner:          "건물 소유자 (§107①2호)",
+  land_owner:              "부속토지 소유자 (§107①2호)",
 };
 
 /** 납세의무자 판정 결과 서브섹션 */
@@ -168,6 +172,97 @@ function CoOwnershipTable({
   );
 }
 
+/** §107①2호 주택 건물·부속토지 소유자 분리 안분 표 */
+function HouseSplitDistributionTable({
+  distribution,
+}: {
+  distribution: PropertyHouseSplitDistribution;
+}) {
+  const {
+    buildingOwner,
+    buildingStdValue,
+    buildingTaxAmount,
+    buildingTotalAmount,
+    landOwner,
+    landStdValue,
+    landTaxAmount,
+    landTotalAmount,
+    buildingRatio,
+  } = distribution;
+
+  const totalStdValue = buildingStdValue + landStdValue;
+  const totalTax = buildingTaxAmount + landTaxAmount;
+  const totalAmount = buildingTotalAmount + landTotalAmount;
+
+  return (
+    <div className="rounded-md border overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40">
+          <tr>
+            <th className="text-left py-2 px-3 font-medium text-muted-foreground">구분</th>
+            <th className="text-right py-2 px-3 font-medium text-muted-foreground whitespace-nowrap">시가표준액</th>
+            <th className="text-right py-2 px-3 font-medium text-muted-foreground whitespace-nowrap">본세 안분</th>
+            <th className="text-right py-2 px-3 font-medium text-muted-foreground whitespace-nowrap">고지액 안분</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          <tr>
+            <td className="py-2 px-3">
+              <span className="font-medium">건물</span>
+              {buildingOwner && (
+                <span className="ml-1 text-xs text-muted-foreground">({buildingOwner.trim()})</span>
+              )}
+            </td>
+            <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+              {formatKRW(buildingStdValue)}
+            </td>
+            <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+              {formatKRW(buildingTaxAmount)}
+            </td>
+            <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+              {formatKRW(buildingTotalAmount)}
+            </td>
+          </tr>
+          <tr>
+            <td className="py-2 px-3">
+              <span className="font-medium">부속토지</span>
+              {landOwner && (
+                <span className="ml-1 text-xs text-muted-foreground">({landOwner.trim()})</span>
+              )}
+            </td>
+            <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+              {formatKRW(landStdValue)}
+            </td>
+            <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+              {formatKRW(landTaxAmount)}
+            </td>
+            <td className="py-2 px-3 text-right font-mono tabular-nums whitespace-nowrap">
+              {formatKRW(landTotalAmount)}
+            </td>
+          </tr>
+        </tbody>
+        <tfoot className="bg-primary/5 border-t-2 border-foreground">
+          <tr>
+            <td className="py-2 px-3 font-bold">합계</td>
+            <td className="py-2 px-3 text-right font-bold font-mono tabular-nums whitespace-nowrap">
+              {formatKRW(totalStdValue)}
+            </td>
+            <td className="py-2 px-3 text-right font-bold font-mono tabular-nums whitespace-nowrap text-primary">
+              {formatKRW(totalTax)}
+            </td>
+            <td className="py-2 px-3 text-right font-bold font-mono tabular-nums whitespace-nowrap text-primary">
+              {formatKRW(totalAmount)}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+      <p className="text-[11px] text-muted-foreground px-3 py-1.5 border-t">
+        건물분 비율 {(buildingRatio * 100).toFixed(1)}% · 안분 잔액은 토지분에 흡수 (floor 잔액 흡수 원칙)
+      </p>
+    </div>
+  );
+}
+
 function TaxRow({
   label,
   amount,
@@ -227,6 +322,7 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
 
   const taxpayer = result.taxpayer;
   const coOwnershipDistribution = result.coOwnershipDistribution;
+  const houseSplitDistribution = result.houseSplitDistribution;
 
   const capApplied = determinedTax < calculatedTaxBeforeCap;
 
@@ -492,11 +588,20 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
       {/* ─── 납세의무자 판정 (taxpayerInfo 입력 시에만) ─── */}
       {taxpayer && (
         <PrintSection id="taxpayer" selectedIds={selectedPrintIds}>
-        <section className="space-y-1">
+        <section className="space-y-2">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             납세의무자 판정
           </h3>
           <TaxpayerSection taxpayer={taxpayer} />
+          {/* ─── §107①2호 주택 건물·부속토지 분리 안분 표 (taxpayer leaf 내부 — 신규 print leaf 미추가) ─── */}
+          {houseSplitDistribution && (
+            <div className="space-y-1">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                주택 건물·부속토지 분리 안분 (지방세법 §107①2호)
+              </h4>
+              <HouseSplitDistributionTable distribution={houseSplitDistribution} />
+            </div>
+          )}
         </section>
         </PrintSection>
       )}

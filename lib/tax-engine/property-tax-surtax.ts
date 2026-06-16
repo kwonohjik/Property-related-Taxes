@@ -11,6 +11,7 @@ import type {
   PropertyTaxInput,
   PropertySurtaxDetail,
   FireHazardClass,
+  InstallmentInfo,
 } from "./types/property.types";
 
 /**
@@ -141,4 +142,28 @@ export function calcSurtax(
     legalBasis.push(PROPERTY.REGIONAL_RESOURCE_TAX_HOUSING);
 
   return { surtax, totalSurtax, legalBasis };
+}
+
+// ============================================================
+// 분납 계산 (지방세법 §115) — property-tax.ts 에서 분리 (800줄 정책)
+// ============================================================
+
+export function calcInstallment(
+  determinedTax: number,
+  objectType: PropertyTaxInput["objectType"],
+): InstallmentInfo {
+  // 지방세법 §115①: 주택 20만원 초과, 토지·건축물 등 비주택 250만원 초과 시 분납 가능
+  const threshold =
+    objectType === "housing"
+      ? PROPERTY_CONST.INSTALLMENT_THRESHOLD
+      : PROPERTY_CONST.INSTALLMENT_THRESHOLD_NON_HOUSE;
+
+  const eligible = determinedTax > threshold;
+  if (!eligible) {
+    return { eligible: false, firstPayment: determinedTax, secondPayment: 0 };
+  }
+  // 균등 분납: 홀수 원은 1차에 포함
+  const secondPayment = Math.floor(determinedTax / 2);
+  const firstPayment = determinedTax - secondPayment;
+  return { eligible: true, firstPayment, secondPayment };
 }

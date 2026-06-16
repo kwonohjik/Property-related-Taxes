@@ -211,6 +211,28 @@ export interface PropertyObjectInput {
   /** 소유권 귀속 불명 시 사용자 (§107③) */
   ownershipUnclearUser?: string;
 
+  // ── §107①2호: 주택 건물·부속토지 소유자 분리 ──
+  /**
+   * 주택 건물·부속토지 소유자 분리 여부 (지방세법 §107①2호).
+   * true 시 건물·토지 시가표준액 비율로 산출세액 안분 필요.
+   * buildingOwner·landOwner·buildingStdValue·landStdValue 모두 입력 필수.
+   */
+  isHouseSplit?: boolean;
+  /** 건축물 소유자 식별자 (§107①2호) */
+  buildingOwner?: string;
+  /** 부속토지 소유자 식별자 (§107①2호) */
+  landOwner?: string;
+  /**
+   * 건축물 시가표준액 (원, §4②) — determineTaxpayer Pick 전달용.
+   * calculatePropertyTax에서 housingBuildingValue를 주입함.
+   */
+  buildingStdValue?: number;
+  /**
+   * 부속토지 시가표준액 (원, §4① 개별공시지가) — §107①2호 안분 기준.
+   * PropertyTaxInput.taxpayerInfo.landStdValue에서 전달.
+   */
+  landStdValue?: number;
+
   // ── 물건별 상세 ──
   landInfo?: LandInput;
   buildingInfo?: BuildingInput;
@@ -299,12 +321,14 @@ export interface CoOwnershipShare {
 }
 
 /**
- * 납세의무자 유형 9종 (지방세법 §107)
+ * 납세의무자 유형 11종 (지방세법 §107)
  */
 export type PropertyTaxpayerType =
   | "registered_owner"        // 공부상 소유자 (원칙, §107①본문)
   | "actual_owner"            // 사실상 소유자 (§107①본문)
   | "co_owner"                // 공유자 (지분별 안분, §107①1호)
+  | "building_owner"          // 주택 건물 소유자 (§107①2호 건물·토지 분리 — 산출세액 안분)
+  | "land_owner"              // 주택 부속토지 소유자 (§107①2호 건물·토지 분리 — 산출세액 안분)
   | "truster"                 // 신탁재산 위탁자 (§107②5호, 2020.12.29 개정 — 현행법)
   | "trustee"                 // 신탁 수탁자 (구법·예외적 케이스, 미사용)
   | "beneficiary"             // 신탁 수익자 (미사용)
