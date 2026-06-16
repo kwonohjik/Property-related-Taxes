@@ -218,9 +218,15 @@ export function Step0({
 // ============================================================
 
 const OWNERSHIP_OPTIONS: { value: OwnershipType; label: string; description: string }[] = [
-  { value: "co",      label: "공유",        description: "§107①1호 — 각 공유자가 지분별 납세의무" },
-  { value: "trust",   label: "신탁",        description: "§107②5호 — 위탁자가 납세의무자 (2020.12.29 개정)" },
-  { value: "inherit", label: "상속 미등기", description: "§107②2호 — 주된 상속인이 납세의무자" },
+  { value: "co",          label: "공유",                  description: "§107①1호 — 각 공유자가 지분별 납세의무" },
+  { value: "trust",       label: "신탁",                  description: "§107②5호 — 위탁자가 납세의무자 (2020.12.29 개정)" },
+  { value: "inherit",     label: "상속 미등기",            description: "§107②2호 — 주된 상속인이 납세의무자" },
+  { value: "clan",        label: "종중재산(§107②3호)",     description: "종중 재산을 미신고 — 공부상 소유자가 납세의무자" },
+  { value: "installment", label: "연부 매수(§107②4호)",    description: "국가 등으로부터 연부 매수계약자가 납세의무자" },
+  { value: "project",     label: "체비지·보류지(§107②6호)", description: "환지 사업의 체비지·보류지 — 사업시행자가 납세의무자" },
+  { value: "import",      label: "외국인 수입 항공기·선박(§107②7호)", description: "외국으로부터 수입된 항공기·선박 — 수입자가 납세의무자" },
+  { value: "bankruptcy",  label: "파산재단(§107②8호)",     description: "파산재단에 속하는 재산 — 공부상 소유자가 납세의무자" },
+  { value: "unclear",     label: "소유권 불명(§107③)",     description: "소유권 귀속이 분명하지 않은 재산 — 사용자가 납세의무자" },
 ];
 
 function OwnershipSection({
@@ -243,6 +249,10 @@ function OwnershipSection({
         settlor: "",
         coOwners: undefined,
         heirsText: "",
+        installmentBuyer: "",
+        projectOperator: "",
+        importer: "",
+        unclearUser: "",
       });
     }
   }
@@ -321,6 +331,70 @@ function OwnershipSection({
               value={form.heirsText}
               onChange={(e) => onChange({ heirsText: e.target.value })}
               placeholder="홍길동, 홍길순"
+            />
+          </FieldCard>
+        )}
+
+        {/* 연부 매수계약자 — 식별자 입력 (§107②4호) */}
+        {form.ownershipType === "installment" && (
+          <FieldCard
+            label="연부 매수계약자"
+            hint="§107②4호 — 국가 등으로부터 연부 매수계약을 체결한 자 성명 또는 식별자"
+          >
+            <input
+              type="text"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              value={form.installmentBuyer}
+              onChange={(e) => onChange({ installmentBuyer: e.target.value })}
+              placeholder="납세의무자 성명 또는 식별자"
+            />
+          </FieldCard>
+        )}
+
+        {/* 체비지·보류지 사업시행자 — 식별자 입력 (§107②6호) */}
+        {form.ownershipType === "project" && (
+          <FieldCard
+            label="사업시행자"
+            hint="§107②6호 — 환지 방식의 도시개발사업 등의 체비지·보류지 사업시행자 성명 또는 식별자"
+          >
+            <input
+              type="text"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              value={form.projectOperator}
+              onChange={(e) => onChange({ projectOperator: e.target.value })}
+              placeholder="사업시행자 성명 또는 식별자"
+            />
+          </FieldCard>
+        )}
+
+        {/* 외국인 수입자 — 식별자 입력 (§107②7호) */}
+        {form.ownershipType === "import" && (
+          <FieldCard
+            label="수입자"
+            hint="§107②7호 — 외국으로부터 수입된 항공기 또는 선박의 수입자 성명 또는 식별자"
+          >
+            <input
+              type="text"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              value={form.importer}
+              onChange={(e) => onChange({ importer: e.target.value })}
+              placeholder="수입자 성명 또는 식별자"
+            />
+          </FieldCard>
+        )}
+
+        {/* 소유권 귀속 불명 사용자 — 식별자 입력 (§107③) */}
+        {form.ownershipType === "unclear" && (
+          <FieldCard
+            label="사용자"
+            hint="§107③ — 소유권의 귀속이 분명하지 않은 재산의 사용자 성명 또는 식별자"
+          >
+            <input
+              type="text"
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              value={form.unclearUser}
+              onChange={(e) => onChange({ unclearUser: e.target.value })}
+              placeholder="사용자 성명 또는 식별자"
             />
           </FieldCard>
         )}

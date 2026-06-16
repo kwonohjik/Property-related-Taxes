@@ -120,6 +120,46 @@ test.describe("재산세 납세의무자 판정 + 공유 안분 §107", () => {
     await expect(page.getByText(/신탁 위탁자/).first()).toBeVisible();
   });
 
+  test("5: 연부 매수(§107②4호) 선택 → 결과에 '연부 매수계약자' 라벨 표시", async ({ page }) => {
+    await gotoStep0(page);
+    await openOwnershipSection(page);
+
+    // 소유 형태: "연부 매수(§107②4호)" 선택
+    await selectOwnership(page, /연부 매수/).check();
+
+    // 공부상 소유자 + 연부 매수계약자 입력
+    await page.getByPlaceholder("성명 또는 식별자", { exact: true }).fill("대한민국");
+    await page.getByPlaceholder("납세의무자 성명 또는 식별자").fill("홍길동");
+
+    await page.getByRole("button", { name: /^다음$/ }).click();
+    await calcAndWait(page);
+
+    // 납세의무자 섹션 표시
+    await expect(page.getByText("납세의무자 판정").first()).toBeVisible();
+    // 연부 매수계약자 라벨 (§107②4호)
+    await expect(page.getByText(/연부 매수계약자/).first()).toBeVisible();
+  });
+
+  test("6: 소유권 불명(§107③) 선택 → 결과에 '사용자 — 소유권 불명' 라벨 표시", async ({ page }) => {
+    await gotoStep0(page);
+    await openOwnershipSection(page);
+
+    // 소유 형태: "소유권 불명(§107③)" 선택
+    await selectOwnership(page, /소유권 불명/).check();
+
+    // 공부상 소유자 + 사용자 입력
+    await page.getByPlaceholder("성명 또는 식별자", { exact: true }).fill("미상");
+    await page.getByPlaceholder("사용자 성명 또는 식별자").fill("김사용");
+
+    await page.getByRole("button", { name: /^다음$/ }).click();
+    await calcAndWait(page);
+
+    // 납세의무자 섹션 표시
+    await expect(page.getByText("납세의무자 판정").first()).toBeVisible();
+    // 사용자 — 소유권 불명 라벨 (§107③)
+    await expect(page.getByText(/사용자 — 소유권 불명/).first()).toBeVisible();
+  });
+
   test("4: 공유 지분 합계 100% 초과 → 실시간 경고 + 단계 차단", async ({ page }) => {
     await gotoStep0(page);
     await openOwnershipSection(page);

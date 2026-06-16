@@ -51,6 +51,11 @@ const TAXPAYER_TYPE_LABEL: Record<string, string> = {
   heir_representative:     "주된 상속인 — 상속 미등기 (§107②2호)",
   construction_contractor: "건축주 — 건설 중 건축물",
   lessee:                  "지상권자·임차인",
+  // 기타 6종 §107
+  installment_buyer:       "연부 매수계약자 (§107②4호)",
+  project_operator:        "체비지·보류지 사업시행자 (§107②6호)",
+  importer:                "외국인 수입 항공기·선박 수입자 (§107②7호)",
+  user:                    "사용자 — 소유권 불명 (§107③)",
 };
 
 /** 납세의무자 판정 결과 서브섹션 */

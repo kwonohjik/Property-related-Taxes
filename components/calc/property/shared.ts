@@ -8,12 +8,28 @@ import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 
 /**
  * 소유 형태 라디오 선택 (UI 전용 — 엔진 taxpayerInfo 매핑 시 분기)
- * - "sole"    : 단독 소유 (기본, taxpayerInfo 미전송)
- * - "co"      : 공유 (coOwnershipShares 배열)
- * - "trust"   : 신탁 (isTrust=true + settlor)
- * - "inherit" : 상속 미등기 (isInheritanceUnregistered + heirs)
+ * - "sole"       : 단독 소유 (기본, taxpayerInfo 미전송)
+ * - "co"         : 공유 (coOwnershipShares 배열)
+ * - "trust"      : 신탁 (isTrust=true + settlor)
+ * - "inherit"    : 상속 미등기 (isInheritanceUnregistered + heirs)
+ * - "clan"       : 종중재산 미신고 §107②3호 → registered_owner(공부상 소유자, isClanProperty=true)
+ * - "installment": 연부 매수계약자 §107②4호 → installment_buyer
+ * - "project"    : 환지 체비지·보류지 사업시행자 §107②6호 → project_operator
+ * - "import"     : 외국인 항공기·선박 수입자 §107②7호 → importer
+ * - "bankruptcy" : 파산재단 §107②8호 → registered_owner(공부상 소유자, isBankruptcyEstate=true)
+ * - "unclear"    : 소유권 귀속 불명 시 사용자 §107③ → ownershipUnclearUser
  */
-export type OwnershipType = "sole" | "co" | "trust" | "inherit";
+export type OwnershipType =
+  | "sole"
+  | "co"
+  | "trust"
+  | "inherit"
+  | "clan"
+  | "installment"
+  | "project"
+  | "import"
+  | "bankruptcy"
+  | "unclear";
 
 /** 공유 지분 항목 (UI 입력용) */
 export interface CoOwnerItem {
@@ -128,6 +144,14 @@ export interface FormState {
   coOwners: CoOwnerItem[] | undefined;
   /** 상속인 목록 (쉼표 구분 단일 텍스트, 편의 입력) */
   heirsText: string;
+  /** 연부 매수계약자 성명/식별자 (§107②4호) */
+  installmentBuyer: string;
+  /** 환지 체비지·보류지 사업시행자 성명/식별자 (§107②6호) */
+  projectOperator: string;
+  /** 외국인 항공기·선박 수입자 성명/식별자 (§107②7호) */
+  importer: string;
+  /** 소유권 귀속 불명 시 사용자 성명/식별자 (§107③) */
+  unclearUser: string;
 }
 
 export const INITIAL_FORM: FormState = {
@@ -160,6 +184,10 @@ export const INITIAL_FORM: FormState = {
   settlor: "",
   coOwners: undefined,
   heirsText: "",
+  installmentBuyer: "",
+  projectOperator: "",
+  importer: "",
+  unclearUser: "",
 };
 
 // ============================================================
@@ -219,6 +247,11 @@ export function validateStep(step: number, form: FormState): string | null {
         // 상속 미등기: 상속인 텍스트 비어있으면 경고만 (API에서 경고 포함)
         // 차단하지 않음 (UI 통과↔validate 차단 모순 금지)
       }
+
+      // 기타 6종(clan·installment·project·import·bankruptcy·unclear) —
+      // 식별자 필드(installmentBuyer 등) 미입력 시 경고만, 차단 아님.
+      // 엔진이 fallback=공부상 소유자 처리 → UI 통과↔validate 차단 모순 금지.
+      // registeredOwner 필수 검증은 위에서 공통 처리됨.
     }
   }
   if (step === 1 && form.objectType === "land") {
@@ -362,6 +395,41 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
           .map((h) => h.trim())
           .filter(Boolean);
         if (heirs.length > 0) info.heirs = heirs;
+      }
+
+      // ── 기타 6종 §107 ──
+      if (form.ownershipType === "clan") {
+        // 종중재산 미신고 §107②3호 — 공부상 소유자가 납세의무자 (isClanProperty=true)
+        info.isClanProperty = true;
+      }
+
+      if (form.ownershipType === "installment") {
+        // 연부 매수계약자 §107②4호
+        const buyer = form.installmentBuyer.trim();
+        if (buyer) info.installmentBuyer = buyer;
+      }
+
+      if (form.ownershipType === "project") {
+        // 환지 체비지·보류지 사업시행자 §107②6호
+        const operator = form.projectOperator.trim();
+        if (operator) info.projectOperator = operator;
+      }
+
+      if (form.ownershipType === "import") {
+        // 외국인 항공기·선박 수입자 §107②7호
+        const imp = form.importer.trim();
+        if (imp) info.importer = imp;
+      }
+
+      if (form.ownershipType === "bankruptcy") {
+        // 파산재단 §107②8호 — 공부상 소유자가 납세의무자 (isBankruptcyEstate=true)
+        info.isBankruptcyEstate = true;
+      }
+
+      if (form.ownershipType === "unclear") {
+        // 소유권 귀속 불명 시 사용자 §107③
+        const unclear = form.unclearUser.trim();
+        if (unclear) info.ownershipUnclearUser = unclear;
       }
 
       // 사실상 소유자 불일치

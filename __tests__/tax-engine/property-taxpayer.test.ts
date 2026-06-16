@@ -127,3 +127,59 @@ describe("distributeCoOwnershipTax — 공유세액 안분", () => {
     ).toThrow(TaxCalculationError);
   });
 });
+
+// ============================================================
+// §107 기타 특수 납세의무자 (②3·4·6·7·8호·③)
+// ============================================================
+
+describe("determineTaxpayer — §107 기타 특수 납세의무자", () => {
+  it("T10: 연부 매수계약자 (§107②4호) → installment_buyer", () => {
+    const r = determineTaxpayer({ ...BASE, installmentBuyer: "매수계약자A" });
+    expect(r.type).toBe("installment_buyer");
+    expect(r.name).toBe("매수계약자A");
+    expect(r.legalBasis).toContain("§107②4호");
+  });
+
+  it("T11: 환지 체비지·보류지 사업시행자 (§107②6호) → project_operator", () => {
+    const r = determineTaxpayer({ ...BASE, projectOperator: "○○도시개발조합" });
+    expect(r.type).toBe("project_operator");
+    expect(r.name).toBe("○○도시개발조합");
+    expect(r.legalBasis).toContain("§107②6호");
+  });
+
+  it("T12: 외국인 항공기·선박 수입자 (§107②7호) → importer", () => {
+    const r = determineTaxpayer({ ...BASE, importer: "수입자B" });
+    expect(r.type).toBe("importer");
+    expect(r.name).toBe("수입자B");
+    expect(r.legalBasis).toContain("§107②7호");
+  });
+
+  it("T13: 종중재산 미신고 (§107②3호) → registered_owner + 종중 근거", () => {
+    const r = determineTaxpayer({ ...BASE, isClanProperty: true });
+    expect(r.type).toBe("registered_owner");
+    expect(r.name).toBe("홍길동");
+    expect(r.legalBasis).toContain("§107②3호");
+  });
+
+  it("T14: 파산재단 (§107②8호) → registered_owner + 파산 근거", () => {
+    const r = determineTaxpayer({ ...BASE, isBankruptcyEstate: true });
+    expect(r.type).toBe("registered_owner");
+    expect(r.legalBasis).toContain("§107②8호");
+  });
+
+  it("T15: 소유권 귀속 불명 (§107③) → user", () => {
+    const r = determineTaxpayer({ ...BASE, ownershipUnclearUser: "사용자C" });
+    expect(r.type).toBe("user");
+    expect(r.name).toBe("사용자C");
+    expect(r.legalBasis).toContain("§107③");
+  });
+
+  it("T16: 우선순위 — 연부(②4호)가 사실상소유자(①본문)보다 우선", () => {
+    const r = determineTaxpayer({
+      ...BASE,
+      installmentBuyer: "매수자",
+      actualOwner: "사실상소유자X",
+    });
+    expect(r.type).toBe("installment_buyer");
+  });
+});

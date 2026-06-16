@@ -162,6 +162,19 @@ export const propertyTaxInputSchema = z
             }),
           )
           .optional(),
+        // ── 기타 6종 §107 ──
+        /** 종중재산 미신고 여부 (§107②3호) — 공부상 소유자가 납세의무자 */
+        isClanProperty: z.boolean().optional(),
+        /** 연부 매수계약자 식별자 (§107②4호) */
+        installmentBuyer: z.string().optional(),
+        /** 환지 체비지·보류지 사업시행자 식별자 (§107②6호) */
+        projectOperator: z.string().optional(),
+        /** 외국인 항공기·선박 수입자 식별자 (§107②7호) */
+        importer: z.string().optional(),
+        /** 파산재단 여부 (§107②8호) — 공부상 소유자가 납세의무자 */
+        isBankruptcyEstate: z.boolean().optional(),
+        /** 소유권 귀속 불명 시 사용자 식별자 (§107③) */
+        ownershipUnclearUser: z.string().optional(),
       })
       .optional(),
   })
