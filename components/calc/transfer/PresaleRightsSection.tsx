@@ -12,14 +12,17 @@
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
   rights: PresaleRightEntry[];
   onChange: (rights: PresaleRightEntry[]) => void;
+  /** #2b 혼인합가일 입력 시 "배우자 단독 보유" chip 노출 (§167의4⑤) */
+  showSpouseOwned?: boolean;
 }
 
-export function PresaleRightsSection({ rights, onChange }: Props) {
+export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Props) {
   function add() {
     const entry: PresaleRightEntry = {
       id: `presale_${Date.now()}`,
@@ -126,6 +129,16 @@ export function PresaleRightsSection({ rights, onChange }: Props) {
                 onChange={(v) => update(r.id, { rightValue: v })}
                 hint="분양권 공급가격/입주권 종전주택가격 — 그 외 지방 3억 이하 시 주택 수 제외 (원)"
               />
+              {/* #2b 혼인합가 — 배우자 단독 보유 (혼인합가일 입력 시) */}
+              {showSpouseOwned && (
+                <ToggleCard
+                  variant="chip"
+                  tone="violet"
+                  checked={r.isSpouseOwned ?? false}
+                  onCheckedChange={(v) => update(r.id, { isSpouseOwned: v })}
+                  title="배우자 단독 보유"
+                />
+              )}
             </div>
           ))}
         </div>

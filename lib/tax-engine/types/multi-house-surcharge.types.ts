@@ -229,6 +229,11 @@ export interface PresaleRight {
   regionCriteria?: "REGION" | "VALUE";
   /** 가액(원) — 분양권 공급계약서상 공급가격(선택품목 제외)/입주권 종전주택가격(도시정비법§74①5). §167의4②1호·§167의11②1호 3억 배제 */
   rightValue?: number;
+  /**
+   * #2b §167의4⑤ 혼인 차감용 — "양도자의 배우자 단독 보유" 분양권/입주권 여부.
+   * 주택+권 합 3↑ + marriageMerge 발동 시 양도일 현재 배우자 보유 권리수를 차감. 미제공=본인 보유.
+   */
+  isSpouseOwned?: boolean;
 }
 
 /** 다주택 중과세 판정 입력 */
@@ -345,6 +350,8 @@ export interface MultiHouseSurchargeResult {
     totalEffective: number;
     otherHousesExcluded: Array<{ houseId: string; reason: string }>;
   };
+  /** #2b 산정에서 차감된 분양권/입주권 (혼인 §167의4⑤ 배우자 보유 차감). 미차감 시 빈 배열. */
+  excludedPresaleRights?: Array<{ id: string; reason: "spouse_marriage_subtraction" }>;
 }
 
 // ============================================================

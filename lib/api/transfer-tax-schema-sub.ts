@@ -281,6 +281,7 @@ export const presaleRightSchema = z.object({
   region: z.enum(["capital", "non_capital"]),
   regionCriteria: z.enum(["REGION", "VALUE"]).optional(),
   rightValue: z.number().int().nonnegative().optional(),
+  isSpouseOwned: z.boolean().optional(),
 });
 
 

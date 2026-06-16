@@ -18,6 +18,7 @@ interface MultiHouseSurchargeDetail {
   exclusionReasons: ExclusionReason[];
   isRegulatedAtTransfer: boolean;
   warnings: string[];
+  excludedPresaleRights?: Array<{ id: string; reason: string }>;
 }
 
 interface Props {
@@ -110,6 +111,25 @@ export function MultiHouseSurchargeDetailCard({ detail }: Props) {
                   </span>
                   <p className="text-xs text-muted-foreground/80 mt-0.5">{h.detail}</p>
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* #2b 제외 분양권·입주권 (혼인 §167의4⑤ 배우자 차감) */}
+      {(detail.excludedPresaleRights?.length ?? 0) > 0 && (
+        <div className="px-4 py-3 border-b border-border">
+          <p className="text-xs font-medium text-muted-foreground mb-2">
+            산정 제외 분양권·입주권 ({detail.excludedPresaleRights!.length}건)
+          </p>
+          <div className="space-y-1">
+            {detail.excludedPresaleRights!.map((p) => (
+              <div key={p.id} className="flex items-start gap-2">
+                <span className="mt-0.5 shrink-0 text-muted-foreground">–</span>
+                <span className="inline-block text-[11px] bg-muted/60 rounded px-1.5 py-0.5 font-medium">
+                  혼인합가 배우자 보유 차감 (§167의4⑤)
+                </span>
               </div>
             ))}
           </div>
