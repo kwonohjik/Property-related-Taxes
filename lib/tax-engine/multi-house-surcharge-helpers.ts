@@ -335,13 +335,13 @@ export function isSmallNewHouseSpecial(house: HouseInfo): boolean {
     return true;
   }
 
-  // 비수도권 준공 후 미분양 (2024.1.10 ~ 2025.12.31, 전용 85㎡ 이하, 6억 이하)
+  // 비수도권 준공 후 미분양 (소령 §167의3①12나목: 2024.1.10 ~ 2026.12.31, 전용 85㎡ 이하, 취득가 7억 이하)
   if (
     acqDate >= new Date("2024-01-10") &&
-    acqDate <= new Date("2025-12-31") &&
+    acqDate <= new Date("2026-12-31") &&
     !isCapital &&
     (house.exclusiveArea ?? 0) <= 85 &&
-    house.acquisitionPrice <= 600_000_000 &&
+    house.acquisitionPrice <= 700_000_000 &&
     house.isUnsoldNewHouse
   ) {
     return true;

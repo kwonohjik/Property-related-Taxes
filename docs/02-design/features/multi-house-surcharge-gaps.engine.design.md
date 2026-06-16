@@ -189,4 +189,4 @@ return { count, excluded, excludedPresaleRights };  // 반환 타입 확장
 
 ## 7. anchor (계획서 §5 + 본 인벤토리 §1)
 
-`__tests__/tax-engine/transfer/multi-house-gaps-*.test.ts`. C2-2주택·C2-5년·C1-가R 신규 → STEP 10에서 계획 §5 역동기화.
+`__tests__/tax-engine/multi-house-surcharge/gaps-*.test.ts`(기존 디렉터리 컨벤션, Do 환류). C2-2주택·C2-5년·C1-가R 신규 → STEP 10에서 계획 §5 역동기화.

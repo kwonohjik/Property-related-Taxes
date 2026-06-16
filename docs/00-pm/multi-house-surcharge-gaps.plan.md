@@ -169,7 +169,7 @@
 
 ## 5. Pre-Do Anchor 목록 (Do 전 우선 작성·실행 — 실패 확보)
 
-`__tests__/tax-engine/transfer/multi-house-gaps-*.test.ts`
+`__tests__/tax-engine/multi-house-surcharge/gaps-*.test.ts`
 
 | # | anchor | 입력 | 기대(수정 후) | 현재(실패 이유) |
 |---|---|---|---|---|
@@ -238,5 +238,5 @@
 - [ ] `components/calc/MultiHouseSurchargeDetailCard.tsx` — #2 `spouse_marriage_subtraction` 라벨 + #4 `excludedPresaleRights` 표기
 
 **테스트**
-- [ ] `__tests__/tax-engine/transfer/multi-house-gaps-*.test.ts` — §5 anchor
+- [ ] `__tests__/tax-engine/multi-house-surcharge/gaps-*.test.ts` — §5 anchor
 - [ ] `e2e/transfer-multi-house-*.spec.ts` — 입력 폼 E2E (E2E_PORT=3103)
