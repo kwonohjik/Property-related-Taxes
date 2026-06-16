@@ -241,13 +241,25 @@ export interface FarmlandDeemingInput {
 
 export interface RevenueTestInput {
   businessType: NblRevenueBusinessType;
-  annualRevenue: number;
-  landValue: number;
+  /** 당해 과세기간 연간수입금액 (원) — §168의11③ 산정값 입력 */
+  currentRevenue: number;
+  /** 당해 과세기간 토지가액 (원) — 양도일 기준시가 §168의11④ */
+  currentLandValue: number;
+  /** 직전 과세기간 연간수입금액 (원). 미제공 시 비율② 생략 */
+  priorRevenue?: number;
+  /** 직전 과세기간 토지가액 (원) */
+  priorLandValue?: number;
 }
 
 export interface RevenueTestResult {
   businessType: NblRevenueBusinessType;
+  /** 업종별 기준비율 (시행규칙 §83의4) */
   threshold: number;
+  /** 비율① 당해 수입 ÷ 당해 토지가액 */
+  ratioCurrent: number;
+  /** 비율② (당해+직전 수입) ÷ (당해+직전 토지가액). 직전 미제공 시 undefined */
+  ratioCombined?: number;
+  /** max(①,②) — §168의11② "큰 것" */
   actualRatio: number;
   pass: boolean;
   detail: string;
@@ -369,6 +381,9 @@ export interface NonBusinessLandJudgment {
   };
 
   areaProportioning?: AreaProportioning;
+
+  /** §168의11② 수입금액비율 테스트 결과 (기타토지 + revenueTest 제공 시) */
+  revenueTestDetail?: RevenueTestResult;
 
   surcharge: {
     surchargeType: "non_business_land";
@@ -523,6 +538,9 @@ export interface CategoryJudgeResult {
   steps: JudgmentStep[];
   appliedLaws: string[];
   areaProportioning?: AreaProportioning;
+
+  /** §168의11② 수입금액비율 테스트 결과 (judgeOtherLand에서 산출) */
+  revenueTestDetail?: RevenueTestResult;
 
   // v2 별장 REDIRECT 경로
   action?: JudgmentAction;

@@ -120,6 +120,12 @@ export const nonBusinessLandRawSchema = z.object({
   nblOtherBuildingValue: z.string().optional(),
   nblOtherLandValue: z.string().optional(),
   nblOtherIsRelatedToResidence: z.boolean().optional(),
+  // §168의11② 수입금액비율 (기타토지 특정 업종)
+  nblRevenueBusinessType: z.string().optional(),
+  nblRevenueCurrentRevenue: z.string().optional(),
+  nblRevenueCurrentLandValue: z.string().optional(),
+  nblRevenuePriorRevenue: z.string().optional(),
+  nblRevenuePriorLandValue: z.string().optional(),
   // 무조건 의제 (§168의14③)
   nblExemptInheritBefore2007: z.boolean().optional(),
   nblExemptInheritDate: z.string().optional(),
