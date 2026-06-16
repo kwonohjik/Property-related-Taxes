@@ -61,7 +61,7 @@ export function judgeVillaLand(
   const nonVilla = invertPeriods(villaUse, ownershipStart, input.transferDate);
   // categoryGroup "villa"는 §168-6 ③ 80% 레거시 대상이 아니므로
   // `getThresholdRatio()` 는 항상 현행 60%를 반환한다 (Bug-06 정리).
-  const r1 = meetsPeriodCriteria(nonVilla, input.acquisitionDate, input.transferDate, "villa", rules);
+  const r1 = meetsPeriodCriteria(nonVilla, input.acquisitionDate, input.transferDate, "villa", rules, input.gracePeriods);
 
   if (r1.meets) {
     steps.push({
@@ -80,7 +80,7 @@ export function judgeVillaLand(
       redirectHint: "별장 비사용기간이 기간기준을 충족합니다. 실제 용도(주택 부수 토지 또는 기타토지)로 다시 입력해 주세요.",
       totalOwnershipDays,
       effectiveBusinessDays: r1.effectiveBusinessDays,
-      gracePeriodDays: 0,
+      gracePeriodDays: r1.gracePeriodDays,
       businessUseRatio: r1.ratio,
       criteria: r1.criteria,
       warnings,
@@ -98,7 +98,7 @@ export function judgeVillaLand(
   // ── Step 3-1-1: 읍·면 농어촌주택 ────────────────────────────────
   if (v.isEupMyeon && v.isRuralHousing) {
     const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
-    const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "villa", rules);
+    const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "villa", rules, input.gracePeriods);
     if (r2.meets) {
       steps.push({
         id: "villa_rural",
@@ -156,7 +156,7 @@ function buildPass(
     appliedLaws,
     totalOwnershipDays: ctx.totalOwnershipDays,
     effectiveBusinessDays: ctx.r.effectiveBusinessDays,
-    gracePeriodDays: 0,
+    gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
     warnings,
@@ -177,7 +177,7 @@ function buildFail(
     appliedLaws,
     totalOwnershipDays: ctx.totalOwnershipDays,
     effectiveBusinessDays: ctx.r.effectiveBusinessDays,
-    gracePeriodDays: 0,
+    gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
     warnings,

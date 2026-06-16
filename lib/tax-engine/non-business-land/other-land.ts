@@ -88,7 +88,7 @@ export function judgeOtherLand(
   const isNonComprehensive = effectiveTaxType !== "comprehensive";
   const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
   if (isNonComprehensive) {
-    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules);
+    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules, input.gracePeriods);
     if (r.meets) {
       steps.push({
         id: "other_tax_type_criteria",
@@ -120,7 +120,7 @@ export function judgeOtherLand(
 
   // ── Step 3-1-1: 거주·사업관련 토지 + 기간기준 ──────────────────────
   if (o.isRelatedToResidenceOrBusiness) {
-    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules);
+    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules, input.gracePeriods);
     if (r.meets) {
       appliedLaws.push(NBL.OTHER_LAND_BUSINESS);
       steps.push({
@@ -153,7 +153,7 @@ export function judgeOtherLand(
     detail: "거주·사업과 직접 관련 플래그 미설정",
     legalBasis: NBL.OTHER_LAND_BUSINESS,
   });
-  const dummyR = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules);
+  const dummyR = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules, input.gracePeriods);
   return buildFail("종합합산 + 거주·사업관련 미해당 → 비사업용", steps, appliedLaws, warnings, {
     r: dummyR, totalOwnershipDays,
   });
@@ -178,7 +178,7 @@ function buildPass(
     appliedLaws,
     totalOwnershipDays: ctx.totalOwnershipDays,
     effectiveBusinessDays: ctx.r.effectiveBusinessDays,
-    gracePeriodDays: 0,
+    gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
     warnings,
@@ -199,7 +199,7 @@ function buildFail(
     appliedLaws,
     totalOwnershipDays: ctx.totalOwnershipDays,
     effectiveBusinessDays: ctx.r.effectiveBusinessDays,
-    gracePeriodDays: 0,
+    gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
     warnings,
