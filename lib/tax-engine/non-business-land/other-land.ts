@@ -14,13 +14,17 @@ import type {
   CategoryJudgeResult,
   DateInterval,
   JudgmentStep,
+  NblRelatedBusinessType,
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
+  OtherLandUsage,
   PropertyTaxType,
   RevenueTestResult,
 } from "./types";
 import { meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
+import { computeAreaProportioning } from "./utils/area-proportioning";
+import { NBL_AREA_MULTIPLIER } from "./data/area-standards";
 import { computeRevenueTest } from "./revenue-test";
 
 /**
@@ -37,6 +41,47 @@ export function isBareLand(input: NonBusinessLandInput): boolean {
     if (o.buildingStandardValue < o.landStandardValue * 0.02) return true;
   }
   return false;
+}
+
+/**
+ * §168의11① 호별 기준면적(㎡) 해석. undefined = 면적기준 없는 호(14호·none) → boolean 유지.
+ *
+ * 자동산출(KoreanLaw 본문 검증): 7호 최대면적×1.2 · 4호 수용정원×200㎡ · 2호나 최저차고×1.5 · 13호 660㎡.
+ * 직접입력(별표 의존): 1호(별표3/4/5) · 2호가목(설치기준면적) · 5호다(별표6) · 6호(휴양 합산면적).
+ */
+export function resolveAreaLimit(o: OtherLandUsage): number | undefined {
+  switch (o.relatedBusinessType) {
+    case "hatchang":
+      return o.maxAnnualArea !== undefined ? o.maxAnnualArea * NBL_AREA_MULTIPLIER.HATCHANG_RATIO : undefined;
+    case "youth_training":
+      return o.youthCapacity !== undefined ? o.youthCapacity * NBL_AREA_MULTIPLIER.YOUTH_PER_CAPITA : undefined;
+    case "parking_garage":
+      return o.minGarageArea !== undefined ? o.minGarageArea * NBL_AREA_MULTIPLIER.GARAGE_MULTIPLIER : undefined;
+    case "vacant_lot_1household":
+      return NBL_AREA_MULTIPLIER.VACANT_LOT_1HOUSEHOLD;
+    case "sports":
+    case "parking_attached":
+    case "reserve_forces":
+    case "resort":
+      return o.standardAreaLimit; // 별표/설치기준 직접입력 (미입력 시 undefined → 면적기준 미적용)
+    default:
+      return undefined; // etc_14호 · none · 미설정 → 면적기준 없음 (boolean 유지)
+  }
+}
+
+/** §168의11① 호별 면적기준 legalBasis. 미해당(14호·legacy)은 OTHER_LAND_BUSINESS. */
+function resolveAreaLegalBasis(t: NblRelatedBusinessType | undefined): string {
+  switch (t) {
+    case "sports":                return NBL.OTHER_LAND_AREA_SPORTS;
+    case "parking_attached":      return NBL.OTHER_LAND_AREA_PARKING;
+    case "parking_garage":        return NBL.OTHER_LAND_AREA_GARAGE;
+    case "youth_training":        return NBL.OTHER_LAND_AREA_YOUTH;
+    case "reserve_forces":        return NBL.OTHER_LAND_AREA_RESERVE;
+    case "resort":                return NBL.OTHER_LAND_AREA_RESORT;
+    case "hatchang":              return NBL.OTHER_LAND_AREA_HATCHANG;
+    case "vacant_lot_1household": return NBL.OTHER_LAND_AREA_VACANT_LOT;
+    default:                      return NBL.OTHER_LAND_BUSINESS;
+  }
 }
 
 export function judgeOtherLand(
@@ -141,32 +186,72 @@ export function judgeOtherLand(
     });
   }
 
-  // ── Step 3-1-1: 거주·사업관련 토지 + 기간기준 ──────────────────────
-  if (o.isRelatedToResidenceOrBusiness) {
+  // ── Step 3-1-1: §168의11① 거주·사업관련 토지 (호별 면적기준) ──────────
+  // relatedBusinessType(호) 우선, 미설정 시 legacy isRelatedToResidenceOrBusiness fallback.
+  const relatedType = o.relatedBusinessType;
+  const isRecognizedHo = relatedType !== undefined && relatedType !== "none";
+  const isRelated = isRecognizedHo || o.isRelatedToResidenceOrBusiness;
+
+  if (isRelated) {
     const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "other_land", rules, input.gracePeriods);
-    if (r.meets) {
-      appliedLaws.push(NBL.OTHER_LAND_BUSINESS);
+    const legalBasis = resolveAreaLegalBasis(relatedType);
+
+    if (!r.meets) {
       steps.push({
         id: "other_residence_business",
         label: "Step 3-1-1 거주·사업관련 토지 + 기간기준",
-        status: "PASS",
-        detail: "거주·사업과 직접 관련 + 기간기준 충족",
-        legalBasis: NBL.OTHER_LAND_BUSINESS,
+        status: "FAIL",
+        detail: `거주·사업관련이나 기간기준 미충족 — ${r.detail}`,
+        legalBasis,
       });
-      return buildPass("거주·사업관련 토지 + 기간기준 충족", steps, appliedLaws, warnings, {
+      return buildFail("거주·사업관련 토지이나 기간기준 미충족", steps, appliedLaws, warnings, {
         r, totalOwnershipDays, revenueTestDetail,
       });
     }
+
+    appliedLaws.push(legalBasis);
+
+    // 호별 기준면적 해석 — 초과분 비사업용 면적 안분 (§168의11①)
+    const areaLimit = resolveAreaLimit(o);
+    if (areaLimit !== undefined && input.landArea > areaLimit) {
+      const areaProportioning = computeAreaProportioning(input.landArea, areaLimit);
+      steps.push({
+        id: "other_area_limit",
+        label: "Step 3-1-1 §168의11① 호별 기준면적",
+        status: "FAIL",
+        detail: `기준면적 ${areaLimit}㎡ 초과 → 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용`,
+        legalBasis,
+      });
+      return {
+        isBusiness: false,
+        reason: `기준면적 초과 — 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용`,
+        steps,
+        appliedLaws,
+        areaProportioning,
+        totalOwnershipDays,
+        effectiveBusinessDays: r.effectiveBusinessDays,
+        gracePeriodDays: r.gracePeriodDays,
+        businessUseRatio: areaProportioning.nonBusinessRatio,
+        criteria: r.criteria,
+        revenueTestDetail,
+        warnings,
+      };
+    }
+
+    // 기준면적 이내 또는 면적기준 없는 호(14호·legacy) → 전량 사업용
     steps.push({
       id: "other_residence_business",
-      label: "Step 3-1-1 거주·사업관련 토지 + 기간기준",
-      status: "FAIL",
-      detail: `거주·사업관련이나 기간기준 미충족 — ${r.detail}`,
-      legalBasis: NBL.OTHER_LAND_BUSINESS,
+      label: areaLimit !== undefined ? "Step 3-1-1 §168의11① 호별 기준면적" : "Step 3-1-1 거주·사업관련 토지 + 기간기준",
+      status: "PASS",
+      detail: areaLimit !== undefined
+        ? `거주·사업관련(§168의11①) + 기준면적 ${areaLimit}㎡ 이내 + 기간기준 충족`
+        : "거주·사업과 직접 관련 + 기간기준 충족",
+      legalBasis,
     });
-    return buildFail("거주·사업관련 토지이나 기간기준 미충족", steps, appliedLaws, warnings, {
-      r, totalOwnershipDays, revenueTestDetail,
-    });
+    return buildPass(
+      areaLimit !== undefined ? "거주·사업관련 토지 + 기준면적 이내" : "거주·사업관련 토지 + 기간기준 충족",
+      steps, appliedLaws, warnings, { r, totalOwnershipDays, revenueTestDetail },
+    );
   }
 
   steps.push({

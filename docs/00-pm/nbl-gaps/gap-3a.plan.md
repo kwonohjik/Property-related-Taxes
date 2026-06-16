@@ -274,3 +274,32 @@ Do 진입 전 anchor #1(isPreDo=true) 먼저 작성·실행하여 현행 엔진�
 | Low | 누락 | sports enum: 1호 별표3/4/5 3종을 `sports` 단일 통합 → standardAreaLimit 참조 별표 구분불가. RadioCard 라벨에 별표번호 표기 또는 `sports_player`/`sports_employee` 세분. |
 | Low | UI누락 | etc_14호 → buildOtherLand `isRelatedToResidenceOrBusiness=true` 도출규칙 §5.1 명시(onChange 동시 set, useEffect 미러링 금지). |
 | Low | 개선 | co-ownership **확인 완료**: applyCoOwnershipRatio(co-ownership.ts:32-40)가 areaProportioning 지분 스케일, nonBusinessRatio 불변. §7.6 "확인 필요"→단정. |
+
+---
+
+## ✅ Do 구현 완료 (2026-06-16, PR-C)
+
+> Pre-Do anchor 우선(7건 RED→GREEN) → 엔진 → 14지점 → UI. KoreanLaw 본문 재검증 후 배율 하드코딩. tsc 0 · 전체 vitest green · ESLint 0.
+
+### KoreanLaw 본문 재검증 (하드코딩 배율)
+`get_law_text` MST 286211 §168조의11① · MST 286379 §83의4 직접 확인:
+- 2호나목 **×1.5**(§168의11①2호나목 본문) · 7호 **×1.2**(7호 본문) · 13호 **660㎡**(13호 본문) · 4호 **수용정원×200㎡**(§83의4⑧).
+
+### 엔진
+- `types.ts`: `NblRelatedBusinessType`(10) + OtherLandUsage 5필드(relatedBusinessType·standardAreaLimit·maxAnnualArea·youthCapacity·minGarageArea).
+- `data/area-standards.ts`(신규): `NBL_AREA_MULTIPLIER`(HATCHANG 1.2·YOUTH 200·GARAGE 1.5·VACANT 660).
+- `legal-codes/transfer.ts`: `OTHER_LAND_AREA_*` 8종.
+- `utils/area-proportioning.ts`(신규): `computeAreaProportioning` pasture에서 추출 → pasture·other-land 단일소스(SR-1).
+- `other-land.ts`: `resolveAreaLimit`·`resolveAreaLegalBasis` 헬퍼 + Step 3-1-1 호별 분기(초과분 면적안분 → isBusiness=false·areaProportioning, businessUseRatio=nonBusinessRatio). 14호·legacy boolean 전량판정 보존.
+- `form-mapper-helpers.ts`: buildOtherLand 5필드 매핑.
+
+### 14 동기화 지점
+- ① store(`calc-wizard-asset.ts` → 800줄 정책 위반(815)으로 **`calc-wizard-asset-nbl-other.ts` 슬라이스 추출**, AssetForm extends, 782줄로 복귀) · ② factory+nbl-defaults 5기본값 · ④⑬ prefix-pick 자동(line 65) · ⑤ OtherLandDetailSection(ToggleCard→RadioCardGroup 10옵션+조건부 DecimalInput) · ⑦ 결과카드 면적안분 안내(중과는 판정 boolean 기준·부분 안분 미반영 명시) · ⑧ validate(면적인자 요구 호 미입력 차단·자동안분 fallback 금지) · ⑫ Zod 5필드 명시 · ⑨⑩⑪⑭ 무관/자동.
+
+### anchor
+- 엔진 `other-land-area-limit.test.ts` 7건(parking/hatchang/youth/garage/vacant within·over/etc14).
+- 파이프라인 `nbl-raw-to-engine-input.test.ts` +2(⑫⑬⑭ 침묵 strip 방지).
+- UI `nbl-other-land-section-render.test.tsx` 6건(⑤ RadioCardGroup·조건부 입력·onChange).
+
+### scope OUT (후속 분리)
+- STEP 0.6 boolean-only → 실제 부분 면적안분 중과(5지목 공통). §168의11⑤ 연접 다필지·⑥ 복합용도. 별표3~6 정본 자동산출. (수입금액비율 §168의11②는 PR#226 완료.)

@@ -1,0 +1,60 @@
+// @vitest-environment jsdom
+/**
+ * ⑤ UI 위젯 anchor — OtherLandDetailSection §168의11① 호별 면적기준 (갭 3a)
+ *
+ * RadioCardGroup 호 옵션 렌더 + 선택 시 조건부 면적인자 입력 노출 + onAssetChange wiring 검증.
+ */
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+
+afterEach(cleanup);
+
+import { OtherLandDetailSection } from "@/components/calc/transfer/nbl/OtherLandDetailSection";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+
+describe("[NBL-OTHER-UI] ⑤ §168의11① 호별 면적기준 위젯", () => {
+  it("호 옵션(부설주차장·하치장·청소년수련시설)이 RadioCardGroup으로 렌더된다", () => {
+    const asset = makeDefaultAsset(1);
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/부설주차장 \(2호 가목\)/)).toBeTruthy();
+    expect(screen.getByText(/하치장·야적장·적치장 \(7호\)/)).toBeTruthy();
+    expect(screen.getByText(/청소년수련시설 \(4호\)/)).toBeTruthy();
+  });
+
+  it("호 라디오 선택 시 onAssetChange(nblOtherRelatedBusinessType) 호출", () => {
+    const asset = makeDefaultAsset(1);
+    const onChange = vi.fn();
+    render(<OtherLandDetailSection asset={asset} onAssetChange={onChange} />);
+    const radio = screen.getByTestId("nbl-other-related-parking_attached");
+    fireEvent.click(radio);
+    expect(onChange).toHaveBeenCalledWith({ nblOtherRelatedBusinessType: "parking_attached" });
+  });
+
+  it("parking_attached 선택 시 '기준면적 (㎡)' 입력이 노출된다", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "parking_attached" as const };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/기준면적 \(㎡\)/)).toBeTruthy();
+  });
+
+  it("hatchang 선택 시 '매년 최대 사용면적 (㎡)' 입력이 노출된다", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "hatchang" as const };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/매년 최대 사용면적 \(㎡\)/)).toBeTruthy();
+  });
+
+  it("vacant_lot_1household 선택 시 안내(660㎡)만 노출, 면적 입력 없음", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "vacant_lot_1household" as const };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    // 안내 카드 고유 문구(별도 면적 입력 불필요) — 옵션 설명과 구분
+    expect(screen.getByText(/별도 면적 입력 불필요/)).toBeTruthy();
+    expect(screen.queryByText(/기준면적 \(㎡\)/)).toBeNull();
+  });
+
+  it("none(해당 없음) 선택 시 면적인자 입력(라벨 ㎡) 미노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "none" as const };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    // FieldCard 라벨은 '(㎡)' 접미 — 옵션 설명("매년 최대 사용면적 × 120%...")과 구분
+    expect(screen.queryByText(/기준면적 \(㎡\)/)).toBeNull();
+    expect(screen.queryByText(/매년 최대 사용면적 \(㎡\)/)).toBeNull();
+  });
+});

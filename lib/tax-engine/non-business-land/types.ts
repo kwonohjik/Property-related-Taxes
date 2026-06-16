@@ -204,6 +204,27 @@ export type PropertyTaxType =
   | "special_sum"
   | "comprehensive";
 
+/**
+ * §168의11① 호별 분기 — 면적기준 정밀판정.
+ * 면적기준 자동산출: parking_garage(최저차고×1.5)·youth_training(수용정원×200㎡)·
+ * hatchang(최대면적×1.2)·vacant_lot_1household(660㎡ 고정).
+ * 별표 직접입력(standardAreaLimit): sports(별표3/4/5)·parking_attached(설치기준면적)·
+ * reserve_forces(별표6제2호)·resort(휴양시설업 합산면적).
+ * 면적기준 없음(boolean 유지): etc_14호(유사토지)·none.
+ * 수입금액비율(2호다·10·11다·12호)은 §168의11② revenueTest 별도 경로.
+ */
+export type NblRelatedBusinessType =
+  | "sports"                // 1호 체육시설 (별표3/4/5 — standardAreaLimit 직접입력)
+  | "parking_attached"      // 2호 가목 부설주차장 (설치기준면적 직접입력)
+  | "parking_garage"        // 2호 나목 업무용자동차 주차장 (최저차고기준면적 × 1.5)
+  | "youth_training"        // 4호 청소년수련시설 (수용정원 × 200㎡ 초과 제외)
+  | "reserve_forces"        // 5호 다목 예비군훈련 (별표6 제2호 — standardAreaLimit)
+  | "resort"                // 6호 휴양시설업 (합산 기준면적 직접입력)
+  | "hatchang"              // 7호 하치장·야적장 (최대면적 × 120%)
+  | "vacant_lot_1household" // 13호 무주택1세대 1필지 나지 (660㎡ 고정)
+  | "etc_14호"              // 14호 유사토지 (면적기준 없음 — boolean 유지)
+  | "none";                 // 호 미해당 (재산세유형·기간기준만)
+
 export interface OtherLandUsage {
   propertyTaxType: PropertyTaxType;
   hasBuilding: boolean;
@@ -211,6 +232,16 @@ export interface OtherLandUsage {
   buildingStandardValue?: number;
   landStandardValue?: number;
   isRelatedToResidenceOrBusiness: boolean;
+  /** §168의11① 호별 분기. 미설정 시 legacy isRelatedToResidenceOrBusiness fallback. */
+  relatedBusinessType?: NblRelatedBusinessType;
+  /** 별표/설치기준 직접입력 기준면적(㎡) — sports·parking_attached·reserve_forces·resort. */
+  standardAreaLimit?: number;
+  /** 7호 하치장: 매년 최대 사용면적(㎡). 엔진이 ×1.2 (§168의11①7호). */
+  maxAnnualArea?: number;
+  /** 4호 청소년수련시설: 수용정원(명). 엔진이 ×200㎡ (시행규칙 §83의4⑧). */
+  youthCapacity?: number;
+  /** 2호 나목: 최저차고기준면적(㎡). 엔진이 ×1.5 (§168의11①2호나목). */
+  minGarageArea?: number;
 }
 
 export interface ForestUsageDetail {

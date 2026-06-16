@@ -207,6 +207,12 @@ export const NBL_DEFAULTS = {
   nblOtherBuildingValue: "",
   nblOtherLandValue: "",
   nblOtherIsRelatedToResidence: false,
+  // §168의11① 호별 면적기준 (갭 3a)
+  nblOtherRelatedBusinessType: "",
+  nblOtherStandardAreaLimit: "",
+  nblOtherMaxAnnualArea: "",
+  nblOtherYouthCapacity: "",
+  nblOtherMinGarageArea: "",
   // §168의11② 수입금액비율 (기타토지 — 2호다목·10·11다·12호 특정 업종)
   nblRevenueBusinessType: "" as
     | ""

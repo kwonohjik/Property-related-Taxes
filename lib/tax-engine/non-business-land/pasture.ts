@@ -26,6 +26,7 @@ import {
 } from "./period-criteria";
 import { isUrbanForPasture } from "./urban-area";
 import { getOwnershipStart } from "./utils/period-math";
+import { computeAreaProportioning } from "./utils/area-proportioning";
 import { getLivestockStandardArea } from "./data/livestock-standards";
 
 function getLivestockPeriods(input: NonBusinessLandInput): DateInterval[] {
@@ -62,19 +63,6 @@ function isRelatedPasture(input: NonBusinessLandInput): { applies: boolean; reas
     }
   }
   return { applies: false, reason: "" };
-}
-
-function computeAreaProportioning(totalArea: number, standardArea: number): AreaProportioning {
-  const businessArea = Math.min(totalArea, standardArea);
-  const nonBusinessArea = Math.max(0, totalArea - standardArea);
-  const nonBusinessRatio = totalArea > 0 ? Math.round((nonBusinessArea / totalArea) * 10000) / 10000 : 0;
-  return {
-    totalArea,
-    businessArea,
-    nonBusinessArea,
-    nonBusinessRatio,
-    buildingMultiplier: 1,
-  };
 }
 
 export function judgePasture(
