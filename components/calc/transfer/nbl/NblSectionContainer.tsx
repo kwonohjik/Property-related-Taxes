@@ -48,9 +48,12 @@ const ZONE_TYPE_OPTIONS = [
 export function NblSectionContainer({
   asset,
   onAssetChange,
+  transferDate,
 }: {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /** form-level 양도일 — GracePeriodSection 5호 미리보기에 전달 */
+  transferDate?: string;
 }) {
   const anyExempt =
     asset.nblExemptInheritBefore2007 ||
@@ -188,7 +191,7 @@ export function NblSectionContainer({
 
         {/* 6. 부득이한 사유 */}
         <div className="mt-3">
-          <GracePeriodSection asset={asset} onAssetChange={onAssetChange} />
+          <GracePeriodSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
         </div>
       </div>
     </div>

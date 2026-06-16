@@ -281,3 +281,37 @@ anchorTests[0] (isPreDo)을 먼저 작성·실행 → 현행 엔진이 종료일
 | Medium | UI누락 | §6.1: string→Date 변환(toOptionalDate) + 자동종료일 read-only testid `nbl-grace-auto-end-{idx}`. |
 | Low | 개선 | 단서 토글 배치: **GracePeriodSection 직전(6번 섹션 상단)**. "5번 공통필드"는 도시편입·지분 영역 — 의미 불일치. |
 | Low | 개선 | sessionStorage: 구 데이터 전부 `other_justifiable`(event_window, anchorDate=구startDate, endDate=구endDate)로 일원화 → 손실0(fixed 호 매핑은 endDate 무시 위험). |
+
+---
+
+## ✅ Do 구현 완료 (2026-06-17, PR-D)
+
+> Pre-Do anchor 우선(resolveGraceIntervals 9건) → 엔진 → 14지점 → UI. KoreanLaw 본문 재검증 후 구현. tsc 0 · 전체 vitest 8506 passed · ESLint 0.
+
+### KoreanLaw 본문 재검증
+`get_law_text` MST 286211 §168조의14①(1~3호 event_window·②경매/공매 양도일의제 scope OUT) · MST 286379 §83조의5①(12호: 1·2·3·7·12호 event_window·4호 착공~제공종료·5호 취득+2년∪착공진행·6/8/10/11호 +2년·9호 +5년·단서 1·2호 배제).
+
+### 설계 결정 (R1 Critical 반영)
+- **store `GracePeriodInput` 변형 금지**(pasture·villa 공유) → 신규 **`NblGracePeriodInput`**(reasonCode 15종) 도입, nblGracePeriods만 교체.
+- `GraceReasonCode` = §168의14①(3) + §83의5①(12) = **15종**(R1 High: §168의14①1-3호 보존).
+- `unavoidableReasons` 채널 **제거**(UI/store wiring 0·engine-only 확인) → gracePeriods 단일 채널.
+- 엔진 `GracePeriod.type`(write-only) → `reasonCode`.
+
+### 엔진
+- `grace-reason-period.ts`(신규): `GRACE_REASON_SPECS`(15) + `resolveGraceIntervals(reasonCode, anchor, endInput, secondary, ctx)`. 6호 취득일 자동(anchorFromAcquisition)·5호 compound([취득,취득+2년]∪[착공,종료||양도일]).
+- `form-mapper.ts`: grace 매핑 → resolveGraceIntervals(종료일 자동산정). isRealEstateDealerMatter 전파.
+- `engine.ts`: unavoidableReasons 병합 제거.
+- `types.ts`: GraceReasonCode·GracePeriod.reasonCode. GracePeriodType·UnavoidableReason·unavoidableReasons 제거.
+- `legal-codes`: UNAVOIDABLE_PERIOD 라벨 §83의5① 병기.
+
+### 14 동기화 지점
+- ① store NblGracePeriodInput + nblBusinessIsRealEstateDealer · ② factory·NBL_DEFAULTS · ③ migrateAsset(구 7-union→other_justifiable, 손실0) · ④⑬ prefix-pick 자동 · ⑤ GracePeriodSection 전면개편(15종·사유별 조건부·자동종료 미리보기·단서 토글, transferDate prop) · ⑦ 결과카드 legalBasis 자동(엔진 주입) · ⑧ validate(사유별 필수 anchorDate/endDate/착공일) · ⑫ Zod nblGracePeriodRawSchema 재정의+단서 · ⑨⑩⑪⑭ 자동/무관.
+
+### anchor
+- `grace-reason-period.test.ts` 9건(9호+5년·6호 취득일·8호·event_window·5호 compound·단서)
+- `nbl-grace-auto-period.test.ts` 4건(end-to-end raw→engine→judge: 기산일만→종료일 자동→사업용 전환·단서 배제)
+- `nbl-grace-section-render.test.tsx` 6건(⑤ UI)
+- 회귀 재정렬: grace-wiring·qa-integration(QA-101)·integration·transfer-tax-nbl-wiring·nbl-detailed-cases·nbl-raw-to-engine-input
+
+### scope OUT (후속)
+§83의5②/§168의14② 양도일 의제(경매·공매·신문공고 — transferDate 의제 별도 경로)·§83의5⑤⑥ 별지 제92호서식 신청·5호 건설중단 세부 입력.

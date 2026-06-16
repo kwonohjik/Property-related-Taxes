@@ -22,7 +22,7 @@ export interface ResidenceHistoryInput {
   hasResidentRegistration: boolean;
 }
 
-/** 부득이한 사유 유예기간 1건 (§168-14①) */
+/** 사업용 사용기간 1건 — 목장 사육기간·별장 사용기간 등 (start/end 직접 입력) */
 export interface GracePeriodInput {
   type:
     | "inheritance"
@@ -34,6 +34,37 @@ export interface GracePeriodInput {
     | "land_replotting";
   startDate: string;
   endDate: string;
+  description: string;
+}
+
+/** 부득이한 사유 유예기간 1건 (§168의14①·시행규칙 §83의5①) — 종료일 사유별 자동산정 (갭 3b) */
+export interface NblGracePeriodInput {
+  reasonCode:
+    // 시행령 §168의14① 1~3호
+    | "use_prohibited"
+    | "protected_zone"
+    | "inherited_restricted"
+    // 시행규칙 §83의5① 1~12호
+    | "building_permit_restricted"
+    | "construction_start_restricted"
+    | "access_road"
+    | "public_open_space"
+    | "construction_in_progress"
+    | "mortgage_or_liquidation"
+    | "ownership_litigation"
+    | "urban_dev_buildable"
+    | "demolition"
+    | "business_closure_relocation"
+    | "natural_disaster_wasteland"
+    | "other_justifiable";
+  /** 기산일 (멸실일·건축가능일·사유발생일·event_window 개시일). 6호·5호는 취득일 자동. */
+  anchorDate: string;
+  /** event_window/4호 종료일. fixed 호(6/8/9/10/11)는 자동산정으로 미사용. */
+  endDate: string;
+  /** 5호 착공일 */
+  secondaryDate?: string;
+  /** 5호 건설진행종료일(선택) */
+  secondaryEndDate?: string;
   description: string;
 }
 
@@ -228,5 +259,7 @@ export const NBL_DEFAULTS = {
   nblRevenueCurrentLandValue: "",
   nblRevenuePriorRevenue: "",
   nblRevenuePriorLandValue: "",
-  nblGracePeriods: [] as GracePeriodInput[],
+  nblGracePeriods: [] as NblGracePeriodInput[],
+  // §83의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제) 게이트
+  nblBusinessIsRealEstateDealer: false,
 } as const satisfies Record<string, unknown>;

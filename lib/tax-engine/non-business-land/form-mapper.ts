@@ -9,12 +9,13 @@
 import type {
   NonBusinessLandInput,
   GracePeriod,
-  GracePeriodType,
+  GraceReasonCode,
   OwnerResidenceHistory,
   LandType,
   LocationInfo,
   ZoneType,
 } from "./types";
+import { resolveGraceIntervals } from "./grace-reason-period";
 import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
 import {
   asString, asBool, asArray,
@@ -80,16 +81,21 @@ export function mapAssetToNblInput(
     parseDate,
   );
 
-  // 유예기간
+  // 유예기간 — 사유별 법정기간 자동산정 (§168의14①·§83의5①)
+  const isRealEstateDealerMatter = asBool(asset.nblBusinessIsRealEstateDealer);
   const rawGrace = asArray<GracePeriodInput>(asset.nblGracePeriods);
-  const gracePeriods: GracePeriod[] = rawGrace.length > 0
-    ? rawGrace.flatMap((p): GracePeriod[] => {
-        const s = parseDate(p.startDate);
-        const e = parseDate(p.endDate);
-        if (!s || !e) return [];
-        return [{ type: p.type as GracePeriodType, startDate: s, endDate: e }];
-      })
-    : [];
+  const gracePeriods: GracePeriod[] = rawGrace.flatMap((p): GracePeriod[] => {
+    const reasonCode = asString(p.reasonCode) as GraceReasonCode;
+    if (!reasonCode) return [];
+    const intervals = resolveGraceIntervals(
+      reasonCode,
+      parseDate(asString(p.anchorDate)),
+      parseDate(asString(p.endDate)),
+      parseDate(asString(p.secondaryDate ?? "")),
+      { transferDate, acquisitionDate, isRealEstateDealerMatter },
+    );
+    return intervals.map((iv) => ({ reasonCode, startDate: iv.start, endDate: iv.end }));
+  });
 
   // 소유자 주거 이력
   const rawRes = asArray<ResidenceHistoryInput>(asset.nblResidenceHistories);
@@ -139,6 +145,7 @@ export function mapAssetToNblInput(
     ...(ownerProfile ? { ownerProfile } : {}),
     businessUsePeriods,
     gracePeriods,
+    isRealEstateDealerMatter,
     housingFootprint: parseNumber(asString(asset.nblHousingFootprint)),
   };
 }

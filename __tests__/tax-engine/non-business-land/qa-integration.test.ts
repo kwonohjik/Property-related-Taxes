@@ -484,20 +484,15 @@ describe("순수 함수 원칙 및 입력 안전성", () => {
   /**
    * QA-101: gracePeriods + unavoidableReasons 병합 → 유효 사업용 일수에 반영
    */
-  it("QA-101: unavoidableReasons 입력 → engine에서 gracePeriods에 병합됨", () => {
-    // gracePeriods 없이 unavoidableReasons만 입력해도 engine이 병합함
+  it("QA-101: gracePeriods(통합 채널) 입력 → engine 정상 처리 (구 unavoidableReasons 대체)", () => {
+    // 갭 3b: unavoidableReasons 채널 제거 → gracePeriods 단일 채널로 일원화
     const input = farmlandBase({
       farmerResidenceDistance: 10,
       businessUsePeriods: [
         { startDate: d("2010-01-02"), endDate: d("2020-01-01"), usageType: "farming" },
       ],
-      gracePeriods: [],
-      unavoidableReasons: [
-        {
-          type: "illness",
-          startDate: d("2015-01-01"),
-          endDate: d("2016-01-01"),
-        },
+      gracePeriods: [
+        { reasonCode: "natural_disaster_wasteland", startDate: d("2015-01-01"), endDate: d("2016-01-01") },
       ],
     });
     // 엔진이 오류 없이 실행되고 gracePeriods에 병합하는지 확인

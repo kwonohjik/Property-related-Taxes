@@ -36,10 +36,17 @@ export interface ResidenceHistoryInput {
   hasResidentRegistration: boolean;
 }
 
+/** 유예기간 raw 항목 (§168의14①·§83의5①) — 종료일은 사유별 법정기간으로 자동산정 */
 export interface GracePeriodInput {
-  type: string;
-  startDate: string;
-  endDate: string;
+  reasonCode: string;
+  /** 기산일 (멸실일·건축가능일·사유발생일 등). 6호·5호는 취득일 자동(미입력 허용). */
+  anchorDate?: string;
+  /** event_window/4호 종료일. fixed 호는 자동산정(미사용). */
+  endDate?: string;
+  /** 5호 착공일 */
+  secondaryDate?: string;
+  /** 5호 건설진행종료일(선택) */
+  secondaryEndDate?: string;
   description?: string;
 }
 

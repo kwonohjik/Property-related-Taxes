@@ -17,8 +17,6 @@ import type {
   NonBusinessLandInput,
   NonBusinessLandJudgment,
   NonBusinessLandJudgmentRules,
-  GracePeriod,
-  GracePeriodType,
 } from "./types";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "./types";
 import { classifyLandCategory } from "./land-category";
@@ -90,16 +88,8 @@ export function judgeNonBusinessLand(
     legalBasis: NBL.UNCONDITIONAL,
   });
 
-  // ── Step 3 준비: 부득이한 사유 → gracePeriods 병합 ────────────────
-  const mergedGracePeriods: GracePeriod[] = [
-    ...input.gracePeriods,
-    ...(input.unavoidableReasons ?? []).map((u) => ({
-      type: "unavoidable" as GracePeriodType,
-      startDate: u.startDate,
-      endDate: u.endDate,
-    })),
-  ];
-  const engineInput: NonBusinessLandInput = { ...input, gracePeriods: mergedGracePeriods };
+  // ── Step 3 준비: 유예기간(§168의14①·§83의5①) — form-mapper에서 사유별 자동산정 완료 ──
+  const engineInput: NonBusinessLandInput = input;
 
   // ── Step 4: 개별 지목별 judge ─────────────────────────────────────
   let catResult: CategoryJudgeResult;

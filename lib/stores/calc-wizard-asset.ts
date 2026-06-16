@@ -19,10 +19,11 @@ export type {
   NblBusinessUsePeriod,
   ResidenceHistoryInput,
   GracePeriodInput,
+  NblGracePeriodInput,
   HouseEntry,
   PresaleRightEntry,
 } from "./calc-wizard-asset-nbl";
-import type { NblBusinessUsePeriod, ResidenceHistoryInput, GracePeriodInput } from "./calc-wizard-asset-nbl";
+import type { NblBusinessUsePeriod, ResidenceHistoryInput, NblGracePeriodInput } from "./calc-wizard-asset-nbl";
 
 // ── 감면 폼 타입 (별도 모듈, 800줄 정책) ──
 export type {
@@ -481,8 +482,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   nblVillaIsAfter20150101: boolean;
   // nblOther*·nblRevenue* (기타토지 §168의11) 일체는 NblOtherFormSlice로 분리 (calc-wizard-asset-nbl-other.ts).
 
-  // ── NBL 부득이한 사유 ──
-  nblGracePeriods: GracePeriodInput[];
+  // ── NBL 부득이한 사유 (§168의14①·§83의5①) ──
+  nblGracePeriods: NblGracePeriodInput[];
+  /** §83의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제) */
+  nblBusinessIsRealEstateDealer: boolean;
 
   // ── 상속 부동산 취득가액 의제 — InheritanceAcquisitionFormSlice (calc-wizard-asset-inheritance-acq.ts) ──
 

@@ -48,11 +48,13 @@ const nblPeriodRawSchema = z.object({
   description: z.string().optional(),
 });
 
-/** raw 유예기간 항목 (type=문자열 — 엔진이 GracePeriodType로 캐스팅) */
+/** raw 유예기간 항목 (§168의14①·§83의5①) — 종료일은 엔진이 사유별 법정기간으로 자동산정 */
 const nblGracePeriodRawSchema = z.object({
-  type: z.string(),
-  startDate: z.string(),
-  endDate: z.string(),
+  reasonCode: z.string(),
+  anchorDate: z.string().optional(),
+  endDate: z.string().optional(),
+  secondaryDate: z.string().optional(),
+  secondaryEndDate: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -145,6 +147,8 @@ export const nonBusinessLandRawSchema = z.object({
   nblExemptUrbanFarmlandJongjoong: z.boolean().optional(),
   nblExemptInong: z.boolean().optional(),
   nblExemptInongDate: z.string().optional(),
+  // §83의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제)
+  nblBusinessIsRealEstateDealer: z.boolean().optional(),
   // 배열
   nblBusinessUsePeriods: z.array(nblPeriodRawSchema).optional(),
   nblResidenceHistories: z.array(nblResidenceHistoryRawSchema).optional(),

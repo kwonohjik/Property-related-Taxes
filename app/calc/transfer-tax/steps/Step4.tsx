@@ -456,6 +456,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       {primaryKind === "land" && primary?.isNonBusinessLand && primary?.nblUseDetailedJudgment && primary && (
         <NblSectionContainer
           asset={primary}
+          transferDate={form.transferDate}
           onAssetChange={(patch) =>
             onChange({ assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) })
           }
