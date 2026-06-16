@@ -105,10 +105,14 @@ export interface PropertyTaxInput {
   housingBuildingValue?: number;
 
   /**
-   * 전년도 재산세 납부세액 (원) — 세부담상한 계산에 사용
+   * 전년도 재산세 납부세액 (원) — 세부담상한 계산에 사용 (direct 모드, §118 단서)
    * 미입력 시 세부담상한 생략 + warnings에 안내 추가
    */
   previousYearTax?: number;
+  /** 직전연도 과세표준 (원) — recompute 모드(§118 본문) 직전 세율 재산정용 (건축물·선박·종합합산) */
+  previousYearTaxBase?: number;
+  /** 세부담상한 모드 — "direct"(직전 세액 직접입력, 기본) | "recompute"(직전 과세표준 재산정) */
+  taxCapMode?: "direct" | "recompute";
 
   /** 계산 기준일 (YYYY-MM-DD, 기본: 과세기준일 6월 1일) */
   targetDate?: string;

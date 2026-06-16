@@ -19,6 +19,8 @@
 
 import { applyRate, truncateToThousand } from "./tax-utils";
 import { PROPERTY_CAL, PROPERTY_CONST, PROPERTY_SEPARATE_CONST } from "./legal-codes";
+import { getCurrentPropertyRateSet } from "./data/property-rate-history";
+import type { PropertyRateSet } from "./data/property-rate-history";
 
 // ============================================================
 // P3-03: 타입 정의
@@ -403,16 +405,21 @@ function safeMultiplyLand(pricePerSqm: number, area: number): number {
  * │ > 1억원      │ 0.5%  │ 250,000원   │
  * └──────────────┴────────┴─────────────┘
  */
-export function calculateComprehensiveAggregateTax(taxBase: number): number {
+export function calculateComprehensiveAggregateTax(
+  taxBase: number,
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
+): number {
   if (taxBase <= 0) return 0;
 
-  const B1 = PROPERTY_CONST.COMPREHENSIVE_BRACKET_1; // 5천만원
-  const B2 = PROPERTY_CONST.COMPREHENSIVE_BRACKET_2; // 1억원
-  const R1 = PROPERTY_CONST.COMPREHENSIVE_RATE_1;    // 0.002
-  const R2 = PROPERTY_CONST.COMPREHENSIVE_RATE_2;    // 0.003
-  const R3 = PROPERTY_CONST.COMPREHENSIVE_RATE_3;    // 0.005
-  const D2 = PROPERTY_CONST.COMPREHENSIVE_DEDUCTION_2; // 50,000
-  const D3 = PROPERTY_CONST.COMPREHENSIVE_DEDUCTION_3; // 2,550,000
+  const {
+    bracket1: B1,
+    bracket2: B2,
+    rate1: R1,
+    rate2: R2,
+    rate3: R3,
+    deduction2: D2,
+    deduction3: D3,
+  } = rateSet.landComprehensive;
 
   if (taxBase <= B1) {
     return applyRate(taxBase, R1);
