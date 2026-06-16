@@ -209,6 +209,8 @@ export const NBL_DEFAULTS = {
   nblExemptUrbanFarmlandJongjoong: false,
   nblExemptInong: false,
   nblExemptInongDate: "",
+  nblDeemedTransferReason: "none",
+  nblDeemedTransferDate: "",
   nblUrbanIncorporationDate: "",
   nblIsMetropolitanArea: "" as "" | "yes" | "no" | "unknown",
   nblOwnershipRatio: "",

@@ -1,9 +1,23 @@
 "use client";
 
-import type { NonBusinessLandJudgment, JudgmentStep, StepStatus } from "@/lib/tax-engine/non-business-land";
+import type { NonBusinessLandJudgment, JudgmentStep, StepStatus, DeemedTransferReason } from "@/lib/tax-engine/non-business-land";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
+}
+
+const DEEMED_REASON_LABEL: Record<DeemedTransferReason, string> = {
+  none: "해당 없음",
+  auction: "민사집행법 경매 (최초 경매기일)",
+  public_sale: "국세징수법 공매 (최초 공매일)",
+  kamco_consignment: "캠코 매각위임 (위임일)",
+  newspaper_public_offering: "신문 매각공고 (최초 공고일)",
+  republication: "매각 재공고 (최초 공고일)",
+};
+
+// JSON 직렬화 경유 시 Date → ISO string 이 되므로 양쪽 모두 안전 처리.
+function formatDeemedDate(d: Date | string): string {
+  return typeof d === "string" ? d.slice(0, 10) : d.toISOString().slice(0, 10);
 }
 
 export function NonBusinessLandResultCard({ judgment }: Props) {
@@ -39,6 +53,16 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
             무조건 사업용 — 소득세법 시행령 §168-14③
           </p>
           <p className="text-xs text-blue-600 dark:text-blue-500 mt-0.5">{exemption.detail}</p>
+        </div>
+      )}
+
+      {/* 양도일 의제 (§168의14②) — 해당 시 */}
+      {judgment.deemedTransfer && (
+        <div className="px-4 py-3 bg-rose-50/40 dark:bg-rose-950/20 border-b border-rose-200 dark:border-rose-800">
+          <p className="text-xs font-semibold text-rose-700 dark:text-rose-400 mb-0.5">양도일 의제 (§168의14②)</p>
+          <p className="text-xs text-muted-foreground">
+            {DEEMED_REASON_LABEL[judgment.deemedTransfer.reason]} — {formatDeemedDate(judgment.deemedTransfer.date)}을 양도일로 보아 기간기준(§168의6)을 판정했습니다. (양도차익·세율·도시지역·편입유예는 실제 양도일 기준)
+          </p>
         </div>
       )}
 

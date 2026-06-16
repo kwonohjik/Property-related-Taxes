@@ -16,7 +16,7 @@ import type {
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
 } from "./types";
-import { meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
+import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart, invertPeriods } from "./utils/period-math";
 
 export function judgeVillaLand(
@@ -28,7 +28,9 @@ export function judgeVillaLand(
   const warnings: string[] = [];
 
   const ownershipStart = getOwnershipStart(input.acquisitionDate);
-  const totalOwnershipDays = Math.max(0, differenceInDays(input.transferDate, ownershipStart));
+  // §168조의14② 양도일 의제 — §168조의6 기간기준 전용
+  const pjDate = getPeriodJudgmentDate(input);
+  const totalOwnershipDays = Math.max(0, differenceInDays(pjDate, ownershipStart));
 
   const v = input.villa;
   if (!v) {
@@ -58,10 +60,10 @@ export function judgeVillaLand(
     start: p.startDate,
     end: p.endDate,
   }));
-  const nonVilla = invertPeriods(villaUse, ownershipStart, input.transferDate);
+  const nonVilla = invertPeriods(villaUse, ownershipStart, pjDate);
   // categoryGroup "villa"는 §168-6 ③ 80% 레거시 대상이 아니므로
   // `getThresholdRatio()` 는 항상 현행 60%를 반환한다 (Bug-06 정리).
-  const r1 = meetsPeriodCriteria(nonVilla, input.acquisitionDate, input.transferDate, "villa", rules, input.gracePeriods);
+  const r1 = meetsPeriodCriteria(nonVilla, input.acquisitionDate, pjDate, "villa", rules, input.gracePeriods);
 
   if (r1.meets) {
     steps.push({
@@ -97,8 +99,8 @@ export function judgeVillaLand(
 
   // ── Step 3-1-1: 읍·면 농어촌주택 ────────────────────────────────
   if (v.isEupMyeon && v.isRuralHousing) {
-    const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
-    const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "villa", rules, input.gracePeriods);
+    const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
+    const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "villa", rules, input.gracePeriods);
     if (r2.meets) {
       steps.push({
         id: "villa_rural",

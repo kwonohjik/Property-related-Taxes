@@ -20,6 +20,7 @@ import type {
 } from "./types";
 import {
   checkIncorporationGrace,
+  getPeriodJudgmentDate,
   meetsPeriodCriteria,
   type PeriodCriteriaResult,
 } from "./period-criteria";
@@ -71,7 +72,9 @@ export function judgeForest(
   const appliedLaws: string[] = [NBL.FOREST];
   const warnings: string[] = [];
   const ownershipStart = getOwnershipStart(input.acquisitionDate);
-  const totalOwnershipDays = Math.max(0, differenceInDays(input.transferDate, ownershipStart));
+  // §168조의14② 양도일 의제 — §168조의6 기간기준 전용 (도시지역·편입유예는 실제 양도일)
+  const pjDate = getPeriodJudgmentDate(input);
+  const totalOwnershipDays = Math.max(0, differenceInDays(pjDate, ownershipStart));
 
   // ── Step 3-1: 재촌기간 기간기준 (주민등록 필수) ─────────────────────
   const residenceFromHistory = computeResidencePeriods(
@@ -99,7 +102,7 @@ export function judgeForest(
   }
 
   const residencePeriods = residenceFromHistory.length > 0 ? residenceFromHistory : fallbackResidence;
-  const r1 = meetsPeriodCriteria(residencePeriods, input.acquisitionDate, input.transferDate, "forest", rules, input.gracePeriods);
+  const r1 = meetsPeriodCriteria(residencePeriods, input.acquisitionDate, pjDate, "forest", rules, input.gracePeriods);
 
   steps.push({
     id: "forest_residence",
@@ -123,8 +126,8 @@ export function judgeForest(
 
   let r2: PeriodCriteriaResult | null = null;
   if (applies) {
-    const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
-    r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "forest", rules, input.gracePeriods);
+    const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
+    r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "forest", rules, input.gracePeriods);
     if (!r2.meets) {
       steps.push({
         id: "forest_public_business",

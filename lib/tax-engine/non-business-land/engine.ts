@@ -252,6 +252,10 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
     businessUseRatio,
     criteria,
     areaProportioning: categoryResult?.areaProportioning,
+    deemedTransfer:
+      input.deemedTransferReason && input.deemedTransferReason !== "none" && input.deemedTransferDate
+        ? { reason: input.deemedTransferReason, date: input.deemedTransferDate }
+        : undefined,
     revenueTestDetail: categoryResult?.revenueTestDetail,
     surcharge: {
       surchargeType: "non_business_land",

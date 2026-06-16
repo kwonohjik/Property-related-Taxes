@@ -18,6 +18,7 @@ import type {
 } from "./types";
 import {
   checkIncorporationGrace,
+  getPeriodJudgmentDate,
   meetsPeriodCriteria,
   type PeriodCriteriaResult,
 } from "./period-criteria";
@@ -97,7 +98,9 @@ export function judgeFarmland(
   const warnings: string[] = [];
 
   const ownershipStart = getOwnershipStart(input.acquisitionDate);
-  const totalOwnershipDays = Math.max(0, differenceInDays(input.transferDate, ownershipStart));
+  // §168조의14② 양도일 의제 — §168조의6 기간기준 전용 (도시지역·편입유예는 실제 양도일)
+  const pjDate = getPeriodJudgmentDate(input);
+  const totalOwnershipDays = Math.max(0, differenceInDays(pjDate, ownershipStart));
 
   // ── Step 3-1: 재촌·자경 기간기준 ──────────────────────────────
   const residenceFromHistory = computeResidencePeriods(
@@ -130,7 +133,7 @@ export function judgeFarmland(
     : input.businessUsePeriods.map((p) => ({ start: p.startDate, end: p.endDate }));
 
   const realFarming = getOverlappingPeriods(residencePeriods, selfFarmingPeriods);
-  const r1 = meetsPeriodCriteria(realFarming, input.acquisitionDate, input.transferDate, "farmland", rules, input.gracePeriods);
+  const r1 = meetsPeriodCriteria(realFarming, input.acquisitionDate, pjDate, "farmland", rules, input.gracePeriods);
 
   let usageOk = r1.meets;
   let mode: FarmlandMode | null = usageOk ? "real" : null;
@@ -152,8 +155,8 @@ export function judgeFarmland(
     const deeming = checkFarmlandDeeming(input);
     if (deeming.applies) {
       // 사용의제는 "사용 종류"만 의제 — 기간기준은 재확인 (보유 전체를 사업용으로 간주)
-      const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
-      const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "farmland", rules, input.gracePeriods);
+      const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
+      const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "farmland", rules, input.gracePeriods);
       if (r2.meets) {
         usageOk = true;
         mode = "deemed";

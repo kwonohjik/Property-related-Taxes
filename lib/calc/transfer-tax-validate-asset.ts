@@ -444,6 +444,9 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       return `${label}: 비사업용 토지 정밀판정 — 용도지역을 선택하세요.`;
     if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
       return `${label}: 비사업용 토지 판정을 위해 토지 면적(㎡)을 입력하세요.`;
+    // §168의14② 양도일 의제 — 사유 선택 시 의제일 필수 (자동 fallback 금지)
+    if (asset.nblDeemedTransferReason && asset.nblDeemedTransferReason !== "none" && !asset.nblDeemedTransferDate)
+      return `${label}: 양도일 의제 사유를 선택했습니다. 의제일(최초 경매기일·공매일·공고일 등)을 입력하세요.`;
     // §168의11① 호별 면적기준 — 면적인자 요구 호 선택 시 해당 면적인자 필수 (자동 안분 fallback 금지)
     if (asset.nblLandType === "other_land") {
       const bt = asset.nblOtherRelatedBusinessType;
