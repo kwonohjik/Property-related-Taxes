@@ -18,7 +18,8 @@ const anyExempt = (a: AssetForm) =>
   a.nblExemptPublicExpropriation ||
   a.nblExemptFactoryAdjacent ||
   a.nblExemptJongjoongOwned ||
-  a.nblExemptUrbanFarmlandJongjoong;
+  a.nblExemptUrbanFarmlandJongjoong ||
+  a.nblExemptInong;
 
 // 법조문 배지 스타일 (LawArticleModal className override)
 const LAW_BADGE_CLASS =
@@ -119,11 +120,11 @@ export function UnconditionalExemptionSection({
 
       <ToggleCard
         tone="violet"
-        title="공장 인접지 (구법 특례)"
+        title="공장 오염피해 인접토지 (소유자 요구로 취득)"
         trailing={
           <LawArticleModal
-            legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168-14③ 구법"
+            legalBasis="소득세법시행규칙 §83조의5"
+            label="소득령 §168-14③5호 (시행규칙 §83의5④1호)"
             className={LAW_BADGE_CLASS}
           />
         }
@@ -166,6 +167,29 @@ export function UnconditionalExemptionSection({
         checked={asset.nblExemptUrbanFarmlandJongjoong}
         onCheckedChange={(v) => onAssetChange({ nblExemptUrbanFarmlandJongjoong: v })}
       />
+
+      <ToggleCard
+        tone="violet"
+        title="2006.12.31. 이전 이농 농지 (2009.12.31.까지 양도)"
+        description="농지 한정 — 이농 당시 소유한 농지를 2009.12.31.까지 양도한 경우"
+        trailing={
+          <LawArticleModal
+            legalBasis="소득세법시행규칙 §83조의5"
+            label="소득령 §168-14③5호 (시행규칙 §83의5④2호)"
+            className={LAW_BADGE_CLASS}
+          />
+        }
+        checked={asset.nblExemptInong}
+        onCheckedChange={(v) => onAssetChange({ nblExemptInong: v })}
+      >
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1">이농일</label>
+          <DateInput
+            value={asset.nblExemptInongDate}
+            onChange={(v) => onAssetChange({ nblExemptInongDate: v })}
+          />
+        </div>
+      </ToggleCard>
     </div>
   );
 }

@@ -143,3 +143,19 @@ NBL prefix-pick(`buildNonBusinessLandRaw`가 `k.startsWith("nbl")` 자동 운반
 | Low | 개선 | ④ prefix-pick=**transport만**; nested 매핑(buildUnconditionalExemption §5.1)은 ⑭ 수동 필요(미반영 시 isInong strip). §0·④ 행 문구 통일. |
 | Low | 오류 | "inong" 리터럴 **정의=types.ts:150**(UnconditionalExemptionReason), 사용=unconditional-exemption.ts:140. §3 정정. |
 | Low | 누락 | NBL 전용 E2E baseline **부재**(e2e/ nbl 매칭 0건) → 신규 spec **단독 통과**를 충족 기준(전체 사전존재 실패와 분리 [[feedback_e2e_preexisting_failures]]). |
+
+---
+
+## ✅ Do 구현 완료 (2026-06-16, worktree feat/nbl-gap2)
+
+**변경(코드 8 + 테스트 1)**:
+- store/factory/normalize/Zod (①②③⑫): `nblExemptInong: boolean`·`nblExemptInongDate: string` 신규 — `calc-wizard-asset.ts`·`-factory.ts`·`-nbl.ts`·`transfer-tax-schema-sub.ts`.
+- form-mapper-helpers (④/⑭): `buildUnconditionalExemption` has 게이트 + 매핑에 `isInong`/`inongDate` 추가 → `mapAssetToNblInput`→`buildNblEngineInput`(route 무변경).
+- UI (⑤): `UnconditionalExemptionSection` 이농 ToggleCard(violet·이농일 DateInput) + **anyExempt 이중 합류**(`UnconditionalExemptionSection.tsx:14-21` + `NblSectionContainer.tsx:55-63` 둘 다 — R1 SR-11 Critical) + 공장인접 라벨 정정.
+- 드리프트(`unconditional-exemption.ts`): `isFactoryAdjacent` legalBasis "공익사업법 연계 (레거시)"→"시행규칙 §83의5④ 1호"·detail("매수"→"취득"·인접토지), `isInong` legalBasis "구법 이농 조항 (레거시)"→"§83의5④ 2호", 주석 2건. **판정 산식·cutoff 무변경**(이미 정합).
+
+**R1 적용**: ⑧ validation 비차단(기존 의제 날짜 필드 패턴 부재→엔진 cutoff 위임), ⑦ 결과 강조배너는 하드코딩 "§168-14③" 불변·정정 legalBasis는 judgmentSteps 배지만, SR-8 해소(§83의5④1호=취득·인접토지 구조 확정).
+
+**14지점**: ①②③⑫⑤(추가)·④⑬⑭(prefix-pick+form-mapper-helpers 자동·route 무변경)·⑥⑦⑧(N/A·무변경).
+
+**검증**: Pre-Do anchor(`__tests__/lib/calc/nbl-inong-exemption.test.ts`) 현행 FAIL(isInong undefined·isNonBusinessLand true) → 구현 후 PASS(isInong true·false, 대조 2010 양도 true). ⑫⑭ grep 7파일 hit. tsc 0 · 전체 vitest **8452 passed / 0 failed**. E2E 미수행(엔진 anchor로 실증·ToggleCard 재사용).

@@ -88,7 +88,7 @@ export function buildUnconditionalExemption(
     asBool(a.nblExemptInheritBefore2007) || asBool(a.nblExemptLongOwned20y) ||
     asBool(a.nblExemptAncestor8YearFarming) || asBool(a.nblExemptPublicExpropriation) ||
     asBool(a.nblExemptFactoryAdjacent) || asBool(a.nblExemptJongjoongOwned) ||
-    asBool(a.nblExemptUrbanFarmlandJongjoong);
+    asBool(a.nblExemptUrbanFarmlandJongjoong) || asBool(a.nblExemptInong);
   if (!has) return undefined;
   return {
     isInheritedBefore2007:               asBool(a.nblExemptInheritBefore2007),
@@ -101,6 +101,8 @@ export function buildUnconditionalExemption(
     isJongjoongOwned:                    asBool(a.nblExemptJongjoongOwned),
     jongjoongAcquisitionDate:            parseDate(asString(a.nblExemptJongjoongAcqDate)),
     isUrbanFarmlandJongjoongOrInherited: asBool(a.nblExemptUrbanFarmlandJongjoong),
+    isInong:                             asBool(a.nblExemptInong),
+    inongDate:                           parseDate(asString(a.nblExemptInongDate)),
   };
 }
 

@@ -4,7 +4,8 @@
  * PDF p.1697 "기준에 관계없이 사업용 토지로 보는 경우" — 해당 시 기간·지역·면적 기준
  * 모두 건너뛰고 사업용 확정.
  *
- * 현행법 §168-14 ③ 본조 + 레거시 플래그(이농·공장인접) 유지.
+ * 현행법 §168-14③ 본조 + ③5호(재정경제부령 위임 → 시행규칙 §83의5④:
+ * 1호 공장 오염피해 인접토지·2호 이농 농지)·종중 등.
  */
 
 import { addYears } from "date-fns";
@@ -117,17 +118,19 @@ export function checkUnconditionalExemption(
     };
   }
 
-  // 레거시: 공장인접 토지 (소유자 요구 매수) — 현행 §168-14 ③ 미명시, 보상법 연계 판례 반영
+  // 공장 오염피해 인접토지 (§168-14③5호 → 시행규칙 §83의5④1호):
+  //   공장 가동 오염피해 인접토지로서 소유자 요구에 따라 취득한 공장용 부속토지의 인접토지.
   if (u.isFactoryAdjacent) {
     return {
       isExempt: true,
       reason: "factory_adjacent",
-      detail: "공장 인접 토지 — 소유자 요구에 의한 매수 (보상법 연계)",
-      legalBasis: "공익사업법 연계 (레거시)",
+      detail: "공장 오염피해 인접토지 — 소유자 요구로 취득한 공장 부속토지의 인접토지",
+      legalBasis: "소득세법 시행규칙 §83의5④ 1호",
     };
   }
 
-  // 레거시: 이농 (농지, 2006.12.31 이전 이농 + 2009.12.31까지 양도)
+  // 이농 농지 (§168-14③5호 → 시행규칙 §83의5④2호):
+  //   2006.12.31 이전 이농한 자가 이농 당시 소유 농지를 2009.12.31까지 양도.
   if (
     u.isInong &&
     u.inongDate &&
@@ -139,7 +142,7 @@ export function checkUnconditionalExemption(
       isExempt: true,
       reason: "inong",
       detail: `2006.12.31 이전 이농(${u.inongDate.toISOString().slice(0, 10)}) + 2009.12.31까지 양도`,
-      legalBasis: "구법 이농 조항 (레거시)",
+      legalBasis: "소득세법 시행규칙 §83의5④ 2호",
     };
   }
 

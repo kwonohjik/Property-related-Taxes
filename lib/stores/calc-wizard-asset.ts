@@ -436,6 +436,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   nblExemptJongjoongOwned: boolean;
   nblExemptJongjoongAcqDate: string;
   nblExemptUrbanFarmlandJongjoong: boolean;
+  nblExemptInong: boolean;
+  nblExemptInongDate: string;
 
   // ── NBL 도시편입·수도권·공동상속 ──
   nblUrbanIncorporationDate: string;

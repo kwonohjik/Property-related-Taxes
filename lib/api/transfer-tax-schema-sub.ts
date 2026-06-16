@@ -137,6 +137,8 @@ export const nonBusinessLandRawSchema = z.object({
   nblExemptJongjoongOwned: z.boolean().optional(),
   nblExemptJongjoongAcqDate: z.string().optional(),
   nblExemptUrbanFarmlandJongjoong: z.boolean().optional(),
+  nblExemptInong: z.boolean().optional(),
+  nblExemptInongDate: z.string().optional(),
   // 배열
   nblBusinessUsePeriods: z.array(nblPeriodRawSchema).optional(),
   nblResidenceHistories: z.array(nblResidenceHistoryRawSchema).optional(),
