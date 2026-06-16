@@ -146,6 +146,10 @@ export interface PresaleRightEntry {
   type: "presale_right" | "redevelopment_right";
   acquisitionDate: string;
   region: "capital" | "non_capital";
+  /** 지역기준 (REGION 수도권·광역시·세종 / VALUE 지방) — 3억 배제 판정 (§167의4②1호) */
+  regionCriteria?: "REGION" | "VALUE";
+  /** 가액(원, 문자열) — 분양권 공급가격/입주권 종전주택가격 */
+  rightValue?: string;
 }
 
 /** 비사업용 토지(NBL) 필드 초기값 상수 — makeDefaultAsset에서 spread 사용 (800줄 분리, 2026-06-15) */

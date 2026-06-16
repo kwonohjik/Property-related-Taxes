@@ -499,9 +499,13 @@ export function countEffectiveHouses(
 
   // 분양권/입주권: 산정시작일(2021.1.1) 이후 취득분 포함
   for (const right of presaleRights) {
-    if (right.acquisitionDate >= presaleStartDate) {
-      count++;
+    if (right.acquisitionDate < presaleStartDate) continue; // 2021.1.1 전 미산입
+    // §167의4②1호·§167의11②1호: VALUE지역(지방) 분양권/입주권 가액 3억 이하 → 미산입
+    const rc = right.regionCriteria ?? (right.region === "capital" ? "REGION" : "VALUE");
+    if (rc === "VALUE" && (right.rightValue ?? Infinity) <= MULTI_HOUSE.PRESALE_LOW_VALUE_CAP) {
+      continue;
     }
+    count++;
   }
 
   return { count, excluded };

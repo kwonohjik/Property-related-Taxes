@@ -416,6 +416,8 @@ export const MULTI_HOUSE = {
   POP_DECLINE_PRICE_CAP_DEFAULT:  400_000_000,
   /** 수도권 밖 인구감소지역(다목) 세컨드홈 기준시가 한도 9억 */
   POP_DECLINE_PRICE_CAP_NONCAPITAL: 900_000_000,
+  /** 분양권/입주권 VALUE지역(지방) 가액 3억 이하 → 주택 수 미산입 (§167의4②1호·§167의11②1호) */
+  PRESALE_LOW_VALUE_CAP:          300_000_000,
   /** 소득세법 시행령 §167의3 ① 2호 나목 10호 — 3주택 중과배제 (유일한 일반주택) */
   THREE_HOUSE_EXCLUSION_SOLE:     "소득세법 시행령 §167의3 ① 2호 나목 10호",
 

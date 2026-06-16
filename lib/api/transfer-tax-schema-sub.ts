@@ -265,6 +265,8 @@ export const presaleRightSchema = z.object({
   type: z.enum(["presale_right", "redevelopment_right"]),
   acquisitionDate: z.string().date(),
   region: z.enum(["capital", "non_capital"]),
+  regionCriteria: z.enum(["REGION", "VALUE"]).optional(),
+  rightValue: z.number().int().nonnegative().optional(),
 });
 
 

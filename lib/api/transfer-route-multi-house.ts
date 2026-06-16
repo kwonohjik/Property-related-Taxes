@@ -94,6 +94,8 @@ export function mapPresaleRightsToEngine(
     type: r.type,
     acquisitionDate: new Date(r.acquisitionDate),
     region: r.region,
+    regionCriteria: r.regionCriteria,
+    rightValue: r.rightValue,
   }));
 }
 

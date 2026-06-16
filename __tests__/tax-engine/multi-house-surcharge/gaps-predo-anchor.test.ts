@@ -199,3 +199,42 @@ describe("Pre-Do #3: 인구감소 세컨드홈 가액한도 (§167의3①12 다�
     expect(r.effectiveHouseCount).toBe(2);
   });
 });
+
+describe("Pre-Do #4: 분양권/입주권 VALUE 3억 배제 (§167의4②1호·§167의11②1호)", () => {
+  const presale = (over?: Partial<{ regionCriteria: "REGION" | "VALUE"; rightValue: number }>) => ({
+    id: "p1",
+    type: "presale_right" as const,
+    acquisitionDate: new Date("2022-03-01"), // 2021.1.1 이후 산입대상
+    region: "non_capital" as const,
+    regionCriteria: "VALUE" as "REGION" | "VALUE",
+    rightValue: 250_000_000,
+    ...over,
+  });
+
+  it("VALUE지역 분양권 2.5억 (≤3억) → 미산입 (현행 FAIL: 무조건 +1)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING });
+    const input = makeInput([selling], { sellingHouseId: "h1", presaleRights: [presale()] });
+    const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
+    expect(r.effectiveHouseCount).toBe(1); // 분양권 미산입 → 1주택
+  });
+
+  it("VALUE지역 분양권 3.5억 (>3억) → 산입 (가드)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING });
+    const input = makeInput([selling], {
+      sellingHouseId: "h1",
+      presaleRights: [presale({ rightValue: 350_000_000 })],
+    });
+    const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
+    expect(r.effectiveHouseCount).toBe(2);
+  });
+
+  it("광역시(REGION) 분양권 2.5억 → 산입 (REGION 가액무관, 광역시 오배제 방지)", () => {
+    const selling = makeHouse("h1", { regionCode: SELLING });
+    const input = makeInput([selling], {
+      sellingHouseId: "h1",
+      presaleRights: [presale({ regionCriteria: "REGION" })],
+    });
+    const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
+    expect(r.effectiveHouseCount).toBe(2);
+  });
+});

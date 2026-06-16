@@ -219,6 +219,10 @@ export interface PresaleRight {
   type: "presale_right" | "redevelopment_right";
   acquisitionDate: Date;
   region: "capital" | "non_capital";
+  /** 지역기준 (REGION 수도권·광역시·세종 / VALUE 지방). 미제공 시 region 폴백. 3억 이하 배제는 VALUE만 */
+  regionCriteria?: "REGION" | "VALUE";
+  /** 가액(원) — 분양권 공급계약서상 공급가격(선택품목 제외)/입주권 종전주택가격(도시정비법§74①5). §167의4②1호·§167의11②1호 3억 배제 */
+  rightValue?: number;
 }
 
 /** 다주택 중과세 판정 입력 */

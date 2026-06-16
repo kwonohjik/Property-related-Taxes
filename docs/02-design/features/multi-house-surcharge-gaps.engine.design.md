@@ -134,6 +134,8 @@ if (input.marriageMerge) {
 **효과**: count 3→2 시 `surchargeType`은 `multi_house_2`(3plus 미진입), 3→1 시 Step 3에서 `surchargeApplicable=false`. **"중과 0"은 차감 후 ≤1일 때만** (C2-소멸); 2주택 잔존 시 2주택 중과 가능(C2-2주택).
 > §167의10①2호(2주택 혼인 *배제*)와 효과 구분: ⑨=count 차감(이 단계), 10①2호=determineSurchargeExclusion Step 6(중과 배제). 중복 적용 아님(서로 다른 단계·효과).
 > **Step 5 상호작용**: 차감 주택을 `excludedHouses`에 push → 오케스트레이터 Step 5(유일1주택, `multi-house-surcharge.ts:190` `excludedHouseIds`)에서도 제외 집합 포함 → 산정 제외로 일관(이중 영향 없음).
+>
+> ⚠️ **Pre-Do 환류 (2026-06-16, #2a 미착수)**: §167의10②는 "§167의3 ②~⑧·⑩ 준용"으로 **⑨(혼인 차감)을 2주택에 준용하지 않음** → ⑨는 **3주택 전용**. 2주택 혼인 구제는 §155(1세대1주택 의제)→§167의10①15호. **기존 엔진 "혼인 5년→중과 전면배제"(exclusion.ts 배제2)는 주택수 무관 발동 = 3주택 혼인도 전면배제하는 잠복 과대배제**. 정확 구현 = 전면배제를 `effectiveHouseCount===2`로 한정 + 3주택은 ⑨ 차감 + `isSpouseOwned`로 본인/배우자 산정(본인2+배우자1=3→배우자1차감→본인2는 §155 비해당, 전면배제 부적격). **단순 차감 주입 불가 — 재설계 필요**. MH-07(2주택)은 한정 후 green 유지.
 
 ### #3 — 인구감소 가액 한도 (`countEffectiveHouses`, helpers:478-489 → 분할 후 -count.ts)
 ```ts
