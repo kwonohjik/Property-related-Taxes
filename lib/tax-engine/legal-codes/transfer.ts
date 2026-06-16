@@ -64,7 +64,7 @@ export const NBL = {
   OTHER_LAND_AREA_VACANT_LOT:     "시행령 §168조의11 ① 13호 + 시행규칙 §83조의4 ⑯⑰",
   HOUSING_MULTIPLIER:             "시행령 §168조의12",
   VILLA:                          "시행령 §168조의13",
-  UNAVOIDABLE_PERIOD:             "시행령 §168조의14 ①",
+  UNAVOIDABLE_PERIOD:             "시행령 §168조의14 ① (시행규칙 §83의5①)",
   TRANSFER_DATE_PRESUMED:         "시행령 §168조의14 ②",
   UNCONDITIONAL_ANCESTOR:         "시행령 §168조의14 ③ 1의2호",
   UNCONDITIONAL_PUBLIC:           "시행령 §168조의14 ③ 3호",

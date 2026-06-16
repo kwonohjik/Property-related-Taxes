@@ -22,7 +22,7 @@ describe("[NBL-CASES] buildNblEngineInput — 지목별 sub-object 엔진 도달
       transferDate: "2026-06-01",
       nblFarmingSelf: true,
       nblFarmlandIsWeekendFarm: true,
-      nblGracePeriods: [{ type: "construction", startDate: "2020-01-01", endDate: "2021-01-01" }],
+      nblGracePeriods: [{ reasonCode: "other_justifiable", anchorDate: "2020-01-01", endDate: "2021-01-01" }],
     } as never);
     expect(input).toBeDefined();
     expect(input!.landArea).toBe(1000); // 콤마 제거 파서

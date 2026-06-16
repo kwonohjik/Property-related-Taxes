@@ -22,7 +22,7 @@ describe("[NBL-REQ] buildNblEngineInput — raw → 엔진 input(nested + Date)"
       nblBusinessUsePeriods: [],
       nblResidenceHistories: [],
       nblGracePeriods: [
-        { type: "unavoidable", startDate: "2022-07-01", endDate: "2023-06-30", description: "질병" },
+        { reasonCode: "other_justifiable", anchorDate: "2022-07-01", endDate: "2023-06-30", description: "질병" },
       ],
     };
     const input = buildNblEngineInput(raw as never);

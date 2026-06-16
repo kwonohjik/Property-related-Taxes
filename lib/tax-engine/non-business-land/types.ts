@@ -65,29 +65,28 @@ export type ZoneType =
 // 유예기간 / 부득이한 사유
 // ============================================================
 
-export type GracePeriodType =
-  | "inheritance"
-  | "legal_restriction"
-  | "sale_contract"
-  | "construction"
-  | "unavoidable"
-  | "preparation"
-  | "land_replotting";
-
-export type UnavoidableReasonType =
-  | "illness"
-  | "elderly"
-  | "military"
-  | "emigration"
-  | "expropriation"
-  | "bankruptcy";
-
-export interface UnavoidableReason {
-  type: UnavoidableReasonType;
-  startDate: Date;
-  endDate: Date;
-  description?: string;
-}
+/**
+ * 부득이한 사유 유예기간 사유코드 (소득세법 시행령 §168조의14① + 시행규칙 §83조의5①).
+ * §168조의14① 1~3호(법령 사용금지·보호구역·상속) + §83조의5① 1~12호(영 §168조의14①4호 위임).
+ */
+export type GraceReasonCode =
+  // 시행령 §168조의14① 직접 (event_window — 사유 존속 기간 입력)
+  | "use_prohibited"                // ①1호 법령 사용금지·제한
+  | "protected_zone"                // ①2호 문화·자연유산 보호구역
+  | "inherited_restricted"          // ①3호 1·2호 상속토지
+  // 시행규칙 §83조의5① 1~12호
+  | "building_permit_restricted"    // 1호 건축허가 제한 (단서: 매매업 매매용부동산 배제)
+  | "construction_start_restricted" // 2호 착공 제한 (단서: 매매업 매매용부동산 배제)
+  | "access_road"                   // 3호 사도·진입도로
+  | "public_open_space"             // 4호 공공공지 제공 (착공일~제공종료일)
+  | "construction_in_progress"      // 5호 건설 착공 (취득일+2년 ∪ 착공일~건설진행종료)
+  | "mortgage_or_liquidation"       // 6호 저당권 실행·청산 분배 (취득일+2년)
+  | "ownership_litigation"          // 7호 소유권 소송 계속
+  | "urban_dev_buildable"           // 8호 도시개발 환지 건축가능 (건축가능일+2년)
+  | "demolition"                    // 9호 건축물 멸실·철거·붕괴 (멸실일+5년)
+  | "business_closure_relocation"   // 10호 휴·폐업·이전 (휴폐업·이전일+2년)
+  | "natural_disaster_wasteland"    // 11호 천재지변 황지화 (사유발생일+2년)
+  | "other_justifiable";            // 12호 그 밖의 정당한 사유
 
 export interface BusinessUsePeriod {
   startDate: Date;
@@ -96,7 +95,7 @@ export interface BusinessUsePeriod {
 }
 
 export interface GracePeriod {
-  type: GracePeriodType;
+  reasonCode: GraceReasonCode;
   startDate: Date;
   endDate: Date;
 }
@@ -345,9 +344,11 @@ export interface NonBusinessLandInput {
   /** v2: 수도권 소재 여부 (주택부수토지 §168-12 배율 결정) */
   isMetropolitanArea?: boolean;
 
-  // 유예기간·부득이 사유
+  // 유예기간·부득이 사유 (§168조의14① + 시행규칙 §83조의5①). 사유별 종료일은 form-mapper가 자동산정.
   gracePeriods: GracePeriod[];
-  unavoidableReasons?: UnavoidableReason[];
+
+  /** §83조의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제) 게이트 */
+  isRealEstateDealerMatter?: boolean;
 
   // 수입금액
   revenueTest?: RevenueTestInput;

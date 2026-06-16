@@ -15,6 +15,7 @@ import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
+import { GRACE_REASON_SPECS } from "@/lib/tax-engine/non-business-land/grace-reason-period";
 
 // ─── 장기임대주택 거주주택 비과세 특례 검증 (⑧, 소령 §155⑳) ──────
 
@@ -462,6 +463,21 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         return `${label}: 수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.`;
       if (!asset.nblRevenueCurrentLandValue || parseAmount(asset.nblRevenueCurrentLandValue) <= 0)
         return `${label}: 수입금액비율 업종 선택 시 당해 토지가액을 입력하세요.`;
+    }
+    // §168의14①·§83의5① 유예기간 — 사유별 필수 기산일/종료일 (자동 안분 fallback 금지)
+    for (const g of asset.nblGracePeriods ?? []) {
+      const spec = GRACE_REASON_SPECS[g.reasonCode];
+      if (!spec) continue;
+      if (spec.lengthKind === "compound_5") {
+        if (!g.secondaryDate) return `${label}: 건설 착공(5호) 유예기간 — 착공일을 입력하세요.`;
+      } else if (spec.lengthKind === "fixed_from_anchor") {
+        if (!spec.anchorFromAcquisition && !g.anchorDate)
+          return `${label}: ${spec.label} 유예기간 — 기산일을 입력하세요.`;
+      } else {
+        // event_window · anchor_to_input_end
+        if (!g.anchorDate) return `${label}: ${spec.label} 유예기간 — 개시일을 입력하세요.`;
+        if (!g.endDate) return `${label}: ${spec.label} 유예기간 — 종료일을 입력하세요.`;
+      }
     }
   }
 

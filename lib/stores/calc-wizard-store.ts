@@ -16,6 +16,7 @@ export type {
   NblBusinessUsePeriod,
   ResidenceHistoryInput,
   GracePeriodInput,
+  NblGracePeriodInput,
   HouseEntry,
   PresaleRightEntry,
   AssetReductionForm,

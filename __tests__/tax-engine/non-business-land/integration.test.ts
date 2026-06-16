@@ -225,7 +225,7 @@ describe("시나리오 11~14 — 특수 케이스", () => {
         { startDate: "2021-01-01", endDate: "2022-06-30", usageType: "자경" },
       ],
       nblGracePeriods: [
-        { type: "unavoidable", startDate: "2022-07-01", endDate: "2023-06-30", description: "질병 입원" },
+        { reasonCode: "other_justifiable", anchorDate: "2022-07-01", endDate: "2023-06-30", description: "질병 입원" },
       ],
     });
     const result = judge(asset, "2018-01-01", "2024-01-01");

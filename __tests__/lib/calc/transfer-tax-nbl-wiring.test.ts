@@ -44,7 +44,7 @@ describe("[NBL-WIRE] 정밀판정 입력 ④⑬ — body.nonBusinessLandRaw 운�
       nblZoneType: "agriculture_forest",
       nblForestHasPlan: true,
       nblGracePeriods: [
-        { type: "unavoidable", startDate: "2022-07-01", endDate: "2023-06-30", description: "질병" },
+        { reasonCode: "other_justifiable", anchorDate: "2022-07-01", endDate: "2023-06-30", description: "질병" },
       ],
     };
     const { run, get } = captureBody(form);
