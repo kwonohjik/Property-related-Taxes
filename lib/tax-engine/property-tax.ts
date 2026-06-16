@@ -41,6 +41,7 @@ import type {
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
+import { resolveBasisTax } from "./property-tax-recompute";
 
 // ============================================================
 // DB 세율 조회 헬퍼 — 공정시장가액비율 (정부 매년 고시)
@@ -640,7 +641,7 @@ export function calculatePropertyTax(
         const grossTaxComp = calculateComprehensiveAggregateTax(comprehensiveTaxBase);
         const { taxAfterCap: determinedTaxComp, appliedCapRate: capRateComp } = applyBurdenCap(
           grossTaxComp,
-          input.previousYearTax,
+          resolveBasisTax(input, taxYear - 1),
         );
 
         legalBasis.push(PROPERTY_CAL.RATE_COMPREHENSIVE);
@@ -711,7 +712,7 @@ export function calculatePropertyTax(
   const capResult = applyTaxCap(
     calculatedTax,
     input.objectType,
-    input.previousYearTax,
+    resolveBasisTax(input, taxYear - 1),
   );
   warnings.push(...capResult.warnings);
   legalBasis.push(capResult.legalBasis);
