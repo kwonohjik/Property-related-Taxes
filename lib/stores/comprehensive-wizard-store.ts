@@ -7,6 +7,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
+import type { CorporateHousingType } from "@/lib/tax-engine/types/comprehensive-corporate.types";
 
 // ============================================================
 // 개별 주택 폼 항목 (문자열 기반)
@@ -117,12 +118,16 @@ export type LandPriorMode = "none" | "auto" | "direct";
 export interface ComprehensiveFormData {
   // ── Step 1: 기본 정보 ──
   assessmentYear: string;          // 과세연도 (숫자 입력용 문자열)
-  /** 납세의무자 유형 (①)
-   *  - individual: 개인 (기본)
-   *  - corporate_special: §9②3호 — 단일세율·기본공제 0·상한 배제
-   *  - corporate_general: §9②1호 — 일반 누진(주택 수 무관)
-   *  - corporate_public:  §9②2호 — §9①각호(주택 수 분기) */
-  taxpayerType: "individual" | "corporate_special" | "corporate_general" | "corporate_public";
+  /** 납세의무자 유형 (①) — individual | corporate. 법인 세부 §9② class는 corporateHousingType로 도출 */
+  taxpayerType: "individual" | "corporate";
+  /** 법인 세부 유형 (시행령 §4의4 자동판정) — corporate일 때 (기본 general_corp, D-4) */
+  corporateHousingType: CorporateHousingType;
+  /** 공익법인: 직접 공익목적사업용 주택만 보유 (§9②1호ⓐ vs 2호) — 3-state(undefined=미응답) */
+  corpHoldsOnlyPublicPurposeHousing?: boolean;
+  /** 민간건설임대/도시개발: 민간건설임대 2호↑ + 적격주택만 (§4의4①5·5의2호) — 3-state */
+  corpHoldsQualifyingRentalHousingOnly?: boolean;
+  /** 사회적기업: 설립목적 + 적격주택만 (§4의4①6호) — 3-state */
+  corpMeetsSocialEnterpriseRequirements?: boolean;
   isOneHouseOwner: boolean;
   /** 부부 공동명의 1주택자 특례 (§10의2) — 개인에만 적용, 법인 시 엔진 무시 */
   isJointOwnershipSpecialCase: boolean;
@@ -222,6 +227,7 @@ const DEFAULT_LAND_AGGREGATE: AggregateLandForm = {
 const defaultFormData: ComprehensiveFormData = {
   assessmentYear: String(new Date().getFullYear()),
   taxpayerType: "individual",              // ② initial value
+  corporateHousingType: "general_corp",    // ② 법인 선택 시 기본 (D-4) — corp* 플래그는 undefined(3-state)
   isOneHouseOwner: false,
   isJointOwnershipSpecialCase: false,      // ② initial value
   birthDate: "",
@@ -429,9 +435,30 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
         if (state && state.formData) {
           state.formData.isMultiHouseInAdjustedArea =
             state.formData.isMultiHouseInAdjustedArea ?? false;
-          // taxpayerType: 구 세션 복원 시 undefined → "individual" 폴백 (3중 일치)
-          state.formData.taxpayerType =
-            state.formData.taxpayerType ?? "individual";
+          // taxpayerType: 레거시 4-value → 2-value + corporateHousingType 매핑 (도출 class 동일 → 세액 불변)
+          const legacyTp = state.formData.taxpayerType as string | undefined;
+          if (legacyTp === "corporate_special") {
+            state.formData.taxpayerType = "corporate";
+            state.formData.corporateHousingType =
+              state.formData.corporateHousingType ?? "general_corp";
+          } else if (legacyTp === "corporate_general") {
+            state.formData.taxpayerType = "corporate";
+            state.formData.corporateHousingType =
+              state.formData.corporateHousingType ?? "public_housing_operator";
+          } else if (legacyTp === "corporate_public") {
+            state.formData.taxpayerType = "corporate";
+            state.formData.corporateHousingType =
+              state.formData.corporateHousingType ?? "public_interest_corp";
+            // 구 corporate_public = "공익법인 + 공익목적주택만 아님(=§9②2호)" → false가 동일 class(corporate_public)·세액 보존.
+            // undefined로 두면 정상 선택했던 레거시 사용자를 C-15가 불필요 차단 (의도적 false).
+            state.formData.corpHoldsOnlyPublicPurposeHousing =
+              state.formData.corpHoldsOnlyPublicPurposeHousing ?? false;
+          } else {
+            state.formData.taxpayerType = legacyTp === "corporate" ? "corporate" : "individual";
+          }
+          // corporateHousingType 필수 필드 보정 (구 세션·개인 경로 안전 기본 — 3중 일치)
+          state.formData.corporateHousingType =
+            state.formData.corporateHousingType ?? "general_corp";
           // isJointOwnershipSpecialCase: 구 세션 복원 시 undefined → false 폴백 (3중 일치)
           state.formData.isJointOwnershipSpecialCase =
             state.formData.isJointOwnershipSpecialCase ?? false;

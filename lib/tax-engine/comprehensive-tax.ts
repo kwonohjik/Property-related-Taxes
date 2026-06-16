@@ -36,6 +36,8 @@ import {
 import { calculatePropertyTax, calcHousingTax } from "./property-tax";
 import { calcMultiFamilyHousingTax } from "./multi-family-housing-tax";
 import { buildHousingPropertyTaxWithCap } from "./comprehensive-housing-tax-cap";
+import { resolveCorporateHousingClass } from "./comprehensive-corporate-class";
+import type { CorporateHousingClass } from "./types/comprehensive-corporate.types";
 import { calculateSeparateAggregateLandTax } from "./comprehensive-separate-land";
 import {
   buildAggregateLandFromParcels,
@@ -128,6 +130,14 @@ export function calculateComprehensiveTax(
   // store에 잔존해도 전부 무시 (3중 패턴 1차 방어 — 법령상 해당 없음)
   const taxpayerType = input.taxpayerType ?? "individual";
   const isCorporate = taxpayerType !== "individual";
+  // §9② class 도출 (시행령 §4의4) — 세부유형+조건 → corporate_general/public/special (단일 진실)
+  const corporateClass: CorporateHousingClass | undefined = isCorporate
+    ? resolveCorporateHousingClass(input.corporateHousingType ?? "general_corp", {
+        corpHoldsOnlyPublicPurposeHousing: input.corpHoldsOnlyPublicPurposeHousing,
+        corpHoldsQualifyingRentalHousingOnly: input.corpHoldsQualifyingRentalHousingOnly,
+        corpMeetsSocialEnterpriseRequirements: input.corpMeetsSocialEnterpriseRequirements,
+      })
+    : undefined;
 
   // ── §10의2 부부 공동명의 1주택자 특례 — 1세대1주택자 의제 (§10의2③) ──
   // 법인이면 무시. isOneHouseOwner와 상호배타는 Zod refine이 차단 (방어적 OR 처리).
@@ -396,7 +406,7 @@ export function calculateComprehensiveTax(
   //   corporate_general·corporate_public: 일반 공제 (1세대1주택 경로 차단)
   //   oneHouseTreatment: 1세대1주택 또는 §10의2 부부 특례 의제 → §8①1호 공제 (12억/11억)
   const basicDeduction =
-    taxpayerType === "corporate_special"
+    corporateClass === "corporate_special"
       ? 0
       : isCorporate
         ? yearParams.basicDeductionGeneral
@@ -430,7 +440,7 @@ export function calculateComprehensiveTax(
   let progressiveDeduction: number;
   let isMultiHouseRateApplied = false;
 
-  if (taxpayerType === "corporate_special") {
+  if (corporateClass === "corporate_special") {
     // §9②3호: 단일 비례세율 (누진공제 없음) — 가목 2주택 이하 / 나목 3주택 이상(≤2022 조정 2주택 포함)
     // 2021·2022 = 3.0%/6.0% (구법 §9②) / 2023~ = 2.7%/5.0%
     // 분수 정수 연산: rate × 1000을 정수화 후 ×/÷ (float 직접 곱 floor 1원 부족 방지)
@@ -440,7 +450,7 @@ export function calculateComprehensiveTax(
     calculatedTax = Math.floor((taxBase * Math.round(corporateRate * 1000)) / 1000);
     appliedRate = corporateRate;
     progressiveDeduction = 0;
-  } else if (taxpayerType === "corporate_general") {
+  } else if (corporateClass === "corporate_general") {
     // §9②1호 (공공주택사업자 등): 주택 수 무관 §9①1호 general 표 고정
     ({ calculatedTax, appliedRate, progressiveDeduction } =
       calcHousingTaxAmount(taxBase, yearParams.housingBracketsGeneral));
@@ -578,7 +588,7 @@ export function calculateComprehensiveTax(
   // 세부담상한 전년도 총세액: 직접입력 우선, 없으면 직전연도 자동계산 결과(시행령 §5②)
   const prevTotalForCap = input.previousYearTotalTax ?? previousYearEquivalent?.total;
   const taxCap =
-    taxpayerType === "corporate_special"
+    corporateClass === "corporate_special"
       ? undefined
       : applyTaxCap(
           comprehensiveTaxAfterCredit,
@@ -587,7 +597,7 @@ export function calculateComprehensiveTax(
           capRate,
         );
 
-  if (prevTotalForCap === undefined && taxpayerType !== "corporate_special") {
+  if (prevTotalForCap === undefined && corporateClass !== "corporate_special") {
     warnings.push(
       "전년도 재산세·종부세 고지서의 합계 세액을 입력하시면 세부담 상한이 자동 적용됩니다.",
     );
@@ -656,9 +666,9 @@ export function calculateComprehensiveTax(
     warnings.push(
       "본 계산은 개인 단독명의 기준입니다. 부부 공동명의 1주택이면 1단계에서 §10의2 특례 신청 여부를 선택할 수 있습니다.",
     );
-  } else if (taxpayerType === "corporate_special") {
+  } else if (corporateClass === "corporate_general" || corporateClass === "corporate_public") {
     warnings.push(
-      "§9②1호(공공주택사업자 등)·2호(공익법인등) 해당 여부는 시행령 §4의4 요건 확인이 필요합니다.",
+      "§9②1·2호 법인 — 시행령 §4의4②에 따라 §8③ 보유현황 신고기간에 관할세무서장에게 서류를 제출해야 합니다(최초 제출 다음 연도부터 변동이 없으면 생략 가능).",
     );
   }
 
@@ -695,6 +705,8 @@ export function calculateComprehensiveTax(
     assessmentDate: assessmentDateStr,
     isOneHouseOwner: input.isOneHouseOwner,
     taxpayerType,
+    corporateHousingType: input.corporateHousingType,
+    corporateHousingClass: corporateClass,
     isJointOwnershipApplied: isJointApplied,
     warnings,
     appliedLawDate: assessmentDateStr,

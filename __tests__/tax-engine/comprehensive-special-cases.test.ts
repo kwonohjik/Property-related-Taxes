@@ -92,7 +92,7 @@ describe("SC-B: 법인 §9②3호 — 단일세율·기본공제 0·상한 배�
     values: number[],
   ): ComprehensiveTaxInput => ({
     assessmentYear: year,
-    taxpayerType: "corporate_special",
+    taxpayerType: "corporate", corporateHousingType: "general_corp",
     isOneHouseOwner: false,
     properties: values.map((v, i) => ({
       propertyId: `p${i + 1}`,
@@ -110,7 +110,7 @@ describe("SC-B: 법인 §9②3호 — 단일세율·기본공제 0·상한 배�
     expect(result.progressiveDeduction).toBe(0);            // 단일 비례 — 누진공제 없음
     expect(result.calculatedTax).toBe(32_400_000);
     expect(result.isMultiHouseRateApplied).toBe(false);     // 개인 multi 표 echo 아님
-    expect(result.taxpayerType).toBe("corporate_special");
+    expect(result.corporateHousingClass).toBe("corporate_special");
   });
 
   it("SC-B2: 2024 나목(3주택 이상) 합산 30억 → 과표 18억 × 5.0% = 90,000,000", () => {
@@ -145,7 +145,7 @@ describe("SC-B: 법인 §9②3호 — 단일세율·기본공제 0·상한 배�
 
   it("SC-B5: 2024 §9②1호(공공주택사업자 등) 3주택 30억 → 공제 9억 → general 표 (multi 금지)", () => {
     const input = corporateBase(2024, [1_000_000_000, 1_000_000_000, 1_000_000_000]);
-    input.taxpayerType = "corporate_general";
+    input.corporateHousingType = "public_housing_operator"; // §9②1호 (corporate_general 도출)
     const result = calculateComprehensiveTax(input);
 
     expect(result.basicDeduction).toBe(900_000_000);
@@ -157,7 +157,8 @@ describe("SC-B: 법인 §9②3호 — 단일세율·기본공제 0·상한 배�
 
   it("SC-B6: 2024 §9②2호(공익법인등) 3주택 30억 → §9①2호 multi 표", () => {
     const input = corporateBase(2024, [1_000_000_000, 1_000_000_000, 1_000_000_000]);
-    input.taxpayerType = "corporate_public";
+    input.corporateHousingType = "public_interest_corp";    // §9②2호 (corporate_public 도출)
+    input.corpHoldsOnlyPublicPurposeHousing = false;        // 공익목적주택만 아님 → 2호
     const result = calculateComprehensiveTax(input);
 
     expect(result.basicDeduction).toBe(900_000_000);
@@ -183,6 +184,25 @@ describe("SC-B: 법인 §9②3호 — 단일세율·기본공제 0·상한 배�
     expect(result.taxBase).toBe(1_200_000_000);
     expect(result.appliedRate).toBe(0.06);
     expect(result.calculatedTax).toBe(72_000_000);
+  });
+
+  it("BG-1: general_corp + previousYearTotalTax → 상한 배제 유지 + class corporate_special (R1 회귀 가드)", () => {
+    const input = corporateBase(2024, [2_000_000_000]);
+    input.previousYearTotalTax = 10_000_000;
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.corporateHousingClass).toBe("corporate_special");
+    expect(result.taxCap).toBeUndefined();                  // §10 단서 — 도출 class로 상한 분기 작동
+  });
+
+  it("BG-2: public_housing_operator + previousYearTotalTax → 상한 적용 + class corporate_general", () => {
+    const input = corporateBase(2024, [2_000_000_000]);
+    input.corporateHousingType = "public_housing_operator";
+    input.previousYearTotalTax = 5_000_000;
+    const result = calculateComprehensiveTax(input);
+
+    expect(result.corporateHousingClass).toBe("corporate_general");
+    expect(result.taxCap).toBeDefined();                    // §9②1호 상한 적용 (special 아님)
   });
 });
 
@@ -269,7 +289,7 @@ describe("SC-C: §10의2 부부 공동명의 특례 — 1세대1주택자 의제
   it("SC-C5: 법인 + 특례 잔존 입력 → 특례 무시 (공제 0 유지)", () => {
     const input: ComprehensiveTaxInput = {
       assessmentYear: 2024,
-      taxpayerType: "corporate_special",
+      taxpayerType: "corporate", corporateHousingType: "general_corp",
       isOneHouseOwner: false,
       isJointOwnershipSpecialCase: true, // 법인 전환 후 잔존 가정
       properties: [
@@ -441,7 +461,7 @@ describe("D2: §8④ 1세대1주택자 의제 — 안분·주택 수 제외", ()
   it("D2-7: 법인 §9②3호 + §8④4호 잔존 → 의제 전부 무시", () => {
     const result = calculateComprehensiveTax({
       assessmentYear: 2024,
-      taxpayerType: "corporate_special",
+      taxpayerType: "corporate", corporateHousingType: "general_corp",
       isOneHouseOwner: false,
       properties: [
         { propertyId: "p1", assessedValue: 2_000_000_000, exclusionType: "none" },

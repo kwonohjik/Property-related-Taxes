@@ -125,7 +125,7 @@ describe("HousingPayableTaxCalcCard — 전 시나리오 분기", () => {
     renderExpanded({
       assessmentYear: 2022,
       isOneHouseOwner: false,
-      taxpayerType: "corporate_special",
+      taxpayerType: "corporate", corporateHousingType: "general_corp",
       properties: [{ propertyId: "p1", assessedValue: 2_000_000_000, exclusionType: "none" }],
     });
     expect(screen.getByTestId("payable-step3").textContent).toContain("해당 없음");

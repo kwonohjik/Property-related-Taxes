@@ -175,7 +175,7 @@ describe("사례12 케이스 매트릭스 — 경계·회귀 (C12-A5·A6 + M-04�
     const result = calculateComprehensiveTax({
       assessmentYear: 2022,
       isOneHouseOwner: false,
-      taxpayerType: "corporate_general",
+      taxpayerType: "corporate", corporateHousingType: "public_housing_operator",
       properties: [{ propertyId: "p1", assessedValue: 1_500_000_000, exclusionType: "none" }],
     });
     expect(result.oneHouseDeduction).toBeUndefined();

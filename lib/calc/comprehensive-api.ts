@@ -9,6 +9,20 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { ComprehensiveFormData, LandParcelForm } from "@/lib/stores/comprehensive-wizard-store";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
+import { resolveCorporateHousingClass } from "@/lib/tax-engine/comprehensive-corporate-class";
+
+/**
+ * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
+ */
+export function deriveCorporateClass(formData: ComprehensiveFormData) {
+  return (formData.taxpayerType ?? "individual") === "corporate"
+    ? resolveCorporateHousingClass(formData.corporateHousingType ?? "general_corp", {
+        corpHoldsOnlyPublicPurposeHousing: formData.corpHoldsOnlyPublicPurposeHousing,
+        corpHoldsQualifyingRentalHousingOnly: formData.corpHoldsQualifyingRentalHousingOnly,
+        corpMeetsSocialEnterpriseRequirements: formData.corpMeetsSocialEnterpriseRequirements,
+      })
+    : undefined;
+}
 
 /**
  * 토지 필지 모드 검증 (⑧ — API/Zod와 동기화). 통과 시 null, 오류 시 메시지.
@@ -70,9 +84,9 @@ export function validateLandParcels(formData: ComprehensiveFormData): string | n
  * (UI 통과↔validate 차단 모순 방지 — API strip 게이트(>0)와 동일 조건).
  */
 export function validateAppurtenantSplit(formData: ComprehensiveFormData): string | null {
-  const taxpayerType = formData.taxpayerType ?? "individual";
+  const corporateClass = deriveCorporateClass(formData);
   const capMode = formData.previousYearCapMode ?? "direct";
-  const autoMode = taxpayerType !== "corporate_special" && capMode === "auto";
+  const autoMode = corporateClass !== "corporate_special" && capMode === "auto";
   for (const p of formData.properties) {
     if (!p.appurtenantSplitEnabled) continue;
     if (parseAmount(p.landStdValue) <= 0 || parseAmount(p.buildingStdValue) <= 0) {
@@ -424,6 +438,11 @@ export async function callComprehensiveApi(
   const body = {
     assessmentYear: parseInt(formData.assessmentYear) || new Date().getFullYear(),
     taxpayerType,                                         // ⑬ body spread
+    // 법인 세부 유형·조건 플래그 (§4의4) — 개인 시 strip (3중 패턴, 엔진 무시가 1차)
+    corporateHousingType: isCorporate ? formData.corporateHousingType : undefined,
+    corpHoldsOnlyPublicPurposeHousing: isCorporate ? formData.corpHoldsOnlyPublicPurposeHousing : undefined,
+    corpHoldsQualifyingRentalHousingOnly: isCorporate ? formData.corpHoldsQualifyingRentalHousingOnly : undefined,
+    corpMeetsSocialEnterpriseRequirements: isCorporate ? formData.corpMeetsSocialEnterpriseRequirements : undefined,
     // 법인 시 명시 strip (엔진 무시가 1차 방어, API strip이 2차 — 3중 패턴)
     isOneHouseOwner: isCorporate ? false : formData.isOneHouseOwner,
     // isJointOwnershipSpecialCase: 법인 시 strip — Zod refine이 3차 차단 (상호배타: isOneHouseOwner && isJointOwnershipSpecialCase)
