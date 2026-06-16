@@ -64,6 +64,16 @@ export const propertyTaxInputSchema = z
       .nonnegative({ message: "전년도 납부세액은 0원 이상이어야 합니다." })
       .optional(),
 
+    /** 직전연도 과세표준 (원) — recompute 모드(§118 본문) 직전 세율 재산정용 */
+    previousYearTaxBase: z
+      .number()
+      .int({ message: "직전연도 과세표준은 원 단위 정수여야 합니다." })
+      .nonnegative({ message: "직전연도 과세표준은 0원 이상이어야 합니다." })
+      .optional(),
+
+    /** 세부담상한 모드 — direct(직접입력) | recompute(과세표준 재산정) */
+    taxCapMode: z.enum(["direct", "recompute"]).optional(),
+
     /** 계산 기준일 (YYYY-MM-DD) */
     targetDate: z
       .string()

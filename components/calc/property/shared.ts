@@ -118,6 +118,10 @@ export interface FormState {
   /** 화재위험 건축물 등급 — 소방분 중과(§146③2호·2의2호) (건축물 전용) */
   fireHazardClass: string;
   previousYearTax: string;
+  /** 직전연도 과세표준 (원) — recompute 모드(§118 본문, 비주택 building·vessel·aircraft·종합합산) */
+  previousYearTaxBase: string;
+  /** 세부담상한 모드 — "direct"(직전 세액 직접입력) | "recompute"(직전 과세표준 재산정) */
+  taxCapMode: "direct" | "recompute";
   landTaxType: "comprehensive_aggregate" | "separate_aggregate" | "separated" | "";
   saZoningDistrict: string;
   saLandArea: string;
@@ -178,6 +182,8 @@ export const INITIAL_FORM: FormState = {
   buildingType: "general",
   fireHazardClass: "none",
   previousYearTax: "",
+  previousYearTaxBase: "",
+  taxCapMode: "direct",
   landTaxType: "",
   saZoningDistrict: "",
   saLandArea: "",
@@ -307,6 +313,11 @@ export function validateStep(step: number, form: FormState): string | null {
         return "공장 입지 유형을 선택하세요.";
     }
   }
+  // Step3: recompute 모드 직전 과세표준 — 입력 시 형식만 검증, 미입력은 통과(상한 미적용 경고는 엔진)
+  if (step === 3 && form.objectType !== "housing" && form.taxCapMode === "recompute") {
+    if (form.previousYearTaxBase && parseAmount(form.previousYearTaxBase) === null)
+      return "직전연도 과세표준을 올바른 금액으로 입력하세요.";
+  }
   return null;
 }
 
@@ -393,9 +404,23 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
 
   // 주택은 세부담상한 미적용 (지방세법 §122 단서) — 전년도 세액 미전송 (엔진·UI 동기화)
   if (form.objectType !== "housing") {
-    const prevTax = parseAmount(form.previousYearTax);
-    if (prevTax !== null && prevTax > 0) {
-      body.previousYearTax = prevTax;
+    // recompute(§118 본문) 대상: 건축물·선박·항공기·종합합산 토지
+    const isRecomputeTarget =
+      form.objectType === "building" ||
+      form.objectType === "vessel" ||
+      form.objectType === "aircraft" ||
+      (form.objectType === "land" && form.landTaxType === "comprehensive_aggregate");
+    if (form.taxCapMode === "recompute" && isRecomputeTarget) {
+      const prevBase = parseAmount(form.previousYearTaxBase);
+      if (prevBase !== null && prevBase > 0) {
+        body.taxCapMode = "recompute";
+        body.previousYearTaxBase = prevBase;
+      }
+    } else {
+      const prevTax = parseAmount(form.previousYearTax);
+      if (prevTax !== null && prevTax > 0) {
+        body.previousYearTax = prevTax;
+      }
     }
   }
 
