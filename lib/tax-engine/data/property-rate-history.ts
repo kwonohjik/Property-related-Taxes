@@ -23,6 +23,10 @@ export interface LandProgressiveRateSet {
   rate2: number;
   /** 3구간(초과) 세율 */
   rate3: number;
+  /** 2구간 누진공제 (원) */
+  deduction2: number;
+  /** 3구간 누진공제 (원) */
+  deduction3: number;
 }
 
 /** 연도별 재산세 비주택 세율 세트 */
@@ -59,6 +63,8 @@ const RATE_SET_2005: PropertyRateSet = {
     rate1: 0.002,
     rate2: 0.003,
     rate3: 0.005,
+    deduction2: 50_000,
+    deduction3: 250_000,
   },
   landSeparateAggregate: {
     bracket1: 200_000_000,
@@ -66,6 +72,8 @@ const RATE_SET_2005: PropertyRateSet = {
     rate1: 0.002,
     rate2: 0.003,
     rate3: 0.004,
+    deduction2: 200_000,
+    deduction3: 1_200_000,
   },
   landSeparatedLow: 0.0007,
   landSeparatedGeneral: 0.002,

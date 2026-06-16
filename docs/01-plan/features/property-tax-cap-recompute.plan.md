@@ -54,7 +54,7 @@ recompute (§118 본문):
 |---|---|---|
 | **P1** | 역사 세율표 데이터 `property-rate-history.ts` + `getPropertyRateSet` + 현행값 추출 anchor | 데이터만, 코드 무변경 |
 | **P2** | 건축물·선박·항공기 calc 연도화 (rateSet 주입, 기본=현행) | 기존 anchor 전수 통과 |
-| **P3** | 토지 3분류 연도화 (comprehensive-aggregate·separate-aggregate·separated) | 종부세 연동 회귀(`comprehensive-*` test) |
+| **P3** | 토지 연도화 — **종합합산·별도합산만**(분리는 classify 3함수 분산 + recompute 무관 → 후속, Do 환류). + 역사표 누진공제 보강(종합 D3 엔진 주석 오기 → 실제 250,000 정정) | 종부세 직접 import 없음 확인 → 회귀 0 |
 | **P4** | `recomputePriorYearTax`(건축물·선박·종합합산만) + 본문 Step 2.5 + basisTax 주입(applyTaxCap `:707`·applyBurdenCap `:638`). 분리(`:581`)·별도(`:502`)는 **direct only** | recompute anchor C-2(건축물)·C-5(선박)·C-6(종합합산) + direct C-1·분리·별도 회귀 |
 | **P5** | UI 모드 토글(RadioCardGroup) + `previousYearTaxBase`·`taxCapMode` 14지점 | direct 현행 회귀·validate 동기화(⑧) |
 | **P6** | 통합 anchor + 전체 vitest 회귀 + 결과뷰 재산정 산식 | 전체 8000+ test |

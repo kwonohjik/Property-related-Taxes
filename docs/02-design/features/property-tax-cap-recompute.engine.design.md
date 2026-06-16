@@ -34,7 +34,7 @@ export function getPropertyRateSet(year: number): PropertyRateSet; // year 이�
 | 선박·항공기 (`:692` 리터럴) | `applyRate(taxBase, 0.003)` | `applyRate(taxBase, rateSet.vesselAircraft)` |
 | `calculateComprehensiveAggregateTax` (`comprehensive-aggregate:406`) | `(taxBase)` | `(taxBase, rateSet?)` |
 | `calculateSeparateAggregateTax` (`separate-aggregate-land:416`) | `(input: SeparateAggregateInput, _rates?)` — **이미 _rates 인자 보유** | `_rates`/rateSet로 누진 brackets 주입 |
-| `calculateSeparateTaxationTax` (`separate-taxation:396`) | `(classification, assessedValue)` — 세율 = `classification.appliedRate`(classify 단계) | **`classifySeparateTaxation`에 rateSet** 주입(세율 결정 지점, `:347`) |
+| `calculateSeparateTaxationTax` (`separate-taxation:396`) | `(classification, assessedValue)` — 세율 = `classification.appliedRate`(classify 단계) | **P3 연도화 보류**(Do 환류) — 세율이 classifyHeavy/LowRate/Standard 3함수에 분산 결정 + recompute 대상 아님(C-6x direct). 후속 |
 
 **기본 인자 = `getPropertyRateSet(현행연도)`** → 모든 기존 호출부(종부세 연동 포함) 동작 불변. 각 Phase 후 해당 test + `comprehensive-*.test.ts` 회귀.
 

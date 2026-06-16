@@ -44,6 +44,13 @@ describe("P1: 역사 세율표 — 현행값 일치 (드리프트 차단)", () =
     expect(rs.landSeparateAggregate.rate3).toBe(PROPERTY_SEPARATE_CONST.RATE_3); // 0.004
   });
 
+  it("토지 누진공제 — DEDUCTION 상수 일치 (종합 250,000 / 별도 1,200,000)", () => {
+    expect(rs.landComprehensive.deduction2).toBe(PROPERTY_CONST.COMPREHENSIVE_DEDUCTION_2); // 50,000
+    expect(rs.landComprehensive.deduction3).toBe(PROPERTY_CONST.COMPREHENSIVE_DEDUCTION_3); // 250,000
+    expect(rs.landSeparateAggregate.deduction2).toBe(PROPERTY_SEPARATE_CONST.DEDUCTION_2); // 200,000
+    expect(rs.landSeparateAggregate.deduction3).toBe(PROPERTY_SEPARATE_CONST.DEDUCTION_3); // 1,200,000
+  });
+
   it("분리과세 저율·일반·중과 (separate-taxation.ts RATE_LOW/STD/HEAVY)", () => {
     expect(rs.landSeparatedLow).toBe(0.0007);
     expect(rs.landSeparatedGeneral).toBe(0.002);

@@ -23,6 +23,8 @@
 
 import { applyRate, truncateToThousand } from "./tax-utils";
 import { PROPERTY_SEPARATE, PROPERTY_SEPARATE_CONST } from "./legal-codes";
+import { getCurrentPropertyRateSet } from "./data/property-rate-history";
+import type { PropertyRateSet } from "./data/property-rate-history";
 
 // ============================================================
 // 타입 정의
@@ -416,6 +418,7 @@ function safeMultiplyArea(pricePerSqm: number, area: number): number {
 export function calculateSeparateAggregateTax(
   input: SeparateAggregateInput,
   _rates?: Record<string, unknown>, // DB 세율 맵 (현재 상수 fallback)
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): SeparateAggregateResult {
   const warnings: string[] = [];
   const legalBasis: string[] = [
@@ -464,7 +467,7 @@ export function calculateSeparateAggregateTax(
   legalBasis.push(PROPERTY_SEPARATE.FAIR_MARKET_RATIO);
 
   // ── Step 4: 누진세율 적용 ──
-  const grossTax = calcProgressiveSeparateTax(taxBase);
+  const grossTax = calcProgressiveSeparateTax(taxBase, rateSet);
 
   // ── Step 5: 세부담상한 적용 ──
   const { taxAfterCap, appliedCapRate } = applySeparateBurdenCap(
@@ -514,16 +517,21 @@ export function calculateSeparateAggregateTax(
 /**
  * 별도합산 누진세율 계산 (지방세법 §111①1호 나목)
  */
-function calcProgressiveSeparateTax(taxBase: number): number {
+function calcProgressiveSeparateTax(
+  taxBase: number,
+  rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
+): number {
   if (taxBase <= 0) return 0;
 
-  const B1 = PROPERTY_SEPARATE_CONST.BRACKET_1; // 2억
-  const B2 = PROPERTY_SEPARATE_CONST.BRACKET_2; // 10억
-  const R1 = PROPERTY_SEPARATE_CONST.RATE_1;    // 0.002
-  const R2 = PROPERTY_SEPARATE_CONST.RATE_2;    // 0.003
-  const R3 = PROPERTY_SEPARATE_CONST.RATE_3;    // 0.004
-  const D2 = PROPERTY_SEPARATE_CONST.DEDUCTION_2; // 200,000
-  const D3 = PROPERTY_SEPARATE_CONST.DEDUCTION_3; // 1,200,000
+  const {
+    bracket1: B1,
+    bracket2: B2,
+    rate1: R1,
+    rate2: R2,
+    rate3: R3,
+    deduction2: D2,
+    deduction3: D3,
+  } = rateSet.landSeparateAggregate;
 
   // P0-2: 세액 계산 시 applyRate() 사용 (Math.floor 직접 사용 금지)
   if (taxBase <= B1) {
