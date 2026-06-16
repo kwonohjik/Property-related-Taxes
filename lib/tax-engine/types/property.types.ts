@@ -17,6 +17,7 @@
 import type {
   PropertyTaxpayerType,
   CoOwnershipShare,
+  PropertyHeir,
 } from "./property-object.types";
 
 // ============================================================
@@ -181,8 +182,8 @@ export interface PropertyTaxInput {
     settlor?: string;
     /** 상속 미등기 여부 (§107②2호) */
     isInheritanceUnregistered?: boolean;
-    /** 상속인 목록 (상속 미등기 시) */
-    heirs?: string[];
+    /** 상속인 목록 (상속 미등기 시) — §107②2호 주된 상속자 판정(지분 최대 → 동률 시 연장자) */
+    heirs?: PropertyHeir[];
     /** 공유 지분 목록 (§107①1호) — 2인 이상 시 지분별 안분 */
     coOwnershipShares?: CoOwnershipShare[];
     /** 종중재산 미신고 (§107②3호) → 공부상 소유자 */

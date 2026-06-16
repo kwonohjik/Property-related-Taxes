@@ -194,8 +194,8 @@ export interface PropertyObjectInput {
   // ── 상속 ──
   /** 상속 미등기 여부 */
   isInheritanceUnregistered?: boolean;
-  /** 상속인 목록 (상속 미등기 시) */
-  heirs?: string[];
+  /** 상속인 목록 (상속 미등기 시) — §107②2호 주된 상속자 판정(지분 최대 → 동률 시 연장자) */
+  heirs?: PropertyHeir[];
 
   // ── 기타 특수 납세의무자 (§107②3·4·6·7·8호·③) ──
   /** 종중재산 미신고 (§107②3호) → 공부상 소유자 */
@@ -313,6 +313,16 @@ export interface PropertyObjectResult {
 /**
  * 공유재산 지분 (지방세법 §107③)
  */
+/** 상속인 (§107②2호 주된 상속자 판정) — 시행규칙 §53: 지분 최대 → 동률 시 연장자 */
+export interface PropertyHeir {
+  /** 상속인 성명 */
+  name: string;
+  /** 민법상 상속지분 (0~1). 미입력 시 주된 상속자 판정 fallback(첫 상속인) */
+  shareRatio?: number;
+  /** 생년월일 ISO "YYYY-MM-DD" — 지분 동률 시 연장자(이른 생년) 판정 */
+  birthDate?: string;
+}
+
 export interface CoOwnershipShare {
   /** 공유자 식별자 */
   ownerId: string;

@@ -69,7 +69,7 @@ describe("determineTaxpayer — 납세의무자 확정", () => {
     const result = determineTaxpayer({
       ...BASE,
       isInheritanceUnregistered: true,
-      heirs: ["홍길동", "홍길순"],
+      heirs: [{ name: "홍길동" }, { name: "홍길순" }],
     });
     expect(result.type).toBe("heir_representative");
     expect(result.name).toBe("홍길동");

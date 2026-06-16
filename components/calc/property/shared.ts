@@ -39,6 +39,13 @@ export interface CoOwnerItem {
   ratio: string;     // 지분율 (소수점 문자열, "0.5" = 50%)
 }
 
+/** 상속인 항목 (UI 입력용 — §107②2호 주된 상속자 판정: 지분 최대 → 동률 시 연장자) */
+export interface HeirItem {
+  name: string;       // 상속인 성명
+  shareRatio: string; // 민법상 상속지분 (소수점 문자열 "0.5", 선택 — 미입력 시 첫 상속인 fallback)
+  birthDate: string;  // 생년월일 "YYYY-MM-DD" (동률 시 연장자 판정, 선택)
+}
+
 // ============================================================
 // 상수
 // ============================================================
@@ -144,8 +151,8 @@ export interface FormState {
   settlor: string;
   /** 공유자 목록 (3-state: undefined=OFF / []=ON빈 / [...]=데이터) */
   coOwners: CoOwnerItem[] | undefined;
-  /** 상속인 목록 (쉼표 구분 단일 텍스트, 편의 입력) */
-  heirsText: string;
+  /** 상속인 목록 (§107②2호 주된 상속자 판정 — 성명·지분·생년 행 기반) */
+  heirs: HeirItem[];
   /** 연부 매수계약자 성명/식별자 (§107②4호) */
   installmentBuyer: string;
   /** 환지 체비지·보류지 사업시행자 성명/식별자 (§107②6호) */
@@ -194,7 +201,7 @@ export const INITIAL_FORM: FormState = {
   actualOwner: "",
   settlor: "",
   coOwners: undefined,
-  heirsText: "",
+  heirs: [],
   installmentBuyer: "",
   projectOperator: "",
   importer: "",
@@ -259,8 +266,18 @@ export function validateStep(step: number, form: FormState): string | null {
       }
 
       if (form.ownershipType === "inherit") {
-        // 상속 미등기: 상속인 텍스트 비어있으면 경고만 (API에서 경고 포함)
-        // 차단하지 않음 (UI 통과↔validate 차단 모순 금지)
+        // 상속 미등기: 상속인 미입력 시 경고만 (API에서 경고 포함, 차단 아님).
+        // 지분은 전원 입력 시에만 합계 검증 — 일부/전부 미입력은 주된 상속자 fallback 대상(§3.4).
+        const named = form.heirs.filter((h) => h.name.trim());
+        const allHaveShare =
+          named.length > 0 && named.every((h) => h.shareRatio.trim() && !isNaN(parseFloat(h.shareRatio)));
+        if (allHaveShare) {
+          if (named.some((h) => parseFloat(h.shareRatio) <= 0))
+            return "상속 지분율은 0보다 커야 합니다.";
+          const total = named.reduce((s, h) => s + parseFloat(h.shareRatio), 0);
+          if (total > 1 + 1e-9)
+            return `상속 지분 합계(${(total * 100).toFixed(2)}%)가 100%를 초과합니다.`;
+        }
       }
 
       // ── §107①2호: 건물·부속토지 소유자 분리 — 시가표준액 안분 필수 차단 ──
@@ -439,10 +456,18 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
 
       if (form.ownershipType === "inherit") {
         info.isInheritanceUnregistered = true;
-        const heirs = form.heirsText
-          .split(/[,，、]/)
-          .map((h) => h.trim())
-          .filter(Boolean);
+        // 행 기반 → {name, shareRatio?, birthDate?}[] (빈 필드 생략). 엔진 selectMainHeir가 §53 판정.
+        const heirs = form.heirs
+          .filter((h) => h.name.trim())
+          .map((h) => {
+            const heir: { name: string; shareRatio?: number; birthDate?: string } = {
+              name: h.name.trim(),
+            };
+            const share = parseFloat(h.shareRatio);
+            if (!isNaN(share) && share > 0) heir.shareRatio = share;
+            if (h.birthDate.trim()) heir.birthDate = h.birthDate.trim();
+            return heir;
+          });
         if (heirs.length > 0) info.heirs = heirs;
       }
 
