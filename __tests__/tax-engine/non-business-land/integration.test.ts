@@ -230,10 +230,8 @@ describe("시나리오 11~14 — 특수 케이스", () => {
     });
     const result = judge(asset, "2018-01-01", "2024-01-01");
     expect(result).not.toBeNull();
-    // gracePeriodDays가 0보다 클 수 있음
-    if (result!.gracePeriodDays > 0) {
-      expect(result!.gracePeriodDays).toBeGreaterThan(0);
-    }
+    // priority 2 결선: 유예기간(질병)이 사업용 일수에 가산되어 gracePeriodDays 확정(§168의14①)
+    expect(result!.gracePeriodDays).toBeGreaterThan(0);
   });
 
   it("시나리오 14: nblUseDetailedJudgment=false → mapper가 null 반환", () => {

@@ -99,7 +99,7 @@ export function judgeForest(
   }
 
   const residencePeriods = residenceFromHistory.length > 0 ? residenceFromHistory : fallbackResidence;
-  const r1 = meetsPeriodCriteria(residencePeriods, input.acquisitionDate, input.transferDate, "forest", rules);
+  const r1 = meetsPeriodCriteria(residencePeriods, input.acquisitionDate, input.transferDate, "forest", rules, input.gracePeriods);
 
   steps.push({
     id: "forest_residence",
@@ -124,7 +124,7 @@ export function judgeForest(
   let r2: PeriodCriteriaResult | null = null;
   if (applies) {
     const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
-    r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "forest", rules);
+    r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "forest", rules, input.gracePeriods);
     if (!r2.meets) {
       steps.push({
         id: "forest_public_business",
@@ -246,7 +246,7 @@ function buildPass(
     appliedLaws,
     totalOwnershipDays: ctx.totalOwnershipDays,
     effectiveBusinessDays: ctx.r.effectiveBusinessDays,
-    gracePeriodDays: 0,
+    gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
     residencePeriodsUsed: ctx.residencePeriodsUsed,
@@ -268,7 +268,7 @@ function buildFail(
     appliedLaws,
     totalOwnershipDays: ctx.totalOwnershipDays,
     effectiveBusinessDays: ctx.r.effectiveBusinessDays,
-    gracePeriodDays: 0,
+    gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
     residencePeriodsUsed: ctx.residencePeriodsUsed,

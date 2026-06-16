@@ -89,7 +89,7 @@ export function judgePasture(
 
   // ── Step 3-1: 축산업 영위기간 기간기준 ──────────────────────────
   const livestockPeriods = getLivestockPeriods(input);
-  const r1 = meetsPeriodCriteria(livestockPeriods, input.acquisitionDate, input.transferDate, "pasture", rules);
+  const r1 = meetsPeriodCriteria(livestockPeriods, input.acquisitionDate, input.transferDate, "pasture", rules, input.gracePeriods);
 
   steps.push({
     id: "pasture_livestock",
@@ -104,7 +104,7 @@ export function judgePasture(
     const related = isRelatedPasture(input);
     if (related.applies) {
       const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: input.transferDate }];
-      const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "pasture", rules);
+      const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, input.transferDate, "pasture", rules, input.gracePeriods);
       if (r2.meets) {
         appliedLaws.push(NBL.PASTURE_RELATED);
         steps.push({
@@ -175,7 +175,7 @@ export function judgePasture(
       areaProportioning,
       totalOwnershipDays,
       effectiveBusinessDays: r1.effectiveBusinessDays,
-      gracePeriodDays: 0,
+      gracePeriodDays: r1.gracePeriodDays,
       businessUseRatio: areaProportioning.nonBusinessRatio,
       criteria: r1.criteria,
       warnings,
@@ -254,7 +254,7 @@ function buildPass(
     appliedLaws,
     totalOwnershipDays: ctx.totalOwnershipDays,
     effectiveBusinessDays: ctx.r.effectiveBusinessDays,
-    gracePeriodDays: 0,
+    gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
     warnings,
@@ -275,7 +275,7 @@ function buildFail(
     appliedLaws,
     totalOwnershipDays: ctx.totalOwnershipDays,
     effectiveBusinessDays: ctx.r.effectiveBusinessDays,
-    gracePeriodDays: 0,
+    gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
     warnings,
