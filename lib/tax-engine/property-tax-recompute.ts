@@ -26,6 +26,7 @@ export function recomputePriorYearTax(
     case "building":
       return calcBuildingTax(priorTaxBase, input.buildingType, rs).tax;
     case "vessel":
+      return applyRate(priorTaxBase, input.vesselType === "luxury" ? rs.vesselLuxury : rs.vesselAircraft);
     case "aircraft":
       return applyRate(priorTaxBase, rs.vesselAircraft);
     case "land":
@@ -65,6 +66,7 @@ export function recomputePriorYearAppliedRate(
     case "building":
       return calcBuildingTax(0, input.buildingType, rs).appliedRate;
     case "vessel":
+      return input.vesselType === "luxury" ? rs.vesselLuxury : rs.vesselAircraft;
     case "aircraft":
       return rs.vesselAircraft;
     default:

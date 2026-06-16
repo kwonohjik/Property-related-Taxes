@@ -696,13 +696,22 @@ export function calculatePropertyTax(
       );
     }
 
-    case "vessel":
-    case "aircraft": {
-      // 선박·항공기: 시가표준액 × 0.3% (지방세법 §111①4호 — 역사 세율표)
-      const vesselRate = getCurrentPropertyRateSet().vesselAircraft;
+    case "vessel": {
+      // 선박: 고급선박(§13⑤5호) 5% / 일반선박 0.3% (지방세법 §111①4호 — 역사 세율표)
+      const rs = getCurrentPropertyRateSet();
+      const isLuxury = input.vesselType === "luxury";
+      const vesselRate = isLuxury ? rs.vesselLuxury : rs.vesselAircraft;
       calculatedTax = applyRate(taxBase, vesselRate);
       appliedRate = vesselRate;
-      legalBasis.push(PROPERTY.VESSEL_AIRCRAFT_RATE);
+      legalBasis.push(isLuxury ? PROPERTY.VESSEL_LUXURY_RATE : PROPERTY.VESSEL_GENERAL_RATE);
+      break;
+    }
+    case "aircraft": {
+      // 항공기: 시가표준액 × 0.3% (지방세법 §111①5호 — 역사 세율표)
+      const aircraftRate = getCurrentPropertyRateSet().vesselAircraft;
+      calculatedTax = applyRate(taxBase, aircraftRate);
+      appliedRate = aircraftRate;
+      legalBasis.push(PROPERTY.AIRCRAFT_RATE);
       break;
     }
 

@@ -14,6 +14,7 @@ import { useState } from "react";
 import {
   OBJECT_TYPE_LABELS,
   BUILDING_TYPE_LABELS,
+  VESSEL_TYPE_LABELS,
   FIRE_HAZARD_OPTIONS,
   type FormState,
   type OwnershipType,
@@ -184,6 +185,24 @@ export function Step0({
             value={form.buildingType}
             onChange={(v) => onChange({ buildingType: v })}
           />
+        </div>
+      )}
+
+      {/* 선박 유형 (선박 전용) — 고급선박 §111①4호 가목(5%) / 일반선박 나목(0.3%) */}
+      {form.objectType === "vessel" && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">선박 유형</label>
+          <RadioCardGroup
+            name="vesselType"
+            tone="violet"
+            layout="inline"
+            options={VESSEL_TYPE_LABELS.map(([value, label]) => ({ value, label }))}
+            value={form.vesselType}
+            onChange={(v) => onChange({ vesselType: v as "general" | "luxury" })}
+          />
+          <p className="text-xs text-muted-foreground">
+            고급선박: 비업무용 자가용 선박 중 대통령령 기준 초과 (지방세법 §13⑤5호)
+          </p>
         </div>
       )}
 

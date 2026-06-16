@@ -23,9 +23,10 @@ describe("P1: 역사 세율표 — 현행값 일치 (드리프트 차단)", () =
     expect(rs.buildingLuxury).toBe(PROPERTY_CONST.BUILDING_LUXURY_RATE); // 0.04
   });
 
-  it("건축물 factory 0.005 · 선박·항공기 0.003 (property-tax.ts 리터럴)", () => {
+  it("건축물 factory 0.005 · 선박·항공기 0.003 · 고급선박 0.05 (property-tax.ts 리터럴)", () => {
     expect(rs.buildingFactory).toBe(0.005);
     expect(rs.vesselAircraft).toBe(0.003);
+    expect(rs.vesselLuxury).toBe(0.05); // §111①4호 가목 고급선박
   });
 
   it("종합합산 brackets·rates — COMPREHENSIVE_* 일치", () => {
