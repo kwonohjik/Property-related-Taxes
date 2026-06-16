@@ -39,6 +39,8 @@ export interface PropertyRateSet {
   buildingFactory: number;
   /** 선박(일반)·항공기 (§111①4호 나목·5호) */
   vesselAircraft: number;
+  /** 고급선박 (§111①4호 가목, §13⑤5호 비업무용 자가용) */
+  vesselLuxury: number;
   /** 토지 종합합산 (§111①1호 가목) */
   landComprehensive: LandProgressiveRateSet;
   /** 토지 별도합산 (§111①1호 나목) */
@@ -57,6 +59,7 @@ const RATE_SET_2005: PropertyRateSet = {
   buildingLuxury: 0.04,
   buildingFactory: 0.005,
   vesselAircraft: 0.003,
+  vesselLuxury: 0.05,
   landComprehensive: {
     bracket1: 50_000_000,
     bracket2: 100_000_000,

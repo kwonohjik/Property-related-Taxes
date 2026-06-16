@@ -52,6 +52,11 @@ export const propertyTaxInputSchema = z
       .enum(["general", "golf_course", "luxury", "factory"])
       .optional(),
 
+    /** 선박 유형 (objectType==="vessel" 시 유효) — 고급선박 §111①4호 가목(5%)·§13⑤5호 */
+    vesselType: z
+      .enum(["general", "luxury"])
+      .optional(),
+
     /** 화재위험 건축물 등급 — 소방분 중과(§146③2호·2의2호, objectType==="building" 시 유효) */
     fireHazardClass: z
       .enum(["none", "fire_hazard", "large_fire_hazard"])
@@ -212,6 +217,14 @@ export const propertyTaxInputSchema = z
         code: z.ZodIssueCode.custom,
         path: ["buildingType"],
         message: "buildingType은 objectType이 'building'일 때만 사용합니다.",
+      });
+    }
+    // vesselType은 objectType==="vessel" 일 때만 유효 (고급선박 §111①4호 가목)
+    if (data.vesselType && data.objectType !== "vessel") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["vesselType"],
+        message: "vesselType은 objectType이 'vessel'일 때만 사용합니다.",
       });
     }
     // fireHazardClass는 objectType==="building" 일 때만 유효 (화재위험 중과 §146③2호·2의2호)

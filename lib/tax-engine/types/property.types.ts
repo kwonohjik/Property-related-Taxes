@@ -92,6 +92,9 @@ export interface PropertyTaxInput {
   /** 건축물 세율 구분 — objectType==="building" 일 때 필수 */
   buildingType?: BuildingTaxType;
 
+  /** 선박 유형 — objectType==="vessel" 전용. luxury=고급선박(§13⑤5호, 5%). 기본 general(0.3%) */
+  vesselType?: "general" | "luxury";
+
   /**
    * 화재위험 건축물 등급 — 소방분 지역자원시설세 중과 (지방세법 §146③2호·2의2호).
    * objectType==="building" 전용. 미지정/"none"=중과 없음(×1).

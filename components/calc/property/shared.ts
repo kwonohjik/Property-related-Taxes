@@ -65,6 +65,11 @@ export const BUILDING_TYPE_LABELS: [string, string][] = [
   ["factory", "공장 (0.5%)"],
 ];
 
+export const VESSEL_TYPE_LABELS: [string, string][] = [
+  ["general", "일반선박 (0.3%)"],
+  ["luxury", "고급선박 (5%)"],
+];
+
 /** 화재위험 건축물 등급 — 소방분 지역자원시설세 중과 (지방세법 §146③2호·2의2호, 시행령 §138) */
 export const FIRE_HAZARD_OPTIONS: { value: string; label: string; description: string }[] = [
   { value: "none", label: "일반", description: "화재위험 건축물 아님 (중과 없음)" },
@@ -122,6 +127,8 @@ export interface FormState {
   isOneHousehold: boolean;
   isUrbanArea: boolean;
   buildingType: string;
+  /** 선박 유형 — objectType==="vessel" 전용. "general"(일반 0.3%) | "luxury"(고급선박 5%, §111①4호 가목·§13⑤5호) */
+  vesselType: "general" | "luxury";
   /** 화재위험 건축물 등급 — 소방분 중과(§146③2호·2의2호) (건축물 전용) */
   fireHazardClass: string;
   previousYearTax: string;
@@ -187,6 +194,7 @@ export const INITIAL_FORM: FormState = {
   isOneHousehold: false,
   isUrbanArea: false,
   buildingType: "general",
+  vesselType: "general",
   fireHazardClass: "none",
   previousYearTax: "",
   previousYearTaxBase: "",
@@ -370,6 +378,11 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
     if (form.fireHazardClass && form.fireHazardClass !== "none") {
       body.fireHazardClass = form.fireHazardClass;
     }
+  }
+
+  // 선박 유형 — §111①4호 가목 고급선박(5%) / 나목 일반선박(0.3%)
+  if (form.objectType === "vessel") {
+    body.vesselType = form.vesselType;
   }
 
   if (form.objectType === "land" && form.landTaxType) {
