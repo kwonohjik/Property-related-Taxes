@@ -227,6 +227,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblOtherMaxAnnualArea: "",
     nblOtherYouthCapacity: "",
     nblOtherMinGarageArea: "",
+    nblOtherSportsFacilityType: "", nblOtherReserveUnitSize: "", nblOtherReserveFacilities: [] as string[],
     nblRevenueBusinessType: "",
     nblRevenueCurrentRevenue: "",
     nblRevenueCurrentLandValue: "",

@@ -9,6 +9,7 @@
  */
 
 import type { NblRevenueBusinessType } from "../legal-codes";
+import type { SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
 
 // ============================================================
 // 기본 원시 타입
@@ -241,6 +242,12 @@ export interface OtherLandUsage {
   youthCapacity?: number;
   /** 2호 나목: 최저차고기준면적(㎡). 엔진이 ×1.5 (§168의11①2호나목). */
   minGarageArea?: number;
+  /** 1호 체육시설 종목 (별표3 자동 lookup — F2 Phase A). 미설정 시 standardAreaLimit fallback. */
+  sportsFacilityType?: keyof typeof SPORTS_OUTDOOR_STD | keyof typeof SPORTS_INDOOR_STD;
+  /** 5호 다목 예비군 부대편성인원 구간 (별표6 — F2 Phase A). */
+  reserveForcesUnitSize?: keyof typeof RESERVE_FORCES_STD;
+  /** 5호 다목 예비군 포함 시설 (별표6 합산 — 전술교육장 외 실시 불가 시 포함). */
+  reserveForcesFacilities?: Array<"tactical" | "shooting_prep" | "range" | "basic">;
 }
 
 export interface ForestUsageDetail {

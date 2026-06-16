@@ -250,6 +250,7 @@ export const NBL_DEFAULTS = {
   nblOtherMaxAnnualArea: "",
   nblOtherYouthCapacity: "",
   nblOtherMinGarageArea: "",
+  nblOtherSportsFacilityType: "", nblOtherReserveUnitSize: "", nblOtherReserveFacilities: [] as string[],
   // §168의11② 수입금액비율 (기타토지 — 2호다목·10·11다·12호 특정 업종)
   nblRevenueBusinessType: "" as
     | ""

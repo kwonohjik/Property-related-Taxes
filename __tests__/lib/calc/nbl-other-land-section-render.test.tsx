@@ -57,4 +57,19 @@ describe("[NBL-OTHER-UI] ⑤ §168의11① 호별 면적기준 위젯", () => {
     expect(screen.queryByText(/기준면적 \(㎡\)/)).toBeNull();
     expect(screen.queryByText(/매년 최대 사용면적 \(㎡\)/)).toBeNull();
   });
+
+  // F2 Phase A — sports: 별표3 종목 select 노출.
+  it("sports 선택 시 '체육시설 종목 (별표3)' select 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "sports" as const };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/체육시설 종목 \(별표3\)/)).toBeTruthy();
+  });
+
+  // F2 Phase A — reserve_forces: 부대규모 select + 부대규모 선택 시 시설 토글 노출.
+  it("reserve_forces + 부대규모 선택 시 '부대편성인원 (별표6)'·시설 토글 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "reserve_forces" as const, nblOtherReserveUnitSize: "le2400" };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/부대편성인원 \(별표6\)/)).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-reserve-fac-tactical")).toBeTruthy();
+  });
 });

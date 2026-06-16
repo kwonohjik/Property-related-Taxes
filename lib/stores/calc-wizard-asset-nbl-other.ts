@@ -26,6 +26,10 @@ export interface NblOtherFormSlice {
   nblOtherMaxAnnualArea: string;
   nblOtherYouthCapacity: string;
   nblOtherMinGarageArea: string;
+  // §168의11① F2 Phase A — 별표3 체육시설 종목·별표6 예비군 부대규모/시설 (자동 lookup)
+  nblOtherSportsFacilityType: string;
+  nblOtherReserveUnitSize: string;
+  nblOtherReserveFacilities: string[];
   // §168의11② 수입금액비율 (기타토지 특정 업종)
   nblRevenueBusinessType:
     | ""

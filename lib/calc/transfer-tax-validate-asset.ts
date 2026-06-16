@@ -450,9 +450,15 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     // §168의11① 호별 면적기준 — 면적인자 요구 호 선택 시 해당 면적인자 필수 (자동 안분 fallback 금지)
     if (asset.nblLandType === "other_land") {
       const bt = asset.nblOtherRelatedBusinessType;
-      const needsStandardArea = bt === "sports" || bt === "parking_attached" || bt === "reserve_forces" || bt === "resort";
+      const needsStandardArea = bt === "parking_attached" || bt === "resort";
       if (needsStandardArea && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
         return `${label}: 선택한 호의 기준면적(㎡)을 입력하세요. (§168의11① 별표·설치기준면적)`;
+      // F2 Phase A — sports: 종목 선택(별표3 자동) 또는 기준면적 직접입력 중 하나 필수
+      if (bt === "sports" && !asset.nblOtherSportsFacilityType && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
+        return `${label}: 체육시설 — 종목을 선택하거나 기준면적(㎡)을 직접 입력하세요. (별표3)`;
+      // F2 Phase A — reserve_forces: 부대편성인원+시설 선택(별표6 자동) 또는 기준면적 직접입력 중 하나 필수
+      if (bt === "reserve_forces" && !(asset.nblOtherReserveUnitSize && (asset.nblOtherReserveFacilities?.length ?? 0) > 0) && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
+        return `${label}: 예비군훈련장 — 부대편성인원·시설을 선택하거나 기준면적(㎡)을 직접 입력하세요. (별표6)`;
       if (bt === "hatchang" && (!asset.nblOtherMaxAnnualArea || parseDecimal(asset.nblOtherMaxAnnualArea) <= 0))
         return `${label}: 하치장 — 매년 최대 사용면적(㎡)을 입력하세요. (§168의11①7호)`;
       if (bt === "youth_training" && (!asset.nblOtherYouthCapacity || parseDecimal(asset.nblOtherYouthCapacity) <= 0))

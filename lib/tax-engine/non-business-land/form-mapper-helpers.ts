@@ -195,6 +195,10 @@ export function buildOtherLand(
     maxAnnualArea:                  parseNumber(asString(a.nblOtherMaxAnnualArea)),
     youthCapacity:                  parseNumber(asString(a.nblOtherYouthCapacity)),
     minGarageArea:                  parseNumber(asString(a.nblOtherMinGarageArea)),
+    // F2 Phase A — 별표3 종목·별표6 부대규모/시설 (자동 lookup)
+    sportsFacilityType:             (asString(a.nblOtherSportsFacilityType) || undefined) as OtherLandUsage["sportsFacilityType"],
+    reserveForcesUnitSize:          (asString(a.nblOtherReserveUnitSize) || undefined) as OtherLandUsage["reserveForcesUnitSize"],
+    reserveForcesFacilities:        asArray<string>(a.nblOtherReserveFacilities) as OtherLandUsage["reserveForcesFacilities"],
   };
 }
 

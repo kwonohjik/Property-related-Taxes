@@ -130,6 +130,9 @@ export const nonBusinessLandRawSchema = z.object({
   nblOtherMaxAnnualArea: z.string().optional(),
   nblOtherYouthCapacity: z.string().optional(),
   nblOtherMinGarageArea: z.string().optional(),
+  nblOtherSportsFacilityType: z.string().optional(),
+  nblOtherReserveUnitSize: z.string().optional(),
+  nblOtherReserveFacilities: z.array(z.string()).optional(),
   // §168의11② 수입금액비율 (기타토지 특정 업종)
   nblRevenueBusinessType: z.string().optional(),
   nblRevenueCurrentRevenue: z.string().optional(),

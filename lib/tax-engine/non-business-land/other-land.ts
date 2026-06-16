@@ -24,7 +24,7 @@ import type {
 import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
 import { computeAreaProportioning } from "./utils/area-proportioning";
-import { NBL_AREA_MULTIPLIER } from "./data/area-standards";
+import { NBL_AREA_MULTIPLIER, SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
 import { computeRevenueTest } from "./revenue-test";
 
 /**
@@ -59,9 +59,26 @@ export function resolveAreaLimit(o: OtherLandUsage): number | undefined {
       return o.minGarageArea !== undefined ? o.minGarageArea * NBL_AREA_MULTIPLIER.GARAGE_MULTIPLIER : undefined;
     case "vacant_lot_1household":
       return NBL_AREA_MULTIPLIER.VACANT_LOT_1HOUSEHOLD;
-    case "sports":
+    case "sports": {
+      // F2 Phase A — 별표3 종목 자동 lookup(실외 11종·실내 3구간), 미선택 시 standardAreaLimit fallback
+      const t = o.sportsFacilityType;
+      if (t) {
+        const std = (SPORTS_OUTDOOR_STD as Record<string, number>)[t] ?? (SPORTS_INDOOR_STD as Record<string, number>)[t];
+        if (std !== undefined) return std;
+      }
+      return o.standardAreaLimit;
+    }
+    case "reserve_forces": {
+      // F2 Phase A — 별표6 부대편성인원×시설 합산, 미선택 시 standardAreaLimit fallback
+      const size = o.reserveForcesUnitSize;
+      const facilities = o.reserveForcesFacilities;
+      if (size && facilities && facilities.length > 0) {
+        const tier = RESERVE_FORCES_STD[size];
+        return facilities.reduce((sum, f) => sum + (tier[f] ?? 0), 0);
+      }
+      return o.standardAreaLimit;
+    }
     case "parking_attached":
-    case "reserve_forces":
     case "resort":
       return o.standardAreaLimit; // 별표/설치기준 직접입력 (미입력 시 undefined → 면적기준 미적용)
     default:

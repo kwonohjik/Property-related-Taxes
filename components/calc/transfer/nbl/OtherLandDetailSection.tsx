@@ -7,6 +7,7 @@ import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   Select,
   SelectContent,
@@ -50,6 +51,40 @@ const AREA_LEGAL_BASIS: Partial<Record<Exclude<RelatedBusinessType, "">, { legal
   vacant_lot_1household: { legalBasis: "소득세법 시행령 §168의11①13호", label: "§168의11①13호" },
 };
 
+// F2 Phase A — 별표3 체육시설 종목(실외 11 + 실내 3) · 별표6 예비군 부대규모·시설
+const SPORTS_FACILITY_OPTIONS = [
+  { value: "soccer", label: "축구장 (11,000㎡)" },
+  { value: "baseball", label: "야구장 (14,000㎡)" },
+  { value: "rugby", label: "럭비장 (9,000㎡)" },
+  { value: "field_hockey", label: "필드하키장 (6,500㎡)" },
+  { value: "tennis", label: "테니스장 (650㎡)" },
+  { value: "soft_tennis", label: "연식정구장 (650㎡)" },
+  { value: "american_football", label: "미식축구장 (7,000㎡)" },
+  { value: "equestrian", label: "승마장 (6,200㎡)" },
+  { value: "shooting", label: "사격장 (4,000㎡)" },
+  { value: "archery", label: "궁도장 (7,100㎡)" },
+  { value: "other_outdoor", label: "기타 실외 (3,000㎡)" },
+  { value: "ball_court", label: "실내 구기·격투·체조 등 (800㎡)" },
+  { value: "swimming", label: "수영·수구·다이빙 (1,000㎡)" },
+  { value: "ice_rink", label: "아이스하키·피겨·롤러 (1,800㎡)" },
+] as const;
+const SPORTS_FACILITY_LABEL: Record<string, string> = Object.fromEntries(SPORTS_FACILITY_OPTIONS.map((o) => [o.value, o.label]));
+
+const RESERVE_SIZE_OPTIONS = [
+  { value: "le800", label: "중대·대대 (800명 이하)" },
+  { value: "le2400", label: "대대·연대 (801~2,400명)" },
+  { value: "le5000", label: "연대 (2,401~5,000명)" },
+  { value: "gt5000", label: "여단 (5,001명 이상)" },
+] as const;
+const RESERVE_SIZE_LABEL: Record<string, string> = Object.fromEntries(RESERVE_SIZE_OPTIONS.map((o) => [o.value, o.label]));
+
+const RESERVE_FAC_OPTIONS = [
+  { value: "tactical", label: "전술교육장" },
+  { value: "shooting_prep", label: "사격술예비훈련장" },
+  { value: "range", label: "사격장" },
+  { value: "basic", label: "기초훈련장" },
+] as const;
+
 const REVENUE_BIZ_LABEL: Record<string, string> = {
   none: "해당 없음",
   parking_operation: "주차장운영업 (3%)",
@@ -71,6 +106,8 @@ export function OtherLandDetailSection({
   const isLikelyBareground = landVal > 0 && buildingVal < landVal * 0.02;
   const relatedType = asset.nblOtherRelatedBusinessType;
   const areaBasis = relatedType ? AREA_LEGAL_BASIS[relatedType] : undefined;
+  const sportsFacilityLabel: string = SPORTS_FACILITY_LABEL[asset.nblOtherSportsFacilityType] ?? "선택 안 함 (직접입력)";
+  const reserveSizeLabel: string = RESERVE_SIZE_LABEL[asset.nblOtherReserveUnitSize] ?? "선택 안 함 (직접입력)";
 
   return (
     <div className="space-y-3">
@@ -138,24 +175,83 @@ export function OtherLandDetailSection({
           onChange={(v) => onAssetChange({ nblOtherRelatedBusinessType: v })}
         />
 
-        {/* 조건부 면적인자 입력 — 선택 호에 따라 노출 */}
-        {(relatedType === "parking_attached" || relatedType === "sports" || relatedType === "reserve_forces" || relatedType === "resort") && (
+        {/* parking_attached·resort — 기준면적 직접입력 (별표 자동산출 미지원) */}
+        {(relatedType === "parking_attached" || relatedType === "resort") && (
           <FieldCard
             label="기준면적 (㎡)"
             unit="㎡"
-            hint={
-              relatedType === "parking_attached" ? "「주차장법」 부설주차장 설치기준면적. 이 면적까지 사업용, 초과분 비사업용"
-              : relatedType === "sports" ? "별표3(선수전용)·별표5(종업원) 등 체육시설 기준면적"
-              : relatedType === "reserve_forces" ? "별표6 제2호 예비군훈련시설 기준면적"
-              : "전문·종합휴양업 합산 기준면적(옥외방목장+부설주차장×2+건축물 부속토지)"
-            }
+            hint={relatedType === "parking_attached"
+              ? "「주차장법」 부설주차장 설치기준면적. 이 면적까지 사업용, 초과분 비사업용"
+              : "전문·종합휴양업 합산 기준면적(옥외방목장+부설주차장×2+건축물 부속토지)"}
             trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}
           >
-            <DecimalInput
-              value={asset.nblOtherStandardAreaLimit}
-              onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })}
-            />
+            <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
           </FieldCard>
+        )}
+
+        {/* F2 Phase A — sports: 별표3 종목 자동 lookup, 미선택 시 직접입력(별표4·5 등) */}
+        {relatedType === "sports" && (
+          <>
+            <FieldCard label="체육시설 종목 (별표3)" hint="종목 선택 시 기준면적 자동 산출. 미선택 시 아래 직접입력." trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+              <Select
+                value={asset.nblOtherSportsFacilityType || "__clear"}
+                onValueChange={(v) => onAssetChange({ nblOtherSportsFacilityType: v && v !== "__clear" ? v : "" })}
+              >
+                <SelectTrigger><SelectValue>{sportsFacilityLabel}</SelectValue></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__clear">선택 안 함 (직접입력)</SelectItem>
+                  {SPORTS_FACILITY_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FieldCard>
+            {!asset.nblOtherSportsFacilityType && (
+              <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡">
+                <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
+              </FieldCard>
+            )}
+          </>
+        )}
+
+        {/* F2 Phase A — reserve_forces: 별표6 부대규모·시설 자동 합산, 미선택 시 직접입력 */}
+        {relatedType === "reserve_forces" && (
+          <>
+            <FieldCard label="부대편성인원 (별표6)" hint="부대규모·시설 선택 시 기준면적 자동 합산. 미선택 시 아래 직접입력." trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+              <Select
+                value={asset.nblOtherReserveUnitSize || "__clear"}
+                onValueChange={(v) => onAssetChange({ nblOtherReserveUnitSize: v && v !== "__clear" ? v : "" })}
+              >
+                <SelectTrigger><SelectValue>{reserveSizeLabel}</SelectValue></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__clear">선택 안 함 (직접입력)</SelectItem>
+                  {RESERVE_SIZE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FieldCard>
+            {asset.nblOtherReserveUnitSize && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">포함 시설 (전술교육장에서 실시 불가 시에만 포함)</p>
+                {RESERVE_FAC_OPTIONS.map((f) => (
+                  <div key={f.value} data-testid={`nbl-other-reserve-fac-${f.value}`}>
+                    <ToggleCard
+                      variant="chip"
+                      tone="sky"
+                      title={f.label}
+                      checked={asset.nblOtherReserveFacilities?.includes(f.value) ?? false}
+                      onCheckedChange={(c) => {
+                        const cur = asset.nblOtherReserveFacilities ?? [];
+                        onAssetChange({ nblOtherReserveFacilities: c ? [...cur, f.value] : cur.filter((x) => x !== f.value) });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            {!(asset.nblOtherReserveUnitSize && (asset.nblOtherReserveFacilities?.length ?? 0) > 0) && (
+              <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡">
+                <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
+              </FieldCard>
+            )}
+          </>
         )}
 
         {relatedType === "hatchang" && (
