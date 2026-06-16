@@ -91,6 +91,12 @@ export interface HouseInfo {
   isNationalSizeHousing?: boolean;
   /** 전용면적(㎡) */
   exclusiveArea?: number;
+  /**
+   * #2a §167의3⑨ 혼인 차감용 — "양도자의 배우자 단독 보유" 주택 여부.
+   * 규약: 양도 주택(sellingHouseId)=양도자 소유(false 전제). 3주택↑ + marriageMerge 발동 시
+   * 양도일 현재 배우자 보유 주택 수를 차감(§167의3⑨). 미제공(기본 false)=본인 소유로 간주(차감 대상 아님).
+   */
+  isSpouseOwned?: boolean;
   /** 대지면적(㎡) — 건설임대 규모 요건 판정용 (298㎡ 이하) */
   landArea?: number;
   /** 연면적(㎡) — 건설임대 규모 요건 판정용 (149㎡ 이하) */
@@ -285,7 +291,8 @@ export interface ExcludedHouse {
     | "unsold_housing"
     | "officetel_pre2022"
     | "small_new_house"               // ⑬ 소형 신축/미분양 특례
-    | "population_decline_second_home"; // ⑭ 인구감소지역 세컨드홈 특례
+    | "population_decline_second_home" // ⑭ 인구감소지역 세컨드홈 특례
+    | "spouse_marriage_subtraction";  // #2a §167의3⑨ 혼인 5년내 배우자 주택수 차감 (3주택)
   detail: string;
 }
 

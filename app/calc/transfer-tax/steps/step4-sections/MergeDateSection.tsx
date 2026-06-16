@@ -38,7 +38,7 @@ export function MergeDateSection({
               value={form.marriageDate}
               onChange={(v) => onChange({ marriageDate: v })}
             />
-            <p className="text-xs text-muted-foreground">혼인합가 후 5년 이내 양도 시 중과 배제</p>
+            <p className="text-xs text-muted-foreground">혼인합가 후 2주택은 10년·3주택↑은 5년(배우자 주택 수 차감) 이내 양도 시 중과 경감</p>
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">동거봉양 합가일</label>

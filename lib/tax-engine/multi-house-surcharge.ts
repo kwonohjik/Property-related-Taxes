@@ -13,6 +13,7 @@
  * 인구감소지역 상수는 ./data/population-decline-areas.ts 로 분리.
  */
 
+import { addYears } from "date-fns";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
 
@@ -131,15 +132,47 @@ export function determineMultiHouseSurcharge(
 ): MultiHouseSurchargeResult {
   const warnings: string[] = [];
 
-  // Step 1: 주택 수 산정
-  const { count: effectiveHouseCount, excluded: excludedHouses } = countEffectiveHouses(
+  // Step 1: 주택 수 산정 (effectiveHouseCount는 #2a ⑨ 차감으로 재할당 → let)
+  const step1Count = countEffectiveHouses(
     input.houses,
     input.transferDate,
     input.presaleRights,
     houseCountRules,
   );
+  let effectiveHouseCount = step1Count.count;
+  const excludedHouses = step1Count.excluded;
 
   const rawHouseCount = input.houses.length + input.presaleRights.length;
+
+  // ── Step 1.5 (#2a): 혼인 합가 §167의3⑨ 배우자 주택수 차감 (3주택 전용) ──
+  // §167의10②는 §167의3②~⑧·⑩만 준용(⑨ 미포함) → ⑨는 3주택 전용.
+  // 2주택 혼인은 §155⑤(→§167의10①15호) 전면배제(determineSurchargeExclusion 배제2)로 처리.
+  let marriageSubtractionApplied = false;
+  if (input.marriageMerge && effectiveHouseCount >= 3) {
+    const m = input.marriageMerge.marriageDate;
+    const within5y =
+      input.transferDate >= m &&
+      input.transferDate <= addYears(m, MULTI_HOUSE.MARRIAGE_SUBTRACT_YEARS_3HOUSE);
+    // 단서: 혼인 5년내 신규주택 취득 시 그 취득일 이후 양도분에는 미적용
+    const acquiredAfterMarriage = input.houses.some(
+      (h) => h.acquisitionDate > m && h.acquisitionDate <= input.transferDate,
+    );
+    if (within5y && !acquiredAfterMarriage) {
+      const excludedIds = new Set(excludedHouses.map((e) => e.houseId));
+      const spouseCounted = input.houses.filter(
+        (h) => h.isSpouseOwned && h.id !== input.sellingHouseId && !excludedIds.has(h.id),
+      );
+      for (const sh of spouseCounted) {
+        effectiveHouseCount -= 1;
+        excludedHouses.push({
+          houseId: sh.id,
+          reason: "spouse_marriage_subtraction",
+          detail: `혼인일(${m.toISOString().slice(0, 10)}) 5년내 배우자 보유 주택 차감 (${MULTI_HOUSE.MARRIAGE_SUBTRACT_3HOUSE_BASIS})`,
+        });
+        marriageSubtractionApplied = true;
+      }
+    }
+  }
 
   // Step 2: 조정대상지역 판단
   const sellingHouse = input.houses.find((h) => h.id === input.sellingHouseId);
@@ -237,6 +270,7 @@ export function determineMultiHouseSurcharge(
     suspensionRules,
     regulatedAreaHistory,
     new Set(excludedHouses.map((e) => e.houseId)),
+    marriageSubtractionApplied,
   );
 
   if (isExcluded) {

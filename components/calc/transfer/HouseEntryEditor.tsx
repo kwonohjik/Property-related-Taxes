@@ -47,13 +47,15 @@ const VIOLET_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-v
 interface Props {
   house: HouseEntry;
   onUpdate: (patch: Partial<HouseEntry>) => void;
+  /** #2a 혼인합가일 입력 시 "배우자 단독 보유" chip 노출 (§167의3⑨) */
+  showSpouseOwned?: boolean;
 }
 
 // ============================================================
 // 섹션 ① 기본정보 (sky)
 // ============================================================
 
-function BasicInfoSection({ house, onUpdate }: Props) {
+function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
   return (
     <div className={SKY_SECTION}>
       <div className="flex items-center gap-2">
@@ -156,6 +158,23 @@ function BasicInfoSection({ house, onUpdate }: Props) {
           />
         </div>
       </div>
+
+      {/* #2a 혼인합가 — 배우자 단독 보유 (혼인합가일 입력 시에만 노출) */}
+      {showSpouseOwned && (
+        <div className="space-y-1">
+          <label className="block text-[11px] text-muted-foreground font-medium">혼인 합가</label>
+          <ToggleCard
+            variant="chip"
+            tone="violet"
+            checked={house.isSpouseOwned ?? false}
+            onCheckedChange={(v) => onUpdate({ isSpouseOwned: v })}
+            title="배우자 단독 보유 주택"
+          />
+          <p className="text-[10px] text-muted-foreground">
+            혼인 전부터 배우자가 보유 — 3주택↑ 혼인 5년내 양도 시 주택 수 차감 (§167의3⑨)
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -304,10 +323,10 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
 // 메인 에디터 (3섹션 조합)
 // ============================================================
 
-export function HouseEntryEditor({ house, onUpdate }: Props) {
+export function HouseEntryEditor({ house, onUpdate, showSpouseOwned }: Props) {
   return (
     <div className="space-y-3">
-      <BasicInfoSection house={house} onUpdate={onUpdate} />
+      <BasicInfoSection house={house} onUpdate={onUpdate} showSpouseOwned={showSpouseOwned} />
       <InheritanceSection house={house} onUpdate={onUpdate} />
       <LongTermRentalSection house={house} onUpdate={onUpdate} />
       <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />

@@ -280,10 +280,10 @@ describe("MH-06: 일시적 2주택 (완화 기준 3년 처분기한)", () => {
 });
 
 // ============================================================
-// MH-07: 혼인합가 5년 이내 → 중과 배제
+// MH-07: 혼인합가 1세대1주택 의제(2주택) → 중과 배제 (§155⑤ 10년)
 // ============================================================
 
-describe("MH-07: 혼인합가 5년 이내 중과 배제", () => {
+describe("MH-07: 혼인합가 2주택 중과 배제 (§155⑤ 10년)", () => {
   it("혼인 3년 후 양도 → 배제", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
     const h2 = makeHouse("h2");
@@ -306,14 +306,14 @@ describe("MH-07: 혼인합가 5년 이내 중과 배제", () => {
     expect(result.exclusionReasons[0].type).toBe("marriage_merge");
   });
 
-  it("혼인 5년 초과 → 배제 안 됨 (중과 적용)", () => {
+  it("혼인 10년 초과 → 배제 안 됨 (중과 적용)", () => {
     const h1 = makeHouse("h1", { regionCode: "11680" });
     const h2 = makeHouse("h2");
 
     const input = makeInput([h1, h2], {
       sellingHouseId: "h1",
       transferDate: new Date("2024-06-01"),
-      marriageMerge: { marriageDate: new Date("2019-01-01") }, // 5년 이상 전 혼인
+      marriageMerge: { marriageDate: new Date("2013-01-01") }, // 11년+ 전 혼인 (§155⑤ 10년 초과)
     });
 
     const result = determineMultiHouseSurcharge(

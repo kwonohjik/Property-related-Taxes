@@ -66,6 +66,8 @@ export function buildHousesPayload(
       exclusiveArea: h.exclusiveArea ? parseFloat(h.exclusiveArea) : undefined,
       isUnsoldNewHouse: h.isUnsoldNewHouse,
       completionDate: h.completionDate || undefined,
+      // #2a 배우자 단독 보유 (§167의3⑨ 혼인 차감) — 양도주택(selling)은 본인 소유라 미설정
+      isSpouseOwned: h.isSpouseOwned,
       // 상속 5년 배제 — isInherited=true 일 때만 기산일 전달
       inheritedDate: h.isInherited ? h.inheritedDate || undefined : undefined,
       // 장기임대 legacy 등록 경로 — isLongTermRental=true 일 때만 등록정보 전달
