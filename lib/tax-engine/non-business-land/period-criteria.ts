@@ -52,8 +52,10 @@ export interface PeriodCriteriaResult {
   thresholdRatio: number;
   /** 전체 소유일수 */
   totalOwnershipDays: number;
-  /** 유효 사업용 일수 (전체 보유기간 클립) */
+  /** 유효 사업용 일수 (전체 보유기간 클립, 유예기간 가산 포함) */
   effectiveBusinessDays: number;
+  /** 유예기간 가산 일수 (전체 보유기간 window 내, §168조의14①) */
+  gracePeriodDays: number;
   /** 사람이 읽을 수 있는 설명 */
   detail: string;
 }
@@ -122,10 +124,12 @@ export function meetsPeriodCriteria(
   let totalEffectiveBusinessDays = sumDaysInWindow(merged, windowFull.start, windowFull.end);
 
   // 유예기간 가산 (§168조의14 ①) — 제공된 경우에만
+  let gracePeriodDaysApplied = 0;
   if (gracePeriods && gracePeriods.length > 0) {
+    gracePeriodDaysApplied = calculateGraceDaysInWindow(gracePeriods, windowFull);
     effectiveBusinessDays3y += calculateGraceDaysInWindow(gracePeriods, window3Years);
     effectiveBusinessDays5y += calculateGraceDaysInWindow(gracePeriods, window5Years);
-    totalEffectiveBusinessDays += calculateGraceDaysInWindow(gracePeriods, windowFull);
+    totalEffectiveBusinessDays += gracePeriodDaysApplied;
   }
 
   // 전체 보유기간 초과 클리핑
@@ -141,33 +145,32 @@ export function meetsPeriodCriteria(
   const rule5Years = bizInLast5 >= DAYS_3Y;
   const rule80Percent = ratio >= thresholdRatio;
 
+  // 4 반환 공용 — flags·metrics (유예기간 가산 일수 포함)
+  const flags = { rule2of3Years, rule5Years, rule80Percent };
+  const metrics = {
+    ratio, bizInLast3, bizInLast5, thresholdRatio,
+    totalOwnershipDays, effectiveBusinessDays, gracePeriodDays: gracePeriodDaysApplied,
+  };
+
   // PDF 우선순위: ① 직전 3년 중 2년 → ② 직전 5년 중 3년 → ③ 보유 비율
   if (rule2of3Years) {
-    return buildResult(true, "3y-2y", { rule2of3Years, rule5Years, rule80Percent }, {
-      ratio, bizInLast3, bizInLast5, thresholdRatio, totalOwnershipDays, effectiveBusinessDays,
-    }, `직전 3년 중 ${bizInLast3}일 사업용 (기준 ≥ ${DAYS_2Y}일)`);
+    return buildResult(true, "3y-2y", flags, metrics, `직전 3년 중 ${bizInLast3}일 사업용 (기준 ≥ ${DAYS_2Y}일)`);
   }
   if (rule5Years) {
-    return buildResult(true, "5y-3y", { rule2of3Years, rule5Years, rule80Percent }, {
-      ratio, bizInLast3, bizInLast5, thresholdRatio, totalOwnershipDays, effectiveBusinessDays,
-    }, `직전 5년 중 ${bizInLast5}일 사업용 (기준 ≥ ${DAYS_3Y}일)`);
+    return buildResult(true, "5y-3y", flags, metrics, `직전 5년 중 ${bizInLast5}일 사업용 (기준 ≥ ${DAYS_3Y}일)`);
   }
   if (rule80Percent) {
-    return buildResult(true, "ratio", { rule2of3Years, rule5Years, rule80Percent }, {
-      ratio, bizInLast3, bizInLast5, thresholdRatio, totalOwnershipDays, effectiveBusinessDays,
-    }, `보유기간 ${totalOwnershipDays}일 중 ${effectiveBusinessDays}일 사업용 (${(ratio * 100).toFixed(1)}% ≥ ${(thresholdRatio * 100).toFixed(0)}%)`);
+    return buildResult(true, "ratio", flags, metrics, `보유기간 ${totalOwnershipDays}일 중 ${effectiveBusinessDays}일 사업용 (${(ratio * 100).toFixed(1)}% ≥ ${(thresholdRatio * 100).toFixed(0)}%)`);
   }
 
-  return buildResult(false, "none", { rule2of3Years, rule5Years, rule80Percent }, {
-    ratio, bizInLast3, bizInLast5, thresholdRatio, totalOwnershipDays, effectiveBusinessDays,
-  }, `3기준 모두 미충족 — 직전 3년 ${bizInLast3}/${DAYS_2Y}, 직전 5년 ${bizInLast5}/${DAYS_3Y}, 보유 ${(ratio * 100).toFixed(1)}%/${(thresholdRatio * 100).toFixed(0)}%`);
+  return buildResult(false, "none", flags, metrics, `3기준 모두 미충족 — 직전 3년 ${bizInLast3}/${DAYS_2Y}, 직전 5년 ${bizInLast5}/${DAYS_3Y}, 보유 ${(ratio * 100).toFixed(1)}%/${(thresholdRatio * 100).toFixed(0)}%`);
 }
 
 function buildResult(
   meets: boolean,
   criteriaUsed: PeriodCriteriaUsed,
   criteria: PeriodCriteriaResult["criteria"],
-  metrics: Pick<PeriodCriteriaResult, "ratio" | "bizInLast3" | "bizInLast5" | "thresholdRatio" | "totalOwnershipDays" | "effectiveBusinessDays">,
+  metrics: Pick<PeriodCriteriaResult, "ratio" | "bizInLast3" | "bizInLast5" | "thresholdRatio" | "totalOwnershipDays" | "effectiveBusinessDays" | "gracePeriodDays">,
   detail: string,
 ): PeriodCriteriaResult {
   return { meets, criteriaUsed, criteria, ...metrics, detail };

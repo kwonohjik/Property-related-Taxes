@@ -19,7 +19,8 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily } from "@/lib/calc/comprehensive-api";
+import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily, deriveCorporateClass } from "@/lib/calc/comprehensive-api";
+import { requiredCorporateReqKey } from "@/lib/tax-engine/comprehensive-corporate-class";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PropertyListInput } from "@/components/calc/PropertyListInput";
@@ -294,11 +295,12 @@ function Step5TaxCap() {
   const year = parseInt(formData.assessmentYear) || new Date().getFullYear();
   const showMultiHouseCap = year < 2023;
   const isMultiHouseOn = formData.isMultiHouseInAdjustedArea;
-  const taxpayerType = formData.taxpayerType ?? "individual";
+  // 법인 §9② class 도출 (엔진 헬퍼 단일 진실) — 가시성 분기
+  const corporateClass = deriveCorporateClass(formData);
   // corporate_special(§9②3호): 세부담상한 미적용 → 전년도 세액 입력 숨김
-  const isCorporateSpecial = taxpayerType === "corporate_special";
+  const isCorporateSpecial = corporateClass === "corporate_special";
   // corporate_general(§9②1호): 주택 수 무관 → 조정대상지역 2주택 토글 숨김
-  const isCorporateGeneral = taxpayerType === "corporate_general";
+  const isCorporateGeneral = corporateClass === "corporate_general";
 
   return (
     <div className="space-y-6">
@@ -526,8 +528,16 @@ export default function ComprehensiveTaxPage() {
     }
 
     // Step 5 (마지막 단계) — 자동 모드 필수 입력 validation (⑧ 동기화)
-    const taxpayerType = formData.taxpayerType ?? "individual";
-    const isCorporateSpecial = taxpayerType === "corporate_special";
+    const corporateClass = deriveCorporateClass(formData);
+    // C-15: 법인 조건부 세부유형(민간건설임대·도시개발·사회적기업·공익법인) 요건 미응답 차단 (시행령 §4의4)
+    if ((formData.taxpayerType ?? "individual") === "corporate") {
+      const reqKey = requiredCorporateReqKey(formData.corporateHousingType);
+      if (reqKey && formData[reqKey] === undefined) {
+        setError("법인 세부 유형의 요건 충족 여부를 선택해주세요 (시행령 §4의4).");
+        return;
+      }
+    }
+    const isCorporateSpecial = corporateClass === "corporate_special";
     const capMode = formData.previousYearCapMode ?? "direct";
     if (!isCorporateSpecial && capMode === "auto") {
       // 당해 2주택+ = 주택별 직전공시(previousYearAutoHouseValues), 1주택 = 단일 합계

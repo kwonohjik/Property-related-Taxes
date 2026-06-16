@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
+import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import {
   calculateTransferTaxAggregate,
   type TransferTaxItemInput,
@@ -208,27 +209,9 @@ export async function POST(request: NextRequest) {
       houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
       requirementsConfirmed: e.requirementsConfirmed,
     })),
-    nonBusinessLandDetails: data.nonBusinessLandDetails
-      ? {
-          ...data.nonBusinessLandDetails,
-          landType: data.nonBusinessLandDetails.landType,
-          zoneType: data.nonBusinessLandDetails.zoneType,
-          acquisitionDate: new Date(data.nonBusinessLandDetails.acquisitionDate),
-          transferDate: new Date(data.nonBusinessLandDetails.transferDate),
-          businessUsePeriods: data.nonBusinessLandDetails.businessUsePeriods.map((p) => ({
-            startDate: new Date(p.startDate),
-            endDate: new Date(p.endDate),
-            usageType: p.usageType,
-          })),
-          gracePeriods: data.nonBusinessLandDetails.gracePeriods.map((g) => ({
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            type: g.type as any,
-            startDate: new Date(g.startDate),
-            endDate: new Date(g.endDate),
-          })),
-        }
-      : undefined,
-    // ⑭ 다주택 중과 houses[]·presaleRights·gracePeriod — Date 변환 헬퍼로 분리 (800줄 정책)
+    // ⑭ NBL 정밀판정: raw 평면 → mapAssetToNblInput(nested + Date 일괄) 공용 헬퍼 (origin/master #223·#224)
+    nonBusinessLandDetails: buildNblEngineInput(data.nonBusinessLandRaw),
+    // ⑭ 다주택 중과 houses[]·presaleRights — Date 변환 + 9유형/P2 필드 매핑 헬퍼 (800줄 정책)
     houses: mapHousesToEngine(data.houses),
     presaleRights: mapPresaleRightsToEngine(data.presaleRights),
     sellingHouseId: data.sellingHouseId,

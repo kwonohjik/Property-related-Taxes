@@ -137,8 +137,10 @@ export function Step0({
         </div>
       )}
 
-      {/* 주택 건축물 부분 시가표준액 — 건물분 소방분 §146④ 단서 (주택 전용·선택) */}
-      {form.objectType === "housing" && (
+      {/* 주택 건축물 부분 시가표준액 — 건물분 소방분 §146④ 단서 (주택 전용·선택).
+          house_split 모드에서는 소유 형태 섹션 내 "건축물 시가표준액"으로 입력받으므로 숨김.
+          (동일 housingBuildingValue 필드 양방향 read/write — mirror-pattern 준수) */}
+      {form.objectType === "housing" && form.ownershipType !== "house_split" && (
         <div className="space-y-1.5">
           <label className="text-sm font-medium">
             주택 건축물 부분 시가표준액{" "}
@@ -217,7 +219,7 @@ export function Step0({
 // 소유 형태 섹션 — 접이식 (선택 입력)
 // ============================================================
 
-const OWNERSHIP_OPTIONS: { value: OwnershipType; label: string; description: string }[] = [
+const OWNERSHIP_OPTIONS_BASE: { value: OwnershipType; label: string; description: string }[] = [
   { value: "co",          label: "공유",                  description: "§107①1호 — 각 공유자가 지분별 납세의무" },
   { value: "trust",       label: "신탁",                  description: "§107②5호 — 위탁자가 납세의무자 (2020.12.29 개정)" },
   { value: "inherit",     label: "상속 미등기",            description: "§107②2호 — 주된 상속인이 납세의무자" },
@@ -229,6 +231,13 @@ const OWNERSHIP_OPTIONS: { value: OwnershipType; label: string; description: str
   { value: "unclear",     label: "소유권 불명(§107③)",     description: "소유권 귀속이 분명하지 않은 재산 — 사용자가 납세의무자" },
 ];
 
+/** §107①2호 주택 건물·부속토지 분리 옵션 — housing 전용 */
+const HOUSE_SPLIT_OPTION: { value: OwnershipType; label: string; description: string } = {
+  value: "house_split",
+  label: "주택 건물·부속토지 분리(§107①2호)",
+  description: "건물 소유자와 토지 소유자가 다른 주택 — 산출세액을 시가표준액 비율로 안분",
+};
+
 function OwnershipSection({
   form,
   onChange,
@@ -237,6 +246,12 @@ function OwnershipSection({
   onChange: (d: Partial<FormState>) => void;
 }) {
   const [open, setOpen] = useState(false);
+
+  // housing 여부에 따라 옵션 목록 분기
+  const ownershipOptions =
+    form.objectType === "housing"
+      ? [...OWNERSHIP_OPTIONS_BASE, HOUSE_SPLIT_OPTION]
+      : OWNERSHIP_OPTIONS_BASE;
 
   function handleOpen(v: boolean) {
     setOpen(v);
@@ -253,6 +268,9 @@ function OwnershipSection({
         projectOperator: "",
         importer: "",
         unclearUser: "",
+        buildingOwner: "",
+        landOwner: "",
+        landStdValue: "",
       });
     }
   }
@@ -273,7 +291,7 @@ function OwnershipSection({
             name="ownershipType"
             tone="sky"
             layout="stack"
-            options={OWNERSHIP_OPTIONS}
+            options={ownershipOptions}
             value={form.ownershipType ?? ""}
             onChange={(v) => onChange({ ownershipType: v as OwnershipType })}
           />
@@ -397,6 +415,64 @@ function OwnershipSection({
               placeholder="사용자 성명 또는 식별자"
             />
           </FieldCard>
+        )}
+
+        {/* §107①2호: 건물·부속토지 소유자 분리 입력 */}
+        {form.ownershipType === "house_split" && (
+          <div className="space-y-3">
+            <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
+              <p className="text-xs font-semibold text-amber-700">건물·부속토지 소유자 정보 (§107①2호)</p>
+              <FieldCard
+                label="건물 소유자"
+                hint="건물(건축물) 소유자 성명 또는 식별자"
+              >
+                <input
+                  type="text"
+                  className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+                  value={form.buildingOwner}
+                  onChange={(e) => onChange({ buildingOwner: e.target.value })}
+                  placeholder="건물 소유자 성명 또는 식별자"
+                />
+              </FieldCard>
+              <FieldCard
+                label="부속토지 소유자"
+                hint="부속토지 소유자 성명 또는 식별자"
+              >
+                <input
+                  type="text"
+                  className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+                  value={form.landOwner}
+                  onChange={(e) => onChange({ landOwner: e.target.value })}
+                  placeholder="부속토지 소유자 성명 또는 식별자"
+                />
+              </FieldCard>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
+              <p className="text-xs font-semibold text-amber-700">시가표준액 (안분 기준, §4)</p>
+              <FieldCard
+                label="건축물 시가표준액"
+                hint="§4② 기준 — 재산세 고지서·주택가격 공시의 건물분 가액 (§146④ 소방분 과세표준과 동일 필드)"
+              >
+                <CurrencyInput
+                  label=""
+                  value={form.housingBuildingValue}
+                  onChange={(v) => onChange({ housingBuildingValue: v })}
+                  placeholder="금액 입력 (원)"
+                />
+              </FieldCard>
+              <FieldCard
+                label="부속토지 시가표준액"
+                hint="§4① 기준 — 개별공시지가 × 부속토지 면적"
+              >
+                <CurrencyInput
+                  label=""
+                  value={form.landStdValue}
+                  onChange={(v) => onChange({ landStdValue: v })}
+                  placeholder="금액 입력 (원)"
+                />
+              </FieldCard>
+            </div>
+          </div>
         )}
 
         {/* 사실상 소유자 — 단독·공유 모드에서 공부와 다를 때 입력 (§107①본문) */}

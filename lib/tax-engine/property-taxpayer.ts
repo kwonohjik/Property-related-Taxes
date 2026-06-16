@@ -6,6 +6,7 @@
  * 기능:
  * - determineTaxpayer(): 납세의무자 우선순위 확정
  * - distributeCoOwnershipTax(): 공유재산 지분별 안분
+ * - buildHouseSplitOutcome(): §107①2호 건물·토지 분리 산출세액 안분 조립
  *
  * 납세의무자 확정 우선순위 (지방세법 §107 현행 — MST 282559):
  *   §107②5호: 신탁재산 → 위탁자 (2020.12.29 개정, 구법 수탁자 아님)
@@ -14,6 +15,7 @@
  *   §107②7호: 외국인 항공기·선박 임차 수입 → 수입자
  *   §107②3호: 종중재산 미신고 → 공부상 소유자
  *   §107②8호: 파산재단 재산 → 공부상 소유자
+ *   §107①2호: 주택 건물·부속토지 소유자 분리 → 시가표준액 큰 쪽 대표 + 안분
  *   §107① 본문: 과세기준일 현재 사실상 소유자 (원칙)
  *   §107②2호: 상속 미등기 → 행안부령 주된 상속인
  *   §107①1호: 공유재산 → 지분권자
@@ -28,8 +30,10 @@ import type {
   PropertyTaxpayerType,
 } from "./types/property-object.types";
 import type {
+  PropertyTaxInput,
   PropertyTaxpayerInfo,
   PropertyCoOwnershipDistribution,
+  PropertyHouseSplitDistribution,
 } from "./types/property.types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
@@ -87,6 +91,11 @@ export function determineTaxpayer(
     | "importer"
     | "isBankruptcyEstate"
     | "ownershipUnclearUser"
+    | "isHouseSplit"
+    | "buildingOwner"
+    | "landOwner"
+    | "buildingStdValue"
+    | "landStdValue"
   >,
 ): TaxpayerResult {
   const warnings: string[] = [];
@@ -157,6 +166,31 @@ export function determineTaxpayer(
       legalBasis: PROPERTY.TAXPAYER_BANKRUPTCY,
       warnings,
     };
+  }
+
+  // ── 주택 건물·부속토지 소유자 분리 → 시가표준액 큰 쪽 대표 (§107①2호) ──
+  //   ②각호 뒤·①본문 앞 (①단서이므로 사실상소유자보다 우선). 산출세액 안분은 buildHouseSplitOutcome.
+  if (input.isHouseSplit) {
+    if (
+      !input.buildingOwner ||
+      !input.landOwner ||
+      !input.buildingStdValue ||
+      input.buildingStdValue <= 0 ||
+      !input.landStdValue ||
+      input.landStdValue <= 0
+    ) {
+      warnings.push(
+        "주택 건물·부속토지 분리(§107①2호)이나 소유자·시가표준액 정보가 부족합니다. 공부상 소유자로 처리합니다.",
+      );
+    } else {
+      const buildingIsRep = input.buildingStdValue >= input.landStdValue;
+      return {
+        type: buildingIsRep ? "building_owner" : "land_owner",
+        name: buildingIsRep ? input.buildingOwner : input.landOwner,
+        legalBasis: PROPERTY.TAXPAYER_HOUSE_SPLIT,
+        warnings,
+      };
+    }
   }
 
   // ── 2순위: 사실상 소유자 ≠ 공부상 소유자 (§107①본문) ──
@@ -345,4 +379,125 @@ export function buildTaxpayerOutcome(
     taxpayer,
     coOwnershipDistribution: { distributions, roundingDiff: byTax.roundingDiff },
   };
+}
+
+// ============================================================
+// 엔진 통합 헬퍼 — 주택 건물·부속토지 분리 산출세액 안분 (§107①2호)
+// ============================================================
+
+/**
+ * §107①2호 건물·부속토지 소유자 분리 산출세액 안분 조립.
+ * 대표(building_owner/land_owner)일 때만 안분. 건축물·부속토지 시가표준액 비율로
+ * 본세(determinedTax)·고지액(totalPayable) 2기준 안분.
+ *
+ * 고가주택 세액×시가표준액 > MAX_SAFE 가능 → BigInt 전체 연산(곱·나눗셈 완결 후 Number).
+ * floor 잔액은 토지분(determinedTax − buildingTax)이 흡수.
+ */
+export function buildHouseSplitOutcome(
+  taxpayerResult: TaxpayerResult | undefined,
+  buildingOwner: string | undefined,
+  landOwner: string | undefined,
+  buildingStdValue: number | undefined,
+  landStdValue: number | undefined,
+  determinedTax: number,
+  totalPayable: number,
+): {
+  taxpayer?: PropertyTaxpayerInfo;
+  houseSplitDistribution?: PropertyHouseSplitDistribution;
+} {
+  if (!taxpayerResult) return {};
+
+  const taxpayer: PropertyTaxpayerInfo = {
+    type: taxpayerResult.type,
+    name: taxpayerResult.name,
+    legalBasis: taxpayerResult.legalBasis,
+    warnings: taxpayerResult.warnings,
+  };
+
+  const isHouseSplitType =
+    taxpayerResult.type === "building_owner" || taxpayerResult.type === "land_owner";
+  if (
+    !isHouseSplitType ||
+    !buildingOwner ||
+    !landOwner ||
+    !buildingStdValue ||
+    buildingStdValue <= 0 ||
+    !landStdValue ||
+    landStdValue <= 0
+  ) {
+    return { taxpayer };
+  }
+
+  const sum = buildingStdValue + landStdValue;
+  // BigInt 전체 연산 — 곱·나눗셈 완결 후 Number (feedback_safemul_decimal_apportion_precision)
+  const buildingTaxAmount = Number(
+    (BigInt(determinedTax) * BigInt(buildingStdValue)) / BigInt(sum),
+  );
+  const landTaxAmount = determinedTax - buildingTaxAmount; // 잔액 흡수
+  const buildingTotalAmount = Number(
+    (BigInt(totalPayable) * BigInt(buildingStdValue)) / BigInt(sum),
+  );
+  const landTotalAmount = totalPayable - buildingTotalAmount;
+
+  return {
+    taxpayer,
+    houseSplitDistribution: {
+      buildingOwner,
+      buildingStdValue,
+      buildingTaxAmount,
+      buildingTotalAmount,
+      landOwner,
+      landStdValue,
+      landTaxAmount,
+      landTotalAmount,
+      buildingRatio: buildingStdValue / sum,
+    },
+  };
+}
+
+// ============================================================
+// 엔진 오케스트레이션 헬퍼 (calculatePropertyTax 800줄 정책 — 위임)
+// ============================================================
+
+/**
+ * Step 0: taxpayerInfo 입력 시 납세의무자 판정.
+ * house_split 시 건축물 시가표준액 = housingBuildingValue 재사용 → buildingStdValue 주입.
+ */
+export function resolveTaxpayer(
+  input: Pick<PropertyTaxInput, "taxpayerInfo" | "housingBuildingValue">,
+): TaxpayerResult | undefined {
+  if (!input.taxpayerInfo) return undefined;
+  return determineTaxpayer({
+    ...input.taxpayerInfo,
+    buildingStdValue: input.taxpayerInfo.isHouseSplit ? input.housingBuildingValue : undefined,
+  });
+}
+
+/**
+ * 결과 부착 선택: house_split(building/land_owner)이면 산출세액 안분(buildHouseSplitOutcome),
+ * 그 외(공유 등)는 공유 안분(buildTaxpayerOutcome). 주택 main return 경로 전용.
+ */
+export function selectTaxpayerOutcome(
+  taxpayerResult: TaxpayerResult | undefined,
+  input: Pick<PropertyTaxInput, "taxpayerInfo" | "housingBuildingValue">,
+  coShares: CoOwnershipShare[] | undefined,
+  determinedTax: number,
+  totalPayable: number,
+): {
+  taxpayer?: PropertyTaxpayerInfo;
+  coOwnershipDistribution?: PropertyCoOwnershipDistribution;
+  houseSplitDistribution?: PropertyHouseSplitDistribution;
+} {
+  if (taxpayerResult?.type === "building_owner" || taxpayerResult?.type === "land_owner") {
+    return buildHouseSplitOutcome(
+      taxpayerResult,
+      input.taxpayerInfo?.buildingOwner,
+      input.taxpayerInfo?.landOwner,
+      input.housingBuildingValue,
+      input.taxpayerInfo?.landStdValue,
+      determinedTax,
+      totalPayable,
+    );
+  }
+  return buildTaxpayerOutcome(taxpayerResult, coShares, determinedTax, totalPayable);
 }

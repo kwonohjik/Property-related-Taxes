@@ -175,6 +175,15 @@ export const propertyTaxInputSchema = z
         isBankruptcyEstate: z.boolean().optional(),
         /** 소유권 귀속 불명 시 사용자 식별자 (§107③) */
         ownershipUnclearUser: z.string().optional(),
+        // ── §107①2호: 주택 건물·부속토지 소유자 분리 ──
+        /** 건물·부속토지 소유자 분리 여부 (§107①2호, housing 전용) */
+        isHouseSplit: z.boolean().optional(),
+        /** 건물 소유자 식별자 */
+        buildingOwner: z.string().optional(),
+        /** 부속토지 소유자 식별자 */
+        landOwner: z.string().optional(),
+        /** 부속토지 시가표준액 (원, §4①) */
+        landStdValue: z.number().nonnegative().optional(),
       })
       .optional(),
   })

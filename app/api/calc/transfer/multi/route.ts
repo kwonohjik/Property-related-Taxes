@@ -24,6 +24,7 @@ import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
+import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 
 export async function POST(request: NextRequest) {
   // Rate Limiting — 분당 15회 (단건 30회의 절반)
@@ -140,24 +141,8 @@ export async function POST(request: NextRequest) {
         : undefined,
       // 감면 매핑 — 단건 route와 공용 (rental §97 시리즈 Date 변환 포함, 2026-06-11)
       reductions: mapReductionsToEngine(p.reductions),
-      nonBusinessLandDetails: p.nonBusinessLandDetails
-        ? {
-            ...p.nonBusinessLandDetails,
-            acquisitionDate: toDate(p.nonBusinessLandDetails.acquisitionDate, "nonBusinessLandDetails.acquisitionDate"),
-            transferDate: toDate(p.nonBusinessLandDetails.transferDate, "nonBusinessLandDetails.transferDate"),
-            businessUsePeriods: p.nonBusinessLandDetails.businessUsePeriods.map((bp) => ({
-              startDate: toDate(bp.startDate, "businessUsePeriods.startDate"),
-              endDate: toDate(bp.endDate, "businessUsePeriods.endDate"),
-              usageType: bp.usageType,
-            })),
-            gracePeriods: p.nonBusinessLandDetails.gracePeriods.map((g) => ({
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              type: g.type as any,
-              startDate: toDate(g.startDate, "gracePeriods.startDate"),
-              endDate: toDate(g.endDate, "gracePeriods.endDate"),
-            })),
-          }
-        : undefined,
+      // ⑭ NBL 정밀판정: 단건 route와 동일 공용 헬퍼 (raw 평면 → nested + Date)
+      nonBusinessLandDetails: buildNblEngineInput(p.nonBusinessLandRaw),
       houses: p.houses
         ? p.houses.map((h) => ({
             id: h.id,

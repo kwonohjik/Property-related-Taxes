@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import { requiredCorporateReqKey } from "@/lib/tax-engine/comprehensive-corporate-class";
 
 // ============================================================
 // 합산배제 유형 enum
@@ -360,14 +361,29 @@ export const comprehensiveTaxInputSchema = z.object({
     .min(1, { message: "주택 정보를 1건 이상 입력해주세요." }),
 
   /**
-   * 납세의무자 유형 (§9②). 미입력 = "individual".
-   * - corporate_special: §9②3호 — 단일세율(2.7%/5.0%, ≤2022 3%/6%)·기본공제 0·상한 배제
-   * - corporate_general: §9②1호 — 일반 누진(주택 수 무관)
-   * - corporate_public:  §9②2호 — §9①각호(주택 수 분기)
+   * 납세의무자 유형 (§9②). 미입력 = "individual" | "corporate".
+   * 법인 세부 §9② class는 corporateHousingType + 조건 플래그로 도출(resolveCorporateHousingClass).
    */
-  taxpayerType: z
-    .enum(["individual", "corporate_special", "corporate_general", "corporate_public"])
+  taxpayerType: z.enum(["individual", "corporate"]).optional(),
+
+  /** 법인 세부 유형 (시행령 §4의4 자동판정). corporate일 때 (기본 general_corp) */
+  corporateHousingType: z
+    .enum([
+      "public_housing_operator",
+      "housing_association",
+      "redevelopment_operator",
+      "private_rental_operator",
+      "urban_dev_operator",
+      "social_enterprise",
+      "clan",
+      "public_interest_corp",
+      "general_corp",
+    ])
     .optional(),
+  /** §4의4 조건부 요건 충족 여부 (3-state). 조건부 유형 미응답(undefined) 차단은 하단 refine(C-15) */
+  corpHoldsOnlyPublicPurposeHousing: z.boolean().optional(),
+  corpHoldsQualifyingRentalHousingOnly: z.boolean().optional(),
+  corpMeetsSocialEnterpriseRequirements: z.boolean().optional(),
 
   /**
    * 1세대1주택자 여부
@@ -507,6 +523,17 @@ export const comprehensiveTaxInputSchema = z.object({
     message:
       "1세대1주택자와 부부 공동명의 특례(§10의2)는 동시에 선택할 수 없습니다. 부부 공동명의 1주택이면 특례만 선택하세요.",
     path: ["isJointOwnershipSpecialCase"],
+  },
+).refine(
+  // C-15: 법인 조건부 세부유형(민간건설임대·도시개발·사회적기업·공익법인)은 요건 충족 여부 필수 (미응답 차단)
+  (v) => {
+    if ((v.taxpayerType ?? "individual") !== "corporate") return true;
+    const reqKey = requiredCorporateReqKey(v.corporateHousingType ?? "general_corp");
+    return reqKey === null || v[reqKey] !== undefined;
+  },
+  {
+    message: "법인 세부 유형의 요건 충족 여부를 선택해주세요 (시행령 §4의4).",
+    path: ["corporateHousingType"],
   },
 ).refine(
   // 세부담상한: 전년도 총세액 직접입력과 직전연도 자동계산은 상호배타

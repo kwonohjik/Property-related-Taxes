@@ -19,7 +19,7 @@
  */
 
 import { applyRate } from "./tax-utils";
-import { calcSurtax } from "./property-tax-surtax";
+import { calcSurtax, calcInstallment } from "./property-tax-surtax";
 import { PROPERTY, PROPERTY_CONST, PROPERTY_CAL, COMPREHENSIVE_LAND } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
@@ -33,11 +33,10 @@ import {
   calculateComprehensiveAggregateTax,
   applyBurdenCap,
 } from "./property-tax-comprehensive-aggregate";
-import { determineTaxpayer, buildTaxpayerOutcome } from "./property-taxpayer";
+import { resolveTaxpayer, buildTaxpayerOutcome, selectTaxpayerOutcome } from "./property-taxpayer";
 import type {
   PropertyTaxInput,
   PropertyTaxResult,
-  InstallmentInfo,
 } from "./types/property.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 
@@ -427,9 +426,7 @@ export function calculatePropertyTax(
   const taxYear = parseInt(targetDate.slice(0, 4), 10);
 
   // ── Step 0: 납세의무자 판정 (지방세법 §107) — taxpayerInfo 입력 시에만 (미입력 시 계산 100% 불변) ──
-  const taxpayerResult = input.taxpayerInfo
-    ? determineTaxpayer(input.taxpayerInfo)
-    : undefined;
+  const taxpayerResult = resolveTaxpayer(input);
   const coShares = input.taxpayerInfo?.coOwnershipShares;
 
   // ── Step 1: 과세표준 계산 (DB rates 전달 → 공정시장가액비율 DB 우선,
@@ -767,30 +764,6 @@ export function calculatePropertyTax(
     legalBasis: [...new Set(legalBasis)],
     warnings,
     targetDate,
-    ...buildTaxpayerOutcome(taxpayerResult, coShares, determinedTax, totalPayable),
+    ...selectTaxpayerOutcome(taxpayerResult, input, coShares, determinedTax, totalPayable),
   };
-}
-
-// ============================================================
-// 내부 유틸 — 분납 계산 (지방세법 §115)
-// ============================================================
-
-function calcInstallment(
-  determinedTax: number,
-  objectType: PropertyTaxInput["objectType"],
-): InstallmentInfo {
-  // 지방세법 §115①: 주택 20만원 초과, 토지·건축물 등 비주택 250만원 초과 시 분납 가능
-  const threshold =
-    objectType === "housing"
-      ? PROPERTY_CONST.INSTALLMENT_THRESHOLD
-      : PROPERTY_CONST.INSTALLMENT_THRESHOLD_NON_HOUSE;
-
-  const eligible = determinedTax > threshold;
-  if (!eligible) {
-    return { eligible: false, firstPayment: determinedTax, secondPayment: 0 };
-  }
-  // 균등 분납: 홀수 원은 1차에 포함
-  const secondPayment = Math.floor(determinedTax / 2);
-  const firstPayment = determinedTax - secondPayment;
-  return { eligible: true, firstPayment, secondPayment };
 }

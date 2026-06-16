@@ -434,6 +434,17 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
 
   if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
 
+  // ⑧ 비사업용 토지 정밀판정 토글 ON — 필수 입력 차단 (UI 통과↔판정 누락 침묵 모순 방지).
+  // 취득 모드(환산·감정·실거래)와 직교하므로 모드 분기 이전에 검사.
+  if (asset.assetKind === "land" && asset.nblUseDetailedJudgment) {
+    if (!asset.nblLandType)
+      return `${label}: 비사업용 토지 정밀판정을 선택했습니다. 지목을 선택하세요.`;
+    if (!asset.nblZoneType)
+      return `${label}: 비사업용 토지 정밀판정 — 용도지역을 선택하세요.`;
+    if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
+      return `${label}: 비사업용 토지 판정을 위해 토지 면적(㎡)을 입력하세요.`;
+  }
+
   const isSalesCase = asset.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;
   const isEstimated = !isSalesCase && !isAppraisal && asset.useEstimatedAcquisition === true;

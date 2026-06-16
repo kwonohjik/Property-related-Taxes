@@ -187,7 +187,7 @@ function HousingTaxBaseSection({
 }: {
   result: ComprehensiveTaxResult;
 }) {
-  const isCorporateSpecial = result.taxpayerType === "corporate_special";
+  const isCorporateSpecial = result.corporateHousingClass === "corporate_special";
 
   return (
     <section className="space-y-2">
@@ -253,15 +253,30 @@ function HousingTaxSection({
 }) {
   if (!result.isSubjectToHousingTax) return null;
   const { oneHouseDeduction, propertyTaxCredit, taxCap } = result;
-  const isCorporateSpecial = result.taxpayerType === "corporate_special";
+  const isCorporateSpecial = result.corporateHousingClass === "corporate_special";
 
   // 산출세액 배지 — taxpayerType 기준 (corporate_special은 isMultiHouseRateApplied와 무관하게 별도 배지)
   function getCalculatedTaxBadge(): string | undefined {
+    // 법인 세부 유형(시행령 §4의4) 한글 라벨 — 도출 호 배지에 병기 (audit)
+    const CORP_TYPE_LABEL: Record<string, string> = {
+      public_housing_operator: "공공주택사업자",
+      housing_association: "주택조합",
+      redevelopment_operator: "정비사업시행자",
+      private_rental_operator: "민간건설임대사업자",
+      urban_dev_operator: "도시개발·재정비 시행자",
+      social_enterprise: "사회적기업·사회적협동조합",
+      clan: "종중",
+      public_interest_corp: "공익법인등",
+      general_corp: "일반법인",
+    };
+    const corpType = result.corporateHousingType
+      ? CORP_TYPE_LABEL[result.corporateHousingType]
+      : undefined;
     if (isCorporateSpecial) return "§9② 법인 단일세율";
-    if (result.taxpayerType === "corporate_general")
-      return "§9②1호 공공주택사업자등 — 일반 누진세율 (주택 수 무관)";
-    if (result.taxpayerType === "corporate_public")
-      return "§9②2호 공익법인등 — §9①각호 세율";
+    if (result.corporateHousingClass === "corporate_general")
+      return `§9②1호 ${corpType ?? "공공주택사업자 등"} — 일반 누진세율 (주택 수 무관)`;
+    if (result.corporateHousingClass === "corporate_public")
+      return `§9②2호 ${corpType ?? "공익법인등"} — §9①각호 세율`;
     if (result.isJointOwnershipApplied) return "§10의2 부부 공동명의 특례";
     if (result.section8para4Detail) {
       const TYPE_LABEL: Record<string, string> = {
