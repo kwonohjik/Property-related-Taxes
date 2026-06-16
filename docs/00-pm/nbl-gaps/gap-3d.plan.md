@@ -160,3 +160,33 @@ function resolveOwnershipBucket(totalOwnershipDays): 1 | 2 | 3
 | Medium | 개선 | §6 UI: effectiveBusinessDays·businessUseRatio **숫자는 불변**, 변경=판정(isNonBusinessLand)+detail 문구뿐. "표시값만 정확해짐"→"판정·detail만 변경, 숫자 불변, 중과 +10%p는 판정 경유" 정정. |
 | Medium | 누락 | criteria boolean 재정의 **매핑표** §5.3 추가: 1호 가나다·2호 가나다·3호 가나 → 3 레거시 boolean(rule2of3/rule5/rule80) 사상. 또는 echo `ownershipBucket?` 도입(의미 보존). 5년창 전제 필드명 2호/3호 재사용 혼선 명시. |
 | Low | 모순 | 일수환산 일관성: 1호 가목=win5len-730(창연동)인데 2호/3호 가목=total-1095/730(고정). 법문 "소유기간에서 N년 차감"=소유기간 기준이라 고정 정당 — 근거 못박고 1호와 모델 차이 정당화. 확인필요 1곳(§1)으로 통합. |
+
+---
+
+## ✅ Do 구현 완료 (2026-06-16, PR-F)
+
+> Pre-Do anchor 우선 → 구현 → 회귀 재정렬. tsc 0 · 전체 vitest 8472 passed.
+
+### 구현 (period-criteria.ts 223→314줄)
+- `meetsPeriodCriteria()`를 **버킷별 가·나·다 AND**로 재구현. `isBusiness = !(가 AND 나 AND 다)`.
+- 1호 가목 = `nonBizInWindow5 > 730`(창 길이 연동) → 고정상수 off-by-one 해소. 나목 = `nonBizInWindow3 > 365`. 다목 = `nonBizTotal > floor(total×0.4)`.
+- 2호 가목 = `nonBizTotal > (total − 1095)`. 3호 가목 = `nonBizTotal > (total − 730)` + **단서**(소유 2년 미만 가목 미적용 → 나목만).
+- 비율 임계 `nonBizRatioThreshold = 1 − thresholdRatio`(0.4/레거시 0.2) — `getThresholdRatio` 재사용.
+- 상수 정리: `ONE_YEAR_DAYS=365`·`TWO_YEARS_DAYS=730`·`THREE_YEARS_DAYS=1095`·`FIVE_YEARS_DAYS=1825`. 구 `DAYS_2Y/DAYS_3Y` 제거.
+- **레거시 boolean 매핑**(De Morgan): `rule5Years=!가목`·`rule2of3Years=!나목`(버킷3=false)·`rule80Percent=!다목/나목`. `meets === (rule2of3 || rule5 || rule80)` 항등 보존 → result/UI/JSON 침묵 strip 0.
+- `ownershipBucket?: 1|2|3` optional echo 추가(PeriodCriteriaResult 한정·테스트/디버깅용).
+- **0일 보유 가드**: `total===0`(취득일=양도일) → `floor(0×0.4)=0`의 `0>0=false` 인공물로 사업용 오판되는 것 차단 → 비사업용(보수적, QA-095 보존).
+
+### 14 동기화 지점
+- 실제 코드 변경 **0지점**(입력 필드 신설 0). ⑦ 결과카드는 criteria/criteriaUsed 일절 미참조(grep 확인) → 무변경. 엔진이 기존 필드를 법령정합값으로 채움.
+
+### anchor (bucket-criteria.test.ts 신규 6건)
+- AT-BUCKET1-OFFBYONE(보유7년·직전5년 1095일→비사업), AT-BUCKET2-SHORT(4.15년·48%→비사업), AT-BUCKET2-BIZ(전기간 사업→사업), AT-BUCKET3-PROVISO(1.5년·0%→비사업), AT-BUCKET3-PROVISO-BIZ(1.5년·80%→사업), + 2호 회귀.
+
+### 법령정합 재정렬(flip, feedback_anchor_correction_legal_priority)
+- `period-criteria.test.ts` ②(15년·20% 사업)·경계(8년·직전3년 730일·전체25%) 2건 → `meets:false`(구 OR-semantics 오판 정정, 본문에 가·나·다 재계산 주석). QA-095(0일 보유)는 가드로 보존(meets:false).
+- qa-period-criteria.test.ts QA-001/004/006은 **미파손**(예상과 달리 재정렬 불요).
+
+### 잔여(scope OUT, 후속)
+- 2호/3호 "달력 N년 vs N×365" 정밀 환산 판례·집행기준 확정(현행 1095/730 채택, 결과 동일 구간만 적용 → 무영향, 확인필요 주석).
+- UI 버킷·가나다 충족 행 노출(선택적).
