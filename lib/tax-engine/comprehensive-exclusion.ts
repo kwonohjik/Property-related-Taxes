@@ -29,7 +29,7 @@ import type {
  * - 건설·매입·2005 이전 구법(§3①1·2·3호): 5년
  * - 공공건설/공공매입: §3①1·2호 5년 (단 §3⑦8호 임대의무기간 종료일까지 계속임대 간주 — 별도 사후관리)
  *
- * ※ 단기민간임대주택(§2⑥의2, 6년·§3①10·11호)은 현재 registrationType enum에 대응 유형이 없어 미포함(후속 확장).
+ * - 단기민간임대주택(§2⑥의2, 6년·§3①10·11호): 6년 (건설 10호·매입 11호)
  */
 const MANDATORY_PERIOD_BY_TYPE: Record<
   RentalExclusionInput["registrationType"],
@@ -41,6 +41,8 @@ const MANDATORY_PERIOD_BY_TYPE: Record<
   public_support: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,          // 10 — §3①7·8호 (공공지원=장기일반민간임대등)
   public_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,    // 5 — §3①1호
   public_purchase: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,        // 5 — §3①2호
+  private_short_term_6y_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①10호
+  private_short_term_6y_purchase:     COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①11호
 };
 
 export function validateRentalExclusion(
@@ -52,8 +54,13 @@ export function validateRentalExclusion(
     failReasons.push(COMPREHENSIVE_EXCL.NO_RENTAL_REGISTRATION);
   }
 
-  if (input.area > COMPREHENSIVE_EXCL_CONST.AREA_LIMIT_NATIONAL_HOUSING) {
-    failReasons.push(COMPREHENSIVE_EXCL.AREA_EXCEEDED);
+  const areaLimit = getAreaLimit(input.registrationType);
+  if (input.area > areaLimit) {
+    failReasons.push(
+      areaLimit === COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_AREA_CONSTRUCTION
+        ? COMPREHENSIVE_EXCL.AREA_EXCEEDED_149
+        : COMPREHENSIVE_EXCL.AREA_EXCEEDED,
+    );
   }
 
   const priceLimit = getPriceLimit(input.registrationType, input.location);
@@ -104,10 +111,27 @@ export function validateRentalExclusion(
   };
 }
 
+/** 전용면적 상한 (㎡) — 건설 단기 149 / 매입 단기 무제한(면적조건 없음) / 기존 6종 85 */
+function getAreaLimit(
+  registrationType: RentalExclusionInput["registrationType"],
+): number {
+  if (registrationType === "private_short_term_6y_construction")
+    return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_AREA_CONSTRUCTION; // 149 — §3①10호가목
+  if (registrationType === "private_short_term_6y_purchase")
+    return Infinity; // 매입 단기(§3①11호)는 면적조건 없음
+  return COMPREHENSIVE_EXCL_CONST.AREA_LIMIT_NATIONAL_HOUSING; // 85 — 기존 6종(회귀 0)
+}
+
 function getPriceLimit(
   registrationType: RentalExclusionInput["registrationType"],
   location: "metro" | "non_metro",
 ): number {
+  if (registrationType === "private_short_term_6y_construction")
+    return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_CONSTRUCTION; // 6억, location 무관 — §3①10호
+  if (registrationType === "private_short_term_6y_purchase")
+    return location === "metro"
+      ? COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_METRO // 4억
+      : COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_NON_METRO; // 2억 — §3①11호
   if (registrationType === "public_support") {
     return location === "metro"
       ? COMPREHENSIVE_EXCL_CONST.PUBLIC_SUPPORT_PRICE_METRO
@@ -128,6 +152,8 @@ function getRentalExclusionLegalCode(
     case "public_support":         return COMPREHENSIVE_EXCL.PUBLIC_SUPPORT_RENTAL;
     case "public_construction":    return COMPREHENSIVE_EXCL.PUBLIC_CONSTRUCTION_RENTAL;
     case "public_purchase":        return COMPREHENSIVE_EXCL.PUBLIC_PURCHASE_RENTAL;
+    case "private_short_term_6y_construction": return COMPREHENSIVE_EXCL.PRIVATE_SHORT_TERM_RENTAL_6Y_CONSTRUCTION;
+    case "private_short_term_6y_purchase":     return COMPREHENSIVE_EXCL.PRIVATE_SHORT_TERM_RENTAL_6Y_PURCHASE;
   }
 }
 
@@ -219,6 +245,8 @@ export function applyAggregationExclusion(
     "public_support_rental",
     "public_construction_rental",
     "public_purchase_rental",
+    "private_short_term_rental_6y_construction",
+    "private_short_term_rental_6y_purchase",
   ];
 
   const results: ExclusionResult[] = properties.map((prop) => {

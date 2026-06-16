@@ -138,6 +138,8 @@ const RENTAL_TYPES = new Set([
   "public_support_rental",
   "public_construction_rental",
   "public_purchase_rental",
+  "private_short_term_rental_6y_construction",
+  "private_short_term_rental_6y_purchase",
 ]);
 
 // 기타 합산배제 유형 (otherInfo 필드 구성에 사용)
@@ -149,7 +151,8 @@ const OTHER_INFO_TYPES = new Set([
 
 // store의 exclusionType → validator의 registrationType 매핑
 // (임대주택 합산배제 신청 시 UI 선택값을 API 검증 스키마 값으로 변환)
-function toRegistrationType(exclusionType: string): string {
+// export: PropertyListInput onChange 자동매칭에서 재사용 (단일 출처 — UI 설계 §3)
+export function toRegistrationType(exclusionType: string): string {
   const map: Record<string, string> = {
     private_construction_rental: "private_construction",
     private_purchase_rental_long: "private_purchase_long",
@@ -157,6 +160,8 @@ function toRegistrationType(exclusionType: string): string {
     public_support_rental: "public_support",
     public_construction_rental: "public_construction",
     public_purchase_rental: "public_purchase",
+    private_short_term_rental_6y_construction: "private_short_term_6y_construction",
+    private_short_term_rental_6y_purchase: "private_short_term_6y_purchase",
   };
   return map[exclusionType] ?? "private_purchase_long";
 }

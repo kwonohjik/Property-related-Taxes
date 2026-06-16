@@ -31,6 +31,8 @@ const RENTAL_REG_TYPE_OPTIONS: [string, string][] = [
   ["public_support", "공공지원민간임대"],
   ["public_construction", "공공건설임대"],
   ["public_purchase", "공공매입임대"],
+  ["private_short_term_6y_construction", "민간건설 단기민간임대 (6년)"],
+  ["private_short_term_6y_purchase", "민간매입 단기민간임대 (6년)"],
 ];
 
 // 임대주택 합산배제 유형 집합
@@ -41,6 +43,8 @@ const RENTAL_EXCLUSION_TYPES = new Set([
   "public_support_rental",
   "public_construction_rental",
   "public_purchase_rental",
+  "private_short_term_rental_6y_construction",
+  "private_short_term_rental_6y_purchase",
 ]);
 
 // 기타 합산배제 (별도 상세정보 불필요)
@@ -95,6 +99,16 @@ function RentalExclusionDetail({
             </option>
           ))}
         </select>
+        {property.rentalRegistrationType === "private_short_term_6y_construction" && (
+          <p className="text-xs text-muted-foreground">
+            단기민간임대(건설, §3①10호): 공시가격 6억원 이하 · 전용 149㎡ 이하 · 6년 이상 임대 · 임대료 5% 초과 금지 · 2호 이상
+          </p>
+        )}
+        {property.rentalRegistrationType === "private_short_term_6y_purchase" && (
+          <p className="text-xs text-muted-foreground">
+            단기민간임대(매입, §3①11호): 공시가격 {property.location === "non_metro" ? "비수도권 2억원" : "수도권 4억원"} 이하 · 6년 이상 임대 · 임대료 5% 금지 · ⚠ 아파트 제외 · 조정대상지역 신규취득 제외(자동판정 안 됨 — 직접 확인)
+          </p>
+        )}
       </div>
 
       {/* 임대사업자 등록일 */}

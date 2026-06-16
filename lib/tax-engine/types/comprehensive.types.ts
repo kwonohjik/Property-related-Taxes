@@ -53,6 +53,8 @@ export type ExclusionType =
   | "public_support_rental"         // 공공지원민간임대 (시행령 §3①3호)
   | "public_construction_rental"    // 공공건설임대 (시행령 §3①4호)
   | "public_purchase_rental"        // 공공매입임대 (시행령 §3①5호)
+  | "private_short_term_rental_6y_construction" // 단기민간임대 건설 6년 (시행령 §3①10호)
+  | "private_short_term_rental_6y_purchase"     // 단기민간임대 매입 6년 (시행령 §3①11호)
   | "unsold_housing"                // 미분양주택 (시행령 §4①1호)
   | "daycare_housing"               // 가정어린이집용 (시행령 §4①2호)
   | "employee_housing"              // 사원용 (시행령 §4①3호)
@@ -72,7 +74,9 @@ export interface RentalExclusionInput {
     | "private_purchase_short"
     | "public_support"
     | "public_construction"
-    | "public_purchase";
+    | "public_purchase"
+    | "private_short_term_6y_construction"  // 단기민간임대 건설 (시행령 §3①10호)
+    | "private_short_term_6y_purchase";     // 단기민간임대 매입 (시행령 §3①11호)
   rentalRegistrationDate: Date;    // 임대사업자 등록일
   rentalStartDate: Date;           // 임대개시일
   assessedValue: number;           // 공시가격 (원)
