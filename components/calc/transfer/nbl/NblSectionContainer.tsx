@@ -59,7 +59,8 @@ export function NblSectionContainer({
     asset.nblExemptPublicExpropriation ||
     asset.nblExemptFactoryAdjacent ||
     asset.nblExemptJongjoongOwned ||
-    asset.nblExemptUrbanFarmlandJongjoong;
+    asset.nblExemptUrbanFarmlandJongjoong ||
+    asset.nblExemptInong;
 
   if (!asset.nblUseDetailedJudgment) {
     return (
