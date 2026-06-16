@@ -318,6 +318,9 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
     oneHouseSpecialApplied,
     warnings,
     legalBasis,
+    taxCapMode,
+    taxCapBasisTax,
+    recomputeDetail,
   } = result;
 
   const taxpayer = result.taxpayer;
@@ -476,6 +479,27 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
           <TaxRow label="산출세액" amount={calculatedTax} />
           {capApplied && (
             <>
+              {taxCapMode === "recompute" && recomputeDetail ? (
+                <TaxRow
+                  label={`직전연도(${recomputeDetail.priorYear}) 재산정 (§118 본문)`}
+                  amount={recomputeDetail.recomputedTax}
+                  sub
+                  note={
+                    recomputeDetail.appliedRate != null
+                      ? `직전 과세표준 ${formatKRW(recomputeDetail.priorTaxBase)} × ${formatRate(recomputeDetail.appliedRate)}`
+                      : `직전 과세표준 ${formatKRW(recomputeDetail.priorTaxBase)} × 직전연도 누진세율`
+                  }
+                />
+              ) : (
+                taxCapBasisTax != null && (
+                  <TaxRow
+                    label="직전연도 부과세액 (직접입력)"
+                    amount={taxCapBasisTax}
+                    sub
+                    note="§118 단서"
+                  />
+                )
+              )}
               <TaxRow
                 label={`세부담상한 적용 (상한율 ${formatRate(taxCapRate)})`}
                 amount={determinedTax}
