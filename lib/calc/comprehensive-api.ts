@@ -359,13 +359,23 @@ export async function callComprehensiveApi(
 
   // ⑬ 직전연도 주택별 공시 (당해 2주택+ 다주택 케이스) — 재산세 주택별 합산용.
   //   미입력/단일은 undefined → 엔진 [assessedValue] fallback. 입력 시 합산을 assessedValue로(단일 원천).
+  // Phase B 통합(comprehensive-prior-year-2step): auto 모드 + 전 주택 priorAssessedValue 입력 시
+  //   주택별 직전공시(priorAssessedValue)를 단일 소스로 파생. 미입력 주택 있으면 기존
+  //   previousYearAutoHouseValues 경로(하위호환). 혼재 차단은 ⑧ validation(전 주택 필수).
+  const priorAssessedVals = formData.properties.map(
+    (p) => parseAmount(p.priorAssessedValue) || 0,
+  );
+  const allPriorAssessed =
+    priorAssessedVals.length > 0 && priorAssessedVals.every((v) => v > 0);
   const priorHouseValues =
-    formData.previousYearAutoHouseValues &&
-    formData.previousYearAutoHouseValues.length > 0
-      ? formData.previousYearAutoHouseValues
-          .map((v) => parseAmount(v))
-          .filter((v) => v > 0)
-      : undefined;
+    capMode === "auto" && allPriorAssessed
+      ? priorAssessedVals
+      : formData.previousYearAutoHouseValues &&
+          formData.previousYearAutoHouseValues.length > 0
+        ? formData.previousYearAutoHouseValues
+            .map((v) => parseAmount(v))
+            .filter((v) => v > 0)
+        : undefined;
   const priorSum =
     priorHouseValues && priorHouseValues.length > 0
       ? priorHouseValues.reduce((a, b) => a + b, 0)
@@ -374,7 +384,11 @@ export async function callComprehensiveApi(
   // ⑬ 직전 §8④ 안분 분자(사례5) — 당해 §8④ 주택 인덱스 ↔ 직전 주택별 공시 매핑 (UI 추가 입력 없음).
   //   ★ filter 전 원본(previousYearAutoHouseValues) 인덱싱 — priorHouseValues는 .filter(v>0)로
   //     인덱스 시프트되므로 properties[i] 대응 깨짐.
-  const priorRawValues = formData.previousYearAutoHouseValues ?? [];
+  // Phase B: §8④ 안분 인덱싱도 통합 소스 추종 (auto+전 주택 priorAssessedValue 시 그 값)
+  const priorRawValues =
+    capMode === "auto" && allPriorAssessed
+      ? formData.properties.map((p) => p.priorAssessedValue)
+      : (formData.previousYearAutoHouseValues ?? []);
   const priorS84Sum = formData.properties.reduce((sum, p, i) => {
     const isS84 = (p.section8para4Type ?? "none") !== "none";
     const v = priorRawValues[i] ? parseAmount(priorRawValues[i]) : 0;

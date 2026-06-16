@@ -224,7 +224,7 @@ const DEFAULT_LAND_AGGREGATE: AggregateLandForm = {
   previousYearTotalTax: "",
 };
 
-const defaultFormData: ComprehensiveFormData = {
+export const defaultFormData: ComprehensiveFormData = {
   assessmentYear: String(new Date().getFullYear()),
   taxpayerType: "individual",              // ② initial value
   corporateHousingType: "general_corp",    // ② 법인 선택 시 기본 (D-4) — corp* 플래그는 undefined(3-state)

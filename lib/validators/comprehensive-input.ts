@@ -562,22 +562,10 @@ export const comprehensiveTaxInputSchema = z.object({
     return check(v.landAggregateParcels) && check(v.landSeparateParcels);
   },
   { message: "직전연도 공시지가는 전 필지를 입력하거나 전부 비워야 합니다 (일부만 입력 불가).", path: ["landAggregateParcels"] },
-).refine(
-  // ⑫ 트랙 B dual-truth 가드: 주택별 priorAssessedValue(layer-1 §122 세부담상한)와
-  //   previousYearAuto.priorHouseValues(layer-2 §9③ 직전 종부세상당액)는 동일 "직전 주택 공시"의
-  //   중복 입력 → 상호배타. priorAssessedValue를 쓰려면 직전 총세액(previousYearTotalTax) 직접입력 경로 사용.
-  (v) =>
-    !(
-      v.properties.some(
-        (p) => p.priorAssessedValue !== undefined && p.priorAssessedValue > 0,
-      ) && (v.previousYearAuto?.priorHouseValues?.length ?? 0) > 0
-    ),
-  {
-    message:
-      "주택별 직전연도 공시가격(세부담상한)과 직전연도 자동계산의 주택 공시가격 목록은 동시에 입력할 수 없습니다. 하나만 사용하세요.",
-    path: ["previousYearAuto"],
-  },
 );
+// (Phase B 통합 — comprehensive-prior-year-2step) refine ⑫ priorAssessedValue ↔
+//   previousYearAuto.priorHouseValues 상호배타 제거: 직전공시 단일 입력원에서 변환이 둘 다
+//   파생하므로 중복이 아님. dual-truth 방지는 변환의 단일 소스(priorAssessedValue)로 보장.
 
 // ============================================================
 // 타입 추론 Export
