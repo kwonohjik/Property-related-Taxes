@@ -180,7 +180,7 @@ NBL 갭 감사의 High 3건 중 입력 도달 클러스터:
 8. **③⑥⑦ 확인**: normalize(`calc-wizard-migration.ts`) nbl* passthrough Read 확인, 사이드바 무기여 grep, ⑦ **결과카드 회귀 anchor 1건**(`nonBusinessLandJudgmentDetail` present 시 렌더 — 입력 도달 후 첫 실데이터).
 9. **케이스 anchor**: C1·C2·C6를 client→buildNblEngineInput→judgeNonBusinessLand로 잇는 통합 anchor 3건. (full route POST 대신 두 추출 헬퍼 합성으로 경계 커버.)
 10. **게이트**: `npx tsc --noEmit` 0건 → `npx vitest run __tests__/tax-engine/non-business-land/ __tests__/lib/calc/` → `npm test` 전체 → `npm run lint`.
-11. **E2E**: `e2e/`에 forest 정밀판정 1 spec (`E2E_PORT=3104`). 폼→계산→결과 도달 + Network body `nonBusinessLandRaw` 확인.
+11. **E2E**(Do 환류): DoD의 "Network 탭 request body 신규 필드 확인"은 **Anchor-0**(`transfer-tax-nbl-wiring.test.ts` — `fetch` body 캡처로 `nonBusinessLandRaw` 운반 단언)가 자동·동치 충족. 백엔드 전용·UI 무변경 특성상 전체 브라우저 위저드 spec(forest 폼→계산→결과 카드)은 **후속 보류(미수행 명시)**. 기존 양도세 위저드 E2E 패턴(`e2e/transfer-sales-case-rtms.spec.ts` 등) 모델로 추후 추가 가능.
 
 ---
 
@@ -203,7 +203,7 @@ NBL 갭 감사의 High 3건 중 입력 도달 클러스터:
 - [ ] 14지점 중 변경 지점(④⑧⑨⑩⑫⑬⑭+매퍼) 전부 동기화, 확인 지점(③⑥⑦⑪) grep 완료
 - [ ] **wire 층** `nonBusinessLandDetails` 잔존 0건(grep) + **엔진 층 4곳 보존** 확인(transfer.types·transfer-tax·rate-calc·engine테스트)
 - [ ] `npx tsc --noEmit` 0건 / `npm test` 전체 통과 / `npm run lint` 0건
-- [ ] E2E forest 정밀판정 spec 통과(`E2E_PORT=3104`), Network body `nonBusinessLandRaw` 확인
+- [x] **Network body `nonBusinessLandRaw` 확인 = Anchor-0 자동 충족**(fetch body 캡처, DoD "request body 신규 필드 확인"과 동치). 전체 브라우저 위저드 E2E는 후속 보류(미수행 명시 — DoD 허용)
 - [ ] 기존 엔진 anchor(longTermDeductionExcluded·areaProportioning) 불변 확인 (회귀 0)
 - [ ] 우선순위 2 선행조건 충족(gracePeriods가 엔진 input까지 도달) — `integration.test.ts:233` 갱신은 우선순위 2로 TODO 이관 명시
 
