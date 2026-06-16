@@ -40,28 +40,24 @@ async function calcAndWait(page: Page): Promise<void> {
 }
 
 /**
- * 사례2 — Step1~Step4 입력 (1세대1주택 OFF, 공시가격 10억, 감면율 25%)
+ * 사례2 — Step1 + Step2 공시·감면 입력 (1세대1주택 OFF, 공시가격 10억, 감면율 25%)까지 진행하고 Step2에 머무름.
+ * cap-mode 선택·직전공시 입력은 각 테스트가 Step2에서 수행 (직전공시 2단계 통합).
  *
  * Step1: 2022 과세연도 선택, 1세대1주택 스위치 OFF (기본값) → 다음
- * Step2: 공시가격 10억, 감면율 25% 입력 → 다음
- * Step3: 합산배제 없음 → 다음
- * Step4: 토지 없음 → 다음
+ * Step2: 공시가격 10억, 감면율 25% 입력 (cap-mode·직전공시는 테스트별)
  */
-async function fillCase2ThroughStep4(page: Page): Promise<void> {
+async function fillCase2ToStep2(page: Page): Promise<void> {
   await page.goto(PAGE);
 
   // Step1: 2022 과세연도 선택 (1세대1주택 스위치 OFF — 기본값 유지)
   await page.getByRole("radio", { name: "2022" }).check();
-  await clickNext(page);
+  await clickNext(page); // → Step2
 
-  // Step2: 공시가격 10억 + 감면율 25% 입력
+  // Step2: 공시가격 10억 + 감면율 25% 입력 (cap-mode-auto 전 — placeholder/숫자 nth 안정)
   // CurrencyInput placeholder="금액 입력" — 공시가격 총액
   await page.getByPlaceholder("금액 입력").first().fill("1000000000");
   // DecimalInput: nth(0)=지분율(기본100 유지), nth(1)=재산세 감면율(%)
   await page.getByPlaceholder("숫자 입력").nth(1).fill("25");
-  await clickNext(page); // → Step3
-  await clickNext(page); // → Step4
-  await clickNext(page); // → Step5
 }
 
 // ════════════════════════════════════════════════════════════
@@ -88,12 +84,14 @@ test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 
     });
     page.on("pageerror", (e) => consoleErrors.push(`pageerror: ${e.message}`));
 
-    await fillCase2ThroughStep4(page);
+    await fillCase2ToStep2(page);
 
-    // Step5: 자동계산 모드 + 직전 공시가격 9억
+    // Step2: 자동계산 모드 + 직전 공시가격 9억
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByPlaceholder("0").first().fill("900000000");
+    await page.getByLabel("직전연도 공시가격").nth(0).fill("900000000");
     // 직전연도 1세대1주택 스위치 OFF (기본값 — 일반 1주택자)
+    await clickNext(page); // → Step3
+    await clickNext(page); // → Step4
     await calcAndWait(page);
 
     // 결과 화면 노출 확인
@@ -149,11 +147,13 @@ test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 
     });
     page.on("pageerror", (e) => consoleErrors.push(`pageerror: ${e.message}`));
 
-    await fillCase2ThroughStep4(page);
+    await fillCase2ToStep2(page);
 
-    // Step5: 자동계산 모드 + 직전 공시가격 9억
+    // Step2: 자동계산 모드 + 직전 공시가격 9억
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByPlaceholder("0").first().fill("900000000");
+    await page.getByLabel("직전연도 공시가격").nth(0).fill("900000000");
+    await clickNext(page); // → Step3
+    await clickNext(page); // → Step4
     await calcAndWait(page);
 
     await expect(page.getByText(/294,923/).first()).toBeVisible({
@@ -189,14 +189,13 @@ test.describe("종합부동산세 재산세 감면율(사례2) — 폼→결과 
     await page.getByRole("radio", { name: "2022" }).check();
     await clickNext(page);
 
-    // Step2: 공시가격 10억, 감면율 미입력
+    // Step2: 공시가격 10억, 감면율 미입력 (세부담상한 적용 안 함 — none 기본)
     await page.getByPlaceholder("금액 입력").first().fill("1000000000");
     // 감면율 입력란을 비워둠 (기본 미입력)
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
 
-    // Step5: 직접입력 모드 (기본) — 전년도 세액 입력 없이 바로 계산
+    // 세부담상한 적용 안 함(none 기본) — 직전공시 없이 바로 계산
     await calcAndWait(page);
 
     await expect(page.getByText(/납부할/).first()).toBeVisible({
@@ -244,17 +243,16 @@ test.describe("종합부동산세 사례12 회귀 (감면율 기능 추가 후)"
     await page.getByLabel("일").nth(1).fill("1");
     await clickNext(page);
 
-    // Step2: 공시가격 15억, 감면율 미입력
+    // Step2: 공시가격 15억, 감면율 미입력 + 자동모드 + 직전공시 14억 + 직전 1세대1주택
     await page.getByPlaceholder("금액 입력").first().fill("1500000000");
     await page.getByPlaceholder("0.00").first().fill("168");
+    // 자동모드 (cap-mode-auto 전 당해 공시 입력 완료 → 직전공시 nth 안정)
+    await page.getByTestId("cap-mode-auto").click();
+    await page.getByLabel("직전연도 공시가격").nth(0).fill("1400000000");
+    // 단일주택 auto switch: [0]당해 조정2주택 [1]직전 1세대1주택 → 직전 1세대1주택 = nth(1)
+    await page.getByRole("switch").nth(1).click();
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
-
-    // Step5: 자동모드 + 14억 + 직전 1세대1주택
-    await page.getByTestId("cap-mode-auto").click();
-    await page.getByPlaceholder("0").first().fill("1400000000");
-    await page.getByRole("switch").last().click();
 
     const calcResponse = page.waitForResponse(
       (r) =>

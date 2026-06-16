@@ -59,7 +59,7 @@ test.describe("종합합산토지분 종합부동산세 납부할 세액 산출 
     await fillParcel(page, 1, { jurisdiction: "송파구", name: "송파구-1", area: "100", share: "100", price: "3700000", prior: "3300000" });
     await fillParcel(page, 2, { jurisdiction: "송파구", name: "송파구-2", area: "200", share: "100", price: "5000000", prior: "4000000" });
 
-    await clickNext(page); // → Step5
+    // Step4(토지)가 마지막 → 계산
     const calcResponse = page.waitForResponse(
       (r) => r.url().includes("/api/calc/comprehensive") && r.request().method() === "POST",
       { timeout: 30_000 },

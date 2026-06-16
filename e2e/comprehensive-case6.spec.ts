@@ -44,10 +44,10 @@ test.describe("종합부동산세 사례6 — 건물·부속토지 소유자 분
     await page.getByRole("radio", { name: "2022" }).check();
     await clickNext(page); // → Step2
 
-    // Step2: 공시 15억 + 건물·부속토지 분리 ON + 시가표준액
+    // Step2: 공시 15억 + 건물·부속토지 분리 ON + 시가표준액 (cap-mode-auto 전 입력 → "금액 입력" nth 안정)
     await page.getByPlaceholder("금액 입력").first().fill("1500000000");
-    // 분리 토글 ON (property card 첫 switch — §8④보다 위)
-    await page.getByRole("switch").first().click();
+    // 분리 토글 ON — none 모드 단일주택 switch: [0]당해 조정2주택 [1]건물·부속토지 분리 → 분리 = nth(1)
+    await page.getByRole("switch").nth(1).click();
     await expect(page.getByText("당해연도 시가표준액")).toBeVisible(); // 펼침 확인
     await expect(page.getByText("토지만 소유")).toBeVisible(); // 기본 선택
     // "금액 입력": nth(0)=공시, (1)=당해토지, (2)=당해건물, (3)=직전토지, (4)=직전건물
@@ -57,13 +57,12 @@ test.describe("종합부동산세 사례6 — 건물·부속토지 소유자 분
     await page.getByPlaceholder("금액 입력").nth(4).fill("260000000");
     // 안분비율 80.00% 자동 표시
     await expect(page.getByText(/안분비율: 80\.00%/)).toBeVisible();
+
+    // Step2: 세부담상한 자동모드 + 직전 공시 14억 (직전공시는 getByLabel — 시가표준액 nth 충돌 회피)
+    await page.getByTestId("cap-mode-auto").click();
+    await page.getByLabel("직전연도 공시가격").nth(0).fill("1400000000");
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
-
-    // Step5: 세부담상한 자동모드 + 직전 공시 14억
-    await page.getByTestId("cap-mode-auto").click();
-    await page.getByPlaceholder("0").first().fill("1400000000");
     await calcAndWait(page);
 
     // 당해 ⑤ 납부할세액 = 1,367,616

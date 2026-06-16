@@ -61,8 +61,7 @@ test.describe("종부세 단기민간임대 6년 합산배제", () => {
     ).toHaveValue("private_short_term_6y_construction");
     await fillDate(page, 0, "2024", "1", "1"); // 임대사업자 등록일
     await fillDate(page, 1, "2024", "1", "1"); // 임대개시일
-    await clickNext(page); // Step4 토지
-    await clickNext(page); // Step5
+    await clickNext(page); // Step3 → Step4(토지·계산)
     await calcAndWait(page);
 
     await expect(page.getByText(/합산배제/).first()).toBeVisible({ timeout: 30_000 });
@@ -93,8 +92,7 @@ test.describe("종부세 단기민간임대 6년 합산배제", () => {
     ).toHaveValue("private_short_term_6y_purchase");
     await fillDate(page, 0, "2024", "1", "1");
     await fillDate(page, 1, "2024", "1", "1");
-    await clickNext(page);
-    await clickNext(page);
+    await clickNext(page); // Step3 → Step4(토지·계산)
     await calcAndWait(page);
 
     await expect(page.getByText(/합산배제/).first()).toBeVisible({ timeout: 30_000 });

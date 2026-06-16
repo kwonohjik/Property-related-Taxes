@@ -53,10 +53,9 @@ test.describe("종합부동산세 사례7·8 — 재산세 부과세액 직접�
     await page.getByPlaceholder("금액 입력").nth(0).fill("800000000");
     await page.getByPlaceholder("금액 입력").nth(1).fill("714000");
     await clickNext(page); // → Step3
-    await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
+    await clickNext(page); // → Step4(토지·계산)
 
-    // Step5: 직접입력 모드(기본) + 전년도 미입력(세부담상한 생략 → ⑤=taxBeforeCap)
+    // 직접입력 모드(기본) + 세부담상한 모드 미사용 → ⑤=taxBeforeCap
     await calcAndWait(page);
 
     // 결과: 납부할세액 560,595
@@ -109,13 +108,14 @@ test.describe("종합부동산세 사례7·8 — 재산세 부과세액 직접�
     await page.getByPlaceholder("금액 입력").nth(2).fill("1000000000");
     await page.getByPlaceholder("금액 입력").nth(3).fill("1677000");
 
-    await clickNext(page); // → Step3
-    await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
-
-    // Step5: 당해 조정대상지역 2주택 토글 ON (중과 2.2% + 세부담상한 300%) — Step5 첫 switch
+    // 당해 조정대상지역 2주택 토글 ON (중과 2.2%) — 2단계 주택 목록 상단(cap-mode 위) 첫 switch
+    //   (세부담상한 5단계 제거 후 당해 조정대상지역 토글이 2단계로 이동)
     await page.getByRole("switch").first().click();
-    // 전년도 미입력(상한 생략 → ⑤=taxBeforeCap)
+
+    await clickNext(page); // → Step3
+    await clickNext(page); // → Step4(토지·계산)
+
+    // 세부담상한 모드 미사용 → ⑤=taxBeforeCap
     await calcAndWait(page);
 
     // 결과: 납부할세액 16,747,099

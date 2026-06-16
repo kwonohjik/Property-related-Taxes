@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * 종합부동산세 부부 공동명의 1주택자 특례 §10의2 E2E (Phase C)
  *
- * 마법사 5단계: Step1 → Step2 → Step3 → Step4 → Step5 → 결과
+ * 마법사 4단계: Step1 → Step2 → Step3 → Step4(토지·계산) → 결과
  *
  * - CPT-SJ-E2E-1: 특례 ToggleCard ON → 신청인 생년월일·취득일 DateInput 펼침
  *                 + 1세대1주택 ToggleCard disabled 확인
@@ -98,8 +98,7 @@ test.describe("종합부동산세 부부 공동명의 1주택자 특례 §10의2
       await page.getByPlaceholder("0.00").first().fill("84");
 
       await clickNext(page); // Step2 → Step3
-      await clickNext(page); // Step3 → Step4
-      await clickNext(page); // Step4 → Step5
+      await clickNext(page); // Step3 → Step4(토지·계산)
       await calcAndWait(page);
 
       // 결과: calculatedTax 900,000 표시 (SC-C1 — (15억−12억)×60%×0.5%=900,000)

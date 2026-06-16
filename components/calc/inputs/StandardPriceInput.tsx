@@ -37,6 +37,8 @@ interface Props {
   /** 기준일 (양도일·취득일·과세기준일 등) — 조회 연도 기본값 계산에 사용 */
   referenceDate?: string;
   label?: string;
+  /** label을 시각적으로 숨기고 input aria-label로만 노출 (getByLabel·접근성). 기본 false */
+  hideLabel?: boolean;
   hint?: string;
   required?: boolean;
   /** false이면 조회 버튼 영역 숨김 (기본 true) */
@@ -65,6 +67,7 @@ export function StandardPriceInput({
   jibun,
   referenceDate,
   label,
+  hideLabel = false,
   hint,
   required = false,
   enableLookup = true,
@@ -217,6 +220,7 @@ export function StandardPriceInput({
           label ??
           (isAreaMode ? "공시가격 총액 (원)" : "공시가격 (원)")
         }
+        hideLabel={hideLabel}
         value={totalPrice}
         onChange={handleTotalPriceChange}
         required={required}

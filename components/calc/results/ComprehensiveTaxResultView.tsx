@@ -16,7 +16,7 @@
  */
 
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
-import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
@@ -567,18 +567,12 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
     () => new Set()
   );
 
-  // 서식 표시용 store 값 (landArea·buildingArea·previousYearTotalTax)
-  // 서식 전용 — 엔진 계산에는 미영향
+  // 서식 표시용 store 값 (landArea·buildingArea) — 서식 전용, 엔진 계산 미영향
   const { formData } = useComprehensiveWizardStore();
   // 첫 번째 주택의 landArea를 서식 표시용으로 사용 (사례12 단일 주택 기준)
   const filingLandArea = formData.properties[0]?.landArea ?? "";
   const filingBuildingArea = formData.properties[0]?.area ?? "";
-  // 직접입력 모드일 때만 previousYearTotalTaxDirect 전달
-  const capMode = formData.previousYearCapMode ?? "direct";
-  const previousYearTotalTaxDirect =
-    capMode === "direct" && formData.previousYearTotalTax
-      ? parseAmount(formData.previousYearTotalTax) || undefined
-      : undefined;
+  // 직전 세액 직접입력 제거(2단계 통합) — 직전 세부담상한은 엔진 previousYearEquivalent.total 사용
 
   // 선택 항목 서버 PDF 다운로드 (PR-E). savedId(로그인+저장) 있을 때만 활성.
   async function handlePrintPdf(pdfSections: string[]) {
@@ -690,7 +684,6 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
           result={result}
           landArea={filingLandArea}
           buildingArea={filingBuildingArea}
-          previousYearTotalTaxDirect={previousYearTotalTaxDirect}
         />
       </PrintSection>
 

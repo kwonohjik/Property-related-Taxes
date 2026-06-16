@@ -55,10 +55,12 @@ test.describe("종합부동산세 사례5 — 부부특례+지방저가+직전 �
     await clickNext(page); // → Step2
 
     // Step2: 성동 15억 + 세종 2억(지방저가 비수도권 §8④4호)
+    //   당해 공시·면적·§8④를 cap-mode-auto 전에 입력 (직전공시 미노출 → 금액 nth 안정)
     await page.getByPlaceholder("금액 입력").first().fill("1500000000");
     await page.getByPlaceholder("0.00").first().fill("84");
     await page.getByRole("button", { name: /주택 추가/ }).click();
-    await page.getByPlaceholder("금액 입력").nth(1).fill("200000000");
+    // "금액 입력" 카드별 2개(공시·재산세 부과세액) → 주택2 공시 = nth(2) (nth(1)은 주택1 재산세 부과세액)
+    await page.getByPlaceholder("금액 입력").nth(2).fill("200000000");
     await page.getByPlaceholder("0.00").nth(1).fill("60");
     await page
       .locator('select:has(option[value="non_metro"])')
@@ -66,17 +68,16 @@ test.describe("종합부동산세 사례5 — 부부특례+지방저가+직전 �
       .selectOption("non_metro");
     await page.getByRole("switch").last().click(); // 주택2 §8④ ON (마지막 주택의 마지막 switch — 분리 토글 추가에 견고)
     await page.getByRole("radio", { name: /지방 저가주택/ }).check();
-    await clickNext(page); // → Step3
-    await clickNext(page); // → Step4
-    await clickNext(page); // → Step5
 
-    // Step5: 자동모드 + 직전 주택별 공시(성동 13억, 세종 1.95억) + 직전 1세대1주택 토글
+    // Step2: 세부담상한 자동모드 + 직전 주택별 공시(성동 13억, 세종 1.95억) + 직전 1세대1주택 토글
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByPlaceholder("0").nth(0).fill("1300000000");
-    await page.getByPlaceholder("0").nth(1).fill("195000000");
-    // Step5 switch: [0]당해 조정2주택(OFF) [1]직전 조정2주택(OFF) [2]직전 1세대1주택(ON)
+    await page.getByLabel("직전연도 공시가격").nth(0).fill("1300000000");
+    await page.getByLabel("직전연도 공시가격").nth(1).fill("195000000");
+    // Step2 모드섹션 switch: [0]당해 조정2주택(OFF) [1]직전 조정2주택(OFF) [2]직전 1세대1주택(ON)
     await expect(page.getByText("직전연도 1세대1주택자")).toBeVisible();
     await page.getByRole("switch").nth(2).click();
+    await clickNext(page); // → Step3
+    await clickNext(page); // → Step4
     await calcAndWait(page);
 
     // 당해 납부할세액 ⑤ = 969,711

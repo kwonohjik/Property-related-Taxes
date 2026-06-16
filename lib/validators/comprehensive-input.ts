@@ -243,10 +243,10 @@ export const comprehensivePropertySchema = z
       .optional(),
 
     /**
-     * 직전연도 주택공시가격 (트랙 B, 사례8·9).
-     * §122 layer-1 세부담상한 전용 — priorAssessedTaxCapEnabled ON 시 전송.
-     * 정수(원), 양의 정수. 빈값/0 = strip(세부담상한 미적용).
-     * ⑧ validate: ON 시 >0 필수 (자동 안분 fallback 금지 정책).
+     * 직전연도 주택공시가격 (직전 공시 단일 입력원, 2단계 통합).
+     * §122 layer-1 + §10 layer-2(변환이 previousYearAuto로 파생) — capMode "auto" 시 전송.
+     * 정수(원), 양의 정수. 빈값/0/none 모드 = strip(세부담상한 미적용).
+     * ⑧ validate: auto 모드 시 전 주택 >0 필수 (자동 안분 fallback 금지 정책).
      */
     priorAssessedValue: z
       .number()
@@ -536,14 +536,6 @@ export const comprehensiveTaxInputSchema = z.object({
     path: ["corporateHousingType"],
   },
 ).refine(
-  // 세부담상한: 전년도 총세액 직접입력과 직전연도 자동계산은 상호배타
-  (v) => !(v.previousYearTotalTax !== undefined && v.previousYearAuto !== undefined),
-  {
-    message:
-      "전년도 총세액 직접 입력과 직전연도 공시가격 자동 계산은 동시에 사용할 수 없습니다. 하나만 선택하세요.",
-    path: ["previousYearAuto"],
-  },
-).refine(
   // 종합합산: 집계 입력(landAggregate)과 필지 모드(landAggregateParcels) 상호배타
   (v) => !(v.landAggregate !== undefined && (v.landAggregateParcels?.length ?? 0) > 0),
   { message: "종합합산 토지는 집계 입력과 필지별 입력을 동시에 사용할 수 없습니다.", path: ["landAggregateParcels"] },
@@ -562,22 +554,10 @@ export const comprehensiveTaxInputSchema = z.object({
     return check(v.landAggregateParcels) && check(v.landSeparateParcels);
   },
   { message: "직전연도 공시지가는 전 필지를 입력하거나 전부 비워야 합니다 (일부만 입력 불가).", path: ["landAggregateParcels"] },
-).refine(
-  // ⑫ 트랙 B dual-truth 가드: 주택별 priorAssessedValue(layer-1 §122 세부담상한)와
-  //   previousYearAuto.priorHouseValues(layer-2 §9③ 직전 종부세상당액)는 동일 "직전 주택 공시"의
-  //   중복 입력 → 상호배타. priorAssessedValue를 쓰려면 직전 총세액(previousYearTotalTax) 직접입력 경로 사용.
-  (v) =>
-    !(
-      v.properties.some(
-        (p) => p.priorAssessedValue !== undefined && p.priorAssessedValue > 0,
-      ) && (v.previousYearAuto?.priorHouseValues?.length ?? 0) > 0
-    ),
-  {
-    message:
-      "주택별 직전연도 공시가격(세부담상한)과 직전연도 자동계산의 주택 공시가격 목록은 동시에 입력할 수 없습니다. 하나만 사용하세요.",
-    path: ["previousYearAuto"],
-  },
 );
+// (Phase B 통합 — comprehensive-prior-year-2step) refine ⑫ priorAssessedValue ↔
+//   previousYearAuto.priorHouseValues 상호배타 제거: 직전공시 단일 입력원에서 변환이 둘 다
+//   파생하므로 중복이 아님. dual-truth 방지는 변환의 단일 소스(priorAssessedValue)로 보장.
 
 // ============================================================
 // 타입 추론 Export

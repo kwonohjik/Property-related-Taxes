@@ -3,7 +3,7 @@ import { test, expect, type Page } from "@playwright/test";
 /**
  * 종합부동산세 §8④ 1세대1주택자 의제 + §9⑦⑨ 안분 E2E (Phase D-2)
  *
- * 마법사 5단계: Step1 → Step2(주택·§8④ 지정) → Step3 → Step4 → Step5 → 결과
+ * 마법사 4단계: Step1 → Step2(주택·§8④ 지정) → Step3 → Step4(토지·계산) → 결과
  *
  * - CPT-S8-E2E-1: 2024, 12억(일반)+3억(지방저가 비수도권) §8④4호 → 기본공제 12억 의제 + §8④4호 배지
  * - CPT-S8-E2E-2: 사례5 — 2022 + §10의2 + 4호 + 70세 → 결정세액 969,711
@@ -44,9 +44,9 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
       await page.getByPlaceholder("금액 입력").first().fill("1200000000");
       await page.getByPlaceholder("0.00").first().fill("84");
 
-      // 주택2 추가
+      // 주택2 추가 — "금액 입력"은 주택당 2개(공시·부과재산세)이므로 주택2 공시는 nth(2)
       await page.getByRole("button", { name: /주택 추가/ }).click();
-      await page.getByPlaceholder("금액 입력").nth(1).fill("300000000");
+      await page.getByPlaceholder("금액 입력").nth(2).fill("300000000");
       await page.getByPlaceholder("0.00").nth(1).fill("60");
       // 주택2 비수도권 (4호 활성화 전제) — 수도권 select만 필터 (StandardPriceInput 기준연도 select 제외)
       await page
@@ -60,8 +60,7 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
       await page.getByRole("radio", { name: /지방 저가주택/ }).check();
 
       await clickNext(page); // Step2 → Step3
-      await clickNext(page); // Step3 → Step4
-      await clickNext(page); // Step4 → Step5
+      await clickNext(page); // Step3 → Step4(토지·계산)
       await calcAndWait(page);
 
       // 기본공제 라벨 — §8④ 의제 (12억)
@@ -97,9 +96,9 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
       // 주택1: 15억
       await page.getByPlaceholder("금액 입력").first().fill("1500000000");
       await page.getByPlaceholder("0.00").first().fill("84");
-      // 주택2: 2억 지방저가 비수도권
+      // 주택2: 2억 지방저가 비수도권 — "금액 입력"은 주택당 2개(공시·부과재산세)이므로 주택2 공시는 nth(2)
       await page.getByRole("button", { name: /주택 추가/ }).click();
-      await page.getByPlaceholder("금액 입력").nth(1).fill("200000000");
+      await page.getByPlaceholder("금액 입력").nth(2).fill("200000000");
       await page.getByPlaceholder("0.00").nth(1).fill("60");
       await page
         .locator('select:has(option[value="non_metro"])')
@@ -110,8 +109,7 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
       await page.getByRole("radio", { name: /지방 저가주택/ }).check();
 
       await clickNext(page); // Step2 → Step3
-      await clickNext(page); // Step3 → Step4
-      await clickNext(page); // Step4 → Step5
+      await clickNext(page); // Step3 → Step4(토지·계산)
       await calcAndWait(page);
 
       // 결정세액 969,711 (사례5 — §9⑦ 안분 528,933 공제 후)

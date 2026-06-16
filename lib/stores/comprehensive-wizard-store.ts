@@ -64,8 +64,7 @@ export interface PropertyEntry {
   // ── 다가구주택 면적안분 (트랙 A, 사례7 이상) ──
   multiFamilyEnabled: boolean;      // 다가구 층별 면적 입력 ON/OFF
   floorUnits: { label: string; area: string }[]; // 구별 면적 행 (area = DecimalInput 문자열)
-  // ── 주택 세부담상한 (트랙 B, 사례8·9) ──
-  priorAssessedTaxCapEnabled: boolean; // 직전연도 공시가격(세부담상한) 입력 ON/OFF
+  // ── 주택 세부담상한 (직전 공시가격 단일 입력원 — 모드가 표시 제어, 2단계 통합) ──
   priorAssessedValue: string;          // 직전연도 주택공시가격 (원, CurrencyInput 문자열)
 }
 
@@ -151,13 +150,11 @@ export interface ComprehensiveFormData {
   landSeparatePriorMode: LandPriorMode;
   landSeparatePreviousYearTotalTax: string; // 별도합산 직전연도 총세액 직접입력 (direct 서브모드)
 
-  // ── Step 5: 세부담 상한 ──
-  previousYearTotalTax: string;    // 전년도 종부세+재산세 합계 (원) — 직접입력 모드
-  /** 세부담 상한 계산 방식 (3중 패턴) */
-  previousYearCapMode: "direct" | "auto"; // "direct"(기본) = 전년도 총세액 직접 입력, "auto" = 공시가격으로 자동 계산
-  previousYearAutoAssessedValue: string;  // 자동 모드: 직전연도 공시가격 합산 (원) — 당해 1주택 시
-  previousYearAutoIsOneHouse: boolean;    // 자동 모드: 직전연도 1세대1주택 여부
-  previousYearAutoHouseValues: string[];  // 자동 모드: 직전연도 주택별 공시가격 (원) — 당해 2주택+ 시 (재산세 주택별 합산)
+  // ── 주택 세부담 상한 (직전 공시가격 단일 입력원 — 2단계 통합) ──
+  /** 세부담 상한 모드 — "none"(적용 안 함, 기본) | "auto"(직전 공시가격 자동계산).
+   *  직전 세액 직접입력은 §10 분모(종부세+재산세)를 재산세만으론 역산 불가하여 제거. */
+  previousYearCapMode: "none" | "auto";
+  previousYearAutoIsOneHouse: boolean;    // 자동 모드: 직전연도 1세대1주택 여부 (세대속성)
   previousYearAutoIsMultiAdjusted: boolean; // 자동 모드: 직전연도 조정대상지역 2주택 (중과세율 분기) — 당해 isMultiHouseInAdjustedArea와 별개
 
   // ── 연도별 세법 (과세연도 < 2023 일 때만 유효) ──
@@ -211,8 +208,7 @@ function makeProperty(): PropertyEntry {
     propertyTaxAmount: "",  // 재산세 부과세액 직접입력 (빈 문자열 = 자동계산)
     multiFamilyEnabled: false,  // 다가구 층별 면적 입력 OFF
     floorUnits: [],              // 구별 면적 행 (빈 배열 = 미입력)
-    // ② initial: 트랙 B (주택 세부담상한)
-    priorAssessedTaxCapEnabled: false,
+    // ② initial: 주택 세부담상한 (직전 공시가격 단일 입력원)
     priorAssessedValue: "",
   };
 }
@@ -224,7 +220,7 @@ const DEFAULT_LAND_AGGREGATE: AggregateLandForm = {
   previousYearTotalTax: "",
 };
 
-const defaultFormData: ComprehensiveFormData = {
+export const defaultFormData: ComprehensiveFormData = {
   assessmentYear: String(new Date().getFullYear()),
   taxpayerType: "individual",              // ② initial value
   corporateHousingType: "general_corp",    // ② 법인 선택 시 기본 (D-4) — corp* 플래그는 undefined(3-state)
@@ -244,11 +240,8 @@ const defaultFormData: ComprehensiveFormData = {
   landAggregatePriorMode: "none",
   landSeparatePriorMode: "none",
   landSeparatePreviousYearTotalTax: "",
-  previousYearTotalTax: "",
-  previousYearCapMode: "direct",
-  previousYearAutoAssessedValue: "",
+  previousYearCapMode: "none",
   previousYearAutoIsOneHouse: false,
-  previousYearAutoHouseValues: [],
   previousYearAutoIsMultiAdjusted: false,
   isMultiHouseInAdjustedArea: false,
 };
@@ -487,22 +480,45 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
               // ③ normalize: 다가구주택 면적안분 (트랙 A) — 구 세션 누락 시 기본값
               multiFamilyEnabled: p.multiFamilyEnabled ?? false,
               floorUnits: p.floorUnits ?? [],
-              // ③ normalize: 주택 세부담상한 (트랙 B) — 구 세션 누락 시 기본값
-              priorAssessedTaxCapEnabled: p.priorAssessedTaxCapEnabled ?? false,
+              // ③ normalize: 주택 세부담상한 (직전 공시가격 단일 입력원) — 구 세션 누락 시 기본값
               priorAssessedValue: p.priorAssessedValue ?? "",
             }));
           }
-          // 세부담상한 모드 — 구 세션 누락 시 "direct" (기존 동작 보존)
-          state.formData.previousYearCapMode =
-            state.formData.previousYearCapMode ?? "direct";
-          state.formData.previousYearAutoAssessedValue =
-            state.formData.previousYearAutoAssessedValue ?? "";
+          // ── 세부담상한 2단계 통합 마이그레이션 (comprehensive-prior-year-2step) ──
+          //   구 auto: previousYearAutoHouseValues[i]→properties[i].priorAssessedValue,
+          //     previousYearAutoAssessedValue→properties[0].priorAssessedValue(1주택)로 흡수.
+          //   구 direct/미설정 → "none"(직전 세액은 종부세+재산세 합계라 재산세만으론 역산 불가
+          //     → 세부담상한 미적용이 안전). 신규 기본도 "none".
+          const legacyFd = state.formData as unknown as Record<string, unknown>;
+          const legacyCapMode = legacyFd.previousYearCapMode as string | undefined;
+          const legacyAutoHouseValues = legacyFd.previousYearAutoHouseValues as
+            | string[]
+            | undefined;
+          const legacyAutoAssessed = legacyFd.previousYearAutoAssessedValue as
+            | string
+            | undefined;
+          if (legacyCapMode === "auto" && Array.isArray(state.formData.properties)) {
+            state.formData.properties = state.formData.properties.map((p, i) => {
+              if (p.priorAssessedValue) return p; // 이미 입력된 직전공시 우선
+              const migrated = legacyAutoHouseValues?.[i] || (i === 0 ? legacyAutoAssessed : undefined);
+              return migrated ? { ...p, priorAssessedValue: migrated } : p;
+            });
+            state.formData.previousYearCapMode = "auto";
+          } else {
+            state.formData.previousYearCapMode = "none";
+          }
           state.formData.previousYearAutoIsOneHouse =
             state.formData.previousYearAutoIsOneHouse ?? false;
-          state.formData.previousYearAutoHouseValues =
-            state.formData.previousYearAutoHouseValues ?? [];
           state.formData.previousYearAutoIsMultiAdjusted =
             state.formData.previousYearAutoIsMultiAdjusted ?? false;
+          // 구 제거 필드 정리 (타입에서 사라짐 — 잔존 시 무시되나 명시 삭제)
+          delete legacyFd.previousYearTotalTax;
+          delete legacyFd.previousYearAutoAssessedValue;
+          delete legacyFd.previousYearAutoHouseValues;
+          // currentStep 5단계→4단계 재매핑: 구 4(세부담상한)·5(결과) → 3(토지, 마지막 입력)
+          if (typeof state.currentStep === "number" && state.currentStep >= 4) {
+            state.currentStep = 3;
+          }
           // 토지 필지 모드 — 구 세션 누락 시 집계 모드 보존 (기존 동작)
           state.formData.landAggregateMode = state.formData.landAggregateMode ?? "summary";
           state.formData.landSeparateMode = state.formData.landSeparateMode ?? "summary";

@@ -3,14 +3,14 @@
 import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
 
 /**
- * 종합부동산세 계산기 — 5단계 StepWizard (T-16)
+ * 종합부동산세 계산기 — 4단계 StepWizard (T-16)
  *
  * Step 1: 기본 정보 (1세대1주택, 생년월일, 취득일, 과세연도)
- * Step 2: 주택 목록 (공시가격, 면적, 수도권, 합산배제 유형)
+ * Step 2: 주택 목록 (세부담상한 모드·공시가격·직전 공시가격, 면적, 수도권, 합산배제 유형)
  * Step 3: 합산배제 상세 (임대주택·미분양·어린이집·사원용 요건)
  * Step 4: 토지 정보 (종합합산·별도합산, 선택)
- * Step 5: 세부담 상한 (전년도 세액, 선택)
  *
+ * 세부담상한 직전연도 입력은 2단계 주택 카드에 통합 (직전 공시가격 단일 입력원).
  * 종합부동산세법 §8~§15 기반
  */
 
@@ -19,7 +19,7 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily, deriveCorporateClass } from "@/lib/calc/comprehensive-api";
+import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily, validatePriorAssessedValue, deriveCorporateClass } from "@/lib/calc/comprehensive-api";
 import { requiredCorporateReqKey } from "@/lib/tax-engine/comprehensive-corporate-class";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -42,7 +42,7 @@ import { Step1Basic } from "./Step1Basic";
 // 상수
 // ============================================================
 
-const STEPS = ["기본 정보", "주택 목록", "합산배제", "토지 정보", "세부담 상한"];
+const STEPS = ["기본 정보", "주택 목록", "합산배제", "토지 정보"];
 
 // ============================================================
 // 네비게이션 버튼
@@ -88,8 +88,16 @@ function NavButtons({
 // ============================================================
 
 function Step2Properties() {
-  const { formData, addProperty, removeProperty, updateProperty } =
+  const { formData, updateFormData, addProperty, removeProperty, updateProperty } =
     useComprehensiveWizardStore();
+  const year = parseInt(formData.assessmentYear) || new Date().getFullYear();
+  const showMultiHouseCap = year < 2023;
+  // 법인 §9② class 도출 (엔진 헬퍼 단일 진실) — 세부담상한 가시성 분기
+  const corporateClass = deriveCorporateClass(formData);
+  const isCorporateSpecial = corporateClass === "corporate_special"; // §9②3호: 세부담상한 미적용
+  const isCorporateGeneral = corporateClass === "corporate_general"; // §9②1호: 주택 수 무관
+  const capMode = formData.previousYearCapMode ?? "none";
+  const isMultiHouse = formData.properties.length > 1;
 
   return (
     <div className="space-y-4">
@@ -99,10 +107,94 @@ function Step2Properties() {
           합산배제 요건은 다음 단계에서 입력합니다.
         </p>
       </div>
+
+      {/* ⑤ 주택 세부담상한 (직전 공시가격 단일 입력원) — 모드가 각 주택 카드 직전공시 표시·전송 제어.
+          "모드 토글은 영향 필드 직전" 원칙: 모드가 주택 목록 위. */}
+      {!isCorporateSpecial ? (
+        <div className="space-y-3">
+          {/* 당해 조정대상지역 2주택 (구법 < 2023) — 당해연도 세율·상한 분기 */}
+          {showMultiHouseCap && !isCorporateGeneral && (
+            <ToggleCard
+              tone="rose"
+              title="조정대상지역 2주택 이상 (당해연도)"
+              description={`세부담 상한 300% 적용 (종합부동산세법 §10② 구법 — ${year} 귀속 이전)\n3주택 이상은 주택 수로 자동 적용됩니다 — 이 토글은 조정대상지역 2주택 보유 시에만 켜세요`}
+              checked={formData.isMultiHouseInAdjustedArea}
+              onCheckedChange={(v) => updateFormData({ isMultiHouseInAdjustedArea: v })}
+            >
+              <p className="text-xs text-rose-700">
+                {year} 귀속(과세기준일 {year}-06-01)까지 조정대상지역 2주택 이상 보유자에게
+                적용된 규정입니다. 2023년부터 해당 조항이 삭제되어 150%로 단일화됩니다.
+              </p>
+            </ToggleCard>
+          )}
+
+          {/* 세부담상한 모드 — ① 적용 안 함 / ② 직전 공시가격 자동계산 */}
+          <RadioCardGroup
+            name="previousYearCapMode"
+            tone="sky"
+            layout="inline"
+            value={capMode}
+            onChange={(v) => updateFormData({ previousYearCapMode: v as "none" | "auto" })}
+            options={[
+              {
+                value: "none",
+                label: "세부담 상한 적용 안 함",
+                description: "직전연도 공시가격 미입력 — 세부담 상한 계산 생략",
+                testId: "cap-mode-none",
+              },
+              {
+                value: "auto",
+                label: "직전 공시가격으로 자동 계산",
+                description: "각 주택의 직전연도 공시가격 입력 시 상당액 자동 산출 (§10의2 준용)",
+                testId: "cap-mode-auto",
+              },
+            ]}
+          />
+
+          {/* ② auto 모드: 직전 세대속성 토글 */}
+          {capMode === "auto" && (
+            <div className="space-y-3">
+              {/* 직전 조정대상지역 2주택 — 당해 < 2023(중과 존재) + 다주택 */}
+              {showMultiHouseCap && isMultiHouse && (
+                <ToggleCard
+                  tone="rose"
+                  title="직전연도 조정대상지역 2주택 이상"
+                  description={`직전연도 종합부동산세상당액에 중과세율 적용\n${year - 1} 귀속 기준 — 당해연도 1세대1주택 의제(일시적 2주택 등)와 별개`}
+                  checked={formData.previousYearAutoIsMultiAdjusted}
+                  onCheckedChange={(v) => updateFormData({ previousYearAutoIsMultiAdjusted: v })}
+                />
+              )}
+              <ToggleCard
+                tone="violet"
+                title="직전연도 1세대1주택자"
+                description="직전연도에 1세대1주택 특례를 적용받은 경우 켜세요"
+                checked={formData.previousYearAutoIsOneHouse}
+                onCheckedChange={(v) => updateFormData({ previousYearAutoIsOneHouse: v })}
+              />
+              <div className="rounded-md bg-sky-50/40 border border-sky-200 px-3 py-2 text-xs text-sky-700">
+                <p>
+                  각 주택의 직전연도 공시가격은 아래 주택 카드의 당해 공시가격 바로 아래에
+                  입력합니다. 생년월일·취득일은 기본정보(1단계)에서 자동 사용됩니다.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-900">
+          <p className="font-semibold">§9②3호 법인 — 세부담 상한 미적용</p>
+          <p className="mt-1">
+            종합부동산세법 §10 단서에 따라 §9②3호 세율(단일 비례세율)이 적용되는 법인에는
+            세부담 상한이 적용되지 않습니다. 직전연도 공시가격 입력이 필요하지 않습니다.
+          </p>
+        </div>
+      )}
+
       <PropertyListInput
         properties={formData.properties}
         isCorporate={(formData.taxpayerType ?? "individual") !== "individual"}
         referenceDate={`${formData.assessmentYear}-06-01`}
+        capMode={isCorporateSpecial ? "none" : capMode}
         onAdd={addProperty}
         onRemove={removeProperty}
         onUpdate={updateProperty}
@@ -287,182 +379,6 @@ function Step4Land() {
 }
 
 // ============================================================
-// Step 5: 세부담 상한
-// ============================================================
-
-function Step5TaxCap() {
-  const { formData, updateFormData } = useComprehensiveWizardStore();
-  const year = parseInt(formData.assessmentYear) || new Date().getFullYear();
-  const showMultiHouseCap = year < 2023;
-  const isMultiHouseOn = formData.isMultiHouseInAdjustedArea;
-  // 법인 §9② class 도출 (엔진 헬퍼 단일 진실) — 가시성 분기
-  const corporateClass = deriveCorporateClass(formData);
-  // corporate_special(§9②3호): 세부담상한 미적용 → 전년도 세액 입력 숨김
-  const isCorporateSpecial = corporateClass === "corporate_special";
-  // corporate_general(§9②1호): 주택 수 무관 → 조정대상지역 2주택 토글 숨김
-  const isCorporateGeneral = corporateClass === "corporate_general";
-
-  return (
-    <div className="space-y-6">
-      {/* corporate_special(§9②3호): 세부담상한 미적용 안내 */}
-      {isCorporateSpecial && (
-        <div className="rounded-md border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-900">
-          <p className="font-semibold">§9②3호 법인 — 세부담 상한 미적용</p>
-          <p className="mt-1">
-            종합부동산세법 §10 단서에 따라 §9②3호 세율(단일 비례세율)이 적용되는 법인에는
-            세부담 상한이 적용되지 않습니다. 전년도 세액 입력이 필요하지 않습니다.
-          </p>
-        </div>
-      )}
-
-      {/* 조정대상지역 2주택 이상 — 과세연도 < 2023 이고 corporate_general이 아닐 때만 노출 */}
-      {showMultiHouseCap && !isCorporateGeneral && (
-        <ToggleCard
-          tone="rose"
-          title="조정대상지역 2주택 이상"
-          description={`세부담 상한 300% 적용 (종합부동산세법 §10② 구법 — ${year} 귀속 이전)\n3주택 이상은 주택 수로 자동 적용됩니다 — 이 토글은 조정대상지역 2주택 보유 시에만 켜세요`}
-          checked={formData.isMultiHouseInAdjustedArea}
-          onCheckedChange={(v) => updateFormData({ isMultiHouseInAdjustedArea: v })}
-        >
-          <p className="text-xs text-rose-700">
-            {year} 귀속(과세기준일 {year}-06-01)까지 조정대상지역 2주택 이상 보유자에게
-            적용된 규정입니다. 2023년부터 해당 조항이 삭제되어 150%로 단일화됩니다.
-          </p>
-        </ToggleCard>
-      )}
-
-      {/* 전년도 세액 — corporate_special(상한 미적용)은 숨김 */}
-      {!isCorporateSpecial && (
-        <div className="space-y-4">
-          {/* 입력 방식 선택 */}
-          <RadioCardGroup
-            name="previousYearCapMode"
-            tone="sky"
-            layout="inline"
-            value={formData.previousYearCapMode ?? "direct"}
-            onChange={(v) => updateFormData({ previousYearCapMode: v as "direct" | "auto" })}
-            options={[
-              {
-                value: "direct",
-                label: "전년도 총세액 직접 입력",
-                description: "재산세·종부세 고지서에서 확인한 합계액 입력",
-                testId: "cap-mode-direct",
-              },
-              {
-                value: "auto",
-                label: "직전연도 공시가격으로 자동 계산",
-                description: "공시가격 입력 시 엔진이 상당액 자동 산출 (§10의2 준용)",
-                testId: "cap-mode-auto",
-              },
-            ]}
-          />
-
-          {/* 직접 입력 모드 */}
-          {(formData.previousYearCapMode ?? "direct") === "direct" && (
-            <div className="space-y-2">
-              <CurrencyInput
-                label="전년도 총세액 (선택)"
-                value={formData.previousYearTotalTax}
-                onChange={(v) => updateFormData({ previousYearTotalTax: v })}
-                placeholder="0"
-                hint="전년도 종합부동산세 + 재산세 합계 (농특세 제외). 미입력 시 세부담 상한 계산 생략."
-              />
-            </div>
-          )}
-
-          {/* 자동 계산 모드 */}
-          {formData.previousYearCapMode === "auto" && (
-            <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-              <p className="text-xs font-semibold text-sky-700">직전연도 공시가격 정보</p>
-
-              {formData.properties.length <= 1 ? (
-                /* 당해 1주택 — 직전 공시 합계 단일 입력 */
-                <CurrencyInput
-                  label="직전연도 공시가격 합계 (원)"
-                  value={formData.previousYearAutoAssessedValue}
-                  onChange={(v) =>
-                    updateFormData({ previousYearAutoAssessedValue: v })
-                  }
-                  placeholder="0"
-                  required
-                  hint="직전연도 6월 1일 기준 보유 주택 공시가격 합계"
-                />
-              ) : (
-                /* 당해 2주택+ — 직전 주택별 공시 입력 (재산세 주택별 합산) */
-                <div className="space-y-2">
-                  {formData.properties.map((p, i) => (
-                    <CurrencyInput
-                      key={p.id}
-                      label={`주택 ${i + 1} 직전연도 공시가격 (원)`}
-                      value={formData.previousYearAutoHouseValues[i] ?? ""}
-                      onChange={(v) => {
-                        const next = [...formData.previousYearAutoHouseValues];
-                        next[i] = v;
-                        updateFormData({ previousYearAutoHouseValues: next });
-                      }}
-                      placeholder="0"
-                      required
-                    />
-                  ))}
-                  <p className="text-xs text-sky-700">
-                    재산세상당액은 주택별로 계산 후 합산됩니다 (누진세율).
-                  </p>
-                </div>
-              )}
-
-              {/* 직전연도 조정대상지역 2주택 — 당해 < 2023(중과 존재) 이고 다주택일 때 */}
-              {showMultiHouseCap && formData.properties.length > 1 && (
-                <ToggleCard
-                  tone="rose"
-                  title="직전연도 조정대상지역 2주택 이상"
-                  description={`직전연도 종합부동산세상당액에 중과세율 적용\n${year - 1} 귀속 기준 — 당해연도 1세대1주택 의제(일시적 2주택 등)와 별개`}
-                  checked={formData.previousYearAutoIsMultiAdjusted}
-                  onCheckedChange={(v) =>
-                    updateFormData({ previousYearAutoIsMultiAdjusted: v })
-                  }
-                />
-              )}
-
-              <ToggleCard
-                tone="violet"
-                title="직전연도 1세대1주택자"
-                description="직전연도에 1세대1주택 특례를 적용받은 경우 켜세요"
-                checked={formData.previousYearAutoIsOneHouse}
-                onCheckedChange={(v) => updateFormData({ previousYearAutoIsOneHouse: v })}
-              />
-
-              <div className="rounded-md bg-muted/30 border px-3 py-2 text-xs text-muted-foreground">
-                <p>생년월일·취득일은 기본정보(1단계)에서 자동으로 사용됩니다.</p>
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
-            <p className="font-medium mb-1">세부담 상한 계산 방식</p>
-            {showMultiHouseCap ? (
-              <>
-                <p>
-                  상한액 = 전년도 세액 ×{" "}
-                  {isMultiHouseOn ? "300% (조정대상지역 2주택 이상 §10②)" : "150% (일반 §10①)"}
-                </p>
-                <p className="mt-1">
-                  3주택 이상은 자동으로 300% 상한이 적용됩니다.
-                </p>
-              </>
-            ) : (
-              <p>상한액 = 전년도 세액 × 150% (종합부동산세법 §10)</p>
-            )}
-            <p className="mt-1">
-              당해 종부세가 상한액을 초과하면 상한액 - 재산세 = 확정 종부세
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================
 // 메인 페이지
 // ============================================================
 // (API 호출·변환은 lib/calc/comprehensive-api.ts — 800줄 정책 분리)
@@ -522,35 +438,26 @@ export default function ComprehensiveTaxPage() {
   async function handleNext() {
     setError(null);
 
+    // 2단계(주택 목록) → 다음: 세부담상한 auto 모드 직전공시 전 주택 필수 (⑧ — 혼재 침묵누락 차단)
+    if (currentStep === 1) {
+      const priorError = validatePriorAssessedValue(formData);
+      if (priorError) {
+        setError(priorError);
+        return;
+      }
+    }
+
     if (currentStep < STEPS.length - 1) {
       setStep(currentStep + 1);
       return;
     }
 
-    // Step 5 (마지막 단계) — 자동 모드 필수 입력 validation (⑧ 동기화)
-    const corporateClass = deriveCorporateClass(formData);
+    // 마지막 단계(토지 정보) → 계산 전 전체 검증 (⑧ 동기화)
     // C-15: 법인 조건부 세부유형(민간건설임대·도시개발·사회적기업·공익법인) 요건 미응답 차단 (시행령 §4의4)
     if ((formData.taxpayerType ?? "individual") === "corporate") {
       const reqKey = requiredCorporateReqKey(formData.corporateHousingType);
       if (reqKey && formData[reqKey] === undefined) {
         setError("법인 세부 유형의 요건 충족 여부를 선택해주세요 (시행령 §4의4).");
-        return;
-      }
-    }
-    const isCorporateSpecial = corporateClass === "corporate_special";
-    const capMode = formData.previousYearCapMode ?? "direct";
-    if (!isCorporateSpecial && capMode === "auto") {
-      // 당해 2주택+ = 주택별 직전공시(previousYearAutoHouseValues), 1주택 = 단일 합계
-      const isMultiHouse = formData.properties.length > 1;
-      const filledHouseValues = formData.previousYearAutoHouseValues.filter(
-        (v) => v && v.trim() !== "" && v.trim() !== "0",
-      ).length;
-      if (isMultiHouse && filledHouseValues < formData.properties.length) {
-        setError("자동 계산 모드에서는 직전연도 주택별 공시가격을 모두 입력해야 합니다.");
-        return;
-      }
-      if (!isMultiHouse && !formData.previousYearAutoAssessedValue) {
-        setError("자동 계산 모드에서는 직전연도 공시가격 합계를 입력해야 합니다.");
         return;
       }
     }
@@ -645,7 +552,6 @@ export default function ComprehensiveTaxPage() {
           {currentStep === 1 && <Step2Properties />}
           {currentStep === 2 && <Step3Exclusion />}
           {currentStep === 3 && <Step4Land />}
-          {currentStep === 4 && <Step5TaxCap />}
 
           {/* 오류 메시지 */}
           {error && (
