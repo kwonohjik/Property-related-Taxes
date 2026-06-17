@@ -9,6 +9,7 @@
  *
  * CLAW-1: §9①2호 배지 클릭 → 팝업 헤더 "종합부동산세법 제9조"
  * CLAW-2: §10 배지 클릭 → 헤더 "종합부동산세법 제10조" + ESC 닫힘
+ * CLAW-3: 과세기준일 §3 배지 → 헤더 "종합부동산세법 제3조" (구 "§16①" 오인용 정정 anchor)
  *
  * 비고: 조문 본문은 법제처 API(KOREAN_LAW_OC) 의존 → 팝업 헤더(법령명·조문번호, props 기반)만 단정.
  *       본문 텍스트는 비단정(property-law-citation-link.spec.ts 동일 철학).
@@ -59,5 +60,21 @@ test.describe("종합부동산세 마법사 법조문 링크 → 조문 팝업",
     // ESC로 조문 팝업 닫힘
     await page.keyboard.press("Escape");
     await expect(title).toBeHidden();
+  });
+
+  test("CLAW-3: 과세기준일 §3 배지 → 종합부동산세법 제3조 (구 §16① 정정)", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await gotoComprehensiveStep1(page);
+
+    // 과세기준일 도움말 배지 — label="§3" (legalBasis="종합부동산세법 §3")
+    const badge = page.getByRole("button", { name: /§3/ });
+    await expect(badge).toBeVisible();
+    await badge.click();
+
+    await expect(
+      page.getByRole("dialog").getByText("종합부동산세법 제3조"),
+    ).toBeVisible();
   });
 });

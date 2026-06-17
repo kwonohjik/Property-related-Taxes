@@ -212,7 +212,8 @@ export function Step1Basic() {
         />
         <YearLawHintCard year={selectedYear} />
         <p className="text-xs text-muted-foreground">
-          과세기준일: {formData.assessmentYear}-06-01 (종합부동산세법 §16①)
+          과세기준일: {formData.assessmentYear}-06-01 (
+          <LawArticleModal legalBasis="종합부동산세법 §3" label="§3" />)
         </p>
       </div>
 
@@ -239,6 +240,13 @@ export function Step1Basic() {
             <label className="text-xs font-semibold text-violet-800">
               법인 세부 유형 <span className="text-destructive">*</span>
             </label>
+            <div className="flex flex-wrap gap-1.5">
+              <LawArticleModal
+                legalBasis="종합부동산세법 시행령 §4의4"
+                label="시행령 §4의4 법인유형"
+              />
+              <LawArticleModal legalBasis="종합부동산세법 §9" label="§9② 법인세율" />
+            </div>
             <select
               aria-label="법인 세부 유형"
               value={formData.corporateHousingType}

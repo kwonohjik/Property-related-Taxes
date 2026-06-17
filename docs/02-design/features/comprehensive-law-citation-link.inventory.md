@@ -167,9 +167,15 @@ R9·R4(§10의2) 결과뷰 링크 활성화 완료.
 - ✅ ExclusionInfoInput: E4 시행령 §3①(말소일 경고).
 - tsc 0.
 
-**남은 작업 (우회 배지 — 런타임 string, 선택)**:
-- S1~S4 법인 세부유형 Select(시행령 §4의4·§9②) → 법인 섹션 헤더 배지행.
-- P1·P2 토지 ToggleCard title(§11·§12) → 인접 배지(결과뷰 R12·R13서 이미 링크됨).
-- E1~E3·E5·E6 합산배제 description(시행령 §3·§4) → 합산배제 섹션 헤더 배지행.
-- S6a·P4·P6 구 §10② / R6 구 §9①3호 → 보류(현행 삭제).
-- Phase 4: RTL(§9② 강조) + E2E `comprehensive-law-citation-link.spec.ts`(E2E_PORT 3102).
+## 9. 우회 배지 + 추가 드리프트 정정 (2026-06-17)
+
+- ✅ **법인 세부유형 우회 배지**(Step1Basic L242): 시행령 §4의4 법인유형 + §9② 법인세율 (Select 런타임 string 우회).
+- ✅ **합산배제 우회 배지**(ExclusionInfoInput 상단): 시행령 §3 임대주택 + §4 사원용주택등 (description 런타임 우회).
+- ✅ **§16①→§3 드리프트 정정**(Step1Basic 과세기준일): UI가 "(§16①)" 오인용 → 본법 §3(과세기준일, 법제처 검증) 링크. E2E CLAW-3 anchor.
+- ⏭ **토지 §11·§12 토글 title**: 생략 — 결과뷰 R12·R13서 이미 링크(article 중복).
+- ⏸ 보류(현행 삭제): S6a·P4·P6 구 §10② / R6 구 §9①3호.
+
+**Phase 4 E2E**: `comprehensive-law-citation-link.spec.ts` CLAW-1(§9)·2(§10+ESC)·3(§3) — **3/3 통과**(E2E_PORT 3102).
+
+## 10. 최종 상태
+전 인용 검증 완료 · legal-codes 드리프트 4건 + UI §16① 1건 정정 · 결과뷰 전체 + 입력폼 직접·우회 링크 · tsc 0 · vitest 8429 · E2E 3/3. 6대세목 법조문 링크화 완결.
