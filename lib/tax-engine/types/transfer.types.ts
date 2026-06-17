@@ -122,6 +122,13 @@ export interface TransferTaxInput {
   isRegulatedArea: boolean;
   /** 취득일 기준 조정대상지역 여부 */
   wasRegulatedAtAcquisition: boolean;
+  /**
+   * 양도 자산 법정동코드 (선택 — 10자리 권장, 5자리 시군구도 가능).
+   * 제공 시 isRegulatedArea/wasRegulatedAtAcquisition boolean fallback 대신
+   * data/regulated-areas.ts의 정밀 시점 판정을 사용.
+   * 미제공 시 boolean fallback 유지 (회귀 0 보장).
+   */
+  regionCode?: string;
   /** 미등기 여부 */
   isUnregistered: boolean;
   isNonBusinessLand: boolean; // 비사업용 토지 여부
@@ -780,19 +787,10 @@ export interface TransferTaxResult {
   familyBusinessDetail?: FamilyBusinessCgtDetail;
 }
 
-// ============================================================
-// 개별주택가격 미공시 취득 환산 (PHD) — 소득세법 시행령 §164⑤
-// 800줄 정책 준수를 위해 ./transfer-phd.types.ts 로 분리. 하위 호환을 위해 재수출.
-// ============================================================
-
-export type {
-  PreHousingDisclosureInput,
-  PreHousingDisclosureResult,
-} from "./transfer-phd.types";
-
+// PHD 재수출 (./transfer-phd.types.ts 분리)
+export type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer-phd.types";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer-phd.types";
 
-// 토지/건물 분리 계산 결과 (SplitPartResult·SplitGainResult)는 800줄 정책 준수를 위해
-// ./transfer-split-gain.types.ts 로 분리. 로컬 사용(TransferTaxResult) + 하위 호환 재수출.
+// SplitGain 재수출 (./transfer-split-gain.types.ts 분리)
 import type { SplitGainResult } from "./transfer-split-gain.types";
 export type { SplitPartResult, SplitGainResult } from "./transfer-split-gain.types";

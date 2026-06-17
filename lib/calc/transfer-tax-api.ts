@@ -424,6 +424,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : parseInt(primary.residencePeriodMonthsAsset || form.residencePeriodMonths) || 0,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // ④ regionCode — 법정동코드 제공 시 엔진이 isRegulated* boolean 대신 정밀 판정 사용 (P4 UI 연동 후 실효화)
+    regionCode: form.regionCode || undefined,
     isUnregistered: form.isUnregistered,
     isNonBusinessLand: primary.isNonBusinessLand ?? false,
     isSuccessorRightToMoveIn:

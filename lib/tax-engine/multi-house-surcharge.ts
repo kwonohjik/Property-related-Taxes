@@ -13,9 +13,10 @@
  * 인구감소지역 상수는 ./data/population-decline-areas.ts 로 분리.
  */
 
-import { addYears } from "date-fns";
+import { addYears, format } from "date-fns";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
+import { isRegulatedByBjdCode } from "./data/regulated-areas";
 
 // ============================================================
 // 타입 정의 — 공개 타입은 ./types/multi-house-surcharge.types 로 분리
@@ -189,17 +190,17 @@ export function determineMultiHouseSurcharge(
     }
   }
 
-  // Step 2: 조정대상지역 판단
+  // Step 2: 조정대상지역 판단 (양도일 기준)
+  // regionCode(법정동코드) 제공 시: isRegulatedByBjdCode로 정밀 판정 (정적 data 사용, DB 불필요).
+  // regionCode 미제공 시: isRegulatedFallback(boolean) 유지 (회귀 0 보장).
   const sellingHouse = input.houses.find((h) => h.id === input.sellingHouseId);
   let isRegulatedAtTransfer = isRegulatedFallback;
 
-  if (sellingHouse?.regionCode && regulatedAreaHistory) {
-    isRegulatedAtTransfer = isRegulatedAreaAtDate(
-      sellingHouse.regionCode,
-      input.transferDate,
-      regulatedAreaHistory,
-    );
-  } else if (sellingHouse && !sellingHouse.regionCode) {
+  if (sellingHouse?.regionCode) {
+    const transferDateStr = format(input.transferDate, "yyyy-MM-dd");
+    isRegulatedAtTransfer = isRegulatedByBjdCode(sellingHouse.regionCode, transferDateStr).isRegulated;
+  } else if (sellingHouse) {
+    // regionCode 미제공 → isRegulatedFallback(boolean = isRegulatedArea) 유지 (회귀 0 보장)
     warnings.push("양도 주택의 regionCode 미제공 — isRegulatedArea 플래그 사용");
   }
 
