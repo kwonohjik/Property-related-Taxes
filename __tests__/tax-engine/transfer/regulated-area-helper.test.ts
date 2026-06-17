@@ -12,6 +12,7 @@
 import { describe, it, expect } from "vitest";
 import {
   isRegulatedByBjdCodeIn,
+  isRegulatedByAddressIn,
   toRegulatedAreaHistoryFrom,
   type RegulatedRegion,
 } from "@/lib/tax-engine/data/regulated-areas";
@@ -223,5 +224,33 @@ describe("toRegulatedAreaHistoryFrom — 엔진 주입 변환", () => {
       type: "regulated_area_history",
       regions: [],
     });
+  });
+});
+
+describe("미수록 시도 안전장치 (P-B) — 단정 방지", () => {
+  it("코드 경로: 미수록 시도(부산 26) → low(직접 확인), high 단정 안 함", () => {
+    const r = judge("2611010100", "2021-01-01"); // FIXTURE에 26 시작 code 없음
+    expect(r.isRegulated).toBe(false);
+    expect(r.confidence).toBe("low");
+    expect(r.basis).toContain("미수록");
+  });
+
+  it("코드 경로: 수록 시도(경기 41) 내 미지정 시군구 → high(진짜 미지정)", () => {
+    const r = judge("4111010100", "2024-01-01"); // 수원 장안(FIXTURE 없음), 41은 수록
+    expect(r.isRegulated).toBe(false);
+    expect(r.confidence).toBe("high");
+  });
+
+  it("주소 경로: 미수록 시도(부산) → low / coveredSidoNamesOf 동적 도출", () => {
+    const r = isRegulatedByAddressIn(FIXTURE, "부산광역시", "해운대구", "2021-01-01");
+    expect(r.isRegulated).toBe(false);
+    expect(r.confidence).toBe("low");
+    expect(r.basis).toContain("미수록");
+  });
+
+  it("주소 경로: 수록 시도(경기) 내 미지정 시군구 → high", () => {
+    const r = isRegulatedByAddressIn(FIXTURE, "경기도", "여주시", "2021-01-01");
+    expect(r.isRegulated).toBe(false);
+    expect(r.confidence).toBe("high");
   });
 });

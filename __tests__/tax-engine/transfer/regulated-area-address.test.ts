@@ -70,8 +70,9 @@ describe("isRegulatedByAddress — 시군구명 매칭(주소 fallback)", () => 
       expect(r.isRegulated).toBe(false);
       expect(r.confidence).toBe("high");
     });
-    it("수도권 외 시도(부산) → 데이터 미수록(low, 직접 확인)", () => {
-      const r = isRegulatedByAddress("부산광역시", "해운대구", "2021-06-01");
+    it("미수록 시도(제주) → 데이터 미수록(low, 직접 확인)", () => {
+      // 부산·대구 등 지방은 P-A로 수록됨. 한 번도 미지정인 시도(제주)로 미수록 경로 검증.
+      const r = isRegulatedByAddress("제주특별자치도", "제주시", "2021-06-01");
       expect(r.isRegulated).toBe(false);
       expect(r.confidence).toBe("low");
       expect(r.basis).toContain("미수록");
