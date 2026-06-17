@@ -474,6 +474,16 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
+    ...(form.provisoReason
+      ? {
+          oneHouseExemptionProviso: {
+            reason: form.provisoReason,
+            ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
+            ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
+            ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
+          },
+        }
+      : {}),
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
     ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     ...(form.enablePenalty && form.filingType !== "correct"

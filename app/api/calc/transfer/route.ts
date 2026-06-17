@@ -222,6 +222,15 @@ export async function POST(request: NextRequest) {
     parentalCareMerge: data.parentalCareMerge
       ? { mergeDate: new Date(data.parentalCareMerge.mergeDate) }
       : undefined,
+    // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
+    oneHouseExemptionProviso: data.oneHouseExemptionProviso
+      ? {
+          reason: data.oneHouseExemptionProviso.reason,
+          departureDate: toOptionalDate(data.oneHouseExemptionProviso.departureDate),
+          expropriationDate: toOptionalDate(data.oneHouseExemptionProviso.expropriationDate),
+          businessApprovalDate: toOptionalDate(data.oneHouseExemptionProviso.businessApprovalDate),
+        }
+      : undefined,
     // [C7 수정] 장기임대 감면 정밀 입력
     rentalReductionDetails: data.rentalReductionDetails
       ? {

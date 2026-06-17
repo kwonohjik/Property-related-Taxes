@@ -142,6 +142,16 @@ export function buildPropertyPayload(form: TransferFormData) {
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
+    ...(form.provisoReason
+      ? {
+          oneHouseExemptionProviso: {
+            reason: form.provisoReason,
+            ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
+            ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
+            ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
+          },
+        }
+      : {}),
     // 자산별 가산세 — 단건 엔진이 자산별 결정세액 기준으로 계산.
     ...(form.enablePenalty && form.filingType !== "correct"
       ? {

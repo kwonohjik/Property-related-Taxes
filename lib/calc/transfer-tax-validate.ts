@@ -161,6 +161,21 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     if (houses.length > 0 && form.gracePeriod && !form.gracePeriod.contractDate)
       issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
 
+    // ⑧ §154① 단서 — 사유별 필수 입력 (미입력 시 침묵 비과세 미적용 차단 — feedback_no_silent_apportion_fallback)
+    if (
+      (form.provisoReason === "overseas_migration" || form.provisoReason === "overseas_residence") &&
+      !form.provisoDepartureDate
+    )
+      issues.push({
+        step,
+        message: "§154① 단서(해외이주·국외거주): 출국일을 입력하세요. (출국일부터 2년 내 양도 판정)",
+      });
+    if (form.provisoReason === "pre_designation_contract" && !form.provisoPreContractNoHouse)
+      issues.push({
+        step,
+        message: "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요.",
+      });
+
     // 1세대1주택 + housing 자산 + interval 모드 거주 구간 검증 — 구간별 첫 오류 1건씩
     const primary = form.assets?.[0];
     if (form.isOneHousehold && primary && primary.assetKind === "housing"

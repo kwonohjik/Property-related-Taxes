@@ -139,6 +139,22 @@ const propertyBaseShape = {
   sellingHouseId: z.string().optional(),
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
   parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
+  // ⑨⑩⑫ §154① 단서 — 비과세 보유·거주 요건 면제 사유 (propertyBaseShape 공유 → 단건·다건 동시)
+  oneHouseExemptionProviso: z
+    .object({
+      reason: z.enum([
+        "rental_5yr_residence",
+        "expropriation",
+        "overseas_migration",
+        "overseas_residence",
+        "unavoidable",
+        "pre_designation_contract",
+      ]),
+      departureDate: z.string().date().optional(),
+      expropriationDate: z.string().date().optional(),
+      businessApprovalDate: z.string().date().optional(),
+    })
+    .optional(),
   // 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9)
   gracePeriod: z
     .object({

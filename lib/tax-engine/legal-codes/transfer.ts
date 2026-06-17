@@ -391,6 +391,24 @@ export const TRANSFER = {
   GENERAL_BUILDING_LUMP_DEDUCTION:    "소득세법 §97 ② 2호 + 시행령 §163 ⑥",
   // 사례 35 — 주택을 상가로 용도변경 시 LTHD 보유기간 기산일
   HOUSE_TO_COMMERCIAL_LTHD_START:     "사전법규재산 2022-684·881, 서울행법 2012구단26961",
+  /** 1세대1주택 비과세 §154① 단서 — 보유·거주 요건 면제 사유 (수용·해외이주·국외거주·부득이·임대5년·조정공고전계약) */
+  EXEMPTION_PROVISO_154_1:            "소득세법 시행령 §154 ① 단서",
+} as const;
+
+/**
+ * §154① 단서 각호 면제 시한 상수 (개정 없는 안정 역사값 — feedback_historical_tax_tables).
+ *   2호 가목: 양도일·수용일부터 5년 / 2호 나·다목: 출국일부터 2년
+ *   1호: 세대전원 거주 5년 / 3호: 1년 이상 거주
+ */
+export const EXEMPTION_PROVISO_CONST = {
+  /** 2호 가목 — 양도일·수용일부터 (년) */
+  EXPROPRIATION_TRANSFER_YEARS: 5,
+  /** 2호 나·다목 — 출국일부터 (년) */
+  OVERSEAS_TRANSFER_YEARS: 2,
+  /** 1호 — 세대전원 거주 (년) */
+  RENTAL_RESIDENCE_YEARS: 5,
+  /** 3호 — 거주 (년) */
+  UNAVOIDABLE_RESIDENCE_YEARS: 1,
 } as const;
 
 /**
