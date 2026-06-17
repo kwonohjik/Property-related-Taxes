@@ -173,6 +173,8 @@ export async function POST(request: NextRequest) {
     residencePeriodMonths: data.residencePeriodMonths,
     isRegulatedArea: data.isRegulatedArea,
     wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,
+    // ⑭ 법정동코드 — Zod 통과 시 string(10), 미제공 시 undefined (Date 변환 불필요)
+    regionCode: data.regionCode,
     isUnregistered: data.isUnregistered,
     isNonBusinessLand: data.isNonBusinessLand,
     isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,

@@ -225,6 +225,8 @@ export const pre1990LandSchema = z.object({
 export const houseSchema = z.object({
   id: z.string().min(1),
   region: z.enum(["capital", "non_capital"]),
+  /** ⑫ 법정동코드 10자리 — sellingHouse에 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정 */
+  regionCode: z.string().length(10).optional(),
   acquisitionDate: z.string().date(),
   officialPrice: z.number().int().nonnegative(),
   isInherited: z.boolean(),

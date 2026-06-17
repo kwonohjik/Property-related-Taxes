@@ -127,6 +127,8 @@ const propertyBaseShape = {
   residencePeriodMonths: z.number().int().nonnegative(),
   isRegulatedArea: z.boolean(),
   wasRegulatedAtAcquisition: z.boolean(),
+  /** ⑫ 법정동코드 10자리 — 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 isRegulatedArea boolean fallback */
+  regionCode: z.string().length(10).optional(),
   isUnregistered: z.boolean(),
   isNonBusinessLand: z.boolean(),
   isSuccessorRightToMoveIn: z.boolean().optional(),

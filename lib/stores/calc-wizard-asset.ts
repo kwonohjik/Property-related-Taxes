@@ -131,6 +131,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   isRegulatedAreaAtAcq: boolean | null;
   /** 양도 시점 조정대상지역 여부 (주택만 조회, 비주택은 null) */
   isRegulatedAreaAtTransfer: boolean | null;
+  /**
+   * 법정동코드 10자리 (AddressSearch PNU 앞 10자리).
+   * 제공 시 엔진이 isRegulatedByBjdCode()로 정밀 판정.
+   * 미제공 시 isRegulatedArea boolean fallback.
+   */
+  regionCode?: string;
 
   // ── 취득시기 상이 필지 분리 (assetKind === "land" 전용) ──
   /** 토지 내 취득시기 상이 필지 분리 계산 여부 (소득세법 시행령 §162①6호) */

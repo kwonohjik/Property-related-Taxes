@@ -238,6 +238,11 @@ export function CompanionAssetCard({
                 .trim();
               if (auto) patch.assetLabel = auto;
             }
+            // ① PNU 앞 10자리 = 법정동코드(regionCode) — 엔진 정밀 조정대상지역 판정에 사용.
+            // useEffect→store 미러링 금지 정책 준수: onChange 핸들러에서 직접 patch에 포함.
+            if (v.pnu && v.pnu.length >= 10) {
+              patch.regionCode = v.pnu.slice(0, 10);
+            }
             // RTMS 매매사례가액 자동조회용 시군구코드 파생 (취득가액 추계 모드).
             // ⚠️ 시군구코드를 먼저 확정(await)한 뒤 단일 patch 로 적용 — stale-closure race 차단.
             const latNum = v.lat ? parseFloat(v.lat) : NaN;
