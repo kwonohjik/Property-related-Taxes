@@ -20,6 +20,7 @@ import type {
   OtherLandUsage,
   PropertyTaxType,
   RevenueTestResult,
+  ZoneType,
 } from "./types";
 import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
@@ -57,7 +58,70 @@ export function isBareLand(input: NonBusinessLandInput): boolean {
  * 자동산출(KoreanLaw 본문 검증): 7호 최대면적×1.2 · 4호 수용정원×200㎡ · 2호나 최저차고×1.5 · 13호 660㎡.
  * 직접입력(별표 의존): 1호(별표3/4/5) · 2호가목(설치기준면적) · 5호다(별표6) · 6호(휴양 합산면적).
  */
-export function resolveAreaLimit(o: OtherLandUsage): number | undefined {
+/** §101② 용도지역별 적용배율 (지방세법 시행령 §101② 정본). residential(세분 전 주거지역)·미정의는 자동 제외(직접입력 fallback) — 추정 금지. */
+const ZONE_AREA_MULTIPLIER: Partial<Record<ZoneType, number>> = {
+  exclusive_residential: 5, // 전용주거지역
+  semi_residential: 3, // 준주거지역
+  commercial: 3, // 상업지역
+  general_residential: 4, // 일반주거지역
+  industrial: 4, // 공업지역
+  green: 7, // 녹지지역
+  unplanned: 4, // 미계획지역
+  management: 7, // 도시지역 외 (관리지역)
+  agriculture_forest: 7, // 도시지역 외 (농림지역)
+  natural_env: 7, // 도시지역 외 (자연환경보전지역)
+  undesignated: 7, // 도시지역 외 (용도 미지정)
+};
+
+/** 별표3·4 비고2 5종목군(축구·야구·럭비·필드하키·미식축구) — 운동장 공유로 그 중 max1만 인정, 그 외 종목은 합산. */
+const SPORTS_BIG_FIELD_GROUP = new Set(["soccer", "baseball", "rugby", "field_hockey", "american_football"]);
+
+/**
+ * 보유 종목 기준면적 합산 (별표3·4 비고2). 5종목군은 그 중 max1·그 외 종목은 합산.
+ * 합산이 원칙(default)이고 비고2는 5종목군에만 두는 예외 제한 — 법 근거 없이 불리(단일 종목만) 적용 금지.
+ */
+function sumSportsEvents(events: string[], lookup: (e: string) => number | undefined): number {
+  let bigMax = 0;
+  let othersSum = 0;
+  for (const e of events) {
+    const std = lookup(e);
+    if (std === undefined) continue;
+    if (SPORTS_BIG_FIELD_GROUP.has(e)) bigMax = Math.max(bigMax, std);
+    else othersSum += std;
+  }
+  return bigMax + othersSum;
+}
+
+/**
+ * 별표3·4 비고 가산·조정 (F2 Phase B B-2).
+ * - 선수가산(테니스·연식정구): 2인 초과 2인마다 별표3 483㎡·별표4 725㎡(비고5/4).
+ * - 실내 미설치(별표3 비고4·workplace 전용): 실내 운동경기부가 실내체육시설 미설치 시 800㎡.
+ * 용도지역별 배율(비고1·3·지방세법 §101②)·종목합산(비고2 일반 다종목)은 cross-statute/명문부재 → 미구현(직접입력 유지).
+ */
+function applySportsNotes(
+  base: number | undefined,
+  o: OtherLandUsage,
+  cat: "workplace" | "business",
+): number | undefined {
+  if (base === undefined) return undefined;
+  let result = base;
+  // 선수가산(테니스·연식정구) — "2인마다" = floor((선수수−2)/2)
+  if (
+    (o.sportsFacilityType === "tennis" || o.sportsFacilityType === "soft_tennis") &&
+    o.sportsPlayerCount !== undefined &&
+    o.sportsPlayerCount > 2
+  ) {
+    result += Math.floor((o.sportsPlayerCount - 2) / 2) * (cat === "business" ? 725 : 483);
+  }
+  // 실내 미설치(별표3 비고4 — workplace 전용) → 800
+  if (cat === "workplace" && o.indoorNotInstalled) {
+    result = 800;
+  }
+  return result;
+}
+
+export function resolveAreaLimit(o: OtherLandUsage, zoneType?: ZoneType): number | undefined {
+  const zoneMul = zoneType ? ZONE_AREA_MULTIPLIER[zoneType] : undefined;
   switch (o.relatedBusinessType) {
     case "hatchang":
       return o.maxAnnualArea !== undefined ? o.maxAnnualArea * NBL_AREA_MULTIPLIER.HATCHANG_RATIO : undefined;
@@ -80,15 +144,23 @@ export function resolveAreaLimit(o: OtherLandUsage): number | undefined {
         }
         return o.standardAreaLimit; // 시설 미선택·n≤0 → 직접입력 fallback
       }
-      // workplace(별표3) | business(별표4) — 종목 자동 lookup, 미선택 시 standardAreaLimit fallback
+      // workplace(별표3) | business(별표4) — 종목 합산(비고2: 5종목군 max1·그 외 합산) + 비고 가산
       const outdoor = cat === "business" ? SPORTS_BUSINESS_OUTDOOR_STD : SPORTS_OUTDOOR_STD;
       const indoor = cat === "business" ? SPORTS_BUSINESS_INDOOR_STD : SPORTS_INDOOR_STD;
-      const t = o.sportsFacilityType;
-      if (t) {
-        const std = (outdoor as Record<string, number>)[t] ?? (indoor as Record<string, number>)[t];
-        if (std !== undefined) return std;
-      }
-      return o.standardAreaLimit;
+      const lookupStd = (e: string): number | undefined => {
+        const out = (outdoor as Record<string, number>)[e];
+        if (out !== undefined) return out; // 실외 종목 — 표값(토지 면적)
+        const ind = (indoor as Record<string, number>)[e];
+        if (ind === undefined) return undefined;
+        // 실내 종목 부속토지(별표3·4·5 비고1·3): min(바닥, 표값) × §101② 용도지역 배율. 바닥·배율 미확보 시 표값 fallback
+        if (o.indoorFloorArea !== undefined && o.indoorFloorArea > 0 && zoneMul !== undefined) {
+          return Math.min(o.indoorFloorArea, ind) * zoneMul;
+        }
+        return ind;
+      };
+      const events = [o.sportsFacilityType, ...(o.sportsExtraEvents ?? [])].filter(Boolean) as string[];
+      if (events.length === 0) return o.standardAreaLimit; // 종목 미선택 → 직접입력 fallback
+      return applySportsNotes(sumSportsEvents(events, lookupStd), o, cat === "business" ? "business" : "workplace");
     }
     case "reserve_forces": {
       // F2 Phase A — 별표6 부대편성인원×시설 합산, 미선택 시 standardAreaLimit fallback
@@ -104,10 +176,12 @@ export function resolveAreaLimit(o: OtherLandUsage): number | undefined {
       return o.standardAreaLimit; // 2호가목 설치기준면적 직접입력 (미입력 시 undefined → 면적기준 미적용)
     case "resort": {
       // F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소 합산: 옥외 방목장·식물원 + 부설주차장×2 + 건축물 부속토지
-      const sum =
-        (o.resortOutdoorArea ?? 0) +
-        (o.resortParkingStdArea ?? 0) * 2 +
-        (o.resortBuildingAttachedArea ?? 0);
+      // 건축물 부속토지: 바닥면적 × §101②(지방세법 시행령) 용도지역별 배율(자동). 매핑 불가(residential 등) 시 부속토지 직접입력 fallback
+      const building =
+        o.resortBuildingFloorArea !== undefined && zoneMul !== undefined
+          ? o.resortBuildingFloorArea * zoneMul
+          : (o.resortBuildingAttachedArea ?? 0);
+      const sum = (o.resortOutdoorArea ?? 0) + (o.resortParkingStdArea ?? 0) * 2 + building;
       return sum > 0 ? sum : o.standardAreaLimit; // 3요소 미입력 시 직접입력 fallback
     }
     default:
@@ -260,7 +334,7 @@ export function judgeOtherLand(
     appliedLaws.push(legalBasis);
 
     // 호별 기준면적 해석 — 초과분 비사업용 면적 안분 (§168의11①)
-    const areaLimit = resolveAreaLimit(o);
+    const areaLimit = resolveAreaLimit(o, input.zoneType);
     if (areaLimit !== undefined && input.landArea > areaLimit) {
       const areaProportioning = computeAreaProportioning(input.landArea, areaLimit);
       steps.push({

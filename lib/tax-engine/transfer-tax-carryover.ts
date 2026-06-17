@@ -218,6 +218,8 @@ export function calcCarryoverScenarios(
     ...rawInput,
     acquisitionPrice: ct.useEstimatedAcquisition ? 0 : donorAcqPrice,
     acquisitionDate: ct.donorAcquisitionDate,   // §95 ④ 보유기간 기산
+    // §154① 거주요건 경과규정 판정은 수증자 실제 취득일 기준 (이월과세 의제는 필요경비 한정 §97의2①)
+    residenceTransitionAcquisitionDate: ct.giftRegistryDate,
     capitalExpenditure: effectiveCapex,           // 합산된 capex (directSide swap용)
     carryoverTaxation: undefined,                // 재귀 방지
     acquisitionCause: "gift",                    // 하위 호환 (단순 증여)

@@ -486,3 +486,298 @@ describe("F2 Phase B (B-3) — 6호 휴양 3요소 합산", () => {
     expect(r.areaProportioning?.businessArea).toBe(8000);
   });
 });
+
+// ============================================================
+// F2 Phase B (B-2) — 선수가산(테니스·연식정구)·실내미설치 (별표3·4 비고)
+// 별표3 비고5(483㎡)·별표4 비고4(725㎡)·별표3 비고4(실내미설치 800). KoreanLaw mst=286379 실측.
+// ============================================================
+describe("F2 Phase B (B-2) — 선수가산·실내미설치", () => {
+  // [Pre-Do] 별표3 비고5: 선수 2인 초과 2인마다 483㎡ 가산.
+  it("AT-F2B-5a: workplace 테니스 6인 → 650+2×483=1,616", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 3000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "tennis",
+          sportsPlayerCount: 6,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(1616);
+  });
+
+  // 별표4 비고4: 선수 2인 초과 2인마다 725㎡ 가산.
+  it("AT-F2B-5b: business 테니스 6인 → 975+2×725=2,425", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 4000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "business",
+          sportsFacilityType: "tennis",
+          sportsPlayerCount: 6,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(2425);
+  });
+
+  // 별표3 비고4: 실내 운동경기부 시설 미설치 → 800㎡(workplace).
+  it("AT-F2B-5c: workplace 실내(수영) 미설치 → 800", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 2000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "swimming",
+          indoorNotInstalled: true,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(800);
+  });
+
+  // 선수 2인 이하 → 가산 없음(회귀).
+  it("AT-F2B-5d: workplace 테니스 2인 → 가산 없음 650", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 3000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "tennis",
+          sportsPlayerCount: 2,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(650);
+  });
+
+  // 종목합산(비고2 원칙): 합산이 default·5종목군만 max1. 법 근거 없이 불리(단일만) 적용 금지.
+  it("AT-F2B-AGG-1: workplace 축구+테니스 → 11,000+650=11,650(합산)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 13000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "soccer",
+          sportsExtraEvents: ["tennis"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(11650);
+  });
+
+  it("AT-F2B-AGG-2: workplace 축구+야구 → max(11,000,14,000)=14,000(비고2 5종목군 max1)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 16000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "soccer",
+          sportsExtraEvents: ["baseball"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(14000);
+  });
+
+  it("AT-F2B-AGG-3: workplace 축구+야구+테니스 → 14,000(군max)+650=14,650", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 16000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "soccer",
+          sportsExtraEvents: ["baseball", "tennis"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(14650);
+  });
+
+  it("AT-F2B-AGG-4: business 축구+테니스 → 16,500+975=17,475(별표4 합산)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 19000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "business",
+          sportsFacilityType: "soccer",
+          sportsExtraEvents: ["tennis"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(17475);
+  });
+});
+
+// ============================================================
+// F2 Phase B — §101② 용도지역별 배율 자동(지방세법 시행령 §101② 정본: 전용주거5·준주거상업3·일반주거공업4·녹지7·미계획4·도시외7)
+// 6호 휴양 3호: 건축물 바닥면적 × zoneType 배율.
+// ============================================================
+describe("F2 Phase B — §101② 용도지역별 배율 자동 (6호 3호)", () => {
+  // [Pre-Do] 일반주거(4배): 건물 바닥 1,000 × 4 = 4,000 + 옥외 2,000 = 6,000.
+  it("AT-F2B-ZONE-1: resort 옥외2000+건물바닥1000×4배(일반주거) → 6,000", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 8000,
+        zoneType: "general_residential",
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "resort",
+          resortOutdoorArea: 2000,
+          resortBuildingFloorArea: 1000,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(6000);
+  });
+
+  // 녹지지역 7배: 건물 바닥 1,000 × 7 = 7,000.
+  it("AT-F2B-ZONE-2: resort 건물바닥1000×7배(녹지) → 7,000", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 9000,
+        zoneType: "green",
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "resort",
+          resortBuildingFloorArea: 1000,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(7000);
+  });
+
+  // residential(§101② 6구분 외) → 배율 자동 제외, resortBuildingAttachedArea 직접입력 fallback.
+  it("AT-F2B-ZONE-3: residential(매핑불가)+바닥1000 → 직접입력(attachedArea 3000) fallback", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 5000,
+        zoneType: "residential",
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "resort",
+          resortBuildingFloorArea: 1000,
+          resortBuildingAttachedArea: 3000,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(3000);
+  });
+});
+
+// ============================================================
+// F2 Phase B — 실내 종목 부속토지 §101② 배율 (별표3·4·5 비고1·3): min(바닥, 표값) × 배율
+// ============================================================
+describe("F2 Phase B — 실내 부속토지 §101② 배율 (비고1·3)", () => {
+  // [Pre-Do] 수영(표값 1000) · 바닥 800 · 녹지 7배 → min(800,1000)×7 = 5,600.
+  it("AT-F2B-INDOOR-1: workplace 수영 바닥800 × 녹지7배 → 5,600", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 8000,
+        zoneType: "green",
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "swimming",
+          indoorFloorArea: 800,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(5600);
+  });
+
+  // 바닥 1500 > 표값 1000 → min=1000 × 4배(일반주거) = 4,000.
+  it("AT-F2B-INDOOR-2: 바닥1500>표값1000 → min(1000)×4배(일반주거) = 4,000", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 6000,
+        zoneType: "general_residential",
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "swimming",
+          indoorFloorArea: 1500,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(4000);
+  });
+
+  // indoorFloorArea 미입력 → 표값 1000 (회귀, Phase A 유지).
+  it("AT-F2B-INDOOR-3: 수영 바닥 미입력 → 표값 1,000 (회귀)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1500,
+        zoneType: "general_residential",
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "swimming",
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(1000);
+  });
+});

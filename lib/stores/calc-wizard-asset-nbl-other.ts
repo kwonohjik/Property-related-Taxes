@@ -38,6 +38,13 @@ export interface NblOtherFormSlice {
   nblOtherResortOutdoorArea: string;
   nblOtherResortParkingStdArea: string;
   nblOtherResortBuildingArea: string;
+  // §168의11① F2 Phase B(B-2) — 선수가산(테니스·연식정구)·실내미설치·종목합산(별표3·4 비고)
+  nblOtherSportsPlayerCount: string;
+  nblOtherIndoorNotInstalled: boolean;
+  nblOtherSportsExtraEvents: string[];
+  nblOtherIndoorFloorArea: string;
+  // §168의11① F2 Phase B(B-3) — 6호 휴양 건축물 바닥면적(§101② 배율 자동)
+  nblOtherResortBuildingFloorArea: string;
   // §168의11② 수입금액비율 (기타토지 특정 업종)
   nblRevenueBusinessType:
     | ""

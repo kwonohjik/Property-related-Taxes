@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 import { judgePasture } from "@/lib/tax-engine/non-business-land/pasture";
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land/types";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
-import { LIVESTOCK_STANDARD_AREA } from "@/lib/tax-engine/non-business-land/data/livestock-standards";
+import { getLivestockStandardArea } from "@/lib/tax-engine/non-business-land/data/livestock-standards";
 
 const d = (iso: string) => new Date(iso);
 
@@ -101,11 +101,11 @@ describe("갭 3c — 목장 자동산출 warning 인용 정정 (별표 1의3)", 
   it("AT-PASTURE-CITE-1: 자동산출 warning은 「소득세법 시행령 별표 1의3」을 인용하고 「축산법」을 인용하지 않는다", () => {
     const r = judgePasture(
       base({
-        landArea: 10000, // hanwoo 10㎡/두 × 600두 = 6000㎡ < 10000 → 기준면적 초과 분기
+        landArea: 10000, // hanwoo_breeding 7,512.5㎡/두 × 1두 = 7,512.5 < 10000 → 기준면적 초과 분기
         pasture: {
           isLivestockOperator: true,
-          livestockType: "hanwoo",
-          livestockCount: 600,
+          livestockType: "hanwoo_breeding",
+          livestockCount: 1,
           // standardArea 미지정 → getLivestockStandardArea 자동 산출 진입
         },
       }),
@@ -117,15 +117,9 @@ describe("갭 3c — 목장 자동산출 warning 인용 정정 (별표 1의3)", 
     expect(autoWarning).not.toContain("축산법");
   });
 
-  // AT-PASTURE-CITE-2: numeric 동결 — E-1 정정은 인용 문자열만, 8축종 단위면적 값 무변경.
-  it("AT-PASTURE-CITE-2: LIVESTOCK_STANDARD_AREA 8축종 단위면적 값 동결 (E-1 numeric 무변경)", () => {
-    expect(LIVESTOCK_STANDARD_AREA.hanwoo).toBe(10);
-    expect(LIVESTOCK_STANDARD_AREA.dairy).toBe(15);
-    expect(LIVESTOCK_STANDARD_AREA.pig_sow).toBe(2.5);
-    expect(LIVESTOCK_STANDARD_AREA.pig_fattening).toBe(0.8);
-    expect(LIVESTOCK_STANDARD_AREA.poultry).toBe(0.05);
-    expect(LIVESTOCK_STANDARD_AREA.horse).toBe(20);
-    expect(LIVESTOCK_STANDARD_AREA.sheep).toBe(2);
-    expect(LIVESTOCK_STANDARD_AREA.goat).toBe(2);
+  // AT-PASTURE-CITE-2: 별표1의3 정본 반영 (구 동결값 → 사용자 제공 정본 재구현. 상세 anchor는 livestock-standards.test.ts).
+  it("AT-PASTURE-CITE-2: 별표1의3 정본 반영 (한우 육우 사육 1두 = 7,512.5㎡ · 유우 7,518㎡)", () => {
+    expect(getLivestockStandardArea("hanwoo_breeding", 1)).toBe(7512.5);
+    expect(getLivestockStandardArea("dairy", 1)).toBe(7518);
   });
 });

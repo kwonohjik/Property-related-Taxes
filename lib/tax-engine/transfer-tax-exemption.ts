@@ -105,7 +105,12 @@ export function meetsOneHouseHoldingResidence(
   const proviso = resolveExemptionProviso(input);
   const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
   const meetsHolding = proviso === "both" || holding.years >= rule.minHoldingYears;
-  const isPrePolicy = input.acquisitionDate < new Date(rule.prePolicyDate);
+  // §154① 거주요건 경과규정 — 2017.8.3(prePolicyDate) 이전 취득은 조정지역이라도 거주요건 면제.
+  // 이월과세 시 acquisitionDate는 증여자(보유 기산)로 교체되므로(§95④), 경과규정 판정은
+  // 수증자 실제 취득일(residenceTransitionAcquisitionDate) 사용 — §97의2는 필요경비 계산 특례에 한정.
+  const residenceTransitionDate =
+    input.residenceTransitionAcquisitionDate ?? input.acquisitionDate;
+  const isPrePolicy = residenceTransitionDate < new Date(rule.prePolicyDate);
   const residenceYears = Math.floor(input.residencePeriodMonths / 12);
   // 취득 당시 조정대상지역 — regionCode 있으면 취득일 기준 정밀 판정, 없으면 boolean fallback
   const wasRegulated = resolveWasRegulatedAtAcquisition(input);
@@ -113,7 +118,8 @@ export function meetsOneHouseHoldingResidence(
     proviso === "both" ||
     proviso === "residence_only" ||
     !wasRegulated ||
-    (isPrePolicy && !wasRegulated) ||
+    // §154① 부칙(대통령령 제28293호) 적용례 — prePolicy 취득은 조정지역이라도 거주요건 면제
+    (rule.prePolicyExemptResidence && isPrePolicy) ||
     residenceYears >= rule.regulatedAreaMinResidenceYears;
   return meetsHolding && meetsResidence;
 }
