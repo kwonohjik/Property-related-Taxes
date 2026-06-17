@@ -190,6 +190,8 @@ export interface TransferTaxInput {
    * 장기보유특별공제 보유기간에는 적용하지 않음.
    */
   donorAcquisitionDate?: Date;
+  /** §154① 거주요건 경과규정(2017.8.3) 판정용 실제 취득일 — 이월과세 시 수증자 취득일(보유기산일과 별개). 미지정 시 acquisitionDate */
+  residenceTransitionAcquisitionDate?: Date;
   /** 조세특례 감면 목록 */
   reductions: TransferReduction[];
   /** 당해 연도 기사용 기본공제 (원) */
