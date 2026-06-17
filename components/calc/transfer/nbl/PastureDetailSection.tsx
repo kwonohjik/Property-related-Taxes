@@ -21,15 +21,17 @@ export interface PastureDetailSectionProps {
   onAssetChange: (patch: Partial<AssetForm>) => void;
 }
 
+// 소득세법 시행령 별표 1의3 9개 구분 (사업종류 포함). 비고: 말·노새·당나귀=한우 사육 / 친칠라=토끼 / 개=돼지 / 여우=밍크.
 const LIVESTOCK_OPTIONS = [
-  { value: "hanwoo", label: "한우" },
-  { value: "dairy", label: "젖소" },
-  { value: "pig_sow", label: "돼지(모돈)" },
-  { value: "pig_fattening", label: "돼지(비육)" },
-  { value: "poultry", label: "가금" },
-  { value: "horse", label: "말" },
+  { value: "hanwoo_breeding", label: "한우·육우 사육 (말·노새·당나귀 포함)" },
+  { value: "hanwoo_fattening", label: "한우·육우 비육" },
+  { value: "dairy", label: "유우(젖소)" },
   { value: "sheep", label: "양" },
-  { value: "goat", label: "염소" },
+  { value: "deer", label: "사슴" },
+  { value: "rabbit", label: "토끼 (친칠라 포함)" },
+  { value: "pig", label: "돼지 (개 포함)" },
+  { value: "poultry", label: "가금" },
+  { value: "mink", label: "밍크 (여우 포함)" },
 ] as const;
 
 export function PastureDetailSection({
