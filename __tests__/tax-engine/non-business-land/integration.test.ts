@@ -151,7 +151,7 @@ describe("시나리오 5~10 — 기간기준 충족", () => {
       nblLandType: "pasture",
       nblZoneType: "agriculture_forest",
       nblPastureIsLivestockOperator: true,
-      nblPastureLivestockType: "hanwoo",
+      nblPastureLivestockType: "hanwoo_breeding",
       nblPastureLivestockCount: "20",
       nblPastureLivestockPeriods: [
         { startDate: "2018-01-01", endDate: "2024-01-01", usageType: "축산" },
