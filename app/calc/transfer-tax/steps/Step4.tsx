@@ -9,6 +9,7 @@ import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionCo
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
+import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
@@ -288,6 +289,18 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),
                 })
               }
+            />
+          )}
+
+          {/* §154① 단서 — 보유·거주 요건 면제 사유 (1세대1주택 + 주택 자산) */}
+          {form.isOneHousehold && primaryKind === "housing" && (
+            <ExemptionProvisoSection
+              provisoReason={form.provisoReason}
+              provisoDepartureDate={form.provisoDepartureDate}
+              provisoExpropriationDate={form.provisoExpropriationDate}
+              provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
+              provisoPreContractNoHouse={form.provisoPreContractNoHouse}
+              onChange={onChange}
             />
           )}
 

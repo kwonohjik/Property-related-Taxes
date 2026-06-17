@@ -96,6 +96,19 @@ export interface TransferFormData {
   newHouseAcquisitionDate: string;
   marriageDate: string;
   parentalCareMergeDate: string;
+  // §154① 단서 — 비과세 보유·거주 요건 면제 사유 (FLAT; API에서 oneHouseExemptionProviso로 조립)
+  provisoReason:
+    | ""
+    | "rental_5yr_residence"
+    | "expropriation"
+    | "overseas_migration"
+    | "overseas_residence"
+    | "unavoidable"
+    | "pre_designation_contract";
+  provisoDepartureDate: string;
+  provisoExpropriationDate: string;
+  provisoBusinessApprovalDate: string;
+  provisoPreContractNoHouse: boolean;
   houses: HouseEntry[];
   /** 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11) */
   presaleRights: PresaleRightEntry[];
@@ -190,6 +203,11 @@ const defaultFormData: TransferFormData = {
   newHouseAcquisitionDate: "",
   marriageDate: "",
   parentalCareMergeDate: "",
+  provisoReason: "",
+  provisoDepartureDate: "",
+  provisoExpropriationDate: "",
+  provisoBusinessApprovalDate: "",
+  provisoPreContractNoHouse: false,
   houses: [],
   presaleRights: [],
   sellingHouseRegion: "capital",

@@ -140,6 +140,26 @@ export interface TransferTaxInput {
     newAcquisitionDate: Date;
   };
   /**
+   * §154① 단서 — 1세대1주택 비과세 보유·거주 요건 면제 사유 (소득세법 시행령 §154 ① 단서).
+   * 폼은 FLAT(provisoReason 등), API 변환 시 이 nested 객체로 조립. 미지정 시 본문 요건만 판정.
+   * 1·2·3호 = 보유+거주 면제, 5호 = 거주만 면제. 거주 충족(1호 5년·3호 1년)은 residencePeriodMonths 재사용.
+   */
+  oneHouseExemptionProviso?: {
+    reason:
+      | "rental_5yr_residence"      // 1호    : 보유+거주 면제 (거주 5년 전제)
+      | "expropriation"             // 2호 가 : 보유+거주 면제 (수용)
+      | "overseas_migration"        // 2호 나 : 보유+거주 면제 (해외이주, 출국일+2년)
+      | "overseas_residence"        // 2호 다 : 보유+거주 면제 (국외거주, 출국일+2년)
+      | "unavoidable"               // 3호    : 보유+거주 면제 (부득이, 거주 1년 전제)
+      | "pre_designation_contract"; // 5호    : 거주만 면제 (조정 공고 전 계약)
+    /** 나·다목 출국일 (2년 기산). 라우트에서 toDate 변환 */
+    departureDate?: Date;
+    /** 가목 수용일 (5년 기산; 미제공 시 transferDate). toDate */
+    expropriationDate?: Date;
+    /** 가목 사업인정 고시일 (acquisitionDate < 고시일 전제). toDate */
+    businessApprovalDate?: Date;
+  };
+  /**
    * 취득 원인 (매매·상속·증여·이월과세증여). 미지정 시 매매로 간주.
    * "carryover_gift" = 소득세법 §97조의2 이월과세 대상 증여 (배우자·직계존비속).
    * 기존 "gift"는 이월과세 미적용 단순 증여 취득 — 하위 호환 유지.
@@ -772,29 +792,7 @@ export type {
 
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer-phd.types";
 
-/** 토지/건물 분리 계산 결과 */
-export interface SplitPartResult {
-  transferPrice: number;
-  acquisitionPrice: number;
-  directExpenses: number;
-  appraisalDeduction: number;
-  /** 취득시 기준시가 — 개산공제 산식 표시용 (개산공제 = floor(stdPriceAtAcq × 3%)) */
-  stdPriceAtAcq?: number;
-  gain: number;
-  holdingYears: number;
-  longTermRate: number;
-  longTermDeduction: number;
-  /** §97② 단서 swap 발동 여부 (자산 단위) */
-  swapApplied?: boolean;
-}
-
-export interface SplitGainResult {
-  land: SplitPartResult;
-  building: SplitPartResult;
-  apportionRatio: { land: number; building: number };
-  note: string;
-  /** 본인 신고 부분 — UI 결과 뷰 표시용 */
-  selfOwns: "both" | "building_only" | "land_only";
-  /** §164⑤ 경로 시만 포함 — calculateTransferTax가 result.preHousingDisclosureDetail로 승격 */
-  preHousingDisclosureDetail?: PreHousingDisclosureResult;
-}
+// 토지/건물 분리 계산 결과 (SplitPartResult·SplitGainResult)는 800줄 정책 준수를 위해
+// ./transfer-split-gain.types.ts 로 분리. 로컬 사용(TransferTaxResult) + 하위 호환 재수출.
+import type { SplitGainResult } from "./transfer-split-gain.types";
+export type { SplitPartResult, SplitGainResult } from "./transfer-split-gain.types";

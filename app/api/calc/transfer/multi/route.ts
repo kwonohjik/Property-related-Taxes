@@ -148,6 +148,15 @@ export async function POST(request: NextRequest) {
       houses: mapHousesToEngine(p.houses),
       sellingHouseId: p.sellingHouseId,
       marriageMerge: p.marriageMerge ? { marriageDate: toDate(p.marriageMerge.marriageDate, "marriageMerge.marriageDate") } : undefined,
+      // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
+      oneHouseExemptionProviso: p.oneHouseExemptionProviso
+        ? {
+            reason: p.oneHouseExemptionProviso.reason,
+            departureDate: toOptionalDate(p.oneHouseExemptionProviso.departureDate),
+            expropriationDate: toOptionalDate(p.oneHouseExemptionProviso.expropriationDate),
+            businessApprovalDate: toOptionalDate(p.oneHouseExemptionProviso.businessApprovalDate),
+          }
+        : undefined,
       parentalCareMerge: p.parentalCareMerge ? { mergeDate: toDate(p.parentalCareMerge.mergeDate, "parentalCareMerge.mergeDate") } : undefined,
       rentalReductionDetails: p.rentalReductionDetails
         ? {

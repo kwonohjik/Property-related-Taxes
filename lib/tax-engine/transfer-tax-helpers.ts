@@ -12,7 +12,6 @@
  * 세액·감면 계산 (H-6.5 ~ H-8)은 ./transfer-tax-rate-calc.ts 로 분리.
  */
 
-import { addYears } from "date-fns";
 import {
   applyRate,
   calculateEstimatedAcquisitionPrice,
@@ -171,94 +170,15 @@ export function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
 }
 
 // ============================================================
-// H-2: checkExemption — 비과세 판단 (E-1 ~ E-4)
+// H-2: 비과세 판단 — checkExemption·meetsOneHouseHoldingResidence·resolveExemptionProviso
+// 800줄 정책 준수를 위해 ./transfer-tax-exemption.ts 로 분리. 하위 호환 위해 재수출.
 // ============================================================
 
-interface ExemptionResult {
-  isExempt: boolean;
-  isPartialExempt: boolean;
-  exemptReason?: string;
-}
-
-/**
- * §154① 보유·거주 핵심 요건 (단서 각호 제외).
- * 보유 2년(rule.minHoldingYears) + 취득 당시 조정대상지역이면 거주 2년(rule.regulatedAreaMinResidenceYears).
- * §155⑤(혼인 합가) 1세대1주택 의제 중과배제(§167의10①15호) 게이트에 재사용 — checkExemption과 단일 진실.
- */
-export function meetsOneHouseHoldingResidence(
-  input: TransferTaxInput,
-  rule: OneHouseSpecialRulesData["one_house_exemption"],
-): boolean {
-  const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-  const isPrePolicy = input.acquisitionDate < new Date(rule.prePolicyDate);
-  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
-  const meetsResidence =
-    !input.wasRegulatedAtAcquisition ||
-    (isPrePolicy && !input.wasRegulatedAtAcquisition) ||
-    residenceYears >= rule.regulatedAreaMinResidenceYears;
-  return holding.years >= rule.minHoldingYears && meetsResidence;
-}
-
-export function checkExemption(
-  input: TransferTaxInput,
-  oneHouseRules: OneHouseSpecialRulesData,
-): ExemptionResult {
-  const { one_house_exemption: rule, temporary_two_house: twoHouseRule } = oneHouseRules;
-
-  if (!input.isOneHousehold || input.propertyType !== "housing") {
-    return { isExempt: false, isPartialExempt: false };
-  }
-
-  // E-3: 일시적 2주택
-  if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
-    const { previousAcquisitionDate, newAcquisitionDate } = input.temporaryTwoHouse;
-
-    const prevHolding = calculateHoldingPeriod(previousAcquisitionDate, input.transferDate);
-    if (prevHolding.years < rule.minHoldingYears) {
-      return { isExempt: false, isPartialExempt: false };
-    }
-
-    let deadlineYears = twoHouseRule.disposalDeadlineYears;
-    if (input.isRegulatedArea) {
-      // 부칙: 양도일이 완화 시행일(2022-05-10) 이후이면 완화 기한 적용
-      const relaxDate = twoHouseRule.regulatedAreaRelaxDate
-        ? new Date(twoHouseRule.regulatedAreaRelaxDate)
-        : null;
-      if (relaxDate && input.transferDate >= relaxDate) {
-        deadlineYears = twoHouseRule.regulatedAreaRelaxDeadlineYears ?? twoHouseRule.regulatedAreaDeadlineYears;
-      } else {
-        deadlineYears = twoHouseRule.regulatedAreaDeadlineYears;
-      }
-    }
-    const deadline = addYears(newAcquisitionDate, deadlineYears);
-    if (input.transferDate <= deadline) {
-      return { isExempt: true, isPartialExempt: false, exemptReason: "일시적 2주택 비과세" };
-    }
-  }
-
-  if (input.householdHousingCount !== 1) {
-    return { isExempt: false, isPartialExempt: false };
-  }
-
-  // E-4: §154① 보유·거주 요건 (2017.8.3 이전 경과규정 포함) — meetsOneHouseHoldingResidence로 단일화
-  if (!meetsOneHouseHoldingResidence(input, rule)) {
-    return { isExempt: false, isPartialExempt: false };
-  }
-
-  // E-1: 전액 비과세 (양도가 12억 이하)
-  // 우선순위:
-  //   1) burdenedGiftDenominator (부담부증여 — D-0-2 해석 B: 분모 = giftValuation C)
-  //   2) totalPropertyTransferPrice (지분 모드 — 총 물건가)
-  //   3) transferPrice (단독 모드 fallback)
-  const exemptionPriceCheck =
-    input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
-  if (exemptionPriceCheck <= rule.maxExemptPrice) {
-    return { isExempt: true, isPartialExempt: false, exemptReason: "1세대1주택 비과세" };
-  }
-
-  // E-2: 부분과세 (양도가 12억 초과)
-  return { isExempt: false, isPartialExempt: true, exemptReason: "1세대1주택 고가주택" };
-}
+export {
+  checkExemption,
+  meetsOneHouseHoldingResidence,
+  resolveExemptionProviso,
+} from "./transfer-tax-exemption";
 
 // ============================================================
 // H-3: calcTransferGain — 양도차익 계산

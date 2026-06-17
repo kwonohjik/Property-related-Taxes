@@ -72,4 +72,22 @@ describe("MH154: §154① 요건 게이트 end-to-end (혼인 2주택 §155⑤ �
     );
     expect(hasMarriageExclusion(r)).toBe(true);
   });
+
+  // A9: §154① 단서(수용) — 보유<2년이라도 요건 충족 의제 → 게이트 통과(단일 진실).
+  // §167의10①15호 "§154①이 적용되는 주택으로서 같은 항의 요건을 모두 충족" — 단서 면제 포함.
+  it("보유<2년 + §154① 단서(수용) → 요건 충족 의제 → 혼인 전면배제 적용", () => {
+    const r = calculateTransferTax(
+      marriageInput({
+        acquisitionDate: new Date("2023-01-01"),
+        transferDate: new Date("2024-06-01"), // 1.4년 보유
+        oneHouseExemptionProviso: {
+          reason: "expropriation",
+          businessApprovalDate: new Date("2024-01-01"),
+          expropriationDate: new Date("2024-05-01"),
+        },
+      }),
+      makeMockRatesWithHouseEngine(),
+    );
+    expect(hasMarriageExclusion(r)).toBe(true);
+  });
 });
