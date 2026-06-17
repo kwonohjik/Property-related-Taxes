@@ -19,6 +19,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 // ============================================================
 // 임대 등록 유형 레이블
@@ -171,7 +172,12 @@ function RentalExclusionDetail({
             onChange={(v) => onUpdate({ registrationRevokedDate: v })}
           />
           <p className="text-xs text-muted-foreground">
-            말소일이 과세기준일(6월 1일) 이전이면 합산배제가 적용되지 않습니다 (시행령 §3①).
+            말소일이 과세기준일(6월 1일) 이전이면 합산배제가 적용되지 않습니다 (
+            <LawArticleModal
+              legalBasis="종합부동산세법 시행령 §3"
+              label="시행령 §3①"
+            />
+            ).
           </p>
         </div>
       </ToggleCard>

@@ -28,6 +28,7 @@ import type {
   CorporateHousingClass,
 } from "@/lib/tax-engine/types/comprehensive-corporate.types";
 import type { ComprehensiveFormData } from "@/lib/stores/comprehensive-wizard-store";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 // ============================================================
 // 법인 세부 유형 (시행령 §4의4) — Select 옵션·조건 요건 라벨·도출 배지
@@ -114,8 +115,9 @@ function YearLawHintCard({ year }: { year: number }) {
         </p>
       ) : (
         <p>
-          세율: 2주택 이하 0.5%~2.7% / 3주택 이상 12억 초과 중과 2.0%~5.0%
-          (§9①2호 — 주택 수 자동 적용)
+          세율: 2주택 이하 0.5%~2.7% / 3주택 이상 12억 초과 중과 2.0%~5.0% (
+          <LawArticleModal legalBasis="종합부동산세법 §9" label="§9①2호" /> — 주택 수
+          자동 적용)
         </p>
       )}
       {hasMultiHouseCap ? (
@@ -124,7 +126,10 @@ function YearLawHintCard({ year }: { year: number }) {
           (§10② 구법)
         </p>
       ) : (
-        <p>세부담 상한: 전년도 세액의 150% (§10)</p>
+        <p>
+          세부담 상한: 전년도 세액의 150% (
+          <LawArticleModal legalBasis="종합부동산세법 §10" label="§10" />)
+        </p>
       )}
     </div>
   );

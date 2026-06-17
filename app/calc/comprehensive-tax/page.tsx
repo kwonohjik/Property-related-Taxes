@@ -37,6 +37,7 @@ import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { Step1Basic } from "./Step1Basic";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 // ============================================================
 // 상수
@@ -183,7 +184,10 @@ function Step2Properties() {
         </div>
       ) : (
         <div className="rounded-md border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-900">
-          <p className="font-semibold">§9②3호 법인 — 세부담 상한 미적용</p>
+          <p className="font-semibold">
+            §9②3호 법인 — 세부담 상한 미적용{" "}
+            <LawArticleModal legalBasis="종합부동산세법 §10" label="§10 단서" />
+          </p>
           <p className="mt-1">
             종합부동산세법 §10 단서에 따라 §9②3호 세율(단일 비례세율)이 적용되는 법인에는
             세부담 상한이 적용되지 않습니다. 직전연도 공시가격 입력이 필요하지 않습니다.
