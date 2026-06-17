@@ -320,7 +320,7 @@ function HousingTaxSection({
       return "종합부동산세법 §9";
     if (result.corporateHousingClass === "corporate_public")
       return "종합부동산세법 §9";
-    if (result.isJointOwnershipApplied) return undefined; // §10의2 — 본문 미검증, 보류
+    if (result.isJointOwnershipApplied) return "종합부동산세법 §10의2"; // 공동명의 1주택자 특례 (검증 2026-06-17)
     if (result.section8para4Detail) return "종합부동산세법 §8";
     if (result.isMultiHouseRateApplied)
       return parseInt(result.assessmentDate.slice(0, 4)) <= 2022
@@ -367,6 +367,7 @@ function HousingTaxSection({
           amount={-propertyTaxCredit.creditAmount}
           sub
           badge="시행령 §4의3"
+          legalBasis="종합부동산세법 시행령 §4의3"
         />
 
         {/* 1세대1주택 세액공제 (재산세 공제 후 세액 기준 — §9⑥⑧) */}
