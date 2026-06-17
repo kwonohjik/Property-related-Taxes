@@ -58,11 +58,33 @@ describe("[NBL-OTHER-UI] ⑤ §168의11① 호별 면적기준 위젯", () => {
     expect(screen.queryByText(/매년 최대 사용면적 \(㎡\)/)).toBeNull();
   });
 
-  // F2 Phase A — sports: 별표3 종목 select 노출.
-  it("sports 선택 시 '체육시설 종목 (별표3)' select 노출", () => {
+  // F2 Phase B — sports: 체육시설 유형 RadioCardGroup + (default workplace) 종목 select 노출.
+  it("sports 선택 시 '체육시설 유형'(직장/운동경기업/종업원) + 종목 select 노출", () => {
     const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "sports" as const };
     render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
-    expect(screen.getByText(/체육시설 종목 \(별표3\)/)).toBeTruthy();
+    expect(screen.getByText(/체육시설 유형/)).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-sports-category-business")).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-sports-category-employee")).toBeTruthy();
+    expect(screen.getByText(/체육시설 종목/)).toBeTruthy(); // default workplace → 종목 select
+  });
+
+  // F2 Phase B — employee: 종업원 수 + 보유 시설(운동장·코트·실내) 토글 노출.
+  it("sports + employee 선택 시 '종업원 수'·보유 시설 토글 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "sports" as const, nblOtherSportsCategory: "employee" };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/종업원 수/)).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-employee-kind-field")).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-employee-kind-court")).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-employee-kind-indoor")).toBeTruthy();
+  });
+
+  // F2 Phase B — 유형 선택 onAssetChange wiring.
+  it("체육시설 유형(운동경기업) 선택 시 onAssetChange(nblOtherSportsCategory) 호출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "sports" as const };
+    const onChange = vi.fn();
+    render(<OtherLandDetailSection asset={asset} onAssetChange={onChange} />);
+    fireEvent.click(screen.getByTestId("nbl-other-sports-category-business"));
+    expect(onChange).toHaveBeenCalledWith({ nblOtherSportsCategory: "business" });
   });
 
   // F2 Phase A — reserve_forces: 부대규모 select + 부대규모 선택 시 시설 토글 노출.
@@ -71,5 +93,14 @@ describe("[NBL-OTHER-UI] ⑤ §168의11① 호별 면적기준 위젯", () => {
     render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
     expect(screen.getByText(/부대편성인원 \(별표6\)/)).toBeTruthy();
     expect(screen.getByTestId("nbl-other-reserve-fac-tactical")).toBeTruthy();
+  });
+
+  // F2 Phase B(B-3) — resort: 6호 휴양 §83의4⑫ 3요소 입력 노출.
+  it("resort 선택 시 6호 휴양 3요소(옥외·부설주차장·건축물 부속토지) 입력 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "resort" as const };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/옥외 방목장·식물원 면적/)).toBeTruthy();
+    expect(screen.getByText(/부설주차장 설치기준면적 \(㎡\)/)).toBeTruthy(); // 옵션 설명과 구분 위해 (㎡) 한정
+    expect(screen.getByText(/건축물 부속토지 면적/)).toBeTruthy();
   });
 });

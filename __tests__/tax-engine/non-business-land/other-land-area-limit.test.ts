@@ -259,3 +259,230 @@ describe("F2 Phase A — 별표3·6 자동 기준면적 (체육시설·예비군
     expect(r.areaProportioning?.nonBusinessArea).toBe(2000);
   });
 });
+
+// ============================================================
+// F2 Phase B (B-1) — 별표4(운동경기업)·별표5(종업원) 체육시설 유형 분기
+// 별표4·5 정본 실측(KoreanLaw mst=286379 §83의4③④ · 별표4·5).
+// ============================================================
+describe("F2 Phase B (B-1) — 별표4·5 체육시설 유형 분기", () => {
+  // [Pre-Do] 별표4 운동경기업 축구장 16,500㎡ 자동 lookup → 초과분 비사업용.
+  it("AT-F2B-1: business 축구장 18,000㎡ · 별표4 기준 16,500 → 초과 1,500 비사업용", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 18000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "business",
+          sportsFacilityType: "soccer",
+        } as never,
+      }),
+      R,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.businessArea).toBe(16500);
+    expect(r.areaProportioning?.nonBusinessArea).toBe(1500);
+  });
+
+  // 별표5 종업원 운동장 선형보간 (300인 → 1,000+200×9=2,800).
+  it("AT-F2B-2a: employee [field] 300인 → 2,800 (선형보간)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 5000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "employee",
+          employeeCount: 300,
+          employeeFacilityKinds: ["field"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(2800);
+  });
+
+  // 별표5 선형보간 600인 → 4,600+100×3=4,900.
+  it("AT-F2B-2b: employee [field] 600인 → 4,900 (선형보간)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 6000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "employee",
+          employeeCount: 600,
+          employeeFacilityKinds: ["field"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(4900);
+  });
+
+  // 비고2: 종업원 50인 이하 → 코트면적만(970), field 무시.
+  it("AT-F2B-3: employee [field] 40인(≤50) → 970 (코트강제)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 2000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "employee",
+          employeeCount: 40,
+          employeeFacilityKinds: ["field"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(970);
+  });
+
+  // 보유시설 합산: [field, court] 600인 → 4,900+1,940=6,840.
+  it("AT-F2B-9: employee [field,court] 600인 → 6,840 (합산)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 8000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "employee",
+          employeeCount: 600,
+          employeeFacilityKinds: ["field", "court"],
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(6840);
+  });
+
+  // 회귀: workplace(별표3) 축구장 → 11,000 불변 (Phase A).
+  it("AT-F2B-4: workplace 축구장 → 11,000 (별표3 회귀)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 12000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "workplace",
+          sportsFacilityType: "soccer",
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(11000);
+  });
+
+  // sportsCategory 미설정 → workplace default(별표3 11,000) 회귀.
+  it("AT-F2B-4b: sportsCategory 미설정 축구장 → 11,000 (default workplace)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 12000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsFacilityType: "soccer",
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(11000);
+  });
+
+  // fallback: employee 시설 미선택 + standardAreaLimit 직접입력.
+  it("AT-F2B-7: employee 시설 미선택 + standardAreaLimit 3,000 → 직접입력", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 5000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "sports",
+          sportsCategory: "employee",
+          standardAreaLimit: 3000,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(3000);
+  });
+});
+
+// ============================================================
+// F2 Phase B (B-3) — 6호 휴양시설 §83의4⑫ 3요소 합산
+// (옥외 방목장·식물원 + 부설주차장×2 + 건축물 부속토지). KoreanLaw mst=286379 §83의4⑫ 실측.
+// ============================================================
+describe("F2 Phase B (B-3) — 6호 휴양 3요소 합산", () => {
+  // [Pre-Do] 옥외 5,000 + 부설주차 1,000(×2) + 건축물 부속 2,000 = 9,000.
+  it("AT-F2B-6: resort 옥외5000+주차1000(×2)+건축2000 → 기준 9,000, landArea 12,000 초과 3,000", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 12000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "resort",
+          resortOutdoorArea: 5000,
+          resortParkingStdArea: 1000,
+          resortBuildingAttachedArea: 2000,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.businessArea).toBe(9000);
+    expect(r.areaProportioning?.nonBusinessArea).toBe(3000);
+  });
+
+  // 부분 입력: 부설주차장만 1,500(×2=3,000).
+  it("AT-F2B-6c: resort 주차장만 1,500(×2) → 3,000", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 5000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "resort",
+          resortParkingStdArea: 1500,
+        } as never,
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(3000);
+  });
+
+  // fallback: 3요소 미입력 + standardAreaLimit 직접입력 유지(회귀).
+  it("AT-F2B-6b: resort 3요소 미입력 + standardAreaLimit 8,000 → 직접입력 유지", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 10000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: false,
+          relatedBusinessType: "resort",
+          standardAreaLimit: 8000,
+        },
+      }),
+      R,
+    );
+    expect(r.areaProportioning?.businessArea).toBe(8000);
+  });
+});

@@ -76,12 +76,19 @@ reserveForcesFacilities?: Array<"tactical"|"shooting_prep"|"range"|"basic">;
 
 `resolveAreaLimit` 분기 확장: sports → `sportsFacilityType` lookup, reserve_forces → 부대규모×시설 합. **선택 미입력 시 `standardAreaLimit` 직접입력 fallback**(3중 패턴).
 
-### Phase B — 직접입력 유지 (복잡 비고)
-자동화 보류, 직접입력 + 안내문:
-- 별표3 비고①③ 실내 부속토지 **용도지역별 배율**(지방세법 §131의2② 교차의존).
-- 별표3 비고② 종목 합산 / 비고⑤ 선수수 가산(테니스 +483㎡/2인).
-- 6호 휴양 §83의4⑫ 3요소 합산.
+### Phase B — 별표4·5 자동화 + 복잡 비고 (→ 상세: [gap-f2b-annex-phase-b.plan.md](gap-f2b-annex-phase-b.plan.md))
+
+> **갱신(2026-06-17, Phase A ✅PR#249 후)**: Phase B를 별도 계획서로 구체화. 별표4(운동경기업)·별표5(종업원)는 KoreanLaw 정본 확보로 **자동화 승격**(직접입력 유지 아님). 용도지역별 배율(지방세법 §101② — 표 추출 실패)·6호 휴양 3호만 직접입력 유지. 별표1의3 목장은 blocker 유지.
+
+자동화 보류, 직접입력 + 안내문(B-2·B-3 일부):
+- 별표3·4·5 비고 실내 부속토지 **용도지역별 배율**(지방세법 §101② 교차의존 — 정본 미확보).
+- 6호 휴양 §83의4⑫ 3호 건축물 부속토지(배율 의존).
 - → UI에 "복잡 산정은 직접입력" 안내(violet 카드), `standardAreaLimit` 유지.
+
+자동화 승격(B-1·B-2·B-3):
+- 별표4·5 체육시설 유형(직장운동경기부/운동경기업/종업원) 분기 + 종목 lookup / 종업원수 선형보간.
+- 종목 합산 max·선수수 가산(별표3 483㎡·별표4 725㎡)·실내 미설치 800㎡.
+- 6호 휴양 1·2호(옥외방목장·식물원 + 부설주차장 ×2).
 
 ### 별표1의3 (blocker) — 현행 유지
 - `livestock-standards.ts` numeric 동결. Do 단계 정본 확보 절차:

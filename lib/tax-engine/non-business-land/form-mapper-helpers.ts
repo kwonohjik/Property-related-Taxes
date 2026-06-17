@@ -199,6 +199,14 @@ export function buildOtherLand(
     sportsFacilityType:             (asString(a.nblOtherSportsFacilityType) || undefined) as OtherLandUsage["sportsFacilityType"],
     reserveForcesUnitSize:          (asString(a.nblOtherReserveUnitSize) || undefined) as OtherLandUsage["reserveForcesUnitSize"],
     reserveForcesFacilities:        asArray<string>(a.nblOtherReserveFacilities) as OtherLandUsage["reserveForcesFacilities"],
+    // F2 Phase B — 체육시설 유형·종업원 체육시설 (별표4·5)
+    sportsCategory:                 (asString(a.nblOtherSportsCategory) || undefined) as OtherLandUsage["sportsCategory"],
+    employeeCount:                  parseNumber(asString(a.nblOtherEmployeeCount)),
+    employeeFacilityKinds:          asArray<string>(a.nblOtherEmployeeFacilityKinds) as OtherLandUsage["employeeFacilityKinds"],
+    // F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소
+    resortOutdoorArea:              parseNumber(asString(a.nblOtherResortOutdoorArea)),
+    resortParkingStdArea:           parseNumber(asString(a.nblOtherResortParkingStdArea)),
+    resortBuildingAttachedArea:     parseNumber(asString(a.nblOtherResortBuildingArea)),
   };
 }
 

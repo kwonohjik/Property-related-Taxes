@@ -450,12 +450,34 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     // §168의11① 호별 면적기준 — 면적인자 요구 호 선택 시 해당 면적인자 필수 (자동 안분 fallback 금지)
     if (asset.nblLandType === "other_land") {
       const bt = asset.nblOtherRelatedBusinessType;
-      const needsStandardArea = bt === "parking_attached" || bt === "resort";
+      const needsStandardArea = bt === "parking_attached";
       if (needsStandardArea && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
         return `${label}: 선택한 호의 기준면적(㎡)을 입력하세요. (§168의11① 별표·설치기준면적)`;
-      // F2 Phase A — sports: 종목 선택(별표3 자동) 또는 기준면적 직접입력 중 하나 필수
-      if (bt === "sports" && !asset.nblOtherSportsFacilityType && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
-        return `${label}: 체육시설 — 종목을 선택하거나 기준면적(㎡)을 직접 입력하세요. (별표3)`;
+      // F2 Phase B(B-3) — resort: 6호 휴양 3요소 중 하나 또는 기준면적 직접입력
+      if (bt === "resort") {
+        const has3Element =
+          (!!asset.nblOtherResortOutdoorArea && parseDecimal(asset.nblOtherResortOutdoorArea) > 0) ||
+          (!!asset.nblOtherResortParkingStdArea && parseDecimal(asset.nblOtherResortParkingStdArea) > 0) ||
+          (!!asset.nblOtherResortBuildingArea && parseDecimal(asset.nblOtherResortBuildingArea) > 0);
+        const hasDirect = !!asset.nblOtherStandardAreaLimit && parseDecimal(asset.nblOtherStandardAreaLimit) > 0;
+        if (!has3Element && !hasDirect)
+          return `${label}: 휴양시설 — 옥외방목장·부설주차장·건축물 부속토지 중 하나 또는 기준면적(㎡)을 입력하세요. (§83의4⑫)`;
+      }
+      // F2 Phase B — sports 유형별: employee→종업원수·보유시설 / workplace·business→종목 OR 직접입력
+      if (bt === "sports") {
+        const cat = asset.nblOtherSportsCategory || "workplace";
+        const hasDirect = !!asset.nblOtherStandardAreaLimit && parseDecimal(asset.nblOtherStandardAreaLimit) > 0;
+        if (cat === "employee") {
+          const hasEmployee =
+            !!asset.nblOtherEmployeeCount &&
+            parseDecimal(asset.nblOtherEmployeeCount) > 0 &&
+            (asset.nblOtherEmployeeFacilityKinds?.length ?? 0) > 0;
+          if (!hasEmployee && !hasDirect)
+            return `${label}: 종업원 체육시설 — 종업원 수와 보유 시설을 선택하거나 기준면적(㎡)을 직접 입력하세요. (별표5)`;
+        } else if (!asset.nblOtherSportsFacilityType && !hasDirect) {
+          return `${label}: 체육시설 — 종목을 선택하거나 기준면적(㎡)을 직접 입력하세요. (별표3·4)`;
+        }
+      }
       // F2 Phase A — reserve_forces: 부대편성인원+시설 선택(별표6 자동) 또는 기준면적 직접입력 중 하나 필수
       if (bt === "reserve_forces" && !(asset.nblOtherReserveUnitSize && (asset.nblOtherReserveFacilities?.length ?? 0) > 0) && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
         return `${label}: 예비군훈련장 — 부대편성인원·시설을 선택하거나 기준면적(㎡)을 직접 입력하세요. (별표6)`;
