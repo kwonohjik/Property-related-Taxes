@@ -80,7 +80,7 @@ export function employeeSportsArea(
 > ⚠️ 키는 별표3(`SPORTS_OUTDOOR_STD`·`SPORTS_INDOOR_STD`)과 **동일**해야 `sportsFacilityType` 단일 필드가 별표3/4 양 테이블에서 lookup 가능(workplace↔business 종목 동일·면적만 상이).
 > ⚠️ 별표5 구간 경계 연속성(실측): n=500→4,600 / n=2,000→9,100 / n=10,000→17,100. court·indoor는 계단식 고정.
 
-별표1의3(목장)·용도지역별 배율(지방세법 §101②)·6호 3호 배율: **상수 미인코딩**(blocker·cross-statute). `LIVESTOCK_STANDARD_AREA` 동결 유지.
+별표1의3(목장)·용도지역별 배율(지방세법 시행령 §101②)·6호 3호 배율: **상수 미인코딩**(blocker·cross-statute). `LIVESTOCK_STANDARD_AREA` 동결 유지.
 
 ---
 
@@ -197,6 +197,6 @@ applyTableNotes(base, o, cat):
 ## 6. blocker·cross-statute (자동화 보류)
 
 - **별표1의3 목장**: KoreanLaw `get_annexes` 가지번호("1의2"·"1의3") 전부 절단 실패 → 정본 미확보. `LIVESTOCK_STANDARD_AREA` 8축종 동결(AT-F2B-8). Do: 법제처 직접 확보 → per-head 정정 + anchor.
-- **용도지역별 적용배율**(지방세법 §101②): KoreanLaw 표 본문 추출 실패. 별표3·4·5 실내 부속토지(비고1·3)·6호 3호 의존 → **직접입력 유지**(추정값 금지). 정본 확보 시 용도지역 select + 배율 자동.
+- **용도지역별 적용배율**(지방세법 시행령 §101②): KoreanLaw 표 본문 추출 실패. 별표3·4·5 실내 부속토지(비고1·3)·6호 3호 의존 → **직접입력 유지**(추정값 금지). 정본 확보 시 용도지역 select + 배율 자동.
 - **§168의11⑥ 복합용도 건축물 부속토지 안분**(1호 단일건축물 연면적비·2호 다수건축물 바닥면적비): 본 Phase 밖(scope OUT).
 - **별표3·4·5 비고1 단서**: "당해 토지가 §101①2호 건축물 부속토지 해당 시 배율 미적용" — 예외 처리 후속.

@@ -207,6 +207,13 @@ export function buildOtherLand(
     resortOutdoorArea:              parseNumber(asString(a.nblOtherResortOutdoorArea)),
     resortParkingStdArea:           parseNumber(asString(a.nblOtherResortParkingStdArea)),
     resortBuildingAttachedArea:     parseNumber(asString(a.nblOtherResortBuildingArea)),
+    // F2 Phase B(B-2) — 선수가산·실내미설치·종목합산
+    sportsPlayerCount:              parseNumber(asString(a.nblOtherSportsPlayerCount)),
+    indoorNotInstalled:             asBool(a.nblOtherIndoorNotInstalled),
+    sportsExtraEvents:              asArray<string>(a.nblOtherSportsExtraEvents) as OtherLandUsage["sportsExtraEvents"],
+    indoorFloorArea:                parseNumber(asString(a.nblOtherIndoorFloorArea)),
+    // F2 Phase B(B-3) — 6호 휴양 건축물 바닥면적(§101② 용도지역별 배율 자동)
+    resortBuildingFloorArea:        parseNumber(asString(a.nblOtherResortBuildingFloorArea)),
   };
 }
 

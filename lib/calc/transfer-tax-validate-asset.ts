@@ -458,7 +458,8 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         const has3Element =
           (!!asset.nblOtherResortOutdoorArea && parseDecimal(asset.nblOtherResortOutdoorArea) > 0) ||
           (!!asset.nblOtherResortParkingStdArea && parseDecimal(asset.nblOtherResortParkingStdArea) > 0) ||
-          (!!asset.nblOtherResortBuildingArea && parseDecimal(asset.nblOtherResortBuildingArea) > 0);
+          (!!asset.nblOtherResortBuildingArea && parseDecimal(asset.nblOtherResortBuildingArea) > 0) ||
+          (!!asset.nblOtherResortBuildingFloorArea && parseDecimal(asset.nblOtherResortBuildingFloorArea) > 0);
         const hasDirect = !!asset.nblOtherStandardAreaLimit && parseDecimal(asset.nblOtherStandardAreaLimit) > 0;
         if (!has3Element && !hasDirect)
           return `${label}: 휴양시설 — 옥외방목장·부설주차장·건축물 부속토지 중 하나 또는 기준면적(㎡)을 입력하세요. (§83의4⑫)`;
