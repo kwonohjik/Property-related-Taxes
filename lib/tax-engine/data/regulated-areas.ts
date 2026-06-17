@@ -348,7 +348,12 @@ export function isRegulatedByBjdCodeIn(
   const region =
     regions.find((r) => r.code === sigunguCode) ?? regions.find((r) => r.code === sidoCode);
   if (!region) {
-    return { isRegulated: false, confidence: "high", basis: `${date} 기준 미지정 지역(${sigunguCode})` };
+    // 데이터 수록 시도 내 미매칭 = 진짜 미지정(high). 미수록 시도(데이터 범위 밖)는
+    // "미지정"으로 단정하지 않고 low(직접 확인) — 주소 경로(isRegulatedByAddressIn)와 대칭.
+    const sidoCovered = regions.some((r) => r.code.slice(0, 2) === sidoCode);
+    return sidoCovered
+      ? { isRegulated: false, confidence: "high", basis: `${date} 기준 미지정 지역(${sigunguCode})` }
+      : { isRegulated: false, confidence: "low", basis: `데이터 미수록 시도(${sidoCode}) — 직접 확인 필요` };
   }
 
   const active = findActiveDesignation(region.designations, date);
@@ -414,11 +419,13 @@ export function isRegulatedByBjdCode(bjdCode: string, date: string): RegulatedAr
 }
 
 /**
- * 데이터 수록 시도 — 이 시도 내 미매칭은 "진짜 미지정"(high).
- * 그 외 시도(지방)는 데이터 미수록 → 판정 불가(low, 직접 확인 유도).
- * 계획서 §5: 본 단계 데이터는 수도권(서울·경기·인천) 한정.
+ * 데이터에 수록된 시도명 집합 — 등장하는 region.name의 첫 어절(시도명).
+ * 정적 리스트 대신 REGULATED_REGIONS에서 동적 도출 → 지방 데이터 추가 시 자동 반영(드리프트 0).
+ * 수록 시도 내 미매칭은 "진짜 미지정"(high), 미수록 시도는 판정 불가(low, 직접 확인 유도).
  */
-const COVERED_SIDO_NAMES = ["서울특별시", "경기도", "인천광역시"];
+function coveredSidoNamesOf(regions: RegulatedRegion[]): Set<string> {
+  return new Set(regions.map((r) => r.name.split(/\s+/)[0]));
+}
 
 /**
  * 시도·시군구명 + 날짜 → 조정대상지역 판정 (주소 기반, 순수·데이터 주입).
@@ -450,13 +457,13 @@ export function isRegulatedByAddressIn(
     regions.find((r) => r.code.length === 2 && r.name === sido);
 
   if (!region) {
-    const covered = COVERED_SIDO_NAMES.includes(sido);
+    const covered = coveredSidoNamesOf(regions).has(sido);
     return {
       isRegulated: false,
       confidence: covered ? "high" : "low",
       basis: covered
         ? `${fullName} — ${date} 기준 미지정`
-        : `${sido}는 데이터 미수록(수도권 외) — 직접 확인 필요`,
+        : `${sido}는 데이터 미수록 — 직접 확인 필요`,
     };
   }
 
