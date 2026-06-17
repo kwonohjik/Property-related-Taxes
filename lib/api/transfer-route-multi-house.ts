@@ -25,6 +25,8 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
   return houses.map((h) => ({
     id: h.id,
     region: h.region,
+    // ⑭ 법정동코드 — sellingHouse에 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정 (string, Date 변환 불필요)
+    regionCode: h.regionCode,
     acquisitionDate: new Date(h.acquisitionDate),
     officialPrice: h.officialPrice,
     isInherited: h.isInherited,

@@ -424,6 +424,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : parseInt(primary.residencePeriodMonthsAsset || form.residencePeriodMonths) || 0,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // ④ regionCode — primary 자산 법정동코드(AddressSearch PNU 앞10) 우선, 없으면 form-global fallback.
+    // 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 isRegulatedArea boolean fallback.
+    regionCode: primary.regionCode || form.regionCode || undefined,
     isUnregistered: form.isUnregistered,
     isNonBusinessLand: primary.isNonBusinessLand ?? false,
     isSuccessorRightToMoveIn:

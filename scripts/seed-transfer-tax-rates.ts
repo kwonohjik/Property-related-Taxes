@@ -19,7 +19,6 @@ import {
   surchargeSpecialRulesSchema,
   oneHouseSpecialRulesSchema,
   houseCountExclusionSchema,
-  regulatedAreaHistorySchema,
   nonBusinessLandJudgmentSchema,
   longTermRentalRuleSetSchema,
   newHousingMatrixSchema,
@@ -200,89 +199,6 @@ const transferTaxSeeds = [
       },
       presaleRightStartDate: "2021-01-01",
       officetelStartDate: "2022-01-01",
-    },
-    is_active: true,
-  },
-
-  // 8. 조정대상지역 이력 (서울 25개구 + 경기·인천 주요 지역)
-  //    주요 변경 이력: 2017.8.3 최초 / 2020.6.19 / 2020.12.18 / 2022.9.26 / 2023.1.5 전면 해제
-  {
-    tax_type: "transfer",
-    category: "special",
-    sub_category: "regulated_areas",
-    effective_date: "2017-08-03",
-    rate_table: null,
-    deduction_rules: null,
-    special_rules: {
-      type: "regulated_area_history",
-      regions: [
-        // 서울특별시 — 2017.8.3 전체 지정, 2023.1.5 전면 해제
-        { code: "11110", name: "서울 종로구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11140", name: "서울 중구",   designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11170", name: "서울 용산구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11200", name: "서울 성동구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11215", name: "서울 광진구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11230", name: "서울 동대문구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11260", name: "서울 중랑구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11290", name: "서울 성북구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11305", name: "서울 강북구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11320", name: "서울 도봉구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11350", name: "서울 노원구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11380", name: "서울 은평구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11410", name: "서울 서대문구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11440", name: "서울 마포구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11470", name: "서울 양천구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11500", name: "서울 강서구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11530", name: "서울 구로구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11545", name: "서울 금천구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11560", name: "서울 영등포구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11590", name: "서울 동작구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11620", name: "서울 관악구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11650", name: "서울 서초구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11680", name: "서울 강남구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11710", name: "서울 송파구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "11740", name: "서울 강동구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        // 경기도 — 2020.6.19 지정, 2022.9.26 또는 2023.1.5 해제
-        { code: "41111", name: "수원 장안구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41113", name: "수원 권선구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41115", name: "수원 팔달구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41117", name: "수원 영통구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41131", name: "성남 수정구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "41133", name: "성남 중원구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "41135", name: "성남 분당구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "41150", name: "의정부시",   designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41171", name: "안양 만안구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41173", name: "안양 동안구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41281", name: "고양 덕양구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41285", name: "고양 일산동구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41287", name: "고양 일산서구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41390", name: "하남시",     designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "41410", name: "광명시",     designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "41450", name: "광주시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41460", name: "양주시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41480", name: "구리시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41550", name: "남양주시",   designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "41570", name: "오산시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41590", name: "시흥시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41610", name: "군포시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41630", name: "의왕시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41650", name: "하남시(재)",  designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41670", name: "용인 처인구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41671", name: "용인 기흥구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "41673", name: "용인 수지구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2023-01-05" }] },
-        { code: "41820", name: "파주시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "41830", name: "이천시",     designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-26" }] },
-        { code: "41390", name: "화성시",     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        // 인천광역시
-        { code: "28110", name: "인천 중구",   designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "28140", name: "인천 동구",   designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "28177", name: "인천 미추홀구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "28185", name: "인천 연수구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "28200", name: "인천 남동구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "28237", name: "인천 부평구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "28245", name: "인천 계양구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-        { code: "28260", name: "인천 서구",   designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-26" }] },
-      ],
     },
     is_active: true,
   },
@@ -676,13 +592,6 @@ function validateSeed(seed: {
     const result = houseCountExclusionSchema.safeParse(seed.special_rules);
     if (!result.success) {
       throw new Error(`[${index}] house_count_exclusion 검증 실패: ${result.error.message}`);
-    }
-  }
-
-  if (seed.special_rules && seed.sub_category === "regulated_areas") {
-    const result = regulatedAreaHistorySchema.safeParse(seed.special_rules);
-    if (!result.success) {
-      throw new Error(`[${index}] regulated_areas 검증 실패: ${result.error.message}`);
     }
   }
 

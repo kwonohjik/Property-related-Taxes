@@ -208,7 +208,11 @@ export const houseCountExclusionSchema = z.object({
 
 export type HouseCountExclusionData = z.infer<typeof houseCountExclusionSchema>;
 
-/** 조정대상지역 지정 이력 (transfer:special:regulated_areas) */
+/**
+ * 조정대상지역 지정 이력 구조.
+ * ⚠️ DB 키(transfer:special:regulated_areas)는 폐기됨 — 이 스키마/타입은
+ *    lib/tax-engine/data/regulated-areas.ts 정적 데이터(toRegulatedAreaHistory)의 형태 계약으로만 유지.
+ */
 export const regulatedAreaHistorySchema = z.object({
   type: z.literal("regulated_area_history"),
   regions: z.array(
@@ -265,13 +269,8 @@ export function parseHouseCountExclusion(raw: unknown): HouseCountExclusionData 
   return result.data;
 }
 
-export function parseRegulatedAreaHistory(raw: unknown): RegulatedAreaHistoryData {
-  const result = regulatedAreaHistorySchema.safeParse(raw);
-  if (!result.success) {
-    throw new TaxRateValidationError(`조정대상지역 이력 구조 오류: ${result.error.message}`);
-  }
-  return result.data;
-}
+// (parseRegulatedAreaHistory 폐기 — 조정대상지역 이력은 lib/tax-engine/data/regulated-areas.ts
+//  정적 단일 소스(toRegulatedAreaHistory)로 전환. DB 키 transfer:special:regulated_areas 미사용.)
 
 // ============================================================
 // 장기임대주택 감면 규칙 V2 스키마 (transfer:deduction:long_term_rental_v2)

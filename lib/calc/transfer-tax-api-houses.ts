@@ -30,6 +30,8 @@ export function buildHousesPayload(
   const sellingHouse = {
     id: "selling",
     region: sellingHouseRegion,
+    // ④⑬ 법정동코드 — 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 boolean fallback
+    regionCode: primary.regionCode || undefined,
     acquisitionDate: primary.acquisitionDate,
     officialPrice: parseAmount(primary.standardPriceAtTransfer) || 0,
     isInherited: false,

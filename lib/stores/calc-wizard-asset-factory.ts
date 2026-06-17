@@ -71,6 +71,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     latitude: "",
     isRegulatedAreaAtAcq: null,
     isRegulatedAreaAtTransfer: null,
+    regionCode: undefined,
     parcelMode: false,
     parcels: [],
     isOneHousehold: false,
@@ -796,5 +797,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   }
   // ── Phase 2·3 + 매매사례가액 신규 필드 normalize — 별도 모듈 (800줄 정책, 2026-06-15) ──
   applyPhase3Normalize(a);
+  // ③ regionCode normalize — 구 세션에 없으면 undefined (optional, string 아닌 값 제거)
+  if (a.regionCode !== undefined && typeof a.regionCode !== "string") a.regionCode = undefined;
   return a as unknown as AssetForm;
 }

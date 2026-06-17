@@ -26,7 +26,6 @@ import {
   parseProgressiveRate,
   parseSurchargeRate,
   parseHouseCountExclusion,
-  parseRegulatedAreaHistory,
   parseNonBusinessLandJudgment,
   parseLongTermRentalRuleSet,
   parseNewHousingMatrix,
@@ -40,6 +39,7 @@ import {
   type LongTermRentalRuleSet,
   type NewHousingMatrixData,
 } from "./schemas/rate-table.schema";
+import { toRegulatedAreaHistory } from "./data/regulated-areas";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { getRate } from "@/lib/db/tax-rates";
 import type { TaxBracket } from "./types";
@@ -129,11 +129,10 @@ export function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
     houseCountExclusionRules = parseHouseCountExclusion(houseCountRecord.specialRules);
   }
 
-  const regulatedAreaRecord = getRate(rates, "transfer", "special", "regulated_areas");
-  let regulatedAreaHistory: RegulatedAreaHistoryData | undefined;
-  if (regulatedAreaRecord?.specialRules) {
-    regulatedAreaHistory = parseRegulatedAreaHistory(regulatedAreaRecord.specialRules);
-  }
+  // 조정대상지역 이력 — 정적 데이터 우선 사용 (DB 키 없어도 동작).
+  // DB 키(transfer:special:regulated_areas)는 optional로 남기고 미사용.
+  // 정밀 판정(isRegulatedByBjdCode)은 data/regulated-areas.ts 단일 소스로 처리.
+  const regulatedAreaHistory: RegulatedAreaHistoryData = toRegulatedAreaHistory();
 
   const nonBizLandRecord = getRate(rates, "transfer", "special", "non_business_land_judgment");
   let nonBusinessLandJudgmentRules: NonBusinessLandJudgmentSchemaData | undefined;
@@ -178,6 +177,7 @@ export {
   checkExemption,
   meetsOneHouseHoldingResidence,
   resolveExemptionProviso,
+  resolveWasRegulatedAtAcquisition,
 } from "./transfer-tax-exemption";
 
 // ============================================================
