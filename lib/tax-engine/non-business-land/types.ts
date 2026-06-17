@@ -258,8 +258,18 @@ export interface OtherLandUsage {
   resortOutdoorArea?: number;
   /** 6호 휴양 §83의4⑫2호 — 부설주차장 설치기준면적(㎡). 엔진이 ×2(2배 이내). */
   resortParkingStdArea?: number;
-  /** 6호 휴양 §83의4⑫3호 — 건축물 부속토지 면적(㎡, 용도지역별 배율 적용 후·직접입력). */
+  /** 6호 휴양 §83의4⑫3호 — 건축물 부속토지 면적(㎡, 용도지역별 배율 적용 후·직접입력). residential 등 배율 매핑 불가 시 fallback. */
   resortBuildingAttachedArea?: number;
+  /** 6호 휴양 §83의4⑫3호 — 건축물 바닥면적(㎡). zoneType→§101②(지방세법 시행령) 용도지역별 배율 자동(바닥 × 배율). F2 Phase B(B-3 배율 자동). */
+  resortBuildingFloorArea?: number;
+  /** 별표3·4 비고 — 테니스·연식정구 선수 수(2인 초과 2인마다 가산: 별표3 483㎡·별표4 725㎡). F2 Phase B(B-2). */
+  sportsPlayerCount?: number;
+  /** 별표3 비고4 — 실내 운동경기부가 실내체육시설을 설치하지 않은 경우 800㎡(workplace 전용). F2 Phase B(B-2). */
+  indoorNotInstalled?: boolean;
+  /** 별표3·4 비고2 — 주종목 외 추가 보유 종목(다중). **합산이 원칙**이되 5종목군(축구·야구·럭비·필드하키·미식축구)은 그 중 max1만. F2 Phase B(B-2 합산). */
+  sportsExtraEvents?: Array<keyof typeof SPORTS_OUTDOOR_STD>;
+  /** 별표3·4·5 비고1·3 — 실내 종목 체육시설 건축물 바닥면적(㎡). 부속토지 = min(바닥, 표값) × zoneType 배율(§101②). 미입력 시 표값 fallback. F2 Phase B(B-2 실내 부속토지). */
+  indoorFloorArea?: number;
 }
 
 export interface ForestUsageDetail {

@@ -101,6 +101,34 @@ describe("[NBL-OTHER-UI] ⑤ §168의11① 호별 면적기준 위젯", () => {
     render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
     expect(screen.getByText(/옥외 방목장·식물원 면적/)).toBeTruthy();
     expect(screen.getByText(/부설주차장 설치기준면적 \(㎡\)/)).toBeTruthy(); // 옵션 설명과 구분 위해 (㎡) 한정
-    expect(screen.getByText(/건축물 부속토지 면적/)).toBeTruthy();
+    expect(screen.getByText(/건축물 바닥면적/)).toBeTruthy();
+  });
+
+  // F2 Phase B(B-2) — 선수가산: 테니스 선택 시 선수 수 입력 노출.
+  it("sports 테니스 선택 시 '선수 수' 입력 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "sports" as const, nblOtherSportsFacilityType: "tennis" };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/선수 수/)).toBeTruthy();
+  });
+
+  // F2 Phase B(B-2) — 실내미설치: workplace 실내 종목 선택 시 토글 노출.
+  it("sports workplace 실내(수영) 선택 시 '실내체육시설 미설치' 토글 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "sports" as const, nblOtherSportsCategory: "workplace", nblOtherSportsFacilityType: "swimming" };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByTestId("nbl-other-indoor-not-installed")).toBeTruthy();
+  });
+
+  // F2 Phase B(B-2) — 종목합산: 종목 선택 시 추가 보유 종목 토글 노출.
+  it("sports 종목 선택 시 추가 보유 종목 토글 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "sports" as const, nblOtherSportsFacilityType: "soccer" };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByTestId("nbl-other-sports-extra-baseball")).toBeTruthy();
+  });
+
+  // F2 Phase B(B-2) — 실내 부속토지: 실내 종목 선택 시 실내 시설 바닥면적 입력 노출.
+  it("sports 실내 종목(수영) 선택 시 '실내 시설 바닥면적' 입력 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherRelatedBusinessType: "sports" as const, nblOtherSportsFacilityType: "swimming" };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/실내 시설 바닥면적/)).toBeTruthy();
   });
 });
