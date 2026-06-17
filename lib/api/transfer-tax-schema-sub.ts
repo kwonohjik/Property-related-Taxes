@@ -133,6 +133,14 @@ export const nonBusinessLandRawSchema = z.object({
   nblOtherSportsFacilityType: z.string().optional(),
   nblOtherReserveUnitSize: z.string().optional(),
   nblOtherReserveFacilities: z.array(z.string()).optional(),
+  // F2 Phase B — 체육시설 유형(별표3/4/5)·종업원 체육시설(별표5)
+  nblOtherSportsCategory: z.string().optional(),
+  nblOtherEmployeeCount: z.string().optional(),
+  nblOtherEmployeeFacilityKinds: z.array(z.string()).optional(),
+  // F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소
+  nblOtherResortOutdoorArea: z.string().optional(),
+  nblOtherResortParkingStdArea: z.string().optional(),
+  nblOtherResortBuildingArea: z.string().optional(),
   // §168의11② 수입금액비율 (기타토지 특정 업종)
   nblRevenueBusinessType: z.string().optional(),
   nblRevenueCurrentRevenue: z.string().optional(),

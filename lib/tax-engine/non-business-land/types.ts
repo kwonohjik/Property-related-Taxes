@@ -248,6 +248,18 @@ export interface OtherLandUsage {
   reserveForcesUnitSize?: keyof typeof RESERVE_FORCES_STD;
   /** 5호 다목 예비군 포함 시설 (별표6 합산 — 전술교육장 외 실시 불가 시 포함). */
   reserveForcesFacilities?: Array<"tactical" | "shooting_prep" | "range" | "basic">;
+  /** 1호 체육시설 유형 (별표3 직장운동경기부 / 별표4 운동경기업 / 별표5 종업원) — F2 Phase B. 미설정 시 workplace(별표3). */
+  sportsCategory?: "workplace" | "business" | "employee";
+  /** 별표5 종업원 체육시설: 종업원수(명). 구간 선형보간 — F2 Phase B. */
+  employeeCount?: number;
+  /** 별표5 보유 시설(다중·합산): 운동장(field)·코트(court)·실내(indoor) — F2 Phase B. */
+  employeeFacilityKinds?: Array<"field" | "court" | "indoor">;
+  /** 6호 휴양 §83의4⑫1호 — 옥외 동물방목장·식물원 면적(㎡). F2 Phase B(B-3). */
+  resortOutdoorArea?: number;
+  /** 6호 휴양 §83의4⑫2호 — 부설주차장 설치기준면적(㎡). 엔진이 ×2(2배 이내). */
+  resortParkingStdArea?: number;
+  /** 6호 휴양 §83의4⑫3호 — 건축물 부속토지 면적(㎡, 용도지역별 배율 적용 후·직접입력). */
+  resortBuildingAttachedArea?: number;
 }
 
 export interface ForestUsageDetail {

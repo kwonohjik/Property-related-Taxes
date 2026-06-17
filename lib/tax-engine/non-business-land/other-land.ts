@@ -24,7 +24,15 @@ import type {
 import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
 import { computeAreaProportioning } from "./utils/area-proportioning";
-import { NBL_AREA_MULTIPLIER, SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
+import {
+  NBL_AREA_MULTIPLIER,
+  SPORTS_OUTDOOR_STD,
+  SPORTS_INDOOR_STD,
+  SPORTS_BUSINESS_OUTDOOR_STD,
+  SPORTS_BUSINESS_INDOOR_STD,
+  RESERVE_FORCES_STD,
+  employeeSportsArea,
+} from "./data/area-standards";
 import { computeRevenueTest } from "./revenue-test";
 
 /**
@@ -60,10 +68,24 @@ export function resolveAreaLimit(o: OtherLandUsage): number | undefined {
     case "vacant_lot_1household":
       return NBL_AREA_MULTIPLIER.VACANT_LOT_1HOUSEHOLD;
     case "sports": {
-      // F2 Phase A — 별표3 종목 자동 lookup(실외 11종·실내 3구간), 미선택 시 standardAreaLimit fallback
+      // F2 Phase B — 체육시설 유형 분기: workplace(별표3)·business(별표4)·employee(별표5). 기본 workplace.
+      const cat = o.sportsCategory ?? "workplace";
+      if (cat === "employee") {
+        // 별표5 종업원 체육시설 — 보유 시설별 기준면적 합산 (비고2: 50인↓ 코트만)
+        const kinds = o.employeeFacilityKinds;
+        const n = o.employeeCount;
+        if (kinds && kinds.length > 0 && n !== undefined && n > 0) {
+          if (n <= 50) return employeeSportsArea("court", n);
+          return kinds.reduce((sum, k) => sum + employeeSportsArea(k, n), 0);
+        }
+        return o.standardAreaLimit; // 시설 미선택·n≤0 → 직접입력 fallback
+      }
+      // workplace(별표3) | business(별표4) — 종목 자동 lookup, 미선택 시 standardAreaLimit fallback
+      const outdoor = cat === "business" ? SPORTS_BUSINESS_OUTDOOR_STD : SPORTS_OUTDOOR_STD;
+      const indoor = cat === "business" ? SPORTS_BUSINESS_INDOOR_STD : SPORTS_INDOOR_STD;
       const t = o.sportsFacilityType;
       if (t) {
-        const std = (SPORTS_OUTDOOR_STD as Record<string, number>)[t] ?? (SPORTS_INDOOR_STD as Record<string, number>)[t];
+        const std = (outdoor as Record<string, number>)[t] ?? (indoor as Record<string, number>)[t];
         if (std !== undefined) return std;
       }
       return o.standardAreaLimit;
@@ -79,8 +101,15 @@ export function resolveAreaLimit(o: OtherLandUsage): number | undefined {
       return o.standardAreaLimit;
     }
     case "parking_attached":
-    case "resort":
-      return o.standardAreaLimit; // 별표/설치기준 직접입력 (미입력 시 undefined → 면적기준 미적용)
+      return o.standardAreaLimit; // 2호가목 설치기준면적 직접입력 (미입력 시 undefined → 면적기준 미적용)
+    case "resort": {
+      // F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소 합산: 옥외 방목장·식물원 + 부설주차장×2 + 건축물 부속토지
+      const sum =
+        (o.resortOutdoorArea ?? 0) +
+        (o.resortParkingStdArea ?? 0) * 2 +
+        (o.resortBuildingAttachedArea ?? 0);
+      return sum > 0 ? sum : o.standardAreaLimit; // 3요소 미입력 시 직접입력 fallback
+    }
     default:
       return undefined; // etc_14호 · none · 미설정 → 면적기준 없음 (boolean 유지)
   }

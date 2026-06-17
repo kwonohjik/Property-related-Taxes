@@ -30,6 +30,14 @@ export interface NblOtherFormSlice {
   nblOtherSportsFacilityType: string;
   nblOtherReserveUnitSize: string;
   nblOtherReserveFacilities: string[];
+  // §168의11① F2 Phase B — 체육시설 유형(별표3 직장/별표4 운동경기업/별표5 종업원)·종업원 체육시설
+  nblOtherSportsCategory: string;
+  nblOtherEmployeeCount: string;
+  nblOtherEmployeeFacilityKinds: string[];
+  // §168의11① F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소(옥외방목장·부설주차장·건축물 부속토지)
+  nblOtherResortOutdoorArea: string;
+  nblOtherResortParkingStdArea: string;
+  nblOtherResortBuildingArea: string;
   // §168의11② 수입금액비율 (기타토지 특정 업종)
   nblRevenueBusinessType:
     | ""

@@ -51,22 +51,22 @@ const AREA_LEGAL_BASIS: Partial<Record<Exclude<RelatedBusinessType, "">, { legal
   vacant_lot_1household: { legalBasis: "소득세법 시행령 §168의11①13호", label: "§168의11①13호" },
 };
 
-// F2 Phase A — 별표3 체육시설 종목(실외 11 + 실내 3) · 별표6 예비군 부대규모·시설
+// F2 Phase A/B — 체육시설 종목(실외 11 + 실내 3). 유형별 기준면적(별표3 직장 / 별표4 운동경기업)은 자동 산출 — 라벨은 종목명만.
 const SPORTS_FACILITY_OPTIONS = [
-  { value: "soccer", label: "축구장 (11,000㎡)" },
-  { value: "baseball", label: "야구장 (14,000㎡)" },
-  { value: "rugby", label: "럭비장 (9,000㎡)" },
-  { value: "field_hockey", label: "필드하키장 (6,500㎡)" },
-  { value: "tennis", label: "테니스장 (650㎡)" },
-  { value: "soft_tennis", label: "연식정구장 (650㎡)" },
-  { value: "american_football", label: "미식축구장 (7,000㎡)" },
-  { value: "equestrian", label: "승마장 (6,200㎡)" },
-  { value: "shooting", label: "사격장 (4,000㎡)" },
-  { value: "archery", label: "궁도장 (7,100㎡)" },
-  { value: "other_outdoor", label: "기타 실외 (3,000㎡)" },
-  { value: "ball_court", label: "실내 구기·격투·체조 등 (800㎡)" },
-  { value: "swimming", label: "수영·수구·다이빙 (1,000㎡)" },
-  { value: "ice_rink", label: "아이스하키·피겨·롤러 (1,800㎡)" },
+  { value: "soccer", label: "축구장" },
+  { value: "baseball", label: "야구장" },
+  { value: "rugby", label: "럭비장" },
+  { value: "field_hockey", label: "필드하키장" },
+  { value: "tennis", label: "테니스장" },
+  { value: "soft_tennis", label: "연식정구장" },
+  { value: "american_football", label: "미식축구장" },
+  { value: "equestrian", label: "승마장" },
+  { value: "shooting", label: "사격장" },
+  { value: "archery", label: "궁도장" },
+  { value: "other_outdoor", label: "기타 실외" },
+  { value: "ball_court", label: "실내 구기·격투·체조 등" },
+  { value: "swimming", label: "수영·수구·다이빙" },
+  { value: "ice_rink", label: "아이스하키·피겨·롤러" },
 ] as const;
 const SPORTS_FACILITY_LABEL: Record<string, string> = Object.fromEntries(SPORTS_FACILITY_OPTIONS.map((o) => [o.value, o.label]));
 
@@ -84,6 +84,23 @@ const RESERVE_FAC_OPTIONS = [
   { value: "range", label: "사격장" },
   { value: "basic", label: "기초훈련장" },
 ] as const;
+
+// F2 Phase B — 체육시설 유형(별표3 직장운동경기부 / 별표4 운동경기업 / 별표5 종업원)
+const SPORTS_CATEGORY_OPTIONS: RadioCardOption<"workplace" | "business" | "employee">[] = [
+  { value: "workplace", label: "직장운동경기부 (별표3)", description: "선수전용 — §83의4①", testId: "nbl-other-sports-category-workplace" },
+  { value: "business", label: "운동경기업 (별표4)", description: "선수전용 — §83의4③", testId: "nbl-other-sports-category-business" },
+  { value: "employee", label: "종업원 (별표5)", description: "종업원수 기준 — §83의4④", testId: "nbl-other-sports-category-employee" },
+];
+const EMPLOYEE_FACILITY_OPTIONS = [
+  { value: "field", label: "운동장" },
+  { value: "court", label: "코트" },
+  { value: "indoor", label: "실내체육시설" },
+] as const;
+const SPORTS_CATEGORY_BASIS: Record<string, { legalBasis: string; label: string }> = {
+  workplace: { legalBasis: "소득세법 시행규칙 §83의4①", label: "§83의4①(별표3)" },
+  business: { legalBasis: "소득세법 시행규칙 §83의4③", label: "§83의4③(별표4)" },
+  employee: { legalBasis: "소득세법 시행규칙 §83의4④", label: "§83의4④(별표5)" },
+};
 
 const REVENUE_BIZ_LABEL: Record<string, string> = {
   none: "해당 없음",
@@ -108,6 +125,8 @@ export function OtherLandDetailSection({
   const areaBasis = relatedType ? AREA_LEGAL_BASIS[relatedType] : undefined;
   const sportsFacilityLabel: string = SPORTS_FACILITY_LABEL[asset.nblOtherSportsFacilityType] ?? "선택 안 함 (직접입력)";
   const reserveSizeLabel: string = RESERVE_SIZE_LABEL[asset.nblOtherReserveUnitSize] ?? "선택 안 함 (직접입력)";
+  const sportsCategory = (asset.nblOtherSportsCategory || "workplace") as "workplace" | "business" | "employee";
+  const sportsBasis = SPORTS_CATEGORY_BASIS[sportsCategory];
 
   return (
     <div className="space-y-3">
@@ -175,39 +194,104 @@ export function OtherLandDetailSection({
           onChange={(v) => onAssetChange({ nblOtherRelatedBusinessType: v })}
         />
 
-        {/* parking_attached·resort — 기준면적 직접입력 (별표 자동산출 미지원) */}
-        {(relatedType === "parking_attached" || relatedType === "resort") && (
+        {/* parking_attached — 기준면적 직접입력 (별표 자동산출 미지원) */}
+        {relatedType === "parking_attached" && (
           <FieldCard
             label="기준면적 (㎡)"
             unit="㎡"
-            hint={relatedType === "parking_attached"
-              ? "「주차장법」 부설주차장 설치기준면적. 이 면적까지 사업용, 초과분 비사업용"
-              : "전문·종합휴양업 합산 기준면적(옥외방목장+부설주차장×2+건축물 부속토지)"}
+            hint="「주차장법」 부설주차장 설치기준면적. 이 면적까지 사업용, 초과분 비사업용"
             trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}
           >
             <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
           </FieldCard>
         )}
 
-        {/* F2 Phase A — sports: 별표3 종목 자동 lookup, 미선택 시 직접입력(별표4·5 등) */}
-        {relatedType === "sports" && (
+        {/* F2 Phase B(B-3) — resort: 6호 휴양 §83의4⑫ 3요소 합산 */}
+        {relatedType === "resort" && (
           <>
-            <FieldCard label="체육시설 종목 (별표3)" hint="종목 선택 시 기준면적 자동 산출. 미선택 시 아래 직접입력." trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
-              <Select
-                value={asset.nblOtherSportsFacilityType || "__clear"}
-                onValueChange={(v) => onAssetChange({ nblOtherSportsFacilityType: v && v !== "__clear" ? v : "" })}
-              >
-                <SelectTrigger><SelectValue>{sportsFacilityLabel}</SelectValue></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__clear">선택 안 함 (직접입력)</SelectItem>
-                  {SPORTS_FACILITY_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <FieldCard label="옥외 방목장·식물원 면적 (㎡)" unit="㎡" hint="§83의4⑫1호 — 옥외 동물방목장·식물원 토지 면적" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+              <DecimalInput value={asset.nblOtherResortOutdoorArea} onChange={(v) => onAssetChange({ nblOtherResortOutdoorArea: v })} />
             </FieldCard>
-            {!asset.nblOtherSportsFacilityType && (
-              <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡">
+            <FieldCard label="부설주차장 설치기준면적 (㎡)" unit="㎡" hint="§83의4⑫2호 — 「주차장법」 설치기준면적. 엔진이 ×2(2배 이내) 적용">
+              <DecimalInput value={asset.nblOtherResortParkingStdArea} onChange={(v) => onAssetChange({ nblOtherResortParkingStdArea: v })} />
+            </FieldCard>
+            <FieldCard label="건축물 부속토지 면적 (㎡)" unit="㎡" hint="§83의4⑫3호 — 건축물 바닥면적 × 용도지역별 배율(지방세법 §101②) 적용 후 부속토지 면적을 직접 입력">
+              <DecimalInput value={asset.nblOtherResortBuildingArea} onChange={(v) => onAssetChange({ nblOtherResortBuildingArea: v })} />
+            </FieldCard>
+            {!(asset.nblOtherResortOutdoorArea || asset.nblOtherResortParkingStdArea || asset.nblOtherResortBuildingArea) && (
+              <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡" hint="3요소 미입력 시 합산 기준면적 직접입력">
                 <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
               </FieldCard>
+            )}
+          </>
+        )}
+
+        {/* F2 Phase B — sports: 체육시설 유형(별표3/4/5) → 종목 lookup 또는 종업원수 선형보간 */}
+        {relatedType === "sports" && (
+          <>
+            <FieldCard label="체육시설 유형">
+              <RadioCardGroup
+                name="nblOtherSportsCategory"
+                tone="sky"
+                layout="inline"
+                options={SPORTS_CATEGORY_OPTIONS}
+                value={sportsCategory}
+                onChange={(v) => onAssetChange({ nblOtherSportsCategory: v })}
+              />
+            </FieldCard>
+
+            {/* workplace(별표3) · business(별표4) — 종목 선택 */}
+            {sportsCategory !== "employee" && (
+              <>
+                <FieldCard label="체육시설 종목" hint="유형(직장 별표3 / 운동경기업 별표4)에 따라 기준면적 자동 산출. 미선택 시 아래 직접입력." trailing={sportsBasis && <LawArticleModal legalBasis={sportsBasis.legalBasis} label={sportsBasis.label} />}>
+                  <Select
+                    value={asset.nblOtherSportsFacilityType || "__clear"}
+                    onValueChange={(v) => onAssetChange({ nblOtherSportsFacilityType: v && v !== "__clear" ? v : "" })}
+                  >
+                    <SelectTrigger><SelectValue>{sportsFacilityLabel}</SelectValue></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__clear">선택 안 함 (직접입력)</SelectItem>
+                      {SPORTS_FACILITY_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </FieldCard>
+                {!asset.nblOtherSportsFacilityType && (
+                  <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡">
+                    <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
+                  </FieldCard>
+                )}
+              </>
+            )}
+
+            {/* employee(별표5) — 종업원수 + 보유 시설 다중 */}
+            {sportsCategory === "employee" && (
+              <>
+                <FieldCard label="종업원 수 (명)" unit="명" hint="별표5 종업원수 구간 기준면적 자동 산출(50인 이하는 코트면적만). 미입력 시 아래 직접입력." trailing={sportsBasis && <LawArticleModal legalBasis={sportsBasis.legalBasis} label={sportsBasis.label} />}>
+                  <DecimalInput value={asset.nblOtherEmployeeCount} onChange={(v) => onAssetChange({ nblOtherEmployeeCount: v })} />
+                </FieldCard>
+                <div className="space-y-1.5">
+                  <p className="text-xs text-muted-foreground">보유 시설 (다중 — 각 기준면적 합산)</p>
+                  {EMPLOYEE_FACILITY_OPTIONS.map((f) => (
+                    <div key={f.value} data-testid={`nbl-other-employee-kind-${f.value}`}>
+                      <ToggleCard
+                        variant="chip"
+                        tone="sky"
+                        title={f.label}
+                        checked={asset.nblOtherEmployeeFacilityKinds?.includes(f.value) ?? false}
+                        onCheckedChange={(c) => {
+                          const cur = asset.nblOtherEmployeeFacilityKinds ?? [];
+                          onAssetChange({ nblOtherEmployeeFacilityKinds: c ? [...cur, f.value] : cur.filter((x) => x !== f.value) });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {!(asset.nblOtherEmployeeCount && (asset.nblOtherEmployeeFacilityKinds?.length ?? 0) > 0) && (
+                  <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡">
+                    <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
+                  </FieldCard>
+                )}
+              </>
             )}
           </>
         )}
