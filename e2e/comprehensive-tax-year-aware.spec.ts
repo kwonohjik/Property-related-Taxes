@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, addHouse, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 과세연도별 세법 E2E (Phase D)
@@ -39,8 +40,10 @@ test.describe("종합부동산세 과세연도별 세법", () => {
 
     await page.getByRole("radio", { name: "2022" }).check();
     await clickNext(page); // Step1 → Step2
+    await openHouseModal(page, 0);
     await page.getByPlaceholder("금액 입력").first().fill("950000000");
     await page.getByPlaceholder("0.00").first().fill("84");
+    await closeHouseModal(page);
     await clickNext(page); // Step2 → Step3
     await clickNext(page); // Step3 → Step4(토지·계산)
     await calcAndWait(page);
@@ -85,16 +88,19 @@ test.describe("종합부동산세 과세연도별 세법", () => {
     await clickNext(page); // → Step2
 
     // 주택 3채: 14억 + 10억 + 5억 = 29억
-    //   각 주택 카드에 "금액 입력" placeholder가 2개(공시가격·재산세 부과세액)이므로
-    //   공시가격은 nth 0·2·4 (부과재산세 nth 1·3·5는 미입력). 면적("0.00")은 주택당 1개 → nth 0·1·2.
-    await page.getByPlaceholder("금액 입력").nth(0).fill("1400000000");
-    await page.getByPlaceholder("0.00").nth(0).fill("84");
-    await page.getByRole("button", { name: /주택 추가/ }).click();
-    await page.getByPlaceholder("금액 입력").nth(2).fill("1000000000");
-    await page.getByPlaceholder("0.00").nth(1).fill("84");
-    await page.getByRole("button", { name: /주택 추가/ }).click();
-    await page.getByPlaceholder("금액 입력").nth(4).fill("500000000");
-    await page.getByPlaceholder("0.00").nth(2).fill("84");
+    //   테이블+모달 전환 후 각 주택은 별도 모달 → 한 주택만 보이므로 모달 안 .first().
+    await openHouseModal(page, 0);
+    await page.getByPlaceholder("금액 입력").first().fill("1400000000");
+    await page.getByPlaceholder("0.00").first().fill("84");
+    await closeHouseModal(page);
+    await addHouse(page); // 주택2 추가 + 모달 자동 오픈
+    await page.getByPlaceholder("금액 입력").first().fill("1000000000");
+    await page.getByPlaceholder("0.00").first().fill("84");
+    await closeHouseModal(page);
+    await addHouse(page); // 주택3 추가 + 모달 자동 오픈
+    await page.getByPlaceholder("금액 입력").first().fill("500000000");
+    await page.getByPlaceholder("0.00").first().fill("84");
+    await closeHouseModal(page);
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4(토지·계산)
     await calcAndWait(page);
@@ -115,8 +121,10 @@ test.describe("종합부동산세 과세연도별 세법", () => {
 
     await page.getByRole("radio", { name: "2021" }).check();
     await clickNext(page); // → Step2
+    await openHouseModal(page, 0);
     await page.getByPlaceholder("금액 입력").first().fill("500000000");
     await page.getByPlaceholder("0.00").first().fill("84");
+    await closeHouseModal(page);
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
 

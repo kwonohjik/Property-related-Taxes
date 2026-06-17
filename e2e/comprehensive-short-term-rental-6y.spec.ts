@@ -1,4 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
+import {
+  openHouseModal,
+  closeHouseModal,
+  expandHouseAdvanced,
+} from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 단기민간임대주택(6년형) 합산배제 E2E — 시행령 §3①10호(건설)·11호(매입)
@@ -46,13 +51,21 @@ test.describe("종부세 단기민간임대 6년 합산배제", () => {
     await page.getByRole("radio", { name: "2024" }).check();
     await clickNext(page);
 
-    // Step2: 공시 5억·면적 100㎡·수도권·합산배제 단기건설
+    // Step2: 공시 5억·면적 100㎡·수도권·합산배제 단기건설 (모두 주택 편집 모달 안)
+    //   공시·면적·수도권은 모달 본문, 합산배제 유형 select는 고급 옵션 안.
+    await openHouseModal(page, 0);
     await page.getByPlaceholder("금액 입력").first().fill("500000000");
     await page.getByPlaceholder("0.00").first().fill("100");
-    await page.locator('select:has(option[value="metro"])').selectOption("metro");
     await page
+      .getByRole("dialog")
+      .locator('select:has(option[value="metro"])')
+      .selectOption("metro");
+    await expandHouseAdvanced(page);
+    await page
+      .getByRole("dialog")
       .locator('select:has(option[value="private_short_term_rental_6y_construction"])')
       .selectOption("private_short_term_rental_6y_construction");
+    await closeHouseModal(page);
     await clickNext(page);
 
     // Step3: 자동매칭(exclusionType→rentalRegistrationType) 확인 + 등록일·임대개시일
@@ -77,13 +90,20 @@ test.describe("종부세 단기민간임대 6년 합산배제", () => {
     await page.getByRole("radio", { name: "2024" }).check();
     await clickNext(page);
 
-    // Step2: 공시 2억·면적 200㎡(매입은 면적조건 없음)·비수도권·합산배제 단기매입
+    // Step2: 공시 2억·면적 200㎡(매입은 면적조건 없음)·비수도권·합산배제 단기매입 (모달 안)
+    await openHouseModal(page, 0);
     await page.getByPlaceholder("금액 입력").first().fill("200000000");
     await page.getByPlaceholder("0.00").first().fill("200");
-    await page.locator('select:has(option[value="metro"])').selectOption("non_metro");
     await page
+      .getByRole("dialog")
+      .locator('select:has(option[value="metro"])')
+      .selectOption("non_metro");
+    await expandHouseAdvanced(page);
+    await page
+      .getByRole("dialog")
       .locator('select:has(option[value="private_short_term_rental_6y_purchase"])')
       .selectOption("private_short_term_rental_6y_purchase");
+    await closeHouseModal(page);
     await clickNext(page);
 
     // Step3: 자동매칭 매입 확인 + 등록일·임대개시일

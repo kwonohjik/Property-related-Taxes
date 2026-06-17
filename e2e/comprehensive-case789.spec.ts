@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, addHouse, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 사례 7·8·9 — 주택분 재산세 부과세액 직접입력 (propertyTaxAmount) E2E
@@ -49,9 +50,11 @@ test.describe("종합부동산세 사례7·8 — 재산세 부과세액 직접�
     await clickNext(page);
 
     // Step2: 공시가격 8억(통합공시) + 부과재산세 714,000 (구별 면적안분 합산)
-    //   "금액 입력" nth0 = 공시가격, nth1 = 부과재산세 (사례6 분리 토글 OFF → 토지/건물 숨김)
-    await page.getByPlaceholder("금액 입력").nth(0).fill("800000000");
+    //   모달 안 "금액 입력" first=공시가격, nth1=부과재산세 (사례6 분리 토글 OFF → 토지/건물 숨김)
+    await openHouseModal(page, 0);
+    await page.getByPlaceholder("금액 입력").first().fill("800000000");
     await page.getByPlaceholder("금액 입력").nth(1).fill("714000");
+    await closeHouseModal(page);
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4(토지·계산)
 
@@ -98,17 +101,20 @@ test.describe("종합부동산세 사례7·8 — 재산세 부과세액 직접�
     await clickNext(page);
 
     // Step2 주택1(서초): 공시 20억, 감면율 30%, 부과재산세 2,702,700
-    //   "금액 입력" nth0=공시·nth1=부과재산세 / "숫자 입력" nth0=지분율·nth1=감면율
-    await page.getByPlaceholder("금액 입력").nth(0).fill("2000000000");
+    //   모달 안 "금액 입력" first=공시·nth1=부과재산세 / "숫자 입력" nth0=지분율·nth1=감면율
+    await openHouseModal(page, 0);
+    await page.getByPlaceholder("금액 입력").first().fill("2000000000");
     await page.getByPlaceholder("숫자 입력").nth(1).fill("30");
     await page.getByPlaceholder("금액 입력").nth(1).fill("2702700");
+    await closeHouseModal(page);
 
-    // 주택2(강남) 추가: 공시 10억, 부과재산세 1,677,000 ("금액 입력" nth2=공시·nth3=부과재산세)
-    await page.getByRole("button", { name: /주택 추가/ }).click();
-    await page.getByPlaceholder("금액 입력").nth(2).fill("1000000000");
-    await page.getByPlaceholder("금액 입력").nth(3).fill("1677000");
+    // 주택2(강남) 추가: 공시 10억, 부과재산세 1,677,000 (모달 안 "금액 입력" first=공시·nth1=부과재산세)
+    await addHouse(page);
+    await page.getByPlaceholder("금액 입력").first().fill("1000000000");
+    await page.getByPlaceholder("금액 입력").nth(1).fill("1677000");
+    await closeHouseModal(page);
 
-    // 당해 조정대상지역 2주택 토글 ON (중과 2.2%) — 2단계 주택 목록 상단(cap-mode 위) 첫 switch
+    // 당해 조정대상지역 2주택 토글 ON (중과 2.2%) — 2단계 공통설정(모달 밖) 첫 switch
     //   (세부담상한 5단계 제거 후 당해 조정대상지역 토글이 2단계로 이동)
     await page.getByRole("switch").first().click();
 

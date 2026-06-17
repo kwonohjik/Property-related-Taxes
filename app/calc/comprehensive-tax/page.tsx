@@ -111,7 +111,8 @@ function Step2Properties() {
       {/* ⑤ 주택 세부담상한 (직전 공시가격 단일 입력원) — 모드가 각 주택 카드 직전공시 표시·전송 제어.
           "모드 토글은 영향 필드 직전" 원칙: 모드가 주택 목록 위. */}
       {!isCorporateSpecial ? (
-        <div className="space-y-3">
+        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+          <p className="text-xs font-semibold text-slate-600">공통 설정 · 모든 주택에 적용</p>
           {/* 당해 조정대상지역 2주택 (구법 < 2023) — 당해연도 세율·상한 분기 */}
           {showMultiHouseCap && !isCorporateGeneral && (
             <ToggleCard
@@ -173,7 +174,7 @@ function Step2Properties() {
               />
               <div className="rounded-md bg-sky-50/40 border border-sky-200 px-3 py-2 text-xs text-sky-700">
                 <p>
-                  각 주택의 직전연도 공시가격은 아래 주택 카드의 당해 공시가격 바로 아래에
+                  각 주택의 직전연도 공시가격은 아래 주택 행을 열어 &lsquo;세부담 상한&rsquo; 섹션에
                   입력합니다. 생년월일·취득일은 기본정보(1단계)에서 자동 사용됩니다.
                 </p>
               </div>

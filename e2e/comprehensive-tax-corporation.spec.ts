@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 법인 §9② E2E (Phase B → §4의4 자동판정 전환 후)
@@ -83,9 +84,11 @@ test.describe("종합부동산세 법인 §9②", () => {
       await expect(page.getByTestId("cap-mode-auto")).toHaveCount(0);
       await expect(page.getByLabel("직전연도 공시가격")).toHaveCount(0);
 
-      // Step2: 공시가격 20억 주택 1채
+      // Step2: 공시가격 20억 주택 1채 (주택 입력은 모달 안)
+      await openHouseModal(page, 0);
       await page.getByPlaceholder("금액 입력").first().fill("2000000000");
       await page.getByPlaceholder("0.00").first().fill("84");
+      await closeHouseModal(page);
 
       await clickNext(page); // Step2 → Step3
       await clickNext(page); // Step3 → Step4(토지·계산)

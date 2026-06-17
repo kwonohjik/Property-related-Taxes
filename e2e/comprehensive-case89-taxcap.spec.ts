@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, addHouse, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 사례8 — 주택 세부담상한 재산세 ⓐ 자동화 (트랙 B · priorAssessedValue) E2E
@@ -49,22 +50,27 @@ test.describe("종합부동산세 사례8 — 주택 세부담상한 자동(prio
     await page.getByRole("radio", { name: "2022" }).check();
     await clickNext(page);
 
-    // ★ Step2: 공시·감면율(nth 기반)을 cap-mode-auto 전에 먼저 입력.
-    //   cap-mode-auto ON 시 priorAssessedValue 입력란이 추가돼 nth 시프트 →
-    //   공시 nth 충돌 회피 위해 모드 전 입력. priorAssessedValue는 getByLabel(aria-label)로 선택.
-    //   서초 공시 20억(금액 nth0), 감면율 30%(숫자 nth1)
-    await page.getByPlaceholder("금액 입력").nth(0).fill("2000000000");
+    // ★ Step2: 공시·감면율은 각 주택 편집 모달 안에서 입력 (모달엔 한 주택만 보이므로 .first()).
+    //   서초 공시 20억(금액 first), 감면율 30%(숫자 nth1)
+    await openHouseModal(page, 0);
+    await page.getByPlaceholder("금액 입력").first().fill("2000000000");
     await page.getByPlaceholder("숫자 입력").nth(1).fill("30");
-    // 주택2(강남) 추가 후 공시 10억 (금액 nth2 = 강남 공시, "금액 입력"이 주택1=공시·재산세부과세액 2개라 nth2)
-    await page.getByRole("button", { name: /주택 추가/ }).click();
-    await page.getByPlaceholder("금액 입력").nth(2).fill("1000000000");
-    // 세부담상한 모드 ② auto (주택 목록 상단·직전 공시 단일 입력원) → 각 주택 직전공시 노출
+    await closeHouseModal(page);
+    // 주택2(강남) 추가 후 공시 10억 (모달 안 금액 first)
+    await addHouse(page);
+    await page.getByPlaceholder("금액 입력").first().fill("1000000000");
+    await closeHouseModal(page);
+    // 세부담상한 모드 ② auto (공통설정·모달 밖, 직전 공시 입력란 노출)
     await page.getByTestId("cap-mode-auto").click();
-    // 당해 조정대상지역 2주택 토글 ON (중과 2.2%) — 모드 섹션 첫 switch (2022<2023)
+    // 당해 조정대상지역 2주택 토글 ON (중과 2.2%) — 공통설정(모달 밖) 첫 switch (2022<2023)
     await page.getByRole("switch").first().click();
-    // 직전 공시 입력 (getByLabel — placeholder nth 충돌 회피)
-    await page.getByLabel("직전연도 공시가격").nth(0).fill("1500000000"); // 서초
-    await page.getByLabel("직전연도 공시가격").nth(1).fill("800000000"); // 강남
+    // 직전 공시 입력 — 각 주택 모달을 따로 열어서 (모달엔 한 주택만 → .first())
+    await openHouseModal(page, 0);
+    await page.getByLabel("직전연도 공시가격").first().fill("1500000000"); // 서초
+    await closeHouseModal(page);
+    await openHouseModal(page, 1);
+    await page.getByLabel("직전연도 공시가격").first().fill("800000000"); // 강남
+    await closeHouseModal(page);
 
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4

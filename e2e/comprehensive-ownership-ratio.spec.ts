@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 — 공유지분(지분율) 사례3 E2E
@@ -50,11 +51,15 @@ async function fillCase3ToStep2(page: Page): Promise<void> {
   await page.getByRole("radio", { name: "2022" }).check();
   await clickNext(page); // → Step2
 
-  // Step2: 공시가격 15억 + 지분율 70% (cap-mode-auto 전 — placeholder/숫자 nth 안정)
-  // CurrencyInput placeholder="금액 입력" — 공시가격 총액
+  // Step2: 주택 행 클릭 → 모달 안 공시가격 15억 + 지분율 70% 입력
+  // 모달엔 한 주택만 보이므로 .first()(공시) / .nth(0)·.nth(1)(지분·감면)
+  await openHouseModal(page, 0);
+  // CurrencyInput placeholder="금액 입력" — 공시가격 총액(모달 첫 번째)
   await page.getByPlaceholder("금액 입력").first().fill("1500000000");
   // DecimalInput: nth(0)=지분율(%), nth(1)=재산세 감면율(기본 미입력)
   await page.getByPlaceholder("숫자 입력").nth(0).fill("70");
+  // cap-mode-auto(공통설정·모달 밖) 클릭 전 모달 닫기 — backdrop 차단 방지
+  await closeHouseModal(page);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -82,9 +87,12 @@ test.describe("종합부동산세 공유지분(사례3) — 폼→결과 전수 
 
     await fillCase3ToStep2(page);
 
-    // Step2: 자동계산 모드 + 직전 공시가격 13억 (지분 동일)
+    // Step2: 자동계산 모드(공통설정·모달 밖) + 직전 공시가격 13억 (지분 동일)
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByLabel("직전연도 공시가격").nth(0).fill("1300000000");
+    // 직전공시는 각 주택 모달 안 — 행 다시 열어 입력 후 닫기
+    await openHouseModal(page, 0);
+    await page.getByLabel("직전연도 공시가격").first().fill("1300000000");
+    await closeHouseModal(page);
     // 직전연도 1세대1주택 스위치 OFF (기본값)
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
@@ -140,9 +148,12 @@ test.describe("종합부동산세 공유지분(사례3) — 폼→결과 전수 
 
     await fillCase3ToStep2(page);
 
-    // Step2: 자동계산 모드 + 직전 공시가격 13억
+    // Step2: 자동계산 모드(공통설정·모달 밖) + 직전 공시가격 13억
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByLabel("직전연도 공시가격").nth(0).fill("1300000000");
+    // 직전공시는 각 주택 모달 안 — 행 다시 열어 입력 후 닫기
+    await openHouseModal(page, 0);
+    await page.getByLabel("직전연도 공시가격").first().fill("1300000000");
+    await closeHouseModal(page);
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
     await calcAndWait(page);
@@ -184,8 +195,11 @@ test.describe("종합부동산세 공유지분(사례3) — 폼→결과 전수 
     await clickNext(page);
 
     // Step2: 공시가격 15억, 지분율 미입력 (기본 100% 표시) — 세부담상한 적용 안 함(none 기본)
+    // 행 클릭 → 모달 안 공시가격만 입력 (지분율 기본 100% 그대로)
+    await openHouseModal(page, 0);
     await page.getByPlaceholder("금액 입력").first().fill("1500000000");
-    // 지분율 입력란 클리어 후 100을 그대로 유지 (기본값 건드리지 않음)
+    // 지분율 입력란은 기본값 100% 그대로 유지 (건드리지 않음)
+    await closeHouseModal(page);
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
 
@@ -230,12 +244,18 @@ test.describe("사례2 감면율 회귀 (지분율 위젯 추가 후)", () => {
     await clickNext(page);
 
     // Step2: 공시가격 10억 + 감면율 25% (지분율은 기본 100% 유지) + 자동계산 모드 + 직전 공시 9억
+    // 행 클릭 → 모달 안 공시·감면율 입력
+    await openHouseModal(page, 0);
     await page.getByPlaceholder("금액 입력").first().fill("1000000000");
     // DecimalInput: nth(0)=지분율(기본 100유지), nth(1)=감면율 25%
     await page.getByPlaceholder("숫자 입력").nth(1).fill("25");
-    // 자동계산 모드 (cap-mode-auto 전 당해 공시 입력 완료 → 직전공시 nth 안정)
+    await closeHouseModal(page);
+    // 자동계산 모드(공통설정·모달 밖)
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByLabel("직전연도 공시가격").nth(0).fill("900000000");
+    // 직전공시는 각 주택 모달 안 — 행 다시 열어 입력 후 닫기
+    await openHouseModal(page, 0);
+    await page.getByLabel("직전연도 공시가격").first().fill("900000000");
+    await closeHouseModal(page);
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
     await calcAndWait(page);

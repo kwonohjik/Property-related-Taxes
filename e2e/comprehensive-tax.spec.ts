@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 마법사 E2E (GAP-4)
@@ -45,9 +46,11 @@ test.describe("종합부동산세 마법사", () => {
     await page.getByRole("radio", { name: "2024" }).check();
     await clickNext(page);
 
-    // Step2: 공시가격 + 면적
+    // Step2: 주택 행 클릭 → 모달에서 공시가격 + 면적
+    await openHouseModal(page);
     await page.getByPlaceholder("금액 입력").first().fill("950000000");
     await page.getByPlaceholder("0.00").first().fill("84");
+    await closeHouseModal(page);
     await clickNext(page);
 
     // Step3: 합산배제 없음 (스킵)
@@ -78,9 +81,11 @@ test.describe("종합부동산세 마법사", () => {
     await page.getByLabel("일").nth(1).fill("1");
     await clickNext(page);
 
-    // Step2: 공시 13억
+    // Step2: 주택 행 클릭 → 모달 공시 13억
+    await openHouseModal(page);
     await page.getByPlaceholder("금액 입력").first().fill("1300000000");
     await page.getByPlaceholder("0.00").first().fill("84");
+    await closeHouseModal(page);
     await clickNext(page);
     await clickNext(page); // Step3 스킵 → Step4(토지)
     await calcAndWait(page);
@@ -100,9 +105,11 @@ test.describe("종합부동산세 마법사", () => {
     await page.getByRole("radio", { name: "2024" }).check();
     await clickNext(page);
 
-    // Step2: 주택 공시 5억 (기본공제 이하)
+    // Step2: 주택 행 클릭 → 모달 공시 5억 (기본공제 이하)
+    await openHouseModal(page);
     await page.getByPlaceholder("금액 입력").first().fill("500000000");
     await page.getByPlaceholder("0.00").first().fill("60");
+    await closeHouseModal(page);
     await clickNext(page);
     await clickNext(page); // Step3 스킵
 

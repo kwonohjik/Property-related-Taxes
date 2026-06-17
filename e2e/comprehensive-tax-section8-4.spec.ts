@@ -1,4 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
+import {
+  openHouseModal,
+  addHouse,
+  closeHouseModal,
+  expandHouseAdvanced,
+} from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 §8④ 1세대1주택자 의제 + §9⑦⑨ 안분 E2E (Phase D-2)
@@ -40,24 +46,29 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
       await page.getByRole("radio", { name: "2024" }).check();
       await clickNext(page); // Step1 → Step2
 
-      // 주택1: 일반 12억
+      // 주택1: 일반 12억 — 행 클릭 → 모달 안 공시·면적 입력
+      await openHouseModal(page, 0);
       await page.getByPlaceholder("금액 입력").first().fill("1200000000");
       await page.getByPlaceholder("0.00").first().fill("84");
+      await closeHouseModal(page);
 
-      // 주택2 추가 — "금액 입력"은 주택당 2개(공시·부과재산세)이므로 주택2 공시는 nth(2)
-      await page.getByRole("button", { name: /주택 추가/ }).click();
-      await page.getByPlaceholder("금액 입력").nth(2).fill("300000000");
-      await page.getByPlaceholder("0.00").nth(1).fill("60");
-      // 주택2 비수도권 (4호 활성화 전제) — 수도권 select만 필터 (StandardPriceInput 기준연도 select 제외)
+      // 주택2 추가 — 추가 직후 자동 오픈된 모달 안에서 입력(모달엔 한 주택만 보이므로 .first())
+      await addHouse(page);
+      await page.getByPlaceholder("금액 입력").first().fill("300000000");
+      await page.getByPlaceholder("0.00").first().fill("60");
+      // 주택2 비수도권 (4호 활성화 전제) — 모달 안 수도권 select (none 모드라 직전공시 StandardPriceInput 없음 → non_metro 옵션은 수도권 select에만 존재)
       await page
+        .getByRole("dialog")
         .locator('select:has(option[value="non_metro"])')
-        .nth(1)
+        .first()
         .selectOption("non_metro");
 
-      // 주택2 §8④ ToggleCard ON (마지막 주택의 마지막 switch — 분리 토글 추가에 견고)
-      await page.getByRole("switch").last().click();
-      // 지방 저가주택 (§8④4호) 라디오 선택
+      // 주택2 §8④ ToggleCard ON — 고급옵션 펼친 뒤 모달 안 마지막 switch
+      await expandHouseAdvanced(page);
+      await page.getByRole("dialog").getByRole("switch").last().click();
+      // 지방 저가주택 (§8④4호) 라디오 선택 (모달 안 RadioCardGroup)
       await page.getByRole("radio", { name: /지방 저가주택/ }).check();
+      await closeHouseModal(page);
 
       await clickNext(page); // Step2 → Step3
       await clickNext(page); // Step3 → Step4(토지·계산)
@@ -93,20 +104,25 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
 
       await clickNext(page); // Step1 → Step2
 
-      // 주택1: 15억
+      // 주택1: 15억 — 행 클릭 → 모달 안 입력
+      await openHouseModal(page, 0);
       await page.getByPlaceholder("금액 입력").first().fill("1500000000");
       await page.getByPlaceholder("0.00").first().fill("84");
-      // 주택2: 2억 지방저가 비수도권 — "금액 입력"은 주택당 2개(공시·부과재산세)이므로 주택2 공시는 nth(2)
-      await page.getByRole("button", { name: /주택 추가/ }).click();
-      await page.getByPlaceholder("금액 입력").nth(2).fill("200000000");
-      await page.getByPlaceholder("0.00").nth(1).fill("60");
+      await closeHouseModal(page);
+      // 주택2: 2억 지방저가 비수도권 — 추가 직후 자동 오픈 모달 안에서 입력(.first())
+      await addHouse(page);
+      await page.getByPlaceholder("금액 입력").first().fill("200000000");
+      await page.getByPlaceholder("0.00").first().fill("60");
       await page
+        .getByRole("dialog")
         .locator('select:has(option[value="non_metro"])')
-        .nth(1)
+        .first()
         .selectOption("non_metro");
-      // 주택2 §8④ ON (마지막 주택의 마지막 switch — 분리 토글 추가에 견고) → 지방저가
-      await page.getByRole("switch").last().click();
+      // 주택2 §8④ ON — 고급옵션 펼친 뒤 모달 안 마지막 switch → 지방저가
+      await expandHouseAdvanced(page);
+      await page.getByRole("dialog").getByRole("switch").last().click();
       await page.getByRole("radio", { name: /지방 저가주택/ }).check();
+      await closeHouseModal(page);
 
       await clickNext(page); // Step2 → Step3
       await clickNext(page); // Step3 → Step4(토지·계산)
@@ -127,10 +143,12 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
 
       await clickNext(page); // Step1 → Step2 (기본 2024·개인)
 
-      // 주택1 기본 location=수도권. §8④ ToggleCard ON (단일 주택의 마지막 switch — 분리 토글 추가에 견고)
-      await page.getByRole("switch").last().click();
+      // 주택1 기본 location=수도권. 행 클릭 → 모달 → 고급옵션 펼침 → §8④ ToggleCard ON (모달 안 마지막 switch)
+      await openHouseModal(page, 0);
+      await expandHouseAdvanced(page);
+      await page.getByRole("dialog").getByRole("switch").last().click();
 
-      // 지방 저가주택 라디오가 disabled (수도권이므로)
+      // 지방 저가주택 라디오가 disabled (수도권이므로) — 모달 안
       await expect(
         page.getByRole("radio", { name: /지방 저가주택/ }),
       ).toBeDisabled({ timeout: 10_000 });
