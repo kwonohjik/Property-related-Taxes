@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, closeHouseModal, expandHouseAdvanced } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 사례7 — 다가구주택 면적안분 재산세 ⓐ 자동화 (트랙 A · floorUnits) E2E
@@ -48,9 +49,12 @@ test.describe("종합부동산세 사례7 — 다가구 면적안분 자동(floo
     await clickNext(page);
 
     // Step2: 통합공시 8억 (부과재산세는 입력하지 않음 — floorUnits 자동 경로)
-    await page.getByPlaceholder("금액 입력").nth(0).fill("800000000");
+    //   다가구 층별 면적·라이브 미리보기는 모두 주택 편집 모달 안 (고급 옵션)
+    await openHouseModal(page, 0);
+    await page.getByPlaceholder("금액 입력").first().fill("800000000");
 
-    // "다가구주택 층별(구별) 면적 입력" 토글 ON (card variant label 클릭 → Switch 토글)
+    // 고급 옵션 펼침 → "다가구주택 층별(구별) 면적 입력" 토글 ON (card variant label 클릭 → Switch 토글)
+    await expandHouseAdvanced(page);
     await page.getByText("다가구주택 층별(구별) 면적 입력").click();
 
     // 층별 면적 3행 입력: 1층 120 · 2층 120 · 지하 60 (toggle ON 시 1행 자동 생성)
@@ -60,10 +64,11 @@ test.describe("종합부동산세 사례7 — 다가구 면적안분 자동(floo
     await page.getByRole("button", { name: /구별\(층별\) 추가/ }).click();
     await page.getByPlaceholder("전용면적").nth(2).fill("60");
 
-    // 라이브 안분 미리보기 — 순수 산술 안분 공시(세액 아님) 확인
+    // 라이브 안분 미리보기 — 순수 산술 안분 공시(세액 아님) 확인 (모달 안)
     await expect(page.getByText(/안분 공시가격 미리보기/)).toBeVisible();
     await expect(page.getByText(/320,000,000/).first()).toBeVisible();
 
+    await closeHouseModal(page);
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4(토지·계산)
 

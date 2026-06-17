@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 — "주택분 종합부동산세 납부할세액의 계산" 산출근거 카드 E2E.
@@ -26,9 +27,11 @@ async function fillCase12ToStep2(page: Page): Promise<void> {
   await page.getByLabel("월").nth(1).fill("1");
   await page.getByLabel("일").nth(1).fill("1");
   await clickNext(page); // → Step2
-  // 당해 공시 먼저 입력 (cap-mode-auto 전 → 직전공시 미노출, placeholder nth 안정)
+  // 당해 공시 먼저 입력 (cap-mode-auto 전 → 직전공시 미노출). 주택 입력은 모달 안.
+  await openHouseModal(page, 0);
   await page.getByPlaceholder("금액 입력").first().fill("1500000000");
   await page.getByPlaceholder("0.00").first().fill("168");
+  await closeHouseModal(page);
 }
 
 async function calcAndWait(page: Page): Promise<void> {
@@ -53,8 +56,11 @@ test.describe("종합부동산세 납부할 세액 산출 근거 카드(주택�
     await fillCase12ToStep2(page);
 
     // Step2: 직전연도 자동계산 모드 + 직전공시 14억 + 직전 1세대1주택
+    // cap-mode-auto·1세대1주택 switch는 공통설정박스(모달 밖). 직전공시는 주택 모달 안.
     await page.getByTestId("cap-mode-auto").click();
+    await openHouseModal(page, 0);
     await page.getByLabel("직전연도 공시가격").nth(0).fill("1400000000");
+    await closeHouseModal(page);
     // 단일주택 auto switch: [0]당해 조정2주택 [1]직전 1세대1주택 → 직전 1세대1주택 = nth(1)
     await page.getByRole("switch").nth(1).click();
     await clickNext(page); // → Step3

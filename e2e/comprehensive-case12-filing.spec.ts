@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 사례12 — 신고서 서식 4종 재현 E2E (전수 셀 검증)
@@ -43,9 +44,12 @@ async function fillCase12ToStep2(page: Page): Promise<void> {
   await page.getByLabel("월").nth(1).fill("1");
   await page.getByLabel("일").nth(1).fill("1");
   await clickNext(page); // → Step2
-  // 당해 공시 먼저 입력 (cap-mode-auto 전 → 직전공시 미노출, placeholder nth 안정)
+  // 당해 공시·면적은 주택 편집 모달 안 (모달엔 한 주택만 → .first()). 입력 후 모달 닫고 Step2 유지.
+  //   cap-mode·직전공시 입력은 각 테스트가 Step2에서 수행.
+  await openHouseModal(page, 0);
   await page.getByPlaceholder("금액 입력").first().fill("1500000000");
   await page.getByPlaceholder("0.00").first().fill("168");
+  await closeHouseModal(page);
 }
 
 /** data-besshi-cell 셀 텍스트 단언 헬퍼 */
@@ -71,8 +75,11 @@ test.describe("종합부동산세 사례12 신고서 서식 재현 (전수)", ()
 
     // Step2: 직전연도 자동계산 모드 + 직전공시 14억 + 직전 1세대1주택
     await page.getByTestId("cap-mode-auto").click();
-    await page.getByLabel("직전연도 공시가격").nth(0).fill("1400000000");
-    // 단일주택 auto switch: [0]당해 조정2주택 [1]직전 1세대1주택 → 직전 1세대1주택 = nth(1)
+    // 직전공시는 주택 모달 안 (모달엔 한 주택만 → .first())
+    await openHouseModal(page, 0);
+    await page.getByLabel("직전연도 공시가격").first().fill("1400000000");
+    await closeHouseModal(page);
+    // 단일주택 auto switch(공통설정·모달 밖): [0]당해 조정2주택 [1]직전 1세대1주택 → 직전 1세대1주택 = nth(1)
     await page.getByRole("switch").nth(1).click();
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4

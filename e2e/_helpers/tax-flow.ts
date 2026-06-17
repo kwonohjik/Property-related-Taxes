@@ -266,3 +266,53 @@ export async function closeStockModal(page: Page) {
     await expect(dialog).toHaveCount(0);
   }
 }
+
+// ============================================================
+// 종합부동산세 주택 — 요약 테이블 + 편집 모달 (PropertyListInput 전환, 2026-06-17)
+// ============================================================
+
+const HOUSE_ROW = '[data-testid^="property-table-row-"]';
+const HOUSE_DIALOG_TESTID = "property-edit-dialog";
+
+/**
+ * 종부세 주택 행 클릭 → 편집 모달(PropertyCardEditor) 오픈.
+ * 카드 나열 → 테이블+모달 전환(2026-06-17) 이후, 주택 공시가격·면적·옵션 입력은 모두 모달 안.
+ * @param index 0-based 주택 행 인덱스 (기본 0 = 첫 주택)
+ */
+export async function openHouseModal(page: Page, index = 0): Promise<void> {
+  await page.locator(HOUSE_ROW).nth(index).click();
+  await expect(page.getByTestId(HOUSE_DIALOG_TESTID)).toBeVisible();
+}
+
+/**
+ * 주택 추가 → 추가 직후 자동 오픈된 편집 모달(E-1) visible 대기.
+ * 입력은 호출부에서 모달 안 셀렉터로 수행 후 closeHouseModal.
+ */
+export async function addHouse(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /주택 추가/ }).click();
+  await expect(page.getByTestId(HOUSE_DIALOG_TESTID)).toBeVisible();
+}
+
+/**
+ * 주택 편집 모달 닫기 — 열려 있으면 닫고 숨김 대기, 닫혀 있으면 no-op.
+ * 모달이 열린 채 "다음"/"계산하기"를 누르면 backdrop이 클릭을 가로채므로 단계 이동·계산 전 호출.
+ * onUpdate 실시간 반영이라 닫아도 입력값 유지.
+ */
+export async function closeHouseModal(page: Page): Promise<void> {
+  const dialog = page.getByTestId(HOUSE_DIALOG_TESTID);
+  if (await dialog.isVisible().catch(() => false)) {
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(dialog).toBeHidden();
+  }
+}
+
+/**
+ * 열린 주택 편집 모달 안에서 고급 옵션 펼치기 (소유자 분리·다가구·합산배제·§8④ 의제).
+ * 설정값이 있으면 기본 펼침이므로, "펼치기" 버튼이 없으면 no-op.
+ */
+export async function expandHouseAdvanced(page: Page): Promise<void> {
+  const toggle = page.getByRole("dialog").getByRole("button", { name: /펼치기/ });
+  if (await toggle.isVisible().catch(() => false)) {
+    await toggle.click();
+  }
+}

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, closeHouseModal } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 법인 주택분 §9②1·2호 요건 자동판정 E2E (시행령 §4의4)
@@ -59,9 +60,11 @@ test.describe("종부세 법인 §9②1·2호 자동판정 (§4의4)", () => {
 
     await clickNext(page); // Step1 → Step2
 
-    // Step2: 공시 20억 1채
+    // Step2: 공시 20억 1채 (주택 입력은 모달 안)
+    await openHouseModal(page, 0);
     await page.getByPlaceholder("금액 입력").first().fill("2000000000");
     await page.getByPlaceholder("0.00").first().fill("84");
+    await closeHouseModal(page);
 
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4(토지·계산)

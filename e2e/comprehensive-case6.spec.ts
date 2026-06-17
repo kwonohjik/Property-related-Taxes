@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { openHouseModal, closeHouseModal, expandHouseAdvanced } from "./_helpers/tax-flow";
 
 /**
  * 종합부동산세 사례6 — 주택 건물·부속토지 소유자 분리(시가표준액 비율 안분, ≠1세대1주택)
@@ -44,23 +45,33 @@ test.describe("종합부동산세 사례6 — 건물·부속토지 소유자 분
     await page.getByRole("radio", { name: "2022" }).check();
     await clickNext(page); // → Step2
 
-    // Step2: 공시 15억 + 건물·부속토지 분리 ON + 시가표준액 (cap-mode-auto 전 입력 → "금액 입력" nth 안정)
-    await page.getByPlaceholder("금액 입력").first().fill("1500000000");
-    // 분리 토글 ON — none 모드 단일주택 switch: [0]당해 조정2주택 [1]건물·부속토지 분리 → 분리 = nth(1)
-    await page.getByRole("switch").nth(1).click();
+    // Step2: 공시 15억 + 직전공시 14억 + 건물·부속토지 분리 ON + 시가표준액 — 모두 주택 편집 모달 안.
+    //   건물·부속토지 분리는 고급 옵션(모달 안)으로 이동했으므로 expandHouseAdvanced 후 토글.
+    //   cap-mode-auto는 공통설정(모달 밖)이라 모달 열기 전에 먼저 켠다 → 모달 §② 직전공시 섹션이 항상 렌더되어
+    //   모달 안 "금액 입력" nth 인덱스가 결정적이 됨.
+    await page.getByTestId("cap-mode-auto").click();
+
+    await openHouseModal(page, 0);
+    // 모달 안 "금액 입력" DOM 순서(capMode auto·분리 ON·고급펼침 시):
+    //   nth0=공시, nth1=직전공시, nth2=재산세 부과세액, nth3=당해토지, nth4=당해건물, nth5=직전토지, nth6=직전건물
+    await page.getByPlaceholder("금액 입력").first().fill("1500000000"); // 공시 (nth0)
+    // 직전공시는 getByLabel (hideLabel aria-label) — 시가표준액 nth 충돌 회피
+    await page.getByLabel("직전연도 공시가격").first().fill("1400000000");
+
+    // 고급 옵션 펼침 → 건물·부속토지 분리 토글 ON (모달 안 첫 switch = 소유자 분리)
+    await expandHouseAdvanced(page);
+    await page.getByRole("dialog").getByRole("switch").first().click();
     await expect(page.getByText("당해연도 시가표준액")).toBeVisible(); // 펼침 확인
     await expect(page.getByText("토지만 소유")).toBeVisible(); // 기본 선택
-    // "금액 입력": nth(0)=공시, (1)=당해토지, (2)=당해건물, (3)=직전토지, (4)=직전건물
-    await page.getByPlaceholder("금액 입력").nth(1).fill("800000000");
-    await page.getByPlaceholder("금액 입력").nth(2).fill("200000000");
-    await page.getByPlaceholder("금액 입력").nth(3).fill("780000000");
-    await page.getByPlaceholder("금액 입력").nth(4).fill("260000000");
+    // 시가표준액 (분리 ON 후 노출): 당해토지 nth3 · 당해건물 nth4 · 직전토지 nth5 · 직전건물 nth6
+    await page.getByPlaceholder("금액 입력").nth(3).fill("800000000");
+    await page.getByPlaceholder("금액 입력").nth(4).fill("200000000");
+    await page.getByPlaceholder("금액 입력").nth(5).fill("780000000");
+    await page.getByPlaceholder("금액 입력").nth(6).fill("260000000");
     // 안분비율 80.00% 자동 표시
     await expect(page.getByText(/안분비율: 80\.00%/)).toBeVisible();
 
-    // Step2: 세부담상한 자동모드 + 직전 공시 14억 (직전공시는 getByLabel — 시가표준액 nth 충돌 회피)
-    await page.getByTestId("cap-mode-auto").click();
-    await page.getByLabel("직전연도 공시가격").nth(0).fill("1400000000");
+    await closeHouseModal(page);
     await clickNext(page); // → Step3
     await clickNext(page); // → Step4
     await calcAndWait(page);

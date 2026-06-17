@@ -262,7 +262,8 @@ interface ComprehensiveWizardState {
   updateFormData: (data: Partial<ComprehensiveFormData>) => void;
 
   // ── 주택 목록 액션 ──
-  addProperty: () => void;
+  /** 새 주택을 추가하고 그 id를 반환 (UI 자동 모달 오픈용) */
+  addProperty: () => string;
   removeProperty: (id: string) => void;
   updateProperty: (id: string, data: Partial<PropertyEntry>) => void;
 
@@ -299,13 +300,16 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
       updateFormData: (data) =>
         set((state) => ({ formData: { ...state.formData, ...data } })),
 
-      addProperty: () =>
+      addProperty: () => {
+        const newProperty = makeProperty();
         set((state) => ({
           formData: {
             ...state.formData,
-            properties: [...state.formData.properties, makeProperty()],
+            properties: [...state.formData.properties, newProperty],
           },
-        })),
+        }));
+        return newProperty.id;
+      },
 
       removeProperty: (id) =>
         set((state) => ({
