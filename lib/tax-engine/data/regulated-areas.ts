@@ -68,6 +68,11 @@ export interface RegulatedRegion extends RegulatedAreaInfo {
   excludedSubCodes?: ExcludedSubArea[];
   /** 이 하위 동·지구만 지정 (포함 목록, 택지지구). excludedSubCodes와 배타. 둘 다 없으면 전역 */
   includedSubCodes?: IncludedSubArea[];
+  /**
+   * 시 전역 지정으로 코드화했으나 실제로는 일부 구역(예: 세종 행정중심복합도시 예정지역)만 지정 —
+   * 동 단위 목록이 확정되지 않아 정밀 판정 불가. 설정 시 지정 판정을 medium으로 강등하고 사유를 basis에 표기.
+   */
+  coarseNote?: string;
 }
 
 /** 판정 결과 (lib/regulated-area.ts RegulatedAreaResult와 동일 형태 — 통합 시 공유) */
@@ -296,6 +301,192 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   { code: "28237", name: "인천광역시 부평구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }] },
   { code: "28245", name: "인천광역시 계양구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }] },
   { code: "28260", name: "인천광역시 서구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }] },
+
+  // ══════ 부산광역시 (26) — 2017.8.3 일부 구 → 2019.11.8 전부해제 → 2020.11.20·12.18 재확대 → 2022.9.26 전부해제 ══════
+  // 1차: 해운대·동래·수영(2019.11.7까지), 부산진·남·연제(2018.12.30까지·주4), 기장(주3·주4)
+  { code: "26350", name: "부산광역시 해운대구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2019-11-07" }, { designatedDate: "2020-11-20", releasedDate: "2022-09-25" }] },
+  { code: "26260", name: "부산광역시 동래구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2019-11-07" }, { designatedDate: "2020-11-20", releasedDate: "2022-09-25" }] },
+  { code: "26500", name: "부산광역시 수영구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2019-11-07" }, { designatedDate: "2020-11-20", releasedDate: "2022-09-25" }] },
+  { code: "26470", name: "부산광역시 연제구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2018-12-30" }, { designatedDate: "2020-11-20", releasedDate: "2022-09-25" }] },
+  { code: "26290", name: "부산광역시 남구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2018-12-30" }, { designatedDate: "2020-11-20", releasedDate: "2022-09-25" }] },
+  { code: "26230", name: "부산광역시 부산진구", designations: [{ designatedDate: "2017-08-03", releasedDate: "2018-12-30" }, { designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  // 기장군: 2017.8.3 전역 → 2018.8.28 일광면만(주3) → 2018.12.31 전부해제(주4). 2020.12.18~ '기장군 제외'로 재지정 없음.
+  { code: "26710", name: "부산광역시 기장군",
+    designations: [{ designatedDate: "2017-08-03", releasedDate: "2018-12-30" }],
+    includedSubCodes: [{ codePrefix: "26710310", name: "일광면", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
+  // 2020.12.18~2022.9.25 '기장군·중구 제외' 전역 재지정 구 (2020.11.20 5개구에는 미포함)
+  { code: "26140", name: "부산광역시 서구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "26170", name: "부산광역시 동구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "26200", name: "부산광역시 영도구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "26320", name: "부산광역시 북구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "26380", name: "부산광역시 사하구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "26410", name: "부산광역시 금정구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "26440", name: "부산광역시 강서구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "26530", name: "부산광역시 사상구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  // (부산 중구 26110은 전 기간 미지정)
+
+  // ══════ 대구광역시 (27) — 2020.11.20 수성 → 2020.12.18 확대 → 2022.7.5 수성만 → 2022.9.26 해제 ══════
+  { code: "27260", name: "대구광역시 수성구", designations: [{ designatedDate: "2020-11-20", releasedDate: "2022-09-25" }] },
+  // 수성 외 구: 2020.12.18~2022.7.4 (2022.7.5부터 수성구만 유지)
+  { code: "27110", name: "대구광역시 중구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }] },
+  { code: "27140", name: "대구광역시 동구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }] },
+  { code: "27170", name: "대구광역시 서구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }] },
+  { code: "27200", name: "대구광역시 남구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }] },
+  { code: "27230", name: "대구광역시 북구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }] },
+  { code: "27290", name: "대구광역시 달서구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }] },
+  // 달성군: 7개 읍면 제외(주9) → 화원·다사읍만 지정
+  { code: "27710", name: "대구광역시 달성군",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }],
+    excludedSubCodes: [
+      { codePrefix: "27710310", name: "가창면" }, { codePrefix: "27710380", name: "구지면" },
+      { codePrefix: "27710330", name: "하빈면" }, { codePrefix: "27710253", name: "논공읍" },
+      { codePrefix: "27710340", name: "옥포읍" }, { codePrefix: "27710370", name: "유가읍" },
+      { codePrefix: "27710360", name: "현풍읍" },
+    ] },
+
+  // ══════ 대전광역시 (30) — 전역(표 표기대로), 2020.6.19~2022.9.25 ══════
+  { code: "30110", name: "대전광역시 동구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }] },
+  { code: "30140", name: "대전광역시 중구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }] },
+  { code: "30170", name: "대전광역시 서구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }] },
+  { code: "30200", name: "대전광역시 유성구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }] },
+  { code: "30230", name: "대전광역시 대덕구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }] },
+
+  // ══════ 광주광역시 (29) — 전역(표 표기대로), 2020.12.18~2022.9.25 ══════
+  { code: "29110", name: "광주광역시 동구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "29140", name: "광주광역시 서구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "29155", name: "광주광역시 남구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "29170", name: "광주광역시 북구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "29200", name: "광주광역시 광산구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+
+  // ══════ 울산광역시 (31) — 중·남구, 2020.12.18~2022.9.25 ══════
+  { code: "31110", name: "울산광역시 중구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "31140", name: "울산광역시 남구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+
+  // ══════ 세종특별자치시 (36) — 행정중심복합도시 예정지역 한함(주5), 2017.8.3~2022.11.13 ══════
+  // 예정지역 동 목록 미확정 → 시 전역 코드화 + coarseNote(medium 강등). 조치원읍 등 비예정지역은 과대판정 주의.
+  { code: "36110", name: "세종특별자치시",
+    designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
+    coarseNote: "행정중심복합도시 예정지역 한함 — 정확한 소재지 확인 필요" },
+
+  // ══════ 충북 청주 (43111~43114) — 동지역 + 오창·오송읍 지정, 그 외 읍·면 제외. 2020.6.19~2022.9.25 ══════
+  { code: "43111", name: "충청북도 청주시 상당구",
+    designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "43111310", name: "낭성면" }, { codePrefix: "43111320", name: "미원면" },
+      { codePrefix: "43111330", name: "가덕면" }, { codePrefix: "43111340", name: "남일면" },
+      { codePrefix: "43111350", name: "문의면" },
+    ] },
+  { code: "43112", name: "충청북도 청주시 서원구",
+    designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "43112310", name: "남이면" }, { codePrefix: "43112320", name: "현도면" },
+    ] },
+  { code: "43113", name: "충청북도 청주시 흥덕구",
+    designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "43113310", name: "강내면" }, { codePrefix: "43113320", name: "옥산면" },
+    ] }, // 오송읍(43113250)은 지정 유지
+  { code: "43114", name: "충청북도 청주시 청원구",
+    designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "43114250", name: "내수읍" }, { codePrefix: "43114310", name: "북이면" },
+    ] }, // 오창읍(43114253)은 지정 유지
+
+  // ══════ 충남 천안 (동남·서북) — 동지역만, 2020.12.18~2022.9.25 ══════
+  { code: "44131", name: "충청남도 천안시 동남구",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "44131250", name: "목천읍" }, { codePrefix: "44131310", name: "풍세면" },
+      { codePrefix: "44131320", name: "광덕면" }, { codePrefix: "44131330", name: "북면" },
+      { codePrefix: "44131340", name: "성남면" }, { codePrefix: "44131350", name: "수신면" },
+      { codePrefix: "44131360", name: "병천면" }, { codePrefix: "44131370", name: "동면" },
+    ] },
+  { code: "44133", name: "충청남도 천안시 서북구",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "44133250", name: "성환읍" }, { codePrefix: "44133253", name: "성거읍" },
+      { codePrefix: "44133256", name: "직산읍" }, { codePrefix: "44133310", name: "입장면" },
+    ] },
+
+  // ══════ 충남 공주 (44150) — 동지역만, 2020.12.18~2022.9.25 ══════
+  { code: "44150", name: "충청남도 공주시",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "44150250", name: "유구읍" }, { codePrefix: "44150310", name: "이인면" },
+      { codePrefix: "44150320", name: "탄천면" }, { codePrefix: "44150330", name: "계룡면" },
+      { codePrefix: "44150340", name: "반포면" }, { codePrefix: "44150360", name: "의당면" },
+      { codePrefix: "44150370", name: "정안면" }, { codePrefix: "44150380", name: "우성면" },
+      { codePrefix: "44150390", name: "사곡면" }, { codePrefix: "44150400", name: "신풍면" },
+    ] },
+
+  // ══════ 충남 논산 (44230) — 동지역만, 2020.12.18~2022.9.25 ══════
+  { code: "44230", name: "충청남도 논산시",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "44230250", name: "강경읍" }, { codePrefix: "44230253", name: "연무읍" },
+      { codePrefix: "44230310", name: "성동면" }, { codePrefix: "44230320", name: "광석면" },
+      { codePrefix: "44230330", name: "노성면" }, { codePrefix: "44230340", name: "상월면" },
+      { codePrefix: "44230350", name: "부적면" }, { codePrefix: "44230360", name: "연산면" },
+      { codePrefix: "44230380", name: "벌곡면" }, { codePrefix: "44230390", name: "양촌면" },
+      { codePrefix: "44230400", name: "가야곡면" }, { codePrefix: "44230410", name: "은진면" },
+      { codePrefix: "44230420", name: "채운면" },
+    ] },
+
+  // ══════ 전북 전주 (완산·덕진) — 동만 있는 구(읍면 없음) 전역, 2020.12.18~2022.9.25 ══════
+  { code: "45111", name: "전라북도 전주시 완산구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+  { code: "45113", name: "전라북도 전주시 덕진구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+
+  // ══════ 경남 창원 성산구 (48123) — 동만 있는 구 전역, 2020.12.18~2022.9.25 ══════
+  { code: "48123", name: "경상남도 창원시 성산구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
+
+  // ══════ 경북 포항 남구 (47111) — 동지역만, 2020.12.18~2022.9.25 ══════
+  { code: "47111", name: "경상북도 포항시 남구",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }],
+    excludedSubCodes: [
+      { codePrefix: "47111250", name: "구룡포읍" }, { codePrefix: "47111253", name: "연일읍" },
+      { codePrefix: "47111256", name: "오천읍" }, { codePrefix: "47111310", name: "대송면" },
+      { codePrefix: "47111320", name: "동해면" }, { codePrefix: "47111330", name: "장기면" },
+      { codePrefix: "47111350", name: "호미곶면" },
+    ] },
+
+  // ══════ 경북 경산 (47290) — 동지역만, 2020.12.18~2022.7.4 (2022.7.5 해제) ══════
+  { code: "47290", name: "경상북도 경산시",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }],
+    excludedSubCodes: [
+      { codePrefix: "47290250", name: "하양읍" }, { codePrefix: "47290253", name: "진량읍" },
+      { codePrefix: "47290310", name: "와촌면" }, { codePrefix: "47290330", name: "자인면" },
+      { codePrefix: "47290340", name: "용성면" }, { codePrefix: "47290350", name: "남산면" },
+      { codePrefix: "47290360", name: "압량면" }, { codePrefix: "47290370", name: "남천면" },
+    ] },
+
+  // ══════ 전남 여수 (46130) — 동지역 + 소라면 지정, 그 외 읍면 제외. 2020.12.18~2022.7.4 ══════
+  { code: "46130", name: "전라남도 여수시",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }],
+    excludedSubCodes: [
+      { codePrefix: "46130250", name: "돌산읍" }, { codePrefix: "46130320", name: "율촌면" },
+      { codePrefix: "46130330", name: "화양면" }, { codePrefix: "46130340", name: "남면" },
+      { codePrefix: "46130350", name: "화정면" }, { codePrefix: "46130360", name: "삼산면" },
+    ] }, // 소라면(46130310)은 지정 유지
+
+  // ══════ 전남 순천 (46150) — 동지역 + 해룡·서면 지정, 그 외 읍면 제외. 2020.12.18~2022.7.4 ══════
+  { code: "46150", name: "전라남도 순천시",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }],
+    excludedSubCodes: [
+      { codePrefix: "46150250", name: "승주읍" }, { codePrefix: "46150330", name: "황전면" },
+      { codePrefix: "46150340", name: "월등면" }, { codePrefix: "46150350", name: "주암면" },
+      { codePrefix: "46150360", name: "송광면" }, { codePrefix: "46150370", name: "외서면" },
+      { codePrefix: "46150380", name: "낙안면" }, { codePrefix: "46150390", name: "별량면" },
+      { codePrefix: "46150400", name: "상사면" },
+    ] }, // 해룡면(46150310)·서면(46150320)은 지정 유지
+
+  // ══════ 전남 광양 (46230) — 동지역 + 광양읍 지정, 그 외 면 제외. 2020.12.18~2022.7.4 ══════
+  { code: "46230", name: "전라남도 광양시",
+    designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-07-04" }],
+    excludedSubCodes: [
+      { codePrefix: "46230310", name: "봉강면" }, { codePrefix: "46230320", name: "옥룡면" },
+      { codePrefix: "46230330", name: "옥곡면" }, { codePrefix: "46230340", name: "진상면" },
+      { codePrefix: "46230350", name: "진월면" }, { codePrefix: "46230360", name: "다압면" },
+    ] }, // 광양읍(46230250)은 지정 유지
 ];
 
 // ============================================================
@@ -394,22 +585,29 @@ export function isRegulatedByBjdCodeIn(
         basis: `${active.designatedDate} 고시 — ${region.name} 중 ${excluded.name} 제외`,
       };
     }
+    // coarseNote(예: 세종 예정지역 한함) — 전역 코드화이나 일부만 지정 → medium 강등
     return {
       isRegulated: true,
-      confidence: "high",
-      basis: `${active.designatedDate} 고시 — ${region.name} 지정`,
+      confidence: region.coarseNote ? "medium" : "high",
+      basis:
+        `${active.designatedDate} 고시 — ${region.name} 지정` +
+        (region.coarseNote ? ` (${region.coarseNote})` : ""),
     };
   }
 
-  // 5자리만: 동·지구 단위 하위규칙이 있는 시군구는 정밀 판정 불가 → confidence medium
+  // 5자리만: 동·지구 단위 하위규칙이 있거나 coarseNote가 있으면 정밀 판정 불가 → confidence medium
   const hasSubRules =
     (region.excludedSubCodes?.length ?? 0) > 0 || (region.includedSubCodes?.length ?? 0) > 0;
   return {
     isRegulated: true,
-    confidence: hasSubRules ? "medium" : "high",
+    confidence: hasSubRules || region.coarseNote ? "medium" : "high",
     basis:
       `${active.designatedDate} 고시 — ${region.name} 지정` +
-      (hasSubRules ? " (동·지구 단위 지정/제외 — 10자리 코드 확인 필요)" : ""),
+      (region.coarseNote
+        ? ` (${region.coarseNote})`
+        : hasSubRules
+          ? " (동·지구 단위 지정/제외 — 10자리 코드 확인 필요)"
+          : ""),
   };
 }
 
