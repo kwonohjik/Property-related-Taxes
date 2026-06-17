@@ -70,6 +70,35 @@ describe("parseLawRef — 단일 ref (회귀 보존)", () => {
     });
   });
 
+  // ── 종합부동산세 약칭·표기 (2026-06-16, feat/comprehensive-law-citation-link) ──
+  it("TC-C1 종합부동산세법 §9②1호 → 본법", () => {
+    expect(parseLawRef("종합부동산세법 §9②1호")).toEqual({
+      lawName: "종합부동산세법",
+      articleNum: "9",
+    });
+  });
+
+  it("TC-C2 종합부동산세법 시행령 §4의3 → 시행령 가지번호 (재산세 비율안분)", () => {
+    expect(parseLawRef("종합부동산세법 시행령 §4의3")).toEqual({
+      lawName: "종합부동산세법 시행령",
+      articleNum: "4의3",
+    });
+  });
+
+  it("TC-C3 종부령 §3①10호 → 시행령 (약칭 보강 + 항·호 무시)", () => {
+    expect(parseLawRef("종부령 §3①10호 단기민간임대")).toEqual({
+      lawName: "종합부동산세법 시행령",
+      articleNum: "3",
+    });
+  });
+
+  it("TC-C4 종부세법 §10의2 → 본법 가지번호 (부부 공동명의)", () => {
+    expect(parseLawRef("종부세법 §10의2 부부 공동명의")).toEqual({
+      lawName: "종합부동산세법",
+      articleNum: "10의2",
+    });
+  });
+
   // ── 양도세 약칭·표기 (2026-06-15, feat/transfer-law-citation-popup) ──
   it("TC-T1 소법 §97의2④2호 → 소득세법 (약칭 보강)", () => {
     expect(parseLawRef("소법 §97의2④2호")).toEqual({
@@ -230,6 +259,14 @@ describe("extractClauseMarkers — 항(項) 마커 추출 (G-5 하이라이트)"
 
   it("CM-4 §22② 금융재산공제", () => {
     expect(extractClauseMarkers("§22② 금융재산공제")).toEqual(["②"]);
+  });
+
+  it("CM-6 종부세 §9②1호 → 항 ②만 강조 (호 무시)", () => {
+    expect(extractClauseMarkers("§9②1호 법인 일반 누진세율")).toEqual(["②"]);
+  });
+
+  it("CM-7 종부세 §9⑤~⑨ 범위 표기 → 등장 항 강조", () => {
+    expect(extractClauseMarkers("§9⑤~⑨ 1세대1주택 세액공제")).toEqual(["⑤", "⑨"]);
   });
 
   it("CM-5 중복 제거·등장 순서 보존", () => {

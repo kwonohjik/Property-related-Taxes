@@ -20,6 +20,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import {
   COMPREHENSIVE_PRINT_SECTIONS,
   type ComprehensivePrintSectionId,
@@ -49,11 +50,14 @@ function TaxLabelRow({
   valueLabel,
   sub = false,
   badge,
+  legalBasis,
 }: {
   label: string;
   valueLabel: string;
   sub?: boolean;
   badge?: string;
+  /** 있으면 badge 옆에 LawArticleModal(조문 클릭 팝업) 렌더. badge 텍스트는 그대로 보존. */
+  legalBasis?: string;
 }) {
   return (
     <div
@@ -64,8 +68,11 @@ function TaxLabelRow({
       <span className="flex items-center gap-1.5 flex-wrap">
         {label}
         {badge && (
-          <span className="text-xs font-medium bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-            {badge}
+          <span className="inline-flex items-center gap-1">
+            <span className="text-xs font-medium bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+              {badge}
+            </span>
+            {legalBasis && <LawArticleModal legalBasis={legalBasis} label={badge} />}
           </span>
         )}
       </span>
@@ -81,6 +88,7 @@ function TaxRow({
   sub = false,
   note,
   badge,
+  legalBasis,
 }: {
   label: string;
   amount: number;
@@ -88,6 +96,8 @@ function TaxRow({
   sub?: boolean;
   note?: string;
   badge?: string;
+  /** 있으면 badge 옆에 LawArticleModal(조문 클릭 팝업) 렌더. badge 텍스트는 그대로 보존. */
+  legalBasis?: string;
 }) {
   return (
     <div
@@ -105,8 +115,11 @@ function TaxRow({
           <span className="text-xs text-muted-foreground">({note})</span>
         )}
         {badge && (
-          <span className="text-xs font-medium bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-            {badge}
+          <span className="inline-flex items-center gap-1">
+            <span className="text-xs font-medium bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+              {badge}
+            </span>
+            {legalBasis && <LawArticleModal legalBasis={legalBasis} label={badge} />}
           </span>
         )}
       </span>
@@ -201,8 +214,10 @@ function HousingTaxBaseSection({
         {isCorporateSpecial ? (
           <TaxLabelRow
             label="기본공제"
-            valueLabel="적용 없음 (§8①2호)"
+            valueLabel="적용 없음"
             sub
+            badge="§8①2호"
+            legalBasis="종합부동산세법 §8"
           />
         ) : (
           <TaxRow
@@ -297,6 +312,23 @@ function HousingTaxSection({
     return undefined;
   }
 
+  // getCalculatedTaxBadge() 분기별 클릭 팝업용 본법 조문(검증 완료분만).
+  // §10의2(부부 공동명의)·구 §9①3호(현행 삭제)는 undefined → 링크 미생성(badge 텍스트는 유지).
+  function getCalculatedTaxLegalBasis(): string | undefined {
+    if (isCorporateSpecial) return "종합부동산세법 §9";
+    if (result.corporateHousingClass === "corporate_general")
+      return "종합부동산세법 §9";
+    if (result.corporateHousingClass === "corporate_public")
+      return "종합부동산세법 §9";
+    if (result.isJointOwnershipApplied) return "종합부동산세법 §10의2"; // 공동명의 1주택자 특례 (검증 2026-06-17)
+    if (result.section8para4Detail) return "종합부동산세법 §8";
+    if (result.isMultiHouseRateApplied)
+      return parseInt(result.assessmentDate.slice(0, 4)) <= 2022
+        ? undefined // 구 §9①3호 — 현행 삭제, 보류
+        : "종합부동산세법 §9";
+    return undefined;
+  }
+
   return (
     <section className="space-y-2">
       <SectionHeader>주택분 세액 계산</SectionHeader>
@@ -316,6 +348,7 @@ function HousingTaxSection({
           label="산출세액"
           amount={result.calculatedTax}
           badge={getCalculatedTaxBadge()}
+          legalBasis={getCalculatedTaxLegalBasis()}
         />
 
         {/* 재산세 비율 안분 공제 (GAP-1: 세액공제보다 선적용 — §9③) */}
@@ -334,6 +367,7 @@ function HousingTaxSection({
           amount={-propertyTaxCredit.creditAmount}
           sub
           badge="시행령 §4의3"
+          legalBasis="종합부동산세법 시행령 §4의3"
         />
 
         {/* 1세대1주택 세액공제 (재산세 공제 후 세액 기준 — §9⑥⑧) */}
@@ -374,6 +408,7 @@ function HousingTaxSection({
               amount={-oneHouseDeduction.deductionAmount}
               sub
               badge={oneHouseDeduction.apportionmentRatio ? "§9⑤~⑨ (§8④ 안분)" : "§9⑤~⑨"}
+              legalBasis="종합부동산세법 §9"
             />
           </>
         )}
@@ -432,7 +467,10 @@ function AggregateLandSection({
 
   return (
     <section className="space-y-2">
-      <SectionHeader>토지분 — 종합합산 (§11)</SectionHeader>
+      <SectionHeader>
+        토지분 — 종합합산{" "}
+        <LawArticleModal legalBasis="종합부동산세법 §11" label="§11" />
+      </SectionHeader>
       <div className="rounded-md border divide-y">
         <TaxRow label="공시지가 합산" amount={land.totalOfficialValue} />
         <TaxRow label="기본공제 (5억)" amount={land.basicDeduction} sub />
@@ -487,7 +525,10 @@ function SeparateLandSection({
 
   return (
     <section className="space-y-2">
-      <SectionHeader>토지분 — 별도합산 (§12)</SectionHeader>
+      <SectionHeader>
+        토지분 — 별도합산{" "}
+        <LawArticleModal legalBasis="종합부동산세법 §12" label="§12" />
+      </SectionHeader>
       <div className="rounded-md border divide-y">
         <TaxRow label="공시지가 합산" amount={land.totalPublicPrice} />
         <TaxRow label="기본공제 (80억)" amount={land.basicDeduction} sub />
