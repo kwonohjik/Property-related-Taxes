@@ -41,10 +41,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
   const primaryAddress =
     (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
+  // 법정동코드(주소검색 PNU 앞 10자리) — 있으면 동 단위 정밀 판정 경로
+  const primaryRegionCode = form.assets?.[0]?.regionCode ?? "";
 
-  // 주소·날짜가 준비되면 조정대상지역 자동 판별
+  // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
   useEffect(() => {
-    if (!primaryAddress || !form.transferDate || !isHousingLike(primaryKind)) {
+    if ((!primaryAddress && !primaryRegionCode) || !form.transferDate || !isHousingLike(primaryKind)) {
       setRegulatedAuto(null);
       appliedRef.current = false;
       return;
@@ -56,7 +58,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        address: primaryAddress,
+        address: primaryAddress || undefined,
+        regionCode: primaryRegionCode || undefined,
         transferDate: form.transferDate,
         acquisitionDate: primaryAcquisitionDate || undefined,
       }),
@@ -91,7 +94,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [primaryAddress, form.transferDate, primaryAcquisitionDate, primaryKind]);
+  }, [primaryAddress, primaryRegionCode, form.transferDate, primaryAcquisitionDate, primaryKind]);
 
   // assetKind 변경 시 표시되지 않는 필드 값 초기화
   //   - 조정대상지역 체크박스: 주택(housing)에서만 표시 → 그 외 false

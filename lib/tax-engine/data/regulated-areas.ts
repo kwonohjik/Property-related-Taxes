@@ -413,6 +413,83 @@ export function isRegulatedByBjdCode(bjdCode: string, date: string): RegulatedAr
   return isRegulatedByBjdCodeIn(REGULATED_REGIONS, bjdCode, date);
 }
 
+/**
+ * 데이터 수록 시도 — 이 시도 내 미매칭은 "진짜 미지정"(high).
+ * 그 외 시도(지방)는 데이터 미수록 → 판정 불가(low, 직접 확인 유도).
+ * 계획서 §5: 본 단계 데이터는 수도권(서울·경기·인천) 한정.
+ */
+const COVERED_SIDO_NAMES = ["서울특별시", "경기도", "인천광역시"];
+
+/**
+ * 시도·시군구명 + 날짜 → 조정대상지역 판정 (주소 기반, 순수·데이터 주입).
+ *
+ * 법정동코드(regionCode)가 없을 때의 보조 경로. 시군구명으로 매칭하므로
+ * 읍·면·동/택지지구 예외는 판정 불가 → 하위규칙이 있는 시군구는 confidence "medium"
+ * (정확한 동 단위 판정은 isRegulatedByBjdCodeIn 사용).
+ *
+ * @param regions 조정대상지역 이력 데이터 (REGULATED_REGIONS 또는 fixture)
+ * @param sido    시도 전체명 (예: "서울특별시", "경기도")
+ * @param sigungu 시군구명 (예: "강남구", "성남시 수정구"). 생략 시 시도 전역 엔트리만 조회.
+ * @param date    YYYY-MM-DD (양도일 또는 취득일)
+ */
+export function isRegulatedByAddressIn(
+  regions: RegulatedRegion[],
+  sido: string,
+  sigungu: string,
+  date: string,
+): RegulatedAreaJudgment {
+  if (!sido || !date) {
+    return { isRegulated: false, confidence: "low", basis: "시도 또는 날짜 누락" };
+  }
+
+  const fullName = sigungu ? `${sido} ${sigungu}` : sido;
+  // 1. 시군구 정확 매칭 (일반구 포함: "경기도 성남시 수정구")
+  //    2. 시도 전역 폴백 (서울 전역 "11" — name이 시도명과 동일)
+  const region =
+    regions.find((r) => r.name === fullName) ??
+    regions.find((r) => r.code.length === 2 && r.name === sido);
+
+  if (!region) {
+    const covered = COVERED_SIDO_NAMES.includes(sido);
+    return {
+      isRegulated: false,
+      confidence: covered ? "high" : "low",
+      basis: covered
+        ? `${fullName} — ${date} 기준 미지정`
+        : `${sido}는 데이터 미수록(수도권 외) — 직접 확인 필요`,
+    };
+  }
+
+  const active = findActiveDesignation(region.designations, date);
+  if (!active) {
+    return {
+      isRegulated: false,
+      confidence: "high",
+      basis: `${region.name} — ${date} 기준 미지정(지정 이력 없음 또는 해제됨)`,
+    };
+  }
+
+  // 시군구명만으로는 동·지구 단위 예외(읍면 제외/택지지구 한정)를 판정할 수 없다.
+  const hasSubRules =
+    (region.excludedSubCodes?.length ?? 0) > 0 || (region.includedSubCodes?.length ?? 0) > 0;
+  return {
+    isRegulated: true,
+    confidence: hasSubRules ? "medium" : "high",
+    basis:
+      `${active.designatedDate} 고시 — ${region.name} 지정` +
+      (hasSubRules ? " (동·지구 단위 지정/제외 — 정확한 소재지 확인 필요)" : ""),
+  };
+}
+
+/** REGULATED_REGIONS(모듈 데이터) 기준 주소 판정 편의 래퍼. */
+export function isRegulatedByAddress(
+  sido: string,
+  sigungu: string,
+  date: string,
+): RegulatedAreaJudgment {
+  return isRegulatedByAddressIn(REGULATED_REGIONS, sido, sigungu, date);
+}
+
 // ============================================================
 // 엔진 주입용 변환 (RegulatedAreaHistory)
 // ============================================================

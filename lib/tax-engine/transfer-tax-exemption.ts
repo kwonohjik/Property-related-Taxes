@@ -10,9 +10,10 @@
  *   E-1: 전액 비과세 (양도가 12억 이하) / E-2: 고가주택 부분과세
  */
 
-import { addYears } from "date-fns";
+import { addYears, format } from "date-fns";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST } from "./legal-codes";
+import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
@@ -75,6 +76,23 @@ export function resolveExemptionProviso(
 }
 
 /**
+ * 취득 당시 조정대상지역 여부 — 거주요건(§154① 본문) 판정 입력.
+ *
+ * regionCode(법정동코드)가 있으면 취득일 기준 isRegulatedByBjdCode로 정밀 판정
+ * (읍·면·동/택지지구 예외까지 반영). 없으면 wasRegulatedAtAcquisition boolean fallback (회귀 0 보장).
+ * 다주택 중과(multi-house-surcharge: 양도일 기준)와 대칭 — 여기서는 취득일 기준.
+ */
+export function resolveWasRegulatedAtAcquisition(input: TransferTaxInput): boolean {
+  if (input.regionCode) {
+    return isRegulatedByBjdCode(
+      input.regionCode,
+      format(input.acquisitionDate, "yyyy-MM-dd"),
+    ).isRegulated;
+  }
+  return input.wasRegulatedAtAcquisition === true;
+}
+
+/**
  * §154① 보유·거주 요건 (단서 각호 면제 포함).
  * 본문: 보유 2년(rule.minHoldingYears) + 취득 당시 조정대상지역이면 거주 2년(rule.regulatedAreaMinResidenceYears).
  * 단서: resolveExemptionProviso "both"=보유+거주 면제 / "residence_only"=거주만 면제 (소령 §154① 단서).
@@ -89,11 +107,13 @@ export function meetsOneHouseHoldingResidence(
   const meetsHolding = proviso === "both" || holding.years >= rule.minHoldingYears;
   const isPrePolicy = input.acquisitionDate < new Date(rule.prePolicyDate);
   const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+  // 취득 당시 조정대상지역 — regionCode 있으면 취득일 기준 정밀 판정, 없으면 boolean fallback
+  const wasRegulated = resolveWasRegulatedAtAcquisition(input);
   const meetsResidence =
     proviso === "both" ||
     proviso === "residence_only" ||
-    !input.wasRegulatedAtAcquisition ||
-    (isPrePolicy && !input.wasRegulatedAtAcquisition) ||
+    !wasRegulated ||
+    (isPrePolicy && !wasRegulated) ||
     residenceYears >= rule.regulatedAreaMinResidenceYears;
   return meetsHolding && meetsResidence;
 }

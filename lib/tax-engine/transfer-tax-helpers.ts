@@ -177,6 +177,7 @@ export {
   checkExemption,
   meetsOneHouseHoldingResidence,
   resolveExemptionProviso,
+  resolveWasRegulatedAtAcquisition,
 } from "./transfer-tax-exemption";
 
 // ============================================================
