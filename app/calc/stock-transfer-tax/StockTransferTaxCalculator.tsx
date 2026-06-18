@@ -144,7 +144,8 @@ export default function StockTransferTaxCalculator() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+            {/* onBeforeNavigate: 결과 화면에서 홈 이동 시 stale 결과 방지(스토어 메모리 정리, 입력 보존) */}
+            <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" onBeforeNavigate={() => { if (isResult) { setResult(null); setStep(0); } }} />
             <SaveButton onSave={handleManualSave} />
             <ResetButton onReset={handleReset} />
           </div>

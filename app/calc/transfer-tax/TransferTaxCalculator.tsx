@@ -503,7 +503,8 @@ export default function TransferTaxCalculator({
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-bold">양도소득세 계산기</h1>
           <div className="flex items-center gap-2">
-            <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+            {/* onBeforeNavigate: 결과서 홈 이동 시 setStep(0)→isResult=false로 stale 결과 숨김(결과 step은 indicator 너머·입력 보존) */}
+            <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" onBeforeNavigate={() => { if (isResult) setStep(0); }} />
             <SaveButton onSave={handleManualSave} />
             <ResetButton onReset={handleReset} />
           </div>
