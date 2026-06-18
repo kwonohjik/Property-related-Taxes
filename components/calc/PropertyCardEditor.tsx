@@ -250,7 +250,7 @@ export function PropertyCardEditor({
         {/* 전용면적 + 토지 과세면적 */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium">전용면적 (㎡)</label>
+            <label className="block text-sm font-medium">건물 전용면적 (㎡)</label>
             <input
               type="text"
               inputMode="decimal"
