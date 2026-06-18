@@ -11,6 +11,7 @@
 import { PROPERTY_CONST, PROPERTY_SEPARATE_CONST } from "./legal-codes";
 import { calcComprehensiveAggregateLandStdTax } from "./comprehensive-land-aggregate";
 import { calcSeparateAggregateLandStdTax } from "./comprehensive-separate-land";
+import { resolvePropertyTaxJurisdiction } from "@/lib/geo/property-tax-jurisdiction";
 import type {
   LandParcelInput,
   LandJurisdictionPropertyTax,
@@ -79,7 +80,8 @@ export function calcLandParcelsPropertyTax(
 ): ParcelsPropertyTaxResult {
   const groups = new Map<string, LandParcelInput[]>();
   for (const p of parcels) {
-    const key = p.jurisdiction.trim();
+    // 재산세 합산 단위(과세권자): 일반구는 시 단위, 자치구는 구 단위로 정규화
+    const key = resolvePropertyTaxJurisdiction(p.jurisdiction);
     const arr = groups.get(key);
     if (arr) arr.push(p);
     else groups.set(key, [p]);
