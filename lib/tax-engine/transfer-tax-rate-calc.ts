@@ -23,6 +23,7 @@ import type { ParsedRates } from "./transfer-tax-helpers";
 import { calcBasicDeduction } from "./transfer-tax-helpers";
 import { resolveCompanionLandRate } from "./appurtenant-land-rate";
 import { getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
+import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 // re-export — 기존 import 경로 하위 호환 유지
 export {
   resolveCompanionLandRate,
@@ -341,8 +342,10 @@ export function calcTax(
       const surchargeInfoST = effectiveSurchargeType === "multi_house_3plus"
         ? surchargeRates.multi_house_3plus
         : surchargeRates.multi_house_2;
-      if (surchargeInfoST) {
-        const additionalRateST = surchargeInfoST.additionalRate;
+      // 양도일 기준 중과 가산율 (§104⑦ 시행일별). null = 2018.4.1 이전 → 중과 미적용.
+      const historicalRateST = resolveSurchargeAddonRate(input.transferDate, effectiveSurchargeType);
+      if (surchargeInfoST && historicalRateST !== null) {
+        const additionalRateST = historicalRateST;
         const { progressiveTax: progressiveTaxST, baseRate: baseRateST, deduction: deductionST } = computeBracketBreakdown(taxBase, brackets);
         const surchargeTaxST = progressiveTaxST + applyRate(taxBase, additionalRateST);
         if (surchargeTaxST > shortTermTax) {
@@ -373,8 +376,11 @@ export function calcTax(
       ? surchargeRates.multi_house_3plus
       : surchargeRates.multi_house_2;
 
-    if (surchargeInfo) {
-      const additionalRate = surchargeInfo.additionalRate;
+    // 양도일 기준 중과 가산율 (§104⑦ 시행일별: 2018.4.1~ +10/+20, 2021.6.1~ +20/+30).
+    // null = 2018.4.1 이전 양도 → 중과 미적용(아래 일반 누진세율로 fall through).
+    const historicalRate = resolveSurchargeAddonRate(input.transferDate, effectiveSurchargeType);
+    if (surchargeInfo && historicalRate !== null) {
+      const additionalRate = historicalRate;
       const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
       const surchargeAmount = applyRate(taxBase, additionalRate);
       return {
