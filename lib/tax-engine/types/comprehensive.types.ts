@@ -620,6 +620,10 @@ export interface ComprehensiveTaxResult {
     assessedValue: number;
     isExcluded: boolean;
     propertyTax: number;      // 개별 주택 재산세 (자동 계산)
+    /** ② ⓐ 재산세 주택별 산출근거 표시용 echo (감면·지분·감면후 공시 — 결과 카드 ⑦) */
+    reductionRate?: number;           // 적용 감면율 (0~1)
+    ownershipRatio?: number;          // 적용 지분율 (0~1)
+    effectiveAssessedValue?: number;  // 감면·지분 반영 후 공시가격 (① 과세공시가격·과표 라벨용)
     /** 트랙 A 다가구 구별 안분 echo (floorUnits 입력 시만) — 결과 카드 ⑦ */
     multiFamilyBreakdown?: { label: string; apportionedAssessedValue: number; tax: number }[];
     /** 트랙 B 주택 세부담상한 echo (priorAssessedValue 입력 시만) — 결과 카드 ⑦ */

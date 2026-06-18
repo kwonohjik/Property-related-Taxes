@@ -23,9 +23,9 @@ describe("PY-Case9: 직전연도 주택별 감면 — 나 35,630,694", () => {
     assessmentYear: 2022,
     isOneHouseOwner: false,
     properties: [
-      { propertyId: "p1", assessedValue: 2_000_000_000, exclusionType: "none" },
-      { propertyId: "p2", assessedValue: 1_000_000_000, exclusionType: "none" },
-      { propertyId: "p3", assessedValue: 500_000_000, exclusionType: "none" },
+      { propertyId: "p1", assessedValue: 2_000_000_000, reductionRate: 0.3, priorAssessedValue: 1_500_000_000, exclusionType: "none" },
+      { propertyId: "p2", assessedValue: 1_000_000_000, priorAssessedValue: 800_000_000, exclusionType: "none" },
+      { propertyId: "p3", assessedValue: 500_000_000, priorAssessedValue: 400_000_000, exclusionType: "none" },
     ],
     previousYearAuto: {
       assessedValue: 2_700_000_000,
@@ -87,5 +87,20 @@ describe("PY-Case9: 직전연도 주택별 감면 — 나 35,630,694", () => {
     const r = calculateComprehensiveTax(input);
     expect(r.previousYearEquivalent?.comprehensiveTaxEquiv).toBe(31_841_694);
     expect(r.previousYearEquivalent?.total).toBe(35_630_694);
+  });
+
+  // 당해연도('22) 재산세 주택별 — 서초만 30% 감면·세부담상한 130/110%
+  it("당해 ⓐ 재산세 주택별 echo — 서초 2,702,700 / 강남 1,677,000 / 안양 462,000 / 합 4,841,700", () => {
+    const r = calculateComprehensiveTax(input);
+    expect(r.propertyTaxCredit.totalPropertyTax).toBe(4_841_700);
+    // 서초: 20억×0.7=14억 감면후공시, 표준 4,170,000 → 직전 2,970,000×130%=3,861,000 Min → ×0.7=2,702,700
+    expect(r.properties[0]).toMatchObject({
+      propertyTax: 2_702_700,
+      reductionRate: 0.3,
+      effectiveAssessedValue: 1_400_000_000,
+    });
+    expect(r.properties[1].propertyTax).toBe(1_677_000);
+    expect(r.properties[2].propertyTax).toBe(462_000);
+    expect(r.propertyTaxCredit.creditAmount).toBe(2_533_288);
   });
 });
