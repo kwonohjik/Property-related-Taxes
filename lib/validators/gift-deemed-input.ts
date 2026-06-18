@@ -55,43 +55,67 @@ const freeLoanSchema = z.object({
   hasJustifiableReason: z.boolean().optional(),
 });
 
-// ── Phase 2: 자본거래 (평가가액·주식수 직접 입력) ──
+// ── Phase 2: 자본거래 (평가가액·주식수 직접 입력) — sub-case 필드는 caseType별 optional ──
+const ratioSchema = z.object({ numer: z.number().nonnegative(), denom: z.number().positive() });
 const mergerSchema = z.object({
   type: z.literal("merger"),
-  mergedSharePrice: z.number().nonnegative(),
+  caseType: z.enum(["stock", "non_stock"]).optional(),
   overvaluedSharePrice: z.number().nonnegative(),
-  preMergerShares: z.number().nonnegative(),
-  exchangedShares: z.number().positive({ message: "교부받은 주식수는 0보다 커야 합니다" }),
   majorShares: z.number().nonnegative(),
+  mergedSharePrice: z.number().nonnegative().optional(),
+  preMergerShares: z.number().nonnegative().optional(),
+  exchangedShares: z.number().nonnegative().optional(),
+  faceValue: z.number().nonnegative().optional(),
+  mergeConsideration: z.number().nonnegative().optional(),
 });
 const capitalIncreaseSchema = z.object({
   type: z.literal("capital_increase"),
+  direction: z.enum(["low", "high"]).optional(),
+  subType: z.enum(["forfeited_realloc", "third_party", "excess", "no_realloc"]).optional(),
   preIssuePrice: z.number().nonnegative(),
   preIssueShares: z.number().positive({ message: "증자 전 발행주식총수는 0보다 커야 합니다" }),
   newSharePrice: z.number().nonnegative(),
   issuedShares: z.number().nonnegative(),
   forfeitedShares: z.number().nonnegative(),
+  relatedAcquiredShares: z.number().nonnegative().optional(),
+  ratioDenomShares: z.number().nonnegative().optional(),
+  smallShareholderImputation: z.boolean().optional(),
 });
 const capitalDecreaseSchema = z.object({
   type: z.literal("capital_decrease"),
+  caseType: z.enum(["low", "high"]).optional(),
   sharePrice: z.number().nonnegative(),
   redemptionPrice: z.number().nonnegative(),
-  totalRedeemedShares: z.number().positive({ message: "총감자 주식수는 0보다 커야 합니다" }),
-  majorPostRatio: z.object({ numer: z.number().nonnegative(), denom: z.number().positive() }),
-  relatedRedeemedShares: z.number().nonnegative(),
+  totalRedeemedShares: z.number().nonnegative().optional(),
+  majorPostRatio: ratioSchema.optional(),
+  relatedRedeemedShares: z.number().nonnegative().optional(),
+  faceValue: z.number().nonnegative().optional(),
+  ownRedeemedShares: z.number().nonnegative().optional(),
 });
 const contributionSchema = z.object({
   type: z.literal("contribution"),
+  caseType: z.enum(["low", "high"]).optional(),
   preContribPrice: z.number().nonnegative(),
   preContribShares: z.number().positive({ message: "현물출자 전 발행주식총수는 0보다 커야 합니다" }),
   newSharePrice: z.number().nonnegative(),
   contributedShares: z.number().nonnegative(),
   allocatedShares: z.number().nonnegative(),
+  relatedRatio: ratioSchema.optional(),
+  smallShareholderImputation: z.boolean().optional(),
 });
 const convertibleBondSchema = z.object({
   type: z.literal("convertible_bond"),
-  bondMarketValue: z.number().positive({ message: "전환사채 시가는 0보다 커야 합니다" }),
-  acquisitionPrice: z.number().nonnegative(),
+  caseType: z.enum(["acquisition", "conversion", "conversion_reverse", "transfer"]).optional(),
+  bondMarketValue: z.number().nonnegative(),
+  acquisitionPrice: z.number().nonnegative().optional(),
+  transferPrice: z.number().nonnegative().optional(),
+  preConvPrice: z.number().nonnegative().optional(),
+  preConvShares: z.number().nonnegative().optional(),
+  conversionPrice: z.number().nonnegative().optional(),
+  increasedShares: z.number().nonnegative().optional(),
+  interestLoss: z.number().nonnegative().optional(),
+  acquisitionGainPrior: z.number().nonnegative().optional(),
+  relatedPreRatio: ratioSchema.optional(),
 });
 
 export const deemedGiftInputSchema = z

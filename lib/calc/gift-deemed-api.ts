@@ -60,47 +60,102 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         hasJustifiableReason: form.loanJustifiable,
       };
     case "merger":
-      return {
-        type: "merger",
-        mergedSharePrice: parseAmount(form.mrgMergedPrice),
-        overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
-        preMergerShares: parseAmount(form.mrgPreShares),
-        exchangedShares: parseAmount(form.mrgExchangedShares),
-        majorShares: parseAmount(form.mrgMajorShares),
-      };
-    case "capital_increase":
+      return form.mrgCaseType === "non_stock"
+        ? {
+            type: "merger",
+            caseType: "non_stock",
+            overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
+            majorShares: parseAmount(form.mrgMajorShares),
+            faceValue: parseAmount(form.mrgFaceValue),
+            mergeConsideration: parseAmount(form.mrgConsideration),
+          }
+        : {
+            type: "merger",
+            caseType: "stock",
+            mergedSharePrice: parseAmount(form.mrgMergedPrice),
+            overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
+            preMergerShares: parseAmount(form.mrgPreShares),
+            exchangedShares: parseAmount(form.mrgExchangedShares),
+            majorShares: parseAmount(form.mrgMajorShares),
+          };
+    case "capital_increase": {
+      const isHigh = form.ciDirection === "high";
+      const needsRatio = isHigh && form.ciSubType !== "forfeited_realloc";
       return {
         type: "capital_increase",
+        direction: form.ciDirection,
+        subType: form.ciSubType,
         preIssuePrice: parseAmount(form.ciPrePrice),
         preIssueShares: parseAmount(form.ciPreShares),
         newSharePrice: parseAmount(form.ciNewPrice),
         issuedShares: parseAmount(form.ciIssuedShares),
         forfeitedShares: parseAmount(form.ciForfeitedShares),
+        relatedAcquiredShares: needsRatio ? parseAmount(form.ciRelatedAcquiredShares) : undefined,
+        ratioDenomShares: needsRatio ? parseAmount(form.ciRatioDenomShares) : undefined,
+        smallShareholderImputation: !isHigh ? form.ciSmallImputation : undefined,
       };
+    }
     case "capital_decrease":
-      return {
-        type: "capital_decrease",
-        sharePrice: parseAmount(form.cdSharePrice),
-        redemptionPrice: parseAmount(form.cdRedemptionPrice),
-        totalRedeemedShares: parseAmount(form.cdTotalShares),
-        majorPostRatio: { numer: Math.round(parseDecimal(form.cdMajorRatioPct) * 100), denom: 10_000 },
-        relatedRedeemedShares: parseAmount(form.cdRelatedShares),
-      };
-    case "contribution":
+      return form.cdCaseType === "high"
+        ? {
+            type: "capital_decrease",
+            caseType: "high",
+            sharePrice: parseAmount(form.cdSharePrice),
+            redemptionPrice: parseAmount(form.cdRedemptionPrice),
+            ownRedeemedShares: parseAmount(form.cdOwnRedeemedShares),
+          }
+        : {
+            type: "capital_decrease",
+            caseType: "low",
+            sharePrice: parseAmount(form.cdSharePrice),
+            redemptionPrice: parseAmount(form.cdRedemptionPrice),
+            totalRedeemedShares: parseAmount(form.cdTotalShares),
+            majorPostRatio: { numer: Math.round(parseDecimal(form.cdMajorRatioPct) * 100), denom: 10_000 },
+            relatedRedeemedShares: parseAmount(form.cdRelatedShares),
+          };
+    case "contribution": {
+      const isHigh = form.conCaseType === "high";
       return {
         type: "contribution",
+        caseType: form.conCaseType,
         preContribPrice: parseAmount(form.conPrePrice),
         preContribShares: parseAmount(form.conPreShares),
         newSharePrice: parseAmount(form.conNewPrice),
         contributedShares: parseAmount(form.conContributedShares),
         allocatedShares: parseAmount(form.conAllocatedShares),
+        relatedRatio: isHigh ? { numer: Math.round(parseDecimal(form.conRelatedRatioPct) * 100), denom: 10_000 } : undefined,
+        smallShareholderImputation: !isHigh ? form.conSmallImputation : undefined,
       };
-    case "convertible_bond":
-      return {
-        type: "convertible_bond",
-        bondMarketValue: parseAmount(form.cbMarketValue),
-        acquisitionPrice: parseAmount(form.cbAcquisitionPrice),
-      };
+    }
+    case "convertible_bond": {
+      const ct = form.cbCaseType;
+      if (ct === "transfer")
+        return { type: "convertible_bond", caseType: "transfer", bondMarketValue: parseAmount(form.cbMarketValue), transferPrice: parseAmount(form.cbTransferPrice) };
+      if (ct === "conversion")
+        return {
+          type: "convertible_bond",
+          caseType: "conversion",
+          bondMarketValue: parseAmount(form.cbMarketValue),
+          preConvPrice: parseAmount(form.cbPreConvPrice),
+          preConvShares: parseAmount(form.cbPreConvShares),
+          conversionPrice: parseAmount(form.cbConversionPrice),
+          increasedShares: parseAmount(form.cbIncreasedShares),
+          interestLoss: parseAmount(form.cbInterestLoss),
+          acquisitionGainPrior: parseAmount(form.cbAcqGainPrior),
+        };
+      if (ct === "conversion_reverse")
+        return {
+          type: "convertible_bond",
+          caseType: "conversion_reverse",
+          bondMarketValue: parseAmount(form.cbMarketValue),
+          preConvPrice: parseAmount(form.cbPreConvPrice),
+          preConvShares: parseAmount(form.cbPreConvShares),
+          conversionPrice: parseAmount(form.cbConversionPrice),
+          increasedShares: parseAmount(form.cbIncreasedShares),
+          relatedPreRatio: { numer: Math.round(parseDecimal(form.cbRelatedPreRatioPct) * 100), denom: 10_000 },
+        };
+      return { type: "convertible_bond", caseType: "acquisition", bondMarketValue: parseAmount(form.cbMarketValue), acquisitionPrice: parseAmount(form.cbAcquisitionPrice) };
+    }
     default:
       throw new Error("증여 유형을 선택하세요");
   }

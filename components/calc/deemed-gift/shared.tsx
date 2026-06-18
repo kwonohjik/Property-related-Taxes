@@ -58,32 +58,54 @@ export interface DeemedFormState {
   loanJustifiable: boolean;
   // ── Phase 2 자본거래 (평가가액·주식수 직접 입력) ──
   // 합병 §38
+  mrgCaseType: "stock" | "non_stock"; // 주식교부(§28③1) / 주식 외 재산교부(§28③2)
   mrgMergedPrice: string;
   mrgOvervaluedPrice: string;
   mrgPreShares: string;
   mrgExchangedShares: string;
   mrgMajorShares: string;
+  mrgFaceValue: string; // non_stock 액면가액
+  mrgConsideration: string; // non_stock 합병대가
   // 증자 §39
+  ciDirection: "low" | "high"; // 저가발행(①1호) / 고가발행(①2호)
+  ciSubType: "forfeited_realloc" | "third_party" | "excess" | "no_realloc";
   ciPrePrice: string;
   ciPreShares: string;
   ciNewPrice: string;
   ciIssuedShares: string;
   ciForfeitedShares: string;
+  ciRelatedAcquiredShares: string; // 고가 나·다라 특수관계인 인수신주수
+  ciRatioDenomShares: string; // 고가 나·다라 분모 신주수
+  ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
   // 감자 §39의2
+  cdCaseType: "low" | "high"; // 저가소각(①1호) / 고가소각(①2호)
   cdSharePrice: string;
   cdRedemptionPrice: string;
   cdTotalShares: string;
   cdMajorRatioPct: string; // 대주주등 감자후 지분비율 (%)
   cdRelatedShares: string;
+  cdOwnRedeemedShares: string; // high 해당 주주등 감자 주식수
   // 현물출자 §39의3
+  conCaseType: "low" | "high"; // 저가인수(①1호) / 고가인수(①2호)
   conPrePrice: string;
   conPreShares: string;
   conNewPrice: string;
   conContributedShares: string;
   conAllocatedShares: string;
+  conRelatedRatioPct: string; // high 현물출자자 특수관계인 지분비율 (%)
+  conSmallImputation: boolean; // 저가 §39의3② 소액주주 1인 의제
   // 전환사채 §40
+  cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
   cbMarketValue: string;
   cbAcquisitionPrice: string;
+  cbTransferPrice: string; // transfer 양도가액
+  cbPreConvPrice: string; // conversion 전환등 전 1주평가
+  cbPreConvShares: string; // conversion 전환등 전 주식총수
+  cbConversionPrice: string; // conversion 1주당 전환가액등
+  cbIncreasedShares: string; // conversion 증가주식수(교부받은 주식수)
+  cbInterestLoss: string; // conversion 이자손실분
+  cbAcqGainPrior: string; // conversion 인수 시 기과세 이익(§30①1)
+  cbRelatedPreRatioPct: string; // conversion_reverse 특수관계인 전환 전 지분비율 (%)
 }
 
 export const INITIAL_DEEMED: DeemedFormState = {
@@ -113,28 +135,50 @@ export const INITIAL_DEEMED: DeemedFormState = {
   loanInterest: "",
   loanRelated: true,
   loanJustifiable: false,
+  mrgCaseType: "stock",
   mrgMergedPrice: "",
   mrgOvervaluedPrice: "",
   mrgPreShares: "",
   mrgExchangedShares: "",
   mrgMajorShares: "",
+  mrgFaceValue: "",
+  mrgConsideration: "",
+  ciDirection: "low",
+  ciSubType: "forfeited_realloc",
   ciPrePrice: "",
   ciPreShares: "",
   ciNewPrice: "",
   ciIssuedShares: "",
   ciForfeitedShares: "",
+  ciRelatedAcquiredShares: "",
+  ciRatioDenomShares: "",
+  ciSmallImputation: false,
+  cdCaseType: "low",
   cdSharePrice: "",
   cdRedemptionPrice: "",
   cdTotalShares: "",
   cdMajorRatioPct: "",
   cdRelatedShares: "",
+  cdOwnRedeemedShares: "",
+  conCaseType: "low",
   conPrePrice: "",
   conPreShares: "",
   conNewPrice: "",
   conContributedShares: "",
   conAllocatedShares: "",
+  conRelatedRatioPct: "",
+  conSmallImputation: false,
+  cbCaseType: "acquisition",
   cbMarketValue: "",
   cbAcquisitionPrice: "",
+  cbTransferPrice: "",
+  cbPreConvPrice: "",
+  cbPreConvShares: "",
+  cbConversionPrice: "",
+  cbIncreasedShares: "",
+  cbInterestLoss: "",
+  cbAcqGainPrior: "",
+  cbRelatedPreRatioPct: "",
 };
 
 export const DEEMED_TYPE_META: Record<
@@ -166,11 +210,11 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "debt_forgiveness", label: "채무면제 등", description: "상증법 §36 — 면제·인수·변제 이익", testId: "deemed-type-debt_forgiveness" },
   { value: "free_realestate", label: "부동산 무상사용", description: "상증법 §37 — 무상사용(5년 현가합)·무상담보", testId: "deemed-type-free_realestate" },
   { value: "free_loan", label: "금전 무상대출", description: "상증법 §41의4 — 적정이자율 4.6% 차액", testId: "deemed-type-free_loan" },
-  { value: "merger", label: "합병에 따른 이익", description: "상증법 §38 — 합병 주식교부 (대주주등)", testId: "deemed-type-merger" },
-  { value: "capital_increase", label: "증자에 따른 이익", description: "상증법 §39 — 저가발행·실권주 재배정", testId: "deemed-type-capital_increase" },
-  { value: "capital_decrease", label: "감자에 따른 이익", description: "상증법 §39의2 — 저가소각", testId: "deemed-type-capital_decrease" },
-  { value: "contribution", label: "현물출자에 따른 이익", description: "상증법 §39의3 — 저가인수", testId: "deemed-type-contribution" },
-  { value: "convertible_bond", label: "전환사채에 따른 이익", description: "상증법 §40 — 저가 인수·취득", testId: "deemed-type-convertible_bond" },
+  { value: "merger", label: "합병에 따른 이익", description: "상증법 §38 — 주식교부·주식 외 재산교부", testId: "deemed-type-merger" },
+  { value: "capital_increase", label: "증자에 따른 이익", description: "상증법 §39 — 저가/고가발행 (실권주·제3자·초과)", testId: "deemed-type-capital_increase" },
+  { value: "capital_decrease", label: "감자에 따른 이익", description: "상증법 §39의2 — 저가/고가 소각", testId: "deemed-type-capital_decrease" },
+  { value: "contribution", label: "현물출자에 따른 이익", description: "상증법 §39의3 — 저가/고가 인수", testId: "deemed-type-contribution" },
+  { value: "convertible_bond", label: "전환사채에 따른 이익", description: "상증법 §40 — 인수취득·주식전환·양도", testId: "deemed-type-convertible_bond" },
 ];
 
 export function DeemedTypeSelector({
