@@ -132,11 +132,19 @@ function Step1({
           공시가격 합산 {eok(result.includedAssessedValue)} × ({apOwnLand ? "토지" : "건물"} 시가표준액 {eok(apNum)} / 전체 {eok(apTotal)} = {apPct}%) = 안분 공시가격 {eok(result.effectiveIncludedAssessedValue ?? result.includedAssessedValue)}
         </Bullet>
       )}
-      {/* 조례 감면 적용 시: 원공시 합산 × (1−감면율) = 과세 공시가격 */}
+      {/* 조례 감면 적용 시: 주택별 감면후 공시 합 = 과세 공시가격 (주택별 감면율 상이 반영) */}
       {hasReduction && (
         <Bullet>
-          과세 공시가격 : 공시가격 합산 {eok(result.includedAssessedValue)} × (1−감면율) ={" "}
-          {eok(result.effectiveIncludedAssessedValue)}
+          과세 공시가격 :{" "}
+          {result.properties
+            .filter((p) => !p.isExcluded)
+            .map((p) =>
+              (p.reductionRate ?? 0) > 0
+                ? `${eok(p.assessedValue)}×(1−${pct(p.reductionRate ?? 0)})`
+                : eok(p.assessedValue),
+            )
+            .join(" + ")}{" "}
+          = {eok(result.effectiveIncludedAssessedValue)}
         </Bullet>
       )}
       <Bullet>
@@ -167,6 +175,9 @@ function Step2({
   const fmr = c.propertyFairMarketRatio ?? 0;
   const ptBase = c.propertyTaxBaseAmount ?? 0;
   const bracket = getHousingStandardRateBracket(ptBase);
+  // ② ⓐ 재산세 주택별 표시 — 합산 단일 산식 대신 주택별(과표→세율→세부담상한→감면) 행
+  const curIncludedProps = result.properties.filter((p) => !p.isExcluded);
+  const curMultiHouse = curIncludedProps.length > 1;
   // ②ⓐ 세부담상한 Min 행: 자동모드(직전연도 상당액 + capPct) 존재 시만
   const capPct = c.priorPropertyTaxCapPct;
   const showCapRow = capPct != null && !!result.previousYearEquivalent;
@@ -245,14 +256,35 @@ function Step2({
         </>
       ) : (
         <>
-          <Bullet indent={2}>
-            재산세 과세표준 : {eok(result.includedAssessedValue)} × {pct(fmr)}(재산세 공정시장가액비율) ={" "}
-            {eok(ptBase)}
-          </Bullet>
-          <Bullet indent={2}>
-            세부담 상한 적용 전 재산세 : {eok(ptBase)} × {pct(bracket.rate)}(세율) − {won(bracket.deduction)}
-            (누진공제액) = {won(c.propertyTaxBase)}
-          </Bullet>
+          {/* 주택별 산출근거: 과세표준 → 표준세율 재산세 → 세부담상한 Min → 감면·지분 (감면후 = 부과액) */}
+          {curIncludedProps.map((p, i) => {
+            const tb = Math.floor((p.assessedValue * Math.round(fmr * 100)) / 100);
+            const b = getHousingStandardRateBracket(tb);
+            const cap = p.housingTaxCapDetail;
+            const std = cap?.standardTax ?? Math.max(Math.floor(tb * b.rate) - b.deduction, 0);
+            const hasRed = (p.reductionRate ?? 0) > 0;
+            const hasRatio = (p.ownershipRatio ?? 1) < 1;
+            return (
+              <Bullet indent={2} key={p.propertyId ?? i}>
+                {curMultiHouse ? `주택 ${i + 1} : ` : ""}
+                {eok(p.assessedValue)} × {pct(fmr)} = {eok(tb)}, {pct(b.rate)} − {won(b.deduction)} = {won(std)}
+                {cap && cap.capAmount != null && (
+                  <>
+                    {" "}→ 세부담상한 Min({won(std)}, 직전 {won(cap.priorStandardTax)} × {cap.capPct}% = {won(cap.capAmount)}) = {won(cap.cappedTax)}
+                  </>
+                )}
+                {(hasRed || hasRatio) && (
+                  <>
+                    {hasRed && ` × (1−${pct(p.reductionRate ?? 0)})`}
+                    {hasRatio && ` × ${pct(p.ownershipRatio ?? 1)}(지분)`}
+                    {" = "}
+                    {won(p.propertyTax)}
+                  </>
+                )}
+              </Bullet>
+            );
+          })}
+          {/* 집계 세부담상한(§122 단서) — 주택별 priorAssessedValue 미입력 + 직전 자동계산 시(주택별 cap과 배타) */}
           {showCapRow && result.previousYearEquivalent && (
             <Bullet indent={2}>
               재산세 세부담 상한액 : 직전연도 재산세상당액 {won(result.previousYearEquivalent.propertyTaxEquiv)}{" "}
@@ -260,7 +292,7 @@ function Step2({
             </Bullet>
           )}
           <Bullet indent={2}>
-            부과된 재산세액 : {won(c.totalPropertyTax)}
+            부과된 재산세액{curMultiHouse ? " 합계" : ""} : {won(c.totalPropertyTax)}
             {showCapRow ? `[= Min(${won(c.propertyTaxBase)}, ${won(capLimit)})]` : ""}
           </Bullet>
         </>
@@ -271,13 +303,6 @@ function Step2({
         .filter((rp) => rp.multiFamilyBreakdown && rp.multiFamilyBreakdown.length > 0)
         .map((rp, pi) => (
           <MultiFamilyBreakdownRow key={rp.propertyId ?? pi} rp={rp} />
-        ))}
-
-      {/* 트랙 B: 주택 세부담상한 산식 (housingTaxCapDetail 존재 시만) — 조건 블록 밖 배치 필수 (Track A 교훈) */}
-      {result.properties
-        .filter((rp) => rp.housingTaxCapDetail != null)
-        .map((rp, pi) => (
-          <HousingTaxCapDetailRow key={(rp.propertyId ?? pi) + "-cap"} rp={rp} />
         ))}
 
       {/* ⓑ 종합부동산세 과세표준의 표준세율재산세액 (누진공제 없음) */}
@@ -701,51 +726,7 @@ function MultiFamilyBreakdownRow({
   );
 }
 
-// ════════════════════════════════════════════════════════════
-// 트랙 B: 주택 세부담상한 산식 명세 (ExpandToggleButton 펼침)
-// ════════════════════════════════════════════════════════════
-function HousingTaxCapDetailRow({
-  rp,
-}: {
-  rp: ComprehensiveTaxResult["properties"][number];
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const d = rp.housingTaxCapDetail;
-  if (!d) return null;
-  return (
-    <div className="ml-8 mt-1">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1 text-xs text-sky-700 hover:underline"
-      >
-        <span className={expandToggleClass("sky")}>{expandToggleLabel(expanded)}</span>
-        주택 세부담상한 산식
-      </button>
-      {expanded && (
-        <div className="mt-1 rounded-md border border-sky-200 bg-sky-50/40 px-3 py-2 text-xs text-sky-900 space-y-0.5">
-          {/* 당해 표준세율 재산세 */}
-          <div>당해 표준세율 재산세: {won(d.standardTax)}</div>
-          {/* 직전 표준세율 재산세 + 세부담상한 */}
-          {d.capPct != null && d.capAmount != null ? (
-            <>
-              <div>
-                직전 표준세율 재산세: {won(d.priorStandardTax)} → 세부담상한 {d.capPct}% = {won(d.capAmount)}
-              </div>
-              <div>
-                세부담상한 적용: min({won(d.standardTax)}, {won(d.capAmount)}) = {won(d.cappedTax)}
-              </div>
-            </>
-          ) : (
-            <div>세부담상한 미적용 (2024년 폐지 · 과세표준상한제)</div>
-          )}
-          {/* 감면·지분 적용 후 부과세액 */}
-          <div>감면·지분 적용 후 부과세액 ⓐ: {won(d.imposedTax)}</div>
-        </div>
-      )}
-    </div>
-  );
-}
+// 트랙 B(주택 세부담상한 산식 펼침)는 ②ⓐ 메인 주택별 행에 inline 통합됨 — 별도 컴포넌트 폐지
 
 function Step6({ result, yr }: { result: ComprehensiveTaxResult; yr: string }) {
   const excess = result.taxCap

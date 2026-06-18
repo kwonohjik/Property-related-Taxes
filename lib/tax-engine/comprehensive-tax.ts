@@ -318,6 +318,10 @@ export function calculateComprehensiveTax(
       isExcluded,
       // 감면후 실부과 재산세 — 최상위 totalPropertyTax("재산세 참고")·grandTotal 집계용
       propertyTax: imposedTax,
+      // ② ⓐ 재산세 주택별 산출근거 표시용 echo (감면·지분·감면후 공시 — 계산 무변경)
+      reductionRate: rate,
+      ownershipRatio: ratio ?? 1,
+      effectiveAssessedValue,
       multiFamilyBreakdown,
       housingTaxCapDetail,
     });
