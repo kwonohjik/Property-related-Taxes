@@ -23,6 +23,32 @@ import { PropertyCardEditor } from "@/components/calc/PropertyCardEditor";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 
 // ============================================================
+// 빈 주택 판정 (추가만 하고 아무것도 입력하지 않은 카드)
+// ============================================================
+
+/**
+ * 사용자가 의미 있는 입력을 전혀 하지 않은 빈 주택 — 모달 닫기 시 자동 제거 대상.
+ * 공시가격·소재지·면적·합산배제/§8④·소유자분리가 모두 미입력/기본값이면 빈 것으로 본다.
+ * (ownershipRatio "100" 등 기본값 필드는 판정에서 제외 — 사용자 의도 입력만 본다.)
+ */
+function isEmptyProperty(p: PropertyEntry): boolean {
+  const blank = (s: string | undefined) => !s || !s.trim();
+  return (
+    blank(p.assessedValue) &&
+    blank(p.jibun) &&
+    blank(p.road) &&
+    blank(p.building) &&
+    blank(p.dong) &&
+    blank(p.ho) &&
+    blank(p.area) &&
+    blank(p.landArea) &&
+    (p.exclusionType ?? "none") === "none" &&
+    (p.section8para4Type ?? "none") === "none" &&
+    !p.appurtenantSplitEnabled
+  );
+}
+
+// ============================================================
 // Props
 // ============================================================
 
@@ -74,6 +100,18 @@ export function PropertyListInput({
     setSelectedPropertyId(null);
   };
 
+  /**
+   * 모달 닫기 (E-3) — 추가만 하고 아무것도 입력하지 않은 빈 주택은 자동 제거.
+   * 빈 카드가 목록에 자동 저장되는 버그 방지. 마지막 1건(최소 보유)은 유지.
+   */
+  const closeModal = () => {
+    const id = selectedPropertyId;
+    setSelectedPropertyId(null);
+    if (!id || properties.length <= 1) return;
+    const target = properties.find((p) => p.id === id);
+    if (target && isEmptyProperty(target)) onRemove(id);
+  };
+
   return (
     <div className="space-y-4">
       {/* 요약 테이블 (행 클릭 → 편집 모달) */}
@@ -87,7 +125,7 @@ export function PropertyListInput({
       <Dialog
         open={selectedPropertyId !== null}
         onOpenChange={(open) => {
-          if (!open) setSelectedPropertyId(null);
+          if (!open) closeModal();
         }}
       >
         <DialogContent
@@ -129,7 +167,7 @@ export function PropertyListInput({
             )}
             <button
               type="button"
-              onClick={() => setSelectedPropertyId(null)}
+              onClick={closeModal}
               className="px-4 py-2 rounded-md text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               닫기

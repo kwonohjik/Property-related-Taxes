@@ -114,4 +114,22 @@ test.describe("종부세 주택 — 테이블+모달", () => {
     // 테이블 합산배제 컬럼에 배지 반영
     await expect(page.locator(ROW).first()).toContainText("가정어린이집");
   });
+
+  test("PT-5: 주택 추가 → 미입력 닫기 → 빈 주택 자동 제거(저장 안 됨)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await gotoStep2(page);
+    await expect(page.locator(ROW)).toHaveCount(1);
+
+    // 주택 추가 → 모달 자동 오픈, 아무것도 입력하지 않고 닫기 → 빈 주택 제거
+    await page.getByRole("button", { name: /주택 추가/ }).click();
+    await expect(page.getByTestId("property-edit-dialog")).toBeVisible();
+    await closeModal(page);
+    await expect(page.locator(ROW)).toHaveCount(1);
+
+    // 대조: 공시가격 입력 후 닫으면 유지(정상 추가)
+    await page.getByRole("button", { name: /주택 추가/ }).click();
+    await page.getByPlaceholder("금액 입력").first().fill("300000000");
+    await closeModal(page);
+    await expect(page.locator(ROW)).toHaveCount(2);
+  });
 });
