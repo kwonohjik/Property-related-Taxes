@@ -98,6 +98,13 @@ const MENU = [
     tone: "rose",
   },
   {
+    href: "/calc/gift-deemed",
+    title: "증여로 보는 경우",
+    subtitle: "보험·저가양수·채무면제·무상사용·무상대출 의제",
+    icon: "🎀",
+    tone: "rose",
+  },
+  {
     href: "/calc/acquisition-tax",
     title: "취득세",
     subtitle: "부동산 취득 시 지방세",
