@@ -190,6 +190,7 @@ export function calcPreviousYearEquivalent(
       oneHouseDeductionAmount,
       propertyFairMarketRatio: propertyFMR,     // 교재 ⑤나 "× 60%" echo
       propertyTaxBaseAmount: propertyTaxBase,   // 교재 ⑤나 감면후 재산세 과세표준 echo
+      effectiveAssessedValue,                   // ②ⓐⓑ 라벨용 — 감면후 공시 합 echo
       propertyTaxBreakdown,                     // ① 주택별 산출 내역 (산출근거 표시용)
     },
   };

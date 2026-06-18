@@ -96,6 +96,7 @@ export interface PreviousYearEquivalentResult {
     oneHouseDeductionAmount: number; // 부표 ⑪ 세액공제액
     propertyFairMarketRatio?: number; // 직전연도 재산세 FMR (교재 ⑤나 "× 60%" — getPropertyFmrForProration)
     propertyTaxBaseAmount?: number;   // 직전연도 재산세 과세표준 (교재 ⑤나 "= 8.4억" — assessedValue × FMR)
+    effectiveAssessedValue?: number;  // ②ⓐⓑ 라벨용 — 주택별 감면후 공시 합(종부세 과표·총표준세율재산세 기준)
     propertyTaxBreakdown?: PriorPropertyTaxLine[]; // ① 주택별 산출 내역 (산출근거 표시용 echo)
   };
 }
