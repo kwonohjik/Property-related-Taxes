@@ -99,6 +99,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
       {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) */}
       <CurrencyInput
         label="취득가액"
+        placeholder="취득가액 입력"
         value={house.acquisitionPrice ?? ""}
         onChange={(v) => onUpdate({ acquisitionPrice: v })}
         hint="소형신축·준공후미분양 특례 가액 기준 (원)"
@@ -158,6 +159,15 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
       </div>
+
+      {/* #3-B1 신축·준공후미분양 특례 비차단 경고 — 특례 의도(준공후미분양 토글·준공일 입력)인데
+          판정 필수필드(취득가액·전용면적) 미입력 시 침묵 미적용 안내 (소령 §167의3①12 가·나목) */}
+      {(house.isUnsoldNewHouse || !!house.completionDate) &&
+        (!house.acquisitionPrice || !house.exclusiveArea) && (
+          <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-[11px] text-amber-700">
+            신축·준공후미분양 특례 판정에는 취득가액·전용면적 입력이 필요합니다. 미입력 시 특례가 적용되지 않습니다.
+          </p>
+        )}
 
       {/* #2a 혼인합가 — 배우자 단독 보유 (혼인합가일 입력 시에만 노출) */}
       {showSpouseOwned && (
