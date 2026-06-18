@@ -138,10 +138,23 @@ export interface ContributionInput {
   relatedRatio?: { numer: number; denom: number }; // 현물출자자 특수관계인 주주등 지분비율
 }
 
-/** (11) 전환사채 §40 — 저가 인수·취득 (§40①1호) */
+/** (11) 전환사채등 §40 — 인수·취득(①1호)·주식전환(①2호 가나다/라목)·양도(①3호) sub-case */
 export interface ConvertibleBondInput {
-  bondMarketValue: number; // 전환사채 시가
-  acquisitionPrice: number; // 인수·취득가액
+  caseType?: "acquisition" | "conversion" | "conversion_reverse" | "transfer"; // 기본 acquisition
+  bondMarketValue: number; // 전환사채등 시가 (acquisition·transfer 이익·기준금액)
+  // acquisition(§40①1호, §30①1)
+  acquisitionPrice?: number; // 인수·취득가액
+  // transfer(§40①3호, §30①4)
+  transferPrice?: number; // 양도가액
+  // conversion / conversion_reverse(§40①2호, §30①2·3) — §30⑤1 교부주식가액 산식
+  preConvPrice?: number; // 전환등 전 1주당 평가가액
+  preConvShares?: number; // 전환등 전 발행주식총수
+  conversionPrice?: number; // 주식 1주당 전환가액등
+  increasedShares?: number; // 전환등 증가주식수(=교부받은 주식수)
+  interestLoss?: number; // 이자손실분 (시행규칙 §10의2) — conversion 차감
+  acquisitionGainPrior?: number; // §30①1호 이익(인수 시 기과세분) — conversion 차감
+  // conversion_reverse(라목, §30①3) 비율
+  relatedPreRatio?: { numer: number; denom: number }; // 교부받은 자의 특수관계인이 전환 전 보유 지분비율
 }
 
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
