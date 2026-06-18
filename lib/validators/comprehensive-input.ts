@@ -353,12 +353,10 @@ export const landParcelSchema = z.object({
 
 export const comprehensiveTaxInputSchema = z.object({
   /**
-   * 보유 주택 목록 (1건 이상 필수)
-   * 합산배제 신청 주택 포함
+   * 보유 주택 목록 (0건 허용 — 토지전용 사례10·11 입력 경로)
+   * 합산배제 신청 주택 포함. 주택·토지 동시 부재는 하단 refine으로 차단.
    */
-  properties: z
-    .array(comprehensivePropertySchema)
-    .min(1, { message: "주택 정보를 1건 이상 입력해주세요." }),
+  properties: z.array(comprehensivePropertySchema).min(0),
 
   /**
    * 납세의무자 유형 (§9②). 미입력 = "individual" | "corporate".
@@ -558,6 +556,16 @@ export const comprehensiveTaxInputSchema = z.object({
     return check(v.landAggregateParcels) && check(v.landSeparateParcels);
   },
   { message: "직전연도 공시지가는 전 필지를 입력하거나 전부 비워야 합니다 (일부만 입력 불가).", path: ["landAggregateParcels"] },
+).refine(
+  // 주택 0채 허용(토지전용) 시 완전 빈 입력(주택 0 + 토지 0) 차단.
+  //   변환(comprehensive-api.ts)이 토지 미보유 시 land 필드를 undefined/생략하므로 아래 판정이 정확.
+  (v) =>
+    v.properties.length > 0 ||
+    v.landAggregate !== undefined ||
+    (v.landSeparate?.length ?? 0) > 0 ||
+    (v.landAggregateParcels?.length ?? 0) > 0 ||
+    (v.landSeparateParcels?.length ?? 0) > 0,
+  { message: "주택 또는 토지를 1건 이상 입력해주세요.", path: ["properties"] },
 );
 // (Phase B 통합 — comprehensive-prior-year-2step) refine ⑫ priorAssessedValue ↔
 //   previousYearAuto.priorHouseValues 상호배타 제거: 직전공시 단일 입력원에서 변환이 둘 다

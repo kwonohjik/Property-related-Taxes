@@ -85,7 +85,9 @@ export function PropertyListInput({
   const selectedIndex = properties.findIndex((p) => p.id === selectedPropertyId);
   const selectedProperty = selectedIndex >= 0 ? properties[selectedIndex] : null;
   const totalAssessedValue = properties.reduce((sum, p) => sum + parseAmount(p.assessedValue), 0);
-  const canRemove = properties.length > 1;
+  // 1채여도 삭제 허용 → 0채(토지전용 사례10·11) 도달 가능. 0채는 명시적 삭제로만 도달
+  // (closeModal 빈 주택 자동 제거는 length>1에서만 — 초기 빈 주택 침묵 소멸 방지).
+  const canRemove = properties.length >= 1;
 
   // 추가 직후 자동 모달 오픈 (E-1) — addProperty가 새 주택 id를 반환 → 즉시 선택
   const handleAdd = () => {
@@ -114,12 +116,22 @@ export function PropertyListInput({
 
   return (
     <div className="space-y-4">
-      {/* 요약 테이블 (행 클릭 → 편집 모달) */}
-      <PropertyListTableView
-        properties={properties}
-        selectedPropertyId={selectedPropertyId}
-        onSelect={setSelectedPropertyId}
-      />
+      {/* 요약 테이블 (행 클릭 → 편집 모달) — 0채면 테이블이 null이므로 빈 상태 안내 */}
+      {properties.length === 0 ? (
+        <div
+          className="rounded-lg border border-sky-200 bg-sky-50/40 px-4 py-5 text-center text-sm text-sky-800"
+          data-testid="property-empty-state"
+        >
+          보유 주택이 없습니다. 토지만 보유한 경우 이대로 다음 단계(토지 정보)에서 입력하세요.
+          주택이 있으면 아래 &lsquo;주택 추가&rsquo;를 누르세요.
+        </div>
+      ) : (
+        <PropertyListTableView
+          properties={properties}
+          selectedPropertyId={selectedPropertyId}
+          onSelect={setSelectedPropertyId}
+        />
+      )}
 
       {/* 편집 모달 — 행 클릭 또는 추가 직후 자동 오픈 */}
       <Dialog
