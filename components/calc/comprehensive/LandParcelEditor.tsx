@@ -45,7 +45,9 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
         <AddressSearch
           value={{ road: "", jibun: parcel.jibun, building: "", detail: "", lng: "", lat: "" }}
           onChange={(v) => {
-            const sigungu = deriveSigunguFromAddress(v.jibun || v.road);
+            // 시군구는 도로명(시도·시군구 포함) 우선 — Vworld 지번(parcel)은 "석촌동 276-1"로 시군구 없음.
+            // jibun은 조회용으로만 저장.
+            const sigungu = deriveSigunguFromAddress(v.road || v.jibun);
             onUpdate({ jibun: v.jibun, ...(sigungu ? { jurisdiction: sigungu } : {}) });
           }}
         />
