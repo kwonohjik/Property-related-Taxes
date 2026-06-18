@@ -28,6 +28,7 @@ import { LandParcelSection } from "@/components/calc/comprehensive/LandParcelSec
 import { ExclusionInfoInput } from "@/components/calc/ExclusionInfoInput";
 import { ComprehensiveTaxResultView } from "@/components/calc/results/ComprehensiveTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
@@ -547,6 +548,7 @@ export default function ComprehensiveTaxPage() {
           <ComprehensiveTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
           <LoginPromptBanner />
           <div className="flex gap-3">
+            <HomeButton className="flex-1 justify-center px-4 py-2 text-sm" />
             <button
               type="button"
               onClick={handlePrev}
