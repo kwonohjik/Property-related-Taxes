@@ -470,6 +470,10 @@ export const comprehensiveTaxInputSchema = z.object({
         .optional(),
       /** 직전연도 주택별 공시가격(원) — 재산세 주택별 합산용 (사례4 다주택). 미입력=단일. */
       priorHouseValues: z.array(z.number().int().nonnegative()).optional(),
+      /** 직전연도 주택별 감면율(0~1) — priorHouseValues 인덱스 정합. 주택별 감면 상이(사례9). 미입력=단일 fallback. */
+      priorHouseReductionRates: z.array(z.number().min(0).max(1)).optional(),
+      /** 직전연도 주택별 공유지분율(0~1) — priorHouseValues 인덱스 정합(사례9 강남 50%). 미입력=단독(1). */
+      priorHouseOwnershipRatios: z.array(z.number().min(0).max(1)).optional(),
       /** 직전연도 조정대상지역 2주택 (중과세율 분기). 당해 isMultiHouseInAdjustedArea와 별개. */
       isMultiHouseInAdjustedArea: z.boolean().optional(),
       /** 직전연도 세율 주택 수 (3주택 이상 중과). 미입력=priorHouseValues.length ?? 1. */
