@@ -13,6 +13,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { SigunguSelect } from "@/components/calc/transfer/nbl/shared/SigunguSelect";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -129,6 +130,19 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
                 onChange={(v) => update(r.id, { rightValue: v })}
                 hint="분양권 공급가격/입주권 종전주택가격 — 그 외 지방 3억 이하 시 주택 수 제외 (원)"
               />
+              <div className="space-y-1">
+                <span className="block text-[11px] text-muted-foreground font-medium">
+                  소재지 (시·군·구) <span className="text-muted-foreground/60">— 선택</span>
+                </span>
+                <SigunguSelect
+                  code={r.regionCode?.slice(0, 5) ?? ""}
+                  name={r.regionName ?? ""}
+                  onChange={(code, name) => update(r.id, { regionCode: code, regionName: name })}
+                />
+                <p className="text-[11px] text-muted-foreground/70">
+                  인구감소지역 세컨드홈 특례의 &ldquo;취득 전 보유주택과 동일 시·군·구&rdquo; 비교에 사용 (소령 §167의3①12 다·라목 2호). 분양권은 공급주택, 입주권은 종전주택 소재지.
+                </p>
+              </div>
               {/* #2b 혼인합가 — 배우자 단독 보유 (혼인합가일 입력 시) */}
               {showSpouseOwned && (
                 <ToggleCard

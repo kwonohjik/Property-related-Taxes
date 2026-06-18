@@ -304,6 +304,8 @@ export const presaleRightSchema = z.object({
   regionCriteria: z.enum(["REGION", "VALUE"]).optional(),
   rightValue: z.number().int().nonnegative().optional(),
   isSpouseOwned: z.boolean().optional(),
+  // 공급주택 소재지 코드 (시·군·구 5자리 또는 법정동 10자리) — 다·라목 2호 동일 시·군·구 비교
+  regionCode: z.string().min(5).optional(),
 });
 
 

@@ -188,3 +188,80 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
     expect(r.effectiveHouseCount).toBe(2); // h0 + h2 (h1 임대 배제)
   });
 });
+
+describe("§167의3①12 다·라목 2호 괄호 — 취득 전 보유 입주권/분양권 동일 시군구", () => {
+  it("C9: 인구감소 세컨드홈 + 취득 전 '동일 시군구' 분양권 보유 → 산입(특례 미적용)", () => {
+    const second = makeHouse("h2", {
+      regionCode: DECLINE_SGG,
+      region: "non_capital",
+      populationAreaType: "decline",
+      isSecondHomeRegistered: true,
+      acquisitionDate: new Date("2026-03-01"),
+    });
+    const input = makeInput([makeHouse("h1", { regionCode: CAPITAL_OTHER }), second], {
+      sellingHouseId: "h1",
+      transferDate: new Date("2026-06-01"),
+      presaleRights: [
+        {
+          id: "p1",
+          type: "presale_right",
+          acquisitionDate: new Date("2024-01-01"), // 후보 취득 전 보유
+          region: "non_capital",
+          regionCode: DECLINE_SGG_OTHER, // 공급주택 동일 시·군·구
+        },
+      ],
+    });
+    const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBeUndefined();
+  });
+
+  it("C10: 동일 시군구 분양권이지만 후보 '취득 후' 취득 → 배제(특례 적용)", () => {
+    const second = makeHouse("h2", {
+      regionCode: DECLINE_SGG,
+      region: "non_capital",
+      populationAreaType: "decline",
+      isSecondHomeRegistered: true,
+      acquisitionDate: new Date("2026-03-01"),
+    });
+    const input = makeInput([makeHouse("h1", { regionCode: CAPITAL_OTHER }), second], {
+      sellingHouseId: "h1",
+      transferDate: new Date("2026-09-01"),
+      presaleRights: [
+        {
+          id: "p1",
+          type: "redevelopment_right",
+          acquisitionDate: new Date("2026-06-01"), // 후보 취득 후
+          region: "non_capital",
+          regionCode: DECLINE_SGG_OTHER,
+        },
+      ],
+    });
+    const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("population_decline_second_home");
+  });
+
+  it("C11: 분양권 소재지(regionCode) 미제공 → 비교 제외 → 배제(특례 적용)", () => {
+    const second = makeHouse("h2", {
+      regionCode: DECLINE_SGG,
+      region: "non_capital",
+      populationAreaType: "decline",
+      isSecondHomeRegistered: true,
+      acquisitionDate: new Date("2026-03-01"),
+    });
+    const input = makeInput([makeHouse("h1", { regionCode: CAPITAL_OTHER }), second], {
+      sellingHouseId: "h1",
+      transferDate: new Date("2026-06-01"),
+      presaleRights: [
+        {
+          id: "p1",
+          type: "presale_right",
+          acquisitionDate: new Date("2024-01-01"),
+          region: "non_capital",
+          // regionCode 미제공
+        },
+      ],
+    });
+    const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionNone, true);
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("population_decline_second_home");
+  });
+});

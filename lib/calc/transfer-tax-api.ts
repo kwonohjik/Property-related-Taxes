@@ -72,6 +72,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             regionCriteria: p.regionCriteria,
             rightValue: p.rightValue ? parseAmount(p.rightValue) || undefined : undefined,
             isSpouseOwned: p.isSpouseOwned,
+            regionCode: p.regionCode || undefined,
           }))
       : undefined;
 
