@@ -548,7 +548,15 @@ export default function ComprehensiveTaxPage() {
           <ComprehensiveTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
           <LoginPromptBanner />
           <div className="flex gap-3">
-            <HomeButton className="flex-1 justify-center px-4 py-2 text-sm" />
+            <HomeButton
+              className="flex-1 justify-center px-4 py-2 text-sm"
+              onBeforeNavigate={() => {
+                // 스토어는 클라이언트 내비게이션에서 유지됨 → 결과 뷰 상태 해제(재진입 시 stale 결과 방지).
+                // 입력 데이터(formData)는 보존 — 재진입 시 1단계부터 검토·재계산 가능.
+                setResult(null);
+                setStep(0);
+              }}
+            />
             <button
               type="button"
               onClick={handlePrev}
