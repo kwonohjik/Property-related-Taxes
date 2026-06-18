@@ -19,12 +19,16 @@ function contributionLow(input: ContributionInput): DeemedGiftResult {
   const value = perShareGain > 0 ? safeMultiply(perShareGain, allocatedShares) : 0;
   const applied = value > 0;
 
+  // §39의3②: 이익을 증여한 소액주주 2명 이상 → 1인 의제 (저가인수 ①1호 한정, 집계 이익 불변)
+  const imputation = input.smallShareholderImputation === true;
+  const imputationNote = imputation ? " · §39의3② 소액주주 1인 의제" : "";
+
   const breakdown: CalculationStep[] = [
     { label: "현물출자 후 1주당 가액", amount: perShareAfter, lawRef: GIFT.CONTRIBUTION },
     { label: "신주 1주당 인수가액", amount: newSharePrice },
     { label: "1주당 이익", amount: perShareGain },
     { label: "배정받은 신주수", amount: allocatedShares },
-    { label: "증여재산가액", amount: value, lawRef: GIFT.CONTRIBUTION, note: "§39의3①1호 저가인수" },
+    { label: "증여재산가액", amount: value, lawRef: GIFT.CONTRIBUTION, note: `§39의3①1호 저가인수${imputationNote}` },
   ];
   return {
     type: "contribution",
@@ -33,6 +37,7 @@ function contributionLow(input: ContributionInput): DeemedGiftResult {
     breakdown,
     exclusionReason: applied ? undefined : "출자 후 1주가가 인수가 이하 — 이익 없음",
     legalBasis: GIFT.CONTRIBUTION,
+    thresholdEcho: { smallShareholderImputation: imputation },
   };
 }
 

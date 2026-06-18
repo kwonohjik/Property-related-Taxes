@@ -102,6 +102,8 @@ export interface CapitalIncreaseInput {
   // 고가 나·다·라목 — 특수관계인 비율 가중 (시행령 §29②4·5)
   relatedAcquiredShares?: number; // 특수관계인이 인수한 신주수 (분자)
   ratioDenomShares?: number; // 분모 신주수 (나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수 총수)
+  // §39②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가발행 ①1호 한정)
+  smallShareholderImputation?: boolean;
 }
 
 /** (8-3) 전환주식 §39①3호 — 전환후 §29②1~5 이익 − 발행당시 §29②1~5 이익 (시행령 §29②6) */
@@ -136,6 +138,8 @@ export interface ContributionInput {
   allocatedShares: number; // 배정받은 신주수 (low) / 인수 신주수 (high)
   // high 전용 (①2호)
   relatedRatio?: { numer: number; denom: number }; // 현물출자자 특수관계인 주주등 지분비율
+  // §39의3②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가인수 ①1호 한정)
+  smallShareholderImputation?: boolean;
 }
 
 /** (11) 전환사채등 §40 — 인수·취득(①1호)·주식전환(①2호 가나다/라목)·양도(①3호) sub-case */

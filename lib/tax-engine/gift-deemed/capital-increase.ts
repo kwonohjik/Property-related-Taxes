@@ -41,12 +41,16 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   }
   const value = applied ? base : 0;
 
+  // §39②: 이익을 증여한 소액주주 2명 이상 → 1인 의제 (저가발행 ①1호 한정, 집계 이익 불변)
+  const imputation = input.smallShareholderImputation === true;
+  const imputationNote = imputation ? " · §39② 소액주주 1인 의제" : "";
+
   const breakdown: CalculationStep[] = [
     { label: "증자 후 1주당 가액", amount: perShareAfter, lawRef: GIFT.CAPITAL_INCREASE },
     { label: "신주 1주당 인수가액", amount: newSharePrice },
     { label: "1주당 이익", amount: perShareGain },
     { label: "이익 귀속 주식수", amount: forfeitedShares },
-    { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①1호 저가발행 — ${SUBTYPE_NOTE[subType]}` },
+    { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①1호 저가발행 — ${SUBTYPE_NOTE[subType]}${imputationNote}` },
   ];
   return {
     type: "capital_increase",
@@ -55,7 +59,7 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
     breakdown,
     exclusionReason,
     legalBasis: GIFT.CAPITAL_INCREASE,
-    thresholdEcho: { gain: value },
+    thresholdEcho: { gain: value, smallShareholderImputation: imputation },
   };
 }
 
