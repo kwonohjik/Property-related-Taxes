@@ -611,7 +611,11 @@ function PriorYearBreakdown({
         {pct(dt.fairMarketRatio)}(공정시장가액비율) = {eok(dt.taxBase)}
       </Bullet>
       <Bullet indent={4}>
-        종합부동산세액 : {eok(dt.taxBase)} × {pct(dt.appliedRate)} = {won(dt.calculatedTax)}
+        종합부동산세액 : {eok(dt.taxBase)} × {pct(dt.appliedRate)}
+        {(dt.progressiveDeduction ?? 0) > 0
+          ? ` − ${won(dt.progressiveDeduction ?? 0)}(누진공제액)`
+          : ""}{" "}
+        = {won(dt.calculatedTax)}
       </Bullet>
 
       {/* ⓑ 공제할 재산세액 */}
