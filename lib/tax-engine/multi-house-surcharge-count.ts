@@ -12,7 +12,7 @@
 
 import { differenceInYears } from "date-fns";
 import { MULTI_HOUSE } from "./legal-codes";
-import { classifyPopulationDeclineArea } from "./data/population-decline-areas";
+import { classifyPopulationDeclineArea, toSigunguCode } from "./data/population-decline-areas";
 import type {
   RentalHousingType,
   HouseInfo,
@@ -381,8 +381,9 @@ export function countEffectiveHouses(
   transferDate: Date,
   presaleRights: PresaleRight[],
   rules: HouseCountExclusionRules,
-): { count: number; excluded: ExcludedHouse[] } {
+): { count: number; excluded: ExcludedHouse[]; warnings: string[] } {
   const excluded: ExcludedHouse[] = [];
+  const warnings: string[] = [];
   let count = 0;
 
   const presaleStartDate = new Date(rules.presaleRightStartDate);
@@ -496,12 +497,41 @@ export function countEffectiveHouses(
           ? MULTI_HOUSE.POP_DECLINE_PRICE_CAP_NONCAPITAL
           : MULTI_HOUSE.POP_DECLINE_PRICE_CAP_DEFAULT;
       if (house.officialPrice <= popCap) {
-        excluded.push({
-          houseId: house.id,
-          reason: "population_decline_second_home",
-          detail: `인구감소지역 세컨드홈 특례 (${MULTI_HOUSE.SECOND_HOME_DEPOPULATION}) — 기준시가 ${house.officialPrice.toLocaleString()} ≤ ${popCap.toLocaleString()}, 주택 수 산정 배제`,
-        });
-        continue;
+        // 다목 2호·라목 2호: 해당 주택 취득 전에 보유한 주택과 동일한 시·군·구에
+        // 소재하는 주택이 아닐 것. 동일 시·군·구 보유주택이 있으면 특례 미적용(산입).
+        // regionCode 미제공(boolean override 경로)이면 비교 불가 → 제한 미적용(특례 유지).
+        const candidateSgg = toSigunguCode(house.regionCode);
+        let hasSameSigunguPriorHouse = false;
+        if (candidateSgg) {
+          for (const other of houses) {
+            if (other.id === house.id) continue;
+            // "취득 전에 보유한 주택" — 후보 취득일 이전(또는 동일)에 취득한 주택만 비교
+            if (other.acquisitionDate > house.acquisitionDate) continue;
+            const otherSgg = toSigunguCode(other.regionCode);
+            if (otherSgg && otherSgg === candidateSgg) {
+              hasSameSigunguPriorHouse = true;
+              break;
+            }
+          }
+        } else {
+          // regionCode 미제공(boolean override 경로) → 동일 시·군·구 요건 검증 불가.
+          // 제한규정 미적용(특례 유지)하되 미검증 사실을 경고로 노출.
+          warnings.push(
+            `주택 ${house.id}: 인구감소지역 세컨드홈 특례 — 주소(시·군·구) 미입력으로 '취득 전 보유주택과 동일 시·군·구' 요건(소령 §167의3①12 다·라목 2호)을 검증하지 못했습니다.`,
+          );
+        }
+        if (!hasSameSigunguPriorHouse) {
+          excluded.push({
+            houseId: house.id,
+            reason: "population_decline_second_home",
+            detail: `인구감소지역 세컨드홈 특례 (${MULTI_HOUSE.SECOND_HOME_DEPOPULATION}) — 기준시가 ${house.officialPrice.toLocaleString()} ≤ ${popCap.toLocaleString()}, 주택 수 산정 배제`,
+          });
+          continue;
+        }
+        // 동일 시·군·구 보유주택 존재 → 다목·라목 2호 미충족 → 특례 미적용, 일반 산입
+        warnings.push(
+          `주택 ${house.id}: 취득 전 보유한 동일 시·군·구 주택이 있어 인구감소지역 세컨드홈 특례를 적용하지 않습니다(소령 §167의3①12 다·라목 2호).`,
+        );
       }
       // 한도 초과 → 배제 미적용, 일반 산입 (fall through)
     }
@@ -514,5 +544,5 @@ export function countEffectiveHouses(
     if (isPresaleRightCounted(right, presaleStartDate)) count++;
   }
 
-  return { count, excluded };
+  return { count, excluded, warnings };
 }
