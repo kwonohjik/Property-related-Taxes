@@ -20,6 +20,7 @@ import {
   ConvertibleStockFields,
   ConvertibleBondFields,
 } from "./capital-forms";
+import { AcquisitionFundFields, NomineeTrustFields } from "./presumption-forms";
 
 // ============================================================
 // 폼 상태
@@ -124,6 +125,15 @@ export interface DeemedFormState {
   csIssueForfeitedShares: string;
   csIssueRelatedAcquiredShares: string;
   csIssueRatioDenomShares: string;
+  // ── Phase 3 추정·의제 ──
+  // 재산취득자금 증여추정 §45
+  afSubType: "acquisition" | "debt_repayment";
+  afAcquisitionValue: string;
+  afProvenAmount: string;
+  // 명의신탁 증여의제 §45의2
+  ntPropertyValue: string;
+  ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
+  ntExcluded: boolean; // §45의2①1·3·4 배제사유
 }
 
 export const INITIAL_DEEMED: DeemedFormState = {
@@ -213,6 +223,12 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csIssueForfeitedShares: "",
   csIssueRelatedAcquiredShares: "",
   csIssueRatioDenomShares: "",
+  afSubType: "acquisition",
+  afAcquisitionValue: "",
+  afProvenAmount: "",
+  ntPropertyValue: "",
+  ntTaxAvoidance: true,
+  ntExcluded: false,
 };
 
 export const DEEMED_TYPE_META: Record<
@@ -231,6 +247,9 @@ export const DEEMED_TYPE_META: Record<
   contribution: { label: "현물출자에 따른 이익", law: "상증법 §39의3" },
   convertible_stock: { label: "전환주식에 따른 이익", law: "상증법 §39①3호" },
   convertible_bond: { label: "전환사채에 따른 이익", law: "상증법 §40" },
+  // Phase 3 추정·의제
+  acquisition_fund_presumption: { label: "재산취득자금 증여추정", law: "상증법 §45" },
+  nominee_trust: { label: "명의신탁 증여의제", law: "상증법 §45의2" },
 };
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
@@ -251,6 +270,8 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "capital_decrease", label: "감자에 따른 이익", description: "상증법 §39의2 — 저가/고가 소각", testId: "deemed-type-capital_decrease" },
   { value: "contribution", label: "현물출자에 따른 이익", description: "상증법 §39의3 — 저가/고가 인수", testId: "deemed-type-contribution" },
   { value: "convertible_bond", label: "전환사채에 따른 이익", description: "상증법 §40 — 인수취득·주식전환·양도", testId: "deemed-type-convertible_bond" },
+  { value: "acquisition_fund_presumption", label: "재산취득자금 증여추정", description: "상증법 §45 — 미입증 취득자금·채무상환", testId: "deemed-type-acquisition_fund_presumption" },
+  { value: "nominee_trust", label: "명의신탁 증여의제", description: "상증법 §45의2 — 명의신탁 재산가액", testId: "deemed-type-nominee_trust" },
 ];
 
 export function DeemedTypeSelector({
@@ -299,6 +320,10 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
       return <ConvertibleStockFields form={form} set={set} />;
     case "convertible_bond":
       return <ConvertibleBondFields form={form} set={set} />;
+    case "acquisition_fund_presumption":
+      return <AcquisitionFundFields form={form} set={set} />;
+    case "nominee_trust":
+      return <NomineeTrustFields form={form} set={set} />;
     default:
       return null;
   }

@@ -11,6 +11,8 @@ import { calcCapitalDecreaseGift } from "./capital-decrease";
 import { calcContributionGift } from "./contribution-in-kind";
 import { calcConvertibleStockGift } from "./convertible-stock";
 import { calcConvertibleBondGift } from "./convertible-bond";
+import { calcAcquisitionFundPresumption } from "./acquisition-fund-presumption";
+import { calcNomineeTrustGift } from "./nominee-trust";
 
 export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
   switch (input.type) {
@@ -36,6 +38,10 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
       return calcConvertibleStockGift(input);
     case "convertible_bond":
       return calcConvertibleBondGift(input);
+    case "acquisition_fund_presumption":
+      return calcAcquisitionFundPresumption(input);
+    case "nominee_trust":
+      return calcNomineeTrustGift(input);
   }
 }
 // §43① 중복배제·§43② 합산은 Phase 3 router 후처리(여기선 단일 의제만)

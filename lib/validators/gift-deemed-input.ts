@@ -109,6 +109,18 @@ const contributionSchema = z.object({
   relatedRatio: ratioSchema.optional(),
   smallShareholderImputation: z.boolean().optional(),
 });
+const acquisitionFundSchema = z.object({
+  type: z.literal("acquisition_fund_presumption"),
+  subType: z.enum(["acquisition", "debt_repayment"]),
+  acquisitionValue: z.number().positive({ message: "취득재산가액(채무상환금액)은 0보다 커야 합니다" }),
+  provenAmount: z.number().nonnegative(),
+});
+const nomineeTrustSchema = z.object({
+  type: z.literal("nominee_trust"),
+  propertyValue: z.number().nonnegative(),
+  hasTaxAvoidancePurpose: z.boolean(),
+  isExcluded: z.boolean().optional(),
+});
 const convertibleBondSchema = z.object({
   type: z.literal("convertible_bond"),
   caseType: z.enum(["acquisition", "conversion", "conversion_reverse", "transfer"]).optional(),
@@ -137,6 +149,8 @@ export const deemedGiftInputSchema = z
     contributionSchema,
     convertibleStockSchema,
     convertibleBondSchema,
+    acquisitionFundSchema,
+    nomineeTrustSchema,
   ])
   .superRefine((data, ctx) => {
     if (data.type === "insurance") {

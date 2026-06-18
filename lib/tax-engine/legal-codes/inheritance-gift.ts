@@ -127,6 +127,9 @@ export const GIFT = {
   CAPITAL_DECREASE: "상증법 §39의2",
   CONTRIBUTION: "상증법 §39의3",
   CONVERTIBLE_BOND: "상증법 §40",
+  // ── 증여로 보는 경우 (Phase 3: 추정·의제) ──
+  ACQUISITION_FUND_PRESUMPTION: "상증법 §45",
+  NOMINEE_TRUST: "상증법 §45의2",
 } as const;
 
 // ============================================================

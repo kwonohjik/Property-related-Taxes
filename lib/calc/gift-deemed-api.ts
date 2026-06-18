@@ -176,6 +176,20 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares }),
       };
     }
+    case "acquisition_fund_presumption":
+      return {
+        type: "acquisition_fund_presumption",
+        subType: form.afSubType,
+        acquisitionValue: parseAmount(form.afAcquisitionValue),
+        provenAmount: parseAmount(form.afProvenAmount),
+      };
+    case "nominee_trust":
+      return {
+        type: "nominee_trust",
+        propertyValue: parseAmount(form.ntPropertyValue),
+        hasTaxAvoidancePurpose: form.ntTaxAvoidance,
+        isExcluded: form.ntExcluded,
+      };
     default:
       throw new Error("증여 유형을 선택하세요");
   }

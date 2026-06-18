@@ -17,7 +17,9 @@ export type DeemedGiftType =
   | "capital_decrease" // §39의2 (9)
   | "contribution" // §39의3 (10)
   | "convertible_stock" // §39①3호 전환주식 (8-3)
-  | "convertible_bond"; // §40 (11)
+  | "convertible_bond" // §40 (11)
+  | "acquisition_fund_presumption" // §45 재산취득자금·채무상환 증여추정 (Phase 3)
+  | "nominee_trust"; // §45의2 명의신탁 증여의제 (Phase 3)
 
 /** 모든 계산기 공통 결과 */
 export interface DeemedGiftResult {
@@ -162,6 +164,22 @@ export interface ConvertibleBondInput {
   relatedPreRatio?: { numer: number; denom: number }; // 교부받은 자의 특수관계인이 전환 전 보유 지분비율
 }
 
+// ── Phase 3: 추정·의제 ──
+
+/** §45 재산취득자금·채무상환 증여추정 */
+export interface AcquisitionFundPresumptionInput {
+  subType: "acquisition" | "debt_repayment"; // §45① 재산취득자금 / §45② 채무상환자금
+  acquisitionValue: number; // 취득재산가액 또는 채무상환금액
+  provenAmount: number; // 입증된 금액 합계 (소득·상속수증·처분대가)
+}
+
+/** §45의2 명의신탁재산 증여의제 */
+export interface NomineeTrustInput {
+  propertyValue: number; // 명의신탁 재산 가액
+  hasTaxAvoidancePurpose: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
+  isExcluded?: boolean; // §45의2①1·3·4 배제 (신탁등기·비거주자 법정대리인 등)
+}
+
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
 export type DeemedGiftInput =
   | ({ type: "insurance" } & InsuranceInput)
@@ -174,4 +192,6 @@ export type DeemedGiftInput =
   | ({ type: "capital_decrease" } & CapitalDecreaseInput)
   | ({ type: "contribution" } & ContributionInput)
   | ({ type: "convertible_stock" } & ConvertibleStockInput)
-  | ({ type: "convertible_bond" } & ConvertibleBondInput);
+  | ({ type: "convertible_bond" } & ConvertibleBondInput)
+  | ({ type: "acquisition_fund_presumption" } & AcquisitionFundPresumptionInput)
+  | ({ type: "nominee_trust" } & NomineeTrustInput);

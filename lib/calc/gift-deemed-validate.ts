@@ -63,6 +63,13 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (parseAmount(form.csIssuePrePrice) <= 0) return "발행 시점 증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.csIssuePreShares) <= 0) return "발행 시점 증자 전 발행주식총수를 입력하세요";
       break;
+    case "acquisition_fund_presumption":
+      if (parseAmount(form.afAcquisitionValue) <= 0)
+        return form.afSubType === "debt_repayment" ? "채무상환금액을 입력하세요" : "취득재산가액을 입력하세요";
+      break;
+    case "nominee_trust":
+      if (parseAmount(form.ntPropertyValue) <= 0) return "명의신탁 재산 가액을 입력하세요";
+      break;
     case "convertible_bond":
       if (form.cbCaseType === "conversion" || form.cbCaseType === "conversion_reverse") {
         if (parseAmount(form.cbPreConvPrice) <= 0) return "전환등 전 1주당 평가가액을 입력하세요";
