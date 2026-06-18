@@ -17,6 +17,7 @@ import { AddressSearch, type AddressValue } from "@/components/ui/address-search
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import {
@@ -520,8 +521,11 @@ export function PropertyCardEditor({
             {!isCorporate && property.exclusionType === "none" && (
               <ToggleCard
                 tone="violet"
-                title="§8④ 1세대1주택자 의제 특례"
-                description="다른 일반주택 1채와 함께 보유 시, 이 주택을 1세대1주택자 계산에 포함(기본공제 12억·세액공제)하되 산출세액은 공시가격으로 안분합니다 (신청 9.16~30, 1호 부속토지는 신청 불요)"
+                title="1세대 1주택 의제 (§8④)"
+                description="일시적 2주택 · 상속주택 · 지방 저가주택 · 다른 주택의 부속토지"
+                trailing={
+                  <LawArticleModal legalBasis="종합부동산세법 §8④" label="§8④" />
+                }
                 checked={(property.section8para4Type ?? "none") !== "none"}
                 onCheckedChange={(v) =>
                   onUpdate(
@@ -546,19 +550,37 @@ export function PropertyCardEditor({
                     {
                       value: "temporary_two_house",
                       label: "일시적 2주택 (§8④2호)",
-                      description: "1주택 양도 전 신규주택 취득 — 취득일부터 3년 이내 (령 §4의2①)",
+                      description: "1주택 양도 전 신규주택 취득 — 취득일부터 3년 이내",
+                      trailing: (
+                        <LawArticleModal
+                          legalBasis="종합부동산세법 시행령 §4의2 ①"
+                          label="령 §4의2①"
+                        />
+                      ),
                       testId: `s84-temporary-${property.id}`,
                     },
                     {
                       value: "inherited_house",
                       label: "상속주택 (§8④3호)",
-                      description: "상속개시 5년 미경과 / 지분 40% 이하 / 지분 공시 6억(비수도권 3억) 이하 중 하나 (령 §4의2②)",
+                      description: "상속개시 5년 미경과 / 지분 40% 이하 / 지분 공시 6억(비수도권 3억) 이하 중 하나",
+                      trailing: (
+                        <LawArticleModal
+                          legalBasis="종합부동산세법 시행령 §4의2 ②"
+                          label="령 §4의2②"
+                        />
+                      ),
                       testId: `s84-inherited-${property.id}`,
                     },
                     {
                       value: "regional_low_price",
                       label: "지방 저가주택 (§8④4호)",
-                      description: "공시가격 4억원 이하 + 수도권·광역시·특별자치시 외 소재 (령 §4의2③)",
+                      description: "공시가격 4억원 이하 + 수도권·광역시·특별자치시 외 소재",
+                      trailing: (
+                        <LawArticleModal
+                          legalBasis="종합부동산세법 시행령 §4의2 ③"
+                          label="령 §4의2③"
+                        />
+                      ),
                       hint:
                         property.location === "metro"
                           ? "현재 '수도권'으로 설정되어 선택할 수 없습니다 — 비수도권 주택만 해당"
