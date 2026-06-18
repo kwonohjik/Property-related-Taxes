@@ -1,0 +1,77 @@
+/**
+ * 증여로 보는 경우 (증여 예시·추정·의제) — 공통 타입.
+ * Phase 1: 보험금§34 · 저가고가§35 · 채무면제§36 · 부동산무상사용§37 · 금전무상대출§41의4.
+ */
+import type { CalculationStep } from "../types/inheritance-gift.types";
+import type { BargainTransferInput } from "../bargain-transfer";
+
+/** Phase 1 의제 유형 (discriminated union 판별자) */
+export type DeemedGiftType =
+  | "insurance" // §34 (2)
+  | "bargain_transfer" // §35 (3)
+  | "debt_forgiveness" // §36 (4)
+  | "free_realestate" // §37 (5)
+  | "free_loan"; // §41의4 (6)
+
+/** 모든 계산기 공통 결과 */
+export interface DeemedGiftResult {
+  type: DeemedGiftType;
+  /** 과세요건·임계 충족 (증여재산가액 > 0) */
+  applied: boolean;
+  /** 증여재산가액 (원, 정수) */
+  deemedGiftValue: number;
+  /** 산식 단계 (formula-display-builder) */
+  breakdown: CalculationStep[];
+  /** 미적용 사유 */
+  exclusionReason?: string;
+  /** 근거 조문 (GIFT.* 상수) */
+  legalBasis: string;
+  /** 임계 판정 근거 echo */
+  thresholdEcho?: Record<string, number | boolean>;
+}
+
+// ── 입력 타입 ──
+
+/** (2) 보험금 §34 */
+export interface InsuranceInput {
+  /** 1호: 수령인 ≠ 납부자 / 2호: 증여재산으로 납부 */
+  caseType: "non_payer" | "gifted_premium";
+  insuranceProceeds: number; // 보험금
+  totalPremiumPaid: number; // 납부보험료총액 (>0)
+  relevantPremium: number; // 1호=수령인외납부 / 2호=증여재산납부
+  isInheritanceInsurance: boolean; // §34② §8 상속재산 → true면 미적용
+}
+
+/** (4) 채무면제 §36 */
+export interface DebtForgivenessInput {
+  forgivenDebt: number; // 면제·인수·변제 채무액
+  compensation: number; // 보상(지급)액 (없으면 0)
+  occurType: "creditor_waiver" | "third_party_assumption"; // 증여시기 라벨
+}
+
+/** (5) 부동산무상사용 §37 */
+export interface FreeRealEstateInput {
+  subType: "free_use" | "collateral";
+  propertyValue?: number; // free_use: 부동산가액
+  loanAmount?: number; // collateral: 차입금
+  actualInterestPaid?: number; // collateral 실제지급이자
+  isRelatedParty: boolean;
+  hasJustifiableReason?: boolean; // §37③
+}
+
+/** (6) 금전무상대출 §41의4 */
+export interface FreeLoanInput {
+  loanAmount: number;
+  actualInterestPaid: number; // 무상이면 0
+  appropriateRate: { numer: number; denom: number }; // 적정이자율 분수 (4.6%={46,1000})
+  isRelatedParty: boolean;
+  hasJustifiableReason?: boolean; // §41의4③
+}
+
+/** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
+export type DeemedGiftInput =
+  | ({ type: "insurance" } & InsuranceInput)
+  | ({ type: "bargain_transfer" } & BargainTransferInput)
+  | ({ type: "debt_forgiveness" } & DebtForgivenessInput)
+  | ({ type: "free_realestate" } & FreeRealEstateInput)
+  | ({ type: "free_loan" } & FreeLoanInput);

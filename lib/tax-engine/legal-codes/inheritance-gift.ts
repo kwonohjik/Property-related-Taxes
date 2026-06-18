@@ -116,6 +116,11 @@ export const GIFT = {
    * "제1항·제2항의 공제는 수증자별로 합산하여 1억원을 한도로 한다."
    */
   MARRIAGE_CUMULATIVE_LIMIT: "상증법 §53의2 ③",
+  // ── 증여로 보는 경우 (Phase 1: 예시·추정·의제) — §35는 BARGAIN_TRANSFER 재사용 ──
+  INSURANCE: "상증법 §34",
+  DEBT_FORGIVENESS: "상증법 §36",
+  FREE_REALESTATE: "상증법 §37",
+  FREE_LOAN: "상증법 §41의4",
 } as const;
 
 // ============================================================
