@@ -643,8 +643,9 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
   // 현재 결과뷰에 실제 렌더되는 leaf id (각 sub 컴포넌트 가드와 1:1 — 설계 §2.4)
   const availablePrintIds = useMemo<Set<ComprehensivePrintSectionId>>(() => {
     const s = new Set<ComprehensivePrintSectionId>();
+    const hasHouses = result.properties.length > 0; // 0채(토지전용) 시 주택분 섹션 제외
     if (result.aggregationExclusion.excludedCount > 0) s.add("aggregation-exclusion");
-    s.add("housing-tax-base");
+    if (hasHouses) s.add("housing-tax-base");
     if (result.isSubjectToHousingTax) s.add("housing-tax");
     if (result.aggregateLandTax) s.add("aggregate-land");
     if (result.separateLandTax) s.add("separate-land");
@@ -655,8 +656,8 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
     s.add("filing-form-buppyo3");
     if (result.taxCap) s.add("filing-form-buppyo5");
     if (result.previousYearEquivalent) s.add("filing-form-buppyo5sub");
-    // 산출근거 카드 — 주택분 계산이 있으면 항상 가용(비대상도 "납세의무 없음" 표기)
-    s.add("housing-payable-calc");
+    // 산출근거 카드 — 주택가 있으면 가용(비대상도 "납세의무 없음" 표기). 0채(토지전용)는 제외
+    if (hasHouses) s.add("housing-payable-calc");
     if (result.aggregateLandTax) s.add("land-agg-payable-calc");
     if (result.separateLandTax) s.add("land-sep-payable-calc");
     return s;
@@ -693,15 +694,17 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
         <AggregationExclusionSection result={result} />
       </PrintSection>
 
-      {/* 과세표준 */}
-      <PrintSection id="housing-tax-base" selectedIds={selectedPrintIds}>
-        <HousingTaxBaseSection result={result} />
-      </PrintSection>
-
-      {/* 주택분 세액 */}
-      <PrintSection id="housing-tax" selectedIds={selectedPrintIds}>
-        <HousingTaxSection result={result} />
-      </PrintSection>
+      {/* 과세표준·주택분 세액 — 0채(토지전용)면 주택분 섹션 전체 숨김 */}
+      {result.properties.length > 0 && (
+        <>
+          <PrintSection id="housing-tax-base" selectedIds={selectedPrintIds}>
+            <HousingTaxBaseSection result={result} />
+          </PrintSection>
+          <PrintSection id="housing-tax" selectedIds={selectedPrintIds}>
+            <HousingTaxSection result={result} />
+          </PrintSection>
+        </>
+      )}
 
       {/* 토지분 */}
       <PrintSection id="aggregate-land" selectedIds={selectedPrintIds}>
@@ -728,10 +731,13 @@ export function ComprehensiveTaxResultView({ result, savedId }: Props) {
         />
       </PrintSection>
 
-      {/* 산출근거 — 교재(계산 사례) "주택분 종합부동산세 납부할세액의 계산" 형식 (기본 접힘) */}
-      <PrintSection id="housing-payable-calc" selectedIds={selectedPrintIds}>
-        <HousingPayableTaxCalcCard result={result} properties={formData.properties} />
-      </PrintSection>
+      {/* 산출근거 — 교재(계산 사례) "주택분 종합부동산세 납부할세액의 계산" 형식 (기본 접힘).
+          0채(토지전용)면 숨김. */}
+      {result.properties.length > 0 && (
+        <PrintSection id="housing-payable-calc" selectedIds={selectedPrintIds}>
+          <HousingPayableTaxCalcCard result={result} properties={formData.properties} />
+        </PrintSection>
+      )}
 
       {/* 토지분 산출근거 — 종합합산·별도합산 (필지 모드 시 풀 분해, 집계 모드 시 축약) */}
       {result.aggregateLandTax && (
