@@ -23,6 +23,19 @@ describe("deriveSigunguFromAddress", () => {
     expect(deriveSigunguFromAddress("경기도 용인시 처인구 중부대로")).toBe("용인시 처인구");
   });
 
+  it("도로명 주소(시도·시군구 포함) → 시군구", () => {
+    expect(deriveSigunguFromAddress("서울특별시 송파구 가락로 100 (석촌동)")).toBe("송파구");
+  });
+
+  it("Vworld 짧은 지번('석촌동 276-1') → null (시군구 없음 — 오추출 방어)", () => {
+    expect(deriveSigunguFromAddress("석촌동 276-1")).toBeNull();
+  });
+
+  it("도로명·번지 토큰 → null (구/군/시 접미사 아님)", () => {
+    expect(deriveSigunguFromAddress("서울특별시 가락로 100")).toBeNull(); // 두번째 토큰 '가락로'
+    expect(deriveSigunguFromAddress("세종특별자치시 한누리대로 2130")).toBeNull(); // 세종 단층제
+  });
+
   it("빈/불완전 입력 → null", () => {
     expect(deriveSigunguFromAddress("")).toBeNull();
     expect(deriveSigunguFromAddress(undefined)).toBeNull();

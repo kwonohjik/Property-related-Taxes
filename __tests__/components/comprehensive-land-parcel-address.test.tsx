@@ -14,7 +14,8 @@ vi.mock("@/components/ui/address-search", () => ({
       type="button"
       data-testid="mock-address-pick"
       onClick={() =>
-        onChange({ road: "", jibun: "서울특별시 송파구 올림픽로 300", building: "", detail: "", lng: "", lat: "" })
+        // Vworld 실제 포맷: road=전체 도로명(시도·시군구), jibun=짧은 지번(시군구 없음)
+        onChange({ road: "서울특별시 송파구 가락로 100", jibun: "석촌동 276-1", building: "", detail: "", lng: "", lat: "" })
       }
     >
       주소 선택(mock)
@@ -55,12 +56,12 @@ describe("LandParcelEditor 주소 검색", () => {
     expect(screen.getByTestId("land-aggregate-parcel-address")).toBeInTheDocument();
   });
 
-  it("주소 선택 → onUpdate({ jibun, jurisdiction:'송파구' })", () => {
+  it("주소 선택 → jibun은 짧은 지번 저장, 시군구는 도로명에서 '송파구' 추출", () => {
     const onUpdate = vi.fn();
     render(<LandParcelEditor {...baseProps} onUpdate={onUpdate} />);
     fireEvent.click(screen.getByTestId("mock-address-pick"));
     expect(onUpdate).toHaveBeenCalledWith({
-      jibun: "서울특별시 송파구 올림픽로 300",
+      jibun: "석촌동 276-1",
       jurisdiction: "송파구",
     });
   });
