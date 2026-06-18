@@ -114,6 +114,15 @@ export function safeMultiplyThenDivide(a: number, b: number, c: number): number 
 }
 
 /**
+ * 분수 세율 적용 — floor(amount × numer / denom). 부동소수 곱(0.046·0.02 등) 회피.
+ * 적정이자율 4.6% → applyRateFraction(x, 46, 1000). 환산율 2% → applyRateFraction(x, 2, 100).
+ * safeMultiplyThenDivide 기반(BigInt overflow 가드).
+ */
+export function applyRateFraction(amount: number, numer: number, denom: number): number {
+  return safeMultiplyThenDivide(amount, numer, denom);
+}
+
+/**
  * (a × b) ÷ c — round-half-up(소수 0.5 이상 올림). BigInt로 overflow·정밀도 안전.
  * 안분 산식이 floor 아닌 반올림인 경우(종부세 재산세 공제 §4의3 — 시행령 절사 미규정,
  * 교재·실무 반올림. 상속세 안분 bigIntRoundDiv과 동일 round-half-up).

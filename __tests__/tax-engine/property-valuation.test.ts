@@ -253,26 +253,28 @@ describe("저가·고가 양도 증여의제 (상증법 §35)", () => {
       isRelatedParty: true,
       transactionType: "purchase",
     });
-    // 차액 4억 > 시가30%(3억) AND 3억 → 과세
+    // 본칙 §35①: 차액 4억 − MIN(시가30%=3억, 3억) = 1억
     expect(result.isSubjectToGiftTax).toBe(true);
-    expect(result.deemedGiftAmount).toBe(400_000_000);
+    expect(result.deemedGiftAmount).toBe(100_000_000);
   });
 
-  it("[T18b] 특수관계인 — 차액 3억 이상 (30% 미만)도 과세", () => {
-    // 시가 11억, 거래가 8억 → 차액 3억(27%) — 30% 미만이지만 3억 이상 → 특수관계인 과세
+  it("[T18b] 특수관계인 — 차액이 30% 미만이나 3억 초과 → 과세 (공제 3억)", () => {
+    // 시가 12억, 거래가 8.5억 → 차액 3.5억(29.2%) — 30% 미만, 3억 초과
+    // 본칙 §35①: 공제 MIN(시가30%=3.6억, 3억)=3억 → 3.5억 − 3억 = 5천만
     const result = detectBargainTransfer({
-      transactionPrice: 800_000_000,
-      marketValue: 1_100_000_000,
+      transactionPrice: 850_000_000,
+      marketValue: 1_200_000_000,
       isRelatedParty: true,
       transactionType: "purchase",
     });
     expect(result.isSubjectToGiftTax).toBe(true);
     expect(result.thresholdCheck.rateThresholdMet).toBe(false);
     expect(result.thresholdCheck.absoluteThresholdMet).toBe(true);
+    expect(result.deemedGiftAmount).toBe(50_000_000);
   });
 
-  it("[T18c] 비특수관계인 — 30% 이상 but 3억 미만: 비과세", () => {
-    // 시가 5천만, 거래가 3천만 → 차액 2천만 (40%) — 30% 초과지만 3억 미만
+  it("[T18c] 비특수관계인 — 차액이 3억 미만: 공제 후 0 → 비과세", () => {
+    // 시가 5천만, 거래가 3천만 → 차액 2천만(40%, 시가30% 충족) but 공제 3억 → 0
     const result = detectBargainTransfer({
       transactionPrice: 30_000_000,
       marketValue: 50_000_000,
@@ -303,7 +305,8 @@ describe("저가·고가 양도 증여의제 (상증법 §35)", () => {
       isRelatedParty: true,
       transactionType: "sale",
     });
+    // 본칙 §35①: 차액 4억 − MIN(시가30%=3억, 3억) = 1억
     expect(result.isSubjectToGiftTax).toBe(true);
-    expect(result.deemedGiftAmount).toBe(400_000_000);
+    expect(result.deemedGiftAmount).toBe(100_000_000);
   });
 });
