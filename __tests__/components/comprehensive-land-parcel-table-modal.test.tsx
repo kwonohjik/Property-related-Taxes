@@ -82,4 +82,10 @@ describe("LandParcelEditor", () => {
     render(<LandParcelEditor {...baseProps} priorMode="auto" />);
     expect(screen.getByTestId("land-aggregate-parcel-prior-price")).toBeInTheDocument();
   });
+
+  it("면적 × 공시지가 → 토지기준시가 자동 계산 (200㎡ × 4,300,000 = 860,000,000)", () => {
+    render(<LandParcelEditor {...baseProps} priorMode="none" />);
+    const priceField = screen.getByTestId("land-aggregate-parcel-price");
+    expect(within(priceField).getByText("860,000,000")).toBeInTheDocument();
+  });
 });
