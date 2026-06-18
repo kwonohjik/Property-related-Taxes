@@ -3,6 +3,7 @@
  */
 import type { DeemedGiftInput, DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { resolveFreeLoanRate } from "@/lib/tax-engine/data/gift-deemed-rates";
 import {
   DEEMED_TYPE_META,
@@ -57,6 +58,48 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         appropriateRate: resolveFreeLoanRate(form.giftDate || "2024-01-01"),
         isRelatedParty: form.loanRelated,
         hasJustifiableReason: form.loanJustifiable,
+      };
+    case "merger":
+      return {
+        type: "merger",
+        mergedSharePrice: parseAmount(form.mrgMergedPrice),
+        overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
+        preMergerShares: parseAmount(form.mrgPreShares),
+        exchangedShares: parseAmount(form.mrgExchangedShares),
+        majorShares: parseAmount(form.mrgMajorShares),
+      };
+    case "capital_increase":
+      return {
+        type: "capital_increase",
+        preIssuePrice: parseAmount(form.ciPrePrice),
+        preIssueShares: parseAmount(form.ciPreShares),
+        newSharePrice: parseAmount(form.ciNewPrice),
+        issuedShares: parseAmount(form.ciIssuedShares),
+        forfeitedShares: parseAmount(form.ciForfeitedShares),
+      };
+    case "capital_decrease":
+      return {
+        type: "capital_decrease",
+        sharePrice: parseAmount(form.cdSharePrice),
+        redemptionPrice: parseAmount(form.cdRedemptionPrice),
+        totalRedeemedShares: parseAmount(form.cdTotalShares),
+        majorPostRatio: { numer: Math.round(parseDecimal(form.cdMajorRatioPct) * 100), denom: 10_000 },
+        relatedRedeemedShares: parseAmount(form.cdRelatedShares),
+      };
+    case "contribution":
+      return {
+        type: "contribution",
+        preContribPrice: parseAmount(form.conPrePrice),
+        preContribShares: parseAmount(form.conPreShares),
+        newSharePrice: parseAmount(form.conNewPrice),
+        contributedShares: parseAmount(form.conContributedShares),
+        allocatedShares: parseAmount(form.conAllocatedShares),
+      };
+    case "convertible_bond":
+      return {
+        type: "convertible_bond",
+        bondMarketValue: parseAmount(form.cbMarketValue),
+        acquisitionPrice: parseAmount(form.cbAcquisitionPrice),
       };
     default:
       throw new Error("증여 유형을 선택하세요");

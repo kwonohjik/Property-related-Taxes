@@ -12,6 +12,13 @@ import {
   RadioCardGroup,
   type RadioCardOption,
 } from "@/components/calc/inputs/RadioCardGroup";
+import {
+  MergerFields,
+  CapitalIncreaseFields,
+  CapitalDecreaseFields,
+  ContributionFields,
+  ConvertibleBondFields,
+} from "./capital-forms";
 
 // ============================================================
 // 폼 상태
@@ -49,6 +56,34 @@ export interface DeemedFormState {
   loanInterest: string;
   loanRelated: boolean;
   loanJustifiable: boolean;
+  // ── Phase 2 자본거래 (평가가액·주식수 직접 입력) ──
+  // 합병 §38
+  mrgMergedPrice: string;
+  mrgOvervaluedPrice: string;
+  mrgPreShares: string;
+  mrgExchangedShares: string;
+  mrgMajorShares: string;
+  // 증자 §39
+  ciPrePrice: string;
+  ciPreShares: string;
+  ciNewPrice: string;
+  ciIssuedShares: string;
+  ciForfeitedShares: string;
+  // 감자 §39의2
+  cdSharePrice: string;
+  cdRedemptionPrice: string;
+  cdTotalShares: string;
+  cdMajorRatioPct: string; // 대주주등 감자후 지분비율 (%)
+  cdRelatedShares: string;
+  // 현물출자 §39의3
+  conPrePrice: string;
+  conPreShares: string;
+  conNewPrice: string;
+  conContributedShares: string;
+  conAllocatedShares: string;
+  // 전환사채 §40
+  cbMarketValue: string;
+  cbAcquisitionPrice: string;
 }
 
 export const INITIAL_DEEMED: DeemedFormState = {
@@ -78,6 +113,28 @@ export const INITIAL_DEEMED: DeemedFormState = {
   loanInterest: "",
   loanRelated: true,
   loanJustifiable: false,
+  mrgMergedPrice: "",
+  mrgOvervaluedPrice: "",
+  mrgPreShares: "",
+  mrgExchangedShares: "",
+  mrgMajorShares: "",
+  ciPrePrice: "",
+  ciPreShares: "",
+  ciNewPrice: "",
+  ciIssuedShares: "",
+  ciForfeitedShares: "",
+  cdSharePrice: "",
+  cdRedemptionPrice: "",
+  cdTotalShares: "",
+  cdMajorRatioPct: "",
+  cdRelatedShares: "",
+  conPrePrice: "",
+  conPreShares: "",
+  conNewPrice: "",
+  conContributedShares: "",
+  conAllocatedShares: "",
+  cbMarketValue: "",
+  cbAcquisitionPrice: "",
 };
 
 export const DEEMED_TYPE_META: Record<
@@ -109,6 +166,11 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "debt_forgiveness", label: "채무면제 등", description: "상증법 §36 — 면제·인수·변제 이익", testId: "deemed-type-debt_forgiveness" },
   { value: "free_realestate", label: "부동산 무상사용", description: "상증법 §37 — 무상사용(5년 현가합)·무상담보", testId: "deemed-type-free_realestate" },
   { value: "free_loan", label: "금전 무상대출", description: "상증법 §41의4 — 적정이자율 4.6% 차액", testId: "deemed-type-free_loan" },
+  { value: "merger", label: "합병에 따른 이익", description: "상증법 §38 — 합병 주식교부 (대주주등)", testId: "deemed-type-merger" },
+  { value: "capital_increase", label: "증자에 따른 이익", description: "상증법 §39 — 저가발행·실권주 재배정", testId: "deemed-type-capital_increase" },
+  { value: "capital_decrease", label: "감자에 따른 이익", description: "상증법 §39의2 — 저가소각", testId: "deemed-type-capital_decrease" },
+  { value: "contribution", label: "현물출자에 따른 이익", description: "상증법 §39의3 — 저가인수", testId: "deemed-type-contribution" },
+  { value: "convertible_bond", label: "전환사채에 따른 이익", description: "상증법 §40 — 저가 인수·취득", testId: "deemed-type-convertible_bond" },
 ];
 
 export function DeemedTypeSelector({
@@ -145,6 +207,16 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
       return <FreeRealEstateFields form={form} set={set} />;
     case "free_loan":
       return <FreeLoanFields form={form} set={set} />;
+    case "merger":
+      return <MergerFields form={form} set={set} />;
+    case "capital_increase":
+      return <CapitalIncreaseFields form={form} set={set} />;
+    case "capital_decrease":
+      return <CapitalDecreaseFields form={form} set={set} />;
+    case "contribution":
+      return <ContributionFields form={form} set={set} />;
+    case "convertible_bond":
+      return <ConvertibleBondFields form={form} set={set} />;
     default:
       return null;
   }

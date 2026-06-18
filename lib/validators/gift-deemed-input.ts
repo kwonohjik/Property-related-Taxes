@@ -55,6 +55,45 @@ const freeLoanSchema = z.object({
   hasJustifiableReason: z.boolean().optional(),
 });
 
+// ── Phase 2: 자본거래 (평가가액·주식수 직접 입력) ──
+const mergerSchema = z.object({
+  type: z.literal("merger"),
+  mergedSharePrice: z.number().nonnegative(),
+  overvaluedSharePrice: z.number().nonnegative(),
+  preMergerShares: z.number().nonnegative(),
+  exchangedShares: z.number().positive({ message: "교부받은 주식수는 0보다 커야 합니다" }),
+  majorShares: z.number().nonnegative(),
+});
+const capitalIncreaseSchema = z.object({
+  type: z.literal("capital_increase"),
+  preIssuePrice: z.number().nonnegative(),
+  preIssueShares: z.number().positive({ message: "증자 전 발행주식총수는 0보다 커야 합니다" }),
+  newSharePrice: z.number().nonnegative(),
+  issuedShares: z.number().nonnegative(),
+  forfeitedShares: z.number().nonnegative(),
+});
+const capitalDecreaseSchema = z.object({
+  type: z.literal("capital_decrease"),
+  sharePrice: z.number().nonnegative(),
+  redemptionPrice: z.number().nonnegative(),
+  totalRedeemedShares: z.number().positive({ message: "총감자 주식수는 0보다 커야 합니다" }),
+  majorPostRatio: z.object({ numer: z.number().nonnegative(), denom: z.number().positive() }),
+  relatedRedeemedShares: z.number().nonnegative(),
+});
+const contributionSchema = z.object({
+  type: z.literal("contribution"),
+  preContribPrice: z.number().nonnegative(),
+  preContribShares: z.number().positive({ message: "현물출자 전 발행주식총수는 0보다 커야 합니다" }),
+  newSharePrice: z.number().nonnegative(),
+  contributedShares: z.number().nonnegative(),
+  allocatedShares: z.number().nonnegative(),
+});
+const convertibleBondSchema = z.object({
+  type: z.literal("convertible_bond"),
+  bondMarketValue: z.number().positive({ message: "전환사채 시가는 0보다 커야 합니다" }),
+  acquisitionPrice: z.number().nonnegative(),
+});
+
 export const deemedGiftInputSchema = z
   .discriminatedUnion("type", [
     insuranceSchema,
@@ -62,6 +101,11 @@ export const deemedGiftInputSchema = z
     debtForgivenessSchema,
     freeRealEstateSchema,
     freeLoanSchema,
+    mergerSchema,
+    capitalIncreaseSchema,
+    capitalDecreaseSchema,
+    contributionSchema,
+    convertibleBondSchema,
   ])
   .superRefine((data, ctx) => {
     if (data.type === "insurance") {

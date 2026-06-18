@@ -29,6 +29,25 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "free_loan":
       if (parseAmount(form.loanAmount) <= 0) return "대출금액을 입력하세요";
       break;
+    case "merger":
+      if (parseAmount(form.mrgMergedPrice) <= 0) return "합병 후 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.mrgExchangedShares) <= 0) return "교부받은 주식수를 입력하세요";
+      break;
+    case "capital_increase":
+      if (parseAmount(form.ciPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.ciPreShares) <= 0) return "증자 전 발행주식총수를 입력하세요";
+      break;
+    case "capital_decrease":
+      if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
+      if (parseAmount(form.cdTotalShares) <= 0) return "총감자 주식수를 입력하세요";
+      break;
+    case "contribution":
+      if (parseAmount(form.conPrePrice) <= 0) return "현물출자 전 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.conPreShares) <= 0) return "현물출자 전 발행주식총수를 입력하세요";
+      break;
+    case "convertible_bond":
+      if (parseAmount(form.cbMarketValue) <= 0) return "전환사채 시가를 입력하세요";
+      break;
   }
   return null;
 }
