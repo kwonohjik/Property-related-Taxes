@@ -109,6 +109,16 @@ export const POPULATION_INTEREST_AREA_CODES = new Set<string>([
 ]);
 
 /**
+ * 법정동 코드(10자리)에서 시·군·구 코드(앞 5자리)를 추출한다.
+ * 동일 시·군·구 비교(소령 §167의3①12 다·라목 2호) 및 인구감소지역 판정에 사용.
+ * @returns 시·군·구 5자리 코드. regionCode가 없거나 5자리 미만이면 null.
+ */
+export function toSigunguCode(regionCode?: string): string | null {
+  if (!regionCode || regionCode.length < 5) return null;
+  return regionCode.substring(0, 5);
+}
+
+/**
  * 시군구코드로 인구감소지역 여부를 자동 판정한다.
  * @returns `{ isDeclineArea: boolean; priceLimit: number }` — 기준시가 한도 포함
  */

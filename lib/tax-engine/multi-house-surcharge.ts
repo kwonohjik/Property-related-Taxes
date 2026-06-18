@@ -143,6 +143,7 @@ export function determineMultiHouseSurcharge(
   );
   let effectiveHouseCount = step1Count.count;
   const excludedHouses = step1Count.excluded;
+  warnings.push(...step1Count.warnings);
 
   const rawHouseCount = input.houses.length + input.presaleRights.length;
 
