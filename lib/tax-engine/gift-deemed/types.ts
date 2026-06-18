@@ -89,13 +89,19 @@ export interface MergerInput {
   mergeConsideration?: number; // 합병대가(액면 미달 시 적용)
 }
 
-/** (8) 증자 §39 — 저가발행·실권주 재배정 (§39①1호가) */
+/** (8) 증자 §39 — 저가발행(low, ①1호) / 고가발행(high, ①2호) sub-case */
 export interface CapitalIncreaseInput {
+  direction?: "low" | "high"; // 저가발행(①1호) / 고가발행(①2호), 기본 low
+  /** 가/다/라목(실권주재배정·제3자직접배정·초과배정) vs 나목(실권주 미배정·특수관계인 인수) */
+  subType?: "forfeited_realloc" | "third_party" | "excess" | "no_realloc"; // 기본 forfeited_realloc
   preIssuePrice: number; // 증자 전 1주당 평가가액
   preIssueShares: number; // 증자 전 발행주식총수
   newSharePrice: number; // 신주 1주당 인수가액
   issuedShares: number; // 증자 주식수
-  forfeitedShares: number; // 배정받은 실권주수
+  forfeitedShares: number; // 이익 귀속 주식수 (실권주수·직접배정신주수·초과배정신주수·미달분신주수)
+  // 고가 나·다·라목 — 특수관계인 비율 가중 (시행령 §29②4·5)
+  relatedAcquiredShares?: number; // 특수관계인이 인수한 신주수 (분자)
+  ratioDenomShares?: number; // 분모 신주수 (나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수 총수)
 }
 
 /** (9) 감자 §39의2 — 저가소각(low, ①1호) / 고가소각(high, ①2호) */
