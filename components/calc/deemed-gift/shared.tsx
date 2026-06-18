@@ -89,6 +89,12 @@ export const DEEMED_TYPE_META: Record<
   debt_forgiveness: { label: "채무면제 등", law: "상증법 §36" },
   free_realestate: { label: "부동산 무상사용", law: "상증법 §37" },
   free_loan: { label: "금전 무상대출", law: "상증법 §41의4" },
+  // Phase 2 자본거래 (엔진 구현 — UI 입력폼은 후속)
+  merger: { label: "합병에 따른 이익", law: "상증법 §38" },
+  capital_increase: { label: "증자에 따른 이익", law: "상증법 §39" },
+  capital_decrease: { label: "감자에 따른 이익", law: "상증법 §39의2" },
+  contribution: { label: "현물출자에 따른 이익", law: "상증법 §39의3" },
+  convertible_bond: { label: "전환사채에 따른 이익", law: "상증법 §40" },
 };
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
