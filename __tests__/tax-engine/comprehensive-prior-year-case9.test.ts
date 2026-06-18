@@ -42,6 +42,27 @@ describe("PY-Case9: 직전연도 주택별 감면 — 나 35,630,694", () => {
     expect(r.previousYearEquivalent?.propertyTaxEquiv).toBe(3_789_000);
   });
 
+  it("① 주택별 내역 echo — 서초 2,079,000 / 강남 1,290,000 / 안양 420,000", () => {
+    const r = calculateComprehensiveTax(input);
+    const bd = r.previousYearEquivalent?.detail.propertyTaxBreakdown;
+    expect(bd).toHaveLength(3);
+    // 서초: 15억 → 과표 9억 → 표준 2,970,000 → 감면 30% → 2,079,000
+    expect(bd?.[0]).toMatchObject({
+      assessedValue: 1_500_000_000,
+      taxBase: 900_000_000,
+      standardTax: 2_970_000,
+      reductionRate: 0.3,
+      reducedTax: 2_079_000,
+    });
+    // 강남: 8억 → 과표 4.8억 → 1,290,000 (감면 0)
+    expect(bd?.[1]).toMatchObject({ standardTax: 1_290_000, reducedTax: 1_290_000 });
+    // 안양: 4억 → 과표 2.4억(6억 이하 0.25%) → 420,000
+    expect(bd?.[2]).toMatchObject({ taxBase: 240_000_000, standardTax: 420_000, reducedTax: 420_000 });
+    // 합계 = propertyTaxEquiv
+    const sum = (bd ?? []).reduce((a, h) => a + h.reducedTax, 0);
+    expect(sum).toBe(3_789_000);
+  });
+
   it("ⓐ 재산세공제전 종부세 = 34,830,000 · 과표 15.675억 · 중과 3.6%", () => {
     const r = calculateComprehensiveTax(input);
     expect(r.previousYearEquivalent?.detail.taxBase).toBe(1_567_500_000);

@@ -28,6 +28,7 @@ import { COMPREHENSIVE_CONST } from "./legal-codes";
 import type {
   PreviousYearAutoInput,
   PreviousYearEquivalentResult,
+  PriorPropertyTaxLine,
 } from "./types/comprehensive.types";
 
 /**
@@ -66,7 +67,7 @@ export function calcPreviousYearEquivalent(
   //   미입력 시 단일 rate/ratio fallback(하위호환 — 단일 감면 사례4 등 동작 보존).
   //   주택별 감면이 다른 다주택(사례9 서초 30%·강남 0%·안양 0%)을 정확 반영.
   const houseRate = (i: number) => auto.priorHouseReductionRates?.[i] ?? rate;
-  const houseRatio = (i: number) => auto.priorHouseOwnershipRatios?.[i] ?? ratio;
+  const houseRatio = (i: number) => auto.priorHouseOwnershipRatios?.[i] ?? ratio ?? 1;
   // 종부세 과표·ⓑ분모용 = 주택별(감면후·지분반영) 공시 Σ (합산 단일 감면 아님 — 주택별 감면 결합 후 합).
   const effectiveAssessedValue = priorHouses.reduce(
     (sum, v, i) => sum + applyEffectiveFactor(v, houseRate(i), houseRatio(i), appurtenant),
@@ -107,10 +108,21 @@ export function calcPreviousYearEquivalent(
   //   C 지점: 표준세율 산출 후 × factor = 감면후 재산세상당액 (교재 1,530,000 × 0.75 = 1,147,500)
   // D-5 (C 지점): 주택별 표준세율 재산세 산출 후 주택별 감면·지분 결합 → 합산
   //   (④나① = Σ 주택별[표준세율 재산세 × factor_i]). 주택별 감면율 상이 케이스 정확(사례9).
+  //   주택별 내역(propertyTaxBreakdown)은 산출근거 표시용 echo — 합계(propertyTaxEquiv)는 동일.
+  const propertyTaxBreakdown: PriorPropertyTaxLine[] = [];
   const propertyTaxEquiv = priorHouses.reduce((sum, v, i) => {
     const base = Math.floor((v * Math.round(propertyFMR * 100)) / 100);
     const std = calcHousingTax(base, v, false).tax; // 표준세율 강제
-    return sum + applyEffectiveFactor(std, houseRate(i), houseRatio(i), appurtenant);
+    const reduced = applyEffectiveFactor(std, houseRate(i), houseRatio(i), appurtenant);
+    propertyTaxBreakdown.push({
+      assessedValue: v,
+      taxBase: base,
+      standardTax: std,
+      reductionRate: houseRate(i),
+      ownershipRatio: houseRatio(i),
+      reducedTax: reduced,
+    });
+    return sum + reduced;
   }, 0);
 
   // ②ⓒ 분모(총표준세율재산세액)도 감면후 유효 공시가격 기준 (D 지점 연쇄)
@@ -178,6 +190,7 @@ export function calcPreviousYearEquivalent(
       oneHouseDeductionAmount,
       propertyFairMarketRatio: propertyFMR,     // 교재 ⑤나 "× 60%" echo
       propertyTaxBaseAmount: propertyTaxBase,   // 교재 ⑤나 감면후 재산세 과세표준 echo
+      propertyTaxBreakdown,                     // ① 주택별 산출 내역 (산출근거 표시용)
     },
   };
 }

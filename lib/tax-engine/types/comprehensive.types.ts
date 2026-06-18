@@ -552,6 +552,19 @@ export interface PropertyTaxCredit {
  * 직전연도 종합부동산세상당액 계산 결과 (시행령 §5② — 별지 제5호서식 부표 ①~⑫ echo).
  * previousYearAuto 입력 시에만 산출. 세부담상한 ⑭⑮⑯에 사용.
  */
+/**
+ * 직전연도 재산세상당액(①) 주택별 산출 내역 — 산출근거 표시용 echo (계산 무변경).
+ * 주택별 감면율·세율구간이 달라 합산 단일 산식으로 표현 불가 → 주택별 행으로 표시.
+ */
+export interface PriorPropertyTaxLine {
+  assessedValue: number;   // 주택 직전 공시가격
+  taxBase: number;         // 재산세 과세표준 = floor(공시 × 재산세FMR)
+  standardTax: number;     // 표준세율 재산세 (감면·지분 전)
+  reductionRate: number;   // 적용 감면율 (0~1)
+  ownershipRatio: number;  // 적용 지분율 (0~1)
+  reducedTax: number;      // 감면·지분 반영 후 재산세상당액 (합계 분자)
+}
+
 export interface PreviousYearEquivalentResult {
   propertyTaxEquiv: number;        // ⑭(5호)/⑦(부표) 직전연도 재산세상당액 (표준세율 재계산)
   comprehensiveTaxEquiv: number;   // ⑮(5호)/⑫(부표) 직전연도 종합부동산세상당액
@@ -570,6 +583,7 @@ export interface PreviousYearEquivalentResult {
     oneHouseDeductionAmount: number; // 부표 ⑪ 세액공제액
     propertyFairMarketRatio?: number; // 직전연도 재산세 FMR (교재 ⑤나 "× 60%" — getPropertyFmrForProration)
     propertyTaxBaseAmount?: number;   // 직전연도 재산세 과세표준 (교재 ⑤나 "= 8.4억" — assessedValue × FMR)
+    propertyTaxBreakdown?: PriorPropertyTaxLine[]; // ① 주택별 산출 내역 (산출근거 표시용 echo)
   };
 }
 
