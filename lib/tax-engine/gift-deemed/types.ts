@@ -104,6 +104,14 @@ export interface CapitalIncreaseInput {
   ratioDenomShares?: number; // 분모 신주수 (나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수 총수)
 }
 
+/** (8-3) 전환주식 §39①3호 — 전환후 §29②1~5 이익 − 발행당시 §29②1~5 이익 (시행령 §29②6) */
+export interface ConvertibleStockInput {
+  /** 가목: 전환 후 교부받은 주식을 신주로 보아 §29②1~5로 계산한 이익 입력(저가/고가 sub-case) */
+  atConversion: CapitalIncreaseInput;
+  /** 나목: 전환주식 발행 당시 §29②1~5로 계산한 이익 입력(저가/고가 sub-case) */
+  atIssuance: CapitalIncreaseInput;
+}
+
 /** (9) 감자 §39의2 — 저가소각(low, ①1호) / 고가소각(high, ①2호) */
 export interface CapitalDecreaseInput {
   caseType?: "low" | "high"; // 기본 low
