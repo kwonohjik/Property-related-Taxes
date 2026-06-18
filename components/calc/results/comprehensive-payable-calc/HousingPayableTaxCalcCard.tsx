@@ -11,7 +11,7 @@
  * Design: docs/01-plan/features/comprehensive-housing-payable-tax-calc-card.plan.md §2·§3
  */
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Calculator } from "lucide-react";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
@@ -256,7 +256,7 @@ function Step2({
         </>
       ) : (
         <>
-          {/* 주택별 산출근거: 과세표준 → 표준세율 재산세 → 세부담상한 Min → 감면·지분 (감면후 = 부과액) */}
+          {/* 주택별 산출근거 (PDF 사례9 형식): 과세표준 → 상한전 재산세 → 세부담상한 → 감면 부과액 */}
           {curIncludedProps.map((p, i) => {
             const tb = Math.floor((p.assessedValue * Math.round(fmr * 100)) / 100);
             const b = getHousingStandardRateBracket(tb);
@@ -264,24 +264,39 @@ function Step2({
             const std = cap?.standardTax ?? Math.max(Math.floor(tb * b.rate) - b.deduction, 0);
             const hasRed = (p.reductionRate ?? 0) > 0;
             const hasRatio = (p.ownershipRatio ?? 1) < 1;
+            const hasFactor = hasRed || hasRatio;
+            const beforeFactor = cap?.cappedTax ?? std; // 감면·지분 적용 전 (상한후 또는 표준)
+            const lv = curMultiHouse ? 3 : 2;
             return (
-              <Bullet indent={2} key={p.propertyId ?? i}>
-                {curMultiHouse ? `주택 ${i + 1} : ` : ""}
-                {eok(p.assessedValue)} × {pct(fmr)} = {eok(tb)}, {pct(b.rate)} − {won(b.deduction)} = {won(std)}
+              <Fragment key={p.propertyId ?? i}>
+                {curMultiHouse && <Bullet indent={2}>≪주택 {i + 1}≫</Bullet>}
+                <Bullet indent={lv}>
+                  재산세 과세표준 : {eok(p.assessedValue)} × {pct(fmr)}(재산세 공정시장가액비율) = {eok(tb)}
+                </Bullet>
+                <Bullet indent={lv}>
+                  세부담 상한 적용 전 재산세 : {eok(tb)} × {pct(b.rate)} − {won(b.deduction)}(누진공제액) = {won(std)}
+                </Bullet>
                 {cap && cap.capAmount != null && (
                   <>
-                    {" "}→ 세부담상한 Min({won(std)}, 직전 {won(cap.priorStandardTax)} × {cap.capPct}% = {won(cap.capAmount)}) = {won(cap.cappedTax)}
+                    <Bullet indent={lv}>직전연도 재산세액 : {won(cap.priorStandardTax)}</Bullet>
+                    <Bullet indent={lv}>
+                      세부담 상한액 : {won(cap.priorStandardTax)} × {cap.capPct}% = {won(cap.capAmount)}
+                    </Bullet>
+                    <Bullet indent={lv}>
+                      세부담 상한후 재산세 : {won(cap.cappedTax)} [= Min({won(std)}, {won(cap.capAmount)})]
+                    </Bullet>
                   </>
                 )}
-                {(hasRed || hasRatio) && (
-                  <>
+                {hasFactor ? (
+                  <Bullet indent={lv}>
+                    부과된 재산세액 : {won(beforeFactor)}
                     {hasRed && ` × (1−${pct(p.reductionRate ?? 0)})`}
-                    {hasRatio && ` × ${pct(p.ownershipRatio ?? 1)}(지분)`}
-                    {" = "}
-                    {won(p.propertyTax)}
-                  </>
-                )}
-              </Bullet>
+                    {hasRatio && ` × ${pct(p.ownershipRatio ?? 1)}(지분)`} = {won(p.propertyTax)}
+                  </Bullet>
+                ) : cap && cap.capAmount != null ? (
+                  <Bullet indent={lv}>부과된 재산세액 : {won(p.propertyTax)}</Bullet>
+                ) : null}
+              </Fragment>
             );
           })}
           {/* 집계 세부담상한(§122 단서) — 주택별 priorAssessedValue 미입력 + 직전 자동계산 시(주택별 cap과 배타) */}
