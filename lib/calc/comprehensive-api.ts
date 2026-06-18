@@ -413,6 +413,22 @@ export async function callComprehensiveApi(
     priorHouseValues && priorHouseValues.length > 0
       ? priorHouseValues.reduce((a, b) => a + b, 0)
       : undefined;
+  // ⑬ 직전연도 주택별 감면율·지분율 — priorHouseValues와 동일 순서(properties). 주택별 감면 상이
+  //   다주택(사례9 서초 30%·강남 0%) 정확 반영. 미입력 주택 = 감면 0 / 지분 단독(1). %→소수 변환.
+  const priorHouseReductionRates =
+    capMode === "auto" && allPriorAssessed
+      ? formData.properties.map((p) =>
+          p.reductionRate ? parseFloat(p.reductionRate) / 100 : 0,
+        )
+      : undefined;
+  const priorHouseOwnershipRatios =
+    capMode === "auto" && allPriorAssessed
+      ? formData.properties.map((p) =>
+          p.ownershipRatio && parseFloat(p.ownershipRatio) !== 100
+            ? parseFloat(p.ownershipRatio) / 100
+            : 1,
+        )
+      : undefined;
 
   // ⑬ 직전 §8④ 안분 분자(사례5) — 당해 §8④ 주택 인덱스 ↔ 직전 주택별 공시 매핑 (UI 추가 입력 없음).
   //   filter 전 원본(properties[i].priorAssessedValue) 인덱싱으로 properties[i] 대응 유지.
@@ -437,20 +453,13 @@ export async function callComprehensiveApi(
           // 생년월일·취득일은 기본정보에서 재사용 (중복 입력 금지)
           birthDate: formData.birthDate || undefined,
           acquisitionDate: formData.acquisitionDate || undefined,
-          // ⑬ T-08: 해당연도 감면율 — 법령 원칙3 (직전연도 자동 계산 시에도 해당연도 감면율 적용)
-          // properties[0].reductionRate 기준 (1주택 단일 물건 케이스 전제 — 다주택은 직접입력 모드 권장)
-          // UI 입력 %(0~100) → /100 변환 (Zod .max(1) 동기)
-          reductionRate: formData.properties[0]?.reductionRate
-            ? parseFloat(formData.properties[0].reductionRate) / 100
-            : undefined,
-          // ⑬ 해당연도 지분율 — properties[0] 기준(원칙3). "100"·미입력은 단독(undefined)
-          ownershipRatio:
-            formData.properties[0]?.ownershipRatio &&
-            parseFloat(formData.properties[0].ownershipRatio) !== 100
-              ? parseFloat(formData.properties[0].ownershipRatio) / 100
-              : undefined,
-          // ⑬ 직전연도 다주택 중과 (사례4) — 주택별 공시·조정2주택·주택수
+          // ⑬ T-08: 해당연도 감면율·지분율 — 법령 원칙3 (직전연도 자동 계산 시에도 해당연도 적용).
+          //   주택별 배열로 전달(아래 priorHouse{ReductionRates,OwnershipRatios}). 단일 collapse 폐지
+          //   (사례9처럼 주택별 감면 상이 시 첫 주택값 전체적용 버그 — 주택별 정확 계산).
+          // ⑬ 직전연도 다주택 중과 (사례4) — 주택별 공시·감면율·지분율·조정2주택·주택수
           priorHouseValues,
+          priorHouseReductionRates,
+          priorHouseOwnershipRatios,
           isMultiHouseInAdjustedArea:
             formData.previousYearAutoIsMultiAdjusted || undefined,
           taxableHouseCount: priorHouseValues?.length,

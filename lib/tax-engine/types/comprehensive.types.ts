@@ -391,6 +391,17 @@ export interface PreviousYearAutoInput {
    */
   priorHouseValues?: number[];
   /**
+   * 직전연도 주택별 감면율(0~1) — priorHouseValues와 인덱스 정합. 주택별 감면율이 다른 다주택
+   * (예: 사례9 서초 30%·강남 0%·안양 0%)에서 감면을 주택별로 적용. 인덱스 미입력/배열 미입력 시
+   * 단일 reductionRate fallback(하위호환 — 단일 감면 사례4 등 동작 보존).
+   */
+  priorHouseReductionRates?: number[];
+  /**
+   * 직전연도 주택별 공유지분율(0~1) — priorHouseValues와 인덱스 정합. 주택별 지분이 다른 경우
+   * (예: 사례9 강남 50%) 주택별 적용. 미입력 시 단일 ownershipRatio(또는 1.0) fallback.
+   */
+  priorHouseOwnershipRatios?: number[];
+  /**
    * 직전연도 조정대상지역 2주택 여부 (≤2022 중과 2축). 미입력 = false.
    * 직전연도 종부세상당액 세율을 일반→다주택 중과로 분기 (시행령 §5② — 직전연도 세법 적용).
    * ※ 당해연도 ComprehensiveTaxInput.isMultiHouseInAdjustedArea(상한율·당해 세율)와는 별개.

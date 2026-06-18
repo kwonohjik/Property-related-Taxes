@@ -134,6 +134,11 @@ function toEngineInput(
           ownershipRatio: schema.previousYearAuto.ownershipRatio,
           // ⑭ pass-through: 직전연도 다주택 중과 (사례4) — 숫자·boolean·배열 (Date 변환 불요)
           priorHouseValues: schema.previousYearAuto.priorHouseValues,
+          // ⑭ pass-through: 직전 주택별 감면율·지분율 (사례9 — 주택별 감면 상이)
+          priorHouseReductionRates:
+            schema.previousYearAuto.priorHouseReductionRates,
+          priorHouseOwnershipRatios:
+            schema.previousYearAuto.priorHouseOwnershipRatios,
           isMultiHouseInAdjustedArea:
             schema.previousYearAuto.isMultiHouseInAdjustedArea,
           taxableHouseCount: schema.previousYearAuto.taxableHouseCount,
