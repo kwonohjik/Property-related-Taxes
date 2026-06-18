@@ -70,6 +70,26 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "nominee_trust":
       if (parseAmount(form.ntPropertyValue) <= 0) return "명의신탁 재산 가액을 입력하세요";
       break;
+    case "excess_dividend":
+      if (parseAmount(form.edExcessDividend) <= 0) return "초과배당금액을 입력하세요";
+      break;
+    case "listing_gain":
+      if (parseAmount(form.lgSettlementPrice) <= 0) return "정산기준일 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.lgShares) <= 0) return "증여·유상취득 주식수를 입력하세요";
+      break;
+    case "property_service_use":
+      if (parseAmount(form.psuMarketValue) <= 0) return form.psuSubType === "free_use" ? "시가 상당액을 입력하세요" : "시가를 입력하세요";
+      break;
+    case "org_change":
+      if (parseAmount(form.ocBaseValue) <= 0) return "변동 전 해당 재산가액을 입력하세요";
+      if (form.ocSubType === "share_change" && parseAmount(form.ocPostPerShare) <= 0) return "변동 후 1주당 가액을 입력하세요";
+      break;
+    case "value_increase":
+      if (parseAmount(form.viCurrentValue) <= 0) return "사유발생일 현재 재산가액을 입력하세요";
+      break;
+    case "specific_corp":
+      if (parseAmount(form.scTransactionBenefit) <= 0) return "거래이익을 입력하세요";
+      break;
     case "convertible_bond":
       if (form.cbCaseType === "conversion" || form.cbCaseType === "conversion_reverse") {
         if (parseAmount(form.cbPreConvPrice) <= 0) return "전환등 전 1주당 평가가액을 입력하세요";

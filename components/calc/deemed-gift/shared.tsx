@@ -21,6 +21,14 @@ import {
   ConvertibleBondFields,
 } from "./capital-forms";
 import { AcquisitionFundFields, NomineeTrustFields } from "./presumption-forms";
+import {
+  ExcessDividendFields,
+  ListingGainFields,
+  PropertyServiceUseFields,
+  OrgChangeFields,
+  ValueIncreaseFields,
+  SpecificCorpFields,
+} from "./other-forms";
 
 // ============================================================
 // 폼 상태
@@ -134,6 +142,36 @@ export interface DeemedFormState {
   ntPropertyValue: string;
   ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
   ntExcluded: boolean; // §45의2①1·3·4 배제사유
+  // 초과배당 §41의2
+  edExcessDividend: string;
+  edIncomeTax: string;
+  // 상장이익 §41의3 / 합병상장 §41의5
+  lgEventType: "listing" | "merger";
+  lgSettlementPrice: string;
+  lgAcqValue: string;
+  lgCorpGrowth: string;
+  lgShares: string;
+  // 재산사용·용역 §42
+  psuSubType: "free_use" | "low_price" | "high_price";
+  psuMarketValue: string;
+  psuConsideration: string;
+  // 조직변경 §42의2
+  ocSubType: "share_change" | "value_change";
+  ocBaseValue: string;
+  ocPreShares: string;
+  ocPostShares: string;
+  ocPostPerShare: string;
+  ocPreValue: string;
+  ocPostValue: string;
+  // 재산가치증가 §42의3
+  viCurrentValue: string;
+  viAcqCost: string;
+  viNormalIncrease: string;
+  viContribution: string;
+  // 특정법인 §45의5
+  scTransactionBenefit: string;
+  scCorporateTax: string;
+  scRatioPct: string;
 }
 
 export const INITIAL_DEEMED: DeemedFormState = {
@@ -229,6 +267,30 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ntPropertyValue: "",
   ntTaxAvoidance: true,
   ntExcluded: false,
+  edExcessDividend: "",
+  edIncomeTax: "",
+  lgEventType: "listing",
+  lgSettlementPrice: "",
+  lgAcqValue: "",
+  lgCorpGrowth: "",
+  lgShares: "",
+  psuSubType: "free_use",
+  psuMarketValue: "",
+  psuConsideration: "",
+  ocSubType: "share_change",
+  ocBaseValue: "",
+  ocPreShares: "",
+  ocPostShares: "",
+  ocPostPerShare: "",
+  ocPreValue: "",
+  ocPostValue: "",
+  viCurrentValue: "",
+  viAcqCost: "",
+  viNormalIncrease: "",
+  viContribution: "",
+  scTransactionBenefit: "",
+  scCorporateTax: "",
+  scRatioPct: "",
 };
 
 export const DEEMED_TYPE_META: Record<
@@ -250,6 +312,13 @@ export const DEEMED_TYPE_META: Record<
   // Phase 3 추정·의제
   acquisition_fund_presumption: { label: "재산취득자금 증여추정", law: "상증법 §45" },
   nominee_trust: { label: "명의신탁 증여의제", law: "상증법 §45의2" },
+  // Phase 3 기타이익·자본거래연계·법인
+  excess_dividend: { label: "초과배당에 따른 이익", law: "상증법 §41의2" },
+  listing_gain: { label: "상장·합병상장 이익", law: "상증법 §41의3·§41의5" },
+  property_service_use: { label: "재산사용·용역제공 이익", law: "상증법 §42" },
+  org_change: { label: "법인 조직변경 이익", law: "상증법 §42의2" },
+  value_increase: { label: "재산취득 후 가치증가 이익", law: "상증법 §42의3" },
+  specific_corp: { label: "특정법인과의 거래 이익", law: "상증법 §45의5" },
 };
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
@@ -272,6 +341,12 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "convertible_bond", label: "전환사채에 따른 이익", description: "상증법 §40 — 인수취득·주식전환·양도", testId: "deemed-type-convertible_bond" },
   { value: "acquisition_fund_presumption", label: "재산취득자금 증여추정", description: "상증법 §45 — 미입증 취득자금·채무상환", testId: "deemed-type-acquisition_fund_presumption" },
   { value: "nominee_trust", label: "명의신탁 증여의제", description: "상증법 §45의2 — 명의신탁 재산가액", testId: "deemed-type-nominee_trust" },
+  { value: "excess_dividend", label: "초과배당에 따른 이익", description: "상증법 §41의2 — 초과배당금액 − 소득세상당액", testId: "deemed-type-excess_dividend" },
+  { value: "listing_gain", label: "상장·합병상장 이익", description: "상증법 §41의3·§41의5 — 정산기준일 평가차익", testId: "deemed-type-listing_gain" },
+  { value: "property_service_use", label: "재산사용·용역제공 이익", description: "상증법 §42 — 무상·저가·고가 사용/용역", testId: "deemed-type-property_service_use" },
+  { value: "org_change", label: "법인 조직변경 이익", description: "상증법 §42의2 — 소유지분·평가액 변동", testId: "deemed-type-org_change" },
+  { value: "value_increase", label: "재산취득 후 가치증가 이익", description: "상증법 §42의3 — 개발·상장 등 가치증가", testId: "deemed-type-value_increase" },
+  { value: "specific_corp", label: "특정법인과의 거래 이익", description: "상증법 §45의5 — 지배주주 특수관계법인 거래", testId: "deemed-type-specific_corp" },
 ];
 
 export function DeemedTypeSelector({
@@ -324,6 +399,18 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
       return <AcquisitionFundFields form={form} set={set} />;
     case "nominee_trust":
       return <NomineeTrustFields form={form} set={set} />;
+    case "excess_dividend":
+      return <ExcessDividendFields form={form} set={set} />;
+    case "listing_gain":
+      return <ListingGainFields form={form} set={set} />;
+    case "property_service_use":
+      return <PropertyServiceUseFields form={form} set={set} />;
+    case "org_change":
+      return <OrgChangeFields form={form} set={set} />;
+    case "value_increase":
+      return <ValueIncreaseFields form={form} set={set} />;
+    case "specific_corp":
+      return <SpecificCorpFields form={form} set={set} />;
     default:
       return null;
   }

@@ -121,6 +121,48 @@ const nomineeTrustSchema = z.object({
   hasTaxAvoidancePurpose: z.boolean(),
   isExcluded: z.boolean().optional(),
 });
+const excessDividendSchema = z.object({
+  type: z.literal("excess_dividend"),
+  excessDividend: z.number().nonnegative(),
+  incomeTaxEquivalent: z.number().nonnegative(),
+});
+const listingGainSchema = z.object({
+  type: z.literal("listing_gain"),
+  eventType: z.enum(["listing", "merger"]).optional(),
+  settlementPerSharePrice: z.number().nonnegative(),
+  perShareAcqValue: z.number().nonnegative(),
+  perShareCorpGrowth: z.number(),
+  shares: z.number().nonnegative(),
+});
+const propertyServiceUseSchema = z.object({
+  type: z.literal("property_service_use"),
+  subType: z.enum(["free_use", "low_price", "high_price"]),
+  marketValue: z.number().nonnegative(),
+  consideration: z.number().nonnegative().optional(),
+});
+const orgChangeSchema = z.object({
+  type: z.literal("org_change"),
+  subType: z.enum(["share_change", "value_change"]),
+  baseValue: z.number().nonnegative(),
+  preShares: z.number().nonnegative().optional(),
+  postShares: z.number().nonnegative().optional(),
+  postPerSharePrice: z.number().nonnegative().optional(),
+  preValue: z.number().nonnegative().optional(),
+  postValue: z.number().nonnegative().optional(),
+});
+const valueIncreaseSchema = z.object({
+  type: z.literal("value_increase"),
+  currentValue: z.number().nonnegative(),
+  acquisitionCost: z.number().nonnegative(),
+  normalIncrease: z.number().nonnegative(),
+  contribution: z.number().nonnegative(),
+});
+const specificCorpSchema = z.object({
+  type: z.literal("specific_corp"),
+  transactionBenefit: z.number().nonnegative(),
+  corporateTax: z.number().nonnegative(),
+  ownershipRatio: ratioSchema,
+});
 const convertibleBondSchema = z.object({
   type: z.literal("convertible_bond"),
   caseType: z.enum(["acquisition", "conversion", "conversion_reverse", "transfer"]).optional(),
@@ -151,6 +193,12 @@ export const deemedGiftInputSchema = z
     convertibleBondSchema,
     acquisitionFundSchema,
     nomineeTrustSchema,
+    excessDividendSchema,
+    listingGainSchema,
+    propertyServiceUseSchema,
+    orgChangeSchema,
+    valueIncreaseSchema,
+    specificCorpSchema,
   ])
   .superRefine((data, ctx) => {
     if (data.type === "insurance") {

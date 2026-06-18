@@ -130,6 +130,15 @@ export const GIFT = {
   // ── 증여로 보는 경우 (Phase 3: 추정·의제) ──
   ACQUISITION_FUND_PRESUMPTION: "상증법 §45",
   NOMINEE_TRUST: "상증법 §45의2",
+  // ── 증여로 보는 경우 (Phase 3: 기타이익·자본거래연계·법인) ──
+  EXCESS_DIVIDEND: "상증법 §41의2",
+  LISTING_GAIN: "상증법 §41의3",
+  MERGER_LISTING_GAIN: "상증법 §41의5",
+  PROPERTY_SERVICE_USE: "상증법 §42",
+  ORG_CHANGE: "상증법 §42의2",
+  VALUE_INCREASE: "상증법 §42의3",
+  SPECIFIC_CORP: "상증법 §45의5",
+  DUP_EXCLUSION: "상증법 §43①",
 } as const;
 
 // ============================================================

@@ -19,7 +19,13 @@ export type DeemedGiftType =
   | "convertible_stock" // §39①3호 전환주식 (8-3)
   | "convertible_bond" // §40 (11)
   | "acquisition_fund_presumption" // §45 재산취득자금·채무상환 증여추정 (Phase 3)
-  | "nominee_trust"; // §45의2 명의신탁 증여의제 (Phase 3)
+  | "nominee_trust" // §45의2 명의신탁 증여의제 (Phase 3)
+  | "excess_dividend" // §41의2 초과배당 (Phase 3)
+  | "listing_gain" // §41의3 상장이익 / §41의5 합병상장이익 (Phase 3)
+  | "property_service_use" // §42 재산사용·용역제공 (Phase 3)
+  | "org_change" // §42의2 법인 조직변경 (Phase 3)
+  | "value_increase" // §42의3 재산취득 후 가치증가 (Phase 3)
+  | "specific_corp"; // §45의5 특정법인과의 거래 (Phase 3)
 
 /** 모든 계산기 공통 결과 */
 export interface DeemedGiftResult {
@@ -180,6 +186,54 @@ export interface NomineeTrustInput {
   isExcluded?: boolean; // §45의2①1·3·4 배제 (신탁등기·비거주자 법정대리인 등)
 }
 
+/** §41의2 초과배당 (소득세상당액은 시행규칙 §10의3 율표 — 직접 입력) */
+export interface ExcessDividendInput {
+  excessDividend: number; // 초과배당금액 = (특수관계인 실수령 − 균등배당) × 최대주주등 과소배당 비율
+  incomeTaxEquivalent: number; // 초과배당금액에 대한 소득세 상당액 (공제)
+}
+
+/** §41의3 상장이익 / §41의5 합병상장이익 (시행령 §31의3·§31의5) */
+export interface ListingGainInput {
+  eventType?: "listing" | "merger"; // §41의3 상장 / §41의5 합병상장, 기본 listing
+  settlementPerSharePrice: number; // 정산기준일(상장일·합병등기일 +3개월) 현재 1주당 평가가액(§63)
+  perShareAcqValue: number; // 1주당 증여세 과세가액(또는 취득가액)
+  perShareCorpGrowth: number; // 1주당 기업가치 실질증가이익(§31의3⑤)
+  shares: number; // 증여·유상취득 주식수
+}
+
+/** §42 재산사용·용역제공 */
+export interface PropertyServiceUseInput {
+  subType: "free_use" | "low_price" | "high_price"; // §32① 1·2·3호
+  marketValue: number; // 시가 (무상=시가상당액, 저가/고가=시가)
+  consideration?: number; // 대가 (저가·고가)
+}
+
+/** §42의2 법인 조직변경 */
+export interface OrgChangeInput {
+  subType: "share_change" | "value_change"; // 소유지분 변동 / 평가액 변동 (시행령 §32의2①)
+  baseValue: number; // 변동 전 해당 재산가액 (기준금액 30% 산정)
+  preShares?: number; // share_change 변동 전 지분
+  postShares?: number; // share_change 변동 후 지분
+  postPerSharePrice?: number; // share_change 변동 후 1주당 가액
+  preValue?: number; // value_change 변동 전 가액
+  postValue?: number; // value_change 변동 후 가액
+}
+
+/** §42의3 재산취득 후 가치증가 */
+export interface ValueIncreaseInput {
+  currentValue: number; // 사유발생일 현재 재산가액
+  acquisitionCost: number; // 취득가액(증여재산은 증여세 과세가액)
+  normalIncrease: number; // 통상적인 가치상승분
+  contribution: number; // 가치상승기여분(자본적지출액 등)
+}
+
+/** §45의5 특정법인과의 거래 */
+export interface SpecificCorpInput {
+  transactionBenefit: number; // 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
+  corporateTax: number; // 법인세 상당액 = (산출세액−공제감면)×min(거래이익/소득금액,1)
+  ownershipRatio: { numer: number; denom: number }; // 지배주주등 주식보유비율
+}
+
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
 export type DeemedGiftInput =
   | ({ type: "insurance" } & InsuranceInput)
@@ -194,4 +248,10 @@ export type DeemedGiftInput =
   | ({ type: "convertible_stock" } & ConvertibleStockInput)
   | ({ type: "convertible_bond" } & ConvertibleBondInput)
   | ({ type: "acquisition_fund_presumption" } & AcquisitionFundPresumptionInput)
-  | ({ type: "nominee_trust" } & NomineeTrustInput);
+  | ({ type: "nominee_trust" } & NomineeTrustInput)
+  | ({ type: "excess_dividend" } & ExcessDividendInput)
+  | ({ type: "listing_gain" } & ListingGainInput)
+  | ({ type: "property_service_use" } & PropertyServiceUseInput)
+  | ({ type: "org_change" } & OrgChangeInput)
+  | ({ type: "value_increase" } & ValueIncreaseInput)
+  | ({ type: "specific_corp" } & SpecificCorpInput);

@@ -190,6 +190,54 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         hasTaxAvoidancePurpose: form.ntTaxAvoidance,
         isExcluded: form.ntExcluded,
       };
+    case "excess_dividend":
+      return {
+        type: "excess_dividend",
+        excessDividend: parseAmount(form.edExcessDividend),
+        incomeTaxEquivalent: parseAmount(form.edIncomeTax),
+      };
+    case "listing_gain":
+      return {
+        type: "listing_gain",
+        eventType: form.lgEventType,
+        settlementPerSharePrice: parseAmount(form.lgSettlementPrice),
+        perShareAcqValue: parseAmount(form.lgAcqValue),
+        perShareCorpGrowth: parseAmount(form.lgCorpGrowth),
+        shares: parseAmount(form.lgShares),
+      };
+    case "property_service_use":
+      return {
+        type: "property_service_use",
+        subType: form.psuSubType,
+        marketValue: parseAmount(form.psuMarketValue),
+        consideration: form.psuSubType === "free_use" ? undefined : parseAmount(form.psuConsideration),
+      };
+    case "org_change":
+      return {
+        type: "org_change",
+        subType: form.ocSubType,
+        baseValue: parseAmount(form.ocBaseValue),
+        preShares: parseAmount(form.ocPreShares),
+        postShares: parseAmount(form.ocPostShares),
+        postPerSharePrice: parseAmount(form.ocPostPerShare),
+        preValue: parseAmount(form.ocPreValue),
+        postValue: parseAmount(form.ocPostValue),
+      };
+    case "value_increase":
+      return {
+        type: "value_increase",
+        currentValue: parseAmount(form.viCurrentValue),
+        acquisitionCost: parseAmount(form.viAcqCost),
+        normalIncrease: parseAmount(form.viNormalIncrease),
+        contribution: parseAmount(form.viContribution),
+      };
+    case "specific_corp":
+      return {
+        type: "specific_corp",
+        transactionBenefit: parseAmount(form.scTransactionBenefit),
+        corporateTax: parseAmount(form.scCorporateTax),
+        ownershipRatio: { numer: Math.round(parseDecimal(form.scRatioPct) * 100), denom: 10_000 },
+      };
     default:
       throw new Error("증여 유형을 선택하세요");
   }

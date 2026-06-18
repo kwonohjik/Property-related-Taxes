@@ -13,6 +13,12 @@ import { calcConvertibleStockGift } from "./convertible-stock";
 import { calcConvertibleBondGift } from "./convertible-bond";
 import { calcAcquisitionFundPresumption } from "./acquisition-fund-presumption";
 import { calcNomineeTrustGift } from "./nominee-trust";
+import { calcExcessDividendGift } from "./excess-dividend";
+import { calcListingGainGift } from "./listing-gain";
+import { calcPropertyServiceUseGift } from "./property-service-use";
+import { calcOrgChangeGift } from "./org-change";
+import { calcValueIncreaseGift } from "./value-increase";
+import { calcSpecificCorpGift } from "./specific-corp";
 
 export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
   switch (input.type) {
@@ -42,6 +48,18 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
       return calcAcquisitionFundPresumption(input);
     case "nominee_trust":
       return calcNomineeTrustGift(input);
+    case "excess_dividend":
+      return calcExcessDividendGift(input);
+    case "listing_gain":
+      return calcListingGainGift(input);
+    case "property_service_use":
+      return calcPropertyServiceUseGift(input);
+    case "org_change":
+      return calcOrgChangeGift(input);
+    case "value_increase":
+      return calcValueIncreaseGift(input);
+    case "specific_corp":
+      return calcSpecificCorpGift(input);
   }
 }
 // §43① 중복배제·§43② 합산은 Phase 3 router 후처리(여기선 단일 의제만)
