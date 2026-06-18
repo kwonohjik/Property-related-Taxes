@@ -88,6 +88,7 @@ export interface PreviousYearEquivalentResult {
     fairMarketRatio: number;       // 부표 ③ 공정시장가액비율 (2021 = 0.95)
     taxBase: number;               // 부표 ④ 종부세 과세표준
     appliedRate: number;           // 부표 ⑤ 세율
+    progressiveDeduction?: number; // ②ⓐ 종부세액 누진공제액 (산식 "× 세율 − 누진공제" 표시용 echo)
     calculatedTax: number;         // 부표 ⑥ 재산세공제전 종부세액
     stdTaxNumerator: number;       // 부표 ⑧ 과세표준 표준세율 재산세액
     stdTaxDenominator: number;     // 부표 ⑨ 총표준세율 재산세액

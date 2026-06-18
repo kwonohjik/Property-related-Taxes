@@ -68,6 +68,8 @@ describe("PY-Case9: 직전연도 주택별 감면 — 나 35,630,694", () => {
     expect(r.previousYearEquivalent?.detail.taxBase).toBe(1_567_500_000);
     expect(r.previousYearEquivalent?.detail.appliedRate).toBe(0.036);
     expect(r.previousYearEquivalent?.detail.calculatedTax).toBe(34_830_000);
+    // 누진공제 echo (15.675억 × 3.6% − 21,600,000 = 34,830,000)
+    expect(r.previousYearEquivalent?.detail.progressiveDeduction).toBe(21_600_000);
   });
 
   it("ⓐⓑ 라벨용 감면후 공시 합(effectiveAssessedValue) = 22.5억", () => {

@@ -94,7 +94,7 @@ export function calcPreviousYearEquivalent(
     houseCount,
     auto.isMultiHouseInAdjustedArea ?? false,
   );
-  const { calculatedTax, appliedRate } = calcHousingTaxAmount(
+  const { calculatedTax, appliedRate, progressiveDeduction } = calcHousingTaxAmount(
     taxBase,
     useMulti ? p.housingBracketsMulti : p.housingBracketsGeneral,
   );
@@ -188,6 +188,7 @@ export function calcPreviousYearEquivalent(
       creditAmount,
       oneHouseDeductionRate,
       oneHouseDeductionAmount,
+      progressiveDeduction,                     // ②ⓐ 종부세액 누진공제액 echo (산식 표시용)
       propertyFairMarketRatio: propertyFMR,     // 교재 ⑤나 "× 60%" echo
       propertyTaxBaseAmount: propertyTaxBase,   // 교재 ⑤나 감면후 재산세 과세표준 echo
       effectiveAssessedValue,                   // ②ⓐⓑ 라벨용 — 감면후 공시 합 echo
