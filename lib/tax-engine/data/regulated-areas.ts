@@ -362,11 +362,26 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   { code: "31110", name: "울산광역시 중구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
   { code: "31140", name: "울산광역시 남구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
 
-  // ══════ 세종특별자치시 (36) — 행정중심복합도시 예정지역 한함(주5), 2017.8.3~2022.11.13 ══════
-  // 예정지역 동 목록 미확정 → 시 전역 코드화 + coarseNote(medium 강등). 조치원읍 등 비예정지역은 과대판정 주의.
+  // ══════ 세종특별자치시 (36110) — 행정중심복합도시 예정지역(동지역)만 지정, 2017.8.3~2022.11.13 ══════
+  // 동(洞)지역 23개(반곡동 101 ~ 용호동 123)만 조정대상. 읍·면(조치원읍 250·연기면 등 1읍9면)은
+  //   비예정지역으로 미지정. 행안부 법정동코드 기준 includedSubCodes로 정밀화(전역 coarseNote 폐지).
+  //   10자리 코드면 동/읍면 정밀(high), 5자리(36110)만이면 medium("10자리 확인 필요").
   { code: "36110", name: "세종특별자치시",
     designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
-    coarseNote: "행정중심복합도시 예정지역 한함 — 정확한 소재지 확인 필요" },
+    includedSubCodes: [
+      { codePrefix: "36110101", name: "반곡동" }, { codePrefix: "36110102", name: "소담동" },
+      { codePrefix: "36110103", name: "보람동" }, { codePrefix: "36110104", name: "대평동" },
+      { codePrefix: "36110105", name: "가람동" }, { codePrefix: "36110106", name: "한솔동" },
+      { codePrefix: "36110107", name: "나성동" }, { codePrefix: "36110108", name: "새롬동" },
+      { codePrefix: "36110109", name: "다정동" }, { codePrefix: "36110110", name: "어진동" },
+      { codePrefix: "36110111", name: "종촌동" }, { codePrefix: "36110112", name: "고운동" },
+      { codePrefix: "36110113", name: "아름동" }, { codePrefix: "36110114", name: "도담동" },
+      { codePrefix: "36110115", name: "산울동" }, { codePrefix: "36110116", name: "해밀동" },
+      { codePrefix: "36110117", name: "합강동" }, { codePrefix: "36110118", name: "집현동" },
+      { codePrefix: "36110119", name: "세종동" }, { codePrefix: "36110120", name: "누리동" },
+      { codePrefix: "36110121", name: "한별동" }, { codePrefix: "36110122", name: "다솜동" },
+      { codePrefix: "36110123", name: "용호동" },
+    ] },
 
   // ══════ 충북 청주 (43111~43114) — 동지역 + 오창·오송읍 지정, 그 외 읍·면 제외. 2020.6.19~2022.9.25 ══════
   { code: "43111", name: "충청북도 청주시 상당구",
