@@ -16,9 +16,9 @@ import {
   makeInput,
 } from "../_helpers/multi-house-mock";
 
-// 강원 고성군(42800) = 인구감소지역. 앞 5자리 동일 = 같은 시·군·구.
-const DECLINE_SGG = "4280011111"; // 인구감소지역 세컨드홈 후보
-const DECLINE_SGG_OTHER = "4280022222"; // 같은 시·군·구(다른 법정동)
+// 강원특별자치도 고성군(51820) = 인구감소지역(법정동 정확 코드). 앞 5자리 동일 = 같은 시·군·구.
+const DECLINE_SGG = "5182011111"; // 인구감소지역 세컨드홈 후보
+const DECLINE_SGG_OTHER = "5182022222"; // 같은 시·군·구(다른 법정동)
 const CAPITAL_OTHER = "1168011111"; // 서울 강남(다른 시·군·구)
 
 describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시군구", () => {

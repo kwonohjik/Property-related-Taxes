@@ -487,13 +487,16 @@ export function countEffectiveHouses(
     }
 
     // 배제 7: ⑭ 인구감소지역/관심지역 세컨드홈 특례 (소령 §167의3①12 다·라목)
-    const isPopDecline =
-      house.isPopulationDeclineArea ??
-      (house.regionCode ? classifyPopulationDeclineArea(house.regionCode).isDeclineArea : false);
+    const autoKind = house.regionCode
+      ? classifyPopulationDeclineArea(house.regionCode).kind
+      : null;
+    const isPopDecline = house.isPopulationDeclineArea ?? (autoKind !== null);
     if (isPopDecline && house.isSecondHomeRegistered) {
-      // 가액 한도: 다목(수도권 밖 인구감소지역) 9억, 라목(관심지역)·그 외 4억
+      // 가액 한도: 다목(수도권 밖 인구감소지역) 9억 / 라목(관심지역)·수도권 접경·그 외 4억.
+      // populationAreaType 미입력 시 regionCode 자동판정(autoKind)으로 다·라목 구분 도출 (N-6).
+      const effectiveAreaType = house.populationAreaType ?? autoKind ?? undefined;
       const popCap =
-        house.region === "non_capital" && house.populationAreaType === "decline"
+        house.region === "non_capital" && effectiveAreaType === "decline"
           ? MULTI_HOUSE.POP_DECLINE_PRICE_CAP_NONCAPITAL
           : MULTI_HOUSE.POP_DECLINE_PRICE_CAP_DEFAULT;
       if (house.officialPrice <= popCap) {
