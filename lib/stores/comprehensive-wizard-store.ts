@@ -273,7 +273,8 @@ interface ComprehensiveWizardState {
   updateSeparateLand: (id: string, data: Partial<SeparateLandEntry>) => void;
 
   // ── 토지 필지 액션 (kind: aggregate | separate) ──
-  addLandParcel: (kind: "aggregate" | "separate") => void;
+  /** 새 필지를 추가하고 그 id를 반환 (UI 자동 모달 오픈용 — addProperty 패턴) */
+  addLandParcel: (kind: "aggregate" | "separate") => string;
   removeLandParcel: (kind: "aggregate" | "separate", id: string) => void;
   updateLandParcel: (kind: "aggregate" | "separate", id: string, data: Partial<LandParcelForm>) => void;
 
@@ -363,23 +364,23 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
           },
         })),
 
-      addLandParcel: (kind) =>
-        set((state) => {
-          const key = kind === "aggregate" ? "landAggregateParcels" : "landSeparateParcels";
-          const newParcel: LandParcelForm = {
-            id: String(Date.now()) + String(Math.random()).slice(2, 5),
-            jurisdiction: "",
-            name: "",
-            jibun: "",
-            area: "",
-            shareRatio: "100",
-            officialPricePerSqm: "",
-            priorOfficialPricePerSqm: "",
-          };
-          return {
-            formData: { ...state.formData, [key]: [...state.formData[key], newParcel] },
-          };
-        }),
+      addLandParcel: (kind) => {
+        const key = kind === "aggregate" ? "landAggregateParcels" : "landSeparateParcels";
+        const newParcel: LandParcelForm = {
+          id: String(Date.now()) + String(Math.random()).slice(2, 5),
+          jurisdiction: "",
+          name: "",
+          jibun: "",
+          area: "",
+          shareRatio: "100",
+          officialPricePerSqm: "",
+          priorOfficialPricePerSqm: "",
+        };
+        set((state) => ({
+          formData: { ...state.formData, [key]: [...state.formData[key], newParcel] },
+        }));
+        return newParcel.id;
+      },
 
       removeLandParcel: (kind, id) =>
         set((state) => {

@@ -1,11 +1,11 @@
-import { test, expect, type Page, type Locator } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 /**
  * 종부세 "주택 0채" 허용 — 토지전용(사례10 종합합산) 입력 흐름 E2E.
  *
  * Plan: docs/00-pm/comprehensive-land-only-zero-house.plan.md
  * - Step2에서 초기 1채를 명시적 삭제 → 0채 빈 상태 안내
- * - Step4 종합합산 토지 입력 → 계산 → 결과에 토지분(8,638,017) 표시, 주택분 산출근거 카드 부재
+ * - Step4 종합합산 토지 입력(테이블+모달) → 계산 → 결과에 토지분(8,638,017) 표시, 주택분 산출근거 카드 부재
  *
  * worktree: E2E_PORT=3100 npx playwright test e2e/comprehensive-land-only-zero-house.spec.ts
  */
@@ -16,20 +16,27 @@ async function clickNext(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 
-async function fillParcel(
+/** 필지 추가(자동 모달 오픈) → 모달 필드 입력 → 닫기. priorMode auto면 prior 포함. */
+async function addParcel(
   page: Page,
-  index: number,
-  data: { jurisdiction: string; name?: string; area: string; share: string; price: string; prior: string },
+  kind: "aggregate" | "separate",
+  data: { jurisdiction: string; name?: string; area: string; share: string; price: string; prior?: string },
 ): Promise<void> {
-  await page.getByTestId(`land-aggregate-parcel-${index}-jurisdiction`).fill(data.jurisdiction);
-  const area: Locator = page.getByTestId(`land-aggregate-parcel-${index}-area`).locator("input");
-  await area.fill(data.area);
-  const share: Locator = page.getByTestId(`land-aggregate-parcel-${index}-share`).locator("input");
-  await share.fill(data.share);
-  const price: Locator = page.getByTestId(`land-aggregate-parcel-${index}-price`).locator("input").last();
-  await price.fill(data.price);
-  const prior: Locator = page.getByTestId(`land-aggregate-parcel-${index}-prior-price`).locator("input").last();
-  await prior.fill(data.prior);
+  await page.getByRole("button", { name: /필지 추가/ }).click();
+  const dialog = page.getByTestId(`land-${kind}-parcel-dialog`);
+  await expect(dialog).toBeVisible();
+
+  await page.getByTestId(`land-${kind}-parcel-jurisdiction`).fill(data.jurisdiction);
+  if (data.name) await page.getByTestId(`land-${kind}-parcel-name`).fill(data.name);
+  await page.getByTestId(`land-${kind}-parcel-area`).locator("input").fill(data.area);
+  await page.getByTestId(`land-${kind}-parcel-share`).locator("input").fill(data.share);
+  await page.getByTestId(`land-${kind}-parcel-price`).locator("input").last().fill(data.price);
+  if (data.prior !== undefined) {
+    await page.getByTestId(`land-${kind}-parcel-prior-price`).locator("input").last().fill(data.prior);
+  }
+
+  await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+  await expect(dialog).toBeHidden();
 }
 
 test.describe("종부세 토지전용 (주택 0채)", () => {
@@ -58,14 +65,11 @@ test.describe("종부세 토지전용 (주택 0채)", () => {
     await page.getByText("종합합산 토지 보유").click();
     await page.getByRole("radio", { name: /필지별 자동 계산/ }).first().check();
     await page.getByRole("radio", { name: /직전 공시지가로 자동 계산/ }).check();
-    const addBtn = page.getByRole("button", { name: /필지 추가/ });
-    await addBtn.click();
-    await addBtn.click();
-    await addBtn.click();
 
-    await fillParcel(page, 0, { jurisdiction: "서초구", area: "200", share: "50", price: "4300000", prior: "3200000" });
-    await fillParcel(page, 1, { jurisdiction: "송파구", name: "송파구-1", area: "100", share: "100", price: "3700000", prior: "3300000" });
-    await fillParcel(page, 2, { jurisdiction: "송파구", name: "송파구-2", area: "200", share: "100", price: "5000000", prior: "4000000" });
+    // 필지 3건 — 추가→모달 fill→닫기 1건씩
+    await addParcel(page, "aggregate", { jurisdiction: "서초구", area: "200", share: "50", price: "4300000", prior: "3200000" });
+    await addParcel(page, "aggregate", { jurisdiction: "송파구", name: "송파구-1", area: "100", share: "100", price: "3700000", prior: "3300000" });
+    await addParcel(page, "aggregate", { jurisdiction: "송파구", name: "송파구-2", area: "200", share: "100", price: "5000000", prior: "4000000" });
 
     // 계산 (0채 + 토지 → Zod refine 통과)
     const calcResponse = page.waitForResponse(

@@ -4,21 +4,53 @@
  * LandParcelSection — 토지 필지별 입력 (종합합산·별도합산 공용).
  *
  * 집계 직접입력(summary, 기본) ↔ 필지별 자동계산(parcels) 모드 토글.
- * 필지 모드: 시군구·면적·지분율·당해/직전 개별공시지가 → 엔진 자동(지자체 합산 재산세·직전연도 상당액).
+ * 필지 모드: 요약 테이블(행 클릭 → Dialog 모달 편집) — 주택 PropertyListInput과 동일 패턴.
+ *   추가 직후 자동 모달 오픈(E-1) · 삭제 시 모달 닫힘(E-2) · 빈 필지 자동 제거(E-3).
  * Design: docs/02-design/features/comprehensive-land-payable-calc.ui.design.md §4
+ *   · docs/00-pm/comprehensive-land-parcel-table-modal.plan.md
  */
 
+import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
-import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { LandParcelTableView } from "./LandParcelTableView";
+import { LandParcelEditor } from "./LandParcelEditor";
+import {
+  useComprehensiveWizardStore,
+  type LandParcelForm,
+} from "@/lib/stores/comprehensive-wizard-store";
 
 type Kind = "aggregate" | "separate";
+
+/**
+ * 사용자가 의미 있는 입력을 전혀 하지 않은 빈 필지 — 모달 닫기 시 자동 제거 대상.
+ * 신규 필지 기본 shareRatio "100"은 의도 입력이 아니므로 판정에서 제외.
+ */
+function isEmptyParcel(p: LandParcelForm): boolean {
+  const blank = (s: string | undefined) => !s || !s.trim();
+  return (
+    blank(p.jurisdiction) &&
+    blank(p.name) &&
+    blank(p.jibun) &&
+    blank(p.area) &&
+    blank(p.officialPricePerSqm) &&
+    blank(p.priorOfficialPricePerSqm) &&
+    (!p.shareRatio?.trim() || p.shareRatio.trim() === "100")
+  );
+}
 
 export function LandParcelSection({ kind }: { kind: Kind }) {
   const { formData, updateFormData, addLandParcel, removeLandParcel, updateLandParcel } =
     useComprehensiveWizardStore();
+
+  // 편집 모달 대상 (UI ephemeral — zustand store 금지). aggregate·separate 인스턴스별 독립.
+  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
 
   const mode = kind === "aggregate" ? formData.landAggregateMode : formData.landSeparateMode;
   const modeKey = kind === "aggregate" ? "landAggregateMode" : "landSeparateMode";
@@ -30,6 +62,31 @@ export function LandParcelSection({ kind }: { kind: Kind }) {
   const refDate = `${formData.assessmentYear}-06-01`;
   const priorYear = String((parseInt(formData.assessmentYear) || new Date().getFullYear()) - 1);
   const autoSupported = (parseInt(formData.assessmentYear) || 0) >= 2022;
+
+  const selectedIndex = parcels.findIndex((p) => p.id === selectedParcelId);
+  const selectedParcel = selectedIndex >= 0 ? parcels[selectedIndex] : null;
+
+  // 추가 직후 자동 모달 오픈 (E-1)
+  const handleAdd = () => {
+    const newId = addLandParcel(kind);
+    setSelectedParcelId(newId);
+  };
+
+  // 삭제 후 모달 자동 닫힘 (E-2)
+  const handleRemove = () => {
+    if (!selectedParcelId) return;
+    removeLandParcel(kind, selectedParcelId);
+    setSelectedParcelId(null);
+  };
+
+  // 모달 닫기 (E-3) — 추가만 하고 아무것도 입력하지 않은 빈 필지는 자동 제거 (0필지 허용)
+  const closeModal = () => {
+    const id = selectedParcelId;
+    setSelectedParcelId(null);
+    if (!id) return;
+    const target = parcels.find((p) => p.id === id);
+    if (target && isEmptyParcel(target)) removeLandParcel(kind, id);
+  };
 
   return (
     <div className="space-y-3">
@@ -48,97 +105,77 @@ export function LandParcelSection({ kind }: { kind: Kind }) {
 
       {mode === "parcels" && (
         <div className="space-y-3">
-          {parcels.map((parcel, index) => (
+          {/* 요약 테이블 (행 클릭 → 편집 모달) — 0필지면 빈 상태 안내 */}
+          {parcels.length === 0 ? (
             <div
-              key={parcel.id}
-              className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-3"
-              data-testid={`land-${kind}-parcel-${index}`}
+              className="rounded-lg border border-sky-200 bg-sky-50/40 px-4 py-5 text-center text-sm text-sky-800"
+              data-testid={`land-${kind}-parcel-empty-state`}
             >
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-sky-800">필지 {index + 1}</h4>
+              필지가 없습니다. 아래 &lsquo;필지 추가&rsquo;를 눌러 입력하세요.
+            </div>
+          ) : (
+            <LandParcelTableView
+              parcels={parcels}
+              kind={kind}
+              selectedParcelId={selectedParcelId}
+              onSelect={setSelectedParcelId}
+            />
+          )}
+
+          {/* 편집 모달 — 행 클릭 또는 추가 직후 자동 오픈 */}
+          <Dialog
+            open={selectedParcelId !== null}
+            onOpenChange={(open) => {
+              if (!open) closeModal();
+            }}
+          >
+            <DialogContent
+              className="sm:max-w-[min(50.4rem,calc(100%-2rem))] w-full p-0"
+              showCloseButton={false}
+            >
+              <DialogHeader className="px-4 pt-4 pb-0">
+                <DialogTitle>필지 {selectedIndex >= 0 ? selectedIndex + 1 : ""} 편집</DialogTitle>
+              </DialogHeader>
+              <div
+                className="max-h-[80vh] overflow-y-auto px-4 pb-4 pt-3"
+                data-testid={`land-${kind}-parcel-dialog`}
+              >
+                {selectedParcel && (
+                  <LandParcelEditor
+                    key={selectedParcel.id}
+                    parcel={selectedParcel}
+                    kind={kind}
+                    refDate={refDate}
+                    priorYear={priorYear}
+                    priorMode={priorMode}
+                    onUpdate={(data) => updateLandParcel(kind, selectedParcel.id, data)}
+                  />
+                )}
+              </div>
+              <div className="border-t px-4 py-3 flex justify-between items-center">
                 <button
                   type="button"
-                  onClick={() => removeLandParcel(kind, parcel.id)}
-                  className="text-xs text-destructive hover:underline"
+                  onClick={handleRemove}
+                  data-testid={`land-${kind}-parcel-remove-${selectedParcelId}`}
+                  className="px-4 py-2 rounded-md text-sm border border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   삭제
                 </button>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 rounded-md text-sm border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  닫기
+                </button>
               </div>
+            </DialogContent>
+          </Dialog>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium">
-                    시군구 <span className="text-muted-foreground font-normal text-xs">(재산세 합산)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={parcel.jurisdiction}
-                    onChange={(e) => updateLandParcel(kind, parcel.id, { jurisdiction: e.target.value })}
-                    placeholder="예: 서초구"
-                    data-testid={`land-${kind}-parcel-${index}-jurisdiction`}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium">
-                    필지명 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={parcel.name}
-                    onChange={(e) => updateLandParcel(kind, parcel.id, { name: e.target.value })}
-                    placeholder="구분용 명칭"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5" data-testid={`land-${kind}-parcel-${index}-area`}>
-                  <label className="block text-sm font-medium">총면적 (㎡)</label>
-                  <DecimalInput
-                    value={parcel.area}
-                    onChange={(v) => updateLandParcel(kind, parcel.id, { area: v })}
-                  />
-                </div>
-                <div className="space-y-1.5" data-testid={`land-${kind}-parcel-${index}-share`}>
-                  <label className="block text-sm font-medium">지분율 (%)</label>
-                  <DecimalInput
-                    value={parcel.shareRatio}
-                    onChange={(v) => updateLandParcel(kind, parcel.id, { shareRatio: v })}
-                  />
-                </div>
-              </div>
-
-              <div data-testid={`land-${kind}-parcel-${index}-price`}>
-                <LandPriceLookupField
-                  label="당해 개별공시지가 (원/㎡)"
-                  pricePerSqm={parcel.officialPricePerSqm}
-                  onPricePerSqmChange={(v) => updateLandParcel(kind, parcel.id, { officialPricePerSqm: v })}
-                  referenceDate={refDate}
-                  jibun={parcel.jibun}
-                />
-              </div>
-
-              {priorMode === "auto" && (
-                <div data-testid={`land-${kind}-parcel-${index}-prior-price`}>
-                  <LandPriceLookupField
-                    label={`직전연도(${priorYear}) 개별공시지가 (원/㎡)`}
-                    pricePerSqm={parcel.priorOfficialPricePerSqm}
-                    onPricePerSqmChange={(v) =>
-                      updateLandParcel(kind, parcel.id, { priorOfficialPricePerSqm: v })
-                    }
-                    referenceDate={`${priorYear}-06-01`}
-                    jibun={parcel.jibun}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-
+          {/* 필지 추가 */}
           <button
             type="button"
-            onClick={() => addLandParcel(kind)}
+            onClick={handleAdd}
             className="w-full rounded-md border border-dashed border-muted-foreground/50 px-4 py-3 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
           >
             + 필지 추가
