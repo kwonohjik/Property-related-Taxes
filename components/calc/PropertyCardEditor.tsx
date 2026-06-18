@@ -229,7 +229,7 @@ export function PropertyCardEditor({
 
       {/* ② 세부담 상한 — 직전연도 공시가격 (capMode auto일 때만) */}
       {capMode === "auto" && (
-        <SectionCard num={2} tone="amber" title="세부담 상한 — 직전연도 공시가격">
+        <SectionCard num={2} tone="amber" title="직전연도 공시가격 — 세부담 상한 계산용">
           <StandardPriceInput
             propertyKind="house_apart"
             totalPrice={property.priorAssessedValue}
