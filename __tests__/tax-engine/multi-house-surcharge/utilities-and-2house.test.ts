@@ -264,22 +264,29 @@ describe("MH-NEW-01: classifyRegionCriteriaByCode — 시군구코드 자동 분
 // MH-NEW-02: 인구감소지역 자동 판정
 // ============================================================
 
-describe("MH-NEW-02: classifyPopulationDeclineArea — 시군구코드 자동 판정", () => {
-  it("인구감소지역 코드 → isDeclineArea=true, priceLimit=9억", () => {
-    expect(classifyPopulationDeclineArea("42800")).toEqual({ isDeclineArea: true, priceLimit: 900_000_000 }); // 강원 고성군
-    expect(classifyPopulationDeclineArea("46930")).toEqual({ isDeclineArea: true, priceLimit: 900_000_000 }); // 전남 신안군
-    expect(classifyPopulationDeclineArea("48820")).toEqual({ isDeclineArea: true, priceLimit: 900_000_000 }); // 경남 고성군
+describe("MH-NEW-02: classifyPopulationDeclineArea — 시군구코드 자동 판정 (법정동 정정 후)", () => {
+  it("인구감소지역(다목) 코드 → kind=decline (법정동 PNU 정확 코드)", () => {
+    expect(classifyPopulationDeclineArea("51820")).toEqual({ kind: "decline" }); // 강원 고성군 (특별자치도 51)
+    expect(classifyPopulationDeclineArea("46910")).toEqual({ kind: "decline" }); // 전남 신안군
+    expect(classifyPopulationDeclineArea("48820")).toEqual({ kind: "decline" }); // 경남 고성군
+    expect(classifyPopulationDeclineArea("52190")).toEqual({ kind: "decline" }); // 전북 남원시 (특별자치도 52)
+    expect(classifyPopulationDeclineArea("28710")).toEqual({ kind: "decline" }); // 인천 강화군 (수도권 접경)
   });
 
-  it("수도권·광역시 코드 → isDeclineArea=false", () => {
-    expect(classifyPopulationDeclineArea("11680")).toEqual({ isDeclineArea: false, priceLimit: 0 }); // 강남구
-    expect(classifyPopulationDeclineArea("41135")).toEqual({ isDeclineArea: false, priceLimit: 0 }); // 분당구
+  it("수도권·광역시 코드 → kind=null", () => {
+    expect(classifyPopulationDeclineArea("11680")).toEqual({ kind: null }); // 강남구
+    expect(classifyPopulationDeclineArea("41135")).toEqual({ kind: null }); // 분당구
+  });
+
+  it("구(舊) 코드(강원 42·전북 45)는 더 이상 매칭 안 됨 (PNU 정합 정정)", () => {
+    expect(classifyPopulationDeclineArea("42800")).toEqual({ kind: null }); // 구 강원 고성 — 폐기
+    expect(classifyPopulationDeclineArea("45190")).toEqual({ kind: null }); // 구 전북 남원 — 폐기
   });
 
   it("regionCode로 자동 판정: isPopulationDeclineArea 미제공 시 코드로 배제 결정", () => {
     const hGosong = makeHouse("gosong", {
       region: "non_capital",
-      regionCode: "42800",           // 강원 고성군 (인구감소지역)
+      regionCode: "51820",           // 강원 고성군 (인구감소지역, 정확 코드)
       isPopulationDeclineArea: undefined, // 명시 안 함
       isSecondHomeRegistered: true,
     });
@@ -294,7 +301,7 @@ describe("MH-NEW-02: classifyPopulationDeclineArea — 시군구코드 자동 �
   it("인구감소지역이지만 세컨드홈 미등록 → 배제 안 됨", () => {
     const h = makeHouse("h", {
       region: "non_capital",
-      regionCode: "42800",
+      regionCode: "51820",
       isPopulationDeclineArea: undefined,
       isSecondHomeRegistered: false, // 미등록
     });
