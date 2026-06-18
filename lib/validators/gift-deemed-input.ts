@@ -55,6 +55,129 @@ const freeLoanSchema = z.object({
   hasJustifiableReason: z.boolean().optional(),
 });
 
+// ── Phase 2: 자본거래 (평가가액·주식수 직접 입력) — sub-case 필드는 caseType별 optional ──
+const ratioSchema = z.object({ numer: z.number().nonnegative(), denom: z.number().positive() });
+const mergerSchema = z.object({
+  type: z.literal("merger"),
+  caseType: z.enum(["stock", "non_stock"]).optional(),
+  overvaluedSharePrice: z.number().nonnegative(),
+  majorShares: z.number().nonnegative(),
+  mergedSharePrice: z.number().nonnegative().optional(),
+  preMergerShares: z.number().nonnegative().optional(),
+  exchangedShares: z.number().nonnegative().optional(),
+  faceValue: z.number().nonnegative().optional(),
+  mergeConsideration: z.number().nonnegative().optional(),
+});
+const capitalIncreaseShape = {
+  direction: z.enum(["low", "high"]).optional(),
+  subType: z.enum(["forfeited_realloc", "third_party", "excess", "no_realloc"]).optional(),
+  preIssuePrice: z.number().nonnegative(),
+  preIssueShares: z.number().positive({ message: "증자 전 발행주식총수는 0보다 커야 합니다" }),
+  newSharePrice: z.number().nonnegative(),
+  issuedShares: z.number().nonnegative(),
+  forfeitedShares: z.number().nonnegative(),
+  relatedAcquiredShares: z.number().nonnegative().optional(),
+  ratioDenomShares: z.number().nonnegative().optional(),
+  smallShareholderImputation: z.boolean().optional(),
+} as const;
+const capitalIncreaseSchema = z.object({ type: z.literal("capital_increase"), ...capitalIncreaseShape });
+const capitalIncreaseInnerSchema = z.object(capitalIncreaseShape);
+const convertibleStockSchema = z.object({
+  type: z.literal("convertible_stock"),
+  atConversion: capitalIncreaseInnerSchema,
+  atIssuance: capitalIncreaseInnerSchema,
+});
+const capitalDecreaseSchema = z.object({
+  type: z.literal("capital_decrease"),
+  caseType: z.enum(["low", "high"]).optional(),
+  sharePrice: z.number().nonnegative(),
+  redemptionPrice: z.number().nonnegative(),
+  totalRedeemedShares: z.number().nonnegative().optional(),
+  majorPostRatio: ratioSchema.optional(),
+  relatedRedeemedShares: z.number().nonnegative().optional(),
+  faceValue: z.number().nonnegative().optional(),
+  ownRedeemedShares: z.number().nonnegative().optional(),
+});
+const contributionSchema = z.object({
+  type: z.literal("contribution"),
+  caseType: z.enum(["low", "high"]).optional(),
+  preContribPrice: z.number().nonnegative(),
+  preContribShares: z.number().positive({ message: "현물출자 전 발행주식총수는 0보다 커야 합니다" }),
+  newSharePrice: z.number().nonnegative(),
+  contributedShares: z.number().nonnegative(),
+  allocatedShares: z.number().nonnegative(),
+  relatedRatio: ratioSchema.optional(),
+  smallShareholderImputation: z.boolean().optional(),
+});
+const acquisitionFundSchema = z.object({
+  type: z.literal("acquisition_fund_presumption"),
+  subType: z.enum(["acquisition", "debt_repayment"]),
+  acquisitionValue: z.number().positive({ message: "취득재산가액(채무상환금액)은 0보다 커야 합니다" }),
+  provenAmount: z.number().nonnegative(),
+});
+const nomineeTrustSchema = z.object({
+  type: z.literal("nominee_trust"),
+  propertyValue: z.number().nonnegative(),
+  hasTaxAvoidancePurpose: z.boolean(),
+  isExcluded: z.boolean().optional(),
+});
+const excessDividendSchema = z.object({
+  type: z.literal("excess_dividend"),
+  excessDividend: z.number().nonnegative(),
+  incomeTaxEquivalent: z.number().nonnegative(),
+});
+const listingGainSchema = z.object({
+  type: z.literal("listing_gain"),
+  eventType: z.enum(["listing", "merger"]).optional(),
+  settlementPerSharePrice: z.number().nonnegative(),
+  perShareAcqValue: z.number().nonnegative(),
+  perShareCorpGrowth: z.number(),
+  shares: z.number().nonnegative(),
+});
+const propertyServiceUseSchema = z.object({
+  type: z.literal("property_service_use"),
+  subType: z.enum(["free_use", "low_price", "high_price"]),
+  marketValue: z.number().nonnegative(),
+  consideration: z.number().nonnegative().optional(),
+});
+const orgChangeSchema = z.object({
+  type: z.literal("org_change"),
+  subType: z.enum(["share_change", "value_change"]),
+  baseValue: z.number().nonnegative(),
+  preShares: z.number().nonnegative().optional(),
+  postShares: z.number().nonnegative().optional(),
+  postPerSharePrice: z.number().nonnegative().optional(),
+  preValue: z.number().nonnegative().optional(),
+  postValue: z.number().nonnegative().optional(),
+});
+const valueIncreaseSchema = z.object({
+  type: z.literal("value_increase"),
+  currentValue: z.number().nonnegative(),
+  acquisitionCost: z.number().nonnegative(),
+  normalIncrease: z.number().nonnegative(),
+  contribution: z.number().nonnegative(),
+});
+const specificCorpSchema = z.object({
+  type: z.literal("specific_corp"),
+  transactionBenefit: z.number().nonnegative(),
+  corporateTax: z.number().nonnegative(),
+  ownershipRatio: ratioSchema,
+});
+const convertibleBondSchema = z.object({
+  type: z.literal("convertible_bond"),
+  caseType: z.enum(["acquisition", "conversion", "conversion_reverse", "transfer"]).optional(),
+  bondMarketValue: z.number().nonnegative(),
+  acquisitionPrice: z.number().nonnegative().optional(),
+  transferPrice: z.number().nonnegative().optional(),
+  preConvPrice: z.number().nonnegative().optional(),
+  preConvShares: z.number().nonnegative().optional(),
+  conversionPrice: z.number().nonnegative().optional(),
+  increasedShares: z.number().nonnegative().optional(),
+  interestLoss: z.number().nonnegative().optional(),
+  acquisitionGainPrior: z.number().nonnegative().optional(),
+  relatedPreRatio: ratioSchema.optional(),
+});
+
 export const deemedGiftInputSchema = z
   .discriminatedUnion("type", [
     insuranceSchema,
@@ -62,6 +185,20 @@ export const deemedGiftInputSchema = z
     debtForgivenessSchema,
     freeRealEstateSchema,
     freeLoanSchema,
+    mergerSchema,
+    capitalIncreaseSchema,
+    capitalDecreaseSchema,
+    contributionSchema,
+    convertibleStockSchema,
+    convertibleBondSchema,
+    acquisitionFundSchema,
+    nomineeTrustSchema,
+    excessDividendSchema,
+    listingGainSchema,
+    propertyServiceUseSchema,
+    orgChangeSchema,
+    valueIncreaseSchema,
+    specificCorpSchema,
   ])
   .superRefine((data, ctx) => {
     if (data.type === "insurance") {

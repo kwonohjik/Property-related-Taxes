@@ -12,6 +12,23 @@ import {
   RadioCardGroup,
   type RadioCardOption,
 } from "@/components/calc/inputs/RadioCardGroup";
+import {
+  MergerFields,
+  CapitalIncreaseFields,
+  CapitalDecreaseFields,
+  ContributionFields,
+  ConvertibleStockFields,
+  ConvertibleBondFields,
+} from "./capital-forms";
+import { AcquisitionFundFields, NomineeTrustFields } from "./presumption-forms";
+import {
+  ExcessDividendFields,
+  ListingGainFields,
+  PropertyServiceUseFields,
+  OrgChangeFields,
+  ValueIncreaseFields,
+  SpecificCorpFields,
+} from "./other-forms";
 
 // ============================================================
 // 폼 상태
@@ -49,6 +66,112 @@ export interface DeemedFormState {
   loanInterest: string;
   loanRelated: boolean;
   loanJustifiable: boolean;
+  // ── Phase 2 자본거래 (평가가액·주식수 직접 입력) ──
+  // 합병 §38
+  mrgCaseType: "stock" | "non_stock"; // 주식교부(§28③1) / 주식 외 재산교부(§28③2)
+  mrgMergedPrice: string;
+  mrgOvervaluedPrice: string;
+  mrgPreShares: string;
+  mrgExchangedShares: string;
+  mrgMajorShares: string;
+  mrgFaceValue: string; // non_stock 액면가액
+  mrgConsideration: string; // non_stock 합병대가
+  // 증자 §39
+  ciDirection: "low" | "high"; // 저가발행(①1호) / 고가발행(①2호)
+  ciSubType: "forfeited_realloc" | "third_party" | "excess" | "no_realloc";
+  ciPrePrice: string;
+  ciPreShares: string;
+  ciNewPrice: string;
+  ciIssuedShares: string;
+  ciForfeitedShares: string;
+  ciRelatedAcquiredShares: string; // 고가 나·다라 특수관계인 인수신주수
+  ciRatioDenomShares: string; // 고가 나·다라 분모 신주수
+  ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
+  // 감자 §39의2
+  cdCaseType: "low" | "high"; // 저가소각(①1호) / 고가소각(①2호)
+  cdSharePrice: string;
+  cdRedemptionPrice: string;
+  cdTotalShares: string;
+  cdMajorRatioPct: string; // 대주주등 감자후 지분비율 (%)
+  cdRelatedShares: string;
+  cdOwnRedeemedShares: string; // high 해당 주주등 감자 주식수
+  // 현물출자 §39의3
+  conCaseType: "low" | "high"; // 저가인수(①1호) / 고가인수(①2호)
+  conPrePrice: string;
+  conPreShares: string;
+  conNewPrice: string;
+  conContributedShares: string;
+  conAllocatedShares: string;
+  conRelatedRatioPct: string; // high 현물출자자 특수관계인 지분비율 (%)
+  conSmallImputation: boolean; // 저가 §39의3② 소액주주 1인 의제
+  // 전환사채 §40
+  cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
+  cbMarketValue: string;
+  cbAcquisitionPrice: string;
+  cbTransferPrice: string; // transfer 양도가액
+  cbPreConvPrice: string; // conversion 전환등 전 1주평가
+  cbPreConvShares: string; // conversion 전환등 전 주식총수
+  cbConversionPrice: string; // conversion 1주당 전환가액등
+  cbIncreasedShares: string; // conversion 증가주식수(교부받은 주식수)
+  cbInterestLoss: string; // conversion 이자손실분
+  cbAcqGainPrior: string; // conversion 인수 시 기과세 이익(§30①1)
+  cbRelatedPreRatioPct: string; // conversion_reverse 특수관계인 전환 전 지분비율 (%)
+  // 전환주식 §39①3호 — 전환 시점 / 발행 시점 2구간 (direction·subType 공유)
+  csDirection: "low" | "high";
+  csSubType: "forfeited_realloc" | "third_party" | "excess" | "no_realloc";
+  csConvPrePrice: string;
+  csConvPreShares: string;
+  csConvNewPrice: string;
+  csConvIssuedShares: string;
+  csConvForfeitedShares: string;
+  csConvRelatedAcquiredShares: string;
+  csConvRatioDenomShares: string;
+  csIssuePrePrice: string;
+  csIssuePreShares: string;
+  csIssueNewPrice: string;
+  csIssueIssuedShares: string;
+  csIssueForfeitedShares: string;
+  csIssueRelatedAcquiredShares: string;
+  csIssueRatioDenomShares: string;
+  // ── Phase 3 추정·의제 ──
+  // 재산취득자금 증여추정 §45
+  afSubType: "acquisition" | "debt_repayment";
+  afAcquisitionValue: string;
+  afProvenAmount: string;
+  // 명의신탁 증여의제 §45의2
+  ntPropertyValue: string;
+  ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
+  ntExcluded: boolean; // §45의2①1·3·4 배제사유
+  // 초과배당 §41의2
+  edExcessDividend: string;
+  edIncomeTax: string;
+  // 상장이익 §41의3 / 합병상장 §41의5
+  lgEventType: "listing" | "merger";
+  lgSettlementPrice: string;
+  lgAcqValue: string;
+  lgCorpGrowth: string;
+  lgShares: string;
+  // 재산사용·용역 §42
+  psuSubType: "free_use" | "low_price" | "high_price";
+  psuMarketValue: string;
+  psuConsideration: string;
+  // 조직변경 §42의2
+  ocSubType: "share_change" | "value_change";
+  ocBaseValue: string;
+  ocPreShares: string;
+  ocPostShares: string;
+  ocPostPerShare: string;
+  ocPreValue: string;
+  ocPostValue: string;
+  // 재산가치증가 §42의3
+  viCurrentValue: string;
+  viAcqCost: string;
+  viNormalIncrease: string;
+  viContribution: string;
+  // 특정법인 §45의5
+  scTransactionBenefit: string;
+  scCorporateTax: string;
+  scRatioPct: string;
 }
 
 export const INITIAL_DEEMED: DeemedFormState = {
@@ -78,6 +201,96 @@ export const INITIAL_DEEMED: DeemedFormState = {
   loanInterest: "",
   loanRelated: true,
   loanJustifiable: false,
+  mrgCaseType: "stock",
+  mrgMergedPrice: "",
+  mrgOvervaluedPrice: "",
+  mrgPreShares: "",
+  mrgExchangedShares: "",
+  mrgMajorShares: "",
+  mrgFaceValue: "",
+  mrgConsideration: "",
+  ciDirection: "low",
+  ciSubType: "forfeited_realloc",
+  ciPrePrice: "",
+  ciPreShares: "",
+  ciNewPrice: "",
+  ciIssuedShares: "",
+  ciForfeitedShares: "",
+  ciRelatedAcquiredShares: "",
+  ciRatioDenomShares: "",
+  ciSmallImputation: false,
+  cdCaseType: "low",
+  cdSharePrice: "",
+  cdRedemptionPrice: "",
+  cdTotalShares: "",
+  cdMajorRatioPct: "",
+  cdRelatedShares: "",
+  cdOwnRedeemedShares: "",
+  conCaseType: "low",
+  conPrePrice: "",
+  conPreShares: "",
+  conNewPrice: "",
+  conContributedShares: "",
+  conAllocatedShares: "",
+  conRelatedRatioPct: "",
+  conSmallImputation: false,
+  cbCaseType: "acquisition",
+  cbMarketValue: "",
+  cbAcquisitionPrice: "",
+  cbTransferPrice: "",
+  cbPreConvPrice: "",
+  cbPreConvShares: "",
+  cbConversionPrice: "",
+  cbIncreasedShares: "",
+  cbInterestLoss: "",
+  cbAcqGainPrior: "",
+  cbRelatedPreRatioPct: "",
+  csDirection: "low",
+  csSubType: "forfeited_realloc",
+  csConvPrePrice: "",
+  csConvPreShares: "",
+  csConvNewPrice: "",
+  csConvIssuedShares: "",
+  csConvForfeitedShares: "",
+  csConvRelatedAcquiredShares: "",
+  csConvRatioDenomShares: "",
+  csIssuePrePrice: "",
+  csIssuePreShares: "",
+  csIssueNewPrice: "",
+  csIssueIssuedShares: "",
+  csIssueForfeitedShares: "",
+  csIssueRelatedAcquiredShares: "",
+  csIssueRatioDenomShares: "",
+  afSubType: "acquisition",
+  afAcquisitionValue: "",
+  afProvenAmount: "",
+  ntPropertyValue: "",
+  ntTaxAvoidance: true,
+  ntExcluded: false,
+  edExcessDividend: "",
+  edIncomeTax: "",
+  lgEventType: "listing",
+  lgSettlementPrice: "",
+  lgAcqValue: "",
+  lgCorpGrowth: "",
+  lgShares: "",
+  psuSubType: "free_use",
+  psuMarketValue: "",
+  psuConsideration: "",
+  ocSubType: "share_change",
+  ocBaseValue: "",
+  ocPreShares: "",
+  ocPostShares: "",
+  ocPostPerShare: "",
+  ocPreValue: "",
+  ocPostValue: "",
+  viCurrentValue: "",
+  viAcqCost: "",
+  viNormalIncrease: "",
+  viContribution: "",
+  scTransactionBenefit: "",
+  scCorporateTax: "",
+  scRatioPct: "",
 };
 
 export const DEEMED_TYPE_META: Record<
@@ -89,6 +302,23 @@ export const DEEMED_TYPE_META: Record<
   debt_forgiveness: { label: "채무면제 등", law: "상증법 §36" },
   free_realestate: { label: "부동산 무상사용", law: "상증법 §37" },
   free_loan: { label: "금전 무상대출", law: "상증법 §41의4" },
+  // Phase 2 자본거래 (엔진 구현 — UI 입력폼은 후속)
+  merger: { label: "합병에 따른 이익", law: "상증법 §38" },
+  capital_increase: { label: "증자에 따른 이익", law: "상증법 §39" },
+  capital_decrease: { label: "감자에 따른 이익", law: "상증법 §39의2" },
+  contribution: { label: "현물출자에 따른 이익", law: "상증법 §39의3" },
+  convertible_stock: { label: "전환주식에 따른 이익", law: "상증법 §39①3호" },
+  convertible_bond: { label: "전환사채에 따른 이익", law: "상증법 §40" },
+  // Phase 3 추정·의제
+  acquisition_fund_presumption: { label: "재산취득자금 증여추정", law: "상증법 §45" },
+  nominee_trust: { label: "명의신탁 증여의제", law: "상증법 §45의2" },
+  // Phase 3 기타이익·자본거래연계·법인
+  excess_dividend: { label: "초과배당에 따른 이익", law: "상증법 §41의2" },
+  listing_gain: { label: "상장·합병상장 이익", law: "상증법 §41의3·§41의5" },
+  property_service_use: { label: "재산사용·용역제공 이익", law: "상증법 §42" },
+  org_change: { label: "법인 조직변경 이익", law: "상증법 §42의2" },
+  value_increase: { label: "재산취득 후 가치증가 이익", law: "상증법 §42의3" },
+  specific_corp: { label: "특정법인과의 거래 이익", law: "상증법 §45의5" },
 };
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
@@ -103,6 +333,20 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "debt_forgiveness", label: "채무면제 등", description: "상증법 §36 — 면제·인수·변제 이익", testId: "deemed-type-debt_forgiveness" },
   { value: "free_realestate", label: "부동산 무상사용", description: "상증법 §37 — 무상사용(5년 현가합)·무상담보", testId: "deemed-type-free_realestate" },
   { value: "free_loan", label: "금전 무상대출", description: "상증법 §41의4 — 적정이자율 4.6% 차액", testId: "deemed-type-free_loan" },
+  { value: "merger", label: "합병에 따른 이익", description: "상증법 §38 — 주식교부·주식 외 재산교부", testId: "deemed-type-merger" },
+  { value: "capital_increase", label: "증자에 따른 이익", description: "상증법 §39 — 저가/고가발행 (실권주·제3자·초과)", testId: "deemed-type-capital_increase" },
+  { value: "convertible_stock", label: "전환주식에 따른 이익", description: "상증법 §39①3호 — 전환 시점 − 발행 시점 이익", testId: "deemed-type-convertible_stock" },
+  { value: "capital_decrease", label: "감자에 따른 이익", description: "상증법 §39의2 — 저가/고가 소각", testId: "deemed-type-capital_decrease" },
+  { value: "contribution", label: "현물출자에 따른 이익", description: "상증법 §39의3 — 저가/고가 인수", testId: "deemed-type-contribution" },
+  { value: "convertible_bond", label: "전환사채에 따른 이익", description: "상증법 §40 — 인수취득·주식전환·양도", testId: "deemed-type-convertible_bond" },
+  { value: "acquisition_fund_presumption", label: "재산취득자금 증여추정", description: "상증법 §45 — 미입증 취득자금·채무상환", testId: "deemed-type-acquisition_fund_presumption" },
+  { value: "nominee_trust", label: "명의신탁 증여의제", description: "상증법 §45의2 — 명의신탁 재산가액", testId: "deemed-type-nominee_trust" },
+  { value: "excess_dividend", label: "초과배당에 따른 이익", description: "상증법 §41의2 — 초과배당금액 − 소득세상당액", testId: "deemed-type-excess_dividend" },
+  { value: "listing_gain", label: "상장·합병상장 이익", description: "상증법 §41의3·§41의5 — 정산기준일 평가차익", testId: "deemed-type-listing_gain" },
+  { value: "property_service_use", label: "재산사용·용역제공 이익", description: "상증법 §42 — 무상·저가·고가 사용/용역", testId: "deemed-type-property_service_use" },
+  { value: "org_change", label: "법인 조직변경 이익", description: "상증법 §42의2 — 소유지분·평가액 변동", testId: "deemed-type-org_change" },
+  { value: "value_increase", label: "재산취득 후 가치증가 이익", description: "상증법 §42의3 — 개발·상장 등 가치증가", testId: "deemed-type-value_increase" },
+  { value: "specific_corp", label: "특정법인과의 거래 이익", description: "상증법 §45의5 — 지배주주 특수관계법인 거래", testId: "deemed-type-specific_corp" },
 ];
 
 export function DeemedTypeSelector({
@@ -139,6 +383,34 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
       return <FreeRealEstateFields form={form} set={set} />;
     case "free_loan":
       return <FreeLoanFields form={form} set={set} />;
+    case "merger":
+      return <MergerFields form={form} set={set} />;
+    case "capital_increase":
+      return <CapitalIncreaseFields form={form} set={set} />;
+    case "capital_decrease":
+      return <CapitalDecreaseFields form={form} set={set} />;
+    case "contribution":
+      return <ContributionFields form={form} set={set} />;
+    case "convertible_stock":
+      return <ConvertibleStockFields form={form} set={set} />;
+    case "convertible_bond":
+      return <ConvertibleBondFields form={form} set={set} />;
+    case "acquisition_fund_presumption":
+      return <AcquisitionFundFields form={form} set={set} />;
+    case "nominee_trust":
+      return <NomineeTrustFields form={form} set={set} />;
+    case "excess_dividend":
+      return <ExcessDividendFields form={form} set={set} />;
+    case "listing_gain":
+      return <ListingGainFields form={form} set={set} />;
+    case "property_service_use":
+      return <PropertyServiceUseFields form={form} set={set} />;
+    case "org_change":
+      return <OrgChangeFields form={form} set={set} />;
+    case "value_increase":
+      return <ValueIncreaseFields form={form} set={set} />;
+    case "specific_corp":
+      return <SpecificCorpFields form={form} set={set} />;
     default:
       return null;
   }

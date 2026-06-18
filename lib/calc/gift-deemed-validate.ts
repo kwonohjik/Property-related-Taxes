@@ -29,6 +29,79 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "free_loan":
       if (parseAmount(form.loanAmount) <= 0) return "대출금액을 입력하세요";
       break;
+    case "merger":
+      if (form.mrgCaseType === "non_stock") {
+        if (parseAmount(form.mrgFaceValue) <= 0) return "액면가액을 입력하세요";
+        if (parseAmount(form.mrgOvervaluedPrice) <= 0) return "합병당사법인 1주당 평가가액을 입력하세요";
+      } else {
+        if (parseAmount(form.mrgMergedPrice) <= 0) return "합병 후 1주당 평가가액을 입력하세요";
+        if (parseAmount(form.mrgExchangedShares) <= 0) return "교부받은 주식수를 입력하세요";
+      }
+      break;
+    case "capital_increase":
+      if (parseAmount(form.ciPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.ciPreShares) <= 0) return "증자 전 발행주식총수를 입력하세요";
+      if (form.ciDirection === "high" && form.ciSubType !== "forfeited_realloc") {
+        if (parseAmount(form.ciRatioDenomShares) <= 0) return "분모 신주수를 입력하세요";
+      }
+      break;
+    case "capital_decrease":
+      if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
+      if (form.cdCaseType === "high") {
+        if (parseAmount(form.cdOwnRedeemedShares) <= 0) return "해당 주주등 감자 주식수를 입력하세요";
+      } else {
+        if (parseAmount(form.cdTotalShares) <= 0) return "총감자 주식수를 입력하세요";
+      }
+      break;
+    case "contribution":
+      if (parseAmount(form.conPrePrice) <= 0) return "현물출자 전 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.conPreShares) <= 0) return "현물출자 전 발행주식총수를 입력하세요";
+      break;
+    case "convertible_stock":
+      if (parseAmount(form.csConvPrePrice) <= 0) return "전환 시점 증자 전 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.csConvPreShares) <= 0) return "전환 시점 증자 전 발행주식총수를 입력하세요";
+      if (parseAmount(form.csIssuePrePrice) <= 0) return "발행 시점 증자 전 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.csIssuePreShares) <= 0) return "발행 시점 증자 전 발행주식총수를 입력하세요";
+      break;
+    case "acquisition_fund_presumption":
+      if (parseAmount(form.afAcquisitionValue) <= 0)
+        return form.afSubType === "debt_repayment" ? "채무상환금액을 입력하세요" : "취득재산가액을 입력하세요";
+      break;
+    case "nominee_trust":
+      if (parseAmount(form.ntPropertyValue) <= 0) return "명의신탁 재산 가액을 입력하세요";
+      break;
+    case "excess_dividend":
+      if (parseAmount(form.edExcessDividend) <= 0) return "초과배당금액을 입력하세요";
+      break;
+    case "listing_gain":
+      if (parseAmount(form.lgSettlementPrice) <= 0) return "정산기준일 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.lgShares) <= 0) return "증여·유상취득 주식수를 입력하세요";
+      break;
+    case "property_service_use":
+      if (parseAmount(form.psuMarketValue) <= 0) return form.psuSubType === "free_use" ? "시가 상당액을 입력하세요" : "시가를 입력하세요";
+      break;
+    case "org_change":
+      if (parseAmount(form.ocBaseValue) <= 0) return "변동 전 해당 재산가액을 입력하세요";
+      if (form.ocSubType === "share_change" && parseAmount(form.ocPostPerShare) <= 0) return "변동 후 1주당 가액을 입력하세요";
+      break;
+    case "value_increase":
+      if (parseAmount(form.viCurrentValue) <= 0) return "사유발생일 현재 재산가액을 입력하세요";
+      break;
+    case "specific_corp":
+      if (parseAmount(form.scTransactionBenefit) <= 0) return "거래이익을 입력하세요";
+      break;
+    case "convertible_bond":
+      if (form.cbCaseType === "conversion" || form.cbCaseType === "conversion_reverse") {
+        if (parseAmount(form.cbPreConvPrice) <= 0) return "전환등 전 1주당 평가가액을 입력하세요";
+        if (parseAmount(form.cbConversionPrice) <= 0) return "1주당 전환가액등을 입력하세요";
+        if (parseAmount(form.cbIncreasedShares) <= 0) return "전환등 증가주식수를 입력하세요";
+      } else if (form.cbCaseType === "transfer") {
+        if (parseAmount(form.cbMarketValue) <= 0) return "전환사채등 시가를 입력하세요";
+        if (parseAmount(form.cbTransferPrice) <= 0) return "양도가액을 입력하세요";
+      } else {
+        if (parseAmount(form.cbMarketValue) <= 0) return "전환사채등 시가를 입력하세요";
+      }
+      break;
   }
   return null;
 }

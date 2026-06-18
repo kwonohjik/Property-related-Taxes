@@ -11,7 +11,21 @@ export type DeemedGiftType =
   | "bargain_transfer" // §35 (3)
   | "debt_forgiveness" // §36 (4)
   | "free_realestate" // §37 (5)
-  | "free_loan"; // §41의4 (6)
+  | "free_loan" // §41의4 (6)
+  | "merger" // §38 (7)
+  | "capital_increase" // §39 (8)
+  | "capital_decrease" // §39의2 (9)
+  | "contribution" // §39의3 (10)
+  | "convertible_stock" // §39①3호 전환주식 (8-3)
+  | "convertible_bond" // §40 (11)
+  | "acquisition_fund_presumption" // §45 재산취득자금·채무상환 증여추정 (Phase 3)
+  | "nominee_trust" // §45의2 명의신탁 증여의제 (Phase 3)
+  | "excess_dividend" // §41의2 초과배당 (Phase 3)
+  | "listing_gain" // §41의3 상장이익 / §41의5 합병상장이익 (Phase 3)
+  | "property_service_use" // §42 재산사용·용역제공 (Phase 3)
+  | "org_change" // §42의2 법인 조직변경 (Phase 3)
+  | "value_increase" // §42의3 재산취득 후 가치증가 (Phase 3)
+  | "specific_corp"; // §45의5 특정법인과의 거래 (Phase 3)
 
 /** 모든 계산기 공통 결과 */
 export interface DeemedGiftResult {
@@ -68,10 +82,176 @@ export interface FreeLoanInput {
   hasJustifiableReason?: boolean; // §41의4③
 }
 
+// ── Phase 2: 자본거래 (시가 = §60·§63 평가가액을 input으로 직접 주입) ──
+
+/** (7) 합병 §38 — 주식교부(stock, §28③1) / 주식 외 재산 교부(non_stock, §28③2) */
+export interface MergerInput {
+  caseType?: "stock" | "non_stock"; // 기본 stock
+  overvaluedSharePrice: number; // 합병당사법인 1주당 평가가액
+  majorShares: number; // 대주주등 주식수
+  // stock 전용
+  mergedSharePrice?: number; // ㉮ 합병 후 신설·존속법인 1주당 평가가액
+  preMergerShares?: number; // 과대평가법인 합병 전 주식수
+  exchangedShares?: number; // 과대평가법인 주주가 교부받은 신설·존속법인 주식수
+  // non_stock 전용 (§28③2)
+  faceValue?: number; // 액면가액
+  mergeConsideration?: number; // 합병대가(액면 미달 시 적용)
+}
+
+/** (8) 증자 §39 — 저가발행(low, ①1호) / 고가발행(high, ①2호) sub-case */
+export interface CapitalIncreaseInput {
+  direction?: "low" | "high"; // 저가발행(①1호) / 고가발행(①2호), 기본 low
+  /** 가/다/라목(실권주재배정·제3자직접배정·초과배정) vs 나목(실권주 미배정·특수관계인 인수) */
+  subType?: "forfeited_realloc" | "third_party" | "excess" | "no_realloc"; // 기본 forfeited_realloc
+  preIssuePrice: number; // 증자 전 1주당 평가가액
+  preIssueShares: number; // 증자 전 발행주식총수
+  newSharePrice: number; // 신주 1주당 인수가액
+  issuedShares: number; // 증자 주식수
+  forfeitedShares: number; // 이익 귀속 주식수 (실권주수·직접배정신주수·초과배정신주수·미달분신주수)
+  // 고가 나·다·라목 — 특수관계인 비율 가중 (시행령 §29②4·5)
+  relatedAcquiredShares?: number; // 특수관계인이 인수한 신주수 (분자)
+  ratioDenomShares?: number; // 분모 신주수 (나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수 총수)
+  // §39②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가발행 ①1호 한정)
+  smallShareholderImputation?: boolean;
+}
+
+/** (8-3) 전환주식 §39①3호 — 전환후 §29②1~5 이익 − 발행당시 §29②1~5 이익 (시행령 §29②6) */
+export interface ConvertibleStockInput {
+  /** 가목: 전환 후 교부받은 주식을 신주로 보아 §29②1~5로 계산한 이익 입력(저가/고가 sub-case) */
+  atConversion: CapitalIncreaseInput;
+  /** 나목: 전환주식 발행 당시 §29②1~5로 계산한 이익 입력(저가/고가 sub-case) */
+  atIssuance: CapitalIncreaseInput;
+}
+
+/** (9) 감자 §39의2 — 저가소각(low, ①1호) / 고가소각(high, ①2호) */
+export interface CapitalDecreaseInput {
+  caseType?: "low" | "high"; // 기본 low
+  sharePrice: number; // 감자주식 1주당 평가액
+  redemptionPrice: number; // 소각 시 지급한 1주당 금액
+  // low 전용 (①1호)
+  totalRedeemedShares?: number; // 총감자 주식수
+  majorPostRatio?: { numer: number; denom: number }; // 대주주등 감자 후 지분비율
+  relatedRedeemedShares?: number; // 대주주등 특수관계인의 감자 주식수
+  // high 전용 (①2호 — 평가액이 액면가 미달 한정)
+  faceValue?: number; // 액면가액
+  ownRedeemedShares?: number; // 해당 주주등의 감자 주식수
+}
+
+/** (10) 현물출자 §39의3 — 저가인수(low, ①1호) / 고가인수(high, ①2호) */
+export interface ContributionInput {
+  caseType?: "low" | "high"; // 기본 low
+  preContribPrice: number; // 현물출자 전 1주당 평가가액
+  preContribShares: number; // 현물출자 전 발행주식총수
+  newSharePrice: number; // 신주 1주당 인수가액
+  contributedShares: number; // 현물출자 주식수
+  allocatedShares: number; // 배정받은 신주수 (low) / 인수 신주수 (high)
+  // high 전용 (①2호)
+  relatedRatio?: { numer: number; denom: number }; // 현물출자자 특수관계인 주주등 지분비율
+  // §39의3②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가인수 ①1호 한정)
+  smallShareholderImputation?: boolean;
+}
+
+/** (11) 전환사채등 §40 — 인수·취득(①1호)·주식전환(①2호 가나다/라목)·양도(①3호) sub-case */
+export interface ConvertibleBondInput {
+  caseType?: "acquisition" | "conversion" | "conversion_reverse" | "transfer"; // 기본 acquisition
+  bondMarketValue: number; // 전환사채등 시가 (acquisition·transfer 이익·기준금액)
+  // acquisition(§40①1호, §30①1)
+  acquisitionPrice?: number; // 인수·취득가액
+  // transfer(§40①3호, §30①4)
+  transferPrice?: number; // 양도가액
+  // conversion / conversion_reverse(§40①2호, §30①2·3) — §30⑤1 교부주식가액 산식
+  preConvPrice?: number; // 전환등 전 1주당 평가가액
+  preConvShares?: number; // 전환등 전 발행주식총수
+  conversionPrice?: number; // 주식 1주당 전환가액등
+  increasedShares?: number; // 전환등 증가주식수(=교부받은 주식수)
+  interestLoss?: number; // 이자손실분 (시행규칙 §10의2) — conversion 차감
+  acquisitionGainPrior?: number; // §30①1호 이익(인수 시 기과세분) — conversion 차감
+  // conversion_reverse(라목, §30①3) 비율
+  relatedPreRatio?: { numer: number; denom: number }; // 교부받은 자의 특수관계인이 전환 전 보유 지분비율
+}
+
+// ── Phase 3: 추정·의제 ──
+
+/** §45 재산취득자금·채무상환 증여추정 */
+export interface AcquisitionFundPresumptionInput {
+  subType: "acquisition" | "debt_repayment"; // §45① 재산취득자금 / §45② 채무상환자금
+  acquisitionValue: number; // 취득재산가액 또는 채무상환금액
+  provenAmount: number; // 입증된 금액 합계 (소득·상속수증·처분대가)
+}
+
+/** §45의2 명의신탁재산 증여의제 */
+export interface NomineeTrustInput {
+  propertyValue: number; // 명의신탁 재산 가액
+  hasTaxAvoidancePurpose: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
+  isExcluded?: boolean; // §45의2①1·3·4 배제 (신탁등기·비거주자 법정대리인 등)
+}
+
+/** §41의2 초과배당 (소득세상당액은 시행규칙 §10의3 율표 — 직접 입력) */
+export interface ExcessDividendInput {
+  excessDividend: number; // 초과배당금액 = (특수관계인 실수령 − 균등배당) × 최대주주등 과소배당 비율
+  incomeTaxEquivalent: number; // 초과배당금액에 대한 소득세 상당액 (공제)
+}
+
+/** §41의3 상장이익 / §41의5 합병상장이익 (시행령 §31의3·§31의5) */
+export interface ListingGainInput {
+  eventType?: "listing" | "merger"; // §41의3 상장 / §41의5 합병상장, 기본 listing
+  settlementPerSharePrice: number; // 정산기준일(상장일·합병등기일 +3개월) 현재 1주당 평가가액(§63)
+  perShareAcqValue: number; // 1주당 증여세 과세가액(또는 취득가액)
+  perShareCorpGrowth: number; // 1주당 기업가치 실질증가이익(§31의3⑤)
+  shares: number; // 증여·유상취득 주식수
+}
+
+/** §42 재산사용·용역제공 */
+export interface PropertyServiceUseInput {
+  subType: "free_use" | "low_price" | "high_price"; // §32① 1·2·3호
+  marketValue: number; // 시가 (무상=시가상당액, 저가/고가=시가)
+  consideration?: number; // 대가 (저가·고가)
+}
+
+/** §42의2 법인 조직변경 */
+export interface OrgChangeInput {
+  subType: "share_change" | "value_change"; // 소유지분 변동 / 평가액 변동 (시행령 §32의2①)
+  baseValue: number; // 변동 전 해당 재산가액 (기준금액 30% 산정)
+  preShares?: number; // share_change 변동 전 지분
+  postShares?: number; // share_change 변동 후 지분
+  postPerSharePrice?: number; // share_change 변동 후 1주당 가액
+  preValue?: number; // value_change 변동 전 가액
+  postValue?: number; // value_change 변동 후 가액
+}
+
+/** §42의3 재산취득 후 가치증가 */
+export interface ValueIncreaseInput {
+  currentValue: number; // 사유발생일 현재 재산가액
+  acquisitionCost: number; // 취득가액(증여재산은 증여세 과세가액)
+  normalIncrease: number; // 통상적인 가치상승분
+  contribution: number; // 가치상승기여분(자본적지출액 등)
+}
+
+/** §45의5 특정법인과의 거래 */
+export interface SpecificCorpInput {
+  transactionBenefit: number; // 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
+  corporateTax: number; // 법인세 상당액 = (산출세액−공제감면)×min(거래이익/소득금액,1)
+  ownershipRatio: { numer: number; denom: number }; // 지배주주등 주식보유비율
+}
+
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
 export type DeemedGiftInput =
   | ({ type: "insurance" } & InsuranceInput)
   | ({ type: "bargain_transfer" } & BargainTransferInput)
   | ({ type: "debt_forgiveness" } & DebtForgivenessInput)
   | ({ type: "free_realestate" } & FreeRealEstateInput)
-  | ({ type: "free_loan" } & FreeLoanInput);
+  | ({ type: "free_loan" } & FreeLoanInput)
+  | ({ type: "merger" } & MergerInput)
+  | ({ type: "capital_increase" } & CapitalIncreaseInput)
+  | ({ type: "capital_decrease" } & CapitalDecreaseInput)
+  | ({ type: "contribution" } & ContributionInput)
+  | ({ type: "convertible_stock" } & ConvertibleStockInput)
+  | ({ type: "convertible_bond" } & ConvertibleBondInput)
+  | ({ type: "acquisition_fund_presumption" } & AcquisitionFundPresumptionInput)
+  | ({ type: "nominee_trust" } & NomineeTrustInput)
+  | ({ type: "excess_dividend" } & ExcessDividendInput)
+  | ({ type: "listing_gain" } & ListingGainInput)
+  | ({ type: "property_service_use" } & PropertyServiceUseInput)
+  | ({ type: "org_change" } & OrgChangeInput)
+  | ({ type: "value_increase" } & ValueIncreaseInput)
+  | ({ type: "specific_corp" } & SpecificCorpInput);
