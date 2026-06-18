@@ -527,6 +527,9 @@ function PriorYearBreakdown({
   const pFmr = dt.propertyFairMarketRatio ?? 0;
   const pPtBase = dt.propertyTaxBaseAmount ?? 0;
   const pBracket = getHousingStandardRateBracket(pPtBase);
+  // 직전연도 재산세상당액(①) 주택별 산출 내역 — 주택별 감면율·세율구간 상이 표시(echo)
+  const priorBreakdown = dt.propertyTaxBreakdown ?? [];
+  const priorMultiHouse = priorBreakdown.length > 1;
 
   return (
     <>
@@ -539,13 +542,42 @@ function PriorYearBreakdown({
         indent={2}
         testId="payable-step5-na-1"
       />
-      <Bullet indent={3}>
-        재산세 과세표준 : {eok(dt.assessedValue)} × {pct(pFmr)}(재산세 공정시장가액비율) = {eok(pPtBase)}
-      </Bullet>
-      <Bullet indent={3}>
-        표준세율 재산세액 : {eok(pPtBase)} × {pct(pBracket.rate)} − {won(pBracket.deduction)} ={" "}
-        {won(pye.propertyTaxEquiv)}
-      </Bullet>
+      {priorBreakdown.length > 0 ? (
+        <>
+          {priorBreakdown.map((h, i) => {
+            const b = getHousingStandardRateBracket(h.taxBase);
+            const hasFactor = h.reductionRate > 0 || h.ownershipRatio < 1;
+            return (
+              <Bullet indent={3} key={i}>
+                {priorMultiHouse ? `주택 ${i + 1} : ` : ""}
+                {eok(h.assessedValue)} × {pct(pFmr)} = {eok(h.taxBase)}, {pct(b.rate)} −{" "}
+                {won(b.deduction)} = {won(h.standardTax)}
+                {hasFactor && (
+                  <>
+                    {h.reductionRate > 0 && ` × (1 − ${pct(h.reductionRate)})`}
+                    {h.ownershipRatio < 1 && ` × ${pct(h.ownershipRatio)}(지분)`}
+                    {" = "}
+                    {won(h.reducedTax)}
+                  </>
+                )}
+              </Bullet>
+            );
+          })}
+          {priorMultiHouse && (
+            <Bullet indent={3}>합계 : {won(pye.propertyTaxEquiv)}</Bullet>
+          )}
+        </>
+      ) : (
+        <>
+          <Bullet indent={3}>
+            재산세 과세표준 : {eok(dt.assessedValue)} × {pct(pFmr)}(재산세 공정시장가액비율) = {eok(pPtBase)}
+          </Bullet>
+          <Bullet indent={3}>
+            표준세율 재산세액 : {eok(pPtBase)} × {pct(pBracket.rate)} − {won(pBracket.deduction)} ={" "}
+            {won(pye.propertyTaxEquiv)}
+          </Bullet>
+        </>
+      )}
 
       {/* 나의 ② 직전연도 종합부동산세상당액 */}
       <StepLine
