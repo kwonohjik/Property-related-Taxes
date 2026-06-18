@@ -530,6 +530,10 @@ function PriorYearBreakdown({
   // 직전연도 재산세상당액(①) 주택별 산출 내역 — 주택별 감면율·세율구간 상이 표시(echo)
   const priorBreakdown = dt.propertyTaxBreakdown ?? [];
   const priorMultiHouse = priorBreakdown.length > 1;
+  // ②ⓐⓑ 라벨용 — 감면후 공시 합(과표·총표준세율재산세 기준). 미입력 시 원공시 fallback(감면 없음)
+  const priorEffAv = dt.effectiveAssessedValue ?? dt.assessedValue;
+  // ⓒ 세액공제는 1세대1주택 세액공제 적용(공제율 > 0) 시에만 — 3주택 등은 ② = ⓐ − ⓑ
+  const priorHasCredit = dt.oneHouseDeductionRate > 0;
 
   return (
     <>
@@ -584,14 +588,14 @@ function PriorYearBreakdown({
         badge="②"
         badgeShape="circle"
         label="직전연도 종합부동산세상당액"
-        formula="(ⓐ − ⓑ − ⓒ)"
+        formula={priorHasCredit ? "(ⓐ − ⓑ − ⓒ)" : "(ⓐ − ⓑ)"}
         amount={pye.comprehensiveTaxEquiv}
         indent={2}
         testId="payable-step5-na-2"
       />
       <Bullet indent={3}>
-        {won(pye.comprehensiveTaxEquiv)}(= {won(dt.calculatedTax)} − {won(dt.creditAmount)} −{" "}
-        {won(dt.oneHouseDeductionAmount)})
+        {won(pye.comprehensiveTaxEquiv)}(= {won(dt.calculatedTax)} − {won(dt.creditAmount)}
+        {priorHasCredit ? <> − {won(dt.oneHouseDeductionAmount)}</> : null})
       </Bullet>
 
       {/* ⓐ 재산세공제전 종합부동산세액 */}
@@ -603,7 +607,7 @@ function PriorYearBreakdown({
         indent={3}
       />
       <Bullet indent={4}>
-        종합부동산세 과세표준 : ({eok(dt.assessedValue)} − {eok(dt.basicDeduction)}) ×{" "}
+        종합부동산세 과세표준 : ({eok(priorEffAv)} − {eok(dt.basicDeduction)}) ×{" "}
         {pct(dt.fairMarketRatio)}(공정시장가액비율) = {eok(dt.taxBase)}
       </Bullet>
       <Bullet indent={4}>
@@ -624,7 +628,7 @@ function PriorYearBreakdown({
         {pct(pBracket.rate)} = {won(dt.stdTaxNumerator)}
       </Bullet>
       <Bullet indent={4}>
-        총표준세율재산세액 : {eok(dt.assessedValue)} × {pct(pFmr)} × {pct(pBracket.rate)} −{" "}
+        총표준세율재산세액 : {eok(priorEffAv)} × {pct(pFmr)} × {pct(pBracket.rate)} −{" "}
         {won(pBracket.deduction)} = {won(dt.stdTaxDenominator)}
       </Bullet>
       <Bullet indent={4}>
@@ -632,19 +636,23 @@ function PriorYearBreakdown({
         {won(dt.stdTaxDenominator)}) = {won(dt.creditAmount)}
       </Bullet>
 
-      {/* ⓒ 세액공제액 */}
-      <StepLine
-        badge="ⓒ"
-        badgeShape="circle"
-        label="세액공제액"
-        formula={`[(ⓐ − ⓑ) × ${pct(dt.oneHouseDeductionRate)}]`}
-        amount={dt.oneHouseDeductionAmount}
-        indent={3}
-      />
-      <Bullet indent={4}>
-        {won(dt.oneHouseDeductionAmount)}[= ({won(dt.calculatedTax)} − {won(dt.creditAmount)}) ×{" "}
-        {pct(dt.oneHouseDeductionRate)}]
-      </Bullet>
+      {/* ⓒ 세액공제액 — 1세대1주택 세액공제 적용(공제율 > 0) 시에만. 3주택 등은 ② = ⓐ − ⓑ */}
+      {priorHasCredit && (
+        <>
+          <StepLine
+            badge="ⓒ"
+            badgeShape="circle"
+            label="세액공제액"
+            formula={`[(ⓐ − ⓑ) × ${pct(dt.oneHouseDeductionRate)}]`}
+            amount={dt.oneHouseDeductionAmount}
+            indent={3}
+          />
+          <Bullet indent={4}>
+            {won(dt.oneHouseDeductionAmount)}[= ({won(dt.calculatedTax)} − {won(dt.creditAmount)}) ×{" "}
+            {pct(dt.oneHouseDeductionRate)}]
+          </Bullet>
+        </>
+      )}
     </>
   );
 }

@@ -70,6 +70,12 @@ describe("PY-Case9: 직전연도 주택별 감면 — 나 35,630,694", () => {
     expect(r.previousYearEquivalent?.detail.calculatedTax).toBe(34_830_000);
   });
 
+  it("ⓐⓑ 라벨용 감면후 공시 합(effectiveAssessedValue) = 22.5억", () => {
+    const r = calculateComprehensiveTax(input);
+    // 서초 15억×0.7=10.5억 + 강남 8억 + 안양 4억 = 22.5억 (원공시 27억 아님)
+    expect(r.previousYearEquivalent?.detail.effectiveAssessedValue).toBe(2_250_000_000);
+  });
+
   it("ⓑ 공제할 재산세액 = 2,988,306", () => {
     const r = calculateComprehensiveTax(input);
     expect(r.previousYearEquivalent?.detail.creditAmount).toBe(2_988_306);
