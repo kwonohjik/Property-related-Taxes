@@ -149,6 +149,42 @@ export function validateMultiFamily(formData: ComprehensiveFormData): string | n
   return null;
 }
 
+/**
+ * 1세대1주택자(또는 부부 공동명의 특례) 토글 ↔ 과세 일반주택 수 정합성 검증 (⑧).
+ *
+ * 종부세법 §8①1호 1세대1주택자 기본공제 12억·고령자/장기보유 세액공제(§9⑤~⑨)는
+ *   "1주택" 전제다. 엔진(comprehensive-tax.ts:373)은 토글값(isOneHouseOwner)만으로
+ *   oneHouseTreatment를 켜 12억 공제·세액공제를 적용하므로, 합산배제·§8④ 의제 제외
+ *   일반 과세주택이 2채 이상이면 과도 공제(과소세액·법령 위반)가 침묵 산출된다.
+ *   → UI에서 차단 (UI 통과↔잘못된 계산 모순 금지 — CLAUDE.md ⑧).
+ *
+ * normalHouseCount는 엔진 정의(exclusionType "none" && §8④ 미지정)와 동일.
+ *   요건 미충족으로 과세 포함되는 합산배제 신청 주택은 세지 않아(하한) 오탐 없음 —
+ *   "확실한 일반주택 ≥ 2"만 차단한다. 정확히 1채(또는 §8④ 의제 1+특례)일 때만 통과.
+ *   법인은 토글 자체가 strip되어(comprehensive-api.ts:455) 미적용.
+ */
+export function validateOneHouseConsistency(formData: ComprehensiveFormData): string | null {
+  const isCorporate = (formData.taxpayerType ?? "individual") !== "individual";
+  if (isCorporate) return null;
+  const claimsOneHouse =
+    formData.isOneHouseOwner || (formData.isJointOwnershipSpecialCase ?? false);
+  if (!claimsOneHouse) return null;
+  const normalHouseCount = formData.properties.filter(
+    (p) => p.exclusionType === "none" && (p.section8para4Type ?? "none") === "none",
+  ).length;
+  if (normalHouseCount >= 2) {
+    const label = formData.isJointOwnershipSpecialCase
+      ? "부부 공동명의 1주택자 특례(§10의2)"
+      : "1세대 1주택자(§8①1호)";
+    return (
+      `${label}는 과세 대상 일반주택이 1채일 때만 적용됩니다. ` +
+      `현재 일반주택이 ${normalHouseCount}채입니다. ` +
+      `특례를 끄거나, 1주택 외의 주택에 합산배제 또는 §8④ 의제 유형(일시적 2주택·상속·지방 저가주택 등)을 지정하세요.`
+    );
+  }
+  return null;
+}
+
 // 임대주택 합산배제 유형 (rentalInfo 필드 구성에 사용)
 const RENTAL_TYPES = new Set([
   "private_construction_rental",

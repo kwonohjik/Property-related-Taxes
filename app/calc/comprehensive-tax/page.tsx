@@ -19,7 +19,7 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily, validatePriorAssessedValue, deriveCorporateClass } from "@/lib/calc/comprehensive-api";
+import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily, validatePriorAssessedValue, validateOneHouseConsistency, deriveCorporateClass } from "@/lib/calc/comprehensive-api";
 import { requiredCorporateReqKey } from "@/lib/tax-engine/comprehensive-corporate-class";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -99,6 +99,8 @@ function Step2Properties() {
   const isCorporateGeneral = corporateClass === "corporate_general"; // §9②1호: 주택 수 무관
   const capMode = formData.previousYearCapMode ?? "none";
   const isMultiHouse = formData.properties.length > 1;
+  // 1세대1주택자 토글 ↔ 일반주택 수 정합성 — 계산 차단 전 조기 안내 (validate와 단일 진실)
+  const oneHouseMismatch = validateOneHouseConsistency(formData);
 
   return (
     <div className="space-y-4">
@@ -108,6 +110,14 @@ function Step2Properties() {
           합산배제 요건은 다음 단계에서 입력합니다.
         </p>
       </div>
+
+      {/* 1세대1주택자 설정 ↔ 주택 수 불일치 실시간 안내 (rose — 계산 시 차단됨) */}
+      {oneHouseMismatch && (
+        <div className="rounded-md border border-rose-300 bg-rose-50/70 px-4 py-3 text-xs text-rose-800 space-y-1">
+          <p className="font-semibold">1세대 1주택자 설정과 주택 수가 맞지 않습니다</p>
+          <p>{oneHouseMismatch}</p>
+        </div>
+      )}
 
       {/* ⑤ 주택 세부담상한 (직전 공시가격 단일 입력원) — 모드가 각 주택 카드 직전공시 표시·전송 제어.
           "모드 토글은 영향 필드 직전" 원칙: 모드가 주택 목록 위. */}
@@ -445,6 +455,12 @@ export default function ComprehensiveTaxPage() {
 
     // 2단계(주택 목록) → 다음: 세부담상한 auto 모드 직전공시 전 주택 필수 (⑧ — 혼재 침묵누락 차단)
     if (currentStep === 1) {
+      // 1세대1주택자 토글 ↔ 일반주택 수 정합성 (⑧ — 토글 ON + 일반 2채 시 12억 과도공제 차단)
+      const oneHouseError = validateOneHouseConsistency(formData);
+      if (oneHouseError) {
+        setError(oneHouseError);
+        return;
+      }
       const priorError = validatePriorAssessedValue(formData);
       if (priorError) {
         setError(priorError);
@@ -465,6 +481,13 @@ export default function ComprehensiveTaxPage() {
         setError("법인 세부 유형의 요건 충족 여부를 선택해주세요 (시행령 §4의4).");
         return;
       }
+    }
+
+    // 1세대1주택자 토글 ↔ 일반주택 수 정합성 재검증 (⑧ — 1단계 토글을 나중에 켠 경로 방어)
+    const oneHouseConsistencyError = validateOneHouseConsistency(formData);
+    if (oneHouseConsistencyError) {
+      setError(oneHouseConsistencyError);
+      return;
     }
 
     // 사례6: 건물·부속토지 분리 시가표준액 검증 (⑧ — 분리 ON 시 시가표준액 미입력 침묵 누락 차단)
