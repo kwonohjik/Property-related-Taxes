@@ -100,6 +100,7 @@ export function mapPresaleRightsToEngine(
     regionCriteria: r.regionCriteria,
     rightValue: r.rightValue,
     isSpouseOwned: r.isSpouseOwned,
+    regionCode: r.regionCode,
   }));
 }
 

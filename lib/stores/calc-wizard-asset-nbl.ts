@@ -185,6 +185,13 @@ export interface PresaleRightEntry {
   rightValue?: string;
   /** #2b 배우자 단독 보유 분양권/입주권 (§167의4⑤ 3↑ 혼인 5년내 차감 대상). 혼인합가일 입력 시에만 의미 */
   isSpouseOwned?: boolean;
+  /**
+   * 소재지 코드 — 공급주택 시·군·구 판정용 (인구감소지역 세컨드홈 다·라목 2호 동일 시·군·구 비교).
+   * 주소검색 PNU 앞 10자리 또는 시·군·구 5자리(앞 5자리만 사용).
+   */
+  regionCode?: string;
+  /** 소재지 시·군·구명 — UI 표시 전용(SigunguSelect controlled). 엔진/API 미전송. */
+  regionName?: string;
 }
 
 /** 비사업용 토지(NBL) 필드 초기값 상수 — makeDefaultAsset에서 spread 사용 (800줄 분리, 2026-06-15) */

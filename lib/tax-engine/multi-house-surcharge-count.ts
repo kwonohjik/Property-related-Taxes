@@ -513,6 +513,18 @@ export function countEffectiveHouses(
               break;
             }
           }
+          // 다·라목 2호 괄호: 취득 전에 보유한 입주권/분양권을 통해 공급하는 주택도 비교 대상.
+          // 권리 소재지(공급주택 시·군·구)를 후보와 비교. 주택 수 산입 여부와 무관(보유 사실 기준).
+          if (!hasSameSigunguPriorHouse) {
+            for (const right of presaleRights) {
+              if (right.acquisitionDate > house.acquisitionDate) continue;
+              const rightSgg = toSigunguCode(right.regionCode);
+              if (rightSgg && rightSgg === candidateSgg) {
+                hasSameSigunguPriorHouse = true;
+                break;
+              }
+            }
+          }
         } else {
           // regionCode 미제공(boolean override 경로) → 동일 시·군·구 요건 검증 불가.
           // 제한규정 미적용(특례 유지)하되 미검증 사실을 경고로 노출.
