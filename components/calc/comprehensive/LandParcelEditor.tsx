@@ -8,7 +8,7 @@
  * 직전연도 개별공시지가 필드는 priorMode === "auto"일 때만 노출(per-parcel 보존).
  */
 
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import type { LandParcelForm, LandPriorMode } from "@/lib/stores/comprehensive-wizard-store";
 
@@ -30,6 +30,9 @@ const TEXT_INPUT_CLASS =
   "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, onUpdate }: Props) {
+  // 토지기준시가 자동 계산용 — 총면적(㎡). 모달에 면적 필드가 함께 있어 즉시 반영.
+  const areaSqm = parseDecimal(parcel.area);
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
@@ -72,7 +75,7 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
         </div>
       </div>
 
-      {/* 당해 개별공시지가 — 현행과 동일 prop (area 미전달 보존) */}
+      {/* 당해 개별공시지가 — 면적 전달로 토지기준시가(= 공시지가 × 면적) 자동 계산 */}
       <div data-testid={`land-${kind}-parcel-price`}>
         <LandPriceLookupField
           label="당해 개별공시지가 (원/㎡)"
@@ -80,6 +83,7 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
           onPricePerSqmChange={(v) => onUpdate({ officialPricePerSqm: v })}
           referenceDate={refDate}
           jibun={parcel.jibun}
+          area={areaSqm}
         />
       </div>
 
@@ -91,6 +95,7 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
             onPricePerSqmChange={(v) => onUpdate({ priorOfficialPricePerSqm: v })}
             referenceDate={`${priorYear}-06-01`}
             jibun={parcel.jibun}
+            area={areaSqm}
           />
         </div>
       )}
