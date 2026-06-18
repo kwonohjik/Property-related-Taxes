@@ -11,16 +11,17 @@ describe("deriveSigunguFromAddress", () => {
     expect(deriveSigunguFromAddress("서울특별시 서초구 반포대로 58")).toBe("서초구");
   });
 
-  it("일반구(시+구) → 2단어 결합", () => {
-    expect(deriveSigunguFromAddress("경기도 성남시 수정구 산성대로 451")).toBe("성남시 수정구");
+  it("일반구(시+구) → 시 단위 축약 (재산세 합산 과세권자)", () => {
+    expect(deriveSigunguFromAddress("경기도 성남시 수정구 산성대로 451")).toBe("성남시");
+    expect(deriveSigunguFromAddress("경기도 용인시 기흥구 공세동")).toBe("용인시");
   });
 
   it("군 단위", () => {
     expect(deriveSigunguFromAddress("강원도 평창군 대관령면")).toBe("평창군");
   });
 
-  it("시 단위(구 없음)", () => {
-    expect(deriveSigunguFromAddress("경기도 용인시 처인구 중부대로")).toBe("용인시 처인구");
+  it("일반구(용인시 처인구) → 시 단위", () => {
+    expect(deriveSigunguFromAddress("경기도 용인시 처인구 중부대로")).toBe("용인시");
   });
 
   it("도로명 주소(시도·시군구 포함) → 시군구", () => {

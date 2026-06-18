@@ -19,6 +19,7 @@ import {
   getLandStandardRateBracket,
   type LandKind,
 } from "./comprehensive-land-parcels";
+import { resolvePropertyTaxJurisdiction } from "@/lib/geo/property-tax-jurisdiction";
 import type {
   LandParcelInput,
   LandPreviousYearEquivalent,
@@ -53,7 +54,8 @@ export function calcLandPreviousYearEquivalent(
   // ── 나① 직전연도 재산세상당액 — 지자체 그룹(직전 공시지가, §122 Min 미적용) ──
   const groups = new Map<string, LandParcelInput[]>();
   for (const p of parcels) {
-    const key = p.jurisdiction.trim();
+    // 재산세 합산 단위(과세권자): 일반구는 시 단위, 자치구는 구 단위로 정규화 (당해와 동일)
+    const key = resolvePropertyTaxJurisdiction(p.jurisdiction);
     const arr = groups.get(key);
     if (arr) arr.push(p);
     else groups.set(key, [p]);
