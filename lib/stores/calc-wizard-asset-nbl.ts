@@ -190,7 +190,7 @@ export interface PresaleRightEntry {
    * 주소검색 PNU 앞 10자리 또는 시·군·구 5자리(앞 5자리만 사용).
    */
   regionCode?: string;
-  /** 소재지 시·군·구명 — UI 표시 전용(SigunguSelect controlled). 엔진/API 미전송. */
+  /** 소재지 주소 요약 — UI 표시 전용(AddressSearch 선택 결과). 엔진/API 미전송. */
   regionName?: string;
 }
 
