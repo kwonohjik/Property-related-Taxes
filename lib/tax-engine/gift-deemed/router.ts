@@ -9,6 +9,7 @@ import { calcMergerGift } from "./merger";
 import { calcCapitalIncreaseGift } from "./capital-increase";
 import { calcCapitalDecreaseGift } from "./capital-decrease";
 import { calcContributionGift } from "./contribution-in-kind";
+import { calcConvertibleStockGift } from "./convertible-stock";
 import { calcConvertibleBondGift } from "./convertible-bond";
 
 export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
@@ -31,6 +32,8 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
       return calcCapitalDecreaseGift(input);
     case "contribution":
       return calcContributionGift(input);
+    case "convertible_stock":
+      return calcConvertibleStockGift(input);
     case "convertible_bond":
       return calcConvertibleBondGift(input);
   }

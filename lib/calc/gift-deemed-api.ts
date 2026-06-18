@@ -156,6 +156,26 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         };
       return { type: "convertible_bond", caseType: "acquisition", bondMarketValue: parseAmount(form.cbMarketValue), acquisitionPrice: parseAmount(form.cbAcquisitionPrice) };
     }
+    case "convertible_stock": {
+      const isHigh = form.csDirection === "high";
+      const needsRatio = isHigh && form.csSubType !== "forfeited_realloc";
+      const side = (k: { prePrice: string; preShares: string; newPrice: string; issuedShares: string; forfeitedShares: string; relatedAcquired: string; ratioDenom: string }) => ({
+        direction: form.csDirection,
+        subType: form.csSubType,
+        preIssuePrice: parseAmount(k.prePrice),
+        preIssueShares: parseAmount(k.preShares),
+        newSharePrice: parseAmount(k.newPrice),
+        issuedShares: parseAmount(k.issuedShares),
+        forfeitedShares: parseAmount(k.forfeitedShares),
+        relatedAcquiredShares: needsRatio ? parseAmount(k.relatedAcquired) : undefined,
+        ratioDenomShares: needsRatio ? parseAmount(k.ratioDenom) : undefined,
+      });
+      return {
+        type: "convertible_stock",
+        atConversion: side({ prePrice: form.csConvPrePrice, preShares: form.csConvPreShares, newPrice: form.csConvNewPrice, issuedShares: form.csConvIssuedShares, forfeitedShares: form.csConvForfeitedShares, relatedAcquired: form.csConvRelatedAcquiredShares, ratioDenom: form.csConvRatioDenomShares }),
+        atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares }),
+      };
+    }
     default:
       throw new Error("증여 유형을 선택하세요");
   }

@@ -16,6 +16,7 @@ export type DeemedGiftType =
   | "capital_increase" // §39 (8)
   | "capital_decrease" // §39의2 (9)
   | "contribution" // §39의3 (10)
+  | "convertible_stock" // §39①3호 전환주식 (8-3)
   | "convertible_bond"; // §40 (11)
 
 /** 모든 계산기 공통 결과 */
@@ -172,4 +173,5 @@ export type DeemedGiftInput =
   | ({ type: "capital_increase" } & CapitalIncreaseInput)
   | ({ type: "capital_decrease" } & CapitalDecreaseInput)
   | ({ type: "contribution" } & ContributionInput)
+  | ({ type: "convertible_stock" } & ConvertibleStockInput)
   | ({ type: "convertible_bond" } & ConvertibleBondInput);

@@ -178,6 +178,144 @@ export function ContributionFields({ form, set }: Props) {
   );
 }
 
+const CS_SECTION_TONE = {
+  sky: { box: "border-sky-200 bg-sky-50/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700" },
+  amber: { box: "border-amber-200 bg-amber-50/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700" },
+} as const;
+
+type CsKeys = {
+  prePrice: keyof DeemedFormState;
+  preShares: keyof DeemedFormState;
+  newPrice: keyof DeemedFormState;
+  issuedShares: keyof DeemedFormState;
+  forfeitedShares: keyof DeemedFormState;
+  relatedAcquired: keyof DeemedFormState;
+  ratioDenom: keyof DeemedFormState;
+};
+
+/** 전환주식 한 시점(전환/발행)의 §29②1~5 산식 입력 구간 */
+function CsNumericSection({
+  form,
+  set,
+  ph,
+  tone,
+  num,
+  title,
+  keys,
+  newPriceLabel,
+  sharesLabel,
+  needsRatio,
+}: {
+  form: DeemedFormState;
+  set: SetFn;
+  ph: string;
+  tone: keyof typeof CS_SECTION_TONE;
+  num: number;
+  title: string;
+  keys: CsKeys;
+  newPriceLabel: string;
+  sharesLabel: string;
+  needsRatio: boolean;
+}) {
+  const t = CS_SECTION_TONE[tone];
+  const v = (k: keyof DeemedFormState) => String(form[k]);
+  const on = (k: keyof DeemedFormState) => (val: string) => set({ [k]: val } as Partial<DeemedFormState>);
+  return (
+    <div className={`space-y-2 rounded-lg border ${t.box} p-3`}>
+      <div className="flex items-center gap-2">
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>{num}</span>
+        <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
+      </div>
+      <CurrencyInput label="증자 전 1주당 평가가액" value={v(keys.prePrice)} onChange={on(keys.prePrice)} placeholder={`${ph} 증자 전 1주당 평가가액 (원)`} />
+      <CurrencyInput label="증자 전 발행주식총수" value={v(keys.preShares)} onChange={on(keys.preShares)} placeholder={`${ph} 증자 전 발행주식총수`} />
+      <CurrencyInput label={newPriceLabel} value={v(keys.newPrice)} onChange={on(keys.newPrice)} placeholder={`${ph} ${newPriceLabel} (원)`} />
+      <CurrencyInput label="증자 주식수" value={v(keys.issuedShares)} onChange={on(keys.issuedShares)} placeholder={`${ph} 증자 주식수`} />
+      <CurrencyInput label={sharesLabel} value={v(keys.forfeitedShares)} onChange={on(keys.forfeitedShares)} placeholder={`${ph} ${sharesLabel}`} />
+      {needsRatio && (
+        <>
+          <CurrencyInput label="특수관계인이 인수한 신주수" value={v(keys.relatedAcquired)} onChange={on(keys.relatedAcquired)} placeholder={`${ph} 특수관계인이 인수한 신주수`} />
+          <CurrencyInput label="분모 신주수" value={v(keys.ratioDenom)} onChange={on(keys.ratioDenom)} placeholder={`${ph} 분모 신주수`} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** (8-3) 전환주식 §39①3호 — 전환 시점 − 발행 시점 이익 (시행령 §29②6) */
+export function ConvertibleStockFields({ form, set }: Props) {
+  const isHigh = form.csDirection === "high";
+  const needsRatio = isHigh && form.csSubType !== "forfeited_realloc";
+  const sharesLabel = CI_SHARES_LABEL[form.csSubType];
+  return (
+    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+      <RadioCardGroup
+        name="cs-direction"
+        tone="rose"
+        layout="inline"
+        value={form.csDirection}
+        onChange={(v) => set({ csDirection: v })}
+        options={[
+          { value: "low", label: "저가발행 (3호 가목)", testId: "cs-direction-low" },
+          { value: "high", label: "고가발행 (3호 나목)", testId: "cs-direction-high" },
+        ]}
+      />
+      <RadioCardGroup
+        name="cs-subtype"
+        tone="rose"
+        value={form.csSubType}
+        onChange={(v) => set({ csSubType: v })}
+        options={[
+          { value: "forfeited_realloc", label: "실권주 재배정 (가목)", testId: "cs-subtype-forfeited_realloc" },
+          { value: "third_party", label: "제3자 직접배정 (다목)", testId: "cs-subtype-third_party" },
+          { value: "excess", label: "초과배정 (라목)", testId: "cs-subtype-excess" },
+          { value: "no_realloc", label: "실권주 미배정 (나목)", testId: "cs-subtype-no_realloc" },
+        ]}
+      />
+      <p className="text-xs text-muted-foreground">증여이익 = 전환 시점 이익 − 발행 시점 이익 (음수면 0)</p>
+      <CsNumericSection
+        form={form}
+        set={set}
+        ph="전환"
+        tone="sky"
+        num={1}
+        title="전환 시점 (교부받은 주식 기준)"
+        newPriceLabel="1주당 전환가액등"
+        sharesLabel={sharesLabel}
+        needsRatio={needsRatio}
+        keys={{
+          prePrice: "csConvPrePrice",
+          preShares: "csConvPreShares",
+          newPrice: "csConvNewPrice",
+          issuedShares: "csConvIssuedShares",
+          forfeitedShares: "csConvForfeitedShares",
+          relatedAcquired: "csConvRelatedAcquiredShares",
+          ratioDenom: "csConvRatioDenomShares",
+        }}
+      />
+      <CsNumericSection
+        form={form}
+        set={set}
+        ph="발행"
+        tone="amber"
+        num={2}
+        title="발행 시점 (전환주식 발행 당시)"
+        newPriceLabel="신주 1주당 인수가액"
+        sharesLabel={sharesLabel}
+        needsRatio={needsRatio}
+        keys={{
+          prePrice: "csIssuePrePrice",
+          preShares: "csIssuePreShares",
+          newPrice: "csIssueNewPrice",
+          issuedShares: "csIssueIssuedShares",
+          forfeitedShares: "csIssueForfeitedShares",
+          relatedAcquired: "csIssueRelatedAcquiredShares",
+          ratioDenom: "csIssueRatioDenomShares",
+        }}
+      />
+    </div>
+  );
+}
+
 /** (11) 전환사채등 §40 — 인수취득(①1호)·주식전환(①2호 가나다/라)·양도(①3호) */
 export function ConvertibleBondFields({ form, set }: Props) {
   const ct = form.cbCaseType;

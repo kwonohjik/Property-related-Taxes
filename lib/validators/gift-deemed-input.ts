@@ -68,8 +68,7 @@ const mergerSchema = z.object({
   faceValue: z.number().nonnegative().optional(),
   mergeConsideration: z.number().nonnegative().optional(),
 });
-const capitalIncreaseSchema = z.object({
-  type: z.literal("capital_increase"),
+const capitalIncreaseShape = {
   direction: z.enum(["low", "high"]).optional(),
   subType: z.enum(["forfeited_realloc", "third_party", "excess", "no_realloc"]).optional(),
   preIssuePrice: z.number().nonnegative(),
@@ -80,6 +79,13 @@ const capitalIncreaseSchema = z.object({
   relatedAcquiredShares: z.number().nonnegative().optional(),
   ratioDenomShares: z.number().nonnegative().optional(),
   smallShareholderImputation: z.boolean().optional(),
+} as const;
+const capitalIncreaseSchema = z.object({ type: z.literal("capital_increase"), ...capitalIncreaseShape });
+const capitalIncreaseInnerSchema = z.object(capitalIncreaseShape);
+const convertibleStockSchema = z.object({
+  type: z.literal("convertible_stock"),
+  atConversion: capitalIncreaseInnerSchema,
+  atIssuance: capitalIncreaseInnerSchema,
 });
 const capitalDecreaseSchema = z.object({
   type: z.literal("capital_decrease"),
@@ -129,6 +135,7 @@ export const deemedGiftInputSchema = z
     capitalIncreaseSchema,
     capitalDecreaseSchema,
     contributionSchema,
+    convertibleStockSchema,
     convertibleBondSchema,
   ])
   .superRefine((data, ctx) => {

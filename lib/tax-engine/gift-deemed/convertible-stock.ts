@@ -21,7 +21,7 @@ export function calcConvertibleStockGift(input: ConvertibleStockInput): DeemedGi
     { label: "증여재산가액 (전환후 − 발행당시, 영 이하면 0)", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: "§39①3호 전환주식" },
   ];
   return {
-    type: "capital_increase",
+    type: "convertible_stock",
     applied,
     deemedGiftValue: value,
     breakdown,

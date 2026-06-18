@@ -61,4 +61,24 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("100,000,000");
   });
+
+  test("§39①3호 전환주식 전환 33,330,000 − 발행 20,000,000 → 13,330,000", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await fillGiftDate(page);
+    await page.getByTestId("deemed-type-convertible_stock").click();
+    // 전환 시점 (증자후 8333 − 전환 5000 = 3333 × 1만 = 33,330,000)
+    await page.getByPlaceholder("전환 증자 전 1주당 평가가액 (원)").fill("10000");
+    await page.getByPlaceholder("전환 증자 전 발행주식총수").fill("100000");
+    await page.getByPlaceholder("전환 1주당 전환가액등 (원)").fill("5000");
+    await page.getByPlaceholder("전환 증자 주식수").fill("50000");
+    await page.getByPlaceholder("전환 배정받은 실권주수").fill("10000");
+    // 발행 시점 (증자후 9000 − 인수 7000 = 2000 × 1만 = 20,000,000)
+    await page.getByPlaceholder("발행 증자 전 1주당 평가가액 (원)").fill("10000");
+    await page.getByPlaceholder("발행 증자 전 발행주식총수").fill("100000");
+    await page.getByPlaceholder("발행 신주 1주당 인수가액 (원)").fill("7000");
+    await page.getByPlaceholder("발행 증자 주식수").fill("50000");
+    await page.getByPlaceholder("발행 배정받은 실권주수").fill("10000");
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toContainText("13,330,000");
+  });
 });
