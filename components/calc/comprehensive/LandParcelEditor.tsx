@@ -8,8 +8,10 @@
  * 직전연도 개별공시지가 필드는 priorMode === "auto"일 때만 노출(per-parcel 보존).
  */
 
+import { AddressSearch } from "@/components/ui/address-search";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { deriveSigunguFromAddress } from "@/lib/utils/derive-sigungu";
 import type { LandParcelForm, LandPriorMode } from "@/lib/stores/comprehensive-wizard-store";
 
 type Kind = "aggregate" | "separate";
@@ -35,6 +37,20 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
 
   return (
     <div className="space-y-3">
+      {/* 소재지 주소 검색 — jibun 설정으로 공시지가 조회 활성 + 시군구 자동 채움 */}
+      <div className="space-y-1.5" data-testid={`land-${kind}-parcel-address`}>
+        <label className="block text-sm font-medium">
+          소재지 <span className="text-muted-foreground font-normal text-xs">(주소 검색 — 공시지가 조회·시군구 자동)</span>
+        </label>
+        <AddressSearch
+          value={{ road: "", jibun: parcel.jibun, building: "", detail: "", lng: "", lat: "" }}
+          onChange={(v) => {
+            const sigungu = deriveSigunguFromAddress(v.jibun || v.road);
+            onUpdate({ jibun: v.jibun, ...(sigungu ? { jurisdiction: sigungu } : {}) });
+          }}
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">

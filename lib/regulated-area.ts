@@ -26,8 +26,9 @@ export type RegulatedAreaResult = RegulatedAreaJudgment;
  * 주소에서 시도·시군구 추출 (간이 파서)
  * 입력: "서울특별시 강남구 테헤란로 123" → { sido: "서울특별시", sigungu: "강남구" }
  *       "경기도 성남시 수정구 ..."       → { sido: "경기도", sigungu: "성남시 수정구" }
+ * export: 조정대상지역 판정 외 토지 필지 시군구 자동 채움(deriveSigunguFromAddress)에서 재사용.
  */
-function parseAddressRegion(address: string): { sido: string; sigungu: string } | null {
+export function parseAddressRegion(address: string): { sido: string; sigungu: string } | null {
   if (!address) return null;
   const parts = address.trim().split(/\s+/);
   if (parts.length < 2) return null;
