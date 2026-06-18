@@ -75,13 +75,18 @@ export interface FreeLoanInput {
 
 // ── Phase 2: 자본거래 (시가 = §60·§63 평가가액을 input으로 직접 주입) ──
 
-/** (7) 합병 §38 — 주식교부 (대주주등) */
+/** (7) 합병 §38 — 주식교부(stock, §28③1) / 주식 외 재산 교부(non_stock, §28③2) */
 export interface MergerInput {
-  mergedSharePrice: number; // ㉮ 합병 후 신설·존속법인 1주당 평가가액
-  overvaluedSharePrice: number; // 과대평가 합병당사법인 1주당 평가가액
-  preMergerShares: number; // 과대평가법인 합병 전 주식수
-  exchangedShares: number; // 과대평가법인 주주가 교부받은 신설·존속법인 주식수
-  majorShares: number; // 대주주등이 교부받은 주식수
+  caseType?: "stock" | "non_stock"; // 기본 stock
+  overvaluedSharePrice: number; // 합병당사법인 1주당 평가가액
+  majorShares: number; // 대주주등 주식수
+  // stock 전용
+  mergedSharePrice?: number; // ㉮ 합병 후 신설·존속법인 1주당 평가가액
+  preMergerShares?: number; // 과대평가법인 합병 전 주식수
+  exchangedShares?: number; // 과대평가법인 주주가 교부받은 신설·존속법인 주식수
+  // non_stock 전용 (§28③2)
+  faceValue?: number; // 액면가액
+  mergeConsideration?: number; // 합병대가(액면 미달 시 적용)
 }
 
 /** (8) 증자 §39 — 저가발행·실권주 재배정 (§39①1호가) */
@@ -93,22 +98,30 @@ export interface CapitalIncreaseInput {
   forfeitedShares: number; // 배정받은 실권주수
 }
 
-/** (9) 감자 §39의2 — 저가소각 (§39의2①1호) */
+/** (9) 감자 §39의2 — 저가소각(low, ①1호) / 고가소각(high, ①2호) */
 export interface CapitalDecreaseInput {
+  caseType?: "low" | "high"; // 기본 low
   sharePrice: number; // 감자주식 1주당 평가액
   redemptionPrice: number; // 소각 시 지급한 1주당 금액
-  totalRedeemedShares: number; // 총감자 주식수
-  majorPostRatio: { numer: number; denom: number }; // 대주주등 감자 후 지분비율
-  relatedRedeemedShares: number; // 대주주등 특수관계인의 감자 주식수
+  // low 전용 (①1호)
+  totalRedeemedShares?: number; // 총감자 주식수
+  majorPostRatio?: { numer: number; denom: number }; // 대주주등 감자 후 지분비율
+  relatedRedeemedShares?: number; // 대주주등 특수관계인의 감자 주식수
+  // high 전용 (①2호 — 평가액이 액면가 미달 한정)
+  faceValue?: number; // 액면가액
+  ownRedeemedShares?: number; // 해당 주주등의 감자 주식수
 }
 
-/** (10) 현물출자 §39의3 — 저가인수 (§39의3①1호) */
+/** (10) 현물출자 §39의3 — 저가인수(low, ①1호) / 고가인수(high, ①2호) */
 export interface ContributionInput {
+  caseType?: "low" | "high"; // 기본 low
   preContribPrice: number; // 현물출자 전 1주당 평가가액
   preContribShares: number; // 현물출자 전 발행주식총수
   newSharePrice: number; // 신주 1주당 인수가액
   contributedShares: number; // 현물출자 주식수
-  allocatedShares: number; // 배정받은 신주수
+  allocatedShares: number; // 배정받은 신주수 (low) / 인수 신주수 (high)
+  // high 전용 (①2호)
+  relatedRatio?: { numer: number; denom: number }; // 현물출자자 특수관계인 주주등 지분비율
 }
 
 /** (11) 전환사채 §40 — 저가 인수·취득 (§40①1호) */
