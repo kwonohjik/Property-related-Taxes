@@ -92,11 +92,12 @@ test.describe("증여세 사전증여 입력 필드 정리", () => {
     // 정리: 제거된 필드 부재
     await expect(dialog.getByText("수증인과의 관계")).toHaveCount(0);
     await expect(dialog.getByText(/기납부 증여세/)).toHaveCount(0);
-    // 통합: 증여자 select + 일반 증여이므로 §47 카드 노출
+    // 통합: 증여자 select + 일반 증여이므로 과세표준 ⑤·산출세액 ⑦ 노출
     await expect(
       dialog.getByText(/증여자 \(동일인 그룹 판정\)/),
     ).toBeVisible();
-    await expect(dialog.getByText(/동일인 합산 정보/)).toBeVisible();
+    await expect(dialog.getByText("과세표준 ⑤")).toBeVisible();
+    await expect(dialog.getByText("산출세액 ⑦")).toBeVisible();
 
     await closePriorGiftModal(page);
 
@@ -123,14 +124,14 @@ test.describe("증여세 사전증여 입력 필드 정리", () => {
       amount: "150000000",
     });
 
-    // 특례 선택 전 §47 카드 노출
-    await expect(dialog.getByText(/동일인 합산 정보/)).toBeVisible();
+    // 특례 선택 전 과세표준 ⑤ 노출
+    await expect(dialog.getByText("과세표준 ⑤")).toBeVisible();
 
     // 조특법 특례 — 창업자금 §30의5 선택
     await dialog.getByText("창업자금 §30의5").click();
 
-    // D2: 특례 회차는 §47 합산 제외 → §47 카드(⑤·⑦) 숨김
-    await expect(dialog.getByText(/동일인 합산 정보/)).toHaveCount(0);
+    // D2: 특례 회차는 §47 합산 제외 → 과세표준 ⑤·산출세액 ⑦ 숨김
+    await expect(dialog.getByText("과세표준 ⑤")).toHaveCount(0);
 
     await closePriorGiftModal(page);
     await page.getByRole("button", { name: /^다음/ }).click();

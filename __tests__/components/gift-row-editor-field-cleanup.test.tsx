@@ -96,14 +96,15 @@ describe("증여세 사전증여 필드 정리 — Pre-Do anchor", () => {
     expect(last.computedTax).toBeUndefined();
   });
 
-  it("AC-4: 조특법 특례(startup) 회차 → §47 카드 숨김 (D2) [구현 전 FAIL]", () => {
+  it("AC-4: 조특법 특례(startup) 회차 → 과세표준 ⑤·⑦ 숨김 (D2) [구현 전 FAIL]", () => {
     renderGiftMode({ ...makeEmptyGift(), specialTreatmentType: "startup" });
-    expect(screen.queryByText(/동일인 합산 정보/)).toBeNull();
+    expect(screen.queryByText("과세표준 ⑤")).toBeNull();
   });
 
-  it("AC-5: 일반 증여 → §47 카드 + 증여자 Select 노출 [대조·PASS]", () => {
+  it("AC-5: 일반 증여 → 과세표준 ⑤·⑦ + 증여자 Select 노출 [대조·PASS]", () => {
     renderGiftMode(makeEmptyGift());
-    expect(screen.queryByText(/동일인 합산 정보/)).not.toBeNull();
+    expect(screen.queryByText("과세표준 ⑤")).not.toBeNull();
+    expect(screen.queryByText("산출세액 ⑦")).not.toBeNull();
     expect(screen.queryByText(/증여자 \(동일인 그룹 판정\)/)).not.toBeNull();
   });
 

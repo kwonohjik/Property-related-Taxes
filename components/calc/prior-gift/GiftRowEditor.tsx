@@ -382,14 +382,45 @@ export function GiftRowEditor({
         </>
       )}
 
-      {/* 증여가액 — 입력 시 자동 세액 재계산 */}
+      {/* 증여가액 — 입력 시 자동 세액 재계산. 증여세 모드는 hint 생략(입력 간결화). */}
       <CurrencyInput
         label="증여재산가액"
         value={gift.giftAmount > 0 ? String(gift.giftAmount) : ""}
         onChange={handleGiftAmountChange}
         required
-        hint="증여 당시 평가액 (시가 기준)"
+        hint={showGiftPhaseA ? undefined : "증여 당시 평가액 (시가 기준)"}
       />
+
+      {/* ⑤·⑦ 과세표준·산출세액 — 증여세 모드 전용. 증여재산가액 흐름에 연속 배치(카드 래퍼 없음).
+       *  D2: 조특법 특례 회차는 §47 합산 제외 → 숨김. prefill(store commit)·userTouchedBaseTax 유지. */}
+      {showGiftPhaseA && !gift.specialTreatmentType && (
+        <>
+          <CurrencyInput
+            label="과세표준 ⑤"
+            value={
+              gift.giftTaxBase && gift.giftTaxBase > 0
+                ? String(gift.giftTaxBase)
+                : ""
+            }
+            onChange={(v) => {
+              setUserTouchedBaseTax(true);
+              set({ giftTaxBase: parseAmount(v) || undefined });
+            }}
+          />
+          <CurrencyInput
+            label="산출세액 ⑦"
+            value={
+              gift.computedTax && gift.computedTax > 0
+                ? String(gift.computedTax)
+                : ""
+            }
+            onChange={(v) => {
+              setUserTouchedBaseTax(true);
+              set({ computedTax: parseAmount(v) || undefined });
+            }}
+          />
+        </>
+      )}
 
       {/* [B] 과세표준 산정 방식 — 상속세 모드(showIsHeir) 전용.
        * 위치: 증여가액 다음, §53의2 직전 (§53 도출 직전 = 계산 로직 순서).
@@ -509,7 +540,128 @@ export function GiftRowEditor({
         );
       })()}
 
-      {/* 신고서 부표 1 표시 메타 (선택 입력·기본 접힘) — 결과 화면 ②/③ 컬럼 표시용.
+      {/* 과세특례 구분 — §30의5·§30의6 해당 여부.
+       * 증여세 모드(showGiftPhaseA): 기존 §47 합산 제외, 특례 스트림 분리 안내.
+       * 상속세 모드(showSpecialType): §30의5⑨·§30의6⑤ — 기간 무관 가산 안내.
+       * donor·⑤·⑦·할증·⑫ 블록(§47 카드)은 showGiftPhaseA 단독 유지(상속 모드 숨김).
+       */}
+      {(showGiftPhaseA || showSpecialType) && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+              §30
+            </span>
+            <p className="text-xs font-semibold text-emerald-700">
+              이 사전증여의 조특법 과세특례 여부
+            </p>
+          </div>
+          <RadioCardGroup<"none" | "startup" | "family_business">
+            name={`priorGiftSpecialType-${index}`}
+            tone="emerald"
+            layout="inline"
+            value={gift.specialTreatmentType ?? "none"}
+            onChange={(v) =>
+              set({
+                specialTreatmentType: v === "none" ? undefined : (v as "startup" | "family_business"),
+                // 특례 타입 초기화 시 priorSpecialTaxPaid도 초기화
+                ...(v === "none" ? { priorSpecialTaxPaid: undefined } : {}),
+              })
+            }
+            options={[
+              { value: "none", label: "일반 증여" },
+              { value: "startup", label: "창업자금 §30의5" },
+              { value: "family_business", label: "가업승계 §30의6" },
+            ]}
+          />
+          {gift.specialTreatmentType === "startup" && (
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+              {showGiftPhaseA
+                ? "§30의5① 후단 — 창업자금은 증여 시기와 무관하게 현재 신고분과 합산됩니다. §47②(10년 합산)에서 제외되어 별도 특례 스트림으로 계산됩니다."
+                : "§30의5⑧⑨ — 창업자금은 §13 10년/5년 기간과 관계없이 상속세 과세가액에 가산됩니다 (조특법 §30의5⑨)."}
+            </p>
+          )}
+          {gift.specialTreatmentType === "family_business" && (
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+              {showGiftPhaseA
+                ? "§30의6 — 가업승계는 §30의5 제8항~제13항 준용. 과거 가업승계 prior는 기간무관 합산됩니다."
+                : "§30의6⑤ — 가업승계 주식은 §30의5⑧~⑬ 준용. §13 기간과 관계없이 상속세 과세가액에 가산됩니다."}
+            </p>
+          )}
+          {/* 상속세 모드 — 특례 prior의 §28/§30의5⑩ 공제액 입력 (증여 당시 납부한 증여세액) */}
+          {showSpecialType && !showGiftPhaseA && gift.specialTreatmentType && (
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+              ⓘ §30의5⑩ — 창업자금·가업승계 특례 증여세액은 상속세 산출세액에서 전액 직접 공제됩니다 (§28 안분 한도 미적용). 증여 당시 납부한 증여세를 아래 &quot;기납부 증여세&quot; 란에 입력하세요.
+            </p>
+          )}
+          {/* 기납부 특례세액 — 특례 타입 선택 시 노출 (증여세 모드: §30의5①후단 차감 / 상속세 모드: §30의5⑩ 공제 분자) */}
+          {gift.specialTreatmentType && (
+            <CurrencyInput
+              label={
+                showGiftPhaseA
+                  ? "그 회차에 납부한 특례세액 (기납부 특례세액 차감용)"
+                  : "기납부 증여세 (§30의5⑩ — 자동·수정 가능)"
+              }
+              value={
+                showGiftPhaseA
+                  ? (gift.priorSpecialTaxPaid && gift.priorSpecialTaxPaid > 0
+                      ? String(gift.priorSpecialTaxPaid)
+                      : "")
+                  : (gift.giftTaxPaid > 0 ? String(gift.giftTaxPaid) : "")
+              }
+              onChange={(v) =>
+                showGiftPhaseA
+                  ? set({ priorSpecialTaxPaid: parseAmount(v) || undefined })
+                  : (() => {
+                      setUserTouchedTax(true);
+                      set({ giftTaxPaid: parseAmount(v) });
+                    })()
+              }
+              hint={
+                showGiftPhaseA
+                  ? "§30의5①후단 합산 시 기납부 특례세액 차감 (max(0, 합산기준특례산출세액 - Σ기납부)). 없으면 빈칸."
+                  : "§30의5⑩ — 증여 당시 납부한 창업자금·가업승계 증여세액 (안분 없이 상속세 산출세액에서 직접 전액 공제, 초과환급 없음). 기납부 증여세 란에서 입력한 값과 동일합니다."
+              }
+            />
+          )}
+        </div>
+      )}
+
+      {/* 세대생략 할증 — 증여세 모드 전용, §30 다음 독립 배치 (구 §47 카드에서 분리).
+       *  D2: 조특법 특례 회차는 §47 합산 제외 → 숨김. */}
+      {showGiftPhaseA && !gift.specialTreatmentType && (
+        <>
+          {/* 세대생략 토글 */}
+          <ToggleCard
+            tone="rose"
+            title="그 회차에 세대생략 할증 적용 (§57)"
+            description="조부모→손자 등 세대생략 증여 회차였으면 ON. donor=조부모 시 자동 ON 권장."
+            checked={gift.wasGenerationSkip ?? false}
+            onCheckedChange={(v) => set({ wasGenerationSkip: v })}
+          />
+
+          {/* ⑫ 추가 할증세액 (할증 ON 시만) */}
+          {gift.wasGenerationSkip && (
+            <CurrencyInput
+              label="그 회차 추가 할증세액 ⑫"
+              value={
+                gift.additionalGenerationSkipSurcharge &&
+                gift.additionalGenerationSkipSurcharge > 0
+                  ? String(gift.additionalGenerationSkipSurcharge)
+                  : ""
+              }
+              onChange={(v) =>
+                set({
+                  additionalGenerationSkipSurcharge:
+                    parseAmount(v) || undefined,
+                })
+              }
+              hint="신고서 ⑱ 값. §57 누적 기할증과세액 ⑨ 산정용."
+            />
+          )}
+        </>
+      )}
+
+      {/* 신고서 부표 1 표시 메타 (선택 입력·기본 접힘·맨 뒤 배치) — 결과 화면 ②/③ 컬럼 표시용.
        * donee-phase2: 필수 입력과 시각 분리. print 시 자동 펼침([[print-only-css-toggle]]). */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
         <button
@@ -622,168 +774,6 @@ export function GiftRowEditor({
         </div>
         </div>
       </div>
-
-      {/* 과세특례 구분 — §30의5·§30의6 해당 여부.
-       * 증여세 모드(showGiftPhaseA): 기존 §47 합산 제외, 특례 스트림 분리 안내.
-       * 상속세 모드(showSpecialType): §30의5⑨·§30의6⑤ — 기간 무관 가산 안내.
-       * donor·⑤·⑦·할증·⑫ 블록(§47 카드)은 showGiftPhaseA 단독 유지(상속 모드 숨김).
-       */}
-      {(showGiftPhaseA || showSpecialType) && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
-              §30
-            </span>
-            <p className="text-xs font-semibold text-emerald-700">
-              이 사전증여의 조특법 과세특례 여부
-            </p>
-          </div>
-          <RadioCardGroup<"none" | "startup" | "family_business">
-            name={`priorGiftSpecialType-${index}`}
-            tone="emerald"
-            layout="inline"
-            value={gift.specialTreatmentType ?? "none"}
-            onChange={(v) =>
-              set({
-                specialTreatmentType: v === "none" ? undefined : (v as "startup" | "family_business"),
-                // 특례 타입 초기화 시 priorSpecialTaxPaid도 초기화
-                ...(v === "none" ? { priorSpecialTaxPaid: undefined } : {}),
-              })
-            }
-            options={[
-              { value: "none", label: "일반 증여" },
-              { value: "startup", label: "창업자금 §30의5" },
-              { value: "family_business", label: "가업승계 §30의6" },
-            ]}
-          />
-          {gift.specialTreatmentType === "startup" && (
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
-              {showGiftPhaseA
-                ? "§30의5① 후단 — 창업자금은 증여 시기와 무관하게 현재 신고분과 합산됩니다. §47②(10년 합산)에서 제외되어 별도 특례 스트림으로 계산됩니다."
-                : "§30의5⑧⑨ — 창업자금은 §13 10년/5년 기간과 관계없이 상속세 과세가액에 가산됩니다 (조특법 §30의5⑨)."}
-            </p>
-          )}
-          {gift.specialTreatmentType === "family_business" && (
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
-              {showGiftPhaseA
-                ? "§30의6 — 가업승계는 §30의5 제8항~제13항 준용. 과거 가업승계 prior는 기간무관 합산됩니다."
-                : "§30의6⑤ — 가업승계 주식은 §30의5⑧~⑬ 준용. §13 기간과 관계없이 상속세 과세가액에 가산됩니다."}
-            </p>
-          )}
-          {/* 상속세 모드 — 특례 prior의 §28/§30의5⑩ 공제액 입력 (증여 당시 납부한 증여세액) */}
-          {showSpecialType && !showGiftPhaseA && gift.specialTreatmentType && (
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
-              ⓘ §30의5⑩ — 창업자금·가업승계 특례 증여세액은 상속세 산출세액에서 전액 직접 공제됩니다 (§28 안분 한도 미적용). 증여 당시 납부한 증여세를 아래 &quot;기납부 증여세&quot; 란에 입력하세요.
-            </p>
-          )}
-          {/* 기납부 특례세액 — 특례 타입 선택 시 노출 (증여세 모드: §30의5①후단 차감 / 상속세 모드: §30의5⑩ 공제 분자) */}
-          {gift.specialTreatmentType && (
-            <CurrencyInput
-              label={
-                showGiftPhaseA
-                  ? "그 회차에 납부한 특례세액 (기납부 특례세액 차감용)"
-                  : "기납부 증여세 (§30의5⑩ — 자동·수정 가능)"
-              }
-              value={
-                showGiftPhaseA
-                  ? (gift.priorSpecialTaxPaid && gift.priorSpecialTaxPaid > 0
-                      ? String(gift.priorSpecialTaxPaid)
-                      : "")
-                  : (gift.giftTaxPaid > 0 ? String(gift.giftTaxPaid) : "")
-              }
-              onChange={(v) =>
-                showGiftPhaseA
-                  ? set({ priorSpecialTaxPaid: parseAmount(v) || undefined })
-                  : (() => {
-                      setUserTouchedTax(true);
-                      set({ giftTaxPaid: parseAmount(v) });
-                    })()
-              }
-              hint={
-                showGiftPhaseA
-                  ? "§30의5①후단 합산 시 기납부 특례세액 차감 (max(0, 합산기준특례산출세액 - Σ기납부)). 없으면 빈칸."
-                  : "§30의5⑩ — 증여 당시 납부한 창업자금·가업승계 증여세액 (안분 없이 상속세 산출세액에서 직접 전액 공제, 초과환급 없음). 기납부 증여세 란에서 입력한 값과 동일합니다."
-              }
-            />
-          )}
-        </div>
-      )}
-
-      {/* Phase A: 증여세 모드 전용 — ⑤ + ⑦ + 할증 + ⑫ (§47·§58 한도 산식).
-       *  증여자(donor)는 증여일 직후로 이동. D2: 조특법 특례 회차는 §47 합산 제외 → 카드 숨김. */}
-      {showGiftPhaseA && !gift.specialTreatmentType && (
-        <>
-        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-              §47
-            </span>
-            <p className="text-xs font-semibold text-violet-700">
-              동일인 합산 정보 (§47 ② · §58 한도 산식용)
-            </p>
-          </div>
-
-          {/* ⑤ 합산과세표준 */}
-          <CurrencyInput
-            label="그 회차 합산과세표준 ⑤"
-            value={
-              gift.giftTaxBase && gift.giftTaxBase > 0
-                ? String(gift.giftTaxBase)
-                : ""
-            }
-            onChange={(v) => {
-              setUserTouchedBaseTax(true);
-              set({ giftTaxBase: parseAmount(v) || undefined });
-            }}
-            hint="신고서 ⑤ 값. §58 한도 산식 분자(가장 최근 합산 회차). 증여자·가액 입력 시 자동 추정(수정 가능)."
-          />
-
-          {/* ⑦ 산출세액 */}
-          <CurrencyInput
-            label="그 회차 산출세액 ⑦"
-            value={
-              gift.computedTax && gift.computedTax > 0
-                ? String(gift.computedTax)
-                : ""
-            }
-            onChange={(v) => {
-              setUserTouchedBaseTax(true);
-              set({ computedTax: parseAmount(v) || undefined });
-            }}
-            hint="신고서 ⑦ 값. §58 가산 증여재산 산출세액(가장 최근 합산 회차). 증여자·가액 입력 시 자동 추정(수정 가능)."
-          />
-
-          {/* 세대생략 토글 */}
-          <ToggleCard
-            tone="rose"
-            title="그 회차에 세대생략 할증 적용 (§57)"
-            description="조부모→손자 등 세대생략 증여 회차였으면 ON. donor=조부모 시 자동 ON 권장."
-            checked={gift.wasGenerationSkip ?? false}
-            onCheckedChange={(v) => set({ wasGenerationSkip: v })}
-          />
-
-          {/* ⑫ 추가 할증세액 (할증 ON 시만) */}
-          {gift.wasGenerationSkip && (
-            <CurrencyInput
-              label="그 회차 추가 할증세액 ⑫"
-              value={
-                gift.additionalGenerationSkipSurcharge &&
-                gift.additionalGenerationSkipSurcharge > 0
-                  ? String(gift.additionalGenerationSkipSurcharge)
-                  : ""
-              }
-              onChange={(v) =>
-                set({
-                  additionalGenerationSkipSurcharge:
-                    parseAmount(v) || undefined,
-                })
-              }
-              hint="신고서 ⑱ 값. §57 누적 기할증과세액 ⑨ 산정용."
-            />
-          )}
-        </div>
-        </>
-      )}
 
     </div>
   );
