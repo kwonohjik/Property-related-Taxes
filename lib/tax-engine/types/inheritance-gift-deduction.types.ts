@@ -290,8 +290,8 @@ export interface GiftApportionment {
   apportionedAmount: number;
   /** 분모 합 ≥ 잔여한도 → 안분 실효(true). 합 < 한도면 각자 전액(false) */
   binding: boolean;
-  /** Phase 1 §53의2 가드: 동시증여+혼인/출산공제 동시 → 혼인·출산공제 미적용 표기 */
-  marriageBirthSkipped?: boolean;
+  /** §53의2 혼인·출산공제 동시증여 안분 후 한도(Phase 2). 혼인/출산공제 미요청 시 undefined */
+  marriageBirthApportionedLimit?: number;
 }
 
 /** 증여공제 계산 결과 */

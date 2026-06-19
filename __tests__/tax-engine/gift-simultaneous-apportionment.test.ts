@@ -99,8 +99,8 @@ describe("동시증여 증여재산공제 안분 — calcRelationDeduction (상�
   });
 });
 
-describe("§53의2 가드 — calcGiftDeductions (동시증여 + 혼인공제 동시)", () => {
-  it("[C-guard] 동시증여 안분 + 혼인공제 요청 → 혼인공제 미적용(0) + marriageBirthSkipped", () => {
+describe("§53의2 혼인·출산공제 동시증여 안분 — calcGiftDeductions (Phase 2, 상증령 §46①)", () => {
+  it("[P2-1] 부모 신고: §53 32.5M + §53의2 안분 65M = total 97.5M", () => {
     const input = makeInput({
       donorRelation: "lineal_ascendant_adult",
       marriageExemption: 100_000_000,
@@ -108,12 +108,44 @@ describe("§53의2 가드 — calcGiftDeductions (동시증여 + 혼인공제 �
     });
     const result = calcGiftDeductions(input, 130_000_000);
     expect(result.relationDeduction).toBe(32_500_000);
-    expect(result.marriageBirthDeduction).toBe(0);
-    expect(result.apportionment?.marriageBirthSkipped).toBe(true);
-    expect(result.totalDeduction).toBe(32_500_000);
+    // §53의2: floor(1억 × 130M ÷ 200M) = 65M
+    expect(result.marriageBirthDeduction).toBe(65_000_000);
+    expect(result.totalDeduction).toBe(97_500_000);
   });
 
-  it("[C-guard2] 동시증여 없으면 혼인공제 정상 적용 (회귀)", () => {
+  it("[P2-2] 조부모 신고: §53 17.5M + §53의2 안분 35M = 52.5M", () => {
+    const input = makeInput({
+      donorRelation: "lineal_ascendant_adult",
+      marriageExemption: 100_000_000,
+      simultaneousGifts: [{ donorRelation: "lineal_ascendant_adult", taxableValue: 130_000_000 }],
+    });
+    const result = calcGiftDeductions(input, 70_000_000);
+    expect(result.marriageBirthDeduction).toBe(35_000_000);
+    expect(result.totalDeduction).toBe(52_500_000);
+  });
+
+  it("[P2-3] 통산 기공제 4천만 차감 후 안분: floor(60M × 130M ÷ 200M) = 39M", () => {
+    const input = makeInput({
+      donorRelation: "lineal_ascendant_adult",
+      marriageExemption: 100_000_000,
+      priorUsedMarriageBirthDeduction: 40_000_000,
+      simultaneousGifts: [{ donorRelation: "lineal_ascendant_adult", taxableValue: 70_000_000 }],
+    });
+    const result = calcGiftDeductions(input, 130_000_000);
+    expect(result.marriageBirthDeduction).toBe(39_000_000);
+  });
+
+  it("[P2-5] 과세가액 캡: §53+§53의2 합이 과세가액 초과 → 과세가액(30M)으로 캡", () => {
+    const input = makeInput({
+      donorRelation: "lineal_ascendant_adult",
+      marriageExemption: 100_000_000,
+      simultaneousGifts: [{ donorRelation: "lineal_ascendant_adult", taxableValue: 70_000_000 }],
+    });
+    const result = calcGiftDeductions(input, 30_000_000);
+    expect(result.totalDeduction).toBe(30_000_000);
+  });
+
+  it("[P2-4] 동시증여 없으면 혼인공제 정상 적용 (회귀)", () => {
     const input = makeInput({
       donorRelation: "lineal_ascendant_adult",
       marriageExemption: 100_000_000,
