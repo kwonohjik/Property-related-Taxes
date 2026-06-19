@@ -1,5 +1,5 @@
 /**
- * 상속세·증여세 계산 엔진 타입 정의
+ * 상속세·증여세 계산 엔진 타입 정의 (barrel)
  *
  * 5개 모듈 간 데이터 계약:
  *   - inheritance-tax.ts (메인 엔진)
@@ -8,15 +8,72 @@
  *   - inheritance-deductions.ts + gift-deductions.ts (공제)
  *   - inheritance-gift-tax-credit.ts (세액공제)
  *   - exemption-rules.ts (비과세)
+ *
+ * 800줄 정책(2026-06-19): 도메인별 타입을 sibling 파일로 분리하고 본 파일이 100% re-export.
+ * 기존 import 경로(`from "./inheritance-gift.types"`)는 무변경 — 본 barrel이 전부 재수출.
+ *   - inheritance-gift-common.types.ts   : CalculationStep·TaxResultMeta
+ *   - inheritance-gift-heir.types.ts      : Heir·CohabitantDependent·ShareholderInfo·HeirAllocation·CohabitReason
+ *   - inheritance-gift-estate.types.ts    : EstateItem·PropertyValuationResult·UnlistedStockData·추정상속·채무
+ *   - inheritance-gift-deduction.types.ts : 상속·증여공제 input/result·재해손실·부수토지지역
  */
 
+// ============================================================
+// 분리 도메인 타입 barrel re-export (2026-06-19)
+// ============================================================
+export type { CalculationStep, TaxResultMeta } from "./inheritance-gift-common.types";
+export type {
+  ValuationMethod,
+  AssetCategory,
+  EstateItem,
+  UnlistedAssetValueOnlyReason,
+  UnlistedStockData,
+  PropertyValuationResult,
+  PresumedCategory,
+  PresumedInheritanceItem,
+  PresumedInheritanceItemResult,
+  DebtCategory,
+  DebtItem,
+} from "./inheritance-gift-estate.types";
+export type {
+  CohabitReasonType,
+  CohabitReason,
+  HeirRelation,
+  Heir,
+  CohabitantDependent,
+  ShareholderInfo,
+  HeirAllocation,
+} from "./inheritance-gift-heir.types";
+export type {
+  CasualtyLossInput,
+  AncillaryLandRegion,
+  InheritanceDeductionInput,
+  InheritanceDeductionResult,
+  DonorRelation,
+  GiftDeductionInput,
+  GiftDeductionResult,
+} from "./inheritance-gift-deduction.types";
+
+// 본 파일 내부 인터페이스에서 사용하는 분리 타입 로컬 import (re-export만으로는 로컬 미생성)
+import type { TaxResultMeta } from "./inheritance-gift-common.types";
 import type {
-  ListedStockClass,
-  ListedCompanySize,
-  ListedPremiumExclusionReason,
-  ListedStockMonthGroups,
-  ListedStockBesshiData,
-} from "./listed-stock-valuation.types";
+  EstateItem,
+  PropertyValuationResult,
+  PresumedInheritanceItem,
+  PresumedInheritanceItemResult,
+  DebtItem,
+} from "./inheritance-gift-estate.types";
+import type { Heir, HeirAllocation } from "./inheritance-gift-heir.types";
+import type {
+  InheritanceDeductionInput,
+  InheritanceDeductionResult,
+  DonorRelation,
+  GiftDeductionInput,
+  GiftDeductionResult,
+} from "./inheritance-gift-deduction.types";
+
+// ============================================================
+// 상장주식 평가 타입 — listed-stock-valuation.types.ts (barrel re-export)
+// ============================================================
 export type {
   ListedStockClass,
   ListedCompanySize,
@@ -29,483 +86,9 @@ export type {
 } from "./listed-stock-valuation.types";
 export { EMPTY_LISTED_STOCK_MONTH_GROUPS } from "./listed-stock-valuation.types";
 
-
 // ============================================================
-// 공통 공유 타입
+// 비상장주식 V2 평가 — unlisted-stock-valuation.types.ts (barrel re-export)
 // ============================================================
-
-/** 계산 단계별 산식·금액 내역 (결과 breakdown 공통) */
-export interface CalculationStep {
-  label: string;
-  amount: number;
-  /** 상증법 §XX 등 근거 조문 */
-  lawRef?: string;
-  note?: string;
-}
-
-/** 공통 계산 결과 메타 */
-export interface TaxResultMeta {
-  breakdown: CalculationStep[];
-  appliedLaws: string[];
-  warnings: string[];
-  /** 계산에 적용된 세법 기준일 (YYYY-MM-DD) */
-  appliedLawDate: string;
-}
-
-// ============================================================
-// 재산평가 (property-valuation.ts)
-// ============================================================
-
-/** 평가 방법 우선순위 (상증법 §60 원칙) */
-export type ValuationMethod =
-  | "market_value"           // 시가 (매매·감정·수용·경매)
-  | "similar_sales"          // 유사매매사례가액 (시행령 §49①5호)
-  | "standard_price"         // 보충적 평가 — 개별공시지가·기준시가
-  | "appraisal"              // 감정평가액
-  | "acquisition_cost"       // 취득가액 (예외적 보충)
-  | "book_value";            // 장부가액 (비상장주식 보충)
-
-/** 평가 대상 자산 종류 */
-export type AssetCategory =
-  | "real_estate_land"       // 토지
-  | "real_estate_building"   // 건물
-  | "real_estate_apartment"  // 아파트 (시세 조회 가능)
-  | "listed_stock"           // 상장주식
-  | "unlisted_stock"         // 비상장주식
-  | "cash"                   // 현금 (지폐·동전 — §22 금융재산공제 대상 아님)
-  | "financial"              // 예금·펀드·채권 (§22 금융재산공제 대상)
-  | "deposit"                // 전세보증금 반환채권 (임차인인 경우 — 상속세 전용)
-  | "other";                 // 기타재산
-
-/** 재산 평가 입력 (단일 자산). 위치 필드 5종(좌표·주소·시·군·구 코드)은 EstateLocationFields mixin */
-export interface EstateItem extends EstateLocationFields {
-  id: string;
-  category: AssetCategory;
-  name: string;
-  /** 시가 (직접 입력 or 조회) — null이면 보충적 평가 */
-  marketValue?: number;
-  /** 개별공시지가 (토지) or 기준시가 (건물·아파트) */
-  standardPrice?: number;
-  /** 감정평가액 */
-  appraisedValue?: number;
-  /** 유사매매사례가액 (상증법 시행령 §49①·④ — "시가로 본다"). market·appraised 존재 시 §49② 단서로 배제(if-chain 자연 후순위). */
-  similarSalesValue?: number;
-  /**
-   * 유사매매사례가액 출처 메타 — §9 D8 (1필드만, similarSalesCandidates 금지).
-   * "manual": 사용자 수동 입력 (기존 동작)
-   * "rtms_auto": RTMS 자동조회 후 사용자가 선택하여 채움
-   * 엔진(resolveValuationMethod)은 이 필드를 소비하지 않음 — UI 표시·출처 추적 전용.
-   */
-  similarSalesSource?: "manual" | "rtms_auto";
-  /** 상장주식: 전후 2개월 일평균 종가 */
-  listedStockAvgPrice?: number;
-  listedStockShares?: number;
-  /** 상장주식 종목코드 (F-01 키움 자동조회 트리거 — 선택) */
-  listedStockCode?: string;
-  /**
-   * §63②3호 (PR-L3): 상장된 법인의 증자로 취득한 새 주식으로서 평가기준일 현재 미상장.
-   * true 시 평가 = (상장 가목 평가액: listedStockAvgPrice) − 배당차액. 이때 listedStockShares는
-   * "증자 신주(미상장) 보유 수"로 의미 전환.
-   */
-  isCapitalIncreaseUnlistedShare?: boolean;
-  /**
-   * §63②3호 미상장 신주 모드 — UI 선택 상태 단일 진실 필드 (H-2 데드락 수정).
-   *
-   * 라디오 value·패널 가시성 게이트·엔진 플래그(`isCapitalIncreaseUnlistedShare`)의
-   * 단일 출처. 날짜 존재 여부에서 파생하지 않음(데드락 원인 제거).
-   *
-   * - "none": 해당없음 (기본, 일반 상장주식)
-   * - "capital_increase": 증자 신주(미상장) — capitalIncreaseDate 별도 입력
-   * - "merger": 합병 신주(미상장) — mergerDate 별도 입력
-   * - undefined: 레거시 호환 — 로드 시 capitalIncreaseDate/mergerDate 존재로 1회 유도
-   *
-   * onChange: 'none' 선택 시 관련 플래그·날짜 초기화.
-   *           'capital_increase'/'merger' 선택 시 isCapitalIncreaseUnlistedShare=true + 반대측 날짜 초기화.
-   * 엔진은 isCapitalIncreaseUnlistedShare 플래그만 소비 — 본 필드는 UI 메타.
-   */
-  unlistedShareMode?: "none" | "capital_increase" | "merger";
-  /** §63②3호 배당차액 (원/주, 직접 입력 — 시행규칙 §18② / 산식 박스 L-1) */
-  listedStockDividendDifference?: number;
-  /** §18② 단서: 정관상 신주의 배당기산일을 기존 상장주식과 동일하게 정함 → 배당차액 0 */
-  dividendBaseDateSameAsListed?: boolean;
-
-  // ============================================================
-  // 상장주식 평가조서(갑·을) 재현용 필드 (PR-LS-01 ~ LS-10)
-  // 계획: docs/00-pm/listed-stock-besshi-form-replica.plan.md
-  // 디자인: docs/02-design/features/listed-stock-besshi-form-replica.engine.design.md
-  // ============================================================
-  /** 갑지 ① 법인명 */
-  companyName?: string;
-  /** 갑지 ② 대표자 */
-  representative?: string;
-  /** 갑지 ③ 법인 소재지 */
-  companyAddress?: string;
-  /** 갑지 ⑤ 평가대상 주식 종류 (보통주/우선주) */
-  stockClass?: ListedStockClass;
-  /** 갑지 ⑥ 상장일자 */
-  listingDate?: Date | string;
-  /** 갑지 ⑦ 증자일자 — §63②3호·시행령 §52의2② 평가구간 단축 트리거 */
-  capitalIncreaseDate?: Date | string;
-  /** 갑지 ⑧ 합병일자 — §63②3호·시행령 §52의2② */
-  mergerDate?: Date | string;
-
-  /** §63③ 최대주주 등 할증평가 적용 토글 */
-  isMaxShareholder?: boolean;
-  /** §53④ 기업 규모 (중소·중견 자동 배제) */
-  companySize?: ListedCompanySize;
-  /** §53⑧ 1~9호 + 중소·중견 배제 사유 */
-  premiumExclusionReason?: ListedPremiumExclusionReason;
-
-  /** 갑지 ⑪ 직전기 배당률 (decimal 0~1, store 단위) */
-  priorDividendRate?: number;
-  /** 1주당 액면가 — §63②3호 분기 시 명시 입력 필수 (자동 fallback 금지) */
-  faceValuePerShare?: number;
-  /** 갑지 ⑬ 배당기산일 (주금납입 다음날) */
-  dividendBaseDate?: Date | string;
-
-  /**
-   * 을지 일자별 종가 4그룹 캐시 — 자동조회 채널-fill 전용.
-   * UI 입력 폼은 보유하지 않음. lib/calc/listed-stock-besshi.ts 어댑터가 채움.
-   * [[mirror-pattern]] 예외: 사용자 입력 mirror가 아닌 외부 시세 응답의 1회 캐시.
-   */
-  listedStockDailyGroupsInput?: ListedStockMonthGroups;
-
-  // ============================================================
-  // 평가기준일 anchor shift (상증령 §52의2 — 이미지 13)
-  // 자동조회 응답 channel-fill 전용. 갑지 ④·평가구간 표시.
-  // ============================================================
-  /** anchor 보정 결과 ISO YYYY-MM-DD (사용자 입력 valuationDate이 거래일이면 동일) */
-  resolvedValuationAnchor?: string;
-  /** anchor가 사용자 입력과 다른지 여부 */
-  valuationAnchorShifted?: boolean;
-  /** shift 사유 라벨 ("토요일" / "일요일" / "납회기간" / "휴장일" 등) */
-  valuationAnchorShiftReason?: string;
-  /** 평가구간 시작 (anchor − 2개월 + 1일) */
-  valuationPeriodStart?: string;
-  /** 평가구간 종료 (anchor + 2개월 − 1일) */
-  valuationPeriodEnd?: string;
-
-  /** 비상장주식 평가 데이터 (legacy 입력 모드) */
-  unlistedStockData?: UnlistedStockData;
-  /** 비상장주식 V2 평가 입력 (별지 부표3 완전 재현 — Phase 2~4) */
-  unlistedStockValuationV2?: UnlistedStockValuationInput;
-  /**
-   * 비상장주식 간편/정식 평가 모드 선택 (PR-K: 모드 선택기 재설계).
-   * - "simple": 간편평가 — 순손익·순자산 회사 전체값 2개 수치 입력 (calcUnlistedStockPerShareValue)
-   * - "formal": 정식평가 — 별지 부표3 완전 재현 (evaluateUnlistedStockV2)
-   * - undefined: 레거시 호환 (unlistedStockValuationV2 존재 시 formal, 없으면 simple로 동작)
-   * 모드 전환 시 반대 모드 데이터는 폼 state에 보존 (데이터 손실 0).
-   * 엔진 전달 전 resolveActiveUnlistedValuation 헬퍼가 비활성 데이터를 strip.
-   */
-  unlistedValuationMode?: "simple" | "formal";
-  /** 임대차 정보 (임대보증금 차감) */
-  leaseDeposit?: number;
-  /** 저당권 설정 여부 */
-  mortgageAmount?: number;
-  /** 월 임대료 (원) — §61⑤·시행규칙 §15의2 임대료환산가액=(월세×12÷0.12)+임대보증금. 보충평가(standard_price) 시만 비교. */
-  monthlyRent?: number;
-  /** 신용보증기관 보증액 (원) — 시행령 §63② 저당 담보채권액에서 차감(§66 1호 한정, 음수 가드). */
-  creditGuaranteeAmount?: number;
-
-  // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
-  /**
-   * 명시 opt-in — ON 시 담보채권액(`mortgageAmount + leaseDeposit`)을 §14①3호 부채로 자동 공제.
-   * undefined/false=미반영 (자동 침묵 금지). 물상보증(타인 채무 담보)은 §14 공제 대상 아니므로 OFF 유지.
-   */
-  deductSecuredClaimAsDebt?: boolean;
-  /**
-   * `mortgageAmount`(저당)가 §10①1호 입증 금융회사 채무인지 — §22 순금융재산 차감 여부.
-   * `leaseDeposit`(임대보증금)은 §19④ 금융회사 채무가 아니므로 §22 차감에서 항상 제외.
-   */
-  securedClaimIsFinancialDebt?: boolean;
-  /** 담보채무 자동노출 카드 표시명 (미입력 시 "{name} 담보채무") */
-  securedClaimCreditorName?: string;
-
-  // ===== 종합사례 PDF 확장 (Design §2-1) =====
-  /** 협의분할 — 상속인별 분배 (합 = valuatedAmount) */
-  heirAllocations?: HeirAllocation[];
-  /** 간주상속재산 표시 분류 (본법 §8 보험금 / §9 신탁 / §10 퇴직금). 결과 카드 분리 노출용. */
-  deemedCategory?: "retirement" | "insurance" | "trust";
-
-  // ===== 물납 충당순위 분류 (상증령 §74②, 갭4) — 물납 안내 카드 전용(결정세액 미영향) =====
-  /**
-   * 상속인 거주 주택·부수토지 (§74②6호) — 충당 최후순위.
-   * 부동산 자산 한정. true 시 충당순서 표시상 일반 국내부동산(3호)에서 분리되어 6순위로,
-   * §73④ 비상장 캡 기준에서 차감. 요건1(§73①1호 부동산·유가증권 분자)에는 포함(국내 부동산).
-   * (유가증권 분류 government_bond/restricted_listed는 §73①3호 "금융재산" 정의와의
-   *  이중계상 검증 후 후속 — 본 PR은 거주주택만.)
-   */
-  isHeirResidenceProperty?: boolean;
-  /** 가업상속재산 여부 — 직접 입력 모드 표시용 */
-  isFamilyBusinessAsset?: boolean;
-  /**
-   * §23의2 동거주택 상속공제 — 자산 카드에서 명시 지정한 동거주택(단일).
-   * true 시 deriveCohabitHouseStdPrice가 본 자산의 standardPrice(gross)와 mortgageAmount(담보채무)를
-   * cohabitHouseStdPrice·cohabitSecuredDebt로 도출. 복수 지정은 자동도출 포기(isApplicable=false).
-   */
-  isCohabitantHouse?: boolean;
-  /**
-   * §23의2 동거주택 자산 유형 구분 (폼·UI용).
-   * isCohabitantHouse=true 시 함께 지정.
-   *
-   * - "house":              일반 주택 (기본값, undefined=house 동일 취급)
-   * - "single_redev_right": 1세대1주택 멸실 취득 단일 조합원입주권 → 적용
-   *                         (재산세제과-230·237, NTS[113036] V-1 확정)
-   * - "one_plus_one_right":  1주택→2입주권 재개발 → 미적용 (조심 2021중6665)
-   * - "sale_right":          주택분양권 → 미적용 (§23의2① "주택" 문언)
-   */
-  cohabitHouseRightType?: "house" | "single_redev_right" | "one_plus_one_right" | "sale_right";
-
-  // ===== 상속개시자료 요약 4표 — Table A 비고/수량 열 (2026-05-28) =====
-  /**
-   * 평가방식 enum — 결과뷰 Table A 비고 열 단일 도출. 기존 `ValuationMethod` 타입 재사용.
-   * 2026-06-08: UI 라디오 삭제. 잔존=하위호환·수동 override 여지(D-5).
-   * 소비처는 `item.valuationMethod ?? resolveValuationMethod(item)` 패턴(명시 우선, 없으면 입력 금액에서 도출).
-   * 도출 우선순위(§49②④): marketValue→"시가" / appraisedValue→"감정가액" / similarSalesValue→"매매사례가액" / standardPrice→"기준시가".
-   */
-  valuationMethod?: ValuationMethod;
-  /** 부동산 면적 (㎡) — Table A "수량(면적)" 열 표시용. 미입력 시 Σ(heirAllocations.areaM2) fallback. */
-  areaSqm?: number;
-  /** 기타자산 수량 (점 등) — category==="other"일 때 Table A 수량 열 표시. */
-  quantityCount?: number;
-
-  // ===== §22 금융재산상속공제 자동화 (2026-05-21) =====
-  /**
-   * §22 금융재산공제 대상 여부 (사용자 명시 체크).
-   * 법령: 상증령 §19① — 금융회사등 취급 예금·적금·신탁(금전)·보험금·주식·채권·수익증권 등.
-   * 우선순위: 명시값 > deemedCategory override > 카테고리 default.
-   * - undefined: 자동 추론 (resolveFinancialEligibility 헬퍼)
-   * - true: 명시 포함
-   * - false: 명시 제외 (§22② 차명·미신고 등)
-   * 안전 default 정책: 모호한 경우(특히 신탁) false 채택 — 사용자가 명시적으로 포함 체크 필요.
-   */
-  isFinancialAssetForDeduction?: boolean;
-  /**
-   * §22② 최대주주 보유주식 법정 강제 배제 (상장·비상장 V1·V2 공용 직속 필드).
-   *
-   * 법령: 상속세 및 증여세법 §22② — 최대주주 및 최대출자자와 그 특수관계인이 보유하는 주식등은
-   *       §22 금융재산공제 금융재산에 포함되지 아니한다.
-   *
-   * - true : §22② 적용 → resolveFinancialEligibility 우선순위 0 가드에 의해 eligible=false (강제 배제)
-   * - false : §22② 미적용 → §19① 기본 eligible(true) 보존
-   * - undefined : 미설정 → 하위 경로(V2 nested 포함) 또는 카테고리 default 추론
-   *
-   * OR 호환: 비상장 V2의 기존 필드 `unlistedStockValuationV2.isSection22MajorShareholder`와
-   *          OR 체크 — 어느 쪽이든 true이면 배제. V2 nested 경로는 변경 없이 유지.
-   *
-   * 우선순위: 직속·V2 nested(우선순위 0) > isFinancialAssetForDeduction(우선순위 1)
-   */
-  isSection22MajorShareholder?: boolean;
-  /**
-   * 신탁 유형 — deemedCategory==="trust"일 때만 의미.
-   * §19① "금전신탁만" §22 적용 — trustType==="cash_trust"만 default true, 그 외 false.
-   * 미입력 시 보수적으로 §22 미적용.
-   */
-  trustType?: "cash_trust" | "real_estate" | "security" | "other";
-
-  // ===== 영농상속공제 자동화 (2026-05-21, §18의3 + 시행령 §16⑤) =====
-  /**
-   * 영농상속 자산 분류 (시행령 §16⑤ 1호 가~사 + 2호).
-   * undefined: 영농 자산 아님.
-   * suggestFarmingAssetValue가 본 필드로 자동 필터링.
-   * 카테고리 호환:
-   *   - real_estate_* · other: farmland/pasture/forest_land/fishing_vessel/fishing_right/agricultural_building/salt_field
-   *   - listed_stock · unlisted_stock: corporate_stock만 가능
-   *   - financial · cash · deposit: 영농 자산 불가 (UI에서 미노출)
-   */
-  farmingCategory?:
-    | "farmland"              // 가. 농지법 §2①가 농지
-    | "pasture"               // 나. 초지법 §5 초지조성허가 초지
-    | "forest_land"           // 다. 보전산지 산림지 (5년 이상 조림)
-    | "fishing_vessel"        // 라. 어선법 §2① 어선
-    | "fishing_right"         // 마. 어업권·양식업권
-    | "agricultural_building" // 바. 농업용 건축물 + 부속토지
-    | "salt_field"            // 사. 염전
-    | "corporate_stock";      // §16⑤2호 법인 영농 주식
-
-  /**
-   * 어업권·양식업권 면허 제외 (PR-RE-1, 시행령 §16⑤마목 단서).
-   * 마을어업 면허·협동양식업 면허는 영농상속재산가액에서 제외.
-   * farmingCategory==="fishing_right"일 때만 의미. true 시 suggestFarmingAssetValue에서 본 자산 제외.
-   * KoreanLaw MCP 검증 (mst=283637) — §16⑤마목 "어업권 또는 「양식산업발전법」에 따른 양식업권
-   *   (「수산업법」 제8조에 따른 마을어업 면허 및 「양식산업발전법」 제10조제1항에 따른 협동양식업
-   *   면허는 제외한다)"
-   */
-  fishingLicenseExcluded?: boolean;
-
-  // ===== §74 지정문화유산 등 징수유예 (상증법 §74 / 상증령 §76①) =====
-  /**
-   * §74①각호 지정문화유산 분류. undefined=해당 없음.
-   * 담보 면제(§74⑤): "designated"·"natural_monument"만 가능.
-   * 2호 박물관자료: 사립은 공익법인등만(UI 안내, 엔진은 type 신뢰).
-   * 징수유예세액 = 산출세액 × (해당 재산가액 ÷ 상속재산[§13 가산증여 포함]) — 비례 방식(조심 940708).
-   */
-  culturalHeritageType?:
-    | "heritage_data"      // 1호 문화유산자료등
-    | "museum"             // 2호 박물관자료등
-    | "designated"         // 3호 국가지정문화유산등 (담보 면제)
-    | "natural_monument";  // 4호 천연기념물등       (담보 면제)
-
-  /** 가업상속 자산 분류 (상증령 §15⑤). farmingCategory 동시 선택 시 validate 차단 (asset_dual_category_conflict). 타입: inheritance-family-business.types.ts */
-  familyBusinessCategory?: FamilyBusinessCategory;
-  /** 법인 영농·가업상속 주식 사업무관자산 (시행령 §15⑤2호 + §16⑤2호). corporate_stock일 때만 의미. 타입: inheritance-corporate-non-business.types.ts */
-  corporateNonBusinessAssets?: CorporateNonBusinessAssets;
-  /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
-  corporateTotalAssets?: number;
-  /**
-   * 영농상속재산 — 피상속인이 상속개시일 2년 전부터 영농에 사용 (§16⑤1호 본문).
-   * undefined=충족 가정(legacy 호환), false=미충족 → suggestFarmingAssetValue에서 제외.
-   *
-   * farmingUseStartDate 입력 시 자동판정 우선, 미입력 시 본 필드 수동 fallback.
-   */
-  farmingUsedTwoYears?: boolean;
-  /**
-   * 영농 사용 개시일 (YYYY-MM-DD, §16⑤1호 — "상속개시일 2년 전부터 영농에 사용한 자산").
-   *
-   * 판정 기준: 취득일이 아닌 실제 영농 사용 시작일 (조심2014중4319: 상속개시 2년 이내 취득·사용
-   * 농지는 §16⑤1호 미충족). 자동판정: farmingUseStartDate <= twoYearsBefore(deathDate)이면 충족.
-   *
-   * 우선순위: farmingUseStartDate(자동) > farmingUsedTwoYears(수동 boolean fallback).
-   * string 비교 YYYY-MM-DD — Date 변환 금지 ([[feedback_api_date_serialize]]).
-   * 2/29 edge는 드물어 무시 (주석).
-   */
-  farmingUseStartDate?: string;
-
-  // ===== 조특법 특례 2-스트림 분리과세 (2026-06-11, §30의5⑪·§30의6⑤) =====
-  /**
-   * 해당 자산이 조특법 특례(창업자금·가업승계) 귀속 자산인지 여부.
-   *
-   * 법령 근거:
-   *   §30의5⑪: 창업자금 외의 일반 증여재산은 특례 과세가액에 §47② 합산 금지.
-   *             → 자산별로 특례 스트림 vs 일반 스트림을 명시 구분해야 함.
-   *
-   * 귀속 규칙:
-   *   - giftItems 1개 + specialTreatment 선택: 자동 특례 귀속 (본 필드 불필요)
-   *   - giftItems N개 + specialTreatment 선택: 자산-수준 명시 필수.
-   *     true  → 특례 스트림 (창업자금·가업승계 자산)
-   *     false → 일반 스트림
-   *     undefined + N개 혼합: validation 차단 ("특례 귀속 자산을 선택해 주세요")
-   *   - specialTreatment 미선택: 본 필드 무시
-   */
-  isSpecialTreatmentAsset?: boolean;
-
-  // ===== §47① 부담부증여 채무인수 (gift-burdened-debt-47-1) =====
-  /**
-   * §47① 부담부증여 수증자 인수 채무액 (원).
-   *
-   * 법령: 상증법 §47① — "증여세 과세가액은 증여재산가액을 합친 금액에서
-   *       그 증여재산에 담보된 채무(그 증여재산에 관련된 채무 등 대통령령으로 정하는
-   *       채무를 포함한다)로서 수증자가 인수한 금액을 뺀 금액으로 한다."
-   *
-   * 성질 구분:
-   *   - 이 필드: §47① **과세가액 차감** (증여 전용)
-   *   - mortgageAmount: §66 MAX 평가 상향 + 선택적으로 §14 상속채무 공제 (상속 전용)
-   *   두 필드는 동일 자산에 공존 가능 — §66 MAX 교차 케이스 허용.
-   *
-   * undefined/0: 부담부증여 아님 (기본).
-   * 양수: 수증자가 인수하기로 한 채무액.
-   * 음수 가드: Math.max(0, ...) 엔진에서 처리.
-   * §47③ 배우자·직계존비속: UI에서 안내 문구 표시, 차단 안 함.
-   */
-  assumedDebtForGift?: number;
-
-  /**
-   * §47③ 부담부증여 채무 인수 객관적 입증 여부 토글 (배우자·직계존비속 한정).
-   *
-   * 법령: 상증법 §47③ — "배우자·직계존비속 간 부담부증여는 채무 인수를 추정하지 아니한다.
-   *       다만, 객관적으로 인정되는 것인 경우에는 그러하지 아니하다."
-   *
-   * - undefined/false: 미입증 (기본 — §47③ 추정 배제).
-   * - true: 입증됨 (금융기관 채무 확인서 등 객관적 증빙 첨부).
-   *
-   * 엔진은 assumedDebtForGift > 0이면 관계 불문 차감 처리.
-   * UI에서 donorRelation이 배우자/직계존비속인 경우 이 토글 ON 시 안내 문구 표시.
-   * 자동 차단(validation 오류) 금지 — §47③ 단서 "객관적으로 인정되는 것"에 해당 시 인정.
-   */
-  burdenedGiftDebtConfirmed?: boolean;
-
-  // 위치 필드(좌표·주소·시·군·구 코드)는 EstateLocationFields mixin — 본 인터페이스에 직접 정의 안 함
-}
-
-/**
- * 시행령 §54④ 순자산가치만 적용 사유.
- *   - liquidation: 1호 청산절차 진행·사업계속 곤란
- *   - lt3y: 2호 사업개시 전·3년 미만·휴업·폐업
- *   - real_estate_80: 3호 부동산 비율 80% 이상 (단서: 가중평균 < 1주당 순자산가치인 경우만)
- *   - stock_80: 5호 주식 등 가액 80% 이상 (단서: 가중평균 < 1주당 순자산가치인 경우만)
- *   - remaining_3y: 6호 잔여 존속기한 3년 이내
- */
-export type UnlistedAssetValueOnlyReason =
-  | "liquidation"
-  | "lt3y"
-  | "real_estate_80"
-  | "stock_80"
-  | "remaining_3y";
-
-/** 비상장주식 평가 데이터 (시행령 §54) */
-export interface UnlistedStockData {
-  totalShares: number;
-  ownedShares: number;
-  /**
-   * @deprecated 직접 입력 폐지 — netIncomeY1~Y3 가중평균으로 대체.
-   * legacy 저장 데이터 fallback용으로 유지. resolveWeightedNetIncome() 경유 사용.
-   */
-  weightedNetIncome: number;
-  /**
-   * 평가기준일 직전 1사업연도 순손익액 (회사 전체, 가중치 ×3) — 상증령 §56①
-   * 결손 연도는 음수 입력 허용.
-   */
-  netIncomeY1?: number;
-  /** 직전 2사업연도 순손익액 (가중치 ×2) — 상증령 §56① */
-  netIncomeY2?: number;
-  /** 직전 3사업연도 순손익액 (가중치 ×1) — 상증령 §56① */
-  netIncomeY3?: number;
-  /** 순자산가치 */
-  netAssetValue: number;
-  /** 자본환원율 (기본 10%) */
-  capitalizationRate: number;
-  /**
-   * §54④ 순자산가치만 적용 사유 (선택).
-   * 1·2·6호는 무조건 순자산가치 / 3·5호는 단서(가중평균 < 1주당 순자산가치인 경우만) 적용.
-   */
-  assetValueOnlyReason?: UnlistedAssetValueOnlyReason;
-  /**
-   * 부동산과다보유법인 여부 (소법 §94①4호다목) — 가중치 반전(순손익가치×2 + 순자산가치×3 ÷ 5).
-   * 상증령 §54① 본문 괄호. 미지정 시 false(일반 법인, 순손익×3 + 순자산×2 ÷ 5).
-   */
-  isRealEstateHeavy?: boolean;
-}
-
-/** 재산 평가 결과 (단일 자산) */
-export interface PropertyValuationResult {
-  estateItemId: string;
-  method: ValuationMethod;
-  valuatedAmount: number;
-  breakdown: CalculationStep[];
-  warnings: string[];
-  /**
-   * 상장주식 평가조서(갑·을) 100% 재현용 echo 데이터.
-   * `evaluateListedStock` 만 채움 (다른 평가 함수는 undefined).
-   * UI/PDF가 본 echo를 single source로 사용 — UI 재계산 금지.
-   */
-  besshiData?: ListedStockBesshiData;
-}
-
-// ============================================================
-// 비상장주식 V2 평가 — unlisted-stock-valuation.types.ts로 분리 (2026-05-22, 800줄 정책)
-// ============================================================
-// 기존 import 경로 보존을 위한 barrel re-export
-import type {
-  UnlistedNetAssetOnlyReason,
-  UnlistedPremiumExclusionReason,
-  UnlistedCapitalChange,
-  FiscalYearAdjustment,
-  UnlistedNetAssetCalculation,
-  UnlistedStockValuationInput,
-  FiscalYearBreakdown,
-  UnlistedGoodwillResult,
-  UnlistedStockValuationResult,
-} from "./unlisted-stock-valuation.types";
 export type {
   UnlistedNetAssetOnlyReason,
   UnlistedPremiumExclusionReason,
@@ -516,23 +99,102 @@ export type {
   FiscalYearBreakdown,
   UnlistedGoodwillResult,
   UnlistedStockValuationResult,
-};
+} from "./unlisted-stock-valuation.types";
 
 // ============================================================
-// 비과세·과세가액 불산입 — inheritance-exemption.types.ts로 분리 (2026-05-21, 800줄 정책)
+// 비과세·과세가액 불산입 — inheritance-exemption.types.ts (barrel re-export)
 // ============================================================
-// 기존 import 경로 보존을 위한 barrel re-export
 import type {
   ExemptionCheckedItem,
-  ExemptionInput,
   ExemptionResult,
   ExemptionItemResult,
 } from "./inheritance-exemption.types";
-export type { ExemptionCheckedItem, ExemptionInput, ExemptionResult, ExemptionItemResult };
+export type { ExemptionCheckedItem, ExemptionInput, ExemptionResult, ExemptionItemResult } from "./inheritance-exemption.types";
 
 // ============================================================
-// 사전증여 내역 (상증법 §13·§47)
+// 사전증여 내역 (상증법 §13·§47) — inheritance-prior-gift.types.ts (barrel re-export)
 // ============================================================
+import type { PriorGift } from "./inheritance-prior-gift.types";
+export type { PriorGift, GiftPriorPropertyCategory, EstatePropertyKindCode } from "./inheritance-prior-gift.types";
+
+// 물납 §73 타입 — inheritance-payment-in-kind.types.ts (barrel re-export)
+export type {
+  PaymentInKindAssets,
+  PaymentInKindInput,
+  PaymentInKindRequirement,
+  FillOrderStep,
+  PaymentInKindResult,
+} from "./inheritance-payment-in-kind.types";
+
+// ============================================================
+// 상속인별 배부 + 영리법인 면제 — inheritance-allocation-result.types.ts (barrel re-export)
+// ============================================================
+import type {
+  CorporateExemptionResult,
+  HeirAllocationResult,
+} from "./inheritance-allocation-result.types";
+export type {
+  HeirTaxBreakdown,
+  HeirAllocationResult,
+  AllocationMismatch,
+  CorporateExemptionResult,
+  PerCorporateExemptionDetail,
+  ShareholderPaymentDetail,
+} from "./inheritance-allocation-result.types";
+
+// ============================================================
+// 공제 상세·영농·가업·사후관리·법인·위치 타입 (barrel re-export)
+// ============================================================
+import type { FamilyBusinessPostMgmtMeta } from "./inheritance-family-business-postmgmt.types";
+export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
+export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard, FamilyBusinessUnit, MultipleFamilyBusinessLineItem, MultipleFamilyBusinessResult } from "./inheritance-family-business.types";
+export type {
+  FamilyBusinessPostMgmtMeta,
+  FamilyBusinessPostMgmtInput,
+  FamilyBusinessPostMgmtResult,
+  PostMgmtViolationDetail,
+  PostMgmtEmploymentResult,
+  ViolationEvent,
+  JustifiableReasonEvent,
+  JustifiableReasonCode,
+  CessationSubType,
+  EmploymentTracking,
+  MonthlyEmploymentData,
+  PostMgmtAssetType,
+  AmendmentReturnData,
+} from "./inheritance-family-business-postmgmt.types";
+export type { CorporateNonBusinessAssets, CorporateStockAdjustedResult } from "./inheritance-corporate-non-business.types";
+export type { LatLng, EstateAddress } from "./inheritance-asset-location.types";
+export type {
+  LumpSumComparisonDetail,
+  SpouseLegalShareTable,
+  SpouseActualAmountTable,
+  SpouseDeductionDetail,
+  FinancialBreakdownRow,
+  FinancialDeductionDetail,
+  CohabitDeductionDetail,
+  DeductionLimitCeilingDetail,
+  PersonalDeductionDetail,
+  CasualtyLossDeductionDetail,
+} from "./inheritance-deduction-detail.types";
+export { FARMING_MAX } from "./inheritance-farming.types";
+export { FAMILY_BUSINESS_CAP_10Y, FAMILY_BUSINESS_CAP_20Y, FAMILY_BUSINESS_CAP_30Y, FAMILY_BUSINESS_SCALE_THRESHOLD, FAMILY_BUSINESS_OTHER_ESTATE_RATIO } from "./inheritance-family-business.types";
+
+// ============================================================
+// 세액공제 입력 (credits/) — inheritance-tax-credit.types.ts (barrel re-export)
+// ============================================================
+import type {
+  InheritanceTaxCreditInput,
+  GiftTaxCreditInput,
+  TaxCreditResult,
+} from "./inheritance-tax-credit.types";
+export type {
+  InheritanceTaxCreditInput,
+  GiftTaxCreditInput,
+  TaxCreditResult,
+  ShortTermReinheritAsset,
+  ShortTermReinheritPerAsset,
+} from "./inheritance-tax-credit.types";
 
 // ============================================================
 // 증여자 관계 (§47② 동일인 그룹화 + §57 적용 판정)
@@ -561,18 +223,6 @@ export type GiftDonorRelation =
   | "other";
 
 export type DonorGroup = "A" | "B" | "C" | "D" | "E" | "F" | "G";
-
-// PriorGift·GiftPriorPropertyCategory·EstatePropertyKindCode — sibling 파일로 분리 (800줄 정책, 2026-05-22)
-import type { PriorGift } from "./inheritance-prior-gift.types";
-export type { PriorGift, GiftPriorPropertyCategory, EstatePropertyKindCode } from "./inheritance-prior-gift.types";
-// 물납 §73 타입 — sibling 파일로 분리 (800줄 정책)
-export type {
-  PaymentInKindAssets,
-  PaymentInKindInput,
-  PaymentInKindRequirement,
-  FillOrderStep,
-  PaymentInKindResult,
-} from "./inheritance-payment-in-kind.types";
 
 // ============================================================
 // §57 할증 한도 detail (사례 2 PDF 표 ⑧⑨⑩⑪⑫⑬ 재현용)
@@ -685,705 +335,6 @@ export interface FilingFormRow {
   /** 별지 제10호서식 2-column grid 배치 (구 buildFilingFormRows는 undefined → UI 단일 컬럼 fallback) */
   column?: "left" | "right";
 }
-
-// ============================================================
-// §23의2② 부득이사유 타입 (Phase 4 — 2026-06-07)
-// ============================================================
-
-/**
- * §23의2② + 상증령 §20의2② + 시행규칙 §9의2 부득이한 사유 유형.
- *
- * 법령 근거 (KoreanLaw MST 283637·284609 실측):
- *   conscription:          §20의2②1호 직접 열거 (징집)
- *   schooling:             §20의2②2호 + 시행규칙 §9의2①1호 (고교·대학·국내대학원; 초·중학교 제외)
- *   work:                  §20의2②2호 + 시행규칙 §9의2①2호 (근무상 형편)
- *   medical:               §20의2②2호 + 시행규칙 §9의2①3호 (1년 이상 질병 요양)
- *   reconstruction_lease:  해석례 미확인(교재 재산-248 근거) → INCLUDED(차감 없음) + UI amber 경고
- *   overseas_grad:         시행규칙 §9의2①1호 적용 불가(국내 고등교육법 학교 한정) → NOT_RECOGNIZED + 계속성 경고
- *
- * 효과 분류:
- *   EXCLUDED (conscription·schooling·work·medical): §23의2② 본문 — 계속 동거 인정, 동거기간 차감
- *   INCLUDED (reconstruction_lease): 해석례상 차감 배제 — rawYears에 그대로 포함
- *   NOT_RECOGNIZED (overseas_grad): 법정 사유 미해당 — 차감 없음 + 계속성 단절 경고
- */
-export type CohabitReasonType =
-  | "conscription"         // 징집 (§20의2②1호) → EXCLUDED
-  | "schooling"            // 취학 — 고교·대학·국내대학원 (시행규칙 §9의2①1호) → EXCLUDED
-  | "work"                 // 근무상 형편 (시행규칙 §9의2①2호) → EXCLUDED
-  | "medical"              // 질병 요양 1년 이상 (시행규칙 §9의2①3호) → EXCLUDED
-  | "reconstruction_lease" // 재건축 전세 — 해석례 미확인(교재 근거) → INCLUDED
-  | "overseas_grad";       // 국외 대학원 — 법정 사유 미해당 → NOT_RECOGNIZED
-
-/**
- * §23의2② 부득이한 사유 1건.
- *
- * 입력 규칙:
- *   - startDate·endDate: YYYY-MM-DD (ISO date string)
- *   - startDate < endDate 검증은 Zod에서 .superRefine() 처리
- *   - 기간이 동거기간(cohabitStartDate~deathDate) 밖이면 엔진이 clamp 처리
- */
-export interface CohabitReason {
-  type: CohabitReasonType;
-  startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
-}
-
-// ============================================================
-// 상속인 정보
-// ============================================================
-
-/** 상속인 관계 */
-export type HeirRelation =
-  | "spouse"
-  | "child"
-  | "lineal_ascendant"
-  | "sibling"
-  | "other"
-  // ===== 종합사례 PDF 확장 (Design §2-0) =====
-  | "legatee"         // 비상속인 수유자 (자연인, 예: 손녀)
-  | "corporate";      // 비상속인 영리법인 수증자
-
-/** 상속인 정보 */
-export interface Heir {
-  id: string;
-  relation: HeirRelation;
-  name?: string;
-  /** 주민등록번호 (각 신고서 인적사항 칸 — 계산 미사용, 식별정보) */
-  residentNumber?: string;
-  birthDate?: string;
-  isDisabled?: boolean;
-  /**
-   * 성별 — 장애인공제(§20①4호) 성별·연령별 기대여명 계산용.
-   * 장애인(isDisabled===true) 시 필수. 미입력 시 validation 차단 (자동추정 금지).
-   * 미성년자·연로자공제는 성별 불필요.
-   */
-  gender?: "male" | "female";
-  /**
-   * 태아 여부 — §20①1호·2호 "태아를 포함한다" (2023.1.1.~).
-   * 자녀공제(1호): count 포함. 미성년자공제(2호): 만 0세 간주 → (19−0)×1천만=1.9억.
-   * 시행령 §18② 신고기한 내 임신 확인 서류 제출 요건.
-   */
-  isFetus?: boolean;
-  /**
-   * @deprecated 2026-05-26 — 전역 협의분할 비율 폐지. 협의분할은 자산별 `heirAllocations`로 일원화,
-   * 미입력 자산은 법정상속분 자동 배분(`inheritance-legal-share.ts`). 엔진 미사용 —
-   * sessionStorage 기존 데이터 호환을 위해 타입만 잔류(validator/UI 제거됨).
-   */
-  actualShareRatio?: number;
-  isCohabitant?: boolean;
-  // ===== 종합사례 PDF 확장 =====
-  /** 상속인 vs 수유자·영리법인 구분. 미입력 시 relation으로 자동 추론. */
-  isHeir?: boolean;
-  /**
-   * 영리법인 여부 (relation === "corporate"일 때만 의미) — Step1에서 결정 (donee-phase2).
-   * undefined·true = 영리법인(§3의2② 면제·산출세액 상당액 자동), false = 비영리법인(§3의2② 미적용).
-   * 미설정 시 영리법인으로 간주(기존 corporate Heir 호환).
-   */
-  isForProfit?: boolean;
-  /** 세대생략 수유자(직계비속 손자녀) — §27 ② 30%/40% 할증 대상 */
-  isGenerationSkipBeneficiary?: boolean;
-  /**
-   * 민법 §1001 대습상속 여부 — 상증법 §27 단서(세대생략 할증 배제).
-   * isGenerationSkipBeneficiary(직계비속 세대생략)이면서 대습상속(부모 사망·결격으로 갈음 상속)인 경우 true
-   * → §27 할증 전액 배제(30%·40% 모두). 자동 판정 불가 → 사용자 명시.
-   * v1: 직계비속 대습(§1001)·배우자 대습(§1003②) 미구분 — generic 1플래그가 양자 포괄.
-   * 신규(2026-06-09): substituteGroupId 보유 시 cohabit-helpers가 본 플래그와 동치 처리(파생).
-   */
-  isSubstituteInheritance?: boolean;
-
-  // ===== 대습상속 법정상속분 반영 (민법 §1001·§1003②·§1010, 2026-06-09) =====
-  /**
-   * 대습상속 그룹 식별자 — 같은 피대습자(상속개시 전 사망·결격된 자녀·형제)를 갈음하는
-   * 대습상속인들이 공유. 존재 시 이 Heir는 **대습상속인**(실제 상속인) —
-   * computeLegalShares가 피대습 슬롯을 §1010②로 재분배한다.
-   * 피대습자는 별도 Heir 엔트리로 만들지 않음(그룹키 방식). relation은 표시용,
-   * 그룹 판정은 본 필드 단독(enum substring 매칭 금지).
-   */
-  substituteGroupId?: string;
-  /**
-   * 피대습자의 원래 상속순위 — §1001은 1순위(직계비속)·3순위(형제자매)만 대습 가능.
-   * "child"=사망 자녀 / "sibling"=사망 형제자매. (2순위 직계존속·배우자 본인 대습 없음)
-   * computeLegalShares가 어느 그룹 슬롯을 차지하는지 결정.
-   */
-  substituteForRelation?: "child" | "sibling";
-  /**
-   * 대습 그룹 내 역할 — §1010②/§1009 재분배 비율(통일 가중치 spouse=3·descendant=2).
-   * "spouse"=피대습자의 배우자(며느리·사위·형수·매부, §1003②) /
-   * "descendant"=피대습자의 직계비속(손자녀·조카).
-   */
-  substituteRole?: "spouse" | "descendant";
-  /**
-   * 피대습자(상속개시 전 사망·결격된 자녀·형제) 성명 — **표시 전용**(엔진 미사용).
-   * 같은 substituteGroupId 멤버가 공유. UI 그룹 라벨("故 {name} 갈음")·신고서 표시에만 사용.
-   */
-  substituteAncestorName?: string;
-
-  /**
-   * §27 미성년 여부 수동 override (3-state).
-   * - undefined: birthDate 기반 자동 판정 (differenceInYears(deathDate, birthDate) < 19, 민법 §4)
-   * - true:  강제 미성년 처리 (연령 개정 대비 or birthDate 미입력 시 수동)
-   * - false: 강제 성년 처리 (자동 판정 결과 무효화)
-   */
-  isMinorOverride?: boolean;
-  /**
-   * 영리법인 수증자 사전증여 당시 증여세 산출세액 (§3의2② 면제 한도용).
-   * ※ 현재 입력 UI·API 경로 없음 — ⑩a 배부 표는 PriorGift.corporateGiftComputedTax(doneeId 합산)를
-   *   단일 진실로 사용(inheritance-allocation.ts). 이 Heir 필드는 하위호환 fallback만 잔류.
-   */
-  corporateGiftComputedTax?: number;
-
-  // ===== PR 2 (2026-05-22) — 부표 5 영리법인 면제 및 납부 명세서 =====
-  /**
-   * 영리법인 사업자등록번호 — 별지 제9호서식 부표 5 ② 컬럼.
-   * relation === "corporate" 일 때만 의미.
-   */
-  businessRegistrationNumber?: string;
-  /**
-   * 영리법인 사업장 소재지 — 별지 제9호서식 부표 5 ③ 컬럼.
-   * relation === "corporate" 일 때만 의미.
-   */
-  businessAddress?: string;
-  /**
-   * 영리법인 주주 중 상속인·직계비속 명세 (부표 5 나. 표).
-   *
-   * 상증법 §3의2② 작성방법 6:
-   *   ⑪ 면제분 납부세액 = [면제세액(⑤) − 유증가액(④)×10%] × 지분율(⑩)
-   *
-   * relation === "corporate" 일 때만 의미.
-   * 합 ≤ 1.0 (외부 주주 — 상속인 아닌 자 — 보유분은 명세 제외, validate 미차단)
-   */
-  shareholders?: ShareholderInfo[];
-
-  // ===== Phase 2 (2026-06-07) — §23의2①1호 동거기간 검증 =====
-  /**
-   * §23의2①1호 동거 시작일 (ISO date, YYYY-MM-DD).
-   * - 입력 시: 엔진이 deathDate와의 차이로 동거연수 계산, result.cohabitDeductionDetail.cohabitYears에 echo.
-   * - 미입력 시: 동거기간 자동 검증 생략 — isCohabitant 체크박스(사용자 확인) 신뢰.
-   *   (자동 안분 fallback 금지 정책 부합 — validation 오류 아님)
-   */
-  cohabitStartDate?: string;
-
-  /**
-   * §23의2② + 상증령 §20의2 부득이한 사유(징집·취학·근무상 형편·질병 요양)로 동거에서 제외할 연수.
-   * 해당 기간은 계속 동거로 인정되나 동거기간에는 산입하지 아니함.
-   *
-   * @deprecated Phase 4에서 cohabitReasons(구조화 배열)로 대체. 역직렬화 호환을 위해 타입에 잔류.
-   *  신규 입력 UI에서는 숨김. 엔진: cohabitReasons가 존재하면 cohabitReasons 우선,
-   *  undefined이면 이 필드 fallback.
-   */
-  cohabitExcludedYears?: number;
-
-  // ===== Phase 4 (2026-06-07) — §23의2② 부득이사유 구조화 배열 =====
-  /**
-   * §23의2② 부득이한 사유 배열 (Phase 4 신규).
-   *
-   * - undefined: 사유 미입력 → cohabitExcludedYears(legacy) fallback 또는 차감 없음.
-   * - []:        사유 없음 → excludedYears=0.
-   * - [...]:     사유 입력됨 → 유형별 자동 집계.
-   *
-   * 법령 근거 (KoreanLaw MST 283637·284609 실측):
-   *   CohabitReasonType 참조.
-   */
-  cohabitReasons?: CohabitReason[];
-}
-
-/**
- * 동거가족 (시행령 §18① — 상속개시일 현재 피상속인이 사실상 부양하는
- * 직계존비속(배우자의 직계존속 포함)·형제자매). 상속인이 아닌 부양가족.
- * §20①2~4호 미성년·연로자·장애인공제 대상 (자녀공제 §20①1호는 제외).
- * P1 — 별도 배열(옵션 B): heirs[] 무변경, calcPersonalDeductions 3rd 인자.
- */
-export interface CohabitantDependent {
-  id: string;
-  name?: string;
-  /** YYYY-MM-DD — 미성년·연로자 판정 (상속개시일 현재 만 나이) */
-  birthDate?: string;
-  isDisabled?: boolean;
-  /** 장애인(isDisabled) 시 필수 — §20①4호 성별·연령별 기대여명 */
-  gender?: "male" | "female";
-  /**
-   * 시령 §18① 제한: 직계존비속(배우자의 직계존속 포함)·형제자매.
-   * - lineal_ascendant: 부·모·조부모·장인·장모(배우자 직계존속 포함)
-   * - lineal_descendant: 손자·손녀 (HeirRelation엔 없는 신규 값 — 본 타입 전용)
-   * - sibling: 형제자매
-   */
-  relation: "lineal_ascendant" | "lineal_descendant" | "sibling";
-}
-
-/**
- * PR 2 — 영리법인 주주 명세 (부표 5 나. 표).
- *
- * §3의2② 본문: "그 영리법인의 주주 또는 출자자 중 상속인, 상속인의 배우자,
- * 상속인의 직계비속 또는 그 직계비속의 배우자"
- */
-export interface ShareholderInfo {
-  id: string;
-  /**
-   * 부표 5 ⑦ 구분.
-   *   - "heir": 상속인
-   *   - "heir_spouse": 상속인의 배우자
-   *   - "lineal_descendant_of_heir": 상속인의 직계비속
-   *   - "spouse_of_lineal_descendant": 직계비속의 배우자
-   */
-  relation:
-    | "heir"
-    | "heir_spouse"
-    | "lineal_descendant_of_heir"
-    | "spouse_of_lineal_descendant";
-  /**
-   * ⑦에서 "입력된 상속인"을 선택한 경우 그 Heir.id.
-   * 미설정 = 기타 관계(수동 입력).
-   * 엔진 미사용 — 신고서 표시·연결 추적 전용.
-   */
-  heirRef?: string;
-  /** 부표 5 ⑧ 성명 */
-  name: string;
-  /** 부표 5 ⑨ 주민등록번호 (옵션 — 신고서 표시용) */
-  residentNumber?: string;
-  /** 부표 5 ⑩ 지분율. 0 ≤ r ≤ 1 (1=100%). 합 ≤1 (외부 주주분 제외) */
-  shareRatio: number;
-}
-
-// ============================================================
-// 자산-수준 협의분할 (Design §2-1)
-// ============================================================
-
-export interface HeirAllocation {
-  /** Heir.id 참조 */
-  heirId: string;
-  /** 분배 금액 (원). 합계 = 자산 평가액 */
-  amount: number;
-  /** 분배 면적 (선택, 표시용) */
-  areaM2?: number;
-}
-
-// ============================================================
-// 추정상속재산 §15 (Design §2-3)
-// ============================================================
-
-export type PresumedCategory =
-  | "real_estate"      // 부동산 및 부동산권리
-  | "deposit"          // 예금 인출
-  | "other_asset"      // 기타재산
-  | "financial_debt";  // 금융기관채무
-
-export interface PresumedInheritanceItem {
-  id: string;
-  category: PresumedCategory;
-  /** 1년 이내 처분·인출·차입 금액 (원) */
-  amountWithin1Y: number;
-  /** 1년 초과 ~ 2년 이내 처분·인출·차입 금액 (원) */
-  amountWithin2Y: number;
-  /** 사용처가 객관적으로 확인된 금액 */
-  verifiedUseAmount: number;
-  /** 상속인별 분배 (선택) */
-  heirAllocations?: HeirAllocation[];
-}
-
-export interface PresumedInheritanceItemResult {
-  id: string;
-  category: PresumedCategory;
-  /** 임계 발동 여부 (1년 2억 OR 2년 5억) */
-  thresholdTriggered: boolean;
-  /** 소명대상 합계 = 1Y + 2Y (임계 미만 시 0) */
-  scrutinyAmount: number;
-  /** 미소명 = 소명대상 − 확인금액 */
-  unverifiedAmount: number;
-  /** Min(처분금액 × 20%, 2억) */
-  baseDeduction: number;
-  /** 추정상속재산 가산액 = max(0, 미소명 − baseDeduction) */
-  addedAmount: number;
-  breakdown: CalculationStep[];
-}
-
-// ============================================================
-// 채무·공과금·장례비 협의분할 (Design §2-3-1)
-// ============================================================
-
-export type DebtCategory =
-  | "financial"      // 금융기관 채무
-  | "tax"            // 공과금
-  | "personal"       // 사적 채무
-  | "funeral";       // 장례비
-
-export interface DebtItem {
-  id: string;
-  category: DebtCategory;
-  name: string;
-  /** 금액 (원). 장례비는 한도 적용 전 금액. */
-  amount: number;
-  /** 장례비 봉안시설 사용료 여부 (true 시 한도 500만, false 시 한도 1,000만) */
-  isBongan?: boolean;
-  /** 협의분할 — 상속인별 변제 분배 */
-  heirAllocations?: HeirAllocation[];
-
-  // ===== 상속개시자료 요약 4표 — Table C 채권자/비고 열 (2026-05-28) =====
-  /** 채권자 주소 — Table C "채권자 주소 등" 열. */
-  creditorAddress?: string;
-  /** 채무 발생일 (ISO date) — Table C "비고" 열 "YYYY.M.D. 발생" 형식. */
-  incurredDate?: string;
-  /**
-   * §22 순금융재산 산식의 차감 채무 여부 (사용자 명시 체크).
-   * 법령: 상증령 §19④ — §10① 1호로 입증된 금융회사등에 대한 채무만 차감 가능.
-   * UI: category !== "financial"이면 체크박스 disabled (resolveFinancialDebt에서 강제 false).
-   * - undefined: financial 카테고리 default true / 그 외 default false
-   * - true: 명시 — §10① 1호 입증 완료
-   * - false: 명시 제외 — 입증 미비 등
-   * 본 플래그는 §22 순금융 계산에만 영향. 채무 본래의 과세가액 차감(§14)은 그대로 작동.
-   */
-  isFinancialDebtForDeduction?: boolean;
-}
-
-// ============================================================
-// 상속인별 배부 + 영리법인 면제 — inheritance-allocation-result.types.ts로 분리
-// (2026-05-21, 800줄 정책). 기존 import 경로 보존을 위한 barrel re-export.
-// ============================================================
-import type {
-  HeirTaxBreakdown,
-  HeirAllocationResult,
-  AllocationMismatch,
-  CorporateExemptionResult,
-  PerCorporateExemptionDetail,
-  ShareholderPaymentDetail,
-} from "./inheritance-allocation-result.types";
-export type {
-  HeirTaxBreakdown,
-  HeirAllocationResult,
-  AllocationMismatch,
-  CorporateExemptionResult,
-  PerCorporateExemptionDetail,
-  ShareholderPaymentDetail,
-};
-
-// ============================================================
-// §23 재해손실공제 입력 타입 (상증법 §23 + 상증령 §20)
-// ============================================================
-
-/**
- * §23 재해손실공제 입력 (상증법 §23 + 상증령 §20).
- * ⚠️ §24③ 분자 보정용 disasterLossDeduction(§54 증여세 재해손실)과 완전히 별개.
- */
-export interface CasualtyLossInput {
-  /** 재해손실 상속재산 가액 (상증령 §20②) — 원 단위 정수 */
-  lossValue: number;
-  /** 보전 가능 금액 (보험금 + 구상권, §23① 단서) — 미입력 시 0 처리 */
-  compensatedValue?: number;
-  /**
-   * 재난 종류 (상증령 §20① — 신고서·표시용, 산식 무영향).
-   * fire=화재 / collapse=붕괴 / explosion=폭발 / environmental=환경오염 / natural=자연재해 / other=기타
-   */
-  disasterType?: "fire" | "collapse" | "explosion" | "environmental" | "natural" | "other";
-  /** 재난 발생일 (YYYY-MM-DD) — §67 신고기한 내 발생 검증용. string 비교, Date 직접변환 금지. */
-  disasterDate?: string;
-  /**
-   * §67 신고기한 내 발생 override.
-   * undefined: 자동/미정 → 기한 내 가정 (입력 강제는 validate ⑧ 담당).
-   * true·false: 명시 override (기존 isFiledOnTime 패턴 일관).
-   */
-  isWithinFilingDeadline?: boolean;
-}
-
-// ============================================================
-// §23의2① 주택부수토지 지역 구분 (G4 Phase 3)
-// ============================================================
-
-/**
- * 주택부수토지 지역 구분 — 소득세 시행령 §154⑦ 배율 결정.
- * - metro_residential_commercial_industrial: 수도권 주거·상업·공업지역 → 3배
- * - metro_green: 수도권 녹지지역 → 5배
- * - non_metro: 수도권 밖 도시지역 → 5배
- * - other: 그 밖의 토지 → 10배
- */
-export type AncillaryLandRegion =
-  | "metro_residential_commercial_industrial"
-  | "metro_green"
-  | "non_metro"
-  | "other";
-
-// ============================================================
-// 상속공제 입력 (inheritance-deductions.ts)
-// ============================================================
-
-/** 상속공제 입력 (7종 + §24 종합한도) */
-export interface InheritanceDeductionInput {
-  heirs: Heir[];
-  /** 배우자 실제 상속금액 (미입력 시 법정상속분으로 산정) */
-  spouseActualAmount?: number;
-  /** 순금융재산 (§22 금융재산공제 계산용) */
-  netFinancialAssets?: number;
-  /** 동거주택 — 상속주택 공시가격 (gross, 담보채무 차감 전) */
-  cohabitHouseStdPrice?: number;
-  /** §23의2① 담보된 피상속인 채무(저당). cohabitHouseStdPrice(gross)에서 엔진이 단일 차감. */
-  cohabitSecuredDebt?: number;
-  /** 영농상속 — 농지·목장용지·어선 가액 */
-  farmingAssetValue?: number;
-  /** 가업상속 — 가업상속재산가액 */
-  familyBusinessValue?: number;
-  /** 가업 영위 기간 (년) */
-  familyBusinessYears?: number;
-  /**
-   * 상속개시일 (ISO date) — 미성년자·연로자·장애인 인적공제의 나이 기준일.
-   * 상증법 §20: 상속개시일 현재 나이로 판정해야 하므로 반드시 전달해야 함.
-   * 미제공 시 계산일 기준으로 fallback (소급 계산 오류 가능).
-   */
-  deathDate?: string;
-
-  // ===== 종합사례 PDF Phase D·E 확장 =====
-  /**
-   * 가업상속공제 직접 입력 (Phase E).
-   * 제공 시 요건 판정 생략하고 입력값 그대로 적용. familyBusinessValue 우선.
-   */
-  familyBusinessDirectAmount?: number;
-  /**
-   * 동거주택공제 직접 입력 (Phase E).
-   * 제공 시 80% 산정 생략하고 입력값 그대로 적용 (한도 6억은 유지).
-   */
-  cohabitDirectAmount?: number;
-  /**
-   * §23의2 동거주택 자산 유형 (엔진 게이트용).
-   * deriveCohabitHouseStdPrice가 EstateItem.cohabitHouseRightType을 전달.
-   * general 경로(:cohabitHouseStdPrice)·directAmount 경로 양쪽에서 게이트 적용.
-   *
-   * - "house" | "single_redev_right" | undefined → applicable=true (적용)
-   * - "one_plus_one_right" | "sale_right" → applicable=false (미적용, cappedDeduction=0)
-   *
-   * 법령: §23의2① (mst=276123), 조심 2021중6665 (id=34000), 재산세제과-230·237
-   */
-  cohabitHouseRightType?: "house" | "single_redev_right" | "one_plus_one_right" | "sale_right";
-  /**
-   * §19 배우자 법정상속분 직접 입력 (Phase D).
-   * 제공 시 calcSpouseDeduction이 법정상속분 자동 산정 대신 입력값 사용.
-   * 미입력 시 orchestrator가 PDF 책 1862 표 산식으로 자동 계산.
-   */
-  spouseLegalShareOverride?: number;
-  // ===== Phase D §24 분자 보정 (orchestrator → calcInheritanceDeductions 전달) =====
-  /** 상속인 외 자에게 유증한 금액 (§24 분자 차감) */
-  legateeAmountNonHeir?: number;
-  /** 증여재산공제 합계 (§24 분자 보정용) */
-  priorGiftDeductionTotal?: number;
-  /** 신고기한 내 재해손실공제 (§24 분자 보정용) */
-  disasterLossDeduction?: number;
-
-  // ===== §23 재해손실공제 (2026-06-07, 상증법 §23 + 상증령 §20) =====
-  /**
-   * §23 재해손실공제 입력. 미제공 시 공제 0.
-   * ⚠️ 기존 disasterLossDeduction(§24③ 분자 보정/§54용)과 완전히 별개 — 명칭 혼동 금지.
-   */
-  casualtyLoss?: CasualtyLossInput;
-
-  // ===== 영농상속공제 정밀화 (2026-05-21, §18의3 + 시행령 §16) =====
-  /**
-   * 영농상속 자격·요건 입력. 미제공 시 legacy 호환 (evaluated=false, eligible=true 가정).
-   * 신규 사용자는 본 객체 제공 권장.
-   */
-  farming?: FarmingInheritanceInput;
-
-  // ===== 가업상속공제 정밀화 (2026-05-21, 상증법 §18의2 + 상증령 §15) =====
-  /**
-   * 가업상속 자격·요건 입력 (Phase B). 미제공 시 legacy 호환.
-   * familyBusinessDirectAmount 제공 시 본 객체 무시 (Phase E escape hatch).
-   * EstateItem 자동 합산은 orchestrator에서 InheritanceTaxInput.estateItems 직접 사용.
-   */
-  familyBusiness?: FamilyBusinessInheritanceInput;
-
-  // ===== 동거가족 인적공제 (2026-06-05, §20 P1 — 시령 §18①) =====
-  /**
-   * 비상속인 동거가족(부양 직계존비속·형제자매) — §20①2~4호 미성년·연로자·장애인공제 대상.
-   * 옵션 B: heirs[]와 별도 배열(법정상속분·§21② 오염 0). calcPersonalDeductions 3rd 인자로 전달.
-   */
-  cohabitantDependents?: CohabitantDependent[];
-
-  // ===== §21① 단서 무신고 일괄공제 5억 고정 (2026-06-07, 계획 inheritance-numeric-gaps §1) =====
-  /**
-   * 완전 무신고(§67 정기신고·국기법 §45의3 기한후신고 모두 없음) 여부.
-   * true면 §21① 단서로 일괄공제 5억 고정(기초+인적이 5억 초과해도 5억). 미입력=정기신고 간주(false).
-   * ★ Pre-Do stub (2026-06-07): 타입만 추가, 엔진 분기 미구현 — anchor 실패 확보용.
-   */
-  isUnfiled?: boolean;
-
-  // ===== Phase 3 (2026-06-07) — G4 §23의2① 주택부수토지 면적한도 =====
-  /**
-   * §23의2①(소득세법 §89①3호 준용) 주택부수토지 실제 면적 (㎡).
-   * - 아파트·공동주택가격은 부수토지 포함이므로 입력 불필요.
-   * - 단독주택 대형토지를 별도 EstateItem으로 분리 입력할 때만 면적 초과분 차감이 필요.
-   * - 미입력 시 차감 없음 (자동 안분 fallback 금지 정책 부합).
-   * - ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion 세 필드 전부 또는 전무 입력.
-   *   일부만 입력 시 validation ⑧에서 차단.
-   */
-  ancillaryLandArea?: number;
-
-  /**
-   * 건물 정착 면적 (㎡) — 소득세 시행령 §154⑦ 배율 계산의 분모.
-   * "건물이 정착된 면적에 지역별로 대통령령으로 정하는 배율을 곱하여 산정한 면적".
-   * ancillaryLandArea·ancillaryLandRegion과 함께 전부 입력 또는 전부 미입력.
-   */
-  buildingFootprintArea?: number;
-
-  /**
-   * 주택부수토지 지역 구분 — 소득세 시행령 §154⑦ 배율 결정.
-   * - metro_residential_commercial_industrial: 수도권 주거·상업·공업지역 → 3배 (§154⑦1호가)
-   * - metro_green: 수도권 녹지지역 → 5배 (§154⑦1호나)
-   * - non_metro: 수도권 밖 도시지역 → 5배 (§154⑦1호다)
-   * - other: 그 밖의 토지 → 10배 (§154⑦2호)
-   * ancillaryLandArea·buildingFootprintArea와 함께 전부 입력 또는 전부 미입력.
-   */
-  ancillaryLandRegion?: AncillaryLandRegion;
-}
-
-// 분리 타입 barrel (800줄 정책)
-import type { FarmingInheritanceInput, FarmingDeductionDetail } from "./inheritance-farming.types";
-import type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessDeductionDetail } from "./inheritance-family-business.types";
-import type { FamilyBusinessPostMgmtMeta } from "./inheritance-family-business-postmgmt.types";
-import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
-import type { EstateLocationFields } from "./inheritance-asset-location.types";
-import type {
-  LumpSumComparisonDetail,
-  SpouseDeductionDetail,
-  FinancialDeductionDetail,
-  CohabitDeductionDetail,
-  DeductionLimitCeilingDetail,
-  PersonalDeductionDetail,
-  CasualtyLossDeductionDetail,
-} from "./inheritance-deduction-detail.types";
-export type { FarmingInheritanceInput, FarmingDeductionDetail, FarmingEligibilityResult } from "./inheritance-farming.types";
-export type { FamilyBusinessCategory, FamilyBusinessInheritanceInput, FamilyBusinessIneligibleReason, FamilyBusinessDeductionDetail, FamilyBusinessCap, FamilyBusinessMediumGuard, FamilyBusinessUnit, MultipleFamilyBusinessLineItem, MultipleFamilyBusinessResult } from "./inheritance-family-business.types";
-export type {
-  FamilyBusinessPostMgmtMeta,
-  FamilyBusinessPostMgmtInput,
-  FamilyBusinessPostMgmtResult,
-  PostMgmtViolationDetail,
-  PostMgmtEmploymentResult,
-  ViolationEvent,
-  JustifiableReasonEvent,
-  JustifiableReasonCode,
-  CessationSubType,
-  EmploymentTracking,
-  MonthlyEmploymentData,
-  PostMgmtAssetType,
-  AmendmentReturnData,
-} from "./inheritance-family-business-postmgmt.types";
-export type { CorporateNonBusinessAssets, CorporateStockAdjustedResult } from "./inheritance-corporate-non-business.types";
-export type { LatLng, EstateAddress } from "./inheritance-asset-location.types";
-export type {
-  LumpSumComparisonDetail,
-  SpouseLegalShareTable,
-  SpouseActualAmountTable,
-  SpouseDeductionDetail,
-  FinancialBreakdownRow,
-  FinancialDeductionDetail,
-  CohabitDeductionDetail,
-  DeductionLimitCeilingDetail,
-  PersonalDeductionDetail,
-  CasualtyLossDeductionDetail,
-} from "./inheritance-deduction-detail.types";
-export { FARMING_MAX } from "./inheritance-farming.types";
-export { FAMILY_BUSINESS_CAP_10Y, FAMILY_BUSINESS_CAP_20Y, FAMILY_BUSINESS_CAP_30Y, FAMILY_BUSINESS_SCALE_THRESHOLD, FAMILY_BUSINESS_OTHER_ESTATE_RATIO } from "./inheritance-family-business.types";
-
-/** 상속공제 계산 결과 */
-export interface InheritanceDeductionResult {
-  basicDeduction: number;
-  spouseDeduction: number;
-  personalDeductionTotal: number;
-  lumpSumDeduction: number;
-  financialDeduction: number;
-  cohabitationDeduction: number;
-  farmingDeduction: number;
-  /** 영농상속공제 상세 (2026-05-21, §18의3 정밀화). farming 미입력 시 evaluated=false. */
-  farmingDetail?: FarmingDeductionDetail;
-  familyBusinessDeduction: number;
-  /** 가업상속공제 상세 (2026-05-21, §18의2 정밀화). familyBusiness 미입력 시 undefined (legacy). */
-  familyBusinessDetail?: FamilyBusinessDeductionDetail;
-  /** §24 종합한도 적용 후 최종 공제액 */
-  totalDeduction: number;
-  /** 일괄공제 vs 개별공제 선택 근거 */
-  chosenMethod: "lump_sum" | "itemized";
-  /** §21② 배우자 단독상속 → 일괄공제 배제 여부 (true면 chosenMethod="itemized" 강제) */
-  lumpSumExcludedBySpouseSoleHeir?: boolean;
-  /** §21① 단서 — 무신고로 일괄공제 5억 고정 여부 (★ Pre-Do stub 2026-06-07, 엔진 미구현) */
-  lumpSumForcedByUnfiled?: boolean;
-  breakdown: CalculationStep[];
-  appliedLaws: string[];
-  // ── 계산 근거 detail (2026-05-31 신설) ──────────────────────────
-  /** ① §21 일괄 vs 항목별 비교 detail */
-  lumpSumComparisonDetail?: LumpSumComparisonDetail;
-  /** ③ §19 배우자공제 계산 근거 detail */
-  spouseDeductionDetail?: SpouseDeductionDetail;
-  /** ④ §22 금융재산공제 계산 근거 detail (rows[]는 orchestrator 주입) */
-  financialDeductionDetail?: FinancialDeductionDetail;
-  /** ⑤ §23의2 동거주택공제 계산 근거 detail */
-  cohabitDeductionDetail?: CohabitDeductionDetail;
-  /** ⑥ §24 종합한도 계산 근거 detail */
-  deductionLimitDetail?: DeductionLimitCeilingDetail;
-  /** §24 한도 적용 전 공제 합계 (rawTotal — UI 표시용) */
-  rawTotalDeduction?: number;
-  /** ② §20 그 밖의 인적공제 4종 계산 근거 detail (G7 echo) */
-  personalDeductionDetail?: PersonalDeductionDetail;
-  /** §23 재해손실공제 공제액 (top-level — 부표3 ㉘ 데이터 소스, deductionDetail 경유) */
-  casualtyLossDeduction: number;
-  /** §23 재해손실공제 계산 근거 detail */
-  casualtyLossDeductionDetail?: CasualtyLossDeductionDetail;
-}
-
-// ============================================================
-// 증여공제 입력 (gift-deductions.ts)
-// ============================================================
-
-/** 증여자와 수증자의 관계 */
-export type DonorRelation =
-  | "spouse"
-  | "lineal_ascendant_adult"    // 성인 직계존속
-  | "lineal_ascendant_minor"    // 미성년자 직계존속
-  | "lineal_descendant"         // 직계비속
-  | "other_relative";           // 기타 친족
-
-/** 증여공제 입력 */
-export interface GiftDeductionInput {
-  donorRelation: DonorRelation;
-  /** 혼인 공제 (§53의2) — ≤ 1억 */
-  marriageExemption?: number;
-  /** 출산 공제 (§53의2) — ≤ 1억 */
-  birthExemption?: number;
-  /** 10년 이내 동일인(동일 관계 그룹)에 대한 기사용 공제 합산 */
-  priorUsedDeduction?: number;
-  /**
-   * §53의2③ 수증자 통산 기공제액 (혼인+출산 합산 한도 1억).
-   * 과거 증여에서 이미 적용된 §53의2 공제 누계액.
-   * 미입력(undefined) 시 0으로 처리 — 기존 동작 100% 보존.
-   * 상증법 §53의2③: "이미 공제받았거나 받을 금액을 합한 금액이 1억원을 초과하는
-   * 경우 그 초과분은 공제하지 아니한다."
-   */
-  priorUsedMarriageBirthDeduction?: number;
-}
-
-/** 증여공제 계산 결과 */
-export interface GiftDeductionResult {
-  relationDeduction: number;
-  marriageBirthDeduction: number;
-  totalDeduction: number;
-  breakdown: CalculationStep[];
-  appliedLaws: string[];
-}
-
-// ============================================================
-// 세액공제 입력 (credits/)
-// ============================================================
-
-/** 상속세 세액공제 입력 */
-// 세액공제 타입은 inheritance-tax-credit.types.ts로 분리 (800줄 정책)
-import type {
-  InheritanceTaxCreditInput,
-  GiftTaxCreditInput,
-  TaxCreditResult,
-  ShortTermReinheritAsset,
-  ShortTermReinheritPerAsset,
-} from "./inheritance-tax-credit.types";
-export type {
-  InheritanceTaxCreditInput,
-  GiftTaxCreditInput,
-  TaxCreditResult,
-  ShortTermReinheritAsset,
-  ShortTermReinheritPerAsset,
-};
 
 // ============================================================
 // 메인 엔진 Input / Output
