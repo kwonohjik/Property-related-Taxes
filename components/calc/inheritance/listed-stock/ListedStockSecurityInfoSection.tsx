@@ -3,7 +3,7 @@
 /**
  * ListedStockSecurityInfoSection — 종목 정보 sky 카드.
  *
- * 묶음: 종목코드(필수) → 종목명(자동 채움) → 보유 주식 수.
+ * 묶음: 종목명(자동 채움) → 종목코드(필수) → 보유 주식 수.
  * 종목코드 FieldCard 의 `trailing` 슬롯에 키움 자동조회 버튼(inline variant)을 받음.
  *
  * Plan: docs/00-pm/listed-stock-security-info-layout-reorder.plan.md §3 Step C-1
@@ -45,12 +45,28 @@ export function ListedStockSecurityInfoSection({
         <div>
           <h4 className="text-sm font-semibold text-sky-900">종목 정보 입력</h4>
           <p className="text-xs text-sky-700 mt-0.5">
-            종목코드·종목명·보유 주식 수
+            종목명·종목코드·보유 주식 수
           </p>
         </div>
       </div>
 
       <div className="space-y-3">
+        <FieldCard
+          label="종목명"
+          hint="회사명 입력 시 매치 목록 표시 → 선택 시 종목코드 자동 채움. 종목코드 입력 후 자동조회 시에도 자동 채움 — 직접 수정 가능"
+        >
+          <InheritanceStockNameAutocomplete
+            value={item.name}
+            onSelect={(m) =>
+              set({ name: m.stockName, listedStockCode: m.stockCode })
+            }
+            onNameChange={(name) => set({ name })}
+            placeholder="종목명 검색 또는 자동조회 시 자동 입력 (예: 삼성전자)"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            testId="ls-security-info-name"
+          />
+        </FieldCard>
+
         <FieldCard
           label="종목코드"
           required
@@ -73,22 +89,6 @@ export function ListedStockSecurityInfoSection({
             maxLength={6}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             data-testid="ls-security-info-code"
-          />
-        </FieldCard>
-
-        <FieldCard
-          label="종목명"
-          hint="회사명 입력 시 매치 목록 표시 → 선택 시 종목코드 자동 채움. 종목코드 입력 후 자동조회 시에도 자동 채움 — 직접 수정 가능"
-        >
-          <InheritanceStockNameAutocomplete
-            value={item.name}
-            onSelect={(m) =>
-              set({ name: m.stockName, listedStockCode: m.stockCode })
-            }
-            onNameChange={(name) => set({ name })}
-            placeholder="종목명 검색 또는 자동조회 시 자동 입력 (예: 삼성전자)"
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            testId="ls-security-info-name"
           />
         </FieldCard>
 

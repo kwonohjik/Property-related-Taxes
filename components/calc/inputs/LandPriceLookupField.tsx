@@ -182,9 +182,9 @@ export function LandPriceLookupField({
         )}
       </FieldCard>
 
-      {/* 공시지가 입력 + 토지기준시가 결과 */}
+      {/* 공시지가 입력 + 토지기준시가 결과 — 2열 셀이 좁아 stacked(라벨 상단·입력 전폭)로 금액폭 확보 */}
       <div className="grid grid-cols-2 gap-2">
-        <FieldCard label={label} hint={hint} unit="원/㎡">
+        <FieldCard label={label} hint={hint} unit="원/㎡" stacked>
           <CurrencyInput
             label=""
             value={pricePerSqm}
@@ -197,6 +197,7 @@ export function LandPriceLookupField({
           label="토지기준시가"
           hint={area ? `${area.toFixed(2)}㎡ × 공시지가` : "① 면적 섹션의 토지면적 입력 후 자동 계산"}
           unit="원"
+          stacked
         >
           <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
             {landStdPrice !== null

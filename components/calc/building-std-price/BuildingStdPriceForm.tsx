@@ -44,6 +44,13 @@ interface Props {
     error: string | null,
     report: NtsReportModel | null,
   ) => void;
+  /**
+   * 세목 고정 — 호출 세목(양도 2시점 / 상속·증여 1시점)을 강제.
+   * 지정 시 세목 라디오를 숨긴다(독립 페이지는 미지정 → 라디오 노출).
+   */
+  lockedTaxType?: BuildingStdPriceFormState["taxType"];
+  /** 부모 자산 카드의 소재지 prefill — 모달 재입력(이중입력) 방지. 미지정 시 빈칸. */
+  initialAddress?: AddressValue;
 }
 
 /** 연도 Select — 명시 라벨(SelectValue 단독 금지) */
@@ -106,8 +113,21 @@ function SectionCard({
   );
 }
 
-export function BuildingStdPriceForm({ onResult }: Props) {
-  const [f, setF] = useState<BuildingStdPriceFormState>(initialBuildingStdPriceForm);
+export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }: Props) {
+  const [f, setF] = useState<BuildingStdPriceFormState>(() => ({
+    ...initialBuildingStdPriceForm,
+    ...(lockedTaxType ? { taxType: lockedTaxType } : {}),
+    ...(initialAddress
+      ? {
+          addressRoad: initialAddress.road,
+          addressJibun: initialAddress.jibun,
+          buildingName: initialAddress.building,
+          addressDetail: initialAddress.detail,
+          longitude: initialAddress.lng,
+          latitude: initialAddress.lat,
+        }
+      : {}),
+  }));
   const [adjOpen, setAdjOpen] = useState(false);
 
   const set = <K extends keyof BuildingStdPriceFormState>(key: K, value: BuildingStdPriceFormState[K]) =>
@@ -189,18 +209,20 @@ export function BuildingStdPriceForm({ onResult }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* 세목 */}
-      <RadioCardGroup
-        name="taxType"
-        tone="sky"
-        layout="inline"
-        value={f.taxType}
-        onChange={(v) => set("taxType", v as BuildingStdPriceFormState["taxType"])}
-        options={[
-          { value: "transfer", label: "양도(취득·양도 2시점)" },
-          { value: "inheritance_gift", label: "상속·증여(1시점)" },
-        ]}
-      />
+      {/* 세목 — 호출 세목이 고정된 경우(lockedTaxType) 라디오 숨김(오선택 방지) */}
+      {!lockedTaxType && (
+        <RadioCardGroup
+          name="taxType"
+          tone="sky"
+          layout="inline"
+          value={f.taxType}
+          onChange={(v) => set("taxType", v as BuildingStdPriceFormState["taxType"])}
+          options={[
+            { value: "transfer", label: "양도(취득·양도 2시점)" },
+            { value: "inheritance_gift", label: "상속·증여(1시점)" },
+          ]}
+        />
+      )}
 
       {/* 기계식주차 토글 */}
       <ToggleCard
