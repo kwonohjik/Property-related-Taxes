@@ -8,6 +8,7 @@
 import type { DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   RadioCardGroup,
@@ -47,6 +48,15 @@ export interface DeemedFormState {
   tbInstallments: string;
   tbSurrenderValue: string;
   tbGiftTiming: "actual" | "decedent_death" | "agreed" | "first_installment";
+  // 증여시기 분리 (§33①1·2호 별개 증여)
+  tbIncomeGiftDate: string; // 수익권 증여시기
+  tbPrincipalGiftDate: string; // 원본권 증여시기
+  // 정기금 유형 (§61②→§62)
+  tbAnnuityType: "finite" | "perpetual" | "lifetime";
+  tbIntervalYears: string; // 회차 간 연수
+  tbBeneficiaryGender: "male" | "female" | ""; // 종신 기대여명 조회용
+  tbBeneficiaryAge: string;
+  tbExpectedRemainingYears: string; // 종신 기대여명 직접 입력
   // 보험금 §34
   insCaseType: "non_payer" | "gifted_premium";
   insProceeds: string;
@@ -195,6 +205,13 @@ export const INITIAL_DEEMED: DeemedFormState = {
   tbInstallments: "",
   tbSurrenderValue: "",
   tbGiftTiming: "first_installment",
+  tbIncomeGiftDate: "",
+  tbPrincipalGiftDate: "",
+  tbAnnuityType: "finite",
+  tbIntervalYears: "1",
+  tbBeneficiaryGender: "",
+  tbBeneficiaryAge: "",
+  tbExpectedRemainingYears: "",
   insCaseType: "non_payer",
   insProceeds: "",
   insTotalPremium: "",
@@ -470,25 +487,91 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
         <label className="block text-xs text-gray-600 dark:text-gray-400">원천징수세율 (%)</label>
         <DecimalInput value={form.tbWithholdingPct} onChange={(v) => set({ tbWithholdingPct: v })} placeholder="원천징수세율 (%)" />
       </div>
-      <div className="space-y-1">
-        <label className="block text-xs text-gray-600 dark:text-gray-400">수익 분할 횟수 (계약기간 연수)</label>
-        <DecimalInput value={form.tbInstallments} onChange={(v) => set({ tbInstallments: v })} placeholder="수익 지급 횟수 (연)" />
+
+      {/* 증여시기 분리 (§33①1·2호 별개 증여 · §25①) */}
+      <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+        <p className="text-xs font-semibold text-violet-700">증여시기 (원본·수익 별개 — §33①·§25①)</p>
+        {form.tbBeneficiaryType !== "diff_principal" && (
+          <div className="space-y-1" data-testid="tb-income-gift-date">
+            <label className="block text-xs text-violet-700">수익권 증여시기 (수익 최초지급일 등)</label>
+            <DateInput value={form.tbIncomeGiftDate} onChange={(v) => set({ tbIncomeGiftDate: v })} />
+          </div>
+        )}
+        {form.tbBeneficiaryType !== "diff_income" && (
+          <div className="space-y-1" data-testid="tb-principal-gift-date">
+            <label className="block text-xs text-violet-700">원본권 증여시기 (원본 실제지급일 — 예: 신탁 종료)</label>
+            <DateInput value={form.tbPrincipalGiftDate} onChange={(v) => set({ tbPrincipalGiftDate: v })} />
+          </div>
+        )}
+        <RadioCardGroup
+          name="tb-gift-timing"
+          tone="violet"
+          layout="inline"
+          value={form.tbGiftTiming}
+          onChange={(v) => set({ tbGiftTiming: v })}
+          options={[
+            { value: "first_installment", label: "분할 최초지급일", testId: "tb-timing-first" },
+            { value: "actual", label: "실제 지급일", testId: "tb-timing-actual" },
+            { value: "agreed", label: "약정일", testId: "tb-timing-agreed" },
+            { value: "decedent_death", label: "위탁자 사망일", testId: "tb-timing-death" },
+          ]}
+        />
+        <p className="text-xs text-muted-foreground">증여시기 종류(§25①) — 위 날짜의 의미를 선택.</p>
       </div>
-      <CurrencyInput label="해지·철회 일시금 (선택)" value={form.tbSurrenderValue} onChange={(v) => set({ tbSurrenderValue: v })} hint="평가액보다 크면 일시금으로 평가 (§61① 단서)" placeholder="해지 시 받을 일시금 (없으면 빈칸)" />
+
+      {/* 정기금 유형 (§61②→§62) */}
       <RadioCardGroup
-        name="tb-gift-timing"
-        tone="violet"
+        name="tb-annuity"
+        tone="sky"
         layout="inline"
-        value={form.tbGiftTiming}
-        onChange={(v) => set({ tbGiftTiming: v })}
+        value={form.tbAnnuityType}
+        onChange={(v) => set({ tbAnnuityType: v })}
         options={[
-          { value: "first_installment", label: "분할 최초지급일", testId: "tb-timing-first" },
-          { value: "actual", label: "실제 지급일", testId: "tb-timing-actual" },
-          { value: "agreed", label: "약정일", testId: "tb-timing-agreed" },
-          { value: "decedent_death", label: "위탁자 사망일", testId: "tb-timing-death" },
+          { value: "finite", label: "유기정기금", description: "지급 횟수 확정", testId: "tb-annuity-finite" },
+          { value: "perpetual", label: "무기정기금", description: "§62 2호 — 20년", testId: "tb-annuity-perpetual" },
+          { value: "lifetime", label: "종신정기금", description: "§62 3호 — 기대여명", testId: "tb-annuity-lifetime" },
         ]}
       />
-      <p className="text-xs text-muted-foreground">증여시기는 §25①에 따라 선택 (분할 지급 + 위탁자 미지배 시 최초지급일). 산식에는 영향 없음.</p>
+      {form.tbAnnuityType === "finite" && (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <label className="block text-xs text-gray-600 dark:text-gray-400">수익 분할 횟수 (회)</label>
+            <DecimalInput value={form.tbInstallments} onChange={(v) => set({ tbInstallments: v })} placeholder="수익 지급 횟수 (회)" />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs text-gray-600 dark:text-gray-400">회차 간격 (연)</label>
+            <DecimalInput value={form.tbIntervalYears} onChange={(v) => set({ tbIntervalYears: v })} placeholder="회차 간 연수 (기본 1)" />
+          </div>
+        </div>
+      )}
+      {form.tbAnnuityType === "lifetime" && (
+        <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
+          <p className="text-xs font-semibold text-sky-700">종신 기대여명 (§62 3호 — 2023 생명표, 소수점 버림)</p>
+          <RadioCardGroup
+            name="tb-gender"
+            tone="sky"
+            layout="inline"
+            value={form.tbBeneficiaryGender}
+            onChange={(v) => set({ tbBeneficiaryGender: v })}
+            options={[
+              { value: "male", label: "남성", testId: "tb-gender-male" },
+              { value: "female", label: "여성", testId: "tb-gender-female" },
+            ]}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="block text-xs text-sky-700">수익자 연령 (만)</label>
+              <DecimalInput value={form.tbBeneficiaryAge} onChange={(v) => set({ tbBeneficiaryAge: v })} placeholder="만 나이" />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs text-sky-700">기대여명 직접 입력 (선택, 연)</label>
+              <DecimalInput value={form.tbExpectedRemainingYears} onChange={(v) => set({ tbExpectedRemainingYears: v })} placeholder="미입력 시 생명표 조회" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <CurrencyInput label="해지·철회 일시금 (선택)" value={form.tbSurrenderValue} onChange={(v) => set({ tbSurrenderValue: v })} hint="평가액보다 크면 일시금으로 평가 (§61① 단서)" placeholder="해지 시 받을 일시금 (없으면 빈칸)" />
     </div>
   );
 }

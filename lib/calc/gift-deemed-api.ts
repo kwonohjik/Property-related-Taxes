@@ -4,6 +4,7 @@
 import type { DeemedGiftInput, DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { resolveFreeLoanRate } from "@/lib/tax-engine/data/gift-deemed-rates";
 import {
   DEEMED_TYPE_META,
@@ -24,7 +25,14 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           ? { numer: Math.round(parseDecimal(form.tbYieldRatePct) * 100), denom: 10_000 }
           : undefined,
         withholdingRate: { numer: Math.round(parseDecimal(form.tbWithholdingPct) * 100), denom: 10_000 },
-        installments: Math.round(parseDecimal(form.tbInstallments)),
+        incomeAnnuityType: form.tbAnnuityType,
+        installments: form.tbAnnuityType === "finite" ? Math.round(parseDecimal(form.tbInstallments)) : undefined,
+        incomeIntervalYears: form.tbIntervalYears ? parseDecimal(form.tbIntervalYears) : undefined,
+        expectedRemainingYears: form.tbExpectedRemainingYears ? parseDecimal(form.tbExpectedRemainingYears) : undefined,
+        beneficiaryGender: form.tbBeneficiaryGender || undefined,
+        beneficiaryAge: form.tbBeneficiaryAge ? parseDecimal(form.tbBeneficiaryAge) : undefined,
+        incomeGiftDate: toOptionalDate(form.tbIncomeGiftDate || undefined),
+        principalGiftDate: toOptionalDate(form.tbPrincipalGiftDate || undefined),
         surrenderValue: form.tbSurrenderValue ? parseAmount(form.tbSurrenderValue) : undefined,
         giftTimingType: form.tbGiftTiming,
       };
@@ -266,6 +274,22 @@ export function buildGiftWizardPrefill(
   result: DeemedGiftResult,
 ): Partial<GiftFormState> {
   const label = form.type ? DEEMED_TYPE_META[form.type].label : "증여이익";
+
+  // 신탁이익(§33): 원본권·수익권 별개 증여시기 → subGifts를 항목 분리 이관.
+  // 마법사 giftDate는 단일이므로 수익권 증여시기 우선(원본권 증여시기가 다르면 별도 신고 — 결과뷰 안내).
+  if (result.type === "trust_benefit" && result.subGifts && result.subGifts.length > 0) {
+    const RIGHT_LABEL = { principal: "원본권", income: "수익권" } as const;
+    return {
+      giftDate: form.tbIncomeGiftDate || form.tbPrincipalGiftDate || form.giftDate,
+      giftItems: result.subGifts.map((sg) => ({
+        id: `deemed-trust-${sg.right}`,
+        category: "other" as const,
+        name: `신탁이익(${RIGHT_LABEL[sg.right]}) 증여이익`,
+        marketValue: sg.value,
+      })),
+    };
+  }
+
   return {
     giftDate: form.giftDate,
     giftItems: [

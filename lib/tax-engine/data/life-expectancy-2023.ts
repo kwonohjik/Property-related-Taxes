@@ -57,3 +57,20 @@ export function getLifeExpectancyByGender(
   // §20③ "1년 미만의 기간은 1년으로 한다"
   return Math.ceil(raw);
 }
+
+/**
+ * 성별·연령별 기대여명 조회 (상증령 §62 3호 종신정기금 — **소수점 버림 floor**).
+ * §20③(장애인공제 ceil)과 라운딩이 다르므로 별도 헬퍼.
+ *
+ * @returns 기대여명 연수 (Math.floor — 소수점 이하 버림)
+ */
+export function getLifeExpectancyFloor(
+  gender: "male" | "female",
+  age: number,
+): number {
+  const clamped = Math.max(0, Math.min(100, Math.floor(age)));
+  const table =
+    gender === "male" ? LIFE_EXPECTANCY_MALE_2023 : LIFE_EXPECTANCY_FEMALE_2023;
+  const raw = table[clamped] ?? table[100];
+  return Math.floor(raw); // §62 3호 "소수점 이하는 버린다"
+}
