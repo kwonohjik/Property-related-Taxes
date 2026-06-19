@@ -336,7 +336,6 @@ export function FamilyBusinessEligibilitySection({
                   value={familyBusiness.totalAssets != null ? String(familyBusiness.totalAssets) : ""}
                   onChange={(v) => update({ totalAssets: parseAmount(v) || undefined })}
                   hint="중소기업 기준 5천억 이하 확인용 — 미입력 시 기준 미충족으로 처리"
-                  placeholder="없으면 빈칸"
                 />
               ) : (
                 <CurrencyInput
@@ -344,7 +343,6 @@ export function FamilyBusinessEligibilitySection({
                   value={familyBusiness.averageRevenue3Y != null ? String(familyBusiness.averageRevenue3Y) : ""}
                   onChange={(v) => update({ averageRevenue3Y: parseAmount(v) || undefined })}
                   hint="중견기업 기준 5천억 이하 확인용 — 미입력 시 기준 미충족으로 처리"
-                  placeholder="없으면 빈칸"
                 />
               )}
             </div>
@@ -442,14 +440,12 @@ export function FamilyBusinessEligibilitySection({
                 value={familyBusiness.heirOtherEstateValue != null ? String(familyBusiness.heirOtherEstateValue) : ""}
                 onChange={(v) => update({ heirOtherEstateValue: parseAmount(v) || undefined })}
                 hint="가업상속인이 받는 가업 외 상속재산 가액"
-                placeholder="없으면 빈칸"
               />
               <CurrencyInput
                 label="가업상속인 부담 채무 (원)"
                 value={familyBusiness.heirDebt != null ? String(familyBusiness.heirDebt) : ""}
                 onChange={(v) => update({ heirDebt: parseAmount(v) || undefined })}
                 hint="가업상속인이 승계하는 채무 (상증령 §15⑥1호 차감)"
-                placeholder="없으면 빈칸"
               />
             </div>
           )}

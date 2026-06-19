@@ -84,7 +84,6 @@ export function EstateBodySimple({ item, onUpdate }: VariantBodyProps) {
             label={MARKET_LABEL[cat]}
             value={item.marketValue != null ? String(item.marketValue) : ""}
             onChange={(v) => set({ marketValue: parseAmount(v) || undefined })}
-            placeholder="없으면 빈칸"
             hideLabel
             hideUnit
           />
@@ -105,7 +104,6 @@ export function EstateBodySimple({ item, onUpdate }: VariantBodyProps) {
               onChange={(v) =>
                 set({ appraisedValue: parseAmount(v) || undefined })
               }
-              placeholder="없으면 빈칸"
               hideLabel
               hideUnit
             />

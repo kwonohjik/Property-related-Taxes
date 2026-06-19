@@ -101,13 +101,17 @@ test.describe("장례비 식대/봉안 별도 입력 UI", () => {
       ).toBeVisible({ timeout: 10_000 });
 
       // 식대 입력: 상증령 §9②1호 — 8,000,000
-      // "일반 장례비(식대·제수 등)" 라벨 다음 input 찾기
-      // CurrencyInput은 FieldCard 안에 렌더되어 aria 연결이 있을 수 있음
-      // placeholder "없으면 빈칸" 기준 위아래 두 개 있으므로 first/nth로 구분
-      const funeralInputs = page.getByPlaceholder("없으면 빈칸");
-      // 첫 번째 = 일반 장례비(식대), 두 번째 = 봉안시설·자연장지
-      await funeralInputs.nth(0).fill("8000000");
-      await funeralInputs.nth(1).fill("6000000");
+      // 라벨 텍스트 기준으로 각 입력란 식별 (placeholder는 기본 "금액 입력"으로 통일됨)
+      await page
+        .getByText("① 일반 장례비(식대·제수 등)")
+        .locator("..")
+        .getByRole("textbox")
+        .fill("8000000");
+      await page
+        .getByText("② 봉안시설·자연장지 비용")
+        .locator("..")
+        .getByRole("textbox")
+        .fill("6000000");
 
       // Step3, Step4 건너뛰고 계산 실행
       await nextSteps(page, 2);

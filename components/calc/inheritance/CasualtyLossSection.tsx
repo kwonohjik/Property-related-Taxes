@@ -106,14 +106,12 @@ export function CasualtyLossSection({
           value={form.casualtyLossValue}
           onChange={(v) => set({ casualtyLossValue: v })}
           hint="멸실·훼손된 상속재산의 평가액 (상속개시일 평가 기준, §20②)"
-          placeholder="없으면 빈칸"
         />
         <CurrencyInput
           label="보전가능금액"
           value={form.casualtyLossCompensated}
           onChange={(v) => set({ casualtyLossCompensated: v })}
           hint="보험금 수령액·구상권 행사로 보전 가능한 금액. 없으면 0 또는 빈칸."
-          placeholder="없으면 빈칸"
         />
         {/* 자동계산 박스 */}
         <div className="rounded-md border border-rose-200 bg-rose-100/60 px-3 py-2 text-xs space-y-1">

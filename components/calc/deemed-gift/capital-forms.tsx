@@ -363,8 +363,8 @@ export function ConvertibleBondFields({ form, set }: Props) {
       )}
       {ct === "conversion" && (
         <>
-          <CurrencyInput label="이자손실분" value={form.cbInterestLoss} onChange={(v) => set({ cbInterestLoss: v })} placeholder="이자손실분 (없으면 빈칸)" />
-          <CurrencyInput label="인수 시 기과세 이익 (§30①1)" value={form.cbAcqGainPrior} onChange={(v) => set({ cbAcqGainPrior: v })} placeholder="기과세 이익 (없으면 빈칸)" />
+          <CurrencyInput label="이자손실분" value={form.cbInterestLoss} onChange={(v) => set({ cbInterestLoss: v })} />
+          <CurrencyInput label="인수 시 기과세 이익 (§30①1)" value={form.cbAcqGainPrior} onChange={(v) => set({ cbAcqGainPrior: v })} />
         </>
       )}
       {ct === "conversion_reverse" && (

@@ -53,7 +53,6 @@ export function AppraisalFeeSection({
               ? "「감정평가법」 감정평가법인등 수수료 (500만원 한도)."
               : "감정가액으로 신고한 경우에만 공제됩니다(시행령 §20의3②). 현재 감정가액 평가 자산이 없어 공제되지 않습니다."
           }
-          placeholder="없으면 빈칸"
         />
       </div>
 
@@ -65,7 +64,6 @@ export function AppraisalFeeSection({
           value={value.appraisalUnlistedFee}
           onChange={(v) => onChange({ appraisalUnlistedFee: v })}
           hint="평가대상 법인 수 × 신용평가기관 수 × 1천만원 한도 (시행령 §20의3③)."
-          placeholder="없으면 빈칸"
         />
         <CurrencyInput
           label="평가대상 법인 수"
@@ -91,7 +89,6 @@ export function AppraisalFeeSection({
           value={value.appraisalTangibleFee}
           onChange={(v) => onChange({ appraisalTangibleFee: v })}
           hint="서화·골동품 등 유형재산 평가 감정수수료 (500만원 한도)."
-          placeholder="없으면 빈칸"
         />
       </div>
     </div>

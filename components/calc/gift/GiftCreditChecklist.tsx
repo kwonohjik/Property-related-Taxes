@@ -185,19 +185,16 @@ export function GiftCreditChecklist({
             label="혼인공제"
             value={form.marriageExemption}
             onChange={(v) => set({ marriageExemption: v })}
-            placeholder="없으면 빈칸"
           />
           <CurrencyInput
             label="출산공제"
             value={form.birthExemption}
             onChange={(v) => set({ birthExemption: v })}
-            placeholder="없으면 빈칸"
           />
           <CurrencyInput
             label="이미 공제받은 혼인·출산 공제액 (§53의2③)"
             value={form.priorUsedMarriageBirthDeduction}
             onChange={(v) => set({ priorUsedMarriageBirthDeduction: v })}
-            placeholder="없으면 빈칸"
           />
         </div>
       )}
@@ -210,7 +207,6 @@ export function GiftCreditChecklist({
             value={form.priorUsedDeduction}
             onChange={(v) => set({ priorUsedDeduction: v })}
             hint="합산 신고 대상이 아닌 동일 그룹에서 10년내 이미 공제 받은 금액"
-            placeholder="없으면 빈칸"
           />
         </div>
       )}
@@ -235,7 +231,6 @@ export function GiftCreditChecklist({
             value={form.foreignTaxPaid}
             onChange={(v) => set({ foreignTaxPaid: v })}
             hint="해외 소재 증여재산에 대해 납부한 외국 세액"
-            placeholder="없으면 빈칸"
           />
         </div>
       )}

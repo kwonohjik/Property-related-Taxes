@@ -265,7 +265,6 @@ export function Step4({
                   value={autoFillValue(form.netFinancialAssets, autos.netFin)}
                   onChange={(v) => set({ netFinancialAssets: v })}
                   hint="예금·펀드·채권 등 — 자산 카드의 금융재산에서 자동 도출. 20% 공제, 최대 2억."
-                  placeholder="없으면 빈칸"
                 />
                 <LawArticleModal legalBasis="상속세및증여세법 §22" label="§22 금융재산 상속공제" />
                 <AutoSuggestBadge
@@ -299,7 +298,6 @@ export function Step4({
                 value={form.cohabitDirectAmount}
                 onChange={(v) => set({ cohabitDirectAmount: v })}
                 hint="요건 판정 생략 모드 — 입력값 그대로 적용 (한도 6억 유지). 공시가격 입력보다 우선."
-                placeholder="없으면 빈칸"
               />
               {/* G4 §23의2① 주택부수토지 면적한도 차감 */}
               <CohabitAncillaryLandBlock
@@ -317,7 +315,6 @@ export function Step4({
                 value={autoFillValue(form.farmingAssetValue, autos.farming)}
                 onChange={(v) => set({ farmingAssetValue: v })}
                 hint="자산 카드에서 농지·초지·어선 등으로 분류하면 자동 도출(시행령 §16⑤). 최대 30억."
-                placeholder="없으면 빈칸"
               />
               <LawArticleModal legalBasis="상속세및증여세법 §18의3" label="§18의3 영농상속공제" />
               <AutoSuggestBadge
@@ -352,7 +349,6 @@ export function Step4({
                     value={form.familyBusinessValue}
                     onChange={(v) => set({ familyBusinessValue: v })}
                     hint="요건 판정 모드 미사용 시 가업재산가액 직접 입력 — 중소·중견기업 가업 (최대 600억)"
-                    placeholder="없으면 빈칸"
                   />
                   {parseAmount(form.familyBusinessValue) > 0 && !form.familyBusiness && (
                     <div className="space-y-1">
@@ -385,7 +381,6 @@ export function Step4({
                     value={form.familyBusinessDirectAmount}
                     onChange={(v) => set({ familyBusinessDirectAmount: v })}
                     hint="법정 요건 생략 — 직접 확인하고 입력하는 경우만 사용"
-                    placeholder="없으면 빈칸"
                   />
                 </div>
               </div>
@@ -417,7 +412,6 @@ export function Step4({
                 value={form.legateeAmountNonHeir}
                 onChange={(v) => set({ legateeAmountNonHeir: v })}
                 hint="상속인이 아닌 자(수유자 손자녀·기타)에게 유증한 재산가액"
-                placeholder="없으면 빈칸"
               />
             )}
 
@@ -428,7 +422,6 @@ export function Step4({
                 value={form.priorGiftDeductionTotal}
                 onChange={(v) => set({ priorGiftDeductionTotal: v })}
                 hint="배우자 6억·직계비속 5천만 등 사전증여 시 적용된 증여재산공제 합"
-                placeholder="없으면 빈칸"
               />
             )}
 
@@ -439,7 +432,6 @@ export function Step4({
                 value={form.disasterLossDeduction}
                 onChange={(v) => set({ disasterLossDeduction: v })}
                 hint="사전증여재산에 적용된 §54 증여세 재해손실공제 합산액. §24 종합한도 분자에서 사전증여 합산가액을 차감할 때 보정에 사용. (상속세 §23 재해손실공제는 아래 '재해손실공제 신청(§23)' 토글에서 입력)"
-                placeholder="없으면 빈칸"
               />
             )}
 
@@ -536,7 +528,7 @@ export function Step4({
             </p>
             <FieldCard
               label="외국에서 납부한 상속세액"
-              hint="외국 법령에 따라 부과된 상속세액 (한도 비교 대상). 없으면 빈칸."
+              hint="외국 법령에 따라 부과된 상속세액 (한도 비교 대상)."
             >
               <CurrencyInput
                 label="외국에서 납부한 상속세액"

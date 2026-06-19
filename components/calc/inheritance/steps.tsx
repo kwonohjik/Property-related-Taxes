@@ -245,7 +245,6 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
               value={form.funeralExpense}
               onChange={(v) => set({ funeralExpense: v })}
               hint="한도: 500만원 미만이면 500만원 인정, 1,000만원 초과분은 공제 불가 (상증령 §9②1호)"
-              placeholder="없으면 빈칸"
             />
             {/* 상증령 §9②2호: 봉안시설·자연장지 비용 — min(실제, 500만) */}
             <CurrencyInput
@@ -253,7 +252,6 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
               value={form.funeralBonganExpense}
               onChange={(v) => set({ funeralBonganExpense: v })}
               hint="한도: 500만원 초과분은 공제 불가. 이용하지 않으면 빈칸 (상증령 §9②2호)"
-              placeholder="없으면 빈칸"
             />
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -262,7 +260,6 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
               value={form.debts}
               onChange={(v) => set({ debts: v })}
               hint="상속개시일 현재 피상속인이 부담해야 할 채무 총액"
-              placeholder="없으면 빈칸"
             />
           </div>
         </>
