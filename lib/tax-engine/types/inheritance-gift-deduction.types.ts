@@ -268,6 +268,30 @@ export interface GiftDeductionInput {
    * 경우 그 초과분은 공제하지 아니한다."
    */
   priorUsedMarriageBirthDeduction?: number;
+  /**
+   * 상증령 §46①2호 — 같은 날 *다른 동일인 그룹*으로부터 받은 동시증여.
+   * 각 항목 = 한 동일인 그룹의 합산 과세가액 + 그 그룹의 donorRelation.
+   * 같은 동일인(부·모)은 현재 신고 grossGiftValue에 이미 합산되므로 여기 넣지 않음.
+   * 3-state: undefined=동시증여 없음 / []=ON 빈 / [...]=데이터.
+   * 안분 그룹 키 = donorRelation (현재 신고와 같은 관계인 항목만 분모에 합산).
+   */
+  simultaneousGifts?: Array<{ donorRelation: DonorRelation; taxableValue: number }>;
+}
+
+/** 동시증여 안분 산출근거 (상증령 §46①2호) — echo */
+export interface GiftApportionment {
+  /** 분모 = 현재 과세가액 + 같은 donorRelation 동시 과세가액 합 */
+  denominator: number;
+  /** 현재 신고 과세가액 (V_cur) */
+  currentTaxableValue: number;
+  /** 잔여한도 L' = max(0, 한도 − 기사용공제) */
+  remainingLimit: number;
+  /** 안분액 = floor(L' × V_cur / denominator) */
+  apportionedAmount: number;
+  /** 분모 합 ≥ 잔여한도 → 안분 실효(true). 합 < 한도면 각자 전액(false) */
+  binding: boolean;
+  /** Phase 1 §53의2 가드: 동시증여+혼인/출산공제 동시 → 혼인·출산공제 미적용 표기 */
+  marriageBirthSkipped?: boolean;
 }
 
 /** 증여공제 계산 결과 */
@@ -277,4 +301,6 @@ export interface GiftDeductionResult {
   totalDeduction: number;
   breakdown: CalculationStep[];
   appliedLaws: string[];
+  /** §46①2호 안분 산출근거 — 동시증여 없을 땐 undefined (회귀 보존) */
+  apportionment?: GiftApportionment;
 }
