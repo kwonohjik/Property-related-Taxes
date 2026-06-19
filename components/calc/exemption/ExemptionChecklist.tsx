@@ -39,6 +39,7 @@ import {
   hasDistributableHeir,
 } from "@/components/calc/inheritance/HeirAllocationInput";
 import { ExemptionChecklistPanel } from "./ExemptionChecklistPanel";
+import { RelatedStockLimitInput } from "./RelatedStockLimitInput";
 import { cn } from "@/lib/utils";
 
 // ============================================================
@@ -47,10 +48,12 @@ import { cn } from "@/lib/utils";
 
 interface ExemptionRowProps {
   rule: ExemptionRule;
+  item: ExemptionCheckedItem;
   amount: number;
   areaM2: number | undefined;
   onAmountChange: (ruleId: string, amount: number) => void;
   onAreaChange: (ruleId: string, areaM2: number | undefined) => void;
+  onPatch: (ruleId: string, patch: Partial<ExemptionCheckedItem>) => void;
   isInheritance: boolean;
   heirs: Heir[];
   heirAllocations: HeirAllocation[] | undefined;
@@ -62,10 +65,12 @@ interface ExemptionRowProps {
 
 function ExemptionRow({
   rule,
+  item,
   amount,
   areaM2,
   onAmountChange,
   onAreaChange,
+  onPatch,
   isInheritance,
   heirs,
   heirAllocations,
@@ -131,6 +136,14 @@ function ExemptionRow({
               </p>
             )}
           </div>
+        )}
+
+        {/* 공익법인 출연 — 동족주식 한도 §16② (갭5a) */}
+        {rule.id === "inh_public_interest" && (
+          <RelatedStockLimitInput
+            item={item}
+            onPatch={(patch) => onPatch(rule.id, patch)}
+          />
         )}
 
         {/* 적용 요건·제외 사유 — 기본 접힘 */}
@@ -209,6 +222,7 @@ interface ExemptionGroupSectionProps {
   onToggleOpen: () => void;
   onAmountChange: (ruleId: string, amount: number) => void;
   onAreaChange: (ruleId: string, areaM2: number | undefined) => void;
+  onPatch: (ruleId: string, patch: Partial<ExemptionCheckedItem>) => void;
   isInheritance: boolean;
   heirs: Heir[];
   onHeirAllocationsChange: (ruleId: string, allocs: HeirAllocation[] | undefined) => void;
@@ -224,6 +238,7 @@ function ExemptionGroupSection({
   onToggleOpen,
   onAmountChange,
   onAreaChange,
+  onPatch,
   isInheritance,
   heirs,
   onHeirAllocationsChange,
@@ -279,10 +294,12 @@ function ExemptionGroupSection({
             <ExemptionRow
               key={rule.id}
               rule={rule}
+              item={checkedMap.get(rule.id) ?? { ruleId: rule.id, claimedAmount: 0 }}
               amount={checkedMap.get(rule.id)?.claimedAmount ?? 0}
               areaM2={checkedMap.get(rule.id)?.claimedAreaM2}
               onAmountChange={onAmountChange}
               onAreaChange={onAreaChange}
+              onPatch={onPatch}
               isInheritance={isInheritance}
               heirs={heirs}
               heirAllocations={checkedMap.get(rule.id)?.heirAllocations}
@@ -349,6 +366,11 @@ export function ExemptionChecklist({
     );
   };
 
+  // §16② 동족주식 한도 등 임의 필드 패치 (갭5a) — onChange 직접(미러링 금지)
+  const handlePatch = (ruleId: string, patch: Partial<ExemptionCheckedItem>) => {
+    onChange(value.map((v) => (v.ruleId === ruleId ? { ...v, ...patch } : v)));
+  };
+
   // 비과세/불산입 그룹 분리
   const nonTaxableRules = rules.filter(
     (r) => getExemptionTreatment(r) === "non_taxable",
@@ -411,6 +433,7 @@ export function ExemptionChecklist({
               onToggleOpen={() => setNontaxableOpen((o) => !o)}
               onAmountChange={handleAmountChange}
               onAreaChange={handleAreaChange}
+              onPatch={handlePatch}
               isInheritance={isInheritance}
               heirs={heirs}
               onHeirAllocationsChange={handleHeirAllocationsChange}
@@ -428,6 +451,7 @@ export function ExemptionChecklist({
               onToggleOpen={() => setNotIncludedOpen((o) => !o)}
               onAmountChange={handleAmountChange}
               onAreaChange={handleAreaChange}
+              onPatch={handlePatch}
               isInheritance={isInheritance}
               heirs={heirs}
               onHeirAllocationsChange={handleHeirAllocationsChange}

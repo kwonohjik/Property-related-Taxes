@@ -56,6 +56,8 @@ const baseItemSchema = z.object({
   // 종합사례 PDF 확장
   heirAllocations: z.array(heirAllocationSchema).optional(),
   deemedCategory: z.enum(["retirement", "insurance", "trust"]).optional(),
+  // 갭4: 물납 충당순위 §74②6호 상속인 거주주택 (누락 시 z.object 침묵 strip — ⑫)
+  isHeirResidenceProperty: z.boolean().optional(),
   isFamilyBusinessAsset: z.boolean().optional(),
   // §23의2 동거주택 상속공제 자동도출 (v3)
   isCohabitantHouse: z.boolean().optional(),

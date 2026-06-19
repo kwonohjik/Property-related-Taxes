@@ -18,12 +18,34 @@ export interface ExemptionCheckedItem {
   /** 장애인 신탁: 10년 합산 기사용 공제액 */
   priorDisabledTrustUsed?: number;
   /**
-   * 공익법인 동족주식 초과분 금액 (§16 ②)
-   * 5%(성실공익법인 10%) 초과 보유 주식의 시가 — 이 금액은 과세됨
+   * 공익법인 동족주식 초과분 금액 (§16 ②) — **수동 입력 fallback**.
+   * 5%(성실공익법인 10%) 초과 보유 주식의 시가 — 이 금액은 과세됨.
+   * publicInterestType + 주식수 필드 입력 시 자동계산(computeRelatedStockExcess)이 우선하며 본 필드는 무시됨.
    */
   excessStockAmount?: number;
-  /** 공익법인 동족주식 5% 초과 보유 여부 (§16 ②) */
+  /** 공익법인 동족주식 5% 초과 보유 여부 (§16 ②) — 수동 fallback */
   relatedStockExceeded?: boolean;
+
+  // ===== §16② 동족주식 한도 자동계산 입력 (갭5a — 자동계산 우선) =====
+  /**
+   * 공익법인 유형 — §16②2호 한도 비율 결정.
+   *   general(본문 10%) · charity_no_voting(가목 20%, 의결권 미행사+자선·장학·사회복지)
+   *   · mutual_investment_restricted(나목 5%, 상호출자제한 특수관계) · art48_11_unmet(다목 5%, §48⑪ 미충족)
+   * 입력 시 아래 주식수 필드로 초과분 자동계산(computeRelatedStockExcess).
+   */
+  publicInterestType?:
+    | "general"
+    | "charity_no_voting"
+    | "mutual_investment_restricted"
+    | "art48_11_unmet";
+  /** 출연 주식수 (§16② 한도 자동계산) */
+  relatedStockDonatedShares?: number;
+  /** 발행주식총수등 — 자기주식·자기출자지분 제외 (§16② 한도 분모) */
+  relatedStockTotalShares?: number;
+  /** §16②1호 합산 기보유분 주식수 (출연 당시 공익법인 보유분 등) */
+  relatedStockPriorHeld?: number;
+  /** 1주당 평가액 (원) — 초과 주식수 × 단가 = 과세 산입액 */
+  relatedStockValuePerShare?: number;
   /** 혼인공제 기사용 여부 (§53의2 — 평생 1회) */
   marriageExemptionAlreadyUsed?: boolean;
   /** 면적 한도 항목의 실제 면적 (㎡) — 금양임야·묘토 */

@@ -226,6 +226,16 @@ export interface EstateItem extends EstateLocationFields {
   heirAllocations?: HeirAllocation[];
   /** 간주상속재산 표시 분류 (본법 §8 보험금 / §9 신탁 / §10 퇴직금). 결과 카드 분리 노출용. */
   deemedCategory?: "retirement" | "insurance" | "trust";
+
+  // ===== 물납 충당순위 분류 (상증령 §74②, 갭4) — 물납 안내 카드 전용(결정세액 미영향) =====
+  /**
+   * 상속인 거주 주택·부수토지 (§74②6호) — 충당 최후순위.
+   * 부동산 자산 한정. true 시 충당순서 표시상 일반 국내부동산(3호)에서 분리되어 6순위로,
+   * §73④ 비상장 캡 기준에서 차감. 요건1(§73①1호 부동산·유가증권 분자)에는 포함(국내 부동산).
+   * (유가증권 분류 government_bond/restricted_listed는 §73①3호 "금융재산" 정의와의
+   *  이중계상 검증 후 후속 — 본 PR은 거주주택만.)
+   */
+  isHeirResidenceProperty?: boolean;
   /** 가업상속재산 여부 — 직접 입력 모드 표시용 */
   isFamilyBusinessAsset?: boolean;
   /**

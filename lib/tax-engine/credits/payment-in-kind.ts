@@ -103,12 +103,12 @@ export function calcPaymentInKindAssessment(
 
   // 충당순서 (상증령 §74②)
   const availableByOrder = [
-    0, // 1 국채·공채 (estate 자동도출 분류 없음 — 보정 입력)
+    0, // 1 국채·공채 (estate 자동도출 분류 없음 — 후속)
     eligibleSecuritiesValue, // 2 상장유가증권(처분제한)
-    realEstateValue, // 3 국내 부동산
+    Math.max(0, realEstateValue - heirResidenceValue), // 3 국내 부동산 (§74②3호 — 제6호 거주주택 제외)
     0, // 4 그 밖의 유가증권
     unlistedStockValue, // 5 비상장주식
-    heirResidenceValue, // 6 상속인 거주 주택·부수토지
+    heirResidenceValue, // 6 상속인 거주 주택·부수토지 (§74②6호)
   ];
   const fillOrder: FillOrderStep[] = FILL_ORDER_LABELS.map((label, i) => ({
     order: i + 1,
@@ -180,6 +180,7 @@ export function derivePaymentInKindAssets(
     result.valuationResults.map((v) => [v.estateItemId, v.valuatedAmount]),
   );
   let realEstateValue = 0;
+  let heirResidenceValue = 0;
   let unlistedStockValue = 0;
   let tradableListedValue = 0;
   let netFinancialValue = 0;
@@ -188,6 +189,9 @@ export function derivePaymentInKindAssets(
     const cat = buildSummaryCategory(item);
     if (cat === "realEstate") {
       realEstateValue += v;
+      // §74②6호 상속인 거주주택 — realEstateValue에 유지(요건1 분자, §73①1호)하되
+      // 별도 추적(충당순서 3호서 제외·6호 분리 + §73④ 캡 차감). subset 태그 (KoreanLaw §73·§74 검증 2026-06-19)
+      if (item.isHeirResidenceProperty) heirResidenceValue += v;
     } else if (cat === "stock") {
       const isUnlisted =
         item.category === "unlisted_stock" ||
@@ -202,11 +206,11 @@ export function derivePaymentInKindAssets(
   }
   return {
     realEstateValue,
-    eligibleSecuritiesValue: 0, // 국채·공채·처분제한 상장 — estate 분류 없음(보정 후속, 확인②)
+    eligibleSecuritiesValue: 0, // 국채·공채·처분제한 상장 — §73①3호 금융재산 정의 이중계상 검증 후 후속
     unlistedStockValue,
     tradableListedValue,
     netFinancialValue,
-    heirResidenceValue: 0, // 상속인 거주 주택 플래그 없음(보정 후속, 확인⑦)
+    heirResidenceValue, // 갭4: isHeirResidenceProperty flag로 자동도출 (subset)
     ineligibleManagementValue,
   };
 }
