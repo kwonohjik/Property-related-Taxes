@@ -14,7 +14,16 @@ const trustBenefitSchema = z.object({
   trustPropertyValue: z.number().nonnegative(),
   yieldRate: rateFractionSchema.optional(),
   withholdingRate: rateFractionSchema,
-  installments: z.number().int().positive({ message: "수익 분할 횟수는 1 이상이어야 합니다" }),
+  // §61②→§62 정기금 유형 (기본 finite). finite일 때만 installments 필수
+  incomeAnnuityType: z.enum(["finite", "perpetual", "lifetime"]).optional(),
+  installments: z.number().int().positive().optional(),
+  incomeIntervalYears: z.number().positive().optional(),
+  expectedRemainingYears: z.number().nonnegative().optional(),
+  beneficiaryGender: z.enum(["male", "female"]).optional(),
+  beneficiaryAge: z.number().nonnegative().optional(),
+  // 증여시기 분리 (§33①1·2호) — string 수신 → Date 변환
+  incomeGiftDate: z.coerce.date().optional(),
+  principalGiftDate: z.coerce.date().optional(),
   surrenderValue: z.number().nonnegative().optional(),
   giftTimingType: z.enum(["actual", "decedent_death", "agreed", "first_installment"]).optional(),
 });
