@@ -50,6 +50,11 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     priorUsedDeduction: parseAmount(form.priorUsedDeduction) || undefined,
     // §53의2③ 기공제 누적 — 3중 패턴: 빈값/0이면 undefined → 엔진 기본(기공제 0) 유지
     priorUsedMarriageBirthDeduction: parseAmount(form.priorUsedMarriageBirthDeduction) || undefined,
+    // 상증령 §46①2호 동시증여 안분 — 3-state 보존(OFF=undefined). string→number 변환.
+    // taxableValue ≤ 0 항목 제거(엔진 필터·Zod positive 정합 — 빈/0행은 "없음" 동일 취급).
+    simultaneousGifts: form.simultaneousGifts
+      ?.map((g) => ({ donorRelation: g.donorRelation, taxableValue: parseAmount(g.taxableValue) }))
+      .filter((g) => g.taxableValue > 0),
   };
 
   const creditInput: GiftTaxCreditInput = {

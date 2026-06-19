@@ -72,6 +72,8 @@ export const GIFT = {
   TAXABLE_VALUE:       "상증법 §47",
   /** 상증법 §53 — 증여재산 공제 (배우자 6억·직계존비속 5천·기타친족 1천) */
   GIFT_DEDUCTION:      "상증법 §53",
+  /** 상증령 §46①2호 — 동시증여 시 증여재산공제 안분 */
+  SIMULTANEOUS_APPORTIONMENT: "상증령 §46①2호",
   /** 상증법 §53의2 — 혼인·출산 증여재산 공제 (1억) */
   MARRIAGE_DEDUCTION:  "상증법 §53의2",
   /** 상증법 §54 — 재해손실공제 */

@@ -432,6 +432,15 @@ export function GiftTaxResultView({
             sub
             deduction
           />
+          {result.deductionDetail?.apportionment && (
+            <div className="px-4 pb-1 text-xs text-sky-700 dark:text-sky-300">
+              동시증여 안분 (상증령 §46①2호): {formatKRW(result.deductionDetail.apportionment.remainingLimit)} × {formatKRW(result.deductionDetail.apportionment.currentTaxableValue)} ÷ {formatKRW(result.deductionDetail.apportionment.denominator)} = {formatKRW(result.deductionDetail.apportionment.apportionedAmount)}
+              {result.deductionDetail.apportionment.apportionedAmount !== result.deductionDetail.relationDeduction &&
+                ` → 과세가액 한도 적용 ${formatKRW(result.deductionDetail.relationDeduction)}`}
+              {!result.deductionDetail.apportionment.binding && " · 동시증여 합산이 한도 미만 → 각자 전액 공제"}
+              {result.deductionDetail.apportionment.marriageBirthSkipped && " · 혼인·출산공제는 동시증여 안분 미지원(별도 신고)"}
+            </div>
+          )}
           {(result.appraisalFeeDeduction ?? 0) > 0 && (
             <Row
               label="감정평가수수료 공제"

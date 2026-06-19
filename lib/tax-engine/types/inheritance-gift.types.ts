@@ -51,6 +51,7 @@ export type {
   DonorRelation,
   GiftDeductionInput,
   GiftDeductionResult,
+  GiftApportionment,
 } from "./inheritance-gift-deduction.types";
 
 // 본 파일 내부 인터페이스에서 사용하는 분리 타입 로컬 import (re-export만으로는 로컬 미생성)

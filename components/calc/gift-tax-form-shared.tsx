@@ -74,6 +74,13 @@ export interface FormState extends AppraisalFeeFormFields {
    * CurrencyInput 규약에 따라 string 타입. parseAmount → number | undefined 변환은 API 변환 ④에서.
    */
   priorUsedMarriageBirthDeduction: string;
+  /**
+   * 상증령 §46①2호 동시증여 안분 — 같은 날 *다른 동일인 그룹*으로부터 받은 증여.
+   * 각 항목 = 다른 동일인 그룹의 합산 과세가액(원, CurrencyInput string) + 그 그룹의 donorRelation.
+   * 같은 동일인(부·모)은 현재 신고 증여재산에 이미 합산 → 여기 넣지 않음.
+   * 3-state: undefined=동시증여 없음 / []=ON 빈 / [...]=데이터.
+   */
+  simultaneousGifts?: Array<{ donorRelation: DonorRelation; taxableValue: string }>;
   isFiledOnTime: boolean;
   foreignTaxPaid: string;
   specialTreatment: "" | "startup" | "family_business";
@@ -353,6 +360,26 @@ export function validateStep(step: number, form: FormState): string | null {
       parseDecimal(form.familyBusinessYears) < 0
     ) {
       return "가업 영위기간은 0 이상이어야 합니다.";
+    }
+
+    // 상증령 §46①2호 동시증여 안분 (⑧) — Zod taxableValue.positive() 동기화 + §53의2 가드.
+    if (form.simultaneousGifts !== undefined) {
+      for (let i = 0; i < form.simultaneousGifts.length; i++) {
+        if (parseAmount(form.simultaneousGifts[i].taxableValue) <= 0) {
+          return `동시증여 ${i + 1}: 증여세 과세가액을 입력하세요. (자동 분할 없음 — §46①2호)`;
+        }
+      }
+      // Phase 1: 동시증여 안분 + 혼인·출산공제 동시 미지원 (엔진 가드와 동일 조건 — 침묵 과다공제 차단).
+      // 엔진은 "같은 donorRelation + 양수" 동시증여가 1건 이상일 때만 안분 발동 → validation도 동일 조건
+      // (타 관계 동시증여만 있으면 안분 미발동 → 정당한 혼인공제 오차단 금지).
+      const hasApportionment = form.simultaneousGifts.some(
+        (g) => g.donorRelation === form.donorRelation && parseAmount(g.taxableValue) > 0,
+      );
+      const mbRequested =
+        parseAmount(form.marriageExemption) > 0 || parseAmount(form.birthExemption) > 0;
+      if (hasApportionment && mbRequested) {
+        return "동시증여 안분 시 혼인·출산공제(§53의2)는 아직 지원하지 않습니다. 혼인·출산공제를 비우거나 동시증여를 해제하세요.";
+      }
     }
   }
   return null;

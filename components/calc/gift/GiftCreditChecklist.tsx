@@ -16,6 +16,16 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
+import type { DonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+
+// 동시증여 안분 — 관계 옵션 (§46①2호). DonorRelation 5종.
+const SIMULTANEOUS_RELATION_OPTIONS: { value: DonorRelation; label: string }[] = [
+  { value: "lineal_ascendant_adult", label: "직계존속(성년)" },
+  { value: "lineal_ascendant_minor", label: "직계존속(미성년)" },
+  { value: "lineal_descendant", label: "직계비속" },
+  { value: "spouse", label: "배우자" },
+  { value: "other_relative", label: "기타친족" },
+];
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -210,6 +220,78 @@ export function GiftCreditChecklist({
           />
         </div>
       )}
+
+      {/* 동시증여 안분 (상증령 §46①2호) — 칩 밖 상시 노출 (직계존속·직계비속 한도 안분) */}
+      <ToggleCard
+        tone="sky"
+        title="같은 날 다른 증여자로부터도 받았나요? (동시증여 안분)"
+        description="직계존속·직계비속 공제 한도를 동시증여 과세가액 비율로 안분합니다 (상증령 §46①2호). 부·모 등 같은 분(동일인)의 증여는 현재 신고 증여재산에 합산하고 여기 넣지 마세요."
+        lawLinks="상증령"
+        checked={form.simultaneousGifts !== undefined}
+        onCheckedChange={(v) => set({ simultaneousGifts: v ? [] : undefined })}
+      >
+        <div className="space-y-2">
+          {(form.simultaneousGifts ?? []).map((g, i) => (
+            <div key={i} className="flex items-end gap-2">
+              <label className="flex flex-col gap-1 text-xs text-sky-800 dark:text-sky-200">
+                관계
+                <select
+                  value={g.donorRelation}
+                  onChange={(e) => {
+                    const next = [...(form.simultaneousGifts ?? [])];
+                    next[i] = { ...next[i], donorRelation: e.target.value as DonorRelation };
+                    set({ simultaneousGifts: next });
+                  }}
+                  className="rounded-md border border-sky-200 bg-white px-2 py-2 text-sm dark:bg-gray-900"
+                >
+                  {SIMULTANEOUS_RELATION_OPTIONS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex-1">
+                <CurrencyInput
+                  label="증여세 과세가액"
+                  value={g.taxableValue}
+                  onChange={(v) => {
+                    const next = [...(form.simultaneousGifts ?? [])];
+                    next[i] = { ...next[i], taxableValue: v };
+                    set({ simultaneousGifts: next });
+                  }}
+                  hint="현재 신고와 같은 관계만 안분에 반영됩니다"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  set({
+                    simultaneousGifts: (form.simultaneousGifts ?? []).filter((_, j) => j !== i),
+                  })
+                }
+                className="rounded-md border border-rose-200 px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50"
+              >
+                삭제
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              set({
+                simultaneousGifts: [
+                  ...(form.simultaneousGifts ?? []),
+                  { donorRelation: form.donorRelation, taxableValue: "" },
+                ],
+              })
+            }
+            className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-2 text-xs font-medium text-sky-800 hover:bg-sky-100"
+          >
+            + 동시증여 추가
+          </button>
+        </div>
+      </ToggleCard>
 
       {/* 감정평가수수료 공제 */}
       {active("appraisalFee") && (

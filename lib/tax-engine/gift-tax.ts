@@ -179,6 +179,7 @@ export function calcGiftTax(
   const deductionResult = calcGiftDeductions(
     input.deductionInput,
     aggregatedGiftValue,
+    netCurrentGiftValue, // §46①2호 안분 분자·분모는 금번 증여 순 과세가액(사전증여 제외)
   );
   const totalDeduction = deductionResult.totalDeduction;
   allBreakdown.push(...deductionResult.breakdown);
@@ -581,6 +582,7 @@ function calcGiftTaxTwoStream(
   const deductionResult = calcGiftDeductions(
     input.deductionInput,
     aggregatedOrdinaryValue,
+    ordinaryNetValue, // §46①2호 안분 분자·분모는 금번 일반 스트림 순 과세가액(사전증여 제외)
   );
   const totalDeduction = deductionResult.totalDeduction;
   allBreakdown.push(...deductionResult.breakdown);

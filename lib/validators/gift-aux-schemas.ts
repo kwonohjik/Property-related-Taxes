@@ -10,14 +10,23 @@ import { z } from "zod";
 // 증여공제 입력 스키마
 // ============================================================
 
+const donorRelationEnum = z.enum([
+  "spouse",
+  "lineal_ascendant_adult",
+  "lineal_ascendant_minor",
+  "lineal_descendant",
+  "other_relative",
+]);
+
 export const giftDeductionInputSchema = z.object({
-  donorRelation: z.enum([
-    "spouse",
-    "lineal_ascendant_adult",
-    "lineal_ascendant_minor",
-    "lineal_descendant",
-    "other_relative",
-  ]),
+  donorRelation: donorRelationEnum,
+  /**
+   * 상증령 §46①2호 동시증여 안분 — 다른 동일인 그룹의 합산 과세가액.
+   * gift Route는 parsed.data 직접 캐스트 → 이 스키마가 유일 게이트(누락 시 침묵 strip).
+   */
+  simultaneousGifts: z
+    .array(z.object({ donorRelation: donorRelationEnum, taxableValue: z.number().positive() }))
+    .optional(),
   marriageExemption: z.number().min(0).max(100_000_000).optional(),
   birthExemption: z.number().min(0).max(100_000_000).optional(),
   priorUsedDeduction: z.number().nonnegative().optional(),
