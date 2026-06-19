@@ -362,23 +362,13 @@ export function validateStep(step: number, form: FormState): string | null {
       return "가업 영위기간은 0 이상이어야 합니다.";
     }
 
-    // 상증령 §46①2호 동시증여 안분 (⑧) — Zod taxableValue.positive() 동기화 + §53의2 가드.
+    // 상증령 §46①2호 동시증여 안분 (⑧) — Zod taxableValue.positive() 동기화.
+    // §53(관계공제)·§53의2(혼인·출산공제) 모두 동시증여 안분(Phase 2) → 별도 차단 없음.
     if (form.simultaneousGifts !== undefined) {
       for (let i = 0; i < form.simultaneousGifts.length; i++) {
         if (parseAmount(form.simultaneousGifts[i].taxableValue) <= 0) {
           return `동시증여 ${i + 1}: 증여세 과세가액을 입력하세요. (자동 분할 없음 — §46①2호)`;
         }
-      }
-      // Phase 1: 동시증여 안분 + 혼인·출산공제 동시 미지원 (엔진 가드와 동일 조건 — 침묵 과다공제 차단).
-      // 엔진은 "같은 donorRelation + 양수" 동시증여가 1건 이상일 때만 안분 발동 → validation도 동일 조건
-      // (타 관계 동시증여만 있으면 안분 미발동 → 정당한 혼인공제 오차단 금지).
-      const hasApportionment = form.simultaneousGifts.some(
-        (g) => g.donorRelation === form.donorRelation && parseAmount(g.taxableValue) > 0,
-      );
-      const mbRequested =
-        parseAmount(form.marriageExemption) > 0 || parseAmount(form.birthExemption) > 0;
-      if (hasApportionment && mbRequested) {
-        return "동시증여 안분 시 혼인·출산공제(§53의2)는 아직 지원하지 않습니다. 혼인·출산공제를 비우거나 동시증여를 해제하세요.";
       }
     }
   }

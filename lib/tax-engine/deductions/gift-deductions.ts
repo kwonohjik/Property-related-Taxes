@@ -159,6 +159,8 @@ export function isMarriageBirthEligibleRelation(relation: DonorRelation): boolea
  * @param marriageExemption 혼인공제 금액 (≤ 1억)
  * @param birthExemption    출산공제 금액 (≤ 1억)
  * @param priorUsedMarriageBirthDeduction §53의2③ 기공제 누계액 — 미입력 시 0 (기존 동작 보존)
+ * @param simultaneousGifts §46①2호 동시증여 — 같은 직계존속 동시증여 시 1억 한도 안분 (Phase 2)
+ * @param currentNetGiftValue 안분 분자·분모 기준 = 현재 순 과세가액 (미지정 시 grossGiftValue 폴백)
  */
 export function calcMarriageBirthDeduction(
   donorRelation: DonorRelation,
@@ -166,7 +168,9 @@ export function calcMarriageBirthDeduction(
   marriageExemption?: number,
   birthExemption?: number,
   priorUsedMarriageBirthDeduction?: number,
-): { deduction: number; breakdown: CalculationStep[] } {
+  simultaneousGifts?: GiftDeductionInput["simultaneousGifts"],
+  currentNetGiftValue: number = grossGiftValue,
+): { deduction: number; breakdown: CalculationStep[]; apportionedLimit?: number } {
   // §53의2 게이트: 직계존속 증여가 아니면 공제 불가
   if (!isMarriageBirthEligibleRelation(donorRelation)) {
     return { deduction: 0, breakdown: [] };
@@ -180,8 +184,31 @@ export function calcMarriageBirthDeduction(
   // 잔여 한도: max(0, 1억 − min(기공제, 1억)) — 기공제가 1억 초과해도 음수 방지
   const remainingMBLimit = Math.max(0, MARRIAGE_BIRTH_MAX - Math.min(priorUsedMB, MARRIAGE_BIRTH_MAX));
 
-  // 혼인 + 출산 합산 후 잔여 한도 적용 (§53의2③)
-  const combinedMax = Math.min(marriage + birth, remainingMBLimit);
+  // 상증령 §46①2호 — 동시증여 시 잔여 1억 한도도 §53과 동일 과세가액 비율 안분 (직계존속 동시증여만).
+  // window 자격: 혼인/출산 2년 window는 수증자 기준(혼인일 전후 2년)이고 동시증여는 같은 날이므로,
+  //   현재 증여가 window 내(혼인/출산공제 요청)이면 같은 날 직계존속 동시증여도 전부 window 내 →
+  //   분모는 §53과 동일(전부 1억 한도 공유). 단, 같은 날에 window 밖 직계존속 증여가 섞이는 케이스는
+  //   현 입력 구조(window 플래그 없음)로 구분 불가 — 미지원(전부 window 내 가정).
+  const sameGroup = (simultaneousGifts ?? []).filter(
+    (g) => g.donorRelation === donorRelation && g.taxableValue > 0,
+  );
+  let effectiveMBLimit = remainingMBLimit;
+  let apportionedLimit: number | undefined;
+  let mbDenominator = currentNetGiftValue;
+  if (sameGroup.length > 0) {
+    mbDenominator = sameGroup.reduce((s, g) => s + g.taxableValue, currentNetGiftValue);
+    effectiveMBLimit =
+      mbDenominator > 0
+        ? Number(
+            (BigInt(Math.trunc(remainingMBLimit)) * BigInt(Math.trunc(currentNetGiftValue))) /
+              BigInt(Math.trunc(mbDenominator)),
+          )
+        : 0;
+    apportionedLimit = effectiveMBLimit;
+  }
+
+  // 혼인 + 출산 합산 후 (안분된) 잔여 한도 적용 (§53의2③ + §46①2호)
+  const combinedMax = Math.min(marriage + birth, effectiveMBLimit);
 
   // 합산 증여재산가액 상한 캡 — totalDeduction이 과세가액 초과 방지
   const deduction = Math.min(combinedMax, Math.max(0, grossGiftValue));
@@ -211,13 +238,21 @@ export function calcMarriageBirthDeduction(
       lawRef: GIFT.MARRIAGE_CUMULATIVE_LIMIT,
     });
   }
+  if (apportionedLimit !== undefined) {
+    breakdown.push({
+      label: "혼인·출산공제 동시증여 안분",
+      amount: apportionedLimit,
+      note: `${remainingMBLimit.toLocaleString()} × ${currentNetGiftValue.toLocaleString()} ÷ ${mbDenominator.toLocaleString()}`,
+      lawRef: GIFT.SIMULTANEOUS_APPORTIONMENT,
+    });
+  }
   breakdown.push({
     label: "혼인·출산 공제 합계 (최대 1억, 직계존속 한정)",
     amount: deduction,
     lawRef: GIFT.MARRIAGE_DEDUCTION,
   });
 
-  return { deduction, breakdown };
+  return { deduction, breakdown, apportionedLimit };
 }
 
 // ============================================================
@@ -251,21 +286,20 @@ export function calcGiftDeductions(
   const { relationDeduction, breakdown: relBreakdown, apportionment } =
     calcRelationDeduction(input, grossGiftValue, currentNetGiftValue);
 
-  // §46①2호 가드 (Phase 1): 동시증여 안분 적용 시 §53의2(혼인·출산) 안분은 미지원 →
-  // 혼인/출산공제가 함께 요청되면 미적용(0)하고 플래그 노출 (침묵 과다공제 차단).
-  const marriageBirthRequested =
-    (input.marriageExemption ?? 0) > 0 || (input.birthExemption ?? 0) > 0;
-  const skipMarriageBirth = apportionment !== undefined && marriageBirthRequested;
-
-  const { deduction: marriageBirthDeduction, breakdown: mbBreakdown } = skipMarriageBirth
-    ? { deduction: 0, breakdown: [] as CalculationStep[] }
-    : calcMarriageBirthDeduction(
-        input.donorRelation,
-        grossGiftValue,
-        input.marriageExemption,
-        input.birthExemption,
-        input.priorUsedMarriageBirthDeduction,
-      );
+  // §46①2호 (Phase 2): 동시증여 시 §53의2(혼인·출산) 1억 한도도 §53과 동일 비율 안분.
+  const {
+    deduction: marriageBirthDeduction,
+    breakdown: mbBreakdown,
+    apportionedLimit: marriageBirthApportionedLimit,
+  } = calcMarriageBirthDeduction(
+    input.donorRelation,
+    grossGiftValue,
+    input.marriageExemption,
+    input.birthExemption,
+    input.priorUsedMarriageBirthDeduction,
+    input.simultaneousGifts,
+    currentNetGiftValue,
+  );
 
   // 합계가 합산 증여재산가액을 초과하지 않도록 캡 적용
   // (관계공제 + 혼인·출산공제 각각 캡이 있어도, 합산 시 초과 가능)
@@ -282,8 +316,10 @@ export function calcGiftDeductions(
       { label: "증여재산공제 합계", amount: totalDeduction, lawRef: GIFT.GIFT_DEDUCTION },
     ],
     appliedLaws: [GIFT.GIFT_DEDUCTION, GIFT.MARRIAGE_DEDUCTION],
+    // 불변식: §53의2 안분 조건(직계존속 게이트 + sameGroup>0)은 §53 안분 조건(sameGroup>0, 전 관계)의
+    // 부분집합 → marriageBirthApportionedLimit이 set이면 apportionment는 항상 존재. 침묵 소실 불가.
     apportionment: apportionment
-      ? { ...apportionment, marriageBirthSkipped: skipMarriageBirth || undefined }
+      ? { ...apportionment, marriageBirthApportionedLimit }
       : undefined,
   };
 }

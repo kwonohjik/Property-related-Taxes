@@ -438,7 +438,8 @@ export function GiftTaxResultView({
               {result.deductionDetail.apportionment.apportionedAmount !== result.deductionDetail.relationDeduction &&
                 ` → 과세가액 한도 적용 ${formatKRW(result.deductionDetail.relationDeduction)}`}
               {!result.deductionDetail.apportionment.binding && " · 동시증여 합산이 한도 미만 → 각자 전액 공제"}
-              {result.deductionDetail.apportionment.marriageBirthSkipped && " · 혼인·출산공제는 동시증여 안분 미지원(별도 신고)"}
+              {result.deductionDetail.apportionment.marriageBirthApportionedLimit !== undefined &&
+                ` · 혼인·출산공제 안분 한도 ${formatKRW(result.deductionDetail.apportionment.marriageBirthApportionedLimit)}`}
             </div>
           )}
           {(result.appraisalFeeDeduction ?? 0) > 0 && (

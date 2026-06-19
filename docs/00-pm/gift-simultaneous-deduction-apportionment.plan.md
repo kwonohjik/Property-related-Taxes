@@ -182,7 +182,7 @@
 
 - **R1 §47② 입력 경로(6-B)**: 부+모 동시합산을 현재 신고 1건으로 넣는 경로가 불명확하면 안분 분자(130,000)가 틀어짐 → Phase 1 선결 실측.
 - **R2 순차×동시(5절)**: 잔여한도 안분 해석은 예규 검증 후 확정. 미검증 단정 금지.
-- **R3 §53의2 안분(침묵 과다공제 위험)**: Phase 1은 §53만 안분, §53의2(혼인·출산 1억)는 미안분. 직계존속 동시증여 + 혼인/출산공제 동시 시 1억 미안분 전액 공제 → **법정 위반 과다공제 침묵**. → Phase 1 **가드 필수**: `simultaneousGifts` 있고 `marriageExemption/birthExemption>0`이면 검증 차단(또는 명시 경고+안분 미적용 표기). Phase 2에서 `calcMarriageBirthDeduction` 동일 비율 안분으로 해소.
+- **R3 §53의2 안분 — ✅ Phase 2 완료**: Phase 1은 §53만 안분 + 가드(혼인/출산공제 동시 시 차단)로 침묵 과다공제 방지. **Phase 2(§46① 법문 직접 근거)에서 `calcMarriageBirthDeduction`이 잔여 1억을 §53과 동일 과세가액 비율 안분 → 가드 전부 제거**. window 자격은 동시증여=같은 날로 동일 → 분모 §53과 동일(신규 입력 0). anchor P2-1~P2-5.
 - **R4 dual-truth**: 그룹 판정·안분 산식은 **엔진 단일 진실**. UI가 자체 재구현 금지(`feedback_ui_engine_dual_truth_avoidance`).
 - **R5 floor 일관성**: 신고별 독립 floor. 이미지 1원 오차 발생 시 PDF round 일관성 점검(`bigint-round-half-up` 정책).
 

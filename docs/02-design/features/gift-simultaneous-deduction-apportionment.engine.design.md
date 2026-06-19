@@ -88,7 +88,7 @@ export interface GiftDeductionResult {
 5. breakdown: 기존 4 step + (안분 시) "동시증여 안분(§46②2호)" step 추가 (lawRef: `legal-codes/inheritance-gift.ts`에 `GIFT.SIMULTANEOUS_APPORTIONMENT="상증령 §46①2호"` 신규 상수 — 문자열 리터럴 금지)
 ```
 
-### 4-1. Phase 1 스코프 가드 (§53의2 미안분 — 침묵 과다공제 차단)
+### 4-1. Phase 1 스코프 가드 (§53의2 미안분 — 침묵 과다공제 차단) — ⚠️ Phase 2(§9)에서 안분으로 대체됨
 Phase 1은 §53 관계공제만 안분하고 **§53의2(혼인·출산공제 1억)는 미안분**이다. 직계존속 동시증여 + 혼인/출산공제가 동시에 걸리면 1억이 안분 없이 전액 공제되어 **법정(§46①) 위반 과다공제**가 침묵 발생한다. 2층 방어:
 - **⑧ validation(차단 책임)**: `simultaneousGifts?.length` && (`marriageExemption||birthExemption`) 동시 충족 시 **입력 차단**. 순수 엔진은 throw하지 않음.
 - **엔진(방어적)**: 위 조합 도달 시 `calcMarriageBirthDeduction`을 **미적용**(0)하고 `apportionment`에 `marriageBirthSkipped: true` 플래그 노출 → UI가 "혼인·출산공제는 동시증여 안분 미반영(Phase 2)" 표기.
@@ -127,4 +127,41 @@ Phase 2에서 `calcMarriageBirthDeduction` 동일 비율 안분으로 해소.
 1. **C9 순차(priorUsed)×동시 안분** — 잔여한도 안분 해석 예규 검증. 분자·분모는 H-1로 currentNet 확정(C9-fix anchor 동결)이나, **사전증여 동반 시 캡(`min(apportioned, gross)`)·"각자 전액" 의미의 예규 정합은 Phase 2**(코드리뷰 M-3 stale 관계 갱신 포함).
 2. **R1 해소(Do 실측)**: 폼 `donor`는 단일 값(father/mother 택1) — 부+모 native 합산 입력 경로 없음. 그러나 `deriveDonorRelation("father")=deriveDonorRelation("mother")=lineal_ascendant_adult`이므로 **사용자가 한 부모 donor로 합산 과세가액(130,000,000)을 입력**하면 C1 성립. §47② 동일인 합산은 사용자가 값 합산으로 수행 — 현 폼 단일 donor 모델과 정합. **블로커 아님 → Phase 1 native 멀티입력 불요.**
 3. **BigInt 경계** — `calcRelationDeduction`에서 `BigInt(L') * BigInt(V_cur) / BigInt(denominator)` 채택(양수 truncate=floor). `safeMultiply` 미사용(직접 BigInt). 확정.
-4. **§53의2 가드 구현**: 2층 방어 — 엔진 `calcGiftDeductions`가 동시증여+혼인/출산 동시 시 MB 미적용(0)+`marriageBirthSkipped` 플래그 / ⑧ validation(`gift-tax-form-shared.tsx` step 3)이 입력 차단.
+4. **§53의2 가드(Phase 1) → 안분(Phase 2 §9)**: Phase 1의 가드(skipMarriageBirth·validation 차단·`marriageBirthSkipped` echo)는 **Phase 2에서 전부 제거**. `calcMarriageBirthDeduction`이 잔여 1억을 §53과 동일 비율 안분, echo는 `marriageBirthApportionedLimit`로 교체. anchor P2-1~P2-5 동결.
+
+---
+
+## 9. Phase 2 — §53의2 혼인·출산공제 안분 (가드 → 안분)
+
+### 9-1. 법령 검증 (KoreanLaw 실측)
+- **상증령 §46①** 본문: "법 제53조 **및 제53조의2**를 적용할 때 … 2이상의 증여가 동시에 있는 경우에는 각각의 증여세과세가액에 대하여 안분" → §53의2도 **§53과 동일 과세가액 비율 안분** (법문 직접 근거, 추정 아님).
+- **상증법 §53의2①②**: "**직계존속으로부터** 혼인일/출생일 전후 2년 이내" → 직계존속 only. ③ 통산 1억.
+- **window 자격 결론**: 동시증여 = **같은 날** → 혼인/출산 2년 window 자격이 모든 직계존속 동시증여에 동일 → **분모 = §53과 동일**(직계존속 동시 과세가액 합). **신규 입력 flag 불요.**
+- **예규**: 국세청 해석 2건(2017 "감면분·과세분 동시증여 증여재산공제 적용방법") — 동시증여 안분 방법론 실무 확립. §53의2 특정 예규는 신설(2024) 후 부재 → 법문 직접 적용.
+
+### 9-2. 산식 (`calcMarriageBirthDeduction` 안분 분기)
+```
+잔여 1억 한도 RemMB = max(0, 1억 − 통산기공제 priorUsedMB)
+denominator = currentNet + Σ(같은 donorRelation 동시 과세가액)   // §53과 동일 분모
+안분 RemMB' = floor( RemMB × currentNet / denominator )           // BigInt floor
+combinedMax = min( 혼인+출산 declared, 안분 RemMB' )
+deduction = min( combinedMax, grossGiftValue )                    // 과세가액 캡(합산)
+```
+- 동시증여(같은 그룹) 없으면 RemMB' = RemMB (회귀 — 기존 동작 보존).
+- 직계존속 게이트(`isMarriageBirthEligibleRelation`) 그대로 — 안분도 직계존속만.
+
+### 9-3. 변경
+- `calcMarriageBirthDeduction`에 `simultaneousGifts`·`currentNetGiftValue` 인자 추가(끝 optional, 기본 grossGiftValue → 기존 positional 테스트 호환).
+- `calcGiftDeductions`: **§53의2 가드(skipMarriageBirth) 제거** → MB에 안분 인자 전달. `apportionment.marriageBirthSkipped` 폐기, `marriageBirthApportionedLimit?` echo 추가.
+- ⑧ validation: §53의2 차단 블록 **제거**.
+- ⑦ 결과뷰: `marriageBirthSkipped` 문구 → 혼인공제 안분 표시.
+
+### 9-4. anchor 매트릭스 (Phase 2)
+| # | 케이스 | currentNet | 동시 | 혼인공제 | 기대 |
+|---|---|---|---|---|---|
+| P2-1 | 부모+조부모 동시, 혼인 1억 | 130M | 70M | 100M | §53 32.5M + §53의2 **65M** = total 97.5M |
+| P2-2 | 조부모 신고 | 70M | 130M | 100M | §53 17.5M + §53의2 **35M** = 52.5M |
+| P2-3 | 통산 차감: priorUsedMB 4천만 | 130M | 70M | 100M | RemMB 60M → 안분 floor(60M×130/200)=39M |
+| P2-4 | 회귀(동시 없음) | 300M | — | 100M | §53의2 100M 전액(기존 불변) |
+| P2-5 | 과세가액 캡 | 30M | 70M | 100M | min(안분, 30M) 캡 확인 |
+| C-guard(개정) | Phase 1 [C-guard] | 130M | 70M | 100M | **MB 0→65M, skipped 폐기** |
