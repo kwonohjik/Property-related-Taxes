@@ -66,7 +66,8 @@ test.describe("§30의5 창업자금 과세특례 + G-M8 신규 고용 토글", 
     // Step1→2→3 이동 (Step2는 비과세·합산 → 기본값 그대로)
     await nextSteps(page, 2);
 
-    // Step3: 조특법 과세특례 — 창업자금 선택
+    // Step4: 조특법 과세특례 칩 펼침 → 창업자금 선택
+    await page.getByText("조특법 과세특례 (§30의5·6)").click();
     await page.getByText("창업자금 증여세 과세특례 (§30의5)").click();
 
     // G-M7 투자완료 토글 ON
@@ -106,7 +107,8 @@ test.describe("§30의5 창업자금 과세특례 + G-M8 신규 고용 토글", 
 
     await nextSteps(page, 2);
 
-    // startup 선택 → G-M8 토글 노출 확인
+    // 조특 칩 펼침 → startup 선택 → G-M8 토글 노출 확인
+    await page.getByText("조특법 과세특례 (§30의5·6)").click();
     await page.getByText("창업자금 증여세 과세특례 (§30의5)").click();
     await expect(
       page.getByText("창업을 통하여 10명 이상 신규 고용 (§30의5①)"),

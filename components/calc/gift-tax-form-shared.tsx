@@ -15,25 +15,22 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
-import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
-import { resolveValuationMethod, evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
+import { evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
-import { SpecialTreatmentAssetSelector } from "@/components/calc/gift/SpecialTreatmentAssetSelector";
 import {
   isSpecialTreatmentEligibleCategory,
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
 } from "@/lib/tax-engine/gift-special-stream";
+import { GiftCreditChecklist } from "@/components/calc/gift/GiftCreditChecklist";
 
 // ============================================================
 // 폼 상태 타입
@@ -548,209 +545,6 @@ export function Step3({
   form: FormState;
   set: (p: Partial<FormState>) => void;
 }) {
-  return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        공제 항목을 입력하면 납부세액이 줄어듭니다.
-      </p>
-
-      {/* 혼인·출산 공제 */}
-      {(form.donorRelation === "lineal_ascendant_adult" || form.donorRelation === "lineal_ascendant_minor") && (
-        <div className="border rounded-lg p-4 space-y-3">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-            혼인·출산 공제 (§53의2, 최대 각 1억)
-          </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            직계존속으로부터 증여 시 적용. 혼인신고일 전후 2년 이내 / 자녀 출생일로부터 2년 이내 증여분. 합산 1억 한도.
-          </p>
-          <CurrencyInput
-            label="혼인공제"
-            value={form.marriageExemption}
-            onChange={(v) => set({ marriageExemption: v })}
-            hint="최대 1억원"
-            placeholder="없으면 빈칸"
-          />
-          <CurrencyInput
-            label="출산공제"
-            value={form.birthExemption}
-            onChange={(v) => set({ birthExemption: v })}
-            hint="최대 1억원"
-            placeholder="없으면 빈칸"
-          />
-          {/* §53의2③ 수증자 통산 기공제액 — 과거 다른 증여에서 이미 혼인·출산 공제를 받은 경우 */}
-          <CurrencyInput
-            label="이미 공제받은 혼인·출산 공제액 (§53의2③)"
-            value={form.priorUsedMarriageBirthDeduction}
-            onChange={(v) => set({ priorUsedMarriageBirthDeduction: v })}
-            hint="과거 다른 증여에서 §53의2 공제를 받은 금액 합계 (없으면 빈칸). 수증자 기준 통산 한도 1억."
-            placeholder="없으면 빈칸"
-          />
-        </div>
-      )}
-
-      {/* 기사용 공제 */}
-      <CurrencyInput
-        label="10년 내 기사용 증여재산공제 합계"
-        value={form.priorUsedDeduction}
-        onChange={(v) => set({ priorUsedDeduction: v })}
-        hint="동일 관계(그룹)에서 10년 이내 이미 공제받은 합계"
-        placeholder="없으면 빈칸"
-      />
-
-      <AppraisalFeeSection
-        taxType="gift"
-        value={form}
-        onChange={set}
-        hasAppraisalAsset={[...form.giftItems, ...form.stockItems].some(
-          (i) => (i.valuationMethod ?? resolveValuationMethod(i)) === "appraisal",
-        )}
-      />
-
-      {/* 신고세액공제 */}
-      <ToggleCard
-        tone="violet"
-        title="법정신고기한 내 신고 (§69 신고세액공제 3%)"
-        description="증여일로부터 3개월 이내 신고 시 산출세액의 3% 공제"
-        checked={form.isFiledOnTime}
-        onCheckedChange={(v) => set({ isFiledOnTime: v })}
-      />
-
-      {/* 외국납부세액 */}
-      <CurrencyInput
-        label="외국납부세액 (§59)"
-        value={form.foreignTaxPaid}
-        onChange={(v) => set({ foreignTaxPaid: v })}
-        hint="해외 소재 증여재산에 대해 납부한 외국 세액"
-        placeholder="없으면 빈칸"
-      />
-
-      {/* 조특법 과세특례 */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-          조특법 과세특례 (창업·가업)
-        </label>
-        <RadioCardGroup<"none" | "startup" | "family_business">
-          name="giftSpecialTreatment"
-          tone="emerald"
-          value={form.specialTreatment === "" ? "none" : form.specialTreatment}
-          onChange={(v) => {
-            const val = v === "none" ? "" : v;
-            // 특례 타입이 바뀔 때 모든 자산의 isSpecialTreatmentAsset을 초기화
-            // N≥2 혼합 자산 귀속: false(미귀속)로 초기화 → 사용자가 명시 선택 필요
-            // 자산 1개: 엔진이 자동 귀속 처리 (isSpecialTreatmentAsset 미설정도 OK)
-            const resetGiftItems = val !== ""
-              ? form.giftItems.map((it) => ({ ...it, isSpecialTreatmentAsset: false as boolean | undefined }))
-              : form.giftItems.map((it) => ({ ...it, isSpecialTreatmentAsset: undefined as boolean | undefined }));
-            const resetStockItems = val !== ""
-              ? form.stockItems.map((it) => ({ ...it, isSpecialTreatmentAsset: false as boolean | undefined }))
-              : form.stockItems.map((it) => ({ ...it, isSpecialTreatmentAsset: undefined as boolean | undefined }));
-            set({
-              specialTreatment: val,
-              giftItems: resetGiftItems,
-              stockItems: resetStockItems,
-              // startup이 아니면 startupInvestmentCompleted / startupNewHiresAtLeast10 초기화
-              ...(val !== "startup" ? { startupInvestmentCompleted: false, startupNewHiresAtLeast10: false } : {}),
-              // family_business가 아니면 familyBusinessYears 초기화
-              ...(val !== "family_business" ? { familyBusinessYears: "" } : {}),
-            });
-          }}
-          options={[
-            { value: "none", label: "해당 없음" },
-            { value: "startup", label: "창업자금 증여세 과세특례 (§30의5)" },
-            { value: "family_business", label: "가업승계 증여세 과세특례 (§30의6)" },
-          ]}
-        />
-      </div>
-
-      {/* 특례 귀속 자산 선택 — 자산 1개:자동귀속, N개:멀티선택 */}
-      {form.specialTreatment !== "" && (
-        <SpecialTreatmentAssetSelector
-          specialTreatment={form.specialTreatment as "startup" | "family_business"}
-          allItems={[...form.giftItems, ...form.stockItems]}
-          onItemChange={(index, isSpecial) => {
-            // giftItems vs stockItems 인덱스 분리 — allItems 순서: giftItems 먼저
-            // isSpecial=true → 특례 귀속, false → 일반 스트림(Zod: false = "명시 일반")
-            // undefined가 아닌 boolean을 저장해야 Zod superRefine 통과
-            const giftLen = form.giftItems.length;
-            if (index < giftLen) {
-              const updated = form.giftItems.map((it, i) =>
-                i === index
-                  ? { ...it, isSpecialTreatmentAsset: isSpecial }
-                  : it
-              );
-              set({ giftItems: updated });
-            } else {
-              const stockIdx = index - giftLen;
-              const updated = form.stockItems.map((it, i) =>
-                i === stockIdx
-                  ? { ...it, isSpecialTreatmentAsset: isSpecial }
-                  : it
-              );
-              set({ stockItems: updated });
-            }
-          }}
-        />
-      )}
-
-      {/* G-M7: 창업자금 투자 완료 여부 (§30의5④) — startup 선택 시 노출 */}
-      {form.specialTreatment === "startup" && (
-        <ToggleCard
-          tone="emerald"
-          title="창업자금 투자 완료 (§30의5④)"
-          description="증여일로부터 2년 이내 창업법인 설립 및 투자 완료 여부. 미완료 시 과세특례 미적용."
-          checked={form.startupInvestmentCompleted}
-          onCheckedChange={(v) => set({ startupInvestmentCompleted: v })}
-        />
-      )}
-
-      {/* G-M8: 10명 이상 신규 고용 여부 (§30의5①) — startup 선택 시 노출. ⑧ validation 불필요(boolean, 차단 없음) */}
-      {form.specialTreatment === "startup" && (
-        <ToggleCard
-          tone="emerald"
-          title="창업을 통하여 10명 이상 신규 고용 (§30의5①)"
-          description="창업자금 증여세 과세특례 적용 한도: 10명 이상 신규 고용 시 100억원, 그 외 50억원 (조특법 §30의5①)."
-          checked={form.startupNewHiresAtLeast10}
-          onCheckedChange={(v) => set({ startupNewHiresAtLeast10: v })}
-        />
-      )}
-
-      {/* 가업 영위기간 (§30의6①) — family_business 선택 시 노출. 한도: 10년 이상 300억 / 20년 이상 400억 / 30년 이상 600억 */}
-      {form.specialTreatment === "family_business" && (
-        <FieldCard
-          label="부모 가업 영위기간 (§30의6①)"
-          hint="부모가 계속하여 경영한 기간(년). 과세가액 한도: 10년 이상 300억 / 20년 이상 400억 / 30년 이상 600억. 비워두면 10년(300억 한도)으로 계산하며, 10년 미만 입력 시 특례 미적용(일반 증여세)으로 계산합니다."
-        >
-          <DecimalInput
-            value={form.familyBusinessYears}
-            onChange={(v) => set({ familyBusinessYears: v })}
-            placeholder="영위 기간 입력"
-            unit="년"
-          />
-        </FieldCard>
-      )}
-
-      {/* 분납 신청 (상증법 §70②) */}
-      <ToggleCard
-        tone="sky"
-        title="분납 신청 (상증법 §70②)"
-        description="결정세액 1천만원 초과 시 신고기한 경과 후 2개월 이내 분할납부. 1천만~2천만은 1천만 초과분, 2천만 초과는 50% 이하를 분납할 수 있습니다."
-        checked={form.splitPaymentEnabled}
-        onCheckedChange={(v) => set({ splitPaymentEnabled: v })}
-      >
-        <div className="space-y-3 pt-1">
-          <FieldCard
-            label="분납 희망액"
-            hint="§70② 한도(2천만 이하→1천만 초과분 / 2천만 초과→50%) 이내에서 입력하세요. 비워두면 결과 화면에서 최대 분납액으로 안내합니다."
-          >
-            <CurrencyInput
-              label="분납 희망액"
-              hideLabel
-              value={form.splitPaymentAmount}
-              onChange={(v) => set({ splitPaymentAmount: v })}
-            />
-          </FieldCard>
-        </div>
-      </ToggleCard>
-    </div>
-  );
+  // Step4(공제·세액공제)는 칩 체크리스트로 컴팩트화 — GiftCreditChecklist로 분리(800줄 정책).
+  return <GiftCreditChecklist form={form} set={set} />;
 }

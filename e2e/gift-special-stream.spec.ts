@@ -121,7 +121,8 @@ test.describe("조특법 특례 2-스트림 분리과세 UI", () => {
     // Step2: 사전증여 없음
     await nextSteps(page, 1); // → Step3
 
-    // Step3: 창업자금 과세특례 선택
+    // Step4: 조특 칩 펼침 → 창업자금 과세특례 선택
+    await page.getByText("조특법 과세특례 (§30의5·6)").click();
     await page.getByText("창업자금 증여세 과세특례 (§30의5)").click();
 
     // 자동 귀속 안내 표시 확인 (자산 1개) — strict 모드: .first() 사용
@@ -169,7 +170,8 @@ test.describe("조특법 특례 2-스트림 분리과세 UI", () => {
     // Step2: skip
     await nextSteps(page, 1); // → Step3
 
-    // Step3: 창업자금 과세특례 선택
+    // Step4: 조특 칩 펼침 → 창업자금 과세특례 선택
+    await page.getByText("조특법 과세특례 (§30의5·6)").click();
     await page.getByText("창업자금 증여세 과세특례 (§30의5)").click();
 
     // 자산 2개 → 멀티선택 카드 표시 확인

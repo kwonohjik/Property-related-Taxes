@@ -136,6 +136,7 @@ test.describe("주식 부담부증여 §47① 채무인수", () => {
     // Step3: 가업승계 특례 선택 + 영위기간 15
     await closeStockModal(page); // 모달 닫고 단계 이동 (테이블+모달 전환)
     await nextSteps(page, 2);
+    await page.getByText("조특법 과세특례 (§30의5·6)").click();
     await page.getByText("가업승계 증여세 과세특례 (§30의6)").click();
     await page.getByPlaceholder("영위 기간 입력").fill("15");
 
