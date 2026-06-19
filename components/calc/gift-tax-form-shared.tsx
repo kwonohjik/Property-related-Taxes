@@ -7,6 +7,8 @@
  * GiftTaxForm.tsx 오케스트레이터가 import.
  */
 
+import { useMemo, useState } from "react";
+
 import type {
   EstateItem,
   PriorGift,
@@ -21,6 +23,8 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { PropertyValuationForm } from "@/components/calc/PropertyValuationForm";
 import { StockValuationForm } from "@/components/calc/StockValuationForm";
+import { CollapsibleEstateGroup } from "@/components/calc/inheritance/CollapsibleEstateGroup";
+import { sumEstateItemsValuation } from "@/lib/stores/inheritance-summary";
 import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionChecklist";
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
@@ -470,6 +474,28 @@ export function Step0({
 // Step 1 — 증여재산 평가
 // ============================================================
 
+/** 섹션 헤더 우측 "+ 추가" 버튼 — 상속세 Step1Estate의 SectionAddButton과 동형 */
+function SectionAddButton({
+  onClick,
+  label,
+  testId,
+}: {
+  onClick: () => void;
+  label: string;
+  testId?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid={testId}
+      className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-[11px] font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+    >
+      + {label}
+    </button>
+  );
+}
+
 export function Step1({
   form,
   set,
@@ -477,25 +503,88 @@ export function Step1({
   form: FormState;
   set: (p: Partial<FormState>) => void;
 }) {
+  // 추가 패널 열림 상태 — 헤더 "+추가" 버튼(controlled)이 토글
+  const [giftAddOpen, setGiftAddOpen] = useState(false);
+  const [stockAddOpen, setStockAddOpen] = useState(false);
+  // 그룹별 합계 — 접힘 헤더 요약용 (상속세와 동일 valuation 로직 공유)
+  const giftTotal = useMemo(
+    () => sumEstateItemsValuation(form.giftItems, form.giftDate),
+    [form.giftItems, form.giftDate],
+  );
+  const stockTotal = useMemo(
+    () => sumEstateItemsValuation(form.stockItems, form.giftDate),
+    [form.stockItems, form.giftDate],
+  );
+
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
-        증여하는 재산을 모두 입력하세요.
+        증여하는 재산을 모두 입력하세요. 주식은 아래 별도 섹션에 입력합니다.
       </p>
-      <PropertyValuationForm
-        items={form.giftItems}
-        onChange={(items) => set({ giftItems: items })}
-        mode="gift"
-        valuationDate={form.giftDate}
-      />
-      <div className="border-t border-dashed border-gray-200 dark:border-gray-700 pt-4">
+
+      <CollapsibleEstateGroup
+        groupKey="gift"
+        sectionNum={1}
+        tone="sky"
+        title="증여재산 목록"
+        description={
+          <>
+            주식·지분은 아래{" "}
+            <span className="text-indigo-600 dark:text-indigo-400">주식평가</span>{" "}
+            섹션에 별도 입력
+          </>
+        }
+        count={form.giftItems.length}
+        totalAmount={giftTotal}
+        headerAction={
+          !giftAddOpen && (
+            <SectionAddButton
+              onClick={() => setGiftAddOpen(true)}
+              label="증여재산 추가"
+              testId="gift-add-header-estate"
+            />
+          )
+        }
+      >
+        <PropertyValuationForm
+          items={form.giftItems}
+          onChange={(items) => set({ giftItems: items })}
+          mode="gift"
+          valuationDate={form.giftDate}
+          hideHeader
+          addPanelOpen={giftAddOpen}
+          onAddPanelOpenChange={setGiftAddOpen}
+        />
+      </CollapsibleEstateGroup>
+
+      <CollapsibleEstateGroup
+        groupKey="stock"
+        sectionNum={2}
+        tone="emerald"
+        title="주식·지분 목록"
+        description="상장주식과 비상장주식을 구분하여 입력하세요"
+        count={form.stockItems.length}
+        totalAmount={stockTotal}
+        headerAction={
+          !stockAddOpen && (
+            <SectionAddButton
+              onClick={() => setStockAddOpen(true)}
+              label="주식·지분 추가"
+              testId="gift-add-header-stock"
+            />
+          )
+        }
+      >
         <StockValuationForm
           items={form.stockItems}
           onChange={(items) => set({ stockItems: items })}
           mode="gift"
           valuationDate={form.giftDate}
+          hideHeader
+          addPanelOpen={stockAddOpen}
+          onAddPanelOpenChange={setStockAddOpen}
         />
-      </div>
+      </CollapsibleEstateGroup>
     </div>
   );
 }
