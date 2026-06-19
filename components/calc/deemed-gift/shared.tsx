@@ -363,6 +363,7 @@ export function DeemedTypeSelector({
       value={value}
       onChange={onChange}
       options={TYPE_OPTIONS}
+      columns={2}
     />
   );
 }
