@@ -33,6 +33,7 @@ import {
   type ChipState,
 } from "@/components/calc/inheritance/estate-card/chip-config";
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   CATEGORY_ICONS,
   CATEGORY_LABELS,
@@ -160,6 +161,22 @@ export function EstateItemEditor({
         {mode === "inheritance" && (
           <CorporateNonBusinessAssetsSection item={item} onUpdate={onUpdate} deathDate={valuationDate} />
         )}
+
+        {/* 물납 충당순위 — 상속인 거주주택 (§74②6호, 갭4). 부동산 자산 한정 */}
+        {mode === "inheritance" &&
+          (cat === "real_estate_land" ||
+            cat === "real_estate_building" ||
+            cat === "real_estate_apartment") && (
+            <ToggleCard
+              tone="sky"
+              title="상속인 거주 주택·부수토지 (물납 §74②6호)"
+              description="물납 신청 시 충당 최후순위로 분류되고 비상장주식 물납한도(§73④) 기준에서 차감됩니다. 결정세액에는 영향 없습니다."
+              checked={item.isHeirResidenceProperty === true}
+              onCheckedChange={(on) =>
+                onUpdate({ ...item, isHeirResidenceProperty: on })
+              }
+            />
+          )}
 
         {/* 헤더 칩 인라인 펼침 (분류·분할·영농·가업) */}
         <EstateChipInlineExpand

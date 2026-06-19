@@ -14,9 +14,14 @@
 import { describe, it, expect } from "vitest";
 import {
   calcPaymentInKindAssessment,
+  derivePaymentInKindAssets,
   isPaymentInKindEligible,
 } from "@/lib/tax-engine/credits/payment-in-kind";
-import type { PaymentInKindInput } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type {
+  EstateItem,
+  InheritanceTaxResult,
+  PaymentInKindInput,
+} from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // §4.3 예시: 상속재산 20억 · 납부세액 4억 · 충당가능 부동산·유가증권 15억(부동산14+처분제한상장1)
 const base: PaymentInKindInput = {
@@ -177,3 +182,87 @@ describe("물납 — 보정·경고·희망액", () => {
 
 // PIK-12 신청기한(거주자 6개월 / 비거주자 9개월): 엔진 input에 decedentType 없음
 //   → UI E2E(e2e/inheritance-payment-in-kind.spec.ts PIK-UI)로 이관. 엔진 anchor 제외.
+
+// ============================================================
+// 갭4 — 상속인 거주주택 자동분류 (§74②6호). KoreanLaw §73·§74 검증 2026-06-19.
+//   subset 태그: realEstateValue에 유지(요건1 분자) + heirResidenceValue 별도 추적.
+//   §74②3호 "국내부동산(제6호 제외)" → 충당순서 3호서 거주주택 제외, 6호 분리.
+// ============================================================
+describe("물납 — 상속인 거주주택 자동분류 (§74②6호, 갭4)", () => {
+  const estateItems = [
+    {
+      id: "h1",
+      category: "real_estate_apartment",
+      name: "거주아파트",
+      isHeirResidenceProperty: true,
+    },
+    { id: "h2", category: "real_estate_land", name: "나대지" },
+  ] as unknown as EstateItem[];
+  const valResult = {
+    valuationResults: [
+      { estateItemId: "h1", valuatedAmount: 500_000_000 },
+      { estateItemId: "h2", valuatedAmount: 900_000_000 },
+    ],
+  } as unknown as Pick<InheritanceTaxResult, "valuationResults">;
+
+  const mkInput = (assets: PaymentInKindInput["assets"]): PaymentInKindInput => ({
+    finalTax: 400_000_000,
+    grossEstateValue: 2_000_000_000,
+    exemptAmount: 0,
+    priorGiftToHeirTotal: 0,
+    taxableEstateValue: 2_000_000_000,
+    assets,
+  });
+
+  it("[4-1] flag=true → heirResidenceValue=평가액, realEstate에 포함(subset)", () => {
+    const a = derivePaymentInKindAssets(estateItems, valResult, 0);
+    expect(a.heirResidenceValue).toBe(500_000_000);
+    expect(a.realEstateValue).toBe(1_400_000_000); // 거주주택 포함 — 요건1 분자(§73①1호)
+  });
+
+  it("[4-1b] 충당순서 — 순위3 국내부동산은 거주주택 제외(§74②3호), 순위6은 거주주택", () => {
+    const a = derivePaymentInKindAssets(estateItems, valResult, 0);
+    const r = calcPaymentInKindAssessment(mkInput(a));
+    expect(r.fillOrder.find((s) => s.order === 3)!.availableValue).toBe(900_000_000);
+    expect(r.fillOrder.find((s) => s.order === 6)!.availableValue).toBe(500_000_000);
+  });
+
+  it("[4-5] 요건1 분자·eligible·limit1은 거주주택 flag 영향 없음 (numeric 불변)", () => {
+    const withFlag = derivePaymentInKindAssets(estateItems, valResult, 0);
+    const noFlag = derivePaymentInKindAssets(
+      estateItems.map((i) => ({ ...i, isHeirResidenceProperty: false })) as EstateItem[],
+      valResult,
+      0,
+    );
+    const rWith = calcPaymentInKindAssessment(mkInput(withFlag));
+    const rNo = calcPaymentInKindAssessment(mkInput(noFlag));
+    expect(rWith.requirement.realEstateSecuritiesValue).toBe(
+      rNo.requirement.realEstateSecuritiesValue,
+    );
+    expect(rWith.eligible).toBe(rNo.eligible);
+    expect(rWith.limit1).toBe(rNo.limit1);
+  });
+
+  it("[4-3] §73④ 비상장 캡 — heirResidenceValue 차감 반영", () => {
+    const cap = (heirResidenceValue: number) =>
+      calcPaymentInKindAssessment({
+        finalTax: 400_000_000,
+        grossEstateValue: 2_000_000_000,
+        exemptAmount: 0,
+        priorGiftToHeirTotal: 0,
+        taxableEstateValue: 600_000_000,
+        assets: {
+          realEstateValue: 1_400_000_000,
+          eligibleSecuritiesValue: 0,
+          unlistedStockValue: 300_000_000,
+          tradableListedValue: 0,
+          netFinancialValue: 0,
+          heirResidenceValue,
+          ineligibleManagementValue: 0,
+        },
+      }).unlistedStockCap;
+    // cap = max(0, 400M − (600M − 300M − heirResidence))
+    expect(cap(0)).toBe(100_000_000);
+    expect(cap(500_000_000)).toBe(600_000_000);
+  });
+});

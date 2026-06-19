@@ -28,14 +28,13 @@ import {
   isCompleteResidentNumber,
 } from "@/lib/calc/resident-number";
 import { endOfMonth, addMonths, format } from "date-fns";
-import {
-  validateExemptionAreaInput,
-  validateExemptionItemAllocations,
-} from "./inheritance-validate-exemption";
+import { validateAllExemptionInputs } from "./inheritance-validate-exemption";
 // 800줄 분리 — 외부 import 호환 보존 (feedback_800line_split_export_preservation)
 export {
   validateExemptionAreaInput,
   validateExemptionItemAllocations,
+  validateRelatedStockInput,
+  validateAllExemptionInputs,
 } from "./inheritance-validate-exemption";
 
 // ────────────────────────────────────────────────────
@@ -387,15 +386,9 @@ export function validateInheritanceTaxInput(
     }
   }
 
-  // 금양임야·묘토 비과세 면적 입력 검증 (상증령 §8③)
-  const exemptAreaErr = validateExemptionAreaInput(input.exemptions);
-  if (exemptAreaErr) return exemptAreaErr;
-
-  // 비과세 협의분할 합계 검증 (작업4)
-  for (const ex of input.exemptions ?? []) {
-    const e = validateExemptionItemAllocations(ex);
-    if (e) return e;
-  }
+  // 비과세·불산입 입력 검증 (면적 §8③ + 동족주식 §16② + 협의분할) — 단일 집계
+  const exemptionErr = validateAllExemptionInputs(input.exemptions);
+  if (exemptionErr) return exemptionErr;
 
   for (const item of input.estateItems) {
     const e = validateEstateItemAllocations(item);

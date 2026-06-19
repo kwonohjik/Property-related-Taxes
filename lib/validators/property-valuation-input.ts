@@ -101,6 +101,14 @@ export const exemptionCheckedItemSchema = z.object({
   priorDisabledTrustUsed: z.number().nonnegative().optional(),
   relatedStockExceeded: z.boolean().optional(),
   excessStockAmount: z.number().nonnegative().optional(),
+  // 갭5a: §16② 동족주식 한도 자동계산 입력 (누락 시 침묵 strip — ⑫)
+  publicInterestType: z
+    .enum(["general", "charity_no_voting", "mutual_investment_restricted", "art48_11_unmet"])
+    .optional(),
+  relatedStockDonatedShares: z.number().nonnegative().optional(),
+  relatedStockTotalShares: z.number().nonnegative().optional(),
+  relatedStockPriorHeld: z.number().nonnegative().optional(),
+  relatedStockValuePerShare: z.number().nonnegative().optional(),
   marriageExemptionAlreadyUsed: z.boolean().optional(),
   claimedAreaM2: z.number().nonnegative().optional(),
   // 작업4: 협의분할 — 상속인별 귀속 (heirAllocationSchema 재사용). 누락 시 침묵 strip

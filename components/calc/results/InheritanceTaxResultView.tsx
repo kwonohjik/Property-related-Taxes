@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
+import { calcInheritanceFilingDeadline } from "@/lib/tax-engine/deductions/family-business-autoderive";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { SummaryRow } from "./SummaryRow";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -427,7 +428,7 @@ export function InheritanceTaxResultView({
             공제받은 금액 100%가 추징되고 이자상당액이 가산됩니다. 조세포탈·회계부정 형 확정 시 5년 무관 추징.
           </p>
           <a
-            href={`/calc/inheritance-postmgmt?originalDeduction=${result.deductionDetail.farmingDeduction}`}
+            href={`/calc/inheritance-postmgmt?originalDeduction=${result.deductionDetail.farmingDeduction}${deathDate ? `&deathDate=${deathDate}&filingDeadline=${calcInheritanceFilingDeadline(deathDate)}` : ""}`}
             className="inline-block text-xs font-medium text-blue-700 dark:text-blue-300 underline hover:text-blue-900 dark:hover:text-blue-100"
           >
             → 사후관리 추징 시뮬레이터 진입

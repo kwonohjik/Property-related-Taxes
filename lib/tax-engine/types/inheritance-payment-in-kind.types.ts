@@ -8,9 +8,9 @@
 
 /** 물납 충당재산 가액 — estate 자동도출 + 관리처분 보정 후. 엔진은 계산만. */
 export interface PaymentInKindAssets {
-  /** §74①1호 국내소재 부동산 */
+  /** §74①1호 국내소재 부동산 (상속인 거주주택 heirResidenceValue 포함 — 요건1 분자) */
   realEstateValue: number;
-  /** §74①2호 충당가능 유가증권 = 국채·공채·내국법인채권 + 처분제한 상장 */
+  /** §74①2호 충당가능 유가증권 = 국채·공채·내국법인채권 + 처분제한 상장 (분류 자동화는 후속 — §73①3호 금융재산 정의 검증 필요) */
   eligibleSecuritiesValue: number;
   /** §74②5호 비상장주식 (§73④ 캡·최후순위) */
   unlistedStockValue: number;

@@ -60,6 +60,11 @@ function sanitizeOriginalDeductionParam(raw: string | null): string {
   return String(capped);
 }
 
+/** YYYY-MM-DD 쿼리 파라미터만 수용 (메인 마법사 prefill — DateInput·신고기한 호환) */
+function sanitizeDateParam(raw: string | null): string {
+  return raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
+}
+
 export default function FarmingPostMgmtPage() {
   return (
     <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">로딩 중…</div>}>
@@ -73,10 +78,12 @@ function FarmingPostMgmtPageInner() {
   const initialOriginalDeduction = sanitizeOriginalDeductionParam(
     searchParams.get("originalDeduction"),
   );
+  // 메인 마법사 진입 시 신고기한(§67) prefill — 가업 시뮬레이터와 동형(영농 prefill 강화)
+  const initialFilingDeadline = sanitizeDateParam(searchParams.get("filingDeadline"));
 
   const [violation, setViolation] = useState<FarmingPostMgmtViolation>("asset_disposed");
   const [violationDate, setViolationDate] = useState("");
-  const [filingDeadline, setFilingDeadline] = useState("");
+  const [filingDeadline, setFilingDeadline] = useState(initialFilingDeadline);
   const [originalDeduction, setOriginalDeduction] = useState(initialOriginalDeduction);
   const [determinedTax, setDeterminedTax] = useState("");
   const [interestRate, setInterestRate] = useState("0.029");  // 기본 연 2.9%
@@ -128,8 +135,13 @@ function FarmingPostMgmtPageInner() {
       {initialOriginalDeduction && (
         <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 text-xs text-blue-700 dark:text-blue-300">
           ⓘ 메인 마법사에서 진입 — 공제받은 영농상속공제액{" "}
-          <strong>{formatKRW(parseAmount(initialOriginalDeduction))}</strong>이 사전 입력되었습니다.
-          필요 시 수정 가능합니다.
+          <strong>{formatKRW(parseAmount(initialOriginalDeduction))}</strong>
+          {initialFilingDeadline && (
+            <>
+              {" "}및 상속세 신고기한 <strong>{initialFilingDeadline}</strong>
+            </>
+          )}
+          이 사전 입력되었습니다. 필요 시 수정 가능합니다.
         </div>
       )}
 
