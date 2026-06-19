@@ -113,6 +113,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
     <div className="space-y-3">
       {/* 1. 평가대상 상장법인 */}
       <ToggleCard
+        lawLinks="상증법"
         tone="sky"
         checked={hasCoverInfo}
         onCheckedChange={(v) => {
@@ -159,6 +160,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
           </FieldCard>
           <FieldCard label="⑤ 주식 종류">
             <RadioCardGroup
+              lawLinks="상증법"
               layout="inline"
               name={`stock-class-${item.id}`}
               value={item.stockClass ?? "common"}
@@ -178,6 +180,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
 
       {/* 2. §63③ 최대주주 할증 */}
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         checked={isMaxShareholder}
         onCheckedChange={(v) => {
@@ -192,6 +195,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
         <div className="space-y-3">
           <FieldCard label="기업 규모 (§53④)">
             <RadioCardGroup
+              lawLinks="상증법"
               layout="inline"
               name={`company-size-${item.id}`}
               value={item.companySize ?? "small"}
@@ -223,6 +227,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
       {/* 3. §63②3호 미상장 신주 */}
       <FieldCard label="§63②3호 미상장 신주">
         <RadioCardGroup
+          lawLinks="상증법"
           layout="inline"
           name={`unlisted-share-mode-${item.id}`}
           value={unlistedMode}

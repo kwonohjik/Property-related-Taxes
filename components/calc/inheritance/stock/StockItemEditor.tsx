@@ -238,6 +238,7 @@ function ListedStockEditor({
 
       {/* §63②3호 — 상장법인 증자 신주(평가기준일 현재 미상장) (PR-L3) */}
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         checked={isCapInc}
         onCheckedChange={(v) =>
@@ -252,6 +253,7 @@ function ListedStockEditor({
         <div className="space-y-3">
           {/* §18② 단서: 배당기산일 동일 → 배당차액 제외 */}
           <ToggleCard
+            lawLinks="상증법"
             tone="sky"
             variant="chip"
             checked={sameBaseDate}
@@ -426,6 +428,7 @@ function UnlistedStockCard({
       <div className="space-y-1.5">
         <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">⚖️ 평가 방식</p>
         <RadioCardGroup
+          lawLinks="상증법"
           name={`unlisted-mode-${item.id}`}
           options={VALUATION_MODE_OPTIONS}
           value={currentMode}

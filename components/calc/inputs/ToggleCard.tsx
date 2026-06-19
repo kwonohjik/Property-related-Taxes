@@ -23,6 +23,8 @@
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import { extractInlineLawRefs } from "@/lib/utils/law-url";
+import { LawRefBadges, type LawRefBadge } from "@/components/ui/law-ref-badges";
 
 export type ToggleCardTone = "amber" | "sky" | "emerald" | "violet" | "rose" | "fuchsia";
 
@@ -151,6 +153,13 @@ export interface ToggleCardProps {
   className?: string;
   /** 비활성화 사유 안내 (disabled 시 description 대신 표시) */
   disabledReason?: ReactNode;
+  /**
+   * 조문 링크 배지 자동 생성 (card variant). 기본 법령명(예: "상증법")을 주면
+   * title·description(문자열) 속 §평문을 추출해 제목 옆 배지로 노출. 미지정 시 off.
+   */
+  lawLinks?: string;
+  /** 자동 추출이 부정확한 카드용 수동 override (ReactNode description 등). */
+  lawRefs?: LawRefBadge[];
 }
 
 export function ToggleCard({
@@ -166,9 +175,23 @@ export function ToggleCard({
   trailing,
   className,
   disabledReason,
+  lawLinks,
+  lawRefs,
 }: ToggleCardProps) {
   const t = TONES[tone];
   const handleChange = disabled ? undefined : onCheckedChange;
+
+  // 조문 배지 (card variant) — lawRefs 우선, 없으면 lawLinks로 title+description(string) 추출.
+  const lawBadgeRefs: LawRefBadge[] =
+    lawRefs ??
+    (lawLinks
+      ? extractInlineLawRefs(
+          [title, typeof description === "string" ? description : ""]
+            .filter(Boolean)
+            .join("  "),
+          lawLinks,
+        )
+      : []);
 
   if (variant === "chip") {
     const chipDescription =
@@ -195,6 +218,7 @@ export function ToggleCard({
       >
         <Switch
           size="sm"
+          aria-label={title}
           checked={checked}
           onCheckedChange={handleChange}
           disabled={disabled}
@@ -241,12 +265,13 @@ export function ToggleCard({
         <div className="min-w-0 flex-1">
           <div
             className={cn(
-              "font-semibold leading-tight",
+              "flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold leading-tight",
               size === "sm" ? "text-sm" : "text-sm sm:text-base",
               checked && !disabled && t.titleOn,
             )}
           >
-            {title}
+            <span>{title}</span>
+            {lawBadgeRefs.length > 0 && <LawRefBadges refs={lawBadgeRefs} />}
           </div>
           {(disabled && disabledReason ? disabledReason : description) && (
             <div
@@ -267,6 +292,7 @@ export function ToggleCard({
           {trailing}
           <Switch
             size={size === "sm" ? "sm" : "default"}
+            aria-label={title}
             checked={checked}
             onCheckedChange={handleChange}
             disabled={disabled}

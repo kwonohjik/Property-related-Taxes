@@ -232,6 +232,7 @@ export function EstateBodyRealEstate({
 
       {/* 보충적 평가 (StandardPriceInput) — 토글 펼침, 우선순위 최후 (D-2 라벨). 값>0이면 초기 ON(비파괴) */}
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         size="sm"
         title={SUPPLEMENTARY_LABEL[cat]}
@@ -375,6 +376,7 @@ function ValuationAccordionFields({
 
       {/* 시가 — 1순위 */}
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         size="sm"
         title="시가 (매매·수용·경매가액)"
@@ -393,6 +395,7 @@ function ValuationAccordionFields({
 
       {/* 감정평가액 */}
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         size="sm"
         title="감정평가액"
@@ -411,6 +414,7 @@ function ValuationAccordionFields({
 
       {/* 매매사례가액 — 시행령 §49④. 아파트일 때 RTMS 자동조회 버튼 추가 */}
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         size="sm"
         title="매매사례가액 (유사매매사례)"
@@ -537,6 +541,7 @@ function CollateralLeaseFields({
   );
   return (
     <ToggleCard
+      lawLinks="상증법"
       tone="amber"
       size="sm"
       title={
@@ -647,6 +652,7 @@ function CollateralLeaseFields({
       {/* §47③ 객관적 입증 토글 — 증여 모드 + 채무 입력 시 노출 */}
       {mode === "gift" && (item.assumedDebtForGift ?? 0) > 0 && (
         <ToggleCard
+          lawLinks="상증법"
           tone="amber"
           size="sm"
           title="채무 인수 사실 객관적 입증 가능 (§47③)"
@@ -668,6 +674,7 @@ function CollateralLeaseFields({
       {/* §14 자동공제 토글 */}
       {showCollateralDeductToggle && (
         <ToggleCard
+          lawLinks="상증법"
           tone="amber"
           size="sm"
           title="이 담보채무를 §14 부채로 자동 공제"
@@ -687,6 +694,7 @@ function CollateralLeaseFields({
         >
           {/* 금융회사 채무 여부 (§22 순금융 차감) */}
           <ToggleCard
+            lawLinks="상증법"
             tone="rose"
             size="sm"
             title="저당채무가 금융회사 채무 (§22 순금융 차감)"
@@ -722,6 +730,7 @@ function CollateralLeaseFields({
       {showCohabitToggle && (
         <div data-testid={`cohabit-house-toggle-${item.id}`}>
           <ToggleCard
+            lawLinks="상증법"
             tone="violet"
             size="sm"
             title="동거주택 공제 대상 (§23의2)"

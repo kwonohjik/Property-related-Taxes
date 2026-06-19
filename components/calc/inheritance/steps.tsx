@@ -29,7 +29,6 @@ import {
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 import type { DeductionSuggestion } from "@/lib/calc/inheritance-deduction-suggest";
 import type { FormState, FormSet } from "./shared";
-import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 /** Step4 추가공제 자동 도출값 — InheritanceTaxForm useMemo에서 계산해 prop 전달(3중 일치). */
 export type Step4Autos = {
@@ -110,6 +109,7 @@ export function Step0({
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">거주자 여부</label>
           <RadioCardGroup
+            lawLinks="상증법"
             name="decedentType"
             layout="inline"
             tone="sky"
@@ -212,6 +212,7 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
 
       {/* 협의분할 모드 토글 (amber tone) */}
       <ToggleCard
+        lawLinks="상증법"
         tone="amber"
         title="채무·공과·장례비 협의분할 입력"
         description="ON: 항목별 채권자명·상속인별 변제 분담 입력 / OFF: 합계 단일 금액 입력"

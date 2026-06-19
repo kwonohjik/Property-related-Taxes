@@ -239,6 +239,7 @@ export function NetAssetCalculationTable({
 
       {/* PR-M: 보험법인 부채 가산 (§17의2 4호 단서 나·다) */}
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         title="보험사업·보험회사 여부"
         description="해당 시 책임준비금·비상위험준비금·해약환급금준비금을 부채에 가산 (§17의2 4호 단서 나·다)"

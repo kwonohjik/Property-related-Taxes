@@ -73,6 +73,7 @@ export function HeirAssessmentCard({
       </div>
 
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         size="sm"
         title="후계자 트랙 (재정경제부령)"
@@ -84,6 +85,7 @@ export function HeirAssessmentCard({
       />
 
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         size="sm"
         title="18세 이상"
@@ -94,6 +96,7 @@ export function HeirAssessmentCard({
       />
 
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         size="sm"
         title={
@@ -110,6 +113,7 @@ export function HeirAssessmentCard({
 
       {farming.type === "personal" && (
         <ToggleCard
+          lawLinks="상증법"
           tone="violet"
           size="sm"
           title="거주지 충족 (§16③1호나)"
@@ -122,6 +126,7 @@ export function HeirAssessmentCard({
 
       {farming.type === "corporate" && (
         <ToggleCard
+          lawLinks="상증법"
           tone="violet"
           size="sm"
           title="신고기한 임원 + 2년 내 대표이사 (§16③2호나)"
@@ -133,6 +138,7 @@ export function HeirAssessmentCard({
       )}
 
       <ToggleCard
+        lawLinks="상증법"
         tone="rose"
         size="sm"
         title="§16⑭1호 — 사업소득금액+총급여 3,700만원 이상 과세기간"
@@ -143,6 +149,7 @@ export function HeirAssessmentCard({
         }
       />
       <ToggleCard
+        lawLinks="상증법"
         tone="rose"
         size="sm"
         title="§16⑭2호 — 총수입금액 기준 이상 과세기간 (2026.2.27 신설)"

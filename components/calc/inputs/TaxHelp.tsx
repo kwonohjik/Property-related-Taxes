@@ -12,6 +12,7 @@
  *  - summary: 한 줄 요약 (모달 없이 읽을 수 있는 핵심)
  *  - details: 마크다운 형식 본문 (줄바꿈 \n 지원)
  *  - legalBasis?: 조문 코드 (LawArticleModal 자동 연결)
+ *  - triggerLabel?: 지정 시 ⓘ 아이콘 대신 텍스트 버튼으로 렌더 (예: "특수관계인 범위 조회")
  *  - size?: "sm" | "md" (기본 "md")
  *  - className?: 추가 클래스
  */
@@ -30,6 +31,8 @@ interface TaxHelpProps {
   summary: string;
   details: string;
   legalBasis?: string | string[];
+  /** 지정 시 ⓘ 아이콘 대신 텍스트 버튼으로 트리거를 렌더 */
+  triggerLabel?: string;
   size?: "sm" | "md";
   className?: string;
 }
@@ -81,6 +84,7 @@ export function TaxHelp({
   summary,
   details,
   legalBasis,
+  triggerLabel,
   size = "md",
   className,
 }: TaxHelpProps) {
@@ -93,15 +97,28 @@ export function TaxHelp({
 
   return (
     <>
-      <button
-        type="button"
-        title={summary}
-        aria-label={`도움말: ${title}`}
-        onClick={() => setOpen(true)}
-        className={`inline-flex items-center justify-center rounded-full bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors select-none ${iconSize} ${className ?? ""}`}
-      >
-        ⓘ
-      </button>
+      {triggerLabel ? (
+        <button
+          type="button"
+          title={summary}
+          aria-label={`도움말: ${title}`}
+          onClick={() => setOpen(true)}
+          className={`inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50/70 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-colors select-none ${className ?? ""}`}
+        >
+          <span aria-hidden className="text-[11px]">ⓘ</span>
+          {triggerLabel}
+        </button>
+      ) : (
+        <button
+          type="button"
+          title={summary}
+          aria-label={`도움말: ${title}`}
+          onClick={() => setOpen(true)}
+          className={`inline-flex items-center justify-center rounded-full bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors select-none ${iconSize} ${className ?? ""}`}
+        >
+          ⓘ
+        </button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">

@@ -133,6 +133,7 @@ export function PreIpoListingToggle({
           <p className="text-xs font-semibold text-emerald-700">기업공개·상장신청 준비 중 평가 (선택)</p>
         </div>
         <ToggleCard
+          lawLinks="상증법"
           tone="emerald"
           checked={isOn}
           onCheckedChange={handleToggle}
@@ -148,6 +149,7 @@ export function PreIpoListingToggle({
               {/* ⓪ 준비 유형 (§63②1호/2호) — 날짜 필드 앞 (라벨이 유형 의존) */}
               <div data-testid="pre-ipo-preparation-type">
                 <RadioCardGroup
+                  lawLinks="상증법"
                   name="pre-ipo-preparation-type"
                   tone="emerald"
                   layout="stack"

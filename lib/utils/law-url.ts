@@ -113,3 +113,81 @@ export function extractClauseMarkers(text: string): string[] {
   }
   return found;
 }
+
+/**
+ * 자유 텍스트(카드 제목·설명 등)에서 인라인 조문 인용을 스캔 → 배지용 ref 배열.
+ *
+ * `parseLawRefsForModal`은 § 앞 전체 구절을 법령명으로 간주하므로
+ * "특수관계인 간 거래 (§35①)" 같은 자유 텍스트엔 쓸 수 없다(쓰레기 lawName).
+ * 이 함수는 **§ 직전에 인접한 법령명 토큰(…법/…령)만** 역방향으로 보고,
+ * 없으면 `defaultLaw`로 귀속한다.
+ *
+ *   "특수관계인 간 거래 (§35①)" + 상증법
+ *     → [{ label:"§35①", legalBasis:"상속세및증여세법 §35①" }]
+ *   "법인세법 §52② 시가 해당" + 상증법
+ *     → [{ label:"§52②", legalBasis:"법인세법 §52②" }]
+ *   "상증법 §60①·시령 §49①" + 상증법
+ *     → [ ...§60①, 상속세및증여세법 시행령 §49① ]
+ *
+ * label에는 항(項) 마커(①…)를 포함 → LawArticleModal 항 하이라이트(label 우선) 동작.
+ * 중복(legalBasis 기준) 제거·등장 순서 유지. 토큰이 깔끔히 붙지 않는 외부법 인용
+ * (예: "민법상 §1001")은 defaultLaw로 귀속되므로, 그런 카드는 호출부에서 `lawRefs` 수동 지정.
+ */
+// 법령명 토큰: "…법" 또는 "…령"(1자+령 → "시령"·"상증령" 포함). § 직전 인접 시에만 귀속.
+// "제"는 뒤에 숫자+조가 올 때만 조문 표기로 인정(공제·면제 등 흔한 단어의 '제' 오인 차단).
+const INLINE_LAW_SCAN_RE =
+  /([가-힣]+법|[가-힣]+령)?\s*(?:§|제(?=\s*\d+\s*조))\s*(\d+)(?:조)?(?:의\s*(\d+))?([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮]*)/g;
+
+export function extractInlineLawRefs(
+  text: string,
+  defaultLaw: string,
+): { label: string; legalBasis: string }[] {
+  if (!text) return [];
+  const defaultResolved = resolveLawAlias(defaultLaw);
+  let baseLaw = defaultResolved.replace(/\s*시행(령|규칙)$/, ""); // 시령 귀속용 본법
+  let lastLaw = defaultResolved; // 토큰 없는 § 가 상속할 직전 법령("민법 §A·§B" → 둘 다 민법)
+
+  const out: { label: string; legalBasis: string }[] = [];
+  const seen = new Set<string>();
+  let prevEnd = 0; // 직전 매치 끝 위치 — bare § 의 carry-over 판정용
+
+  for (const m of text.matchAll(INLINE_LAW_SCAN_RE)) {
+    const token = m[1];
+    const num = m[2];
+    if (!num) {
+      prevEnd = m.index + m[0].length;
+      continue;
+    }
+    const branch = m[3];
+    const clause = m[4] ?? "";
+
+    let lawName: string;
+    if (token && /^시(행)?령$/.test(token)) {
+      lawName = `${baseLaw} 시행령`;
+      lastLaw = lawName;
+    } else if (token === "시행규칙") {
+      lawName = `${baseLaw} 시행규칙`;
+      lastLaw = lawName;
+    } else if (token) {
+      lawName = resolveLawAlias(token);
+      baseLaw = lawName.replace(/\s*시행(령|규칙)$/, "");
+      lastLaw = lawName;
+    } else {
+      // 토큰 없는 § — 직전 매치와 이 § 사이에 한글 단어가 있으면 별개 맥락(기본법),
+      // 구분자(·, , 공백·괄호)만이면 직전 법령 상속("민법 §1013·§1073" → 둘 다 민법).
+      const gap = text.slice(prevEnd, m.index);
+      lawName = /[가-힣]/.test(gap) ? defaultResolved : lastLaw;
+      lastLaw = lawName;
+    }
+    prevEnd = m.index + m[0].length;
+
+    const articleNum = num + (branch ? "의" + branch : "");
+    const label = `§${articleNum}${clause}`;
+    const legalBasis = `${lawName} §${articleNum}${clause}`;
+    if (seen.has(legalBasis)) continue;
+    seen.add(legalBasis);
+    out.push({ label, legalBasis });
+  }
+
+  return out;
+}

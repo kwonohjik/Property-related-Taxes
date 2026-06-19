@@ -97,6 +97,7 @@ export function FbAdditionalBusinessesSection({
   return (
     <div className="space-y-3">
       <ToggleCard
+        lawLinks="상증법"
         tone="sky"
         title="복수가업 순차공제 (상증령 §15④ · 상증칙 §5)"
         description={

@@ -23,6 +23,7 @@ export function PaymentInKindInputSection({
 }) {
   return (
     <ToggleCard
+      lawLinks="상증법"
       tone="sky"
       title="물납 신청 (상증법 §73)"
       description="부동산·유가증권이 상속재산의 1/2 초과 + 납부세액 2천만원 초과 + 납부세액이 금융재산 초과 시 신청 가능. 결과 화면에 요건 충족·허용한도·충당순서가 표시됩니다."

@@ -102,6 +102,7 @@ export function FarmingCategorySection({
   return (
     <div className="space-y-2">
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         size="sm"
         title="영농상속 재산 (§18의3 + 시행령 §16⑤)"
@@ -180,6 +181,7 @@ export function FarmingCategorySection({
           ) : (
             /* farmingUseStartDate 미입력 시 수동 ToggleCard fallback (하위호환) */
             <ToggleCard
+              lawLinks="상증법"
               tone={item.farmingUsedTwoYears === false ? "rose" : "emerald"}
               size="sm"
               title="상속개시일 2년 전부터 영농 사용 (§16⑤1호) — 수동 설정"
@@ -196,6 +198,7 @@ export function FarmingCategorySection({
           )}
           {item.farmingCategory === "fishing_right" && (
             <ToggleCard
+              lawLinks="상증법"
               tone="rose"
               size="sm"
               title="마을어업·협동양식업 면허 (영농상속 제외)"

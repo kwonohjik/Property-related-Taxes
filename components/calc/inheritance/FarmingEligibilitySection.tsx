@@ -205,6 +205,7 @@ export function FarmingEligibilitySection({
   return (
     <div className="space-y-3">
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         title="영농상속공제 요건 입력 (§18의3 + 시행령 §16)"
         description={
@@ -257,6 +258,7 @@ export function FarmingEligibilitySection({
             {farming.type === "personal" ? (
               <>
                 <ToggleCard
+                  lawLinks="상증법"
                   tone="violet"
                   size="sm"
                   title="8년 이상 직접 영농 종사 (§16②1호가)"
@@ -265,6 +267,7 @@ export function FarmingEligibilitySection({
                   onCheckedChange={(v) => update({ decedentEightYearFarming: v })}
                 />
                 <ToggleCard
+                  lawLinks="상증법"
                   tone="violet"
                   size="sm"
                   title="거주지 충족 (§16②1호나)"
@@ -283,6 +286,7 @@ export function FarmingEligibilitySection({
               </>
             ) : (
               <ToggleCard
+                lawLinks="상증법"
                 tone="violet"
                 size="sm"
                 title="법인 8년 경영 + 최대주주 50%+ 유지 (§16②2호)"
@@ -299,6 +303,7 @@ export function FarmingEligibilitySection({
               상속인 요건 (§16③)
             </p>
             <ToggleCard
+              lawLinks="상증법"
               tone="violet"
               size="sm"
               title="영농·영어·임업후계자 (재정경제부령)"
@@ -309,6 +314,7 @@ export function FarmingEligibilitySection({
               }
             />
             <ToggleCard
+              lawLinks="상증법"
               tone="violet"
               size="sm"
               title="18세 이상"
@@ -319,6 +325,7 @@ export function FarmingEligibilitySection({
               disabledReason="후계자 트랙 — 18세 요건 면제"
             />
             <ToggleCard
+              lawLinks="상증법"
               tone="violet"
               size="sm"
               title={
@@ -334,6 +341,7 @@ export function FarmingEligibilitySection({
             />
             {farming.type === "personal" && (
               <ToggleCard
+                lawLinks="상증법"
                 tone="violet"
                 size="sm"
                 title="상속인 거주지 충족 (§16③1호나)"
@@ -345,6 +353,7 @@ export function FarmingEligibilitySection({
               />
             )}
             <ToggleCard
+              lawLinks="상증법"
               tone="violet"
               size="sm"
               title="피상속인 65세 미만 사망 or 천재지변·인재 사망"
@@ -356,6 +365,7 @@ export function FarmingEligibilitySection({
             />
             {farming.type === "corporate" && (
               <ToggleCard
+                lawLinks="상증법"
                 tone="violet"
                 size="sm"
                 title="신고기한 내 임원 + 2년 내 대표이사 취임 예정 (§16③2호나)"
@@ -373,6 +383,7 @@ export function FarmingEligibilitySection({
               배제 사유 (§16⑭ + §18의3⑥{farming.type === "corporate" ? " + §16② 단서" : ""})
             </p>
             <ToggleCard
+              lawLinks="상증법"
               tone="rose"
               size="sm"
               title="사업소득금액+총급여 3,700만원 이상 과세기간 (§16⑭1호)"
@@ -383,6 +394,7 @@ export function FarmingEligibilitySection({
               }
             />
             <ToggleCard
+              lawLinks="상증법"
               tone="rose"
               size="sm"
               title="총수입금액 기준 이상 과세기간 (§16⑭2호)"
@@ -393,10 +405,11 @@ export function FarmingEligibilitySection({
               }
             />
             <ToggleCard
+              lawLinks="상증법"
               tone="rose"
               size="sm"
               title="조세포탈·회계부정 형 확정 (§18의3⑥)"
-              description="§15⑲ 1호 조세범 §3① 벌금 / 2호 외감법 §39① (자산 5% 이상) — 단독 사유로 공제 배제"
+              description="§15⑲ 1호 조세범처벌법 §3① 벌금 / 2호 외부감사법 §39① (자산 5% 이상) — 단독 사유로 공제 배제"
               checked={farming.hasTaxFraudConviction ?? false}
               onCheckedChange={(v) =>
                 update({ hasTaxFraudConviction: v ? true : undefined })
@@ -405,6 +418,7 @@ export function FarmingEligibilitySection({
             {/* PR-D F-9: §16② 단서 — corporate 전용 (rare) */}
             {farming.type === "corporate" && (
               <ToggleCard
+                lawLinks="상증법"
                 tone="rose"
                 size="sm"
                 title="§16② 단서 — 영농상속 후 최대주주 사망 상속"
@@ -423,6 +437,7 @@ export function FarmingEligibilitySection({
           {heirs && heirs.length > 1 && (
             <div className="space-y-2">
               <ToggleCard
+                lawLinks="상증법"
                 tone="violet"
                 size="sm"
                 title="상속인별 자격 분리 평가 (부록 A)"
@@ -528,6 +543,7 @@ export function FarmingEligibilitySection({
                 const checked = ids !== undefined && ids.includes(h.id);
                 return (
                   <ToggleCard
+                    lawLinks="상증법"
                     key={h.id}
                     tone="violet"
                     size="sm"
@@ -621,6 +637,7 @@ export function FarmingEligibilitySection({
               {estateItems.some((i) => i.farmingCategory === "forest_land") && (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <ToggleCard
+                    lawLinks="상증법"
                     tone="emerald"
                     variant="card"
                     title="피상속인 — 산림지 통상 직접 경영 가능 지역 (§16②1호나 단서)"
@@ -631,6 +648,7 @@ export function FarmingEligibilitySection({
                     }
                   />
                   <ToggleCard
+                    lawLinks="상증법"
                     tone="emerald"
                     variant="card"
                     title="상속인 — 산림지 통상 직접 경영 가능 지역 (§16②1호나 단서)"

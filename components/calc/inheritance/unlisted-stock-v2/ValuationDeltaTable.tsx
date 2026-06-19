@@ -128,6 +128,7 @@ export function ValuationDeltaTable({
       </p>
 
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         title="행 단위 입력 모드"
         description={

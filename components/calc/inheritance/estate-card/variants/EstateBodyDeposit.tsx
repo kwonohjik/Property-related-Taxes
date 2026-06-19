@@ -71,6 +71,7 @@ export function EstateBodyDeposit({
       {/* §14 자동공제 토글 (조건부) — 섹션 카드 밖 (ToggleCard 자체 카드형) */}
       {showCollateralDeductToggle && (
         <ToggleCard
+          lawLinks="상증법"
           tone="amber"
           title="이 담보채무를 §14 부채로 자동 공제"
           description={

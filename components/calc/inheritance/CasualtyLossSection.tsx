@@ -13,7 +13,6 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { FormState, FormSet } from "./shared";
 
 /** §23 재난 종류 enum → 한국어 라벨 (단일 출처 — RadioCardGroup·결과 표시 공용) */
@@ -50,10 +49,10 @@ export function CasualtyLossSection({
 
   return (
     <ToggleCard
+      lawLinks="상증법"
       tone="rose"
       title="재해손실공제 신청 (상증법 §23)"
       description="신고기한(상속개시일 말일부터 6개월) 이내 화재·붕괴·폭발·자연재해 등으로 상속재산이 멸실·훼손된 경우 과세가액에서 공제"
-      trailing={<LawArticleModal legalBasis="상속세및증여세법 §23" label="§23" />}
       checked={form.casualtyLossEnabled}
       onCheckedChange={(v) => set({ casualtyLossEnabled: v })}
     >
@@ -68,6 +67,7 @@ export function CasualtyLossSection({
         <div className="space-y-1">
           <p className="text-xs font-medium text-gray-700 dark:text-gray-300">재난 종류</p>
           <RadioCardGroup
+            lawLinks="상증법"
             name="casualtyLossType"
             tone="sky"
             layout="inline"

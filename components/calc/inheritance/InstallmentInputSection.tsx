@@ -41,6 +41,7 @@ export function InstallmentInputSection({
       </div>
       {/* 분납 (§70②) — 연부연납과 배타 */}
       <ToggleCard
+        lawLinks="상증법"
         tone="sky"
         title="분납 신청 (상증법 §70②)"
         description="결정세액 1천만원 초과 시 신고기한 경과 후 2개월 이내 분할납부. 1천만~2천만은 1천만 초과분, 2천만 초과는 50% 이하를 분납할 수 있습니다."
@@ -65,6 +66,7 @@ export function InstallmentInputSection({
       </ToggleCard>
 
       <ToggleCard
+        lawLinks="상증법"
         tone="amber"
         title="연부연납 신청 (상증법 §71)"
         description="결정세액 2천만원 초과 시 분할납부 — 일반 10년 / 가업상속 20년. 결과 화면에 회차별 일정표(일자·원금·가산금·합계)가 표시됩니다."
@@ -98,6 +100,7 @@ export function InstallmentInputSection({
 
           {/* 가업상속재산 포함 (§71②1가·§68②) */}
           <ToggleCard
+            lawLinks="상증법"
             tone="emerald"
             size="sm"
             title="가업상속재산 포함 (§71②1가)"
@@ -110,6 +113,7 @@ export function InstallmentInputSection({
                 가업상속 납부방식
               </p>
               <RadioCardGroup
+                lawLinks="상증법"
                 name="installment-fb-mode"
                 tone="emerald"
                 layout="inline"
