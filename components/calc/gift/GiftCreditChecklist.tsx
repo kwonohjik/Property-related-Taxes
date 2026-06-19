@@ -174,9 +174,9 @@ export function GiftCreditChecklist({
 
       {/* 혼인·출산 공제 (직계존속만 칩 노출) */}
       {active("marriageBirth") && (
-        <div className="border rounded-lg p-4 space-y-3">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-            혼인·출산 공제 (§53의2, 최대 각 1억)
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-3">
+          <h4 className="text-sm font-semibold text-sky-700 dark:text-sky-300">
+            혼인·출산 공제 (§53의2, 최대 1억원)
           </h4>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             직계존속으로부터 증여 시 적용. 혼인신고일 전후 2년 이내 / 자녀 출생일로부터 2년 이내 증여분. 합산 1억 한도.
@@ -185,21 +185,18 @@ export function GiftCreditChecklist({
             label="혼인공제"
             value={form.marriageExemption}
             onChange={(v) => set({ marriageExemption: v })}
-            hint="최대 1억원"
             placeholder="없으면 빈칸"
           />
           <CurrencyInput
             label="출산공제"
             value={form.birthExemption}
             onChange={(v) => set({ birthExemption: v })}
-            hint="최대 1억원"
             placeholder="없으면 빈칸"
           />
           <CurrencyInput
             label="이미 공제받은 혼인·출산 공제액 (§53의2③)"
             value={form.priorUsedMarriageBirthDeduction}
             onChange={(v) => set({ priorUsedMarriageBirthDeduction: v })}
-            hint="과거 다른 증여에서 §53의2 공제를 받은 금액 합계 (없으면 빈칸). 수증자 기준 통산 한도 1억."
             placeholder="없으면 빈칸"
           />
         </div>
@@ -207,13 +204,15 @@ export function GiftCreditChecklist({
 
       {/* 10년 내 기사용 공제 */}
       {active("priorUsed") && (
-        <CurrencyInput
-          label="10년 내 기사용 증여재산공제 합계"
-          value={form.priorUsedDeduction}
-          onChange={(v) => set({ priorUsedDeduction: v })}
-          hint="동일 관계(그룹)에서 10년 이내 이미 공제받은 합계"
-          placeholder="없으면 빈칸"
-        />
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4">
+          <CurrencyInput
+            label="10년 내 기사용 증여재산공제 합계"
+            value={form.priorUsedDeduction}
+            onChange={(v) => set({ priorUsedDeduction: v })}
+            hint="합산 신고 대상이 아닌 동일 그룹에서 10년내 이미 공제 받은 금액"
+            placeholder="없으면 빈칸"
+          />
+        </div>
       )}
 
       {/* 감정평가수수료 공제 */}
@@ -230,20 +229,22 @@ export function GiftCreditChecklist({
 
       {/* 외국납부세액 (§59) */}
       {active("foreignTax") && (
-        <CurrencyInput
-          label="외국납부세액 (§59)"
-          value={form.foreignTaxPaid}
-          onChange={(v) => set({ foreignTaxPaid: v })}
-          hint="해외 소재 증여재산에 대해 납부한 외국 세액"
-          placeholder="없으면 빈칸"
-        />
+        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4">
+          <CurrencyInput
+            label="외국납부세액 (§59)"
+            value={form.foreignTaxPaid}
+            onChange={(v) => set({ foreignTaxPaid: v })}
+            hint="해외 소재 증여재산에 대해 납부한 외국 세액"
+            placeholder="없으면 빈칸"
+          />
+        </div>
       )}
 
       {/* 조특법 과세특례 (§30의5·6) + 종속 입력 */}
       {active("specialTreatment") && (
-        <div className="space-y-3">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+            <label className="block text-sm font-medium text-emerald-700 dark:text-emerald-300">
               조특법 과세특례 (창업·가업)
             </label>
             <RadioCardGroup<"none" | "startup" | "family_business">
