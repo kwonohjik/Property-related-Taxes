@@ -314,7 +314,9 @@ describe("GiftRowEditor — 수증자 select (2-B anchor)", () => {
     expect(idxIsHeir).toBeLessThan(idxRelation); // isHeir 토글이 위
   });
 
-  it("T-16(A7): 증여세 모드(showGiftPhaseA) → 수증인과의 관계 select 유지(§53 핵심)", () => {
+  it("T-16(A7): 증여세 모드(showGiftPhaseA) → 수증인과의 관계 제거 + 증여자 select 통합 (field-cleanup)", () => {
+    // field-cleanup: 증여세 모드에서 doneeRelation Select 폐지(donor 중복·엔진 미사용).
+    // §53 관계는 donor에서 deriveDonorRelation으로 자동 도출.
     const onUpdate = vi.fn();
     render(
       <GiftRowEditor
@@ -327,7 +329,8 @@ describe("GiftRowEditor — 수증자 select (2-B anchor)", () => {
         heirs={HEIRS}
       />,
     );
-    expect(screen.getByText("수증인과의 관계")).toBeDefined();
+    expect(screen.queryByText("수증인과의 관계")).toBeNull();
+    expect(screen.getByText(/증여자 \(동일인 그룹 판정\)/)).toBeDefined();
     expect(screen.queryByTestId("gift-donee-select")).toBeNull();
   });
 });

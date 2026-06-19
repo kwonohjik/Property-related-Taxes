@@ -38,7 +38,10 @@ import {
   deriveBeneficiaryTypeFromHeir,
   deriveDoneeRelationFromHeir,
 } from "@/lib/calc/prior-gift-donee-derive";
-import { autoComputePriorGiftTax } from "@/lib/calc/prior-gift-auto-tax";
+import {
+  autoComputePriorGiftTax,
+  computePriorGiftBaseTaxPrefill,
+} from "@/lib/calc/prior-gift-auto-tax";
 import { isInheritancePriorGiftMarriageBirthEligible } from "@/lib/calc/prior-gift-marriage-birth-rule";
 import { GiftTaxBaseModeBlock } from "@/components/calc/prior-gift/GiftTaxBaseModeBlock";
 import { MinorAtGiftToggleBlock } from "@/components/calc/prior-gift/MinorAtGiftToggleBlock";
@@ -86,6 +89,12 @@ export function GiftRowEditor({
   // 카드-local useState (showAutoBadge가 render에 영향 → ref 아닌 state. useEffect→store 미러링 아님).
   const [userTouchedTax, setUserTouchedTax] = useState(false);
 
+  // 증여세 모드 ⑤·⑦ prefill 수동 수정 여부 — 자동 덮어쓰기 차단.
+  // 이력 채움 행(sourceCalculationId)은 초기 true로 prefill이 이력 ⑤·⑦을 덮지 않게 보호 (R6).
+  const [userTouchedBaseTax, setUserTouchedBaseTax] = useState(
+    Boolean(gift.sourceCalculationId),
+  );
+
   // 부표1(신고서 메타) 기본 접힘 (donee-phase2 — 입력 간소화, print 자동 펼침)
   const [besshiOpen, setBesshiOpen] = useState(false);
 
@@ -108,6 +117,27 @@ export function GiftRowEditor({
       };
     }
     return { giftTaxPaid: tax };
+  }
+
+  /**
+   * 증여세 모드 ⑤·⑦ prefill patch (store commit — D1).
+   *   donor + 증여재산가액에서 §53 관계 도출 → 단순 1건 ⑤·⑦ 추정값을 실제 store에 반영.
+   *   표시 fallback이 아니라 store commit이라야 validate(동일그룹 ⑤·⑦ 필수)를 통과한다.
+   *   게이트: 증여세 모드 + 미터치 + 비특례 + donor·가액 존재 (computePriorGiftBaseTaxPrefill).
+   */
+  function computeBaseTaxPatch(next: PriorGift): Partial<PriorGift> {
+    if (!showGiftPhaseA || userTouchedBaseTax) return {};
+    if (next.specialTreatmentType) return {}; // 특례는 §47 합산 제외 → prefill 불필요
+    const prefill = computePriorGiftBaseTaxPrefill(
+      next.donor,
+      next.giftAmount ?? 0,
+    );
+    if (!prefill) return {};
+    // 과세표준 0(공제 이하)은 빈칸 유지 → 사용자 직접 입력 유도 (validate >0 정합)
+    return {
+      giftTaxBase: prefill.giftTaxBase || undefined,
+      computedTax: prefill.computedTax || undefined,
+    };
   }
 
   // ============================================================
@@ -135,9 +165,16 @@ export function GiftRowEditor({
   }
 
   // 증여재산가액 onChange — 가액 반영 후 자동 세액 재계산 (단일 set)
+  //   증여세 모드: ⑤·⑦ prefill(store commit) / 상속세 모드: 기납부 증여세 자동계산
   function handleGiftAmountChange(v: string) {
     const giftAmount = parseAmount(v);
-    set({ giftAmount, ...computeTaxPatch({ ...gift, giftAmount }) });
+    const next = { ...gift, giftAmount };
+    set({
+      giftAmount,
+      ...(showGiftPhaseA
+        ? computeBaseTaxPatch(next)
+        : computeTaxPatch(next)),
+    });
   }
 
   // 수동 경로 관계 onChange — doneeRelation 반영 후 자동 세액 재계산 (P6 경로2)
@@ -209,30 +246,35 @@ export function GiftRowEditor({
         />
       </div>
 
-      {/* 수증인과의 관계 — 증여세 모드 전용 (§53 증여재산공제 핵심 입력, 증여일 직후 유지) */}
+      {/* 증여자(donor) — 증여세 모드 전용. 증여일 직후 배치 = "누가 줬나" 단일 입력.
+       *  §47 동일인 합산 그룹 판정 + §53 증여재산공제 관계(deriveDonorRelation)를 모두 이 값에서 도출.
+       *  구 "수증인과의 관계"(doneeRelation) Select 폐지 — donor와 중복·증여세 엔진 미사용. */}
       {showGiftPhaseA && (
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-            수증인과의 관계
+            증여자 (동일인 그룹 판정) <span className="text-destructive">*</span>
           </label>
           <select
-            value={gift.doneeRelation ?? ""}
-            onChange={(e) =>
-              set({
-                doneeRelation: (e.target.value || undefined) as
-                  | DonorRelation
-                  | undefined,
-              })
-            }
+            data-testid="gift-prior-donor-select"
+            value={gift.donor ?? ""}
+            onChange={(e) => {
+              const donor = (e.target.value || undefined) as
+                | GiftDonorRelation
+                | undefined;
+              set({ donor, ...computeBaseTaxPatch({ ...gift, donor }) });
+            }}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">선택</option>
-            {DONOR_RELATION_LIST.map((r) => (
-              <option key={r} value={r}>
-                {DONOR_RELATION_LABELS[r]}
+            {GIFT_DONOR_LIST.map((d) => (
+              <option key={d} value={d}>
+                {GIFT_DONOR_LABELS[d]}
               </option>
             ))}
           </select>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            현재 증여자와 동일인 그룹(부·모 또는 조부모)만 §47 합산 대상. §53 증여재산공제 관계도 이 값에서 자동 도출됩니다.
+          </p>
         </div>
       )}
 
@@ -427,7 +469,9 @@ export function GiftRowEditor({
        * ★ 진입 fallback(phase2-후속): 영리법인 cgct 미설정(undefined)이고 가액 있으면, onChange 트리거 없이도
        *   표시값을 autoComputePriorGiftTax로 derive (기존 데이터·진입 시점 빈칸 해소). store mirror 아님(표시 전용).
        *   계산 정합은 lib/calc/inheritance-api.ts API fallback이 동일 산식으로 보장(mirror 3중). */}
-      {(() => {
+      {/* 기납부 증여세 — 상속세 모드 전용(§28 증여세액공제용).
+       *  증여세 모드는 §58이 ⑦(computedTax)을 쓰므로 미사용 → 숨김. */}
+      {!showGiftPhaseA && (() => {
         const corpNeedsFallback =
           isCorporate &&
           (gift.corporateGiftComputedTax === undefined ||
@@ -665,8 +709,9 @@ export function GiftRowEditor({
         </div>
       )}
 
-      {/* Phase A: 증여세 모드 전용 — donor + ⑤ + ⑦ + 할증 + ⑫ (§47 합산 정보) */}
-      {showGiftPhaseA && (
+      {/* Phase A: 증여세 모드 전용 — ⑤ + ⑦ + 할증 + ⑫ (§47·§58 한도 산식).
+       *  증여자(donor)는 증여일 직후로 이동. D2: 조특법 특례 회차는 §47 합산 제외 → 카드 숨김. */}
+      {showGiftPhaseA && !gift.specialTreatmentType && (
         <>
         <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
           <div className="flex items-center gap-2">
@@ -678,34 +723,6 @@ export function GiftRowEditor({
             </p>
           </div>
 
-          {/* 증여자 (donor) */}
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-violet-700">
-              증여자 (동일인 그룹 판정) <span className="text-destructive">*</span>
-            </label>
-            <select
-              value={gift.donor ?? ""}
-              onChange={(e) =>
-                set({
-                  donor: (e.target.value || undefined) as
-                    | GiftDonorRelation
-                    | undefined,
-                })
-              }
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">선택</option>
-              {GIFT_DONOR_LIST.map((d) => (
-                <option key={d} value={d}>
-                  {GIFT_DONOR_LABELS[d]}
-                </option>
-              ))}
-            </select>
-            <p className="text-[11px] text-violet-600">
-              현재 증여자와 동일인 그룹(부·모 또는 조부모)만 §47 합산 대상. 다른 그룹은 별개 신고로 자동 분리됩니다.
-            </p>
-          </div>
-
           {/* ⑤ 합산과세표준 */}
           <CurrencyInput
             label="그 회차 합산과세표준 ⑤"
@@ -714,8 +731,11 @@ export function GiftRowEditor({
                 ? String(gift.giftTaxBase)
                 : ""
             }
-            onChange={(v) => set({ giftTaxBase: parseAmount(v) || undefined })}
-            hint="신고서 ⑤ 값. §58 한도 산식 분자(가장 최근 합산 회차) 용도."
+            onChange={(v) => {
+              setUserTouchedBaseTax(true);
+              set({ giftTaxBase: parseAmount(v) || undefined });
+            }}
+            hint="신고서 ⑤ 값. §58 한도 산식 분자(가장 최근 합산 회차). 증여자·가액 입력 시 자동 추정(수정 가능)."
           />
 
           {/* ⑦ 산출세액 */}
@@ -726,8 +746,11 @@ export function GiftRowEditor({
                 ? String(gift.computedTax)
                 : ""
             }
-            onChange={(v) => set({ computedTax: parseAmount(v) || undefined })}
-            hint="신고서 ⑦ 값. §58 가산 증여재산 산출세액(가장 최근 합산 회차)."
+            onChange={(v) => {
+              setUserTouchedBaseTax(true);
+              set({ computedTax: parseAmount(v) || undefined });
+            }}
+            hint="신고서 ⑦ 값. §58 가산 증여재산 산출세액(가장 최근 합산 회차). 증여자·가액 입력 시 자동 추정(수정 가능)."
           />
 
           {/* 세대생략 토글 */}

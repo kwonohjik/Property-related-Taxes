@@ -16,6 +16,7 @@ import type {
   Heir,
   HeirRelation,
   DonorRelation,
+  GiftDonorRelation,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /** Heir.relation이 비상속인(수유자·영리법인)인지 판정 */
@@ -78,5 +79,41 @@ export function deriveDoneeRelationFromHeir(
     case "legatee":
     case "corporate":
       return undefined; // 비친족·법인 — §53 공제 대상 아님
+  }
+}
+
+/**
+ * GiftDonorRelation → DonorRelation (§53 증여재산공제 관계 도출, G-M3 단일 진실).
+ *
+ * 증여세 모드 사전증여: 증여자(donor) 단일 입력에서 §53 관계를 자동 도출 →
+ *   별도 "수증인과의 관계"(doneeRelation) 입력 폐지. (메인 폼과 동일 매핑)
+ *
+ * ⚠️ 본 함수는 gift-tax-form-shared.tsx에서 lib로 이동(순환 import 회피).
+ *   gift-tax-form-shared.tsx는 하위호환 re-export 유지.
+ *
+ * 매핑 기준:
+ * - father/mother/grandparent → lineal_ascendant_adult (기본)
+ *   isMinorDonee=true 이면 lineal_ascendant_minor (2천만원 공제)
+ * - spouse → spouse
+ * - lineal_descendant → lineal_descendant
+ * - sibling/other_relative/other → other_relative
+ */
+export function deriveDonorRelation(
+  donor: GiftDonorRelation,
+  isMinorDonee: boolean,
+): DonorRelation {
+  switch (donor) {
+    case "father":
+    case "mother":
+    case "grandparent":
+      return isMinorDonee ? "lineal_ascendant_minor" : "lineal_ascendant_adult";
+    case "spouse":
+      return "spouse";
+    case "lineal_descendant":
+      return "lineal_descendant";
+    case "sibling":
+    case "other_relative":
+    case "other":
+      return "other_relative";
   }
 }
