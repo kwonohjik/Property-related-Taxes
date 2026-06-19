@@ -402,6 +402,10 @@ export function ExemptionChecklist({
     ? "해당되는 비과세 또는 과세가액 불산입 항목을 체크하면 아래에 입력란이 열립니다. (없으면 건너뛰기)"
     : "해당되는 비과세 항목을 체크하면 아래에 입력란이 열립니다. (없으면 건너뛰기)";
 
+  // 그룹 헤더·입력 섹션 법령 라벨 (세목별) — 상속 §12/§16·§17 / 증여 §46/§48·§52
+  const nonTaxableLaw = isInheritance ? "상증법 §12" : "상증법 §46";
+  const notIncludedLaw = isInheritance ? "상증법 §16·§17" : "상증법 §48·§52";
+
   return (
     <div className="space-y-3">
       {/* 통합 카드: 제목 + 안내 + 칩 패널 (마스터 토글 제거 — 항목 직접 선택) */}
@@ -414,6 +418,10 @@ export function ExemptionChecklist({
         </div>
         <ExemptionChecklistPanel
           items={value}
+          nonTaxableRules={nonTaxableRules}
+          notIncludedRules={notIncludedRules}
+          nonTaxableLaw={nonTaxableLaw}
+          notIncludedLaw={notIncludedLaw}
           onToggle={(ruleId) => {
             handleToggle(ruleId);
           }}
@@ -426,7 +434,7 @@ export function ExemptionChecklist({
           {nonTaxableRules.length > 0 && (
             <ExemptionGroupSection
               title="비과세"
-              subtitle="상증법 §12"
+              subtitle={nonTaxableLaw}
               rules={nonTaxableRules}
               checkedMap={checkedMap}
               isOpen={nontaxableOpen}
@@ -444,7 +452,7 @@ export function ExemptionChecklist({
           {notIncludedRules.length > 0 && (
             <ExemptionGroupSection
               title="과세가액 불산입"
-              subtitle="상증법 §16·§17"
+              subtitle={notIncludedLaw}
               rules={notIncludedRules}
               checkedMap={checkedMap}
               isOpen={notIncludedOpen}

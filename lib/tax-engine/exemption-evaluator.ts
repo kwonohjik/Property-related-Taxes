@@ -15,6 +15,7 @@ import {
   DISABLED_TRUST_LIMIT,
   findExemptionRuleById,
   type ExemptionRule,
+  type ExemptionCategory,
 } from "./exemption-rules";
 import type {
   CalculationStep,
@@ -260,6 +261,12 @@ function applyGraveGroupCap(itemResults: ExemptionItemResult[]): void {
 export function evaluateExemptions(
   checkedItems: ExemptionCheckedItem[],
   grossEstateValue: number,
+  /**
+   * 세목 가드 — 지정 시 해당 세목(inheritance·gift)에 속하지 않는 비과세 룰은
+   * 무시한다. 상속세 §12·§16·§17(inh_*)이 증여세에 적용되는 등 cross-category
+   * 오적용을 차단(stale 저장 계산·직접 API 경로 포함). 미지정 시 가드 미적용(하위호환).
+   */
+  expectedCategory?: ExemptionCategory,
 ): ExemptionResult & { itemResults: ExemptionItemResult[] } {
   const itemResults: ExemptionItemResult[] = [];
   const allWarnings: string[] = [];
@@ -272,6 +279,14 @@ export function evaluateExemptions(
         TaxErrorCode.EXEMPTION_REQUIREMENT_FAILED,
         `비과세 룰 ID를 찾을 수 없습니다: ${item.ruleId}`,
       );
+    }
+
+    // 세목 불일치 비과세 항목은 무시(차감하지 않음) — 잘못된 입력 경로 방어
+    if (expectedCategory && rule.category !== expectedCategory) {
+      allWarnings.push(
+        `세목 불일치 비과세 항목 무시: ${item.ruleId} (${rule.category} ≠ ${expectedCategory})`,
+      );
+      continue;
     }
 
     const result = evaluateSingleExemption(item, rule);

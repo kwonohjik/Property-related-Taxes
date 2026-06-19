@@ -206,7 +206,7 @@ export function computeInheritanceSummary(
   const exemptEstimate =
     result?.exemptAmount ??
     (items.length > 0
-      ? evaluateExemptions(items, totalEstate).totalExemptAmount
+      ? evaluateExemptions(items, totalEstate, "inheritance").totalExemptAmount
       : 0);
 
   // ── 상속세 과세가액 ──

@@ -112,7 +112,7 @@ export function calcGiftTax(
   let exemptAmount = 0;
   if (input.exemptions && input.exemptions.length > 0) {
     const { totalExemptAmount, breakdown: exemptBreakdown } =
-      evaluateExemptions(input.exemptions, grossGiftValue);
+      evaluateExemptions(input.exemptions, grossGiftValue, "gift");
     exemptAmount = totalExemptAmount;
     allBreakdown.push(...exemptBreakdown);
   }
@@ -532,7 +532,7 @@ function calcGiftTaxTwoStream(
   let exemptAmount = 0;
   if (input.exemptions && input.exemptions.length > 0) {
     const { totalExemptAmount, breakdown: exemptBreakdown } =
-      evaluateExemptions(input.exemptions, effectiveOrdinaryGrossValue);
+      evaluateExemptions(input.exemptions, effectiveOrdinaryGrossValue, "gift");
     exemptAmount = totalExemptAmount;
     allBreakdown.push(...exemptBreakdown);
   }

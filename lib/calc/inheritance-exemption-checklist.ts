@@ -20,85 +20,33 @@
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
 
 // ────────────────────────────────────────────────────
-// 그룹·섹션 타입
+// 칩 라벨 (메타 일원화)
 // ────────────────────────────────────────────────────
-
-export type ExemptionRuleGroup = "sky" | "violet";
-export type ExemptionRuleSection = "nontaxable" | "not_included";
-
-// ────────────────────────────────────────────────────
-// 항목 메타
-// ────────────────────────────────────────────────────
-
-export interface ExemptionChecklistMeta {
-  label: string;
-  group: ExemptionRuleGroup;
-  /** 법령 섹션 (패널 섹션 구분) */
-  section: ExemptionRuleSection;
-}
 
 /**
- * 8개 항목 메타 정의.
- * - nontaxable (§12): sky 톤 — 비과세
- * - not_included (§16·§17): violet 톤 — 과세가액 불산입
+ * 칩 표시용 짧은 라벨 (rule.name과 다를 때만 명시).
+ * 칩 그룹(sky/violet)·노출 항목·순서는 ExemptionChecklist 부모가
+ * getExemptionRulesByCategory(category) + getExemptionTreatment(rule)으로 결정한다
+ * (세목별 분기 단일 진실). 여기는 라벨 override만 — 미정의 ruleId는 rule.name 사용.
+ *
+ * 메타 일원화: 과거 inh_* 전용 EXEMPTION_CHECKLIST_META(label+group+section)·
+ * NONTAXABLE_RULE_IDS·NOT_INCLUDED_RULE_IDS 폐기(증여세에 inh_* 오노출 버그 원인).
  */
-export const EXEMPTION_CHECKLIST_META: Record<string, ExemptionChecklistMeta> = {
-  inh_state_bequest: {
-    label: "국가·지자체 유증",
-    group: "sky",
-    section: "nontaxable",
-  },
-  inh_forest_burial: {
-    label: "금양임야",
-    group: "sky",
-    section: "nontaxable",
-  },
-  inh_grave_land: {
-    label: "묘토",
-    group: "sky",
-    section: "nontaxable",
-  },
-  inh_ritual_items: {
-    label: "족보·제구",
-    group: "sky",
-    section: "nontaxable",
-  },
-  inh_emergency_relief: {
-    label: "이재구호금품·치료비",
-    group: "sky",
-    section: "nontaxable",
-  },
-  inh_political_bequest: {
-    label: "정당 유증",
-    group: "sky",
-    section: "nontaxable",
-  },
-  inh_public_interest: {
-    label: "공익법인 출연",
-    group: "violet",
-    section: "not_included",
-  },
-  inh_public_trust: {
-    label: "공익신탁 출연",
-    group: "violet",
-    section: "not_included",
-  },
+export const EXEMPTION_CHIP_LABELS: Record<string, string> = {
+  inh_state_bequest: "국가·지자체 유증",
+  inh_forest_burial: "금양임야",
+  inh_grave_land: "묘토",
+  inh_ritual_items: "족보·제구",
+  inh_emergency_relief: "이재구호금품·치료비",
+  inh_political_bequest: "정당 유증",
+  inh_public_interest: "공익법인 출연",
+  inh_public_trust: "공익신탁 출연",
 };
 
-/** 섹션별 ruleId 순서 배열 */
-export const NONTAXABLE_RULE_IDS: string[] = [
-  "inh_state_bequest",
-  "inh_forest_burial",
-  "inh_grave_land",
-  "inh_ritual_items",
-  "inh_emergency_relief",
-  "inh_political_bequest",
-];
-
-export const NOT_INCLUDED_RULE_IDS: string[] = [
-  "inh_public_interest",
-  "inh_public_trust",
-];
+/** 칩 라벨 — override 있으면 사용, 없으면 rule.name fallback */
+export function getExemptionChipLabel(ruleId: string, fallbackName: string): string {
+  return EXEMPTION_CHIP_LABELS[ruleId] ?? fallbackName;
+}
 
 // ────────────────────────────────────────────────────
 // 값 판정 헬퍼
