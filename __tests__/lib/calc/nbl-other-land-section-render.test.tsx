@@ -101,7 +101,7 @@ describe("[NBL-OTHER-UI] ⑤ §168의11① 호별 면적기준 위젯", () => {
     render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
     expect(screen.getByText(/옥외 방목장·식물원 면적/)).toBeTruthy();
     expect(screen.getByText(/부설주차장 설치기준면적 \(㎡\)/)).toBeTruthy(); // 옵션 설명과 구분 위해 (㎡) 한정
-    expect(screen.getByText(/건축물 바닥면적/)).toBeTruthy();
+    expect(screen.getByText(/건축물 바닥면적 \(㎡\)/)).toBeTruthy(); // §101①2호나목 안내문(괄호 없음)과 구분 위해 (㎡) 한정
   });
 
   // F2 Phase B(B-2) — 선수가산: 테니스 선택 시 선수 수 입력 노출.

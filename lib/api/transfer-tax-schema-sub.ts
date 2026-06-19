@@ -130,6 +130,7 @@ export const nonBusinessLandRawSchema = z.object({
   nblOtherLandValue: z.string().optional(),
   nblOtherIsRelatedToResidence: z.boolean().optional(),
   nblOtherHasBuilding: z.boolean().optional(),
+  nblOtherBuildingFloorArea: z.string().optional(),
   // §168의11① 호별 면적기준 (갭 3a)
   nblOtherRelatedBusinessType: z.string().optional(),
   nblOtherStandardAreaLimit: z.string().optional(),

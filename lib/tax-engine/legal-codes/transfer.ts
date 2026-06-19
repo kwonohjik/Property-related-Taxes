@@ -62,6 +62,8 @@ export const NBL = {
   OTHER_LAND_AREA_RESORT:         "시행령 §168조의11 ① 6호 + 시행규칙 §83조의4 ⑪⑫",
   OTHER_LAND_AREA_HATCHANG:       "시행령 §168조의11 ① 7호",
   OTHER_LAND_AREA_VACANT_LOT:     "시행령 §168조의11 ① 13호 + 시행규칙 §83조의4 ⑯⑰",
+  // §101①2호나목 (지방세법 시행령) — 2% 미달 건축물 바닥면적분 별도합산 유지(cross-statute)
+  OTHER_LAND_FOOTPRINT_CARVEOUT:  "지방세법 시행령 §101 ① 2호 나목",
   HOUSING_MULTIPLIER:             "시행령 §168조의12",
   VILLA:                          "시행령 §168조의13",
   UNAVOIDABLE_PERIOD:             "시행령 §168조의14 ① (시행규칙 §83의5①)",

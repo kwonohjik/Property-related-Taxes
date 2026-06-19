@@ -257,6 +257,7 @@ export const NBL_DEFAULTS = {
   nblOtherLandValue: "",
   nblOtherIsRelatedToResidence: false,
   nblOtherHasBuilding: false,
+  nblOtherBuildingFloorArea: "",
   // §168의11① 호별 면적기준 (갭 3a)
   nblOtherRelatedBusinessType: "",
   nblOtherStandardAreaLimit: "",

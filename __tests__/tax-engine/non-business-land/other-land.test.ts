@@ -55,6 +55,108 @@ describe("C-6 기타토지 PDF p.1706 흐름도", () => {
     expect(r.isBusiness).toBe(false);
   });
 
+  it("N2: 2% 미달 건물 + 거주사업관련X → 바닥면적분 별도합산 유지·잔여 비사업용 (§101①2호나목)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          buildingStandardValue: 5_000_000,
+          landStandardValue: 1_000_000_000, // 2% = 20M, 건물 5M < 20M → 2% 미달
+          buildingFloorArea: 200,
+          isRelatedToResidenceOrBusiness: false,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.nonBusinessRatio).toBe(0.8); // (1000-200)/1000
+    expect(r.steps.some((s) => s.id === "other_footprint_carveout")).toBe(true);
+  });
+
+  it("N3: 2% 미달 + footprint 미입력 → 전량 비사업용 (자동안분 금지)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          buildingStandardValue: 5_000_000,
+          landStandardValue: 1_000_000_000,
+          isRelatedToResidenceOrBusiness: false,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning).toBeUndefined();
+    expect(r.steps.some((s) => s.id === "other_footprint_carveout")).toBe(false);
+  });
+
+  it("N4: 2% 이상 → 별도합산 사업용 (carve-out 미진입·회귀)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1000,
+        otherLand: {
+          propertyTaxType: "separate",
+          hasBuilding: true,
+          buildingStandardValue: 25_000_000, // 2% = 20M, 25M ≥ 20M → 2% 이상
+          landStandardValue: 1_000_000_000,
+          buildingFloorArea: 200,
+          isRelatedToResidenceOrBusiness: false,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
+    expect(r.steps.some((s) => s.id === "other_footprint_carveout")).toBe(false);
+  });
+
+  it("N5: footprint ≥ landArea → 전량 별도합산 사업용", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 200,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          buildingStandardValue: 5_000_000,
+          landStandardValue: 500_000_000, // 2% = 10M, 5M < 10M → 2% 미달
+          buildingFloorArea: 200,
+          isRelatedToResidenceOrBusiness: false,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
+    expect(r.areaProportioning).toBeUndefined();
+    expect(r.steps.some((s) => s.id === "other_footprint_carveout")).toBe(true);
+  });
+
+  it("N7: 2% 미달 + 수입금액비율 PASS → 전량 사업용 (carve-out 미진입·불리적용 차단)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          buildingStandardValue: 5_000_000,
+          landStandardValue: 1_000_000_000,
+          buildingFloorArea: 200,
+          isRelatedToResidenceOrBusiness: false,
+        },
+        revenueTest: {
+          businessType: "parking_operation",
+          currentRevenue: 50_000_000, // 5% ≥ 3% → PASS
+          currentLandValue: 1_000_000_000,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
+    expect(r.steps.some((s) => s.id === "other_footprint_carveout")).toBe(false);
+  });
+
   it("종합합산 + 거주·사업관련 O → 사업용", () => {
     const r = judgeOtherLand(
       base({

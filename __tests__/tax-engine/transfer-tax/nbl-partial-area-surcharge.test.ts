@@ -52,6 +52,25 @@ const pastureOverAreaNbl: NonBusinessLandInput = {
   gracePeriods: [],
 };
 
+// 기타토지 §101①2호나목 footprint carve-out — 2% 미달·바닥면적 200㎡·부속토지 1,000㎡ → 잔여 800㎡ 비사업용 (ratio 0.8)
+const footprintCarveoutNbl: NonBusinessLandInput = {
+  landType: "other_land",
+  landArea: 1000,
+  zoneType: "residential",
+  acquisitionDate: new Date("2020-01-01"),
+  transferDate: new Date("2025-01-01"),
+  otherLand: {
+    propertyTaxType: "comprehensive",
+    hasBuilding: true,
+    buildingStandardValue: 5_000_000,
+    landStandardValue: 1_000_000_000, // 2% = 20M, 5M < 20M → 2% 미달
+    buildingFloorArea: 200,
+    isRelatedToResidenceOrBusiness: false,
+  },
+  businessUsePeriods: [],
+  gracePeriods: [],
+};
+
 describe("F3 — 비사업용 토지 부분 면적안분 중과 (목장 §168의10③·기타토지 §168의11①)", () => {
   it("AT-F3-1: 목장 면적초과 33.3% → 중과분만 안분 (전량 비사업용보다 세액 작음)", () => {
     const refFull = calculateTransferTax(baseInput({ ...common, nonBusinessLandDetails: vacantLotNbl }), mockRates);
@@ -73,5 +92,16 @@ describe("F3 — 비사업용 토지 부분 면적안분 중과 (목장 §168의
   it("AT-F3-7: 부분안분 surcharge.nonBusinessAreaRatio 노출 (목장 0.3333)", () => {
     const testPartial = calculateTransferTax(baseInput({ ...common, nonBusinessLandDetails: pastureOverAreaNbl }), mockRates);
     expect(testPartial.nonBusinessLandJudgmentDetail!.surcharge.nonBusinessAreaRatio).toBeCloseTo(0.3333, 3);
+  });
+
+  it("AT-A-N6: §101①2호나목 footprint carve-out 80% → 중과분만 안분 (전량 비사업용보다 세액 작음)", () => {
+    const refFull = calculateTransferTax(baseInput({ ...common, nonBusinessLandDetails: vacantLotNbl }), mockRates);
+    const testFootprint = calculateTransferTax(baseInput({ ...common, nonBusinessLandDetails: footprintCarveoutNbl }), mockRates);
+
+    expect(testFootprint.nonBusinessLandJudgmentDetail!.isNonBusinessLand).toBe(true);
+    expect(testFootprint.nonBusinessLandJudgmentDetail!.areaProportioning!.nonBusinessRatio).toBeCloseTo(0.8, 3);
+    expect(testFootprint.nonBusinessLandJudgmentDetail!.surcharge.nonBusinessAreaRatio).toBeCloseTo(0.8, 3);
+    // 바닥면적분(200㎡) 별도합산 유지 → 중과분 80%만 안분 → 전량중과보다 세액 작음
+    expect(testFootprint.calculatedTax).toBeLessThan(refFull.calculatedTax);
   });
 });

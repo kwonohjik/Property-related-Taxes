@@ -229,6 +229,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblOtherLandValue: "",
     nblOtherIsRelatedToResidence: false,
     nblOtherHasBuilding: false,
+    nblOtherBuildingFloorArea: "",
     nblOtherRelatedBusinessType: "",
     nblOtherStandardAreaLimit: "",
     nblOtherMaxAnnualArea: "",
@@ -410,6 +411,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   // NBL 잔여 갭(2026-06-19): ② 농지개발사업지구 · ④ 기타토지 건물유무 · ③ 별장 농어촌주택 3요건 — 구 세션 복원 방어
   if (a.nblFarmlandIsFarmDevZone === undefined) a.nblFarmlandIsFarmDevZone = false;
   if (a.nblOtherHasBuilding === undefined) a.nblOtherHasBuilding = false;
+  if (a.nblOtherBuildingFloorArea === undefined) a.nblOtherBuildingFloorArea = "";
   if (a.nblVillaBuildingFloorArea === undefined) a.nblVillaBuildingFloorArea = "";
   if (a.nblVillaAttachedLandArea === undefined) a.nblVillaAttachedLandArea = "";
   if (a.nblVillaCombinedStdValue === undefined) a.nblVillaCombinedStdValue = "";
