@@ -72,6 +72,44 @@ test.describe("증여이익 계산기 — 상세 입력 모달", () => {
     await expect(page.getByPlaceholder("보험금 (원)")).toBeVisible();
   });
 
+  test("M-5: 특수관계인 범위 조회 버튼 → 범위 모달 표시 → 닫기(부모 모달 유지)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.goto("/calc/gift-deemed");
+    await page.getByTestId("deemed-type-bargain_transfer").click();
+    await expect(page.getByTestId("deemed-detail-dialog")).toBeVisible();
+
+    // 조회 버튼(aria-label "도움말: …") 클릭 → 중첩 모달 표시
+    await page.getByRole("button", { name: /도움말: 특수관계인의 범위/ }).click();
+    const scopeDialog = page.getByRole("dialog", { name: /특수관계인의 범위/ });
+    await expect(scopeDialog).toBeVisible();
+    await expect(scopeDialog).toContainText("4촌 이내의 혈족");
+    await expect(scopeDialog).toContainText("경영지배관계");
+
+    // 닫기(Escape) → 부모 상세 모달은 유지
+    await page.keyboard.press("Escape");
+    await expect(scopeDialog).toBeHidden();
+    await expect(page.getByTestId("deemed-detail-dialog")).toBeVisible();
+  });
+
+  test("M-6: 조문 배지(§35①) 클릭 → 법령 팝업 + 토글 미간섭", async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.goto("/calc/gift-deemed");
+    await page.getByTestId("deemed-type-bargain_transfer").click();
+    await expect(page.getByTestId("deemed-detail-dialog")).toBeVisible();
+
+    // §35① 조문 배지(LawArticleModal 버튼, "§35① ↗")가 모달 안에 렌더
+    const badge = page.getByRole("button", { name: /§35①/ });
+    await expect(badge.first()).toBeVisible();
+
+    // 클릭 → 법령 팝업 제목(상속세및증여세법 제35조) 노출, 부모 모달 유지
+    await badge.first().click();
+    await expect(
+      page.getByRole("heading", { name: /상속세및증여세법 제35조/ }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("deemed-detail-dialog")).toBeVisible();
+  });
+
   test("M-4: 증여일 미입력 후 계산 → 모달 자동 재오픈 + 모달 내 에러(D7)", async ({ page }) => {
     test.setTimeout(60_000);
     await page.goto("/calc/gift-deemed");

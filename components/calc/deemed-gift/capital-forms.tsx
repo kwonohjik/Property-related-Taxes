@@ -18,6 +18,7 @@ export function MergerFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="mrg-case"
         tone="emerald"
         layout="inline"
@@ -61,6 +62,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="ci-direction"
         tone="sky"
         layout="inline"
@@ -72,6 +74,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
         ]}
       />
       <RadioCardGroup
+        lawLinks="상증법"
         name="ci-subtype"
         tone="sky"
         value={form.ciSubType}
@@ -96,6 +99,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
       )}
       {!isHigh && (
         <ToggleCard
+          lawLinks="상증법"
           tone="violet"
           checked={form.ciSmallImputation}
           onCheckedChange={(v) => set({ ciSmallImputation: v })}
@@ -113,6 +117,7 @@ export function CapitalDecreaseFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="cd-case"
         tone="amber"
         layout="inline"
@@ -146,6 +151,7 @@ export function ContributionFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="con-case"
         tone="violet"
         layout="inline"
@@ -167,6 +173,7 @@ export function ContributionFields({ form, set }: Props) {
         </FieldCard>
       ) : (
         <ToggleCard
+          lawLinks="상증법"
           tone="violet"
           checked={form.conSmallImputation}
           onCheckedChange={(v) => set({ conSmallImputation: v })}
@@ -249,6 +256,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="cs-direction"
         tone="rose"
         layout="inline"
@@ -260,6 +268,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
         ]}
       />
       <RadioCardGroup
+        lawLinks="상증법"
         name="cs-subtype"
         tone="rose"
         value={form.csSubType}
@@ -323,6 +332,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="cb-case"
         tone="rose"
         value={form.cbCaseType}

@@ -491,6 +491,7 @@ export function Step4({
             <LawArticleModal legalBasis="상속세및증여세법 §20" label="§20 인적공제" />
           </div>
           <RadioCardGroup
+            lawLinks="상증법"
             name="filing-status"
             tone="violet"
             value={form.isUnfiled ? "none" : form.isFiledOnTime ? "on_time" : "late"}

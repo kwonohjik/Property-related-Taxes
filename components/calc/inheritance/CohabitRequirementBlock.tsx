@@ -112,6 +112,7 @@ export function CohabitRequirementBlock({
       {/* §23의2② 부득이 사유 — Phase 4: 3-state 토글 + 배열 입력 */}
       <div className="space-y-2">
         <ToggleCard
+          lawLinks="상증법"
           tone="violet"
           size="sm"
           title="§23의2② 부득이한 사유 있음"

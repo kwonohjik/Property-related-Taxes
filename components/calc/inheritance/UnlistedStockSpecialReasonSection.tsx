@@ -70,6 +70,7 @@ export function UnlistedStockSpecialReasonSection({
 
   return (
     <ToggleCard
+      lawLinks="상증법"
       tone="rose"
       title="순자산가치만 적용 (상증법 시행령 §54④)"
       description="ON: 5가지 사유 중 선택 — 가중평균 대신 1주당 순자산가치 적용"

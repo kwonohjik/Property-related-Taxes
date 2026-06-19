@@ -124,6 +124,7 @@ export function CategoryChangeDialog({
               변경할 카테고리
             </p>
             <RadioCardGroup
+              lawLinks="상증법"
               name="newCategory"
               tone="sky"
               layout="stack"

@@ -53,6 +53,7 @@ export function DebtItemEditor({ item, heirs, onUpdate }: DebtItemEditorProps) {
       {/* 장례비 봉안 토글 — native checkbox 금지, ToggleCard 강제 */}
       {item.category === "funeral" && (
         <ToggleCard
+          lawLinks="상증법"
           tone="emerald"
           size="sm"
           title="봉안시설 사용료"
@@ -67,6 +68,7 @@ export function DebtItemEditor({ item, heirs, onUpdate }: DebtItemEditorProps) {
         <LawArticleModal legalBasis="상증법 §22" label="§22 금융재산공제" />
         <LawArticleModal legalBasis="상증령 §19" label="상증령 §19 금융재산·채무" />
       </div>
+      {/* O-1: §22·§19 링크는 위 전용 행에서 제공 → lawLinks 미적용(중복 방지) */}
       <ToggleCard
         tone="rose"
         size="sm"

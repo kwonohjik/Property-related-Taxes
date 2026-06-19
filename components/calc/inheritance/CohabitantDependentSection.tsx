@@ -78,6 +78,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
           관계
         </p>
         <RadioCardGroup
+          lawLinks="상증법"
           name={`cohabitant-relation-${dep.id}`}
           tone="sky"
           layout="stack"
@@ -126,6 +127,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
 
       {/* 장애인 + 성별 (§20①4호) */}
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         size="sm"
         title="장애인"
@@ -141,6 +143,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
             장애인 성별 (§20①4호 — 성별·연령별 기대여명 기준)
           </p>
           <RadioCardGroup
+            lawLinks="상증법"
             name={`cohabitant-gender-${dep.id}`}
             tone="violet"
             layout="inline"

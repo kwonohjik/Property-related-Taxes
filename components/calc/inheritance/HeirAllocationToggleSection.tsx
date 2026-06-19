@@ -46,6 +46,7 @@ export function HeirAllocationToggleSection({
 
   return (
     <ToggleCard
+      lawLinks="상증법"
       tone="violet"
       title="협의분할 직접 입력"
       description="법정상속분(민법 §1009) 대신 상속인·수유자에게 직접 분배(민법 §1013·§1073) · 영리법인 제외"

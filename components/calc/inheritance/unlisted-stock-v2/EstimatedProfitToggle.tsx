@@ -131,6 +131,7 @@ export function EstimatedProfitToggle({
           <p className="text-xs font-semibold text-violet-700">추정이익 갈음 (선택)</p>
         </div>
         <ToggleCard
+          lawLinks="상증법"
           tone="violet"
           checked={isOn}
           onCheckedChange={handleToggle}
@@ -145,6 +146,7 @@ export function EstimatedProfitToggle({
               </div>
               {/* ① §17의3① 사유 */}
               <RadioCardGroup
+                lawLinks="상증법"
                 name="estimated-profit-reason"
                 tone="violet"
                 layout="stack"
@@ -195,6 +197,7 @@ export function EstimatedProfitToggle({
               {/* ③ 절차 3요건 (§56② 2·3·4호) */}
               <div className="space-y-2">
                 <ToggleCard
+                  lawLinks="상증법"
                   tone="violet"
                   variant="chip"
                   checked={value.filedWithinDeadline}
@@ -202,6 +205,7 @@ export function EstimatedProfitToggle({
                   title="신고기한 내 추정이익 평균가액 신고 (§56② 2호)"
                 />
                 <ToggleCard
+                  lawLinks="상증법"
                   tone="violet"
                   variant="chip"
                   checked={value.baseDateAndReportWithinDeadline}
@@ -209,6 +213,7 @@ export function EstimatedProfitToggle({
                   title="산정기준일·평가서작성일이 신고기한 이내 (§56② 3호)"
                 />
                 <ToggleCard
+                  lawLinks="상증법"
                   tone="violet"
                   variant="chip"
                   checked={value.sameYearAsInheritanceOrGift}

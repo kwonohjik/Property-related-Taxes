@@ -47,6 +47,7 @@ export function StockBurdenedDebtSection({
 
   return (
     <ToggleCard
+      lawLinks="상증법"
       tone="amber"
       title="§47① 부담부증여 채무인수"
       description="수증자가 증여재산(주식)에 담보된 채무를 인수한 경우, 그 채무액을 증여세 과세가액에서 차감합니다 (상증법 §47①)."
@@ -87,6 +88,7 @@ export function StockBurdenedDebtSection({
 
         {hasDebt && (
           <ToggleCard
+            lawLinks="상증법"
             tone="amber"
             size="sm"
             title="채무 인수 사실 객관적 입증 가능 (§47③)"

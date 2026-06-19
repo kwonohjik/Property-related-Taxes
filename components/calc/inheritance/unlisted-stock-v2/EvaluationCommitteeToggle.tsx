@@ -107,6 +107,7 @@ export function EvaluationCommitteeToggle({ value, onChange, sectionNum = 8 }: E
         <p className="text-xs font-semibold text-emerald-700">평가심의위원회 신청 (선택)</p>
       </div>
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         checked={isOn}
         onCheckedChange={handleToggle}
@@ -122,6 +123,7 @@ export function EvaluationCommitteeToggle({ value, onChange, sectionNum = 8 }: E
               <LawArticleModal legalBasis="상증령 §54" label="상증령 §54⑥" />
             </div>
             <RadioCardGroup
+              lawLinks="상증법"
               name="evaluation-committee-method"
               tone="emerald"
               layout="stack"

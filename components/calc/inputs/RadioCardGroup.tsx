@@ -17,6 +17,8 @@
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import type { ToggleCardTone } from "./ToggleCard";
+import { extractInlineLawRefs } from "@/lib/utils/law-url";
+import { LawRefBadges, type LawRefBadge } from "@/components/ui/law-ref-badges";
 
 interface RadioCardClasses {
   /** 미선택 컨테이너 */
@@ -97,6 +99,8 @@ export interface RadioCardOption<T extends string> {
   disabled?: boolean;
   /** 라디오 input에 부여할 data-testid (E2E·단위 테스트 셀렉터용) */
   testId?: string;
+  /** 자동 추출이 부정확한 옵션용 수동 조문 배지 override. */
+  lawRefs?: LawRefBadge[];
 }
 
 export interface RadioCardGroupProps<T extends string> {
@@ -110,6 +114,11 @@ export interface RadioCardGroupProps<T extends string> {
   /** stack 레이아웃 열 수 (반응형: 모바일은 항상 1열, sm↑부터 적용). 기본 1 */
   columns?: 1 | 2;
   className?: string;
+  /**
+   * 조문 링크 배지 자동 생성. 기본 법령명(예: "상증법")을 주면 각 옵션의
+   * label·description·hint(문자열) 속 §평문을 추출해 배지로 노출. 미지정 시 off.
+   */
+  lawLinks?: string;
 }
 
 export function RadioCardGroup<T extends string>({
@@ -121,8 +130,24 @@ export function RadioCardGroup<T extends string>({
   layout = "stack",
   columns = 1,
   className,
+  lawLinks,
 }: RadioCardGroupProps<T>) {
   const t = TONES[tone];
+
+  function optionLawRefs(opt: RadioCardOption<T>): LawRefBadge[] {
+    if (opt.lawRefs) return opt.lawRefs;
+    if (!lawLinks) return [];
+    return extractInlineLawRefs(
+      [
+        opt.label,
+        typeof opt.description === "string" ? opt.description : "",
+        typeof opt.hint === "string" ? opt.hint : "",
+      ]
+        .filter(Boolean)
+        .join("  "),
+      lawLinks,
+    );
+  }
 
   return (
     <div
@@ -139,6 +164,7 @@ export function RadioCardGroup<T extends string>({
     >
       {options.map((opt) => {
         const isSelected = value === opt.value;
+        const optRefs = optionLawRefs(opt);
         return (
           <label
             key={opt.value}
@@ -171,12 +197,16 @@ export function RadioCardGroup<T extends string>({
               )}
             />
             {layout === "inline" ? (
-              <span>{opt.label}</span>
+              <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>{opt.label}</span>
+                {optRefs.length > 0 && <LawRefBadges refs={optRefs} />}
+              </span>
             ) : (
               <div className="flex-1 min-w-0 space-y-0.5">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium leading-tight">
-                    {opt.label}
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+                    <span>{opt.label}</span>
+                    {optRefs.length > 0 && <LawRefBadges refs={optRefs} />}
                   </p>
                   {opt.trailing && (
                     <span className="shrink-0 text-xs text-muted-foreground">

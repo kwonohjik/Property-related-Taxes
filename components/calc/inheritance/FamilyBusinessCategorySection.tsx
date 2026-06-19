@@ -106,6 +106,7 @@ export function FamilyBusinessCategorySection({
   return (
     <div className="space-y-2">
       <ToggleCard
+        lawLinks="상증법"
         tone="amber"
         size="sm"
         title="가업상속 재산 (§18의2 + 상증령 §15⑤)"

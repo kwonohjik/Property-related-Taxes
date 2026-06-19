@@ -132,6 +132,7 @@ export function FbDecedentRequirementsSection({
 
       {/* 거래소 상장 토글 (지분 기준 변경) */}
       <ToggleCard
+        lawLinks="상증법"
         tone="amber"
         size="sm"
         title="거래소 상장 법인"

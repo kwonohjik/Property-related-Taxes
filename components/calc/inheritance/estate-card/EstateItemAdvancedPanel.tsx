@@ -165,6 +165,7 @@ export function EstateItemAdvancedPanel({
             §14 담보채무 자동공제 — 보조 입력
           </p>
           <ToggleCard
+            lawLinks="상증법"
             tone="rose"
             size="sm"
             title="저당채무가 금융회사 채무 (§22 순금융 차감)"

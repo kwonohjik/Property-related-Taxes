@@ -212,6 +212,7 @@ export function FamilyBusinessEligibilitySection({
   return (
     <div className="space-y-3">
       <ToggleCard
+        lawLinks="상증법"
         tone="amber"
         title="가업상속공제 요건 입력 (§18의2 + 상증령 §15)"
         description={
@@ -350,6 +351,7 @@ export function FamilyBusinessEligibilitySection({
 
             {/* 별표 업종 */}
             <ToggleCard
+              lawLinks="상증법"
               tone="sky"
               title="별표 업종 해당 (상증령 §15①1·②1)"
               description="상증령 별표에 열거된 업종 영위 자기 확인"
@@ -377,6 +379,7 @@ export function FamilyBusinessEligibilitySection({
                 <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">피상속인 요건 (상증령 §15③1호)</p>
               </div>
               <ToggleCard
+                lawLinks="상증법"
                 tone="amber"
                 size="sm"
                 title="대표이사 종사 요건 충족 (상증령 §15③1호 나)"
@@ -461,6 +464,7 @@ export function FamilyBusinessEligibilitySection({
               Step1 자산 카드에서 familyBusinessCategory 선택 시, 사업무관자산 차감 후 평가액을 직접 입력하세요.
             </p>
             <ToggleCard
+              lawLinks="상증법"
               tone="sky"
               size="sm"
               title="사업무관자산 차감 후 가액 입력 완료 자기 확인"
@@ -479,6 +483,7 @@ export function FamilyBusinessEligibilitySection({
               가업상속공제 수혜 후 5년(기존 7년) 이내 폐업·지분 처분·가업 무관 업종 전환 시 공제액 전부 또는 일부가 추징됩니다.
             </p>
             <ToggleCard
+              lawLinks="상증법"
               tone="amber"
               size="sm"
               title="5년 사후관리 의무 인지·동의"
@@ -497,6 +502,7 @@ export function FamilyBusinessEligibilitySection({
               두 요건 모두 충족 시 신고기한 후 2년 내 대표이사 취임(라목) 요건 면제
             </p>
             <ToggleCard
+              lawLinks="상증법"
               tone="emerald"
               size="sm"
               title="본사 기회발전특구 소재·이전 (§15㉕1호)"
@@ -505,6 +511,7 @@ export function FamilyBusinessEligibilitySection({
               onCheckedChange={(v) => update({ isInOpportunityDevelopmentZone: v ? true : undefined })}
             />
             <ToggleCard
+              lawLinks="상증법"
               tone="emerald"
               size="sm"
               title="특구 상시근무인원 50% 이상 (§15㉕2호)"
@@ -516,6 +523,7 @@ export function FamilyBusinessEligibilitySection({
 
           {/* 조세포탈 (rose tone) */}
           <ToggleCard
+            lawLinks="상증법"
             tone="rose"
             size="sm"
             title="조세포탈·회계부정 형 확정 (§18의2⑧1호) — 공제 배제"

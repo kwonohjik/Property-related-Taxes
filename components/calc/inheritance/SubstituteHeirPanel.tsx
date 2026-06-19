@@ -60,6 +60,7 @@ export function SubstituteHeirPanel({
 
   return (
     <ToggleCard
+      lawLinks="상증법"
       tone="rose"
       title="대습상속인 (민법 §1001·§1003②)"
       description="사망·결격된 자녀·형제를 갈음하여 상속하는 손자녀·며느리·사위. ON 시 실제 상속인으로 법정상속분(§1010) 배분."
@@ -85,6 +86,7 @@ export function SubstituteHeirPanel({
               피대습자의 원래 상속순위 (§1001)
             </p>
             <RadioCardGroup
+              lawLinks="상증법"
               name={`subst-relation-${heir.id}`}
               tone="rose"
               layout="inline"
@@ -122,6 +124,7 @@ export function SubstituteHeirPanel({
               대습 그룹 (같은 피대습자끼리 묶음)
             </p>
             <RadioCardGroup
+              lawLinks="상증법"
               name={`subst-group-${heir.id}`}
               tone="rose"
               layout="stack"
@@ -155,6 +158,7 @@ export function SubstituteHeirPanel({
               대습 그룹 내 역할 (§1010②)
             </p>
             <RadioCardGroup
+              lawLinks="상증법"
               name={`subst-role-${heir.id}`}
               tone="rose"
               layout="inline"

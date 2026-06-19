@@ -51,6 +51,7 @@ export function CulturalHeritageSection({ item, onUpdate }: CulturalHeritageSect
 
   return (
     <ToggleCard
+      lawLinks="상증법"
       tone="emerald"
       title="지정문화유산 등 (§74 징수유예 대상)"
       description="문화재보호법·자연유산법에 지정된 재산 — 상속세 징수가 유예됩니다 (상증법 §74)."

@@ -133,6 +133,7 @@ export function CohabitAncillaryLandBlock({
           지역 구분 (소득세 시행령 §154⑦ 배율)
         </label>
         <RadioCardGroup
+          lawLinks="상증법"
           name="ancillaryLandRegion"
           tone="sky"
           layout="stack"

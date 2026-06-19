@@ -163,6 +163,7 @@ export function CorporateNonBusinessAssetsSection({
 
       {/* 라. 과다보유현금 — 자동산정 토글 */}
       <ToggleCard
+        lawLinks="상증법"
         tone="sky"
         title={`라. 과다보유현금 자동산정 (5년 평균 ${ratioPct}% 초과분)`}
         description={

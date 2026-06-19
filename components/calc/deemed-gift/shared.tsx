@@ -10,10 +10,17 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import {
   RadioCardGroup,
   type RadioCardOption,
 } from "@/components/calc/inputs/RadioCardGroup";
+import {
+  RELATED_PARTY_SCOPE_TITLE,
+  RELATED_PARTY_SCOPE_SUMMARY,
+  RELATED_PARTY_SCOPE_DETAILS,
+  RELATED_PARTY_SCOPE_LEGAL_BASIS,
+} from "./related-party-scope";
 import {
   MergerFields,
   CapitalIncreaseFields,
@@ -395,6 +402,7 @@ export function DeemedTypeSelector({
 }) {
   return (
     <RadioCardGroup
+      lawLinks="상증법"
       name="deemed-type"
       tone="rose"
       value={value}
@@ -460,6 +468,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
   return (
     <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="tb-beneficiary"
         tone="rose"
         value={form.tbBeneficiaryType}
@@ -472,6 +481,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
       />
       <CurrencyInput label="신탁재산(원본) 가액" value={form.tbPropertyValue} onChange={(v) => set({ tbPropertyValue: v })} placeholder="신탁재산 가액 (원)" />
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         checked={form.tbYieldDetermined}
         onCheckedChange={(v) => set({ tbYieldDetermined: v })}
@@ -521,6 +531,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
 
       {/* 정기금 유형 (§61②→§62) */}
       <RadioCardGroup
+        lawLinks="상증법"
         name="tb-annuity"
         tone="sky"
         layout="inline"
@@ -580,6 +591,7 @@ function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
     <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="ins-case"
         tone="sky"
         layout="inline"
@@ -599,6 +611,7 @@ function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         placeholder="관련 보험료 (원)"
       />
       <ToggleCard
+        lawLinks="상증법"
         tone="rose"
         checked={form.insIsInheritance}
         onCheckedChange={(v) => set({ insIsInheritance: v })}
@@ -612,7 +625,17 @@ function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
 function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
     <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+      <div className="flex justify-end">
+        <TaxHelp
+          triggerLabel="특수관계인 범위 조회"
+          title={RELATED_PARTY_SCOPE_TITLE}
+          summary={RELATED_PARTY_SCOPE_SUMMARY}
+          details={RELATED_PARTY_SCOPE_DETAILS}
+          legalBasis={RELATED_PARTY_SCOPE_LEGAL_BASIS}
+        />
+      </div>
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         checked={form.bargRelated}
         onCheckedChange={(v) => set({ bargRelated: v })}
@@ -620,6 +643,7 @@ function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         description="끄면 특수관계인 외 거래 (§35②) — 공제 3억 고정"
       />
       <RadioCardGroup
+        lawLinks="상증법"
         name="barg-type"
         tone="emerald"
         layout="inline"
@@ -634,6 +658,7 @@ function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
       <CurrencyInput label="거래대가" value={form.bargPrice} onChange={(v) => set({ bargPrice: v })} placeholder="거래대가 (원)" />
       {!form.bargRelated && (
         <ToggleCard
+          lawLinks="상증법"
           tone="amber"
           checked={form.bargJustifiable}
           onCheckedChange={(v) => set({ bargJustifiable: v })}
@@ -642,6 +667,7 @@ function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         />
       )}
       <ToggleCard
+        lawLinks="상증법"
         tone="rose"
         checked={form.bargExcluded}
         onCheckedChange={(v) => set({ bargExcluded: v })}
@@ -656,6 +682,7 @@ function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
     <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="debt-occur"
         tone="amber"
         layout="inline"
@@ -676,6 +703,7 @@ function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set: SetFn
   return (
     <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="free-subtype"
         tone="violet"
         layout="inline"
@@ -695,6 +723,7 @@ function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set: SetFn
         </>
       )}
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         checked={form.freeRelated}
         onCheckedChange={(v) => set({ freeRelated: v })}
@@ -703,6 +732,7 @@ function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set: SetFn
       />
       {!form.freeRelated && (
         <ToggleCard
+          lawLinks="상증법"
           tone="amber"
           checked={form.freeJustifiable}
           onCheckedChange={(v) => set({ freeJustifiable: v })}
@@ -720,6 +750,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
       <CurrencyInput label="실제 지급이자" value={form.loanInterest} onChange={(v) => set({ loanInterest: v })} placeholder="실제 지급이자 (무이자면 빈칸)" />
       <p className="text-xs text-muted-foreground">적정이자율은 증여일 기준 자동 적용 (2016.3.7~ 연 4.6%)</p>
       <ToggleCard
+        lawLinks="상증법"
         tone="violet"
         checked={form.loanRelated}
         onCheckedChange={(v) => set({ loanRelated: v })}
@@ -728,6 +759,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
       />
       {!form.loanRelated && (
         <ToggleCard
+          lawLinks="상증법"
           tone="amber"
           checked={form.loanJustifiable}
           onCheckedChange={(v) => set({ loanJustifiable: v })}

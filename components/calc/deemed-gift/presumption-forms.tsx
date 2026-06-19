@@ -16,6 +16,7 @@ export function AcquisitionFundFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
       <RadioCardGroup
+        lawLinks="상증법"
         name="af-subtype"
         tone="sky"
         layout="inline"
@@ -55,6 +56,7 @@ export function NomineeTrustFields({ form, set }: Props) {
         placeholder="명의신탁 재산 가액 (원)"
       />
       <ToggleCard
+        lawLinks="상증법"
         tone="rose"
         checked={form.ntTaxAvoidance}
         onCheckedChange={(v) => set({ ntTaxAvoidance: v })}
@@ -62,6 +64,7 @@ export function NomineeTrustFields({ form, set }: Props) {
         description="끄면 조세회피목적 없음 — 증여의제 미적용 (§45의2①1호)"
       />
       <ToggleCard
+        lawLinks="상증법"
         tone="amber"
         checked={form.ntExcluded}
         onCheckedChange={(v) => set({ ntExcluded: v })}

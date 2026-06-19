@@ -55,6 +55,7 @@ export function FinancialDeductionChip({
         </span>
       </div>
       <ToggleCard
+        lawLinks="상증법"
         tone="emerald"
         size="sm"
         title={eligible ? "공제 대상으로 포함" : "공제 대상 제외"}

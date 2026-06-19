@@ -140,6 +140,7 @@ export function FbHeirRequirementsSection({
 
       {/* 배우자 간주 토글 */}
       <ToggleCard
+        lawLinks="상증법"
         tone="sky"
         size="sm"
         title="상속인의 배우자가 가~라 요건 모두 충족 (간주)"
@@ -212,6 +213,7 @@ export function FbHeirRequirementsSection({
         </p>
         {/* 65세 미만 사망 단서 토글 */}
         <ToggleCard
+          lawLinks="상증법"
           tone="sky"
           size="sm"
           title="피상속인 65세 미만 사망 또는 천재지변·인재 사망 (나 단서)"
