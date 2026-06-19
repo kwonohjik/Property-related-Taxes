@@ -82,6 +82,39 @@ describe("C-1 농지 PDF p.1698 흐름도", () => {
     expect(r.steps.some((s) => s.id === "farmland_deeming" && s.status === "PASS")).toBe(true);
   });
 
+  it("농지개발사업지구 사용의제(1,500㎡ 미만) + 도시지역 밖 → 사업용 (deemed 모드)", () => {
+    // §168의8③1호(농지법 §6②9호) — isFarmDevZone 결선 anchor
+    const r = judgeFarmland(
+      base({
+        farmingSelf: false,
+        landArea: 1200,
+        businessUsePeriods: [],
+        farmlandDeeming: { isFarmDevZone: true },
+        acquisitionDate: d("2010-01-01"),
+        transferDate: d("2020-01-01"),
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
+    expect(r.steps.some((s) => s.id === "farmland_deeming" && s.status === "PASS")).toBe(true);
+  });
+
+  it("농지개발사업지구 경계 1,500㎡(미만 아님) → 의제 미적용", () => {
+    // 농지법 §6②9호 '1천500제곱미터 미만' → 1500은 제외(< strict)
+    const r = judgeFarmland(
+      base({
+        farmingSelf: false,
+        landArea: 1500,
+        businessUsePeriods: [],
+        farmlandDeeming: { isFarmDevZone: true },
+        acquisitionDate: d("2010-01-01"),
+        transferDate: d("2020-01-01"),
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.steps.some((s) => s.id === "farmland_deeming" && s.status === "PASS")).toBe(false);
+  });
+
   it("재촌·자경 + 도시지역 內 + 편입유예 3년 내 → 사업용", () => {
     const r = judgeFarmland(
       base({

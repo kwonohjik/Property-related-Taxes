@@ -116,12 +116,13 @@ export function buildUnconditionalExemption(
 export function buildFarmlandDeeming(a: Record<string, unknown>): FarmlandDeemingInput | undefined {
   const has =
     asBool(a.nblFarmlandIsWeekendFarm) || asBool(a.nblFarmlandIsConversionApproved) ||
-    asBool(a.nblFarmlandIsMarginalFarm) || asBool(a.nblFarmlandIsReclaimedLand) ||
+    asBool(a.nblFarmlandIsFarmDevZone) || asBool(a.nblFarmlandIsMarginalFarm) || asBool(a.nblFarmlandIsReclaimedLand) ||
     asBool(a.nblFarmlandIsPublicProjectUse) || asBool(a.nblFarmlandIsSickElderlyRental);
   if (!has) return undefined;
   return {
     isWeekendFarm:            asBool(a.nblFarmlandIsWeekendFarm),
     isFarmConversionApproved: asBool(a.nblFarmlandIsConversionApproved),
+    isFarmDevZone:            asBool(a.nblFarmlandIsFarmDevZone),
     isMarginalFarmProject:    asBool(a.nblFarmlandIsMarginalFarm),
     isReclaimed:              asBool(a.nblFarmlandIsReclaimedLand),
     isPublicProjectUse:       asBool(a.nblFarmlandIsPublicProjectUse),
@@ -166,13 +167,18 @@ export function buildVilla(
   a: Record<string, unknown>,
   landType: LandType,
   parseDate: ParseDate,
+  parseNumber: ParseNumber,
 ): VillaUsage | undefined {
   if (landType !== "villa_land") return undefined;
   return {
     villaUsePeriods: mapBusinessUsePeriods(asArray<NblBusinessUsePeriod>(a.nblVillaUsePeriods), parseDate),
-    isEupMyeon:      asBool(a.nblVillaIsEupMyeon),
-    isRuralHousing:  asBool(a.nblVillaIsRuralHousing),
-    isAfter20150101: asBool(a.nblVillaIsAfter20150101),
+    isEupMyeon:        asBool(a.nblVillaIsEupMyeon),
+    isRuralHousing:    asBool(a.nblVillaIsRuralHousing),
+    buildingFloorArea: parseNumber(asString(a.nblVillaBuildingFloorArea)),
+    attachedLandArea:  parseNumber(asString(a.nblVillaAttachedLandArea)),
+    combinedStdValue:  parseNumber(asString(a.nblVillaCombinedStdValue)),
+    isInRestrictedArea: asBool(a.nblVillaIsInRestrictedArea),
+    isAfter20150101:   asBool(a.nblVillaIsAfter20150101),
   };
 }
 
@@ -185,7 +191,7 @@ export function buildOtherLand(
   const relatedBusinessType = asString(a.nblOtherRelatedBusinessType) || undefined;
   return {
     propertyTaxType:                (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"],
-    hasBuilding:                    false,
+    hasBuilding:                    asBool(a.nblOtherHasBuilding),
     buildingStandardValue:          parseNumber(asString(a.nblOtherBuildingValue)),
     landStandardValue:              parseNumber(asString(a.nblOtherLandValue)),
     isRelatedToResidenceOrBusiness: asBool(a.nblOtherIsRelatedToResidence),

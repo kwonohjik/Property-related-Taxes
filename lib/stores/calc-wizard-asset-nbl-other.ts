@@ -9,6 +9,8 @@ export interface NblOtherFormSlice {
   nblOtherBuildingValue: string;
   nblOtherLandValue: string;
   nblOtherIsRelatedToResidence: boolean;
+  /** §104의3①4호나목 — 건축물(건물·시설물) 부속토지 여부. false=나대지 간주(종합합산). true=시가표준액 2% 비교(지방세령§101①2호나목) 후 사용자 재산세 유형 존중. */
+  nblOtherHasBuilding: boolean;
   // §168의11① 호별 면적기준 (갭 3a) — NblRelatedBusinessType
   nblOtherRelatedBusinessType:
     | ""

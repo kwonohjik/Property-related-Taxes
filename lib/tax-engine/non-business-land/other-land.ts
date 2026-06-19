@@ -248,8 +248,10 @@ export function judgeOtherLand(
     label: "Step 0 나대지 간주 검증 (2% 기준)",
     status: bareLand ? "FAIL" : "PASS",
     detail: bareLand
-      ? `나대지 간주 (건물시가표준액 < 토지시가표준액 × 2%) → 종합합산 취급`
-      : `일반 건축물 부속토지 (원 재산세 유형 유지: ${o.propertyTaxType})`,
+      ? (o.hasBuilding
+          ? `건축물 시가표준액 < 토지 시가표준액 × 2% → 별도합산 제외(종합합산 취급)`
+          : `건축물 없는 토지(나대지) → 종합합산 취급`)
+      : `건축물 부속토지 (원 재산세 유형 유지: ${o.propertyTaxType})`,
     legalBasis: NBL.OTHER_LAND,
   });
 

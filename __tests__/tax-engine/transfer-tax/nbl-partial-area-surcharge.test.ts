@@ -1,5 +1,5 @@
 /**
- * F3 — 비사업용 토지 부분 면적안분 중과 (§168의11⑤⑥)
+ * F3 — 비사업용 토지 부분 면적안분 중과 (목장 §168의10③·기타토지 §168의11①)
  *
  * 기준면적 초과분만 비사업용(중과), 이내분은 사업용(일반세율).
  * 판정 엔진이 산출하는 areaProportioning.nonBusinessRatio를 본 세액 계산에 연결 →
@@ -52,7 +52,7 @@ const pastureOverAreaNbl: NonBusinessLandInput = {
   gracePeriods: [],
 };
 
-describe("F3 — 비사업용 토지 부분 면적안분 중과 (§168의11⑤⑥)", () => {
+describe("F3 — 비사업용 토지 부분 면적안분 중과 (목장 §168의10③·기타토지 §168의11①)", () => {
   it("AT-F3-1: 목장 면적초과 33.3% → 중과분만 안분 (전량 비사업용보다 세액 작음)", () => {
     const refFull = calculateTransferTax(baseInput({ ...common, nonBusinessLandDetails: vacantLotNbl }), mockRates);
     const testPartial = calculateTransferTax(baseInput({ ...common, nonBusinessLandDetails: pastureOverAreaNbl }), mockRates);

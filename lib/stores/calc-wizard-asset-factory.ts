@@ -198,6 +198,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblFarmlandIsWeekendFarm: false,
     nblFarmlandIsConversionApproved: false,
     nblFarmlandConversionDate: "",
+    nblFarmlandIsFarmDevZone: false,
     nblFarmlandIsMarginalFarm: false,
     nblFarmlandIsReclaimedLand: false,
     nblFarmlandIsPublicProjectUse: false,
@@ -218,11 +219,16 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblVillaUsePeriods: [],
     nblVillaIsEupMyeon: false,
     nblVillaIsRuralHousing: false,
+    nblVillaBuildingFloorArea: "",
+    nblVillaAttachedLandArea: "",
+    nblVillaCombinedStdValue: "",
+    nblVillaIsInRestrictedArea: false,
     nblVillaIsAfter20150101: false,
     nblOtherPropertyTaxType: "",
     nblOtherBuildingValue: "",
     nblOtherLandValue: "",
     nblOtherIsRelatedToResidence: false,
+    nblOtherHasBuilding: false,
     nblOtherRelatedBusinessType: "",
     nblOtherStandardAreaLimit: "",
     nblOtherMaxAnnualArea: "",
@@ -401,6 +407,13 @@ export function migrateAsset(raw: unknown): AssetForm {
     );
   }
   if (a.nblBusinessIsRealEstateDealer === undefined) a.nblBusinessIsRealEstateDealer = false;
+  // NBL 잔여 갭(2026-06-19): ② 농지개발사업지구 · ④ 기타토지 건물유무 · ③ 별장 농어촌주택 3요건 — 구 세션 복원 방어
+  if (a.nblFarmlandIsFarmDevZone === undefined) a.nblFarmlandIsFarmDevZone = false;
+  if (a.nblOtherHasBuilding === undefined) a.nblOtherHasBuilding = false;
+  if (a.nblVillaBuildingFloorArea === undefined) a.nblVillaBuildingFloorArea = "";
+  if (a.nblVillaAttachedLandArea === undefined) a.nblVillaAttachedLandArea = "";
+  if (a.nblVillaCombinedStdValue === undefined) a.nblVillaCombinedStdValue = "";
+  if (a.nblVillaIsInRestrictedArea === undefined) a.nblVillaIsInRestrictedArea = false;
   // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 3-state 필드 누락 보정 (구 세션 복원 방어)
   if (Array.isArray(a.reductions)) {
     a.reductions = (a.reductions as Record<string, unknown>[]).map((r) => {

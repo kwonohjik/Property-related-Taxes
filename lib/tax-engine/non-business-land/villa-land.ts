@@ -97,31 +97,59 @@ export function judgeVillaLand(
     legalBasis: NBL.VILLA,
   });
 
-  // ── Step 3-1-1: 읍·면 농어촌주택 ────────────────────────────────
+  // ── Step 3-1-1: 읍·면 농어촌주택 (§168의13① 3요건 AND) ───────────
   if (v.isEupMyeon && v.isRuralHousing) {
-    const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
-    const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "villa", rules, input.gracePeriods);
-    if (r2.meets) {
+    const RURAL_FLOOR_MAX = 150; // §168의13①1호 건물 연면적(㎡)
+    const RURAL_LAND_MAX = 660; // §168의13①1호 건물 부속토지면적(㎡)
+    const RURAL_VALUE_MAX = 200_000_000; // §168의13①2호 건물+부속토지 합산 기준시가(원)
+    const floorOk = v.buildingFloorArea !== undefined && v.buildingFloorArea <= RURAL_FLOOR_MAX;
+    const landOk = v.attachedLandArea !== undefined && v.attachedLandArea <= RURAL_LAND_MAX;
+    const valueOk = v.combinedStdValue !== undefined && v.combinedStdValue <= RURAL_VALUE_MAX;
+    const areaOk = v.isInRestrictedArea !== true; // §168의13①3호 §99의4①1호가목 제외지역 아님
+    const reqMet = floorOk && landOk && valueOk && areaOk; // 미입력(undefined)=요건 미충족(미입증=불인정)
+    const reqDetail =
+      `연면적 ${v.buildingFloorArea ?? "미입력"}㎡(≤150 ${floorOk ? "✓" : "✗"})·` +
+      `부속토지 ${v.attachedLandArea ?? "미입력"}㎡(≤660 ${landOk ? "✓" : "✗"})·` +
+      `건물+부속토지 기준시가 ${v.combinedStdValue ?? "미입력"}원(≤2억 ${valueOk ? "✓" : "✗"})·` +
+      `§99의4①1호가목 제외지역 ${v.isInRestrictedArea ? "해당(✗)" : "아님(✓)"}`;
+
+    if (reqMet) {
+      const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
+      const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "villa", rules, input.gracePeriods);
+      if (r2.meets) {
+        steps.push({
+          id: "villa_rural",
+          label: "Step 3-1-1 읍·면 농어촌주택",
+          status: "PASS",
+          detail: `농어촌주택 §168의13 3요건 충족 (${reqDetail}) + 기간기준 충족`,
+          legalBasis: NBL.VILLA,
+        });
+        return buildPass("읍·면 농어촌주택 부수토지", steps, appliedLaws, warnings, {
+          r: r2, totalOwnershipDays,
+        });
+      }
       steps.push({
         id: "villa_rural",
         label: "Step 3-1-1 읍·면 농어촌주택",
-        status: "PASS",
-        detail: "농어촌주택 (건 150㎡·토 660㎡·기준시가 2억 이하) + 기간기준 충족",
+        status: "FAIL",
+        detail: `농어촌주택 3요건 충족이나 기간기준 미충족 (${reqDetail})`,
         legalBasis: NBL.VILLA,
       });
-      return buildPass("읍·면 농어촌주택 부수토지", steps, appliedLaws, warnings, {
+      return buildFail("농어촌주택이나 기간기준 미충족", steps, appliedLaws, warnings, {
         r: r2, totalOwnershipDays,
       });
     }
+
+    // 3요건 미충족 → 비사업용 (사업용 의제는 납세자 유리 → 미입증=불인정, 불리 적용 아님)
     steps.push({
       id: "villa_rural",
       label: "Step 3-1-1 읍·면 농어촌주택",
       status: "FAIL",
-      detail: "농어촌주택이나 기간기준 미충족",
+      detail: `농어촌주택 §168의13 요건 미충족 (${reqDetail})`,
       legalBasis: NBL.VILLA,
     });
-    return buildFail("농어촌주택이나 기간기준 미충족", steps, appliedLaws, warnings, {
-      r: r2, totalOwnershipDays,
+    return buildFail("농어촌주택 §168의13 요건 미충족 — 비사업용", steps, appliedLaws, warnings, {
+      r: r1, totalOwnershipDays,
     });
   }
 
