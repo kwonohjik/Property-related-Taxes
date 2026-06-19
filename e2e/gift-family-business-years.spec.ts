@@ -61,7 +61,8 @@ async function setupFamilyBusinessStep3(page: PageT) {
   await closeStockModal(page); // 추가 직후 모달 자동 오픈 → backdrop 닫기 (테이블+모달 전환)
   await nextSteps(page, 2); // Step1 → Step2 → Step3
 
-  // Step3: 가업승계 선택 → 영위기간 필드 노출
+  // Step4: 조특 칩 펼침 → 가업승계 선택 → 영위기간 필드 노출
+  await page.getByText("조특법 과세특례 (§30의5·6)").click();
   await page.getByText("가업승계 증여세 과세특례 (§30의6)").click();
   await expect(page.getByText("부모 가업 영위기간 (§30의6①)")).toBeVisible();
 }
@@ -137,7 +138,8 @@ test.describe("§30의6① 가업 영위기간 — 한도 분기 + 카테고리 
 
     await nextSteps(page, 2);
 
-    // Step3: 가업승계 선택 → Selector 부적격 경고 카드 (단일 자산 자동 귀속 불가)
+    // Step4: 조특 칩 펼침 → 가업승계 선택 → Selector 부적격 경고 카드 (단일 자산 자동 귀속 불가)
+    await page.getByText("조특법 과세특례 (§30의5·6)").click();
     await page.getByText("가업승계 증여세 과세특례 (§30의6)").click();
     await expect(
       page.getByText("특례 귀속 불가 재산", { exact: false }).first(),

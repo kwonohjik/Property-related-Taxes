@@ -139,7 +139,8 @@ test.describe("분납 §70② (상속·증여)", () => {
     await giftAddLand(page); // 3억 → 증여공제 5천만 → 결정세액 >1천만
     await nextSteps(page, 2); // Step1→2→3
 
-    // Step3 끝 분납 토글 ON
+    // Step4: 분납 칩 펼침 → 분납 토글 ON
+    await page.getByText("분납 신청 (§70②)").click();
     const toggle = page.getByText("분납 신청 (상증법 §70②)");
     await expect(toggle).toBeVisible();
     await toggle.click();
