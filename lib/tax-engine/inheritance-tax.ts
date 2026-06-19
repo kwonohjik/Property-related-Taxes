@@ -136,7 +136,7 @@ export function calcInheritanceTax(
   let exemptAmount = 0;
   let exemptionDetail: ReturnType<typeof evaluateExemptions> | undefined;
   if (input.exemptions && input.exemptions.length > 0) {
-    const exemptResult = evaluateExemptions(input.exemptions, grossEstateValue);
+    const exemptResult = evaluateExemptions(input.exemptions, grossEstateValue, "inheritance");
     exemptAmount = exemptResult.totalExemptAmount;
     allBreakdown.push(...exemptResult.breakdown);
     exemptionDetail = exemptResult;

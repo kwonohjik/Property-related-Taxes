@@ -18,12 +18,11 @@
 
 import { cn } from "@/lib/utils";
 import {
-  EXEMPTION_CHECKLIST_META,
-  NONTAXABLE_RULE_IDS,
-  NOT_INCLUDED_RULE_IDS,
+  getExemptionChipLabel,
   exemptionItemHasValue,
 } from "@/lib/calc/inheritance-exemption-checklist";
 import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator";
+import type { ExemptionRule } from "@/lib/tax-engine/exemption-rules";
 
 // ────────────────────────────────────────────────────
 // 정적 색조 매핑 (feedback_tailwind_static_tone_mapping)
@@ -59,13 +58,17 @@ const CHECK_BOX_ON: Record<"sky" | "violet", string> = {
 // ────────────────────────────────────────────────────
 
 function ExemptionChip({
-  ruleId,
+  rule,
+  group,
   checkedMap,
   itemMap,
   onToggle,
   onGroupOpen,
 }: {
-  ruleId: string;
+  /** 표시할 규칙 — 라벨·세목별 항목은 부모가 category 필터로 결정 */
+  rule: ExemptionRule;
+  /** 칩 색조: 비과세=sky / 과세가액 불산입=violet */
+  group: "sky" | "violet";
   checkedMap: Map<string, ExemptionCheckedItem>;
   /** ruleId → 값 있는 미체크 항목 (경고 점 표시용) */
   itemMap: Map<string, ExemptionCheckedItem>;
@@ -73,14 +76,13 @@ function ExemptionChip({
   /** 체크 시 해당 그룹 자동 펼침 (useEffect 금지 — onClick 직접) */
   onGroupOpen: () => void;
 }) {
-  const meta = EXEMPTION_CHECKLIST_META[ruleId];
-  if (!meta) return null;
+  const ruleId = rule.id;
+  const label = getExemptionChipLabel(ruleId, rule.name);
 
   const active = checkedMap.has(ruleId);
   const item = itemMap.get(ruleId);
   // 값 있는데 미체크 → amber 경고 점
   const showWarning = !active && item != null && exemptionItemHasValue(item);
-  const group = meta.group;
 
   const handleClick = () => {
     const willBeActive = !active;
@@ -99,8 +101,8 @@ function ExemptionChip({
       aria-pressed={active}
       title={
         active
-          ? `${meta.label} — 클릭하여 숨기기 (값 보존)`
-          : `${meta.label} — 클릭하여 입력 섹션 열기`
+          ? `${label} — 클릭하여 숨기기 (값 보존)`
+          : `${label} — 클릭하여 입력 섹션 열기`
       }
     >
       {/* 체크박스 역할 시각 표시 */}
@@ -114,7 +116,7 @@ function ExemptionChip({
       >
         {active && "✓"}
       </span>
-      <span>{meta.label}</span>
+      <span>{label}</span>
       {/* 값 있는데 비활성 → amber 경고 점 */}
       {showWarning && (
         <span
@@ -132,16 +134,28 @@ function ExemptionChip({
 
 export function ExemptionChecklistPanel({
   items,
+  nonTaxableRules,
+  notIncludedRules,
+  nonTaxableLaw,
+  notIncludedLaw,
   onToggle,
   onNontaxableGroupOpen,
   onNotIncludedGroupOpen,
 }: {
   items: ExemptionCheckedItem[];
+  /** 비과세 그룹 규칙 — 부모가 category 필터(getExemptionRulesByCategory)로 결정 */
+  nonTaxableRules: ExemptionRule[];
+  /** 과세가액 불산입 그룹 규칙 — 부모가 category 필터로 결정 */
+  notIncludedRules: ExemptionRule[];
+  /** 비과세 그룹 헤더 법령 라벨 (상속 "상증법 §12" / 증여 "상증법 §46") */
+  nonTaxableLaw: string;
+  /** 불산입 그룹 헤더 법령 라벨 (상속 "상증법 §16·§17") */
+  notIncludedLaw: string;
   /** ruleId 체크 토글 — 항목 추가/제거 */
   onToggle: (ruleId: string) => void;
-  /** 비과세(§12) 그룹 자동 펼침 — onClick에서 직접 호출 (useEffect 금지) */
+  /** 비과세 그룹 자동 펼침 — onClick에서 직접 호출 (useEffect 금지) */
   onNontaxableGroupOpen: () => void;
-  /** 과세가액 불산입(§16·§17) 그룹 자동 펼침 — onClick에서 직접 호출 (useEffect 금지) */
+  /** 과세가액 불산입 그룹 자동 펼침 — onClick에서 직접 호출 (useEffect 금지) */
   onNotIncludedGroupOpen: () => void;
 }) {
   const checkedMap = new Map(items.map((i) => [i.ruleId, i]));
@@ -168,43 +182,49 @@ export function ExemptionChecklistPanel({
         </div>
       )}
 
-      {/* 비과세 §12 그룹 (sky) */}
-      <div className="space-y-1.5">
-        <p className={GROUP_HEADER.sky}>
-          비과세 <span className="font-normal normal-case tracking-normal text-sky-600 dark:text-sky-400">상증법 §12</span>
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {NONTAXABLE_RULE_IDS.map((ruleId) => (
-            <ExemptionChip
-              key={ruleId}
-              ruleId={ruleId}
-              checkedMap={checkedMap}
-              itemMap={itemMap}
-              onToggle={onToggle}
-              onGroupOpen={onNontaxableGroupOpen}
-            />
-          ))}
+      {/* 비과세 그룹 (sky) — 세목별 항목은 부모 category 필터로 결정 */}
+      {nonTaxableRules.length > 0 && (
+        <div className="space-y-1.5">
+          <p className={GROUP_HEADER.sky}>
+            비과세 <span className="font-normal normal-case tracking-normal text-sky-600 dark:text-sky-400">{nonTaxableLaw}</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {nonTaxableRules.map((rule) => (
+              <ExemptionChip
+                key={rule.id}
+                rule={rule}
+                group="sky"
+                checkedMap={checkedMap}
+                itemMap={itemMap}
+                onToggle={onToggle}
+                onGroupOpen={onNontaxableGroupOpen}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* 과세가액 불산입 §16·§17 그룹 (violet) */}
-      <div className={cn("space-y-1.5", GROUP_DIVIDER.violet)}>
-        <p className={GROUP_HEADER.violet}>
-          과세가액 불산입 <span className="font-normal normal-case tracking-normal text-violet-600 dark:text-violet-400">상증법 §16·§17</span>
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {NOT_INCLUDED_RULE_IDS.map((ruleId) => (
-            <ExemptionChip
-              key={ruleId}
-              ruleId={ruleId}
-              checkedMap={checkedMap}
-              itemMap={itemMap}
-              onToggle={onToggle}
-              onGroupOpen={onNotIncludedGroupOpen}
-            />
-          ))}
+      {/* 과세가액 불산입 그룹 (violet) — 증여세는 해당 항목 없으면 미렌더 */}
+      {notIncludedRules.length > 0 && (
+        <div className={cn("space-y-1.5", GROUP_DIVIDER.violet)}>
+          <p className={GROUP_HEADER.violet}>
+            과세가액 불산입 <span className="font-normal normal-case tracking-normal text-violet-600 dark:text-violet-400">{notIncludedLaw}</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {notIncludedRules.map((rule) => (
+              <ExemptionChip
+                key={rule.id}
+                rule={rule}
+                group="violet"
+                checkedMap={checkedMap}
+                itemMap={itemMap}
+                onToggle={onToggle}
+                onGroupOpen={onNotIncludedGroupOpen}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
