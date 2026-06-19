@@ -7,6 +7,7 @@ import type { BargainTransferInput } from "../bargain-transfer";
 
 /** Phase 1 의제 유형 (discriminated union 판별자) */
 export type DeemedGiftType =
+  | "trust_benefit" // §33 신탁이익의 증여 (1)
   | "insurance" // §34 (2)
   | "bargain_transfer" // §35 (3)
   | "debt_forgiveness" // §36 (4)
@@ -45,6 +46,24 @@ export interface DeemedGiftResult {
 }
 
 // ── 입력 타입 ──
+
+/** (1) 신탁이익의 증여 §33 — 평가 상증령 §61·이자율 상증칙 §19의2(연 3%) */
+export interface TrustBenefitInput {
+  /** §61① 수익자 구성: 동일(1호) / 원본만(2호가목) / 수익만(2호나목) */
+  beneficiaryType: "same" | "diff_principal" | "diff_income";
+  /** 평가기준일(증여시기) 현재 상증법 평가 신탁재산(원본) 가액 */
+  trustPropertyValue: number;
+  /** 확정 수익률 분수 (미입력=미확정 → 상증칙 §19의2② 원본×30/1000) */
+  yieldRate?: { numer: number; denom: number };
+  /** 원천징수세율 분수 (예: 15.4% = {154, 1000}) */
+  withholdingRate: { numer: number; denom: number };
+  /** 수익 분할 횟수(=현가합 항 수). 연차 n=0..installments-1, n=0=증여시기 미할인 */
+  installments: number;
+  /** 해지·철회·취소 일시금 (§61① 단서 Max 비교, 미입력 0) */
+  surrenderValue?: number;
+  /** §25① 증여시기 분기 echo (표시 전용 — 산식 무관) */
+  giftTimingType?: "actual" | "decedent_death" | "agreed" | "first_installment";
+}
 
 /** (2) 보험금 §34 */
 export interface InsuranceInput {
@@ -236,6 +255,7 @@ export interface SpecificCorpInput {
 
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
 export type DeemedGiftInput =
+  | ({ type: "trust_benefit" } & TrustBenefitInput)
   | ({ type: "insurance" } & InsuranceInput)
   | ({ type: "bargain_transfer" } & BargainTransferInput)
   | ({ type: "debt_forgiveness" } & DebtForgivenessInput)

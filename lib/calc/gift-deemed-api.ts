@@ -14,6 +14,20 @@ import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form
 /** 폼 상태 → DeemedGiftInput (유형별 분기) */
 export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
   switch (form.type) {
+    case "trust_benefit":
+      return {
+        type: "trust_benefit",
+        beneficiaryType: form.tbBeneficiaryType,
+        trustPropertyValue: parseAmount(form.tbPropertyValue),
+        // 확정 시 % → 분수 (10%→{1000,10000}). 미확정이면 undefined → 엔진이 칙§19의2② 3% 적용
+        yieldRate: form.tbYieldDetermined
+          ? { numer: Math.round(parseDecimal(form.tbYieldRatePct) * 100), denom: 10_000 }
+          : undefined,
+        withholdingRate: { numer: Math.round(parseDecimal(form.tbWithholdingPct) * 100), denom: 10_000 },
+        installments: Math.round(parseDecimal(form.tbInstallments)),
+        surrenderValue: form.tbSurrenderValue ? parseAmount(form.tbSurrenderValue) : undefined,
+        giftTimingType: form.tbGiftTiming,
+      };
     case "insurance":
       return {
         type: "insurance",

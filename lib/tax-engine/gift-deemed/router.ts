@@ -19,9 +19,12 @@ import { calcPropertyServiceUseGift } from "./property-service-use";
 import { calcOrgChangeGift } from "./org-change";
 import { calcValueIncreaseGift } from "./value-increase";
 import { calcSpecificCorpGift } from "./specific-corp";
+import { calcTrustBenefit } from "./trust-benefit";
 
 export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
   switch (input.type) {
+    case "trust_benefit":
+      return calcTrustBenefit(input);
     case "insurance":
       return calcInsuranceGift(input);
     case "bargain_transfer":

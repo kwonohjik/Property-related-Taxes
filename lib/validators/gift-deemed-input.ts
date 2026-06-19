@@ -7,6 +7,18 @@
  */
 import { z } from "zod";
 
+const rateFractionSchema = z.object({ numer: z.number().nonnegative(), denom: z.number().positive() });
+const trustBenefitSchema = z.object({
+  type: z.literal("trust_benefit"),
+  beneficiaryType: z.enum(["same", "diff_principal", "diff_income"]),
+  trustPropertyValue: z.number().nonnegative(),
+  yieldRate: rateFractionSchema.optional(),
+  withholdingRate: rateFractionSchema,
+  installments: z.number().int().positive({ message: "수익 분할 횟수는 1 이상이어야 합니다" }),
+  surrenderValue: z.number().nonnegative().optional(),
+  giftTimingType: z.enum(["actual", "decedent_death", "agreed", "first_installment"]).optional(),
+});
+
 const insuranceSchema = z.object({
   type: z.literal("insurance"),
   caseType: z.enum(["non_payer", "gifted_premium"]),
@@ -180,6 +192,7 @@ const convertibleBondSchema = z.object({
 
 export const deemedGiftInputSchema = z
   .discriminatedUnion("type", [
+    trustBenefitSchema,
     insuranceSchema,
     bargainTransferSchema,
     debtForgivenessSchema,

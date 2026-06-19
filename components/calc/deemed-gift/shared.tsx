@@ -7,6 +7,7 @@
 
 import type { DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   RadioCardGroup,
@@ -37,6 +38,15 @@ import {
 export interface DeemedFormState {
   giftDate: string;
   type: DeemedGiftType | "";
+  // 신탁이익 §33
+  tbBeneficiaryType: "same" | "diff_principal" | "diff_income";
+  tbPropertyValue: string;
+  tbYieldDetermined: boolean;
+  tbYieldRatePct: string;
+  tbWithholdingPct: string;
+  tbInstallments: string;
+  tbSurrenderValue: string;
+  tbGiftTiming: "actual" | "decedent_death" | "agreed" | "first_installment";
   // 보험금 §34
   insCaseType: "non_payer" | "gifted_premium";
   insProceeds: string;
@@ -177,6 +187,14 @@ export interface DeemedFormState {
 export const INITIAL_DEEMED: DeemedFormState = {
   giftDate: "",
   type: "",
+  tbBeneficiaryType: "same",
+  tbPropertyValue: "",
+  tbYieldDetermined: true,
+  tbYieldRatePct: "",
+  tbWithholdingPct: "",
+  tbInstallments: "",
+  tbSurrenderValue: "",
+  tbGiftTiming: "first_installment",
   insCaseType: "non_payer",
   insProceeds: "",
   insTotalPremium: "",
@@ -297,6 +315,7 @@ export const DEEMED_TYPE_META: Record<
   DeemedGiftType,
   { label: string; law: string }
 > = {
+  trust_benefit: { label: "신탁이익의 증여", law: "상증법 §33" },
   insurance: { label: "보험금의 증여", law: "상증법 §34" },
   bargain_transfer: { label: "저가양수·고가양도", law: "상증법 §35" },
   debt_forgiveness: { label: "채무면제 등", law: "상증법 §36" },
@@ -328,6 +347,7 @@ type SetFn = (patch: Partial<DeemedFormState>) => void;
 // ============================================================
 
 const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
+  { value: "trust_benefit", label: "신탁이익의 증여", description: "상증법 §33 — 원본·수익 권리 현재가치 (령§61·연 3%)", testId: "deemed-type-trust_benefit" },
   { value: "insurance", label: "보험금의 증여", description: "상증법 §34 — 수령인 ≠ 보험료 납부자 등", testId: "deemed-type-insurance" },
   { value: "bargain_transfer", label: "저가양수·고가양도", description: "상증법 §35 — 특수/비특수 30%·3억 공제", testId: "deemed-type-bargain_transfer" },
   { value: "debt_forgiveness", label: "채무면제 등", description: "상증법 §36 — 면제·인수·변제 이익", testId: "deemed-type-debt_forgiveness" },
@@ -373,6 +393,8 @@ export function DeemedTypeSelector({
 
 export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   switch (form.type) {
+    case "trust_benefit":
+      return <TrustBenefitFields form={form} set={set} />;
     case "insurance":
       return <InsuranceFields form={form} set={set} />;
     case "bargain_transfer":
@@ -414,6 +436,60 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
     default:
       return null;
   }
+}
+
+function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
+  return (
+    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+      <RadioCardGroup
+        name="tb-beneficiary"
+        tone="rose"
+        value={form.tbBeneficiaryType}
+        onChange={(v) => set({ tbBeneficiaryType: v })}
+        options={[
+          { value: "same", label: "원본·수익 동일 수익자", description: "§61①1호 — 수익권 현가합 + 원본", testId: "tb-beneficiary-same" },
+          { value: "diff_principal", label: "원본만 수익", description: "§61①2호가목 — 신탁재산 − 수익권", testId: "tb-beneficiary-diff_principal" },
+          { value: "diff_income", label: "수익만 수익", description: "§61①2호나목 — 수익권 현가합", testId: "tb-beneficiary-diff_income" },
+        ]}
+      />
+      <CurrencyInput label="신탁재산(원본) 가액" value={form.tbPropertyValue} onChange={(v) => set({ tbPropertyValue: v })} placeholder="신탁재산 가액 (원)" />
+      <ToggleCard
+        tone="emerald"
+        checked={form.tbYieldDetermined}
+        onCheckedChange={(v) => set({ tbYieldDetermined: v })}
+        title="신탁 수익률 확정"
+        description="끄면 미확정 → 원본 × 3% 추산 (상증칙 §19의2②)"
+      >
+        <div className="space-y-1">
+          <label className="block text-xs text-gray-600 dark:text-gray-400">신탁 수익률 (%)</label>
+          <DecimalInput value={form.tbYieldRatePct} onChange={(v) => set({ tbYieldRatePct: v })} placeholder="신탁 수익률 (%)" />
+        </div>
+      </ToggleCard>
+      <div className="space-y-1">
+        <label className="block text-xs text-gray-600 dark:text-gray-400">원천징수세율 (%)</label>
+        <DecimalInput value={form.tbWithholdingPct} onChange={(v) => set({ tbWithholdingPct: v })} placeholder="원천징수세율 (%)" />
+      </div>
+      <div className="space-y-1">
+        <label className="block text-xs text-gray-600 dark:text-gray-400">수익 분할 횟수 (계약기간 연수)</label>
+        <DecimalInput value={form.tbInstallments} onChange={(v) => set({ tbInstallments: v })} placeholder="수익 지급 횟수 (연)" />
+      </div>
+      <CurrencyInput label="해지·철회 일시금 (선택)" value={form.tbSurrenderValue} onChange={(v) => set({ tbSurrenderValue: v })} hint="평가액보다 크면 일시금으로 평가 (§61① 단서)" placeholder="해지 시 받을 일시금 (없으면 빈칸)" />
+      <RadioCardGroup
+        name="tb-gift-timing"
+        tone="violet"
+        layout="inline"
+        value={form.tbGiftTiming}
+        onChange={(v) => set({ tbGiftTiming: v })}
+        options={[
+          { value: "first_installment", label: "분할 최초지급일", testId: "tb-timing-first" },
+          { value: "actual", label: "실제 지급일", testId: "tb-timing-actual" },
+          { value: "agreed", label: "약정일", testId: "tb-timing-agreed" },
+          { value: "decedent_death", label: "위탁자 사망일", testId: "tb-timing-death" },
+        ]}
+      />
+      <p className="text-xs text-muted-foreground">증여시기는 §25①에 따라 선택 (분할 지급 + 위탁자 미지배 시 최초지급일). 산식에는 영향 없음.</p>
+    </div>
+  );
 }
 
 function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
