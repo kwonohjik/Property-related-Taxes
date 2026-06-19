@@ -131,4 +131,42 @@ describe("[NBL-OTHER-UI] ⑤ §168의11① 호별 면적기준 위젯", () => {
     render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
     expect(screen.getByText(/실내 시설 바닥면적/)).toBeTruthy();
   });
+
+  // §168의11⑤ 연접 다필지 (C·D) — 토글 + ON 시 필지 추가/입력 노출.
+  it("§168의11⑤ 연접 다필지 토글이 렌더되고 클릭 시 onAssetChange(nblOtherUseParcels) 호출", () => {
+    const asset = makeDefaultAsset(1);
+    const onChange = vi.fn();
+    render(<OtherLandDetailSection asset={asset} onAssetChange={onChange} />);
+    expect(screen.getByText(/§168의11⑤ 연접 다필지/)).toBeTruthy();
+    fireEvent.click(screen.getByText(/연접 다필지로 입력/));
+    expect(onChange).toHaveBeenCalledWith({ nblOtherUseParcels: true });
+  });
+
+  it("§168의11⑤ ON + 필지 1건 → 필지 면적·삭제 버튼·추가 버튼 노출", () => {
+    const asset = {
+      ...makeDefaultAsset(1),
+      nblOtherUseParcels: true,
+      nblOtherParcels: [{ id: "p1", landArea: "800", acquisitionDate: "2018-01-01", hasBuilding: false, buildingFootprintArea: "" }],
+    };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByTestId("nbl-other-parcel-0")).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-parcel-remove-0")).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-parcel-add")).toBeTruthy();
+  });
+
+  // §168의11⑥ 복합용도 (B) — 건축물 ON 시 카드 노출 + mode 선택 시 면적 입력.
+  it("§168의11⑥ 복합용도 카드는 건축물 ON 시 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherHasBuilding: true };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/§168의11⑥ 복합용도 건축물 부속토지 안분/)).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-mixed-single")).toBeTruthy();
+    expect(screen.getByTestId("nbl-other-mixed-multiple")).toBeTruthy();
+  });
+
+  it("§168의11⑥ single_building 선택 시 특정용도분·전체 연면적 입력 노출", () => {
+    const asset = { ...makeDefaultAsset(1), nblOtherHasBuilding: true, nblOtherMixedUseMode: "single_building" as const };
+    render(<OtherLandDetailSection asset={asset} onAssetChange={() => {}} />);
+    expect(screen.getByText(/특정용도분 연면적 \(㎡\)/)).toBeTruthy();
+    expect(screen.getByText(/건축물 전체 연면적 \(㎡\)/)).toBeTruthy();
+  });
 });

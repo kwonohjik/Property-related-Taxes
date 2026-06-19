@@ -157,6 +157,228 @@ describe("C-6 기타토지 PDF p.1706 흐름도", () => {
     expect(r.steps.some((s) => s.id === "other_footprint_carveout")).toBe(false);
   });
 
+  it("M1: ⑥1호 복합용도(연면적비) → 특정용도분 부속토지만 사업용·잔여 비사업용 (mode 단독 isRelated 의제)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 2000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          isRelatedToResidenceOrBusiness: false, // mode 단독으로 isRelated 의제 검증
+          mixedUseBuildingMode: "single_building",
+          specificUseFloorArea: 300,
+          totalFloorArea: 1000, // 비율 0.3
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.businessArea).toBe(600); // 2000 × 0.3
+    expect(r.areaProportioning?.nonBusinessRatio).toBe(0.7); // (2000-600)/2000
+    expect(r.areaProportioning?.mixedUseBuildingRatio).toBe(0.3);
+    expect(r.steps.some((s) => s.id === "other_mixed_use")).toBe(true);
+  });
+
+  it("M2: ⑥2호 다수 건축물(바닥면적비) → 특정용도분 부속토지만 사업용", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          isRelatedToResidenceOrBusiness: true,
+          mixedUseBuildingMode: "multiple_buildings",
+          specificUseFootprint: 150,
+          totalFootprint: 500, // 비율 0.3
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.nonBusinessRatio).toBe(0.7);
+    expect(r.areaProportioning?.mixedUseBuildingRatio).toBe(0.3);
+    expect(r.steps.some((s) => s.id === "other_mixed_use")).toBe(true);
+  });
+
+  it("M3: ⑥ 분자=분모(전부 특정용도) → 전량 사업용 buildPass", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          isRelatedToResidenceOrBusiness: true,
+          mixedUseBuildingMode: "single_building",
+          specificUseFloorArea: 1000,
+          totalFloorArea: 1000, // 비율 1.0
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
+    expect(r.areaProportioning).toBeUndefined(); // 전량 사업용 → 안분 미노출
+    expect(r.steps.some((s) => s.id === "other_mixed_use")).toBe(true);
+  });
+
+  it("M4: mode 미설정 → ⑥ 미진입(① 호별 경로 회귀)", () => {
+    const r = judgeOtherLand(
+      base({
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          isRelatedToResidenceOrBusiness: true,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
+    expect(r.steps.some((s) => s.id === "other_mixed_use")).toBe(false);
+  });
+
+  // ── §168의11⑤ 연접 다필지 취득시기순 안분 (C+D) ──
+  it("D1: ⑤1호 연접 다필지 — 취득시기 늦은 필지(B)에 초과분 귀속", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1200,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: true,
+          relatedBusinessType: "parking_attached",
+          standardAreaLimit: 1000, // S=1000
+          parcels: [
+            { id: "A", landArea: 800, acquisitionDate: d("2010-01-01"), hasBuilding: false },
+            { id: "B", landArea: 400, acquisitionDate: d("2018-01-01"), hasBuilding: false },
+          ],
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(false);
+    // T=1200, S=1000, E=200 → 늦은 B에 200 귀속. ratio=200/1200
+    expect(r.areaProportioning?.nonBusinessRatio).toBeCloseTo(0.1667, 4);
+    const detail = r.areaProportioning?.contiguousNblDetail;
+    expect(detail?.find((p) => p.id === "B")?.nonBusinessArea).toBe(200);
+    expect(detail?.find((p) => p.id === "A")?.nonBusinessArea).toBe(0);
+    expect(r.steps.some((s) => s.id === "other_contiguous_nbl")).toBe(true);
+  });
+
+  it("D2: ⑤1호 잔액 흡수 — B 전체 + A 일부", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1200,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: true,
+          relatedBusinessType: "parking_attached",
+          standardAreaLimit: 600, // S=600 → E=600
+          parcels: [
+            { id: "A", landArea: 800, acquisitionDate: d("2010-01-01"), hasBuilding: false },
+            { id: "B", landArea: 400, acquisitionDate: d("2018-01-01"), hasBuilding: false },
+          ],
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.areaProportioning?.nonBusinessRatio).toBe(0.5); // 600/1200
+    const detail = r.areaProportioning?.contiguousNblDetail;
+    expect(detail?.find((p) => p.id === "B")?.nonBusinessArea).toBe(400); // B 전체
+    expect(detail?.find((p) => p.id === "A")?.nonBusinessArea).toBe(200); // A 200/800
+  });
+
+  it("D3: ⑤2호 — 건축물 바닥면적 제외 후보에 귀속", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 900,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          isRelatedToResidenceOrBusiness: true,
+          relatedBusinessType: "parking_attached",
+          standardAreaLimit: 500, // S=500
+          parcels: [
+            { id: "A", landArea: 600, acquisitionDate: d("2010-01-01"), hasBuilding: true, buildingFootprintArea: 200 },
+            { id: "B", landArea: 300, acquisitionDate: d("2018-01-01"), hasBuilding: true, buildingFootprintArea: 100 },
+          ],
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    // T=900, E=400. 후보 A=400·B=200(총600). 늦은 B(200) + A(200) 귀속. ratio=400/900
+    expect(r.areaProportioning?.nonBusinessRatio).toBeCloseTo(0.4444, 4);
+    const detail = r.areaProportioning?.contiguousNblDetail;
+    expect(detail?.find((p) => p.id === "B")?.nonBusinessArea).toBe(200);
+    expect(detail?.find((p) => p.id === "A")?.nonBusinessArea).toBe(200);
+  });
+
+  it("D4: ⑤2호 경계 클램프 — 초과분 > 후보합계 → 후보합계로 클램프 + 경고", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 900,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: true,
+          isRelatedToResidenceOrBusiness: true,
+          relatedBusinessType: "parking_attached",
+          standardAreaLimit: 100, // S=100 → E=800 > 후보합계 600
+          parcels: [
+            { id: "A", landArea: 600, acquisitionDate: d("2010-01-01"), hasBuilding: true, buildingFootprintArea: 200 },
+            { id: "B", landArea: 300, acquisitionDate: d("2018-01-01"), hasBuilding: true, buildingFootprintArea: 100 },
+          ],
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.areaProportioning?.nonBusinessRatio).toBeCloseTo(0.6667, 4); // 600/900 (바닥면적 300은 사업용 유지)
+    expect(r.warnings?.some((w) => w.includes("§168의11⑤"))).toBe(true);
+  });
+
+  it("D5: ⑤ 동일 취득시기 tie-break → 입력순(중립)", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1000,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: true,
+          relatedBusinessType: "parking_attached",
+          standardAreaLimit: 600, // S=600 → E=400
+          parcels: [
+            { id: "A", landArea: 500, acquisitionDate: d("2015-01-01"), hasBuilding: false },
+            { id: "B", landArea: 500, acquisitionDate: d("2015-01-01"), hasBuilding: false },
+          ],
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.areaProportioning?.nonBusinessRatio).toBe(0.4); // 400/1000
+    const detail = r.areaProportioning?.contiguousNblDetail;
+    // 동일 취득시기 → 입력순(A 먼저)에 귀속
+    expect(detail?.find((p) => p.id === "A")?.nonBusinessArea).toBe(400);
+    expect(detail?.find((p) => p.id === "B")?.nonBusinessArea).toBe(0);
+  });
+
+  it("D6: 회귀 — parcels 미제공 → 단일 필지 ① 호별 안분 경로", () => {
+    const r = judgeOtherLand(
+      base({
+        landArea: 1500,
+        otherLand: {
+          propertyTaxType: "comprehensive",
+          hasBuilding: false,
+          isRelatedToResidenceOrBusiness: true,
+          relatedBusinessType: "parking_attached",
+          standardAreaLimit: 1000,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.areaProportioning?.nonBusinessRatio).toBeCloseTo(0.3333, 4); // 500/1500
+    expect(r.areaProportioning?.contiguousNblDetail).toBeUndefined();
+    expect(r.steps.some((s) => s.id === "other_contiguous_nbl")).toBe(false);
+    expect(r.steps.some((s) => s.id === "other_area_limit")).toBe(true);
+  });
+
   it("종합합산 + 거주·사업관련 O → 사업용", () => {
     const r = judgeOtherLand(
       base({

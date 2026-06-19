@@ -58,6 +58,15 @@ const nblGracePeriodRawSchema = z.object({
   description: z.string().optional(),
 });
 
+/** §168의11⑤ 연접 다필지 raw 항목 (전부 z.string() — route의 parseRawNumber/toOptionalDate가 변환). superRefine 금지: off 상태 stale 항목 거부 방지(검증은 validate ⑧에서 nblOtherUseParcels 게이트). */
+const nblOtherParcelRawSchema = z.object({
+  id: z.string(),
+  landArea: z.string(),
+  acquisitionDate: z.string(),
+  hasBuilding: z.boolean(),
+  buildingFootprintArea: z.string().optional(),
+});
+
 /** raw 거주이력 항목 */
 const nblResidenceHistoryRawSchema = z.object({
   sigunguCode: z.string().optional(),
@@ -131,6 +140,15 @@ export const nonBusinessLandRawSchema = z.object({
   nblOtherIsRelatedToResidence: z.boolean().optional(),
   nblOtherHasBuilding: z.boolean().optional(),
   nblOtherBuildingFloorArea: z.string().optional(),
+  // §168의11⑥ 복합용도 건축물 부속토지 안분 (B)
+  nblOtherMixedUseMode: z.string().optional(),
+  nblOtherMixedUseSpecificFloorArea: z.string().optional(),
+  nblOtherMixedUseTotalFloorArea: z.string().optional(),
+  nblOtherMixedUseSpecificFootprint: z.string().optional(),
+  nblOtherMixedUseTotalFootprint: z.string().optional(),
+  // §168의11⑤ 연접 다필지 (C·D)
+  nblOtherUseParcels: z.boolean().optional(),
+  nblOtherParcels: z.array(nblOtherParcelRawSchema).optional(),
   // §168의11① 호별 면적기준 (갭 3a)
   nblOtherRelatedBusinessType: z.string().optional(),
   nblOtherStandardAreaLimit: z.string().optional(),

@@ -260,7 +260,7 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
     surcharge: {
       surchargeType: "non_business_land",
       additionalRate: isNonBusinessLand ? 0.10 : 0,
-      // 단일 필지 기준면적 초과분 부분 면적안분(목장 §168의10③·기타토지 §168의11①) — 면적안분 산출 시 그 비율, 없으면 전량(1). ⑤⑥(다필지·복합용도) 미구현
+      // 부분 면적안분(목장 §168의10③·기타토지 §168의11①·복합용도 §168의11⑥·연접 다필지 §168의11⑤·바닥면적 외 §101①2호나목) — 면적안분 산출 시 그 비율, 없으면 전량(1)
       nonBusinessAreaRatio: isNonBusinessLand ? (categoryResult?.areaProportioning?.nonBusinessRatio ?? 1) : 0,
       longTermDeductionExcluded: isNonBusinessLand,
       basicDeductionApplied: true,

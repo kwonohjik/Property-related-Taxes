@@ -3,6 +3,12 @@
 > 출처: `nbl-multiparcel-footprint-plan` 워크플로 — 법령(KoreanLaw 본문 실측) + 코드 모델 probe → 4 작업단위 설계 + R1 적대적 자가검토.
 > 선행 PR#291(NBL 잔여 4갭)에서 SCOPE_OUT으로 분리한 항목. CLAUDE.md 검증 기준(추정 금지·file:line·법령 본문) 적용.
 
+> **진행 상태 (2026-06-19):**
+> - **A. footprint 정밀안분 ✅완료 (PR#293 merged `53df86c3`)**
+> - **B. §168의11⑥ 복합용도 ✅완료** (구현·테스트 완료, ship 대기)
+> - **C+D. §168의11⑤ 연접 다필지 ✅완료** — ★**계획서 C Option A 채택**(NBL 판정엔진 내부 area-attribution, multi-parcel-transfer.ts·rate-calc **무변경**·회귀0). 아래 D 섹션의 rate-calc 필지별 양도소득금액 분리 리팩터는 환지·§97②swap 회귀위험 + NblParcel 취득가액 미보유로 **SCOPE_OUT**(정직 문서화). §168의11⑤ 면적/필지 귀속 규칙은 area-ratio로 충실 구현, 기존 면적안분 중과경로(목장·호별·footprint·⑥)와 일관.
+> - 잔여 SCOPE_OUT: ⑤ 필지별 양도소득금액 분리(non-uniform gain 정밀화)·⑤2호 footprint 차감범위·⑥vs① 중첩순서(유권해석).
+
 ## 0. 개요 — 사용자 요청 2갭 → 4 작업단위 분해
 
 | 작업단위 | scope | 의존 | 독립성 |

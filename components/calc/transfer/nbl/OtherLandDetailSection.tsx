@@ -4,6 +4,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+import { OtherLandParcelSection } from "./OtherLandParcelSection";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -50,6 +51,13 @@ const AREA_LEGAL_BASIS: Partial<Record<Exclude<RelatedBusinessType, "">, { legal
   hatchang: { legalBasis: "소득세법 시행령 §168의11①7호", label: "§168의11①7호" },
   vacant_lot_1household: { legalBasis: "소득세법 시행령 §168의11①13호", label: "§168의11①13호" },
 };
+
+// §168의11⑥ 복합용도 건축물 부속토지 안분 모드 (건축물 존재 시)
+const MIXED_USE_MODE_OPTIONS: RadioCardOption<"" | "single_building" | "multiple_buildings">[] = [
+  { value: "", label: "미적용", description: "복합용도 안분 없음 — 위 §168의11① 호별 기준면적으로 판정", testId: "nbl-other-mixed-none" },
+  { value: "single_building", label: "하나의 건축물 복합용도 (⑥1호)", description: "한 건물 일부만 거주·특정사업 사용 → 특정용도분 연면적 ÷ 건축물 연면적 비율로 부속토지 안분", testId: "nbl-other-mixed-single" },
+  { value: "multiple_buildings", label: "동일경계 다수 건축물 (⑥2호)", description: "여러 건물 중 일부만 거주·특정사업 사용 → 특정용도분 바닥면적 ÷ 전체 바닥면적 비율로 부속토지 안분", testId: "nbl-other-mixed-multiple" },
+];
 
 // F2 Phase A/B — 체육시설 종목(실외 11 + 실내 3). 유형별 기준면적(별표3 직장 / 별표4 운동경기업)은 자동 산출 — 라벨은 종목명만.
 const SPORTS_FACILITY_OPTIONS = [
@@ -435,6 +443,49 @@ export function OtherLandDetailSection({
           </div>
         )}
       </div>
+
+      {/* §168의11⑤ 연접 다필지 취득시기순 안분 */}
+      <OtherLandParcelSection asset={asset} onAssetChange={onAssetChange} />
+
+      {/* §168의11⑥ 복합용도 건축물 부속토지 안분 (건축물 존재 시) */}
+      {asset.nblOtherHasBuilding && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">§168의11⑥ 복합용도 건축물 부속토지 안분</p>
+            <LawArticleModal legalBasis="소득세법 시행령 §168의11⑥" label="§168의11⑥" />
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            건축물이 거주·특정사업 사용분(특정용도분)과 그 외로 함께 사용될 때, 특정용도분 부속토지만 사업용으로 보고 안분합니다. 선택 시 위 호별 기준면적(§168의11①)은 적용하지 않습니다.
+          </p>
+          <RadioCardGroup
+            name="nblOtherMixedUseMode"
+            tone="emerald"
+            options={MIXED_USE_MODE_OPTIONS}
+            value={asset.nblOtherMixedUseMode}
+            onChange={(v) => onAssetChange({ nblOtherMixedUseMode: v })}
+          />
+          {asset.nblOtherMixedUseMode === "single_building" && (
+            <>
+              <FieldCard label="특정용도분 연면적 (㎡)" unit="㎡" hint="거주·특정사업에 사용되는 부분의 연면적 (안분 분자)">
+                <DecimalInput value={asset.nblOtherMixedUseSpecificFloorArea} onChange={(v) => onAssetChange({ nblOtherMixedUseSpecificFloorArea: v })} />
+              </FieldCard>
+              <FieldCard label="건축물 전체 연면적 (㎡)" unit="㎡" hint="건축물 전체 연면적 (안분 분모). 특정용도분 ÷ 전체 비율로 부속토지 안분">
+                <DecimalInput value={asset.nblOtherMixedUseTotalFloorArea} onChange={(v) => onAssetChange({ nblOtherMixedUseTotalFloorArea: v })} />
+              </FieldCard>
+            </>
+          )}
+          {asset.nblOtherMixedUseMode === "multiple_buildings" && (
+            <>
+              <FieldCard label="특정용도분 바닥면적 (㎡)" unit="㎡" hint="거주·특정사업에 사용되는 건축물의 바닥면적 (안분 분자)">
+                <DecimalInput value={asset.nblOtherMixedUseSpecificFootprint} onChange={(v) => onAssetChange({ nblOtherMixedUseSpecificFootprint: v })} />
+              </FieldCard>
+              <FieldCard label="다수 건축물 전체 바닥면적 (㎡)" unit="㎡" hint="동일 경계 안 다수 건축물의 전체 바닥면적 (안분 분모)">
+                <DecimalInput value={asset.nblOtherMixedUseTotalFootprint} onChange={(v) => onAssetChange({ nblOtherMixedUseTotalFootprint: v })} />
+              </FieldCard>
+            </>
+          )}
+        </div>
+      )}
 
       {/* §168의11② 수입금액비율 (특정 업종 한정) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 dark:bg-violet-950/20 dark:border-violet-800 p-3 space-y-2">

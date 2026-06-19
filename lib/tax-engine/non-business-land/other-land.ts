@@ -11,6 +11,7 @@
 import { differenceInDays } from "date-fns";
 import { NBL } from "../legal-codes";
 import type {
+  AreaProportioning,
   CategoryJudgeResult,
   DateInterval,
   JudgmentStep,
@@ -24,7 +25,8 @@ import type {
 } from "./types";
 import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
-import { computeAreaProportioning } from "./utils/area-proportioning";
+import { computeAreaProportioning, computeMixedUseProportioning } from "./utils/area-proportioning";
+import { computeContiguousParcelNblAttribution } from "./utils/contiguous-parcel-proportioning";
 import {
   NBL_AREA_MULTIPLIER,
   SPORTS_OUTDOOR_STD,
@@ -189,6 +191,31 @@ export function resolveAreaLimit(o: OtherLandUsage, zoneType?: ZoneType): number
   }
 }
 
+/**
+ * §168의11⑥ 복합용도 건축물 부속토지 안분 산출 (mode·면적 유효 시).
+ * ⑥1호(single_building)=연면적비 · ⑥2호(multiple_buildings)=바닥면적비.
+ * 분자·분모 미입력/0 이하면 undefined(⑥ 미적용 → ① 호별 경로). 분자>분모 클램프 없음(validate 차단).
+ */
+function resolveMixedUseProportioning(
+  o: OtherLandUsage,
+  landArea: number,
+): { ap: AreaProportioning; legalBasis: string } | undefined {
+  const mode = o.mixedUseBuildingMode;
+  if (mode === "single_building") {
+    const num = o.specificUseFloorArea;
+    const den = o.totalFloorArea;
+    if (num === undefined || num <= 0 || den === undefined || den <= 0) return undefined;
+    return { ap: computeMixedUseProportioning(landArea, num, den), legalBasis: NBL.OTHER_LAND_MIXED_USE_FLOOR };
+  }
+  if (mode === "multiple_buildings") {
+    const num = o.specificUseFootprint;
+    const den = o.totalFootprint;
+    if (num === undefined || num <= 0 || den === undefined || den <= 0) return undefined;
+    return { ap: computeMixedUseProportioning(landArea, num, den), legalBasis: NBL.OTHER_LAND_MIXED_USE_FOOTPRINT };
+  }
+  return undefined;
+}
+
 /** §168의11① 호별 면적기준 legalBasis. 미해당(14호·legacy)은 OTHER_LAND_BUSINESS. */
 function resolveAreaLegalBasis(t: NblRelatedBusinessType | undefined): string {
   switch (t) {
@@ -314,7 +341,10 @@ export function judgeOtherLand(
   // relatedBusinessType(호) 우선, 미설정 시 legacy isRelatedToResidenceOrBusiness fallback.
   const relatedType = o.relatedBusinessType;
   const isRecognizedHo = relatedType !== undefined && relatedType !== "none";
-  const isRelated = isRecognizedHo || o.isRelatedToResidenceOrBusiness;
+  // §168의11⑥ 복합용도 건축물 부속토지 안분 — 건축물에 거주·특정사업 사용분(특정용도분)이 있으면
+  // 그 자체가 거주·사업관련(isRelated)에 해당 → mode 단독으로도 isRelated 의제.
+  const mixedUse = resolveMixedUseProportioning(o, input.landArea);
+  const isRelated = isRecognizedHo || o.isRelatedToResidenceOrBusiness || mixedUse !== undefined;
 
   if (isRelated) {
     const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
@@ -333,10 +363,105 @@ export function judgeOtherLand(
       });
     }
 
+    // ── §168의11⑥ 복합용도 건축물 부속토지 안분 (⑥ 단독 — ① 호별 기준면적 미적용·이중차감 방지) ──
+    // 기간기준(§168의6) 충족 후 진입. 특정용도분(거주·특정사업 사용분)만 사업용, 잔여 부속토지는 비사업용.
+    if (mixedUse) {
+      appliedLaws.push(mixedUse.legalBasis);
+      const pctBiz = (mixedUse.ap.mixedUseBuildingRatio ?? 0) * 100;
+      if (mixedUse.ap.nonBusinessRatio <= 0) {
+        // 부속토지 전부가 특정용도분(거주·특정사업) → 전량 사업용
+        steps.push({
+          id: "other_mixed_use",
+          label: "Step 3-1-1 §168의11⑥ 복합용도 건축물 부속토지 안분",
+          status: "PASS",
+          detail: `특정용도분 비율 ${pctBiz.toFixed(1)}% → 부속토지 전량 사업용`,
+          legalBasis: mixedUse.legalBasis,
+        });
+        return buildPass("복합용도 건축물 — 특정용도분 부속토지 전량 사업용 (§168의11⑥)", steps, appliedLaws, warnings, {
+          r, totalOwnershipDays, revenueTestDetail,
+        });
+      }
+      steps.push({
+        id: "other_mixed_use",
+        label: "Step 3-1-1 §168의11⑥ 복합용도 건축물 부속토지 안분",
+        status: "FAIL",
+        detail: `특정용도분 비율 ${pctBiz.toFixed(1)}% → 사업용 ${mixedUse.ap.businessArea.toFixed(1)}㎡·비사업용(종합합산) ${mixedUse.ap.nonBusinessArea.toFixed(1)}㎡`,
+        legalBasis: mixedUse.legalBasis,
+      });
+      return {
+        isBusiness: false,
+        reason: `복합용도 건축물 — 특정용도분(${pctBiz.toFixed(1)}%)만 사업용·잔여 비사업용 (§168의11⑥)`,
+        steps,
+        appliedLaws,
+        areaProportioning: mixedUse.ap,
+        totalOwnershipDays,
+        effectiveBusinessDays: r.effectiveBusinessDays,
+        gracePeriodDays: r.gracePeriodDays,
+        businessUseRatio: mixedUse.ap.nonBusinessRatio,
+        criteria: r.criteria,
+        revenueTestDetail,
+        warnings,
+      };
+    }
+
     appliedLaws.push(legalBasis);
 
-    // 호별 기준면적 해석 — 초과분 비사업용 면적 안분 (§168의11①)
     const areaLimit = resolveAreaLimit(o, input.zoneType);
+
+    // ── §168의11⑤ 연접 다필지 취득시기순 안분 (parcels 제공 시 — 호별 기준면적 초과분을 늦은 필지부터 귀속) ──
+    if (o.parcels && o.parcels.length > 0 && areaLimit !== undefined) {
+      const c = computeContiguousParcelNblAttribution(o.parcels, areaLimit);
+      const hoLabel = c.hasBuilding ? "2호" : "1호";
+      appliedLaws.push(NBL.OTHER_LAND_CONTIGUOUS);
+      if (c.clampWarning) {
+        warnings.push(
+          `§168의11⑤ — 기준면적 초과분(${c.excessArea.toFixed(1)}㎡)이 귀속 후보(건축물 바닥면적 제외 ${c.candidateTotal.toFixed(1)}㎡)를 초과하여 후보 면적으로 한정했습니다. 바닥면적분은 사업용으로 유지됩니다.`,
+        );
+      }
+      if (c.nonBusinessRatio <= 0) {
+        steps.push({
+          id: "other_contiguous_nbl",
+          label: `Step 3-1-1 §168의11⑤ 연접 다필지(${hoLabel}) 안분`,
+          status: "PASS",
+          detail: `총면적 ${c.totalArea.toFixed(1)}㎡ ≤ 기준면적 ${areaLimit}㎡ → 전량 사업용`,
+          legalBasis: NBL.OTHER_LAND_CONTIGUOUS,
+        });
+        return buildPass("연접 다필지 — 기준면적 이내 전량 사업용 (§168의11⑤)", steps, appliedLaws, warnings, {
+          r, totalOwnershipDays, revenueTestDetail,
+        });
+      }
+      const areaProportioning: AreaProportioning = {
+        totalArea: c.totalArea,
+        businessArea: c.totalArea - c.nonBusinessArea,
+        nonBusinessArea: c.nonBusinessArea,
+        nonBusinessRatio: c.nonBusinessRatio,
+        buildingMultiplier: 1,
+        contiguousNblDetail: c.detail,
+      };
+      steps.push({
+        id: "other_contiguous_nbl",
+        label: `Step 3-1-1 §168의11⑤ 연접 다필지(${hoLabel}) 취득시기순 안분`,
+        status: "FAIL",
+        detail: `총면적 ${c.totalArea.toFixed(1)}㎡ − 기준면적 ${areaLimit}㎡ → 초과분 ${c.nonBusinessArea.toFixed(1)}㎡(취득시기 늦은 필지부터) 비사업용`,
+        legalBasis: NBL.OTHER_LAND_CONTIGUOUS,
+      });
+      return {
+        isBusiness: false,
+        reason: `연접 다필지 기준면적 초과 — 초과분 ${c.nonBusinessArea.toFixed(1)}㎡ 비사업용 (§168의11⑤ ${hoLabel})`,
+        steps,
+        appliedLaws,
+        areaProportioning,
+        totalOwnershipDays,
+        effectiveBusinessDays: r.effectiveBusinessDays,
+        gracePeriodDays: r.gracePeriodDays,
+        businessUseRatio: areaProportioning.nonBusinessRatio,
+        criteria: r.criteria,
+        revenueTestDetail,
+        warnings,
+      };
+    }
+
+    // 호별 기준면적 해석 — 초과분 비사업용 면적 안분 (§168의11①) [단일 필지]
     if (areaLimit !== undefined && input.landArea > areaLimit) {
       const areaProportioning = computeAreaProportioning(input.landArea, areaLimit);
       steps.push({

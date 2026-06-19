@@ -83,6 +83,88 @@ describe("[NBL-CASES] buildNblEngineInput — 지목별 sub-object 엔진 도달
     expect(input!.otherLand?.resortBuildingFloorArea).toBeUndefined(); // resort와 분리
   });
 
+  it("[B] other_land — 복합용도 ⑥1호 wire → mixedUseBuildingMode·연면적 도달", () => {
+    const input = buildNblEngineInput({
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "2000",
+      acquisitionDate: "2018-01-01",
+      transferDate: "2026-06-01",
+      nblOtherHasBuilding: true,
+      nblOtherPropertyTaxType: "comprehensive",
+      nblOtherIsRelatedToResidence: true,
+      nblOtherMixedUseMode: "single_building",
+      nblOtherMixedUseSpecificFloorArea: "300",
+      nblOtherMixedUseTotalFloorArea: "1000",
+    } as never);
+    expect(input!.otherLand?.mixedUseBuildingMode).toBe("single_building");
+    expect(input!.otherLand?.specificUseFloorArea).toBe(300);
+    expect(input!.otherLand?.totalFloorArea).toBe(1000);
+  });
+
+  it("[B] other_land — 복합용도 ⑥2호 wire → 바닥면적 도달", () => {
+    const input = buildNblEngineInput({
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1000",
+      acquisitionDate: "2018-01-01",
+      transferDate: "2026-06-01",
+      nblOtherHasBuilding: true,
+      nblOtherPropertyTaxType: "comprehensive",
+      nblOtherIsRelatedToResidence: true,
+      nblOtherMixedUseMode: "multiple_buildings",
+      nblOtherMixedUseSpecificFootprint: "150",
+      nblOtherMixedUseTotalFootprint: "500",
+    } as never);
+    expect(input!.otherLand?.mixedUseBuildingMode).toBe("multiple_buildings");
+    expect(input!.otherLand?.specificUseFootprint).toBe(150);
+    expect(input!.otherLand?.totalFootprint).toBe(500);
+  });
+
+  it("[C·D] other_land — 연접 다필지 wire → parcels[].acquisitionDate(Date)·landArea 도달", () => {
+    const input = buildNblEngineInput({
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1200",
+      acquisitionDate: "2018-01-01",
+      transferDate: "2026-06-01",
+      nblOtherPropertyTaxType: "comprehensive",
+      nblOtherIsRelatedToResidence: true,
+      nblOtherRelatedBusinessType: "parking_attached",
+      nblOtherStandardAreaLimit: "1000",
+      nblOtherUseParcels: true,
+      nblOtherParcels: [
+        { id: "A", landArea: "800", acquisitionDate: "2010-01-01", hasBuilding: false, buildingFootprintArea: "" },
+        { id: "B", landArea: "400", acquisitionDate: "2018-01-01", hasBuilding: true, buildingFootprintArea: "100" },
+      ],
+    } as never);
+    expect(input!.otherLand?.parcels?.length).toBe(2);
+    expect(input!.otherLand?.parcels?.[0]?.landArea).toBe(800);
+    expect(input!.otherLand?.parcels?.[0]?.acquisitionDate).toBeInstanceOf(Date); // string<Date 함정 회피
+    expect(input!.otherLand?.parcels?.[1]?.hasBuilding).toBe(true);
+    expect(input!.otherLand?.parcels?.[1]?.buildingFootprintArea).toBe(100);
+  });
+
+  it("[C·D] other_land — nblOtherUseParcels=false → parcels undefined(단일 필지)", () => {
+    const input = buildNblEngineInput({
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1200",
+      acquisitionDate: "2018-01-01",
+      transferDate: "2026-06-01",
+      nblOtherPropertyTaxType: "comprehensive",
+      nblOtherUseParcels: false,
+      nblOtherParcels: [
+        { id: "A", landArea: "800", acquisitionDate: "2010-01-01", hasBuilding: false, buildingFootprintArea: "" },
+      ],
+    } as never);
+    expect(input!.otherLand?.parcels).toBeUndefined();
+  });
+
   it("[④] other_land — nblOtherHasBuilding → otherLand.hasBuilding 도달 (매퍼 결선)", () => {
     // fix 전: buildOtherLand가 hasBuilding:false 하드코딩 → 항상 false
     const input = buildNblEngineInput({

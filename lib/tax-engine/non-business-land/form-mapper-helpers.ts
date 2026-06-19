@@ -13,6 +13,7 @@ import type {
   PastureUsage,
   VillaUsage,
   OtherLandUsage,
+  NblParcel,
   LandType,
   RevenueTestInput,
 } from "./types";
@@ -182,10 +183,35 @@ export function buildVilla(
   };
 }
 
+/** §168의11⑤ 연접 다필지 raw → NblParcel[]. nblOtherUseParcels=false면 undefined(단일 필지). 면적·취득일 미충족 항목은 제외. */
+function buildNblParcels(
+  a: Record<string, unknown>,
+  parseDate: ParseDate,
+  parseNumber: ParseNumber,
+): NblParcel[] | undefined {
+  if (!asBool(a.nblOtherUseParcels)) return undefined;
+  type RawParcel = { id?: string; landArea?: string; acquisitionDate?: string; hasBuilding?: boolean; buildingFootprintArea?: string };
+  const raw = asArray<RawParcel>(a.nblOtherParcels);
+  const parcels = raw.flatMap((p, i): NblParcel[] => {
+    const landArea = parseNumber(asString(p.landArea));
+    const acquisitionDate = parseDate(asString(p.acquisitionDate));
+    if (landArea === undefined || landArea <= 0 || !acquisitionDate) return [];
+    return [{
+      id: asString(p.id) || `parcel-${i}`,
+      landArea,
+      acquisitionDate,
+      hasBuilding: asBool(p.hasBuilding),
+      buildingFootprintArea: parseNumber(asString(p.buildingFootprintArea)),
+    }];
+  });
+  return parcels.length > 0 ? parcels : undefined;
+}
+
 export function buildOtherLand(
   a: Record<string, unknown>,
   landType: LandType,
   parseNumber: ParseNumber,
+  parseDate: ParseDate,
 ): OtherLandUsage | undefined {
   if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
   const relatedBusinessType = asString(a.nblOtherRelatedBusinessType) || undefined;
@@ -193,6 +219,12 @@ export function buildOtherLand(
     propertyTaxType:                (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"],
     hasBuilding:                    asBool(a.nblOtherHasBuilding),
     buildingFloorArea:              parseNumber(asString(a.nblOtherBuildingFloorArea)),
+    // §168의11⑥ 복합용도 건축물 부속토지 안분 (B)
+    mixedUseBuildingMode:           (asString(a.nblOtherMixedUseMode) || undefined) as OtherLandUsage["mixedUseBuildingMode"],
+    specificUseFloorArea:           parseNumber(asString(a.nblOtherMixedUseSpecificFloorArea)),
+    totalFloorArea:                 parseNumber(asString(a.nblOtherMixedUseTotalFloorArea)),
+    specificUseFootprint:           parseNumber(asString(a.nblOtherMixedUseSpecificFootprint)),
+    totalFootprint:                 parseNumber(asString(a.nblOtherMixedUseTotalFootprint)),
     buildingStandardValue:          parseNumber(asString(a.nblOtherBuildingValue)),
     landStandardValue:              parseNumber(asString(a.nblOtherLandValue)),
     isRelatedToResidenceOrBusiness: asBool(a.nblOtherIsRelatedToResidence),
@@ -221,6 +253,8 @@ export function buildOtherLand(
     indoorFloorArea:                parseNumber(asString(a.nblOtherIndoorFloorArea)),
     // F2 Phase B(B-3) — 6호 휴양 건축물 바닥면적(§101② 용도지역별 배율 자동)
     resortBuildingFloorArea:        parseNumber(asString(a.nblOtherResortBuildingFloorArea)),
+    // §168의11⑤ 연접 다필지 (C·D)
+    parcels:                        buildNblParcels(a, parseDate, parseNumber),
   };
 }
 

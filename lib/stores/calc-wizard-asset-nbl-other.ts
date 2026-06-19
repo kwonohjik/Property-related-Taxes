@@ -4,6 +4,15 @@
  * AssetForm이 extends. 800줄 정책으로 calc-wizard-asset.ts에서 분리(갭 3a).
  * 필드 값 기본/normalize는 calc-wizard-asset-factory.ts·calc-wizard-asset-nbl.ts가 담당.
  */
+/** §168의11⑤ 연접 다필지 1건 (폼 — 전부 string). 엔진 NblParcel과 별개(취득가액 미보유). */
+export interface NblParcelFormItem {
+  id: string;
+  landArea: string;
+  acquisitionDate: string;
+  hasBuilding: boolean;
+  buildingFootprintArea: string;
+}
+
 export interface NblOtherFormSlice {
   nblOtherPropertyTaxType: "" | "exempt" | "comprehensive" | "separate" | "special_sum";
   nblOtherBuildingValue: string;
@@ -13,6 +22,19 @@ export interface NblOtherFormSlice {
   nblOtherHasBuilding: boolean;
   /** §101①2호나목 — 건축물 바닥면적(㎡). 2% 미달 시 이 면적만 별도합산(사업용) 유지·잔여 부속토지는 종합합산(비사업용) */
   nblOtherBuildingFloorArea: string;
+  // §168의11⑥ 복합용도 건축물 부속토지 안분 (B) — ""=미적용·single_building=⑥1호(연면적비)·multiple_buildings=⑥2호(바닥면적비)
+  nblOtherMixedUseMode: "" | "single_building" | "multiple_buildings";
+  /** §168의11⑥1호 특정용도분 연면적(㎡) */
+  nblOtherMixedUseSpecificFloorArea: string;
+  /** §168의11⑥1호 건축물 전체 연면적(㎡) */
+  nblOtherMixedUseTotalFloorArea: string;
+  /** §168의11⑥2호 특정용도분 바닥면적(㎡) */
+  nblOtherMixedUseSpecificFootprint: string;
+  /** §168의11⑥2호 다수 건축물 전체 바닥면적(㎡) */
+  nblOtherMixedUseTotalFootprint: string;
+  // §168의11⑤ 연접 다필지 취득시기순 안분 (C·D) — OFF=단일 필지, ON=필지 배열
+  nblOtherUseParcels: boolean;
+  nblOtherParcels: NblParcelFormItem[];
   // §168의11① 호별 면적기준 (갭 3a) — NblRelatedBusinessType
   nblOtherRelatedBusinessType:
     | ""
