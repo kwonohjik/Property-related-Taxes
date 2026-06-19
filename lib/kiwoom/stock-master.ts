@@ -13,6 +13,19 @@ import { deduplicate } from "./dedup";
 
 const TTL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * 동일 api-id(ka10099) 연속 호출 간 최소 간격.
+ *
+ * 키움은 같은 TR을 짧은 간격으로 호출하면 return_code=5("허용된 요청 개수를 초과하였습니다[1700]")로
+ * 거부한다. Promise.all 동시 호출 시 일부가 실패 → list 누락 → 마스터 전체 로드 실패.
+ * 실측: 1.2초 간격 순차는 3건 모두 성공. 안전 마진 포함 1.5초.
+ */
+const MASTER_FETCH_GAP_MS = 1500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 interface MasterCacheEntry {
   byCode: Map<string, StockMasterEntry>;
   loadedAt: number;
@@ -43,11 +56,12 @@ async function loadStockMaster(): Promise<Map<string, StockMasterEntry>> {
     // 캐시 재확인 (race condition)
     if (cache && now - cache.loadedAt < TTL_MS) return cache.byCode;
 
-    const [kospi, kosdaq, konex] = await Promise.all([
-      fetchStockList({ marketTp: "0" }),
-      fetchStockList({ marketTp: "10" }),
-      fetchStockList({ marketTp: "50" }), // F-16 KONEX 추가
-    ]);
+    // 동일 api-id 연속 호출 제한(1700) 회피 — 순차 호출 + 간격. Promise.all 동시 호출 금지.
+    const kospi = await fetchStockList({ marketTp: "0" });
+    await sleep(MASTER_FETCH_GAP_MS);
+    const kosdaq = await fetchStockList({ marketTp: "10" });
+    await sleep(MASTER_FETCH_GAP_MS);
+    const konex = await fetchStockList({ marketTp: "50" }); // F-16 KONEX 추가
 
     const byCode = new Map<string, StockMasterEntry>();
     for (const entry of kospi) byCode.set(entry.stockCode, entry);

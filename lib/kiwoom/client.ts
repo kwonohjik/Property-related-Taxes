@@ -10,7 +10,12 @@
  */
 
 import { getAccessToken, resolveKiwoomBaseUrl, resolveKiwoomEnv } from "./auth";
+import { deduplicate } from "./dedup";
 import { KiwoomError, type KiwoomEnv } from "./types";
+
+/** 키움 본문 응답 코드 (HTTP 200 이어도 에러를 코드로 전달) */
+const RC_TOKEN_INVALID = 3; // "인증에 실패했습니다[8005:Token이 유효하지 않습니다]"
+const RC_RATE_EXCEEDED = 5; // "허용된 요청 개수를 초과하였습니다[1700]"
 
 // ──────────────────────────────────────────────────────────
 // Token Bucket Rate Limiter
@@ -166,11 +171,25 @@ export async function kiwoomFetch<T>(req: KiwoomRequestOptions): Promise<T> {
     }
 
     if (res.ok) {
+      let json: T;
       try {
-        return (await res.json()) as T;
+        json = (await res.json()) as T;
       } catch {
         throw new KiwoomError(`키움 API 응답 파싱 실패 (${req.apiId})`, "invalid_response");
       }
+      // 키움은 에러도 HTTP 200 + return_code≠0 으로 응답 → 본문 코드 검사 필수.
+      // (return_code 미존재 TR은 통과 — 각 TR 파서가 처리)
+      const rc = (json as { return_code?: number } | null)?.return_code;
+      if (rc === RC_TOKEN_INVALID && attempt < RETRY_DELAYS_MS.length) {
+        // 만료시각 기반 캐시는 조기 무효화를 감지 못함 → 강제 재발급 후 재시도. dedup으로 동시 재발급 1회화.
+        await deduplicate(`kiwoom-token-refresh:${env}`, () => getAccessToken({ env, force: true }));
+        continue;
+      }
+      if (rc === RC_RATE_EXCEEDED && attempt < RETRY_DELAYS_MS.length) {
+        await sleep(RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
+      return json;
     }
 
     if (shouldRetry(res.status) && attempt < RETRY_DELAYS_MS.length) {
