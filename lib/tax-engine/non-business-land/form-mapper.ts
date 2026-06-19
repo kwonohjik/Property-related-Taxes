@@ -139,7 +139,7 @@ export function mapAssetToNblInput(
     forestDetail:            buildForestDetail(asset, landType, parseDate),
     pasture:                 buildPasture(asset, landType, parseDate, parseNumber),
     villa:                   buildVilla(asset, landType, parseDate, parseNumber),
-    otherLand:               buildOtherLand(asset, landType, parseNumber),
+    otherLand:               buildOtherLand(asset, landType, parseNumber, parseDate),
     revenueTest:             buildRevenueTest(asset, landType, parseNumber),
     unconditionalExemption:  buildUnconditionalExemption(asset, parseDate),
     urbanIncorporationDate,

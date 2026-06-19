@@ -121,9 +121,40 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
             <span className="font-mono text-right text-emerald-600">{area.businessArea.toFixed(1)} ㎡</span>
             <span className="text-muted-foreground">비사업용 면적</span>
             <span className="font-mono text-right text-red-600">{area.nonBusinessArea.toFixed(1)} ㎡</span>
+            {area.mixedUseBuildingRatio !== undefined && (
+              <>
+                <span className="text-muted-foreground">특정용도분 비율 (§168의11⑥)</span>
+                <span className="font-mono text-right">{(area.mixedUseBuildingRatio * 100).toFixed(1)}%</span>
+              </>
+            )}
           </div>
+          {area.contiguousNblDetail && area.contiguousNblDetail.length > 0 && (
+            <div className="mt-3 rounded-md border border-border/60 overflow-hidden">
+              <p className="text-[11px] font-medium text-muted-foreground px-2 py-1 bg-muted/30">§168의11⑤ 연접 다필지 — 취득시기순 비사업용 귀속</p>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border/60">
+                    <th className="text-left font-medium px-2 py-1">필지</th>
+                    <th className="text-right font-medium px-2 py-1">취득일</th>
+                    <th className="text-right font-medium px-2 py-1">면적</th>
+                    <th className="text-right font-medium px-2 py-1">비사업용 귀속</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {area.contiguousNblDetail.map((p, i) => (
+                    <tr key={p.id} className="border-b border-border/40 last:border-0">
+                      <td className="px-2 py-1">{i + 1}</td>
+                      <td className="px-2 py-1 text-right font-mono tabular-nums">{formatDeemedDate(p.acquisitionDate)}</td>
+                      <td className="px-2 py-1 text-right font-mono tabular-nums">{p.landArea.toFixed(1)} ㎡</td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${p.nonBusinessArea > 0 ? "text-red-600" : "text-muted-foreground"}`}>{p.nonBusinessArea.toFixed(1)} ㎡</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
-            비사업용 면적분(전체의 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다. (기준면적 초과분 — 목장 §168의10③·기타토지 §168의11①, 또는 건축물 바닥면적 외 부속토지 §101①2호나목. 연접 다필지(§168의11⑤)·복합용도 건축물(§168의11⑥) 안분은 미지원.)
+            비사업용 면적분(전체의 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다. (기준면적 초과분 — 목장 §168의10③·기타토지 §168의11①, 건축물 바닥면적 외 부속토지 §101①2호나목, 복합용도 건축물 §168의11⑥, 연접 다필지 §168의11⑤.)
           </p>
         </div>
       )}

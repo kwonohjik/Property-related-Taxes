@@ -235,11 +235,47 @@ export type NblRelatedBusinessType =
   | "etc_14호"              // 14호 유사토지 (면적기준 없음 — boolean 유지)
   | "none";                 // 호 미해당 (재산세유형·기간기준만)
 
+/**
+ * §168의11⑤ 연접 다필지 1건 (하나의 용도로 일괄 사용되는 연접 토지 묶음의 개별 필지).
+ * 양도차익 분리 엔진(multi-parcel-transfer.ts)의 ParcelInput과 별개 — NBL 면적 귀속 전용(취득가액 미보유).
+ */
+export interface NblParcel {
+  id: string;
+  /** 필지 면적(㎡) */
+  landArea: number;
+  /** 필지 취득시기 — ⑤ 가목: 취득시기 늦은 필지부터 초과부분 귀속 */
+  acquisitionDate: Date;
+  /** 해당 필지 위 건축물·시설물 존재 여부 — true면 ⑤2호(바닥면적 제외) */
+  hasBuilding: boolean;
+  /** ⑤2호 — 건축물 바닥면적·시설물 수평투영면적(㎡). 귀속 후보에서 제외(사업용 유지) */
+  buildingFootprintArea?: number;
+}
+
 export interface OtherLandUsage {
   propertyTaxType: PropertyTaxType;
   hasBuilding: boolean;
   /** §101①2호나목 — 건축물 바닥면적(㎡, 시설은 수평투영면적). 2% 미달 시 이 면적만 별도합산(사업용) 유지·잔여 부속토지는 종합합산(비사업용). 배율 미적용(나목 carve-out은 바닥면적 자체·연면적 아님). VillaUsage.buildingFloorArea(별개)와 동명이타입 — 무관 */
   buildingFloorArea?: number;
+  /**
+   * §168의11⑥ 복합용도 건축물 부속토지 안분 모드. undefined=미적용(① 호별 기준면적으로 판정).
+   * - "single_building" = ⑥1호: 하나의 건축물 복합용도 → 특정용도분 연면적 / 건축물 연면적 비율로 안분
+   * - "multiple_buildings" = ⑥2호: 동일경계 다수 건축물 → 특정용도분 바닥면적 / 전체 바닥면적 비율로 안분
+   * 선택 시 ① 호별 기준면적(resolveAreaLimit)은 적용하지 않음(⑥ 단독·이중차감 방지). 기간기준(§168의6) 충족 후 진입.
+   */
+  mixedUseBuildingMode?: "single_building" | "multiple_buildings";
+  /** §168의11⑥1호 — 특정용도분(거주·특정사업 사용분) 연면적(㎡). mixedUseBuildingMode='single_building' 분자 */
+  specificUseFloorArea?: number;
+  /** §168의11⑥1호 — 건축물 전체 연면적(㎡). 분모 */
+  totalFloorArea?: number;
+  /** §168의11⑥2호 — 특정용도분 건축물 바닥면적(㎡). mixedUseBuildingMode='multiple_buildings' 분자 */
+  specificUseFootprint?: number;
+  /** §168의11⑥2호 — 다수 건축물 전체 바닥면적(㎡). 분모 */
+  totalFootprint?: number;
+  /**
+   * §168의11⑤ 연접 다필지 (하나의 용도로 일괄 사용). undefined/빈 배열=단일 필지(기존 동작).
+   * 제공 시 §168의11① 호별 기준면적 초과분을 취득시기 늦은 필지부터 귀속(⑤). resolveAreaLimit 기준면적 재사용.
+   */
+  parcels?: NblParcel[];
   buildingStandardValue?: number;
   landStandardValue?: number;
   isRelatedToResidenceOrBusiness: boolean;
@@ -432,12 +468,27 @@ export interface JudgmentStep {
   legalBasis?: string;
 }
 
+/** §168의11⑤ 필지별 비사업용 귀속 상세 1건 (결과 표시·감사용). Map 금지 — array. */
+export interface ContiguousParcelNbl {
+  id: string;
+  landArea: number;
+  acquisitionDate: Date;
+  /** 귀속 후보 면적 — ⑤1호=landArea, ⑤2호=max(0, landArea − 바닥면적) */
+  candidateArea: number;
+  /** 이 필지에서 비사업용(기준면적 초과부분)으로 귀속된 면적(㎡) */
+  nonBusinessArea: number;
+}
+
 export interface AreaProportioning {
   totalArea: number;
   businessArea: number;
   nonBusinessArea: number;
   nonBusinessRatio: number;
   buildingMultiplier: number;
+  /** §168의11⑥ 복합용도 안분 시 특정용도분 비율(분자/분모, 사업용 비율). 미설정=① 호별·footprint·기간 안분 */
+  mixedUseBuildingRatio?: number;
+  /** §168의11⑤ 연접 다필지 취득시기순 안분 시 필지별 귀속 상세. 미설정=단일 필지 안분 */
+  contiguousNblDetail?: ContiguousParcelNbl[];
 }
 
 /** 판정 엔진 반환 액션 (v2 신규 — 별장 REDIRECT 경로 지원) */
@@ -480,7 +531,7 @@ export interface NonBusinessLandJudgment {
   surcharge: {
     surchargeType: "non_business_land";
     additionalRate: number;
-    /** 비사업용 면적 비율 (단일 필지 기준면적 초과분 안분 중과 — 면적안분 없으면 1) 목장 §168의10③·기타토지 §168의11①. ⑤⑥(다필지·복합용도) 미구현 */
+    /** 비사업용 면적 비율 (기준면적 초과분 안분 중과 — 면적안분 없으면 1) 목장 §168의10③·기타토지 §168의11①·복합용도 §168의11⑥·연접 다필지 §168의11⑤·바닥면적 외 §101①2호나목 */
     nonBusinessAreaRatio: number;
     longTermDeductionExcluded: boolean;
     basicDeductionApplied: boolean;

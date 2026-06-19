@@ -64,6 +64,13 @@ export const NBL = {
   OTHER_LAND_AREA_VACANT_LOT:     "시행령 §168조의11 ① 13호 + 시행규칙 §83조의4 ⑯⑰",
   // §101①2호나목 (지방세법 시행령) — 2% 미달 건축물 바닥면적분 별도합산 유지(cross-statute)
   OTHER_LAND_FOOTPRINT_CARVEOUT:  "지방세법 시행령 §101 ① 2호 나목",
+  // §168의11⑥ 복합용도 건축물 부속토지 안분 — 특정용도분만 사업용
+  /** ⑥1호 — 하나의 건축물 복합용도: 부속토지 × 특정용도분 연면적 / 건축물 연면적 */
+  OTHER_LAND_MIXED_USE_FLOOR:     "시행령 §168조의11 ⑥ 1호",
+  /** ⑥2호 — 동일경계 다수 건축물: 전체 부속토지 × 특정용도분 바닥면적 / 전체 바닥면적 */
+  OTHER_LAND_MIXED_USE_FOOTPRINT: "시행령 §168조의11 ⑥ 2호",
+  /** ⑤ — 연접 다필지 일괄용도 기준면적 초과분: 취득시기 늦은 필지부터 비사업용 귀속(2호=바닥면적 제외) */
+  OTHER_LAND_CONTIGUOUS:          "시행령 §168조의11 ⑤",
   HOUSING_MULTIPLIER:             "시행령 §168조의12",
   VILLA:                          "시행령 §168조의13",
   UNAVOIDABLE_PERIOD:             "시행령 §168조의14 ① (시행규칙 §83의5①)",

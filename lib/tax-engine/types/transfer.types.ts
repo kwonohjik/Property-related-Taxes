@@ -132,7 +132,7 @@ export interface TransferTaxInput {
   /** 미등기 여부 */
   isUnregistered: boolean;
   isNonBusinessLand: boolean; // 비사업용 토지 여부
-  nonBusinessLandAreaRatio?: number; // 단일 필지 기준면적 초과분 면적비율(목장 §168의10③·기타토지 §168의11①) — 엔진 파생(judgeNonBusinessLand), 미지정=1 전량중과. ⑤⑥(다필지·복합용도) 미구현
+  nonBusinessLandAreaRatio?: number; // 부분 면적비율(목장 §168의10③·기타토지 §168의11①·복합용도 §168의11⑥·연접 다필지 §168의11⑤·바닥면적 외 §101①2호나목) — 엔진 파생(judgeNonBusinessLand), 미지정=1 전량중과
   /**
    * 조합원입주권 승계취득 여부 (propertyType === "right_to_move_in" 일 때만 의미).
    * true = 승계조합원 (장특공제 배제), false/미지정 = 원조합원.
