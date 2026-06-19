@@ -2,20 +2,20 @@
 
 /**
  * DeemedGiftCalculator — 증여로 보는 경우(증여이익) 독립 계산기 (Phase 1).
- * 증여일 + 유형 선택 + 유형별 입력 → 증여이익 산정 → 증여세 마법사 prefill 이관.
+ * 유형 선택 → 상세 입력 모달(증여일 + 유형별 입력) → 증여이익 산정 → 증여세 마법사 prefill 이관.
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { DateInput } from "@/components/ui/date-input";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import {
   DeemedTypeSelector,
-  DeemedInputFields,
+  DEEMED_TYPE_META,
   INITIAL_DEEMED,
   type DeemedFormState,
 } from "@/components/calc/deemed-gift/shared";
+import { DeemedDetailModal } from "@/components/calc/deemed-gift/DeemedDetailModal";
 import { DeemedGiftResultView } from "@/components/calc/results/DeemedGiftResultView";
 import { buildDeemedGiftInput, buildGiftWizardPrefill } from "@/lib/calc/gift-deemed-api";
 import { validateDeemedInput } from "@/lib/calc/gift-deemed-validate";
@@ -27,16 +27,19 @@ export function DeemedGiftCalculator() {
   const [result, setResult] = useState<DeemedGiftResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const set = (patch: Partial<DeemedFormState>) => {
     setForm((p) => ({ ...p, ...patch }));
     setResult(null);
+    setError(null); // 모달 내 편집 시 에러 잔존 방지
   };
 
   async function handleCalc() {
     const v = validateDeemedInput(form);
     if (v) {
       setError(v);
+      if (form.type) setModalOpen(true); // D7: 누락 필드는 모달 안 → 재오픈
       return;
     }
     setError(null);
@@ -70,26 +73,53 @@ export function DeemedGiftCalculator() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
-        <label className="mb-1 block text-sm font-semibold text-slate-700">증여일</label>
-        <DateInput value={form.giftDate} onChange={(v) => set({ giftDate: v })} />
-        <p className="mt-1 text-xs text-muted-foreground">증여시기·적정이자율 연도 기준</p>
-      </div>
-
       <SectionHeader title="① 증여로 보는 경우 유형" />
       <DeemedTypeSelector
         value={form.type}
-        onChange={(v: DeemedGiftType) => set({ type: v })}
+        onChange={(v: DeemedGiftType) => {
+          set({ type: v });
+          setModalOpen(true);
+        }}
       />
 
       {form.type && (
-        <>
-          <SectionHeader title="② 상세 입력" />
-          <DeemedInputFields form={form} set={set} />
-        </>
+        <div
+          data-testid="deemed-summary-card"
+          className="flex items-start justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3"
+        >
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-rose-900">
+              {DEEMED_TYPE_META[form.type].label}
+            </p>
+            <p className="text-xs text-rose-700">{DEEMED_TYPE_META[form.type].law}</p>
+            <p className="text-xs text-muted-foreground">
+              증여일 {form.giftDate || "미입력"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            data-testid="deemed-edit-btn"
+            className="shrink-0 rounded-md border border-rose-300 bg-white/70 px-3 py-1.5 text-xs font-medium text-rose-800 hover:bg-rose-100/60"
+          >
+            수정
+          </button>
+        </div>
       )}
 
-      {error && <p className="text-sm font-medium text-rose-600" data-testid="deemed-error">{error}</p>}
+      <DeemedDetailModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        form={form}
+        set={set}
+        error={modalOpen ? error : null}
+      />
+
+      {error && (
+        <p className="text-sm font-medium text-rose-600" data-testid="deemed-error">
+          {error}
+        </p>
+      )}
 
       <button
         type="button"
