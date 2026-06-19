@@ -264,6 +264,8 @@ export function EstateBodyRealEstate({
             <div className="flex justify-end">
               <BuildingStdPriceModalButton
                 buttonLabel="건물 기준시가 계산"
+                lockedTaxType="inheritance_gift"
+                initialAddress={addrValue}
                 onApply={(v) => set({ standardPrice: v })}
               />
             </div>

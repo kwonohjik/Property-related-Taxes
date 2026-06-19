@@ -11,16 +11,27 @@ import { Button } from "@/components/ui/button";
 import { BuildingStdPriceForm } from "./BuildingStdPriceForm";
 import { BuildingStdPriceResultCard } from "./BuildingStdPriceResultCard";
 import type { BuildingStandardPriceResult } from "@/lib/tax-engine/building-standard-price";
+import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
+import type { AddressValue } from "@/components/ui/address-search";
 
 interface Props {
   /** 선택한 시점의 건물 기준시가(원, 정수)를 받아 대상 필드에 주입 */
   onApply: (standardPrice: number) => void;
   buttonLabel?: string;
+  /** 호출 세목 고정 — 양도="transfer" / 상속·증여="inheritance_gift". 지정 시 세목 라디오 숨김 */
+  lockedTaxType?: BuildingStdPriceFormState["taxType"];
+  /** 부모 자산 카드 소재지 prefill — 모달 이중입력 방지 */
+  initialAddress?: AddressValue;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
-export function BuildingStdPriceModalButton({ onApply, buttonLabel = "건물 기준시가 계산" }: Props) {
+export function BuildingStdPriceModalButton({
+  onApply,
+  buttonLabel = "건물 기준시가 계산",
+  lockedTaxType,
+  initialAddress,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
   const [floorArea, setFloorArea] = useState(0);
@@ -48,6 +59,8 @@ export function BuildingStdPriceModalButton({ onApply, buttonLabel = "건물 기
           </DialogHeader>
 
           <BuildingStdPriceForm
+            lockedTaxType={lockedTaxType}
+            initialAddress={initialAddress}
             onResult={(r, fa, err) => {
               setResult(r);
               setFloorArea(fa);

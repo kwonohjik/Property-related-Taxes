@@ -51,6 +51,15 @@ const CB_ERA_OPTIONS = [
 ];
 
 export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props) {
+  // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(이중입력 방지)
+  const stdPriceAddress = {
+    road: asset.addressRoad,
+    jibun: asset.addressJibun,
+    building: asset.buildingName,
+    detail: asset.addressDetail,
+    lng: asset.longitude,
+    lat: asset.latitude,
+  };
   const isOn = asset.useEstimatedAcquisition && asset.assetKind === "commercial_building";
   const isPreDisclosure = asset.cbEra === "pre_disclosure";
   const isPostDisclosure = asset.cbEra === "post_disclosure";
@@ -218,7 +227,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               />
             </FieldCard>
             <div className="flex justify-end">
-              <BuildingStdPriceModalButton onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
+              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
             </div>
             {/* 최초고시시(2005) — amber */}
             <FieldCard
@@ -248,7 +257,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 />
               </FieldCard>
               <div className="mt-1 flex justify-end">
-                <BuildingStdPriceModalButton onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
+                <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
               </div>
             </div>
           </div>

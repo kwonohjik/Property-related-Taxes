@@ -23,7 +23,7 @@ const BASE_ITEM: EstateItem = {
 afterEach(() => cleanup());
 
 describe("ListedStockSecurityInfoSection — 순서·라벨·trailing 슬롯", () => {
-  it("A-1 DOM 순서: 종목코드 → 종목명 → 보유 주식 수", () => {
+  it("A-1 DOM 순서: 종목명 → 종목코드 → 보유 주식 수", () => {
     render(
       <ListedStockSecurityInfoSection item={BASE_ITEM} onUpdate={vi.fn()} />,
     );
@@ -31,8 +31,9 @@ describe("ListedStockSecurityInfoSection — 순서·라벨·trailing 슬롯", (
     const name = screen.getByTestId("ls-security-info-name-input");
     const shares = screen.getByTestId("ls-security-info-shares");
     // DOM 순서 검증 — compareDocumentPosition 비트마스크 4 = following
-    expect(code.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(name.compareDocumentPosition(shares) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // 종목명(typeahead·회사명 검색→종목코드 자동 채움)을 위로, 종목코드를 아래로
+    expect(name.compareDocumentPosition(code) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(code.compareDocumentPosition(shares) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("A-1 종목코드 FieldCard 가 required *(별표) 표시 (FieldCard.required prop)", () => {
