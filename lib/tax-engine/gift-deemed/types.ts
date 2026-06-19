@@ -43,6 +43,16 @@ export interface DeemedGiftResult {
   legalBasis: string;
   /** 임계 판정 근거 echo */
   thresholdEcho?: Record<string, number | boolean>;
+  /**
+   * 신탁이익(§33) 전용 — 원본권·수익권 별개 증여시기(§33①1·2호) 분리 산출.
+   * deemedGiftValue=합계(하위호환). 표시·prefill은 subGifts 사용.
+   */
+  subGifts?: {
+    right: "principal" | "income";
+    giftDate?: Date;
+    value: number;
+    lawRef: string;
+  }[];
 }
 
 // ── 입력 타입 ──
@@ -57,11 +67,24 @@ export interface TrustBenefitInput {
   yieldRate?: { numer: number; denom: number };
   /** 원천징수세율 분수 (예: 15.4% = {154, 1000}) */
   withholdingRate: { numer: number; denom: number };
-  /** 수익 분할 횟수(=현가합 항 수). 연차 n=0..installments-1, n=0=증여시기 미할인 */
-  installments: number;
-  /** 해지·철회·취소 일시금 (§61① 단서 Max 비교, 미입력 0) */
+  /** 유기정기금 수익 분할 횟수(=현가합 항 수). annuityType="finite"일 때 사용 */
+  installments?: number;
+  /** §61②→§62 정기금 유형: 유기(installments)/무기(20년)/종신(기대여명 floor). 기본 finite */
+  incomeAnnuityType?: "finite" | "perpetual" | "lifetime";
+  /** 회차 간 연수 (할인 nₖ = k×interval). 기본 1 */
+  incomeIntervalYears?: number;
+  /** 종신정기금 기대여명(연). 미입력 시 2023표 floor 조회 */
+  expectedRemainingYears?: number;
+  /** 종신정기금 기대여명 조회용 성별·연령 (expectedRemainingYears 미입력 시) */
+  beneficiaryGender?: "male" | "female";
+  beneficiaryAge?: number;
+  /** 수익권 증여시기(§25① — 분할=최초지급일). diff_income·same 표시용 */
+  incomeGiftDate?: Date;
+  /** 원본권 증여시기(§25① — 원본 실제지급일). diff_principal·same 표시용 */
+  principalGiftDate?: Date;
+  /** 해지·철회·취소 일시금 (§61① 단서 — 전체 합계 Max, 미입력 0) */
   surrenderValue?: number;
-  /** §25① 증여시기 분기 echo (표시 전용 — 산식 무관) */
+  /** §25① 증여시기 종류 라벨(메타 — 입력 날짜의 의미) */
   giftTimingType?: "actual" | "decedent_death" | "agreed" | "first_installment";
 }
 

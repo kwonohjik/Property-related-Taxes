@@ -2,13 +2,31 @@
  * 증여로 보는 경우 — 입력 검증 (⑧ 동기화). Zod superRefine과 동일 fallback.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { DeemedFormState } from "@/components/calc/deemed-gift/shared";
 
 export function validateDeemedInput(form: DeemedFormState): string | null {
-  if (!form.giftDate) return "증여일을 입력하세요";
+  // 신탁이익(§33)은 공통 증여일 대신 원본·수익 증여시기를 분리 입력(§25①) → 공통 giftDate 검사 skip
+  if (form.type !== "trust_benefit" && !form.giftDate) return "증여일을 입력하세요";
   if (!form.type) return "증여로 보는 경우 유형을 선택하세요";
 
   switch (form.type) {
+    case "trust_benefit": {
+      if (parseAmount(form.tbPropertyValue) <= 0) return "신탁재산(원본) 가액을 입력하세요";
+      if (form.tbBeneficiaryType !== "diff_principal" && !form.tbIncomeGiftDate)
+        return "수익권 증여시기를 입력하세요";
+      if (form.tbBeneficiaryType !== "diff_income" && !form.tbPrincipalGiftDate)
+        return "원본권 증여시기를 입력하세요";
+      if (form.tbAnnuityType === "finite" && parseDecimal(form.tbInstallments) <= 0)
+        return "수익 분할 횟수를 입력하세요";
+      if (
+        form.tbAnnuityType === "lifetime" &&
+        parseDecimal(form.tbExpectedRemainingYears) <= 0 &&
+        (!form.tbBeneficiaryGender || parseDecimal(form.tbBeneficiaryAge) <= 0)
+      )
+        return "종신정기금은 성별·연령 또는 기대여명을 입력하세요";
+      break;
+    }
     case "insurance":
       if (parseAmount(form.insTotalPremium) <= 0) return "납부보험료 총액을 입력하세요";
       if (parseAmount(form.insRelevantPremium) > parseAmount(form.insTotalPremium))

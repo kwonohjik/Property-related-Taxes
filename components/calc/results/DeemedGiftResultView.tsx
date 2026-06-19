@@ -9,6 +9,13 @@ import {
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import type { DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
 
+/** subGifts.giftDate는 엔진에선 Date, NextResponse.json 경유 후 client에선 string → 양립 포맷 */
+function fmtGiftDate(d?: Date | string): string {
+  if (!d) return "미입력";
+  const s = typeof d === "string" ? d : d.toISOString();
+  return s.slice(0, 10);
+}
+
 export function DeemedGiftResultView({
   result,
   onToGiftTax,
@@ -56,6 +63,37 @@ export function DeemedGiftResultView({
           </table>
         </div>
       </div>
+
+      {result.subGifts && result.subGifts.length > 0 && (
+        <div
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          data-testid="deemed-subgifts"
+        >
+          <p className="text-sm font-semibold text-violet-800">
+            증여시기별 분리 (§33①1·2호 — 원본·수익 별개 증여)
+          </p>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              {result.subGifts.map((sg, i) => (
+                <tr key={i} className="border-t border-violet-100">
+                  <td className="py-1.5 pr-2 text-violet-700">
+                    {sg.right === "principal" ? "원본권 증여" : "수익권 증여"}
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      (증여시기 {fmtGiftDate(sg.giftDate)})
+                    </span>
+                  </td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                    {formatKRW(sg.value)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-muted-foreground">
+            원본·수익 증여시기가 다르면 각 증여시기 기준으로 별도 신고합니다.
+          </p>
+        </div>
+      )}
 
       {!result.applied && result.exclusionReason && (
         <div

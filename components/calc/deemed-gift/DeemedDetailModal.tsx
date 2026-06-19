@@ -50,16 +50,18 @@ export function DeemedDetailModal({
           className="max-h-[80vh] overflow-y-auto px-4 pb-4 pt-3"
           data-testid="deemed-detail-dialog"
         >
-          {/* 증여일 */}
-          <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 mb-4">
-            <label className="mb-1 block text-sm font-semibold text-slate-700">
-              증여일
-            </label>
-            <DateInput value={form.giftDate} onChange={(v) => set({ giftDate: v })} />
-            <p className="mt-1 text-xs text-muted-foreground">
-              증여시기·적정이자율 연도 기준
-            </p>
-          </div>
+          {/* 증여일 — 신탁이익은 원본·수익 증여시기를 폼 내부에서 분리 입력하므로 공통 증여일 숨김(§33·§25①) */}
+          {form.type !== "trust_benefit" && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 mb-4">
+              <label className="mb-1 block text-sm font-semibold text-slate-700">
+                증여일
+              </label>
+              <DateInput value={form.giftDate} onChange={(v) => set({ giftDate: v })} />
+              <p className="mt-1 text-xs text-muted-foreground">
+                증여시기·적정이자율 연도 기준
+              </p>
+            </div>
+          )}
 
           {/* ② 상세 입력 (유형별) */}
           {form.type && <DeemedInputFields form={form} set={set} />}
