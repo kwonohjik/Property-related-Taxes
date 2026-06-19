@@ -123,7 +123,7 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
             <span className="font-mono text-right text-red-600">{area.nonBusinessArea.toFixed(1)} ㎡</span>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
-            기준면적 초과분(비사업용 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다. (단일 필지 기준면적 초과분 안분 — 목장 §168의10③·기타토지 §168의11①. 연접 다필지(§168의11⑤)·복합용도 건축물(§168의11⑥) 안분은 미지원.)
+            비사업용 면적분(전체의 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다. (기준면적 초과분 — 목장 §168의10③·기타토지 §168의11①, 또는 건축물 바닥면적 외 부속토지 §101①2호나목. 연접 다필지(§168의11⑤)·복합용도 건축물(§168의11⑥) 안분은 미지원.)
           </p>
         </div>
       )}

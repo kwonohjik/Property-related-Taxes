@@ -238,6 +238,7 @@ export type NblRelatedBusinessType =
 export interface OtherLandUsage {
   propertyTaxType: PropertyTaxType;
   hasBuilding: boolean;
+  /** §101①2호나목 — 건축물 바닥면적(㎡, 시설은 수평투영면적). 2% 미달 시 이 면적만 별도합산(사업용) 유지·잔여 부속토지는 종합합산(비사업용). 배율 미적용(나목 carve-out은 바닥면적 자체·연면적 아님). VillaUsage.buildingFloorArea(별개)와 동명이타입 — 무관 */
   buildingFloorArea?: number;
   buildingStandardValue?: number;
   landStandardValue?: number;

@@ -63,6 +63,26 @@ describe("[NBL-CASES] buildNblEngineInput — 지목별 sub-object 엔진 도달
     expect(input!.otherLand?.propertyTaxType).toBe("comprehensive");
   });
 
+  it("[A·N1] other_land — nblOtherBuildingFloorArea → otherLand.buildingFloorArea 도달 (매퍼 결선)", () => {
+    // fix 전: buildOtherLand가 buildingFloorArea 미설정 → undefined
+    const input = buildNblEngineInput({
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1000",
+      acquisitionDate: "2018-01-01",
+      transferDate: "2026-06-01",
+      nblOtherHasBuilding: true,
+      nblOtherPropertyTaxType: "comprehensive",
+      nblOtherBuildingValue: "5000000",
+      nblOtherLandValue: "1000000000",
+      nblOtherBuildingFloorArea: "200",
+    } as never);
+    expect(input).toBeDefined();
+    expect(input!.otherLand?.buildingFloorArea).toBe(200);
+    expect(input!.otherLand?.resortBuildingFloorArea).toBeUndefined(); // resort와 분리
+  });
+
   it("[④] other_land — nblOtherHasBuilding → otherLand.hasBuilding 도달 (매퍼 결선)", () => {
     // fix 전: buildOtherLand가 hasBuilding:false 하드코딩 → 항상 false
     const input = buildNblEngineInput({

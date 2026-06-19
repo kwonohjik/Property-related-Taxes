@@ -192,6 +192,7 @@ export function buildOtherLand(
   return {
     propertyTaxType:                (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"],
     hasBuilding:                    asBool(a.nblOtherHasBuilding),
+    buildingFloorArea:              parseNumber(asString(a.nblOtherBuildingFloorArea)),
     buildingStandardValue:          parseNumber(asString(a.nblOtherBuildingValue)),
     landStandardValue:              parseNumber(asString(a.nblOtherLandValue)),
     isRelatedToResidenceOrBusiness: asBool(a.nblOtherIsRelatedToResidence),

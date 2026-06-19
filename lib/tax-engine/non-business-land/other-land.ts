@@ -378,6 +378,52 @@ export function judgeOtherLand(
     );
   }
 
+  // ── Step 3-2: §101①2호나목 footprint carve-out ──────────────────
+  // 수입금액비율·비종합합산·거주사업관련 모두 미해당이고 2% 미달(bareLand·건물有)인 경우,
+  // 건축물 바닥면적(footprint)분 토지는 별도합산(사업용) 유지하고 잔여 부속토지만 종합합산(비사업용).
+  // (지방세법 시행령 §101①2호나목 — "건축물의 바닥면적을 제외한 부속토지"만 별도합산 제외)
+  // 진입 위치 주의: 수입금액비율(②)·거주사업관련(① 호별) 우선 경로 이후 — 법 근거 없는 불리 적용 방지.
+  if (bareLand && o.hasBuilding && o.buildingFloorArea !== undefined && o.buildingFloorArea > 0) {
+    const fp = o.buildingFloorArea;
+    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+    appliedLaws.push(NBL.OTHER_LAND_FOOTPRINT_CARVEOUT);
+    if (fp >= input.landArea) {
+      // 부속토지 전부가 바닥면적분 → 전량 별도합산(사업용) 유지
+      steps.push({
+        id: "other_footprint_carveout",
+        label: "Step 3-2 §101①2호나목 건축물 바닥면적 별도합산 유지",
+        status: "PASS",
+        detail: `건축물 바닥면적 ${fp}㎡ ≥ 부속토지 ${input.landArea}㎡ → 전량 별도합산(사업용) 유지`,
+        legalBasis: NBL.OTHER_LAND_FOOTPRINT_CARVEOUT,
+      });
+      return buildPass("건축물 바닥면적 별도합산 유지 (§101①2호나목)", steps, appliedLaws, warnings, {
+        r, totalOwnershipDays, revenueTestDetail,
+      });
+    }
+    const areaProportioning = computeAreaProportioning(input.landArea, fp);
+    steps.push({
+      id: "other_footprint_carveout",
+      label: "Step 3-2 §101①2호나목 건축물 바닥면적 별도합산 유지",
+      status: "FAIL",
+      detail: `건축물 바닥면적 ${fp}㎡ 별도합산 유지(사업용)·잔여 ${areaProportioning.nonBusinessArea}㎡ 종합합산(비사업용)`,
+      legalBasis: NBL.OTHER_LAND_FOOTPRINT_CARVEOUT,
+    });
+    return {
+      isBusiness: false,
+      reason: `건축물 바닥면적 ${fp}㎡ 별도합산 유지·잔여 ${areaProportioning.nonBusinessArea}㎡ 비사업용 (§101①2호나목)`,
+      steps,
+      appliedLaws,
+      areaProportioning,
+      totalOwnershipDays,
+      effectiveBusinessDays: r.effectiveBusinessDays,
+      gracePeriodDays: r.gracePeriodDays,
+      businessUseRatio: areaProportioning.nonBusinessRatio,
+      criteria: r.criteria,
+      revenueTestDetail,
+      warnings,
+    };
+  }
+
   steps.push({
     id: "other_residence_business",
     label: "Step 3-1-1 거주·사업관련 토지",
