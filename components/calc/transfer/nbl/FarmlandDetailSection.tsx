@@ -76,6 +76,14 @@ export function FarmlandDetailSection({
 
       <ToggleCard
         tone="sky"
+        title="농지개발사업지구 (1,500㎡ 미만)"
+        description="한국농어촌공사 개발사업지구 내 1,500㎡ 미만 농지 (소득세법 시행령 §168의8③, 농지법 §6②9호)"
+        checked={asset.nblFarmlandIsFarmDevZone}
+        onCheckedChange={(v) => onAssetChange({ nblFarmlandIsFarmDevZone: v })}
+      />
+
+      <ToggleCard
+        tone="sky"
         title="한계농지 정비사업"
         checked={asset.nblFarmlandIsMarginalFarm}
         onCheckedChange={(v) => onAssetChange({ nblFarmlandIsMarginalFarm: v })}

@@ -37,7 +37,7 @@ describe("[NBL-CARD] ⑦ 판정 상세 렌더 (raw→engine→judgment→card)",
     expect(judgment.judgmentReason.length).toBeGreaterThan(0);
   });
 
-  it("F3: 목장 기준면적 초과 → 부분안분 안내문(비사업용 비율·§168의11⑤⑥) 렌더", () => {
+  it("F3: 목장 기준면적 초과 → 부분안분 안내문(비사업용 비율·목장 §168의10③·기타토지 §168의11①) 렌더", () => {
     const input = buildNblEngineInput({
       nblUseDetailedJudgment: true,
       nblLandType: "pasture",
@@ -53,6 +53,8 @@ describe("[NBL-CARD] ⑦ 판정 상세 렌더 (raw→engine→judgment→card)",
     const { container } = render(<NonBusinessLandResultCard judgment={judgment} />);
     expect(judgment.areaProportioning).toBeDefined();
     expect(container.textContent).toMatch(/기준면적 초과분/);
-    expect(container.textContent).toMatch(/§168의11⑤⑥/);
+    expect(container.textContent).toMatch(/§168의10③/);
+    expect(container.textContent).toMatch(/§168의11①/);
+    expect(container.textContent).not.toMatch(/§168의11⑤⑥/);
   });
 });

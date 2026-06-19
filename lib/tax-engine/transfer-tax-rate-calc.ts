@@ -272,7 +272,7 @@ export function calcTax(
   // T-2: 비사업용 토지 누진 + 10%p (§104①8호)
   if (input.isNonBusinessLand && surchargeRates.non_business_land) {
     const additionalRate = surchargeRates.non_business_land.additionalRate;
-    // §168의11⑤⑥ 부분 면적안분 — 중과분(+10%p)만 비사업용 면적비율로 안분(누진 기본세액은 전체 taxBase)
+    // 단일 필지 기준면적 초과분 부분 면적안분(목장 §168의10③·기타토지 §168의11①) — 중과분(+10%p)만 비사업용 면적비율로 안분(누진 기본세액은 전체 taxBase). 연접 다필지(§168의11⑤)·복합용도(§168의11⑥) 미구현
     const ratio = input.nonBusinessLandAreaRatio ?? 1;
     const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
     const surchargedBase = applyRate(taxBase, ratio); // ratio=1이면 surchargedBase=taxBase (회귀)

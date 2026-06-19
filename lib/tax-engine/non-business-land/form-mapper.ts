@@ -138,7 +138,7 @@ export function mapAssetToNblInput(
     farmlandDeeming:         buildFarmlandDeeming(asset),
     forestDetail:            buildForestDetail(asset, landType, parseDate),
     pasture:                 buildPasture(asset, landType, parseDate, parseNumber),
-    villa:                   buildVilla(asset, landType, parseDate),
+    villa:                   buildVilla(asset, landType, parseDate, parseNumber),
     otherLand:               buildOtherLand(asset, landType, parseNumber),
     revenueTest:             buildRevenueTest(asset, landType, parseNumber),
     unconditionalExemption:  buildUnconditionalExemption(asset, parseDate),

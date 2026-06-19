@@ -394,6 +394,11 @@ describe("별장 흐름도 (§168-13, PDF p.1705)", () => {
         ],
         isEupMyeon: true,
         isRuralHousing: true,
+        // §168의13① 3요건 충족 (연면적 150㎡·부속토지 660㎡·기준시가 2억·제외지역 아님)
+        buildingFloorArea: 140,
+        attachedLandArea: 600,
+        combinedStdValue: 180_000_000,
+        isInRestrictedArea: false,
       },
     };
     const r = judgeNonBusinessLand(input);

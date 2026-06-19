@@ -463,6 +463,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   nblFarmlandIsWeekendFarm: boolean;
   nblFarmlandIsConversionApproved: boolean;
   nblFarmlandConversionDate: string;
+  nblFarmlandIsFarmDevZone: boolean;
   nblFarmlandIsMarginalFarm: boolean;
   nblFarmlandIsReclaimedLand: boolean;
   nblFarmlandIsPublicProjectUse: boolean;
@@ -489,6 +490,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   nblVillaUsePeriods: NblBusinessUsePeriod[];
   nblVillaIsEupMyeon: boolean;
   nblVillaIsRuralHousing: boolean;
+  nblVillaBuildingFloorArea: string;
+  nblVillaAttachedLandArea: string;
+  nblVillaCombinedStdValue: string;
+  nblVillaIsInRestrictedArea: boolean;
   nblVillaIsAfter20150101: boolean;
   // nblOther*·nblRevenue* (기타토지 §168의11) 일체는 NblOtherFormSlice로 분리 (calc-wizard-asset-nbl-other.ts).
 

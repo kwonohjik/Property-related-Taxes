@@ -136,6 +136,14 @@ export function OtherLandDetailSection({
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의11①" label="§168의11① 기타토지" />}
       />
 
+      <ToggleCard
+        tone="amber"
+        title="건축물(건물·시설물) 있음"
+        description="건물 없으면 나대지 간주(종합합산). 건물 있으면 시가표준액 2% 비교 후 재산세 유형 적용 — 소득세법 §104의3①4호나목·지방세법 시행령 §101①2호나목"
+        checked={asset.nblOtherHasBuilding}
+        onCheckedChange={(c) => onAssetChange({ nblOtherHasBuilding: c })}
+      />
+
       <FieldCard label="재산세 과세 분류">
         <Select
           value={asset.nblOtherPropertyTaxType ?? ""}
@@ -159,25 +167,29 @@ export function OtherLandDetailSection({
         </Select>
       </FieldCard>
 
-      <FieldCard label="건물가액" unit="원">
-        <CurrencyInput
-          label="건물가액"
-          hideLabel
-          value={asset.nblOtherBuildingValue}
-          onChange={(v) => onAssetChange({ nblOtherBuildingValue: v })}
-          hideUnit
-        />
-      </FieldCard>
+      {asset.nblOtherHasBuilding && (
+        <>
+          <FieldCard label="건물가액" unit="원">
+            <CurrencyInput
+              label="건물가액"
+              hideLabel
+              value={asset.nblOtherBuildingValue}
+              onChange={(v) => onAssetChange({ nblOtherBuildingValue: v })}
+              hideUnit
+            />
+          </FieldCard>
 
-      <FieldCard label="토지가액" unit="원">
-        <CurrencyInput
-          label="토지가액"
-          hideLabel
-          value={asset.nblOtherLandValue}
-          onChange={(v) => onAssetChange({ nblOtherLandValue: v })}
-          hideUnit
-        />
-      </FieldCard>
+          <FieldCard label="토지가액" unit="원">
+            <CurrencyInput
+              label="토지가액"
+              hideLabel
+              value={asset.nblOtherLandValue}
+              onChange={(v) => onAssetChange({ nblOtherLandValue: v })}
+              hideUnit
+            />
+          </FieldCard>
+        </>
+      )}
 
       {/* §168의11① 호별 면적기준 정밀판정 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 dark:bg-sky-950/20 dark:border-sky-800 p-3 space-y-2">

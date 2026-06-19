@@ -218,7 +218,7 @@ export function calculateTransferTax(
       workingInput.nonBusinessLandDetails,
       parsedRates.nonBusinessLandJudgmentRules,
     );
-    // 판정 결과로 isNonBusinessLand override + §168의11⑤⑥ 면적안분 비율(F3) 항상 주입
+    // 판정 결과로 isNonBusinessLand override + 단일 필지 기준면적 초과분 면적안분 비율(목장 §168의10③·기타토지 §168의11①, F3) 항상 주입
     // (입력 플래그=true·판정=true 케이스도 부분안분이 반영되도록 if 밖에서 갱신)
     effectiveInput = {
       ...workingInput,
