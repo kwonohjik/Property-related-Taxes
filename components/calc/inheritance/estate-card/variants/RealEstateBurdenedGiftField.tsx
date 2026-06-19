@@ -30,7 +30,6 @@ export function RealEstateBurdenedGiftField({
         label="수증자 인수 채무액 (§47①)"
         value={value != null ? String(value) : ""}
         onChange={(v) => onChange(parseAmount(v) || undefined)}
-        placeholder="없으면 빈칸"
         hideLabel
         hideUnit
       />

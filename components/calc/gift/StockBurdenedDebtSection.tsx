@@ -80,7 +80,6 @@ export function StockBurdenedDebtSection({
             onChange={(v) =>
               set({ assumedDebtForGift: parseAmount(v) || undefined })
             }
-            placeholder="없으면 빈칸"
             hideLabel
             hideUnit
           />

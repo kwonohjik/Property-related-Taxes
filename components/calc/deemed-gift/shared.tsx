@@ -582,7 +582,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
         </div>
       )}
 
-      <CurrencyInput label="해지·철회 일시금 (선택)" value={form.tbSurrenderValue} onChange={(v) => set({ tbSurrenderValue: v })} hint="평가액보다 크면 일시금으로 평가 (§61① 단서)" placeholder="해지 시 받을 일시금 (없으면 빈칸)" />
+      <CurrencyInput label="해지·철회 일시금 (선택)" value={form.tbSurrenderValue} onChange={(v) => set({ tbSurrenderValue: v })} hint="평가액보다 크면 일시금으로 평가 (§61① 단서)" />
     </div>
   );
 }
@@ -694,7 +694,7 @@ function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         ]}
       />
       <CurrencyInput label="면제·인수·변제 채무액" value={form.debtForgiven} onChange={(v) => set({ debtForgiven: v })} placeholder="채무액 (원)" />
-      <CurrencyInput label="보상(지급)액" value={form.debtCompensation} onChange={(v) => set({ debtCompensation: v })} placeholder="보상액 (없으면 빈칸)" />
+      <CurrencyInput label="보상(지급)액" value={form.debtCompensation} onChange={(v) => set({ debtCompensation: v })} />
     </div>
   );
 }
@@ -719,7 +719,7 @@ function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set: SetFn
       ) : (
         <>
           <CurrencyInput label="차입금" value={form.freeLoanAmount} onChange={(v) => set({ freeLoanAmount: v })} hint="차입이익(차입금×4.6%−이자)이 1천만 이상이면 과세" placeholder="차입금 (원)" />
-          <CurrencyInput label="실제 지급이자" value={form.freeInterest} onChange={(v) => set({ freeInterest: v })} placeholder="실제 지급이자 (없으면 빈칸)" />
+          <CurrencyInput label="실제 지급이자" value={form.freeInterest} onChange={(v) => set({ freeInterest: v })} />
         </>
       )}
       <ToggleCard

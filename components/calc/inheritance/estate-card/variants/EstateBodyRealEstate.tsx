@@ -388,7 +388,6 @@ function ValuationAccordionFields({
           label="시가 (매매·수용·경매가액)"
           value={item.marketValue != null ? String(item.marketValue) : ""}
           onChange={(v) => set({ marketValue: parseAmount(v) || undefined })}
-          placeholder="없으면 빈칸"
           hideLabel
         />
       </ToggleCard>
@@ -407,7 +406,6 @@ function ValuationAccordionFields({
           label="감정평가액"
           value={item.appraisedValue != null ? String(item.appraisedValue) : ""}
           onChange={(v) => set({ appraisedValue: parseAmount(v) || undefined })}
-          placeholder="없으면 빈칸"
           hideLabel
         />
       </ToggleCard>
@@ -441,7 +439,6 @@ function ValuationAccordionFields({
                     set({ similarSalesValue: amount });
                   }
                 }}
-                placeholder="없으면 빈칸"
                 hideLabel
               />
             </div>
@@ -572,7 +569,6 @@ function CollateralLeaseFields({
             label="임대보증금 (세입자 있는 경우)"
             value={item.leaseDeposit != null ? String(item.leaseDeposit) : ""}
             onChange={(v) => set({ leaseDeposit: parseAmount(v) || undefined })}
-            placeholder="없으면 빈칸"
             hideLabel
             hideUnit
           />
@@ -591,7 +587,6 @@ function CollateralLeaseFields({
             label="월 임대료 (원)"
             value={item.monthlyRent != null ? String(item.monthlyRent) : ""}
             onChange={(v) => set({ monthlyRent: parseAmount(v) || undefined })}
-            placeholder="없으면 빈칸"
             hideLabel
             hideUnit
           />
@@ -612,7 +607,6 @@ function CollateralLeaseFields({
           label="저당권 등에 의해 담보된 채권액"
           value={item.mortgageAmount != null ? String(item.mortgageAmount) : ""}
           onChange={(v) => set({ mortgageAmount: parseAmount(v) || undefined })}
-          placeholder="없으면 빈칸"
           hideLabel
           hideUnit
         />
@@ -634,7 +628,6 @@ function CollateralLeaseFields({
           label="신용보증기관 보증액 (원)"
           value={item.creditGuaranteeAmount != null ? String(item.creditGuaranteeAmount) : ""}
           onChange={(v) => set({ creditGuaranteeAmount: parseAmount(v) || undefined })}
-          placeholder="없으면 빈칸"
           hideLabel
           hideUnit
           disabled={(item.mortgageAmount ?? 0) === 0}
