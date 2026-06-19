@@ -28,6 +28,7 @@ import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
 import { resolveValuationMethod, evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
+import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { SpecialTreatmentAssetSelector } from "@/components/calc/gift/SpecialTreatmentAssetSelector";
 import {
   isSpecialTreatmentEligibleCategory,
@@ -154,35 +155,9 @@ export const DONOR_OPTIONS: GiftDonorRelation[] = [
   "other",
 ];
 
-/**
- * G-M3: donor 선택 시 donorRelation 자동 도출 (단일 진실화)
- *
- * 매핑 기준:
- * - father/mother/grandparent → lineal_ascendant_adult (기본)
- *   isMinorDonee=true 이면 lineal_ascendant_minor (2천만원 공제)
- * - spouse → spouse
- * - lineal_descendant → lineal_descendant
- * - sibling/other_relative/other → other_relative
- */
-export function deriveDonorRelation(
-  donor: GiftDonorRelation,
-  isMinorDonee: boolean,
-): DonorRelation {
-  switch (donor) {
-    case "father":
-    case "mother":
-    case "grandparent":
-      return isMinorDonee ? "lineal_ascendant_minor" : "lineal_ascendant_adult";
-    case "spouse":
-      return "spouse";
-    case "lineal_descendant":
-      return "lineal_descendant";
-    case "sibling":
-    case "other_relative":
-    case "other":
-      return "other_relative";
-  }
-}
+// G-M3: donor → donorRelation 자동 도출. 사전증여(GiftRowEditor) prefill 공용을 위해
+// lib 단일 출처로 이동(순환 import 회피). 상단 import로 내부 사용 + 하위호환 재노출.
+export { deriveDonorRelation };
 
 // ============================================================
 // API 에러 상세화 — Zod issues → 한국어 라벨 + 메시지
@@ -313,7 +288,8 @@ export function validateStep(step: number, form: FormState): string | null {
         }
         // 동일 그룹 priorGift이면 §58 한도 산식용으로 ⑤·⑦ 필수
         // (다른 그룹은 자동 무시되므로 검증 제외)
-        if (isSameDonorGroup(p.donor, form.donor)) {
+        // D2: 조특법 특례(§30의5/6) 회차는 §47 합산 제외 → §47 카드 미노출 → ⑤·⑦ 검증 면제
+        if (isSameDonorGroup(p.donor, form.donor) && !p.specialTreatmentType) {
           if (!p.giftTaxBase || p.giftTaxBase <= 0) {
             return `사전증여 ${i + 1}: 동일인 합산 — 그 회차 합산과세표준 ⑤을 입력하세요.`;
           }

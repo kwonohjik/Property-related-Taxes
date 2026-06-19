@@ -16,8 +16,10 @@
 
 import { calcRelationDeduction } from "@/lib/tax-engine/deductions/gift-deductions";
 import { calcInheritanceGiftTax } from "@/lib/tax-engine/inheritance-gift-common";
+import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import type {
   DonorRelation,
+  GiftDonorRelation,
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -94,4 +96,29 @@ export function applyCorporateGiftTaxFallback(gifts: PriorGift[]): PriorGift[] {
         }
       : g,
   );
+}
+
+/**
+ * 증여세 모드 사전증여 ⑤ 합산과세표준·⑦ 산출세액 prefill (store commit — D1).
+ *
+ * 증여자(donor) + 증여재산가액에서 §53 관계를 deriveDonorRelation으로 도출하여
+ * 단순 1건 독립 기준 ⑤·⑦ 추정값을 산정. UI(GiftRowEditor)가 미터치·비특례 시
+ * 실제 store에 set하여 validate(동일그룹 ⑤·⑦ 필수)를 통과시킨다.
+ *
+ * 게이트: donor 미선택 또는 giftAmount ≤ 0 → null (prefill 안 함).
+ * 미성년 직계존속(2천 공제)은 성인 기준 추정 — 사용자 수정으로 커버.
+ * 그 회차가 또 합산됐거나 과거 세율이면 실제 신고서 ⑤·⑦로 수정 필요(추정값 한계).
+ *
+ * @returns { giftTaxBase, computedTax } 또는 null (게이트 미충족)
+ */
+export function computePriorGiftBaseTaxPrefill(
+  donor: GiftDonorRelation | undefined,
+  giftAmount: number,
+): { giftTaxBase: number; computedTax: number } | null {
+  if (!donor || giftAmount <= 0) return null;
+  const relation = deriveDonorRelation(donor, false);
+  return {
+    giftTaxBase: autoComputeGiftTaxBase(giftAmount, relation),
+    computedTax: autoComputePriorGiftTax(giftAmount, relation),
+  };
 }
