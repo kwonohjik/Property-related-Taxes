@@ -283,7 +283,7 @@ export function EstateBodyRealEstate({
         set={set}
         showLeaseDeposit={showLeaseDeposit}
         showCollateralDeductToggle={showCollateralDeductToggle}
-        showCohabitToggle={showLeaseDeposit}
+        showCohabitToggle={showLeaseDeposit && mode === "inheritance"}
         hasCohabitantChild={hasCohabitantChild}
         mode={mode}
       />
