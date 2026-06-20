@@ -35,6 +35,7 @@ import {
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
 } from "@/lib/tax-engine/gift-special-stream";
 import { GiftCreditChecklist } from "@/components/calc/gift/GiftCreditChecklist";
+import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
 
 // ============================================================
 // 폼 상태 타입
@@ -261,6 +262,62 @@ export function validateStep(step: number, form: FormState): string | null {
     if (needsName.some((it) => !it.name.trim())) {
       return "모든 증여재산에 자산명을 입력하세요.";
     }
+    // ─── 부담부증여 양도소득세 함께 계산 — 토글 ON 검증 ───
+    // (설계 §9⑧ — 자동 안분 fallback 금지, 미입력=차단)
+    const BURDENED_GIFT_RE_CATEGORIES = [
+      "real_estate_land",
+      "real_estate_building",
+      "real_estate_apartment",
+    ] as const;
+    const bgItems = form.giftItems.filter(
+      (it) =>
+        it.burdenedGiftTransferTax !== undefined &&
+        BURDENED_GIFT_RE_CATEGORIES.includes(
+          it.category as (typeof BURDENED_GIFT_RE_CATEGORIES)[number],
+        ),
+    );
+    // C-4: 다자산 동시 토글 ON 차단 (MVP 단일 자산 제한)
+    if (bgItems.length > 1) {
+      return "양도소득세 함께 계산은 자산 1건에만 켤 수 있습니다. (복수 토글 ON 비지원)";
+    }
+    if (bgItems.length === 1) {
+      const bgItem = bgItems[0];
+      const bgt = bgItem.burdenedGiftTransferTax!;
+      const itemLabel = bgItem.name.trim() || "부담부증여 자산";
+
+      // 필수: 취득일
+      if (!bgt.acquisitionDate) {
+        return `${itemLabel}: 취득일을 입력하세요. (양도소득세 계산 필수)`;
+      }
+      // 필수: 취득시 기준시가
+      if (!bgt.standardPriceAtAcquisition || bgt.standardPriceAtAcquisition <= 0) {
+        return `${itemLabel}: 취득시 기준시가를 입력하세요. (양도소득세 계산 필수)`;
+      }
+      // housing 전용 — 거주기간 (resolvePropertyType 단일 진실로 dual-truth 방지)
+      const propertyType = resolvePropertyType(bgItem.category, bgt.isHousing);
+      if (propertyType === "housing" && bgt.isOneHousehold) {
+        // 1세대1주택 비과세 판정 시 거주기간 필수 (H11)
+        if (bgt.residencePeriodMonths === undefined || bgt.residencePeriodMonths < 0) {
+          return `${itemLabel}: 1세대1주택 여부가 활성화되어 있으면 거주기간(개월)을 입력하세요.`;
+        }
+      }
+      // C-4: assumedDebtForGift === leaseDeposit + mortgageAmount 일치 강제
+      // (불일치 = 일부 인수 → MVP 비범위 → 차단)
+      const assumedDebt = bgItem.assumedDebtForGift ?? 0;
+      const leaseDeposit = bgItem.leaseDeposit ?? 0;
+      const mortgageAmount = bgItem.mortgageAmount ?? 0;
+      const expectedDebt = leaseDeposit + mortgageAmount;
+      // Critical: 채무 합계 0이면 양도소득세 과세 대상 없음 → 토글 차단
+      // (소득세법 §88: 유상양도 = 채무인수가 있어야 양도가액 발생)
+      if (expectedDebt <= 0) {
+        return `${itemLabel}: 임대보증금 또는 저당권이 있어야 양도소득세가 발생합니다. "양도소득세 함께 계산" 토글을 끄거나 채무 정보를 입력하세요.`;
+      }
+      if (assumedDebt > 0 && assumedDebt !== expectedDebt) {
+        return `${itemLabel}: 채무인수액(${assumedDebt.toLocaleString()}원)이 임대보증금(${leaseDeposit.toLocaleString()}원)과 저당권(${mortgageAmount.toLocaleString()}원) 합계와 다릅니다. 일부 인수는 현재 지원하지 않습니다.`;
+      }
+    }
+    // ─── end 부담부증여 양도소득세 ───
+
     // §47① 채무인수액 > 재산평가액 경고 (차단 아님 — §47① 입증 후 허용 가능, 엔진 음수가드 위임)
     // 부동산(giftItems) + 주식(stockItems) 전수. 주식 평가액은 엔진 단일 진실(evaluateAllEstateItems)
     // — UI 자체 재계산 금지(dual-truth). 입력 미완성 예외는 try/catch → 0(경고 미발생, 엔진 위임).
