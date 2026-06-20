@@ -35,6 +35,10 @@ export function runBurdenedGiftStep(
       buildingStdPriceAtAcquisition: rawInput.burdenedGiftInfo.buildingStdPriceAtAcquisition,
       info: rawInput.burdenedGiftInfo,
       giftDate: rawInput.transferDate, // Phase 2 — 증여일 = 양도일
+      // K-4(실지취득가) 실비: 채무비율 안분 후 estimatedDeduction 슬롯에 반영
+      // (workingInput.capitalExpenditure는 중복 방지 위해 undefined 유지).
+      capitalExpenditure: rawInput.capitalExpenditure,
+      transferExpense: rawInput.transferExpense,
     });
     const land = transferBurdenedGiftBreakdown.perAsset.land;
     const building = transferBurdenedGiftBreakdown.perAsset.building;

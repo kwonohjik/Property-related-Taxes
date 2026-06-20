@@ -20,8 +20,16 @@ export const burdenedGiftInfoSchema = z.object({
   mortgageSetAmount: z.number().int().nonnegative().optional(),
   /** 시가 모드 양도시 평가액 (총액). sangjeungbeop_market 시 필수. */
   marketValueAtTransfer: z.number().int().nonnegative().optional(),
-  /** 시가 모드 취득시 평가액 (총액). sangjeungbeop_market 시 필수. */
+  /** 시가 모드 취득시 평가액 (총액, legacy backward-compat). */
   marketValueAtAcquisition: z.number().int().nonnegative().optional(),
+  /** [신설] 취득가액 산정방식 (K-4 실지·K-5 환산). 시가 모드 시 필수. */
+  acquisitionMethod: z.enum(["actual", "converted"]).optional(),
+  /** [신설] K-4 실지취득가액 — 토지. */
+  actualLandAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** [신설] K-4 실지취득가액 — 건물. */
+  actualBuildingAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** [신설] K-4 실지취득가액 — 단일자산. */
+  actualAcquisitionTotal: z.number().int().nonnegative().optional(),
   /** 양도시 토지 기준시가 (개별공시지가 × 면적). */
   landStdPriceAtTransfer: z.number().int().nonnegative(),
   /** 양도시 건물 기준시가 합계 (층별 합계). */

@@ -108,6 +108,11 @@ export function applyPhase3Normalize(a: Record<string, unknown>): void {
   if (a.bgIsFiledOnTime === undefined) a.bgIsFiledOnTime = true;
   if (!Array.isArray(a.bgPriorGifts)) a.bgPriorGifts = [];
   if (a.bgGiftBuildingStdPriceAtTransfer === undefined) a.bgGiftBuildingStdPriceAtTransfer = "";
+  // K-4/K-5 취득가액 산정방식 (시가 모드) — 신규 4필드 fallback
+  if (a.bgAcquisitionMethod === undefined) a.bgAcquisitionMethod = "";
+  if (a.bgActualAcquisitionLand === undefined) a.bgActualAcquisitionLand = "";
+  if (a.bgActualAcquisitionBuilding === undefined) a.bgActualAcquisitionBuilding = "";
+  if (a.bgActualAcquisitionTotal === undefined) a.bgActualAcquisitionTotal = "";
   // 가업상속공제 §97의2④ — 미사용이면 undefined 유지 (3중 패턴: factory=undefined)
   if (a.familyBusinessInheritance === null) a.familyBusinessInheritance = undefined;
   // ── 매매사례가액(추계) 신규 필드 fallback (소령 §176의2③1호, 2026-06-15) ──

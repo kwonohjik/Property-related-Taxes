@@ -37,6 +37,20 @@ export interface BurdenedGiftFormSlice {
    */
   bgGiftBuildingStdPriceAtTransfer: string;
 
+  // ── 취득가액 산정방식 (K-4/K-5, 시가 모드 전용) ──
+  /**
+   * [신설] 취득가액 산정방식 (시가 모드 `sangjeungbeop_market` 선택 시 필수).
+   * "": 미선택, "actual": 실지취득가액 안분(§159①1호 본문), "converted": 환산취득가액(§176의2②2호).
+   * 기준시가 모드에서는 무시 — §159①1호 A괄호가 취득가 기준시가를 강제(K-1~K-3).
+   */
+  bgAcquisitionMethod: "" | "actual" | "converted";
+  /** [신설] K-4 실지취득가액 — 토지 (general_building·land). 원, string. */
+  bgActualAcquisitionLand: string;
+  /** [신설] K-4 실지취득가액 — 건물 (general_building). 원, string. */
+  bgActualAcquisitionBuilding: string;
+  /** [신설] K-4 실지취득가액 — 단일자산 (housing·building·commercial_building). 원, string. */
+  bgActualAcquisitionTotal: string;
+
   // ── 증여세 통합 입력 (Phase 3) ──
   /** 증여자-수증자 관계 (상증법 §53 증여재산공제). "" = 미선택 (엔진 default: lineal_descendant). */
   bgDonorRelation:

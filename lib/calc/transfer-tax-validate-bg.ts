@@ -56,15 +56,44 @@ export function validateBurdenedGiftAsset(
     return `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.`;
   }
 
-  // (4) 시가 모드 — 양도시·취득시 시가 평가액 필수 + B/C>1 차단
+  // (4) 시가 모드 — 양도시 시가 + 취득가액 산정방식(K-4/K-5) + B/C>1 차단 (§100①·§159①1호 본문)
   if (asset.bgValuationMode === "sangjeungbeop_market") {
     if (!parseAmount(asset.bgMarketValueAtTransfer)) {
       return `${label}: 부담부증여 시가 모드 — 양도시 시가 평가액을 입력하세요.`;
     }
-    if (!parseAmount(asset.bgMarketValueAtAcquisition)) {
-      return `${label}: 부담부증여 시가 모드 — 취득시 시가 평가액을 입력하세요.`;
+    // 취득가액 산정방식별 필수 입력 (H-5: bgMarketValueAtAcquisition 무조건 차단 제거)
+    const acqMethod = asset.bgAcquisitionMethod || "";
+    if (acqMethod === "actual") {
+      // K-4 실지취득가액 안분 — 자산별 실지취득가 필수 (자동 안분 fallback 금지)
+      if (asset.assetKind === "general_building") {
+        if (
+          !parseAmount(asset.bgActualAcquisitionLand) &&
+          !parseAmount(asset.bgActualAcquisitionBuilding)
+        ) {
+          return `${label}: 부담부증여 실지취득가액 안분 — 토지 또는 건물의 실지취득가액을 입력하세요 (§97①1호가목).`;
+        }
+      } else if (asset.assetKind === "land") {
+        if (!parseAmount(asset.bgActualAcquisitionLand)) {
+          return `${label}: 부담부증여 실지취득가액 안분 — 토지 실지취득가액을 입력하세요.`;
+        }
+      } else if (!parseAmount(asset.bgActualAcquisitionTotal)) {
+        return `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`;
+      }
+    } else if (acqMethod === "converted") {
+      // K-5 환산취득가액 — 취득·양도시 기준시가 필수. general_building은 (5-b)에서 별도 검사.
+      if (asset.assetKind !== "general_building" && asset.assetKind !== "land") {
+        if (
+          !parseAmount(asset.standardPriceAtTransfer) ||
+          !parseAmount(asset.standardPriceAtAcq)
+        ) {
+          return `${label}: 부담부증여 환산취득가액 — 양도시·취득시 기준시가를 입력하세요 (소령 §176의2②2호).`;
+        }
+      }
+    } else {
+      // 미지정: 취득가액 산정방식 선택 강제 (시가 모드 입력 미완성 — collectStepIssues 단계 차단)
+      return `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·환산취득가액)을 선택하세요 (소득세법 §100①).`;
     }
-    // 시가 모드는 양도시 시가가 직접 입력값이므로 C = bgMarketValueAtTransfer
+    // B/C > 1 차단 (C = bgMarketValueAtTransfer)
     const giftValuationMarket = parseAmount(asset.bgMarketValueAtTransfer) || 0;
     if (giftValuationMarket > 0 && assumedDebt > giftValuationMarket) {
       return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuationMarket.toLocaleString()}원)을 초과합니다. 부담부증여로는 성립하지 않습니다(상증법 §47③ 검토 필요). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;

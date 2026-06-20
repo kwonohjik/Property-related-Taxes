@@ -321,6 +321,11 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgMarketValueAtTransfer: "",
     bgMarketValueAtAcquisition: "",
     bgGiftBuildingStdPriceAtTransfer: "",
+    // K-4/K-5 취득가액 산정방식 (시가 모드)
+    bgAcquisitionMethod: "",
+    bgActualAcquisitionLand: "",
+    bgActualAcquisitionBuilding: "",
+    bgActualAcquisitionTotal: "",
     // Phase 3: 증여세 통합 입력
     bgDonorRelation: "",
     bgIsMinorDonee: false,

@@ -705,7 +705,14 @@ export async function POST(request: NextRequest) {
       // generalBuildingValuation.bundledAcquisitionPrice를 실제 취득가·필요경비로 사용.
       // 비증축(사례 31·32): 환산취득가는 기준시가 비율로 엔진이 직접 계산하므로 0이어도 무방.
       const bundledAcq = (gbv.bundledAcquisitionPrice as number | undefined) ?? engineInput.acquisitionPrice ?? 0;
-      const bundledExp = (gbv.bundledExpenses as number | undefined) ?? engineInput.expenses ?? 0;
+      // 부담부증여 K-4(실지취득가 안분)는 개산공제 미적용 — 자본적지출+양도비를 actualExpenses로 전달.
+      // (general-building-route-helper가 buildBurdenedGiftBreakdown.capitalExpenditure로 넘겨 채무비율 안분.)
+      const isBurdenedGiftActualGb =
+        data.transferType === "burdened_gift" &&
+        data.burdenedGiftInfo?.acquisitionMethod === "actual";
+      const bundledExp = isBurdenedGiftActualGb
+        ? (engineInput.capitalExpenditure ?? 0) + (engineInput.transferExpense ?? 0)
+        : (gbv.bundledExpenses as number | undefined) ?? engineInput.expenses ?? 0;
       // 부담부증여 §159 — actualPriceMode 분기에서 §159①1호 환산 적용용 정보 전달.
       // BurdenedGiftInfo 타입은 string Date 허용이지만, 엔진 buildBurdenedGiftBreakdown은 필드 그대로 사용.
       const burdenedGiftInfoForGb =

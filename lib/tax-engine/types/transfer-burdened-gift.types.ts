@@ -130,6 +130,26 @@ export interface BurdenedGiftInfo {
    * Excel C37 = D37(=D31) + E37(층별 합계)에 대응.
    */
   giftBuildingStdPriceAtTransfer?: number;
+
+  // === K-4/K-5 취득가액 산정방식 (valuationMode === "sangjeungbeop_market" 시) ===
+  /**
+   * 취득가액 산정방식 (시가 모드 `sangjeungbeop_market` 선택 시 필수).
+   * 증여재산을 상증법 §60② 시가로 평가한 경우, §100①·§159①1호 본문에 따라 취득가액도 실지/환산.
+   *
+   * - `"actual"`: K-4. 증여자 실지취득가액 × 채무비율 (§97①1호가목). 개산공제 미적용 — 실비(자본적지출·양도비) 공제.
+   * - `"converted"`: K-5. 환산취득가액 = 자산별 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가) (§176의2②2호). 개산공제 적용.
+   *
+   * 미지정(undefined) 시: backward-compat — 기존 `marketValueAtAcquisition` 기반 산정.
+   * `sangjeungbeop_standard` 모드에서는 무시 — §159①1호 A괄호가 취득가액 기준시가를 강제(K-1~K-3).
+   */
+  acquisitionMethod?: "actual" | "converted";
+
+  /** K-4: 증여자 실지취득가액 — 토지 (general_building·land). 미입력 시 validation 차단. */
+  actualLandAcquisitionPrice?: number;
+  /** K-4: 증여자 실지취득가액 — 건물 (general_building). */
+  actualBuildingAcquisitionPrice?: number;
+  /** K-4: 증여자 실지취득가액 — 단일자산 (housing·building·commercial_building). 취득시 기준시가 비율로 토지·건물 분배. */
+  actualAcquisitionTotal?: number;
 }
 
 /**
@@ -198,6 +218,14 @@ export interface TransferBurdenedGiftBreakdown {
   taxpayer: "donor";
 
   /**
+   * 실제 적용된 취득가액 산정 경로 (감사·결과카드·테스트 활용).
+   * - "standard_price": K-1~K-3 (기준시가 × 채무비율, §159①1호 A괄호)
+   * - "actual": K-4 (실지취득가액 × 채무비율, §159①1호 본문) — 개산공제 미적용
+   * - "converted": K-5 (환산취득가액, §176의2②2호) — 개산공제 적용
+   */
+  acquisitionMethodUsed: "standard_price" | "actual" | "converted";
+
+  /**
    * Phase 2: 증여세 명세 (calcGiftTax 결과 요약).
    * burdenedGiftInfo.donorRelation 제공 시만 채워짐 — 미제공 시 undefined.
    */
@@ -238,8 +266,14 @@ export interface TransferBurdenedGiftBreakdown {
       transferPrice: number;
       /** 자산별 취득가액 = 취득시 자산 기준시가 × debtRatio (소령 §159 ① 1호, 기준시가 모드). */
       acquisitionPrice: number;
-      /** 자산별 개산공제 = acquisitionPrice × 3% (소령 §163 ⑥). */
+      /** 자산별 개산공제 = acquisitionPrice × 3% (소령 §163 ⑥). K-4(actual)는 안분 실비(자본적지출·양도비). */
       estimatedDeduction: number;
+      /** 취득가액 산정 경로 (결과카드 산식 분기): standard_price·actual·converted. */
+      acquisitionMethod: "standard_price" | "actual" | "converted";
+      /** 환산(K-5) 산식 분모 — 양도시 자산 기준시가. sangjeungbeopValue(시가 안분값)와 구분. */
+      stdPriceAtTransfer: number;
+      /** K-4 입력 실지취득가 (채무비율 적용 전, 산식 표시용). */
+      actualAcquisition?: number;
     };
     building: {
       sangjeungbeopValue: number;
@@ -247,6 +281,9 @@ export interface TransferBurdenedGiftBreakdown {
       transferPrice: number;
       acquisitionPrice: number;
       estimatedDeduction: number;
+      acquisitionMethod: "standard_price" | "actual" | "converted";
+      stdPriceAtTransfer: number;
+      actualAcquisition?: number;
     };
   };
 }
