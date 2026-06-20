@@ -51,5 +51,8 @@ else
   gh pr merge "$BRANCH" --merge --delete-branch
   git checkout master
   git pull --ff-only
-  echo "✅ 머지 + 브랜치 삭제 + master 동기화 완료."
+  # gh --delete-branch는 체크아웃 중이던 로컬 브랜치를 못 지움 → master 이동 후 명시 삭제 + prune
+  git branch -d "$BRANCH" 2>/dev/null || git branch -D "$BRANCH" 2>/dev/null || true
+  git fetch -p --quiet
+  echo "✅ 머지 + 원격/로컬 브랜치 삭제 + master 동기화 완료."
 fi

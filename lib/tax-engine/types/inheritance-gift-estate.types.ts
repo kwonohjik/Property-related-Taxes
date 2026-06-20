@@ -624,4 +624,63 @@ export interface BurdenedGiftTransferTaxInput {
    * true 시 LTHD 배제 + 중과세율 70% 적용.
    */
   isUnregistered?: boolean;
+
+  // ===== K-4/K-5 취득가액 실지·환산 모드 (§159①1호 게이트) =====
+  /**
+   * 평가 방식. 미입력 = 기준시가 모드(K-1~K-3) 유지.
+   * - "sangjeungbeop_standard": 상증법 기준시가 안분 (K-1~K-3)
+   * - "sangjeungbeop_market":   시가 평가 → 실지 또는 환산 (K-4/K-5)
+   */
+  valuationMode?: "sangjeungbeop_standard" | "sangjeungbeop_market";
+
+  /**
+   * 시가 평가 시 분모 C: 양도시 시가 (원).
+   * sangjeungbeop_market 선택 시 필수. K-5 환산취득가 = 취득기준시가 × (채무 / C).
+   */
+  marketValueAtTransfer?: number;
+
+  /**
+   * 취득가액 산정 방식 (sangjeungbeop_market 선택 시 필수).
+   * - "actual":    실지취득가액 안분 (K-4)
+   * - "converted": 환산취득가액 §176의2②2호 (K-5)
+   */
+  acquisitionMethod?: "actual" | "converted";
+
+  /**
+   * 실지 취득가액 합계 (원) — K-4 전용, 건물+토지 통합 입력.
+   * 증여 category에는 general_building 없음 → 분리입력 불요, 합계 단일 필드.
+   * acquisitionMethod==="actual" 시 필수.
+   */
+  actualAcquisitionTotal?: number;
+
+  /**
+   * 타입 호환용: 양도세 엔진 actualLandAcquisitionPrice (증여세 탭에서는 미사용).
+   * buildGiftBurdenedTransferBody에서 건물분과 통합하여 전송.
+   */
+  actualLandAcquisitionPrice?: number;
+
+  /**
+   * 타입 호환용: 양도세 엔진 actualBuildingAcquisitionPrice (증여세 탭에서는 미사용).
+   * buildGiftBurdenedTransferBody에서 actualAcquisitionTotal로 통합 전송.
+   */
+  actualBuildingAcquisitionPrice?: number;
+
+  /**
+   * 자본적 지출 (원) — K-4 실지 모드 시 선택입력. body 최상위 capitalExpenditure.
+   * K-5 환산 모드에서는 §176의2②2호 적용 → 무시됨.
+   */
+  capitalExpenditure?: number;
+
+  /**
+   * 양도비용 (원) — K-4 실지 모드 시 선택입력. body 최상위 transferExpense.
+   * K-5에서는 개산공제 §163⑥(3%)가 대신 적용되므로 무시됨.
+   */
+  transferExpense?: number;
+
+  /**
+   * 토지 양도시 기준시가 (원) — 토지 자산의 K-5 환산 분자.
+   * real_estate_land + sangjeungbeop_market + converted 조합 시 필수.
+   * 주택·건물 자산에서는 standardPrice(양도시 기준시가)가 이미 있으므로 불필요.
+   */
+  landStdPriceAtTransfer?: number;
 }

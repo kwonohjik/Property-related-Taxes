@@ -295,12 +295,44 @@ export function validateStep(step: number, form: FormState): string | null {
       }
       // housing 전용 — 거주기간 (resolvePropertyType 단일 진실로 dual-truth 방지)
       const propertyType = resolvePropertyType(bgItem.category, bgt.isHousing);
-      // 필수: 양도시(증여시) 기준시가 — item.standardPrice (평가 '보충적 평가'와 동일 필드).
-      //   §159 양도차익 안분에 사용. 미입력 시 엔진이 양도차익 0으로 침묵 계산되므로 차단
-      //   (feedback_no_silent_apportion_fallback). land는 단위 체계가 달라(원/㎡ vs 총액) 별도 — 건물·아파트만.
-      if (propertyType !== "land" && (!bgItem.standardPrice || bgItem.standardPrice <= 0)) {
-        return `${itemLabel}: 양도시(증여시) 기준시가를 입력하세요. (양도소득세 §159 안분 필수 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값)`;
+      // ─── 평가방식(valuationMode) 분기 검증 ───
+      const valuationMode = bgt.valuationMode ?? "sangjeungbeop_standard";
+      const isMarketMode = valuationMode === "sangjeungbeop_market";
+
+      if (isMarketMode) {
+        // K-4/K-5 시가 모드: 분모 C (양도시 시가) 필수
+        if (!bgt.marketValueAtTransfer || bgt.marketValueAtTransfer <= 0) {
+          return `${itemLabel}: 시가 평가 시 양도시 시가(분모 C)를 입력하세요. (§159①1호 K-4/K-5 필수)`;
+        }
+        // 취득가액 산정방식 필수
+        if (!bgt.acquisitionMethod) {
+          return `${itemLabel}: 취득가액 산정방식(실지 또는 환산)을 선택하세요.`;
+        }
+        // K-4 실지: 실지취득가액 합계 필수
+        if (bgt.acquisitionMethod === "actual") {
+          if (!bgt.actualAcquisitionTotal || bgt.actualAcquisitionTotal <= 0) {
+            return `${itemLabel}: 실지취득가액 합계를 입력하세요. (K-4 실지 모드 필수)`;
+          }
+        }
+        // K-5 환산 + 토지: 양도시 기준시가 별도 필수
+        if (bgt.acquisitionMethod === "converted" && propertyType === "land") {
+          if (!bgt.landStdPriceAtTransfer || bgt.landStdPriceAtTransfer <= 0) {
+            return `${itemLabel}: 토지 양도시(증여시) 기준시가(원/㎡)를 입력하세요. (K-5 환산 분모 필수)`;
+          }
+        }
+      } else {
+        // 기준시가 모드(K-1~K-3): 양도시 기준시가 필수 — 건물·아파트 및 토지 모두
+        // 토지: standardPrice = 개별공시지가 총액 (LandPriceLookupField with area prop → 총액 저장)
+        // 주택·건물: standardPrice = 공동주택가격·건물기준시가
+        if (!bgItem.standardPrice || bgItem.standardPrice <= 0) {
+          const transferStdLabel =
+            propertyType === "land"
+              ? "양도시(증여시) 개별공시지가 총액"
+              : "양도시(증여시) 기준시가";
+          return `${itemLabel}: ${transferStdLabel}를 입력하세요. (양도소득세 §159 안분 분모 필수)`;
+        }
       }
+
       if (propertyType === "housing" && bgt.isOneHousehold) {
         // 1세대1주택 비과세 판정 시 거주기간 필수 (H11)
         if (bgt.residencePeriodMonths === undefined || bgt.residencePeriodMonths < 0) {
@@ -511,15 +543,6 @@ export function Step0({
             onCheckedChange={(v) => set({ isSubstituteGift: v })}
           />
         )}
-        {(form.donor === "father" || form.donor === "mother") && (
-          <p className="text-[11px] text-violet-600">
-            부·모는 §47② 동일인. 다른 한쪽의 사전증여도 합산 대상입니다.
-          </p>
-        )}
-        {/* 자동 도출된 공제 관계 표시 */}
-        <p className="text-[11px] text-violet-500">
-          공제 관계 자동 설정: <strong>{RELATION_LABELS[form.donorRelation]}</strong>
-        </p>
       </div>
 
       {/* G-M2: isMinorDonee — donor=grandparent 포함 직계존속 전체에서 항상 노출

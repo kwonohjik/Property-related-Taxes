@@ -85,13 +85,24 @@ export function buildGiftBurdenedTransferBody(
   const leaseDeposit = item.leaseDeposit ?? 0;
   const mortgageAmount = item.mortgageAmount ?? 0;
 
+  // ─── K-4/K-5 평가방식 게이트 (§159①1호) ───
+  // valuationMode === "sangjeungbeop_market": 시가 평가 → K-4(실지) 또는 K-5(환산)
+  // 미입력(undefined) 또는 "sangjeungbeop_standard": 기준시가 안분 모드(K-1~K-3)
+  const valuationMode = bgt.valuationMode ?? "sangjeungbeop_standard";
+  const isMarketMode = valuationMode === "sangjeungbeop_market";
+
   // 기준시가 배정: land → landStd, building/housing → buildingStd (§3)
   const stdAtTransfer = item.standardPrice ?? 0;
   const stdAtAcquisition = bgt.standardPriceAtAcquisition;
+
+  // 표준 모드(K-1~K-3): 기준시가 안분용 분자/분모
   const landStdAtTransfer = isLandType ? stdAtTransfer : 0;
   const buildingStdAtTransfer = isLandType ? 0 : stdAtTransfer;
   const landStdAtAcquisition = isLandType ? stdAtAcquisition : 0;
   const buildingStdAtAcquisition = isLandType ? 0 : stdAtAcquisition;
+
+  // 시가 모드(K-4/K-5): 분모 C = marketValueAtTransfer
+  const marketValueAtTransfer = isMarketMode ? (bgt.marketValueAtTransfer ?? 0) : undefined;
 
   // 월세 → 연간 임대료 환산 (C1 핵심: 누락 시 임대평가 1/12 오류)
   const annualRentTotal = (item.monthlyRent ?? 0) * 12;
@@ -122,6 +133,46 @@ export function buildGiftBurdenedTransferBody(
   // ─── C. 기본값 ───
   const isUnregistered = bgt.isUnregistered ?? false;
 
+  // ─── burdenedGiftInfo — 평가방식별 분기 ───
+  // 공통 필드 (K-1~K-3 및 K-4/K-5 모두)
+  const burdenedGiftInfoBase = {
+    valuationMode,
+    lendingDepositTotal: leaseDeposit,
+    mortgageDebtAmount: mortgageAmount,
+    annualRentTotal,
+    mortgageSetAmount,
+    // 증여재산 평가용 건물 기준시가 (§61 층별가감 — building·apt는 동일값, H2)
+    giftBuildingStdPriceAtTransfer: isLandType ? undefined : buildingStdAtTransfer,
+    // 증여세 측 정보 (Phase 3 통합 — apportionment.ts:309 역매핑 처리)
+    donorRelation,
+    isMinorDonee: isMinorDonee || undefined,
+    isGenerationSkip: isGenerationSkip || undefined,
+    priorGiftsWithin10Years,
+  };
+
+  // 시가 모드(K-4/K-5) 추가 필드
+  const burdenedGiftInfoMarket = isMarketMode
+    ? {
+        marketValueAtTransfer,
+        acquisitionMethod: bgt.acquisitionMethod,
+        // K-4: 실지취득가액 (건물+토지 통합, 증여 category에 general_building 없음)
+        actualAcquisitionTotal: bgt.acquisitionMethod === "actual"
+          ? (bgt.actualAcquisitionTotal ?? 0)
+          : undefined,
+        // K-5: 환산 분자/분모용 기준시가 (시장모드 + 토지: 별도 입력값, 주택·건물: standardPrice)
+        landStdPriceAtTransfer: isLandType ? (bgt.landStdPriceAtTransfer ?? 0) : undefined,
+        buildingStdPriceAtTransfer: isLandType ? undefined : buildingStdAtTransfer,
+        landStdPriceAtAcquisition: isLandType ? stdAtAcquisition : undefined,
+        buildingStdPriceAtAcquisition: isLandType ? undefined : buildingStdAtAcquisition,
+      }
+    : {
+        // 기준시가 모드(K-1~K-3): 안분용 기준시가 4종
+        landStdPriceAtTransfer: landStdAtTransfer,
+        buildingStdPriceAtTransfer: buildingStdAtTransfer,
+        landStdPriceAtAcquisition: landStdAtAcquisition,
+        buildingStdPriceAtAcquisition: buildingStdAtAcquisition,
+      };
+
   // ─── body 구성 (⑬ — Zod transfer schema 호환) ───
   const body: Record<string, unknown> = {
     // propertyType / transferType
@@ -139,35 +190,22 @@ export function buildGiftBurdenedTransferBody(
       ? bgt.acquisitionDate.toISOString().slice(0, 10)
       : (bgt.acquisitionDate as unknown as string),
 
-    // 취득가액 = 0 (엔진이 기준시가 안분으로 계산)
+    // 취득가액 = 0 (엔진이 기준시가 안분 또는 K-4 실지/K-5 환산으로 계산)
     acquisitionPrice: 0,
 
-    // 취득방법: estimated(환산)을 override — 엔진 M3: useEstimatedAcquisition:false 강제
-    // (설계 §4-C: "acquisitionMethod 불요 — 엔진 STEP 0.48이 useEstimatedAcquisition:false 강제 override")
+    // 취득방법: 기준시가 모드에서는 엔진 STEP 0.48이 override; K-4/K-5는 acquisitionMethod로 제어
     useEstimatedAcquisition: false,
     acquisitionMethod: "actual" as const,
 
-    // 부담부증여 채무 정보 (⑬ — 기존 BurdenedGiftInfoPayload 형식)
-    burdenedGiftInfo: {
-      valuationMode: "sangjeungbeop_standard" as const,
-      lendingDepositTotal: leaseDeposit,
-      mortgageDebtAmount: mortgageAmount,
-      annualRentTotal,
-      mortgageSetAmount,
-      landStdPriceAtTransfer: landStdAtTransfer,
-      buildingStdPriceAtTransfer: buildingStdAtTransfer,
-      landStdPriceAtAcquisition: landStdAtAcquisition,
-      buildingStdPriceAtAcquisition: buildingStdAtAcquisition,
-      // 증여재산 평가용 건물 기준시가 (§61 층별가감 — building·apt는 동일값, H2)
-      giftBuildingStdPriceAtTransfer: isLandType ? undefined : buildingStdAtTransfer,
-      // 증여세 측 정보 (Phase 3 통합 — apportionment.ts:309 역매핑 처리)
-      donorRelation,
-      isMinorDonee: isMinorDonee || undefined,
-      isGenerationSkip: isGenerationSkip || undefined,
-      priorGiftsWithin10Years,
-    },
+    // 부담부증여 채무 정보 (⑬ — BurdenedGiftInfoPayload)
+    burdenedGiftInfo: { ...burdenedGiftInfoBase, ...burdenedGiftInfoMarket },
 
-    // 필요경비: 0 (부담부증여는 §159 엔진이 안분 후 자동 계산)
+    // 실비 (K-4 실지 모드 시 유효) — Zod strip 방지를 위해 body 최상위에 배치 (⑫⑬ 설계 §4)
+    // K-5 환산 모드에서는 엔진이 §176의2②2호 + §163⑥(3% 개산공제) 적용 → 이 값 무시
+    capitalExpenditure: bgt.capitalExpenditure ?? 0,
+    transferExpense: bgt.transferExpense ?? 0,
+
+    // 필요경비: 0 (부담부증여는 §159 엔진이 안분 후 자동 계산; 실비는 별도 최상위)
     expenses: 0,
 
     // 기본값 (§4-C)

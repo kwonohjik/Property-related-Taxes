@@ -25,6 +25,7 @@ import {
 } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { DateInput } from "@/components/ui/date-input";
+import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
 import {
   Dialog,
   DialogContent,
@@ -57,6 +58,14 @@ function createEmptyBgt(): BurdenedGiftTransferTaxInput {
   return {
     acquisitionDate: undefined as unknown as Date,
     standardPriceAtAcquisition: 0,
+    // K-4/K-5 신규 필드 — 기본 기준시가 모드(K-1~K-3). store default = UI fallback = API/validate 3중 일치.
+    valuationMode: "sangjeungbeop_standard",
+    marketValueAtTransfer: undefined,
+    acquisitionMethod: undefined,
+    actualAcquisitionTotal: undefined,
+    capitalExpenditure: undefined,
+    transferExpense: undefined,
+    landStdPriceAtTransfer: undefined,
   };
 }
 
@@ -68,7 +77,14 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     bgt.isHousing !== undefined ||
     bgt.isOneHousehold !== undefined ||
     !!bgt.residencePeriodMonths ||
-    !!bgt.householdHousingCount
+    !!bgt.householdHousingCount ||
+    bgt.valuationMode === "sangjeungbeop_market" ||
+    !!bgt.marketValueAtTransfer ||
+    bgt.acquisitionMethod !== undefined ||
+    !!bgt.actualAcquisitionTotal ||
+    !!bgt.capitalExpenditure ||
+    !!bgt.transferExpense ||
+    !!bgt.landStdPriceAtTransfer
   );
 }
 
@@ -111,9 +127,6 @@ export function BurdenedGiftTransferSection({
   // housing 여부 파생
   const isHousingType =
     isApartment || (isBuilding && (bgt?.isHousing ?? false));
-
-  // 세대 보유 주택 수
-  const householdCount = bgt?.householdHousingCount ?? 1;
 
   // ─── 핸들러 ────────────────────────────────────────────────────────────────
 
@@ -222,12 +235,42 @@ export function BurdenedGiftTransferSection({
                 onPricePerSqmChange={(v) =>
                   set({ standardPriceAtAcquisition: parseAmount(v) || 0 })
                 }
+                area={item.areaSqm}
                 referenceDate={dateToStr(bgt.acquisitionDate)}
                 jibun={jibun}
                 label={stdPriceLabel}
                 hint={stdPriceHint}
               />
             </div>
+
+            {/* 평가방식·취득가액 산정 (K-4/K-5) */}
+            <ValuationModeSection
+              bgt={bgt}
+              set={set}
+              item={item}
+              isLandType={true}
+              jibun={jibun}
+            />
+
+            {/* 기준시가 모드: 양도시 개별공시지가 (area prop 필수 → 총액으로 저장됨) */}
+            {(bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_standard" && (
+              <div data-testid="bg-transfer-transfer-stdprice-land">
+                <LandPriceLookupField
+                  pricePerSqm={
+                    item.standardPrice && item.standardPrice > 0
+                      ? String(item.standardPrice)
+                      : ""
+                  }
+                  onPricePerSqmChange={(v) =>
+                    onTransferStdPriceChange(parseAmount(v) || undefined)
+                  }
+                  area={item.areaSqm}
+                  jibun={jibun}
+                  label="양도시(증여시) 개별공시지가 (원/㎡)"
+                  hint="증여일(양도일) 기준 공시지가. §159 안분 분모로 사용됩니다."
+                />
+              </div>
+            )}
 
             {/* 비사업용 토지 여부 */}
             <ToggleCard
@@ -287,6 +330,7 @@ export function BurdenedGiftTransferSection({
                 transferStdPriceLabel={transferStdPriceLabel}
                 isLand={false}
                 jibun={jibun}
+                item={item}
               />
             )}
 
@@ -300,6 +344,7 @@ export function BurdenedGiftTransferSection({
                 transferStdPrice={transferStdPrice}
                 onTransferStdPriceChange={onTransferStdPriceChange}
                 transferStdPriceLabel={transferStdPriceLabel}
+                item={item}
               />
             )}
           </div>
@@ -318,6 +363,7 @@ export function BurdenedGiftTransferSection({
             transferStdPriceLabel={transferStdPriceLabel}
             isLand={false}
             jibun={jibun}
+            item={item}
           />
         )}
       </ToggleCard>
@@ -367,10 +413,12 @@ interface HousingFieldSetProps {
   transferStdPriceLabel: string;
   isLand: boolean;
   jibun?: string;
+  item: EstateItem;
 }
 
-function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, jibun }: HousingFieldSetProps) {
+function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, jibun, item }: HousingFieldSetProps) {
   const householdCount = bgt.householdHousingCount ?? 1;
+  const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
   return (
     <div className="space-y-2">
       {/* 취득일 */}
@@ -407,21 +455,26 @@ function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint,
         />
       </FieldCard>
 
-      {/* 양도시(증여시) 기준시가 — item.standardPrice (평가 '보충적 평가'와 동일 값, 양방향 read/write) */}
-      <FieldCard
-        label={transferStdPriceLabel}
-        hint="증여일(양도일) 현재 기준시가. §159 안분에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
-        required
-      >
-        <CurrencyInput
+      {/* 평가방식·취득가액 산정 (K-4/K-5) */}
+      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} jibun={jibun} />
+
+      {/* 기준시가 모드: 양도시 기준시가 (시가 모드에서는 ValuationModeSection 내 시가 입력으로 대체) */}
+      {!isMarketMode && (
+        <FieldCard
           label={transferStdPriceLabel}
-          value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
-          onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
-          hideLabel
-          hideUnit
-          data-testid="bg-transfer-transfer-stdprice"
-        />
-      </FieldCard>
+          hint="증여일(양도일) 현재 기준시가. §159 안분에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
+          required
+        >
+          <CurrencyInput
+            label={transferStdPriceLabel}
+            value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
+            onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
+            hideLabel
+            hideUnit
+            data-testid="bg-transfer-transfer-stdprice"
+          />
+        </FieldCard>
+      )}
 
       {/* 1세대1주택 여부 */}
       <ToggleCard
@@ -562,9 +615,11 @@ interface NonHousingFieldSetProps {
   transferStdPrice: number | undefined;
   onTransferStdPriceChange: (v: number | undefined) => void;
   transferStdPriceLabel: string;
+  item: EstateItem;
 }
 
-function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel }: NonHousingFieldSetProps) {
+function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item }: NonHousingFieldSetProps) {
+  const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
   return (
     <div className="space-y-2">
       <FieldCard label="취득일 (증여자 당초 취득일)" required>
@@ -594,21 +649,28 @@ function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStd
           data-testid="bg-transfer-acq-stdprice"
         />
       </FieldCard>
-      {/* 양도시(증여시) 기준시가 — item.standardPrice (평가 '보충적 평가'와 동일 값, 양방향 read/write) */}
-      <FieldCard
-        label={transferStdPriceLabel}
-        hint="증여일(양도일) 현재 기준시가. §159 안분에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
-        required
-      >
-        <CurrencyInput
+
+      {/* 평가방식·취득가액 산정 (K-4/K-5) */}
+      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} />
+
+      {/* 기준시가 모드: 양도시 기준시가 */}
+      {!isMarketMode && (
+        <FieldCard
           label={transferStdPriceLabel}
-          value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
-          onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
-          hideLabel
-          hideUnit
-          data-testid="bg-transfer-transfer-stdprice"
-        />
-      </FieldCard>
+          hint="증여일(양도일) 현재 기준시가. §159 안분에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
+          required
+        >
+          <CurrencyInput
+            label={transferStdPriceLabel}
+            value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
+            onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
+            hideLabel
+            hideUnit
+            data-testid="bg-transfer-transfer-stdprice"
+          />
+        </FieldCard>
+      )}
     </div>
   );
 }
+
