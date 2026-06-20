@@ -295,6 +295,12 @@ export function validateStep(step: number, form: FormState): string | null {
       }
       // housing 전용 — 거주기간 (resolvePropertyType 단일 진실로 dual-truth 방지)
       const propertyType = resolvePropertyType(bgItem.category, bgt.isHousing);
+      // 필수: 양도시(증여시) 기준시가 — item.standardPrice (평가 '보충적 평가'와 동일 필드).
+      //   §159 양도차익 안분에 사용. 미입력 시 엔진이 양도차익 0으로 침묵 계산되므로 차단
+      //   (feedback_no_silent_apportion_fallback). land는 단위 체계가 달라(원/㎡ vs 총액) 별도 — 건물·아파트만.
+      if (propertyType !== "land" && (!bgItem.standardPrice || bgItem.standardPrice <= 0)) {
+        return `${itemLabel}: 양도시(증여시) 기준시가를 입력하세요. (양도소득세 §159 안분 필수 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값)`;
+      }
       if (propertyType === "housing" && bgt.isOneHousehold) {
         // 1세대1주택 비과세 판정 시 거주기간 필수 (H11)
         if (bgt.residencePeriodMonths === undefined || bgt.residencePeriodMonths < 0) {

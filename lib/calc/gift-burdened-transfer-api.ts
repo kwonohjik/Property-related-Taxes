@@ -179,27 +179,29 @@ export function buildGiftBurdenedTransferBody(
     isNonBusinessLand: isLandType ? (bgt.isNonBusinessLand ?? false) : false,
   };
 
-  // ─── B. housing 전용 필드 ───
-  if (isHousingType) {
-    body.isOneHousehold = bgt.isOneHousehold ?? false;
-    body.householdHousingCount = bgt.householdHousingCount ?? 1;
-    body.isRegulatedArea = bgt.isRegulatedArea ?? false;
-    body.wasRegulatedAtAcquisition = bgt.wasRegulatedAtAcquisition ?? false;
-    body.residencePeriodMonths = bgt.residencePeriodMonths ?? 0;
+  // ─── B. 주택 판정 필드 (Zod propertyBaseShape 필수 — 전 유형 무조건 전송) ───
+  // propertyBaseShape(transfer-tax-schema.ts:123~135)는 단건 공유 base라 building·land
+  // 포함 모든 propertyType에 required. 비주택은 엔진이 propertyType==="housing"에서만
+  // 이 값들을 사용하므로 안전 기본값(false/1/0)이 무해. 일반 양도세 변환
+  // (transfer-tax-api.ts:417-427)과 동일하게 isHousingType 무관하게 전송해야 Zod 통과.
+  body.isOneHousehold = bgt.isOneHousehold ?? false;
+  body.householdHousingCount = bgt.householdHousingCount ?? 1;
+  body.isRegulatedArea = bgt.isRegulatedArea ?? false;
+  body.wasRegulatedAtAcquisition = bgt.wasRegulatedAtAcquisition ?? false;
+  body.residencePeriodMonths = bgt.residencePeriodMonths ?? 0;
 
-    // 일시적 2주택 (H4) — householdHousingCount === 2일 때만 의미 있음
-    if (bgt.temporaryTwoHouse) {
-      const prev = bgt.temporaryTwoHouse.previousAcquisitionDate;
-      const next = bgt.temporaryTwoHouse.newAcquisitionDate;
-      body.temporaryTwoHouse = {
-        previousAcquisitionDate: prev instanceof Date
-          ? prev.toISOString().slice(0, 10)
-          : (prev as unknown as string),
-        newAcquisitionDate: next instanceof Date
-          ? next.toISOString().slice(0, 10)
-          : (next as unknown as string),
-      };
-    }
+  // 일시적 2주택 (H4) — 주택 전용. householdHousingCount === 2일 때만 의미 있음
+  if (isHousingType && bgt.temporaryTwoHouse) {
+    const prev = bgt.temporaryTwoHouse.previousAcquisitionDate;
+    const next = bgt.temporaryTwoHouse.newAcquisitionDate;
+    body.temporaryTwoHouse = {
+      previousAcquisitionDate: prev instanceof Date
+        ? prev.toISOString().slice(0, 10)
+        : (prev as unknown as string),
+      newAcquisitionDate: next instanceof Date
+        ? next.toISOString().slice(0, 10)
+        : (next as unknown as string),
+    };
   }
 
   return body;
