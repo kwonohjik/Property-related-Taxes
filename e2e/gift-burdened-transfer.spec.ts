@@ -366,6 +366,16 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       // CurrencyInput은 blur 시 쉼표 포맷 적용 — raw value와 포맷 중 하나
       await expect(stdPriceInput).toHaveValue(/200/);
 
+      // 양도시(증여시) 개별공시지가 — 표준모드 land §159 분모 (신규 필수 차단 필드)
+      const transferStdLand = dialog.locator(
+        "[data-testid='bg-transfer-transfer-stdprice-land']",
+      );
+      await expect(transferStdLand).toBeVisible();
+      const transferStdLandInput = transferStdLand.getByRole("textbox").first();
+      await transferStdLandInput.fill("250000");
+      await transferStdLandInput.press("Tab");
+      await expect(transferStdLandInput).toHaveValue(/250/);
+
       // 비사업용 토지 ON — ToggleCard switch role
       const nonBizToggle = dialog.getByRole("switch", { name: /비사업용 토지/ });
       await expect(nonBizToggle).toBeVisible();
@@ -544,6 +554,105 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       await expect(
         dialog2.getByText(/양도소득세 동시 계산.*1건만 지원/),
       ).toBeVisible({ timeout: 5_000 });
+    },
+  );
+});
+
+// ─── 취득가액 산정방식 K-4/K-5 (실지·환산 모드) ──────────────────────────────────
+test.describe("부담부증여 양도세 — 취득가액 산정방식 K-4/K-5 (증여세 마법사)", () => {
+  test(
+    "[AM-E2E-1] 시가 평가 선택 → 산정방식(K-4/K-5) 노출·전환 + 조건부 필드 표시/숨김",
+    async ({ page }) => {
+      test.setTimeout(120_000);
+      await setupTransferApiMock(page);
+      await giftStep0(page);
+      const dialog = await addApartmentWithDebt(page);
+      await enableBurdenedTransferToggle(dialog);
+      await fillApartmentTransferInfo(dialog);
+
+      // 기본 = 기준시가 모드(K-1~K-3): 시가(분모 C) 입력·산정방식 라디오 숨김
+      // ★ RadioCardGroup radio의 accessible name = label+description → testId로 셀렉트
+      const marketValueInput = dialog.getByRole("textbox", { name: "양도시 시가" });
+      const actualRadio = dialog.getByTestId("bg-acq-method-actual");
+      await expect(marketValueInput).toBeHidden();
+      await expect(actualRadio).toBeHidden();
+
+      // 평가방식 = 시가 평가(K-4/K-5) 선택 → 시가·산정방식 노출
+      await dialog.getByTestId("bg-valuation-mode-market").check();
+      await expect(marketValueInput).toBeVisible();
+      await fillAndVerify(marketValueInput, "500000000");
+      const convertedRadio = dialog.getByTestId("bg-acq-method-converted");
+      await expect(actualRadio).toBeVisible();
+      await expect(convertedRadio).toBeVisible();
+
+      // 산정방식 = 실지(K-4): 실지취득가액 박스 노출
+      await actualRadio.check();
+      const actualTotalInput = dialog.getByRole("textbox", { name: "실지취득가액 합계" });
+      await expect(actualTotalInput).toBeVisible();
+      await expect(dialog.getByRole("textbox", { name: "자본적 지출" })).toBeVisible();
+
+      // 산정방식 = 환산(K-5): 실지 박스 숨김 + 환산 안내 노출
+      await convertedRadio.check();
+      await expect(actualTotalInput).toBeHidden();
+      await expect(dialog.getByText(/환산취득가 =/)).toBeVisible();
+
+      // 평가방식 = 기준시가로 복귀: 시가·산정방식 숨김 (조건부 회귀)
+      await dialog.getByTestId("bg-valuation-mode-standard").check();
+      await expect(marketValueInput).toBeHidden();
+      await expect(actualRadio).toBeHidden();
+    },
+  );
+
+  test(
+    "[AM-E2E-2] K-4 시가+실지 → 계산 → API body acquisitionMethod·valuationMode·실비 최상위 전달",
+    async ({ page }) => {
+      test.setTimeout(120_000);
+      const mock = await setupTransferApiMock(page);
+      await giftStep0(page);
+      const dialog = await addApartmentWithDebt(page);
+      await enableBurdenedTransferToggle(dialog);
+      await fillApartmentTransferInfo(dialog);
+
+      // 시가 평가 + 실지(K-4) + 자본적지출 (라디오는 testId 셀렉트)
+      await dialog.getByTestId("bg-valuation-mode-market").check();
+      await fillAndVerify(dialog.getByRole("textbox", { name: "양도시 시가" }), "500000000");
+      await dialog.getByTestId("bg-acq-method-actual").check();
+      await fillAndVerify(
+        dialog.getByRole("textbox", { name: "실지취득가액 합계" }),
+        "200000000",
+      );
+      await fillAndVerify(dialog.getByRole("textbox", { name: "자본적 지출" }), "5000000");
+
+      await dialog.getByRole("button", { name: "닫기" }).click();
+      await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+
+      await page.getByRole("button", { name: /^다음/ }).click();
+      await page.getByRole("button", { name: /^다음/ }).click();
+
+      const giftResponse = page.waitForResponse(
+        (r) => r.url().includes("/api/calc/gift") && r.request().method() === "POST",
+        { timeout: 30_000 },
+      );
+      // 부담부증여 양도세는 gift 결과 후 호출됨 → transfer 응답을 명시 대기 (타이밍 보장)
+      const transferResponse = page.waitForResponse(
+        (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+        { timeout: 30_000 },
+      );
+      await page.getByRole("button", { name: /계산하기/ }).click();
+      const gResp = await giftResponse;
+      expect(gResp.ok(), `증여세 API 비정상 ${gResp.status()}`).toBe(true);
+      await transferResponse;
+
+      // API body 검증 — K-4 실지·환산 필드 + 실비 최상위
+      expect(mock.bodies.length, "양도세 API 호출").toBeGreaterThan(0);
+      const body = mock.bodies[0];
+      const bgInfo = body.burdenedGiftInfo as Record<string, unknown>;
+      expect(bgInfo.valuationMode).toBe("sangjeungbeop_market");
+      expect(bgInfo.acquisitionMethod).toBe("actual");
+      expect(bgInfo.actualAcquisitionTotal).toBe(200_000_000);
+      expect(bgInfo.marketValueAtTransfer).toBe(500_000_000);
+      // ★ 실비는 burdenedGiftInfo 밖 body 최상위 (엔진 top-level 소비)
+      expect(body.capitalExpenditure).toBe(5_000_000);
     },
   );
 });

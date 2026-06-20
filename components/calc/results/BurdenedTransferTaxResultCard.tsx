@@ -158,6 +158,42 @@ function SingleTransferResultCard({
             <span className="font-medium">채무액 ÷ 증여재산가액</span>
             으로 안분합니다.
           </p>
+          {/* 취득가액 산정 경로 — 3경로 표시 */}
+          {(() => {
+            const brkd = result.transferBurdenedGiftBreakdown;
+            const method = brkd?.acquisitionMethodUsed;
+            const land = brkd?.perAsset.land;
+            const bldg = brkd?.perAsset.building;
+            const deductionTotal =
+              (land?.estimatedDeduction ?? 0) + (bldg?.estimatedDeduction ?? 0);
+
+            if (method === "actual") {
+              return (
+                <p className="mt-1 text-amber-700 dark:text-amber-300">
+                  ※ 취득가액 산정: 실지취득가액 × 채무 ÷ 시가 (소령 §159①1호 A괄호 — K-4)
+                  {deductionTotal > 0
+                    ? ` / 자본적 지출·양도비 ${formatKRW(deductionTotal)}`
+                    : ""}
+                </p>
+              );
+            }
+            if (method === "converted") {
+              return (
+                <p className="mt-1 text-sky-700 dark:text-sky-300">
+                  ※ 취득가액 산정: 취득시 기준시가 ÷ 양도시 기준시가 × 시가 (소령 §176의2②2호 — K-5)
+                  {deductionTotal > 0
+                    ? ` + 개산공제 ${formatKRW(deductionTotal)} (소법 §163⑥)`
+                    : " + 소법 §163⑥ 개산공제 적용"}
+                </p>
+              );
+            }
+            // standard_price 또는 미확인(구버전 결과)
+            return (
+              <p className="mt-1">
+                취득가액 산정: 취득시 기준시가 × 채무 ÷ 증여재산 기준시가 (소령 §159①1호 — K-1~K-3)
+              </p>
+            );
+          })()}
           <p className="mt-1">
             장기보유특별공제:{" "}
             {result.longTermHoldingDeduction > 0
@@ -170,15 +206,6 @@ function SingleTransferResultCard({
               ? ` − 누진공제 ${formatKRW(result.progressiveDeduction)}`
               : ""}
           </p>
-          {result.usedEstimatedAcquisition && (
-            <p className="text-amber-600 dark:text-amber-400">
-              ※ 취득가액 불분명 — 환산취득가액(취득시 기준시가 × 취득시/양도시 기준시가 비율)
-              {result.estimatedDeduction && result.estimatedDeduction > 0
-                ? ` + 개산공제 ${formatKRW(result.estimatedDeduction)}`
-                : ""}{" "}
-              적용 (소령 §163⑧)
-            </p>
-          )}
           {result.warnings && result.warnings.length > 0 && (
             <div className="mt-1 space-y-0.5">
               {result.warnings.map((w, i) => (
