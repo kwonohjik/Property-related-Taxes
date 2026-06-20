@@ -391,6 +391,23 @@ export interface EstateItem extends EstateLocationFields {
    */
   burdenedGiftDebtConfirmed?: boolean;
 
+  /**
+   * 부담부증여 양도소득세 함께 계산 — 토글 ON 시 존재, OFF 시 undefined (3-state).
+   *
+   * 법령 근거: 소득세법 §88 — 채무인수분은 유상양도로 보아 증여자에게 양도소득세 과세.
+   *           소득세법 시행령 §159 — 상증법 기준시가 안분으로 취득가액·양도가액 산정.
+   *
+   * 적용 대상: mode==="gift" && category∈{real_estate_land·real_estate_building·real_estate_apartment}
+   *            && assumedDebtForGift > 0
+   *
+   * - undefined: 토글 OFF (기본)
+   * - 객체: 토글 ON — 양도세 API 호출에 필요한 추가 입력값
+   *
+   * 증여세 엔진(gift-tax.ts)은 이 필드를 읽지 않는다(양도세 전용).
+   * 계산 결과는 EstateItem에 저장하지 않음(휘발) — 계산 액션 시점 API 호출 후 결과뷰 props로 주입.
+   */
+  burdenedGiftTransferTax?: BurdenedGiftTransferTaxInput;
+
   // 위치 필드(좌표·주소·시·군·구 코드)는 EstateLocationFields mixin — 본 인터페이스에 직접 정의 안 함
 }
 
@@ -533,4 +550,78 @@ export interface DebtItem {
    * 본 플래그는 §22 순금융 계산에만 영향. 채무 본래의 과세가액 차감(§14)은 그대로 작동.
    */
   isFinancialDebtForDeduction?: boolean;
+}
+
+// ============================================================
+// 부담부증여 양도소득세 추가 입력 (EstateItem.burdenedGiftTransferTax)
+// 설계: docs/02-design/features/gift-burdened-transfer-tax.design.md §5
+// ============================================================
+
+/**
+ * 부담부증여 양도소득세 함께 계산 — 토글 ON 시 EstateItem에 포함되는 추가 입력.
+ *
+ * MVP: 단일 자산 · 상증법 기준시가 모드(valuationMode: "sangjeungbeop_standard" 고정).
+ * 취득가액 = 취득시 기준시가 안분(소득세법 시행령 §159①1호).
+ *
+ * 납세의무자: 증여자 (소득세법 §88 — 채무인수분은 유상양도).
+ * 양도일=증여일, 취득일=증여자 당초 취득일.
+ *
+ * 증여세 엔진(gift-tax.ts)은 이 필드를 읽지 않음 — 양도세 API(/api/calc/transfer) 전용.
+ */
+export interface BurdenedGiftTransferTaxInput {
+  // ===== 전 category 필수 =====
+  /** 증여자 당초 취득일 (보유기간·LTHD·단기세율 기준) */
+  acquisitionDate: Date;
+  /**
+   * 취득시 기준시가 — §159①1호 안분 분자.
+   * - real_estate_land: 개별공시지가 총액 (원). UI: LandPriceLookupField 필수.
+   * - real_estate_building / real_estate_apartment: 건물기준시가 / 공동주택공시가격 (원).
+   */
+  standardPriceAtAcquisition: number;
+
+  // ===== real_estate_building 전용 =====
+  /**
+   * 건물의 주택 여부 (real_estate_building만 적용).
+   * - true → propertyType:"housing" (비과세·LTHD·중과 활성)
+   * - false → propertyType:"building"
+   * real_estate_apartment는 항상 housing → 이 필드 불필요.
+   * real_estate_land는 항상 land → 이 필드 불필요.
+   */
+  isHousing?: boolean;
+
+  // ===== housing(isHousing=true or apartment) 전용 =====
+  /** 세대 보유 주택 수 (비과세·중과 판정용, 기본 1). 증여자 기준. */
+  householdHousingCount?: number;
+  /** 1세대1주택 여부 (기본 false — 안전 방향, 미입력 시 비과세 미적용). 증여자 기준. */
+  isOneHousehold?: boolean;
+  /** 양도시(=증여일) 조정대상지역 여부 */
+  isRegulatedArea?: boolean;
+  /** 취득시 조정대상지역 여부 (거주요건 경과규정 판단) */
+  wasRegulatedAtAcquisition?: boolean;
+  /**
+   * 거주기간 (개월, 정수). 1세대1주택 LTHD 표2 적용 기준.
+   * isOneHousehold=true 시 필수(⑧ validation 차단).
+   */
+  residencePeriodMonths?: number;
+  /**
+   * 일시적 2주택 비과세 특례.
+   * householdHousingCount===2 일 때만 UI 노출.
+   * - previousAcquisitionDate: 종전 주택 취득일
+   * - newAcquisitionDate: 신규 주택(=이번 증여 주택) 취득일
+   */
+  temporaryTwoHouse?: {
+    previousAcquisitionDate: Date;
+    newAcquisitionDate: Date;
+  };
+
+  // ===== real_estate_land 전용 =====
+  /** 비사업용 토지 여부 (중과 +10%p 적용) */
+  isNonBusinessLand?: boolean;
+
+  // ===== 공통 선택 =====
+  /**
+   * 미등기 양도 여부 (기본 false).
+   * true 시 LTHD 배제 + 중과세율 70% 적용.
+   */
+  isUnregistered?: boolean;
 }

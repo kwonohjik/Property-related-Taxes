@@ -39,55 +39,91 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 interface FormLike {
   estateItems?: EstateItem[];
   stockItems?: EstateItem[];
+  /** 증여세 폼 — gift-tax-form-shared.tsx FormState */
+  giftItems?: EstateItem[];
   [key: string]: unknown;
 }
 
 /**
- * EstateItem 하나의 unlistedStockValuationV2 Date 필드를 정규화.
- * V2가 없거나 category가 unlisted_stock이 아니면 원본 반환.
+ * EstateItem 하나의 Date 필드를 정규화.
+ * - unlistedStockValuationV2 Date 필드 (V2 비상장주식)
+ * - burdenedGiftTransferTax Date 필드 (부담부증여 양도소득세)
  */
 function normalizeEstateItemDates(item: EstateItem): EstateItem {
+  let result: EstateItem = item;
+
+  // unlistedStockValuationV2 Date 정규화
   const v2 = item.unlistedStockValuationV2;
-  if (!v2) return item;
+  if (v2) {
+    const normalizedFiscalYears = v2.fiscalYears.map((fy) => ({
+      ...fy,
+      fiscalYearEndDate: toOptionalDate(fy.fiscalYearEndDate) ?? fy.fiscalYearEndDate,
+      ...(fy.fiscalYearStartDate !== undefined && fy.fiscalYearStartDate !== null
+        ? { fiscalYearStartDate: toOptionalDate(fy.fiscalYearStartDate) }
+        : {}),
+    })) as typeof v2.fiscalYears;
 
-  const normalizedFiscalYears = v2.fiscalYears.map((fy) => ({
-    ...fy,
-    fiscalYearEndDate: toOptionalDate(fy.fiscalYearEndDate) ?? fy.fiscalYearEndDate,
-    ...(fy.fiscalYearStartDate !== undefined && fy.fiscalYearStartDate !== null
-      ? { fiscalYearStartDate: toOptionalDate(fy.fiscalYearStartDate) }
-      : {}),
-  })) as typeof v2.fiscalYears;
+    const normalizedCapitalChanges = v2.capitalChanges.map((cc) => ({
+      ...cc,
+      changeDate: toOptionalDate(cc.changeDate),
+    }));
 
-  const normalizedCapitalChanges = v2.capitalChanges.map((cc) => ({
-    ...cc,
-    changeDate: toOptionalDate(cc.changeDate),
-  }));
+    result = {
+      ...result,
+      unlistedStockValuationV2: {
+        ...v2,
+        businessStartDate: toOptionalDate(v2.businessStartDate) ?? v2.businessStartDate,
+        evaluationDate: toOptionalDate(v2.evaluationDate) ?? v2.evaluationDate,
+        fiscalYears: normalizedFiscalYears,
+        capitalChanges: normalizedCapitalChanges,
+      },
+    };
+  }
 
-  return {
-    ...item,
-    unlistedStockValuationV2: {
-      ...v2,
-      businessStartDate: toOptionalDate(v2.businessStartDate) ?? v2.businessStartDate,
-      evaluationDate: toOptionalDate(v2.evaluationDate) ?? v2.evaluationDate,
-      fiscalYears: normalizedFiscalYears,
-      capitalChanges: normalizedCapitalChanges,
-    },
-  };
+  // burdenedGiftTransferTax Date 정규화 (부담부증여 양도소득세 함께 계산)
+  // sessionStorage JSON.parse 후 acquisitionDate / temporaryTwoHouse 내 Date 필드가 string으로 도달
+  const bgt = item.burdenedGiftTransferTax;
+  if (bgt) {
+    const normalizedAcq = toOptionalDate(bgt.acquisitionDate);
+    const normalizedBgt = {
+      ...bgt,
+      ...(normalizedAcq !== undefined ? { acquisitionDate: normalizedAcq } : {}),
+      ...(bgt.temporaryTwoHouse !== undefined
+        ? {
+            temporaryTwoHouse: {
+              previousAcquisitionDate:
+                toOptionalDate(bgt.temporaryTwoHouse.previousAcquisitionDate) ??
+                bgt.temporaryTwoHouse.previousAcquisitionDate,
+              newAcquisitionDate:
+                toOptionalDate(bgt.temporaryTwoHouse.newAcquisitionDate) ??
+                bgt.temporaryTwoHouse.newAcquisitionDate,
+            },
+          }
+        : {}),
+    };
+    result = { ...result, burdenedGiftTransferTax: normalizedBgt };
+  }
+
+  return result;
 }
 
 /**
- * sessionStorage 복원 직후 호출. 폼의 estateItems·stockItems 내
- * V2 비상장주식 Date 필드를 Date 객체로 복원.
+ * sessionStorage 복원 직후 호출. 폼의 estateItems·stockItems·giftItems 내
+ * Date 필드를 Date 객체로 복원.
  *
- * 다른 FormState 필드(deathDate 등)는 string 타입으로 정의되어 있으므로 변환 불필요.
+ * - V2 비상장주식: unlistedStockValuationV2 Date 필드
+ * - 부담부증여 양도소득세: burdenedGiftTransferTax.acquisitionDate / temporaryTwoHouse
+ * - 다른 FormState 필드(deathDate 등)는 string 타입으로 정의되어 있으므로 변환 불필요.
  */
 export function normalizeRestoredFormDates<T extends FormLike>(parsed: T): T {
   const estateItems = parsed.estateItems?.map(normalizeEstateItemDates);
   const stockItems = parsed.stockItems?.map(normalizeEstateItemDates);
+  const giftItems = parsed.giftItems?.map(normalizeEstateItemDates);
 
   return {
     ...parsed,
     ...(estateItems !== undefined ? { estateItems } : {}),
     ...(stockItems !== undefined ? { stockItems } : {}),
+    ...(giftItems !== undefined ? { giftItems } : {}),
   };
 }

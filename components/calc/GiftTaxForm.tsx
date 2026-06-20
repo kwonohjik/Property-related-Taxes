@@ -25,6 +25,8 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import { buildGiftTaxInput } from "@/lib/calc/gift-api";
+import { callGiftBurdenedTransferAPI } from "@/lib/calc/gift-burdened-transfer-api";
+import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import {
   type FormState,
   INITIAL_FORM,
@@ -47,6 +49,8 @@ export function GiftTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GiftTaxResult | null>(null);
+  const [transferTaxResults, setTransferTaxResults] = useState<TransferTaxResult[]>([]);
+  const [transferTaxError, setTransferTaxError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
 
   const { activeClientId } = useProfessionalStore();
@@ -133,6 +137,36 @@ export function GiftTaxForm() {
         return;
       }
       setResult(data.result);
+
+      // 부담부증여 양도소득세 직렬 계산 — burdenedGiftTransferTax ON 자산만 순서대로 호출
+      const burdenedItems = form.giftItems.filter(
+        (it) => it.burdenedGiftTransferTax !== undefined,
+      );
+      if (burdenedItems.length > 0) {
+        const txResults: TransferTaxResult[] = [];
+        const txErrors: string[] = [];
+        for (const item of burdenedItems) {
+          try {
+            const txResult = await callGiftBurdenedTransferAPI(item, form);
+            if (txResult) txResults.push(txResult);
+          } catch (e) {
+            // 단건 실패 — 증여세 결과는 이미 표시, 경고만 기록
+            const msg = e instanceof Error ? e.message : String(e);
+            txErrors.push(`${item.name.trim() || "자산"}: ${msg}`);
+          }
+        }
+        if (txErrors.length > 0) {
+          setTransferTaxError(
+            `부담부증여 양도소득세 계산에 실패했습니다. 취득일·기준시가를 확인하세요.\n${txErrors.join("\n")}`
+          );
+        } else {
+          setTransferTaxError(null);
+        }
+        setTransferTaxResults(txResults);
+      } else {
+        setTransferTaxResults([]);
+      }
+
       setStep(STEPS.length);
     } catch {
       setError("네트워크 오류가 발생했습니다. 잠시 후 다시 시도하세요.");
@@ -144,6 +178,8 @@ export function GiftTaxForm() {
   const handleReset = () => {
     setForm(INITIAL_FORM);
     setResult(null);
+    setTransferTaxResults([]);
+    setTransferTaxError(null);
     setStep(0);
     setError(null);
   };
@@ -185,6 +221,8 @@ export function GiftTaxForm() {
         savedId={autoSave.savedId ?? undefined}
         estateItems={[...form.giftItems, ...form.stockItems]}
         giftDate={form.giftDate}
+        transferTaxResults={transferTaxResults}
+        transferTaxError={transferTaxError ?? undefined}
         priorGifts={form.priorGifts.map((pg) => ({
           giftDate: pg.giftDate,
           giftAmount: pg.giftAmount,

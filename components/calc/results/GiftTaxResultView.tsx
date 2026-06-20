@@ -8,6 +8,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
+import { BurdenedTransferTaxResultCard } from "@/components/calc/results/BurdenedTransferTaxResultCard";
 import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -178,6 +180,10 @@ interface Props {
   /** 분납 입력 (Step3, §70②) — 결정세액 미영향 투영 */
   splitPaymentEnabled?: boolean;
   splitPaymentAmount?: string;
+  /** 부담부증여 양도소득세 결과 목록 — burdenedGiftTransferTax ON 자산 순서대로 */
+  transferTaxResults?: TransferTaxResult[];
+  /** 부담부증여 양도소득세 계산 실패 시 경고 메시지 (증여세 결과 표시는 계속) */
+  transferTaxError?: string;
 }
 
 export function GiftTaxResultView({
@@ -194,6 +200,8 @@ export function GiftTaxResultView({
   savedId,
   splitPaymentEnabled = false,
   splitPaymentAmount = "",
+  transferTaxResults = [],
+  transferTaxError,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -279,8 +287,9 @@ export function GiftTaxResultView({
       s.add("installment");
     if (isInstallmentSplitEligible(result.finalTax)) s.add("split-payment");
     if (result.warnings.length > 0) s.add("warnings");
+    if (transferTaxResults.length > 0) s.add("burdened-transfer-tax");
     return s;
-  }, [result, estateItems, priorGifts]);
+  }, [result, estateItems, priorGifts, transferTaxResults]);
 
   // 분납기한 (§70② — 증여 신고기한 §68① 증여일+3개월 + 2개월). giftDate 없으면 undefined.
   const giftDueDates = useMemo(() => {
@@ -553,6 +562,18 @@ export function GiftTaxResultView({
             </div>
           )}
         </div>
+      )}
+
+      {/* 부담부증여 양도소득세 (소득세법 §88 · 소령 §159) */}
+      {transferTaxError && (
+        <div className="border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-line">
+          ⚠ {transferTaxError}
+        </div>
+      )}
+      {transferTaxResults.length > 0 && (
+        <PrintSection id="burdened-transfer-tax" selectedIds={selectedPrintIds}>
+          <BurdenedTransferTaxResultCard transferTaxResults={transferTaxResults} />
+        </PrintSection>
       )}
 
       {/* §57① 단서 적용 — 세대생략 할증 배제 안내 (donorGroup=B이지만 단서로 할증 0인 경우)
