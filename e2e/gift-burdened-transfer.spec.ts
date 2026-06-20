@@ -171,6 +171,11 @@ async function fillApartmentTransferInfo(
   await expect(stdPriceInput).toBeVisible();
   await fillAndVerify(stdPriceInput, "300000000");
 
+  // 양도시 공동주택공시가격 — item.standardPrice (§159 안분 필수, 신규 필드)
+  const transferStdPriceInput = dialog.getByRole("textbox", { name: "양도시 공동주택공시가격 (원)" });
+  await expect(transferStdPriceInput).toBeVisible();
+  await fillAndVerify(transferStdPriceInput, "350000000");
+
   // 1세대1주택 ON — ToggleCard switch
   const oneHouseToggle = dialog.getByRole("switch", { name: /1세대 1주택/ });
   await expect(oneHouseToggle).toBeVisible();
@@ -460,6 +465,11 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       const stdPriceInput = dialog.getByRole("textbox", { name: "취득시 건물 기준시가 (원)" });
       await expect(stdPriceInput).toBeVisible();
       await fillAndVerify(stdPriceInput, "180000000");
+
+      // 양도시 건물 기준시가 — item.standardPrice (§159 안분 필수, 신규 필드)
+      const transferStdPriceInput = dialog.getByRole("textbox", { name: "양도시 건물 기준시가 (원)" });
+      await expect(transferStdPriceInput).toBeVisible();
+      await fillAndVerify(transferStdPriceInput, "500000000");
 
       // 모달 닫기
       await dialog.getByRole("button", { name: "닫기" }).click();

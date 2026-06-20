@@ -242,10 +242,15 @@ describe("B-api-3: 건물 비주택(isHousing=false) → building 매핑", () =>
     expect(bgi.landStdPriceAtTransfer).toBe(0);
   });
 
-  it("housing 전용 필드가 body에 없음 (isOneHousehold, residencePeriodMonths 등)", () => {
-    expect(body.isOneHousehold).toBeUndefined();
-    expect(body.residencePeriodMonths).toBeUndefined();
-    expect(body.isRegulatedArea).toBeUndefined();
+  // 회귀: 비주택(building)도 propertyBaseShape(transfer-tax-schema.ts:123~135) 필수
+  // 5필드를 안전 기본값으로 전송해야 Zod 통과. 이전엔 if(isHousingType) 게이트로
+  // 누락되어 상업용 건물 부담부증여 양도세 API 400(received undefined) 발생.
+  it("주택 판정 필드 안전 기본값 전송 (Zod 필수 — 비주택 400 회귀)", () => {
+    expect(body.isOneHousehold).toBe(false);
+    expect(body.householdHousingCount).toBe(1);
+    expect(body.isRegulatedArea).toBe(false);
+    expect(body.wasRegulatedAtAcquisition).toBe(false);
+    expect(body.residencePeriodMonths).toBe(0);
   });
 });
 
