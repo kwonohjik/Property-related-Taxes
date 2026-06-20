@@ -23,7 +23,11 @@ import {
   ANNUAL_RENT_CAPITALIZATION_RATE_AFTER_2009_04_23,
   REGISTERED_ESTIMATED_DEDUCTION_RATE,
 } from "./legal-codes/burdened-gift";
-import { safeMultiplyThenDivide, applyRate } from "./tax-utils";
+import {
+  safeMultiplyThenDivide,
+  applyRate,
+  calculateEstimatedAcquisitionPrice,
+} from "./tax-utils";
 import { calcGiftTax } from "./gift-tax";
 import type {
   BurdenedGiftInfo,
@@ -184,6 +188,10 @@ export function buildBurdenedGiftBreakdown(params: {
   info: BurdenedGiftInfo;
   /** 증여일(= 양도일). Phase 2 증여세 호출용. 미제공 시 증여세 계산 생략. */
   giftDate?: Date;
+  /** K-4 실지취득가 경로 필요경비 — 자본적지출(§163③). 채무비율 안분 후 estimatedDeduction 슬롯에 반영. */
+  capitalExpenditure?: number;
+  /** K-4 실지취득가 경로 필요경비 — 양도비(§163⑤). */
+  transferExpense?: number;
 }): TransferBurdenedGiftBreakdown {
   const {
     landStdPriceAtTransfer,
@@ -267,23 +275,53 @@ export function buildBurdenedGiftBreakdown(params: {
     }
   }
 
-  // STEP 4: 자산별 취득가액 안분 (소령 §159 ① 1호 A 괄호 — 기준시가 모드에서는 취득가도 기준시가)
-  //   분모는 증여재산 평가액(giftValuation.max) — 양도세 분모와 분리 (Excel 정합).
-  //   시가 모드에서는 marketValueAtAcquisition 전체를 자산 비율로 분배 후 채무비율 적용.
+  // STEP 4: 자산별 취득가액 산정 (소령 §159 ① 1호) — 4-way 분기 (§100① 일치 게이트 내재화)
+  //   K-1~K-3 (standard):        취득시 기준시가 × 채무비율 (§159①1호 A괄호 강제). 분모 giftValuation.max.
+  //   K-4 (market+actual):       실지취득가액 × 채무비율 (§159①1호 본문). 개산공제 미적용.
+  //   K-5 (market+converted):    환산취득가액 = 자산별 양도가액 × (취득기준시가 ÷ 양도기준시가) (§176의2②2호). 개산공제 적용.
+  //   market+미지정 (legacy):    backward-compat — marketValueAtAcquisition 기반 (개산공제 적용).
   let landAcquisitionPrice: number;
   let buildingAcquisitionPrice: number;
+  let acquisitionMethodUsed: TransferBurdenedGiftBreakdown["acquisitionMethodUsed"];
+  let landActualAcquisition: number | undefined;
+  let buildingActualAcquisition: number | undefined;
+
   if (info.valuationMode === "sangjeungbeop_standard") {
-    landAcquisitionPrice = apportionAcquisitionPrice(
-      landStdPriceAtAcquisition,
-      assumedDebtAmount,
-      giftValuation.max,
-    );
-    buildingAcquisitionPrice = apportionAcquisitionPrice(
-      buildingStdPriceAtAcquisition,
-      assumedDebtAmount,
-      giftValuation.max,
-    );
+    // K-1~K-3: 취득시 기준시가 × 채무비율 (A괄호). 분모 giftValuation.max (Excel 정합).
+    acquisitionMethodUsed = "standard_price";
+    landAcquisitionPrice = apportionAcquisitionPrice(landStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
+    buildingAcquisitionPrice = apportionAcquisitionPrice(buildingStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
+  } else if (info.acquisitionMethod === "actual") {
+    // K-4: 실지취득가액 × 채무비율 (§159①1호 본문).
+    //   자산별 실지취득가 — 토지·건물 분리 입력 우선, 없으면 단일 total을 취득기준시가 비율로 분배.
+    acquisitionMethodUsed = "actual";
+    if (info.actualLandAcquisitionPrice !== undefined || info.actualBuildingAcquisitionPrice !== undefined) {
+      landActualAcquisition = info.actualLandAcquisitionPrice ?? 0;
+      buildingActualAcquisition = info.actualBuildingAcquisitionPrice ?? 0;
+    } else {
+      const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
+      const total = info.actualAcquisitionTotal ?? 0;
+      landActualAcquisition = totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(total, landStdPriceAtAcquisition, totalAcqStd);
+      buildingActualAcquisition = total - landActualAcquisition;
+    }
+    landAcquisitionPrice = apportionAcquisitionPrice(landActualAcquisition, assumedDebtAmount, giftValuation.max);
+    buildingAcquisitionPrice = apportionAcquisitionPrice(buildingActualAcquisition, assumedDebtAmount, giftValuation.max);
+  } else if (info.acquisitionMethod === "converted") {
+    // K-5: 환산취득가액 (§176의2②2호) = 자산별 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가).
+    //   부담부증여 맥락: 자산별 양도가액(채무액 안분분)을 "양도당시 실지거래가액"으로 본다.
+    //   자산별 독립 환산이라 합산이 처분청 일괄총액과 ±1원 차이 가능(§176의2②2호 자산별 적용, 법적 허용).
+    acquisitionMethodUsed = "converted";
+    landAcquisitionPrice =
+      landStdPriceAtTransfer === 0
+        ? 0
+        : calculateEstimatedAcquisitionPrice(landTransferPrice, landStdPriceAtAcquisition, landStdPriceAtTransfer);
+    buildingAcquisitionPrice =
+      buildingStdPriceAtTransfer === 0
+        ? 0
+        : calculateEstimatedAcquisitionPrice(buildingTransferPrice, buildingStdPriceAtAcquisition, buildingStdPriceAtTransfer);
   } else {
+    // legacy (market + 미지정): 기존 marketValueAtAcquisition 기반 (개산공제 적용 — STEP 5 else).
+    acquisitionMethodUsed = "standard_price";
     const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
     const marketAcqTotal = info.marketValueAtAcquisition ?? 0;
     const landAcqMarket =
@@ -295,9 +333,22 @@ export function buildBurdenedGiftBreakdown(params: {
     buildingAcquisitionPrice = apportionTransferPrice(buildingAcqMarket, assumedDebtAmount, giftValuation.max);
   }
 
-  // STEP 5: 자산별 개산공제 (안분된 취득가액 × 3%)
-  const landEstimatedDeduction = computeEstimatedDeduction(landAcquisitionPrice);
-  const buildingEstimatedDeduction = computeEstimatedDeduction(buildingAcquisitionPrice);
+  // STEP 5: 자산별 필요경비 슬롯 (estimatedDeduction)
+  //   K-1~K-3·K-5·legacy: 개산공제 (취득가액 × 3%, §163⑥).
+  //   K-4 (실지취득가): 개산공제 미적용 — 실비(자본적지출+양도비)를 채무비율 안분 후 취득기준시가 비율로 자산 분배.
+  let landEstimatedDeduction: number;
+  let buildingEstimatedDeduction: number;
+  if (acquisitionMethodUsed === "actual") {
+    const totalNecessaryExpense = (params.capitalExpenditure ?? 0) + (params.transferExpense ?? 0);
+    const necessaryExpenseDebt = apportionAcquisitionPrice(totalNecessaryExpense, assumedDebtAmount, giftValuation.max);
+    const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
+    landEstimatedDeduction =
+      totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(necessaryExpenseDebt, landStdPriceAtAcquisition, totalAcqStd);
+    buildingEstimatedDeduction = necessaryExpenseDebt - landEstimatedDeduction;
+  } else {
+    landEstimatedDeduction = computeEstimatedDeduction(landAcquisitionPrice);
+    buildingEstimatedDeduction = computeEstimatedDeduction(buildingAcquisitionPrice);
+  }
 
   // STEP 6: 무상이전분 — 증여재산 평가액(giftValuation.max) − 채무액 (상증법 §47③)
   const gratuitousPortion = giftValuation.max - assumedDebtAmount;
@@ -387,6 +438,7 @@ export function buildBurdenedGiftBreakdown(params: {
     debtRatio,
     gratuitousPortion,
     taxpayer: "donor",
+    acquisitionMethodUsed,
     giftTax: giftTaxSummary,
     perAsset: {
       land: {
@@ -395,6 +447,9 @@ export function buildBurdenedGiftBreakdown(params: {
         transferPrice: landTransferPrice,
         acquisitionPrice: landAcquisitionPrice,
         estimatedDeduction: landEstimatedDeduction,
+        acquisitionMethod: acquisitionMethodUsed,
+        stdPriceAtTransfer: landStdPriceAtTransfer,
+        actualAcquisition: landActualAcquisition,
       },
       building: {
         sangjeungbeopValue: buildingSangjeungbeopValue,
@@ -402,6 +457,9 @@ export function buildBurdenedGiftBreakdown(params: {
         transferPrice: buildingTransferPrice,
         acquisitionPrice: buildingAcquisitionPrice,
         estimatedDeduction: buildingEstimatedDeduction,
+        acquisitionMethod: acquisitionMethodUsed,
+        stdPriceAtTransfer: buildingStdPriceAtTransfer,
+        actualAcquisition: buildingActualAcquisition,
       },
     },
   };

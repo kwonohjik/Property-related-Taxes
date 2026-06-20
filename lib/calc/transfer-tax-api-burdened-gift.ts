@@ -19,6 +19,14 @@ export interface BurdenedGiftInfoPayload {
   mortgageSetAmount?: number;
   marketValueAtTransfer?: number;
   marketValueAtAcquisition?: number;
+  /** [신설] 취득가액 산정방식 (K-4/K-5, 시가 모드). */
+  acquisitionMethod?: "actual" | "converted";
+  /** [신설] K-4 실지취득가액 — 토지. */
+  actualLandAcquisitionPrice?: number;
+  /** [신설] K-4 실지취득가액 — 건물. */
+  actualBuildingAcquisitionPrice?: number;
+  /** [신설] K-4 실지취득가액 — 단일자산. */
+  actualAcquisitionTotal?: number;
   /** 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용). */
   giftBuildingStdPriceAtTransfer?: number;
   // Phase 3: 증여세 통합 입력
@@ -73,6 +81,20 @@ export function buildBurdenedGiftInfo(primary: AssetForm): BurdenedGiftInfoPaylo
     marketValueAtAcquisition: primary.bgMarketValueAtAcquisition
       ? parseAmount(primary.bgMarketValueAtAcquisition)
       : undefined,
+    // K-4/K-5 취득가액 산정방식 (시가 모드). 미선택 시 undefined → 엔진 backward-compat.
+    acquisitionMethod: primary.bgAcquisitionMethod || undefined,
+    actualLandAcquisitionPrice:
+      primary.bgAcquisitionMethod === "actual" && primary.bgActualAcquisitionLand
+        ? parseAmount(primary.bgActualAcquisitionLand) || undefined
+        : undefined,
+    actualBuildingAcquisitionPrice:
+      primary.bgAcquisitionMethod === "actual" && primary.bgActualAcquisitionBuilding
+        ? parseAmount(primary.bgActualAcquisitionBuilding) || undefined
+        : undefined,
+    actualAcquisitionTotal:
+      primary.bgAcquisitionMethod === "actual" && primary.bgActualAcquisitionTotal
+        ? parseAmount(primary.bgActualAcquisitionTotal) || undefined
+        : undefined,
     // 증여재산 평가용 건물 기준시가 (층별 가감율 적용 — 미입력 시 양도세용 값 fallback)
     giftBuildingStdPriceAtTransfer: primary.bgGiftBuildingStdPriceAtTransfer
       ? parseAmount(primary.bgGiftBuildingStdPriceAtTransfer)

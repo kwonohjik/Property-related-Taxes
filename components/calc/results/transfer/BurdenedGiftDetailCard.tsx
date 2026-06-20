@@ -18,6 +18,12 @@ const SELECTED_LABEL: Record<string, string> = {
   rental: "임대평가 (상증법 §61⑤ · 시행령 §50⑦)",
 };
 
+const ACQ_METHOD_LABEL: Record<string, string> = {
+  standard_price: "기준시가 안분 · 소령 §159①1호",
+  actual: "실지취득가액 안분 · §97①1호가목",
+  converted: "환산취득가액 · 시행령 §176의2②2호",
+};
+
 const RELATION_LABEL: Record<string, string> = {
   spouse: "배우자",
   lineal_descendant: "직계비속(성년 수증자)",
@@ -120,6 +126,83 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
             <td className="py-1 pr-2">채무비율 = 채무액 ÷ 증여재산 평가액</td>
             <td className="text-right font-mono">{(bg.debtRatio * 100).toFixed(4)}%</td>
           </tr>
+          {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}
+          <tr className="border-t border-fuchsia-300">
+            <td colSpan={2} className="py-1 pr-2 pt-2 text-[11px] font-semibold text-fuchsia-700">
+              자산별 취득가액 ({ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed})
+            </td>
+          </tr>
+          {bg.acquisitionMethodUsed === "converted" ? (
+            <>
+              {bg.perAsset.land.acquisitionPrice > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    토지 환산취득가 = 양도가액 {fmt(bg.perAsset.land.transferPrice)} × 취득기준시가{" "}
+                    {fmt(bg.perAsset.land.stdPriceAtAcquisition)} ÷ 양도기준시가{" "}
+                    {fmt(bg.perAsset.land.stdPriceAtTransfer)}
+                  </td>
+                  <td className="text-right font-mono">{fmt(bg.perAsset.land.acquisitionPrice)}원</td>
+                </tr>
+              )}
+              {bg.perAsset.building.acquisitionPrice > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    건물 환산취득가 = 양도가액 {fmt(bg.perAsset.building.transferPrice)} × 취득기준시가{" "}
+                    {fmt(bg.perAsset.building.stdPriceAtAcquisition)} ÷ 양도기준시가{" "}
+                    {fmt(bg.perAsset.building.stdPriceAtTransfer)}
+                  </td>
+                  <td className="text-right font-mono">{fmt(bg.perAsset.building.acquisitionPrice)}원</td>
+                </tr>
+              )}
+            </>
+          ) : bg.acquisitionMethodUsed === "actual" ? (
+            <>
+              {bg.perAsset.land.acquisitionPrice > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    토지 취득가 = 실지취득가 {fmt(bg.perAsset.land.actualAcquisition ?? 0)} × 채무비율{" "}
+                    {(bg.debtRatio * 100).toFixed(4)}%
+                  </td>
+                  <td className="text-right font-mono">{fmt(bg.perAsset.land.acquisitionPrice)}원</td>
+                </tr>
+              )}
+              {bg.perAsset.building.acquisitionPrice > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    건물 취득가 = 실지취득가 {fmt(bg.perAsset.building.actualAcquisition ?? 0)} × 채무비율{" "}
+                    {(bg.debtRatio * 100).toFixed(4)}%
+                  </td>
+                  <td className="text-right font-mono">{fmt(bg.perAsset.building.acquisitionPrice)}원</td>
+                </tr>
+              )}
+              <tr>
+                <td colSpan={2} className="py-1 pr-2 pl-3 text-[11px] text-fuchsia-600">
+                  ※ 실지취득가 모드 — 개산공제(§163⑥) 미적용, 자본적지출·양도비를 채무비율 안분하여 필요경비 반영
+                </td>
+              </tr>
+            </>
+          ) : (
+            <>
+              {bg.perAsset.land.acquisitionPrice > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    토지 취득가 = 취득기준시가 {fmt(bg.perAsset.land.stdPriceAtAcquisition)} × 채무비율{" "}
+                    {(bg.debtRatio * 100).toFixed(4)}%
+                  </td>
+                  <td className="text-right font-mono">{fmt(bg.perAsset.land.acquisitionPrice)}원</td>
+                </tr>
+              )}
+              {bg.perAsset.building.acquisitionPrice > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    건물 취득가 = 취득기준시가 {fmt(bg.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
+                    {(bg.debtRatio * 100).toFixed(4)}%
+                  </td>
+                  <td className="text-right font-mono">{fmt(bg.perAsset.building.acquisitionPrice)}원</td>
+                </tr>
+              )}
+            </>
+          )}
           <tr>
             <td className="py-1 pr-2 text-fuchsia-700">무상이전분 (증여세 과세 가액)</td>
             <td className="text-right font-mono text-fuchsia-700">{fmt(bg.gratuitousPortion)}원</td>

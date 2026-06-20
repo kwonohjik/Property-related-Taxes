@@ -464,6 +464,9 @@ export function calculateGeneralBuildingActualTransfer(
       buildingStdPriceAtAcquisition: acquisitionBuildingStdPrice,
       info: burdenedGiftInfo,
       giftDate: transferDate, // 증여일 = 양도일 (의제)
+      // K-4(실지취득가) 실비: actualExpenses(자본적지출+양도비)를 채무비율 안분하여 estimatedDeduction에 반영.
+      capitalExpenditure: actualExpenses,
+      transferExpense: 0,
     });
     landTransfer = breakdown.perAsset.land.transferPrice;
     buildingTransfer = breakdown.perAsset.building.transferPrice;

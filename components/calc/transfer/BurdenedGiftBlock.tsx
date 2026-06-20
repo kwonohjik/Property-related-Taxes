@@ -42,6 +42,20 @@ const VALUATION_MODE_OPTIONS = [
   },
 ] as const;
 
+// 취득가액 산정방식 (시가 모드 — 소득세법 §100① 양도·취득 산정방식 일치 원칙)
+const ACQUISITION_METHOD_OPTIONS = [
+  {
+    value: "actual",
+    label: "실지취득가액 안분",
+    description: "증여자의 실제 취득가액 확인 시 — 실지취득가액 × 채무비율 (§97①1호가목)",
+  },
+  {
+    value: "converted",
+    label: "환산취득가액",
+    description: "실지취득가 불명 시 — 양도가액 × 취득기준시가 ÷ 양도기준시가 (§176의2③)",
+  },
+] as const;
+
 // Phase 3: 증여자-수증자 관계 (상증법 §53 증여재산공제)
 // 주의: enum 값 의미
 //   lineal_descendant       = 수증자가 직계비속(성년) — 증여자가 직계비속(자녀→부모 방향) (§53③)
@@ -180,9 +194,9 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
         </FieldCard>
       </div>
 
-      {/* ③ 시가 모드 — 양도시·취득시 평가액 직접 입력 */}
+      {/* ③ 시가 모드 — 양도시 시가 + 취득가액 산정방식 (K-4 실지 / K-5 환산) */}
       {isMarketMode && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-2">
+        <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-3">
           <p className="text-xs font-semibold text-amber-800">시가 모드 — 상증법 §60②~④</p>
           <FieldCard label="양도시 시가 평가액 (총액)">
             <CurrencyInput label=""
@@ -191,13 +205,94 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
               onChange={(v) => onChange({ bgMarketValueAtTransfer: v })}
             />
           </FieldCard>
-          <FieldCard label="취득시 시가 평가액 (총액)">
-            <CurrencyInput label=""
-              hideUnit
-              value={asset.bgMarketValueAtAcquisition}
-              onChange={(v) => onChange({ bgMarketValueAtAcquisition: v })}
+
+          {/* 취득가액 산정방식 (§100① 일치 원칙) */}
+          <FieldCard
+            label="취득가액 산정방식"
+            hint="§100①: 양도가액을 시가(실지거래가액)로 산정한 경우 취득가액도 실지거래가액 또는 환산취득가액으로 산정."
+            trailing={
+              <div className="flex flex-wrap items-center gap-1.5">
+                <LawArticleModal legalBasis="소득세법 §100" label="§100①" />
+                <LawArticleModal legalBasis="소득세법 §97" label="§97①1호" />
+                <LawArticleModal legalBasis="소득세법 시행령 §176의2" label="시행령 §176의2" />
+              </div>
+            }
+          >
+            <RadioCardGroup
+              name="bgAcquisitionMethod"
+              layout="stack"
+              value={asset.bgAcquisitionMethod || ""}
+              onChange={(v) => onChange({ bgAcquisitionMethod: v as AssetForm["bgAcquisitionMethod"] })}
+              options={ACQUISITION_METHOD_OPTIONS.map((o) => ({
+                value: o.value,
+                label: o.label,
+                description: o.description,
+              }))}
             />
           </FieldCard>
+
+          {/* K-4: 실지취득가액 입력 (assetKind별) */}
+          {asset.bgAcquisitionMethod === "actual" && (
+            <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-semibold text-amber-800">실지취득가액 입력</span>
+                <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
+              </div>
+              <div className="rounded border border-violet-200 bg-violet-50 p-2 text-[11px] text-violet-800">
+                개산공제(§163⑥ 3%) 미적용 — 실지거래가액 경로이므로 자본적지출·양도비를 필요경비로 공제합니다 (양도분 채무비율 안분).
+              </div>
+              {asset.assetKind === "general_building" ? (
+                <>
+                  <FieldCard label="토지 실지취득가액">
+                    <CurrencyInput label="" hideUnit
+                      value={asset.bgActualAcquisitionLand}
+                      onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
+                  </FieldCard>
+                  <FieldCard label="건물 실지취득가액">
+                    <CurrencyInput label="" hideUnit
+                      value={asset.bgActualAcquisitionBuilding}
+                      onChange={(v) => onChange({ bgActualAcquisitionBuilding: v })} />
+                  </FieldCard>
+                </>
+              ) : asset.assetKind === "land" ? (
+                <FieldCard label="토지 실지취득가액">
+                  <CurrencyInput label="" hideUnit
+                    value={asset.bgActualAcquisitionLand}
+                    onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
+                </FieldCard>
+              ) : (
+                <FieldCard label="실지취득가액 (주택·건물 전체)"
+                  hint="증여자의 취득 당시 실지거래가액">
+                  <CurrencyInput label="" hideUnit
+                    value={asset.bgActualAcquisitionTotal}
+                    onChange={(v) => onChange({ bgActualAcquisitionTotal: v })} />
+                </FieldCard>
+              )}
+              <FieldCard label="자본적지출 (선택)"
+                hint="소령 §163③ — 양도분(채무비율)에 대응하는 부분만 안분 공제">
+                <CurrencyInput label="" hideUnit
+                  value={asset.capitalExpenditure}
+                  onChange={(v) => onChange({ capitalExpenditure: v })} />
+              </FieldCard>
+              <FieldCard label="양도비 (선택)"
+                hint="소령 §163⑤ — 양도분(채무비율)에 대응하는 부분만 안분 공제">
+                <CurrencyInput label="" hideUnit
+                  value={asset.transferExpense}
+                  onChange={(v) => onChange({ transferExpense: v })} />
+              </FieldCard>
+            </div>
+          )}
+
+          {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
+          {asset.bgAcquisitionMethod === "converted" && (
+            <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-[11px] text-amber-800">
+              환산취득가액 = 양도가액(채무액) × 취득시 기준시가 ÷ 양도시 기준시가 (시행령 §176의2②2호).
+              {asset.assetKind === "general_building"
+                ? " 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 입력하세요."
+                : " 취득시·양도시 기준시가를 입력하세요."}
+              {" "}개산공제(§163⑥ 3%) 자동 적용.
+            </div>
+          )}
         </div>
       )}
 
