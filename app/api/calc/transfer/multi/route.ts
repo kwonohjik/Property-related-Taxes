@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { preloadTaxRates } from "@/lib/db/tax-rates";
+import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import {
   calculateTransferTaxAggregate,
   type AggregateTransferInput,
@@ -79,22 +79,22 @@ export async function POST(request: NextRequest) {
 
   const data = parsed.data;
 
-  // 세율 로드 — 과세기간 말일(12/31) 기준 1회
+  // 세율 로드 — 과세기간 말일(12/31) 기준 1회 (Supabase 미도달 시 로컬 fallback)
   const rateDate = new Date(data.taxYear, 11, 31);
   let rates;
-  try {
-    rates = await preloadTaxRates(["transfer"], rateDate);
-  } catch (err) {
-    if (err instanceof TaxCalculationError) {
-      return NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 500 },
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    try {
+      rates = await preloadTaxRates(["transfer"], rateDate);
+      if (rates.size === 0) rates = loadFallbackTransferRates(rateDate);
+    } catch (err) {
+      console.warn(
+        "[POST /api/calc/transfer/multi] preloadTaxRates 실패, 로컬 세율 fallback 사용:",
+        err,
       );
+      rates = loadFallbackTransferRates(rateDate);
     }
-    return NextResponse.json(
-      { error: { code: "TAX_RATE_NOT_FOUND", message: "세율 데이터를 로드할 수 없습니다" } },
-      { status: 500 },
-    );
+  } else {
+    rates = loadFallbackTransferRates(rateDate);
   }
 
   // string → Date 변환 (건별)
