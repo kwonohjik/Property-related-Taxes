@@ -620,11 +620,6 @@ export interface BurdenedGiftTransferTaxInput {
 
   // ===== 공통 선택 =====
   /**
-   * 양도세 법정신고기한 내 신고 예정 여부 (기본 true — §69 신고세액공제 3%).
-   * 양도일이 속한 달의 말일로부터 2개월 이내.
-   */
-  isFiledOnTime?: boolean;
-  /**
    * 미등기 양도 여부 (기본 false).
    * true 시 LTHD 배제 + 중과세율 70% 적용.
    */

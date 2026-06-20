@@ -41,6 +41,7 @@ import {
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { VariantBodyProps } from "./types";
 import { RtmsSimilarSalesModal } from "./RtmsSimilarSalesModal";
+import { BurdenedGiftTransferSection } from "./BurdenedGiftTransferSection";
 
 // ============================================================
 // §23의2 자산 유형 옵션 — 정적 정의 (Tailwind JIT purge 안전)
@@ -122,6 +123,7 @@ export function EstateBodyRealEstate({
   valuationDate,
   showCollateralDeductToggle,
   hasCohabitantChild = false,
+  hasOtherBurdenedGiftTransfer = false,
   mode = "inheritance",
 }: VariantBodyProps) {
   const cat = item.category as
@@ -285,6 +287,16 @@ export function EstateBodyRealEstate({
         hasCohabitantChild={hasCohabitantChild}
         mode={mode}
       />
+
+      {/* 양도소득세 함께 계산 — 부담부증여 채무인수분 (소득세법 §88·소령 §159) */}
+      {mode === "gift" && (
+        <BurdenedGiftTransferSection
+          item={item}
+          onChange={(patch) => onUpdate({ ...item, ...patch })}
+          hasOtherBurdenedGiftTransfer={hasOtherBurdenedGiftTransfer}
+          jibun={addrValue.jibun}
+        />
+      )}
     </div>
   );
 }

@@ -221,6 +221,15 @@ export function PropertyValuationForm({
                 valuationDate={valuationDate}
                 onUpdate={(updated) => handleUpdate(selectedIndex, updated)}
                 onRemove={() => handleRemove(selectedIndex)}
+                hasOtherBurdenedGiftTransfer={
+                  mode === "gift"
+                    ? items.some(
+                        (it, i) =>
+                          i !== selectedIndex &&
+                          it.burdenedGiftTransferTax !== undefined,
+                      )
+                    : undefined
+                }
               />
             )}
           </div>

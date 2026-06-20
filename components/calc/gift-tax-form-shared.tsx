@@ -301,19 +301,12 @@ export function validateStep(step: number, form: FormState): string | null {
           return `${itemLabel}: 1세대1주택 여부가 활성화되어 있으면 거주기간(개월)을 입력하세요.`;
         }
       }
-      // C-4: assumedDebtForGift === leaseDeposit + mortgageAmount 일치 강제
-      // (불일치 = 일부 인수 → MVP 비범위 → 차단)
+      // C-4: 채무인수액(§47①) 필수 — assumedDebtForGift가 0이면 양도소득세 과세 대상 없음
+      // (소득세법 §88: 유상양도 = 수증자 채무인수가 있어야 양도가액 발생)
+      // Note: leaseDeposit·mortgageAmount는 §66 평가 목적 필드로 채무인수와 별개.
       const assumedDebt = bgItem.assumedDebtForGift ?? 0;
-      const leaseDeposit = bgItem.leaseDeposit ?? 0;
-      const mortgageAmount = bgItem.mortgageAmount ?? 0;
-      const expectedDebt = leaseDeposit + mortgageAmount;
-      // Critical: 채무 합계 0이면 양도소득세 과세 대상 없음 → 토글 차단
-      // (소득세법 §88: 유상양도 = 채무인수가 있어야 양도가액 발생)
-      if (expectedDebt <= 0) {
-        return `${itemLabel}: 임대보증금 또는 저당권이 있어야 양도소득세가 발생합니다. "양도소득세 함께 계산" 토글을 끄거나 채무 정보를 입력하세요.`;
-      }
-      if (assumedDebt > 0 && assumedDebt !== expectedDebt) {
-        return `${itemLabel}: 채무인수액(${assumedDebt.toLocaleString()}원)이 임대보증금(${leaseDeposit.toLocaleString()}원)과 저당권(${mortgageAmount.toLocaleString()}원) 합계와 다릅니다. 일부 인수는 현재 지원하지 않습니다.`;
+      if (assumedDebt <= 0) {
+        return `${itemLabel}: 수증자 인수 채무액(§47①)을 입력하세요. 채무인수가 있어야 양도소득세가 발생합니다. "양도소득세 함께 계산" 토글을 끄거나 채무액을 입력하세요.`;
       }
     }
     // ─── end 부담부증여 양도소득세 ───

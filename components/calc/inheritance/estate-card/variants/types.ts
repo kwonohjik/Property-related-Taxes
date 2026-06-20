@@ -21,4 +21,10 @@ export interface VariantBodyProps {
    * 부모(ItemEditor)에서 heirs로부터 도출해 전달(EstateItem엔 heirs 없음).
    */
   hasCohabitantChild?: boolean;
+  /**
+   * 같은 마법사 내 다른 자산 중 burdenedGiftTransferTax가 이미 ON인 자산이 있는지.
+   * 부모(PropertyValuationForm)에서 items 배열 전수를 참고해 계산 후 전달.
+   * gift 모드 + 부동산 카테고리에서 BurdenedGiftTransferSection에 전달됨.
+   */
+  hasOtherBurdenedGiftTransfer?: boolean;
 }

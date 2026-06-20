@@ -70,7 +70,6 @@ function makeAptItem(overrides: Partial<EstateItem> = {}): EstateItem {
       isRegulatedArea: false,
       wasRegulatedAtAcquisition: false,
       residencePeriodMonths: 0,
-      isFiledOnTime: true,
       isUnregistered: false,
     },
     ...overrides,
@@ -166,7 +165,6 @@ describe("B-api-2: 토지 → land 매핑 + 기준시가 배정", () => {
       acquisitionDate: new Date("2012-01-15"),
       standardPriceAtAcquisition: 800_000_000,
       isNonBusinessLand: true,
-      isFiledOnTime: false,
     },
   } as EstateItem;
 
@@ -203,9 +201,11 @@ describe("B-api-2: 토지 → land 매핑 + 기준시가 배정", () => {
     expect(body.isNonBusinessLand).toBe(true);
   });
 
-  it("isFiledOnTime override false → burdenedGiftInfo.isFiledOnTime = false", () => {
+  it("burdenedGiftInfo.isFiledOnTime === undefined (양도세 무관 — UI 입력 제거됨)", () => {
+    // isFiledOnTime은 양도세 §69 신고세액공제 아님(상증법 §69). 양도세 결과에 무영향.
+    // BurdenedGiftTransferTaxInput에서 제거됨 → API 전달 없음 → 엔진 기본값(undefined=신고 없음 취급)
     const bgi = body.burdenedGiftInfo as Record<string, unknown>;
-    expect(bgi.isFiledOnTime).toBe(false);
+    expect(bgi.isFiledOnTime).toBeUndefined();
   });
 });
 

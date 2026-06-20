@@ -77,11 +77,13 @@ export function buildGiftBurdenedTransferBody(
 
   // ─── A. 증여세가 이미 보유 → 변환 전달 ───
 
-  // 채무인수액 → 양도가액 placeholder (엔진 STEP 0.48에서 안분 override)
-  // C-4 확정(probe): leaseDeposit + mortgageAmount = assumedDebtForGift = burdenedGiftTransferPrice
+  // 채무인수액 → 양도가액 (소득세법 §88: 부담부증여 양도가액 = 수증자 채무인수액)
+  // assumedDebtForGift: §47① 수증자 실제 인수 채무액 → §159 안분 전 양도가액 총액
+  // leaseDeposit·mortgageAmount: §66 평가 하한 목적 별개 필드 (부담부증여 양도가액과 무관)
+  const assumedDebtForGift = item.assumedDebtForGift ?? 0;
+  const burdenedGiftTransferPrice = assumedDebtForGift; // §159 양도가액 B = 채무인수총액
   const leaseDeposit = item.leaseDeposit ?? 0;
   const mortgageAmount = item.mortgageAmount ?? 0;
-  const burdenedGiftTransferPrice = leaseDeposit + mortgageAmount; // §159 양도가액 B
 
   // 기준시가 배정: land → landStd, building/housing → buildingStd (§3)
   const stdAtTransfer = item.standardPrice ?? 0;
@@ -118,7 +120,6 @@ export function buildGiftBurdenedTransferBody(
       : undefined;
 
   // ─── C. 기본값 ───
-  const isFiledOnTime = bgt.isFiledOnTime ?? true; // 법정신고기한 내 신고(기본 true)
   const isUnregistered = bgt.isUnregistered ?? false;
 
   // ─── body 구성 (⑬ — Zod transfer schema 호환) ───
@@ -163,7 +164,6 @@ export function buildGiftBurdenedTransferBody(
       donorRelation,
       isMinorDonee: isMinorDonee || undefined,
       isGenerationSkip: isGenerationSkip || undefined,
-      isFiledOnTime: isFiledOnTime === false ? false : undefined,
       priorGiftsWithin10Years,
     },
 

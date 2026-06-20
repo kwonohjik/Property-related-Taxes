@@ -69,6 +69,8 @@ export interface EstateItemEditorProps {
   heirs?: Heir[];
   /** 평가기준일 (상속개시일·증여일) — 기준시가 공시연도 기본값 계산용 */
   valuationDate?: string;
+  /** 같은 마법사 내 다른 자산 중 burdenedGiftTransferTax가 이미 ON인 자산 존재 여부 */
+  hasOtherBurdenedGiftTransfer?: boolean;
 }
 
 export function EstateItemEditor({
@@ -79,6 +81,7 @@ export function EstateItemEditor({
   mode,
   heirs,
   valuationDate,
+  hasOtherBurdenedGiftTransfer,
 }: EstateItemEditorProps) {
   const cat = item.category as SupportedCategory;
 
@@ -154,6 +157,7 @@ export function EstateItemEditor({
           valuationDate={valuationDate}
           showCollateralDeductToggle={showCollateralDeductToggle}
           hasCohabitantChild={hasCohabitantChild}
+          hasOtherBurdenedGiftTransfer={hasOtherBurdenedGiftTransfer}
           mode={mode}
         />
 
