@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { preloadTaxRates } from "@/lib/db/tax-rates";
+import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
@@ -399,21 +399,25 @@ export async function POST(request: NextRequest) {
     })() : {}),
   };
 
-  // 단계 4: 세율 로드
+  // 단계 4: 세율 로드 (Supabase 미도달 시 로컬 세율 fallback — 양도세 계산 지속)
+  //   재산세·종부세 route와 동일한 graceful 정책. 양도세 엔진은 rates 필수(throw)이므로
+  //   undefined 대신 항상 유효한 TaxRatesMap을 보장 (loadFallbackTransferRates).
   let rates;
-  try {
-    rates = await preloadTaxRates(["transfer"], transferDate);
-  } catch (err) {
-    if (err instanceof TaxCalculationError) {
-      return NextResponse.json(
-        { error: { code: err.code, message: err.message } },
-        { status: 500 },
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    try {
+      rates = await preloadTaxRates(["transfer"], transferDate);
+      // 테이블 존재하나 비어있는 경우(시딩 전)도 로컬 fallback
+      if (rates.size === 0) rates = loadFallbackTransferRates(transferDate);
+    } catch (err) {
+      console.warn(
+        "[POST /api/calc/transfer] preloadTaxRates 실패, 로컬 세율 fallback 사용:",
+        err,
       );
+      rates = loadFallbackTransferRates(transferDate);
     }
-    return NextResponse.json(
-      { error: { code: "TAX_RATE_NOT_FOUND", message: "세율 데이터를 로드할 수 없습니다" } },
-      { status: 500 },
-    );
+  } else {
+    // 환경변수 미설정 — 로컬 개발/오프라인 (CLAUDE.md: graceful 통과)
+    rates = loadFallbackTransferRates(transferDate);
   }
 
   // 단계 5: 계산 실행
