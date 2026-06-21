@@ -291,6 +291,15 @@ export async function callGiftBurdenedTransferAPI(
     throw new Error(`양도소득세 API 오류 ${res.status}: ${text}`);
   }
 
-  const data = (await res.json()) as TransferTaxResult;
-  return data;
+  // 라우트 응답 형태: { data: { mode: "single", result: TransferTaxResult } }
+  // (정상 양도세 클라이언트 callTransferTaxAPI와 동일 — json.data.result 추출).
+  // 과거 res.json()을 곧장 result로 캐스팅 → result.transferGain undefined로 결과 카드 크래시.
+  const json = (await res.json()) as {
+    data?: { mode: string; result: TransferTaxResult };
+  };
+  const result = json.data?.result;
+  if (!result) {
+    throw new Error("양도소득세 계산 결과를 받지 못했습니다.");
+  }
+  return result;
 }

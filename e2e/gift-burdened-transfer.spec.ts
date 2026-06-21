@@ -72,7 +72,9 @@ async function setupTransferApiMock(
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify(MOCK_TRANSFER_RESULT),
+        // 실제 라우트 응답 형태와 일치 — { data: { mode, result } } 봉투.
+        // (과거 raw result 반환이 client의 봉투 추출 버그를 가렸음 — 회귀 방지)
+        body: JSON.stringify({ data: { mode: "single", result: MOCK_TRANSFER_RESULT } }),
       });
     } else {
       await route.continue();
