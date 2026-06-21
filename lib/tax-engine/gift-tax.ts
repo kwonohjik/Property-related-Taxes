@@ -51,6 +51,9 @@ import {
 } from "./gift-special-stream";
 import type { TaxBracket } from "./types";
 
+// 대납 gross-up 엔진 re-export (분리 파일 — 800줄 정책)
+export { calcGiftTaxWithDonorPaidTax } from "./gift-tax-grossup";
+
 // ============================================================
 // 증여세 과세표준 최소값 (§55 단서)
 // ============================================================
@@ -63,8 +66,9 @@ const TAX_BASE_MIN = 500_000;
 
 export interface GiftTaxEngineOptions {
   brackets?: TaxBracket[];
-  /** @deprecated 도달 불가 — 미사용 (gift §59 한도 미적용). */
-  foreignPropertyRatio?: number;
+  /** @deprecated 미사용 */ foreignPropertyRatio?: number;
+  /** 내부 전용(calcGiftTaxWithDonorPaidTax만). partialResult에 합체 → buildBesshi10Rows가 donorPaidTax 참조. 외부 세팅 금지. */
+  _echoGrossUp?: GiftTaxResult["donorPaidTaxGrossUp"];
 }
 
 export function calcGiftTax(
@@ -164,15 +168,11 @@ export function calcGiftTax(
     );
   }
 
-  const aggregatedGiftValue =
-    netCurrentGiftValue + priorAggregation.totalAmount;
-
-  allBreakdown.push({
-    label: "10년 합산 증여가액 ③",
-    amount: aggregatedGiftValue,
-    lawRef: GIFT_LAW.TAXABLE_VALUE,
-    note: `금번 ${netCurrentGiftValue.toLocaleString()} + 기증여 ${priorAggregation.totalAmount.toLocaleString()}`,
-  });
+  // STEP G-3: _donorPaidTaxAddition — aggregatedGiftValue에만 가산 (netCurrentGiftValue 불변 → §53 공제 동결)
+  const donorPaidTaxAddition = input._donorPaidTaxAddition ?? 0;
+  const aggregatedGiftValue = netCurrentGiftValue + priorAggregation.totalAmount + donorPaidTaxAddition;
+  const aggregatedNote = `금번 ${netCurrentGiftValue.toLocaleString()} + 기증여 ${priorAggregation.totalAmount.toLocaleString()}${donorPaidTaxAddition > 0 ? ` + 대납가산 ${donorPaidTaxAddition.toLocaleString()}` : ""}`;
+  allBreakdown.push({ label: "10년 합산 증여가액 ③", amount: aggregatedGiftValue, lawRef: GIFT_LAW.TAXABLE_VALUE, note: aggregatedNote });
 
   // ─────────────────────────────────────────────
   // STEP 4: 증여재산공제 ④ (§53·§53의2)
@@ -377,6 +377,7 @@ export function calcGiftTax(
     publicInterestPenalty: 0,
     installmentPayment: 0,
     cashDeferred: installmentSplit.splitAmount, // §70② 분납 (별지10호 ㊼)
+    ...(options._echoGrossUp !== undefined ? { donorPaidTaxGrossUp: options._echoGrossUp } : {}), // gross-up echo 주입 → derivePriorGiftAddition 참조
   };
 
   const besshi10Rows = buildBesshi10Rows(input, partialResult, brackets);
@@ -790,7 +791,6 @@ function calcGiftTaxTwoStream(
     // 특례 자산 §47① 인수 채무 (한도 차감분) — 2-스트림 카드 표시용
     specialStreamDebt: Math.min(specialItemsDebt, specialItemsValue) || undefined,
   };
-
   const besshi10Rows = buildBesshi10Rows(input, partialResult, brackets);
 
   return {

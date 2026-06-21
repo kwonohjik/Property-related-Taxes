@@ -613,6 +613,19 @@ export interface GiftTaxInput {
   applyInstallmentSplit?: boolean;
   /** 분납 희망액 (§70② "이하" 범위 — 미입력 시 최대 분납액) */
   requestedSplitAmount?: number;
+  /** 증여자가 수증자의 증여세를 대신 납부하는지 (대납 — §36 채무면제 재차증여) */
+  donorPaysGiftTax?: boolean;
+  /**
+   * 증여자가 §4의2⑥ 연대납세의무자로서 대납하는지.
+   * true: 재차증여 아님(국세청 해석 [207328]) → gross-up 미적용.
+   * false/undefined: 비연대 대납 → §36 재차증여 → gross-up 적용.
+   */
+  donorHasJointLiability?: boolean;
+  /**
+   * 내부 전용 — calcGiftTaxWithDonorPaidTax가 반복 회차에서 주입하는 대납 가산분.
+   * Zod·UI·API 노출 금지. 외부 호출자 직접 세팅 금지.
+   */
+  _donorPaidTaxAddition?: number;
 }
 
 /** 증여세 계산 결과 전체 */
@@ -730,4 +743,33 @@ export interface GiftTaxResult extends TaxResultMeta {
    * 특례 세액은 specialStreamTax 필드로 접근할 것.
    */
   _deprecatedSpecialTreatmentCredit_alwaysZero?: never;
+
+  /**
+   * 대납 gross-up 상세 (echo — UI 표시 전용, 미적용 시 applied=false).
+   * Map 금지 — Record/원시값만 사용 (memory: feedback_engine_result_map_json_loss).
+   */
+  donorPaidTaxGrossUp?: {
+    /** gross-up 적용 여부 */
+    applied: boolean;
+    /** 미적용 사유 (applied=false 시에만) */
+    reasonNotApplied?: "joint_liability" | "toggle_off";
+    /** 수렴 반복 횟수 (applied=true 시만 의미 있음) */
+    iterations: number;
+    /**
+     * gross-up 전 순증여가액 A = netCurrentGiftValue
+     * = max(0, grossGiftValue − exemptAmount − assumedDebtTotal)
+     * 공제(§53)는 STEP4에서 차감되므로 여기 미포함.
+     */
+    originalNetGift: number;
+    /**
+     * 수렴 후 aggregatedGiftValue V* = A + donorPaidTax.
+     * (사전증여 없으면 = A + donorPaidTax)
+     * 과세표준(taxBase)이 아님 — 공제 차감 전 합산 과세가액.
+     */
+    grossedUpNetGift: number;
+    /** 대납세액 = 수렴 finalTax (§36 재차증여가액) */
+    donorPaidTax: number;
+    /** 비대납 결정세액 (비교용 echo) */
+    baselineTax: number;
+  };
 }

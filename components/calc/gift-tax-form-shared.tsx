@@ -99,6 +99,16 @@ export interface FormState extends AppraisalFeeFormFields {
   splitPaymentEnabled: boolean;
   /** 분납 희망액 (원, 빈 문자열 허용 — 미입력 시 최대 분납액) */
   splitPaymentAmount: string;
+  /**
+   * §36 채무면제 — 증여자가 수증자의 증여세를 대납(代納)하는 경우.
+   * true 시 gross-up 순환계산 적용. (UI 위젯은 UI senior 담당)
+   */
+  donorPaysGiftTax?: boolean;
+  /**
+   * §4의2⑥ 연대납세의무 — true 시 재차증여 아님 → gross-up 미적용.
+   * donorPaysGiftTax=true 이어야 유효. (UI 위젯은 UI senior 담당)
+   */
+  donorHasJointLiability?: boolean;
 }
 
 export const INITIAL_FORM: FormState = {
@@ -237,7 +247,7 @@ export function formatGiftApiError(data: { error?: string; issues?: ApiIssue[] }
 // 단계별 유효성 검사
 // ============================================================
 
-import { isSameDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
+import { isSameDonorGroup, getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 
 /**
  * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
@@ -479,6 +489,22 @@ export function validateStep(step: number, form: FormState): string | null {
         if (parseAmount(form.simultaneousGifts[i].taxableValue) <= 0) {
           return `동시증여 ${i + 1}: 증여세 과세가액을 입력하세요. (자동 분할 없음 — §46①2호)`;
         }
+      }
+    }
+
+    // 대납(代納) gross-up 차단 조합 ⑧ — Zod ⑫ superRefine과 동일 메시지
+    if (form.donorPaysGiftTax === true) {
+      // ⓐ 동시증여 + 대납
+      if (form.simultaneousGifts && form.simultaneousGifts.length > 0) {
+        return "동시증여와 대납(代納)은 현재 함께 계산할 수 없습니다.";
+      }
+      // ⓑ 2-스트림 특례 + 대납
+      if (form.specialTreatment === "startup" || form.specialTreatment === "family_business") {
+        return "가업·창업 특례(2-스트림)와 대납(代納)은 현재 함께 계산할 수 없습니다.";
+      }
+      // ⓒ 세대생략(donorGroup=B) + 대납
+      if (getDonorGroup(form.donor) === "B") {
+        return "세대생략 할증 대상 증여와 대납(代納)은 현재 함께 계산할 수 없습니다.";
       }
     }
   }
