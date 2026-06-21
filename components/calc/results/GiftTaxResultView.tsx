@@ -10,6 +10,7 @@ import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritan
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { BurdenedTransferTaxResultCard } from "@/components/calc/results/BurdenedTransferTaxResultCard";
+import { BurdenedGiftComparisonCard } from "@/components/calc/results/BurdenedGiftComparisonCard";
 import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -184,6 +185,8 @@ interface Props {
   transferTaxResults?: TransferTaxResult[];
   /** 부담부증여 양도소득세 계산 실패 시 경고 메시지 (증여세 결과 표시는 계속) */
   transferTaxError?: string;
+  /** 단순증여(채무 0) baseline 증여세 결과 — 부담부 자산 있을 때만 산출, 없으면 undefined */
+  simpleGiftResult?: GiftTaxResult;
 }
 
 export function GiftTaxResultView({
@@ -202,6 +205,7 @@ export function GiftTaxResultView({
   splitPaymentAmount = "",
   transferTaxResults = [],
   transferTaxError,
+  simpleGiftResult,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -288,8 +292,11 @@ export function GiftTaxResultView({
     if (isInstallmentSplitEligible(result.finalTax)) s.add("split-payment");
     if (result.warnings.length > 0) s.add("warnings");
     if (transferTaxResults.length > 0) s.add("burdened-transfer-tax");
+    // 세부담 비교 카드 — 표시 조건과 3자 일치(화면 가드·이 등록·deps 배열)
+    if (simpleGiftResult != null && transferTaxResults.length > 0 && !transferTaxError)
+      s.add("burdened-gift-comparison");
     return s;
-  }, [result, estateItems, priorGifts, transferTaxResults]);
+  }, [result, estateItems, priorGifts, transferTaxResults, transferTaxError, simpleGiftResult]);
 
   // 분납기한 (§70② — 증여 신고기한 §68① 증여일+3개월 + 2개월). giftDate 없으면 undefined.
   const giftDueDates = useMemo(() => {
@@ -503,6 +510,23 @@ export function GiftTaxResultView({
           <BurdenedTransferTaxResultCard transferTaxResults={transferTaxResults} />
         </PrintSection>
       )}
+
+      {/* 세부담 비교 — 단순증여 vs 부담부증여 (증여세 + 양도세). 양도세 성공 시에만 */}
+      {simpleGiftResult != null &&
+        transferTaxResults.length > 0 &&
+        !transferTaxError && (
+          <PrintSection id="burdened-gift-comparison" selectedIds={selectedPrintIds}>
+            <BurdenedGiftComparisonCard
+              simpleGiftResult={simpleGiftResult}
+              giftResult={result}
+              transferTaxResults={transferTaxResults}
+              hasUncoveredDebtAsset={
+                estateItems.filter((it) => (it.assumedDebtForGift ?? 0) > 0)
+                  .length > transferTaxResults.length
+              }
+            />
+          </PrintSection>
+        )}
 
       {/* §57① 단서 적용 — 세대생략 할증 배제 안내 (donorGroup=B이지만 단서로 할증 0인 경우)
           선택 출력: 할증 산출근거와 같은 gen-skip-surcharge 섹션으로 편입 (availablePrintIds 가드 동기화) */}

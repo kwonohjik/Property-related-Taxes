@@ -25,6 +25,7 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import { buildGiftTaxInput } from "@/lib/calc/gift-api";
+import { calcGiftTax } from "@/lib/tax-engine/gift-tax";
 import { callGiftBurdenedTransferAPI } from "@/lib/calc/gift-burdened-transfer-api";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import {
@@ -51,6 +52,8 @@ export function GiftTaxForm() {
   const [result, setResult] = useState<GiftTaxResult | null>(null);
   const [transferTaxResults, setTransferTaxResults] = useState<TransferTaxResult[]>([]);
   const [transferTaxError, setTransferTaxError] = useState<string | null>(null);
+  // 단순증여(채무 0) baseline 증여세 — 부담부 자산 있을 때만 산출, 비교 카드용
+  const [simpleGiftResult, setSimpleGiftResult] = useState<GiftTaxResult | null>(null);
   const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
 
   const { activeClientId } = useProfessionalStore();
@@ -126,10 +129,11 @@ export function GiftTaxForm() {
     setLoading(true);
     setError(null);
     try {
+      const engineInput = buildGiftTaxInput(form);
       const res = await fetch("/api/calc/gift", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildGiftTaxInput(form)),
+        body: JSON.stringify(engineInput),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -137,6 +141,25 @@ export function GiftTaxForm() {
         return;
       }
       setResult(data.result);
+
+      // 단순증여 baseline — 부담부 자산(채무>0) 있을 때만 calcGiftTax 동기 호출.
+      // engineInput.giftItems는 [...giftItems, ...stockItems] 병합분(gift-api.ts:42)이므로
+      // 전체 배열의 assumedDebtForGift를 0으로 덮어써 전액 무상증여 케이스를 산출(원본 불변).
+      const hasBurdenedDebt = engineInput.giftItems.some(
+        (it) => (it.assumedDebtForGift ?? 0) > 0,
+      );
+      if (hasBurdenedDebt) {
+        const simpleInput = {
+          ...engineInput,
+          giftItems: engineInput.giftItems.map((it) => ({
+            ...it,
+            assumedDebtForGift: 0,
+          })),
+        };
+        setSimpleGiftResult(calcGiftTax(simpleInput));
+      } else {
+        setSimpleGiftResult(null);
+      }
 
       // 부담부증여 양도소득세 직렬 계산 — burdenedGiftTransferTax ON 자산만 순서대로 호출
       const burdenedItems = form.giftItems.filter(
@@ -180,6 +203,7 @@ export function GiftTaxForm() {
     setResult(null);
     setTransferTaxResults([]);
     setTransferTaxError(null);
+    setSimpleGiftResult(null);
     setStep(0);
     setError(null);
   };
@@ -223,6 +247,7 @@ export function GiftTaxForm() {
         giftDate={form.giftDate}
         transferTaxResults={transferTaxResults}
         transferTaxError={transferTaxError ?? undefined}
+        simpleGiftResult={simpleGiftResult ?? undefined}
         priorGifts={form.priorGifts.map((pg) => ({
           giftDate: pg.giftDate,
           giftAmount: pg.giftAmount,
