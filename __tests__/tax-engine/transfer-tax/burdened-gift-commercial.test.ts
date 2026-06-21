@@ -168,3 +168,64 @@ describe("F-3-2 — 미지원 propertyType (presale_right) 차단", () => {
     expect(() => calculateTransferTax(input, rates)).toThrow(/주택·토지·건물·일반건물·상업용건물|미지원/);
   });
 });
+
+// ============================================================
+// F-3-3: 상업용건물 K-4(시가 + 실지취득가액) — 취득시 기준시가 inert 회귀
+// ============================================================
+//
+// 근거: 상업용건물은 토지/건물 분리 없이 단일 기준시가로 처리(landStd=0).
+//   K-4 실지 경로는 실지취득가액 전액이 건물분으로 귀속되므로(§159①1호 본문),
+//   취득시 건물 기준시가(buildingStdPriceAtAcquisition)의 값은 양도차익·산출세액에
+//   영향을 주지 않는다 → UI/검증에서 입력 필수 해제(gift-tax-form-shared validateStep)의 전제.
+//
+//   취득가액 = 실지취득가액 160M × 채무비율(400M/1B = 0.4) = 64,000,000 (기준시가 무관)
+
+describe("F-3-3 — 상업용건물 K-4(시가+실지): 취득시 기준시가는 결과에 무영향(inert)", () => {
+  const TRANSFER_DATE = new Date("2024-01-01");
+  const ACQUISITION_DATE = new Date("2012-01-01");
+
+  function makeK4Input(buildingStdAtAcq: number): TransferTaxInput {
+    const info: BurdenedGiftInfo = {
+      valuationMode: "sangjeungbeop_market",
+      marketValueAtTransfer: 1_000_000_000, // 분모 C (감정·매매사례 시가)
+      lendingDepositTotal: 200_000_000,
+      mortgageDebtAmount: 200_000_000,
+      annualRentTotal: 0,
+      acquisitionMethod: "actual",
+      actualAcquisitionTotal: 160_000_000, // 실지취득가액 합계(건물+토지)
+      landStdPriceAtTransfer: 0,
+      buildingStdPriceAtTransfer: 1_000_000_000,
+      landStdPriceAtAcquisition: 0,
+      buildingStdPriceAtAcquisition: buildingStdAtAcq, // ← 변수: 미입력(0) vs 입력(400M)
+    };
+    return baseTransferInput({
+      propertyType: "commercial_building",
+      transferDate: TRANSFER_DATE,
+      acquisitionDate: ACQUISITION_DATE,
+      transferPrice: 0,
+      acquisitionPrice: 0,
+      expenses: 0,
+      useEstimatedAcquisition: false,
+      transferType: "burdened_gift",
+      acquisitionCause: "purchase",
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      burdenedGiftInfo: info,
+    });
+  }
+
+  it("취득시 기준시가 0(미입력) vs 400,000,000 → 양도차익·과세표준·산출세액 동일", () => {
+    const withZero = calculateTransferTax(makeK4Input(0), rates);
+    const withValue = calculateTransferTax(makeK4Input(400_000_000), rates);
+
+    expect(withZero.transferGain).toBe(withValue.transferGain);
+    expect(withZero.taxBase).toBe(withValue.taxBase);
+    expect(withZero.calculatedTax).toBe(withValue.calculatedTax);
+
+    // 취득가액도 실지취득가액 전액(건물분) 기준으로 동일 — 64,000,000 (= 160M × 0.4)
+    const acqZero = withZero.transferBurdenedGiftBreakdown!.perAsset.building.acquisitionPrice;
+    const acqValue = withValue.transferBurdenedGiftBreakdown!.perAsset.building.acquisitionPrice;
+    expect(acqZero).toBe(acqValue);
+    expect(acqZero).toBe(64_000_000);
+  });
+});

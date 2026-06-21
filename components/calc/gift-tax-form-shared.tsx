@@ -289,15 +289,25 @@ export function validateStep(step: number, form: FormState): string | null {
       if (!bgt.acquisitionDate) {
         return `${itemLabel}: 취득일을 입력하세요. (양도소득세 계산 필수)`;
       }
-      // 필수: 취득시 기준시가
-      if (!bgt.standardPriceAtAcquisition || bgt.standardPriceAtAcquisition <= 0) {
-        return `${itemLabel}: 취득시 기준시가를 입력하세요. (양도소득세 계산 필수)`;
-      }
       // housing 전용 — 거주기간 (resolvePropertyType 단일 진실로 dual-truth 방지)
       const propertyType = resolvePropertyType(bgItem.category, bgt.isHousing);
       // ─── 평가방식(valuationMode) 분기 검증 ───
       const valuationMode = bgt.valuationMode ?? "sangjeungbeop_standard";
       const isMarketMode = valuationMode === "sangjeungbeop_market";
+      // 필수: 취득시 기준시가 — 단, 시가 모드 + 실지취득가액(K-4) + 비-토지 자산은 제외.
+      //   K-1~3(기준시가 안분): 취득가액 = 취득시 기준시가 × 채무비율 → 산식 직접 인자(필수).
+      //   K-5(환산): 환산취득가 분자 → 필수.
+      //   K-4(실지): 비-토지 자산은 실지취득가액이 전액 건물분으로 귀속(landStd=0)되어
+      //     취득시 기준시가가 양도차익 계산에 영향이 없음(inert) → 입력 불필요.
+      //     토지는 공시지가 비율로 토지/건물 분배 라우팅에 필요 → 필수 유지.
+      const acqStdPriceInert =
+        isMarketMode && bgt.acquisitionMethod === "actual" && propertyType !== "land";
+      if (
+        !acqStdPriceInert &&
+        (!bgt.standardPriceAtAcquisition || bgt.standardPriceAtAcquisition <= 0)
+      ) {
+        return `${itemLabel}: 취득시 기준시가를 입력하세요. (양도소득세 계산 필수)`;
+      }
 
       if (isMarketMode) {
         // K-4/K-5 시가 모드: 분모 C (양도시 시가) 필수
