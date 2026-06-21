@@ -151,6 +151,14 @@ function SingleTransferResultCard({
             deduction
           />
         )}
+        {result.basicDeduction > 0 && (
+          <Row
+            label="양도소득기본공제 (§103②)"
+            value={`(−) ${formatKRW(result.basicDeduction)}`}
+            sub
+            deduction
+          />
+        )}
         <Row label="양도소득 과세표준" value={formatKRW(result.taxBase)} highlight />
         <Row
           label={`산출세액 (세율 ${rateDisplay})`}

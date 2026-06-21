@@ -58,17 +58,18 @@ test.describe("계산 결과 선택 출력 (증여세) — 화면 인쇄", () =>
     const printBtn = page.getByTestId("print-selected-button");
     await expect(printBtn).toBeDisabled();
 
-    // SP-gift-2: "증여세 과세 요약" 항목 체크 → 버튼 활성
-    await panel.getByRole("checkbox", { name: "증여세 과세 요약" }).check();
+    // SP-gift-2: "핵심 결과 (결정세액)" 항목 체크 → 버튼 활성
+    //   (tax-summary는 신고서 양식과 중복이라 화면 카드 제거 → PDF 전용 섹션으로 전환됨)
+    await panel.getByRole("checkbox", { name: "핵심 결과 (결정세액)" }).check();
     await expect(printBtn).toBeEnabled();
 
-    // SP-gift-3: print 미디어 — 선택 섹션(tax-summary) 보이고, 미선택(core-result) 숨김
+    // SP-gift-3: print 미디어 — 선택 섹션(core-result) 보이고, 미선택(valuation-form) 숨김
     await page.emulateMedia({ media: "print" });
-    await expect(page.locator('[data-print-id="tax-summary"]')).toBeVisible();
-    await expect(page.locator('[data-print-id="core-result"]')).toBeHidden();
+    await expect(page.locator('[data-print-id="core-result"]')).toBeVisible();
+    await expect(page.locator('[data-print-id="valuation-form"]')).toBeHidden();
     await page.emulateMedia({ media: "screen" });
 
     // 화면(screen)에서는 미선택 섹션도 그대로 보임 (화면 표시 불변 원칙)
-    await expect(page.locator('[data-print-id="core-result"]')).toBeVisible();
+    await expect(page.locator('[data-print-id="valuation-form"]')).toBeVisible();
   });
 });
