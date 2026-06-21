@@ -274,7 +274,12 @@ async function fetchRtmsMonth(
     try {
       res = await fetch(`${config.endpoint}?${params}`, {
         cache: "no-store",
-        headers: { Accept: "application/xml" },
+        // data.go.kr 게이트웨이는 User-Agent 없는 요청을 "400 Request Blocked"로 차단한다.
+        // Node 서버 fetch 기본 UA로는 전건 차단 → 반드시 브라우저형 UA 명시.
+        headers: {
+          Accept: "application/xml",
+          "User-Agent": "Mozilla/5.0",
+        },
       });
     } catch (err) {
       return {
