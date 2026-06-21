@@ -11,6 +11,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -74,11 +75,12 @@ export function ValuationModeSection({
                     capitalExpenditure: undefined,
                     transferExpense: undefined,
                     landStdPriceAtTransfer: undefined,
-                    // §114조의2 신축필드도 초기화 (K-5 전용 — store stale 방지)
+                    // §114조의2 신축·증축 필드도 초기화 (K-5 전용 — store stale 방지)
                     isSelfBuilt: undefined,
                     buildingType: undefined,
                     constructionDate: undefined,
                     extensionFloorArea: undefined,
+                    extensionStdPriceAtAcquisition: undefined,
                   }
                 : {}),
             })
@@ -145,12 +147,13 @@ export function ValuationModeSection({
                       transferExpense: undefined,
                     }
                   : {
-                      // actual(K-4) 전환 — K-5 전용 신축필드 초기화 (store stale 방지)
+                      // actual(K-4) 전환 — K-5 전용 신축·증축 필드 초기화 (store stale 방지)
                       landStdPriceAtTransfer: undefined,
                       isSelfBuilt: undefined,
                       buildingType: undefined,
                       constructionDate: undefined,
                       extensionFloorArea: undefined,
+                      extensionStdPriceAtAcquisition: undefined,
                     }),
               })
             }
@@ -280,6 +283,7 @@ export function ValuationModeSection({
                           buildingType: undefined,
                           constructionDate: undefined,
                           extensionFloorArea: undefined,
+                          extensionStdPriceAtAcquisition: undefined,
                         }),
                   })
                 }
@@ -294,35 +298,89 @@ export function ValuationModeSection({
                       layout="inline"
                       value={bgt.buildingType ?? "new"}
                       onChange={(v) =>
-                        set({ buildingType: v as BurdenedGiftTransferTaxInput["buildingType"] })
+                        set({
+                          buildingType: v as BurdenedGiftTransferTaxInput["buildingType"],
+                          // 신축↔증축 전환 시 증축 전용 필드 초기화 (store stale 방지)
+                          extensionFloorArea: undefined,
+                          extensionStdPriceAtAcquisition: undefined,
+                        })
                       }
                       options={[
                         {
                           value: "new",
                           label: "신축",
-                          description: "건물 신축",
+                          description: "건물 신축 — 건물 전체 환산취득가 × 5%",
                           testId: "bg-building-type-new",
                         },
                         {
                           value: "extension",
                           label: "증축",
-                          description: "증축(85㎡ 초과·증축부분 한정) 가산세는 Phase 2에서 지원합니다.",
-                          disabled: true,
+                          description: "바닥면적 합계 85㎡ 초과·증축부분 한정 환산취득가 × 5%",
                           testId: "bg-building-type-extension",
                         },
                       ]}
                     />
                   </FieldCard>
+                  {/* ③ 증축 바닥면적 — extension 전용, §114조의2① 85㎡ 초과 판정 */}
+                  {bgt.buildingType === "extension" && (
+                    <FieldCard
+                      label="증축부분 바닥면적 합계"
+                      unit="㎡"
+                      required
+                      hint="§114조의2① 게이트: 바닥면적 합계 85㎡ 초과 시에만 가산세 적용. 85㎡ 이하이면 발동하지 않습니다."
+                    >
+                      <DecimalInput
+                        value={
+                          bgt.extensionFloorArea != null
+                            ? String(bgt.extensionFloorArea)
+                            : ""
+                        }
+                        onChange={(v) =>
+                          set({ extensionFloorArea: v != null ? parseDecimal(v) : undefined })
+                        }
+                        data-testid="bg-extension-floor-area"
+                      />
+                    </FieldCard>
+                  )}
+                  {/* ④ 신축일(신축) / 증축일(증축) — §114조의2 5년 기산 */}
                   <FieldCard
-                    label="신축일(취득일) — §114조의2 5년 기산"
+                    label={bgt.buildingType === "extension" ? "증축일 — §114조의2 5년 기산" : "신축일(취득일) — §114조의2 5년 기산"}
                     required
-                    hint="신축일부터 양도일까지 5년 이내일 때 가산세가 적용됩니다."
+                    hint={
+                      bgt.buildingType === "extension"
+                        ? "증축일부터 양도일까지 5년 이내일 때 가산세가 적용됩니다. (§114조의2① '취득일 또는 증축일')"
+                        : "신축일부터 양도일까지 5년 이내일 때 가산세가 적용됩니다."
+                    }
                   >
                     <DateInput
                       value={dateToStr(bgt.constructionDate)}
                       onChange={(v) => set({ constructionDate: toOptionalDate(v) })}
                     />
                   </FieldCard>
+                  {/* ⑤ 증축부분 취득시 기준시가 — extension 전용, §176의2②2호 환산 분자 */}
+                  {bgt.buildingType === "extension" && (
+                    <FieldCard
+                      label="증축부분 취득시(증축완공시) 기준시가 총액"
+                      unit="원"
+                      required
+                      hint="증축완공 시점의 증축부분 기준시가 총액(원). 국세청 홈택스 → 기준시가 조회. §114조의2① 증축부분 한정 환산취득가 산출에 사용됩니다."
+                    >
+                      <CurrencyInput
+                        label="증축부분 취득시 기준시가 총액"
+                        hideUnit
+                        value={
+                          bgt.extensionStdPriceAtAcquisition != null
+                            ? String(bgt.extensionStdPriceAtAcquisition)
+                            : ""
+                        }
+                        onChange={(v) => {
+                          const n = parseAmount(v);
+                          set({ extensionStdPriceAtAcquisition: n > 0 ? n : undefined });
+                        }}
+                        data-testid="bg-extension-std-price-at-acq"
+                      />
+                    </FieldCard>
+                  )}
                 </>
               )}
             </div>

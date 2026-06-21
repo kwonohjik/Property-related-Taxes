@@ -56,6 +56,8 @@ export interface CurrencyInputProps {
   hideLabel?: boolean;
   /** 음수 입력 허용 (선행 `-` 1개). 기본 false — 기존 사용처 동작 보존. (예: 비상장주식 결손 순손익·음수 순자산) */
   allowNegative?: boolean;
+  /** E2E·단위 테스트 셀렉터용 data-testid (내부 input에 전달) */
+  "data-testid"?: string;
 }
 
 export function CurrencyInput({
@@ -69,6 +71,7 @@ export function CurrencyInput({
   hideUnit = false,
   hideLabel = false,
   allowNegative = false,
+  "data-testid": dataTestId,
 }: CurrencyInputProps) {
   const [focused, setFocused] = useState(false);
   const [localRaw, setLocalRaw] = useState(toRawDigits(value, allowNegative));
@@ -126,6 +129,7 @@ export function CurrencyInput({
           onBlur={handleBlur}
           placeholder={placeholder}
           disabled={disabled}
+          data-testid={dataTestId}
           className={cn(
             "w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
             hideUnit ? "pr-3" : "pr-8"

@@ -3,17 +3,20 @@
 /**
  * 본인 신축·증축 특례 입력 섹션 (소득세법 §114조의2 가산세 판정용)
  *
- * 자산-수준 4필드 입력:
+ * 자산-수준 5필드 입력:
  *   - isSelfBuilt: 신축·증축 여부 토글
  *   - buildingType: "new" | "extension"
  *   - constructionDate: 완공일
  *   - extensionFloorArea: 증축 부분 바닥면적 (extension 전용)
+ *   - extensionStdPriceAtAcquisition: 증축부분 취득시 기준시가 총액 (extension 전용, Phase 2)
  *
  * acquisitionCause === "purchase" + assetKind in {housing, building} 인 자산에만 노출.
  */
 
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { cn } from "@/lib/utils";
 
 export interface SelfBuiltSectionProps {
@@ -25,6 +28,9 @@ export interface SelfBuiltSectionProps {
   onConstructionDateChange: (v: string) => void;
   extensionFloorArea: string;
   onExtensionFloorAreaChange: (v: string) => void;
+  /** 증축부분 취득(증축완공)당시 기준시가 총액 (원). buildingType==="extension" 시 필수. Phase 2. */
+  extensionStdPriceAtAcquisition: string;
+  onExtensionStdPriceAtAcquisitionChange: (v: string) => void;
 }
 
 export function SelfBuiltSection({
@@ -36,6 +42,8 @@ export function SelfBuiltSection({
   onConstructionDateChange,
   extensionFloorArea,
   onExtensionFloorAreaChange,
+  extensionStdPriceAtAcquisition,
+  onExtensionStdPriceAtAcquisitionChange,
 }: SelfBuiltSectionProps) {
   return (
     <ToggleCard
@@ -49,6 +57,7 @@ export function SelfBuiltSection({
           onBuildingTypeChange("");
           onConstructionDateChange("");
           onExtensionFloorAreaChange("");
+          onExtensionStdPriceAtAcquisitionChange("");
         }
       }}
     >
@@ -88,16 +97,27 @@ export function SelfBuiltSection({
           <label className="block text-sm font-medium">
             증축 부분 바닥면적 (㎡) <span className="text-destructive">*</span>
           </label>
-          <input
-            type="text"
-            inputMode="decimal"
+          <DecimalInput
             value={extensionFloorArea}
-            onChange={(e) =>
-              onExtensionFloorAreaChange(e.target.value.replace(/[^0-9.]/g, ""))
-            }
-            placeholder="증축한 면적만 입력"
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onChange={onExtensionFloorAreaChange}
           />
+        </div>
+      )}
+
+      {buildingType === "extension" && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            증축부분 취득(완공)당시 기준시가 총액 (원) <span className="text-destructive">*</span>
+          </label>
+          <CurrencyInput
+            label="증축부분 취득(완공)당시 기준시가 총액"
+            hideUnit
+            value={extensionStdPriceAtAcquisition}
+            onChange={onExtensionStdPriceAtAcquisitionChange}
+          />
+          <p className="text-xs text-muted-foreground">
+            §114조의2① 가산세 base 산출용. 국세청 건물 기준시가 조회 후 면적 × 단가로 총액 입력.
+          </p>
         </div>
       )}
     </ToggleCard>

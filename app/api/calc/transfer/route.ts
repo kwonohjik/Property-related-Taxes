@@ -269,6 +269,8 @@ export async function POST(request: NextRequest) {
     buildingType: data.buildingType,
     constructionDate: toOptionalDate(data.constructionDate),
     extensionFloorArea: data.extensionFloorArea,
+    // ⑭ Phase 2 증축 — 침묵 strip 방지 명시 매핑
+    extensionStdPriceAtAcquisition: data.extensionStdPriceAtAcquisition,
     // 토지/건물 취득일 분리 (선택)
     landAcquisitionDate: toOptionalDate(data.landAcquisitionDate),
     landSplitMode: data.landSplitMode,

@@ -14,7 +14,7 @@
 import { applyRate, truncateToWon } from "./tax-utils";
 import { applyAnnualLimits, applyFiveYearLimits } from "./aggregate-reduction-limits";
 import { TRANSFER } from "./legal-codes";
-import { calculateBuildingPenalty, calcTax, calcReductions } from "./transfer-tax-rate-calc";
+import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import {
   emitPenaltySteps,
   getReductionLegalBasis,
@@ -318,9 +318,12 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     estimatedBase ||
     (input.usedEstimatedAcquisition ? (input.estimatedBase ?? 0) : 0) ||
     (effectiveInput.usedEstimatedAcquisition ? (effectiveInput.estimatedBase ?? 0) : 0);
-  const penaltyBase = input.acquisitionMethod === "appraisal"
+  let penaltyBase = input.acquisitionMethod === "appraisal"
     ? (input.appraisalValue ?? 0)
     : (isEstimatedMode ? effectiveEstimatedBase : 0);
+  // §114조의2① 통상(비-부담부) 증축: penalty base를 증축부분 환산취득가로 교체 (부담부는 step override가 effectiveInput.estimatedBase에 반영).
+  // 손실 조기반환(transfer-tax.ts)과 동일 헬퍼 — single-source, dual-truth 방지.
+  penaltyBase = resolveExtensionPenaltyBase(input, penaltyBase);
   const penaltyResult = calculateBuildingPenalty(effectiveInput, penaltyBase);
   const penaltyTax = penaltyResult?.penalty ?? 0;
   const determinedTaxWithPenalty = determinedTax + penaltyTax;
