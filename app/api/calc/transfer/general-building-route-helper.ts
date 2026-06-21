@@ -125,6 +125,10 @@ function buildProperties(
       isSelfBuilt: isBuilding ? (card.isSelfBuilt ?? false) : false,
       // buildingAcquisitionDate → 엔진 input의 constructionDate로 단일 원천 매핑
       constructionDate: isBuilding ? card.buildingAcquisitionDate : undefined,
+      // §114조의2① 증축 85㎡ 게이트: 건물2(증축) 카드의 buildingType·extensionFloorArea 패스스루.
+      // 미매핑 시 buildingType=undefined → 신축 취급 → 85㎡ 게이트 미적용(오발동).
+      buildingType: isBuilding ? card.buildingType : undefined,
+      extensionFloorArea: isBuilding ? card.extensionFloorArea : undefined,
       // 건물 카드: buildingAcquisitionCause → acquisitionCause + decedent/donor (#6)
       // 토지 카드: landAcquisitionCause + decedent/donorAcquisitionDate (#4-a)
       // 단건/aggregate 엔진의 단기보유 기산점 분기(영 §95④)에 사용.

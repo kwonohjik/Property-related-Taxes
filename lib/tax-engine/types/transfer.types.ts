@@ -263,6 +263,12 @@ export interface TransferTaxInput {
   /** 증축 바닥면적 합계 (㎡) */
   extensionFloorArea?: number;
   /**
+   * 증축부분 취득(증축완공)시 기준시가 (원) — §114조의2① 증축부분 한정 환산취득가 분자.
+   * buildingType==="extension" + 환산(K-5) 시 사용. 증축부분 환산취득가 =
+   * 양도가 × (이 값 ÷ 양도시 건물 기준시가). 미입력 시 건물 전체 base fallback.
+   */
+  extensionStdPriceAtAcquisition?: number;
+  /**
    * 환산취득가 이미 계산 여부 (aggregate 경로 전용).
    * aggregate 엔진이 buildProperties()를 통해 이미 계산된 환산취득가를 전달할 때 true.
    * finalize.ts STEP 10.5: penaltyBase 결정 시 useEstimatedAcquisition fallback으로 사용.
