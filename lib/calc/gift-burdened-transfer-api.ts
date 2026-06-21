@@ -160,10 +160,12 @@ export function buildGiftBurdenedTransferBody(
           ? (bgt.actualAcquisitionTotal ?? 0)
           : undefined,
         // K-5: 환산 분자/분모용 기준시가 (시장모드 + 토지: 별도 입력값, 주택·건물: standardPrice)
-        landStdPriceAtTransfer: isLandType ? (bgt.landStdPriceAtTransfer ?? 0) : undefined,
-        buildingStdPriceAtTransfer: isLandType ? undefined : buildingStdAtTransfer,
-        landStdPriceAtAcquisition: isLandType ? stdAtAcquisition : undefined,
-        buildingStdPriceAtAcquisition: isLandType ? undefined : buildingStdAtAcquisition,
+        //   비적용 측은 0으로 전달(undefined 금지) — Zod number 필수 + 엔진 totalStd 안분 분모 안전.
+        //   비-토지 K-4 실지: 취득시 기준시가 미입력이어도 landStd=0/buildingStd=0이 전액 건물분으로 귀속(inert).
+        landStdPriceAtTransfer: isLandType ? (bgt.landStdPriceAtTransfer ?? 0) : 0,
+        buildingStdPriceAtTransfer: isLandType ? 0 : buildingStdAtTransfer,
+        landStdPriceAtAcquisition: isLandType ? stdAtAcquisition : 0,
+        buildingStdPriceAtAcquisition: isLandType ? 0 : buildingStdAtAcquisition,
       }
     : {
         // 기준시가 모드(K-1~K-3): 안분용 기준시가 4종
