@@ -257,6 +257,17 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       await expect(page.getByText("필요경비", { exact: true })).toBeVisible();
       await expect(page.getByText("총 납부세액")).toBeVisible();
 
+      // 세부담 비교 카드 — 단순증여 vs 부담부증여 (burdened-gift-comparison)
+      const comparisonCard = page.locator(
+        "[data-print-id='burdened-gift-comparison']",
+      );
+      await expect(comparisonCard).toBeVisible({ timeout: 10_000 });
+      await expect(
+        comparisonCard.getByText("단순증여 vs 부담부증여 세부담 비교"),
+      ).toBeVisible();
+      await expect(comparisonCard.getByText("세부담 차이")).toBeVisible();
+      await expect(comparisonCard.getByText("양도소득세")).toBeVisible();
+
       // API body 검증 — 올바른 값이 전달됨
       expect(mock.bodies.length, "양도세 API 호출 횟수").toBeGreaterThan(0);
       const body = mock.bodies[0];

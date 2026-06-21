@@ -42,7 +42,8 @@ export type GiftPrintSectionId =
   | "installment"
   | "split-payment"
   | "warnings"
-  | "burdened-transfer-tax";
+  | "burdened-transfer-tax"
+  | "burdened-gift-comparison";
 
 /** 증여세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type GiftPrintSectionNode = GenericNode<GiftPrintSectionId>;
@@ -101,6 +102,7 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
       { id: "split-payment", label: "분납 안내 (§70②)", channel: SCREEN },
       { id: "warnings", label: "주의 사항", channel: SCREEN },
       { id: "burdened-transfer-tax", label: "부담부증여 양도소득세 (증여자)", channel: SCREEN },
+      { id: "burdened-gift-comparison", label: "세부담 비교 (단순증여 vs 부담부증여)", channel: SCREEN },
     ],
   },
 ];
