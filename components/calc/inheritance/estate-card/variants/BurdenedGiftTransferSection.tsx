@@ -66,6 +66,11 @@ function createEmptyBgt(): BurdenedGiftTransferTaxInput {
     capitalExpenditure: undefined,
     transferExpense: undefined,
     landStdPriceAtTransfer: undefined,
+    // §114조의2 신축·증축 가산세 (K-5 + 건물 전용)
+    isSelfBuilt: undefined,
+    buildingType: undefined,
+    constructionDate: undefined,
+    extensionFloorArea: undefined,
   };
 }
 
@@ -84,7 +89,9 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     !!bgt.actualAcquisitionTotal ||
     !!bgt.capitalExpenditure ||
     !!bgt.transferExpense ||
-    !!bgt.landStdPriceAtTransfer
+    !!bgt.landStdPriceAtTransfer ||
+    bgt.isSelfBuilt === true ||
+    !!bgt.constructionDate
   );
 }
 

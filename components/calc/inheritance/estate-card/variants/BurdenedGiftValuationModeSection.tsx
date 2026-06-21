@@ -13,8 +13,16 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DateInput } from "@/components/ui/date-input";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
+
+/** Date → YYYY-MM-DD (DateInput 교환용). new Date 직접 호출 금지 — 역변환은 toOptionalDate. */
+function dateToStr(d: Date | undefined): string {
+  return d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : "";
+}
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -66,6 +74,11 @@ export function ValuationModeSection({
                     capitalExpenditure: undefined,
                     transferExpense: undefined,
                     landStdPriceAtTransfer: undefined,
+                    // §114조의2 신축필드도 초기화 (K-5 전용 — store stale 방지)
+                    isSelfBuilt: undefined,
+                    buildingType: undefined,
+                    constructionDate: undefined,
+                    extensionFloorArea: undefined,
                   }
                 : {}),
             })
@@ -131,7 +144,14 @@ export function ValuationModeSection({
                       capitalExpenditure: undefined,
                       transferExpense: undefined,
                     }
-                  : { landStdPriceAtTransfer: undefined }),
+                  : {
+                      // actual(K-4) 전환 — K-5 전용 신축필드 초기화 (store stale 방지)
+                      landStdPriceAtTransfer: undefined,
+                      isSelfBuilt: undefined,
+                      buildingType: undefined,
+                      constructionDate: undefined,
+                      extensionFloorArea: undefined,
+                    }),
               })
             }
             options={[
@@ -240,6 +260,71 @@ export function ValuationModeSection({
                 label="양도시(증여시) 개별공시지가 (원/㎡) — K-5 환산 분모"
                 hint="환산취득가액 계산 시 양도시 기준시가(분모). 취득시 기준시가와 구분 입력."
               />
+            </div>
+          )}
+          {/* K-5 + 건물(non-land): §114조의2 신축·증축 가산세 입력 */}
+          {!isLandType && (
+            <div className="mt-2 space-y-2">
+              <ToggleCard
+                tone="amber"
+                size="sm"
+                title="신축·증축 건물 (§114조의2 가산세)"
+                description="증여자가 신축·증축한 건물을 취득(증축)일부터 5년 이내 양도 시 건물 환산취득가액의 5% 가산세가 부과됩니다."
+                checked={bgt.isSelfBuilt ?? false}
+                onCheckedChange={(v) =>
+                  set({
+                    isSelfBuilt: v || undefined,
+                    ...(v
+                      ? {}
+                      : {
+                          buildingType: undefined,
+                          constructionDate: undefined,
+                          extensionFloorArea: undefined,
+                        }),
+                  })
+                }
+                data-testid="bg-self-built"
+              />
+              {bgt.isSelfBuilt && (
+                <>
+                  <FieldCard label="신축·증축 구분">
+                    <RadioCardGroup
+                      name="bg-building-type"
+                      tone="amber"
+                      layout="inline"
+                      value={bgt.buildingType ?? "new"}
+                      onChange={(v) =>
+                        set({ buildingType: v as BurdenedGiftTransferTaxInput["buildingType"] })
+                      }
+                      options={[
+                        {
+                          value: "new",
+                          label: "신축",
+                          description: "건물 신축",
+                          testId: "bg-building-type-new",
+                        },
+                        {
+                          value: "extension",
+                          label: "증축",
+                          description: "증축(85㎡ 초과·증축부분 한정) 가산세는 Phase 2에서 지원합니다.",
+                          disabled: true,
+                          testId: "bg-building-type-extension",
+                        },
+                      ]}
+                    />
+                  </FieldCard>
+                  <FieldCard
+                    label="신축일(취득일) — §114조의2 5년 기산"
+                    required
+                    hint="신축일부터 양도일까지 5년 이내일 때 가산세가 적용됩니다."
+                  >
+                    <DateInput
+                      value={dateToStr(bgt.constructionDate)}
+                      onChange={(v) => set({ constructionDate: toOptionalDate(v) })}
+                    />
+                  </FieldCard>
+                </>
+              )}
             </div>
           )}
         </div>

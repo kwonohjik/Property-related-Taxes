@@ -320,6 +320,18 @@ export function validateStep(step: number, form: FormState): string | null {
             return `${itemLabel}: 토지 양도시(증여시) 기준시가(원/㎡)를 입력하세요. (K-5 환산 분모 필수)`;
           }
         }
+        // K-5 환산 + 건물/주택: 양도시 기준시가(standardPrice = 분모) 침묵 0-base 차단 (소령 §176의2②2호)
+        if (bgt.acquisitionMethod === "converted" && propertyType !== "land") {
+          if (!bgItem.standardPrice || bgItem.standardPrice <= 0) {
+            return `${itemLabel}: 양도시(증여시) 기준시가를 입력하세요. (K-5 환산 분모 필수)`;
+          }
+          // §114조의2 신축·증축: 신축일(취득일) 필수 (5년 기산 — 자동 fallback 금지)
+          if (bgt.isSelfBuilt === true && !bgt.constructionDate) {
+            return `${itemLabel}: 신축·증축 건물의 신축일(취득일)을 입력하세요. (§114조의2 5년 기산 필수)`;
+          }
+          // TODO(Phase 2 증축): buildingType==="extension" 활성화 시 extensionFloorArea>0 필수 차단 추가.
+          //   현재 UI는 증축 disabled(Phase 1 신축만). 미입력 시 엔진 rate-calc.ts (extensionFloorArea ?? 0)<=85 → 침묵 미발동.
+        }
       } else {
         // 기준시가 모드(K-1~K-3): 양도시 기준시가 필수 — 건물·아파트 및 토지 모두
         // 토지: standardPrice = 개별공시지가 총액 (LandPriceLookupField with area prop → 총액 저장)

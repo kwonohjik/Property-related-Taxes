@@ -215,6 +215,23 @@ export function buildGiftBurdenedTransferBody(
     priorReductionUsage: [] as unknown[],
     specialHouseExclusions: [] as unknown[],
     isNonBusinessLand: isLandType ? (bgt.isNonBusinessLand ?? false) : false,
+
+    // §114조의2 신축·증축 가산세 (K-5 환산 + 건물 전용) — body 최상위 (Zod propertyBaseShape 수용)
+    // land 제외(건물 행위). 엔진 step override가 converted+isSelfBuilt에서 penalty base 결선.
+    ...(isMarketMode &&
+    bgt.acquisitionMethod === "converted" &&
+    bgt.isSelfBuilt === true &&
+    !isLandType
+      ? {
+          isSelfBuilt: true,
+          buildingType: bgt.buildingType ?? "new",
+          constructionDate:
+            bgt.constructionDate instanceof Date
+              ? bgt.constructionDate.toISOString().slice(0, 10)
+              : (bgt.constructionDate as unknown as string | undefined),
+          extensionFloorArea: bgt.extensionFloorArea,
+        }
+      : {}),
   };
 
   // ─── B. 주택 판정 필드 (Zod propertyBaseShape 필수 — 전 유형 무조건 전송) ───

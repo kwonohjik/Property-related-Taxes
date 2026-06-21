@@ -310,8 +310,14 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   //   - useEstimatedAcquisition: true  → 단건 엔진 calcTransferGain() 결과 estimatedBase (FinalizeArgs)
   //   - usedEstimatedAcquisition: true → aggregate 경로(일반건물 등) — calcTransferGain 미경유.
   //     이때 estimatedBase(args)=0이므로 input.estimatedBase(카드에서 전달된 값)를 fallback.
-  const isEstimatedMode = input.useEstimatedAcquisition || input.usedEstimatedAcquisition;
-  const effectiveEstimatedBase = estimatedBase || (input.usedEstimatedAcquisition ? (input.estimatedBase ?? 0) : 0);
+  // 부담부증여 K-5 신축(§114조의2): step override가 effectiveInput에 usedEstimatedAcquisition·
+  // estimatedBase(건물분 환산취득가)를 실어보냄 → 원본 input 외 effectiveInput도 penalty base 인식.
+  const isEstimatedMode =
+    input.useEstimatedAcquisition || input.usedEstimatedAcquisition || effectiveInput.usedEstimatedAcquisition;
+  const effectiveEstimatedBase =
+    estimatedBase ||
+    (input.usedEstimatedAcquisition ? (input.estimatedBase ?? 0) : 0) ||
+    (effectiveInput.usedEstimatedAcquisition ? (effectiveInput.estimatedBase ?? 0) : 0);
   const penaltyBase = input.acquisitionMethod === "appraisal"
     ? (input.appraisalValue ?? 0)
     : (isEstimatedMode ? effectiveEstimatedBase : 0);

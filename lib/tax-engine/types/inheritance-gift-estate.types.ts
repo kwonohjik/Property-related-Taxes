@@ -683,4 +683,25 @@ export interface BurdenedGiftTransferTaxInput {
    * 주택·건물 자산에서는 standardPrice(양도시 기준시가)가 이미 있으므로 불필요.
    */
   landStdPriceAtTransfer?: number;
+
+  // ===== §114조의2 신축·증축 환산 5% 가산세 (K-5 환산 + 건물 전용) =====
+  /**
+   * 증여자가 신축·증축한 건물 여부. true + K-5 환산 + 취득(증축)일~양도 5년 이내 시
+   * 건물 환산취득가액 × 5% 가산세(소득세법 §114조의2). land·K-4 실지·표준 모드는 미발동.
+   * real_estate_building(isHousing 무관)·real_estate_apartment 전용 — real_estate_land 미적용.
+   */
+  isSelfBuilt?: boolean;
+  /**
+   * 신축/증축 구분. "new"(신축) | "extension"(증축).
+   * Phase 1은 신축("new")만 지원 — 증축(85㎡ 초과·증축부분 한정 base)은 Phase 2 SCOPE OUT.
+   */
+  buildingType?: "new" | "extension";
+  /**
+   * 신축일(=취득일) 또는 증축일. §114조의2 5년 기산점. isSelfBuilt=true 시 필수(⑧ validation).
+   */
+  constructionDate?: Date;
+  /**
+   * 증축 바닥면적 합계(㎡) — buildingType="extension" 시 85㎡ 초과 판정용. Phase 2.
+   */
+  extensionFloorArea?: number;
 }

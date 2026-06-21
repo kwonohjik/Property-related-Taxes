@@ -134,8 +134,19 @@ function SingleTransferResultCard({
           />
         )}
         <Row label="결정세액" value={formatKRW(result.determinedTax)} highlight />
+        {result.penaltyTax > 0 && (
+          <Row
+            label="신축·증축 가산세 (§114조의2 · 건물 환산취득가 × 5%)"
+            value={formatKRW(result.penaltyTax)}
+            sub
+          />
+        )}
         <Row
-          label="지방소득세 (10%)"
+          label={
+            result.penaltyTax > 0
+              ? "지방소득세 ((결정세액+가산세) × 10%)"
+              : "지방소득세 (10%)"
+          }
           value={formatKRW(result.localIncomeTax)}
           sub
         />
