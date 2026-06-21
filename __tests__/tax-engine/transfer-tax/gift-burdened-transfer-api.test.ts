@@ -17,6 +17,7 @@
 
 import { describe, it, expect } from "vitest";
 import { buildGiftBurdenedTransferBody } from "@/lib/calc/gift-burdened-transfer-api";
+import { burdenedGiftInfoSchema } from "@/lib/api/transfer-tax-burdened-gift-schema";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
 
@@ -435,5 +436,48 @@ describe("B-api-9: 토글 OFF(undefined) 자산 호출 시 throw", () => {
     } as EstateItem;
 
     expect(() => buildGiftBurdenedTransferBody(item, makeForm())).toThrow();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B-api-10: 상업용건물(building) 시가+실지(K-4) + 취득시 기준시가 미입력 → Zod 통과
+//   회귀: 시가 모드 변환에서 비-토지 landStd*를 undefined로 보내 Zod 400 (INVALID_INPUT) 발생하던 버그.
+//   비-토지는 landStd=0/buildingStd=value 로 전달되어야 number 필수 스키마 통과 + 엔진 전액 건물분 귀속.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("B-api-10: 상업용건물 시가+실지(K-4) 취득시 기준시가 미입력 → Zod 통과", () => {
+  const item: EstateItem = {
+    id: "cb-1",
+    category: "real_estate_building",
+    name: "정안빌딩",
+    standardPrice: 0, // 양도시 기준시가 미입력 (K-4에서 불요)
+    leaseDeposit: 200_000_000,
+    mortgageAmount: 200_000_000,
+    assumedDebtForGift: 400_000_000,
+    monthlyRent: 0,
+    burdenedGiftTransferTax: {
+      acquisitionDate: new Date("2003-12-17"),
+      standardPriceAtAcquisition: 0, // ← 취득시 기준시가 미입력
+      isHousing: false,
+      valuationMode: "sangjeungbeop_market",
+      marketValueAtTransfer: 5_200_000_000,
+      acquisitionMethod: "actual",
+      actualAcquisitionTotal: 700_000_000,
+      isUnregistered: false,
+    },
+  } as EstateItem;
+  const body = buildGiftBurdenedTransferBody(item, makeForm());
+  const bgi = body.burdenedGiftInfo as Record<string, unknown>;
+
+  it("landStd/buildingStd 4종 모두 number(0 포함) — undefined 금지", () => {
+    expect(bgi.landStdPriceAtTransfer).toBe(0);
+    expect(bgi.landStdPriceAtAcquisition).toBe(0);
+    expect(typeof bgi.buildingStdPriceAtTransfer).toBe("number");
+    expect(typeof bgi.buildingStdPriceAtAcquisition).toBe("number");
+  });
+
+  it("burdenedGiftInfoSchema.safeParse 성공 (400 INVALID_INPUT 회귀 가드)", () => {
+    const parsed = burdenedGiftInfoSchema.safeParse(body.burdenedGiftInfo);
+    expect(parsed.success).toBe(true);
   });
 });
