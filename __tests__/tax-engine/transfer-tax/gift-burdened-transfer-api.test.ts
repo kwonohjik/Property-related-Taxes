@@ -15,8 +15,11 @@
  *   B-api-8: C-4 검증 — assumedDebt = leaseDeposit + mortgageAmount 매핑 정확성
  */
 
-import { describe, it, expect } from "vitest";
-import { buildGiftBurdenedTransferBody } from "@/lib/calc/gift-burdened-transfer-api";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import {
+  buildGiftBurdenedTransferBody,
+  callGiftBurdenedTransferAPI,
+} from "@/lib/calc/gift-burdened-transfer-api";
 import { burdenedGiftInfoSchema } from "@/lib/api/transfer-tax-burdened-gift-schema";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
@@ -479,5 +482,51 @@ describe("B-api-10: 상업용건물 시가+실지(K-4) 취득시 기준시가 �
   it("burdenedGiftInfoSchema.safeParse 성공 (400 INVALID_INPUT 회귀 가드)", () => {
     const parsed = burdenedGiftInfoSchema.safeParse(body.burdenedGiftInfo);
     expect(parsed.success).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B-api-11: callGiftBurdenedTransferAPI — 응답 봉투 { data: { mode, result } } 추출
+//   회귀: res.json()을 곧장 result로 캐스팅 → result.transferGain undefined →
+//   BurdenedTransferTaxResultCard formatKRW(undefined) 런타임 크래시.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("B-api-11: callGiftBurdenedTransferAPI — 봉투에서 result 추출", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("성공 응답 { data: { mode:'single', result } } → result(transferGain 포함) 반환", async () => {
+    const fakeResult = {
+      transferGain: 346_153_847,
+      taxableGain: 346_153_847,
+      taxBase: 239_807_693,
+      calculatedTax: 71_186_923,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ data: { mode: "single", result: fakeResult } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    const result = await callGiftBurdenedTransferAPI(makeAptItem(), makeForm());
+    expect(result.transferGain).toBe(346_153_847);
+    expect(result.calculatedTax).toBe(71_186_923);
+  });
+
+  it("봉투 없는(레거시) 형태 응답 → throw (잘못된 추출 회귀 방지)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ transferGain: 1 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    await expect(
+      callGiftBurdenedTransferAPI(makeAptItem(), makeForm()),
+    ).rejects.toThrow();
   });
 });
