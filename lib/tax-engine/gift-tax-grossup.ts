@@ -120,18 +120,22 @@ export function calcGiftTaxWithDonorPaidTax(
   );
 
   // ─────────────────────────────────────────────
-  // STEP G-2: 고정점 반복 수렴
+  // STEP G-2: 고정점 반복 수렴 (부분 대납 지원)
+  //   P = 수증자 본인 납부액 (doneePaidGiftTax, 고정). 증여자는 부족분만 대납.
+  //   addition(증여자 대납분 D) = max(0, finalTax − P)
   //   addition_0 = 0, tax_0 = baseline
-  //   addition_n+1 = tax_n
+  //   addition_n+1 = max(0, tax_n − P)
   //   tax_n+1 = calcGiftTax(input with _donorPaidTaxAddition=addition_n+1).finalTax
   //   |tax_n+1 - tax_n| < TOLERANCE → 수렴
+  //   수렴 보장: max(0,·)는 비확장 + finalTax 한계세율 ≤0.679<1 축약 → 합성 수렴.
   // ─────────────────────────────────────────────
+  const doneePaid = Math.max(0, input.doneePaidGiftTax ?? 0);
   let addition = 0;
   let prevTax = baseline;
   let iterations = 0;
 
   for (let n = 0; n < MAX_ITER; n++) {
-    const nextAddition = prevTax;
+    const nextAddition = Math.max(0, prevTax - doneePaid);
     const nextTax = runGrossUpIteration(input, options, nextAddition).finalTax;
     iterations = n + 1;
     addition = nextAddition;
@@ -143,18 +147,24 @@ export function calcGiftTaxWithDonorPaidTax(
     prevTax = nextTax;
   }
 
-  // 수렴 후 finalTax = prevTax (= 대납세액)
-  const donorPaidTax = prevTax;
+  // 수렴 후: prevTax = 총세액 T*, addition = 증여자 대납분 D = max(0, T* − P)
+  // 최종 prevTax 기준으로 addition 재정렬(고정점 정합 — grossedUpNetGift·besshi10 일치)
+  const totalGiftTax = prevTax;
+  addition = Math.max(0, totalGiftTax - doneePaid);
+  const donorPaidTax = addition;
+  const doneePaidTax = Math.min(doneePaid, totalGiftTax); // 세액 한도 캡 → D + doneePaidTax == T*
   const grossedUpNetGift = originalNetGift + addition;
 
   // STEP G-3: echo를 포함하여 최종 결과 재계산
-  // _echoGrossUp 주입 → buildBesshi10Rows 내 derivePriorGiftAddition이 donorPaidTax 차감
+  // _echoGrossUp 주입 → buildBesshi10Rows 내 derivePriorGiftAddition이 donorPaidTax(=addition) 차감
   const finalEcho: GiftTaxResult["donorPaidTaxGrossUp"] = {
     applied: true,
     iterations,
     originalNetGift,
     grossedUpNetGift,
     donorPaidTax,
+    totalGiftTax,
+    doneePaidTax,
     baselineTax: baseline,
   };
   const lastResult = runGrossUpIteration(input, options, addition, finalEcho);
