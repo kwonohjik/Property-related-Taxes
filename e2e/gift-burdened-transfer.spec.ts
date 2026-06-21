@@ -48,6 +48,24 @@ const MOCK_TRANSFER_RESULT = {
   localIncomeTax: 1_912_500,
   totalTax: 21_037_500,
   warnings: [],
+  // 결과 카드의 양도가액·취득가액·필요경비 행 렌더용 (§159①1호 안분 결과)
+  transferBurdenedGiftBreakdown: {
+    acquisitionMethodUsed: "standard_price",
+    assumedDebtAmount: 200_000_000,
+    debtRatio: 0.25,
+    perAsset: {
+      land: {
+        transferPrice: 0,
+        acquisitionPrice: 0,
+        estimatedDeduction: 0,
+      },
+      building: {
+        transferPrice: 200_000_000,
+        acquisitionPrice: 97_000_000,
+        estimatedDeduction: 3_000_000,
+      },
+    },
+  },
 };
 
 /**
@@ -233,6 +251,10 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       ).toBeVisible({ timeout: 10_000 });
       // "양도차익" 정확히 일치 (strict: "과세 양도차익"과 구분)
       await expect(page.getByText("양도차익", { exact: true })).toBeVisible();
+      // 양도가액·취득가액·필요경비 행 표시 (§159①1호 안분 결과)
+      await expect(page.getByText("양도가액 (채무인수분)")).toBeVisible();
+      await expect(page.getByText("취득가액 (채무인수분)")).toBeVisible();
+      await expect(page.getByText("필요경비", { exact: true })).toBeVisible();
       await expect(page.getByText("총 납부세액")).toBeVisible();
 
       // API body 검증 — 올바른 값이 전달됨
