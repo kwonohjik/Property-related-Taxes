@@ -180,6 +180,29 @@ export function GiftCreditChecklist({
         onCheckedChange={(v) => set({ isFiledOnTime: v })}
       />
 
+      {/* 증여자 대납(代納) — §36 채무면제이익 gross-up 순환계산 */}
+      <ToggleCard
+        tone="violet"
+        title="증여자가 수증자의 증여세를 대납(代納)합니까? (§36)"
+        description="증여자가 수증자 대신 증여세를 납부하면 그 세액 자체도 채무면제이익 증여(§36)로 보아 과세표준에 합산합니다. 수렴할 때까지 반복 계산(gross-up)합니다."
+        checked={form.donorPaysGiftTax === true}
+        onCheckedChange={(v) => set({ donorPaysGiftTax: v, donorHasJointLiability: false })}
+      >
+        {/* 연대납세의무 — ON 시 재차증여 아님 → gross-up 미적용 */}
+        <ToggleCard
+          tone="amber"
+          title="증여자가 해당 증여의 연대납세의무자(§4의2⑥)이었습니까?"
+          description="증여자가 이미 해당 증여세의 연대납세의무자인 경우, 대납은 새로운 채무면제이익 증여로 보지 않아 gross-up이 적용되지 않습니다."
+          checked={form.donorHasJointLiability === true}
+          onCheckedChange={(v) => set({ donorHasJointLiability: v })}
+        />
+        {form.donorHasJointLiability === true && (
+          <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+            연대납세의무자가 납부한 세액은 채무면제이익에 해당하지 않아 gross-up 계산이 생략됩니다 (§4의2⑥).
+          </div>
+        )}
+      </ToggleCard>
+
       {/* ── 활성 항목 입력 블록 ── */}
 
       {/* 혼인·출산 공제 (직계존속만 칩 노출) */}

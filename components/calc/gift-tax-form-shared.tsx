@@ -134,6 +134,8 @@ export const INITIAL_FORM: FormState = {
   familyBusinessYears: "",
   splitPaymentEnabled: false,
   splitPaymentAmount: "",
+  donorPaysGiftTax: false,
+  donorHasJointLiability: false,
   ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 

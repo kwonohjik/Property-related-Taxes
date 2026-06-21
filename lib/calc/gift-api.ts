@@ -105,5 +105,8 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     requestedSplitAmount: form.splitPaymentAmount
       ? parseAmount(form.splitPaymentAmount)
       : undefined,
+    // §36 대납(代納) gross-up — 명시 키 (spread 금지: 침묵 strip 방지)
+    donorPaysGiftTax: form.donorPaysGiftTax,
+    donorHasJointLiability: form.donorHasJointLiability,
   };
 }

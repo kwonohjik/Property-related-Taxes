@@ -26,6 +26,7 @@ const ALL_LEAVES: GiftPrintSectionId[] = [
   "tax-summary",
   "gen-skip-surcharge",
   "tax-credit",
+  "donor-paid-grossup",
   "prior-gift",
   "filing-form-10",
   "valuation-form",
@@ -66,8 +67,8 @@ describe("증여세 선택 출력 레지스트리 — Pre-Do anchor (PR-B1)", ()
     }
   });
 
-  // PD-gift-3: 트리 평탄화 = 14 leaf, 유니크, group: 접두 없음
-  it("PD-gift-3: flattenPrintSectionIds는 14개 유니크 leaf, group: 접두 없음", () => {
+  // PD-gift-3: 트리 평탄화 = 15 leaf, 유니크, group: 접두 없음 (donor-paid-grossup 추가)
+  it("PD-gift-3: flattenPrintSectionIds는 15개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);

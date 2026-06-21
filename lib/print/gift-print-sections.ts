@@ -26,12 +26,13 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 12종 (오타 방지·exact 매칭) */
+/** 선택 가능 leaf 13종 (오타 방지·exact 매칭) */
 export type GiftPrintSectionId =
   | "core-result"
   | "tax-summary"
   | "gen-skip-surcharge"
   | "tax-credit"
+  | "donor-paid-grossup"
   | "prior-gift"
   | "filing-form-10"
   | "valuation-form"
@@ -62,6 +63,7 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
       { id: "tax-summary", label: "증여세 과세 요약", channel: PDF },
       { id: "gen-skip-surcharge", label: "세대생략 할증 근거 (§57)", channel: SCREEN },
       { id: "tax-credit", label: "세액공제 상세 (§28·§69)", channel: SCREEN },
+      { id: "donor-paid-grossup", label: "대납(代納) gross-up 상세 (§36)", channel: SCREEN },
     ],
   },
   {

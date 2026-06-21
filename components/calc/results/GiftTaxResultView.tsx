@@ -286,6 +286,7 @@ export function GiftTaxResultView({
     )
       s.add("installment");
     if (isInstallmentSplitEligible(result.finalTax)) s.add("split-payment");
+    if (result.donorPaidTaxGrossUp?.applied) s.add("donor-paid-grossup");
     if (result.warnings.length > 0) s.add("warnings");
     if (transferTaxResults.length > 0) s.add("burdened-transfer-tax");
     return s;
@@ -537,6 +538,57 @@ export function GiftTaxResultView({
           computedTax={result.computedTax}
         />
         </PrintSection>
+      )}
+
+      {/* 대납(代納) gross-up 상세 (§36) — applied 시에만 노출 */}
+      {result.donorPaidTaxGrossUp?.applied && (
+        <PrintSection id="donor-paid-grossup" selectedIds={selectedPrintIds}>
+          <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3 dark:border-violet-800 dark:bg-violet-950/20">
+            <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
+              대납(代納) gross-up 상세 (§36 채무면제이익)
+            </h3>
+            <p className="text-xs text-violet-600 dark:text-violet-400">
+              증여자가 수증자의 증여세를 대납하면 그 세액 자체도 채무면제이익 증여로 보아 과세표준에 합산합니다.
+              수렴할 때까지 반복 계산(최대 100회)한 결과입니다.
+            </p>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex items-center justify-between px-3 py-2">
+                <span>원본 증여세 과세표준 (과세가액 − 공제)</span>
+                <span className="font-mono">{formatKRW(result.donorPaidTaxGrossUp.originalNetGift)}</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 font-semibold text-violet-700 dark:text-violet-300">
+                <span>대납세액 (gross-up 수렴값)</span>
+                <span className="font-mono">{formatKRW(result.donorPaidTaxGrossUp.donorPaidTax)}</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 font-semibold bg-violet-100/60 dark:bg-violet-900/20 rounded-lg">
+                <span>gross-up 후 최종 과세표준</span>
+                <span className="font-mono">{formatKRW(result.donorPaidTaxGrossUp.grossedUpNetGift)}</span>
+              </div>
+            </div>
+            {/* 흐름 표시 */}
+            <div className="flex items-center gap-1.5 flex-wrap text-xs text-violet-700 dark:text-violet-300 bg-violet-100/60 dark:bg-violet-900/20 rounded-lg px-3 py-2">
+              <span>{formatKRW(result.donorPaidTaxGrossUp.originalNetGift)}</span>
+              <span className="text-violet-400">+</span>
+              <span>{formatKRW(result.donorPaidTaxGrossUp.donorPaidTax)} (대납세액)</span>
+              <span className="text-violet-400">=</span>
+              <span className="font-semibold">{formatKRW(result.donorPaidTaxGrossUp.grossedUpNetGift)} (최종 과표)</span>
+            </div>
+            <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground">
+              <span>gross-up 전 기준 산출세액 (수렴 비교용, 반복 {result.donorPaidTaxGrossUp.iterations}회)</span>
+              <span className="font-mono">{formatKRW(result.donorPaidTaxGrossUp.baselineTax)}</span>
+            </div>
+          </div>
+        </PrintSection>
+      )}
+
+      {/* 연대납세의무 → gross-up 미적용 안내 */}
+      {result.donorPaidTaxGrossUp?.reasonNotApplied === "joint_liability" && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-800 dark:bg-amber-950/20">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            증여자가 해당 증여의 연대납세의무자(§4의2⑥)이므로, 대납세액은 채무면제이익 증여로 보지 않아
+            gross-up 계산이 적용되지 않았습니다.
+          </p>
+        </div>
       )}
 
 {/* 증여재산 및 평가명세서 (별지 제10호서식 부표 1) — A4 가로 양식, 카드 내부에서 가로 스크롤 */}
