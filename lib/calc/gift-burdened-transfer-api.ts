@@ -230,6 +230,10 @@ export function buildGiftBurdenedTransferBody(
               ? bgt.constructionDate.toISOString().slice(0, 10)
               : (bgt.constructionDate as unknown as string | undefined),
           extensionFloorArea: bgt.extensionFloorArea,
+          // Phase 2 증축 신규: extension 시 증축부분 취득기준시가 명시 전송 (최상위 경로 통일)
+          ...(bgt.buildingType === "extension" && bgt.extensionStdPriceAtAcquisition != null
+            ? { extensionStdPriceAtAcquisition: bgt.extensionStdPriceAtAcquisition }
+            : {}),
         }
       : {}),
   };

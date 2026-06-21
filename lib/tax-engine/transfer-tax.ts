@@ -61,7 +61,7 @@ import {
   runCommercialBuildingStep,
   type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
-import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch } from "./transfer-tax-rate-calc";
+import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
@@ -383,11 +383,13 @@ export function calculateTransferTax(
   // 양도 손실(또는 0): 가산세는 §114조의2 ②에 따라 산출세액 없어도 부과
   // aggregate 엔진에서 skipLossFloor=true로 호출 시 음수 차익도 이 분기로 흡수되어야 함
   if (transferGain <= 0) {
-    const pb0 = input.acquisitionMethod === "appraisal"
+    let pb0 = input.acquisitionMethod === "appraisal"
       ? (input.appraisalValue ?? 0)
       : ((input.useEstimatedAcquisition || effectiveInput.usedEstimatedAcquisition)
           ? (estimatedBase || effectiveInput.estimatedBase || 0)
           : 0);
+    // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지)
+    pb0 = resolveExtensionPenaltyBase(input, pb0);
     const pr0 = calculateBuildingPenalty(effectiveInput, pb0);
     const pt0 = pr0?.penalty ?? 0;
     if (pt0 > 0) {

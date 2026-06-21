@@ -24,6 +24,8 @@ export interface DecimalInputProps {
   className?: string;
   /** 천단위 콤마 표시 (주식수·금액 등). 저장값은 콤마 없음. */
   thousandSeparator?: boolean;
+  /** E2E·단위 테스트 셀렉터용 data-testid (내부 input에 전달) */
+  "data-testid"?: string;
 }
 
 /** 소수점 유지하며 정수부에 천단위 콤마 적용. */
@@ -42,6 +44,7 @@ export function DecimalInput({
   unit,
   className,
   thousandSeparator = false,
+  "data-testid": dataTestId,
 }: DecimalInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -70,6 +73,7 @@ export function DecimalInput({
         onChange={handleChange}
         placeholder={placeholder}
         disabled={disabled}
+        data-testid={dataTestId}
         className={cn(
           "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
           unit ? "pr-10" : "pr-3",

@@ -106,6 +106,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     buildingType: "",
     constructionDate: "",
     extensionFloorArea: "",
+    extensionStdPriceAtAcquisition: "",
     selfOwns: "both",
     hasSeperateLandAcquisitionDate: false,
     landAcquisitionDate: "",
@@ -302,6 +303,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbExtensionAcquisitionMode: "estimated",   // 사례 33 호환 default
     gbExtensionActualAcquisitionPrice: "",
     gbExtensionActualExpenses: "",
+    gbExtensionFloorArea85: "",
     // ── 사례 35: 주택→상가 용도변경 ──
     gbHouseToCommercialConversion: false,
     gbConversionDate: "",

@@ -249,3 +249,72 @@ describe("§114조의2 Phase2 P2-6 — general_building 증축 85㎡ 게이트 (
     expect(b2P?.penaltyTax ?? 0).toBe(1_648_944);
   });
 });
+
+// ============================================================
+// C-A1b — 양도세 단독(비-부담부) 증축 K-5 (설계 §70·§718, #5 함께수정)
+// ============================================================
+
+describe("§114조의2 Phase2 C-A1b — 양도세 단독(비-부담부) 증축 K-5 penalty 증축부분 한정", () => {
+  function cA1bInput(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput {
+    return baseTransferInput({
+      propertyType: "building",
+      transferPrice: 200_000_000,
+      transferDate: new Date("2025-06-01"),
+      acquisitionDate: new Date("2022-01-01"),
+      useEstimatedAcquisition: true,
+      acquisitionMethod: "estimated",
+      standardPriceAtAcquisition: 100_000_000, // 건물 전체 취득기준시가
+      standardPriceAtTransfer: 160_000_000, // 양도시 건물 기준시가
+      isSelfBuilt: true,
+      buildingType: "extension",
+      extensionFloorArea: 100, // > 85
+      constructionDate: new Date("2022-01-01"),
+      extensionStdPriceAtAcquisition: 40_000_000, // 증축부분 취득기준시가
+      ...overrides,
+    } as Partial<TransferTaxInput>);
+  }
+
+  it("[C-A1b] penaltyBase = 증축부분 환산취득가 50,000,000 / penaltyTax = 2,500,000", () => {
+    // 전체 환산취득가 = floor(200M×100M/160M) = 125M (양도차익용 취득가)
+    // 증축부분 환산취득가 = floor(200M×40M/160M) = 50M → penalty = floor(50M×5%) = 2,500,000
+    const result = calculateTransferTax(cA1bInput(), rates);
+    expect(result.penaltyBase).toBe(50_000_000);
+    expect(result.penaltyTax).toBe(2_500_000);
+  });
+
+  it("[C-A1b 진단] 증축 penalty < 건물전체 base penalty(6,250,000) — 과대부과 방지 확인", () => {
+    const result = calculateTransferTax(cA1bInput(), rates);
+    expect(result.penaltyTax).toBeLessThan(6_250_000);
+  });
+
+  it("[C-A1b 신축 회귀] buildingType='new' → 건물전체 base 125M × 5% = 6,250,000", () => {
+    const result = calculateTransferTax(
+      cA1bInput({
+        buildingType: "new",
+        extensionFloorArea: undefined,
+        extensionStdPriceAtAcquisition: undefined,
+      } as Partial<TransferTaxInput>),
+      rates,
+    );
+    expect(result.penaltyBase).toBe(125_000_000);
+    expect(result.penaltyTax).toBe(6_250_000);
+  });
+
+  it("[C-A1c] 손실(transferGain≤0) 증축 → 손실 경로도 증축부분 base (penaltyTax 1,250,000, §114조의2②)", () => {
+    // 손실 유도: 양도가 100M < 전체 환산취득가 125M → 양도차익 음수 → 조기반환 경로
+    //   전체 환산취득가 = floor(100M×200M/160M) = 125M
+    //   증축부분 환산취득가 = floor(100M×40M/160M) = 25M → penalty = floor(25M×5%) = 1,250,000
+    // §114조의2② 산출세액 0(손실)에도 가산세 부과 — 손실 조기반환도 증축부분 base 적용 확인.
+    const result = calculateTransferTax(
+      cA1bInput({
+        transferPrice: 100_000_000,
+        standardPriceAtAcquisition: 200_000_000, // 취득기준시가 > 양도 → 손실
+        standardPriceAtTransfer: 160_000_000,
+        extensionStdPriceAtAcquisition: 40_000_000,
+      }),
+      rates,
+    );
+    expect(result.penaltyBase).toBe(25_000_000);
+    expect(result.penaltyTax).toBe(1_250_000);
+  });
+});

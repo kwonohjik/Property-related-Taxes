@@ -704,4 +704,10 @@ export interface BurdenedGiftTransferTaxInput {
    * 증축 바닥면적 합계(㎡) — buildingType="extension" 시 85㎡ 초과 판정용. Phase 2.
    */
   extensionFloorArea?: number;
+  /**
+   * 증축부분 취득시(증축완공시) 기준시가 총액(원) — buildingType="extension" 시 필수.
+   * §114조의2① "증축한 부분에 한정" 환산취득가 산출 분자. 소령 §176의2②2호.
+   * Phase 2 신규. land·K-4 실지·신축·표준 모드에서는 미사용.
+   */
+  extensionStdPriceAtAcquisition?: number;
 }

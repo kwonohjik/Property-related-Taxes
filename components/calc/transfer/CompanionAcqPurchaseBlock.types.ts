@@ -73,6 +73,9 @@ export interface BlockProps {
   onConstructionDateChange?: (v: string) => void;
   extensionFloorArea?: string;
   onExtensionFloorAreaChange?: (v: string) => void;
+  /** 증축부분 취득시 기준시가 총액 (원). buildingType==="extension" 시 필수. Phase 2. */
+  extensionStdPriceAtAcquisition?: string;
+  onExtensionStdPriceAtAcquisitionChange?: (v: string) => void;
   /** 토지/건물 취득일 분리 (housing·building 공통) */
   hasSeperateLandAcquisitionDate?: boolean;
   onHasSeperateLandAcquisitionDateChange?: (v: boolean) => void;

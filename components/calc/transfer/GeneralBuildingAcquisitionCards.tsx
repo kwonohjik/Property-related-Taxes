@@ -145,6 +145,8 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onConstructionDateChange={(v) => onChange({ constructionDate: v })}
             extensionFloorArea={asset.extensionFloorArea}
             onExtensionFloorAreaChange={(v) => onChange({ extensionFloorArea: v })}
+            extensionStdPriceAtAcquisition={asset.extensionStdPriceAtAcquisition}
+            onExtensionStdPriceAtAcquisitionChange={(v) => onChange({ extensionStdPriceAtAcquisition: v })}
             selfOwns={asset.selfOwns ?? "both"}
             onSelfOwnsChange={(v) => onChange({ selfOwns: v })}
             hasSeperateLandAcquisitionDate={false}

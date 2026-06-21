@@ -685,6 +685,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             onConstructionDateChange={props.onConstructionDateChange}
             extensionFloorArea={props.extensionFloorArea ?? ""}
             onExtensionFloorAreaChange={props.onExtensionFloorAreaChange}
+            extensionStdPriceAtAcquisition={props.extensionStdPriceAtAcquisition ?? ""}
+            onExtensionStdPriceAtAcquisitionChange={props.onExtensionStdPriceAtAcquisitionChange ?? (() => {})}
           />
         )}
     </div>

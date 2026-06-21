@@ -541,6 +541,20 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               />
             </FieldCard>
 
+            {/* §114조의2① 85㎡ 초과 게이트 — 자가증축 시만 표시 (경고용, 미입력=85㎡ 이하 처리) */}
+            {asset.gbExtensionAcquisitionCause === "newConstruction" && (
+              <FieldCard
+                label="증축부분 바닥면적 합계"
+                unit="㎡"
+                hint="§114조의2① 가산세 발동 여부 판정 전용. 85㎡ 초과 시 가산세 적용. 모르는 경우 비워두세요."
+              >
+                <DecimalInput
+                  value={asset.gbExtensionFloorArea85}
+                  onChange={(v) => onChange({ gbExtensionFloorArea85: v })}
+                />
+              </FieldCard>
+            )}
+
             {(asset.gbExtensionAcquisitionMode === "estimated" || !asset.gbExtensionAcquisitionMode) && (
               <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-700 space-y-0.5">
                 <p className="font-semibold">환산취득가 (§176의2②)</p>
