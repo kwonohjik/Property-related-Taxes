@@ -107,6 +107,36 @@ function SingleTransferResultCard({
 
       {/* 최종 납부세액 요약 */}
       <div className="divide-y divide-border">
+        {/* 양도가액·취득가액·필요경비 (소령 §159①1호 채무액 안분 후 — 채무인수분) */}
+        {(() => {
+          const brkd = result.transferBurdenedGiftBreakdown;
+          if (!brkd) return null;
+          const land = brkd.perAsset.land;
+          const bldg = brkd.perAsset.building;
+          const transferPrice =
+            (land?.transferPrice ?? 0) + (bldg?.transferPrice ?? 0);
+          const acquisitionPrice =
+            (land?.acquisitionPrice ?? 0) + (bldg?.acquisitionPrice ?? 0);
+          const necessaryExpense =
+            (land?.estimatedDeduction ?? 0) + (bldg?.estimatedDeduction ?? 0);
+          return (
+            <>
+              <Row label="양도가액 (채무인수분)" value={formatKRW(transferPrice)} />
+              <Row
+                label="취득가액 (채무인수분)"
+                value={`(−) ${formatKRW(acquisitionPrice)}`}
+                sub
+                deduction
+              />
+              <Row
+                label="필요경비"
+                value={`(−) ${formatKRW(necessaryExpense)}`}
+                sub
+                deduction
+              />
+            </>
+          );
+        })()}
         <Row label="양도차익" value={formatKRW(result.transferGain)} />
         <Row
           label="과세 양도차익"

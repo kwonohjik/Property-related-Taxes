@@ -228,4 +228,15 @@ describe("F-3-3 — 상업용건물 K-4(시가+실지): 취득시 기준시가�
     expect(acqZero).toBe(acqValue);
     expect(acqZero).toBe(64_000_000);
   });
+
+  // 회귀 가드: 시가 모드(K-4)에서도 장기보유특별공제(§95② 표1)가 적용되어야 한다.
+  //   (보유 2012-01-01~2024-01-01 = 표1 22%. "시가 모드 LTHD 누락" 의혹에 대한 실증 anchor —
+  //    LTHD=0은 보유기간 3년 미만일 때만 발생, 시가 모드 자체로는 누락되지 않음.)
+  it("시가 K-4 — 장기보유특별공제 적용(표1 22%) — LTHD 누락 회귀 가드", () => {
+    const r = calculateTransferTax(makeK4Input(0), rates);
+    expect(r.longTermHoldingDeduction).toBeGreaterThan(0);
+    expect(r.longTermHoldingRate).toBeCloseTo(0.22, 2);
+    // LTHD가 실제 과세표준에 차감됨 (양도차익 − 기본공제보다 작아야 함)
+    expect(r.taxBase).toBeLessThan(r.transferGain - 2_500_000);
+  });
 });
