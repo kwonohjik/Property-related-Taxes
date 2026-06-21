@@ -426,6 +426,8 @@ interface HousingFieldSetProps {
 function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, jibun, item }: HousingFieldSetProps) {
   const householdCount = bgt.householdHousingCount ?? 1;
   const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
+  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요.
+  const acqStdInert = isMarketMode && bgt.acquisitionMethod === "actual";
   return (
     <div className="space-y-2">
       {/* 취득일 */}
@@ -451,7 +453,15 @@ function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint,
       </FieldCard>
 
       {/* 취득시 기준시가 */}
-      <FieldCard label={stdPriceLabel} hint={stdPriceHint} required>
+      <FieldCard
+        label={stdPriceLabel}
+        hint={
+          acqStdInert
+            ? "실지취득가액(K-4) 모드에서는 입력하지 않아도 됩니다 — 결과(양도차익)에 영향 없음."
+            : stdPriceHint
+        }
+        required={!acqStdInert}
+      >
         <CurrencyInput
           label={stdPriceLabel}
           value={bgt.standardPriceAtAcquisition > 0 ? String(bgt.standardPriceAtAcquisition) : ""}
@@ -627,6 +637,8 @@ interface NonHousingFieldSetProps {
 
 function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item }: NonHousingFieldSetProps) {
   const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
+  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요.
+  const acqStdInert = isMarketMode && bgt.acquisitionMethod === "actual";
   return (
     <div className="space-y-2">
       <FieldCard label="취득일 (증여자 당초 취득일)" required>
@@ -646,7 +658,15 @@ function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStd
           data-testid="bg-transfer-acq-date"
         />
       </FieldCard>
-      <FieldCard label={stdPriceLabel} hint={stdPriceHint} required>
+      <FieldCard
+        label={stdPriceLabel}
+        hint={
+          acqStdInert
+            ? "실지취득가액(K-4) 모드에서는 입력하지 않아도 됩니다 — 결과(양도차익)에 영향 없음."
+            : stdPriceHint
+        }
+        required={!acqStdInert}
+      >
         <CurrencyInput
           label={stdPriceLabel}
           value={bgt.standardPriceAtAcquisition > 0 ? String(bgt.standardPriceAtAcquisition) : ""}
