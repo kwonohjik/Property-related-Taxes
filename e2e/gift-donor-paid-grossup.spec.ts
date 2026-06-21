@@ -88,16 +88,16 @@ test.describe("증여세 대납(代納) gross-up (§36)", () => {
       page.getByText("대납(代納) gross-up 상세 (§36 채무면제이익)"),
     ).toBeVisible();
 
-    // 흐름 표시 확인 (대납세액 텍스트)
-    await expect(page.getByText(/대납세액 \(gross-up 수렴값\)/)).toBeVisible();
+    // 흐름 표시 확인 — 신규 라벨 (부분 대납 확장 후)
+    await expect(page.getByText(/증여자 대납분 \(총세액 − 수증자 납부\)/)).toBeVisible();
     await expect(page.getByText(/gross-up 후 최종 과세표준/)).toBeVisible();
-    await expect(page.getByText(/원본 증여세 과세표준/)).toBeVisible();
+    await expect(page.getByText(/원본 증여세 과세가액/)).toBeVisible();
 
     // 반복 횟수 표시 (수렴 비교용 줄)
     await expect(page.getByText(/수렴 비교용, 반복/)).toBeVisible();
 
-    // 흐름 식 표시 — 원본 → + 대납세액 = 최종 과표
-    await expect(page.getByText(/\(대납세액\)/)).toBeVisible();
+    // 흐름 식 표시 — 증여자 대납분 라벨 + 최종 과표
+    await expect(page.getByText(/\(증여자 대납분\)/)).toBeVisible();
     await expect(page.getByText(/\(최종 과표\)/)).toBeVisible();
   });
 
@@ -187,5 +187,105 @@ test.describe("증여세 대납(代納) gross-up (§36)", () => {
     await expect(
       page.getByText("동시증여와 대납(代納)은 현재 함께 계산할 수 없습니다"),
     ).toBeVisible({ timeout: 10_000 });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // 부분 대납 신규 케이스 (feat/gift-partial)
+  // ─────────────────────────────────────────────────────────────────────
+
+  test("E-4: 부분 대납 — 수증자 납부액 5천만 입력 후 증여자 대납분 섹션 확인", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await gotoGiftTax(page);
+    await fillStep0(page);
+
+    // Step1: 현금 5억
+    await addCashAsset(page, "500000000");
+    await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
+
+    // Step2: 건너뜀
+    await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
+
+    // Step3: 대납 ON + 연대의무 OFF(기본) + 수증자 납부액 입력
+    await page.getByRole("switch", { name: /증여자가 수증자의 증여세를 대납/ }).click();
+
+    // 연대납세의무 스위치 노출 확인 (대납 ON children 렌더 확인)
+    await expect(page.getByRole("switch", { name: /연대납세의무자/ })).toBeVisible();
+
+    // 수증자 본인 납부액 칸 노출 확인 — aria-label="수증자 본인 납부액" (hideLabel=true)
+    await expect(page.getByLabel("수증자 본인 납부액")).toBeVisible();
+
+    // 5천만 입력
+    await page.getByLabel("수증자 본인 납부액").fill("50000000");
+
+    await calcAndWaitResult(page, { taxType: "gift" });
+
+    // gross-up 섹션 노출
+    await expect(page.getByText("대납(代納) gross-up 상세 (§36 채무면제이익)")).toBeVisible();
+
+    // 5행 구조 확인 (신규 행 포함)
+    await expect(page.getByText("총 결정세액 (수렴값)")).toBeVisible();
+    await expect(page.getByText("수증자 본인 납부")).toBeVisible();
+    await expect(page.getByText("증여자 대납분 (총세액 − 수증자 납부)")).toBeVisible();
+    await expect(page.getByText("gross-up 후 최종 과세표준")).toBeVisible();
+
+    // 흐름행 — 증여자 대납분 라벨 확인
+    await expect(page.getByText(/\(증여자 대납분\)/)).toBeVisible();
+    await expect(page.getByText(/\(최종 과표\)/)).toBeVisible();
+  });
+
+  test("E-5: 수증자 납부액 ≥ 총세액 → 증여자 대납분 없음 안내 노출", async ({ page }) => {
+    test.setTimeout(120_000);
+    await gotoGiftTax(page);
+    await fillStep0(page);
+
+    // Step1: 현금 5억
+    await addCashAsset(page, "500000000");
+    await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
+
+    // Step2: 건너뜀
+    await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
+
+    // Step3: 대납 ON + 수증자 납부액 2억 (총세액 초과)
+    await page.getByRole("switch", { name: /증여자가 수증자의 증여세를 대납/ }).click();
+    await expect(page.getByLabel("수증자 본인 납부액")).toBeVisible();
+    await page.getByLabel("수증자 본인 납부액").fill("200000000");
+
+    await calcAndWaitResult(page, { taxType: "gift" });
+
+    // D=0 안내 노출
+    await expect(page.getByText("재차증여 해당 없음")).toBeVisible();
+  });
+
+  test("E-6: 수증자 납부액 미입력 → 전액 대납 기존 동작 회귀 (③행 미노출)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await gotoGiftTax(page);
+    await fillStep0(page);
+
+    // Step1: 현금 5억
+    await addCashAsset(page, "500000000");
+    await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
+
+    // Step2: 건너뜀
+    await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
+
+    // Step3: 대납 ON + 수증자 납부액 미입력(기본 빈값)
+    await page.getByRole("switch", { name: /증여자가 수증자의 증여세를 대납/ }).click();
+    // 수증자 납부액 칸 노출만 확인, 값은 입력 안 함
+    await expect(page.getByLabel("수증자 본인 납부액")).toBeVisible();
+
+    await calcAndWaitResult(page, { taxType: "gift" });
+
+    // gross-up 섹션 노출 (전액 대납 기존 동작)
+    await expect(page.getByText("대납(代納) gross-up 상세 (§36 채무면제이익)")).toBeVisible();
+
+    // ③행(수증자 본인 납부)은 P=0이므로 미노출
+    await expect(page.getByText("수증자 본인 납부")).not.toBeVisible();
+
+    // 기존 라벨이 정밀화되어도 섹션 자체는 표시
+    await expect(page.getByText("증여자 대납분 (총세액 − 수증자 납부)")).toBeVisible();
   });
 });

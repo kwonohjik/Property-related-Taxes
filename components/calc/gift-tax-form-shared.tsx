@@ -109,6 +109,12 @@ export interface FormState extends AppraisalFeeFormFields {
    * donorPaysGiftTax=true 이어야 유효. (UI 위젯은 UI senior 담당)
    */
   donorHasJointLiability?: boolean;
+  /**
+   * §36 부분 대납 — 수증자 본인이 직접 납부하는 증여세액(원).
+   * 증여자는 (총세액 − 이 금액) 부족분만 대납. 미입력/""/0 = 전액 대납(기존 동작).
+   * donorPaysGiftTax=true && donorHasJointLiability!==true 일 때만 유효.
+   */
+  doneePaidGiftTax?: string;
 }
 
 export const INITIAL_FORM: FormState = {
@@ -136,6 +142,7 @@ export const INITIAL_FORM: FormState = {
   splitPaymentAmount: "",
   donorPaysGiftTax: false,
   donorHasJointLiability: false,
+  doneePaidGiftTax: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 
@@ -180,70 +187,8 @@ export const DONOR_OPTIONS: GiftDonorRelation[] = [
 // lib 단일 출처로 이동(순환 import 회피). 상단 import로 내부 사용 + 하위호환 재노출.
 export { deriveDonorRelation };
 
-// ============================================================
-// API 에러 상세화 — Zod issues → 한국어 라벨 + 메시지
-// ============================================================
-
-const GIFT_FIELD_LABELS: Record<string, string> = {
-  giftDate: "증여일",
-  reportDate: "신고일",
-  donor: "증여자",
-  recipient: "수증자",
-  isGenerationSkip: "세대생략 증여 여부",
-  isMinor: "수증자 미성년 여부",
-  estateItems: "증여재산",
-  category: "재산 종류",
-  name: "자산 명칭",
-  marketValue: "시가",
-  standardPrice: "기준시가/공시가격",
-  appraisedValue: "감정평가액",
-  listedStockAvgPrice: "상장주식 평균종가",
-  listedStockShares: "상장주식 수량",
-  listedStockCode: "상장주식 종목코드",
-  leaseDeposit: "임대보증금",
-  mortgageAmount: "저당권 설정액",
-  marriageDeduction: "혼인공제",
-  childbirthDeduction: "출산공제",
-  prior10YearDeductionsUsed: "10년 내 기사용 증여재산공제",
-  foreignTaxPaid: "외국납부세액",
-  specialTaxRegime: "조특법 과세특례",
-  priorGifts: "사전증여",
-  giftAmount: "사전증여 금액",
-  giftTaxBase: "그 회차 합산과세표준 ⑤",
-  computedTax: "그 회차 산출세액 ⑦",
-  filedWithinDeadline: "법정신고기한 내 신고",
-};
-
-interface ApiIssue {
-  path: string[];
-  message: string;
-  code?: string;
-}
-
-function labelForPath(path: string[]): string {
-  if (path.length === 0) return "입력";
-  const parts: string[] = [];
-  for (const seg of path) {
-    if (/^\d+$/.test(seg)) {
-      parts.push(`${Number(seg) + 1}번`);
-    } else {
-      parts.push(GIFT_FIELD_LABELS[seg] ?? seg);
-    }
-  }
-  return parts.join(" › ");
-}
-
-export function formatGiftApiError(data: { error?: string; issues?: ApiIssue[] }): string {
-  if (Array.isArray(data.issues) && data.issues.length > 0) {
-    const lines = data.issues.slice(0, 8).map((iss) => {
-      const label = labelForPath(iss.path);
-      return `• ${label}: ${iss.message}`;
-    });
-    const more = data.issues.length > 8 ? `\n(외 ${data.issues.length - 8}건)` : "";
-    return `${data.error ?? "입력값이 올바르지 않습니다."}\n${lines.join("\n")}${more}`;
-  }
-  return data.error ?? "계산 중 오류가 발생했습니다.";
-}
+// API 에러 상세화 — 800줄 정책 준수를 위해 분리 (gift/gift-api-error-format.ts)
+export { formatGiftApiError } from "@/components/calc/gift/gift-api-error-format";
 
 // ============================================================
 // 단계별 유효성 검사
@@ -514,6 +459,10 @@ export function validateStep(step: number, form: FormState): string | null {
       // ⓒ 세대생략(donorGroup=B) + 대납
       if (getDonorGroup(form.donor) === "B") {
         return "세대생략 할증 대상 증여와 대납(代納)은 현재 함께 계산할 수 없습니다.";
+      }
+      // ⓓ 수증자 본인 납부액 음수 차단 (Zod ⑫ min(0)과 동기화)
+      if (parseAmount(form.doneePaidGiftTax ?? "") < 0) {
+        return "수증자 본인 납부액은 음수일 수 없습니다.";
       }
     }
   }

@@ -201,6 +201,31 @@ export function GiftCreditChecklist({
             연대납세의무자가 납부한 세액은 채무면제이익에 해당하지 않아 gross-up 계산이 생략됩니다 (§4의2⑥).
           </div>
         )}
+
+        {/* 수증자 본인 납부액 — 연대의무 OFF + 대납 ON 일 때만 노출 */}
+        {form.donorHasJointLiability !== true && (
+          <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-950/20 p-3 space-y-2">
+            <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
+              수증자 본인 납부액 (§36)
+            </p>
+            <p className="text-xs text-violet-600 dark:text-violet-400">
+              수증자가 직접 납부하는 증여세액을 입력하세요. 증여자는 총세액에서 이 금액을 차감한
+              나머지(부족분)만 대납합니다. 미입력 또는 0원 시 증여자가 전액 대납합니다.
+            </p>
+            <FieldCard
+              label="수증자 본인 납부액"
+              hint="수증자가 직접 납부하는 증여세 금액(원). 0원 = 증여자 전액 대납(기존 동작)."
+            >
+              <CurrencyInput
+                label="수증자 본인 납부액"
+                hideLabel
+                value={form.doneePaidGiftTax ?? ""}
+                onChange={(v) => set({ doneePaidGiftTax: v })}
+                hideUnit
+              />
+            </FieldCard>
+          </div>
+        )}
       </ToggleCard>
 
       {/* ── 활성 항목 입력 블록 ── */}
