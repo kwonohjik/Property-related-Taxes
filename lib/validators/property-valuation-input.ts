@@ -90,6 +90,8 @@ import {
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
 } from "@/lib/tax-engine/gift-special-stream";
 import type { AssetCategory } from "@/lib/tax-engine/types/inheritance-gift.types";
+// 대납(代納) gross-up 차단 판정 — donorGroup=B 시 세대생략 할증 ↔ 대납 fold-back 미지원
+import { getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 
 // ============================================================
 // 비과세 항목 스키마 — ExemptionCheckedItem[] 기반 (§11·§12·§46·§46의2)
@@ -512,6 +514,16 @@ export const giftTaxInputSchema = z
      * true 시 donorGroup=B이어도 §57① 할증 전액 미적용.
      */
     isSubstituteGift: z.boolean().optional(),
+    /**
+     * §36 채무면제 — 증여자가 수증자의 증여세를 대납(代納)하는 경우.
+     * true 시 gift-tax-grossup.ts에서 고정점 수렴 계산 적용.
+     */
+    donorPaysGiftTax: z.boolean().optional(),
+    /**
+     * §4의2⑥ 연대납세의무 — true 시 대납이 재차증여가 아님(국세청 해석[207328]) → gross-up 미적용.
+     * donorPaysGiftTax=true 이어야 유효.
+     */
+    donorHasJointLiability: z.boolean().optional(),
     deductionInput: giftDeductionInputSchema,
     creditInput: giftTaxCreditInputSchema,
     valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -565,6 +577,37 @@ export const giftTaxInputSchema = z
           code: z.ZodIssueCode.custom,
           path: ["giftItems"],
           message: `특례 귀속 불가 재산 ${ineligible.length}개 — ${SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[specialTreatment]}`,
+        });
+      }
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // 대납(代納) gross-up 차단 조합 ⑫ (Zod superRefine)
+    // ⑧ validateStep과 동일 메시지로 동기화
+    // ──────────────────────────────────────────────────────────────
+    if (data.donorPaysGiftTax === true) {
+      // ⓐ 동시증여 + 대납 — 상증령 §46①2호 안분 ↔ 대납 fold-back 미지원
+      if (data.deductionInput?.simultaneousGifts && data.deductionInput.simultaneousGifts.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["donorPaysGiftTax"],
+          message: "동시증여와 대납(代納)은 현재 함께 계산할 수 없습니다.",
+        });
+      }
+      // ⓑ 2-스트림 특례 + 대납 — aggregatedOrdinaryValue 주입 미지원
+      if (data.creditInput?.specialTreatment) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["donorPaysGiftTax"],
+          message: "가업·창업 특례(2-스트림)와 대납(代納)은 현재 함께 계산할 수 없습니다.",
+        });
+      }
+      // ⓒ 세대생략(donorGroup=B) + 대납 — §57 grossGiftValue 조정 미구현
+      if (getDonorGroup(data.donor) === "B") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["donorPaysGiftTax"],
+          message: "세대생략 할증 대상 증여와 대납(代納)은 현재 함께 계산할 수 없습니다.",
         });
       }
     }

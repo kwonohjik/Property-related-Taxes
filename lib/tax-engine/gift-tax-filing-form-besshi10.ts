@@ -63,10 +63,13 @@ function deriveRelationDeductionSplit(
 }
 
 /**
- * ㉓ 증여재산가산액 = 사전증여 합산분 (현재 증여 본체 제외).
- * aggregatedGiftValue = netCurrent + priorGiftSum
- *   netCurrent = grossGiftValue − exemptAmount
- *   priorGiftSum = aggregatedGiftValue − netCurrent
+ * ㉓ 증여재산가산액 = 사전증여 합산분 (현재 증여 본체·대납가산분 제외).
+ * aggregatedGiftValue = netCurrent + priorGiftSum + donorPaidTaxAddition
+ *   netCurrent = grossGiftValue − exemptAmount − debtAssumed
+ *   priorGiftSum = aggregatedGiftValue − netCurrent − donorPaidTaxAddition
+ *
+ * §36 대납분(donorPaidTaxGrossUp.donorPaidTax)은 사전증여가 아니라 재차증여 fold-back.
+ * 별지10호 ㉓에 산입하면 과세표준 이중계산 → 명시 차감 필수.
  */
 function derivePriorGiftAddition(
   r: Omit<GiftTaxResult, "besshi10Rows">,
@@ -75,7 +78,9 @@ function derivePriorGiftAddition(
   // netCurrent = grossGiftValue − exemptAmount − debtAssumed (§47① 차감분)
   const debtAssumed = r.debtAssumed ?? 0;
   const netCurrent = Math.max(0, r.grossGiftValue - r.exemptAmount - debtAssumed);
-  return Math.max(0, r.aggregatedGiftValue - netCurrent);
+  // §36 대납가산분 — aggregatedGiftValue에만 가산됐으므로 역산 시 제거
+  const donorPaidTax = r.donorPaidTaxGrossUp?.donorPaidTax ?? 0;
+  return Math.max(0, r.aggregatedGiftValue - netCurrent - donorPaidTax);
 }
 
 /**

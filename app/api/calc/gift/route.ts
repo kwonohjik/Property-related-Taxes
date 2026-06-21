@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { giftTaxInputSchema } from "@/lib/validators/property-valuation-input";
-import { calcGiftTax } from "@/lib/tax-engine/gift-tax";
+import { calcGiftTaxWithDonorPaidTax } from "@/lib/tax-engine/gift-tax";
 import type { GiftTaxInput } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 export async function POST(req: NextRequest) {
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
   // 4. 순수 엔진 계산
   // ─────────────────────────────────────────────
   try {
-    const result = calcGiftTax(input);
+    const result = calcGiftTaxWithDonorPaidTax(input);
     return NextResponse.json({ success: true, result });
   } catch (err) {
     if (err instanceof TaxCalculationError) {
