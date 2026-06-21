@@ -25,7 +25,7 @@ import type {
   CalculationStep,
 } from "./types/inheritance-gift.types";
 
-import { evaluateAllEstateItems, resolveValuationMethod } from "./property-valuation";
+import { evaluateAllEstateItems, resolveValuationMethod, COLLATERAL_DEBT_NOTICE } from "./property-valuation";
 import { evaluateExemptions } from "./exemption-evaluator";
 import { calcGiftDeductions } from "./deductions/gift-deductions";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
@@ -103,7 +103,8 @@ export function calcGiftTax(
     lawRef: GIFT_LAW.TAXABLE_VALUE,
   });
   for (const vr of valuationResults) {
-    allWarnings.push(...vr.warnings);
+    // §14 부채명세 공제는 상속세 전용 — 증여세 결과에서 담보채무 §14 안내 제외
+    allWarnings.push(...vr.warnings.filter((w) => w !== COLLATERAL_DEBT_NOTICE));
   }
 
   // ─────────────────────────────────────────────
@@ -436,7 +437,8 @@ function calcGiftTaxTwoStream(
   // STEP 0.2: 자산별 평가
   // ─────────────────────────────────────────────
   const allValuationResults = evaluateAllEstateItems(input.giftItems);
-  for (const vr of allValuationResults) allWarnings.push(...vr.warnings);
+  for (const vr of allValuationResults)
+    allWarnings.push(...vr.warnings.filter((w) => w !== COLLATERAL_DEBT_NOTICE)); // §14 상속세 전용 제외
 
   // 자산 ID → 평가액 매핑 (id 없으면 인덱스 기반)
   const valuationMap = new Map<EstateItem, number>();

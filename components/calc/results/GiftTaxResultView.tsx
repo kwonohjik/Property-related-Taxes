@@ -404,80 +404,8 @@ export function GiftTaxResultView({
         </PrintSection>
       )}
 
-      {/* 과세 요약 */}
-      <PrintSection id="tax-summary" selectedIds={selectedPrintIds}>
-      <div className="border rounded-xl overflow-hidden">
-        <div className="bg-muted/30 px-4 py-3">
-          <h3 className="text-sm font-semibold">증여세 과세 요약</h3>
-        </div>
-        <div className="divide-y divide-border">
-          <Row label="증여재산가액" value={formatKRW(result.grossGiftValue)} />
-          {result.exemptAmount > 0 && (
-            <Row
-              label="비과세 차감"
-              value={`- ${formatKRW(result.exemptAmount)}`}
-              sub
-              deduction
-            />
-          )}
-          {(result.debtAssumed ?? 0) > 0 && (
-            <Row
-              label="부담부증여 채무인수 차감 (§47①)"
-              value={`- ${formatKRW(result.debtAssumed ?? 0)}`}
-              sub
-              deduction
-            />
-          )}
-          {result.aggregatedGiftValue > result.grossGiftValue && (
-            <Row
-              label="10년 합산 증여가액"
-              value={formatKRW(result.aggregatedGiftValue)}
-              highlight
-            />
-          )}
-          <Row
-            label="증여재산공제"
-            value={`- ${formatKRW(result.totalDeduction)}`}
-            sub
-            deduction
-          />
-          {result.deductionDetail?.apportionment && (
-            <div className="px-4 pb-1 text-xs text-sky-700 dark:text-sky-300">
-              동시증여 안분 (상증령 §46①2호): {formatKRW(result.deductionDetail.apportionment.remainingLimit)} × {formatKRW(result.deductionDetail.apportionment.currentTaxableValue)} ÷ {formatKRW(result.deductionDetail.apportionment.denominator)} = {formatKRW(result.deductionDetail.apportionment.apportionedAmount)}
-              {result.deductionDetail.apportionment.apportionedAmount !== result.deductionDetail.relationDeduction &&
-                ` → 과세가액 한도 적용 ${formatKRW(result.deductionDetail.relationDeduction)}`}
-              {!result.deductionDetail.apportionment.binding && " · 동시증여 합산이 한도 미만 → 각자 전액 공제"}
-              {result.deductionDetail.apportionment.marriageBirthApportionedLimit !== undefined &&
-                ` · 혼인·출산공제 안분 한도 ${formatKRW(result.deductionDetail.apportionment.marriageBirthApportionedLimit)}`}
-            </div>
-          )}
-          {(result.appraisalFeeDeduction ?? 0) > 0 && (
-            <Row
-              label="감정평가수수료 공제"
-              value={`- ${formatKRW(result.appraisalFeeDeduction ?? 0)}`}
-              sub
-              deduction
-            />
-          )}
-          <Row label="과세표준" value={formatKRW(result.taxBase)} highlight />
-          <Row label="산출세액 (누진세율)" value={formatKRW(result.computedTax)} />
-          {result.generationSkipSurcharge > 0 && (
-            <Row
-              label="세대생략 할증 (30% / 40%)"
-              value={`+ ${formatKRW(result.generationSkipSurcharge)}`}
-            />
-          )}
-          {result.totalTaxCredit > 0 && (
-            <Row
-              label="세액공제"
-              value={`- ${formatKRW(result.totalTaxCredit)}`}
-              deduction
-            />
-          )}
-          <Row label="결정세액" value={formatKRW(result.finalTax)} highlight />
-        </div>
-      </div>
-      </PrintSection>
+      {/* 과세 요약(증여세) 화면 카드 제거 — 신고서 양식 표(filing-form-10)와 중복(사족).
+          PDF 채널의 tax-summary 계산표는 ResultPdfDocument가 독립 렌더하므로 유지된다. */}
 
       {/* 2-스트림 분리과세 상세 — specialStreamTax 있을 때만 표시 */}
       {(result.specialStreamTax != null && result.specialStreamTax > 0) && (

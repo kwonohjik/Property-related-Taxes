@@ -49,6 +49,7 @@ export type GiftPrintSectionGroup = GenericGroup<GiftPrintSectionId>;
 
 const SCREEN: PrintChannel[] = ["screen"];
 const SCREEN_PDF: PrintChannel[] = ["screen", "pdf"];
+const PDF: PrintChannel[] = ["pdf"];
 
 /** §2.1 계층 트리 — 큰 섹션(그룹) → 개별 서식(leaf) */
 export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
@@ -57,8 +58,8 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
     label: "계산 요약",
     children: [
       { id: "core-result", label: "핵심 결과 (결정세액)", channel: SCREEN },
-      // 서버 PDF(PR-B1): ResultPdfDocument 증여세 계산표로 표현 가능 → pdf 채널
-      { id: "tax-summary", label: "증여세 과세 요약", channel: SCREEN_PDF },
+      // 화면 카드는 신고서 양식(filing-form-10)과 중복이라 제거 — PDF 계산표(ResultPdfDocument)로만 표현 → pdf 전용 채널
+      { id: "tax-summary", label: "증여세 과세 요약", channel: PDF },
       { id: "gen-skip-surcharge", label: "세대생략 할증 근거 (§57)", channel: SCREEN },
       { id: "tax-credit", label: "세액공제 상세 (§28·§69)", channel: SCREEN },
     ],
