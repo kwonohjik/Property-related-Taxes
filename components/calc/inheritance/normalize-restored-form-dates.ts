@@ -85,9 +85,12 @@ function normalizeEstateItemDates(item: EstateItem): EstateItem {
   const bgt = item.burdenedGiftTransferTax;
   if (bgt) {
     const normalizedAcq = toOptionalDate(bgt.acquisitionDate);
+    // §114조의2 신축일(constructionDate)도 Date 필드 — sessionStorage 복원 시 string 도달 방지
+    const normalizedConstruction = toOptionalDate(bgt.constructionDate);
     const normalizedBgt = {
       ...bgt,
       ...(normalizedAcq !== undefined ? { acquisitionDate: normalizedAcq } : {}),
+      ...(normalizedConstruction !== undefined ? { constructionDate: normalizedConstruction } : {}),
       ...(bgt.temporaryTwoHouse !== undefined
         ? {
             temporaryTwoHouse: {

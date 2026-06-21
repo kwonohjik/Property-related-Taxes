@@ -47,6 +47,13 @@ export function runBurdenedGiftStep(
     const totalEstimatedDeduction = land.estimatedDeduction + building.estimatedDeduction;
     // override: §159 산정값으로 본 계산 진행 (§114⑦ 환산경로와 분리).
     // F-1: burdenedGiftDenominator = giftValuation C — 12억 안분 해석 B 분모.
+    // §114조의2: K-5(환산취득가) + 신축·증축 시 건물분 환산취득가(채무비율 안분 후)를
+    // penalty base로 신호. estimatedBase·usedEstimatedAcquisition은 finalize STEP 10.5가
+    // 읽는 penalty 전용 신호이며, 본 양도차익은 위 §159 안분값(useEstimatedAcquisition:false)으로 계산.
+    // 발동 게이트(5년·85㎡·acquisitionMethod=estimated)는 calculateBuildingPenalty가 최종 판정.
+    const isK5SelfBuilt =
+      rawInput.burdenedGiftInfo.acquisitionMethod === "converted" &&
+      rawInput.isSelfBuilt === true;
     workingInput = {
       ...workingInput,
       transferPrice: totalTransferPrice,
@@ -56,6 +63,13 @@ export function runBurdenedGiftStep(
       transferExpense: undefined,
       useEstimatedAcquisition: false,
       burdenedGiftDenominator: transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
+      ...(isK5SelfBuilt
+        ? {
+            acquisitionMethod: "estimated" as const,
+            usedEstimatedAcquisition: true,
+            estimatedBase: building.acquisitionPrice,
+          }
+        : {}),
     };
     steps.push({
       label: "부담부증여 양도차익 산정 (소령 §159)",

@@ -385,7 +385,9 @@ export function calculateTransferTax(
   if (transferGain <= 0) {
     const pb0 = input.acquisitionMethod === "appraisal"
       ? (input.appraisalValue ?? 0)
-      : (input.useEstimatedAcquisition ? estimatedBase : 0);
+      : ((input.useEstimatedAcquisition || effectiveInput.usedEstimatedAcquisition)
+          ? (estimatedBase || effectiveInput.estimatedBase || 0)
+          : 0);
     const pr0 = calculateBuildingPenalty(effectiveInput, pb0);
     const pt0 = pr0?.penalty ?? 0;
     if (pt0 > 0) {
@@ -420,7 +422,7 @@ export function calculateTransferTax(
       reductionAmount: 0,
       determinedTax: 0,
       penaltyTax: pt0,
-      penaltyBase: 0,
+      penaltyBase: pt0 > 0 ? pb0 : 0,
       localIncomeTax: lit0,
       totalTax: pt0 + lit0,
       steps,

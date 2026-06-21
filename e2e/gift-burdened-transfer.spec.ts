@@ -656,3 +656,65 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 K-4/K-5 (
     },
   );
 });
+
+// ─── §114조의2 신축·증축 환산 5% 가산세 ──────────────────────────────────────────
+test.describe("부담부증여 양도세 — §114조의2 신축 가산세 (증여세 마법사)", () => {
+  test(
+    "[P114-E2E] K-5 환산 + 신축 토글 → 신축일 입력 → body isSelfBuilt·constructionDate·converted 전달",
+    async ({ page }) => {
+      test.setTimeout(120_000);
+      const mock = await setupTransferApiMock(page);
+      await giftStep0(page);
+      const dialog = await addApartmentWithDebt(page);
+      await enableBurdenedTransferToggle(dialog);
+      await fillApartmentTransferInfo(dialog);
+
+      // 시가 평가 + 환산(K-5)
+      await dialog.getByTestId("bg-valuation-mode-market").check();
+      await fillAndVerify(dialog.getByRole("textbox", { name: "양도시 시가" }), "500000000");
+      await dialog.getByTestId("bg-acq-method-converted").check();
+
+      // 신축·증축 토글 ON → 신축 위젯 노출
+      const selfBuiltToggle = dialog.getByRole("switch", { name: /신축·증축 건물/ });
+      await expect(selfBuiltToggle).toBeVisible();
+      await selfBuiltToggle.click();
+      await expect(selfBuiltToggle).toHaveAttribute("aria-checked", "true");
+
+      // 증축은 Phase 2 — disabled 확인
+      await expect(dialog.getByTestId("bg-building-type-extension")).toBeDisabled();
+
+      // 신축일 입력 (K-5 박스 내 DateInput — 신축 토글 후 마지막 연/월/일 세트)
+      await dialog.getByRole("textbox", { name: "연도" }).last().fill("2021");
+      await dialog.getByRole("textbox", { name: "월" }).last().fill("1");
+      await dialog.getByRole("textbox", { name: "일" }).last().fill("10");
+
+      await dialog.getByRole("button", { name: "닫기" }).click();
+      await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+
+      await page.getByRole("button", { name: /^다음/ }).click();
+      await page.getByRole("button", { name: /^다음/ }).click();
+
+      const giftResponse = page.waitForResponse(
+        (r) => r.url().includes("/api/calc/gift") && r.request().method() === "POST",
+        { timeout: 30_000 },
+      );
+      const transferResponse = page.waitForResponse(
+        (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+        { timeout: 30_000 },
+      );
+      await page.getByRole("button", { name: /계산하기/ }).click();
+      await giftResponse;
+      await transferResponse;
+
+      // body 검증 — §114조의2 신축필드 최상위 전달 + K-5 converted
+      expect(mock.bodies.length, "양도세 API 호출").toBeGreaterThan(0);
+      const body = mock.bodies[0];
+      expect(body.isSelfBuilt).toBe(true);
+      expect(body.buildingType).toBe("new");
+      expect(body.constructionDate).toBe("2021-01-10");
+      expect((body.burdenedGiftInfo as Record<string, unknown>).acquisitionMethod).toBe(
+        "converted",
+      );
+    },
+  );
+});
