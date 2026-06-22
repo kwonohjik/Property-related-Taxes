@@ -11,6 +11,7 @@
 
 import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
+import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { computeBurdenedGiftComparison } from "@/lib/calc/gift-burden-comparison";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
@@ -18,6 +19,8 @@ interface Props {
   simpleGiftResult: GiftTaxResult;
   giftResult: GiftTaxResult;
   transferTaxResults: TransferTaxResult[];
+  /** 주식 부담부 양도소득세 결과 — 비교 합산에 포함 */
+  stockTransferTaxResults?: StockTransferResult[];
   /** 채무 > 0이나 양도세 토글 OFF인 자산이 있어 양도세 일부가 비교에 누락됨 (T-11) */
   hasUncoveredDebtAsset?: boolean;
 }
@@ -28,12 +31,14 @@ export function BurdenedGiftComparisonCard({
   simpleGiftResult,
   giftResult,
   transferTaxResults,
+  stockTransferTaxResults = [],
   hasUncoveredDebtAsset = false,
 }: Props) {
   const cmp = computeBurdenedGiftComparison(
     simpleGiftResult,
     giftResult,
     transferTaxResults,
+    stockTransferTaxResults,
   );
 
   const diffText =

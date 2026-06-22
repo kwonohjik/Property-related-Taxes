@@ -408,6 +408,17 @@ export interface EstateItem extends EstateLocationFields {
    */
   burdenedGiftTransferTax?: BurdenedGiftTransferTaxInput;
 
+  /**
+   * 주식 부담부증여 양도소득세 추가 입력 (listed_stock·unlisted_stock 전용).
+   *
+   * - undefined: 토글 OFF (§47① 채무 차감만)
+   * - 객체: 토글 ON — 주식 양도세 API(/api/calc/stock-transfer) 호출 대상
+   *
+   * 부동산 burdenedGiftTransferTax와 별도 필드 — 양도세 엔진 분리(stock-transfer vs transfer).
+   * 증여세 엔진(gift-tax.ts)은 이 필드를 읽지 않음 — 양도세 API 전용.
+   */
+  burdenedGiftStockTransferTax?: BurdenedGiftStockTransferTaxInput;
+
   // 위치 필드(좌표·주소·시·군·구 코드)는 EstateLocationFields mixin — 본 인터페이스에 직접 정의 안 함
 }
 
@@ -550,6 +561,56 @@ export interface DebtItem {
    * 본 플래그는 §22 순금융 계산에만 영향. 채무 본래의 과세가액 차감(§14)은 그대로 작동.
    */
   isFinancialDebtForDeduction?: boolean;
+}
+
+// ============================================================
+// ============================================================
+// 주식 부담부증여 양도소득세 추가 입력 (EstateItem.burdenedGiftStockTransferTax)
+// 설계: docs/02-design/features/gift-stock-burdened-transfer-tax.engine.design.md
+// ============================================================
+
+/**
+ * 주식 부담부증여 양도소득세 함께 계산 — 토글 ON 시 EstateItem(listed_stock/unlisted_stock)에 포함.
+ *
+ * 납세의무자: 증여자 (소법 §88①1호 — 채무인수분은 유상양도 의제).
+ * 자산 종류: listed_stock·unlisted_stock.
+ * 양도일=증여일, 취득일=증여자 당초 취득일.
+ *
+ * §159①1호 주석: 주식 평가는 §63, 취득가액은 §97①1호(실지/환산). 기준시가 안분 경로(K-1~K-3) 미적용.
+ * → actual: 클라이언트가 취득가 × B/C 안분 → perShareAcquisitionPrice 주입.
+ * → estimated + 비상장: 엔진 burdenedGiftDebtRatio 후처리(estimatedBase만).
+ * → estimated + 상장: transferPrice=B 기반 자동 안분.
+ *
+ * - undefined: 토글 OFF (§47① 채무 차감만, 기존 동작)
+ * - 객체: 토글 ON
+ */
+export interface BurdenedGiftStockTransferTaxInput {
+  /** 시장구분 — §94①3가목(상장) 또는 §94①3나목(비상장) */
+  marketType: "kospi" | "kosdaq" | "konex" | "unlisted";
+  /** 증여자 당초 취득일 (§95 보유기간·§104② 기산점·§157 대주주 판정) */
+  acquisitionDate: Date | string;
+  /**
+   * 취득가액 산정 방식.
+   * - "actual": 증여자 당초취득가 입력 → 클라이언트가 B/C 안분 후 perShare 주입.
+   * - "estimated": §165④ 보충평가(비상장) 또는 §176의2 환산(상장) — 엔진 자동 산출.
+   */
+  acquisitionMode: "actual" | "estimated";
+  /**
+   * 실지 모드(actual) 전용: 증여자 당초취득가 합계 (안분 전, 원).
+   * acquisitionMode==="actual" 시 validation 필수.
+   */
+  actualAcquisitionPrice?: number;
+  /**
+   * 상장 대주주 여부 (§104①11 세율 분기).
+   * - true: §104①11가목 (대주주 세율)
+   * - false/undefined: §104①11나목 (소액주주 세율, 단 isOnMarketTransaction=false로 과세)
+   */
+  isMajorShareholder?: boolean;
+  /**
+   * 중소기업 해당 여부 (§104①11나목 10%/20% 분기).
+   * 비상장 비대주주: 중소=10%, 비중소=20%.
+   */
+  isSmallMediumEnterprise?: boolean;
 }
 
 // ============================================================

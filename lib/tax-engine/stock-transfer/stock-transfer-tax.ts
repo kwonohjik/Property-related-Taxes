@@ -340,6 +340,15 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
       acquisitionPrice = unlistedResult.totalAcquisitionPrice;
       // ★ PR-2 정정: estimatedBase = 취득기준시가 총액 (환산취득가 아님)
       estimatedBase = unlistedResult.acquisitionStdPriceTotal;
+      // [부담부증여 §159] estimatedBase(개산공제 §163⑥4 base)에만 채무비율 안분.
+      // acquisitionPrice는 transferPrice(=채무B) 기반 환산이라 자동 안분됨 — 이중안분 금지.
+      if (
+        input.burdenedGiftDebtRatio !== undefined &&
+        input.burdenedGiftDebtRatio > 0 &&
+        input.burdenedGiftDebtRatio < 1
+      ) {
+        estimatedBase = Math.floor(estimatedBase * input.burdenedGiftDebtRatio);
+      }
       valuationDetail = {
         // [사례 49] acq_face_value_only는 그대로 passthrough (UI 결과 카드 분기용)
         method:

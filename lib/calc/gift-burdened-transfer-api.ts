@@ -1,16 +1,18 @@
 /**
  * gift-burdened-transfer-api.ts — 증여세 부담부증여 자산 → 양도세 API 변환 (④ 지점)
  *
- * 설계: docs/02-design/features/gift-burdened-transfer-tax.design.md §4, §6
+ * 설계:
+ *   부동산: docs/02-design/features/gift-burdened-transfer-tax.design.md §4, §6
+ *   주식:   docs/02-design/features/gift-stock-burdened-transfer-tax.ui.design.md §6
  *
  * 역할:
  *   - 증여세 폼 EstateItem.burdenedGiftTransferTax (토글 ON 자산) → /api/calc/transfer POST body 구성
- *   - POST 호출 → TransferTaxResult 반환
+ *   - 증여세 폼 EstateItem.burdenedGiftStockTransferTax (주식 토글 ON 자산) → /api/calc/stock-transfer POST body 구성
+ *   - POST 호출 → TransferTaxResult / StockTransferResult 반환
  *
  * 제약:
- *   - 신규 세금 계산 로직 0 — 기존 calculateTransferTax 엔진을 /api/calc/transfer 경유로만 재사용
- *   - gift 엔진 → transfer 엔진 직접 import 금지 (2-레이어: 클라이언트 API 경유)
- *   - MVP: 단일 자산, sangjeungbeop_standard(취득시 기준시가 안분) 모드 고정
+ *   - 신규 세금 계산 로직 0 — 기존 엔진을 /api/calc/transfer, /api/calc/stock-transfer 경유로만 재사용
+ *   - gift 엔진 → transfer/stock-transfer 엔진 직접 import 금지 (2-레이어: 클라이언트 API 경유)
  *
  * 14개 동기화 지점: ④ (body 구성), ⑬ (body spread — TypeScript 미감지)
  *
@@ -23,7 +25,9 @@
 
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
+import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
+import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 1. category → propertyType 매핑 헬퍼
@@ -300,6 +304,172 @@ export async function callGiftBurdenedTransferAPI(
   const result = json.data?.result;
   if (!result) {
     throw new Error("양도소득세 계산 결과를 받지 못했습니다.");
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 4. 주식 부담부증여 body 구성 (순수 함수)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * buildGiftStockBurdenedTransferBody — 주식 부담부 자산 → /api/calc/stock-transfer body 구성
+ *
+ * 설계: docs/02-design/features/gift-stock-burdened-transfer-tax.ui.design.md §6
+ *
+ * §159①1호 안분:
+ *   양도가액 = assumedDebtForGift (채무인수액)
+ *   debtRatio = assumedDebtForGift / valuationAmount
+ *
+ * actual 모드:
+ *   안분취득가 = Math.floor(bgt.actualAcquisitionPrice × debtRatio)
+ *   perShareAcquisitionPrice = Math.floor(안분취득가 / shareCount)
+ *
+ * estimated + 비상장:
+ *   burdenedGiftDebtRatio = debtRatio 전달 → 엔진 estimatedBase 후처리
+ *
+ * estimated + 상장:
+ *   burdenedGiftDebtRatio 미전달 — transferPrice(=채무액) 기반 자동 안분
+ *
+ * isOnMarketTransaction=false 고정: 부담부증여 = 장외 양도 (§94①3가목2)
+ */
+export function buildGiftStockBurdenedTransferBody(
+  item: EstateItem,
+  form: FormState,
+): Record<string, unknown> {
+  const bgt = item.burdenedGiftStockTransferTax;
+  if (!bgt) {
+    throw new Error("burdenedGiftStockTransferTax가 undefined — 토글 OFF 자산은 호출 금지");
+  }
+
+  const assumedDebtForGift = item.assumedDebtForGift ?? 0;
+  const valuationAmount = computeEffectiveValuation(item, form.giftDate);
+
+  if (valuationAmount <= 0) {
+    throw new Error("주식 평가액이 0 — 증여재산가액을 입력하세요");
+  }
+
+  const debtRatio = assumedDebtForGift / valuationAmount;
+
+  // shareCount 결정: 상장 → listedStockShares, 비상장 → unlistedStockData.ownedShares
+  const isListed = bgt.marketType !== "unlisted";
+  const shareCount = isListed
+    ? (item.listedStockShares ?? 1)
+    : (item.unlistedStockData?.ownedShares ?? 1);
+  const totalIssuedShares = isListed
+    ? shareCount
+    : (item.unlistedStockData?.totalShares ?? shareCount);
+
+  // priorYearEndDate: 취득일 이전 연도말 — 취득일 연도 전년 12/31
+  const acquisitionDateStr =
+    bgt.acquisitionDate instanceof Date
+      ? bgt.acquisitionDate.toISOString().slice(0, 10)
+      : (bgt.acquisitionDate as string);
+  const acquisitionYear = acquisitionDateStr
+    ? parseInt(acquisitionDateStr.slice(0, 4), 10)
+    : new Date().getFullYear();
+  const priorYearEnd = `${acquisitionYear - 1}-12-31`;
+
+  // 양도일 = 증여일 (부담부증여 시점)
+  const transferDate = form.giftDate ?? "";
+
+  // 주식 종목명 (결과 표시용)
+  const stockName = item.name?.trim() || "주식(부담부증여)";
+
+  // ─── 기본값 (부담부증여에 무관한 필드들) ───
+  const body: Record<string, unknown> = {
+    // 주식 종목 정보
+    stockName,
+    marketType: bgt.marketType,
+    shareCount,
+    totalIssuedShares,
+
+    // 양도 정보 — 양도가액 = 채무인수액, 장외 고정
+    transferActualInputMode: "total" as const,
+    transferTotalPrice: assumedDebtForGift,
+    transferDate,
+    isOnMarketTransaction: false, // 부담부증여 = 장외 (§94①3가목2)
+
+    // 취득 정보
+    acquisitionDate: acquisitionDateStr,
+
+    // 대주주 판정 (부담부에 무관한 필드들 — 기본값 0/false)
+    selfShareRatio: 0,
+    selfMarketCap: 0,
+    isLargestShareholderGroup: false,
+    combinedShareRatio: 0,
+    combinedMarketCap: 0,
+    priorYearEndDate: priorYearEnd,
+
+    // 분류 플래그
+    isQualifyingBlockShareholder: false,
+    isHeavyRealEstateForRate: false,
+    isHeavyRealEstateForValuation: false,
+    isSmallMediumEnterprise: bgt.isSmallMediumEnterprise ?? false,
+    isMidsizeEnterprise: false,
+    isListedSmallShareholder: false,
+    isVentureCompany: false,
+    isKOTCTrading: false,
+
+    // 대주주 여부 (상장에서 중과 판정용)
+    isMajorShareholder: bgt.isMajorShareholder ?? false,
+  };
+
+  // ─── 취득가액 모드별 안분 ───
+  if (bgt.acquisitionMode === "actual") {
+    // K-4: 실지취득가 × debtRatio ÷ shareCount (클라이언트 안분)
+    const actualAcquisitionPrice = bgt.actualAcquisitionPrice ?? 0;
+    const proratedAcquisitionPrice = Math.floor(actualAcquisitionPrice * debtRatio);
+    const perShareAcquisitionPrice = shareCount > 0
+      ? Math.floor(proratedAcquisitionPrice / shareCount)
+      : 0;
+    body.acquisitionActualInputMode = "per_share" as const;
+    body.perShareAcquisitionPrice = perShareAcquisitionPrice;
+  } else {
+    // K-5(estimated): 비상장은 debtRatio 전달, 상장은 자동 안분
+    if (bgt.marketType === "unlisted") {
+      body.burdenedGiftDebtRatio = debtRatio; // ⑬ — 엔진이 estimatedBase에 적용
+    }
+    // 상장 estimated는 transferPrice=B 기반 엔진 자동 처리 (별도 필드 불필요)
+  }
+
+  return body;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § 5. 주식 부담부증여 API 호출 함수
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * callGiftStockBurdenedTransferAPI — 주식 부담부 자산 1건 → POST /api/calc/stock-transfer → StockTransferResult
+ *
+ * 오케스트레이션: GiftTaxForm.tsx 계산 액션 내 stockBurdenedItems 루프에서 호출.
+ * 결과: GiftTaxResultView.stockTransferTaxResults prop으로 주입.
+ */
+export async function callGiftStockBurdenedTransferAPI(
+  item: EstateItem,
+  form: FormState,
+): Promise<StockTransferResult> {
+  const body = buildGiftStockBurdenedTransferBody(item, form);
+
+  const res = await fetch("/api/calc/stock-transfer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`주식 양도소득세 API 오류 ${res.status}: ${text}`);
+  }
+
+  // 라우트 응답 형태: { data: StockTransferResult } (stock-transfer route 참조)
+  const json = (await res.json()) as {
+    data?: StockTransferResult;
+  };
+  const result = json.data;
+  if (!result) {
+    throw new Error("주식 양도소득세 계산 결과를 받지 못했습니다.");
   }
   return result;
 }
