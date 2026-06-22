@@ -342,7 +342,8 @@ test("조정률 모달 — 구조지수 100 미만 구조에서 지붕재료(I�
 
   // 연와조 = 구조지수 95 (< 100) → 지붕재료 적용 대상
   await selectOption(page, "구조 선택", /연와조/);
-  await page.getByRole("button", { name: "건물 특성으로 조정률 계산" }).click();
+  // "건물 특성으로 계산" 라디오 클릭 → 모달 자동 오픈(별도 버튼 없음)
+  await page.getByText("건물 특성으로 계산", { exact: true }).click();
 
   const roofPanel = page.getByRole("radio", { name: "패널 등 (80)" });
   await expect(roofPanel).toBeEnabled();
@@ -353,9 +354,40 @@ test("조정률 모달 — 구조지수 100 미만 구조에서 지붕재료(I�
   // 철근콘크리트조 = 구조지수 100 → 지붕재료 비활성 (트리거는 선택된 라벨 표시 중)
   await page.getByText("연와조 (지수 95)").first().click();
   await page.getByRole("option", { name: /^철근콘크리트조/ }).first().click();
-  await page.getByRole("button", { name: "건물 특성으로 조정률 계산" }).click();
+  // 취소 후 features 모드 유지·미적용 → "건물 특성으로 계산 열기" 링크로 재오픈
+  await page.getByRole("button", { name: "건물 특성으로 계산 열기" }).click();
   await expect(page.getByRole("radio", { name: "패널 등 (80)" })).toBeDisabled();
   await expect(page.getByText("구조지수 100 이상 — 미적용")).toBeVisible();
+});
+
+test("조정률 — 기본 직접입력 / 건물 특성 라디오 클릭 시 모달 자동 오픈 + 주거용 토글 모달 내부", async ({
+  page,
+}) => {
+  await page.goto(URL);
+  await page.getByText("상속·증여(1시점)").click();
+  await fillEventDate(page, "2025-03-15");
+  await selectOption(page, "구조 선택", /철근콘크리트조/);
+  await selectOption(page, "용도 선택", /아파트/);
+
+  // 기본값 = 직접 입력(%) → 조정률 DecimalInput 노출, 모달/주거용 토글은 미노출
+  await expect(page.getByPlaceholder("100")).toBeVisible();
+  await expect(page.getByText("주거용 건물", { exact: true })).toHaveCount(0);
+
+  // "건물 특성으로 계산" 라디오 클릭 → 모달 자동 오픈
+  await page.getByText("건물 특성으로 계산", { exact: true }).click();
+  await expect(page.getByText("개별건물 특성 조정률")).toBeVisible();
+  // 주거용 토글이 모달 내부에 있음
+  const modalResidential = page.getByText("주거용 건물", { exact: true });
+  await expect(modalResidential).toBeVisible();
+
+  // II 최고층수 입력 → 적용 → 섹션에 "특성 N개 적용 · 조정률 X%" 배지
+  await page.getByPlaceholder("지상 최고층수").fill("15");
+  await page.getByRole("button", { name: "적용" }).click();
+  await expect(page.getByText(/특성 \d+개 적용 · 조정률/)).toBeVisible();
+
+  // "다시 계산" 링크로 재오픈
+  await page.getByRole("button", { name: "다시 계산" }).click();
+  await expect(page.getByText("개별건물 특성 조정률")).toBeVisible();
 });
 
 test("계산기 → 홈으로 네비게이션 버튼", async ({ page }) => {
