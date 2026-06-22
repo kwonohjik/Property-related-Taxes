@@ -8,45 +8,43 @@
  */
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
+import { evaluateEstateItem, resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 import type { EstateItem, ValuationMethod } from "@/lib/tax-engine/types/inheritance-gift.types";
 
+const REAL_ESTATE_CATEGORIES = new Set([
+  "real_estate_land",
+  "real_estate_building",
+  "real_estate_apartment",
+]);
+
+/** §66 담보채권 하한 발동 여부 — 엔진 breakdown 권위 판정(근사 비교 금지·dual-truth 회피). 부동산만 의미. */
+function isCollateralRaised(item: EstateItem): boolean {
+  if (!REAL_ESTATE_CATEGORIES.has(item.category)) return false;
+  try {
+    return evaluateEstateItem(item).breakdown.some(
+      (b) => b.label.includes("담보채권액") && b.label.includes("하한"),
+    );
+  } catch {
+    return false;
+  }
+}
+
 // ============================================================
-// 예상 평가액 미리보기 (자산 1건)
+// 예상 평가액 미리보기 (자산 1건) — 엔진 단일 진실 위임(estate-valuation-single-source)
 // ============================================================
 
 export function EstimatedValuePreview({ item }: { item: EstateItem }) {
-  let base = 0;
-  let method: ValuationMethod = "standard_price";
+  // 평가액·평가방법 모두 엔진 단일 진실로 위임 (§61⑤ 임대료환산·미임대·§66 담보하한 반영)
+  const net = computeEffectiveValuation(item);
+  if (net === 0) return null;
 
-  if (item.category === "deposit") {
-    base = item.leaseDeposit ?? 0;
-    method = "market_value";
-  } else if (item.marketValue && item.marketValue > 0) {
-    base = item.marketValue;
-    method = "market_value";
-  } else if (item.appraisedValue && item.appraisedValue > 0) {
-    base = item.appraisedValue;
-    method = "appraisal";
-  } else if (item.similarSalesValue && item.similarSalesValue > 0) {
-    base = item.similarSalesValue;
-    method = "similar_sales";
-  } else if (item.standardPrice && item.standardPrice > 0) {
-    base = item.standardPrice;
-    method = "standard_price";
-  }
-
-  // 상업용 건물 부수토지 개별공시지가(§61①1호) — 보충평가로 귀결 시 합산(엔진 evaluateDetachedHouse 동일 게이트).
-  if (item.category === "real_estate_building" && method === "standard_price") {
-    base += item.appurtenantLandStandardPrice ?? 0;
-  }
-
-  // §66·§63② — 평가액과 담보채권액(저당+임대보증금 합산) 중 큰 금액. 차감이 아니라 하한.
+  const method: ValuationMethod =
+    item.category === "deposit" ? "market_value" : resolveValuationMethod(item);
+  // §66·§63② — 담보채권액(저당+임대보증금). net은 이미 Max(평가, 담보채권) 반영(엔진).
   const securedClaim = (item.leaseDeposit ?? 0) + (item.mortgageAmount ?? 0);
   const isReal = item.category !== "deposit";
-  const net = isReal ? Math.max(base, securedClaim) : base;
-  const collateralRaised = isReal && securedClaim > base;
-
-  if (base === 0) return null;
+  const collateralRaised = isCollateralRaised(item);
 
   const methodLabel: Record<ValuationMethod, string> = {
     market_value: "시가",
@@ -90,33 +88,8 @@ export function EstimatedValuePreview({ item }: { item: EstateItem }) {
 // ============================================================
 
 export function TotalEstimatedValue({ items }: { items: EstateItem[] }) {
-  let total = 0;
-  for (const item of items) {
-    let base = 0;
-    if (item.category === "deposit") {
-      base = item.leaseDeposit ?? 0;
-    } else if (item.marketValue && item.marketValue > 0) {
-      base = item.marketValue;
-    } else if (item.appraisedValue && item.appraisedValue > 0) {
-      base = item.appraisedValue;
-    } else if (item.similarSalesValue && item.similarSalesValue > 0) {
-      base = item.similarSalesValue;
-    } else if (item.standardPrice && item.standardPrice > 0) {
-      base = item.standardPrice;
-    }
-    // 상업용 건물 부수토지 개별공시지가(§61①1호) — 보충평가로 귀결 시(시가류 미입력) 합산. 엔진 동일 게이트.
-    if (
-      item.category === "real_estate_building" &&
-      !(item.marketValue && item.marketValue > 0) &&
-      !(item.appraisedValue && item.appraisedValue > 0) &&
-      !(item.similarSalesValue && item.similarSalesValue > 0)
-    ) {
-      base += item.appurtenantLandStandardPrice ?? 0;
-    }
-    // §66·§63② — 담보채권액(저당+임대보증금)을 차감하지 않고 평가액과 MAX(하한)
-    const securedClaim = (item.leaseDeposit ?? 0) + (item.mortgageAmount ?? 0);
-    total += (item.category !== "deposit") ? Math.max(base, securedClaim) : base;
-  }
+  // 엔진 단일 진실 위임 — 자산별 computeEffectiveValuation 합산(임대료환산·미임대·담보하한 반영)
+  const total = items.reduce((sum, item) => sum + computeEffectiveValuation(item), 0);
 
   if (total === 0 || items.length === 0) return null;
 
