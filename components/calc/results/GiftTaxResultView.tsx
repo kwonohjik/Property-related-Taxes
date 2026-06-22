@@ -21,6 +21,7 @@ import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard
 import { GenerationSkipSurchargeBreakdownCard } from "@/components/calc/results/GenerationSkipSurchargeBreakdownCard";
 import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import { GiftTaxValuationFormTable } from "@/components/calc/results/GiftTaxValuationFormTable";
+import { GiftValuationBasisCard } from "@/components/calc/results/GiftValuationBasisCard";
 import { UnlistedStockBesshiResultSection } from "@/components/calc/results/UnlistedStockBesshiResultSection";
 import { UnlistedStockSimpleValuationSection } from "@/components/calc/results/UnlistedStockSimpleValuationSection";
 import { isSimpleModeUnlisted } from "@/lib/calc/unlisted-valuation-mode";
@@ -603,7 +604,15 @@ export function GiftTaxResultView({
         </div>
       )}
 
-{/* 증여재산 및 평가명세서 (별지 제10호서식 부표 1) — A4 가로 양식, 카드 내부에서 가로 스크롤 */}
+{/* 증여재산 평가 산출근거 — 자산별 breakdown 펼침 (엔진 valuationResults.breakdown 렌더) */}
+      {result.valuationResults.length > 0 && (
+        <GiftValuationBasisCard
+          valuationResults={result.valuationResults}
+          estateItems={estateItems}
+        />
+      )}
+
+      {/* 증여재산 및 평가명세서 (별지 제10호서식 부표 1) — A4 가로 양식, 카드 내부에서 가로 스크롤 */}
       <PrintSection id="valuation-form" selectedIds={selectedPrintIds}>
       <div className="border rounded-xl">
         <button
