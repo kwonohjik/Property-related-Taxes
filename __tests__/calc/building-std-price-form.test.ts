@@ -10,6 +10,7 @@ import {
   emptyCompositePart,
   toEngineInput,
   validateBuildingStdPriceForm,
+  deriveYearFromEventDate,
   availableYears,
   type BuildingStdPriceFormState,
   type CompositePartForm,
@@ -367,5 +368,36 @@ describe("building-std-price 연도 옵션 — 데이터 보유 교집합", () =
   });
   it("기계식 모드: 2026 포함", () => {
     expect(availableYears(true)).toContain(2026);
+  });
+});
+
+describe("상속·증여 평가시점 — eventDate 단일 입력 → 연도 도출", () => {
+  // deriveYearFromEventDate: valuationYear 단일 진실 writer의 도출 규칙
+  it("헬퍼: 완성 일자만 연도 도출, 미완성/빈값은 빈 문자열", () => {
+    expect(deriveYearFromEventDate("2025-03-15")).toBe("2025");
+    expect(deriveYearFromEventDate("")).toBe("");
+    expect(deriveYearFromEventDate("2025-03")).toBe(""); // 미완성
+    expect(deriveYearFromEventDate("2025")).toBe(""); // 연도만
+    expect(deriveYearFromEventDate("2026-12-31")).toBe("2026");
+  });
+
+  // C-1: 평가연도 미설정(=일자 미완성) → 차단, 메시지는 날짜 기준
+  it("C-1: 평가연도 빈값 → '상속·증여일을 입력하세요'", () => {
+    const f = form({ taxType: "inheritance_gift", builtYear: "2020", floorArea: "500", valuationYear: "" });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/상속·증여일을 입력하세요/);
+  });
+
+  // C-3: 데이터 없는 연도(2000) → 차단(유효연도 검증, 드롭다운 폐지 후에도 방어)
+  it("C-3: 데이터 없는 연도 → '자료가 없습니다'", () => {
+    const f = form({
+      taxType: "inheritance_gift",
+      builtYear: "2020",
+      floorArea: "500",
+      valuationYear: "2000",
+      valStructureKey: "rc",
+      valUsageNo: "1",
+      valLandPrice: "7,500,000",
+    });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/자료가 없습니다/);
   });
 });

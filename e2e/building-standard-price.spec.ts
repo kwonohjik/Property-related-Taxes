@@ -18,6 +18,14 @@ async function selectOption(page: Page, triggerText: string, optionName: string 
   await page.getByRole("option", { name: optionName }).first().click();
 }
 
+// 상속·증여일(DateInput 연/월/일 3필드) 입력 → 평가연도 자동 도출.
+async function fillEventDate(page: Page, iso: string) {
+  const [y, m, d] = iso.split("-");
+  await page.getByLabel("연도", { exact: true }).fill(y);
+  await page.getByLabel("월", { exact: true }).fill(m);
+  await page.getByLabel("일", { exact: true }).fill(d);
+}
+
 test("상속·증여 기본 — 224,600,000 (BSP-01)", async ({ page }) => {
   await page.goto(URL);
   await page.getByText("상속·증여(1시점)").click();
@@ -25,7 +33,7 @@ test("상속·증여 기본 — 224,600,000 (BSP-01)", async ({ page }) => {
   await page.getByPlaceholder("신축연도 (4자리)").fill("2020"); // 신축연도
   await page.getByPlaceholder("건물 연면적").fill("200"); // 연면적
 
-  await selectOption(page, "연도 선택", "2025년"); // 평가연도
+  await fillEventDate(page, "2025-03-15"); // 상속·증여일 → 평가연도 2025 자동
   await selectOption(page, "구조 선택", /철근콘크리트조/);
   await selectOption(page, "용도 선택", /아파트/);
   await page.getByPlaceholder("원/㎡").fill("7500000"); // 공시지가
@@ -75,7 +83,7 @@ test("기계식주차 — 255,000,000 (BSP-MECH)", async ({ page }) => {
 
   await page.getByPlaceholder("신축연도 (4자리)").fill("2020"); // 신축연도
   await page.getByPlaceholder("기계식 주차대수").fill("50"); // 주차대수
-  await selectOption(page, "연도 선택", "2025년"); // 평가연도
+  await fillEventDate(page, "2025-03-15"); // 상속·증여일 → 평가연도 2025 자동
 
   await page.getByRole("button", { name: "기준시가 계산하기" }).click();
 
@@ -91,12 +99,24 @@ test("검증 차단 — 미입력 시 오류", async ({ page }) => {
   await expect(page.getByTestId("bsp-error")).toBeVisible();
 });
 
+test("모드 전환 시 평가시점 날짜 초기화 — 새 입력 강제", async ({ page }) => {
+  await page.goto(URL);
+  await page.getByText("상속·증여(1시점)").click();
+  await fillEventDate(page, "2025-03-15"); // 상속·증여일 입력
+  await expect(page.getByLabel("연도", { exact: true })).toHaveValue("2025");
+
+  // 양도 모드로 전환 → 다시 상속·증여 → 날짜 비워져 있어야 함(양도일↔상속·증여일 혼입 방지)
+  await page.getByText("취득·양도 2시점").click();
+  await page.getByText("상속·증여(1시점)").click();
+  await expect(page.getByLabel("연도", { exact: true })).toHaveValue("");
+});
+
 test("복합구조 + 공용시설 안분 — 합계 187,640,000", async ({ page }) => {
   await page.goto(URL);
   await page.getByText("상속·증여(1시점)").click();
 
   await page.getByPlaceholder("신축연도 (4자리)").fill("2000"); // 신축연도
-  await selectOption(page, "연도 선택", "2026년"); // 평가연도 (부분 구조/용도 옵션 활성화 선행)
+  await fillEventDate(page, "2026-03-15"); // 상속·증여일 → 평가연도 2026 (부분 구조/용도 옵션 활성화 선행)
 
   await page.getByText("복합구조 (층·구역별 구조·용도 상이)").click(); // 토글 ON
   await page.getByPlaceholder("기타 면적").fill("90"); // 부속 기타(공용) → 공용 조정률 노출
@@ -248,7 +268,7 @@ test("계산서 서식 — 상속 복합 작성례(3) ⑪ 200,540,000", async ({
   await page.goto(URL);
   await page.getByText("상속·증여(1시점)").click();
   await page.getByPlaceholder("신축연도 (4자리)").fill("2000");
-  await selectOption(page, "연도 선택", "2023년"); // 평가연도
+  await fillEventDate(page, "2023-03-15"); // 상속·증여일 → 평가연도 2023
 
   await page.getByText("복합구조 (층·구역별 구조·용도 상이)").click();
   await page.getByPlaceholder("기타 면적").fill("90"); // 부속(주차60+보일러30 → 기타 합계)
@@ -318,7 +338,7 @@ test("동일연도 §164⑧ — 양도시점 상세 숨김 + 환산 62,450,000",
 test("조정률 모달 — 구조지수 100 미만 구조에서 지붕재료(I구분) 활성", async ({ page }) => {
   await page.goto(URL);
   await page.getByText("상속·증여(1시점)").click();
-  await selectOption(page, "연도 선택", "2025년"); // 평가연도
+  await fillEventDate(page, "2025-03-15"); // 상속·증여일 → 평가연도 2025
 
   // 연와조 = 구조지수 95 (< 100) → 지붕재료 적용 대상
   await selectOption(page, "구조 선택", /연와조/);

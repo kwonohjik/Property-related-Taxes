@@ -250,6 +250,14 @@ export function availableYears(isMechanical: boolean): number[] {
   return out.reverse();
 }
 
+/**
+ * 상속·증여 평가기준일(YYYY-MM-DD) → 평가연도 문자열. 완성된 일자만 도출, 그 외 "".
+ * 상속·증여 모드에서 valuationYear의 단일 진실 writer(UI onChange·taxType 전환·initial 공용).
+ */
+export function deriveYearFromEventDate(eventDate: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(eventDate) ? eventDate.slice(0, 4) : "";
+}
+
 const intOrUndef = (s: string): number | undefined => {
   const n = parseInt(s, 10);
   return Number.isNaN(n) ? undefined : n;
@@ -452,7 +460,7 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
 
   if (f.taxType === "inheritance_gift") {
     const y = intOrUndef(f.valuationYear);
-    if (y === undefined) return "상속·증여 연도를 선택하세요.";
+    if (y === undefined) return "상속·증여일을 입력하세요.";
     if (f.isMechanicalParking) {
       if (resolveMechParkingFormula(y) === undefined) return `${y}년 기계식주차 단가 자료가 없습니다.`;
       return null;
