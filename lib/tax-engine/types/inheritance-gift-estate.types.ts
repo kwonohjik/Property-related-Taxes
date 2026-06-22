@@ -53,6 +53,14 @@ export interface EstateItem extends EstateLocationFields {
   marketValue?: number;
   /** 개별공시지가 (토지) or 기준시가 (건물·아파트) */
   standardPrice?: number;
+  /**
+   * 부수토지 개별공시지가 총액(원) — 상업용 건물(real_estate_building) 보충평가에서
+   * §61①3호 일괄고시 대상이 아닌 일반 상업용 건물의 경로 B(건물 기준시가 §61①2호 +
+   * 부수토지 개별공시지가 §61①1호) 합산용. method==="standard_price"일 때만 standardPrice(건물분)에
+   * 가산. 시가·감정·매매사례 평가 시 무시(통합액에 포함). UI: 부수토지용 StandardPriceInput(land)
+   * onTotalPriceChange로 단가×면적 총액 저장(면적 별도 필드 불요).
+   */
+  appurtenantLandStandardPrice?: number;
   /** 감정평가액 */
   appraisedValue?: number;
   /** 유사매매사례가액 (상증법 시행령 §49①·④ — "시가로 본다"). market·appraised 존재 시 §49② 단서로 배제(if-chain 자연 후순위). */

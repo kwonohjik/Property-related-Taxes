@@ -98,7 +98,13 @@ export function buildGiftBurdenedTransferBody(
   const isMarketMode = valuationMode === "sangjeungbeop_market";
 
   // 기준시가 배정: land → landStd, building/housing → buildingStd (§3)
-  const stdAtTransfer = item.standardPrice ?? 0;
+  // 상업용 건물 경로 B(§61①2호+1호): standardPrice(건물분)에 부수토지 개별공시지가를 합산한
+  // 통합 양도시 기준시가를 §159 안분 분자로 사용(엔진은 상업용 건물을 buildingStd에 통째로 넣어 sum).
+  const stdAtTransfer =
+    (item.standardPrice ?? 0) +
+    (item.category === "real_estate_building"
+      ? (item.appurtenantLandStandardPrice ?? 0)
+      : 0);
   const stdAtAcquisition = bgt.standardPriceAtAcquisition;
 
   // 표준 모드(K-1~K-3): 기준시가 안분용 분자/분모

@@ -25,8 +25,7 @@ import {
   resolveSigunguCode,
   isReverseGeocodeError,
 } from "@/lib/calc/vworld-reverse-geocode";
-import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { EstateBodySupplementaryValuation } from "./EstateBodySupplementaryValuation";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   RadioCardGroup,
@@ -147,12 +146,6 @@ export function EstateBodyRealEstate({
       lat: latLng ? String(latLng.lat) : "",
     };
   });
-  const [standardPricePerSqm, setStandardPricePerSqm] = useState("");
-  // 보충적 평가 토글 — 값>0이면 초기 ON(비파괴). mount 1회. OFF로 닫아도 store 값 보존.
-  const [supplementaryOpen, setSupplementaryOpen] = useState(
-    () => (item.standardPrice ?? 0) > 0,
-  );
-
   const showLeaseDeposit =
     cat === "real_estate_apartment" || cat === "real_estate_building";
 
@@ -232,48 +225,16 @@ export function EstateBodyRealEstate({
         estateSigunguCode={item.estateSigunguCode}
       />
 
-      {/* 보충적 평가 (StandardPriceInput) — 토글 펼침, 우선순위 최후 (D-2 라벨). 값>0이면 초기 ON(비파괴) */}
-      <ToggleCard
-        lawLinks="상증법"
-        tone="emerald"
-        size="sm"
-        title={SUPPLEMENTARY_LABEL[cat]}
-        description="시가·감정가·매매사례가 모두 없을 때 최종 적용"
-        checked={supplementaryOpen}
-        onCheckedChange={setSupplementaryOpen}
-      >
-        <div className="space-y-2">
-          {!addrValue.jibun && (
-            <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
-              ⚠️ 공시가격 자동 조회는 상단 <strong>자산 명칭(소재지 검색)</strong>에서
-              지번 주소를 선택해야 활성화됩니다.
-            </p>
-          )}
-          <StandardPriceInput
-            propertyKind={propertyKind}
-            referenceDate={valuationDate}
-            totalPrice={item.standardPrice != null ? String(item.standardPrice) : ""}
-            onTotalPriceChange={(v) =>
-              set({ standardPrice: parseAmount(v) || undefined })
-            }
-            pricePerSqm={standardPricePerSqm}
-            onPricePerSqmChange={setStandardPricePerSqm}
-            jibun={addrValue.jibun}
-            label=""
-            enableLookup={true}
-          />
-          {propertyKind !== "land" && (
-            <div className="flex justify-end">
-              <BuildingStdPriceModalButton
-                buttonLabel="건물 기준시가 계산"
-                lockedTaxType="inheritance_gift"
-                initialAddress={addrValue}
-                onApply={(v) => set({ standardPrice: v })}
-              />
-            </div>
-          )}
-        </div>
-      </ToggleCard>
+      {/* 보충적 평가 (§61①) — 토지·아파트·상업용 건물 공통 + 상업용 건물 §61 경로 분리. 800줄 정책 분리 */}
+      <EstateBodySupplementaryValuation
+        item={item}
+        set={set}
+        cat={cat}
+        propertyKind={propertyKind}
+        valuationDate={valuationDate}
+        addrValue={addrValue}
+        supplementaryLabel={SUPPLEMENTARY_LABEL[cat]}
+      />
 
       </EstateBodySection>
 

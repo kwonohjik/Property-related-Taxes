@@ -28,6 +28,8 @@ const baseItemSchema = z.object({
    */
   similarSalesSource: z.enum(["manual", "rtms_auto"]).optional(),
   standardPrice: z.number().nonnegative().optional(),
+  // 상업용 건물 부수토지 개별공시지가 총액(§61①1호) — 경로 B 보충평가 합산용. 누락 시 silent strip.
+  appurtenantLandStandardPrice: z.number().nonnegative().optional(),
   // 상속개시자료 요약 4표 (2026-05-28) — Table A 비고/수량 열
   valuationMethod: z
     .enum([

@@ -35,6 +35,11 @@ export function EstimatedValuePreview({ item }: { item: EstateItem }) {
     method = "standard_price";
   }
 
+  // 상업용 건물 부수토지 개별공시지가(§61①1호) — 보충평가로 귀결 시 합산(엔진 evaluateDetachedHouse 동일 게이트).
+  if (item.category === "real_estate_building" && method === "standard_price") {
+    base += item.appurtenantLandStandardPrice ?? 0;
+  }
+
   // §66·§63② — 평가액과 담보채권액(저당+임대보증금 합산) 중 큰 금액. 차감이 아니라 하한.
   const securedClaim = (item.leaseDeposit ?? 0) + (item.mortgageAmount ?? 0);
   const isReal = item.category !== "deposit";
@@ -98,6 +103,15 @@ export function TotalEstimatedValue({ items }: { items: EstateItem[] }) {
       base = item.similarSalesValue;
     } else if (item.standardPrice && item.standardPrice > 0) {
       base = item.standardPrice;
+    }
+    // 상업용 건물 부수토지 개별공시지가(§61①1호) — 보충평가로 귀결 시(시가류 미입력) 합산. 엔진 동일 게이트.
+    if (
+      item.category === "real_estate_building" &&
+      !(item.marketValue && item.marketValue > 0) &&
+      !(item.appraisedValue && item.appraisedValue > 0) &&
+      !(item.similarSalesValue && item.similarSalesValue > 0)
+    ) {
+      base += item.appurtenantLandStandardPrice ?? 0;
     }
     // §66·§63② — 담보채권액(저당+임대보증금)을 차감하지 않고 평가액과 MAX(하한)
     const securedClaim = (item.leaseDeposit ?? 0) + (item.mortgageAmount ?? 0);

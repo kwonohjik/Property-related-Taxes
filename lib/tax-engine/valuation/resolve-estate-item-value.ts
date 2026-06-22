@@ -138,11 +138,18 @@ export function resolveEstateItemValue(item: EstateItem): number {
   if (typeof item.appraisedValue === "number" && item.appraisedValue > 0) {
     return item.appraisedValue;
   }
+  // 상업용 건물 부수토지 개별공시지가(§61①1호) — 보충평가로 귀결될 때만 합산(시가류 미입력).
+  // 엔진 evaluateDetachedHouse 동일 게이트. 매매사례가(§49④) 존재 시는 시가이므로 제외.
+  const supplementaryLandAddon =
+    item.category === "real_estate_building" &&
+    !(typeof item.similarSalesValue === "number" && item.similarSalesValue > 0)
+      ? (item.appurtenantLandStandardPrice ?? 0)
+      : 0;
   if (typeof item.standardPrice === "number" && item.standardPrice > 0) {
-    return item.standardPrice;
+    return item.standardPrice + supplementaryLandAddon;
   }
   if (item.category === "listed_stock" || item.category === "unlisted_stock") {
     return computeStockValuation(item);
   }
-  return 0;
+  return supplementaryLandAddon;
 }

@@ -13,6 +13,7 @@ import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
+import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import {
   isSpecialTreatmentEligibleCategory,
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
@@ -217,8 +218,9 @@ export function validateStep(step: number, form: FormState): string | null {
           valuation = 0;
         }
       } else {
-        valuation =
-          it.marketValue ?? it.appraisedValue ?? it.similarSalesValue ?? it.standardPrice ?? 0;
+        // 부동산 gross 평가액 단일 진실(시가→감정→매매사례→기준시가 + 상업용 건물 부수토지 §61①1호).
+        // §66 담보하한 미적용 gross — 채무초과 경고 의미 보존.
+        valuation = computeEffectiveValuation(it);
       }
       if (valuation > 0 && debtForGift > valuation) {
         return `${it.name.trim() || `재산 ${i + 1}`}: 채무인수액(${debtForGift.toLocaleString()}원)이 평가액(${valuation.toLocaleString()}원)을 초과합니다. 입력값을 확인하세요. (과세가액 0으로 처리됩니다)`;

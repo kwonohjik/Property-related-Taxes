@@ -33,8 +33,20 @@ export function computeEffectiveValuation(
     item.appraisedValue ??
     item.similarSalesValue ??
     item.standardPrice;
+  // 상업용 건물 부수토지 개별공시지가(§61①1호) — 보충평가(기준시가)로 귀결될 때만 합산.
+  // 엔진 evaluateDetachedHouse와 동일 게이트(시가·감정·매매사례 부재 = 보충평가). 시가류 입력 시 통합액에 포함되므로 무시.
+  const supplementaryLandAddon =
+    item.category === "real_estate_building" &&
+    item.marketValue == null &&
+    item.appraisedValue == null &&
+    item.similarSalesValue == null
+      ? (item.appurtenantLandStandardPrice ?? 0)
+      : 0;
   if (explicit !== undefined && explicit !== null) {
-    return explicit;
+    return explicit + supplementaryLandAddon;
+  }
+  if (supplementaryLandAddon > 0) {
+    return supplementaryLandAddon;
   }
   // 주식 보충평가 (§63) — 상장 시세 평균·비상장 V1/V2. valuationDate는 V2 evaluationDate fallback용.
   if (item.category === "listed_stock" || item.category === "unlisted_stock") {

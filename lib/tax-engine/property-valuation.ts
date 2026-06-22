@@ -233,7 +233,13 @@ export function evaluateDetachedHouse(item: EstateItem): PropertyValuationResult
     );
   }
 
-  const { amount, method } = resolveValuationAmount(item);
+  const { amount: baseAmount, method } = resolveValuationAmount(item);
+  // §61①2호+1호 경로 B — 일괄고시(§61①3호) 대상 아닌 일반 상업용 건물의 보충평가:
+  // 건물 기준시가(baseAmount) + 부수토지 개별공시지가(appurtenantLandStandardPrice) 합산.
+  // 보충평가(standard_price)일 때만 가산. 시가·감정·매매사례는 통합액에 부수토지 포함되므로 무시.
+  const landAddon =
+    method === "standard_price" ? (item.appurtenantLandStandardPrice ?? 0) : 0;
+  const amount = baseAmount + landAddon;
   const { valuatedAmount, securedClaim, raised, rentalRaised } = applyCollateralFloor(amount, item, method);
 
   return {
@@ -241,7 +247,12 @@ export function evaluateDetachedHouse(item: EstateItem): PropertyValuationResult
     method,
     valuatedAmount,
     breakdown: [
-      { label: "단독주택 평가액", amount, lawRef: VALUATION.REAL_ESTATE_SUPP },
+      ...(landAddon > 0
+        ? [
+            { label: "건물 기준시가", amount: baseAmount, lawRef: VALUATION.REAL_ESTATE_SUPP },
+            { label: "부수토지 개별공시지가", amount: landAddon, lawRef: VALUATION.REAL_ESTATE_SUPP },
+          ]
+        : [{ label: "단독주택 평가액", amount, lawRef: VALUATION.REAL_ESTATE_SUPP }]),
       ...extraCollateralRows(item, valuatedAmount, rentalRaised),
       ...(raised
         ? [{ label: "§66·§63② 담보채권액(저당+임대보증금) 하한 적용", amount: valuatedAmount, lawRef: VALUATION.COLLATERAL_SPECIAL }]
