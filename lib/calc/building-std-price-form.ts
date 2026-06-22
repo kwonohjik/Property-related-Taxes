@@ -214,7 +214,7 @@ export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   valStructureKey: "",
   valUsageNo: "",
   valLandPrice: "",
-  adjustmentMode: "features",
+  adjustmentMode: "manual",
   adjustmentFeatures: null,
   manualAdjustmentRate: "",
   isResidentialUse: false,

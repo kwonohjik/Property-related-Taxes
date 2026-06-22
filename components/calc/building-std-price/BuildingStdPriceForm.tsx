@@ -38,6 +38,7 @@ import {
   type BuildingStandardPriceResult,
 } from "@/lib/tax-engine/building-standard-price";
 import { listStructureOptions, listUsageOptions } from "@/lib/tax-engine/data/building-standard-price";
+import { calcSpecialAdjustmentRate } from "@/lib/tax-engine/building-standard-price-helpers";
 
 interface Props {
   onResult: (
@@ -650,45 +651,45 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 tone="violet"
                 layout="inline"
                 value={f.adjustmentMode}
-                onChange={(v) => set("adjustmentMode", v as BuildingStdPriceFormState["adjustmentMode"])}
+                onChange={(v) => {
+                  const mode = v as BuildingStdPriceFormState["adjustmentMode"];
+                  set("adjustmentMode", mode);
+                  // "건물 특성으로 계산" 선택 시 모달 자동 오픈(사용자 클릭 시에만 — useEffect 미사용)
+                  if (mode === "features") setAdjOpen(true);
+                }}
                 options={[
                   { value: "features", label: "건물 특성으로 계산" },
                   { value: "manual", label: "직접 입력(%)" },
                 ]}
               />
               {f.adjustmentMode === "features" ? (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <ToggleCard
-                      checked={f.isResidentialUse}
-                      onCheckedChange={(v) => set("isResidentialUse", v)}
-                      title="주거용 건물"
-                      tone="violet"
-                      variant="chip"
-                      size="sm"
-                    />
-                    {f.isResidentialUse && (
-                      <ToggleCard
-                        checked={f.isApartmentUse}
-                        onCheckedChange={(v) => set("isApartmentUse", v)}
-                        title="아파트"
-                        tone="violet"
-                        variant="chip"
-                        size="sm"
-                      />
-                    )}
+                f.adjustmentFeatures && Object.keys(f.adjustmentFeatures).length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+                      특성 {Object.keys(f.adjustmentFeatures).length}개 적용 · 조정률{" "}
+                      {(
+                        calcSpecialAdjustmentRate(
+                          f.adjustmentFeatures,
+                          valStructureIndex || 100,
+                          parseFloat(f.floorArea.replace(/,/g, "")) || 0,
+                          { isResidential: f.isResidentialUse, isApartment: f.isApartmentUse },
+                        ) * 100
+                      ).toFixed(1)}
+                      %
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAdjOpen(true)}
+                      className="text-xs font-medium text-violet-700 underline underline-offset-2 hover:text-violet-900"
+                    >
+                      다시 계산
+                    </button>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Button variant="outline" size="sm" onClick={() => setAdjOpen(true)}>
-                      건물 특성으로 조정률 계산
-                    </Button>
-                    {f.adjustmentFeatures && Object.keys(f.adjustmentFeatures).length > 0 && (
-                      <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
-                        특성 {Object.keys(f.adjustmentFeatures).length}개 적용
-                      </span>
-                    )}
-                  </div>
-                </div>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setAdjOpen(true)}>
+                    건물 특성으로 계산 열기
+                  </Button>
+                )
               ) : (
                 <FieldCard label="조정률" hint="100 = 1.0(미적용)">
                   <DecimalInput value={f.manualAdjustmentRate} onChange={(v) => set("manualAdjustmentRate", v)} unit="%" placeholder="100" />
@@ -711,7 +712,11 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
         isResidential={f.isResidentialUse}
         isApartment={f.isApartmentUse}
         initial={f.adjustmentFeatures}
-        onApply={(features) => set("adjustmentFeatures", features)}
+        onApply={(features, res, apt) => {
+          set("adjustmentFeatures", features);
+          set("isResidentialUse", res);
+          set("isApartmentUse", apt);
+        }}
       />
     </div>
   );

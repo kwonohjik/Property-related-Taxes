@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { calcSpecialAdjustmentRate } from "@/lib/tax-engine/building-standard-price-helpers";
@@ -28,10 +29,11 @@ interface Props {
   structureIndex: number;
   /** 연면적(II 연면적 구간) */
   floorArea: number;
+  /** 주거용/아파트 초기 seed — 토글은 모달 내부에서 관리, 적용 시 onApply로 반환 */
   isResidential: boolean;
   isApartment: boolean;
   initial: SpecialAdjustmentFeatures | null;
-  onApply: (features: SpecialAdjustmentFeatures) => void;
+  onApply: (features: SpecialAdjustmentFeatures, isResidential: boolean, isApartment: boolean) => void;
 }
 
 type LabeledSelect = { value: string; label: string };
@@ -104,12 +106,19 @@ export function AdjustmentRateModal({
   onApply,
 }: Props) {
   const [draft, setDraft] = useState<SpecialAdjustmentFeatures>(initial ?? {});
+  // 주거용/아파트 — 섹션에서 모달 내부로 이동. 열릴 때 props로 seed.
+  const [residential, setResidential] = useState(isResidential);
+  const [apartment, setApartment] = useState(isApartment);
 
-  // 모달 열릴 때 initial 동기화(닫혀 있던 사이 변경 반영) — open 토글마다 reset
+  // 모달 열릴 때 initial·seed 동기화(닫혀 있던 사이 변경 반영) — open 토글마다 reset
   const [lastOpen, setLastOpen] = useState(open);
   if (open !== lastOpen) {
     setLastOpen(open);
-    if (open) setDraft(initial ?? {});
+    if (open) {
+      setDraft(initial ?? {});
+      setResidential(isResidential);
+      setApartment(isApartment);
+    }
   }
 
   const roofActive = structureIndex > 0 && structureIndex < 100;
@@ -123,8 +132,8 @@ export function AdjustmentRateModal({
     });
 
   const previewRate = useMemo(
-    () => calcSpecialAdjustmentRate(draft, structureIndex || 100, floorArea, { isResidential, isApartment }),
-    [draft, structureIndex, floorArea, isResidential, isApartment],
+    () => calcSpecialAdjustmentRate(draft, structureIndex || 100, floorArea, { isResidential: residential, isApartment: apartment }),
+    [draft, structureIndex, floorArea, residential, apartment],
   );
 
   return (
@@ -137,7 +146,31 @@ export function AdjustmentRateModal({
           </DialogDescription>
         </DialogHeader>
 
-        {!isResidential && floorArea <= 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleCard
+            checked={residential}
+            onCheckedChange={(v) => {
+              setResidential(v);
+              if (!v) setApartment(false);
+            }}
+            title="주거용 건물"
+            tone="violet"
+            variant="chip"
+            size="sm"
+          />
+          {residential && (
+            <ToggleCard
+              checked={apartment}
+              onCheckedChange={setApartment}
+              title="아파트"
+              tone="violet"
+              variant="chip"
+              size="sm"
+            />
+          )}
+        </div>
+
+        {!residential && floorArea <= 0 && (
           <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700">
             연면적이 아직 입력되지 않아 II구분 연면적 구간은 예상 조정률에 반영되지 않습니다. 실제 계산은
             입력된 연면적 기준으로 적용됩니다.
@@ -274,7 +307,7 @@ export function AdjustmentRateModal({
               variant="default"
               size="sm"
               onClick={() => {
-                onApply(draft);
+                onApply(draft, residential, apartment);
                 onOpenChange(false);
               }}
             >
