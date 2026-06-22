@@ -42,6 +42,10 @@ import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveT
 import { formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  BuildingStdPriceReportSection,
+  hasBuildingStdReport,
+} from "@/components/calc/results/BuildingStdPriceReportSection";
 import { GiftDonorPaidGrossUpSection } from "@/components/calc/results/GiftDonorPaidGrossUpSection";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { parseLawRefsForModal } from "@/lib/utils/law-url";
@@ -207,6 +211,7 @@ export function GiftTaxResultView({
     if (result.filingFormRows && result.filingFormRows.length > 0)
       s.add("filing-form-10");
     if (result.valuationResults.length > 0) s.add("valuation-form");
+    if (hasBuildingStdReport({ estateItems: items })) s.add("building-std-report");
     if (items.some((it) => it.unlistedStockValuationV2)) s.add("unlisted-stock-besshi");
     if (items.some(isSimpleModeUnlisted)) s.add("unlisted-stock-simple");
     if (
@@ -671,6 +676,11 @@ export function GiftTaxResultView({
           </div>
         )}
       </div>
+      </PrintSection>
+
+      {/* 건물 기준시가 계산서 (모달 스냅샷 재유도 — 스냅샷 있을 때만 렌더) */}
+      <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
+        <BuildingStdPriceReportSection inputData={{ estateItems }} />
       </PrintSection>
 
       {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산, R-6) */}

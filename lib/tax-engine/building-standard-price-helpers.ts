@@ -67,6 +67,8 @@ export class BuildingStdPriceError extends Error {
 export interface AdjustmentContext {
   isResidential: boolean;
   isApartment: boolean;
+  /** 구조키 — II 최고층수 "통나무조(solid_wood) 적용 제외"(원본 비고) 판정용. 미지정 시 제외 안 함 */
+  structureKey?: string;
 }
 
 /** 리모델링(대수선) 정보 — 상증만 잔가율 할증 */
@@ -172,6 +174,7 @@ export function calcPointBreakdown(
     residualGroup,
     durableYears,
     adjustmentRate: adjustmentRate === 1 ? undefined : adjustmentRate,
+    floorArea, // 계산서 Ⅱ 연면적·Ⅲ 면적⑨ echo(단일 경로 누락 방지 — 복합은 호출부에서 부분 면적으로 덮어씀)
     appliedLandPriceYear: year,
     applyNotes: {
       structure: STRUCTURE_META[point.structureKey]?.label,
@@ -509,7 +512,7 @@ interface AdjustmentSelection {
  * 조정율 구분별 선택(단일 출처). I~VII 각 구분의 적용 규칙대로 선택 항목을 산출.
  * calcSpecialAdjustmentRate(지수곱)·describeSpecialAdjustment(라벨) 양쪽이 이 결과를 공유 → 드리프트 방지.
  */
-function selectSpecialAdjustment(
+export function selectSpecialAdjustment(
   features: SpecialAdjustmentFeatures,
   structureIndex: number,
   floorArea: number,
@@ -525,8 +528,13 @@ function selectSpecialAdjustment(
   }
 
   // II 최고층수/연면적/지능형: 해당 항목 중 가장 높은 지수 1개
+  // 최고층수: 통나무조(solid_wood) 적용 제외(원본 II 비고) · 주거용은 아파트만 적용
   const groupII: { no: number; rate: number }[] = [];
-  if (features.maxFloors !== undefined && (!ctx.isResidential || ctx.isApartment)) {
+  if (
+    features.maxFloors !== undefined &&
+    (!ctx.isResidential || ctx.isApartment) &&
+    ctx.structureKey !== "solid_wood"
+  ) {
     groupII.push({ no: resolveMaxFloorsNo(features.maxFloors), rate: resolveMaxFloorsRate(features.maxFloors) });
   }
   if (!ctx.isResidential && floorArea > 0) {

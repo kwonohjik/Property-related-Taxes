@@ -35,7 +35,8 @@ export type TransferPrintSectionId =
   | "detailed-statement"
   | "calculation"
   | "phd"
-  | "split-detail";
+  | "split-detail"
+  | "building-std-report";
 
 /** 양도세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type TransferPrintSectionNode = GenericNode<TransferPrintSectionId>;
@@ -62,6 +63,7 @@ export const TRANSFER_PRINT_SECTIONS: TransferPrintSectionGroup[] = [
       { id: "calculation", label: "핵심 결과·계산 내역", channel: SCREEN_PDF },
       { id: "phd", label: "개별주택가격 미공시 환산", channel: SCREEN },
       { id: "split-detail", label: "토지/건물 분리 양도차익", channel: SCREEN },
+      { id: "building-std-report", label: "건물 기준시가 계산서", channel: SCREEN_PDF },
     ],
   },
 ];

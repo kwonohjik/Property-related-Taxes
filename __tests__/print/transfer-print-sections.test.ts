@@ -25,9 +25,10 @@ const ALL_LEAVES: TransferPrintSectionId[] = [
   "calculation",
   "phd",
   "split-detail",
+  "building-std-report",
 ];
 
-const PDF_LEAVES: TransferPrintSectionId[] = ["calculation"];
+const PDF_LEAVES: TransferPrintSectionId[] = ["calculation", "building-std-report"];
 
 describe("양도세(단일) 선택 출력 레지스트리 — Pre-Do anchor (PR-F1)", () => {
   it("PD-tr-1: 선택 0건이면 모든 섹션이 print:hidden", () => {
@@ -46,7 +47,7 @@ describe("양도세(단일) 선택 출력 레지스트리 — Pre-Do anchor (PR-
     }
   });
 
-  it("PD-tr-3: flattenPrintSectionIds는 5개 유니크 leaf, group: 접두 없음", () => {
+  it("PD-tr-3: flattenPrintSectionIds는 6개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);
@@ -56,7 +57,7 @@ describe("양도세(단일) 선택 출력 레지스트리 — Pre-Do anchor (PR-
     }
   });
 
-  it("PD-tr-4: pdfEligibleIds는 calculation 1종 (계산 내역 대표)", () => {
+  it("PD-tr-4: pdfEligibleIds는 calculation·building-std-report 2종", () => {
     const ids = pdfEligibleIds();
     expect([...ids].sort()).toEqual([...PDF_LEAVES].sort());
   });

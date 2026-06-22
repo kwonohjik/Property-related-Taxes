@@ -12,6 +12,8 @@ import {
 import { InheritanceHeirAllocationSection } from "@/lib/pdf/sections/inheritance-heir-allocation-section";
 import { InheritanceSelectedBesshiPages } from "@/lib/pdf/inheritance-besshi-pages";
 import { GiftSelectedBesshiPages } from "@/lib/pdf/gift-besshi-pages";
+import { BuildingStdReportPdfPages } from "@/lib/pdf/BuildingStdReportPdfPages";
+import { buildBuildingStdReportsFromInput } from "@/lib/calc/building-std-pdf-data";
 import type {
   Heir,
   InheritanceTaxResult,
@@ -774,6 +776,14 @@ export function ResultPdfDocument({
         <GiftSelectedBesshiPages
           resultData={r}
           inputData={inputData}
+          selectedSectionIds={selectedSectionIds}
+        />
+      )}
+
+      {/* 건물 기준시가 계산서 — 양도·상속·증여 공통(input_data 스냅샷 재유도) */}
+      {(taxType === "transfer" || taxType === "inheritance" || taxType === "gift") && (
+        <BuildingStdReportPdfPages
+          models={buildBuildingStdReportsFromInput(inputData)}
           selectedSectionIds={selectedSectionIds}
         />
       )}

@@ -19,7 +19,15 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
-import { calcSpecialAdjustmentRate } from "@/lib/tax-engine/building-standard-price-helpers";
+import {
+  calcSpecialAdjustmentRate,
+  describeSpecialAdjustment,
+} from "@/lib/tax-engine/building-standard-price-helpers";
+import {
+  resolveGrossAreaNo,
+  resolveGrossAreaRate,
+  ADJUSTMENT_FEATURE_LABEL,
+} from "@/lib/tax-engine/data/building-standard-price/special-adjustment-rate";
 import type { SpecialAdjustmentFeatures } from "@/lib/tax-engine/types/building-standard-price.types";
 
 interface Props {
@@ -27,6 +35,8 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   /** 평가시점 구조지수(I 지붕재료 적용 판정용, <100) */
   structureIndex: number;
+  /** 평가시점 구조키(II 최고층수 통나무조 적용 제외 판정용) */
+  structureKey?: string;
   /** 연면적(II 연면적 구간) */
   floorArea: number;
   /** 주거용/아파트 초기 seed — 토글은 모달 내부에서 관리, 적용 시 onApply로 반환 */
@@ -99,6 +109,7 @@ export function AdjustmentRateModal({
   open,
   onOpenChange,
   structureIndex,
+  structureKey,
   floorArea,
   isResidential,
   isApartment,
@@ -131,10 +142,22 @@ export function AdjustmentRateModal({
       return next;
     });
 
-  const previewRate = useMemo(
-    () => calcSpecialAdjustmentRate(draft, structureIndex || 100, floorArea, { isResidential: residential, isApartment: apartment }),
-    [draft, structureIndex, floorArea, residential, apartment],
+  const adjCtx = useMemo(
+    () => ({ isResidential: residential, isApartment: apartment, structureKey }),
+    [residential, apartment, structureKey],
   );
+  const previewRate = useMemo(
+    () => calcSpecialAdjustmentRate(draft, structureIndex || 100, floorArea, adjCtx),
+    [draft, structureIndex, floorArea, adjCtx],
+  );
+  // 적용 내역(엔진 단일 출처 — UI 재구현 금지). "11. 11~15층 & 20. 상가 1층" 형식.
+  const previewDesc = useMemo(
+    () => describeSpecialAdjustment(draft, structureIndex || 100, floorArea, adjCtx),
+    [draft, structureIndex, floorArea, adjCtx],
+  );
+  // II 연면적 자동 구간(비주거·면적>0일 때만 — 엔진 조건과 동일).
+  const grossAreaNo = !residential && floorArea > 0 ? resolveGrossAreaNo(floorArea) : undefined;
+  const grossAreaRate = grossAreaNo !== undefined ? resolveGrossAreaRate(floorArea) : undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -196,20 +219,37 @@ export function AdjustmentRateModal({
               onChange={(v) => set("roofMaterial", v)}
               options={[
                 { value: "", label: "해당없음", disabled: !roofActive },
-                { value: "1", label: "슬레이트·기와 등 (100)", disabled: !roofActive },
-                { value: "2", label: "패널 등 (80)", disabled: !roofActive },
-                { value: "3", label: "함석·초가 등 (60)", disabled: !roofActive },
+                { value: "1", label: "슬래브·기와·아스팔트싱글·징크 등 (100)", disabled: !roofActive },
+                { value: "2", label: "패널·유리·슬레이트 등 (80)", disabled: !roofActive },
+                { value: "3", label: "함석·자연석·천막·초가 등 (60)", disabled: !roofActive },
               ]}
             />
           </FieldCard>
 
-          <FieldCard label="II 최고층수" hint="지하·옥탑 제외 실제 최고층수(주거용은 아파트만 적용)">
+          <FieldCard
+            label="II 최고층수"
+            hint={
+              structureKey === "solid_wood"
+                ? "통나무조는 최고층수 미적용(원본 비고)"
+                : "지하·옥탑 제외 실제 최고층수(주거용은 아파트만 적용, 통나무조 제외)"
+            }
+          >
             <DecimalInput
               value={draft.maxFloors !== undefined ? String(draft.maxFloors) : ""}
               onChange={(v) => set("maxFloors", v)}
               unit="층"
               placeholder="지상 최고층수"
             />
+          </FieldCard>
+
+          <FieldCard label="II 연면적" hint="연면적은 본 계산 입력값을 자동 적용(주거용 미적용)">
+            <div className="rounded-md bg-violet-50/70 px-2.5 py-2 text-xs text-violet-800">
+              {residential
+                ? "주거용 건물 — 연면적 조정 미적용"
+                : floorArea > 0 && grossAreaNo !== undefined
+                  ? `${floorArea.toLocaleString("ko-KR")}㎡ → ${ADJUSTMENT_FEATURE_LABEL[grossAreaNo]} (지수 ${grossAreaRate}) 자동 적용`
+                  : "연면적 미입력 — 본 단계 입력값 기준 자동 적용"}
+            </div>
           </FieldCard>
 
           <FieldCard label="II 지능형건축물">
@@ -294,6 +334,16 @@ export function AdjustmentRateModal({
             />
           </FieldCard>
         </div>
+
+        <p className="rounded-md bg-violet-50/60 px-2.5 py-1.5 text-[11px] text-violet-700">
+          II 구분(최고층수·연면적·지능형)은 <b>가장 높은 지수 1개</b>만 적용됩니다(중복 방지).
+          {previewDesc && (
+            <>
+              <br />
+              적용 내역: {previewDesc}
+            </>
+          )}
+        </p>
 
         <DialogFooter className="flex-row items-center justify-between sm:justify-between">
           <span className="text-sm font-semibold text-violet-700">
