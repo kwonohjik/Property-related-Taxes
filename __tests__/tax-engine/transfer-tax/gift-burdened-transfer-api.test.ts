@@ -414,9 +414,11 @@ describe("B-api-8: C-4 확정 — 채무 매핑 정확성", () => {
     expect(body.transferPrice).toBe(500_000_000);
   });
 
-  it("donorRelation = form.donorRelation (수증자→증여자 관계 직접 전달)", () => {
+  it("donorRelation = deriveDonorRelation(donor) (수증자→증여자 관계 derive 전달)", () => {
+    // 채택안 A: store form.donorRelation 직접 read 대신 donor+미성년에서 derive.
+    // 정상 흐름에서 form.donorRelation은 donor onChange로 동일하게 set되므로 결과 일치.
     const item = makeAptItem();
-    const form = makeForm({ donorRelation: "lineal_descendant" });
+    const form = makeForm({ donor: "lineal_descendant" });
     const body = buildGiftBurdenedTransferBody(item, form);
     const bgi = body.burdenedGiftInfo as Record<string, unknown>;
 
@@ -528,5 +530,34 @@ describe("B-api-11: callGiftBurdenedTransferAPI — 봉투에서 result 추출",
     await expect(
       callGiftBurdenedTransferAPI(makeAptItem(), makeForm()),
     ).rejects.toThrow();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A-12: 부담부증여 ④' — 주민번호 자동판정 미성년이 burdenedGiftInfo에 derive 반영
+//   gift-burdened-transfer-api.ts:117·:119가 store form.donorRelation 직접 read 대신
+//   resolveIsMinorDonee(form) 기반 derive로 전환되었는지 검증 (store 수동값 false 무관).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("A-12: 주민번호 자동판정 미성년 → burdenedGiftInfo derive", () => {
+  const item = makeAptItem();
+  const form = makeForm({
+    donor: "father",
+    doneeResidentNumber: "1005013XXXXXX", // 2010-05-01 → 미성년 자동판정
+    giftDate: "2026-02-09",
+    isMinorDonee: false, // store 수동값 false — 자동판정 우선
+  });
+  const body = buildGiftBurdenedTransferBody(item, form);
+  const info = body.burdenedGiftInfo as {
+    donorRelation: string;
+    isMinorDonee?: boolean;
+  };
+
+  it("donorRelation === 'lineal_ascendant_minor' (deriveDonorRelation + resolveIsMinorDonee)", () => {
+    expect(info.donorRelation).toBe("lineal_ascendant_minor");
+  });
+
+  it("isMinorDonee === true (resolveIsMinorDonee 자동판정)", () => {
+    expect(info.isMinorDonee).toBe(true);
   });
 });

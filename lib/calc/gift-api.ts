@@ -12,6 +12,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/components/calc/gift-tax-form-shared";
+import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import type {
   GiftTaxInput,
   GiftDeductionInput,
@@ -44,7 +45,7 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
   );
 
   const deductionInput: GiftDeductionInput = {
-    donorRelation: deriveDonorRelation(form.donor, form.isMinorDonee),
+    donorRelation: deriveDonorRelation(form.donor, resolveIsMinorDonee(form)),
     marriageExemption: parseAmount(form.marriageExemption) || undefined,
     birthExemption: parseAmount(form.birthExemption) || undefined,
     priorUsedDeduction: parseAmount(form.priorUsedDeduction) || undefined,
@@ -82,7 +83,7 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
 
   return {
     giftDate: form.giftDate,
-    donorRelation: deriveDonorRelation(form.donor, form.isMinorDonee),
+    donorRelation: deriveDonorRelation(form.donor, resolveIsMinorDonee(form)),
     donor: form.donor,
     giftItems: allItems,
     exemptions: form.exemptionItems.length > 0 ? form.exemptionItems : undefined,
@@ -93,7 +94,7 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     ),
     // G-M2b: isGenerationSkip → donor === "grandparent" 자동 파생
     isGenerationSkip: form.donor === "grandparent",
-    isMinorDonee: form.isMinorDonee,
+    isMinorDonee: resolveIsMinorDonee(form),
     // §57① 단서 — donor=grandparent 일 때만 전송, 그 외 undefined strip (3중 패턴)
     isSubstituteGift: form.donor === "grandparent" ? (form.isSubstituteGift || undefined) : undefined,
     deductionInput,

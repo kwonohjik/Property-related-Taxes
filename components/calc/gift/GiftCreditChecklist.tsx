@@ -17,6 +17,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import type { DonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
+import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 
 // 동시증여 안분 — 관계 옵션 (§46①2호). DonorRelation 5종.
 const SIMULTANEOUS_RELATION_OPTIONS: { value: DonorRelation; label: string }[] = [
@@ -330,7 +332,13 @@ export function GiftCreditChecklist({
               set({
                 simultaneousGifts: [
                   ...(form.simultaneousGifts ?? []),
-                  { donorRelation: form.donorRelation, taxableValue: "" },
+                  {
+                    donorRelation: deriveDonorRelation(
+                      form.donor,
+                      resolveIsMinorDonee(form),
+                    ),
+                    taxableValue: "",
+                  },
                 ],
               })
             }

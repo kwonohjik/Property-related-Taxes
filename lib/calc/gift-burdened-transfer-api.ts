@@ -27,6 +27,8 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
+import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
+import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,9 +120,11 @@ export function buildGiftBurdenedTransferBody(
   const mortgageSetAmount = mortgageAmount;
 
   // 증여세 side에서 오는 부담부증여 정보
-  const donorRelation = form.donorRelation; // 수증자→증여자 관계 (apportionment.ts:309가 역매핑)
+  // 수증자→증여자 관계 (burdened-gift-apportionment.ts:360가 역매핑).
+  // 채택안 A: store form.donorRelation 직접 read 대신 resolveIsMinorDonee 기반 derive(자동판정 미성년 반영).
+  const donorRelation = deriveDonorRelation(form.donor, resolveIsMinorDonee(form));
   const isGenerationSkip = form.donor === "grandparent";
-  const isMinorDonee = form.isMinorDonee;
+  const isMinorDonee = resolveIsMinorDonee(form);
 
   // 사전증여 10년 합산 내역 (PriorGift.giftAmount: number)
   const priorGiftsWithin10Years =
