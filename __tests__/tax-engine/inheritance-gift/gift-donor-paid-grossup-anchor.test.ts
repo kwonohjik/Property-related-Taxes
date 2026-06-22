@@ -379,3 +379,88 @@ describe("C-12: 의제증여 유형 수증 후 대납 → 연대의무 불가 �
     expect(result.donorPaidTaxGrossUp!.applied).toBe(true);
   });
 });
+
+// ──────────────────────────────────────────────────────────────
+// 부분 대납 (수증자 일부 납부 + 증여자 부족분 대납) — doneePaidGiftTax
+// 모델: addition = max(0, finalTax − P). P=0 → 전액 대납(회귀).
+// ──────────────────────────────────────────────────────────────
+
+describe("부분 대납 (doneePaidGiftTax)", () => {
+  it("[A-1 회귀] P=0(미입력) → 전액 대납과 동일 (donorPaidTax=102,609,309)", () => {
+    const input: GiftTaxInput = {
+      ...baseParentChildInput,
+      donorPaysGiftTax: true,
+      donorHasJointLiability: false,
+      // doneePaidGiftTax 미입력 → 전액 대납
+    };
+    const g = calcGiftTaxWithDonorPaidTax(input).donorPaidTaxGrossUp!;
+    expect(g.applied).toBe(true);
+    expect(g.donorPaidTax).toBe(102_609_309);
+    expect(g.totalGiftTax).toBe(102_609_309); // P=0 → D == T*
+    expect(g.doneePaidTax).toBe(0);
+    expect(g.grossedUpNetGift).toBe(602_609_309);
+  });
+
+  it("[A-2] 수증자 5천만 납부 → 증여자 부족분만 대납 (자기일관·캡)", () => {
+    /**
+     * 닫힌형(20% 구간): finalTax=(0.2(V−50M)−10M)·0.97=0.194V−19,400,000
+     * addition=finalTax−50M, 0.806V=430,600,000 → V*≈534,243,176
+     * 총세액 T*≈84,243,176, 증여자 대납 D≈34,243,176
+     */
+    const input: GiftTaxInput = {
+      ...baseParentChildInput,
+      donorPaysGiftTax: true,
+      donorHasJointLiability: false,
+      doneePaidGiftTax: 50_000_000,
+    };
+    const g = calcGiftTaxWithDonorPaidTax(input).donorPaidTaxGrossUp!;
+    expect(g.applied).toBe(true);
+    expect(g.doneePaidTax).toBe(50_000_000); // P < T* → 캡 안 됨
+    // 자기일관: D + P == T*, V* == A + D
+    expect(g.donorPaidTax + g.doneePaidTax!).toBe(g.totalGiftTax);
+    expect(g.grossedUpNetGift).toBe(g.originalNetGift + g.donorPaidTax);
+    // 닫힌형 검산값 (Pre-Do 실측 고정)
+    expect(g.donorPaidTax).toBe(34_243_176);
+    expect(g.totalGiftTax).toBe(84_243_176);
+    expect(g.grossedUpNetGift).toBe(534_243_176);
+    // 전액 대납(102,609,309)보다 증여자 부담 감소
+    expect(g.donorPaidTax).toBeLessThan(102_609_309);
+  });
+
+  it("[A-3] P ≥ 총세액(2억) → 증여자 대납 0, doneePaidTax 세액 캡, V*=A", () => {
+    const input: GiftTaxInput = {
+      ...baseParentChildInput,
+      donorPaysGiftTax: true,
+      donorHasJointLiability: false,
+      doneePaidGiftTax: 200_000_000, // baseline 77,600,000 초과
+    };
+    const g = calcGiftTaxWithDonorPaidTax(input).donorPaidTaxGrossUp!;
+    expect(g.applied).toBe(true);
+    expect(g.donorPaidTax).toBe(0); // 대납 없음
+    expect(g.totalGiftTax).toBe(77_600_000); // baseline 유지(가산 없음)
+    expect(g.doneePaidTax).toBe(77_600_000); // min(2억, 7,760만) 캡 → 자기일관
+    expect(g.donorPaidTax + g.doneePaidTax!).toBe(g.totalGiftTax);
+    expect(g.grossedUpNetGift).toBe(500_000_000); // V* = A
+  });
+
+  it("[A-4 회귀] 대납 OFF → doneePaidGiftTax 무시, gross-up 미적용", () => {
+    const input: GiftTaxInput = {
+      ...baseParentChildInput,
+      donorPaysGiftTax: false,
+      doneePaidGiftTax: 50_000_000, // 무시되어야 함
+    };
+    const r = calcGiftTaxWithDonorPaidTax(input);
+    expect(r.donorPaidTaxGrossUp!.applied).toBe(false);
+    expect(r.finalTax).toBe(77_600_000);
+  });
+
+  it("[Zod] doneePaidGiftTax 음수 → 검증 오류", () => {
+    const parsed = giftTaxInputSchema.safeParse({
+      ...baseParentChildInput,
+      giftItems: [{ id: "1", category: "financial", name: "예금", marketValue: 500_000_000 }],
+      donorPaysGiftTax: true,
+      doneePaidGiftTax: -1,
+    });
+    expect(parsed.success).toBe(false);
+  });
+});

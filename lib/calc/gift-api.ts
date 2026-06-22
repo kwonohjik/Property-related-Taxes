@@ -108,5 +108,7 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     // §36 대납(代納) gross-up — 명시 키 (spread 금지: 침묵 strip 방지)
     donorPaysGiftTax: form.donorPaysGiftTax,
     donorHasJointLiability: form.donorHasJointLiability,
+    // §36 부분 대납 — 빈값/0 → undefined → 엔진 ?? 0 (전액 대납 기존 동작)
+    doneePaidGiftTax: parseAmount(form.doneePaidGiftTax ?? "") || undefined,
   };
 }

@@ -622,6 +622,12 @@ export interface GiftTaxInput {
    */
   donorHasJointLiability?: boolean;
   /**
+   * 수증자가 본인 부담으로 납부하는 증여세액(원). 증여자는 (총세액 − 이 금액)인 부족분만 대납.
+   * 미입력/0 = 증여자 전액 대납(기존 동작). donorPaysGiftTax=true 일 때만 유효.
+   * §36 재차증여는 증여자가 실제 변제한 부족분(D)뿐 → gross-up 가산분 = max(0, finalTax − doneePaidGiftTax).
+   */
+  doneePaidGiftTax?: number;
+  /**
    * 내부 전용 — calcGiftTaxWithDonorPaidTax가 반복 회차에서 주입하는 대납 가산분.
    * Zod·UI·API 노출 금지. 외부 호출자 직접 세팅 금지.
    */
@@ -762,13 +768,22 @@ export interface GiftTaxResult extends TaxResultMeta {
      */
     originalNetGift: number;
     /**
-     * 수렴 후 aggregatedGiftValue V* = A + donorPaidTax.
-     * (사전증여 없으면 = A + donorPaidTax)
+     * 수렴 후 aggregatedGiftValue V* = A + donorPaidTax(증여자 대납분 D).
+     * (사전증여 없으면 = A + D)
      * 과세표준(taxBase)이 아님 — 공제 차감 전 합산 과세가액.
      */
     grossedUpNetGift: number;
-    /** 대납세액 = 수렴 finalTax (§36 재차증여가액) */
+    /**
+     * 증여자 대납분 D = max(0, 총세액 T* − 수증자 납부 P) (§36 재차증여가액).
+     * 부분대납: 수증자가 P를 본인 부담하면 증여자는 부족분만 대납.
+     * 전액대납(P=0): D == totalGiftTax.
+     * ※ besshi10 ㉓ 역산이 이 값을 차감 — 항상 주입 가산분(addition)과 동일 유지(T* 환원 금지).
+     */
     donorPaidTax: number;
+    /** 총 결정세액 T* = 수렴 finalTax (= 증여자 대납분 D + 수증자 부담 doneePaidTax). applied=true 시 세팅. */
+    totalGiftTax?: number;
+    /** 수증자 본인 납부액 = min(입력 P, 총세액 T*) (세액 한도 캡 — 자기일관). applied=true 시 세팅. */
+    doneePaidTax?: number;
     /** 비대납 결정세액 (비교용 echo) */
     baselineTax: number;
   };

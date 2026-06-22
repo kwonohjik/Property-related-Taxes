@@ -524,6 +524,11 @@ export const giftTaxInputSchema = z
      * donorPaysGiftTax=true 이어야 유효.
      */
     donorHasJointLiability: z.boolean().optional(),
+    /**
+     * 수증자 본인 납부액(원). 증여자는 (총세액 − 이 금액) 부족분만 대납.
+     * 미입력/0 = 증여자 전액 대납. donorPaysGiftTax=true 일 때만 유효.
+     */
+    doneePaidGiftTax: z.number().min(0).optional(),
     deductionInput: giftDeductionInputSchema,
     creditInput: giftTaxCreditInputSchema,
     valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
