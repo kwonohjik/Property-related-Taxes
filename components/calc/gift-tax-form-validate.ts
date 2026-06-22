@@ -10,6 +10,7 @@
  */
 
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
+import { DONOR_LABELS } from "@/components/calc/gift-tax-form-shared";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
@@ -316,6 +317,29 @@ export function validateStep(step: number, form: FormState): string | null {
       for (let i = 0; i < form.simultaneousGifts.length; i++) {
         if (parseAmount(form.simultaneousGifts[i].taxableValue) <= 0) {
           return `동시증여 ${i + 1}: 증여세 과세가액을 입력하세요. (자동 분할 없음 — §46①2호)`;
+        }
+      }
+    }
+
+    // D-2: 동시증여 다중 건 검증 (⑧ 지점) — 3-state: undefined skip, [] skip, [...] 전수 검증
+    if (form.simultaneousGiftForms && form.simultaneousGiftForms.length > 0) {
+      for (let i = 0; i < form.simultaneousGiftForms.length; i++) {
+        const sub = form.simultaneousGiftForms[i];
+        // 증여자 관계 필수
+        if (!sub.donor) {
+          return `동시증여 건 ${i + 1}: 증여자 관계를 선택하세요.`;
+        }
+        // 동일 그룹 차단 — 건 0(j=-1) + 앞선 모든 추가 건과 비교
+        for (let j = -1; j < i; j++) {
+          const otherDonor = j === -1 ? form.donor : form.simultaneousGiftForms[j].donor;
+          if (otherDonor && isSameDonorGroup(sub.donor, otherDonor)) {
+            const otherLabel = j === -1 ? "현재 신고 건" : `동시증여 건 ${j + 1}`;
+            return `동시증여 건 ${i + 1}(${DONOR_LABELS[sub.donor]})이 ${otherLabel}(${DONOR_LABELS[otherDonor]})과 같은 동일인 그룹(상증법 §47②)입니다. 동일인의 증여는 한 건으로 합산해 입력하세요.`;
+          }
+        }
+        // 증여재산 필수 (자동 안분 fallback 금지 정책 — ⑧)
+        if (sub.giftItems.length + sub.stockItems.length === 0) {
+          return `동시증여 건 ${i + 1}(${DONOR_LABELS[sub.donor]}): 증여재산을 1개 이상 입력하세요.`;
         }
       }
     }

@@ -362,6 +362,8 @@ export function calcGiftTax(
     generationSkipProvisoApplied: input.isSubstituteGift === true ? true : undefined,
     priorGiftCreditDetail,
     filingFormRows,
+    // 동시증여 2-pass 안분 분모 산출용 echo (gift-tax.ts STEP 3 계산값 노출 — 산식 영향 0)
+    netCurrentGiftValue,
     // 별지 제10호서식 표시 전용 (default 0)
     publicInterestExclusion: 0,
     publicTrustExclusion: 0,

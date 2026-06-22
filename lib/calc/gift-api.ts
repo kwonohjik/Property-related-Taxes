@@ -18,7 +18,10 @@ import type {
   GiftDeductionInput,
   GiftTaxCreditInput,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
-import type { FormState } from "@/components/calc/gift-tax-form-shared";
+import type { FormState, GiftSubFormState } from "@/components/calc/gift-tax-form-shared";
+
+// GiftSubForm re-export — gift-api.ts 공개 계약 (⑬ 지점에서 참조)
+export type { GiftSubFormState as GiftSubForm };
 
 export type { FormState as GiftTaxFormState };
 
@@ -112,4 +115,26 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     // §36 부분 대납 — 빈값/0 → undefined → 엔진 ?? 0 (전액 대납 기존 동작)
     doneePaidGiftTax: parseAmount(form.doneePaidGiftTax ?? "") || undefined,
   };
+}
+
+/**
+ * buildSimultaneousGiftInputs — 건 0 + simultaneousGiftForms(추가 건 배열) → GiftTaxInput[] 변환 (④ 지점)
+ *
+ * UI 설계 §2(④): 동시증여 다중 건 세액 계산에서 호출.
+ * buildGiftTaxInput을 건 0 + 각 추가 건에 모두 적용.
+ * 동시증여 없음(undefined/[]) → [건0] 단건 반환.
+ *
+ * ⑬ 지점: Route body에 포함될 inputs 배열 직렬화는 호출부(GiftTaxForm.tsx)에서 처리.
+ */
+export function buildSimultaneousGiftInputs(form: FormState): GiftTaxInput[] {
+  const base = buildGiftTaxInput(form);
+  if (!form.simultaneousGiftForms || form.simultaneousGiftForms.length === 0) {
+    return [base];
+  }
+  const additional = form.simultaneousGiftForms.map((sub) =>
+    // simultaneousGiftForms는 Omit<FormState, "simultaneousGiftForms">
+    // buildGiftTaxInput은 simultaneousGiftForms 필드를 사용하지 않으므로 spread로 확장
+    buildGiftTaxInput({ ...sub, simultaneousGiftForms: undefined } as FormState),
+  );
+  return [base, ...additional];
 }

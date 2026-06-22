@@ -26,7 +26,7 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 14종 (오타 방지·exact 매칭) */
+/** 선택 가능 leaf 15종 (오타 방지·exact 매칭) */
 export type GiftPrintSectionId =
   | "core-result"
   | "tax-summary"
@@ -35,6 +35,7 @@ export type GiftPrintSectionId =
   | "donor-paid-grossup"
   | "prior-gift"
   | "filing-form-10"
+  | "simultaneous-filing-10"
   | "valuation-form"
   | "unlisted-stock-besshi"
   | "unlisted-stock-simple"
@@ -80,7 +81,8 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
     label: "공식 신고서식",
     children: [
       // PR-B2: GiftFilingForm10PdfDocument react-pdf 포팅 완료 → pdf 승격
-      { id: "filing-form-10", label: "별지 제10호서식", channel: SCREEN_PDF },
+      { id: "filing-form-10", label: "별지 제10호서식 (건 0)", channel: SCREEN_PDF },
+      { id: "simultaneous-filing-10", label: "동시증여 별지 제10호서식 (건 1..N)", channel: SCREEN },
       // PR-B2: GiftValuationFormPdfDocument 신규 완료 → pdf 승격
       { id: "valuation-form", label: "증여재산 및 평가명세서 (부표1)", channel: SCREEN_PDF },
     ],

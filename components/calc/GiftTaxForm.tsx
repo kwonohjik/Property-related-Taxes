@@ -24,7 +24,7 @@ import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation"
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
-import { buildGiftTaxInput } from "@/lib/calc/gift-api";
+import { buildGiftTaxInput, buildSimultaneousGiftInputs } from "@/lib/calc/gift-api";
 import { calcGiftTax } from "@/lib/tax-engine/gift-tax";
 import { callGiftBurdenedTransferAPI, callGiftStockBurdenedTransferAPI } from "@/lib/calc/gift-burdened-transfer-api";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -33,6 +33,7 @@ import {
   type FormState,
   INITIAL_FORM,
   STEPS,
+  DONOR_LABELS,
   formatGiftApiError,
   validateStep,
   Step0,
@@ -51,6 +52,9 @@ export function GiftTaxForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GiftTaxResult | null>(null);
+  // 동시증여 추가 건 결과 (⑦-e 지점)
+  const [simultaneousResults, setSimultaneousResults] = useState<GiftTaxResult[]>([]);
+  const [simultaneousResultLabels, setSimultaneousResultLabels] = useState<string[]>([]);
   const [transferTaxResults, setTransferTaxResults] = useState<TransferTaxResult[]>([]);
   const [transferTaxError, setTransferTaxError] = useState<string | null>(null);
   const [stockTransferTaxResults, setStockTransferTaxResults] = useState<StockTransferResult[]>([]);
@@ -131,11 +135,32 @@ export function GiftTaxForm() {
     setLoading(true);
     setError(null);
     try {
+      // ⑬ 지점: simultaneousGiftForms 있으면 다건 경로, 없으면 단건 경로
+      const isSimultaneous =
+        form.simultaneousGiftForms !== undefined &&
+        form.simultaneousGiftForms.length > 0;
+
+      // engineInput은 단순증여 baseline 계산용 (건 0)
       const engineInput = buildGiftTaxInput(form);
+
+      let requestBody: unknown;
+      if (isSimultaneous) {
+        // 다건 경로 (⑬ 지점): buildSimultaneousGiftInputs = [건0, 건1, ...] 전부 GiftTaxInput 변환됨.
+        // Zod giftSimultaneousRequestSchema = 건0 필드 최상위 spread + simultaneousGiftForms: GiftTaxInput[].
+        // → 건0를 spread, 추가 건(변환된 GiftTaxInput)을 simultaneousGiftForms로 전송.
+        const inputs = buildSimultaneousGiftInputs(form);
+        requestBody = {
+          ...inputs[0],
+          simultaneousGiftForms: inputs.slice(1),
+        };
+      } else {
+        // 단건 경로: 기존 단건 input
+        requestBody = engineInput;
+      }
       const res = await fetch("/api/calc/gift", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(engineInput),
+        body: JSON.stringify(requestBody),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -143,6 +168,22 @@ export function GiftTaxForm() {
         return;
       }
       setResult(data.result);
+
+      // 동시증여 추가 건 결과 처리 (⑦-e 지점)
+      if (data.simultaneousResults && Array.isArray(data.simultaneousResults)) {
+        setSimultaneousResults(data.simultaneousResults as GiftTaxResult[]);
+        // 라벨 생성: DONOR_LABELS[subForm.donor] + 과세가액
+        const labels = (form.simultaneousGiftForms ?? []).map((sub, i) => {
+          const sr = (data.simultaneousResults as GiftTaxResult[])[i];
+          const donorLabel = DONOR_LABELS[sub.donor] ?? "기타";
+          const grossValue = sr?.grossGiftValue?.toLocaleString("ko-KR") ?? "";
+          return `${donorLabel}로부터 — ${grossValue}원 증여`;
+        });
+        setSimultaneousResultLabels(labels);
+      } else {
+        setSimultaneousResults([]);
+        setSimultaneousResultLabels([]);
+      }
 
       // 단순증여 baseline — 부담부 자산(채무>0) 있을 때만 calcGiftTax 동기 호출.
       // engineInput.giftItems는 [...giftItems, ...stockItems] 병합분(gift-api.ts:42)이므로
@@ -222,6 +263,8 @@ export function GiftTaxForm() {
   const handleReset = () => {
     setForm(INITIAL_FORM);
     setResult(null);
+    setSimultaneousResults([]);
+    setSimultaneousResultLabels([]);
     setTransferTaxResults([]);
     setTransferTaxError(null);
     setStockTransferTaxResults([]);
@@ -283,6 +326,9 @@ export function GiftTaxForm() {
         }))}
         splitPaymentEnabled={form.splitPaymentEnabled}
         splitPaymentAmount={form.splitPaymentAmount}
+        simultaneousResults={simultaneousResults.length > 0 ? simultaneousResults : undefined}
+        simultaneousResultLabels={simultaneousResultLabels.length > 0 ? simultaneousResultLabels : undefined}
+        mainDonor={form.donor}
       />
     );
   }

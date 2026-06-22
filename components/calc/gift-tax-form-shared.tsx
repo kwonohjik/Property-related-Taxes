@@ -114,7 +114,21 @@ export interface FormState extends AppraisalFeeFormFields {
    * donorPaysGiftTax=true && donorHasJointLiability!==true 일 때만 유효.
    */
   doneePaidGiftTax?: string;
+  /**
+   * 동시증여 추가 건 배열 (§46①2호 완전 입력 방식, Phase 2).
+   * 3-state: undefined=동시증여 없음(토글 OFF) / []=토글 ON 빈 / [...]=데이터.
+   * GiftSubForm = Omit<FormState, "simultaneousGiftForms"> (재귀 방지).
+   * UI 시니어 담당(①②③⑤) — ④ API 변환에서 buildGiftTaxInput 재사용.
+   */
+  simultaneousGiftForms?: GiftSubFormState[];
 }
+
+/**
+ * GiftSubFormState — 동시증여 추가 건 1개의 폼 상태.
+ * FormState에서 simultaneousGiftForms 제외 (재귀 방지).
+ * @see buildSimultaneousGiftInputs (lib/calc/gift-api.ts)
+ */
+export type GiftSubFormState = Omit<FormState, "simultaneousGiftForms">;
 
 export const INITIAL_FORM: FormState = {
   giftDate: "",
@@ -144,6 +158,8 @@ export const INITIAL_FORM: FormState = {
   donorHasJointLiability: false,
   doneePaidGiftTax: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
+  // 동시증여 다중 건 세액 계산 — 3-state: undefined=OFF, []=ON빈, [...]=ON데이터
+  simultaneousGiftForms: undefined,
 };
 
 export const STEPS = ["증여 정보", "증여재산", "비과세·합산", "공제·세액공제"];
