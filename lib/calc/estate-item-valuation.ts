@@ -8,49 +8,53 @@
 
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { computeStockValuation } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
+import { evaluateEstateItem } from "@/lib/tax-engine/property-valuation";
 
 /**
- * 자산 카드별 "효과 평가액" 우선순위 — 시가 > 감정가 > 기준시가 > (주식: §63 보충평가) > 보증금(deposit).
- * TotalEstimatedValue·HeirAllocationToggleSection·chip-config 공통 사용.
+ * 자산 카드별 "효과 평가액" — **부동산 엔진 단일 진실 위임**(estate-valuation-single-source).
+ * TotalEstimatedValue·사이드바·chip-config·테이블·협의분할 배분 공통 사용.
  *
- * 주식 분기 (2026-05-29 정정):
- *   상장·비상장주식 카테고리는 명시 시가·감정가·기준시가가 없으면
- *   computeStockValuation(§63①1가 전후 2개월 평균·§63 보충평가)로 fallback.
- *   동일 진실: lib/tax-engine/valuation/resolve-estate-item-value.ts (§60 5단계).
- *   [[project_section22_major_shareholder_toggle]] Phase0 동일 패턴 — chip-config 칩 라벨도
- *   본 헬퍼를 거치므로 주식 평가액이 칩에 반영되도록 단일 진실 통과.
+ * hybrid 위임 (2026-06-22, Do 환류):
+ *   - 부동산(land/building/apartment): evaluateEstateItem(item).valuatedAmount로 위임 →
+ *     §61⑤ 임대료환산·미임대(공실) 특례·§66 담보채권 하한·부수토지(경로 B)·§60 우선순위까지 엔진과
+ *     동일 반영. 종전 경량 추정은 이들을 누락해 사이드바·칩·미리보기가 결과 화면(엔진값)과 어긋났음(dual-truth 해소).
+ *   - 주식(listed/unlisted): §60 명시 시가/감정/매매 우선, 없으면 computeStockValuation(item, valuationDate).
+ *     evaluateAllEstateItems는 valuationDate 인자가 없어 V2 evaluationDate fallback이 소실되므로 위임 안 함.
+ *   - deposit: leaseDeposit (evaluateRentalConversion은 leaseDeposit<=0 throw → 직접 처리로 회피).
+ *   - cash·financial·기타: §60 명시값 우선 chain (엔진 evaluateCash/Financial=marketValue만과 실무 정합).
+ *
+ * 설계 환류: 초안의 "전 카테고리 evaluateEstateItem 위임"은 financial·무효 category에서 §60 chain과 갈려
+ *   기존 동작(전 category 공통 우선순위)을 깸 → **부동산만 위임**으로 축소(나머지 §60 chain 보존).
  */
 export function computeEffectiveValuation(
   item: EstateItem,
   valuationDate?: string,
 ): number {
+  // 부동산: 엔진 권위값 위임 (임대료환산·미임대·담보하한·부수토지·§60 우선순위 전부 반영)
+  if (
+    item.category === "real_estate_land" ||
+    item.category === "real_estate_building" ||
+    item.category === "real_estate_apartment"
+  ) {
+    try {
+      return evaluateEstateItem(item).valuatedAmount;
+    } catch {
+      return 0; // 부분입력 throw 가드 — 입력 단계 추정
+    }
+  }
+  // 주식: §60 시가 우선 후 §63 보충평가(valuationDate fallback 보존)
+  if (item.category === "listed_stock" || item.category === "unlisted_stock") {
+    if (item.marketValue && item.marketValue > 0) return item.marketValue;
+    if (item.appraisedValue && item.appraisedValue > 0) return item.appraisedValue;
+    if (item.similarSalesValue && item.similarSalesValue > 0) return item.similarSalesValue;
+    return computeStockValuation(item, valuationDate);
+  }
+  // deposit: 임대보증금 액면
   if (item.category === "deposit") {
     return item.leaseDeposit ?? 0;
   }
-  // 명시 평가액(§60 시가 우선) — 시가 → 감정가 → 매매사례가(§49④) → 기준시가 (??chain: 0도 그대로 반환하여 기존 동작 보존)
-  const explicit =
-    item.marketValue ??
-    item.appraisedValue ??
-    item.similarSalesValue ??
-    item.standardPrice;
-  // 상업용 건물 부수토지 개별공시지가(§61①1호) — 보충평가(기준시가)로 귀결될 때만 합산.
-  // 엔진 evaluateDetachedHouse와 동일 게이트(시가·감정·매매사례 부재 = 보충평가). 시가류 입력 시 통합액에 포함되므로 무시.
-  const supplementaryLandAddon =
-    item.category === "real_estate_building" &&
-    item.marketValue == null &&
-    item.appraisedValue == null &&
-    item.similarSalesValue == null
-      ? (item.appurtenantLandStandardPrice ?? 0)
-      : 0;
-  if (explicit !== undefined && explicit !== null) {
-    return explicit + supplementaryLandAddon;
-  }
-  if (supplementaryLandAddon > 0) {
-    return supplementaryLandAddon;
-  }
-  // 주식 보충평가 (§63) — 상장 시세 평균·비상장 V1/V2. valuationDate는 V2 evaluationDate fallback용.
-  if (item.category === "listed_stock" || item.category === "unlisted_stock") {
-    return computeStockValuation(item, valuationDate);
-  }
-  return 0;
+  // cash·financial·기타: §60 명시값 우선 (marketValue > 감정 > 매매 > 기준시가)
+  return (
+    item.marketValue ?? item.appraisedValue ?? item.similarSalesValue ?? item.standardPrice ?? 0
+  );
 }
