@@ -231,6 +231,7 @@ export function EstateBodySupplementaryValuation({
               buttonLabel="건물 기준시가 계산"
               lockedTaxType="inheritance_gift"
               initialAddress={addrValue}
+              snapshotKey={`bsp-estate-${item.id}`}
               onApply={(v, land) =>
                 set({
                   standardPrice: v,

@@ -47,6 +47,8 @@ interface Props {
     report: NtsReportModel | null,
     /** 상증 경로 B 부수토지 평가액(§61①1호, 원). 미산출 시 0. 모달이 부수토지 필드로 자동 전달 */
     landStandardPrice: number,
+    /** 현재 폼 입력 스냅샷 — 모달이 적용 시 보관해 재오픈 복원(정정)에 사용 */
+    formSnapshot: BuildingStdPriceFormState,
   ) => void;
   /**
    * 세목 고정 — 호출 세목(양도 2시점 / 상속·증여 1시점)을 강제.
@@ -55,6 +57,8 @@ interface Props {
   lockedTaxType?: BuildingStdPriceFormState["taxType"];
   /** 부모 자산 카드의 소재지 prefill — 모달 재입력(이중입력) 방지. 미지정 시 빈칸. */
   initialAddress?: AddressValue;
+  /** 직전 계산 입력 스냅샷 복원(정정) — 지정 시 initialAddress보다 우선. 미지정 시 빈 폼. */
+  initialForm?: Partial<BuildingStdPriceFormState>;
 }
 
 /** 연도 Select — 명시 라벨(SelectValue 단독 금지) */
@@ -117,7 +121,7 @@ function SectionCard({
   );
 }
 
-export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }: Props) {
+export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm }: Props) {
   const [f, setF] = useState<BuildingStdPriceFormState>(() => {
     const base: BuildingStdPriceFormState = {
       ...initialBuildingStdPriceForm,
@@ -132,6 +136,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }
             latitude: initialAddress.lat,
           }
         : {}),
+      // 직전 입력 스냅샷 복원(정정) — 소재지 prefill보다 우선(스냅샷에 소재지 포함)
+      ...(initialForm ?? {}),
     };
     // 상속·증여 평가연도는 eventDate에서 단일 도출(factory=normalize=UI 일치)
     return { ...base, valuationYear: deriveYearFromEventDate(base.eventDate) };
@@ -232,7 +238,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }
   const handleCalc = () => {
     const err = validateBuildingStdPriceForm(f);
     if (err) {
-      onResult(null, 0, err, null, 0);
+      onResult(null, 0, err, null, 0, f);
       return;
     }
     try {
@@ -244,9 +250,10 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }
         null,
         report,
         computeValuationLandTotal(f),
+        f,
       );
     } catch (e) {
-      onResult(null, 0, e instanceof Error ? e.message : "계산 오류", null, 0);
+      onResult(null, 0, e instanceof Error ? e.message : "계산 오류", null, 0, f);
     }
   };
 

@@ -13,6 +13,7 @@ import { BuildingStdPriceResultCard } from "./BuildingStdPriceResultCard";
 import type { BuildingStandardPriceResult } from "@/lib/tax-engine/building-standard-price";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import type { AddressValue } from "@/components/ui/address-search";
+import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 
 interface Props {
   /**
@@ -25,6 +26,11 @@ interface Props {
   lockedTaxType?: BuildingStdPriceFormState["taxType"];
   /** 부모 자산 카드 소재지 prefill — 모달 이중입력 방지 */
   initialAddress?: AddressValue;
+  /**
+   * 입력 스냅샷 저장/복원 키 — 지정 시 적용한 입력을 보관했다가 재오픈 시 복원(정정 지원).
+   * 규약: 상증 `bsp-estate-${item.id}` / 양도 `bsp-${asset.assetId}-{gb|cb}-{acq|transfer}`.
+   */
+  snapshotKey?: string;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -34,6 +40,7 @@ export function BuildingStdPriceModalButton({
   buttonLabel = "건물 기준시가 계산",
   lockedTaxType,
   initialAddress,
+  snapshotKey,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
@@ -41,9 +48,16 @@ export function BuildingStdPriceModalButton({
   const [error, setError] = useState<string | null>(null);
   // 상증 경로 B 부수토지 평가액(§61①1호) — 폼이 입력한 토지면적×공시지가로 산출. 0이면 미전달.
   const [landStandardPrice, setLandStandardPrice] = useState(0);
+  // 현재 폼 입력 스냅샷 — 적용 시 스토어에 보관(정정 복원용).
+  const [formSnapshot, setFormSnapshot] = useState<BuildingStdPriceFormState | null>(null);
+  const saveSnapshot = useBuildingStdSnapshotStore((s) => s.saveSnapshot);
+  const restoredForm = useBuildingStdSnapshotStore((s) =>
+    snapshotKey ? s.snapshots[snapshotKey] : undefined,
+  );
 
   const apply = (v: number, land?: number) => {
     onApply(v, land && land > 0 ? land : undefined);
+    if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, formSnapshot);
     setOpen(false);
     setResult(null);
     setError(null);
@@ -67,11 +81,13 @@ export function BuildingStdPriceModalButton({
           <BuildingStdPriceForm
             lockedTaxType={lockedTaxType}
             initialAddress={initialAddress}
-            onResult={(r, fa, err, _report, landTotal) => {
+            initialForm={restoredForm}
+            onResult={(r, fa, err, _report, landTotal, snapshot) => {
               setResult(r);
               setFloorArea(fa);
               setError(err);
               setLandStandardPrice(landTotal);
+              setFormSnapshot(snapshot);
             }}
           />
 
