@@ -213,12 +213,19 @@ export function EstateBodySupplementaryValuation({
           pricePerSqm={standardPricePerSqm}
           onPricePerSqmChange={setStandardPricePerSqm}
           jibun={addrValue.jibun}
+          forceTotalMode={cat === "real_estate_building"}
+          enableLookup={cat !== "real_estate_building"}
           label={
-            cat === "real_estate_building" && separateLandMode ? "건물 기준시가" : ""
+            cat === "real_estate_building"
+              ? separateLandMode
+                ? "건물 기준시가"
+                : "기준시가"
+              : ""
           }
-          enableLookup={true}
         />
-        {propertyKind !== "land" && (
+        {(cat === "real_estate_building"
+          ? separateLandMode
+          : propertyKind !== "land") && (
           <div className="flex justify-end">
             <BuildingStdPriceModalButton
               buttonLabel="건물 기준시가 계산"
