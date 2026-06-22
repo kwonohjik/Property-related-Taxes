@@ -26,6 +26,7 @@ import {
   type BuildingStdPriceFormState,
   initialBuildingStdPriceForm,
   availableYears,
+  deriveYearFromEventDate,
   toEngineInput,
   validateBuildingStdPriceForm,
   buildNtsReportContext,
@@ -114,20 +115,24 @@ function SectionCard({
 }
 
 export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }: Props) {
-  const [f, setF] = useState<BuildingStdPriceFormState>(() => ({
-    ...initialBuildingStdPriceForm,
-    ...(lockedTaxType ? { taxType: lockedTaxType } : {}),
-    ...(initialAddress
-      ? {
-          addressRoad: initialAddress.road,
-          addressJibun: initialAddress.jibun,
-          buildingName: initialAddress.building,
-          addressDetail: initialAddress.detail,
-          longitude: initialAddress.lng,
-          latitude: initialAddress.lat,
-        }
-      : {}),
-  }));
+  const [f, setF] = useState<BuildingStdPriceFormState>(() => {
+    const base: BuildingStdPriceFormState = {
+      ...initialBuildingStdPriceForm,
+      ...(lockedTaxType ? { taxType: lockedTaxType } : {}),
+      ...(initialAddress
+        ? {
+            addressRoad: initialAddress.road,
+            addressJibun: initialAddress.jibun,
+            buildingName: initialAddress.building,
+            addressDetail: initialAddress.detail,
+            longitude: initialAddress.lng,
+            latitude: initialAddress.lat,
+          }
+        : {}),
+    };
+    // 상속·증여 평가연도는 eventDate에서 단일 도출(factory=normalize=UI 일치)
+    return { ...base, valuationYear: deriveYearFromEventDate(base.eventDate) };
+  });
   const [adjOpen, setAdjOpen] = useState(false);
 
   const set = <K extends keyof BuildingStdPriceFormState>(key: K, value: BuildingStdPriceFormState[K]) =>
@@ -156,9 +161,10 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }
     return y <= 2000 ? 2001 : y;
   }, [f.acquisitionYear]);
 
-  // 연도 변경 시 구조/용도 무효화 가드(onChange 내 동기 처리)
+  // 연도 변경 시 구조/용도 무효화 가드(onChange 내 동기 처리) — 양도 전용.
+  // (상속·증여 valuationYear는 valuationPatchFromEventDate 단일 경로로만 도출)
   const changeYearWithGuard = (
-    yearKey: "acquisitionYear" | "transferYear" | "valuationYear",
+    yearKey: "acquisitionYear" | "transferYear",
     structKey: keyof BuildingStdPriceFormState,
     usageKey: keyof BuildingStdPriceFormState,
     newYear: string,
@@ -174,6 +180,34 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }
       [usageKey]: usageOk ? prev[usageKey] : "",
     }));
   };
+
+  // 상속·증여: eventDate → valuationYear 도출 + 새 연도 지수표에 없는 구조/용도 초기화(가드).
+  // valuationYear 단일 writer(날짜 onChange·taxType 전환 공용) — useEffect 미러링 아님.
+  const valuationPatchFromEventDate = (eventDate: string, prev: BuildingStdPriceFormState) => {
+    const derivedYear = deriveYearFromEventDate(eventDate);
+    const iy = parseInt(derivedYear, 10);
+    const structOk = !Number.isNaN(iy) && listStructureOptions(iy).some((o) => o.key === prev.valStructureKey);
+    const usageOk = !Number.isNaN(iy) && listUsageOptions(iy).some((o) => String(o.no) === prev.valUsageNo);
+    return {
+      valuationYear: derivedYear,
+      valStructureKey: structOk ? prev.valStructureKey : "",
+      valUsageNo: usageOk ? prev.valUsageNo : "",
+    };
+  };
+  const setEventDateDeriveYear = (v: string) =>
+    setF((prev) => ({ ...prev, eventDate: v, ...valuationPatchFromEventDate(v, prev) }));
+  // 모드 전환 시 평가시점 날짜를 비워 새 입력 강제 — 양도일↔상속·증여일 의미 혼입 방지.
+  // 날짜가 비므로 valuationYear·평가 구조/용도도 초기화(구조/용도 입력은 새 일자 입력 후 활성).
+  const changeTaxType = (tt: BuildingStdPriceFormState["taxType"]) =>
+    setF((prev) => ({
+      ...prev,
+      taxType: tt,
+      eventDate: "",
+      acquisitionEventDate: "",
+      valuationYear: "",
+      valStructureKey: "",
+      valUsageNo: "",
+    }));
 
   const sameYear = f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
   const valYear = f.valuationYear ? parseInt(f.valuationYear, 10) : undefined;
@@ -216,7 +250,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }
           tone="sky"
           layout="inline"
           value={f.taxType}
-          onChange={(v) => set("taxType", v as BuildingStdPriceFormState["taxType"])}
+          onChange={(v) => changeTaxType(v as BuildingStdPriceFormState["taxType"])}
           options={[
             { value: "transfer", label: "양도(취득·양도 2시점)" },
             { value: "inheritance_gift", label: "상속·증여(1시점)" },
@@ -514,15 +548,11 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }
                 { value: "gift", label: "증여세" },
               ]}
             />
-            <FieldCard label="상속·증여 연도">
-              <YearSelect
-                years={yearOpts}
-                value={f.valuationYear}
-                onChange={(v) => changeYearWithGuard("valuationYear", "valStructureKey", "valUsageNo", v)}
-              />
-            </FieldCard>
-            <FieldCard label="상속·증여일" hint="계산서 일자 표기용(선택)">
-              <DateInput value={f.eventDate} onChange={(v) => set("eventDate", v)} />
+            <FieldCard
+              label="상속·증여일"
+              hint="상속개시일·증여일 — 평가연도가 자동 산정됩니다. 일자 입력 후 구조·용도·공시지가 조회가 활성화됩니다."
+            >
+              <DateInput value={f.eventDate} onChange={setEventDateDeriveYear} />
             </FieldCard>
             {!isMech && (
               <>
