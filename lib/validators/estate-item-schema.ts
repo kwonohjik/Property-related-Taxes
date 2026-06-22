@@ -50,6 +50,10 @@ const baseItemSchema = z.object({
   // §47③ 배우자·직계존비속 채무 인수 객관적 입증 토글 (표시·안내용)
   burdenedGiftDebtConfirmed: z.boolean().optional(),
   monthlyRent: z.number().nonnegative().optional(), // §61⑤ 임대료환산
+  // §61⑤ 미임대(공실) 부분 — 1동 건물 일부 임대 시 미임대분 기준시가 합산용. 누락 시 silent strip.
+  totalBuildingArea: z.number().nonnegative().optional(), // 전체 건물 연면적(㎡) — 토지 안분 분모
+  vacantBuildingArea: z.number().nonnegative().optional(), // 미임대 건물 연면적(㎡) — 토지 안분 분자
+  vacantBuildingStandardPrice: z.number().nonnegative().optional(), // 미임대분 건물 기준시가(원, 직접입력)
   creditGuaranteeAmount: z.number().nonnegative().optional(), // §63② 신용보증 차감
   // 담보채무 §14 자동공제 (collateral-debt-auto-deduction)
   deductSecuredClaimAsDebt: z.boolean().optional(),

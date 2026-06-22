@@ -179,6 +179,19 @@ export interface EstateItem extends EstateLocationFields {
   mortgageAmount?: number;
   /** 월 임대료 (원) — §61⑤·시행규칙 §15의2 임대료환산가액=(월세×12÷0.12)+임대보증금. 보충평가(standard_price) 시만 비교. */
   monthlyRent?: number;
+  /**
+   * 전체 건물 연면적 (㎡) — §61⑤ 미임대(공실) 부분 토지 안분 분모. EstateItem 보충평가 전용
+   * (NBL area-proportioning.ts의 동명 함수 파라미터와 무관 — 스코프 다름).
+   * 1동 건물 일부만 임대 시 미임대분 토지 기준시가 = appurtenantLandStandardPrice × (vacantBuildingArea / totalBuildingArea).
+   */
+  totalBuildingArea?: number;
+  /** 미임대(공실) 건물 연면적 (㎡) — §61⑤ 미임대분 토지 안분 분자. */
+  vacantBuildingArea?: number;
+  /**
+   * 미임대(공실)분 건물 기준시가 (원, 직접입력) — §61⑤ 미임대분 평가. 층별 기준시가가 위치지수·구조로
+   * 비균등하여 면적 단순 안분이 부정확 → 「건물기준시가 계산서」의 미임대 층 합계를 직접 입력.
+   */
+  vacantBuildingStandardPrice?: number;
   /** 신용보증기관 보증액 (원) — 시행령 §63② 저당 담보채권액에서 차감(§66 1호 한정, 음수 가드). */
   creditGuaranteeAmount?: number;
 
