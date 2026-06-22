@@ -17,9 +17,11 @@ import { BesshiColumn } from "@/components/calc/results/shared/BesshiRow";
 
 interface Props {
   result: GiftTaxResult;
+  /** BesshiRow data-testid prefix — E2E 셀렉터용. 예: "besshi10-0-" → tr[data-testid="besshi10-0-④"] */
+  testIdPrefix?: string;
 }
 
-export function GiftTaxFilingFormTable({ result }: Props) {
+export function GiftTaxFilingFormTable({ result, testIdPrefix }: Props) {
   const [showLaw, setShowLaw] = useState(false);
   const rows = result.besshi10Rows;
 
@@ -47,8 +49,8 @@ export function GiftTaxFilingFormTable({ result }: Props) {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border-t border-gray-300 dark:border-gray-700">
-        <BesshiColumn rows={leftRows} showLaw={showLaw} />
-        <BesshiColumn rows={rightRows} showLaw={showLaw} />
+        <BesshiColumn rows={leftRows} showLaw={showLaw} testIdPrefix={testIdPrefix} />
+        <BesshiColumn rows={rightRows} showLaw={showLaw} testIdPrefix={testIdPrefix} />
       </div>
 
       {result.warnings.length > 0 && (

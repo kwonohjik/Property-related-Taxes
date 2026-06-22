@@ -751,6 +751,14 @@ export interface GiftTaxResult extends TaxResultMeta {
   _deprecatedSpecialTreatmentCredit_alwaysZero?: never;
 
   /**
+   * 금번 증여 순 과세가액 (echo — 2-pass 동시증여 안분 분모 산출용).
+   * = max(0, grossGiftValue − exemptAmount − assumedDebtTotal)
+   * gift-tax.ts STEP 3 계산값을 노출. 산식·계산 영향 0 (echo-field-pattern).
+   * calcSimultaneousGifts PASS1에서 정확한 안분 분모를 얻기 위해 사용.
+   */
+  netCurrentGiftValue?: number;
+
+  /**
    * 대납 gross-up 상세 (echo — UI 표시 전용, 미적용 시 applied=false).
    * Map 금지 — Record/원시값만 사용 (memory: feedback_engine_result_map_json_loss).
    */

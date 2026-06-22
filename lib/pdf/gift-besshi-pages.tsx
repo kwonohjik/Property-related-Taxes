@@ -54,8 +54,15 @@ export function GiftSelectedBesshiPages({
   const besshi10Rows = (giftResult.besshi10Rows ?? []) as FilingFormRow[];
   const valuationResults = (giftResult.valuationResults ?? []) as PropertyValuationResult[];
 
+  // 동시증여 추가 건 결과 배열 (⑦-f 지점) — resultData.simultaneousResults에서 추출
+  const simultaneousResults = (r.simultaneousResults as unknown as GiftTaxResult[] | undefined) ?? [];
+
   // 별지10호 (증여세과세표준신고 및 자진납부계산서)
   const ff10 = want("filing-form-10") && besshi10Rows.length > 0;
+
+  // 동시증여 별지10호 (건 1..N) — simultaneous-filing-10 채널은 screen only; PDF 불포함
+  // 향후 PDF 채널 승격 시 simFF10 게이트 추가 예정
+  const simFF10 = want("simultaneous-filing-10") && simultaneousResults.length > 0;
 
   // 부표1 (증여재산 및 평가명세서)
   const valForm = want("valuation-form") && valuationResults.length > 0;
@@ -89,6 +96,13 @@ export function GiftSelectedBesshiPages({
   return (
     <>
       {ff10 && <FilingForm10PdfPage rows={besshi10Rows} />}
+      {simFF10 &&
+        simultaneousResults.map((sr, i) => {
+          const rows = (sr.besshi10Rows ?? []) as FilingFormRow[];
+          return rows.length > 0 ? (
+            <FilingForm10PdfPage key={`sim-${i}`} rows={rows} />
+          ) : null;
+        })}
       {valForm && (
         <GiftValuationFormPdfPage
           valuationResults={valuationResults}

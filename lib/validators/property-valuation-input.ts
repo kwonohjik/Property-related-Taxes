@@ -619,3 +619,62 @@ export const giftTaxInputSchema = z
   });
 
 export type GiftTaxInputSchema = z.infer<typeof giftTaxInputSchema>;
+
+// ============================================================
+// 동시증여 다중 건 Route 전용 요청 스키마 (⑨⑩⑫ — Phase 2)
+//
+// POST /api/calc/gift 에서 simultaneousGiftForms 있을 때 분기.
+// giftTaxInputSchema(건 0) + simultaneousGiftForms(추가 건 배열) 를
+// Route handler가 검증하기 위한 wrapper.
+//
+// TS 미감지 지점 ⑫: 이 스키마가 누락되면 침묵 stripping 발생.
+// ============================================================
+
+/**
+ * 동시증여 추가 건 1개 스키마 — giftTaxInputSchema와 동일 구조.
+ * 재사용: giftTaxInputSchema 자체가 추가 건에도 동일하게 적용됨.
+ */
+export const giftSubFormSchema = giftTaxInputSchema;
+export type GiftSubFormSchema = z.infer<typeof giftSubFormSchema>;
+
+/**
+ * 동시증여 다중 건 Route 요청 스키마.
+ * simultaneousGiftForms 존재 시 Route가 이 스키마로 재검증.
+ *
+ * 구조:
+ *   body = { ...GiftTaxInput(건0 필드들), simultaneousGiftForms: GiftTaxInput[] }
+ */
+export const giftSimultaneousRequestSchema = giftTaxInputSchema
+  .extend({
+    /**
+     * 동시증여 추가 건 배열 (건 1..).
+     * 없으면 단건 경로 (하위호환).
+     * ⑫ Zod 입력 객체 정의 — TS 미감지 → grep 자가 점검 필수.
+     */
+    simultaneousGiftForms: z.array(giftSubFormSchema).optional(),
+  })
+  .superRefine((data, ctx) => {
+    // 다건 경로 차단 조합 — calcSimultaneousGifts는 calcGiftTax(대납 미지원) 호출.
+    // simultaneousGiftForms 있을 때 건 0 또는 추가 건의 donorPaysGiftTax=true 차단.
+    if (data.simultaneousGiftForms && data.simultaneousGiftForms.length > 0) {
+      // 건 0 대납 차단
+      if (data.donorPaysGiftTax === true) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["donorPaysGiftTax"],
+          message: "동시증여 다중 건 계산과 대납(代納)은 현재 함께 계산할 수 없습니다.",
+        });
+      }
+      // 추가 건 대납 차단
+      data.simultaneousGiftForms.forEach((sub, i) => {
+        if (sub.donorPaysGiftTax === true) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["simultaneousGiftForms", i, "donorPaysGiftTax"],
+            message: "동시증여 추가 건에는 대납(代納)을 사용할 수 없습니다.",
+          });
+        }
+      });
+    }
+  });
+export type GiftSimultaneousRequestSchema = z.infer<typeof giftSimultaneousRequestSchema>;

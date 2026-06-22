@@ -41,6 +41,8 @@ interface FormLike {
   stockItems?: EstateItem[];
   /** 증여세 폼 — gift-tax-form-shared.tsx FormState */
   giftItems?: EstateItem[];
+  /** 동시증여 추가 건 서브폼 배열 — 각 서브폼에도 giftItems/stockItems Date 정규화 필요 */
+  simultaneousGiftForms?: FormLike[];
   [key: string]: unknown;
 }
 
@@ -123,10 +125,16 @@ export function normalizeRestoredFormDates<T extends FormLike>(parsed: T): T {
   const stockItems = parsed.stockItems?.map(normalizeEstateItemDates);
   const giftItems = parsed.giftItems?.map(normalizeEstateItemDates);
 
+  // 동시증여 추가 건 서브폼 — 각 서브폼에도 재귀 정규화 (③ 지점)
+  const simultaneousGiftForms = parsed.simultaneousGiftForms?.map(
+    (sub) => normalizeRestoredFormDates(sub),
+  );
+
   return {
     ...parsed,
     ...(estateItems !== undefined ? { estateItems } : {}),
     ...(stockItems !== undefined ? { stockItems } : {}),
     ...(giftItems !== undefined ? { giftItems } : {}),
+    ...(simultaneousGiftForms !== undefined ? { simultaneousGiftForms } : {}),
   };
 }
