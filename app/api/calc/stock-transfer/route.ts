@@ -229,6 +229,10 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     transferLots: coerced.transferLots as StockTransferInput["transferLots"],
     costAllocationMethod: coerced.costAllocationMethod as StockTransferInput["costAllocationMethod"],
     specificMatchings: coerced.specificMatchings as StockTransferInput["specificMatchings"],
+
+    // [부담부증여 전용 ⑭] §159 개산공제 base 안분 비율 (비상장 estimated 경로 전용)
+    // TypeScript 미감지 — grep 자가점검 대상 (⑭ 동기화 지점)
+    burdenedGiftDebtRatio: coerced.burdenedGiftDebtRatio as number | undefined,
   };
 }
 

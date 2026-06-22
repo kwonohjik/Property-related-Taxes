@@ -26,8 +26,9 @@ import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.type
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import { buildGiftTaxInput } from "@/lib/calc/gift-api";
 import { calcGiftTax } from "@/lib/tax-engine/gift-tax";
-import { callGiftBurdenedTransferAPI } from "@/lib/calc/gift-burdened-transfer-api";
+import { callGiftBurdenedTransferAPI, callGiftStockBurdenedTransferAPI } from "@/lib/calc/gift-burdened-transfer-api";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
+import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import {
   type FormState,
   INITIAL_FORM,
@@ -52,6 +53,7 @@ export function GiftTaxForm() {
   const [result, setResult] = useState<GiftTaxResult | null>(null);
   const [transferTaxResults, setTransferTaxResults] = useState<TransferTaxResult[]>([]);
   const [transferTaxError, setTransferTaxError] = useState<string | null>(null);
+  const [stockTransferTaxResults, setStockTransferTaxResults] = useState<StockTransferResult[]>([]);
   // 단순증여(채무 0) baseline 증여세 — 부담부 자산 있을 때만 산출, 비교 카드용
   const [simpleGiftResult, setSimpleGiftResult] = useState<GiftTaxResult | null>(null);
   const [saveMessage, setSaveMessage] = useState<SaveToastMessage | null>(null);
@@ -190,6 +192,25 @@ export function GiftTaxForm() {
         setTransferTaxResults([]);
       }
 
+      // 주식 부담부증여 양도소득세 직렬 계산 — burdenedGiftStockTransferTax ON 주식만
+      const stockBurdenedItems = form.stockItems.filter(
+        (it) => it.burdenedGiftStockTransferTax !== undefined,
+      );
+      if (stockBurdenedItems.length > 0) {
+        const stockTxResults: StockTransferResult[] = [];
+        for (const item of stockBurdenedItems) {
+          try {
+            const stockTxResult = await callGiftStockBurdenedTransferAPI(item, form);
+            if (stockTxResult) stockTxResults.push(stockTxResult);
+          } catch {
+            // 단건 실패 — 증여세 결과는 이미 표시됨. 주식 양도세는 증여세 결과에 부가이므로 무시
+          }
+        }
+        setStockTransferTaxResults(stockTxResults);
+      } else {
+        setStockTransferTaxResults([]);
+      }
+
       setStep(STEPS.length);
     } catch {
       setError("네트워크 오류가 발생했습니다. 잠시 후 다시 시도하세요.");
@@ -203,6 +224,7 @@ export function GiftTaxForm() {
     setResult(null);
     setTransferTaxResults([]);
     setTransferTaxError(null);
+    setStockTransferTaxResults([]);
     setSimpleGiftResult(null);
     setStep(0);
     setError(null);
@@ -247,6 +269,7 @@ export function GiftTaxForm() {
         giftDate={form.giftDate}
         transferTaxResults={transferTaxResults}
         transferTaxError={transferTaxError ?? undefined}
+        stockTransferTaxResults={stockTransferTaxResults}
         simpleGiftResult={simpleGiftResult ?? undefined}
         priorGifts={form.priorGifts.map((pg) => ({
           giftDate: pg.giftDate,
