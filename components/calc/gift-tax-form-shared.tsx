@@ -35,6 +35,7 @@ import {
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
 } from "@/lib/tax-engine/gift-special-stream";
 import { GiftCreditChecklist } from "@/components/calc/gift/GiftCreditChecklist";
+import { DoneeMinorField } from "@/components/calc/gift/DoneeMinorField";
 import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
 
 // ============================================================
@@ -54,6 +55,12 @@ export interface FormState extends AppraisalFeeFormFields {
    */
   isGenerationSkip: boolean;
   isMinorDonee: boolean;
+  /**
+   * 수증자 주민등록번호 — 앞 7자리로 미성년 자동판정(증여일 기준 만 19세 미만).
+   * 클라이언트 derive 전용(엔진 미전송)·체크섬 검증 생략. 파싱불가/미입력 시 isMinorDonee 수동 fallback.
+   * optional — 기존 신규 필드 패턴(donorPaysGiftTax 등) 일관. INITIAL_FORM은 "".
+   */
+  doneeResidentNumber?: string;
   /**
    * §57① 단서 — 증여자(조부모)의 최근친 직계비속(부·모)이 이미 사망하여
    * 그 사망자의 최근친 직계비속(손자녀)이 증여받는 경우 세대생략 할증 배제.
@@ -123,6 +130,7 @@ export const INITIAL_FORM: FormState = {
   donor: "father",
   isGenerationSkip: false,
   isMinorDonee: false,
+  doneeResidentNumber: "",
   isSubstituteGift: false,
   giftItems: [],
   stockItems: [],
@@ -551,18 +559,18 @@ export function Step0({
         )}
       </div>
 
-      {/* G-M2: isMinorDonee — donor=grandparent 포함 직계존속 전체에서 항상 노출
-          (§57 40% 판정: isMinorDonee AND grossGiftValue > 20억) */}
+      {/* G-M2: 수증자 미성년 — 주민번호 자동판정(증여일 기준 만19세) 우선 + 수동 토글 fallback(D-1).
+          donor=grandparent 포함 직계존속 전체 노출 (§57① 40% 판정: 미성년 AND 20억 초과) */}
       {(form.donor === "father" ||
         form.donor === "mother" ||
         form.donor === "grandparent") && (
-        <ToggleCard
-          tone="violet"
-          title="수증자 미성년자 (§57 ② 40% 할증 판정)"
-          description="수증자가 미성년자이고 세대생략 증여재산가액이 20억을 초과하면 30% 대신 40% 할증 적용"
-          checked={form.isMinorDonee}
-          onCheckedChange={(v) => {
-            // G-M3: isMinorDonee 변경 시 donorRelation 재도출 (직계존속 성인↔미성년 전환)
+        <DoneeMinorField
+          doneeResidentNumber={form.doneeResidentNumber ?? ""}
+          giftDate={form.giftDate}
+          isMinorDonee={form.isMinorDonee}
+          onResidentNumberChange={(v) => set({ doneeResidentNumber: v })}
+          onMinorToggle={(v) => {
+            // G-M3: 수동 토글 시 donorRelation 재도출 (채택안 A — store set 유지)
             const newDonorRelation = deriveDonorRelation(form.donor, v);
             set({ isMinorDonee: v, donorRelation: newDonorRelation });
           }}
