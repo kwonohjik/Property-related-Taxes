@@ -20,7 +20,7 @@ import {
   type GiftPrintSectionId,
 } from "@/lib/print/gift-print-sections";
 
-// 설계 §2.1 기준 leaf 14종 (+ 부담부증여 양도소득세)
+// 설계 §2.1 기준 leaf 17종 (부동산 부담부증여 + 주식 부담부증여 + 비교 포함)
 const ALL_LEAVES: GiftPrintSectionId[] = [
   "core-result",
   "tax-summary",
@@ -37,6 +37,7 @@ const ALL_LEAVES: GiftPrintSectionId[] = [
   "split-payment",
   "warnings",
   "burdened-transfer-tax",
+  "burdened-stock-transfer-tax",
   "burdened-gift-comparison",
 ];
 
@@ -68,7 +69,7 @@ describe("증여세 선택 출력 레지스트리 — Pre-Do anchor (PR-B1)", ()
     }
   });
 
-  // PD-gift-3: 트리 평탄화 = 16 leaf, 유니크, group: 접두 없음 (donor-paid-grossup + burdened-gift-comparison 병합)
+  // PD-gift-3: 트리 평탄화 = 17 leaf, 유니크, group: 접두 없음 (burdened-stock-transfer-tax 추가)
   it("PD-gift-3: flattenPrintSectionIds는 16개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);

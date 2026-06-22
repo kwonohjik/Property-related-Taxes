@@ -9,7 +9,9 @@ import { ChevronLeft } from "lucide-react";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
+import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { BurdenedTransferTaxResultCard } from "@/components/calc/results/BurdenedTransferTaxResultCard";
+import { BurdenedStockTransferTaxResultCard } from "@/components/calc/results/BurdenedStockTransferTaxResultCard";
 import { BurdenedGiftComparisonCard } from "@/components/calc/results/BurdenedGiftComparisonCard";
 import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -25,6 +27,11 @@ import { isSimpleModeUnlisted } from "@/lib/calc/unlisted-valuation-mode";
 import { ListedStockBesshiResultSection } from "@/components/calc/results/ListedStockBesshiResultSection";
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
+import {
+  Row,
+  LawBadge,
+  InstallmentGuide,
+} from "@/components/calc/results/GiftTaxResultViewHelpers";
 import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
 import { SplitPaymentCard } from "@/components/calc/results/installment/SplitPaymentCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -41,99 +48,6 @@ import {
   GIFT_PRINT_SECTIONS,
   type GiftPrintSectionId,
 } from "@/lib/print/gift-print-sections";
-
-// ============================================================
-// 헬퍼 컴포넌트
-// ============================================================
-
-function Row({
-  label,
-  value,
-  sub = false,
-  highlight = false,
-  deduction = false,
-}: {
-  label: string;
-  value: string;
-  sub?: boolean;
-  highlight?: boolean;
-  deduction?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between px-4 py-2.5 ${
-        highlight ? "bg-muted/50 font-semibold" : ""
-      } ${sub ? "pl-7" : ""}`}
-    >
-      <span className={sub ? "text-xs text-muted-foreground" : "text-sm"}>{label}</span>
-      <span className={`font-mono text-sm ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function LawBadge({ law }: { law: string }) {
-  return (
-    <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 mr-1 mb-1">
-      {law}
-    </span>
-  );
-}
-
-// ============================================================
-// 연부연납 안내 (증여세는 5년, 일반)
-// ============================================================
-
-function InstallmentGuide({ finalTax }: { finalTax: number }) {
-  const result = calcInstallmentPayment({ finalTax, isFamilyBusiness: false });
-  if (!result.eligible) return null;
-
-  return (
-    <div className="border border-amber-200 dark:border-amber-700 rounded-xl overflow-hidden">
-      <div className="bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
-        <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-          연부연납 안내 (상증법 §71)
-        </h4>
-        <div className="flex flex-wrap gap-1 mt-1">
-          <LawArticleModal legalBasis="상증법 §71" label="§71 연부연납" />
-          <LawArticleModal legalBasis="상증법 §70" label="§70 분납" />
-        </div>
-        <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-          결정세액 2천만원 초과 시 최대 5년 분할납부 가능
-        </p>
-      </div>
-      <div className="p-3 text-xs space-y-1.5 text-gray-600 dark:text-gray-300">
-        <div className="flex justify-between">
-          <span>허가 즉시 납부</span>
-          <span className="font-medium">{formatKRW(result.initialPayment)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>연간 납부 원금 ({result.appliedYears}회)</span>
-          <span className="font-medium">{formatKRW(result.annualPrincipal)}</span>
-        </div>
-        <p className="text-amber-600 dark:text-amber-400 mt-1">
-          ※ 이자 상당액(연 1.8% 기준) 별도 납부 — 세무사 확인 권장
-        </p>
-        {/* 납세담보 */}
-        <div className="mt-2 pt-2 border-t border-amber-200 dark:border-amber-700 space-y-1">
-          <p className="font-medium text-gray-700 dark:text-gray-200">납세담보 제공 (상증법 §71 ②)</p>
-          <div className="flex justify-between">
-            <span>현금·예금·보증보험</span>
-            <span className="font-medium">세액의 110%</span>
-          </div>
-          <div className="flex justify-between">
-            <span>기타 재산 (부동산·유가증권 등)</span>
-            <span className="font-medium">세액의 120%</span>
-          </div>
-          <p className="text-amber-600 dark:text-amber-400">
-            ※ 연부연납 허가 신청 시 납세담보를 함께 제공해야 함
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================
 // 메인 컴포넌트
@@ -186,6 +100,8 @@ interface Props {
   transferTaxResults?: TransferTaxResult[];
   /** 부담부증여 양도소득세 계산 실패 시 경고 메시지 (증여세 결과 표시는 계속) */
   transferTaxError?: string;
+  /** 주식 부담부증여 양도소득세 결과 목록 — burdenedGiftStockTransferTax ON 자산 순서대로 */
+  stockTransferTaxResults?: StockTransferResult[];
   /** 단순증여(채무 0) baseline 증여세 결과 — 부담부 자산 있을 때만 산출, 없으면 undefined */
   simpleGiftResult?: GiftTaxResult;
 }
@@ -206,6 +122,7 @@ export function GiftTaxResultView({
   splitPaymentAmount = "",
   transferTaxResults = [],
   transferTaxError,
+  stockTransferTaxResults = [],
   simpleGiftResult,
 }: Props) {
   const [showValuation, setShowValuation] = useState(false);
@@ -294,11 +211,16 @@ export function GiftTaxResultView({
     if (result.donorPaidTaxGrossUp?.applied) s.add("donor-paid-grossup");
     if (result.warnings.length > 0) s.add("warnings");
     if (transferTaxResults.length > 0) s.add("burdened-transfer-tax");
-    // 세부담 비교 카드 — 표시 조건과 3자 일치(화면 가드·이 등록·deps 배열)
-    if (simpleGiftResult != null && transferTaxResults.length > 0 && !transferTaxError)
+    if (stockTransferTaxResults.length > 0) s.add("burdened-stock-transfer-tax");
+    // 세부담 비교 카드 — 부동산 또는 주식 양도세가 1건 이상 있어야 노출
+    if (
+      simpleGiftResult != null &&
+      (transferTaxResults.length > 0 || stockTransferTaxResults.length > 0) &&
+      !transferTaxError
+    )
       s.add("burdened-gift-comparison");
     return s;
-  }, [result, estateItems, priorGifts, transferTaxResults, transferTaxError, simpleGiftResult]);
+  }, [result, estateItems, priorGifts, transferTaxResults, transferTaxError, stockTransferTaxResults, simpleGiftResult]);
 
   // 분납기한 (§70② — 증여 신고기한 §68① 증여일+3개월 + 2개월). giftDate 없으면 undefined.
   const giftDueDates = useMemo(() => {
@@ -513,18 +435,28 @@ export function GiftTaxResultView({
         </PrintSection>
       )}
 
+      {/* 주식 부담부증여 양도소득세 (소득세법 §88 · 소령 §159) */}
+      {stockTransferTaxResults.length > 0 && (
+        <PrintSection id="burdened-stock-transfer-tax" selectedIds={selectedPrintIds}>
+          <BurdenedStockTransferTaxResultCard
+            stockTransferTaxResults={stockTransferTaxResults}
+          />
+        </PrintSection>
+      )}
+
       {/* 세부담 비교 — 단순증여 vs 부담부증여 (증여세 + 양도세). 양도세 성공 시에만 */}
       {simpleGiftResult != null &&
-        transferTaxResults.length > 0 &&
+        (transferTaxResults.length > 0 || stockTransferTaxResults.length > 0) &&
         !transferTaxError && (
           <PrintSection id="burdened-gift-comparison" selectedIds={selectedPrintIds}>
             <BurdenedGiftComparisonCard
               simpleGiftResult={simpleGiftResult}
               giftResult={result}
               transferTaxResults={transferTaxResults}
+              stockTransferTaxResults={stockTransferTaxResults}
               hasUncoveredDebtAsset={
                 estateItems.filter((it) => (it.assumedDebtForGift ?? 0) > 0)
-                  .length > transferTaxResults.length
+                  .length > transferTaxResults.length + stockTransferTaxResults.length
               }
             />
           </PrintSection>

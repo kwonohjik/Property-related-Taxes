@@ -26,7 +26,7 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 13종 (오타 방지·exact 매칭) */
+/** 선택 가능 leaf 14종 (오타 방지·exact 매칭) */
 export type GiftPrintSectionId =
   | "core-result"
   | "tax-summary"
@@ -43,6 +43,7 @@ export type GiftPrintSectionId =
   | "split-payment"
   | "warnings"
   | "burdened-transfer-tax"
+  | "burdened-stock-transfer-tax"
   | "burdened-gift-comparison";
 
 /** 증여세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
@@ -101,7 +102,8 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
       { id: "installment", label: "연부연납 안내", channel: SCREEN },
       { id: "split-payment", label: "분납 안내 (§70②)", channel: SCREEN },
       { id: "warnings", label: "주의 사항", channel: SCREEN },
-      { id: "burdened-transfer-tax", label: "부담부증여 양도소득세 (증여자)", channel: SCREEN },
+      { id: "burdened-transfer-tax", label: "부담부증여 양도소득세 (증여자, 부동산)", channel: SCREEN },
+      { id: "burdened-stock-transfer-tax", label: "부담부증여 주식 양도소득세 (증여자)", channel: SCREEN },
       { id: "burdened-gift-comparison", label: "세부담 비교 (단순증여 vs 부담부증여)", channel: SCREEN },
     ],
   },
