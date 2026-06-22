@@ -30,6 +30,7 @@ import {
   toEngineInput,
   validateBuildingStdPriceForm,
   buildNtsReportContext,
+  computeValuationLandTotal,
 } from "@/lib/calc/building-std-price-form";
 import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
 import {
@@ -44,6 +45,8 @@ interface Props {
     floorArea: number,
     error: string | null,
     report: NtsReportModel | null,
+    /** 상증 경로 B 부수토지 평가액(§61①1호, 원). 미산출 시 0. 모달이 부수토지 필드로 자동 전달 */
+    landStandardPrice: number,
   ) => void;
   /**
    * 세목 고정 — 호출 세목(양도 2시점 / 상속·증여 1시점)을 강제.
@@ -229,15 +232,21 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress }
   const handleCalc = () => {
     const err = validateBuildingStdPriceForm(f);
     if (err) {
-      onResult(null, 0, err, null);
+      onResult(null, 0, err, null, 0);
       return;
     }
     try {
       const result = calcBuildingStandardPrice(toEngineInput(f));
       const report = buildNtsReportModel(buildNtsReportContext(f), result);
-      onResult(result, parseFloat(f.floorArea.replace(/,/g, "")) || 0, null, report);
+      onResult(
+        result,
+        parseFloat(f.floorArea.replace(/,/g, "")) || 0,
+        null,
+        report,
+        computeValuationLandTotal(f),
+      );
     } catch (e) {
-      onResult(null, 0, e instanceof Error ? e.message : "계산 오류", null);
+      onResult(null, 0, e instanceof Error ? e.message : "계산 오류", null, 0);
     }
   };
 

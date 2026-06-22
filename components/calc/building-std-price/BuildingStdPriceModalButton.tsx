@@ -15,8 +15,11 @@ import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-fo
 import type { AddressValue } from "@/components/ui/address-search";
 
 interface Props {
-  /** 선택한 시점의 건물 기준시가(원, 정수)를 받아 대상 필드에 주입 */
-  onApply: (standardPrice: number) => void;
+  /**
+   * 선택한 시점의 건물 기준시가(원, 정수)를 받아 대상 필드에 주입.
+   * 상증 경로 B는 부수토지 평가액(§61①1호, landStandardPrice)도 함께 전달 — 호출부가 부수토지 필드에 자동 채움.
+   */
+  onApply: (standardPrice: number, landStandardPrice?: number) => void;
   buttonLabel?: string;
   /** 호출 세목 고정 — 양도="transfer" / 상속·증여="inheritance_gift". 지정 시 세목 라디오 숨김 */
   lockedTaxType?: BuildingStdPriceFormState["taxType"];
@@ -36,12 +39,15 @@ export function BuildingStdPriceModalButton({
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
   const [floorArea, setFloorArea] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // 상증 경로 B 부수토지 평가액(§61①1호) — 폼이 입력한 토지면적×공시지가로 산출. 0이면 미전달.
+  const [landStandardPrice, setLandStandardPrice] = useState(0);
 
-  const apply = (v: number) => {
-    onApply(v);
+  const apply = (v: number, land?: number) => {
+    onApply(v, land && land > 0 ? land : undefined);
     setOpen(false);
     setResult(null);
     setError(null);
+    setLandStandardPrice(0);
   };
 
   return (
@@ -61,10 +67,11 @@ export function BuildingStdPriceModalButton({
           <BuildingStdPriceForm
             lockedTaxType={lockedTaxType}
             initialAddress={initialAddress}
-            onResult={(r, fa, err) => {
+            onResult={(r, fa, err, _report, landTotal) => {
               setResult(r);
               setFloorArea(fa);
               setError(err);
+              setLandStandardPrice(landTotal);
             }}
           />
 
@@ -75,7 +82,11 @@ export function BuildingStdPriceModalButton({
               <BuildingStdPriceResultCard result={result} floorArea={floorArea} />
               <div className="flex flex-wrap gap-2">
                 {result.valuation && (
-                  <Button type="button" size="sm" onClick={() => apply(result.valuation!.standardPrice)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => apply(result.valuation!.standardPrice, landStandardPrice)}
+                  >
                     이 금액 적용 ({fmt(result.valuation.standardPrice)})
                   </Button>
                 )}
@@ -87,6 +98,43 @@ export function BuildingStdPriceModalButton({
                 {result.transfer && (
                   <Button type="button" size="sm" onClick={() => apply(result.transfer!.standardPrice)}>
                     양도시 적용 ({fmt(result.transfer.standardPrice)})
+                  </Button>
+                )}
+                {/* 복합구조(상증 1시점) — compositeTotal 합계 + 부수토지 함께 적용 */}
+                {result.compositeTotal != null && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => apply(result.compositeTotal!, landStandardPrice)}
+                  >
+                    이 금액 적용 ({fmt(result.compositeTotal)})
+                  </Button>
+                )}
+                {/* 복합구조(양도 2시점) — 취득시 합계 적용. ≤2000은 산정기준율 환산값(convertedTotal) */}
+                {result.acquisitionComposite && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() =>
+                      apply(
+                        result.acqBaseConversion?.convertedTotal ??
+                          result.acquisitionComposite!.total,
+                      )
+                    }
+                  >
+                    취득시 적용 (
+                    {fmt(
+                      result.acqBaseConversion?.convertedTotal ??
+                        result.acquisitionComposite.total,
+                    )}
+                    )
+                  </Button>
+                )}
+                {/* 복합구조(양도 2시점) — 양도시 합계 적용 */}
+                {result.transferComposite && (
+                  <Button type="button" size="sm" onClick={() => apply(result.transferComposite!.total)}>
+                    양도시 적용 ({fmt(result.transferComposite.total)})
                   </Button>
                 )}
               </div>
