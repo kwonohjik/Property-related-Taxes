@@ -43,6 +43,8 @@ interface Props {
   required?: boolean;
   /** false이면 조회 버튼 영역 숨김 (기본 true) */
   enableLookup?: boolean;
+  /** true이면 단가×면적 area-mode를 끄고 총액 직접 입력만 노출 (단가 산정 불가 자산 — 건물 기준시가 등). 기본 false */
+  forceTotalMode?: boolean;
   /** 이력 저장용 출처 추적 (UI 미노출) */
   onSourceChange?: (source: PriceSource) => void;
   /** 조회 연도 강제 고정 (1990 이전 등) */
@@ -71,11 +73,13 @@ export function StandardPriceInput({
   hint,
   required = false,
   enableLookup = true,
+  forceTotalMode = false,
   onSourceChange,
   forceYear,
 }: Props) {
   const isAreaMode =
-    propertyKind === "land" || propertyKind === "building_non_residential";
+    !forceTotalMode &&
+    (propertyKind === "land" || propertyKind === "building_non_residential");
   const propertyType = toPropertyType(propertyKind);
 
   // 면적은 totalPrice(단가×면적) 계산 입력일 뿐 — 엔진엔 총액만 전달된다.
