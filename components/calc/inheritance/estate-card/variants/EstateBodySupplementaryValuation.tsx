@@ -15,7 +15,10 @@ import {
 } from "@/components/calc/inputs/RadioCardGroup";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { calcVacantPortionStandardPrice } from "@/lib/tax-engine/property-valuation";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { resolvePropertyKind } from "./EstateBodyHelpers";
 
@@ -50,6 +53,97 @@ const CB_ROUTE_OPTIONS = (itemId: string): RadioCardOption<"lump_sum" | "separat
     testId: `cb-route-separate-${itemId}`,
   },
 ];
+
+/**
+ * §61⑤ 미임대(공실) 부분 입력 — 경로 B(건물+부수토지 분리) + 임대 중(monthlyRent>0) 시 노출.
+ * 같은 카드 내라 토지 안분 분모(appurtenantLandStandardPrice)에 동일 스코프 접근(cross-card 결합 없음).
+ * 미임대분 토지 기준시가·합계는 엔진 calcVacantPortionStandardPrice 단일 진실로 표시(dual-truth 회피).
+ */
+function VacancyPortionFields({
+  item,
+  set,
+}: {
+  item: EstateItem;
+  set: (patch: Partial<EstateItem>) => void;
+}) {
+  const [open, setOpen] = useState(
+    () =>
+      (item.vacantBuildingArea ?? 0) > 0 ||
+      (item.vacantBuildingStandardPrice ?? 0) > 0,
+  );
+  const vacantTotal = calcVacantPortionStandardPrice(item);
+  const vacantBuildingStd = item.vacantBuildingStandardPrice ?? 0;
+  const vacantLandStd = Math.max(0, vacantTotal - vacantBuildingStd);
+  const noLandBase = (item.appurtenantLandStandardPrice ?? 0) === 0;
+
+  return (
+    <ToggleCard
+      lawLinks="상증법"
+      tone="sky"
+      size="sm"
+      title="일부만 임대 중 (미임대 공실 있음)"
+      description="1동 건물 일부만 임대 시 — 임대분 환산가액 + 미임대분 기준시가로 평가 (§61⑤)"
+      checked={open}
+      onCheckedChange={setOpen}
+    >
+      <div className="space-y-2">
+        <FieldCard label="전체 건물 연면적 (㎡)" hint="건물기준시가 계산서의 연면적 합계">
+          <DecimalInput
+            value={item.totalBuildingArea != null ? String(item.totalBuildingArea) : ""}
+            onChange={(v) => set({ totalBuildingArea: parseDecimal(v) || undefined })}
+            placeholder="전체 건물 연면적"
+          />
+        </FieldCard>
+        <FieldCard label="미임대 건물 연면적 (㎡)" hint="공실(미임대) 층의 연면적 합계">
+          <DecimalInput
+            value={item.vacantBuildingArea != null ? String(item.vacantBuildingArea) : ""}
+            onChange={(v) => set({ vacantBuildingArea: parseDecimal(v) || undefined })}
+            placeholder="미임대(공실) 건물 연면적"
+          />
+        </FieldCard>
+        <FieldCard
+          label="미임대분 건물 기준시가"
+          unit="원"
+          hint="건물기준시가 계산서의 미임대 층 기준시가 합계 (층별 비균등 — 직접 입력)"
+        >
+          <CurrencyInput
+            label="미임대분 건물 기준시가"
+            value={
+              item.vacantBuildingStandardPrice != null
+                ? String(item.vacantBuildingStandardPrice)
+                : ""
+            }
+            onChange={(v) => set({ vacantBuildingStandardPrice: parseAmount(v) || undefined })}
+            hideLabel
+            hideUnit
+          />
+        </FieldCard>
+        {noLandBase ? (
+          <p className="text-[11px] text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+            ⚠️ 부수토지 개별공시지가 미입력 — 미임대분 토지 안분 불가(건물분만 반영)
+          </p>
+        ) : (
+          <div className="rounded-md border border-sky-200 bg-sky-100/60 px-2 py-1.5 text-[11px] space-y-0.5 dark:border-sky-800/40 dark:bg-sky-950/30">
+            <div className="flex justify-between">
+              <span className="text-sky-700 dark:text-sky-300">
+                미임대분 토지 기준시가 (전체 토지 × 미임대면적 ÷ 전체면적)
+              </span>
+              <span className="font-mono tabular-nums">
+                {vacantLandStd.toLocaleString("ko-KR")}
+              </span>
+            </div>
+            <div className="flex justify-between font-semibold">
+              <span className="text-sky-800 dark:text-sky-200">미임대분 기준시가 합계</span>
+              <span className="font-mono tabular-nums">
+                {vacantTotal.toLocaleString("ko-KR")}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </ToggleCard>
+  );
+}
 
 export function EstateBodySupplementaryValuation({
   item,
@@ -159,6 +253,12 @@ export function EstateBodySupplementaryValuation({
             />
           </div>
         )}
+        {/* §61⑤ 미임대(공실) — 경로 B + 임대 중(월 임대료>0)일 때만. monthlyRent는 형제 CollateralLeaseFields에서 write, 여기선 read */}
+        {cat === "real_estate_building" &&
+          separateLandMode &&
+          (item.monthlyRent ?? 0) > 0 && (
+            <VacancyPortionFields item={item} set={set} />
+          )}
       </div>
     </ToggleCard>
   );

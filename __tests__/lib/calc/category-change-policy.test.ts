@@ -207,9 +207,9 @@ describe("computeLossFields", () => {
 // LOSS_FIELD_LABELS — 한국어 라벨 매트릭스
 // ============================================================
 
-describe("LOSS_FIELD_LABELS — 한국어 라벨 13건", () => {
-  it("13개 필드 모두 정의", () => {
-    expect(Object.keys(LOSS_FIELD_LABELS)).toHaveLength(13);
+describe("LOSS_FIELD_LABELS — 한국어 라벨 16건", () => {
+  it("16개 필드 모두 정의 (§61⑤ 미임대 3필드 포함)", () => {
+    expect(Object.keys(LOSS_FIELD_LABELS)).toHaveLength(16);
   });
 
   it("주요 라벨 sample", () => {
@@ -218,5 +218,6 @@ describe("LOSS_FIELD_LABELS — 한국어 라벨 13건", () => {
       "§14 담보채무 자동공제",
     );
     expect(LOSS_FIELD_LABELS.deemedCategory).toBe("간주상속재산 분류");
+    expect(LOSS_FIELD_LABELS.vacantBuildingStandardPrice).toBe("미임대분 건물 기준시가");
   });
 });

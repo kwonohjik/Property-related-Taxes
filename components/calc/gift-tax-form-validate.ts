@@ -20,6 +20,7 @@ import {
 } from "@/lib/tax-engine/gift-special-stream";
 import { isSameDonorGroup, getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
+import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
 
 /**
  * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
@@ -43,6 +44,11 @@ export function validateStep(step: number, form: FormState): string | null {
     );
     if (needsName.some((it) => !it.name.trim())) {
       return "모든 증여재산에 자산명을 입력하세요.";
+    }
+    // §61⑤ 미임대(공실) 부분 입력 정합 (rental-vacancy-portion) — 상속과 동일 단일 헬퍼
+    for (const it of form.giftItems) {
+      const ve = validateVacancyPortion(it);
+      if (ve) return ve;
     }
     // ─── 부담부증여 양도소득세 함께 계산 — 토글 ON 검증 ───
     // (설계 §9⑧ — 자동 안분 fallback 금지, 미입력=차단)

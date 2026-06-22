@@ -19,6 +19,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { validateSubstituteHeirs } from "@/lib/calc/inheritance-validate-substitute";
+import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
 import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 import { checkMarriageBirthGiftRule } from "@/lib/calc/prior-gift-marriage-birth-rule";
@@ -399,6 +400,9 @@ export function validateInheritanceTaxInput(
     // 담보채무 §14 자동공제 opt-in 검증 (B8, 설계 §3-5)
     const cde = validateCollateralDebtOptIn(item);
     if (cde) return cde;
+    // §61⑤ 미임대(공실) 부분 입력 정합 (rental-vacancy-portion)
+    const ve = validateVacancyPortion(item);
+    if (ve) return ve;
   }
   // 가업상속공제 요건 날짜 정합성 (Phase 1, 2026-06-02)
   const fbDateErr = validateFamilyBusinessDates(

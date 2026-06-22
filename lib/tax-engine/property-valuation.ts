@@ -11,6 +11,7 @@
 
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { safeMultiply } from "./tax-utils";
 import type {
   EstateItem,
   PropertyValuationResult,
@@ -94,6 +95,25 @@ function calcRentalConversionValue(item: EstateItem): number {
 }
 
 /**
+ * §61⑤·시행령 §50⑧1호·사전법령해석재산2020-(2021.06.04, 교재 인용·미검증) —
+ * 구분등기 안 된 1동 건물이 일부만 임대 중일 때 미임대(공실)분 기준시가.
+ *   미임대분 기준시가 = 미임대분 건물 기준시가(직접입력)
+ *                     + 미임대분 토지 기준시가(= 전체 부수토지 기준시가 × 미임대건물면적 / 전체건물면적)
+ * 토지는 면적 직접 안분(round 비율 곱 금지 — feedback_safemul_decimal_apportion_precision).
+ * 면적 미입력(0) 시 0 반환 → 임대료환산 단일 비교 동작 보존(완전 하위호환).
+ * export: UI 자동계산 박스가 동일 산식을 단일 진실로 재사용(single-source-engine-helper).
+ */
+export function calcVacantPortionStandardPrice(item: EstateItem): number {
+  const vacantArea = item.vacantBuildingArea ?? 0;
+  const totalArea = item.totalBuildingArea ?? 0;
+  if (vacantArea <= 0 || totalArea <= 0) return 0;
+  const vacantBuildingStd = item.vacantBuildingStandardPrice ?? 0;
+  const totalLandStd = item.appurtenantLandStandardPrice ?? 0;
+  const vacantLandStd = Math.floor(safeMultiply(totalLandStd, vacantArea) / totalArea);
+  return vacantBuildingStd + vacantLandStd;
+}
+
+/**
  * §66·시행령 §63 — 저당권 등이 설정된 재산 평가 특례.
  * §60 평가액(보충평가 시 §61⑤ 임대료환산가액과 MAX) 과 "그 재산이 담보하는 채권액"
  * (§63② — 저당[신용보증액 차감] + 전세/임대보증금 합산) 중 **큰 금액**(MAX). 차감이 아니라 하한.
@@ -106,14 +126,18 @@ function applyCollateralFloor(
   item: EstateItem,
   method: ValuationMethod,
 ): { valuatedAmount: number; securedClaim: number; raised: boolean; rentalRaised: boolean } {
-  // ㉱ 임대료환산가액 — 보충평가 케이스만 (§61⑤)
+  // ㉱ 임대료환산가액 — 보충평가 케이스만 (§61⑤). 1동 일부 임대 시 임대분 환산 + 미임대분 기준시가.
   let baseAmount = amount;
   let rentalRaised = false;
   if (method === "standard_price") {
     const rentalValue = calcRentalConversionValue(item);
-    if (rentalValue > amount) {
-      baseAmount = rentalValue;
-      rentalRaised = true;
+    if (rentalValue > 0) {
+      // 임대보증금 평가특례액 = 임대분 환산가액 + 미임대분 기준시가(미임대 미입력 시 0 = 종전 동작).
+      const specialValue = rentalValue + calcVacantPortionStandardPrice(item);
+      if (specialValue > amount) {
+        baseAmount = specialValue;
+        rentalRaised = true;
+      }
     }
   }
   // ㉲ 신용보증 차감 — 저당분(§66 1호)만, 음수 가드 (§63②)
@@ -131,7 +155,31 @@ function extraCollateralRows(
 ): CalculationStep[] {
   const rows: CalculationStep[] = [];
   if (rentalRaised) {
-    rows.push({ label: "§61⑤ 임대료환산가액 적용", amount: valuatedAmount, lawRef: VALUATION.RENTAL_CONVERSION });
+    const rentalValue = calcRentalConversionValue(item);
+    const vacantArea = item.vacantBuildingArea ?? 0;
+    const totalArea = item.totalBuildingArea ?? 0;
+    const hasVacant = vacantArea > 0 && totalArea > 0;
+    if (hasVacant) {
+      // 1동 일부 임대 — 임대분 환산 + 미임대분(건물·토지) 분해 표시 (§61⑤)
+      const vacantBuildingStd = item.vacantBuildingStandardPrice ?? 0;
+      const vacantLandStd = Math.floor(
+        safeMultiply(item.appurtenantLandStandardPrice ?? 0, vacantArea) / totalArea,
+      );
+      rows.push({ label: "§61⑤ 임대료환산가액 (임대분)", amount: rentalValue, lawRef: VALUATION.RENTAL_CONVERSION });
+      if (vacantBuildingStd > 0) {
+        rows.push({ label: "미임대분 건물 기준시가", amount: vacantBuildingStd, lawRef: VALUATION.RENTAL_CONVERSION });
+      }
+      if (vacantLandStd > 0) {
+        rows.push({ label: "미임대분 토지 기준시가 (면적안분)", amount: vacantLandStd, lawRef: VALUATION.RENTAL_CONVERSION });
+      }
+      rows.push({
+        label: "임대보증금 평가특례 합계",
+        amount: rentalValue + vacantBuildingStd + vacantLandStd,
+        lawRef: VALUATION.RENTAL_CONVERSION,
+      });
+    } else {
+      rows.push({ label: "§61⑤ 임대료환산가액 적용", amount: valuatedAmount, lawRef: VALUATION.RENTAL_CONVERSION });
+    }
   }
   const cg = item.creditGuaranteeAmount ?? 0;
   if (cg > 0) {
