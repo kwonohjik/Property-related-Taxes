@@ -385,6 +385,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.buildingType === "extension" && primary.extensionFloorArea
         ? parseFloat(primary.extensionFloorArea)
         : undefined,
+    extensionStdPriceAtAcquisition:
+      primary.buildingType === "extension"
+        ? parseAmount(primary.extensionStdPriceAtAcquisition) || undefined
+        : undefined,
     // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
     selfOwns: primary.selfOwns !== "both" ? primary.selfOwns : undefined,
     // PHD 모드: 취득일 동일이어도 calcSplitGain 진입을 위해 landAcquisitionDate를 acquisitionDate로 fallback.

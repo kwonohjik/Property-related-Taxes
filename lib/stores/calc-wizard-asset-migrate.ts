@@ -459,5 +459,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   applyPhase3Normalize(a);
   // ③ regionCode normalize — 구 세션에 없으면 undefined (optional, string 아닌 값 제거)
   if (a.regionCode !== undefined && typeof a.regionCode !== "string") a.regionCode = undefined;
+  // ③ §114조의2 Phase2: 증축부분 취득시 기준시가 총액 — 구 세션 복원 방어
+  if (a.extensionStdPriceAtAcquisition === undefined) a.extensionStdPriceAtAcquisition = "";
   return a as unknown as AssetForm;
 }

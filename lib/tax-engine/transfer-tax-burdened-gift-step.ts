@@ -6,6 +6,7 @@
  */
 
 import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible, detectBurdenedGiftMultiHouseWarning } from "./burdened-gift-apportionment";
+import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
@@ -54,6 +55,20 @@ export function runBurdenedGiftStep(
     const isK5SelfBuilt =
       rawInput.burdenedGiftInfo.acquisitionMethod === "converted" &&
       rawInput.isSelfBuilt === true;
+    // §114조의2① 증축: penalty base를 증축부분 한정 환산취득가로 교체 (건물 전체 base 과대부과 방지).
+    // 증축부분 환산취득가 = 채무안분 건물양도가 × (증축부분 취득기준시가 ÷ 양도시 건물 기준시가).
+    // 기존 환산취득가 헬퍼 재사용(single-source) — 통상 양도 경로와 동일 산식.
+    const extensionPenaltyBase =
+      isK5SelfBuilt &&
+      rawInput.buildingType === "extension" &&
+      (rawInput.extensionStdPriceAtAcquisition ?? 0) > 0 &&
+      rawInput.burdenedGiftInfo.buildingStdPriceAtTransfer > 0
+        ? calculateEstimatedAcquisitionPrice(
+            building.transferPrice,
+            rawInput.extensionStdPriceAtAcquisition!,
+            rawInput.burdenedGiftInfo.buildingStdPriceAtTransfer,
+          )
+        : undefined;
     workingInput = {
       ...workingInput,
       transferPrice: totalTransferPrice,
@@ -67,7 +82,11 @@ export function runBurdenedGiftStep(
         ? {
             acquisitionMethod: "estimated" as const,
             usedEstimatedAcquisition: true,
-            estimatedBase: building.acquisitionPrice,
+            // 증축: 증축부분 한정 base / 신축: 건물 전체 환산취득가 (기존 동작)
+            estimatedBase: extensionPenaltyBase ?? building.acquisitionPrice,
+            // 85㎡ 게이트(rate-calc)가 읽는 신호 — spread 의존 제거용 명시 전달(안전 강화)
+            buildingType: rawInput.buildingType,
+            extensionFloorArea: rawInput.extensionFloorArea,
           }
         : {}),
     };

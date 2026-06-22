@@ -81,6 +81,8 @@ export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
     a.gbExtensionActualAcquisitionPrice = "";
     a.gbExtensionActualExpenses = "";
   }
+  // ③ §114조의2 Phase2: 증축부분 바닥면적 합계 (85㎡ 게이트용) — 구 세션 복원 방어
+  if (a.gbExtensionFloorArea85 === undefined) a.gbExtensionFloorArea85 = "";
 }
 
 /**

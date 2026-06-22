@@ -628,6 +628,9 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       return `${label}: 신축·증축 완공일이 양도일(${formTransferDate}) 이후입니다. 날짜를 확인하세요.`;
     if (asset.buildingType === "extension" && (!asset.extensionFloorArea || parseFloat(asset.extensionFloorArea) <= 0))
       return `${label}: 증축 부분 바닥면적을 입력하세요.`;
+    // §114조의2① Phase2: 증축부분 취득시 기준시가 필수 (환산 취득가 산출 기준)
+    if (asset.buildingType === "extension" && (!asset.extensionStdPriceAtAcquisition || parseAmount(asset.extensionStdPriceAtAcquisition) <= 0))
+      return `${label}: 증축부분 취득(완공)당시 기준시가 총액을 입력해 주세요.`;
   }
 
   return null;

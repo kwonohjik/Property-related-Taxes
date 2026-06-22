@@ -153,6 +153,12 @@ export type GeneralBuildingInput = {
     /** 증축 연면적 (㎡) — 정보용 (위치지수 산정 확장 대비, 산식 미사용, 선택) */
     extensionArea?: number;
     /**
+     * 증축 바닥면적 합계 (㎡) — 소득세법 §114조의2① 85㎡ 초과 게이트 전용.
+     * 신축은 면적 무관, 증축만 이 값으로 가산세 발동 판정(extensionFloorArea85 > 85).
+     * 정보용 extensionArea(연면적)와 구분 — 게이트에는 이 필드만 사용.
+     */
+    extensionFloorArea85?: number;
+    /**
      * 양도시 건물2 기준시가 총액 (원) — UI에서 단가 곱한 총액 받음. ㎡당 단가 아님.
      * acquisitionMode === "estimated" 시 필수. 실가 모드 시 미입력 허용.
      */
@@ -340,6 +346,17 @@ export type AssetCardForAggregate = {
    * 결과 카드 배지 표시용. 산식에는 미사용.
    */
   isExtensionBuilding?: boolean;
+  /**
+   * 건물2(증축) 카드만 "extension" set. 소득세법 §114조의2① 85㎡ 게이트 진입용.
+   * 라우트(buildProperties)가 TransferTaxItemInput.buildingType으로 패스스루.
+   * 건물1·토지·신축 건물은 undefined(extension 아님 → 신축/일반 취급).
+   */
+  buildingType?: "new" | "extension";
+  /**
+   * 증축 바닥면적 합계 (㎡) — buildingType==="extension" 카드만 set.
+   * 라우트가 TransferTaxItemInput.extensionFloorArea로 패스스루 → 85㎡ 초과 게이트.
+   */
+  extensionFloorArea?: number;
   /**
    * 사례 35: 주택→상가 용도변경 LTHD 분기 — 각 자산 카드에 동일 spread.
    * `propertyType === "general_building"` 자산 전체 속성이므로 토지·건물 모든 카드에 전파.

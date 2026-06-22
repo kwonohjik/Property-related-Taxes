@@ -17,6 +17,7 @@ import {
   calculateHoldingPeriod,
   isSurchargeSuspended,
   truncateToWon,
+  calculateEstimatedAcquisitionPrice,
 } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -84,6 +85,36 @@ export function calculateBuildingPenalty(
     penalty,
     note: `${typeLabel} 5년 이내 양도 + ${methodLabel} 적용`,
   };
+}
+
+/**
+ * §114조의2① 증축부분 한정 penalty base — 정상·손실 경로 공통 (single-source).
+ * 통상(비-부담부) 환산(K-5) 양도에서 base를 증축부분 한정 환산취득가로 산출.
+ *   증축부분 환산취득가 = 양도가 × (증축부분 취득기준시가 ÷ 양도시 건물 기준시가) — calculateEstimatedAcquisitionPrice 재사용.
+ * - 부담부증여(transferType/acquisitionCause)는 step override가 effectiveInput.estimatedBase에 증축부분 base를 이미 실으므로 배제(fullBuildingBase 그대로).
+ * - 신축·비환산·증축필드 미입력 시 fullBuildingBase(건물 전체) 유지.
+ * finalize STEP 10.5(정상 이익)와 transfer-tax.ts 손실 조기반환(§114조의2② 산출세액0) 양쪽에서 호출 — dual-truth 방지.
+ */
+export function resolveExtensionPenaltyBase(
+  input: TransferTaxInput,
+  fullBuildingBase: number,
+): number {
+  const isBurdenedGiftPath =
+    input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift";
+  if (
+    !isBurdenedGiftPath &&
+    input.useEstimatedAcquisition &&
+    input.buildingType === "extension" &&
+    (input.extensionStdPriceAtAcquisition ?? 0) > 0 &&
+    (input.standardPriceAtTransfer ?? 0) > 0
+  ) {
+    return calculateEstimatedAcquisitionPrice(
+      input.transferPrice,
+      input.extensionStdPriceAtAcquisition!,
+      input.standardPriceAtTransfer!,
+    );
+  }
+  return fullBuildingBase;
 }
 
 // ============================================================

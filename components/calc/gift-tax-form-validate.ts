@@ -120,8 +120,15 @@ export function validateStep(step: number, form: FormState): string | null {
           if (bgt.isSelfBuilt === true && !bgt.constructionDate) {
             return `${itemLabel}: 신축·증축 건물의 신축일(취득일)을 입력하세요. (§114조의2 5년 기산 필수)`;
           }
-          // TODO(Phase 2 증축): buildingType==="extension" 활성화 시 extensionFloorArea>0 필수 차단 추가.
-          //   현재 UI는 증축 disabled(Phase 1 신축만). 미입력 시 엔진 rate-calc.ts (extensionFloorArea ?? 0)<=85 → 침묵 미발동.
+          // Phase 2 증축 필수 차단 — 자동 안분 fallback 금지
+          if (bgt.isSelfBuilt === true && bgt.buildingType === "extension") {
+            if (!bgt.extensionFloorArea || bgt.extensionFloorArea <= 0) {
+              return `${itemLabel}: 증축부분 바닥면적 합계를 입력해 주세요. §114조의2① 85㎡ 초과 판정에 필요합니다.`;
+            }
+            if (!bgt.extensionStdPriceAtAcquisition || bgt.extensionStdPriceAtAcquisition <= 0) {
+              return `${itemLabel}: 증축부분 취득시 기준시가를 입력해 주세요. §114조의2① 증축부분 한정 환산취득가 산출에 필요합니다.`;
+            }
+          }
         }
       } else {
         // 기준시가 모드(K-1~K-3): 양도시 기준시가 필수 — 건물·아파트 및 토지 모두

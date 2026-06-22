@@ -71,6 +71,7 @@ function createEmptyBgt(): BurdenedGiftTransferTaxInput {
     buildingType: undefined,
     constructionDate: undefined,
     extensionFloorArea: undefined,
+    extensionStdPriceAtAcquisition: undefined,
   };
 }
 
@@ -91,7 +92,9 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     !!bgt.transferExpense ||
     !!bgt.landStdPriceAtTransfer ||
     bgt.isSelfBuilt === true ||
-    !!bgt.constructionDate
+    !!bgt.constructionDate ||
+    (bgt.extensionFloorArea ?? 0) > 0 ||
+    bgt.extensionStdPriceAtAcquisition != null
   );
 }
 

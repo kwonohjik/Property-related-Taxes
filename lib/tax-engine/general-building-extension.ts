@@ -356,6 +356,8 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     isNonBusinessLand: false,
     isExtensionBuilding: true,
     isSelfBuilt: building2IsSelfBuilt,
+    buildingType: "extension", // §114조의2① 증축 — 85㎡ 게이트 진입 (신축 취급 방지)
+    extensionFloorArea: ext.extensionFloorArea85, // 85㎡ 초과 판정값
     buildingAcquisitionDate: ext.extensionDate, // §114조의2 5년 기산점
     buildingAcquisitionCause: ext.extensionAcquisitionCause,
   });

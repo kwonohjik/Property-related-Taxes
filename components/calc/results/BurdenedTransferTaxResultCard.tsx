@@ -174,7 +174,7 @@ function SingleTransferResultCard({
         <Row label="결정세액" value={formatKRW(result.determinedTax)} highlight />
         {result.penaltyTax > 0 && (
           <Row
-            label="신축·증축 가산세 (§114조의2 · 건물 환산취득가 × 5%)"
+            label="감정가액 또는 환산취득가액 적용 가산세 (§114조의2①)"
             value={formatKRW(result.penaltyTax)}
             sub
           />

@@ -118,6 +118,11 @@ export const generalBuildingValuationSchema = z.object({
        * 증축 필요경비 (원). 실가 모드 시 입력 가능. 0 허용(미입력 = 0으로 처리).
        */
       actualExpenses: z.number().int().nonnegative().optional(),
+      /**
+       * §114조의2① 85㎡ 초과 게이트 전용 증축부분 바닥면적 합계 (㎡).
+       * extensionAcquisitionCause==="newConstruction" 시 전달. 미전달 시 0으로 처리 → 가산세 미발동.
+       */
+      extensionFloorArea85: z.number().nonnegative().optional(),
     })
     .superRefine((ext, ctx) => {
       if (ext.acquisitionMode === "estimated") {

@@ -418,7 +418,7 @@ export function TransferTaxResultView({
                   <>
                     <Row label="가산세 합계" value={`+ ${formatKRW(totalAllPenalty)}`} />
                     {result.penaltyTax > 0 && (
-                      <Row label="환산가액적용가산세 (§114조의2)" value={formatKRW(result.penaltyTax)} sub />
+                      <Row label="감정가액 또는 환산취득가액 적용 가산세 (§114조의2①)" value={formatKRW(result.penaltyTax)} sub />
                     )}
                     {result.penaltyDetail?.filingPenalty && result.penaltyDetail.filingPenalty.filingPenalty > 0 && (
                       <Row

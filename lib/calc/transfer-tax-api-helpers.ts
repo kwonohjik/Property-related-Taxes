@@ -160,12 +160,19 @@ function buildExtensionInfo(
     );
   }
 
+  // §114조의2① 85㎡ 게이트: newConstruction 시만 전달. 미입력(0) → 85㎡ 이하 처리로 가산세 미발동.
+  const extensionFloorArea85 =
+    extensionCause === "newConstruction"
+      ? parseDecimal(asset.gbExtensionFloorArea85) || undefined
+      : undefined;
+
   // 공통 base 필드
   const base = {
     extensionDate,                               // string — route handler에서 toOptionalDate 변환 (⑭)
     ...(extensionArea ? { extensionArea } : {}), // 선택 필드: 미입력 시 미전달
     extensionAcquisitionCause: extensionCause,
     acquisitionMode: mode,
+    ...(extensionFloorArea85 ? { extensionFloorArea85 } : {}),
   };
 
   if (mode === "estimated") {

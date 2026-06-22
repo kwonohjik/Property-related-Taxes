@@ -176,6 +176,8 @@ const propertyBaseShape = {
   buildingType: z.enum(["new", "extension"]).optional(),
   constructionDate: z.string().date().optional(),
   extensionFloorArea: z.number().nonnegative().optional(),
+  // ⑫ Phase 2 증축 — 증축부분 취득시 기준시가 총액(원). §114조의2① 증축부분 환산취득가 분자.
+  extensionStdPriceAtAcquisition: z.number().nonnegative().optional(),
   pre1990Land: pre1990LandSchema.optional(),
   parcels: z.array(parcelSchema).max(10).optional(),
 
