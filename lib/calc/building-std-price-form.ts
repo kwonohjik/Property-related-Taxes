@@ -440,6 +440,25 @@ function validateCompositeParts(f: BuildingStdPriceFormState, forTransfer: boole
   return null;
 }
 
+/**
+ * 상속·증여 경로 B 부수토지 평가액(§61①1호) = 대지면적 × ㎡당 개별공시지가.
+ * 모달에서 위치지수 산정용으로 이미 입력한 토지 정보로 산출 → 호출부가 부수토지 필드에 자동 전달(중복 입력 제거).
+ * 양도이거나 면적·단가 미입력이면 0(전달 안 함). 라운딩은 StandardPriceInput(단가×면적 floor)과 일치.
+ */
+export function computeValuationLandTotal(f: BuildingStdPriceFormState): number {
+  if (f.taxType !== "inheritance_gift") return 0;
+  if (f.landParcelMode) {
+    return f.landParcels.reduce((sum, p) => {
+      const area = parseDecimal(p.areaM2);
+      const price = parseAmount(p.pricePerM2);
+      return area > 0 && price > 0 ? sum + Math.floor(price * area) : sum;
+    }, 0);
+  }
+  const area = parseDecimal(f.landAreaM2);
+  const price = parseAmount(f.valLandPrice);
+  return area > 0 && price > 0 ? Math.floor(price * area) : 0;
+}
+
 /** 검증(⑧). 엔진 silent-fallback 식별표와 동기화. 통과 = null. */
 export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): string | null {
   const builtYear = intOrUndef(f.builtYear);

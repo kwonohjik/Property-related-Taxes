@@ -231,7 +231,15 @@ export function EstateBodySupplementaryValuation({
               buttonLabel="건물 기준시가 계산"
               lockedTaxType="inheritance_gift"
               initialAddress={addrValue}
-              onApply={(v) => set({ standardPrice: v })}
+              onApply={(v, land) =>
+                set({
+                  standardPrice: v,
+                  // 경로 B: 모달이 토지면적×공시지가로 산출한 부수토지(§61①1호)도 함께 채움(중복 입력 제거)
+                  ...(separateLandMode && land && land > 0
+                    ? { appurtenantLandStandardPrice: land }
+                    : {}),
+                })
+              }
             />
           </div>
         )}
