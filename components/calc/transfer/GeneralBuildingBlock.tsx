@@ -344,7 +344,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             <CurrencyInput label="양도시 건물기준시가" hideUnit value={asset.gbTransferBuildingValue} onChange={(v) => onChange({ gbTransferBuildingValue: v })} />
           </FieldCard>
           <div className="flex justify-end">
-            <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
+            <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-transfer`} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
           </div>
         </div>
 
@@ -371,7 +371,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <CurrencyInput label="취득시 건물기준시가" hideUnit value={asset.gbAcqBuildingValue} onChange={(v) => onChange({ gbAcqBuildingValue: v })} />
             </FieldCard>
             <div className="flex justify-end">
-              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
+              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-acq`} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
             </div>
 
             <div className="rounded bg-violet-50/60 border border-violet-200 px-3 py-2 text-xs text-violet-700 space-y-0.5">

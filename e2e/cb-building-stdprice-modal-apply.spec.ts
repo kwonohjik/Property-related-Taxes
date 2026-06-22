@@ -93,5 +93,14 @@ test.describe("건물 기준시가 모달 — 복합구조 적용 + 부수토지
       .getByText("건물 기준시가", { exact: true })
       .locator("xpath=following-sibling::div//input");
     await expect(buildingTotal).toHaveValue(building!);
+
+    // ── 정정: 모달 재오픈 시 직전 입력 스냅샷 복원 ─────────────────
+    await page.getByRole("button", { name: "건물 기준시가 계산" }).click();
+    const modal2 = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
+    await expect(modal2).toBeVisible();
+    // 빈 폼이 아니라 직전 입력이 복원됨(신축연도·부속토지면적·복합 부분 면적)
+    await expect(modal2.getByPlaceholder("신축연도 (4자리)")).toHaveValue("2000");
+    await expect(modal2.getByPlaceholder("부속토지 면적")).toHaveValue("300");
+    await expect(modal2.getByPlaceholder("부분 면적").first()).toHaveValue("180");
   });
 });
