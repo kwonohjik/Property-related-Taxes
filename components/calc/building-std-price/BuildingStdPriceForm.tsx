@@ -708,6 +708,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
         open={adjOpen}
         onOpenChange={setAdjOpen}
         structureIndex={valStructureIndex}
+        structureKey={f.valStructureKey}
         floorArea={parseFloat(f.floorArea.replace(/,/g, "")) || 0}
         isResidential={f.isResidentialUse}
         isApartment={f.isApartmentUse}

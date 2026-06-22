@@ -345,7 +345,7 @@ test("조정률 모달 — 구조지수 100 미만 구조에서 지붕재료(I�
   // "건물 특성으로 계산" 라디오 클릭 → 모달 자동 오픈(별도 버튼 없음)
   await page.getByText("건물 특성으로 계산", { exact: true }).click();
 
-  const roofPanel = page.getByRole("radio", { name: "패널 등 (80)" });
+  const roofPanel = page.getByRole("radio", { name: "패널·유리·슬레이트 등 (80)" });
   await expect(roofPanel).toBeEnabled();
   await roofPanel.click();
   await expect(page.getByText("예상 조정률: 80.0%")).toBeVisible();
@@ -356,7 +356,7 @@ test("조정률 모달 — 구조지수 100 미만 구조에서 지붕재료(I�
   await page.getByRole("option", { name: /^철근콘크리트조/ }).first().click();
   // 취소 후 features 모드 유지·미적용 → "건물 특성으로 계산 열기" 링크로 재오픈
   await page.getByRole("button", { name: "건물 특성으로 계산 열기" }).click();
-  await expect(page.getByRole("radio", { name: "패널 등 (80)" })).toBeDisabled();
+  await expect(page.getByRole("radio", { name: "패널·유리·슬레이트 등 (80)" })).toBeDisabled();
   await expect(page.getByText("구조지수 100 이상 — 미적용")).toBeVisible();
 });
 

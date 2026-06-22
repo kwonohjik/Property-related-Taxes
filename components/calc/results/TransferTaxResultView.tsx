@@ -34,6 +34,10 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
+  BuildingStdPriceReportSection,
+  hasBuildingStdReport,
+} from "@/components/calc/results/BuildingStdPriceReportSection";
+import {
   TRANSFER_PRINT_SECTIONS,
   type TransferPrintSectionId,
 } from "@/lib/print/transfer-print-sections";
@@ -98,8 +102,9 @@ export function TransferTaxResultView({
     s.add("calculation");
     if (result.preHousingDisclosureDetail) s.add("phd");
     if (result.splitDetail) s.add("split-detail");
+    if (hasBuildingStdReport({ assets: formData?.assets })) s.add("building-std-report");
     return s;
-  }, [result]);
+  }, [result, formData]);
 
   return (
     <div className="space-y-5">
@@ -589,6 +594,11 @@ export function TransferTaxResultView({
           </PrintSection>
         );
       })()}
+
+      {/* 건물 기준시가 계산서 (모달 스냅샷 재유도 — 스냅샷 있을 때만 렌더) */}
+      <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
+        <BuildingStdPriceReportSection inputData={{ assets: formData?.assets }} />
+      </PrintSection>
 
       {/* 계산 과정 토글은 명세서 카드 내 'EngineStepsSubToggle'로 통합됨 (2026-05-12) */}
 

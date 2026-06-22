@@ -29,6 +29,7 @@ import {
   calcSameYearTransferStdPrice,
   calcSpecialAdjustmentRate,
   describeSpecialAdjustment,
+  selectSpecialAdjustment,
   weightedAvgLandPrice,
   calcApartmentConversion,
   calcCompositeForYear,
@@ -222,6 +223,7 @@ function computeAdjustmentRate(
   return calcSpecialAdjustmentRate(input.specialFeatures, structureIndex, input.floorArea, {
     isResidential: !!input.isResidentialUse,
     isApartment: !!input.isApartmentUse,
+    structureKey: point.structureKey, // II 최고층수 통나무조 제외 판정
   });
 }
 
@@ -265,15 +267,25 @@ export function calcBuildingStandardPrice(
         remodelYear: input.remodelYear,
         isInheritanceGift: true,
       });
-      // 조정율 특성 설명 echo(인쇄·적용요령용) — 특성 모드만(직접입력은 undefined)
-      if (input.manualAdjustmentRate == null && input.specialFeatures && valuation.applyNotes) {
+      // 조정율 특성 설명·번호 echo(인쇄·계산서용) — 특성 모드만(직접입력은 undefined)
+      if (input.manualAdjustmentRate == null && input.specialFeatures) {
         const structureIndex = resolveStructureIndex(year, point.structureKey) ?? 0;
-        valuation.applyNotes.adjustment = describeSpecialAdjustment(
-          input.specialFeatures,
-          structureIndex,
-          input.floorArea,
-          { isResidential: !!input.isResidentialUse, isApartment: !!input.isApartmentUse },
-        );
+        const adjCtx = {
+          isResidential: !!input.isResidentialUse,
+          isApartment: !!input.isApartmentUse,
+          structureKey: point.structureKey,
+        };
+        if (valuation.applyNotes) {
+          valuation.applyNotes.adjustment = describeSpecialAdjustment(
+            input.specialFeatures,
+            structureIndex,
+            input.floorArea,
+            adjCtx,
+          );
+        }
+        // 계산서 Ⅲ "조정률(번호)" 칸 echo — 단일 경로 누락 방지(복합은 calcCompositeForYear에서 부착)
+        const sel = selectSpecialAdjustment(input.specialFeatures, structureIndex, input.floorArea, adjCtx);
+        if (sel.length > 0) valuation.adjustmentItems = sel.map((s) => ({ nos: s.nos, rate: s.rate }));
       }
     }
     return { valuation, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_INHERITANCE };

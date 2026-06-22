@@ -37,6 +37,7 @@ export type GiftPrintSectionId =
   | "filing-form-10"
   | "simultaneous-filing-10"
   | "valuation-form"
+  | "building-std-report"
   | "unlisted-stock-besshi"
   | "unlisted-stock-simple"
   | "listed-stock-besshi"
@@ -91,6 +92,7 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
     id: "group:valuation",
     label: "재산 평가",
     children: [
+      { id: "building-std-report", label: "건물 기준시가 계산서", channel: SCREEN_PDF },
       // PR-B2: gift-besshi-pages 위임 완료 → pdf 승격 (주식 별지 react-pdf는 PR-3b 재사용)
       { id: "unlisted-stock-besshi", label: "비상장주식 별지4 부표3 (정식평가)", channel: SCREEN_PDF },
       { id: "unlisted-stock-simple", label: "비상장주식 평가조서 (간편평가)", channel: SCREEN },

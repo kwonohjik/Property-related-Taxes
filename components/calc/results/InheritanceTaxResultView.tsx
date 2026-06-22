@@ -32,6 +32,7 @@ import { SplitPaymentCard } from "./installment/SplitPaymentCard";
 import { CulturalHeritageDeferralCard } from "./inheritance/CulturalHeritageDeferralCard";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { BuildingStdPriceReportSection } from "@/components/calc/results/BuildingStdPriceReportSection";
 import { INHERITANCE_PRINT_SECTIONS } from "@/lib/print/inheritance-print-sections";
 import { DeductionBreakdownSection } from "./deduction-breakdown/DeductionBreakdownSection";
 import { AllocationBreakdownSection } from "./allocation-breakdown/AllocationBreakdownSection";
@@ -495,6 +496,11 @@ export function InheritanceTaxResultView({
           </div>
         )}
       </div>
+      </PrintSection>
+
+      {/* 건물 기준시가 계산서 (모달 스냅샷 재유도 — 스냅샷 있을 때만 렌더) */}
+      <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
+        <BuildingStdPriceReportSection inputData={{ estateItems }} />
       </PrintSection>
 
       {/* 비상장주식 별지 부표3 출력 (정식평가 V2 자산) */}

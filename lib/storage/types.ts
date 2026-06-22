@@ -94,6 +94,8 @@ export interface CalculationRecord {
    * 인덱스 없음 — 200건 상한 내 in-memory scan.
    */
   businessKey?: string;
+  // 건물 기준시가 모달 스냅샷은 input_data 안에 `buildingStdSnapshots` 키로 동반 저장한다
+  // (이력 복원·서버 PDF가 동일 위치에서 재유도 — Supabase input_data jsonb 호환). 별도 컬럼 없음.
   createdAt: string;
   updatedAt: string;
 }

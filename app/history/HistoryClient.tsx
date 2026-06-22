@@ -6,6 +6,7 @@ import { calculationRepository } from "@/lib/storage/calculation-repository";
 import { clientRepository } from "@/lib/storage/client-repository";
 import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
+import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
 
@@ -213,6 +214,16 @@ export function HistoryClient() {
     // 미지정 이력은 일단 'manualPassed' 의도된 진입으로 간주하기 어려움 → 미지정 이력은 그대로 게이트 노출).
     if (record.clientId) {
       useProfessionalStore.getState().setActiveClientId(record.clientId);
+    }
+    // 건물 기준시가 모달 입력 스냅샷 복원 — 결과탭 「건물 기준시가 계산서」 서식 재유도용(세목 무관).
+    // input_data 안에 동반 저장된 스냅샷을 세션 스토어로 re-hydrate.
+    const bspSnaps = (record.inputData as { buildingStdSnapshots?: Record<string, unknown> })
+      ?.buildingStdSnapshots;
+    if (bspSnaps && typeof bspSnaps === "object") {
+      const prev = useBuildingStdSnapshotStore.getState().snapshots;
+      useBuildingStdSnapshotStore.setState({
+        snapshots: { ...prev, ...(bspSnaps as typeof prev) },
+      });
     }
     if (record.taxType === "transfer") {
       import("@/lib/stores/calc-wizard-store").then(({ useCalcWizardStore }) => {

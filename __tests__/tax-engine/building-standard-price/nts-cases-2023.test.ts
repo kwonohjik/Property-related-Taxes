@@ -199,7 +199,7 @@ describe("적용요령 echo(applyNotes) — 인쇄 서식용", () => {
       specialFeatures: { roofMaterial: 1, maxFloors: 1 }, // 징크(#1, 율100) + 5층이하(#4, 율90)
     }).valuation;
     expect(v?.adjustmentRate).toBe(0.9); // 100×90/100² = 0.9 (selectSpecialAdjustment 단일출처)
-    expect(v?.applyNotes?.adjustment).toBe("1. 기와·징크·아스팔트싱글 등 지붕 & 4. 5층 이하");
+    expect(v?.applyNotes?.adjustment).toBe("1. 슬래브·기와·징크 등 지붕 & 4. 5층 이하");
   });
 });
 

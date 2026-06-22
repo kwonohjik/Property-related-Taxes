@@ -4,7 +4,31 @@ import { useEffect, useRef, useState } from "react";
 import { calculationRepository } from "./calculation-repository";
 import { clientRepository } from "./client-repository";
 import { generateTitle } from "./title-generator";
+import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
+import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import type { LocalTaxType } from "./types";
+
+/**
+ * 이번 계산에 관련된 건물 기준시가 스냅샷만 추출(이력 동반 저장용).
+ * 키에 박힌 자산/재산 id가 inputData에 등장하면 이 계산 소속으로 판정 — 세목 무관(transfer assetId·estate id 공통).
+ */
+function extractRelevantBuildingStdSnapshots(
+  inputData: Record<string, unknown>,
+): Record<string, BuildingStdPriceFormState> | undefined {
+  const all = useBuildingStdSnapshotStore.getState().snapshots;
+  const keys = Object.keys(all);
+  if (keys.length === 0) return undefined;
+  const inputStr = JSON.stringify(inputData);
+  const relevant: Record<string, BuildingStdPriceFormState> = {};
+  for (const k of keys) {
+    // bsp-estate-${id} | bsp-${assetId}-{gb|cb}-{acq|transfer}
+    const id = k.startsWith("bsp-estate-")
+      ? k.slice("bsp-estate-".length)
+      : k.replace(/^bsp-/, "").replace(/-(gb|cb)-(acq|transfer)$/, "");
+    if (id && inputStr.includes(id)) relevant[k] = all[k];
+  }
+  return Object.keys(relevant).length > 0 ? relevant : undefined;
+}
 
 export type AutoSaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -69,11 +93,15 @@ export function useAutoSaveCalculation({
 
     const now = new Date().toISOString();
     const title = generateTitle(taxType, inputData, now);
+    // 건물 기준시가 스냅샷을 input_data 안에 동반 저장 — 이력 복원·서버 PDF가 동일 위치에서 재유도.
+    // (Supabase는 input_data/result_data jsonb만 보유 → 서버 PDF는 input_data에서만 읽을 수 있음.)
+    const bspSnaps = extractRelevantBuildingStdSnapshots(inputData);
+    const inputDataToSave = bspSnaps ? { ...inputData, buildingStdSnapshots: bspSnaps } : inputData;
     calculationRepository
       .saveOrUpdateByBusinessKey({
         taxType,
         title,
-        inputData,
+        inputData: inputDataToSave,
         resultData: target,
         taxLawVersion,
         linkedCalculationId: null,
