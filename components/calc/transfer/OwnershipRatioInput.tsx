@@ -13,6 +13,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { isFractionalRatioStr } from "@/lib/calc/transfer-tax-api-helpers";
 import { cn } from "@/lib/utils";
 
@@ -50,27 +51,30 @@ export function OwnershipRatioInput({
         ) : null
       }
     >
-      <div className="flex items-center gap-2">
-        <div className="w-20">
-          <DecimalInput
-            value={numerator}
-            onChange={(v) => onChange({ numerator: v })}
-            placeholder="분자"
-          />
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <div className="w-20">
+            <DecimalInput
+              value={numerator}
+              onChange={(v) => onChange({ numerator: v })}
+              placeholder="분자"
+            />
+          </div>
+          <span className={cn("text-sm font-semibold text-muted-foreground select-none")}>/</span>
+          <div className="w-20">
+            <DecimalInput
+              value={denominator}
+              onChange={(v) => onChange({ denominator: v })}
+              placeholder="분모"
+            />
+          </div>
+          <span className="text-xs text-muted-foreground">
+            ({numerator && denominator && parseFloat(denominator) > 0
+              ? `${((parseFloat(numerator) / parseFloat(denominator)) * 100).toFixed(2)}%`
+              : "—"})
+          </span>
         </div>
-        <span className={cn("text-sm font-semibold text-muted-foreground select-none")}>/</span>
-        <div className="w-20">
-          <DecimalInput
-            value={denominator}
-            onChange={(v) => onChange({ denominator: v })}
-            placeholder="분모"
-          />
-        </div>
-        <span className="text-xs text-muted-foreground">
-          ({numerator && denominator && parseFloat(denominator) > 0
-            ? `${((parseFloat(numerator) / parseFloat(denominator)) * 100).toFixed(2)}%`
-            : "—"})
-        </span>
+        <ReferenceSiteLinks sites={[REFERENCE_SITES.realEstateRegister]} />
       </div>
     </FieldCard>
   );

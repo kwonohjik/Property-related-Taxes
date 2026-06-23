@@ -15,6 +15,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
 import { BuildingUsageSelect } from "./BuildingUsageSelect";
@@ -329,6 +330,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
 
       {/* ① 건물 기본 */}
       <SectionCard num={1} title="건물 기본" tone="sky">
+        <ReferenceSiteLinks sites={[REFERENCE_SITES.buildingRegister]} />
         <FieldCard label="신축연도" hint="준공·사용승인 연도">
           <DecimalInput value={f.builtYear} onChange={(v) => set("builtYear", v)} placeholder="신축연도 (4자리)" thousandSeparator={false} />
         </FieldCard>

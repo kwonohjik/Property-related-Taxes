@@ -27,6 +27,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
@@ -634,6 +635,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                   options={GB_ZONE_OPTIONS}
                 />
               </FieldCard>
+              <ReferenceSiteLinks className="-mt-1" sites={[REFERENCE_SITES.landUsePlan]} />
 
               {/* 수도권 여부 */}
               <ToggleCard

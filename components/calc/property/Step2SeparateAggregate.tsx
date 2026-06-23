@@ -5,6 +5,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { ZONING_DISTRICT_LABELS, type FormState } from "./shared";
 
 interface Props {
@@ -32,6 +33,7 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
           value={form.saZoningDistrict}
           onChange={(v) => onChange({ saZoningDistrict: v })}
         />
+        <ReferenceSiteLinks sites={[REFERENCE_SITES.landUsePlan]} />
       </div>
 
       {/* 토지 면적 */}

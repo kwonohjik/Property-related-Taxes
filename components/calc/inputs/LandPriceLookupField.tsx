@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
 
 export interface LandPriceLookupFieldProps {
@@ -180,6 +181,10 @@ export function LandPriceLookupField({
             소재지 입력 후 조회 가능합니다
           </p>
         )}
+        <ReferenceSiteLinks
+          className="mt-1.5"
+          sites={[REFERENCE_SITES.landPrice, REFERENCE_SITES.landRegister]}
+        />
       </FieldCard>
 
       {/* 공시지가 입력 + 토지기준시가 결과 — 2열 셀이 좁아 stacked(라벨 상단·입력 전폭)로 금액폭 확보 */}

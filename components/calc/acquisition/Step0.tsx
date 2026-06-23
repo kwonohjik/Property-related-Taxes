@@ -6,6 +6,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import {
   PROPERTY_TYPE_LABELS,
   INITIAL_FORM,
@@ -369,6 +370,7 @@ Step 3 "부담부증여 관계" 토글에서 배우자·직계존비속 여부 �
           <p className="text-xs text-muted-foreground -mt-2">
             잔금지급일·등기접수일 중 빠른 날이 취득일입니다. 미입력 시 오늘 날짜 사용.
           </p>
+          <ReferenceSiteLinks sites={[REFERENCE_SITES.realEstateRegister]} />
         </>
       )}
 
