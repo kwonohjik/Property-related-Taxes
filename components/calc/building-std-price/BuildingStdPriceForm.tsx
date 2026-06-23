@@ -424,7 +424,6 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               title="복합구조 (층·구역별 구조·용도 상이)"
               tone="violet"
               variant="card"
-              description="층·구역마다 구조·용도가 다른 건물을 각 부분 독립 계산 후 합산합니다. 취득시·양도시 용도를 시점별로 선택합니다(양도 조정률 미적용). 부속시설은 전 부분 면적비율로 안분합니다."
             >
               <CompositePartsSection
                 year={f.transferYear ? parseInt(f.transferYear, 10) : undefined}
