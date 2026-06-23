@@ -19,6 +19,7 @@ import { useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { CohabitReasonList } from "./CohabitReasonList";
 import { calcCohabitYears } from "@/lib/tax-engine/deductions/inheritance-cohabit-helpers";
 import type { CohabitReason } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -92,11 +93,13 @@ export function CohabitRequirementBlock({
         <LawArticleModal legalBasis="상증령 §20의2" label="상증령 §20의2 부득이사유" />
       </div>
 
-      <p className="text-[11px] text-violet-600 dark:text-violet-400 leading-relaxed">
-        동거 시작일을 입력하면 10년 이상 요건 충족 여부를 미리 확인할 수 있습니다.
-        상속개시일부터 소급 10년 이상(미성년자 기간 제외, 2016.1.1.~) 동거가 요건입니다.
-        미입력 시 동거주택 체크박스 확인 상태를 그대로 신뢰합니다.
-      </p>
+      <CollapsibleHintCard tone="violet" summary="§23의2 동거주택공제 요건 안내">
+        <p className="text-violet-600 dark:text-violet-400 leading-relaxed">
+          동거 시작일을 입력하면 10년 이상 요건 충족 여부를 미리 확인할 수 있습니다.
+          상속개시일부터 소급 10년 이상(미성년자 기간 제외, 2016.1.1.~) 동거가 요건입니다.
+          미입력 시 동거주택 체크박스 확인 상태를 그대로 신뢰합니다.
+        </p>
+      </CollapsibleHintCard>
 
       {/* 동거 시작일 */}
       <div className="space-y-1" data-testid="cohabit-start-date-input">
@@ -251,11 +254,12 @@ export function CohabitRequirementBlock({
       )}
 
       {/* G6 겸용주택·오피스텔 적용 범위 안내 (조합원입주권·분양권은 자산 카드 RadioCardGroup으로 대체) */}
-      <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20 p-2.5 text-[10px] text-sky-700 dark:text-sky-300 space-y-0.5">
-        <p className="font-semibold">§23의2 적용 범위 안내 (G6)</p>
-        <p>• 겸용주택: 주택 면적이 주택 외 면적보다 큰 경우 전부 주택으로 봄</p>
-        <p>• 상시주거용 오피스텔: 실제 주거 사용 확인 시 적용 가능</p>
-      </div>
+      <CollapsibleHintCard tone="sky" summary="§23의2 적용 범위 안내 (G6)">
+        <div className="text-sky-700 dark:text-sky-300 space-y-0.5">
+          <p>• 겸용주택: 주택 면적이 주택 외 면적보다 큰 경우 전부 주택으로 봄</p>
+          <p>• 상시주거용 오피스텔: 실제 주거 사용 확인 시 적용 가능</p>
+        </div>
+      </CollapsibleHintCard>
     </div>
   );
 }
