@@ -580,7 +580,6 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                   title="복합구조 (층·구역별 구조·용도 상이)"
                   tone="violet"
                   variant="card"
-                  description="층·구역마다 구조나 용도가 다른 건물을 각 부분 독립 계산 후 합산합니다. 공용 부속시설(주차장·기계실 등)은 주용도 면적비율로 안분합니다. 활성화 시 아래 단일 구조·용도·조정률 입력 대신 부분별로 입력합니다."
                 >
                   <CompositePartsSection
                     year={valYear}

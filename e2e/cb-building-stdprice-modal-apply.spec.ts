@@ -52,6 +52,10 @@ test.describe("건물 기준시가 모달 — 복합구조 적용 + 부수토지
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
     await expect(modal).toBeVisible();
 
+    // [회귀] 중첩 모달 backdrop 강제 렌더 — BaseUI는 nested backdrop을 기본 숨김(enabled: !nested).
+    // forceOverlay 미적용 시 뒤 estate 모달이 안 가려져 활성 모달 혼동. bg-black/60 오버레이 실재 검증.
+    await expect(page.locator('[data-slot="dialog-overlay"].bg-black\\/60')).toBeVisible();
+
     // 신축연도 + 상속·증여일(평가연도 도출 → 구조·용도 활성)
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2000");
     await modal.getByLabel("연도", { exact: true }).fill("2026");
