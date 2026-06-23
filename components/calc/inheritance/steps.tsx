@@ -244,10 +244,10 @@ export function Step2({ form, set }: { form: FormState; set: FormSet }) {
             </div>
             {/* 상증령 §9②1호: 일반 장례비(봉안 제외) — clamp [500만, 1천만] */}
             <CurrencyInput
-              label="① 일반 장례비(식대·제수 등)"
+              label="① 일반 장례비(식대·제수 등) · 500만~1,000만"
               value={form.funeralExpense}
               onChange={(v) => set({ funeralExpense: v })}
-              hint="한도: 500만원 미만이면 500만원 인정, 1,000만원 초과분은 공제 불가 (상증령 §9②1호)"
+              hint="500만원 미만이면 500만원 인정, 1,000만원 초과분은 공제 불가 (상증령 §9②1호)"
             />
             {/* 상증령 §9②2호: 봉안시설·자연장지 비용 — min(실제, 500만) */}
             <CurrencyInput

@@ -243,10 +243,10 @@ export function Step4({
             {hasSpouse && (
               <div className="space-y-2">
                 <CurrencyInput
-                  label="배우자 실제 상속액 (§19)"
+                  label="배우자 실제 상속액 (§19 · 최소 5억·최대 30억)"
                   value={autoFillValue(form.spouseActualAmount, autos.spouse)}
                   onChange={(v) => set({ spouseActualAmount: v })}
-                  hint="협의분할 입력 시 배우자 배분액에서 자동 도출. 실제 상속액이 법정상속분보다 적을 때만 직접 입력 (최소 5억·최대 30억)."
+                  hint="협의분할 입력 시 배우자 배분액에서 자동 도출. 실제 상속액이 법정상속분보다 적을 때만 직접 입력."
                 />
                 <LawArticleModal legalBasis="상속세및증여세법 §19" label="§19 배우자 상속공제" />
                 <AutoSuggestBadge
@@ -279,10 +279,10 @@ export function Step4({
             <>
               <div className="space-y-2">
                 <CurrencyInput
-                  label="동거주택 공시가격 (§23의2)"
+                  label="동거주택 공시가격 (§23의2 · 공제 최대 6억)"
                   value={autoFillValue(form.cohabitHouseStdPrice, autos.cohabit)}
                   onChange={(v) => set({ cohabitHouseStdPrice: v })}
-                  hint="자산 카드에서 주택을 '동거주택'으로 체크하면 기준시가가 자동 도출됩니다. 공시가 100%(2020.1.1.~)·이전 80%, 담보채무 차감 후 최대 6억."
+                  hint="자산 카드에서 주택을 '동거주택'으로 체크하면 기준시가가 자동 도출됩니다. 공시가 100%(2020.1.1.~)·이전 80%, 담보채무 차감."
                   placeholder="자산 카드 동거주택 체크 또는 직접 입력"
                 />
                 <LawArticleModal legalBasis="상속세및증여세법 §23의2" label="§23의2 동거주택 상속공제" />
@@ -294,10 +294,10 @@ export function Step4({
                 />
               </div>
               <CurrencyInput
-                label="동거주택공제 직접 입력 (Phase E)"
+                label="동거주택공제 직접 입력 (공제 최대 6억)"
                 value={form.cohabitDirectAmount}
                 onChange={(v) => set({ cohabitDirectAmount: v })}
-                hint="요건 판정 생략 모드 — 입력값 그대로 적용 (한도 6억 유지). 공시가격 입력보다 우선."
+                hint="요건 판정 생략 모드 — 입력값 그대로 적용. 공시가격 입력보다 우선."
               />
               {/* G4 §23의2① 주택부수토지 면적한도 차감 */}
               <CohabitAncillaryLandBlock
@@ -311,10 +311,10 @@ export function Step4({
             {/* 영농 §18의3 — 항상 노출 */}
             <div className="space-y-2">
               <CurrencyInput
-                label="영농상속재산가액 (§18의3)"
+                label="영농상속재산가액 (§18의3 · 공제 최대 30억)"
                 value={autoFillValue(form.farmingAssetValue, autos.farming)}
                 onChange={(v) => set({ farmingAssetValue: v })}
-                hint="자산 카드에서 농지·초지·어선 등으로 분류하면 자동 도출(시행령 §16⑤). 최대 30억."
+                hint="자산 카드에서 농지·초지·어선 등으로 분류하면 자동 도출(시행령 §16⑤)."
               />
               <LawArticleModal legalBasis="상속세및증여세법 §18의3" label="§18의3 영농상속공제" />
               <AutoSuggestBadge

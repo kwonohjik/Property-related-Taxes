@@ -124,10 +124,6 @@ export function GiftCreditChecklist({
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        공제 항목을 입력하면 납부세액이 줄어듭니다.
-      </p>
-
       {/* 칩 패널 (2그룹) */}
       <div className="rounded-lg border border-violet-200/70 bg-violet-50/40 p-3 space-y-3">
         <div className="space-y-0.5">
