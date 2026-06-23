@@ -51,7 +51,7 @@ describe("GiftValuationBasisCard", () => {
     expect(screen.getByText("82,500,000")).toBeInTheDocument();
   });
 
-  it("펼침 토글 클릭 — 라벨 ▼펼치기 ↔ ▲접기 전환", () => {
+  it("펼침 토글 클릭 — 자산행 헤더 버튼 aria-expanded 전환", () => {
     const vr = evaluateEstateItem(buildingItem);
     render(
       <GiftValuationBasisCard
@@ -59,9 +59,11 @@ describe("GiftValuationBasisCard", () => {
         estateItems={[buildingItem]}
       />,
     );
-    const toggle = screen.getByRole("button", { name: /펼치기/ });
+    // 자산명(좌)+평가액·▼(우) 전체폭 헤더 버튼 — 증여 명세서·건물 계산서와 동일 서식
+    const toggle = screen.getByRole("button", { name: /빌딩/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
-    expect(screen.getByRole("button", { name: /접기/ })).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
   it("자산명 미입력 — 재산종류 라벨로 fallback (id 미노출)", () => {

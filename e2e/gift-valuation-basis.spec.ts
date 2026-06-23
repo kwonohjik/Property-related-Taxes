@@ -49,8 +49,8 @@ test.describe("증여재산 평가 산출근거 카드", () => {
     await expect(card.getByText("증여재산 평가 산출근거")).toBeVisible();
     await expect(card.getByText("본가 토지")).toBeVisible();
 
-    // 2) 펼침 → breakdown 단계 표시
-    await card.getByRole("button", { name: /펼치기/ }).first().click();
+    // 2) 펼침(자산행 헤더 버튼 클릭) → breakdown 단계 표시
+    await card.getByRole("button", { name: /본가 토지/ }).first().click();
     await expect(card.getByText("토지 평가액")).toBeVisible();
   });
 });
