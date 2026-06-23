@@ -403,3 +403,57 @@ test("홈 링크 → 건물 기준시가 계산기 진입", async ({ page }) => 
   await expect(page).toHaveURL(/\/tools\/building-standard-price/);
   await expect(page.getByRole("heading", { name: "건물 기준시가 계산기" })).toBeVisible();
 });
+
+test("복합구조 조정률 — 건물 전체+부분 특성 자동계산 합계 943,600,000", async ({ page }) => {
+  await page.goto(URL);
+  await page.getByText("상속·증여(1시점)").click();
+
+  await page.getByPlaceholder("신축연도 (4자리)").fill("2000");
+  await fillEventDate(page, "2023-03-15"); // 평가연도 2023(부분 구조/용도 옵션 활성화 선행)
+
+  await page.getByText("복합구조 (층·구역별 구조·용도 상이)").click(); // 토글 ON
+
+  // 건물 전체 특성(II 최고층수 12층 → no6, 110%) — 전 부분 공유
+  await page.getByRole("button", { name: "건물 특성으로 계산 열기" }).click();
+  await expect(page.getByText("건물 전체 특성 조정률")).toBeVisible();
+  await page.getByPlaceholder("지상 최고층수").fill("12");
+  await page.getByRole("button", { name: "적용" }).click();
+  await expect(page.getByText(/건물 특성 \d+개 적용/)).toBeVisible();
+
+  // 부분 1: 지상1 근생(#41) 700㎡ — 부분 특성 IV 상가1층(no20, 120%) → 1.10×1.20=1.32
+  await selectOption(page, "구조 선택", /철근콘크리트조/);
+  await selectOption(page, "용도 선택", /^41\./);
+  await page.getByPlaceholder("부분 면적").fill("700");
+  await page.getByText("특성으로 계산", { exact: true }).first().click(); // 부분1 조정률 모드 라디오
+  await page.getByRole("button", { name: "부분 특성으로 계산 열기" }).click();
+  await expect(page.getByText("부분 특성 조정률")).toBeVisible();
+  // 부분 모달 첫 Select = IV 상가층(해당없음 → 상가 1층)
+  await page.getByRole("dialog").getByText("해당없음", { exact: true }).first().click();
+  await page.getByRole("option", { name: "상가 1층 (120)" }).click();
+  await page.getByRole("button", { name: "적용" }).click();
+  await expect(page.getByText(/부분 특성 \d+개 적용/)).toBeVisible();
+
+  // 부분 2: 지상2 단독(#2) 700㎡ — 부분 특성 없음(기본 manual·빈값) → 건물 전체 II만 1.10
+  await page.getByRole("button", { name: "+ 부분 추가" }).click();
+  await selectOption(page, "구조 선택", /철근콘크리트조/);
+  await selectOption(page, "용도 선택", /^2\./);
+  await page.getByPlaceholder("부분 면적").nth(1).fill("700");
+
+  await page.getByPlaceholder("원/㎡").fill("2500000"); // 단일 공시지가(위치지수)
+
+  await page.getByRole("button", { name: "기준시가 계산하기" }).click();
+
+  const result = page.getByTestId("bsp-result");
+  await expect(result).toBeVisible();
+  await expect(result).toContainText("943,600,000");
+});
+
+test("양도 복합 — 건물특성 라디오·건물전체 블록 미노출(조정률 미적용)", async ({ page }) => {
+  await page.goto(URL);
+  // 기본 양도 모드
+  await page.getByPlaceholder("신축연도 (4자리)").fill("2000");
+  await page.getByText("복합구조 (층·구역별 구조·용도 상이)").click(); // 양도 복합 토글 ON
+  // 양도는 조정률 미적용 → 건물 전체 특성 블록·부분 특성 라디오 비노출
+  await expect(page.getByText("건물 전체 특성 (전 부분 공통)")).toHaveCount(0);
+  await expect(page.getByText("특성으로 계산", { exact: true })).toHaveCount(0);
+});

@@ -183,6 +183,12 @@ export interface BuildingCompositePart {
   sharedAdjustmentRate?: number;
   /** 공용 부속분 조정율 번호(최대 3, 상증 전용) — 계산서 Ⅳ. sharedAdjustmentRate와 동시 입력 = 검증 오류. */
   sharedAdjustmentNos?: number[];
+  /**
+   * 부분별 개별건물 특성(상증 전용) — IV 상가층·부속, V 개축, VI 무벽, VII 구조진단·화재.
+   * 건물 전체 특성(I 지붕·II·III)은 input.specialFeatures(공유). 엔진이 부분마다 merge 후 calcSpecialAdjustmentRate.
+   * adjustmentRate/adjustmentNos(수동)가 있으면 그 부분은 수동 우선 — specialFeatures 무시.
+   */
+  specialFeatures?: SpecialAdjustmentFeatures;
 }
 
 /** 부속시설 종류 — 계산서 Ⅴ항 열 Ci~Hi 순서 고정 */

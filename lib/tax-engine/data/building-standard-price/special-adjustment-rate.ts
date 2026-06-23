@@ -21,8 +21,46 @@
  *   VII 구조진단/철거(입증): **가장 낮은 지수 1개**. 37=정상사용면적비율을 율로 적용.
  */
 
+import type { SpecialAdjustmentFeatures } from "../../types/building-standard-price.types";
+
 /** 조정율 기준값(미해당 = 100 = 무영향) */
 export const ADJUSTMENT_RATE_BASE = 100;
+
+/**
+ * 복합구조 특성 적용단위 키셋 (상증).
+ * - 건물 전체(전 부분 공유): I 지붕재료·II 최고층수·II 지능형·III 주택유형. (II 연면적은 자동·필드 없음)
+ *   근거: 적용요령(3) "복합건물은 해당 건물 전체 최고층수". I 지붕은 1개·부분 구조지수<100일 때만 적용(엔진 게이트).
+ * - 부분별: IV 상가층·부속, V 개축, VI 무벽, VII 구조진단·화재.
+ * 단일모드 잔존 특성 오염 방지를 위해 경계(toEngineInput)에서 pickFeatures로 필터.
+ */
+export const BUILDING_WIDE_FEATURE_KEYS = [
+  "roofMaterial",
+  "maxFloors",
+  "intelligentBuildingGrade",
+  "houseTypeTier",
+] as const satisfies readonly (keyof SpecialAdjustmentFeatures)[];
+
+export const PART_FEATURE_KEYS = [
+  "commercialFloor",
+  "ancillaryParking",
+  "remodelCount",
+  "wallessRatio",
+  "structuralSafety",
+  "normalUseRatio",
+] as const satisfies readonly (keyof SpecialAdjustmentFeatures)[];
+
+/** 지정 키만 추린 특성 객체. 추린 결과가 빈 객체면 undefined(무영향). */
+export function pickFeatures(
+  f: SpecialAdjustmentFeatures | null | undefined,
+  keys: readonly (keyof SpecialAdjustmentFeatures)[],
+): SpecialAdjustmentFeatures | undefined {
+  if (!f) return undefined;
+  const out: SpecialAdjustmentFeatures = {};
+  for (const k of keys) {
+    if (f[k] !== undefined) (out[k] as SpecialAdjustmentFeatures[typeof k]) = f[k];
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
 
 /** I 지붕재료 (구조지수<100일 때만) — 번호 → 지수 */
 export const ROOF_MATERIAL_RATE: Readonly<Record<1 | 2 | 3, number>> = Object.freeze({

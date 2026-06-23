@@ -590,6 +590,12 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                     onAncillaryChange={(a) => set("ancillaryAreas", a)}
                     ancillaryFloors={f.ancillaryFloors}
                     onAncillaryFloorsChange={(fl) => set("ancillaryFloors", fl)}
+                    buildingFeatures={f.adjustmentFeatures}
+                    onBuildingFeaturesChange={(features) => set("adjustmentFeatures", features)}
+                    isResidentialUse={f.isResidentialUse}
+                    isApartmentUse={f.isApartmentUse}
+                    onResidentialChange={(v) => set("isResidentialUse", v)}
+                    onApartmentChange={(v) => set("isApartmentUse", v)}
                   />
                 </ToggleCard>
 

@@ -27,8 +27,14 @@ import {
   resolveGrossAreaNo,
   resolveGrossAreaRate,
   ADJUSTMENT_FEATURE_LABEL,
+  pickFeatures,
+  BUILDING_WIDE_FEATURE_KEYS,
+  PART_FEATURE_KEYS,
 } from "@/lib/tax-engine/data/building-standard-price/special-adjustment-rate";
 import type { SpecialAdjustmentFeatures } from "@/lib/tax-engine/types/building-standard-price.types";
+
+/** 표시할 조정률 구분 범위 — all(단일) / building(I·II·III) / part(IV·V·VI·VII) */
+export type AdjustmentCategoryScope = "all" | "building" | "part";
 
 interface Props {
   open: boolean;
@@ -44,6 +50,8 @@ interface Props {
   isApartment: boolean;
   initial: SpecialAdjustmentFeatures | null;
   onApply: (features: SpecialAdjustmentFeatures, isResidential: boolean, isApartment: boolean) => void;
+  /** 표시 구분 범위 — 복합구조: building(건물 전체)·part(부분). 기본 all(단일). */
+  categoryScope?: AdjustmentCategoryScope;
 }
 
 type LabeledSelect = { value: string; label: string };
@@ -115,7 +123,16 @@ export function AdjustmentRateModal({
   isApartment,
   initial,
   onApply,
+  categoryScope = "all",
 }: Props) {
+  const showBuilding = categoryScope !== "part"; // I·II·III·주거용 토글
+  const showPart = categoryScope !== "building"; // IV·V·VI·VII
+  const scopeKeys =
+    categoryScope === "building"
+      ? BUILDING_WIDE_FEATURE_KEYS
+      : categoryScope === "part"
+        ? PART_FEATURE_KEYS
+        : null; // all = 필터 없음
   const [draft, setDraft] = useState<SpecialAdjustmentFeatures>(initial ?? {});
   // 주거용/아파트 — 섹션에서 모달 내부로 이동. 열릴 때 props로 seed.
   const [residential, setResidential] = useState(isResidential);
@@ -146,14 +163,19 @@ export function AdjustmentRateModal({
     () => ({ isResidential: residential, isApartment: apartment, structureKey }),
     [residential, apartment, structureKey],
   );
+  // 표시 구분만 미리보기·적용에 반영(숨긴 구분 draft 잔존 오염 차단)
+  const scopedDraft = useMemo(
+    () => (scopeKeys ? (pickFeatures(draft, scopeKeys) ?? {}) : draft),
+    [draft, scopeKeys],
+  );
   const previewRate = useMemo(
-    () => calcSpecialAdjustmentRate(draft, structureIndex || 100, floorArea, adjCtx),
-    [draft, structureIndex, floorArea, adjCtx],
+    () => calcSpecialAdjustmentRate(scopedDraft, structureIndex || 100, floorArea, adjCtx),
+    [scopedDraft, structureIndex, floorArea, adjCtx],
   );
   // 적용 내역(엔진 단일 출처 — UI 재구현 금지). "11. 11~15층 & 20. 상가 1층" 형식.
   const previewDesc = useMemo(
-    () => describeSpecialAdjustment(draft, structureIndex || 100, floorArea, adjCtx),
-    [draft, structureIndex, floorArea, adjCtx],
+    () => describeSpecialAdjustment(scopedDraft, structureIndex || 100, floorArea, adjCtx),
+    [scopedDraft, structureIndex, floorArea, adjCtx],
   );
   // II 연면적 자동 구간(비주거·면적>0일 때만 — 엔진 조건과 동일).
   const grossAreaNo = !residential && floorArea > 0 ? resolveGrossAreaNo(floorArea) : undefined;
@@ -163,37 +185,45 @@ export function AdjustmentRateModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>개별건물 특성 조정률</DialogTitle>
+          <DialogTitle>
+            {categoryScope === "building"
+              ? "건물 전체 특성 조정률"
+              : categoryScope === "part"
+                ? "부분 특성 조정률"
+                : "개별건물 특성 조정률"}
+          </DialogTitle>
           <DialogDescription>
             해당 구분만 선택하세요. 여러 구분 해당 시 각 조정률을 곱합니다(미선택 구분 = 영향 없음).
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <ToggleCard
-            checked={residential}
-            onCheckedChange={(v) => {
-              setResidential(v);
-              if (!v) setApartment(false);
-            }}
-            title="주거용 건물"
-            tone="violet"
-            variant="chip"
-            size="sm"
-          />
-          {residential && (
+        {showBuilding && (
+          <div className="flex flex-wrap items-center gap-2">
             <ToggleCard
-              checked={apartment}
-              onCheckedChange={setApartment}
-              title="아파트"
+              checked={residential}
+              onCheckedChange={(v) => {
+                setResidential(v);
+                if (!v) setApartment(false);
+              }}
+              title="주거용 건물"
               tone="violet"
               variant="chip"
               size="sm"
             />
-          )}
-        </div>
+            {residential && (
+              <ToggleCard
+                checked={apartment}
+                onCheckedChange={setApartment}
+                title="아파트"
+                tone="violet"
+                variant="chip"
+                size="sm"
+              />
+            )}
+          </div>
+        )}
 
-        {!residential && floorArea <= 0 && (
+        {showBuilding && !residential && floorArea <= 0 && (
           <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700">
             연면적이 아직 입력되지 않아 II구분 연면적 구간은 예상 조정률에 반영되지 않습니다. 실제 계산은
             입력된 연면적 기준으로 적용됩니다.
@@ -201,6 +231,8 @@ export function AdjustmentRateModal({
         )}
 
         <div className="space-y-3">
+          {showBuilding && (
+          <>
           <FieldCard
             label="I 지붕재료"
             hint={
@@ -275,7 +307,11 @@ export function AdjustmentRateModal({
               placeholder="해당없음"
             />
           </FieldCard>
+          </>
+          )}
 
+          {showPart && (
+          <>
           <FieldCard label="IV 상가층" hint="상가층·부속 동시 해당 시 60 적용">
             <LabeledSelectField
               value={draft.commercialFloor ? String(draft.commercialFloor) : ""}
@@ -333,10 +369,23 @@ export function AdjustmentRateModal({
               placeholder="정상 사용 면적비율"
             />
           </FieldCard>
+          </>
+          )}
         </div>
 
         <p className="rounded-md bg-violet-50/60 px-2.5 py-1.5 text-[11px] text-violet-700">
-          II 구분(최고층수·연면적·지능형)은 <b>가장 높은 지수 1개</b>만 적용됩니다(중복 방지).
+          {showBuilding && (
+            <>II 구분(최고층수·연면적·지능형)은 <b>가장 높은 지수 1개</b>만 적용됩니다(중복 방지).</>
+          )}
+          {categoryScope === "building" && (
+            <>
+              <br />
+              지붕은 구조지수 100 미만인 부분에만 적용됩니다(부분별 자동 판정).
+            </>
+          )}
+          {categoryScope === "part" && (
+            <>이 부분 특성은 건물 전체 특성과 곱해 최종 적용됩니다.</>
+          )}
           {previewDesc && (
             <>
               <br />
@@ -347,7 +396,8 @@ export function AdjustmentRateModal({
 
         <DialogFooter className="flex-row items-center justify-between sm:justify-between">
           <span className="text-sm font-semibold text-violet-700">
-            예상 조정률: {(previewRate * 100).toFixed(1)}%
+            {categoryScope === "building" ? "예상 건물 전체 조정률" : categoryScope === "part" ? "예상 부분 조정률" : "예상 조정률"}:{" "}
+            {(previewRate * 100).toFixed(1)}%
           </span>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
@@ -357,7 +407,7 @@ export function AdjustmentRateModal({
               variant="default"
               size="sm"
               onClick={() => {
-                onApply(draft, residential, apartment);
+                onApply(scopedDraft, residential, apartment);
                 onOpenChange(false);
               }}
             >

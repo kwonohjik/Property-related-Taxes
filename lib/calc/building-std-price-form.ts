@@ -19,6 +19,9 @@ import {
   hasUsageIndexYear,
   hasLocationIndexYear,
   resolveMechParkingFormula,
+  pickFeatures,
+  BUILDING_WIDE_FEATURE_KEYS,
+  PART_FEATURE_KEYS,
 } from "@/lib/tax-engine/data/building-standard-price";
 import type { NtsReportContext, NtsPointContext } from "@/lib/calc/nts-report-adapter";
 
@@ -44,6 +47,10 @@ export interface CompositePartForm {
   sharedAdjustmentRate: string;
   /** 공용 조정률 번호(쉼표) — 상증 전용 */
   sharedAdjustmentNos: string;
+  /** 부분 조정률 입력 방식 — "manual"(번호/%) / "features"(부분 건물특성 자동) */
+  adjustmentMode: "manual" | "features";
+  /** "features" 모드 부분 특성(IV·V·VI·VII) — 건물 전체(I·II·III)는 폼 전역 adjustmentFeatures */
+  specialFeatures: SpecialAdjustmentFeatures | null;
 }
 
 /** 부속시설 종류별 면적(㎡, 문자열) — 계산서 Ⅳ·Ⅴ */
@@ -173,6 +180,8 @@ export function emptyCompositePart(): CompositePartForm {
     adjustmentNos: "",
     sharedAdjustmentRate: "",
     sharedAdjustmentNos: "",
+    adjustmentMode: "manual",
+    specialFeatures: null,
   };
 }
 
@@ -290,8 +299,13 @@ function toCompositePart(p: CompositePartForm, forTransfer: boolean): BuildingCo
   if (forTransfer) {
     part.acqUsageNo = p.acqUsageNo ? intOrUndef(p.acqUsageNo) : undefined;
   } else {
-    part.adjustmentRate = p.adjustmentRate ? parseDecimal(p.adjustmentRate) : undefined;
-    part.adjustmentNos = parseNos(p.adjustmentNos);
+    if (p.adjustmentMode === "features") {
+      // 부분 특성(IV~VII)만 — 수동 필드는 전달 안 함(엔진 수동 우선 분기 회피)
+      part.specialFeatures = pickFeatures(p.specialFeatures, PART_FEATURE_KEYS);
+    } else {
+      part.adjustmentRate = p.adjustmentRate ? parseDecimal(p.adjustmentRate) : undefined;
+      part.adjustmentNos = parseNos(p.adjustmentNos);
+    }
     part.sharedAdjustmentRate = p.sharedAdjustmentRate ? parseDecimal(p.sharedAdjustmentRate) : undefined;
     part.sharedAdjustmentNos = parseNos(p.sharedAdjustmentNos);
   }
@@ -335,9 +349,12 @@ export function toEngineInput(f: BuildingStdPriceFormState): BuildingStandardPri
       if (f.compositeMode) {
         base.compositeParts = f.compositeParts.map((p) => toCompositePart(p, false));
         applyAncillary(base, f);
-      }
-      // 조정율은 단일(비복합) 모드에서만 적용 — 복합은 부분별 adjustmentRate 사용
-      if (!f.compositeMode) {
+        // 건물 전체 특성(I 지붕·II·III) — 부분키 오염 방지 위해 BUILDING_WIDE로 필터
+        base.specialFeatures = pickFeatures(f.adjustmentFeatures, BUILDING_WIDE_FEATURE_KEYS);
+        base.isResidentialUse = f.isResidentialUse || undefined;
+        base.isApartmentUse = f.isApartmentUse || undefined;
+      } else {
+        // 단일(비복합) 조정율
         if (f.adjustmentMode === "manual") {
           base.manualAdjustmentRate = f.manualAdjustmentRate ? parseDecimal(f.manualAdjustmentRate) : undefined;
         } else if (f.adjustmentFeatures) {
