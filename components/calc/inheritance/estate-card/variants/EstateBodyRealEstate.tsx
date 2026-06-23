@@ -17,6 +17,7 @@
 import { useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { EstateBodySection } from "./EstateBodySection";
 import { RealEstateBurdenedGiftField } from "./RealEstateBurdenedGiftField";
@@ -455,6 +456,7 @@ function ValuationAccordionFields({
               </span>
             </div>
           )}
+          <ReferenceSiteLinks sites={[REFERENCE_SITES.realPrice]} />
         </div>
       </ToggleCard>
 
@@ -578,13 +580,16 @@ function CollateralLeaseFields({
             : "평가기준일 현재 실제 채무 잔액(설정액 아님). §66 — 평가액이 더 크면 평가액으로 평가(차감 아님). 피상속인 채무이면 아래 토글로 §14 자동공제 가능."
         }
       >
-        <CurrencyInput
-          label="저당권 등에 의해 담보된 채권액"
-          value={item.mortgageAmount != null ? String(item.mortgageAmount) : ""}
-          onChange={(v) => set({ mortgageAmount: parseAmount(v) || undefined })}
-          hideLabel
-          hideUnit
-        />
+        <div className="space-y-1.5">
+          <CurrencyInput
+            label="저당권 등에 의해 담보된 채권액"
+            value={item.mortgageAmount != null ? String(item.mortgageAmount) : ""}
+            onChange={(v) => set({ mortgageAmount: parseAmount(v) || undefined })}
+            hideLabel
+            hideUnit
+          />
+          <ReferenceSiteLinks sites={[REFERENCE_SITES.realEstateRegister]} />
+        </div>
       </FieldCard>
 
       {/* 신용보증기관 보증액 (상증령 §63② 차감 — 저당0 시 disabled, D-UI2) */}

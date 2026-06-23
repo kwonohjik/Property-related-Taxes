@@ -20,6 +20,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import {
   ExpandToggleButton,
 } from "@/components/calc/results/shared/ExpandToggleButton";
@@ -205,6 +206,7 @@ export function PropertyCardEditor({
               }}
             />
             <p className="text-xs text-muted-foreground">단독 소유면 100. 공유지분만 변경.</p>
+            <ReferenceSiteLinks sites={[REFERENCE_SITES.realEstateRegister]} />
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">
