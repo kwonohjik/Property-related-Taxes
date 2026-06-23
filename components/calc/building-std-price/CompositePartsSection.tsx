@@ -105,27 +105,24 @@ export function CompositePartsSection({
       {/* 건물 전체 특성(상증) — I 지붕·II·III, 전 부분 공유 */}
       {!forTransfer && onBuildingFeaturesChange && (
         <div className="rounded-md border border-violet-200 bg-violet-50/40 p-2.5 space-y-2">
-          <p className="text-xs font-semibold text-violet-700">건물 전체 특성 (전 부분 공통)</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-bold text-violet-800">건물 전체 특성 (전 부분 공통)</p>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setBuildingModalOpen(true)}
+              className="shrink-0 bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              {buildingFeatureCount > 0 ? "다시 계산" : "건물 특성으로 계산"}
+            </Button>
+          </div>
           <p className="text-[11px] text-violet-700/80">
             최고층수·연면적·지능형·주택유형·지붕 등 건물 단위 특성. 연면적은 부분 면적 합계 + 부속으로 자동 적용됩니다.
           </p>
-          {buildingFeatureCount > 0 ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
-                건물 특성 {buildingFeatureCount}개 적용
-              </span>
-              <button
-                type="button"
-                onClick={() => setBuildingModalOpen(true)}
-                className="text-xs font-medium text-violet-700 underline underline-offset-2 hover:text-violet-900"
-              >
-                다시 계산
-              </button>
-            </div>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => setBuildingModalOpen(true)}>
-              건물 특성으로 계산 열기
-            </Button>
+          {buildingFeatureCount > 0 && (
+            <span className="inline-block rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+              건물 특성 {buildingFeatureCount}개 적용
+            </span>
           )}
         </div>
       )}

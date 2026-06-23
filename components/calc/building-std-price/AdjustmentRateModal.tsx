@@ -186,6 +186,7 @@ export function AdjustmentRateModal({
       <DialogContent
         className="max-h-[85vh] overflow-y-auto sm:max-w-[min(50.4rem,calc(100%-2rem))] w-full shadow-2xl ring-2 ring-violet-300 dark:ring-violet-700"
         overlayClassName="bg-black/80"
+        forceOverlay
       >
         <DialogHeader>
           <DialogTitle>

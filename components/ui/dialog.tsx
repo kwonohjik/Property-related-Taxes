@@ -44,15 +44,18 @@ function DialogContent({
   children,
   showCloseButton = true,
   overlayClassName,
+  forceOverlay = false,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
   /** 오버레이(backdrop) 클래스 오버라이드 — 중첩 모달은 진한 배경으로 뒤 모달을 가린다. */
   overlayClassName?: string
+  /** 중첩 모달도 backdrop 강제 렌더 (BaseUI는 nested backdrop을 기본 숨김). */
+  forceOverlay?: boolean
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay className={overlayClassName} />
+      <DialogOverlay className={overlayClassName} forceRender={forceOverlay} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(

@@ -414,7 +414,7 @@ test("복합구조 조정률 — 건물 전체+부분 특성 자동계산 합계
   await page.getByText("복합구조 (층·구역별 구조·용도 상이)").click(); // 토글 ON
 
   // 건물 전체 특성(II 최고층수 12층 → no6, 110%) — 전 부분 공유
-  await page.getByRole("button", { name: "건물 특성으로 계산 열기" }).click();
+  await page.getByRole("button", { name: "건물 특성으로 계산", exact: true }).click();
   await expect(page.getByText("건물 전체 특성 조정률")).toBeVisible();
   await page.getByPlaceholder("지상 최고층수").fill("12");
   await page.getByRole("button", { name: "적용" }).click();
