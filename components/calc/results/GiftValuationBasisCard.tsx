@@ -27,7 +27,6 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { PROPERTY_TYPE_LABEL } from "@/lib/calc/gift-valuation-besshi";
 import { toEstateItemTypeCode } from "@/components/calc/results/inheritance-filing-form-helpers";
-import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 
 export interface GiftValuationBasisCardProps {
   valuationResults: PropertyValuationResult[];
@@ -113,25 +112,31 @@ function AssetBasis({
   const hasDetail = breakdown.length > 0;
 
   return (
-    <div className="rounded-lg border border-emerald-200/70 dark:border-emerald-800/50 bg-white/70 dark:bg-gray-900/40">
-      {/* 자산 헤더 — 자산명 + 최종 평가액 + 토글 */}
-      <div className="flex items-center justify-between gap-2 px-3 py-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-            {name}
+    <div className="rounded-lg border border-emerald-200/70 dark:border-emerald-800/50 bg-white/70 dark:bg-gray-900/40 overflow-hidden">
+      {/* 자산 헤더 — 자산명(좌) + 최종 평가액·▲/▼(우). 서식 토글 통일(증여 명세서·건물 계산서와 동일 패턴) */}
+      {hasDetail ? (
+        <button
+          type="button"
+          onClick={() => setOpen((p) => !p)}
+          aria-expanded={open}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-emerald-50/60 dark:hover:bg-emerald-900/20 transition-colors"
+        >
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{name}</span>
+          <span className="flex items-center gap-2">
+            <span className="font-mono tabular-nums whitespace-nowrap text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+              {valuatedAmount.toLocaleString()}
+            </span>
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 print:hidden">{open ? "▲" : "▼"}</span>
           </span>
-          {hasDetail && (
-            <ExpandToggleButton
-              open={open}
-              onClick={() => setOpen((p) => !p)}
-              tone="emerald"
-            />
-          )}
+        </button>
+      ) : (
+        <div className="flex items-center justify-between gap-2 px-3 py-2">
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{name}</span>
+          <span className="font-mono tabular-nums whitespace-nowrap text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+            {valuatedAmount.toLocaleString()}
+          </span>
         </div>
-        <span className="font-mono tabular-nums whitespace-nowrap text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-          {valuatedAmount.toLocaleString()}
-        </span>
-      </div>
+      )}
 
       {/* 산출근거 단계 — 접힘 시에도 인쇄 시 펼침 */}
       {hasDetail && (
