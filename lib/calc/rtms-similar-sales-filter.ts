@@ -131,6 +131,27 @@ export function normalizeAptName(name: string): string {
 }
 
 /**
+ * 단지명 동일 단지 판정 — 시행규칙 §15③1호가목 "동일한 공동주택단지".
+ *
+ * 완전일치뿐 아니라 부분 포함도 인정한다. 사용자가 자산명에
+ * "송파대로 345 헬리오시티 101 804"처럼 주소·동·호를 통째로 입력해도
+ * RTMS 순수 단지명("헬리오시티")과 매칭되도록 하기 위함이다.
+ * (정규화만으로는 "송파대로345헬리오시티101804" !== "헬리오시티" 로 전부 탈락)
+ *
+ * 오매칭 방지: 정규화 후 1글자 단지명은 포함 매칭에서 제외(완전일치만 인정).
+ */
+export function isSameAptComplex(targetName: string, tradeName: string): boolean {
+  const target = normalizeAptName(targetName);
+  const trade = normalizeAptName(tradeName);
+  if (!target || !trade) return false;
+  if (target === trade) return true;
+  // 2글자 이상일 때만 부분 포함 — 1글자 우연 포함 오매칭 차단
+  if (trade.length >= 2 && target.includes(trade)) return true;
+  if (target.length >= 2 && trade.includes(target)) return true;
+  return false;
+}
+
+/**
  * RTMS 거래금액(만원 문자열 "85,000") → 원 정수 환산.
  * 음수·NaN·0 → 0 반환 (필터에서 제외됨).
  * Math.round 금지 — parseInt는 정수.
@@ -226,8 +247,7 @@ export function filterSimilarSales(
     );
   }
 
-  // ── 단지명 정규화 ──────────────────────────────
-  const targetNameNorm = normalizeAptName(criteria.targetAptName);
+  // ── 단지명 ─────────────────────────────────────
   const targetUmdNmTrim = criteria.targetUmdNm?.trim() ?? "";
 
   // 면적 관련 범위 계산 (경고 출력용 — hasTargetArea 보장 후 사용)
@@ -245,8 +265,8 @@ export function filterSimilarSales(
     // Step 2: 거래금액 유효성
     if (trade.dealAmountWon <= 0) continue;
 
-    // Step 3: 단지명 정규화 일치
-    if (normalizeAptName(trade.aptName) !== targetNameNorm) continue;
+    // Step 3: 동일 단지 판정 (완전일치 + 부분 포함 — §15③1호가목)
+    if (!isSameAptComplex(criteria.targetAptName, trade.aptName)) continue;
 
     // Step 3b: umdNm 일치 (targetUmdNm 입력 시 추가 필터 — P3)
     if (targetUmdNmTrim) {
