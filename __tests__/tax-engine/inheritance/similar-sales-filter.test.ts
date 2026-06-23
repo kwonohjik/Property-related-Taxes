@@ -26,6 +26,7 @@ import {
   filterSimilarSales,
   parseDealAmountWon,
   normalizeAptName,
+  isSameAptComplex,
   type RtmsTradeRecord,
   type SimilarSalesFilterCriteria,
 } from "@/lib/calc/rtms-similar-sales-filter";
@@ -256,6 +257,39 @@ describe("T-5: 단지명 정규화 (§15③1호가목)", () => {
 
   it("normalizeAptName: 괄호·하이픈·점 제거", () => {
     expect(normalizeAptName("래미안(2차)-아파트.")).toBe("래미안2차아파트");
+  });
+
+  // 자산명에 주소·동·호가 통째로 들어가도 RTMS 순수 단지명과 매칭 (부분 포함)
+  it("부분 포함: 자산명 '송파대로 345 헬리오시티 101 804' vs RTMS '헬리오시티' → 일치", () => {
+    const result = filterSimilarSales(
+      [makeRecord({ aptName: "헬리오시티" })],
+      { ...baseCriteria, targetAptName: "송파대로 345 헬리오시티 101 804" },
+    );
+    expect(result.candidates).toHaveLength(1);
+  });
+
+  it("부분 포함: 약칭(target) ⊂ RTMS 전체명 → 일치", () => {
+    const result = filterSimilarSales(
+      [makeRecord({ aptName: "래미안퍼스티지아파트" })],
+      { ...baseCriteria, targetAptName: "래미안퍼스티지" },
+    );
+    expect(result.candidates).toHaveLength(1);
+  });
+
+  it("부분 포함이어도 다른 단지면 제외 ('힐스테이트' 자산명 ⊄ '헬리오시티')", () => {
+    const result = filterSimilarSales(
+      [makeRecord({ aptName: "헬리오시티" })],
+      { ...baseCriteria, targetAptName: "송파 힐스테이트 101동" },
+    );
+    expect(result.candidates).toHaveLength(0);
+  });
+
+  it("isSameAptComplex 직접: 완전일치·부분포함·불일치", () => {
+    expect(isSameAptComplex("헬리오시티", "헬리오시티")).toBe(true);
+    expect(isSameAptComplex("송파대로 345 헬리오시티 101 804", "헬리오시티")).toBe(true);
+    expect(isSameAptComplex("래미안", "래미안퍼스티지")).toBe(true);
+    expect(isSameAptComplex("힐스테이트", "헬리오시티")).toBe(false);
+    expect(isSameAptComplex("", "헬리오시티")).toBe(false);
   });
 });
 
