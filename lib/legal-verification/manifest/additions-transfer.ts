@@ -335,4 +335,18 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywords: ["양도소득세 및 증여세 감면의 종합한도", "과세기간별로 1억원을 초과", "5개 과세기간"],
     keywordMode: "ALL",
   },
+  {
+    // burdened-gift.ts — 양도가액·취득가액 산정방식 일치 원칙
+    id: "TRANSFER.GAIN_CALCULATION",
+    citation: "소득세법 §100",
+    keywords: ["양도가액을 실지거래가액", "취득가액도 실지거래가액", "양도가액을 기준시가에 따를 때에는 취득가액도 기준시가에 따른다"],
+    keywordMode: "ALL",
+  },
+  {
+    // stock.ts SECTION_118_17_REENTRY — 국외전출세 재전입 환급·납부유예 취소
+    id: "TRANSFER.REENTRY_REFUND",
+    citation: "소득세법 §118의17",
+    keywords: ["재전입 등에 따른 환급 등", "국외전출자가 출국일부터 5년 이내에", "납부유예 중인 세액의 취소"],
+    keywordMode: "ALL",
+  },
 ];

@@ -32,6 +32,13 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // transfer.ts RURAL_SURTAX_993 등 — 농어촌특별세 납세의무자
+    id: "SURTAX.TAX_LIABILITY",
+    citation: "농어촌특별세법 §3",
+    keywords: ["농어촌특별세를 납부할 의무를 진다", "취득세 또는 레저세의 납세의무자", "종합부동산세의 납세의무자"],
+    keywordMode: "ALL",
+  },
+  {
     id: "SURTAX.NON_TAXABLE",
     citation: "농어촌특별세법 §4",
     keywords: ["농어촌특별세를 부과하지 아니한다", "농어업인", "취득세", "감면"],
