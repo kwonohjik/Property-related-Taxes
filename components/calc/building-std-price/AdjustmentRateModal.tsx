@@ -183,7 +183,10 @@ export function AdjustmentRateModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        className="max-h-[85vh] overflow-y-auto sm:max-w-[min(50.4rem,calc(100%-2rem))] w-full shadow-2xl ring-2 ring-violet-300 dark:ring-violet-700"
+        overlayClassName="bg-black/80"
+      >
         <DialogHeader>
           <DialogTitle>
             {categoryScope === "building"

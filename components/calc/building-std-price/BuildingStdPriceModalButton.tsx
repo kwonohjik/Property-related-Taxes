@@ -70,7 +70,10 @@ export function BuildingStdPriceModalButton({
         {buttonLabel}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent
+          className="max-h-[88vh] overflow-y-auto sm:max-w-[min(50.4rem,calc(100%-2rem))] w-full shadow-2xl"
+          overlayClassName="bg-black/60"
+        >
           <DialogHeader>
             <DialogTitle>건물 기준시가 계산</DialogTitle>
             <DialogDescription>
