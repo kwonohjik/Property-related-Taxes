@@ -17,6 +17,7 @@ import { ExemptionChecklist } from "@/components/calc/exemption/ExemptionCheckli
 import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { HeirComposition } from "@/components/calc/HeirComposition";
 import { CohabitantDependentSection } from "./CohabitantDependentSection";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { DebtAllocationInput } from "./DebtAllocationInput";
 import {
   Dialog,
@@ -138,10 +139,12 @@ export function Step0({
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
         {/* B-2 (2026-06-01): deathDate 전달 — legatee 미성년 자동 판정용 */}
         <HeirComposition heirs={form.heirs} onChange={setHeirs} deathDate={form.deathDate} />
-        <p className="rounded-md bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900 px-3 py-2 text-[11px] text-sky-800 dark:text-sky-200 leading-relaxed">
-          ℹ️ 협의분할은 각 <strong>자산 카드</strong>에서 상속인별로 분배합니다. 분배를 입력하지 않은 자산은
-          <strong> 법정상속분</strong>(배우자 1.5 : 직계비속·직계존속 1)으로 자동 배분됩니다.
-        </p>
+        <CollapsibleHintCard tone="sky" summary="협의분할·법정상속분 배분 안내">
+          <p className="text-sky-800 dark:text-sky-200 leading-relaxed">
+            협의분할은 각 <strong>자산 카드</strong>에서 상속인별로 분배합니다. 분배를 입력하지 않은 자산은
+            <strong> 법정상속분</strong>(배우자 1.5 : 직계비속·직계존속 1)으로 자동 배분됩니다.
+          </p>
+        </CollapsibleHintCard>
       </div>
 
       {/* 섹션 ③ — 동거가족 인적공제 (비상속인 부양가족, 시령 §18①) — ② 밖 독립 섹션 */}

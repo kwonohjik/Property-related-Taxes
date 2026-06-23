@@ -40,6 +40,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { DateInput } from "@/components/ui/date-input";
 import {
   evaluateFamilyBusinessEligibility,
@@ -450,15 +451,14 @@ export function FamilyBusinessEligibilitySection({
             </div>
           )}
 
-          {/* 사업무관자산 안내 (sky tone) */}
-          <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-3 space-y-2">
-            <p className="text-xs font-semibold text-sky-800 dark:text-sky-200">
-              ⓘ 사업무관자산 차감 안내 (§15⑤2호)
-            </p>
-            <p className="text-[10px] text-sky-700 dark:text-sky-300">
-              법인 주식(corporate_stock)은 §15⑤2호에 따라 사업무관자산 가액을 차감한 후 가업상속재산에 포함됩니다.
-              Step1 자산 카드에서 familyBusinessCategory 선택 시, 사업무관자산 차감 후 평가액을 직접 입력하세요.
-            </p>
+          {/* 사업무관자산 안내 (sky tone) — 설명은 접기, 자기확인 토글은 항상 노출 */}
+          <div className="space-y-2">
+            <CollapsibleHintCard tone="sky" summary="사업무관자산 차감 안내 (§15⑤2호)">
+              <p className="text-sky-700 dark:text-sky-300">
+                법인 주식(corporate_stock)은 §15⑤2호에 따라 사업무관자산 가액을 차감한 후 가업상속재산에 포함됩니다.
+                Step1 자산 카드에서 familyBusinessCategory 선택 시, 사업무관자산 차감 후 평가액을 직접 입력하세요.
+              </p>
+            </CollapsibleHintCard>
             <ToggleCard
               lawLinks="상증법"
               tone="sky"
@@ -470,14 +470,13 @@ export function FamilyBusinessEligibilitySection({
             />
           </div>
 
-          {/* 사후관리 안내 (amber tone) */}
-          <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-              ⓘ 사후관리 의무 안내 (§18의2⑤)
-            </p>
-            <p className="text-[10px] text-amber-700 dark:text-amber-300">
-              가업상속공제 수혜 후 5년(기존 7년) 이내 폐업·지분 처분·가업 무관 업종 전환 시 공제액 전부 또는 일부가 추징됩니다.
-            </p>
+          {/* 사후관리 안내 (amber tone) — 설명은 접기, 인지·동의 토글은 항상 노출 */}
+          <div className="space-y-2">
+            <CollapsibleHintCard tone="amber" summary="사후관리 의무 안내 (§18의2⑤)">
+              <p className="text-amber-700 dark:text-amber-300">
+                가업상속공제 수혜 후 5년(기존 7년) 이내 폐업·지분 처분·가업 무관 업종 전환 시 공제액 전부 또는 일부가 추징됩니다.
+              </p>
+            </CollapsibleHintCard>
             <ToggleCard
               lawLinks="상증법"
               tone="amber"
