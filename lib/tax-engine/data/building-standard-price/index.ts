@@ -70,6 +70,9 @@ export {
   resolveWallessRate,
   resolveWallessNo,
   resolveAdjustmentRateByNo,
+  BUILDING_WIDE_FEATURE_KEYS,
+  PART_FEATURE_KEYS,
+  pickFeatures,
 } from "./special-adjustment-rate";
 
 // D3 용도지수

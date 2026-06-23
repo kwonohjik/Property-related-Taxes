@@ -218,6 +218,39 @@ const ANCILLARY_KIND_LABEL: Record<AncillaryFacilityKind, string> = {
   other: "공용",
 };
 
+/**
+ * 부분 조정률(상증 복합) — 수동(번호/%) 우선, 없으면 건물전체+부분 특성 자동 산정.
+ * rate=calcSpecialAdjustmentRate·items=selectSpecialAdjustment 동일 selection 공유 → 드리프트 0.
+ */
+function resolvePartAdjustment(
+  p: BuildingCompositePart,
+  opts: CompositeYearOptions,
+  year: number,
+  structureKey: string,
+  buildingTotalArea: number,
+  label: string,
+): { adjRate: number; items?: { nos: number[]; rate: number }[] } {
+  // (1) 수동 우선(완전 override — 단일 manual과 일관)
+  if ((p.adjustmentNos?.length ?? 0) > 0 || p.adjustmentRate != null) {
+    return adjustmentFromNos(p.adjustmentNos, p.adjustmentRate, label);
+  }
+  // (2) 특성 자동 — 건물 전체 ∪ 부분 (키셋 disjoint 가정 — 경계에서 필터됨)
+  const merged: SpecialAdjustmentFeatures = { ...(opts.buildingWideFeatures ?? {}), ...(p.specialFeatures ?? {}) };
+  if (Object.keys(merged).length === 0) return { adjRate: 1.0, items: undefined };
+  const structureIndex = resolveStructureIndex(year, structureKey) ?? 0;
+  const ctx: AdjustmentContext = {
+    isResidential: !!opts.adjustmentCtx?.isResidential,
+    isApartment: !!opts.adjustmentCtx?.isApartment,
+    structureKey, // II 통나무조 제외·I 지붕 게이트(부분 구조지수<100일 때만)
+  };
+  const adjRate = calcSpecialAdjustmentRate(merged, structureIndex, buildingTotalArea, ctx);
+  const sel = selectSpecialAdjustment(merged, structureIndex, buildingTotalArea, ctx);
+  return {
+    adjRate,
+    items: sel.length > 0 ? sel.map((s) => ({ nos: s.nos, rate: s.rate })) : undefined,
+  };
+}
+
 /** 조정율 번호(들) → {배율, echo items}. 번호 미수록 시 throw. */
 function adjustmentFromNos(
   nos: number[] | undefined,
@@ -251,6 +284,10 @@ export interface CompositeYearOptions {
   remodel?: RemodelInfo;
   /** 오류 메시지 접두(예 "복합 부분"·"양도 복합 부분") */
   errorPrefix?: string;
+  /** 건물 전체 특성(상증 복합 전용) — I 지붕·II·III. 부분 specialFeatures와 merge 후 자동 산정. */
+  buildingWideFeatures?: SpecialAdjustmentFeatures;
+  /** 조정율 II 통나무조 제외·주거용 판정 컨텍스트(상증 복합 자동 산정용) */
+  adjustmentCtx?: { isResidential: boolean; isApartment: boolean };
 }
 
 export interface CompositeYearResult {
@@ -274,6 +311,9 @@ export function calcCompositeForYear(
   const prefix = opts.errorPrefix ?? "복합 부분";
   const totalMainArea = parts.reduce((s, p) => s + p.floorArea, 0);
   if (!(totalMainArea > 0)) throw new BuildingStdPriceError(`${prefix}: 면적 합계가 0입니다.`);
+  // II 연면적용 건물 전체 연면적 = 부분 주용도 면적 합 + 부속 면적 합(적용요령 4 "지하·옥탑 포함 전체면적")
+  const buildingTotalArea =
+    totalMainArea + opts.ancillary.reduce((s, a) => s + (a.areaM2 > 0 ? a.areaM2 : 0), 0);
 
   // 부속 종류별 총면적 + 층 라벨 집계(층은 종류별 첫 입력값 — 계산서 Ⅳ "층별" 표기 전용)
   const totalByKind: Partial<Record<AncillaryFacilityKind, number>> = {};
@@ -299,9 +339,9 @@ export function calcCompositeForYear(
     if (!(p.floorArea > 0)) throw new BuildingStdPriceError(`${label}: 면적(㎡) 필요`);
     const point: BuildingPointInput = { structureKey: p.structureKey, usageNo, landPricePerM2: landPrice };
 
-    // 주용도 행
+    // 주용도 행 — 상증: 수동 우선, 없으면 건물전체+부분 특성 자동 산정 / 양도: 미적용
     const mainAdj = opts.adjustmentEnabled
-      ? adjustmentFromNos(p.adjustmentNos, p.adjustmentRate, label)
+      ? resolvePartAdjustment(p, opts, year, point.structureKey, buildingTotalArea, label)
       : { adjRate: 1.0, items: undefined };
     const main = calcPointBreakdown(year, point, p.floorArea, builtYear, mainAdj.adjRate, label, opts.remodel);
     breakdowns.push({ ...main, label: p.label, floorArea: p.floorArea, adjustmentItems: mainAdj.items });

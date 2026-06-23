@@ -107,6 +107,9 @@ function calcCompositeValuation(
       adjustmentEnabled: true,
       ancillary: normalizeAncillary(input.ancillaryFacilities, input.sharedFacilityArea),
       remodel: { remodelYear: input.remodelYear, isInheritanceGift: true },
+      // 건물 전체 특성(I 지붕·II·III) — toEngineInput에서 BUILDING_WIDE_FEATURE_KEYS로 필터됨. manual이면 무시.
+      buildingWideFeatures: input.manualAdjustmentRate == null ? input.specialFeatures : undefined,
+      adjustmentCtx: { isResidential: !!input.isResidentialUse, isApartment: !!input.isApartmentUse },
     },
   );
 
@@ -136,11 +139,15 @@ function calcTransferComposite(
   if (!(transferLandPrice > 0)) throw new BuildingStdPriceError("양도시: 개별공시지가(원/㎡) 필요");
   if (!(acqLandPrice > 0)) throw new BuildingStdPriceError("취득시: 개별공시지가(원/㎡) 필요");
 
-  // 양도 복합 조정률 입력 금지(고시: 조정률은 상속·증여만)
+  // 양도 복합 조정률 입력 금지(고시: 조정률은 상속·증여만) — 건물전체 특성 포함
+  if (input.specialFeatures) {
+    throw new BuildingStdPriceError("양도 복합: 건물특성 조정률은 상속·증여에만 적용됩니다.");
+  }
   for (const p of parts) {
     if (
       p.adjustmentRate != null ||
       (p.adjustmentNos?.length ?? 0) > 0 ||
+      p.specialFeatures ||
       p.sharedAdjustmentRate != null ||
       (p.sharedAdjustmentNos?.length ?? 0) > 0
     ) {
