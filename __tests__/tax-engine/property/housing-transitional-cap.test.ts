@@ -10,6 +10,7 @@
 import { describe, it, expect } from "vitest";
 import {
   applyHousingTransitionalCap,
+  applyHousingUrbanTransitionalCap,
   resolveHousingCapRate,
 } from "../../../lib/tax-engine/property-tax-housing-cap";
 import { calculatePropertyTax } from "../../../lib/tax-engine/property-tax";
@@ -102,5 +103,54 @@ describe("주택 세부담상한 경과조치 — calculatePropertyTax 통합", 
     expect(r.housingTransitionalCap).toBeUndefined();
     expect(r.determinedTax).toBe(r.calculatedTaxBeforeCap); // 상한 미적용 → 산출=확정
     expect(r.taxCapRate).toBe(1);
+  });
+});
+
+/**
+ * v2 선구현 — 도시지역분 세부담상한 순수함수 (§118 본문 "각각 산출").
+ *
+ * ⚠️ anchor는 §118 법문 산식(직전 도시지역분 × 상한율, floor) 기준이다.
+ *    실제 고지 도시지역분(302,480)과 법령 산식값(302,148)의 332원차는 도시지역분 과세표준 미스터리
+ *    (환산과표 216,057,143 ≠ 재산세 과표 223,036,000)로, 계획서 docs/00-pm/property-urban-area-cap-v2.plan.md §3 참조.
+ *    통합 anchor(실제 고지값 재현)는 구청 산출내역 확보 후. 본 단위 테스트는 법문 산식만 검증.
+ */
+describe("도시지역분 세부담상한 (§118 본문 각각 산출) — 순수함수 [v2 선구현]", () => {
+  it("U-1 도시지역분 110% — min(312,250, floor(274,680×1.10)=302,148)=302,148 (법문 산식)", () => {
+    const r = applyHousingUrbanTransitionalCap(312_250, 518_000_000, 2025, 274_680);
+    expect(r.applied).toBe(true);
+    expect(r.capRate).toBe(1.1);
+    expect(r.capLimit).toBe(302_148); // floor(274,680 × 1.10) — 실제고지 302,480과 332원차(과표 미스터리)
+    expect(r.determinedUrbanTax).toBe(302_148);
+  });
+
+  it("U-2 직전 도시지역분 미입력 → 상한 미적용 + warning", () => {
+    const r = applyHousingUrbanTransitionalCap(312_250, 518_000_000, 2025, undefined);
+    expect(r.applied).toBe(false);
+    expect(r.determinedUrbanTax).toBe(312_250);
+    expect(r.warnings.join()).toContain("직전연도 도시지역분 미입력");
+  });
+
+  it("U-3 본세와 동일 capRate 공유 (resolveHousingCapRate) — 공시 3억↓105% / 6억↑130%", () => {
+    expect(
+      applyHousingUrbanTransitionalCap(100_000, 250_000_000, 2025, 90_000).capRate,
+    ).toBe(1.05);
+    expect(
+      applyHousingUrbanTransitionalCap(500_000, 700_000_000, 2025, 400_000).capRate,
+    ).toBe(1.3);
+  });
+
+  it("U-4 2029년 → 경과조치 만료, 미적용", () => {
+    const r = applyHousingUrbanTransitionalCap(312_250, 518_000_000, 2029, 274_680);
+    expect(r.applied).toBe(false);
+    expect(r.determinedUrbanTax).toBe(312_250);
+    expect(r.warnings.join()).toContain("2028");
+  });
+
+  it("U-5 산출 < 상한 한도 → 산출 그대로 (min)", () => {
+    // 직전 도시지역분이 크면 한도가 높아 당해 산출이 그대로 결정
+    const r = applyHousingUrbanTransitionalCap(280_000, 518_000_000, 2025, 300_000);
+    expect(r.applied).toBe(true);
+    expect(r.capLimit).toBe(330_000); // floor(300,000 × 1.10)
+    expect(r.determinedUrbanTax).toBe(280_000); // min(280,000, 330,000)
   });
 });
