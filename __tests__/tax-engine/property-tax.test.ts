@@ -290,10 +290,10 @@ describe("calculatePropertyTax — 통합 시나리오", () => {
     expect(result.oneHouseSpecialApplied).toBe(true);
     // 특례 세율 0.1% 구간 (1.5억 이하): 129_000_000 × 0.001 - 30_000 = 99_000
     expect(result.calculatedTax).toBe(99_000);
-    // 주택은 세부담상한 미적용 (§122 단서) — 전년도 입력값은 미사용 안내
+    // 주택 2026년: 직전본세(previousYearHousingBaseTax) 미입력 → 부칙 제15조 경과조치 미적용 안내
     expect(result.taxCapRate).toBe(1);
     expect(result.determinedTax).toBe(99_000);
-    expect(result.warnings.some(w => w.includes("주택은 세부담상한"))).toBe(true);
+    expect(result.warnings.some((w) => w.includes("세부담상한"))).toBe(true);
   });
 
   it("T21: 건축물 일반, 공시가격 5억, 비도시지역", () => {

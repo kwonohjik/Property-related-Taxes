@@ -44,6 +44,9 @@ import { getPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import { resolveBasisTax } from "./property-tax-recompute";
 import { buildCapEcho } from "./property-tax-cap-echo";
+import { applyHousingTransitionalCap, applyTaxCap } from "./property-tax-housing-cap";
+// 800줄 분리: applyTaxCap을 property-tax-housing-cap.ts로 이동 — 외부(테스트) import 하위호환 re-export
+export { applyTaxCap } from "./property-tax-housing-cap";
 
 // ============================================================
 // DB 세율 조회 헬퍼 — 공정시장가액비율 (정부 매년 고시)
@@ -334,67 +337,6 @@ export function calcBuildingTax(
 
   const tax = applyRate(taxBase, rate);
   return { tax, appliedRate: rate, legalBasis };
-}
-
-// ============================================================
-// P1-07: applyTaxCap — 세부담상한
-// ============================================================
-
-/**
- * 세부담상한 적용 (지방세법 §122)
- *
- * - 토지·건축물·선박·항공기: 직전 연도 재산세액 상당액의 150%
- * - 주택: 적용하지 아니함 (§122 단서 — 주택 세부담상한 폐지, 과세표준상한제 §110의2로 대체)
- * - 전년도 세액 미입력 시 (비주택): 상한 미적용 + warnings 추가
- *
- * @returns { determinedTax, taxCapRate, warnings }
- */
-export function applyTaxCap(
-  calculatedTax: number,
-  objectType: PropertyTaxInput["objectType"],
-  previousYearTax?: number,
-): {
-  determinedTax: number;
-  taxCapRate: number;
-  warnings: string[];
-  legalBasis: string;
-} {
-  const warnings: string[] = [];
-
-  // §122 단서: 주택은 세부담상한 적용 배제
-  if (objectType === "housing") {
-    if (previousYearTax !== undefined && previousYearTax > 0) {
-      warnings.push(
-        `주택은 세부담상한이 적용되지 않습니다 (${PROPERTY.TAX_CAP} 단서). ` +
-        "입력한 전년도 납부세액은 계산에 사용되지 않습니다.",
-      );
-    }
-    return {
-      determinedTax: calculatedTax,
-      taxCapRate: 1,
-      warnings,
-      legalBasis: PROPERTY.TAX_CAP,
-    };
-  }
-
-  if (previousYearTax === undefined || previousYearTax <= 0) {
-    warnings.push(
-      `전년도 납부세액 미입력으로 세부담상한(${PROPERTY.TAX_CAP})을 적용하지 않습니다. ` +
-      "정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
-    );
-    return {
-      determinedTax: calculatedTax,
-      taxCapRate: 1,
-      warnings,
-      legalBasis: PROPERTY.TAX_CAP,
-    };
-  }
-
-  const capRate = PROPERTY_CONST.TAX_CAP_RATE_LAND; // 150%
-  const capLimit = applyRate(previousYearTax, capRate);
-  const determinedTax = Math.min(calculatedTax, capLimit);
-
-  return { determinedTax, taxCapRate: capRate, warnings, legalBasis: PROPERTY.TAX_CAP };
 }
 
 // ============================================================
@@ -723,18 +665,55 @@ export function calculatePropertyTax(
     }
   }
 
-  // ── Step 3: 세부담상한 (주택은 §122 단서로 미적용) ──
-  const basisMain = resolveBasisTax(input, taxYear - 1);
-  const capResult = applyTaxCap(
-    calculatedTax,
-    input.objectType,
-    basisMain,
-  );
-  warnings.push(...capResult.warnings);
-  legalBasis.push(capResult.legalBasis);
-
+  // ── Step 3: 세부담상한 ──
+  //   주택(2024~2028): 부칙 제15조 경과조치(종전 §122 105/110/130%) — 직전본세 입력 시에만.
+  //     종부세 내부 calculatePropertyTax 호출(직전본세 미전달)은 미적용 → 종부세 회귀 0 (설계 C2).
+  //   비주택·주택(2023↓·2029↑): 기존 applyTaxCap(주택 §122 단서 pass-through·비주택 150%).
   const calculatedTaxBeforeCap = calculatedTax;
-  const determinedTax = capResult.determinedTax;
+  let determinedTax: number;
+  let taxCapRateResult: number;
+  let capEcho: ReturnType<typeof buildCapEcho> = {};
+  let housingTransitionalCap: PropertyTaxResult["housingTransitionalCap"];
+
+  if (
+    input.objectType === "housing" &&
+    taxYear >= PROPERTY_CONST.HOUSING_TAX_CAP_ABOLISHED_YEAR
+  ) {
+    const hc = applyHousingTransitionalCap(
+      calculatedTax,
+      input.publishedPrice,
+      taxYear,
+      input.previousYearHousingBaseTax,
+    );
+    determinedTax = hc.determinedTax;
+    taxCapRateResult = hc.applied ? hc.capRate! : 1;
+    warnings.push(...hc.warnings);
+    if (hc.applied) {
+      legalBasis.push(PROPERTY.TAX_CAP_TRANSITIONAL);
+      housingTransitionalCap = {
+        applied: true,
+        capRate: hc.capRate!,
+        previousYearBaseTax: input.previousYearHousingBaseTax!,
+        baseCapLimit: hc.capLimit!,
+        baseCalculatedTax: calculatedTax,
+        baseDeterminedTax: determinedTax,
+        legalBasis: PROPERTY.TAX_CAP_TRANSITIONAL,
+      };
+      // 기존 결과뷰 세부담상한 블록 재사용(직전 부과세액·상한율 표시) — §118 단서 direct
+      capEcho = {
+        taxCapMode: "direct",
+        taxCapBasisTax: input.previousYearHousingBaseTax,
+      };
+    }
+  } else {
+    const basisMain = resolveBasisTax(input, taxYear - 1);
+    const capResult = applyTaxCap(calculatedTax, input.objectType, basisMain);
+    determinedTax = capResult.determinedTax;
+    taxCapRateResult = capResult.taxCapRate;
+    warnings.push(...capResult.warnings);
+    legalBasis.push(capResult.legalBasis);
+    capEcho = buildCapEcho(input, basisMain, taxYear - 1);
+  }
 
   // 주택 건물분 소방분 과세표준 = 건물분가액 × FMR (§146④ 단서).
   //   fairMarketRatio는 calcTaxBase(Step 1) 반환값 — §110③ 상한과 무관(ratio 자체 불변).
@@ -756,7 +735,11 @@ export function calculatePropertyTax(
   legalBasis.push(...surtaxResult.legalBasis);
 
   // ── Step 5: 분납 안내 ──
-  const installment = calcInstallment(determinedTax, input.objectType);
+  const installment = calcInstallment(
+    determinedTax,
+    input.objectType,
+    surtaxResult.totalSurtax,
+  );
 
   // ── Step 6: 최종 합산 ──
   const totalPayable = determinedTax + surtaxResult.totalSurtax;
@@ -775,7 +758,7 @@ export function calculatePropertyTax(
     appliedRate,
     calculatedTax,
     calculatedTaxBeforeCap,
-    taxCapRate: capResult.taxCapRate,
+    taxCapRate: taxCapRateResult,
     determinedTax,
     surtax: surtaxResult.surtax,
     totalSurtax: surtaxResult.totalSurtax,
@@ -785,7 +768,8 @@ export function calculatePropertyTax(
     legalBasis: [...new Set(legalBasis)],
     warnings,
     targetDate,
-    ...buildCapEcho(input, basisMain, taxYear - 1),
+    ...capEcho,
+    ...(housingTransitionalCap && { housingTransitionalCap }),
     ...selectTaxpayerOutcome(taxpayerResult, input, coShares, determinedTax, totalPayable),
   };
 }

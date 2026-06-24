@@ -321,6 +321,7 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
     taxCapMode,
     taxCapBasisTax,
     recomputeDetail,
+    housingTransitionalCap,
   } = result;
 
   const taxpayer = result.taxpayer;
@@ -493,10 +494,18 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
               ) : (
                 taxCapBasisTax != null && (
                   <TaxRow
-                    label="직전연도 부과세액 (직접입력)"
+                    label={
+                      housingTransitionalCap
+                        ? "직전연도 재산세 본세"
+                        : "직전연도 부과세액 (직접입력)"
+                    }
                     amount={taxCapBasisTax}
                     sub
-                    note="§118 단서"
+                    note={
+                      housingTransitionalCap
+                        ? "부칙 제15조 — 종전 §122 세부담상한"
+                        : "§118 단서"
+                    }
                   />
                 )
               )}
