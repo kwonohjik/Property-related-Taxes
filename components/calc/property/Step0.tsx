@@ -10,6 +10,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
+import { useStandardPriceLookup } from "@/lib/hooks/useStandardPriceLookup";
 import { useState } from "react";
 import {
   OBJECT_TYPE_LABELS,
@@ -53,6 +54,25 @@ export function Step0({
   jibun,
   referenceDate,
 }: Props) {
+  // 직전연도 공시가격 자동 조회 (주택 §110③ 과세표준상한 계산용)
+  // 당해연도 "공시가격 조회" 성공 시, 같은 지번으로 직전연도(조회연도−1)를 한 번 더 조회해 자동 입력
+  const priorPriceLookup = useStandardPriceLookup("housing");
+
+  async function fillPriorYearPrice(lookedUpYear: string) {
+    if (form.objectType !== "housing") return;
+    const priorYear = String(parseInt(lookedUpYear, 10) - 1);
+    const priorPrice = await priorPriceLookup.lookup({
+      jibun: jibun ?? form.jibun,
+      propertyType: "housing",
+      year: priorYear,
+      dong: form.dong || undefined,
+      ho: form.ho || undefined,
+    });
+    if (priorPrice && priorPrice > 0) {
+      onChange({ priorYearPublishedPrice: String(priorPrice) });
+    }
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
@@ -83,7 +103,7 @@ export function Step0({
         </label>
         <AddressSearch
           value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "" } satisfies AddressValue}
-          onChange={(v) => onChange({ jibun: v.jibun, road: v.road, building: v.building })}
+          onChange={(v) => onChange({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "" })}
         />
       </div>
 
@@ -101,9 +121,12 @@ export function Step0({
             pricePerSqm={publishedPricePerSqm}
             onPricePerSqmChange={onPublishedPricePerSqmChange}
             jibun={jibun ?? form.jibun}
+            dong={form.dong}
+            ho={form.ho}
             referenceDate={referenceDate}
             label=""
             enableLookup={true}
+            onLookupSuccess={({ year }) => fillPriorYearPrice(year)}
           />
         ) : (
           <>
@@ -137,6 +160,9 @@ export function Step0({
             onChange={(v) => onChange({ priorYearPublishedPrice: v })}
             placeholder="금액 입력 (원)"
           />
+          {priorPriceLookup.loading && (
+            <p className="text-xs text-muted-foreground">직전연도 공시가격 조회 중…</p>
+          )}
         </div>
       )}
 

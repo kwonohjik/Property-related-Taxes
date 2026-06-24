@@ -120,6 +120,8 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
             transferDate={transferDate}
             jibun={asset.addressJibun || undefined}
+            dong={asset.addressDong || undefined}
+            ho={asset.addressHo || undefined}
             assetKind={asset.assetKind}
             acquisitionArea={asset.acquisitionArea || undefined}
             transferArea={asset.transferArea || undefined}
@@ -219,6 +221,8 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
                 onChange({ fixedAcquisitionPrice: v })
               }
               jibun={asset.addressJibun || undefined}
+              dong={asset.addressDong || undefined}
+              ho={asset.addressHo || undefined}
             />
             <InheritedAcquisitionDeemedSection
               asset={asset}

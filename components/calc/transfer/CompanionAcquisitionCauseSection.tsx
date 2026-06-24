@@ -140,6 +140,8 @@ export function CompanionAcquisitionCauseSection({
           onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
           transferDate={transferDate}
           jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
           assetKind={asset.assetKind}
           acquisitionArea={asset.acquisitionArea || undefined}
           onAcquisitionAreaChange={(v) => onChange({ acquisitionArea: v })}
@@ -234,6 +236,8 @@ export function CompanionAcquisitionCauseSection({
           fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
           onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
           jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
         />
       )}
 

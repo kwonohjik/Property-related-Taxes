@@ -100,6 +100,8 @@ export function Step1({
               pricePerSqm={standardValuePerSqm}
               onPricePerSqmChange={onStandardValuePerSqmChange}
               jibun={form.jibun}
+              dong={form.dong}
+              ho={form.ho}
               referenceDate={referenceDate}
               label=""
               hint="없으면 신고가액으로 과세"

@@ -72,6 +72,8 @@ export function buildAddressPatch(
         building: v.building || undefined,
         detail: v.detail || undefined,
         pnu: v.pnu || undefined,
+        dong: v.dong || undefined,
+        ho: v.ho || undefined,
       }
     : undefined;
 

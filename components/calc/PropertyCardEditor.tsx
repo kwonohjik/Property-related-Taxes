@@ -135,11 +135,11 @@ export function PropertyCardEditor({
           <AddressSearch
             value={addressValue}
             onChange={(v) => {
-              // detail = "101동 1501호" 형태로 올 수 있으므로 dong/ho로 분리
+              // 동/호 드롭다운 선택 시 v.dong/v.ho 직접 사용. 미지원(텍스트) 시 detail 파싱 fallback.
               const parts = v.detail.trim().split(/\s+/);
-              const dong = parts.length >= 2 ? parts[0] : v.detail.includes("동") ? v.detail : "";
+              const dong = v.dong ?? (parts.length >= 2 ? parts[0] : v.detail.includes("동") ? v.detail : "");
               const ho =
-                parts.length >= 2 ? parts.slice(1).join(" ") : v.detail.includes("호") ? v.detail : "";
+                v.ho ?? (parts.length >= 2 ? parts.slice(1).join(" ") : v.detail.includes("호") ? v.detail : "");
               onUpdate({ jibun: v.jibun, road: v.road, building: v.building, dong, ho });
             }}
           />
@@ -185,6 +185,8 @@ export function PropertyCardEditor({
             totalPrice={property.assessedValue}
             onTotalPriceChange={(v) => onUpdate({ assessedValue: v })}
             jibun={property.jibun}
+            dong={property.dong}
+            ho={property.ho}
             referenceDate={referenceDate}
             enableLookup={true}
             label=""
@@ -237,6 +239,8 @@ export function PropertyCardEditor({
             totalPrice={property.priorAssessedValue}
             onTotalPriceChange={(v) => onUpdate({ priorAssessedValue: v })}
             jibun={property.jibun}
+            dong={property.dong}
+            ho={property.ho}
             referenceDate={priorReferenceDate}
             enableLookup={true}
             label="직전연도 공시가격"

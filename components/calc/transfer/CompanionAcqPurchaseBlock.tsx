@@ -627,6 +627,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               area={props.acquisitionArea}
               onAreaChange={props.onAcquisitionAreaChange}
               jibun={props.jibun}
+              dong={props.dong}
+              ho={props.ho}
               referenceDate={props.acquisitionDate}
               hint="환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
               forceYear={pre1990ForceYear}
@@ -661,6 +663,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               area={props.transferArea}
               onAreaChange={props.onTransferAreaChange}
               jibun={props.jibun}
+              dong={props.dong}
+              ho={props.ho}
               referenceDate={props.transferDate}
               hint="환산 분모 — 취득시/양도시 기준시가 비율의 분모"
             />

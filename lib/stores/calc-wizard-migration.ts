@@ -198,6 +198,8 @@ export function migrateLegacyForm(
       standardPriceAtAcqLabel: String(ca.standardPriceAtAcqLabel ?? ""),
       standardPriceAtTransferLabel: String(ca.standardPriceAtTransferLabel ?? ""),
       addressDetail: String(ca.addressDetail ?? ""),
+      addressDong: String(ca.addressDong ?? ""),
+      addressHo: String(ca.addressHo ?? ""),
       buildingName: String(ca.buildingName ?? ""),
       longitude: String(ca.longitude ?? ""),
       latitude: String(ca.latitude ?? ""),

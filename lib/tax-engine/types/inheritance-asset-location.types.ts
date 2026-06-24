@@ -17,6 +17,10 @@ export interface EstateAddress {
   building?: string;
   detail?: string;
   pnu?: string;
+  /** 선택한 동(예: "201동") — 공동주택 보충적 평가 조회 세대 식별용 (UI 전용) */
+  dong?: string;
+  /** 선택한 호(예: "3204") — 공동주택 보충적 평가 조회 세대 식별용 (UI 전용) */
+  ho?: string;
 }
 
 /**

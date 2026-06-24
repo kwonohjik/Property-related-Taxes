@@ -81,6 +81,10 @@ interface BlockProps {
   singleMode?: boolean;
   /** 공시가격 조회용 지번 주소 */
   jibun?: string;
+  /** 공동주택 기준시가 조회용 동(예: "201동") — 세대 식별 */
+  dong?: string;
+  /** 공동주택 기준시가 조회용 호(예: "3204") — 세대 식별 */
+  ho?: string;
   /** 양도일 (기준연도 자동 계산용) */
   transferDate?: string;
   /** 양도 당시 면적 (㎡) — 안분 모드 토지에서 기준시가 자동 계산에 사용 */
@@ -117,6 +121,8 @@ function ApportionedPriceBlock({
   standardPriceAtTransfer,
   onStandardPriceAtTransferChange,
   jibun,
+  dong,
+  ho,
   transferDate,
   transferArea,
   onTransferAreaChange,
@@ -127,6 +133,8 @@ function ApportionedPriceBlock({
   standardPriceAtTransfer: string;
   onStandardPriceAtTransferChange: (v: string) => void;
   jibun?: string;
+  dong?: string;
+  ho?: string;
   transferDate?: string;
   transferArea?: string;
   onTransferAreaChange?: (v: string) => void;
@@ -151,6 +159,8 @@ function ApportionedPriceBlock({
       area={transferArea}
       onAreaChange={handleAreaChange}
       jibun={jibun}
+      dong={dong}
+      ho={ho}
       referenceDate={transferDate}
       label={
         assetKind === "land"
@@ -267,6 +277,8 @@ export function CompanionSaleModeBlock(props: BlockProps) {
       standardPriceAtTransfer={props.standardPriceAtTransfer}
       onStandardPriceAtTransferChange={props.onStandardPriceAtTransferChange}
       jibun={props.jibun}
+      dong={props.dong}
+      ho={props.ho}
       transferDate={props.transferDate}
       transferArea={props.transferArea}
       onTransferAreaChange={props.onTransferAreaChange}

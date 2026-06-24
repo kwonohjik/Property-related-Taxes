@@ -121,6 +121,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   addressJibun: string;
   /** 상세주소 */
   addressDetail: string;
+  /** 선택한 동(예: "201동") — 공동주택 기준시가 조회 세대 식별 (UI 전용, 엔진 미전송) */
+  addressDong: string;
+  /** 선택한 호(예: "3204") — 공동주택 기준시가 조회 세대 식별 (UI 전용, 엔진 미전송) */
+  addressHo: string;
   /** 건물명 */
   buildingName: string;
   /** 경도 */
