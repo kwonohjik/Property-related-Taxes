@@ -12,6 +12,7 @@ import {
   extractShares,
 } from "@/lib/calc/stock-valuation-tool";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 describe("주식 평가 도구 resultData 빌더", () => {
   it("상장주식 — 종가평균 × 주식수 (§63①1가), 회사명 companyName 우선", () => {
@@ -44,6 +45,37 @@ describe("주식 평가 도구 resultData 빌더", () => {
       listedStockShares: 10,
     };
     expect(extractCompanyName(item)).toBe("내회사");
+  });
+
+  it("비상장주식 V2(정식) — corpName·V2 ownedShares 추출 (name보다 corpName 우선)", () => {
+    const item: EstateItem = {
+      id: "U2",
+      name: "백업명칭",
+      category: "unlisted_stock",
+      unlistedValuationMode: "formal",
+      // 추출 분기 검증용 — corpName·ownedShares만 읽음 (전체 V2 평가 불요)
+      unlistedStockValuationV2: {
+        corpName: "정식법인",
+        ownedShares: 500,
+        totalShares: 1_000,
+      } as UnlistedStockValuationInput,
+    };
+    expect(extractCompanyName(item)).toBe("정식법인");
+    expect(extractShares(item)).toBe(500);
+  });
+
+  it("빈 평가기준일 — 상장주식은 자기 종가평균으로 계산(날짜 무관), valuationDate echo 빈값", () => {
+    const item: EstateItem = {
+      id: "L1",
+      name: "A",
+      category: "listed_stock",
+      listedStockAvgPrice: 10_000,
+      listedStockShares: 100,
+    };
+    const r = buildStockValuationResult([item], "");
+    expect(r.valuationDate).toBe("");
+    expect(r.items).toHaveLength(1);
+    expect(r.items[0].valuationAmount).toBe(1_000_000);
   });
 
   it("비상장주식 V1(간편) — name·ownedShares 추출, 평가액 > 0", () => {

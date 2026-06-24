@@ -24,6 +24,10 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { useStockValuationStore } from "@/lib/stores/calc-stock-valuation-store";
 import { buildStockValuationResult } from "@/lib/calc/stock-valuation-tool";
+import {
+  computeStockValuation,
+  resolveUnlistedDisplayMode,
+} from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 
@@ -36,6 +40,18 @@ export function StockValuationTool() {
 
   const result = useMemo(
     () => buildStockValuationResult(stockItems, valuationDate),
+    [stockItems, valuationDate],
+  );
+
+  // 비상장 간편평가(V1) 종목 — 별지 부표3 평가조서가 생성되지 않음(V2 정식평가만 대상)
+  const hasUnlistedSimple = useMemo(
+    () =>
+      stockItems.some(
+        (it) =>
+          it.category === "unlisted_stock" &&
+          resolveUnlistedDisplayMode(it) === "simple" &&
+          computeStockValuation(it, valuationDate || undefined) > 0,
+      ),
     [stockItems, valuationDate],
   );
 
@@ -148,6 +164,15 @@ export function StockValuationTool() {
               valuationDate={valuationDate}
             />
             <UnlistedStockBesshiResultSection estateItems={stockItems} />
+            {hasUnlistedSimple && (
+              <p
+                data-testid="stock-valuation-v1-notice"
+                className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-700 print:hidden"
+              >
+                비상장 간편평가 종목은 별지 부표3 평가조서가 생성되지 않습니다. 평가조서가 필요하면
+                종목 편집에서 「정식평가」로 전환하세요.
+              </p>
+            )}
           </div>
         </section>
       )}
