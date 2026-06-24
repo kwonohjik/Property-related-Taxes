@@ -18,6 +18,7 @@ import {
   extractTransferDate,
   extractStockSecurityName,
   extractStockTransferDate,
+  extractStockValuationName,
 } from "./title-generator";
 
 export function extractBusinessKey(
@@ -53,6 +54,11 @@ export function extractBusinessKey(
       const sec = extractStockSecurityName(inputData);
       const date = extractStockTransferDate(inputData);
       return sec || date ? `sec:${sec ?? ""}|${date ?? ""}` : null;
+    }
+    case "stock_valuation": {
+      const sec = extractStockValuationName(inputData);
+      const date = formatDate(inputData.valuationDate as string | undefined);
+      return sec || date ? `sec-val:${sec ?? ""}|${date ?? ""}` : null;
     }
     default:
       // gift·comprehensive_property — 인적 식별 필드 부재(실측 확정) → content 폴백

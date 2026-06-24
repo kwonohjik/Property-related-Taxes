@@ -106,6 +106,11 @@ export interface StockValuationFormProps {
    */
   addPanelOpen?: boolean;
   onAddPanelOpenChange?: (open: boolean) => void;
+  /**
+   * 평가 전용 모드 — 세금 계산 없이 주식 가치 평가만 (독립 도구 /tools/stock-valuation).
+   * true 시 협의분할·공통속성(저당·임대보증금)·부담부증여 채무 섹션 미렌더. (mode는 "gift" 전달 권장 → 테이블 협의분할 컬럼 자동 숨김)
+   */
+  valuationOnly?: boolean;
 }
 
 export function StockValuationForm({
@@ -117,6 +122,7 @@ export function StockValuationForm({
   hideHeader = false,
   addPanelOpen,
   onAddPanelOpenChange,
+  valuationOnly = false,
 }: StockValuationFormProps) {
   // 부동산과다보유법인 여부는 unlistedStockData.isRealEstateHeavy(store)에 저장 — heavyMap local state 폐지.
   const [internalAddPanel, setInternalAddPanel] = useState(false);
@@ -227,6 +233,7 @@ export function StockValuationForm({
                 mode={mode}
                 heirs={heirs}
                 valuationDate={valuationDate}
+                valuationOnly={valuationOnly}
                 onUpdate={(updated) => handleUpdate(selectedIndex, updated)}
                 onRemove={() => handleRemove(selectedIndex)}
               />

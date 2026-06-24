@@ -11,7 +11,8 @@ export type LocalTaxType =
   | "acquisition"
   | "property"
   | "comprehensive_property"
-  | "stock_transfer";
+  | "stock_transfer"
+  | "stock_valuation";
 
 /** 프로필 모드: 일반 납세자 | 세무사·대리인 */
 export type UserMode = "taxpayer" | "professional";

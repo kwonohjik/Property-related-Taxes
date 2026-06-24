@@ -17,7 +17,8 @@ export type TaxType =
   | "acquisition"
   | "property"
   | "comprehensive_property"
-  | "stock_transfer";
+  | "stock_transfer"
+  | "stock_valuation";
 
 export interface CalculationRecord {
   id: string;

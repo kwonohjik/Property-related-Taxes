@@ -8,6 +8,7 @@ const TAX_LABEL: Record<LocalTaxType, string> = {
   property: "재산세",
   comprehensive_property: "종합부동산세",
   stock_transfer: "주식 양도세",
+  stock_valuation: "주식 평가",
 };
 
 export function formatDate(dateStr: string | undefined | null): string | null {
@@ -69,6 +70,21 @@ export function extractStockTransferDate(inputData: Record<string, unknown>): st
 }
 
 /**
+ * 주식 평가 도구 — 대표 종목(평가대상회사)명 추출.
+ * inputData.stockItems[0]에서 상장 companyName → 비상장 V2 corpName → name 순.
+ */
+export function extractStockValuationName(inputData: Record<string, unknown>): string | null {
+  const items = inputData.stockItems as Array<Record<string, unknown>> | undefined;
+  if (!Array.isArray(items) || items.length === 0) return null;
+  const first = items[0];
+  const companyName = (first.companyName as string | undefined)?.trim();
+  const name = (first.name as string | undefined)?.trim();
+  const v2 = first.unlistedStockValuationV2 as Record<string, unknown> | undefined;
+  const corp = (v2?.corpName as string | undefined)?.trim();
+  return companyName || corp || name || null;
+}
+
+/**
  * 세목·입력값 기반 계산 이력 title 자동 생성.
  * 주소·날짜가 입력된 경우 포함하여 식별력을 높임.
  * 미입력 필드는 기본 레이블만 사용.
@@ -98,6 +114,14 @@ export function generateTitle(
     if (securityName && date) return `${label} — ${securityName} (양도 ${date})`;
     if (securityName) return `${label} — ${securityName}`;
     if (date) return `${label} — 양도 ${date}`;
+  }
+
+  if (taxType === "stock_valuation") {
+    const sec = extractStockValuationName(inputData);
+    const date = formatDate(inputData.valuationDate as string | undefined);
+    if (sec && date) return `${label} — ${sec} (평가 ${date})`;
+    if (sec) return `${label} — ${sec}`;
+    if (date) return `${label} — 평가 ${date}`;
   }
 
   // 기타 세목 + 주소·날짜 미입력: 저장 일시로 구분
