@@ -65,6 +65,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     addressRoad: "",
     addressJibun: "",
     addressDetail: "",
+    addressDong: "",
+    addressHo: "",
     buildingName: "",
     longitude: "",
     latitude: "",

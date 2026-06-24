@@ -118,6 +118,10 @@ export interface FormState {
   jibun: string;
   road: string;
   building: string;
+  /** 선택한 동(예: "201동") — 공동주택 공시가격 조회 세대 식별용 (UI 전용, 엔진 미전송) */
+  dong: string;
+  /** 선택한 호(예: "3204") — 공동주택 공시가격 조회 세대 식별용 (UI 전용, 엔진 미전송) */
+  ho: string;
   objectType: string;
   publishedPrice: string;
   /** 직전연도 공시가격 — 주택 과세표준상한제(§110③) 계산용 (주택 전용·선택) */
@@ -187,6 +191,8 @@ export const INITIAL_FORM: FormState = {
   jibun: "",
   road: "",
   building: "",
+  dong: "",
+  ho: "",
   objectType: "housing",
   publishedPrice: "",
   priorYearPublishedPrice: "",

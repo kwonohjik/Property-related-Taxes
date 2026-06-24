@@ -218,7 +218,7 @@ export function Step0({
         </label>
         <AddressSearch
           value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "" } satisfies AddressValue}
-          onChange={(v) => setForm((f) => ({ ...f, jibun: v.jibun, road: v.road, building: v.building }))}
+          onChange={(v) => setForm((f) => ({ ...f, jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "" }))}
         />
         <p className="text-xs text-muted-foreground">
           입력하면 다음 단계에서 시가표준액을 자동 조회할 수 있습니다.

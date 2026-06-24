@@ -213,6 +213,8 @@ export function EstateBodySupplementaryValuation({
           pricePerSqm={standardPricePerSqm}
           onPricePerSqmChange={setStandardPricePerSqm}
           jibun={addrValue.jibun}
+          dong={addrValue.dong}
+          ho={addrValue.ho}
           forceTotalMode={cat === "real_estate_building"}
           enableLookup={cat !== "real_estate_building"}
           label={

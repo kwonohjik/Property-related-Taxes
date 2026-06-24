@@ -143,6 +143,8 @@ export function EstateBodyRealEstate({
       building: item.estateAddress?.building ?? "",
       detail: item.estateAddress?.detail ?? "",
       pnu: item.estateAddress?.pnu ?? "",
+      dong: item.estateAddress?.dong ?? "",
+      ho: item.estateAddress?.ho ?? "",
       lng: latLng ? String(latLng.lng) : "",
       lat: latLng ? String(latLng.lat) : "",
     };

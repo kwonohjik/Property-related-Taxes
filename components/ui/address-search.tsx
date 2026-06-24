@@ -27,6 +27,10 @@ export interface AddressValue {
   lng: string;
   lat: string;
   pnu?: string;
+  /** 선택한 동(예: "201동") — 공동주택 공시가격 조회 시 세대 식별용 (미선택 시 undefined) */
+  dong?: string;
+  /** 선택한 호(예: "3204") — 공동주택 공시가격 조회 시 세대 식별용 (미선택 시 undefined) */
+  ho?: string;
   /** 동/호 선택 시 해당 호의 전용면적(㎡) — 면적 자동채움용 (미선택 시 undefined) */
   exclusiveArea?: number;
   /** 동/호 선택 시 해당 호의 공시가격(원) — 공시가격 자동채움용 (미선택 시 undefined) */
@@ -340,17 +344,19 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
               onDongChange={(dong) => {
                 setSelectedDong(dong);
                 setSelectedHo("");
-                onChange({ ...value, detail: dong });
+                onChange({ ...value, detail: dong, dong, ho: undefined });
               }}
               onHoChange={(ho) => {
                 setSelectedHo(ho);
-                // 선택한 호의 전용면적·공시가격을 함께 전달 → 상위에서 면적·공시가격 자동채움
+                // 선택한 호의 동·호·전용면적·공시가격을 함께 전달 → 상위에서 세대 식별·면적·공시가격 자동채움
                 const unit = units.find(
                   (u) => u.ho === ho && (!u.dong || u.dong === selectedDong),
                 );
                 onChange({
                   ...value,
                   detail: [selectedDong, ho].filter(Boolean).join(" "),
+                  dong: selectedDong || undefined,
+                  ho,
                   exclusiveArea: unit?.exclusiveArea,
                   standardPrice:
                     unit && unit.price > 0 ? unit.price : undefined,

@@ -179,6 +179,10 @@ export interface FormState {
   jibun: string;
   road: string;
   building: string;
+  /** 선택한 동(예: "201동") — 공동주택 시가표준액 조회 세대 식별용 (UI 전용, 엔진 미전송) */
+  dong: string;
+  /** 선택한 호(예: "3204") — 공동주택 시가표준액 조회 세대 식별용 (UI 전용, 엔진 미전송) */
+  ho: string;
 
   // ─── [P4] 부가세·감면 정밀화 ───
   /** 수도권 외 도시지역 외 읍·면 지역 — 농특세 100㎡ 한도 */
@@ -382,6 +386,8 @@ export const INITIAL_FORM: FormState = {
   jibun: "",
   road: "",
   building: "",
+  dong: "",
+  ho: "",
 
   // P4
   isRuralRegion: false,

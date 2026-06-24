@@ -226,6 +226,8 @@ export function CompanionAssetCard({
               addressJibun: v.jibun,
               buildingName: v.building,
               addressDetail: v.detail,
+              addressDong: v.dong ?? "",
+              addressHo: v.ho ?? "",
               longitude: v.lng,
               latitude: v.lat,
             };
@@ -513,6 +515,8 @@ export function CompanionAssetCard({
           onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
           singleMode={singleMode}
           jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
           transferDate={transferDate}
           transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
           onTransferAreaChange={asset.assetKind === "land" ? (v) => onChange({ transferArea: v }) : undefined}

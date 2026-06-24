@@ -34,6 +34,10 @@ interface Props {
   onAreaChange?: (v: string) => void;
   /** 지번 주소 (공시가격 자동 조회용) */
   jibun?: string;
+  /** 선택한 동(예: "201동") — 공동주택 조회 시 세대 식별. 미전달 시 건물 임의 세대 반환 */
+  dong?: string;
+  /** 선택한 호(예: "3204") — 공동주택 조회 시 세대 식별. 미전달 시 건물 임의 세대 반환 */
+  ho?: string;
   /** 기준일 (양도일·취득일·과세기준일 등) — 조회 연도 기본값 계산에 사용 */
   referenceDate?: string;
   label?: string;
@@ -49,6 +53,8 @@ interface Props {
   onSourceChange?: (source: PriceSource) => void;
   /** 조회 연도 강제 고정 (1990 이전 등) */
   forceYear?: string;
+  /** 조회 성공 시 콜백 — 조회 연도·가격 전달 (직전연도 자동 조회 등 연계용) */
+  onLookupSuccess?: (info: { year: string; price: number }) => void;
 }
 
 /**
@@ -67,6 +73,8 @@ export function StandardPriceInput({
   area,
   onAreaChange,
   jibun,
+  dong,
+  ho,
   referenceDate,
   label,
   hideLabel = false,
@@ -76,6 +84,7 @@ export function StandardPriceInput({
   forceTotalMode = false,
   onSourceChange,
   forceYear,
+  onLookupSuccess,
 }: Props) {
   const isAreaMode =
     !forceTotalMode &&
@@ -137,7 +146,7 @@ export function StandardPriceInput({
 
   // ── 조회 버튼 클릭 ─────────────────────────────────────────────
   async function handleLookup() {
-    const price = await lookup({ jibun: jibun ?? "", propertyType, year });
+    const price = await lookup({ jibun: jibun ?? "", propertyType, year, dong, ho });
     if (price === null) return;
 
     if (isAreaMode) {
@@ -153,6 +162,7 @@ export function StandardPriceInput({
       onTotalPriceChange(String(price));
     }
     onSourceChange?.("lookup");
+    onLookupSuccess?.({ year, price });
   }
 
   const showLookupArea = enableLookup;

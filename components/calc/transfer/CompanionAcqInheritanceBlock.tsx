@@ -55,6 +55,10 @@ interface BlockProps {
   onFixedAcquisitionPriceChange: (v: string) => void;
   /** 공시가격 조회용 지번 주소 */
   jibun?: string;
+  /** 공동주택 주택가격 조회용 동(예: "201동") — 세대 식별 */
+  dong?: string;
+  /** 공동주택 주택가격 조회용 호(예: "3204") — 세대 식별 */
+  ho?: string;
 }
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
@@ -198,6 +202,8 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
                 totalPrice={props.publishedValueAtInheritance}
                 onTotalPriceChange={props.onPublishedValueAtInheritanceChange}
                 jibun={props.jibun}
+                dong={props.dong}
+                ho={props.ho}
                 referenceDate={props.inheritanceDate}
                 label="상속개시일 직전 고시 주택가격 (원)"
               />

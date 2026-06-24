@@ -47,6 +47,10 @@ export interface BlockProps {
   transferDate?: string;
   /** 공시가격 조회용 지번 주소 */
   jibun?: string;
+  /** 공동주택 기준시가 조회용 동(예: "201동") — 세대 식별 */
+  dong?: string;
+  /** 공동주택 기준시가 조회용 호(예: "3204") — 세대 식별 */
+  ho?: string;
   /** 자산 종류 — 공시가격 API 선택 및 토지 면적 계산용 */
   assetKind?: string;
   /** 취득 당시 면적 (㎡) — 취득시 기준시가 자동계산, Pre1990 환산용 */
