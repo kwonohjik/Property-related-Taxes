@@ -18,6 +18,7 @@ const TAX_TYPE_ROUTES: Partial<Record<LocalTaxType, string>> = {
   property: "/calc/property-tax",
   comprehensive_property: "/calc/comprehensive-tax",
   stock_transfer: "/calc/stock-transfer-tax",
+  stock_valuation: "/tools/stock-valuation",
 };
 
 const TAX_TYPE_LABELS: Record<string, string> = {
@@ -29,12 +30,14 @@ const TAX_TYPE_LABELS: Record<string, string> = {
   property: "재산세",
   comprehensive_property: "종합부동산세",
   stock_transfer: "주식 양도세",
+  stock_valuation: "주식 평가",
 };
 
 const FILTER_OPTIONS: { label: string; value: LocalTaxType | "all" }[] = [
   { label: "전체", value: "all" },
   { label: "양도소득세", value: "transfer" },
   { label: "주식 양도세", value: "stock_transfer" },
+  { label: "주식 평가", value: "stock_valuation" },
   { label: "취득세", value: "acquisition" },
   { label: "상속세", value: "inheritance" },
   { label: "증여세", value: "gift" },
@@ -129,7 +132,25 @@ function extractCardSummary(
       dateLabel: fmt(rawDate, "양도일"),
     };
   }
+  if (taxType === "stock_valuation") {
+    // 대표 종목(평가대상회사) → address 위치, 평가기준일 → dateLabel
+    const items = inputData.stockItems as Array<Record<string, unknown>> | undefined;
+    const first = Array.isArray(items) && items.length > 0 ? items[0] : null;
+    const v2 = first?.unlistedStockValuationV2 as Record<string, unknown> | undefined;
+    const company =
+      (first?.companyName as string | undefined)?.trim() ||
+      (v2?.corpName as string | undefined)?.trim() ||
+      (first?.name as string | undefined)?.trim() ||
+      null;
+    return { address: company, dateLabel: fmt(inputData.valuationDate as string | undefined, "평가기준일") };
+  }
   return { address: null, dateLabel: null };
+}
+
+/** 주식 평가 이력 — 총 평가액 표시값. */
+function extractStockValuationTotal(resultData: Record<string, unknown>): string {
+  const total = resultData?.totalValuationAmount;
+  return typeof total === "number" ? total.toLocaleString() : "-";
 }
 
 function extractTotalTax(resultData: Record<string, unknown>): string {
@@ -254,6 +275,16 @@ export function HistoryClient() {
         });
         router.push(route);
       });
+    } else if (record.taxType === "stock_valuation") {
+      // 주식 평가 도구 — 이력 inputData를 평가 store에 hydrate
+      import("@/lib/stores/calc-stock-valuation-store").then(
+        ({ useStockValuationStore, normalizeStockValuationFormData }) => {
+          useStockValuationStore.setState({
+            formData: normalizeStockValuationFormData(record.inputData),
+          });
+          router.push(route);
+        },
+      );
     } else {
       router.push(route);
     }
@@ -480,7 +511,11 @@ export function HistoryClient() {
                   ) : null;
                 })()}
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  납부세액: <span className="font-semibold text-foreground">{extractTotalTax(record.resultData)}</span>
+                  {record.taxType === "stock_valuation" ? (
+                    <>평가액: <span className="font-semibold text-foreground">{extractStockValuationTotal(record.resultData)}</span></>
+                  ) : (
+                    <>납부세액: <span className="font-semibold text-foreground">{extractTotalTax(record.resultData)}</span></>
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">

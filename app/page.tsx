@@ -133,6 +133,13 @@ const MENU = [
     tone: "cyan",
   },
   {
+    href: "/tools/stock-valuation",
+    title: "주식 평가",
+    subtitle: "상장·비상장주식 보충적 평가",
+    icon: "📊",
+    tone: "emerald",
+  },
+  {
     href: "/law",
     title: "법령 리서치",
     subtitle: "조문·판례·별표 통합 검색",

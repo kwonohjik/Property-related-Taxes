@@ -122,6 +122,16 @@ export function HistoryDetailDrawer({
       // 상속세 — InheritanceTaxForm은 자체 useState 기반이라 sessionStorage 경유로 hydrate
       sessionStorage.setItem("inheritanceTaxResumeInput", JSON.stringify(record.inputData));
       router.push(route);
+    } else if (record.taxType === "stock_valuation") {
+      // 주식 평가 도구 — 이력 inputData를 평가 store에 hydrate
+      import("@/lib/stores/calc-stock-valuation-store").then(
+        ({ useStockValuationStore, normalizeStockValuationFormData }) => {
+          useStockValuationStore.setState({
+            formData: normalizeStockValuationFormData(record.inputData),
+          });
+          router.push(route);
+        },
+      );
     } else {
       router.push(route);
     }

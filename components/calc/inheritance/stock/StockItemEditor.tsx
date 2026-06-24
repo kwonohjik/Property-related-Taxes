@@ -140,6 +140,8 @@ interface ListedStockEditorProps {
   heirs?: Heir[];
   /** 모달 내용물로 렌더 시 외곽 카드·헤더(이모지+번호+삭제) 미렌더 (DialogTitle·푸터 대체) */
   hideHeader?: boolean;
+  /** 평가 전용 — 협의분할·공통속성·부담부채무 섹션 미렌더 (독립 도구) */
+  valuationOnly?: boolean;
 }
 
 function ListedStockEditor({
@@ -151,6 +153,7 @@ function ListedStockEditor({
   mode,
   heirs,
   hideHeader = false,
+  valuationOnly = false,
 }: ListedStockEditorProps) {
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
 
@@ -292,17 +295,19 @@ function ListedStockEditor({
       <ListedStockValuationPreviewCard item={item} />
 
       {/* §47① 부담부증여 채무인수 (증여 모드 전용) — 평가 입력 뒤 = 계산 로직 순서 */}
-      <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} />
+      {!valuationOnly && <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} />}
 
-      {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 상장·비상장 공용 */}
-      <EstateCommonAttributesSection
-        item={item}
-        onUpdate={onUpdate}
-        mode={mode}
-        heirs={heirs}
-        effectiveValuation={totalValue}
-        deathDate={valuationDate}
-      />
+      {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 상장·비상장 공용. 평가 전용 도구는 미렌더 */}
+      {!valuationOnly && (
+        <EstateCommonAttributesSection
+          item={item}
+          onUpdate={onUpdate}
+          mode={mode}
+          heirs={heirs}
+          effectiveValuation={totalValue}
+          deathDate={valuationDate}
+        />
+      )}
     </div>
   );
 }
@@ -336,6 +341,8 @@ interface UnlistedStockCardProps {
   valuationDate?: string;
   /** 모달 내용물로 렌더 시 외곽 카드·헤더(이모지+번호+삭제) 미렌더 (DialogTitle·푸터 대체) */
   hideHeader?: boolean;
+  /** 평가 전용 — 협의분할·공통속성·부담부채무 섹션 미렌더 (독립 도구) */
+  valuationOnly?: boolean;
 }
 
 function UnlistedStockCard({
@@ -347,6 +354,7 @@ function UnlistedStockCard({
   heirs,
   valuationDate,
   hideHeader = false,
+  valuationOnly = false,
 }: UnlistedStockCardProps) {
   const currentMode = resolveUnlistedDisplayMode(item);
   // 부동산과다보유법인 — store(unlistedStockData)에서 read. heavyMap local state 폐지(엔진 도달 보장).
@@ -452,22 +460,24 @@ function UnlistedStockCard({
           input={item.unlistedStockValuationV2}
           onChange={(next) => onUpdate({ ...item, unlistedStockValuationV2: next })}
           valuationDate={valuationDate}
-          taxKind={mode}
+          taxKind={valuationOnly ? "inheritance" : mode}
         />
       )}
 
       {/* §47① 부담부증여 채무인수 (증여 모드 전용) — 평가 입력 뒤 = 계산 로직 순서 */}
-      <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} />
+      {!valuationOnly && <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} />}
 
-      {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 모드 밖, 카드 하단 배치 */}
-      <EstateCommonAttributesSection
-        item={item}
-        onUpdate={onUpdate}
-        mode={mode}
-        heirs={heirs}
-        effectiveValuation={effectiveValuation}
-        deathDate={valuationDate}
-      />
+      {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 모드 밖, 카드 하단 배치. 평가 전용 도구는 미렌더 */}
+      {!valuationOnly && (
+        <EstateCommonAttributesSection
+          item={item}
+          onUpdate={onUpdate}
+          mode={mode}
+          heirs={heirs}
+          effectiveValuation={effectiveValuation}
+          deathDate={valuationDate}
+        />
+      )}
     </div>
   );
 }
@@ -485,6 +495,8 @@ export interface StockItemEditorProps {
   heirs?: Heir[];
   /** 평가기준일 (상속개시일·증여일) */
   valuationDate?: string;
+  /** 평가 전용 — 협의분할·공통속성·부담부채무 섹션 미렌더 (독립 도구) */
+  valuationOnly?: boolean;
 }
 
 export function StockItemEditor({
@@ -495,6 +507,7 @@ export function StockItemEditor({
   mode,
   heirs,
   valuationDate,
+  valuationOnly = false,
 }: StockItemEditorProps) {
   if (item.category === "listed_stock") {
     return (
@@ -507,6 +520,7 @@ export function StockItemEditor({
         mode={mode}
         heirs={heirs}
         hideHeader
+        valuationOnly={valuationOnly}
       />
     );
   }
@@ -520,6 +534,7 @@ export function StockItemEditor({
       heirs={heirs}
       valuationDate={valuationDate}
       hideHeader
+      valuationOnly={valuationOnly}
     />
   );
 }
