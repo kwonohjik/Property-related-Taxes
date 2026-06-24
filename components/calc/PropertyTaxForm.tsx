@@ -157,6 +157,13 @@ export function PropertyTaxForm() {
     setStep(0);
   }
 
+  // 결과 화면 → 입력 마지막 단계(step 3) 복귀 (폼 값 유지, 결과만 닫음)
+  function handleBackToInput() {
+    setResult(null);
+    setError(null);
+    setStep(3);
+  }
+
   if (step === 4 && result) {
     return (
       <div>
@@ -165,6 +172,13 @@ export function PropertyTaxForm() {
         </div>
         <PropertyTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
         <div className="mt-6 flex justify-center gap-3">
+          <button
+            onClick={handleBackToInput}
+            className="inline-flex items-center gap-1 px-6 py-2 rounded-md border text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            뒤로 가기
+          </button>
           <button
             onClick={handleReset}
             className="px-6 py-2 rounded-md border text-sm font-medium hover:bg-muted transition-colors"

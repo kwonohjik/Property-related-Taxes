@@ -2,6 +2,7 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { FormState } from "./shared";
 
@@ -11,22 +12,32 @@ interface Props {
 }
 
 export function Step3({ form, onChange }: Props) {
-  // 주택: §122 단서로 세부담상한 미적용 — 전년도 세액 입력 불필요
+  // 주택: 부칙 제15조 경과조치(2024~2028 종전 §122 세부담상한) — 직전본세 입력 시 적용
   if (form.objectType === "housing") {
     return (
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">입력 확인</h2>
-        <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-3 space-y-1">
-          <p className="text-sm font-medium text-sky-900">
-            주택은 세부담상한이 적용되지 않습니다
-          </p>
-          <LawArticleModal legalBasis="지방세법 §122" label="§122 단서" />
-          <p className="text-xs text-muted-foreground">
-            2024년부터 주택 세부담상한제가 폐지되어 전년도 납부세액 입력이
-            필요하지 않습니다. 아래 &ldquo;재산세 계산하기&rdquo;를 눌러
-            계산을 진행하세요.
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold">전년도 세액 (선택)</h2>
+        <ToggleCard
+          tone="sky"
+          title="부칙 제15조 세부담상한 경과조치"
+          description="2024.1.1 이전 과세된 주택은 2028년까지 종전 세부담상한(전년 대비 105~130%)이 적용됩니다. 2024년 이후 최초 과세 신축주택은 해당 없습니다."
+          checked={form.housingTaxCapEnabled}
+          onCheckedChange={(v) => onChange({ housingTaxCapEnabled: v })}
+        >
+          <div className="space-y-1">
+            <label className="text-sm font-medium">직전연도 재산세 본세 (원)</label>
+            <CurrencyInput
+              label="직전연도 재산세 본세"
+              value={form.housingPreviousYearTax}
+              onChange={(v) => onChange({ housingPreviousYearTax: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              전년도 7·9월 고지서의 &ldquo;재산세&rdquo; 금액을 합산해 입력하세요.
+              공시가격 구간에 따라 105/110/130% 상한이 자동 적용됩니다. 미입력 시 상한 없이 산출세액을 적용합니다.
+            </p>
+            <LawArticleModal legalBasis="지방세법 §122" label="부칙 §15·§122" />
+          </div>
+        </ToggleCard>
       </div>
     );
   }

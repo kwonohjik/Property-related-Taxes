@@ -153,6 +153,7 @@ export function calcSurtax(
 export function calcInstallment(
   determinedTax: number,
   objectType: PropertyTaxInput["objectType"],
+  totalSurtax = 0,
 ): InstallmentInfo {
   // 지방세법 §115①: 주택 20만원 초과, 토지·건축물 등 비주택 250만원 초과 시 분납 가능
   const threshold =
@@ -160,12 +161,20 @@ export function calcInstallment(
       ? PROPERTY_CONST.INSTALLMENT_THRESHOLD
       : PROPERTY_CONST.INSTALLMENT_THRESHOLD_NON_HOUSE;
 
+  // 분납 판정은 재산세 본세(§115①3호 "부과·징수할 세액") 기준.
   const eligible = determinedTax > threshold;
+
+  // 주택(§115①3호)은 본세를 7·9월 1/2씩 분할 고지하며, 도시지역분(§112)·지역자원시설세(§147)·
+  // 지방교육세(§152)도 동일 납기로 함께 분할 고지된다 → 각 기분 실납부액 = 총 납부세액 ÷ 2.
+  // 비주택(토지·건축물 등)은 본세만 기준(§118 분할납부).
+  const installmentBase =
+    objectType === "housing" ? determinedTax + totalSurtax : determinedTax;
+
   if (!eligible) {
-    return { eligible: false, firstPayment: determinedTax, secondPayment: 0 };
+    return { eligible: false, firstPayment: installmentBase, secondPayment: 0 };
   }
   // 균등 분납: 홀수 원은 1차에 포함
-  const secondPayment = Math.floor(determinedTax / 2);
-  const firstPayment = determinedTax - secondPayment;
+  const secondPayment = Math.floor(installmentBase / 2);
+  const firstPayment = installmentBase - secondPayment;
   return { eligible: true, firstPayment, secondPayment };
 }

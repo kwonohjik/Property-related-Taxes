@@ -76,6 +76,13 @@ export const propertyTaxInputSchema = z
       .nonnegative({ message: "직전연도 과세표준은 0원 이상이어야 합니다." })
       .optional(),
 
+    /** [부칙 제15조] 직전연도 주택 본세 (원) — 주택 세부담상한 경과조치용 (housing 전용) */
+    previousYearHousingBaseTax: z
+      .number()
+      .int({ message: "직전연도 본세는 원 단위 정수여야 합니다." })
+      .nonnegative({ message: "직전연도 본세는 0원 이상이어야 합니다." })
+      .optional(),
+
     /** 세부담상한 모드 — direct(직접입력) | recompute(과세표준 재산정) */
     taxCapMode: z.enum(["direct", "recompute"]).optional(),
 
@@ -261,6 +268,14 @@ export const propertyTaxInputSchema = z
         code: z.ZodIssueCode.custom,
         path: ["housingBuildingValue"],
         message: "housingBuildingValue는 objectType이 'housing'일 때만 적용됩니다.",
+      });
+    }
+    // previousYearHousingBaseTax는 objectType==="housing" 일 때만 유효 (부칙 제15조 경과조치)
+    if (data.previousYearHousingBaseTax != null && data.objectType !== "housing") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["previousYearHousingBaseTax"],
+        message: "previousYearHousingBaseTax는 objectType이 'housing'일 때만 적용됩니다.",
       });
     }
     // landTaxType은 objectType==="land" 일 때 필수

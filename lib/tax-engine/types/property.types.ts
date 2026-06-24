@@ -117,6 +117,13 @@ export interface PropertyTaxInput {
   /** 세부담상한 모드 — "direct"(직전 세액 직접입력, 기본) | "recompute"(직전 과세표준 재산정) */
   taxCapMode?: "direct" | "recompute";
 
+  /**
+   * [부칙 제15조 경과조치] 직전연도 주택 재산세 본세 (§112①1호, 고지서 '재산세' 항목).
+   * objectType==="housing" 전용. 입력 시 2024~2028 종전 §122(공시 구간별 105/110/130%) 세부담상한 적용.
+   * 미입력 시 상한 미적용 + warnings. 종부세 내부 호출은 미전달 → 회귀 0. (§118 단서: 직전 실제 과세 세액)
+   */
+  previousYearHousingBaseTax?: number;
+
   /** 계산 기준일 (YYYY-MM-DD, 기본: 과세기준일 6월 1일) */
   targetDate?: string;
 
@@ -377,6 +384,27 @@ export interface PropertyTaxResult {
     appliedRate?: number;
     /** 재산정 직전 세액상당액 (= taxCapBasisTax) */
     recomputedTax: number;
+  };
+
+  /**
+   * 주택 세부담상한 경과조치(부칙 제15조) 적용 결과 — objectType==="housing" + 경과조치 적용 시에만.
+   * v1 본세. 도시지역분(§112①2호) 상한은 v2.
+   */
+  housingTransitionalCap?: {
+    /** 경과조치 상한 실제 적용 여부 */
+    applied: boolean;
+    /** 공시가격 구간별 상한율 (1.05/1.10/1.30) */
+    capRate: number;
+    /** 직전연도 본세 (입력값, §118 단서) */
+    previousYearBaseTax: number;
+    /** 본세 상한 한도 = floor(직전본세 × capRate) */
+    baseCapLimit: number;
+    /** 상한 적용 전 산출세액 */
+    baseCalculatedTax: number;
+    /** 결정 본세 (= determinedTax) */
+    baseDeterminedTax: number;
+    /** 법령 근거 (부칙 제15조) */
+    legalBasis: string;
   };
 
   // ── 부가세 ──

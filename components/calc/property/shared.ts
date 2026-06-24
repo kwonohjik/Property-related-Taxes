@@ -140,6 +140,10 @@ export interface FormState {
   previousYearTaxBase: string;
   /** 세부담상한 모드 — "direct"(직전 세액 직접입력) | "recompute"(직전 과세표준 재산정) */
   taxCapMode: "direct" | "recompute";
+  /** 주택 세부담상한 경과조치(부칙 제15조) 적용 토글 — 노출제어 (주택 전용) */
+  housingTaxCapEnabled: boolean;
+  /** 직전연도 주택 재산세 본세 — 부칙 제15조 경과조치 직접입력 (주택 전용) */
+  housingPreviousYearTax: string;
   landTaxType: "comprehensive_aggregate" | "separate_aggregate" | "separated" | "";
   saZoningDistrict: string;
   saLandArea: string;
@@ -205,6 +209,8 @@ export const INITIAL_FORM: FormState = {
   previousYearTax: "",
   previousYearTaxBase: "",
   taxCapMode: "direct",
+  housingTaxCapEnabled: false,
+  housingPreviousYearTax: "",
   landTaxType: "",
   saZoningDistrict: "",
   saLandArea: "",
@@ -349,6 +355,12 @@ export function validateStep(step: number, form: FormState): string | null {
     if (form.previousYearTaxBase && parseAmount(form.previousYearTaxBase) === null)
       return "직전연도 과세표준을 올바른 금액으로 입력하세요.";
   }
+  // Step3(주택): 부칙 제15조 경과조치 토글 ON 시 직전본세 필수 (자동 안분 fallback 금지 — 미입력 차단)
+  if (step === 3 && form.objectType === "housing" && form.housingTaxCapEnabled) {
+    const prev = parseAmount(form.housingPreviousYearTax);
+    if (prev === null || prev <= 0)
+      return "세부담상한 경과조치 적용 시 직전연도 재산세 본세를 입력하세요.";
+  }
   return null;
 }
 
@@ -375,6 +387,13 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
     const bldgValue = parseAmount(form.housingBuildingValue);
     if (bldgValue !== null && bldgValue > 0) {
       body.housingBuildingValue = bldgValue;
+    }
+    // 주택 세부담상한 경과조치(부칙 제15조) — 토글 ON + 직전본세 값>0 시에만 전송 (게이트=필드 존재 → 종부세 호출 불변)
+    if (form.housingTaxCapEnabled) {
+      const prevHousingTax = parseAmount(form.housingPreviousYearTax);
+      if (prevHousingTax !== null && prevHousingTax > 0) {
+        body.previousYearHousingBaseTax = prevHousingTax;
+      }
     }
   }
 
