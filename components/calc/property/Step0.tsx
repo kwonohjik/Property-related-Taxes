@@ -6,6 +6,7 @@ import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { UrbanAreaLookup } from "./UrbanAreaLookup";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -248,13 +249,19 @@ export function Step0({
       )}
 
       {/* 도시지역 여부 */}
-      <ToggleCard
-        tone="rose"
-        title="도시지역 내 소재"
-        description="도시지역분 0.14% 추가 과세"
-        checked={form.isUrbanArea}
-        onCheckedChange={(v) => onChange({ isUrbanArea: v })}
-      />
+      <div className="space-y-2">
+        <ToggleCard
+          tone="rose"
+          title="도시지역 내 소재"
+          description="도시지역분 0.14% 추가 과세 (지방세법 §112)"
+          checked={form.isUrbanArea}
+          onCheckedChange={(v) => onChange({ isUrbanArea: v })}
+        />
+        <UrbanAreaLookup
+          jibun={jibun ?? form.jibun}
+          onApply={() => onChange({ isUrbanArea: true })}
+        />
+      </div>
 
       {/* 소유 형태 (선택) — 납세의무자 판정(지방세법 §107) */}
       <OwnershipSection form={form} onChange={onChange} />
