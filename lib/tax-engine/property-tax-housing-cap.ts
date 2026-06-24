@@ -76,6 +76,67 @@ export function applyHousingTransitionalCap(
   };
 }
 
+export interface HousingUrbanCapResult {
+  /** 도시지역분 세부담상한 실제 적용 여부 */
+  applied: boolean;
+  /** 상한 적용 후 도시지역분 (미적용 시 = urbanCalculatedTax) */
+  determinedUrbanTax: number;
+  /** 공시가격 구간별 상한율 (1.05/1.10/1.30) — 본세와 동일 — 적용 시에만 */
+  capRate?: number;
+  /** 상한 한도 = floor(직전 도시지역분 × capRate) — 적용 시에만 */
+  capLimit?: number;
+  /** 미적용 사유 안내 */
+  warnings: string[];
+}
+
+/**
+ * [v2 §118 본문 "각각 산출"] 주택 도시지역분(§112①2호)에 부칙 제15조 경과조치 세부담상한 적용.
+ *
+ * §118은 직전 재산세액 상당액을 본세(§112①1호)·도시지역분(§112①2호·②) **각각** 산출하도록 규정한다.
+ * 도시지역분은 본세와 **동일 capRate**(공시 구간 105/110/130%, resolveHousingCapRate 공유)·동일 게이트.
+ * 직전 도시지역분은 §118 2호 가목 단서(직전 실제 부과 도시지역분)로 직접입력(previousYearHousingUrbanTax).
+ *
+ * ⚠️ v2 선구현(순수함수만): 엔진 Step4 주입·input/UI 결선·통합 anchor는 실측 도시지역분 과세표준 미스터리
+ *   (환산과표 ≠ 재산세 과표·법령 산식과 332원차) 규명 후. 본 함수는 §118 법문(직전×상한율)만 구현.
+ *   호출측은 isUrbanArea=false(도시지역분 0)이면 호출하지 않는다.
+ */
+export function applyHousingUrbanTransitionalCap(
+  urbanCalculatedTax: number,
+  publishedPrice: number,
+  taxYear: number,
+  previousYearHousingUrbanTax?: number,
+): HousingUrbanCapResult {
+  // G2: 경과조치 만료 (2029~)
+  if (taxYear > PROPERTY_CONST.HOUSING_TAX_CAP_EXPIRY_YEAR) {
+    return {
+      applied: false,
+      determinedUrbanTax: urbanCalculatedTax,
+      warnings: [
+        `주택 도시지역분 세부담상한 경과조치(${PROPERTY.TAX_CAP_TRANSITIONAL})는 ${PROPERTY_CONST.HOUSING_TAX_CAP_EXPIRY_YEAR}년까지만 적용됩니다.`,
+      ],
+    };
+  }
+  // G3: 직전연도 도시지역분 미입력 → 상한 미적용 (자동 안분 금지 — 0 대입 안 함)
+  if (previousYearHousingUrbanTax == null || previousYearHousingUrbanTax <= 0) {
+    return {
+      applied: false,
+      determinedUrbanTax: urbanCalculatedTax,
+      warnings: [
+        "직전연도 도시지역분 미입력으로 도시지역분 세부담상한(부칙 제15조)을 적용하지 않습니다. 전년도 고지서 '도시지역분' 금액을 입력하세요.",
+      ],
+    };
+  }
+  const capRate = resolveHousingCapRate(publishedPrice);
+  const capLimit = applyRate(previousYearHousingUrbanTax, capRate); // floor (§118)
+  return {
+    applied: true,
+    determinedUrbanTax: Math.min(urbanCalculatedTax, capLimit),
+    capRate,
+    capLimit,
+    warnings: [],
+  };
+}
+
 /** 공시가격 구간별 세부담상한율 (종전 §122 단서). single-source: PROPERTY_CONST 공유. */
 export function resolveHousingCapRate(publishedPrice: number): number {
   if (publishedPrice <= PROPERTY_CONST.HOUSING_TAX_CAP_BRACKET_1)
