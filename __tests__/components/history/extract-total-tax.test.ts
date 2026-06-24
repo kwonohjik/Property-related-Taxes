@@ -13,8 +13,26 @@ describe("extractTotalTax — Bug B 회귀 보호", () => {
     expect(extractTotalTax({ result: { totalTax: 9_876 } })).toBe("9,876");
   });
 
-  it("Anchor 4-c: 취득세·재산세·종부세 top-level totalTax 회귀", () => {
+  it("Anchor 4-c: 취득세 top-level totalTax 회귀", () => {
     expect(extractTotalTax({ totalTax: 5_000 })).toBe("5,000");
+  });
+
+  // 재산세·종부세는 결과 객체를 최상위에 직접 저장 — totalTax가 아닌 totalPayable/grandTotal.
+  // (이전 'totalTax 회귀' 주석이 잘못 가정해 "납부세액: -" 버그가 테스트로 안 잡혔음)
+  it("Anchor 4-h: 재산세 top-level totalPayable", () => {
+    expect(extractTotalTax({ totalPayable: 1_234_567, determinedTax: 1_000_000 })).toBe(
+      "1,234,567"
+    );
+  });
+
+  it("Anchor 4-i: 종부세 top-level grandTotal", () => {
+    expect(extractTotalTax({ grandTotal: 9_876_543, totalHousingTax: 8_000_000 })).toBe(
+      "9,876,543"
+    );
+  });
+
+  it("Anchor 4-j: 재산세 비과세 우선", () => {
+    expect(extractTotalTax({ isExempt: true, totalPayable: 0 })).toBe("비과세");
   });
 
   it("Anchor 4-d: bundled aggregated.totalTax 회귀", () => {
@@ -62,6 +80,26 @@ describe("extractResultSummaryItems — taxType 분기 (Bug B 확장)", () => {
     );
     expect(items.find((i) => i.label === "납부세액")?.value).toBe("50");
     expect(items.find((i) => i.label === "산출세액")?.value).toBe("60");
+  });
+
+  it("Anchor 5-e: 재산세 과세표준·본세·부가세·납부세액 노출", () => {
+    const items = extractResultSummaryItems(
+      { taxBase: 100_000_000, determinedTax: 140_000, totalSurtax: 28_000, totalPayable: 168_000 },
+      "property"
+    );
+    expect(items.find((i) => i.label === "과세표준")?.value).toBe("100,000,000");
+    expect(items.find((i) => i.label === "본세(결정세액)")?.value).toBe("140,000");
+    expect(items.find((i) => i.label === "부가세 합계")?.value).toBe("28,000");
+    expect(items.find((i) => i.label === "납부세액")?.value).toBe("168,000");
+  });
+
+  it("Anchor 5-f: 종부세 grandTotal 노출", () => {
+    const items = extractResultSummaryItems(
+      { totalHousingTax: 8_000_000, grandTotal: 9_876_543 },
+      "comprehensive_property"
+    );
+    expect(items.find((i) => i.label === "납부세액")?.value).toBe("9,876,543");
+    expect(items.find((i) => i.label === "주택분 종부세")?.value).toBe("8,000,000");
   });
 
   it("Anchor 5-d: 비과세 우선 (회귀)", () => {

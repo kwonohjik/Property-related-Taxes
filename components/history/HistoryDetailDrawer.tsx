@@ -44,6 +44,9 @@ export function extractTotalTax(resultData: Record<string, unknown>): string {
   if (resultData?.isExempt) return "비과세";
   if (typeof resultData?.totalTax === "number") return resultData.totalTax.toLocaleString();
   if (typeof resultData?.finalTax === "number") return resultData.finalTax.toLocaleString();
+  // 재산세(totalPayable) · 종부세(grandTotal) — 결과 객체를 최상위에 직접 저장(래핑 없음)
+  if (typeof resultData?.totalPayable === "number") return resultData.totalPayable.toLocaleString();
+  if (typeof resultData?.grandTotal === "number") return resultData.grandTotal.toLocaleString();
   return "-";
 }
 
@@ -71,6 +74,16 @@ export function extractResultSummaryItems(
     addNum("과세표준", "taxBase");
     addNum("산출세액", "computedTax");
     addNum("결정세액", "finalTax");
+  } else if (taxType === "property") {
+    // 재산세: 과세표준 / 본세(determinedTax) / 부가세 합계(totalSurtax) / 납부세액(totalPayable)
+    addNum("과세표준", "taxBase");
+    addNum("본세(결정세액)", "determinedTax");
+    addNum("부가세 합계", "totalSurtax");
+    addNum("납부세액", "totalPayable");
+  } else if (taxType === "comprehensive_property") {
+    // 종부세: 주택분 / 토지분 / 총 납부세액(grandTotal)
+    addNum("주택분 종부세", "totalHousingTax");
+    addNum("납부세액", "grandTotal");
   } else {
     addNum("양도차익", "transferGain");
     addNum("장기보유특별공제", "longTermDeduction");

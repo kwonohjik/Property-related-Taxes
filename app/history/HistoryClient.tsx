@@ -167,6 +167,9 @@ function extractTotalTax(resultData: Record<string, unknown>): string {
   if (typeof resultData?.totalTax === "number") return resultData.totalTax.toLocaleString();
   // 증여세·상속세 finalTax (top-level)
   if (typeof resultData?.finalTax === "number") return resultData.finalTax.toLocaleString();
+  // 재산세(totalPayable) · 종부세(grandTotal) — 결과 객체를 최상위에 직접 저장(래핑 없음)
+  if (typeof resultData?.totalPayable === "number") return resultData.totalPayable.toLocaleString();
+  if (typeof resultData?.grandTotal === "number") return resultData.grandTotal.toLocaleString();
   return "-";
 }
 
