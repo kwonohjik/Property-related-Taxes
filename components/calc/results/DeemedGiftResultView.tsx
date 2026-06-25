@@ -359,6 +359,43 @@ export function DeemedGiftResultView({
         </div>
       </div>
 
+      {result.nomineeCapitalIncrease && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="nominee-capital-increase">
+          <p className="text-sm font-semibold text-emerald-800">유상증자 신주 명의신탁 평가 (§45의2 · 명의개서일 §63 평가)</p>
+          <div className="mt-2 rounded-md border border-emerald-200 bg-white p-2 text-sm text-emerald-900">
+            1주당 평가액{" "}
+            <b className="font-mono tabular-nums">{result.nomineeCapitalIncrease.perSharePrice.toLocaleString("ko-KR")}</b>
+            {" × 명의신탁 신주 "}
+            <b className="font-mono tabular-nums">{result.nomineeCapitalIncrease.nomineeShares.toLocaleString("ko-KR")}</b>
+            {"주 = "}
+            <b className="font-mono tabular-nums">{formatKRW(result.deemedGiftValue)}</b>
+          </div>
+          {(result.nomineeCapitalIncrease.preIncreasePerShare ||
+            result.nomineeCapitalIncrease.subscriptionPrice ||
+            result.nomineeCapitalIncrease.theoreticalExRightsPrice) && (
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {result.nomineeCapitalIncrease.preIncreasePerShare ? (
+                <p>
+                  증자 전 1주당 {result.nomineeCapitalIncrease.preIncreasePerShare.toLocaleString("ko-KR")} → 유상증자 희석으로 명의개서일 §63 평가{" "}
+                  {result.nomineeCapitalIncrease.perSharePrice.toLocaleString("ko-KR")} <span className="text-emerald-700">(적용)</span>
+                </p>
+              ) : null}
+              {result.nomineeCapitalIncrease.subscriptionPrice || result.nomineeCapitalIncrease.theoreticalExRightsPrice ? (
+                <p>
+                  신주인수가액 {result.nomineeCapitalIncrease.subscriptionPrice ? result.nomineeCapitalIncrease.subscriptionPrice.toLocaleString("ko-KR") : "-"}
+                  {" · 이론적 권리락 "}
+                  {result.nomineeCapitalIncrease.theoreticalExRightsPrice ? result.nomineeCapitalIncrease.theoreticalExRightsPrice.toLocaleString("ko-KR") : "-"}
+                  {" — 평가에 미적용 (조심2012중3707·2019서2129)"}
+                </p>
+              ) : null}
+            </div>
+          )}
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            증여의제 수증자 = 명의자 / 납세의무자 = 실제소유자 (§4의2②, 2018.12.31 개정 후). 합산배제증여재산 — 동일인 10년 합산·증여재산공제 비적용 (§47①).
+          </p>
+        </div>
+      )}
+
       {result.capitalDecreaseMulti && (
         <CapitalDecreaseMultiResultView
           multi={result.capitalDecreaseMulti}
@@ -658,6 +695,36 @@ export function DeemedGiftResultView({
       {/* ── §41의2 초과배당 전용 상세 섹션 ── */}
       {result.excessDividendDetail && (
         <ExcessDividendDetailSection detail={result.excessDividendDetail} />
+      )}
+
+      {/* ── §42의3 재산취득 후 가치증가 — 적용요건 echo ── */}
+      {result.valueIncreaseDetail && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4 space-y-1.5" data-testid="deemed-vi-detail">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-rose-800">재산취득 후 가치증가 — 적용요건 (상증법 §42의3)</span>
+            <LawArticleModal legalBasis={GIFT.VALUE_INCREASE} />
+          </div>
+          {result.valueIncreaseDetail.acquisitionCauseLabel && (
+            <p className="text-xs text-rose-700">취득사유: {result.valueIncreaseDetail.acquisitionCauseLabel}</p>
+          )}
+          {result.valueIncreaseDetail.reasonLabel && (
+            <p className="text-xs text-rose-700">가치증가사유: {result.valueIncreaseDetail.reasonLabel}</p>
+          )}
+          {result.valueIncreaseDetail.withinFiveYears !== undefined && (
+            <p className="text-xs text-rose-700">
+              취득~사유발생 {result.valueIncreaseDetail.holdingYears}년 — 5년 이내{" "}
+              {result.valueIncreaseDetail.withinFiveYears ? "○" : "✕ (초과)"}
+            </p>
+          )}
+          {result.valueIncreaseDetail.isExchangeListingNotice && (
+            <div className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-700" data-testid="deemed-vi-exchange-notice">
+              ⚠ 현행 §42의3은 K-OTC 등록·코넥스 상장만 해당. 유가증권·코스닥시장 상장 이익은 §41의3 상장이익으로 과세됩니다.
+              <span className="ml-1 inline-block align-middle">
+                <LawArticleModal legalBasis={GIFT.LISTING_GAIN} />
+              </span>
+            </div>
+          )}
+        </div>
       )}
 
       {result.applied && (

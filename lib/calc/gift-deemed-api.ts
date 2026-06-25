@@ -374,13 +374,28 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         acquisitionValue: parseAmount(form.afAcquisitionValue),
         provenAmount: parseAmount(form.afProvenAmount),
       };
-    case "nominee_trust":
+    case "nominee_trust": {
+      const ntPerShare = form.ntValuationMode === "per_share";
       return {
         type: "nominee_trust",
-        propertyValue: parseAmount(form.ntPropertyValue),
+        // per_share 모드는 propertyValue 미전송 — 엔진이 perSharePrice×nomineeShares로 단일 도출(dual-truth 금지)
+        ...(ntPerShare ? {} : { propertyValue: parseAmount(form.ntPropertyValue) }),
         hasTaxAvoidancePurpose: form.ntTaxAvoidance,
         isExcluded: form.ntExcluded,
+        valuationMode: form.ntValuationMode,
+        ...(ntPerShare
+          ? {
+              perSharePrice: parseAmount(form.ntPerSharePrice),
+              nomineeShares: parseAmount(form.ntNewShares),
+              subscriptionPrice: parseAmount(form.ntSubscriptionPrice) || undefined,
+              theoreticalExRightsPrice: parseAmount(form.ntTheoreticalExRights) || undefined,
+              preIncreasePerShare: parseAmount(form.ntPreIncreasePerShare) || undefined,
+              actualOwnerName: form.ntActualOwner?.trim() || undefined,
+              nomineeName: form.ntNominee?.trim() || undefined,
+            }
+          : {}),
       };
+    }
     case "excess_dividend": {
       // ① 주주 배열 → shareholders 변환 (ownershipRatioPct → 분수)
       const edRows = form.edShareholders ?? [];
@@ -487,6 +502,10 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         acquisitionCost: parseAmount(form.viAcqCost),
         normalIncrease: parseAmount(form.viNormalIncrease),
         contribution: parseAmount(form.viContribution),
+        acquisitionCause: form.viAcqCause || undefined,
+        valueIncreaseReason: form.viReason,
+        acquisitionDate: form.viAcqDate || undefined,
+        eventDate: form.viEventDate || undefined,
       };
     case "specific_corp":
       return {

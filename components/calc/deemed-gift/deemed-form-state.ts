@@ -2,7 +2,7 @@
  * 증여로 보는 경우 — 폼 상태 타입 + 초기값.
  * shared.tsx에서 분리(800줄 정책). shared.tsx가 re-export하여 하위호환 유지.
  */
-import type { DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftType, ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /** 감자 멀티 모드 주주 행 (전부 string — parseAmount 변환은 API 변환 시) */
@@ -248,6 +248,14 @@ export interface DeemedFormState {
   ntPropertyValue: string;
   ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
   ntExcluded: boolean; // §45의2①1·3·4 배제사유
+  ntValuationMode: "total" | "per_share"; // total=재산가액 직접 / per_share=유상증자 신주(명의개서일 §63 평가×신주수)
+  ntPerSharePrice: string; // per_share: 명의개서일 §63 평가 1주당 가액
+  ntNewShares: string; // per_share: 명의신탁 신주 수
+  ntSubscriptionPrice: string; // echo: 신주인수가액(발행가액)
+  ntTheoreticalExRights: string; // echo: 이론적 권리락 증자후 1주당 가액
+  ntPreIncreasePerShare: string; // echo: 증자 전 1주당 평가액
+  ntActualOwner: string; // prefill: 실제소유자(증여자) 성명
+  ntNominee: string; // prefill: 명의자(증여의제 수증자) 성명
   // 초과배당 §41의2 — 주주 배열 기반 자동산정 (edExcessDividend·edIncomeTax·edDividendDate 폐지)
   edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
   edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
@@ -291,6 +299,10 @@ export interface DeemedFormState {
   viAcqCost: string;
   viNormalIncrease: string;
   viContribution: string;
+  viAcqCause: ValueIncreaseAcquisitionCause | ""; // 취득사유 ①1·2·3호 (미선택="")
+  viReason: ValueIncreaseReason; // 가치증가사유 영①호 (기본 form_change=1호)
+  viAcqDate: string; // 취득일 (5년 echo)
+  viEventDate: string; // 사유발생일
   // 특정법인 §45의5
   scTransactionBenefit: string;
   scCorporateTax: string;
@@ -453,6 +465,14 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ntPropertyValue: "",
   ntTaxAvoidance: true,
   ntExcluded: false,
+  ntValuationMode: "total",
+  ntPerSharePrice: "",
+  ntNewShares: "",
+  ntSubscriptionPrice: "",
+  ntTheoreticalExRights: "",
+  ntPreIncreasePerShare: "",
+  ntActualOwner: "",
+  ntNominee: "",
   edShareholders: undefined,
   edIncomeTaxMode: "undetermined",
   edSeparateTaxAmount: "",
@@ -485,6 +505,10 @@ export const INITIAL_DEEMED: DeemedFormState = {
   viAcqCost: "",
   viNormalIncrease: "",
   viContribution: "",
+  viAcqCause: "",
+  viReason: "form_change",
+  viAcqDate: "",
+  viEventDate: "",
   scTransactionBenefit: "",
   scCorporateTax: "",
   scRatioPct: "",
