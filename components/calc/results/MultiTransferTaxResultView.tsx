@@ -638,7 +638,6 @@ export function MultiTransferTaxResultView({
   properties,
   taxYear,
   isLoggedIn,
-  savedId,
   priorPaidTax,
   priorPaidLocalTax,
 }: MultiTransferTaxResultViewProps) {
@@ -660,9 +659,18 @@ export function MultiTransferTaxResultView({
     return s;
   }, []);
 
-  // 선택 항목 서버 PDF 다운로드 (PR-F2) — Helpers downloadSelectedPdf 위임 (POST sections)
+  // 선택 항목 클라이언트 PDF 다운로드 — Helpers downloadSelectedPdf 위임 (로컬 result react-pdf 생성)
   const handlePrintPdf = (pdfSections: string[]) =>
-    downloadSelectedPdf(savedId ?? undefined, pdfSections, setIsPdfLoading);
+    downloadSelectedPdf(
+      {
+        taxType: "transfer_multi",
+        taxTypeLabel: "양도소득세 (다건)",
+        resultData: result as unknown as Record<string, unknown>,
+        filenamePrefix: "양도소득세_계산결과",
+      },
+      pdfSections,
+      setIsPdfLoading,
+    );
 
   return (
     <div className="space-y-4">
@@ -673,7 +681,7 @@ export function MultiTransferTaxResultView({
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
         onPrintPdf={handlePrintPdf}
-        pdfReady={!!savedId}
+        pdfReady={true}
         pdfBusy={isPdfLoading}
       />
 

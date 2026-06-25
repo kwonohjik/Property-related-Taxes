@@ -8,33 +8,39 @@
  */
 
 import { cn } from "@/lib/utils";
+import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
+import { formatIsoStamp } from "@/lib/utils/file-download";
 
 // ── 인쇄 헬퍼 ──────────────────────────────────────────────────
 // (PR-F4) printScoped 정의 제거 — 양도세 4 결과뷰(단일/다중/주식/겸용)가 PrintSelectionPanel로
 //   전면 통일되어 호출처 0(dead code). globals.css의 data-print-scope CSS 규칙도 함께 제거.
 
-/** 선택 항목 서버 PDF 다운로드 (PR-F1 PrintSelectionPanel onPrintPdf 위임). savedId 없거나 0건이면 no-op. */
+/**
+ * 선택 항목 PDF 다운로드 — 클라이언트 react-pdf 생성(로컬 result). 0건이면 no-op.
+ * 서버 라우트(getCalculation Supabase 의존) 대신 로컬 데이터로 직접 렌더 — 로컬 일원화.
+ */
 export async function downloadSelectedPdf(
-  savedId: string | undefined,
+  args: {
+    taxType: string;
+    taxTypeLabel: string;
+    resultData: Record<string, unknown>;
+    inputData?: Record<string, unknown>;
+    filenamePrefix: string;
+  },
   pdfSections: string[],
   setBusy: (b: boolean) => void,
 ) {
-  if (!savedId || pdfSections.length === 0) return;
+  if (pdfSections.length === 0) return;
   setBusy(true);
   try {
-    const res = await fetch(`/api/pdf/result/${savedId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sections: pdfSections }),
+    await generateResultPdf({
+      taxType: args.taxType,
+      taxTypeLabel: args.taxTypeLabel,
+      resultData: args.resultData,
+      inputData: args.inputData,
+      selectedSectionIds: pdfSections,
+      filename: `${args.filenamePrefix}_${formatIsoStamp()}.pdf`,
     });
-    if (!res.ok) throw new Error("PDF 생성 실패");
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `양도소득세_계산결과_${savedId.slice(0, 8)}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
   } catch {
     alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
   } finally {

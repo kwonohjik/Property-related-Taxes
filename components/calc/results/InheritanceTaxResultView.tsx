@@ -7,6 +7,8 @@
 
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
+import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
+import { formatIsoStamp } from "@/lib/utils/file-download";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
 import { calcInheritanceFilingDeadline } from "@/lib/tax-engine/deductions/family-business-autoderive";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -72,7 +74,6 @@ export function InheritanceTaxResultView({
   decedentName,
   decedentResidentNumber,
   decedentAddress,
-  savedId,
   installmentEnabled = false,
   installmentYears = "5",
   installmentFamilyBusiness = false,
@@ -88,24 +89,18 @@ export function InheritanceTaxResultView({
   const [showValuation, setShowValuation] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
 
-  // 선택 항목 서버 PDF 다운로드 (PR-2). savedId(로그인+저장) 있을 때만 활성.
+  // 선택 항목 PDF 다운로드 — 클라이언트 react-pdf 생성(로컬 result 기준, savedId 비의존).
   async function handlePrintPdf(pdfSections: string[]) {
-    if (!savedId || pdfSections.length === 0) return;
+    if (pdfSections.length === 0) return;
     setPdfBusy(true);
     try {
-      const res = await fetch(`/api/pdf/result/${savedId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections: pdfSections }),
+      await generateResultPdf({
+        taxType: "inheritance",
+        taxTypeLabel: "상속세",
+        resultData: result as unknown as Record<string, unknown>,
+        selectedSectionIds: pdfSections,
+        filename: `상속세_계산결과_${formatIsoStamp()}.pdf`,
       });
-      if (!res.ok) throw new Error("PDF 생성 실패");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `상속세_계산결과_${savedId.slice(0, 8)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
     } catch {
       alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -148,7 +143,7 @@ export function InheritanceTaxResultView({
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
         onPrintPdf={handlePrintPdf}
-        pdfReady={!!savedId}
+        pdfReady={true}
         pdfBusy={pdfBusy}
       />
 

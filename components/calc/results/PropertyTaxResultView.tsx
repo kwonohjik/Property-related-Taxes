@@ -20,6 +20,8 @@ import type {
 } from "@/lib/tax-engine/types/property.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useState, useMemo } from "react";
+import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
+import { formatIsoStamp } from "@/lib/utils/file-download";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -297,7 +299,7 @@ function TaxRow({
   );
 }
 
-export function PropertyTaxResultView({ result, savedId }: Props) {
+export function PropertyTaxResultView({ result }: Props) {
   const {
     publishedPrice,
     fairMarketRatio,
@@ -335,24 +337,18 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
     () => new Set()
   );
 
-  // 선택 항목 서버 PDF 다운로드 (PR-D). savedId(로그인+저장) 있을 때만 활성.
+  // 선택 항목 클라이언트 PDF 다운로드 (react-pdf). result 존재 기준.
   async function handlePrintPdf(pdfSections: string[]) {
-    if (!savedId || pdfSections.length === 0) return;
+    if (pdfSections.length === 0) return;
     setPdfBusy(true);
     try {
-      const res = await fetch(`/api/pdf/result/${savedId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections: pdfSections }),
+      await generateResultPdf({
+        taxType: "property",
+        taxTypeLabel: "재산세",
+        resultData: result as unknown as Record<string, unknown>,
+        selectedSectionIds: pdfSections,
+        filename: `재산세_계산결과_${formatIsoStamp()}.pdf`,
       });
-      if (!res.ok) throw new Error("PDF 생성 실패");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `재산세_계산결과_${savedId.slice(0, 8)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
     } catch {
       alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -384,7 +380,7 @@ export function PropertyTaxResultView({ result, savedId }: Props) {
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
         onPrintPdf={handlePrintPdf}
-        pdfReady={!!savedId}
+        pdfReady={true}
         pdfBusy={pdfBusy}
       />
 
