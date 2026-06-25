@@ -135,6 +135,12 @@ export const GIFT = {
   CAPITAL_INCREASE: "상증법 §39",
   CAPITAL_DECREASE: "상증법 §39의2",
   CONTRIBUTION: "상증법 §39의3",
+  /** 상증법 §39의3① 본문 — 현물출자 납입일을 증여일로 한다 */
+  CONTRIBUTION_TIMING: "상증법 §39의3① 본문",
+  /** 상증령 §53⑧3호 — §39의3 이익 계산 시 최대주주 할증평가 배제 */
+  PREMIUM_EXCLUSION_29_3: "상증령 §53⑧3호",
+  /** 상증법 §4의2⑥ 단서 — §39의3 수증자에 대한 증여자 연대납부의무 면제 */
+  JOINT_LIABILITY_EXEMPTION: "상증법 §4의2⑥ 단서",
   CONVERTIBLE_BOND: "상증법 §40",
   CONVERTIBLE_BOND_INTEREST_LOSS: "상증칙 §10의2",
   CONVERTIBLE_BOND_DISCOUNT_RATE: "상증칙 §18의3",
@@ -160,6 +166,8 @@ export const GIFT = {
   VALUE_INCREASE: "상증법 §42의3",
   SPECIFIC_CORP: "상증법 §45의5",
   DUP_EXCLUSION: "상증법 §43①",
+  /** 상증법 §43② · 상증령 §32의4 6호 — §39의3 이익의 1년 내 동일거래 합산 */
+  DUP_EXCLUSION_ANNUAL: "상증법 §43② · 상증령 §32의4 6호",
 } as const;
 
 // ============================================================

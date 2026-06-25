@@ -3,6 +3,7 @@
  * shared.tsx에서 분리(800줄 정책). shared.tsx가 re-export하여 하위호환 유지.
  */
 import type { DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
+import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /** 감자 멀티 모드 주주 행 (전부 string — parseAmount 변환은 API 변환 시) */
 export interface CdShareholderRow {
@@ -174,6 +175,11 @@ export interface DeemedFormState {
   conAllocatedShares: string;
   conRelatedRatioPct: string; // high 현물출자자 특수관계인 지분비율 (%)
   conSmallImputation: boolean; // 저가 §39의3② 소액주주 1인 의제
+  /**
+   * 현물출자 §39의3 당사자 명부 — 3-state (undefined OFF / [] ON빈(validate 차단) / [{...}] 데이터).
+   * low: 증여자(현물출자자 外 주주) / high: 수증자(특수관계 기존주주). 분모=conPreShares.
+   */
+  conParties?: Array<{ name: string; shares: string; relation: GiftDonorRelation | "" }>;
   // 전환사채 §40
   cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
   cbMarketValue: string;
@@ -381,6 +387,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   conAllocatedShares: "",
   conRelatedRatioPct: "",
   conSmallImputation: false,
+  conParties: undefined,
   cbCaseType: "acquisition",
   cbMarketValue: "",
   cbAcquisitionPrice: "",

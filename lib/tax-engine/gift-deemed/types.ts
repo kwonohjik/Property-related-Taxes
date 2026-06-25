@@ -2,7 +2,7 @@
  * 증여로 보는 경우 (증여 예시·추정·의제) — 공통 타입.
  * Phase 1: 보험금§34 · 저가고가§35 · 채무면제§36 · 부동산무상사용§37 · 금전무상대출§41의4.
  */
-import type { CalculationStep } from "../types/inheritance-gift.types";
+import type { CalculationStep, GiftDonorRelation } from "../types/inheritance-gift.types";
 import type { BargainTransferInput } from "../bargain-transfer";
 
 /** Phase 1 의제 유형 (discriminated union 판별자) */
@@ -48,6 +48,32 @@ export interface DeemedGiftResult {
   aggregationExcluded?: boolean;
   /** 증여자 연대납부의무 면제 여부 (§4의2⑥ — §40 등 명시 유형 true). 증여세 연계 echo */
   donorJointLiabilityExempt?: boolean;
+  /**
+   * §39의3 현물출자 — caseType echo (echo-field-pattern, 산식 불변).
+   * 결과뷰·prefill은 gross 대소비교 휴리스틱 대신 이 명시값으로 저가/고가 판정
+   * (고가 roster有도 gross(base) ≥ Σper-donee 성립 → gross 비교 시 고가가 저가로 오판).
+   */
+  caseType?: "low" | "high";
+  /**
+   * §39의3 gross (법문 §29의3①1, 안분 전 총액) echo. 저가·고가 모두 항상 산출.
+   * 저가 roster無: grossDeemedGiftValue === deemedGiftValue.
+   * 저가 roster有: grossDeemedGiftValue > deemedGiftValue (자기지분 미제외분 포함) → 결과뷰 amber 경고.
+   */
+  grossDeemedGiftValue?: number;
+  /**
+   * §39의3 당사자별 안분 명세 — **배열**(Map 금지, feedback_engine_result_map_json_loss).
+   * 저가 roster有=증여자별(자기지분 제외) / 고가 roster有=수증자별 per-donee / roster無=undefined.
+   */
+  contributionBreakdown?: {
+    /** 표시명: name.trim() || "주주" (feedback_no_internal_id_in_result) */
+    party: string;
+    preShares: number;
+    /** 비율 표시 문자열 (예: "55,000/100,000") */
+    ratioLabel: string;
+    value: number;
+    /** 관계 — 증여세 본세 prefill 시 donorRelation 매핑용 (GiftDonorRelation 그대로 전달) */
+    relation?: GiftDonorRelation;
+  }[];
   /**
    * §37 다기간(G2/G3) — window별 별개 증여 산출. plain 배열(Map 금지).
    * ⚠️ 합산 금지: deemedGiftValue는 첫 window(현재 증여)만 — 나머지는 미래 별건.
@@ -365,6 +391,20 @@ export interface CapitalDecreaseVerification {
   delta: number; // 증감 = postValue + redemptionPaid − preValue
 }
 
+/**
+ * §39의3 현물출자 당사자 명부 1행.
+ * caseType=low: 증여자(현물출자자 外 기존 주주) / caseType=high: 수증자(현물출자자 특수관계 기존주주).
+ * 분모는 양 caseType 모두 preContribShares.
+ */
+export interface ContributionParty {
+  /** 표시명 (undefined·빈문자열 시 결과뷰 "주주" 대체 — feedback_no_internal_id_in_result) */
+  name?: string;
+  /** 현물출자 전 보유 주식수 (안분 분자) */
+  preShares: number;
+  /** 관계 — 증여세 본세 prefill 시 donorRelation(저가)/수증자 관계(고가) 매핑용. 미지정 시 마법사에서 선택 */
+  relation?: GiftDonorRelation;
+}
+
 /** (10) 현물출자 §39의3 — 저가인수(low, ①1호) / 고가인수(high, ①2호) */
 export interface ContributionInput {
   caseType?: "low" | "high"; // 기본 low
@@ -373,10 +413,16 @@ export interface ContributionInput {
   newSharePrice: number; // 신주 1주당 인수가액
   contributedShares: number; // 현물출자 주식수
   allocatedShares: number; // 배정받은 신주수 (low) / 인수 신주수 (high)
-  // high 전용 (①2호)
+  // high 전용 (①2호) — roster無 aggregate 경로 (기존 필드 유지, CON-H 회귀 보존)
   relatedRatio?: { numer: number; denom: number }; // 현물출자자 특수관계인 주주등 지분비율
   // §39의3②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가인수 ①1호 한정)
   smallShareholderImputation?: boolean;
+  /**
+   * 현물출자 당사자 명부 — 3-state (feedback_three_state_optional_mode_toggle):
+   *   undefined = OFF (현행 gross/relatedRatio 경로) / [] = ON 빈 (validate 차단) / [{...}] = 데이터.
+   * low: 증여자(현물출자자 外 전체 주주), high: 수증자(특수관계 기존주주만). 분모 = preContribShares.
+   */
+  parties?: ContributionParty[];
 }
 
 /** (11) 전환사채등 §40 — 인수·취득(①1호)·주식전환(①2호 가나다/라목)·양도(①3호) sub-case */

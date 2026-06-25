@@ -2,6 +2,8 @@
  * 증여로 보는 경우 — 폼 → 엔진 입력 변환 + 증여세 마법사 prefill 어댑터 (④ 동기화).
  */
 import type { DeemedGiftInput, DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
+import type { ContributionParty } from "@/lib/tax-engine/gift-deemed/types";
+import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -18,6 +20,7 @@ import {
   type DeemedFormState,
 } from "@/components/calc/deemed-gift/shared";
 import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form-shared";
+import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 
 /** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
 export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
@@ -235,6 +238,15 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           };
     case "contribution": {
       const isHigh = form.conCaseType === "high";
+      // conParties 3-state: undefined=미전달 / []=빈(validate 차단됨) / [...]=데이터
+      const parties: ContributionParty[] | undefined =
+        form.conParties === undefined
+          ? undefined
+          : form.conParties.map((p) => ({
+              name: p.name || undefined,
+              preShares: parseAmount(p.shares),
+              relation: (p.relation || undefined) as GiftDonorRelation | undefined,
+            }));
       return {
         type: "contribution",
         caseType: form.conCaseType,
@@ -243,8 +255,12 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         newSharePrice: parseAmount(form.conNewPrice),
         contributedShares: parseAmount(form.conContributedShares),
         allocatedShares: parseAmount(form.conAllocatedShares),
-        relatedRatio: isHigh ? { numer: Math.round(parseDecimal(form.conRelatedRatioPct) * 100), denom: 10_000 } : undefined,
+        // 고가 + roster無 경로만 relatedRatio 전달 (roster有면 parties 경로)
+        relatedRatio: isHigh && !form.conParties
+          ? { numer: Math.round(parseDecimal(form.conRelatedRatioPct) * 100), denom: 10_000 }
+          : undefined,
         smallShareholderImputation: !isHigh ? form.conSmallImputation : undefined,
+        parties,
       };
     }
     case "convertible_bond": {
@@ -490,6 +506,62 @@ export function buildGiftWizardPrefill(
   }
 
   const label = form.type ? DEEMED_TYPE_META[form.type].label : "증여이익";
+
+  // §39의3 현물출자: contributionBreakdown 있으면 저가/고가별 prefill
+  if (result.type === "contribution" && result.contributionBreakdown && result.contributionBreakdown.length > 0) {
+    // M2 — 저가/고가 판정은 form.conCaseType 명시값으로. gross 대소비교 금지:
+    //   고가 roster有도 gross(base) >= Σper-donee 성립 → gross 비교 시 오판.
+    const isLow = form.conCaseType !== "high";
+
+    if (isLow) {
+      // 저가: N 증여자 → 동시증여 다건 prefill (§47, 조심2010서3741)
+      const mainBreakdown = result.contributionBreakdown[0];
+      const restBreakdowns = result.contributionBreakdown.slice(1);
+
+      const toDonorRel = (r?: GiftDonorRelation) =>
+        r ? deriveDonorRelation(r, false) : ("other_relative" as const);
+
+      const simultaneousGifts =
+        restBreakdowns.length > 0
+          ? restBreakdowns.map((bd) => ({
+              donorRelation: toDonorRel(bd.relation),
+              taxableValue: String(bd.value),
+            }))
+          : undefined;
+
+      return {
+        giftDate: form.giftDate,
+        donorRelation: toDonorRel(mainBreakdown.relation),
+        giftItems: [
+          {
+            id: `deemed-contribution-${mainBreakdown.party}`,
+            category: "other" as const,
+            name: `현물출자에 따른 이익 — ${mainBreakdown.party} 증여분`,
+            marketValue: mainBreakdown.value,
+          },
+        ],
+        simultaneousGifts,
+      };
+    }
+
+    // 고가: 수증자 첫 행 단건 prefill (multi-수증자 N-건 자동화는 Phase B 후속)
+    const firstDonee = result.contributionBreakdown[0];
+    return {
+      giftDate: form.giftDate,
+      donorRelation: deriveDonorRelation(
+        (firstDonee.relation ?? "other") as GiftDonorRelation,
+        false,
+      ),
+      giftItems: [
+        {
+          id: `deemed-contribution-high-${firstDonee.party}`,
+          category: "other" as const,
+          name: `현물출자에 따른 이익 — ${firstDonee.party} 수증자분`,
+          marketValue: firstDonee.value,
+        },
+      ],
+    };
+  }
 
   // 감자 멀티(§39의2): 과세 수증자 여러 명 → 선택된 수증자의 total만 이관(수증자별 별도 신고).
   if (result.type === "capital_decrease" && result.capitalDecreaseMulti) {

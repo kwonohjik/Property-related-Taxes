@@ -9,6 +9,8 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { type DeemedFormState, type CapTableRow, makeCapTableRow } from "./shared";
 import { CapitalDecreaseShareholderTable } from "./CapitalDecreaseShareholderTable";
+// §39의3 현물출자 폼은 contribution-form.tsx로 분리(800줄 정책). re-export로 import 경로 보존.
+export { ContributionFields } from "./contribution-form";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -437,46 +439,6 @@ export function CapitalDecreaseFields({ form, set }: Props) {
             </>
           )}
         </>
-      )}
-    </div>
-  );
-}
-
-/** (10) 현물출자 §39의3 — 저가인수(①1호) / 고가인수(①2호) */
-export function ContributionFields({ form, set }: Props) {
-  const isHigh = form.conCaseType === "high";
-  return (
-    <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
-      <RadioCardGroup
-        lawLinks="상증법"
-        name="con-case"
-        tone="violet"
-        layout="inline"
-        value={form.conCaseType}
-        onChange={(v) => set({ conCaseType: v })}
-        options={[
-          { value: "low", label: "저가 인수 (①1호)", testId: "con-case-low" },
-          { value: "high", label: "고가 인수 (①2호)", testId: "con-case-high" },
-        ]}
-      />
-      <CurrencyInput label="현물출자 전 1주당 평가가액" value={form.conPrePrice} onChange={(v) => set({ conPrePrice: v })} placeholder="현물출자 전 1주당 평가가액 (원)" />
-      <CurrencyInput label="현물출자 전 발행주식총수" value={form.conPreShares} onChange={(v) => set({ conPreShares: v })} placeholder="현물출자 전 발행주식총수" />
-      <CurrencyInput label="신주 1주당 인수가액" value={form.conNewPrice} onChange={(v) => set({ conNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
-      <CurrencyInput label="현물출자 주식수" value={form.conContributedShares} onChange={(v) => set({ conContributedShares: v })} placeholder="현물출자 주식수" />
-      <CurrencyInput label={isHigh ? "인수 신주수" : "배정받은 신주수"} value={form.conAllocatedShares} onChange={(v) => set({ conAllocatedShares: v })} placeholder={isHigh ? "인수 신주수" : "배정받은 신주수"} />
-      {isHigh ? (
-        <FieldCard label="현물출자자 특수관계인 주주등 지분비율" hint="고가인수 시 비율 가중" unit="%">
-          <DecimalInput value={form.conRelatedRatioPct} onChange={(v) => set({ conRelatedRatioPct: v })} />
-        </FieldCard>
-      ) : (
-        <ToggleCard
-          lawLinks="상증법"
-          tone="violet"
-          checked={form.conSmallImputation}
-          onCheckedChange={(v) => set({ conSmallImputation: v })}
-          title="소액주주 1인 의제 (§39의3②)"
-          description="이익을 증여한 소액주주(1%·액면3억 미만)가 2명 이상이면 1명으로 보고 계산"
-        />
       )}
     </div>
   );

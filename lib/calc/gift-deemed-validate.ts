@@ -153,6 +153,22 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "contribution":
       if (parseAmount(form.conPrePrice) <= 0) return "현물출자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.conPreShares) <= 0) return "현물출자 전 발행주식총수를 입력하세요";
+      // 당사자 명부 roster 3-state 검증 (자동 안분 fallback 금지)
+      if (form.conParties !== undefined) {
+        // ON 빈 배열 — 최소 1명 필요
+        if (form.conParties.length === 0)
+          return `${form.conCaseType === "high" ? "수증자" : "증여자"}를 1명 이상 추가하세요`;
+        // 각 행: 주식수 > 0 필수
+        for (const [i, p] of form.conParties.entries()) {
+          if (parseAmount(p.shares) <= 0)
+            return `${i + 1}번째 ${form.conCaseType === "high" ? "수증자" : "증여자"}의 주식수를 입력하세요`;
+        }
+        // 합계 주식수 > 기준 주식수 차단
+        const sumShares = form.conParties.reduce((acc, p) => acc + parseAmount(p.shares), 0);
+        const baseShares = parseAmount(form.conPreShares);
+        if (baseShares > 0 && sumShares > baseShares)
+          return "당사자 주식수 합계가 현물출자 전 발행주식총수를 초과합니다";
+      }
       break;
     case "convertible_stock":
       if (parseAmount(form.csConvPrePrice) <= 0) return "전환 시점 증자 전 1주당 평가가액을 입력하세요";

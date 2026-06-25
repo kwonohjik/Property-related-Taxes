@@ -197,17 +197,47 @@ const capitalDecreaseSchema = z.object({
   shareholders: z.array(capitalDecreaseShareholderSchema).optional(),
   preTotalShares: z.number().nonnegative().optional(),
 });
-const contributionSchema = z.object({
-  type: z.literal("contribution"),
-  caseType: z.enum(["low", "high"]).optional(),
-  preContribPrice: z.number().nonnegative(),
-  preContribShares: z.number().positive({ message: "현물출자 전 발행주식총수는 0보다 커야 합니다" }),
-  newSharePrice: z.number().nonnegative(),
-  contributedShares: z.number().nonnegative(),
-  allocatedShares: z.number().nonnegative(),
-  relatedRatio: ratioSchema.optional(),
-  smallShareholderImputation: z.boolean().optional(),
+const contributionPartySchema = z.object({
+  name: z.string().optional(),
+  preShares: z.number().nonnegative(),
+  relation: z
+    .enum(["father", "mother", "grandparent", "spouse", "lineal_descendant", "sibling", "other_relative", "other"])
+    .optional(),
 });
+const contributionSchema = z
+  .object({
+    type: z.literal("contribution"),
+    caseType: z.enum(["low", "high"]).optional(),
+    preContribPrice: z.number().nonnegative(),
+    preContribShares: z.number().positive({ message: "현물출자 전 발행주식총수는 0보다 커야 합니다" }),
+    newSharePrice: z.number().nonnegative(),
+    contributedShares: z.number().nonnegative(),
+    allocatedShares: z.number().nonnegative(),
+    relatedRatio: ratioSchema.optional(),
+    smallShareholderImputation: z.boolean().optional(),
+    // 3-state: undefined=OFF / []=ON빈(차단) / [{...}]=데이터
+    parties: z.array(contributionPartySchema).optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.parties === undefined) return; // OFF 경로 — gross/relatedRatio 경로
+    if (val.parties.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${val.caseType === "high" ? "수증자" : "증여자"}를 1명 이상 추가하세요`,
+        path: ["parties"],
+      });
+      return;
+    }
+    // 합계 주식수 > 기준 주식수 차단
+    const sum = val.parties.reduce((acc, p) => acc + p.preShares, 0);
+    if (val.preContribShares > 0 && sum > val.preContribShares) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "당사자 주식수 합계가 현물출자 전 발행주식총수를 초과합니다",
+        path: ["parties"],
+      });
+    }
+  });
 const acquisitionFundSchema = z.object({
   type: z.literal("acquisition_fund_presumption"),
   subType: z.enum(["acquisition", "debt_repayment"]),
