@@ -129,6 +129,9 @@ export const GIFT = {
   RECTIFICATION_FORMULA_81_9: "상증령 §81⑨",
   // ── 증여로 보는 경우 (Phase 2: 자본거래) ──
   MERGER: "상증법 §38",
+  MERGER_VALUATION: "상증령 §28⑤⑥",
+  MERGER_SPLIT: "상증령 §28⑦",
+  MERGER_SELF_GIFT: "재산세과-799, 2009.4.24.",
   CAPITAL_INCREASE: "상증법 §39",
   CAPITAL_DECREASE: "상증법 §39의2",
   CONTRIBUTION: "상증법 §39의3",

@@ -40,3 +40,31 @@ export function appliesSmallShareholderImputation(
 ): boolean {
   return donors.filter((d) => isSmallShareholder({ ownedShares: d.ownedShares, totalShares, faceValueSum: d.faceValueSum })).length >= 2;
 }
+
+/**
+ * §28⑤2 합병후 1주당 단순평균액 =
+ *   (과대평가법인 합병전 주식가액 + 과소평가법인 합병전 주식가액) ÷ 합병후 존속법인 주식수.
+ * 분모(postShares)는 합병비율 반영값 — preShares 합과 다르므로 별도 주입(computeWeightedPerShare 부적합).
+ * BigInt로 분자 오버플로 방지, floor.
+ */
+export function computeMergerSimpleAvg(
+  overPrice: number,
+  overShares: number,
+  underPrice: number,
+  underShares: number,
+  postShares: number,
+): number {
+  if (postShares <= 0) return 0;
+  const numer =
+    BigInt(Math.floor(overPrice)) * BigInt(Math.floor(overShares)) +
+    BigInt(Math.floor(underPrice)) * BigInt(Math.floor(underShares));
+  return Number(numer / BigInt(Math.floor(postShares)));
+}
+
+/**
+ * 합병 양 당사법인 주주의 동일인 판정 (재산세과-799 자기증여 차감 대상).
+ * 식별자(id) 일치로 판정 — UI에서 같은 주주는 같은 id 부여.
+ */
+export function isSameMergerShareholder(overId: string, underId: string): boolean {
+  return overId.trim().length > 0 && overId.trim() === underId.trim();
+}
