@@ -71,6 +71,22 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         actualInterestPaid: parseAmount(form.freeInterest),
         isRelatedParty: form.freeRelated,
         hasJustifiableReason: form.freeJustifiable,
+        // 다기간(G2/G3) — 토글 ON 시에만 전달(undefined=단일). value=subType별 의미
+        periods: form.freePeriods?.map((p) => ({
+          startDate: p.startDate,
+          propertyValue: form.freeSubType === "free_use" ? parseAmount(p.value) : undefined,
+          loanAmount: form.freeSubType === "collateral" ? parseAmount(p.value) : undefined,
+          actualInterestPaid: form.freeSubType === "collateral" ? parseAmount(p.interest) : undefined,
+        })),
+        // 경정청구(G1) — free_use에서만 활성(담보 분모 미검증)
+        rectification:
+          form.freeRectOn && form.freeSubType === "free_use"
+            ? {
+                giftTaxCalculated: parseAmount(form.freeRectTax),
+                giftDate: form.freeRectGiftDate,
+                terminationDate: form.freeRectTermDate,
+              }
+            : undefined,
       };
     case "free_loan":
       return {

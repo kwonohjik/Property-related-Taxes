@@ -44,6 +44,26 @@ export interface DeemedGiftResult {
   /** 임계 판정 근거 echo */
   thresholdEcho?: Record<string, number | boolean>;
   /**
+   * §37 다기간(G2/G3) — window별 별개 증여 산출. plain 배열(Map 금지).
+   * ⚠️ 합산 금지: deemedGiftValue는 첫 window(현재 증여)만 — 나머지는 미래 별건.
+   */
+  periodBreakdown?: {
+    index: number;
+    giftDate: string; // window 증여일
+    baseValue: number; // free_use 부동산가액 / collateral 차입금
+    benefit: number; // free_use 5년 현가합 / collateral 차입이익
+    applied: boolean; // 기준금액(1억/1천만) 충족
+  }[];
+  /** §79②1호 경정청구(G1) — plain 객체(Map 금지) */
+  rectification?: {
+    giftTaxCalculated: number; // echo
+    expiryDate: string; // giftDate + 5년/1년
+    remainingMonths: number; // max(0, 역산 월수; 1개월 미만 일수→1)
+    totalMonths: number; // 60(free_use) / 12(collateral)
+    refundableTax: number; // floor(산출세액 × remainingMonths/totalMonths) — "경정청구 가능 세액"
+    steps: CalculationStep[];
+  };
+  /**
    * 신탁이익(§33) 전용 — 원본권·수익권 별개 증여시기(§33①1·2호) 분리 산출.
    * deemedGiftValue=합계(하위호환). 표시·prefill은 subGifts 사용.
    */
@@ -108,11 +128,30 @@ export interface DebtForgivenessInput {
 /** (5) 부동산무상사용 §37 */
 export interface FreeRealEstateInput {
   subType: "free_use" | "collateral";
-  propertyValue?: number; // free_use: 부동산가액
-  loanAmount?: number; // collateral: 차입금
+  propertyValue?: number; // free_use: 부동산가액 (단일기간)
+  loanAmount?: number; // collateral: 차입금 (단일기간)
   actualInterestPaid?: number; // collateral 실제지급이자
   isRelatedParty: boolean;
   hasJustifiableReason?: boolean; // §37③
+  /** 다기간 (시행령§27③ 5년·§27⑤ 1년 초과 재과세). undefined=단일 / [...]=다기간 (빈 []은 validate 차단) */
+  periods?: FreeUsePeriod[];
+  /** 경정청구 (§79②1호·시행령§81⑨) — 무상사용기간 중 소유자 사망·양도 등 중단 시 잔여기간분 */
+  rectification?: RectificationInput;
+}
+
+/** §37 다기간 window — 각 window는 별개 증여일의 별개 증여 */
+export interface FreeUsePeriod {
+  startDate: string; // ISO. window 개시일(=증여일). free_use 5년·collateral 1년 단위
+  propertyValue?: number; // free_use: window 증여일 기준 §4장 평가가액
+  loanAmount?: number; // collateral: 차입금
+  actualInterestPaid?: number; // collateral 실제지급이자
+}
+
+/** §79②1호 경정청구 입력 */
+export interface RectificationInput {
+  giftTaxCalculated: number; // 증여세 산출세액(§57 세대생략 할증 가산 포함) — 직접입력
+  giftDate: string; // ISO. 당초 증여일(=무상사용/담보 개시일)
+  terminationDate: string; // ISO. 중단사유 발생일(소유자 사망·토지 양도 등 §81⑥)
 }
 
 /** (6) 금전무상대출 §41의4 */
