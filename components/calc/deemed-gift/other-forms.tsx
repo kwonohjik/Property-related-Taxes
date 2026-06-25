@@ -12,6 +12,8 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
+import { DateInput } from "@/components/ui/date-input";
+import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
 import type { DeemedFormState } from "./shared";
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
 
@@ -276,6 +278,30 @@ export function ListingGainFields({ form, set }: Props) {
           { value: "merger", label: "합병상장 (§41의5)", testId: "lg-event-merger" },
         ]}
       />
+      {/* §63①1 정산기준일 평가가액 키움 자동조회 (선택) — onFill로 lgSettlementPrice 자동채움, 미설정 시 수동 입력 */}
+      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2">
+        <p className="text-xs font-semibold text-emerald-700">§63①1 정산기준일 평가가액 자동조회 (키움, 선택)</p>
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          value={form.lgStockCode}
+          onChange={(e) => set({ lgStockCode: e.target.value })}
+          placeholder="종목코드 6자리 (예: 005930)"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          data-testid="lg-stock-code"
+        />
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground">정산기준일 (상장일·합병등기일 +3개월)</label>
+          <DateInput value={form.lgSettlementDate} onChange={(v) => set({ lgSettlementDate: v })} />
+        </div>
+        <KiwoomValuationAutoFetchButton
+          variant="card"
+          stockCode={form.lgStockCode}
+          valuationDate={form.lgSettlementDate}
+          onFill={(patch) => set({ lgSettlementPrice: String(patch.listedStockAvgPrice) })}
+        />
+      </div>
       <CurrencyInput label="정산기준일 1주당 평가가액" value={form.lgSettlementPrice} onChange={(v) => set({ lgSettlementPrice: v })} hint={form.lgEventType === "merger" ? "합병등기일 +3개월 (§63 평가)" : "상장일 +3개월 (§63 평가)"} placeholder="정산기준일 1주당 평가가액 (원)" />
       {/* §63③ 최대주주 20% 할증 (정산기준일 평가가액에 적용) */}
       <ToggleCard
