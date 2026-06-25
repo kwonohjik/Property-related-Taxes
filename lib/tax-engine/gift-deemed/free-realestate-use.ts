@@ -152,9 +152,7 @@ function _calcMultiPeriod(subType: SubType, periods: FreeUsePeriod[]): DeemedGif
 /** 경정청구(§79②1호·§81⑨) 부착 — 입력 시 base 결과에 rectification 추가 */
 function _attachRect(base: DeemedGiftResult, subType: SubType, rect?: RectificationInput): DeemedGiftResult {
   if (!rect) return base;
-  // ⚠️ 담보(§37②) 경정 분모(12)는 §81⑨2호가목 산식 별표 미검증 → 활성화 차단(데이터 파일 경고·UI free_use-only 게이팅과 일치).
-  //    검증·anchor(COL-RECT-1) 확정 후 이 가드 제거.
-  if (subType === "collateral") return base;
+  // 분모·만료기간 = 부동산무상사용기간(§81⑤): 무상사용 §27③후단 5년(60월) / 담보 §27⑤후단 1년(12월)
   const totalMonths = subType === "free_use" ? RECT_MONTHS_FREE_USE : RECT_MONTHS_COLLATERAL;
   const giftDate = new Date(rect.giftDate);
   const expiry = subType === "free_use" ? addYears(giftDate, 5) : addYears(giftDate, 1);
