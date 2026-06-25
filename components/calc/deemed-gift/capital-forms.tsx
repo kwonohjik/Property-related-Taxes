@@ -7,7 +7,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import type { DeemedFormState } from "./shared";
+import { type DeemedFormState, type CapTableRow, makeCapTableRow } from "./shared";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -107,6 +107,115 @@ export function CapitalIncreaseFields({ form, set }: Props) {
           description="이익을 증여한 소액주주(1%·액면3억 미만)가 2명 이상이면 1명으로 보고 계산"
         />
       )}
+    </div>
+  );
+}
+
+/** (8b) 증자 §39 cap-table — 다수증자·다증여자 (주주 다중행 + 손해비례 배분 + 검증내역) */
+export function CapitalIncreaseAllocationFields({ form, set }: Props) {
+  const rows = form.ciAllocRows;
+  const updateRow = (id: string, patch: Partial<CapTableRow>) =>
+    set({ ciAllocRows: rows.map((r) => (r.id === id ? { ...r, ...patch } : r)) });
+  const addRow = () => {
+    const max = rows.reduce((m, r) => {
+      const n = parseInt(r.id.replace(/\D/g, ""), 10);
+      return Number.isFinite(n) && n > m ? n : m;
+    }, 0);
+    set({ ciAllocRows: [...rows, makeCapTableRow(`sh-${max + 1}`)] });
+  };
+  const removeRow = (id: string) =>
+    set({
+      ciAllocRows: rows
+        .filter((r) => r.id !== id)
+        .map((r) => ({ ...r, relatedTo: r.relatedTo.filter((rid) => rid !== id) })),
+    });
+  const toggleRelated = (row: CapTableRow, otherId: string) =>
+    updateRow(row.id, {
+      relatedTo: row.relatedTo.includes(otherId)
+        ? row.relatedTo.filter((x) => x !== otherId)
+        : [...row.relatedTo, otherId],
+    });
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800">1</span>
+          <p className="text-xs font-semibold text-sky-700">증자 개요</p>
+        </div>
+        <RadioCardGroup
+          lawLinks="상증법"
+          name="ci-alloc-direction"
+          tone="sky"
+          layout="inline"
+          value={form.ciAllocDirection}
+          onChange={(v) => set({ ciAllocDirection: v })}
+          options={[
+            { value: "low", label: "저가발행 (①1호)", testId: "ci-alloc-direction-low" },
+            { value: "high", label: "고가발행 (①2호)", testId: "ci-alloc-direction-high" },
+          ]}
+        />
+        <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciAllocPrePrice} onChange={(v) => set({ ciAllocPrePrice: v })} placeholder="증자 전 1주당 평가가액 (원)" />
+        <CurrencyInput label="신주 1주당 인수가액" value={form.ciAllocNewPrice} onChange={(v) => set({ ciAllocNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
+      </div>
+
+      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800">2</span>
+            <p className="text-xs font-semibold text-emerald-700">주주 목록 (증자 전 보유·배정·인수)</p>
+          </div>
+          <button type="button" onClick={addRow} data-testid="ci-alloc-add-row" className="rounded-md border border-emerald-300 bg-white/70 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100/60">
+            + 주주 추가
+          </button>
+        </div>
+        {rows.map((r, idx) => (
+          <div key={r.id} className="space-y-2 rounded-md border border-emerald-100 bg-white/60 p-2.5" data-testid={`ci-alloc-row-${idx}`}>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={r.name}
+                onChange={(e) => updateRow(r.id, { name: e.target.value })}
+                placeholder="주주 이름"
+                data-testid={`ci-alloc-name-${idx}`}
+                className="flex-1 rounded-md border border-emerald-200 bg-white px-2 py-1 text-sm"
+              />
+              {rows.length > 2 && (
+                <button type="button" onClick={() => removeRow(r.id)} data-testid={`ci-alloc-remove-${idx}`} className="shrink-0 rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50">
+                  삭제
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <CurrencyInput hideUnit label="증자 전 보유" value={r.preShares} onChange={(v) => updateRow(r.id, { preShares: v })} placeholder="증자 전 보유 주식수" />
+              <CurrencyInput hideUnit label="당초 배정" value={r.entitledShares} onChange={(v) => updateRow(r.id, { entitledShares: v })} placeholder="균등 배정 신주수" />
+              <CurrencyInput hideUnit label="실제 인수" value={r.subscribedShares} onChange={(v) => updateRow(r.id, { subscribedShares: v })} placeholder="실제 인수 신주수" />
+              <CurrencyInput hideUnit label="재배정·제3자·초과" value={r.reallocatedShares} onChange={(v) => updateRow(r.id, { reallocatedShares: v })} placeholder="재배정/제3자/초과 신주수" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-[11px] text-emerald-700">특수관계인 (이 주주에게 증여한 자)</p>
+              <div className="flex flex-wrap gap-1.5" data-testid={`ci-alloc-related-${idx}`}>
+                {rows.filter((o) => o.id !== r.id).map((o) => {
+                  const on = r.relatedTo.includes(o.id);
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleRelated(r, o.id)}
+                      data-testid={`ci-alloc-related-${idx}-${o.id}`}
+                      className={`rounded-full border px-2 py-0.5 text-xs ${on ? "border-violet-400 bg-violet-100 text-violet-800" : "border-gray-200 bg-white text-gray-500"}`}
+                    >
+                      {o.name.trim() || "(이름 없음)"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ))}
+        <p className="text-[11px] text-muted-foreground">증자 후 1주당 평가가액·증여재산가액은 입력값으로 자동 계산(자동 안분 없음). 특수관계인 없는 자에게 귀속된 이익은 과세 제외.</p>
+      </div>
     </div>
   );
 }

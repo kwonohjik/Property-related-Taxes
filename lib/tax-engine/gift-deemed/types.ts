@@ -14,7 +14,8 @@ export type DeemedGiftType =
   | "free_realestate" // §37 (5)
   | "free_loan" // §41의4 (6)
   | "merger" // §38 (7)
-  | "capital_increase" // §39 (8)
+  | "capital_increase" // §39 (8) — 단건
+  | "capital_increase_allocation" // §39 cap-table 다수증자·다증여자 (8b)
   | "capital_decrease" // §39의2 (9)
   | "contribution" // §39의3 (10)
   | "convertible_stock" // §39①3호 전환주식 (8-3)
@@ -197,6 +198,9 @@ export interface CapitalIncreaseAllocationResult {
   splits: DonationSplit[];
 }
 
+/** 라우터 반환 — 단건 결과 또는 cap-table 배분 결과 (type 판별) */
+export type DeemedGiftAnyResult = DeemedGiftResult | CapitalIncreaseAllocationResult;
+
 /** (8-3) 전환주식 §39①3호 — 전환후 §29②1~5 이익 − 발행당시 §29②1~5 이익 (시행령 §29②6) */
 export interface ConvertibleStockInput {
   /** 가목: 전환 후 교부받은 주식을 신주로 보아 §29②1~5로 계산한 이익 입력(저가/고가 sub-case) */
@@ -326,6 +330,7 @@ export type DeemedGiftInput =
   | ({ type: "free_loan" } & FreeLoanInput)
   | ({ type: "merger" } & MergerInput)
   | ({ type: "capital_increase" } & CapitalIncreaseInput)
+  | ({ type: "capital_increase_allocation" } & CapitalIncreaseAllocationInput)
   | ({ type: "capital_decrease" } & CapitalDecreaseInput)
   | ({ type: "contribution" } & ContributionInput)
   | ({ type: "convertible_stock" } & ConvertibleStockInput)

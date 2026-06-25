@@ -103,6 +103,23 @@ const capitalIncreaseShape = {
 } as const;
 const capitalIncreaseSchema = z.object({ type: z.literal("capital_increase"), ...capitalIncreaseShape });
 const capitalIncreaseInnerSchema = z.object(capitalIncreaseShape);
+// §39 cap-table 다수증자·다증여자 (equity-delta)
+const capShareholderSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().optional(),
+  preShares: z.number().nonnegative(),
+  entitledShares: z.number().nonnegative(),
+  subscribedShares: z.number().nonnegative(),
+  reallocatedShares: z.number().nonnegative().optional(),
+  relatedTo: z.array(z.string()).optional(),
+});
+const capitalIncreaseAllocationSchema = z.object({
+  type: z.literal("capital_increase_allocation"),
+  direction: z.enum(["low", "high"]),
+  preIssuePrice: z.number().nonnegative(),
+  newSharePrice: z.number().nonnegative(),
+  shareholders: z.array(capShareholderSchema).min(2, { message: "주주를 2명 이상 입력하세요" }),
+});
 const convertibleStockSchema = z.object({
   type: z.literal("convertible_stock"),
   atConversion: capitalIncreaseInnerSchema,
@@ -209,6 +226,7 @@ export const deemedGiftInputSchema = z
     freeLoanSchema,
     mergerSchema,
     capitalIncreaseSchema,
+    capitalIncreaseAllocationSchema,
     capitalDecreaseSchema,
     contributionSchema,
     convertibleStockSchema,

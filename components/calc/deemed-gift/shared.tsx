@@ -24,6 +24,7 @@ import {
 import {
   MergerFields,
   CapitalIncreaseFields,
+  CapitalIncreaseAllocationFields,
   CapitalDecreaseFields,
   ContributionFields,
   ConvertibleStockFields,
@@ -42,6 +43,21 @@ import {
 // ============================================================
 // 폼 상태
 // ============================================================
+
+/** 증자 cap-table 1행 (폼 — string 필드). API 변환에서 CapShareholder(number)로 변환 */
+export interface CapTableRow {
+  id: string;
+  name: string;
+  preShares: string; // 증자 전 보유
+  entitledShares: string; // 당초(균등) 배정 신주수
+  subscribedShares: string; // 실제 인수 신주수
+  reallocatedShares: string; // 재배정/제3자/초과로 받은 신주수
+  relatedTo: string[]; // 특수관계인 주주 id 목록
+}
+
+export function makeCapTableRow(id: string): CapTableRow {
+  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [] };
+}
 
 export interface DeemedFormState {
   giftDate: string;
@@ -114,6 +130,11 @@ export interface DeemedFormState {
   ciRelatedAcquiredShares: string; // 고가 나·다라 특수관계인 인수신주수
   ciRatioDenomShares: string; // 고가 나·다라 분모 신주수
   ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
+  // 증자 §39 cap-table (다수증자·다증여자)
+  ciAllocDirection: "low" | "high";
+  ciAllocPrePrice: string; // ㉮ 증자 전 1주당 평가가액
+  ciAllocNewPrice: string; // ㉰ 신주 1주당 인수가액
+  ciAllocRows: CapTableRow[];
   // 감자 §39의2
   cdCaseType: "low" | "high"; // 저가소각(①1호) / 고가소각(①2호)
   cdSharePrice: string;
@@ -261,6 +282,10 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciRelatedAcquiredShares: "",
   ciRatioDenomShares: "",
   ciSmallImputation: false,
+  ciAllocDirection: "low",
+  ciAllocPrePrice: "",
+  ciAllocNewPrice: "",
+  ciAllocRows: [makeCapTableRow("sh-1"), makeCapTableRow("sh-2")],
   cdCaseType: "low",
   cdSharePrice: "",
   cdRedemptionPrice: "",
@@ -348,6 +373,7 @@ export const DEEMED_TYPE_META: Record<
   // Phase 2 자본거래 (엔진 구현 — UI 입력폼은 후속)
   merger: { label: "합병에 따른 이익", law: "상증법 §38" },
   capital_increase: { label: "증자에 따른 이익", law: "상증법 §39" },
+  capital_increase_allocation: { label: "증자에 따른 이익 — 주주별(cap-table)", law: "상증법 §39" },
   capital_decrease: { label: "감자에 따른 이익", law: "상증법 §39의2" },
   contribution: { label: "현물출자에 따른 이익", law: "상증법 §39의3" },
   convertible_stock: { label: "전환주식에 따른 이익", law: "상증법 §39①3호" },
@@ -379,6 +405,7 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "free_loan", label: "금전 무상대출", description: "상증법 §41의4 — 적정이자율 4.6% 차액", testId: "deemed-type-free_loan" },
   { value: "merger", label: "합병에 따른 이익", description: "상증법 §38 — 주식교부·주식 외 재산교부", testId: "deemed-type-merger" },
   { value: "capital_increase", label: "증자에 따른 이익", description: "상증법 §39 — 저가/고가발행 (실권주·제3자·초과)", testId: "deemed-type-capital_increase" },
+  { value: "capital_increase_allocation", label: "증자에 따른 이익 — 주주별(cap-table)", description: "상증법 §39 — 자본구성표 기반 다수증자·다증여자·검증내역", testId: "deemed-type-capital_increase_allocation" },
   { value: "convertible_stock", label: "전환주식에 따른 이익", description: "상증법 §39①3호 — 전환 시점 − 발행 시점 이익", testId: "deemed-type-convertible_stock" },
   { value: "capital_decrease", label: "감자에 따른 이익", description: "상증법 §39의2 — 저가/고가 소각", testId: "deemed-type-capital_decrease" },
   { value: "contribution", label: "현물출자에 따른 이익", description: "상증법 §39의3 — 저가/고가 인수", testId: "deemed-type-contribution" },
@@ -435,6 +462,8 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
       return <MergerFields form={form} set={set} />;
     case "capital_increase":
       return <CapitalIncreaseFields form={form} set={set} />;
+    case "capital_increase_allocation":
+      return <CapitalIncreaseAllocationFields form={form} set={set} />;
     case "capital_decrease":
       return <CapitalDecreaseFields form={form} set={set} />;
     case "contribution":

@@ -21,7 +21,9 @@ import { calcValueIncreaseGift } from "./value-increase";
 import { calcSpecificCorpGift } from "./specific-corp";
 import { calcTrustBenefit } from "./trust-benefit";
 
-export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
+export function calcDeemedGift(
+  input: Exclude<DeemedGiftInput, { type: "capital_increase_allocation" }>,
+): DeemedGiftResult {
   switch (input.type) {
     case "trust_benefit":
       return calcTrustBenefit(input);

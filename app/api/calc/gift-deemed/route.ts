@@ -12,6 +12,7 @@ import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { deemedGiftInputSchema } from "@/lib/validators/gift-deemed-input";
 import { calcDeemedGift } from "@/lib/tax-engine/gift-deemed/router";
+import { calcCapitalIncreaseAllocation } from "@/lib/tax-engine/gift-deemed/capital-increase-allocation";
 import type { DeemedGiftInput } from "@/lib/tax-engine/gift-deemed/types";
 
 export async function POST(req: NextRequest) {
@@ -57,9 +58,12 @@ export async function POST(req: NextRequest) {
 
   const input = parsed.data as unknown as DeemedGiftInput;
 
-  // 4. 순수 엔진 계산
+  // 4. 순수 엔진 계산 (cap-table 배분은 별도 오케스트레이터로 dispatch)
   try {
-    const result = calcDeemedGift(input);
+    const result =
+      input.type === "capital_increase_allocation"
+        ? calcCapitalIncreaseAllocation(input)
+        : calcDeemedGift(input);
     return NextResponse.json({ success: true, result });
   } catch (err) {
     if (err instanceof TaxCalculationError) {

@@ -1,7 +1,7 @@
 /**
  * 증여로 보는 경우 — 폼 → 엔진 입력 변환 + 증여세 마법사 prefill 어댑터 (④ 동기화).
  */
-import type { DeemedGiftInput, DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftInput, DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -117,6 +117,22 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         smallShareholderImputation: !isHigh ? form.ciSmallImputation : undefined,
       };
     }
+    case "capital_increase_allocation":
+      return {
+        type: "capital_increase_allocation",
+        direction: form.ciAllocDirection,
+        preIssuePrice: parseAmount(form.ciAllocPrePrice),
+        newSharePrice: parseAmount(form.ciAllocNewPrice),
+        shareholders: form.ciAllocRows.map((r) => ({
+          id: r.id,
+          name: r.name.trim() || undefined,
+          preShares: parseAmount(r.preShares),
+          entitledShares: parseAmount(r.entitledShares),
+          subscribedShares: parseAmount(r.subscribedShares),
+          reallocatedShares: parseAmount(r.reallocatedShares) || undefined,
+          relatedTo: r.relatedTo.length > 0 ? r.relatedTo : undefined,
+        })),
+      };
     case "capital_decrease":
       return form.cdCaseType === "high"
         ? {
@@ -271,8 +287,24 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
  */
 export function buildGiftWizardPrefill(
   form: DeemedFormState,
-  result: DeemedGiftResult,
+  result: DeemedGiftAnyResult,
 ): Partial<GiftFormState> {
+  // 증자 cap-table: 수증자별 과세분(total>0)을 각각 별도 증여항목으로 이관 (수증자별 증여세 단위 상이)
+  if ("perBeneficiary" in result) {
+    const nameById = new Map(result.byShareholder.map((b) => [b.id, b.name]));
+    return {
+      giftDate: form.giftDate,
+      giftItems: result.perBeneficiary
+        .filter((b) => b.total > 0)
+        .map((b) => ({
+          id: `deemed-ci-alloc-${b.beneficiaryId}`,
+          category: "other" as const,
+          name: `${(nameById.get(b.beneficiaryId) ?? "").trim() || "수증자"} 증자이익(§39)`,
+          marketValue: b.total,
+        })),
+    };
+  }
+
   const label = form.type ? DEEMED_TYPE_META[form.type].label : "증여이익";
 
   // 신탁이익(§33): 원본권·수익권 별개 증여시기 → subGifts를 항목 분리 이관.
