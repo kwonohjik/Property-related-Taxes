@@ -1,14 +1,39 @@
 /** (Phase 3) 재산 취득 후 재산가치 증가에 따른 이익의 증여 (§42의3 · 시행령 §32의3) */
+import { differenceInYears, parseISO } from "date-fns";
 import { GIFT } from "../legal-codes";
 import { safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";
-import type { DeemedGiftResult, ValueIncreaseInput } from "./types";
+import type {
+  DeemedGiftResult,
+  ValueIncreaseAcquisitionCause,
+  ValueIncreaseInput,
+  ValueIncreaseReason,
+} from "./types";
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
+
+/** §42의3①1·2·3호 취득사유 라벨 */
+const CAUSE_LABEL: Record<ValueIncreaseAcquisitionCause, string> = {
+  gift: "특수관계인 증여 (§42의3①1호)",
+  inside_info: "내부정보 유상취득 (§42의3①2호)",
+  borrowed_funds: "차입·담보차입 자금 취득 (§42의3①3호)",
+};
+
+/** 시행령 §32의3① 재산가치증가사유 라벨 (1호는 4개 세분 — 법령상 동일 1호) */
+const REASON_LABEL: Record<ValueIncreaseReason, string> = {
+  development: "개발사업 시행 (영§32의3①1호)",
+  form_change: "형질변경 (영§32의3①1호)",
+  partition: "공유물 분할 (영§32의3①1호)",
+  license: "사업 인가·허가 (영§32의3①1호)",
+  kotc_registration: "한국금융투자협회 등록 (영§32의3①2호)",
+  konex_listing: "코넥스시장 상장 (영§32의3①3호)",
+  similar: "그 밖의 유사 사유 (영§32의3①4호)",
+};
 
 /**
  * 시행령 §32의3③: 이익 = 해당 재산가액 − 취득가액 − 통상적 가치상승분 − 가치상승기여분.
  * 기준금액(§32의3②) = MIN((취득가액+통상상승분+기여분) × 30%, 3억). 미만이면 제외.
+ * 취득사유·가치증가사유·5년요건은 echo(valueIncreaseDetail)로만 표시 — 산식·applied 불변.
  */
 export function calcValueIncreaseGift(input: ValueIncreaseInput): DeemedGiftResult {
   const { currentValue, acquisitionCost, normalIncrease, contribution } = input;
@@ -29,6 +54,22 @@ export function calcValueIncreaseGift(input: ValueIncreaseInput): DeemedGiftResu
     { label: "기준금액 (차감합계 30%·3억 중 적은 금액)", amount: threshold },
     { label: "증여재산가액", amount: value, lawRef: GIFT.VALUE_INCREASE, note: "§42의3 재산취득 후 가치증가" },
   ];
+
+  // ── echo (산식·value·applied에 영향 없음) ──
+  const { acquisitionCause, valueIncreaseReason, acquisitionDate, eventDate } = input;
+  const hasDates = !!acquisitionDate && !!eventDate;
+  const holdingYears = hasDates ? differenceInYears(parseISO(eventDate!), parseISO(acquisitionDate!)) : undefined;
+  const hasDetail = !!valueIncreaseReason || !!acquisitionCause || hasDates;
+  const valueIncreaseDetail = hasDetail
+    ? {
+        acquisitionCauseLabel: acquisitionCause ? CAUSE_LABEL[acquisitionCause] : undefined,
+        reasonLabel: valueIncreaseReason ? REASON_LABEL[valueIncreaseReason] : undefined,
+        withinFiveYears: holdingYears !== undefined ? holdingYears <= 5 : undefined,
+        holdingYears,
+        isExchangeListingNotice: valueIncreaseReason === "similar" ? true : undefined,
+      }
+    : undefined;
+
   return {
     type: "value_increase",
     applied,
@@ -37,5 +78,6 @@ export function calcValueIncreaseGift(input: ValueIncreaseInput): DeemedGiftResu
     exclusionReason: applied ? undefined : "이익이 기준금액(차감합계 30%·3억 중 적은 금액) 미만",
     legalBasis: GIFT.VALUE_INCREASE,
     thresholdEcho: { gain: value0, threshold },
+    valueIncreaseDetail,
   };
 }

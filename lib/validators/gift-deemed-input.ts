@@ -93,6 +93,23 @@ const freeLoanSchema = z.object({
   }),
   isRelatedParty: z.boolean(),
   hasJustifiableReason: z.boolean().optional(),
+  // §41의4② 다년 분할 — YYYY-MM-DD 문자열 (date-coerce N/A, 문자열 그대로 엔진 전달)
+  loanStartDate: z.string().optional(),
+  loanEndDate: z.string().optional(),
+});
+// §43² 1년 이내 동일거래(§41의4) 합산 — 복수 대출 건 (별도 type dispatch)
+const freeLoanItemSchema = z.object({
+  loanDate: z.string().min(1),
+  loanAmount: z.number().positive(),
+  actualInterestPaid: z.number().nonnegative(),
+  appropriateRate: z.object({ numer: z.number().positive(), denom: z.number().positive() }),
+  isRelatedParty: z.boolean(),
+  hasJustifiableReason: z.boolean().optional(),
+  label: z.string().optional(),
+});
+const freeLoanAggregatedSchema = z.object({
+  type: z.literal("free_loan_aggregated"),
+  loans: z.array(freeLoanItemSchema).min(1, { message: "대출 건을 1건 이상 입력하세요" }),
 });
 
 // ── Phase 2: 자본거래 (평가가액·주식수 직접 입력) — sub-case 필드는 caseType별 optional ──
@@ -244,12 +261,32 @@ const acquisitionFundSchema = z.object({
   acquisitionValue: z.number().positive({ message: "취득재산가액(채무상환금액)은 0보다 커야 합니다" }),
   provenAmount: z.number().nonnegative(),
 });
-const nomineeTrustSchema = z.object({
-  type: z.literal("nominee_trust"),
-  propertyValue: z.number().nonnegative(),
-  hasTaxAvoidancePurpose: z.boolean(),
-  isExcluded: z.boolean().optional(),
-});
+const nomineeTrustSchema = z
+  .object({
+    type: z.literal("nominee_trust"),
+    // total 모드만 필수 (per_share는 perSharePrice×nomineeShares로 엔진 단일 도출) → superRefine로 모드별 검증
+    propertyValue: z.number().nonnegative().optional(),
+    hasTaxAvoidancePurpose: z.boolean(),
+    isExcluded: z.boolean().optional(),
+    valuationMode: z.enum(["total", "per_share"]).optional(),
+    perSharePrice: z.number().nonnegative().optional(),
+    nomineeShares: z.number().nonnegative().optional(),
+    subscriptionPrice: z.number().nonnegative().optional(),
+    theoreticalExRightsPrice: z.number().nonnegative().optional(),
+    preIncreasePerShare: z.number().nonnegative().optional(),
+    actualOwnerName: z.string().optional(),
+    nomineeName: z.string().optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.valuationMode === "per_share") {
+      if (!val.perSharePrice || val.perSharePrice <= 0)
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "1주당 평가액(명의개서일 §63)을 입력하세요", path: ["perSharePrice"] });
+      if (!val.nomineeShares || val.nomineeShares <= 0)
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "명의신탁 신주 수를 입력하세요", path: ["nomineeShares"] });
+    } else if (!val.propertyValue || val.propertyValue <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "명의신탁 재산 가액을 입력하세요", path: ["propertyValue"] });
+    }
+  });
 const shareholderDividendSchema = z.object({
   id: z.string().min(1),
   role: z.enum(["major_shareholder", "related_party", "other"]),
@@ -315,12 +352,44 @@ const valueIncreaseSchema = z.object({
   acquisitionCost: z.number().nonnegative(),
   normalIncrease: z.number().nonnegative(),
   contribution: z.number().nonnegative(),
+  // echo (적용요건 표시 — 산식 무관)
+  acquisitionCause: z.enum(["gift", "inside_info", "borrowed_funds"]).optional(),
+  valueIncreaseReason: z
+    .enum(["development", "form_change", "partition", "license", "kotc_registration", "konex_listing", "similar"])
+    .optional(),
+  acquisitionDate: z.string().optional(),
+  eventDate: z.string().optional(),
+});
+// §45의5 주주 행 Zod (엔진 SpecificCorpShareholder에 대응)
+const scRelationSchema = z.enum([
+  "lineal_ascendant",
+  "lineal_descendant",
+  "spouse",
+  "sibling",
+  "other_relative",
+  "other",
+]);
+const specificCorpShareholderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  relation: scRelationSchema,
+  shares: z.number().nonnegative(),
+  totalShares: z.number().nonnegative(),
+  isDonor: z.boolean(),
+  isRelated: z.boolean(),
 });
 const specificCorpSchema = z.object({
   type: z.literal("specific_corp"),
   transactionBenefit: z.number().nonnegative(),
-  corporateTax: z.number().nonnegative(),
-  ownershipRatio: ratioSchema,
+  // single 하위호환
+  corporateTax: z.number().nonnegative().optional(),
+  ownershipRatio: ratioSchema.optional(),
+  // roster 모드 신규 필드 (⑫ Zod 입력 객체 정의 — TS 미감지 지점)
+  shareholders: z.array(specificCorpShareholderSchema).optional(),
+  annualIncome: z.number().nonnegative().optional(),
+  corporateTaxComputed: z.number().nonnegative().optional(),
+  corporateTaxCredit: z.number().nonnegative().optional(),
+  giftDeduction: z.number().nonnegative().optional(),
 });
 const convertibleBondSchema = z.object({
   type: z.literal("convertible_bond"),
@@ -403,6 +472,7 @@ export const deemedGiftInputSchema = z
     debtForgivenessSchema,
     freeRealEstateSchema,
     freeLoanSchema,
+    freeLoanAggregatedSchema,
     mergerSchema,
     capitalIncreaseSchema,
     capitalIncreaseAllocationSchema,

@@ -5,6 +5,7 @@ import { calcBargainTransferGift } from "./bargain-transfer";
 import { calcDebtForgivenessGift } from "./debt-forgiveness";
 import { calcFreeRealEstateGift } from "./free-realestate-use";
 import { calcFreeLoanGift } from "./free-loan";
+import { calcFreeLoanAggregatedGift } from "./free-loan-aggregated";
 import { calcMergerGift } from "./merger";
 import { calcCapitalIncreaseGift } from "./capital-increase";
 import { calcCapitalDecreaseGift } from "./capital-decrease";
@@ -18,7 +19,7 @@ import { calcListingGainGift } from "./listing-gain";
 import { calcPropertyServiceUseGift } from "./property-service-use";
 import { calcOrgChangeGift } from "./org-change";
 import { calcValueIncreaseGift } from "./value-increase";
-import { calcSpecificCorpGift } from "./specific-corp";
+import { calcSpecificCorpGift, calcSpecificCorpGiftMulti } from "./specific-corp";
 import { calcRelatedCorpGift } from "./related-corp";
 import { calcTrustBenefit } from "./trust-benefit";
 
@@ -36,6 +37,8 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
       return calcFreeRealEstateGift(input);
     case "free_loan":
       return calcFreeLoanGift(input);
+    case "free_loan_aggregated":
+      return calcFreeLoanAggregatedGift(input);
     case "merger":
       return calcMergerGift(input);
     case "capital_increase":
@@ -63,7 +66,9 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
     case "value_increase":
       return calcValueIncreaseGift(input);
     case "specific_corp":
-      return calcSpecificCorpGift(input);
+      return input.shareholders && input.shareholders.length > 0
+        ? calcSpecificCorpGiftMulti(input)
+        : calcSpecificCorpGift(input);
     case "related_corp":
       return calcRelatedCorpGift(input);
   }

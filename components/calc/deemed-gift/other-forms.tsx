@@ -5,13 +5,16 @@
  * (§41의2·§41의3·§41의5·§42·§42의2·§42의3·§45의5).
  */
 
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { useMemo } from "react";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DateInput } from "@/components/ui/date-input";
 import type { DeemedFormState } from "./shared";
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
+import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -331,27 +334,250 @@ export function OrgChangeFields({ form, set }: Props) {
   );
 }
 
+/** §42의3 재산취득 후 가치증가 — 계산사례 프리셋 (국세청 2004 개정세법 해설 pp.197~200) */
+const VI_PRESETS: { label: string; testId: string; v: Partial<DeemedFormState> }[] = [
+  { label: "①형질변경", testId: "deemed-vi-preset-1", v: { viCurrentValue: "2000000000", viAcqCost: "100000000", viNormalIncrease: "10000000", viContribution: "20000000", viAcqCause: "gift", viReason: "form_change" } },
+  { label: "②공유물분할", testId: "deemed-vi-preset-2", v: { viCurrentValue: "7500000000", viAcqCost: "5000000000", viNormalIncrease: "0", viContribution: "0", viAcqCause: "", viReason: "partition" } },
+  { label: "③비상장주식 상장", testId: "deemed-vi-preset-3", v: { viCurrentValue: "10000000000", viAcqCost: "1000000000", viNormalIncrease: "0", viContribution: "0", viAcqCause: "borrowed_funds", viReason: "similar" } },
+  { label: "④사업 인허가", testId: "deemed-vi-preset-4", v: { viCurrentValue: "5000000000", viAcqCost: "100000000", viNormalIncrease: "50000000", viContribution: "50000000", viAcqCause: "borrowed_funds", viReason: "license" } },
+];
+
 /** §42의3 재산취득 후 가치증가 */
 export function ValueIncreaseFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+      {/* 계산사례 프리셋 */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-rose-700">계산사례:</span>
+        {VI_PRESETS.map((p) => (
+          <button
+            key={p.testId}
+            type="button"
+            data-testid={p.testId}
+            onClick={() => set(p.v)}
+            className="rounded-md border border-rose-300 bg-white/70 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ① 취득사유 (§42의3①1·2·3호) */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold text-rose-700">취득사유 (§42의3①)</p>
+        <RadioCardGroup
+          name="deemed-vi-cause"
+          tone="amber"
+          layout="stack"
+          value={form.viAcqCause}
+          onChange={(v) => set({ viAcqCause: v })}
+          options={[
+            { value: "gift", label: "특수관계인으로부터 증여 (①1호)" },
+            { value: "inside_info", label: "내부정보 제공받아 유상취득 (①2호)" },
+            { value: "borrowed_funds", label: "차입·담보차입 자금으로 취득 (①3호)" },
+          ]}
+        />
+      </div>
+
+      {/* ② 재산가치증가사유 (시행령 §32의3①) */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold text-rose-700">재산가치증가사유 (시행령 §32의3①)</p>
+        <RadioCardGroup
+          name="deemed-vi-reason"
+          tone="amber"
+          layout="stack"
+          value={form.viReason}
+          onChange={(v) => set({ viReason: v })}
+          options={[
+            { value: "form_change", label: "개발사업·형질변경·공유물분할·인가허가 (①1호)" },
+            { value: "kotc_registration", label: "한국금융투자협회 등록 K-OTC (①2호)" },
+            { value: "konex_listing", label: "코넥스시장 상장 (①3호)" },
+            { value: "similar", label: "그 밖의 유사 사유 (①4호)" },
+          ]}
+        />
+        {form.viReason === "similar" && (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-700" data-testid="deemed-vi-exchange-hint">
+            ⚠ 유가증권·코스닥시장 상장 이익은 §42의3에서 제외되어 §41의3 상장이익으로 과세됩니다.
+          </p>
+        )}
+      </div>
+
+      {/* ③ 금액 */}
       <CurrencyInput label="사유발생일 현재 재산가액" value={form.viCurrentValue} onChange={(v) => set({ viCurrentValue: v })} placeholder="사유발생일 현재 재산가액 (원)" />
       <CurrencyInput label="취득가액" value={form.viAcqCost} onChange={(v) => set({ viAcqCost: v })} hint="증여받은 재산은 증여세 과세가액" placeholder="취득가액 (원)" />
       <CurrencyInput label="통상적인 가치상승분" value={form.viNormalIncrease} onChange={(v) => set({ viNormalIncrease: v })} placeholder="통상적인 가치상승분 (원)" />
       <CurrencyInput label="가치상승기여분" value={form.viContribution} onChange={(v) => set({ viContribution: v })} hint="자본적지출액 등" placeholder="가치상승기여분 (원)" />
+
+      {/* ④ 기간 (5년 요건 echo) */}
+      <FieldCard label="취득일" hint="취득일부터 5년 이내 가치증가사유 발생 여부 표시">
+        <DateInput value={form.viAcqDate} onChange={(v) => set({ viAcqDate: v })} />
+      </FieldCard>
+      <FieldCard label="사유발생일">
+        <DateInput value={form.viEventDate} onChange={(v) => set({ viEventDate: v })} />
+      </FieldCard>
     </div>
   );
 }
 
 /** §45의5 특정법인과의 거래 */
 export function SpecificCorpFields({ form, set }: Props) {
+  const isRoster = form.scMode === "roster";
+  const isAuto = form.scCorporateTaxMode === "auto";
+
+  // 법인세 안분 echo — useMemo 표시전용. store 역기록 금지 (feedback_useeffect_store_mirror_forbidden).
+  const corpTaxEcho = useMemo(() => {
+    if (!isAuto) return null;
+    const assessed = parseAmount(form.scCorpTaxAssessed);
+    const deduction = parseAmount(form.scCorpTaxDeduction);
+    const income = parseAmount(form.scCorpIncome);
+    const benefit = parseAmount(form.scTransactionBenefit);
+    if (income <= 0 || assessed <= 0) return null;
+    const net = Math.max(0, assessed - deduction);
+    const minNumer = Math.min(benefit, income);
+    // BigInt 안전 안분(overflow 방지 — safeMultiplyThenDivide와 동일 로직)
+    const result = Number(BigInt(net) * BigInt(minNumer) / BigInt(income));
+    return result;
+  }, [isAuto, form.scCorpTaxAssessed, form.scCorpTaxDeduction, form.scCorpIncome, form.scTransactionBenefit]);
+
   return (
-    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
-      <CurrencyInput label="거래이익" value={form.scTransactionBenefit} onChange={(v) => set({ scTransactionBenefit: v })} hint="증여재산가액·채무면제이익·시가−대가 차액" placeholder="거래이익 (원)" />
-      <CurrencyInput label="법인세 상당액" value={form.scCorporateTax} onChange={(v) => set({ scCorporateTax: v })} hint="(산출세액 − 공제·감면) × min(거래이익/소득금액, 1)" placeholder="법인세 상당액 (원)" />
-      <FieldCard label="지배주주등 주식보유비율" hint="증여의제이익 1억원 이상이면 과세" unit="%">
-        <DecimalInput value={form.scRatioPct} onChange={(v) => set({ scRatioPct: v })} placeholder="지배주주등 지분율" />
-      </FieldCard>
+    <div className="space-y-3">
+      {/* ── 섹션 1: 입력 방식 + 거래이익 ── */}
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
+          <p className="text-xs font-semibold text-sky-700">입력 방식 선택</p>
+        </div>
+        <RadioCardGroup
+          name="sc-mode"
+          tone="sky"
+          layout="inline"
+          value={form.scMode}
+          onChange={(v) => {
+            const next = v as DeemedFormState["scMode"];
+            set({
+              scMode: next,
+              // roster ON → scShareholders [] 초기화 / OFF → undefined(3-state)
+              scShareholders: next === "roster" ? (form.scShareholders ?? []) : undefined,
+            });
+          }}
+          options={[
+            { value: "single", label: "지분율 직접 입력", testId: "sc-mode-single" },
+            { value: "roster", label: "주주 명단 입력", testId: "sc-mode-roster" },
+          ]}
+        />
+        <CurrencyInput
+          label="거래이익"
+          value={form.scTransactionBenefit}
+          onChange={(v) => set({ scTransactionBenefit: v })}
+          hint="증여재산가액·채무면제이익·시가−대가 차액 (시행령 §34의5④1호)"
+          data-testid="sc-transaction-benefit"
+        />
+      </div>
+
+      {/* ── 섹션 2: 법인세 상당액 ── */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">2</span>
+          <p className="text-xs font-semibold text-amber-700">법인세 상당액 (시행령 §34의5④2호)</p>
+        </div>
+        <RadioCardGroup
+          name="sc-corp-tax-mode"
+          tone="amber"
+          layout="inline"
+          value={form.scCorporateTaxMode}
+          onChange={(v) => set({ scCorporateTaxMode: v as DeemedFormState["scCorporateTaxMode"] })}
+          options={[
+            { value: "direct", label: "직접 입력", testId: "sc-corp-tax-direct" },
+            { value: "auto", label: "산출세액 + 소득금액 자동안분", testId: "sc-corp-tax-auto" },
+          ]}
+        />
+        {!isAuto && (
+          <CurrencyInput
+            label="법인세 상당액"
+            value={form.scCorporateTax}
+            onChange={(v) => set({ scCorporateTax: v })}
+            hint="(산출세액 − 공제·감면) × min(거래이익/소득금액, 1). 이월결손금 0이면 0 입력"
+            data-testid="sc-corporate-tax"
+          />
+        )}
+        {isAuto && (
+          <div className="space-y-2">
+            <CurrencyInput
+              label="법인세 산출세액"
+              value={form.scCorpTaxAssessed}
+              onChange={(v) => set({ scCorpTaxAssessed: v })}
+              hint="법인세 산출세액 (공제·감면 차감 전)"
+              data-testid="sc-corp-tax-assessed"
+            />
+            <CurrencyInput
+              label="법인세 공제·감면액"
+              value={form.scCorpTaxDeduction}
+              onChange={(v) => set({ scCorpTaxDeduction: v })}
+              hint="공제·감면액 합계 (없으면 0)"
+              data-testid="sc-corp-tax-deduction"
+            />
+            <CurrencyInput
+              label="각사업연도소득금액 (안분 분모)"
+              value={form.scCorpIncome}
+              onChange={(v) => set({ scCorpIncome: v })}
+              hint="§34의5④2호나목 분모 — 필수 입력 (0이면 계산 불가)"
+              data-testid="sc-corp-income"
+            />
+            {corpTaxEcho !== null && (
+              <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                안분 법인세 상당액 (표시용) ≈{" "}
+                <span className="font-mono font-bold">{corpTaxEcho.toLocaleString()}</span>원
+                <span className="ml-1 text-amber-600">(실계산은 엔진)</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── 섹션 3: 지분율 or 주주 명단 ── */}
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">3</span>
+          <p className="text-xs font-semibold text-violet-700">
+            {isRoster ? "발행주식 총수 + 주주 명단" : "지배주주등 주식보유비율"}
+          </p>
+        </div>
+        {!isRoster && (
+          <FieldCard label="지배주주등 주식보유비율" hint="증여의제이익 1억원 이상이면 과세 (§34의5⑤)" unit="%">
+            <DecimalInput value={form.scRatioPct} onChange={(v) => set({ scRatioPct: v })} />
+          </FieldCard>
+        )}
+        {isRoster && (
+          <>
+            <CurrencyInput
+              label="발행주식 총수"
+              value={form.scTotalShares}
+              onChange={(v) => set({ scTotalShares: v })}
+              hint="법인 발행주식 총수 (지분율 분모)"
+              data-testid="sc-total-shares"
+            />
+            <SpecificCorpShareholderTable
+              rows={form.scShareholders ?? []}
+              onChange={(rows) => set({ scShareholders: rows })}
+            />
+          </>
+        )}
+      </div>
+
+      {/* ── 섹션 4: §45의5② 한도 — 증여재산공제 ── */}
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">4</span>
+          <p className="text-xs font-semibold text-emerald-700">§45의5② 한도 — 증여재산공제 (선택)</p>
+        </div>
+        <CurrencyInput
+          label="증여재산공제"
+          value={form.scGiftDeduction}
+          onChange={(v) => set({ scGiftDeduction: v })}
+          hint="§45의5② 한도 ㉮㉠ 계산 시 적용할 증여재산공제액 (미입력 시 0)"
+          data-testid="sc-gift-deduction"
+        />
+      </div>
     </div>
   );
 }
