@@ -98,3 +98,43 @@ describe("부동산 무상담보 §37② — 다기간 (G3)", () => {
     expect(r.deemedGiftValue).toBe(46_000_000);
   });
 });
+
+describe("부동산 무상담보 §37② — 경정청구 (담보 분모 12월, §81⑤·§27⑤후단)", () => {
+  it("[COL-RECT-1] 산출 5천만 / 2023-01-01 담보개시 / 2023-07-01 사망 → 잔여 6/12 → 25,000,000", () => {
+    const r = calcFreeRealEstateGift({
+      subType: "collateral",
+      loanAmount: 500_000_000,
+      actualInterestPaid: 0,
+      isRelatedParty: true,
+      rectification: { giftTaxCalculated: 50_000_000, giftDate: "2023-01-01", terminationDate: "2023-07-01" },
+    });
+    expect(r.rectification?.totalMonths).toBe(12);
+    expect(r.rectification?.expiryDate).toBe("2024-01-01");
+    expect(r.rectification?.remainingMonths).toBe(6);
+    expect(r.rectification?.refundableTax).toBe(25_000_000);
+  });
+
+  it("[COL-RECT-2] 중단일(2024-02-01) ≥ 만료일(2024-01-01) → 잔여 0 · 경정세액 0", () => {
+    const r = calcFreeRealEstateGift({
+      subType: "collateral",
+      loanAmount: 500_000_000,
+      actualInterestPaid: 0,
+      isRelatedParty: true,
+      rectification: { giftTaxCalculated: 50_000_000, giftDate: "2023-01-01", terminationDate: "2024-02-01" },
+    });
+    expect(r.rectification?.remainingMonths).toBe(0);
+    expect(r.rectification?.refundableTax).toBe(0);
+  });
+
+  it("[COL-RECT-3] 부분월 2023-06-15 중단 → 잔여 7/12 → 29,166,666 (1개월 미만 일수→1)", () => {
+    const r = calcFreeRealEstateGift({
+      subType: "collateral",
+      loanAmount: 500_000_000,
+      actualInterestPaid: 0,
+      isRelatedParty: true,
+      rectification: { giftTaxCalculated: 50_000_000, giftDate: "2023-01-01", terminationDate: "2023-06-15" },
+    });
+    expect(r.rectification?.remainingMonths).toBe(7);
+    expect(r.rectification?.refundableTax).toBe(29_166_666);
+  });
+});

@@ -148,7 +148,7 @@ export function DeemedGiftResultView({
             {formatKRW(result.rectification.refundableTax)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            무상사용 만료일 {result.rectification.expiryDate} 기준 잔여 {result.rectification.remainingMonths}/{result.rectification.totalMonths}개월.
+            만료일 {result.rectification.expiryDate} 기준 잔여 {result.rectification.remainingMonths}/{result.rectification.totalMonths}개월.
           </p>
         </div>
       )}

@@ -13,7 +13,7 @@
 | M-U | free_use 다기간 | `periods=[{startDate,propertyValue}...]` | window 루프(5년·1억) | window별 표 + **첫 window 세액연결**(합산 X) | FRE-MULTI-1·2 |
 | M-C | collateral 다기간 | `periods=[{startDate,loanAmount,actualInterestPaid}...]` | window 루프(1년·1천만) | window별 표 + 첫 window 연결(합산 X) | COL-MULTI-1 |
 | R-U | free_use 경정 | `rectification`(free_use) | 경정 분기(분모 60) | floor(산출세액×잔여월/60) | RECT-1·2·3 |
-| R-C | collateral 경정 | `rectification`(collateral) | 경정 분기(분모 12) | floor(산출세액×잔여월/12) | COL-RECT-1 ⚠️§6 보류 |
+| R-C | collateral 경정 | `rectification`(collateral) | 경정 분기(분모 12) | floor(산출세액×잔여월/12) | COL-RECT-1·2·3 ✅(§81⑤ 도출) |
 | F-1 | 비특수+정당사유 | `!isRelatedParty && hasJustifiableReason` | `_fail()`(기존) | 비적용 | (기존 회귀) |
 
 > 다기간·경정은 **독립 optional**. 둘 다 입력 가능(다기간 산정 + 그중 특정 증여의 경정). 단 MVP는 분리 표시. **`rectification`은 자체 `giftDate`로 만료일·월수 산정 → `periods`와 독립**(periods의 window 증여일에 자동 연동하지 않음 — 사용자가 경정 대상 증여일을 직접 지정).
@@ -95,7 +95,7 @@ if (periods?.length) {
 
 ### 4.2 경정청구 (R-U / R-C)
 ```
-totalMonths = subType==="free_use" ? 60 : 12      // ⚠️ collateral 12는 §6 검증 후 확정
+totalMonths = subType==="free_use" ? 60 : 12      // collateral 12 = §81⑤(§27⑤후단 1년) 도출·COL-RECT-1~3 검증
 expiryDate  = subType==="free_use" ? addYears(giftDate,5) : addYears(giftDate,1)
 diff        = differenceInMonths(expiryDate, terminationDate)   // date-fns 4.1.0
 residual    = addMonths(terminationDate, diff) < expiryDate     // 1개월 미만 일수
@@ -124,7 +124,7 @@ refundableTax   = safeMultiplyThenDivide(giftTaxCalculated, remainingMonths, tot
 | RECT-2 | 중단 2025-04-01 ≥ 만료 2025-03-15 | 0 | 음수가드 실측✓ |
 | RECT-3 | 2020-01-10 / 중단 2024-06-05 | 잔여 8개월 → floor(tax×8/60) | date-fns 실측✓ |
 | S-U/S-C/F-1 | (기존 입력) | 기존값 동일 | 회귀 0 |
-| COL-RECT-1 | 담보 경정 | §6 별표 캡처 후 확정 | ⚠️ 보류 |
+| COL-RECT-1·2·3 | 담보 경정(분모 12) | 25,000,000(6/12)·0·29,166,666(7/12) | ✅ §81⑤ 도출·실측 |
 
 ## 8. 회귀 불변식
 - `periods` undefined & `rectification` undefined → **기존 코드 경로·출력 비트 동일**. 기존 `__tests__/tax-engine/gift-deemed/` 전체 green 유지가 머지 게이트.

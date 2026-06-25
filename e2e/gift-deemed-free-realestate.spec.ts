@@ -61,4 +61,17 @@ test.describe("증여로 보는 경우 §37 — 경정청구·다기간", () => 
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("151,631,469");
   });
+
+  test("[COL-RECT-1] 담보 경정 산출 5천만 · 2023-01-01~2023-07-01 → 25,000,000 (분모 12월)", async ({ page }) => {
+    await openFreeRealEstate(page);
+    await page.getByTestId("free-subtype-collateral").click();
+    await page.getByPlaceholder("차입금 (원)").fill("500000000");
+    await page.getByTestId("free-rect-toggle").getByRole("switch").click();
+    await page.getByPlaceholder("증여세 산출세액 (원)").fill("50000000");
+    await fillDate(page, "free-rect-giftdate-wrap", "2023", "1", "1");
+    await fillDate(page, "free-rect-termdate-wrap", "2023", "7", "1");
+    await confirm(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-rectification-value")).toContainText("25,000,000");
+  });
 });

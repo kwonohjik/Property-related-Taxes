@@ -96,21 +96,20 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
         />
       )}
 
-      {/* 경정청구(§79②1호·§81⑨) — free_use 한정(담보 분모 미검증) */}
-      {isFreeUse && (
-        <div data-testid="free-rect-toggle">
+      {/* 경정청구(§79②1호·§81⑨) — 무상사용(분모 60월)·담보(분모 12월) 공통 */}
+      <div data-testid="free-rect-toggle">
         <ToggleCard
           lawLinks="상증법"
           tone="emerald"
           checked={form.freeRectOn}
           onCheckedChange={(v) => set({ freeRectOn: v })}
           title="경정청구 계산 (소유자 사망·양도 등 중단)"
-          description="무상사용기간 중 중단 시 잔여기간분 경정청구 (§79②1호)"
+          description={`${isFreeUse ? "무상사용기간(5년)" : "담보이용기간(1년)"} 중 중단 시 잔여기간분 경정청구 (§79②1호)`}
         >
           <div className="space-y-2">
             <CurrencyInput label="증여세 산출세액" value={form.freeRectTax} onChange={(v) => set({ freeRectTax: v })} hint="세대생략 할증(§57) 포함" placeholder="증여세 산출세액 (원)" />
             <div className="space-y-1" data-testid="free-rect-giftdate-wrap">
-              <label className="block text-xs text-emerald-700">당초 증여일(무상사용 개시일)</label>
+              <label className="block text-xs text-emerald-700">당초 증여일({isFreeUse ? "무상사용" : "담보이용"} 개시일)</label>
               <DateInput value={form.freeRectGiftDate} onChange={(v) => set({ freeRectGiftDate: v })} />
             </div>
             <div className="space-y-1" data-testid="free-rect-termdate-wrap">
@@ -119,8 +118,7 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
             </div>
           </div>
         </ToggleCard>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

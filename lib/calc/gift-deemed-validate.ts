@@ -53,8 +53,8 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (form.freeSubType === "collateral" && parseAmount(form.freeLoanAmount) <= 0)
           return "차입금을 입력하세요";
       }
-      // 경정청구(free_use 한정) — 필수값
-      if (form.freeRectOn && form.freeSubType === "free_use") {
+      // 경정청구(무상사용·담보 공통) — 필수값
+      if (form.freeRectOn) {
         if (parseAmount(form.freeRectTax) <= 0) return "경정청구: 증여세 산출세액을 입력하세요";
         if (!form.freeRectGiftDate) return "경정청구: 당초 증여일을 입력하세요";
         if (!form.freeRectTermDate) return "경정청구: 중단사유 발생일을 입력하세요";
