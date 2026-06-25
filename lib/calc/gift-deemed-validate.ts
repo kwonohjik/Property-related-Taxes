@@ -254,9 +254,36 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "value_increase":
       if (parseAmount(form.viCurrentValue) <= 0) return "사유발생일 현재 재산가액을 입력하세요";
       break;
-    case "specific_corp":
+    case "specific_corp": {
       if (parseAmount(form.scTransactionBenefit) <= 0) return "거래이익을 입력하세요";
+      const isRoster = form.scMode === "roster";
+      const isAuto = form.scCorporateTaxMode === "auto";
+      if (isRoster) {
+        // roster+direct: 주주 명단 필수 + 각 행 name·shares + 발행주식 총수
+        if (!form.scShareholders || form.scShareholders.length === 0)
+          return "주주 명단을 입력하세요 (+ 행 추가)";
+        for (let i = 0; i < form.scShareholders.length; i++) {
+          const sh = form.scShareholders[i];
+          if (!sh.name.trim()) return `주주 ${i + 1}의 성명을 입력하세요`;
+          if (parseAmount(sh.shares) <= 0) return `주주 ${i + 1}의 주식수를 입력하세요`;
+        }
+        if (parseAmount(form.scTotalShares) <= 0) return "발행주식 총수를 입력하세요";
+        if (isAuto) {
+          // roster+auto: 산출세액·소득금액 필수 (자동안분 fallback 금지, 0 차단)
+          if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";
+          if (parseAmount(form.scCorpIncome) <= 0) return "각사업연도소득금액을 입력하세요 (분모 0 불가)";
+        }
+        // roster+direct: corporateTax 0 허용 (이월결손금 0)
+      } else {
+        // single 경로 — 기존 validate 유지
+        if (isAuto) {
+          if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";
+          if (parseAmount(form.scCorpIncome) <= 0) return "각사업연도소득금액을 입력하세요 (분모 0 불가)";
+        }
+        // single+direct: corporateTax·ratio 기존(0 허용)
+      }
       break;
+    }
     case "convertible_bond":
       if (form.cbCaseType === "conversion" || form.cbCaseType === "conversion_reverse") {
         if (parseAmount(form.cbPreConvPrice) <= 0) return "전환등 전 1주당 평가가액을 입력하세요";

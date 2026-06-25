@@ -46,9 +46,9 @@ import { INITIAL_DEEMED, makeLoanItem, type DeemedFormState } from "./deemed-for
 // 폼 상태 — 타입·초기값은 deemed-form-state.ts로 분리(800줄 정책). 하위호환 re-export.
 // ============================================================
 export type { DeemedFormState };
-export type { CdShareholderRow, EdShareholderRow, CapTableRow, LoanLoanItem } from "./deemed-form-state";
+export type { CdShareholderRow, EdShareholderRow, CapTableRow, ScShareholderRow, LoanLoanItem } from "./deemed-form-state";
 export { INITIAL_DEEMED };
-export { makeCapTableRow, makeLoanItem } from "./deemed-form-state";
+export { makeCapTableRow, makeScShareholderRow, makeLoanItem } from "./deemed-form-state";
 
 export const DEEMED_TYPE_META: Record<
   DeemedGiftType,

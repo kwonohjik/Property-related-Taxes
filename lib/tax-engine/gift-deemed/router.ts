@@ -19,7 +19,7 @@ import { calcListingGainGift } from "./listing-gain";
 import { calcPropertyServiceUseGift } from "./property-service-use";
 import { calcOrgChangeGift } from "./org-change";
 import { calcValueIncreaseGift } from "./value-increase";
-import { calcSpecificCorpGift } from "./specific-corp";
+import { calcSpecificCorpGift, calcSpecificCorpGiftMulti } from "./specific-corp";
 import { calcTrustBenefit } from "./trust-benefit";
 
 export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
@@ -65,7 +65,9 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
     case "value_increase":
       return calcValueIncreaseGift(input);
     case "specific_corp":
-      return calcSpecificCorpGift(input);
+      return input.shareholders && input.shareholders.length > 0
+        ? calcSpecificCorpGiftMulti(input)
+        : calcSpecificCorpGift(input);
   }
 }
 // §43① 중복배제·§43② 합산은 Phase 3 router 후처리(여기선 단일 의제만)

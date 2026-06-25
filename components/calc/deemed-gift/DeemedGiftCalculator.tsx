@@ -71,8 +71,12 @@ export function DeemedGiftCalculator() {
     router.push("/calc/gift-tax");
   }
 
-  // 감자 멀티 수증자 선택 — result 유지(set()는 result를 리셋하므로 직접 setForm)
-  const selectDonee = (i: number) => setForm((p) => ({ ...p, cdSelectedDoneeIndex: i }));
+  // 멀티 수증자 선택 — result 유지(set()는 result를 리셋하므로 직접 setForm). 유형별 인덱스 분리.
+  const selectDonee = (i: number) =>
+    setForm((p) => ({
+      ...p,
+      ...(result?.type === "specific_corp" ? { scSelectedDoneeIndex: i } : { cdSelectedDoneeIndex: i }),
+    }));
 
   return (
     <div className="space-y-5">
@@ -138,7 +142,7 @@ export function DeemedGiftCalculator() {
         <DeemedGiftResultView
           result={result}
           onToGiftTax={handleToGiftTax}
-          selectedDoneeIndex={form.cdSelectedDoneeIndex}
+          selectedDoneeIndex={result.type === "specific_corp" ? form.scSelectedDoneeIndex : form.cdSelectedDoneeIndex}
           onSelectDonee={selectDonee}
         />
       )}

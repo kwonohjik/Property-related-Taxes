@@ -360,11 +360,36 @@ const valueIncreaseSchema = z.object({
   acquisitionDate: z.string().optional(),
   eventDate: z.string().optional(),
 });
+// §45의5 주주 행 Zod (엔진 SpecificCorpShareholder에 대응)
+const scRelationSchema = z.enum([
+  "lineal_ascendant",
+  "lineal_descendant",
+  "spouse",
+  "sibling",
+  "other_relative",
+  "other",
+]);
+const specificCorpShareholderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  relation: scRelationSchema,
+  shares: z.number().nonnegative(),
+  totalShares: z.number().nonnegative(),
+  isDonor: z.boolean(),
+  isRelated: z.boolean(),
+});
 const specificCorpSchema = z.object({
   type: z.literal("specific_corp"),
   transactionBenefit: z.number().nonnegative(),
-  corporateTax: z.number().nonnegative(),
-  ownershipRatio: ratioSchema,
+  // single 하위호환
+  corporateTax: z.number().nonnegative().optional(),
+  ownershipRatio: ratioSchema.optional(),
+  // roster 모드 신규 필드 (⑫ Zod 입력 객체 정의 — TS 미감지 지점)
+  shareholders: z.array(specificCorpShareholderSchema).optional(),
+  annualIncome: z.number().nonnegative().optional(),
+  corporateTaxComputed: z.number().nonnegative().optional(),
+  corporateTaxCredit: z.number().nonnegative().optional(),
+  giftDeduction: z.number().nonnegative().optional(),
 });
 const convertibleBondSchema = z.object({
   type: z.literal("convertible_bond"),

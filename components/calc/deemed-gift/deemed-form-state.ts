@@ -2,7 +2,7 @@
  * 증여로 보는 경우 — 폼 상태 타입 + 초기값.
  * shared.tsx에서 분리(800줄 정책). shared.tsx가 re-export하여 하위호환 유지.
  */
-import type { DeemedGiftType, ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftType, ScRelation, ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /** 감자 멀티 모드 주주 행 (전부 string — parseAmount 변환은 API 변환 시) */
@@ -28,6 +28,22 @@ export interface CapTableRow {
 
 export function makeCapTableRow(id: string): CapTableRow {
   return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [] };
+}
+
+/**
+ * §45의5 특정법인 다주주 명단 행 (전부 string — parseAmount 변환은 API 변환 시).
+ * relation은 ScRelation 열거값. isDonor=증여자 본인 여부(과세제외 donor_self).
+ */
+export interface ScShareholderRow {
+  id: string;
+  name: string;
+  relation: ScRelation;
+  shares: string; // 주식수 (CurrencyInput)
+  isDonor: boolean; // 증여자 본인 → donor_self 제외
+}
+
+export function makeScShareholderRow(id: string): ScShareholderRow {
+  return { id, name: "", relation: "lineal_descendant", shares: "", isDonor: false };
 }
 
 /** §43² 합산 — 개별 대출 건 (전부 string. API 변환에서 number). */
@@ -307,6 +323,28 @@ export interface DeemedFormState {
   scTransactionBenefit: string;
   scCorporateTax: string;
   scRatioPct: string;
+  // §45의5 확장 — 모드 토글 + 다주주 roster
+  /** 입력 방식: "single"=지분율 직접 / "roster"=주주 명단 */
+  scMode: "single" | "roster";
+  /** 법인세 상당액 모드: "direct"=직접 입력 / "auto"=산출세액+소득금액 자동안분 */
+  scCorporateTaxMode: "direct" | "auto";
+  /** auto: 법인세 산출세액 */
+  scCorpTaxAssessed: string;
+  /** auto: 법인세 공제·감면 */
+  scCorpTaxDeduction: string;
+  /** auto: 각사업연도소득금액 (안분 분모) */
+  scCorpIncome: string;
+  /** roster: 발행주식 총수 (분모) */
+  scTotalShares: string;
+  /**
+   * roster: 주주 명단 — 3-state (undefined=OFF / []=ON빈(validate 차단) / [...]=데이터).
+   * feedback_three_state_optional_mode_toggle 준수.
+   */
+  scShareholders?: ScShareholderRow[];
+  /** 결과 수증자 선택 인덱스 (한도표 표시용) */
+  scSelectedDoneeIndex: number;
+  /** §45의5② 한도 ㉮㉠ 증여재산공제 */
+  scGiftDeduction: string;
 }
 
 export const INITIAL_DEEMED: DeemedFormState = {
@@ -512,4 +550,13 @@ export const INITIAL_DEEMED: DeemedFormState = {
   scTransactionBenefit: "",
   scCorporateTax: "",
   scRatioPct: "",
+  scMode: "single",
+  scCorporateTaxMode: "direct",
+  scCorpTaxAssessed: "",
+  scCorpTaxDeduction: "",
+  scCorpIncome: "",
+  scTotalShares: "",
+  scShareholders: undefined,
+  scSelectedDoneeIndex: 0,
+  scGiftDeduction: "",
 };

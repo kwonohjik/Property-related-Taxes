@@ -112,6 +112,8 @@ export interface DeemedGiftResult {
   capitalDecreaseMulti?: CapitalDecreaseMultiResult;
   /** 합병(§38) 주주 매트릭스 — Phase B(다수 대주주·동일인 자기증여). deemedGiftValue=Σ applied netGain */
   mergerMatrix?: MergerMatrix;
+  /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
+  specificCorpMulti?: SpecificCorpMultiResult;
   /**
    * §43² 1년 이내 동일거래(§41의4) 합산 — 건별 echo. plain 배열(Map 금지, feedback_engine_result_map_json_loss).
    * deemedGiftValue=합산 총액. 증여시기=isThresholdCrossing 건의 loanDate.
@@ -731,11 +733,69 @@ export interface ValueIncreaseInput {
   eventDate?: string; // ISO. 재산가치증가사유 발생일(§42의3② 전단: 사유발생 전 양도 시 양도일)
 }
 
+/** §45의5 관계 — "other"=비친족(타인). 증여자 본인은 isDonor 플래그로 분리 */
+export type ScRelation =
+  | "lineal_ascendant"
+  | "lineal_descendant"
+  | "spouse"
+  | "sibling"
+  | "other_relative"
+  | "other";
+
+/** §45의5 다주주(roster) 모드 주주 1명 */
+export interface SpecificCorpShareholder {
+  id: string; // 결과 표시 금지(feedback_no_internal_id_in_result) — name 우선
+  name: string;
+  relation: ScRelation; // 표시·prefill용 passthrough (엔진 판정은 isDonor·isRelated)
+  shares: number; // 보유 주식수
+  totalShares: number; // 발행주식 총수 (분모)
+  isDonor: boolean; // 증여자 본인 → donor_self 제외
+  isRelated: boolean; // 지배주주 친족 여부, false → non_related 제외
+}
+
+/** §45의5② 증여세 한도 계산 (수증자별) */
+export interface SpecificCorpLimitCalc {
+  computedTax: number; // ㉮ 일반 산출세액
+  directGiftTax: number; // ㉠ 직접증여 가정 산출세액(법인세 차감 前)
+  corpTaxShare: number; // ㉡ 법인세 상당액 × 지분율
+  limitAmount: number; // ㉯ = max(0, ㉠ − ㉡)
+  finalTax: number; // min(㉮, ㉯)
+  filingCredit: number; // §69 floor(finalTax × 3/100)
+  selfPayTax: number; // finalTax − filingCredit
+}
+
+/** §45의5 수증자별 명세 (Map 금지 — plain 배열) */
+export interface SpecificCorpDonee {
+  name: string;
+  relation: ScRelation;
+  shares: number;
+  totalShares: number;
+  ownershipRatioPct: number; // 표시용 백분율
+  gain: number; // 증여의제이익 = corpProfit × shares/totalShares
+  isTaxable: boolean;
+  nonTaxableReason?: "donor_self" | "non_related" | "below_threshold";
+  limitCalc?: SpecificCorpLimitCalc; // 과세 주주만
+}
+
+/** §45의5 다주주 모드 결과 (Map 금지 — plain 배열) */
+export interface SpecificCorpMultiResult {
+  corpProfit: number; // 특정법인의 이익 (거래이익 − 법인세 안분)
+  corpTaxApportioned: number; // 법인세 안분액
+  donees: SpecificCorpDonee[];
+}
+
 /** §45의5 특정법인과의 거래 */
 export interface SpecificCorpInput {
-  transactionBenefit: number; // 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
-  corporateTax: number; // 법인세 상당액 = (산출세액−공제감면)×min(거래이익/소득금액,1)
-  ownershipRatio: { numer: number; denom: number }; // 지배주주등 주식보유비율
+  transactionBenefit: number; // §34의5④1호 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
+  // ── single(하위호환) 모드: 법인세 안분·지분율을 호출자가 사전 계산 ──
+  corporateTax?: number; // 법인세 상당액(이미 안분된 최종값)
+  ownershipRatio?: { numer: number; denom: number }; // 지배주주등 주식보유비율
+  // ── roster 모드 (shareholders 존재 시 dispatch) ──
+  shareholders?: SpecificCorpShareholder[];
+  annualIncome?: number; // §34의5④2호나목 각사업연도소득금액(분모)
+  corporateTaxComputed?: number; // 법인세 산출세액(안분 前)
+  corporateTaxCredit?: number; // 법인세 공제·감면액
+  giftDeduction?: number; // §45의5② 한도 ㉮㉠ 증여재산공제 (default 0)
 }
 
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
