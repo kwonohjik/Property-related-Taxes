@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AuthMigrationListener } from "@/components/auth/AuthMigrationListener";
 import { SelectOnFocusProvider } from "@/components/providers/SelectOnFocusProvider";
 import { EnterKeyNavigationProvider } from "@/components/providers/EnterKeyNavigationProvider";
 import { HeaderProfileBadge } from "@/components/layout/HeaderProfileBadge";
@@ -64,7 +63,6 @@ export default function RootLayout({
         <ThemeProvider>
           <SelectOnFocusProvider>
             <EnterKeyNavigationProvider />
-            <AuthMigrationListener />
             <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
               <div className="mx-auto flex h-14 max-w-4xl items-center px-4">
                 <span className="font-semibold text-sm shrink-0">한국 부동산 세금 계산기</span>

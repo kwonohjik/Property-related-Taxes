@@ -31,7 +31,6 @@ import {
   validateMultiSettings,
   areAllPropertiesReady,
 } from "@/lib/calc/multi-transfer-tax-validate";
-import { saveCalculation } from "@/actions/calculations";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import TransferTaxCalculator from "../TransferTaxCalculator";
@@ -241,8 +240,6 @@ export default function MultiTransferTaxCalculator() {
   } = useCalcWizardStore();
 
   const [error, setError] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [savedId, setSavedId] = useState<string | null>(null);
 
   const { activeClientId } = useProfessionalStore();
 
@@ -399,34 +396,7 @@ export default function MultiTransferTaxCalculator() {
       const res = await callMultiTransferTaxAPI(form, form.properties);
       setResult(res);
       setStep("result");
-
-      // 로그인 시 이력 저장
-      try {
-        if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-          const { createClient } = await import("@/lib/supabase/client");
-          const supabase = createClient();
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            setIsLoggedIn(true);
-            const saveRes = await saveCalculation({
-              taxType: "transfer_multi",
-              inputData: {
-                taxYear: form.taxYear,
-                properties: form.properties.map((p) => ({
-                  propertyId: p.propertyId,
-                  propertyLabel: p.propertyLabel,
-                })),
-              },
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              resultData: res as unknown as Record<string, any>,
-              taxLawVersion: "2024",
-            });
-            if (saveRes.id) setSavedId(saveRes.id);
-          }
-        }
-      } catch {
-        // 이력 저장 실패는 무시
-      }
+      // 이력 저장은 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)
     } catch (err) {
       setError(err instanceof Error ? err.message : "계산 중 오류가 발생했습니다.");
     } finally {
@@ -594,24 +564,12 @@ export default function MultiTransferTaxCalculator() {
               <ArrowLeft className="h-4 w-4" />
               설정으로 돌아가기
             </Button>
-            {savedId && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/result/${savedId}`)}
-              >
-                이력에서 보기
-              </Button>
-            )}
           </div>
 
           <MultiTransferTaxResultView
             result={result}
             properties={form.properties}
             taxYear={form.taxYear}
-            isLoggedIn={isLoggedIn}
-            savedId={savedId}
           />
 
           {/* 결과 화면 하단 네비게이션 — 다른 양도건 추가, 자산 목록, 홈 */}

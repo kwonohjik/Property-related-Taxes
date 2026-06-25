@@ -53,7 +53,7 @@ export default function TransferTaxCalculator({
   const isEmbeddedInMulti = pathname?.includes("/multi") ?? false;
   // 단건/다건 모두 6단계 — 가산세는 자산별 입력
   const STEPS = STEPS_SINGLE;
-  const { currentStep, formData, result, setStep, updateFormData, setResult, reset, clearPendingMigration } =
+  const { currentStep, formData, result, setStep, updateFormData, setResult, reset } =
     useCalcWizardStore();
   // API·계산 오류 (단건 메시지). 검증 오류는 issues 배열로 일괄 표시.
   const [error, setError] = useState<string | null>(null);
@@ -234,19 +234,7 @@ export default function TransferTaxCalculator({
         }
       }
 
-      // 로그인된 사용자면 이력 자동 저장
-      if (isLoggedIn) {
-        const { saveCalculation } = await import("@/actions/calculations");
-        await saveCalculation({
-          taxType: "transfer",
-          inputData: formData as unknown as Record<string, unknown>,
-          resultData: res as unknown as Record<string, unknown>,
-          // [I8] 양도일 기준 세법 버전 — 세법 적용 시점을 오늘이 아닌 양도일로 기록
-          taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
-        });
-        // [I6] 이력 저장 성공 후 pendingMigration 플래그 해제
-        clearPendingMigration();
-      }
+      // 이력 저장은 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "계산 중 오류가 발생했습니다.");
     } finally {
