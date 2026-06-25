@@ -24,6 +24,7 @@ import {
 import {
   MergerFields,
   CapitalIncreaseFields,
+  CapitalIncreaseAllocationFields,
   CapitalDecreaseFields,
   ContributionFields,
   ConvertibleStockFields,
@@ -45,8 +46,9 @@ import { INITIAL_DEEMED, type DeemedFormState } from "./deemed-form-state";
 // 폼 상태 — 타입·초기값은 deemed-form-state.ts로 분리(800줄 정책). 하위호환 re-export.
 // ============================================================
 export type { DeemedFormState };
-export type { CdShareholderRow, EdShareholderRow } from "./deemed-form-state";
+export type { CdShareholderRow, EdShareholderRow, CapTableRow } from "./deemed-form-state";
 export { INITIAL_DEEMED };
+export { makeCapTableRow } from "./deemed-form-state";
 
 export const DEEMED_TYPE_META: Record<
   DeemedGiftType,
@@ -61,6 +63,7 @@ export const DEEMED_TYPE_META: Record<
   // Phase 2 자본거래 (엔진 구현 — UI 입력폼은 후속)
   merger: { label: "합병에 따른 이익", law: "상증법 §38" },
   capital_increase: { label: "증자에 따른 이익", law: "상증법 §39" },
+  capital_increase_allocation: { label: "증자에 따른 이익 — 주주별(cap-table)", law: "상증법 §39" },
   capital_decrease: { label: "감자에 따른 이익", law: "상증법 §39의2" },
   contribution: { label: "현물출자에 따른 이익", law: "상증법 §39의3" },
   convertible_stock: { label: "전환주식에 따른 이익", law: "상증법 §39①3호" },
@@ -92,6 +95,7 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "free_loan", label: "금전 무상대출", description: "상증법 §41의4 — 적정이자율 4.6% 차액", testId: "deemed-type-free_loan" },
   { value: "merger", label: "합병에 따른 이익", description: "상증법 §38 — 주식교부·주식 외 재산교부", testId: "deemed-type-merger" },
   { value: "capital_increase", label: "증자에 따른 이익", description: "상증법 §39 — 저가/고가발행 (실권주·제3자·초과)", testId: "deemed-type-capital_increase" },
+  { value: "capital_increase_allocation", label: "증자에 따른 이익 — 주주별(cap-table)", description: "상증법 §39 — 자본구성표 기반 다수증자·다증여자·검증내역", testId: "deemed-type-capital_increase_allocation" },
   { value: "convertible_stock", label: "전환주식에 따른 이익", description: "상증법 §39①3호 — 전환 시점 − 발행 시점 이익", testId: "deemed-type-convertible_stock" },
   { value: "capital_decrease", label: "감자에 따른 이익", description: "상증법 §39의2 — 저가/고가 소각", testId: "deemed-type-capital_decrease" },
   { value: "contribution", label: "현물출자에 따른 이익", description: "상증법 §39의3 — 저가/고가 인수", testId: "deemed-type-contribution" },
@@ -148,6 +152,8 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
       return <MergerFields form={form} set={set} />;
     case "capital_increase":
       return <CapitalIncreaseFields form={form} set={set} />;
+    case "capital_increase_allocation":
+      return <CapitalIncreaseAllocationFields form={form} set={set} />;
     case "capital_decrease":
       return <CapitalDecreaseFields form={form} set={set} />;
     case "contribution":

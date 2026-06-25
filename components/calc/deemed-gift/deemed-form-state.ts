@@ -14,6 +14,21 @@ export interface CdShareholderRow {
   relationGroup: string;
 }
 
+/** 증자 cap-table 1행 (폼 — string 필드). API 변환에서 CapShareholder(number)로 변환 */
+export interface CapTableRow {
+  id: string;
+  name: string;
+  preShares: string; // 증자 전 보유
+  entitledShares: string; // 당초(균등) 배정 신주수
+  subscribedShares: string; // 실제 인수 신주수
+  reallocatedShares: string; // 재배정/제3자/초과로 받은 신주수
+  relatedTo: string[]; // 특수관계인 주주 id 목록
+}
+
+export function makeCapTableRow(id: string): CapTableRow {
+  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [] };
+}
+
 /** 초과배당 §41의2 주주 행 (전부 string — parseAmount/parseDecimal 변환은 API 변환 시) */
 export interface EdShareholderRow {
   /** 행 고유 ID (클라이언트 UUID) */
@@ -131,6 +146,11 @@ export interface DeemedFormState {
   ciRelatedAcquiredShares: string; // 고가 나·다라 특수관계인 인수신주수
   ciRatioDenomShares: string; // 고가 나·다라 분모 신주수
   ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
+  // 증자 §39 cap-table (다수증자·다증여자)
+  ciAllocDirection: "low" | "high";
+  ciAllocPrePrice: string; // ㉮ 증자 전 1주당 평가가액
+  ciAllocNewPrice: string; // ㉰ 신주 1주당 인수가액
+  ciAllocRows: CapTableRow[];
   // 감자 §39의2
   cdCaseType: "low" | "high"; // 저가소각(①1호) / 고가소각(①2호)
   cdSharePrice: string;
@@ -337,6 +357,10 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciRelatedAcquiredShares: "",
   ciRatioDenomShares: "",
   ciSmallImputation: false,
+  ciAllocDirection: "low",
+  ciAllocPrePrice: "",
+  ciAllocNewPrice: "",
+  ciAllocRows: [makeCapTableRow("sh-1"), makeCapTableRow("sh-2")],
   cdCaseType: "low",
   cdSharePrice: "",
   cdRedemptionPrice: "",

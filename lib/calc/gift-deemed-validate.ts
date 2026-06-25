@@ -111,6 +111,18 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (parseAmount(form.ciRatioDenomShares) <= 0) return "분모 신주수를 입력하세요";
       }
       break;
+    case "capital_increase_allocation": {
+      if (parseAmount(form.ciAllocPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
+      if (parseAmount(form.ciAllocNewPrice) <= 0) return "신주 1주당 인수가액을 입력하세요";
+      const rows = form.ciAllocRows;
+      if (rows.length < 2) return "주주를 2명 이상 입력하세요";
+      if (rows.some((r) => !r.name.trim())) return "각 주주의 이름을 입력하세요";
+      if (rows.every((r) => parseAmount(r.subscribedShares) <= 0)) return "신주를 인수한 주주가 1명 이상 필요합니다";
+      const ids = new Set(rows.map((r) => r.id));
+      if (rows.some((r) => r.relatedTo.some((rid) => !ids.has(rid))))
+        return "특수관계인 선택이 올바르지 않습니다";
+      break;
+    }
     case "capital_decrease":
       if (form.cdMode === "multi") {
         if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";

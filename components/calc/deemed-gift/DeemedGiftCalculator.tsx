@@ -19,12 +19,12 @@ import { DeemedDetailModal } from "@/components/calc/deemed-gift/DeemedDetailMod
 import { DeemedGiftResultView } from "@/components/calc/results/DeemedGiftResultView";
 import { buildDeemedGiftInput, buildGiftWizardPrefill } from "@/lib/calc/gift-deemed-api";
 import { validateDeemedInput } from "@/lib/calc/gift-deemed-validate";
-import type { DeemedGiftResult, DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftAnyResult, DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
 
 export function DeemedGiftCalculator() {
   const router = useRouter();
   const [form, setForm] = useState<DeemedFormState>(INITIAL_DEEMED);
-  const [result, setResult] = useState<DeemedGiftResult | null>(null);
+  const [result, setResult] = useState<DeemedGiftAnyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -56,7 +56,7 @@ export function DeemedGiftCalculator() {
         setError(json.error || "계산 중 오류가 발생했습니다.");
         return;
       }
-      setResult(json.result as DeemedGiftResult);
+      setResult(json.result as DeemedGiftAnyResult);
     } catch {
       setError("네트워크 오류가 발생했습니다.");
     } finally {

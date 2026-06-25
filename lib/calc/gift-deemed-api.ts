@@ -1,7 +1,7 @@
 /**
  * 증여로 보는 경우 — 폼 → 엔진 입력 변환 + 증여세 마법사 prefill 어댑터 (④ 동기화).
  */
-import type { DeemedGiftInput, DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftInput, DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -19,7 +19,7 @@ import {
 } from "@/components/calc/deemed-gift/shared";
 import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form-shared";
 
-/** 폼 상태 → DeemedGiftInput (유형별 분기) */
+/** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
 export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
   switch (form.type) {
     case "trust_benefit":
@@ -181,6 +181,23 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         smallShareholderImputation: !isHigh ? form.ciSmallImputation : undefined,
       };
     }
+    case "capital_increase_allocation":
+      // cap-table은 DeemedGiftInput(단건 엔진) 멤버가 아님 — route가 Zod 재검증 후 별도 dispatch
+      return {
+        type: "capital_increase_allocation",
+        direction: form.ciAllocDirection,
+        preIssuePrice: parseAmount(form.ciAllocPrePrice),
+        newSharePrice: parseAmount(form.ciAllocNewPrice),
+        shareholders: form.ciAllocRows.map((r) => ({
+          id: r.id,
+          name: r.name.trim() || undefined,
+          preShares: parseAmount(r.preShares),
+          entitledShares: parseAmount(r.entitledShares),
+          subscribedShares: parseAmount(r.subscribedShares),
+          reallocatedShares: parseAmount(r.reallocatedShares) || undefined,
+          relatedTo: r.relatedTo.length > 0 ? r.relatedTo : undefined,
+        })),
+      } as unknown as DeemedGiftInput;
     case "capital_decrease":
       if (form.cdMode === "multi") {
         // 멀티(불균등 감자 N:N) — 주주 테이블. 저가/고가는 엔진이 자동 판정.
@@ -454,8 +471,24 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
  */
 export function buildGiftWizardPrefill(
   form: DeemedFormState,
-  result: DeemedGiftResult,
+  result: DeemedGiftAnyResult,
 ): Partial<GiftFormState> {
+  // 증자 cap-table: 수증자별 과세분(total>0)을 각각 별도 증여항목으로 이관 (수증자별 증여세 단위 상이)
+  if ("perBeneficiary" in result) {
+    const nameById = new Map(result.byShareholder.map((b) => [b.id, b.name]));
+    return {
+      giftDate: form.giftDate,
+      giftItems: result.perBeneficiary
+        .filter((b) => b.total > 0)
+        .map((b) => ({
+          id: `deemed-ci-alloc-${b.beneficiaryId}`,
+          category: "other" as const,
+          name: `${(nameById.get(b.beneficiaryId) ?? "").trim() || "수증자"} 증자이익(§39)`,
+          marketValue: b.total,
+        })),
+    };
+  }
+
   const label = form.type ? DEEMED_TYPE_META[form.type].label : "증여이익";
 
   // 감자 멀티(§39의2): 과세 수증자 여러 명 → 선택된 수증자의 total만 이관(수증자별 별도 신고).
