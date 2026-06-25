@@ -63,15 +63,47 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "free_loan":
       if (parseAmount(form.loanAmount) <= 0) return "대출금액을 입력하세요";
       break;
-    case "merger":
+    case "merger": {
       if (form.mrgCaseType === "non_stock") {
         if (parseAmount(form.mrgFaceValue) <= 0) return "액면가액을 입력하세요";
         if (parseAmount(form.mrgOvervaluedPrice) <= 0) return "합병당사법인 1주당 평가가액을 입력하세요";
+        break;
+      }
+      // §28⑦ 분할합병(순자산비율)이면 과대평가 1주평가 대신 분할 3필드 필수
+      const splitNet = form.mrgIsSplitMerger && form.mrgSplitMode === "net_asset_ratio";
+      if (splitNet) {
+        if (parseAmount(form.mrgSplitPrePrice) <= 0) return "분할법인 분할직전 1주당 평가가액을 입력하세요";
+        if (parseAmount(form.mrgSplitBusinessNetAsset) <= 0) return "분할사업부문 순자산가액을 입력하세요";
+        if (parseAmount(form.mrgSplitCompanyNetAsset) <= 0) return "분할법인 순자산가액을 입력하세요";
+      } else if (parseAmount(form.mrgOvervaluedPrice) <= 0) {
+        return "과대평가법인 1주당 평가가액을 입력하세요";
+      }
+      if (form.mrgUseShareholders) {
+        // Phase B 주주 매트릭스 — auto 평가 + 주주 배열 필수
+        if (parseAmount(form.mrgUnderSharePrice) <= 0) return "과소평가법인 1주당 평가가액을 입력하세요";
+        if (parseAmount(form.mrgPostMergerTotalShares) <= 0) return "합병 후 존속법인 주식수를 입력하세요";
+        if (parseAmount(form.mrgExchangeNumer) <= 0 || parseAmount(form.mrgExchangeDenom) <= 0)
+          return "교부 환산비를 입력하세요";
+        if (form.mrgOverShareholders.filter((s) => s.name.trim() && parseAmount(s.shares) > 0).length === 0)
+          return "과대평가(이익측)법인 주주를 1명 이상 입력하세요";
+        if (form.mrgUnderShareholders.filter((s) => s.name.trim() && parseAmount(s.shares) > 0).length === 0)
+          return "과소평가(증여자측)법인 주주를 1명 이상 입력하세요";
       } else {
-        if (parseAmount(form.mrgMergedPrice) <= 0) return "합병 후 1주당 평가가액을 입력하세요";
         if (parseAmount(form.mrgExchangedShares) <= 0) return "교부받은 주식수를 입력하세요";
+        if (form.mrgMergedPriceMode === "auto") {
+          // §28⑤ 단순평균액 — 자동추정 금지, 명시 입력 필수
+          if (parseAmount(form.mrgUnderSharePrice) <= 0) return "과소평가법인 1주당 평가가액을 입력하세요";
+          if (parseAmount(form.mrgPreShares) <= 0) return "과대평가법인 합병 전 주식수를 입력하세요";
+          if (parseAmount(form.mrgUnderPreShares) <= 0) return "과소평가법인 합병 전 주식수를 입력하세요";
+          if (parseAmount(form.mrgPostMergerTotalShares) <= 0) return "합병 후 존속법인 주식수를 입력하세요";
+          if (form.mrgIsListed && parseAmount(form.mrgListedPostAvgPrice) <= 0)
+            return "합병등기일 후 2개월 종가평균을 입력하세요";
+        } else if (parseAmount(form.mrgMergedPrice) <= 0) {
+          return "합병 후 1주당 평가가액을 입력하세요";
+        }
       }
       break;
+    }
     case "capital_increase":
       if (parseAmount(form.ciPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.ciPreShares) <= 0) return "증자 전 발행주식총수를 입력하세요";

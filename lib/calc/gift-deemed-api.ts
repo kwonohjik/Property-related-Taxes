@@ -97,24 +97,66 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         hasJustifiableReason: form.loanJustifiable,
       };
     case "merger":
-      return form.mrgCaseType === "non_stock"
-        ? {
-            type: "merger",
-            caseType: "non_stock",
-            overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
-            majorShares: parseAmount(form.mrgMajorShares),
-            faceValue: parseAmount(form.mrgFaceValue),
-            mergeConsideration: parseAmount(form.mrgConsideration),
-          }
-        : {
-            type: "merger",
-            caseType: "stock",
-            mergedSharePrice: parseAmount(form.mrgMergedPrice),
-            overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
-            preMergerShares: parseAmount(form.mrgPreShares),
-            exchangedShares: parseAmount(form.mrgExchangedShares),
-            majorShares: parseAmount(form.mrgMajorShares),
-          };
+      if (form.mrgCaseType === "non_stock") {
+        return {
+          type: "merger",
+          caseType: "non_stock",
+          overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
+          majorShares: parseAmount(form.mrgMajorShares),
+          faceValue: parseAmount(form.mrgFaceValue),
+          mergeConsideration: parseAmount(form.mrgConsideration),
+        };
+      }
+      {
+        const useSh = form.mrgUseShareholders;
+        const overSh = form.mrgOverShareholders.map((s) => ({
+          id: s.name.trim(),
+          name: s.name.trim(),
+          shares: parseAmount(s.shares),
+        }));
+        const underSh = form.mrgUnderShareholders.map((s) => ({
+          id: s.name.trim(),
+          name: s.name.trim(),
+          shares: parseAmount(s.shares),
+        }));
+        // 매트릭스 모드는 auto 강제(㉮ 단순평균액). preShares는 주주 합으로 도출(단일소스).
+        const autoEval = useSh || form.mrgMergedPriceMode === "auto";
+        return {
+          type: "merger",
+          caseType: "stock",
+          overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
+          preMergerShares: useSh ? overSh.reduce((a, b) => a + b.shares, 0) : parseAmount(form.mrgPreShares),
+          exchangedShares: parseAmount(form.mrgExchangedShares),
+          majorShares: useSh ? 0 : parseAmount(form.mrgMajorShares),
+          mergedPriceMode: autoEval ? "auto" : "direct",
+          isRelatedCompany: form.mrgIsRelatedCompany,
+          ...(autoEval
+            ? {
+                underSharePrice: parseAmount(form.mrgUnderSharePrice),
+                underPreShares: useSh ? underSh.reduce((a, b) => a + b.shares, 0) : parseAmount(form.mrgUnderPreShares),
+                postMergerTotalShares: parseAmount(form.mrgPostMergerTotalShares),
+                isListed: form.mrgIsListed,
+                ...(form.mrgIsListed && { listedPostAvgPrice: parseAmount(form.mrgListedPostAvgPrice) }),
+              }
+            : { mergedSharePrice: parseAmount(form.mrgMergedPrice) }),
+          ...(useSh && {
+            shareholders: {
+              overvalued: overSh,
+              undervalued: underSh,
+              exchangeRatio: { numer: parseAmount(form.mrgExchangeNumer), denom: parseAmount(form.mrgExchangeDenom) },
+            },
+          }),
+          ...(form.mrgIsSplitMerger && {
+            isSplitMerger: true,
+            splitValuationMode: form.mrgSplitMode,
+            ...(form.mrgSplitMode === "net_asset_ratio" && {
+              splitCompanyPreSharePrice: parseAmount(form.mrgSplitPrePrice),
+              splitBusinessNetAsset: parseAmount(form.mrgSplitBusinessNetAsset),
+              splitCompanyNetAsset: parseAmount(form.mrgSplitCompanyNetAsset),
+            }),
+          }),
+        };
+      }
     case "capital_increase": {
       const isHigh = form.ciDirection === "high";
       const needsRatio = isHigh && form.ciSubType !== "forfeited_realloc";
