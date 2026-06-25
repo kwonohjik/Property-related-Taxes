@@ -65,13 +65,36 @@ describe("§45의5 특정법인과의 거래 (시행령 §34의5)", () => {
   });
 });
 
-describe("§41의2 초과배당 (소득세상당액 직접입력)", () => {
-  it("[ED-1] 초과배당 5억 − 소득세 1.5억 = 3.5억", () => {
-    const r = calcExcessDividendGift({ excessDividend: 500_000_000, incomeTaxEquivalent: 150_000_000 });
-    expect(r.deemedGiftValue).toBe(350_000_000);
+describe("§41의2 초과배당 (주주배열 기반 신모델)", () => {
+  // ED-N1: 단순 2인 구성 (최대주주+특수관계인), 소득세 분리과세 직접입력
+  it("[ED-N1] 최대주주(70%,0)·특수관계인(30%,1억), 분리과세소득세5천만 → 증여재산 2천만", () => {
+    const r = calcExcessDividendGift({
+      shareholders: [
+        { id: "1", role: "major_shareholder", ownershipRatio: { numer: 70, denom: 100 }, actualDividend: 0 },
+        { id: "2", role: "related_party", ownershipRatio: { numer: 30, denom: 100 }, actualDividend: 100_000_000 },
+      ],
+      dividendDate: new Date("2024-06-01"),
+      incomeTaxMode: "separate",
+      separateIncomeTax: 50_000_000,
+    });
+    // 초과배당금액 = 70,000,000 → deemedGiftValue = 70,000,000 - 50,000,000 = 20,000,000
+    expect(r.deemedGiftValue).toBe(20_000_000);
+    expect(r.applied).toBe(true);
   });
-  it("[ED-FAIL] 초과배당 1억 − 소득세 1.2억 = 음수 → 0", () => {
-    expect(calcExcessDividendGift({ excessDividend: 100_000_000, incomeTaxEquivalent: 120_000_000 }).deemedGiftValue).toBe(0);
+  // ED-N2: 소득세 ≥ 초과배당 → deemedGiftValue = 0 (applied=false)
+  it("[ED-N2] 소득세상당액이 초과배당금액 이상 → applied=false, deemedGiftValue=0", () => {
+    const r = calcExcessDividendGift({
+      shareholders: [
+        { id: "1", role: "major_shareholder", ownershipRatio: { numer: 60, denom: 100 }, actualDividend: 0 },
+        { id: "2", role: "related_party", ownershipRatio: { numer: 40, denom: 100 }, actualDividend: 100_000_000 },
+      ],
+      dividendDate: new Date("2024-06-01"),
+      incomeTaxMode: "separate",
+      separateIncomeTax: 70_000_000, // 초과배당금액 60M 이상
+    });
+    // 초과배당금액=60M, 소득세=70M → deemedGiftValue=0
+    expect(r.deemedGiftValue).toBe(0);
+    expect(r.applied).toBe(false);
   });
 });
 

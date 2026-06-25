@@ -8,6 +8,7 @@ export { calcFreeRealEstateGift } from "./free-realestate-use";
 export { calcFreeLoanGift } from "./free-loan";
 export { calcMergerGift } from "./merger";
 export { calcCapitalIncreaseGift } from "./capital-increase";
+export { calcCapitalIncreaseAllocation } from "./capital-increase-allocation";
 export { calcCapitalDecreaseGift } from "./capital-decrease";
 export { calcContributionGift } from "./contribution-in-kind";
 export { calcConvertibleBondGift } from "./convertible-bond";

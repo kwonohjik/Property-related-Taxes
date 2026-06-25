@@ -1,14 +1,20 @@
 /**
  * 증여로 보는 경우 — 폼 → 엔진 입력 변환 + 증여세 마법사 prefill 어댑터 (④ 동기화).
  */
-import type { DeemedGiftInput } from "@/lib/tax-engine/gift-deemed/types";
-import type { DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftInput, DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
 import type { ContributionParty } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { resolveFreeLoanRate } from "@/lib/tax-engine/data/gift-deemed-rates";
+import { applyRateFraction } from "@/lib/tax-engine/tax-utils";
+import {
+  bondInterestLoss,
+  computeExcessRatio,
+  applyExcessRatio,
+  PV_FACTOR_SCALE,
+} from "@/lib/tax-engine/gift-deemed/convertible-bond-helpers";
 import {
   DEEMED_TYPE_META,
   type DeemedFormState,
@@ -16,7 +22,7 @@ import {
 import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form-shared";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 
-/** 폼 상태 → DeemedGiftInput (유형별 분기) */
+/** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
 export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
   switch (form.type) {
     case "trust_benefit":
@@ -101,24 +107,66 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         hasJustifiableReason: form.loanJustifiable,
       };
     case "merger":
-      return form.mrgCaseType === "non_stock"
-        ? {
-            type: "merger",
-            caseType: "non_stock",
-            overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
-            majorShares: parseAmount(form.mrgMajorShares),
-            faceValue: parseAmount(form.mrgFaceValue),
-            mergeConsideration: parseAmount(form.mrgConsideration),
-          }
-        : {
-            type: "merger",
-            caseType: "stock",
-            mergedSharePrice: parseAmount(form.mrgMergedPrice),
-            overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
-            preMergerShares: parseAmount(form.mrgPreShares),
-            exchangedShares: parseAmount(form.mrgExchangedShares),
-            majorShares: parseAmount(form.mrgMajorShares),
-          };
+      if (form.mrgCaseType === "non_stock") {
+        return {
+          type: "merger",
+          caseType: "non_stock",
+          overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
+          majorShares: parseAmount(form.mrgMajorShares),
+          faceValue: parseAmount(form.mrgFaceValue),
+          mergeConsideration: parseAmount(form.mrgConsideration),
+        };
+      }
+      {
+        const useSh = form.mrgUseShareholders;
+        const overSh = form.mrgOverShareholders.map((s) => ({
+          id: s.name.trim(),
+          name: s.name.trim(),
+          shares: parseAmount(s.shares),
+        }));
+        const underSh = form.mrgUnderShareholders.map((s) => ({
+          id: s.name.trim(),
+          name: s.name.trim(),
+          shares: parseAmount(s.shares),
+        }));
+        // 매트릭스 모드는 auto 강제(㉮ 단순평균액). preShares는 주주 합으로 도출(단일소스).
+        const autoEval = useSh || form.mrgMergedPriceMode === "auto";
+        return {
+          type: "merger",
+          caseType: "stock",
+          overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
+          preMergerShares: useSh ? overSh.reduce((a, b) => a + b.shares, 0) : parseAmount(form.mrgPreShares),
+          exchangedShares: parseAmount(form.mrgExchangedShares),
+          majorShares: useSh ? 0 : parseAmount(form.mrgMajorShares),
+          mergedPriceMode: autoEval ? "auto" : "direct",
+          isRelatedCompany: form.mrgIsRelatedCompany,
+          ...(autoEval
+            ? {
+                underSharePrice: parseAmount(form.mrgUnderSharePrice),
+                underPreShares: useSh ? underSh.reduce((a, b) => a + b.shares, 0) : parseAmount(form.mrgUnderPreShares),
+                postMergerTotalShares: parseAmount(form.mrgPostMergerTotalShares),
+                isListed: form.mrgIsListed,
+                ...(form.mrgIsListed && { listedPostAvgPrice: parseAmount(form.mrgListedPostAvgPrice) }),
+              }
+            : { mergedSharePrice: parseAmount(form.mrgMergedPrice) }),
+          ...(useSh && {
+            shareholders: {
+              overvalued: overSh,
+              undervalued: underSh,
+              exchangeRatio: { numer: parseAmount(form.mrgExchangeNumer), denom: parseAmount(form.mrgExchangeDenom) },
+            },
+          }),
+          ...(form.mrgIsSplitMerger && {
+            isSplitMerger: true,
+            splitValuationMode: form.mrgSplitMode,
+            ...(form.mrgSplitMode === "net_asset_ratio" && {
+              splitCompanyPreSharePrice: parseAmount(form.mrgSplitPrePrice),
+              splitBusinessNetAsset: parseAmount(form.mrgSplitBusinessNetAsset),
+              splitCompanyNetAsset: parseAmount(form.mrgSplitCompanyNetAsset),
+            }),
+          }),
+        };
+      }
     case "capital_increase": {
       const isHigh = form.ciDirection === "high";
       const needsRatio = isHigh && form.ciSubType !== "forfeited_realloc";
@@ -136,7 +184,41 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         smallShareholderImputation: !isHigh ? form.ciSmallImputation : undefined,
       };
     }
+    case "capital_increase_allocation":
+      // cap-table은 DeemedGiftInput(단건 엔진) 멤버가 아님 — route가 Zod 재검증 후 별도 dispatch
+      return {
+        type: "capital_increase_allocation",
+        direction: form.ciAllocDirection,
+        preIssuePrice: parseAmount(form.ciAllocPrePrice),
+        newSharePrice: parseAmount(form.ciAllocNewPrice),
+        shareholders: form.ciAllocRows.map((r) => ({
+          id: r.id,
+          name: r.name.trim() || undefined,
+          preShares: parseAmount(r.preShares),
+          entitledShares: parseAmount(r.entitledShares),
+          subscribedShares: parseAmount(r.subscribedShares),
+          reallocatedShares: parseAmount(r.reallocatedShares) || undefined,
+          relatedTo: r.relatedTo.length > 0 ? r.relatedTo : undefined,
+        })),
+      } as unknown as DeemedGiftInput;
     case "capital_decrease":
+      if (form.cdMode === "multi") {
+        // 멀티(불균등 감자 N:N) — 주주 테이블. 저가/고가는 엔진이 자동 판정.
+        return {
+          type: "capital_decrease",
+          sharePrice: parseAmount(form.cdSharePrice),
+          faceValue: parseAmount(form.cdFaceValue) || undefined,
+          preTotalShares: parseAmount(form.cdPreTotalShares),
+          shareholders: form.cdShareholders.map((row) => ({
+            id: row.id,
+            name: row.name,
+            preShares: parseAmount(row.preShares),
+            redeemedShares: parseAmount(row.redeemedShares),
+            redemptionPricePerShare: parseAmount(row.redemptionPrice) || undefined,
+            relationGroup: row.relationGroup || undefined,
+          })),
+        };
+      }
       return form.cdCaseType === "high"
         ? {
             type: "capital_decrease",
@@ -183,9 +265,38 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
     }
     case "convertible_bond": {
       const ct = form.cbCaseType;
+      const ratioFromPct = (pct: string) => ({ numer: Math.round(parseDecimal(pct) * 100), denom: 10_000 });
+      const optAmount = (s: string) => (s.trim() ? parseAmount(s) : undefined);
       if (ct === "transfer")
         return { type: "convertible_bond", caseType: "transfer", bondMarketValue: parseAmount(form.cbMarketValue), transferPrice: parseAmount(form.cbTransferPrice) };
-      if (ct === "conversion")
+      if (ct === "conversion") {
+        const increasedShares = parseAmount(form.cbIncreasedShares);
+        // 초과분 자동산정(⑤) — creditedShares·이자손실분 안분. 미입력 시 직접입력(또는 전부=증가주식수)
+        let creditedShares = optAmount(form.cbCreditedShares) ?? increasedShares;
+        let excessRatio: { numer: number; denom: number } | undefined;
+        if (form.cbAutoExcess) {
+          excessRatio = computeExcessRatio({
+            subscribedShares: parseAmount(form.cbSubscribedShares),
+            totalSubscribableShares: parseAmount(form.cbTotalSubscribable),
+            ownPreRatio: ratioFromPct(form.cbOwnPreRatioPct),
+          });
+          creditedShares = excessRatio.numer;
+        }
+        // 이자손실분 자동계산(PV §10의2) — full × 초과분비율. 미입력 시 직접입력
+        let interestLoss: number;
+        if (form.cbAutoInterestLoss) {
+          const maturity = parseAmount(form.cbBondMaturity);
+          const annualCoupon = applyRateFraction(maturity, Math.round(parseDecimal(form.cbCouponRatePct) * 100), 10_000);
+          const full = bondInterestLoss({
+            maturityAmount: maturity,
+            annualCoupon,
+            pvFactorAppropriate: Math.round(parseDecimal(form.cbPvFactorAppr) * PV_FACTOR_SCALE),
+            annuityFactorAppropriate: Math.round(parseDecimal(form.cbAnnuityFactorAppr) * PV_FACTOR_SCALE),
+          });
+          interestLoss = excessRatio ? applyExcessRatio(full, excessRatio) : full;
+        } else {
+          interestLoss = parseAmount(form.cbInterestLoss);
+        }
         return {
           type: "convertible_bond",
           caseType: "conversion",
@@ -193,10 +304,15 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           preConvPrice: parseAmount(form.cbPreConvPrice),
           preConvShares: parseAmount(form.cbPreConvShares),
           conversionPrice: parseAmount(form.cbConversionPrice),
-          increasedShares: parseAmount(form.cbIncreasedShares),
-          interestLoss: parseAmount(form.cbInterestLoss),
+          increasedShares,
+          creditedShares,
+          isListed: form.cbIsListed,
+          listedMarketAvg: form.cbIsListed ? parseAmount(form.cbListedMarketAvg) : undefined,
+          interestLoss,
           acquisitionGainPrior: parseAmount(form.cbAcqGainPrior),
+          bondTransferGainForCap: optAmount(form.cbTransferGainForCap),
         };
+      }
       if (ct === "conversion_reverse")
         return {
           type: "convertible_bond",
@@ -206,7 +322,9 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           preConvShares: parseAmount(form.cbPreConvShares),
           conversionPrice: parseAmount(form.cbConversionPrice),
           increasedShares: parseAmount(form.cbIncreasedShares),
-          relatedPreRatio: { numer: Math.round(parseDecimal(form.cbRelatedPreRatioPct) * 100), denom: 10_000 },
+          isListed: form.cbIsListed,
+          listedMarketAvg: form.cbIsListed ? parseAmount(form.cbListedMarketAvg) : undefined,
+          relatedPreRatio: ratioFromPct(form.cbRelatedPreRatioPct),
         };
       return { type: "convertible_bond", caseType: "acquisition", bondMarketValue: parseAmount(form.cbMarketValue), acquisitionPrice: parseAmount(form.cbAcquisitionPrice) };
     }
@@ -244,12 +362,78 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         hasTaxAvoidancePurpose: form.ntTaxAvoidance,
         isExcluded: form.ntExcluded,
       };
-    case "excess_dividend":
+    case "excess_dividend": {
+      // ① 주주 배열 → shareholders 변환 (ownershipRatioPct → 분수)
+      const edRows = form.edShareholders ?? [];
+      const shareholders = edRows.map((row) => {
+        const pct = parseDecimal(row.ownershipRatioPctStr);
+        return {
+          id: row.id,
+          role: row.role,
+          // 소수점 3자리까지 지원: 10.5% → {1050, 10000}
+          ownershipRatio: {
+            numer: Math.round(pct * 100),
+            denom: 10_000,
+          },
+          actualDividend: parseAmount(row.actualDividendStr),
+          name: row.name || undefined,
+        };
+      });
+
+      // ② 소득세 모드별 조건부 필드
+      const incomeTaxMode = form.edIncomeTaxMode ?? "undetermined";
+      const separateIncomeTax =
+        incomeTaxMode === "separate"
+          ? parseAmount(form.edSeparateTaxAmount)
+          : undefined;
+      const comprehensiveTaxBase =
+        incomeTaxMode === "comprehensive"
+          ? parseAmount(form.edComprehensiveTaxBase)
+          : undefined;
+      // ⓑ기준 — 미입력 시 엔진 자동 추정
+      const comprehensiveTaxBaseExcluding =
+        incomeTaxMode === "comprehensive" && form.edComprehensiveTaxBaseExcluding
+          ? parseAmount(form.edComprehensiveTaxBaseExcluding)
+          : undefined;
+      // 소득 귀속연도 override — 미입력 시 배당지급일 연도
+      const incomeTaxYear =
+        form.edIncomeTaxYear ? Number(form.edIncomeTaxYear) : undefined;
+
+      // ③ 정산 2-pass 입력
+      const actualIncomeTax = form.edSettlementMode
+        ? parseAmount(form.edActualIncomeTax)
+        : undefined;
+
+      // ④ 증여세 과세 맥락 (giftTaxContext) — 증여자관계가 선택된 경우에만 전달
+      const giftTaxContext = form.edDonorRelationship
+        ? {
+            donorRelationship: form.edDonorRelationship,
+            priorDeductionApplied: form.edPriorDeductionApplied
+              ? parseAmount(form.edPriorDeductionApplied)
+              : undefined,
+            isGenerationSkip: form.edIsGenerationSkip || undefined,
+            isMinorGenerationSkip: form.edIsMinorGenerationSkip || undefined,
+            isWithinFilingDeadline: form.edIsWithinFilingDeadline,
+          }
+        : undefined;
+
+      // ⑤ 배당지급일 = 증여일 = 공통 giftDate (§41의2①). edDividendDate 폐지 — 다른 의제 유형과 일관.
+      // buildDeemedGiftInput()은 Server Action 경로에서 직접 엔진을 호출할 수도 있어 Date로 변환 후 전달.
+      const dividendDate = toOptionalDate(form.giftDate) ?? new Date();
+
       return {
-        type: "excess_dividend",
-        excessDividend: parseAmount(form.edExcessDividend),
-        incomeTaxEquivalent: parseAmount(form.edIncomeTax),
+        type: "excess_dividend" as const,
+        shareholders,
+        dividendDate,
+        incomeTaxMode,
+        separateIncomeTax,
+        comprehensiveTaxBase,
+        comprehensiveTaxBaseExcluding,
+        incomeTaxYear,
+        actualIncomeTax,
+        giftTaxContext,
       };
+    }
     case "listing_gain":
       return {
         type: "listing_gain",
@@ -303,8 +487,24 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
  */
 export function buildGiftWizardPrefill(
   form: DeemedFormState,
-  result: DeemedGiftResult,
+  result: DeemedGiftAnyResult,
 ): Partial<GiftFormState> {
+  // 증자 cap-table: 수증자별 과세분(total>0)을 각각 별도 증여항목으로 이관 (수증자별 증여세 단위 상이)
+  if ("perBeneficiary" in result) {
+    const nameById = new Map(result.byShareholder.map((b) => [b.id, b.name]));
+    return {
+      giftDate: form.giftDate,
+      giftItems: result.perBeneficiary
+        .filter((b) => b.total > 0)
+        .map((b) => ({
+          id: `deemed-ci-alloc-${b.beneficiaryId}`,
+          category: "other" as const,
+          name: `${(nameById.get(b.beneficiaryId) ?? "").trim() || "수증자"} 증자이익(§39)`,
+          marketValue: b.total,
+        })),
+    };
+  }
+
   const label = form.type ? DEEMED_TYPE_META[form.type].label : "증여이익";
 
   // §39의3 현물출자: contributionBreakdown 있으면 저가/고가별 prefill
@@ -358,6 +558,24 @@ export function buildGiftWizardPrefill(
           category: "other" as const,
           name: `현물출자에 따른 이익 — ${firstDonee.party} 수증자분`,
           marketValue: firstDonee.value,
+        },
+      ],
+    };
+  }
+
+  // 감자 멀티(§39의2): 과세 수증자 여러 명 → 선택된 수증자의 total만 이관(수증자별 별도 신고).
+  if (result.type === "capital_decrease" && result.capitalDecreaseMulti) {
+    const taxable = result.capitalDecreaseMulti.donees.filter((d) => d.isTaxable);
+    const selected = taxable[form.cdSelectedDoneeIndex] ?? taxable[0];
+    if (!selected) return { giftDate: form.giftDate, giftItems: [] };
+    return {
+      giftDate: form.giftDate,
+      giftItems: [
+        {
+          id: `deemed-capital_decrease-${selected.name}`,
+          category: "other",
+          name: `감자에 따른 이익 증여이익 (${selected.name})`,
+          marketValue: selected.total,
         },
       ],
     };

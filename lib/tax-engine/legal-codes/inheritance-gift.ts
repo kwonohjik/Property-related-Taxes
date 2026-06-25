@@ -129,6 +129,9 @@ export const GIFT = {
   RECTIFICATION_FORMULA_81_9: "상증령 §81⑨",
   // ── 증여로 보는 경우 (Phase 2: 자본거래) ──
   MERGER: "상증법 §38",
+  MERGER_VALUATION: "상증령 §28⑤⑥",
+  MERGER_SPLIT: "상증령 §28⑦",
+  MERGER_SELF_GIFT: "재산세과-799, 2009.4.24.",
   CAPITAL_INCREASE: "상증법 §39",
   CAPITAL_DECREASE: "상증법 §39의2",
   CONTRIBUTION: "상증법 §39의3",
@@ -139,6 +142,8 @@ export const GIFT = {
   /** 상증법 §4의2⑥ 단서 — §39의3 수증자에 대한 증여자 연대납부의무 면제 */
   JOINT_LIABILITY_EXEMPTION: "상증법 §4의2⑥ 단서",
   CONVERTIBLE_BOND: "상증법 §40",
+  CONVERTIBLE_BOND_INTEREST_LOSS: "상증칙 §10의2",
+  CONVERTIBLE_BOND_DISCOUNT_RATE: "상증칙 §18의3",
   // ── 신탁이익의 증여 (§33) — 평가 상증령 §61·이자율 상증칙 §19의2 ──
   TRUST_BENEFIT: "상증법 §33",
   TRUST_BENEFIT_VALUATION: "상증령 §61",
@@ -148,6 +153,12 @@ export const GIFT = {
   NOMINEE_TRUST: "상증법 §45의2",
   // ── 증여로 보는 경우 (Phase 3: 기타이익·자본거래연계·법인) ──
   EXCESS_DIVIDEND: "상증법 §41의2",
+  /** 시행규칙 §10의3① — 초과배당 소득세 상당액 율표 */
+  EXCESS_DIVIDEND_INCOME_TAX_RATE: "상증칙 §10의3①",
+  /** 상증법 §41의2②③ — 초과배당 정산 증여세 */
+  EXCESS_DIVIDEND_SETTLEMENT: "상증법 §41의2②③",
+  /** 시행령 §31의2② — 초과배당금액 자동산정 (주주 비율 안분) */
+  EXCESS_DIVIDEND_AUTO_COMPUTE: "상증령 §31의2②",
   LISTING_GAIN: "상증법 §41의3",
   MERGER_LISTING_GAIN: "상증법 §41의5",
   PROPERTY_SERVICE_USE: "상증법 §42",

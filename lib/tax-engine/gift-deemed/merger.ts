@@ -1,18 +1,25 @@
 /** (7) 합병에 따른 이익의 증여 (§38) — 주식교부(§28③1) / 주식 외 재산 교부(§28③2) */
 import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
+import { calcMergerMatrix } from "./merger-matrix";
+import { resolveMajorShareholderEcho, resolveMergedPrice, resolveSplitOvervalued } from "./merger-valuation";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, MergerInput } from "./types";
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
 
 export function calcMergerGift(input: MergerInput): DeemedGiftResult {
-  return (input.caseType ?? "stock") === "non_stock" ? mergerNonStock(input) : mergerStock(input);
+  // §28⑦ 분할합병: 분할사업부문 합병직전 1주평가로 overvaluedSharePrice 대체(단일 정규화 지점)
+  const norm = input.isSplitMerger
+    ? { ...input, overvaluedSharePrice: resolveSplitOvervalued(input) }
+    : input;
+  if (norm.shareholders) return calcMergerMatrix(norm); // Phase B: 주주 매트릭스
+  return (norm.caseType ?? "stock") === "non_stock" ? mergerNonStock(norm) : mergerStock(norm);
 }
 
 /** §28③1 주식교부 */
 function mergerStock(input: MergerInput): DeemedGiftResult {
-  const mergedSharePrice = input.mergedSharePrice ?? 0;
+  const { mergedSharePrice, computedSimpleAvg } = resolveMergedPrice(input); // §28⑤ direct/auto
   const { overvaluedSharePrice, majorShares } = input;
   const preMergerShares = input.preMergerShares ?? 0;
   const exchangedShares = input.exchangedShares ?? 0;
@@ -27,12 +34,17 @@ function mergerStock(input: MergerInput): DeemedGiftResult {
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
-    { label: "합병 후 1주당 평가가액", amount: mergedSharePrice, lawRef: GIFT.MERGER },
+    {
+      label: "합병 후 1주당 평가가액",
+      amount: mergedSharePrice,
+      lawRef: computedSimpleAvg !== undefined ? GIFT.MERGER_VALUATION : GIFT.MERGER,
+    },
     { label: "과대평가법인 1주당 평가가액 (합병전÷교부 비율 조정)", amount: adjustedOvervalued },
     { label: "1주당 이익", amount: perShareGain },
     { label: "대주주등 교부 주식수", amount: majorShares },
     { label: "증여재산가액", amount: value, lawRef: GIFT.MERGER, note: "§38 주식교부" },
   ];
+  const isMajor = resolveMajorShareholderEcho(input);
   return {
     type: "merger",
     applied,
@@ -40,7 +52,12 @@ function mergerStock(input: MergerInput): DeemedGiftResult {
     breakdown,
     exclusionReason: applied ? undefined : "이익이 기준금액(합병후평가 30%·3억 중 적은 금액) 미만",
     legalBasis: GIFT.MERGER,
-    thresholdEcho: { gain, threshold },
+    thresholdEcho: {
+      gain,
+      threshold,
+      ...(computedSimpleAvg !== undefined && { computedMergedPrice: computedSimpleAvg }),
+      ...(isMajor !== undefined && { isMajorShareholder: isMajor }),
+    },
   };
 }
 
