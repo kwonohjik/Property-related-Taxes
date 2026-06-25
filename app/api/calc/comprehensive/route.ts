@@ -2,7 +2,7 @@
  * 종합부동산세 계산 API Route (T-12)
  *
  * Layer 1 (Orchestrator):
- *   Rate Limit → JSON 파싱 → Zod 검증 → 날짜 변환 → preloadTaxRates → calculateComprehensiveTax → saveCalculation → 결과 반환
+ *   Rate Limit → JSON 파싱 → Zod 검증 → 날짜 변환 → preloadTaxRates → calculateComprehensiveTax → 결과 반환
  *
  * POST /api/calc/comprehensive
  *
@@ -19,7 +19,6 @@ import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/ra
 import { comprehensiveTaxInputSchema } from "@/lib/validators/comprehensive-input";
 import { calculateComprehensiveTax } from "@/lib/tax-engine/comprehensive-tax";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
-import { saveCalculation } from "@/actions/calculations";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   ComprehensiveTaxInput,
@@ -295,18 +294,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // 7. 이력 저장 (로그인 사용자만, 비동기 non-blocking)
-  //    실패해도 계산 결과 반환에 영향 없음
-  // ─────────────────────────────────────────────
-  saveCalculation({
-    taxType: "comprehensive_property",
-    inputData: body as Record<string, unknown>,
-    resultData: result as unknown as Record<string, unknown>,
-    taxLawVersion: taxBaseDateStr,
-  }).catch((err) => {
-    console.warn("[POST /api/calc/comprehensive] saveCalculation 실패:", err);
-  });
-
+  // 이력 저장은 클라이언트 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)
   return NextResponse.json({ data: result });
 }

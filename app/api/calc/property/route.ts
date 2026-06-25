@@ -2,7 +2,7 @@
  * 재산세 계산 API Route (P1-13)
  *
  * Layer 1 (Orchestrator):
- *   Rate Limit → Zod 검증 → preloadTaxRates → calculatePropertyTax → saveCalculation → 결과 반환
+ *   Rate Limit → Zod 검증 → preloadTaxRates → calculatePropertyTax → 결과 반환
  *
  * POST /api/calc/property
  */
@@ -14,7 +14,6 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { propertyTaxInputSchema } from "@/lib/validators/property-input";
 import { calculatePropertyTax } from "@/lib/tax-engine/property-tax";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
-import { saveCalculation } from "@/actions/calculations";
 import type { PropertyTaxInput } from "@/lib/tax-engine/types/property.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 
@@ -119,18 +118,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // 6. 이력 저장 (로그인 사용자만, 비동기 non-blocking)
-  //    실패해도 계산 결과 반환에 영향 없음
-  // ─────────────────────────────────────────────
-  saveCalculation({
-    taxType: "property",
-    inputData: input as unknown as Record<string, unknown>,
-    resultData: result as unknown as Record<string, unknown>,
-    taxLawVersion: "2024-01-01",
-  }).catch((err) => {
-    console.warn("[POST /api/calc/property] saveCalculation 실패:", err);
-  });
-
+  // 이력 저장은 클라이언트 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)
   return NextResponse.json({ data: result });
 }
