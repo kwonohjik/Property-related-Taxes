@@ -157,6 +157,46 @@ export interface CapitalIncreaseInput {
   smallShareholderImputation?: boolean;
 }
 
+// ── (8b) 증자 §39 cap-table 다수증자·다증여자 배분 (equity-delta 방식) ──
+
+/** 주주 1명의 증자 참여 명세 (cap-table 1행) */
+export interface CapShareholder {
+  id: string;
+  name?: string;
+  preShares: number; // 증자 전 보유 주식수
+  entitledShares: number; // 균등(당초지분) 배정 신주수
+  subscribedShares: number; // 실제 인수한 총 신주수(당초+재배정+제3자+초과)
+  reallocatedShares?: number; // 그 중 재배정/제3자/초과로 받은 신주수 (실권처리 판정용)
+  relatedTo?: string[]; // 특수관계인 주주 id (없으면 그 증여자 귀속분 과세 0)
+}
+
+/** 증자 cap-table 입력 (equity-delta: 실제 ㉯ + 손해비례 배분) */
+export interface CapitalIncreaseAllocationInput {
+  direction: "low" | "high"; // 저가/고가 (이익자 방향 결정)
+  preIssuePrice: number; // ㉮ 증자 전 1주당 평가가액
+  newSharePrice: number; // ㉰ 신주 1주당 인수가액
+  shareholders: CapShareholder[];
+}
+
+/** 수증자 1명 × 증여자 1명 분할 1행 ((증여자) 카르테시안) */
+export interface DonationSplit {
+  beneficiaryId: string; // 이익 본 자
+  donorId: string; // 손해 본 자(증여자)
+  value: number; // 이 쌍 증여재산가액(과세분, 특수관계 아니면 0)
+  excludedReason?: string; // value 0 사유 (특수관계 부재 등)
+}
+
+/** 증자 cap-table 결과 (전부 array/object — Map 금지) */
+export interface CapitalIncreaseAllocationResult {
+  type: "capital_increase_allocation";
+  perShareAfter: number; // ㉯ 실제 증자후 1주당 평가가액
+  perBeneficiary: Array<{ beneficiaryId: string; total: number; byDonor: DonationSplit[] }>;
+  /** 교재 검증내역 = 주주별 증자전·후 평가·증감 (Σdelta=0) */
+  byShareholder: Array<{ id: string; name?: string; preValuation: number; paidIn: number; postValuation: number; delta: number }>;
+  reconciliation: { totalGain: number; totalLoss: number; balanced: boolean };
+  splits: DonationSplit[];
+}
+
 /** (8-3) 전환주식 §39①3호 — 전환후 §29②1~5 이익 − 발행당시 §29②1~5 이익 (시행령 §29②6) */
 export interface ConvertibleStockInput {
   /** 가목: 전환 후 교부받은 주식을 신주로 보아 §29②1~5로 계산한 이익 입력(저가/고가 sub-case) */

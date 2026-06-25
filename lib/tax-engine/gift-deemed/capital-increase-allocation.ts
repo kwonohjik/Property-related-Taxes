@@ -1,0 +1,101 @@
+/**
+ * (8b) 증자에 따른 이익의 증여 (§39) — cap-table 다수증자·다증여자 배분.
+ *
+ * equity-delta 방식: 주주별 지분 자산 증감(delta)이 곧 증여재산가액이고(부의 이전 zero-sum),
+ * 증여자별 분할은 손해비례(증여자 손해 ÷ 총손해)로 배분한다.
+ * 이는 교재 호별 산식(§29②1~5: 실권주÷실권주총수·지분비율·균등㉯)과 대수적으로 동치이며
+ * (손해 ∝ 인수신주이므로 손해비례 = 인수신주비례), 유형 추론 없이 case-independent하게 6사례를 재현한다.
+ *
+ * 증자후 1주당 평가가액(㉯) = [(증자전평가×증자전총주식) + (인수가×실제 증가주식)] ÷ (증자전총 + 증가)
+ *   - 실제 증가주식 = Σ 인수신주(subscribedShares). 검증내역·증여재산가액 모두 실제 ㉯ 사용.
+ */
+import { computeWeightedPerShare } from "./capital-helpers";
+import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
+import type {
+  CapShareholder,
+  CapitalIncreaseAllocationInput,
+  CapitalIncreaseAllocationResult,
+  DonationSplit,
+} from "./types";
+
+const ABSOLUTE_THRESHOLD = 300_000_000; // §29②2·4 3억원
+const RATIO_NUMER = 30; // 100분의 30
+const RATIO_DENOM = 100;
+
+/** 주주의 실권주수 = max(0, 당초배정 − 본인 당초배정분 인수) */
+function forfeitedBy(s: CapShareholder): number {
+  const ownSubscribed = s.subscribedShares - (s.reallocatedShares ?? 0);
+  return Math.max(0, s.entitledShares - ownSubscribed);
+}
+
+export function calcCapitalIncreaseAllocation(
+  input: CapitalIncreaseAllocationInput,
+): CapitalIncreaseAllocationResult {
+  const { preIssuePrice: pre, newSharePrice: priceIn, shareholders } = input;
+  const preTotal = shareholders.reduce((a, s) => a + s.preShares, 0);
+  const issuedActual = shareholders.reduce((a, s) => a + s.subscribedShares, 0);
+
+  // ㉯ 실제 증자후 1주당 평가가액 (BigInt floor)
+  const perShareAfter = computeWeightedPerShare(pre, preTotal, priceIn, issuedActual);
+
+  // 주주별 지분 자산 증감 (검증내역) — delta = 증자후평가 − 증자전평가 − 납입대금
+  const byShareholder = shareholders.map((s) => {
+    const preValuation = safeMultiply(s.preShares, pre);
+    const paidIn = safeMultiply(s.subscribedShares, priceIn);
+    const postValuation = safeMultiply(s.preShares + s.subscribedShares, perShareAfter);
+    return { id: s.id, name: s.name, preValuation, paidIn, postValuation, delta: postValuation - preValuation - paidIn };
+  });
+
+  const donors = byShareholder.filter((b) => b.delta < 0); // 손해 본 자(증여자)
+  const totalLoss = donors.reduce((a, b) => a + -b.delta, 0);
+  const totalGain = byShareholder.reduce((a, b) => (b.delta > 0 ? a + b.delta : a), 0);
+
+  // 실권처리(②⑤) 발생 여부 = 총실권주 > 총재배정 → 30%·3억 게이트 적용
+  const totalForfeit = shareholders.reduce((a, s) => a + forfeitedBy(s), 0);
+  const totalRealloc = shareholders.reduce((a, s) => a + (s.reallocatedShares ?? 0), 0);
+  const hasForfeitProcessing = totalForfeit > totalRealloc;
+  // 차액(|㉯−㉰|) ≥ 증자후가 30% (per-share, 수증자 무관)
+  const perShareDiff = Math.abs(perShareAfter - priceIn);
+  const ratioMet = perShareDiff >= safeMultiplyThenDivide(perShareAfter, RATIO_NUMER, RATIO_DENOM);
+
+  const relatedSets = new Map(shareholders.map((s) => [s.id, new Set(s.relatedTo ?? [])]));
+  const splits: DonationSplit[] = [];
+  const perBeneficiary: CapitalIncreaseAllocationResult["perBeneficiary"] = [];
+
+  for (const b of byShareholder) {
+    if (b.delta <= 0) continue; // 이익 본 자만 수증자
+    // 집계 게이트(②⑤): 실권처리 발생 시 차액 30% 미만 AND 집계이익 3억 미만이면 미과세
+    const gatedOut = hasForfeitProcessing && !ratioMet && b.delta < ABSOLUTE_THRESHOLD;
+
+    // 손해비례 증여자별 배분 + floor 잔액 흡수(마지막 증여자가 잔액 흡수)
+    const byDonor: DonationSplit[] = [];
+    let assigned = 0;
+    donors.forEach((d, i) => {
+      const raw =
+        i === donors.length - 1
+          ? b.delta - assigned // 마지막 = 잔액(floor 누적 −1 차단)
+          : safeMultiplyThenDivide(b.delta, -d.delta, totalLoss);
+      assigned += raw;
+      const isRelated = relatedSets.get(b.id)?.has(d.id) ?? false;
+      const taxable = gatedOut || !isRelated ? 0 : raw;
+      const excludedReason = gatedOut
+        ? "이익이 기준금액(증자후가 30%·3억) 미만"
+        : !isRelated
+          ? "특수관계 부재(§39①2호)"
+          : undefined;
+      const row: DonationSplit = { beneficiaryId: b.id, donorId: d.id, value: taxable, excludedReason };
+      byDonor.push(row);
+      splits.push(row);
+    });
+    perBeneficiary.push({ beneficiaryId: b.id, total: byDonor.reduce((a, r) => a + r.value, 0), byDonor });
+  }
+
+  return {
+    type: "capital_increase_allocation",
+    perShareAfter,
+    perBeneficiary,
+    byShareholder,
+    reconciliation: { totalGain, totalLoss, balanced: totalGain === totalLoss },
+    splits,
+  };
+}
