@@ -63,15 +63,47 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "free_loan":
       if (parseAmount(form.loanAmount) <= 0) return "대출금액을 입력하세요";
       break;
-    case "merger":
+    case "merger": {
       if (form.mrgCaseType === "non_stock") {
         if (parseAmount(form.mrgFaceValue) <= 0) return "액면가액을 입력하세요";
         if (parseAmount(form.mrgOvervaluedPrice) <= 0) return "합병당사법인 1주당 평가가액을 입력하세요";
+        break;
+      }
+      // §28⑦ 분할합병(순자산비율)이면 과대평가 1주평가 대신 분할 3필드 필수
+      const splitNet = form.mrgIsSplitMerger && form.mrgSplitMode === "net_asset_ratio";
+      if (splitNet) {
+        if (parseAmount(form.mrgSplitPrePrice) <= 0) return "분할법인 분할직전 1주당 평가가액을 입력하세요";
+        if (parseAmount(form.mrgSplitBusinessNetAsset) <= 0) return "분할사업부문 순자산가액을 입력하세요";
+        if (parseAmount(form.mrgSplitCompanyNetAsset) <= 0) return "분할법인 순자산가액을 입력하세요";
+      } else if (parseAmount(form.mrgOvervaluedPrice) <= 0) {
+        return "과대평가법인 1주당 평가가액을 입력하세요";
+      }
+      if (form.mrgUseShareholders) {
+        // Phase B 주주 매트릭스 — auto 평가 + 주주 배열 필수
+        if (parseAmount(form.mrgUnderSharePrice) <= 0) return "과소평가법인 1주당 평가가액을 입력하세요";
+        if (parseAmount(form.mrgPostMergerTotalShares) <= 0) return "합병 후 존속법인 주식수를 입력하세요";
+        if (parseAmount(form.mrgExchangeNumer) <= 0 || parseAmount(form.mrgExchangeDenom) <= 0)
+          return "교부 환산비를 입력하세요";
+        if (form.mrgOverShareholders.filter((s) => s.name.trim() && parseAmount(s.shares) > 0).length === 0)
+          return "과대평가(이익측)법인 주주를 1명 이상 입력하세요";
+        if (form.mrgUnderShareholders.filter((s) => s.name.trim() && parseAmount(s.shares) > 0).length === 0)
+          return "과소평가(증여자측)법인 주주를 1명 이상 입력하세요";
       } else {
-        if (parseAmount(form.mrgMergedPrice) <= 0) return "합병 후 1주당 평가가액을 입력하세요";
         if (parseAmount(form.mrgExchangedShares) <= 0) return "교부받은 주식수를 입력하세요";
+        if (form.mrgMergedPriceMode === "auto") {
+          // §28⑤ 단순평균액 — 자동추정 금지, 명시 입력 필수
+          if (parseAmount(form.mrgUnderSharePrice) <= 0) return "과소평가법인 1주당 평가가액을 입력하세요";
+          if (parseAmount(form.mrgPreShares) <= 0) return "과대평가법인 합병 전 주식수를 입력하세요";
+          if (parseAmount(form.mrgUnderPreShares) <= 0) return "과소평가법인 합병 전 주식수를 입력하세요";
+          if (parseAmount(form.mrgPostMergerTotalShares) <= 0) return "합병 후 존속법인 주식수를 입력하세요";
+          if (form.mrgIsListed && parseAmount(form.mrgListedPostAvgPrice) <= 0)
+            return "합병등기일 후 2개월 종가평균을 입력하세요";
+        } else if (parseAmount(form.mrgMergedPrice) <= 0) {
+          return "합병 후 1주당 평가가액을 입력하세요";
+        }
       }
       break;
+    }
     case "capital_increase":
       if (parseAmount(form.ciPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.ciPreShares) <= 0) return "증자 전 발행주식총수를 입력하세요";
@@ -80,11 +112,30 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       }
       break;
     case "capital_decrease":
-      if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
-      if (form.cdCaseType === "high") {
-        if (parseAmount(form.cdOwnRedeemedShares) <= 0) return "해당 주주등 감자 주식수를 입력하세요";
+      if (form.cdMode === "multi") {
+        if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
+        if (parseAmount(form.cdPreTotalShares) <= 0) return "감자 전 발행주식총수를 입력하세요";
+        if (form.cdShareholders.length < 2) return "주주를 2명 이상 입력하세요";
+        for (const [i, row] of form.cdShareholders.entries()) {
+          const n = i + 1;
+          if (!row.name.trim()) return `${n}번째 주주 이름을 입력하세요`;
+          if (parseAmount(row.preShares) <= 0) return `${n}번째 주주의 감자 전 주식수를 입력하세요`;
+          if (parseAmount(row.redeemedShares) > 0 && parseAmount(row.redemptionPrice) <= 0)
+            return `${n}번째 주주는 감자주주이므로 소각대가를 입력하세요`;
+          // 자동 안분 fallback 금지: 특수관계 그룹 미입력 차단
+          if (!row.relationGroup.trim())
+            return `${n}번째 주주의 특수관계 그룹을 입력하세요 (비특수관계면 별도 구분값 입력)`;
+        }
+        const totalPre = form.cdShareholders.reduce((s, r) => s + parseAmount(r.preShares), 0);
+        if (totalPre > parseAmount(form.cdPreTotalShares))
+          return "주주별 감자 전 주식수 합계가 발행주식총수를 초과합니다";
       } else {
-        if (parseAmount(form.cdTotalShares) <= 0) return "총감자 주식수를 입력하세요";
+        if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
+        if (form.cdCaseType === "high") {
+          if (parseAmount(form.cdOwnRedeemedShares) <= 0) return "해당 주주등 감자 주식수를 입력하세요";
+        } else {
+          if (parseAmount(form.cdTotalShares) <= 0) return "총감자 주식수를 입력하세요";
+        }
       }
       break;
     case "contribution":
@@ -162,10 +213,30 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (parseAmount(form.cbPreConvPrice) <= 0) return "전환등 전 1주당 평가가액을 입력하세요";
         if (parseAmount(form.cbConversionPrice) <= 0) return "1주당 전환가액등을 입력하세요";
         if (parseAmount(form.cbIncreasedShares) <= 0) return "전환등 증가주식수를 입력하세요";
-      } else if (form.cbCaseType === "transfer") {
+        // 상장 Min/Max 단서 — 종가평균 필요. creditedShares는 non-required(미입력=증가주식수)
+        if (form.cbIsListed && parseAmount(form.cbListedMarketAvg) <= 0) return "전환일 전후 2개월 종가평균을 입력하세요";
+      }
+      if (form.cbCaseType === "conversion") {
+        if (form.cbAutoExcess) {
+          if (parseAmount(form.cbSubscribedShares) <= 0) return "인수(전환) 주식수를 입력하세요";
+          if (parseAmount(form.cbTotalSubscribable) <= 0) return "총인수가능주식수를 입력하세요";
+          if (parseDecimal(form.cbOwnPreRatioPct) <= 0) return "본인 전환전 지분율을 입력하세요";
+        }
+        if (form.cbAutoInterestLoss) {
+          if (parseAmount(form.cbBondMaturity) <= 0) return "만기상환금액을 입력하세요";
+          if (parseDecimal(form.cbCouponRatePct) <= 0) return "사채발행이율을 입력하세요";
+          if (parseDecimal(form.cbPvFactorAppr) <= 0) return "적정할인율 현가계수를 입력하세요";
+          if (parseDecimal(form.cbAnnuityFactorAppr) <= 0) return "적정할인율 연금현가계수를 입력하세요";
+        }
+      }
+      if (form.cbCaseType === "conversion_reverse") {
+        if (parseDecimal(form.cbRelatedPreRatioPct) <= 0) return "특수관계인 전환 전 지분비율을 입력하세요";
+      }
+      if (form.cbCaseType === "transfer") {
         if (parseAmount(form.cbMarketValue) <= 0) return "전환사채등 시가를 입력하세요";
         if (parseAmount(form.cbTransferPrice) <= 0) return "양도가액을 입력하세요";
-      } else {
+      }
+      if (form.cbCaseType === "acquisition") {
         if (parseAmount(form.cbMarketValue) <= 0) return "전환사채등 시가를 입력하세요";
       }
       break;

@@ -7,6 +7,7 @@ import {
   ExpandToggleButton,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { CapitalDecreaseMultiResultView } from "./CapitalDecreaseMultiResultView";
 import type { DeemedGiftResult, ExcessDividendDetail } from "@/lib/tax-engine/gift-deemed/types";
 
 // ─────────────────────────────────────────────────────────────
@@ -299,9 +300,13 @@ function fmtGiftDate(d?: Date | string): string {
 export function DeemedGiftResultView({
   result,
   onToGiftTax,
+  selectedDoneeIndex = 0,
+  onSelectDonee,
 }: {
   result: DeemedGiftResult;
   onToGiftTax: () => void;
+  selectedDoneeIndex?: number;
+  onSelectDonee?: (i: number) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -343,6 +348,14 @@ export function DeemedGiftResultView({
           </table>
         </div>
       </div>
+
+      {result.capitalDecreaseMulti && (
+        <CapitalDecreaseMultiResultView
+          multi={result.capitalDecreaseMulti}
+          selectedDoneeIndex={selectedDoneeIndex}
+          onSelectDonee={onSelectDonee ?? (() => {})}
+        />
+      )}
 
       {result.subGifts && result.subGifts.length > 0 && (
         <div
@@ -430,6 +443,46 @@ export function DeemedGiftResultView({
           <p className="mt-1 text-xs text-muted-foreground">
             만료일 {result.rectification.expiryDate} 기준 잔여 {result.rectification.remainingMonths}/{result.rectification.totalMonths}개월.
           </p>
+        </div>
+      )}
+
+      {result.mergerMatrix && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="merger-matrix">
+          <p className="text-sm font-semibold text-emerald-800">수증자별 증여이익 (§38 합병 — 주주 매트릭스)</p>
+          <table className="mt-2 w-full text-sm">
+            <thead>
+              <tr className="text-xs text-muted-foreground">
+                <th className="text-left font-medium">수증자</th>
+                <th className="text-right font-medium">차감전</th>
+                <th className="text-right font-medium">자기증여</th>
+                <th className="text-right font-medium">순이익</th>
+                <th className="text-right font-medium">과세</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.mergerMatrix.recipients.map((r, i) => (
+                <tr key={i} className="border-t border-emerald-100">
+                  <td className="py-1.5 pr-2 text-emerald-700">{r.name.trim() || "주주"}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.grossGain)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{r.selfGift > 0 ? formatKRW(r.selfGift) : "-"}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.netGain)}</td>
+                  <td className="py-1.5 pl-2 text-right text-xs text-muted-foreground">{r.applied ? "과세" : "제외"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-3 text-xs font-semibold text-emerald-700">증여자별 안분</p>
+          {result.mergerMatrix.recipients.map((rec, i) => {
+            const alloc = result.mergerMatrix!.allocation[rec.id] ?? {};
+            const entries = Object.entries(alloc).filter(([, v]) => v > 0);
+            if (entries.length === 0) return null;
+            return (
+              <p key={i} className="text-xs text-muted-foreground">
+                {rec.name.trim() || "주주"} ← {entries.map(([donor, v]) => `${donor.trim() || "주주"} ${formatKRW(v)}`).join(" · ")}
+              </p>
+            );
+          })}
+          <p className="mt-2 text-[11px] text-muted-foreground">동일인 자기증여분 차감(재산세과-799). 각 수증자 §28④ 기준금액(합병후평가 30%·3억 중 적은 금액) 개별 판정.</p>
         </div>
       )}
 

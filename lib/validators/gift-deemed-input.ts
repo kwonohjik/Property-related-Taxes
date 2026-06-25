@@ -97,6 +97,11 @@ const freeLoanSchema = z.object({
 
 // ── Phase 2: 자본거래 (평가가액·주식수 직접 입력) — sub-case 필드는 caseType별 optional ──
 const ratioSchema = z.object({ numer: z.number().nonnegative(), denom: z.number().positive() });
+const mergerShareholderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  shares: z.number().nonnegative(),
+});
 const mergerSchema = z.object({
   type: z.literal("merger"),
   caseType: z.enum(["stock", "non_stock"]).optional(),
@@ -107,6 +112,32 @@ const mergerSchema = z.object({
   exchangedShares: z.number().nonnegative().optional(),
   faceValue: z.number().nonnegative().optional(),
   mergeConsideration: z.number().nonnegative().optional(),
+  // Phase A 평가 §28⑤
+  mergedPriceMode: z.enum(["direct", "auto"]).optional(),
+  underSharePrice: z.number().nonnegative().optional(),
+  underPreShares: z.number().nonnegative().optional(),
+  postMergerTotalShares: z.number().nonnegative().optional(),
+  listedPostAvgPrice: z.number().nonnegative().optional(),
+  isListed: z.boolean().optional(),
+  // G0 echo §28①②
+  isRelatedCompany: z.boolean().optional(),
+  shareholderOwnedShares: z.number().nonnegative().optional(),
+  shareholderTotalShares: z.number().nonnegative().optional(),
+  faceValueSum: z.number().nonnegative().optional(),
+  // Phase B 매트릭스
+  shareholders: z
+    .object({
+      overvalued: z.array(mergerShareholderSchema),
+      undervalued: z.array(mergerShareholderSchema),
+      exchangeRatio: z.object({ numer: z.number(), denom: z.number() }),
+    })
+    .optional(),
+  // Phase C 분할합병 §28⑦
+  isSplitMerger: z.boolean().optional(),
+  splitValuationMode: z.enum(["supplementary", "net_asset_ratio"]).optional(),
+  splitCompanyPreSharePrice: z.number().nonnegative().optional(),
+  splitBusinessNetAsset: z.number().nonnegative().optional(),
+  splitCompanyNetAsset: z.number().nonnegative().optional(),
 });
 const capitalIncreaseShape = {
   direction: z.enum(["low", "high"]).optional(),
@@ -127,16 +158,27 @@ const convertibleStockSchema = z.object({
   atConversion: capitalIncreaseInnerSchema,
   atIssuance: capitalIncreaseInnerSchema,
 });
+const capitalDecreaseShareholderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  preShares: z.number().nonnegative(),
+  redeemedShares: z.number().nonnegative(),
+  redemptionPricePerShare: z.number().nonnegative().optional(),
+  relationGroup: z.string().optional(),
+});
 const capitalDecreaseSchema = z.object({
   type: z.literal("capital_decrease"),
   caseType: z.enum(["low", "high"]).optional(),
   sharePrice: z.number().nonnegative(),
-  redemptionPrice: z.number().nonnegative(),
+  redemptionPrice: z.number().nonnegative().optional(),
   totalRedeemedShares: z.number().nonnegative().optional(),
   majorPostRatio: ratioSchema.optional(),
   relatedRedeemedShares: z.number().nonnegative().optional(),
   faceValue: z.number().nonnegative().optional(),
   ownRedeemedShares: z.number().nonnegative().optional(),
+  // 멀티(불균등 감자 N:N) 모드
+  shareholders: z.array(capitalDecreaseShareholderSchema).optional(),
+  preTotalShares: z.number().nonnegative().optional(),
 });
 const contributionSchema = z.object({
   type: z.literal("contribution"),
@@ -243,8 +285,12 @@ const convertibleBondSchema = z.object({
   preConvShares: z.number().nonnegative().optional(),
   conversionPrice: z.number().nonnegative().optional(),
   increasedShares: z.number().nonnegative().optional(),
+  creditedShares: z.number().nonnegative().optional(),
+  isListed: z.boolean().optional(),
+  listedMarketAvg: z.number().nonnegative().optional(),
   interestLoss: z.number().nonnegative().optional(),
   acquisitionGainPrior: z.number().nonnegative().optional(),
+  bondTransferGainForCap: z.number().nonnegative().optional(),
   relatedPreRatio: ratioSchema.optional(),
 });
 
