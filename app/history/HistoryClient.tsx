@@ -10,6 +10,7 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
+import { HistoryBackupActions } from "@/components/history/HistoryBackupActions";
 
 const TAX_TYPE_ROUTES: Partial<Record<LocalTaxType, string>> = {
   transfer: "/calc/transfer-tax",
@@ -429,14 +430,20 @@ export function HistoryClient() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={handleClearAll}
-          disabled={total === 0}
-          className="shrink-0 rounded-md border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          전체 삭제
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <HistoryBackupActions
+            mode={mode}
+            onImported={() => loadRecords(activeFilter, activeClientFilter)}
+          />
+          <button
+            type="button"
+            onClick={handleClearAll}
+            disabled={total === 0}
+            className="rounded-md border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            전체 삭제
+          </button>
+        </div>
       </div>
 
       {/* 건수 */}
