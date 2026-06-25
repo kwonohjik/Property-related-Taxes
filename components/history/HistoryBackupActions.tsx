@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
-import { buildBackup, type BackupFile } from "@/lib/storage/backup-export";
+import { buildBackup, type BackupFile, type BackupFilter } from "@/lib/storage/backup-export";
 import { validateBackup } from "@/lib/storage/backup-validate";
 import { importBackup, type ImportMode } from "@/lib/storage/backup-import";
 import {
@@ -31,12 +31,18 @@ import {
   type EncryptedBackupFile,
 } from "@/lib/storage/backup-crypto";
 import { downloadJson, formatIsoStamp } from "@/lib/utils/file-download";
-import type { UserMode } from "@/lib/storage/types";
+import type { UserMode, LocalTaxType } from "@/lib/storage/types";
 
 interface Props {
   mode: UserMode;
   /** 가져오기 완료 후 목록 갱신 콜백 (loadRecords 재호출). */
   onImported: () => void;
+  /** 현재 화면 필터 — "현재 보기만 내보내기" 옵션용. */
+  currentFilter?: {
+    taxType: LocalTaxType | "all";
+    clientId: string | null | "all";
+    label: string;
+  };
 }
 
 const BTN_CLASS =
@@ -45,10 +51,15 @@ const BTN_CLASS =
 const PW_INPUT_CLASS =
   "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-export function HistoryBackupActions({ mode, onImported }: Props) {
+export function HistoryBackupActions({ mode, onImported, currentFilter }: Props) {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportEncrypt, setExportEncrypt] = useState(false);
   const [exportPassword, setExportPassword] = useState("");
+  const [exportFiltered, setExportFiltered] = useState(false);
+
+  const filterActive =
+    !!currentFilter &&
+    (currentFilter.taxType !== "all" || currentFilter.clientId !== "all");
 
   const [pendingBackup, setPendingBackup] = useState<BackupFile | null>(null);
   const [pendingEncrypted, setPendingEncrypted] = useState<EncryptedBackupFile | null>(null);
@@ -63,15 +74,26 @@ export function HistoryBackupActions({ mode, onImported }: Props) {
     setExportOpen(false);
     setExportEncrypt(false);
     setExportPassword("");
+    setExportFiltered(false);
   }
 
   async function handleExportConfirm() {
     const encrypt = exportEncrypt;
     const password = exportPassword;
+    const useFilter = exportFiltered && filterActive;
+    const filter: BackupFilter | undefined =
+      useFilter && currentFilter
+        ? {
+            taxType:
+              currentFilter.taxType !== "all" ? currentFilter.taxType : undefined,
+            clientId:
+              currentFilter.clientId !== "all" ? currentFilter.clientId : undefined,
+          }
+        : undefined;
     resetExportDialog();
     setBusy(true);
     try {
-      const backup = await buildBackup();
+      const backup = await buildBackup(undefined, filter);
       if (backup.calculations.length === 0 && backup.clients.length === 0) {
         setToast({ kind: "info", text: "내보낼 이력이 없습니다." });
         return;
@@ -207,6 +229,16 @@ export function HistoryBackupActions({ mode, onImported }: Props) {
           </DialogHeader>
 
           <div className="space-y-2">
+            {filterActive && (
+              <ToggleCard
+                variant="chip"
+                tone="sky"
+                title="현재 보기만 내보내기"
+                description={currentFilter?.label}
+                checked={exportFiltered}
+                onCheckedChange={setExportFiltered}
+              />
+            )}
             <ToggleCard
               variant="chip"
               tone="violet"
