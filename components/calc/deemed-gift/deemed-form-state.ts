@@ -30,6 +30,18 @@ export function makeCapTableRow(id: string): CapTableRow {
   return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [] };
 }
 
+/** §43² 합산 — 개별 대출 건 (전부 string. API 변환에서 number). */
+export interface LoanLoanItem {
+  id: string;
+  loanDate: string; // YYYY-MM-DD (DateInput)
+  amount: string; // 대출금액 (CurrencyInput)
+  interest: string; // 실제 지급이자 (무이자=빈 문자열)
+}
+
+export function makeLoanItem(id: string): LoanLoanItem {
+  return { id, loanDate: "", amount: "", interest: "" };
+}
+
 /** 초과배당 §41의2 주주 행 (전부 string — parseAmount/parseDecimal 변환은 API 변환 시) */
 export interface EdShareholderRow {
   /** 행 고유 ID (클라이언트 UUID) */
@@ -106,6 +118,10 @@ export interface DeemedFormState {
   loanInterest: string;
   loanRelated: boolean;
   loanJustifiable: boolean;
+  // §41의4② 다년 분할 — 대출 기간(빈 문자열=단건). §43² 다건 합산 — loanLoans 3-state
+  loanStartDate: string;
+  loanEndDate: string;
+  loanLoans?: LoanLoanItem[]; // undefined=단건 OFF / []=다건 ON빈(validate 차단) / [...]=데이터
   // ── Phase 2 자본거래 (평가가액·주식수 직접 입력) ──
   // 합병 §38
   mrgCaseType: "stock" | "non_stock"; // 주식교부(§28③1) / 주식 외 재산교부(§28③2)
@@ -340,6 +356,9 @@ export const INITIAL_DEEMED: DeemedFormState = {
   loanInterest: "",
   loanRelated: true,
   loanJustifiable: false,
+  loanStartDate: "",
+  loanEndDate: "",
+  loanLoans: undefined,
   mrgCaseType: "stock",
   mrgMergedPrice: "",
   mrgOvervaluedPrice: "",

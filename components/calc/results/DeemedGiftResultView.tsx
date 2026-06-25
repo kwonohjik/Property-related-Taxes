@@ -526,12 +526,17 @@ export function DeemedGiftResultView({
 
       {result.periodBreakdown && result.periodBreakdown.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4" data-testid="deemed-period-breakdown">
-          <p className="text-sm font-semibold text-amber-800">기간별 증여 (§37·시행령§27③⑤ — 5년/1년 단위)</p>
+          <p className="text-sm font-semibold text-amber-800">
+            {result.type === "free_loan"
+              ? "연도별 증여 (§41의4② — 1년 되는 날 다음 날 매년 새로 대출받은 것으로 봄)"
+              : "기간별 증여 (§37·시행령§27③⑤ — 5년/1년 단위)"}
+          </p>
           <table className="mt-2 w-full text-sm">
             <thead>
               <tr className="text-xs text-amber-700">
                 <th className="py-1 text-left font-medium">증여일</th>
-                <th className="py-1 text-right font-medium">평가액</th>
+                <th className="py-1 text-right font-medium">{result.type === "free_loan" ? "대출금액" : "평가액"}</th>
+                {result.type === "free_loan" && <th className="py-1 text-right font-medium">일수</th>}
                 <th className="py-1 text-right font-medium">증여이익</th>
                 <th className="py-1 text-right font-medium">과세</th>
               </tr>
@@ -541,6 +546,11 @@ export function DeemedGiftResultView({
                 <tr key={p.index} className="border-t border-amber-100">
                   <td className="py-1.5 pr-2 text-muted-foreground">{p.giftDate || "미입력"}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(p.baseValue)}</td>
+                  {result.type === "free_loan" && (
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs">
+                      {p.dayCount !== undefined ? `${p.dayCount}/365일` : "—"}
+                    </td>
+                  )}
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(p.benefit)}</td>
                   <td className="py-1.5 text-right text-xs">{p.applied ? "○" : "—"}</td>
                 </tr>
@@ -549,6 +559,52 @@ export function DeemedGiftResultView({
           </table>
           <p className="mt-2 text-xs text-muted-foreground">
             각 기간은 별개 증여 — 해당 증여일 도래 시 별도 신고 대상입니다. 위 증여재산가액은 첫 기간(현재 증여) 기준입니다.
+          </p>
+          {result.type === "free_loan" && (
+            <p className="mt-1 text-xs text-amber-600">
+              ※ §41의4② 의제 도출 — 일수/365 명문 조항 없음, 분모 365 고정(교재 기준)
+            </p>
+          )}
+        </div>
+      )}
+
+      {result.aggregationBreakdown && result.aggregationBreakdown.length > 0 && (
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4" data-testid="loan-aggregation-result">
+          <p className="text-sm font-semibold text-sky-800">§43② 동일거래 합산 증여이익 (1년 이내)</p>
+          <table className="mt-2 w-full text-sm">
+            <thead>
+              <tr className="text-xs text-sky-700">
+                <th className="py-1 text-left font-medium">대출일</th>
+                <th className="py-1 text-right font-medium">대출금액</th>
+                <th className="py-1 text-right font-medium">건별 이익</th>
+                <th className="py-1 text-right font-medium">누계</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.aggregationBreakdown.map((b, i) => (
+                <tr
+                  key={i}
+                  className={`border-t ${b.isThresholdCrossing ? "bg-sky-100 font-semibold border-sky-300" : "border-sky-100"}`}
+                >
+                  <td className="py-1.5 pr-2 text-muted-foreground">
+                    {b.loanDate}
+                    {b.isThresholdCrossing && <span className="ml-1 text-xs font-medium text-sky-700">▶ 증여시기</span>}
+                    {!b.eligible && <span className="ml-1 text-xs text-muted-foreground">(정당사유 제외)</span>}
+                  </td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(b.loanAmount)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(b.rawBenefit)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(b.cumulativeBenefit)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-sm text-sky-800">합산 증여재산가액</p>
+            <p className="text-right font-mono text-lg font-bold tabular-nums text-sky-900">{formatKRW(result.deemedGiftValue)}</p>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            개별 건으로는 1천만 미만이더라도 1년 이내 동일거래를 합산하여 과세합니다.
+            &nbsp;<LawArticleModal legalBasis={GIFT.DUP_EXCLUSION_ANNUAL} />
           </p>
         </div>
       )}

@@ -5,6 +5,7 @@ import { calcBargainTransferGift } from "./bargain-transfer";
 import { calcDebtForgivenessGift } from "./debt-forgiveness";
 import { calcFreeRealEstateGift } from "./free-realestate-use";
 import { calcFreeLoanGift } from "./free-loan";
+import { calcFreeLoanAggregatedGift } from "./free-loan-aggregated";
 import { calcMergerGift } from "./merger";
 import { calcCapitalIncreaseGift } from "./capital-increase";
 import { calcCapitalDecreaseGift } from "./capital-decrease";
@@ -35,6 +36,8 @@ export function calcDeemedGift(input: DeemedGiftInput): DeemedGiftResult {
       return calcFreeRealEstateGift(input);
     case "free_loan":
       return calcFreeLoanGift(input);
+    case "free_loan_aggregated":
+      return calcFreeLoanAggregatedGift(input);
     case "merger":
       return calcMergerGift(input);
     case "capital_increase":

@@ -13,6 +13,7 @@ export type DeemedGiftType =
   | "debt_forgiveness" // §36 (4)
   | "free_realestate" // §37 (5)
   | "free_loan" // §41의4 (6)
+  | "free_loan_aggregated" // §41의4 §43② 1년내 동일거래 합산 (6b)
   | "merger" // §38 (7)
   | "capital_increase" // §39 (8) — 단건
   | "capital_increase_allocation" // §39 cap-table 다수증자·다증여자 (8b)
@@ -75,15 +76,16 @@ export interface DeemedGiftResult {
     relation?: GiftDonorRelation;
   }[];
   /**
-   * §37 다기간(G2/G3) — window별 별개 증여 산출. plain 배열(Map 금지).
+   * §37 다기간(G2/G3)·§41의4② 다년 — window별 별개 증여 산출. plain 배열(Map 금지).
    * ⚠️ 합산 금지: deemedGiftValue는 첫 window(현재 증여)만 — 나머지는 미래 별건.
    */
   periodBreakdown?: {
     index: number;
     giftDate: string; // window 증여일
-    baseValue: number; // free_use 부동산가액 / collateral 차입금
-    benefit: number; // free_use 5년 현가합 / collateral 차입이익
+    baseValue: number; // free_use 부동산가액 / collateral·free_loan 대출금
+    benefit: number; // free_use 5년 현가합 / collateral·free_loan 대출이익(일수안분 후)
     applied: boolean; // 기준금액(1억/1천만) 충족
+    dayCount?: number; // §41의4② 해당 window 실제 일수(마지막 해 안분 표시용). §37=undefined
   }[];
   /** §41의2 초과배당 전용 상세 (excessDividendDetail — plain 객체, Map 금지) */
   excessDividendDetail?: ExcessDividendDetail;
@@ -110,6 +112,19 @@ export interface DeemedGiftResult {
   capitalDecreaseMulti?: CapitalDecreaseMultiResult;
   /** 합병(§38) 주주 매트릭스 — Phase B(다수 대주주·동일인 자기증여). deemedGiftValue=Σ applied netGain */
   mergerMatrix?: MergerMatrix;
+  /**
+   * §43² 1년 이내 동일거래(§41의4) 합산 — 건별 echo. plain 배열(Map 금지, feedback_engine_result_map_json_loss).
+   * deemedGiftValue=합산 총액. 증여시기=isThresholdCrossing 건의 loanDate.
+   */
+  aggregationBreakdown?: {
+    label: string; // ㉮·㉯·㉰ 또는 "건 N"
+    loanDate: string; // 거래일(=증여일 echo)
+    loanAmount: number;
+    rawBenefit: number; // 적정이자−실제이자 (임계판정 전, max(0,))
+    eligible: boolean; // §41의4③ 게이트 통과
+    cumulativeBenefit: number; // 누계 rawBenefit
+    isThresholdCrossing: boolean; // 누계 1천만 첫 도달(=증여시기)
+  }[];
   /**
    * §45의2 명의신탁 유상증자(per_share 모드) echo — plain 객체(Map 금지, feedback_engine_result_map_json_loss).
    * total 모드는 undefined. 결과뷰가 산식(1주당평가×신주수)·평가원칙 비교(인수가·권리락·증자전) 표시에 사용.
@@ -213,13 +228,38 @@ export interface RectificationInput {
   terminationDate: string; // ISO. 중단사유 발생일(소유자 사망·토지 양도 등 §81⑥)
 }
 
-/** (6) 금전무상대출 §41의4 */
+/** (6) 금전무상대출 §41의4 — 단건 + 다년 분할(§41의4②) */
 export interface FreeLoanInput {
   loanAmount: number;
-  actualInterestPaid: number; // 무상이면 0
+  actualInterestPaid: number; // 무상이면 0 (다년: 연간 실제이자)
   appropriateRate: { numer: number; denom: number }; // 적정이자율 분수 (4.6%={46,1000})
   isRelatedParty: boolean;
   hasJustifiableReason?: boolean; // §41의4③
+  /**
+   * §41의4② 다년 분할 — 대출 기간. 두 필드 모두 있을 때만 다년 경로 활성(한쪽 undefined→단건 회귀).
+   * YYYY-MM-DD 문자열(date-coerce 불필요). 마지막 해 1년 미만 시 일수 안분(÷365, 명문 부재·교재 기준).
+   */
+  loanStartDate?: string; // 대출 개시일 (첫 window 증여일)
+  loanEndDate?: string; // 대출 종료일 (마지막 window 마지막 날)
+}
+
+/**
+ * §43② 1년 이내 동일거래(§41의4) 합산 입력 (상증법§43②·상증령§32의4).
+ * 복수 대출 건의 raw benefit을 임계판정 전 합산 → 1천만 판정. 선례: capital_increase_allocation.
+ */
+export interface FreeLoanAggregatedInput {
+  loans: FreeLoanItem[]; // 개별 대출 건 (1건 이상)
+}
+
+/** §43² 합산 개별 대출 건 */
+export interface FreeLoanItem {
+  loanDate: string; // 대출 거래일(=해당 건 증여일). YYYY-MM-DD
+  loanAmount: number;
+  actualInterestPaid: number; // 무상이면 0
+  appropriateRate: { numer: number; denom: number };
+  isRelatedParty: boolean;
+  hasJustifiableReason?: boolean; // §41의4③
+  label?: string; // 표시용(㉮·㉯·㉰). 없으면 "건 N"
 }
 
 // ── Phase 2: 자본거래 (시가 = §60·§63 평가가액을 input으로 직접 주입) ──
@@ -706,6 +746,7 @@ export type DeemedGiftInput =
   | ({ type: "debt_forgiveness" } & DebtForgivenessInput)
   | ({ type: "free_realestate" } & FreeRealEstateInput)
   | ({ type: "free_loan" } & FreeLoanInput)
+  | ({ type: "free_loan_aggregated" } & FreeLoanAggregatedInput)
   | ({ type: "merger" } & MergerInput)
   | ({ type: "capital_increase" } & CapitalIncreaseInput)
   | ({ type: "capital_decrease" } & CapitalDecreaseInput)

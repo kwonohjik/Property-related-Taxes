@@ -97,7 +97,22 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
             }
           : undefined,
       };
-    case "free_loan":
+    case "free_loan": {
+      // §43² 다건 합산 (loanLoans 토글 ON) → free_loan_aggregated 별도 type dispatch
+      if (form.loanLoans !== undefined) {
+        return {
+          type: "free_loan_aggregated",
+          loans: form.loanLoans.map((item) => ({
+            loanDate: item.loanDate,
+            loanAmount: parseAmount(item.amount),
+            actualInterestPaid: parseAmount(item.interest),
+            appropriateRate: resolveFreeLoanRate(item.loanDate || form.giftDate || "2024-01-01"),
+            isRelatedParty: form.loanRelated,
+            hasJustifiableReason: form.loanJustifiable,
+          })),
+        };
+      }
+      // 단건 + §41의4② 다년(기간 양끝 입력 시만 — date-coerce N/A, 문자열 그대로)
       return {
         type: "free_loan",
         loanAmount: parseAmount(form.loanAmount),
@@ -105,7 +120,11 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         appropriateRate: resolveFreeLoanRate(form.giftDate || "2024-01-01"),
         isRelatedParty: form.loanRelated,
         hasJustifiableReason: form.loanJustifiable,
+        ...(form.loanStartDate && form.loanEndDate
+          ? { loanStartDate: form.loanStartDate, loanEndDate: form.loanEndDate }
+          : {}),
       };
+    }
     case "merger":
       if (form.mrgCaseType === "non_stock") {
         return {
