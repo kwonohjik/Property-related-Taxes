@@ -244,12 +244,32 @@ const acquisitionFundSchema = z.object({
   acquisitionValue: z.number().positive({ message: "취득재산가액(채무상환금액)은 0보다 커야 합니다" }),
   provenAmount: z.number().nonnegative(),
 });
-const nomineeTrustSchema = z.object({
-  type: z.literal("nominee_trust"),
-  propertyValue: z.number().nonnegative(),
-  hasTaxAvoidancePurpose: z.boolean(),
-  isExcluded: z.boolean().optional(),
-});
+const nomineeTrustSchema = z
+  .object({
+    type: z.literal("nominee_trust"),
+    // total 모드만 필수 (per_share는 perSharePrice×nomineeShares로 엔진 단일 도출) → superRefine로 모드별 검증
+    propertyValue: z.number().nonnegative().optional(),
+    hasTaxAvoidancePurpose: z.boolean(),
+    isExcluded: z.boolean().optional(),
+    valuationMode: z.enum(["total", "per_share"]).optional(),
+    perSharePrice: z.number().nonnegative().optional(),
+    nomineeShares: z.number().nonnegative().optional(),
+    subscriptionPrice: z.number().nonnegative().optional(),
+    theoreticalExRightsPrice: z.number().nonnegative().optional(),
+    preIncreasePerShare: z.number().nonnegative().optional(),
+    actualOwnerName: z.string().optional(),
+    nomineeName: z.string().optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.valuationMode === "per_share") {
+      if (!val.perSharePrice || val.perSharePrice <= 0)
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "1주당 평가액(명의개서일 §63)을 입력하세요", path: ["perSharePrice"] });
+      if (!val.nomineeShares || val.nomineeShares <= 0)
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "명의신탁 신주 수를 입력하세요", path: ["nomineeShares"] });
+    } else if (!val.propertyValue || val.propertyValue <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "명의신탁 재산 가액을 입력하세요", path: ["propertyValue"] });
+    }
+  });
 const shareholderDividendSchema = z.object({
   id: z.string().min(1),
   role: z.enum(["major_shareholder", "related_party", "other"]),

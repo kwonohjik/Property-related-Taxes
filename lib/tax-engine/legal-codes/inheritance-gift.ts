@@ -151,6 +151,12 @@ export const GIFT = {
   // ── 증여로 보는 경우 (Phase 3: 추정·의제) ──
   ACQUISITION_FUND_PRESUMPTION: "상증법 §45",
   NOMINEE_TRUST: "상증법 §45의2",
+  /** 상증법 §60·§63 — 명의신탁 신주 증여재산가액 평가(증여일 현재, 발행가액·권리락 아님) */
+  NOMINEE_TRUST_VALUATION: "상증법 §60·§63",
+  /** 상증법 §4의2② — 명의신탁 증여의제 시 실제소유자가 증여세 납부의무(2018.12.31 개정 후) */
+  NOMINEE_TRUST_TAXPAYER: "상증법 §4의2②",
+  /** 상증법 §47① — 명의신탁 증여의제는 합산배제증여재산(동일인 10년 합산 제외) */
+  NOMINEE_TRUST_AGGREGATION_EXCLUSION: "상증법 §47①",
   // ── 증여로 보는 경우 (Phase 3: 기타이익·자본거래연계·법인) ──
   EXCESS_DIVIDEND: "상증법 §41의2",
   /** 시행규칙 §10의3① — 초과배당 소득세 상당액 율표 */
