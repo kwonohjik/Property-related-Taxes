@@ -228,10 +228,22 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         isExcluded: form.ntExcluded,
       };
     case "excess_dividend":
+      // TODO(UI시니어): shareholders 배열 입력 UI 신규 구현 필요.
+      // 임시: 구형 edExcessDividend/edIncomeTax 기반 최소 변환 (단일 최대주주+특수관계인 가정).
+      // UI 완성 후 이 블록을 새 폼 필드(edShareholders, edDividendDate 등)로 교체.
       return {
         type: "excess_dividend",
-        excessDividend: parseAmount(form.edExcessDividend),
-        incomeTaxEquivalent: parseAmount(form.edIncomeTax),
+        shareholders: [
+          {
+            id: "major",
+            role: "major_shareholder" as const,
+            ownershipRatio: { numer: 100, denom: 100 },
+            actualDividend: 0,
+          },
+        ],
+        dividendDate: new Date(),
+        incomeTaxMode: "separate" as const,
+        separateIncomeTax: 0,
       };
     case "listing_gain":
       return {

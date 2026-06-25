@@ -54,6 +54,8 @@ export interface DeemedGiftResult {
     benefit: number; // free_use 5년 현가합 / collateral 차입이익
     applied: boolean; // 기준금액(1억/1천만) 충족
   }[];
+  /** §41의2 초과배당 전용 상세 (excessDividendDetail — plain 객체, Map 금지) */
+  excessDividendDetail?: ExcessDividendDetail;
   /** §79②1호 경정청구(G1) — plain 객체(Map 금지) */
   rectification?: {
     giftTaxCalculated: number; // echo
@@ -267,10 +269,135 @@ export interface NomineeTrustInput {
   isExcluded?: boolean; // §45의2①1·3·4 배제 (신탁등기·비거주자 법정대리인 등)
 }
 
-/** §41의2 초과배당 (소득세상당액은 시행규칙 §10의3 율표 — 직접 입력) */
+/** 주주별 배당 내역 (시행령 §31의2② 초과배당금액 자동산정용) */
+export interface ShareholderDividend {
+  /** 식별자 (UI row id) */
+  id: string;
+  /** 주주 역할 */
+  role:
+    | "major_shareholder" // 최대주주등 (배당 포기·과소배당 주체)
+    | "related_party"     // 특수관계인 (초과배당 수령자)
+    | "other";            // 기타 주주
+  /** 지분율 분수 (예: 30% → { numer: 30, denom: 100 }) */
+  ownershipRatio: { numer: number; denom: number };
+  /** 실제 수령 배당금액 (원) */
+  actualDividend: number;
+  /** 표시용 이름 (결과뷰 echo) */
+  name?: string;
+}
+
+/** 정산 2-pass 계산을 위한 증여세 과세 맥락 */
+export interface ExcessDividendGiftTaxContext {
+  /** 수증자와 증여자 관계 (증여재산공제 결정) */
+  donorRelationship:
+    | "spouse"
+    | "lineal_ascendant_adult"
+    | "lineal_ascendant_minor"
+    | "lineal_descendant"
+    | "other_relative";
+  /** 10년 내 기적용 공제 누계 (원). 잔여공제 = 총한도 - 이 값. */
+  priorDeductionApplied?: number;
+  /** 세대생략 해당 여부 */
+  isGenerationSkip?: boolean;
+  /** 세대생략 미성년자 해당 여부 */
+  isMinorGenerationSkip?: boolean;
+  /** 신고기한 내 신고 예정 여부 (신고세액공제 3% 적용). 기본 true. */
+  isWithinFilingDeadline?: boolean;
+}
+
+/** §41의2 초과배당 (시행령 §31의2 주주배열 기반 자동산정) */
 export interface ExcessDividendInput {
-  excessDividend: number; // 초과배당금액 = (특수관계인 실수령 − 균등배당) × 최대주주등 과소배당 비율
-  incomeTaxEquivalent: number; // 초과배당금액에 대한 소득세 상당액 (공제)
+  // ── ① 주주 배열 (영§31의2② 자동산정) ──────────────────
+  /** 주주별 배당 내역. 비례배당 자동산정에 필요. 1개 이상 필수. */
+  shareholders: ShareholderDividend[];
+
+  // ── ② 시기·증여일 ──────────────────────────────────────
+  /** 배당 지급일 (= 증여일, 법§41의2①). Date 객체. */
+  dividendDate: Date;
+
+  // ── ③ 소득세 모드 ──────────────────────────────────────
+  /**
+   * 소득세 상당액 확정 여부 및 과세유형 (규칙§10의3).
+   * - 'undetermined': 미확정 → 율표 자동 적용 (규칙①)
+   * - 'separate'    : 확정·분리과세 → 실제 세액 직접입력 (규칙②)
+   * - 'comprehensive': 확정·종합과세 → Max(ⓐ−ⓑ, 14%) 자동 계산 (규칙②)
+   * - 'exempt'      : 비과세 → 소득세 0 (규칙② 1호)
+   */
+  incomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
+
+  // ── ④ 분리과세 직접입력 (incomeTaxMode='separate') ─────
+  /** 분리과세 실제 소득세액 (원). incomeTaxMode='separate'일 때 필수. */
+  separateIncomeTax?: number;
+
+  // ── ⑤ 종합과세 입력 (incomeTaxMode='comprehensive') ────
+  /** 수증자 종합소득과세표준 ⓐ기준 (초과배당금액 포함, 원). */
+  comprehensiveTaxBase?: number;
+  /** 종합소득과세표준에서 초과배당금액을 제외한 값 ⓑ기준 (원). 미입력 시 자동 추정. */
+  comprehensiveTaxBaseExcluding?: number;
+  /** 소득세 과세연도 (종합과세 세율표 연도 분기용). 기본: dividendDate.year. */
+  incomeTaxYear?: number;
+
+  // ── ⑥ 신고기한구분 (영§31의2③1호 분기) ─────────────────
+  /**
+   * 성실신고확인대상: true → 신고기한 6.30 → 경계 7.1
+   * 일반: false → 신고기한 5.31 → 경계 6.1
+   * 기본: false (일반)
+   */
+  isDiligentFiler?: boolean;
+
+  // ── ⑦ 정산 입력 (현행 2021~ + 정산 단계에서만) ──────────
+  /** 실제 납부 소득세액 (확정 후). 정산 pass 2에서만 사용. */
+  actualIncomeTax?: number;
+
+  // ── ⑧ 증여세 본체 맥락 (정산 2-pass 자동 수행 시 필요) ──
+  /** 정산 2-pass를 엔진 내부에서 calcGiftTax로 완결할 경우 증여세 과세 맥락. */
+  giftTaxContext?: ExcessDividendGiftTaxContext;
+}
+
+/** §41의2 초과배당 결과 상세 (DeemedGiftResult.excessDividendDetail) */
+export interface ExcessDividendDetail {
+  // 초과배당금액 자동산정 내역
+  totalDividend: number;        // 법인 전체 배당총액
+  proportionalDividend: number; // 특수관계인 비례 배당(지분×총배당)
+  excessBeforeRatio: number;    // ①가액 = 실수령 − 비례
+  majorShortfall: number;       // 최대주주 과소배당금액
+  totalShortfall: number;       // 총과소배당금액
+  ratioNumer: number;           // ②비율 분자 = majorShortfall
+  ratioDenom: number;           // ②비율 분모 = totalShortfall
+  excessDividendAmount: number; // 초과배당금액 = ①×②
+
+  // 소득세 상당액 산정 내역
+  incomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
+  appliedRateTableSet: "6bracket_2018" | "7bracket_2024" | null;
+  incomeTaxEquivalent: number; // 소득세 상당액 (원)
+  comprehensiveMaxDetail?: {   // 종합과세 Max 계산 내역
+    taxA: number;              // ⓐ과세표준×세율
+    taxB: number;              // ⓑ(과세표준−초과배당)×세율
+    taxAminusB: number;        // ⓐ−ⓑ
+    taxFloor: number;          // 초과배당금액×14%
+    appliedAmount: number;     // Max(ⓐ−ⓑ, 14%)
+  };
+
+  // 법적 처리 방식
+  taxMethod: "current_deduction_from_base" | "legacy_credit_from_tax";
+
+  // 정산 2-pass (현행 2021~, giftTaxContext 제공 시)
+  settlement?: {
+    initialGiftTax: number;   // ㉮ 당초 증여세액
+    settlementGiftTax: number; // ⑭ 정산 증여세액
+    settlementDue: number;    // 정산 납부액 (음수=환급)
+    isRefund: boolean;
+  };
+
+  // 구법 산출세액공제 (2018~2020, giftTaxContext 제공 시)
+  legacyCredit?: {
+    grossGiftTax: number;       // 할증포함 산출세액
+    legacyCreditAmount: number; // min(소득세상당액, 산출세액)
+    finalTax: number;           // 산출세액 − 공제액
+  };
+
+  // §47② 합산배제 안내
+  isAggregationExcluded?: boolean;
 }
 
 /** §41의3 상장이익 / §41의5 합병상장이익 (시행령 §31의3·§31의5) */
