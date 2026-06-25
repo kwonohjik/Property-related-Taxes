@@ -48,8 +48,8 @@ export function SpecificCorpMultiResultView({
   const [openLimit, setOpenLimit] = useState(true);
   const taxableDonees = multi.donees.filter((d) => d.isTaxable);
 
-  // 한도 표: 선택 인덱스 → 과세 수증자 중 해당 인덱스
-  const selectedDonee: SpecificCorpDonee | undefined = taxableDonees[selectedDoneeIndex];
+  // 한도 표: 선택 인덱스 → 과세 수증자 중 해당 인덱스 (범위 초과 시 첫 과세자 fallback)
+  const selectedDonee: SpecificCorpDonee | undefined = taxableDonees[selectedDoneeIndex] ?? taxableDonees[0];
   const limitCalc = selectedDonee?.limitCalc;
 
   return (
