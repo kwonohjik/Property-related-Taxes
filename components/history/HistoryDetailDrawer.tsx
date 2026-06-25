@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import type { CalculationRecord, LocalTaxType } from "@/lib/storage/types";
 import { EditTitleDialog } from "./EditTitleDialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { buildBackup } from "@/lib/storage/backup-export";
+import { downloadJson, formatIsoStamp } from "@/lib/utils/file-download";
 
 const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
   transfer: "/calc/transfer-tax",
@@ -163,6 +165,11 @@ export function HistoryDetailDrawer({
     }
   }
 
+  async function handleExportSingle() {
+    const backup = await buildBackup(undefined, { ids: [record.id] });
+    downloadJson(backup, `korean-tax-calc-backup_${formatIsoStamp()}.json`);
+  }
+
   return (
     <>
       {/* 백드롭 */}
@@ -263,6 +270,14 @@ export function HistoryDetailDrawer({
               이 조건으로 재계산
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleExportSingle}
+            data-testid="drawer-export-single"
+            className="w-full rounded-lg border border-border py-2 text-sm font-medium hover:bg-muted/60 transition-colors"
+          >
+            이 계산 내보내기
+          </button>
           <div className="flex gap-2">
             <button
               type="button"
