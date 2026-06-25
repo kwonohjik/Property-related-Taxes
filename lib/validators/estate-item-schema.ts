@@ -49,6 +49,8 @@ const baseItemSchema = z.object({
   assumedDebtForGift: z.number().nonnegative().optional(),
   // §47③ 배우자·직계존비속 채무 인수 객관적 입증 토글 (표시·안내용)
   burdenedGiftDebtConfirmed: z.boolean().optional(),
+  // §47① 합산배제증여재산(§41의3·§41의5) — 본세 §55①3호 스트림. ⑫ strip 방지
+  isAggregationExcludedGift: z.boolean().optional(),
   monthlyRent: z.number().nonnegative().optional(), // §61⑤ 임대료환산
   // §61⑤ 미임대(공실) 부분 — 1동 건물 일부 임대 시 미임대분 기준시가 합산용. 누락 시 silent strip.
   totalBuildingArea: z.number().nonnegative().optional(), // 전체 건물 연면적(㎡) — 토지 안분 분모

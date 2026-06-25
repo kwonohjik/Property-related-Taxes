@@ -132,7 +132,8 @@
 |---|---|---|---|
 | **Pre-Do** | 사례2 총액 anchor(650M) 실증 ✅완료 + 환급 케이스 실패 anchor 확보 | — | anchor |
 | **Phase A0(P0)** | A 환급방향 — 엔진 `listing-gain.ts` 단독(`direction`·`refundBase` echo) + 환급 anchor | **저**(엔진 격리) | 엔진·테스트 |
-| **Phase A1(P0)** | B/C/D 합산배제 본세 특례 — `gift-tax.ts` partition 분기 + §55①·§53배제 + 정산세액 + 사례 anchor | **고**(증여세 전체 회귀) | 본세·테스트 |
+| **Phase A1(P0)** ✅ | 합산배제 스트림 신규(`gift-aggregation-excluded-stream.ts`) + gift-tax.ts 격리·combined. §55①3호·§53배제·§47②격리·§56·§57·§69. baseline 601→603 회귀 0 | **고** | **완료** |
+| **Phase A1.5(후속)** | 별지 서식(filingFormRows·besshi10) 합산배제 행/표 정합 — A1 코드리뷰 Low 3건: ⑫/⑱행·㉝ 할증·§57①단서 echo가 일반분 기준(combined finalTax와 표시 불일치). **크래시·음수 없음**(모두 Math.max 가드) | 중 | 서식 |
 | **Phase B(P1)** | E 기업가치 월수산식 + F 할증 + G 무상주 + H 구법 | 중 | 헬퍼·연도분기 |
 | **Phase C(P2)** | I 전환사채 + J 거짓 + K 신고 + L 안내 | 저 | 간주·결과뷰 |
 | **Check** | `ui-engine-sync-checker`(14지점) + `gap-detector`(matchRate) + **증여세 전체 회귀(baseline 대조)** | — | — |

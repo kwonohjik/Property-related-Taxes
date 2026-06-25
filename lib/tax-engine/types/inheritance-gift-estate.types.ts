@@ -377,6 +377,9 @@ export interface EstateItem extends EstateLocationFields {
    */
   isSpecialTreatmentAsset?: boolean;
 
+  /** §47① 합산배제증여재산(§41의3·§41의5 등). true→§47② 10년합산 격리 + §55①3호 과세표준(증여이익−3천만, §53·§54 미적용) + §56 일반세율. false/undef→일반(현행 보존). */
+  isAggregationExcludedGift?: boolean;
+
   // ===== §47① 부담부증여 채무인수 (gift-burdened-debt-47-1) =====
   /**
    * §47① 부담부증여 수증자 인수 채무액 (원).

@@ -79,6 +79,7 @@ export function calcListingGainGift(input: ListingGainInput): DeemedGiftResult {
         : undefined,
     legalBasis,
     thresholdEcho: { gain: totalGain, threshold },
+    aggregationExcluded: true, // §47① 합산배제증여재산 — 본세 §55①3호 스트림 연계
     direction,
     refundBase,
   };

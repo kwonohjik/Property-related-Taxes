@@ -604,6 +604,8 @@ export function buildGiftWizardPrefill(
         category: "other",
         name: `${label} 증여이익`,
         marketValue: result.deemedGiftValue,
+        // §47① 합산배제증여재산(§41의3·§41의5 등) → 본세 §55①3호 스트림. 비합산배제 deemed는 undefined.
+        ...(result.aggregationExcluded ? { isAggregationExcludedGift: true } : {}),
       },
     ],
   };
