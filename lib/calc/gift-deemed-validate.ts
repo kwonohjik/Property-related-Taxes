@@ -125,9 +125,8 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           return `${i + 1}번째 주주의 실수령 배당금은 0 이상이어야 합니다`;
       }
 
-      // ⑧ F5: 소득세 모드 필수 — API fallback은 "undetermined" 이지만 validate는 명시 선택 강제
-      // (⑧ 정책: API/UI fallback ↔ validate 모순 금지. 여기서는 validate가 명시입력을 요구하도록 동기화)
-      if (!form.edIncomeTaxMode) return "소득세 확정 여부를 선택하세요 (§41의2①)";
+      // ⑧ F5: 소득세 모드는 INITIAL "undetermined"로 store·display·api·validate 4자 일치
+      // (feedback_store_default_vs_ui_display_fallback — display fallback과 모순되는 명시 선택 강제는 금지)
 
       // ⑧ F6: 모드별 조건부 필드
       if (form.edIncomeTaxMode === "separate" && parseAmount(form.edSeparateTaxAmount) < 0)

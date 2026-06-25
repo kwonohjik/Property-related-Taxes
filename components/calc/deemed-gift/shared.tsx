@@ -202,9 +202,9 @@ export interface DeemedFormState {
   ntExcluded: boolean; // §45의2①1·3·4 배제사유
   // 초과배당 §41의2 — 주주 배열 기반 자동산정
   // (edExcessDividend·edIncomeTax 폐지 → 아래 필드로 대체)
-  edDividendDate: string;                       // DateInput "YYYY-MM-DD"
+  // edDividendDate 폐지: 배당지급일=증여일=공통 giftDate (§41의2①). 다른 의제 유형과 일관.
   edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
-  edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt" | undefined;
+  edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
   edSeparateTaxAmount: string;                  // 분리과세 세액 직접입력
   edComprehensiveTaxBase: string;               // 종합과세 과세표준 (ⓐ기준)
   edSettlementMode: boolean;                    // 정산 활성화 ToggleCard
@@ -358,9 +358,9 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ntPropertyValue: "",
   ntTaxAvoidance: true,
   ntExcluded: false,
-  edDividendDate: "",
+  // edDividendDate 폐지: 공통 giftDate 사용
   edShareholders: undefined,
-  edIncomeTaxMode: undefined,
+  edIncomeTaxMode: "undetermined",
   edSeparateTaxAmount: "",
   edComprehensiveTaxBase: "",
   edSettlementMode: false,

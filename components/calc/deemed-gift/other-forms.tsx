@@ -10,7 +10,6 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { DateInput } from "@/components/ui/date-input";
 import type { DeemedFormState } from "./shared";
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
 
@@ -23,30 +22,11 @@ export function ExcessDividendFields({ form, set }: Props) {
 
   return (
     <div className="space-y-3">
-      {/* ── 섹션 1: 증여일 (배당지급일) ── */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-800 select-none">
-            1
-          </span>
-          <p className="text-xs font-semibold text-slate-700">증여일 (배당지급일) — §41의2①</p>
-        </div>
-        <FieldCard
-          label="배당지급일"
-          hint="배당기준일 이후 지급일이 증여일이 됩니다 (시행령 §31의2①)"
-        >
-          <DateInput
-            value={form.edDividendDate}
-            onChange={(v) => set({ edDividendDate: v })}
-          />
-        </FieldCard>
-      </div>
-
-      {/* ── 섹션 2: 주주 입력 ── */}
+      {/* ── 섹션 1: 주주 입력 (배당지급일=증여일은 상단 공통 증여일 사용 — §41의2①) ── */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-            2
+            1
           </span>
           <p className="text-xs font-semibold text-sky-700">
             주주별 배당 내역 — 비례배당·초과배당금액 자동산정 (시행령 §31의2②)
@@ -62,7 +42,7 @@ export function ExcessDividendFields({ form, set }: Props) {
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
-            3
+            2
           </span>
           <p className="text-xs font-semibold text-amber-700">소득세 상당액 확정 여부 — 시행규칙 §10의3</p>
         </div>
@@ -132,7 +112,7 @@ export function ExcessDividendFields({ form, set }: Props) {
             />
             <FieldCard
               label="소득 귀속연도 (선택)"
-              hint="미입력 시 배당지급일 연도를 소득 귀속연도로 적용합니다"
+              hint="미입력 시 증여일(배당지급일) 연도를 소득 귀속연도로 적용합니다"
             >
               <input
                 type="text"
@@ -141,7 +121,7 @@ export function ExcessDividendFields({ form, set }: Props) {
                 maxLength={4}
                 value={form.edIncomeTaxYear}
                 onChange={(e) => set({ edIncomeTaxYear: e.target.value.replace(/\D/g, "") })}
-                placeholder="연도 4자리 (미입력 시 배당지급일 연도)"
+                placeholder="연도 4자리 (미입력 시 증여일 연도)"
                 className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </FieldCard>
@@ -156,7 +136,7 @@ export function ExcessDividendFields({ form, set }: Props) {
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-            4
+            3
           </span>
           <p className="text-xs font-semibold text-violet-700">
             증여자와의 관계 (선택 — 입력 시 정산·구법 세액 추가 표시)

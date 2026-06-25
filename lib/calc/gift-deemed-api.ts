@@ -282,12 +282,9 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           }
         : undefined;
 
-      // ⑤ 배당지급일 (증여일) — edDividendDate 우선, fallback giftDate
-      // Route.ts는 fetch body → JSON string → Zod z.coerce.date() 로 변환하지만
-      // buildDeemedGiftInput()은 Server Action 경로에서 직접 엔진을 호출할 수도 있으므로
-      // Date 객체로 변환 후 전달한다.
-      const dividendDateStr = form.edDividendDate || form.giftDate || "";
-      const dividendDate = toOptionalDate(dividendDateStr) ?? new Date();
+      // ⑤ 배당지급일 = 증여일 = 공통 giftDate (§41의2①). edDividendDate 폐지 — 다른 의제 유형과 일관.
+      // buildDeemedGiftInput()은 Server Action 경로에서 직접 엔진을 호출할 수도 있어 Date로 변환 후 전달.
+      const dividendDate = toOptionalDate(form.giftDate) ?? new Date();
 
       return {
         type: "excess_dividend" as const,
