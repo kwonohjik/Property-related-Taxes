@@ -46,6 +46,18 @@ export function makeScShareholderRow(id: string): ScShareholderRow {
   return { id, name: "", relation: "lineal_descendant", shares: "", isDonor: false };
 }
 
+/** §43² 합산 — 개별 대출 건 (전부 string. API 변환에서 number). */
+export interface LoanLoanItem {
+  id: string;
+  loanDate: string; // YYYY-MM-DD (DateInput)
+  amount: string; // 대출금액 (CurrencyInput)
+  interest: string; // 실제 지급이자 (무이자=빈 문자열)
+}
+
+export function makeLoanItem(id: string): LoanLoanItem {
+  return { id, loanDate: "", amount: "", interest: "" };
+}
+
 /** 초과배당 §41의2 주주 행 (전부 string — parseAmount/parseDecimal 변환은 API 변환 시) */
 export interface EdShareholderRow {
   /** 행 고유 ID (클라이언트 UUID) */
@@ -122,6 +134,10 @@ export interface DeemedFormState {
   loanInterest: string;
   loanRelated: boolean;
   loanJustifiable: boolean;
+  // §41의4② 다년 분할 — 대출 기간(빈 문자열=단건). §43² 다건 합산 — loanLoans 3-state
+  loanStartDate: string;
+  loanEndDate: string;
+  loanLoans?: LoanLoanItem[]; // undefined=단건 OFF / []=다건 ON빈(validate 차단) / [...]=데이터
   // ── Phase 2 자본거래 (평가가액·주식수 직접 입력) ──
   // 합병 §38
   mrgCaseType: "stock" | "non_stock"; // 주식교부(§28③1) / 주식 외 재산교부(§28③2)
@@ -248,6 +264,14 @@ export interface DeemedFormState {
   ntPropertyValue: string;
   ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
   ntExcluded: boolean; // §45의2①1·3·4 배제사유
+  ntValuationMode: "total" | "per_share"; // total=재산가액 직접 / per_share=유상증자 신주(명의개서일 §63 평가×신주수)
+  ntPerSharePrice: string; // per_share: 명의개서일 §63 평가 1주당 가액
+  ntNewShares: string; // per_share: 명의신탁 신주 수
+  ntSubscriptionPrice: string; // echo: 신주인수가액(발행가액)
+  ntTheoreticalExRights: string; // echo: 이론적 권리락 증자후 1주당 가액
+  ntPreIncreasePerShare: string; // echo: 증자 전 1주당 평가액
+  ntActualOwner: string; // prefill: 실제소유자(증여자) 성명
+  ntNominee: string; // prefill: 명의자(증여의제 수증자) 성명
   // 초과배당 §41의2 — 주주 배열 기반 자동산정 (edExcessDividend·edIncomeTax·edDividendDate 폐지)
   edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
   edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
@@ -370,6 +394,9 @@ export const INITIAL_DEEMED: DeemedFormState = {
   loanInterest: "",
   loanRelated: true,
   loanJustifiable: false,
+  loanStartDate: "",
+  loanEndDate: "",
+  loanLoans: undefined,
   mrgCaseType: "stock",
   mrgMergedPrice: "",
   mrgOvervaluedPrice: "",
@@ -476,6 +503,14 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ntPropertyValue: "",
   ntTaxAvoidance: true,
   ntExcluded: false,
+  ntValuationMode: "total",
+  ntPerSharePrice: "",
+  ntNewShares: "",
+  ntSubscriptionPrice: "",
+  ntTheoreticalExRights: "",
+  ntPreIncreasePerShare: "",
+  ntActualOwner: "",
+  ntNominee: "",
   edShareholders: undefined,
   edIncomeTaxMode: "undetermined",
   edSeparateTaxAmount: "",

@@ -359,6 +359,43 @@ export function DeemedGiftResultView({
         </div>
       </div>
 
+      {result.nomineeCapitalIncrease && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="nominee-capital-increase">
+          <p className="text-sm font-semibold text-emerald-800">유상증자 신주 명의신탁 평가 (§45의2 · 명의개서일 §63 평가)</p>
+          <div className="mt-2 rounded-md border border-emerald-200 bg-white p-2 text-sm text-emerald-900">
+            1주당 평가액{" "}
+            <b className="font-mono tabular-nums">{result.nomineeCapitalIncrease.perSharePrice.toLocaleString("ko-KR")}</b>
+            {" × 명의신탁 신주 "}
+            <b className="font-mono tabular-nums">{result.nomineeCapitalIncrease.nomineeShares.toLocaleString("ko-KR")}</b>
+            {"주 = "}
+            <b className="font-mono tabular-nums">{formatKRW(result.deemedGiftValue)}</b>
+          </div>
+          {(result.nomineeCapitalIncrease.preIncreasePerShare ||
+            result.nomineeCapitalIncrease.subscriptionPrice ||
+            result.nomineeCapitalIncrease.theoreticalExRightsPrice) && (
+            <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {result.nomineeCapitalIncrease.preIncreasePerShare ? (
+                <p>
+                  증자 전 1주당 {result.nomineeCapitalIncrease.preIncreasePerShare.toLocaleString("ko-KR")} → 유상증자 희석으로 명의개서일 §63 평가{" "}
+                  {result.nomineeCapitalIncrease.perSharePrice.toLocaleString("ko-KR")} <span className="text-emerald-700">(적용)</span>
+                </p>
+              ) : null}
+              {result.nomineeCapitalIncrease.subscriptionPrice || result.nomineeCapitalIncrease.theoreticalExRightsPrice ? (
+                <p>
+                  신주인수가액 {result.nomineeCapitalIncrease.subscriptionPrice ? result.nomineeCapitalIncrease.subscriptionPrice.toLocaleString("ko-KR") : "-"}
+                  {" · 이론적 권리락 "}
+                  {result.nomineeCapitalIncrease.theoreticalExRightsPrice ? result.nomineeCapitalIncrease.theoreticalExRightsPrice.toLocaleString("ko-KR") : "-"}
+                  {" — 평가에 미적용 (조심2012중3707·2019서2129)"}
+                </p>
+              ) : null}
+            </div>
+          )}
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            증여의제 수증자 = 명의자 / 납세의무자 = 실제소유자 (§4의2②, 2018.12.31 개정 후). 합산배제증여재산 — 동일인 10년 합산·증여재산공제 비적용 (§47①).
+          </p>
+        </div>
+      )}
+
       {result.capitalDecreaseMulti && (
         <CapitalDecreaseMultiResultView
           multi={result.capitalDecreaseMulti}
@@ -497,12 +534,17 @@ export function DeemedGiftResultView({
 
       {result.periodBreakdown && result.periodBreakdown.length > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4" data-testid="deemed-period-breakdown">
-          <p className="text-sm font-semibold text-amber-800">기간별 증여 (§37·시행령§27③⑤ — 5년/1년 단위)</p>
+          <p className="text-sm font-semibold text-amber-800">
+            {result.type === "free_loan"
+              ? "연도별 증여 (§41의4② — 1년 되는 날 다음 날 매년 새로 대출받은 것으로 봄)"
+              : "기간별 증여 (§37·시행령§27③⑤ — 5년/1년 단위)"}
+          </p>
           <table className="mt-2 w-full text-sm">
             <thead>
               <tr className="text-xs text-amber-700">
                 <th className="py-1 text-left font-medium">증여일</th>
-                <th className="py-1 text-right font-medium">평가액</th>
+                <th className="py-1 text-right font-medium">{result.type === "free_loan" ? "대출금액" : "평가액"}</th>
+                {result.type === "free_loan" && <th className="py-1 text-right font-medium">일수</th>}
                 <th className="py-1 text-right font-medium">증여이익</th>
                 <th className="py-1 text-right font-medium">과세</th>
               </tr>
@@ -512,6 +554,11 @@ export function DeemedGiftResultView({
                 <tr key={p.index} className="border-t border-amber-100">
                   <td className="py-1.5 pr-2 text-muted-foreground">{p.giftDate || "미입력"}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(p.baseValue)}</td>
+                  {result.type === "free_loan" && (
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs">
+                      {p.dayCount !== undefined ? `${p.dayCount}/365일` : "—"}
+                    </td>
+                  )}
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(p.benefit)}</td>
                   <td className="py-1.5 text-right text-xs">{p.applied ? "○" : "—"}</td>
                 </tr>
@@ -520,6 +567,52 @@ export function DeemedGiftResultView({
           </table>
           <p className="mt-2 text-xs text-muted-foreground">
             각 기간은 별개 증여 — 해당 증여일 도래 시 별도 신고 대상입니다. 위 증여재산가액은 첫 기간(현재 증여) 기준입니다.
+          </p>
+          {result.type === "free_loan" && (
+            <p className="mt-1 text-xs text-amber-600">
+              ※ §41의4② 의제 도출 — 일수/365 명문 조항 없음, 분모 365 고정(교재 기준)
+            </p>
+          )}
+        </div>
+      )}
+
+      {result.aggregationBreakdown && result.aggregationBreakdown.length > 0 && (
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4" data-testid="loan-aggregation-result">
+          <p className="text-sm font-semibold text-sky-800">§43② 동일거래 합산 증여이익 (1년 이내)</p>
+          <table className="mt-2 w-full text-sm">
+            <thead>
+              <tr className="text-xs text-sky-700">
+                <th className="py-1 text-left font-medium">대출일</th>
+                <th className="py-1 text-right font-medium">대출금액</th>
+                <th className="py-1 text-right font-medium">건별 이익</th>
+                <th className="py-1 text-right font-medium">누계</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.aggregationBreakdown.map((b, i) => (
+                <tr
+                  key={i}
+                  className={`border-t ${b.isThresholdCrossing ? "bg-sky-100 font-semibold border-sky-300" : "border-sky-100"}`}
+                >
+                  <td className="py-1.5 pr-2 text-muted-foreground">
+                    {b.loanDate}
+                    {b.isThresholdCrossing && <span className="ml-1 text-xs font-medium text-sky-700">▶ 증여시기</span>}
+                    {!b.eligible && <span className="ml-1 text-xs text-muted-foreground">(정당사유 제외)</span>}
+                  </td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(b.loanAmount)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(b.rawBenefit)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(b.cumulativeBenefit)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-sm text-sky-800">합산 증여재산가액</p>
+            <p className="text-right font-mono text-lg font-bold tabular-nums text-sky-900">{formatKRW(result.deemedGiftValue)}</p>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            개별 건으로는 1천만 미만이더라도 1년 이내 동일거래를 합산하여 과세합니다.
+            &nbsp;<LawArticleModal legalBasis={GIFT.DUP_EXCLUSION_ANNUAL} />
           </p>
         </div>
       )}

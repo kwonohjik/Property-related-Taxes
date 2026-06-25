@@ -42,4 +42,21 @@ test.describe("증여로 보는 경우 — 추정·의제", () => {
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("500,000,000");
   });
+
+  test("§45의2 명의신탁 유상증자 신주: 1주당15,000×18,375 → 275,625,000", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "nominee_trust");
+    await page.getByTestId("nt-mode-per_share").click();
+    await page.getByPlaceholder("1주당 평가액 (원)").fill("15000");
+    await page.getByPlaceholder("명의신탁 신주 수").fill("18375");
+    // 참고·비교 입력 (이미지 29 — 평가원칙 비교 표시 활성)
+    await page.getByPlaceholder("신주인수가액 (원)").fill("5000");
+    await page.getByPlaceholder("권리락 단가 (원)").fill("13000");
+    await page.getByPlaceholder("증자 전 평가액 (원)").fill("20000");
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toContainText("275,625,000");
+    await expect(page.getByTestId("nominee-capital-increase")).toBeVisible();
+    await expect(page.getByTestId("nominee-capital-increase")).toContainText("평가에 미적용");
+  });
 });
