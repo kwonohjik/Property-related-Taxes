@@ -93,6 +93,23 @@ const freeLoanSchema = z.object({
   }),
   isRelatedParty: z.boolean(),
   hasJustifiableReason: z.boolean().optional(),
+  // §41의4② 다년 분할 — YYYY-MM-DD 문자열 (date-coerce N/A, 문자열 그대로 엔진 전달)
+  loanStartDate: z.string().optional(),
+  loanEndDate: z.string().optional(),
+});
+// §43² 1년 이내 동일거래(§41의4) 합산 — 복수 대출 건 (별도 type dispatch)
+const freeLoanItemSchema = z.object({
+  loanDate: z.string().min(1),
+  loanAmount: z.number().positive(),
+  actualInterestPaid: z.number().nonnegative(),
+  appropriateRate: z.object({ numer: z.number().positive(), denom: z.number().positive() }),
+  isRelatedParty: z.boolean(),
+  hasJustifiableReason: z.boolean().optional(),
+  label: z.string().optional(),
+});
+const freeLoanAggregatedSchema = z.object({
+  type: z.literal("free_loan_aggregated"),
+  loans: z.array(freeLoanItemSchema).min(1, { message: "대출 건을 1건 이상 입력하세요" }),
 });
 
 // ── Phase 2: 자본거래 (평가가액·주식수 직접 입력) — sub-case 필드는 caseType별 optional ──
@@ -349,6 +366,7 @@ export const deemedGiftInputSchema = z
     debtForgivenessSchema,
     freeRealEstateSchema,
     freeLoanSchema,
+    freeLoanAggregatedSchema,
     mergerSchema,
     capitalIncreaseSchema,
     capitalIncreaseAllocationSchema,

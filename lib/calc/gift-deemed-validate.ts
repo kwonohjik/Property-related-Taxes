@@ -61,7 +61,23 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       }
       break;
     case "free_loan":
+      // §43² 다건 합산 모드 (loanLoans 토글 ON) — 빈 배열 차단(자동 fallback 금지) + 각 건 필수값
+      if (form.loanLoans !== undefined) {
+        if (form.loanLoans.length === 0) return "대출 건을 1건 이상 추가하세요";
+        for (const [i, item] of form.loanLoans.entries()) {
+          if (!item.loanDate) return `${i + 1}번째 대출의 대출일을 입력하세요`;
+          if (parseAmount(item.amount) <= 0) return `${i + 1}번째 대출의 대출금액을 입력하세요`;
+        }
+        break;
+      }
+      // 단건 모드
       if (parseAmount(form.loanAmount) <= 0) return "대출금액을 입력하세요";
+      // §41의4② 기간 입력 시 — 양끝 모두 필수 + start ≤ end (한쪽만 입력 차단, 자동 fallback 금지)
+      if (form.loanStartDate || form.loanEndDate) {
+        if (!form.loanStartDate) return "대출 시작일을 입력하세요";
+        if (!form.loanEndDate) return "대출 종료일을 입력하세요";
+        if (form.loanStartDate > form.loanEndDate) return "대출 종료일이 시작일보다 앞설 수 없습니다";
+      }
       break;
     case "merger": {
       if (form.mrgCaseType === "non_stock") {
