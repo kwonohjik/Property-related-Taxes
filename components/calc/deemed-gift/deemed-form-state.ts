@@ -263,6 +263,8 @@ export interface DeemedFormState {
   lgTotalNetIncome: string; // 사업연도별 1주당 순손익 합계
   lgMonthsBusinessStart: string; // 분모 월수 (사업연도개시일~상장전일)
   lgMonthsAcqToSettlement: string; // 곱수 월수 (증여·취득일~정산기준일)
+  lgMajorShareholder: boolean; // §63③ 최대주주 20% 할증
+  lgSurchargeExempt: boolean; // §63③ 단서 배제(중소·중견·결손)
   // 재산사용·용역 §42
   psuSubType: "free_use" | "low_price" | "high_price";
   psuMarketValue: string;
@@ -461,6 +463,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   lgTotalNetIncome: "",
   lgMonthsBusinessStart: "",
   lgMonthsAcqToSettlement: "",
+  lgMajorShareholder: false,
+  lgSurchargeExempt: false,
   psuSubType: "free_use",
   psuMarketValue: "",
   psuConsideration: "",

@@ -162,6 +162,21 @@ describe("§41의3 상장 / §41의5 합병상장 이익 (시행령 §31의3·§
     // floor(5000/1)×1 = 5000 → perShareGain = 50000−10000−5000 = 35000
     expect(r.breakdown.find((s) => s.label === "1주당 기업가치 실질증가이익")?.amount).toBe(5_000);
   });
+  // §63③ 최대주주 20% 할증 (중소·중견·결손법인 배제)
+  it("[MS-1] 최대주주 할증: 정산가 50000×1.2=60000 → 증여이익 900M", () => {
+    const r = calcListingGainGift({
+      settlementPerSharePrice: 50_000, perShareAcqValue: 10_000, perShareCorpGrowth: 5_000, shares: 20_000,
+      isMajorShareholder: true,
+    });
+    expect(r.deemedGiftValue).toBe(900_000_000); // (60000−10000−5000)×20000
+  });
+  it("[MS-2] 최대주주+중소기업 배제: 할증 미적용 → 700M (LG-1 동일)", () => {
+    const r = calcListingGainGift({
+      settlementPerSharePrice: 50_000, perShareAcqValue: 10_000, perShareCorpGrowth: 5_000, shares: 20_000,
+      isMajorShareholder: true, isSurchargeExemptEntity: true,
+    });
+    expect(r.deemedGiftValue).toBe(700_000_000);
+  });
 });
 
 describe("§43① 중복배제 (이익 최대 1건)", () => {

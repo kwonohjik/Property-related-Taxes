@@ -1,5 +1,5 @@
 /** (Phase 3) 주식 상장이익(§41의3) / 합병상장이익(§41의5) — 시행령 §31의3·§31의5 */
-import { GIFT } from "../legal-codes";
+import { GIFT, VALUATION } from "../legal-codes";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ListingGainInput } from "./types";
@@ -31,7 +31,13 @@ export function calcListingGainGift(input: ListingGainInput): DeemedGiftResult {
   const perShareCorpGrowth = input.corpGrowthAuto
     ? calcPerShareCorpGrowth(input.corpGrowthAuto)
     : input.perShareCorpGrowth;
-  const perShareGain = settlementPerSharePrice - perShareAcqValue - perShareCorpGrowth;
+  // §63③ 최대주주 20% 할증 — 정산기준일 평가가액에만 적용 (중소·중견·결손법인 배제 제외)
+  const settlementSurcharge =
+    input.isMajorShareholder === true && input.isSurchargeExemptEntity !== true;
+  const effectiveSettlement = settlementSurcharge
+    ? safeMultiplyThenDivide(settlementPerSharePrice, 120, 100)
+    : settlementPerSharePrice;
+  const perShareGain = effectiveSettlement - perShareAcqValue - perShareCorpGrowth;
   // 부호 유지 — 음수(손실)는 환급 판정용. safeMultiply는 비음수 입력 전제 → 절댓값 후 부호 복원.
   const absTotal = safeMultiply(Math.abs(perShareGain), shares);
   const totalGain = perShareGain >= 0 ? absTotal : -absTotal;
@@ -62,6 +68,15 @@ export function calcListingGainGift(input: ListingGainInput): DeemedGiftResult {
   const label = eventType === "merger" ? "§41의5 합병상장이익" : "§41의3 상장이익";
   const breakdown: CalculationStep[] = [
     { label: "정산기준일 1주당 평가가액", amount: settlementPerSharePrice, lawRef: legalBasis },
+    ...(settlementSurcharge
+      ? [
+          {
+            label: "최대주주 할증 (20% 가산)",
+            amount: effectiveSettlement - settlementPerSharePrice,
+            lawRef: VALUATION.LISTED_STOCK_PREMIUM,
+          },
+        ]
+      : []),
     { label: "1주당 증여세 과세가액(취득가액)", amount: perShareAcqValue },
     { label: "1주당 기업가치 실질증가이익", amount: perShareCorpGrowth },
     { label: "1주당 이익", amount: perShareGain },

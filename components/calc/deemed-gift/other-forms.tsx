@@ -276,6 +276,25 @@ export function ListingGainFields({ form, set }: Props) {
         ]}
       />
       <CurrencyInput label="정산기준일 1주당 평가가액" value={form.lgSettlementPrice} onChange={(v) => set({ lgSettlementPrice: v })} hint={form.lgEventType === "merger" ? "합병등기일 +3개월 (§63 평가)" : "상장일 +3개월 (§63 평가)"} placeholder="정산기준일 1주당 평가가액 (원)" />
+      {/* §63③ 최대주주 20% 할증 (정산기준일 평가가액에 적용) */}
+      <ToggleCard
+        tone="amber"
+        checked={form.lgMajorShareholder}
+        onCheckedChange={(v) => set({ lgMajorShareholder: v, lgSurchargeExempt: v ? form.lgSurchargeExempt : false })}
+        title="최대주주 등 — 정산기준일 평가가액 20% 할증 (§63③)"
+        description="최대주주·특수관계인 주식은 §63 평가가액에 20% 가산"
+        data-testid="lg-major-shareholder-toggle"
+      />
+      {form.lgMajorShareholder && (
+        <ToggleCard
+          tone="amber"
+          checked={form.lgSurchargeExempt}
+          onCheckedChange={(v) => set({ lgSurchargeExempt: v })}
+          title="중소·중견기업 또는 3년연속 결손법인 — 할증 배제 (§63③ 단서)"
+          description="해당 시 최대주주여도 20% 할증 미적용"
+          data-testid="lg-surcharge-exempt-toggle"
+        />
+      )}
       <CurrencyInput label="1주당 증여세 과세가액(취득가액)" value={form.lgAcqValue} onChange={(v) => set({ lgAcqValue: v })} placeholder="1주당 과세가액(취득가액) (원)" />
 
       {/* 1주당 기업가치 실질증가이익 — 직접입력 / 월수 산식 자동계산 (령§31의3⑤) */}

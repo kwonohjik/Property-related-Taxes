@@ -615,6 +615,10 @@ export interface ListingGainInput {
     monthsBusinessStartToListingPrevDay: number; // 분모 월수 — 사업연도개시일~상장전일(1월미만=1월)
     monthsAcqToSettlement: number; // 곱수 월수 — 증여·취득일~정산기준일(령§31의3⑤2, 1월미만=1월)
   };
+  /** §63③ 최대주주등 — true면 정산기준일 평가가액에 20% 가산(할증) */
+  isMajorShareholder?: boolean;
+  /** §63③ 단서 할증 배제 대상(중소기업·중견기업·3년연속 결손법인) — true면 최대주주여도 할증 미적용 */
+  isSurchargeExemptEntity?: boolean;
 }
 
 /** §42 재산사용·용역제공 */
