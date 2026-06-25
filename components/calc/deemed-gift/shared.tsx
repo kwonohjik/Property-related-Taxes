@@ -429,14 +429,16 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   const isMulti = loans !== undefined;
   return (
     <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
-      <ToggleCard
-        lawLinks="상증법"
-        tone="sky"
-        checked={isMulti}
-        onCheckedChange={(v) => set({ loanLoans: v ? [makeLoanItem(newLoanId())] : undefined })}
-        title="여러 건 합산 계산 (§43②)"
-        description="1년 이내 여러 대출을 합산하여 1천만 판정 (개별 1천만 미만도 합산 과세)"
-      />
+      <div data-testid="loan-multi-toggle">
+        <ToggleCard
+          lawLinks="상증법"
+          tone="sky"
+          checked={isMulti}
+          onCheckedChange={(v) => set({ loanLoans: v ? [makeLoanItem(newLoanId())] : undefined })}
+          title="여러 건 합산 계산 (§43②)"
+          description="1년 이내 여러 대출을 합산하여 1천만 판정 (개별 1천만 미만도 합산 과세)"
+        />
+      </div>
 
       {!isMulti && (
         <>
@@ -463,7 +465,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         <div className="space-y-2" data-testid="loan-items-table">
           <p className="text-xs font-semibold text-rose-700">대출 건 (1년 이내 동일거래 합산)</p>
           {loans.map((item, i) => (
-            <div key={item.id} className="space-y-2 rounded-lg border border-rose-200 bg-white/60 p-2">
+            <div key={item.id} data-testid={`loan-item-${i}`} className="space-y-2 rounded-lg border border-rose-200 bg-white/60 p-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-rose-600">대출 {i + 1}</span>
                 <button
