@@ -87,4 +87,42 @@ test.describe("이력 백업 Export/Import §112", () => {
     });
     await expect(page.getByText(/검증 실패/)).toBeVisible({ timeout: 10_000 });
   });
+
+  test("암호화 export → import 비밀번호 복호화 round-trip", async ({ page }) => {
+    await page.goto("/history");
+
+    // 평문 데이터 주입
+    await page.getByTestId("history-import-file").setInputFiles({
+      name: "seed.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(BACKUP)),
+    });
+    await page.getByTestId("history-import-merge").click();
+    await expect(page.getByText(/가져오기 완료/)).toBeVisible({ timeout: 10_000 });
+
+    // 암호화 내보내기
+    await page.getByTestId("history-export-button").click();
+    await page.getByRole("switch", { name: "비밀번호로 암호화" }).click();
+    await page.getByTestId("history-export-password").fill("test1234");
+    const dl = page.waitForEvent("download");
+    await page.getByTestId("history-export-confirm").click();
+    const download = await dl;
+    expect(download.suggestedFilename()).toMatch(/_encrypted\.json/);
+    const filePath = await download.path();
+    expect(filePath).toBeTruthy();
+
+    // 암호화 파일 가져오기 → 비밀번호 Dialog
+    await page.getByTestId("history-import-file").setInputFiles(filePath!);
+    await expect(page.getByTestId("history-import-password")).toBeVisible({ timeout: 10_000 });
+
+    // 잘못된 비밀번호 → 오류
+    await page.getByTestId("history-import-password").fill("wrong-pw");
+    await page.getByTestId("history-decrypt-confirm").click();
+    await expect(page.getByTestId("history-decrypt-error")).toBeVisible({ timeout: 10_000 });
+
+    // 올바른 비밀번호 → 복호화 → 병합 Dialog
+    await page.getByTestId("history-import-password").fill("test1234");
+    await page.getByTestId("history-decrypt-confirm").click();
+    await expect(page.getByTestId("history-import-merge")).toBeVisible({ timeout: 10_000 });
+  });
 });
