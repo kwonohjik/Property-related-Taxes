@@ -476,6 +476,53 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         corporateTax: parseAmount(form.scCorporateTax),
         ownershipRatio: { numer: Math.round(parseDecimal(form.scRatioPct) * 100), denom: 10_000 },
       };
+    case "related_corp": {
+      // string → 분수(분모 10000) 변환. ⚠️ discriminated union이라 roster 누락을 TS가 못 잡음 → grep 자가점검.
+      const parseRatio = (pctStr: string) => ({
+        numer: Math.round(parseDecimal(pctStr) * 100),
+        denom: 10_000,
+      });
+      const shareholders = form.rcShareholders.map((row) => ({
+        id: row.id,
+        name: row.name,
+        relation: (row.relation as "self" | "relative" | "other") || "other",
+        directRatio: parseRatio(row.directRatioPctStr),
+        isCorporate: row.isCorporate,
+      }));
+      const intermediaryCorps = form.rcIntermediaryCorps.map((row) => ({
+        corpShareholderId: row.corpShareholderId,
+        stakeInBeneficiary: parseRatio(row.stakeInBeneficiaryPctStr),
+        owners: row.owners.map((o) => ({
+          individualId: o.individualId,
+          ratio: parseRatio(o.ratioPctStr),
+        })),
+      }));
+      const salesPartners = form.rcSalesPartners.map((row) => ({
+        id: row.id,
+        name: row.name,
+        salesAmount: parseAmount(row.salesAmountStr),
+        isRelated: row.isRelated,
+        exclusionType: row.exclusionType || undefined,
+        rulingShareholderStakes:
+          row.rulingStakes.length > 0
+            ? row.rulingStakes.map((s) => ({
+                shareholderId: s.shareholderId,
+                ratio: parseRatio(s.ratioPctStr),
+              }))
+            : undefined,
+      }));
+      return {
+        type: "related_corp",
+        enterpriseSize: (form.rcEnterpriseSize || "small") as "small" | "medium" | "large",
+        totalSales: parseAmount(form.rcTotalSalesStr),
+        preTaxAdjOperatingIncome: parseAmount(form.rcPreTaxAdjOperatingIncomeStr),
+        taxableIncome: parseAmount(form.rcTaxableIncomeStr),
+        corporateTaxNet: parseAmount(form.rcCorporateTaxNetStr),
+        shareholders,
+        intermediaryCorps,
+        salesPartners,
+      };
+    }
     default:
       throw new Error("증여 유형을 선택하세요");
   }
@@ -560,6 +607,30 @@ export function buildGiftWizardPrefill(
           marketValue: firstDonee.value,
         },
       ],
+    };
+  }
+
+  // §45의3 일감몰아주기: 수증자별 다건 prefill (존재 가드 — Critical-1, contribution 게이트와 별도)
+  if (result.type === "related_corp" && result.recipientBreakdown && result.recipientBreakdown.length > 0) {
+    const taxable = result.recipientBreakdown.filter((r) => r.subtotal > 0);
+    const [main, ...rest] = taxable;
+    if (!main) return { giftDate: form.giftDate };
+    const simultaneousGifts =
+      rest.length > 0
+        ? rest.map((r) => ({ donorRelation: "other_relative" as const, taxableValue: String(r.subtotal) }))
+        : undefined;
+    return {
+      giftDate: form.giftDate,
+      donorRelation: "other_relative" as const,
+      giftItems: [
+        {
+          id: `deemed-rc-${main.recipientName.trim() || "recipient"}`,
+          category: "other" as const,
+          name: `일감몰아주기 이익 — ${main.recipientName.trim() || "지배주주등"}`,
+          marketValue: main.subtotal,
+        },
+      ],
+      simultaneousGifts,
     };
   }
 
