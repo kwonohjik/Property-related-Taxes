@@ -604,6 +604,36 @@ export function DeemedGiftResultView({
         <ExcessDividendDetailSection detail={result.excessDividendDetail} />
       )}
 
+      {/* ── §42의3 재산취득 후 가치증가 — 적용요건 echo ── */}
+      {result.valueIncreaseDetail && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4 space-y-1.5" data-testid="deemed-vi-detail">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-rose-800">재산취득 후 가치증가 — 적용요건 (상증법 §42의3)</span>
+            <LawArticleModal legalBasis={GIFT.VALUE_INCREASE} />
+          </div>
+          {result.valueIncreaseDetail.acquisitionCauseLabel && (
+            <p className="text-xs text-rose-700">취득사유: {result.valueIncreaseDetail.acquisitionCauseLabel}</p>
+          )}
+          {result.valueIncreaseDetail.reasonLabel && (
+            <p className="text-xs text-rose-700">가치증가사유: {result.valueIncreaseDetail.reasonLabel}</p>
+          )}
+          {result.valueIncreaseDetail.withinFiveYears !== undefined && (
+            <p className="text-xs text-rose-700">
+              취득~사유발생 {result.valueIncreaseDetail.holdingYears}년 — 5년 이내{" "}
+              {result.valueIncreaseDetail.withinFiveYears ? "○" : "✕ (초과)"}
+            </p>
+          )}
+          {result.valueIncreaseDetail.isExchangeListingNotice && (
+            <div className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-700" data-testid="deemed-vi-exchange-notice">
+              ⚠ 현행 §42의3은 K-OTC 등록·코넥스 상장만 해당. 유가증권·코스닥시장 상장 이익은 §41의3 상장이익으로 과세됩니다.
+              <span className="ml-1 inline-block align-middle">
+                <LawArticleModal legalBasis={GIFT.LISTING_GAIN} />
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {result.applied && (
         <button
           type="button"
