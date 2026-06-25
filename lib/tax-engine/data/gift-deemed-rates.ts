@@ -32,6 +32,10 @@ export function resolveFreeLoanRate(giftDate: string): RateFraction {
   return resolved;
 }
 
+// 전환사채등 §40 적정할인율(상증칙 §18의3: 2010.11.5~ 8% / 과거 6.5·7·7.5%)은
+// 이자손실분 자동계산이 "적정할인율 현가계수"를 직접 input으로 받으므로(0원 정확 재현)
+// 별도 시대표 상수·룩업 함수를 두지 않는다(현가계수에 율·기간이 내재).
+
 /** 부동산무상사용 §37① — 환산율 2% (시행규칙 위임) */
 export const FREE_USE_ANNUAL_RATE: RateFraction = { numer: 2, denom: 100 };
 /** 부동산무상사용 §37① — 할인율 10%: 현가 1/1.1^n = 10^n / 11^n (정수경로) */
@@ -43,3 +47,8 @@ export const FREE_USE_YEARS = 5;
 export const FREE_USE_THRESHOLD = 100_000_000;
 /** §37② 무상담보 / §41의4 무상대출 과세 기준금액 (1천만) */
 export const FREE_LOAN_THRESHOLD = 10_000_000;
+
+/** §79②1호 경정청구 분모 — 무상사용 5년 = 60개월 (시행령§27③후단·§81⑤) */
+export const RECT_MONTHS_FREE_USE = 60;
+/** §79②1호 경정청구 분모 — 담보이용 1년 = 12개월 (시행령§27⑤후단·§81⑤가 "부동산무상사용기간"에 §27⑤후단 포함) */
+export const RECT_MONTHS_COLLATERAL = 12;

@@ -437,6 +437,21 @@ export function HistoryClient() {
           <HistoryBackupActions
             mode={mode}
             onImported={() => loadRecords(activeFilter, activeClientFilter)}
+            currentFilter={{
+              taxType: activeFilter,
+              clientId: activeClientFilter,
+              label:
+                [
+                  activeFilter !== "all" ? (TAX_TYPE_LABELS[activeFilter] ?? activeFilter) : "",
+                  activeClientFilter !== "all"
+                    ? activeClientFilter === null
+                      ? "미지정"
+                      : (clientMap[activeClientFilter] ?? "의뢰인")
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "전체",
+            }}
           />
           <button
             type="button"

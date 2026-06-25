@@ -13,7 +13,7 @@ import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/ra
 import { deemedGiftInputSchema } from "@/lib/validators/gift-deemed-input";
 import { calcDeemedGift } from "@/lib/tax-engine/gift-deemed/router";
 import { calcCapitalIncreaseAllocation } from "@/lib/tax-engine/gift-deemed/capital-increase-allocation";
-import type { DeemedGiftInput } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftInput, CapitalIncreaseAllocationInput } from "@/lib/tax-engine/gift-deemed/types";
 
 export async function POST(req: NextRequest) {
   // 1. Rate Limiting
@@ -56,14 +56,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const input = parsed.data as unknown as DeemedGiftInput;
+  const data = parsed.data;
 
   // 4. 순수 엔진 계산 (cap-table 배분은 별도 오케스트레이터로 dispatch)
   try {
     const result =
-      input.type === "capital_increase_allocation"
-        ? calcCapitalIncreaseAllocation(input)
-        : calcDeemedGift(input);
+      data.type === "capital_increase_allocation"
+        ? calcCapitalIncreaseAllocation(data as unknown as CapitalIncreaseAllocationInput)
+        : calcDeemedGift(data as unknown as DeemedGiftInput);
     return NextResponse.json({ success: true, result });
   } catch (err) {
     if (err instanceof TaxCalculationError) {

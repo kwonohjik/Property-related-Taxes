@@ -3,16 +3,20 @@ import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, CapitalDecreaseInput } from "./types";
+import { calcCapitalDecreaseMulti } from "./capital-decrease-multi";
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
 
 export function calcCapitalDecreaseGift(input: CapitalDecreaseInput): DeemedGiftResult {
+  // 멀티(불균등 감자 N:N) 모드 dispatch — shareholders 존재 시
+  if (input.shareholders && input.shareholders.length > 0) return calcCapitalDecreaseMulti(input);
   return (input.caseType ?? "low") === "high" ? decreaseHigh(input) : decreaseLow(input);
 }
 
 /** ①1호 저가소각 (시행령 §29의2①1) */
 function decreaseLow(input: CapitalDecreaseInput): DeemedGiftResult {
-  const { sharePrice, redemptionPrice } = input;
+  const { sharePrice } = input;
+  const redemptionPrice = input.redemptionPrice ?? 0;
   const totalRedeemedShares = input.totalRedeemedShares ?? 0;
   const majorPostRatio = input.majorPostRatio ?? { numer: 0, denom: 1 };
   const relatedRedeemedShares = input.relatedRedeemedShares ?? 0;
@@ -46,7 +50,8 @@ function decreaseLow(input: CapitalDecreaseInput): DeemedGiftResult {
 
 /** ①2호 고가소각 (시행령 §29의2①2 — 평가액이 액면가 미달 한정) */
 function decreaseHigh(input: CapitalDecreaseInput): DeemedGiftResult {
-  const { sharePrice, redemptionPrice } = input;
+  const { sharePrice } = input;
+  const redemptionPrice = input.redemptionPrice ?? 0;
   const ownRedeemedShares = input.ownRedeemedShares ?? 0;
 
   const diff = redemptionPrice - sharePrice; // 고가: 소각가 > 평가

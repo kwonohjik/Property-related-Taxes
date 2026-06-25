@@ -7,8 +7,8 @@ import {
   ExpandToggleButton,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { CapitalDecreaseMultiResultView } from "./CapitalDecreaseMultiResultView";
 import type {
-  DeemedGiftResult,
   DeemedGiftAnyResult,
   CapitalIncreaseAllocationResult,
 } from "@/lib/tax-engine/gift-deemed/types";
@@ -23,24 +23,19 @@ function fmtGiftDate(d?: Date | string): string {
 export function DeemedGiftResultView({
   result,
   onToGiftTax,
+  selectedDoneeIndex = 0,
+  onSelectDonee,
 }: {
   result: DeemedGiftAnyResult;
   onToGiftTax: () => void;
+  selectedDoneeIndex?: number;
+  onSelectDonee?: (i: number) => void;
 }) {
+  const [open, setOpen] = useState(true);
+
   if ("perBeneficiary" in result) {
     return <AllocationResultView result={result} onToGiftTax={onToGiftTax} />;
   }
-  return <SingleResultView result={result} onToGiftTax={onToGiftTax} />;
-}
-
-function SingleResultView({
-  result,
-  onToGiftTax,
-}: {
-  result: DeemedGiftResult;
-  onToGiftTax: () => void;
-}) {
-  const [open, setOpen] = useState(true);
 
   return (
     <div className="space-y-4" data-testid="deemed-result">
@@ -81,6 +76,14 @@ function SingleResultView({
         </div>
       </div>
 
+      {result.capitalDecreaseMulti && (
+        <CapitalDecreaseMultiResultView
+          multi={result.capitalDecreaseMulti}
+          selectedDoneeIndex={selectedDoneeIndex}
+          onSelectDonee={onSelectDonee ?? (() => {})}
+        />
+      )}
+
       {result.subGifts && result.subGifts.length > 0 && (
         <div
           className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
@@ -109,6 +112,104 @@ function SingleResultView({
           <p className="mt-2 text-xs text-muted-foreground">
             원본·수익 증여시기가 다르면 각 증여시기 기준으로 별도 신고합니다.
           </p>
+        </div>
+      )}
+
+      {result.periodBreakdown && result.periodBreakdown.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4" data-testid="deemed-period-breakdown">
+          <p className="text-sm font-semibold text-amber-800">기간별 증여 (§37·시행령§27③⑤ — 5년/1년 단위)</p>
+          <table className="mt-2 w-full text-sm">
+            <thead>
+              <tr className="text-xs text-amber-700">
+                <th className="py-1 text-left font-medium">증여일</th>
+                <th className="py-1 text-right font-medium">평가액</th>
+                <th className="py-1 text-right font-medium">증여이익</th>
+                <th className="py-1 text-right font-medium">과세</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.periodBreakdown.map((p) => (
+                <tr key={p.index} className="border-t border-amber-100">
+                  <td className="py-1.5 pr-2 text-muted-foreground">{p.giftDate || "미입력"}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(p.baseValue)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(p.benefit)}</td>
+                  <td className="py-1.5 text-right text-xs">{p.applied ? "○" : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-muted-foreground">
+            각 기간은 별개 증여 — 해당 증여일 도래 시 별도 신고 대상입니다. 위 증여재산가액은 첫 기간(현재 증여) 기준입니다.
+          </p>
+        </div>
+      )}
+
+      {result.rectification && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="deemed-rectification">
+          <p className="text-sm font-semibold text-emerald-800">경정청구 가능 세액 (§79②1호·시행령§81⑨)</p>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              {result.rectification.steps.map((step, i) => (
+                <tr key={i} className="border-t border-emerald-100">
+                  <td className="py-1.5 pr-2 text-muted-foreground">
+                    {step.label}
+                    {step.note ? <span className="ml-1 text-xs text-emerald-600">({step.note})</span> : null}
+                  </td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(step.amount)}</td>
+                  <td className="py-1.5 pl-2">{step.lawRef ? <LawArticleModal legalBasis={step.lawRef} /> : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p
+            className="mt-2 text-right font-mono text-lg font-bold tabular-nums text-emerald-900"
+            data-testid="deemed-rectification-value"
+          >
+            {formatKRW(result.rectification.refundableTax)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            만료일 {result.rectification.expiryDate} 기준 잔여 {result.rectification.remainingMonths}/{result.rectification.totalMonths}개월.
+          </p>
+        </div>
+      )}
+
+      {result.mergerMatrix && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="merger-matrix">
+          <p className="text-sm font-semibold text-emerald-800">수증자별 증여이익 (§38 합병 — 주주 매트릭스)</p>
+          <table className="mt-2 w-full text-sm">
+            <thead>
+              <tr className="text-xs text-muted-foreground">
+                <th className="text-left font-medium">수증자</th>
+                <th className="text-right font-medium">차감전</th>
+                <th className="text-right font-medium">자기증여</th>
+                <th className="text-right font-medium">순이익</th>
+                <th className="text-right font-medium">과세</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.mergerMatrix.recipients.map((r, i) => (
+                <tr key={i} className="border-t border-emerald-100">
+                  <td className="py-1.5 pr-2 text-emerald-700">{r.name.trim() || "주주"}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.grossGain)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{r.selfGift > 0 ? formatKRW(r.selfGift) : "-"}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.netGain)}</td>
+                  <td className="py-1.5 pl-2 text-right text-xs text-muted-foreground">{r.applied ? "과세" : "제외"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-3 text-xs font-semibold text-emerald-700">증여자별 안분</p>
+          {result.mergerMatrix.recipients.map((rec, i) => {
+            const alloc = result.mergerMatrix!.allocation[rec.id] ?? {};
+            const entries = Object.entries(alloc).filter(([, v]) => v > 0);
+            if (entries.length === 0) return null;
+            return (
+              <p key={i} className="text-xs text-muted-foreground">
+                {rec.name.trim() || "주주"} ← {entries.map(([donor, v]) => `${donor.trim() || "주주"} ${formatKRW(v)}`).join(" · ")}
+              </p>
+            );
+          })}
+          <p className="mt-2 text-[11px] text-muted-foreground">동일인 자기증여분 차감(재산세과-799). 각 수증자 §28④ 기준금액(합병후평가 30%·3억 중 적은 금액) 개별 판정.</p>
         </div>
       )}
 
@@ -151,7 +252,6 @@ function AllocationResultView({
 
   return (
     <div className="space-y-4" data-testid="deemed-result">
-      {/* 수증자별 증여재산가액 */}
       <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-4">
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-rose-800">증자에 따른 이익의 증여 (증자 후 1주당 평가 {formatKRW(result.perShareAfter)})</span>
@@ -189,7 +289,6 @@ function AllocationResultView({
         </div>
       </div>
 
-      {/* 검증내역 (증감 합계 = 0) */}
       <div className={open ? "block" : "hidden print:block"}>
         <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4" data-testid="ci-alloc-reconciliation">
           <p className="text-sm font-semibold text-slate-700">검증내역 (증감 합계 = {formatKRW(result.reconciliation.totalGain - result.reconciliation.totalLoss)})</p>

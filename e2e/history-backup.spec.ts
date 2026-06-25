@@ -142,4 +142,42 @@ test.describe("이력 백업 Export/Import §112", () => {
     await page.getByTestId("confirm-dialog-confirm").click();
     await expect(page.getByText("백업테스트 재산세")).toHaveCount(0);
   });
+
+  test("단건 내보내기 — 상세 드로어에서 다운로드", async ({ page }) => {
+    await page.goto("/history");
+    await page.getByTestId("history-import-file").setInputFiles({
+      name: "seed.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(BACKUP)),
+    });
+    await page.getByTestId("history-import-merge").click();
+    // 카드 클릭 → 상세 드로어
+    await page.getByText("백업테스트 재산세").click();
+    const dl = page.waitForEvent("download");
+    await page.getByTestId("drawer-export-single").click();
+    const download = await dl;
+    expect(download.suggestedFilename()).toMatch(/korean-tax-calc-backup_/);
+  });
+
+  test("필터 내보내기 — 세목 필터 적용 시 '현재 보기만' 토글 노출", async ({ page }) => {
+    await page.goto("/history");
+    await page.getByTestId("history-import-file").setInputFiles({
+      name: "seed.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(BACKUP)),
+    });
+    await page.getByTestId("history-import-merge").click();
+    await expect(page.getByText("백업테스트 재산세")).toBeVisible({ timeout: 10_000 });
+
+    // 세목 필터(재산세) 적용
+    await page.getByRole("button", { name: "재산세", exact: true }).click();
+
+    // 내보내기 Dialog → '현재 보기만 내보내기' 토글 노출(필터 활성)
+    await page.getByTestId("history-export-button").click();
+    await expect(page.getByRole("switch", { name: "현재 보기만 내보내기" })).toBeVisible();
+    const dl = page.waitForEvent("download");
+    await page.getByTestId("history-export-confirm").click();
+    const download = await dl;
+    expect(download.suggestedFilename()).toMatch(/korean-tax-calc-backup_/);
+  });
 });
