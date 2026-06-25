@@ -83,6 +83,13 @@ export const propertyTaxInputSchema = z
       .nonnegative({ message: "직전연도 본세는 0원 이상이어야 합니다." })
       .optional(),
 
+    /** [부칙 제15조 v2] 직전연도 주택 도시지역분 (원) — 도시지역분 세부담상한(§118 본문) (housing 전용) */
+    previousYearHousingUrbanTax: z
+      .number()
+      .int({ message: "직전연도 도시지역분은 원 단위 정수여야 합니다." })
+      .nonnegative({ message: "직전연도 도시지역분은 0원 이상이어야 합니다." })
+      .optional(),
+
     /** 세부담상한 모드 — direct(직접입력) | recompute(과세표준 재산정) */
     taxCapMode: z.enum(["direct", "recompute"]).optional(),
 
@@ -276,6 +283,25 @@ export const propertyTaxInputSchema = z
         code: z.ZodIssueCode.custom,
         path: ["previousYearHousingBaseTax"],
         message: "previousYearHousingBaseTax는 objectType이 'housing'일 때만 적용됩니다.",
+      });
+    }
+    // previousYearHousingUrbanTax는 objectType==="housing" 일 때만 유효 (부칙 제15조 v2 도시지역분 §118 본문)
+    if (data.previousYearHousingUrbanTax != null && data.objectType !== "housing") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["previousYearHousingUrbanTax"],
+        message: "previousYearHousingUrbanTax는 objectType이 'housing'일 때만 적용됩니다.",
+      });
+    }
+    // 도시지역분 세부담상한(v2)은 본세 세부담상한과 함께만 입력 — 본세 미적용+도시만 적용 경로 차단(echo 일관, UI validate 미러링)
+    if (
+      data.previousYearHousingUrbanTax != null &&
+      data.previousYearHousingBaseTax == null
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["previousYearHousingUrbanTax"],
+        message: "도시지역분 세부담상한은 직전연도 본세(previousYearHousingBaseTax)와 함께 입력해야 합니다.",
       });
     }
     // landTaxType은 objectType==="land" 일 때 필수

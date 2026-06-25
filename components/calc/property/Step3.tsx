@@ -37,6 +37,22 @@ export function Step3({ form, onChange }: Props) {
             </p>
             <LawArticleModal legalBasis="지방세법 §122" label="부칙 §15·§122" />
           </div>
+
+          {/* v2 도시지역분 세부담상한(§118 본문 "각각 산출") — 도시지역 주택만 노출 */}
+          {form.isUrbanArea && (
+            <div className="space-y-1 border-t border-sky-200/60 pt-3">
+              <label className="text-sm font-medium">직전연도 도시지역분 (원)</label>
+              <CurrencyInput
+                label="직전연도 도시지역분"
+                value={form.housingPreviousUrbanTax}
+                onChange={(v) => onChange({ housingPreviousUrbanTax: v })}
+              />
+              <p className="text-xs text-muted-foreground">
+                도시지역 주택은 도시지역분(과세표준 × 0.14%)도 본세와 별개로 같은 상한율(105/110/130%)이
+                적용됩니다(§118 본문). 전년도 고지서의 &ldquo;도시지역분&rdquo; 금액을 입력하세요.
+              </p>
+            </div>
+          )}
         </ToggleCard>
       </div>
     );
