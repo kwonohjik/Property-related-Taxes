@@ -44,6 +44,16 @@ import {
 // 폼 상태
 // ============================================================
 
+/** 감자 멀티 모드 주주 행 (전부 string — parseAmount 변환은 API 변환 시) */
+export interface CdShareholderRow {
+  id: string;
+  name: string;
+  preShares: string;
+  redeemedShares: string;
+  redemptionPrice: string;
+  relationGroup: string;
+}
+
 export interface DeemedFormState {
   giftDate: string;
   type: DeemedGiftType | "";
@@ -130,6 +140,12 @@ export interface DeemedFormState {
   cdMajorRatioPct: string; // 대주주등 감자후 지분비율 (%)
   cdRelatedShares: string;
   cdOwnRedeemedShares: string; // high 해당 주주등 감자 주식수
+  // 감자 멀티(불균등 N:N) 모드
+  cdMode: "single" | "multi";
+  cdFaceValue: string; // 액면가액 (고가 게이트 §29의2①2호 + 대주주 액면 3억 §28②)
+  cdPreTotalShares: string; // 감자 전 발행주식총수
+  cdShareholders: CdShareholderRow[];
+  cdSelectedDoneeIndex: number; // 과세 수증자 선택 (prefill 이관용)
   // 현물출자 §39의3
   conCaseType: "low" | "high"; // 저가인수(①1호) / 고가인수(①2호)
   conPrePrice: string;
@@ -281,6 +297,11 @@ export const INITIAL_DEEMED: DeemedFormState = {
   cdMajorRatioPct: "",
   cdRelatedShares: "",
   cdOwnRedeemedShares: "",
+  cdMode: "single",
+  cdFaceValue: "",
+  cdPreTotalShares: "",
+  cdShareholders: [],
+  cdSelectedDoneeIndex: 0,
   conCaseType: "low",
   conPrePrice: "",
   conPreShares: "",

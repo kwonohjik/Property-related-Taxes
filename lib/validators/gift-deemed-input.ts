@@ -127,16 +127,27 @@ const convertibleStockSchema = z.object({
   atConversion: capitalIncreaseInnerSchema,
   atIssuance: capitalIncreaseInnerSchema,
 });
+const capitalDecreaseShareholderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  preShares: z.number().nonnegative(),
+  redeemedShares: z.number().nonnegative(),
+  redemptionPricePerShare: z.number().nonnegative().optional(),
+  relationGroup: z.string().optional(),
+});
 const capitalDecreaseSchema = z.object({
   type: z.literal("capital_decrease"),
   caseType: z.enum(["low", "high"]).optional(),
   sharePrice: z.number().nonnegative(),
-  redemptionPrice: z.number().nonnegative(),
+  redemptionPrice: z.number().nonnegative().optional(),
   totalRedeemedShares: z.number().nonnegative().optional(),
   majorPostRatio: ratioSchema.optional(),
   relatedRedeemedShares: z.number().nonnegative().optional(),
   faceValue: z.number().nonnegative().optional(),
   ownRedeemedShares: z.number().nonnegative().optional(),
+  // 멀티(불균등 감자 N:N) 모드
+  shareholders: z.array(capitalDecreaseShareholderSchema).optional(),
+  preTotalShares: z.number().nonnegative().optional(),
 });
 const contributionSchema = z.object({
   type: z.literal("contribution"),

@@ -71,6 +71,9 @@ export function DeemedGiftCalculator() {
     router.push("/calc/gift-tax");
   }
 
+  // 감자 멀티 수증자 선택 — result 유지(set()는 result를 리셋하므로 직접 setForm)
+  const selectDonee = (i: number) => setForm((p) => ({ ...p, cdSelectedDoneeIndex: i }));
+
   return (
     <div className="space-y-5">
       <SectionHeader title="① 증여로 보는 경우 유형" />
@@ -131,7 +134,14 @@ export function DeemedGiftCalculator() {
         {loading ? "계산 중..." : "증여이익 계산"}
       </button>
 
-      {result && <DeemedGiftResultView result={result} onToGiftTax={handleToGiftTax} />}
+      {result && (
+        <DeemedGiftResultView
+          result={result}
+          onToGiftTax={handleToGiftTax}
+          selectedDoneeIndex={form.cdSelectedDoneeIndex}
+          onSelectDonee={selectDonee}
+        />
+      )}
 
       <div className="pt-2">
         <Link href="/" className="text-sm text-muted-foreground hover:underline">

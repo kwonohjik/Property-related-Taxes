@@ -73,6 +73,8 @@ export interface DeemedGiftResult {
     value: number;
     lawRef: string;
   }[];
+  /** 감자 §39의2 멀티(불균등 감자 N:N) 모드 결과 — plain 배열(Map 금지) */
+  capitalDecreaseMulti?: CapitalDecreaseMultiResult;
 }
 
 // ── 입력 타입 ──
@@ -207,15 +209,55 @@ export interface ConvertibleStockInput {
 /** (9) 감자 §39의2 — 저가소각(low, ①1호) / 고가소각(high, ①2호) */
 export interface CapitalDecreaseInput {
   caseType?: "low" | "high"; // 기본 low
-  sharePrice: number; // 감자주식 1주당 평가액
-  redemptionPrice: number; // 소각 시 지급한 1주당 금액
-  // low 전용 (①1호)
+  sharePrice: number; // 감자주식 1주당 평가액 (§53⑧3호: 최대주주 할증 미포함)
+  redemptionPrice?: number; // (단일) 소각 시 지급한 1주당 금액. 멀티는 row별 redemptionPricePerShare 사용
+  // 단일 low 전용 (①1호)
   totalRedeemedShares?: number; // 총감자 주식수
   majorPostRatio?: { numer: number; denom: number }; // 대주주등 감자 후 지분비율
   relatedRedeemedShares?: number; // 대주주등 특수관계인의 감자 주식수
-  // high 전용 (①2호 — 평가액이 액면가 미달 한정)
-  faceValue?: number; // 액면가액
+  // 단일 high 전용 (①2호 — 평가액이 액면가 미달 한정)
+  faceValue?: number; // 액면가액 (멀티: 고가 게이트 + 대주주 액면 3억 판정)
   ownRedeemedShares?: number; // 해당 주주등의 감자 주식수
+  // 멀티(불균등 감자 N:N) 모드 — shareholders 존재 시 dispatch
+  shareholders?: CapitalDecreaseShareholder[]; // 주주 목록 (감자주주 + 잔존주주)
+  preTotalShares?: number; // 감자 전 발행주식총수 (멀티 필수)
+}
+
+/** 멀티(불균등 감자) 모드 주주 1명 */
+export interface CapitalDecreaseShareholder {
+  id: string; // 결과 표시 금지(memory feedback_no_internal_id_in_result) — name 우선
+  name: string; // 갑/을/병/정/소액주주
+  preShares: number; // 감자 전 보유주식수
+  redeemedShares: number; // 감자(소각)주식수 (0이면 잔존주주)
+  redemptionPricePerShare?: number; // 소각 1주당 대가 (감자주주만)
+  relationGroup?: string; // 특수관계 그룹 태그 (같은 문자열 = 특수관계)
+}
+
+/** 멀티 모드 결과 (Map 금지 — plain 배열) */
+export interface CapitalDecreaseMultiResult {
+  caseType: "low" | "high";
+  postPerShareExact: number; // 감자 후 1주당 평가액 정확값(검증표·증여이익 계산용; 표시 금지)
+  postPerShareDisplay: number; // Math.round(exact) — UI 표시 전용
+  donees: CapitalDecreaseMultiDonee[];
+  verification: CapitalDecreaseVerification[];
+}
+
+export interface CapitalDecreaseMultiDonee {
+  name: string;
+  isTaxable: boolean; // 대주주등(§28②) AND 특수관계(relationGroup)
+  nonTaxableReason?: string; // "비특수관계" | "대주주 아님" | 고가게이트 미충족
+  total: number; // 과세 시 총 증여재산가액 (비과세·기준금액 미달 시 0)
+  potentialAmount?: number; // 비과세 수증자 참고 산출액 (게이트 무시 가정치)
+  thresholdApplied: number; // 적용 기준금액 (0 또는 300_000_000)
+  fromDonors: { donorName: string; amount: number }[]; // 증여자별 분해(floor; 마지막 잔액 흡수)
+}
+
+export interface CapitalDecreaseVerification {
+  name: string;
+  preValue: number; // 감자 전 주식가액 = preShares × sharePrice
+  redemptionPaid: number; // 감자대가(소각주주만) = redeemedShares × redemptionPricePerShare
+  postValue: number; // 감자 후 주식가액(잔존주주 floor + 마지막 잔액 흡수, 감자주주=0)
+  delta: number; // 증감 = postValue + redemptionPaid − preValue
 }
 
 /** (10) 현물출자 §39의3 — 저가인수(low, ①1호) / 고가인수(high, ①2호) */

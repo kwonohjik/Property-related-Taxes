@@ -80,11 +80,30 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       }
       break;
     case "capital_decrease":
-      if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
-      if (form.cdCaseType === "high") {
-        if (parseAmount(form.cdOwnRedeemedShares) <= 0) return "해당 주주등 감자 주식수를 입력하세요";
+      if (form.cdMode === "multi") {
+        if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
+        if (parseAmount(form.cdPreTotalShares) <= 0) return "감자 전 발행주식총수를 입력하세요";
+        if (form.cdShareholders.length < 2) return "주주를 2명 이상 입력하세요";
+        for (const [i, row] of form.cdShareholders.entries()) {
+          const n = i + 1;
+          if (!row.name.trim()) return `${n}번째 주주 이름을 입력하세요`;
+          if (parseAmount(row.preShares) <= 0) return `${n}번째 주주의 감자 전 주식수를 입력하세요`;
+          if (parseAmount(row.redeemedShares) > 0 && parseAmount(row.redemptionPrice) <= 0)
+            return `${n}번째 주주는 감자주주이므로 소각대가를 입력하세요`;
+          // 자동 안분 fallback 금지: 특수관계 그룹 미입력 차단
+          if (!row.relationGroup.trim())
+            return `${n}번째 주주의 특수관계 그룹을 입력하세요 (비특수관계면 별도 구분값 입력)`;
+        }
+        const totalPre = form.cdShareholders.reduce((s, r) => s + parseAmount(r.preShares), 0);
+        if (totalPre > parseAmount(form.cdPreTotalShares))
+          return "주주별 감자 전 주식수 합계가 발행주식총수를 초과합니다";
       } else {
-        if (parseAmount(form.cdTotalShares) <= 0) return "총감자 주식수를 입력하세요";
+        if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
+        if (form.cdCaseType === "high") {
+          if (parseAmount(form.cdOwnRedeemedShares) <= 0) return "해당 주주등 감자 주식수를 입력하세요";
+        } else {
+          if (parseAmount(form.cdTotalShares) <= 0) return "총감자 주식수를 입력하세요";
+        }
       }
       break;
     case "contribution":

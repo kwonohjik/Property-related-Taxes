@@ -8,6 +8,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { DeemedFormState } from "./shared";
+import { CapitalDecreaseShareholderTable } from "./CapitalDecreaseShareholderTable";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -111,34 +112,58 @@ export function CapitalIncreaseFields({ form, set }: Props) {
   );
 }
 
-/** (9) 감자 §39의2 — 저가소각(①1호) / 고가소각(①2호) */
+/** (9) 감자 §39의2 — 단일(저가/고가 단건) / 다주주(불균등 N:N 안분) */
 export function CapitalDecreaseFields({ form, set }: Props) {
   const isHigh = form.cdCaseType === "high";
+  const isMulti = form.cdMode === "multi";
   return (
     <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
       <RadioCardGroup
         lawLinks="상증법"
-        name="cd-case"
+        name="cd-mode"
         tone="amber"
         layout="inline"
-        value={form.cdCaseType}
-        onChange={(v) => set({ cdCaseType: v })}
+        value={form.cdMode}
+        onChange={(v) => set({ cdMode: v })}
         options={[
-          { value: "low", label: "저가 소각 (①1호)", testId: "cd-case-low" },
-          { value: "high", label: "고가 소각 (①2호)", testId: "cd-case-high" },
+          { value: "single", label: "단일 (저가/고가 단건)", testId: "cd-mode-single" },
+          { value: "multi", label: "다주주 (N:N 안분)", testId: "cd-mode-multi" },
         ]}
       />
-      <CurrencyInput label="감자주식 1주당 평가액" value={form.cdSharePrice} onChange={(v) => set({ cdSharePrice: v })} placeholder="감자주식 1주당 평가액 (원)" />
-      <CurrencyInput label="소각 시 지급한 1주당 금액" value={form.cdRedemptionPrice} onChange={(v) => set({ cdRedemptionPrice: v })} placeholder="소각 지급 1주당 금액 (원)" />
-      {isHigh ? (
-        <CurrencyInput label="해당 주주등 감자 주식수" value={form.cdOwnRedeemedShares} onChange={(v) => set({ cdOwnRedeemedShares: v })} placeholder="해당 주주등 감자 주식수" />
+      {isMulti ? (
+        <>
+          <CurrencyInput label="감자주식 1주당 평가액" value={form.cdSharePrice} onChange={(v) => set({ cdSharePrice: v })} placeholder="할증 미적용(§53⑧3호)·§60 평가액" />
+          <CurrencyInput label="액면가액" value={form.cdFaceValue} onChange={(v) => set({ cdFaceValue: v })} placeholder="고가게이트 §29의2①2호 + 대주주 액면 3억 §28②" />
+          <CurrencyInput label="감자 전 발행주식총수" value={form.cdPreTotalShares} onChange={(v) => set({ cdPreTotalShares: v })} placeholder="감자 전 발행주식총수" />
+          <CapitalDecreaseShareholderTable shareholders={form.cdShareholders} onChange={(rows) => set({ cdShareholders: rows })} />
+        </>
       ) : (
         <>
-          <CurrencyInput label="총감자 주식수" value={form.cdTotalShares} onChange={(v) => set({ cdTotalShares: v })} placeholder="총감자 주식수" />
-          <FieldCard label="대주주등 감자후 지분비율" hint="감자 후 대주주등의 지분율" unit="%">
-            <DecimalInput value={form.cdMajorRatioPct} onChange={(v) => set({ cdMajorRatioPct: v })} />
-          </FieldCard>
-          <CurrencyInput label="대주주등 특수관계인 감자 주식수" value={form.cdRelatedShares} onChange={(v) => set({ cdRelatedShares: v })} placeholder="대주주등 특수관계인 감자 주식수" />
+          <RadioCardGroup
+            lawLinks="상증법"
+            name="cd-case"
+            tone="amber"
+            layout="inline"
+            value={form.cdCaseType}
+            onChange={(v) => set({ cdCaseType: v })}
+            options={[
+              { value: "low", label: "저가 소각 (①1호)", testId: "cd-case-low" },
+              { value: "high", label: "고가 소각 (①2호)", testId: "cd-case-high" },
+            ]}
+          />
+          <CurrencyInput label="감자주식 1주당 평가액" value={form.cdSharePrice} onChange={(v) => set({ cdSharePrice: v })} placeholder="감자주식 1주당 평가액 (원)" />
+          <CurrencyInput label="소각 시 지급한 1주당 금액" value={form.cdRedemptionPrice} onChange={(v) => set({ cdRedemptionPrice: v })} placeholder="소각 지급 1주당 금액 (원)" />
+          {isHigh ? (
+            <CurrencyInput label="해당 주주등 감자 주식수" value={form.cdOwnRedeemedShares} onChange={(v) => set({ cdOwnRedeemedShares: v })} placeholder="해당 주주등 감자 주식수" />
+          ) : (
+            <>
+              <CurrencyInput label="총감자 주식수" value={form.cdTotalShares} onChange={(v) => set({ cdTotalShares: v })} placeholder="총감자 주식수" />
+              <FieldCard label="대주주등 감자후 지분비율" hint="감자 후 대주주등의 지분율" unit="%">
+                <DecimalInput value={form.cdMajorRatioPct} onChange={(v) => set({ cdMajorRatioPct: v })} />
+              </FieldCard>
+              <CurrencyInput label="대주주등 특수관계인 감자 주식수" value={form.cdRelatedShares} onChange={(v) => set({ cdRelatedShares: v })} placeholder="대주주등 특수관계인 감자 주식수" />
+            </>
+          )}
         </>
       )}
     </div>

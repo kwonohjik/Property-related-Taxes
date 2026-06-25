@@ -133,6 +133,23 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
       };
     }
     case "capital_decrease":
+      if (form.cdMode === "multi") {
+        // 멀티(불균등 감자 N:N) — 주주 테이블. 저가/고가는 엔진이 자동 판정.
+        return {
+          type: "capital_decrease",
+          sharePrice: parseAmount(form.cdSharePrice),
+          faceValue: parseAmount(form.cdFaceValue) || undefined,
+          preTotalShares: parseAmount(form.cdPreTotalShares),
+          shareholders: form.cdShareholders.map((row) => ({
+            id: row.id,
+            name: row.name,
+            preShares: parseAmount(row.preShares),
+            redeemedShares: parseAmount(row.redeemedShares),
+            redemptionPricePerShare: parseAmount(row.redemptionPrice) || undefined,
+            relationGroup: row.relationGroup || undefined,
+          })),
+        };
+      }
       return form.cdCaseType === "high"
         ? {
             type: "capital_decrease",
@@ -289,6 +306,24 @@ export function buildGiftWizardPrefill(
   result: DeemedGiftResult,
 ): Partial<GiftFormState> {
   const label = form.type ? DEEMED_TYPE_META[form.type].label : "증여이익";
+
+  // 감자 멀티(§39의2): 과세 수증자 여러 명 → 선택된 수증자의 total만 이관(수증자별 별도 신고).
+  if (result.type === "capital_decrease" && result.capitalDecreaseMulti) {
+    const taxable = result.capitalDecreaseMulti.donees.filter((d) => d.isTaxable);
+    const selected = taxable[form.cdSelectedDoneeIndex] ?? taxable[0];
+    if (!selected) return { giftDate: form.giftDate, giftItems: [] };
+    return {
+      giftDate: form.giftDate,
+      giftItems: [
+        {
+          id: `deemed-capital_decrease-${selected.name}`,
+          category: "other",
+          name: `감자에 따른 이익 증여이익 (${selected.name})`,
+          marketValue: selected.total,
+        },
+      ],
+    };
+  }
 
   // 신탁이익(§33): 원본권·수익권 별개 증여시기 → subGifts를 항목 분리 이관.
   // 마법사 giftDate는 단일이므로 수익권 증여시기 우선(원본권 증여시기가 다르면 별도 신고 — 결과뷰 안내).
