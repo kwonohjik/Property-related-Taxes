@@ -8,6 +8,7 @@ import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import type { DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
+import { GIFT } from "@/lib/tax-engine/legal-codes/inheritance-gift";
 
 /** subGifts.giftDate는 엔진에선 Date, NextResponse.json 경유 후 client에선 string → 양립 포맷 */
 function fmtGiftDate(d?: Date | string): string {
@@ -92,6 +93,91 @@ export function DeemedGiftResultView({
           <p className="mt-2 text-xs text-muted-foreground">
             원본·수익 증여시기가 다르면 각 증여시기 기준으로 별도 신고합니다.
           </p>
+        </div>
+      )}
+
+      {/* §39의3 현물출자 — gross echo + 당사자별 안분 명세 */}
+      {result.grossDeemedGiftValue !== undefined && (
+        <div
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          data-testid="deemed-contribution-gross"
+        >
+          <p className="text-sm font-semibold text-violet-800">
+            §39의3 현물출자 — 이익 산출 근거
+          </p>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              <tr className="border-t border-violet-100">
+                <td className="py-1.5 pr-2 text-muted-foreground">
+                  gross 이익 (법문 §39의3① 1호·2호 산식 총액)
+                </td>
+                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                  {formatKRW(result.grossDeemedGiftValue)}
+                </td>
+                <td className="py-1.5 pl-2">
+                  <LawArticleModal legalBasis={GIFT.CONTRIBUTION_TIMING} />
+                </td>
+              </tr>
+              <tr className="border-t border-violet-100">
+                <td className="py-1.5 pr-2 text-muted-foreground">
+                  인별 안분 후 증여재산가액 (위 최종값)
+                </td>
+                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                  {formatKRW(result.deemedGiftValue)}
+                </td>
+                <td />
+              </tr>
+            </tbody>
+          </table>
+
+          {/* roster 無 — 비율 입력 경로 안내 */}
+          {!result.contributionBreakdown && (
+            <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+              당사자 명부를 직접 입력하면 1인별 이익·관계별 증여세를 자동 계산합니다.
+              현재는 지분비율(%) 단일 경로로 산출된 값입니다.
+            </p>
+          )}
+
+          {/* roster 有 — 당사자별 안분 표 */}
+          {result.contributionBreakdown && result.contributionBreakdown.length > 0 && (
+            <div className="mt-3" data-testid="deemed-contribution-breakdown">
+              <p className="text-xs font-semibold text-violet-700 mb-1">
+                {result.caseType === "high" ? "수증자별" : "증여자별"} 안분 명세
+              </p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-violet-600">
+                    <th className="py-1 text-left font-medium">
+                      {result.caseType === "high" ? "수증자" : "증여자"}
+                    </th>
+                    <th className="py-1 text-right font-medium">주식수</th>
+                    <th className="py-1 text-right font-medium">비율</th>
+                    <th className="py-1 text-right font-medium">증여이익</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.contributionBreakdown.map((row, i) => (
+                    <tr key={i} className="border-t border-violet-100">
+                      <td className="py-1.5 pr-2 text-muted-foreground">{row.party}</td>
+                      <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                        {row.preShares.toLocaleString()}주
+                      </td>
+                      <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs">
+                        {row.ratioLabel}
+                      </td>
+                      <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                        {formatKRW(row.value)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-2 text-xs text-muted-foreground">
+                각 {result.caseType === "high" ? "수증자" : "증여자"}는 위 이익을 각자의 증여재산가액으로 별도 증여세를 신고합니다.
+                &nbsp;<LawArticleModal legalBasis={GIFT.DUP_EXCLUSION_ANNUAL} />
+              </p>
+            </div>
+          )}
         </div>
       )}
 

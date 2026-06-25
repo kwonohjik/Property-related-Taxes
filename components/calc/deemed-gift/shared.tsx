@@ -6,6 +6,7 @@
  */
 
 import type { DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
+import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -139,6 +140,18 @@ export interface DeemedFormState {
   conAllocatedShares: string;
   conRelatedRatioPct: string; // high 현물출자자 특수관계인 지분비율 (%)
   conSmallImputation: boolean; // 저가 §39의3② 소액주주 1인 의제
+  /**
+   * 현물출자 당사자 명부 — 3-state (feedback_three_state_optional_mode_toggle):
+   *   undefined  = OFF  (기존 gross/relatedRatio 경로 유지)
+   *   []         = ON 빈  (validate 차단 — roster 모드 진입, 행 없음)
+   *   [{...}...] = 데이터
+   * low: 증여자(현물출자자 外 기존 주주), high: 수증자(특수관계 기존주주)
+   */
+  conParties?: Array<{
+    name: string;
+    shares: string;
+    relation: GiftDonorRelation | "";
+  }>;
   // 전환사채 §40
   cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
   cbMarketValue: string;
@@ -289,6 +302,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   conAllocatedShares: "",
   conRelatedRatioPct: "",
   conSmallImputation: false,
+  conParties: undefined,
   cbCaseType: "acquisition",
   cbMarketValue: "",
   cbAcquisitionPrice: "",
