@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { User } from "lucide-react";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
 import { clientRepository } from "@/lib/storage/client-repository";
 import { useUserProfile } from "@/lib/storage/use-user-profile";
@@ -487,7 +488,8 @@ export function HistoryClient() {
                     {TAX_TYPE_LABELS[record.taxType] ?? record.taxType}
                   </span>
                   {record.clientId && clientMap[record.clientId] && (
-                    <span className="inline-block rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
+                      <User className="h-3 w-3 shrink-0" aria-label="의뢰인" />
                       {clientMap[record.clientId]}
                     </span>
                   )}
