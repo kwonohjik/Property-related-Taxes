@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CalculationRecord, LocalTaxType } from "@/lib/storage/types";
 import { EditTitleDialog } from "./EditTitleDialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
   transfer: "/calc/transfer-tax",
@@ -112,6 +113,7 @@ export function HistoryDetailDrawer({
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const route = TAX_TYPE_ROUTES[record.taxType];
 
@@ -152,8 +154,7 @@ export function HistoryDetailDrawer({
 
   const summaryItems = extractResultSummaryItems(record.resultData, record.taxType);
 
-  async function handleDelete() {
-    if (!confirm("이 계산 이력을 삭제하시겠습니까?")) return;
+  async function doDelete() {
     setIsDeleting(true);
     try {
       await onDelete(record.id);
@@ -265,7 +266,7 @@ export function HistoryDetailDrawer({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={handleDelete}
+              onClick={() => setDeleteConfirmOpen(true)}
               disabled={isDeleting}
               className="flex-1 rounded-lg border border-destructive/40 py-2 text-sm font-medium text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-50"
             >
@@ -293,6 +294,17 @@ export function HistoryDetailDrawer({
           onClose={() => setEditOpen(false)}
         />
       )}
+
+      {/* 삭제 확인 */}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="이력 삭제"
+        description="이 계산 이력을 삭제합니다. 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        destructive
+        onConfirm={doDelete}
+      />
     </>
   );
 }

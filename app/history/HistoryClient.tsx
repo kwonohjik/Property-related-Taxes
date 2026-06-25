@@ -11,6 +11,7 @@ import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
 import { HistoryBackupActions } from "@/components/history/HistoryBackupActions";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const TAX_TYPE_ROUTES: Partial<Record<LocalTaxType, string>> = {
   transfer: "/calc/transfer-tax",
@@ -186,6 +187,9 @@ export function HistoryClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState<CalculationRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<
+    { type: "clearAll" } | { type: "delete"; id: string } | null
+  >(null);
 
   // 세무사 모드: 의뢰인 목록 로드
   useEffect(() => {
@@ -295,8 +299,7 @@ export function HistoryClient() {
     }
   }
 
-  async function handleClearAll() {
-    if (!confirm("모든 계산 이력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+  async function doClearAll() {
     await calculationRepository.clearAll();
     setRecords([]);
     setTotal(0);
@@ -437,7 +440,7 @@ export function HistoryClient() {
           />
           <button
             type="button"
-            onClick={handleClearAll}
+            onClick={() => setConfirmAction({ type: "clearAll" })}
             disabled={total === 0}
             className="rounded-md border border-destructive/40 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -547,7 +550,7 @@ export function HistoryClient() {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm("이 계산 이력을 삭제하시겠습니까?")) handleDelete(record.id);
+                    setConfirmAction({ type: "delete", id: record.id });
                   }}
                   className="rounded-md border border-destructive/40 px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5 transition-colors"
                 >
@@ -568,6 +571,24 @@ export function HistoryClient() {
           onTitleUpdate={handleTitleUpdate}
         />
       )}
+
+      {/* 파괴적 액션 확인 (전체 삭제 / 개별 삭제) */}
+      <ConfirmDialog
+        open={confirmAction !== null}
+        onOpenChange={(o) => !o && setConfirmAction(null)}
+        title={confirmAction?.type === "clearAll" ? "전체 이력 삭제" : "이력 삭제"}
+        description={
+          confirmAction?.type === "clearAll"
+            ? "모든 계산 이력을 삭제합니다. 되돌릴 수 없습니다."
+            : "이 계산 이력을 삭제합니다. 되돌릴 수 없습니다."
+        }
+        confirmLabel="삭제"
+        destructive
+        onConfirm={() => {
+          if (confirmAction?.type === "clearAll") doClearAll();
+          else if (confirmAction?.type === "delete") handleDelete(confirmAction.id);
+        }}
+      />
     </div>
   );
 }
