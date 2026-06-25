@@ -29,6 +29,25 @@ export function makeCapTableRow(id: string): CapTableRow {
   return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [] };
 }
 
+/** 초과배당 §41의2 주주 행 (전부 string — parseAmount/parseDecimal 변환은 API 변환 시) */
+export interface EdShareholderRow {
+  /** 행 고유 ID (클라이언트 UUID) */
+  id: string;
+  /** 표시용 이름 */
+  name: string;
+  /**
+   * 주주 역할
+   * - major_shareholder: 최대주주등 (배당 포기·과소배당 주체)
+   * - related_party: 특수관계인 (초과배당 수령자)
+   * - other: 기타 주주
+   */
+  role: "major_shareholder" | "related_party" | "other";
+  /** 지분율 (소수점 포함 %) — DecimalInput 입력값 */
+  ownershipRatioPctStr: string;
+  /** 실제 수령 배당금 — CurrencyInput 입력값 */
+  actualDividendStr: string;
+}
+
 export interface DeemedFormState {
   giftDate: string;
   type: DeemedGiftType | "";
@@ -207,9 +226,26 @@ export interface DeemedFormState {
   ntPropertyValue: string;
   ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
   ntExcluded: boolean; // §45의2①1·3·4 배제사유
-  // 초과배당 §41의2
-  edExcessDividend: string;
-  edIncomeTax: string;
+  // 초과배당 §41의2 — 주주 배열 기반 자동산정 (edExcessDividend·edIncomeTax·edDividendDate 폐지)
+  edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
+  edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
+  edSeparateTaxAmount: string; // 분리과세 세액 직접입력
+  edComprehensiveTaxBase: string; // 종합과세 과세표준 (ⓐ기준)
+  edSettlementMode: boolean; // 정산 활성화 ToggleCard
+  edActualIncomeTax: string; // 정산 실제 소득세납부세액
+  edDonorRelationship:
+    | "spouse"
+    | "lineal_ascendant_adult"
+    | "lineal_ascendant_minor"
+    | "lineal_descendant"
+    | "other_relative"
+    | undefined;
+  edPriorDeductionApplied: string; // 10년 내 기적용 공제 누계
+  edIsGenerationSkip: boolean; // 세대생략 여부
+  edIsMinorGenerationSkip: boolean; // 미성년 세대생략 할증 (§57①)
+  edIsWithinFilingDeadline: boolean; // 기한내신고 예정 (신고세액공제 3%)
+  edComprehensiveTaxBaseExcluding: string; // 종합과세 ⓑ기준(초과배당 제외) — 미입력 시 자동 추정
+  edIncomeTaxYear: string; // 소득 귀속연도 override — 미입력 시 증여일 연도
   // 상장이익 §41의3 / 합병상장 §41의5
   lgEventType: "listing" | "merger";
   lgSettlementPrice: string;
@@ -391,8 +427,19 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ntPropertyValue: "",
   ntTaxAvoidance: true,
   ntExcluded: false,
-  edExcessDividend: "",
-  edIncomeTax: "",
+  edShareholders: undefined,
+  edIncomeTaxMode: "undetermined",
+  edSeparateTaxAmount: "",
+  edComprehensiveTaxBase: "",
+  edSettlementMode: false,
+  edActualIncomeTax: "",
+  edDonorRelationship: undefined,
+  edPriorDeductionApplied: "",
+  edIsGenerationSkip: false,
+  edIsMinorGenerationSkip: false,
+  edIsWithinFilingDeadline: true,
+  edComprehensiveTaxBaseExcluding: "",
+  edIncomeTaxYear: "",
   lgEventType: "listing",
   lgSettlementPrice: "",
   lgAcqValue: "",

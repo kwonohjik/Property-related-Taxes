@@ -346,12 +346,78 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         hasTaxAvoidancePurpose: form.ntTaxAvoidance,
         isExcluded: form.ntExcluded,
       };
-    case "excess_dividend":
+    case "excess_dividend": {
+      // ① 주주 배열 → shareholders 변환 (ownershipRatioPct → 분수)
+      const edRows = form.edShareholders ?? [];
+      const shareholders = edRows.map((row) => {
+        const pct = parseDecimal(row.ownershipRatioPctStr);
+        return {
+          id: row.id,
+          role: row.role,
+          // 소수점 3자리까지 지원: 10.5% → {1050, 10000}
+          ownershipRatio: {
+            numer: Math.round(pct * 100),
+            denom: 10_000,
+          },
+          actualDividend: parseAmount(row.actualDividendStr),
+          name: row.name || undefined,
+        };
+      });
+
+      // ② 소득세 모드별 조건부 필드
+      const incomeTaxMode = form.edIncomeTaxMode ?? "undetermined";
+      const separateIncomeTax =
+        incomeTaxMode === "separate"
+          ? parseAmount(form.edSeparateTaxAmount)
+          : undefined;
+      const comprehensiveTaxBase =
+        incomeTaxMode === "comprehensive"
+          ? parseAmount(form.edComprehensiveTaxBase)
+          : undefined;
+      // ⓑ기준 — 미입력 시 엔진 자동 추정
+      const comprehensiveTaxBaseExcluding =
+        incomeTaxMode === "comprehensive" && form.edComprehensiveTaxBaseExcluding
+          ? parseAmount(form.edComprehensiveTaxBaseExcluding)
+          : undefined;
+      // 소득 귀속연도 override — 미입력 시 배당지급일 연도
+      const incomeTaxYear =
+        form.edIncomeTaxYear ? Number(form.edIncomeTaxYear) : undefined;
+
+      // ③ 정산 2-pass 입력
+      const actualIncomeTax = form.edSettlementMode
+        ? parseAmount(form.edActualIncomeTax)
+        : undefined;
+
+      // ④ 증여세 과세 맥락 (giftTaxContext) — 증여자관계가 선택된 경우에만 전달
+      const giftTaxContext = form.edDonorRelationship
+        ? {
+            donorRelationship: form.edDonorRelationship,
+            priorDeductionApplied: form.edPriorDeductionApplied
+              ? parseAmount(form.edPriorDeductionApplied)
+              : undefined,
+            isGenerationSkip: form.edIsGenerationSkip || undefined,
+            isMinorGenerationSkip: form.edIsMinorGenerationSkip || undefined,
+            isWithinFilingDeadline: form.edIsWithinFilingDeadline,
+          }
+        : undefined;
+
+      // ⑤ 배당지급일 = 증여일 = 공통 giftDate (§41의2①). edDividendDate 폐지 — 다른 의제 유형과 일관.
+      // buildDeemedGiftInput()은 Server Action 경로에서 직접 엔진을 호출할 수도 있어 Date로 변환 후 전달.
+      const dividendDate = toOptionalDate(form.giftDate) ?? new Date();
+
       return {
-        type: "excess_dividend",
-        excessDividend: parseAmount(form.edExcessDividend),
-        incomeTaxEquivalent: parseAmount(form.edIncomeTax),
+        type: "excess_dividend" as const,
+        shareholders,
+        dividendDate,
+        incomeTaxMode,
+        separateIncomeTax,
+        comprehensiveTaxBase,
+        comprehensiveTaxBaseExcluding,
+        incomeTaxYear,
+        actualIncomeTax,
+        giftTaxContext,
       };
+    }
     case "listing_gain":
       return {
         type: "listing_gain",

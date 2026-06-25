@@ -46,7 +46,7 @@ import { INITIAL_DEEMED, type DeemedFormState } from "./deemed-form-state";
 // 폼 상태 — 타입·초기값은 deemed-form-state.ts로 분리(800줄 정책). 하위호환 re-export.
 // ============================================================
 export type { DeemedFormState };
-export type { CdShareholderRow, CapTableRow } from "./deemed-form-state";
+export type { CdShareholderRow, EdShareholderRow, CapTableRow } from "./deemed-form-state";
 export { INITIAL_DEEMED };
 export { makeCapTableRow } from "./deemed-form-state";
 

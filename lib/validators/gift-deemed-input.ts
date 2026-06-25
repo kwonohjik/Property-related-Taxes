@@ -220,10 +220,40 @@ const nomineeTrustSchema = z.object({
   hasTaxAvoidancePurpose: z.boolean(),
   isExcluded: z.boolean().optional(),
 });
+const shareholderDividendSchema = z.object({
+  id: z.string().min(1),
+  role: z.enum(["major_shareholder", "related_party", "other"]),
+  ownershipRatio: ratioSchema,
+  actualDividend: z.number().nonnegative(),
+  name: z.string().optional(),
+});
+
+const excessDividendGiftTaxContextSchema = z.object({
+  donorRelationship: z.enum([
+    "spouse",
+    "lineal_ascendant_adult",
+    "lineal_ascendant_minor",
+    "lineal_descendant",
+    "other_relative",
+  ]),
+  priorDeductionApplied: z.number().nonnegative().optional(),
+  isGenerationSkip: z.boolean().optional(),
+  isMinorGenerationSkip: z.boolean().optional(),
+  isWithinFilingDeadline: z.boolean().optional(),
+});
+
 const excessDividendSchema = z.object({
   type: z.literal("excess_dividend"),
-  excessDividend: z.number().nonnegative(),
-  incomeTaxEquivalent: z.number().nonnegative(),
+  shareholders: z.array(shareholderDividendSchema).min(1),
+  dividendDate: z.coerce.date(),
+  incomeTaxMode: z.enum(["undetermined", "separate", "comprehensive", "exempt"]),
+  separateIncomeTax: z.number().nonnegative().optional(),
+  comprehensiveTaxBase: z.number().nonnegative().optional(),
+  comprehensiveTaxBaseExcluding: z.number().nonnegative().optional(),
+  incomeTaxYear: z.number().int().positive().optional(),
+  isDiligentFiler: z.boolean().optional(),
+  actualIncomeTax: z.number().nonnegative().optional(),
+  giftTaxContext: excessDividendGiftTaxContextSchema.optional(),
 });
 const listingGainSchema = z.object({
   type: z.literal("listing_gain"),
