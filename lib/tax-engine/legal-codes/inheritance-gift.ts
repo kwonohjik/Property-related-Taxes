@@ -165,6 +165,8 @@ export const GIFT = {
   ORG_CHANGE: "상증법 §42의2",
   VALUE_INCREASE: "상증법 §42의3",
   SPECIFIC_CORP: "상증법 §45의5",
+  /** 상증법 §45의5② · 상증령 §34의5⑨ — 증여세 한도(직접증여 증여세 − 법인세 상당액) */
+  SPECIFIC_CORP_LIMIT: "상증법 §45의5②",
   DUP_EXCLUSION: "상증법 §43①",
   /** 상증법 §43② · 상증령 §32의4 6호 — §39의3 이익의 1년 내 동일거래 합산 */
   DUP_EXCLUSION_ANNUAL: "상증법 §43② · 상증령 §32의4 6호",

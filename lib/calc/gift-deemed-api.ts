@@ -469,13 +469,54 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         normalIncrease: parseAmount(form.viNormalIncrease),
         contribution: parseAmount(form.viContribution),
       };
-    case "specific_corp":
+    case "specific_corp": {
+      const isRoster = form.scMode === "roster";
+      const isAuto = form.scCorporateTaxMode === "auto";
+      const transactionBenefit = parseAmount(form.scTransactionBenefit);
+      const giftDeduction = parseAmount(form.scGiftDeduction) || undefined; // 0이면 undefined(엔진 default 0)
+
+      if (isRoster && form.scShareholders && form.scShareholders.length > 0) {
+        const totalShares = parseAmount(form.scTotalShares);
+        const shareholders = form.scShareholders.map((sh) => ({
+          id: sh.id,
+          name: sh.name,
+          relation: sh.relation,
+          shares: parseAmount(sh.shares),
+          totalShares,
+          isDonor: sh.isDonor,
+          isRelated: sh.relation !== "other", // "other"=타인 → 비특수관계인
+        }));
+        if (isAuto) {
+          // auto: 엔진이 안분. raw 4필드 전달. UI 재계산 금지.
+          return {
+            type: "specific_corp",
+            transactionBenefit,
+            shareholders,
+            annualIncome: parseAmount(form.scCorpIncome),
+            corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
+            corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
+            giftDeduction,
+          };
+        } else {
+          // direct: corporateTax = 직접 입력 (이월결손금 0 허용 → 0 전달)
+          return {
+            type: "specific_corp",
+            transactionBenefit,
+            corporateTax: parseAmount(form.scCorporateTax),
+            shareholders,
+            giftDeduction,
+          };
+        }
+      }
+      // single 경로 (기존 하위호환)
       return {
         type: "specific_corp",
-        transactionBenefit: parseAmount(form.scTransactionBenefit),
+        transactionBenefit,
         corporateTax: parseAmount(form.scCorporateTax),
         ownershipRatio: { numer: Math.round(parseDecimal(form.scRatioPct) * 100), denom: 10_000 },
+        giftDeduction,
       };
+    }
     default:
       throw new Error("증여 유형을 선택하세요");
   }

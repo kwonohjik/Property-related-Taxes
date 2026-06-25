@@ -8,8 +8,8 @@ import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { CapitalDecreaseMultiResultView } from "./CapitalDecreaseMultiResultView";
+import { SpecificCorpMultiResultView } from "./SpecificCorpMultiResultView";
 import type {
-  DeemedGiftResult,
   ExcessDividendDetail,
   DeemedGiftAnyResult,
   CapitalIncreaseAllocationResult,
@@ -362,6 +362,14 @@ export function DeemedGiftResultView({
       {result.capitalDecreaseMulti && (
         <CapitalDecreaseMultiResultView
           multi={result.capitalDecreaseMulti}
+          selectedDoneeIndex={selectedDoneeIndex}
+          onSelectDonee={onSelectDonee ?? (() => {})}
+        />
+      )}
+
+      {result.specificCorpMulti && (
+        <SpecificCorpMultiResultView
+          multi={result.specificCorpMulti}
           selectedDoneeIndex={selectedDoneeIndex}
           onSelectDonee={onSelectDonee ?? (() => {})}
         />
