@@ -40,6 +40,7 @@ import {
   ValueIncreaseFields,
   SpecificCorpFields,
 } from "./other-forms";
+import { RelatedCorpFields } from "./related-corp-form";
 import { INITIAL_DEEMED, makeLoanItem, type DeemedFormState } from "./deemed-form-state";
 
 // ============================================================
@@ -79,6 +80,7 @@ export const DEEMED_TYPE_META: Record<
   org_change: { label: "법인 조직변경 이익", law: "상증법 §42의2" },
   value_increase: { label: "재산취득 후 가치증가 이익", law: "상증법 §42의3" },
   specific_corp: { label: "특정법인과의 거래 이익", law: "상증법 §45의5" },
+  related_corp: { label: "일감몰아주기 증여의제", law: "상증법 §45의3" },
 };
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
@@ -109,6 +111,7 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "org_change", label: "법인 조직변경 이익", description: "상증법 §42의2 — 소유지분·평가액 변동", testId: "deemed-type-org_change" },
   { value: "value_increase", label: "재산취득 후 가치증가 이익", description: "상증법 §42의3 — 개발·상장 등 가치증가", testId: "deemed-type-value_increase" },
   { value: "specific_corp", label: "특정법인과의 거래 이익", description: "상증법 §45의5 — 지배주주 특수관계법인 거래", testId: "deemed-type-specific_corp" },
+  { value: "related_corp", label: "일감몰아주기 증여의제", description: "상증법 §45의3 — 수혜법인 특수관계법인 거래이익 → 지배주주 증여의제", testId: "deemed-type-related_corp" },
 ];
 
 export function DeemedTypeSelector({
@@ -179,6 +182,8 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
       return <ValueIncreaseFields form={form} set={set} />;
     case "specific_corp":
       return <SpecificCorpFields form={form} set={set} />;
+    case "related_corp":
+      return <RelatedCorpFields form={form} set={set} />;
     default:
       return null;
   }

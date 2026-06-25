@@ -28,7 +28,8 @@ export type DeemedGiftType =
   | "property_service_use" // §42 재산사용·용역제공 (Phase 3)
   | "org_change" // §42의2 법인 조직변경 (Phase 3)
   | "value_increase" // §42의3 재산취득 후 가치증가 (Phase 3)
-  | "specific_corp"; // §45의5 특정법인과의 거래 (Phase 3)
+  | "specific_corp" // §45의5 특정법인과의 거래 (Phase 3)
+  | "related_corp"; // §45의3 특수관계법인과의 거래(일감몰아주기) (Phase 3)
 
 /** 모든 계산기 공통 결과 */
 export interface DeemedGiftResult {
@@ -112,6 +113,30 @@ export interface DeemedGiftResult {
   capitalDecreaseMulti?: CapitalDecreaseMultiResult;
   /** 합병(§38) 주주 매트릭스 — Phase B(다수 대주주·동일인 자기증여). deemedGiftValue=Σ applied netGain */
   mergerMatrix?: MergerMatrix;
+  // ── §45의3 일감몰아주기 (Phase 3) — base optional 필드 (extends 금지, 기존 패턴) ──
+  /** §45의3 수증자별 명세 — 배열(Map 금지, feedback_engine_result_map_json_loss) */
+  recipientBreakdown?: RcRecipientBreakdown[];
+  /** §45의3 판정된 지배주주 이름 */
+  rulingShareholder?: string;
+  /** §45의3 특수관계법인거래비율 분수 */
+  tradeRatio?: { numer: number; denom: number };
+  /** §45의3 특수관계매출 합계(원) */
+  relatedSales?: number;
+  /** §45의3 수혜법인 단위 공통 과세제외매출(원) */
+  taxableExcludedSales?: number;
+  /** §45의3 과세매출비율 적용 전 세후영업이익(원) */
+  baseAfterTaxProfit?: number;
+  /** §45의3 거래비율 분자(특수관계매출 − 과세제외) */
+  tradeRatioNumer?: number;
+  /** §45의3 거래비율 분모(총매출 − 과세제외) */
+  tradeRatioDenom?: number;
+  /** §45의3 과세요건 충족 여부 */
+  taxRequirementMet?: boolean;
+  /** §45의3 정상거래비율 분수 */
+  normalTradeRatio?: { numer: number; denom: number };
+  /** §45의3 한계보유비율 분수 */
+  marginalOwnershipRatio?: { numer: number; denom: number };
+  // ── §45의5 특정법인 멀티 · §43②합산 · §45의2 · §42의3 (origin/master) ──
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;
   /**
@@ -149,6 +174,26 @@ export interface DeemedGiftResult {
     holdingYears?: number; // 취득~사유발생 연수 echo
     isExchangeListingNotice?: boolean; // reason==="similar" → 결과뷰 §41의3 경계 amber
   };
+}
+
+/** §45의3 수증자 1명의 직접/간접 분해 명세 (배열 요소 — Map 금지) */
+export interface RcRecipientBreakdown {
+  /** 표시명: name.trim() || "지배주주등" (feedback_no_internal_id_in_result) */
+  recipientName: string;
+  directGain: number;
+  indirectGain: number;
+  subtotal: number;
+  pretaxProfit: number;
+  tradeRatioOver: { numer: number; denom: number };
+  /** 직접보유비율(차감 전 raw) — UI 대칭 표시 */
+  directRatioRaw: { numer: number; denom: number };
+  /** §⑱ recipient 간접보유비율 raw — "미작동"과 "차감후 0" 구분 echo */
+  indirectRatioRaw: { numer: number; denom: number };
+  directOwnershipOver: { numer: number; denom: number };
+  indirectOwnershipOver: { numer: number; denom: number };
+  additionalExclusion: number;
+  totalExclusion: number;
+  dividendDeduction: number;
 }
 
 // ── 입력 타입 ──
@@ -798,6 +843,78 @@ export interface SpecificCorpInput {
   giftDeduction?: number; // §45의5② 한도 ㉮㉠ 증여재산공제 (default 0)
 }
 
+/** §45의3 일감몰아주기 — 주주 1명 */
+export interface RcShareholder {
+  id: string;
+  name: string;
+  /** "self"=지배주주 후보 / "relative"=친족 / "other"=해당없음 */
+  relation: "self" | "relative" | "other";
+  /** 수혜법인 직접보유비율 분수 (예: 20% → {numer:20,denom:100}) */
+  directRatio: { numer: number; denom: number };
+  /** true면 법인주주 → intermediaryCorps에 대응 항목 */
+  isCorporate: boolean;
+}
+
+/** §45의3 일감몰아주기 — 간접출자법인 1개 (2단계 간접: 개인→법인→수혜법인) */
+export interface RcIntermediaryCorpItem {
+  /** 이 법인인 법인주주의 id (RcShareholder.id 매칭) */
+  corpShareholderId: string;
+  /** 이 법인의 수혜법인 직접보유비율 분수 */
+  stakeInBeneficiary: { numer: number; denom: number };
+  /** 이 법인의 개인 소유주 (§⑱ 자동판정용: 지배주주등 합산≥30% → §⑱1호) */
+  owners: {
+    individualId: string; // RcShareholder.id
+    ratio: { numer: number; denom: number }; // 이 법인에 대한 직접보유비율
+  }[];
+}
+
+/** §34의3⑩ 과세제외유형 */
+export type RcExclusionType =
+  | "sec10_1" // 중소-중소
+  | "sec10_2" // 수혜법인 50%↑ 출자 특수관계법인
+  | "sec10_3" // 수혜법인 50%미만 출자 × 보유비율 (본 사례 미적용)
+  | "sec10_4" // 지주회사-자회사·손자회사
+  | "sec10_5" // 수출목적
+  | "sec10_5_2" // 국외용역
+  | "sec10_5_3" // 영세율용역
+  | "sec10_6" // 법정의무거래
+  | "sec10_7" // 프로스포츠 광고
+  | "sec10_8"; // 공공기관
+
+/** §45의3 일감몰아주기 — 매출처 1개 */
+export interface RcSalesPartner {
+  id: string;
+  name: string;
+  /** 매출액(원) */
+  salesAmount: number;
+  /** 특수관계 여부 (사용자 입력 — 엔진이 §2의2 자체판정 불요) */
+  isRelated: boolean;
+  /** §⑩ 과세제외유형. 없으면 undefined */
+  exclusionType?: RcExclusionType;
+  /** §⑭3호: 수증자별 이 법인에 대한 보유비율 (⑩ 미해당 시 적용). 없으면 미적용 */
+  rulingShareholderStakes?: {
+    shareholderId: string; // RcShareholder.id 매칭 키
+    ratio: { numer: number; denom: number };
+  }[];
+}
+
+/** §45의3 일감몰아주기 — 엔진 입력 (nested, 순수함수) */
+export interface RelatedCorpInput {
+  /** 기업규모 — 비율 3종 분기 단일 분기점 */
+  enterpriseSize: "small" | "medium" | "large";
+  /** 총 매출액(원) = §⑫ 분모 */
+  totalSales: number;
+  /** 세무조정 반영 후 영업손익(원) = §⑫1호 */
+  preTaxAdjOperatingIncome: number;
+  /** 각 사업연도 소득금액(원) = §⑫2호나목 분모 */
+  taxableIncome: number;
+  /** 법인세 순세액(원) = 산출세액 − 공제감면 = §⑫2호가목 */
+  corporateTaxNet: number;
+  shareholders: RcShareholder[];
+  intermediaryCorps: RcIntermediaryCorpItem[];
+  salesPartners: RcSalesPartner[];
+}
+
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
 export type DeemedGiftInput =
   | ({ type: "trust_benefit" } & TrustBenefitInput)
@@ -820,4 +937,5 @@ export type DeemedGiftInput =
   | ({ type: "property_service_use" } & PropertyServiceUseInput)
   | ({ type: "org_change" } & OrgChangeInput)
   | ({ type: "value_increase" } & ValueIncreaseInput)
-  | ({ type: "specific_corp" } & SpecificCorpInput);
+  | ({ type: "specific_corp" } & SpecificCorpInput)
+  | ({ type: "related_corp" } & RelatedCorpInput);

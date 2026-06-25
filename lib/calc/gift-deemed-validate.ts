@@ -316,6 +316,55 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (parseAmount(form.cbMarketValue) <= 0) return "전환사채등 시가를 입력하세요";
       }
       break;
+    case "related_corp": {
+      // R-1 기업규모
+      if (!form.rcEnterpriseSize) return "기업규모를 선택하세요";
+      // R-2 재무
+      if (parseAmount(form.rcTotalSalesStr) <= 0) return "총 매출액을 입력하세요";
+      if (parseAmount(form.rcTaxableIncomeStr) <= 0) return "각 사업연도 소득금액을 입력하세요";
+      if (parseAmount(form.rcCorporateTaxNetStr) < 0) return "법인세 순세액은 0 이상이어야 합니다";
+      // R-3 주주 roster 빈행 차단
+      if (form.rcShareholders.length < 2) return "주주를 2명 이상 입력하세요";
+      for (const [i, row] of form.rcShareholders.entries()) {
+        const n = i + 1;
+        if (!row.name.trim()) return `${n}번째 주주 이름을 입력하세요`;
+        if (parseDecimal(row.directRatioPctStr) < 0) return `${n}번째 주주의 직접지분율은 0 이상이어야 합니다`;
+        if (!row.relation) return `${n}번째 주주의 관계를 선택하세요`;
+      }
+      // R-4 직접지분 합계 100% (cross-field — 톨러런스 0.01%, parseDecimal round 없음)
+      const totalDirectPct = form.rcShareholders.reduce((s, r) => s + parseDecimal(r.directRatioPctStr), 0);
+      if (Math.abs(totalDirectPct - 100) > 0.01)
+        return `주주 직접지분 합계가 100%가 아닙니다 (현재 ${totalDirectPct.toFixed(2)}%)`;
+      // R-5 간접출자법인 roster 빈행 차단
+      for (const [i, row] of form.rcIntermediaryCorps.entries()) {
+        const n = i + 1;
+        if (!row.corpShareholderId) return `${n}번째 간접출자법인의 법인주주를 선택하세요`;
+        if (parseDecimal(row.stakeInBeneficiaryPctStr) <= 0)
+          return `${n}번째 간접출자법인의 수혜법인 지분율을 입력하세요`;
+        for (const [j, owner] of row.owners.entries()) {
+          if (!owner.individualId) return `${n}번째 법인 ${j + 1}번 소유주를 선택하세요`;
+          if (parseDecimal(owner.ratioPctStr) <= 0) return `${n}번째 법인 ${j + 1}번 소유주의 지분율을 입력하세요`;
+        }
+      }
+      // R-6 매출처 roster 빈행 차단 (자동 안분 fallback 금지)
+      if (form.rcSalesPartners.length === 0) return "매출처를 1개 이상 입력하세요";
+      for (const [i, row] of form.rcSalesPartners.entries()) {
+        const n = i + 1;
+        if (!row.name.trim()) return `${n}번째 매출처 이름을 입력하세요`;
+        if (parseAmount(row.salesAmountStr) < 0) return `${n}번째 매출처의 매출액은 0 이상이어야 합니다`;
+        for (const [j, stake] of row.rulingStakes.entries()) {
+          if (!stake.shareholderId) return `${n}번째 매출처 §⑭ ${j + 1}번 주주를 선택하세요`;
+          if (parseDecimal(stake.ratioPctStr) <= 0)
+            return `${n}번째 매출처 §⑭ ${j + 1}번 주주의 보유비율을 입력하세요`;
+        }
+      }
+      // R-7 매출처 합계 = 총매출액 (정수 원 → 톨러런스 0)
+      const salesSum = form.rcSalesPartners.reduce((s, r) => s + parseAmount(r.salesAmountStr), 0);
+      const totalSales = parseAmount(form.rcTotalSalesStr);
+      if (totalSales > 0 && salesSum !== totalSales)
+        return `매출처 합계(${salesSum.toLocaleString()})가 총매출액(${totalSales.toLocaleString()})과 다릅니다`;
+      break;
+    }
   }
   return null;
 }

@@ -409,6 +409,60 @@ const convertibleBondSchema = z.object({
   bondTransferGainForCap: z.number().nonnegative().optional(),
   relatedPreRatio: ratioSchema.optional(),
 });
+// §45의3 일감몰아주기 — 순수 z.object (cross-field 지분합·매출합은 validate ⑧에 위임: discriminatedUnion superRefine 제약)
+const relatedCorpSchema = z.object({
+  type: z.literal("related_corp"),
+  enterpriseSize: z.enum(["small", "medium", "large"]),
+  totalSales: z.number().int().min(1),
+  preTaxAdjOperatingIncome: z.number().int(),
+  taxableIncome: z.number().int().min(1),
+  corporateTaxNet: z.number().int().min(0),
+  shareholders: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string(),
+        relation: z.enum(["self", "relative", "other"]),
+        directRatio: ratioSchema,
+        isCorporate: z.boolean(),
+      }),
+    )
+    .min(1),
+  intermediaryCorps: z.array(
+    z.object({
+      corpShareholderId: z.string().min(1),
+      stakeInBeneficiary: ratioSchema,
+      owners: z.array(z.object({ individualId: z.string().min(1), ratio: ratioSchema })),
+    }),
+  ),
+  salesPartners: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        name: z.string(),
+        salesAmount: z.number().int().min(0),
+        isRelated: z.boolean(),
+        exclusionType: z
+          .enum([
+            "sec10_1",
+            "sec10_2",
+            "sec10_3",
+            "sec10_4",
+            "sec10_5",
+            "sec10_5_2",
+            "sec10_5_3",
+            "sec10_6",
+            "sec10_7",
+            "sec10_8",
+          ])
+          .optional(),
+        rulingShareholderStakes: z
+          .array(z.object({ shareholderId: z.string().min(1), ratio: ratioSchema }))
+          .optional(),
+      }),
+    )
+    .min(1),
+});
 
 export const deemedGiftInputSchema = z
   .discriminatedUnion("type", [
@@ -434,6 +488,7 @@ export const deemedGiftInputSchema = z
     orgChangeSchema,
     valueIncreaseSchema,
     specificCorpSchema,
+    relatedCorpSchema,
   ])
   .superRefine((data, ctx) => {
     if (data.type === "insurance") {

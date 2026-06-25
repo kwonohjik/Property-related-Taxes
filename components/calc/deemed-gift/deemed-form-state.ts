@@ -77,6 +77,61 @@ export interface EdShareholderRow {
   actualDividendStr: string;
 }
 
+/** §45의3 일감몰아주기 — 주주 roster 1행 (전부 string) */
+export interface RcShareholderRow {
+  id: string;
+  name: string;
+  /** "self" | "relative" | "other" */
+  relation: string;
+  /** 직접지분 % — DecimalInput */
+  directRatioPctStr: string;
+  isCorporate: boolean;
+}
+
+/** §45의3 — 간접출자법인 개인소유주 1행 */
+export interface RcIntermediaryOwnerRow {
+  individualId: string;
+  ratioPctStr: string;
+}
+
+/** §45의3 — 간접출자법인 roster 1행 */
+export interface RcIntermediaryRow {
+  id: string;
+  corpShareholderId: string;
+  stakeInBeneficiaryPctStr: string;
+  owners: RcIntermediaryOwnerRow[];
+}
+
+/** §34의3⑩ 과세제외유형 코드 (string — select) */
+export type RcExclusionTypeStr =
+  | "sec10_1"
+  | "sec10_2"
+  | "sec10_3"
+  | "sec10_4"
+  | "sec10_5"
+  | "sec10_5_2"
+  | "sec10_5_3"
+  | "sec10_6"
+  | "sec10_7"
+  | "sec10_8"
+  | "";
+
+/** §45의3 — 매출처 §⑭3호 지배주주등 보유비율 1행 */
+export interface RcRulingStakeRow {
+  shareholderId: string;
+  ratioPctStr: string;
+}
+
+/** §45의3 — 매출처 roster 1행 */
+export interface RcSalesRow {
+  id: string;
+  name: string;
+  salesAmountStr: string;
+  isRelated: boolean;
+  exclusionType: RcExclusionTypeStr;
+  rulingStakes: RcRulingStakeRow[];
+}
+
 export interface DeemedFormState {
   giftDate: string;
   type: DeemedGiftType | "";
@@ -323,6 +378,15 @@ export interface DeemedFormState {
   scTransactionBenefit: string;
   scCorporateTax: string;
   scRatioPct: string;
+  // §45의3 일감몰아주기
+  rcEnterpriseSize: "small" | "medium" | "large" | "";
+  rcTotalSalesStr: string;
+  rcPreTaxAdjOperatingIncomeStr: string;
+  rcTaxableIncomeStr: string;
+  rcCorporateTaxNetStr: string;
+  rcShareholders: RcShareholderRow[];
+  rcIntermediaryCorps: RcIntermediaryRow[];
+  rcSalesPartners: RcSalesRow[];
   // §45의5 확장 — 모드 토글 + 다주주 roster
   /** 입력 방식: "single"=지분율 직접 / "roster"=주주 명단 */
   scMode: "single" | "roster";
@@ -550,6 +614,15 @@ export const INITIAL_DEEMED: DeemedFormState = {
   scTransactionBenefit: "",
   scCorporateTax: "",
   scRatioPct: "",
+  // §45의3 일감몰아주기
+  rcEnterpriseSize: "",
+  rcTotalSalesStr: "",
+  rcPreTaxAdjOperatingIncomeStr: "",
+  rcTaxableIncomeStr: "",
+  rcCorporateTaxNetStr: "",
+  rcShareholders: [],
+  rcIntermediaryCorps: [],
+  rcSalesPartners: [],
   scMode: "single",
   scCorporateTaxMode: "direct",
   scCorpTaxAssessed: "",
@@ -560,3 +633,16 @@ export const INITIAL_DEEMED: DeemedFormState = {
   scSelectedDoneeIndex: 0,
   scGiftDeduction: "",
 };
+
+// ── §45의3 일감몰아주기 roster 행 팩토리 ──
+export function makeRcShareholderRow(id: string): RcShareholderRow {
+  return { id, name: "", relation: "other", directRatioPctStr: "", isCorporate: false };
+}
+
+export function makeRcIntermediaryRow(id: string): RcIntermediaryRow {
+  return { id, corpShareholderId: "", stakeInBeneficiaryPctStr: "", owners: [] };
+}
+
+export function makeRcSalesRow(id: string): RcSalesRow {
+  return { id, name: "", salesAmountStr: "", isRelated: false, exclusionType: "", rulingStakes: [] };
+}

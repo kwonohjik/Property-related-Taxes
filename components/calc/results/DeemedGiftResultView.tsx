@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { RelatedCorpResultSection } from "./RelatedCorpResultSection";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import {
   ExpandToggleButton,
@@ -358,6 +359,10 @@ export function DeemedGiftResultView({
           </table>
         </div>
       </div>
+
+      {result.type === "related_corp" && result.recipientBreakdown && (
+        <RelatedCorpResultSection result={result} />
+      )}
 
       {result.nomineeCapitalIncrease && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="nominee-capital-increase">
