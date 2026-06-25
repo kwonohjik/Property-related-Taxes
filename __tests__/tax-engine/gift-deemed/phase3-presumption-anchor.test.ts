@@ -54,4 +54,53 @@ describe("§45의2 명의신탁 증여의제", () => {
     expect(r.applied).toBe(false);
     expect(r.deemedGiftValue).toBe(0);
   });
+
+  // per_share 모드 — 유상증자 신주 명의신탁 (교재 이미지 28·29, 조심2012중3707·2019서2129)
+  // 증여재산가액 = 명의개서일 §63 평가 1주당 가액 × 명의신탁 신주수 (인수가·권리락 아님)
+  it("[NT-CAP] 유상증자 신주: 1주당 15,000 × 18,375주 = 275,625,000", () => {
+    const r = calcNomineeTrustGift({
+      valuationMode: "per_share",
+      perSharePrice: 15_000,
+      nomineeShares: 18_375,
+      hasTaxAvoidancePurpose: true,
+      subscriptionPrice: 5_000,
+      theoreticalExRightsPrice: 13_000,
+      preIncreasePerShare: 20_000,
+    });
+    expect(r.applied).toBe(true);
+    expect(r.deemedGiftValue).toBe(275_625_000);
+    expect(r.nomineeCapitalIncrease?.perSharePrice).toBe(15_000);
+    expect(r.nomineeCapitalIncrease?.nomineeShares).toBe(18_375);
+    expect(r.nomineeCapitalIncrease?.subscriptionPrice).toBe(5_000);
+    expect(r.nomineeCapitalIncrease?.theoreticalExRightsPrice).toBe(13_000);
+    expect(r.nomineeCapitalIncrease?.preIncreasePerShare).toBe(20_000);
+  });
+
+  it("[NT-CAP-NOAVOID] per_share + 조세회피목적 없음 → 제외", () => {
+    const r = calcNomineeTrustGift({ valuationMode: "per_share", perSharePrice: 15_000, nomineeShares: 18_375, hasTaxAvoidancePurpose: false });
+    expect(r.applied).toBe(false);
+    expect(r.deemedGiftValue).toBe(0);
+  });
+
+  it("[NT-CAP-EXCLUDED] per_share + 배제사유 → 제외", () => {
+    const r = calcNomineeTrustGift({ valuationMode: "per_share", perSharePrice: 15_000, nomineeShares: 18_375, hasTaxAvoidancePurpose: true, isExcluded: true });
+    expect(r.applied).toBe(false);
+    expect(r.deemedGiftValue).toBe(0);
+  });
+
+  it("[NT-OVERFLOW] per_share 대형 정수 정확: 3,000,000 × 5,000,000 = 15,000,000,000,000", () => {
+    const r = calcNomineeTrustGift({ valuationMode: "per_share", perSharePrice: 3_000_000, nomineeShares: 5_000_000, hasTaxAvoidancePurpose: true });
+    expect(r.deemedGiftValue).toBe(15_000_000_000_000);
+  });
+
+  it("[NT-NOTE] per_share 평가원칙 note — §60·§63·신주인수가액·이론적 권리락·§4의2·§47 포함", () => {
+    const r = calcNomineeTrustGift({ valuationMode: "per_share", perSharePrice: 15_000, nomineeShares: 18_375, hasTaxAvoidancePurpose: true });
+    const notes = r.breakdown.map((s) => `${s.label} ${s.note ?? ""} ${s.lawRef ?? ""}`).join(" | ");
+    expect(notes).toContain("§60");
+    expect(notes).toContain("§63");
+    expect(notes).toContain("신주인수가액");
+    expect(notes).toContain("이론적 권리락");
+    expect(notes).toContain("§4의2");
+    expect(notes).toContain("§47");
+  });
 });

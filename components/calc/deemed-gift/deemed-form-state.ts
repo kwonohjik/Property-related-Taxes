@@ -232,6 +232,14 @@ export interface DeemedFormState {
   ntPropertyValue: string;
   ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
   ntExcluded: boolean; // §45의2①1·3·4 배제사유
+  ntValuationMode: "total" | "per_share"; // total=재산가액 직접 / per_share=유상증자 신주(명의개서일 §63 평가×신주수)
+  ntPerSharePrice: string; // per_share: 명의개서일 §63 평가 1주당 가액
+  ntNewShares: string; // per_share: 명의신탁 신주 수
+  ntSubscriptionPrice: string; // echo: 신주인수가액(발행가액)
+  ntTheoreticalExRights: string; // echo: 이론적 권리락 증자후 1주당 가액
+  ntPreIncreasePerShare: string; // echo: 증자 전 1주당 평가액
+  ntActualOwner: string; // prefill: 실제소유자(증여자) 성명
+  ntNominee: string; // prefill: 명의자(증여의제 수증자) 성명
   // 초과배당 §41의2 — 주주 배열 기반 자동산정 (edExcessDividend·edIncomeTax·edDividendDate 폐지)
   edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
   edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt";
@@ -438,6 +446,14 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ntPropertyValue: "",
   ntTaxAvoidance: true,
   ntExcluded: false,
+  ntValuationMode: "total",
+  ntPerSharePrice: "",
+  ntNewShares: "",
+  ntSubscriptionPrice: "",
+  ntTheoreticalExRights: "",
+  ntPreIncreasePerShare: "",
+  ntActualOwner: "",
+  ntNominee: "",
   edShareholders: undefined,
   edIncomeTaxMode: "undetermined",
   edSeparateTaxAmount: "",

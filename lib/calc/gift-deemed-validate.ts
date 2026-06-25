@@ -181,7 +181,12 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         return form.afSubType === "debt_repayment" ? "채무상환금액을 입력하세요" : "취득재산가액을 입력하세요";
       break;
     case "nominee_trust":
-      if (parseAmount(form.ntPropertyValue) <= 0) return "명의신탁 재산 가액을 입력하세요";
+      if (form.ntValuationMode === "per_share") {
+        if (parseAmount(form.ntPerSharePrice) <= 0) return "1주당 평가액(명의개서일 §63)을 입력하세요";
+        if (parseAmount(form.ntNewShares) <= 0) return "명의신탁 신주 수를 입력하세요";
+      } else if (parseAmount(form.ntPropertyValue) <= 0) {
+        return "명의신탁 재산 가액을 입력하세요";
+      }
       break;
     case "excess_dividend": {
       // ⑧ F1: 주주 목록 필수 — 엔진 요구사항 동기화 (API fallback: edShareholders ?? [])

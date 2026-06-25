@@ -111,6 +111,17 @@ export interface DeemedGiftResult {
   /** 합병(§38) 주주 매트릭스 — Phase B(다수 대주주·동일인 자기증여). deemedGiftValue=Σ applied netGain */
   mergerMatrix?: MergerMatrix;
   /**
+   * §45의2 명의신탁 유상증자(per_share 모드) echo — plain 객체(Map 금지, feedback_engine_result_map_json_loss).
+   * total 모드는 undefined. 결과뷰가 산식(1주당평가×신주수)·평가원칙 비교(인수가·권리락·증자전) 표시에 사용.
+   */
+  nomineeCapitalIncrease?: {
+    perSharePrice: number;
+    nomineeShares: number;
+    subscriptionPrice?: number;
+    theoreticalExRightsPrice?: number;
+    preIncreasePerShare?: number;
+  };
+  /**
    * §42의3 재산취득 후 가치증가 — 적용요건 echo (산식 불변, feedback_engine_result_map_json_loss: plain 값만).
    * 입력에 사유·날짜가 하나도 없으면 undefined(기존 동작 바이트 동일).
    */
@@ -470,9 +481,30 @@ export interface AcquisitionFundPresumptionInput {
 
 /** §45의2 명의신탁재산 증여의제 */
 export interface NomineeTrustInput {
-  propertyValue: number; // 명의신탁 재산 가액
+  /** 명의신탁 재산 가액 (total 모드). per_share 모드는 미전송 — 엔진이 perSharePrice×nomineeShares로 단일 도출 */
+  propertyValue?: number;
   hasTaxAvoidancePurpose: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
   isExcluded?: boolean; // §45의2①1·3·4 배제 (신탁등기·비거주자 법정대리인 등)
+  /**
+   * 평가 모드 (3-state, feedback_three_state_optional_mode_toggle).
+   * undefined/"total" = 재산가액 총액 직접(현행) / "per_share" = 유상증자 신주 명의신탁
+   * (명의개서일 §63 평가 1주당 가액 × 명의신탁 신주수 — 조심2012중3707·2019서2129).
+   */
+  valuationMode?: "total" | "per_share";
+  /** per_share: 증여일(명의개서일) 현재 §60·§63 평가 1주당 가액 (희석효과 반영 — 인수가·권리락 아님) */
+  perSharePrice?: number;
+  /** per_share: 명의신탁된 신주 수 (제척기간 만료 기존분 제외) */
+  nomineeShares?: number;
+  /** echo (계산 무영향·이미지28 평가원칙 비교): 신주인수가액(발행가액) */
+  subscriptionPrice?: number;
+  /** echo: 이론적 권리락 증자후 1주당 가액 */
+  theoreticalExRightsPrice?: number;
+  /** echo: 증자 전 1주당 평가액 (희석 출발점) */
+  preIncreasePerShare?: number;
+  /** prefill용 (계산 무영향): 실제소유자(증여자) 성명 */
+  actualOwnerName?: string;
+  /** prefill용 (계산 무영향): 명의자(증여의제 수증자) 성명 */
+  nomineeName?: string;
 }
 
 /** 주주별 배당 내역 (시행령 §31의2② 초과배당금액 자동산정용) */
