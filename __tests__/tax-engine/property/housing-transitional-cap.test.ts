@@ -155,8 +155,8 @@ describe("주택 세부담상한 경과조치 — calculatePropertyTax 통합", 
       previousYearHousingBaseTax: 215_336, // 구청 전년세액(상당액)
       previousYearHousingUrbanTax: 277_846, // 구청 전년 도시지역분(상당액)
     } as Input);
-    // 세부담상한이 binding → 산출세액(2025 1세대1주택 FMR 미구성으로 구청과 다름)과 무관하게
-    //   controlling value인 상한액이 구청 '상한세액'과 정확히 일치. 도시지역분 v2가 본 anchor의 핵심.
+    // 세부담상한이 binding → controlling value인 상한액이 구청 '상한세액'과 정확히 일치. 도시지역분 v2가 본 anchor의 핵심.
+    //   (v3로 2025 1세대1주택 FMR 44% 구성 → 과세표준 223,036,000·산출 266,072도 구청 일치. 단 cap이 binding이라 확정값 불변.)
     expect(r.determinedTax).toBe(236_869); // 구청 본세 상한세액 = floor(215,336 × 1.10)
     expect(r.surtax.urbanAreaTax).toBe(305_630); // 구청 도시지역분 상한세액 = floor(277,846 × 1.10)
     expect(r.housingTransitionalCap?.urbanApplied).toBe(true);
