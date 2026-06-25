@@ -213,8 +213,12 @@ const convertibleBondSchema = z.object({
   preConvShares: z.number().nonnegative().optional(),
   conversionPrice: z.number().nonnegative().optional(),
   increasedShares: z.number().nonnegative().optional(),
+  creditedShares: z.number().nonnegative().optional(),
+  isListed: z.boolean().optional(),
+  listedMarketAvg: z.number().nonnegative().optional(),
   interestLoss: z.number().nonnegative().optional(),
   acquisitionGainPrior: z.number().nonnegative().optional(),
+  bondTransferGainForCap: z.number().nonnegative().optional(),
   relatedPreRatio: ratioSchema.optional(),
 });
 

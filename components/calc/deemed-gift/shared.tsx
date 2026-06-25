@@ -147,10 +147,24 @@ export interface DeemedFormState {
   cbPreConvPrice: string; // conversion 전환등 전 1주평가
   cbPreConvShares: string; // conversion 전환등 전 주식총수
   cbConversionPrice: string; // conversion 1주당 전환가액등
-  cbIncreasedShares: string; // conversion 증가주식수(교부받은 주식수)
-  cbInterestLoss: string; // conversion 이자손실분
+  cbIncreasedShares: string; // conversion 전환등 증가주식수(㉡ 가중평균 분모)
+  cbInterestLoss: string; // conversion 이자손실분(직접입력)
   cbAcqGainPrior: string; // conversion 인수 시 기과세 이익(§30①1)
   cbRelatedPreRatioPct: string; // conversion_reverse 특수관계인 전환 전 지분비율 (%)
+  // §40 보완 — 교부주식수 분리·상장 Min/Max·양도 cap·자동계산 모드
+  cbCreditedShares: string; // 교부받은 주식수(초과분; 미입력=증가주식수)
+  cbIsListed: boolean; // 주권상장법인 (§30⑤1 Min/Max 단서)
+  cbListedMarketAvg: string; // 전환일 전후 2개월 종가평균(㉠)
+  cbTransferGainForCap: string; // 전환가능기간 전환사채 양도차익(양도 cap §30①2 단서)
+  cbAutoInterestLoss: boolean; // 이자손실분 자동계산(PV §10의2) 모드
+  cbBondMaturity: string; // 만기상환금액(원금)
+  cbCouponRatePct: string; // 사채발행이율 (%)
+  cbPvFactorAppr: string; // 적정할인율 현가계수 (예 0.73502)
+  cbAnnuityFactorAppr: string; // 적정할인율 연금현가계수 (예 3.31212)
+  cbAutoExcess: boolean; // 균등초과분 자동산정 모드 (⑤)
+  cbOwnPreRatioPct: string; // 본인 전환전 지분율 (%)
+  cbSubscribedShares: string; // 인수(전환) 주식수
+  cbTotalSubscribable: string; // 총인수가능주식수
   // 전환주식 §39①3호 — 전환 시점 / 발행 시점 2구간 (direction·subType 공유)
   csDirection: "low" | "high";
   csSubType: "forfeited_realloc" | "third_party" | "excess" | "no_realloc";
@@ -300,6 +314,19 @@ export const INITIAL_DEEMED: DeemedFormState = {
   cbInterestLoss: "",
   cbAcqGainPrior: "",
   cbRelatedPreRatioPct: "",
+  cbCreditedShares: "",
+  cbIsListed: false,
+  cbListedMarketAvg: "",
+  cbTransferGainForCap: "",
+  cbAutoInterestLoss: false,
+  cbBondMaturity: "",
+  cbCouponRatePct: "",
+  cbPvFactorAppr: "",
+  cbAnnuityFactorAppr: "",
+  cbAutoExcess: false,
+  cbOwnPreRatioPct: "",
+  cbSubscribedShares: "",
+  cbTotalSubscribable: "",
   csDirection: "low",
   csSubType: "forfeited_realloc",
   csConvPrePrice: "",

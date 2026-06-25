@@ -358,13 +358,59 @@ export function ConvertibleBondFields({ form, set }: Props) {
           <CurrencyInput label="전환등 전 1주당 평가가액" value={form.cbPreConvPrice} onChange={(v) => set({ cbPreConvPrice: v })} placeholder="전환등 전 1주당 평가가액 (원)" />
           <CurrencyInput label="전환등 전 발행주식총수" value={form.cbPreConvShares} onChange={(v) => set({ cbPreConvShares: v })} placeholder="전환등 전 발행주식총수" />
           <CurrencyInput label="1주당 전환가액등" value={form.cbConversionPrice} onChange={(v) => set({ cbConversionPrice: v })} placeholder="1주당 전환가액등 (원)" />
-          <CurrencyInput label="전환등 증가주식수 (교부받은 주식수)" value={form.cbIncreasedShares} onChange={(v) => set({ cbIncreasedShares: v })} placeholder="전환등 증가주식수" />
+          <CurrencyInput label="전환등 증가주식수 (㉡ 가중평균 분모)" value={form.cbIncreasedShares} onChange={(v) => set({ cbIncreasedShares: v })} placeholder="전환등 증가주식수" />
+          <ToggleCard
+            tone="emerald"
+            checked={form.cbIsListed}
+            onCheckedChange={(v) => set({ cbIsListed: v })}
+            title="주권상장법인 (교부주식가액 Min/Max §30⑤1)"
+            description={ct === "conversion_reverse" ? "라목: Max(종가평균, 이론주가)" : "가·나·다목: Min(종가평균, 이론주가)"}
+          >
+            <CurrencyInput label="전환일 전후 2개월 종가평균" value={form.cbListedMarketAvg} onChange={(v) => set({ cbListedMarketAvg: v })} placeholder="전환일 전후 2개월 종가평균 (원)" />
+          </ToggleCard>
         </>
       )}
       {ct === "conversion" && (
         <>
-          <CurrencyInput label="이자손실분" value={form.cbInterestLoss} onChange={(v) => set({ cbInterestLoss: v })} />
+          <ToggleCard
+            tone="sky"
+            checked={form.cbAutoExcess}
+            onCheckedChange={(v) => set({ cbAutoExcess: v })}
+            title="균등지분 초과분 자동산정 (⑤ §40①2호나)"
+            description="ON: 인수·총인수가능·본인지분율로 초과분 자동. OFF: 교부받은 주식수 직접입력"
+          >
+            <CurrencyInput label="인수(전환) 주식수" value={form.cbSubscribedShares} onChange={(v) => set({ cbSubscribedShares: v })} placeholder="인수(전환) 주식수" />
+            <CurrencyInput label="총인수가능 주식수" value={form.cbTotalSubscribable} onChange={(v) => set({ cbTotalSubscribable: v })} placeholder="총인수가능 주식수" />
+            <FieldCard label="본인 전환전 지분율" hint="균등배정 산정" unit="%">
+              <DecimalInput value={form.cbOwnPreRatioPct} onChange={(v) => set({ cbOwnPreRatioPct: v })} />
+            </FieldCard>
+          </ToggleCard>
+          {!form.cbAutoExcess && (
+            <CurrencyInput label="교부받은 주식수 (초과분; 미입력 시 증가주식수)" value={form.cbCreditedShares} onChange={(v) => set({ cbCreditedShares: v })} placeholder="교부받은 주식수" />
+          )}
+          <ToggleCard
+            tone="amber"
+            checked={form.cbAutoInterestLoss}
+            onCheckedChange={(v) => set({ cbAutoInterestLoss: v })}
+            title="이자손실분 자동계산 (PV §10의2)"
+            description="ON: 만기상환금액·발행이율·적정할인율 현가계수로 산출. OFF: 이자손실분 직접입력"
+          >
+            <CurrencyInput label="만기상환금액 (원금)" value={form.cbBondMaturity} onChange={(v) => set({ cbBondMaturity: v })} placeholder="만기상환금액 (원)" />
+            <FieldCard label="사채발행이율" hint="표면이율" unit="%">
+              <DecimalInput value={form.cbCouponRatePct} onChange={(v) => set({ cbCouponRatePct: v })} />
+            </FieldCard>
+            <FieldCard label="적정할인율 현가계수" hint="공시 현가계수표 값">
+              <DecimalInput value={form.cbPvFactorAppr} onChange={(v) => set({ cbPvFactorAppr: v })} />
+            </FieldCard>
+            <FieldCard label="적정할인율 연금현가계수" hint="공시 연금현가계수표 값">
+              <DecimalInput value={form.cbAnnuityFactorAppr} onChange={(v) => set({ cbAnnuityFactorAppr: v })} />
+            </FieldCard>
+          </ToggleCard>
+          {!form.cbAutoInterestLoss && (
+            <CurrencyInput label="이자손실분" value={form.cbInterestLoss} onChange={(v) => set({ cbInterestLoss: v })} />
+          )}
           <CurrencyInput label="인수 시 기과세 이익 (§30①1)" value={form.cbAcqGainPrior} onChange={(v) => set({ cbAcqGainPrior: v })} />
+          <CurrencyInput label="전환가능기간 전환사채 양도차익 (선택 — 양도 cap §30①2 단서)" value={form.cbTransferGainForCap} onChange={(v) => set({ cbTransferGainForCap: v })} />
         </>
       )}
       {ct === "conversion_reverse" && (

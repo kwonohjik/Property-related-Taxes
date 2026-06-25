@@ -129,10 +129,30 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (parseAmount(form.cbPreConvPrice) <= 0) return "전환등 전 1주당 평가가액을 입력하세요";
         if (parseAmount(form.cbConversionPrice) <= 0) return "1주당 전환가액등을 입력하세요";
         if (parseAmount(form.cbIncreasedShares) <= 0) return "전환등 증가주식수를 입력하세요";
-      } else if (form.cbCaseType === "transfer") {
+        // 상장 Min/Max 단서 — 종가평균 필요. creditedShares는 non-required(미입력=증가주식수)
+        if (form.cbIsListed && parseAmount(form.cbListedMarketAvg) <= 0) return "전환일 전후 2개월 종가평균을 입력하세요";
+      }
+      if (form.cbCaseType === "conversion") {
+        if (form.cbAutoExcess) {
+          if (parseAmount(form.cbSubscribedShares) <= 0) return "인수(전환) 주식수를 입력하세요";
+          if (parseAmount(form.cbTotalSubscribable) <= 0) return "총인수가능주식수를 입력하세요";
+          if (parseDecimal(form.cbOwnPreRatioPct) <= 0) return "본인 전환전 지분율을 입력하세요";
+        }
+        if (form.cbAutoInterestLoss) {
+          if (parseAmount(form.cbBondMaturity) <= 0) return "만기상환금액을 입력하세요";
+          if (parseDecimal(form.cbCouponRatePct) <= 0) return "사채발행이율을 입력하세요";
+          if (parseDecimal(form.cbPvFactorAppr) <= 0) return "적정할인율 현가계수를 입력하세요";
+          if (parseDecimal(form.cbAnnuityFactorAppr) <= 0) return "적정할인율 연금현가계수를 입력하세요";
+        }
+      }
+      if (form.cbCaseType === "conversion_reverse") {
+        if (parseDecimal(form.cbRelatedPreRatioPct) <= 0) return "특수관계인 전환 전 지분비율을 입력하세요";
+      }
+      if (form.cbCaseType === "transfer") {
         if (parseAmount(form.cbMarketValue) <= 0) return "전환사채등 시가를 입력하세요";
         if (parseAmount(form.cbTransferPrice) <= 0) return "양도가액을 입력하세요";
-      } else {
+      }
+      if (form.cbCaseType === "acquisition") {
         if (parseAmount(form.cbMarketValue) <= 0) return "전환사채등 시가를 입력하세요";
       }
       break;

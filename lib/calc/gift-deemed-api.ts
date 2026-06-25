@@ -6,6 +6,13 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { resolveFreeLoanRate } from "@/lib/tax-engine/data/gift-deemed-rates";
+import { applyRateFraction } from "@/lib/tax-engine/tax-utils";
+import {
+  bondInterestLoss,
+  computeExcessRatio,
+  applyExcessRatio,
+  PV_FACTOR_SCALE,
+} from "@/lib/tax-engine/gift-deemed/convertible-bond-helpers";
 import {
   DEEMED_TYPE_META,
   type DeemedFormState,
@@ -166,9 +173,38 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
     }
     case "convertible_bond": {
       const ct = form.cbCaseType;
+      const ratioFromPct = (pct: string) => ({ numer: Math.round(parseDecimal(pct) * 100), denom: 10_000 });
+      const optAmount = (s: string) => (s.trim() ? parseAmount(s) : undefined);
       if (ct === "transfer")
         return { type: "convertible_bond", caseType: "transfer", bondMarketValue: parseAmount(form.cbMarketValue), transferPrice: parseAmount(form.cbTransferPrice) };
-      if (ct === "conversion")
+      if (ct === "conversion") {
+        const increasedShares = parseAmount(form.cbIncreasedShares);
+        // 초과분 자동산정(⑤) — creditedShares·이자손실분 안분. 미입력 시 직접입력(또는 전부=증가주식수)
+        let creditedShares = optAmount(form.cbCreditedShares) ?? increasedShares;
+        let excessRatio: { numer: number; denom: number } | undefined;
+        if (form.cbAutoExcess) {
+          excessRatio = computeExcessRatio({
+            subscribedShares: parseAmount(form.cbSubscribedShares),
+            totalSubscribableShares: parseAmount(form.cbTotalSubscribable),
+            ownPreRatio: ratioFromPct(form.cbOwnPreRatioPct),
+          });
+          creditedShares = excessRatio.numer;
+        }
+        // 이자손실분 자동계산(PV §10의2) — full × 초과분비율. 미입력 시 직접입력
+        let interestLoss: number;
+        if (form.cbAutoInterestLoss) {
+          const maturity = parseAmount(form.cbBondMaturity);
+          const annualCoupon = applyRateFraction(maturity, Math.round(parseDecimal(form.cbCouponRatePct) * 100), 10_000);
+          const full = bondInterestLoss({
+            maturityAmount: maturity,
+            annualCoupon,
+            pvFactorAppropriate: Math.round(parseDecimal(form.cbPvFactorAppr) * PV_FACTOR_SCALE),
+            annuityFactorAppropriate: Math.round(parseDecimal(form.cbAnnuityFactorAppr) * PV_FACTOR_SCALE),
+          });
+          interestLoss = excessRatio ? applyExcessRatio(full, excessRatio) : full;
+        } else {
+          interestLoss = parseAmount(form.cbInterestLoss);
+        }
         return {
           type: "convertible_bond",
           caseType: "conversion",
@@ -176,10 +212,15 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           preConvPrice: parseAmount(form.cbPreConvPrice),
           preConvShares: parseAmount(form.cbPreConvShares),
           conversionPrice: parseAmount(form.cbConversionPrice),
-          increasedShares: parseAmount(form.cbIncreasedShares),
-          interestLoss: parseAmount(form.cbInterestLoss),
+          increasedShares,
+          creditedShares,
+          isListed: form.cbIsListed,
+          listedMarketAvg: form.cbIsListed ? parseAmount(form.cbListedMarketAvg) : undefined,
+          interestLoss,
           acquisitionGainPrior: parseAmount(form.cbAcqGainPrior),
+          bondTransferGainForCap: optAmount(form.cbTransferGainForCap),
         };
+      }
       if (ct === "conversion_reverse")
         return {
           type: "convertible_bond",
@@ -189,7 +230,9 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           preConvShares: parseAmount(form.cbPreConvShares),
           conversionPrice: parseAmount(form.cbConversionPrice),
           increasedShares: parseAmount(form.cbIncreasedShares),
-          relatedPreRatio: { numer: Math.round(parseDecimal(form.cbRelatedPreRatioPct) * 100), denom: 10_000 },
+          isListed: form.cbIsListed,
+          listedMarketAvg: form.cbIsListed ? parseAmount(form.cbListedMarketAvg) : undefined,
+          relatedPreRatio: ratioFromPct(form.cbRelatedPreRatioPct),
         };
       return { type: "convertible_bond", caseType: "acquisition", bondMarketValue: parseAmount(form.cbMarketValue), acquisitionPrice: parseAmount(form.cbAcquisitionPrice) };
     }
