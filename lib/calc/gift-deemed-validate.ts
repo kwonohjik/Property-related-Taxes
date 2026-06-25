@@ -3,7 +3,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import type { DeemedFormState } from "@/components/calc/deemed-gift/shared";
+import type { DeemedFormState, EdShareholderRow } from "@/components/calc/deemed-gift/shared";
 
 export function validateDeemedInput(form: DeemedFormState): string | null {
   // 신탁이익(§33)은 공통 증여일 대신 원본·수익 증여시기를 분리 입력(§25①) → 공통 giftDate 검사 skip
@@ -104,9 +104,43 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "nominee_trust":
       if (parseAmount(form.ntPropertyValue) <= 0) return "명의신탁 재산 가액을 입력하세요";
       break;
-    case "excess_dividend":
-      if (parseAmount(form.edExcessDividend) <= 0) return "초과배당금액을 입력하세요";
+    case "excess_dividend": {
+      // ⑧ F1: 주주 목록 필수 — 엔진 요구사항 동기화 (API fallback: edShareholders ?? [])
+      const edRows: EdShareholderRow[] = form.edShareholders ?? [];
+      if (edRows.length === 0) return "주주를 1명 이상 추가하세요";
+
+      // ⑧ F2: 최대주주등 최소 1명
+      const hasMajor = edRows.some((r) => r.role === "major_shareholder");
+      if (!hasMajor) return "최대주주등(배당 포기·과소수령) 주주를 1명 이상 지정하세요";
+
+      // ⑧ F3: 특수관계인(수증자) 최소 1명
+      const hasRelated = edRows.some((r) => r.role === "related_party");
+      if (!hasRelated) return "초과배당을 수령한 특수관계인 주주를 1명 이상 지정하세요";
+
+      // ⑧ F4: 각 행 — 지분율 > 0, 실수령 배당금 >= 0
+      for (const [i, row] of edRows.entries()) {
+        if (parseDecimal(row.ownershipRatioPctStr) <= 0)
+          return `${i + 1}번째 주주의 지분율을 입력하세요 (0 초과)`;
+        if (parseAmount(row.actualDividendStr) < 0)
+          return `${i + 1}번째 주주의 실수령 배당금은 0 이상이어야 합니다`;
+      }
+
+      // ⑧ F5: 소득세 모드 필수 — API fallback은 "undetermined" 이지만 validate는 명시 선택 강제
+      // (⑧ 정책: API/UI fallback ↔ validate 모순 금지. 여기서는 validate가 명시입력을 요구하도록 동기화)
+      if (!form.edIncomeTaxMode) return "소득세 확정 여부를 선택하세요 (§41의2①)";
+
+      // ⑧ F6: 모드별 조건부 필드
+      if (form.edIncomeTaxMode === "separate" && parseAmount(form.edSeparateTaxAmount) < 0)
+        return "분리과세 소득세액은 0 이상이어야 합니다";
+      if (form.edIncomeTaxMode === "comprehensive" && parseAmount(form.edComprehensiveTaxBase) <= 0)
+        return "종합과세 과세표준을 입력하세요 (양수여야 합니다)";
+
+      // ⑧ F7: 정산 모드 — 실제 소득세 필수 (0은 유효)
+      if (form.edSettlementMode && form.edActualIncomeTax === "")
+        return "정산용 실제 소득세액을 입력하세요 (납부 0원이면 0 입력)";
+
       break;
+    }
     case "listing_gain":
       if (parseAmount(form.lgSettlementPrice) <= 0) return "정산기준일 1주당 평가가액을 입력하세요";
       if (parseAmount(form.lgShares) <= 0) return "증여·유상취득 주식수를 입력하세요";

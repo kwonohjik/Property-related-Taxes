@@ -1,22 +1,233 @@
 "use client";
 
-/** 증여로 보는 경우 Phase 3 — 기타이익·자본거래연계·법인 입력 폼 (§41의2·§41의3·§41의5·§42·§42의2·§42의3·§45의5). */
+/**
+ * 증여로 보는 경우 Phase 3 — 기타이익·자본거래연계·법인 입력 폼
+ * (§41의2·§41의3·§41의5·§42·§42의2·§42의3·§45의5).
+ */
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DateInput } from "@/components/ui/date-input";
 import type { DeemedFormState } from "./shared";
+import { ExcessShareholderTable } from "./ExcessShareholderTable";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
 
 /** §41의2 초과배당 */
 export function ExcessDividendFields({ form, set }: Props) {
+  const incomeTaxMode = form.edIncomeTaxMode;
+
   return (
-    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
-      <CurrencyInput label="초과배당금액" value={form.edExcessDividend} onChange={(v) => set({ edExcessDividend: v })} hint="(특수관계인 실수령 배당 − 균등배당) × 최대주주등 과소배당 비율" placeholder="초과배당금액 (원)" />
-      <CurrencyInput label="초과배당금액에 대한 소득세 상당액" value={form.edIncomeTax} onChange={(v) => set({ edIncomeTax: v })} hint="시행규칙 §10의3 율표(또는 실제 소득세액) — 직접 입력. 정산(§41의2②③)은 별도" placeholder="소득세 상당액 (원)" />
+    <div className="space-y-3">
+      {/* ── 섹션 1: 증여일 (배당지급일) ── */}
+      <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-800 select-none">
+            1
+          </span>
+          <p className="text-xs font-semibold text-slate-700">증여일 (배당지급일) — §41의2①</p>
+        </div>
+        <FieldCard
+          label="배당지급일"
+          hint="배당기준일 이후 지급일이 증여일이 됩니다 (시행령 §31의2①)"
+        >
+          <DateInput
+            value={form.edDividendDate}
+            onChange={(v) => set({ edDividendDate: v })}
+          />
+        </FieldCard>
+      </div>
+
+      {/* ── 섹션 2: 주주 입력 ── */}
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+            2
+          </span>
+          <p className="text-xs font-semibold text-sky-700">
+            주주별 배당 내역 — 비례배당·초과배당금액 자동산정 (시행령 §31의2②)
+          </p>
+        </div>
+        <ExcessShareholderTable
+          rows={form.edShareholders}
+          onChange={(rows) => set({ edShareholders: rows })}
+        />
+      </div>
+
+      {/* ── 섹션 3: 소득세 상당액 모드 ── */}
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+            3
+          </span>
+          <p className="text-xs font-semibold text-amber-700">소득세 상당액 확정 여부 — 시행규칙 §10의3</p>
+        </div>
+        <RadioCardGroup
+          name="ed-income-tax-mode"
+          tone="amber"
+          value={incomeTaxMode ?? "undetermined"}
+          onChange={(v) =>
+            set({
+              edIncomeTaxMode: v as DeemedFormState["edIncomeTaxMode"],
+            })
+          }
+          options={[
+            {
+              value: "undetermined",
+              label: "미확정 — 율표 자동 (시행규칙 §10의3①)",
+              description: "증여일 연도 율표에 따라 소득세 상당액을 자동 산정합니다",
+              testId: "ed-mode-undetermined",
+            },
+            {
+              value: "exempt",
+              label: "비과세 — 소득세 0원 (규칙 §10의3②1호)",
+              description: "해당 배당이 소득세 비과세에 해당하는 경우",
+              testId: "ed-mode-exempt",
+            },
+            {
+              value: "separate",
+              label: "분리과세 확정 — 실제 세액 입력 (규칙 §10의3②2호)",
+              description: "분리과세로 납부한 실제 소득세액을 직접 입력합니다",
+              testId: "ed-mode-separate",
+            },
+            {
+              value: "comprehensive",
+              label: "종합과세 확정 — Max(ⓐ−ⓑ, 14%) 산식 (규칙 §10의3②3호)",
+              description: "종합소득과세표준을 입력하면 Max 산식으로 자동 계산합니다",
+              testId: "ed-mode-comprehensive",
+            },
+          ]}
+        />
+
+        {/* 분리과세 세액 직접입력 */}
+        {incomeTaxMode === "separate" && (
+          <div className="pt-1">
+            <CurrencyInput
+              label="분리과세 소득세액"
+              value={form.edSeparateTaxAmount}
+              onChange={(v) => set({ edSeparateTaxAmount: v })}
+              hint="분리과세 적용 소득세납부세액 (시행규칙 §10의3②2호)"
+            />
+          </div>
+        )}
+
+        {/* 종합과세 과세표준 입력 */}
+        {incomeTaxMode === "comprehensive" && (
+          <div className="pt-1 space-y-2">
+            <CurrencyInput
+              label="수증자 종합소득과세표준"
+              value={form.edComprehensiveTaxBase}
+              onChange={(v) => set({ edComprehensiveTaxBase: v })}
+              hint="ⓐ기준 — 초과배당금액 포함 종합소득과세표준 (시행규칙 §10의3②3호)"
+            />
+            <p className="text-xs text-muted-foreground">
+              Max(ⓐ과세표준 세율 적용액 − ⓑ차감액 세율 적용액, 초과배당금액 × 14%) — 서버 계산 후 결과에 표시됩니다.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ── 섹션 4: 증여세 계산 맥락 (giftTaxContext) — 정산·구법 결과 표시용 ── */}
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+            4
+          </span>
+          <p className="text-xs font-semibold text-violet-700">
+            증여자와의 관계 (선택 — 입력 시 정산·구법 세액 추가 표시)
+          </p>
+        </div>
+        <RadioCardGroup
+          name="ed-donor-relationship"
+          tone="violet"
+          value={form.edDonorRelationship ?? ""}
+          onChange={(v) =>
+            set({
+              edDonorRelationship: v
+                ? (v as DeemedFormState["edDonorRelationship"])
+                : undefined,
+            })
+          }
+          options={[
+            {
+              value: "spouse",
+              label: "배우자",
+              description: "증여재산공제 6억원",
+              testId: "ed-rel-spouse",
+            },
+            {
+              value: "lineal_ascendant_adult",
+              label: "직계존비속 (성년)",
+              description: "증여재산공제 5천만원",
+              testId: "ed-rel-lineal-adult",
+            },
+            {
+              value: "lineal_ascendant_minor",
+              label: "직계존비속 (미성년)",
+              description: "증여재산공제 2천만원",
+              testId: "ed-rel-lineal-minor",
+            },
+            {
+              value: "lineal_descendant",
+              label: "직계비속 (성년)",
+              description: "증여재산공제 5천만원",
+              testId: "ed-rel-lineal-desc",
+            },
+            {
+              value: "other_relative",
+              label: "기타친족",
+              description: "증여재산공제 1천만원",
+              testId: "ed-rel-other",
+            },
+          ]}
+        />
+
+        {form.edDonorRelationship && (
+          <div className="space-y-2 pt-1">
+            <CurrencyInput
+              label="10년 내 기적용 공제 누계 (선택)"
+              value={form.edPriorDeductionApplied}
+              onChange={(v) => set({ edPriorDeductionApplied: v })}
+              hint="과거 10년 내 동일인으로부터 받은 증여에서 이미 적용된 공제 합계액"
+            />
+            <ToggleCard
+              tone="rose"
+              checked={form.edIsGenerationSkip}
+              onCheckedChange={(v) => set({ edIsGenerationSkip: v })}
+              title="세대생략 할증 (§27)"
+              description="수증자가 증여자의 자녀를 건너뛴 직계비속인 경우 30% 할증"
+              data-testid="ed-generation-skip-toggle"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── 섹션 5: 정산 (§41의2②③) — 2021.1.1 이후 배당 전용 ── */}
+      {/* §0.5 환류: 신고기한 섹션 없음. 정산은 항상 적용 가능(isDiligentFiler 엔진 미사용) */}
+      <ToggleCard
+        tone="emerald"
+        checked={form.edSettlementMode}
+        onCheckedChange={(v) => set({ edSettlementMode: v })}
+        title="정산 입력 (§41의2②③)"
+        description="실제 소득세 납부 후 당초·정산 증여세 차액을 계산합니다 (2021.1.1 이후 배당)"
+        data-testid="ed-settlement-toggle"
+      >
+        <div className="space-y-3 pt-1">
+          <CurrencyInput
+            label="실제 소득세납부세액 (§31의2④)"
+            value={form.edActualIncomeTax}
+            onChange={(v) => set({ edActualIncomeTax: v })}
+            hint="납부세액 0원인 경우도 0 입력 (시행규칙 §10의3② 확정소득세)"
+          />
+          <p className="text-xs text-muted-foreground">
+            정산 결과(당초·정산 증여세 차액·추납/환급)는 계산 후 결과 화면에 표시됩니다.
+          </p>
+        </div>
+      </ToggleCard>
     </div>
   );
 }

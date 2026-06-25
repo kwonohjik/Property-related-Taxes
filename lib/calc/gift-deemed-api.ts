@@ -227,24 +227,69 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         hasTaxAvoidancePurpose: form.ntTaxAvoidance,
         isExcluded: form.ntExcluded,
       };
-    case "excess_dividend":
-      // TODO(UI시니어): shareholders 배열 입력 UI 신규 구현 필요.
-      // 임시: 구형 edExcessDividend/edIncomeTax 기반 최소 변환 (단일 최대주주+특수관계인 가정).
-      // UI 완성 후 이 블록을 새 폼 필드(edShareholders, edDividendDate 등)로 교체.
-      return {
-        type: "excess_dividend",
-        shareholders: [
-          {
-            id: "major",
-            role: "major_shareholder" as const,
-            ownershipRatio: { numer: 100, denom: 100 },
-            actualDividend: 0,
+    case "excess_dividend": {
+      // ① 주주 배열 → shareholders 변환 (ownershipRatioPct → 분수)
+      const edRows = form.edShareholders ?? [];
+      const shareholders = edRows.map((row) => {
+        const pct = parseDecimal(row.ownershipRatioPctStr);
+        return {
+          id: row.id,
+          role: row.role,
+          // 소수점 3자리까지 지원: 10.5% → {1050, 10000}
+          ownershipRatio: {
+            numer: Math.round(pct * 100),
+            denom: 10_000,
           },
-        ],
-        dividendDate: new Date(),
-        incomeTaxMode: "separate" as const,
-        separateIncomeTax: 0,
+          actualDividend: parseAmount(row.actualDividendStr),
+          name: row.name || undefined,
+        };
+      });
+
+      // ② 소득세 모드별 조건부 필드
+      const incomeTaxMode = form.edIncomeTaxMode ?? "undetermined";
+      const separateIncomeTax =
+        incomeTaxMode === "separate"
+          ? parseAmount(form.edSeparateTaxAmount)
+          : undefined;
+      const comprehensiveTaxBase =
+        incomeTaxMode === "comprehensive"
+          ? parseAmount(form.edComprehensiveTaxBase)
+          : undefined;
+
+      // ③ 정산 2-pass 입력
+      const actualIncomeTax = form.edSettlementMode
+        ? parseAmount(form.edActualIncomeTax)
+        : undefined;
+
+      // ④ 증여세 과세 맥락 (giftTaxContext) — 증여자관계가 선택된 경우에만 전달
+      const giftTaxContext = form.edDonorRelationship
+        ? {
+            donorRelationship: form.edDonorRelationship,
+            priorDeductionApplied: form.edPriorDeductionApplied
+              ? parseAmount(form.edPriorDeductionApplied)
+              : undefined,
+            isGenerationSkip: form.edIsGenerationSkip || undefined,
+          }
+        : undefined;
+
+      // ⑤ 배당지급일 (증여일) — edDividendDate 우선, fallback giftDate
+      // Route.ts는 fetch body → JSON string → Zod z.coerce.date() 로 변환하지만
+      // buildDeemedGiftInput()은 Server Action 경로에서 직접 엔진을 호출할 수도 있으므로
+      // Date 객체로 변환 후 전달한다.
+      const dividendDateStr = form.edDividendDate || form.giftDate || "";
+      const dividendDate = toOptionalDate(dividendDateStr) ?? new Date();
+
+      return {
+        type: "excess_dividend" as const,
+        shareholders,
+        dividendDate,
+        incomeTaxMode,
+        separateIncomeTax,
+        comprehensiveTaxBase,
+        actualIncomeTax,
+        giftTaxContext,
       };
+    }
     case "listing_gain":
       return {
         type: "listing_gain",

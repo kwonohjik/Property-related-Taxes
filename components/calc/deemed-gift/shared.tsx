@@ -41,6 +41,29 @@ import {
 } from "./other-forms";
 
 // ============================================================
+// §41의2 초과배당 — 주주 행 보조 타입
+// ============================================================
+
+/** §41의2 UI 주주 행 (엔진 ShareholderDividend에 UI 식별자 추가) */
+export interface EdShareholderRow {
+  /** 행 고유 ID (클라이언트 UUID) */
+  id: string;
+  /** 표시용 이름 */
+  name: string;
+  /**
+   * 주주 역할
+   * - major_shareholder: 최대주주등 (배당 포기·과소배당 주체)
+   * - related_party: 특수관계인 (초과배당 수령자)
+   * - other: 기타 주주
+   */
+  role: "major_shareholder" | "related_party" | "other";
+  /** 지분율 numerator (소수점 포함 %) — DecimalInput 입력값 */
+  ownershipRatioPctStr: string;
+  /** 실제 수령 배당금 — CurrencyInput 입력값 */
+  actualDividendStr: string;
+}
+
+// ============================================================
 // 폼 상태
 // ============================================================
 
@@ -177,9 +200,18 @@ export interface DeemedFormState {
   ntPropertyValue: string;
   ntTaxAvoidance: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
   ntExcluded: boolean; // §45의2①1·3·4 배제사유
-  // 초과배당 §41의2
-  edExcessDividend: string;
-  edIncomeTax: string;
+  // 초과배당 §41의2 — 주주 배열 기반 자동산정
+  // (edExcessDividend·edIncomeTax 폐지 → 아래 필드로 대체)
+  edDividendDate: string;                       // DateInput "YYYY-MM-DD"
+  edShareholders: EdShareholderRow[] | undefined; // 3-state: undefined=미입력 / []=빈 / [...]
+  edIncomeTaxMode: "undetermined" | "separate" | "comprehensive" | "exempt" | undefined;
+  edSeparateTaxAmount: string;                  // 분리과세 세액 직접입력
+  edComprehensiveTaxBase: string;               // 종합과세 과세표준 (ⓐ기준)
+  edSettlementMode: boolean;                    // 정산 활성화 ToggleCard
+  edActualIncomeTax: string;                    // 정산 실제 소득세납부세액
+  edDonorRelationship: "spouse" | "lineal_ascendant_adult" | "lineal_ascendant_minor" | "lineal_descendant" | "other_relative" | undefined;
+  edPriorDeductionApplied: string;              // 10년 내 기적용 공제 누계
+  edIsGenerationSkip: boolean;                  // 세대생략 여부
   // 상장이익 §41의3 / 합병상장 §41의5
   lgEventType: "listing" | "merger";
   lgSettlementPrice: string;
@@ -322,8 +354,16 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ntPropertyValue: "",
   ntTaxAvoidance: true,
   ntExcluded: false,
-  edExcessDividend: "",
-  edIncomeTax: "",
+  edDividendDate: "",
+  edShareholders: undefined,
+  edIncomeTaxMode: undefined,
+  edSeparateTaxAmount: "",
+  edComprehensiveTaxBase: "",
+  edSettlementMode: false,
+  edActualIncomeTax: "",
+  edDonorRelationship: undefined,
+  edPriorDeductionApplied: "",
+  edIsGenerationSkip: false,
   lgEventType: "listing",
   lgSettlementPrice: "",
   lgAcqValue: "",
