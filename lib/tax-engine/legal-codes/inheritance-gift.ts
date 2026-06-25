@@ -147,6 +147,12 @@ export const GIFT = {
   NOMINEE_TRUST: "상증법 §45의2",
   // ── 증여로 보는 경우 (Phase 3: 기타이익·자본거래연계·법인) ──
   EXCESS_DIVIDEND: "상증법 §41의2",
+  /** 시행규칙 §10의3① — 초과배당 소득세 상당액 율표 */
+  EXCESS_DIVIDEND_INCOME_TAX_RATE: "상증칙 §10의3①",
+  /** 상증법 §41의2②③ — 초과배당 정산 증여세 */
+  EXCESS_DIVIDEND_SETTLEMENT: "상증법 §41의2②③",
+  /** 시행령 §31의2② — 초과배당금액 자동산정 (주주 비율 안분) */
+  EXCESS_DIVIDEND_AUTO_COMPUTE: "상증령 §31의2②",
   LISTING_GAIN: "상증법 §41의3",
   MERGER_LISTING_GAIN: "상증법 §41의5",
   PROPERTY_SERVICE_USE: "상증법 §42",
