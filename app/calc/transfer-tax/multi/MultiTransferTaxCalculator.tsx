@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,8 @@ import {
   areAllPropertiesReady,
 } from "@/lib/calc/multi-transfer-tax-validate";
 import { saveCalculation } from "@/actions/calculations";
+import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import TransferTaxCalculator from "../TransferTaxCalculator";
 
 const STEPS: MultiStep[] = ["list", "edit", "settings", "result"];
@@ -241,6 +243,29 @@ export default function MultiTransferTaxCalculator() {
   const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+
+  const { activeClientId } = useProfessionalStore();
+
+  // 로컬 IndexedDB 자동저장 — 다건 양도세 결과를 transfer로 통합 저장(계획서 §4-0).
+  // Supabase 저장(아래 handleCalculate)과 병행 — 트랙 B에서 Supabase만 제거 예정.
+  const autoSaveInput = useMemo(
+    () => ({
+      __multiTransfer: true,
+      taxYear: form.taxYear,
+      properties: form.properties.map((p) => ({
+        propertyId: p.propertyId,
+        propertyLabel: p.propertyLabel,
+      })),
+    }),
+    [form.taxYear, form.properties],
+  );
+  useAutoSaveCalculation({
+    taxType: "transfer",
+    inputData: autoSaveInput,
+    resultData: result ? (result as unknown as Record<string, unknown>) : null,
+    taxLawVersion: String(form.taxYear),
+    clientId: activeClientId,
+  });
 
   const activeStepIndex = STEPS.indexOf(form.activeStep);
 
