@@ -306,6 +306,16 @@ export function ListingGainFields({ form, set }: Props) {
       </div>
 
       <CurrencyInput label="증여·유상취득 주식수" value={form.lgShares} onChange={(v) => set({ lgShares: v })} placeholder="증여·유상취득 주식수" />
+
+      {/* 무상주 환산 안내 (령§31의3⑦ → 칙§17의3⑤) — 환산은 §56 평가의 발행주식총수 조정이라 1주당 입력값에 반영 */}
+      <div
+        className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 text-xs leading-relaxed text-amber-800"
+        data-testid="lg-bonus-share-notice"
+      >
+        ※ 증여·취득일부터 상장 전일까지 <b>무상주(증자)</b>를 발행한 경우, 환산주식수 기준으로 1주당 평가가액·순손익액을 산정해 입력하세요 (령§31의3⑦ → 칙§17의3⑤).
+        <br />
+        환산주식수 = 과거 사업연도말 주식수 × (증자 직전 주식수 + 증자 주식수) ÷ 증자 직전 주식수
+      </div>
     </div>
   );
 }
