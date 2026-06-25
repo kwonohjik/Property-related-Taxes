@@ -43,6 +43,10 @@ export interface DeemedGiftResult {
   legalBasis: string;
   /** 임계 판정 근거 echo */
   thresholdEcho?: Record<string, number | boolean>;
+  /** 증여세 합산배제 대상 여부 (§47① — §40①2·3호=true / §40①1호=false). 증여세 연계 echo */
+  aggregationExcluded?: boolean;
+  /** 증여자 연대납부의무 면제 여부 (§4의2⑥ — §40 등 명시 유형 true). 증여세 연계 echo */
+  donorJointLiabilityExempt?: boolean;
   /**
    * §37 다기간(G2/G3) — window별 별개 증여 산출. plain 배열(Map 금지).
    * ⚠️ 합산 금지: deemedGiftValue는 첫 window(현재 증여)만 — 나머지는 미래 별건.
@@ -299,9 +303,13 @@ export interface ConvertibleBondInput {
   preConvPrice?: number; // 전환등 전 1주당 평가가액
   preConvShares?: number; // 전환등 전 발행주식총수
   conversionPrice?: number; // 주식 1주당 전환가액등
-  increasedShares?: number; // 전환등 증가주식수(=교부받은 주식수)
-  interestLoss?: number; // 이자손실분 (시행규칙 §10의2) — conversion 차감
+  increasedShares?: number; // 전환등 증가주식수 (㉡ §30⑤1 가중평균 분모/분자)
+  creditedShares?: number; // 교부받은 주식수=이익승수 (미입력=increasedShares; ④⑥ 전부 / ⑤ 초과분)
+  isListed?: boolean; // 주권상장법인 — §30⑤1 단서 Min(가나다)/Max(라목)
+  listedMarketAvg?: number; // 전환일 전후 2개월 종가평균(㉠) — 상장 Min/Max용
+  interestLoss?: number; // 이자손실분 (시행규칙 §10의2) — 최종값(초과분 안분 포함, 엔진 재안분 금지). conversion 차감
   acquisitionGainPrior?: number; // §30①1호 이익(인수 시 기과세분) — conversion 차감
+  bondTransferGainForCap?: number; // 전환가능기간 전환사채 양도차익(양도가−취득가) — Min cap 한도 (영§30①2 단서)
   // conversion_reverse(라목, §30①3) 비율
   relatedPreRatio?: { numer: number; denom: number }; // 교부받은 자의 특수관계인이 전환 전 보유 지분비율
 }
