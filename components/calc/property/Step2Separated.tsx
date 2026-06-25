@@ -2,6 +2,7 @@
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { SEPARATED_TYPE_OPTIONS, type FormState } from "./shared";
 
 interface Props {
@@ -53,14 +54,19 @@ export function Step2Separated({ form, onChange }: Props) {
         </div>
       )}
 
-      <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 space-y-1">
-        <p className="text-xs text-amber-800">
-          대중형·간이 골프장 부속토지는 분리과세 대상이 아닙니다 (회원제
-          골프장만 해당). 영업용 건축물 부속토지 요건을 충족하면 &ldquo;토지
-          분류&rdquo; 단계에서 별도합산과세대상으로 입력하세요.
-        </p>
-        <LawArticleModal legalBasis="지방세법 §106" label="§106①3호" />
-      </div>
+      <CollapsibleHintCard
+        tone="amber"
+        summary="대중형·간이 골프장 부속토지 분리과세 제외 안내"
+      >
+        <div className="space-y-1 text-amber-800">
+          <p>
+            대중형·간이 골프장 부속토지는 분리과세 대상이 아닙니다 (회원제
+            골프장만 해당). 영업용 건축물 부속토지 요건을 충족하면 &ldquo;토지
+            분류&rdquo; 단계에서 별도합산과세대상으로 입력하세요.
+          </p>
+          <LawArticleModal legalBasis="지방세법 §106" label="§106①3호" />
+        </div>
+      </CollapsibleHintCard>
     </div>
   );
 }

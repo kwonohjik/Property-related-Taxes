@@ -218,7 +218,7 @@ export function LandParcelSection({ kind }: { kind: Kind }) {
                     : updateFormData({ landSeparatePreviousYearTotalTax: v })
                 }
                 placeholder="0"
-                hint="직전연도 재산세 + 종합부동산세 합계 (농특세 제외)"
+                hint="직전연도 재산세·종합부동산세 본세 합계 (지방교육세·지역자원시설세·농특세 등 부가세 제외)"
               />
             )}
           </div>
