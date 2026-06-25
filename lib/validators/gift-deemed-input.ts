@@ -315,6 +315,13 @@ const valueIncreaseSchema = z.object({
   acquisitionCost: z.number().nonnegative(),
   normalIncrease: z.number().nonnegative(),
   contribution: z.number().nonnegative(),
+  // echo (적용요건 표시 — 산식 무관)
+  acquisitionCause: z.enum(["gift", "inside_info", "borrowed_funds"]).optional(),
+  valueIncreaseReason: z
+    .enum(["development", "form_change", "partition", "license", "kotc_registration", "konex_listing", "similar"])
+    .optional(),
+  acquisitionDate: z.string().optional(),
+  eventDate: z.string().optional(),
 });
 // §45의5 주주 행 Zod (엔진 SpecificCorpShareholder에 대응)
 const scRelationSchema = z.enum([

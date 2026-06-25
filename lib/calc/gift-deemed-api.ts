@@ -468,6 +468,10 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         acquisitionCost: parseAmount(form.viAcqCost),
         normalIncrease: parseAmount(form.viNormalIncrease),
         contribution: parseAmount(form.viContribution),
+        acquisitionCause: form.viAcqCause || undefined,
+        valueIncreaseReason: form.viReason,
+        acquisitionDate: form.viAcqDate || undefined,
+        eventDate: form.viEventDate || undefined,
       };
     case "specific_corp": {
       const isRoster = form.scMode === "roster";

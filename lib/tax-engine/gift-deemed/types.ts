@@ -112,6 +112,17 @@ export interface DeemedGiftResult {
   mergerMatrix?: MergerMatrix;
   /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
   specificCorpMulti?: SpecificCorpMultiResult;
+  /**
+   * §42의3 재산취득 후 가치증가 — 적용요건 echo (산식 불변, feedback_engine_result_map_json_loss: plain 값만).
+   * 입력에 사유·날짜가 하나도 없으면 undefined(기존 동작 바이트 동일).
+   */
+  valueIncreaseDetail?: {
+    acquisitionCauseLabel?: string; // 취득사유 라벨 (cause 입력 시)
+    reasonLabel?: string; // 가치증가사유 라벨 (reason 입력 시)
+    withinFiveYears?: boolean; // acqDate·eventDate 둘 다 입력 시만; undefined=미입력 (echo만, applied 차단 안 함)
+    holdingYears?: number; // 취득~사유발생 연수 echo
+    isExchangeListingNotice?: boolean; // reason==="similar" → 결과뷰 §41의3 경계 amber
+  };
 }
 
 // ── 입력 타입 ──
@@ -624,12 +635,30 @@ export interface OrgChangeInput {
   postValue?: number; // value_change 변동 후 가액
 }
 
+/** §42의3 취득사유 (①1·2·3호) */
+export type ValueIncreaseAcquisitionCause = "gift" | "inside_info" | "borrowed_funds";
+
+/** §42의3 재산가치증가사유 (시행령 §32의3①). 1호는 4개 세분(UI 라벨용 — 법령상 동일 1호) */
+export type ValueIncreaseReason =
+  | "development"
+  | "form_change"
+  | "partition"
+  | "license"
+  | "kotc_registration"
+  | "konex_listing"
+  | "similar";
+
 /** §42의3 재산취득 후 가치증가 */
 export interface ValueIncreaseInput {
   currentValue: number; // 사유발생일 현재 재산가액
   acquisitionCost: number; // 취득가액(증여재산은 증여세 과세가액)
   normalIncrease: number; // 통상적인 가치상승분
   contribution: number; // 가치상승기여분(자본적지출액 등)
+  // ── echo (산식 미사용 — 적용요건 표시 전용) ──
+  acquisitionCause?: ValueIncreaseAcquisitionCause; // §42의3①1·2·3호
+  valueIncreaseReason?: ValueIncreaseReason; // 시행령 §32의3①
+  acquisitionDate?: string; // ISO. 취득일
+  eventDate?: string; // ISO. 재산가치증가사유 발생일(§42의3② 전단: 사유발생 전 양도 시 양도일)
 }
 
 /** §45의5 관계 — "other"=비친족(타인). 증여자 본인은 isDonor 플래그로 분리 */

@@ -11,6 +11,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DateInput } from "@/components/ui/date-input";
 import type { DeemedFormState } from "./shared";
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
 import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
@@ -333,14 +334,87 @@ export function OrgChangeFields({ form, set }: Props) {
   );
 }
 
+/** §42의3 재산취득 후 가치증가 — 계산사례 프리셋 (국세청 2004 개정세법 해설 pp.197~200) */
+const VI_PRESETS: { label: string; testId: string; v: Partial<DeemedFormState> }[] = [
+  { label: "①형질변경", testId: "deemed-vi-preset-1", v: { viCurrentValue: "2000000000", viAcqCost: "100000000", viNormalIncrease: "10000000", viContribution: "20000000", viAcqCause: "gift", viReason: "form_change" } },
+  { label: "②공유물분할", testId: "deemed-vi-preset-2", v: { viCurrentValue: "7500000000", viAcqCost: "5000000000", viNormalIncrease: "0", viContribution: "0", viAcqCause: "", viReason: "partition" } },
+  { label: "③비상장주식 상장", testId: "deemed-vi-preset-3", v: { viCurrentValue: "10000000000", viAcqCost: "1000000000", viNormalIncrease: "0", viContribution: "0", viAcqCause: "borrowed_funds", viReason: "similar" } },
+  { label: "④사업 인허가", testId: "deemed-vi-preset-4", v: { viCurrentValue: "5000000000", viAcqCost: "100000000", viNormalIncrease: "50000000", viContribution: "50000000", viAcqCause: "borrowed_funds", viReason: "license" } },
+];
+
 /** §42의3 재산취득 후 가치증가 */
 export function ValueIncreaseFields({ form, set }: Props) {
   return (
     <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+      {/* 계산사례 프리셋 */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-rose-700">계산사례:</span>
+        {VI_PRESETS.map((p) => (
+          <button
+            key={p.testId}
+            type="button"
+            data-testid={p.testId}
+            onClick={() => set(p.v)}
+            className="rounded-md border border-rose-300 bg-white/70 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ① 취득사유 (§42의3①1·2·3호) */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold text-rose-700">취득사유 (§42의3①)</p>
+        <RadioCardGroup
+          name="deemed-vi-cause"
+          tone="amber"
+          layout="stack"
+          value={form.viAcqCause}
+          onChange={(v) => set({ viAcqCause: v })}
+          options={[
+            { value: "gift", label: "특수관계인으로부터 증여 (①1호)" },
+            { value: "inside_info", label: "내부정보 제공받아 유상취득 (①2호)" },
+            { value: "borrowed_funds", label: "차입·담보차입 자금으로 취득 (①3호)" },
+          ]}
+        />
+      </div>
+
+      {/* ② 재산가치증가사유 (시행령 §32의3①) */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold text-rose-700">재산가치증가사유 (시행령 §32의3①)</p>
+        <RadioCardGroup
+          name="deemed-vi-reason"
+          tone="amber"
+          layout="stack"
+          value={form.viReason}
+          onChange={(v) => set({ viReason: v })}
+          options={[
+            { value: "form_change", label: "개발사업·형질변경·공유물분할·인가허가 (①1호)" },
+            { value: "kotc_registration", label: "한국금융투자협회 등록 K-OTC (①2호)" },
+            { value: "konex_listing", label: "코넥스시장 상장 (①3호)" },
+            { value: "similar", label: "그 밖의 유사 사유 (①4호)" },
+          ]}
+        />
+        {form.viReason === "similar" && (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-700" data-testid="deemed-vi-exchange-hint">
+            ⚠ 유가증권·코스닥시장 상장 이익은 §42의3에서 제외되어 §41의3 상장이익으로 과세됩니다.
+          </p>
+        )}
+      </div>
+
+      {/* ③ 금액 */}
       <CurrencyInput label="사유발생일 현재 재산가액" value={form.viCurrentValue} onChange={(v) => set({ viCurrentValue: v })} placeholder="사유발생일 현재 재산가액 (원)" />
       <CurrencyInput label="취득가액" value={form.viAcqCost} onChange={(v) => set({ viAcqCost: v })} hint="증여받은 재산은 증여세 과세가액" placeholder="취득가액 (원)" />
       <CurrencyInput label="통상적인 가치상승분" value={form.viNormalIncrease} onChange={(v) => set({ viNormalIncrease: v })} placeholder="통상적인 가치상승분 (원)" />
       <CurrencyInput label="가치상승기여분" value={form.viContribution} onChange={(v) => set({ viContribution: v })} hint="자본적지출액 등" placeholder="가치상승기여분 (원)" />
+
+      {/* ④ 기간 (5년 요건 echo) */}
+      <FieldCard label="취득일" hint="취득일부터 5년 이내 가치증가사유 발생 여부 표시">
+        <DateInput value={form.viAcqDate} onChange={(v) => set({ viAcqDate: v })} />
+      </FieldCard>
+      <FieldCard label="사유발생일">
+        <DateInput value={form.viEventDate} onChange={(v) => set({ viEventDate: v })} />
+      </FieldCard>
     </div>
   );
 }
