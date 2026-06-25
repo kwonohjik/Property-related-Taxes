@@ -111,6 +111,25 @@ describe("§41의3 상장 / §41의5 합병상장 이익 (시행령 §31의3·§
   it("[LG-FAIL] 1주당 이익 1천 × 2만 = 2천만 < 기준 9천만(=3억×30%) → 0", () => {
     expect(calcListingGainGift({ settlementPerSharePrice: 16_000, perShareAcqValue: 10_000, perShareCorpGrowth: 5_000, shares: 20_000 }).deemedGiftValue).toBe(0);
   });
+  // §41의3④ 단서·령§31의3⑥ 환급(평가손실): 정산기준일 가액 < 당초 과세가액, 차액 ≥ 기준금액
+  it("[LG-T1-DIR] 과세 케이스 direction=taxation", () => {
+    const r = calcListingGainGift({ settlementPerSharePrice: 50_000, perShareAcqValue: 10_000, perShareCorpGrowth: 5_000, shares: 20_000 });
+    expect(r.direction).toBe("taxation");
+    expect(r.refundBase).toBe(0);
+  });
+  it("[LG-R1] 환급: 정산 5천 < 과세 1만, 손실 5억 ≥ 기준 3억 → refund, refundBase 5억", () => {
+    const r = calcListingGainGift({ settlementPerSharePrice: 5_000, perShareAcqValue: 10_000, perShareCorpGrowth: 0, shares: 100_000 });
+    expect(r.direction).toBe("refund");
+    expect(r.refundBase).toBe(500_000_000);
+    expect(r.deemedGiftValue).toBe(0);
+    expect(r.applied).toBe(false);
+  });
+  it("[LG-R2] 환급 미달: 손실 1억 < 기준 3억 → none", () => {
+    const r = calcListingGainGift({ settlementPerSharePrice: 9_000, perShareAcqValue: 10_000, perShareCorpGrowth: 0, shares: 100_000 });
+    expect(r.direction).toBe("none");
+    expect(r.refundBase).toBe(0);
+    expect(r.deemedGiftValue).toBe(0);
+  });
 });
 
 describe("§43① 중복배제 (이익 최대 1건)", () => {

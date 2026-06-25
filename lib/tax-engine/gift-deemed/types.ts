@@ -44,6 +44,10 @@ export interface DeemedGiftResult {
   legalBasis: string;
   /** 임계 판정 근거 echo */
   thresholdEcho?: Record<string, number | boolean>;
+  /** §41의3 정산 방향 — taxation(과세)/refund(평가손실 환급)/none(기준미달). 미설정 시 일반 의제 */
+  direction?: "taxation" | "refund" | "none";
+  /** §41의3④ 단서·령§31의3⑥ 환급 대상액(=평가손실 (B+C)−A). direction==="refund"만 > 0 */
+  refundBase?: number;
   /** 증여세 합산배제 대상 여부 (§47① — §40①2·3호=true / §40①1호=false). 증여세 연계 echo */
   aggregationExcluded?: boolean;
   /** 증여자 연대납부의무 면제 여부 (§4의2⑥ — §40 등 명시 유형 true). 증여세 연계 echo */
