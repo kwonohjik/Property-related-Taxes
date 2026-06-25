@@ -321,31 +321,46 @@ export function DeemedGiftResultView({
     return <AllocationResultView result={result} onToGiftTax={onToGiftTax} />;
   }
 
+  // §41의3④ 단서·령§31의3⑥ 평가손실 환급 — 증여이익(과세)과 별도 표시(정적 색조 매핑)
+  const isRefund = result.direction === "refund";
+  const headLabel = isRefund ? "평가손실 환급 대상액" : "증여재산가액 (증여이익)";
+  const headValue = isRefund ? result.refundBase ?? 0 : result.deemedGiftValue;
+  const cardCls = isRefund ? "border-blue-200 bg-blue-50/50" : "border-rose-200 bg-rose-50/50";
+  const titleCls = isRefund ? "text-blue-800" : "text-rose-800";
+  const valueCls = isRefund ? "text-blue-900" : "text-rose-900";
+  const rowBorderCls = isRefund ? "border-blue-100" : "border-rose-100";
+  const noteCls = isRefund ? "text-blue-600" : "text-rose-600";
+
   return (
     <div className="space-y-4" data-testid="deemed-result">
-      <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-4">
+      <div className={`rounded-lg border p-4 ${cardCls}`}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-rose-800">증여재산가액 (증여이익)</span>
-          <ExpandToggleButton open={open} onClick={() => setOpen(!open)} tone="rose" />
+          <span className={`text-sm font-semibold ${titleCls}`}>{headLabel}</span>
+          <ExpandToggleButton open={open} onClick={() => setOpen(!open)} tone={isRefund ? "sky" : "rose"} />
         </div>
         <p
-          className="mt-1 text-right font-mono text-2xl font-bold tabular-nums text-rose-900"
+          className={`mt-1 text-right font-mono text-2xl font-bold tabular-nums ${valueCls}`}
           data-testid="deemed-result-value"
         >
-          {formatKRW(result.deemedGiftValue)}
+          {formatKRW(headValue)}
         </p>
         <div className="mt-1 flex justify-end">
           <LawArticleModal legalBasis={result.legalBasis} />
         </div>
+        {isRefund && (
+          <p className="mt-2 text-xs text-blue-700" data-testid="deemed-result-refund-notice">
+            정산기준일 가액이 당초 증여세 과세가액보다 하락하여 그 차액이 기준금액 이상입니다. 당초 납부한 증여세액을 경정청구로 환급받을 수 있습니다 (§41의3④ 단서).
+          </p>
+        )}
 
         <div className={open ? "mt-3 block" : "mt-3 hidden print:block"}>
           <table className="w-full text-sm">
             <tbody>
               {result.breakdown.map((step, i) => (
-                <tr key={i} className="border-t border-rose-100">
+                <tr key={i} className={`border-t ${rowBorderCls}`}>
                   <td className="py-1.5 pr-2 text-muted-foreground">
                     {step.label}
-                    {step.note ? <span className="ml-1 text-xs text-rose-600">({step.note})</span> : null}
+                    {step.note ? <span className={`ml-1 text-xs ${noteCls}`}>({step.note})</span> : null}
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                     {formatKRW(step.amount)}

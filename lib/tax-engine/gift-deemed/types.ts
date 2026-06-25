@@ -46,6 +46,10 @@ export interface DeemedGiftResult {
   legalBasis: string;
   /** 임계 판정 근거 echo */
   thresholdEcho?: Record<string, number | boolean>;
+  /** §41의3 정산 방향 — taxation(과세)/refund(평가손실 환급)/none(기준미달). 미설정 시 일반 의제 */
+  direction?: "taxation" | "refund" | "none";
+  /** §41의3④ 단서·령§31의3⑥ 환급 대상액(=평가손실 (B+C)−A). direction==="refund"만 > 0 */
+  refundBase?: number;
   /** 증여세 합산배제 대상 여부 (§47① — §40①2·3호=true / §40①1호=false). 증여세 연계 echo */
   aggregationExcluded?: boolean;
   /** 증여자 연대납부의무 면제 여부 (§4의2⑥ — §40 등 명시 유형 true). 증여세 연계 echo */
@@ -730,8 +734,21 @@ export interface ListingGainInput {
   eventType?: "listing" | "merger"; // §41의3 상장 / §41의5 합병상장, 기본 listing
   settlementPerSharePrice: number; // 정산기준일(상장일·합병등기일 +3개월) 현재 1주당 평가가액(§63)
   perShareAcqValue: number; // 1주당 증여세 과세가액(또는 취득가액)
-  perShareCorpGrowth: number; // 1주당 기업가치 실질증가이익(§31의3⑤)
+  perShareCorpGrowth: number; // 1주당 기업가치 실질증가이익(§31의3⑤). corpGrowthAuto 지정 시 무시(자동계산)
   shares: number; // 증여·유상취득 주식수
+  /**
+   * 1주당 기업가치 실질증가이익 자동계산(령§31의3⑤) — 지정 시 perShareCorpGrowth 대신 사용.
+   * = (사업연도별 1주당 순손익 합계 ÷ 분모월수) × 곱수월수. 월수 1월미만은 1월(령§31의3⑤ 각호).
+   */
+  corpGrowthAuto?: {
+    totalNetIncomePerShare: number; // 증여·취득일 속한 사업연도개시일~상장전일 1주당 순손익액 합계(령§31의3⑤1)
+    monthsBusinessStartToListingPrevDay: number; // 분모 월수 — 사업연도개시일~상장전일(1월미만=1월)
+    monthsAcqToSettlement: number; // 곱수 월수 — 증여·취득일~정산기준일(령§31의3⑤2, 1월미만=1월)
+  };
+  /** §63③ 최대주주등 — true면 정산기준일 평가가액에 20% 가산(할증) */
+  isMajorShareholder?: boolean;
+  /** §63③ 단서 할증 배제 대상(중소기업·중견기업·3년연속 결손법인) — true면 최대주주여도 할증 미적용 */
+  isSurchargeExemptEntity?: boolean;
 }
 
 /** §42 재산사용·용역제공 */

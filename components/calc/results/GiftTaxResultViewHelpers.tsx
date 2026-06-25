@@ -93,3 +93,59 @@ export function InstallmentGuide({ finalTax }: { finalTax: number }) {
     </div>
   );
 }
+
+/**
+ * 합산배제증여재산(§41의3·§41의5) 별도 스트림 카드 — §47① 개별 건별 과세 (A1.5).
+ * 별지 서식은 일반 증여재산 기준이므로, 별도 과세표준(§55①3호) 합산배제분을 분리 표시.
+ */
+export function AggregationExcludedCard({
+  detail,
+}: {
+  detail: {
+    finalTax: number;
+    breakdown: { label: string; amount: number; note?: string; lawRef?: string }[];
+  };
+}) {
+  return (
+    <div
+      className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4"
+      data-testid="aggregation-excluded-card"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold text-emerald-800">
+          합산배제증여재산 (§41의3·§41의5) — 개별 건별 과세
+        </span>
+        <LawArticleModal legalBasis="상증법 §47" label="§47①" />
+      </div>
+      <p className="mt-1 text-xs text-emerald-700">
+        §47① 10년 합산 제외 · §55①3호 별도 과세표준(증여이익 − 3천만원, §53 미적용)
+      </p>
+      <p
+        className="mt-2 text-right font-mono text-2xl font-bold tabular-nums whitespace-nowrap text-emerald-900"
+        data-testid="aggregation-excluded-final-tax"
+      >
+        {formatKRW(detail.finalTax)}
+      </p>
+      <table className="mt-3 w-full text-sm">
+        <tbody>
+          {detail.breakdown.map((step, i) => (
+            <tr key={i} className="border-t border-emerald-100">
+              <td className="py-1.5 pr-2 text-muted-foreground">
+                {step.label}
+                {step.note ? (
+                  <span className="ml-1 text-xs text-emerald-600">({step.note})</span>
+                ) : null}
+              </td>
+              <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                {formatKRW(step.amount)}
+              </td>
+              <td className="py-1.5 pl-2">
+                {step.lawRef ? <LawArticleModal legalBasis={step.lawRef} /> : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

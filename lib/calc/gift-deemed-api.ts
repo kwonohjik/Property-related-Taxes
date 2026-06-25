@@ -476,6 +476,18 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         perShareAcqValue: parseAmount(form.lgAcqValue),
         perShareCorpGrowth: parseAmount(form.lgCorpGrowth),
         shares: parseAmount(form.lgShares),
+        ...(form.lgMajorShareholder ? { isMajorShareholder: true } : {}),
+        ...(form.lgSurchargeExempt ? { isSurchargeExemptEntity: true } : {}),
+        // 령§31의3⑤ 자동계산 모드 — corpGrowthAuto 지정 시 엔진이 perShareCorpGrowth 무시
+        ...(form.lgCorpGrowthMode === "auto"
+          ? {
+              corpGrowthAuto: {
+                totalNetIncomePerShare: parseAmount(form.lgTotalNetIncome),
+                monthsBusinessStartToListingPrevDay: parseAmount(form.lgMonthsBusinessStart),
+                monthsAcqToSettlement: parseAmount(form.lgMonthsAcqToSettlement),
+              },
+            }
+          : {}),
       };
     case "property_service_use":
       return {
@@ -754,6 +766,8 @@ export function buildGiftWizardPrefill(
         category: "other",
         name: `${label} 증여이익`,
         marketValue: result.deemedGiftValue,
+        // §47① 합산배제증여재산(§41의3·§41의5 등) → 본세 §55①3호 스트림. 비합산배제 deemed는 undefined.
+        ...(result.aggregationExcluded ? { isAggregationExcludedGift: true } : {}),
       },
     ],
   };

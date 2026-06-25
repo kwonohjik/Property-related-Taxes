@@ -46,7 +46,8 @@ export type GiftPrintSectionId =
   | "warnings"
   | "burdened-transfer-tax"
   | "burdened-stock-transfer-tax"
-  | "burdened-gift-comparison";
+  | "burdened-gift-comparison"
+  | "aggregation-excluded";
 
 /** 증여세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type GiftPrintSectionNode = GenericNode<GiftPrintSectionId>;
@@ -68,6 +69,7 @@ export const GIFT_PRINT_SECTIONS: GiftPrintSectionGroup[] = [
       { id: "gen-skip-surcharge", label: "세대생략 할증 근거 (§57)", channel: SCREEN },
       { id: "tax-credit", label: "세액공제 상세 (§28·§69)", channel: SCREEN },
       { id: "donor-paid-grossup", label: "대납(代納) gross-up 상세 (§36)", channel: SCREEN },
+      { id: "aggregation-excluded", label: "합산배제증여재산 별도 과세 (§41의3·§41의5)", channel: SCREEN },
     ],
   },
   {

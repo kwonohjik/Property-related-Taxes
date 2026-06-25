@@ -11,7 +11,9 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { DateInput } from "@/components/ui/date-input";
+import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
 import type { DeemedFormState } from "./shared";
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
 import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
@@ -256,6 +258,14 @@ export function ExcessDividendFields({ form, set }: Props) {
 
 /** §41의3 상장이익 / §41의5 합병상장이익 */
 export function ListingGainFields({ form, set }: Props) {
+  // 령§31의3⑤ 자동계산 echo — (순손익 합계 ÷ 분모월수) × 곱수월수 (1월미만=1월)
+  const autoCorpGrowth = useMemo(() => {
+    const total = parseAmount(form.lgTotalNetIncome);
+    const denom = Math.max(1, parseAmount(form.lgMonthsBusinessStart));
+    const mult = Math.max(1, parseAmount(form.lgMonthsAcqToSettlement));
+    return Math.floor(total / denom) * mult;
+  }, [form.lgTotalNetIncome, form.lgMonthsBusinessStart, form.lgMonthsAcqToSettlement]);
+
   return (
     <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
       <RadioCardGroup
@@ -269,10 +279,111 @@ export function ListingGainFields({ form, set }: Props) {
           { value: "merger", label: "합병상장 (§41의5)", testId: "lg-event-merger" },
         ]}
       />
+      {/* §63①1 정산기준일 평가가액 키움 자동조회 (선택) — onFill로 lgSettlementPrice 자동채움, 미설정 시 수동 입력 */}
+      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2">
+        <p className="text-xs font-semibold text-emerald-700">§63①1 정산기준일 평가가액 자동조회 (키움, 선택)</p>
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={6}
+          value={form.lgStockCode}
+          onChange={(e) => set({ lgStockCode: e.target.value })}
+          placeholder="종목코드 6자리 (예: 005930)"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          data-testid="lg-stock-code"
+        />
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground">정산기준일 (상장일·합병등기일 +3개월)</label>
+          <DateInput value={form.lgSettlementDate} onChange={(v) => set({ lgSettlementDate: v })} />
+        </div>
+        <KiwoomValuationAutoFetchButton
+          variant="card"
+          stockCode={form.lgStockCode}
+          valuationDate={form.lgSettlementDate}
+          onFill={(patch) => set({ lgSettlementPrice: String(patch.listedStockAvgPrice) })}
+        />
+      </div>
       <CurrencyInput label="정산기준일 1주당 평가가액" value={form.lgSettlementPrice} onChange={(v) => set({ lgSettlementPrice: v })} hint={form.lgEventType === "merger" ? "합병등기일 +3개월 (§63 평가)" : "상장일 +3개월 (§63 평가)"} placeholder="정산기준일 1주당 평가가액 (원)" />
+      {/* §63③ 최대주주 20% 할증 (정산기준일 평가가액에 적용) */}
+      <ToggleCard
+        tone="amber"
+        checked={form.lgMajorShareholder}
+        onCheckedChange={(v) => set({ lgMajorShareholder: v, lgSurchargeExempt: v ? form.lgSurchargeExempt : false })}
+        title="최대주주 등 — 정산기준일 평가가액 20% 할증 (§63③)"
+        description="최대주주·특수관계인 주식은 §63 평가가액에 20% 가산"
+        data-testid="lg-major-shareholder-toggle"
+      />
+      {form.lgMajorShareholder && (
+        <ToggleCard
+          tone="amber"
+          checked={form.lgSurchargeExempt}
+          onCheckedChange={(v) => set({ lgSurchargeExempt: v })}
+          title="중소·중견기업 또는 3년연속 결손법인 — 할증 배제 (§63③ 단서)"
+          description="해당 시 최대주주여도 20% 할증 미적용"
+          data-testid="lg-surcharge-exempt-toggle"
+        />
+      )}
       <CurrencyInput label="1주당 증여세 과세가액(취득가액)" value={form.lgAcqValue} onChange={(v) => set({ lgAcqValue: v })} placeholder="1주당 과세가액(취득가액) (원)" />
-      <CurrencyInput label="1주당 기업가치 실질증가이익" value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (1주당 순손익액 평균 × 보유월수)" placeholder="1주당 기업가치 실질증가이익 (원)" />
+
+      {/* 1주당 기업가치 실질증가이익 — 직접입력 / 월수 산식 자동계산 (령§31의3⑤) */}
+      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2">
+        <RadioCardGroup
+          name="lg-corp-growth-mode"
+          tone="emerald"
+          layout="inline"
+          value={form.lgCorpGrowthMode}
+          onChange={(v) => set({ lgCorpGrowthMode: v })}
+          options={[
+            { value: "direct", label: "1주당 기업가치 직접 입력", testId: "lg-corp-growth-mode-direct" },
+            { value: "auto", label: "월수 산식 자동계산", testId: "lg-corp-growth-mode-auto" },
+          ]}
+        />
+        {form.lgCorpGrowthMode === "direct" ? (
+          <CurrencyInput label="1주당 기업가치 실질증가이익" value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤" placeholder="1주당 기업가치 실질증가이익 (원)" />
+        ) : (
+          <>
+            <CurrencyInput label="사업연도별 1주당 순손익액 합계" value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1)" placeholder="1주당 순손익액 합계 (원)" />
+            <CurrencyInput label="사업연도개시일~상장전일 월수" value={form.lgMonthsBusinessStart} onChange={(v) => set({ lgMonthsBusinessStart: v })} hint="분모 월수 (1월미만은 1월)" placeholder="월수" />
+            <CurrencyInput label="증여·취득일~정산기준일 월수" value={form.lgMonthsAcqToSettlement} onChange={(v) => set({ lgMonthsAcqToSettlement: v })} hint="곱수 월수 (령§31의3⑤2, 1월미만은 1월)" placeholder="월수" />
+            <p className="text-xs font-medium text-emerald-800" data-testid="lg-corp-growth-echo">
+              → 1주당 기업가치 실질증가이익 {autoCorpGrowth.toLocaleString()}
+            </p>
+          </>
+        )}
+      </div>
+
       <CurrencyInput label="증여·유상취득 주식수" value={form.lgShares} onChange={(v) => set({ lgShares: v })} placeholder="증여·유상취득 주식수" />
+
+      {/* 무상주 환산 안내 (령§31의3⑦ → 칙§17의3⑤) — 환산은 §56 평가의 발행주식총수 조정이라 1주당 입력값에 반영 */}
+      <div
+        className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 text-xs leading-relaxed text-amber-800"
+        data-testid="lg-bonus-share-notice"
+      >
+        ※ 증여·취득일부터 상장 전일까지 <b>무상주(증자)</b>를 발행한 경우, 환산주식수 기준으로 1주당 평가가액·순손익액을 산정해 입력하세요 (령§31의3⑦ → 칙§17의3⑤).
+        <br />
+        환산주식수 = 과거 사업연도말 주식수 × (증자 직전 주식수 + 증자 주식수) ÷ 증자 직전 주식수
+      </div>
+
+      {/* §41의3 적용 요건·특례 정보성 안내 (전환사채·거짓·증여시기·연대납부·합산배제) */}
+      <CollapsibleHintCard tone="sky" summary="§41의3 적용 요건·특례 (전환사채·증여시기·연대납부)">
+        <ul className="list-disc space-y-1 pl-4">
+          <li>
+            <b>증여시기·정산기준일 (§41의3③)</b>: 증여시기는 당초 증여일. 정산기준일은 상장일부터 3개월이 되는 날(보유자가 3개월 내 사망하거나 그 주식을 증여·양도한 경우 그 사망일·증여일·양도일).
+          </li>
+          <li>
+            <b>전환사채 등 간주 (§41의3⑧)</b>: 전환사채 등을 증여·유상취득한 후 5년 내 주식으로 전환하면 전환사채 취득 시점에 그 주식을 취득한 것으로 봄. 정산기준일까지 미전환 시 정산기준일에 전환된 것으로 보아 과세하되, 만기까지 미전환 시 정산기준일 기준 과세한 증여세액을 환급.
+          </li>
+          <li>
+            <b>특수관계인 아닌 자 간 거짓 (§41의3⑨)</b>: 거짓이나 부정한 방법으로 증여세를 감소시킨 것으로 인정되면 특수관계인이 아닌 자 간 증여에도 적용하며, 이 경우 5년 기간 규정은 없는 것으로 봄.
+          </li>
+          <li>
+            <b>연대납부의무 면제 (§4의2⑥ 단서)</b>: 수증자가 증여세 납세의무를 부담하며, 증여자는 연대납부의무를 지지 않음.
+          </li>
+          <li>
+            <b>합산배제증여재산 (§47①)</b>: 10년 내 동일인 증여재산과 합산하지 않고 개별 건별로 과세(과세표준 = 증여이익 − 감정평가수수료 − 3천만원, §55①3호).
+          </li>
+        </ul>
+      </CollapsibleHintCard>
     </div>
   );
 }

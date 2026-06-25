@@ -353,6 +353,15 @@ export interface DeemedFormState {
   lgAcqValue: string;
   lgCorpGrowth: string;
   lgShares: string;
+  // 령§31의3⑤ 기업가치 자동계산 (direct=직접입력 / auto=월수산식)
+  lgCorpGrowthMode: "direct" | "auto";
+  lgTotalNetIncome: string; // 사업연도별 1주당 순손익 합계
+  lgMonthsBusinessStart: string; // 분모 월수 (사업연도개시일~상장전일)
+  lgMonthsAcqToSettlement: string; // 곱수 월수 (증여·취득일~정산기준일)
+  lgMajorShareholder: boolean; // §63③ 최대주주 20% 할증
+  lgSurchargeExempt: boolean; // §63③ 단서 배제(중소·중견·결손)
+  lgStockCode: string; // 키움 §63①1 자동조회용 종목코드 (조회 보조 — 엔진 미전달)
+  lgSettlementDate: string; // 키움 §63①1 자동조회용 정산기준일 (상장일+3개월)
   // 재산사용·용역 §42
   psuSubType: "free_use" | "low_price" | "high_price";
   psuMarketValue: string;
@@ -593,6 +602,14 @@ export const INITIAL_DEEMED: DeemedFormState = {
   lgAcqValue: "",
   lgCorpGrowth: "",
   lgShares: "",
+  lgCorpGrowthMode: "direct",
+  lgTotalNetIncome: "",
+  lgMonthsBusinessStart: "",
+  lgMonthsAcqToSettlement: "",
+  lgMajorShareholder: false,
+  lgSurchargeExempt: false,
+  lgStockCode: "",
+  lgSettlementDate: "",
   psuSubType: "free_use",
   psuMarketValue: "",
   psuConsideration: "",

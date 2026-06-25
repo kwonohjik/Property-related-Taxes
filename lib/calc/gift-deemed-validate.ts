@@ -243,6 +243,12 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "listing_gain":
       if (parseAmount(form.lgSettlementPrice) <= 0) return "정산기준일 1주당 평가가액을 입력하세요";
       if (parseAmount(form.lgShares) <= 0) return "증여·유상취득 주식수를 입력하세요";
+      if (form.lgCorpGrowthMode === "auto") {
+        if (parseAmount(form.lgMonthsBusinessStart) <= 0)
+          return "사업연도개시일~상장전일 월수를 입력하세요";
+        if (parseAmount(form.lgMonthsAcqToSettlement) <= 0)
+          return "증여·취득일~정산기준일 월수를 입력하세요";
+      }
       break;
     case "property_service_use":
       if (parseAmount(form.psuMarketValue) <= 0) return form.psuSubType === "free_use" ? "시가 상당액을 입력하세요" : "시가를 입력하세요";

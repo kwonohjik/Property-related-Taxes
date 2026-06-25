@@ -329,6 +329,16 @@ const listingGainSchema = z.object({
   perShareAcqValue: z.number().nonnegative(),
   perShareCorpGrowth: z.number(),
   shares: z.number().nonnegative(),
+  isMajorShareholder: z.boolean().optional(), // §63③ 최대주주 20% 할증
+  isSurchargeExemptEntity: z.boolean().optional(), // §63③ 단서 배제(중소·중견·결손)
+  // 령§31의3⑤ 기업가치 자동계산 (지정 시 perShareCorpGrowth 대신)
+  corpGrowthAuto: z
+    .object({
+      totalNetIncomePerShare: z.number(),
+      monthsBusinessStartToListingPrevDay: z.number().nonnegative(),
+      monthsAcqToSettlement: z.number().nonnegative(),
+    })
+    .optional(),
 });
 const propertyServiceUseSchema = z.object({
   type: z.literal("property_service_use"),
