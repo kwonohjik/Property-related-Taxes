@@ -212,6 +212,10 @@ export interface DeemedFormState {
   edDonorRelationship: "spouse" | "lineal_ascendant_adult" | "lineal_ascendant_minor" | "lineal_descendant" | "other_relative" | undefined;
   edPriorDeductionApplied: string;              // 10년 내 기적용 공제 누계
   edIsGenerationSkip: boolean;                  // 세대생략 여부
+  edIsMinorGenerationSkip: boolean;             // 미성년 세대생략 할증 (§57①)
+  edIsWithinFilingDeadline: boolean;            // 기한내신고 예정 (신고세액공제 3%)
+  edComprehensiveTaxBaseExcluding: string;      // 종합과세 ⓑ기준(초과배당 제외) 직접입력 — 미입력 시 자동 추정
+  edIncomeTaxYear: string;                      // 소득 귀속연도 override — 미입력 시 배당지급일 연도
   // 상장이익 §41의3 / 합병상장 §41의5
   lgEventType: "listing" | "merger";
   lgSettlementPrice: string;
@@ -364,6 +368,10 @@ export const INITIAL_DEEMED: DeemedFormState = {
   edDonorRelationship: undefined,
   edPriorDeductionApplied: "",
   edIsGenerationSkip: false,
+  edIsMinorGenerationSkip: false,
+  edIsWithinFilingDeadline: true,
+  edComprehensiveTaxBaseExcluding: "",
+  edIncomeTaxYear: "",
   lgEventType: "listing",
   lgSettlementPrice: "",
   lgAcqValue: "",

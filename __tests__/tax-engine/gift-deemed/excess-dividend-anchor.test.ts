@@ -6,6 +6,10 @@ import {
   resolveExcessDividendRateTable,
 } from "@/lib/tax-engine/data/gift-deemed-rates";
 import { computeExcessDividendAmount } from "@/lib/tax-engine/gift-deemed/excess-dividend";
+import {
+  runSettlement2Pass,
+  runLegacyCredit,
+} from "@/lib/tax-engine/gift-deemed/excess-dividend-settlement";
 import type { ShareholderDividend } from "@/lib/tax-engine/gift-deemed/types";
 
 /**
@@ -80,5 +84,54 @@ describe("§41의2 초과배당금액 자동산정 (시행령 §31의2②)", () 
     // 총배당 1억 / 특수관계인 비례 30,000,000 / ①가액 70,000,000
     // 최대주주 과소 70,000,000 = 총과소 → ②비율 1.0 → 70,000,000
     expect(computeExcessDividendAmount(shareholders).excessDividendAmount).toBe(70_000_000);
+  });
+});
+
+describe("§41의2 정산 2-pass (현행 2021~, 법§41의2②③)", () => {
+  // A4: 초과배당 1억, 기타친족 공제 1천만, 신고세액공제 3%
+  //   율표 7구간(2024.4.1): 1억 → 8,800만~1.5억 구간 base 1,536만 + (1억−8,800만)×35% = 19,560,000
+  //   pass1(당초): deemed = 1억−19,560,000 = 80,440,000 → 과표 70,440,000 → ×10% = 7,044,000 → −3%(211,320) = 6,832,680
+  //   pass2(정산): 실제소득세 1,200만 → deemed = 88,000,000 → 과표 78,000,000 → ×10% = 7,800,000 → −3%(234,000) = 7,566,000
+  //   정산납부 = 7,566,000 − 6,832,680 = 733,320 (추납)
+  it("[A4] 정산 2-pass: 율표소득세>실제소득세 → 추가납부 733,320", () => {
+    const r = runSettlement2Pass({
+      excessDividendAmount: 100_000_000,
+      initialIncomeTax: 19_560_000, // 현행 7구간 1억 율표
+      actualIncomeTax: 12_000_000,
+      dividendDate: new Date("2024-04-01"),
+      giftTaxContext: { donorRelationship: "other_relative" },
+    });
+    expect(r?.settlementDue).toBe(733_320);
+    expect(r?.isRefund).toBe(false);
+  });
+
+  // A5-현행: 4억, 현행 7구간 율표 134,060,000 → deemed 265,940,000
+  //   당초 증여세 = 과표 255,940,000 → ×20% − 1천만 = 41,188,000 → −3%(1,235,640) = 39,952,360
+  it("[A5-현행] 4억 현행 당초 증여세 = 39,952,360", () => {
+    const r = runSettlement2Pass({
+      excessDividendAmount: 400_000_000,
+      initialIncomeTax: 134_060_000, // 현행 7구간 4억
+      actualIncomeTax: 134_060_000, // 동일 → 정산 0
+      dividendDate: new Date("2024-04-01"),
+      giftTaxContext: { donorRelationship: "other_relative" },
+    });
+    expect(r?.initialGiftTax).toBe(39_952_360);
+    expect(r?.settlementDue).toBe(0);
+  });
+});
+
+describe("§41의2 구법 산출세액공제 (2018~2020, img29)", () => {
+  // A5-구법: 4억, 구법 6구간 율표 134,600,000
+  //   과세표준 = 4억 전액 − 공제 1천만 = 3.9억 → 산출세액 = 3.9억×20% − 1천만 = 68,000,000
+  //   legacyCredit = min(134,600,000, 68,000,000) = 68,000,000 → finalTax = 0 (전액공제)
+  it("[A5-구법] 4억 구법 산출세액공제 → finalTax 0 (소득세상당액>산출세액)", () => {
+    const r = runLegacyCredit({
+      excessDividendAmount: 400_000_000,
+      incomeTaxEquivalent: 134_600_000, // 구법 6구간 4억
+      dividendDate: new Date("2019-03-01"),
+      giftTaxContext: { donorRelationship: "other_relative" },
+    });
+    expect(r?.finalTax).toBe(0);
+    expect(r?.legacyCreditAmount).toBe(r?.grossGiftTax); // 전액공제
   });
 });

@@ -255,6 +255,14 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         incomeTaxMode === "comprehensive"
           ? parseAmount(form.edComprehensiveTaxBase)
           : undefined;
+      // ⓑ기준 — 미입력 시 엔진 자동 추정
+      const comprehensiveTaxBaseExcluding =
+        incomeTaxMode === "comprehensive" && form.edComprehensiveTaxBaseExcluding
+          ? parseAmount(form.edComprehensiveTaxBaseExcluding)
+          : undefined;
+      // 소득 귀속연도 override — 미입력 시 배당지급일 연도
+      const incomeTaxYear =
+        form.edIncomeTaxYear ? Number(form.edIncomeTaxYear) : undefined;
 
       // ③ 정산 2-pass 입력
       const actualIncomeTax = form.edSettlementMode
@@ -269,6 +277,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
               ? parseAmount(form.edPriorDeductionApplied)
               : undefined,
             isGenerationSkip: form.edIsGenerationSkip || undefined,
+            isMinorGenerationSkip: form.edIsMinorGenerationSkip || undefined,
+            isWithinFilingDeadline: form.edIsWithinFilingDeadline,
           }
         : undefined;
 
@@ -286,6 +296,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         incomeTaxMode,
         separateIncomeTax,
         comprehensiveTaxBase,
+        comprehensiveTaxBaseExcluding,
+        incomeTaxYear,
         actualIncomeTax,
         giftTaxContext,
       };

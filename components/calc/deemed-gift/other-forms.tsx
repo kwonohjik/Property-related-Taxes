@@ -119,11 +119,32 @@ export function ExcessDividendFields({ form, set }: Props) {
         {incomeTaxMode === "comprehensive" && (
           <div className="pt-1 space-y-2">
             <CurrencyInput
-              label="수증자 종합소득과세표준"
+              label="수증자 종합소득과세표준 ⓐ"
               value={form.edComprehensiveTaxBase}
               onChange={(v) => set({ edComprehensiveTaxBase: v })}
               hint="ⓐ기준 — 초과배당금액 포함 종합소득과세표준 (시행규칙 §10의3②3호)"
             />
+            <CurrencyInput
+              label="종합소득과세표준 ⓑ (초과배당 제외, 선택)"
+              value={form.edComprehensiveTaxBaseExcluding}
+              onChange={(v) => set({ edComprehensiveTaxBaseExcluding: v })}
+              hint="미입력 시 엔진이 ⓐ − 초과배당금액으로 자동 추정합니다"
+            />
+            <FieldCard
+              label="소득 귀속연도 (선택)"
+              hint="미입력 시 배당지급일 연도를 소득 귀속연도로 적용합니다"
+            >
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                value={form.edIncomeTaxYear}
+                onChange={(e) => set({ edIncomeTaxYear: e.target.value.replace(/\D/g, "") })}
+                placeholder="연도 4자리 (미입력 시 배당지급일 연도)"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </FieldCard>
             <p className="text-xs text-muted-foreground">
               Max(ⓐ과세표준 세율 적용액 − ⓑ차감액 세율 적용액, 초과배당금액 × 14%) — 서버 계산 후 결과에 표시됩니다.
             </p>
@@ -197,17 +218,27 @@ export function ExcessDividendFields({ form, set }: Props) {
             <ToggleCard
               tone="rose"
               checked={form.edIsGenerationSkip}
-              onCheckedChange={(v) => set({ edIsGenerationSkip: v })}
+              onCheckedChange={(v) => set({ edIsGenerationSkip: v, edIsMinorGenerationSkip: v ? form.edIsMinorGenerationSkip : false })}
               title="세대생략 할증 (§27)"
               description="수증자가 증여자의 자녀를 건너뛴 직계비속인 경우 30% 할증"
               data-testid="ed-generation-skip-toggle"
             />
+            {form.edIsGenerationSkip && (
+              <ToggleCard
+                tone="rose"
+                checked={form.edIsMinorGenerationSkip}
+                onCheckedChange={(v) => set({ edIsMinorGenerationSkip: v })}
+                title="미성년 세대생략 할증 (§57①)"
+                description="수증자가 미성년자이고 20억 초과인 경우 40% 할증 적용"
+                data-testid="ed-minor-generation-skip-toggle"
+              />
+            )}
           </div>
         )}
       </div>
 
       {/* ── 섹션 5: 정산 (§41의2②③) — 2021.1.1 이후 배당 전용 ── */}
-      {/* §0.5 환류: 신고기한 섹션 없음. 정산은 항상 적용 가능(isDiligentFiler 엔진 미사용) */}
+      {/* §0.5 환류: isDiligentFiler 엔진 미사용. isWithinFilingDeadline은 신고세액공제에 사용 */}
       <ToggleCard
         tone="emerald"
         checked={form.edSettlementMode}
@@ -222,6 +253,14 @@ export function ExcessDividendFields({ form, set }: Props) {
             value={form.edActualIncomeTax}
             onChange={(v) => set({ edActualIncomeTax: v })}
             hint="납부세액 0원인 경우도 0 입력 (시행규칙 §10의3② 확정소득세)"
+          />
+          <ToggleCard
+            tone="emerald"
+            checked={form.edIsWithinFilingDeadline}
+            onCheckedChange={(v) => set({ edIsWithinFilingDeadline: v })}
+            title="기한 내 신고 예정 (신고세액공제 3%)"
+            description="법정 신고기한 내 신고 시 산출세액의 3%가 공제됩니다 (§69)"
+            data-testid="ed-within-filing-deadline-toggle"
           />
           <p className="text-xs text-muted-foreground">
             정산 결과(당초·정산 증여세 차액·추납/환급)는 계산 후 결과 화면에 표시됩니다.
