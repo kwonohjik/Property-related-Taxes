@@ -7,6 +7,7 @@ import {
   ExpandToggleButton,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { CapitalDecreaseMultiResultView } from "./CapitalDecreaseMultiResultView";
 import type { DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
 
 /** subGifts.giftDate는 엔진에선 Date, NextResponse.json 경유 후 client에선 string → 양립 포맷 */
@@ -19,9 +20,13 @@ function fmtGiftDate(d?: Date | string): string {
 export function DeemedGiftResultView({
   result,
   onToGiftTax,
+  selectedDoneeIndex = 0,
+  onSelectDonee,
 }: {
   result: DeemedGiftResult;
   onToGiftTax: () => void;
+  selectedDoneeIndex?: number;
+  onSelectDonee?: (i: number) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -63,6 +68,14 @@ export function DeemedGiftResultView({
           </table>
         </div>
       </div>
+
+      {result.capitalDecreaseMulti && (
+        <CapitalDecreaseMultiResultView
+          multi={result.capitalDecreaseMulti}
+          selectedDoneeIndex={selectedDoneeIndex}
+          onSelectDonee={onSelectDonee ?? (() => {})}
+        />
+      )}
 
       {result.subGifts && result.subGifts.length > 0 && (
         <div
