@@ -11,6 +11,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import type { DeemedFormState } from "./shared";
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
 
@@ -335,6 +336,27 @@ export function ListingGainFields({ form, set }: Props) {
         <br />
         환산주식수 = 과거 사업연도말 주식수 × (증자 직전 주식수 + 증자 주식수) ÷ 증자 직전 주식수
       </div>
+
+      {/* §41의3 적용 요건·특례 정보성 안내 (전환사채·거짓·증여시기·연대납부·합산배제) */}
+      <CollapsibleHintCard tone="sky" summary="§41의3 적용 요건·특례 (전환사채·증여시기·연대납부)">
+        <ul className="list-disc space-y-1 pl-4">
+          <li>
+            <b>증여시기·정산기준일 (§41의3③)</b>: 증여시기는 당초 증여일. 정산기준일은 상장일부터 3개월이 되는 날(보유자가 3개월 내 사망하거나 그 주식을 증여·양도한 경우 그 사망일·증여일·양도일).
+          </li>
+          <li>
+            <b>전환사채 등 간주 (§41의3⑧)</b>: 전환사채 등을 증여·유상취득한 후 5년 내 주식으로 전환하면 전환사채 취득 시점에 그 주식을 취득한 것으로 봄. 정산기준일까지 미전환 시 정산기준일에 전환된 것으로 보아 과세하되, 만기까지 미전환 시 정산기준일 기준 과세한 증여세액을 환급.
+          </li>
+          <li>
+            <b>특수관계인 아닌 자 간 거짓 (§41의3⑨)</b>: 거짓이나 부정한 방법으로 증여세를 감소시킨 것으로 인정되면 특수관계인이 아닌 자 간 증여에도 적용하며, 이 경우 5년 기간 규정은 없는 것으로 봄.
+          </li>
+          <li>
+            <b>연대납부의무 면제 (§4의2⑥ 단서)</b>: 수증자가 증여세 납세의무를 부담하며, 증여자는 연대납부의무를 지지 않음.
+          </li>
+          <li>
+            <b>합산배제증여재산 (§47①)</b>: 10년 내 동일인 증여재산과 합산하지 않고 개별 건별로 과세(과세표준 = 증여이익 − 감정평가수수료 − 3천만원, §55①3호).
+          </li>
+        </ul>
+      </CollapsibleHintCard>
     </div>
   );
 }

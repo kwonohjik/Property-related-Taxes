@@ -135,7 +135,7 @@
 | **Phase A1(P0)** ✅ | 합산배제 스트림 신규(`gift-aggregation-excluded-stream.ts`) + gift-tax.ts 격리·combined. §55①3호·§53배제·§47②격리·§56·§57·§69. baseline 601→603 회귀 0 | **고** | **완료** |
 | **Phase A1.5(후속)** | 별지 서식(filingFormRows·besshi10) 합산배제 행/표 정합 — A1 코드리뷰 Low 3건: ⑫/⑱행·㉝ 할증·§57①단서 echo가 일반분 기준(combined finalTax와 표시 불일치). **크래시·음수 없음**(모두 Math.max 가드) | 중 | 서식 |
 | **Phase B(P1)** | E 기업가치 월수산식 + F 할증 + G 무상주 + H 구법 | 중 | 헬퍼·연도분기 |
-| **Phase C(P2)** | I 전환사채 + J 거짓 + K 신고 + L 안내 | 저 | 간주·결과뷰 |
+| **Phase C(P2)** ✅ | §41의3⑧(전환사채)·⑨(거짓)·③(증여시기)·§4의2⑥(연대납부면제)·§47①(합산배제) 정보성 안내(CollapsibleHintCard). 전환사채 만기환급 등 저빈도 계산은 안내로 갈음(anchor 부재) | 저 | **완료** |
 | **Check** | `ui-engine-sync-checker`(14지점) + `gap-detector`(matchRate) + **증여세 전체 회귀(baseline 대조)** | — | — |
 
 **A0/A1 분리 이유**(검토 #6): A0(환급)는 엔진 단독·저위험이라 먼저 ship. A1(본세 특례)은 `gift-tax.ts` 수정으로 전체 증여세 회귀를 유발하므로 별도 PR + baseline 대조 필수. A1은 합산배제증여재산 일반에 재사용 가치(§41의2·§42의3 등 후속).
