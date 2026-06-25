@@ -123,6 +123,10 @@ export const GIFT = {
   DEBT_FORGIVENESS: "상증법 §36",
   FREE_REALESTATE: "상증법 §37",
   FREE_LOAN: "상증법 §41의4",
+  /** §37·§41의4 경정청구 특례 — 무상사용·담보 중단 시 잔여기간분 */
+  RECTIFICATION_79_2: "상증법 §79②1호",
+  /** 경정청구 세액 = 산출세액 × 비율 (월수 역산·1개월 미만=1개월) */
+  RECTIFICATION_FORMULA_81_9: "상증령 §81⑨",
   // ── 증여로 보는 경우 (Phase 2: 자본거래) ──
   MERGER: "상증법 §38",
   CAPITAL_INCREASE: "상증법 §39",

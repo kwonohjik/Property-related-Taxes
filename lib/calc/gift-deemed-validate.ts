@@ -39,10 +39,26 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (parseAmount(form.debtForgiven) <= 0) return "면제·인수·변제 채무액을 입력하세요";
       break;
     case "free_realestate":
-      if (form.freeSubType === "free_use" && parseAmount(form.freePropertyValue) <= 0)
-        return "부동산 가액을 입력하세요";
-      if (form.freeSubType === "collateral" && parseAmount(form.freeLoanAmount) <= 0)
-        return "차입금을 입력하세요";
+      if (form.freePeriods !== undefined) {
+        // 다기간 모드 — 빈 배열 차단(자동 fallback 금지) + 각 window 필수값
+        if (form.freePeriods.length === 0) return "기간을 1개 이상 추가하세요 (5년/1년 초과 다기간)";
+        for (const [i, p] of form.freePeriods.entries()) {
+          if (!p.startDate) return `${i + 1}번째 기간의 개시일을 입력하세요`;
+          if (parseAmount(p.value) <= 0)
+            return `${i + 1}번째 기간의 ${form.freeSubType === "free_use" ? "부동산 가액" : "차입금"}을 입력하세요`;
+        }
+      } else {
+        if (form.freeSubType === "free_use" && parseAmount(form.freePropertyValue) <= 0)
+          return "부동산 가액을 입력하세요";
+        if (form.freeSubType === "collateral" && parseAmount(form.freeLoanAmount) <= 0)
+          return "차입금을 입력하세요";
+      }
+      // 경정청구(free_use 한정) — 필수값
+      if (form.freeRectOn && form.freeSubType === "free_use") {
+        if (parseAmount(form.freeRectTax) <= 0) return "경정청구: 증여세 산출세액을 입력하세요";
+        if (!form.freeRectGiftDate) return "경정청구: 당초 증여일을 입력하세요";
+        if (!form.freeRectTermDate) return "경정청구: 중단사유 발생일을 입력하세요";
+      }
       break;
     case "free_loan":
       if (parseAmount(form.loanAmount) <= 0) return "대출금액을 입력하세요";

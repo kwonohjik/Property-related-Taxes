@@ -29,6 +29,7 @@ import {
   ConvertibleStockFields,
   ConvertibleBondFields,
 } from "./capital-forms";
+import { FreeRealEstateFields } from "./free-realestate-form";
 import { AcquisitionFundFields, NomineeTrustFields } from "./presumption-forms";
 import {
   ExcessDividendFields,
@@ -88,6 +89,13 @@ export interface DeemedFormState {
   freeInterest: string;
   freeRelated: boolean;
   freeJustifiable: boolean;
+  // §37 다기간(G2/G3) — 3-state: undefined=단일 / []=다기간ON빈 / [...]=다기간
+  freePeriods?: { startDate: string; value: string; interest: string }[];
+  // §37 경정청구(G1, free_use 한정)
+  freeRectOn: boolean;
+  freeRectTax: string;
+  freeRectGiftDate: string;
+  freeRectTermDate: string;
   // 금전 무상대출 §41의4
   loanAmount: string;
   loanInterest: string;
@@ -239,6 +247,11 @@ export const INITIAL_DEEMED: DeemedFormState = {
   freeInterest: "",
   freeRelated: true,
   freeJustifiable: false,
+  freePeriods: undefined,
+  freeRectOn: false,
+  freeRectTax: "",
+  freeRectGiftDate: "",
+  freeRectTermDate: "",
   loanAmount: "",
   loanInterest: "",
   loanRelated: true,
@@ -699,49 +712,6 @@ function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   );
 }
 
-function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
-  return (
-    <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
-      <RadioCardGroup
-        lawLinks="상증법"
-        name="free-subtype"
-        tone="violet"
-        layout="inline"
-        value={form.freeSubType}
-        onChange={(v) => set({ freeSubType: v })}
-        options={[
-          { value: "free_use", label: "무상 사용 (§37①)", testId: "free-subtype-free_use" },
-          { value: "collateral", label: "무상 담보 (§37②)", testId: "free-subtype-collateral" },
-        ]}
-      />
-      {form.freeSubType === "free_use" ? (
-        <CurrencyInput label="부동산 가액" value={form.freePropertyValue} onChange={(v) => set({ freePropertyValue: v })} hint="5년 현가합이 1억 이상이면 과세 (연 2%·할인율 10%)" placeholder="부동산 가액 (원)" />
-      ) : (
-        <>
-          <CurrencyInput label="차입금" value={form.freeLoanAmount} onChange={(v) => set({ freeLoanAmount: v })} hint="차입이익(차입금×4.6%−이자)이 1천만 이상이면 과세" placeholder="차입금 (원)" />
-          <CurrencyInput label="실제 지급이자" value={form.freeInterest} onChange={(v) => set({ freeInterest: v })} />
-        </>
-      )}
-      <ToggleCard
-        lawLinks="상증법"
-        tone="violet"
-        checked={form.freeRelated}
-        onCheckedChange={(v) => set({ freeRelated: v })}
-        title="특수관계인 간 거래"
-        description="끄면 §37③ — 정당한 사유 없는 경우만 과세"
-      />
-      {!form.freeRelated && (
-        <ToggleCard
-          lawLinks="상증법"
-          tone="amber"
-          checked={form.freeJustifiable}
-          onCheckedChange={(v) => set({ freeJustifiable: v })}
-          title="거래관행상 정당한 사유 있음 (§37③)"
-        />
-      )}
-    </div>
-  );
-}
 
 function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
