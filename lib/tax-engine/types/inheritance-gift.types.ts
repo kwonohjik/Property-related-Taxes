@@ -699,6 +699,8 @@ export interface GiftTaxResult extends TaxResultMeta {
   /** 별지 제10호서식 좌·우 컬럼 행 배열 (총 34행) — UI는 본 배열만 읽음 */
   besshi10Rows: FilingFormRow[];
 
+  aggregationExcludedDetail?: { grossValue: number; taxBase: number; computedTax: number; generationSkipSurcharge: number; totalCredit: number; finalTax: number; breakdown: { label: string; amount: number; lawRef?: string; note?: string }[] }; // §47① 합산배제(§41의3·§41의5) 별도 스트림 echo
+
   // ===== 조특법 특례 2-스트림 분리과세 결과 (2026-06-11) =====
   /**
    * 특례 스트림 세액 (§30의5·§30의6 해당분).

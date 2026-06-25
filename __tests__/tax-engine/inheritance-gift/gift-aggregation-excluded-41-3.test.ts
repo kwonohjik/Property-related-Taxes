@@ -49,4 +49,14 @@ describe("§41의3 합산배제증여재산 본세 (§47②격리·§55①3호·
     expect(r.taxBase).toBe(600_000_000);
     expect(r.finalTax).toBe(120_000_000); // 600M×30% − 6천만
   });
+  // A1.5 — 별도 카드용 echo (별지 서식은 일반분, 합산배제분은 별도 표시)
+  it("[AE-DETAIL] 합산배제: aggregationExcludedDetail echo", () => {
+    const d = calcGiftTax(baseInput(true)).aggregationExcludedDetail;
+    expect(d?.grossValue).toBe(650_000_000);
+    expect(d?.taxBase).toBe(620_000_000);
+    expect(d?.finalTax).toBe(126_000_000);
+  });
+  it("[AE-OFF-DETAIL] 일반재산은 aggregationExcludedDetail undefined", () => {
+    expect(calcGiftTax(baseInput(false)).aggregationExcludedDetail).toBeUndefined();
+  });
 });

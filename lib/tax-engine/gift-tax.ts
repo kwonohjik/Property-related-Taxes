@@ -403,6 +403,18 @@ export function calcGiftTax(
     publicInterestPenalty: 0,
     installmentPayment: 0,
     cashDeferred: installmentSplit.splitAmount, // §70② 분납 (별지10호 ㊼)
+    // 합산배제증여재산(§41의3·§41의5) 별도 스트림 echo — 결과뷰 별도 카드 (별지 서식은 일반분 유지)
+    aggregationExcludedDetail: aggExcl
+      ? {
+          grossValue: aggExcl.grossValue,
+          taxBase: aggExcl.taxBase,
+          computedTax: aggExcl.computedTax,
+          generationSkipSurcharge: aggExcl.generationSkipSurcharge,
+          totalCredit: aggExcl.totalCredit,
+          finalTax: aggExcl.finalTax,
+          breakdown: aggExcl.breakdown,
+        }
+      : undefined,
     ...(options._echoGrossUp !== undefined ? { donorPaidTaxGrossUp: options._echoGrossUp } : {}), // gross-up echo 주입 → derivePriorGiftAddition 참조
   };
 
