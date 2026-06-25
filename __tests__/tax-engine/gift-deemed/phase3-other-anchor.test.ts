@@ -130,6 +130,38 @@ describe("§41의3 상장 / §41의5 합병상장 이익 (시행령 §31의3·§
     expect(r.refundBase).toBe(0);
     expect(r.deemedGiftValue).toBe(0);
   });
+  // 령§31의3⑤ 기업가치 자동계산 — 교재 사례2 (1주당 순손익합 30000 ÷ 30월 × 27월 = 27000)
+  it("[CG-1] corpGrowthAuto 자동계산 → C=27000 → 증여이익 650M (사례2)", () => {
+    const r = calcListingGainGift({
+      settlementPerSharePrice: 50_000,
+      perShareAcqValue: 10_000,
+      perShareCorpGrowth: 0, // corpGrowthAuto 우선이라 무시
+      shares: 50_000,
+      corpGrowthAuto: {
+        totalNetIncomePerShare: 30_000,
+        monthsBusinessStartToListingPrevDay: 30,
+        monthsAcqToSettlement: 27,
+      },
+    });
+    expect(r.deemedGiftValue).toBe(650_000_000);
+    expect(r.thresholdEcho?.threshold).toBe(300_000_000);
+    expect(r.direction).toBe("taxation");
+  });
+  it("[CG-2] 월수 1월미만=1월 절사 가드 (분모·곱수 0 → 1)", () => {
+    const r = calcListingGainGift({
+      settlementPerSharePrice: 50_000,
+      perShareAcqValue: 10_000,
+      perShareCorpGrowth: 999, // 무시
+      shares: 1,
+      corpGrowthAuto: {
+        totalNetIncomePerShare: 5_000,
+        monthsBusinessStartToListingPrevDay: 0,
+        monthsAcqToSettlement: 0,
+      },
+    });
+    // floor(5000/1)×1 = 5000 → perShareGain = 50000−10000−5000 = 35000
+    expect(r.breakdown.find((s) => s.label === "1주당 기업가치 실질증가이익")?.amount).toBe(5_000);
+  });
 });
 
 describe("§43① 중복배제 (이익 최대 1건)", () => {

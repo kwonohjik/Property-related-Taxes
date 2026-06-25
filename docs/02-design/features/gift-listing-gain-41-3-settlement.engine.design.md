@@ -29,7 +29,7 @@ export interface ListingGainInput {
   shares: number;
   // ── P1 신규(optional, 미지정 시 현행 동작) ──
   corpGrowthAuto?: {                   // 기업가치 월수산식(령§31의3⑤) — 지정 시 perShareCorpGrowth 무시하고 자동계산
-    perShareNetIncomeByYear: number[]; // 사업연도별 1주당 순손익액(칙§10의4②)
+    totalNetIncomePerShare: number;    // [Do 환류] 배열→합계: 사업연도별 1주당 순손익 합계(령§31의3⑤1·칙§10의4②). 교재가 "합계액÷월수"라 합계가 본질, UI 단순
     monthsBusinessStartToListingPrevDay: number; // 사업연도개시일~상장전일 월수(분모, 1월미만=1월)
     monthsAcqToSettlement: number;     // 증여·취득일~정산기준일 월수(곱수)
   };
@@ -86,9 +86,8 @@ applied = direction === "taxation"
 
 ### 3-2. B/E — 기업가치 월수산식 (신규 헬퍼 `calcPerShareCorpGrowth`)
 ```
-sumNetIncome    = sum(perShareNetIncomeByYear)
-perMonthIncome  = floor(sumNetIncome / monthsBusinessStartToListingPrevDay)  // 1개월당(령§31의3⑤1)
-perShareCorpGrowth = perMonthIncome * monthsAcqToSettlement                  // (령§31의3⑤2)
+perMonthIncome  = floor(totalNetIncomePerShare / max(1, monthsBusinessStartToListingPrevDay))  // 1개월당(령§31의3⑤1)
+perShareCorpGrowth = perMonthIncome * max(1, monthsAcqToSettlement)          // (령§31의3⑤2, 1월미만=1월)
 ```
 검증(사례2): `(10,000+15,000+5,000)=30,000 / 30 = 1,000 × 27 = 27,000` ✅
 
@@ -119,7 +118,7 @@ calcListingGainGift(I).thresholdEcho.threshold === 300_000_000
 calcListingGainGift(I).direction              === "taxation"    // A0
 
 // CG-1 — 기업가치 월수산식
-calcPerShareCorpGrowth({ perShareNetIncomeByYear:[10_000,15_000,5_000], monthsBusinessStartToListingPrevDay:30, monthsAcqToSettlement:27 }) === 27_000
+calcPerShareCorpGrowth({ totalNetIncomePerShare:30_000, monthsBusinessStartToListingPrevDay:30, monthsAcqToSettlement:27 }) === 27_000  // floor(30000/30)×27 (사례2)
 
 // LG-R1 — 환급(평가손실): A 하락 케이스
 calcListingGainGift({ settlementPerSharePrice: 5_000, perShareAcqValue: 10_000, perShareCorpGrowth: 0, shares: 100_000 })

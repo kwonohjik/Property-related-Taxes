@@ -604,8 +604,17 @@ export interface ListingGainInput {
   eventType?: "listing" | "merger"; // §41의3 상장 / §41의5 합병상장, 기본 listing
   settlementPerSharePrice: number; // 정산기준일(상장일·합병등기일 +3개월) 현재 1주당 평가가액(§63)
   perShareAcqValue: number; // 1주당 증여세 과세가액(또는 취득가액)
-  perShareCorpGrowth: number; // 1주당 기업가치 실질증가이익(§31의3⑤)
+  perShareCorpGrowth: number; // 1주당 기업가치 실질증가이익(§31의3⑤). corpGrowthAuto 지정 시 무시(자동계산)
   shares: number; // 증여·유상취득 주식수
+  /**
+   * 1주당 기업가치 실질증가이익 자동계산(령§31의3⑤) — 지정 시 perShareCorpGrowth 대신 사용.
+   * = (사업연도별 1주당 순손익 합계 ÷ 분모월수) × 곱수월수. 월수 1월미만은 1월(령§31의3⑤ 각호).
+   */
+  corpGrowthAuto?: {
+    totalNetIncomePerShare: number; // 증여·취득일 속한 사업연도개시일~상장전일 1주당 순손익액 합계(령§31의3⑤1)
+    monthsBusinessStartToListingPrevDay: number; // 분모 월수 — 사업연도개시일~상장전일(1월미만=1월)
+    monthsAcqToSettlement: number; // 곱수 월수 — 증여·취득일~정산기준일(령§31의3⑤2, 1월미만=1월)
+  };
 }
 
 /** §42 재산사용·용역제공 */

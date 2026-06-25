@@ -442,6 +442,16 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         perShareAcqValue: parseAmount(form.lgAcqValue),
         perShareCorpGrowth: parseAmount(form.lgCorpGrowth),
         shares: parseAmount(form.lgShares),
+        // 령§31의3⑤ 자동계산 모드 — corpGrowthAuto 지정 시 엔진이 perShareCorpGrowth 무시
+        ...(form.lgCorpGrowthMode === "auto"
+          ? {
+              corpGrowthAuto: {
+                totalNetIncomePerShare: parseAmount(form.lgTotalNetIncome),
+                monthsBusinessStartToListingPrevDay: parseAmount(form.lgMonthsBusinessStart),
+                monthsAcqToSettlement: parseAmount(form.lgMonthsAcqToSettlement),
+              },
+            }
+          : {}),
       };
     case "property_service_use":
       return {

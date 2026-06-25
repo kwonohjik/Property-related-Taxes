@@ -5,7 +5,8 @@
  * (§41의2·§41의3·§41의5·§42·§42의2·§42의3·§45의5).
  */
 
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { useMemo } from "react";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -253,6 +254,14 @@ export function ExcessDividendFields({ form, set }: Props) {
 
 /** §41의3 상장이익 / §41의5 합병상장이익 */
 export function ListingGainFields({ form, set }: Props) {
+  // 령§31의3⑤ 자동계산 echo — (순손익 합계 ÷ 분모월수) × 곱수월수 (1월미만=1월)
+  const autoCorpGrowth = useMemo(() => {
+    const total = parseAmount(form.lgTotalNetIncome);
+    const denom = Math.max(1, parseAmount(form.lgMonthsBusinessStart));
+    const mult = Math.max(1, parseAmount(form.lgMonthsAcqToSettlement));
+    return Math.floor(total / denom) * mult;
+  }, [form.lgTotalNetIncome, form.lgMonthsBusinessStart, form.lgMonthsAcqToSettlement]);
+
   return (
     <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
       <RadioCardGroup
@@ -268,7 +277,34 @@ export function ListingGainFields({ form, set }: Props) {
       />
       <CurrencyInput label="정산기준일 1주당 평가가액" value={form.lgSettlementPrice} onChange={(v) => set({ lgSettlementPrice: v })} hint={form.lgEventType === "merger" ? "합병등기일 +3개월 (§63 평가)" : "상장일 +3개월 (§63 평가)"} placeholder="정산기준일 1주당 평가가액 (원)" />
       <CurrencyInput label="1주당 증여세 과세가액(취득가액)" value={form.lgAcqValue} onChange={(v) => set({ lgAcqValue: v })} placeholder="1주당 과세가액(취득가액) (원)" />
-      <CurrencyInput label="1주당 기업가치 실질증가이익" value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (1주당 순손익액 평균 × 보유월수)" placeholder="1주당 기업가치 실질증가이익 (원)" />
+
+      {/* 1주당 기업가치 실질증가이익 — 직접입력 / 월수 산식 자동계산 (령§31의3⑤) */}
+      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2">
+        <RadioCardGroup
+          name="lg-corp-growth-mode"
+          tone="emerald"
+          layout="inline"
+          value={form.lgCorpGrowthMode}
+          onChange={(v) => set({ lgCorpGrowthMode: v })}
+          options={[
+            { value: "direct", label: "1주당 기업가치 직접 입력", testId: "lg-corp-growth-mode-direct" },
+            { value: "auto", label: "월수 산식 자동계산", testId: "lg-corp-growth-mode-auto" },
+          ]}
+        />
+        {form.lgCorpGrowthMode === "direct" ? (
+          <CurrencyInput label="1주당 기업가치 실질증가이익" value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤" placeholder="1주당 기업가치 실질증가이익 (원)" />
+        ) : (
+          <>
+            <CurrencyInput label="사업연도별 1주당 순손익액 합계" value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1)" placeholder="1주당 순손익액 합계 (원)" />
+            <CurrencyInput label="사업연도개시일~상장전일 월수" value={form.lgMonthsBusinessStart} onChange={(v) => set({ lgMonthsBusinessStart: v })} hint="분모 월수 (1월미만은 1월)" placeholder="월수" />
+            <CurrencyInput label="증여·취득일~정산기준일 월수" value={form.lgMonthsAcqToSettlement} onChange={(v) => set({ lgMonthsAcqToSettlement: v })} hint="곱수 월수 (령§31의3⑤2, 1월미만은 1월)" placeholder="월수" />
+            <p className="text-xs font-medium text-emerald-800" data-testid="lg-corp-growth-echo">
+              → 1주당 기업가치 실질증가이익 {autoCorpGrowth.toLocaleString()}
+            </p>
+          </>
+        )}
+      </div>
+
       <CurrencyInput label="증여·유상취득 주식수" value={form.lgShares} onChange={(v) => set({ lgShares: v })} placeholder="증여·유상취득 주식수" />
     </div>
   );

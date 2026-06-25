@@ -15,12 +15,11 @@
 │ │ ○ 직접 입력   ○ 월수 산식 자동계산 (령§31의3⑤)     │  │
 │ │ ─ 직접입력 모드 ─                                   │  │
 │ │   1주당 값 [        27,000 ]                         │  │
-│ │ ─ 자동계산 모드 ─ (corpGrowthAuto)                  │  │
-│ │   사업연도별 1주당 순손익액(DecimalInput 배열 추가) │  │
-│ │     ① [ 10,000 ] ② [ 15,000 ] ③ [ 5,000 ] [+행]   │  │
+│ │ ─ 자동계산 모드 ─ (corpGrowthAuto, [Do 환류] 합계) │  │
+│ │   사업연도별 1주당 순손익액 합계 [     30,000 ]     │  │
 │ │   사업연도개시일~상장전일 월수 [ 30 ]               │  │
 │ │   증여·취득일~정산기준일 월수  [ 27 ]               │  │
-│ │   → 1개월 순손익 1,000 × 27개월 = 27,000 (echo)     │  │
+│ │   → 1주당 기업가치 27,000 (echo: floor(30000/30)×27)│  │
 │ └────────────────────────────────────────────────┘  │
 │ 증여·유상취득 주식수             [        50,000 ]        │
 └──────────────────────────────────────────────────────┘
@@ -28,7 +27,7 @@
 
 - **자동계산 토글 = 3-state optional**(`feedback_three_state_optional_mode_toggle`): `corpGrowthAuto?: {...} | undefined`. undefined=직접입력 / 객체=자동계산. **length>0 derive 금지**, 명시 모드 상태.
 - 자동계산 echo(27,000)는 `useMemo`로 파생 표시(useEffect→store 미러링 금지, `feedback_useeffect_store_mirror_forbidden`).
-- 월수·순손익은 `DecimalInput`(정수 월수도 숫자) — CurrencyInput 아님(`feedback_decimal_input`). 단가 아닌 금액(순손익액)은 CurrencyInput.
+- [Do 환류] 합계·월수 모두 `CurrencyInput`+`parseAmount`로 통일 — gift-deemed-api가 `parseAmount(form.lgMonths*)`로 매핑하므로 입력도 동일 파서. 월수는 작은 정수라 콤마 무관, lgCorpGrowthMode("direct"|"auto") 명시 상태로 3-state 표현.
 - 구법(H, applyOldLaw): 증여일 < 2016.2.5 자동 판정 — **토글 아닌 파생**(증여일 입력에서). UI 안내 배지만.
 
 testid: `lg-event-listing`·`lg-event-merger`(현행) / `lg-corp-growth-mode-direct`·`lg-corp-growth-mode-auto`(신규).

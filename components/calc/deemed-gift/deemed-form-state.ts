@@ -258,6 +258,11 @@ export interface DeemedFormState {
   lgAcqValue: string;
   lgCorpGrowth: string;
   lgShares: string;
+  // 령§31의3⑤ 기업가치 자동계산 (direct=직접입력 / auto=월수산식)
+  lgCorpGrowthMode: "direct" | "auto";
+  lgTotalNetIncome: string; // 사업연도별 1주당 순손익 합계
+  lgMonthsBusinessStart: string; // 분모 월수 (사업연도개시일~상장전일)
+  lgMonthsAcqToSettlement: string; // 곱수 월수 (증여·취득일~정산기준일)
   // 재산사용·용역 §42
   psuSubType: "free_use" | "low_price" | "high_price";
   psuMarketValue: string;
@@ -452,6 +457,10 @@ export const INITIAL_DEEMED: DeemedFormState = {
   lgAcqValue: "",
   lgCorpGrowth: "",
   lgShares: "",
+  lgCorpGrowthMode: "direct",
+  lgTotalNetIncome: "",
+  lgMonthsBusinessStart: "",
+  lgMonthsAcqToSettlement: "",
   psuSubType: "free_use",
   psuMarketValue: "",
   psuConsideration: "",

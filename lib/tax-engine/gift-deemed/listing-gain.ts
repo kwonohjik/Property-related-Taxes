@@ -6,6 +6,15 @@ import type { DeemedGiftResult, ListingGainInput } from "./types";
 
 const ABSOLUTE_THRESHOLD = 300_000_000;
 
+/** 령§31의3⑤ 1주당 기업가치 실질증가이익 = (사업연도별 1주당 순손익 합계 ÷ 분모월수) × 곱수월수 (1월미만=1월). */
+function calcPerShareCorpGrowth(
+  a: NonNullable<ListingGainInput["corpGrowthAuto"]>,
+): number {
+  const denomMonths = Math.max(1, a.monthsBusinessStartToListingPrevDay);
+  const perMonth = Math.floor(a.totalNetIncomePerShare / denomMonths);
+  return perMonth * Math.max(1, a.monthsAcqToSettlement);
+}
+
 /**
  * 시행령 §31의3①: 이익 = (정산기준일 1주당 평가가액 − 1주당 증여세과세가액/취득가액
  *  − 1주당 기업가치 실질증가이익) × 주식수.
@@ -17,7 +26,11 @@ const ABSOLUTE_THRESHOLD = 300_000_000;
  */
 export function calcListingGainGift(input: ListingGainInput): DeemedGiftResult {
   const eventType = input.eventType ?? "listing";
-  const { settlementPerSharePrice, perShareAcqValue, perShareCorpGrowth, shares } = input;
+  const { settlementPerSharePrice, perShareAcqValue, shares } = input;
+  // 령§31의3⑤ 자동계산(corpGrowthAuto) 우선, 없으면 직접입력 perShareCorpGrowth
+  const perShareCorpGrowth = input.corpGrowthAuto
+    ? calcPerShareCorpGrowth(input.corpGrowthAuto)
+    : input.perShareCorpGrowth;
   const perShareGain = settlementPerSharePrice - perShareAcqValue - perShareCorpGrowth;
   // 부호 유지 — 음수(손실)는 환급 판정용. safeMultiply는 비음수 입력 전제 → 절댓값 후 부호 복원.
   const absTotal = safeMultiply(Math.abs(perShareGain), shares);
