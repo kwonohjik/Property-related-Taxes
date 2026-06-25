@@ -28,12 +28,15 @@ const NORMAL_TRADE_RATIO: Record<Size, number> = { small: 50, medium: 40, large:
 const MARGINAL_OWNERSHIP_RATIO: Record<Size, number> = { small: 10, medium: 10, large: 3 };
 
 /**
- * §45의3①2호 계산식 거래비율차감 (박스 미렌더 → 흐름도).
- * ⚠️ 중견(20)·일반(5)은 법령집 재확인 필요(SCOPE_OUT). 중소(50)만 사례 확정.
+ * §45의3①2호 계산식 거래비율차감 (legal_research 박스 verbatim 검증 — get_law_text 미렌더 우회).
+ * 가목(중소)="정상거래비율을 초과"(§⑦ 50%) / 나목(중견)="정상거래비율의 100분의50을 초과"(40×50%=20%) / 다목(일반)="100분의5를 초과"(고정 5%).
  */
 const TRADE_RATIO_DEDUCTION: Record<Size, number> = { small: 50, medium: 20, large: 5 };
 
-/** §34의3⑬ 계산식 보유비율차감 (가목=한계·나목=한계×50%·다목=0) — 분자(분모 100) */
+/**
+ * §45의3①2호 계산식 보유비율차감 (legal_research 박스 verbatim 검증).
+ * 가목(중소)="한계보유비율을 초과"(§⑨ 10%) / 나목(중견)="한계보유비율의 100분의50을 초과"(10×50%=5%) / 다목(일반)="주식보유비율"(차감 없음, 0).
+ */
 const OWNERSHIP_RATIO_DEDUCTION: Record<Size, number> = { small: 10, medium: 5, large: 0 };
 
 const RATIO_DENOM = 100;

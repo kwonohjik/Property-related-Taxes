@@ -88,3 +88,40 @@ describe("§45의3 일감몰아주기 — Pre-Do 핵심 anchor (교재 사례4)"
     expect(r.deemedGiftValue).toBe(36_720_000);
   });
 });
+
+// 중견·일반 거래비율차감 — legal_research 박스 verbatim 검증 (교재 사례 없어 법령 산식 anchor)
+// 가목(중소)=정상거래비율 / 나목(중견)=정상거래비율×50% / 다목(일반)=고정5% · 보유차감 한계/한계×50%/0
+describe("§45의3 — 중견·일반 거래비율차감 (법령 산식 anchor)", () => {
+  function baseInput(size: "medium" | "large"): RelatedCorpInput {
+    return {
+      enterpriseSize: size,
+      totalSales: 20_000_000_000,
+      preTaxAdjOperatingIncome: 2_500_000_000,
+      taxableIncome: 1_800_000_000,
+      corporateTaxNet: 340_000_000,
+      shareholders: [
+        { id: "gap", name: "갑", relation: "self", directRatio: { numer: 50, denom: 100 }, isCorporate: false },
+        { id: "etc", name: "기타", relation: "other", directRatio: { numer: 50, denom: 100 }, isCorporate: false },
+      ],
+      intermediaryCorps: [],
+      salesPartners: [
+        { id: "s1", name: "특수법인", salesAmount: 14_000_000_000, isRelated: true },
+        { id: "s2", name: "기타매출", salesAmount: 6_000_000_000, isRelated: false },
+      ],
+    };
+  }
+
+  it("[RC-MEDIUM] 중견: 2,160M × (거래70%−정상40%×50%=20%→50%) × (직접50%−한계10%×50%=5%→45%) = 486,000,000", () => {
+    const r = calcRelatedCorpGift(baseInput("medium"));
+    const gap = r.recipientBreakdown?.find((b) => b.recipientName === "갑");
+    expect(gap?.directGain).toBe(486_000_000);
+    expect(r.deemedGiftValue).toBe(486_000_000);
+  });
+
+  it("[RC-LARGE] 일반: 2,160M × (거래70%−고정5%→65%) × (직접50%−0%→50%) = 702,000,000", () => {
+    const r = calcRelatedCorpGift(baseInput("large"));
+    const gap = r.recipientBreakdown?.find((b) => b.recipientName === "갑");
+    expect(gap?.directGain).toBe(702_000_000);
+    expect(r.deemedGiftValue).toBe(702_000_000);
+  });
+});

@@ -100,11 +100,6 @@ export function RelatedCorpFields({ form, set }: Props) {
             { value: "large", label: "일반기업", testId: "rc-size-large" },
           ]}
         />
-        {(form.rcEnterpriseSize === "medium" || form.rcEnterpriseSize === "large") && (
-          <p className="text-[11px] text-rose-600">
-            중견·일반기업 거래비율차감(20%/5%)은 법령집 재확인 전까지 참고용입니다 — 중소기업만 검증 완료.
-          </p>
-        )}
         <CurrencyInput label="총 매출액" value={form.rcTotalSalesStr} onChange={(v) => set({ rcTotalSalesStr: v })} placeholder="총 매출액 (원)" />
         <CurrencyInput label="세무조정 후 영업손익" value={form.rcPreTaxAdjOperatingIncomeStr} onChange={(v) => set({ rcPreTaxAdjOperatingIncomeStr: v })} placeholder="세무조정 후 영업손익 (원)" />
         <CurrencyInput label="각 사업연도 소득금액" value={form.rcTaxableIncomeStr} onChange={(v) => set({ rcTaxableIncomeStr: v })} placeholder="각 사업연도 소득금액 (원)" />
