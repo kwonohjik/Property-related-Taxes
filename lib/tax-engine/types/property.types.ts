@@ -124,6 +124,14 @@ export interface PropertyTaxInput {
    */
   previousYearHousingBaseTax?: number;
 
+  /**
+   * [부칙 제15조 경과조치 v2] 직전연도 주택 도시지역분 세액(§112①2호, 고지서 '도시지역분' 항목).
+   * objectType==="housing" + isUrbanArea 전용. 입력 시 2024~2028 종전 §122 세부담상한을 도시지역분에
+   * **본세와 별개로 각각** 적용(시행령 §118 본문). capRate는 본세와 동일(공시 구간별 105/110/130%).
+   * 미입력 시 도시지역분 상한 미적용. 종부세 내부 호출은 미전달 → 회귀 0. (§118 2호 가목 단서: 직전 실제 과세 세액)
+   */
+  previousYearHousingUrbanTax?: number;
+
   /** 계산 기준일 (YYYY-MM-DD, 기본: 과세기준일 6월 1일) */
   targetDate?: string;
 
@@ -405,6 +413,18 @@ export interface PropertyTaxResult {
     baseDeterminedTax: number;
     /** 법령 근거 (부칙 제15조) */
     legalBasis: string;
+
+    // ── [v2 §118 본문 "각각 산출"] 도시지역분(§112①2호) 세부담상한 — isUrbanArea + 직전 도시지역분 입력 + 적용 시에만 ──
+    /** 도시지역분 상한 실제 적용 여부 */
+    urbanApplied?: boolean;
+    /** 직전연도 도시지역분 (입력값, §118 2호 가목 단서) */
+    previousYearUrbanTax?: number;
+    /** 상한 전 도시지역분 산출 = floor(과세표준 × 0.14%) */
+    urbanCalculatedTax?: number;
+    /** 도시지역분 상한 한도 = floor(직전 도시지역분 × capRate) — 본세와 동일 capRate */
+    urbanCapLimit?: number;
+    /** 결정 도시지역분 (= surtax.urbanAreaTax, 상한 적용 후) */
+    urbanDeterminedTax?: number;
   };
 
   // ── 부가세 ──

@@ -49,6 +49,13 @@ export interface DeemedFormState {
   freeInterest: string;
   freeRelated: boolean;
   freeJustifiable: boolean;
+  // §37 다기간(G2/G3) — 3-state: undefined=단일 / []=다기간ON빈 / [...]=다기간
+  freePeriods?: { startDate: string; value: string; interest: string }[];
+  // §37 경정청구(G1, free_use 한정)
+  freeRectOn: boolean;
+  freeRectTax: string;
+  freeRectGiftDate: string;
+  freeRectTermDate: string;
   // 금전 무상대출 §41의4
   loanAmount: string;
   loanInterest: string;
@@ -220,6 +227,11 @@ export const INITIAL_DEEMED: DeemedFormState = {
   freeInterest: "",
   freeRelated: true,
   freeJustifiable: false,
+  freePeriods: undefined,
+  freeRectOn: false,
+  freeRectTax: "",
+  freeRectGiftDate: "",
+  freeRectTermDate: "",
   loanAmount: "",
   loanInterest: "",
   loanRelated: true,

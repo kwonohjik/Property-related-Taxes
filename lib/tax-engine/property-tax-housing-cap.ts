@@ -17,7 +17,7 @@
 
 import { applyRate } from "./tax-utils";
 import { PROPERTY, PROPERTY_CONST } from "./legal-codes";
-import type { PropertyTaxInput } from "./types/property.types";
+import type { PropertyTaxInput, PropertyTaxResult } from "./types/property.types";
 
 export interface HousingTransitionalCapResult {
   /** 경과조치 상한 실제 적용 여부 */
@@ -197,4 +197,108 @@ export function applyTaxCap(
   const determinedTax = Math.min(calculatedTax, capLimit);
 
   return { determinedTax, taxCapRate: capRate, warnings, legalBasis: PROPERTY.TAX_CAP };
+}
+
+/**
+ * 주택 세부담상한 경과조치(부칙 제15조) Step3 통합 — 본세 + 도시지역분(§118 본문 "각각 산출").
+ *
+ * property-tax.ts Step3 housing 분기를 응집 추출(800줄 정책). 본세 상한(v1)과 도시지역분 상한(v2)을
+ * 한 곳에서 처리하고 호출측이 wiring할 값(결정세액·상한율·echo·overrideUrbanTax)을 반환한다.
+ *
+ * 게이트(둘 다 직전세액 입력 시에만 적용 → 종부세 내부 호출(미전달)은 미적용·회귀 0):
+ *   - 본세: previousYearHousingBaseTax
+ *   - 도시지역분: isUrbanArea && previousYearHousingUrbanTax
+ */
+export interface HousingTransitionalStep3 {
+  /** 세부담상한 적용 후 확정 본세 */
+  determinedTax: number;
+  /** 본세 세부담상한율 (미적용 시 1) */
+  taxCapRate: number;
+  /** 결과뷰 echo용 housingTransitionalCap (본세 상한 적용 시에만, 도시 echo 포함) */
+  housingTransitionalCap?: PropertyTaxResult["housingTransitionalCap"];
+  /** capEcho.taxCapBasisTax (= 직전 본세, taxCapMode는 항상 "direct") — 본세 상한 적용 시에만 */
+  taxCapBasisTax?: number;
+  /** calcSurtax 주입용 도시지역분 상한 후 값 (도시 상한 적용 시에만) */
+  overrideUrbanTax?: number;
+  /** 누적 경고 (호출측이 push) */
+  warnings: string[];
+  /** 누적 법령 근거 (호출측이 push) */
+  legalBasis: string[];
+}
+
+export function computeHousingTransitionalStep3(
+  input: PropertyTaxInput,
+  calculatedTax: number,
+  effectiveTaxBase: number,
+  taxYear: number,
+): HousingTransitionalStep3 {
+  const warnings: string[] = [];
+  const legalBasis: string[] = [];
+
+  // ── 본세(§112①1호) 세부담상한 (v1) ──
+  const hc = applyHousingTransitionalCap(
+    calculatedTax,
+    input.publishedPrice,
+    taxYear,
+    input.previousYearHousingBaseTax,
+  );
+  const determinedTax = hc.determinedTax;
+  const taxCapRate = hc.applied ? hc.capRate! : 1;
+  warnings.push(...hc.warnings);
+
+  // ── 도시지역분(§112①2호) 세부담상한 (v2 §118 본문 "각각 산출") — 직전 도시지역분 입력 + 경과조치 기간 내에만 ──
+  //   만료(2029+)는 본세 applyHousingTransitionalCap이 이미 일괄 안내하므로 도시 블록은 skip(경고 중복 방지).
+  let overrideUrbanTax: number | undefined;
+  let urbanCapEcho: Partial<NonNullable<PropertyTaxResult["housingTransitionalCap"]>> = {};
+  if (
+    (input.isUrbanArea ?? false) &&
+    input.previousYearHousingUrbanTax != null &&
+    taxYear <= PROPERTY_CONST.HOUSING_TAX_CAP_EXPIRY_YEAR
+  ) {
+    const urbanCalculatedTax = applyRate(
+      effectiveTaxBase,
+      PROPERTY_CONST.URBAN_AREA_TAX_RATE,
+    );
+    const uc = applyHousingUrbanTransitionalCap(
+      urbanCalculatedTax,
+      input.publishedPrice,
+      taxYear,
+      input.previousYearHousingUrbanTax,
+    );
+    warnings.push(...uc.warnings);
+    if (uc.applied) {
+      overrideUrbanTax = uc.determinedUrbanTax; // calcSurtax에 주입 (도시지역분 상한 후)
+      urbanCapEcho = {
+        urbanApplied: true,
+        previousYearUrbanTax: input.previousYearHousingUrbanTax,
+        urbanCalculatedTax,
+        urbanCapLimit: uc.capLimit!,
+        urbanDeterminedTax: uc.determinedUrbanTax,
+      };
+    }
+  }
+
+  if (!hc.applied) {
+    return { determinedTax, taxCapRate, overrideUrbanTax, warnings, legalBasis };
+  }
+
+  legalBasis.push(PROPERTY.TAX_CAP_TRANSITIONAL);
+  return {
+    determinedTax,
+    taxCapRate,
+    overrideUrbanTax,
+    taxCapBasisTax: input.previousYearHousingBaseTax, // capEcho direct
+    housingTransitionalCap: {
+      applied: true,
+      capRate: hc.capRate!,
+      previousYearBaseTax: input.previousYearHousingBaseTax!,
+      baseCapLimit: hc.capLimit!,
+      baseCalculatedTax: calculatedTax,
+      baseDeterminedTax: determinedTax,
+      legalBasis: PROPERTY.TAX_CAP_TRANSITIONAL,
+      ...urbanCapEcho, // 도시지역분 상한 echo (적용 시에만)
+    },
+    warnings,
+    legalBasis,
+  };
 }

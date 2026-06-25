@@ -71,6 +71,21 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         actualInterestPaid: parseAmount(form.freeInterest),
         isRelatedParty: form.freeRelated,
         hasJustifiableReason: form.freeJustifiable,
+        // 다기간(G2/G3) — 토글 ON 시에만 전달(undefined=단일). value=subType별 의미
+        periods: form.freePeriods?.map((p) => ({
+          startDate: p.startDate,
+          propertyValue: form.freeSubType === "free_use" ? parseAmount(p.value) : undefined,
+          loanAmount: form.freeSubType === "collateral" ? parseAmount(p.value) : undefined,
+          actualInterestPaid: form.freeSubType === "collateral" ? parseAmount(p.interest) : undefined,
+        })),
+        // 경정청구(G1) — 무상사용(분모 60)·담보(분모 12) 공통 (§79②1호·§81⑤)
+        rectification: form.freeRectOn
+          ? {
+              giftTaxCalculated: parseAmount(form.freeRectTax),
+              giftDate: form.freeRectGiftDate,
+              terminationDate: form.freeRectTermDate,
+            }
+          : undefined,
       };
     case "free_loan":
       return {

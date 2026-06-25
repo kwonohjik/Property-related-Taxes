@@ -144,6 +144,8 @@ export interface FormState {
   housingTaxCapEnabled: boolean;
   /** 직전연도 주택 재산세 본세 — 부칙 제15조 경과조치 직접입력 (주택 전용) */
   housingPreviousYearTax: string;
+  /** 직전연도 주택 도시지역분 — 부칙 제15조 v2 도시지역분 세부담상한(§118 본문) 직접입력 (주택+도시지역 전용) */
+  housingPreviousUrbanTax: string;
   landTaxType: "comprehensive_aggregate" | "separate_aggregate" | "separated" | "";
   saZoningDistrict: string;
   saLandArea: string;
@@ -211,6 +213,7 @@ export const INITIAL_FORM: FormState = {
   taxCapMode: "direct",
   housingTaxCapEnabled: false,
   housingPreviousYearTax: "",
+  housingPreviousUrbanTax: "",
   landTaxType: "",
   saZoningDistrict: "",
   saLandArea: "",
@@ -360,6 +363,12 @@ export function validateStep(step: number, form: FormState): string | null {
     const prev = parseAmount(form.housingPreviousYearTax);
     if (prev === null || prev <= 0)
       return "세부담상한 경과조치 적용 시 직전연도 재산세 본세를 입력하세요.";
+    // 도시지역 주택은 도시지역분도 본세와 별개로 세부담상한 대상(§118 본문) — 직전 도시지역분 필수
+    if (form.isUrbanArea) {
+      const prevUrban = parseAmount(form.housingPreviousUrbanTax);
+      if (prevUrban === null || prevUrban <= 0)
+        return "도시지역 주택은 도시지역분 세부담상한 적용을 위해 직전연도 도시지역분을 입력하세요.";
+    }
   }
   return null;
 }
@@ -393,6 +402,13 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
       const prevHousingTax = parseAmount(form.housingPreviousYearTax);
       if (prevHousingTax !== null && prevHousingTax > 0) {
         body.previousYearHousingBaseTax = prevHousingTax;
+      }
+      // v2 도시지역분 세부담상한(§118 본문) — 도시지역 + 직전 도시지역분 값>0 시에만 전송
+      if (form.isUrbanArea) {
+        const prevUrban = parseAmount(form.housingPreviousUrbanTax);
+        if (prevUrban !== null && prevUrban > 0) {
+          body.previousYearHousingUrbanTax = prevUrban;
+        }
       }
     }
   }

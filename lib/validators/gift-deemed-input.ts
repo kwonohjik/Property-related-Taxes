@@ -62,6 +62,25 @@ const freeRealEstateSchema = z.object({
   actualInterestPaid: z.number().nonnegative().optional(),
   isRelatedParty: z.boolean(),
   hasJustifiableReason: z.boolean().optional(),
+  // 다기간 (G2/G3) — undefined=단일 / [...]=다기간 (빈 []은 superRefine 차단)
+  periods: z
+    .array(
+      z.object({
+        startDate: z.string().min(1),
+        propertyValue: z.number().nonnegative().optional(),
+        loanAmount: z.number().nonnegative().optional(),
+        actualInterestPaid: z.number().nonnegative().optional(),
+      })
+    )
+    .optional(),
+  // 경정청구 (G1)
+  rectification: z
+    .object({
+      giftTaxCalculated: z.number().nonnegative(),
+      giftDate: z.string().min(1),
+      terminationDate: z.string().min(1),
+    })
+    .optional(),
 });
 
 const freeLoanSchema = z.object({
@@ -264,19 +283,19 @@ export const deemedGiftInputSchema = z
       }
     }
     if (data.type === "free_realestate") {
-      if (data.subType === "free_use" && !data.propertyValue) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["propertyValue"],
-          message: "무상사용은 부동산 가액 입력이 필요합니다 (§37①)",
-        });
-      }
-      if (data.subType === "collateral" && !data.loanAmount) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["loanAmount"],
-          message: "무상담보는 차입금 입력이 필요합니다 (§37②)",
-        });
+      // 다기간 모드(periods 정의됨) — 빈 배열 차단(자동 fallback 금지)
+      if (data.periods !== undefined) {
+        if (data.periods.length === 0) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["periods"], message: "다기간 입력 시 기간을 1개 이상 추가하세요 (§37·시행령§27③⑤)" });
+        }
+      } else {
+        // 단일기간
+        if (data.subType === "free_use" && !data.propertyValue) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["propertyValue"], message: "무상사용은 부동산 가액 입력이 필요합니다 (§37①)" });
+        }
+        if (data.subType === "collateral" && !data.loanAmount) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["loanAmount"], message: "무상담보는 차입금 입력이 필요합니다 (§37②)" });
+        }
       }
     }
   });

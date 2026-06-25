@@ -5,7 +5,7 @@
  *   DB 직접 호출 없음 — 세율 데이터는 매개변수로 전달
  *
  * 계산 순서:
- * 1. calcTaxBase()        — 공정시장가액비율 × 공시가격 (§110, 시행령 §109 — 2026 1세대1주택 43~45%)
+ * 1. calcTaxBase()        — 공정시장가액비율 × 공시가격 (§110, 시행령 §109 — 2024·2025·2026 1세대1주택 43~45%)
  * 2. calcHousingTax()     — 주택 누진세율 4구간 / 1세대1주택 특례 (§111①1, §111③)
  * 3. calcBuildingTax()    — 건축물 일반 0.25% / 골프·오락 4% (§111①2)
  * 4. applyTaxCap()        — 세부담상한 150% (주택 미적용 — §122 단서)
@@ -44,7 +44,10 @@ import { getPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import { resolveBasisTax } from "./property-tax-recompute";
 import { buildCapEcho } from "./property-tax-cap-echo";
-import { applyHousingTransitionalCap, applyTaxCap } from "./property-tax-housing-cap";
+import {
+  computeHousingTransitionalStep3,
+  applyTaxCap,
+} from "./property-tax-housing-cap";
 // 800줄 분리: applyTaxCap을 property-tax-housing-cap.ts로 이동 — 외부(테스트) import 하위호환 re-export
 export { applyTaxCap } from "./property-tax-housing-cap";
 
@@ -83,8 +86,8 @@ function getFairMarketRatio(
  * 재산세 과세표준 계산 (지방세법 §110, 시행령 §109)
  *
  * - 주택: 공시가격 × 60%
- *   · 2026년 과세 1세대1주택: 공시가격 구간별 43%(3억 이하)·44%(6억 이하)·45%(6억 초과)
- *     — 시행령 §109①2호 단서. 공시가격 9억 초과 주택 포함 (특례세율 §111의2와 별개)
+ *   · 2024·2025·2026년 과세 1세대1주택: 공시가격 구간별 43%(3억 이하)·44%(6억 이하)·45%(6억 초과)
+ *     — 시행령 §109①2호 단서. 공시가격 9억 초과 주택 포함 (특례세율 §111의2와 별개). 2022는 단일 45%·2023은 60%
  * - 토지·건축물: 공시가격 × 70%
  * - 지방세법상 과세표준 절사 규정 없음 — 원 단위
  */
@@ -117,11 +120,12 @@ export function calcTaxBase(
     };
   }
 
-  // 시행령 §109①2호 단서 — 2026년 납세의무 성립 1세대1주택 구간별 비율 (법령 명시값, DB보다 우선)
+  // 시행령 §109①2호 단서 — 2024·2025·2026년 납세의무 성립 1세대1주택 구간별 비율 (43/44/45%, 법령 명시값, DB보다 우선)
   if (
     isHousing &&
     opts?.isOneHousehold === true &&
-    opts.taxYear === PROPERTY_CONST.ONE_HOUSE_FMR_YEAR
+    opts.taxYear != null &&
+    PROPERTY_CONST.ONE_HOUSE_FMR_BRACKET_YEARS.includes(opts.taxYear)
   ) {
     const fairMarketRatio =
       publishedPrice <= PROPERTY_CONST.ONE_HOUSE_FMR_BRACKET_1
@@ -674,36 +678,30 @@ export function calculatePropertyTax(
   let taxCapRateResult: number;
   let capEcho: ReturnType<typeof buildCapEcho> = {};
   let housingTransitionalCap: PropertyTaxResult["housingTransitionalCap"];
+  // [v2 §118 본문] 도시지역분 세부담상한 적용 후 값 — calcSurtax 주입용 (미적용 시 undefined → 산출 그대로)
+  let overrideUrbanTax: number | undefined;
 
   if (
     input.objectType === "housing" &&
     taxYear >= PROPERTY_CONST.HOUSING_TAX_CAP_ABOLISHED_YEAR
   ) {
-    const hc = applyHousingTransitionalCap(
+    // 본세(v1) + 도시지역분(v2 §118 본문) 세부담상한 경과조치 통합 — property-tax-housing-cap.ts.
+    //   게이트(직전세액 입력 시에만)로 종부세 내부 호출(미전달)은 미적용 → 회귀 0.
+    const step3 = computeHousingTransitionalStep3(
+      input,
       calculatedTax,
-      input.publishedPrice,
+      effectiveTaxBase,
       taxYear,
-      input.previousYearHousingBaseTax,
     );
-    determinedTax = hc.determinedTax;
-    taxCapRateResult = hc.applied ? hc.capRate! : 1;
-    warnings.push(...hc.warnings);
-    if (hc.applied) {
-      legalBasis.push(PROPERTY.TAX_CAP_TRANSITIONAL);
-      housingTransitionalCap = {
-        applied: true,
-        capRate: hc.capRate!,
-        previousYearBaseTax: input.previousYearHousingBaseTax!,
-        baseCapLimit: hc.capLimit!,
-        baseCalculatedTax: calculatedTax,
-        baseDeterminedTax: determinedTax,
-        legalBasis: PROPERTY.TAX_CAP_TRANSITIONAL,
-      };
+    determinedTax = step3.determinedTax;
+    taxCapRateResult = step3.taxCapRate;
+    housingTransitionalCap = step3.housingTransitionalCap;
+    overrideUrbanTax = step3.overrideUrbanTax;
+    warnings.push(...step3.warnings);
+    legalBasis.push(...step3.legalBasis);
+    if (step3.taxCapBasisTax != null) {
       // 기존 결과뷰 세부담상한 블록 재사용(직전 부과세액·상한율 표시) — §118 단서 direct
-      capEcho = {
-        taxCapMode: "direct",
-        taxCapBasisTax: input.previousYearHousingBaseTax,
-      };
+      capEcho = { taxCapMode: "direct", taxCapBasisTax: step3.taxCapBasisTax };
     }
   } else {
     const basisMain = resolveBasisTax(input, taxYear - 1);
@@ -731,6 +729,7 @@ export function calculatePropertyTax(
     input.isUrbanArea ?? false,
     input.fireHazardClass, // 화재위험 중과 (building 외에는 calcSurtax 내부 게이트로 무영향)
     housingFireServiceTaxBase, // 주택 건물분 소방분 과세표준 (§146④ 단서)
+    overrideUrbanTax, // 도시지역분 세부담상한 적용 후 값 (주택 부칙 §15 v2, §118 본문) — 미적용 시 undefined
   );
   legalBasis.push(...surtaxResult.legalBasis);
 

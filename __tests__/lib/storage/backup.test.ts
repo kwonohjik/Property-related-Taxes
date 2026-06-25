@@ -88,6 +88,42 @@ describe("buildBackup", () => {
     expect(backup.calculations).toHaveLength(1);
     expect(backup.calculations[0].title).toBe("내 계산");
   });
+
+  it("filter.ids — 지정 id만 + 관련 clients만 포함", async () => {
+    const c = await clientRepo.create({ name: "의뢰인A", birthDate: null, phone: null, email: null, memo: null });
+    const a = await calcRepo.saveOrUpdateByBusinessKey(makeCalc({ title: "포함", clientId: c.id }));
+    await calcRepo.saveOrUpdateByBusinessKey(makeCalc({ title: "제외", inputData: { x: 2 } }));
+    const backup = await buildBackup(UID, { ids: [a.id] });
+    expect(backup.calculations).toHaveLength(1);
+    expect(backup.calculations[0].title).toBe("포함");
+    expect(backup.clients.map((x) => x.id)).toEqual([c.id]); // 관련 client만
+  });
+
+  it("filter.taxType — 해당 세목만", async () => {
+    await calcRepo.saveOrUpdateByBusinessKey(makeCalc({ taxType: "property", title: "재산", inputData: { a: 1 } }));
+    await calcRepo.saveOrUpdateByBusinessKey(makeCalc({ taxType: "transfer", title: "양도", inputData: { b: 2 } }));
+    const backup = await buildBackup(UID, { taxType: "property" });
+    expect(backup.calculations).toHaveLength(1);
+    expect(backup.calculations[0].taxType).toBe("property");
+  });
+
+  it("filter.clientId — 해당 의뢰인만 + 무관 clients 제외", async () => {
+    const c1 = await clientRepo.create({ name: "A", birthDate: null, phone: null, email: null, memo: null });
+    const c2 = await clientRepo.create({ name: "B", birthDate: null, phone: null, email: null, memo: null });
+    await calcRepo.saveOrUpdateByBusinessKey(makeCalc({ title: "A건", clientId: c1.id, inputData: { a: 1 } }));
+    await calcRepo.saveOrUpdateByBusinessKey(makeCalc({ title: "B건", clientId: c2.id, inputData: { b: 2 } }));
+    const backup = await buildBackup(UID, { clientId: c1.id });
+    expect(backup.calculations).toHaveLength(1);
+    expect(backup.calculations[0].title).toBe("A건");
+    expect(backup.clients.map((x) => x.id)).toEqual([c1.id]); // c2 제외
+  });
+
+  it("filter 없으면 전체 — 미사용 client도 포함", async () => {
+    await clientRepo.create({ name: "미사용의뢰인", birthDate: null, phone: null, email: null, memo: null });
+    await calcRepo.saveOrUpdateByBusinessKey(makeCalc());
+    const backup = await buildBackup(UID);
+    expect(backup.clients).toHaveLength(1); // 전체 export는 미사용 client도 포함
+  });
 });
 
 // ─────────────────────────────────────────────

@@ -43,3 +43,8 @@ export const FREE_USE_YEARS = 5;
 export const FREE_USE_THRESHOLD = 100_000_000;
 /** §37② 무상담보 / §41의4 무상대출 과세 기준금액 (1천만) */
 export const FREE_LOAN_THRESHOLD = 10_000_000;
+
+/** §79②1호 경정청구 분모 — 무상사용 5년 = 60개월 (시행령§27③후단·§81⑤) */
+export const RECT_MONTHS_FREE_USE = 60;
+/** §79②1호 경정청구 분모 — 담보이용 1년 = 12개월 (시행령§27⑤후단·§81⑤가 "부동산무상사용기간"에 §27⑤후단 포함) */
+export const RECT_MONTHS_COLLATERAL = 12;

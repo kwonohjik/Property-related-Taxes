@@ -420,11 +420,18 @@ describe("2026 1세대1주택 공정시장가액비율 — 시행령 §109①2�
     expect(r.calculatedTax).toBe(1_530_000);
   });
 
-  it("R1-6: 연도 게이트 — 2025년은 60%, 2026년 다주택(특례 미신청)도 60%", () => {
+  it("R1-6: 연도 게이트 — 2024·2025·2026 구간별 적용(v3), 2023은 특례 없음 60%, 다주택은 60%", () => {
+    // v3: 2025년 1세대1주택도 구간별 특례 적용 (시행령 §109①2호 단서 "각 목" — applicable_law 확정)
     expect(
       calculatePropertyTax({ ...base2026, publishedPrice: 200_000_000, targetDate: "2025-06-01" })
         .fairMarketRatio,
+    ).toBe(0.43);
+    // 2023년은 각 목 특례 없음 (applicable_law 2023-06-01 "2022년도 45%"만) → 본문 60%
+    expect(
+      calculatePropertyTax({ ...base2026, publishedPrice: 200_000_000, targetDate: "2023-06-01" })
+        .fairMarketRatio,
     ).toBe(0.6);
+    // 다주택(특례 미신청)은 연도 무관 60%
     expect(
       calculatePropertyTax({ ...base2026, publishedPrice: 200_000_000, isOneHousehold: false })
         .fairMarketRatio,

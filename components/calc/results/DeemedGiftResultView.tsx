@@ -95,6 +95,64 @@ export function DeemedGiftResultView({
         </div>
       )}
 
+      {result.periodBreakdown && result.periodBreakdown.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4" data-testid="deemed-period-breakdown">
+          <p className="text-sm font-semibold text-amber-800">기간별 증여 (§37·시행령§27③⑤ — 5년/1년 단위)</p>
+          <table className="mt-2 w-full text-sm">
+            <thead>
+              <tr className="text-xs text-amber-700">
+                <th className="py-1 text-left font-medium">증여일</th>
+                <th className="py-1 text-right font-medium">평가액</th>
+                <th className="py-1 text-right font-medium">증여이익</th>
+                <th className="py-1 text-right font-medium">과세</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.periodBreakdown.map((p) => (
+                <tr key={p.index} className="border-t border-amber-100">
+                  <td className="py-1.5 pr-2 text-muted-foreground">{p.giftDate || "미입력"}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(p.baseValue)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(p.benefit)}</td>
+                  <td className="py-1.5 text-right text-xs">{p.applied ? "○" : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-muted-foreground">
+            각 기간은 별개 증여 — 해당 증여일 도래 시 별도 신고 대상입니다. 위 증여재산가액은 첫 기간(현재 증여) 기준입니다.
+          </p>
+        </div>
+      )}
+
+      {result.rectification && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="deemed-rectification">
+          <p className="text-sm font-semibold text-emerald-800">경정청구 가능 세액 (§79②1호·시행령§81⑨)</p>
+          <table className="mt-2 w-full text-sm">
+            <tbody>
+              {result.rectification.steps.map((step, i) => (
+                <tr key={i} className="border-t border-emerald-100">
+                  <td className="py-1.5 pr-2 text-muted-foreground">
+                    {step.label}
+                    {step.note ? <span className="ml-1 text-xs text-emerald-600">({step.note})</span> : null}
+                  </td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(step.amount)}</td>
+                  <td className="py-1.5 pl-2">{step.lawRef ? <LawArticleModal legalBasis={step.lawRef} /> : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p
+            className="mt-2 text-right font-mono text-lg font-bold tabular-nums text-emerald-900"
+            data-testid="deemed-rectification-value"
+          >
+            {formatKRW(result.rectification.refundableTax)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            만료일 {result.rectification.expiryDate} 기준 잔여 {result.rectification.remainingMonths}/{result.rectification.totalMonths}개월.
+          </p>
+        </div>
+      )}
+
       {result.mergerMatrix && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="merger-matrix">
           <p className="text-sm font-semibold text-emerald-800">수증자별 증여이익 (§38 합병 — 주주 매트릭스)</p>
