@@ -125,4 +125,21 @@ test.describe("이력 백업 Export/Import §112", () => {
     await page.getByTestId("history-decrypt-confirm").click();
     await expect(page.getByTestId("history-import-merge")).toBeVisible({ timeout: 10_000 });
   });
+
+  test("전체 삭제 — ConfirmDialog(window.confirm 아님) 확인 후 비워짐", async ({ page }) => {
+    await page.goto("/history");
+    await page.getByTestId("history-import-file").setInputFiles({
+      name: "seed.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(BACKUP)),
+    });
+    await page.getByTestId("history-import-merge").click();
+    await expect(page.getByText("백업테스트 재산세")).toBeVisible({ timeout: 10_000 });
+
+    // 전체 삭제 → ConfirmDialog 노출 → 확인 → 목록 비워짐
+    await page.getByRole("button", { name: "전체 삭제" }).click();
+    await expect(page.getByText("전체 이력 삭제")).toBeVisible();
+    await page.getByTestId("confirm-dialog-confirm").click();
+    await expect(page.getByText("백업테스트 재산세")).toHaveCount(0);
+  });
 });
