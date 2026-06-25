@@ -78,6 +78,7 @@ function calcRegionalResourceTax(standardPrice: number): number {
  * @param isUrbanArea    도시지역 여부 (도시지역분 과세)
  * @param fireHazardClass 화재위험 등급 (building 전용 — 소방분 ×2/×3 중과, §146③2호·2의2호)
  * @param housingFireServiceTaxBase 주택 건물분 소방분 과세표준 (housing 전용 — 건물분 × FMR, §146④ 단서)
+ * @param overrideUrbanTax 도시지역분 세부담상한 적용 후 값 (주택 부칙 §15 v2, §118 본문). 전달 시 taxBase×0.14% 대신 사용
  * @returns { surtax, totalSurtax, legalBasis }
  */
 export function calcSurtax(
@@ -88,6 +89,7 @@ export function calcSurtax(
   isUrbanArea: boolean,
   fireHazardClass?: FireHazardClass,
   housingFireServiceTaxBase?: number,
+  overrideUrbanTax?: number,
 ): {
   surtax: PropertySurtaxDetail;
   totalSurtax: number;
@@ -99,10 +101,11 @@ export function calcSurtax(
     PROPERTY_CONST.LOCAL_EDUCATION_TAX_RATE,
   );
 
-  // 도시지역분 = 과세표준 × 0.14% (도시지역 한정)
-  const urbanAreaTax = isUrbanArea
-    ? applyRate(taxBase, PROPERTY_CONST.URBAN_AREA_TAX_RATE)
-    : 0;
+  // 도시지역분 = 과세표준 × 0.14% (도시지역 한정).
+  //   주택 부칙 §15 v2(§118 본문): 세부담상한 적용 후 값을 overrideUrbanTax로 주입받으면 그 값 사용.
+  const urbanAreaTax = !isUrbanArea
+    ? 0
+    : overrideUrbanTax ?? applyRate(taxBase, PROPERTY_CONST.URBAN_AREA_TAX_RATE);
 
   // 지역자원시설세 — 건축물·선박(§146③1호 시가표준액)·주택(§146④ 단서 건물분) 분기
   //   §146④: 제3항 대상은 §104 2·3·5호 = 건축물·선박. 항공기는 비대상(0).

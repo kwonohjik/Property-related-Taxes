@@ -534,14 +534,30 @@ export function PropertyTaxResultView({ result }: Props) {
             note="재산세 × 20%"
             sub
           />
-          {surtax.urbanAreaTax > 0 && (
-            <TaxRow
-              label="도시지역분"
-              amount={surtax.urbanAreaTax}
-              note="과세표준 × 0.14%"
-              sub
-            />
-          )}
+          {surtax.urbanAreaTax > 0 &&
+            (housingTransitionalCap?.urbanApplied ? (
+              <>
+                <TaxRow
+                  label="도시지역분 산출"
+                  amount={housingTransitionalCap.urbanCalculatedTax!}
+                  note="과세표준 × 0.14%"
+                  sub
+                />
+                <TaxRow
+                  label={`도시지역분 세부담상한 (상한율 ${formatRate(housingTransitionalCap.capRate)})`}
+                  amount={surtax.urbanAreaTax}
+                  note={`직전 도시지역분 ${formatKRW(housingTransitionalCap.previousYearUrbanTax!)} × ${(housingTransitionalCap.capRate * 100).toFixed(0)}% (부칙 제15조·§118 본문)`}
+                  sub
+                />
+              </>
+            ) : (
+              <TaxRow
+                label="도시지역분"
+                amount={surtax.urbanAreaTax}
+                note="과세표준 × 0.14%"
+                sub
+              />
+            ))}
           {surtax.regionalResourceTax > 0 &&
             (surtax.fireHazardMultiplier ? (
               <>
