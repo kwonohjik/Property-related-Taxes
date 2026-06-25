@@ -130,11 +130,15 @@ export function DeemedGiftResultView({
             </tbody>
           </table>
 
-          {/* roster 無 — 비율 입력 경로 안내 */}
+          {/* roster 無 — 비율 입력 경로 안내 (저가: 자기지분 미제외 gross 주의) */}
           {!result.contributionBreakdown && (
-            <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
-              당사자 명부를 직접 입력하면 1인별 이익·관계별 증여세를 자동 계산합니다.
-              현재는 지분비율(%) 단일 경로로 산출된 값입니다.
+            <p
+              className="mt-2 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1"
+              data-testid="deemed-contribution-roster-warning"
+            >
+              {result.caseType === "high"
+                ? "지분비율(%) 단일 경로로 산출된 값입니다. 수증자 명부를 입력하면 1인별로 분리 계산합니다."
+                : "현물출자자 본인 지분이 제외되지 않은 법문상 총액입니다. 증여자 명부를 입력하면 자기지분 제외 후 인별 과세액으로 안분합니다."}
             </p>
           )}
 
