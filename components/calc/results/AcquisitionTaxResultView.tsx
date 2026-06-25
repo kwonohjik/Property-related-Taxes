@@ -29,6 +29,8 @@ import { DeemedAcquisitionResultCard } from "./acquisition/DeemedAcquisitionResu
 import { InstallmentResultCard } from "./acquisition/InstallmentResultCard";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
+import { formatIsoStamp } from "@/lib/utils/file-download";
 import {
   ACQUISITION_PRINT_SECTIONS,
   type AcquisitionPrintSectionId,
@@ -345,7 +347,7 @@ interface Props {
   savedId?: string;
 }
 
-export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCorporation = false, onGoToStep, installmentRows, savedId }: Props) {
+export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCorporation = false, onGoToStep, installmentRows }: Props) {
   const [showSteps, setShowSteps] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(
@@ -356,24 +358,18 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
   const isDeemedAcquisition = result.deemedDetail !== undefined ||
     ["deemed_major_shareholder", "deemed_land_category", "deemed_renovation"].includes(result.acquisitionCause);
 
-  // 선택 항목 서버 PDF 다운로드 (PR-C). savedId(로그인+저장) 있을 때만 활성.
+  // 선택 항목 PDF 다운로드 — 클라이언트 react-pdf 생성 (로컬 result 기준).
   async function handlePrintPdf(pdfSections: string[]) {
-    if (!savedId || pdfSections.length === 0) return;
+    if (pdfSections.length === 0) return;
     setPdfBusy(true);
     try {
-      const res = await fetch(`/api/pdf/result/${savedId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections: pdfSections }),
+      await generateResultPdf({
+        taxType: "acquisition",
+        taxTypeLabel: "취득세",
+        resultData: result as unknown as Record<string, unknown>,
+        selectedSectionIds: pdfSections,
+        filename: `취득세_계산결과_${formatIsoStamp()}.pdf`,
       });
-      if (!res.ok) throw new Error("PDF 생성 실패");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `취득세_계산결과_${savedId.slice(0, 8)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
     } catch {
       alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -430,7 +426,7 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
         onPrintPdf={handlePrintPdf}
-        pdfReady={!!savedId}
+        pdfReady={true}
         pdfBusy={pdfBusy}
       />
 

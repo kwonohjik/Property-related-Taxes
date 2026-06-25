@@ -49,6 +49,8 @@ import {
 import { GiftDonorPaidGrossUpSection } from "@/components/calc/results/GiftDonorPaidGrossUpSection";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { parseLawRefsForModal } from "@/lib/utils/law-url";
+import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
+import { formatIsoStamp } from "@/lib/utils/file-download";
 import {
   GIFT_PRINT_SECTIONS,
   type GiftPrintSectionId,
@@ -134,7 +136,6 @@ export function GiftTaxResultView({
   estateItems = [],
   priorGifts = [],
   giftDate,
-  savedId,
   splitPaymentEnabled = false,
   splitPaymentAmount = "",
   transferTaxResults = [],
@@ -173,24 +174,18 @@ export function GiftTaxResultView({
   const hasFilingFormTable =
     result.filingFormRows && result.filingFormRows.length > 0;
 
-  // 선택 항목 서버 PDF 다운로드 (PR-B1). savedId(로그인+저장) 있을 때만 활성.
+  // 선택 항목 PDF 다운로드 — 클라이언트 react-pdf 생성 (로컬 데이터 기반).
   async function handlePrintPdf(pdfSections: string[]) {
-    if (!savedId || pdfSections.length === 0) return;
+    if (pdfSections.length === 0) return;
     setPdfBusy(true);
     try {
-      const res = await fetch(`/api/pdf/result/${savedId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections: pdfSections }),
+      await generateResultPdf({
+        taxType: "gift",
+        taxTypeLabel: "증여세",
+        resultData: result as unknown as Record<string, unknown>,
+        selectedSectionIds: pdfSections,
+        filename: `증여세_계산결과_${formatIsoStamp()}.pdf`,
       });
-      if (!res.ok) throw new Error("PDF 생성 실패");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `증여세_계산결과_${savedId.slice(0, 8)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
     } catch {
       alert("PDF 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -269,7 +264,7 @@ export function GiftTaxResultView({
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
         onPrintPdf={handlePrintPdf}
-        pdfReady={!!savedId}
+        pdfReady={true}
         pdfBusy={pdfBusy}
       />
 

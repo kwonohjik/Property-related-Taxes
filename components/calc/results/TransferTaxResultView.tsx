@@ -55,7 +55,7 @@ interface Props {
   formData?: TransferFormData;
   asset?: AssetForm;
   transferPriceOverride?: number;
-  /** 저장된 계산 id — 서버 PDF 선택 출력(PR-F1)용. 미저장/비로그인 시 undefined */
+  /** 저장된 계산 id — 호출부 호환용. PDF는 로컬 result 기반 클라이언트 생성으로 전환되어 더는 사용 안 함 */
   savedId?: string;
 }
 
@@ -72,7 +72,6 @@ export function TransferTaxResultView({
   formData,
   asset,
   transferPriceOverride,
-  savedId,
 }: Props) {
   // showSteps 상태는 명세서 카드의 EngineStepsSubToggle로 통합되어 제거 (2026-05-12)
 
@@ -90,9 +89,18 @@ export function TransferTaxResultView({
     () => new Set()
   );
 
-  // 선택 항목 서버 PDF 다운로드 (PR-F1) — Helpers downloadSelectedPdf 위임 (800줄 정책)
+  // 선택 항목 PDF 다운로드 — 클라이언트 react-pdf 생성(로컬 result). Helpers downloadSelectedPdf 위임 (800줄 정책)
   const handlePrintPdf = (pdfSections: string[]) =>
-    downloadSelectedPdf(savedId, pdfSections, setPdfBusy);
+    downloadSelectedPdf(
+      {
+        taxType: "transfer",
+        taxTypeLabel: "양도소득세",
+        resultData: result as unknown as Record<string, unknown>,
+        filenamePrefix: "양도소득세_계산결과",
+      },
+      pdfSections,
+      setPdfBusy,
+    );
 
   // 현재 결과뷰에 실제 렌더되는 leaf id (printScoped scope → leaf, 설계 §2.5)
   const availablePrintIds = useMemo<Set<TransferPrintSectionId>>(() => {
@@ -115,7 +123,7 @@ export function TransferTaxResultView({
         availableIds={availablePrintIds}
         onChange={setSelectedPrintIds}
         onPrintPdf={handlePrintPdf}
-        pdfReady={!!savedId}
+        pdfReady={true}
         pdfBusy={pdfBusy}
       />
 
