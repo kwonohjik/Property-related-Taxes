@@ -40,15 +40,16 @@ import {
   ValueIncreaseFields,
   SpecificCorpFields,
 } from "./other-forms";
-import { INITIAL_DEEMED, type DeemedFormState } from "./deemed-form-state";
+import { RelatedCorpFields } from "./related-corp-form";
+import { INITIAL_DEEMED, makeLoanItem, type DeemedFormState } from "./deemed-form-state";
 
 // ============================================================
 // 폼 상태 — 타입·초기값은 deemed-form-state.ts로 분리(800줄 정책). 하위호환 re-export.
 // ============================================================
 export type { DeemedFormState };
-export type { CdShareholderRow, EdShareholderRow, CapTableRow } from "./deemed-form-state";
+export type { CdShareholderRow, EdShareholderRow, CapTableRow, ScShareholderRow, LoanLoanItem } from "./deemed-form-state";
 export { INITIAL_DEEMED };
-export { makeCapTableRow } from "./deemed-form-state";
+export { makeCapTableRow, makeScShareholderRow, makeLoanItem } from "./deemed-form-state";
 
 export const DEEMED_TYPE_META: Record<
   DeemedGiftType,
@@ -60,6 +61,7 @@ export const DEEMED_TYPE_META: Record<
   debt_forgiveness: { label: "채무면제 등", law: "상증법 §36" },
   free_realestate: { label: "부동산 무상사용", law: "상증법 §37" },
   free_loan: { label: "금전 무상대출", law: "상증법 §41의4" },
+  free_loan_aggregated: { label: "금전 무상대출 — 여러 건 합산(§43②)", law: "상증법 §43②" },
   // Phase 2 자본거래 (엔진 구현 — UI 입력폼은 후속)
   merger: { label: "합병에 따른 이익", law: "상증법 §38" },
   capital_increase: { label: "증자에 따른 이익", law: "상증법 §39" },
@@ -78,6 +80,7 @@ export const DEEMED_TYPE_META: Record<
   org_change: { label: "법인 조직변경 이익", law: "상증법 §42의2" },
   value_increase: { label: "재산취득 후 가치증가 이익", law: "상증법 §42의3" },
   specific_corp: { label: "특정법인과의 거래 이익", law: "상증법 §45의5" },
+  related_corp: { label: "일감몰아주기 증여의제", law: "상증법 §45의3" },
 };
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
@@ -108,6 +111,7 @@ const TYPE_OPTIONS: RadioCardOption<DeemedGiftType>[] = [
   { value: "org_change", label: "법인 조직변경 이익", description: "상증법 §42의2 — 소유지분·평가액 변동", testId: "deemed-type-org_change" },
   { value: "value_increase", label: "재산취득 후 가치증가 이익", description: "상증법 §42의3 — 개발·상장 등 가치증가", testId: "deemed-type-value_increase" },
   { value: "specific_corp", label: "특정법인과의 거래 이익", description: "상증법 §45의5 — 지배주주 특수관계법인 거래", testId: "deemed-type-specific_corp" },
+  { value: "related_corp", label: "일감몰아주기 증여의제", description: "상증법 §45의3 — 수혜법인 특수관계법인 거래이익 → 지배주주 증여의제", testId: "deemed-type-related_corp" },
 ];
 
 export function DeemedTypeSelector({
@@ -178,6 +182,8 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
       return <ValueIncreaseFields form={form} set={set} />;
     case "specific_corp":
       return <SpecificCorpFields form={form} set={set} />;
+    case "related_corp":
+      return <RelatedCorpFields form={form} set={set} />;
     default:
       return null;
   }
@@ -419,11 +425,82 @@ function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
 }
 
 
+function newLoanId() {
+  return `loan-${Math.floor(performance.now())}`;
+}
+
 function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
+  const loans = form.loanLoans;
+  const isMulti = loans !== undefined;
   return (
     <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
-      <CurrencyInput label="대출금액" value={form.loanAmount} onChange={(v) => set({ loanAmount: v })} hint="증여이익(대출금×4.6%−실제이자)이 1천만 이상이면 과세" placeholder="대출금액 (원)" />
-      <CurrencyInput label="실제 지급이자" value={form.loanInterest} onChange={(v) => set({ loanInterest: v })} placeholder="실제 지급이자 (무이자면 빈칸)" />
+      <div data-testid="loan-multi-toggle">
+        <ToggleCard
+          lawLinks="상증법"
+          tone="sky"
+          checked={isMulti}
+          onCheckedChange={(v) => set({ loanLoans: v ? [makeLoanItem(newLoanId())] : undefined })}
+          title="여러 건 합산 계산 (§43②)"
+          description="1년 이내 여러 대출을 합산하여 1천만 판정 (개별 1천만 미만도 합산 과세)"
+        />
+      </div>
+
+      {!isMulti && (
+        <>
+          <CurrencyInput label="대출금액" value={form.loanAmount} onChange={(v) => set({ loanAmount: v })} hint="증여이익(대출금×4.6%−실제이자)이 1천만 이상이면 과세" placeholder="대출금액 (원)" />
+          <CurrencyInput label="실제 지급이자" value={form.loanInterest} onChange={(v) => set({ loanInterest: v })} hint="다년 기간 입력 시 연간 실제이자" placeholder="실제 지급이자 (무이자면 빈칸)" />
+          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+            <p className="text-xs font-semibold text-amber-700">대출 기간 (선택 — 입력 시 §41의4② 매년 별개 증여로 분할)</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1" data-testid="loan-start-date">
+                <label className="block text-xs text-amber-700">대출 시작일</label>
+                <DateInput value={form.loanStartDate} onChange={(v) => set({ loanStartDate: v })} />
+              </div>
+              <div className="space-y-1" data-testid="loan-end-date">
+                <label className="block text-xs text-amber-700">대출 종료일</label>
+                <DateInput value={form.loanEndDate} onChange={(v) => set({ loanEndDate: v })} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">마지막 해가 1년 미만이면 일수 안분(÷365). 비우면 1년분 단건.</p>
+          </div>
+        </>
+      )}
+
+      {isMulti && (
+        <div className="space-y-2" data-testid="loan-items-table">
+          <p className="text-xs font-semibold text-rose-700">대출 건 (1년 이내 동일거래 합산)</p>
+          {loans.map((item, i) => (
+            <div key={item.id} data-testid={`loan-item-${i}`} className="space-y-2 rounded-lg border border-rose-200 bg-white/60 p-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-rose-600">대출 {i + 1}</span>
+                <button
+                  type="button"
+                  className="text-xs text-rose-500 hover:text-rose-700"
+                  data-testid={`loan-item-delete-${i}`}
+                  onClick={() => set({ loanLoans: loans.filter((_, idx) => idx !== i) })}
+                >
+                  × 삭제
+                </button>
+              </div>
+              <div className="space-y-1" data-testid={`loan-item-date-${i}`}>
+                <label className="block text-xs text-gray-600 dark:text-gray-400">대출일</label>
+                <DateInput value={item.loanDate} onChange={(v) => set({ loanLoans: loans.map((it, idx) => (idx === i ? { ...it, loanDate: v } : it)) })} />
+              </div>
+              <CurrencyInput label="대출금액" value={item.amount} onChange={(v) => set({ loanLoans: loans.map((it, idx) => (idx === i ? { ...it, amount: v } : it)) })} placeholder="대출금액 (원)" />
+              <CurrencyInput label="실제 지급이자" value={item.interest} onChange={(v) => set({ loanLoans: loans.map((it, idx) => (idx === i ? { ...it, interest: v } : it)) })} placeholder="실제 지급이자 (무이자면 빈칸)" />
+            </div>
+          ))}
+          <button
+            type="button"
+            className="w-full rounded-lg border border-dashed border-rose-300 py-2 text-xs text-rose-600 hover:bg-rose-50"
+            data-testid="loan-item-add"
+            onClick={() => set({ loanLoans: [...loans, makeLoanItem(newLoanId())] })}
+          >
+            + 대출 추가
+          </button>
+        </div>
+      )}
+
       <p className="text-xs text-muted-foreground">적정이자율은 증여일 기준 자동 적용 (2016.3.7~ 연 4.6%)</p>
       <ToggleCard
         lawLinks="상증법"

@@ -61,7 +61,23 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       }
       break;
     case "free_loan":
+      // §43² 다건 합산 모드 (loanLoans 토글 ON) — 빈 배열 차단(자동 fallback 금지) + 각 건 필수값
+      if (form.loanLoans !== undefined) {
+        if (form.loanLoans.length === 0) return "대출 건을 1건 이상 추가하세요";
+        for (const [i, item] of form.loanLoans.entries()) {
+          if (!item.loanDate) return `${i + 1}번째 대출의 대출일을 입력하세요`;
+          if (parseAmount(item.amount) <= 0) return `${i + 1}번째 대출의 대출금액을 입력하세요`;
+        }
+        break;
+      }
+      // 단건 모드
       if (parseAmount(form.loanAmount) <= 0) return "대출금액을 입력하세요";
+      // §41의4② 기간 입력 시 — 양끝 모두 필수 + start ≤ end (한쪽만 입력 차단, 자동 fallback 금지)
+      if (form.loanStartDate || form.loanEndDate) {
+        if (!form.loanStartDate) return "대출 시작일을 입력하세요";
+        if (!form.loanEndDate) return "대출 종료일을 입력하세요";
+        if (form.loanStartDate > form.loanEndDate) return "대출 종료일이 시작일보다 앞설 수 없습니다";
+      }
       break;
     case "merger": {
       if (form.mrgCaseType === "non_stock") {
@@ -181,7 +197,12 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         return form.afSubType === "debt_repayment" ? "채무상환금액을 입력하세요" : "취득재산가액을 입력하세요";
       break;
     case "nominee_trust":
-      if (parseAmount(form.ntPropertyValue) <= 0) return "명의신탁 재산 가액을 입력하세요";
+      if (form.ntValuationMode === "per_share") {
+        if (parseAmount(form.ntPerSharePrice) <= 0) return "1주당 평가액(명의개서일 §63)을 입력하세요";
+        if (parseAmount(form.ntNewShares) <= 0) return "명의신탁 신주 수를 입력하세요";
+      } else if (parseAmount(form.ntPropertyValue) <= 0) {
+        return "명의신탁 재산 가액을 입력하세요";
+      }
       break;
     case "excess_dividend": {
       // ⑧ F1: 주주 목록 필수 — 엔진 요구사항 동기화 (API fallback: edShareholders ?? [])
@@ -239,9 +260,36 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "value_increase":
       if (parseAmount(form.viCurrentValue) <= 0) return "사유발생일 현재 재산가액을 입력하세요";
       break;
-    case "specific_corp":
+    case "specific_corp": {
       if (parseAmount(form.scTransactionBenefit) <= 0) return "거래이익을 입력하세요";
+      const isRoster = form.scMode === "roster";
+      const isAuto = form.scCorporateTaxMode === "auto";
+      if (isRoster) {
+        // roster+direct: 주주 명단 필수 + 각 행 name·shares + 발행주식 총수
+        if (!form.scShareholders || form.scShareholders.length === 0)
+          return "주주 명단을 입력하세요 (+ 행 추가)";
+        for (let i = 0; i < form.scShareholders.length; i++) {
+          const sh = form.scShareholders[i];
+          if (!sh.name.trim()) return `주주 ${i + 1}의 성명을 입력하세요`;
+          if (parseAmount(sh.shares) <= 0) return `주주 ${i + 1}의 주식수를 입력하세요`;
+        }
+        if (parseAmount(form.scTotalShares) <= 0) return "발행주식 총수를 입력하세요";
+        if (isAuto) {
+          // roster+auto: 산출세액·소득금액 필수 (자동안분 fallback 금지, 0 차단)
+          if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";
+          if (parseAmount(form.scCorpIncome) <= 0) return "각사업연도소득금액을 입력하세요 (분모 0 불가)";
+        }
+        // roster+direct: corporateTax 0 허용 (이월결손금 0)
+      } else {
+        // single 경로 — 기존 validate 유지
+        if (isAuto) {
+          if (parseAmount(form.scCorpTaxAssessed) <= 0) return "법인세 산출세액을 입력하세요";
+          if (parseAmount(form.scCorpIncome) <= 0) return "각사업연도소득금액을 입력하세요 (분모 0 불가)";
+        }
+        // single+direct: corporateTax·ratio 기존(0 허용)
+      }
       break;
+    }
     case "convertible_bond":
       if (form.cbCaseType === "conversion" || form.cbCaseType === "conversion_reverse") {
         if (parseAmount(form.cbPreConvPrice) <= 0) return "전환등 전 1주당 평가가액을 입력하세요";
@@ -274,6 +322,55 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (parseAmount(form.cbMarketValue) <= 0) return "전환사채등 시가를 입력하세요";
       }
       break;
+    case "related_corp": {
+      // R-1 기업규모
+      if (!form.rcEnterpriseSize) return "기업규모를 선택하세요";
+      // R-2 재무
+      if (parseAmount(form.rcTotalSalesStr) <= 0) return "총 매출액을 입력하세요";
+      if (parseAmount(form.rcTaxableIncomeStr) <= 0) return "각 사업연도 소득금액을 입력하세요";
+      if (parseAmount(form.rcCorporateTaxNetStr) < 0) return "법인세 순세액은 0 이상이어야 합니다";
+      // R-3 주주 roster 빈행 차단
+      if (form.rcShareholders.length < 2) return "주주를 2명 이상 입력하세요";
+      for (const [i, row] of form.rcShareholders.entries()) {
+        const n = i + 1;
+        if (!row.name.trim()) return `${n}번째 주주 이름을 입력하세요`;
+        if (parseDecimal(row.directRatioPctStr) < 0) return `${n}번째 주주의 직접지분율은 0 이상이어야 합니다`;
+        if (!row.relation) return `${n}번째 주주의 관계를 선택하세요`;
+      }
+      // R-4 직접지분 합계 100% (cross-field — 톨러런스 0.01%, parseDecimal round 없음)
+      const totalDirectPct = form.rcShareholders.reduce((s, r) => s + parseDecimal(r.directRatioPctStr), 0);
+      if (Math.abs(totalDirectPct - 100) > 0.01)
+        return `주주 직접지분 합계가 100%가 아닙니다 (현재 ${totalDirectPct.toFixed(2)}%)`;
+      // R-5 간접출자법인 roster 빈행 차단
+      for (const [i, row] of form.rcIntermediaryCorps.entries()) {
+        const n = i + 1;
+        if (!row.corpShareholderId) return `${n}번째 간접출자법인의 법인주주를 선택하세요`;
+        if (parseDecimal(row.stakeInBeneficiaryPctStr) <= 0)
+          return `${n}번째 간접출자법인의 수혜법인 지분율을 입력하세요`;
+        for (const [j, owner] of row.owners.entries()) {
+          if (!owner.individualId) return `${n}번째 법인 ${j + 1}번 소유주를 선택하세요`;
+          if (parseDecimal(owner.ratioPctStr) <= 0) return `${n}번째 법인 ${j + 1}번 소유주의 지분율을 입력하세요`;
+        }
+      }
+      // R-6 매출처 roster 빈행 차단 (자동 안분 fallback 금지)
+      if (form.rcSalesPartners.length === 0) return "매출처를 1개 이상 입력하세요";
+      for (const [i, row] of form.rcSalesPartners.entries()) {
+        const n = i + 1;
+        if (!row.name.trim()) return `${n}번째 매출처 이름을 입력하세요`;
+        if (parseAmount(row.salesAmountStr) < 0) return `${n}번째 매출처의 매출액은 0 이상이어야 합니다`;
+        for (const [j, stake] of row.rulingStakes.entries()) {
+          if (!stake.shareholderId) return `${n}번째 매출처 §⑭ ${j + 1}번 주주를 선택하세요`;
+          if (parseDecimal(stake.ratioPctStr) <= 0)
+            return `${n}번째 매출처 §⑭ ${j + 1}번 주주의 보유비율을 입력하세요`;
+        }
+      }
+      // R-7 매출처 합계 = 총매출액 (정수 원 → 톨러런스 0)
+      const salesSum = form.rcSalesPartners.reduce((s, r) => s + parseAmount(r.salesAmountStr), 0);
+      const totalSales = parseAmount(form.rcTotalSalesStr);
+      if (totalSales > 0 && salesSum !== totalSales)
+        return `매출처 합계(${salesSum.toLocaleString()})가 총매출액(${totalSales.toLocaleString()})과 다릅니다`;
+      break;
+    }
   }
   return null;
 }
