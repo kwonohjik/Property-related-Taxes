@@ -250,6 +250,14 @@ export function validateStep(step: number, form: FormState): string | null {
         ) {
           return `사전증여 ${i + 1}: §71 농지 감면 회차이면 감면받은 증여세액을 입력하세요.`;
         }
+        // §71⑥ 과세부분 ㉯ — 설정 시 전액(giftAmount) 이하 (㉯ = 농지가액 − 감면부분 ㉮)
+        if (
+          p.farmlandReductionApplied &&
+          p.farmlandTaxablePortion != null &&
+          p.farmlandTaxablePortion > p.giftAmount
+        ) {
+          return `사전증여 ${i + 1}: 과세부분 농지가액 ㉯은 증여재산가액 이하여야 합니다.`;
+        }
         // 동일 그룹 priorGift이면 §58 한도 산식용으로 ⑤·⑦ 필수
         // (다른 그룹은 자동 무시되므로 검증 제외)
         // D2: 조특법 특례(§30의5/6) 회차는 §47 합산 제외 → §47 카드 미노출 → ⑤·⑦ 검증 면제

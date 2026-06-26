@@ -55,6 +55,17 @@ export function isSameDonorGroup(
   return getDonorGroup(a) === getDonorGroup(b);
 }
 
+/**
+ * §71⑥ — §47② 합산 가액. 감면농지 회차(farmlandReductionApplied)이고 과세부분(㉯)이 설정되면
+ * giftAmount(전액) 대신 ㉯(farmlandTaxablePortion)로 합산 (감면부분 ㉮ 제외, 조특법 §71⑥).
+ * 미설정/비감면이면 giftAmount 전액 (2차 = 재재산-1454 불변). 예규 재산세과-2450·법규재산-2314.
+ */
+function priorAggregatedValue(p: PriorGift): number {
+  return p.farmlandReductionApplied && p.farmlandTaxablePortion != null
+    ? p.farmlandTaxablePortion
+    : p.giftAmount;
+}
+
 // ============================================================
 // 합산 결과 타입
 // ============================================================
@@ -157,7 +168,7 @@ export function aggregatePriorGiftsForGift(
   // giftDate 내림차순: 첫 번째가 가장 최근
   matched.sort((a, b) => b.giftDate.localeCompare(a.giftDate));
 
-  const totalAmount = matched.reduce((s, p) => s + p.giftAmount, 0);
+  const totalAmount = matched.reduce((s, p) => s + priorAggregatedValue(p), 0);
   const totalTaxPaid = matched.reduce((s, p) => s + p.giftTaxPaid, 0);
   const totalComputedTax = matched[0]?.computedTax ?? 0;
   const priorAddedTaxBase = matched[0]?.giftTaxBase ?? 0;
@@ -199,8 +210,11 @@ export function aggregatePriorGiftsForGift(
     getDonorGroup(currentDonor) === "B" ? totalAmount : 0;
 
   const breakdown: CalculationStep[] = matched.map((p) => ({
-    label: `§47 합산 (${p.giftDate}, 증여자=${p.donor})`,
-    amount: p.giftAmount,
+    label:
+      p.farmlandReductionApplied && p.farmlandTaxablePortion != null
+        ? `§47 합산 (${p.giftDate}, 증여자=${p.donor}, §71⑥ 농지 과세부분 ㉯)`
+        : `§47 합산 (${p.giftDate}, 증여자=${p.donor})`,
+    amount: priorAggregatedValue(p),
     lawRef: GIFT.AGGREGATION_SAME_PERSON,
   }));
 
