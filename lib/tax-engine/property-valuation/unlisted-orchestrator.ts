@@ -57,6 +57,7 @@ import { applyPreIpoListing } from "./pre-ipo-listing-section-63-2";
 import type { PreIpoListingResult } from "./pre-ipo-listing-section-63-2";
 import { safeMultiply } from "@/lib/tax-engine/tax-utils";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { SECTION_53_8_2_FAIL_LABELS } from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -386,12 +387,18 @@ export function evaluateUnlistedStockV2(
     isMaxShareholder: input.isMaxShareholder,
     companySize: input.companySize,
     isContinuousLossLastThreeYears: input.isContinuousLossLastThreeYears,
+    explicitExclusionReason: input.premiumExclusionReason,
+    section53_8_2: input.section53_8_2,
+    valuationDate: toOptionalDate(input.evaluationDate),
   });
 
   if (premium.exclusionReason) {
     appliedRules.push(`§53⑧ ${premium.exclusionReason} — 할증 배제`);
   } else if (premium.premiumRate > 0) {
     appliedRules.push("§63③ 최대주주 할증 ×120%");
+  }
+  if (premium.section53_8_2FailReason) {
+    warnings.push(SECTION_53_8_2_FAIL_LABELS[premium.section53_8_2FailReason]);
   }
 
   const finalPerShareForReporting = input.isMaxShareholder

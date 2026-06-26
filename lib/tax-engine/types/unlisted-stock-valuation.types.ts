@@ -21,18 +21,15 @@ export type UnlistedNetAssetOnlyReason =
   | "remaining_3y";      // 6호: 잔여 존속기한 3년 이내 (무조건)
 
 /**
- * §53⑧ 최대주주 할증평가 배제 사유 9가지
+ * §53⑧ 최대주주 할증평가 배제 사유 — 공용 StockPremiumExclusionReason alias (상장·비상장 단일 타입).
+ * 라벨 단일 출처: lib/tax-engine/data/stock-premium-exclusion-labels.ts
  */
-export type UnlistedPremiumExclusionReason =
-  | "continuous_loss_3y"        // 1호
-  | "all_sold_within_6m"        // 2호
-  | "calc_gift_profit"          // 3호
-  | "subsidiary_other_max"      // 4호
-  | "all_negative_op_income_3y" // 5호
-  | "liquidation_confirmed"     // 6호
-  | "not_max_after_succession"  // 7호
-  | "deemed_gift_nominee"       // 8호
-  | "small_medium_enterprise";  // 9호 (중소·중견기업)
+export type { StockPremiumExclusionReason } from "./stock-premium-exclusion.types";
+import type {
+  StockPremiumExclusionReason,
+  Section53_8_2Input,
+} from "./stock-premium-exclusion.types";
+export type UnlistedPremiumExclusionReason = StockPremiumExclusionReason;
 
 /** 자본금 변동 (환산주식수 산정) — 상증규 §17의3⑤ */
 export interface UnlistedCapitalChange {
@@ -239,6 +236,10 @@ export interface UnlistedStockValuationInput {
    *   - large: 일반기업 → ×120% (할증 적용)
    */
   companySize: "small" | "medium" | "large";
+  /** §53⑧ 배제 사유 (수동 선택 — 1·9호 자동 외). undefined=none */
+  premiumExclusionReason?: StockPremiumExclusionReason;
+  /** §53⑧2호 전부매각 보조입력 — premiumExclusionReason==="all_sold_within_6m" 시에만 */
+  section53_8_2?: Section53_8_2Input;
 }
 
 /** 사업연도별 산출 결과 (별지 6쪽 다·라·마·바·사) */

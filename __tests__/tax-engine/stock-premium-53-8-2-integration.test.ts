@@ -8,6 +8,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { evaluateListedStock } from "@/lib/tax-engine/property-valuation-stock";
+import { calcMaxShareholderPremium } from "@/lib/tax-engine/property-valuation/max-shareholder-premium";
 import { migrateListedPremiumReason } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { Section53_8_2Input } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
@@ -101,5 +102,69 @@ describe("evaluateListedStock — §53⑧2호 게이트 통합", () => {
     item.companySize = "small";
     const r = evaluateListedStock(item, { valuationDate: D });
     expect(r.besshiData?.page1Values.majorShareholderRate).toBe(0);
+  });
+});
+
+describe("calcMaxShareholderPremium — 비상장 §53⑧2호 게이트", () => {
+  const base = (over: Partial<Parameters<typeof calcMaxShareholderPremium>[0]> = {}) =>
+    calcMaxShareholderPremium({
+      finalPerShareValue: 10_000,
+      isMaxShareholder: true,
+      companySize: "large",
+      explicitExclusionReason: "all_sold_within_6m",
+      section53_8_2: {
+        allSharesSold: true,
+        meetsArticle49_1_1: true,
+        saleContractDate: new Date("2026-04-01"),
+        transferType: "inheritance",
+      },
+      valuationDate: D,
+      ...over,
+    });
+
+  it("2호 충족 → 배제 0%, exclusionReason=all_sold_within_6m", () => {
+    const r = base();
+    expect(r.premiumRate).toBe(0);
+    expect(r.exclusionReason).toBe("all_sold_within_6m");
+    expect(r.premiumPerShare).toBe(10_000);
+  });
+
+  it("기간초과(증여 D+6월) → 할증 0.2 + failReason out_of_period", () => {
+    const r = base({
+      section53_8_2: {
+        allSharesSold: true,
+        meetsArticle49_1_1: true,
+        saleContractDate: new Date("2026-08-01"),
+        transferType: "gift",
+      },
+    });
+    expect(r.premiumRate).toBe(0.2);
+    expect(r.premiumPerShare).toBe(12_000);
+    expect(r.section53_8_2FailReason).toBe("out_of_period");
+  });
+
+  it("전부매각 아님 → 할증 0.2 + not_all_sold", () => {
+    const r = base({
+      section53_8_2: {
+        allSharesSold: false,
+        meetsArticle49_1_1: true,
+        saleContractDate: new Date("2026-04-01"),
+        transferType: "inheritance",
+      },
+    });
+    expect(r.premiumRate).toBe(0.2);
+    expect(r.section53_8_2FailReason).toBe("not_all_sold");
+  });
+
+  it("보조입력 부재 → missing_input → 할증 0.2", () => {
+    const r = base({ section53_8_2: undefined });
+    expect(r.premiumRate).toBe(0.2);
+    expect(r.section53_8_2FailReason).toBe("missing_input");
+  });
+
+  it("중소기업은 9호로 배제(2호 무관) → 0%", () => {
+    const r = base({ companySize: "small", explicitExclusionReason: "none" });
+    expect(r.premiumRate).toBe(0);
+    expect(r.exclusionReason).toBe("small_medium_enterprise");
   });
 });

@@ -27,6 +27,12 @@
  */
 
 import type { UnlistedPremiumExclusionReason } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import type {
+  Section53_8_2Input,
+  Section53_8_2FailReason,
+} from "@/lib/tax-engine/types/stock-premium-exclusion.types";
+import { evaluateSection53_8_2 } from "./section-53-8-2-gate";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 export interface MaxShareholderPremiumInput {
   /** ⑥ 1주당 평가액 (할증 적용 전 base value) */
@@ -39,6 +45,10 @@ export interface MaxShareholderPremiumInput {
   isContinuousLossLastThreeYears?: boolean;
   /** 추가 배제 사유 (사용자 명시 시 우선 적용) */
   explicitExclusionReason?: UnlistedPremiumExclusionReason;
+  /** §53⑧2호 전부매각 보조입력 (explicitExclusionReason==="all_sold_within_6m" 시) */
+  section53_8_2?: Section53_8_2Input;
+  /** 평가기준일 D (= evaluationDate) — 2호 게이트 기간 판정 */
+  valuationDate?: Date;
 }
 
 export interface MaxShareholderPremiumResult {
@@ -50,6 +60,8 @@ export interface MaxShareholderPremiumResult {
   premiumPerShare: number;
   /** §53⑧ 배제 사유 (해당 시) */
   exclusionReason?: UnlistedPremiumExclusionReason;
+  /** §53⑧2호 게이트 실패 사유 (요건 미충족 → 할증 적용) */
+  section53_8_2FailReason?: Section53_8_2FailReason;
 }
 
 /**
@@ -82,15 +94,35 @@ export function calcMaxShareholderPremium(
     };
   }
 
+  // §53⑧2호: 게이트 통과해야만 유효한 배제. 실패 시 explicit 무효화 후 일반 분기로.
+  let effective = input.explicitExclusionReason;
+  let section53_8_2FailReason: Section53_8_2FailReason | undefined;
+  if (effective === "all_sold_within_6m") {
+    const D = toOptionalDate(input.valuationDate);
+    const saleDate = toOptionalDate(input.section53_8_2?.saleContractDate);
+    if (!D || !input.section53_8_2 || !saleDate) {
+      effective = undefined;
+      section53_8_2FailReason = "missing_input";
+    } else {
+      const gate = evaluateSection53_8_2(
+        { ...input.section53_8_2, saleContractDate: saleDate },
+        D,
+      );
+      if (!gate.eligible) {
+        effective = undefined;
+        section53_8_2FailReason = gate.failReason;
+      }
+    }
+  }
+
   // §53⑧ 배제 사유 판정 — 우선순위:
-  //   1) 명시 배제 사유 (사용자 입력)
+  //   1) 명시 배제 사유 (게이트 통과한 2호 포함)
   //   2) §53⑧9호 중소·중견기업
   //   3) §53⑧1호 3년 계속 결손
-  //   (2·3·4·5·6·7·8호는 후속 PR — 입력 모델 보완 필요)
   let exclusionReason: UnlistedPremiumExclusionReason | undefined;
 
-  if (input.explicitExclusionReason) {
-    exclusionReason = input.explicitExclusionReason;
+  if (effective && effective !== "none") {
+    exclusionReason = effective;
   } else if (companySize === "small" || companySize === "medium") {
     exclusionReason = "small_medium_enterprise"; // §53⑧9호
   } else if (input.isContinuousLossLastThreeYears) {
@@ -114,5 +146,6 @@ export function calcMaxShareholderPremium(
     premiumRate,
     perShareValueNonMaxShareholder: finalPerShareValue,
     premiumPerShare,
+    section53_8_2FailReason,
   };
 }

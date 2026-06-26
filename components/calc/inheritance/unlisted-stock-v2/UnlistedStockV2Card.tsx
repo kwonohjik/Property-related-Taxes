@@ -292,6 +292,8 @@ export function UnlistedStockV2Card({
         isMaxShareholder={input.isMaxShareholder}
         companySize={input.companySize}
         isContinuousLossLastThreeYears={input.isContinuousLossLastThreeYears}
+        premiumExclusionReason={input.premiumExclusionReason}
+        section53_8_2={input.section53_8_2}
         treasuryStock={input.treasuryStock}
         capitalChanges={input.capitalChanges}
         onCapitalChangesChange={updateCapitalChanges}
