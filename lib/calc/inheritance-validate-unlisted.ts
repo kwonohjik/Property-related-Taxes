@@ -20,7 +20,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
  *   6) 자본금 변동: 변동일 유효 Date 필수 / 주식수 > 0 필수 / 변동일 ≤ 평가기준일
  *   7) 유상증자(paid_in) — 1주당 납입금액 > 0 필수 (§56⑤)
  *   8) 유상감자(capital_reduction) — 1주당 지급금액 > 0 필수 (§56⑤ 준용)
- *   9) 무상증자(free_issue) — 주식수·변동일 필수, pricePerShare 검증 제외
+ *   9) 무상증자(free_issue)·무상감자(free_reduction) — 주식수·변동일 필수, pricePerShare 검증 제외
  *
  * @param ctx.evaluationDateFallback — 상속개시일/증여일 (YYYY-MM-DD).
  *   evaluationDate 미입력 시 이 값으로 대체해 비교.
@@ -94,7 +94,8 @@ export function validateUnlistedStockV2(
     const c = v2.capitalChanges[i];
     const typeLabel =
       c.changeType === "paid_in" ? "유상증자" :
-      c.changeType === "free_issue" ? "무상증자" : "유상감자";
+      c.changeType === "free_issue" ? "무상증자" :
+      c.changeType === "free_reduction" ? "무상감자" : "유상감자";
 
     // 변동일 미입력/invalid 차단
     // toOptionalDate: string ISO → Date 정규화 (H-5 2차 방어 — instanceof Date 대체)

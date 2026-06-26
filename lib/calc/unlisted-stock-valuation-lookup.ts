@@ -226,7 +226,7 @@ function restoreUnlistedStockInput(raw: UnlistedStockV2Lite): UnlistedStockValua
         const cObj = c as Record<string, unknown>;
         const d = restoreDate(cObj.changeDate); // undefined면 그대로 undefined
         return {
-          changeType: cObj.changeType as "paid_in" | "free_issue" | "capital_reduction",
+          changeType: cObj.changeType as "paid_in" | "free_issue" | "capital_reduction" | "free_reduction",
           changeDate: d,
           sharesIssued: typeof cObj.sharesIssued === "number" ? cObj.sharesIssued : 0,
           pricePerShare: typeof cObj.pricePerShare === "number" ? cObj.pricePerShare : undefined,

@@ -35,12 +35,14 @@ const CHANGE_TYPE_LABEL: Record<UnlistedCapitalChange["changeType"], string> = {
   paid_in: "유상증자",
   free_issue: "무상증자",
   capital_reduction: "유상감자",
+  free_reduction: "무상감자",
 };
 
 const CHANGE_TYPE_TONE: Record<UnlistedCapitalChange["changeType"], string> = {
   paid_in: "bg-sky-100 text-sky-800 border-sky-300",
   free_issue: "bg-emerald-100 text-emerald-800 border-emerald-300",
   capital_reduction: "bg-rose-100 text-rose-800 border-rose-300",
+  free_reduction: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 export interface CapitalChangeTableProps {
@@ -117,6 +119,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                   <option value="paid_in">유상증자</option>
                   <option value="free_issue">무상증자</option>
                   <option value="capital_reduction">유상감자</option>
+                  <option value="free_reduction">무상감자</option>
                 </select>
                 <button
                   type="button"
@@ -179,6 +182,12 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
               {c.changeType === "free_issue" && (
                 <p className="text-[10px] text-emerald-700/80 italic">
                   ※ 무상증자는 §56⑤ 미적용 — 순손익액 조정 없음. 환산주식수만 영향 (§17의3⑤)
+                </p>
+              )}
+
+              {c.changeType === "free_reduction" && (
+                <p className="text-[10px] text-rose-700/80 italic">
+                  ※ 무상감자는 §56⑤ 미적용 — 순손익액 조정 없음. 환산주식수만 영향 (§17의3⑤ 2호, 유·무상 공통)
                 </p>
               )}
             </div>

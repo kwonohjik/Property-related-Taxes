@@ -50,7 +50,8 @@ export function calcCapitalIncreaseAdjustment(
   const adjustments: [number, number, number] = [0, 0, 0];
 
   for (const change of capitalChanges) {
-    // §56⑤은 유상증자(paid_in)와 유상감자(capital_reduction)만 적용. 무상증자(free_issue)는 미적용
+    // §56⑤은 유상증자(paid_in)와 유상감자(capital_reduction)만 적용.
+    // 무상증자(free_issue)·무상감자(free_reduction)는 미적용 — 1주당 납입·지급금액이 없음(무상).
     if (change.changeType !== "paid_in" && change.changeType !== "capital_reduction") {
       continue;
     }
