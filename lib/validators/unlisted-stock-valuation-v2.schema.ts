@@ -37,7 +37,7 @@ export const unlistedPremiumExclusionReasonSchema = z.enum([
 
 /** 자본금 변동 — 상증규 §17의3⑤ + §56⑤ */
 export const unlistedCapitalChangeSchema = z.object({
-  changeType: z.enum(["paid_in", "free_issue", "capital_reduction"]),
+  changeType: z.enum(["paid_in", "free_issue", "capital_reduction", "free_reduction"]),
   /** 변동일 — 새 행은 undefined로 시작. 미입력은 inheritance-validate.ts가 차단. Zod는 optional 허용. */
   changeDate: z.coerce.date().optional(),
   sharesIssued: z.number().int().positive({ message: "주식수는 1 이상이어야 합니다." }),

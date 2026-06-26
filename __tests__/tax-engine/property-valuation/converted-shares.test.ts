@@ -231,3 +231,68 @@ describe("[INT] 통합 — 환산주식수 → 1주당 순손익액 downstream",
     expect(r.fiscalYearBreakdowns[0].perShareNetIncome).toBe(10);
   });
 });
+
+// ============================================================
+// 무상감자(free_reduction) — §17의3⑤ 2호 환산식은 유·무상 공통,
+//   §56⑤ 순손익액 조정은 무상이므로 미적용. (교재 계산사례 ③-사례2·⑤)
+// ============================================================
+const freeReduction = (date: string, shares: number): UnlistedCapitalChange => ({
+  changeType: "free_reduction",
+  changeDate: new Date(date),
+  sharesIssued: shares,
+});
+
+describe("[SC-11] 무상감자 단건 — 유상감자와 환산 동일", () => {
+  it("2021 무상 −40k → [60k,60k,60k]", () => {
+    expect(convShares(makeInput(60_000, [freeReduction("2021-06-30", 40_000)]))).toEqual([60_000, 60_000, 60_000]);
+  });
+});
+
+describe("[SC-12] 교재 ③-사례2 — 무상감자 2건", () => {
+  // 평가기준일 발행주식총수 3,000 / 무상감자 2020.5.1 −1,000 · 2022.3.1 −2,000
+  // 교재(이미지 8): 2021·2020·2019 각 사업연도말 환산 = 3,000주
+  it("total 3,000, 2020.5.1 −1,000 · 2022.3.1 −2,000 → [3000,3000,3000]", () => {
+    expect(
+      convShares(makeInput(3_000, [freeReduction("2020-05-01", 1_000), freeReduction("2022-03-01", 2_000)])),
+    ).toEqual([3_000, 3_000, 3_000]);
+  });
+});
+
+describe("[SC-13] 교재 ⑤ — 무상감자+무상증자 2단계 환산", () => {
+  // 2004말 1,000,000 / 2005 무상감자 200,000 / 2006 무상증자 500,000 / 평가 2007.5.31
+  // 교재(이미지 9~10): 2004년도 1차 감자환산(800,000)→2차 증자환산(1,300,000). 3개년 모두 1,300,000
+  const FY_ENDS_2006: [Date, Date, Date] = [
+    new Date("2006-12-31"),
+    new Date("2005-12-31"),
+    new Date("2004-12-31"),
+  ];
+  it("total 1,300,000, 2005 −200k · 2006 +500k → [1.3M,1.3M,1.3M]", () => {
+    expect(
+      convShares(
+        makeInput(1_300_000, [freeReduction("2005-06-01", 200_000), freeIssue("2006-06-01", 500_000)], {
+          fyEnds: FY_ENDS_2006,
+          evalDate: new Date("2007-05-31"),
+        }),
+      ),
+    ).toEqual([1_300_000, 1_300_000, 1_300_000]);
+  });
+});
+
+describe("[SC-14] 무상감자 §56⑤ 순손익조정 미적용 (유상감자와 대비)", () => {
+  it("무상감자는 finalNetIncome 무변동 / 유상감자는 −조정", () => {
+    // 무상감자: pricePerShare 없음 → 순손익 조정 0
+    const free = makeInput(60_000, [freeReduction("2021-06-30", 40_000)]);
+    free.fiscalYears[0].taxableIncome = 6_000_000;
+    const rf = evaluateUnlistedStockV2(free);
+    expect(rf.fiscalYearBreakdowns[0].capitalIncreaseAdjustment).toBe(0);
+    expect(rf.fiscalYearBreakdowns[0].finalNetIncome).toBe(6_000_000);
+
+    // 유상감자: 1주당 5,000 지급 → §56⑤ −조정 발생 (대비 검증, 부호만 확인)
+    const paid = makeInput(60_000, [
+      { changeType: "capital_reduction", changeDate: new Date("2021-06-30"), sharesIssued: 40_000, pricePerShare: 5_000 },
+    ]);
+    paid.fiscalYears[0].taxableIncome = 6_000_000;
+    const rp = evaluateUnlistedStockV2(paid);
+    expect(rp.fiscalYearBreakdowns[0].capitalIncreaseAdjustment).toBeLessThan(0);
+  });
+});

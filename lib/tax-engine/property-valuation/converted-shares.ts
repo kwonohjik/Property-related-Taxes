@@ -34,9 +34,11 @@
 import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import type { UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
-/** 증자 +sharesIssued / 감자 −sharesIssued */
+/** 증자(paid_in·free_issue) +sharesIssued / 감자(capital_reduction·free_reduction) −sharesIssued */
 function signedDelta(ch: UnlistedCapitalChange): number {
-  return ch.changeType === "capital_reduction" ? -ch.sharesIssued : ch.sharesIssued;
+  return ch.changeType === "capital_reduction" || ch.changeType === "free_reduction"
+    ? -ch.sharesIssued
+    : ch.sharesIssued;
 }
 
 function fmtDate(d: Date): string {
