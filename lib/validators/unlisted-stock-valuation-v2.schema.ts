@@ -229,6 +229,21 @@ export const unlistedStockValuationV2Schema = z
         purpose: z.enum(["temporary_holding", "cancellation"]),
       })
       .optional(),
+    // 합병 후 3년 미경과 순손익 합산 (상증령 §56③ + 상증통 63-56…12)
+    mergerContext: z
+      .object({
+        mergerRegistrationDate: z.coerce.date(),
+        postMergerShares: z.number().int().positive({ message: "합병후 발행주식총수는 1 이상이어야 합니다." }),
+        acquirer: z.tuple([
+          z.object({ startDate: z.coerce.date(), endDate: z.coerce.date(), shares: z.number().int().positive(), netIncome: z.number() }),
+          z.object({ startDate: z.coerce.date(), endDate: z.coerce.date(), shares: z.number().int().positive(), netIncome: z.number() }),
+          z.object({ startDate: z.coerce.date(), endDate: z.coerce.date(), shares: z.number().int().positive(), netIncome: z.number() }),
+        ]),
+        targetFiscalYears: z.array(
+          z.object({ startDate: z.coerce.date(), endDate: z.coerce.date(), netIncome: z.number() }),
+        ),
+      })
+      .optional(),
   })
   .superRefine((input, ctx) => {
     // 사업연도 종료일 순서 검증 (1년전 > 2년전 > 3년전)
@@ -322,6 +337,36 @@ export const unlistedStockValuationV2Schema = z
         code: z.ZodIssueCode.custom,
         path: ["treasuryStock", "shares"],
         message: "자기주식수는 발행주식총수 미만이어야 합니다.",
+      });
+    }
+    // 합병 후 3년 미경과 (§56③): 합병등기일 < 평가기준일, 각 사업연도 개시 ≤ 종료 검증
+    if (input.mergerContext) {
+      const mc = input.mergerContext;
+      if (mc.mergerRegistrationDate >= input.evaluationDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["mergerContext", "mergerRegistrationDate"],
+          message: "합병등기일은 평가기준일 이전이어야 합니다.",
+        });
+      }
+      for (let i = 0; i < 3; i++) {
+        const yr = mc.acquirer[i];
+        if (yr.startDate > yr.endDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["mergerContext", "acquirer", i, "startDate"],
+            message: "합병법인 사업연도 개시일은 종료일 이전이어야 합니다.",
+          });
+        }
+      }
+      mc.targetFiscalYears.forEach((yr, i) => {
+        if (yr.startDate > yr.endDate) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["mergerContext", "targetFiscalYears", i, "startDate"],
+            message: "피합병법인 사업연도 개시일은 종료일 이전이어야 합니다.",
+          });
+        }
       });
     }
   });

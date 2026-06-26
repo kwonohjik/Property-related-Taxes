@@ -19,6 +19,7 @@ import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import type { MergerNetIncomeResult } from "@/lib/tax-engine/types/merger-net-income.types";
 
 export interface PerShareValuationResultCardProps {
   input: UnlistedStockValuationInput;
@@ -136,8 +137,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
             ))}
           </div>
         )}
-        {/* §17의3② 연환산 echo — 1년 미만 사업연도 있을 때만 표시 */}
-        {result.annualizationApplied?.some((a) => a) && result.annualizedPerShareNetIncome && (
+        {/* §17의3② 연환산 echo — 1년 미만 사업연도 있을 때만 표시. 합병 적용 시 대신 합병 명세 카드 표시 (상호 배타) */}
+        {!result.mergerApplied && result.annualizationApplied?.some((a) => a) && result.annualizedPerShareNetIncome && (
           <div className="rounded border border-amber-300 bg-amber-50/60 px-3 py-2 space-y-1 text-[11px]">
             <p className="font-semibold text-amber-800">§17의3② 1년 미만 사업연도 연환산 내역</p>
             {result.annualizationApplied.map((applied, i) => {
@@ -157,6 +158,11 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
               );
             })}
           </div>
+        )}
+
+        {/* §56③ 합병 후 3년 미경과 순손익 합산 명세 카드 — mergerApplied=true 시만 표시 */}
+        {result.mergerApplied && result.mergerResult && (
+          <MergerBreakdownCard mergerResult={result.mergerResult} />
         )}
         <ResultRow
           cellNum="⑥-㉠"
@@ -408,6 +414,64 @@ function AutoJudgmentEchoLines({ input }: { input: UnlistedStockValuationInput }
         >
           {input.isRealEstateHeavy ? "부동산과다 (가중치 2·3/5)" : "일반법인 (가중치 3·2/5)"}
         </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * §56③ 합병 후 3년 미경과 순손익 합산 명세 카드
+ * - amber tone (연환산 카드와 동일 색상 — 상호 배타)
+ * - ExpandToggleButton 펼치기/접기
+ * - print:block (인쇄 시 항상 노출)
+ */
+function MergerBreakdownCard({ mergerResult }: { mergerResult: MergerNetIncomeResult }) {
+  const [open, setOpen] = useState(false);
+  const YEAR_LABELS = ["전1년 (×3)", "전2년 (×2)", "전3년 (×1)"];
+
+  return (
+    <div
+      className="rounded border border-amber-400 bg-amber-50/70 px-3 py-2 space-y-1 text-[11px]"
+      data-testid="merger-breakdown-card"
+    >
+      <div className="flex items-center justify-between">
+        <p className="font-semibold text-amber-800">§56③ 합병법인 순손익 합산 내역</p>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className={expandToggleClass("amber")}
+        >
+          {expandToggleLabel(open)}
+        </button>
+      </div>
+      <p className="text-[10px] text-amber-700">
+        합병 후 3년 미경과 — 합병법인+피합병법인 순손익 합산 후 합병후 발행주식총수로 나눈 1주당 순손익액 적용
+      </p>
+      <div
+        className={open ? "space-y-2 print:block" : "hidden print:block space-y-2"}
+      >
+        {mergerResult.breakdown.map((row, i) => (
+          <div
+            key={i}
+            className="rounded border border-amber-200 bg-white/60 p-2 grid grid-cols-2 gap-x-3 gap-y-0.5 font-mono tabular-nums"
+            data-testid={`merger-breakdown-row-${i}`}
+          >
+            <span className="col-span-2 font-semibold text-amber-800 not-font-mono text-[11px]">
+              {YEAR_LABELS[i]}
+            </span>
+            <span className="text-gray-600">합병법인 순손익액</span>
+            <span className="text-right">{fmt(row.acquirerNetIncome)}원</span>
+            <span className="text-gray-600">피합병 안분 합산액</span>
+            <span className="text-right">{fmt(row.targetApportioned)}원</span>
+            <span className="text-gray-600">합산 순손익액</span>
+            <span className="text-right">{fmt(row.combinedNetIncome)}원</span>
+            <span className="text-gray-600">적용 주식수</span>
+            <span className="text-right">{fmt(row.sharesUsed)}주</span>
+            <span className="font-semibold text-amber-900">1주당 순손익액</span>
+            <span className="text-right font-semibold text-amber-900">{fmt(row.perShare)}원</span>
+          </div>
+        ))}
       </div>
     </div>
   );

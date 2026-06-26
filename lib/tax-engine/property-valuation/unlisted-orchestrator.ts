@@ -32,6 +32,7 @@ import { calcFiscalYearNetIncome } from "./fiscal-year-net-income";
 import { calcConvertedShares } from "./converted-shares";
 import { annualizePerShareNetIncome } from "./fiscal-year-annualize";
 import { fiscalYearMonths } from "./fiscal-year-annualize";
+import { computeMergerPerShareNetIncome } from "./merger-net-income";
 import {
   calcWeightedAvg3y,
   calcPerShareNetIncomeValue,
@@ -137,8 +138,21 @@ export function evaluateUnlistedStockV2(
     fiscalYearMonths(input.fiscalYears[1].fiscalYearStartDate, input.fiscalYears[1].fiscalYearEndDate) < 12,
     fiscalYearMonths(input.fiscalYears[2].fiscalYearStartDate, input.fiscalYears[2].fiscalYearEndDate) < 12,
   ];
+
+  // 합병 후 3년 미경과 순손익 합산 (상증령 §56③·상증통 63-56…12). 설정 시 1주당 순손익액(사) 대체 + 연환산 skip.
+  let perShareForWeighted: [number, number, number] = annualizedPerShare;
+  let companyNetIncomes: [number, number, number] = finalNetIncomes;
+  let mergerResult: UnlistedStockValuationResult["mergerResult"];
+  if (input.mergerContext) {
+    mergerResult = computeMergerPerShareNetIncome(input.mergerContext);
+    perShareForWeighted = mergerResult.perShare;       // §17의3② 연환산 skip(안분에 월할 내재)
+    companyNetIncomes = mergerResult.combined;          // 영업권 companyWeighted도 합산값 일관 적용
+    appliedRules.push(
+      "상증령 §56③ 합병 후 3년 미경과 — 합병법인·피합병법인 순손익액 합산(상증통 63-56…12)",
+    );
+  }
   // 아.1주당 가중평균 (§56①, 음수 시 0)
-  const weightedNetIncomePerShare = calcWeightedAvg3y(annualizedPerShare);
+  const weightedNetIncomePerShare = calcWeightedAvg3y(perShareForWeighted);
   // 차.1주당 순손익가치 ⑤ = 아 ÷ 자.환원율
   let netIncomePerShare = calcPerShareNetIncomeValue(weightedNetIncomePerShare, capRate);
 
@@ -175,7 +189,7 @@ export function evaluateUnlistedStockV2(
   // 영업권 산식용: 회사 전체 가중평균 순손익액 (§59③ 준용 §56①)
   // ★ §56① 후단 음수 시 0
   const companyWeightedRaw =
-    (finalNetIncomes[0] * 3 + finalNetIncomes[1] * 2 + finalNetIncomes[2] * 1) / 6;
+    (companyNetIncomes[0] * 3 + companyNetIncomes[1] * 2 + companyNetIncomes[2] * 1) / 6;
   let companyWeighted3y = Math.max(0, Math.floor(companyWeightedRaw));
 
   // PR-G2: §59③ 준용 §56② — 추정이익 적용 시 영업권 가중평균도 추정이익 기준.
@@ -414,9 +428,14 @@ export function evaluateUnlistedStockV2(
     fiscalYearBreakdowns,
     weightedNetIncomePerShare,
     capitalizationRate: capRate,
-    // §17의3② 연환산 echo (1년 미만 사업연도 있을 때만)
-    annualizationApplied: annualizationApplied.some((a) => a) ? annualizationApplied : undefined,
-    annualizedPerShareNetIncome: annualizationApplied.some((a) => a) ? annualizedPerShare : undefined,
+    // §17의3② 연환산 echo (1년 미만 사업연도 있을 때만 — 합병 시 skip이므로 미표시)
+    annualizationApplied:
+      !mergerResult && annualizationApplied.some((a) => a) ? annualizationApplied : undefined,
+    annualizedPerShareNetIncome:
+      !mergerResult && annualizationApplied.some((a) => a) ? annualizedPerShare : undefined,
+    // 합병 합산 echo (mergerContext 입력 시) — 연환산과 상호배타
+    mergerApplied: mergerResult ? true : undefined,
+    mergerResult,
     goodwillCalculation: goodwill,
     premiumRate: premium.premiumRate,
     premiumExclusionReason: premium.exclusionReason,

@@ -126,6 +126,54 @@ export function validateUnlistedStockV2(
   // PR-E (UI 통합 v3): §22② 자동 모드 시 보유·발행 주식 수 필수 (사실상 기존 ownedShares/totalShares 검증)
   // 별도 추가 검증 없음 — ownedShares>0 / totalShares>0 보장은 Zod에서 처리.
 
+  // 합병 후 3년 미경과 순손익 합산 (§56③): mergerContext 입력 시 필수 필드 검증
+  // 자동 안분 fallback 금지 — 미입력은 명확한 오류로 차단 (CLAUDE.md 정책)
+  const mc = v2.mergerContext;
+  if (mc) {
+    const mergerRegDate = toOptionalDate(mc.mergerRegistrationDate);
+    if (!mergerRegDate) {
+      return `비상장주식 "${item.name}" — 합병등기일을 입력해야 합니다. (§56③)`;
+    }
+    if (effectiveEvaluationDate && mergerRegDate >= effectiveEvaluationDate) {
+      return `비상장주식 "${item.name}" — 합병등기일은 평가기준일 이전이어야 합니다. (§56③)`;
+    }
+    if (!mc.postMergerShares || mc.postMergerShares <= 0) {
+      return `비상장주식 "${item.name}" — 합병후 발행주식총수를 1주 이상 입력해야 합니다. (§56③)`;
+    }
+    for (let i = 0; i < 3; i++) {
+      const yr = mc.acquirer[i];
+      const startDate = toOptionalDate(yr.startDate);
+      const endDate = toOptionalDate(yr.endDate);
+      const label = ["전1년", "전2년", "전3년"][i];
+      if (!startDate) {
+        return `비상장주식 "${item.name}" — 합병법인 ${label} 사업연도 개시일을 입력해야 합니다.`;
+      }
+      if (!endDate) {
+        return `비상장주식 "${item.name}" — 합병법인 ${label} 사업연도 종료일을 입력해야 합니다.`;
+      }
+      if (startDate > endDate) {
+        return `비상장주식 "${item.name}" — 합병법인 ${label} 사업연도 개시일은 종료일 이전이어야 합니다.`;
+      }
+      if (!yr.shares || yr.shares <= 0) {
+        return `비상장주식 "${item.name}" — 합병법인 ${label} 발행주식수를 1주 이상 입력해야 합니다.`;
+      }
+    }
+    for (let i = 0; i < mc.targetFiscalYears.length; i++) {
+      const yr = mc.targetFiscalYears[i];
+      const startDate = toOptionalDate(yr.startDate);
+      const endDate = toOptionalDate(yr.endDate);
+      if (!startDate) {
+        return `비상장주식 "${item.name}" — 피합병법인 #${i + 1} 사업연도 개시일을 입력해야 합니다.`;
+      }
+      if (!endDate) {
+        return `비상장주식 "${item.name}" — 피합병법인 #${i + 1} 사업연도 종료일을 입력해야 합니다.`;
+      }
+      if (startDate > endDate) {
+        return `비상장주식 "${item.name}" — 피합병법인 #${i + 1} 사업연도 개시일은 종료일 이전이어야 합니다.`;
+      }
+    }
+  }
+
   // PR-N (UI 통합 v3): 평가차액 행 단위 입력 시 각 행 accountName 필수 (silent omission 차단)
   const deltaRows = v2.netAssetValueRaw.evaluationDeltaRows;
   if (deltaRows && deltaRows.length > 0) {

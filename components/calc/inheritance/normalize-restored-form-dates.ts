@@ -70,6 +70,26 @@ function normalizeEstateItemDates(item: EstateItem): EstateItem {
       changeDate: toOptionalDate(cc.changeDate),
     }));
 
+    // mergerContext Date 재수화 (합병등기일·사업연도 개시·종료일)
+    const mc = v2.mergerContext;
+    const normalizedMergerContext = mc
+      ? {
+          ...mc,
+          mergerRegistrationDate:
+            toOptionalDate(mc.mergerRegistrationDate) ?? mc.mergerRegistrationDate,
+          acquirer: (mc.acquirer as typeof mc.acquirer).map((yr) => ({
+            ...yr,
+            startDate: toOptionalDate(yr.startDate) ?? yr.startDate,
+            endDate: toOptionalDate(yr.endDate) ?? yr.endDate,
+          })) as typeof mc.acquirer,
+          targetFiscalYears: mc.targetFiscalYears.map((yr) => ({
+            ...yr,
+            startDate: toOptionalDate(yr.startDate) ?? yr.startDate,
+            endDate: toOptionalDate(yr.endDate) ?? yr.endDate,
+          })),
+        }
+      : undefined;
+
     result = {
       ...result,
       unlistedStockValuationV2: {
@@ -78,6 +98,9 @@ function normalizeEstateItemDates(item: EstateItem): EstateItem {
         evaluationDate: toOptionalDate(v2.evaluationDate) ?? v2.evaluationDate,
         fiscalYears: normalizedFiscalYears,
         capitalChanges: normalizedCapitalChanges,
+        ...(normalizedMergerContext !== undefined
+          ? { mergerContext: normalizedMergerContext }
+          : {}),
       },
     };
   }
