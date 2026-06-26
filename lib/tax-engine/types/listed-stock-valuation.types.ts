@@ -24,10 +24,16 @@ export type ListedStockClass = "common" | "preferred";
 export type ListedCompanySize = "small" | "medium" | "large";
 
 /**
- * §53⑧ 1~9호 할증 배제 사유 + 중소·중견 자동 배제(smb_med) + 미적용(none).
- * 라벨 문구 단일 출처: lib/tax-engine/data/listed-premium-exclusion-labels.ts
+ * §53⑧ 할증 배제 사유 — 공용 StockPremiumExclusionReason alias (상장·비상장 단일 타입).
+ * 라벨 문구 단일 출처: lib/tax-engine/data/stock-premium-exclusion-labels.ts
+ * 레거시 코드(art53_8_*·smb_med)는 LegacyListedPremiumReason — 마이그레이션 전용.
  */
-export type ListedPremiumExclusionReason =
+export type { StockPremiumExclusionReason } from "./stock-premium-exclusion.types";
+import type { StockPremiumExclusionReason } from "./stock-premium-exclusion.types";
+export type ListedPremiumExclusionReason = StockPremiumExclusionReason;
+
+/** 구버전 저장값 — normalize(migrateListedPremiumReason) 입력 전용. */
+export type LegacyListedPremiumReason =
   | "none"
   | "smb_med"
   | "art53_8_1"
@@ -131,6 +137,8 @@ export interface ListedStockBesshiPage1Values {
   majorShareholderRate: 0 | 0.2;
   /** §53⑧ 배제 사유 라벨 (premiumRate=0 이고 사유 있는 경우만) */
   premiumExclusionLabel?: string;
+  /** §53⑧2호 게이트 실패 안내 (요건 미충족 → 할증 적용 사유) */
+  section53_8_2FailLabel?: string;
 }
 
 /** evaluateListedStock 결과에 echo되는 부표 데이터 단일 source */

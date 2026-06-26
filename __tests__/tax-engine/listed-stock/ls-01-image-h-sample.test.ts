@@ -102,7 +102,7 @@ describe("LS-09 최대주주 + 대기업 + §53⑧5호 배제 → ⑩ = 8,452 (�
         ...H_SAMPLE_ITEM,
         isMaxShareholder: true,
         companySize: "large",
-        premiumExclusionReason: "art53_8_5",
+        premiumExclusionReason: "all_negative_op_income_3y",
       },
       { valuationDate: "2022-07-06" },
     );
