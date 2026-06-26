@@ -20,6 +20,8 @@ interface Props {
   value: Section53_8_2Input | undefined;
   onChange: (v: Section53_8_2Input) => void;
   idPrefix: string;
+  /** 미입력 시 transferType 초기값을 계산 세목(상속/증여)에서 seed — 증여 기간(전6·후3월) 정확성 */
+  transferTypeDefault?: "inheritance" | "gift";
 }
 
 const TRANSFER_TYPE_OPTIONS: Array<{
@@ -36,12 +38,12 @@ function iso(v: Date | string | undefined): string {
   return v instanceof Date ? v.toISOString().slice(0, 10) : v;
 }
 
-export function Section53_8_2Fields({ value, onChange, idPrefix }: Props) {
+export function Section53_8_2Fields({ value, onChange, idPrefix, transferTypeDefault }: Props) {
   const v: Section53_8_2Input = value ?? {
     allSharesSold: false,
     meetsArticle49_1_1: false,
     saleContractDate: "",
-    transferType: "inheritance",
+    transferType: transferTypeDefault ?? "inheritance",
   };
   const set = (patch: Partial<Section53_8_2Input>) => onChange({ ...v, ...patch });
 

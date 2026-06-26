@@ -146,6 +146,8 @@ export interface CorporateInfoSectionProps {
   premiumExclusionReason?: StockPremiumExclusionReason;
   /** §53⑧2호 전부매각 보조입력 */
   section53_8_2?: Section53_8_2Input;
+  /** 계산 세목 — §53⑧2호 transferType 초기값 seed */
+  taxKind?: "inheritance" | "gift";
   /** 자기주식 보유 시 평가방법 (상증령 §54②·§55①). undefined = 미보유 */
   treasuryStock?: { shares: number; purpose: "temporary_holding" | "cancellation" };
   /** 자본금 변동(증자·감자) 이력 — 섹션 1 내부에 임베드 (§56③·⑤ + §17의3⑤) */
@@ -190,6 +192,7 @@ export function CorporateInfoSection({
   isContinuousLossLastThreeYears,
   premiumExclusionReason,
   section53_8_2,
+  taxKind,
   treasuryStock,
   capitalChanges,
   onCapitalChangesChange,
@@ -507,6 +510,7 @@ export function CorporateInfoSection({
                 value={section53_8_2}
                 onChange={(v) => onChange({ section53_8_2: v })}
                 idPrefix="unlisted-premium-53-8-2"
+                transferTypeDefault={taxKind}
               />
             )}
           </div>

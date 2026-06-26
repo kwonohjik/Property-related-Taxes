@@ -30,6 +30,8 @@ import { Section53_8_2Fields } from "@/components/calc/inheritance/shared/Sectio
 interface Props {
   item: EstateItem;
   onUpdate: (patch: Partial<EstateItem>) => void;
+  /** 계산 세목 — §53⑧2호 transferType 초기값 seed */
+  taxKind?: "inheritance" | "gift";
 }
 
 const STOCK_CLASS_OPTIONS: Array<{
@@ -82,7 +84,7 @@ function isoOrEmpty(v: Date | string | undefined): string {
   return v;
 }
 
-export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
+export function ListedStockBesshiAttributesSection({ item, onUpdate, taxKind }: Props) {
   const set = (patch: Partial<EstateItem>) => onUpdate(patch);
 
   // 갑지 정보 — 어떤 필드라도 입력되면 ON 간주
@@ -236,6 +238,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
               value={item.section53_8_2}
               onChange={(v) => set({ section53_8_2: v })}
               idPrefix="premium-53-8-2"
+              transferTypeDefault={taxKind}
             />
           )}
         </div>
