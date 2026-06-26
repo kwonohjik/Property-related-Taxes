@@ -83,15 +83,17 @@ export function Section53_8_2Fields({ value, onChange, idPrefix }: Props) {
       </FieldCard>
 
       <FieldCard label="구분">
-        <RadioCardGroup
-          lawLinks="상증법"
-          layout="inline"
-          name={`${idPrefix}-transfer-type`}
-          value={v.transferType}
-          onChange={(t) => set({ transferType: t as "inheritance" | "gift" })}
-          options={TRANSFER_TYPE_OPTIONS}
-          tone="emerald"
-        />
+        <div data-testid={`${idPrefix}-transfer-type`}>
+          <RadioCardGroup
+            lawLinks="상증법"
+            layout="inline"
+            name={`${idPrefix}-transfer-type`}
+            value={v.transferType}
+            onChange={(t) => set({ transferType: t as "inheritance" | "gift" })}
+            options={TRANSFER_TYPE_OPTIONS}
+            tone="emerald"
+          />
+        </div>
       </FieldCard>
     </div>
   );
