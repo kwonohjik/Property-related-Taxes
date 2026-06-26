@@ -50,6 +50,7 @@ const CATEGORY_LABEL_KO: Record<AssetCategory, string> = {
   cash: "현금",
   financial: "금융재산",
   deposit: "전세보증금",
+  superficies: "지상권",
   other: "기타재산",
 };
 

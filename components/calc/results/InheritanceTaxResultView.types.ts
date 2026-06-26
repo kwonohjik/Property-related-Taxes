@@ -27,6 +27,7 @@ export const ASSET_CATEGORY_LABELS: Record<EstateItem["category"], string> = {
   cash: "현금",
   financial: "예금·펀드·채권·공제금",
   deposit: "전세보증금 반환채권",
+  superficies: "지상권",
   other: "기타 재산",
 };
 

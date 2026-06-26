@@ -21,6 +21,7 @@ const CATEGORY_TO_SUMMARY: Record<AssetCategory, SummaryTableCategory> = {
   real_estate_apartment: "realEstate",
   listed_stock: "stock",
   unlisted_stock: "stock",
+  superficies: "realEstate", // 지상권 — 토지 위 권리, 부동산 그룹
   other: "other",
 };
 

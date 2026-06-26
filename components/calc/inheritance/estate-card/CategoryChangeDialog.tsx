@@ -38,6 +38,7 @@ const CATEGORY_LABELS: Record<SupportedCategory, string> = {
   cash: "현금",
   financial: "예금·펀드·채권·공제금",
   deposit: "전세보증금 반환채권 (상속세 전용)",
+  superficies: "지상권",
   other: "기타 재산",
 };
 
@@ -48,6 +49,7 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "cash",
   "financial",
   "deposit",
+  "superficies",
   "other",
 ];
 
@@ -57,6 +59,7 @@ const GIFT_CATEGORIES: SupportedCategory[] = [
   "real_estate_land",
   "cash",
   "financial",
+  "superficies",
   "other",
 ];
 

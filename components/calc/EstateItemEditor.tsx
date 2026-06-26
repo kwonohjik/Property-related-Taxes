@@ -21,6 +21,7 @@ import {
   EstateBodySimple,
   EstateBodyRealEstate,
   EstateBodyDeposit,
+  EstateBodySuperficies,
 } from "@/components/calc/inheritance/estate-card/variants";
 import type {
   SupportedCategory as VariantSupportedCategory,
@@ -51,6 +52,8 @@ function VariantBody(props: VariantBodyProps) {
       return <EstateBodyRealEstate {...props} />;
     case "deposit":
       return <EstateBodyDeposit {...props} />;
+    case "superficies":
+      return <EstateBodySuperficies {...props} />;
     case "cash":
     case "financial":
     case "other":
@@ -92,8 +95,8 @@ export function EstateItemEditor({
 
   // 헤더 칩 도출 (mode·heirs 의존)
   const chips: ChipState[] = useMemo(
-    () => resolveChips({ item, mode, heirsCount: heirs?.length ?? 0 }),
-    [item, mode, heirs],
+    () => resolveChips({ item, mode, heirsCount: heirs?.length ?? 0, valuationDate }),
+    [item, mode, heirs, valuationDate],
   );
   const advancedBadgeCount = useMemo(
     () => countNonDefaultOptions(item, mode),

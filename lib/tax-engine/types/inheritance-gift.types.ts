@@ -24,6 +24,7 @@ export type { CalculationStep, TaxResultMeta } from "./inheritance-gift-common.t
 export type {
   ValuationMethod,
   AssetCategory,
+  SuperficiesStructureType,
   EstateItem,
   UnlistedAssetValueOnlyReason,
   UnlistedStockData,

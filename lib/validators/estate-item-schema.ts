@@ -294,6 +294,32 @@ export const otherItemSchema = baseItemSchema.extend({
   category: z.literal("other"),
 });
 
+/** 지상권 (상증법 §61③·상증령 §51·상증규 §16) — 토지가액×2% 연수입 10% 현가환산 */
+export const superficiesItemSchema = baseItemSchema
+  .extend({
+    category: z.literal("superficies"),
+    superficiesLandStandardPrice: z.number().positive({ message: "지상권 설정 토지의 개별공시지가를 입력하세요." }),
+    superficiesLandArea: z.number().positive({ message: "지상권 설정 토지의 면적을 입력하세요." }),
+    // 미약정이 기본(토글 OFF=undefined) — 엔진 !!superficiesAgreed로 false 처리
+    superficiesAgreed: z.boolean().optional(),
+    superficiesStructureType: z.enum(["solid_building", "other_building", "non_building", "unspecified"]),
+    superficiesAgreedYears: z.number().positive().optional(),
+    superficiesSetDate: z.union([z.string(), z.date()]),
+    superficiesRemainingYearsOverride: z.number().int().positive().optional(),
+    // 합성 잔존연수 (lib/calc buildInput/buildGiftTaxInput에서 주입) — ⑫ silent strip 방지
+    superficiesRemainingYears: z.number().int().nonnegative().optional(),
+  })
+  .superRefine((item, ctx) => {
+    // 약정 시 약정 존속기간 필수
+    if (item.superficiesAgreed && !(item.superficiesAgreedYears && item.superficiesAgreedYears > 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["superficiesAgreedYears"],
+        message: "존속기간 약정 시 약정 존속기간(년)을 입력하세요.",
+      });
+    }
+  });
+
 /** 자산 항목 discriminatedUnion 스키마 */
 export const estateItemSchema = z
   .discriminatedUnion("category", [
@@ -305,12 +331,13 @@ export const estateItemSchema = z
     cashItemSchema,
     financialItemSchema,
     depositItemSchema,
+    superficiesItemSchema,
     otherItemSchema,
   ])
   // v4.1.1 Phase 5 D11/디자인 §5 — 카테고리별 좌표 입력 정책 (영농 §16②1호나)
   .superRefine((item, ctx) => {
     // 무관 카테고리 + 좌표 입력 → 차단
-    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "other"];
+    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "other"];
     if (COORD_INCOMPATIBLE.includes(item.category)) {
       if (item.estateLatLng !== undefined || item.estateSigunguCode !== undefined) {
         ctx.addIssue({
