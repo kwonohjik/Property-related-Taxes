@@ -46,6 +46,7 @@ import { calcCapitalIncreaseAdjustment } from "./capital-increase-adjustment";
 import { calcMaxShareholderPremium } from "./max-shareholder-premium";
 import { resolveEvaluationDelta } from "./evaluation-delta";
 import { evaluateOtherUnlistedHoldings } from "./other-unlisted-holdings";
+import { evaluateCrossHoldingReflection } from "./cross-holding-equations";
 import { applyEvaluationCommittee } from "./evaluation-committee-section-54-6";
 import {
   applyEstimatedProfit,
@@ -167,10 +168,48 @@ export function evaluateUnlistedStockV2(
     ),
     assetEvaluationDeltaTotal: input.netAssetValueRaw.assetValuationDelta,
   });
-  const netAssetResult = calcNetAssetTotal({
+  // PR-Q (C2 자산반영): 10% 초과 다른 비상장주식(상호출자 포함) 평가 → ②평가차액 주입.
+  //   bsTotalAssets는 보유주식을 장부가로 포함 → 주입액 = Σ(Max(장부,보충적) − 장부) (uplift만).
+  //   상호출자 시 cross-holding 연립방정식(준칙§60²)으로 평가대상·상대 1주당가액 동시 확정.
+  const baseNetAsset = calcNetAssetTotal({
     ...input.netAssetValueRaw,
     assetValuationDelta: evaluationDeltaResolved.evaluationDelta,
   });
+  const crossHoldingBook = (input.otherUnlistedHoldings ?? [])
+    .filter((h) => h.counterparty)
+    .reduce((s, h) => s + (h.bookValue ?? 0), 0);
+  const crossHoldingReflection = evaluateCrossHoldingReflection(
+    {
+      // P − d = (주식 제외 순자산) — base 순자산(주입 전) − Σ장부 → totalLiabilities는 0으로 합산 (이미 차감됨)
+      netAssetExStock: baseNetAsset.netAssetBeforeGoodwill - crossHoldingBook,
+      totalLiabilities: 0,
+      issuedShares: input.totalShares,
+      netIncomePerShare,
+      isRealEstateHeavy: input.isRealEstateHeavy,
+      valuationBasis:
+        input.netAssetOnlyReason === "liquidation" ||
+        input.netAssetOnlyReason === "lt3y" ||
+        input.netAssetOnlyReason === "remaining_3y"
+          ? "net_asset_only"
+          : "weighted",
+    },
+    input.otherUnlistedHoldings,
+  );
+  // M-1: 연립방정식의 TARGET α는 **상대 법인 평가 보정용**(상대 β가 TARGET을 역참조하므로 필요).
+  //      TARGET 최종 1주당가액(④⑤⑥)은 메인 파이프라인이 담당 — heldValuation(주입액)만 취한다.
+  //      주입액이 메인 순자산에 반영 → 메인 α가 연립 α와 정합(사례Ⅲ 검증).
+  const crossHoldingInjection = crossHoldingReflection?.assetValuationDeltaInjection ?? 0;
+  const netAssetResult =
+    crossHoldingInjection === 0
+      ? baseNetAsset
+      : calcNetAssetTotal({
+          ...input.netAssetValueRaw,
+          assetValuationDelta: evaluationDeltaResolved.evaluationDelta + crossHoldingInjection,
+        });
+  if (crossHoldingReflection) {
+    appliedRules.push("상증 평가준칙 §60② + 상증령 §53⑧4호 (다른 비상장주식 10% 초과·상호출자 평가)");
+    for (const w of crossHoldingReflection.warnings) warnings.push(`[상호출자] ${w}`);
+  }
 
   // 영업권 산식용: 회사 전체 가중평균 순손익액 (§59③ 준용 §56①)
   // ★ §56① 후단 음수 시 0
@@ -425,6 +464,7 @@ export function evaluateUnlistedStockV2(
     warnings,
     appliedRules,
     otherUnlistedHoldingsEvaluated,
+    crossHoldingReflection,
     evaluationCommitteeApplied,
     estimatedProfitResult,
     preIpoListingResult,

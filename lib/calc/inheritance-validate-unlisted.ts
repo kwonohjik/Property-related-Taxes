@@ -146,5 +146,32 @@ export function validateUnlistedStockV2(
     }
   }
 
+  // PR-Q: 다른 비상장법인 주식 보유 — 행별 필수 입력 (silent omission 차단)
+  const holdings = v2.otherUnlistedHoldings;
+  if (holdings && holdings.length > 0) {
+    for (let i = 0; i < holdings.length; i++) {
+      const h = holdings[i];
+      if (!h.issuerCorpName || !h.issuerCorpName.trim()) {
+        return `비상장주식 "${item.name}" — 보유 다른 비상장주식 ${i + 1}번째 발행법인명이 비어 있습니다.`;
+      }
+      if (!h.holdingShares || h.holdingShares <= 0 || !h.totalShares || h.totalShares <= 0) {
+        return `비상장주식 "${item.name}" — 보유 다른 비상장주식 "${h.issuerCorpName}"의 보유 주식수·발행주식총수를 입력해야 합니다.`;
+      }
+      const denom = h.totalShares - (h.treasuryShares ?? 0);
+      const over10 = denom > 0 && h.holdingShares / denom > 0.1;
+      // 10% 초과 + 상호출자: 상대 법인 재무 필수
+      if (over10 && h.counterparty) {
+        const cp = h.counterparty;
+        if (cp.issuedShares <= 0) {
+          return `비상장주식 "${item.name}" — 상호출자 상대법인 "${h.issuerCorpName}"의 발행주식총수(η)를 입력해야 합니다. (평가준칙 §60②)`;
+        }
+      }
+      // 10% 초과 비상호: 장부가액 필수 (Max(장부,보충적) 기준선)
+      if (over10 && !h.counterparty && (h.bookValue ?? 0) <= 0) {
+        return `비상장주식 "${item.name}" — 10% 초과 보유 "${h.issuerCorpName}"는 장부가액을 입력해야 합니다.`;
+      }
+    }
+  }
+
   return null;
 }

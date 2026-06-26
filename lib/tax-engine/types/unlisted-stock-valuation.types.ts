@@ -358,4 +358,11 @@ export interface UnlistedStockValuationResult {
    * 미입력 시 undefined.
    */
   preIpoListingResult?: import("@/lib/tax-engine/property-valuation/pre-ipo-listing-section-63-2").PreIpoListingResult;
+
+  /**
+   * PR-Q: 10% 초과 다른 비상장주식(상호출자 포함) 평가 결과 echo.
+   * appliedHoldings의 적용액(Max(장부,보충적)) − 장부 차액이 ②평가차액에 자동 주입됨(C2 자산반영).
+   * 미입력(counterparty 없는 holding만) 시 undefined.
+   */
+  crossHoldingReflection?: import("@/lib/tax-engine/property-valuation/cross-holding-equations").CrossHoldingReflectionResult;
 }
