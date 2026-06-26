@@ -27,13 +27,18 @@ async function fillStep0(page: Page) {
 
 /** Step1: 토지(공시지가 1,000,000원/㎡ × 300㎡) + 자산명(증여세 §validateStep Step1 필수) */
 async function addGiftLandAsset(page: Page) {
+  // 자산명은 편집 모달 안에 있으므로 keepModalOpen으로 모달 유지 후 입력 → 직접 닫기.
   await addLandAsset(page, {
     area: "300",
     unitPrice: "1000000",
     addButtonName: /증여재산 추가/,
+    keepModalOpen: true,
   });
-  // 토지는 자산명 필수(cash·financial·deposit만 면제) — 별칭으로 충족
-  await page.getByPlaceholder(/본가 토지/).fill("본가 토지");
+  // 토지는 자산명 필수(cash·financial·deposit만 면제) — 모달 안 입력
+  const editDialog = page.getByRole("dialog");
+  await editDialog.getByPlaceholder(/본가 토지/).fill("본가 토지");
+  await editDialog.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
 }
 
 /** Step2→3→계산 → 결과 대기 (증여세 4단계 마법사) */

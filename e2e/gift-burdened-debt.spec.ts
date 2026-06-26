@@ -85,9 +85,9 @@ test.describe("부담부증여 §47① 채무인수 차감", () => {
       await page.getByRole("button", { name: /^다음/ }).click(); // → Step3 결과
       await calcAndWaitResult(page, { taxType: "gift" });
 
-      // 결과 검증: 채무인수 차감 행 표시
+      // 결과 검증: 별지10호 ㉒행 §47① 채무인수액(4억) 차감 표시
       await expect(
-        page.getByText("부담부증여 채무인수 차감 (§47①)"),
+        page.getByRole("row", { name: /채무액.*400,000,000/ }),
       ).toBeVisible();
     },
   );
