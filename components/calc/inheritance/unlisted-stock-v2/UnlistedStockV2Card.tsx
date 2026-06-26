@@ -19,6 +19,8 @@ import { PerShareValuationResultCard } from "./PerShareValuationResultCard";
 import { GoodwillCalculationTable } from "./GoodwillCalculationTable";
 import { BesshiForm4Buppyo3PrintView } from "./BesshiForm4Buppyo3PrintView";
 import { ValuationDeltaTable } from "./ValuationDeltaTable";
+import { OtherUnlistedHoldingSection } from "./OtherUnlistedHoldingSection";
+import { CrossHoldingResultCard } from "./CrossHoldingResultCard";
 import type { EvaluationDeltaRow } from "@/lib/tax-engine/property-valuation/evaluation-delta";
 import { MajorShareholderStockToggle } from "./MajorShareholderStockToggle";
 import { EvaluationCommitteeToggle } from "./EvaluationCommitteeToggle";
@@ -308,8 +310,16 @@ export function UnlistedStockV2Card({
         sectionNum={6}
       />
 
+      {/* 6-2. 다른 비상장법인 주식 보유 (§54③ 10%↓ / 평가준칙 §60² 10%↑·상호출자) — 순자산 ②평가차액 자동 주입 */}
+      <OtherUnlistedHoldingSection
+        holdings={input.otherUnlistedHoldings}
+        onChange={(next) => wrappedOnChange({ ...input, otherUnlistedHoldings: next })}
+        sectionNum={7}
+      />
+      <CrossHoldingResultCard input={effectiveInput} sectionNum={7} />
+
       {/* 7. 영업권 평가 (자동 표시) — effectiveInput 사용으로 evaluationDate fallback 적용 */}
-      <GoodwillPanel input={effectiveInput} sectionNum={7} />
+      <GoodwillPanel input={effectiveInput} sectionNum={11} />
 
       {/* 8. §22② 최대주주 해당 여부 토글 — 금융재산공제 배제 */}
       <MajorShareholderStockToggle
@@ -341,7 +351,7 @@ export function UnlistedStockV2Card({
       )}
 
       {/* 11. 결과 카드 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
-      <PerShareValuationResultCard input={effectiveInput} sectionNum={11} />
+      <PerShareValuationResultCard input={effectiveInput} sectionNum={12} />
 
       {/* 7. 별지 양식 PDF 출력 미리보기 — effectiveInput 사용으로 evaluationDate fallback 적용 */}
       <BesshiForm4Buppyo3PrintView input={effectiveInput} />

@@ -38,6 +38,36 @@ export interface OtherUnlistedHolding {
    * 미입력 시 movingAverageAcquisitionValue 사용 가능.
    */
   marketValue?: number;
+
+  // ── 10% 초과 (§54③ 옵션 불가) — 평가준칙 Max(장부, 보충적) / 상호출자 연립 ──
+  /** 장부가액 — 10% 초과 시 Max(장부, 보충적평가가액) 비교용. 평가차액(②) 기준선이기도 함 */
+  bookValue?: number;
+  /**
+   * 상호출자 상대 법인 재무 (입력 시 cross-holding 연립방정식 발동).
+   * 미입력 + 10% 초과 시 단방향 보충적평가(Max(장부, 보충적)) 처리.
+   */
+  counterparty?: OtherUnlistedCounterparty;
+}
+
+/**
+ * 상호출자 상대 법인(피출자법인 B) 재무 — cross-holding 연립방정식 노드 입력.
+ * 평가대상 A가 보유한 B 주식수는 상위 OtherUnlistedHolding.holdingShares 사용.
+ */
+export interface OtherUnlistedCounterparty {
+  /** Pᴮ — A·C 주식 제외 자산총액 */
+  netAssetExStock: number;
+  /** dᴮ — 부채총계 */
+  totalLiabilities: number;
+  /** ηᴮ — 발행주식 총수 */
+  issuedShares: number;
+  /** ρᴮ — 1주당 순손익가치 (순자산단독 사례 0) */
+  netIncomePerShare: number;
+  /** 부동산과다보유법인 여부 */
+  isRealEstateHeavy: boolean;
+  /** §54④ 순자산단독 평가 여부 (사례Ⅰ형) */
+  netAssetOnly: boolean;
+  /** B가 보유한 평가대상 A 주식수 (a) */
+  crossHeldOfTarget: number;
 }
 
 export type OtherUnlistedHoldingMethod =
