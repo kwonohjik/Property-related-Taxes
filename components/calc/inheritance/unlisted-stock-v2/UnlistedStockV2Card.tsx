@@ -14,6 +14,8 @@ import { useMemo, useState } from "react";
 import { CorporateInfoSection } from "./CorporateInfoSection";
 import { UnlistedStockHistoryModal } from "./UnlistedStockHistoryModal";
 import { FiscalYearAdjustmentTable } from "./FiscalYearAdjustmentTable";
+import { MergerNetIncomeBlock, MERGER_INITIAL_STATE } from "./MergerNetIncomeBlock";
+import type { MergerBlockState } from "./MergerNetIncomeBlock";
 import { NetAssetCalculationTable } from "./NetAssetCalculationTable";
 import { PerShareValuationResultCard } from "./PerShareValuationResultCard";
 import { GoodwillCalculationTable } from "./GoodwillCalculationTable";
@@ -128,6 +130,18 @@ export function UnlistedStockV2Card({
 }: UnlistedStockV2CardProps) {
   // PR-H: 이력 조회 모달
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // 합병 후 3년 미경과 순손익 합산 블록 상태 — input.mergerContext에서 derive (단일 진실 소스)
+  // ★ useState 로컬 캐시 금지: sessionStorage 복원 후 enabled=false로 초기화되어
+  //   엔진·결과카드는 합병 반영, 입력 UI는 OFF 표시되는 display↔engine 불일치 발생. (코드품질검토 High)
+  const mergerBlock = useMemo<MergerBlockState>(
+    () => ({
+      enabled: input.mergerContext !== undefined,
+      context: input.mergerContext ?? MERGER_INITIAL_STATE.context,
+    }),
+    [input.mergerContext],
+  );
+
   // sourceCalculationId 메타 — UI 전용 (엔진 미전달)
   const [sourceCalculationId, setSourceCalculationId] = useState<string | undefined>(undefined);
 
@@ -182,6 +196,15 @@ export function UnlistedStockV2Card({
 
   const updateNetAsset = (next: UnlistedNetAssetCalculation) => {
     wrappedOnChange({ ...input, netAssetValueRaw: next });
+  };
+
+  // 합병 블록 onChange — wrappedOnChange 이후 선언 (참조 순서 보장)
+  // mergerBlock은 useMemo derive라 setMergerBlock 없음 — input.mergerContext write만으로 자동 파생
+  const handleMergerBlockChange = (next: MergerBlockState) => {
+    wrappedOnChange({
+      ...input,
+      mergerContext: next.enabled ? next.context : undefined,
+    });
   };
 
   // §22② 최대주주 해당 여부 토글 (금융재산공제 배제 — isMaxShareholder §63③와 분리)
@@ -282,6 +305,12 @@ export function UnlistedStockV2Card({
         fiscalYears={input.fiscalYears}
         onChange={updateFiscalYears}
         sectionNum={3}
+      />
+
+      {/* 3-1. 합병 후 3년 미경과 순손익 합산 (상증령 §56③) */}
+      <MergerNetIncomeBlock
+        state={mergerBlock}
+        onChange={handleMergerBlockChange}
       />
 
       {/* 자본금 변동(증자·감자)은 섹션 1(CorporateInfoSection) 내부 발행주식총수·자본금 아래로 이동됨 */}

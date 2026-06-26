@@ -222,6 +222,14 @@ export interface UnlistedStockValuationInput {
     purpose: "temporary_holding" | "cancellation";
   };
 
+  /**
+   * 합병 후 3년 미경과 합병법인 순손익액 합산 (상증령 §56③, 상증통 63-56…12·서서-1071·재재산-181).
+   * undefined = 합병 없음(현행 fiscalYears 기반 순손익 경로 100% 보존).
+   * 설정 시 1주당 순손익액(사)을 합병법인+피합병법인 합산값으로 대체 → 연환산(§17의3②) skip.
+   * Design: docs/02-design/features/unlisted-net-income-fiscal-year-change.engine.design.md
+   */
+  mergerContext?: import("@/lib/tax-engine/types/merger-net-income.types").MergerNetIncomeContext;
+
   // === 할증평가 §63③ ===
   isMaxShareholder: boolean;
   /**
@@ -310,6 +318,13 @@ export interface UnlistedStockValuationResult {
    */
   annualizationApplied?: [boolean, boolean, boolean];
   annualizedPerShareNetIncome?: [number, number, number];
+
+  /**
+   * 합병 후 3년 미경과 순손익 합산 echo (mergerContext 입력 시에만 채움).
+   * mergerApplied=true 시 1주당 순손익액(사)이 합병법인+피합병 합산값으로 대체되고 연환산은 skip.
+   */
+  mergerApplied?: boolean;
+  mergerResult?: import("@/lib/tax-engine/types/merger-net-income.types").MergerNetIncomeResult;
 
   // === 5쪽 영업권 ===
   goodwillCalculation: UnlistedGoodwillResult;

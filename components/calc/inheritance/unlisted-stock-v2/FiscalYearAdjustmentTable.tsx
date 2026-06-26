@@ -164,6 +164,11 @@ export function FiscalYearAdjustmentTable({
       <p className="text-[11px] text-emerald-700/80">
         평가기준일 이전 1·2·3년차 사업연도. 가중치 ×3·×2·×1로 가중평균 후 ÷ 환원율(10%) = 1주당 순손익가치 ⑤
       </p>
+      <p className="text-[10px] text-emerald-600/80">
+        사업연도 변경 시: 평가기준일 이전 1·2·3년이 되는 날이 속하는 사업연도를 입력.
+        1년 미만이면 자동 1년 환산(§17의3②).
+        합병 후 3년 미경과 법인은 아래 &ldquo;합병 후 3년 미경과 순손익 보정&rdquo; 토글로 합병법인·피합병법인을 합산 입력하세요.
+      </p>
       <div className="flex flex-wrap gap-1.5">
         <LawArticleModal legalBasis="상증령 §56" label="상증령 §56①④ 순손익액 산정" />
         <LawArticleModal legalBasis="상증규 §17의3" label="상증규 §17의3② 1년미만 연환산" />
