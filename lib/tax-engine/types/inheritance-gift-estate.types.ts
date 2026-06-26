@@ -42,7 +42,15 @@ export type AssetCategory =
   | "cash"                   // 현금 (지폐·동전 — §22 금융재산공제 대상 아님)
   | "financial"              // 예금·펀드·채권 (§22 금융재산공제 대상)
   | "deposit"                // 전세보증금 반환채권 (임차인인 경우 — 상속세 전용)
+  | "superficies"            // 지상권 (상증법 §61③) — 권리 평가
   | "other";                 // 기타재산
+
+/** 지상권 건물·공작물 종류 (민법 §280·§281 최단존속기간 결정) */
+export type SuperficiesStructureType =
+  | "solid_building"   // ㉠ 석조·석회조·연와조 등 견고건물·수목 → 최단 30년
+  | "other_building"   // ㉡ 그 외 건물 → 최단 15년
+  | "non_building"     // ㉢ 건물 이외 공작물 → 최단 5년
+  | "unspecified";     // 공작물 종류·구조 미정 (§281②) → 15년 간주
 
 /** 재산 평가 입력 (단일 자산). 위치 필드 5종(좌표·주소·시·군·구 코드)은 EstateLocationFields mixin */
 export interface EstateItem extends EstateLocationFields {
@@ -194,6 +202,28 @@ export interface EstateItem extends EstateLocationFields {
   vacantBuildingStandardPrice?: number;
   /** 신용보증기관 보증액 (원) — 시행령 §63② 저당 담보채권액에서 차감(§66 1호 한정, 음수 가드). */
   creditGuaranteeAmount?: number;
+
+  // ===== 지상권 평가 (상증법 §61③·상증령 §51·상증칙 §16) =====
+  /** 지상권 설정 토지 개별공시지가 (원/㎡) — §61① 토지가액 산정 */
+  superficiesLandStandardPrice?: number;
+  /** 지상권 설정 토지 면적 (㎡) — UI에서 parseFloat(toFixed(2)) 후 전달 */
+  superficiesLandArea?: number;
+  /** 존속기간 약정 여부 (민법 §280 약정 / §281 미약정) */
+  superficiesAgreed?: boolean;
+  /** 건물·공작물 종류 (최단존속기간 결정) */
+  superficiesStructureType?: SuperficiesStructureType;
+  /** 약정 존속기간(연) — superficiesAgreed=true 시 필수 */
+  superficiesAgreedYears?: number;
+  /** 지상권 설정일 — 평가기준일(상속개시일/증여일)과 차분해 잔존연수 도출 */
+  superficiesSetDate?: Date | string;
+  /** 잔존연수 사용자 오버라이드(정수) — 있으면 자동도출 대신 사용 (mirror-pattern: store엔 override만) */
+  superficiesRemainingYearsOverride?: number;
+  /**
+   * 엔진 소비용 최종 잔존연수 — lib/calc 입력빌드(buildInput/buildGiftTaxInput)에서
+   * resolveSuperficiesTenureYears로 합성 주입. evaluateAllEstateItems가 평가기준일 미수신하므로
+   * 엔진 내 도출 불가 → 변환 레이어 합성. evaluateSuperficies는 이 값만 소비.
+   */
+  superficiesRemainingYears?: number;
 
   // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
   /**

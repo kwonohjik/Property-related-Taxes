@@ -127,6 +127,7 @@ export const ESTATE_ITEM_TYPE_CODE: Record<AssetCategory, string> = {
   unlisted_stock: "10",
   financial: "11",
   deposit: "11",
+  superficies: "12", // 지상권 — 부표2 전용코드 부재 → 12 기타재산 fallback
   other: "12",
 };
 

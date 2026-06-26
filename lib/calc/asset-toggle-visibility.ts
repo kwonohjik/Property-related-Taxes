@@ -97,6 +97,13 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
     financialDeduction: "default",
     deemedRetirementOption: "visible",
   },
+  // 지상권 — 토지 위 권리, 영농·가업·금융공제·간주퇴직 모두 미대상
+  superficies: {
+    farming: "hidden_permanent",
+    familyBusiness: "hidden_permanent",
+    financialDeduction: "hidden_permanent",
+    deemedRetirementOption: "hidden",
+  },
   other: {
     // §16⑤ 라·마목 어선·어업권·양식업권 — 현금성 노이즈 제거, 추가옵션·활성우선으로 접근 (정밀화 2026-06-05)
     farming: "hidden_expandable",
@@ -211,6 +218,7 @@ const CULTURAL_HERITAGE_VISIBILITY: Record<AssetCategory, ToggleVisibility> = {
   deposit: "hidden_permanent",
   listed_stock: "hidden_permanent",
   unlisted_stock: "hidden_permanent",
+  superficies: "hidden_permanent",     // 지상권 — §74 문화유산 미대상
   other: "hidden_expandable",          // 동산(서화·골동품 등) — 확장 노출
 };
 

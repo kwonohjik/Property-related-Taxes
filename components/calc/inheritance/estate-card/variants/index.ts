@@ -9,10 +9,11 @@ import type { ComponentType } from "react";
 import { EstateBodySimple } from "./EstateBodySimple";
 import { EstateBodyRealEstate } from "./EstateBodyRealEstate";
 import { EstateBodyDeposit } from "./EstateBodyDeposit";
+import { EstateBodySuperficies } from "./EstateBodySuperficies";
 import { assertNever } from "./EstateBodyHelpers";
 import type { SupportedCategory, VariantBodyProps } from "./types";
 
-export { EstateBodySimple, EstateBodyRealEstate, EstateBodyDeposit };
+export { EstateBodySimple, EstateBodyRealEstate, EstateBodyDeposit, EstateBodySuperficies };
 export type { SupportedCategory, VariantBodyProps };
 
 /**
@@ -29,6 +30,8 @@ export function pickBodyVariant(
       return EstateBodyRealEstate;
     case "deposit":
       return EstateBodyDeposit;
+    case "superficies":
+      return EstateBodySuperficies;
     case "cash":
     case "financial":
     case "other":

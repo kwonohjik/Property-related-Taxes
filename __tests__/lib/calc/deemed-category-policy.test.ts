@@ -12,9 +12,10 @@ import {
 } from "@/lib/calc/deemed-category-policy";
 
 describe("DEEMED_ALLOWED_CATEGORIES", () => {
-  it("none → 7 SupportedCategory 전체 허용 (deposit 포함)", () => {
-    expect(DEEMED_ALLOWED_CATEGORIES.none).toHaveLength(7);
+  it("none → 8 SupportedCategory 전체 허용 (deposit·superficies 포함)", () => {
+    expect(DEEMED_ALLOWED_CATEGORIES.none).toHaveLength(8);
     expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("deposit");
+    expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("superficies");
   });
 
   it("insurance (§8) → cash·financial·other만 (3건)", () => {
@@ -26,7 +27,7 @@ describe("DEEMED_ALLOWED_CATEGORIES", () => {
   });
 
   it("trust (§9) → 전체 허용", () => {
-    expect(DEEMED_ALLOWED_CATEGORIES.trust).toHaveLength(7);
+    expect(DEEMED_ALLOWED_CATEGORIES.trust).toHaveLength(8);
   });
 
   it("retirement (§10) → cash·financial만 (2건)", () => {

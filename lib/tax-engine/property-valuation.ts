@@ -9,6 +9,7 @@
  * 이 모듈은 Pure Function — DB 호출 없음, 순수 계산만 수행.
  */
 
+import { addYears, differenceInYears } from "date-fns";
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { safeMultiply } from "./tax-utils";
@@ -17,6 +18,7 @@ import type {
   PropertyValuationResult,
   ValuationMethod,
   CalculationStep,
+  SuperficiesStructureType,
 } from "./types/inheritance-gift.types";
 import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestrator";
 // listed_stock / V1 간편 비상장(unlistedStockData) 평가 단일 진실.
@@ -41,6 +43,91 @@ const LEASE_CONVERSION_RATE = 0.12;
 export function convertLeaseToValue(depositAmount: number): number {
   if (depositAmount <= 0) return 0;
   return Math.floor(depositAmount / LEASE_CONVERSION_RATE);
+}
+
+// ============================================================
+// 지상권 평가 (상증법 §61③·상증령 §51①·상증규 §16①②)
+//   평가액 = Σ(n=1..N) floor(income × 10ⁿ / 11ⁿ), income = floor(토지가액 × 2%)
+//   할인율 10% 고정(분수 11/10, 부동소수 누적 금지). 잔존연수: 민법 §280·§281 준용.
+// ============================================================
+
+const SUPERFICIES_RATE = 2; // 상증규 §16① 연 100분의 2
+
+/** 민법 §280·§281 건물·공작물 종류별 최단존속기간(년) */
+const SUPERFICIES_MIN_TENURE: Record<SuperficiesStructureType, number> = {
+  solid_building: 30, // ㉠ 견고건물·수목
+  other_building: 15, // ㉡ 그 외 건물
+  non_building: 5, // ㉢ 공작물
+  unspecified: 15, // §281② 종류미정 → ㉡ 간주
+};
+
+/**
+ * 지상권 잔존연수 도출 (민법 §280·§281 준용) — 엔진 단일진실.
+ * UI(useMemo 표시)·lib/calc 입력빌드·validate가 공용 import (dual-truth 금지).
+ * 1년 미만 단수 = 절상.
+ */
+export function resolveSuperficiesTenureYears(p: {
+  agreed: boolean;
+  structureType: SuperficiesStructureType;
+  agreedYears?: number;
+  setDate: Date;
+  valuationDate: Date;
+}): number {
+  const min = SUPERFICIES_MIN_TENURE[p.structureType];
+  // §280① 약정: max(약정, 최단) — 단축 약정은 최단으로 연장 / §281① 미약정: 최단
+  const tenure = p.agreed ? Math.max(p.agreedYears ?? 0, min) : min;
+  const expiry = addYears(p.setDate, tenure); // 존속만료일
+  if (expiry <= p.valuationDate) return 0; // 만료
+  // 잔존연수 = 만료일 − 평가기준일, 1년 미만 절상
+  const full = differenceInYears(expiry, p.valuationDate);
+  const hasRemainder = addYears(p.valuationDate, full) < expiry;
+  return full + (hasRemainder ? 1 : 0);
+}
+
+/**
+ * 지상권 평가 (§61③). 토지가액(§61① 개별공시지가×면적) → 연수입(×2%) → 잔존연수 10% 현가환산.
+ * 담보·임대 무관 — applyCollateralFloor 미사용. 잔존연수는 lib/calc에서 합성된 값 소비.
+ */
+export function evaluateSuperficies(item: EstateItem): PropertyValuationResult {
+  if (item.category !== "superficies") {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "evaluateSuperficies: 지상권 자산이 아닙니다.",
+    );
+  }
+
+  const unit = item.superficiesLandStandardPrice ?? 0;
+  const area = item.superficiesLandArea ?? 0; // UI에서 toFixed(2) 처리됨
+  // 면적 소수 → ×100 정수화 후 BigInt 곱·/100 floor (부동소수 금지)
+  const areaScaled = Math.round(area * 100);
+  const landValue = Math.floor(safeMultiply(unit, areaScaled) / 100); // §61① 토지가액
+  const income = Math.floor(safeMultiply(landValue, SUPERFICIES_RATE) / 100); // ×2%
+  const years = Math.max(0, Math.trunc(item.superficiesRemainingYears ?? 0));
+
+  // Σ floor(income × 10ⁿ / 11ⁿ) — BigInt 분수 (할인율 10% = 11/10)
+  let sum = 0n;
+  let num = 1n; // 10ⁿ
+  let den = 1n; // 11ⁿ
+  const incBig = BigInt(income);
+  for (let n = 1; n <= years; n++) {
+    num *= 10n;
+    den *= 11n;
+    sum += (incBig * num) / den; // 각 항 BigInt floor
+  }
+  const valuatedAmount = Number(sum);
+
+  return {
+    estateItemId: item.id,
+    method: "standard_price",
+    valuatedAmount,
+    breakdown: [
+      { label: "지상권 설정 토지가액 (개별공시지가 × 면적)", amount: landValue, lawRef: VALUATION.REAL_ESTATE_SUPP },
+      { label: "각 연도 수입금액 (토지가액 × 2%)", amount: income, lawRef: VALUATION.SUPERFICIES },
+      { label: `잔존연수 ${years}년 · 할인율 10% 현재가치 환산 합계`, amount: valuatedAmount, lawRef: VALUATION.SUPERFICIES },
+      { label: "평가액", amount: valuatedAmount },
+    ],
+    warnings: ["지상권 보충적 평가 — 잔존연수·존속기간 약정 내용 확인 권장"],
+  };
 }
 
 // ============================================================
@@ -465,6 +552,8 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
       return evaluateFinancial(item);
     case "deposit":
       return evaluateRentalConversion(item);
+    case "superficies":
+      return evaluateSuperficies(item);
     case "listed_stock":
     case "unlisted_stock":
       throw new TaxCalculationError(

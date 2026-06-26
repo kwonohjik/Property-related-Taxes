@@ -249,6 +249,7 @@ const FINANCIAL_ASSET_KIND_LABEL: Record<AssetCategory, string> = {
   cash: "현금",
   financial: "예금",
   deposit: "전세보증금",
+  superficies: "지상권",
   other: "기타금융",
 };
 
