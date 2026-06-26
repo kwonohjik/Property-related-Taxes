@@ -273,6 +273,31 @@ export function GiftRowEditor({
         </div>
       )}
 
+      {/* 증여자 사망 합산제외 (재산-58·재삼46014-1228·서일46014-11750) — 증여세 모드 전용.
+       *  금번 증여일 전에 이 회차 증여자가 사망하면 사망자 생전 증여재산은 §47② 합산 제외.
+       *  부·모 동일그룹이라도 사망자분만 선별 제외 → 기납부세액공제는 곱셈 안분. */}
+      {showGiftPhaseA && gift.donor && (
+        <ToggleCard
+          tone="rose"
+          title="이 증여자가 금번 증여 전 사망"
+          description="사망자 생전 증여재산은 §47② 합산에서 제외 (재산-58). 부·모 중 사망자분만 선별 제외되고, 기납부세액공제는 부·모 합산 산출세액 중 생존자분으로 안분됩니다 (서일46014-11750)."
+          checked={gift.donorDeceasedDate !== undefined}
+          onCheckedChange={(v) =>
+            set({ donorDeceasedDate: v ? "" : undefined })
+          }
+        >
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+              증여자 사망일 <span className="text-destructive">*</span>
+            </label>
+            <DateInput
+              value={gift.donorDeceasedDate ?? ""}
+              onChange={(v) => set({ donorDeceasedDate: v })}
+            />
+          </div>
+        </ToggleCard>
+      )}
+
       {/* ③ 수증자 드롭다운 — 상속세 모드 최상단 (증여일 직후).
        * 도메인: 증여인=피상속인(고정), 수증인=Step1 heirs 전체 중 선택(영리법인 포함 — donee-phase2).
        * doneeId 선택 시 isHeir·beneficiaryType·doneeRelation + 자동계산 세액 도출.

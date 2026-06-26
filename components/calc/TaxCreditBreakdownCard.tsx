@@ -42,6 +42,9 @@ function buildSection28Formula(
     aggregatedTaxBase,
     creditLimit,
     priorPaidCredit,
+    deceasedExclusion,
+    deceasedMarginalNumerator,
+    deceasedMarginalDenominator,
   } = detail;
 
   return (
@@ -53,6 +56,23 @@ function buildSection28Formula(
         = Min(<Amt val={priorComputedTax} />, <Amt val={creditLimit} />) ={" "}
         <span className="font-semibold"><Amt val={priorPaidCredit} /></span>
       </div>
+      {deceasedExclusion &&
+        deceasedMarginalNumerator != null &&
+        deceasedMarginalDenominator != null && (
+          <div className="mt-1 rounded-md bg-rose-50/60 dark:bg-rose-950/20 p-2 text-[11px] text-rose-700 dark:text-rose-300">
+            <div>
+              종전 증여재산 산출세액 = 부·모 합산 산출세액 × (생존 증여자분 ÷ 부·모 합산 증여재산가액)
+            </div>
+            <div className="flex flex-wrap items-baseline gap-x-1">
+              = <Amt val={priorComputedTax} /> &nbsp;(생존분{" "}
+              <Amt val={deceasedMarginalNumerator} /> ÷ 합산{" "}
+              <Amt val={deceasedMarginalDenominator} />)
+            </div>
+            <div className="mt-0.5 text-[10px] text-rose-500 dark:text-rose-400">
+              ※ 증여자가 금번 증여 전 사망 — 생전 증여재산은 §47② 합산 제외 (재산-58·서일46014-11750)
+            </div>
+          </div>
+        )}
       {aggregatedTaxBase > 0 ? (
         <>
           <div className="text-gray-500 dark:text-gray-400 mt-1">

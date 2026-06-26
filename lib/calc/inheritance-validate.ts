@@ -23,6 +23,7 @@ import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate"
 import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 import { checkMarriageBirthGiftRule } from "@/lib/calc/prior-gift-marriage-birth-rule";
+import { checkDeceasedDonorRule } from "@/lib/calc/prior-gift-deceased-rule";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import {
   parseResidentNumber,
@@ -224,6 +225,10 @@ export function validatePriorGift(gift: PriorGift): string | null {
   ) {
     return "직접 입력 모드: 증여 과세표준을 입력하세요 (증여세 신고서 과세표준 ⑤).";
   }
+
+  // 증여자 사망 합산제외 (재산-58) — 단일진실 헬퍼 (Zod priorGiftSchema와 공용 ⑫)
+  const deceasedError = checkDeceasedDonorRule(gift);
+  if (deceasedError !== null) return deceasedError;
 
   // beneficiaryType 미설정 시 legacy isHeir 사용 (자동 추론)
   return null;

@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 import { checkMarriageBirthGiftRule } from "@/lib/calc/prior-gift-marriage-birth-rule";
+import { checkDeceasedDonorRule } from "@/lib/calc/prior-gift-deceased-rule";
 
 /** Phase A: 증여자 관계 enum (7그룹 8값, gift-prior-aggregation.ts와 동일) */
 export const giftDonorRelationSchema = z.enum([
@@ -96,6 +97,14 @@ export const priorGiftSchema = z
     farmlandReductionAmount: z.number().nonnegative().optional(),
     /** §71⑥ 그 회차 농지 과세부분(㉯) — 설정 시 §47② 합산에 giftAmount 대신 사용 (감면농지 prior) */
     farmlandTaxablePortion: z.number().nonnegative().optional(),
+    /**
+     * 그 회차 증여자 사망일 — 재산-58·서일46014-11750. 금번 증여일 전 사망 시 §47② 합산 제외.
+     * 동기화 지점 ⑫ — strip 방지. types/inheritance-prior-gift.types.ts PriorGift.donorDeceasedDate와 동기화.
+     */
+    donorDeceasedDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식")
+      .optional(),
   })
   .superRefine((data, ctx) => {
     // 영리법인 사전증여 필수요건 (동기화 지점 ⑨)
@@ -116,6 +125,15 @@ export const priorGiftSchema = z
         code: z.ZodIssueCode.custom,
         message: mbError,
         path: ["marriageBirthDeduction"],
+      });
+    }
+    // 증여자 사망 합산제외 (재산-58) — client validatePriorGift(⑧)와 단일진실 헬퍼 공용
+    const deceasedError = checkDeceasedDonorRule(data);
+    if (deceasedError !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: deceasedError,
+        path: ["donorDeceasedDate"],
       });
     }
   });

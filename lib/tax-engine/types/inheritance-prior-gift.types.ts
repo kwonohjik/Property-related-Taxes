@@ -140,6 +140,17 @@ export interface PriorGift {
    * 결과 화면 FarmlandReductionCard의 ㉯(excessFarmlandValue) 출력을 다음 회차 입력으로 사용.
    */
   farmlandTaxablePortion?: number;
+
+  // ===== 증여자 사망 합산제외 (재산-58·재삼46014-1228·서일46014-11750) =====
+  /**
+   * 그 회차 증여자의 사망일(ISO "YYYY-MM-DD"). opt-in.
+   * 설정 시 금번 증여일이 이 날짜 이후이면 §47② 합산에서 제외 (사망자 생전 증여재산 합산 배제).
+   * 부·모 동일그룹(A)이라도 사망한 부(父)분만 선별 제외.
+   * 사망일 ≥ 금번 증여일(증여 후 사망)은 무효 → 합산 유지. 미설정이면 현행 동작 100% 보존.
+   * 엔진은 parseISO로 비교(new Date 직접 호출 금지). Route handler는 string pass-through.
+   * 법령: 서일46014-11750 — 기납부세액공제 = 부·모 합산 산출세액 × 생존(모)분/(부+모) 가액.
+   */
+  donorDeceasedDate?: string;
 }
 
 /**

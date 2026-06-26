@@ -15,8 +15,9 @@
  * Pure function. DB 호출 없음. UI display 책임 없음.
  */
 
-import { isBefore, subYears } from "date-fns";
+import { isBefore, parseISO, subYears } from "date-fns";
 import { GIFT } from "./legal-codes";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import type {
   GiftDonorRelation,
   DonorGroup,
@@ -95,6 +96,21 @@ export interface PriorAggregationResult {
    */
   marginalPriorComputedTax: number;
   /**
+   * 증여자 사망 합산제외 (서일46014-11750): 사망으로 §47② 합산에서 빠진 prior가
+   * 직전회차(matched[0])에 함께 합산됐던 경우 true → ⑧을 곱셈 안분으로 보정.
+   * R-6 drop-out(뺄셈)과 배타 — gift-tax STEP 6.5에서 `if(deceased) else if(dropout)`.
+   */
+  priorRoundHadDeceasedExclusion: boolean;
+  /**
+   * 사망 안분 시 가산재산 산출세액 ⑧ = 직전회차 ⑦ × 생존(모)분 가액 / (생존분 + 사망제외분) gross.
+   * 사망 제외 없으면 totalComputedTax와 동일.
+   */
+  deceasedMarginalComputedTax: number;
+  /** 사망 안분 분자 = 생존 증여자(모)분 증여재산가액 (결과 echo). */
+  deceasedSurvivingPriorAmount: number;
+  /** 사망 안분 분모 = 부·모 합산 증여재산가액(gross) (결과 echo). */
+  deceasedAggregationDenominator: number;
+  /**
    * 가장 최근 합산 회차의 ⑤ = giftTaxBase (§58·§57 한도 산식 분자).
    * 합산 대상 없으면 0.
    */
@@ -127,7 +143,9 @@ export function aggregatePriorGiftsForGift(
   giftDate: string,
   currentDonor: GiftDonorRelation,
 ): PriorAggregationResult {
-  const current = new Date(giftDate);
+  // 날짜 비교 전부 parseISO(local 자정)로 통일 — new Date(UTC 자정)와 혼용 시
+  // 사망 당일 경계가 타임존(KST)에서 오작동. CLAUDE.md "new Date 직접 호출 금지" 정책 부합.
+  const current = parseISO(giftDate);
   // §47②: "해당 증여일 전 10년 이내에 동일인으로부터 받은 증여재산가액"
   // boundary = subYears(증여일, 10). 경계일 당일 포함, 전일 제외 (민법 §160②).
   // 수정: differenceInYears(만 연수 절사 버그) → isBefore(일 단위, 경계일 전일 제외).
@@ -146,7 +164,7 @@ export function aggregatePriorGiftsForGift(
     }
 
     // 사전증여일이 boundary보다 이전이면 도과(10년 초과) → 제외
-    if (isBefore(new Date(gift.giftDate), boundary47)) continue;
+    if (isBefore(parseISO(gift.giftDate), boundary47)) continue;
 
     if (!gift.donor) {
       warnings.push(
@@ -158,6 +176,19 @@ export function aggregatePriorGiftsForGift(
     if (!isSameDonorGroup(gift.donor, currentDonor)) {
       warnings.push(
         `사전증여 ${gift.giftDate} (증여자=${gift.donor})는 현 증여자(${currentDonor})와 다른 동일인 그룹 — §47 합산 제외, 별개 신고 대상`,
+      );
+      continue;
+    }
+
+    // 증여자 사망 합산제외 (재산-58·재삼46014-1228): 금번 증여일 전에 그 회차 증여자가
+    // 사망하면 사망자 생전 증여재산은 §47② 합산 제외 (동일그룹이라도 사망분만 선별).
+    // 사망일 ≥ 금번 증여일(증여 후 사망)은 무효 → 합산 유지.
+    if (
+      gift.donorDeceasedDate &&
+      isBefore(parseISO(gift.donorDeceasedDate), current)
+    ) {
+      warnings.push(
+        `사전증여 ${gift.giftDate} (증여자=${gift.donor}) — 증여자가 금번 증여일 전 사망(${gift.donorDeceasedDate}) → §47② 합산 제외 (재산-58·재삼46014-1228)`,
       );
       continue;
     }
@@ -180,13 +211,13 @@ export function aggregatePriorGiftsForGift(
   let marginalPriorComputedTax = totalComputedTax;
   const mostRecent = matched[0];
   if (mostRecent) {
-    const subBoundary47 = subYears(new Date(mostRecent.giftDate), 10); // 직전회차의 10년 창
+    const subBoundary47 = subYears(parseISO(mostRecent.giftDate), 10); // 직전회차의 10년 창
     // 금번 cutoff 탈락(boundary47 이전) + 직전회차 10년 내 + 직전회차보다 이전 + 동일 그룹
     const droppedSubPrior = priorGifts
       .filter((g) => {
         if (g.specialTreatmentType !== undefined) return false;
         if (!g.donor || !isSameDonorGroup(g.donor, currentDonor)) return false;
-        const d = new Date(g.giftDate);
+        const d = parseISO(g.giftDate);
         return (
           isBefore(d, boundary47) && // 금번 10년 밖 (matched에서 탈락)
           !isBefore(d, subBoundary47) && // 직전회차 10년 내 (직전 합산에 포함됐던 회차)
@@ -202,6 +233,47 @@ export function aggregatePriorGiftsForGift(
       );
     }
   }
+
+  // 증여자 사망 합산제외 — 곱셈 안분 marginal (서일46014-11750)
+  //   사망으로 §47② 합산에서 빠진 prior가 직전회차(matched[0])에 함께 합산됐던 경우,
+  //   ⑧ = 직전회차 ⑦ × 생존(모)분 가액 / (생존분 + 사망제외분) gross 가액.
+  //   분모 = 부·모 합산 증여재산가액(gross) — 서일46014-11750 동결. R-6 뺄셈과 별개(STEP 6.5 배타).
+  //   C4a 가드: 직전회차 본인이 사망자면 matched에서 제외돼 mostRecent 부재 → 분기 미진입.
+  let priorRoundHadDeceasedExclusion = false;
+  let deceasedMarginalComputedTax = totalComputedTax;
+  let deceasedSurvivingPriorAmount = 0;
+  let deceasedAggregationDenominator = 0;
+  if (mostRecent) {
+    const subBoundaryDeceased = subYears(parseISO(mostRecent.giftDate), 10); // 직전회차 합산창
+    const deceasedDropped = priorGifts.filter((g) => {
+      if (g.specialTreatmentType !== undefined) return false;
+      if (!g.donor || !isSameDonorGroup(g.donor, currentDonor)) return false;
+      if (!g.donorDeceasedDate) return false;
+      if (!isBefore(parseISO(g.donorDeceasedDate), current)) return false; // 금번 전 사망
+      const d = parseISO(g.giftDate);
+      return (
+        !isBefore(d, subBoundaryDeceased) && // 직전회차 10년 내 (직전 합산에 포함됐던 회차)
+        g.giftDate < mostRecent.giftDate // 직전회차보다 이전
+      );
+    });
+    if (deceasedDropped.length > 0) {
+      priorRoundHadDeceasedExclusion = true;
+      // 서일46014-11750 분모는 "부·모 합산 gross 증여재산가액" — 분자(생존분)도 동일 gross 기준으로
+      // 통일해야 안분비 정합 (생존자가 감면농지 회차일 때 ㉯ 치환으로 분자만 축소되는 비대칭 방지).
+      deceasedSurvivingPriorAmount = mostRecent.giftAmount; // 생존(모)분 gross 가액
+      const deceasedSum = deceasedDropped.reduce((s, g) => s + g.giftAmount, 0);
+      deceasedAggregationDenominator = deceasedSurvivingPriorAmount + deceasedSum;
+      deceasedMarginalComputedTax =
+        deceasedAggregationDenominator > 0
+          ? safeMultiplyThenDivide(
+              mostRecent.computedTax ?? 0,
+              deceasedSurvivingPriorAmount,
+              deceasedAggregationDenominator,
+            )
+          : (mostRecent.computedTax ?? 0);
+    }
+  }
+
   const totalAdditionalSurcharge = matched.reduce(
     (s, p) => s + (p.additionalGenerationSkipSurcharge ?? 0),
     0,
@@ -225,6 +297,10 @@ export function aggregatePriorGiftsForGift(
     totalComputedTax,
     priorRoundHadDropout,
     marginalPriorComputedTax,
+    priorRoundHadDeceasedExclusion,
+    deceasedMarginalComputedTax,
+    deceasedSurvivingPriorAmount,
+    deceasedAggregationDenominator,
     priorAddedTaxBase,
     totalAdditionalSurcharge,
     nonParentLinealAmount,

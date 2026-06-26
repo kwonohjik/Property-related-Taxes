@@ -71,6 +71,13 @@ export interface PriorGiftCreditDetail {
   creditLimit: number;
   /** ⑯ 공제액 = Min(⑭, ⑮) */
   priorPaidCredit: number;
+  // 증여자 사망 합산제외 echo (서일46014-11750) — 결과카드에서 사례4(뺄셈)와 구분 표기용
+  /** 사망 안분 적용 여부. true면 ⑭은 곱셈 안분(아래 분자/분모), false/undefined면 일반·뺄셈 */
+  deceasedExclusion?: boolean;
+  /** 사망 안분 분자 = 생존 증여자(모)분 증여재산가액 */
+  deceasedMarginalNumerator?: number;
+  /** 사망 안분 분모 = 부·모 합산 증여재산가액(gross) */
+  deceasedMarginalDenominator?: number;
 }
 
 // ============================================================

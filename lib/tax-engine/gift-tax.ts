@@ -226,25 +226,33 @@ export function calcGiftTax(
   });
 
   // ─────────────────────────────────────────────
-  // STEP 6.5: R-6 재차증여 체인 marginal 보정 (재재산-610)
-  //   직전회차가 그 자신의 사전증여(금번 cutoff 탈락)를 합산한 경우, §58 ⑭(가산재산 산출세액)·
-  //   ⑤_prior(가산재산 과표)·§57 ⑩을 marginal로 축소. drop-out 없으면 priorAggregation 그대로.
-  //   가산재산 과표 = ⑤ × 가산재산/(가산재산 + 순현재) (가산재산 안분공제 차감과 동치).
+  // STEP 6.5: 가산재산 산출세액 marginal 보정 — 사망 안분 / R-6 drop-out 배타 분기
+  //   ① 증여자 사망 합산제외(서일46014-11750): ⑧ = 직전회차 ⑦ × 생존(모)분/(부+모) gross 가액 (곱셈 안분).
+  //   ② R-6 drop-out(재재산-610): ⑧ = 직전회차 ⑦ − 금번 cutoff 탈락분 ⑦ (뺄셈 marginal).
+  //   ①②는 배타(if/else if) — 사망 prior는 §47② matched에서 이미 제외돼 cutoff와 중복 평가 불요(C3).
+  //   ⑤_prior(가산재산 과표) = ⑤ × 가산재산/(가산재산 + 순현재) (안분공제 차감과 동치, 양 분기 공통).
   // ─────────────────────────────────────────────
-  const effectivePriorAggregation = priorAggregation.priorRoundHadDropout
+  const marginalPriorAddedTaxBase =
+    priorAggregation.totalAmount + netCurrentGiftValue > 0
+      ? safeMultiplyThenDivide(
+          taxBase,
+          priorAggregation.totalAmount,
+          priorAggregation.totalAmount + netCurrentGiftValue,
+        )
+      : 0;
+  const effectivePriorAggregation = priorAggregation.priorRoundHadDeceasedExclusion
     ? {
         ...priorAggregation,
-        totalComputedTax: priorAggregation.marginalPriorComputedTax,
-        priorAddedTaxBase:
-          priorAggregation.totalAmount + netCurrentGiftValue > 0
-            ? safeMultiplyThenDivide(
-                taxBase,
-                priorAggregation.totalAmount,
-                priorAggregation.totalAmount + netCurrentGiftValue,
-              )
-            : 0,
+        totalComputedTax: priorAggregation.deceasedMarginalComputedTax,
+        priorAddedTaxBase: marginalPriorAddedTaxBase,
       }
-    : priorAggregation;
+    : priorAggregation.priorRoundHadDropout
+      ? {
+          ...priorAggregation,
+          totalComputedTax: priorAggregation.marginalPriorComputedTax,
+          priorAddedTaxBase: marginalPriorAddedTaxBase,
+        }
+      : priorAggregation;
 
   // ─────────────────────────────────────────────
   // STEP 7: §57 세대생략 할증 + 한도 안분 (⑧⑨⑩⑪⑫⑬)
@@ -361,6 +369,14 @@ export function calcGiftTax(
               ? 0
               : safeMultiplyThenDivide(computedTax, effectivePriorAggregation.priorAddedTaxBase, taxBase),
           priorPaidCredit: creditResult.giftTaxCredit,
+          // 증여자 사망 안분 echo (서일46014-11750) — 결과카드 사례4(뺄셈)와 분기
+          deceasedExclusion: priorAggregation.priorRoundHadDeceasedExclusion || undefined,
+          deceasedMarginalNumerator: priorAggregation.priorRoundHadDeceasedExclusion
+            ? priorAggregation.deceasedSurvivingPriorAmount
+            : undefined,
+          deceasedMarginalDenominator: priorAggregation.priorRoundHadDeceasedExclusion
+            ? priorAggregation.deceasedAggregationDenominator
+            : undefined,
         }
       : null;
 
