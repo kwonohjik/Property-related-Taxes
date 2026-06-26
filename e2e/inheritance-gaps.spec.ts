@@ -3,7 +3,7 @@
  *
  * 정책: [[feedback_browser_verify_with_playwright]] · [[feedback_e2e_worktree_port_isolation]] (E2E_PORT=3102)
  *
- * 갭5a: 공익법인 출연 → 동족주식 한도(§16②) 토글 → 주식수 입력 → 초과분 실시간 미리보기
+ * 갭5a: 공익법인 출연 → 특수관계법인 주식 한도(§16②) 토글 → 주식수 입력 → 초과분 실시간 미리보기
  * 갭4 : 부동산 자산 편집 모달 → 상속인 거주주택(§74②6호) 토글 노출·체크
  *
  * 엔진 numeric은 unit anchor(public-interest-stock-limit.test·payment-in-kind.test)로 검증됨.
@@ -29,10 +29,10 @@ async function gotoExemptionStep(page: Page) {
 async function openPublicInterestStockLimit(page: Page) {
   await page.getByRole("button", { name: /공익법인 출연/ }).first().click();
   await expect(page.getByText("공익법인 출연 재산")).toBeVisible();
-  await page.getByRole("switch", { name: /동족주식 한도/ }).click();
+  await page.getByRole("switch", { name: /특수관계법인 주식 한도/ }).click();
 }
 
-test.describe("갭5a — 공익법인 동족주식 한도 자동계산 (§16②)", () => {
+test.describe("갭5a — 공익법인 특수관계법인 주식 한도 자동계산 (§16②)", () => {
   test("GAP5A-1: 일반 10% — 발행10만·출연1.5만 → 초과 5,000주·50,000,000 미리보기", async ({
     page,
   }) => {

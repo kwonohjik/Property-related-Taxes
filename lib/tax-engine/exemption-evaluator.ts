@@ -97,7 +97,7 @@ function evaluateSingleExemption(
     return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
   }
 
-  // === 공익법인: 동족주식 초과분 과세 (§16 ②) — 자동계산 우선 → 수동 fallback → 전액 불산입 ===
+  // === 공익법인: 특수관계법인 주식 초과분 과세 (§16 ②) — 자동계산 우선 → 수동 fallback → 전액 불산입 ===
   // lawRef: 상속 출연 불산입 본칙은 §16①(INH_PUBLIC_CONTRIBUTION). §48①은 증여세(공익법인 본인)이므로 차용 금지.
   if (rule.id === "inh_public_interest") {
     if (hasAutoRelatedStockInput(item)) {
@@ -113,13 +113,13 @@ function evaluateSingleExemption(
       exemptAmount = Math.max(0, item.claimedAmount - taxableOverflow);
       breakdown.push({ label: "공익법인 출연재산 불산입 (한도 이내)", amount: exemptAmount, lawRef: EXEMPTION.INH_PUBLIC_CONTRIBUTION });
       breakdown.push({
-        label: `동족주식 한도 = 발행 ${ex.limitShares + (item.relatedStockPriorHeld ?? 0)}주 기준 ${Math.round(ex.ratio * 100)}% (한도 ${ex.limitShares}주, 초과 ${ex.excessShares}주)`,
+        label: `특수관계법인 주식 한도 = 발행 ${ex.limitShares + (item.relatedStockPriorHeld ?? 0)}주 기준 ${Math.round(ex.ratio * 100)}% (한도 ${ex.limitShares}주, 초과 ${ex.excessShares}주)`,
         amount: taxableOverflow,
         lawRef: EXEMPTION.INH_RELATED_STOCK,
         note: `초과 ${ex.excessShares}주 × ${(item.relatedStockValuePerShare ?? 0).toLocaleString()}원 = ${taxableOverflow.toLocaleString()}원 상속세 과세 (§16②)`,
       });
       if (taxableOverflow > 0) {
-        warnings.push(`공익법인 동족주식 한도(${Math.round(ex.ratio * 100)}%) 초과 — 초과분 ${taxableOverflow.toLocaleString()} 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
+        warnings.push(`공익법인 특수관계법인 주식 한도(${Math.round(ex.ratio * 100)}%) 초과 — 초과분 ${taxableOverflow.toLocaleString()} 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
       }
     } else if (item.relatedStockExceeded && item.excessStockAmount != null && item.excessStockAmount > 0) {
       // ② 수동 fallback: 초과분 직접 입력 (자동계산 입력 부재 시)
@@ -127,15 +127,15 @@ function evaluateSingleExemption(
       exemptAmount = Math.max(0, item.claimedAmount - taxableOverflow);
       breakdown.push({ label: "공익법인 출연재산 불산입 (한도 이내)", amount: exemptAmount, lawRef: EXEMPTION.INH_PUBLIC_CONTRIBUTION });
       breakdown.push({
-        label: `동족주식 한도 초과분 — 상속세 과세 (수동 입력, ${EXEMPTION.INH_RELATED_STOCK})`,
+        label: `특수관계법인 주식 한도 초과분 — 상속세 과세 (수동 입력, ${EXEMPTION.INH_RELATED_STOCK})`,
         amount: taxableOverflow,
         lawRef: EXEMPTION.INH_RELATED_STOCK,
         note: `초과분 ${taxableOverflow.toLocaleString()}원은 상속재산 합산 과세`,
       });
-      warnings.push(`공익법인 동족주식 한도 초과 보유 — 초과분 ${taxableOverflow.toLocaleString()} 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
+      warnings.push(`공익법인 특수관계법인 주식 한도 초과 보유 — 초과분 ${taxableOverflow.toLocaleString()} 상속세 과세 (${EXEMPTION.INH_RELATED_STOCK})`);
     } else if (item.relatedStockExceeded) {
       // ③ 초과 표시만 있고 금액·주식수 미입력 → 경고(자동 산입 금지, 미입력=검증오류 성격)
-      warnings.push(`공익법인 동족주식 한도 초과 보유 확인됨 — 유형·주식수 또는 초과분 금액 입력 필요 (${EXEMPTION.INH_RELATED_STOCK})`);
+      warnings.push(`공익법인 특수관계법인 주식 한도 초과 보유 확인됨 — 유형·주식수 또는 초과분 금액 입력 필요 (${EXEMPTION.INH_RELATED_STOCK})`);
       exemptAmount = item.claimedAmount;
       breakdown.push({ label: "공익법인 출연재산 불산입 (초과분 미입력)", amount: exemptAmount, lawRef: EXEMPTION.INH_PUBLIC_CONTRIBUTION });
     } else {

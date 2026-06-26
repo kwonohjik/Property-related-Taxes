@@ -103,7 +103,7 @@ export const exemptionCheckedItemSchema = z.object({
   priorDisabledTrustUsed: z.number().nonnegative().optional(),
   relatedStockExceeded: z.boolean().optional(),
   excessStockAmount: z.number().nonnegative().optional(),
-  // 갭5a: §16② 동족주식 한도 자동계산 입력 (누락 시 침묵 strip — ⑫)
+  // 갭5a: §16② 특수관계법인 주식 한도 자동계산 입력 (누락 시 침묵 strip — ⑫)
   publicInterestType: z
     .enum(["general", "charity_no_voting", "mutual_investment_restricted", "art48_11_unmet"])
     .optional(),

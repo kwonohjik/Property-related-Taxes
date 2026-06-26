@@ -18,15 +18,15 @@ export interface ExemptionCheckedItem {
   /** 장애인 신탁: 10년 합산 기사용 공제액 */
   priorDisabledTrustUsed?: number;
   /**
-   * 공익법인 동족주식 초과분 금액 (§16 ②) — **수동 입력 fallback**.
+   * 공익법인 특수관계법인 주식 초과분 금액 (§16 ②) — **수동 입력 fallback**.
    * 5%(성실공익법인 10%) 초과 보유 주식의 시가 — 이 금액은 과세됨.
    * publicInterestType + 주식수 필드 입력 시 자동계산(computeRelatedStockExcess)이 우선하며 본 필드는 무시됨.
    */
   excessStockAmount?: number;
-  /** 공익법인 동족주식 5% 초과 보유 여부 (§16 ②) — 수동 fallback */
+  /** 공익법인 특수관계법인 주식 5% 초과 보유 여부 (§16 ②) — 수동 fallback */
   relatedStockExceeded?: boolean;
 
-  // ===== §16② 동족주식 한도 자동계산 입력 (갭5a — 자동계산 우선) =====
+  // ===== §16② 특수관계법인 주식 한도 자동계산 입력 (갭5a — 자동계산 우선) =====
   /**
    * 공익법인 유형 — §16②2호 한도 비율 결정.
    *   general(본문 10%) · charity_no_voting(가목 20%, 의결권 미행사+자선·장학·사회복지)

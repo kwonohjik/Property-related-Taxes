@@ -138,7 +138,7 @@ function ExemptionRow({
           </div>
         )}
 
-        {/* 공익법인 출연 — 동족주식 한도 §16② (갭5a) */}
+        {/* 공익법인 출연 — 특수관계법인 주식 한도 §16② (갭5a) */}
         {rule.id === "inh_public_interest" && (
           <RelatedStockLimitInput
             item={item}
@@ -366,7 +366,7 @@ export function ExemptionChecklist({
     );
   };
 
-  // §16② 동족주식 한도 등 임의 필드 패치 (갭5a) — onChange 직접(미러링 금지)
+  // §16② 특수관계법인 주식 한도 등 임의 필드 패치 (갭5a) — onChange 직접(미러링 금지)
   const handlePatch = (ruleId: string, patch: Partial<ExemptionCheckedItem>) => {
     onChange(value.map((v) => (v.ruleId === ruleId ? { ...v, ...patch } : v)));
   };

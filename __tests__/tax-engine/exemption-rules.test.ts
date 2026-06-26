@@ -120,7 +120,7 @@ describe("비과세 평가기 — 핵심 케이스", () => {
     expect(result.itemResults[0].taxableOverflow).toBe(0);
   });
 
-  it("[N12b] 공익법인: 동족주식 초과 시 경고 포함", () => {
+  it("[N12b] 공익법인: 특수관계법인 주식 초과 시 경고 포함", () => {
     const items: ExemptionCheckedItem[] = [
       {
         ruleId: "inh_public_interest",
@@ -129,7 +129,7 @@ describe("비과세 평가기 — 핵심 케이스", () => {
       },
     ];
     const result = evaluateExemptions(items, 5_000_000_000);
-    expect(result.itemResults[0].warnings.some((w) => w.includes("동족주식"))).toBe(true);
+    expect(result.itemResults[0].warnings.some((w) => w.includes("특수관계법인 주식"))).toBe(true);
     // 3년 내 공익 외 사용 사후관리 경고도 포함
     expect(result.itemResults[0].warnings.some((w) => w.includes("3년"))).toBe(true);
   });
