@@ -300,7 +300,8 @@ export const superficiesItemSchema = baseItemSchema
     category: z.literal("superficies"),
     superficiesLandStandardPrice: z.number().positive({ message: "지상권 설정 토지의 개별공시지가를 입력하세요." }),
     superficiesLandArea: z.number().positive({ message: "지상권 설정 토지의 면적을 입력하세요." }),
-    superficiesAgreed: z.boolean(),
+    // 미약정이 기본(토글 OFF=undefined) — 엔진 !!superficiesAgreed로 false 처리
+    superficiesAgreed: z.boolean().optional(),
     superficiesStructureType: z.enum(["solid_building", "other_building", "non_building", "unspecified"]),
     superficiesAgreedYears: z.number().positive().optional(),
     superficiesSetDate: z.union([z.string(), z.date()]),

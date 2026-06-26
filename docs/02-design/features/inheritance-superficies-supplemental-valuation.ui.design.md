@@ -10,7 +10,7 @@
 
 | 위치 | 작업 |
 |---|---|
-| category→body 분기 (상위) | `superficies` → `<EstateBodySuperficies>` 분기 추가. ⚠️ **실제 dispatch 위치 Do에서 grep 확인** — `EstateBodySection.tsx`는 공용 래퍼(EstateBodySimple/Deposit/RealEstate 적용)이지 dispatch 아님. 분기는 상위 자산카드(EstateBodyRealEstate 인근 또는 카드 컨테이너) |
+| **실제 dispatch** `components/calc/EstateItemEditor.tsx:45 VariantBody` switch | `case "superficies": return <EstateBodySuperficies {...props} />` 추가. ⚠️ **이 switch가 진짜 dispatch**(`variants/index.ts:pickBodyVariant`는 미사용). superficies case 누락 시 switch가 undefined 반환 → **본문 미렌더(tsc 미감지, E2E가 검출)**. + 모달 평가액 칩: `chip-config.ts resolveChips`에 `valuationDate` 전달 필요(지상권 평가액 의존) — EstateItemEditor:98 호출+deps |
 | `components/calc/inheritance/estate-card/variants/EstateBodySuperficies.tsx` | **신규** body 컴포넌트 (EstateBodySection 래퍼 재사용 가능) |
 | `components/calc/inheritance/estate-card/variants/index.ts` | export 추가 |
 | `components/calc/inheritance/estate-card/CategoryChangeDialog.tsx:35,47,57` | 라벨 맵(`superficies: "지상권"`) + 카테고리 배열에 추가 (UI 동기화 — TS 부분 미감지) |

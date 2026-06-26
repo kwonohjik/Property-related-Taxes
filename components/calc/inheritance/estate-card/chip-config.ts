@@ -112,17 +112,19 @@ export interface ResolveChipsParams {
   /** PR-B(FU-2): 주식 자산에서 §22② 최대주주 칩 노출 여부.
    *  상장·V1 simple만 true. V2 formal은 카드 내부 자체 토글로 처리(중복 방지) → false. */
   showMajorShareholderChip?: boolean;
+  /** 평가기준일(상속개시일/증여일) — 지상권 등 평가기준일 의존 평가액 추정에 필요 */
+  valuationDate?: string;
 }
 
 /**
  * 자산 1개에 노출할 칩 목록을 좌→우 우선순위 순으로 반환.
  * Design §5.2 정렬 기준.
  */
-export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip }: ResolveChipsParams): ChipState[] {
+export function resolveChips({ item, mode, heirsCount, showMajorShareholderChip, valuationDate }: ResolveChipsParams): ChipState[] {
   const chips: ChipState[] = [];
 
-  // 1. chip-estimated-value (항상)
-  const value = computeEffectiveValuation(item);
+  // 1. chip-estimated-value (항상). 지상권은 평가기준일 의존 → valuationDate 전달
+  const value = computeEffectiveValuation(item, valuationDate);
   chips.push({
     key: "estimated-value",
     label: value > 0 ? `평가액 ${value.toLocaleString()}` : "평가액 미입력",
