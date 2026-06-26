@@ -205,6 +205,18 @@ export interface UnlistedStockValuationInput {
    */
   preIpoListing?: import("@/lib/tax-engine/property-valuation/pre-ipo-listing-section-63-2").PreIpoListingInput;
 
+  /**
+   * 자기주식 보유 시 평가방법 (상증령 §54②·§55① + 재재산-1494·재산-240).
+   * undefined = 자기주식 없음(현행 동작 100% 보존).
+   *   - temporary_holding(일시보유): 자기주식을 1주당 평가액(X)으로 재평가해 자산 가산 → 자기참조 평가.
+   *   - cancellation(소각·감자): 발행주식총수에서 차감(N−t), 자산 미포함.
+   * Plan/Design: docs/02-design/features/inheritance-unlisted-stock-treasury-stock.*
+   */
+  treasuryStock?: {
+    shares: number; // 자기주식수 (0 < shares < totalShares)
+    purpose: "temporary_holding" | "cancellation";
+  };
+
   // === 할증평가 §63③ ===
   isMaxShareholder: boolean;
   /**
@@ -300,6 +312,19 @@ export interface UnlistedStockValuationResult {
   // === 할증평가 ===
   premiumRate: number;                 // 0 (배제) | 0.20 (×120%)
   premiumExclusionReason?: UnlistedPremiumExclusionReason;
+
+  /**
+   * 자기주식 처리 내역 (treasuryStock 입력 시에만 채움).
+   * 일시보유=자기참조 평가 / 소각·감자=발행주식총수 차감(N−t).
+   */
+  treasuryStockApplied?: {
+    purpose: "temporary_holding" | "cancellation";
+    shares: number;
+    effectiveTotalShares: number;      // 일시보유=N, 소각·감자=N−t
+    selfReferentialValue?: number;     // 일시보유 X(=⑥). 소각은 undefined
+    floor80SelfReferentialApplied?: boolean;
+    floor80NetAssetValue?: number;     // NA80 = floor(A/(N−0.8t))
+  };
 
   // === 최종 ===
   totalValuation: number;              // ⑨ × ownedShares

@@ -76,6 +76,21 @@ const NET_ASSET_ONLY_OPTIONS: RadioCardOption<UnlistedNetAssetOnlyReason>[] = [
   },
 ];
 
+const TREASURY_PURPOSE_OPTIONS: RadioCardOption<"temporary_holding" | "cancellation">[] = [
+  {
+    value: "temporary_holding",
+    label: "일시보유목적",
+    description: "취득~평가시점 기업가치 변동분 반영 — 자기주식을 1주당 평가액으로 재평가해 자산 가산(자기참조 평가)",
+    hint: "재재산-1494·자본거래-2616",
+  },
+  {
+    value: "cancellation",
+    label: "소각·감자목적",
+    description: "발행주식총수에서 자기주식 차감(N−t), 자산 미포함",
+    hint: "재산-240·서일46014-10198",
+  },
+];
+
 const COMPANY_SIZE_OPTIONS: RadioCardOption<"small" | "medium" | "large">[] = [
   {
     value: "small",
@@ -115,6 +130,8 @@ export interface CorporateInfoSectionProps {
   isMaxShareholder: boolean;
   companySize: "small" | "medium" | "large";
   isContinuousLossLastThreeYears: boolean;
+  /** 자기주식 보유 시 평가방법 (상증령 §54②·§55①). undefined = 미보유 */
+  treasuryStock?: { shares: number; purpose: "temporary_holding" | "cancellation" };
   /** 자본금 변동(증자·감자) 이력 — 섹션 1 내부에 임베드 (§56③·⑤ + §17의3⑤) */
   capitalChanges: UnlistedCapitalChange[];
   onCapitalChangesChange: (next: UnlistedCapitalChange[]) => void;
@@ -133,6 +150,7 @@ export interface CorporateInfoSectionProps {
     isMaxShareholder?: boolean;
     companySize?: "small" | "medium" | "large";
     isContinuousLossLastThreeYears?: boolean;
+    treasuryStock?: { shares: number; purpose: "temporary_holding" | "cancellation" } | undefined;
   }) => void;
 }
 
@@ -152,6 +170,7 @@ export function CorporateInfoSection({
   isMaxShareholder,
   companySize,
   isContinuousLossLastThreeYears,
+  treasuryStock,
   capitalChanges,
   onCapitalChangesChange,
   onChange,
@@ -335,6 +354,19 @@ export function CorporateInfoSection({
               }
               title="상증령 §55③ 3호 — ON 시 영업권 평가액 자동 0 처리(자동 배제)."
             />
+            <ToggleChip
+              tone="emerald"
+              label="자기주식 보유"
+              checked={!!treasuryStock}
+              onCheckedChange={(on) =>
+                onChange({
+                  treasuryStock: on
+                    ? { shares: 0, purpose: "temporary_holding" }
+                    : undefined,
+                })
+              }
+              title="상증령 §54②·§55① — 평가대상 법인이 자기주식 보유 시 목적(일시보유/소각·감자)별 평가방법 적용."
+            />
           </div>
         </div>
 
@@ -384,6 +416,35 @@ export function CorporateInfoSection({
               options={NET_ASSET_ONLY_OPTIONS}
               value={netAssetOnlyReason ?? ""}
               onChange={(next) => onChange({ netAssetOnlyReason: next })}
+              layout="stack"
+            />
+          </div>
+        )}
+        {treasuryStock && (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-900/20 p-2.5 space-y-2">
+            <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+              자기주식 보유 — 목적별 평가 (상증령 §54②·§55①)
+            </p>
+            <FieldCard label="자기주식수" stacked unit="주" hint="평가기준일 현재 보유한 자기주식 수 — 발행주식총수 미만">
+              <CurrencyInput
+                label="자기주식수"
+                hideLabel
+                value={String(treasuryStock.shares || "")}
+                onChange={(v) =>
+                  onChange({
+                    treasuryStock: { ...treasuryStock, shares: Number(v.replace(/,/g, "")) || 0 },
+                  })
+                }
+                placeholder="자기주식수"
+                hideUnit
+              />
+            </FieldCard>
+            <RadioCardGroup<"temporary_holding" | "cancellation">
+              name="v2-treasuryPurpose"
+              tone="emerald"
+              options={TREASURY_PURPOSE_OPTIONS}
+              value={treasuryStock.purpose}
+              onChange={(next) => onChange({ treasuryStock: { ...treasuryStock, purpose: next } })}
               layout="stack"
             />
           </div>

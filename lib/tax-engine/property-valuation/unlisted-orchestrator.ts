@@ -40,6 +40,7 @@ import {
   calcFinalPerShareValue,
 } from "./weighted-avg";
 import { calcNetAssetTotal, calcNetAssetPerShare } from "./net-asset-calc";
+import { solveSelfReferentialValuation } from "./treasury-stock";
 import { calcGoodwill } from "./goodwill";
 import { calcCapitalIncreaseAdjustment } from "./capital-increase-adjustment";
 import { calcMaxShareholderPremium } from "./max-shareholder-premium";
@@ -65,6 +66,14 @@ export function evaluateUnlistedStockV2(
   const appliedRules: string[] = ["상증법 §63 ① 1호 나목 + 상증령 §54 ①"];
   const capRate = input.capitalizationRate > 0 ? input.capitalizationRate : 0.10;
   const goodwillRate = input.goodwillRate ?? 0.10;
+
+  // 자기주식 — 소각·감자목적은 발행주식총수에서 차감(N−t), 일시보유·미보유는 N 유지.
+  //   소각·감자: 1주당 순손익가치(⑤)·순자산가치(④) 두 분모 모두 N−t (재산-240, 이미지 7쪽 ②).
+  //   일시보유: 분모 N 유지하되 ⑥은 자기참조 solver로 override (STEP 7).
+  const effectiveTotalShares =
+    input.treasuryStock?.purpose === "cancellation"
+      ? input.totalShares - input.treasuryStock.shares
+      : input.totalShares;
 
   // STEP 1: 사업연도별 다.순손익액
   const adjustedIncomes = input.fiscalYears.map((fy) => calcFiscalYearNetIncome(fy));
@@ -99,7 +108,7 @@ export function evaluateUnlistedStockV2(
   // STEP 4: 바.환산주식수 (§17의3⑤ 충실 — 연도별 누적 환산 + 3년 윈도우 필터)
   //   정상 complete-chain → [totalShares, totalShares, totalShares] (telescoping 항등식)
   const conversionResult = calcConvertedShares({
-    totalShares: input.totalShares,
+    totalShares: effectiveTotalShares,
     fiscalYearEndDates,
     evaluationDate: toOptionalDate(input.evaluationDate) ?? input.evaluationDate,
     capitalChanges: normalizedCapitalChanges,
@@ -188,7 +197,7 @@ export function evaluateUnlistedStockV2(
   });
 
   const netAssetTotal = netAssetResult.netAssetBeforeGoodwill + goodwill.goodwillFinal; // ③
-  const netAssetPerShare = calcNetAssetPerShare(netAssetTotal, input.totalShares); // ④
+  let netAssetPerShare = calcNetAssetPerShare(netAssetTotal, effectiveTotalShares); // ④
 
   // STEP 7: ⑥-㉠·㉡·⑥ 1주당 평가액
   let weightedAvgPerShare = calcPerShareWeightedValuation(
@@ -196,43 +205,97 @@ export function evaluateUnlistedStockV2(
     netAssetPerShare,
     input.isRealEstateHeavy,
   );
-  const netAssetFloor80 = calcNetAssetFloor80(netAssetPerShare);
+  let netAssetFloor80 = calcNetAssetFloor80(netAssetPerShare);
 
   let finalPerShareValue: number;
   let netAssetFloorApplied = false;
+  let treasuryStockApplied: UnlistedStockValuationResult["treasuryStockApplied"];
 
-  if (input.netAssetOnlyReason) {
-    // 무조건 사유 (1·2·6호): 순자산 단독
-    if (
+  if (input.treasuryStock?.purpose === "temporary_holding") {
+    // 자기주식 일시보유 — ⑥ 블록 전체(㉠·㉡·최종)를 자기참조 solver로 대체 (기존 3함수 우회).
+    //   단서 사유(real_estate_80·stock_holding_80)+일시보유는 MVP 범위 외 → 일반 가중평균(단서 미발동).
+    const netAssetOnlyUnconditional =
       input.netAssetOnlyReason === "liquidation" ||
       input.netAssetOnlyReason === "lt3y" ||
-      input.netAssetOnlyReason === "remaining_3y"
-    ) {
-      finalPerShareValue = netAssetPerShare;
-      weightedAvgPerShare = 0; // 미적용 표시
-      appliedRules.push(`§54④ ${input.netAssetOnlyReason} — 순자산 단독 (무조건)`);
-    } else {
-      // 단서 사유 (3·5호): 가중평균 < 순자산일 때만
-      if (weightedAvgPerShare < netAssetPerShare) {
-        finalPerShareValue = netAssetPerShare;
-        appliedRules.push(
-          `§54④ ${input.netAssetOnlyReason} 단서 발동 — 가중평균(${weightedAvgPerShare}) < 순자산(${netAssetPerShare})`,
-        );
-      } else {
-        const result = calcFinalPerShareValue(weightedAvgPerShare, netAssetFloor80);
-        finalPerShareValue = result.finalValue;
-        netAssetFloorApplied = result.floorApplied;
-      }
+      input.netAssetOnlyReason === "remaining_3y";
+    const sr = solveSelfReferentialValuation({
+      netAssetTotal,
+      treasuryShares: input.treasuryStock.shares,
+      totalShares: input.totalShares,
+      netIncomeValuePerShare: netIncomePerShare,
+      isRealEstateHeavy: input.isRealEstateHeavy,
+      netAssetOnly: netAssetOnlyUnconditional,
+    });
+    weightedAvgPerShare = sr.weightedSelfRef;
+    netAssetPerShare = sr.selfRefNetAssetPerShare; // self-ref ④
+    netAssetFloor80 = Number((BigInt(sr.selfRefNetAssetPerShare) * 4n) / 5n);
+    finalPerShareValue = sr.finalPerShareValue;
+    netAssetFloorApplied = sr.floor80Applied;
+    appliedRules.push(
+      "상증령 §54②·§55① + 재재산-1494·자본거래-2616 — 자기주식 일시보유(자기참조 평가)",
+    );
+    if (sr.floor80Applied) {
+      appliedRules.push(
+        "재재산-616 — 가중평균이 순자산가치의 80% 미만 → 순자산가치 80% 자기참조 재계산",
+      );
+      warnings.push(
+        "자기주식 일시보유 — 손익가치가 낮아 1주당 순자산가치의 80%로 평가(순자산가치 재계산).",
+      );
     }
+    treasuryStockApplied = {
+      purpose: "temporary_holding",
+      shares: input.treasuryStock.shares,
+      effectiveTotalShares: input.totalShares,
+      selfReferentialValue: sr.finalPerShareValue,
+      floor80SelfReferentialApplied: sr.floor80Applied,
+      floor80NetAssetValue: sr.floor80NetAssetValue,
+    };
   } else {
-    // 본칙 §54①: max(가중평균, 80% 하한)
-    const result = calcFinalPerShareValue(weightedAvgPerShare, netAssetFloor80);
-    finalPerShareValue = result.finalValue;
-    netAssetFloorApplied = result.floorApplied;
-  }
+    // 미보유 + 소각·감자 공통 — 소각은 effectiveTotalShares=N−t 주입으로 ④·⑤가 차감 반영됨.
+    if (input.netAssetOnlyReason) {
+      // 무조건 사유 (1·2·6호): 순자산 단독
+      if (
+        input.netAssetOnlyReason === "liquidation" ||
+        input.netAssetOnlyReason === "lt3y" ||
+        input.netAssetOnlyReason === "remaining_3y"
+      ) {
+        finalPerShareValue = netAssetPerShare;
+        weightedAvgPerShare = 0; // 미적용 표시
+        appliedRules.push(`§54④ ${input.netAssetOnlyReason} — 순자산 단독 (무조건)`);
+      } else {
+        // 단서 사유 (3·5호): 가중평균 < 순자산일 때만
+        if (weightedAvgPerShare < netAssetPerShare) {
+          finalPerShareValue = netAssetPerShare;
+          appliedRules.push(
+            `§54④ ${input.netAssetOnlyReason} 단서 발동 — 가중평균(${weightedAvgPerShare}) < 순자산(${netAssetPerShare})`,
+          );
+        } else {
+          const result = calcFinalPerShareValue(weightedAvgPerShare, netAssetFloor80);
+          finalPerShareValue = result.finalValue;
+          netAssetFloorApplied = result.floorApplied;
+        }
+      }
+    } else {
+      // 본칙 §54①: max(가중평균, 80% 하한)
+      const result = calcFinalPerShareValue(weightedAvgPerShare, netAssetFloor80);
+      finalPerShareValue = result.finalValue;
+      netAssetFloorApplied = result.floorApplied;
+    }
 
-  if (netAssetFloorApplied) {
-    appliedRules.push("§54① 단서 — 80% 하한 발동");
+    if (netAssetFloorApplied) {
+      appliedRules.push("§54① 단서 — 80% 하한 발동");
+    }
+
+    if (input.treasuryStock?.purpose === "cancellation") {
+      appliedRules.push(
+        "재산-240·서일46014-10198 — 자기주식 소각·감자 목적(발행주식총수에서 차감)",
+      );
+      treasuryStockApplied = {
+        purpose: "cancellation",
+        shares: input.treasuryStock.shares,
+        effectiveTotalShares,
+      };
+    }
   }
 
   // PR-L (§63②1호): 기업공개 준비 중 평가 override (STEP 7 직후, STEP 8 할증 직전).
@@ -358,6 +421,7 @@ export function evaluateUnlistedStockV2(
     premiumRate: premium.premiumRate,
     premiumExclusionReason: premium.exclusionReason,
     totalValuation,
+    treasuryStockApplied,
     warnings,
     appliedRules,
     otherUnlistedHoldingsEvaluated,

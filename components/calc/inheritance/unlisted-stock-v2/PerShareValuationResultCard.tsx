@@ -88,7 +88,13 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           cellNum="④"
           label="1주당 순자산가치"
           value={`${fmt(result.netAssetPerShare)}원`}
-          hint={`= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(input.totalShares)}주 (발행주식총수)`}
+          hint={
+            result.treasuryStockApplied?.purpose === "temporary_holding"
+              ? `자기주식을 1주당 평가액으로 재평가한 순자산가치 (자기주식 일시보유)`
+              : result.treasuryStockApplied?.purpose === "cancellation"
+                ? `= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(result.treasuryStockApplied.effectiveTotalShares)}주 (발행주식총수 − 자기주식)`
+                : `= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(input.totalShares)}주 (발행주식총수)`
+          }
           law="상증령 §54 ②"
         />
         <ResultRow
@@ -178,6 +184,42 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           law={result.preIpoListingResult?.applied ? preIpoLaw : "상증령 §54 ①"}
           emphasized
         />
+
+        {/* 자기주식 보유 — 목적별 평가 내역 (result 필드만 표시, 재계산 금지) */}
+        {result.treasuryStockApplied && (
+          <div
+            className="rounded border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-[11px] text-emerald-900 space-y-1"
+            data-testid="result-treasury-block"
+          >
+            {result.treasuryStockApplied.purpose === "temporary_holding" ? (
+              <>
+                <p className="font-semibold">
+                  자기주식 일시보유 — 자기참조 평가 (상증령 §54②·§55①)
+                </p>
+                <p className="leading-snug">
+                  자기주식 {fmt(result.treasuryStockApplied.shares)}주를 1주당 평가액으로 재평가해
+                  순자산에 가산했습니다 (발행주식총수 {fmt(result.treasuryStockApplied.effectiveTotalShares)}주 유지).
+                </p>
+                {result.treasuryStockApplied.floor80SelfReferentialApplied && (
+                  <p className="leading-snug">
+                    손익가치가 낮아 1주당 순자산가치의 80%로 평가 — 순자산가치를 80%로 재계산해
+                    {" "}{fmt(result.treasuryStockApplied.floor80NetAssetValue ?? 0)}원의 80%를 1주당 평가액으로 적용 (재재산-616).
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">
+                  자기주식 소각·감자 목적 — 발행주식총수 차감 (재산-240)
+                </p>
+                <p className="leading-snug">
+                  발행주식총수에서 자기주식 {fmt(result.treasuryStockApplied.shares)}주를 차감한
+                  {" "}{fmt(result.treasuryStockApplied.effectiveTotalShares)}주를 기준으로 1주당 순자산가치·순손익가치를 평가했습니다.
+                </p>
+              </>
+            )}
+          </div>
+        )}
 
         {/* PR-L/L2: §63② 기업공개·상장신청 준비 중 평가 — 적용/미적용/§54⑥ 범위 안내 */}
         {input.preIpoListing && result.preIpoListingResult && (
