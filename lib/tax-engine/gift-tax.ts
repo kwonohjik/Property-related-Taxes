@@ -226,6 +226,27 @@ export function calcGiftTax(
   });
 
   // ─────────────────────────────────────────────
+  // STEP 6.5: R-6 재차증여 체인 marginal 보정 (재재산-610)
+  //   직전회차가 그 자신의 사전증여(금번 cutoff 탈락)를 합산한 경우, §58 ⑭(가산재산 산출세액)·
+  //   ⑤_prior(가산재산 과표)·§57 ⑩을 marginal로 축소. drop-out 없으면 priorAggregation 그대로.
+  //   가산재산 과표 = ⑤ × 가산재산/(가산재산 + 순현재) (가산재산 안분공제 차감과 동치).
+  // ─────────────────────────────────────────────
+  const effectivePriorAggregation = priorAggregation.priorRoundHadDropout
+    ? {
+        ...priorAggregation,
+        totalComputedTax: priorAggregation.marginalPriorComputedTax,
+        priorAddedTaxBase:
+          priorAggregation.totalAmount + netCurrentGiftValue > 0
+            ? safeMultiplyThenDivide(
+                taxBase,
+                priorAggregation.totalAmount,
+                priorAggregation.totalAmount + netCurrentGiftValue,
+              )
+            : 0,
+      }
+    : priorAggregation;
+
+  // ─────────────────────────────────────────────
   // STEP 7: §57 세대생략 할증 + 한도 안분 (⑧⑨⑩⑪⑫⑬)
   // ─────────────────────────────────────────────
   const donorGroup = getDonorGroup(input.donor);
@@ -234,7 +255,7 @@ export function calcGiftTax(
     donorGroup,
     input.isMinorDonee,
     grossGiftValue,
-    priorAggregation,
+    effectivePriorAggregation,
     taxBase,
     input.isSubstituteGift,
   );
@@ -278,8 +299,8 @@ export function calcGiftTax(
     generationSkipSurcharge: surchargeResult.additionalSurcharge,
     foreignPropertyRatio: options.foreignPropertyRatio,
     giftAmount: netCurrentGiftValue,
-    priorGiftComputedTax: priorAggregation.totalComputedTax,
-    priorGiftAddedTaxBase: priorAggregation.priorAddedTaxBase,
+    priorGiftComputedTax: effectivePriorAggregation.totalComputedTax,
+    priorGiftAddedTaxBase: effectivePriorAggregation.priorAddedTaxBase,
     aggregatedTaxBase: taxBase,
     farmlandReductionAmount: farmlandReduction,
   });
@@ -323,15 +344,15 @@ export function calcGiftTax(
   // STEP 10: 결과 detail 조립
   // ─────────────────────────────────────────────
   const priorGiftCreditDetail =
-    priorAggregation.totalComputedTax > 0
+    effectivePriorAggregation.totalComputedTax > 0
       ? {
-          priorComputedTax: priorAggregation.totalComputedTax,
-          priorAddedTaxBase: priorAggregation.priorAddedTaxBase,
+          priorComputedTax: effectivePriorAggregation.totalComputedTax,
+          priorAddedTaxBase: effectivePriorAggregation.priorAddedTaxBase,
           aggregatedTaxBase: taxBase,
           creditLimit:
             taxBase === 0
               ? 0
-              : safeMultiplyThenDivide(computedTax, priorAggregation.priorAddedTaxBase, taxBase),
+              : safeMultiplyThenDivide(computedTax, effectivePriorAggregation.priorAddedTaxBase, taxBase),
           priorPaidCredit: creditResult.giftTaxCredit,
         }
       : null;

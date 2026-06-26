@@ -72,6 +72,18 @@ export interface PriorAggregationResult {
    */
   totalComputedTax: number;
   /**
+   * R-6 재차증여 체인 drop-out: 직전회차(matched[0])가 그 자신의 사전증여를 합산했고,
+   * 그 사전증여가 금번 증여의 §47② cutoff(10년)에서 탈락한 경우 true.
+   * (예: 1차 2013·2차 2020·3차 2024 → 1차는 3차 10년 밖·2차 10년 내. 재재산-610.)
+   */
+  priorRoundHadDropout: boolean;
+  /**
+   * drop-out 시 가산재산 산출세액 ⑭ = matched[0].computedTax − 탈락한 직전 사전증여 computedTax.
+   * 직전회차 전체값(totalComputedTax)이 아닌 그 회차의 순증 산출세액 (§58 ⑭ 정합).
+   * drop-out 없으면 totalComputedTax와 동일.
+   */
+  marginalPriorComputedTax: number;
+  /**
    * 가장 최근 합산 회차의 ⑤ = giftTaxBase (§58·§57 한도 산식 분자).
    * 합산 대상 없으면 0.
    */
@@ -149,6 +161,36 @@ export function aggregatePriorGiftsForGift(
   const totalTaxPaid = matched.reduce((s, p) => s + p.giftTaxPaid, 0);
   const totalComputedTax = matched[0]?.computedTax ?? 0;
   const priorAddedTaxBase = matched[0]?.giftTaxBase ?? 0;
+
+  // R-6: 재차증여 체인 drop-out 감지 (재재산-610)
+  //   직전회차(matched[0])가 그 자신의 사전증여를 합산했고, 그 사전증여가 금번 cutoff(boundary47)에서
+  //   탈락한 경우 → matched[0].computedTax는 그 사전증여분을 포함 → 가산재산 산출세액 ⑭은 순증분으로 축소.
+  let priorRoundHadDropout = false;
+  let marginalPriorComputedTax = totalComputedTax;
+  const mostRecent = matched[0];
+  if (mostRecent) {
+    const subBoundary47 = subYears(new Date(mostRecent.giftDate), 10); // 직전회차의 10년 창
+    // 금번 cutoff 탈락(boundary47 이전) + 직전회차 10년 내 + 직전회차보다 이전 + 동일 그룹
+    const droppedSubPrior = priorGifts
+      .filter((g) => {
+        if (g.specialTreatmentType !== undefined) return false;
+        if (!g.donor || !isSameDonorGroup(g.donor, currentDonor)) return false;
+        const d = new Date(g.giftDate);
+        return (
+          isBefore(d, boundary47) && // 금번 10년 밖 (matched에서 탈락)
+          !isBefore(d, subBoundary47) && // 직전회차 10년 내 (직전 합산에 포함됐던 회차)
+          g.giftDate < mostRecent.giftDate // 직전회차보다 이전
+        );
+      })
+      .sort((a, b) => b.giftDate.localeCompare(a.giftDate))[0]; // 가장 최근
+    if (droppedSubPrior) {
+      priorRoundHadDropout = true;
+      marginalPriorComputedTax = Math.max(
+        0,
+        (mostRecent.computedTax ?? 0) - (droppedSubPrior.computedTax ?? 0),
+      );
+    }
+  }
   const totalAdditionalSurcharge = matched.reduce(
     (s, p) => s + (p.additionalGenerationSkipSurcharge ?? 0),
     0,
@@ -167,6 +209,8 @@ export function aggregatePriorGiftsForGift(
     totalAmount,
     totalTaxPaid,
     totalComputedTax,
+    priorRoundHadDropout,
+    marginalPriorComputedTax,
     priorAddedTaxBase,
     totalAdditionalSurcharge,
     nonParentLinealAmount,
