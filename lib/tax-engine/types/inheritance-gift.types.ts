@@ -795,4 +795,18 @@ export interface GiftTaxResult extends TaxResultMeta {
     /** 비대납 결정세액 (비교용 echo) */
     baselineTax: number;
   };
+
+  /**
+   * 조특법 §71 농지 감면 상세 (gift-farmland-reduction-71). 미신청 시 null.
+   * reductionAmount만 finalTax·§69 base 반영, 나머지 echo. Map 금지(feedback_engine_result_map_json_loss).
+   */
+  farmlandReductionDetail?: {
+    farmlandValue: number; // 금번 감면농지 평가액 합계
+    farmlandComputedTax: number; // ㉣ 농지분 산출세액=합산−직전(한도없음,≥0) — 안분 분모
+    reductionLimitRemaining: number; // 5년 한도 잔여=max(0,1억−5년기감면)
+    reductionAmount: number; // ㉤ 감면세액=min(㉣,잔여)
+    reducedFarmlandValue: number; // ㉮ 감면범위=farmlandValue×㉤/㉣
+    excessFarmlandValue: number; // ㉯ 초과분=farmlandValue−㉮
+    cumulative5yrReduction: number; // 5년 누적 감면 echo(1억 도달)
+  } | null;
 }

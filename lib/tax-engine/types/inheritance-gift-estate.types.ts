@@ -377,6 +377,9 @@ export interface EstateItem extends EstateLocationFields {
    */
   isSpecialTreatmentAsset?: boolean;
 
+  /** 조특법 §71① 영농자녀 농지 증여세 감면 대상 자산 (gift-farmland-reduction-71). UI 노출은 농지만. undefined=일반. */
+  isFarmlandGiftReduction?: boolean;
+
   // ===== §47① 부담부증여 채무인수 (gift-burdened-debt-47-1) =====
   /**
    * §47① 부담부증여 수증자 인수 채무액 (원).

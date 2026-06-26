@@ -182,6 +182,19 @@ export function EstateItemEditor({
             />
           )}
 
+        {/* 조특법 §71 영농자녀 농지 증여세 감면 — gift 모드 + 농지(real_estate_land) 한정 */}
+        {mode === "gift" && cat === "real_estate_land" && (
+          <ToggleCard
+            tone="emerald"
+            title="영농자녀 농지 증여세 감면 (조특법 §71)"
+            description="영농자녀(만18세 이상 직계비속·농지소재지 또는 직선 20km 거주·증여 전 3년 자경)·자경농민 요건 충족 시 신청. 감면세액은 5년 합계 1억원 한도(§71②), 초과분은 일반 증여세 과세."
+            checked={item.isFarmlandGiftReduction === true}
+            onCheckedChange={(on) =>
+              onUpdate({ ...item, isFarmlandGiftReduction: on })
+            }
+          />
+        )}
+
         {/* 헤더 칩 인라인 펼침 (분류·분할·영농·가업) */}
         <EstateChipInlineExpand
           expandedKey={inlineExpandedKey}

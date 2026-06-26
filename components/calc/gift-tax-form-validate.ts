@@ -243,6 +243,13 @@ export function validateStep(step: number, form: FormState): string | null {
         if (!p.donor) {
           return `사전증여 ${i + 1}: 증여자를 선택하세요 (§47 합산 그룹 판정).`;
         }
+        // §71 농지 감면 회차이면 감면받은 증여세액 필수 (5년 1억 한도 누계 — 수증자별, donor 그룹 무관)
+        if (
+          p.farmlandReductionApplied &&
+          (!p.farmlandReductionAmount || p.farmlandReductionAmount <= 0)
+        ) {
+          return `사전증여 ${i + 1}: §71 농지 감면 회차이면 감면받은 증여세액을 입력하세요.`;
+        }
         // 동일 그룹 priorGift이면 §58 한도 산식용으로 ⑤·⑦ 필수
         // (다른 그룹은 자동 무시되므로 검증 제외)
         // D2: 조특법 특례(§30의5/6) 회차는 §47 합산 제외 → §47 카드 미노출 → ⑤·⑦ 검증 면제

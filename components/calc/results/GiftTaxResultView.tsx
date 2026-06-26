@@ -47,6 +47,7 @@ import {
   hasBuildingStdReport,
 } from "@/components/calc/results/BuildingStdPriceReportSection";
 import { GiftDonorPaidGrossUpSection } from "@/components/calc/results/GiftDonorPaidGrossUpSection";
+import { FarmlandReductionCard } from "@/components/calc/results/FarmlandReductionCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { parseLawRefsForModal } from "@/lib/utils/law-url";
 import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
@@ -225,6 +226,7 @@ export function GiftTaxResultView({
       s.add("installment");
     if (isInstallmentSplitEligible(result.finalTax)) s.add("split-payment");
     if (result.donorPaidTaxGrossUp?.applied) s.add("donor-paid-grossup");
+    if (result.farmlandReductionDetail) s.add("farmland-reduction");
     if (result.warnings.length > 0) s.add("warnings");
     if (transferTaxResults.length > 0) s.add("burdened-transfer-tax");
     if (stockTransferTaxResults.length > 0) s.add("burdened-stock-transfer-tax");
@@ -591,6 +593,17 @@ export function GiftTaxResultView({
       {result.donorPaidTaxGrossUp?.applied && (
         <PrintSection id="donor-paid-grossup" selectedIds={selectedPrintIds}>
           <GiftDonorPaidGrossUpSection grossUp={result.donorPaidTaxGrossUp} />
+        </PrintSection>
+      )}
+
+      {/* 조특법 §71 영농자녀 농지 감면 상세 — farmlandReductionDetail 있을 때만 */}
+      {result.farmlandReductionDetail && (
+        <PrintSection id="farmland-reduction" selectedIds={selectedPrintIds}>
+          <FarmlandReductionCard
+            detail={result.farmlandReductionDetail}
+            computedTax={result.computedTax}
+            priorTaxCredit={result.creditDetail.giftTaxCredit}
+          />
         </PrintSection>
       )}
 

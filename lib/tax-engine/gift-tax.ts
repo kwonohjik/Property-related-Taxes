@@ -49,6 +49,7 @@ import {
   filterOrdinaryPriors,
   calcSpecialTreatmentStream,
 } from "./gift-special-stream";
+import { deriveFarmlandReduction, toFarmlandReductionDetail } from "./gift-farmland-reduction";
 import type { TaxBracket } from "./types";
 
 // 대납 gross-up 엔진 re-export (분리 파일 — 800줄 정책)
@@ -255,6 +256,26 @@ export function calcGiftTax(
     computedTax + surchargeResult.additionalSurcharge;
 
   // ─────────────────────────────────────────────
+  // STEP 7.5: 조특법 §71 영농자녀 농지 증여세 감면 (gift-farmland-reduction-71)
+  //   감면농지(isFarmlandGiftReduction) 있을 때만. ㉣ 분모는 priorAggregation.totalComputedTax(full).
+  //   §58·§69·finalTax 연계: G-5(§69 base 차감) + G-6(finalTax 차감).
+  // ─────────────────────────────────────────────
+  const farmlandReductionResult = deriveFarmlandReduction(
+    input.giftItems,
+    valuationResults.map((v) => v.valuatedAmount),
+    input.priorGiftsWithin10Years,
+    input.giftDate,
+    computedTax,
+    priorAggregation.totalComputedTax,
+  );
+  const farmlandReduction = farmlandReductionResult?.reductionAmount ?? 0;
+  if (farmlandReductionResult !== null) {
+    allBreakdown.push(...farmlandReductionResult.breakdown);
+    allWarnings.push(...farmlandReductionResult.warnings);
+    allLaws.add(GIFT_LAW.FARMLAND_REDUCTION);
+  }
+
+  // ─────────────────────────────────────────────
   // STEP 8: 세액공제 — §58 안분 한도 + §69 (⑭⑮⑯⑰)
   // ─────────────────────────────────────────────
   const creditResult = calcGiftTaxCredits({
@@ -266,6 +287,7 @@ export function calcGiftTax(
     priorGiftComputedTax: priorAggregation.totalComputedTax,
     priorGiftAddedTaxBase: priorAggregation.priorAddedTaxBase,
     aggregatedTaxBase: taxBase,
+    farmlandReductionAmount: farmlandReduction,
   });
   const totalTaxCredit = creditResult.totalCredit;
   allBreakdown.push(...creditResult.breakdown);
@@ -279,12 +301,14 @@ export function calcGiftTax(
   // ─────────────────────────────────────────────
   const finalTax = Math.max(
     0,
-    totalComputedTaxWithSurcharge - totalTaxCredit,
+    totalComputedTaxWithSurcharge - totalTaxCredit - farmlandReduction,
   );
   allBreakdown.push({
     label: "증여세 결정세액",
     amount: finalTax,
-    note: "= 산출세액합계 − 세액공제 합계",
+    note: farmlandReduction > 0
+      ? "= 산출세액합계 − 세액공제 합계 − 농지 감면세액(§71)"
+      : "= 산출세액합계 − 세액공제 합계",
   });
 
   // ─────────────────────────────────────────────
@@ -379,6 +403,10 @@ export function calcGiftTax(
     publicInterestPenalty: 0,
     installmentPayment: 0,
     cashDeferred: installmentSplit.splitAmount, // §70② 분납 (별지10호 ㊼)
+    // 조특법 §71 농지 감면 detail (gift-farmland-reduction-71) — 미신청 시 null
+    farmlandReductionDetail: farmlandReductionResult
+      ? toFarmlandReductionDetail(farmlandReductionResult)
+      : null,
     ...(options._echoGrossUp !== undefined ? { donorPaidTaxGrossUp: options._echoGrossUp } : {}), // gross-up echo 주입 → derivePriorGiftAddition 참조
   };
 

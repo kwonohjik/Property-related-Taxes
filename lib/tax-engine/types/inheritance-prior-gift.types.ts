@@ -122,6 +122,15 @@ export interface PriorGift {
    * 미입력/undefined 시 0으로 처리.
    */
   priorSpecialTaxPaid?: number;
+
+  // ===== 조특법 §71 영농자녀 농지 감면 (gift-farmland-reduction-71) =====
+  /** 그 회차가 조특법 §71 농지 감면 적용 회차였는지 (5년 1억 한도 누계 대상 식별) */
+  farmlandReductionApplied?: boolean;
+  /**
+   * 그 회차에 감면받은 증여세액(원) — §71② 5년 1억 한도 누계용.
+   * farmlandReductionApplied=true 시 필수(validation 차단). 5년 필터는 엔진이 giftDate로 처리.
+   */
+  farmlandReductionAmount?: number;
 }
 
 /**

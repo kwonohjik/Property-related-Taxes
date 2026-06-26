@@ -155,6 +155,9 @@ const baseItemSchema = z.object({
    * 법령 근거: §30의5⑪ — 창업자금 외 자산은 특례 스트림 과세가액에 §47② 합산 금지.
    */
   isSpecialTreatmentAsset: z.boolean().optional(),
+  // ===== 조특법 §71 영농자녀 농지 감면 (gift-farmland-reduction-71) =====
+  // 동기화 지점 ⑫ — EstateItem.isFarmlandGiftReduction과 동기화 (누락 시 z.object 침묵 strip)
+  isFarmlandGiftReduction: z.boolean().optional(),
 });
 
 export const landItemSchema = baseItemSchema.extend({

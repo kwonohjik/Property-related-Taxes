@@ -89,6 +89,11 @@ export const priorGiftSchema = z
      * specialTreatmentType 있을 때만 유효. 미입력 시 0으로 처리.
      */
     priorSpecialTaxPaid: z.number().nonnegative().optional(),
+    // ===== 조특법 §71 영농자녀 농지 감면 (gift-farmland-reduction-71) — 동기화 지점 ⑫ =====
+    /** 그 회차 §71 농지 감면 적용 여부 (5년 1억 한도 누계 식별) */
+    farmlandReductionApplied: z.boolean().optional(),
+    /** 그 회차 감면받은 증여세액 — farmlandReductionApplied=true 시 필수(client validate ⑧) */
+    farmlandReductionAmount: z.number().nonnegative().optional(),
   })
   .superRefine((data, ctx) => {
     // 영리법인 사전증여 필수요건 (동기화 지점 ⑨)

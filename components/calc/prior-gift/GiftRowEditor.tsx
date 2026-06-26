@@ -422,6 +422,28 @@ export function GiftRowEditor({
         </>
       )}
 
+      {/* 조특법 §71 농지 감면 회차 — 증여세 모드 (금번 5년 1억 한도 누계용) */}
+      {showGiftPhaseA && !gift.specialTreatmentType && (
+        <ToggleCard
+          tone="emerald"
+          title="이 회차 §71 농지 감면 적용"
+          description="이 사전증여가 조특법 §71 농지 감면 회차면 선택 — 감면세액이 금번 5년 1억원 한도 누계에 반영됩니다."
+          checked={gift.farmlandReductionApplied === true}
+          onCheckedChange={(on) =>
+            set({
+              farmlandReductionApplied: on || undefined,
+              farmlandReductionAmount: on ? gift.farmlandReductionAmount : undefined,
+            })
+          }
+        >
+          <CurrencyInput
+            label="감면받은 증여세액"
+            value={gift.farmlandReductionAmount ? String(gift.farmlandReductionAmount) : ""}
+            onChange={(v) => set({ farmlandReductionAmount: parseAmount(v) || undefined })}
+          />
+        </ToggleCard>
+      )}
+
       {/* [B] 과세표준 산정 방식 — 상속세 모드(showIsHeir) 전용.
        * 위치: 증여가액 다음, §53의2 직전 (§53 도출 직전 = 계산 로직 순서).
        * auto 복귀 시 marriageBirthDeduction 보존(초기화 금지). */}

@@ -395,6 +395,12 @@ export interface GiftTaxCreditParams {
    * Phase A: priorGiftComputedTax > 0 일 때만 한도 산식 적용.
    */
   aggregatedTaxBase?: number;
+  /**
+   * 조특법 §71 농지 감면세액 (gift-farmland-reduction-71).
+   * §69 신고세액공제 기준(remainingTax)에서 §58·외국납부와 함께 차감 (G-5).
+   * 미입력/0 = 농지 감면 없음(기존 동작 불변).
+   */
+  farmlandReductionAmount?: number;
 }
 
 /**
@@ -413,6 +419,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     priorGiftComputedTax = 0,
     priorGiftAddedTaxBase = 0,
     aggregatedTaxBase = 0,
+    farmlandReductionAmount = 0,
   } = params;
 
   const totalComputedTax = computedTax + generationSkipSurcharge;
@@ -476,6 +483,17 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
   // 신고세액공제는 "기납부 및 외국납부 공제 후 남은 세액"의 3%이므로
   // priorPaidCredit를 반드시 remainingTax에서 차감해야 함.
   let remainingTax = Math.max(0, totalComputedTax - priorPaidCredit - foreignTaxCredit);
+
+  // 1.5 조특법 §71 농지 감면세액 — §69 기준에서 차감 (G-5). 산식·산출세액 영향 없음(§69 base만 축소).
+  if (farmlandReductionAmount > 0) {
+    remainingTax = Math.max(0, remainingTax - farmlandReductionAmount);
+    allBreakdown.push({
+      label: "조특법 §71 농지 감면세액 (§69 신고세액공제 기준 차감)",
+      amount: -farmlandReductionAmount,
+      lawRef: GIFT_LAW.FARMLAND_REDUCTION,
+    });
+    appliedLaws.add(GIFT_LAW.FARMLAND_REDUCTION);
+  }
 
   // 2. 조특법 특례 절감액 계산 (선택 시)
   let specialTreatmentCredit = 0;
