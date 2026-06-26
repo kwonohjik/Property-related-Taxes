@@ -275,13 +275,20 @@ export function calcGiftTax(
   //   감면농지(isFarmlandGiftReduction) 있을 때만. ㉣ 분모는 priorAggregation.totalComputedTax(full).
   //   §58·§69·finalTax 연계: G-5(§69 base 차감) + G-6(finalTax 차감).
   // ─────────────────────────────────────────────
+  // R-7: 손자(세대생략) 영농자녀 — §71 한도 base = 산출세액 + 세대생략가산액 (재산세과-2292 제3안).
+  //   부→자(세대생략 아님, surchargeResult.detail===null)는 ⑦ 그대로 (현행 불변).
+  const isGenerationSkipFarmland = surchargeResult.detail !== null;
   const farmlandReductionResult = deriveFarmlandReduction(
     ordinaryGiftItems, // valuationResults(=ordinaryGiftItems 평가)와 인덱스 정합 + 금번총가액 분모
     valuationResults.map((v) => v.valuatedAmount),
     input.priorGiftsWithin10Years,
     input.giftDate,
-    computedTax,
-    priorAggregation.totalComputedTax,
+    isGenerationSkipFarmland ? totalComputedTaxWithSurcharge : computedTax, // ㉡: 손자면 ⑬(⑦+세대생략 할증)
+    isGenerationSkipFarmland
+      ? priorAggregation.totalComputedTax + priorAggregation.totalAdditionalSurcharge
+      : priorAggregation.totalComputedTax, // ㉠: 손자면 직전 ⑬(직전 ⑦+직전 할증).
+      // SCOPE_OUT: 손자+농지 다건 사전증여 시 totalAdditionalSurcharge=Σmatched⑫ over-count
+      //   (단일-prior 전제 — gift-farmland-reduction.ts:16). 희소·후속.
   );
   const farmlandReduction = farmlandReductionResult?.reductionAmount ?? 0;
   if (farmlandReductionResult !== null) {
