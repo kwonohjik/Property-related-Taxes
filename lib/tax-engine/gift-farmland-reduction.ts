@@ -36,6 +36,11 @@ export interface FarmlandGiftReductionInput {
   priorComputedTax: number;
   /** 5년 내 기감면받은 증여세액 합계 (PriorGift 5년 필터 Σ farmlandReductionAmount) */
   priorReductionWithin5Years: number;
+  /**
+   * R-2: 금번 증여 총 평가액(농지+비농지). ㉣ 농지분 산출세액 안분 분모.
+   * 단일 농지(=farmlandValue)면 ratio=1 → ㉣=full marginal (무회귀).
+   */
+  currentTotalGiftValue: number;
 }
 
 export interface FarmlandGiftReductionResult {
@@ -73,18 +78,31 @@ export function calcFarmlandGiftReduction(
     aggregatedComputedTax,
     priorComputedTax,
     priorReductionWithin5Years,
+    currentTotalGiftValue,
   } = input;
 
   const breakdown: CalculationStep[] = [];
   const warnings: string[] = [];
 
-  // ㉣ 농지분 산출세액 = 합산 − 직전 (한도 미적용, ≥0 가드)
-  const farmlandComputedTax = Math.max(0, aggregatedComputedTax - priorComputedTax);
+  // ㉣ 농지분 산출세액 = (합산 − 직전) × 농지가액/금번총가액 (한도 미적용, ≥0 가드)
+  //   R-2: 농지+비농지 혼합 시 농지분으로 가액비례 안분 — §71 감면(㉤)이 비농지분 세액까지
+  //   감면하지 않도록 제한. 단일 증여 내 혼합 직접 예규 부재 → 가액비례(법령 도출).
+  //   단일 농지(농지=총가액)면 ratio=1 → full marginal (무회귀).
+  const currentMarginalTax = Math.max(0, aggregatedComputedTax - priorComputedTax);
+  const farmlandComputedTax =
+    currentTotalGiftValue > 0
+      ? safeMultiplyThenDivide(currentMarginalTax, farmlandValue, currentTotalGiftValue)
+      : currentMarginalTax;
+  const isMixed = farmlandValue < currentTotalGiftValue;
   breakdown.push({
-    label: "농지분 산출세액 ㉣ (합산 산출세액 − 직전 회차 산출세액)",
+    label: isMixed
+      ? "농지분 산출세액 ㉣ ((합산 − 직전) × 농지가액/금번총가액 안분)"
+      : "농지분 산출세액 ㉣ (합산 산출세액 − 직전 회차 산출세액)",
     amount: farmlandComputedTax,
     lawRef: GIFT.FARMLAND_REDUCTION,
-    note: `${aggregatedComputedTax.toLocaleString()} − ${priorComputedTax.toLocaleString()}`,
+    note: isMixed
+      ? `(${aggregatedComputedTax.toLocaleString()} − ${priorComputedTax.toLocaleString()}) × ${farmlandValue.toLocaleString()}/${currentTotalGiftValue.toLocaleString()}`
+      : `${aggregatedComputedTax.toLocaleString()} − ${priorComputedTax.toLocaleString()}`,
   });
 
   // 5년 감면한도 잔여
@@ -180,6 +198,9 @@ export function deriveFarmlandReduction(
   );
   if (farmlandValue <= 0) return null; // 감면농지 미신청 — 기존 동작 불변
 
+  // R-2: 금번 증여 총 평가액(농지+비농지) — ㉣ 안분 분모
+  const currentTotalGiftValue = valuatedAmounts.reduce((s, v) => s + (v ?? 0), 0);
+
   // §71② 5년 기감면 누계 (수증자별, donor 무관). §47② 10년 합산과 별개 비대칭.
   const boundary5yr = subYears(new Date(giftDate), 5);
   const priorReductionWithin5Years = priorGifts.reduce((s, p) => {
@@ -193,6 +214,7 @@ export function deriveFarmlandReduction(
     aggregatedComputedTax,
     priorComputedTax,
     priorReductionWithin5Years,
+    currentTotalGiftValue,
   });
 }
 
