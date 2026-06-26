@@ -51,12 +51,17 @@ async function giftStep0(page: Page) {
 }
 
 async function giftAddLand(page: Page) {
+  // 자산명은 편집 모달 안에 있으므로 keepModalOpen으로 유지 후 입력 → 직접 닫기.
   await addLandAsset(page, {
     area: "300",
     unitPrice: "1000000",
     addButtonName: /증여재산 추가/,
+    keepModalOpen: true,
   });
-  await page.getByPlaceholder(/본가 토지/).fill("본가 토지");
+  const editDialog = page.getByRole("dialog");
+  await editDialog.getByPlaceholder(/본가 토지/).fill("본가 토지");
+  await editDialog.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
 }
 
 test.describe("분납 §70② (상속·증여)", () => {
@@ -69,8 +74,8 @@ test.describe("분납 §70② (상속·증여)", () => {
     // 그룹 D(납부 방법) 헤더 클릭 → 펼침 (디폴트 접힘 대응)
     await page.getByRole("button", { name: /납부 방법/ }).click();
 
-    // 분납 토글 노출 + ON
-    const toggle = page.getByText("분납 신청 (상증법 §70②)");
+    // 분납 토글 노출 + ON (ToggleCard Switch는 role=switch — title 텍스트 클릭으로는 토글 안 됨)
+    const toggle = page.getByRole("switch", { name: /분납 신청/ });
     await expect(toggle).toBeVisible();
     await toggle.click();
     await expect(page.getByText("분납 희망액")).toBeVisible();
@@ -94,8 +99,8 @@ test.describe("분납 §70② (상속·증여)", () => {
     // 그룹 D(납부 방법) 헤더 클릭 → 펼침 (디폴트 접힘 대응)
     await page.getByRole("button", { name: /납부 방법/ }).click();
 
-    // 연부연납 ON → 분납 배타 안내 노출
-    await page.getByText("연부연납 신청 (상증법 §71)").click();
+    // 연부연납 ON → 분납 배타 안내 노출 (role=switch로 토글)
+    await page.getByRole("switch", { name: /연부연납 신청/ }).click();
     await expect(
       page.getByText(/연부연납\(§71\) 신청 중에는 분납을 신청할 수 없습니다/),
     ).toBeVisible();
@@ -139,11 +144,11 @@ test.describe("분납 §70② (상속·증여)", () => {
     await giftAddLand(page); // 3억 → 증여공제 5천만 → 결정세액 >1천만
     await nextSteps(page, 2); // Step1→2→3
 
-    // Step4: 분납 칩 펼침 → 분납 토글 ON
+    // Step4: 분납 칩 펼침(칩 라벨 클릭) → 분납 ToggleCard ON(role=switch)
     await page.getByText("분납 신청 (§70②)").click();
-    const toggle = page.getByText("분납 신청 (상증법 §70②)");
-    await expect(toggle).toBeVisible();
-    await toggle.click();
+    await page
+      .getByRole("switch", { name: "분납 신청 (상증법 §70②)" })
+      .click();
     await expect(page.getByText("분납 희망액")).toBeVisible();
 
     await calcAndWaitResult(page, { taxType: "gift" });
