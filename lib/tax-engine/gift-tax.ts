@@ -312,6 +312,7 @@ export function calcGiftTax(
     creditInput: input.creditInput,
     computedTax,
     generationSkipSurcharge: surchargeResult.additionalSurcharge,
+    giftDate: input.giftDate,
     foreignPropertyRatio: options.foreignPropertyRatio,
     giftAmount: netCurrentGiftValue,
     priorGiftComputedTax: effectivePriorAggregation.totalComputedTax,
@@ -399,6 +400,7 @@ export function calcGiftTax(
     hasPriorGifts: priorAggregation.matchedPriorGifts.length > 0,
     // §69 formula 표시 정합 — 외국납부(§59) 차감 후 기준액 echo
     filingCreditBase: creditResult.filingCreditBase,
+    filingCreditRate: creditResult.filingCreditRate,
     foreignTaxCredit: creditResult.foreignTaxCredit,
     // ⑤ formula 표시 정합 — 비과세·감정평가수수료 차감 표기 (0이면 생략)
     exemptTotal: exemptAmount,

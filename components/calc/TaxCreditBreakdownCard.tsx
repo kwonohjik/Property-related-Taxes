@@ -256,6 +256,8 @@ function buildSection69Formula(
 ): React.ReactNode {
   const base = credit.filingCreditBase ?? 0;
   const totalWithSurcharge = credit.totalComputedTaxWithSurcharge ?? 0;
+  // §69 신고세액공제율 (연도별 echo, 미전달 이력 호환 fallback 3%).
+  const filingRatePct = (credit.filingCreditRate ?? 0.03) * 100;
   const giftCredit = credit.giftTaxCredit;
   const foreign = credit.foreignTaxCredit;
   const special = credit.specialTreatmentCredit;
@@ -278,10 +280,10 @@ function buildSection69Formula(
   return (
     <>
       <div>
-        신고세액공제 = 신고기한 내 신고분 세액 × 3%
+        신고세액공제 = 신고기한 내 신고분 세액 × {filingRatePct}%
       </div>
       <div className="flex flex-wrap items-baseline gap-x-1">
-        = <Amt val={base} /> × 3% ={" "}
+        = <Amt val={base} /> × {filingRatePct}% ={" "}
         <span className="font-semibold"><Amt val={credit.filingCredit} /></span>
       </div>
       <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
@@ -481,7 +483,7 @@ export function TaxCreditBreakdownCard({
           formula={section30Formula}
         />
         <CreditRow
-          label="신고세액공제 (3%)"
+          label={`신고세액공제 (${(credit.filingCreditRate ?? 0.03) * 100}%)`}
           amount={credit.filingCredit}
           lawRef="§69"
           formula={section69Formula}
