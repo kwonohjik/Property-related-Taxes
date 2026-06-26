@@ -276,7 +276,7 @@ export function calcGiftTax(
   //   §58·§69·finalTax 연계: G-5(§69 base 차감) + G-6(finalTax 차감).
   // ─────────────────────────────────────────────
   const farmlandReductionResult = deriveFarmlandReduction(
-    input.giftItems,
+    ordinaryGiftItems, // valuationResults(=ordinaryGiftItems 평가)와 인덱스 정합 + 금번총가액 분모
     valuationResults.map((v) => v.valuatedAmount),
     input.priorGiftsWithin10Years,
     input.giftDate,
