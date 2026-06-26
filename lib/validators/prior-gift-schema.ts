@@ -94,6 +94,8 @@ export const priorGiftSchema = z
     farmlandReductionApplied: z.boolean().optional(),
     /** 그 회차 감면받은 증여세액 — farmlandReductionApplied=true 시 필수(client validate ⑧) */
     farmlandReductionAmount: z.number().nonnegative().optional(),
+    /** §71⑥ 그 회차 농지 과세부분(㉯) — 설정 시 §47② 합산에 giftAmount 대신 사용 (감면농지 prior) */
+    farmlandTaxablePortion: z.number().nonnegative().optional(),
   })
   .superRefine((data, ctx) => {
     // 영리법인 사전증여 필수요건 (동기화 지점 ⑨)

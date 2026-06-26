@@ -131,6 +131,15 @@ export interface PriorGift {
    * farmlandReductionApplied=true 시 필수(validation 차단). 5년 필터는 엔진이 giftDate로 처리.
    */
   farmlandReductionAmount?: number;
+  /**
+   * §71⑥ — 그 회차 감면농지의 과세부분(㉯ 감면한도 초과분 농지가액).
+   * 설정 시 §47② 동일인 합산에서 giftAmount(전액) 대신 이 값으로 합산 (감면부분 ㉮ 제외).
+   * 법령: 조특법 §71⑥ — 감면받은 농지등은 §47② 합산 증여재산가액에 미포함(과세부분만).
+   * 예규: 재산세과-2450·법규재산-2314 (3차+ 증여, 직전 감면농지 ㉯만 합산).
+   * farmlandReductionApplied=true 일 때만 유효. 미설정이면 전액 합산(2차 = 재재산-1454 불변).
+   * 결과 화면 FarmlandReductionCard의 ㉯(excessFarmlandValue) 출력을 다음 회차 입력으로 사용.
+   */
+  farmlandTaxablePortion?: number;
 }
 
 /**

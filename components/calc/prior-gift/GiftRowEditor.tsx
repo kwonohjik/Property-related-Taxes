@@ -428,6 +428,7 @@ export function GiftRowEditor({
             set({
               farmlandReductionApplied: on || undefined,
               farmlandReductionAmount: on ? gift.farmlandReductionAmount : undefined,
+              farmlandTaxablePortion: on ? gift.farmlandTaxablePortion : undefined,
             })
           }
         >
@@ -435,6 +436,13 @@ export function GiftRowEditor({
             label="감면받은 증여세액"
             value={gift.farmlandReductionAmount ? String(gift.farmlandReductionAmount) : ""}
             onChange={(v) => set({ farmlandReductionAmount: parseAmount(v) || undefined })}
+          />
+          {/* §71⑥ 과세부분 ㉯ — 설정 시 §47② 합산에 전액 대신 이 값 사용 (3차+ 증여, 감면농지 prior) */}
+          <CurrencyInput
+            label="과세부분 농지가액 ㉯ (선택 — §71⑥ 합산용)"
+            value={gift.farmlandTaxablePortion ? String(gift.farmlandTaxablePortion) : ""}
+            onChange={(v) => set({ farmlandTaxablePortion: parseAmount(v) || undefined })}
+            hint="조특법 §71⑥ — 이 감면농지를 동일인 합산할 때 감면부분 제외, 과세부분(초과분)만 합산. 결과 화면 ㉯(감면한도 초과분) 값을 입력. 미입력 시 전액 합산."
           />
         </ToggleCard>
       )}
