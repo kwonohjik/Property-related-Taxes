@@ -50,6 +50,7 @@ import {
   calcSpecialTreatmentStream,
 } from "./gift-special-stream";
 import { deriveFarmlandReduction, toFarmlandReductionDetail } from "./gift-farmland-reduction";
+import { calcAggregationExcludedStream } from "./gift-aggregation-excluded-stream";
 import type { TaxBracket } from "./types";
 
 // 대납 gross-up 엔진 re-export (분리 파일 — 800줄 정책)
@@ -94,10 +95,17 @@ export function calcGiftTax(
   const allWarnings: string[] = [];
   const allLaws: Set<string> = new Set([GIFT_LAW.TAXABLE_VALUE]);
 
+  // 합산배제증여재산(§41의3·§41의5) 분리 — §47② 격리·§55①3호 별도 과세표준.
+  // 빈 배열이면 ordinaryGiftItems === giftItems → 현행 동작 100% 보존.
+  const aggExclItems = input.giftItems.filter((i) => i.isAggregationExcludedGift);
+  const ordinaryGiftItems = input.giftItems.filter(
+    (i) => !i.isAggregationExcludedGift,
+  );
+
   // ─────────────────────────────────────────────
   // STEP 1: 재산 평가
   // ─────────────────────────────────────────────
-  const valuationResults = evaluateAllEstateItems(input.giftItems);
+  const valuationResults = evaluateAllEstateItems(ordinaryGiftItems);
   const grossGiftValue = valuationResults.reduce(
     (sum, v) => sum + v.valuatedAmount,
     0,
@@ -130,7 +138,7 @@ export function calcGiftTax(
   // ─────────────────────────────────────────────
   const assumedDebtTotal = Math.max(
     0,
-    input.giftItems.reduce(
+    ordinaryGiftItems.reduce(
       (sum, item) => sum + (item.assumedDebtForGift ?? 0),
       0,
     ),
@@ -190,7 +198,7 @@ export function calcGiftTax(
   // ─────────────────────────────────────────────
   // STEP 5: 과세표준 ⑤ (§55 ② — §55① 감정평가수수료 차감, 시행령 §46의2 → §20의3 준용)
   // ─────────────────────────────────────────────
-  const hasAppraisalValuation = input.giftItems.some(
+  const hasAppraisalValuation = ordinaryGiftItems.some(
     (i) => (i.valuationMethod ?? resolveValuationMethod(i)) === "appraisal",
   );
   const appraisalFee = calcAppraisalFeeDeduction(input.appraisalFee, {
@@ -312,6 +320,20 @@ export function calcGiftTax(
   });
 
   // ─────────────────────────────────────────────
+  // STEP 9.5: 합산배제증여재산(§41의3·§41의5) 스트림 — §47② 격리·§55①3호 별도 과세표준
+  //   일반 스트림과 독립 계산 후 결과 합산. 빈 배열이면 null → 현행 동작 보존.
+  // ─────────────────────────────────────────────
+  const aggExcl =
+    aggExclItems.length > 0
+      ? calcAggregationExcludedStream(aggExclItems, input, brackets)
+      : null;
+  if (aggExcl) {
+    allBreakdown.push(...aggExcl.breakdown);
+    for (const w of aggExcl.warnings) allWarnings.push(w);
+  }
+  const combinedFinalTax = finalTax + (aggExcl?.finalTax ?? 0);
+
+  // ─────────────────────────────────────────────
   // STEP 10: 결과 detail 조립
   // ─────────────────────────────────────────────
   const priorGiftCreditDetail =
@@ -355,22 +377,23 @@ export function calcGiftTax(
 
   // 분납 (§70②) — finalTax 산출 후 내부 계산 (순환 회피). 별지10호 ㊼ cashDeferred echo.
   const installmentSplit = calcInstallmentSplit({
-    payableTax: finalTax,
+    payableTax: combinedFinalTax,
     applyInstallmentSplit: input.applyInstallmentSplit ?? false,
     requestedSplitAmount: input.requestedSplitAmount,
     applyLongTermInstallment: false, // 증여 연부연납 미구현 → 배타 대상 없음
   });
 
   const partialResult = {
-    grossGiftValue,
+    grossGiftValue: grossGiftValue + (aggExcl?.grossValue ?? 0),
     exemptAmount,
     aggregatedGiftValue,
     totalDeduction,
-    taxBase,
-    computedTax,
-    generationSkipSurcharge: surchargeResult.additionalSurcharge,
-    totalTaxCredit,
-    finalTax,
+    taxBase: taxBase + (aggExcl?.taxBase ?? 0),
+    computedTax: computedTax + (aggExcl?.computedTax ?? 0),
+    generationSkipSurcharge:
+      surchargeResult.additionalSurcharge + (aggExcl?.generationSkipSurcharge ?? 0),
+    totalTaxCredit: totalTaxCredit + (aggExcl?.totalCredit ?? 0),
+    finalTax: combinedFinalTax,
     deductionDetail: deductionResult,
     creditDetail: creditResult,
     valuationResults,
@@ -380,7 +403,8 @@ export function calcGiftTax(
     appliedLawDate,
     // Phase A 신규
     donorGroup,
-    additionalGenerationSkipSurcharge: surchargeResult.additionalSurcharge,
+    additionalGenerationSkipSurcharge:
+      surchargeResult.additionalSurcharge + (aggExcl?.generationSkipSurcharge ?? 0),
     generationSkipSurchargeDetail: surchargeResult.detail,
     // §57① 단서 적용 여부 echo (단서로 할증이 배제된 경우에만 true)
     generationSkipProvisoApplied: input.isSubstituteGift === true ? true : undefined,
@@ -407,6 +431,18 @@ export function calcGiftTax(
     farmlandReductionDetail: farmlandReductionResult
       ? toFarmlandReductionDetail(farmlandReductionResult)
       : null,
+    // 합산배제증여재산(§41의3·§41의5) 별도 스트림 echo — 결과뷰 별도 카드 (별지 서식은 일반분 유지)
+    aggregationExcludedDetail: aggExcl
+      ? {
+          grossValue: aggExcl.grossValue,
+          taxBase: aggExcl.taxBase,
+          computedTax: aggExcl.computedTax,
+          generationSkipSurcharge: aggExcl.generationSkipSurcharge,
+          totalCredit: aggExcl.totalCredit,
+          finalTax: aggExcl.finalTax,
+          breakdown: aggExcl.breakdown,
+        }
+      : undefined,
     ...(options._echoGrossUp !== undefined ? { donorPaidTaxGrossUp: options._echoGrossUp } : {}), // gross-up echo 주입 → derivePriorGiftAddition 참조
   };
 

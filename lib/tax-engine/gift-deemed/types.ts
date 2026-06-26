@@ -13,6 +13,7 @@ export type DeemedGiftType =
   | "debt_forgiveness" // §36 (4)
   | "free_realestate" // §37 (5)
   | "free_loan" // §41의4 (6)
+  | "free_loan_aggregated" // §41의4 §43② 1년내 동일거래 합산 (6b)
   | "merger" // §38 (7)
   | "capital_increase" // §39 (8) — 단건
   | "capital_increase_allocation" // §39 cap-table 다수증자·다증여자 (8b)
@@ -27,7 +28,8 @@ export type DeemedGiftType =
   | "property_service_use" // §42 재산사용·용역제공 (Phase 3)
   | "org_change" // §42의2 법인 조직변경 (Phase 3)
   | "value_increase" // §42의3 재산취득 후 가치증가 (Phase 3)
-  | "specific_corp"; // §45의5 특정법인과의 거래 (Phase 3)
+  | "specific_corp" // §45의5 특정법인과의 거래 (Phase 3)
+  | "related_corp"; // §45의3 특수관계법인과의 거래(일감몰아주기) (Phase 3)
 
 /** 모든 계산기 공통 결과 */
 export interface DeemedGiftResult {
@@ -44,6 +46,10 @@ export interface DeemedGiftResult {
   legalBasis: string;
   /** 임계 판정 근거 echo */
   thresholdEcho?: Record<string, number | boolean>;
+  /** §41의3 정산 방향 — taxation(과세)/refund(평가손실 환급)/none(기준미달). 미설정 시 일반 의제 */
+  direction?: "taxation" | "refund" | "none";
+  /** §41의3④ 단서·령§31의3⑥ 환급 대상액(=평가손실 (B+C)−A). direction==="refund"만 > 0 */
+  refundBase?: number;
   /** 증여세 합산배제 대상 여부 (§47① — §40①2·3호=true / §40①1호=false). 증여세 연계 echo */
   aggregationExcluded?: boolean;
   /** 증여자 연대납부의무 면제 여부 (§4의2⑥ — §40 등 명시 유형 true). 증여세 연계 echo */
@@ -75,15 +81,16 @@ export interface DeemedGiftResult {
     relation?: GiftDonorRelation;
   }[];
   /**
-   * §37 다기간(G2/G3) — window별 별개 증여 산출. plain 배열(Map 금지).
+   * §37 다기간(G2/G3)·§41의4② 다년 — window별 별개 증여 산출. plain 배열(Map 금지).
    * ⚠️ 합산 금지: deemedGiftValue는 첫 window(현재 증여)만 — 나머지는 미래 별건.
    */
   periodBreakdown?: {
     index: number;
     giftDate: string; // window 증여일
-    baseValue: number; // free_use 부동산가액 / collateral 차입금
-    benefit: number; // free_use 5년 현가합 / collateral 차입이익
+    baseValue: number; // free_use 부동산가액 / collateral·free_loan 대출금
+    benefit: number; // free_use 5년 현가합 / collateral·free_loan 대출이익(일수안분 후)
     applied: boolean; // 기준금액(1억/1천만) 충족
+    dayCount?: number; // §41의4② 해당 window 실제 일수(마지막 해 안분 표시용). §37=undefined
   }[];
   /** §41의2 초과배당 전용 상세 (excessDividendDetail — plain 객체, Map 금지) */
   excessDividendDetail?: ExcessDividendDetail;
@@ -110,6 +117,56 @@ export interface DeemedGiftResult {
   capitalDecreaseMulti?: CapitalDecreaseMultiResult;
   /** 합병(§38) 주주 매트릭스 — Phase B(다수 대주주·동일인 자기증여). deemedGiftValue=Σ applied netGain */
   mergerMatrix?: MergerMatrix;
+  // ── §45의3 일감몰아주기 (Phase 3) — base optional 필드 (extends 금지, 기존 패턴) ──
+  /** §45의3 수증자별 명세 — 배열(Map 금지, feedback_engine_result_map_json_loss) */
+  recipientBreakdown?: RcRecipientBreakdown[];
+  /** §45의3 판정된 지배주주 이름 */
+  rulingShareholder?: string;
+  /** §45의3 특수관계법인거래비율 분수 */
+  tradeRatio?: { numer: number; denom: number };
+  /** §45의3 특수관계매출 합계(원) */
+  relatedSales?: number;
+  /** §45의3 수혜법인 단위 공통 과세제외매출(원) */
+  taxableExcludedSales?: number;
+  /** §45의3 과세매출비율 적용 전 세후영업이익(원) */
+  baseAfterTaxProfit?: number;
+  /** §45의3 거래비율 분자(특수관계매출 − 과세제외) */
+  tradeRatioNumer?: number;
+  /** §45의3 거래비율 분모(총매출 − 과세제외) */
+  tradeRatioDenom?: number;
+  /** §45의3 과세요건 충족 여부 */
+  taxRequirementMet?: boolean;
+  /** §45의3 정상거래비율 분수 */
+  normalTradeRatio?: { numer: number; denom: number };
+  /** §45의3 한계보유비율 분수 */
+  marginalOwnershipRatio?: { numer: number; denom: number };
+  // ── §45의5 특정법인 멀티 · §43②합산 · §45의2 · §42의3 (origin/master) ──
+  /** §45의5 특정법인 다주주(roster) 모드 — 주주별 증여가액 + §45의5② 한도 (Map 금지) */
+  specificCorpMulti?: SpecificCorpMultiResult;
+  /**
+   * §43² 1년 이내 동일거래(§41의4) 합산 — 건별 echo. plain 배열(Map 금지, feedback_engine_result_map_json_loss).
+   * deemedGiftValue=합산 총액. 증여시기=isThresholdCrossing 건의 loanDate.
+   */
+  aggregationBreakdown?: {
+    label: string; // ㉮·㉯·㉰ 또는 "건 N"
+    loanDate: string; // 거래일(=증여일 echo)
+    loanAmount: number;
+    rawBenefit: number; // 적정이자−실제이자 (임계판정 전, max(0,))
+    eligible: boolean; // §41의4③ 게이트 통과
+    cumulativeBenefit: number; // 누계 rawBenefit
+    isThresholdCrossing: boolean; // 누계 1천만 첫 도달(=증여시기)
+  }[];
+  /**
+   * §45의2 명의신탁 유상증자(per_share 모드) echo — plain 객체(Map 금지, feedback_engine_result_map_json_loss).
+   * total 모드는 undefined. 결과뷰가 산식(1주당평가×신주수)·평가원칙 비교(인수가·권리락·증자전) 표시에 사용.
+   */
+  nomineeCapitalIncrease?: {
+    perSharePrice: number;
+    nomineeShares: number;
+    subscriptionPrice?: number;
+    theoreticalExRightsPrice?: number;
+    preIncreasePerShare?: number;
+  };
   /**
    * §42의3 재산취득 후 가치증가 — 적용요건 echo (산식 불변, feedback_engine_result_map_json_loss: plain 값만).
    * 입력에 사유·날짜가 하나도 없으면 undefined(기존 동작 바이트 동일).
@@ -121,6 +178,26 @@ export interface DeemedGiftResult {
     holdingYears?: number; // 취득~사유발생 연수 echo
     isExchangeListingNotice?: boolean; // reason==="similar" → 결과뷰 §41의3 경계 amber
   };
+}
+
+/** §45의3 수증자 1명의 직접/간접 분해 명세 (배열 요소 — Map 금지) */
+export interface RcRecipientBreakdown {
+  /** 표시명: name.trim() || "지배주주등" (feedback_no_internal_id_in_result) */
+  recipientName: string;
+  directGain: number;
+  indirectGain: number;
+  subtotal: number;
+  pretaxProfit: number;
+  tradeRatioOver: { numer: number; denom: number };
+  /** 직접보유비율(차감 전 raw) — UI 대칭 표시 */
+  directRatioRaw: { numer: number; denom: number };
+  /** §⑱ recipient 간접보유비율 raw — "미작동"과 "차감후 0" 구분 echo */
+  indirectRatioRaw: { numer: number; denom: number };
+  directOwnershipOver: { numer: number; denom: number };
+  indirectOwnershipOver: { numer: number; denom: number };
+  additionalExclusion: number;
+  totalExclusion: number;
+  dividendDeduction: number;
 }
 
 // ── 입력 타입 ──
@@ -202,13 +279,38 @@ export interface RectificationInput {
   terminationDate: string; // ISO. 중단사유 발생일(소유자 사망·토지 양도 등 §81⑥)
 }
 
-/** (6) 금전무상대출 §41의4 */
+/** (6) 금전무상대출 §41의4 — 단건 + 다년 분할(§41의4②) */
 export interface FreeLoanInput {
   loanAmount: number;
-  actualInterestPaid: number; // 무상이면 0
+  actualInterestPaid: number; // 무상이면 0 (다년: 연간 실제이자)
   appropriateRate: { numer: number; denom: number }; // 적정이자율 분수 (4.6%={46,1000})
   isRelatedParty: boolean;
   hasJustifiableReason?: boolean; // §41의4③
+  /**
+   * §41의4② 다년 분할 — 대출 기간. 두 필드 모두 있을 때만 다년 경로 활성(한쪽 undefined→단건 회귀).
+   * YYYY-MM-DD 문자열(date-coerce 불필요). 마지막 해 1년 미만 시 일수 안분(÷365, 명문 부재·교재 기준).
+   */
+  loanStartDate?: string; // 대출 개시일 (첫 window 증여일)
+  loanEndDate?: string; // 대출 종료일 (마지막 window 마지막 날)
+}
+
+/**
+ * §43② 1년 이내 동일거래(§41의4) 합산 입력 (상증법§43②·상증령§32의4).
+ * 복수 대출 건의 raw benefit을 임계판정 전 합산 → 1천만 판정. 선례: capital_increase_allocation.
+ */
+export interface FreeLoanAggregatedInput {
+  loans: FreeLoanItem[]; // 개별 대출 건 (1건 이상)
+}
+
+/** §43² 합산 개별 대출 건 */
+export interface FreeLoanItem {
+  loanDate: string; // 대출 거래일(=해당 건 증여일). YYYY-MM-DD
+  loanAmount: number;
+  actualInterestPaid: number; // 무상이면 0
+  appropriateRate: { numer: number; denom: number };
+  isRelatedParty: boolean;
+  hasJustifiableReason?: boolean; // §41의4③
+  label?: string; // 표시용(㉮·㉯·㉰). 없으면 "건 N"
 }
 
 // ── Phase 2: 자본거래 (시가 = §60·§63 평가가액을 input으로 직접 주입) ──
@@ -470,9 +572,30 @@ export interface AcquisitionFundPresumptionInput {
 
 /** §45의2 명의신탁재산 증여의제 */
 export interface NomineeTrustInput {
-  propertyValue: number; // 명의신탁 재산 가액
+  /** 명의신탁 재산 가액 (total 모드). per_share 모드는 미전송 — 엔진이 perSharePrice×nomineeShares로 단일 도출 */
+  propertyValue?: number;
   hasTaxAvoidancePurpose: boolean; // §45의2③ 조세회피목적 (타인명의 등기 시 추정 true)
   isExcluded?: boolean; // §45의2①1·3·4 배제 (신탁등기·비거주자 법정대리인 등)
+  /**
+   * 평가 모드 (3-state, feedback_three_state_optional_mode_toggle).
+   * undefined/"total" = 재산가액 총액 직접(현행) / "per_share" = 유상증자 신주 명의신탁
+   * (명의개서일 §63 평가 1주당 가액 × 명의신탁 신주수 — 조심2012중3707·2019서2129).
+   */
+  valuationMode?: "total" | "per_share";
+  /** per_share: 증여일(명의개서일) 현재 §60·§63 평가 1주당 가액 (희석효과 반영 — 인수가·권리락 아님) */
+  perSharePrice?: number;
+  /** per_share: 명의신탁된 신주 수 (제척기간 만료 기존분 제외) */
+  nomineeShares?: number;
+  /** echo (계산 무영향·이미지28 평가원칙 비교): 신주인수가액(발행가액) */
+  subscriptionPrice?: number;
+  /** echo: 이론적 권리락 증자후 1주당 가액 */
+  theoreticalExRightsPrice?: number;
+  /** echo: 증자 전 1주당 평가액 (희석 출발점) */
+  preIncreasePerShare?: number;
+  /** prefill용 (계산 무영향): 실제소유자(증여자) 성명 */
+  actualOwnerName?: string;
+  /** prefill용 (계산 무영향): 명의자(증여의제 수증자) 성명 */
+  nomineeName?: string;
 }
 
 /** 주주별 배당 내역 (시행령 §31의2② 초과배당금액 자동산정용) */
@@ -611,8 +734,21 @@ export interface ListingGainInput {
   eventType?: "listing" | "merger"; // §41의3 상장 / §41의5 합병상장, 기본 listing
   settlementPerSharePrice: number; // 정산기준일(상장일·합병등기일 +3개월) 현재 1주당 평가가액(§63)
   perShareAcqValue: number; // 1주당 증여세 과세가액(또는 취득가액)
-  perShareCorpGrowth: number; // 1주당 기업가치 실질증가이익(§31의3⑤)
+  perShareCorpGrowth: number; // 1주당 기업가치 실질증가이익(§31의3⑤). corpGrowthAuto 지정 시 무시(자동계산)
   shares: number; // 증여·유상취득 주식수
+  /**
+   * 1주당 기업가치 실질증가이익 자동계산(령§31의3⑤) — 지정 시 perShareCorpGrowth 대신 사용.
+   * = (사업연도별 1주당 순손익 합계 ÷ 분모월수) × 곱수월수. 월수 1월미만은 1월(령§31의3⑤ 각호).
+   */
+  corpGrowthAuto?: {
+    totalNetIncomePerShare: number; // 증여·취득일 속한 사업연도개시일~상장전일 1주당 순손익액 합계(령§31의3⑤1)
+    monthsBusinessStartToListingPrevDay: number; // 분모 월수 — 사업연도개시일~상장전일(1월미만=1월)
+    monthsAcqToSettlement: number; // 곱수 월수 — 증여·취득일~정산기준일(령§31의3⑤2, 1월미만=1월)
+  };
+  /** §63③ 최대주주등 — true면 정산기준일 평가가액에 20% 가산(할증) */
+  isMajorShareholder?: boolean;
+  /** §63③ 단서 할증 배제 대상(중소기업·중견기업·3년연속 결손법인) — true면 최대주주여도 할증 미적용 */
+  isSurchargeExemptEntity?: boolean;
 }
 
 /** §42 재산사용·용역제공 */
@@ -659,11 +795,141 @@ export interface ValueIncreaseInput {
   eventDate?: string; // ISO. 재산가치증가사유 발생일(§42의3② 전단: 사유발생 전 양도 시 양도일)
 }
 
+/** §45의5 관계 — "other"=비친족(타인). 증여자 본인은 isDonor 플래그로 분리 */
+export type ScRelation =
+  | "lineal_ascendant"
+  | "lineal_descendant"
+  | "spouse"
+  | "sibling"
+  | "other_relative"
+  | "other";
+
+/** §45의5 다주주(roster) 모드 주주 1명 */
+export interface SpecificCorpShareholder {
+  id: string; // 결과 표시 금지(feedback_no_internal_id_in_result) — name 우선
+  name: string;
+  relation: ScRelation; // 표시·prefill용 passthrough (엔진 판정은 isDonor·isRelated)
+  shares: number; // 보유 주식수
+  totalShares: number; // 발행주식 총수 (분모)
+  isDonor: boolean; // 증여자 본인 → donor_self 제외
+  isRelated: boolean; // 지배주주 친족 여부, false → non_related 제외
+}
+
+/** §45의5② 증여세 한도 계산 (수증자별) */
+export interface SpecificCorpLimitCalc {
+  computedTax: number; // ㉮ 일반 산출세액
+  directGiftTax: number; // ㉠ 직접증여 가정 산출세액(법인세 차감 前)
+  corpTaxShare: number; // ㉡ 법인세 상당액 × 지분율
+  limitAmount: number; // ㉯ = max(0, ㉠ − ㉡)
+  finalTax: number; // min(㉮, ㉯)
+  filingCredit: number; // §69 floor(finalTax × 3/100)
+  selfPayTax: number; // finalTax − filingCredit
+}
+
+/** §45의5 수증자별 명세 (Map 금지 — plain 배열) */
+export interface SpecificCorpDonee {
+  name: string;
+  relation: ScRelation;
+  shares: number;
+  totalShares: number;
+  ownershipRatioPct: number; // 표시용 백분율
+  gain: number; // 증여의제이익 = corpProfit × shares/totalShares
+  isTaxable: boolean;
+  nonTaxableReason?: "donor_self" | "non_related" | "below_threshold";
+  limitCalc?: SpecificCorpLimitCalc; // 과세 주주만
+}
+
+/** §45의5 다주주 모드 결과 (Map 금지 — plain 배열) */
+export interface SpecificCorpMultiResult {
+  corpProfit: number; // 특정법인의 이익 (거래이익 − 법인세 안분)
+  corpTaxApportioned: number; // 법인세 안분액
+  donees: SpecificCorpDonee[];
+}
+
 /** §45의5 특정법인과의 거래 */
 export interface SpecificCorpInput {
-  transactionBenefit: number; // 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
-  corporateTax: number; // 법인세 상당액 = (산출세액−공제감면)×min(거래이익/소득금액,1)
-  ownershipRatio: { numer: number; denom: number }; // 지배주주등 주식보유비율
+  transactionBenefit: number; // §34의5④1호 거래이익(증여재산가액·채무면제이익·시가−대가 차액)
+  // ── single(하위호환) 모드: 법인세 안분·지분율을 호출자가 사전 계산 ──
+  corporateTax?: number; // 법인세 상당액(이미 안분된 최종값)
+  ownershipRatio?: { numer: number; denom: number }; // 지배주주등 주식보유비율
+  // ── roster 모드 (shareholders 존재 시 dispatch) ──
+  shareholders?: SpecificCorpShareholder[];
+  annualIncome?: number; // §34의5④2호나목 각사업연도소득금액(분모)
+  corporateTaxComputed?: number; // 법인세 산출세액(안분 前)
+  corporateTaxCredit?: number; // 법인세 공제·감면액
+  giftDeduction?: number; // §45의5② 한도 ㉮㉠ 증여재산공제 (default 0)
+}
+
+/** §45의3 일감몰아주기 — 주주 1명 */
+export interface RcShareholder {
+  id: string;
+  name: string;
+  /** "self"=지배주주 후보 / "relative"=친족 / "other"=해당없음 */
+  relation: "self" | "relative" | "other";
+  /** 수혜법인 직접보유비율 분수 (예: 20% → {numer:20,denom:100}) */
+  directRatio: { numer: number; denom: number };
+  /** true면 법인주주 → intermediaryCorps에 대응 항목 */
+  isCorporate: boolean;
+}
+
+/** §45의3 일감몰아주기 — 간접출자법인 1개 (2단계 간접: 개인→법인→수혜법인) */
+export interface RcIntermediaryCorpItem {
+  /** 이 법인인 법인주주의 id (RcShareholder.id 매칭) */
+  corpShareholderId: string;
+  /** 이 법인의 수혜법인 직접보유비율 분수 */
+  stakeInBeneficiary: { numer: number; denom: number };
+  /** 이 법인의 개인 소유주 (§⑱ 자동판정용: 지배주주등 합산≥30% → §⑱1호) */
+  owners: {
+    individualId: string; // RcShareholder.id
+    ratio: { numer: number; denom: number }; // 이 법인에 대한 직접보유비율
+  }[];
+}
+
+/** §34의3⑩ 과세제외유형 */
+export type RcExclusionType =
+  | "sec10_1" // 중소-중소
+  | "sec10_2" // 수혜법인 50%↑ 출자 특수관계법인
+  | "sec10_3" // 수혜법인 50%미만 출자 × 보유비율 (본 사례 미적용)
+  | "sec10_4" // 지주회사-자회사·손자회사
+  | "sec10_5" // 수출목적
+  | "sec10_5_2" // 국외용역
+  | "sec10_5_3" // 영세율용역
+  | "sec10_6" // 법정의무거래
+  | "sec10_7" // 프로스포츠 광고
+  | "sec10_8"; // 공공기관
+
+/** §45의3 일감몰아주기 — 매출처 1개 */
+export interface RcSalesPartner {
+  id: string;
+  name: string;
+  /** 매출액(원) */
+  salesAmount: number;
+  /** 특수관계 여부 (사용자 입력 — 엔진이 §2의2 자체판정 불요) */
+  isRelated: boolean;
+  /** §⑩ 과세제외유형. 없으면 undefined */
+  exclusionType?: RcExclusionType;
+  /** §⑭3호: 수증자별 이 법인에 대한 보유비율 (⑩ 미해당 시 적용). 없으면 미적용 */
+  rulingShareholderStakes?: {
+    shareholderId: string; // RcShareholder.id 매칭 키
+    ratio: { numer: number; denom: number };
+  }[];
+}
+
+/** §45의3 일감몰아주기 — 엔진 입력 (nested, 순수함수) */
+export interface RelatedCorpInput {
+  /** 기업규모 — 비율 3종 분기 단일 분기점 */
+  enterpriseSize: "small" | "medium" | "large";
+  /** 총 매출액(원) = §⑫ 분모 */
+  totalSales: number;
+  /** 세무조정 반영 후 영업손익(원) = §⑫1호 */
+  preTaxAdjOperatingIncome: number;
+  /** 각 사업연도 소득금액(원) = §⑫2호나목 분모 */
+  taxableIncome: number;
+  /** 법인세 순세액(원) = 산출세액 − 공제감면 = §⑫2호가목 */
+  corporateTaxNet: number;
+  shareholders: RcShareholder[];
+  intermediaryCorps: RcIntermediaryCorpItem[];
+  salesPartners: RcSalesPartner[];
 }
 
 /** 판별 유니온 입력 (§35는 기존 BargainTransferInput 재사용) */
@@ -674,6 +940,7 @@ export type DeemedGiftInput =
   | ({ type: "debt_forgiveness" } & DebtForgivenessInput)
   | ({ type: "free_realestate" } & FreeRealEstateInput)
   | ({ type: "free_loan" } & FreeLoanInput)
+  | ({ type: "free_loan_aggregated" } & FreeLoanAggregatedInput)
   | ({ type: "merger" } & MergerInput)
   | ({ type: "capital_increase" } & CapitalIncreaseInput)
   | ({ type: "capital_decrease" } & CapitalDecreaseInput)
@@ -687,4 +954,5 @@ export type DeemedGiftInput =
   | ({ type: "property_service_use" } & PropertyServiceUseInput)
   | ({ type: "org_change" } & OrgChangeInput)
   | ({ type: "value_increase" } & ValueIncreaseInput)
-  | ({ type: "specific_corp" } & SpecificCorpInput);
+  | ({ type: "specific_corp" } & SpecificCorpInput)
+  | ({ type: "related_corp" } & RelatedCorpInput);

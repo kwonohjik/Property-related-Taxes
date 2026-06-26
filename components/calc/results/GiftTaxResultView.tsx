@@ -32,6 +32,7 @@ import {
   Row,
   LawBadge,
   InstallmentGuide,
+  AggregationExcludedCard,
 } from "@/components/calc/results/GiftTaxResultViewHelpers";
 import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
 import { SplitPaymentCard } from "@/components/calc/results/installment/SplitPaymentCard";
@@ -206,6 +207,7 @@ export function GiftTaxResultView({
     if (priorGifts.length > 0) s.add("prior-gift");
     if (result.filingFormRows && result.filingFormRows.length > 0)
       s.add("filing-form-10");
+    if (result.aggregationExcludedDetail) s.add("aggregation-excluded");
     if (result.valuationResults.length > 0) s.add("valuation-form");
     if (hasBuildingStdReport({ estateItems: items })) s.add("building-std-report");
     if (items.some((it) => it.unlistedStockValuationV2)) s.add("unlisted-stock-besshi");
@@ -315,6 +317,14 @@ export function GiftTaxResultView({
       {hasFilingFormTable && (
         <PrintSection id="filing-form-10" selectedIds={selectedPrintIds}>
           <GiftTaxFilingFormTable result={result} testIdPrefix="besshi10-0-" />
+        </PrintSection>
+      )}
+
+      {/* 합산배제증여재산(§41의3·§41의5) 별도 스트림 — §47① 개별 건별 과세 (A1.5).
+          별지 서식(위)은 일반 증여재산 기준. 합산배제분은 별도 과세표준(§55①3호)이라 분리 카드로 표시. */}
+      {result.aggregationExcludedDetail && (
+        <PrintSection id="aggregation-excluded" selectedIds={selectedPrintIds}>
+          <AggregationExcludedCard detail={result.aggregationExcludedDetail} />
         </PrintSection>
       )}
 

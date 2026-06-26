@@ -111,6 +111,72 @@ describe("§41의3 상장 / §41의5 합병상장 이익 (시행령 §31의3·§
   it("[LG-FAIL] 1주당 이익 1천 × 2만 = 2천만 < 기준 9천만(=3억×30%) → 0", () => {
     expect(calcListingGainGift({ settlementPerSharePrice: 16_000, perShareAcqValue: 10_000, perShareCorpGrowth: 5_000, shares: 20_000 }).deemedGiftValue).toBe(0);
   });
+  // §41의3④ 단서·령§31의3⑥ 환급(평가손실): 정산기준일 가액 < 당초 과세가액, 차액 ≥ 기준금액
+  it("[LG-T1-DIR] 과세 케이스 direction=taxation", () => {
+    const r = calcListingGainGift({ settlementPerSharePrice: 50_000, perShareAcqValue: 10_000, perShareCorpGrowth: 5_000, shares: 20_000 });
+    expect(r.direction).toBe("taxation");
+    expect(r.refundBase).toBe(0);
+  });
+  it("[LG-R1] 환급: 정산 5천 < 과세 1만, 손실 5억 ≥ 기준 3억 → refund, refundBase 5억", () => {
+    const r = calcListingGainGift({ settlementPerSharePrice: 5_000, perShareAcqValue: 10_000, perShareCorpGrowth: 0, shares: 100_000 });
+    expect(r.direction).toBe("refund");
+    expect(r.refundBase).toBe(500_000_000);
+    expect(r.deemedGiftValue).toBe(0);
+    expect(r.applied).toBe(false);
+  });
+  it("[LG-R2] 환급 미달: 손실 1억 < 기준 3억 → none", () => {
+    const r = calcListingGainGift({ settlementPerSharePrice: 9_000, perShareAcqValue: 10_000, perShareCorpGrowth: 0, shares: 100_000 });
+    expect(r.direction).toBe("none");
+    expect(r.refundBase).toBe(0);
+    expect(r.deemedGiftValue).toBe(0);
+  });
+  // 령§31의3⑤ 기업가치 자동계산 — 교재 사례2 (1주당 순손익합 30000 ÷ 30월 × 27월 = 27000)
+  it("[CG-1] corpGrowthAuto 자동계산 → C=27000 → 증여이익 650M (사례2)", () => {
+    const r = calcListingGainGift({
+      settlementPerSharePrice: 50_000,
+      perShareAcqValue: 10_000,
+      perShareCorpGrowth: 0, // corpGrowthAuto 우선이라 무시
+      shares: 50_000,
+      corpGrowthAuto: {
+        totalNetIncomePerShare: 30_000,
+        monthsBusinessStartToListingPrevDay: 30,
+        monthsAcqToSettlement: 27,
+      },
+    });
+    expect(r.deemedGiftValue).toBe(650_000_000);
+    expect(r.thresholdEcho?.threshold).toBe(300_000_000);
+    expect(r.direction).toBe("taxation");
+  });
+  it("[CG-2] 월수 1월미만=1월 절사 가드 (분모·곱수 0 → 1)", () => {
+    const r = calcListingGainGift({
+      settlementPerSharePrice: 50_000,
+      perShareAcqValue: 10_000,
+      perShareCorpGrowth: 999, // 무시
+      shares: 1,
+      corpGrowthAuto: {
+        totalNetIncomePerShare: 5_000,
+        monthsBusinessStartToListingPrevDay: 0,
+        monthsAcqToSettlement: 0,
+      },
+    });
+    // floor(5000/1)×1 = 5000 → perShareGain = 50000−10000−5000 = 35000
+    expect(r.breakdown.find((s) => s.label === "1주당 기업가치 실질증가이익")?.amount).toBe(5_000);
+  });
+  // §63③ 최대주주 20% 할증 (중소·중견·결손법인 배제)
+  it("[MS-1] 최대주주 할증: 정산가 50000×1.2=60000 → 증여이익 900M", () => {
+    const r = calcListingGainGift({
+      settlementPerSharePrice: 50_000, perShareAcqValue: 10_000, perShareCorpGrowth: 5_000, shares: 20_000,
+      isMajorShareholder: true,
+    });
+    expect(r.deemedGiftValue).toBe(900_000_000); // (60000−10000−5000)×20000
+  });
+  it("[MS-2] 최대주주+중소기업 배제: 할증 미적용 → 700M (LG-1 동일)", () => {
+    const r = calcListingGainGift({
+      settlementPerSharePrice: 50_000, perShareAcqValue: 10_000, perShareCorpGrowth: 5_000, shares: 20_000,
+      isMajorShareholder: true, isSurchargeExemptEntity: true,
+    });
+    expect(r.deemedGiftValue).toBe(700_000_000);
+  });
 });
 
 describe("§43① 중복배제 (이익 최대 1건)", () => {

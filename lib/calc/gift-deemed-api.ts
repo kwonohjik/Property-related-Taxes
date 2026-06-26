@@ -97,7 +97,22 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
             }
           : undefined,
       };
-    case "free_loan":
+    case "free_loan": {
+      // §43² 다건 합산 (loanLoans 토글 ON) → free_loan_aggregated 별도 type dispatch
+      if (form.loanLoans !== undefined) {
+        return {
+          type: "free_loan_aggregated",
+          loans: form.loanLoans.map((item) => ({
+            loanDate: item.loanDate,
+            loanAmount: parseAmount(item.amount),
+            actualInterestPaid: parseAmount(item.interest),
+            appropriateRate: resolveFreeLoanRate(item.loanDate || form.giftDate || "2024-01-01"),
+            isRelatedParty: form.loanRelated,
+            hasJustifiableReason: form.loanJustifiable,
+          })),
+        };
+      }
+      // 단건 + §41의4② 다년(기간 양끝 입력 시만 — date-coerce N/A, 문자열 그대로)
       return {
         type: "free_loan",
         loanAmount: parseAmount(form.loanAmount),
@@ -105,7 +120,11 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         appropriateRate: resolveFreeLoanRate(form.giftDate || "2024-01-01"),
         isRelatedParty: form.loanRelated,
         hasJustifiableReason: form.loanJustifiable,
+        ...(form.loanStartDate && form.loanEndDate
+          ? { loanStartDate: form.loanStartDate, loanEndDate: form.loanEndDate }
+          : {}),
       };
+    }
     case "merger":
       if (form.mrgCaseType === "non_stock") {
         return {
@@ -355,13 +374,28 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         acquisitionValue: parseAmount(form.afAcquisitionValue),
         provenAmount: parseAmount(form.afProvenAmount),
       };
-    case "nominee_trust":
+    case "nominee_trust": {
+      const ntPerShare = form.ntValuationMode === "per_share";
       return {
         type: "nominee_trust",
-        propertyValue: parseAmount(form.ntPropertyValue),
+        // per_share 모드는 propertyValue 미전송 — 엔진이 perSharePrice×nomineeShares로 단일 도출(dual-truth 금지)
+        ...(ntPerShare ? {} : { propertyValue: parseAmount(form.ntPropertyValue) }),
         hasTaxAvoidancePurpose: form.ntTaxAvoidance,
         isExcluded: form.ntExcluded,
+        valuationMode: form.ntValuationMode,
+        ...(ntPerShare
+          ? {
+              perSharePrice: parseAmount(form.ntPerSharePrice),
+              nomineeShares: parseAmount(form.ntNewShares),
+              subscriptionPrice: parseAmount(form.ntSubscriptionPrice) || undefined,
+              theoreticalExRightsPrice: parseAmount(form.ntTheoreticalExRights) || undefined,
+              preIncreasePerShare: parseAmount(form.ntPreIncreasePerShare) || undefined,
+              actualOwnerName: form.ntActualOwner?.trim() || undefined,
+              nomineeName: form.ntNominee?.trim() || undefined,
+            }
+          : {}),
       };
+    }
     case "excess_dividend": {
       // ① 주주 배열 → shareholders 변환 (ownershipRatioPct → 분수)
       const edRows = form.edShareholders ?? [];
@@ -442,6 +476,18 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         perShareAcqValue: parseAmount(form.lgAcqValue),
         perShareCorpGrowth: parseAmount(form.lgCorpGrowth),
         shares: parseAmount(form.lgShares),
+        ...(form.lgMajorShareholder ? { isMajorShareholder: true } : {}),
+        ...(form.lgSurchargeExempt ? { isSurchargeExemptEntity: true } : {}),
+        // 령§31의3⑤ 자동계산 모드 — corpGrowthAuto 지정 시 엔진이 perShareCorpGrowth 무시
+        ...(form.lgCorpGrowthMode === "auto"
+          ? {
+              corpGrowthAuto: {
+                totalNetIncomePerShare: parseAmount(form.lgTotalNetIncome),
+                monthsBusinessStartToListingPrevDay: parseAmount(form.lgMonthsBusinessStart),
+                monthsAcqToSettlement: parseAmount(form.lgMonthsAcqToSettlement),
+              },
+            }
+          : {}),
       };
     case "property_service_use":
       return {
@@ -473,13 +519,101 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         acquisitionDate: form.viAcqDate || undefined,
         eventDate: form.viEventDate || undefined,
       };
-    case "specific_corp":
+    case "specific_corp": {
+      const isRoster = form.scMode === "roster";
+      const isAuto = form.scCorporateTaxMode === "auto";
+      const transactionBenefit = parseAmount(form.scTransactionBenefit);
+      const giftDeduction = parseAmount(form.scGiftDeduction) || undefined; // 0이면 undefined(엔진 default 0)
+
+      if (isRoster && form.scShareholders && form.scShareholders.length > 0) {
+        const totalShares = parseAmount(form.scTotalShares);
+        const shareholders = form.scShareholders.map((sh) => ({
+          id: sh.id,
+          name: sh.name,
+          relation: sh.relation,
+          shares: parseAmount(sh.shares),
+          totalShares,
+          isDonor: sh.isDonor,
+          isRelated: sh.relation !== "other", // "other"=타인 → 비특수관계인
+        }));
+        if (isAuto) {
+          // auto: 엔진이 안분. raw 4필드 전달. UI 재계산 금지.
+          return {
+            type: "specific_corp",
+            transactionBenefit,
+            shareholders,
+            annualIncome: parseAmount(form.scCorpIncome),
+            corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
+            corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
+            giftDeduction,
+          };
+        } else {
+          // direct: corporateTax = 직접 입력 (이월결손금 0 허용 → 0 전달)
+          return {
+            type: "specific_corp",
+            transactionBenefit,
+            corporateTax: parseAmount(form.scCorporateTax),
+            shareholders,
+            giftDeduction,
+          };
+        }
+      }
+      // single 경로 (기존 하위호환)
       return {
         type: "specific_corp",
-        transactionBenefit: parseAmount(form.scTransactionBenefit),
+        transactionBenefit,
         corporateTax: parseAmount(form.scCorporateTax),
         ownershipRatio: { numer: Math.round(parseDecimal(form.scRatioPct) * 100), denom: 10_000 },
+        giftDeduction,
       };
+    }
+    case "related_corp": {
+      // string → 분수(분모 10000) 변환. ⚠️ discriminated union이라 roster 누락을 TS가 못 잡음 → grep 자가점검.
+      const parseRatio = (pctStr: string) => ({
+        numer: Math.round(parseDecimal(pctStr) * 100),
+        denom: 10_000,
+      });
+      const shareholders = form.rcShareholders.map((row) => ({
+        id: row.id,
+        name: row.name,
+        relation: (row.relation as "self" | "relative" | "other") || "other",
+        directRatio: parseRatio(row.directRatioPctStr),
+        isCorporate: row.isCorporate,
+      }));
+      const intermediaryCorps = form.rcIntermediaryCorps.map((row) => ({
+        corpShareholderId: row.corpShareholderId,
+        stakeInBeneficiary: parseRatio(row.stakeInBeneficiaryPctStr),
+        owners: row.owners.map((o) => ({
+          individualId: o.individualId,
+          ratio: parseRatio(o.ratioPctStr),
+        })),
+      }));
+      const salesPartners = form.rcSalesPartners.map((row) => ({
+        id: row.id,
+        name: row.name,
+        salesAmount: parseAmount(row.salesAmountStr),
+        isRelated: row.isRelated,
+        exclusionType: row.exclusionType || undefined,
+        rulingShareholderStakes:
+          row.rulingStakes.length > 0
+            ? row.rulingStakes.map((s) => ({
+                shareholderId: s.shareholderId,
+                ratio: parseRatio(s.ratioPctStr),
+              }))
+            : undefined,
+      }));
+      return {
+        type: "related_corp",
+        enterpriseSize: (form.rcEnterpriseSize || "small") as "small" | "medium" | "large",
+        totalSales: parseAmount(form.rcTotalSalesStr),
+        preTaxAdjOperatingIncome: parseAmount(form.rcPreTaxAdjOperatingIncomeStr),
+        taxableIncome: parseAmount(form.rcTaxableIncomeStr),
+        corporateTaxNet: parseAmount(form.rcCorporateTaxNetStr),
+        shareholders,
+        intermediaryCorps,
+        salesPartners,
+      };
+    }
     default:
       throw new Error("증여 유형을 선택하세요");
   }
@@ -567,6 +701,30 @@ export function buildGiftWizardPrefill(
     };
   }
 
+  // §45의3 일감몰아주기: 수증자별 다건 prefill (존재 가드 — Critical-1, contribution 게이트와 별도)
+  if (result.type === "related_corp" && result.recipientBreakdown && result.recipientBreakdown.length > 0) {
+    const taxable = result.recipientBreakdown.filter((r) => r.subtotal > 0);
+    const [main, ...rest] = taxable;
+    if (!main) return { giftDate: form.giftDate };
+    const simultaneousGifts =
+      rest.length > 0
+        ? rest.map((r) => ({ donorRelation: "other_relative" as const, taxableValue: String(r.subtotal) }))
+        : undefined;
+    return {
+      giftDate: form.giftDate,
+      donorRelation: "other_relative" as const,
+      giftItems: [
+        {
+          id: `deemed-rc-${main.recipientName.trim() || "recipient"}`,
+          category: "other" as const,
+          name: `일감몰아주기 이익 — ${main.recipientName.trim() || "지배주주등"}`,
+          marketValue: main.subtotal,
+        },
+      ],
+      simultaneousGifts,
+    };
+  }
+
   // 감자 멀티(§39의2): 과세 수증자 여러 명 → 선택된 수증자의 total만 이관(수증자별 별도 신고).
   if (result.type === "capital_decrease" && result.capitalDecreaseMulti) {
     const taxable = result.capitalDecreaseMulti.donees.filter((d) => d.isTaxable);
@@ -608,6 +766,8 @@ export function buildGiftWizardPrefill(
         category: "other",
         name: `${label} 증여이익`,
         marketValue: result.deemedGiftValue,
+        // §47① 합산배제증여재산(§41의3·§41의5 등) → 본세 §55①3호 스트림. 비합산배제 deemed는 undefined.
+        ...(result.aggregationExcluded ? { isAggregationExcludedGift: true } : {}),
       },
     ],
   };
