@@ -29,6 +29,7 @@ import type {
 } from "@/lib/tax-engine/types/comprehensive-corporate.types";
 import type { ComprehensiveFormData } from "@/lib/stores/comprehensive-wizard-store";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 
 // ============================================================
 // 법인 세부 유형 (시행령 §4의4) — Select 옵션·조건 요건 라벨·도출 배지
@@ -91,47 +92,45 @@ function YearLawHintCard({ year }: { year: number }) {
   const hasMultiHouseCap = year < 2023;
   const isPreUnified = year < 2023;
 
+  const summary = `${year} 귀속 적용 기준${isPreUnified ? " (개정 전 구법)" : ""}${
+    year === currentYear ? " · 현재" : ""
+  }`;
+
   return (
-    <div className="rounded-md border border-amber-200 bg-amber-50/60 px-4 py-3 text-xs text-amber-900 space-y-1">
-      <p className="font-semibold">
-        {year} 귀속 적용 기준{isPreUnified ? " (개정 전 구법)" : ""}
-        {year === currentYear ? (
-          <span className="ml-1.5 rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
-            현재
-          </span>
-        ) : null}
-      </p>
-      <p>
-        기본공제: 일반 {formatKRW(params.basicDeductionGeneral)} / 1세대1주택{" "}
-        {formatKRW(params.basicDeductionOneHouse)}
-      </p>
-      <p>
-        공정시장가액비율 (주택분): {(params.fairMarketRatioHousing * 100).toFixed(0)}%
-      </p>
-      {isPreUnified ? (
+    <CollapsibleHintCard tone="amber" summary={summary}>
+      <div className="space-y-1 text-amber-900">
         <p>
-          세율: 일반(2주택 이하) 0.6%~3.0% / 다주택(조정2주택·3주택+) 1.2%~6.0%
-          (종합부동산세법 §9① 구법)
+          기본공제: 일반 {formatKRW(params.basicDeductionGeneral)} / 1세대1주택{" "}
+          {formatKRW(params.basicDeductionOneHouse)}
         </p>
-      ) : (
         <p>
-          세율: 2주택 이하 0.5%~2.7% / 3주택 이상 12억 초과 중과 2.0%~5.0% (
-          <LawArticleModal legalBasis="종합부동산세법 §9" label="§9①2호" /> — 주택 수
-          자동 적용)
+          공정시장가액비율 (주택분): {(params.fairMarketRatioHousing * 100).toFixed(0)}%
         </p>
-      )}
-      {hasMultiHouseCap ? (
-        <p>
-          세부담 상한: 일반 150% / 조정대상지역 2주택+ 또는 3주택+ 300%
-          (§10② 구법)
-        </p>
-      ) : (
-        <p>
-          세부담 상한: 전년도 세액의 150% (
-          <LawArticleModal legalBasis="종합부동산세법 §10" label="§10" />)
-        </p>
-      )}
-    </div>
+        {isPreUnified ? (
+          <p>
+            세율: 일반(2주택 이하) 0.6%~3.0% / 다주택(조정2주택·3주택+) 1.2%~6.0%
+            (종합부동산세법 §9① 구법)
+          </p>
+        ) : (
+          <p>
+            세율: 2주택 이하 0.5%~2.7% / 3주택 이상 12억 초과 중과 2.0%~5.0% (
+            <LawArticleModal legalBasis="종합부동산세법 §9" label="§9①2호" /> — 주택 수
+            자동 적용)
+          </p>
+        )}
+        {hasMultiHouseCap ? (
+          <p>
+            세부담 상한: 일반 150% / 조정대상지역 2주택+ 또는 3주택+ 300%
+            (§10② 구법)
+          </p>
+        ) : (
+          <p>
+            세부담 상한: 전년도 세액의 150% (
+            <LawArticleModal legalBasis="종합부동산세법 §10" label="§10" />)
+          </p>
+        )}
+      </div>
+    </CollapsibleHintCard>
   );
 }
 
