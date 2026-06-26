@@ -72,11 +72,9 @@ test.describe("비상장주식 V2 — 합병 후 3년 미경과 순손익 합산
   test("합병 토글 ON 시 입력 폼이 노출된다", async ({ page }) => {
     await gotoV2FormalValuationCard(page);
 
-    // 토글 카드 활성화 — ToggleCard 내부 switch 역할 버튼
+    // 토글 카드 활성화 — ToggleCard switch (BaseUI: data-checked, role=switch). ON 검증은 children 노출로.
     const mergerToggle = page.locator('[data-testid="merger-toggle"]');
-    const switchBtn = mergerToggle.getByRole("switch");
-    await switchBtn.click();
-    await expect(switchBtn).toHaveAttribute("data-state", "checked", { timeout: 3_000 });
+    await mergerToggle.getByRole("switch").click();
 
     // 합병등기일 wrapper 노출
     await expect(
@@ -97,97 +95,51 @@ test.describe("비상장주식 V2 — 합병 후 3년 미경과 순손익 합산
   test("㉰ 케이스 입력 후 결과 카드에 합병 합산 명세 카드가 노출된다", async ({ page }) => {
     await gotoV2FormalValuationCard(page);
 
-    // ── 법인 기본 정보 먼저 채우기 ──
-    // 법인명
-    const corpNameInput = page.getByPlaceholder(/법인명/).first();
-    await corpNameInput.fill("합병테스트(주)");
-
-    // 발행주식총수 (기본값 없어서 직접 입력)
-    const totalInput = page.getByPlaceholder(/발행주식총수/).first();
-    await totalInput.fill("100000");
-
-    // 보유주식수
-    const ownedInput = page.getByPlaceholder(/보유주식수/).first();
-    await ownedInput.fill("50000");
-
-    // 사업연도 종료일 (3년치) — 필수
-    // 종료일 DateInput은 순서대로 배치됨 — 각 연도 종료일 입력
-    // 1년전: 2023-12-31
-    const endDateInputs = page.locator(".space-y-0\\.5").filter({ hasText: /종료일/ }).locator("input");
-    if (await endDateInputs.count() >= 3) {
-      await endDateInputs.nth(0).fill("2023");
-      await endDateInputs.nth(1).fill("12");
-      await endDateInputs.nth(2).fill("31");
+    // DateInput wrapper 안의 연/월/일 입력 헬퍼 (getByLabel — 검증된 패턴)
+    async function fillDate(testid: string, y: string, m: string, d: string) {
+      const w = page.locator(`[data-testid="${testid}"]`);
+      await w.getByLabel("연도").fill(y);
+      await w.getByLabel("월").fill(m);
+      await w.getByLabel("일").fill(d);
     }
 
-    // ── 합병 토글 활성화 ──
+    // ── 법인 기본정보 (결과 카드 렌더 게이트: totalShares·ownedShares > 0 필수) ──
+    await page.getByPlaceholder("발행주식총수").fill("15000");
+    await page.getByPlaceholder("보유 주식수").fill("7500");
+
+    // ── 합병 토글 활성화 (title 클릭 또는 switch) ──
     const mergerToggle = page.locator('[data-testid="merger-toggle"]');
-    const switchBtn = mergerToggle.getByRole("switch");
-    await switchBtn.click();
-    await expect(switchBtn).toHaveAttribute("data-state", "checked", { timeout: 3_000 });
+    await mergerToggle.getByRole("switch").click();
+    await expect(mergerToggle.locator('[data-testid="merger-reg-date"]')).toBeVisible({ timeout: 3_000 });
 
-    // 합병등기일 입력 (wrapper div 내 input 찾기)
-    const mergerRegDateWrapper = mergerToggle.locator('[data-testid="merger-reg-date"]');
-    const mergerRegInputs = mergerRegDateWrapper.locator("input");
-    if (await mergerRegInputs.count() >= 3) {
-      await mergerRegInputs.nth(0).fill("2023");
-      await mergerRegInputs.nth(1).fill("7");
-      await mergerRegInputs.nth(2).fill("1");
+    // 합병등기일 2021-06-30
+    await fillDate("merger-reg-date", "2021", "6", "30");
+    // 합병후 발행주식총수 15,000 (CurrencyInput testid는 input 자체 — 직접 fill)
+    await mergerToggle.locator('[data-testid="merger-post-shares"]').fill("15000");
+
+    // 합병법인 전1/2/3년 (㉰): 날짜·주식수·순손익
+    const acq = [
+      { y: "2021", shares: "15000", income: "40000000" },
+      { y: "2020", shares: "15000", income: "30000000" },
+      { y: "2019", shares: "10000", income: "20000000" },
+    ];
+    for (let i = 0; i < 3; i++) {
+      await fillDate(`merger-acquirer-${i}-start`, acq[i].y, "1", "1");
+      await fillDate(`merger-acquirer-${i}-end`, acq[i].y, "12", "31");
+      await mergerToggle.locator(`[data-testid="merger-acquirer-${i}-shares"]`).fill(acq[i].shares);
+      await mergerToggle.locator(`[data-testid="merger-acquirer-${i}-income"]`).fill(acq[i].income);
     }
 
-    // 합병후 발행주식총수
-    await mergerToggle.locator('[data-testid="merger-post-shares"] input').fill("100000");
-
-    // 합병법인 전1년 (idx=0)
-    const acq0Start = mergerToggle.locator('[data-testid="merger-acquirer-0-start"] input');
-    if (await acq0Start.count() >= 3) {
-      await acq0Start.nth(0).fill("2023");
-      await acq0Start.nth(1).fill("1");
-      await acq0Start.nth(2).fill("1");
-    }
-    const acq0End = mergerToggle.locator('[data-testid="merger-acquirer-0-end"] input');
-    if (await acq0End.count() >= 3) {
-      await acq0End.nth(0).fill("2023");
-      await acq0End.nth(1).fill("12");
-      await acq0End.nth(2).fill("31");
-    }
-    await mergerToggle.locator('[data-testid="merger-acquirer-0-shares"] input').fill("100000");
-    await mergerToggle.locator('[data-testid="merger-acquirer-0-income"] input').fill("50000000");
-
-    // 합병법인 전2년 (idx=1)
-    const acq1Start = mergerToggle.locator('[data-testid="merger-acquirer-1-start"] input');
-    if (await acq1Start.count() >= 3) {
-      await acq1Start.nth(0).fill("2022");
-      await acq1Start.nth(1).fill("1");
-      await acq1Start.nth(2).fill("1");
-    }
-    const acq1End = mergerToggle.locator('[data-testid="merger-acquirer-1-end"] input');
-    if (await acq1End.count() >= 3) {
-      await acq1End.nth(0).fill("2022");
-      await acq1End.nth(1).fill("12");
-      await acq1End.nth(2).fill("31");
-    }
-    await mergerToggle.locator('[data-testid="merger-acquirer-1-shares"] input').fill("80000");
-    await mergerToggle.locator('[data-testid="merger-acquirer-1-income"] input').fill("40000000");
-
-    // 합병법인 전3년 (idx=2)
-    const acq2Start = mergerToggle.locator('[data-testid="merger-acquirer-2-start"] input');
-    if (await acq2Start.count() >= 3) {
-      await acq2Start.nth(0).fill("2021");
-      await acq2Start.nth(1).fill("1");
-      await acq2Start.nth(2).fill("1");
-    }
-    const acq2End = mergerToggle.locator('[data-testid="merger-acquirer-2-end"] input');
-    if (await acq2End.count() >= 3) {
-      await acq2End.nth(0).fill("2021");
-      await acq2End.nth(1).fill("12");
-      await acq2End.nth(2).fill("31");
-    }
-    await mergerToggle.locator('[data-testid="merger-acquirer-2-shares"] input').fill("80000");
-    await mergerToggle.locator('[data-testid="merger-acquirer-2-income"] input').fill("30000000");
-
-    // 결과 카드가 렌더되기까지 대기
-    await page.waitForTimeout(500);
+    // 피합병법인(을) 2개 사업연도 추가: 2021(2,000,000)·2020(△5,000,000)
+    const addBtn = mergerToggle.locator('[data-testid="merger-target-add"]');
+    await addBtn.click();
+    await addBtn.click();
+    await fillDate("merger-target-0-start", "2021", "1", "1");
+    await fillDate("merger-target-0-end", "2021", "12", "31");
+    await mergerToggle.locator('[data-testid="merger-target-0-income"]').fill("2000000");
+    await fillDate("merger-target-1-start", "2020", "1", "1");
+    await fillDate("merger-target-1-end", "2020", "12", "31");
+    await mergerToggle.locator('[data-testid="merger-target-1-income"]').fill("-5000000");
 
     // ── 결과 카드 검증 ──
     // §56③ 합병 합산 명세 카드 노출 확인
