@@ -387,7 +387,7 @@ export function validateInheritanceTaxInput(
     }
   }
 
-  // 비과세·불산입 입력 검증 (면적 §8③ + 동족주식 §16② + 협의분할) — 단일 집계
+  // 비과세·불산입 입력 검증 (면적 §8③ + 특수관계법인 주식 §16② + 협의분할) — 단일 집계
   const exemptionErr = validateAllExemptionInputs(input.exemptions);
   if (exemptionErr) return exemptionErr;
 

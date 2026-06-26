@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 공익법인 출연 동족주식 한도 입력 (§16②, 갭5a)
+ * 공익법인 출연 특수관계법인 주식 한도 입력 (§16②, 갭5a)
  *
  * 토글 ON 시 유형(10/20/5%)·주식수 입력 → 엔진 computeRelatedStockExcess로 초과분 실시간 미리보기.
  * 단일 진실: UI 자체 한도 재계산 금지 — 엔진 헬퍼 직접 import (single-source-engine-helper).
@@ -106,7 +106,7 @@ export function RelatedStockLimitInput({ item, onPatch }: RelatedStockLimitInput
   return (
     <ToggleCard
       tone="violet"
-      title="내국법인 주식 출연 — 동족주식 한도 (§16②)"
+      title="내국법인 주식 출연 — 특수관계법인 주식 한도 (§16②)"
       description="출연재산에 내국법인 의결권 주식이 포함되면 유형별 한도(10/20/5%) 초과분이 상속세 과세가액에 산입됩니다."
       checked={enabled}
       onCheckedChange={(on) =>

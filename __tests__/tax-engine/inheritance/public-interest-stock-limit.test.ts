@@ -1,5 +1,5 @@
 /**
- * 갭5a — 공익법인 동족주식 한도 자동계산 (상증법 §16②)
+ * 갭5a — 공익법인 특수관계법인 주식 한도 자동계산 (상증법 §16②)
  * 계획: docs/00-pm/inheritance-gaps.plan.md §3 · 설계: inheritance-gaps.engine.design.md 케이스 5a-1~7
  * 법령: KoreanLaw §16② 원문 검증 2026-06-19 (본문 10%·가목 20%·나목/다목 5%)
  */

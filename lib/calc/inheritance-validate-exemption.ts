@@ -28,7 +28,7 @@ export function validateExemptionAreaInput(
 }
 
 /**
- * 갭5a — 공익법인 동족주식 한도 자동계산 입력 검증 (§16②).
+ * 갭5a — 공익법인 특수관계법인 주식 한도 자동계산 입력 검증 (§16②).
  * publicInterestType(유형 토글) 선택 시 발행총수·출연주식수·주당평가액 미입력 차단.
  * 부분 입력을 허용하면 전액 불산입으로 fallback되어 과소과세 → 차단(자동 fallback 금지, ⑧).
  * UI(RelatedStockLimitInput)가 토글 ON 시 입력 위젯을 제공하므로 validate 차단과 정합.
@@ -39,11 +39,11 @@ export function validateRelatedStockInput(
   for (const it of exemptions ?? []) {
     if (it.ruleId !== "inh_public_interest" || it.publicInterestType == null) continue;
     if ((it.relatedStockTotalShares ?? 0) <= 0)
-      return "공익법인 동족주식 한도(§16②)를 적용하려면 발행주식총수등을 입력해야 합니다.";
+      return "공익법인 특수관계법인 주식 한도(§16②)를 적용하려면 발행주식총수등을 입력해야 합니다.";
     if ((it.relatedStockDonatedShares ?? 0) <= 0)
-      return "공익법인 동족주식 한도(§16②)를 적용하려면 출연 주식수를 입력해야 합니다.";
+      return "공익법인 특수관계법인 주식 한도(§16②)를 적용하려면 출연 주식수를 입력해야 합니다.";
     if ((it.relatedStockValuePerShare ?? 0) <= 0)
-      return "공익법인 동족주식 한도(§16②)를 적용하려면 1주당 평가액을 입력해야 합니다.";
+      return "공익법인 특수관계법인 주식 한도(§16②)를 적용하려면 1주당 평가액을 입력해야 합니다.";
   }
   return null;
 }
@@ -67,7 +67,7 @@ export function validateExemptionItemAllocations(
 }
 
 /**
- * 비과세·불산입 입력 전체 집계 검증 (면적 + 동족주식 + 협의분할). 첫 오류 반환·없으면 null.
+ * 비과세·불산입 입력 전체 집계 검증 (면적 + 특수관계법인 주식 + 협의분할). 첫 오류 반환·없으면 null.
  * 메인 inheritance-validate.ts의 인라인 3블록을 단일 호출로 통합 (800줄 정책).
  */
 export function validateAllExemptionInputs(
