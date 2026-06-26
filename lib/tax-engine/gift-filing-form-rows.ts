@@ -34,6 +34,11 @@ export interface FilingFormRowsInput {
    */
   filingCreditBase?: number;
   /**
+   * §69 적용 신고세액공제율 (연도별, 증여일 기준). 미전달 시 현행 3%.
+   * formula "× N%" 표시에 사용 (2018 증여 = 5% 등).
+   */
+  filingCreditRate?: number;
+  /**
    * §59 외국납부세액공제액.
    * filingCreditBase가 전달된 경우 formula에 반영.
    */
@@ -65,21 +70,25 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
     finalTax,
     hasPriorGifts,
     filingCreditBase,
+    filingCreditRate,
     foreignTaxCredit,
     exemptTotal,
     appraisalFeeTotal,
   } = input;
 
+  // §69 적용율 (연도별, 미전달 이력 호환 fallback 3%).
+  const filingRatePct = (filingCreditRate ?? 0.03) * 100;
+
   // §69 신고세액공제 formula 문자열 빌드.
-  // filingCreditBase가 전달된 경우: "신고세액공제 대상금액 × 3%" 풀어쓰기로 base를 echo.
+  // filingCreditBase가 전달된 경우: "신고세액공제 대상금액 × N%" 풀어쓰기로 base를 echo.
   // 외국납부세액 > 0 이면 차감 단계를 formula에 포함 (표시 정합 — feedback_detailed_statement_formula_sync).
   function buildFilingCreditFormula(baseRow: string): string {
     if (filingCreditBase !== undefined) {
       const hasForeign = (foreignTaxCredit ?? 0) > 0;
       if (hasForeign) {
-        return `(${baseRow} − §59 외국납부세액) × 3%`;
+        return `(${baseRow} − §59 외국납부세액) × ${filingRatePct}%`;
       }
-      return `${baseRow} × 3%`;
+      return `${baseRow} × ${filingRatePct}%`;
     }
     // filingCreditBase 미전달 시 종전 formula
     return baseRow;

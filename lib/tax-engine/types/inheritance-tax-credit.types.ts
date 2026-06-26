@@ -121,6 +121,11 @@ export interface TaxCreditResult {
    */
   filingCreditBase?: number;
   /**
+   * §69 적용 신고세액공제율 (연도별, 상속개시일/증여일 기준).
+   * 결과카드·신고서 양식 율 표시용 echo. 미전달 이력 호환: 표시 측 `?? 0.03` fallback.
+   */
+  filingCreditRate?: number;
+  /**
    * §69 산식 노출용 — 산출세액 합계 (할증 포함).
    * = computedTax + generationSkipSurcharge
    * (= 엔진 `totalComputedTax`, inheritance-gift-tax-credit.ts:315).

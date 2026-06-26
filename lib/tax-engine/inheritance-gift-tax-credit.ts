@@ -327,6 +327,7 @@ export function calcInheritanceTaxCredits(
   const filingResult = calcFilingCredit({
     isFiledOnTime: creditInput.isFiledOnTime,
     taxBeforeFilingCredit: filingCreditBaseAmount,
+    referenceDate: deathDate,
   });
   const filingCredit = filingResult.creditAmount;
   allBreakdown.push(...filingResult.breakdown);
@@ -353,6 +354,7 @@ export function calcInheritanceTaxCredits(
     // §28·§29·§30 + 영리법인 면제(§3의2②) 차감 후·§69 적용 전 값(calcFilingCredit의
     // taxBeforeFilingCredit와 동일). 증여세 경로와 달리 단기재상속공제(§30)까지 반영됨.
     filingCreditBase: filingCreditBaseAmount,
+    filingCreditRate: filingResult.appliedRate,
     totalComputedTaxWithSurcharge: totalComputedTax,
     foreignCreditDetail,
     // §30 재산별 표 echo (결과뷰 TaxCreditBreakdownCard)
@@ -370,6 +372,8 @@ export interface GiftTaxCreditParams {
   computedTax: number;
   /** 세대생략 할증액 */
   generationSkipSurcharge: number;
+  /** 증여일 — §69 연도별 신고세액공제율 결정. 미전달 시 현행 3%. */
+  giftDate?: string;
   /** @deprecated 도달 불가 — 미사용 (gift §59 한도 미적용). */
   foreignPropertyRatio?: number;
   /** 증여재산가액 (특례 절감액 계산용) */
@@ -414,6 +418,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     creditInput,
     computedTax,
     generationSkipSurcharge,
+    giftDate,
     giftAmount = 0,
     priorGiftTaxPaid = 0,
     priorGiftComputedTax = 0,
@@ -528,6 +533,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
   const filingResult = calcFilingCredit({
     isFiledOnTime: creditInput.isFiledOnTime && !isSpecialTreatmentApplied,
     taxBeforeFilingCredit: Math.max(0, remainingTax),
+    referenceDate: giftDate,
   });
   const filingCredit = filingResult.creditAmount;
   allBreakdown.push(...filingResult.breakdown);
@@ -561,6 +567,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     appliedLaws: Array.from(appliedLaws),
     // §69 산식 노출용 echo (UI TaxCreditBreakdownCard 산출근거 펼침)
     filingCreditBase: Math.max(0, remainingTax),
+    filingCreditRate: filingResult.appliedRate,
     totalComputedTaxWithSurcharge: totalComputedTax,
   };
 }

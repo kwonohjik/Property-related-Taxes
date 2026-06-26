@@ -27,7 +27,8 @@ function cashItem(id: string, amount: number): EstateItem {
 describe("PDF 사례 2 — 조부모→손자 세대생략 재차증여", () => {
   // ──────────────────────────────────────────────
   // C2-1: 2018-05-02 1차 단독 (조모 → 손자 300M)
-  //   ⑤=250M / ⑦=40M / ⑧=12M / ⑫=12M / ⑬=52M / ⑱=50,440,000
+  //   ⑤=250M / ⑦=40M / ⑧=12M / ⑫=12M / ⑬=52M / ⑱=49,400,000
+  //   (2018년 §69 신고세액공제율 5% — filing-credit-year-rate 도입 후 법령 정합 갱신)
   // ──────────────────────────────────────────────
   describe("C2-1: 1차 단독 신고", () => {
     const input: GiftTaxInput = {
@@ -65,8 +66,10 @@ describe("PDF 사례 2 — 조부모→손자 세대생략 재차증여", () => 
         result.generationSkipSurchargeDetail?.totalComputedTaxWithSurcharge,
       ).toBe(52_000_000);
     });
-    it("⑱ 차가감자진납부세액 = 50,440,000", () => {
-      expect(result.finalTax).toBe(50_440_000);
+    it("⑱ 차가감자진납부세액 = 49,400,000 (2018년 신고세액공제 5% = 2,600,000)", () => {
+      // ⑬ 52,000,000 − §69 신고세액공제 floor(52M×5%)=2,600,000 = 49,400,000
+      expect(result.creditDetail.filingCreditRate).toBe(0.05);
+      expect(result.finalTax).toBe(49_400_000);
     });
   });
 
