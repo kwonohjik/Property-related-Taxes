@@ -222,6 +222,13 @@ export const unlistedStockValuationV2Schema = z
         preparationType: z.enum(["exchange_listing", "association_registration"]).optional(),
       })
       .optional(),
+    // 자기주식 보유 시 평가방법 (상증령 §54②·§55① + 재재산-1494·재산-240)
+    treasuryStock: z
+      .object({
+        shares: z.number().int().positive(),
+        purpose: z.enum(["temporary_holding", "cancellation"]),
+      })
+      .optional(),
   })
   .superRefine((input, ctx) => {
     // 사업연도 종료일 순서 검증 (1년전 > 2년전 > 3년전)
@@ -307,6 +314,14 @@ export const unlistedStockValuationV2Schema = z
         code: z.ZodIssueCode.custom,
         path: ["preIpoListing", "publicOfferingPrice"],
         message: "기업공개 준비 중 평가는 공모가격(1주당)을 입력해야 합니다. (상증령 §57①1호)",
+      });
+    }
+    // 자기주식: 0 < shares < totalShares (소각·감자 시 분모 N−t > 0 보장)
+    if (input.treasuryStock && input.treasuryStock.shares >= input.totalShares) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["treasuryStock", "shares"],
+        message: "자기주식수는 발행주식총수 미만이어야 합니다.",
       });
     }
   });
