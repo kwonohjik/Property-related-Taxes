@@ -127,6 +127,8 @@ export interface BuildingStdPriceFormState {
   addressDetail: string;
   longitude: string;
   latitude: string;
+  /** PNU(19자리) — 건축물대장 자동조회 파라미터 소스(엔진 미전달, longitude/latitude 성격 동일) */
+  pnu: string;
   // 양도
   acquisitionYear: string;
   transferYear: string;
@@ -204,6 +206,7 @@ export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   addressDetail: "",
   longitude: "",
   latitude: "",
+  pnu: "",
   acquisitionYear: "",
   transferYear: "",
   acqStructureKey: "",

@@ -17,6 +17,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { BuildingRegisterLookupField } from "./BuildingRegisterLookupField";
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
 import { BuildingUsageSelect } from "./BuildingUsageSelect";
 import { AdjustmentRateModal } from "./AdjustmentRateModal";
@@ -136,6 +137,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             addressDetail: initialAddress.detail,
             longitude: initialAddress.lng,
             latitude: initialAddress.lat,
+            pnu: initialAddress.pnu ?? "",
           }
         : {}),
       // 직전 입력 스냅샷 복원(정정) — 소재지 prefill보다 우선(스냅샷에 소재지 포함)
@@ -311,6 +313,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 detail: f.addressDetail,
                 lng: f.longitude,
                 lat: f.latitude,
+                pnu: f.pnu,
               } satisfies AddressValue
             }
             onChange={(v) =>
@@ -322,8 +325,16 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 addressDetail: v.detail,
                 longitude: v.lng,
                 latitude: v.lat,
+                pnu: v.pnu ?? "",
               }))
             }
+          />
+          <BuildingRegisterLookupField
+            pnu={f.pnu}
+            year={f.taxType === "transfer" ? f.transferYear : f.valuationYear}
+            taxType={f.taxType}
+            disabled={composite || isMech || apartmentConv}
+            onAutoFill={(patch) => setF((prev) => ({ ...prev, ...patch }))}
           />
         </div>
       )}
