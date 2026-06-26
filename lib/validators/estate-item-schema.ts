@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { unlistedStockDataSchema } from "./property-valuation-input-unlisted-data";
 import { unlistedStockValuationV2Schema } from "./unlisted-stock-valuation-v2.schema";
+import { migrateListedPremiumReason } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
 
 export const heirAllocationSchema = z.object({
   heirId: z.string().min(1),
@@ -208,20 +209,32 @@ export const listedStockItemSchema = baseItemSchema.extend({
   // §63③ 최대주주 할증
   isMaxShareholder: z.boolean().optional(),
   companySize: z.enum(["small", "medium", "large"]).optional(),
+  // §53⑧ 배제사유 — 공용 코드. 레거시(art53_8_*·smb_med)는 preprocess로 매핑(저장값 호환).
   premiumExclusionReason: z
-    .enum([
-      "none",
-      "smb_med",
-      "art53_8_1",
-      "art53_8_2",
-      "art53_8_3",
-      "art53_8_4",
-      "art53_8_5",
-      "art53_8_6",
-      "art53_8_7",
-      "art53_8_8",
-      "art53_8_9",
-    ])
+    .preprocess(
+      (v) => (typeof v === "string" ? migrateListedPremiumReason(v) : v),
+      z.enum([
+        "none",
+        "continuous_loss_3y",
+        "all_sold_within_6m",
+        "calc_gift_profit",
+        "subsidiary_other_max",
+        "all_negative_op_income_3y",
+        "liquidation_confirmed",
+        "not_max_after_succession",
+        "deemed_gift_nominee",
+        "small_medium_enterprise",
+      ]),
+    )
+    .optional(),
+  // §53⑧2호 전부매각 보조입력 (⑫ Zod 입력객체)
+  section53_8_2: z
+    .object({
+      allSharesSold: z.boolean(),
+      meetsArticle49_1_1: z.boolean(),
+      saleContractDate: z.union([z.string(), z.date()]),
+      transferType: z.enum(["inheritance", "gift"]),
+    })
     .optional(),
 
   // §63②3호 미상장 신주 — 갑지 ⑪⑬

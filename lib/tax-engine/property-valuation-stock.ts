@@ -35,7 +35,16 @@ import type {
   UnlistedGoodwillResult,
   UnlistedNetAssetOnlyReason,
 } from "./types/unlisted-stock-valuation.types";
-import { PREMIUM_EXCLUSION_LABELS } from "./data/listed-premium-exclusion-labels";
+import {
+  STOCK_PREMIUM_EXCLUSION_LABELS,
+  SECTION_53_8_2_FAIL_LABELS,
+} from "./data/stock-premium-exclusion-labels";
+import { evaluateSection53_8_2 } from "./property-valuation/section-53-8-2-gate";
+import type {
+  StockPremiumExclusionReason,
+  Section53_8_2FailReason,
+} from "./types/stock-premium-exclusion.types";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ============================================================
 // 비상장주식 평가 가중치 상수 (시행령 §54)
@@ -82,28 +91,55 @@ export function evaluateListedStockValue(
  *   3) companySize ∈ {small, medium} → 0 (§53④ 자동 배제)
  *   4) companySize === "large" + isMaxShareholder=true + 배제 사유 없음 → 0.20
  */
-function resolveListedPremiumRate(item: EstateItem): {
+function resolveListedPremiumRate(
+  item: EstateItem,
+  valuationDate?: Date | string,
+): {
   premiumRate: 0 | 0.2;
-  exclusionReason?: ListedPremiumExclusionReason;
+  exclusionReason?: StockPremiumExclusionReason;
+  section53_8_2FailReason?: Section53_8_2FailReason;
 } {
   if (!item.isMaxShareholder) return { premiumRate: 0 };
 
-  const explicit = item.premiumExclusionReason;
-  if (explicit && explicit !== "none") {
-    return { premiumRate: 0, exclusionReason: explicit };
+  let exclusionEffective = item.premiumExclusionReason;
+  let section53_8_2FailReason: Section53_8_2FailReason | undefined;
+
+  // §53⑧2호: 게이트 통과해야만 유효한 배제. 실패 시 explicit 무효화 후 일반 분기로.
+  if (exclusionEffective === "all_sold_within_6m") {
+    const D = toOptionalDate(valuationDate);
+    // saleContractDate는 JSON 경유 시 string 도달 가능 → toOptionalDate로 Date 보장.
+    const saleDate = toOptionalDate(item.section53_8_2?.saleContractDate);
+    if (!D || !item.section53_8_2 || !saleDate) {
+      // 평가기준일·보조입력 미상 → 보수적으로 2호 무효 (validate가 필수화)
+      exclusionEffective = "none";
+      section53_8_2FailReason = "missing_input";
+    } else {
+      const gate = evaluateSection53_8_2(
+        { ...item.section53_8_2, saleContractDate: saleDate },
+        D,
+      );
+      if (!gate.eligible) {
+        exclusionEffective = "none";
+        section53_8_2FailReason = gate.failReason;
+      }
+    }
+  }
+
+  if (exclusionEffective && exclusionEffective !== "none") {
+    return { premiumRate: 0, exclusionReason: exclusionEffective, section53_8_2FailReason };
   }
 
   if (item.companySize === "small" || item.companySize === "medium") {
-    return { premiumRate: 0, exclusionReason: "smb_med" };
+    return { premiumRate: 0, exclusionReason: "small_medium_enterprise", section53_8_2FailReason };
   }
 
   // companySize === "large" + isMaxShareholder + 배제 사유 없음 → §63③ 본문 20%
   if (item.companySize === "large") {
-    return { premiumRate: 0.2 };
+    return { premiumRate: 0.2, section53_8_2FailReason };
   }
 
   // companySize 미입력 + isMaxShareholder=true → 보수적으로 0 (validate에서 입력 요구)
-  return { premiumRate: 0 };
+  return { premiumRate: 0, section53_8_2FailReason };
 }
 
 /**
@@ -147,15 +183,24 @@ function computeListedBesshiPage1Values(
   perShareMajorShareholderUnlisted?: number;
   majorShareholderRate: 0 | 0.2;
   premiumExclusionLabel?: string;
+  section53_8_2FailLabel?: string;
 } {
-  const { premiumRate, exclusionReason } = resolveListedPremiumRate(item);
+  const { premiumRate, exclusionReason, section53_8_2FailReason } = resolveListedPremiumRate(
+    item,
+    context.valuationDate,
+  );
   // SSOT — groups.closingAverage 우선, tradingDays === 0 시 avgPrice fallback
   const closingAvg = resolveClosingAvg(groups, avgPrice);
   const perShareMajorShareholder = Math.floor(closingAvg * (1 + premiumRate));
 
+  // §53⑧2호 게이트 실패 안내 (할증 적용됨 — rose tone 결과 표시·warnings용)
+  const section53_8_2FailLabel = section53_8_2FailReason
+    ? SECTION_53_8_2_FAIL_LABELS[section53_8_2FailReason]
+    : undefined;
+
   const premiumExclusionLabel =
     premiumRate === 0 && exclusionReason
-      ? PREMIUM_EXCLUSION_LABELS[exclusionReason]
+      ? STOCK_PREMIUM_EXCLUSION_LABELS[exclusionReason]
       : undefined;
 
   // §63②3호 미상장 신주 분기 — ⑪~⑰ derive
@@ -165,6 +210,7 @@ function computeListedBesshiPage1Values(
       perShareMajorShareholder,
       majorShareholderRate: premiumRate,
       premiumExclusionLabel,
+      section53_8_2FailLabel,
     };
   }
 
@@ -212,6 +258,7 @@ function computeListedBesshiPage1Values(
     perShareMajorShareholderUnlisted,
     majorShareholderRate: premiumRate,
     premiumExclusionLabel,
+    section53_8_2FailLabel,
   };
 }
 
@@ -284,6 +331,9 @@ export function evaluateListedStock(
     if (page1Values.majorShareholderRate === 0.2) {
       warnings.push("§63③ 최대주주 등 할증 20% 적용 (대기업).");
     }
+    if (page1Values.section53_8_2FailLabel) {
+      warnings.push(page1Values.section53_8_2FailLabel);
+    }
     return {
       estateItemId: item.id,
       method: "market_value",
@@ -334,6 +384,9 @@ export function evaluateListedStock(
   const warnings: string[] = [];
   if (page1Values.majorShareholderRate === 0.2) {
     warnings.push("§63③ 최대주주 등 할증 20% 적용 (대기업).");
+  }
+  if (page1Values.section53_8_2FailLabel) {
+    warnings.push(page1Values.section53_8_2FailLabel);
   }
 
   return {

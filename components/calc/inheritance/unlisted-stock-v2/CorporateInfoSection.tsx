@@ -18,7 +18,19 @@ import { ToggleChip } from "@/components/calc/inputs/ToggleChip";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { CapitalChangeTable } from "./CapitalChangeTable";
+import { Section53_8_2Fields } from "@/components/calc/inheritance/shared/Section53_8_2Fields";
+import {
+  STOCK_PREMIUM_EXCLUSION_LABELS,
+} from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
 import type { UnlistedNetAssetOnlyReason, UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import type {
+  StockPremiumExclusionReason,
+  Section53_8_2Input,
+} from "@/lib/tax-engine/types/stock-premium-exclusion.types";
+
+const PREMIUM_EXCLUSION_OPTIONS = (
+  Object.keys(STOCK_PREMIUM_EXCLUSION_LABELS) as StockPremiumExclusionReason[]
+).map((k) => ({ value: k, label: STOCK_PREMIUM_EXCLUSION_LABELS[k] }));
 
 /** Date ↔ YYYY-MM-DD string 변환 헬퍼 */
 function dateToStr(d: Date | undefined): string {
@@ -130,6 +142,12 @@ export interface CorporateInfoSectionProps {
   isMaxShareholder: boolean;
   companySize: "small" | "medium" | "large";
   isContinuousLossLastThreeYears: boolean;
+  /** §53⑧ 배제 사유 (수동 선택) */
+  premiumExclusionReason?: StockPremiumExclusionReason;
+  /** §53⑧2호 전부매각 보조입력 */
+  section53_8_2?: Section53_8_2Input;
+  /** 계산 세목 — §53⑧2호 transferType 초기값 seed */
+  taxKind?: "inheritance" | "gift";
   /** 자기주식 보유 시 평가방법 (상증령 §54②·§55①). undefined = 미보유 */
   treasuryStock?: { shares: number; purpose: "temporary_holding" | "cancellation" };
   /** 자본금 변동(증자·감자) 이력 — 섹션 1 내부에 임베드 (§56③·⑤ + §17의3⑤) */
@@ -150,6 +168,8 @@ export interface CorporateInfoSectionProps {
     isMaxShareholder?: boolean;
     companySize?: "small" | "medium" | "large";
     isContinuousLossLastThreeYears?: boolean;
+    premiumExclusionReason?: StockPremiumExclusionReason;
+    section53_8_2?: Section53_8_2Input | undefined;
     treasuryStock?: { shares: number; purpose: "temporary_holding" | "cancellation" } | undefined;
   }) => void;
 }
@@ -170,6 +190,9 @@ export function CorporateInfoSection({
   isMaxShareholder,
   companySize,
   isContinuousLossLastThreeYears,
+  premiumExclusionReason,
+  section53_8_2,
+  taxKind,
   treasuryStock,
   capitalChanges,
   onCapitalChangesChange,
@@ -462,6 +485,34 @@ export function CorporateInfoSection({
               onChange={(next) => onChange({ companySize: next })}
               layout="stack"
             />
+            <FieldCard label="배제 사유 (§53⑧ — 해당 시)" stacked>
+              <select
+                value={premiumExclusionReason ?? "none"}
+                onChange={(e) => {
+                  const next = e.target.value as StockPremiumExclusionReason;
+                  onChange({
+                    premiumExclusionReason: next,
+                    ...(next === "all_sold_within_6m" ? {} : { section53_8_2: undefined }),
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-900 text-sm"
+                data-testid="unlisted-premium-exclusion-select"
+              >
+                {PREMIUM_EXCLUSION_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </FieldCard>
+            {premiumExclusionReason === "all_sold_within_6m" && (
+              <Section53_8_2Fields
+                value={section53_8_2}
+                onChange={(v) => onChange({ section53_8_2: v })}
+                idPrefix="unlisted-premium-53-8-2"
+                transferTypeDefault={taxKind}
+              />
+            )}
           </div>
         )}
       </div>

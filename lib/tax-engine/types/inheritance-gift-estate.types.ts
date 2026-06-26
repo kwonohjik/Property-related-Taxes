@@ -15,6 +15,7 @@ import type {
   ListedStockBesshiData,
 } from "./listed-stock-valuation.types";
 import type { UnlistedStockValuationInput } from "./unlisted-stock-valuation.types";
+import type { Section53_8_2Input } from "./stock-premium-exclusion.types";
 import type { FamilyBusinessCategory } from "./inheritance-family-business.types";
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
 import type { EstateLocationFields } from "./inheritance-asset-location.types";
@@ -138,6 +139,8 @@ export interface EstateItem extends EstateLocationFields {
   companySize?: ListedCompanySize;
   /** §53⑧ 1~9호 + 중소·중견 배제 사유 */
   premiumExclusionReason?: ListedPremiumExclusionReason;
+  /** §53⑧2호 전부매각 보조입력 — premiumExclusionReason==="all_sold_within_6m" 시에만 (optional 3-state) */
+  section53_8_2?: Section53_8_2Input;
 
   /** 갑지 ⑪ 직전기 배당률 (decimal 0~1, store 단위) */
   priorDividendRate?: number;

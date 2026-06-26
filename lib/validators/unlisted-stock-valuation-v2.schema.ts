@@ -12,6 +12,7 @@
  */
 
 import { z } from "zod";
+import { migrateListedPremiumReason } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
 
 /** §54④ 순자산 단독 평가 사유 5종 (4호 삭제 반영) */
 export const unlistedNetAssetOnlyReasonSchema = z.enum([
@@ -164,6 +165,33 @@ export const unlistedStockValuationV2Schema = z
     goodwillRate: z.number().min(0.01).max(1).optional(),
     isMaxShareholder: z.boolean(),
     companySize: z.enum(["small", "medium", "large"]),
+    // §53⑧ 배제사유 — 공용 코드(레거시 매핑은 상장과 동일 헬퍼)
+    premiumExclusionReason: z
+      .preprocess(
+        (v) => (typeof v === "string" ? migrateListedPremiumReason(v) : v),
+        z.enum([
+          "none",
+          "continuous_loss_3y",
+          "all_sold_within_6m",
+          "calc_gift_profit",
+          "subsidiary_other_max",
+          "all_negative_op_income_3y",
+          "liquidation_confirmed",
+          "not_max_after_succession",
+          "deemed_gift_nominee",
+          "small_medium_enterprise",
+        ]),
+      )
+      .optional(),
+    // §53⑧2호 전부매각 보조입력
+    section53_8_2: z
+      .object({
+        allSharesSold: z.boolean(),
+        meetsArticle49_1_1: z.boolean(),
+        saleContractDate: z.union([z.string(), z.date()]),
+        transferType: z.enum(["inheritance", "gift"]),
+      })
+      .optional(),
     // §22② 최대주주 해당 여부 (금융재산공제 배제 토글). 레거시 3-state string 호환:
     // manual_on→true, manual_off·auto→false (auto는 종전 표시 전용이라 계산상 미배제=false 보존).
     isSection22MajorShareholder: z.preprocess(

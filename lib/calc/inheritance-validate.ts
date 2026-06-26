@@ -610,6 +610,17 @@ export function validateListedStockBesshi(item: EstateItem): string | null {
     return `자산 "${item.name}" §63③ — 기업 규모 (중소·중견·대기업) 입력 필요`;
   }
 
+  // §53⑧2호 전부매각 — 선택 시 매매계약일 필수 (게이트 missing_input 차단).
+  // isMaxShareholder 가드: 엔진(resolveListedPremiumRate)이 최대주주 아니면 2호를 읽지 않음 — 정합.
+  // allSharesSold·meetsArticle49_1_1 미체크는 차단 아님(요건 불충족=할증 적용).
+  if (
+    item.isMaxShareholder &&
+    item.premiumExclusionReason === "all_sold_within_6m" &&
+    !item.section53_8_2?.saleContractDate
+  ) {
+    return `자산 "${item.name}" §53⑧2호 — 매매계약일 입력 필요`;
+  }
+
   return null;
 }
 

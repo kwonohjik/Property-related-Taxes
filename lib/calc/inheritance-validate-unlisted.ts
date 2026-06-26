@@ -124,6 +124,18 @@ export function validateUnlistedStockV2(
     }
   }
 
+  // §53⑧2호 전부매각 — 최대주주 + 2호 선택 시 매매계약일·평가기준일 필수 (게이트 missing_input 차단).
+  // isMaxShareholder 가드: 엔진(calcMaxShareholderPremium)이 최대주주 아니면 2호 미독.
+  // allSharesSold·meetsArticle49_1_1 미체크는 차단 아님(요건 불충족=할증 적용).
+  if (v2.isMaxShareholder && v2.premiumExclusionReason === "all_sold_within_6m") {
+    if (!v2.section53_8_2?.saleContractDate) {
+      return `비상장주식 "${item.name}" §53⑧2호 — 매매계약일을 입력해야 합니다.`;
+    }
+    if (!effectiveEvaluationDate) {
+      return `비상장주식 "${item.name}" §53⑧2호 — 평가기준일이 필요합니다(전부매각 기간 판정).`;
+    }
+  }
+
   // PR-E (UI 통합 v3): §22② 자동 모드 시 보유·발행 주식 수 필수 (사실상 기존 ownedShares/totalShares 검증)
   // 별도 추가 검증 없음 — ownedShares>0 / totalShares>0 보장은 Zod에서 처리.
 

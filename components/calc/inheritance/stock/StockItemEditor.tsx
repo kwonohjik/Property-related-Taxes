@@ -209,6 +209,7 @@ function ListedStockEditor({
       <ListedStockBesshiAttributesSection
         item={item}
         onUpdate={(patch) => set(patch)}
+        taxKind={mode}
       />
 
       {/* 평가조서 미리보기 + PDF 다운로드 (계획: ux-refinement) */}

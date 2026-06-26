@@ -24,11 +24,14 @@ import type {
   ListedPremiumExclusionReason,
   ListedStockClass,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { PREMIUM_EXCLUSION_LABELS } from "@/lib/tax-engine/data/listed-premium-exclusion-labels";
+import { STOCK_PREMIUM_EXCLUSION_LABELS } from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
+import { Section53_8_2Fields } from "@/components/calc/inheritance/shared/Section53_8_2Fields";
 
 interface Props {
   item: EstateItem;
   onUpdate: (patch: Partial<EstateItem>) => void;
+  /** 계산 세목 — §53⑧2호 transferType 초기값 seed */
+  taxKind?: "inheritance" | "gift";
 }
 
 const STOCK_CLASS_OPTIONS: Array<{
@@ -54,8 +57,8 @@ const PREMIUM_EXCLUSION_OPTIONS: Array<{
   value: ListedPremiumExclusionReason;
   label: string;
 }> = (
-  Object.keys(PREMIUM_EXCLUSION_LABELS) as ListedPremiumExclusionReason[]
-).map((k) => ({ value: k, label: PREMIUM_EXCLUSION_LABELS[k] }));
+  Object.keys(STOCK_PREMIUM_EXCLUSION_LABELS) as ListedPremiumExclusionReason[]
+).map((k) => ({ value: k, label: STOCK_PREMIUM_EXCLUSION_LABELS[k] }));
 
 const UNLISTED_SHARE_MODE_OPTIONS: Array<{
   value: "none" | "capital_increase" | "merger";
@@ -81,7 +84,7 @@ function isoOrEmpty(v: Date | string | undefined): string {
   return v;
 }
 
-export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
+export function ListedStockBesshiAttributesSection({ item, onUpdate, taxKind }: Props) {
   const set = (patch: Partial<EstateItem>) => onUpdate(patch);
 
   // 갑지 정보 — 어떤 필드라도 입력되면 ON 간주
@@ -186,7 +189,13 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
         onCheckedChange={(v) => {
           set({
             isMaxShareholder: v || undefined,
-            ...(v ? {} : { companySize: undefined, premiumExclusionReason: undefined }),
+            ...(v
+              ? {}
+              : {
+                  companySize: undefined,
+                  premiumExclusionReason: undefined,
+                  section53_8_2: undefined,
+                }),
           });
         }}
         title="§63③ 최대주주 등 할증평가 (×120%)"
@@ -207,11 +216,14 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
           <FieldCard label="배제 사유 (§53⑧ — 해당 시)">
             <select
               value={item.premiumExclusionReason ?? "none"}
-              onChange={(e) =>
+              onChange={(e) => {
+                const next = e.target.value as ListedPremiumExclusionReason;
+                // 2호 외로 바뀌면 보조입력 clear (3-state)
                 set({
-                  premiumExclusionReason: e.target.value as ListedPremiumExclusionReason,
-                })
-              }
+                  premiumExclusionReason: next,
+                  ...(next === "all_sold_within_6m" ? {} : { section53_8_2: undefined }),
+                });
+              }}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               {PREMIUM_EXCLUSION_OPTIONS.map((o) => (
@@ -221,6 +233,14 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate }: Props) {
               ))}
             </select>
           </FieldCard>
+          {item.premiumExclusionReason === "all_sold_within_6m" && (
+            <Section53_8_2Fields
+              value={item.section53_8_2}
+              onChange={(v) => set({ section53_8_2: v })}
+              idPrefix="premium-53-8-2"
+              transferTypeDefault={taxKind}
+            />
+          )}
         </div>
       </ToggleCard>
 
