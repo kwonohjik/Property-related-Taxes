@@ -36,7 +36,7 @@ const TEXT_INPUT_CLASS =
 
 /** 원화 포맷 (결과 미리보기 전용) */
 function fmtKRW(n: number): string {
-  return n.toLocaleString("ko-KR") + " 원";
+  return n.toLocaleString("ko-KR");
 }
 
 const VALUATION_MODE_OPTIONS = [
