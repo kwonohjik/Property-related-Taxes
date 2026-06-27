@@ -126,10 +126,12 @@ if (item.category === "financial") {
 - `savingsAnnualRate`·`savingsWithholdingRate`: 0~100% 범위. 0% 허용(미수이자 0). 100% 초과 차단.
 - API/UI fallback ↔ validate 동기화: mode별 동일 fallback. UI 통과↔validate 차단 모순 금지.
 
-## 8. testid 동결 (E2E)
-`savings-mode-balance`·`savings-mode-statutory`·`savings-accrual-auto`·`savings-accrual-manual`·
-`savings-principal`·`savings-annual-rate`·`savings-start-date`·`savings-wht-rate`·
-`savings-include-local-tax`·`savings-preview-valuation`.
+## 8. testid 동결 (E2E) — ✅ 구현 정렬(드리프트 0)
+실제 구현·통과 E2E(`e2e/deposit-savings-valuation-63-4.spec.ts`, 3/3 PASS) 기준:
+`savings-valuation-mode-{id}`(평가모드 라디오 그룹)·`savings-accrual-method`(미수이자 산정)·
+`savings-market-value-{id}`(잔액)·`savings-principal-{id}`·`savings-annual-rate-{id}`·
+`savings-withholding-rate`·`savings-accrued-interest-{id}`·`savings-withholding-tax-{id}`.
+> v1 동결값(savings-mode-balance 등)은 구현과 불일치 → 위 구현값으로 갱신(gap-detector deviation #testid 해소).
 
 ## 9. 미해결 (계획서 §9)
 factory 초기값 위치(UI#8)·normalize savingsStartDate 재수화(코드#5) — Do 전 grep 확정.

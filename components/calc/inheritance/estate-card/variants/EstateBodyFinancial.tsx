@@ -154,7 +154,7 @@ export function EstateBodyFinancial({ item, onUpdate, valuationDate }: VariantBo
         {mode === "balance" && (
           <>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 rounded px-3 py-2">
-              §62·상증령 §19① — 평가기준일 현재 잔액 또는 시가. §22 금융재산공제 적용 대상.
+              상증법 §63④ — 평가기준일 현재 잔액. 미수이자·원천징수세액 정밀반영은 §63④ 정밀평가 모드. §22 금융재산공제 적용 대상.
             </p>
             <FieldCard
               label="잔액 또는 시가"
