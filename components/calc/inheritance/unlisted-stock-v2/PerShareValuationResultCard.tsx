@@ -37,7 +37,7 @@ function buildEstimatedProfitHint(r: EstimatedProfitResult, capRate: number): st
   const base = `§56② 추정이익 평균가액 ${r.estimatedProfitAverage.toLocaleString()}원 (기관 ${r.agencyCount}개 평균) ÷ 환원율 ${(capRate * 100).toFixed(0)}%`;
   if (r.agencyMeta && r.agencyMeta.length > 0) {
     const agencyList = r.agencyMeta
-      .map((a) => `${AGENCY_TYPE_LABEL[a.type]} ${a.name}`)
+      .map((a) => (a.name ? `${AGENCY_TYPE_LABEL[a.type]} ${a.name}` : AGENCY_TYPE_LABEL[a.type]))
       .join(" / ");
     return `${base} — ${agencyList}`;
   }
