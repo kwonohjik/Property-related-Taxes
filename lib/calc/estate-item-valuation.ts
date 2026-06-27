@@ -18,6 +18,7 @@ import {
   computeCryptoUnitPrice,
   injectCryptoUnitPriceIfTimeseries,
 } from "@/lib/tax-engine/property-valuation";
+import { resolveAnnuityYears } from "@/lib/tax-engine/valuation-annuity-core";
 
 // Re-export so buildInput / buildGiftTaxInput callers use a single import source
 export { injectSavingsAccrualIfAuto, injectCryptoUnitPriceIfTimeseries };
@@ -132,6 +133,47 @@ export function injectCbValuationDate(
   return { ...item, cbValuationDate: valuationDateISO };
 }
 
+/**
+ * 신탁수익권 수익 회차수(연수) 합성 (§61②) — 엔진 단일진실 resolveAnnuityYears 위임.
+ * 평가기준일~수익만기 / 미정 시 §62 준용(무기 20·종신 기대여명). override 우선.
+ * (mirror-pattern: store 미러링 아님 — 빌드시 합성. evaluateTrustBenefit가 소비)
+ */
+export function injectTrustBenefitRemainingYears(
+  item: EstateItem,
+  valuationDateISO?: string,
+): EstateItem {
+  if (item.category !== "trust_benefit") return item;
+  const years = resolveAnnuityYears({
+    kind: item.trustAnnuityType ?? "finite",
+    override: item.trustRemainingYearsOverride,
+    maturityDate: item.trustIncomeMaturityDate,
+    valuationDate: valuationDateISO,
+    gender: item.trustBeneficiaryGender,
+    age: item.trustBeneficiaryAge,
+  });
+  return { ...item, trustRemainingYears: years };
+}
+
+/**
+ * 정기금 잔존연수 합성 (§62) — 엔진 단일진실 resolveAnnuityYears 위임.
+ * 유기=평가기준일~만기 / 종신=기대여명 floor / 무기=미사용(1년분×20). override 우선.
+ */
+export function injectPeriodicRemainingYears(
+  item: EstateItem,
+  valuationDateISO?: string,
+): EstateItem {
+  if (item.category !== "periodic_payment") return item;
+  const years = resolveAnnuityYears({
+    kind: item.periodicAnnuityType ?? "finite",
+    override: item.periodicRemainingYearsOverride,
+    maturityDate: item.periodicMaturityDate,
+    valuationDate: valuationDateISO,
+    gender: item.periodicBeneficiaryGender,
+    age: item.periodicBeneficiaryAge,
+  });
+  return { ...item, periodicRemainingYears: years };
+}
+
 export function computeEffectiveValuation(
   item: EstateItem,
   valuationDate?: string,
@@ -183,6 +225,22 @@ export function computeEffectiveValuation(
   if (item.category === "convertible_bond") {
     try {
       return evaluateEstateItem({ ...item, cbValuationDate: valuationDate }).valuatedAmount;
+    } catch {
+      return 0; // 부분입력 가드
+    }
+  }
+  // 신탁수익권: 수익 회차수 합성 후 엔진 위임 (§61, single-source)
+  if (item.category === "trust_benefit") {
+    try {
+      return evaluateEstateItem(injectTrustBenefitRemainingYears(item, valuationDate)).valuatedAmount;
+    } catch {
+      return 0; // 부분입력 가드
+    }
+  }
+  // 정기금받을권리: 잔존연수 합성 후 엔진 위임 (§62, single-source)
+  if (item.category === "periodic_payment") {
+    try {
+      return evaluateEstateItem(injectPeriodicRemainingYears(item, valuationDate)).valuatedAmount;
     } catch {
       return 0; // 부분입력 가드
     }

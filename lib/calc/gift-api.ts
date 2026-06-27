@@ -10,7 +10,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
-import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
+import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectTrustBenefitRemainingYears, injectPeriodicRemainingYears, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/components/calc/gift-tax-form-shared";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
@@ -54,6 +54,8 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     .map((i) => (giftDateObj ? injectSavingsAccrualIfAuto(i, giftDateObj) : i))
     .map((i) => injectReceivableValuationDate(i, form.giftDate || undefined))
     .map((i) => injectCbValuationDate(i, form.giftDate || undefined))
+    .map((i) => injectTrustBenefitRemainingYears(i, form.giftDate || undefined))
+    .map((i) => injectPeriodicRemainingYears(i, form.giftDate || undefined))
     .map(injectCryptoUnitPriceIfTimeseries);
 
   const deductionInput: GiftDeductionInput = {

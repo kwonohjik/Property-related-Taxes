@@ -14,6 +14,8 @@ import { EstateBodyIntangibleIp } from "./EstateBodyIntangibleIp";
 import { EstateBodyFinancial } from "./EstateBodyFinancial";
 import { EstateBodyReceivable } from "./EstateBodyReceivable";
 import { EstateBodyConvertibleBond } from "./EstateBodyConvertibleBond";
+import { EstateBodyTrustBenefit } from "./EstateBodyTrustBenefit";
+import { EstateBodyPeriodicPayment } from "./EstateBodyPeriodicPayment";
 import { EstateBodyCryptoAsset } from "./EstateBodyCryptoAsset";
 import { assertNever } from "./EstateBodyHelpers";
 import type { SupportedCategory, VariantBodyProps } from "./types";
@@ -27,6 +29,8 @@ export {
   EstateBodyFinancial,
   EstateBodyReceivable,
   EstateBodyConvertibleBond,
+  EstateBodyTrustBenefit,
+  EstateBodyPeriodicPayment,
   EstateBodyCryptoAsset,
 };
 export type { SupportedCategory, VariantBodyProps };
@@ -53,6 +57,10 @@ export function pickBodyVariant(
       return EstateBodyReceivable;
     case "convertible_bond":
       return EstateBodyConvertibleBond;
+    case "trust_benefit":
+      return EstateBodyTrustBenefit;
+    case "periodic_payment":
+      return EstateBodyPeriodicPayment;
     case "crypto_asset":
       return EstateBodyCryptoAsset;
     case "financial":

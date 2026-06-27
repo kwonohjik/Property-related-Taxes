@@ -571,6 +571,78 @@ export const convertibleBondItemSchema = baseItemSchema
     }
   });
 
+/** 신탁수익권 (상증법 §65①·상증령 §61) */
+export const trustBenefitItemSchema = baseItemSchema
+  .extend({
+    category: z.literal("trust_benefit"),
+    trustBeneficiaryType: z.enum(["same", "diff_principal", "diff_income"]).optional(),
+    trustAssets: z
+      .array(z.object({ kind: z.string(), label: z.string().optional(), value: z.number().nonnegative() }))
+      .optional(),
+    trustYieldRateNumer: z.number().optional(),
+    trustYieldRateDenom: z.number().optional(),
+    trustWithholdingRateNumer: z.number().optional(),
+    trustWithholdingRateDenom: z.number().optional(),
+    trustIncomeMaturityDate: z.union([z.string(), z.date()]).optional(),
+    trustAnnuityType: z.enum(["finite", "perpetual", "lifetime"]).optional(),
+    trustBeneficiaryGender: z.enum(["male", "female"]).optional(),
+    trustBeneficiaryAge: z.number().optional(),
+    trustRemainingYearsOverride: z.number().optional(),
+    trustSurrenderValue: z.number().nonnegative().optional(),
+    // ⑫ silent strip 방지 — 합성 주입 잔존연수
+    trustRemainingYears: z.number().optional(),
+  })
+  .superRefine((item, ctx) => {
+    const principal = (item.trustAssets ?? []).reduce((s, a) => s + (a.value ?? 0), 0);
+    if (!(principal > 0)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["trustAssets"], message: "신탁재산 구성을 1건 이상 입력하세요." });
+    }
+    // 수익권 PV 분기(원본권·수익권) — 미입력=0 침묵 평가 차단(자동 fallback 금지 정책)
+    if (item.trustBeneficiaryType === "diff_principal" || item.trustBeneficiaryType === "diff_income") {
+      const timing = item.trustAnnuityType ?? "finite";
+      if (item.trustRemainingYearsOverride == null) {
+        if (timing === "finite" && !item.trustIncomeMaturityDate) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["trustIncomeMaturityDate"], message: "수익 만기일을 입력하세요(또는 잔존연수 직접 입력)." });
+        }
+        if (timing === "lifetime" && (!item.trustBeneficiaryGender || item.trustBeneficiaryAge == null)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["trustBeneficiaryAge"], message: "종신 기대여명을 위한 수익자 성별·나이를 입력하세요." });
+        }
+      }
+      if (item.trustYieldRateNumer != null && !(item.trustYieldRateNumer > 0)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["trustYieldRateNumer"], message: "연수익률을 입력하세요(확정 선택 시). 미확정은 토글 OFF." });
+      }
+    }
+  });
+
+/** 정기금받을권리 (상증법 §65①·상증령 §62) */
+export const periodicPaymentItemSchema = baseItemSchema
+  .extend({
+    category: z.literal("periodic_payment"),
+    periodicAnnuityType: z.enum(["finite", "perpetual", "lifetime"]).optional(),
+    periodicAnnualAmount: z.number().nonnegative().optional(),
+    periodicMaturityDate: z.union([z.string(), z.date()]).optional(),
+    periodicBeneficiaryGender: z.enum(["male", "female"]).optional(),
+    periodicBeneficiaryAge: z.number().optional(),
+    periodicRemainingYearsOverride: z.number().optional(),
+    periodicSurrenderValue: z.number().nonnegative().optional(),
+    periodicRemainingYears: z.number().optional(),
+  })
+  .superRefine((item, ctx) => {
+    if (!((item.periodicAnnualAmount ?? 0) > 0)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["periodicAnnualAmount"], message: "1년분 정기금액을 입력하세요." });
+    }
+    // 미입력=0 침묵 평가 차단 — 유기는 만기일, 종신은 성별·나이 필수(무기는 1년분×20이라 불요)
+    const type = item.periodicAnnuityType ?? "finite";
+    if (item.periodicRemainingYearsOverride == null) {
+      if (type === "finite" && !item.periodicMaturityDate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["periodicMaturityDate"], message: "정기금 만기일을 입력하세요(또는 잔존연수 직접 입력)." });
+      }
+      if (type === "lifetime" && (!item.periodicBeneficiaryGender || item.periodicBeneficiaryAge == null)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["periodicBeneficiaryAge"], message: "종신 기대여명을 위한 수급자 성별·나이를 입력하세요." });
+      }
+    }
+  });
+
 /** 자산 항목 discriminatedUnion 스키마 */
 export const estateItemSchema = z
   .discriminatedUnion("category", [
@@ -586,13 +658,15 @@ export const estateItemSchema = z
     intangibleIpItemSchema,
     receivableItemSchema,
     convertibleBondItemSchema,
+    trustBenefitItemSchema,
+    periodicPaymentItemSchema,
     cryptoAssetItemSchema,
     otherItemSchema,
   ])
   // v4.1.1 Phase 5 D11/디자인 §5 — 카테고리별 좌표 입력 정책 (영농 §16②1호나)
   .superRefine((item, ctx) => {
     // 무관 카테고리 + 좌표 입력 → 차단
-    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "intangible_ip", "receivable", "convertible_bond", "crypto_asset", "other"];
+    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "intangible_ip", "receivable", "convertible_bond", "trust_benefit", "periodic_payment", "crypto_asset", "other"];
     if (COORD_INCOMPATIBLE.includes(item.category)) {
       if (item.estateLatLng !== undefined || item.estateSigunguCode !== undefined) {
         ctx.addIssue({

@@ -25,6 +25,8 @@ const CATEGORY_TO_SUMMARY: Record<AssetCategory, SummaryTableCategory> = {
   intangible_ip: "other", // 무체재산권 — 권리, 기타 그룹
   receivable: "financial", // 채권(대여금·외상매출금 등) — 금전채권, 금융 그룹
   convertible_bond: "financial", // 전환사채등 — 유가증권/금전채권, 금융 그룹
+  trust_benefit: "other", // 신탁수익권 — 권리 평가, 기타 그룹 (§10 분류 확인 대기)
+  periodic_payment: "other", // 정기금받을권리 — 권리 평가, 기타 그룹
   crypto_asset: "other", // 가상화폐(가상자산) — §22 금융재산공제 대상 아님, 기타 그룹
   other: "other",
 };

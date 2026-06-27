@@ -42,6 +42,8 @@ const CATEGORY_LABELS: Record<SupportedCategory, string> = {
   intangible_ip: "무체재산권",
   receivable: "채권 (대여금·외상매출금 등)",
   convertible_bond: "전환사채등 (전환사채·신주인수권부사채 등)",
+  trust_benefit: "신탁수익권",
+  periodic_payment: "정기금받을권리",
   crypto_asset: "가상화폐 (가상자산)",
   other: "기타 재산",
 };
@@ -57,6 +59,8 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "intangible_ip",
   "receivable",
   "convertible_bond",
+  "trust_benefit",
+  "periodic_payment",
   "other",
 ];
 
@@ -70,6 +74,8 @@ const GIFT_CATEGORIES: SupportedCategory[] = [
   "intangible_ip",
   "receivable",
   "convertible_bond",
+  "trust_benefit",
+  "periodic_payment",
   "other",
 ];
 

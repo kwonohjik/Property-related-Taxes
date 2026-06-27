@@ -49,7 +49,7 @@ import {
   warnCohabitHouseRightType,
 } from "@/lib/calc/inheritance-validate";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
-import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
+import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectTrustBenefitRemainingYears, injectPeriodicRemainingYears, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { applyCorporateGiftTaxFallback } from "@/lib/calc/prior-gift-auto-tax";
 import {
@@ -430,6 +430,8 @@ export function InheritanceTaxForm() {
       .map((i) => (deathDateObj ? injectSavingsAccrualIfAuto(i, deathDateObj) : i))
       .map((i) => injectReceivableValuationDate(i, form.deathDate || undefined))
       .map((i) => injectCbValuationDate(i, form.deathDate || undefined))
+      .map((i) => injectTrustBenefitRemainingYears(i, form.deathDate || undefined))
+      .map((i) => injectPeriodicRemainingYears(i, form.deathDate || undefined))
       .map(injectCryptoUnitPriceIfTimeseries);
     // 자동 도출 (mirror, R4): 빈 문자열(미입력)일 때만 자산·협의분할 기반 자동, "0"·명시값 우선.
     // store는 불변(form 그대로) — useEffect→store 미러링 아님. UI는 자동값을 display fallback으로 표시.

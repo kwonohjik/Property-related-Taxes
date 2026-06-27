@@ -28,9 +28,12 @@ import {
   resolveReceivableRecoveryYears,
 } from "./property-valuation-receivable";
 import { evaluateConvertibleBond } from "./property-valuation-convertible-bond";
+import { evaluateTrustBenefit } from "./property-valuation-trust-benefit";
+import { evaluatePeriodicPayment } from "./property-valuation-periodic";
 import { computeCryptoUnitPrice } from "./property-valuation-crypto";
 
 export { evaluateReceivable, resolveReceivableRecoveryYears, evaluateConvertibleBond };
+export { evaluateTrustBenefit, evaluatePeriodicPayment };
 // listed_stock / V1 간편 비상장(unlistedStockData) 평가 단일 진실.
 // resolve-estate-item-value.ts는 property-valuation.ts를 import하지 않으므로 순환 없음(단방향).
 import {
@@ -815,6 +818,10 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
       return evaluateReceivable(item);
     case "convertible_bond":
       return evaluateConvertibleBond(item);
+    case "trust_benefit":
+      return evaluateTrustBenefit(item);
+    case "periodic_payment":
+      return evaluatePeriodicPayment(item);
     case "crypto_asset":
       return evaluateCryptoAsset(item);
     case "listed_stock":
