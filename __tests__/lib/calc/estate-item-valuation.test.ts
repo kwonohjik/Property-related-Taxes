@@ -9,10 +9,11 @@ import { describe, it, expect } from "vitest";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
+// 일반 카테고리 기본값 ("other") — financial은 §63④ 전용 분기 사용 (하단 별도 테스트)
 function makeItem(overrides: Partial<EstateItem> = {}): EstateItem {
   return {
     id: "t-1",
-    category: "financial",
+    category: "other",
     name: "테스트",
     ...overrides,
   };
@@ -78,5 +79,31 @@ describe("computeEffectiveValuation — 우선순위 매트릭스", () => {
       listedStockShares: 15_000,
     });
     expect(computeEffectiveValuation(item)).toBe(200_000_000);
+  });
+});
+
+describe("computeEffectiveValuation — financial §63④ 전용 분기", () => {
+  it("balance 모드 기본 — marketValue 반환", () => {
+    const item: EstateItem = { id: "t", category: "financial", name: "", marketValue: 1_000_000 };
+    expect(computeEffectiveValuation(item)).toBe(1_000_000);
+  });
+
+  it("balance 모드 — marketValue 없으면 0 (일반 fallback 없음)", () => {
+    const item: EstateItem = { id: "t", category: "financial", name: "", standardPrice: 3_000 };
+    expect(computeEffectiveValuation(item)).toBe(0);
+  });
+
+  it("manual 모드 — ㉠+㉡−㉢ 계산", () => {
+    const item: EstateItem = {
+      id: "t",
+      category: "financial",
+      name: "",
+      savingsValuationMode: "manual",
+      savingsPrincipal: 1_000_000_000,
+      savingsAccruedInterest: 38_356_164,
+      savingsWithholdingTax: 5_969_588,
+    };
+    // 1,000,000,000 + 38,356,164 - 5,969,588 = 1,032,386,576
+    expect(computeEffectiveValuation(item)).toBe(1_032_386_576);
   });
 });
