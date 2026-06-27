@@ -91,6 +91,12 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
     financialDeduction: "hidden_expandable", // §19① 사인간 직접채권(대여금 등) 미열거 — deposit과 동일
     deemedRetirementOption: "hidden",
   },
+  convertible_bond: {
+    farming: "hidden_permanent",
+    familyBusiness: "hidden_permanent",
+    financialDeduction: "hidden_expandable", // §19① 사인간 직접 보유 사채 — receivable과 동일(§22 적격은 §9 검증 후 default 전환)
+    deemedRetirementOption: "hidden",
+  },
   listed_stock: {
     farming: "default", // 영농법인 주식 (§16② 50%+ 보유 요건 안내 강화)
     familyBusiness: "default",
@@ -226,6 +232,7 @@ const CULTURAL_HERITAGE_VISIBILITY: Record<AssetCategory, ToggleVisibility> = {
   unlisted_stock: "hidden_permanent",
   superficies: "hidden_permanent",     // 지상권 — §74 문화유산 미대상
   receivable: "hidden_permanent",      // 채권 — §74 문화유산 미대상
+  convertible_bond: "hidden_permanent", // 전환사채등 — §74 문화유산 미대상
   other: "hidden_expandable",          // 동산(서화·골동품 등) — 확장 노출
 };
 

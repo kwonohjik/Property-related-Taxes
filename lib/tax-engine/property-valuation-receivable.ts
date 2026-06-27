@@ -46,7 +46,7 @@ export function resolveReceivableRecoveryYears(
  * 8% → (1+r)=1080/1000 → base=1000, step=1080. 교재 정리채권 anchor는 floor가 아닌 round로 일치.
  * (상증칙 §18의2②1가목 현가환산. trustIncomePV는 floor — 채권은 round, 메모리 bigint-round-half-up)
  */
-function receivablePV(amount: number, base: number, step: number, n: number): number {
+export function receivablePV(amount: number, base: number, step: number, n: number): number {
   if (amount <= 0) return 0;
   const num = BigInt(Math.round(amount)) * BigInt(base) ** BigInt(n);
   const den = BigInt(step) ** BigInt(n);

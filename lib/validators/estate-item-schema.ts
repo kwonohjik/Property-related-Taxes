@@ -393,6 +393,82 @@ export const receivableItemSchema = baseItemSchema
     }
   });
 
+export const convertibleBondItemSchema = baseItemSchema
+  .extend({
+    category: z.literal("convertible_bond"),
+    // ⑫ silent strip 방지 — cb* 전필드 등재
+    cbSecurityType: z
+      .enum(["convertible_bond", "bond_with_warrant", "warrant_certificate", "preemptive_right"])
+      .optional(),
+    cbTradedOnExchange: z.boolean().optional(),
+    cbExchange2mAvg: z.number().nonnegative().optional(),
+    cbExchangeLatestPrice: z.number().nonnegative().optional(),
+    cbHasTradeRecord: z.boolean().optional(),
+    cbExchangeSubMode: z.enum(["purchase", "disposal"]).optional(),
+    cbPurchasePrice: z.number().nonnegative().optional(),
+    cbAccruedInterestToBase: z.number().nonnegative().optional(),
+    cbDisposalExpected: z.number().nonnegative().optional(),
+    cbConvertible: z.boolean().optional(),
+    cbPrincipal: z.number().nonnegative().optional(),
+    cbHasRedemptionPremium: z.boolean().optional(),
+    cbRedemptionPremium: z.number().nonnegative().optional(),
+    cbCouponRate: z.number().nonnegative().optional(),
+    cbIssueRate: z.number().nonnegative().optional(),
+    cbMaturityYears: z.number().nonnegative().optional(),
+    cbInterestBaseDate: z.union([z.string(), z.date()]).optional(),
+    cbAccruedInterestOverride: z.number().nonnegative().optional(),
+    cbConvertibleShareValue: z.number().nonnegative().optional(),
+    cbDividendDifferenceOverride: z.number().nonnegative().optional(),
+    cbFaceValuePerShare: z.number().nonnegative().optional(),
+    cbPriorDividendRate: z.number().nonnegative().optional(),
+    cbShareCount: z.number().nonnegative().optional(),
+    cbDividendBaseDate: z.union([z.string(), z.date()]).optional(),
+    cbSubscriptionPrice: z.number().nonnegative().optional(),
+    cbExRightsPriorPrice: z.number().nonnegative().optional(),
+    cbExRightsPostPrice: z.number().nonnegative().optional(),
+    cbValuationDate: z.union([z.string(), z.date()]).optional(),
+  })
+  .superRefine((item, ctx) => {
+    const need = (cond: boolean, path: string, message: string) => {
+      if (!cond) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+    };
+    if (item.cbTradedOnExchange && item.cbSecurityType !== "preemptive_right") {
+      // A. 거래소
+      if (item.cbHasTradeRecord) {
+        need((item.cbExchange2mAvg ?? 0) > 0, "cbExchange2mAvg", "2개월 종가평균을 입력하세요.");
+        need((item.cbExchangeLatestPrice ?? 0) > 0, "cbExchangeLatestPrice", "최근일 최종시세를 입력하세요.");
+      } else if (item.cbExchangeSubMode === "disposal") {
+        need((item.cbDisposalExpected ?? 0) > 0, "cbDisposalExpected", "처분예상금액을 입력하세요.");
+      } else {
+        need((item.cbPurchasePrice ?? 0) > 0, "cbPurchasePrice", "매입가액을 입력하세요.");
+      }
+      return;
+    }
+    // B. 비거래소
+    const isWarrantCert = item.cbSecurityType === "warrant_certificate";
+    const isPreemptive = item.cbSecurityType === "preemptive_right";
+    if (!isPreemptive) {
+      need((item.cbPrincipal ?? 0) > 0, "cbPrincipal", "원금(액면총액)을 입력하세요.");
+      // 표시 액면이자율: 0%(무이표) 유효 → 미입력=0 취급, 별도 차단 없음
+      need((item.cbMaturityYears ?? 0) > 0, "cbMaturityYears", "만기년수를 입력하세요.");
+      if (item.cbHasRedemptionPremium) {
+        need((item.cbRedemptionPremium ?? 0) > 0, "cbRedemptionPremium", "상환할증금을 입력하세요.");
+        need((item.cbIssueRate ?? 0) > 0, "cbIssueRate", "유효이자율(R)을 입력하세요.");
+      }
+    }
+    if (item.cbConvertible) {
+      if (isPreemptive) {
+        need((item.cbExRightsPriorPrice ?? 0) > 0, "cbExRightsPriorPrice", "권리락 전 주식가액을 입력하세요.");
+        need((item.cbSubscriptionPrice ?? 0) > 0, "cbSubscriptionPrice", "신주인수가액을 입력하세요.");
+      } else {
+        need((item.cbConvertibleShareValue ?? 0) > 0, "cbConvertibleShareValue", "전환·인수가능 주식가액을 입력하세요.");
+        if (isWarrantCert || item.cbSecurityType === "bond_with_warrant") {
+          need((item.cbSubscriptionPrice ?? 0) > 0, "cbSubscriptionPrice", "신주인수가액을 입력하세요.");
+        }
+      }
+    }
+  });
+
 /** 자산 항목 discriminatedUnion 스키마 */
 export const estateItemSchema = z
   .discriminatedUnion("category", [
@@ -406,12 +482,13 @@ export const estateItemSchema = z
     depositItemSchema,
     superficiesItemSchema,
     receivableItemSchema,
+    convertibleBondItemSchema,
     otherItemSchema,
   ])
   // v4.1.1 Phase 5 D11/디자인 §5 — 카테고리별 좌표 입력 정책 (영농 §16②1호나)
   .superRefine((item, ctx) => {
     // 무관 카테고리 + 좌표 입력 → 차단
-    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "receivable", "other"];
+    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "receivable", "convertible_bond", "other"];
     if (COORD_INCOMPATIBLE.includes(item.category)) {
       if (item.estateLatLng !== undefined || item.estateSigunguCode !== undefined) {
         ctx.addIssue({

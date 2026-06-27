@@ -27,6 +27,7 @@ export type {
   SuperficiesStructureType,
   ReceivableKind,
   ReceivableInstallment,
+  CbSecurityType,
   EstateItem,
   UnlistedAssetValueOnlyReason,
   UnlistedStockData,

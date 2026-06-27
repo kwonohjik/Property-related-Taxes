@@ -40,6 +40,7 @@ const CATEGORY_LABELS: Record<SupportedCategory, string> = {
   deposit: "전세보증금 반환채권 (상속세 전용)",
   superficies: "지상권",
   receivable: "채권 (대여금·외상매출금 등)",
+  convertible_bond: "전환사채등 (전환사채·신주인수권부사채 등)",
   other: "기타 재산",
 };
 
@@ -52,6 +53,7 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "deposit",
   "superficies",
   "receivable",
+  "convertible_bond",
   "other",
 ];
 
@@ -63,6 +65,7 @@ const GIFT_CATEGORIES: SupportedCategory[] = [
   "financial",
   "superficies",
   "receivable",
+  "convertible_bond",
   "other",
 ];
 
