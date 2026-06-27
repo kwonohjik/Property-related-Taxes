@@ -10,10 +10,11 @@ import { EstateBodySimple } from "./EstateBodySimple";
 import { EstateBodyRealEstate } from "./EstateBodyRealEstate";
 import { EstateBodyDeposit } from "./EstateBodyDeposit";
 import { EstateBodySuperficies } from "./EstateBodySuperficies";
+import { EstateBodyIntangibleIp } from "./EstateBodyIntangibleIp";
 import { assertNever } from "./EstateBodyHelpers";
 import type { SupportedCategory, VariantBodyProps } from "./types";
 
-export { EstateBodySimple, EstateBodyRealEstate, EstateBodyDeposit, EstateBodySuperficies };
+export { EstateBodySimple, EstateBodyRealEstate, EstateBodyDeposit, EstateBodySuperficies, EstateBodyIntangibleIp };
 export type { SupportedCategory, VariantBodyProps };
 
 /**
@@ -32,6 +33,8 @@ export function pickBodyVariant(
       return EstateBodyDeposit;
     case "superficies":
       return EstateBodySuperficies;
+    case "intangible_ip":
+      return EstateBodyIntangibleIp;
     case "cash":
     case "financial":
     case "other":

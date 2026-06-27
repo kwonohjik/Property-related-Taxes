@@ -9,7 +9,7 @@
 import { parseISO } from "date-fns";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { computeStockValuation } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
-import { evaluateEstateItem, resolveSuperficiesTenureYears } from "@/lib/tax-engine/property-valuation";
+import { evaluateEstateItem, resolveSuperficiesTenureYears, resolveIntangibleRemainingYears } from "@/lib/tax-engine/property-valuation";
 
 /**
  * 자산 카드별 "효과 평가액" — **부동산 엔진 단일 진실 위임**(estate-valuation-single-source).
@@ -61,6 +61,42 @@ export function injectSuperficiesRemainingYears(
   return { ...item, superficiesRemainingYears: years };
 }
 
+/**
+ * 무체재산권 잔존연수 합성 (§64·규§19③) — 엔진 단일진실 resolveIntangibleRemainingYears 위임.
+ * override 우선, appraisal 모드·미입력은 0(validate 차단). evaluateIntangibleIp가 소비.
+ * (mirror-pattern: store 미러링 아님 — 빌드시 합성)
+ */
+export function injectIntangibleRemainingYears(
+  item: EstateItem,
+  valuationDateISO?: string,
+): EstateItem {
+  if (item.category !== "intangible_ip") return item;
+  if (item.intangibleRemainingYearsOverride != null) {
+    // 엔진(clamp 0~20)·validate(int positive)와 3중 일관
+    return {
+      ...item,
+      intangibleRemainingYears: Math.max(0, Math.min(20, Math.trunc(item.intangibleRemainingYearsOverride))),
+    };
+  }
+  // 감정가액 모드는 잔존연수 무관
+  if (!item.intangibleIpType || item.intangibleIncomeMode === "appraisal") {
+    return { ...item, intangibleRemainingYears: 0 };
+  }
+  const isCopyright = item.intangibleIpType === "copyright";
+  const base = isCopyright ? item.intangibleAuthorDeathDate : item.intangibleOriginDate;
+  if (!base || !valuationDateISO) {
+    return { ...item, intangibleRemainingYears: 0 }; // 미입력 — validate 차단
+  }
+  const baseDate = typeof base === "string" ? parseISO(base) : base;
+  const years = resolveIntangibleRemainingYears({
+    type: item.intangibleIpType,
+    originDate: isCopyright ? undefined : baseDate,
+    authorDeathDate: isCopyright ? baseDate : undefined,
+    valuationDate: parseISO(valuationDateISO),
+  });
+  return { ...item, intangibleRemainingYears: years };
+}
+
 export function computeEffectiveValuation(
   item: EstateItem,
   valuationDate?: string,
@@ -88,6 +124,14 @@ export function computeEffectiveValuation(
   if (item.category === "superficies") {
     try {
       return evaluateEstateItem(injectSuperficiesRemainingYears(item, valuationDate)).valuatedAmount;
+    } catch {
+      return 0; // 부분입력 가드
+    }
+  }
+  // 무체재산권: 잔존연수 합성 후 엔진 위임 (§64, single-source)
+  if (item.category === "intangible_ip") {
+    try {
+      return evaluateEstateItem(injectIntangibleRemainingYears(item, valuationDate)).valuatedAmount;
     } catch {
       return 0; // 부분입력 가드
     }

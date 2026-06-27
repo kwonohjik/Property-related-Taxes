@@ -333,6 +333,48 @@ export const superficiesItemSchema = baseItemSchema
     }
   });
 
+/** 무체재산권 (상증법 §64·상증령 §59⑤·상증규 §19) — 정기금 10% 현가환산·20년 한도 */
+export const intangibleIpItemSchema = baseItemSchema
+  .extend({
+    category: z.literal("intangible_ip"),
+    intangibleIpType: z.enum(["patent", "utility_model", "trademark", "design", "copyright"]),
+    intangibleIncomeMode: z.enum(["fixed", "avg3y", "appraisal"]),
+    intangibleAnnualIncome: z.number().positive().optional(),
+    intangiblePrior3yIncomeTotal: z.number().positive().optional(),
+    intangiblePrior3yYears: z.number().int().min(1).max(3).optional(),
+    intangibleAppraisedValue: z.number().positive().optional(),
+    intangibleOriginDate: z.union([z.string(), z.date()]).optional(),
+    intangibleAuthorDeathDate: z.union([z.string(), z.date()]).optional(),
+    intangibleAcquisitionCost: z.number().positive().optional(),
+    intangibleRemainingYearsOverride: z.number().int().positive().max(20).optional(),
+    // 합성 잔존연수 (lib/calc inject) — ⑫ silent strip 방지
+    intangibleRemainingYears: z.number().int().nonnegative().optional(),
+  })
+  .superRefine((item, ctx) => {
+    // 수입모드별 필수 필드
+    if (item.intangibleIncomeMode === "fixed" && !(item.intangibleAnnualIncome && item.intangibleAnnualIncome > 0)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["intangibleAnnualIncome"], message: "미래 각 연도 수입금액을 입력하세요." });
+    }
+    if (item.intangibleIncomeMode === "avg3y") {
+      if (!(item.intangiblePrior3yIncomeTotal && item.intangiblePrior3yIncomeTotal > 0))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["intangiblePrior3yIncomeTotal"], message: "직전 3년 수입금액 합계를 입력하세요." });
+      if (!(item.intangiblePrior3yYears && item.intangiblePrior3yYears >= 1))
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["intangiblePrior3yYears"], message: "직전 수입금액의 실제 연수(1~3)를 입력하세요." });
+    }
+    if (item.intangibleIncomeMode === "appraisal" && !(item.intangibleAppraisedValue && item.intangibleAppraisedValue > 0)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["intangibleAppraisedValue"], message: "감정가액을 입력하세요." });
+    }
+    // 권리종류별 기산일 필수 (appraisal 모드·override 시 면제 — 존속기간 무관)
+    if (item.intangibleIncomeMode !== "appraisal" && item.intangibleRemainingYearsOverride == null) {
+      if (item.intangibleIpType === "copyright") {
+        if (!item.intangibleAuthorDeathDate)
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["intangibleAuthorDeathDate"], message: "저작자 사망일을 입력하세요." });
+      } else if (!item.intangibleOriginDate) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["intangibleOriginDate"], message: "출원일(또는 설정등록일)을 입력하세요." });
+      }
+    }
+  });
+
 /** 자산 항목 discriminatedUnion 스키마 */
 export const estateItemSchema = z
   .discriminatedUnion("category", [
@@ -345,12 +387,13 @@ export const estateItemSchema = z
     financialItemSchema,
     depositItemSchema,
     superficiesItemSchema,
+    intangibleIpItemSchema,
     otherItemSchema,
   ])
   // v4.1.1 Phase 5 D11/디자인 §5 — 카테고리별 좌표 입력 정책 (영농 §16②1호나)
   .superRefine((item, ctx) => {
     // 무관 카테고리 + 좌표 입력 → 차단
-    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "other"];
+    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "intangible_ip", "other"];
     if (COORD_INCOMPATIBLE.includes(item.category)) {
       if (item.estateLatLng !== undefined || item.estateSigunguCode !== undefined) {
         ctx.addIssue({

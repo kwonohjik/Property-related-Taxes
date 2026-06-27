@@ -128,6 +128,7 @@ export const ESTATE_ITEM_TYPE_CODE: Record<AssetCategory, string> = {
   financial: "11",
   deposit: "11",
   superficies: "12", // 지상권 — 부표2 전용코드 부재 → 12 기타재산 fallback
+  intangible_ip: "12", // 무체재산권 — 부표2 전용코드 부재 → 12 기타재산 fallback
   other: "12",
 };
 

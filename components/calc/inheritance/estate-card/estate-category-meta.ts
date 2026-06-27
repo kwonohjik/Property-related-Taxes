@@ -21,6 +21,7 @@ export const CATEGORY_LABELS: Record<SupportedCategory, string> = {
   financial: "예금·펀드·채권·공제금",
   deposit: "전세보증금 반환채권",
   superficies: "지상권",
+  intangible_ip: "무체재산권",
   other: "기타 재산",
 };
 
@@ -32,6 +33,7 @@ export const CATEGORY_ICONS: Record<SupportedCategory, string> = {
   financial: "🏦",
   deposit: "🔑",
   superficies: "📜",
+  intangible_ip: "💡",
   other: "📦",
 };
 
@@ -43,5 +45,6 @@ export const GIFT_CATEGORIES: SupportedCategory[] = [
   "cash",
   "financial",
   "superficies",
+  "intangible_ip",
   "other",
 ];
