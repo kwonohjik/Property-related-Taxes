@@ -36,6 +36,30 @@ export function resolveFreeLoanRate(giftDate: string): RateFraction {
 // 이자손실분 자동계산이 "적정할인율 현가계수"를 직접 input으로 받으므로(0원 정확 재현)
 // 별도 시대표 상수·룩업 함수를 두지 않는다(현가계수에 율·기간이 내재).
 
+/**
+ * 장기채권 적정할인율 시점별 (상증칙 §18의2②1호 → 영 §58의2②1호가목 → 상증칙 §18의3) — 평가기준일 기준 lookup.
+ *
+ * KoreanLaw 검증(2026-06-27):
+ *   - 현행 8% = 상증칙 §18의3 본문 "연간 100분의 8" ✅ 동결.
+ *   - 과거 율(7.5/7.0/6.5%)은 §18의3 신설 전 국세청·기재부 고시 → **법제처 조문 미수록**(2010-01-01 §18의3 NOT_FOUND).
+ *     교재 고시내역(§2001-14·§2002-23·§2002-28·§2009-29·§2010-20) 출처로 잠정 — 조세심판원·고시 원문 확인 후 동결 권장.
+ */
+export const RECEIVABLE_DISCOUNT_RATE_HISTORY: ReadonlyArray<{ from: string; rate: RateFraction }> = [
+  { from: "2001-01-01", rate: { numer: 75, denom: 1000 } }, // 7.5% (국세청고시 §2001-14)
+  { from: "2002-07-10", rate: { numer: 70, denom: 1000 } }, // 7.0% (§2002-23)
+  { from: "2002-11-08", rate: { numer: 65, denom: 1000 } }, // 6.5% (§2002-28·39·2004-02·2009-29)
+  { from: "2011-07-26", rate: { numer: 80, denom: 1000 } }, // 8.0% (기재부고시 §2010-20, 2016.3.21 §18의3 동일)
+];
+
+/** 평가기준일(YYYY-MM-DD) 기준 장기채권 적정할인율 룩업 — 해당일 이전 가장 최근 고시 */
+export function resolveReceivableDiscountRate(valuationDate: string): RateFraction {
+  let resolved = RECEIVABLE_DISCOUNT_RATE_HISTORY[0].rate;
+  for (const entry of RECEIVABLE_DISCOUNT_RATE_HISTORY) {
+    if (valuationDate >= entry.from) resolved = entry.rate;
+  }
+  return resolved;
+}
+
 /** 부동산무상사용 §37① — 환산율 2% (시행규칙 위임) */
 export const FREE_USE_ANNUAL_RATE: RateFraction = { numer: 2, denom: 100 };
 /** 부동산무상사용 §37① — 할인율 10%: 현가 1/1.1^n = 10^n / 11^n (정수경로) */

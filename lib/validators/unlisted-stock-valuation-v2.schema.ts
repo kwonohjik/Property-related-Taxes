@@ -237,6 +237,16 @@ export const unlistedStockValuationV2Schema = z
         filedWithinDeadline: z.boolean(),
         baseDateAndReportWithinDeadline: z.boolean(),
         sameYearAsInheritanceOrGift: z.boolean(),
+        // Phase D·E 신규 — 평가기관 메타 (optional, agencyEstimates 정합 검증용)
+        // name: z.string() — min(1) 금지: 빈 기관명은 엔진 warning만, 차단 없음 (설계서 §9·§13 정정)
+        agencies: z
+          .array(
+            z.object({
+              type: z.enum(["credit_rating", "accounting", "tax"]),
+              name: z.string(),
+            }),
+          )
+          .optional(),
       })
       .optional(),
     // PR-L (§63②1호) / PR-L2 (§63②2호): 기업공개·상장신청 준비 중 평가 (MAX(공모가, §54 보충적평가))

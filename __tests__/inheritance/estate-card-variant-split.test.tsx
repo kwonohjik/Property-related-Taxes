@@ -11,6 +11,7 @@ import {
   EstateBodySimple,
   EstateBodyRealEstate,
   EstateBodyDeposit,
+  EstateBodyFinancial,
 } from "@/components/calc/inheritance/estate-card/variants";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { SupportedCategory } from "@/components/calc/inheritance/estate-card/variants/types";
@@ -50,8 +51,8 @@ describe("pickBodyVariant — 7 SupportedCategory 매핑", () => {
     expect(pickBodyVariant("cash")).toBe(EstateBodySimple);
   });
 
-  it("financial → EstateBodySimple", () => {
-    expect(pickBodyVariant("financial")).toBe(EstateBodySimple);
+  it("financial → EstateBodyFinancial (§63④ 예금 평가)", () => {
+    expect(pickBodyVariant("financial")).toBe(EstateBodyFinancial);
   });
 
   it("other → EstateBodySimple", () => {
@@ -63,7 +64,7 @@ describe("pickBodyVariant — 7 SupportedCategory 매핑", () => {
 // variant 렌더 + testid + 본체 필드 노출 매트릭스
 // ============================================================
 
-describe("EstateBodySimple — cash/financial/other 본체", () => {
+describe("EstateBodySimple — cash/other 본체 (financial은 EstateBodyFinancial로 이동)", () => {
   it("cash → 자산명 + 현금 금액, 감정가 미노출", () => {
     render(
       <EstateBodySimple
@@ -80,16 +81,20 @@ describe("EstateBodySimple — cash/financial/other 본체", () => {
     expect(screen.queryByText("감정평가액")).toBeNull();
   });
 
-  it("financial → 잔액 또는 시가, 감정가 미노출", () => {
+  it("financial → EstateBodyFinancial 렌더 (§63④ 예금·저금·적금 평가 섹션)", () => {
+    // financial은 EstateBodySimple이 아닌 EstateBodyFinancial로 라우팅됨
     render(
-      <EstateBodySimple
+      <EstateBodyFinancial
         item={makeItem("financial")}
         onUpdate={() => {}}
         showCollateralDeductToggle={false}
         mode="inheritance"
       />,
     );
-    expect(screen.getByText("잔액 또는 시가")).toBeInTheDocument();
+    expect(screen.getByTestId("estate-body-variant-financial-t-financial")).toBeInTheDocument();
+    // §63④ 잔액평가 기본 — "예금·저금·적금 평가" 섹션 타이틀 및 잔액 필드
+    expect(screen.getByText("예금·저금·적금 평가")).toBeInTheDocument();
+    // 감정평가액 미노출 (예금 카테고리에는 없음)
     expect(screen.queryByText("감정평가액")).toBeNull();
   });
 

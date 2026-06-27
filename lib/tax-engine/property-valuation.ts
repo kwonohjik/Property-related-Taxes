@@ -23,6 +23,13 @@ import type {
   IntangibleIncomeMode,
 } from "./types/inheritance-gift.types";
 import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestrator";
+import {
+  evaluateReceivable,
+  resolveReceivableRecoveryYears,
+} from "./property-valuation-receivable";
+import { evaluateConvertibleBond } from "./property-valuation-convertible-bond";
+
+export { evaluateReceivable, resolveReceivableRecoveryYears, evaluateConvertibleBond };
 // listed_stock / V1 간편 비상장(unlistedStockData) 평가 단일 진실.
 // resolve-estate-item-value.ts는 property-valuation.ts를 import하지 않으므로 순환 없음(단방향).
 import {
@@ -645,7 +652,7 @@ export function evaluateCash(item: EstateItem): PropertyValuationResult {
 }
 
 // ============================================================
-// 금융재산 평가 (§62 — 예금·채권·펀드)
+// 금융재산 평가 (§62·§63④ — 예금·채권·펀드)
 // ============================================================
 
 export function evaluateFinancial(item: EstateItem): PropertyValuationResult {
@@ -656,22 +663,66 @@ export function evaluateFinancial(item: EstateItem): PropertyValuationResult {
     );
   }
 
-  const amount = item.marketValue ?? 0;
+  const mode = item.savingsValuationMode ?? "balance";
 
+  // ── 1순위: balance 모드 — 잔액·시가 (상증법 §62, 기본)
+  if (mode === "balance") {
+    const amount = item.marketValue ?? 0;
+    return {
+      estateItemId: item.id,
+      method: "market_value",
+      valuatedAmount: amount,
+      breakdown: [
+        {
+          label: "금융재산 평가액 (잔액·시가)",
+          amount,
+          lawRef: VALUATION.PRINCIPLE,
+        },
+      ],
+      warnings: amount <= 0 ? ["금융재산 금액이 0원 — 입력 확인 필요"] : [],
+    };
+  }
+
+  // ── 2·3순위: auto·manual — §63④ 법정평가 (원금+미수이자−원천징수세액)
+  // 엔진은 날짜 연산 미수행. auto 모드는 클라이언트가 injectSavingsAccrualIfAuto로 pre-inject 후 전달.
+  const principal = item.savingsPrincipal ?? item.marketValue ?? 0;
+  const accrued = item.savingsAccruedInterest ?? null;
+  const wht = item.savingsWithholdingTax ?? null;
+
+  // M-3: auto인데 클라이언트가 미주입 시 — 원금 fallback, method는 "deposit_statutory" 유지
+  if (mode === "auto" && accrued == null) {
+    return {
+      estateItemId: item.id,
+      method: "deposit_statutory",
+      valuatedAmount: principal,
+      breakdown: [
+        {
+          label: "예입원금 (미수이자 미산정·평가기준일 확인 필요)",
+          amount: principal,
+          lawRef: VALUATION.DEPOSIT,
+        },
+      ],
+      warnings: ["미수이자 미주입 — 잔액으로 평가 (평가기준일 누락 가능)"],
+    };
+  }
+
+  // 정상 auto(주입 완료) 또는 manual — ㉠+㉡-㉢
+  const valuatedAmount = principal + (accrued ?? 0) - (wht ?? 0);
   return {
     estateItemId: item.id,
-    method: "market_value",
-    valuatedAmount: amount,
+    method: "deposit_statutory",
+    valuatedAmount,
     breakdown: [
-      {
-        label: "금융재산 평가액 (잔액·시가)",
-        amount,
-        lawRef: VALUATION.PRINCIPLE,
-      },
+      { label: "㉠ 예입금액", amount: principal, lawRef: VALUATION.DEPOSIT },
+      { label: "㉡ 미수이자", amount: accrued ?? 0, lawRef: VALUATION.DEPOSIT },
+      { label: "㉢ 원천징수세액", amount: -(wht ?? 0), lawRef: VALUATION.DEPOSIT },
     ],
-    warnings: amount <= 0 ? ["금융재산 금액이 0원 — 입력 확인 필요"] : [],
+    warnings: valuatedAmount <= 0 ? ["예금 평가액이 0원 이하 — 입력 확인"] : [],
   };
 }
+
+// re-export: 테스트·클라이언트는 property-valuation에서 import 가능
+export { computeSavingsAccrual, injectSavingsAccrualIfAuto } from "./property-valuation-deposit";
 
 // ============================================================
 // 통합 평가 디스패처 — 자산 종류에 따라 적합한 함수 호출
@@ -695,6 +746,10 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
       return evaluateSuperficies(item);
     case "intangible_ip":
       return evaluateIntangibleIp(item);
+    case "receivable":
+      return evaluateReceivable(item);
+    case "convertible_bond":
+      return evaluateConvertibleBond(item);
     case "listed_stock":
     case "unlisted_stock":
       throw new TaxCalculationError(

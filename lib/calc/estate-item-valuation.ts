@@ -9,7 +9,16 @@
 import { parseISO } from "date-fns";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { computeStockValuation } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
-import { evaluateEstateItem, resolveSuperficiesTenureYears, resolveIntangibleRemainingYears } from "@/lib/tax-engine/property-valuation";
+import {
+  evaluateEstateItem,
+  resolveSuperficiesTenureYears,
+  resolveIntangibleRemainingYears,
+  computeSavingsAccrual,
+  injectSavingsAccrualIfAuto,
+} from "@/lib/tax-engine/property-valuation";
+
+// Re-export so buildInput / buildGiftTaxInput callers use a single import source
+export { injectSavingsAccrualIfAuto };
 
 /**
  * 자산 카드별 "효과 평가액" — **부동산 엔진 단일 진실 위임**(estate-valuation-single-source).
@@ -97,6 +106,30 @@ export function injectIntangibleRemainingYears(
   return { ...item, intangibleRemainingYears: years };
 }
 
+/**
+ * 채권 평가기준일 주입 — 엔진 evaluateReceivable이 회수일 연수(n)·적정할인율 lookup에 사용.
+ * gift-api/InheritanceTaxForm 입력빌드에서 superficies 합성과 동시 호출 (engine 경로 단일화).
+ */
+export function injectReceivableValuationDate(
+  item: EstateItem,
+  valuationDateISO?: string,
+): EstateItem {
+  if (item.category !== "receivable") return item;
+  return { ...item, receivableValuationDate: valuationDateISO };
+}
+
+/**
+ * 전환사채등 평가기준일 주입 — 엔진 evaluateConvertibleBond이 적정할인율 lookup·발생이자/배당차액 일수 산정에 사용.
+ * gift-api/InheritanceTaxForm 입력빌드에서 superficies·receivable 합성과 동시 호출 (engine 경로 단일화).
+ */
+export function injectCbValuationDate(
+  item: EstateItem,
+  valuationDateISO?: string,
+): EstateItem {
+  if (item.category !== "convertible_bond") return item;
+  return { ...item, cbValuationDate: valuationDateISO };
+}
+
 export function computeEffectiveValuation(
   item: EstateItem,
   valuationDate?: string,
@@ -136,11 +169,55 @@ export function computeEffectiveValuation(
       return 0; // 부분입력 가드
     }
   }
+  // 채권: 평가기준일 주입 후 엔진 위임 (§58②, single-source — n·할인율 산정)
+  if (item.category === "receivable") {
+    try {
+      return evaluateEstateItem({ ...item, receivableValuationDate: valuationDate }).valuatedAmount;
+    } catch {
+      return 0; // 부분입력 가드
+    }
+  }
+  // 전환사채등: 평가기준일 주입 후 엔진 위임 (§58의2, single-source — 할인율·일수 산정)
+  if (item.category === "convertible_bond") {
+    try {
+      return evaluateEstateItem({ ...item, cbValuationDate: valuationDate }).valuatedAmount;
+    } catch {
+      return 0; // 부분입력 가드
+    }
+  }
   // deposit: 임대보증금 액면
   if (item.category === "deposit") {
     return item.leaseDeposit ?? 0;
   }
-  // cash·financial·기타: §60 명시값 우선 (marketValue > 감정 > 매매 > 기준시가)
+  // financial: §63④ 예금·저금·적금 평가 (mode 분기)
+  if (item.category === "financial") {
+    const mode = item.savingsValuationMode ?? "balance";
+    if (mode === "balance") return item.marketValue ?? 0;
+    if (mode === "manual") {
+      return (
+        (item.savingsPrincipal ?? 0) +
+        (item.savingsAccruedInterest ?? 0) -
+        (item.savingsWithholdingTax ?? 0)
+      );
+    }
+    // auto: 날짜 주입 후 computeSavingsAccrual 위임
+    if (valuationDate && item.savingsStartDate && item.savingsPrincipal != null) {
+      try {
+        return computeSavingsAccrual({
+          principal: item.savingsPrincipal,
+          annualRate: item.savingsAnnualRate ?? 0,
+          startDate: parseISO(item.savingsStartDate),
+          valuationDate: parseISO(valuationDate),
+          withholdingRate: item.savingsWithholdingRate ?? 14,
+          includeLocalTax: item.savingsIncludeLocalTax ?? true,
+        }).valuatedAmount;
+      } catch {
+        return item.savingsPrincipal;
+      }
+    }
+    return item.savingsPrincipal ?? 0;
+  }
+  // cash·기타: §60 명시값 우선 (marketValue > 감정 > 매매 > 기준시가)
   return (
     item.marketValue ?? item.appraisedValue ?? item.similarSalesValue ?? item.standardPrice ?? 0
   );

@@ -161,7 +161,13 @@ export function evaluateUnlistedStockV2(
   // STEP 5.5: §56② 추정이익 갈음 (요건 충족 시 순손익가치 대체)
   let estimatedProfitResult: UnlistedStockValuationResult["estimatedProfitResult"];
   if (input.estimatedProfit) {
-    estimatedProfitResult = applyEstimatedProfit(input.estimatedProfit, capRate);
+    // 평가기준일을 3번째 인자로 주입 → evaluationMethod(현행/구법) 안내 도출
+    // ⚠️ 임계일 출처: 구 증권공시세칙 6 부칙 (확인 필요 — 폐지된 구 세칙)
+    estimatedProfitResult = applyEstimatedProfit(
+      input.estimatedProfit,
+      capRate,
+      toOptionalDate(input.evaluationDate) ?? input.evaluationDate,
+    );
     if (estimatedProfitResult.applied) {
       netIncomePerShare = estimatedProfitResult.perShareIncomeValue; // §56② 갈음 (F-7: 결과도 이 값)
       appliedRules.push(

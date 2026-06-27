@@ -56,6 +56,7 @@ export const VALUATION_METHOD_LABEL: Record<ValuationMethod, string> = {
   appraisal: "감정가액",
   acquisition_cost: "취득가액",
   book_value: "장부가액",
+  deposit_statutory: "예금·적금 법정평가",
 };
 
 // ============================================================
