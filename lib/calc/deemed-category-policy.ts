@@ -33,6 +33,7 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "financial",
   "deposit",
   "superficies",
+  "receivable",
   "other",
 ];
 

@@ -22,6 +22,7 @@ import {
   EstateBodyRealEstate,
   EstateBodyDeposit,
   EstateBodySuperficies,
+  EstateBodyReceivable,
 } from "@/components/calc/inheritance/estate-card/variants";
 import type {
   SupportedCategory as VariantSupportedCategory,
@@ -54,6 +55,8 @@ function VariantBody(props: VariantBodyProps) {
       return <EstateBodyDeposit {...props} />;
     case "superficies":
       return <EstateBodySuperficies {...props} />;
+    case "receivable":
+      return <EstateBodyReceivable {...props} />;
     case "cash":
     case "financial":
     case "other":

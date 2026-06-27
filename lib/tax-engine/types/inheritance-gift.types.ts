@@ -25,6 +25,8 @@ export type {
   ValuationMethod,
   AssetCategory,
   SuperficiesStructureType,
+  ReceivableKind,
+  ReceivableInstallment,
   EstateItem,
   UnlistedAssetValueOnlyReason,
   UnlistedStockData,
