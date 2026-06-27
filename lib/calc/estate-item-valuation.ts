@@ -9,7 +9,15 @@
 import { parseISO } from "date-fns";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { computeStockValuation } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
-import { evaluateEstateItem, resolveSuperficiesTenureYears } from "@/lib/tax-engine/property-valuation";
+import {
+  evaluateEstateItem,
+  resolveSuperficiesTenureYears,
+  computeSavingsAccrual,
+  injectSavingsAccrualIfAuto,
+} from "@/lib/tax-engine/property-valuation";
+
+// Re-export so buildInput / buildGiftTaxInput callers use a single import source
+export { injectSavingsAccrualIfAuto };
 
 /**
  * 자산 카드별 "효과 평가액" — **부동산 엔진 단일 진실 위임**(estate-valuation-single-source).
@@ -96,7 +104,35 @@ export function computeEffectiveValuation(
   if (item.category === "deposit") {
     return item.leaseDeposit ?? 0;
   }
-  // cash·financial·기타: §60 명시값 우선 (marketValue > 감정 > 매매 > 기준시가)
+  // financial: §63④ 예금·저금·적금 평가 (mode 분기)
+  if (item.category === "financial") {
+    const mode = item.savingsValuationMode ?? "balance";
+    if (mode === "balance") return item.marketValue ?? 0;
+    if (mode === "manual") {
+      return (
+        (item.savingsPrincipal ?? 0) +
+        (item.savingsAccruedInterest ?? 0) -
+        (item.savingsWithholdingTax ?? 0)
+      );
+    }
+    // auto: 날짜 주입 후 computeSavingsAccrual 위임
+    if (valuationDate && item.savingsStartDate && item.savingsPrincipal != null) {
+      try {
+        return computeSavingsAccrual({
+          principal: item.savingsPrincipal,
+          annualRate: item.savingsAnnualRate ?? 0,
+          startDate: parseISO(item.savingsStartDate),
+          valuationDate: parseISO(valuationDate),
+          withholdingRate: item.savingsWithholdingRate ?? 14,
+          includeLocalTax: item.savingsIncludeLocalTax ?? true,
+        }).valuatedAmount;
+      } catch {
+        return item.savingsPrincipal;
+      }
+    }
+    return item.savingsPrincipal ?? 0;
+  }
+  // cash·기타: §60 명시값 우선 (marketValue > 감정 > 매매 > 기준시가)
   return (
     item.marketValue ?? item.appraisedValue ?? item.similarSalesValue ?? item.standardPrice ?? 0
   );

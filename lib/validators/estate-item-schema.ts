@@ -295,7 +295,19 @@ export const cashItemSchema = baseItemSchema.extend({
 
 export const financialItemSchema = baseItemSchema.extend({
   category: z.literal("financial"),
-  marketValue: z.number().nonnegative(),
+  // 잔액평가 모드(balance): 잔액 직접 입력
+  marketValue: z.number().nonnegative().optional(),
+  // §63④ 정밀평가 공통 필드
+  savingsValuationMode: z.enum(["balance", "auto", "manual"]).optional(),
+  savingsPrincipal: z.number().nonnegative().optional(),
+  // auto 전용
+  savingsAnnualRate: z.number().min(0).max(100).optional(),
+  savingsStartDate: z.union([z.string(), z.date()]).optional(),
+  savingsWithholdingRate: z.number().min(0).max(100).optional(),
+  savingsIncludeLocalTax: z.boolean().optional(),
+  // 주입 필드 (injectSavingsAccrualIfAuto 또는 manual 직접 입력) — ⑫ silent strip 방지
+  savingsAccruedInterest: z.number().nonnegative().optional(),
+  savingsWithholdingTax: z.number().nonnegative().optional(),
 });
 
 export const depositItemSchema = baseItemSchema.extend({

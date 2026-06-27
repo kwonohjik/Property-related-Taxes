@@ -9,6 +9,8 @@
  *   - ./legal-codes/inheritance-gift — INH, GIFT, VALUATION, EXEMPTION, TAX_CREDIT
  *   - ./legal-codes/common           — PENALTY, PENALTY_CONST (국세기본법 공통)
  *   - ./legal-codes/building-standard-price — BUILDING_STANDARD_PRICE, BUILDING_STD_PRICE_LEGAL_BASIS_*
+ *   - ./legal-codes/income-tax            — INCOME_TAX (소득세법 원천징수 조문)
+ *   - ./legal-codes/local-tax             — LOCAL_TAX (지방세법 특별징수 조문)
  *
  * 하위 호환: 기존 `import { TRANSFER, NBL, ... } from "@/lib/tax-engine/legal-codes"` 그대로 작동.
  * 세법 개정 시 해당 세목 파일만 수정하면 된다.
@@ -23,3 +25,5 @@ export * from "./legal-codes/common";
 export * from "./legal-codes/burdened-gift";
 export * from "./legal-codes/stock";
 export * from "./legal-codes/building-standard-price";
+export * from "./legal-codes/income-tax";
+export * from "./legal-codes/local-tax";

@@ -19,6 +19,7 @@ import type { Section53_8_2Input } from "./stock-premium-exclusion.types";
 import type { FamilyBusinessCategory } from "./inheritance-family-business.types";
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
 import type { EstateLocationFields } from "./inheritance-asset-location.types";
+import type { EstateItemSavingsFields } from "./inheritance-gift-deposit.types";
 
 // ============================================================
 // 재산평가 (property-valuation.ts)
@@ -31,7 +32,8 @@ export type ValuationMethod =
   | "standard_price"         // 보충적 평가 — 개별공시지가·기준시가
   | "appraisal"              // 감정평가액
   | "acquisition_cost"       // 취득가액 (예외적 보충)
-  | "book_value";            // 장부가액 (비상장주식 보충)
+  | "book_value"             // 장부가액 (비상장주식 보충)
+  | "deposit_statutory";     // 예금·저금·적금 §63④ 법정평가 (원금+미수이자−원천징수세액)
 
 /** 평가 대상 자산 종류 */
 export type AssetCategory =
@@ -53,8 +55,8 @@ export type SuperficiesStructureType =
   | "non_building"     // ㉢ 건물 이외 공작물 → 최단 5년
   | "unspecified";     // 공작물 종류·구조 미정 (§281②) → 15년 간주
 
-/** 재산 평가 입력 (단일 자산). 위치 필드 5종(좌표·주소·시·군·구 코드)은 EstateLocationFields mixin */
-export interface EstateItem extends EstateLocationFields {
+/** 재산 평가 입력 (단일 자산). 위치 필드 5종(좌표·주소·시·군·구 코드)은 EstateLocationFields mixin. 예금 §63④ 필드는 EstateItemSavingsFields mixin. */
+export interface EstateItem extends EstateLocationFields, EstateItemSavingsFields {
   id: string;
   category: AssetCategory;
   name: string;
