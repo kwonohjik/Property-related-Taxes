@@ -320,6 +320,66 @@ export const superficiesItemSchema = baseItemSchema
     }
   });
 
+/** 채권 (대여금·외상매출금·받을어음·정리채권) — 상증령 §58②·상증칙 §18의2② */
+export const receivableItemSchema = baseItemSchema
+  .extend({
+    category: z.literal("receivable"),
+    receivableKind: z.enum(["loan", "trade", "note", "reorg", "other"]).optional(),
+    receivableMode: z.enum(["simple", "discounted"]).optional(),
+    receivablePrincipal: z.number().nonnegative().optional(),
+    receivableAccruedInterest: z.number().nonnegative().optional(),
+    receivableUncollectible: z.number().nonnegative().optional(),
+    receivableUncollectibleReason: z.string().optional(),
+    // ⑫ silent strip 방지 — discounted 현가할인 스케줄·할인율·평가기준일 주입
+    receivableSchedule: z
+      .array(
+        z.object({
+          recoverDate: z.union([z.string(), z.date()]),
+          amount: z.number().nonnegative(),
+        }),
+      )
+      .optional(),
+    receivableDiscountRateOverride: z
+      .object({ numer: z.number(), denom: z.number() })
+      .optional(),
+    receivableValuationDate: z.union([z.string(), z.date()]).optional(),
+  })
+  .superRefine((item, ctx) => {
+    if (item.receivableMode === "discounted") {
+      const rows = item.receivableSchedule ?? [];
+      if (rows.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["receivableSchedule"],
+          message: "연도별 회수 스케줄을 1건 이상 입력하세요.",
+        });
+      }
+      rows.forEach((r, i) => {
+        if (!(r.amount > 0)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["receivableSchedule", i, "amount"], message: "회수금액을 입력하세요." });
+        }
+        if (!r.recoverDate) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["receivableSchedule", i, "recoverDate"], message: "회수일을 입력하세요." });
+        }
+      });
+    } else {
+      if (!((item.receivablePrincipal ?? 0) > 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["receivablePrincipal"],
+          message: "원본(원금) 가액을 입력하세요.",
+        });
+      }
+      if ((item.receivableUncollectible ?? 0) > (item.receivablePrincipal ?? 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["receivableUncollectible"],
+          message: "회수불가능 차감액이 원본을 초과할 수 없습니다.",
+        });
+      }
+    }
+  });
+
 /** 자산 항목 discriminatedUnion 스키마 */
 export const estateItemSchema = z
   .discriminatedUnion("category", [
@@ -332,12 +392,13 @@ export const estateItemSchema = z
     financialItemSchema,
     depositItemSchema,
     superficiesItemSchema,
+    receivableItemSchema,
     otherItemSchema,
   ])
   // v4.1.1 Phase 5 D11/디자인 §5 — 카테고리별 좌표 입력 정책 (영농 §16②1호나)
   .superRefine((item, ctx) => {
     // 무관 카테고리 + 좌표 입력 → 차단
-    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "other"];
+    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "receivable", "other"];
     if (COORD_INCOMPATIBLE.includes(item.category)) {
       if (item.estateLatLng !== undefined || item.estateSigunguCode !== undefined) {
         ctx.addIssue({

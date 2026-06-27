@@ -250,6 +250,7 @@ const FINANCIAL_ASSET_KIND_LABEL: Record<AssetCategory, string> = {
   financial: "예금",
   deposit: "전세보증금",
   superficies: "지상권",
+  receivable: "채권",
   other: "기타금융",
 };
 

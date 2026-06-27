@@ -18,6 +18,7 @@ import type { UnlistedStockValuationInput } from "./unlisted-stock-valuation.typ
 import type { FamilyBusinessCategory } from "./inheritance-family-business.types";
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
 import type { EstateLocationFields } from "./inheritance-asset-location.types";
+import type { RateFraction } from "../data/gift-deemed-rates";
 
 // ============================================================
 // 재산평가 (property-valuation.ts)
@@ -43,6 +44,7 @@ export type AssetCategory =
   | "financial"              // 예금·펀드·채권 (§22 금융재산공제 대상)
   | "deposit"                // 전세보증금 반환채권 (임차인인 경우 — 상속세 전용)
   | "superficies"            // 지상권 (상증법 §61③) — 권리 평가
+  | "receivable"             // 금전채권 (대여금·외상매출금·받을어음·정리채권 §58②)
   | "other";                 // 기타재산
 
 /** 지상권 건물·공작물 종류 (민법 §280·§281 최단존속기간 결정) */
@@ -51,6 +53,22 @@ export type SuperficiesStructureType =
   | "other_building"   // ㉡ 그 외 건물 → 최단 15년
   | "non_building"     // ㉢ 건물 이외 공작물 → 최단 5년
   | "unspecified";     // 공작물 종류·구조 미정 (§281②) → 15년 간주
+
+/** 채권 종류 (상증령 §58② 대부금·외상매출금·받을어음 등) */
+export type ReceivableKind =
+  | "loan"    // 대여금·대부금
+  | "trade"   // 외상매출금
+  | "note"    // 받을어음
+  | "reorg"   // 정리채권 (회사정리·화의 등 변경)
+  | "other";  // 기타 금전채권
+
+/** 채권 연도별 회수 스케줄 1행 (discounted 현가할인용) */
+export interface ReceivableInstallment {
+  /** 회수일 — 평가기준일과 차분해 연수(n) 산정 (⚠️ 중첩 Date: Route map 변환) */
+  recoverDate: Date | string;
+  /** 그 해 회수금액 = 원본분 + 이자상당액 (사용자 직접 입력, 자동 안분 fallback 금지) */
+  amount: number;
+}
 
 /** 재산 평가 입력 (단일 자산). 위치 필드 5종(좌표·주소·시·군·구 코드)은 EstateLocationFields mixin */
 export interface EstateItem extends EstateLocationFields {
@@ -224,6 +242,30 @@ export interface EstateItem extends EstateLocationFields {
    * 엔진 내 도출 불가 → 변환 레이어 합성. evaluateSuperficies는 이 값만 소비.
    */
   superficiesRemainingYears?: number;
+
+  // ===== 채권 평가 (상증령 §58②·상증칙 §18의2②) =====
+  /** 채권 종류 (UI 안내·별지 표기용) */
+  receivableKind?: ReceivableKind;
+  /** 평가방식 — 회수기간 5년 이내(simple) / 5년 초과·회사정리 등 변경(discounted) */
+  receivableMode?: "simple" | "discounted";
+  /** [simple] 원본(원금) 가액 */
+  receivablePrincipal?: number;
+  /** [simple] 평가기준일까지 발생한 미수이자상당액 (피상속인 미수령분) */
+  receivableAccruedInterest?: number;
+  /** [simple] 회수불가능 차감액 (§58② 단서, 원본 한도). discounted은 스케줄에 사전반영 */
+  receivableUncollectible?: number;
+  /** 회수불가능 사유 메모 (별지·근거) */
+  receivableUncollectibleReason?: string;
+  /** [discounted] 연도별 회수 스케줄 (원본+이자상당액 합산액, 회수일) */
+  receivableSchedule?: ReceivableInstallment[];
+  /** [discounted] 적정할인율 override — 미입력 시 평가기준일 기준 시대표 lookup */
+  receivableDiscountRateOverride?: RateFraction;
+  /**
+   * 엔진 소비용 평가기준일 — lib/calc 입력빌드에서 주입(상속개시일/증여일).
+   * evaluateEstateItem이 평가기준일 미수신하므로 변환 레이어가 주입. evaluateReceivable이
+   * 회수일 연수(n)·적정할인율 lookup에 사용 (지상권 superficiesRemainingYears 주입과 동일 패턴).
+   */
+  receivableValuationDate?: Date | string;
 
   // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
   /**
