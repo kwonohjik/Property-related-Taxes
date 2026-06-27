@@ -19,6 +19,24 @@
  * Design: docs/02-design/features/inheritance-unlisted-stock-estimated-profit-section-56-2.engine.design.md
  */
 
+/**
+ * §56② + §17의3③ — 평가기관 유형 코드
+ *   신용평가전문기관: 자본시장과 금융투자업에 관한 법률 §335의3 신용평가업인가를 받은 자 (상증규 §17의3③)
+ *   회계법인: 공인회계사법에 따른 회계법인
+ *   세무법인: 세무사법에 따른 세무법인
+ */
+export type AgencyType =
+  | "credit_rating" // 신용평가전문기관 (자본시장법 §335의3 인가)
+  | "accounting"    // 공인회계사법에 따른 회계법인
+  | "tax";          // 세무사법에 따른 세무법인
+
+/** 평가기관 메타 (optional — agencyEstimates 정합 검증용, 엔진 산식 무관) */
+export interface AgencyMeta {
+  type: AgencyType;
+  /** 기관명 (임의 문자열, 엔진 산식 무관. 빈 기관명은 warning만, 차단 없음) */
+  name: string;
+}
+
 /** §17의3① 추정이익 사용 사유 (1호 삭제 — enum 제외) */
 export type EstimatedProfitReasonCode =
   | "asset_receipt_50pct" // 2호: 자산수증이익등 가중평균 > (법인세차감전손익 − 자산수증이익등) 가중평균 × 50%
@@ -51,6 +69,13 @@ export interface EstimatedProfitInput {
   baseDateAndReportWithinDeadline: boolean;
   /** §56② 4호 — 산정기준일·상속개시(증여)일 동일 연도 */
   sameYearAsInheritanceOrGift: boolean;
+
+  // ── Phase D·E 신규 (optional, 엔진 산식 무관) ──
+  /**
+   * 평가기관 메타 (optional) — agencyEstimates와 1:1 대응 권장, 불일치 시 warning만.
+   * 상증규 §17의3③ 기관 유형(AgencyType) + 기관명(name) 메타.
+   */
+  agencies?: AgencyMeta[];
 }
 
 export interface EstimatedProfitResult {
@@ -63,18 +88,32 @@ export interface EstimatedProfitResult {
   reasonCode?: EstimatedProfitReasonCode;
   agencyCount: number;
   warnings: string[];
+
+  // ── Phase D·E 신규 필드 ──
+  /** 평가기관 메타 echo (input.agencies 그대로) */
+  agencyMeta?: AgencyMeta[];
+  /**
+   * 산출방법 구분 — evaluationDate 기준 (차단 아님, UI 안내용)
+   *   "current": 현행법 (2012.12.6 이후) — 현금흐름할인모형·배당할인모형 등 미래 수익가치 산정
+   *   "legacy":  구법   (2012.12.5 이전) — 연도별 주당추정이익 산식 + 3:2 가중평균
+   */
+  evaluationMethod?: "current" | "legacy";
+  /** 산출방법 안내 텍스트 (evaluationMethod 존재 시) */
+  evaluationMethodNote?: string;
 }
 
 /**
  * §56② 추정이익 갈음 적용 판정 + 1주당 순손익가치 산출.
  *
- * @param input 추정이익 입력
- * @param capRate §54① 순손익가치환원율 (기본 0.10 — 상증규 §17)
+ * @param input          추정이익 입력 (§56② 4요건 + 기관 메타)
+ * @param capRate        §54① 순손익가치환원율 (상증규 §17 = 연 10% 고정 — 변경 금지)
+ * @param evaluationDate 평가기준일 (orchestrator 주입 — 현행/구법 안내용, 차단 아님)
  * @returns 갈음 결과. applied=true일 때만 orchestrator가 netIncomePerShare 대체.
  */
 export function applyEstimatedProfit(
   input: EstimatedProfitInput,
   capRate: number,
+  evaluationDate?: Date,
 ): EstimatedProfitResult {
   const warnings: string[] = [];
   const agencyCount = input.agencyEstimates.length;
@@ -114,6 +153,34 @@ export function applyEstimatedProfit(
   const safeRate = capRate > 0 ? capRate : 0.1;
   const perShareIncomeValue = Math.floor(estimatedProfitAverage / safeRate);
 
+  // ── Phase E: agencies 정합 검증 (warning, 차단 아님) ──
+  // §17의3③ 기관 메타 수 ≠ 추정이익 수 → 1:1 대응 안내
+  if (input.agencies !== undefined && input.agencies.length !== agencyCount) {
+    warnings.push(
+      `기관 메타 수(${input.agencies.length})와 추정이익 수(${agencyCount})가 다릅니다. 기관별 1:1 입력을 확인하세요.`,
+    );
+  }
+
+  // ── Phase D: 시점 분기 안내 (임계 날짜 = 2012-12-06) ──
+  // ⚠️ 임계 날짜 출처: 구 증권공시세칙 6 부칙 기반 (KoreanLaw MCP 검증 불가 — 폐지된 구 세칙).
+  //    차단 아닌 안내 전용. evaluationDate 미입력 시 판단 없음.
+  const LEGACY_LAW_THRESHOLD = new Date("2012-12-06");
+  let evaluationMethod: "current" | "legacy" | undefined;
+  let evaluationMethodNote: string | undefined;
+
+  if (evaluationDate !== undefined) {
+    if (evaluationDate < LEGACY_LAW_THRESHOLD) {
+      evaluationMethod = "legacy";
+      evaluationMethodNote =
+        "평가기준일이 2012.12.5 이전입니다. 구법(연도별 주당추정이익 산식 + 3:2 가중평균)이 적용될 수 있습니다. 산출 내역을 세무사에게 확인하세요.";
+      warnings.push("[시점 안내] " + evaluationMethodNote);
+    } else {
+      evaluationMethod = "current";
+      evaluationMethodNote =
+        "평가기준일이 2012.12.6 이후입니다. 현금흐름할인모형·배당할인모형 등 미래 수익가치 산정 모형을 적용한 1주당 추정이익을 입력하세요.";
+    }
+  }
+
   return {
     applied,
     estimatedProfitAverage,
@@ -121,5 +188,9 @@ export function applyEstimatedProfit(
     reasonCode: input.reasonCode,
     agencyCount,
     warnings,
+    // Phase D·E 신규
+    agencyMeta: input.agencies,
+    evaluationMethod,
+    evaluationMethodNote,
   };
 }

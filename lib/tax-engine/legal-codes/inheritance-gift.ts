@@ -238,6 +238,9 @@ export const VALUATION = {
   UNLISTED_NET_INCOME_FORMULA: "상증령 §56 ①",
   /** 상증령 §56 ② + 상증규 §17의3 ① — 추정이익 옵션 (신용평가전문기관·회계법인·세무법인 둘 이상 평균, 8가지 사유) */
   UNLISTED_ESTIMATED_INCOME_OPTION: "상증령 §56 ② + 상증규 §17의3 ①",
+  /** 상증규 §17의3 ③ — 신용평가전문기관 정의 (자본시장과 금융투자업에 관한 법률 §335의3 신용평가업인가를 받은 자).
+   *  소비처: ⑤/⑦ 평가기관 메타(E) law 링크·appliedRules 인용 */
+  UNLISTED_ESTIMATED_AGENCY_TYPE: "상증규 §17의3③",
   /** 상증령 §56 ③ + 상증규 §17의3 ⑤ — 환산주식수 산정 (증자·감자 환산식) */
   UNLISTED_CONVERTED_SHARES: "상증령 §56 ③ + 상증규 §17의3 ⑤",
   /** 상증령 §56 ④ — 순손익액 가산 1호 · 차감 2호 항목 */
