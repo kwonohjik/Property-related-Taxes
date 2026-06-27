@@ -15,7 +15,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
-import { validateFinancialSavingsFields } from "@/lib/calc/inheritance-validate";
+import { validateFinancialSavingsFields, validateCryptoFields } from "@/lib/calc/inheritance-validate";
 import {
   isSpecialTreatmentEligibleCategory,
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
@@ -42,7 +42,11 @@ export function validateStep(step: number, form: FormState): string | null {
     const allItems = [...form.giftItems, ...form.stockItems];
     // cash·financial·deposit은 위치 기반 자산이 아니므로 자산명 선택 입력
     const needsName = allItems.filter(
-      (it) => it.category !== "cash" && it.category !== "financial" && it.category !== "deposit"
+      (it) =>
+        it.category !== "cash" &&
+        it.category !== "financial" &&
+        it.category !== "deposit" &&
+        it.category !== "crypto_asset"
     );
     if (needsName.some((it) => !it.name.trim())) {
       return "모든 증여재산에 자산명을 입력하세요.";
@@ -56,6 +60,9 @@ export function validateStep(step: number, form: FormState): string | null {
     for (const it of [...form.giftItems, ...form.stockItems]) {
       const sf = validateFinancialSavingsFields(it);
       if (sf) return sf;
+      // §60② 가상자산 필수 필드 검증 (⑧ 동기화 지점)
+      const cf = validateCryptoFields(it);
+      if (cf) return cf;
     }
     // ─── 부담부증여 양도소득세 함께 계산 — 토글 ON 검증 ───
     // (설계 §9⑧ — 자동 안분 fallback 금지, 미입력=차단)

@@ -177,6 +177,29 @@ export function validateFinancialSavingsFields(item: EstateItem): string | null 
   return null;
 }
 
+/**
+ * 가상화폐(가상자산) §60② 필수 필드 검증 (⑧ 동기화 지점).
+ * cryptoAssetItemSchema superRefine과 동일 조건 — UI 통과 ↔ Zod 차단 모순 제거. 자동 안분 fallback 금지.
+ */
+export function validateCryptoFields(item: EstateItem): string | null {
+  if (item.category !== "crypto_asset") return null;
+  const mode = item.cryptoValuationMode ?? "direct";
+  if (!item.cryptoQuantity || item.cryptoQuantity <= 0) {
+    return `자산 "${item.name}" 가상자산: 보유 수량을 입력하세요.`;
+  }
+  if (mode === "direct") {
+    if (!item.cryptoUnitPrice || item.cryptoUnitPrice <= 0) {
+      return `자산 "${item.name}" 가상자산: 1코인당 평가단가를 입력하세요.`;
+    }
+  } else if (!item.cryptoDailyPrices || item.cryptoDailyPrices.length === 0) {
+    return `자산 "${item.name}" 가상자산: 거래일별 일평균가액을 1건 이상 입력하세요.`;
+  } else if (item.cryptoDailyPrices.some((p) => !(p > 0))) {
+    // 0원·빈 행이 단순평균에 포함되면 평가단가 과소산정 → 차단 (Zod superRefine과 동일)
+    return `자산 "${item.name}" 가상자산: 각 거래일의 일평균가액은 0보다 커야 합니다.`;
+  }
+  return null;
+}
+
 export function validateEstateItemAllocations(item: EstateItem): string | null {
   if (!item.heirAllocations || item.heirAllocations.length === 0) {
     return null; // 분배 미입력은 허용 (총액-단위 계산 모드)
@@ -432,6 +455,9 @@ export function validateInheritanceTaxInput(
     // §63④ 자동 계산 필수 필드 검증 (⑧ 동기화 지점)
     const sf = validateFinancialSavingsFields(rawItem);
     if (sf) return sf;
+    // §60② 가상자산 필수 필드 검증 (⑧ 동기화 지점)
+    const cf = validateCryptoFields(rawItem);
+    if (cf) return cf;
     // auto 모드 pre-inject — 미수이자·원천징수세액 주입 후 협의분할 검증
     const item = deathDateObj ? injectSavingsAccrualIfAuto(rawItem, deathDateObj) : rawItem;
     const e = validateEstateItemAllocations(item);

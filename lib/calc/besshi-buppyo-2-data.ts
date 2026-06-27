@@ -54,6 +54,7 @@ const CATEGORY_LABEL_KO: Record<AssetCategory, string> = {
   intangible_ip: "무체재산권",
   receivable: "채권",
   convertible_bond: "전환사채등",
+  crypto_asset: "가상자산",
   other: "기타재산",
 };
 
