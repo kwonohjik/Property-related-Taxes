@@ -98,6 +98,18 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
     financialDeduction: "hidden_expandable",
     deemedRetirementOption: "hidden",
   },
+  trust_benefit: {
+    farming: "hidden_permanent",
+    familyBusiness: "hidden_permanent",
+    financialDeduction: "hidden_permanent", // 신탁수익권 — §19① 금융재산공제 미열거 (권리 평가)
+    deemedRetirementOption: "hidden",
+  },
+  periodic_payment: {
+    farming: "hidden_permanent",
+    familyBusiness: "hidden_permanent",
+    financialDeduction: "hidden_permanent", // 정기금받을권리 — §19① 금융재산공제 미열거
+    deemedRetirementOption: "hidden",
+  },
   listed_stock: {
     farming: "default", // 영농법인 주식 (§16② 50%+ 보유 요건 안내 강화)
     familyBusiness: "default",
@@ -242,6 +254,8 @@ const CULTURAL_HERITAGE_VISIBILITY: Record<AssetCategory, ToggleVisibility> = {
   intangible_ip: "hidden_permanent",   // 무체재산권 — §74 문화유산 미대상
   receivable: "hidden_permanent",      // 채권 — §74 문화유산 미대상
   convertible_bond: "hidden_permanent", // 전환사채등 — §74 문화유산 미대상
+  trust_benefit: "hidden_permanent",   // 신탁수익권 — §74 문화유산 미대상
+  periodic_payment: "hidden_permanent", // 정기금받을권리 — §74 문화유산 미대상
   other: "hidden_expandable",          // 동산(서화·골동품 등) — 확장 노출
 };
 

@@ -50,7 +50,25 @@ export type AssetCategory =
   | "intangible_ip"          // 무체재산권 (특허·실용신안·상표·디자인·저작권, 상증법 §64) — 권리 평가
   | "receivable"             // 금전채권 (대여금·외상매출금·받을어음·정리채권 §58②)
   | "convertible_bond"       // 전환사채등 (상증법 §63①2호·상증령 §58의2) — CB·BW·신주인수권증권·증서
+  | "trust_benefit"          // 신탁의 이익을 받을 권리 (상증법 §65①·상증령 §61) — 권리 평가
+  | "periodic_payment"       // 정기금을 받을 권리 (상증법 §65①·상증령 §62) — 유기·무기·종신
   | "other";                 // 기타재산
+
+/** 신탁수익권 수익자 구성 (상증령 §61① 1호/2호가목/2호나목) */
+export type TrustBeneficiaryType =
+  | "same"           // 1호 원본·수익 동일수익자 → 신탁재산 가액 그 자체
+  | "diff_principal" // 2호가목 원본권(수익자 다름) → 신탁재산 − 수익권 현가합
+  | "diff_income";   // 2호나목 수익권(수익자 다름) → 수익 현가합
+
+/** 신탁재산 구성 항목 (결정 B 경량 — 종류 라벨 + 평가액 직접) */
+export interface TrustAssetComponent {
+  kind: AssetCategory | "simple";
+  label?: string;
+  value: number;
+}
+
+/** 정기금·신탁 수익시기 종류 (상증령 §62 1·2·3호 / §61② 준용) */
+export type AnnuityKindType = "finite" | "perpetual" | "lifetime";
 
 /** 지상권 건물·공작물 종류 (민법 §280·§281 최단존속기간 결정) */
 export type SuperficiesStructureType =
@@ -383,6 +401,48 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
    * (receivableValuationDate 주입과 동일 패턴).
    */
   cbValuationDate?: Date | string;
+
+  // ===== 신탁수익권 평가 (상증법 §65①·상증령 §61) =====
+  /** 수익자 구성 — 1호 동일/2호가 원본권/2호나 수익권 */
+  trustBeneficiaryType?: TrustBeneficiaryType;
+  /** 신탁재산 구성 (결정 B 경량 — Σ value = 평가기준일 현재 신탁재산 가액) */
+  trustAssets?: TrustAssetComponent[];
+  /** 확정 연수익률 분자/분모 (미입력=미확정 → 원본×3%, 상증칙 §19의2②) */
+  trustYieldRateNumer?: number;
+  trustYieldRateDenom?: number;
+  /** 수익 원천징수세율 분자/분모 (예: 15.4% = 154/1000) */
+  trustWithholdingRateNumer?: number;
+  trustWithholdingRateDenom?: number;
+  /** 수익만기일 — 평가기준일과 차분해 수익권 현가 회차수(연수) 산정 */
+  trustIncomeMaturityDate?: Date | string;
+  /** 수익시기 미정 시 §62 준용 — perpetual=20년 / lifetime=기대여명 */
+  trustAnnuityType?: AnnuityKindType;
+  /** [lifetime] 종신 기대여명용 수익자 성별·나이 */
+  trustBeneficiaryGender?: "male" | "female";
+  trustBeneficiaryAge?: number;
+  /** 수익 회차수(연수) 직접 override */
+  trustRemainingYearsOverride?: number;
+  /** 해지·철회·취소 일시금 (§61① 단서 Max) */
+  trustSurrenderValue?: number;
+  /** 엔진 소비용 — lib/calc 입력빌드에서 합성 주입(평가기준일~수익시기 연수). store 미저장 */
+  trustRemainingYears?: number;
+
+  // ===== 정기금받을권리 평가 (상증법 §65①·상증령 §62) =====
+  /** 유기(finite)·무기(perpetual)·종신(lifetime) */
+  periodicAnnuityType?: AnnuityKindType;
+  /** 1년분 정기금액 */
+  periodicAnnualAmount?: number;
+  /** [유기] 만기일 — 평가기준일과 차분해 잔존연수 산정 */
+  periodicMaturityDate?: Date | string;
+  /** [종신] 기대여명용 수급자 성별·나이 */
+  periodicBeneficiaryGender?: "male" | "female";
+  periodicBeneficiaryAge?: number;
+  /** 잔존연수 직접 override */
+  periodicRemainingYearsOverride?: number;
+  /** 해지·철회·취소 일시금 (§62 본문 단서 Max) */
+  periodicSurrenderValue?: number;
+  /** 엔진 소비용 — 합성 주입(잔존연수). store 미저장 */
+  periodicRemainingYears?: number;
 
   // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
   /**

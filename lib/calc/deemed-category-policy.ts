@@ -36,6 +36,8 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "intangible_ip",
   "receivable",
   "convertible_bond",
+  "trust_benefit",
+  "periodic_payment",
   "other",
 ];
 

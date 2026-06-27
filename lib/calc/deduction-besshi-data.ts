@@ -253,6 +253,8 @@ const FINANCIAL_ASSET_KIND_LABEL: Record<AssetCategory, string> = {
   intangible_ip: "무체재산권",
   receivable: "채권",
   convertible_bond: "전환사채등",
+  trust_benefit: "신탁수익권",
+  periodic_payment: "정기금받을권리",
   other: "기타금융",
 };
 
