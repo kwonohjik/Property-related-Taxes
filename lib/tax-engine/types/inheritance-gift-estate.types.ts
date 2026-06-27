@@ -46,6 +46,7 @@ export type AssetCategory =
   | "deposit"                // 전세보증금 반환채권 (임차인인 경우 — 상속세 전용)
   | "superficies"            // 지상권 (상증법 §61③) — 권리 평가
   | "receivable"             // 금전채권 (대여금·외상매출금·받을어음·정리채권 §58②)
+  | "convertible_bond"       // 전환사채등 (상증법 §63①2호·상증령 §58의2) — CB·BW·신주인수권증권·증서
   | "other";                 // 기타재산
 
 /** 지상권 건물·공작물 종류 (민법 §280·§281 최단존속기간 결정) */
@@ -62,6 +63,13 @@ export type ReceivableKind =
   | "note"    // 받을어음
   | "reorg"   // 정리채권 (회사정리·화의 등 변경)
   | "other";  // 기타 금전채권
+
+/** 전환사채등 증권 종류 (상증령 §58의2② 가~라목) */
+export type CbSecurityType =
+  | "convertible_bond"     // 가. 전환사채
+  | "bond_with_warrant"    // 나. 신주인수권부사채
+  | "warrant_certificate"  // 다. 신주인수권증권
+  | "preemptive_right";    // 라. 신주인수권증서
 
 /** 채권 연도별 회수 스케줄 1행 (discounted 현가할인용) */
 export interface ReceivableInstallment {
@@ -269,6 +277,68 @@ export interface EstateItem extends EstateLocationFields {
    * 회수일 연수(n)·적정할인율 lookup에 사용 (지상권 superficiesRemainingYears 주입과 동일 패턴).
    */
   receivableValuationDate?: Date | string;
+
+  // ===== 전환사채등 평가 (상증법 §63①2호·상증령 §58의2) =====
+  /** 증권 종류 (가~라목, 기본 convertible_bond) */
+  cbSecurityType?: CbSecurityType;
+  /** 거래소 거래 여부 (true=A §58①1호 준용 / false=B §58의2②) */
+  cbTradedOnExchange?: boolean;
+  /** [A] 평가기준일 이전 2개월 종가평균 (라목 거래소는 전체거래일 평균) */
+  cbExchange2mAvg?: number;
+  /** [A] 평가기준일 이전 최근일 최종시세 */
+  cbExchangeLatestPrice?: number;
+  /** [A] 2개월 거래실적 유무 */
+  cbHasTradeRecord?: boolean;
+  /** [A 실적無] 평가방법 — 매입분(§58①2호가) / 처분예상(2호나) */
+  cbExchangeSubMode?: "purchase" | "disposal";
+  /** [A 실적無 purchase] 매입가액 */
+  cbPurchasePrice?: number;
+  /** [A 실적無 purchase] 평가기준일까지 미수이자상당액 */
+  cbAccruedInterestToBase?: number;
+  /** [A 실적無 disposal] 처분예상금액 */
+  cbDisposalExpected?: number;
+  /** [B] 평가기준일 현재 주식전환 가능 여부 */
+  cbConvertible?: boolean;
+  /** [B] 원금(액면총액) = 발행가액(par 발행 가정, PV(R)=발행가액) */
+  cbPrincipal?: number;
+  /** [B] 상환할증조건 여부 */
+  cbHasRedemptionPremium?: boolean;
+  /** [B 할증有] 상환할증금 (만기상환금액 = 원금 + 상환할증금) */
+  cbRedemptionPremium?: number;
+  /** [B] 표시 액면이자율 (%) */
+  cbCouponRate?: number;
+  /** [B 할증有] 유효이자율 R (%) — min(R,r) 판정용. 무할증=cbCouponRate 자동 */
+  cbIssueRate?: number;
+  /** [B] 만기년수 n */
+  cbMaturityYears?: number;
+  /** [B] 직전 이자지급일 — 평가기준일까지 발생이자 일수 산정 */
+  cbInterestBaseDate?: Date | string;
+  /** [B] 발생이자상당액 직접입력 override (미입력 시 일수 auto-derive) */
+  cbAccruedInterestOverride?: number;
+  /** [B 전환가능 가·나·다목] 전환·인수가능 주식가액 (시가 × 주식수) */
+  cbConvertibleShareValue?: number;
+  /** [B 전환가능] 배당차액 직접입력 override (§57③, 미입력 시 auto-derive) */
+  cbDividendDifferenceOverride?: number;
+  /** [B 전환가능] 배당차액 auto-derive — 1주당 액면가액 */
+  cbFaceValuePerShare?: number;
+  /** [B 전환가능] 배당차액 auto-derive — 직전기 배당률 (%) */
+  cbPriorDividendRate?: number;
+  /** [B 전환가능] 배당차액 auto-derive — 주식수 */
+  cbShareCount?: number;
+  /** [B 전환가능] 배당차액 auto-derive — 배당기산일 (사업연도개시~전일 일수) */
+  cbDividendBaseDate?: Date | string;
+  /** [B 나·다·라목] 신주인수가액 */
+  cbSubscriptionPrice?: number;
+  /** [B 라목] 권리락 전 주식가액 */
+  cbExRightsPriorPrice?: number;
+  /** [B 라목 상장단서] 권리락 후 주식가액 */
+  cbExRightsPostPrice?: number;
+  /**
+   * 엔진 소비용 평가기준일 — lib/calc 입력빌드에서 주입(상속개시일/증여일).
+   * evaluateConvertibleBond이 적정할인율 lookup·발생이자/배당차액 일수 산정에 사용
+   * (receivableValuationDate 주입과 동일 패턴).
+   */
+  cbValuationDate?: Date | string;
 
   // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
   /**

@@ -10,7 +10,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
-import { injectSuperficiesRemainingYears, injectReceivableValuationDate } from "@/lib/calc/estate-item-valuation";
+import { injectSuperficiesRemainingYears, injectReceivableValuationDate, injectCbValuationDate } from "@/lib/calc/estate-item-valuation";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/components/calc/gift-tax-form-shared";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
@@ -48,7 +48,8 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
   const allItems = [...form.giftItems, ...form.stockItems]
     .map(resolveActiveUnlistedValuation)
     .map((i) => injectSuperficiesRemainingYears(i, form.giftDate || undefined))
-    .map((i) => injectReceivableValuationDate(i, form.giftDate || undefined));
+    .map((i) => injectReceivableValuationDate(i, form.giftDate || undefined))
+    .map((i) => injectCbValuationDate(i, form.giftDate || undefined));
 
   const deductionInput: GiftDeductionInput = {
     donorRelation: deriveDonorRelation(form.donor, resolveIsMinorDonee(form)),

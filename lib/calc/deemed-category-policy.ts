@@ -34,6 +34,7 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "deposit",
   "superficies",
   "receivable",
+  "convertible_bond",
   "other",
 ];
 

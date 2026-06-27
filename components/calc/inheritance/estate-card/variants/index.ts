@@ -11,6 +11,7 @@ import { EstateBodyRealEstate } from "./EstateBodyRealEstate";
 import { EstateBodyDeposit } from "./EstateBodyDeposit";
 import { EstateBodySuperficies } from "./EstateBodySuperficies";
 import { EstateBodyReceivable } from "./EstateBodyReceivable";
+import { EstateBodyConvertibleBond } from "./EstateBodyConvertibleBond";
 import { assertNever } from "./EstateBodyHelpers";
 import type { SupportedCategory, VariantBodyProps } from "./types";
 
@@ -20,6 +21,7 @@ export {
   EstateBodyDeposit,
   EstateBodySuperficies,
   EstateBodyReceivable,
+  EstateBodyConvertibleBond,
 };
 export type { SupportedCategory, VariantBodyProps };
 
@@ -41,6 +43,8 @@ export function pickBodyVariant(
       return EstateBodySuperficies;
     case "receivable":
       return EstateBodyReceivable;
+    case "convertible_bond":
+      return EstateBodyConvertibleBond;
     case "cash":
     case "financial":
     case "other":

@@ -91,6 +91,13 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
     financialDeduction: "hidden_expandable", // §19① 사인간 직접채권(대여금 등) 미열거 — deposit과 동일
     deemedRetirementOption: "hidden",
   },
+  convertible_bond: {
+    farming: "hidden_permanent",
+    familyBusiness: "hidden_permanent",
+    // §19①: 채권·유가증권은 금융재산이나 "금융회사등 취급" 요건 → 금융회사 보유분만 적격(상장 CB 등). 사인간 직접 보유분은 비적격 → 기본숨김+확장선택(KoreanLaw 검증 2026-06-27)
+    financialDeduction: "hidden_expandable",
+    deemedRetirementOption: "hidden",
+  },
   listed_stock: {
     farming: "default", // 영농법인 주식 (§16② 50%+ 보유 요건 안내 강화)
     familyBusiness: "default",
@@ -226,6 +233,7 @@ const CULTURAL_HERITAGE_VISIBILITY: Record<AssetCategory, ToggleVisibility> = {
   unlisted_stock: "hidden_permanent",
   superficies: "hidden_permanent",     // 지상권 — §74 문화유산 미대상
   receivable: "hidden_permanent",      // 채권 — §74 문화유산 미대상
+  convertible_bond: "hidden_permanent", // 전환사채등 — §74 문화유산 미대상
   other: "hidden_expandable",          // 동산(서화·골동품 등) — 확장 노출
 };
 
