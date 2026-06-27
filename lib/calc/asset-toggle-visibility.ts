@@ -117,6 +117,13 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
     financialDeduction: "hidden_permanent",
     deemedRetirementOption: "hidden",
   },
+  // 무체재산권 — 권리, 영농·가업·금융공제·간주퇴직 모두 미대상
+  intangible_ip: {
+    farming: "hidden_permanent",
+    familyBusiness: "hidden_permanent",
+    financialDeduction: "hidden_permanent",
+    deemedRetirementOption: "hidden",
+  },
   // 가상화폐(가상자산) — 영농·가업·§19① 금융재산공제(예금·채권 등 열거, 가상자산 미열거)·간주퇴직 모두 미대상
   crypto_asset: {
     farming: "hidden_permanent",
@@ -239,6 +246,7 @@ const CULTURAL_HERITAGE_VISIBILITY: Record<AssetCategory, ToggleVisibility> = {
   listed_stock: "hidden_permanent",
   unlisted_stock: "hidden_permanent",
   superficies: "hidden_permanent",     // 지상권 — §74 문화유산 미대상
+  intangible_ip: "hidden_permanent",   // 무체재산권 — §74 문화유산 미대상
   receivable: "hidden_permanent",      // 채권 — §74 문화유산 미대상
   convertible_bond: "hidden_permanent", // 전환사채등 — §74 문화유산 미대상
   crypto_asset: "hidden_permanent",     // 가상화폐(가상자산) — §74 문화유산 미대상

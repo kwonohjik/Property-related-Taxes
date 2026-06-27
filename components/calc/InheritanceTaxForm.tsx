@@ -49,7 +49,7 @@ import {
   warnCohabitHouseRightType,
 } from "@/lib/calc/inheritance-validate";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
-import { injectSuperficiesRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
+import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { applyCorporateGiftTaxFallback } from "@/lib/calc/prior-gift-auto-tax";
 import {
@@ -426,6 +426,7 @@ export function InheritanceTaxForm() {
     const allItems = [...form.estateItems, ...form.stockItems]
       .map(resolveActiveUnlistedValuation)
       .map((i) => injectSuperficiesRemainingYears(i, form.deathDate || undefined))
+      .map((i) => injectIntangibleRemainingYears(i, form.deathDate || undefined))
       .map((i) => (deathDateObj ? injectSavingsAccrualIfAuto(i, deathDateObj) : i))
       .map((i) => injectReceivableValuationDate(i, form.deathDate || undefined))
       .map((i) => injectCbValuationDate(i, form.deathDate || undefined))

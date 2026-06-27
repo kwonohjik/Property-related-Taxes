@@ -128,6 +128,7 @@ export const ESTATE_ITEM_TYPE_CODE: Record<AssetCategory, string> = {
   financial: "11",
   deposit: "11",
   superficies: "12", // 지상권 — 부표2 전용코드 부재 → 12 기타재산 fallback
+  intangible_ip: "12", // 무체재산권 — 부표2 전용코드 부재 → 12 기타재산 fallback
   receivable: "11", // 채권 — 부표2 코드표상 금융재산(11)으로 잠정. ⚠️ 별지9호 부표2 뒷면 코드표 검증 후 동결 (plan §9)
   convertible_bond: "11", // 전환사채등 — 유가증권/금융재산(11)으로 잠정. ⚠️ 부표2 코드표 검증 후 동결 (plan §9)
   crypto_asset: "12", // 가상화폐(가상자산) — 부표2 전용코드 부재 → 12 기타재산 fallback

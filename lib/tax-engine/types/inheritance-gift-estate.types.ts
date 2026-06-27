@@ -49,6 +49,7 @@ export type AssetCategory =
   | "financial"              // 예금·펀드·채권 (§22 금융재산공제 대상)
   | "deposit"                // 전세보증금 반환채권 (임차인인 경우 — 상속세 전용)
   | "superficies"            // 지상권 (상증법 §61③) — 권리 평가
+  | "intangible_ip"          // 무체재산권 (특허·실용신안·상표·디자인·저작권, 상증법 §64) — 권리 평가
   | "receivable"             // 금전채권 (대여금·외상매출금·받을어음·정리채권 §58②)
   | "convertible_bond"       // 전환사채등 (상증법 §63①2호·상증령 §58의2) — CB·BW·신주인수권증권·증서
   | "crypto_asset"           // 가상화폐(가상자산) (상증법 §65②·상증령 §60②) — 전·후 각 1개월 일평균가액 평균
@@ -60,6 +61,20 @@ export type SuperficiesStructureType =
   | "other_building"   // ㉡ 그 외 건물 → 최단 15년
   | "non_building"     // ㉢ 건물 이외 공작물 → 최단 5년
   | "unspecified";     // 공작물 종류·구조 미정 (§281②) → 15년 간주
+
+/** 무체재산권 종류 (상증령 §59⑤ — 존속기간·기산점 분기, 현행법) */
+export type IntangibleIpType =
+  | "patent"         // 특허권 — 출원일+20년 (특허법 §88①)
+  | "utility_model"  // 실용신안권 — 출원일+10년 (실용신안법 §22①)
+  | "trademark"      // 상표권 — 설정등록일+10년 (상표법 §42①)
+  | "design"         // 디자인권 — 출원일+20년 (디자인보호법 §91①, 구법 15년 SCOPE_OUT)
+  | "copyright";     // 저작권 — 사망일+70년 (저작권법 §39①, 구 50년 경과조치 SCOPE_OUT)
+
+/** 무체재산권 각 연도 수입금액 산정 방식 (상증령 §59⑤·상증규 §19) */
+export type IntangibleIncomeMode =
+  | "fixed"       // 미래 각 연도 수입금액 확정 (§59⑤ 전단·규 §19②)
+  | "avg3y"       // 미확정 → 직전 3년 평균 (§59⑤ 후단·규 §19④ 전단)
+  | "appraisal";  // 수입 없음/저작권 하락 명백 → 감정가액 (규 §19④ 후단)
 
 /** 채권 종류 (상증령 §58② 대부금·외상매출금·받을어음 등) */
 export type ReceivableKind =
@@ -258,6 +273,33 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
    * 엔진 내 도출 불가 → 변환 레이어 합성. evaluateSuperficies는 이 값만 소비.
    */
   superficiesRemainingYears?: number;
+
+  // ===== 무체재산권 평가 (상증법 §64·상증령 §59⑤·상증규 §19②③④) =====
+  /** 권리 종류 — 존속기간·기산점 분기 */
+  intangibleIpType?: IntangibleIpType;
+  /** 각 연도 수입금액 산정 방식 (fixed/avg3y/appraisal) */
+  intangibleIncomeMode?: IntangibleIncomeMode;
+  /** fixed: 미래 각 연도 수입금액(원, 균등 가정) */
+  intangibleAnnualIncome?: number;
+  /** avg3y: 직전 3년 수입금액 합계(원) */
+  intangiblePrior3yIncomeTotal?: number;
+  /** avg3y: 실제 연수(1~3, 3 미달 시 미달 연수) — validate 필수, 자동 ÷3 금지 */
+  intangiblePrior3yYears?: number;
+  /** appraisal: 감정가액(원, 규 §19④ 후단) */
+  intangibleAppraisedValue?: number;
+  /** 출원일(특허·실용·디자인)/설정등록일(상표) — 존속기간 기산점 */
+  intangibleOriginDate?: Date | string;
+  /** copyright: 저작자 사망일(공동저작물=최후 사망자, §39②) */
+  intangibleAuthorDeathDate?: Date | string;
+  /** §64 1호 — 취득가액 − 법인세법상 감가상각비(원, 선택) — ②환산액과 MAX 비교 */
+  intangibleAcquisitionCost?: number;
+  /** 잔존연수 사용자 오버라이드(정수) — 있으면 자동도출 무시(clamp 0~20) */
+  intangibleRemainingYearsOverride?: number;
+  /**
+   * 엔진 소비용 최종 잔존연수 — lib/calc 입력빌드에서 resolveIntangibleRemainingYears로 합성 주입.
+   * evaluateIntangibleIp는 이 값만 소비(evaluateAllEstateItems가 평가기준일 미수신).
+   */
+  intangibleRemainingYears?: number;
 
   // ===== 채권 평가 (상증령 §58②·상증칙 §18의2②) =====
   /** 채권 종류 (UI 안내·별지 표기용) */

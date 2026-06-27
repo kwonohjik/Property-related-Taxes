@@ -19,6 +19,8 @@ import type {
   ValuationMethod,
   CalculationStep,
   SuperficiesStructureType,
+  IntangibleIpType,
+  IntangibleIncomeMode,
 } from "./types/inheritance-gift.types";
 import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestrator";
 import {
@@ -135,6 +137,143 @@ export function evaluateSuperficies(item: EstateItem): PropertyValuationResult {
       { label: "평가액", amount: valuatedAmount },
     ],
     warnings: ["지상권 보충적 평가 — 잔존연수·존속기간 약정 내용 확인 권장"],
+  };
+}
+
+// ============================================================
+// 무체재산권 평가 (상증법 §64·상증령 §59⑤·상증규 §19②③④)
+//   평가액 = Σ(n=1..N) floor(income × 10ⁿ / 11ⁿ), 할인율 10%(분수 11/10)
+//   N = min(존속만료일 − 평가기준일, 20). 잔존연수 floor(규 §19③ — 지상권 절상과 반대).
+// ============================================================
+
+/** 무체재산권 종류별 법정 존속기간(기산일·연수) — 현행법, KoreanLaw 검증 */
+function resolveIntangibleDurationYears(
+  type: IntangibleIpType,
+  originDate?: Date,
+  authorDeathDate?: Date,
+): { base?: Date; years: number } {
+  switch (type) {
+    case "patent":        return { base: originDate, years: 20 }; // 특허법 §88①
+    case "utility_model": return { base: originDate, years: 10 }; // 실용신안법 §22①
+    case "trademark":     return { base: originDate, years: 10 }; // 상표법 §42①(설정등록일)
+    case "design":        return { base: originDate, years: 20 }; // 디자인보호법 §91①(구법 15년 SCOPE_OUT)
+    case "copyright":     return { base: authorDeathDate, years: 70 }; // 저작권법 §39①(구 50년 SCOPE_OUT)
+  }
+}
+
+/**
+ * 무체재산권 잔존연수 도출 (상증규 §19③) — 엔진 단일진실.
+ * UI useMemo·lib/calc inject·validate 공용 import (dual-truth 금지).
+ * override 우선. 잔존 = floor(만료 − 평가기준일), 20년 한도. (지상권 절상과 반대 — 규 §19③.)
+ */
+export function resolveIntangibleRemainingYears(p: {
+  type: IntangibleIpType;
+  originDate?: Date;
+  authorDeathDate?: Date;
+  override?: number;
+  valuationDate: Date;
+}): number {
+  if (p.override != null) return Math.max(0, Math.min(20, Math.trunc(p.override)));
+  const { base, years } = resolveIntangibleDurationYears(p.type, p.originDate, p.authorDeathDate);
+  if (!base) return 0; // 미입력 — validate 차단
+  const expiry = addYears(base, years); // 존속만료일
+  if (expiry <= p.valuationDate) return 0; // 만료
+  return Math.min(differenceInYears(expiry, p.valuationDate), 20); // floor + 20년 한도
+}
+
+const INTANGIBLE_INCOME_LABEL: Record<IntangibleIncomeMode, string> = {
+  fixed: "미래 확정수입",
+  avg3y: "직전 3년 평균",
+  appraisal: "감정가액",
+};
+
+/**
+ * 무체재산권 평가 (§64·령§59⑤·규§19). 각 연도 수입금액 → 잔존연수 10% 현가환산(BigInt Σfloor).
+ * 잔존연수는 lib/calc에서 합성된 intangibleRemainingYears 소비. §64 1호 취득가액과 MAX.
+ */
+export function evaluateIntangibleIp(item: EstateItem): PropertyValuationResult {
+  if (item.category !== "intangible_ip") {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "evaluateIntangibleIp: 무체재산권 자산이 아닙니다.",
+    );
+  }
+
+  // appraisal: Σ 미적용, 감정가액(규 §19④ 후단=§64 2호 하위). §64 1호 취득가액과 MAX(법 §64 본문 "큰 금액").
+  if (item.intangibleIncomeMode === "appraisal") {
+    const appraised = item.intangibleAppraisedValue ?? 0;
+    const byCostA = item.intangibleAcquisitionCost ?? 0;
+    const methodA: ValuationMethod = byCostA > appraised ? "acquisition_cost" : "appraisal";
+    const valA = Math.max(appraised, byCostA);
+    const bdA: CalculationStep[] = [
+      { label: "감정가액 (상증규 §19④ 후단)", amount: appraised, lawRef: VALUATION.INTANGIBLE_IP },
+    ];
+    if (methodA === "acquisition_cost") {
+      bdA.push({ label: "취득가액 − 감가상각비 (상증법 §64 1호, MAX 채택)", amount: byCostA, lawRef: VALUATION.INTANGIBLE_IP });
+    }
+    bdA.push({ label: "평가액", amount: valA });
+    return {
+      estateItemId: item.id,
+      method: methodA,
+      valuatedAmount: valA,
+      breakdown: bdA,
+      warnings: ["무체재산권 감정가액 — 2 이상 공신력 감정기관·전문가 평가 확인 권장"],
+    };
+  }
+
+  // 각 연도 수입금액 (명시 분기 — silent fallback 금지)
+  let income = 0;
+  if (item.intangibleIncomeMode === "avg3y") {
+    // prior3yYears는 validate 필수(≥1) — `?? 3` 자동 안분 금지 (no_silent_apportion_fallback)
+    income = Math.floor((item.intangiblePrior3yIncomeTotal ?? 0) / (item.intangiblePrior3yYears ?? 1));
+  } else if (item.intangibleIncomeMode === "fixed") {
+    income = item.intangibleAnnualIncome ?? 0;
+  }
+  const years = Math.max(0, Math.min(20, Math.trunc(item.intangibleRemainingYears ?? 0)));
+
+  // Σ floor(income × 10ⁿ / 11ⁿ) — 할인율 10% = 분수 11/10, 각 항 BigInt floor
+  let sum = 0n;
+  let num = 1n;
+  let den = 1n;
+  const incBig = BigInt(income);
+  for (let n = 1; n <= years; n++) {
+    num *= 10n;
+    den *= 11n;
+    sum += (incBig * num) / den;
+  }
+  const converted = Number(sum);
+
+  // §64 1호 MAX (양방향) — method 라벨 일치
+  const byCost = item.intangibleAcquisitionCost ?? 0;
+  const method: ValuationMethod = byCost > converted ? "acquisition_cost" : "standard_price";
+  const valuatedAmount = Math.max(converted, byCost);
+
+  const modeLabel = item.intangibleIncomeMode
+    ? INTANGIBLE_INCOME_LABEL[item.intangibleIncomeMode]
+    : "미선택";
+  const breakdown: CalculationStep[] = [
+    { label: `각 연도 수입금액 (${modeLabel})`, amount: income, lawRef: VALUATION.INTANGIBLE_IP },
+    {
+      label: `잔존연수 ${years}년(20년 한도) · 할인율 10% 현재가치 환산 합계`,
+      amount: converted,
+      lawRef: VALUATION.INTANGIBLE_IP,
+    },
+  ];
+  if (method === "acquisition_cost") {
+    breakdown.push({
+      label: "취득가액 − 감가상각비 (상증법 §64 1호, MAX 채택)",
+      amount: byCost,
+      lawRef: VALUATION.INTANGIBLE_IP,
+    });
+  }
+  breakdown.push({ label: "평가액", amount: valuatedAmount });
+
+  return {
+    estateItemId: item.id,
+    method,
+    valuatedAmount,
+    breakdown,
+    warnings: ["무체재산권 보충적 평가 — 수입금액·존속기간·감정 여부 확인 권장"],
   };
 }
 
@@ -670,6 +809,8 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
       return evaluateRentalConversion(item);
     case "superficies":
       return evaluateSuperficies(item);
+    case "intangible_ip":
+      return evaluateIntangibleIp(item);
     case "receivable":
       return evaluateReceivable(item);
     case "convertible_bond":

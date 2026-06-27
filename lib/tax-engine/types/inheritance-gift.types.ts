@@ -25,6 +25,8 @@ export type {
   ValuationMethod,
   AssetCategory,
   SuperficiesStructureType,
+  IntangibleIpType,
+  IntangibleIncomeMode,
   ReceivableKind,
   ReceivableInstallment,
   CbSecurityType,
