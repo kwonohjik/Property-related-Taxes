@@ -94,7 +94,8 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
   convertible_bond: {
     farming: "hidden_permanent",
     familyBusiness: "hidden_permanent",
-    financialDeduction: "hidden_expandable", // §19① 사인간 직접 보유 사채 — receivable과 동일(§22 적격은 §9 검증 후 default 전환)
+    // §19①: 채권·유가증권은 금융재산이나 "금융회사등 취급" 요건 → 금융회사 보유분만 적격(상장 CB 등). 사인간 직접 보유분은 비적격 → 기본숨김+확장선택(KoreanLaw 검증 2026-06-27)
+    financialDeduction: "hidden_expandable",
     deemedRetirementOption: "hidden",
   },
   listed_stock: {
