@@ -21,6 +21,8 @@ export const CATEGORY_LABELS: Record<SupportedCategory, string> = {
   financial: "예금·펀드·채권·공제금",
   deposit: "전세보증금 반환채권",
   superficies: "지상권",
+  receivable: "채권 (대여금·외상매출금 등)",
+  convertible_bond: "전환사채등 (전환사채·신주인수권부사채 등)",
   other: "기타 재산",
 };
 
@@ -32,6 +34,8 @@ export const CATEGORY_ICONS: Record<SupportedCategory, string> = {
   financial: "🏦",
   deposit: "🔑",
   superficies: "📜",
+  receivable: "📄",
+  convertible_bond: "📊",
   other: "📦",
 };
 
@@ -43,5 +47,7 @@ export const GIFT_CATEGORIES: SupportedCategory[] = [
   "cash",
   "financial",
   "superficies",
+  "receivable",
+  "convertible_bond",
   "other",
 ];

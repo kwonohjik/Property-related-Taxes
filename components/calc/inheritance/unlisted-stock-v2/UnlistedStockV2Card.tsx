@@ -324,6 +324,7 @@ export function UnlistedStockV2Card({
         onChange={(next) => wrappedOnChange({ ...input, estimatedProfit: next })}
         capitalizationRate={input.capitalizationRate}
         sectionNum={4}
+        evaluationDate={effectiveInput.evaluationDate}
       />
 
       {/* 5. PR-N: 평가차액 행 단위 입력 (별지 3쪽, design v3 Section 4) */}

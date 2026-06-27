@@ -20,6 +20,29 @@ import {
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 import type { MergerNetIncomeResult } from "@/lib/tax-engine/types/merger-net-income.types";
+import type { AgencyType, EstimatedProfitResult } from "@/lib/tax-engine/property-valuation/estimated-profit-section-56-2";
+
+/** §17의3③ 기관 유형 라벨 (상증규 §17의3③) */
+const AGENCY_TYPE_LABEL: Record<AgencyType, string> = {
+  credit_rating: "신용평가전문기관",
+  accounting: "회계법인",
+  tax: "세무법인",
+};
+
+/**
+ * ⑤ 1주당 순손익가치 hint 빌더 — §56② 추정이익 적용 시 기관 메타 포함
+ * capRate는 최상위 UnlistedStockValuationResult.capitalizationRate 주입
+ */
+function buildEstimatedProfitHint(r: EstimatedProfitResult, capRate: number): string {
+  const base = `§56② 추정이익 평균가액 ${r.estimatedProfitAverage.toLocaleString()}원 (기관 ${r.agencyCount}개 평균) ÷ 환원율 ${(capRate * 100).toFixed(0)}%`;
+  if (r.agencyMeta && r.agencyMeta.length > 0) {
+    const agencyList = r.agencyMeta
+      .map((a) => (a.name ? `${AGENCY_TYPE_LABEL[a.type]} ${a.name}` : AGENCY_TYPE_LABEL[a.type]))
+      .join(" / ");
+    return `${base} — ${agencyList}`;
+  }
+  return base;
+}
 
 export interface PerShareValuationResultCardProps {
   input: UnlistedStockValuationInput;
@@ -104,7 +127,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           value={`${fmt(result.netIncomePerShare)}원`}
           hint={
             result.estimatedProfitResult?.applied
-              ? `§56② 추정이익 평균가액 ${fmt(result.estimatedProfitResult.estimatedProfitAverage)}원 (기관 ${result.estimatedProfitResult.agencyCount}개 평균) ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`
+              ? buildEstimatedProfitHint(result.estimatedProfitResult, result.capitalizationRate)
               : `최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원 ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`
           }
           law={
@@ -135,6 +158,43 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
                 · {w}
               </p>
             ))}
+            {/* 영역 D — evaluationMethod 배지 (차단 아님, 시점 안내) */}
+            {result.estimatedProfitResult.evaluationMethod && (
+              <div
+                className={`mt-1 flex items-center gap-1.5 text-[10px] ${
+                  result.estimatedProfitResult.evaluationMethod === "legacy"
+                    ? "text-amber-700"
+                    : "text-violet-600"
+                }`}
+                data-testid="result-evaluation-method-badge"
+              >
+                <span
+                  className={`rounded-sm px-1.5 py-0.5 font-medium border ${
+                    result.estimatedProfitResult.evaluationMethod === "legacy"
+                      ? "bg-amber-100 border-amber-300 text-amber-700"
+                      : "bg-violet-100 border-violet-300 text-violet-700"
+                  }`}
+                >
+                  {result.estimatedProfitResult.evaluationMethod === "legacy" ? "구법 안내" : "현행"}
+                </span>
+                <span>{result.estimatedProfitResult.evaluationMethodNote}</span>
+              </div>
+            )}
+            {/* 영역 E — agencyMeta 기관 목록 echo (빈 행 필터: 기본값 type + name 빈 제외) */}
+            {result.estimatedProfitResult.applied && (() => {
+              const shown = (result.estimatedProfitResult.agencyMeta ?? []).filter(
+                (a) => a.name.trim() !== "" || a.type !== "credit_rating",
+              );
+              return shown.length > 0 ? (
+                <div className="mt-1 space-y-0.5" data-testid="result-agency-meta-list">
+                  {shown.map((a, i) => (
+                    <p key={i} className="text-[10px] leading-snug">
+                      · 기관 {i + 1}: {AGENCY_TYPE_LABEL[a.type]} — {a.name || "(기관명 미입력)"}
+                    </p>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
         )}
         {/* §17의3② 연환산 echo — 1년 미만 사업연도 있을 때만 표시. 합병 적용 시 대신 합병 명세 카드 표시 (상호 배타) */}

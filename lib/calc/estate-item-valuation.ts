@@ -69,6 +69,30 @@ export function injectSuperficiesRemainingYears(
   return { ...item, superficiesRemainingYears: years };
 }
 
+/**
+ * 채권 평가기준일 주입 — 엔진 evaluateReceivable이 회수일 연수(n)·적정할인율 lookup에 사용.
+ * gift-api/InheritanceTaxForm 입력빌드에서 superficies 합성과 동시 호출 (engine 경로 단일화).
+ */
+export function injectReceivableValuationDate(
+  item: EstateItem,
+  valuationDateISO?: string,
+): EstateItem {
+  if (item.category !== "receivable") return item;
+  return { ...item, receivableValuationDate: valuationDateISO };
+}
+
+/**
+ * 전환사채등 평가기준일 주입 — 엔진 evaluateConvertibleBond이 적정할인율 lookup·발생이자/배당차액 일수 산정에 사용.
+ * gift-api/InheritanceTaxForm 입력빌드에서 superficies·receivable 합성과 동시 호출 (engine 경로 단일화).
+ */
+export function injectCbValuationDate(
+  item: EstateItem,
+  valuationDateISO?: string,
+): EstateItem {
+  if (item.category !== "convertible_bond") return item;
+  return { ...item, cbValuationDate: valuationDateISO };
+}
+
 export function computeEffectiveValuation(
   item: EstateItem,
   valuationDate?: string,
@@ -96,6 +120,22 @@ export function computeEffectiveValuation(
   if (item.category === "superficies") {
     try {
       return evaluateEstateItem(injectSuperficiesRemainingYears(item, valuationDate)).valuatedAmount;
+    } catch {
+      return 0; // 부분입력 가드
+    }
+  }
+  // 채권: 평가기준일 주입 후 엔진 위임 (§58②, single-source — n·할인율 산정)
+  if (item.category === "receivable") {
+    try {
+      return evaluateEstateItem({ ...item, receivableValuationDate: valuationDate }).valuatedAmount;
+    } catch {
+      return 0; // 부분입력 가드
+    }
+  }
+  // 전환사채등: 평가기준일 주입 후 엔진 위임 (§58의2, single-source — 할인율·일수 산정)
+  if (item.category === "convertible_bond") {
+    try {
+      return evaluateEstateItem({ ...item, cbValuationDate: valuationDate }).valuatedAmount;
     } catch {
       return 0; // 부분입력 가드
     }

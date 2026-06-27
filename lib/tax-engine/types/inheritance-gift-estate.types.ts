@@ -20,6 +20,7 @@ import type { FamilyBusinessCategory } from "./inheritance-family-business.types
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
 import type { EstateLocationFields } from "./inheritance-asset-location.types";
 import type { EstateItemSavingsFields } from "./inheritance-gift-deposit.types";
+import type { RateFraction } from "../data/gift-deemed-rates";
 
 // ============================================================
 // 재산평가 (property-valuation.ts)
@@ -46,6 +47,8 @@ export type AssetCategory =
   | "financial"              // 예금·펀드·채권 (§22 금융재산공제 대상)
   | "deposit"                // 전세보증금 반환채권 (임차인인 경우 — 상속세 전용)
   | "superficies"            // 지상권 (상증법 §61③) — 권리 평가
+  | "receivable"             // 금전채권 (대여금·외상매출금·받을어음·정리채권 §58②)
+  | "convertible_bond"       // 전환사채등 (상증법 §63①2호·상증령 §58의2) — CB·BW·신주인수권증권·증서
   | "other";                 // 기타재산
 
 /** 지상권 건물·공작물 종류 (민법 §280·§281 최단존속기간 결정) */
@@ -54,6 +57,29 @@ export type SuperficiesStructureType =
   | "other_building"   // ㉡ 그 외 건물 → 최단 15년
   | "non_building"     // ㉢ 건물 이외 공작물 → 최단 5년
   | "unspecified";     // 공작물 종류·구조 미정 (§281②) → 15년 간주
+
+/** 채권 종류 (상증령 §58② 대부금·외상매출금·받을어음 등) */
+export type ReceivableKind =
+  | "loan"    // 대여금·대부금
+  | "trade"   // 외상매출금
+  | "note"    // 받을어음
+  | "reorg"   // 정리채권 (회사정리·화의 등 변경)
+  | "other";  // 기타 금전채권
+
+/** 전환사채등 증권 종류 (상증령 §58의2② 가~라목) */
+export type CbSecurityType =
+  | "convertible_bond"     // 가. 전환사채
+  | "bond_with_warrant"    // 나. 신주인수권부사채
+  | "warrant_certificate"  // 다. 신주인수권증권
+  | "preemptive_right";    // 라. 신주인수권증서
+
+/** 채권 연도별 회수 스케줄 1행 (discounted 현가할인용) */
+export interface ReceivableInstallment {
+  /** 회수일 — 평가기준일과 차분해 연수(n) 산정 (⚠️ 중첩 Date: Route map 변환) */
+  recoverDate: Date | string;
+  /** 그 해 회수금액 = 원본분 + 이자상당액 (사용자 직접 입력, 자동 안분 fallback 금지) */
+  amount: number;
+}
 
 /** 재산 평가 입력 (단일 자산). 위치 필드 5종(좌표·주소·시·군·구 코드)은 EstateLocationFields mixin. 예금 §63④ 필드는 EstateItemSavingsFields mixin. */
 export interface EstateItem extends EstateLocationFields, EstateItemSavingsFields {
@@ -229,6 +255,92 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
    * 엔진 내 도출 불가 → 변환 레이어 합성. evaluateSuperficies는 이 값만 소비.
    */
   superficiesRemainingYears?: number;
+
+  // ===== 채권 평가 (상증령 §58②·상증칙 §18의2②) =====
+  /** 채권 종류 (UI 안내·별지 표기용) */
+  receivableKind?: ReceivableKind;
+  /** 평가방식 — 회수기간 5년 이내(simple) / 5년 초과·회사정리 등 변경(discounted) */
+  receivableMode?: "simple" | "discounted";
+  /** [simple] 원본(원금) 가액 */
+  receivablePrincipal?: number;
+  /** [simple] 평가기준일까지 발생한 미수이자상당액 (피상속인 미수령분) */
+  receivableAccruedInterest?: number;
+  /** [simple] 회수불가능 차감액 (§58② 단서, 원본 한도). discounted은 스케줄에 사전반영 */
+  receivableUncollectible?: number;
+  /** 회수불가능 사유 메모 (별지·근거) */
+  receivableUncollectibleReason?: string;
+  /** [discounted] 연도별 회수 스케줄 (원본+이자상당액 합산액, 회수일) */
+  receivableSchedule?: ReceivableInstallment[];
+  /** [discounted] 적정할인율 override — 미입력 시 평가기준일 기준 시대표 lookup */
+  receivableDiscountRateOverride?: RateFraction;
+  /**
+   * 엔진 소비용 평가기준일 — lib/calc 입력빌드에서 주입(상속개시일/증여일).
+   * evaluateEstateItem이 평가기준일 미수신하므로 변환 레이어가 주입. evaluateReceivable이
+   * 회수일 연수(n)·적정할인율 lookup에 사용 (지상권 superficiesRemainingYears 주입과 동일 패턴).
+   */
+  receivableValuationDate?: Date | string;
+
+  // ===== 전환사채등 평가 (상증법 §63①2호·상증령 §58의2) =====
+  /** 증권 종류 (가~라목, 기본 convertible_bond) */
+  cbSecurityType?: CbSecurityType;
+  /** 거래소 거래 여부 (true=A §58①1호 준용 / false=B §58의2②) */
+  cbTradedOnExchange?: boolean;
+  /** [A] 평가기준일 이전 2개월 종가평균 (라목 거래소는 전체거래일 평균) */
+  cbExchange2mAvg?: number;
+  /** [A] 평가기준일 이전 최근일 최종시세 */
+  cbExchangeLatestPrice?: number;
+  /** [A] 2개월 거래실적 유무 */
+  cbHasTradeRecord?: boolean;
+  /** [A 실적無] 평가방법 — 매입분(§58①2호가) / 처분예상(2호나) */
+  cbExchangeSubMode?: "purchase" | "disposal";
+  /** [A 실적無 purchase] 매입가액 */
+  cbPurchasePrice?: number;
+  /** [A 실적無 purchase] 평가기준일까지 미수이자상당액 */
+  cbAccruedInterestToBase?: number;
+  /** [A 실적無 disposal] 처분예상금액 */
+  cbDisposalExpected?: number;
+  /** [B] 평가기준일 현재 주식전환 가능 여부 */
+  cbConvertible?: boolean;
+  /** [B] 원금(액면총액) = 발행가액(par 발행 가정, PV(R)=발행가액) */
+  cbPrincipal?: number;
+  /** [B] 상환할증조건 여부 */
+  cbHasRedemptionPremium?: boolean;
+  /** [B 할증有] 상환할증금 (만기상환금액 = 원금 + 상환할증금) */
+  cbRedemptionPremium?: number;
+  /** [B] 표시 액면이자율 (%) */
+  cbCouponRate?: number;
+  /** [B 할증有] 유효이자율 R (%) — min(R,r) 판정용. 무할증=cbCouponRate 자동 */
+  cbIssueRate?: number;
+  /** [B] 만기년수 n */
+  cbMaturityYears?: number;
+  /** [B] 직전 이자지급일 — 평가기준일까지 발생이자 일수 산정 */
+  cbInterestBaseDate?: Date | string;
+  /** [B] 발생이자상당액 직접입력 override (미입력 시 일수 auto-derive) */
+  cbAccruedInterestOverride?: number;
+  /** [B 전환가능 가·나·다목] 전환·인수가능 주식가액 (시가 × 주식수) */
+  cbConvertibleShareValue?: number;
+  /** [B 전환가능] 배당차액 직접입력 override (§57③, 미입력 시 auto-derive) */
+  cbDividendDifferenceOverride?: number;
+  /** [B 전환가능] 배당차액 auto-derive — 1주당 액면가액 */
+  cbFaceValuePerShare?: number;
+  /** [B 전환가능] 배당차액 auto-derive — 직전기 배당률 (%) */
+  cbPriorDividendRate?: number;
+  /** [B 전환가능] 배당차액 auto-derive — 주식수 */
+  cbShareCount?: number;
+  /** [B 전환가능] 배당차액 auto-derive — 배당기산일 (사업연도개시~전일 일수) */
+  cbDividendBaseDate?: Date | string;
+  /** [B 나·다·라목] 신주인수가액 */
+  cbSubscriptionPrice?: number;
+  /** [B 라목] 권리락 전 주식가액 */
+  cbExRightsPriorPrice?: number;
+  /** [B 라목 상장단서] 권리락 후 주식가액 */
+  cbExRightsPostPrice?: number;
+  /**
+   * 엔진 소비용 평가기준일 — lib/calc 입력빌드에서 주입(상속개시일/증여일).
+   * evaluateConvertibleBond이 적정할인율 lookup·발생이자/배당차액 일수 산정에 사용
+   * (receivableValuationDate 주입과 동일 패턴).
+   */
+  cbValuationDate?: Date | string;
 
   // ===== 담보채무 §14 자동 반영 (collateral-debt-auto-deduction) =====
   /**
