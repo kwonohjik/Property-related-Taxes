@@ -133,6 +133,7 @@ export const ESTATE_ITEM_TYPE_CODE: Record<AssetCategory, string> = {
   convertible_bond: "11", // 전환사채등 — 유가증권/금융재산(11)으로 잠정. ⚠️ 부표2 코드표 검증 후 동결 (plan §9)
   trust_benefit: "12", // 신탁수익권 — 부표2 전용코드 부재 → 12 기타재산 fallback. ⚠️ 코드표 검증 후 동결
   periodic_payment: "12", // 정기금받을권리 — 부표2 전용코드 부재 → 12 기타재산 fallback. ⚠️ 코드표 검증 후 동결
+  crypto_asset: "12", // 가상화폐(가상자산) — 부표2 전용코드 부재 → 12 기타재산 fallback
   other: "12",
 };
 

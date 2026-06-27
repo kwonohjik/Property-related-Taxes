@@ -30,6 +30,7 @@ import {
 import { evaluateConvertibleBond } from "./property-valuation-convertible-bond";
 import { evaluateTrustBenefit } from "./property-valuation-trust-benefit";
 import { evaluatePeriodicPayment } from "./property-valuation-periodic";
+import { computeCryptoUnitPrice } from "./property-valuation-crypto";
 
 export { evaluateReceivable, resolveReceivableRecoveryYears, evaluateConvertibleBond };
 export { evaluateTrustBenefit, evaluatePeriodicPayment };
@@ -728,6 +729,70 @@ export function evaluateFinancial(item: EstateItem): PropertyValuationResult {
 export { computeSavingsAccrual, injectSavingsAccrualIfAuto } from "./property-valuation-deposit";
 
 // ============================================================
+// 가상화폐(가상자산) 평가 (§65②·§60②)
+// ============================================================
+
+export function evaluateCryptoAsset(item: EstateItem): PropertyValuationResult {
+  if (item.category !== "crypto_asset") {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "evaluateCryptoAsset: 가상자산이 아닙니다.",
+    );
+  }
+
+  const qty = item.cryptoQuantity ?? 0;
+  const mode = item.cryptoValuationMode ?? "direct";
+  const isListed = item.cryptoIsListedProvider ?? true;
+
+  // 1코인당 평가단가 도출 (timeseries: echo 우선, 미주입 시 배열 평균 산정 / direct: 단가 직접)
+  let unitPrice: number;
+  let method: ValuationMethod;
+  let unitLabel: string;
+  let unitLawRef: string;
+  if (mode === "timeseries") {
+    unitPrice =
+      item.cryptoUnitPriceComputed ??
+      computeCryptoUnitPrice(item.cryptoDailyPrices ?? []);
+    // 1호(고시사업장) = §60②1호 법정평균 / 2호 = 합리적 가액(시가성)
+    method = isListed ? "crypto_statutory" : "market_value";
+    unitLabel = `거래일별 일평균가액의 평균액 (${item.cryptoDailyPrices?.length ?? 0}일)`;
+    unitLawRef = isListed ? VALUATION.CRYPTO_LISTED : VALUATION.CRYPTO_OTHER;
+  } else {
+    unitPrice = item.cryptoUnitPrice ?? 0;
+    method = "market_value";
+    unitLabel = "1코인당 평가단가";
+    unitLawRef = VALUATION.CRYPTO_OTHER;
+  }
+
+  // 평가액 = 단가(정수) × 수량(소수 8자리). 부동소수 곱 1원 절사오차·safeMultiply 소수부 소실 둘 다 회피:
+  //   단가는 정수(computeCryptoUnitPrice=floor·direct=parseAmount), 수량을 satoshi(×1e8) 정수화 후 BigInt 분수연산.
+  const unitInt = Math.trunc(unitPrice);
+  const qtySatoshi = Math.round(qty * 1e8);
+  const valuatedAmount = Number(
+    (BigInt(unitInt) * BigInt(qtySatoshi)) / 100000000n,
+  );
+
+  return {
+    estateItemId: item.id,
+    method,
+    valuatedAmount,
+    breakdown: [
+      { label: unitLabel, amount: unitPrice, lawRef: unitLawRef },
+      {
+        label: `1코인당 평가단가 × 보유수량 ${qty}`,
+        amount: valuatedAmount,
+        lawRef: unitLawRef,
+      },
+    ],
+    warnings:
+      valuatedAmount <= 0 ? ["가상자산 평가액이 0원 — 단가·수량 입력 확인"] : [],
+  };
+}
+
+// re-export: 테스트·클라이언트 단일 import 소스
+export { computeCryptoUnitPrice, injectCryptoUnitPriceIfTimeseries } from "./property-valuation-crypto";
+
+// ============================================================
 // 통합 평가 디스패처 — 자산 종류에 따라 적합한 함수 호출
 // ============================================================
 
@@ -757,6 +822,8 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
       return evaluateTrustBenefit(item);
     case "periodic_payment":
       return evaluatePeriodicPayment(item);
+    case "crypto_asset":
+      return evaluateCryptoAsset(item);
     case "listed_stock":
     case "unlisted_stock":
       throw new TaxCalculationError(

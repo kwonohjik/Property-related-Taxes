@@ -136,6 +136,13 @@ const MATRIX: Record<AssetCategory, AssetToggleVisibility> = {
     financialDeduction: "hidden_permanent",
     deemedRetirementOption: "hidden",
   },
+  // 가상화폐(가상자산) — 영농·가업·§19① 금융재산공제(예금·채권 등 열거, 가상자산 미열거)·간주퇴직 모두 미대상
+  crypto_asset: {
+    farming: "hidden_permanent",
+    familyBusiness: "hidden_permanent",
+    financialDeduction: "hidden_permanent",
+    deemedRetirementOption: "hidden",
+  },
   other: {
     // §16⑤ 라·마목 어선·어업권·양식업권 — 현금성 노이즈 제거, 추가옵션·활성우선으로 접근 (정밀화 2026-06-05)
     farming: "hidden_expandable",
@@ -256,6 +263,7 @@ const CULTURAL_HERITAGE_VISIBILITY: Record<AssetCategory, ToggleVisibility> = {
   convertible_bond: "hidden_permanent", // 전환사채등 — §74 문화유산 미대상
   trust_benefit: "hidden_permanent",   // 신탁수익권 — §74 문화유산 미대상
   periodic_payment: "hidden_permanent", // 정기금받을권리 — §74 문화유산 미대상
+  crypto_asset: "hidden_permanent",     // 가상화폐(가상자산) — §74 문화유산 미대상
   other: "hidden_expandable",          // 동산(서화·골동품 등) — 확장 노출
 };
 

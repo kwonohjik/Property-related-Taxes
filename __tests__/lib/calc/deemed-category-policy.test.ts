@@ -12,8 +12,8 @@ import {
 } from "@/lib/calc/deemed-category-policy";
 
 describe("DEEMED_ALLOWED_CATEGORIES", () => {
-  it("none → 13 SupportedCategory 전체 허용 (…·receivable·convertible_bond·trust_benefit·periodic_payment 포함)", () => {
-    expect(DEEMED_ALLOWED_CATEGORIES.none).toHaveLength(13);
+  it("none → 14 SupportedCategory 전체 허용 (receivable·convertible_bond·trust_benefit·periodic_payment·crypto_asset 포함)", () => {
+    expect(DEEMED_ALLOWED_CATEGORIES.none).toHaveLength(14);
     expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("deposit");
     expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("superficies");
     expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("intangible_ip");
@@ -21,6 +21,7 @@ describe("DEEMED_ALLOWED_CATEGORIES", () => {
     expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("convertible_bond");
     expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("trust_benefit");
     expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("periodic_payment");
+    expect(DEEMED_ALLOWED_CATEGORIES.none).toContain("crypto_asset");
   });
 
   it("insurance (§8) → cash·financial·other만 (3건)", () => {
@@ -32,7 +33,7 @@ describe("DEEMED_ALLOWED_CATEGORIES", () => {
   });
 
   it("trust (§9) → 전체 허용", () => {
-    expect(DEEMED_ALLOWED_CATEGORIES.trust).toHaveLength(13);
+    expect(DEEMED_ALLOWED_CATEGORIES.trust).toHaveLength(14);
   });
 
   it("retirement (§10) → cash·financial만 (2건)", () => {

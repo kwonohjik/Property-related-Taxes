@@ -56,6 +56,7 @@ const CATEGORY_LABEL_KO: Record<AssetCategory, string> = {
   convertible_bond: "전환사채등",
   trust_benefit: "신탁수익권",
   periodic_payment: "정기금받을권리",
+  crypto_asset: "가상자산",
   other: "기타재산",
 };
 

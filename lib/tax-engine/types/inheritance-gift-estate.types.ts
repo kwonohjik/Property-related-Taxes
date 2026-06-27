@@ -20,6 +20,7 @@ import type { FamilyBusinessCategory } from "./inheritance-family-business.types
 import type { CorporateNonBusinessAssets } from "./inheritance-corporate-non-business.types";
 import type { EstateLocationFields } from "./inheritance-asset-location.types";
 import type { EstateItemSavingsFields } from "./inheritance-gift-deposit.types";
+import type { EstateItemCryptoFields } from "./inheritance-gift-crypto.types";
 import type { RateFraction } from "../data/gift-deemed-rates";
 
 // ============================================================
@@ -34,7 +35,8 @@ export type ValuationMethod =
   | "appraisal"              // 감정평가액
   | "acquisition_cost"       // 취득가액 (예외적 보충)
   | "book_value"             // 장부가액 (비상장주식 보충)
-  | "deposit_statutory";     // 예금·저금·적금 §63④ 법정평가 (원금+미수이자−원천징수세액)
+  | "deposit_statutory"      // 예금·저금·적금 §63④ 법정평가 (원금+미수이자−원천징수세액)
+  | "crypto_statutory";      // 가상자산 §60②1호 법정평가 (전·후 각 1개월 일평균가액의 평균액)
 
 /** 평가 대상 자산 종류 */
 export type AssetCategory =
@@ -52,6 +54,7 @@ export type AssetCategory =
   | "convertible_bond"       // 전환사채등 (상증법 §63①2호·상증령 §58의2) — CB·BW·신주인수권증권·증서
   | "trust_benefit"          // 신탁의 이익을 받을 권리 (상증법 §65①·상증령 §61) — 권리 평가
   | "periodic_payment"       // 정기금을 받을 권리 (상증법 §65①·상증령 §62) — 유기·무기·종신
+  | "crypto_asset"           // 가상화폐(가상자산) (상증법 §65②·상증령 §60②) — 전·후 각 1개월 일평균가액 평균
   | "other";                 // 기타재산
 
 /** 신탁수익권 수익자 구성 (상증령 §61① 1호/2호가목/2호나목) */
@@ -115,7 +118,7 @@ export interface ReceivableInstallment {
 }
 
 /** 재산 평가 입력 (단일 자산). 위치 필드 5종(좌표·주소·시·군·구 코드)은 EstateLocationFields mixin. 예금 §63④ 필드는 EstateItemSavingsFields mixin. */
-export interface EstateItem extends EstateLocationFields, EstateItemSavingsFields {
+export interface EstateItem extends EstateLocationFields, EstateItemSavingsFields, EstateItemCryptoFields {
   id: string;
   category: AssetCategory;
   name: string;

@@ -319,6 +319,54 @@ export const otherItemSchema = baseItemSchema.extend({
   category: z.literal("other"),
 });
 
+/** 가상화폐(가상자산) (상증법 §65②·상증령 §60②) — 전·후 각 1개월 일평균가액의 평균액 × 수량 */
+export const cryptoAssetItemSchema = baseItemSchema
+  .extend({
+    category: z.literal("crypto_asset"),
+    cryptoValuationMode: z.enum(["direct", "timeseries"]).optional(),
+    cryptoQuantity: z.number().nonnegative().optional(),
+    cryptoUnitPrice: z.number().nonnegative().optional(),
+    // ⑫ silent strip 방지 — number[] 배열 (Map 금지)
+    cryptoDailyPrices: z.array(z.number().nonnegative()).optional(),
+    cryptoIsListedProvider: z.boolean().optional(),
+    cryptoUnitPriceComputed: z.number().nonnegative().optional(),
+  })
+  .superRefine((item, ctx) => {
+    const mode = item.cryptoValuationMode ?? "direct";
+    if (!item.cryptoQuantity || item.cryptoQuantity <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cryptoQuantity"],
+        message: "보유 수량을 입력하세요.",
+      });
+    }
+    if (mode === "direct") {
+      if (!item.cryptoUnitPrice || item.cryptoUnitPrice <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cryptoUnitPrice"],
+          message: "1코인당 평가단가를 입력하세요.",
+        });
+      }
+    } else {
+      // timeseries — 일평균가액 시계열 1건 이상 필수 (빈 배열 차단, 자동 안분 fallback 금지)
+      if (!item.cryptoDailyPrices || item.cryptoDailyPrices.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cryptoDailyPrices"],
+          message: "거래일별 일평균가액을 1건 이상 입력하세요.",
+        });
+      } else if (item.cryptoDailyPrices.some((p) => !(p > 0))) {
+        // 0원·빈 행이 단순평균에 포함되면 평가단가 과소산정 → 차단
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["cryptoDailyPrices"],
+          message: "각 거래일의 일평균가액은 0보다 커야 합니다.",
+        });
+      }
+    }
+  });
+
 /** 지상권 (상증법 §61③·상증령 §51·상증규 §16) — 토지가액×2% 연수입 10% 현가환산 */
 export const superficiesItemSchema = baseItemSchema
   .extend({
@@ -612,12 +660,13 @@ export const estateItemSchema = z
     convertibleBondItemSchema,
     trustBenefitItemSchema,
     periodicPaymentItemSchema,
+    cryptoAssetItemSchema,
     otherItemSchema,
   ])
   // v4.1.1 Phase 5 D11/디자인 §5 — 카테고리별 좌표 입력 정책 (영농 §16②1호나)
   .superRefine((item, ctx) => {
     // 무관 카테고리 + 좌표 입력 → 차단
-    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "intangible_ip", "receivable", "convertible_bond", "trust_benefit", "periodic_payment", "other"];
+    const COORD_INCOMPATIBLE = ["listed_stock", "unlisted_stock", "cash", "financial", "deposit", "superficies", "intangible_ip", "receivable", "convertible_bond", "trust_benefit", "periodic_payment", "crypto_asset", "other"];
     if (COORD_INCOMPATIBLE.includes(item.category)) {
       if (item.estateLatLng !== undefined || item.estateSigunguCode !== undefined) {
         ctx.addIssue({

@@ -28,6 +28,7 @@ import {
   EstateBodyConvertibleBond,
   EstateBodyTrustBenefit,
   EstateBodyPeriodicPayment,
+  EstateBodyCryptoAsset,
 } from "@/components/calc/inheritance/estate-card/variants";
 import type {
   SupportedCategory as VariantSupportedCategory,
@@ -71,6 +72,8 @@ function VariantBody(props: VariantBodyProps) {
       return <EstateBodyTrustBenefit {...props} />;
     case "periodic_payment":
       return <EstateBodyPeriodicPayment {...props} />;
+    case "crypto_asset":
+      return <EstateBodyCryptoAsset {...props} />;
     case "financial":
       return <EstateBodyFinancial {...props} />;
     case "cash":

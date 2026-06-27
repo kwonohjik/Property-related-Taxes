@@ -38,6 +38,7 @@ const INHERITANCE_CATEGORIES: SupportedCategory[] = [
   "convertible_bond",
   "trust_benefit",
   "periodic_payment",
+  "crypto_asset",
   "other",
 ];
 
