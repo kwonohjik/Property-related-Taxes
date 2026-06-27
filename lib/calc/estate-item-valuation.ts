@@ -14,10 +14,12 @@ import {
   resolveSuperficiesTenureYears,
   computeSavingsAccrual,
   injectSavingsAccrualIfAuto,
+  computeCryptoUnitPrice,
+  injectCryptoUnitPriceIfTimeseries,
 } from "@/lib/tax-engine/property-valuation";
 
 // Re-export so buildInput / buildGiftTaxInput callers use a single import source
-export { injectSavingsAccrualIfAuto };
+export { injectSavingsAccrualIfAuto, injectCryptoUnitPriceIfTimeseries };
 
 /**
  * 자산 카드별 "효과 평가액" — **부동산 엔진 단일 진실 위임**(estate-valuation-single-source).
@@ -171,6 +173,23 @@ export function computeEffectiveValuation(
       }
     }
     return item.savingsPrincipal ?? 0;
+  }
+  // 가상화폐(가상자산): §60② 단가 × 수량 (엔진 computeCryptoUnitPrice 재사용 — dual-truth 아님)
+  if (item.category === "crypto_asset") {
+    const mode = item.cryptoValuationMode ?? "direct";
+    let unit: number | undefined;
+    if (mode === "timeseries") {
+      unit =
+        item.cryptoUnitPriceComputed ??
+        (item.cryptoDailyPrices?.length
+          ? computeCryptoUnitPrice(item.cryptoDailyPrices)
+          : undefined);
+    } else {
+      unit = item.cryptoUnitPrice;
+    }
+    return unit != null
+      ? Math.floor(unit * (item.cryptoQuantity ?? 0))
+      : (item.marketValue ?? 0);
   }
   // cash·기타: §60 명시값 우선 (marketValue > 감정 > 매매 > 기준시가)
   return (

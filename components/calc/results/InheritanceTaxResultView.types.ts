@@ -30,6 +30,7 @@ export const ASSET_CATEGORY_LABELS: Record<EstateItem["category"], string> = {
   superficies: "지상권",
   receivable: "채권 (대여금·외상매출금 등)",
   convertible_bond: "전환사채등 (전환사채·신주인수권부사채 등)",
+  crypto_asset: "가상화폐 (가상자산)",
   other: "기타 재산",
 };
 

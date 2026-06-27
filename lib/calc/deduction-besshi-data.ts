@@ -252,6 +252,7 @@ const FINANCIAL_ASSET_KIND_LABEL: Record<AssetCategory, string> = {
   superficies: "지상권",
   receivable: "채권",
   convertible_bond: "전환사채등",
+  crypto_asset: "가상자산",
   other: "기타금융",
 };
 

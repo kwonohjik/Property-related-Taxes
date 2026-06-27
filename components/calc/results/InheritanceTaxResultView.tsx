@@ -480,6 +480,7 @@ export function InheritanceTaxResultView({
                     acquisition_cost: "취득가액",
                     book_value: "장부가액",
                     deposit_statutory: "예금·적금 법정평가",
+                    crypto_statutory: "가상자산 법정평가",
                   }[vr.method]}
                 </p>
                 {vr.method === "deposit_statutory" && vr.breakdown.length > 0 && (
