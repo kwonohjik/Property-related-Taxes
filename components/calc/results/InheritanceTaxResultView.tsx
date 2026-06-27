@@ -479,8 +479,19 @@ export function InheritanceTaxResultView({
                     similar_sales: "유사매매사례",
                     acquisition_cost: "취득가액",
                     book_value: "장부가액",
+                    deposit_statutory: "예금·적금 법정평가",
                   }[vr.method]}
                 </p>
+                {vr.method === "deposit_statutory" && vr.breakdown.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {vr.breakdown.map((bd, k) => (
+                      <div key={k} className="flex justify-between text-gray-400">
+                        <span>{bd.label}</span>
+                        <span>{formatKRW(bd.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {vr.warnings.map((w, j) => (
                   <p key={j} className="text-amber-600 dark:text-amber-400">
                     {w}

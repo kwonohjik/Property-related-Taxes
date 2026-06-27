@@ -20,7 +20,7 @@ import type {
 import { deriveCollateralDebts } from "@/lib/tax-engine/inheritance-collateral-debt";
 import { validateSubstituteHeirs } from "@/lib/calc/inheritance-validate-substitute";
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
-import { resolveEngineValuatedAmount } from "@/lib/tax-engine/property-valuation";
+import { resolveEngineValuatedAmount, injectSavingsAccrualIfAuto } from "@/lib/tax-engine/property-valuation";
 import { checkCorporateGiftRule } from "@/lib/calc/prior-gift-corporate-rule";
 import { checkMarriageBirthGiftRule } from "@/lib/calc/prior-gift-marriage-birth-rule";
 import { checkDeceasedDonorRule } from "@/lib/calc/prior-gift-deceased-rule";
@@ -149,6 +149,34 @@ export function validateAdditionalFamilyBusinesses(
  *
  * ⑧ 동기화 지점: API/UI fallback과 validate가 동일 함수 사용 → UI 통과 ↔ validate 차단 모순 제거.
  */
+
+/**
+ * §63④ 예금 자동 계산 모드 필수 필드 검증 (⑧ 동기화 지점).
+ * UI/API fallback과 동일 조건 적용 — 자동 안분 fallback 금지.
+ */
+export function validateFinancialSavingsFields(item: EstateItem): string | null {
+  if (item.category !== "financial") return null;
+  const mode = item.savingsValuationMode ?? "balance";
+  if (mode === "auto") {
+    if (!item.savingsPrincipal || item.savingsPrincipal <= 0) {
+      return `자산 "${item.name}" §63④ 자동 계산: 예입원금을 입력하세요.`;
+    }
+    if (!item.savingsStartDate) {
+      return `자산 "${item.name}" §63④ 자동 계산: 예입일(최초 납입일)을 입력하세요.`;
+    }
+    const rate = item.savingsAnnualRate ?? 0;
+    if (rate < 0 || rate > 100) {
+      return `자산 "${item.name}" §63④ 자동 계산: 연이율은 0~100% 사이여야 합니다.`;
+    }
+  }
+  if (mode === "manual") {
+    if (!item.savingsPrincipal || item.savingsPrincipal <= 0) {
+      return `자산 "${item.name}" §63④ 직접 입력: 예입원금을 입력하세요.`;
+    }
+  }
+  return null;
+}
+
 export function validateEstateItemAllocations(item: EstateItem): string | null {
   if (!item.heirAllocations || item.heirAllocations.length === 0) {
     return null; // 분배 미입력은 허용 (총액-단위 계산 모드)
@@ -398,7 +426,14 @@ export function validateInheritanceTaxInput(
   const exemptionErr = validateAllExemptionInputs(input.exemptions);
   if (exemptionErr) return exemptionErr;
 
-  for (const item of input.estateItems) {
+  // §63④ 예금 auto 모드 pre-inject (H-1 패턴): 협의분할 합계 검증에 정확한 평가액 반영
+  const deathDateObj = input.deathDate ? new Date(input.deathDate) : undefined;
+  for (const rawItem of input.estateItems) {
+    // §63④ 자동 계산 필수 필드 검증 (⑧ 동기화 지점)
+    const sf = validateFinancialSavingsFields(rawItem);
+    if (sf) return sf;
+    // auto 모드 pre-inject — 미수이자·원천징수세액 주입 후 협의분할 검증
+    const item = deathDateObj ? injectSavingsAccrualIfAuto(rawItem, deathDateObj) : rawItem;
     const e = validateEstateItemAllocations(item);
     if (e) return e;
     // 가업상속공제 배타성·정합성 (2026-05-21, 상증법 §18의2)

@@ -10,7 +10,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
-import { injectSuperficiesRemainingYears, injectReceivableValuationDate, injectCbValuationDate } from "@/lib/calc/estate-item-valuation";
+import { injectSuperficiesRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate } from "@/lib/calc/estate-item-valuation";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/components/calc/gift-tax-form-shared";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
@@ -45,9 +45,12 @@ export type { FormState as GiftTaxFormState };
 export function buildGiftTaxInput(form: FormState): GiftTaxInput {
   // 비상장주식 모드 strip — simple 모드인데 V2가 잔존하는 경우 엔진 전달 전 제거
   // 지상권 잔존연수 합성 — 평가기준일(증여일) 기준 (§61③, override 우선)
+  // §63④ 예금 자동 계산 주입 — auto 모드 시 미수이자·원천징수세액 pre-inject
+  const giftDateObj = form.giftDate ? new Date(form.giftDate) : undefined;
   const allItems = [...form.giftItems, ...form.stockItems]
     .map(resolveActiveUnlistedValuation)
     .map((i) => injectSuperficiesRemainingYears(i, form.giftDate || undefined))
+    .map((i) => (giftDateObj ? injectSavingsAccrualIfAuto(i, giftDateObj) : i))
     .map((i) => injectReceivableValuationDate(i, form.giftDate || undefined))
     .map((i) => injectCbValuationDate(i, form.giftDate || undefined));
 

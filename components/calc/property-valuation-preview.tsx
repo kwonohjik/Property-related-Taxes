@@ -53,6 +53,7 @@ export function EstimatedValuePreview({ item }: { item: EstateItem }) {
     similar_sales: "유사매매사례",
     acquisition_cost: "취득가액",
     book_value: "장부가액",
+    deposit_statutory: "예금·적금 법정평가",
   };
 
   return (
