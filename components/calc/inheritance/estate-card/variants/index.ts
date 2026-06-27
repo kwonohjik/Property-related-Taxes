@@ -10,6 +10,7 @@ import { EstateBodySimple } from "./EstateBodySimple";
 import { EstateBodyRealEstate } from "./EstateBodyRealEstate";
 import { EstateBodyDeposit } from "./EstateBodyDeposit";
 import { EstateBodySuperficies } from "./EstateBodySuperficies";
+import { EstateBodyIntangibleIp } from "./EstateBodyIntangibleIp";
 import { EstateBodyFinancial } from "./EstateBodyFinancial";
 import { EstateBodyReceivable } from "./EstateBodyReceivable";
 import { EstateBodyConvertibleBond } from "./EstateBodyConvertibleBond";
@@ -21,6 +22,7 @@ export {
   EstateBodyRealEstate,
   EstateBodyDeposit,
   EstateBodySuperficies,
+  EstateBodyIntangibleIp,
   EstateBodyFinancial,
   EstateBodyReceivable,
   EstateBodyConvertibleBond,
@@ -28,7 +30,7 @@ export {
 export type { SupportedCategory, VariantBodyProps };
 
 /**
- * SupportedCategory 7종을 variant 3 타입으로 매핑.
+ * SupportedCategory를 variant 컴포넌트로 매핑.
  * exhaustive switch — 신규 카테고리 추가 시 컴파일러가 차단 (assertNever).
  */
 export function pickBodyVariant(
@@ -43,6 +45,8 @@ export function pickBodyVariant(
       return EstateBodyDeposit;
     case "superficies":
       return EstateBodySuperficies;
+    case "intangible_ip":
+      return EstateBodyIntangibleIp;
     case "receivable":
       return EstateBodyReceivable;
     case "convertible_bond":

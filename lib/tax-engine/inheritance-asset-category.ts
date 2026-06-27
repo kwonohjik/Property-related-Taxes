@@ -22,6 +22,7 @@ const CATEGORY_TO_SUMMARY: Record<AssetCategory, SummaryTableCategory> = {
   listed_stock: "stock",
   unlisted_stock: "stock",
   superficies: "realEstate", // 지상권 — 토지 위 권리, 부동산 그룹
+  intangible_ip: "other", // 무체재산권 — 권리, 기타 그룹
   receivable: "financial", // 채권(대여금·외상매출금 등) — 금전채권, 금융 그룹
   convertible_bond: "financial", // 전환사채등 — 유가증권/금전채권, 금융 그룹
   other: "other",

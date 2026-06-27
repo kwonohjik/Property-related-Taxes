@@ -22,6 +22,7 @@ import {
   EstateBodyRealEstate,
   EstateBodyDeposit,
   EstateBodySuperficies,
+  EstateBodyIntangibleIp,
   EstateBodyFinancial,
   EstateBodyReceivable,
   EstateBodyConvertibleBond,
@@ -57,6 +58,9 @@ function VariantBody(props: VariantBodyProps) {
       return <EstateBodyDeposit {...props} />;
     case "superficies":
       return <EstateBodySuperficies {...props} />;
+    case "intangible_ip":
+      return <EstateBodyIntangibleIp {...props} />;
+    case "cash":
     case "receivable":
       return <EstateBodyReceivable {...props} />;
     case "convertible_bond":

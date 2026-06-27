@@ -51,6 +51,7 @@ const CATEGORY_LABEL_KO: Record<AssetCategory, string> = {
   financial: "금융재산",
   deposit: "전세보증금",
   superficies: "지상권",
+  intangible_ip: "무체재산권",
   receivable: "채권",
   convertible_bond: "전환사채등",
   other: "기타재산",
