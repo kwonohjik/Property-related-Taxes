@@ -26,6 +26,11 @@ import type {
 // ── 재export ──
 export { checkReductionPeriod, getReductionPeriodLabel } from "./period-check";
 export { REDUCTION_METADATA, ALL_REDUCTION_IDS, getReductionsByCategory, CATEGORY_UI_SCHEMA } from "./metadata";
+export {
+  isReductionCategoryAllowedForAssetKind,
+  isReductionAllowedForAssetKind,
+  type ReductionAssetKind,
+} from "./asset-kind-gate";
 export type { ReductionMetadata, CategoryUiSchema } from "./metadata";
 export type {
   TransferReductionId,

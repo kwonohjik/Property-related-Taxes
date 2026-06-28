@@ -51,6 +51,7 @@ import {
   CATEGORY_UI_SCHEMA,
   countActiveReductionsByCategory,
   evaluateAllPeriods,
+  isReductionCategoryAllowedForAssetKind,
   type TransferReductionId,
   type ReductionCategory,
   type PeriodCheckContext,
@@ -88,6 +89,18 @@ const CATEGORY_LAW_BADGES: Record<
   new_housing: [{ legalBasis: "조세특례제한법 §99", label: "§99 시리즈 신축주택" }],
   unsold_housing: [{ legalBasis: "조세특례제한법 §98", label: "§98 시리즈 미분양주택" }],
   standalone: [],
+};
+
+// 자산 종류 한글 라벨 — 주택 게이트 비활성 사유 표시용
+const ASSET_KIND_LABEL: Record<AssetForm["assetKind"], string> = {
+  housing: "주택",
+  land: "토지",
+  building: "건물",
+  right_to_move_in: "조합원입주권",
+  presale_right: "분양권",
+  commercial_building: "상가건물",
+  general_building: "일반건물",
+  redevelopment_apt: "재개발·재건축",
 };
 
 // ============================================================================
@@ -296,6 +309,8 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           isOpen={openCategories[cat]}
           onToggleOpen={() => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }))}
           counter={counters[cat]}
+          housingAllowed={isReductionCategoryAllowedForAssetKind(cat, asset.assetKind)}
+          assetKindLabel={ASSET_KIND_LABEL[asset.assetKind]}
           periodResults={periodResults}
           reductions={reductions}
           onSelectId={(id) => toggleGroup(cat, id)}
@@ -367,6 +382,8 @@ function GroupCategorySection({
   isOpen,
   onToggleOpen,
   counter,
+  housingAllowed,
+  assetKindLabel,
   periodResults,
   reductions,
   onSelectId,
@@ -395,6 +412,10 @@ function GroupCategorySection({
   isOpen: boolean;
   onToggleOpen: () => void;
   counter: { active: number; total: number };
+  /** 자산 종류 게이트 — 주택 감면이 이 자산에 적용 가능한지 (false면 카테고리 전체 비활성) */
+  housingAllowed: boolean;
+  /** 비활성 사유 표시용 현재 자산 종류 한글 라벨 */
+  assetKindLabel: string;
   periodResults: Record<TransferReductionId, { inPeriod: boolean; failReason?: string; periodLabel?: string }>;
   reductions: AssetReductionForm[];
   onSelectId: (id: TransferReductionId) => void;
@@ -443,18 +464,19 @@ function GroupCategorySection({
         className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/20"
       >
         <div>
-          <span className="text-sm font-semibold">
-            <span className={expandToggleClass("slate")}>{expandToggleLabel(isOpen)}</span> {schema.title}
-          </span>
+          <span className="text-sm font-semibold">{schema.title}</span>
           <span className="ml-2 text-xs text-muted-foreground">{schema.subtitle}</span>
         </div>
-        <span className="text-xs">
-          <span className={counter.active > 0 ? "font-semibold text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}>
-            활성 {counter.active}
+        <div className="flex items-center gap-3">
+          <span className="text-xs">
+            <span className={housingAllowed && counter.active > 0 ? "font-semibold text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}>
+              활성 {housingAllowed ? counter.active : 0}
+            </span>
+            <span className="mx-1 text-muted-foreground">/</span>
+            <span className="text-muted-foreground">전체 {counter.total}</span>
           </span>
-          <span className="mx-1 text-muted-foreground">/</span>
-          <span className="text-muted-foreground">전체 {counter.total}</span>
-        </span>
+          <span className={expandToggleClass("slate")}>{expandToggleLabel(isOpen)}</span>
+        </div>
       </button>
       {isOpen && (
         <div className="border-t border-border px-4 py-3 space-y-2">
@@ -485,15 +507,17 @@ function GroupCategorySection({
             const itemMeta = REDUCTION_METADATA[id];
             const period = periodResults[id];
             const isFullyImplemented = itemMeta.isFullyImplemented === true;
-            const isDisabled = !period.inPeriod || !isFullyImplemented;
+            const isDisabled = !housingAllowed || !period.inPeriod || !isFullyImplemented;
             const isSelected = reductions.some((r) => r.type === id);
 
-            // 비활성 사유 (시한 외 / 미구현)
-            const disabledReason = !period.inPeriod
-              ? `⚠ ${period.failReason ?? "시한 외"}`
-              : !isFullyImplemented
-                ? "📋 시한 통과 — Phase 2~ 본격 구현 예정"
-                : undefined;
+            // 비활성 사유 (주택 게이트 > 시한 외 > 미구현 — 가장 근본 차단 사유 우선)
+            const disabledReason = !housingAllowed
+              ? `🏠 주택 양도에만 적용되는 감면입니다 (현재 자산: ${assetKindLabel})`
+              : !period.inPeriod
+                ? `⚠ ${period.failReason ?? "시한 외"}`
+                : !isFullyImplemented
+                  ? "📋 시한 통과 — Phase 2~ 본격 구현 예정"
+                  : undefined;
 
             // §97 시리즈 현재 선택된 variant 찾기
             const rentalVariantTypes = [
