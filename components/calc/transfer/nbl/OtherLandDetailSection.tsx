@@ -5,6 +5,7 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { OtherLandParcelSection } from "./OtherLandParcelSection";
+import { NblLandValueAutoFetchButton } from "./NblLandAutoFetch";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -21,6 +22,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 export interface OtherLandDetailSectionProps {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /** form-level 양도일 — 토지가액 자동조회 당해/직전 연도 결정 */
+  transferDate?: string;
 }
 
 type PropertyTaxType = "" | "comprehensive" | "separate" | "special_sum" | "exempt";
@@ -125,6 +128,7 @@ const REVENUE_BIZ_LABEL: Record<string, string> = {
 export function OtherLandDetailSection({
   asset,
   onAssetChange,
+  transferDate,
 }: OtherLandDetailSectionProps) {
   const buildingVal = parseFloat(asset.nblOtherBuildingValue || "0") || 0;
   const landVal = parseFloat(asset.nblOtherLandValue || "0") || 0;
@@ -522,6 +526,15 @@ export function OtherLandDetailSection({
             <FieldCard label="당해 과세기간 수입금액" unit="원">
               <CurrencyInput label="당해 수입금액" hideLabel hideUnit value={asset.nblRevenueCurrentRevenue} onChange={(v) => onAssetChange({ nblRevenueCurrentRevenue: v })} />
             </FieldCard>
+            <NblLandValueAutoFetchButton
+              jibun={asset.addressJibun}
+              area={parseFloat(asset.acquisitionArea || "0") || 0}
+              ratio={parseFloat(asset.nblOwnershipRatio || "1") || 1}
+              transferDate={transferDate ?? ""}
+              onResult={(cur, prior) =>
+                onAssetChange({ nblRevenueCurrentLandValue: cur, nblRevenuePriorLandValue: prior })
+              }
+            />
             <FieldCard label="당해 토지가액 (양도일 기준시가)" unit="원">
               <CurrencyInput label="당해 토지가액" hideLabel hideUnit value={asset.nblRevenueCurrentLandValue} onChange={(v) => onAssetChange({ nblRevenueCurrentLandValue: v })} />
             </FieldCard>

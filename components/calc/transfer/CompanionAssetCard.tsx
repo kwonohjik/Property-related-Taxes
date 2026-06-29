@@ -701,7 +701,7 @@ export function CompanionAssetCard({
       {/* 비사업용 토지 정밀 판정 — "판정 도움" 모드일 때만 표시 */}
       {asset.assetKind === "land" && asset.isNonBusinessLand && asset.nblUseDetailedJudgment && (
         <div className="pt-2 border-t border-border/60">
-          <NblSectionContainer asset={asset} onAssetChange={onChange} />
+          <NblSectionContainer asset={asset} onAssetChange={onChange} transferDate={transferDate} />
         </div>
       )}
 

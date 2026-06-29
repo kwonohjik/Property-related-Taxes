@@ -45,6 +45,7 @@ export interface NedPriceItem {
   stdrMt?: string;
   pblntfDe?: string;
   pblntfPclnd?: string;  // 개별공시지가 (원/㎡)
+  prposArea1Nm?: string; // 용도지역명 (토지특성정보, 예: "일반상업지역")
   pblntfPc?: string;     // 공동주택 공시가격 (원)
   housePc?: string;      // 개별단독주택 공시가격 (원) ← getIndvdHousingPriceAttr 전용 필드
   dongNm?: string;
@@ -58,9 +59,10 @@ export interface NedPriceItem {
 }
 
 interface NedRawResponse {
-  indvdLandPrices?:    { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  apartHousingPrices?: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  indvdHousingPrices?: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
+  indvdLandPrices?:      { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
+  landCharacteristicss?: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
+  apartHousingPrices?:   { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
+  indvdHousingPrices?:   { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
   response?: { totalCount?: string; resultCode?: string };
 }
 
@@ -112,7 +114,7 @@ async function callNedAllPages(
   pnu: string,
   year: string,
   apiKey: string,
-  responseKey: "apartHousingPrices" | "indvdHousingPrices" | "indvdLandPrices",
+  responseKey: "apartHousingPrices" | "indvdHousingPrices" | "indvdLandPrices" | "landCharacteristicss",
 ): Promise<NedPriceItem[]> {
   const allItems: NedPriceItem[] = [];
   let pageNo = 1;
@@ -261,11 +263,21 @@ export async function GET(request: NextRequest) {
           { status: 404 },
         );
       }
+      // 용도지역(도시지역 여부 판정용) 보강 — 토지특성정보. 실패해도 가격은 반환.
+      let zoneName: string | undefined;
+      try {
+        const chars = await callNedAllPages("getLandCharacteristics", pnu, year, apiKey, "landCharacteristicss");
+        const charHit = [...chars].sort((a, b) => (b.stdrYear ?? "").localeCompare(a.stdrYear ?? ""))[0];
+        const z = charHit?.prposArea1Nm;
+        if (typeof z === "string" && z && z !== "지정되지않음") zoneName = z;
+      } catch { /* 용도지역 보강 실패는 가격 반환에 영향 없음 */ }
+
       return NextResponse.json({
         pnu, priceType: "land_price",
         year: hit.item.stdrYear, price: hit.price,
         announcedDate: hit.item.pblntfDe ?? "",
         ldCodeNm: hit.item.ldCodeNm,
+        zoneName,
         message: `${hit.item.stdrYear}년 개별공시지가 (원/㎡)`,
       });
     }

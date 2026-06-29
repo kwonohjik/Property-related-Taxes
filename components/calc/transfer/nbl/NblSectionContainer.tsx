@@ -23,6 +23,7 @@ import { HousingLandDetailSection } from "./HousingLandDetailSection";
 import { VillaLandDetailSection } from "./VillaLandDetailSection";
 import { OtherLandDetailSection } from "./OtherLandDetailSection";
 import { DeemedTransferSection } from "./DeemedTransferSection";
+import { NblUrbanZoneCheckButton } from "./NblLandAutoFetch";
 
 const LAND_TYPE_OPTIONS = [
   { value: "farmland",     label: "농지 (전·답·과수원)" },
@@ -167,13 +168,13 @@ export function NblSectionContainer({
             {asset.nblLandType === "pasture"      && <PastureDetailSection asset={asset} onAssetChange={onAssetChange} />}
             {asset.nblLandType === "housing_site" && <HousingLandDetailSection asset={asset} onAssetChange={onAssetChange} />}
             {asset.nblLandType === "villa_land"   && <VillaLandDetailSection asset={asset} onAssetChange={onAssetChange} />}
-            {asset.nblLandType === "other_land"   && <OtherLandDetailSection asset={asset} onAssetChange={onAssetChange} />}
+            {asset.nblLandType === "other_land"   && <OtherLandDetailSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />}
           </div>
         )}
 
         {/* 5. 공통 지원 필드 */}
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FieldCard label="도시편입일" hint="도시지역 편입 시 3년 유예 적용">
+          <FieldCard label="도시편입일" hint="도시지역 편입 시 3년 유예 적용. 편입일은 토지이용계획확인원에서 확인해 입력하세요(자동조회 불가)">
             <input
               type="text"
               value={asset.nblUrbanIncorporationDate}
@@ -181,6 +182,7 @@ export function NblSectionContainer({
               placeholder="YYYY-MM-DD"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
+            <NblUrbanZoneCheckButton jibun={asset.addressJibun} transferDate={transferDate ?? ""} />
           </FieldCard>
           <FieldCard label="공동소유 지분" hint="예: 0.5 (50%), 기본 1">
             <DecimalInput
