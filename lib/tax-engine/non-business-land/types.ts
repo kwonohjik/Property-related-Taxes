@@ -347,28 +347,49 @@ export interface FarmlandDeemingInput {
 
 export interface RevenueTestInput {
   businessType: NblRevenueBusinessType;
-  /** 당해 과세기간 연간수입금액 (원) — §168의11③ 산정값 입력 */
+  /**
+   * 당해 과세기간 수입금액 (원) — §168의11③3호 연환산 전 raw 기간수입금액.
+   * currentBusinessDays·currentTaxYear가 제공되고 영위일수 < 해당연도총일수면 엔진이 연환산.
+   */
   currentRevenue: number;
   /** 당해 과세기간 토지가액 (원) — 양도일 기준시가 §168의11④ */
   currentLandValue: number;
-  /** 직전 과세기간 연간수입금액 (원). 미제공 시 비율② 생략 */
+  /** 당해 과세기간 중 사업영위 일수(초일산입). 미제공 시 환산 안 함(계수 1) */
+  currentBusinessDays?: number;
+  /** 당해 과세연도(윤년 판정용 총일수 365/366). 미제공 시 환산 안 함 */
+  currentTaxYear?: number;
+  /** 직전 과세기간 수입금액 (원). 미제공 시 비율② 생략 */
   priorRevenue?: number;
   /** 직전 과세기간 토지가액 (원) */
   priorLandValue?: number;
+  /** 직전 과세기간 중 사업영위 일수(초일산입). 미제공 시 직전 환산 안 함 */
+  priorBusinessDays?: number;
+  /** 직전 과세연도(윤년 판정용). 미제공 시 직전 환산 안 함 */
+  priorTaxYear?: number;
 }
 
 export interface RevenueTestResult {
   businessType: NblRevenueBusinessType;
   /** 업종별 기준비율 (시행규칙 §83의4) */
   threshold: number;
-  /** 비율① 당해 수입 ÷ 당해 토지가액 */
+  /** 비율① 당해 (연환산) 수입 ÷ 당해 토지가액 */
   ratioCurrent: number;
-  /** 비율② (당해+직전 수입) ÷ (당해+직전 토지가액). 직전 미제공 시 undefined */
+  /** 비율② (당해+직전 연환산 수입) ÷ (당해+직전 토지가액). 직전 미제공 시 undefined */
   ratioCombined?: number;
   /** max(①,②) — §168의11② "큰 것" */
   actualRatio: number;
   pass: boolean;
   detail: string;
+  /** §168의11③3호 연환산 후 당해 연간수입금액 (환산 미적용 시 raw와 동일) */
+  annualizedCurrentRevenue: number;
+  /** 연환산 후 직전 연간수입금액 (직전 제공 시). 환산 미적용 시 raw와 동일 */
+  annualizedPriorRevenue?: number;
+  /** 당해 영위일수 (echo) */
+  currentBusinessDays?: number;
+  /** 직전 영위일수 (echo) */
+  priorBusinessDays?: number;
+  /** 당해 또는 직전에 연환산이 적용되었는지 */
+  annualizationApplied: boolean;
 }
 
 // ============================================================

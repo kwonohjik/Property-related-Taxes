@@ -73,6 +73,33 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
           : "bg-muted/20 border-border"}`}>
           <p className="text-xs font-semibold text-foreground mb-1">§168의11② 수입금액비율</p>
           <p className="text-xs text-muted-foreground">{judgment.revenueTestDetail.detail}</p>
+          {judgment.revenueTestDetail.annualizationApplied && (
+            <div className="mt-1.5 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2.5 py-1.5 text-[11px] text-amber-800 dark:text-amber-200 space-y-0.5">
+              <p className="font-medium">§168의11③3호 연환산 적용</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+                {judgment.revenueTestDetail.currentBusinessDays !== undefined && (
+                  <>
+                    <span>당해 영위일수</span>
+                    <span className="font-mono text-right">{judgment.revenueTestDetail.currentBusinessDays}일</span>
+                  </>
+                )}
+                <span>당해 연간환산 수입</span>
+                <span className="font-mono text-right">{judgment.revenueTestDetail.annualizedCurrentRevenue.toLocaleString()}원</span>
+                {judgment.revenueTestDetail.priorBusinessDays !== undefined && (
+                  <>
+                    <span>직전 영위일수</span>
+                    <span className="font-mono text-right">{judgment.revenueTestDetail.priorBusinessDays}일</span>
+                  </>
+                )}
+                {judgment.revenueTestDetail.annualizedPriorRevenue !== undefined && (
+                  <>
+                    <span>직전 연간환산 수입</span>
+                    <span className="font-mono text-right">{judgment.revenueTestDetail.annualizedPriorRevenue.toLocaleString()}원</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs mt-1.5">
             <span className="text-muted-foreground">당해 비율</span>
             <span className="font-mono text-right">{(judgment.revenueTestDetail.ratioCurrent * 100).toFixed(2)}%</span>

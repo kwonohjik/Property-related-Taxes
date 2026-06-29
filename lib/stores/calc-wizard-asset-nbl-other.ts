@@ -86,4 +86,8 @@ export interface NblOtherFormSlice {
   nblRevenueCurrentLandValue: string;
   nblRevenuePriorRevenue: string;
   nblRevenuePriorLandValue: string;
+  /** §168의11③3호 당해 사업개시일 (당해연도 중 개시 시; 미입력 시 과세기간개시일·취득일 자동) */
+  nblRevenueCurrentBusinessStartDate: string;
+  /** §168의11③3호 직전 과세기간 영위일수 (직전연도 중 개시·폐업 시; 미입력 시 직전 환산 안 함) */
+  nblRevenuePriorBusinessDays: string;
 }

@@ -89,6 +89,99 @@ describe("[NBL-REVENUE] §168의11② 수입금액비율", () => {
     expect(r.isNonBusinessLand).toBe(false);
   });
 
+  // ── §168의11③3호 연환산 (Pre-Do anchor) ──────────────────────────
+  it("A1 당해 183일 연환산(2026 평년 365) → 비율 4.99% ≥ 3% 사업용", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "parking_operation",
+        currentRevenue: 25_000_000,
+        currentLandValue: 1_000_000_000,
+        currentBusinessDays: 183,
+        currentTaxYear: 2026,
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    // floor(25,000,000 × 365 ÷ 183) = 49,863,387
+    expect(r.revenueTestDetail?.annualizedCurrentRevenue).toBe(49_863_387);
+    expect(r.revenueTestDetail?.annualizationApplied).toBe(true);
+    expect(r.revenueTestDetail?.ratioCurrent).toBeCloseTo(0.049863, 5);
+    expect(r.revenueTestDetail?.pass).toBe(true);
+    expect(r.isNonBusinessLand).toBe(false);
+  });
+
+  it("A1b 당해 183일 연환산(2024 윤년 366) → 분자 366 적용", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "parking_operation",
+        currentRevenue: 25_000_000,
+        currentLandValue: 1_000_000_000,
+        currentBusinessDays: 183,
+        currentTaxYear: 2024, // 윤년
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    // floor(25,000,000 × 366 ÷ 183) = 50,000,000 (366/183=2 정확)
+    expect(r.revenueTestDetail?.annualizedCurrentRevenue).toBe(50_000_000);
+    expect(r.revenueTestDetail?.ratioCurrent).toBeCloseTo(0.05, 5);
+  });
+
+  it("A2 영위 = 해당연도 총일수(365) → 환산 미적용 raw 그대로", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "parking_operation",
+        currentRevenue: 40_000_000,
+        currentLandValue: 1_000_000_000,
+        currentBusinessDays: 365,
+        currentTaxYear: 2026,
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.revenueTestDetail?.annualizedCurrentRevenue).toBe(40_000_000);
+    expect(r.revenueTestDetail?.annualizationApplied).toBe(false);
+    expect(r.revenueTestDetail?.ratioCurrent).toBeCloseTo(0.04, 5);
+  });
+
+  it("A3 환산 당해가 ②에도 반영 — mineral_spring 직전 full-year", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "mineral_spring",
+        currentRevenue: 25_000_000,
+        currentLandValue: 1_000_000_000,
+        currentBusinessDays: 183,
+        currentTaxYear: 2026, // 당해 환산 49,863,387
+        priorRevenue: 120_000_000,
+        priorLandValue: 1_000_000_000, // 직전 full-year(미환산)
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    // ② = (49,863,387 + 120,000,000) / 2,000,000,000 = 0.0849317
+    expect(r.revenueTestDetail?.ratioCombined).toBeCloseTo(0.084932, 5);
+    expect(r.revenueTestDetail?.actualRatio).toBeCloseTo(0.084932, 5);
+    expect(r.revenueTestDetail?.pass).toBe(true);
+    expect(r.isNonBusinessLand).toBe(false);
+  });
+
+  it("A4 직전 환산(200일·2025 365)이 ②를 뒤집어 사업용", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "vehicle_repair_academy",
+        currentRevenue: 40_000_000,
+        currentLandValue: 1_000_000_000, // ① = 4% (미달)
+        priorRevenue: 100_000_000,
+        priorLandValue: 1_000_000_000,
+        priorBusinessDays: 200,
+        priorTaxYear: 2025,
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    // 직전 환산 floor(100,000,000 × 365 ÷ 200) = 182,500,000
+    expect(r.revenueTestDetail?.annualizedPriorRevenue).toBe(182_500_000);
+    // ② = (40,000,000 + 182,500,000) / 2,000,000,000 = 0.111250 ≥ 0.10
+    expect(r.revenueTestDetail?.ratioCombined).toBeCloseTo(0.11125, 5);
+    expect(r.revenueTestDetail?.pass).toBe(true);
+    expect(r.isNonBusinessLand).toBe(false);
+  });
+
   it("R5 입력경로 — nblRevenue* asset → mapAssetToNblInput → revenueTest → 사업용", () => {
     const asset = {
       nblUseDetailedJudgment: true,
@@ -115,5 +208,37 @@ describe("[NBL-REVENUE] §168의11② 수입금액비율", () => {
     const r = judgeNonBusinessLand(input!, DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(r.isNonBusinessLand).toBe(false);
     expect(r.revenueTestDetail?.pass).toBe(true);
+  });
+
+  it("A5 매퍼 경로 — 양도일 2026-07-02에서 당해 영위일수 183 자동도출 + 연환산", () => {
+    const asset = {
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "residential",
+      acquisitionArea: "1000",
+      nblOtherPropertyTaxType: "comprehensive",
+      nblRevenueBusinessType: "parking_operation",
+      nblRevenueCurrentRevenue: "25,000,000",
+      nblRevenueCurrentLandValue: "1,000,000,000",
+    };
+    const input = mapAssetToNblInput(asset, {
+      acquisitionDate: new Date("2018-01-01"),
+      transferDate: new Date("2026-07-02"), // 1.1~7.2 초일산입 = 183일
+      parseDate: (s: string) => {
+        const d = new Date(s);
+        return Number.isNaN(d.getTime()) ? undefined : d;
+      },
+      parseNumber: (s) => {
+        const n = parseFloat(String(s).replace(/,/g, ""));
+        return Number.isFinite(n) ? n : undefined;
+      },
+    });
+    expect(input?.revenueTest?.currentBusinessDays).toBe(183);
+    expect(input?.revenueTest?.currentTaxYear).toBe(2026);
+
+    const r = judgeNonBusinessLand(input!, DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(r.revenueTestDetail?.annualizedCurrentRevenue).toBe(49_863_387);
+    expect(r.revenueTestDetail?.pass).toBe(true);
+    expect(r.isNonBusinessLand).toBe(false);
   });
 });

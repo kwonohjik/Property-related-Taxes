@@ -179,6 +179,9 @@ export const nonBusinessLandRawSchema = z.object({
   nblRevenueCurrentLandValue: z.string().optional(),
   nblRevenuePriorRevenue: z.string().optional(),
   nblRevenuePriorLandValue: z.string().optional(),
+  // §168의11③3호 연환산 — 당해 사업개시일·직전 영위일수
+  nblRevenueCurrentBusinessStartDate: z.string().optional(),
+  nblRevenuePriorBusinessDays: z.string().optional(),
   // 무조건 의제 (§168의14③)
   nblExemptInheritBefore2007: z.boolean().optional(),
   nblExemptInheritDate: z.string().optional(),

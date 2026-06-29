@@ -140,7 +140,7 @@ export function mapAssetToNblInput(
     pasture:                 buildPasture(asset, landType, parseDate, parseNumber),
     villa:                   buildVilla(asset, landType, parseDate, parseNumber),
     otherLand:               buildOtherLand(asset, landType, parseNumber, parseDate),
-    revenueTest:             buildRevenueTest(asset, landType, parseNumber),
+    revenueTest:             buildRevenueTest(asset, landType, parseNumber, parseDate, transferDate, acquisitionDate),
     unconditionalExemption:  buildUnconditionalExemption(asset, parseDate),
     urbanIncorporationDate,
     isMetropolitanArea,

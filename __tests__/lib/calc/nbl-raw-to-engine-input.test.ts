@@ -7,7 +7,8 @@
  */
 import { describe, it, expect } from "vitest";
 
-import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
+import { buildNblEngineInput, buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 
 describe("[NBL-REQ] buildNblEngineInput — raw → 엔진 input(nested + Date)", () => {
   it("forest raw → forestDetail + gracePeriods(Date)", () => {
@@ -80,5 +81,38 @@ describe("[NBL-REQ] buildNblEngineInput — raw → 엔진 input(nested + Date)"
     expect(input!.otherLand?.maxAnnualArea).toBe(1000);
     expect(input!.otherLand?.youthCapacity).toBe(10);
     expect(input!.otherLand?.minGarageArea).toBe(400);
+  });
+
+  it("연환산 raw 운반(prefix-pick ⑬) + 당해/직전 영위일수·과세연도 도출", () => {
+    // 클라 빌더: store 폼 → raw 평면. 신규 nbl* 필드가 prefix-pick으로 운반되어야 함.
+    const asset = {
+      ...makeDefaultAsset(1),
+      assetKind: "land",
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1000",
+      acquisitionDate: "2018-01-01",
+      nblOtherPropertyTaxType: "comprehensive",
+      nblRevenueBusinessType: "vehicle_repair_academy",
+      nblRevenueCurrentRevenue: "25000000",
+      nblRevenueCurrentLandValue: "1000000000",
+      nblRevenuePriorRevenue: "100000000",
+      nblRevenuePriorLandValue: "1000000000",
+      nblRevenueCurrentBusinessStartDate: "",
+      nblRevenuePriorBusinessDays: "200",
+    } as unknown as Parameters<typeof buildNonBusinessLandRaw>[0];
+
+    const raw = buildNonBusinessLandRaw(asset, "2026-07-02"); // 1.1~7.2 초일산입 = 183일
+    expect(raw).toBeDefined();
+    // prefix-pick 운반 확인 (신규 2필드)
+    expect(raw!.nblRevenuePriorBusinessDays).toBe("200");
+    expect("nblRevenueCurrentBusinessStartDate" in raw!).toBe(true);
+
+    const input = buildNblEngineInput(raw as never);
+    expect(input!.revenueTest?.currentBusinessDays).toBe(183);
+    expect(input!.revenueTest?.currentTaxYear).toBe(2026);
+    expect(input!.revenueTest?.priorBusinessDays).toBe(200);
+    expect(input!.revenueTest?.priorTaxYear).toBe(2025);
   });
 });
