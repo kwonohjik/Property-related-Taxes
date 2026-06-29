@@ -8,6 +8,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+import { isReductionAllowedForAssetKind, REDUCTION_METADATA } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
@@ -46,6 +47,13 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
       const asset = assets[ai];
       const fail = (message: string): ValidationIssue => ({ step, assetIndex: ai, message });
       for (const r of asset.reductions ?? []) {
+        // 주택 게이트 (2026-06-29): 비주택 자산에 stale 선택된 주택 감면(§97·§99·§98 시리즈) 차단.
+        // UI disabled와 동일 판정 (단일 소스 isReductionAllowedForAssetKind). field별 검증보다 먼저.
+        if (!isReductionAllowedForAssetKind(r.type, asset.assetKind)) {
+          const gateLabel =
+            REDUCTION_METADATA[r.type as keyof typeof REDUCTION_METADATA]?.uiLabel ?? "이 감면";
+          return fail(`${gateLabel} 감면은 주택 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.`);
+        }
         if (r.type === "public_expropriation") {
           const cash = parseAmount(r.expropriationCash || "0");
           const bond = parseAmount(r.expropriationBond || "0");

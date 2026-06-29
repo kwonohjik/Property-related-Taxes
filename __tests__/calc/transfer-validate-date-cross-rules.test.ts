@@ -7,7 +7,7 @@
 //  4. 신축·증축 완공일 > 양도일 모순 (완공 당일 양도는 허용)
 //  5. 신고일 < 양도일 모순 — 예정신고는 양도 후 (법 §105①1호 확인)
 import { describe, it, expect } from "vitest";
-import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
+import { collectStepIssues, collectStepWarnings } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 
 function baseForm() {
@@ -158,5 +158,75 @@ describe("신축·증축 완공일 / 신고일 순서 (step 0)", () => {
     form.filingDate = "2024-06-01";
     const issues = collectStepIssues(0, form);
     expect(issues.some((it) => it.message.includes("예정신고는 양도 후에만"))).toBe(false);
+  });
+});
+
+describe("양도일·취득일 정합 검증 (step 0, 2026-06-29)", () => {
+  it("T-14: 양도일 < 취득일 → 차단", () => {
+    const form = baseForm();
+    form.assets[0].acquisitionDate = "2020-05-01";
+    form.transferDate = "2019-12-31"; // 취득보다 빠름
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("양도일") && it.message.includes("취득일") && it.message.includes("빠릅니다"))).toBe(true);
+  });
+
+  it("T-15: 양도일 == 취득일 (당일 양도) → 통과", () => {
+    const form = baseForm();
+    form.assets[0].acquisitionDate = "2024-06-01";
+    form.transferDate = "2024-06-01";
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("취득 후에만 양도"))).toBe(false);
+  });
+
+  it("T-16: 취득일 미래 → 차단", () => {
+    const form = baseForm();
+    form.assets[0].acquisitionDate = "2099-01-01";
+    form.transferDate = "2099-06-01"; // 양도일도 미래(≥취득일) — 양도일<취득일 먼저 잡히지 않게
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("취득일") && it.message.includes("오늘 이후"))).toBe(true);
+  });
+
+  it("T-17: 양도일 < 토지 취득일 (취득일 분리) → 차단", () => {
+    const form = baseForm();
+    form.assets[0].acquisitionDate = "2020-01-01";
+    form.assets[0].hasSeperateLandAcquisitionDate = true;
+    form.assets[0].landAcquisitionDate = "2024-07-01"; // 양도일(2024-06-01) 이후
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("토지 취득일") && it.message.includes("빠릅니다"))).toBe(true);
+  });
+
+  it("T-18: 토지 취득일 미래 → 차단", () => {
+    const form = baseForm();
+    form.assets[0].acquisitionDate = "2020-01-01";
+    form.assets[0].hasSeperateLandAcquisitionDate = true;
+    form.assets[0].landAcquisitionDate = "2099-01-01";
+    form.transferDate = "2099-06-01";
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("토지 취득일") && it.message.includes("오늘 이후"))).toBe(true);
+  });
+
+  it("T-19: 취득일 미입력 → 정합 검증 skip (오차단 없음)", () => {
+    const form = baseForm();
+    form.assets[0].acquisitionDate = "";
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("취득 후에만 양도") || (it.message.includes("취득일") && it.message.includes("오늘 이후")))).toBe(false);
+  });
+});
+
+describe("미래 양도일 경고 (비차단, collectStepWarnings)", () => {
+  it("T-20: 미래 양도일 → 경고 1건 + 차단 오류 아님", () => {
+    const form = baseForm();
+    form.transferDate = "2099-01-01";
+    const warnings = collectStepWarnings(0, form);
+    expect(warnings.some((w) => w.message.includes("오늘 이후") && w.message.includes("미래"))).toBe(true);
+    // 차단 채널에는 미래 양도일 오류 없음 (진행 허용)
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("양도일") && it.message.includes("오늘 이후"))).toBe(false);
+  });
+
+  it("T-21: 과거 양도일 → 경고 0건", () => {
+    const form = baseForm();
+    form.transferDate = "2024-06-01";
+    expect(collectStepWarnings(0, form)).toHaveLength(0);
   });
 });

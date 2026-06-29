@@ -13,7 +13,8 @@ import { BundledAllocationCard } from "@/components/calc/results/BundledAllocati
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
-import { collectStepIssues, type ValidationIssue } from "@/lib/calc/transfer-tax-validate";
+import { collectStepIssues, collectStepWarnings, type ValidationIssue } from "@/lib/calc/transfer-tax-validate";
+import { StepWarningBanner } from "@/components/calc/transfer/StepWarningBanner";
 import type { StepStatus } from "@/components/calc/StepIndicator";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -352,6 +353,12 @@ export default function TransferTaxCalculator({
     [formData, currentStep],
   );
 
+  // 비차단 경고 (미래 양도일 등) — handleNext/handleSubmit를 막지 않는 amber 배너. 차단 흐름과 독립.
+  const warnings = useMemo<ValidationIssue[]>(
+    () => collectStepWarnings(currentStep, formData),
+    [currentStep, formData],
+  );
+
   const sidebarSteps: WizardSidebarStep[] = STEPS_SINGLE.map((label, i) => ({
     label,
     status:
@@ -609,6 +616,9 @@ export default function TransferTaxCalculator({
               <h2 className="text-base font-semibold mb-4">
                 {STEP_TITLES[currentStep]}
               </h2>
+
+              {/* 비차단 경고 배너 (미래 양도일 등) — 진행은 허용 */}
+              <StepWarningBanner warnings={warnings} />
 
               {/* 폼 내용 */}
               <div className="min-h-[280px]">
