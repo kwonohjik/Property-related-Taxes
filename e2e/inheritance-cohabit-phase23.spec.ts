@@ -177,7 +177,7 @@ test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
     await expect(page.getByTestId("cohabit-reason-add-button")).not.toBeVisible();
 
     // 부득이 사유 있음 토글 ON
-    await page.getByText("부득이한 사유 있음").click();
+    await page.getByRole("switch", { name: /부득이한 사유 있음/ }).click();
 
     // 토글 ON 후: 사유 추가 버튼 노출
     await expect(page.getByTestId("cohabit-reason-add-button")).toBeVisible();
@@ -189,7 +189,7 @@ test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
     await setupStep0WithCohabitChild(page);
 
     // 부득이 사유 토글 ON
-    await page.getByText("부득이한 사유 있음").click();
+    await page.getByRole("switch", { name: /부득이한 사유 있음/ }).click();
 
     // 사유 추가
     await page.getByTestId("cohabit-reason-add-button").click();
@@ -205,7 +205,7 @@ test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
     await setupStep0WithCohabitChild(page);
 
     // 부득이 사유 토글 ON + 사유 추가
-    await page.getByText("부득이한 사유 있음").click();
+    await page.getByRole("switch", { name: /부득이한 사유 있음/ }).click();
     await page.getByTestId("cohabit-reason-add-button").click();
 
     // 유형 Select에서 overseas_grad 선택
@@ -221,7 +221,7 @@ test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
     await setupStep0WithCohabitChild(page);
 
     // 부득이 사유 토글 ON + 사유 추가
-    await page.getByText("부득이한 사유 있음").click();
+    await page.getByRole("switch", { name: /부득이한 사유 있음/ }).click();
     await page.getByTestId("cohabit-reason-add-button").click();
 
     // 행 존재 확인
