@@ -8,7 +8,7 @@
  * 서버: E2E_PORT 환경변수 또는 기본 3000
  */
 import { test, expect, type Page } from "@playwright/test";
-import { addHeir } from "./_helpers/tax-flow";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
 // ─────────────────────────────────────────────
 // 공통 헬퍼
@@ -22,16 +22,19 @@ async function setupStep0WithCohabitChild(page: Page) {
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("1");
 
-  // 자녀 추가
-  await addHeir(page, "heir", "child");
+  // 자녀 추가 — 동거주택 토글이 "상속인 편집" 모달 안으로 이전됨 → 모달 유지
+  await addHeir(page, "heir", "child", { keepModalOpen: true });
 
-  // 동거주택 토글 ON — Phase 2 G3 블록 노출 조건
-  await page.getByText("동거주택 상속공제 해당").click();
+  // 동거주택 토글 ON — Phase 2 G3 블록 노출 조건 (모달 안, ToggleCard=role=switch)
+  await page.getByRole("switch", { name: /동거주택 상속공제 해당/ }).click();
+  // 모달은 열어 둔다 — G3·P4가 모달 내 CohabitRequirementBlock과 상호작용
 }
 
 /** Step0 → Step4로 이동 (3번 다음) */
 async function goToStep4WithCohabitChild(page: Page) {
-  await setupStep0WithCohabitChild(page);
+  await setupStep0WithCohabitChild(page); // 모달 OPEN + 동거 ON
+  // G4는 Step4 페이지의 CohabitAncillaryLandBlock과 상호작용 → 모달 닫고 이동
+  await closeHeirEditModal(page);
   // Step0 → Step1
   await page.getByRole("button", { name: /^다음/ }).click();
   // Step1: 아파트 추가 + 동거주택 체크
@@ -42,11 +45,19 @@ async function goToStep4WithCohabitChild(page: Page) {
   await page.getByPlaceholder("금액 입력").first().fill("800000000");
   // 담보·임대 섹션 토글 ON → 동거주택 공제 대상 체크 (2026-06-09 토글 전환)
   await page.getByRole("switch", { name: /담보·임대/ }).click();
-  await page.getByText("동거주택 공제 대상 (§23의2)").click();
+  // 동거주택 공제 대상 토글 — role=switch로 직접 타깃 (getByText는 §23의2 법령 배지를
+  // 눌러 법령 모달이 뜸 → #7과 동류의 모호성). ToggleCard, hasCohabitantChild로 활성.
+  await page.getByRole("switch", { name: /동거주택 공제 대상/ }).click();
+  // 자산 편집도 "주택 편집" 모달(aria-label 없음)로 이전됨 → 닫아야 "다음"이 backdrop에 막히지 않음
+  const assetDialog = page.getByRole("dialog");
+  await assetDialog.getByRole("button", { name: "닫기" }).click();
+  await expect(assetDialog).toBeHidden();
   // → Step2 → Step3 → Step4
   for (let i = 0; i < 3; i++) {
     await page.getByRole("button", { name: /^다음/ }).click();
   }
+  // Step4(공제·세액공제)는 체크리스트형 progressive disclosure → 동거주택공제 입력 섹션 펼치기
+  await page.getByRole("button", { name: /동거주택공제 §23의2/ }).click();
 }
 
 // ─────────────────────────────────────────────
@@ -60,14 +71,14 @@ test.describe("G5 — §23의2 적격 관계 (손자녀 legatee)", () => {
     await page.getByLabel("월").first().fill("1");
     await page.getByLabel("일").first().fill("1");
 
-    // 수유자 추가 — label은 "수유자"
-    await addHeir(page, "legatee");
+    // 수유자 추가 — 세대생략·동거 토글이 "상속인 편집" 모달 안 → 모달 유지
+    await addHeir(page, "legatee", undefined, { keepModalOpen: true });
 
     // 세대생략 토글 ON
     await page.getByText("§27 세대생략 할증 대상").click();
 
     // legatee + isGenerationSkipBeneficiary=true → isCohabitDeductionEligibleRelation = true → 토글 노출
-    await expect(page.getByText("동거주택 상속공제 해당")).toBeVisible();
+    await expect(page.getByRole("switch", { name: /동거주택 상속공제 해당/ })).toBeVisible();
   });
 
   test("E2E-G5-2: 일반 legatee(세대생략 OFF)는 동거주택 토글 미노출", async ({ page }) => {
@@ -76,11 +87,11 @@ test.describe("G5 — §23의2 적격 관계 (손자녀 legatee)", () => {
     await page.getByLabel("월").first().fill("1");
     await page.getByLabel("일").first().fill("1");
 
-    // 수유자 추가 (세대생략 OFF)
-    await addHeir(page, "legatee");
+    // 수유자 추가 (세대생략 OFF) — 모달 유지하고 모달 안에서 토글 부재 확인
+    await addHeir(page, "legatee", undefined, { keepModalOpen: true });
 
-    // 세대생략 OFF → showCohabitant=false → 토글 미노출
-    await expect(page.getByText("동거주택 상속공제 해당")).not.toBeVisible();
+    // 세대생략 OFF → showCohabitant=false → 토글 미노출 (모달 안)
+    await expect(page.getByRole("switch", { name: /동거주택 상속공제 해당/ })).toHaveCount(0);
   });
 });
 
@@ -177,7 +188,7 @@ test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
     await expect(page.getByTestId("cohabit-reason-add-button")).not.toBeVisible();
 
     // 부득이 사유 있음 토글 ON
-    await page.getByText("부득이한 사유 있음").click();
+    await page.getByRole("switch", { name: /부득이한 사유 있음/ }).click();
 
     // 토글 ON 후: 사유 추가 버튼 노출
     await expect(page.getByTestId("cohabit-reason-add-button")).toBeVisible();
@@ -189,7 +200,7 @@ test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
     await setupStep0WithCohabitChild(page);
 
     // 부득이 사유 토글 ON
-    await page.getByText("부득이한 사유 있음").click();
+    await page.getByRole("switch", { name: /부득이한 사유 있음/ }).click();
 
     // 사유 추가
     await page.getByTestId("cohabit-reason-add-button").click();
@@ -205,7 +216,7 @@ test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
     await setupStep0WithCohabitChild(page);
 
     // 부득이 사유 토글 ON + 사유 추가
-    await page.getByText("부득이한 사유 있음").click();
+    await page.getByRole("switch", { name: /부득이한 사유 있음/ }).click();
     await page.getByTestId("cohabit-reason-add-button").click();
 
     // 유형 Select에서 overseas_grad 선택
@@ -221,7 +232,7 @@ test.describe("Phase 4 — §23의2② 부득이 사유 배열 입력", () => {
     await setupStep0WithCohabitChild(page);
 
     // 부득이 사유 토글 ON + 사유 추가
-    await page.getByText("부득이한 사유 있음").click();
+    await page.getByRole("switch", { name: /부득이한 사유 있음/ }).click();
     await page.getByTestId("cohabit-reason-add-button").click();
 
     // 행 존재 확인
