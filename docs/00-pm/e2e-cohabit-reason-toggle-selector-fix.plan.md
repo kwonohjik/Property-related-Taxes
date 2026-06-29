@@ -92,3 +92,13 @@
   1. #7 셀렉터 변경 자체는 **정상·회귀 0**(구조적 + baseline 검증). 단 **green 기능 확인 불가** — 셋업이 상류에서 죽어 P4 4개 테스트가 #7 줄에 도달하지 못함.
   2. 스펙을 un-stale(`keepModalOpen` + 모달 내 입력·`dialog` 스코프)하면, 내 `page.getByRole("switch", …)`도 **`dialog.getByRole(...)`** 로 스코프해야 정확 → #7은 un-stale 작업에 자연 흡수.
 - **분기 (사용자 결정)**: **A** #7 단독 커밋 + 모달 stale 별도 후속(Surgical) / **B** 스펙 전체 un-stale 확장(#7 흡수, 11개 green 목표 — #7 범위 초과).
+
+## 8. Do 환류 (2) — un-stale 완료, 12/12 green (2026-06-30)
+
+> 사용자가 "green 확인해" 선택(=B). 스펙 전체 un-stale 수행. 스펙 작성 후 누적된 **3개 마이그레이션 드리프트**를 현행 UI에 맞춰 적응(모두 실측 — error-context a11y 스냅샷으로 dialog·heading 확인 후 확정).
+
+1. **상속인 편집 모달**: `addHeir(..., { keepModalOpen: true })` + 모달 내 토글은 `role=switch`. G3·P4·G5는 모달 OPEN 유지, G4는 `closeHeirEditModal()` 후 step 이동.
+2. **자산 "주택 편집" 모달**: `동거주택 공제 대상` 토글을 `role=switch`로 직접 타깃 — `getByText("…(§23의2)")`는 §23의2 **법령 배지**를 눌러 법령 모달이 떠 navigation을 막았음(**#7과 정확히 동류의 모호성**). + 자산 모달 닫기(dialog에 aria-label 없음 → generic `getByRole("dialog")`, 프로젝트 헬퍼 패턴).
+3. **Step4 공제 체크리스트 progressive disclosure**: `동거주택공제 §23의2` 체크리스트 항목 클릭으로 입력 섹션(CohabitAncillaryLandBlock 포함) 펼침.
+
+**결과**: `npx playwright test e2e/inheritance-cohabit-phase23.spec.ts` → **12/12 green**. #7(P4-1~4) 기능 green **최종 확인**. 변경은 spec 1파일에 국한(공유 헬퍼는 기존 `addHeir`/`closeHeirEditModal`만 사용 → 타 spec 영향 0). G4가 #7과 같은 `getByText`→`role=switch` 해법으로 풀린 것은 #7 thesis(ToggleCard는 role=switch로 타깃)의 추가 사례.
