@@ -43,7 +43,7 @@ interface Props {
 const PROPERTY_TYPE_LABEL: Record<string, string> = {
   housing: "주택",
   land: "토지·농지",
-  building: "건물(토지 외)",
+  building: "건물(토지 제외)",
   general_building: "일반건물(토지+건물 일괄)",
   commercial_building: "상업용건물·오피스텔",
 };

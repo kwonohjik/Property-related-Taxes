@@ -1,5 +1,7 @@
 "use client";
 
+import { Fragment } from "react";
+
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -35,7 +37,7 @@ import { RedevelopmentBlock } from "./RedevelopmentBlock";
 const ASSET_KIND_LABELS: Record<string, string> = {
   housing: "주택",
   land: "토지",
-  building: "건물(토지 외)",
+  building: "건물(토지 제외)",
   right_to_move_in: "입주권",
   presale_right: "분양권",
   commercial_building: "상업용건물·오피스텔",
@@ -45,13 +47,13 @@ const ASSET_KIND_LABELS: Record<string, string> = {
 
 const ASSET_KIND_OPTIONS = [
   { value: "housing", label: "주택" },
-  { value: "land", label: "토지·농지" },
-  { value: "building", label: "건물(토지 외)" },
-  { value: "right_to_move_in", label: "입주권" },
-  { value: "presale_right", label: "분양권" },
   { value: "commercial_building", label: "상업용건물·오피스텔", description: "기준시가 공시된 것" },
   { value: "general_building", label: "일반건물(토지+건물 일괄)", description: "취득가액 확인 불가 시 환산취득가 적용" },
+  { value: "land", label: "토지·농지" },
+  { value: "building", label: "건물(토지 제외)" },
   { value: "redevelopment_apt", label: "재개발/재건축 APT", description: "관리처분 인가일 분기로 3분할 양도차익 산정 (시행령 §166)" },
+  { value: "right_to_move_in", label: "입주권" },
+  { value: "presale_right", label: "분양권" },
 ] as const;
 
 interface Props {
@@ -175,19 +177,21 @@ export function CompanionAssetCard({
         <label className="block text-sm font-medium">자산 종류</label>
         <div className="flex gap-2 flex-wrap">
           {ASSET_KIND_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onChange({ assetKind: opt.value })}
-              className={cn(
-                "px-3 py-1.5 rounded-md text-sm border transition-colors",
-                asset.assetKind === opt.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background border-border hover:bg-muted",
-              )}
-            >
-              {opt.label}
-            </button>
+            <Fragment key={opt.value}>
+              {opt.value === "redevelopment_apt" && <div className="basis-full" />}
+              <button
+                type="button"
+                onClick={() => onChange({ assetKind: opt.value })}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm border transition-colors",
+                  asset.assetKind === opt.value
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-border hover:bg-muted",
+                )}
+              >
+                {opt.label}
+              </button>
+            </Fragment>
           ))}
         </div>
         {asset.assetKind === "commercial_building" && (
