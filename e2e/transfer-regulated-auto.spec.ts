@@ -21,14 +21,14 @@ async function seedStep4(
 
   // zustand persist는 첫 set 전 sessionStorage 미기록 → 완전한 state를 직접 생성.
   // merge가 defaultFormData와 병합하고 assets는 migrateAsset로 정규화하므로 부분 formData로 충분.
-  // ⚠️ merge STEP_MIGRATION { 2:1 } → 보유 상황(인덱스 1)에 도달하려면 currentStep=2 주입.
+  // currentStep은 더 이상 persist되지 않음(항상 첫 스텝부터) → formData만 주입 후
+  // 자산 목록(step 0)에서 "다음"으로 보유 상황(step 1)으로 이동한다.
   const seeded = await page.evaluate(
     ({ asset, transferDate }) => {
       sessionStorage.setItem(
         "transfer-tax-wizard",
         JSON.stringify({
           state: {
-            currentStep: 2, // STEP_MIGRATION[2] = 1 (보유 상황)
             formData: { assets: [asset], transferDate },
             pendingMigration: false,
           },
@@ -41,6 +41,10 @@ async function seedStep4(
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  // 사이드바 "보유 상황" 스텝 직접 클릭 → 검증 없이 step 1로 점프
+  // (currentStep 미persist로 reload 시 step 0부터 시작 → 사이드바 점프로 기존 셋업과 동등).
+  await page.getByRole("button", { name: "보유 상황", exact: true }).click();
+  await page.getByText("보유 상황 입력").waitFor({ timeout: 15000 });
   return seeded;
 }
 

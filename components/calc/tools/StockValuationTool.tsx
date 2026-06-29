@@ -23,6 +23,7 @@ import { UnlistedStockBesshiResultSection } from "@/components/calc/results/Unli
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { useStockValuationStore } from "@/lib/stores/calc-stock-valuation-store";
+import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { buildStockValuationResult } from "@/lib/calc/stock-valuation-tool";
 import {
   computeStockValuation,
@@ -34,7 +35,9 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 const AMOUNT_CELL = "text-right font-mono tabular-nums whitespace-nowrap";
 
 export function StockValuationTool() {
-  const { formData, setFormData } = useStockValuationStore();
+  const { formData, setFormData, reset } = useStockValuationStore();
+  // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
+  useResetOnNewParam(reset);
   const { valuationDate, stockItems } = formData;
   const activeClientId = useProfessionalStore((s) => s.activeClientId);
 

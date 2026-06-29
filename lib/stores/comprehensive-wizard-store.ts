@@ -423,13 +423,14 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
           removeItem: () => {},
         };
       }),
-      // result는 sessionStorage 제외 — 민감정보 보호 + Date 직렬화 오류 방지
+      // result·currentStep은 sessionStorage 제외 — 민감정보 보호 + Date 직렬화 오류 방지 + 재진입 시 항상 첫 스텝.
       partialize: (state) => ({
-        currentStep: state.currentStep,
         formData: state.formData,
       }),
       // ③ normalize fallback — 구 sessionStorage에 없는 신규 필드 보정
       onRehydrateStorage: () => (state) => {
+        // 재진입·새로고침 시 항상 첫 스텝부터 (구 sessionStorage 잔존 currentStep 무시).
+        if (state) state.currentStep = 0;
         if (state && state.formData) {
           state.formData.isMultiHouseInAdjustedArea =
             state.formData.isMultiHouseInAdjustedArea ?? false;

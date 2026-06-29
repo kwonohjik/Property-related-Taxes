@@ -729,13 +729,14 @@ export const useStockTransferStore = create<StockTransferStore>()(
     {
       name: "stock-transfer-tax-wizard",
       storage: createJSONStorage(() => sessionStorage),
-      // result 제외 — Date 직렬화 불가 + 민감 정보
+      // result·currentStep 제외 — Date 직렬화 불가 + 민감 정보 + 재진입 시 항상 첫 스텝.
       partialize: (state) => ({
-        currentStep: state.currentStep,
         formData: state.formData,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          // 재진입·새로고침 시 항상 첫 스텝부터 (구 sessionStorage 잔존 currentStep 무시).
+          state.currentStep = 0;
           // ③ normalize — sessionStorage 구형 데이터 마이그레이션
           state.formData = normalizeStockFormData(state.formData);
         }

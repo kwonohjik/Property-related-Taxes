@@ -313,8 +313,8 @@ export const useCalcWizardStore = create<CalcWizardState>()(
           removeItem: () => {},
         };
       }),
+      // currentStep은 persist하지 않음 — 홈 재진입·새로고침 시 항상 첫 스텝부터 시작.
       partialize: (state) => ({
-        currentStep: state.currentStep,
         formData: state.formData,
         pendingMigration: state.pendingMigration,
       }),
@@ -346,11 +346,8 @@ export const useCalcWizardStore = create<CalcWizardState>()(
           };
         }
 
-        const STEP_MIGRATION: Record<number, number> = { 0: 0, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4 };
-        const persistedStep = ps.currentStep ?? 0;
-        const migratedStep = STEP_MIGRATION[persistedStep] ?? Math.min(persistedStep, 4);
-
-        return { ...current, ...ps, formData, currentStep: migratedStep };
+        // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 currentStep(잔존값)을 무시.
+        return { ...current, ...ps, formData, currentStep: 0 };
       },
     },
   ),

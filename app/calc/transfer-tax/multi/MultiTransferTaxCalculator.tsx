@@ -26,6 +26,7 @@ import {
   type TransferFormData,
 } from "@/lib/stores/calc-wizard-store";
 import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
+import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import {
   calcPropertyCompletion,
   validateMultiSettings,
@@ -238,6 +239,15 @@ export default function MultiTransferTaxCalculator() {
     setStep: setWizardStep,
     reset: resetWizard,
   } = useCalcWizardStore();
+
+  // 홈 카드(?new=1) 진입 = 새 계산 → multi(properties)·단건(작업영역) store 둘 다 초기화.
+  // 다른 mount useEffect보다 앞에 둬 잔존 properties 1틱 노출 방지 (계획서 §5-3).
+  useResetOnNewParam(
+    useCallback(() => {
+      resetMulti();
+      resetWizard();
+    }, [resetMulti, resetWizard]),
+  );
 
   const [error, setError] = useState<string | null>(null);
 

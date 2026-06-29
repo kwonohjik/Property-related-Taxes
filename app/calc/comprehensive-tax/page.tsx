@@ -31,6 +31,7 @@ import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
+import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { runComprehensiveManualSave, formatComprehensiveSaveMessage } from "@/components/calc/comprehensive-tax-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
@@ -403,6 +404,8 @@ export default function ComprehensiveTaxPage() {
   const router = useRouter();
   const { currentStep, setStep, formData, setResult, result, reset } =
     useComprehensiveWizardStore();
+  // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
+  useResetOnNewParam(reset);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
