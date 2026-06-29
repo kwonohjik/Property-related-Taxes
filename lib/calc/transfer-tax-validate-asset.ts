@@ -18,6 +18,19 @@ import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 import { GRACE_REASON_SPECS } from "@/lib/tax-engine/non-business-land/grace-reason-period";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
 
+/**
+ * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
+ * `toISOString()`(UTC)은 자정 부근 하루 어긋남 위험 → 로컬 연·월·일로 직접 조립.
+ * 클라이언트 검증 전용이라 `new Date()` 허용 (엔진 `new Date(x)` 파싱 금지 정책과 무관).
+ * validate.ts(collectStepWarnings)도 import — validate-asset.ts(leaf)에 두어 순환 import 회피.
+ */
+export function todayLocalISO(): string {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 // ─── 장기임대주택 거주주택 비과세 특례 검증 (⑧, 소령 §155⑳) ──────
 
 /**
@@ -680,6 +693,26 @@ export function validateAssetEntry(
   const label = form.assets.length === 1 ? "자산" : `자산 ${index + 1}`;
 
   if (!a.assetKind) return `${label}: 자산 유형을 선택하세요.`;
+
+  // ── 양도일·취득일 정합 검증 (모든 자산 공통, 분기 진입 전) ──
+  // YYYY-MM-DD 사전식 비교 = 날짜 비교 동치. 빈 값이면 skip(존재성은 분기별 검증). strict > → 당일(==) 통과.
+  const today = todayLocalISO();
+  if (a.acquisitionDate && form.transferDate && a.acquisitionDate > form.transferDate) {
+    return `${label}: 양도일(${form.transferDate})이 취득일(${a.acquisitionDate})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`;
+  }
+  if (
+    a.hasSeperateLandAcquisitionDate && a.landAcquisitionDate && form.transferDate &&
+    a.landAcquisitionDate > form.transferDate
+  ) {
+    return `${label}: 양도일(${form.transferDate})이 토지 취득일(${a.landAcquisitionDate})보다 빠릅니다.`;
+  }
+  // 취득일 미래 차단 (미래 취득은 입력 오류). 양도일<취득일 다음에 둠 — 둘 다 미래여도 모순이 먼저 잡히게.
+  if (a.acquisitionDate && a.acquisitionDate > today) {
+    return `${label}: 취득일(${a.acquisitionDate})이 오늘 이후입니다. 미래 날짜는 입력할 수 없습니다.`;
+  }
+  if (a.hasSeperateLandAcquisitionDate && a.landAcquisitionDate && a.landAcquisitionDate > today) {
+    return `${label}: 토지 취득일(${a.landAcquisitionDate})이 오늘 이후입니다.`;
+  }
 
   // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
   // 자동 안분 fallback 금지 원칙 준수 (부수토지/독립 나대지에 따라 세율 분기가 달라짐)

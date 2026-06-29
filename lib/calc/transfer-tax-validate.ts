@@ -16,7 +16,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { validateAssetEntry } from "./transfer-tax-validate-asset";
+import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
 
 /**
@@ -246,4 +246,24 @@ export function validateStep(step: number, form: TransferFormData): string | nul
 /** 첫 번째 차단 오류 1건 — collectStepIssues 위임 (검증 규칙 단일 진실) */
 export function validateStepDetailed(step: number, form: TransferFormData): ValidationIssue | null {
   return collectStepIssues(step, form)[0] ?? null;
+}
+
+/**
+ * 비차단 경고 수집 — 진행은 허용하되 주의를 요하는 입력.
+ * collectStepIssues(차단)와 독립 채널. UI는 amber 배너로 표시하되 handleNext/handleSubmit를 막지 않음.
+ *
+ * - 미래 양도일: 미래 시점 가정 계산(시뮬레이션) 허용 — 입력 확인용 경고만.
+ *   (취득일 미래는 입력 오류로 collectStepIssues에서 차단 — validateAssetEntry)
+ */
+export function collectStepWarnings(step: number, form: TransferFormData): ValidationIssue[] {
+  const warnings: ValidationIssue[] = [];
+  if (step === 0) {
+    if (form.transferDate && form.transferDate > todayLocalISO()) {
+      warnings.push({
+        step,
+        message: `양도일(${form.transferDate})이 오늘 이후입니다. 미래 시점 가정 계산입니다 — 입력값을 확인하세요.`,
+      });
+    }
+  }
+  return warnings;
 }
