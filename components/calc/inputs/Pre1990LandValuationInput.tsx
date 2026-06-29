@@ -102,8 +102,7 @@ export function Pre1990LandValuationInput({
         transferDate: new Date(transferDate),
         areaSqm: area,
         pricePerSqm_1990: price1990,
-        // 양도시 가액은 상위에서 별도 입력 — 환산엔 사용 안 함, validateInput 통과용으로 동일값 주입
-        pricePerSqm_atTransfer: price1990,
+        // pricePerSqm_atTransfer 불필요 — optional. 양도시 기준시가는 상위 standardPriceAtTransfer로 공급.
         grade_1990_0830: { gradeValue: previews.current.value },
         gradePrev_1990_0830: { gradeValue: previews.prev.value },
         gradeAtAcquisition: { gradeValue: previews.atAcq.value },

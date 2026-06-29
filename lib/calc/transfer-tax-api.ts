@@ -365,13 +365,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : isEstimated
           ? parseAmount(primary.standardPriceAtAcq) || undefined
           : undefined,
-    standardPriceAtTransfer: hasPre1990 || usesPhd
+    // pre1990 모드: 취득시 기준시가는 서브엔진(pre1990Land)이 산출하므로 undefined.
+    // 양도시 기준시가는 form 입력값(standardPriceAtTransfer)을 그대로 전달 — 서브엔진은 산출하지 않음.
+    standardPriceAtTransfer: usesPhd
       ? undefined
-      : isCarryoverGeneral
-        ? (parseAmount(primary.carryover?.donorStandardPriceAtTransfer ?? "") || undefined)
-        : isEstimated
-          ? parseAmount(primary.standardPriceAtTransfer) || undefined
-          : undefined,
+      : hasPre1990
+        ? parseAmount(primary.standardPriceAtTransfer) || undefined
+        : isCarryoverGeneral
+          ? (parseAmount(primary.carryover?.donorStandardPriceAtTransfer ?? "") || undefined)
+          : isEstimated
+            ? parseAmount(primary.standardPriceAtTransfer) || undefined
+            : undefined,
     acquisitionMethod: hasPre1990 || isMixed
       ? ("actual" as const)
       : isSalesCase ? "salesCase"
@@ -686,15 +690,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           const gAcq = buildGrade(primary.pre1990Grade_atAcq ?? "");
           const areaSqm = parseFloat((primary.acquisitionArea ?? "").replace(/,/g, "")) || 0;
           const p1990 = parseAmount(primary.pre1990PricePerSqm_1990 ?? "");
-          const pTsf = parseAmount(primary.pre1990PricePerSqm_atTransfer ?? "");
-          if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0 || pTsf <= 0) return {};
+          // pTsf 제거: 양도시 기준시가는 standardPriceAtTransfer(상위)로 공급하므로 pre1990Land 페이로드 불필요.
+          if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0) return {};
           return {
             pre1990Land: {
               acquisitionDate: primary.acquisitionDate,
               transferDate: form.transferDate,
               areaSqm,
               pricePerSqm_1990: p1990,
-              pricePerSqm_atTransfer: pTsf,
               grade_1990_0830: gCur,
               gradePrev_1990_0830: gPrev,
               gradeAtAcquisition: gAcq,

@@ -136,9 +136,12 @@ describe("PDF 실사례 재현 — 1988.12.3. 취득 농지, 2023.2.16. 양도",
     expect(r.standardPriceAtAcquisition).toBe(114_921_099);
   });
 
-  it("양도시 기준시가 = 584,188,900원", () => {
+  it("standardPriceAtTransfer = undefined (서브엔진은 양도시 기준시가 산출 안 함 — 상위 폼에서 공급)", () => {
+    // 서브엔진 책임 변경: 양도시 기준시가는 상위 TransferTaxInput.standardPriceAtTransfer로 공급.
+    // 과거에는 pricePerSqm_atTransfer × areaSqm = 241,700 × 2,417 = 584,188,900을 산출했으나,
+    // 지금은 undefined. 양도시 기준시가 검증은 통합 transfer-tax 엔진 앵커에서 수행.
     const r = calculatePre1990LandValuation(input);
-    expect(r.standardPriceAtTransfer).toBe(584_188_900);
+    expect(r.standardPriceAtTransfer).toBeUndefined();
   });
 
   it("caseType = case1_no_adjustment (직전=취득시)", () => {
@@ -151,13 +154,27 @@ describe("PDF 실사례 재현 — 1988.12.3. 취득 농지, 2023.2.16. 양도",
     expect(getGradeValue(103)).toBe(689);
   });
 
-  it("전체 취득가액 환산 공식: 550,000,000 × 114,921,099 / 584,188,900 = 108,195,490", () => {
-    // 외곽 공식 자체는 본 엔진 범위 밖이지만, 입력값으로 검산
+  it("환산취득가 공식 앵커 (상위 standardPriceAtTransfer=584,188,900 기준): 550,000,000 × 114,921,099 / 584,188,900 = 108,195,490", () => {
+    // 서브엔진은 standardPriceAtAcquisition만 산출. standardPriceAtTransfer는 상위 폼에서 공급.
+    // 검산: 상위에서 pricePerSqm_atTransfer=241,700 × areaSqm=2,417 = 584,188,900 을 제공한 경우.
     const r = calculatePre1990LandValuation(input);
-    const acqCost = Math.floor(
-      (550_000_000 * r.standardPriceAtAcquisition) / r.standardPriceAtTransfer,
+    // BigInt 사용 (550_000_000 * 114_921_099 > MAX_SAFE_INTEGER)
+    const stdAtTransfer = 584_188_900; // 상위 폼에서 제공되는 값 (241,700 × 2,417)
+    const acqCost = Number(
+      (BigInt(550_000_000) * BigInt(r.standardPriceAtAcquisition)) / BigInt(stdAtTransfer),
     );
     expect(acqCost).toBe(108_195_490);
+  });
+
+  it("앵커 (버그수정 시나리오): standardPriceAtTransfer=537,057,400(222,200×2,417)일 때 환산취득가 = 117,690,594", () => {
+    // 실제 버그 케이스: 화면에서 222,200원/㎡ × 2,417㎡ = 537,057,400을 standardPriceAtTransfer로 입력.
+    // 양도가 550,000,000, standardPriceAtAcquisition = 114,921,099 (서브엔진 산출, 불변)
+    const r = calculatePre1990LandValuation(input);
+    const stdAtTransfer = 537_057_400; // 222,200 × 2,417 — 상위 폼 입력값
+    const acqCost = Number(
+      (BigInt(550_000_000) * BigInt(r.standardPriceAtAcquisition)) / BigInt(stdAtTransfer),
+    );
+    expect(acqCost).toBe(117_690_594);
   });
 });
 
@@ -334,9 +351,13 @@ describe("입력 검증", () => {
     expect(() => calculatePre1990LandValuation({ ...base, areaSqm: -1 })).toThrow(TaxCalculationError);
   });
 
-  it("공시지가 <= 0 → TaxCalculationError", () => {
+  it("1990.1.1. 공시지가 <= 0 → TaxCalculationError", () => {
     expect(() => calculatePre1990LandValuation({ ...base, pricePerSqm_1990: 0 })).toThrow(TaxCalculationError);
-    expect(() => calculatePre1990LandValuation({ ...base, pricePerSqm_atTransfer: -100 })).toThrow(TaxCalculationError);
+  });
+
+  it("pricePerSqm_atTransfer는 optional — 음수여도 오류 없음 (서브엔진이 무시)", () => {
+    // pricePerSqm_atTransfer는 더 이상 검증하지 않음. 양도시 기준시가는 상위 폼에서 공급.
+    expect(() => calculatePre1990LandValuation({ ...base, pricePerSqm_atTransfer: -100 })).not.toThrow();
   });
 
   it("유효하지 않은 Date → TaxCalculationError", () => {
@@ -353,14 +374,18 @@ describe("입력 검증", () => {
     })).toThrow(TaxCalculationError);
   });
 
-  it("대면적 + 고공시지가 overflow 처리 (100,000㎡ × 1,000,000원/㎡)", () => {
+  it("대면적 + 고공시지가 overflow 처리 (100,000㎡ × 1,000,000원/㎡) — 취득시 기준시가만 검증", () => {
+    // standardPriceAtTransfer는 서브엔진이 산출하지 않으므로 undefined.
+    // overflow 처리(safeMultiply)는 standardPriceAtAcquisition으로 검증.
     const r = calculatePre1990LandValuation({
       ...base,
       areaSqm: 100_000,
       pricePerSqm_1990: 1_000_000,
-      pricePerSqm_atTransfer: 1_000_000,
     });
-    expect(r.standardPriceAtTransfer).toBe(100_000 * 1_000_000); // 100,000,000,000
+    expect(r.standardPriceAtTransfer).toBeUndefined();
+    // 취득시 기준시가: pricePerSqmAtAcq = floor(1,000,000 × 689/782.5) ≈ 880,765원
+    // standardPriceAtAcquisition = 880,765 × 100,000 = 88,076,500,000 (overflow 없음)
+    expect(r.standardPriceAtAcquisition).toBeGreaterThan(0);
   });
 });
 

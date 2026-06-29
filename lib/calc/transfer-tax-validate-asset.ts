@@ -537,8 +537,10 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     if (!areaSqm || areaSqm <= 0) return `${label}: 취득 당시 면적(㎡)을 입력하세요.`;
     if (!asset.pre1990PricePerSqm_1990 || parseAmount(asset.pre1990PricePerSqm_1990) <= 0)
       return `${label}: 1990.1.1. 개별공시지가(원/㎡)를 입력하세요.`;
-    if (!asset.pre1990PricePerSqm_atTransfer || parseAmount(asset.pre1990PricePerSqm_atTransfer) <= 0)
-      return `${label}: 양도당시 개별공시지가(원/㎡)를 입력하세요.`;
+    // 양도시 기준시가는 상위 standardPriceAtTransfer 필드로 입력 (㎡당 단가 × 면적 총액).
+    // pre1990PricePerSqm_atTransfer(입력 UI 없는 필드)는 더 이상 검사하지 않음.
+    if (!asset.standardPriceAtTransfer || parseAmount(asset.standardPriceAtTransfer) <= 0)
+      return `${label}: 양도 당시 기준시가를 입력하세요.`;
     const gradeValid = (raw: string) => {
       const n = Number((raw || "").replace(/,/g, ""));
       return Number.isFinite(n) && n > 0;

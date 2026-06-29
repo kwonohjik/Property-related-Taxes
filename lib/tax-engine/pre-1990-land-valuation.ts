@@ -66,8 +66,14 @@ export interface Pre1990LandValuationInput {
 
   /** 1990.1.1. 개별공시지가 (원/㎡) */
   pricePerSqm_1990: number;
-  /** 양도당시 개별공시지가 (원/㎡) */
-  pricePerSqm_atTransfer: number;
+  /**
+   * 양도당시 개별공시지가 (원/㎡) — 선택.
+   * 본 서브엔진은 취득시 기준시가만 산출하며, 양도시 기준시가는
+   * 상위 `standardPriceAtTransfer` 필드로 별도 공급된다.
+   * 하위 호환(PreDeemedInputs 등)을 위해 optional로 유지하되, 무시됨.
+   * @deprecated 새 코드에서는 전달하지 말 것. 상위 standardPriceAtTransfer 사용.
+   */
+  pricePerSqm_atTransfer?: number;
 
   /** 1990.8.30. 현재 토지등급 (또는 등급가액 직접 입력) */
   grade_1990_0830: LandGradeInput;
@@ -128,8 +134,12 @@ export interface Pre1990LandValuationResult {
   pricePerSqmAtAcquisition: number;
   /** 취득시 기준시가 = ㎡당 가액 × 면적 (원, 정수) */
   standardPriceAtAcquisition: number;
-  /** 양도시 기준시가 = 양도당시 개별공시지가 × 면적 (원, 정수) */
-  standardPriceAtTransfer: number;
+  /**
+   * 양도시 기준시가 — 더 이상 본 서브엔진에서 산출하지 않음.
+   * 양도시 기준시가는 상위 TransferTaxInput.standardPriceAtTransfer로 제공된다.
+   * @deprecated 항상 undefined. 하위 호환용으로만 존재.
+   */
+  standardPriceAtTransfer: undefined;
 
   /** 5유형 분류 결과 (UI 설명용) */
   caseType: CaseType;
@@ -173,9 +183,8 @@ function validateInput(input: Pre1990LandValuationInput): void {
   if (!Number.isFinite(input.pricePerSqm_1990) || input.pricePerSqm_1990 <= 0) {
     throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, `1990.1.1. 개별공시지가는 양수여야 합니다 (입력: ${input.pricePerSqm_1990})`);
   }
-  if (!Number.isFinite(input.pricePerSqm_atTransfer) || input.pricePerSqm_atTransfer <= 0) {
-    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, `양도당시 개별공시지가는 양수여야 합니다 (입력: ${input.pricePerSqm_atTransfer})`);
-  }
+  // pricePerSqm_atTransfer는 optional — 검증 불필요.
+  // 양도시 기준시가는 상위 standardPriceAtTransfer 필드로 공급된다.
 }
 
 // ============================================================
@@ -261,12 +270,10 @@ export function calculatePre1990LandValuation(
   // ㎡당 가액 = 1990.1.1. 개별공시지가 × 비율 → 원/㎡ 단위 이하 절사 (집행기준 97-176의2)
   const pricePerSqmAtAcquisition = Math.floor(input.pricePerSqm_1990 * appliedRatio);
 
-  // 기준시가 = ㎡당 가액 × 면적 → 모든 계산 완료 후 최종에서만 원단위 이하 절사
+  // 취득시 기준시가 = ㎡당 가액 × 면적 → 원단위 이하 절사
+  // 양도시 기준시가는 상위 standardPriceAtTransfer(form 입력)으로 공급 — 본 엔진 산출 제거
   const standardPriceAtAcquisition = Math.floor(
     safeMultiply(pricePerSqmAtAcquisition, input.areaSqm),
-  );
-  const standardPriceAtTransfer = Math.floor(
-    safeMultiply(input.pricePerSqm_atTransfer, input.areaSqm),
   );
 
   const formula =
@@ -297,7 +304,7 @@ export function calculatePre1990LandValuation(
   return {
     pricePerSqmAtAcquisition,
     standardPriceAtAcquisition,
-    standardPriceAtTransfer,
+    standardPriceAtTransfer: undefined,
     caseType,
     caseLabel: caseLabelOf(caseType),
     breakdown,
