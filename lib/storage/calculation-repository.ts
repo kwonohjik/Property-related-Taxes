@@ -75,6 +75,30 @@ export interface CalculationRepository {
 }
 
 /**
+ * clientId의 잔여 계산이 0건이면 해당 의뢰인을 삭제 (cascade). clientId가 null이면 no-op.
+ *
+ * 의뢰인 생명주기를 계산 이력에 종속시키는 불변식: 계산이 참조하는 clientId는 dangling이 아니다.
+ * 계획서: docs/00-pm/client-calc-cascade-delete-restore.plan.md §4-1 (결정 D1).
+ *
+ * count는 in-memory 필터(≤200건) — `[userId+clientId+createdAt]` 인덱스는 null 키를
+ * 제외하므로 codebase 선례(list)와 동일하게 in-memory로 처리. rw 트랜잭션 내 호출 전제.
+ */
+async function deleteClientIfOrphaned(
+  uid: UserId,
+  clientId: string | null
+): Promise<void> {
+  if (clientId == null) return;
+  const remaining = await db.calculations
+    .where("userId")
+    .equals(uid)
+    .filter((r) => r.clientId === clientId)
+    .count();
+  if (remaining === 0) {
+    await db.clients.delete(clientId);
+  }
+}
+
+/**
  * uid를 클로저로 캡처. 모든 메서드는 uid 필터를 강제.
  *
  * 200건 상한 정책: save() 시 카운트 초과면 가장 오래된 1건 삭제 (Supabase와 동일).
@@ -355,11 +379,27 @@ export function createCalculationRepository(uid: UserId): CalculationRepository 
     async remove(id) {
       const rec = await db.calculations.get(id);
       if (!rec || rec.userId !== uid) return;
-      await db.calculations.delete(id);
+      const { clientId } = rec;
+      // 계산 삭제 후 그 의뢰인의 마지막 계산이었으면 의뢰인도 삭제 (cascade, 결정 D1).
+      await db.transaction("rw", [db.calculations, db.clients], async () => {
+        await db.calculations.delete(id);
+        await deleteClientIfOrphaned(uid, clientId);
+      });
     },
 
     async clearAll() {
-      await db.calculations.where("userId").equals(uid).delete();
+      // 전체 계산 삭제 → 계산을 참조하던 모든 의뢰인도 삭제 (cascade, 결정 D1).
+      // 계산 0건으로 등록만 된 의뢰인은 distinct 집합에 없어 유지.
+      await db.transaction("rw", [db.calculations, db.clients], async () => {
+        const calcs = await db.calculations.where("userId").equals(uid).toArray();
+        const clientIds = [
+          ...new Set(
+            calcs.map((r) => r.clientId).filter((c): c is string => c != null)
+          ),
+        ];
+        await db.calculations.where("userId").equals(uid).delete();
+        if (clientIds.length) await db.clients.bulkDelete(clientIds);
+      });
     },
 
     async count() {

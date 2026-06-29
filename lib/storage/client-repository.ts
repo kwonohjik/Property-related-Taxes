@@ -13,6 +13,11 @@ export interface ClientRepository {
     patch: Partial<Pick<Client, "name" | "birthDate" | "phone" | "email" | "memo">>
   ): Promise<void>;
   remove(id: string): Promise<void>;
+  /**
+   * 해당 의뢰인에 연결된 계산 이력 건수 (단독 삭제 차단 판정용, 결정 D3).
+   * in-memory 필터 — `[userId+clientId+createdAt]` 인덱스는 null 키 제외로 미사용 (list 선례).
+   */
+  countCalculations(id: string): Promise<number>;
   /** 이름·전화·이메일 부분 일치 검색 (대소문자·공백·하이픈 무시, 최대 limit건) */
   search(query: string, limit?: number): Promise<Client[]>;
   /** 최근 사용 N명 (lastUsedAt DESC, null 제외) */
@@ -66,6 +71,14 @@ export function createClientRepository(uid: UserId): ClientRepository {
       const existing = await db.clients.get(id);
       if (!existing || existing.userId !== uid) return;
       await db.clients.delete(id);
+    },
+
+    async countCalculations(id) {
+      return db.calculations
+        .where("userId")
+        .equals(uid)
+        .filter((r) => r.clientId === id)
+        .count();
     },
 
     async search(query, limit = 50) {
