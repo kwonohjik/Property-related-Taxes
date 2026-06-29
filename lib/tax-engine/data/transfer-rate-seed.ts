@@ -9,6 +9,8 @@
  * 세율 개정 시 이 파일만 수정 → 시딩·fallback 동시 반영.
  */
 
+import { ONE_HOUSE_RESIDENCE } from "../legal-codes/transfer";
+
 export const transferTaxSeeds = [
   // 1. 누진세율 (2023.1.1~ 현행)
   {
@@ -114,9 +116,7 @@ export const transferTaxSeeds = [
       one_house_exemption: {
         maxExemptPrice: 1200000000, // 12억원 초과분 과세
         minHoldingYears: 2,
-        regulatedAreaMinResidenceYears: 2,
-        prePolicyDate: "2017-08-03",
-        prePolicyExemptResidence: true,
+        ...ONE_HOUSE_RESIDENCE, // 거주요건 3값 단일 소스 (legal-codes/transfer)
       },
       temporary_two_house: {
         disposalDeadlineYears: 3,

@@ -1,6 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
+import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
+import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { DateInput } from "@/components/ui/date-input";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -43,6 +46,23 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
   // 법정동코드(주소검색 PNU 앞 10자리) — 있으면 동 단위 정밀 판정 경로
   const primaryRegionCode = form.assets?.[0]?.regionCode ?? "";
+
+  // 메시지 ②: 조정대상지역 거주요건(2년) 미충족 — 엔진 §154① 판정과 단일 진실(useMemo 파생, store 미러링 금지).
+  const residenceShortfall = useMemo(() => {
+    const p = form.assets?.[0];
+    const kind = p?.assetKind ?? "";
+    if (kind !== "housing" || !form.isOneHousehold) return false;
+    if (!form.transferDate || !p?.acquisitionDate) return false;
+    // 거주기간 입력 흔적이 있을 때만 — 미입력 초기 상태의 성급한 경고 방지
+    const hasResidenceInput =
+      (p.residencePeriods?.length ?? 0) > 0 || !!p.residencePeriodMonthsAsset;
+    if (!hasResidenceInput) return false;
+    try {
+      return !meetsOneHouseResidenceRequirement(buildResidenceReqInput(form), ONE_HOUSE_RESIDENCE);
+    } catch {
+      return false;
+    }
+  }, [form]);
 
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
   useEffect(() => {
@@ -295,6 +315,17 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             />
           )}
 
+          {/* 메시지 ② 거주요건 불충족 — 엔진 §154① 판정과 일치 (단서면제·2017.8.3 이전 취득 자동 제외) */}
+          {residenceShortfall && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50/40 px-3 py-2 text-xs text-rose-900">
+              <p className="font-medium">⚠️ 조정대상지역 거주요건(2년) 불충족</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-rose-800">
+                취득 당시 조정대상지역 주택은 2년 이상 거주해야 1세대1주택 비과세가 적용됩니다.
+                현재 거주기간으로는 비과세가 배제될 수 있습니다.
+              </p>
+            </div>
+          )}
+
           {/* §154① 단서 — 보유·거주 요건 면제 사유 (1세대1주택 + 주택 자산) */}
           {form.isOneHousehold && primaryKind === "housing" && (
             <ExemptionProvisoSection
@@ -324,6 +355,16 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 description="비과세 거주요건 판단"
                 tone="rose"
               />
+            </div>
+          )}
+
+          {/* 메시지 ① 중과 검토 안내 — 주택 + 양도시 조정대상이면 항상(1주택 포함, 단순 주의환기) */}
+          {primaryKind === "housing" && form.isRegulatedArea && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
+              <p className="font-medium">⚠️ 양도일 현재 조정대상지역</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-amber-800">
+                조정대상지역 주택 양도는 중과세 적용 여부를 검토하세요.
+              </p>
             </div>
           )}
         </div>

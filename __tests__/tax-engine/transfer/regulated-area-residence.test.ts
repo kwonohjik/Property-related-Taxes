@@ -11,6 +11,7 @@
 import { describe, it, expect } from "vitest";
 import {
   meetsOneHouseHoldingResidence,
+  meetsOneHouseResidenceRequirement,
   resolveWasRegulatedAtAcquisition,
 } from "@/lib/tax-engine/transfer-tax-exemption";
 import type { OneHouseSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
@@ -87,5 +88,60 @@ describe("meetsOneHouseHoldingResidence — 거주요건 numeric 영향", () => 
   it("fallback: regionCode 없음 + wasRegulated false + 거주 0개월 → true", () => {
     const input = baseTransferInput({ wasRegulatedAtAcquisition: false, residencePeriodMonths: 0 });
     expect(meetsOneHouseHoldingResidence(input, RULE)).toBe(true);
+  });
+});
+
+// Step4 거주요건 안내 메시지(②) 단일 진실 — 보유요건 제외 거주요건 단독 판정
+describe("meetsOneHouseResidenceRequirement — 거주요건 단독(메시지 ② 트리거)", () => {
+  it("R-req1: 취득조정(강남) + 거주 12개월 + proviso 없음 + 2018취득 → false(미충족)", () => {
+    const input = baseTransferInput({
+      regionCode: "1168010100",
+      acquisitionDate: new Date("2018-06-01"),
+      residencePeriodMonths: 12,
+    });
+    expect(meetsOneHouseResidenceRequirement(input, RULE)).toBe(false);
+  });
+
+  it("R-req2: 취득조정(강남) + 거주 24개월 → true", () => {
+    const input = baseTransferInput({
+      regionCode: "1168010100",
+      acquisitionDate: new Date("2018-06-01"),
+      residencePeriodMonths: 24,
+    });
+    expect(meetsOneHouseResidenceRequirement(input, RULE)).toBe(true);
+  });
+
+  it("R-req3: proviso 5호(공고전계약) → residence_only 거주면제 → true(거주 0이어도)", () => {
+    const input = baseTransferInput({
+      regionCode: "1168010100",
+      acquisitionDate: new Date("2018-06-01"),
+      residencePeriodMonths: 0,
+      oneHouseExemptionProviso: { reason: "pre_designation_contract" },
+    });
+    expect(meetsOneHouseResidenceRequirement(input, RULE)).toBe(true);
+  });
+
+  it("R-req4: proviso 3호(부득이, 거주 1년↑) → both 면제 → true", () => {
+    const input = baseTransferInput({
+      regionCode: "1168010100",
+      acquisitionDate: new Date("2018-06-01"),
+      residencePeriodMonths: 12,
+      oneHouseExemptionProviso: { reason: "unavoidable" },
+    });
+    expect(meetsOneHouseResidenceRequirement(input, RULE)).toBe(true);
+  });
+
+  it("R-req5: 2017-08-02 취득(prePolicy) + 취득조정 + 거주 0 → true(경과규정 면제)", () => {
+    const input = baseTransferInput({
+      wasRegulatedAtAcquisition: true,
+      acquisitionDate: new Date("2017-08-02"),
+      residencePeriodMonths: 0,
+    });
+    expect(meetsOneHouseResidenceRequirement(input, RULE)).toBe(true);
+  });
+
+  it("R-req6: 취득 비조정 + 거주 0 → true(거주요건 무관)", () => {
+    const input = baseTransferInput({ wasRegulatedAtAcquisition: false, residencePeriodMonths: 0 });
+    expect(meetsOneHouseResidenceRequirement(input, RULE)).toBe(true);
   });
 });
