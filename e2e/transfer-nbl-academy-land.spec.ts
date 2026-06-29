@@ -14,7 +14,7 @@
  *   - 자본적 지출액(배관시설·건물철거비): 27,854,000 원
  *   - 비사업용 토지 여부: OFF (수입금액비율 53.1% ≥ 10% → 사업용)
  *
- * 기대값 (사용자 수기 계산):
+ * 기대값 (사용자 수기 계산 — 엔진은 단계별 floor 적용으로 각 항목 최대 1원 작음, 정상):
  *   - 환산취득가액: ≈ 1,426,172,617 원
  *   - 개산공제: 6,002,451 원
  *   - 양도차익: ≈ 567,824,932 원
@@ -39,9 +39,10 @@ function getInputByLabel(page: Page, labelText: string) {
     .locator("input");
 }
 
-/** 결과 테이블 Row에서 오른쪽(값) 셀 텍스트 반환 — last(): parcelDetails 보다 메인 테이블 우선 */
+/** 결과 테이블 Row에서 오른쪽(값) 셀 텍스트 반환 — first(): 본세 메인 테이블 우선
+ *  (지방소득세 명세에 같은 라벨(산출세액·결정세액)이 중복 존재하므로 last() 사용 시 오매칭) */
 async function getRowValue(page: Page, labelText: string): Promise<string> {
-  const row = page.locator(`tr:has(td:has-text("${labelText}"))`).last();
+  const row = page.locator(`tr:has(td:has-text("${labelText}"))`).first();
   return (await row.locator("td").nth(1).textContent())?.trim() ?? "";
 }
 
@@ -51,14 +52,14 @@ test.describe("인천 중구 내동 6-20 학원용 토지 환산취득가액", (
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
     // ─── 양도일: 2026-02-18 (첫 번째 DateInput 그룹) ───────────────
-    await page.getByLabel("연도").first().fill("2026");
-    await page.getByLabel("월").first().fill("02");
-    await page.getByLabel("일").first().fill("18");
+    await page.getByLabel("연도", { exact: true }).first().fill("2026");
+    await page.getByLabel("월", { exact: true }).first().fill("02");
+    await page.getByLabel("일", { exact: true }).first().fill("18");
 
     // ─── 신고일: 2026-04-30 (두 번째 DateInput 그룹) ───────────────
-    await page.getByLabel("연도").nth(1).fill("2026");
-    await page.getByLabel("월").nth(1).fill("04");
-    await page.getByLabel("일").nth(1).fill("30");
+    await page.getByLabel("연도", { exact: true }).nth(1).fill("2026");
+    await page.getByLabel("월", { exact: true }).nth(1).fill("04");
+    await page.getByLabel("일", { exact: true }).nth(1).fill("30");
 
     // ─── 자산 카드: 토지·농지 선택 ──────────────────────────────────
     await page.getByRole("button", { name: "토지·농지" }).click();
@@ -80,12 +81,12 @@ test.describe("인천 중구 내동 6-20 학원용 토지 환산취득가액", (
     await page.getByRole("button", { name: "매매", exact: true }).click();
 
     // ─── 취득가액 산정방식: 환산취득가 ─────────────────────────────
-    await page.getByRole("button", { name: "환산취득가", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
 
     // ─── 취득일: 1997-02-03 (세 번째 DateInput 그룹, nth(2)) ─────────
-    await page.getByLabel("연도").nth(2).fill("1997");
-    await page.getByLabel("월").nth(2).fill("02");
-    await page.getByLabel("일").nth(2).fill("03");
+    await page.getByLabel("연도", { exact: true }).nth(2).fill("1997");
+    await page.getByLabel("월", { exact: true }).nth(2).fill("02");
+    await page.getByLabel("일", { exact: true }).nth(2).fill("03");
 
     // ─── 취득시 기준시가: 637,000 원/㎡ ─────────────────────────────
     // area prop이 314.1로 pre-populate → 단가 입력만으로 총액 자동계산
@@ -120,7 +121,8 @@ test.describe("인천 중구 내동 6-20 학원용 토지 환산취득가액", (
     await page.getByRole("button", { name: "세금 계산하기" }).click();
 
     // ─── 결과 대기 ──────────────────────────────────────────────────
-    await page.locator('p:has-text("총 납부세액")').waitFor({ timeout: 15000 });
+    // "총 납부세액" 라벨이 2곳(요약 hidden + 납부카드 visible) — visible 쪽(last) 사용
+    await page.locator('p:has-text("총 납부세액")').last().waitFor({ timeout: 15000 });
 
     // ─── 결과 캡처 ──────────────────────────────────────────────────
 
@@ -128,6 +130,7 @@ test.describe("인천 중구 내동 6-20 학원용 토지 환산취득가액", (
     const totalTax = (
       await page
         .locator('p:has-text("총 납부세액")')
+        .last()
         .locator("xpath=following-sibling::p[1]")
         .textContent()
     )?.trim() ?? "";
