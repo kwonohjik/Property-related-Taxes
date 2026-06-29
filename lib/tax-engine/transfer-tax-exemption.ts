@@ -17,6 +17,21 @@ import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
+/**
+ * 거주요건 판정 입력 — TransferTaxInput의 부분집합. UI(Step4 안내 메시지)와 엔진이 공용.
+ * resolveExemptionProviso·resolveWasRegulatedAtAcquisition·meetsOneHouseResidenceRequirement 입력.
+ */
+export type ResidenceReqInput = Pick<
+  TransferTaxInput,
+  | "acquisitionDate"
+  | "transferDate"
+  | "residencePeriodMonths"
+  | "oneHouseExemptionProviso"
+  | "regionCode"
+  | "wasRegulatedAtAcquisition"
+  | "residenceTransitionAcquisitionDate"
+>;
+
 interface ExemptionResult {
   isExempt: boolean;
   isPartialExempt: boolean;
@@ -42,7 +57,7 @@ const PROVISO_LABEL: Record<
  * 시한 상수: EXEMPTION_PROVISO_CONST (가목 5년·나다목 2년·1호 거주5년·3호 거주1년).
  */
 export function resolveExemptionProviso(
-  input: TransferTaxInput,
+  input: ResidenceReqInput,
 ): "both" | "residence_only" | null {
   const p = input.oneHouseExemptionProviso;
   if (!p) return null;
@@ -82,7 +97,7 @@ export function resolveExemptionProviso(
  * (읍·면·동/택지지구 예외까지 반영). 없으면 wasRegulatedAtAcquisition boolean fallback (회귀 0 보장).
  * 다주택 중과(multi-house-surcharge: 양도일 기준)와 대칭 — 여기서는 취득일 기준.
  */
-export function resolveWasRegulatedAtAcquisition(input: TransferTaxInput): boolean {
+export function resolveWasRegulatedAtAcquisition(input: ResidenceReqInput): boolean {
   if (input.regionCode) {
     return isRegulatedByBjdCode(
       input.regionCode,
@@ -93,8 +108,40 @@ export function resolveWasRegulatedAtAcquisition(input: TransferTaxInput): boole
 }
 
 /**
+ * §154① 본문 거주요건 단독 판정 (보유요건 제외) — Step4 거주요건 안내 메시지와 엔진 공용(단일 진실).
+ * true = 거주요건 충족 또는 면제. 단서면제(both·residence_only)·취득시 비조정·
+ * 2017.8.3 이전 취득(경과규정)·거주 2년 이상 중 하나라도 해당하면 충족.
+ */
+export function meetsOneHouseResidenceRequirement(
+  input: ResidenceReqInput,
+  rule: Pick<
+    OneHouseSpecialRulesData["one_house_exemption"],
+    "regulatedAreaMinResidenceYears" | "prePolicyDate" | "prePolicyExemptResidence"
+  >,
+): boolean {
+  const proviso = resolveExemptionProviso(input);
+  // §154① 거주요건 경과규정 — 2017.8.3(prePolicyDate) 이전 취득은 조정지역이라도 거주요건 면제.
+  // 이월과세 시 acquisitionDate는 증여자(보유 기산)로 교체되므로(§95④), 경과규정 판정은
+  // 수증자 실제 취득일(residenceTransitionAcquisitionDate) 사용 — §97의2는 필요경비 계산 특례에 한정.
+  const residenceTransitionDate =
+    input.residenceTransitionAcquisitionDate ?? input.acquisitionDate;
+  const isPrePolicy = residenceTransitionDate < new Date(rule.prePolicyDate);
+  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+  // 취득 당시 조정대상지역 — regionCode 있으면 취득일 기준 정밀 판정, 없으면 boolean fallback
+  const wasRegulated = resolveWasRegulatedAtAcquisition(input);
+  return (
+    proviso === "both" ||
+    proviso === "residence_only" ||
+    !wasRegulated ||
+    // §154① 부칙(대통령령 제28293호) 적용례 — prePolicy 취득은 조정지역이라도 거주요건 면제
+    (rule.prePolicyExemptResidence && isPrePolicy) ||
+    residenceYears >= rule.regulatedAreaMinResidenceYears
+  );
+}
+
+/**
  * §154① 보유·거주 요건 (단서 각호 면제 포함).
- * 본문: 보유 2년(rule.minHoldingYears) + 취득 당시 조정대상지역이면 거주 2년(rule.regulatedAreaMinResidenceYears).
+ * 본문: 보유 2년(rule.minHoldingYears) + 취득 당시 조정대상지역이면 거주 2년(거주요건은 위 헬퍼 재사용).
  * 단서: resolveExemptionProviso "both"=보유+거주 면제 / "residence_only"=거주만 면제 (소령 §154① 단서).
  * §155⑤(혼인 합가) 1세대1주택 의제 중과배제(§167의10①15호) 게이트에 재사용 — checkExemption과 단일 진실.
  */
@@ -105,23 +152,7 @@ export function meetsOneHouseHoldingResidence(
   const proviso = resolveExemptionProviso(input);
   const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
   const meetsHolding = proviso === "both" || holding.years >= rule.minHoldingYears;
-  // §154① 거주요건 경과규정 — 2017.8.3(prePolicyDate) 이전 취득은 조정지역이라도 거주요건 면제.
-  // 이월과세 시 acquisitionDate는 증여자(보유 기산)로 교체되므로(§95④), 경과규정 판정은
-  // 수증자 실제 취득일(residenceTransitionAcquisitionDate) 사용 — §97의2는 필요경비 계산 특례에 한정.
-  const residenceTransitionDate =
-    input.residenceTransitionAcquisitionDate ?? input.acquisitionDate;
-  const isPrePolicy = residenceTransitionDate < new Date(rule.prePolicyDate);
-  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
-  // 취득 당시 조정대상지역 — regionCode 있으면 취득일 기준 정밀 판정, 없으면 boolean fallback
-  const wasRegulated = resolveWasRegulatedAtAcquisition(input);
-  const meetsResidence =
-    proviso === "both" ||
-    proviso === "residence_only" ||
-    !wasRegulated ||
-    // §154① 부칙(대통령령 제28293호) 적용례 — prePolicy 취득은 조정지역이라도 거주요건 면제
-    (rule.prePolicyExemptResidence && isPrePolicy) ||
-    residenceYears >= rule.regulatedAreaMinResidenceYears;
-  return meetsHolding && meetsResidence;
+  return meetsHolding && meetsOneHouseResidenceRequirement(input, rule);
 }
 
 export function checkExemption(

@@ -8,7 +8,9 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
+import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
+import { toDate } from "@/lib/api/date-coerce";
+import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -422,11 +424,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 수 (양도일 현재)
     // right_to_move_in 자산 유형에서만 의미. 기본 "0" fallback.
     householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
-    // 거주기간 — interval 모드면 자산 구간 합산, direct 모드는 자산 또는 form-global fallback
-    residencePeriodMonths:
-      primary.residenceInputMode === "interval" && primary.residencePeriods.length > 0
-        ? sumResidenceMonths(primary.residencePeriods, form.transferDate)
-        : parseInt(primary.residencePeriodMonthsAsset || form.residencePeriodMonths) || 0,
+    // 거주기간 — 공용 헬퍼 도출(interval 합산 / direct·form-global fallback). UI 메시지②와 단일 진실.
+    residencePeriodMonths: deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths),
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     // ④ regionCode — primary 자산 법정동코드(AddressSearch PNU 앞10) 우선, 없으면 form-global fallback.
@@ -762,4 +761,36 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     throw new Error(detailedMsg);
   }
   return json.data as TransferAPIResult;
+}
+
+/**
+ * 거주요건 판정 입력 빌드 — Step4 거주요건 안내 메시지(②)가 엔진 meetsOneHouseResidenceRequirement
+ * 호출에 사용. API 변환과 동일 도출(deriveResidencePeriodMonths·proviso 조립)로 단일 진실.
+ * 호출 전 form.transferDate·primary.acquisitionDate 존재 보장 필요(toDate는 필수값 미입력 시 throw).
+ */
+export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
+  const primary = form.assets?.[0];
+  return {
+    acquisitionDate: toDate(primary?.acquisitionDate, "acquisitionDate"),
+    transferDate: toDate(form.transferDate, "transferDate"),
+    residencePeriodMonths: primary
+      ? deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths)
+      : 0,
+    regionCode: primary?.regionCode || form.regionCode || undefined,
+    wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    oneHouseExemptionProviso: form.provisoReason
+      ? {
+          reason: form.provisoReason,
+          ...(form.provisoDepartureDate
+            ? { departureDate: toDate(form.provisoDepartureDate, "provisoDepartureDate") }
+            : {}),
+          ...(form.provisoExpropriationDate
+            ? { expropriationDate: toDate(form.provisoExpropriationDate, "provisoExpropriationDate") }
+            : {}),
+          ...(form.provisoBusinessApprovalDate
+            ? { businessApprovalDate: toDate(form.provisoBusinessApprovalDate, "provisoBusinessApprovalDate") }
+            : {}),
+        }
+      : undefined,
+  };
 }

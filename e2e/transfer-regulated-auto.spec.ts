@@ -70,6 +70,9 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
     await expect(
       page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
     ).toBeChecked({ timeout: 15000 });
+
+    // 메시지① 중과 검토 안내 노출 (주택 + 양도시 조정)
+    await expect(page.getByText("중과세 적용 여부를 검토하세요")).toBeVisible({ timeout: 15000 });
   });
 
   test("미수록 시도(제주) regionCode → 미지정 + 신뢰도 경고", async ({ page }) => {
@@ -89,5 +92,134 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
     await expect(page.getByText("미지정").first()).toBeVisible({ timeout: 15000 });
     // 미수록 → low 신뢰도 경고 노출
     await expect(page.getByText(/신뢰도: low/)).toBeVisible({ timeout: 15000 });
+  });
+});
+
+/**
+ * P2-b 전체 흐름: 소재지 주소검색·선택 → PNU 앞10 = regionCode 자동 추출
+ *   (CompanionAssetCard.tsx onChange) → Step4 진입 시 조정대상지역 자동 판정.
+ *
+ * 위 P2와 달리 regionCode를 직접 주입하지 않는다. AddressSearch에서 강남 PNU를
+ * 가진 결과를 선택하는 것만으로 regionCode가 추출되어 자동 판정까지 이어지는지 검증.
+ * /api/address/search만 mock하고 /api/address/regulated-area는 실제 로컬 판정(REGULATED_REGIONS)을 사용.
+ */
+const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력 (예: 테헤란로 123)";
+
+test.describe("P2-b 소재지 검색 → regionCode 자동추출 → 자동판정", () => {
+  test("강남 주소 선택만으로 regionCode 추출 + 조정대상지역 자동 판정 + 토글 체크", async ({
+    page,
+  }) => {
+    // 강남구 PNU(앞5 = 11680 = 강남구, 줄곧 지정). 좌표는 비워 reverse-geocode 부수호출 회피.
+    await page.route("**/api/address/search**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          results: [
+            {
+              pnu: "1168010100107360000",
+              title: "역삼동 736",
+              road: "서울 강남구 테헤란로 152",
+              jibun: "서울 강남구 역삼동 736",
+              building: "",
+              zipcode: "",
+              lng: "",
+              lat: "",
+            },
+          ],
+        }),
+      }),
+    );
+    // 부수 네트워크 호출 차단(둘 다 silent catch 대상이라 실패 무방)
+    await page.route("**/api/address/standard-price**", (route) =>
+      route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
+    );
+    await page.route("**/api/address/reverse-geocode**", (route) =>
+      route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
+    );
+
+    // assetKind(housing) + 양도일만 주입 — regionCode·주소는 비움(주소검색으로 채울 대상).
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.evaluate(() => {
+      // 완전한 asset 형태로 주입(assetLabel·assetId 포함) — 부분 asset이면 AddressSearch
+      // onChange 경로의 asset.assetLabel.trim()에서 TypeError가 나 store 반영이 막힌다.
+      sessionStorage.setItem(
+        "transfer-tax-wizard",
+        JSON.stringify({
+          state: {
+            formData: {
+              assets: [{ assetId: "seed-asset-1", assetKind: "housing", assetLabel: "" }],
+              transferDate: "2021-06-01",
+            },
+            pendingMigration: false,
+          },
+          version: 0,
+        }),
+      );
+    });
+    await page.reload();
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    // 자산 목록(step 0)에서 소재지 검색 → 결과 선택 (이 시점에 regionCode 추출됨)
+    const addrInput = page.getByPlaceholder(ADDR_PLACEHOLDER);
+    await addrInput.fill("역삼동 736");
+    await page.getByRole("button", { name: /역삼동 736/ }).click();
+    // 선택 성공 확인 — 입력란이 선택 결과(도로명)로 교체됨(이 시점 onChange로 regionCode 추출)
+    await expect(addrInput).toHaveValue("서울 강남구 테헤란로 152", { timeout: 15000 });
+
+    // 보유 상황(step 1)으로 이동 → 자동 판정 발동
+    await page.getByRole("button", { name: "보유 상황", exact: true }).click();
+    await page.getByText("보유 상황 입력").waitFor({ timeout: 15000 });
+
+    // regionCode 직접 주입 없이도 자동 판정되어야 한다
+    await expect(page.getByText("조정대상지역 자동 판별")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("조정대상지역 ✓").first()).toBeVisible({ timeout: 15000 });
+    await expect(
+      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
+    ).toBeChecked({ timeout: 15000 });
+  });
+});
+
+/**
+ * P2-c 거주요건 미충족 메시지(②) — 엔진 §154① meetsOneHouseResidenceRequirement와 단일 진실.
+ * regionCode 강남(취득 2018 조정) + 거주기간 자산 주입. isOneHousehold는 기본값 true.
+ * 단서면제(proviso) 케이스는 엔진 단위(regulated-area-residence.test.ts R-req3/4)가 커버.
+ */
+test.describe("P2-c 조정대상지역 거주요건 메시지(②)", () => {
+  const MSG2 = "조정대상지역 거주요건(2년) 불충족";
+
+  test("취득조정 + 거주 12개월 → 메시지② 노출", async ({ page }) => {
+    await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900", // 강남(11680)
+        acquisitionDate: "2018-06-01", // 2017.8.3 이후(경과규정 비적용)
+        residenceInputMode: "direct",
+        residencePeriodMonthsAsset: "12", // 1년 < 2년
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2021-06-01",
+    );
+    await expect(page.getByText(MSG2)).toBeVisible({ timeout: 15000 });
+  });
+
+  test("취득조정 + 거주 24개월 → 메시지② 미노출", async ({ page }) => {
+    await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900",
+        acquisitionDate: "2018-06-01",
+        residenceInputMode: "direct",
+        residencePeriodMonthsAsset: "24", // 2년 충족
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2021-06-01",
+    );
+    // 보유 상황 진입 확인 후 메시지② 없음
+    await expect(page.getByText("조정대상지역 자동 판별")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(MSG2)).toHaveCount(0);
   });
 });

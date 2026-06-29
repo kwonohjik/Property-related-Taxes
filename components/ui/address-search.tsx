@@ -310,11 +310,6 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
               {value.building && (
                 <p className="text-xs text-muted-foreground">🏢 {value.building}</p>
               )}
-              {value.lng && value.lat && (
-                <p className="text-[10px] text-muted-foreground tabular-nums">
-                  좌표: {Number(value.lng).toFixed(6)}, {Number(value.lat).toFixed(6)}
-                </p>
-              )}
             </div>
             <button
               type="button"

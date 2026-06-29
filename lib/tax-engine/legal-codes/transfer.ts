@@ -421,6 +421,17 @@ export const EXEMPTION_PROVISO_CONST = {
 } as const;
 
 /**
+ * §154① 본문 — 취득 당시 조정대상지역 1세대1주택 비과세 거주요건 (단일 소스).
+ * 2017.8.3(8·2 대책, 대통령령 제28293호) 이후 취득 + 취득 당시 조정대상지역이면 거주 2년.
+ * transfer-rate-seed(엔진 rule)·Step4 거주요건 안내 메시지(UI)가 모두 이 상수를 참조 — dual-truth 방지.
+ */
+export const ONE_HOUSE_RESIDENCE = {
+  regulatedAreaMinResidenceYears: 2,
+  prePolicyDate: "2017-08-03",
+  prePolicyExemptResidence: true,
+} as const;
+
+/**
  * 다주택자 양도소득세 중과 한시적 배제 윈도우.
  * 근거: 조세특례제한법 시행령 §167조의3 (대통령령 제32672호, 2022-05-31 개정)
  *      → 2022-05-10 ~ 2024-05-09 사이 양도 시 일반 누진세율 적용.

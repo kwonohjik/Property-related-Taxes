@@ -73,3 +73,21 @@ export function sumResidenceMonths(
     return sum + diffMonthsClamped(p.moveInDate, p.moveOutDate);
   }, 0);
 }
+
+/**
+ * 거주기간 개월수 도출 — API 변환(transfer-tax-api)·UI 거주요건 안내 메시지(Step4) 공용(단일 진실).
+ * interval 모드 + 구간 입력 있으면 합산, 아니면 자산 직접입력 또는 form-global fallback.
+ */
+export function deriveResidencePeriodMonths(
+  primary: {
+    residenceInputMode: "interval" | "direct";
+    residencePeriods: ResidencePeriod[];
+    residencePeriodMonthsAsset: string;
+  },
+  transferDate: string,
+  formFallbackMonths: string,
+): number {
+  return primary.residenceInputMode === "interval" && primary.residencePeriods.length > 0
+    ? sumResidenceMonths(primary.residencePeriods, transferDate)
+    : parseInt(primary.residencePeriodMonthsAsset || formFallbackMonths) || 0;
+}
