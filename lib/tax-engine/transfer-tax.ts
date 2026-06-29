@@ -738,6 +738,8 @@ export function calculateTransferTax(
     usedEstimatedAcquisition: usedEstimated,
     estimatedBase: usedEstimated ? estimatedBase : undefined,
     estimatedDeduction: usedEstimated ? estimatedDeduction : undefined,
+    estimatedStdPriceAtAcquisition: effectiveInput.useEstimatedAcquisition && !splitDetail ? effectiveInput.standardPriceAtAcquisition : undefined,
+    estimatedStdPriceAtTransfer: effectiveInput.useEstimatedAcquisition && !splitDetail ? effectiveInput.standardPriceAtTransfer : undefined,
     expenses: appliedExpenses,
     swapApplied,
     swapComparison,

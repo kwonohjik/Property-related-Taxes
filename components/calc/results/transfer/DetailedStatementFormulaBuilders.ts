@@ -479,3 +479,59 @@ export function setAggregateProcedureItems(
     });
   }
 }
+
+/**
+ * 취득가액 산식 — 단건은 실제 변수값(양도차익 항목과 동일 표기), 다건은 자산별 합계 요약.
+ * 환산취득가 모드는 기준시가 비율식까지 풀어쓰되, 기준시가 echo가 없는
+ * 감정가액·매매사례가액 모드는 추계 취득가액만 표시(비율식 부적용).
+ */
+export function buildAcquisitionPriceFormula(
+  result: TransferTaxResult,
+  isAggregate: boolean,
+  totalTransferPrice: number,
+  singleAcq: number,
+  capEx: number,
+): string {
+  const capExStr = capEx > 0 ? ` + 자본적지출 ${capEx.toLocaleString()}` : "";
+  if (isAggregate) {
+    return result.usedEstimatedAcquisition
+      ? "자산별 환산취득가 합계 — 시행령 §163·§176의2②"
+      : "자산별 실제 거래가액 합계 (자본적지출 §97① 가목 합산)";
+  }
+  if (result.usedEstimatedAcquisition) {
+    const estBase = (result.estimatedBase ?? 0).toLocaleString();
+    const stdAcq = result.estimatedStdPriceAtAcquisition;
+    const stdTransfer = result.estimatedStdPriceAtTransfer;
+    return stdAcq != null && stdTransfer != null
+      ? `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × (취득시 기준시가 ${stdAcq.toLocaleString()} ÷ 양도시 기준시가 ${stdTransfer.toLocaleString()})${capExStr} — 시행령 §163·§176의2②`
+      : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2`;
+  }
+  return `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
+}
+
+/**
+ * 필요경비 산식 — 단건은 실제 변수값. 환산모드 본문은 개산공제(취득시 기준시가 × 3%),
+ * §97② 단서 swap 시 직접경비(양도비), 실거래는 양도비 합계.
+ */
+export function buildNecessaryExpenseFormula(
+  result: TransferTaxResult,
+  isAggregate: boolean,
+  singleExp: number,
+): string {
+  if (isAggregate) {
+    return result.usedEstimatedAcquisition
+      ? "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥"
+      : "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목";
+  }
+  if (result.usedEstimatedAcquisition) {
+    if (result.swapApplied) {
+      return `양도비 ${singleExp.toLocaleString()} (§97② 단서 적용 — 자본적지출은 취득가액에 합산 표시)`;
+    }
+    const ded = (result.estimatedDeduction ?? 0).toLocaleString();
+    const stdAcq = result.estimatedStdPriceAtAcquisition;
+    return stdAcq != null
+      ? `개산공제 ${ded} = 취득시 기준시가 ${stdAcq.toLocaleString()} × 3% — 소득세법 §97① 나목·시행령 §163⑥`
+      : `개산공제 ${ded} (취득시 기준시가 × 3%) — §97① 나목·시행령 §163⑥`;
+  }
+  return `양도비 ${singleExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
+}
