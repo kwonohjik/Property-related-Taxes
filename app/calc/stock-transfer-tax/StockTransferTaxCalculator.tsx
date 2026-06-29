@@ -19,6 +19,7 @@ import { Step2 } from "./steps/Step2";
 import { Step3 } from "./steps/Step3";
 import { Step4 } from "./steps/Step4";
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
+import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { callStockTransferTaxAPI } from "@/lib/calc/stock-transfer-tax-api";
 import { validateStep1, validateStep2, validateStep3 } from "@/lib/calc/stock-transfer-tax-validate";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
@@ -44,6 +45,8 @@ export default function StockTransferTaxCalculator() {
 
   const { setStep, updateFormData, setResult, setError, setLoading, reset } =
     useStockTransferStore();
+  // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
+  useResetOnNewParam(reset);
 
   const { activeClientId } = useProfessionalStore();
 

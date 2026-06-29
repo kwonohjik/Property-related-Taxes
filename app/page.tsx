@@ -63,21 +63,21 @@ const TONE_STYLE: Record<Tone, { card: string; chip: string; title: string }> = 
 
 const MENU = [
   {
-    href: "/calc/transfer-tax",
+    href: "/calc/transfer-tax?new=1",
     title: "양도소득세",
     subtitle: "부동산 매도 양도차익 과세",
     icon: "🏠",
     tone: "sky",
   },
   {
-    href: "/calc/transfer-tax/multi",
+    href: "/calc/transfer-tax/multi?new=1",
     title: "양도소득세 (다건)",
     subtitle: "복수 양도 연간 합산·차손 통산",
     icon: "🏘️",
     tone: "cyan",
   },
   {
-    href: "/calc/stock-transfer-tax",
+    href: "/calc/stock-transfer-tax?new=1",
     title: "주식 양도소득세",
     subtitle: "상장·비상장 대주주 판정",
     icon: "📈",
@@ -119,7 +119,7 @@ const MENU = [
     tone: "indigo",
   },
   {
-    href: "/calc/comprehensive-tax",
+    href: "/calc/comprehensive-tax?new=1",
     title: "종합부동산세",
     subtitle: "기준 초과 보유자 국세",
     icon: "🏛️",
@@ -133,7 +133,7 @@ const MENU = [
     tone: "cyan",
   },
   {
-    href: "/tools/stock-valuation",
+    href: "/tools/stock-valuation?new=1",
     title: "주식 평가",
     subtitle: "상장·비상장주식 보충적 평가",
     icon: "📊",

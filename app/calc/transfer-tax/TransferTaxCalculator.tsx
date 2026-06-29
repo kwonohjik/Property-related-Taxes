@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { useCalcWizardStore, createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { useMultiTransferStore, generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
@@ -56,6 +57,8 @@ export default function TransferTaxCalculator({
   const STEPS = STEPS_SINGLE;
   const { currentStep, formData, result, setStep, updateFormData, setResult, reset } =
     useCalcWizardStore();
+  // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
+  useResetOnNewParam(reset);
   // API·계산 오류 (단건 메시지). 검증 오류는 issues 배열로 일괄 표시.
   const [error, setError] = useState<string | null>(null);
   // 검증 오류 일괄 목록 — 한 단계의 모든 차단 오류를 한 번에 표시 (두더지잡기 제거)
