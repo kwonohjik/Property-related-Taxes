@@ -17,7 +17,8 @@ test.describe("양도세 P5", () => {
     // ── Step4 보유 상황: 2채 선택 → 모드 2 섹션 노출 ──
     await page.getByRole("button", { name: "보유 상황" }).click();
     await page.getByRole("button", { name: "2채" }).click();
-    const modeToggle = page.getByText("조특법 감면주택 보유 — 주택 수 제외", { exact: false }).first();
+    // ToggleCard 토글은 role=switch 로 조작 (제목 텍스트 클릭은 Radix Switch onCheckedChange 미발화)
+    const modeToggle = page.getByRole("switch", { name: /조특법 감면주택 보유/ });
     await expect(modeToggle).toBeVisible();
     await modeToggle.click();
     await expect(page.getByText("보유 감면주택 1", { exact: false }).first()).toBeVisible();

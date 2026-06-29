@@ -10,6 +10,7 @@
  * 실행: E2E_PORT=3002 npx playwright test e2e/transfer-nbl-revenue-autofetch.spec.ts
  */
 import { test, expect } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 test.describe("§168의11② 수입금액비율 — 토지가액 자동조회 버튼 노출", () => {
   test("기타 토지 + 업종 선택 시 자동조회 버튼이 보인다", async ({ page }) => {
@@ -20,6 +21,9 @@ test.describe("§168의11② 수입금액비율 — 토지가액 자동조회 �
     await page.getByLabel("연도", { exact: true }).first().fill("2026");
     await page.getByLabel("월", { exact: true }).first().fill("02");
     await page.getByLabel("일", { exact: true }).first().fill("18");
+
+    // 점진적 노출 — 기본정보(①) 펼침 (자산종류·성격·면적). NBL 판정은 보유 상황(Step4)이라 비접힘.
+    await expandAssetSection(page, 1);
 
     // 자산: 토지·농지 → 독립 나대지
     await page.getByRole("button", { name: "토지·농지" }).click();

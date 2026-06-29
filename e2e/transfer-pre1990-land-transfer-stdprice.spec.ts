@@ -11,6 +11,7 @@
  * pre1990 입력 흐름 셀렉터는 probe로 실측 확정.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 function getInputByLabel(page: Page, labelText: string) {
   return page.locator(`label:has-text("${labelText}")`).locator("xpath=..").locator("input");
@@ -28,6 +29,11 @@ test.describe("1990.8.30 이전 취득 토지 환산 — 양도시 기준시가"
     await page.getByLabel("연도", { exact: true }).nth(1).fill("2026");
     await page.getByLabel("월", { exact: true }).nth(1).fill("04");
     await page.getByLabel("일", { exact: true }).nth(1).fill("30");
+
+    // 점진적 노출(전부 접힘) — 입력할 섹션 펼침: ① 기본 / ② 양도 / ③ 취득
+    await expandAssetSection(page, 1);
+    await expandAssetSection(page, 2);
+    await expandAssetSection(page, 3);
 
     // 토지·농지 → 독립 나대지 → 면적 2417 → 양도가액 20억
     await page.getByRole("button", { name: "토지·농지" }).click();

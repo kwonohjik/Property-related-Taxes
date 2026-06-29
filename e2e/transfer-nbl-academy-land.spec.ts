@@ -30,6 +30,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 /** CurrencyInput(htmlFor 연결 없음) → label 부모 div 탐색 후 input 반환 */
 function getInputByLabel(page: Page, labelText: string) {
@@ -60,6 +61,12 @@ test.describe("인천 중구 내동 6-20 학원용 토지 환산취득가액", (
     await page.getByLabel("연도", { exact: true }).nth(1).fill("2026");
     await page.getByLabel("월", { exact: true }).nth(1).fill("04");
     await page.getByLabel("일", { exact: true }).nth(1).fill("30");
+
+    // 점진적 노출 — 기본정보(①)·양도정보(②)·취득정보(③)·필요경비(④ 자본적지출) 펼침
+    await expandAssetSection(page, 1);
+    await expandAssetSection(page, 2);
+    await expandAssetSection(page, 3);
+    await expandAssetSection(page, 4);
 
     // ─── 자산 카드: 토지·농지 선택 ──────────────────────────────────
     await page.getByRole("button", { name: "토지·농지" }).click();

@@ -10,6 +10,7 @@
  * ⚠️ stale 서버 주의 — lsof -ti :3101 | xargs kill 후 실행.
  */
 import { test, expect } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 test.describe("양도세 매매사례가액 추계(§176의2③1호)", () => {
   test("매매사례가액 모드 — 섹션 노출 + 자동조회 disabled 안내 + 수동 입력", async ({
@@ -19,6 +20,8 @@ test.describe("양도세 매매사례가액 추계(§176의2③1호)", () => {
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
     const card = page.locator('[data-asset-card-index="0"]');
+    // 점진적 노출 — 취득정보(③) 펼침 (취득가액 산정방식 선택자가 ③ 안)
+    await expandAssetSection(page, 3);
 
     // 취득가액 산정 방식: "매매사례가액" 모드 버튼 클릭
     await card.getByRole("button", { name: /매매사례가액/ }).first().click();

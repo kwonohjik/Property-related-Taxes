@@ -10,6 +10,7 @@
  * 실행: E2E_PORT=3003 npx playwright test e2e/transfer-nbl-revenue-deemed-common.spec.ts
  */
 import { test, expect, type Page, type Locator } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 /** FieldCard/CurrencyInput 라벨 → 내부 input (scope 한정 가능) */
 function inputByLabel(scope: Page | Locator, labelText: string): Locator {
@@ -29,6 +30,11 @@ test.describe("§168의11③1·2호 간주임대료·공통수입 안분 — 풀
     await page.getByLabel("연도", { exact: true }).first().fill("2026");
     await page.getByLabel("월", { exact: true }).first().fill("02");
     await page.getByLabel("일", { exact: true }).first().fill("18");
+
+    // 점진적 노출 — 기본정보(①)·양도정보(②)·취득정보(③) 펼침
+    await expandAssetSection(page, 1);
+    await expandAssetSection(page, 2);
+    await expandAssetSection(page, 3);
 
     // 자산: 토지·농지 → 독립 나대지 → 면적
     await page.getByRole("button", { name: "토지·농지" }).click();

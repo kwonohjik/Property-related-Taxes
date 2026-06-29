@@ -9,6 +9,7 @@
  * ⚠️ stale 서버 주의 — lsof -ti :3102 | xargs kill 후 실행.
  */
 import { test, expect } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 test.describe("양도세 입력 오류 예방", () => {
   test("오류 일괄 표시 — 빈 폼에서 다음 클릭 시 오류 목록 + 건수 헤더", async ({ page }) => {
@@ -36,6 +37,8 @@ test.describe("양도세 입력 오류 예방", () => {
     // 자산 카드 취득일을 양도일과 동일하게 입력 (자산 카드 내 DateInput)
     // getByLabel("일")은 토글 스위치 라벨("…일…" 포함)에 오매칭 — textbox role로 한정
     const card = page.locator('[data-asset-card-index="0"]');
+    // 점진적 노출 — 취득일(③) 펼침
+    await expandAssetSection(page, 3);
     await card.getByRole("textbox", { name: "연도" }).first().fill("2024");
     await card.getByRole("textbox", { name: "월" }).first().fill("06");
     await card.getByRole("textbox", { name: "일" }).first().fill("01");

@@ -14,6 +14,7 @@
  *   자산종류 → CompanionAssetCard 버튼 → getByRole("button", { name })
  */
 import { test, expect } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 test.describe("부담부증여 양도세 — 취득가액 산정방식 (K-4/K-5)", () => {
   test("시가 모드 → 취득방식 토글 노출 + K-5 환산/K-4 실지 조건부 UI", async ({ page }) => {
@@ -23,6 +24,9 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 (K-4/K-5)
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
     const card = page.locator('[data-asset-card-index="0"]');
+    // 점진적 노출 — 기본정보(① 자산종류)·양도정보(② 부담부증여·산정방식) 펼침
+    await expandAssetSection(page, 1);
+    await expandAssetSection(page, 2);
 
     // 자산 종류: 주택 (housing)
     await card.getByRole("button", { name: "주택", exact: true }).click();

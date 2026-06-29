@@ -7,6 +7,7 @@
  * worktree 실행: E2E_PORT=3100 npx playwright test e2e/transfer-result-no-detail-summary-table.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 function getInputByLabel(page: Page, labelText: string) {
   return page.locator(`label:has-text("${labelText}")`).locator("xpath=..").locator("input");
@@ -29,6 +30,10 @@ test("상세 내역 표 제거 후 신고서 양식·상세명세서·총 납부
   await year(1).fill("2024");
   await month(1).fill("08");
   await day(1).fill("31");
+
+  // 점진적 노출 — 양도정보(②)·취득정보(③) 펼침
+  await expandAssetSection(page, 2);
+  await expandAssetSection(page, 3);
 
   // 자산: 주택(기본) · 양도가액 1,500,000,000
   await getInputByLabel(page, "양도가액 (원)").first().fill("1500000000");

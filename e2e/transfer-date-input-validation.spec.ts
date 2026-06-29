@@ -8,6 +8,7 @@
  * worktree 실행: E2E_PORT=3100 npx playwright test e2e/transfer-date-input-validation.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 function getInputByLabel(page: Page, labelText: string) {
   return page.locator(`label:has-text("${labelText}")`).locator("xpath=..").locator("input");
@@ -24,6 +25,9 @@ const day = (p: Page, i: number) => p.getByRole("textbox", { name: "일", exact:
 
 async function fillBaseAsset(page: Page, acq: [string, string, string]) {
   // 자산: 주택(기본) · 양도가액 · 취득원인 매매 · 실지 취득가액 · 취득일
+  // 점진적 노출 — 양도정보(②)·취득정보(③) 펼침
+  await expandAssetSection(page, 2);
+  await expandAssetSection(page, 3);
   await getInputByLabel(page, "양도가액 (원)").first().fill("1500000000");
   await page.getByRole("button", { name: "매매", exact: true }).click();
   await year(page, 2).fill(acq[0]);

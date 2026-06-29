@@ -9,6 +9,7 @@
  * worktree 실행: E2E_PORT=3101 npx playwright test e2e/transfer-regulated-auto.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 /** 양도세 마법사를 Step4(보유 상황)로 진입시키고 assets[0]·양도일을 주입 */
 async function seedStep4(
@@ -160,6 +161,9 @@ test.describe("P2-b 소재지 검색 → regionCode 자동추출 → 자동판�
     });
     await page.reload();
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    // 점진적 노출 — 기본정보(① 소재지 검색) 펼침
+    await expandAssetSection(page, 1);
 
     // 자산 목록(step 0)에서 소재지 검색 → 결과 선택 (이 시점에 regionCode 추출됨)
     const addrInput = page.getByPlaceholder(ADDR_PLACEHOLDER);
