@@ -20,6 +20,7 @@
  *   ⚠️ stale 서버 주의 — lsof -ti :3102 | xargs kill 후 실행.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 /** 양도세 마법사 첫 화면(Step1) 도달 — 기본 자산 카드가 즉시 렌더됨 */
 async function gotoTransferStep1(page: Page) {
@@ -27,6 +28,8 @@ async function gotoTransferStep1(page: Page) {
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   // 기본 단일 자산 카드(증여/상속 취득 원인 라디오 포함)가 렌더되어 있어야 함
   await expect(page.locator('[data-asset-card-index="0"]')).toBeVisible();
+  // 점진적 노출 — 취득정보(③ 취득원인 라디오·법조문 배지) 펼침
+  await expandAssetSection(page, 3);
 }
 
 test.describe("양도세 계산 마법사 법조문 링크 → 조문 팝업", () => {

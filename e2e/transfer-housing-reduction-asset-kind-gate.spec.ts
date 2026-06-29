@@ -8,6 +8,7 @@
  * worktree 실행: E2E_PORT=3100 npx playwright test e2e/transfer-housing-reduction-asset-kind-gate.spec.ts
  */
 import { test, expect } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 const GATE_REASON = "주택 양도에만 적용";
 
@@ -17,6 +18,8 @@ async function gotoReductionStep(page: import("@playwright/test").Page) {
   await page.getByLabel("연도").first().fill("2024");
   await page.getByLabel("월").first().fill("06");
   await page.getByLabel("일").first().fill("01");
+  // 점진적 노출 — 자산 종류 라디오가 기본정보(①) 안
+  await expandAssetSection(page, 1);
 }
 
 test.describe("주택 감면 자산 종류 게이트", () => {
