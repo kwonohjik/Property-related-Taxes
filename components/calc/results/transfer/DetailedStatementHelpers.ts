@@ -27,6 +27,8 @@ import {
   buildGbAcquisitionFormula,
   buildGbExpenseFormula,
   buildSubGainFormula,
+  buildAcquisitionPriceFormula,
+  buildNecessaryExpenseFormula,
   buildTaxableGainFormula,
   buildLthFormula,
   buildIncomeFormula,
@@ -346,21 +348,24 @@ export function buildStatementItems(
         0,
       )
     : 0;
+  const capEx = result.capitalExpenditureForDisplay ?? 0;
   const singleAcq = result.usedEstimatedAcquisition
-    ? (result.estimatedBase ?? 0) + (result.capitalExpenditureForDisplay ?? 0)
-    : (totalTransferPrice - result.transferGain - (result.expenses ?? 0)) +
-      (result.capitalExpenditureForDisplay ?? 0);
+    ? (result.estimatedBase ?? 0) + capEx
+    : totalTransferPrice - result.transferGain - (result.expenses ?? 0) + capEx;
+  // 단건: 실제 변수값을 풀어쓴 산식 (양도차익 항목과 동일 표기). 다건은 자산별 perAsset이 담당.
+  const acqFormula = buildAcquisitionPriceFormula(
+    result,
+    isAggregate,
+    totalTransferPrice,
+    singleAcq,
+    capEx,
+  );
 
   items.set("acquisitionPrice", {
     label: "취득가액",
     value: isAggregate ? sumAcq : singleAcq,
-    formula: result.usedEstimatedAcquisition
-      ? "환산취득가 = 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가) — §163·시행령 §176의2②"
-      : "실제 거래가액 (자본적지출 §97① 가목 합산 표시)",
+    formula: acqFormula,
     legalBasis: "소득세법 §97 / 시행령 §163·§176의2",
-    note: result.usedEstimatedAcquisition && result.estimatedBase
-      ? `환산취득가 ${result.estimatedBase.toLocaleString()} + 자본적지출 ${(result.capitalExpenditureForDisplay ?? 0).toLocaleString()}`
-      : undefined,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
@@ -377,17 +382,16 @@ export function buildStatementItems(
         0,
       )
     : 0;
-  const singleExp = Math.max(
-    0,
-    (result.expenses ?? 0) - (result.capitalExpenditureForDisplay ?? 0),
-  ) + (result.usedEstimatedAcquisition ? (result.estimatedDeduction ?? 0) : 0);
+  // 환산모드 본문에서 result.expenses 는 이미 개산공제(estimatedDeduction)만 담는다
+  // (transfer-tax-helpers calcNecessaryExpense). 개산공제를 별도로 다시 더하면 이중 계산이므로
+  // 신고서 양식 표시는 자본적지출만 분리: 필요경비 = expenses − capitalExpenditureForDisplay.
+  const singleExp = Math.max(0, (result.expenses ?? 0) - capEx);
+  const expFormula = buildNecessaryExpenseFormula(result, isAggregate, singleExp);
 
   items.set("expenses", {
     label: "필요경비",
     value: isAggregate ? sumExp : singleExp,
-    formula: result.usedEstimatedAcquisition
-      ? "개산공제 (취득시 기준시가 × 3%) + 양도비 — §97① 나목·시행령 §163⑥"
-      : "양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목",
+    formula: expFormula,
     legalBasis: "소득세법 §97 / 시행령 §163⑥",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(

@@ -53,6 +53,14 @@ export interface TransferTaxResult {
   estimatedBase?: number;
   /** 개산공제액 (취득시 기준시가 × 3%) — 환산/감정가액 모드에서만 */
   estimatedDeduction?: number;
+  /**
+   * [echo] 환산취득가 산정에 쓰인 취득시 기준시가. 결과 산식 표시 전용 (계산 로직 불변).
+   * 환산취득가 모드(useEstimatedAcquisition)이고 토지/건물 분리(split) 아닐 때만 부착.
+   * 감정가액·매매사례가액 모드는 비율 산식이 아니므로 미부착.
+   */
+  estimatedStdPriceAtAcquisition?: number;
+  /** [echo] 환산취득가 산정에 쓰인 양도시 기준시가. 결과 산식 표시 전용. */
+  estimatedStdPriceAtTransfer?: number;
   /** 엔진이 실제 차감한 필요경비 합계 (자본적지출+양도비, swap 적용 후). 신고서 양식 분리 표시용 */
   expenses?: number;
   /** §97② 단서 swap 발동 여부 (환산/감정가액 모드 + 자본+양도비 > 환산+개산공제) */
