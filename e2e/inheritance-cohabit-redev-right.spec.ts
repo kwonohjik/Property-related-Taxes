@@ -7,7 +7,7 @@
  * 서버: E2E_PORT 환경변수 또는 기본 3000
  */
 import { test, expect, type Page } from "@playwright/test";
-import { addHeir } from "./_helpers/tax-flow";
+import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
 const PORT = process.env.E2E_PORT ?? "3000";
 const BASE = `http://localhost:${PORT}`;
@@ -24,11 +24,12 @@ async function setupCohabitApartmentWithChild(page: Page) {
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("1");
 
-  // 자녀 추가
-  await addHeir(page, "heir", "child");
+  // 자녀 추가 — 동거 토글이 "상속인 편집" 모달 안 → 모달 유지
+  await addHeir(page, "heir", "child", { keepModalOpen: true });
 
-  // 동거주택 상속공제 해당 (isCohabitant) 토글 ON — 동거주택 토글 활성화 조건
-  await page.getByText("동거주택 상속공제 해당").click();
+  // 동거주택 상속공제 해당 (isCohabitant) 토글 ON (모달 안, role=switch)
+  await page.getByRole("switch", { name: /동거주택 상속공제 해당/ }).click();
+  await closeHeirEditModal(page);
 
   // Step0 → Step1
   await page.getByRole("button", { name: /^다음/ }).click();
@@ -44,7 +45,8 @@ async function setupCohabitApartmentWithChild(page: Page) {
 
   // 담보·임대 섹션 토글 ON → 동거주택 공제 대상 토글 ON (2026-06-09 토글 전환)
   await page.getByRole("switch", { name: /담보·임대/ }).click();
-  await page.getByText("동거주택 공제 대상 (§23의2)").click();
+  // role=switch (getByText는 §23의2 법령 배지 클릭→모달). 자산 모달은 유지(자산 유형 radio 상호작용).
+  await page.getByRole("switch", { name: /동거주택 공제 대상/ }).click();
 
   // RadioCardGroup이 노출되는지 확인 (자산 유형 선택 섹션)
   await expect(

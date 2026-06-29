@@ -14,6 +14,7 @@ import {
   nextSteps,
   calcAndWaitResult,
   addHeir,
+  closeHeirEditModal,
 } from "./_helpers/tax-flow";
 
 /** Step0: 상속개시일(year) + 동거 자녀 1명 → Step1: 아파트 8억 + 동거주택 체크 → 계산 → 공제 상세 펼침 */
@@ -21,9 +22,10 @@ async function calcWithCohabitHouse(page: Page, year: string) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year, month: "6", day: "1" });
 
-  await addHeir(page, "heir", "child");
-  // 자녀 동거(isCohabitant) — §23의2 게이팅 충족
-  await page.getByText("동거주택 상속공제 해당").click();
+  await addHeir(page, "heir", "child", { keepModalOpen: true });
+  // 자녀 동거(isCohabitant) — §23의2 게이팅 충족 (모달 안 토글, role=switch)
+  await page.getByRole("switch", { name: /동거주택 상속공제 해당/ }).click();
+  await closeHeirEditModal(page);
 
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
@@ -36,7 +38,11 @@ async function calcWithCohabitHouse(page: Page, year: string) {
 
   // 담보·임대 섹션 토글 ON → 동거주택 공제 대상 체크 (2026-06-09 토글 전환)
   await page.getByRole("switch", { name: /담보·임대/ }).click();
-  await page.getByText("동거주택 공제 대상 (§23의2)").click();
+  // role=switch (getByText는 §23의2 법령 배지 클릭→모달). 이후 자산 "주택 편집" 모달 닫기.
+  await page.getByRole("switch", { name: /동거주택 공제 대상/ }).click();
+  const assetDialog = page.getByRole("dialog");
+  await assetDialog.getByRole("button", { name: "닫기" }).click();
+  await expect(assetDialog).toBeHidden();
 
   // Step1 → 2 → 3 → 4
   await nextSteps(page, 3);
