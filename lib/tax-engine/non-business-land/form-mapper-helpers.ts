@@ -19,6 +19,7 @@ import type {
 } from "./types";
 import type { NblRevenueBusinessType } from "../legal-codes";
 import { deriveCurrentBusinessDays } from "./revenue-test";
+import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
 
 // ============================================================
 // Raw 입력 타입 (store 필드 그대로)
@@ -285,6 +286,14 @@ export function buildRevenueTest(
 
   // 직전 과세기간 영위일수 — 직접 입력(직전연도 중 개시·폐업 시). 미입력 시 직전 환산 안 함.
   const priorBusinessDays = parseNumber(asString(a.nblRevenuePriorBusinessDays));
+  const priorTaxYear = currentTaxYear - 1;
+
+  // §168의11③1호 간주임대료율 — 연도별 테이블에서 해소(미검증 연도면 undefined → 엔진 경고)
+  const curRate = resolveDeemedRentRate(transferDate);
+  const priorRate = resolveDeemedRentRate(priorTaxYear);
+
+  // §168의11③2호 공통수입 안분 — 토글 ON 시에만 매핑
+  const commonOn = asBool(a.nblRevenueCommonApportion);
 
   return {
     businessType:     bt as NblRevenueBusinessType,
@@ -295,6 +304,18 @@ export function buildRevenueTest(
     priorRevenue:     parseNumber(asString(a.nblRevenuePriorRevenue)),
     priorLandValue:   parseNumber(asString(a.nblRevenuePriorLandValue)),
     priorBusinessDays,
-    priorTaxYear:     priorBusinessDays !== undefined ? currentTaxYear - 1 : undefined,
+    priorTaxYear,
+    // §168의11③1호 간주임대료
+    currentDeposit:   parseNumber(asString(a.nblRevenueCurrentDeposit)),
+    currentRentDays:  parseNumber(asString(a.nblRevenueCurrentRentDays)),
+    currentDeemedRate: curRate ? { num: curRate.rateNum, den: curRate.rateDen } : undefined,
+    priorDeposit:     parseNumber(asString(a.nblRevenuePriorDeposit)),
+    priorRentDays:    parseNumber(asString(a.nblRevenuePriorRentDays)),
+    priorDeemedRate:  priorRate ? { num: priorRate.rateNum, den: priorRate.rateDen } : undefined,
+    // §168의11③2호 공통수입 안분 (토글 ON)
+    commonRevenue:      commonOn ? parseNumber(asString(a.nblRevenueCommonRevenue)) : undefined,
+    otherLandValue:     commonOn ? parseNumber(asString(a.nblRevenueOtherLandValue)) : undefined,
+    priorCommonRevenue: commonOn ? parseNumber(asString(a.nblRevenuePriorCommonRevenue)) : undefined,
+    priorOtherLandValue: commonOn ? parseNumber(asString(a.nblRevenuePriorOtherLandValue)) : undefined,
   };
 }

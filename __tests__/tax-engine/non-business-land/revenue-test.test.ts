@@ -241,4 +241,94 @@ describe("[NBL-REVENUE] §168의11② 수입금액비율", () => {
     expect(r.revenueTestDetail?.pass).toBe(true);
     expect(r.isNonBusinessLand).toBe(false);
   });
+
+  // ── §168의11③1호 간주임대료 (Pre-Do anchor) ──────────────────────
+  it("D1 간주임대료 — 보증금 10억·임대 365일·2026·31/1000 → 간주 31,000,000", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "parking_operation",
+        currentRevenue: 0,
+        currentLandValue: 1_000_000_000,
+        currentDeposit: 1_000_000_000,
+        currentRentDays: 365,
+        currentTaxYear: 2026,
+        currentDeemedRate: { num: 31, den: 1000 },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.revenueTestDetail?.deemedRentCurrent).toBe(31_000_000);
+    expect(r.revenueTestDetail?.annualizedCurrentRevenue).toBe(31_000_000); // 직접0 + 간주
+    expect(r.revenueTestDetail?.ratioCurrent).toBeCloseTo(0.031, 5);
+    expect(r.revenueTestDetail?.pass).toBe(true);
+  });
+
+  it("D1b 간주 + 연환산 결합 — 임대183·영위183·2026 → 이중 floor 30,999,998", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "parking_operation",
+        currentRevenue: 0,
+        currentLandValue: 1_000_000_000,
+        currentDeposit: 1_000_000_000,
+        currentRentDays: 183,
+        currentTaxYear: 2026,
+        currentDeemedRate: { num: 31, den: 1000 },
+        currentBusinessDays: 183,
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.revenueTestDetail?.deemedRentCurrent).toBe(15_542_465); // 원 단위 floor
+    expect(r.revenueTestDetail?.annualizedCurrentRevenue).toBe(30_999_998); // 환산 floor
+  });
+
+  it("D2 윤년 — 임대366·2024(366)·31/1000 → 간주 31,000,000 (연일수 약분)", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "parking_operation",
+        currentRevenue: 0,
+        currentLandValue: 1_000_000_000,
+        currentDeposit: 1_000_000_000,
+        currentRentDays: 366,
+        currentTaxYear: 2024,
+        currentDeemedRate: { num: 31, den: 1000 },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.revenueTestDetail?.deemedRentCurrent).toBe(31_000_000);
+  });
+
+  // ── §168의11③2호 공통수입 안분 (Pre-Do anchor) ────────────────────
+  it("E1 당해 공통수입 안분 — 공통 1억 × 6억/(6억+4억) = 60,000,000", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "vehicle_repair_academy",
+        currentRevenue: 0,
+        currentLandValue: 600_000_000,
+        commonRevenue: 100_000_000,
+        otherLandValue: 400_000_000,
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.revenueTestDetail?.commonApportionedCurrent).toBe(60_000_000);
+    expect(r.revenueTestDetail?.annualizedCurrentRevenue).toBe(60_000_000);
+    expect(r.revenueTestDetail?.ratioCurrent).toBeCloseTo(0.1, 5); // 60M/600M
+    expect(r.revenueTestDetail?.pass).toBe(true); // 0.10 ≥ 0.10
+  });
+
+  it("E2 직전 공통수입 안분 — 직전 공통 8천만 × 5억/(5억+5억) = 40,000,000 → ②", () => {
+    const r = judgeNonBusinessLand(
+      otherLandInput({
+        businessType: "vehicle_repair_academy",
+        currentRevenue: 40_000_000,
+        currentLandValue: 1_000_000_000,
+        priorRevenue: 0,
+        priorLandValue: 500_000_000,
+        priorCommonRevenue: 80_000_000,
+        priorOtherLandValue: 500_000_000,
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.revenueTestDetail?.commonApportionedPrior).toBe(40_000_000);
+    // ② = (40,000,000 + 40,000,000) / (1,000,000,000 + 500,000,000) = 0.053333
+    expect(r.revenueTestDetail?.ratioCombined).toBeCloseTo(0.053333, 5);
+  });
 });

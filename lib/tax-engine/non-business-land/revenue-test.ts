@@ -12,6 +12,38 @@ import { differenceInCalendarDays, getDaysInYear } from "date-fns";
 
 import type { RevenueTestInput, RevenueTestResult } from "./types";
 import { getNblRevenueThreshold } from "../legal-codes";
+import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
+
+/**
+ * §168의11③1호 간주임대료 = floor(보증금 × 임대일수 × rate.num ÷ (rate.den × 그해일수)).
+ * 부가가치세법 시행령 §65① 산식 준용 (시행규칙 §47 정기예금이자율). 정수연산(BigInt overflow 가드).
+ * deposit·rentDays·rate 미제공이면 0.
+ */
+function computeDeemedRent(
+  deposit: number | undefined,
+  rentDays: number | undefined,
+  rate: { num: number; den: number } | undefined,
+  taxYear: number | undefined,
+): number {
+  if (!deposit || !rentDays || !rate || !taxYear) return 0;
+  const yearDays = getDaysInYear(new Date(taxYear, 0, 1)); // 365 / 366(윤년)
+  return safeMultiplyThenDivide(safeMultiply(deposit, rentDays), rate.num, rate.den * yearDays);
+}
+
+/**
+ * §168의11③2호 공통수입 안분 = floor(공통수입 × 당해토지가액 ÷ (당해토지가액 + 그밖의토지가액)).
+ * common·landValue 미제공/0이면 0.
+ */
+function computeCommonApportion(
+  common: number | undefined,
+  landValue: number,
+  otherLandValue: number | undefined,
+): number {
+  if (!common || landValue <= 0) return 0;
+  const denom = landValue + (otherLandValue ?? 0);
+  if (denom <= 0) return 0;
+  return safeMultiplyThenDivide(common, landValue, denom);
+}
 
 /**
  * 사업영위 일수 (초일산입 inclusive). 매퍼·UI preview 공용 단일 진실.
@@ -64,22 +96,44 @@ function annualizeRevenue(
 export function computeRevenueTest(rt: RevenueTestInput): RevenueTestResult {
   const threshold = getNblRevenueThreshold(rt.businessType);
 
-  // §168의11③3호 연환산 (당해·직전 각각)
-  const annCurrent = annualizeRevenue(rt.currentRevenue, rt.currentBusinessDays, rt.currentTaxYear);
+  // §168의11③ 1과세기간 수입금액 = 직접 + 간주임대료(1호) + 공통수입 안분(2호) — 당해·직전 각각
+  const deemedRentCurrent = computeDeemedRent(rt.currentDeposit, rt.currentRentDays, rt.currentDeemedRate, rt.currentTaxYear);
+  const commonApportionedCurrent = computeCommonApportion(rt.commonRevenue, rt.currentLandValue, rt.otherLandValue);
+  const compositeCurrentRaw = rt.currentRevenue + deemedRentCurrent + commonApportionedCurrent;
+
+  const deemedRentPrior = computeDeemedRent(rt.priorDeposit, rt.priorRentDays, rt.priorDeemedRate, rt.priorTaxYear);
+  const commonApportionedPrior = computeCommonApportion(
+    rt.priorCommonRevenue,
+    rt.priorLandValue ?? 0,
+    rt.priorOtherLandValue,
+  );
+
+  // 간주임대료 입력 있으나 해당 연도 율 미검증 → 미적용(경고)
+  const deemedRateUnavailable =
+    (!!rt.currentDeposit && !!rt.currentRentDays && !rt.currentDeemedRate) ||
+    (!!rt.priorDeposit && !!rt.priorRentDays && !rt.priorDeemedRate);
+
+  // §168의11③3호 연환산 (1·2호 합산 후, 당해·직전 각각)
+  const annCurrent = annualizeRevenue(compositeCurrentRaw, rt.currentBusinessDays, rt.currentTaxYear);
   const currentRevenue = annCurrent.value;
 
+  // 직전 과세기간 — 직전 토지가액 제공 + 직전 데이터(수입·간주·공통 중 하나)가 있을 때만 ② 산정
+  const hasPrior =
+    rt.priorLandValue !== undefined &&
+    (rt.priorRevenue !== undefined || deemedRentPrior > 0 || commonApportionedPrior > 0);
   let annualizedPriorRevenue: number | undefined;
   let priorApplied = false;
-  if (rt.priorRevenue !== undefined) {
-    const annPrior = annualizeRevenue(rt.priorRevenue, rt.priorBusinessDays, rt.priorTaxYear);
+  if (hasPrior) {
+    const compositePriorRaw = (rt.priorRevenue ?? 0) + deemedRentPrior + commonApportionedPrior;
+    const annPrior = annualizeRevenue(compositePriorRaw, rt.priorBusinessDays, rt.priorTaxYear);
     annualizedPriorRevenue = annPrior.value;
     priorApplied = annPrior.applied;
   }
 
-  // 비율① 당해 과세기간 (연환산 수입)
+  // 비율① 당해 과세기간
   const ratioCurrent = rt.currentLandValue > 0 ? currentRevenue / rt.currentLandValue : 0;
 
-  // 비율② 당해+직전 (직전 제공 시)
+  // 비율② 당해+직전
   let ratioCombined: number | undefined;
   if (annualizedPriorRevenue !== undefined && rt.priorLandValue !== undefined) {
     const denom = rt.currentLandValue + rt.priorLandValue;
@@ -104,6 +158,11 @@ export function computeRevenueTest(rt: RevenueTestInput): RevenueTestResult {
     currentBusinessDays: rt.currentBusinessDays,
     priorBusinessDays: rt.priorBusinessDays,
     annualizationApplied,
+    deemedRentCurrent,
+    deemedRentPrior,
+    commonApportionedCurrent,
+    commonApportionedPrior,
+    deemedRateUnavailable,
     detail: pass
       ? `수입금액비율 ${pct(actualRatio)} ≥ 기준 ${pct(threshold)} → 사업용 인정`
       : `수입금액비율 ${pct(actualRatio)} < 기준 ${pct(threshold)} → 미충족`,

@@ -615,6 +615,50 @@ export function OtherLandDetailSection({
             <FieldCard label="직전 토지가액" unit="원">
               <CurrencyInput label="직전 토지가액" hideLabel hideUnit value={asset.nblRevenuePriorLandValue} onChange={(v) => onAssetChange({ nblRevenuePriorLandValue: v })} />
             </FieldCard>
+
+            {/* §168의11③1호 간주임대료 — 전세금·보증금 (부가세령 §65①·시행규칙 §47) */}
+            <div className="rounded-lg border border-violet-200 bg-violet-50/40 dark:bg-violet-950/20 dark:border-violet-800 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">임</span>
+                <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">전세금·보증금 간주임대료 (§168의11③1호)</p>
+                <LawArticleModal legalBasis="부가가치세법 시행령 §65①" label="간주임대료" />
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">전세·임대보증금이 있으면 정기예금이자율(부가세칙 §47, 현행 연 3.1%)로 환산한 간주임대료를 수입금액에 합산합니다. 입력 시에만 적용.</p>
+              <FieldCard label="당해 전세금·보증금" unit="원">
+                <CurrencyInput label="당해 보증금" hideLabel hideUnit value={asset.nblRevenueCurrentDeposit} onChange={(v) => onAssetChange({ nblRevenueCurrentDeposit: v })} />
+              </FieldCard>
+              <FieldCard label="당해 임대 과세대상기간" unit="일" hint="해당 보증금의 임대 일수. 미입력 시 간주임대료 미적용.">
+                <DecimalInput value={asset.nblRevenueCurrentRentDays} onChange={(v) => onAssetChange({ nblRevenueCurrentRentDays: v })} />
+              </FieldCard>
+              <FieldCard label="직전 전세금·보증금" unit="원">
+                <CurrencyInput label="직전 보증금" hideLabel hideUnit value={asset.nblRevenuePriorDeposit} onChange={(v) => onAssetChange({ nblRevenuePriorDeposit: v })} />
+              </FieldCard>
+              <FieldCard label="직전 임대 과세대상기간" unit="일">
+                <DecimalInput value={asset.nblRevenuePriorRentDays} onChange={(v) => onAssetChange({ nblRevenuePriorRentDays: v })} />
+              </FieldCard>
+            </div>
+
+            {/* §168의11③2호 공통수입 안분 */}
+            <ToggleCard
+              tone="violet"
+              title="공통수입 안분 (§168의11③2호)"
+              description="당해 토지와 그 밖의 토지에 공통으로 관련된 수입금액의 실지귀속을 구분할 수 없을 때, 토지가액 비율로 안분해 합산합니다."
+              checked={asset.nblRevenueCommonApportion}
+              onCheckedChange={(c) => onAssetChange({ nblRevenueCommonApportion: c })}
+            >
+              <FieldCard label="당해 공통수입금액" unit="원">
+                <CurrencyInput label="당해 공통수입금액" hideLabel hideUnit value={asset.nblRevenueCommonRevenue} onChange={(v) => onAssetChange({ nblRevenueCommonRevenue: v })} />
+              </FieldCard>
+              <FieldCard label="당해 그 밖의 토지가액" unit="원" hint="안분 분모 = 당해 토지가액 + 그 밖의 토지가액">
+                <CurrencyInput label="당해 그 밖의 토지가액" hideLabel hideUnit value={asset.nblRevenueOtherLandValue} onChange={(v) => onAssetChange({ nblRevenueOtherLandValue: v })} />
+              </FieldCard>
+              <FieldCard label="직전 공통수입금액" unit="원" hint="직전 과세기간도 공통수입이 있으면 입력(선택). 공통수입금액·그 밖의 토지가액을 함께 입력.">
+                <CurrencyInput label="직전 공통수입금액" hideLabel hideUnit value={asset.nblRevenuePriorCommonRevenue} onChange={(v) => onAssetChange({ nblRevenuePriorCommonRevenue: v })} />
+              </FieldCard>
+              <FieldCard label="직전 그 밖의 토지가액" unit="원">
+                <CurrencyInput label="직전 그 밖의 토지가액" hideLabel hideUnit value={asset.nblRevenuePriorOtherLandValue} onChange={(v) => onAssetChange({ nblRevenuePriorOtherLandValue: v })} />
+              </FieldCard>
+            </ToggleCard>
           </div>
         )}
       </div>
