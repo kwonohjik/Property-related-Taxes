@@ -250,6 +250,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblRevenueCurrentLandValue: "",
     nblRevenuePriorRevenue: "",
     nblRevenuePriorLandValue: "",
+    nblRevenueCurrentBusinessStartDate: "",
+    nblRevenuePriorBusinessDays: "",
     nblGracePeriods: [],
     nblBusinessIsRealEstateDealer: false,
     inheritanceMode: null,

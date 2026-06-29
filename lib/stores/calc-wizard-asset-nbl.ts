@@ -280,6 +280,8 @@ export const NBL_DEFAULTS = {
   nblRevenueCurrentLandValue: "",
   nblRevenuePriorRevenue: "",
   nblRevenuePriorLandValue: "",
+  nblRevenueCurrentBusinessStartDate: "",
+  nblRevenuePriorBusinessDays: "",
   nblGracePeriods: [] as NblGracePeriodInput[],
   // §83의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제) 게이트
   nblBusinessIsRealEstateDealer: false,

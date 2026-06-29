@@ -18,6 +18,7 @@ import type {
   RevenueTestInput,
 } from "./types";
 import type { NblRevenueBusinessType } from "../legal-codes";
+import { deriveCurrentBusinessDays } from "./revenue-test";
 
 // ============================================================
 // Raw 입력 타입 (store 필드 그대로)
@@ -258,20 +259,42 @@ export function buildOtherLand(
   };
 }
 
-/** §168의11② 수입금액비율 입력 (기타토지 + 업종 선택 시). 미선택/none이면 undefined. */
+/**
+ * §168의11② 수입금액비율 입력 (기타토지 + 업종 선택 시). 미선택/none이면 undefined.
+ * §168의11③3호 연환산용 당해 영위일수·과세연도를 양도일·취득일·사업개시일에서 도출.
+ */
 export function buildRevenueTest(
   a: Record<string, unknown>,
   landType: LandType,
   parseNumber: ParseNumber,
+  parseDate: ParseDate,
+  transferDate: Date,
+  acquisitionDate: Date,
 ): RevenueTestInput | undefined {
   if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
   const bt = asString(a.nblRevenueBusinessType);
   if (!bt || bt === "none") return undefined;
+
+  // 당해 영위일수·과세연도 (공유 헬퍼 — UI preview와 단일 진실)
+  const startOverride = parseDate(asString(a.nblRevenueCurrentBusinessStartDate));
+  const { days: currentBusinessDays, taxYear: currentTaxYear } = deriveCurrentBusinessDays(
+    transferDate,
+    acquisitionDate,
+    startOverride,
+  );
+
+  // 직전 과세기간 영위일수 — 직접 입력(직전연도 중 개시·폐업 시). 미입력 시 직전 환산 안 함.
+  const priorBusinessDays = parseNumber(asString(a.nblRevenuePriorBusinessDays));
+
   return {
     businessType:     bt as NblRevenueBusinessType,
     currentRevenue:   parseNumber(asString(a.nblRevenueCurrentRevenue)) ?? 0,
     currentLandValue: parseNumber(asString(a.nblRevenueCurrentLandValue)) ?? 0,
+    currentBusinessDays,
+    currentTaxYear,
     priorRevenue:     parseNumber(asString(a.nblRevenuePriorRevenue)),
     priorLandValue:   parseNumber(asString(a.nblRevenuePriorLandValue)),
+    priorBusinessDays,
+    priorTaxYear:     priorBusinessDays !== undefined ? currentTaxYear - 1 : undefined,
   };
 }

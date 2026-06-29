@@ -9,7 +9,12 @@ import { NblLandValueAutoFetchButton } from "./NblLandAutoFetch";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { useMemo } from "react";
+import { parseISO, getDaysInYear } from "date-fns";
+import { deriveCurrentBusinessDays, computeRevenueTest } from "@/lib/tax-engine/non-business-land/revenue-test";
+import type { NblRevenueBusinessType } from "@/lib/tax-engine/legal-codes";
 import {
   Select,
   SelectContent,
@@ -41,7 +46,7 @@ const RELATED_BUSINESS_OPTIONS: RadioCardOption<Exclude<RelatedBusinessType, "">
   { value: "resort", label: "휴양시설업 (6호)", description: "휴양시설업 합산 기준면적 직접입력", testId: "nbl-other-related-resort" },
   { value: "hatchang", label: "하치장·야적장·적치장 (7호)", description: "매년 최대 사용면적 × 120%까지 사업용", testId: "nbl-other-related-hatchang" },
   { value: "vacant_lot_1household", label: "무주택1세대 1필지 나지 (13호)", description: "660㎡ 이내까지 사업용 (고정)", testId: "nbl-other-related-vacant_lot" },
-  { value: "etc_14호", label: "기타 유사토지 (14호)", description: "제1~13호와 유사한 거주·사업관련 토지 (면적기준 없음)", testId: "nbl-other-related-etc14" },
+  { value: "etc_14호", label: "기타 거주 및 사업관련 토지", description: "제1~13호와 유사한 거주·사업관련 토지 (면적기준 없음)", testId: "nbl-other-related-etc14" },
 ];
 
 const AREA_LEGAL_BASIS: Partial<Record<Exclude<RelatedBusinessType, "">, { legalBasis: string; label: string }>> = {
@@ -139,6 +144,45 @@ export function OtherLandDetailSection({
   const reserveSizeLabel: string = RESERVE_SIZE_LABEL[asset.nblOtherReserveUnitSize] ?? "선택 안 함 (직접입력)";
   const sportsCategory = (asset.nblOtherSportsCategory || "workplace") as "workplace" | "business" | "employee";
   const sportsBasis = SPORTS_CATEGORY_BASIS[sportsCategory];
+
+  // §168의11③3호 당해 연환산 preview — 엔진 헬퍼 단일 진실 (재구현 금지)
+  const revenuePreview = useMemo(() => {
+    if (!asset.nblRevenueBusinessType || !transferDate || !asset.acquisitionDate) return undefined;
+    const rawCurrent = parseFloat((asset.nblRevenueCurrentRevenue || "0").replace(/,/g, "")) || 0;
+    if (rawCurrent <= 0) return undefined;
+    const transferObj = parseISO(transferDate);
+    const acqObj = parseISO(asset.acquisitionDate);
+    if (Number.isNaN(transferObj.getTime()) || Number.isNaN(acqObj.getTime())) return undefined;
+    const startOverride = asset.nblRevenueCurrentBusinessStartDate
+      ? parseISO(asset.nblRevenueCurrentBusinessStartDate)
+      : undefined;
+    const { days, taxYear } = deriveCurrentBusinessDays(
+      transferObj,
+      acqObj,
+      startOverride && !Number.isNaN(startOverride.getTime()) ? startOverride : undefined,
+    );
+    const res = computeRevenueTest({
+      businessType: asset.nblRevenueBusinessType as NblRevenueBusinessType,
+      currentRevenue: rawCurrent,
+      currentLandValue: parseFloat((asset.nblRevenueCurrentLandValue || "0").replace(/,/g, "")) || 0,
+      currentBusinessDays: days,
+      currentTaxYear: taxYear,
+    });
+    return {
+      days,
+      taxYear,
+      yearDays: getDaysInYear(new Date(taxYear, 0, 1)),
+      annualized: res.annualizedCurrentRevenue,
+      applied: res.annualizationApplied,
+    };
+  }, [
+    asset.nblRevenueBusinessType,
+    asset.nblRevenueCurrentRevenue,
+    asset.nblRevenueCurrentLandValue,
+    asset.nblRevenueCurrentBusinessStartDate,
+    asset.acquisitionDate,
+    transferDate,
+  ]);
 
   return (
     <div className="space-y-3">
@@ -523,9 +567,33 @@ export function OtherLandDetailSection({
 
         {asset.nblRevenueBusinessType && (
           <div className="space-y-2">
-            <FieldCard label="당해 과세기간 수입금액" unit="원">
+            <FieldCard label="당해 과세기간 수입금액" unit="원" hint="해당 기간 중 실제 수입금액(연환산 전). 양도일까지 1과세기간 미만 영위 시 아래에서 1년으로 환산됩니다.">
               <CurrencyInput label="당해 수입금액" hideLabel hideUnit value={asset.nblRevenueCurrentRevenue} onChange={(v) => onAssetChange({ nblRevenueCurrentRevenue: v })} />
             </FieldCard>
+
+            {/* §168의11③3호 당해 연환산 — 사업개시일(선택) + 영위일수·환산 preview */}
+            <div className="rounded-lg border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 dark:border-amber-800 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">연</span>
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">당해 과세기간 연환산 (§168의11③3호)</p>
+                <LawArticleModal legalBasis="소득세법 시행령 §168의11③" label="§168의11③" />
+              </div>
+              <FieldCard label="당해 사업개시일" hint="당해연도 중 사업을 개시한 경우만 입력. 미입력 시 과세기간개시일(1.1) 또는 당해연도 취득일을 기산일로 자동 적용.">
+                <DateInput value={asset.nblRevenueCurrentBusinessStartDate} onChange={(v) => onAssetChange({ nblRevenueCurrentBusinessStartDate: v })} />
+              </FieldCard>
+              {revenuePreview ? (
+                revenuePreview.applied ? (
+                  <div className="rounded-md bg-amber-100/60 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 space-y-0.5">
+                    <p>영위 {revenuePreview.days}일 ÷ {revenuePreview.taxYear}년 {revenuePreview.yearDays}일 환산</p>
+                    <p className="font-semibold">연간환산 수입금액 = {revenuePreview.annualized.toLocaleString()}원</p>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">영위 {revenuePreview.days}일 = {revenuePreview.taxYear}년 총일수 → 환산 없음(raw 그대로)</p>
+                )
+              ) : (
+                <p className="text-[11px] text-muted-foreground">당해 수입금액·양도일·취득일 입력 시 연환산 금액이 표시됩니다.</p>
+              )}
+            </div>
             <NblLandValueAutoFetchButton
               jibun={asset.addressJibun}
               area={parseFloat(asset.acquisitionArea || "0") || 0}
@@ -540,6 +608,9 @@ export function OtherLandDetailSection({
             </FieldCard>
             <FieldCard label="직전 과세기간 수입금액" unit="원" hint="입력 시 (당해+직전) 합산비율과 비교해 큰 값 적용 (§168의11②)">
               <CurrencyInput label="직전 수입금액" hideLabel hideUnit value={asset.nblRevenuePriorRevenue} onChange={(v) => onAssetChange({ nblRevenuePriorRevenue: v })} />
+            </FieldCard>
+            <FieldCard label="직전 과세기간 영위일수" unit="일" hint="직전연도 중 사업을 개시·폐업하여 영위기간이 1년 미만인 경우만 입력. 미입력 시 직전 수입금액은 연환산하지 않습니다 (§168의11③3호).">
+              <DecimalInput value={asset.nblRevenuePriorBusinessDays} onChange={(v) => onAssetChange({ nblRevenuePriorBusinessDays: v })} />
             </FieldCard>
             <FieldCard label="직전 토지가액" unit="원">
               <CurrencyInput label="직전 토지가액" hideLabel hideUnit value={asset.nblRevenuePriorLandValue} onChange={(v) => onAssetChange({ nblRevenuePriorLandValue: v })} />
