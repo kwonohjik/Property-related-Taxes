@@ -17,14 +17,15 @@ import {
   addLandAsset as addLandAssetShared,
   nextSteps,
   calcAndWaitResult,
+  addHeir,
 } from "./_helpers/tax-flow";
 
 async function fillStep0WithSevenChildren(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   for (let i = 0; i < 7; i++) {
-    await page.getByRole("button", { name: /상속인 추가/ }).click();
-    await page.getByText("자녀", { exact: true }).last().click();
+    // 2단계 picker(종류→관계) + RRN + 편집 모달 닫기를 헬퍼로. distinct RRN으로 중복 회피.
+    await addHeir(page, "heir", "child", { residentNumber: `700101-100000${i}` });
   }
   await nextSteps(page, 1); // → Step1
 }
@@ -45,9 +46,10 @@ test.describe("§21① 단서 무신고 일괄공제", () => {
     await addLandAsset(page);
     await gotoStep4(page);
 
-    // 신고 상태 라디오 — 무신고 선택
+    // 신고 상태는 Step4 C그룹(세액공제) progressive disclosure에 접힘 → 그룹 펼치기
+    await page.getByRole("button", { name: /신고 상태·외국납부·단기재상속 세액공제/ }).click();
     await expect(
-      page.getByText("신고 상태 (§67 · §69 신고세액공제 · §21① 일괄공제)"),
+      page.getByText("신고 상태 (§67 · §69 신고세액공제 · §21① 일괄공제)").first(),
     ).toBeVisible();
     await page.getByText("무신고", { exact: true }).click();
 

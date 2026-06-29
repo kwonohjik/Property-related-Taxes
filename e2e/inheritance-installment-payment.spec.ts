@@ -51,7 +51,8 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     await page.getByRole("button", { name: /납부 방법/ }).click();
 
     // Step4 — 연부연납 신청 토글 노출
-    const toggle = page.getByText("연부연납 신청 (상증법 §71)");
+    // role=switch (ToggleCard — getByText는 §71 법령 배지를 눌러 모달이 뜸)
+    const toggle = page.getByRole("switch", { name: /연부연납 신청/ });
     await expect(toggle).toBeVisible();
     await toggle.click(); // ON → 펼침(희망기간·가업·미래율)
 
@@ -91,7 +92,7 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
     // Step0: 비거주자 선택 + 자녀
     await page.goto("/calc/inheritance-tax");
     await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
-    await page.getByRole("button", { name: /비거주자/ }).click();
+    await page.getByText("비거주자", { exact: true }).click(); // RadioCardGroup 옵션(steps.tsx)
     await addHeir(page, "heir", "child");
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
@@ -100,7 +101,7 @@ test.describe("연부연납 일정표 (§71·§72)", () => {
 
     // 그룹 D(납부 방법) 헤더 클릭 → 펼침 (디폴트 접힘 대응)
     await page.getByRole("button", { name: /납부 방법/ }).click();
-    await page.getByText("연부연납 신청 (상증법 §71)").click(); // ON
+    await page.getByRole("switch", { name: /연부연납 신청/ }).click(); // ON (role=switch)
     await calcAndWaitResult(page);
 
     // 펼치기 → 본문(주석) 노출
