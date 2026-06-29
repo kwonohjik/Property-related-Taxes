@@ -250,7 +250,8 @@ export const pre1990LandSchema = z.object({
   transferDate: z.string().date(),
   areaSqm: z.number().positive(),
   pricePerSqm_1990: z.number().positive(),
-  pricePerSqm_atTransfer: z.number().positive(),
+  // 양도시 기준시가는 상위 standardPriceAtTransfer로 공급 — 서브엔진은 산출하지 않음(deprecated).
+  pricePerSqm_atTransfer: z.number().positive().optional(),
   grade_1990_0830: landGradeInputSchema,
   gradePrev_1990_0830: landGradeInputSchema,
   gradeAtAcquisition: landGradeInputSchema,

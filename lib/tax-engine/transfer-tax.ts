@@ -96,7 +96,9 @@ export function calculateTransferTax(
       acquisitionPrice: 0,
       useEstimatedAcquisition: true,
       standardPriceAtAcquisition: pre1990LandResult.standardPriceAtAcquisition,
-      standardPriceAtTransfer: pre1990LandResult.standardPriceAtTransfer,
+      // standardPriceAtTransfer는 rawInput에서 유지 (form 입력값 — 양도시 기준시가 총액).
+      // 서브엔진(pre-1990-land-valuation)은 더 이상 양도시 기준시가를 산출하지 않음.
+      // rawInput.standardPriceAtTransfer = 상위 폼에서 사용자가 입력한 양도시 기준시가(㎡당 × 면적).
       acquisitionMethod: "estimated",
     };
     steps.push({

@@ -176,6 +176,9 @@ describe("T-17: §114조의2 신축·증축 가산세", () => {
 
 describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
   it("pre1990Land 제공 시 기준시가 자동 주입 (PDF 재현)", () => {
+    // 버그 수정 후: 양도시 기준시가는 rawInput.standardPriceAtTransfer로 공급.
+    // pre1990Land 서브엔진은 취득시 기준시가만 산출 (standardPriceAtTransfer = undefined).
+    // 241,700원/㎡ × 2,417㎡ = 584,188,900원을 standardPriceAtTransfer로 직접 제공.
     const input = baseInput({
       propertyType: "land",
       transferPrice: 550_000_000,
@@ -183,6 +186,7 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
       acquisitionPrice: 0,                 // 무시됨 (pre1990Land가 덮어씀)
       acquisitionDate: new Date("1988-12-03"),
       useEstimatedAcquisition: false,       // 엔진이 true로 덮어씀
+      standardPriceAtTransfer: 584_188_900, // 241,700원/㎡ × 2,417㎡ — 상위 폼 입력
       isOneHousehold: false,
       householdHousingCount: 0,
       pre1990Land: {
@@ -190,7 +194,6 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
         transferDate: new Date("2023-02-16"),
         areaSqm: 2_417,
         pricePerSqm_1990: 54_000,
-        pricePerSqm_atTransfer: 241_700,
         grade_1990_0830: 108,
         gradePrev_1990_0830: 103,
         gradeAtAcquisition: 103,
@@ -198,11 +201,12 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
     });
     const result = calculateTransferTax(input, mockRates);
 
-    // 기준시가 자동 주입 확인
+    // 취득시 기준시가 자동 주입 확인
     expect(result.pre1990LandValuationDetail).toBeDefined();
     expect(result.pre1990LandValuationDetail!.pricePerSqmAtAcquisition).toBe(47_547);
     expect(result.pre1990LandValuationDetail!.standardPriceAtAcquisition).toBe(114_921_099);
-    expect(result.pre1990LandValuationDetail!.standardPriceAtTransfer).toBe(584_188_900);
+    // 양도시 기준시가는 서브엔진이 산출하지 않음 → undefined
+    expect(result.pre1990LandValuationDetail!.standardPriceAtTransfer).toBeUndefined();
     expect(result.pre1990LandValuationDetail!.caseType).toBe("case1_no_adjustment");
 
     // 환산취득가가 자동 활성화되었는지 확인
@@ -228,6 +232,7 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
       transferDate: new Date("2023-02-16"),
       acquisitionPrice: 0,
       acquisitionDate: new Date("1988-12-03"),
+      standardPriceAtTransfer: 584_188_900, // 241,700원/㎡ × 2,417㎡
       isOneHousehold: false,
       householdHousingCount: 0,
       pre1990Land: {
@@ -235,7 +240,6 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
         transferDate: new Date("2023-02-16"),
         areaSqm: 2_417,
         pricePerSqm_1990: 54_000,
-        pricePerSqm_atTransfer: 241_700,
         grade_1990_0830: 108,
         gradePrev_1990_0830: 103,
         gradeAtAcquisition: 103,
@@ -254,6 +258,7 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
       transferDate: new Date("2023-02-16"),
       acquisitionPrice: 0,
       acquisitionDate: new Date("1988-12-03"),
+      standardPriceAtTransfer: 584_188_900, // 241,700원/㎡ × 2,417㎡
       isOneHousehold: false,
       householdHousingCount: 0,
       isNonBusinessLand: false, // 자경농지는 사업용
@@ -264,7 +269,6 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
         transferDate: new Date("2023-02-16"),
         areaSqm: 2_417,
         pricePerSqm_1990: 54_000,
-        pricePerSqm_atTransfer: 241_700,
         grade_1990_0830: 108,
         gradePrev_1990_0830: 103,
         gradeAtAcquisition: 103,
@@ -294,6 +298,7 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
       transferDate: new Date("2023-02-16"),
       acquisitionPrice: 0,
       acquisitionDate: new Date("1988-12-03"),
+      standardPriceAtTransfer: 584_188_900, // 241,700원/㎡ × 2,417㎡ — 환산 분모
       isOneHousehold: false,
       householdHousingCount: 0,
       pre1990Land: {
@@ -301,7 +306,6 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
         transferDate: new Date("2023-02-16"),
         areaSqm: 2_417,
         pricePerSqm_1990: 54_000,
-        pricePerSqm_atTransfer: 241_700,
         grade_1990_0830: 108,
         gradePrev_1990_0830: 103,
         gradeAtAcquisition: 103,
@@ -332,6 +336,7 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
       transferDate: new Date("2023-02-16"),
       acquisitionPrice: 0,
       acquisitionDate: new Date("1988-12-03"),
+      standardPriceAtTransfer: 584_188_900, // 241,700원/㎡ × 2,417㎡
       isOneHousehold: false,
       householdHousingCount: 0,
       pre1990Land: {
@@ -339,7 +344,6 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
         transferDate: new Date("2023-02-16"),
         areaSqm: 2_417,
         pricePerSqm_1990: 54_000,
-        pricePerSqm_atTransfer: 241_700,
         grade_1990_0830: 108,
         gradePrev_1990_0830: 103,
         gradeAtAcquisition: 103,

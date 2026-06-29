@@ -375,8 +375,7 @@ export function TransferTaxResultView({
                 <span className="font-mono text-right">{result.pre1990LandValuationDetail.pricePerSqmAtAcquisition.toLocaleString()}</span>
                 <span className="text-muted-foreground font-medium">취득시 기준시가</span>
                 <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtAcquisition.toLocaleString()}</span>
-                <span className="text-muted-foreground font-medium">양도시 기준시가</span>
-                <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtTransfer.toLocaleString()}</span>
+                {/* 양도시 기준시가는 상위 폼 standardPriceAtTransfer 입력값으로 공급 — 서브엔진 미산출 */}
               </div>
               {result.pre1990LandValuationDetail.warnings.length > 0 && (
                 <ul className="mt-2 list-disc pl-5 text-destructive">
