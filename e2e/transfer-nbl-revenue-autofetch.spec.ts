@@ -63,6 +63,11 @@ test.describe("§168의11② 수입금액비율 — 토지가액 자동조회 �
     await expect(page.getByText("당해 사업개시일")).toBeVisible();
     await expect(page.getByText("직전 과세기간 영위일수")).toBeVisible();
 
-    console.log("✅ 자동조회 버튼 + 연환산(§168의11③3호) UI 노출 확인");
+    // §168의11③1호 간주임대료 + §168의11③2호 공통수입 안분 신규 UI 노출
+    await expect(page.getByText("전세금·보증금 간주임대료 (§168의11③1호)")).toBeVisible();
+    await expect(page.getByText("당해 전세금·보증금")).toBeVisible();
+    await expect(page.getByText("공통수입 안분 (§168의11③2호)")).toBeVisible();
+
+    console.log("✅ 자동조회 + 연환산 + 간주임대료(③1호) + 공통안분(③2호) UI 노출 확인");
   });
 });

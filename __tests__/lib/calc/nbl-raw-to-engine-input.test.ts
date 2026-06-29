@@ -115,4 +115,62 @@ describe("[NBL-REQ] buildNblEngineInput — raw → 엔진 input(nested + Date)"
     expect(input!.revenueTest?.priorBusinessDays).toBe(200);
     expect(input!.revenueTest?.priorTaxYear).toBe(2025);
   });
+
+  it("간주임대료·공통안분 raw 운반(⑬) + 율 해소(⑭) + 토글 게이트", () => {
+    const asset = {
+      ...makeDefaultAsset(1),
+      assetKind: "land",
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1000",
+      acquisitionDate: "2018-01-01",
+      nblOtherPropertyTaxType: "comprehensive",
+      nblRevenueBusinessType: "parking_operation",
+      nblRevenueCurrentRevenue: "0",
+      nblRevenueCurrentLandValue: "1000000000",
+      nblRevenueCurrentDeposit: "1000000000",
+      nblRevenueCurrentRentDays: "365",
+      nblRevenueCommonApportion: true,
+      nblRevenueCommonRevenue: "100000000",
+      nblRevenueOtherLandValue: "400000000",
+    } as unknown as Parameters<typeof buildNonBusinessLandRaw>[0];
+
+    const raw = buildNonBusinessLandRaw(asset, "2026-07-02");
+    // prefix-pick 운반
+    expect(raw!.nblRevenueCurrentDeposit).toBe("1000000000");
+    expect(raw!.nblRevenueCommonApportion).toBe(true);
+
+    const input = buildNblEngineInput(raw as never);
+    // ⑭ 율 해소 — 2026 → 부가세칙 §47 현행 31/1000
+    expect(input!.revenueTest?.currentDeemedRate).toEqual({ num: 31, den: 1000 });
+    expect(input!.revenueTest?.currentDeposit).toBe(1_000_000_000);
+    expect(input!.revenueTest?.currentRentDays).toBe(365);
+    // 토글 ON → 공통 매핑
+    expect(input!.revenueTest?.commonRevenue).toBe(100_000_000);
+    expect(input!.revenueTest?.otherLandValue).toBe(400_000_000);
+  });
+
+  it("공통안분 토글 OFF → 공통 필드 미매핑(undefined)", () => {
+    const asset = {
+      ...makeDefaultAsset(1),
+      assetKind: "land",
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1000",
+      acquisitionDate: "2018-01-01",
+      nblOtherPropertyTaxType: "comprehensive",
+      nblRevenueBusinessType: "parking_operation",
+      nblRevenueCurrentRevenue: "50000000",
+      nblRevenueCurrentLandValue: "1000000000",
+      nblRevenueCommonApportion: false,
+      nblRevenueCommonRevenue: "100000000",
+      nblRevenueOtherLandValue: "400000000",
+    } as unknown as Parameters<typeof buildNonBusinessLandRaw>[0];
+
+    const input = buildNblEngineInput(buildNonBusinessLandRaw(asset, "2026-07-02") as never);
+    expect(input!.revenueTest?.commonRevenue).toBeUndefined();
+    expect(input!.revenueTest?.otherLandValue).toBeUndefined();
+  });
 });

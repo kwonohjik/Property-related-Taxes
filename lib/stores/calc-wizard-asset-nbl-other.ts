@@ -90,4 +90,22 @@ export interface NblOtherFormSlice {
   nblRevenueCurrentBusinessStartDate: string;
   /** §168의11③3호 직전 과세기간 영위일수 (직전연도 중 개시·폐업 시; 미입력 시 직전 환산 안 함) */
   nblRevenuePriorBusinessDays: string;
+  /** §168의11③1호 당해 전세금·임대보증금 (원) */
+  nblRevenueCurrentDeposit: string;
+  /** §168의11③1호 당해 임대 과세대상기간 일수 */
+  nblRevenueCurrentRentDays: string;
+  /** §168의11③1호 직전 전세금·임대보증금 (원) */
+  nblRevenuePriorDeposit: string;
+  /** §168의11③1호 직전 임대 과세대상기간 일수 */
+  nblRevenuePriorRentDays: string;
+  /** §168의11③2호 공통수입 안분 토글 */
+  nblRevenueCommonApportion: boolean;
+  /** §168의11③2호 당해 공통수입금액 (원) */
+  nblRevenueCommonRevenue: string;
+  /** §168의11③2호 당해 그 밖의 토지가액 (원) */
+  nblRevenueOtherLandValue: string;
+  /** §168의11③2호 직전 공통수입금액 (원) */
+  nblRevenuePriorCommonRevenue: string;
+  /** §168의11③2호 직전 그 밖의 토지가액 (원) */
+  nblRevenuePriorOtherLandValue: string;
 }

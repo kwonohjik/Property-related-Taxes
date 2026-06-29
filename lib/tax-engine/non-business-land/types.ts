@@ -366,6 +366,32 @@ export interface RevenueTestInput {
   priorBusinessDays?: number;
   /** 직전 과세연도(윤년 판정용). 미제공 시 직전 환산 안 함 */
   priorTaxYear?: number;
+
+  // §168의11③1호 간주임대료 — 전세금·보증금 (부가세법 시행령 §65① 준용)
+  /** 당해 전세금·임대보증금 (원) */
+  currentDeposit?: number;
+  /** 당해 임대 과세대상기간 일수 */
+  currentRentDays?: number;
+  /** 당해 적용 정기예금이자율 분수(부가세칙 §47). 매퍼가 연도별 테이블에서 해소; 미검증 연도면 미제공 */
+  currentDeemedRate?: { num: number; den: number };
+  /** 직전 전세금·임대보증금 (원) */
+  priorDeposit?: number;
+  /** 직전 임대 과세대상기간 일수 */
+  priorRentDays?: number;
+  /** 직전 적용 정기예금이자율 분수 */
+  priorDeemedRate?: { num: number; den: number };
+  /** 간주임대료 입력은 있으나 해당 연도 율 미검증 → 적용 불가(경고) */
+  deemedRateUnavailable?: boolean;
+
+  // §168의11③2호 공통수입 안분 — 실지귀속 불가 공통수입금액
+  /** 당해 공통수입금액 (원) */
+  commonRevenue?: number;
+  /** 당해 그 밖의 토지가액 (원) — 안분 분모 */
+  otherLandValue?: number;
+  /** 직전 공통수입금액 (원) */
+  priorCommonRevenue?: number;
+  /** 직전 그 밖의 토지가액 (원) */
+  priorOtherLandValue?: number;
 }
 
 export interface RevenueTestResult {
@@ -390,6 +416,16 @@ export interface RevenueTestResult {
   priorBusinessDays?: number;
   /** 당해 또는 직전에 연환산이 적용되었는지 */
   annualizationApplied: boolean;
+  /** §168의11③1호 당해 간주임대료 (원). 0이면 미적용 */
+  deemedRentCurrent: number;
+  /** 직전 간주임대료 (원) */
+  deemedRentPrior: number;
+  /** §168의11③2호 당해 공통수입 안분액 (원) */
+  commonApportionedCurrent: number;
+  /** 직전 공통수입 안분액 (원) */
+  commonApportionedPrior: number;
+  /** 간주임대료 입력 있으나 해당 연도 율 미검증으로 미적용된 경우 true (경고) */
+  deemedRateUnavailable: boolean;
 }
 
 // ============================================================

@@ -472,6 +472,18 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         return `${label}: 수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.`;
       if (!asset.nblRevenueCurrentLandValue || parseAmount(asset.nblRevenueCurrentLandValue) <= 0)
         return `${label}: 수입금액비율 업종 선택 시 당해 토지가액을 입력하세요.`;
+      // §168의11③2호 공통수입 안분 토글 ON → 당해 공통수입·그 밖의 토지가액 필수쌍
+      if (asset.nblRevenueCommonApportion) {
+        if (!asset.nblRevenueCommonRevenue || parseAmount(asset.nblRevenueCommonRevenue) <= 0)
+          return `${label}: 공통수입 안분 시 당해 공통수입금액을 입력하세요.`;
+        if (!asset.nblRevenueOtherLandValue || parseAmount(asset.nblRevenueOtherLandValue) <= 0)
+          return `${label}: 공통수입 안분 시 당해 '그 밖의 토지가액'을 입력하세요.`;
+        // 직전 공통쌍은 선택이나 한쪽만 입력 시 나머지도 필수
+        const pc = parseAmount(asset.nblRevenuePriorCommonRevenue || "0");
+        const po = parseAmount(asset.nblRevenuePriorOtherLandValue || "0");
+        if ((pc > 0) !== (po > 0))
+          return `${label}: 직전 공통수입 안분은 공통수입금액과 '그 밖의 토지가액'을 함께 입력하세요.`;
+      }
     }
     // §168의14①·§83의5① 유예기간 — 사유별 필수 기산일/종료일 (자동 안분 fallback 금지)
     for (const g of asset.nblGracePeriods ?? []) {

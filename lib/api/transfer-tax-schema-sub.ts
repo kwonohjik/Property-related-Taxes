@@ -182,6 +182,17 @@ export const nonBusinessLandRawSchema = z.object({
   // §168의11③3호 연환산 — 당해 사업개시일·직전 영위일수
   nblRevenueCurrentBusinessStartDate: z.string().optional(),
   nblRevenuePriorBusinessDays: z.string().optional(),
+  // §168의11③1호 간주임대료 — 전세금·보증금·임대일수
+  nblRevenueCurrentDeposit: z.string().optional(),
+  nblRevenueCurrentRentDays: z.string().optional(),
+  nblRevenuePriorDeposit: z.string().optional(),
+  nblRevenuePriorRentDays: z.string().optional(),
+  // §168의11③2호 공통수입 안분
+  nblRevenueCommonApportion: z.boolean().optional(),
+  nblRevenueCommonRevenue: z.string().optional(),
+  nblRevenueOtherLandValue: z.string().optional(),
+  nblRevenuePriorCommonRevenue: z.string().optional(),
+  nblRevenuePriorOtherLandValue: z.string().optional(),
   // 무조건 의제 (§168의14③)
   nblExemptInheritBefore2007: z.boolean().optional(),
   nblExemptInheritDate: z.string().optional(),

@@ -100,6 +100,41 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
               </div>
             </div>
           )}
+          {(judgment.revenueTestDetail.deemedRentCurrent > 0 || judgment.revenueTestDetail.deemedRentPrior > 0) && (
+            <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-[11px] text-violet-800 dark:text-violet-200 space-y-0.5">
+              <p className="font-medium">§168의11③1호 간주임대료 합산</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+                <span>당해 간주임대료</span>
+                <span className="font-mono text-right">{judgment.revenueTestDetail.deemedRentCurrent.toLocaleString()}원</span>
+                {judgment.revenueTestDetail.deemedRentPrior > 0 && (
+                  <>
+                    <span>직전 간주임대료</span>
+                    <span className="font-mono text-right">{judgment.revenueTestDetail.deemedRentPrior.toLocaleString()}원</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {(judgment.revenueTestDetail.commonApportionedCurrent > 0 || judgment.revenueTestDetail.commonApportionedPrior > 0) && (
+            <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-[11px] text-violet-800 dark:text-violet-200 space-y-0.5">
+              <p className="font-medium">§168의11③2호 공통수입 안분</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+                <span>당해 안분액</span>
+                <span className="font-mono text-right">{judgment.revenueTestDetail.commonApportionedCurrent.toLocaleString()}원</span>
+                {judgment.revenueTestDetail.commonApportionedPrior > 0 && (
+                  <>
+                    <span>직전 안분액</span>
+                    <span className="font-mono text-right">{judgment.revenueTestDetail.commonApportionedPrior.toLocaleString()}원</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {judgment.revenueTestDetail.deemedRateUnavailable && (
+            <p className="mt-1.5 text-[11px] text-rose-600 dark:text-rose-400">
+              ⚠️ 전세금·보증금이 입력되었으나 해당 과세연도의 정기예금이자율(부가세칙 §47)이 미등재되어 간주임대료를 적용하지 못했습니다. 해당 연도 율 확인이 필요합니다.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs mt-1.5">
             <span className="text-muted-foreground">당해 비율</span>
             <span className="font-mono text-right">{(judgment.revenueTestDetail.ratioCurrent * 100).toFixed(2)}%</span>
