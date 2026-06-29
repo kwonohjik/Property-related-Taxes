@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { rankAddressResults } from "@/lib/address/rank-address-results";
 
 const VWORLD_URL = "https://api.vworld.kr/req/search";
 
@@ -124,7 +125,8 @@ export async function GET(request: NextRequest) {
       lat: item.point?.y ?? "",
     }));
 
-    return NextResponse.json({ results });
+    // 검색어 관련도 순으로 안정 정렬 — 지번 검색 시 정확 지번이 최상단에 오도록.
+    return NextResponse.json({ results: rankAddressResults(query, results) });
   } catch (err) {
     console.error("[vworld] fetch failed:", err);
     return NextResponse.json(
