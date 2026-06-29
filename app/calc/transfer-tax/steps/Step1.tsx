@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   type TransferFormData,
   type AssetForm,
@@ -111,31 +111,20 @@ export function Step1({
         />
 
         {/* 일괄양도 여부 */}
-        <div className="mb-3">
-          <p className="text-sm font-medium mb-1">
-            함께 양도한 다른 자산 또는 같은 물건의 다른 지분이 있나요?
-          </p>
-          <p className="text-xs text-muted-foreground mb-2">
-            동일 아파트를 여러 번에 걸쳐 지분 취득한 경우(예: 60% 상속 + 40% 매매)에도 <strong>&quot;예&quot;</strong>를 선택하고 각 지분을 별도 자산으로 추가하세요.
-          </p>
-          <div className="grid grid-cols-2 gap-2 max-w-xs">
-            {([false, true] as const).map((val) => (
-              <button
-                key={String(val)}
-                type="button"
-                onClick={() => handleBundledToggle(val)}
-                className={cn(
-                  "rounded-md border-2 py-2 text-sm font-medium transition-all",
-                  hasBundledAssets === val
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-                )}
-              >
-                {val ? "예" : "아니오"}
-              </button>
-            ))}
-          </div>
-        </div>
+        <ToggleCard
+          className="mb-3"
+          tone="sky"
+          checked={hasBundledAssets}
+          onCheckedChange={handleBundledToggle}
+          title="함께 양도한 다른 자산이 있거나, 같은 물건을 지분별로 나눠 취득했나요?"
+          description={
+            <>
+              같은 날 다른 부동산도 함께 팔았거나, 이 부동산을 여러 번에 나눠 취득해 취득시기가
+              다르면 켜세요. (예: 같은 아파트를 60%는 상속, 40%는 매매로 취득) — 각 자산·지분을
+              별도로 추가합니다.
+            </>
+          }
+        />
 
         {/* 일괄양도 모드: 총 양도가액 + 총 양도비 + 안분 방식 */}
         {hasBundledAssets && (

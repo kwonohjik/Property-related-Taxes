@@ -58,21 +58,20 @@ async function gotoExemptStep(page: Page): Promise<void> {
   await fillAndVerify(page.getByPlaceholder("면적 입력"), "100");
   await fillAndVerify(page.getByPlaceholder("공시지가 단가"), "1000000");
 
+  // 토지 편집 모달 닫기 — StepIndicator 이동이 backdrop에 막히지 않게
+  const landDialog = page.getByRole("dialog");
+  await landDialog.getByRole("button", { name: "닫기" }).click();
+  await expect(landDialog).toBeHidden();
+
   // 비과세·장례비 단계로 직접 이동 (StepIndicator aria-label)
   await page
     .getByRole("button", { name: /비과세.*단계로 이동/ })
     .click();
 
-  // 마스터 토글 "여" 클릭 — 비과세 항목 목록 노출
-  const masterYesBtn = page
-    .locator("div.rounded-lg.border")
-    .filter({ hasText: /비과세.*과세가액 불산입 해당 여부|비과세.*해당 여부/ })
-    .getByRole("button", { name: "여" })
-    .first();
-  await masterYesBtn.click();
-
-  // "여" 클릭 후 항목 목록 노출 대기
-  await expect(page.getByText("국가·지자체 유증 재산")).toBeVisible({ timeout: 5_000 });
+  // 마스터 "여/부" 토글 제거됨 → 칩 패널 직접 노출 (ExemptionChecklist 재구성, 2026).
+  // 비과세 step 진입 + 칩 노출 확인 (칩 라벨은 축약형 "국가·지자체 유증").
+  await expect(page.getByText("비과세·과세가액 불산입 선택")).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole("button", { name: /국가·지자체 유증/ })).toBeVisible({ timeout: 5_000 });
 }
 
 /**
@@ -92,14 +91,14 @@ test("SB-1 국가유증 1억 입력 → 사이드바 과세가액 0 + 비과세 
   test.setTimeout(90_000);
   await gotoExemptStep(page);
 
-  // "국가·지자체 유증 재산" 행에서 "여" 클릭
+  // 비과세 칩 "국가·지자체 유증" 클릭 → 항목 체크 + 그룹 자동 펼침 → 입력 섹션(ExemptionRow) 노출
+  await page.getByRole("button", { name: /국가·지자체 유증/ }).click();
+
+  // 금액 입력 — 1억. ExemptionRow(rule.name "국가·지자체 유증 재산")의 금액 입력
   const stateRow = page
     .locator("div.rounded-lg.border")
     .filter({ hasText: "국가·지자체 유증 재산" })
     .first();
-  await stateRow.getByRole("button", { name: "여" }).click();
-
-  // 금액 입력 — 1억 (총상속재산과 동일 → 과세가액 0)
   const amountInput = stateRow.getByPlaceholder("금액 입력");
   await fillAndVerify(amountInput, "100000000");
 
@@ -128,17 +127,14 @@ test("SB-1b 공익법인 출연 2억 입력 → 사이드바 비과세 행 노�
   test.setTimeout(90_000);
   await gotoExemptStep(page);
 
-  // 과세가액 불산입 섹션 펼쳐질 때까지 대기
-  await expect(page.getByText("공익법인 출연 재산")).toBeVisible({ timeout: 5_000 });
+  // 과세가액 불산입 칩 "공익법인 출연" 클릭 → 항목 체크 + 그룹 자동 펼침
+  await page.getByRole("button", { name: /공익법인 출연/ }).click();
 
-  // "공익법인 출연 재산" 행에서 "여" 클릭
+  // 금액 입력 2억 (총상속재산 1억 초과 — 과세가액 불산입이지만 max(0) 처리)
   const corpRow = page
     .locator("div.rounded-lg.border")
     .filter({ hasText: "공익법인 출연 재산" })
     .first();
-  await corpRow.getByRole("button", { name: "여" }).click();
-
-  // 금액 입력 2억 (총상속재산 1억 초과 — 과세가액 불산입이지만 max(0) 처리)
   const amountInput = corpRow.getByPlaceholder("금액 입력");
   await fillAndVerify(amountInput, "200000000");
 

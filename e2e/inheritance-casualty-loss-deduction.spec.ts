@@ -26,10 +26,14 @@ test.describe("상속세 재해손실공제 §23", () => {
     await addHeir(page, "heir", "child");
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
-    // Step1: 아파트 10억
+    // Step1: 주택 10억 (자산 편집 "주택 편집" 모달 — 보충평가 토글 후 금액, 닫아야 다음 가능)
     await page.getByRole("button", { name: /상속재산 추가/ }).click();
-    await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
+    await page.getByRole("button", { name: /주택/ }).first().click();
+    await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
     await page.getByPlaceholder("금액 입력").first().fill("1000000000");
+    const assetDialog = page.getByRole("dialog");
+    await assetDialog.getByRole("button", { name: "닫기" }).click();
+    await expect(assetDialog).toBeHidden();
 
     // Step1 → 2 → 3 → 4
     await nextSteps(page, 3);

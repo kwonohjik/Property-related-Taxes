@@ -19,6 +19,7 @@ import {
   nextSteps,
   calcAndWaitResult,
   addHeir,
+  closeHeirEditModal,
 } from "./_helpers/tax-flow";
 
 // ============================================================
@@ -31,7 +32,9 @@ async function gotoStep0(page: Page, [y, m, d]: [string, string, string]) {
 }
 
 async function addChild(page: Page) {
-  await addHeir(page, "heir", "child");
+  // RRN 미입력(residentNumber:"") → 성별이 RRN에서 자동도출되지 않아 장애인 성별 위젯이 노출됨(PD-2/3 전제).
+  // keepModalOpen → heir-editor-0(생년월일·장애인·성별)와 모달이 열린 상태에서 상호작용.
+  await addHeir(page, "heir", "child", { keepModalOpen: true, residentNumber: "" });
 }
 
 /** heir-editor-{index} 내부 생년월일 DateInput 채움 */
@@ -90,6 +93,7 @@ test.describe("상속세 그 밖의 인적공제 §20 (P0+P2)", () => {
     await editor.getByText("장애인", { exact: true }).click();
     await editor.getByText("남성", { exact: true }).click();
 
+    await closeHeirEditModal(page); // 상속인 편집 모달 닫고 다음
     await page.getByRole("button", { name: /^다음/ }).click(); // Step0→1
     await addLandAsset(page);
     await proceedToResult(page);
@@ -143,6 +147,7 @@ test.describe("상속세 그 밖의 인적공제 §20 (P0+P2)", () => {
     const editor = page.getByTestId("heir-editor-0");
     await editor.getByText("장애인", { exact: true }).click(); // 장애 ON, 성별 미선택
 
+    await closeHeirEditModal(page); // 상속인 편집 모달 닫고 다음
     await page.getByRole("button", { name: /^다음/ }).click(); // Step0→1
     await addLandAsset(page);
     await nextSteps(page, 3); // 1→2→3→4

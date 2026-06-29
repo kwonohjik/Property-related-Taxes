@@ -26,10 +26,16 @@ async function gotoDeductionStep(page: Page) {
   await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   await page.getByPlaceholder("면적 입력").fill("300");
   await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  // 토지 편집 모달 닫기 (다음이 backdrop에 막히지 않게)
+  const assetDialog = page.getByRole("dialog");
+  await assetDialog.getByRole("button", { name: "닫기" }).click();
+  await expect(assetDialog).toBeHidden();
 
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step3
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step4 공제
+  // Step4 공제 체크리스트(progressive disclosure) — 가업상속공제 입력 섹션 펼치기
+  await page.getByRole("button", { name: /가업상속공제 §18의2/ }).click();
 }
 
 test.describe("복수가업 순차공제 입력·미리보기", () => {
@@ -39,13 +45,13 @@ test.describe("복수가업 순차공제 입력·미리보기", () => {
     await gotoDeductionStep(page);
 
     // 가업상속공제 요건 입력 토글 ON
-    await page.getByText(/가업상속공제 요건 입력/).click();
+    await page.getByRole("switch", { name: /가업상속공제 요건 입력/ }).click();
 
     // 가업 영위 연수 30년
     await page.getByPlaceholder("영위 연수 입력 (년)").fill("30");
 
     // 복수가업 순차공제 토글 ON
-    await page.getByText(/복수가업 순차공제/).first().click();
+    await page.getByRole("switch", { name: /복수가업 순차공제/ }).click();
 
     // 순차공제 미리보기 노출 (엔진 단일 소스) — 총한도 = 가장 긴(30년) = 600억
     const preview = page.getByText(/순차공제 미리보기/);
@@ -59,7 +65,7 @@ test.describe("복수가업 순차공제 입력·미리보기", () => {
 
   test("복수가업 토글 OFF → 추가 가업 입력 영역 숨김", async ({ page }) => {
     await gotoDeductionStep(page);
-    await page.getByText(/가업상속공제 요건 입력/).click();
+    await page.getByRole("switch", { name: /가업상속공제 요건 입력/ }).click();
     await page.getByPlaceholder("영위 연수 입력 (년)").fill("25");
 
     // 토글 OFF 기본 — 미리보기 없음
