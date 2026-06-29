@@ -225,11 +225,24 @@ export function HistoryClient() {
     loadRecords(activeFilter, activeClientFilter);
   }, [activeFilter, activeClientFilter, loadRecords]);
 
+  // 계산 삭제로 cascade 삭제된 의뢰인을 목록·필터 칩에서 즉시 반영하고,
+  // active 의뢰인이 사라졌으면 세션 참조를 정리 (orphan 재발 방지).
+  async function refreshClientsAfterDelete() {
+    if (mode !== "professional") return;
+    const list = await clientRepository.list();
+    setClients(list);
+    const active = useProfessionalStore.getState().activeClientId;
+    if (active && !list.some((c) => c.id === active)) {
+      useProfessionalStore.getState().clearActiveClient();
+    }
+  }
+
   async function handleDelete(id: string) {
     await calculationRepository.remove(id);
     setRecords((prev) => prev.filter((r) => r.id !== id));
     setTotal((prev) => prev - 1);
     if (selectedRecord?.id === id) setSelectedRecord(null);
+    await refreshClientsAfterDelete();
   }
 
   function handleResume(record: CalculationRecord) {
@@ -304,6 +317,7 @@ export function HistoryClient() {
     setRecords([]);
     setTotal(0);
     setSelectedRecord(null);
+    await refreshClientsAfterDelete();
   }
 
   async function handleTitleUpdate(id: string, title: string) {
@@ -594,8 +608,8 @@ export function HistoryClient() {
         title={confirmAction?.type === "clearAll" ? "전체 이력 삭제" : "이력 삭제"}
         description={
           confirmAction?.type === "clearAll"
-            ? "모든 계산 이력을 삭제합니다. 되돌릴 수 없습니다."
-            : "이 계산 이력을 삭제합니다. 되돌릴 수 없습니다."
+            ? `모든 계산 이력을 삭제합니다. 되돌릴 수 없습니다.${mode === "professional" ? " 연결된 의뢰인도 함께 삭제됩니다." : ""}`
+            : `이 계산 이력을 삭제합니다. 되돌릴 수 없습니다.${mode === "professional" ? " 의뢰인의 마지막 계산이면 의뢰인도 함께 삭제됩니다." : ""}`
         }
         confirmLabel="삭제"
         destructive

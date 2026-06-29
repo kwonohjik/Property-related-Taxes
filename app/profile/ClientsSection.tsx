@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { clientRepository } from "@/lib/storage/client-repository";
 import { ClientSearchInput } from "@/components/calc/ClientSearchInput";
 import { ClientForm } from "./ClientForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { Client } from "@/lib/storage/types";
 
 const PAGE_SIZE = 20;
@@ -16,6 +24,8 @@ export function ClientsSection() {
   const [page, setPage] = useState(0);
   const [editState, setEditState] = useState<EditState>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // 연결 계산 이력이 있는 의뢰인의 단독 삭제 차단 안내 (결정 D3)
+  const [blocked, setBlocked] = useState<{ name: string; count: number } | null>(null);
 
   async function reload() {
     const list = await clientRepository.list();
@@ -56,6 +66,13 @@ export function ClientsSection() {
   }
 
   async function handleDelete(id: string) {
+    // 연결된 계산 이력이 있으면 단독 삭제 차단 — 의뢰인 삭제는 계산 이력 삭제(cascade)로만 (결정 D3).
+    const count = await clientRepository.countCalculations(id);
+    if (count > 0) {
+      const c = allClients.find((x) => x.id === id);
+      setBlocked({ name: c?.name ?? "", count });
+      return;
+    }
     setDeletingId(id);
     await clientRepository.remove(id);
     setDeletingId(null);
@@ -174,6 +191,29 @@ export function ClientsSection() {
           )}
         </>
       )}
+
+      {/* 단독 삭제 차단 안내 (연결 계산 이력 존재 시) */}
+      <Dialog open={blocked !== null} onOpenChange={(o) => !o && setBlocked(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>의뢰인을 삭제할 수 없습니다</DialogTitle>
+            <DialogDescription>
+              {blocked
+                ? `'${blocked.name}' 의뢰인은 계산 이력 ${blocked.count}건과 연결되어 있습니다. 계산 이력 화면에서 이 의뢰인의 마지막 계산을 삭제하면 의뢰인도 함께 삭제됩니다.`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setBlocked(null)}
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              확인
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
