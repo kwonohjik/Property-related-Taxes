@@ -99,11 +99,13 @@ test.describe("종합부동산세 법인 §9②", () => {
         page.getByText(/32,400,000/).first(),
       ).toBeVisible({ timeout: 30_000 });
 
-      // "§9② 법인 단일세율" 배지 표시
-      await expect(page.getByText(/§9② 법인 단일세율/)).toBeVisible({ timeout: 10_000 });
+      // "§9② 법인 단일세율" 배지 표시 (배지 span + 인용 링크 "… ↗" 2곳 → .first()=배지 span)
+      await expect(page.getByText(/§9② 법인 단일세율/).first()).toBeVisible({ timeout: 10_000 });
 
-      // 기본공제 "적용 없음 (§8①2호)" 라벨 표시
-      await expect(page.getByText(/적용 없음.*§8①2호/)).toBeVisible({ timeout: 5_000 });
+      // 기본공제 "적용 없음" 라벨 + §8①2호 근거 배지
+      // (label·§8①2호 배지 span·§8①2호 인용 링크·valueLabel "적용 없음" 모두 별도 노드 → 분리 단언, 배지는 .first())
+      await expect(page.getByText("적용 없음").first()).toBeVisible({ timeout: 5_000 });
+      await expect(page.getByText("§8①2호").first()).toBeVisible();
     },
   );
 });

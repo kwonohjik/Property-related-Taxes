@@ -98,8 +98,7 @@ test.describe("종합부동산세 납부할 세액 산출 근거 카드(주택�
     await expect(page.getByTestId("payable-step6")).toContainText("302,400원");
     // ②ⓐ 재산세 FMR 45% echo (상시 노출)
     await expect(card).toContainText("× 45%");
-    // 트랙 B 세부담상한 산식 echo 펼침 → 직전 재산세 2,730,000 × 130% = 3,549,000 (직전공시 2단계 통합 후에도 동일)
-    await card.getByText(/주택 세부담상한 산식/).first().click();
+    // 트랙 B 세부담상한 산식은 ②ⓐ 주택별 행에 inline 통합 (별도 펼침 카드 폐지) → 직전 재산세 2,730,000 × 130% = 3,549,000
     await expect(card).toContainText("3,549,000원");
     // ⑥ 농특세 미표기
     await expect(card).not.toContainText("농어촌특별세");

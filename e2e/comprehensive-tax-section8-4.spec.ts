@@ -79,8 +79,9 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
         page.getByText(/§8④ 1세대1주택자 의제/).first(),
       ).toBeVisible({ timeout: 30_000 });
       // 산출세액 배지 — §8④4호 지방 저가주택
+      // (배지 span + 법조문 인용 링크 버튼 "… ↗" 2곳 렌더 → .first()=배지 span)
       await expect(
-        page.getByText("§8④4호 지방 저가주택"),
+        page.getByText("§8④4호 지방 저가주택").first(),
       ).toBeVisible({ timeout: 10_000 });
     },
   );

@@ -12,14 +12,11 @@
 
 import { test, expect, type Page } from "@playwright/test";
 
-/** 라벨 텍스트를 가진 컨테이너 내부의 숫자 input 반환 */
-function amountInputByLabel(page: Page, labelText: string | RegExp) {
-  return page
-    .locator("div")
-    .filter({ hasText: labelText })
-    .locator('input[inputmode="numeric"]')
-    .last();
-}
+// 공시가격 입력 textbox 접근성 이름(probe: error-context page snapshot 확인):
+//   - 당해 공시가격(StandardPriceInput, housing): name "금액 입력"
+//   - 직전연도 공시가격(CurrencyInput): name "금액 입력 (원)" — DOM 첫 번째
+//   - 주택 건축물 부분 시가표준액(CurrencyInput): name "금액 입력 (원)" — DOM 두 번째
+// (이전 div.filter(hasText).last() 헬퍼는 조상 div까지 매칭돼 직전연도값이 건축물 필드로 잘못 들어감)
 
 async function calcAndWait(page: Page) {
   const calcResponse = page.waitForResponse(
@@ -36,10 +33,10 @@ test.describe("재산세 주택 과세표준상한제 §110③", () => {
   test("1: 당해 7억 + 직전 5억 → 과세표준상한 적용 (3.21억)", async ({ page }) => {
     await page.goto("/calc/property-tax");
 
-    // objectType 기본 housing. 공시가격 7억 (StandardPriceInput 총액)
-    await amountInputByLabel(page, /^공시가격/).fill("700000000");
-    // 직전연도 공시가격 5억 (신규 필드)
-    await amountInputByLabel(page, /직전연도 공시가격/).fill("500000000");
+    // objectType 기본 housing. 당해 공시가격 7억 (StandardPriceInput, name "금액 입력")
+    await page.getByRole("textbox", { name: "금액 입력", exact: true }).fill("700000000");
+    // 직전연도 공시가격 5억 (CurrencyInput, name "금액 입력 (원)" — DOM 첫 번째)
+    await page.getByRole("textbox", { name: "금액 입력 (원)" }).first().fill("500000000");
 
     await page.getByRole("button", { name: /^다음$/ }).click();
     await calcAndWait(page);
@@ -50,7 +47,7 @@ test.describe("재산세 주택 과세표준상한제 §110③", () => {
 
   test("2: 당해 7억 + 직전 미입력 → 상한 카드 미표시", async ({ page }) => {
     await page.goto("/calc/property-tax");
-    await amountInputByLabel(page, /^공시가격/).fill("700000000");
+    await page.getByRole("textbox", { name: "금액 입력", exact: true }).fill("700000000");
 
     await page.getByRole("button", { name: /^다음$/ }).click();
     await calcAndWait(page);
