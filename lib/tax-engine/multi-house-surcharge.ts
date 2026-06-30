@@ -97,6 +97,8 @@ export function isRegulatedAreaAtDate(
     const designated = new Date(designation.designatedDate);
     const released = designation.releasedDate ? new Date(designation.releasedDate) : null;
 
+    // 폐구간 포함 비교 — releasedDate = 마지막 규제일(효력발생일 −1). `<=` 유지.
+    // (regulated-areas.ts findActiveDesignation과 동일 규약 — 두 경로 일치 보장.)
     if (referenceDate >= designated && (!released || referenceDate <= released)) {
       return true;
     }

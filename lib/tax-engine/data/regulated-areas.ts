@@ -90,6 +90,14 @@ export interface RegulatedAreaJudgment {
  * 조정대상지역 지정·해제 이력 — 수도권(서울·경기·인천).
  * 출처: 양도소득세 2026 교재 변천표 + 주석 + 국토부 대책 교차검증, 법정동코드는 행안부 표준.
  *
+ * ⚠️ releasedDate 규약 (검증 완료, 절대 변경 금지):
+ *   releasedDate = "효력발생일 − 1일 = 마지막 규제일"로 저장한다(해제 효력일 자체 아님).
+ *   판정은 폐구간 포함 비교 `designatedDate <= date <= releasedDate`.
+ *   예: 서울 해제 효력 2023-01-05 0시 → 저장값 releasedDate "2023-01-04".
+ *       2023-01-04 양도 = 규제(마지막 규제일), 2023-01-05 양도 = 비규제(효력일). ✅
+ *   ⛔ 포함 비교(`<=`)를 배제(`<`)로 "고치지" 말 것 — 효력일 당일을 규제로 오판하는 off-by-one 주입.
+ *   근거: 국토부 고시(2023.1.5 효력) 교차검증 + 경계 anchor(regulated-area-release-boundary.test.ts).
+ *
  * ⚠️ 잔여 근사:
  *   - 광교택지/택지지구 included는 동(洞) 단위 근사 — 동 내 비택지 부분 존재 가능.
  *   - 지방(부산·대전·대구·세종 등)은 본 단계(수도권) 범위 밖.
@@ -514,6 +522,7 @@ function findActiveDesignation(
   date: string,
 ): RegulatedAreaDesignation | null {
   for (const d of designations) {
+    // 폐구간 포함 비교 — releasedDate = 마지막 규제일(효력발생일 −1). `<=` 유지(데이터 헤더 규약 참조).
     const active = d.designatedDate <= date && (d.releasedDate === null || date <= d.releasedDate);
     if (active) return d;
   }
