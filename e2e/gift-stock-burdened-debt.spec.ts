@@ -78,10 +78,10 @@ test.describe("주식 부담부증여 §47① 채무인수", () => {
     const stockItem = body.giftItems.find((i) => i.category === "listed_stock");
     expect(stockItem?.assumedDebtForGift).toBe(200_000_000);
 
-    // 결과: 부담부증여 채무인수 차감 (§47①) 행 표시
+    // 결과: 별지 제10호 ㉒ 채무액 행에 인수 채무액 200,000,000 표시 (일반 부담부증여 — 특례 2-stream 아님)
     await expect(
-      page.getByText("부담부증여 채무인수 차감 (§47①)").first(),
-    ).toBeVisible({ timeout: 10_000 });
+      page.getByRole("row", { name: /㉒ 채무액/ }),
+    ).toContainText("200,000,000");
   });
 
   test("[SBD-E2E-2] 상속 모드 주식 카드 — §47① 채무 섹션 미노출", async ({
