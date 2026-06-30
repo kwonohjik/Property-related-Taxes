@@ -53,6 +53,9 @@ test.describe("PR-F S-2: 카테고리 변경 워크플로", () => {
     page,
   }) => {
     test.setTimeout(60_000);
+    // 카테고리 13종으로 늘어나며 다이얼로그가 길어져 '변경 확인' 푸터가 기본 뷰포트(720px)
+    // 밖으로 밀린다(다이얼로그는 fixed-center·내부 스크롤 없음). 뷰포트를 키워 클릭 가능하게.
+    await page.setViewportSize({ width: 1280, height: 1600 });
     await gotoStep1WithFinancialCard(page);
 
     await page.locator('[data-testid^="estate-card-actions-menu-"]').first().click();

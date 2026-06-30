@@ -94,7 +94,10 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
 
     // dead field("실제 상속 비율") 완전 제거
     await expect(page.getByText("실제 상속 비율")).toHaveCount(0);
-    // 법정상속분 자동 배분 안내 노출 (상속인 섹션)
+    // 법정상속분 자동 배분 안내 — CollapsibleHintCard로 강등(기본 접힘) → 펼쳐서 노출 확인
+    await page
+      .getByRole("button", { name: /협의분할·법정상속분 배분 안내/ })
+      .click();
     await expect(page.getByText(/법정상속분.*자동 배분/).first()).toBeVisible();
   });
 
@@ -102,13 +105,20 @@ test.describe("상속세 기준시가 공시연도 자동 선택", () => {
     await gotoEstateAptCard(page, "2023", "3", "10");
     await expect(noticeYearSelect(page)).toHaveValue("2022");
 
+    // 자산 편집 모달이 열린 채라 '이전' 버튼을 가림 → 모달 닫고 Step0 복귀 (테이블+모달 전환)
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+
     // Step1 복귀 후 6-01로 변경
     await page.getByRole("button", { name: /^이전|뒤로/ }).first().click();
     await page.getByLabel("월").first().fill("6");
     await page.getByLabel("일").first().fill("1");
     await page.getByRole("button", { name: /^다음/ }).click();
 
-    // 스텝 재진입 시 보충적 평가 토글 로컬 state 초기화(OFF) → 재오픈 (2026-06-09 토글 전환)
+    // 스텝 재진입 — 자산 행 클릭으로 편집 모달 재오픈 (테이블+모달 전환)
+    await page.locator('[data-testid^="estate-table-row-"]').first().click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeVisible();
+    // 보충적 평가 토글 로컬 state 초기화(OFF) → 재오픈 (2026-06-09 토글 전환)
     await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
     await expect(noticeYearSelect(page)).toHaveValue("2023");
   });

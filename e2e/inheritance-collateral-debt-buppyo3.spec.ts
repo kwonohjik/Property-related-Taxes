@@ -36,7 +36,12 @@ async function setupCollateralOnlyLand(page: Page) {
   await mortgageInput.fill("50000000");
 
   // §14 자동공제 토글 ON (수동 협의분할 채무는 입력하지 않음 — 담보만 있는 케이스)
-  await page.getByText("이 담보채무를 §14 부채로 자동 공제").click();
+  // ToggleCard switch — 제목 텍스트 클릭은 토글 무효(BaseUI)
+  await page.getByRole("switch", { name: /§14 부채로 자동 공제/ }).click();
+
+  // 자산 편집 모달 닫기 (테이블+모달 전환 — 열린 모달이 다음 버튼을 가림)
+  await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
 }
 
 test.describe("§14 담보채무 자동도출분 결과 표시", () => {

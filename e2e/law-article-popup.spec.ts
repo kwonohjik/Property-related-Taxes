@@ -35,7 +35,8 @@ test.describe("법령 리서치 — 조문 팝업", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText(/소득세법/)).toBeVisible();
-    await expect(dialog.getByText(/제77조/)).toBeVisible();
+    // 제77조는 다이얼로그 헤더(제목)와 본문 두 곳에 렌더 → .first()(헤더)로 strict 위반 회피
+    await expect(dialog.getByText(/제77조/).first()).toBeVisible();
 
     // v3 Phase E — 현행성 라벨 [현행] (조문 본문 로드 성공 시). 법제처 API 의존이라 관대하게.
     await expect(dialog.getByText("[현행]")).toBeVisible({ timeout: 30_000 });
@@ -50,7 +51,8 @@ test.describe("법령 리서치 — 조문 팝업", () => {
     await expect(page.getByText("specific_article")).toBeVisible();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText(/제750조/)).toBeVisible();
+    // 제750조는 헤더(제목)+본문 두 곳 렌더 → .first()(헤더)로 strict 위반 회피
+    await expect(dialog.getByText(/제750조/).first()).toBeVisible();
 
     // ESC로 닫힘
     await page.keyboard.press("Escape");

@@ -24,10 +24,11 @@ async function gotoStep1WithLand(page: Page) {
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
   await addHeir(page, "heir", "child");
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
-  await addLandAsset(page, { area: "300", unitPrice: "10000000" });
+  // 자산 편집 모달을 연 채 유지 — §74 토글은 모달 안 ⚙️ 고급 옵션 패널에 있음 (테이블+모달 전환)
+  await addLandAsset(page, { area: "300", unitPrice: "10000000", keepModalOpen: true });
 }
 
-/** 자산카드 ⚙️ 고급 옵션 열고 §74 토글 ON (기본 3호 designated) */
+/** 자산카드 ⚙️ 고급 옵션 열고 §74 토글 ON (기본 3호 designated) — 편집 모달이 열린 상태에서 호출 */
 async function enableHeritageToggle(page: Page) {
   await page.locator('[data-testid^="estate-advanced-panel-toggle-"]').first().click();
   // ToggleCard Switch는 title+description을 aria-label로 가짐 → role=switch + name으로 직접 선택
@@ -58,6 +59,10 @@ test.describe("§74 지정문화유산 등 징수유예 — UI", () => {
     test.setTimeout(90_000);
     await gotoStep1WithLand(page);
     await enableHeritageToggle(page);
+
+    // 편집 모달 닫기 — 모달 backdrop이 '다음' 클릭을 막지 않도록 (테이블+모달 전환)
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
 
     await nextSteps(page, 3); // → Step2 → Step3 → Step4
     await calcAndWaitResult(page);

@@ -88,7 +88,14 @@ test.describe("항목2: 협의분할 칩 클릭 → 토글 자동 ON", () => {
     // 칩 라벨이 "협의분할"(mark on)로 갱신
     await expect(heirChip).toContainText("협의분할");
 
-    // 첫 상속인에게 평가액 전액(3억) 자동 배분 — 분배 금액 input value
+    // 협의분할 ON 초기 배분은 빈 배열(2026-06: 첫 자연인 전액 자동배정 제거).
+    // 상속인 칩(+ 자녀)을 선택하면 toggleHeir가 잔여(=평가액 전액 3억)를 자동 입력한다.
+    await page
+      .getByTestId("heir-allocation-input")
+      .getByRole("button", { name: /자녀/ })
+      .click();
+
+    // 선택된 첫 상속인에게 평가액 전액(3억) 자동 배분 — 분배 금액 input value
     await expect(page.getByPlaceholder("분배 금액").first()).toHaveValue(
       "300,000,000",
     );

@@ -61,10 +61,12 @@ test.describe("PR-L3: §63②3호 상장법인 증자 신주(미상장)", () => 
     await gotoStep0(page);
     await openListedStockCard(page);
     await fillBase(page);
-    await page.getByText(TOGGLE_TITLE).click();
-    // 배당차액 입력 (토글 ON 후 노출된 CurrencyInput — 콤마 입력란)
-    await page.getByText("배당차액 (원/주)").click();
-    await page.locator('input[inputmode="numeric"]').last().fill("3000");
+    await page.getByRole("switch", { name: TOGGLE_TITLE }).click();
+    // 배당차액 입력 (토글 ON 후 노출된 CurrencyInput) — FieldCard 스코프로 정확히 타겟
+    const dividendInput = page
+      .getByText("배당차액 (원/주)")
+      .locator("xpath=ancestor::div[@data-slot='field-card']//input");
+    await dividendInput.fill("3000");
     // 실제 앱 산식: perShareFormula = "50,000 − 3,000 = 47,000", totalFormula = "47,000 × 100주"
     await expect(page.getByTestId("ls-preview-per-share-formula")).toContainText("50,000 − 3,000");
     await expect(page.getByTestId("ls-preview-total-formula")).toContainText("47,000 × 100주");
@@ -76,9 +78,9 @@ test.describe("PR-L3: §63②3호 상장법인 증자 신주(미상장)", () => 
     await gotoStep0(page);
     await openListedStockCard(page);
     await fillBase(page);
-    await page.getByText(TOGGLE_TITLE).click();
-    // 단서 토글 ON (배당기산일 동일 → 배당차액 차감 없음)
-    await page.getByText(/배당기산일을 기존 상장주식과 동일/).click();
+    await page.getByRole("switch", { name: TOGGLE_TITLE }).click();
+    // 단서 토글 ON (배당기산일 동일 → 배당차액 차감 없음) — ToggleCard chip(Switch role)
+    await page.getByRole("switch", { name: /배당기산일을 기존 상장주식과 동일/ }).click();
     // sameBaseDate=true → perShareFormula = "50,000" (차감 0), totalFormula = "50,000 × 100주"
     await expect(page.getByTestId("ls-preview-total-formula")).toContainText("50,000 × 100주");
   });
