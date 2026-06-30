@@ -3,7 +3,7 @@
  *
  * 검증 (계획: docs/00-pm/inheritance-unlisted-capital-change-relocation.plan.md):
  *   1. 자본금 변동사항(CapitalChangeTable)이 섹션 1(CorporateInfoSection) 내부로 이동:
- *      발행주식총수 < 자본금 변동사항 < 보유 주식수 (DOM 세로 순서)
+ *      3×3 그리드 재편 후 DOM 세로 순서 = 보유 주식수(행2) < 발행주식총수(행3) < 자본금 변동사항(행3 직후 임베드)
  *   2. 자본금 변동사항이 "사업연도별 순손익액"(FiscalYearAdjustmentTable)보다 위에 온다
  *      (= 더 이상 섹션 4가 아니라 섹션 1 내부 — 재배치의 핵심 행동 변화)
  *   3. 임베드 시 자체 circle 번호 badge 없음 (제목만 표시)
@@ -45,7 +45,7 @@ async function topY(page: Page, text: string | RegExp): Promise<number> {
 }
 
 test.describe("비상장주식 V2 — 자본금 변동사항 입력란 재배치", () => {
-  test("자본금 변동사항이 섹션 1 내부(발행주식총수 < 자본금변동 < 보유주식)에 위치한다", async ({ page }) => {
+  test("자본금 변동사항이 섹션 1 내부(보유주식 < 발행주식총수 < 자본금변동)에 위치한다", async ({ page }) => {
     await gotoV2FormalValuationCard(page);
 
     // 제목이 렌더되어 있어야 함 (FiscalYear 표 아래로 스크롤하지 않아도 보임)
@@ -53,13 +53,14 @@ test.describe("비상장주식 V2 — 자본금 변동사항 입력란 재배치
       page.getByText(/자본금 변동사항/).first()
     ).toBeVisible({ timeout: 5_000 });
 
+    const yOwnedShares = await topY(page, "보유 주식수");
     const yTotalShares = await topY(page, "발행주식총수");
     const yCapitalChange = await topY(page, /자본금 변동사항/);
-    const yOwnedShares = await topY(page, "보유 주식수");
 
-    // 섹션 1 내부 순서: 발행주식총수 → 자본금 변동사항 → 보유 주식수
+    // 섹션 1 내부 순서 (3×3 그리드): 보유 주식수(행2) → 발행주식총수(행3) → 자본금 변동사항(행3 직후 임베드).
+    // 핵심 검증: 자본금 변동사항이 발행주식총수 바로 아래 = 섹션 1 내부 임베드.
+    expect(yOwnedShares).toBeLessThan(yTotalShares);
     expect(yTotalShares).toBeLessThan(yCapitalChange);
-    expect(yCapitalChange).toBeLessThan(yOwnedShares);
   });
 
   test("자본금 변동사항이 '사업연도별 순손익액' 표보다 위에 온다 (섹션 1로 이동)", async ({ page }) => {

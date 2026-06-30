@@ -14,6 +14,7 @@ import { test, expect, type Page } from "@playwright/test";
 import {
   fillDateAndVerify,
   addLandAsset,
+  addHeir,
   nextSteps,
   calcAndWaitResult,
 } from "./_helpers/tax-flow";
@@ -23,8 +24,7 @@ async function gotoInheritanceStep4(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
 
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child"); // 2단계 picker(상속인 → 자녀) + 주민번호 자동 입력 + 모달 닫기
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
   await addLandAsset(page, { area: "300", unitPrice: "10000000" });
@@ -86,7 +86,13 @@ test.describe("감정평가수수료 공제 — UI", () => {
     // Step1 증여재산 — 현금 1건
     await page.getByRole("button", { name: /증여재산 추가|재산 추가/ }).first().click();
     await page.getByRole("button", { name: /현금/ }).first().click();
+    // 현금 추가 직후 편집 모달 자동 오픈(E-1) — backdrop이 '다음'을 가리므로 닫는다.
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
     await nextSteps(page, 2); // → Step2 → Step3
+
+    // 체크리스트 칩 "감정평가수수료 (§55①)" 클릭 → 입력 섹션 노출 (상속 AF-E2E-1과 동일 패턴)
+    await page.getByText("감정평가수수료 (§55①)").click();
 
     await expect(
       page.getByText("감정평가수수료 공제 (§55①·시행령 §46의2)"),

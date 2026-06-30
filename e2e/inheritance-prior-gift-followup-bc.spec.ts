@@ -10,7 +10,7 @@
  * UI 설계: docs/02-design/features/inheritance-prior-gift-followup-3items.ui.design.md
  */
 import { test, expect } from "@playwright/test";
-import { addHeir, closePriorGiftModal } from "./_helpers/tax-flow";
+import { addHeir, addLandAsset, closePriorGiftModal } from "./_helpers/tax-flow";
 
 async function gotoStep3WithChild(page: import("@playwright/test").Page) {
   await page.goto("/calc/inheritance-tax");
@@ -19,13 +19,15 @@ async function gotoStep3WithChild(page: import("@playwright/test").Page) {
   await page.getByLabel("연도").first().fill("2024");
   await page.getByLabel("월").first().fill("6");
   await page.getByLabel("일").first().fill("1");
-  await addHeir(page, "heir", "child");
+  // 자녀를 주민번호 없이 추가 → birthDate 미도출 → C의 "증여 당시 미성년" 수동 토글 노출 조건 충족.
+  // (RRN 입력 시 HeirEditor가 birthDate를 자동 도출 → MinorAtGiftToggleBlock이 자동판정 안내로 분기되어 토글 미표시)
+  // Step0 진행은 deathDate + 상속인 1명만 요구(collectStepErrors step 0) — RRN 미입력도 네비 가능.
+  await addHeir(page, "heir", "child", { residentNumber: "" });
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
-  // Step1: 아파트 10억
-  await page.getByRole("button", { name: /상속재산 추가/ }).click();
-  await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
-  await page.getByPlaceholder("금액 입력").first().fill("1000000000");
+  // Step1: 토지 자산 3억 (자산 종류 picker 라벨 변경 + 추가 직후 편집 모달 자동 오픈 →
+  // 공용 addLandAsset 헬퍼로 면적·단가 입력 후 모달 자동 닫음). 추정상속재산 산정용 estate.
+  await addLandAsset(page, { area: "300", unitPrice: "1000000" });
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
   await page.getByRole("button", { name: /^다음/ }).click(); // → Step3 (사전증여)
 
@@ -84,8 +86,8 @@ test.describe("상속세 사전증여 후속 B·C", () => {
 
     await page.getByPlaceholder("금액 입력").last().fill("100000000");
 
-    // C 토글: birthDate 미입력 자녀 → "증여 당시 미성년이었음" 노출
-    const minorToggle = page.getByText("증여 당시 미성년이었음");
+    // C 토글: birthDate 미입력 자녀 → "증여 당시 미성년이었음" 노출 (ToggleCard — Switch role)
+    const minorToggle = page.getByRole("switch", { name: "증여 당시 미성년이었음" });
     await expect(minorToggle).toBeVisible();
 
     // 토글 ON

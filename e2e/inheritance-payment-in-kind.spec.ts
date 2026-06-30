@@ -51,7 +51,8 @@ test.describe("물납 (§73)", () => {
     // Step4 — 물납 신청 토글 노출
     const toggle = page.getByText("물납 신청 (상증법 §73)");
     await expect(toggle).toBeVisible();
-    await toggle.click(); // ON → 펼침
+    // ToggleCard switch — 제목 텍스트 클릭은 토글 무효(BaseUI), 인접 §73 인용링크가 가로챔
+    await page.getByRole("switch", { name: /물납 신청/ }).click(); // ON → 펼침
 
     // 보정 입력 노출 확인
     await expect(page.getByText("관리·처분 부적당 제외액")).toBeVisible();

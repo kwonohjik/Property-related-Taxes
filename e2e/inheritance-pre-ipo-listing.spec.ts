@@ -55,7 +55,7 @@ test.describe("비상장주식 V2 §63②1호 기업공개 준비 중 평가", (
   test("T-L-1: 상속 토글 ON → 윈도우 미리보기 + '6개월' 표기", async ({ page }) => {
     test.setTimeout(60_000);
     await gotoInheritanceV2Formal(page);
-    await page.getByText(TOGGLE_TITLE).click();
+    await page.getByRole("switch", { name: TOGGLE_TITLE }).click();
     await expect(page.getByTestId("pre-ipo-listing-form")).toBeVisible();
     const preview = page.getByTestId("pre-ipo-window-preview");
     await expect(preview).toBeVisible();
@@ -65,7 +65,7 @@ test.describe("비상장주식 V2 §63②1호 기업공개 준비 중 평가", (
   test("T-L-2: 증여 토글 ON → '3개월' 표기 (taxKind 주입 검증)", async ({ page }) => {
     test.setTimeout(60_000);
     await gotoGiftV2Formal(page);
-    await page.getByText(TOGGLE_TITLE).click();
+    await page.getByRole("switch", { name: TOGGLE_TITLE }).click();
     await expect(page.getByTestId("pre-ipo-listing-form")).toBeVisible();
     const preview = page.getByTestId("pre-ipo-window-preview");
     await expect(preview).toBeVisible();
@@ -77,7 +77,7 @@ test.describe("비상장주식 V2 §63②2호 거래소 상장신청·협회 등
   test("T-L2-2: 토글 ON 기본 거래소 상장 → preview '거래소 상장 전'", async ({ page }) => {
     test.setTimeout(60_000);
     await gotoInheritanceV2Formal(page);
-    await page.getByText(TOGGLE_TITLE).click();
+    await page.getByRole("switch", { name: TOGGLE_TITLE }).click();
     await expect(page.getByTestId("pre-ipo-preparation-type")).toBeVisible();
     await expect(page.getByTestId("pre-ipo-window-preview")).toContainText("거래소 상장 전");
   });
@@ -85,7 +85,7 @@ test.describe("비상장주식 V2 §63②2호 거래소 상장신청·협회 등
   test("T-L2-1: 협회 등록 선택 → preview '협회 등록 전'", async ({ page }) => {
     test.setTimeout(60_000);
     await gotoInheritanceV2Formal(page);
-    await page.getByText(TOGGLE_TITLE).click();
+    await page.getByRole("switch", { name: TOGGLE_TITLE }).click();
     // preparationType 라디오: 협회 등록(K-OTC) 선택
     await page.getByText(/협회 등록\(K-OTC\)/).click();
     await expect(page.getByTestId("pre-ipo-window-preview")).toContainText("협회 등록 전");

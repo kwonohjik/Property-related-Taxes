@@ -12,6 +12,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import {
+  addHeir,
   addLandAsset,
   calcAndWaitResult,
   fillDateAndVerify,
@@ -22,8 +23,7 @@ import {
 async function fillStep0WithChild(page: Page) {
   await page.goto("/calc/inheritance-tax");
   await fillDateAndVerify(page, { year: "2024", month: "6", day: "10" });
-  await page.getByRole("button", { name: /상속인 추가/ }).click();
-  await page.getByText("자녀", { exact: true }).click();
+  await addHeir(page, "heir", "child"); // 2단계 picker(상속인 → 자녀) + 주민번호 자동 입력 + 모달 닫기
   await page.getByRole("button", { name: /^다음/ }).click();
 }
 

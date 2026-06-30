@@ -30,6 +30,9 @@ async function inputAndCalculate(page: Page) {
   await page.getByRole("switch", { name: /보충적 평가방법/ }).click();
   await page.getByPlaceholder("면적 입력").fill("300");
   await page.getByPlaceholder("공시지가 단가").fill("1000000");
+  // 자산 편집 모달 닫기 (테이블+모달 전환 — 열린 모달이 다음 버튼을 가림)
+  await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
   // Step2 → Step3 → Step4 → 계산
   for (let i = 0; i < 3; i++) {
     await page.getByRole("button", { name: /^다음/ }).click();
@@ -40,8 +43,11 @@ async function inputAndCalculate(page: Page) {
 
 test("ER: 이력 수정 클릭 시 상속개시일·상속인 복원 (빈 폼 아님)", async ({ page }) => {
   await inputAndCalculate(page);
-  // 결과 화면 자동저장 대기
-  await expect(page.getByText(/자동 저장|이력/).first()).toBeVisible({ timeout: 15_000 });
+  // 결과 화면 자동저장 완료 대기 — IndexedDB 쓰기 commit 보장 후 /history 이동.
+  // (구 정규식 /자동 저장|이력/ 은 상단 "계산 이력" 내비 링크에 오매칭 → 실질 대기 없음 → 레이스)
+  await expect(
+    page.getByText(/이력에 자동 저장되었습니다/).first(),
+  ).toBeVisible({ timeout: 15_000 });
 
   // /history 이동 → 수정 클릭
   await page.goto("/history");

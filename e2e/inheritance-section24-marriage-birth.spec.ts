@@ -12,6 +12,7 @@
 import { test, expect } from "@playwright/test";
 import { fillDateAndVerify, calcAndWaitResult,
   addHeir,
+  addLandAsset,
   closePriorGiftModal,
 } from "./_helpers/tax-flow";
 
@@ -24,10 +25,8 @@ test.describe("상속세 §53의2 혼인·출산 증여재산공제", () => {
     await addHeir(page, "heir", "child");
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step1
 
-    // Step1: 아파트 10억
-    await page.getByRole("button", { name: /상속재산 추가/ }).click();
-    await page.getByRole("button", { name: /아파트.*공동주택/ }).click();
-    await page.getByPlaceholder("금액 입력").first().fill("1000000000");
+    // Step1: 상속재산 (토지 30억 — §53의2 위젯 테스트는 자산 종류 무관, 공유 헬퍼로 모달 처리)
+    await addLandAsset(page, { area: "300", unitPrice: "10000000" });
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step2
     await page.getByRole("button", { name: /^다음/ }).click(); // → Step3 (사전증여)
 

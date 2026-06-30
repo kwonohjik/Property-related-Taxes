@@ -40,19 +40,23 @@ test.describe("담보채무 §14 자동공제 토글 ON → 자동노출", () =>
       .locator("xpath=ancestor::div[@data-slot='field-card']//input");
     await mortgageInput.fill("50000000");
 
-    // 담보채무 §14 자동공제 토글 ON
-    await page.getByText("이 담보채무를 §14 부채로 자동 공제").click();
+    // 담보채무 §14 자동공제 토글 ON (ToggleCard switch — 제목 텍스트 클릭은 토글 무효)
+    await page.getByRole("switch", { name: /§14 부채로 자동 공제/ }).click();
 
     // 금융채무 하위 토글 노출 확인 (ON children)
     await expect(
       page.getByText("저당채무가 금융회사 채무", { exact: false }),
     ).toBeVisible();
 
+    // 자산 편집 모달 닫기 (테이블+모달 전환 — 열린 모달이 다음 버튼을 가림)
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+
     // Step2(비과세·장례비)로 이동
     await page.getByRole("button", { name: /^다음/ }).click();
 
     // 채무·공과·장례비 협의분할 모드 토글 ON → DebtAllocationInput 렌더
-    await page.getByText("채무·공과·장례비 협의분할 입력").click();
+    await page.getByRole("switch", { name: /채무·공과·장례비 협의분할 입력/ }).click();
 
     // 자동노출 카드 확인 (derive only — 읽기전용)
     await expect(
@@ -76,8 +80,12 @@ test.describe("담보채무 §14 자동공제 토글 ON → 자동노출", () =>
     await mortgageInput.fill("50000000");
     // 토글 ON 하지 않음
 
+    // 자산 편집 모달 닫기 (테이블+모달 전환 — 열린 모달이 다음 버튼을 가림)
+    await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+    await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+
     await page.getByRole("button", { name: /^다음/ }).click();
-    await page.getByText("채무·공과·장례비 협의분할 입력").click();
+    await page.getByRole("switch", { name: /채무·공과·장례비 협의분할 입력/ }).click();
 
     // 자동노출 카드 없어야 함 (opt-in OFF → deriveCollateralDebts 빈 배열)
     await expect(
