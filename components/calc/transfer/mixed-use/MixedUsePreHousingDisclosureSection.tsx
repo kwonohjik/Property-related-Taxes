@@ -77,6 +77,13 @@ export function MixedUsePreHousingDisclosureSection({
   const acqDate = asset.landAcquisitionDate || asset.acquisitionDate;
   const isPre1990 = !!acqDate && acqDate < "1990-08-30";
 
+  // [의도적 예외] "useEffect → store 미러링 금지" 정책의 명시적 예외로 유지한다.
+  // pre1990Enabled를 true로 한 번만 세팅하는 "수렴하는 boolean 래치"다 — 가드(!pre1990Enabled)가
+  // 재발동을 차단해 무한 루프 위험이 없다(값 미러링이 아닌 단방향 latch). effect ②(phdLandPricePerSqmAtAcq
+  // 값 미러링)는 제거했으나 이 래치는 유지: 깔끔한 제거는 hasPre1990 의미를 API 7곳·validate 3곳
+  // (실가 §622 취득가액 필수 등) + companion 쌍둥이까지 재파생해야 하고, 실가/일반 환산 pre-1990 토지
+  // 검증을 뒤집을 silent 회귀 위험이 커 tax-correctness 우선으로 보류한다.
+  // (companion 동일 패턴: CompanionAcqPurchaseBlock.tsx)
   useEffect(() => {
     if (isPre1990 && !asset.pre1990Enabled) {
       onChange({ pre1990Enabled: true });
