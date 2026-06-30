@@ -105,6 +105,9 @@ describe("CompanionAssetCard — 실시간 경고 렌더", () => {
         onChange={() => {}}
         singleMode
         transferDate="2024-06-01"
+        splitMode="none"
+        onFractionalToggle={() => {}}
+        hasSiblings={false}
       />,
     );
     expect(
@@ -122,6 +125,9 @@ describe("CompanionAssetCard — 실시간 경고 렌더", () => {
         singleMode
         transferDate="2024-06-01"
         errorMessage="자산: 취득일은 양도일보다 이전이어야 합니다."
+        splitMode="none"
+        onFractionalToggle={() => {}}
+        hasSiblings={false}
       />,
     );
     // 차단 배너 1건만 — 실시간 경고("날짜를 확인해 주세요" 꼬리표)는 미렌더

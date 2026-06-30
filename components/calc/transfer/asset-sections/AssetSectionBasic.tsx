@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ① 기본정보 — 자산종류·겸용토글·소재지·입주권·자산명칭·면적·토지성격·지분율·지분안내.
+ * ① 기본정보 — 자산종류·겸용토글·소재지·입주권·자산명칭·면적·토지성격. (지분율은 ③ 취득정보로 이전)
  * CompanionAssetCard L175–472 JSX를 그대로 이동 (동작 변화 0).
  */
 import { Fragment } from "react";
@@ -29,7 +29,6 @@ import {
   isReverseGeocodeError,
 } from "@/lib/calc/vworld-reverse-geocode";
 import { MixedUseToggleRow } from "../MixedUseSection";
-import { OwnershipRatioInput, isFractionalMode } from "../OwnershipRatioInput";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
 import {
   ReplotReductionFields,
@@ -446,59 +445,6 @@ export function AssetSectionBasic({
         />
       )}
 
-      {/* 공유 지분율 — 단독 100/100 기본, 지분 단계취득 자산은 명시 입력 */}
-      <OwnershipRatioInput
-        numerator={asset.ownershipNumerator}
-        denominator={asset.ownershipDenominator}
-        onChange={(patch) =>
-          onChange({
-            ...(patch.numerator !== undefined
-              ? { ownershipNumerator: patch.numerator }
-              : {}),
-            ...(patch.denominator !== undefined
-              ? { ownershipDenominator: patch.denominator }
-              : {}),
-          })
-        }
-      />
-
-      {/* 지분 모드 활성 시 100% 기준 입력 안내 (단독 소유는 미표시) */}
-      {isFractionalMode(
-        asset.ownershipNumerator,
-        asset.ownershipDenominator,
-      ) && (
-        <div className="rounded-lg border-2 border-amber-300 bg-amber-50/70 px-4 py-3 text-sm">
-          <div className="flex items-start gap-2">
-            <span
-              aria-hidden
-              className="text-amber-600 font-bold text-base leading-none mt-0.5"
-            >
-              ⚠
-            </span>
-            <div className="space-y-1.5 flex-1">
-              <p className="font-semibold text-amber-900">
-                지분 모드 — 모든 금액을{" "}
-                <span className="underline">100% 기준</span>으로 입력하세요
-              </p>
-              <ul className="text-xs text-amber-800 space-y-0.5 leading-relaxed list-disc list-inside">
-                <li>
-                  <strong>양도가액·취득가액·필요경비</strong>는 물건 전체(100%)
-                  기준으로 입력합니다. 시스템이 지분율(
-                  {asset.ownershipNumerator}/{asset.ownershipDenominator})을
-                  자동으로 적용합니다.
-                </li>
-                <li>
-                  예: 60% 지분의 실제 매매가 600,000,000원 → 100% 기준{" "}
-                  <strong>1,000,000,000원</strong>으로 입력 (600M ÷ 0.6).
-                </li>
-                <li>
-                  상속 보충적평가는 공동주택가격(100%)을 그대로 입력하면 됩니다.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

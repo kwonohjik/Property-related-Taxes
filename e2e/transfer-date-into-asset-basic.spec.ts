@@ -26,8 +26,8 @@ test.describe("양도일·신고일 자산 ① 기본정보 이동", () => {
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
-    // 일괄양도 토글 ON → 자산 2건
-    await page.getByRole("switch", { name: /함께 양도한 다른 자산/ }).click();
+    // 함께양도(토글 A) ON → 자산 2건
+    await page.getByRole("switch", { name: /다른 부동산도 함께/ }).click();
 
     // 폼-전역 양도일·신고일 위젯은 첫 자산에만 1개씩 (strict 중복 없음)
     await expect(page.getByTestId("transfer-date")).toHaveCount(1);

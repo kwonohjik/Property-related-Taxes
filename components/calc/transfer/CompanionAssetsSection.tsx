@@ -5,6 +5,7 @@ import { type AssetForm, type TransferFormData, makeDefaultAsset } from "@/lib/s
 import { Button } from "@/components/ui/button";
 import { CompanionAssetCard } from "./CompanionAssetCard";
 import type { BundledSaleMode } from "./CompanionSaleModeBlock";
+import type { AssetSplitMode } from "./OwnershipRatioInput";
 
 interface Props {
   assets: AssetForm[];
@@ -35,9 +36,13 @@ interface Props {
   errorAssetIndex?: number | null;
   /** 검증 실패 메시지 (errorAssetIndex 카드에 표시) */
   errorMessage?: string | null;
+  /** 자산 분할 모드 (Step1 단일 소스) — ③ 토글 B + "+ 추가" 버튼 분기 */
+  splitMode: AssetSplitMode;
+  /** 토글 B(지분분할) on/off 핸들러 — Step1 정의 */
+  onFractionalToggle: (yes: boolean) => void;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, errorAssetIndex, errorMessage }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, errorAssetIndex, errorMessage, splitMode, onFractionalToggle }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -90,12 +95,26 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           primaryAsset={idx > 0 ? assets[0] : undefined}
           isOneHouseSingle={isOneHouseSingle}
           errorMessage={errorAssetIndex === idx ? errorMessage ?? undefined : undefined}
+          splitMode={splitMode}
+          onFractionalToggle={onFractionalToggle}
+          hasSiblings={assets.length > 1}
         />
       ))}
 
       {assets.length > 1 && (
-        <Button type="button" variant="outline" onClick={() => addAsset()} className="w-full">
-          + 자산 추가
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            addAsset(
+              splitMode === "fractional"
+                ? { ownershipNumerator: "", ownershipDenominator: "" }
+                : undefined,
+            )
+          }
+          className="w-full"
+        >
+          {splitMode === "fractional" ? "+ 지분 추가" : "+ 자산 추가"}
         </Button>
       )}
     </div>

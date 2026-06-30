@@ -126,4 +126,70 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     expect(issues[2].message).toContain("보유 감면주택 2");
     expect(issues[2].message).toContain("취득일");
   });
+
+  // ── 토글 분리 anchor (회귀 baseline) ──────────────────────────────
+  it("T-09 (anchor): 함께양도 actual — 구분 양도가액 합 ≠ 총양도가액 차단", () => {
+    const form = baseForm();
+    form.contractTotalPrice = "100000000";
+    form.assets[0].assetKind = "housing";
+    form.assets[0].acquisitionDate = "2020-01-01";
+    form.assets[0].fixedAcquisitionPrice = "30000000";
+    form.assets[0].actualSalePrice = "60000000";
+    const second = makeDefaultAsset(2);
+    second.assetKind = "housing";
+    second.acquisitionDate = "2020-01-01";
+    second.fixedAcquisitionPrice = "20000000";
+    second.actualSalePrice = "30000000"; // 합 90M ≠ 100M
+    form.assets.push(second);
+    form.bundledSaleMode = "actual";
+
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("총 양도가액과 일치하지 않"))).toBe(true);
+  });
+
+  it("T-10 (anchor): 지분분할 — anyFractional 시 합계검증 생략", () => {
+    const form = baseForm();
+    form.contractTotalPrice = "1000000000";
+    form.assets[0].assetKind = "housing";
+    form.assets[0].acquisitionDate = "2020-01-01";
+    form.assets[0].fixedAcquisitionPrice = "300000000";
+    form.assets[0].actualSalePrice = "1000000000"; // 100% 기준
+    form.assets[0].ownershipNumerator = "60";
+    form.assets[0].ownershipDenominator = "100";
+    const second = makeDefaultAsset(2);
+    second.assetKind = "housing";
+    second.acquisitionDate = "2021-01-01";
+    second.fixedAcquisitionPrice = "300000000";
+    second.actualSalePrice = "1000000000";
+    second.ownershipNumerator = "40";
+    second.ownershipDenominator = "100";
+    form.assets.push(second);
+    form.bundledSaleMode = "actual";
+
+    const issues = collectStepIssues(0, form);
+    // anyFractional=true → 합계검증 생략 → 합계 불일치 메시지 없음
+    expect(issues.some((it) => it.message.includes("총 양도가액과 일치하지 않"))).toBe(false);
+  });
+
+  it("T-11 (anchor): 지분분할 토글 ON — ownership 빈칸이면 지분율 입력 차단 (옵션 c)", () => {
+    const form = baseForm();
+    form.contractTotalPrice = "1000000000";
+    form.assets[0].assetKind = "housing";
+    form.assets[0].acquisitionDate = "2020-01-01";
+    form.assets[0].fixedAcquisitionPrice = "300000000";
+    form.assets[0].actualSalePrice = "1000000000";
+    form.assets[0].ownershipNumerator = ""; // 토글 B ON 직후 빈칸
+    form.assets[0].ownershipDenominator = "";
+    const second = makeDefaultAsset(2);
+    second.assetKind = "housing";
+    second.acquisitionDate = "2021-01-01";
+    second.fixedAcquisitionPrice = "300000000";
+    second.actualSalePrice = "1000000000";
+    second.ownershipNumerator = "";
+    second.ownershipDenominator = "";
+    form.assets.push(second);
+
+    const issues = collectStepIssues(0, form);
+    expect(issues.some((it) => it.message.includes("지분율(분자/분모)"))).toBe(true);
+  });
 });
