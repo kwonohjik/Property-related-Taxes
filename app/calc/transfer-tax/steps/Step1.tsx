@@ -7,7 +7,6 @@ import {
 } from "@/lib/stores/calc-wizard-store";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
 import { BundledSaleModeToggle } from "@/components/calc/transfer/CompanionSaleModeBlock";
 import { getFilingDeadline, isFilingOverdue, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
@@ -65,13 +64,7 @@ export function Step1({
 
   return (
     <div className="space-y-6">
-      {/* 양도자산 구성 */}
       <section>
-        <SectionHeader
-          title="양도자산 구성"
-          description="자산을 1건 이상 입력하세요"
-        />
-
         {/* 일괄양도 여부 */}
         <ToggleCard
           className="mb-3"
