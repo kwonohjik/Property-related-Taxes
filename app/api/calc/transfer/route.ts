@@ -369,6 +369,10 @@ export async function POST(request: NextRequest) {
     buildingFootprintArea: data.buildingFootprintArea,
     isUrbanArea: data.isUrbanArea,
     appurtenantLandZone: data.appurtenantLandZone,
+    // ⑭ 부수토지 일체과세 판정 (§89①3호·영§154⑦) — landNature는 Zod 검증되나 매핑 누락 시 엔진 미도달.
+    // primaryContextForCompanionRate가 설정된 bundled 토지-primary에서 resolveCompanionLandRate가
+    // landNature !== "appurtenant_to_housing"(undefined 포함)이면 applied=false로 일체과세 미발동.
+    landNature: data.landNature,
     // ⑭ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 — 명시 매핑 필수)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(data.commercialBuildingValuation ? { commercialBuildingValuation: data.commercialBuildingValuation as any } : {}),
