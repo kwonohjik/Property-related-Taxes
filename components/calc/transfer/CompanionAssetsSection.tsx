@@ -20,8 +20,6 @@ interface Props {
   filingOverdue?: boolean;
   /** 신고기한 문자열 (Step1 산출) */
   filingDeadline?: string;
-  /** 전 자산 부담부증여 여부 (Step1 산출) */
-  burdenedGiftDeadline?: boolean;
   /** 폼-전역 패치 (양도일·신고일 write — handleFormChange 경유) */
   onFormChange?: (patch: Partial<TransferFormData>) => void;
   /** 폼-수준 총 양도가액 — 지분 모드 자동 계산용 */
@@ -39,7 +37,7 @@ interface Props {
   errorMessage?: string | null;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, burdenedGiftDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, errorAssetIndex, errorMessage }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, errorAssetIndex, errorMessage }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -84,7 +82,6 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           filingDate={filingDate}
           filingOverdue={filingOverdue}
           filingDeadline={filingDeadline}
-          burdenedGiftDeadline={burdenedGiftDeadline}
           showFormDates={idx === 0}
           onFormChange={onFormChange}
           contractTotalPrice={contractTotalPrice}

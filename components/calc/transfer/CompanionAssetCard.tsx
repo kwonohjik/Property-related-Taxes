@@ -54,8 +54,6 @@ interface Props {
   filingOverdue?: boolean;
   /** 신고기한 문자열 (Step1 산출 — warning·hint 표시) */
   filingDeadline?: string;
-  /** 전 자산 부담부증여 여부 (Step1 산출 — 신고기한 3개월 §105①3호) */
-  burdenedGiftDeadline?: boolean;
   /** 첫 자산(index 0)일 때 양도일·신고일 입력란 노출 + ① 자동 펼침 */
   showFormDates?: boolean;
   /** 폼-전역 패치 (양도일·신고일 write — handleFormChange 경유) */
@@ -93,7 +91,6 @@ export function CompanionAssetCard({
   filingDate,
   filingOverdue,
   filingDeadline,
-  burdenedGiftDeadline,
   showFormDates,
   onFormChange,
   onAddAsset,
@@ -264,7 +261,6 @@ export function CompanionAssetCard({
           filingDate={filingDate}
           filingOverdue={filingOverdue}
           filingDeadline={filingDeadline}
-          burdenedGiftDeadline={burdenedGiftDeadline}
           onFormChange={onFormChange}
         />
       </AssetSection>
