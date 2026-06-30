@@ -10,7 +10,7 @@
  */
 
 import { addYears } from "date-fns";
-import { calculateHoldingPeriod, applyRate } from "./tax-utils";
+import { calculateHoldingPeriod } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import { TRANSFER } from "./legal-codes";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -180,9 +180,9 @@ export function calcCarryoverScenarios(
   // ─────────────────────────────────────────────────────────
 
   // 4a: 취득가액 결정 (직접 입력 or PHD/APD 환산)
+  // 개산공제 등 필요경비는 아래 necessaryExpenseBeforeGift가 엔진 산출값(swap 반영)에서 역산하므로
+  // 여기서 별도로 계산하지 않는다.
   let donorAcqPrice: number;
-  // 환산 모드에서 개산공제액 (§163⑥ — 취득시 기준시가 × 3%). 증여세 차감 경로에서 사용.
-  let estimatedDeductionForGiftTax = 0;
   if (ct.useEstimatedAcquisition) {
     if (rawInput.preHousingDisclosure) {
       // PHD/APD 환산 재사용 (M-2 결정: apartmentPreDisclosure도 동일 함수)
@@ -191,7 +191,6 @@ export function calcCarryoverScenarios(
         rawInput.preHousingDisclosure,
       );
       donorAcqPrice = phdResult.totalEstimatedAcquisitionPrice;
-      estimatedDeductionForGiftTax = phdResult.landLumpDeduction + phdResult.buildingLumpDeduction;
     } else {
       // 기준시가 직접 입력 환산 (§97 ① 1호 나목, 시행령 §163 ⑨)
       const stdAtAcq = rawInput.standardPriceAtAcquisition ?? 0;
@@ -199,8 +198,6 @@ export function calcCarryoverScenarios(
       donorAcqPrice = stdAtTransfer > 0
         ? Math.floor(rawInput.transferPrice * stdAtAcq / stdAtTransfer)
         : 0;
-      // 개산공제 = 취득시 기준시가 × 3% (§163⑥)
-      estimatedDeductionForGiftTax = applyRate(stdAtAcq, 0.03);
     }
   } else {
     donorAcqPrice = ct.donorAcquisitionPrice ?? 0;
@@ -246,9 +243,18 @@ export function calcCarryoverScenarios(
   //   - acquisitionPrice = 이미 계산된 donorAcqPrice
   //   - expenses = 개산공제 + giftTaxAddedToExpense (legacy expenses로 직접 차감)
   // 실가 모드(useEstimatedAcquisition=false)에서는 expenses가 직접 차감되므로 그대로 사용.
+  // 환산 모드에서 엔진이 §97②2호 단서 swap까지 반영해 산출한 필요경비.
+  //   = 양도가 − 환산취득가 − (증여세 가산 전 양도차익)
+  // 개산공제 단독이 아니라 swap-aware 값이므로, capex가 개산공제보다 커서 swap이 발동한 경우에도
+  // 자본적지출이 누락되지 않는다(과거 버그: 개산공제만 써서 capex 전액 누락 → 양도차익 과대).
+  // 실가 전환 후 actual 모드 gain = 양도가 − 환산취득가 − expenses 이므로 모드(PHD/기준시가) 무관하게 정확.
+  const necessaryExpenseBeforeGift = Math.max(
+    0,
+    rawInput.transferPrice - donorAcqPrice - gainBeforeGiftTax,
+  );
   let inputAFinal: TransferTaxInput;
   if (ct.useEstimatedAcquisition && giftTaxAddedToExpense > 0) {
-    // 환산 모드 + 증여세 차감 필요: 실가 전환 후 expenses에 개산공제+증여세 합산
+    // 환산 모드 + 증여세 차감 필요: 실가 전환 후 expenses = swap-aware 필요경비 + 증여세 상당액
     inputAFinal = {
       ...inputABase,
       useEstimatedAcquisition: false,
@@ -258,10 +264,9 @@ export function calcCarryoverScenarios(
       preHousingDisclosure: undefined,
       standardPriceAtAcquisition: undefined,
       standardPriceAtTransfer: undefined,
-      // 증여세 포함 필요경비 = 개산공제 + 증여세 상당액
-      expenses: estimatedDeductionForGiftTax + giftTaxAddedToExpense,
-      // capitalExpenditure는 그대로 유지 (swap 비교 — 환산+개산 vs 직접)
-      // 단 실가 전환 후 swap 비교 무의미하므로 명시적으로 제거
+      // 증여세 포함 필요경비 = swap-aware 필요경비(개산공제 또는 자본+양도비) + 증여세 상당액
+      expenses: necessaryExpenseBeforeGift + giftTaxAddedToExpense,
+      // capex/양도비는 위 필요경비에 이미 반영됨 → 실가 모드 재차감 방지 위해 제거
       capitalExpenditure: undefined,
       transferExpense: undefined,
     };
