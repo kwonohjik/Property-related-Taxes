@@ -490,7 +490,9 @@ export function handleMultiParcelBranch(
     const parcelLabel = `필지 ${pi + 1}`;
     const expenseDesc = pr.estimatedDeduction > 0
       ? `개산공제 ${pr.estimatedDeduction.toLocaleString()}`
-      : pr.expenses.toLocaleString();
+      : pr.swapApplied
+        ? `자본적지출+양도비 ${pr.expenses.toLocaleString()} (§97②단서)`
+        : pr.expenses.toLocaleString();
     steps.push({ label: `[${parcelLabel}] 양도차익`, formula: `안분가 ${pr.allocatedTransferPrice.toLocaleString()} - 취득가 ${pr.acquisitionPrice.toLocaleString()} - 경비 ${expenseDesc}`, amount: pr.transferGain });
     steps.push({ label: `[${parcelLabel}] 장특공제`, formula: `${(pr.longTermHoldingRate * 100).toFixed(0)}%`, amount: pr.longTermHoldingDeduction, sub: true });
   }
