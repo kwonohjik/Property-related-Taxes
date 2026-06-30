@@ -338,7 +338,9 @@ export function calculateTransferTaxAggregate(
   const penaltyTax = perAssetBuildingPenalty + perAssetFilingDelayedPenalty;
 
   // M-10: 지방소득세 (원 미만 절사 — 지방세법 §103의3)
-  const localIncomeTax = applyRate(determinedTaxBeforePenalty + penaltyTax, 0.1);
+  // 과세표준 = 결정세액 + §114조의2 건물 가산세만 (단건 엔진 finalize와 동일).
+  // 신고불성실·납부지연 가산세(국세기본법 §47의2~5)는 지방소득세 부과대상이 아니므로 base 제외.
+  const localIncomeTax = applyRate(determinedTaxBeforePenalty + perAssetBuildingPenalty, 0.1);
   const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax;
 
   steps.push({

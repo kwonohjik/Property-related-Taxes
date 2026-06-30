@@ -20,7 +20,7 @@
  * NB(비사업용토지) 비율 + 12억 비과세 안분(proratio)은 housing 풀 전체에 적용.
  */
 
-import { applyRate } from "./tax-utils";
+import { applyRate, calculateHoldingPeriod } from "./tax-utils";
 import {
   calcLongTermRate,
   type HousingGainSplit,
@@ -41,10 +41,14 @@ export interface UsagePeriodInfo {
   t2Days: number;
   /** 전체 보유 일수 */
   totalDays: number;
-  /** Period 1 보유연수 (LTHD용) */
+  /** Period 1 보유연수 (365.25 기준, 시간비례 안분용) */
   t1Years: number;
-  /** Period 2 보유연수 (LTHD용) */
+  /** Period 2 보유연수 (365.25 기준, 시간비례 안분용) */
   t2Years: number;
+  /** Period 1 완성 보유연수 (초일불산입·calendar, LTHD 율 산정용) */
+  t1HoldingYears: number;
+  /** Period 2 완성 보유연수 (초일불산입·calendar, LTHD 율 산정용) */
+  t2HoldingYears: number;
 }
 
 /**
@@ -73,6 +77,9 @@ export function calcUsagePeriodInfo(
     totalDays,
     t1Years: t1Days / 365.25,
     t2Years: t2Days / 365.25,
+    // LTHD 율은 §95② 완성연수 기준 — 분수(t1Years/t2Years)가 아닌 초일불산입 calendar 연수 사용.
+    t1HoldingYears: calculateHoldingPeriod(acquisitionDate, usageChangeDate).years,
+    t2HoldingYears: calculateHoldingPeriod(usageChangeDate, transferDate).years,
   };
 }
 
@@ -112,7 +119,7 @@ export function applyUsagePeriodSplit(
   usagePeriodSplit: UsagePeriodSplitResult;
 } {
   const HIGH_VALUE_THRESHOLD = 1_200_000_000;
-  const { t1Days, t2Days, totalDays, t1Years, t2Years } = periodInfo;
+  const { t1Days, t2Days, totalDays, t1HoldingYears, t2HoldingYears } = periodInfo;
   const t1Frac = t1Days / totalDays;
   const t2Frac = t2Days / totalDays;
 
@@ -189,14 +196,14 @@ export function applyUsagePeriodSplit(
 
   // P1 housing LTHD: t1 보유기간 (h_to_c일 때만 housing P1 존재)
   const p1HousingRate = isHtoC
-    ? calcLongTermRate(t1Years, residenceYears, useTable2)
+    ? calcLongTermRate(t1HoldingYears, residenceYears, useTable2)
     : 0;
   const p1HousingLTHD =
     applyRate(p1HousingLandProrated, p1HousingRate) +
     applyRate(p1HousingBuildingProrated, p1HousingRate);
 
   // P2 housing LTHD: t2 보유기간
-  const p2HousingRate = calcLongTermRate(t2Years, residenceYears, useTable2);
+  const p2HousingRate = calcLongTermRate(t2HoldingYears, residenceYears, useTable2);
   const p2HousingLTHD =
     applyRate(p2HousingLandProrated, p2HousingRate) +
     applyRate(p2HousingBuildingProrated, p2HousingRate);
@@ -205,7 +212,7 @@ export function applyUsagePeriodSplit(
   const housingIncome = Math.max(0, proratedTaxableGain - housingLTHD);
 
   // P1 commercial LTHD: t1 보유기간 (c_to_h일 때만 P1 commercial 존재), 표1 only
-  const p1CommercialRate = !isHtoC ? calcLongTermRate(t1Years, 0, false) : 0;
+  const p1CommercialRate = !isHtoC ? calcLongTermRate(t1HoldingYears, 0, false) : 0;
   const p1CommercialLand = !isHtoC
     ? Math.floor(Math.max(p1CommercialLandGain, 0))
     : 0;
@@ -217,7 +224,7 @@ export function applyUsagePeriodSplit(
     applyRate(p1CommercialBuilding, p1CommercialRate);
 
   // P2 commercial LTHD: t2 보유기간, 표1 only
-  const p2CommercialRate = calcLongTermRate(t2Years, 0, false);
+  const p2CommercialRate = calcLongTermRate(t2HoldingYears, 0, false);
   const p2CommercialLand = Math.floor(Math.max(p2CommercialLandGain, 0));
   const p2CommercialBuilding = Math.floor(Math.max(p2CommercialBuildingGain, 0));
   const p2CommercialLTHD =

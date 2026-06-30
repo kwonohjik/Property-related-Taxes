@@ -288,13 +288,15 @@ export const PARTIAL_USAGE_CHANGE_ANCHORS = {
     housingTransferGain: 433_502_054,
     commercialTransferGain: 182_236_563,
     // 양도소득금액 — 용도변경 시점 기반 LTHD 시간 비례 분할 (period split) 활성화
-    housingIncomeAmount: 574_986_364,
-    commercialIncomeAmount: 140_196_173,
+    // LTHD 율은 완성 보유연수 기준 (§95②): P2 = 완성 11년(2011.8.5→2023.2.16) × 2% = 22%.
+    // (이전 anchor는 분수 11.534년 → 23.07% 과다공제 버그를 encode했음 — 완성연수 floor로 정정)
+    housingIncomeAmount: 576_295_246,
+    commercialIncomeAmount: 142_144_520,
     // 합산 세액
-    aggregateIncome: 736_822_125,
-    taxBase: 734_322_125,
-    transferTax: 274_639_250,
-    localTax: 27_463_925,
-    totalPayable: 302_103_175,
+    aggregateIncome: 740_079_354,
+    taxBase: 737_579_354,
+    transferTax: 276_007_286,
+    localTax: 27_600_728,
+    totalPayable: 303_608_014,
   },
 } as const;

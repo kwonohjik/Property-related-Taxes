@@ -471,6 +471,37 @@ describe("T-M11: 가산세 건별 + 합산 (자산별 가산세)", () => {
     expect(r.properties[0].filingDelayedPenaltyTax).toBeGreaterThanOrEqual(0);
     expect(r.properties[0].penaltyDetail).toBeDefined();
   });
+
+  it("지방소득세 과세표준은 신고·납부지연 가산세 제외 — 단건 엔진과 동일 (회귀)", () => {
+    // 버그: aggregate가 신고·납부지연 가산세까지 지방소득세 base에 포함 → 과다.
+    // 수정: base = 결정세액 + §114조의2 건물가산세만 (토지 직접취득이라 건물가산세 0).
+    const input: AggregateTransferInput = {
+      taxYear: 2024,
+      annualBasicDeductionUsed: 0,
+      properties: [
+        makeItem("A", "토지 A", {
+          propertyType: "land", transferPrice: 800_000_000, acquisitionPrice: 300_000_000,
+          acquisitionDate: new Date("2018-06-01"), transferDate: new Date("2024-06-01"),
+          isOneHousehold: false, householdHousingCount: 0,
+          filingPenaltyDetails: {
+            determinedTax: 100_000_000,
+            reductionAmount: 0,
+            priorPaidTax: 0,
+            originalFiledTax: 0,
+            excessRefundAmount: 0,
+            interestSurcharge: 0,
+            filingType: "none",      // 무신고 20% → 신고가산세 발생
+            penaltyReason: "normal",
+          },
+        }),
+      ],
+    };
+    const r = calculateTransferTaxAggregate(input, mockRates);
+    // 무신고 가산세가 실제 발생해야 회귀 테스트로서 의미 있음
+    expect(r.properties[0].filingDelayedPenaltyTax).toBeGreaterThan(0);
+    // 직접취득(환산 아님) → §114조의2 건물가산세 0 → base = 결정세액만
+    expect(r.localIncomeTax).toBe(Math.floor(r.determinedTax * 0.1));
+  });
 });
 
 // ============================================================
