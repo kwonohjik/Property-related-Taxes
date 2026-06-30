@@ -31,12 +31,13 @@ async function gotoStep0WithChildAndCorporate(page: Page) {
   await page.getByPlaceholder("예: 홍길동").first().fill("김철수");
   await closeHeirEditModal(page);
 
-  // 영리법인 추가 → 부표 5 영리법인 면제 명세 카드 노출 (메인 페이지)
-  await addHeir(page, "corporate");
+  // 영리법인 추가 — 부표 5(영리법인 면제 명세)는 상속인 편집 모달(HeirEditor) 안으로 이동.
+  // 모달을 연 채로 유지하고 모달 내부에서 주주 명세를 조작한다.
+  await addHeir(page, "corporate", undefined, { keepModalOpen: true });
 
-  await expect(
-    page.getByText("부표 5 — 영리법인 면제 명세"),
-  ).toBeVisible();
+  const dialog = page.getByRole("dialog", { name: "상속인 편집" });
+  await expect(dialog.getByText("부표 5 — 영리법인 면제 명세")).toBeVisible();
+  return dialog;
 }
 
 test.describe("부표5 ⑦ 구분 드롭다운 상속인 연동", () => {
@@ -44,13 +45,13 @@ test.describe("부표5 ⑦ 구분 드롭다운 상속인 연동", () => {
     page,
   }) => {
     test.setTimeout(60_000);
-    await gotoStep0WithChildAndCorporate(page);
+    const dialog = await gotoStep0WithChildAndCorporate(page);
 
-    // 주주 추가 → §3-4: 첫 자연인 상속인(김철수) 자동 연결
-    await page.getByRole("button", { name: /주주 추가/ }).click();
+    // 주주 추가 → §3-4: 첫 자연인 상속인(김철수) 자동 연결 (모달 내부)
+    await dialog.getByRole("button", { name: /주주 추가/ }).click();
 
     // ⑦ 구분 select (입력된 상속인 optgroup 보유) 스코프
-    const shSelect = page.locator(
+    const shSelect = dialog.locator(
       'select:has(optgroup[label="입력된 상속인"])',
     );
     await expect(shSelect).toBeVisible();
@@ -66,7 +67,7 @@ test.describe("부표5 ⑦ 구분 드롭다운 상속인 연동", () => {
     ).toHaveCount(1);
 
     // ⑧ 성명 자동채움 = "김철수" + read-only
-    const nameInput = page.getByPlaceholder("주주 성명");
+    const nameInput = dialog.getByPlaceholder("주주 성명");
     await expect(nameInput).toHaveValue("김철수");
     await expect(nameInput).toHaveAttribute("readonly", "");
   });
@@ -75,10 +76,10 @@ test.describe("부표5 ⑦ 구분 드롭다운 상속인 연동", () => {
     page,
   }) => {
     test.setTimeout(60_000);
-    await gotoStep0WithChildAndCorporate(page);
-    await page.getByRole("button", { name: /주주 추가/ }).click();
+    const dialog = await gotoStep0WithChildAndCorporate(page);
+    await dialog.getByRole("button", { name: /주주 추가/ }).click();
 
-    const shSelect = page.locator(
+    const shSelect = dialog.locator(
       'select:has(optgroup[label="입력된 상속인"])',
     );
     await expect(shSelect).toBeVisible();
@@ -86,7 +87,7 @@ test.describe("부표5 ⑦ 구분 드롭다운 상속인 연동", () => {
     // 그룹2 "상속인의 배우자" 선택 → heirRef 해제, ⑧ editable
     await shSelect.selectOption({ label: "상속인의 배우자" });
 
-    const nameInput = page.getByPlaceholder("주주 성명");
+    const nameInput = dialog.getByPlaceholder("주주 성명");
     // read-only 해제 (heirRef 없음)
     await expect(nameInput).not.toHaveAttribute("readonly", "");
     // 자동채움 스냅샷 비워짐 → 수동 입력 가능

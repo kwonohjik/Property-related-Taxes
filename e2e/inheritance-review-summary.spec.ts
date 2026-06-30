@@ -57,7 +57,8 @@ test.describe("상속세 계산 직전 입력 요약 카드", () => {
     // 그룹 D(납부 방법) 헤더 클릭 → 펼침
     await page.getByRole("button", { name: /납부 방법/ }).click();
     // 연부연납 토글 ON → 납부 방법 칩 반영
-    await page.getByText("연부연납 신청 (상증법 §71)").click();
+    // ToggleCard switch — 제목 텍스트 클릭은 토글 무효(BaseUI), 인접 §71 인용링크가 가로챔
+    await page.getByRole("switch", { name: /연부연납 신청/ }).click();
     await expect(card.getByText("연부연납")).toBeVisible();
   });
 });

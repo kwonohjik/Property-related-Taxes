@@ -62,7 +62,8 @@ test.describe("상속세 Step4 접이식 그룹", () => {
     await page.getByRole("button", { name: /납부 방법/ }).click();
 
     // 연부연납 토글 ON → 납부 방법 그룹에 데이터 발생
-    await page.getByText("연부연납 신청 (상증법 §71)").click();
+    // ToggleCard는 BaseUI Switch(aria-label=title) — 제목 텍스트 클릭은 토글되지 않아 switch role로 켠다
+    await page.getByRole("switch", { name: /연부연납 신청/ }).click();
 
     // 헤더에 "입력됨" 배지 노출
     await expect(paymentGroup.getByText("입력됨")).toBeVisible();

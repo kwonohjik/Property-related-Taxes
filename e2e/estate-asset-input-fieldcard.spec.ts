@@ -80,7 +80,8 @@ test.describe("금융 자산 카드 — FieldCard + 섹션 스타일", () => {
     await gotoStep1WithChild(page);
     await addFinancialCard(page);
 
-    await expect(page.getByText("평가액 입력").first()).toBeVisible();
+    // financial 카드 섹션 헤더는 "예금·저금·적금 평가"(§63④) — 토지 카드의 "평가액 입력"과 다름
+    await expect(page.getByText("예금·저금·적금 평가").first()).toBeVisible();
     await expect(
       page.locator('[data-slot="field-card"]').first(),
     ).toBeVisible();

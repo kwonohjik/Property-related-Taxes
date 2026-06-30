@@ -40,13 +40,15 @@ test.describe("상속세 이력 비즈니스 키 dedup", () => {
     await saveDecedent(page, "800101-1000000", ["김코리아", "김코리아 정정", "김코리아 최종"]);
     await page.goto("/history");
     await expect(page.getByText("상속세").first()).toBeVisible();
-    expect(await cardCount(page)).toBe(1);
+    // IndexedDB 비동기 로드 — 카드 렌더 완료까지 auto-retry (instantaneous count() 레이스 차단)
+    await expect.poll(() => cardCount(page)).toBe(1);
   });
 
   test("H-2: 다른 주민번호 → 이력 2건", async ({ page }) => {
     await saveDecedent(page, "800101-1000000", ["피상속인 A"]);
     await saveDecedent(page, "900202-2000000", ["피상속인 B"]);
     await page.goto("/history");
-    expect(await cardCount(page)).toBe(2);
+    // IndexedDB 비동기 로드 — 카드 렌더 완료까지 auto-retry (instantaneous count() 레이스 차단)
+    await expect.poll(() => cardCount(page)).toBe(2);
   });
 });

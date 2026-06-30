@@ -62,7 +62,8 @@ test.describe("Step4 공제 체크리스트 — 자동 항목 칩 클릭 → 그
 
     // 칩 클릭 → 그룹 A 펼침 → 배우자 입력란 노출
     await spouseChip.click();
-    await expect(page.getByText("배우자 실제 상속액 (§19)")).toBeVisible();
+    // 라벨에 한도 안내 접미사 부착됨 ("배우자 실제 상속액 (§19 · 최소 5억·최대 30억)")
+    await expect(page.getByText(/배우자 실제 상속액/)).toBeVisible();
   });
 
   test("CL-E2E-2: 금융·동거주택·영농 — 칩 클릭 → 그룹 A 펼침 → 입력란 노출", async ({ page }) => {
@@ -77,8 +78,9 @@ test.describe("Step4 공제 체크리스트 — 자동 항목 칩 클릭 → 그
 
     // 그룹 A 펼침 → 입력란 노출
     await expect(page.getByText("순 금융재산 (§22 금융재산공제용)")).toBeVisible();
-    await expect(page.getByText("동거주택 공시가격 (§23의2)")).toBeVisible();
-    await expect(page.getByText("영농상속재산가액 (§18의3)")).toBeVisible();
+    // 라벨에 한도 안내 접미사 부착됨 ("… (§23의2 · 공제 최대 6억)", "… (§18의3 · 공제 최대 30억)")
+    await expect(page.getByText(/동거주택 공시가격/)).toBeVisible();
+    await expect(page.getByText(/영농상속재산가액/)).toBeVisible();
   });
 });
 

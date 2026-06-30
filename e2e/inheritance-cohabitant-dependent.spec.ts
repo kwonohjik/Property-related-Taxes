@@ -83,7 +83,7 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
       { year: "2017", month: "3", day: "4" }, // 2023-01-01 기준 만 5세
       { scope: dep },
     );
-    await dep.getByText("장애인", { exact: true }).click();
+    await dep.getByRole("switch", { name: "장애인" }).click();
     await dep.getByText("남성", { exact: true }).click();
 
     // 모달 닫기 (Dialog backdrop이 "다음" 클릭을 막지 않도록)
@@ -133,7 +133,7 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
 
     // 장애 OFF → 성별 미노출 / ON → 노출
     await expect(dep.getByText(/장애인 성별/)).not.toBeVisible();
-    await dep.getByText("장애인", { exact: true }).click();
+    await dep.getByRole("switch", { name: "장애인" }).click();
     await expect(dep.getByText(/장애인 성별/)).toBeVisible();
     await expect(dep.getByText("남성", { exact: true })).toBeVisible();
     await expect(dep.getByText("여성", { exact: true })).toBeVisible();
@@ -158,7 +158,7 @@ test.describe("상속세 동거가족 인적공제 §20 P1", () => {
       { year: "2010", month: "1", day: "1" }, // 만 15세 미성년
       { scope: dep },
     );
-    await dep.getByText("장애인", { exact: true }).click(); // 성별 미선택
+    await dep.getByRole("switch", { name: "장애인" }).click(); // 성별 미선택
 
     // 모달 닫기 (Dialog backdrop이 "다음" 클릭을 막지 않도록)
     await page.getByRole("button", { name: "닫기" }).click();

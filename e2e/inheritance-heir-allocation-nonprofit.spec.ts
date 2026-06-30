@@ -43,17 +43,25 @@ test.describe("협의분할 — 비영리법인 노출·기본값 제거·2열",
     await page.getByRole("button", { name: /^다음/ }).click();
 
     // 토지 자산 추가 (면적 300 × 공시지가 1,000,000 = 3억)
-    await addLandAsset(page, { area: "300", unitPrice: "1000000" });
+    // 자산-수준 협의분할 칩·행은 편집 모달 안 — 모달 유지(keepModalOpen)
+    await addLandAsset(page, {
+      area: "300",
+      unitPrice: "1000000",
+      keepModalOpen: true,
+    });
+
+    // 협의분할 칩·행은 자산 편집 모달 안 (테이블+모달 전환) — dialog로 스코프
+    const dialog = page.getByTestId("estate-edit-dialog");
 
     // 협의분할 칩 클릭 → 인라인 패널 ON (heirAllocations=[] 빈 배열)
-    const allocChip = page.locator(
+    const allocChip = dialog.locator(
       '[data-testid^="estate-chip-heir-allocation-"]',
     );
     await expect(allocChip.first()).toBeVisible();
     await allocChip.first().click();
 
     // 협의분할 입력 행 컨테이너
-    const rows = page.getByTestId("heir-allocation-rows");
+    const rows = dialog.getByTestId("heir-allocation-rows");
     await expect(rows).toBeVisible();
 
     // (이슈3) 2열 그리드
@@ -63,11 +71,11 @@ test.describe("협의분할 — 비영리법인 노출·기본값 제거·2열",
     await expect(rows.getByRole("button", { name: /법인/ })).toBeVisible();
 
     // (이슈2) ON 직후 아무도 미선택 → 분배 금액 input 0개
-    await expect(page.getByPlaceholder("분배 금액")).toHaveCount(0);
+    await expect(dialog.getByPlaceholder("분배 금액")).toHaveCount(0);
 
     // 비영리법인 칩 클릭 → 분배 금액 input 등장 + 평가액 전액(300,000,000)
     await rows.getByRole("button", { name: /법인/ }).click();
-    const amountInput = page.getByPlaceholder("분배 금액");
+    const amountInput = dialog.getByPlaceholder("분배 금액");
     await expect(amountInput).toHaveCount(1);
     await expect(amountInput).toHaveValue(/300,000,000/);
   });

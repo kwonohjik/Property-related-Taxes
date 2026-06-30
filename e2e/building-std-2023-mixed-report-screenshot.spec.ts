@@ -11,6 +11,7 @@
  * 목적: 계산서 양식을 펼친 화면을 PNG로 저장(e2e/_artifacts/screenshots/)하여 육안 확인.
  */
 import { test, expect, type Page } from "@playwright/test";
+import { fillDateAndVerify } from "./_helpers/tax-flow";
 
 const URL = "/tools/building-standard-price";
 const OUT = "e2e/_artifacts/screenshots";
@@ -28,7 +29,12 @@ test("마.주거+상업 복합 — 계산서 양식 보고서 스크린샷(200,5
   await page.getByText("상속·증여(1시점)").click();
 
   await page.getByPlaceholder("신축연도 (4자리)").fill("2000");
-  await selectOption(page, "연도 선택", "2023년"); // 평가연도 (부분 옵션 활성화 선행)
+  // 평가연도는 "연도 선택" 드롭다운 폐지 → 상속·증여일에서 자동 산정. 2023.1.1 → 평가연도 2023.
+  // 일자 입력 후 구조·용도·공시지가 입력이 활성화된다.
+  const eventDateCard = page
+    .locator('[data-slot="field-card"]')
+    .filter({ hasText: "상속·증여일" });
+  await fillDateAndVerify(page, { year: "2023", month: "1", day: "1" }, { scope: eventDateCard });
 
   await page.getByText("복합구조 (층·구역별 구조·용도 상이)").click(); // 토글 ON
   // 부속시설: 주차장 60 + 보일러실 30 (PDF 구분 입력 → 공용 조정률 노출), 둘 다 지하1층
