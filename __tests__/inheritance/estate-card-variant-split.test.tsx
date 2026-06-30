@@ -13,6 +13,7 @@ import {
   EstateBodyDeposit,
   EstateBodyFinancial,
 } from "@/components/calc/inheritance/estate-card/variants";
+import { EstateItemEditor } from "@/components/calc/EstateItemEditor";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { SupportedCategory } from "@/components/calc/inheritance/estate-card/variants/types";
 
@@ -57,6 +58,32 @@ describe("pickBodyVariant — 7 SupportedCategory 매핑", () => {
 
   it("other → EstateBodySimple", () => {
     expect(pickBodyVariant("other")).toBe(EstateBodySimple);
+  });
+});
+
+// ============================================================
+// EstateItemEditor.VariantBody 실제 dispatch 경로 (pickBodyVariant 미사용 — 사각지대 회귀)
+//   pickBodyVariant는 cash→Simple로 올바르지만, 실제 렌더에 쓰이는 VariantBody switch가
+//   별도 정의돼 있어 중복 case "cash"가 receivable로 fall through하면 단위 매핑 테스트가 못 잡음.
+// ============================================================
+
+describe("EstateItemEditor.VariantBody — cash 실제 dispatch", () => {
+  it("cash → EstateBodySimple 본체 (채권평가 §58② 아님)", () => {
+    render(
+      <EstateItemEditor
+        item={makeItem("cash")}
+        index={0}
+        onUpdate={() => {}}
+        onRemove={() => {}}
+        mode="gift"
+      />,
+    );
+    // VariantBody가 cash를 EstateBodySimple로 dispatch — simple 본체 testid로 확정
+    expect(
+      screen.getByTestId("estate-body-variant-simple-t-cash"),
+    ).toBeInTheDocument();
+    // 채권 평가(EstateBodyReceivable §58②) 본체가 아님 — "채권 종류" 라디오 부재
+    expect(screen.queryByText("채권 종류")).toBeNull();
   });
 });
 
