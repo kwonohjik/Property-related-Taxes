@@ -27,6 +27,7 @@ import { AssetSection } from "./AssetSection";
 import { AssetSectionBasic } from "./asset-sections/AssetSectionBasic";
 import { AssetSectionTransfer } from "./asset-sections/AssetSectionTransfer";
 import { AssetSectionAcquisition } from "./asset-sections/AssetSectionAcquisition";
+import type { AssetSplitMode } from "./OwnershipRatioInput";
 import { AssetSectionExpense } from "./asset-sections/AssetSectionExpense";
 import { AssetSectionExtras } from "./asset-sections/AssetSectionExtras";
 
@@ -70,6 +71,12 @@ interface Props {
   isOneHouseSingle?: boolean;
   /** 검증 실패 메시지 — 이 자산 카드에 해당하는 오류. 상단 인라인 배너 + 테두리 강조 + 전체 펼침. */
   errorMessage?: string;
+  /** 자산 분할 모드 (Step1 단일 소스) — ③ 토글 B로 전달 */
+  splitMode: AssetSplitMode;
+  /** 토글 B(지분분할) on/off 핸들러 — Step1 정의 */
+  onFractionalToggle: (yes: boolean) => void;
+  /** 형제 자산 존재(assets.length>1) — 토글 B OFF Dialog 조건 */
+  hasSiblings: boolean;
 }
 
 const SECTION_CHIPS = [
@@ -99,6 +106,9 @@ export function CompanionAssetCard({
   primaryAsset,
   isOneHouseSingle,
   errorMessage,
+  splitMode,
+  onFractionalToggle,
+  hasSiblings,
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   const isPrimary = asset.isPrimaryForHouseholdFlags;
@@ -304,6 +314,10 @@ export function CompanionAssetCard({
           isNewConstruction={isNewConstruction}
           isPrimary={isPrimary}
           isOneHouseSingle={isOneHouseSingle}
+          splitMode={splitMode}
+          onFractionalToggle={onFractionalToggle}
+          isFirst={index === 0}
+          hasSiblings={hasSiblings}
         />
       </AssetSection>
 

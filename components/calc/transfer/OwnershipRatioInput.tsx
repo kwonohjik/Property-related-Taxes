@@ -16,6 +16,9 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { isFractionalRatioStr } from "@/lib/calc/transfer-tax-api-helpers";
 import { cn } from "@/lib/utils";
 
+/** 자산 분할 모드 — 토글 A(함께양도)·토글 B(지분분할)·없음. Step1↔③ 4레벨 prop 공유 타입. */
+export type AssetSplitMode = "none" | "companion" | "fractional";
+
 export interface OwnershipRatioInputProps {
   /** 분자 (문자열) */
   numerator: string;

@@ -69,6 +69,20 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       if (message) issues.push({ step, assetIndex: i, message });
     }
 
+    // 지분 분할 모드(토글 B) 미입력 차단 — ownership 분자/분모 빈칸 = "지분율 미입력" 신호.
+    // 함께양도는 100/100 비빈칸이라 미해당. UI 토글 상태 없이 form만으로 판정 (옵션 c).
+    for (let i = 0; i < form.assets.length; i++) {
+      const a = form.assets[i];
+      const numEmpty = !a.ownershipNumerator || a.ownershipNumerator.trim() === "";
+      const denEmpty = !a.ownershipDenominator || a.ownershipDenominator.trim() === "";
+      if (numEmpty || denEmpty)
+        issues.push({
+          step,
+          assetIndex: i,
+          message: "지분 분할 취득: 공유 지분율(분자/분모)을 입력하세요.",
+        });
+    }
+
     // actual 모드 합계 검증 — 지분 모드 자산이 하나라도 있으면 ratio 자동 적용으로 합계 검증 생략.
     // 동일 물건 지분 단계취득은 ratio 합 = 100% 가정으로 시스템이 자동 분배.
     const anyFractional = form.assets.some((a) => {
