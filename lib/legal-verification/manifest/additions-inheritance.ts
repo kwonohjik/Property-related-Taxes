@@ -369,4 +369,51 @@ export const INHERITANCE_ADDITIONS: VerificationRule[] = [
     keywords: ["특정법인과의 거래를 통한 이익의 증여 의제", "주식보유비율이 100분의 30 이상인 법인", "특정법인이 부담한 법인세 상당액을 차감"],
     keywordMode: "ALL",
   },
+  {
+    id: "INH.GIFT_DEEMED_RELATED_CORP",
+    citation: "상증법 §45의3",
+    keywords: ["수혜법인", "특수관계법인거래비율", "정상거래비율", "증여의제이익"],
+    keywordMode: "ALL",
+  },
+
+  // ── 증여세 납부의무·무체재산권 평가·경정청구 특례 (커버리지 보강) ────────
+  {
+    id: "INH.GIFT_TAX_LIABILITY",
+    citation: "상증법 §4의2",
+    keywords: [
+      "수증자는 다음 각 호의 구분에 따른 증여재산에 대하여 증여세를 납부할 의무가 있다",
+      "실제소유자가 해당 재산에 대하여 증여세를 납부할 의무가 있다",
+      "수증자가 납부할 증여세를 연대하여 납부할 의무가 있다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH.VALUATION_INTANGIBLE_IP",
+    citation: "상증법 §64",
+    keywords: ["무체재산권", "금액 중 큰 금액으로 한다", "감가상각비를 뺀 금액", "장래의 경제적 이익"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH.RECTIFICATION_CLAIM",
+    citation: "상증법 §79",
+    keywords: [
+      "그 사유가 발생한 날부터 6개월 이내에",
+      "그 사유가 발생한 날부터 3개월 이내에",
+      "결정 또는 경정을 청구할 수 있다",
+    ],
+    keywordMode: "ALL",
+  },
+
+  // ── 조세특례제한법 — 영농자녀등 농지 증여세 감면 (증여세 세목) ──────────
+  {
+    id: "SPECIAL.FARMLAND_GIFT_REDUCTION",
+    citation: "조특법 §71",
+    keywords: [
+      "자경농민등",
+      "영농자녀등",
+      "증여세의 100분의 100에 상당하는 세액을 감면한다",
+      "이자상당액을 가산하여 징수한다",
+    ],
+    keywordMode: "ALL",
+  },
 ];
