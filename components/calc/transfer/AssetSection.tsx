@@ -12,6 +12,10 @@
  */
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import {
+  expandToggleClass,
+  expandToggleLabel,
+} from "@/components/calc/results/shared/ExpandToggleButton";
 
 export type AssetSectionTone = "sky" | "emerald" | "amber" | "slate" | "violet";
 
@@ -118,8 +122,9 @@ export function AssetSection({
         <span className={cn("shrink-0 text-xs", dot.cls)} aria-hidden>
           {dot.glyph}
         </span>
-        <span className="shrink-0 text-muted-foreground" aria-hidden>
-          {expanded ? "▾" : "▸"}
+        {/* 상속세 탭과 동일한 펼치기/접기 버튼 모양 — 헤더가 button이므로 중첩 button 금지, span에 시각만 적용 */}
+        <span className={expandToggleClass(tone)} aria-hidden>
+          {expandToggleLabel(expanded)}
         </span>
       </button>
       <div className={cn("space-y-4 px-3 pb-3 pt-1", expanded ? "" : "hidden print:block")}>
