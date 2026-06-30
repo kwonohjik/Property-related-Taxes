@@ -19,6 +19,7 @@ import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
+import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import {
   buildInheritedAcquisitionPayload,
@@ -163,10 +164,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         }
         return 0;
       })(),
-      // PHD ① 취득시 공시지가를 섹션 2에서 직접 입력하지 않은 경우 fallback
+      // PHD ① 취득시 공시지가 fallback (마지막 항: 1990.8.30. 이전 취득 토지 환산 — useEffect→store 미러링 제거 대체)
       landPricePerSqm:
         parseAmount(primary.mixedAcqLandPricePerSqm) ||
-        parseAmount(primary.phdLandPricePerSqmAtAcq) || 0,
+        parseAmount(primary.phdLandPricePerSqmAtAcq) ||
+        (derivePre1990PhdLandPricePerSqmAtAcq(primary, form.transferDate) ?? 0),
     },
     usePreHousingDisclosure: primary.usePreHousingDisclosure,
     // PHD 페이로드는 모든 필수 필드(.positive() 제약)가 채워졌을 때만 전송.
@@ -175,7 +177,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       // 겸용주택 PHD: phdLandPricePerSqm* 미설정 시 섹션 2의 mixed 값으로 fallback
       const landSqmAtAcq =
         parseAmount(primary.phdLandPricePerSqmAtAcq) ||
-        parseAmount(primary.mixedAcqLandPricePerSqm);
+        parseAmount(primary.mixedAcqLandPricePerSqm) ||
+        (derivePre1990PhdLandPricePerSqmAtAcq(primary, form.transferDate) ?? 0);
       const landSqmAtTransfer =
         parseAmount(primary.phdLandPricePerSqmAtTransfer) ||
         parseAmount(primary.mixedTransferLandPricePerSqm);
