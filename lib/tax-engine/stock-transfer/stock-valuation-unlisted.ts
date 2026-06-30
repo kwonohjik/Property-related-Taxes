@@ -195,12 +195,16 @@ export function calcUnlistedValuation(
       ? naPerShare
       : Math.floor((niPerShare * niW + naPerShare * naW) / 5);
 
-    // STEP 2: 80% 하한 (가중평균 케이스만)
+    // STEP 2: 80% 하한 (가중평균 케이스만) — §165④1 단서.
+    // MAIN 경로(아래 hasFloor80 분기)와 동일하게 `floor80 > weighted`만으로 판정한다.
+    // 결손법인(순손익가치 음수 → weighted ≤ 0)에서도 하한(na×0.8)이 발동해야 하므로
+    // `weighted > 0` 가드를 두지 않는다(두면 0 반환 → MAIN과 dual-truth).
+    // all-zero(ni=0·na=0): floor80=0, `0 > 0`=false → 미발동 → 후속 ≤0 가드가 처리(동작 불변).
     let transferStdPerShare = weighted;
     let floor80Applied = false;
     if (!isNetAssetOnly) {
       const floor80 = Math.floor(naPerShare * 0.8);
-      if (weighted > 0 && floor80 > weighted) {
+      if (floor80 > weighted) {
         transferStdPerShare = floor80;
         floor80Applied = true;
       }
