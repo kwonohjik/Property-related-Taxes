@@ -350,19 +350,20 @@ export function calculateTransferTax(
 
   // STEP 2a: 손실 → 0 (aggregate 엔진에서 skipLossFloor=true 시 음수 허용 — §102② 통산용)
   const transferGain = input.skipLossFloor ? ownerRawGain : Math.max(0, ownerRawGain);
-  // 환산취득가 방식: 취득가와 필요경비(개산공제)를 분리 표시
-  // 일반 방식: 취득가와 필요경비를 분리 표시
+  // 양도차익 산출근거 — 파생 입력(effectiveInput) 기준 통일. 경비는 실제 적용 필요경비(appliedExpenses).
+  // (원본 input 기준 시 CB 환산은 취득가·개산공제가 0, §97② swap은 개산공제가 실제 경비와 어긋나 산식 불일치.)
   let gainFormula: string;
-  if (input.useEstimatedAcquisition) {
+  if (effectiveInput.useEstimatedAcquisition) {
+    const expenseLabel = swapApplied ? "필요경비(자본적지출+양도비)" : "개산공제";
     gainFormula = [
-      `양도가(${input.transferPrice.toLocaleString()}`,
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
       `취득가(환산 ${estimatedBase.toLocaleString()}`,
-      `경비(개산공제 ${estimatedDeduction.toLocaleString()}`,
+      `경비(${expenseLabel} ${appliedExpenses.toLocaleString()}`,
     ].join(" - ");
   } else {
     gainFormula = [
-      `양도가(${input.transferPrice.toLocaleString()}`,
-      `취득가(${input.acquisitionPrice.toLocaleString()}`,
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+      `취득가(${effectiveInput.acquisitionPrice.toLocaleString()}`,
       `경비(${appliedExpenses.toLocaleString()}`,
     ].join(" - ");
   }
