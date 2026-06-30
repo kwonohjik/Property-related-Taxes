@@ -17,10 +17,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ThreePointStandardPriceInput } from "../ThreePointStandardPriceInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
-import {
-  calculatePre1990LandValuation,
-  type LandGradeInput,
-} from "@/lib/tax-engine/pre-1990-land-valuation";
+import { derivePre1990PhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -86,60 +83,11 @@ export function MixedUsePreHousingDisclosureSection({
     }
   }, [isPre1990, asset.pre1990Enabled, onChange]);
 
-  // 토지등급가액 환산 ㎡당 가액 자동 계산 (모든 입력 충족 시)
-  const pre1990AutoPricePerSqm = useMemo<number | null>(() => {
-    if (!isPre1990 || !asset.pre1990Enabled) return null;
-    if (effectiveLandArea <= 0) return null;
-    if (!acqDate || !transferDate) return null;
-    const buildGrade = (raw: string | undefined): LandGradeInput | undefined => {
-      if (!raw) return undefined;
-      const n = parseFloat(raw.replace(/,/g, ""));
-      if (!Number.isFinite(n) || n <= 0) return undefined;
-      return asset.pre1990GradeMode === "number" ? Math.trunc(n) : { gradeValue: n };
-    };
-    const gCur = buildGrade(asset.pre1990Grade_current);
-    const gPrev = buildGrade(asset.pre1990Grade_prev);
-    const gAcq = buildGrade(asset.pre1990Grade_atAcq);
-    const p1990 = parseAmount(asset.pre1990PricePerSqm_1990 || "");
-    if (!gCur || !gPrev || !gAcq || p1990 <= 0) return null;
-    try {
-      const r = calculatePre1990LandValuation({
-        acquisitionDate: new Date(acqDate),
-        transferDate: new Date(transferDate),
-        areaSqm: effectiveLandArea,
-        pricePerSqm_1990: p1990,
-        // 환산엔 미사용, validateInput 통과용 동일값 주입
-        pricePerSqm_atTransfer: p1990,
-        grade_1990_0830: gCur,
-        gradePrev_1990_0830: gPrev,
-        gradeAtAcquisition: gAcq,
-      });
-      return r.pricePerSqmAtAcquisition;
-    } catch {
-      return null;
-    }
-  }, [
-    isPre1990,
-    asset.pre1990Enabled,
-    asset.pre1990GradeMode,
-    asset.pre1990Grade_current,
-    asset.pre1990Grade_prev,
-    asset.pre1990Grade_atAcq,
-    asset.pre1990PricePerSqm_1990,
-    acqDate,
-    transferDate,
-    effectiveLandArea,
-  ]);
-
-  // 자동 계산값을 phdLandPricePerSqmAtAcq 에 주입
-  useEffect(() => {
-    if (pre1990AutoPricePerSqm === null || pre1990AutoPricePerSqm <= 0) return;
-    const current = parseAmount(asset.phdLandPricePerSqmAtAcq || "");
-    const next = pre1990AutoPricePerSqm;
-    if (current !== next) {
-      onChange({ phdLandPricePerSqmAtAcq: String(next) });
-    }
-  }, [pre1990AutoPricePerSqm, asset.phdLandPricePerSqmAtAcq, onChange]);
+  // 토지등급가액 환산 ㎡당 가액 — 단일 진실 헬퍼로 파생 (store 미저장 → display fallback로 전달).
+  // 과거 useEffect → store(onChange) 미러링으로 이 값을 phdLandPricePerSqmAtAcq에 주입했으나,
+  // "파생 계산 결과를 store에 저장"하는 정책 위반(무한 루프 위험)이라 제거됨. 동일 헬퍼를
+  // API 변환(transfer-tax-api.ts)·validate(transfer-tax-validate-asset.ts)도 fallback으로 공유.
+  const pre1990AutoPricePerSqmStr = derivePre1990PhdLandPricePerSqmAtAcqString(asset, transferDate);
 
   return (
     <div className="space-y-4 rounded-md border border-primary/30 bg-primary/5 p-4">
@@ -303,7 +251,7 @@ export function MixedUsePreHousingDisclosureSection({
           onLandPriceYearAtAcqChange={(year, isManual) =>
             onChange({ phdLandPriceYearAtAcq: year, phdLandPriceYearAtAcqIsManual: isManual })
           }
-          landPricePerSqmAtAcq={asset.phdLandPricePerSqmAtAcq || asset.mixedAcqLandPricePerSqm}
+          landPricePerSqmAtAcq={asset.phdLandPricePerSqmAtAcq || asset.mixedAcqLandPricePerSqm || pre1990AutoPricePerSqmStr}
           onLandPricePerSqmAtAcqChange={(v) => onChange({ phdLandPricePerSqmAtAcq: v })}
           buildingStdPriceAtAcq={asset.phdBuildingStdPriceAtAcq}
           onBuildingStdPriceAtAcqChange={(v) => onChange({ phdBuildingStdPriceAtAcq: v })}

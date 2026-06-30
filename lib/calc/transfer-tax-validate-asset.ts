@@ -17,6 +17,7 @@ import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 import { GRACE_REASON_SPECS } from "@/lib/tax-engine/non-business-land/grace-reason-period";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
+import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 
 /**
  * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
@@ -392,10 +393,12 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         if (directBuilding <= 0 && autoBuilding <= 0) {
           return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 상가건물 기준시가를 입력하세요. PHD ① 전체 건물 기준시가 입력 시 자동 안분, 또는 직접 조회·입력해야 합니다.`;
         }
-        // 개별공시지가(상가): 직접 입력 또는 PHD ① 공시지가 fallback
+        // 개별공시지가(상가): 직접 입력 / PHD ① 공시지가 / 1990.8.30. 이전 토지 환산(헬퍼) fallback
         const directLandPerSqm = parseAmount(asset.mixedAcqLandPricePerSqm);
         const phdLandPerSqm = parseAmount(asset.phdLandPricePerSqmAtAcq);
-        if (directLandPerSqm <= 0 && phdLandPerSqm <= 0) {
+        const pre1990LandPerSqm =
+          derivePre1990PhdLandPricePerSqmAtAcq(asset, formTransferDate ?? "") ?? 0;
+        if (directLandPerSqm <= 0 && phdLandPerSqm <= 0 && pre1990LandPerSqm <= 0) {
           return `${label}: 보유 중 일부 용도변경(주택→상가) — 취득시 개별공시지가(상가)를 입력하세요.`;
         }
       }
