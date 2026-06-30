@@ -655,7 +655,7 @@ export function SpecificCorpFields({ form, set }: Props) {
         </div>
         {!isRoster && (
           <FieldCard label="지배주주등 주식보유비율" hint="증여의제이익 1억원 이상이면 과세 (§34의5⑤)" unit="%">
-            <DecimalInput value={form.scRatioPct} onChange={(v) => set({ scRatioPct: v })} />
+            <DecimalInput value={form.scRatioPct} onChange={(v) => set({ scRatioPct: v })} data-testid="sc-shareholder-ratio" />
           </FieldCard>
         )}
         {isRoster && (

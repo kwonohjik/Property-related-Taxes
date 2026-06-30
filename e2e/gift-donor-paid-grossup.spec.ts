@@ -160,9 +160,9 @@ test.describe("증여세 대납(代納) gross-up (§36)", () => {
 
     // Step3: 동시증여 ON — Switch 직접 클릭
     // getByText() 사용 시 lawLinks="상증령" 배지(§46①)를 클릭해 법조문 모달이 열릴 위험
-    // 실제 title: "같은 날 다른 증여자로부터도 받았나요? (동시증여 안분)"
+    // 실제 title: "같은 날 다른 분으로부터도 받으셨나요? (동시증여 — 세액 전체 계산)"
     const simultaneousSwitch = page.getByRole("switch", {
-      name: /같은 날 다른 증여자로부터도 받았나요/,
+      name: /같은 날 다른 분으로부터도/,
     });
     await simultaneousSwitch.click();
 
@@ -171,11 +171,19 @@ test.describe("증여세 대납(代納) gross-up (§36)", () => {
     await expect(page.getByRole("button", { name: /동시증여 추가/ })).toBeVisible();
 
     // 동시증여 항목 추가 (simultaneousGifts.length > 0 이어야 차단 트리거)
-    await page.getByRole("button", { name: /동시증여 추가/ }).click();
+    await page.getByRole("button", { name: "+ 동시증여 추가" }).click();
+    // 동시증여 건 관계 — 추가 직후 default 미선택이므로 명시 필수 (검증 통과용)
+    await page.getByTestId("sim-card-0-donor-grandparent").click();
 
-    // 동시증여 과세가액 입력 — 비워두면 "과세가액을 입력하세요" 오류가 먼저 나와 대납 차단 미도달
-    // CurrencyInput(placeholder="금액 입력", hideLabel 없음) → getByPlaceholder로 찾음
-    await page.getByPlaceholder("금액 입력").first().fill("100000000");
+    // 동시증여 건 증여재산 = PropertyValuationForm 모달 (현금 100,000,000)
+    // 과세가액>0 이어야 "과세가액 입력" 오류 대신 대납 차단(validateStep)에 도달
+    await page.getByRole("button", { name: "+ 증여재산 추가" }).last().click();
+    await page.getByRole("button", { name: /현금/ }).last().click();
+    const simModal = page.getByRole("dialog");
+    await expect(simModal).toBeVisible();
+    await simModal.getByRole("textbox", { name: "현금 금액" }).fill("100000000");
+    await simModal.getByRole("button", { name: "닫기" }).click();
+    await expect(simModal).toBeHidden();
 
     // 대납 ON — Switch 직접 클릭
     // 실제 title: "증여자가 수증자의 증여세를 대납(代納)합니까? (§36)"
@@ -185,7 +193,7 @@ test.describe("증여세 대납(代納) gross-up (§36)", () => {
     // validateStep: "동시증여와 대납(代納)은 현재 함께 계산할 수 없습니다"
     await page.getByRole("button", { name: /계산하기/ }).click();
     await expect(
-      page.getByText("동시증여와 대납(代納)은 현재 함께 계산할 수 없습니다"),
+      page.getByText(/동시증여 다중 건 계산과 대납\(代納\)은 현재 함께 계산할 수 없습니다/),
     ).toBeVisible({ timeout: 10_000 });
   });
 

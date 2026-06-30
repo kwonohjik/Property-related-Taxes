@@ -5,9 +5,10 @@ import { test, expect, type Page } from "@playwright/test";
 async function openDetail(page: Page, type: string) {
   await page.getByTestId(`deemed-type-${type}`).click();
   const dialog = page.getByTestId("deemed-detail-dialog");
-  await dialog.getByLabel("연도").fill("2025");
-  await dialog.getByLabel("월").fill("3");
-  await dialog.getByLabel("일", { exact: true }).fill("15");
+  // listing_gain은 증여일+정산기준일 2개 DateInput → 증여일(첫 번째)만 채움(.first())
+  await dialog.getByLabel("연도").first().fill("2025");
+  await dialog.getByLabel("월").first().fill("3");
+  await dialog.getByLabel("일", { exact: true }).first().fill("15");
 }
 const closeDetail = (page: Page) => page.getByTestId("deemed-detail-confirm").click();
 
@@ -36,9 +37,9 @@ test.describe("증여로 보는 경우 — 기타이익·법인", () => {
   test("§45의5 특정법인 (거래10억−법인세2억)×50% → 4억 + 증여세 연결", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "specific_corp");
-    await page.getByPlaceholder("거래이익 (원)").fill("1000000000");
-    await page.getByPlaceholder("법인세 상당액 (원)").fill("200000000");
-    await page.getByPlaceholder("지배주주등 지분율").fill("50");
+    await page.getByTestId("sc-transaction-benefit").fill("1000000000");
+    await page.getByTestId("sc-corporate-tax").fill("200000000");
+    await page.getByTestId("sc-shareholder-ratio").fill("50");
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("400,000,000");

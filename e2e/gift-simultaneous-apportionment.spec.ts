@@ -55,9 +55,18 @@ async function setupSimultaneousGift(page: import("@playwright/test").Page) {
   await nextSteps(page, 2);
 
   // 동시증여 ToggleCard ON (Switch role 직접 클릭) → 행 추가 → 할아버지 70,000,000
-  await page.getByRole("switch", { name: /동시증여 안분/ }).click();
-  await page.getByRole("button", { name: /동시증여 추가/ }).click();
-  await fillLabeledCurrency(page, "증여세 과세가액", "70000000");
+  await page.getByRole("switch", { name: /같은 날 다른 분으로부터도/ }).click();
+  await page.getByRole("button", { name: "+ 동시증여 추가" }).click();
+  // 동시증여 건 관계 = 할아버지(grandparent, 직계존속 그룹) — 추가 직후 default 미선택이므로 명시 필수
+  await page.getByTestId("sim-card-0-donor-grandparent").click();
+  // 동시증여 건 증여재산 = PropertyValuationForm 모달 (현금 70,000,000)
+  await page.getByRole("button", { name: "+ 증여재산 추가" }).last().click();
+  await page.getByRole("button", { name: /현금/ }).last().click();
+  const simModal = page.getByRole("dialog");
+  await expect(simModal).toBeVisible();
+  await simModal.getByRole("textbox", { name: "현금 금액" }).fill("70000000");
+  await simModal.getByRole("button", { name: "닫기" }).click();
+  await expect(simModal).toBeHidden();
 }
 
 test.describe("동시증여 증여재산공제 안분 (상증령 §46①2호)", () => {
@@ -67,11 +76,10 @@ test.describe("동시증여 증여재산공제 안분 (상증령 §46①2호)", 
 
     await calcAndWaitResult(page, { taxType: "gift" });
 
-    // 결과: 동시증여 안분 산식 + §53 안분 결과 32,500,000
+    // 결과: 건0(부모 신고분) 별지 제10호 ㉖ 증여재산공제 = §53 직계존속 5천만을 과세가액 비율(130:70) 안분 → 32,500,000
     await expect(
-      page.getByText(/동시증여 안분 \(상증령 §46①2호\)/),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/32,500,000/).first()).toBeVisible();
+      page.locator('[data-testid="besshi10-0-㉖"]'),
+    ).toContainText("32,500,000");
   });
 
   test("[E2E-SIM-2] Phase 2 §53의2: 혼인공제 1억 동시증여 안분 → 한도 65,000,000, 공제 97,500,000", async ({
@@ -86,10 +94,9 @@ test.describe("동시증여 증여재산공제 안분 (상증령 §46①2호)", 
 
     await calcAndWaitResult(page, { taxType: "gift" });
 
-    // 결과: 혼인·출산공제 안분 한도 65,000,000 + 증여재산공제 합계 97,500,000
+    // 결과: 건0 별지 제10호 ㉖ 증여재산공제 (혼인·출산공제 §53의2 안분 포함) = 97,500,000
     await expect(
-      page.getByText(/혼인·출산공제 안분 한도 65,000,000/),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/97,500,000/).first()).toBeVisible();
+      page.locator('[data-testid="besshi10-0-㉖"]'),
+    ).toContainText("97,500,000");
   });
 });
