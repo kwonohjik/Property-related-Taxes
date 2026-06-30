@@ -275,7 +275,7 @@ export function TransferTaxResultView({
                     <Row label="필요경비 (개산공제 §163⑥)" value={`- ${formatKRW(pr.estimatedDeduction)}`} sub />
                   )}
                   {pr.expenses > 0 && (
-                    <Row label={pr.estimatedDeduction > 0 ? "필요경비 (자본·양도비)" : "필요경비"} value={`- ${formatKRW(pr.expenses)}`} sub />
+                    <Row label={pr.swapApplied ? "필요경비 (자본·양도비 §97②단서)" : pr.estimatedDeduction > 0 ? "필요경비 (자본·양도비)" : "필요경비"} value={`- ${formatKRW(pr.expenses)}`} sub />
                   )}
                   <Row label="양도차익" value={formatKRW(pr.transferGain)} />
                   <Row

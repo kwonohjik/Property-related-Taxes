@@ -97,8 +97,14 @@ export interface ParcelResult {
    * actual 방식이면 0, 대신 expenses가 별도 표시.
    */
   estimatedDeduction: number;
-  /** 기타 필요경비 (actual 방식 시) */
+  /** 기타 필요경비 (원) — actual 방식, 또는 estimated 방식에서 §97②단서 swap 발동 시 자본적지출+양도비 */
   expenses: number;
+  /**
+   * §97②2호 단서 swap 발동 여부 (estimated 방식 전용).
+   * true이면 환산취득가+개산공제 대신 자본적지출+양도비를 필요경비로 적용 →
+   * estimatedDeduction은 0으로 표시(미적용), expenses에 directSide 노출.
+   */
+  swapApplied?: boolean;
   /** 양도차익 (원) = allocatedTransferPrice - acquisitionPrice - estimatedDeduction - expenses */
   transferGain: number;
   /** 보유기간 연수 (장기보유특별공제 계산용) */
@@ -251,6 +257,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     let standardAtTransfer: number | undefined;
     let effectiveAcquisitionArea: number | undefined;
     let exchangeLandReductionApplied = false;
+    let swapApplied = false;
 
     if (parcel.acquisitionMethod === "estimated") {
       // 환산취득가액 방식
@@ -309,6 +316,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       if (swapEligible && directSide > estimatedSide) {
         // 단서 적용: 자본+양도비를 필요경비로 (개산공제 대체)
         expenses = directSide;
+        swapApplied = true;
       } else {
         // 본문: 개산공제만 인정
         expenses = estimatedDeduction;
@@ -347,8 +355,13 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       id: parcel.id,
       allocatedTransferPrice: allocatedPrice,
       acquisitionPrice,
-      estimatedDeduction,
-      expenses: parcel.acquisitionMethod === "estimated" ? 0 : expenses,
+      // swap 발동 시 개산공제는 미적용 → 0 표시. expenses에 directSide 노출(산식 reconcile).
+      estimatedDeduction: swapApplied ? 0 : estimatedDeduction,
+      expenses:
+        parcel.acquisitionMethod === "estimated"
+          ? (swapApplied ? expenses : 0)
+          : expenses,
+      swapApplied: swapApplied || undefined,
       transferGain,
       holdingYears,
       longTermHoldingRate,

@@ -383,3 +383,68 @@ describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행
     expect(result.warnings.some((w) => w.includes("증환지"))).toBe(true);
   });
 });
+
+// ============================================================
+// MP-SWAP: estimated 방식 §97②2호 단서 swap 표시 reconcile (회귀)
+// 버그: estimated 모드 결과 expenses를 무조건 0으로 덮어써 swap된 자본적지출이
+//       산출근거·UI에서 소실 → "안분가 - 취득가 - 개산공제" 산식이 양도차익과 불일치.
+// 수정: swap 발동 시 estimatedDeduction=0·expenses=directSide·swapApplied=true.
+// ============================================================
+
+describe("MP-SWAP: estimated swap 표시 reconcile", () => {
+  it("환산취득가+개산공제 < 자본+양도비 → swap 발동, 표시필드 정합", () => {
+    const result = calculateMultiParcelTransfer({
+      totalTransferPrice: 1_000_000_000,
+      transferDate: new Date("2024-06-01"),
+      parcels: [
+        {
+          id: "P1",
+          transferArea: 100,
+          acquisitionArea: 100,
+          acquisitionDate: new Date("2010-01-01"),
+          acquisitionMethod: "estimated",
+          standardPricePerSqmAtAcq: 1_000_000,    // stdAtAcq = 100,000,000 → 환산취득가 200,000,000
+          standardPricePerSqmAtTransfer: 5_000_000, // stdAtTransfer = 500,000,000
+          capitalExpenditure: 300_000_000,          // directSide 300M > 환산200M+개산3M=203M → swap
+          transferExpense: 0,
+        },
+      ],
+    });
+    const p = result.parcelResults[0];
+    expect(p.swapApplied).toBe(true);
+    expect(p.acquisitionPrice).toBe(200_000_000);     // 환산취득가
+    expect(p.estimatedDeduction).toBe(0);             // 개산공제 미적용 → 0 표시
+    expect(p.expenses).toBe(300_000_000);             // directSide 노출
+    expect(p.transferGain).toBe(500_000_000);         // 1000M - 200M - 300M
+    // 표시필드 reconcile: 안분가 - 취득가 - 개산공제 - 경비 = 양도차익
+    expect(
+      p.allocatedTransferPrice - p.acquisitionPrice - p.estimatedDeduction - p.expenses,
+    ).toBe(p.transferGain);
+  });
+
+  it("swap 미발동(개산공제 ≥ 자본+양도비) → 기존 동작 불변 (회귀)", () => {
+    const result = calculateMultiParcelTransfer({
+      totalTransferPrice: 1_000_000_000,
+      transferDate: new Date("2024-06-01"),
+      parcels: [
+        {
+          id: "P1",
+          transferArea: 100,
+          acquisitionArea: 100,
+          acquisitionDate: new Date("2010-01-01"),
+          acquisitionMethod: "estimated",
+          standardPricePerSqmAtAcq: 1_000_000,
+          standardPricePerSqmAtTransfer: 5_000_000,
+          capitalExpenditure: 1_000_000,  // directSide 1M < 환산200M+개산3M → swap 미발동
+          transferExpense: 0,
+        },
+      ],
+    });
+    const p = result.parcelResults[0];
+    expect(p.swapApplied).toBeUndefined();
+    expect(p.estimatedDeduction).toBe(3_000_000);  // 개산공제 100M × 3%
+    expect(p.expenses).toBe(0);
+    // gain = 1000M - 200M(환산) - 3M(개산공제) = 797M
+    expect(p.transferGain).toBe(797_000_000);
+  });
+});
