@@ -38,7 +38,7 @@ test.describe("자산 분할 토글 분리", () => {
     // ③ 취득정보 펼침 (첫 자산)
     await page.getByRole("button", { name: /취득정보/ }).first().click();
 
-    const toggleB = page.getByRole("switch", { name: /지분별로 나눠 취득/ });
+    const toggleB = page.getByRole("switch", { name: /지분\(%\)별로 나눠 취득/ });
     await expect(toggleB).toBeVisible();
     await toggleB.click();
     await expect(toggleB).toBeChecked(); // 자기소멸 차단
