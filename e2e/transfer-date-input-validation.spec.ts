@@ -39,9 +39,9 @@ async function fillBaseAsset(page: Page, acq: [string, string, string]) {
 test("(a) 양도일 < 취득일 → 차단", async ({ page }) => {
   await setup(page);
   // 양도일 2019-12-31 (취득 2020-03-10보다 빠름)
-  await year(page, 0).fill("2019");
-  await month(page, 0).fill("12");
-  await day(page, 0).fill("31");
+  await page.getByTestId("transfer-date").getByLabel("연도").fill("2019");
+  await page.getByTestId("transfer-date").getByLabel("월").fill("12");
+  await page.getByTestId("transfer-date").getByLabel("일").fill("31");
   await fillBaseAsset(page, ["2020", "03", "10"]);
 
   await page.getByRole("button", { name: "가산세" }).first().click();
@@ -52,9 +52,9 @@ test("(a) 양도일 < 취득일 → 차단", async ({ page }) => {
 test("(b) 취득일 미래 → 차단", async ({ page }) => {
   await setup(page);
   // 양도일도 미래(2099-06)로 둬서 양도일<취득일이 먼저 잡히지 않게 — 취득일 미래(2099-01)만 차단
-  await year(page, 0).fill("2099");
-  await month(page, 0).fill("06");
-  await day(page, 0).fill("01");
+  await page.getByTestId("transfer-date").getByLabel("연도").fill("2099");
+  await page.getByTestId("transfer-date").getByLabel("월").fill("06");
+  await page.getByTestId("transfer-date").getByLabel("일").fill("01");
   await fillBaseAsset(page, ["2099", "01", "10"]);
 
   await page.getByRole("button", { name: "가산세" }).first().click();
@@ -65,9 +65,9 @@ test("(b) 취득일 미래 → 차단", async ({ page }) => {
 test("(c) 미래 양도일 → amber 경고 + 진행 가능", async ({ page }) => {
   await setup(page);
   // 양도일 미래(2099) · 취득 과거 → 경고만, 차단 아님
-  await year(page, 0).fill("2099");
-  await month(page, 0).fill("01");
-  await day(page, 0).fill("01");
+  await page.getByTestId("transfer-date").getByLabel("연도").fill("2099");
+  await page.getByTestId("transfer-date").getByLabel("월").fill("01");
+  await page.getByTestId("transfer-date").getByLabel("일").fill("01");
   await fillBaseAsset(page, ["2015", "03", "10"]);
 
   // amber 경고 배너 노출

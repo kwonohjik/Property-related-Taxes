@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { type AssetForm, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
+import { type AssetForm, type TransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import { Button } from "@/components/ui/button";
 import { CompanionAssetCard } from "./CompanionAssetCard";
 import type { BundledSaleMode } from "./CompanionSaleModeBlock";
@@ -12,8 +12,18 @@ interface Props {
   onChange: (assets: AssetForm[]) => void;
   /** 단일 자산 모드: 첫 번째 카드에 singleMode를 전달 */
   singleMode?: boolean;
-  /** 양도일 (공시가격 기준연도 자동 계산용) */
+  /** 양도일 (공시가격 기준연도 자동 계산용 + ① 양도일 위젯) */
   transferDate?: string;
+  /** 폼-전역 신고일 (① 신고일 위젯) */
+  filingDate?: string;
+  /** 신고기한 초과 여부 (Step1 산출) */
+  filingOverdue?: boolean;
+  /** 신고기한 문자열 (Step1 산출) */
+  filingDeadline?: string;
+  /** 전 자산 부담부증여 여부 (Step1 산출) */
+  burdenedGiftDeadline?: boolean;
+  /** 폼-전역 패치 (양도일·신고일 write — handleFormChange 경유) */
+  onFormChange?: (patch: Partial<TransferFormData>) => void;
   /** 폼-수준 총 양도가액 — 지분 모드 자동 계산용 */
   contractTotalPrice?: string;
   /** 폼-수준 총 양도비 — 자산별 자동 안분 표시용 */
@@ -29,7 +39,7 @@ interface Props {
   errorMessage?: string | null;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, contractTotalPrice, totalTransferExpense, isOneHouseSingle, errorAssetIndex, errorMessage }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, burdenedGiftDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, errorAssetIndex, errorMessage }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -71,6 +81,12 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           onRemove={assets.length > 1 ? () => removeAsset(idx) : undefined}
           singleMode={singleMode && assets.length === 1}
           transferDate={transferDate}
+          filingDate={filingDate}
+          filingOverdue={filingOverdue}
+          filingDeadline={filingDeadline}
+          burdenedGiftDeadline={burdenedGiftDeadline}
+          showFormDates={idx === 0}
+          onFormChange={onFormChange}
           contractTotalPrice={contractTotalPrice}
           totalTransferExpense={totalTransferExpense}
           onAddAsset={(patch) => addAsset(patch)}

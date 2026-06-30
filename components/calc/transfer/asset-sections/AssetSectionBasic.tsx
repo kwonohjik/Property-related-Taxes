@@ -6,8 +6,10 @@
  */
 import { Fragment } from "react";
 
-import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { cn } from "@/lib/utils";
+import { DateInput } from "@/components/ui/date-input";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
@@ -38,11 +40,79 @@ interface Props {
   isMultiBundled: boolean;
   /** 증환지 증가분 등 자산 자동 추가 콜백 */
   onAddAsset?: (patch: Partial<AssetForm>) => void;
+  /** 첫 자산(주 자산) 카드일 때만 양도일·신고일 입력란 노출 (폼-전역값) */
+  showFormDates?: boolean;
+  /** 폼-전역 양도일 */
+  transferDate?: string;
+  /** 폼-전역 신고일 */
+  filingDate?: string;
+  /** 신고기한 초과 여부 (Step1 산출) */
+  filingOverdue?: boolean;
+  /** 신고기한 문자열 (Step1 산출, 양도일 미입력 시 빈 문자열) */
+  filingDeadline?: string;
+  /** 전 자산 부담부증여 여부 (Step1 산출 — 신고기한 3개월 §105①3호) */
+  burdenedGiftDeadline?: boolean;
+  /** 폼-전역 패치 (양도일·신고일 write — handleFormChange 경유) */
+  onFormChange?: (patch: Partial<TransferFormData>) => void;
 }
 
-export function AssetSectionBasic({ asset, onChange, isMultiBundled, onAddAsset }: Props) {
+export function AssetSectionBasic({
+  asset,
+  onChange,
+  isMultiBundled,
+  onAddAsset,
+  showFormDates,
+  transferDate,
+  filingDate,
+  filingOverdue,
+  filingDeadline,
+  burdenedGiftDeadline,
+  onFormChange,
+}: Props) {
   return (
     <>
+      {/* 양도일·신고일 — 폼-전역값. 첫 자산(주 자산)에만 입력란, 나머지는 공통 안내 */}
+      {showFormDates ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <FieldCard
+            label="양도일"
+            required
+            hint="잔금 청산일 또는 등기 접수일 중 빠른 날"
+            warning={
+              filingOverdue
+                ? `⚠ 신고기한(${filingDeadline})을 지났습니다 — 가산세 자동 적용`
+                : undefined
+            }
+          >
+            <DateInput
+              value={transferDate ?? ""}
+              onChange={(v) => onFormChange?.({ transferDate: v })}
+              data-testid="transfer-date"
+            />
+          </FieldCard>
+          <FieldCard
+            label="신고일"
+            hint={
+              transferDate
+                ? burdenedGiftDeadline
+                  ? `신고기한: ${filingDeadline} (양도월 말일 + 3개월 — 부담부증여 §105①3호)`
+                  : `신고기한: ${filingDeadline} (양도월 말일 + 2개월)`
+                : "양도일 입력 시 신고기한이 표시됩니다"
+            }
+          >
+            <DateInput
+              value={filingDate ?? ""}
+              onChange={(v) => onFormChange?.({ filingDate: v })}
+              data-testid="filing-date"
+            />
+          </FieldCard>
+        </div>
+      ) : (
+        <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          양도일·신고일은 주 자산(자산 1)과 공통입니다.
+        </p>
+      )}
+
       {/* 자산 종류 */}
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">자산 종류</label>

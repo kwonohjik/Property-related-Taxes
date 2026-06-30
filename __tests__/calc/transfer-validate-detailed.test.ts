@@ -24,13 +24,15 @@ describe("validateStepDetailed", () => {
     expect(issue?.message).toContain("자산 유형");
   });
 
-  it("폼-전역 오류(양도일 누락)는 assetIndex 없이 반환", () => {
+  it("양도일 누락 오류는 주 자산 카드(index 0)로 유도", () => {
+    // 양도일·신고일 위젯이 자산 카드 ① 안으로 이동 — 폼-전역 오류지만
+    // assetIndex 0을 부여해 주 자산 카드로 스크롤 + 인라인 표시한다.
     const form = baseForm();
     form.transferDate = "";
 
     const issue = validateStepDetailed(0, form);
     expect(issue).not.toBeNull();
-    expect(issue?.assetIndex).toBeUndefined();
+    expect(issue?.assetIndex).toBe(0);
     expect(issue?.message).toContain("양도일");
   });
 

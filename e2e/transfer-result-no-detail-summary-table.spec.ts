@@ -24,12 +24,12 @@ test("상세 내역 표 제거 후 신고서 양식·상세명세서·총 납부
   const day = (i: number) => page.getByRole("textbox", { name: "일", exact: true }).nth(i);
 
   // 양도일 2024-06-01 / 신고일 2024-08-31
-  await year(0).fill("2024");
-  await month(0).fill("06");
-  await day(0).fill("01");
-  await year(1).fill("2024");
-  await month(1).fill("08");
-  await day(1).fill("31");
+  await page.getByTestId("transfer-date").getByLabel("연도").fill("2024");
+  await page.getByTestId("transfer-date").getByLabel("월").fill("06");
+  await page.getByTestId("transfer-date").getByLabel("일").fill("01");
+  await page.getByTestId("filing-date").getByLabel("연도").fill("2024");
+  await page.getByTestId("filing-date").getByLabel("월").fill("08");
+  await page.getByTestId("filing-date").getByLabel("일").fill("31");
 
   // 점진적 노출 — 양도정보(②)·취득정보(③) 펼침
   await expandAssetSection(page, 2);

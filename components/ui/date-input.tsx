@@ -21,6 +21,8 @@ interface DateInputProps {
   onBlur?: () => void;
   className?: string;
   disabled?: boolean;
+  /** 위젯 루트에 부여 — E2E가 연/월/일 input을 순서 의존 없이 스코프하는 데 사용 */
+  "data-testid"?: string;
 }
 
 function parseDateStr(value: string): { year: string; month: string; day: string } {
@@ -73,7 +75,7 @@ function clampDay(day: string, year: string, month: string): string {
   return n > max ? String(max).padStart(2, "0") : day;
 }
 
-export function DateInput({ value, onChange, onBlur, className, disabled }: DateInputProps) {
+export function DateInput({ value, onChange, onBlur, className, disabled, "data-testid": dataTestid }: DateInputProps) {
   const parsed = parseDateStr(value);
   const [year, setYear] = useState(parsed.year);
   const [month, setMonth] = useState(parsed.month);
@@ -151,6 +153,7 @@ export function DateInput({ value, onChange, onBlur, className, disabled }: Date
 
   return (
     <div
+      data-testid={dataTestid}
       className={cn(
         "flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring",
         disabled && "opacity-50 cursor-not-allowed",

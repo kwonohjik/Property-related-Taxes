@@ -6,7 +6,6 @@ import {
   makeDefaultAsset,
 } from "@/lib/stores/calc-wizard-store";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
@@ -60,49 +59,12 @@ export function Step1({
   // §105①3호 — 전 자산 부담부증여 양도는 예정신고 기한 3개월 (일반·혼합은 2개월)
   const burdenedGiftDeadline = isAllBurdenedGift(form.assets);
   const filingOverdue = isFilingOverdue(form.transferDate, form.filingDate, burdenedGiftDeadline);
+  // 양도일·신고일 위젯이 자산 카드 ① 안으로 이동 — 신고기한 문자열은 form.assets 전체가
+  // 필요한 isAllBurdenedGift 의존이므로 여기서 산출해 prop으로 내려보낸다 (leaf 재계산 금지).
+  const filingDeadline = form.transferDate ? getFilingDeadline(form.transferDate, burdenedGiftDeadline) : "";
 
   return (
     <div className="space-y-6">
-      {/* 기본 정보 */}
-      <section>
-        <SectionHeader
-          title="기본정보"
-          description="계약·신고 정보를 입력하세요"
-        />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <FieldCard
-            label="양도일"
-            required
-            hint="잔금 청산일 또는 등기 접수일 중 빠른 날"
-            warning={
-              filingOverdue
-                ? `⚠ 신고기한(${getFilingDeadline(form.transferDate, burdenedGiftDeadline)})을 지났습니다 — 가산세 자동 적용`
-                : undefined
-            }
-          >
-            <DateInput
-              value={form.transferDate}
-              onChange={(v) => onChange({ transferDate: v })}
-            />
-          </FieldCard>
-          <FieldCard
-            label="신고일"
-            hint={
-              form.transferDate
-                ? burdenedGiftDeadline
-                  ? `신고기한: ${getFilingDeadline(form.transferDate, true)} (양도월 말일 + 3개월 — 부담부증여 §105①3호)`
-                  : `신고기한: ${getFilingDeadline(form.transferDate)} (양도월 말일 + 2개월)`
-                : "양도일 입력 시 신고기한이 표시됩니다"
-            }
-          >
-            <DateInput
-              value={form.filingDate}
-              onChange={(v) => onChange({ filingDate: v })}
-            />
-          </FieldCard>
-        </div>
-      </section>
-
       {/* 양도자산 구성 */}
       <section>
         <SectionHeader
@@ -178,6 +140,11 @@ export function Step1({
           onChange={updateAssets}
           singleMode={!hasBundledAssets}
           transferDate={form.transferDate}
+          filingDate={form.filingDate}
+          filingOverdue={filingOverdue}
+          filingDeadline={filingDeadline}
+          burdenedGiftDeadline={burdenedGiftDeadline}
+          onFormChange={onChange}
           contractTotalPrice={form.contractTotalPrice}
           totalTransferExpense={form.totalTransferExpense}
           isOneHouseSingle={form.isOneHousehold === true && form.householdHousingCount === "1"}
