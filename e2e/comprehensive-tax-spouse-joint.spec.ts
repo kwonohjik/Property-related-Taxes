@@ -110,9 +110,9 @@ test.describe("종합부동산세 부부 공동명의 1주택자 특례 §10의2
       ).toBeVisible({ timeout: 30_000 });
 
       // "§10의2 부부 공동명의 특례" 배지 (산출세액 행 badge span) 표시
-      // getByText 정확 일치: span 배지 텍스트 전체와 일치
+      // 배지 span + 법조문 인용 링크 버튼 "… ↗" 2곳 렌더 → .first()=배지 span
       await expect(
-        page.getByText("§10의2 부부 공동명의 특례"),
+        page.getByText("§10의2 부부 공동명의 특례").first(),
       ).toBeVisible({ timeout: 10_000 });
 
       // 기본공제 라벨 "부부 공동명의 특례 (1세대1주택 의제)" 표시

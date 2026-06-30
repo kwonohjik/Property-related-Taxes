@@ -94,10 +94,10 @@ test.describe("종합부동산세 사례8 — 주택 세부담상한 자동(prio
     // ⑤ 납부할세액 16,747,099
     await expect(page.getByTestId("payable-step6")).toContainText("16,747,099원");
 
-    // 트랙 B 세부담상한 산식 echo (priorAssessedValue 자동 시만, 조건 블록 밖 렌더)
-    await expect(card.getByText(/주택 세부담상한 산식/).first()).toBeVisible();
-    await card.getByText(/주택 세부담상한 산식/).first().click();
-    await expect(card.getByText(/세부담상한 130%/).first()).toBeVisible();
+    // 트랙 B 세부담상한 산식은 ②ⓐ 주택별 행에 inline 통합 (별도 펼침 카드 폐지).
+    //   서초: 직전 2,970,000 × 130% cap → ⓐ 2,702,700 (×(1−30%)) / 강남: 직전 1,290,000 × 130% cap → ⓐ 1,677,000
+    await expect(card).toContainText("2,702,700원");
+    await expect(card).toContainText("1,677,000원");
 
     expect(consoleErrors, `콘솔 에러: ${consoleErrors.join("\n")}`).toEqual([]);
   });

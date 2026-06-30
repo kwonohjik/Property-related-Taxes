@@ -31,6 +31,9 @@ test.describe("종합부동산세 마법사 법조문 링크 → 조문 팝업",
     test.setTimeout(60_000);
     await gotoComprehensiveStep1(page);
 
+    // YearLawHintCard(연도 세법 요약)는 기본 접힘 — 세율·세부담상한 배지는 본문 안 → 펼치기 선행
+    await page.getByRole("button", { name: /펼치기/ }).first().click();
+
     // 세율 도움말 배지 — 버튼 텍스트 "§9①2호 ↗" (legalBasis="종합부동산세법 §9")
     const badge = page.getByRole("button", { name: /§9①2호/ });
     await expect(badge).toBeVisible();
@@ -47,6 +50,9 @@ test.describe("종합부동산세 마법사 법조문 링크 → 조문 팝업",
   }) => {
     test.setTimeout(60_000);
     await gotoComprehensiveStep1(page);
+
+    // YearLawHintCard(연도 세법 요약)는 기본 접힘 — 세율·세부담상한 배지는 본문 안 → 펼치기 선행
+    await page.getByRole("button", { name: /펼치기/ }).first().click();
 
     // 세부담상한 도움말 배지 — 버튼 텍스트 "§10 ↗" (legalBasis="종합부동산세법 §10")
     const badge = page.getByRole("button", { name: /§10/ }).first();

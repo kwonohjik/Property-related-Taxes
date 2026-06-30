@@ -6,7 +6,7 @@
  * UI:   Step2 거래정지 토글(이동·활성) + EstimatedUnlistedBlock simpleOnly
  *
  * E-1: kosdaq·환산모드 → 거래정지 토글 노출(§163⑨ 블록 앞)
- * E-2: 토글 ON → §163⑨ 블록 숨김 + 비상장 평가 폼 노출 + 모드 라디오 비노출(simpleOnly)
+ * E-2: 토글 ON → §163⑨ 블록 숨김 + 비상장 평가 폼 노출 + 모드 라디오 노출(simpleOnly 미적용)
  * E-3: 토글 ON + 평가 입력 + 계산 → 결과 환산취득가 25,000,000 (A-TH-1 동일 입력)
  *
  * 실행: E2E_PORT=3200 npx playwright test e2e/stock-transfer-trading-halt.spec.ts
@@ -67,7 +67,7 @@ test.describe("거래정지 §165③ UI", () => {
     await expect(page.getByText(HALT_TOGGLE_TITLE)).toBeVisible({ timeout: 10_000 });
   });
 
-  test("E-2: 토글 ON → 비상장 평가 폼 노출 + 모드 라디오 비노출(simpleOnly)", async ({ page }) => {
+  test("E-2: 토글 ON → 비상장 평가 폼 노출 + 모드 라디오 노출(simpleOnly 미적용) + §163⑨ 블록 숨김", async ({ page }) => {
     test.setTimeout(90_000);
     await gotoStockTransferTax(page);
     await fillStep1(page);
@@ -78,9 +78,9 @@ test.describe("거래정지 §165③ UI", () => {
 
     // 비상장 보충 평가 폼 노출
     await expect(page.getByText("비상장 보충적 평가 — 시행령 §165④1")).toBeVisible({ timeout: 10_000 });
-    // simpleOnly — full(V2) 모드 라디오 비노출
-    await expect(page.getByText("평가액 계산")).toHaveCount(0);
-    // §163⑨ 블록(취득시 1주당 기준시가) 숨김
+    // Step2가 EstimatedUnlistedBlock에 simpleOnly를 전달하지 않음 → full(V2) 모드 라디오 "평가액 계산" 노출 (현행 의도)
+    await expect(page.getByText("평가액 계산")).toBeVisible();
+    // §163⑨ 블록(취득시 1주당 기준시가)은 거래정지 ON 시 숨김 (Step2:392 분기) — 현행 유지
     await expect(page.getByText("환산취득가 (시행령 §163⑨)")).toHaveCount(0);
   });
 
