@@ -64,6 +64,19 @@ describe("SC-1: calcUsagePeriodInfo — 시간 분할 정보 산출", () => {
     expect(info.t1Years).toBeCloseTo(info.t1Days / 365.25, 6);
     expect(info.t2Years).toBeCloseTo(info.t2Days / 365.25, 6);
   });
+
+  it("완성 보유연수(t1/t2HoldingYears)는 초일불산입 calendar 정수 — LTHD 율 산정용", () => {
+    // 갑氏 케이스: 취득 1985-01-01, 변경 2010-01-01, 양도 2023-02-16
+    const info = calcUsagePeriodInfo(
+      new Date("1985-01-01"),
+      new Date("2010-01-01"),
+      new Date("2023-02-16"),
+    )!;
+    // 1985-01-02(초일불산입)→2010-01-01 = 24년 (anniversary 2010-01-02 미도달)
+    expect(info.t1HoldingYears).toBe(24);
+    // 2010-01-02→2023-02-16 = 13년 (13.1253년의 완성연수)
+    expect(info.t2HoldingYears).toBe(13);
+  });
 });
 
 // ──────────────────────────────────────────────────────────────
@@ -171,6 +184,14 @@ describe("SC-3: house_to_commercial — usageChangeDate 입력", () => {
   it("Period 1 LTHD 공제율 ≤ 30% (표1, 갑氏는 다주택자)", () => {
     const ups = result.usagePeriodSplit!;
     expect(ups.period1LongTermDeductionRate).toBeLessThanOrEqual(0.30);
+  });
+
+  it("Period 2 LTHD 율은 완성연수(13년) 기준 정확값 — 분수 13.1253년 과다공제 방지 (회귀)", () => {
+    // 버그: t2Years=4794/365.25=13.1253 → 0.2625051 과다공제.
+    // 수정: 완성 13년 × 2% = 0.26 (표1, 갑氏 다주택자).
+    const ups = result.usagePeriodSplit!;
+    expect(ups.period2HousingLongTermDeductionRate).toBe(0.26);
+    expect(ups.period2CommercialLongTermDeductionRate).toBe(0.26);
   });
 });
 
