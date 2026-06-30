@@ -84,6 +84,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   }
 
   // 환산취득가 + 1990.8.30. 이전 취득 토지 → pre1990Enabled 자동 체크
+  // [의도적 예외] "useEffect → store 미러링 금지" 정책의 예외로 유지 — MixedUsePreHousingDisclosureSection
+  // effect ①과 동일한 "수렴하는 boolean 래치"(가드 !pre1990Enabled로 재발동 차단, 무한 루프 없음).
+  // 깔끔한 제거는 hasPre1990 의미를 API 7곳·validate 3곳에서 재파생해야 해 tax-correctness 회귀 위험이
+  // 커 보류한다. 상세 근거: MixedUsePreHousingDisclosureSection.tsx 주석.
   useEffect(() => {
     if (
       props.useEstimatedAcquisition &&
