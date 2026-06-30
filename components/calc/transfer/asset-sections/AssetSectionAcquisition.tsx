@@ -74,8 +74,8 @@ export function AssetSectionAcquisition({
         <>
           <ToggleCard
             tone="amber"
-            title="같은 물건을 지분별로 나눠 취득했나요?"
-            description="동일 부동산을 지분으로 나눠 여러 번 취득해 취득시기·취득원인이 다른 경우 (예: 60% 상속 + 40% 매매). 켜면 각 지분을 별도 자산으로 추가합니다."
+            title="같은 물건을 지분(%)별로 나눠 취득했나요?"
+            description="한 물건의 소유 지분(%)을 나눠 여러 번 취득해 취득시기·취득원인이 다른 경우 (예: 60% 상속 + 40% 매매). 켜면 각 지분을 별도 자산으로 추가합니다. (※ 필지가 여러 개인 경우는 아래 ‘여러 필지’ 토글)"
             checked={splitMode === "fractional"}
             disabled={splitMode === "companion"}
             disabledReason={
@@ -195,8 +195,8 @@ export function AssetSectionAcquisition({
       {asset.assetKind === "land" && (
         <ToggleCard
           tone="sky"
-          title="취득시기 상이 (환지·합병 등 다필지)"
-          description="취득원인·취득일이 다른 2필지 이상인 경우 (소득세법 시행령 §162①6호)"
+          title="여러 필지를 각각 다른 시기에 취득했나요? (환지·합병)"
+          description="물리적으로 다른 2필지 이상을 취득원인·취득일 다르게 취득한 경우 (소득세법 시행령 §162①6호). ※ 한 필지의 지분(%)을 나눈 경우는 위 ‘지분(%)별 취득’ 토글을 사용하세요."
           checked={asset.parcelMode ?? false}
           onCheckedChange={(checked) => {
             const defaultParcel: ParcelFormItem = {
