@@ -136,7 +136,6 @@ export function Step1({
           filingDate={form.filingDate}
           filingOverdue={filingOverdue}
           filingDeadline={filingDeadline}
-          burdenedGiftDeadline={burdenedGiftDeadline}
           onFormChange={onChange}
           contractTotalPrice={form.contractTotalPrice}
           totalTransferExpense={form.totalTransferExpense}

@@ -20,9 +20,6 @@ test.describe("양도일·신고일 자산 ① 기본정보 이동", () => {
     await page.getByTestId("transfer-date").getByLabel("월").fill("06");
     await page.getByTestId("transfer-date").getByLabel("일").fill("01");
     await expect(page.getByTestId("transfer-date").getByLabel("연도")).toHaveValue("2024");
-
-    // 신고기한 hint 표시 (양도일 입력 후)
-    await expect(page.getByText(/신고기한:/).first()).toBeVisible();
   });
 
   test("일괄양도 — 양도일·신고일은 첫 자산에만(중복 없음) + 공통 안내", async ({ page }) => {

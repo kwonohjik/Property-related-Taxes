@@ -13,7 +13,6 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
-import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { isFractionalRatioStr } from "@/lib/calc/transfer-tax-api-helpers";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +41,6 @@ export function OwnershipRatioInput({
   return (
     <FieldCard
       label="공유 지분율"
-      hint={fractional ? undefined : "단독 소유는 100/100. 같은 물건을 다회 분할 취득(지분 단계취득)한 경우 본 자산의 지분 비율을 입력하세요."}
       trailing={
         fractional ? (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
@@ -60,7 +58,13 @@ export function OwnershipRatioInput({
               placeholder="분자"
             />
           </div>
-          <span className={cn("text-sm font-semibold text-muted-foreground select-none")}>/</span>
+          <span
+            className={cn(
+              "text-sm font-semibold text-muted-foreground select-none",
+            )}
+          >
+            /
+          </span>
           <div className="w-20">
             <DecimalInput
               value={denominator}
@@ -69,12 +73,13 @@ export function OwnershipRatioInput({
             />
           </div>
           <span className="text-xs text-muted-foreground">
-            ({numerator && denominator && parseFloat(denominator) > 0
+            (
+            {numerator && denominator && parseFloat(denominator) > 0
               ? `${((parseFloat(numerator) / parseFloat(denominator)) * 100).toFixed(2)}%`
-              : "—"})
+              : "—"}
+            )
           </span>
         </div>
-        <ReferenceSiteLinks sites={[REFERENCE_SITES.realEstateRegister]} />
       </div>
     </FieldCard>
   );

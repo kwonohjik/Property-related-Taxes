@@ -19,14 +19,10 @@ const LAND_NATURE_OPTIONS: RadioCardOption<LandNatureValue>[] = [
   {
     value: "appurtenant",
     label: "부수토지",
-    description:
-      "주택·건물에 딸린 토지입니다. §89①3가 비과세 요건을 충족하면 주택과 일체로 과세(§154⑦ 한도 내 비과세 포함)합니다.",
   },
   {
     value: "standalone",
     label: "독립 나대지",
-    description:
-      "주택·건물과 무관한 순수 토지입니다. 주택 일체과세 분기가 적용되지 않으며 본래 보유기간 기준 세율로 과세합니다.",
   },
 ];
 
@@ -45,8 +41,9 @@ export function CompanionLandNatureBlock({ landNature, onChange }: Props) {
       <div className="space-y-0.5">
         <p className="text-sm font-semibold text-violet-900">토지 성격</p>
         <p className="text-xs text-muted-foreground">
-          이 토지가 주택·건물에 딸린 부수토지인지, 독립적인 나대지인지 선택하세요.
-          부수토지는 주택 비과세(§89①3가) 요건 충족 시 주택과 일체 과세합니다.
+          이 토지가 주택·건물에 딸린 부수토지인지, 독립적인 나대지인지
+          선택하세요. 부수토지는 주택 비과세(§89①3가) 요건 충족 시 주택과 일체
+          과세합니다.
         </p>
       </div>
       <RadioCardGroup
@@ -56,6 +53,7 @@ export function CompanionLandNatureBlock({ landNature, onChange }: Props) {
         onChange={(v) => onChange({ landNature: v as LandNatureValue })}
         tone="violet"
         layout="stack"
+        columns={2}
       />
     </div>
   );
