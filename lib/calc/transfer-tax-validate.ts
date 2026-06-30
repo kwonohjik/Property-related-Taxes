@@ -49,11 +49,13 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       issues.push({ step, message: "자산을 최소 1건 입력하세요." });
       return issues;
     }
-    if (!form.transferDate) issues.push({ step, message: "양도일을 선택하세요." });
+    // 양도일·신고일 위젯이 주 자산 카드 ① 안으로 이동 — assetIndex 0으로 해당 카드 스크롤·인라인 유도
+    // (step은 유지 — 스크롤 게이트가 assetIndex != null AND step === 0 동시 충족 필요)
+    if (!form.transferDate) issues.push({ step, assetIndex: 0, message: "양도일을 선택하세요." });
     // 신고일 < 양도일 모순 — 예정신고는 양도 후에만 가능 (법 §105①: 양도일이 속하는 달의 말일부터 2개월).
     // 양도 당일 신고는 허용, 미만만 차단. 기한 초과는 가산세 자동 적용 경고로 별도 처리(차단 아님).
     if (form.filingDate && form.transferDate && form.filingDate < form.transferDate)
-      issues.push({ step, message: `신고(예정)일(${form.filingDate})이 양도일(${form.transferDate})보다 빠릅니다. 예정신고는 양도 후에만 가능합니다.` });
+      issues.push({ step, assetIndex: 0, message: `신고(예정)일(${form.filingDate})이 양도일(${form.transferDate})보다 빠릅니다. 예정신고는 양도 후에만 가능합니다.` });
     // 부담부증여(소령 §159) 모드는 양도가액 = 인수채무액으로 엔진 자동 산정이므로 contractTotalPrice 검증 면제.
     const allBurdenedGift = form.assets.every((a) => a.transferType === "burdened_gift");
     if (!allBurdenedGift) {

@@ -15,9 +15,9 @@ const GATE_REASON = "주택 양도에만 적용";
 async function gotoReductionStep(page: import("@playwright/test").Page) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.getByLabel("연도").first().fill("2024");
-  await page.getByLabel("월").first().fill("06");
-  await page.getByLabel("일").first().fill("01");
+  await page.getByTestId("transfer-date").getByLabel("연도").fill("2024");
+  await page.getByTestId("transfer-date").getByLabel("월").fill("06");
+  await page.getByTestId("transfer-date").getByLabel("일").fill("01");
   // 점진적 노출 — 자산 종류 라디오가 기본정보(①) 안
   await expandAssetSection(page, 1);
 }

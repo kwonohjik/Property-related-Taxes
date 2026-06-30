@@ -30,18 +30,20 @@ test.describe("양도세 입력 오류 예방", () => {
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
     // 양도일 2024-06-01 (페이지 첫 DateInput)
-    await page.getByLabel("연도").first().fill("2024");
-    await page.getByLabel("월").first().fill("06");
-    await page.getByLabel("일").first().fill("01");
+    await page.getByTestId("transfer-date").getByLabel("연도").fill("2024");
+    await page.getByTestId("transfer-date").getByLabel("월").fill("06");
+    await page.getByTestId("transfer-date").getByLabel("일").fill("01");
 
     // 자산 카드 취득일을 양도일과 동일하게 입력 (자산 카드 내 DateInput)
     // getByLabel("일")은 토글 스위치 라벨("…일…" 포함)에 오매칭 — textbox role로 한정
     const card = page.locator('[data-asset-card-index="0"]');
     // 점진적 노출 — 취득일(③) 펼침
     await expandAssetSection(page, 3);
-    await card.getByRole("textbox", { name: "연도" }).first().fill("2024");
-    await card.getByRole("textbox", { name: "월" }).first().fill("06");
-    await card.getByRole("textbox", { name: "일" }).first().fill("01");
+    // 양도일·신고일이 ① 안으로 이동했으므로 취득일은 ③ 취득정보 섹션으로 스코프 한정
+    const acqSection = card.locator('[data-asset-section="3"]');
+    await acqSection.getByRole("textbox", { name: "연도" }).first().fill("2024");
+    await acqSection.getByRole("textbox", { name: "월" }).first().fill("06");
+    await acqSection.getByRole("textbox", { name: "일" }).first().fill("01");
 
     // "다음" 클릭 없이 즉시 경고 표시
     await expect(
@@ -49,7 +51,7 @@ test.describe("양도세 입력 오류 예방", () => {
     ).toBeVisible();
 
     // 취득일을 양도일 이전으로 고치면 경고 즉시 소멸
-    await card.getByRole("textbox", { name: "연도" }).first().fill("2020");
+    await acqSection.getByRole("textbox", { name: "연도" }).first().fill("2020");
     await expect(
       card.getByText(/날짜를 확인해 주세요/),
     ).toBeHidden();
@@ -60,9 +62,9 @@ test.describe("양도세 입력 오류 예방", () => {
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
     // 양도일에 2023-02-30 시도 → 일이 28로 클램핑
-    const year = page.getByLabel("연도").first();
-    const month = page.getByLabel("월").first();
-    const day = page.getByLabel("일").first();
+    const year = page.getByTestId("transfer-date").getByLabel("연도");
+    const month = page.getByTestId("transfer-date").getByLabel("월");
+    const day = page.getByTestId("transfer-date").getByLabel("일");
     await year.fill("2023");
     await month.fill("02");
     await day.fill("30");

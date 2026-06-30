@@ -10,9 +10,9 @@ test.describe("양도세 P5", () => {
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
-    await page.getByLabel("연도").first().fill("2024");
-    await page.getByLabel("월").first().fill("06");
-    await page.getByLabel("일").first().fill("01");
+    await page.getByTestId("transfer-date").getByLabel("연도").fill("2024");
+    await page.getByTestId("transfer-date").getByLabel("월").fill("06");
+    await page.getByTestId("transfer-date").getByLabel("일").fill("01");
 
     // ── Step4 보유 상황: 2채 선택 → 모드 2 섹션 노출 ──
     await page.getByRole("button", { name: "보유 상황" }).click();

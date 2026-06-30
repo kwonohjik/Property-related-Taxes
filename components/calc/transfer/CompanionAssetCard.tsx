@@ -15,7 +15,7 @@
  */
 import { useMemo, useRef, useState } from "react";
 
-import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useUnifiedRateBadge } from "./CompanionAssetCardNewConstruction";
@@ -46,8 +46,20 @@ interface Props {
   onRemove?: () => void;
   /** 단일 자산 모드: 양도가액 레이블·힌트를 §166⑥ 없이 단순화 */
   singleMode?: boolean;
-  /** 양도일 (공시가격 기준연도 자동 계산용) */
+  /** 양도일 (공시가격 기준연도 자동 계산용 + ① 기본정보 양도일 위젯) */
   transferDate?: string;
+  /** 폼-전역 신고일 (① 기본정보 신고일 위젯 — 첫 자산만) */
+  filingDate?: string;
+  /** 신고기한 초과 여부 (Step1 산출 — 양도일 warning) */
+  filingOverdue?: boolean;
+  /** 신고기한 문자열 (Step1 산출 — warning·hint 표시) */
+  filingDeadline?: string;
+  /** 전 자산 부담부증여 여부 (Step1 산출 — 신고기한 3개월 §105①3호) */
+  burdenedGiftDeadline?: boolean;
+  /** 첫 자산(index 0)일 때 양도일·신고일 입력란 노출 + ① 자동 펼침 */
+  showFormDates?: boolean;
+  /** 폼-전역 패치 (양도일·신고일 write — handleFormChange 경유) */
+  onFormChange?: (patch: Partial<TransferFormData>) => void;
   /** 증환지 증가분 등 자산 자동 추가 콜백 */
   onAddAsset?: (patch: Partial<AssetForm>) => void;
   /** 폼-수준 총 양도가액 — 지분 모드 시 ratio×total 자동 계산용 */
@@ -78,6 +90,12 @@ export function CompanionAssetCard({
   onRemove,
   singleMode,
   transferDate,
+  filingDate,
+  filingOverdue,
+  filingDeadline,
+  burdenedGiftDeadline,
+  showFormDates,
+  onFormChange,
   onAddAsset,
   contractTotalPrice,
   totalTransferExpense,
@@ -100,8 +118,10 @@ export function CompanionAssetCard({
     [asset, totalTransferExpense],
   );
 
-  // 접기 상태 — 전부 접힘 기본. 로컬 state (useEffect→store 미러링 없음)
-  const [open, setOpen] = useState<Record<number, boolean>>({});
+  // 접기 상태 — 첫 자산(양도일·신고일 호스트)은 ① 자동 펼침, 그 외 전부 접힘.
+  // 진입 즉시 활성(클릭·useEffect 지연 없음) — 양도일은 필수·최우선 입력값이고
+  // E2E는 양도일 fill을 섹션 expand보다 먼저 실행한다.
+  const [open, setOpen] = useState<Record<number, boolean>>(showFormDates ? { 1: true } : {});
   const forceOpenAll = !!errorMessage; // 검증 오류 시 5개 전부 펼침 (H2)
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -239,6 +259,13 @@ export function CompanionAssetCard({
           onChange={handleBasicChange}
           isMultiBundled={isMultiBundled}
           onAddAsset={onAddAsset}
+          showFormDates={showFormDates}
+          transferDate={transferDate}
+          filingDate={filingDate}
+          filingOverdue={filingOverdue}
+          filingDeadline={filingDeadline}
+          burdenedGiftDeadline={burdenedGiftDeadline}
+          onFormChange={onFormChange}
         />
       </AssetSection>
 

@@ -18,9 +18,9 @@ test.describe("§168의11② 수입금액비율 — 토지가액 자동조회 �
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
     // 양도일 2026-02-18 (첫 DateInput 그룹) — transferDate prop·버튼 활성 조건
-    await page.getByLabel("연도", { exact: true }).first().fill("2026");
-    await page.getByLabel("월", { exact: true }).first().fill("02");
-    await page.getByLabel("일", { exact: true }).first().fill("18");
+    await page.getByTestId("transfer-date").getByLabel("연도").fill("2026");
+    await page.getByTestId("transfer-date").getByLabel("월").fill("02");
+    await page.getByTestId("transfer-date").getByLabel("일").fill("18");
 
     // 점진적 노출 — 기본정보(①) 펼침 (자산종류·성격·면적). NBL 판정은 보유 상황(Step4)이라 비접힘.
     await expandAssetSection(page, 1);
