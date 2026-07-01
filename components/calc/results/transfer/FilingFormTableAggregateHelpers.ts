@@ -20,6 +20,7 @@ import {
   fmtPeriod,
   getAcqDateForCard,
 } from "./FilingFormTableHelpers";
+import { reductionEligibleIncome } from "./reduction-eligible-income";
 
 export function buildAggregateRows(
   _result: TransferTaxResult,
@@ -150,7 +151,16 @@ export function buildAggregateRows(
     // 양도소득금액
     setNum("incomeAmount", col, p.income);
     setNum("nontaxableIncome", col, 0);
-    setNum("reductionTargetIncome", col, p.reducibleIncome ?? 0);
+    setNum(
+      "reductionTargetIncome",
+      col,
+      reductionEligibleIncome(
+        p.reductionType,
+        p.income,
+        p.reducibleIncome ?? 0,
+        p.replacementLandDetail?.eligibleTransferIncome,
+      ),
+    );
     setNum("reductionTargetIncome2", col, 0);
     setNum("incomeAmountAfter", col, p.incomeAfterOffset);
     setNum("priorIncomeAmount", col, 0);
@@ -205,7 +215,17 @@ export function buildAggregateRows(
   setNum(
     "reductionTargetIncome",
     "total",
-    properties.reduce((s, p) => s + (p.reducibleIncome ?? 0), 0),
+    properties.reduce(
+      (s, p) =>
+        s +
+        reductionEligibleIncome(
+          p.reductionType,
+          p.income,
+          p.reducibleIncome ?? 0,
+          p.replacementLandDetail?.eligibleTransferIncome,
+        ),
+      0,
+    ),
   );
   setNum("reductionTargetIncome2", "total", 0);
   setNum("incomeAmountAfter", "total", aggregated.totalIncomeAfterOffset);

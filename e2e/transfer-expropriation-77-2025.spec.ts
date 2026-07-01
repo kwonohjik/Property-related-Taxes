@@ -106,4 +106,72 @@ test.describe("비자발적 양도 감면 UI (§77 2025 개정 · §77의2 · §
 
     console.log("✅ §77의2 입력 카드 확인");
   });
+
+  test("§77 공익수용 — 결과 화면에 감면세액 산출근거 상세 카드(①~⑤ 산식) 노출", async ({ page }) => {
+    // 실거래가 모드로 자체 셋업 (환산 기준시가 미입력 재검증 차단 회피)
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.getByTestId("transfer-date").getByLabel("연도").fill("2026");
+    await page.getByTestId("transfer-date").getByLabel("월").fill("05");
+    await page.getByTestId("transfer-date").getByLabel("일").fill("01");
+
+    await expandAssetSection(page, 1);
+    await expandAssetSection(page, 2);
+    await expandAssetSection(page, 3);
+
+    await page.getByRole("button", { name: "단순토지" }).click();
+    await page.getByText("독립 나대지", { exact: true }).click();
+    await page.getByPlaceholder("면적 입력").first().fill("300");
+    await inputByLabel(page, "양도가액 (원)").fill("1000000000");
+
+    // 매매 → 실거래가 → 취득일 2003-03-27 → 취득가액 3억
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "실거래가 계약서상 실거래가" }).click();
+    await page.getByLabel("연도", { exact: true }).nth(2).fill("2003");
+    await page.getByLabel("월", { exact: true }).nth(2).fill("03");
+    await page.getByLabel("일", { exact: true }).nth(2).fill("27");
+    await inputByLabel(page, "취득가액 (원)").fill("300000000");
+
+    // 감면·공제 이동 → §77 ON + 현금 보상액 전액
+    await page.getByRole("button", { name: "감면·공제" }).first().click();
+    await page.getByRole("switch", { name: /공익사업 수용 감면/ }).click();
+    await inputByLabel(page, "현금 보상액").fill("1000000000");
+
+    const approvalScope = page.locator("label:has-text('사업인정고시일')").locator("xpath=..");
+    await approvalScope.getByLabel("연도", { exact: true }).fill("2024");
+    await approvalScope.getByLabel("월", { exact: true }).fill("01");
+    await approvalScope.getByLabel("일", { exact: true }).fill("15");
+
+    // 가산세 단계로 이동 후 최종 계산
+    await page.getByRole("button", { name: "다음" }).click();
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+
+    // 결과 상세 카드 — 헤더 + ①보상구성 + ⑤ 산식
+    await expect(
+      page.getByText("공익사업 수용 감면 상세 (조특법 §77)"),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("① 보상 구성")).toBeVisible();
+    // ④ 자산별 감면금액 산출과정 (보상분 소득 − 기본공제) × 감면율
+    await expect(
+      page.getByText("④ 자산별 감면금액 = (보상분 소득 − 기본공제) × 감면율"),
+    ).toBeVisible();
+    await expect(page.getByText(/현금 = \(.+ − .+\) × \d+% =/)).toBeVisible();
+    await expect(
+      page.getByText("⑤ 감면세액 = 산출세액 × 감면대상소득금액 / 과세표준"),
+    ).toBeVisible();
+
+    // 별지84호 부표2 — ⑲ 세액감면대상금액 = 양도소득금액 전액(§90①·감면율 前),
+    // 감면후 소득금액 = 양도소득금액(§90① 소득 미차감). rate-곱값(53,425,403) 금지.
+    const rowTotal = (label: RegExp) =>
+      page
+        .locator("tr", { has: page.locator("td").filter({ hasText: label }) })
+        .first()
+        .locator("td")
+        .last();
+    const incomeText = (await rowTotal(/^양도소득금액$/).innerText()).trim();
+    await expect(rowTotal(/^세액감면대상금액$/)).toHaveText(incomeText);
+    await expect(rowTotal(/^감면후 소득금액$/)).toHaveText(incomeText);
+
+    console.log(`✅ §77 부표2 ⑲ 세액감면대상금액 = 감면후 소득금액 = 양도소득금액(${incomeText})`);
+  });
 });

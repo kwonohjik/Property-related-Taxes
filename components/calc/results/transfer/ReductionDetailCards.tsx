@@ -26,6 +26,12 @@ import { New994DetailCard } from "./New994DetailCard";
 import { Unsold989DetailCard } from "./Unsold989DetailCard";
 import { IncomeDeductionDetailCard } from "./IncomeDeductionDetailCard";
 import { SpecialHouseExclusionDetailCard } from "./SpecialHouseExclusionDetailCard";
+import {
+  New993DetailCard,
+  PublicExpropriationDetailCard,
+} from "./TransferReductionRows";
+import { ReplacementLand77_2DetailCard } from "./ReplacementLand77_2DetailCard";
+import { GbDesignatedLand77_3DetailCard } from "./GbDesignatedLand77_3DetailCard";
 
 interface Props {
   result: TransferTaxResult;
@@ -52,6 +58,10 @@ export function ReductionDetailCards({ result }: Props) {
     !!result.unsold982Detail ||
     !!result.unsold984Detail ||
     !!result.unsold98Detail ||
+    !!result.new993Detail ||
+    !!result.publicExpropriationDetail?.isEligible ||
+    !!result.replacementLandDetail ||
+    !!result.gbDesignatedLandDetail ||
     !!(result.specialHouseExclusionDetail &&
       result.specialHouseExclusionDetail.entries.length > 0);
 
@@ -123,6 +133,30 @@ export function ReductionDetailCards({ result }: Props) {
       {/* P5 (2026-06-12) */}
       {result.unsold98Detail && (
         <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} />
+      )}
+      {/* §99의3 신축주택 과세특례 — 양도소득금액 차감 방식 5년 안분 산식 */}
+      {result.new993Detail && <New993DetailCard detail={result.new993Detail} />}
+      {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 감면세액 산출근거(변수값) */}
+      {result.publicExpropriationDetail?.isEligible && (
+        <PublicExpropriationDetailCard
+          detail={result.publicExpropriationDetail}
+          calculatedTax={result.calculatedTax}
+          taxBase={result.taxBase}
+        />
+      )}
+      {result.replacementLandDetail && (
+        <ReplacementLand77_2DetailCard
+          detail={result.replacementLandDetail}
+          calculatedTax={result.calculatedTax}
+          taxBase={result.taxBase}
+        />
+      )}
+      {result.gbDesignatedLandDetail && (
+        <GbDesignatedLand77_3DetailCard
+          detail={result.gbDesignatedLandDetail}
+          calculatedTax={result.calculatedTax}
+          taxBase={result.taxBase}
+        />
       )}
       {/* P5 모드 2 — 보유 감면주택 주택수 제외 (2026-06-12 리뷰 H-2) */}
       {result.specialHouseExclusionDetail &&
