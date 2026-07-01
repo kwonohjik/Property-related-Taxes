@@ -20,6 +20,7 @@ import type {
 } from "@/lib/tax-engine/types/property.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useState, useMemo } from "react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
 import { formatIsoStamp } from "@/lib/utils/file-download";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -31,6 +32,31 @@ import {
 
 function formatKRW(amount: number): string {
   return amount.toLocaleString("ko-KR");
+}
+
+// 법령 근거 — 펼치기/접기 (native details → 표준 칩, 인쇄 시 자동 펼침)
+function LegalBasisDisclosure({ legalBasis }: { legalBasis: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="text-xs text-muted-foreground">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 hover:text-foreground transition-colors"
+      >
+        <span>법령 근거 보기 ({legalBasis.length}건)</span>
+        <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(open)}</span>
+      </button>
+      <ul className={`${open ? "" : "hidden print:block "}mt-2 space-y-0.5 pl-3 list-disc`}>
+        {legalBasis.map((b, i) => (
+          <li key={i}>
+            <LawArticleModal legalBasis={b} className="hover:text-primary hover:underline transition-colors text-xs" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function formatRate(rate: number): string {
@@ -671,18 +697,7 @@ export function PropertyTaxResultView({ result }: Props) {
       {legalBasis.length > 0 && (
         <PrintSection id="legal-basis" selectedIds={selectedPrintIds}>
         <section>
-          <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer hover:text-foreground transition-colors">
-              법령 근거 보기 ({legalBasis.length}건)
-            </summary>
-            <ul className="mt-2 space-y-0.5 pl-3 list-disc">
-              {legalBasis.map((b, i) => (
-                <li key={i}>
-                  <LawArticleModal legalBasis={b} className="hover:text-primary hover:underline transition-colors text-xs" />
-                </li>
-              ))}
-            </ul>
-          </details>
+          <LegalBasisDisclosure legalBasis={legalBasis} />
         </section>
         </PrintSection>
       )}
