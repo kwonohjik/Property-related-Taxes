@@ -154,9 +154,10 @@ function ExemptionRow({
               onClick={() => setDetailsOpen((o) => !o)}
               aria-expanded={detailsOpen}
               data-testid={`exemption-row-${rule.id}-details-toggle`}
-              className="text-xs text-sky-600 hover:text-sky-800 dark:text-sky-400 font-medium"
+              className="inline-flex items-center gap-1.5 text-xs text-sky-600 hover:text-sky-800 dark:text-sky-400 font-medium"
             >
-              {detailsOpen ? "▲" : "▼"} 적용 요건·제외 사유 자세히
+              <span>적용 요건·제외 사유 자세히</span>
+              <span className={expandToggleClass("sky")} aria-hidden>{expandToggleLabel(detailsOpen)}</span>
             </button>
             {detailsOpen && (
               <div className="mt-2 space-y-2">

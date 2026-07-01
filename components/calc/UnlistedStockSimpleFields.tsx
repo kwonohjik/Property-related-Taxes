@@ -17,6 +17,7 @@
  */
 
 import { useMemo, useState, type ReactNode } from "react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
@@ -191,9 +192,10 @@ export function UnlistedStockPreview({
               <button
                 type="button"
                 onClick={() => setGoodwillOpen((o) => !o)}
-                className="text-left text-indigo-600 dark:text-indigo-400 hover:underline print:hidden"
+                className="inline-flex items-center gap-1.5 text-left text-indigo-600 dark:text-indigo-400 print:hidden"
               >
-                ㉯ 영업권 평가액 (§59②) {goodwillOpen ? "▲" : "▼"} 산출근거
+                <span className="hover:underline">㉯ 영업권 평가액 (§59②) 산출근거</span>
+                <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(goodwillOpen)}</span>
               </button>
               <span className="hidden print:inline">㉯ 영업권 평가액 (§59②)</span>
               <span>{goodwill.goodwillFinal.toLocaleString()}</span>
