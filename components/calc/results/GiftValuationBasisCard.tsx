@@ -20,6 +20,7 @@
  */
 
 import { useState } from "react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import type {
   EstateItem,
   PropertyValuationResult,
@@ -126,7 +127,7 @@ function AssetBasis({
             <span className="font-mono tabular-nums whitespace-nowrap text-sm font-semibold text-emerald-800 dark:text-emerald-200">
               {valuatedAmount.toLocaleString()}
             </span>
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 print:hidden">{open ? "▲" : "▼"}</span>
+            <span className={expandToggleClass("emerald")} aria-hidden>{expandToggleLabel(open)}</span>
           </span>
         </button>
       ) : (

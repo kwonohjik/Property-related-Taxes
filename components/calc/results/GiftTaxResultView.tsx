@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { ChevronLeft } from "lucide-react";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -564,7 +565,7 @@ export function GiftTaxResultView({
           <span>
             증여재산 및 평가명세서 (별지 제10호서식 부표 1) — {result.valuationResults.length}건
           </span>
-          <span>{showValuation ? "▲" : "▼"}</span>
+          <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(showValuation)}</span>
         </button>
         {showValuation ? (
           <HorizontalScrollContainer hint="← → 좌우 스크롤 또는 thumb 드래그로 모든 컬럼 보기">

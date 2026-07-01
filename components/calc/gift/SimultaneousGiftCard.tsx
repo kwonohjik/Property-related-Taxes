@@ -20,7 +20,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { cn } from "@/lib/utils";
 import type { GiftSubFormState } from "@/components/calc/gift-tax-form-shared";
 import {
@@ -74,11 +74,7 @@ function SectionToggle({
       className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-gray-800"
     >
       <span>{label}</span>
-      {expanded ? (
-        <ChevronUp className="h-3.5 w-3.5" />
-      ) : (
-        <ChevronDown className="h-3.5 w-3.5" />
-      )}
+      <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(expanded)}</span>
     </button>
   );
 }
