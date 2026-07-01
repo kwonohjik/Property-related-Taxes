@@ -9,7 +9,7 @@
 import { describe, it, expect } from "vitest";
 
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
-import { evaluateUnconditionalExemption } from "@/components/calc/transfer/nbl/unconditional-exemption-status";
+import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 function asset(overrides: Partial<AssetForm>): AssetForm {
