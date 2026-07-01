@@ -142,7 +142,7 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
     designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }, { designatedDate: "2025-10-16", releasedDate: null }],
     includedSubCodes: [{ codePrefix: "41465107", name: "광교택지 상현동", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
   { code: "41463", name: "경기도 용인시 기흥구",
-    designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }],
+    designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }, { designatedDate: "2026-07-01", releasedDate: null }],
     includedSubCodes: [{ codePrefix: "41463111", name: "광교택지 영덕동", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
   { code: "41461", name: "경기도 용인시 처인구",
     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }],
@@ -160,7 +160,7 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   { code: "41430", name: "경기도 의왕시", designations: [{ designatedDate: "2020-02-21", releasedDate: "2022-11-13" }, { designatedDate: "2025-10-16", releasedDate: null }] },
 
   // ── 구리 ──
-  { code: "41310", name: "경기도 구리시", designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }] },
+  { code: "41310", name: "경기도 구리시", designations: [{ designatedDate: "2018-08-28", releasedDate: "2022-11-13" }, { designatedDate: "2026-07-01", releasedDate: null }] },
 
   // ── 고양시 (2017.8.3 전역 → 2019.11.8~2020.6.18 택지지구만 → 2020.6.19 전역 → 2022.11.14 해제) ──
   { code: "41281", name: "경기도 고양시 덕양구",
@@ -217,6 +217,9 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
       { codePrefix: "41590128", name: "동탄2 석우동" },
       { codePrefix: "41590420", name: "동탄2 동탄면" },
     ] },
+
+  // ── 화성 동탄구 (일반구 신설, 시군구코드 41597) — 2026.7.1 전역 지정 ──
+  { code: "41597", name: "경기도 화성시 동탄구", designations: [{ designatedDate: "2026-07-01", releasedDate: null }] },
 
   // ── 김포 (2020.11.20~2022.11.14, 통진·대곶·월곶·하성면 제외) ──
   { code: "41570", name: "경기도 김포시",
