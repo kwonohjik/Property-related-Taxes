@@ -46,6 +46,7 @@ export interface NedPriceItem {
   pblntfDe?: string;
   pblntfPclnd?: string;  // 개별공시지가 (원/㎡)
   prposArea1Nm?: string; // 용도지역명 (토지특성정보, 예: "일반상업지역")
+  lndpclAr?: string;     // 필지면적 (㎡, 토지특성정보 — 실측 확정: "87534.3")
   pblntfPc?: string;     // 공동주택 공시가격 (원)
   housePc?: string;      // 개별단독주택 공시가격 (원) ← getIndvdHousingPriceAttr 전용 필드
   dongNm?: string;
@@ -265,12 +266,18 @@ export async function GET(request: NextRequest) {
       }
       // 용도지역(도시지역 여부 판정용) 보강 — 토지특성정보. 실패해도 가격은 반환.
       let zoneName: string | undefined;
+      let landArea: number | undefined; // 필지면적(㎡) — getLandCharacteristics.lndpclAr (실측 확정)
       try {
         const chars = await callNedAllPages("getLandCharacteristics", pnu, year, apiKey, "landCharacteristicss");
         const charHit = [...chars].sort((a, b) => (b.stdrYear ?? "").localeCompare(a.stdrYear ?? ""))[0];
         const z = charHit?.prposArea1Nm;
         if (typeof z === "string" && z && z !== "지정되지않음") zoneName = z;
-      } catch { /* 용도지역 보강 실패는 가격 반환에 영향 없음 */ }
+        const ar = charHit?.lndpclAr;
+        if (typeof ar === "string" && ar) {
+          const n = parseFloat(ar);
+          if (Number.isFinite(n) && n > 0) landArea = n;
+        }
+      } catch { /* 용도지역·면적 보강 실패는 가격 반환에 영향 없음 */ }
 
       return NextResponse.json({
         pnu, priceType: "land_price",
@@ -278,6 +285,7 @@ export async function GET(request: NextRequest) {
         announcedDate: hit.item.pblntfDe ?? "",
         ldCodeNm: hit.item.ldCodeNm,
         zoneName,
+        area: landArea,
         message: `${hit.item.stdrYear}년 개별공시지가 (원/㎡)`,
       });
     }

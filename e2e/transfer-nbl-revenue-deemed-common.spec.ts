@@ -37,7 +37,7 @@ test.describe("§168의11③1·2호 간주임대료·공통수입 안분 — 풀
     await expandAssetSection(page, 3);
 
     // 자산: 토지·농지 → 독립 나대지 → 면적
-    await page.getByRole("button", { name: "토지·농지" }).click();
+    await page.getByRole("button", { name: "단순토지" }).click();
     await page.getByText("독립 나대지", { exact: true }).click();
     await page.getByPlaceholder("면적 입력").first().fill("314.1");
 

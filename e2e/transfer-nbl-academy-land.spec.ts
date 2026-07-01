@@ -69,7 +69,7 @@ test.describe("인천 중구 내동 6-20 학원용 토지 환산취득가액", (
     await expandAssetSection(page, 4);
 
     // ─── 자산 카드: 토지·농지 선택 ──────────────────────────────────
-    await page.getByRole("button", { name: "토지·농지" }).click();
+    await page.getByRole("button", { name: "단순토지" }).click();
 
     // ─── 토지 성격: 독립 나대지 ─────────────────────────────────────
     // (건물 철거 후 양도 → 나대지)

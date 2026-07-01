@@ -47,7 +47,7 @@ const ASSET_KIND_OPTIONS = [
     label: "일반건물(토지+건물 일괄)",
     description: "취득가액 확인 불가 시 환산취득가 적용",
   },
-  { value: "land", label: "토지·농지" },
+  { value: "land", label: "단순토지(나대지,농지,임야)" },
   { value: "building", label: "건물(토지 제외)" },
   {
     value: "redevelopment_apt",

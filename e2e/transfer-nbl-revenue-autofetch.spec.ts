@@ -26,7 +26,7 @@ test.describe("§168의11② 수입금액비율 — 토지가액 자동조회 �
     await expandAssetSection(page, 1);
 
     // 자산: 토지·농지 → 독립 나대지
-    await page.getByRole("button", { name: "토지·농지" }).click();
+    await page.getByRole("button", { name: "단순토지" }).click();
     await page.getByText("독립 나대지", { exact: true }).click();
     await page.getByPlaceholder("면적 입력").first().fill("314.1");
 

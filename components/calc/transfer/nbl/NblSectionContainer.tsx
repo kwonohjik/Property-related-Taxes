@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { evaluateUnconditionalExemption } from "./unconditional-exemption-status";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import {
@@ -57,15 +59,11 @@ export function NblSectionContainer({
   /** form-level 양도일 — GracePeriodSection 5호 미리보기에 전달 */
   transferDate?: string;
 }) {
-  const anyExempt =
-    asset.nblExemptInheritBefore2007 ||
-    asset.nblExemptLongOwned20y ||
-    asset.nblExemptAncestor8YearFarming ||
-    asset.nblExemptPublicExpropriation ||
-    asset.nblExemptFactoryAdjacent ||
-    asset.nblExemptJongjoongOwned ||
-    asset.nblExemptUrbanFarmlandJongjoong ||
-    asset.nblExemptInong;
+  // 무조건 사업용 의제 — 엔진 실제 판정(날짜/지역/지목 조건) 기준. 토글 ON 여부만 보지 않는다.
+  const exemptionStatus = useMemo(
+    () => evaluateUnconditionalExemption(asset, transferDate ?? ""),
+    [asset, transferDate],
+  );
 
   if (!asset.nblUseDetailedJudgment) {
     return (
@@ -98,10 +96,17 @@ export function NblSectionContainer({
       </div>
 
       {/* 1. 무조건 면제 (§168-14③) — 최우선 */}
-      <UnconditionalExemptionSection asset={asset} onAssetChange={onAssetChange} />
+      <UnconditionalExemptionSection
+        asset={asset}
+        onAssetChange={onAssetChange}
+        status={exemptionStatus}
+      />
 
-      {/* 2. 공통 — 지목·용도지역 */}
-      <div className={anyExempt ? "opacity-50 pointer-events-none" : undefined}>
+      {/* 2. 공통 — 지목·용도지역 (실제 의제 성립 시에만 비활성) */}
+      <div
+        data-testid="nbl-per-category"
+        className={exemptionStatus.isExempt ? "opacity-50 pointer-events-none" : undefined}
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldCard label="토지 지목">
             <Select

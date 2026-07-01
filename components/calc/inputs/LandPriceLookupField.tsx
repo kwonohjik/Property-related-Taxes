@@ -35,6 +35,8 @@ export interface LandPriceLookupFieldProps {
   onPricePerSqmChange: (v: string) => void;
   /** 토지 면적 (㎡) — 제공 시 토지기준시가 = pricePerSqm × area 자동 표시 */
   area?: number;
+  /** 면적 변경 콜백 — 지정 시 공시가격 조회 성공 시 필지면적(lndpclAr)을 빈 칸에 한해 자동 채움 */
+  onAreaChange?: (v: string) => void;
   /** 기준일 (양도일 또는 취득일) — 추천 연도 자동 계산 */
   referenceDate?: string;
   /** 지번 주소 — Vworld 조회 활성화 조건 */
@@ -51,6 +53,7 @@ export function LandPriceLookupField({
   pricePerSqm,
   onPricePerSqmChange,
   area,
+  onAreaChange,
   referenceDate,
   jibun,
   label = "개별공시지가 (원/㎡)",
@@ -98,6 +101,10 @@ export function LandPriceLookupField({
       }
       if (json.price && json.price > 0) {
         onPricePerSqmChange(String(json.price));
+        // 면적 자동 채움 — 빈 값일 때만 (조회된 필지면적 lndpclAr, ㎡)
+        if (onAreaChange && typeof json.area === "number" && json.area > 0 && !(area && area > 0)) {
+          onAreaChange(String(json.area));
+        }
         setLookupError(null);
       } else {
         setLookupError("해당 연도 공시지가 없음");

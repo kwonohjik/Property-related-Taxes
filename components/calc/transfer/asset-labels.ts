@@ -9,7 +9,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 /** 자산 종류 단축 라벨 (헤더·요약 공용). */
 export const ASSET_KIND_LABELS: Record<AssetForm["assetKind"], string> = {
   housing: "주택",
-  land: "토지",
+  land: "단순토지(나대지,농지,임야)",
   building: "건물(토지 제외)",
   right_to_move_in: "입주권",
   presale_right: "분양권",

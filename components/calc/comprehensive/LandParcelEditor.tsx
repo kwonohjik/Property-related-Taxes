@@ -102,6 +102,7 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
           referenceDate={refDate}
           jibun={parcel.jibun}
           area={areaSqm}
+          onAreaChange={(v) => onUpdate({ area: v })}
         />
       </div>
 
@@ -114,6 +115,7 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
             referenceDate={`${priorYear}-06-01`}
             jibun={parcel.jibun}
             area={areaSqm}
+            onAreaChange={(v) => onUpdate({ area: v })}
           />
         </div>
       )}
