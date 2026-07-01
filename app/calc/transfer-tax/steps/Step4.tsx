@@ -436,9 +436,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       {/* ④ 특수 상황 — 중과·배제 트리거 (비과세 특례 이후 위치) */}
       <section className="rounded-xl border border-rose-200 bg-rose-50/30 p-4 dark:border-rose-900/50 dark:bg-rose-950/20">
       <SectionHeader title="④ 특수 상황" description="미등기·비사업용 토지·다주택 중과 해당 여부를 확인하세요" />
-      <p className="-mt-2 mb-3 text-xs text-rose-800 dark:text-rose-300">
-        왜 필요한가요? — 미등기 양도(70% 단일세율)·비사업용 토지(+10%p 중과)는 장기보유공제·기본공제까지 배제되는 강한 페널티 항목이므로 별도 확인이 필요합니다.
-      </p>
       <div className="space-y-2">
         {/* 미등기 양도 — 주택·토지·건물만 표시 (입주권·분양권은 등기 개념 없음) */}
         {(primaryKind === "housing" ||
@@ -470,8 +467,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 ),
               })
             }
-            title="비사업용 토지"
-            description="누진세율 + 10%p 중과세 (장기보유특별공제 표1 적용)"
+            title="비사업용 토지 여부 검토"
+            description="해당 시 기본세율 +10%p 중과 대상"
             tone="rose"
           >
             {/* P3: 재촌 요건 안내 */}
