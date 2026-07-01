@@ -15,6 +15,14 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
     if (r.type === "public_expropriation") {
       return { ...r, businessApprovalDate: new Date(r.businessApprovalDate) };
     }
+    if (r.type === "gb_designated_land") {
+      return {
+        ...r,
+        designationDate: new Date(r.designationDate),
+        triggerDate: new Date(r.triggerDate),
+        releasedDate: r.releasedDate ? new Date(r.releasedDate) : undefined,
+      };
+    }
     if (r.type === "self_farming") {
       return {
         ...r,

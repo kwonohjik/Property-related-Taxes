@@ -183,8 +183,8 @@ describe("R77-6: 부칙 §53 종전 감면율 (현금 20%)", () => {
   });
 });
 
-describe("R77-7: §133 연간 한도 2억원 capping", () => {
-  it("rawReduction > 2억이면 2억으로 capping", () => {
+describe("R77-7: §133② 연간 한도 capping (양도연도 분기)", () => {
+  it("pre-2025 양도(2023)는 §133① 연간 한도 1억으로 capping", () => {
     // 채권 200억 × 40% = 80억 감면소득, 과세표준도 충분히 커서 산출세액 대부분 차감
     const result = calculatePublicExpropriationReduction({
       cashCompensation: 0,
@@ -197,11 +197,85 @@ describe("R77-7: §133 연간 한도 2억원 capping", () => {
       basicDeduction: 2_500_000,
       taxBase: 19_997_500_000,
     });
-    // reducibleIncome = (20,000,000,000 − 2,500,000) × 40% = 7,999,000,000
-    // raw = 3,000,000,000 × 7,999,000,000 / 19,997,500,000 = 1,199,849,981
-    // 한도 2억 초과 → capping
+    // raw = 1,199,849,981 > 1억 → 2024 이전 양도는 1억으로 capping (§133①, 2025 개정 전)
     expect(result.cappedByAnnualLimit).toBe(true);
-    expect(result.reductionAmount).toBe(PUBLIC_EXPROPRIATION_ANNUAL_LIMIT);
+    expect(result.reductionAmount).toBe(100_000_000);
+    expect(result.appliedAnnualLimit).toBe(100_000_000);
+    expect(result.rateSetApplied).toBe("current_2018");
+  });
+
+  it("2025+ 양도(2026)는 §133② 연간 한도 2억으로 capping", () => {
+    const result = calculatePublicExpropriationReduction({
+      cashCompensation: 0,
+      bondCompensation: 20_000_000_000,
+      bondHoldingYears: 5,
+      businessApprovalDate: new Date("2020-01-01"),
+      transferDate: new Date("2026-02-16"),
+      calculatedTax: 3_000_000_000,
+      transferIncome: 20_000_000_000,
+      basicDeduction: 2_500_000,
+      taxBase: 19_997_500_000,
+    });
+    expect(result.cappedByAnnualLimit).toBe(true);
+    expect(result.reductionAmount).toBe(PUBLIC_EXPROPRIATION_ANNUAL_LIMIT); // 2억
+    expect(result.appliedAnnualLimit).toBe(200_000_000);
+  });
+});
+
+describe("R77-9: 2025.3.14 개정 감면율 (2025.1.1 이후 양도분)", () => {
+  const base = {
+    businessApprovalDate: new Date("2020-01-01"),
+    transferDate: new Date("2026-02-16"),
+    calculatedTax: 50_000_000,
+    transferIncome: 100_000_000,
+    basicDeduction: 2_500_000,
+    taxBase: 97_500_000,
+  };
+
+  it("현금 15% (10→15)", () => {
+    const r = calculatePublicExpropriationReduction({
+      ...base, cashCompensation: 100_000_000, bondCompensation: 0,
+    });
+    expect(r.rateSetApplied).toBe("amended_2025");
+    expect(r.breakdown.cashRate).toBe(0.15);
+    // (100,000,000 − 2,500,000) × 15% = 14,625,000
+    expect(r.breakdown.cashReduction).toBe(14_625_000);
+    // 감면세액 = 50,000,000 × 14,625,000 / 97,500,000 = 7,500,000
+    expect(r.rawReductionAmount).toBe(7_500_000);
+  });
+
+  it("채권 무특약 20% (15→20)", () => {
+    const r = calculatePublicExpropriationReduction({
+      ...base, cashCompensation: 0, bondCompensation: 100_000_000,
+    });
+    expect(r.breakdown.bondRate).toBe(0.20);
+  });
+
+  it("채권 3년 만기 35% (30→35)", () => {
+    const r = calculatePublicExpropriationReduction({
+      ...base, cashCompensation: 0, bondCompensation: 100_000_000, bondHoldingYears: 3,
+    });
+    expect(r.breakdown.bondRate).toBe(0.35);
+  });
+
+  it("채권 5년 만기 45% (40→45)", () => {
+    const r = calculatePublicExpropriationReduction({
+      ...base, cashCompensation: 0, bondCompensation: 100_000_000, bondHoldingYears: 5,
+    });
+    expect(r.breakdown.bondRate).toBe(0.45);
+  });
+
+  it("경계: 2024-12-31 양도는 CURRENT(10%), 2025-01-01 양도는 AMENDED(15%)", () => {
+    const dec = calculatePublicExpropriationReduction({
+      ...base, transferDate: new Date("2024-12-31"), cashCompensation: 100_000_000, bondCompensation: 0,
+    });
+    expect(dec.rateSetApplied).toBe("current_2018");
+    expect(dec.breakdown.cashRate).toBe(0.10);
+    const jan = calculatePublicExpropriationReduction({
+      ...base, transferDate: new Date("2025-01-01"), cashCompensation: 100_000_000, bondCompensation: 0,
+    });
+    expect(jan.rateSetApplied).toBe("amended_2025");
+    expect(jan.breakdown.cashRate).toBe(0.15);
   });
 });
 

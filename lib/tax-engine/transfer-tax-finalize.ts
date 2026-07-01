@@ -12,7 +12,7 @@
  */
 
 import { applyRate, truncateToWon } from "./tax-utils";
-import { applyAnnualLimits, applyFiveYearLimits } from "./aggregate-reduction-limits";
+import { applyAnnualLimits, applyFiveYearLimits, buildLimitGroups } from "./aggregate-reduction-limits";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import {
@@ -90,6 +90,8 @@ export interface FinalizeResult {
   rentalReductionDetail: TransferTaxResult["rentalReductionDetail"];
   newHousingReductionDetail: TransferTaxResult["newHousingReductionDetail"];
   publicExpropriationDetail: TransferTaxResult["publicExpropriationDetail"];
+  gbDesignatedLandDetail: TransferTaxResult["gbDesignatedLandDetail"];
+  replacementLandDetail: TransferTaxResult["replacementLandDetail"];
   selfFarmingReductionDetail: TransferTaxResult["selfFarmingReductionDetail"];
   rental97TaxDetail: TransferTaxResult["rental97TaxDetail"];
   // 결정세액·가산세
@@ -192,6 +194,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
+    gbDesignatedLandDetail,
+    replacementLandDetail,
     selfFarmingReductionDetail,
     rental97TaxDetail,
     hybridTaxDetail,
@@ -230,13 +234,17 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     // 연간 한도 선처리 — applyFiveYearLimits 인자 계약("연간 캡 적용 후 값") 준수.
     // 현행 자경·공익수용은 calcReductions 내부에서 이미 연간 캡이 적용되어 등가(no-op)이나,
     // 내부 캡 없는 감면 유형이 향후 추가될 때 silent 과감면을 방지한다.
+    // §133 한도는 양도연도 분기 그룹(2025+ §77 그룹 2억/3억, 이전 1억/2억)으로 적용.
+    const limitGroups = buildLimitGroups(input.transferDate.getFullYear());
     const { cappedByType: annuallyCappedByType, capInfoByType } = applyAnnualLimits(
       new Map([[reductionTypeApplied, reductionAmount]]),
+      limitGroups,
     );
     const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
       annuallyCappedByType,
       priorUsage,
       input.transferDate.getFullYear(),
+      limitGroups,
     );
     const fiveInfo = fiveYearCapInfoByType.get(reductionTypeApplied);
     const annualInfo = capInfoByType.get(reductionTypeApplied);
@@ -378,6 +386,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
+    gbDesignatedLandDetail,
+    replacementLandDetail,
     selfFarmingReductionDetail,
     rental97TaxDetail,
     determinedTax,

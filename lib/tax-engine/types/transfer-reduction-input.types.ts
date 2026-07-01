@@ -43,5 +43,25 @@ export type TransferReduction =
       bondHoldingYears?: 3 | 5 | null;
       businessApprovalDate: Date;
     }
+  | {
+      // 조특법 §77의3 — 개발제한구역 지정에 따른 매수대상 토지 감면 (40%/25%)
+      type: "gb_designated_land";
+      branch: "in_zone" | "released";
+      designationDate: Date;
+      /** ①매수청구·협의매수일 / ②사업인정고시일 */
+      triggerDate: Date;
+      /** ②해제일 (branch="released" 시 필수) */
+      releasedDate?: Date;
+      /** ②경제자유구역 등 지정 → 해제~고시 허용 5년 */
+      freeEconZone?: boolean;
+      /** 취득일~triggerDate 소재지 거주 요건 충족 */
+      residedFromAcqToTrigger: boolean;
+    }
+  | {
+      // 조특법 §77의2 — 대토보상 과세특례 (40% 세액감면 모드, P3a)
+      type: "replacement_land_comp";
+      cashCompensation: number;
+      replacementLandComp: number;
+    }
   // Phase 1 (2026-05-06): 23개 조문 인벤토리 stub union — 별도 파일 분리 (800줄 정책)
   | TransferReductionStub;

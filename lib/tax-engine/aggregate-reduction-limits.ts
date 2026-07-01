@@ -50,6 +50,27 @@ export const DEFAULT_LIMIT_GROUPS: readonly LimitGroup[] = [
   },
 ] as const;
 
+/**
+ * 양도연도별 §133 한도 그룹 — 2025.1.1. 이후 양도분부터 §133② 상향(연 2억/5년 3억).
+ * group①(자경 등 §133①)은 미개정 → 연도 불변(1억/2억).
+ * group②(§77·§77의2·§77의3 §133②)만 양도연도 분기.
+ */
+export function buildLimitGroups(transferYear: number): readonly LimitGroup[] {
+  const involuntary =
+    transferYear >= 2025
+      ? { annual: 200_000_000, fiveYear: 300_000_000 }
+      : { annual: 100_000_000, fiveYear: 200_000_000 };
+  return [
+    DEFAULT_LIMIT_GROUPS[0], // 자경농지·축산·어업 (연도 불변)
+    {
+      types: ["public_expropriation", "gb_designated_land", "replacement_land_comp"],
+      annualLimit: involuntary.annual,
+      fiveYearLimit: involuntary.fiveYear,
+      legalBasis: "조특법 §133②",
+    },
+  ] as const;
+}
+
 /** 유형별 한도 조회 결과 */
 export interface LimitLookup {
   annualLimit: number;

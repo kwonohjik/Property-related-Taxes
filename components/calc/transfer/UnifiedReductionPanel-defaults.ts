@@ -11,14 +11,40 @@ import {
   type ReductionCategory,
 } from "@/lib/tax-engine/transfer-reductions";
 
-export const STANDALONE_LABELS: Record<"self_farming" | "public_expropriation", { label: string; desc: string }> = {
+export type StandaloneReductionType =
+  | "self_farming"
+  | "public_expropriation"
+  | "gb_designated_land"
+  | "replacement_land_comp";
+
+export const STANDALONE_LABELS: Record<StandaloneReductionType, { label: string; desc: string }> = {
   self_farming: { label: "자경농지 감면 (§69)", desc: "8년 이상 자경 (한도 1억)" },
-  public_expropriation: { label: "공익사업 수용 감면 (§77)", desc: "현금 10% / 채권 15~40% (연간 2억)" },
+  public_expropriation: { label: "공익사업 수용 감면 (§77)", desc: "현금 15% / 채권 20~45% (2025+ · 연간 2억)" },
+  gb_designated_land: { label: "개발제한구역 매수 토지 감면 (§77의3)", desc: "40%(지정일 前+거주) / 25%(20년 前+거주) · 연간 2억" },
+  replacement_land_comp: { label: "대토보상 과세특례 (§77의2)", desc: "대토보상분 40% 세액감면 · 2026.12.31까지 · 연간 2억" },
 };
 
-export function getStandaloneDefault(type: "self_farming" | "public_expropriation"): AssetReductionForm {
+export function getStandaloneDefault(type: StandaloneReductionType): AssetReductionForm {
   if (type === "self_farming") {
     return { type: "self_farming", farmingYears: "0" };
+  }
+  if (type === "gb_designated_land") {
+    return {
+      type: "gb_designated_land",
+      gbBranch: "in_zone",
+      gbDesignationDate: "",
+      gbTriggerDate: "",
+      gbReleasedDate: "",
+      gbFreeEconZone: false,
+      gbResided: false,
+    };
+  }
+  if (type === "replacement_land_comp") {
+    return {
+      type: "replacement_land_comp",
+      rlCashComp: "0",
+      rlLandComp: "0",
+    };
   }
   return {
     type: "public_expropriation",
