@@ -23,6 +23,7 @@
 import { useState } from "react";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 
 interface Props {
   result: AcquisitionTaxResult;
@@ -208,8 +209,8 @@ export function SurchargeFlowDiagram({ result }: Props) {
                 <span className={`text-xs px-1.5 py-0.5 rounded ${style.badge}`}>
                   {style.badgeLabel}
                 </span>
-                <span className="text-muted-foreground text-xs">
-                  {expanded === step.id ? "▲" : "▼"}
+                <span className={expandToggleClass("slate")} aria-hidden>
+                  {expandToggleLabel(expanded === step.id)}
                 </span>
               </button>
 

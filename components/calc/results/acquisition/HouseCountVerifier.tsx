@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 
 interface Props {
   result: AcquisitionTaxResult;
@@ -76,7 +77,7 @@ export function HouseCountVerifier({ result }: Props) {
             {excludedCount > 0 && ` (보유 ${detail.totalCount}주택 중 ${excludedCount}주택 제외)`}
           </p>
         </div>
-        <span className="text-muted-foreground text-sm">{open ? "▲" : "▼"}</span>
+        <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(open)}</span>
       </button>
 
       {open && (

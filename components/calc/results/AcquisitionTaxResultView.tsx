@@ -18,6 +18,7 @@
 
 import { useState, useMemo } from "react";
 import { differenceInDays, parseISO } from "date-fns";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SurchargeFlowDiagram } from "./acquisition/SurchargeFlowDiagram";
@@ -658,7 +659,7 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
             className="w-full flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm font-medium hover:bg-muted/40 transition-colors"
           >
             <span>계산 과정 상세 보기</span>
-            <span className="text-muted-foreground">{showSteps ? "▲" : "▼"}</span>
+            <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(showSteps)}</span>
           </button>
 
           {showSteps && (
