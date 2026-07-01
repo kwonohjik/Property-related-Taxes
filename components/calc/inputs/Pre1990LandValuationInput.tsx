@@ -161,7 +161,6 @@ export function Pre1990LandValuationInput({
     <ToggleCard
       tone="amber"
       title="1990.8.30. 이전 취득 토지 기준시가 환산"
-      description="개별공시지가 고시(1990.8.30.) 이전 취득한 토지는 토지등급가액표를 이용해 취득 당시 기준시가를 환산합니다. (소득세법 시행규칙 §80⑥·집행기준 97-176의2)"
       checked={form.pre1990Enabled}
       onCheckedChange={(v) => onChange({ pre1990Enabled: v })}
     >
@@ -232,18 +231,21 @@ export function Pre1990LandValuationInput({
               value={form.pre1990Grade_current ?? ""}
               onChange={(v) => onChange({ pre1990Grade_current: v })}
               preview={previews.current}
+              mode={mode}
             />
             <GradeField
               label="1990.8.30. 직전 등급"
               value={form.pre1990Grade_prev ?? ""}
               onChange={(v) => onChange({ pre1990Grade_prev: v })}
               preview={previews.prev}
+              mode={mode}
             />
             <GradeField
               label="취득시 유효 등급"
               value={form.pre1990Grade_atAcq ?? ""}
               onChange={(v) => onChange({ pre1990Grade_atAcq: v })}
               preview={previews.atAcq}
+              mode={mode}
             />
           </div>
 
@@ -261,28 +263,35 @@ function GradeField({
   value,
   onChange,
   preview,
+  mode,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   preview: { value: number; note: string } | null;
+  mode: "number" | "value";
 }) {
   return (
     <div className="space-y-1">
       <label className="block text-xs font-medium leading-snug">{label} <span className="text-destructive">*</span></label>
-      <input
-        type="text"
-        inputMode="numeric"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-        placeholder="등급 번호 또는 등급가액 입력"
-      />
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm"
+          placeholder={mode === "number" ? "등급 번호" : "등급가액"}
+        />
+        {/* 등급번호 모드에서만 환산된 등급가액을 옆에 표시 (직접입력 모드는 입력값이 곧 등급가액) */}
+        {mode === "number" && preview && (
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            등급가액 {preview.value.toLocaleString()}
+          </span>
+        )}
+      </div>
       {value && !preview && (
         <p className="text-[11px] text-destructive">등급 범위 밖이거나 올바르지 않은 값입니다.</p>
-      )}
-      {preview && (
-        <p className="text-[11px] text-muted-foreground">{preview.note}</p>
       )}
     </div>
   );

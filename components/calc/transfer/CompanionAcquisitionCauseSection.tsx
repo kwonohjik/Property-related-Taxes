@@ -53,20 +53,20 @@ export function CompanionAcquisitionCauseSection({
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium">취득 원인</label>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-1.5">
         {ACQUISITION_CAUSE_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => onChange({ acquisitionCause: opt.value })}
             className={cn(
-              "rounded-md border-2 p-2 text-center transition-all",
+              "rounded-md border-2 px-1 py-2 text-center transition-all",
               asset.acquisitionCause === opt.value
                 ? "border-primary bg-primary/5 text-primary"
                 : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
             )}
           >
-            <div className="text-sm font-semibold">{opt.label}</div>
+            <div className="text-[13px] font-semibold whitespace-nowrap">{opt.label}</div>
           </button>
         ))}
       </div>

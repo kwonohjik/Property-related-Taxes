@@ -637,6 +637,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               hint="환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
               forceYear={pre1990ForceYear}
               enableLookup={!(isLand && acqDatePre1990)}
+              pricePerSqmDisabled={isLand && acqDatePre1990}
             />
           </div>
 

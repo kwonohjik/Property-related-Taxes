@@ -47,6 +47,8 @@ interface Props {
   required?: boolean;
   /** false이면 조회 버튼 영역 숨김 (기본 true) */
   enableLookup?: boolean;
+  /** true이면 ㎡당 단가 입력을 비활성화 (1990.8.30 이전 취득 토지 — 토지등급 환산 자동 산정). 기본 false */
+  pricePerSqmDisabled?: boolean;
   /** true이면 단가×면적 area-mode를 끄고 총액 직접 입력만 노출 (단가 산정 불가 자산 — 건물 기준시가 등). 기본 false */
   forceTotalMode?: boolean;
   /** 이력 저장용 출처 추적 (UI 미노출) */
@@ -81,6 +83,7 @@ export function StandardPriceInput({
   hint,
   required = false,
   enableLookup = true,
+  pricePerSqmDisabled = false,
   forceTotalMode = false,
   onSourceChange,
   forceYear,
@@ -204,14 +207,17 @@ export function StandardPriceInput({
         </div>
       )}
 
-      {/* 단가 + 면적 입력 (isAreaMode) */}
-      {isAreaMode && (
-        <div className="grid grid-cols-2 gap-3">
+      {/* 단가 + 면적 + 총액 — 1행 (isAreaMode). 단가·면적은 좁게(각 1/4), 총액은 넓게(2/4).
+          상단 정렬(items-start): 라벨이 한 줄로 높이가 같아 세 입력칸이 같은 라인에 오고,
+          총액 아래 hint(자동계산 안내)가 입력칸 정렬을 밀어올리지 않게 한다. */}
+      {isAreaMode ? (
+        <div className="grid grid-cols-4 items-start gap-3">
           <CurrencyInput
             label="㎡당 단가 (원/㎡)"
             value={pricePerSqm ?? ""}
             onChange={handlePricePerSqmChange}
-            placeholder="공시지가 단가"
+            placeholder={pricePerSqmDisabled ? "토지등급 환산 자동" : "공시지가 단가"}
+            disabled={pricePerSqmDisabled}
           />
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">면적 (㎡)</label>
@@ -225,21 +231,28 @@ export function StandardPriceInput({
               className="w-full border rounded-md px-3 py-2 text-sm bg-background"
             />
           </div>
+          <div className="col-span-2">
+            <CurrencyInput
+              label={label ?? "공시가격 총액 (원)"}
+              hideLabel={hideLabel}
+              value={totalPrice}
+              onChange={handleTotalPriceChange}
+              required={required}
+              hint={effectiveHint}
+            />
+          </div>
         </div>
+      ) : (
+        /* 주택 등 — 단가·면적 없이 총액 직접 입력 (전폭) */
+        <CurrencyInput
+          label={label ?? "공시가격 (원)"}
+          hideLabel={hideLabel}
+          value={totalPrice}
+          onChange={handleTotalPriceChange}
+          required={required}
+          hint={effectiveHint}
+        />
       )}
-
-      {/* 총액 입력 */}
-      <CurrencyInput
-        label={
-          label ??
-          (isAreaMode ? "공시가격 총액 (원)" : "공시가격 (원)")
-        }
-        hideLabel={hideLabel}
-        value={totalPrice}
-        onChange={handleTotalPriceChange}
-        required={required}
-        hint={effectiveHint}
-      />
 
       {/* 조회 결과 메시지 */}
       {msg && (

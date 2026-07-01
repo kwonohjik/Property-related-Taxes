@@ -136,9 +136,10 @@ export function CompanionAssetCard({
     setOpen((o) => ({ ...o, [num]: !o[num] }));
   }
 
-  // 칩 클릭 — 해당 섹션 펼침 + 스크롤 + 헤더 포커스(a11y)
+  // 칩 클릭 — 아코디언: 해당 섹션만 펼치고 나머지는 접기 + 스크롤 + 헤더 포커스(a11y).
+  // (섹션 헤더 클릭 toggleSection은 독립 토글 유지 — 칩만 배타적 이동)
   function jumpToSection(num: number) {
-    setOpen((o) => ({ ...o, [num]: true }));
+    setOpen({ [num]: true });
     requestAnimationFrame(() => {
       const header = cardRef.current?.querySelector<HTMLElement>(
         `[data-asset-section="${num}"] > button`,
@@ -238,9 +239,9 @@ export function CompanionAssetCard({
               key={chip.num}
               type="button"
               onClick={() => jumpToSection(chip.num)}
-              className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted"
+              className="inline-flex min-w-[8rem] items-center justify-center gap-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-bold text-muted-foreground hover:bg-muted"
             >
-              <span className="font-semibold text-foreground">{chip.num}</span>
+              <span className="font-bold text-foreground">{chip.num}</span>
               {chip.name}
               <span className={filled ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground/40"} aria-hidden>
                 {filled ? "✓" : "○"}
