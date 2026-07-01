@@ -266,8 +266,8 @@ export function TransferTaxResultView({
       <PrintSection id="calculation" selectedIds={selectedPrintIds}>
       <div className="space-y-5">
 
-        {/* 비과세 / 납부세액 요약 */}
-        {result.isExempt ? (
+        {/* 비과세 / 납부세액 요약 — [F13] 비과세 경정(refund_claim)은 🎉 대신 환급 카드 우선 */}
+        {result.isExempt && result.amendmentDetail?.correctionKind !== "refund_claim" ? (
           <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 p-6 text-center">
             <div className="text-4xl mb-2">🎉</div>
             <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">

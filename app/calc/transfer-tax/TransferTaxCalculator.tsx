@@ -34,19 +34,12 @@ import { Step1 } from "./steps/Step1";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
 import { Step6 } from "./steps/Step6";
+import { CorrectionModeBanner } from "@/components/calc/transfer/CorrectionModeBanner";
+import { STEPS_SINGLE, STEP_TITLES, type TransferTaxCalculatorProps } from "./transfer-calculator-meta";
 
-const STEPS_SINGLE = ["자산 목록", "보유 상황", "감면·공제", "가산세"] as const;
-const STEP_TITLES = ["자산 목록·취득 정보 입력", "보유 상황 입력", "감면 확인", "가산세 입력"] as const;
-
+// ============================================================
 // 메인 컴포넌트
 // ============================================================
-interface TransferTaxCalculatorProps {
-  /** 다건 모드: 현재 자산 저장 후 새 자산 추가 (마법사 step 0으로 리셋) */
-  onSaveAndAddNext?: () => void;
-  /** 다건 모드: 현재 자산 저장 후 공통 설정 단계로 이동 */
-  onSaveAndGoToSettings?: () => void;
-}
-
 export default function TransferTaxCalculator({
   onSaveAndAddNext,
   onSaveAndGoToSettings,
@@ -493,15 +486,10 @@ export default function TransferTaxCalculator({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      {formData.amendmentMode && (
-        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50/60 px-4 py-3 text-sm text-amber-900 print:hidden dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
-          <p className="font-semibold">📝 수정신고 작성 중</p>
-          <p className="mt-0.5 text-xs leading-relaxed">
-            당초 신고 기준으로 불러왔습니다. 양도가액·취득가액·필요경비를 수정하세요.
-            당초 결정세액은 마지막 단계에서 자동 차감됩니다.
-          </p>
-        </div>
-      )}
+      <CorrectionModeBanner
+        amendmentMode={formData.amendmentMode}
+        correctionKind={formData.correctionKind}
+      />
       {/* 헤더 */}
       <div className="mb-6 print:hidden">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
