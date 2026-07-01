@@ -7,7 +7,7 @@
  * API: /api/address/standard-price?jibun=&propertyType=&year=&dong=&ho=
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export interface LookupMsg {
   text: string;
@@ -60,6 +60,8 @@ export function useStandardPriceLookup(defaultPropertyType = "housing") {
   const [announcedLabel, setAnnouncedLabel] = useState<string>("");
   /** 마지막 조회 결과의 실제 공시일자 (YYYYMMDD) — 평가기준일 경계 검증용 */
   const [noticeDate, setNoticeDate] = useState<string>("");
+  /** 마지막 land 조회의 필지면적(㎡). await lookup() 직후 동기적으로 읽어 면적 자동 채움에 사용. */
+  const lastAreaRef = useRef<number | null>(null);
 
   async function lookup(opts: LookupOptions): Promise<number | null> {
     if (!opts.jibun) {
@@ -69,6 +71,7 @@ export function useStandardPriceLookup(defaultPropertyType = "housing") {
 
     setLoading(true);
     setMsg(null);
+    lastAreaRef.current = null;
 
     try {
       const apiType = opts.propertyType === "land_farmland" ? "land" : opts.propertyType;
@@ -104,6 +107,8 @@ export function useStandardPriceLookup(defaultPropertyType = "housing") {
         const pubDate = `${d.slice(0, 4)}.${parseInt(d.slice(4, 6), 10)}.${parseInt(d.slice(6, 8), 10)}.`;
         setAnnouncedLabel(`${typeName} 공시일 : ${pubDate}`);
         setNoticeDate(d.length === 8 ? d : "");
+        lastAreaRef.current =
+          typeof data.area === "number" && data.area > 0 ? data.area : null;
         setMsg({ text: `${data.message ?? "조회 성공"}: ${price.toLocaleString()}`, kind: "ok" });
         return price;
       }
@@ -126,5 +131,5 @@ export function useStandardPriceLookup(defaultPropertyType = "housing") {
     setNoticeDate("");
   }
 
-  return { loading, msg, year, setYear, yearOptions, announcedLabel, noticeDate, lookup, reset };
+  return { loading, msg, year, setYear, yearOptions, announcedLabel, noticeDate, lastAreaRef, lookup, reset };
 }

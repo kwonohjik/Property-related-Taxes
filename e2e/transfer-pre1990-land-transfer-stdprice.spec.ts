@@ -36,7 +36,7 @@ test.describe("1990.8.30 이전 취득 토지 환산 — 양도시 기준시가"
     await expandAssetSection(page, 3);
 
     // 토지·농지 → 독립 나대지 → 면적 2417 → 양도가액 20억
-    await page.getByRole("button", { name: "토지·농지" }).click();
+    await page.getByRole("button", { name: "단순토지" }).click();
     await page.getByText("독립 나대지", { exact: true }).click();
     await page.getByPlaceholder("면적 입력").first().fill("2417");
     await getInputByLabel(page, "양도가액 (원)").fill("2000000000");

@@ -27,7 +27,7 @@ test.describe("주택 감면 자산 종류 게이트", () => {
     await gotoReductionStep(page);
 
     // 자산 종류를 토지로 변경 (비주택)
-    await page.getByRole("button", { name: "토지·농지" }).click();
+    await page.getByRole("button", { name: "단순토지" }).click();
 
     // 감면·공제 단계로 이동
     await page.getByRole("button", { name: "감면·공제" }).click();

@@ -99,7 +99,7 @@ export function StandardPriceInput({
   const [internalArea, setInternalArea] = useState("");
   const areaValue = area ?? internalArea;
 
-  const { loading, msg, year, setYear, yearOptions, announcedLabel, noticeDate, lookup } =
+  const { loading, msg, year, setYear, yearOptions, announcedLabel, noticeDate, lastAreaRef, lookup } =
     useStandardPriceLookup(propertyType);
 
   // 조회된 공시가격의 실제 고시일이 평가기준일보다 늦으면(= 평가기준일 시점 미고시) 경고.
@@ -155,8 +155,15 @@ export function StandardPriceInput({
     if (isAreaMode) {
       // 단가 저장
       onPricePerSqmChange?.(String(price));
+      // 면적 자동 채움 — 빈 칸일 때만(사용자 입력 보호). 조회된 필지면적(lndpclAr, ㎡).
+      let areaNum = parseFloat(areaValue.replace(/,/g, "") || "0");
+      const fetchedArea = lastAreaRef.current;
+      if (!(areaNum > 0) && fetchedArea && fetchedArea > 0) {
+        if (onAreaChange) onAreaChange(String(fetchedArea));
+        else setInternalArea(String(fetchedArea));
+        areaNum = fetchedArea;
+      }
       // 면적이 있으면 총액 자동계산
-      const areaNum = parseFloat(areaValue.replace(/,/g, "") || "0");
       if (areaNum > 0) {
         onTotalPriceChange(String(Math.floor(areaNum * price)));
       }

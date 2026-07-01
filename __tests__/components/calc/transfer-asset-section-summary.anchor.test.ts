@@ -22,7 +22,7 @@ function asset(overrides: Partial<AssetForm>): AssetForm {
 describe("summarizeAssetSections — 헤더 라벨 요약 (금액 없음)", () => {
   it("신규 토지 — 전부 미입력", () => {
     const s = summarizeAssetSections(asset({ assetKind: "land" }), {});
-    expect(s.basic).toEqual({ label: "토지 · 소재지 미입력", filled: false });
+    expect(s.basic).toEqual({ label: "단순토지(나대지,농지,임야) · 소재지 미입력", filled: false });
     expect(s.transfer).toEqual({ label: "일반 양도", filled: false });
     expect(s.acquisition).toEqual({ label: "매매 · 실거래가", filled: false });
     expect(s.expense).toEqual({ label: "미입력", filled: false });
@@ -44,7 +44,7 @@ describe("summarizeAssetSections — 헤더 라벨 요약 (금액 없음)", () =
       {},
     );
     expect(s.basic).toEqual({
-      label: "토지 · 제주특별자치도 서귀포시 효돈동 628-2 · 면적 입력됨",
+      label: "단순토지(나대지,농지,임야) · 제주특별자치도 서귀포시 효돈동 628-2 · 면적 입력됨",
       filled: true,
     });
     expect(s.transfer).toEqual({ label: "일반 양도", filled: true });
@@ -106,7 +106,7 @@ describe("summarizeAssetSections — 헤더 라벨 요약 (금액 없음)", () =
   it("8개 assetKind 전부 basic.label 이 종류 라벨로 시작", () => {
     const expected: Record<AssetForm["assetKind"], string> = {
       housing: "주택",
-      land: "토지",
+      land: "단순토지(나대지,농지,임야)",
       building: "건물(토지 제외)",
       right_to_move_in: "입주권",
       presale_right: "분양권",

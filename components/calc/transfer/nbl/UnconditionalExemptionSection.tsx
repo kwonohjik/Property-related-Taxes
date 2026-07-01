@@ -5,21 +5,17 @@ import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import type {
+  NblExemptionEval,
+  ToggleExemptionStatus,
+} from "./unconditional-exemption-status";
 
 export interface UnconditionalExemptionSectionProps {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /** 상위(NblSectionContainer)에서 계산한 엔진 실제 판정 상태 */
+  status: NblExemptionEval;
 }
-
-const anyExempt = (a: AssetForm) =>
-  a.nblExemptInheritBefore2007 ||
-  a.nblExemptLongOwned20y ||
-  a.nblExemptAncestor8YearFarming ||
-  a.nblExemptPublicExpropriation ||
-  a.nblExemptFactoryAdjacent ||
-  a.nblExemptJongjoongOwned ||
-  a.nblExemptUrbanFarmlandJongjoong ||
-  a.nblExemptInong;
 
 // 법조문 배지 스타일 (LawArticleModal className override)
 const LAW_BADGE_CLASS =
@@ -27,24 +23,51 @@ const LAW_BADGE_CLASS =
   "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
   "hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors shrink-0 whitespace-nowrap cursor-pointer";
 
+/** 토글별 요건 충족/미충족 뱃지 — ON 토글에만 status가 존재 */
+function ExemptionStatusBadge({ status }: { status?: ToggleExemptionStatus }) {
+  if (!status) return null;
+  if (status.qualifies) {
+    return (
+      <p className="mt-1 flex items-start gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+        <span className="shrink-0 font-semibold">요건 충족</span>
+        <span>· 이 사유로 사업용 토지로 확정됩니다.</span>
+      </p>
+    );
+  }
+  return (
+    <p className="mt-1 flex items-start gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+      <span className="shrink-0 font-semibold">요건 미충족</span>
+      <span>· {status.requirementHint}</span>
+    </p>
+  );
+}
+
 export function UnconditionalExemptionSection({
   asset,
   onAssetChange,
+  status,
 }: UnconditionalExemptionSectionProps) {
-  const hasExemption = anyExempt(asset);
-
   return (
     <div className="space-y-3">
       <SectionHeader
         title="무조건 사업용 토지 판정 (§168-14③)"
-        description="아래 사유 중 하나라도 해당하면 지목별 판정 없이 사업용으로 분류됩니다."
+        description="아래 사유의 날짜·지목 요건을 충족하면 지목별 판정 없이 사업용으로 분류됩니다."
       />
 
-      {hasExemption && (
-        <div className="rounded-md bg-blue-50 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800 px-4 py-2.5 text-sm text-blue-700 dark:text-blue-300">
-          엔진이 무조건 사업용으로 판정합니다 (§168-14③). 아래 지목별 판정을 건너뜁니다.
+      {status.isExempt ? (
+        <div className="rounded-md bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800 px-4 py-2.5 text-sm text-emerald-700 dark:text-emerald-300">
+          엔진이 무조건 사업용으로 판정합니다
+          {status.matched
+            ? ` — ${status.matched.detail}${status.matched.legalBasis ? ` (${status.matched.legalBasis})` : ""}`
+            : ""}
+          . 아래 지목별 판정을 건너뜁니다.
         </div>
-      )}
+      ) : status.anyToggleOn ? (
+        <div className="rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300">
+          선택한 사유가 아직 무조건 사업용 의제 요건을 충족하지 않아, 아래 지목별 판정으로 진행합니다.
+          각 사유의 날짜·지목을 확인하세요.
+        </div>
+      ) : null}
 
       <ToggleCard
         tone="violet"
@@ -66,6 +89,7 @@ export function UnconditionalExemptionSection({
             onChange={(v) => onAssetChange({ nblExemptInheritDate: v })}
           />
         </div>
+        <ExemptionStatusBadge status={status.perToggle.inheritBefore2007} />
       </ToggleCard>
 
       <ToggleCard
@@ -80,7 +104,9 @@ export function UnconditionalExemptionSection({
         }
         checked={asset.nblExemptLongOwned20y}
         onCheckedChange={(v) => onAssetChange({ nblExemptLongOwned20y: v })}
-      />
+      >
+        <ExemptionStatusBadge status={status.perToggle.longOwned20y} />
+      </ToggleCard>
 
       <ToggleCard
         tone="violet"
@@ -94,7 +120,9 @@ export function UnconditionalExemptionSection({
         }
         checked={asset.nblExemptAncestor8YearFarming}
         onCheckedChange={(v) => onAssetChange({ nblExemptAncestor8YearFarming: v })}
-      />
+      >
+        <ExemptionStatusBadge status={status.perToggle.ancestor8Year} />
+      </ToggleCard>
 
       <ToggleCard
         tone="violet"
@@ -116,6 +144,7 @@ export function UnconditionalExemptionSection({
             onChange={(v) => onAssetChange({ nblExemptPublicNoticeDate: v })}
           />
         </div>
+        <ExemptionStatusBadge status={status.perToggle.publicExpropriation} />
       </ToggleCard>
 
       <ToggleCard
@@ -130,7 +159,9 @@ export function UnconditionalExemptionSection({
         }
         checked={asset.nblExemptFactoryAdjacent}
         onCheckedChange={(v) => onAssetChange({ nblExemptFactoryAdjacent: v })}
-      />
+      >
+        <ExemptionStatusBadge status={status.perToggle.factoryAdjacent} />
+      </ToggleCard>
 
       <ToggleCard
         tone="violet"
@@ -152,6 +183,7 @@ export function UnconditionalExemptionSection({
             onChange={(v) => onAssetChange({ nblExemptJongjoongAcqDate: v })}
           />
         </div>
+        <ExemptionStatusBadge status={status.perToggle.jongjoongOwned} />
       </ToggleCard>
 
       <ToggleCard
@@ -166,7 +198,9 @@ export function UnconditionalExemptionSection({
         }
         checked={asset.nblExemptUrbanFarmlandJongjoong}
         onCheckedChange={(v) => onAssetChange({ nblExemptUrbanFarmlandJongjoong: v })}
-      />
+      >
+        <ExemptionStatusBadge status={status.perToggle.urbanFarmland} />
+      </ToggleCard>
 
       <ToggleCard
         tone="violet"
@@ -189,6 +223,7 @@ export function UnconditionalExemptionSection({
             onChange={(v) => onAssetChange({ nblExemptInongDate: v })}
           />
         </div>
+        <ExemptionStatusBadge status={status.perToggle.inong} />
       </ToggleCard>
     </div>
   );
