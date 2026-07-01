@@ -49,6 +49,30 @@ export type AssetReductionForm =
       /** 사업인정고시일 (YYYY-MM-DD) */
       expropriationApprovalDate: string;
     }
+  | {
+      // 조특법 §77의3 — 개발제한구역 매수 토지 감면
+      type: "gb_designated_land";
+      /** ①구역 내 / ②해제 후 */
+      gbBranch: "in_zone" | "released";
+      /** 개발제한구역 지정일 (YYYY-MM-DD) */
+      gbDesignationDate: string;
+      /** ①매수청구·협의매수일 / ②사업인정고시일 (YYYY-MM-DD) */
+      gbTriggerDate: string;
+      /** ②해제일 (YYYY-MM-DD) */
+      gbReleasedDate: string;
+      /** ②경제자유구역 등 지정 (해제~고시 5년 허용) */
+      gbFreeEconZone: boolean;
+      /** 취득일~매수/고시일 소재지 거주 요건 충족 */
+      gbResided: boolean;
+    }
+  | {
+      // 조특법 §77의2 — 대토보상 과세특례 (40% 세액감면 모드)
+      type: "replacement_land_comp";
+      /** 현금 보상액 (원) */
+      rlCashComp: string;
+      /** 대토(토지) 보상액 (원) */
+      rlLandComp: string;
+    }
   // ── Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본격 구현 ──
   // 설계: docs/02-design/features/transfer-reduction-99-3.engine.design.md
   | {

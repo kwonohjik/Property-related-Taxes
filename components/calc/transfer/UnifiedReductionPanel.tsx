@@ -154,7 +154,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
   const periodResults = useMemo(() => evaluateAllPeriods(periodCtx), [periodCtx]);
 
   // ── standalone 토글(자경·공익) ──
-  function toggleStandalone(type: "self_farming" | "public_expropriation") {
+  function toggleStandalone(type: "self_farming" | "public_expropriation" | "gb_designated_land" | "replacement_land_comp") {
     const has = reductions.some((r) => r.type === type);
     if (has) {
       onChange({ reductions: reductions.filter((r) => r.type !== type) });
@@ -343,6 +343,20 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
         checked={reductions.some((r) => r.type === "public_expropriation")}
         onToggle={() => toggleStandalone("public_expropriation")}
       />
+
+      {/* ── 개발제한구역 매수 토지 §77의3 (standalone) ── */}
+      <StandaloneCheckbox
+        type="gb_designated_land"
+        checked={reductions.some((r) => r.type === "gb_designated_land")}
+        onToggle={() => toggleStandalone("gb_designated_land")}
+      />
+
+      {/* ── 대토보상 과세특례 §77의2 (standalone) ── */}
+      <StandaloneCheckbox
+        type="replacement_land_comp"
+        checked={reductions.some((r) => r.type === "replacement_land_comp")}
+        onToggle={() => toggleStandalone("replacement_land_comp")}
+      />
     </div>
   );
 }
@@ -356,7 +370,7 @@ function StandaloneCheckbox({
   checked,
   onToggle,
 }: {
-  type: "self_farming" | "public_expropriation";
+  type: "self_farming" | "public_expropriation" | "gb_designated_land" | "replacement_land_comp";
   checked: boolean;
   onToggle: () => void;
 }) {

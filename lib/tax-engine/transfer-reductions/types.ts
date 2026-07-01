@@ -35,9 +35,11 @@ export type TransferReductionId =
   | "unsold_98_8"
   | "unsold_98_9"
   | "unsold_99_2"
-  // 별도 (2)
+  // 별도 (4)
   | "self_farming"
-  | "public_expropriation";
+  | "public_expropriation"
+  | "gb_designated_land"
+  | "replacement_land_comp";
 
 /** 23개 조문 카테고리 분류 — UI 펼침 그룹 매핑 */
 export type ReductionCategory =

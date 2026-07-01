@@ -215,6 +215,19 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     check: () => true,
     failReason: "",
   },
+  gb_designated_land: {
+    // §77의3 sunset(2028-12-31)은 **양도일** 기준 — 엔진에서 별도 판정 (취득/계약일 기준 아님).
+    // period-check(취득·계약일 target)는 낙관 통과.
+    label: "양도 2028-12-31까지 (엔진 판정)",
+    check: () => true,
+    failReason: "",
+  },
+  replacement_land_comp: {
+    // §77의2 sunset(2026-12-31)은 **양도일** 기준 — 엔진 판정. period-check는 낙관 통과.
+    label: "양도 2026-12-31까지 (엔진 판정)",
+    check: () => true,
+    failReason: "",
+  },
 };
 
 /**

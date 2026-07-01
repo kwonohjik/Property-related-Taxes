@@ -62,6 +62,25 @@ export const reductionSchema = z.discriminatedUnion("type", [
     (v) => v.cashCompensation + v.bondCompensation > 0,
     { message: "현금 또는 채권 보상액 중 최소 하나는 0보다 커야 합니다" },
   ),
+  // 조특법 §77의3 — 개발제한구역 매수 토지 감면
+  z.object({
+    type: z.literal("gb_designated_land"),
+    branch: z.union([z.literal("in_zone"), z.literal("released")]),
+    designationDate: z.string().date(),
+    triggerDate: z.string().date(),
+    releasedDate: z.string().date().optional(),
+    freeEconZone: z.boolean().optional(),
+    residedFromAcqToTrigger: z.boolean(),
+  }),
+  // 조특법 §77의2 — 대토보상 과세특례 (40% 세액감면)
+  z.object({
+    type: z.literal("replacement_land_comp"),
+    cashCompensation: z.number().int().nonnegative(),
+    replacementLandComp: z.number().int().nonnegative(),
+  }).refine(
+    (v) => v.replacementLandComp > 0,
+    { message: "대토보상액은 0보다 커야 합니다" },
+  ),
   // ─────────────────────────────────────────────────────────────
   // Phase 1 골격 (2026-05-06): 23개 조문 인벤토리 신규 stub 멤버 (20개)
   // 본 단계는 type 식별 + 시한 검증만 — 본 요건 필드는 Phase 2~ 에서 추가.

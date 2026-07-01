@@ -70,6 +70,24 @@ export function toEngineReductions(
         businessApprovalDate: r.expropriationApprovalDate,
       };
     }
+    if (r.type === "gb_designated_land") {
+      return {
+        type: "gb_designated_land" as const,
+        branch: r.gbBranch,
+        designationDate: r.gbDesignationDate,
+        triggerDate: r.gbTriggerDate,
+        releasedDate: r.gbReleasedDate || undefined,
+        freeEconZone: r.gbFreeEconZone,
+        residedFromAcqToTrigger: r.gbResided,
+      };
+    }
+    if (r.type === "replacement_land_comp") {
+      return {
+        type: "replacement_land_comp" as const,
+        cashCompensation: parseAmount(r.rlCashComp || "0"),
+        replacementLandComp: parseAmount(r.rlLandComp || "0"),
+      };
+    }
     // ── Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본격 변환 ──
     if (r.type === "new_99_3") {
       return {

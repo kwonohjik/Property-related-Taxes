@@ -13,6 +13,8 @@ import type { NewHousingReductionResult } from "../new-housing-reduction";
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
 import type { Pre1990LandValuationResult } from "../pre-1990-land-valuation";
 import type { PublicExpropriationReductionResult } from "../public-expropriation-reduction";
+import type { GbDesignatedLandResult } from "../gb-designated-land-reduction";
+import type { ReplacementLandResult } from "../replacement-land-reduction";
 import type { SelfFarmingReductionResult } from "../self-farming-reduction";
 import type { ParcelResult } from "../multi-parcel-transfer";
 import type { Rental97Result } from "../transfer-reductions/types";
@@ -214,6 +216,16 @@ export interface TransferTaxResult {
    * reductions에 public_expropriation 유형 포함 시만 세팅
    */
   publicExpropriationDetail?: PublicExpropriationReductionResult;
+  /**
+   * 개발제한구역 매수대상 토지 감면 상세 결과 (조특법 §77의3)
+   * reductions에 gb_designated_land 유형 포함 시만 세팅. 40%/25%/비적격 판정 표시용.
+   */
+  gbDesignatedLandDetail?: GbDesignatedLandResult;
+  /**
+   * 대토보상 과세특례 상세 결과 (조특법 §77의2 — 40% 세액감면 모드)
+   * reductions에 replacement_land_comp 유형 포함 시만 세팅.
+   */
+  replacementLandDetail?: ReplacementLandResult;
   /**
    * 자경농지 감면 상세 결과 (조특법 §69 + 시행령 §66 ⑤⑥)
    * reductions에 self_farming 유형 포함 시만 세팅.

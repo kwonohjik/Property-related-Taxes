@@ -2,11 +2,33 @@ import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 
 export const PUBLIC_EXPROPRIATION_RATES = Object.freeze({
-  CURRENT: Object.freeze({ cash: 0.10, bond: 0.15, bond3y: 0.30, bond5y: 0.40 }),
+  // 2018-01-01 ~ 2024-12-31 양도분 (개정 전)
+  CURRENT_2018: Object.freeze({ cash: 0.10, bond: 0.15, bond3y: 0.30, bond5y: 0.40 }),
+  // 2025-01-01 이후 양도분 (2025.3.14 개정, 조특법 §77① — 현행 원문 확정)
+  AMENDED_2025: Object.freeze({ cash: 0.15, bond: 0.20, bond3y: 0.35, bond5y: 0.45 }),
+  // 부칙 §53 — 2015-12-31 이전 고시 + 2017-12-31 이전 양도
   LEGACY:  Object.freeze({ cash: 0.20, bond: 0.25, bond3y: 0.40, bond5y: 0.50 }),
 });
 
+/**
+ * @deprecated 양도연도 분기 — getInvoluntaryTransferLimits(year).annual 사용.
+ * 2025+ 값(2억) 유지 (하위호환 · 테스트 참조).
+ */
 export const PUBLIC_EXPROPRIATION_ANNUAL_LIMIT = 200_000_000;
+
+/**
+ * 조특법 §133② 비자발적 양도(§77·§77의2·§77의3) 감면 종합한도 — 양도연도 분기.
+ * 2025.1.1. 이후 양도분: 연간 2억 / 5년 3억 (2025.3.14 개정). 이전: 연간 1억 / 5년 2억(§133①).
+ */
+export function getInvoluntaryTransferLimits(
+  transferYear: number,
+): { annual: number; fiveYear: number } {
+  return transferYear >= 2025
+    ? { annual: 200_000_000, fiveYear: 300_000_000 }
+    : { annual: 100_000_000, fiveYear: 200_000_000 };
+}
+
+export const AMENDED_2025_TRANSFER_CUTOFF = new Date("2025-01-01T00:00:00");
 export const LEGACY_APPROVAL_CUTOFF = new Date("2015-12-31T23:59:59");
 export const LEGACY_TRANSFER_CUTOFF = new Date("2017-12-31T23:59:59");
 
@@ -51,6 +73,8 @@ export interface PublicExpropriationReductionResult {
     reducibleIncome: number;
   };
   useLegacyRates: boolean;
+  /** 적용 감면율 세트 — 결과 카드 배지 (2025 개정율 안내용) */
+  rateSetApplied: "current_2018" | "amended_2025" | "legacy";
   cappedByAnnualLimit: boolean;
   appliedAnnualLimit: number;
   legalBasis: string;
@@ -103,8 +127,14 @@ export function calculatePublicExpropriationReduction(
       weightedRate: 0,
       breakdown: emptyBreakdown(input),
       useLegacyRates: false,
+      rateSetApplied:
+        input.transferDate >= AMENDED_2025_TRANSFER_CUTOFF
+          ? "amended_2025"
+          : "current_2018",
       cappedByAnnualLimit: false,
-      appliedAnnualLimit: PUBLIC_EXPROPRIATION_ANNUAL_LIMIT,
+      appliedAnnualLimit: getInvoluntaryTransferLimits(
+        input.transferDate.getFullYear(),
+      ).annual,
       legalBasis: TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
       warnings,
       notEligibleReason:
@@ -118,14 +148,29 @@ export function calculatePublicExpropriationReduction(
     };
   }
 
-  // ── 감면율 결정 (부칙 §53) ──
+  // ── 감면율 결정 (양도일 우선: 2025 개정 → 부칙 §53 → 현행) ──
+  // 2025.1.1. 이후 양도분은 무조건 AMENDED_2025 (부칙 §53 legacy는 양도≤2017만 → 중첩 없음).
+  const isAmended2025 = input.transferDate >= AMENDED_2025_TRANSFER_CUTOFF;
   const useLegacyRates =
+    !isAmended2025 &&
     input.businessApprovalDate <= LEGACY_APPROVAL_CUTOFF &&
     input.transferDate <= LEGACY_TRANSFER_CUTOFF;
 
-  const rateSet = useLegacyRates
-    ? PUBLIC_EXPROPRIATION_RATES.LEGACY
-    : PUBLIC_EXPROPRIATION_RATES.CURRENT;
+  const rateSetApplied: "current_2018" | "amended_2025" | "legacy" = isAmended2025
+    ? "amended_2025"
+    : useLegacyRates
+      ? "legacy"
+      : "current_2018";
+  const rateSet = isAmended2025
+    ? PUBLIC_EXPROPRIATION_RATES.AMENDED_2025
+    : useLegacyRates
+      ? PUBLIC_EXPROPRIATION_RATES.LEGACY
+      : PUBLIC_EXPROPRIATION_RATES.CURRENT_2018;
+
+  // ── 연간 한도 (조특법 §133② — 양도연도 분기: 2025+ 2억 / 이전 1억) ──
+  const annualLimit = getInvoluntaryTransferLimits(
+    input.transferDate.getFullYear(),
+  ).annual;
 
   const cashRate = rateSet.cash;
   const bondRate = pickBondRate(rateSet, input.bondHoldingYears);
@@ -186,11 +231,11 @@ export function calculatePublicExpropriationReduction(
     input.taxBase,
   );
 
-  // ── ⑤ 연간 한도(조특법 §133 2억원) capping ──
-  const cappedByAnnualLimit = rawReductionAmount > PUBLIC_EXPROPRIATION_ANNUAL_LIMIT;
+  // ── ⑤ 연간 한도(조특법 §133② — 양도연도별) capping ──
+  const cappedByAnnualLimit = rawReductionAmount > annualLimit;
   const reductionAmount = Math.min(
     rawReductionAmount,
-    PUBLIC_EXPROPRIATION_ANNUAL_LIMIT,
+    annualLimit,
     input.calculatedTax,
   );
 
@@ -199,7 +244,7 @@ export function calculatePublicExpropriationReduction(
 
   if (cappedByAnnualLimit) {
     warnings.push(
-      `감면세액이 연간 한도 ${PUBLIC_EXPROPRIATION_ANNUAL_LIMIT.toLocaleString()}원을 초과하여 한도로 capping되었습니다 (조특법 §133)`,
+      `감면세액이 연간 한도 ${annualLimit.toLocaleString()}원을 초과하여 한도로 capping되었습니다 (조특법 §133②)`,
     );
   }
   if (useLegacyRates) {
@@ -230,8 +275,9 @@ export function calculatePublicExpropriationReduction(
       reducibleIncome,
     },
     useLegacyRates,
+    rateSetApplied,
     cappedByAnnualLimit,
-    appliedAnnualLimit: PUBLIC_EXPROPRIATION_ANNUAL_LIMIT,
+    appliedAnnualLimit: annualLimit,
     legalBasis: useLegacyRates
       ? `${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION} + ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL}`
       : TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,

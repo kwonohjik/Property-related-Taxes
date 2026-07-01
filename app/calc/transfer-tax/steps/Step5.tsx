@@ -4,6 +4,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { SelfFarmingIncorporationInput } from "@/components/calc/inputs/SelfFarmingIncorporationInput";
@@ -22,7 +23,7 @@ const REDUCTION_LABELS = {
   long_term_rental: { label: "장기임대주택 감면", desc: "공공지원/장기일반민간임대 10년+ → 장특공제율 70% (§97의3)" },
   new_housing: { label: "신축주택 감면", desc: "신축주택 취득자 양도세 감면 (§99, 1998~1999 IMF 1차)" },
   unsold_housing: { label: "미분양주택 감면", desc: "서울 외 미분양 5년 100% (수도권과밀 60%) — §98의3, 2009.2.12~2010.2.11" },
-  public_expropriation: { label: "공익사업 수용 감면", desc: "현금 10%/채권 15%~40% (§77, 연간 2억)" },
+  public_expropriation: { label: "공익사업 수용 감면", desc: "현금 15%/채권 20~45% (§77, 2025+ · 연간 2억)" },
   // new_99_3은 별도 펼침 패널(ReductionExpansion)에서 처리 — 옵션 Y 결정
 } as const;
 
@@ -85,6 +86,11 @@ function AssetReductionBlock({
   const newHousing = reductions.find((r) => r.type === "new_housing");
   const unsoldHousing = reductions.find((r) => r.type === "unsold_housing");
   const expropriation = reductions.find((r) => r.type === "public_expropriation");
+  const gbDesignated = reductions.find((r) => r.type === "gb_designated_land");
+  const replacementLand = reductions.find((r) => r.type === "replacement_land_comp");
+  // §77 감면율 2025.3.14 개정 — 2025.1.1 이후 양도분 상향(현금 15·채권 20/35/45%, 연간 2억).
+  // 문자열 ISO(YYYY-MM-DD) 사전순 비교. 미입력("") → 개정 전 표기.
+  const expropriationAmended2025 = (transferDate ?? "") >= "2025-01-01";
 
   const label =
     asset.assetLabel ||
@@ -217,7 +223,9 @@ function AssetReductionBlock({
           <div>
             <p className="text-xs font-medium text-primary">공익사업 수용·협의매수 (조특법 §77)</p>
             <p className="text-xs text-muted-foreground mt-1">
-              현금 10%, 채권 15% (3년 30%, 5년 40%). 연간 한도 2억원.
+              {expropriationAmended2025
+                ? "현금 15%, 채권 20% (3년 35%, 5년 45%). 연간 한도 2억원. (2025.1.1 이후 양도분 개정율)"
+                : "현금 10%, 채권 15% (3년 30%, 5년 40%). 연간 한도 1억원. (2024.12.31 이전 양도분)"}
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -255,9 +263,9 @@ function AssetReductionBlock({
                 } as Partial<AssetReductionForm>)
               }
               options={[
-                { value: "none", label: "없음 (15%)" },
-                { value: "3", label: "3년 (30%)" },
-                { value: "5", label: "5년 (40%)" },
+                { value: "none", label: expropriationAmended2025 ? "없음 (20%)" : "없음 (15%)" },
+                { value: "3", label: expropriationAmended2025 ? "3년 (35%)" : "3년 (30%)" },
+                { value: "5", label: expropriationAmended2025 ? "5년 (45%)" : "5년 (40%)" },
               ]}
             />
           </div>
@@ -274,6 +282,107 @@ function AssetReductionBlock({
             <p className="text-xs text-muted-foreground mt-1">
               부칙 §53 적용 판정용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도 시 종전 감면율).
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* 개발제한구역 매수 토지 §77의3 서브패널 */}
+      {gbDesignated && gbDesignated.type === "gb_designated_land" && (
+        <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-4">
+          <div>
+            <p className="text-xs font-medium text-primary">개발제한구역 매수 토지 감면 (조특법 §77의3)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              40%(지정일 이전 취득+거주) / 25%(매수·고시일 20년 이전 취득+거주). 2028.12.31까지 양도. 연간 한도 2억원. 취득일은 자산 취득일 사용(상속 시 피상속인 취득일).
+            </p>
+          </div>
+          <div>
+            <p className="block text-xs font-medium mb-1">구역 상태</p>
+            <RadioCardGroup
+              name={`gbBranch-${assetIndex}`}
+              layout="inline"
+              tone="rose"
+              value={gbDesignated.gbBranch}
+              onChange={(v) => updateReduction("gb_designated_land", { gbBranch: v })}
+              options={[
+                { value: "in_zone", label: "구역 내 매수·협의매수" },
+                { value: "released", label: "해제 후 협의매수·수용" },
+              ]}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium mb-1">개발제한구역 지정일</label>
+              <DateInput
+                value={gbDesignated.gbDesignationDate}
+                onChange={(v) => updateReduction("gb_designated_land", { gbDesignationDate: v })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">
+                {gbDesignated.gbBranch === "released" ? "사업인정고시일" : "매수청구·협의매수일"}
+              </label>
+              <DateInput
+                value={gbDesignated.gbTriggerDate}
+                onChange={(v) => updateReduction("gb_designated_land", { gbTriggerDate: v })}
+              />
+            </div>
+          </div>
+          {gbDesignated.gbBranch === "released" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium mb-1">개발제한구역 해제일</label>
+                <DateInput
+                  value={gbDesignated.gbReleasedDate}
+                  onChange={(v) => updateReduction("gb_designated_land", { gbReleasedDate: v })}
+                />
+              </div>
+              <ToggleCard
+                tone="amber"
+                size="sm"
+                checked={gbDesignated.gbFreeEconZone}
+                onCheckedChange={(c) => updateReduction("gb_designated_land", { gbFreeEconZone: c })}
+                title="경제자유구역 등 지정"
+                description="해제~사업인정고시 허용기간 5년 (미지정 시 1년)"
+              />
+            </div>
+          )}
+          <ToggleCard
+            tone="violet"
+            size="sm"
+            checked={gbDesignated.gbResided}
+            onCheckedChange={(c) => updateReduction("gb_designated_land", { gbResided: c })}
+            title="취득일~매수/고시일 소재지 거주"
+            description="§77의3 거주요건 (소재지 거주 세부는 조특령)"
+          />
+        </div>
+      )}
+
+      {/* 대토보상 과세특례 §77의2 서브패널 */}
+      {replacementLand && replacementLand.type === "replacement_land_comp" && (
+        <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-4">
+          <div>
+            <p className="text-xs font-medium text-primary">대토보상 과세특례 (조특법 §77의2)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              대토(토지)보상 받는 부분의 양도세 40% 세액감면. 2026.12.31까지 양도. 연간 한도 2억원. 과세이연 선택은 별도(추후 지원). 현금 전환·현물출자 시 이자상당가산액 추징(§77의2③).
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium mb-1">현금 보상액</label>
+              <CurrencyInput
+                label=""
+                value={replacementLand.rlCashComp}
+                onChange={(v) => updateReduction("replacement_land_comp", { rlCashComp: v })}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1">대토(토지) 보상액</label>
+              <CurrencyInput
+                label=""
+                value={replacementLand.rlLandComp}
+                onChange={(v) => updateReduction("replacement_land_comp", { rlLandComp: v })}
+              />
+            </div>
           </div>
         </div>
       )}

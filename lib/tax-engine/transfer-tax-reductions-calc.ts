@@ -31,6 +31,14 @@ import { evaluateAnyHybridTaxAmount } from "./transfer-reductions/unsold-hybrid-
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { LongTermRentalRuleSet, NewHousingMatrixData } from "./schemas/rate-table.schema";
 import type { TransferReduction } from "./types/transfer.types";
+import {
+  calculateGbDesignatedLandReduction,
+  type GbDesignatedLandResult,
+} from "./gb-designated-land-reduction";
+import {
+  calculateReplacementLandReduction,
+  type ReplacementLandResult,
+} from "./replacement-land-reduction";
 
 export interface ReductionsResult {
   reductionAmount: number;
@@ -66,6 +74,8 @@ export function calcReductions(
   rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
   publicExpropriationDetail?: PublicExpropriationReductionResult;
+  gbDesignatedLandDetail?: GbDesignatedLandResult;
+  replacementLandDetail?: ReplacementLandResult;
   selfFarmingReductionDetail?: SelfFarmingReductionResult;
   rental97TaxDetail?: Rental97Result;
   hybridTaxDetail?: UnsoldHybridResult;
@@ -85,6 +95,8 @@ export function calcReductions(
   let rentalReductionDetail: RentalReductionResult | undefined;
   let newHousingReductionDetail: NewHousingReductionResult | undefined;
   let publicExpropriationDetail: PublicExpropriationReductionResult | undefined;
+  let gbDesignatedLandDetail: GbDesignatedLandResult | undefined;
+  let replacementLandDetail: ReplacementLandResult | undefined;
   let selfFarmingReductionDetail: SelfFarmingReductionResult | undefined;
 
   // R-2-V2: 장기임대 정밀 엔진
@@ -171,7 +183,51 @@ export function calcReductions(
     });
     publicExpropriationDetail = result;
     if (result.isEligible && result.reductionAmount > 0) {
-      candidates.push({ amount: result.reductionAmount, type: "public_expropriation" });
+      candidates.push({ amount: result.reductionAmount, type: "public_expropriation", reducibleIncome: result.breakdown.reducibleIncome });
+    }
+  }
+
+  // R-6: 개발제한구역 매수대상 토지 감면 (조특법 §77의3)
+  for (const reduction of reductions) {
+    if (reduction.type !== "gb_designated_land") continue;
+    if (!transferDate || transferIncome === undefined || basicDeduction === undefined || taxBase === undefined) continue;
+    if (!acquisitionDate) continue; // 취득일(상속 시 피상속인 취득일) 필수
+    const result = calculateGbDesignatedLandReduction({
+      branch: reduction.branch,
+      acquisitionDate,
+      designationDate: reduction.designationDate,
+      triggerDate: reduction.triggerDate,
+      releasedDate: reduction.releasedDate,
+      freeEconZone: reduction.freeEconZone,
+      residedFromAcqToTrigger: reduction.residedFromAcqToTrigger,
+      transferDate,
+      calculatedTax,
+      transferIncome,
+      basicDeduction,
+      taxBase,
+    });
+    gbDesignatedLandDetail = result;
+    if (result.isEligible && result.reductionAmount > 0) {
+      candidates.push({ amount: result.reductionAmount, type: "gb_designated_land", reducibleIncome: result.reducibleIncome });
+    }
+  }
+
+  // R-7: 대토보상 과세특례 (조특법 §77의2, 40% 세액감면 모드)
+  for (const reduction of reductions) {
+    if (reduction.type !== "replacement_land_comp") continue;
+    if (!transferDate || transferIncome === undefined || basicDeduction === undefined || taxBase === undefined) continue;
+    const result = calculateReplacementLandReduction({
+      cashCompensation: reduction.cashCompensation,
+      replacementLandComp: reduction.replacementLandComp,
+      transferDate,
+      calculatedTax,
+      transferIncome,
+      basicDeduction,
+      taxBase,
+    });
+    replacementLandDetail = result;
+    if (result.isEligible && result.reductionAmount > 0) {
+      candidates.push({ amount: result.reductionAmount, type: "replacement_land_comp", reducibleIncome: result.reducibleIncome });
     }
   }
 
@@ -288,6 +344,8 @@ export function calcReductions(
     new_housing: "신축주택",
     unsold_housing: "미분양주택",
     public_expropriation: "공익사업용 토지 수용(§77)",
+    gb_designated_land: "개발제한구역 매수 토지(§77의3)",
+    replacement_land_comp: "대토보상 과세특례(§77의2)",
     // Round 8 (2026-05-06): 신규 23개 ID 한국어 라벨 (방어 코드)
     // Phase 2 본격 구현 시 calcReductions candidates 진입 케이스 대응
     rental_97_main: "장기임대주택 (§97 ① 본문)",
@@ -321,6 +379,8 @@ export function calcReductions(
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
+    gbDesignatedLandDetail,
+    replacementLandDetail,
     selfFarmingReductionDetail,
     rental97TaxDetail,
     hybridTaxDetail,

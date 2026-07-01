@@ -9,6 +9,8 @@ import type { ReductionType } from "@/lib/stores/calc-wizard-asset-reduction";
 export const REDUCTION_SHORT_LABELS: Record<ReductionType, string> = {
   self_farming: "자경농지 감면 (§69)",
   public_expropriation: "공익사업 수용 감면 (§77)",
+  gb_designated_land: "개발제한구역 매수 토지 감면 (§77의3)",
+  replacement_land_comp: "대토보상 과세특례 (§77의2)",
   long_term_rental: "장기임대주택 감면 (§97)",
   new_housing: "신축주택 감면 (§99)",
   unsold_housing: "미분양주택 감면 (§98)",

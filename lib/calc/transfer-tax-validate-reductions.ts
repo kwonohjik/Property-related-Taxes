@@ -62,6 +62,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (form.transferDate && r.expropriationApprovalDate >= form.transferDate)
             return fail("사업인정고시일은 양도일보다 이전이어야 합니다.");
         }
+        if (r.type === "gb_designated_land") {
+          if (!r.gbDesignationDate) return fail("개발제한구역 지정일을 선택하세요.");
+          if (!r.gbTriggerDate) return fail(r.gbBranch === "released" ? "사업인정고시일을 선택하세요." : "매수청구·협의매수일을 선택하세요.");
+          if (r.gbBranch === "released" && !r.gbReleasedDate) return fail("개발제한구역 해제일을 선택하세요.");
+        }
+        if (r.type === "replacement_land_comp") {
+          if (parseAmount(r.rlLandComp || "0") <= 0)
+            return fail("대토(토지) 보상액을 입력하세요 (대토보상분만 감면 대상).");
+        }
         // Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본 요건 검증
         if (r.type === "new_99_3") {
           // 취득 유형별 필수 일자 검증

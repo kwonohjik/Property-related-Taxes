@@ -23,6 +23,7 @@ import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import {
   applyAnnualLimits,
   applyFiveYearLimits,
+  buildLimitGroups,
   lookupLimit,
 } from "./aggregate-reduction-limits";
 import {
@@ -250,14 +251,17 @@ export function calculateTransferTaxAggregate(
         : 0;
     rawByType.set(type, raw);
   }
-  const { cappedByType: annuallyCapped, capInfoByType } = applyAnnualLimits(rawByType);
+  // §133 한도는 양도연도 분기 그룹(2025+ §77 그룹 2억/3억, 이전 1억/2억).
+  const transferYear = input.taxYear;
+  const limitGroups = buildLimitGroups(transferYear);
+  const { cappedByType: annuallyCapped, capInfoByType } = applyAnnualLimits(rawByType, limitGroups);
 
   // §133 5년 누적 한도 추가 capping
-  const transferYear = input.taxYear;
   const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
     annuallyCapped,
     input.priorReductionUsage ?? [],
     transferYear,
+    limitGroups,
   );
   const cappedByType = fiveYearCappedByType;
 

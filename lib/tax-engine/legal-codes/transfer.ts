@@ -246,6 +246,12 @@ export const TRANSFER = {
   REDUCTION_PUBLIC_EXPROPRIATION: "조특법 §77",
   /** 조특법 부칙 제53조 — 공익사업 수용 감면 종전 감면율 경과조치 */
   REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL: "조특법 부칙 제53조",
+  /** 조특법 §77의2 — 대토보상에 대한 양도소득세 과세특례 (40% 감면 또는 과세이연) */
+  REDUCTION_REPLACEMENT_LAND: "조특법 §77의2",
+  /** 조특법 §77의3 — 개발제한구역 지정에 따른 매수대상 토지등 양도소득세 감면 (40%/25%) */
+  REDUCTION_GB_DESIGNATED_LAND: "조특법 §77의3",
+  /** 조특법 §133② — 비자발적 양도(§77·§77의2·§77의3) 감면 종합한도 (2025+ 1년 2억 / 5년 3억) */
+  REDUCTION_OVERALL_LIMIT_INVOLUNTARY: "조특법 §133②",
   /** 조특법 §133 — 감면 종합한도 (공익사업 수용 1년 2억 / 5년 3억) */
   REDUCTION_ANNUAL_LIMIT:        "조특법 §133",
   /** 소득세법 시행령 §168의14 ③ 3호 — 공익사업 수용 토지 당연사업용 인정 (2년/5년) */
@@ -619,6 +625,8 @@ export const TRANSFER_REDUCTION_ARTICLE = {
   // ── 별도 카테고리 ──
   SELF_FARMING:       "조특법 §69",
   PUBLIC_EXPROPRIATION: "조특법 §77",
+  GB_DESIGNATED_LAND: "조특법 §77의3",
+  REPLACEMENT_LAND:   "조특법 §77의2",
 } as const;
 
 /**
