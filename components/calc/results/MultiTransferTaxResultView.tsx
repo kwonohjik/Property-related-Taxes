@@ -23,6 +23,9 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import { downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import { PublicExpropriationDetailCard } from "@/components/calc/results/transfer/TransferReductionRows";
+import { ReplacementLand77_2DetailCard } from "@/components/calc/results/transfer/ReplacementLand77_2DetailCard";
+import { GbDesignatedLand77_3DetailCard } from "@/components/calc/results/transfer/GbDesignatedLand77_3DetailCard";
 import {
   MULTI_TRANSFER_PRINT_SECTIONS,
   type MultiTransferPrintSectionId,
@@ -479,6 +482,17 @@ function PropertyBreakdownAccordion({
                 />
               )}
             </div>
+          )}
+
+          {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 자산별 ①~④ 구성 (최종 감면세액은 합산 재계산 카드) */}
+          {breakdown.publicExpropriationDetail?.isEligible && (
+            <PublicExpropriationDetailCard detail={breakdown.publicExpropriationDetail} aggregatedContext />
+          )}
+          {breakdown.replacementLandDetail?.isEligible && (
+            <ReplacementLand77_2DetailCard detail={breakdown.replacementLandDetail} aggregatedContext />
+          )}
+          {breakdown.gbDesignatedLandDetail?.isEligible && (
+            <GbDesignatedLand77_3DetailCard detail={breakdown.gbDesignatedLandDetail} aggregatedContext />
           )}
 
           {/* 신고서 양식 표 — 자산별 (PR-F2: printScoped 버튼 제거, 패널 per-property로 통일) */}

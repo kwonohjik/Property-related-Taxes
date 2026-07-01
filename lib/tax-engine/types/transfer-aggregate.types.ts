@@ -16,6 +16,9 @@
 
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
 import type { TransferTaxInput, CalculationStep } from "./transfer.types";
+import type { PublicExpropriationReductionResult } from "../public-expropriation-reduction";
+import type { ReplacementLandResult } from "../replacement-land-reduction";
+import type { GbDesignatedLandResult } from "../gb-designated-land-reduction";
 
 /** 세율군 (소득세법 §102 ① 각 호 구분) */
 export type RateGroup =
@@ -133,6 +136,14 @@ export interface PerPropertyBreakdown {
   reductionAggregated: number;
   /** 배분 비율 (= 이 건 reducibleIncome / 유형별 총 reducibleIncome) */
   reductionAllocationRatio: number;
+  /**
+   * 비자발적 양도 감면 자산별 상세 (조특법 §77·§77의2·§77의3) — echo 전용.
+   * 다건뷰 자산별 카드에서 현금/채권·감면율 등 ①~④ 구성 표시용.
+   * 최종 감면세액은 합산 재계산(reductionAggregated·ReductionBreakdownEntry)이 담당.
+   */
+  publicExpropriationDetail?: PublicExpropriationReductionResult;
+  replacementLandDetail?: ReplacementLandResult;
+  gbDesignatedLandDetail?: GbDesignatedLandResult;
   /** §114조의2 건별 환산가액적용가산세 */
   penaltyTax: number;
   /**

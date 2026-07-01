@@ -456,6 +456,7 @@ export function splitTwoColFinancials(
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
 import { buildRowsFromOrder } from "./FilingFormTableRowDefs";
+import { reductionEligibleIncome } from "./reduction-eligible-income";
 export { fmtCell } from "./FilingFormTableRowDefs";
 
 export function buildRows(
@@ -738,17 +739,27 @@ export function buildRows(
   setNum("incomeAmount", "total", incomeAmount);
   // §161 비과세 양도소득금액 — 양도소득금액 단계 차감 (§95①에서 안분)
   setNum("nontaxableIncome", "total", isRH ? (result.nontaxableGainAmount ?? 0) : 0);
-  setNum("reductionTargetIncome", "total", result.reducibleIncome ?? 0);
+  // ⑲ 세액감면대상금액 = 감면대상 양도소득금액 (§90① — 감면율 前). §77 계열 reducibleIncome은 감면율 곱값이라 부적합.
+  setNum(
+    "reductionTargetIncome",
+    "total",
+    reductionEligibleIncome(
+      result.reductionTypeApplied,
+      incomeAmount,
+      result.reducibleIncome ?? 0,
+      result.replacementLandDetail?.eligibleTransferIncome,
+    ),
+  );
   // §99의3 5년 안분 차감액 (소득금액 단계) — Phase 2 result.new993Detail
   // 산식: 양도소득금액 × (5년시점 공시가격 - 취득시 공시가격) / (양도시 공시가격 - 취득시 공시가격)
   setNum("reductionTargetIncome2", "total", result.new993Detail?.reducibleTransferIncome ?? 0);
-  // 감면후 소득금액 = 양도소득금액 − 세액감면대상금액 − 소득금액 감면대상
+  // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(⑳ §90② 소득금액차감방식)
+  // §90①(세액감면방식·§77 등)은 소득금액 미차감 → ⑲(세액감면대상)은 빼지 않는다 (다건·상세명세서와 일치).
   // §161 (장기임대 거주주택 비과세) 케이스는 result.taxableGain이 이미 안분 후 값이므로 별도 처리.
-  const reductionTargetTotal = result.reducibleIncome ?? 0;
   const new993Reducible = result.new993Detail?.reducibleTransferIncome ?? 0;
   const incomeAmountAfter = isRH
     ? result.taxableGain
-    : Math.max(0, incomeAmount - reductionTargetTotal - new993Reducible);
+    : Math.max(0, incomeAmount - new993Reducible);
   setNum("incomeAmountAfter", "total", incomeAmountAfter);
   setNum("priorIncomeAmount", "total", 0);
   setNum("basicDeduction", "total", result.basicDeduction);

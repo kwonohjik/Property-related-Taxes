@@ -41,6 +41,8 @@ export interface ReplacementLandResult {
   reductionRate: number;
   /** 대토보상 / (현금보상 + 대토보상) */
   replacementRatio: number;
+  /** 대토보상분 감면대상 양도소득금액 (기본공제 前) — 별지84호 부표2 ⑲ 세액감면대상금액용 echo */
+  eligibleTransferIncome?: number;
   /** 대토보상분 소득 (기본공제 배정 후) */
   replacementTaxableIncome: number;
   /** 감면대상소득금액 = 대토보상분 소득 × 40% */
@@ -143,6 +145,7 @@ export function calculateReplacementLandReduction(
     isEligible: reductionAmount > 0,
     reductionRate: REPLACEMENT_LAND_RATE,
     replacementRatio: total > 0 ? input.replacementLandComp / total : 0,
+    eligibleTransferIncome: replacementIncome,
     replacementTaxableIncome,
     reducibleIncome,
     rawReductionAmount,

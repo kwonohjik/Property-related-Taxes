@@ -50,6 +50,8 @@ export interface GbDesignatedLandResult {
   isEligible: boolean;
   reductionRate: 0 | 0.25 | 0.4;
   appliedClause?: "1호" | "2호";
+  /** 감면대상소득 산정 기준 = 양도소득금액 − 기본공제 (감면율 적용 전 base) — 산출과정 표시용 echo */
+  taxableIncome?: number;
   /** 감면대상소득금액 = (양도소득금액 − 기본공제) × 감면율 */
   reducibleIncome: number;
   rawReductionAmount: number;
@@ -170,6 +172,7 @@ export function calculateGbDesignatedLandReduction(
     isEligible: true,
     reductionRate: rate,
     appliedClause: clause,
+    taxableIncome,
     reducibleIncome,
     rawReductionAmount,
     reductionAmount,
