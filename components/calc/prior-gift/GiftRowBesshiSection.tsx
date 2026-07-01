@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   GIFT_PRIOR_CATEGORY_LIST,
@@ -42,7 +43,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
         <p className="text-xs font-semibold text-sky-700 flex-1">
           증여재산 및 평가명세서 (별지 제10호서식 부표 1) 표시 (선택 입력)
         </p>
-        <span className="text-sky-600 text-xs">{besshiOpen ? "▲" : "▼"}</span>
+        <span className={expandToggleClass("sky")} aria-hidden>{expandToggleLabel(besshiOpen)}</span>
       </button>
 
       <div className={besshiOpen ? "block space-y-3" : "hidden print:block print:space-y-3"}>
