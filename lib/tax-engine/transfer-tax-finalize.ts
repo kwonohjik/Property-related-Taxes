@@ -38,6 +38,7 @@ import type { UnsoldHybridResult } from "./transfer-reductions/unsold-hybrid";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { TransferTaxPenaltyResult } from "./transfer-tax-penalty";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { resolveLTHDStartDate } from "./transfer-tax-lthd-start"; // 로컬 사용(buildExemptEarlyResult) — 421행 re-export와 별개
 import type { AmendmentDetail } from "./types/transfer-amendment.types";
 
 export interface FinalizeArgs {
@@ -458,6 +459,64 @@ export function buildTransferResultDetails(ctx: {
     commercialBuildingValuationDetail: ctx.cbStep?.detail,
     splitDetail: ctx.splitDetail ?? undefined,
     preHousingDisclosureDetail: ctx.splitDetail?.preHousingDisclosureDetail,
+  };
+}
+
+/**
+ * STEP 1a 전액 비과세 조기반환 결과 조립 (transfer-tax.ts에서 격리 — 800줄 정책).
+ * finalize 미경유 경로이므로 amendmentDetail(refund 전액환급 F1)·detail 카드를 여기서 부착.
+ * detail 3종은 TransferTaxResult 인덱스 타입으로 참조(underlying 타입 import 불필요).
+ */
+export function buildExemptEarlyResult(p: {
+  input: TransferTaxInput;
+  effectiveInput: TransferTaxInput;
+  steps: CalculationStep[];
+  exemptReason: TransferTaxResult["exemptReason"];
+  new994Detail: TransferTaxResult["new994Detail"];
+  unsold989Detail: TransferTaxResult["unsold989Detail"];
+  specialHouseExclusionDetail: TransferTaxResult["specialHouseExclusionDetail"];
+  warnings: TransferTaxResult["warnings"];
+  multiHouseSurchargeResult?: MultiHouseSurchargeResult;
+  nonBusinessLandJudgment?: NonBusinessLandJudgment;
+  pre1990LandResult?: Pre1990LandValuationResult;
+  carryoverDetail?: CarryoverTaxationDetail;
+  inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
+}): TransferTaxResult {
+  return {
+    isExempt: true,
+    // [F1] 경정 결과 비과세 → refund면 전액환급 산출(determinedTax=0)
+    amendmentDetail: p.input.amendment ? computeAmendment(p.input.amendment, 0) : undefined,
+    exemptReason: p.exemptReason,
+    new994Detail: p.new994Detail,
+    unsold989Detail: p.unsold989Detail,
+    specialHouseExclusionDetail: p.specialHouseExclusionDetail,
+    warnings: p.warnings,
+    transferGain: 0,
+    taxableGain: 0,
+    usedEstimatedAcquisition: p.effectiveInput.useEstimatedAcquisition,
+    longTermHoldingDeduction: 0,
+    longTermHoldingRate: 0,
+    lthdStartDate: resolveLTHDStartDate(p.effectiveInput),
+    basicDeduction: 0,
+    taxBase: 0,
+    appliedRate: 0,
+    progressiveDeduction: 0,
+    calculatedTax: 0,
+    isSurchargeSuspended: false,
+    reductionAmount: 0,
+    determinedTax: 0,
+    penaltyTax: 0,
+    penaltyBase: 0,
+    localIncomeTax: 0,
+    totalTax: 0,
+    steps: p.steps,
+    ...buildTransferResultDetails({
+      multiHouseSurchargeResult: p.multiHouseSurchargeResult,
+      nonBusinessLandJudgment: p.nonBusinessLandJudgment,
+      pre1990LandResult: p.pre1990LandResult,
+      carryoverDetail: p.carryoverDetail,
+      inheritedAcquisitionStep: p.inheritedAcquisitionStep,
+    }),
   };
 }
 

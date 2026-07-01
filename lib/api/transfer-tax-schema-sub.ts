@@ -383,6 +383,10 @@ export const amendmentSchema = z.object({
   priorAssessmentNotified:    z.boolean().optional(),
   applyLatePaymentPenalty:    z.boolean(),
   amendedPaymentDate:         z.string().date().optional(),
+  // 경정청구(세액 감소·환급) — 국세기본법 §45의2
+  correctionKind:             z.enum(["amend", "refund_claim"]).optional(),
+  claimReasonType:            z.enum(["ordinary", "posterior"]).optional(),
+  posteriorEventDate:         z.string().date().optional(),
 });
 
 // ─── 일괄양도 안분 — 상속 보충적평가액 입력 스키마 ───────────────

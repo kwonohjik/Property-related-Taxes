@@ -62,7 +62,8 @@ import {
   type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
-import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails } from "./transfer-tax-finalize";
+import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, buildExemptEarlyResult } from "./transfer-tax-finalize";
+import { computeAmendment } from "./transfer-tax-amendment";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
@@ -279,41 +280,22 @@ export function calculateTransferTax(
       amount: 0,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
-    return {
-      isExempt: true,
+    return buildExemptEarlyResult({
+      input,
+      effectiveInput,
+      steps,
       exemptReason: exemptionResult.exemptReason,
-      new994Detail, // §99의4 주택수 제외가 비과세 근거인 경우 카드 표시 (추징 경고 포함)
-      unsold989Detail, // §98의9 동일 (종부세 안내·F-4 경고 포함)
+      new994Detail,
+      unsold989Detail,
       specialHouseExclusionDetail:
         specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
       warnings: warnings.length > 0 ? warnings : undefined,
-      transferGain: 0,
-      taxableGain: 0,
-      usedEstimatedAcquisition: effectiveInput.useEstimatedAcquisition,
-      longTermHoldingDeduction: 0,
-      longTermHoldingRate: 0,
-      lthdStartDate: resolveLTHDStartDate(effectiveInput),
-      basicDeduction: 0,
-      taxBase: 0,
-      appliedRate: 0,
-      progressiveDeduction: 0,
-      calculatedTax: 0,
-      isSurchargeSuspended: false,
-      reductionAmount: 0,
-      determinedTax: 0,
-      penaltyTax: 0,
-      penaltyBase: 0,
-      localIncomeTax: 0,
-      totalTax: 0,
-      steps,
-      ...buildTransferResultDetails({
-        multiHouseSurchargeResult,
-        nonBusinessLandJudgment,
-        pre1990LandResult,
-        carryoverDetail,
-        inheritedAcquisitionStep,
-      }),
-    };
+      multiHouseSurchargeResult,
+      nonBusinessLandJudgment,
+      pre1990LandResult,
+      carryoverDetail,
+      inheritedAcquisitionStep,
+    });
   }
 
   // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑧ + §176조의2②2호)
@@ -410,6 +392,8 @@ export function calculateTransferTax(
     }
     return {
       isExempt: false,
+      // [F1] 경정 결과 양도차손(산출세액 0) → 조기반환. refund면 전액환급(determinedTax=0).
+      amendmentDetail: input.amendment ? computeAmendment(input.amendment, 0) : undefined,
       exemptReason: exemptionResult.exemptReason,
       warnings: warnings.length > 0 ? warnings : undefined,
       transferGain: transferGain,

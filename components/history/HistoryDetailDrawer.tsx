@@ -166,10 +166,43 @@ export function HistoryDetailDrawer({
       updateFormData({
         ...(record.inputData as Parameters<typeof updateFormData>[0]),
         amendmentMode: true,
+        correctionKind: "amend",
         amendmentSourceId: record.id,
         originalDeterminedTax: String(result?.determinedTax ?? ""),
         statutoryFilingDeadline: deriveStatutoryDeadline(transferDate),
         // 당초 무신고/과소신고 가산세 입력은 수정신고와 상호배타 — 초기화
+        enablePenalty: false,
+      });
+      setStep(0);
+      router.push(route);
+    });
+  }
+
+  // 경정청구(세액 감소·환급) 진입 — 수정신고와 방향만 다름(correctionKind)
+  function handleRefundClaim() {
+    if (!route || record.taxType !== "transfer") return;
+    Promise.all([
+      import("@/lib/stores/calc-wizard-store"),
+      import("@/lib/calc/transfer-amendment-helpers"),
+    ]).then(([{ useCalcWizardStore }, { deriveStatutoryDeadline }]) => {
+      const { updateFormData, setStep } = useCalcWizardStore.getState();
+      const result = (record.resultData as { result?: { determinedTax?: number } }).result;
+      const transferDate = (record.inputData as { transferDate?: string }).transferDate;
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+        now.getDate(),
+      ).padStart(2, "0")}`;
+      updateFormData({
+        ...(record.inputData as Parameters<typeof updateFormData>[0]),
+        amendmentMode: true,
+        correctionKind: "refund_claim",
+        // [F6] 경정청구는 가산세 없음 — amend 플래그 초기화
+        applyUnderReportingPenalty: false,
+        applyLatePaymentPenalty: false,
+        amendmentSourceId: record.id,
+        originalDeterminedTax: String(result?.determinedTax ?? ""),
+        statutoryFilingDeadline: deriveStatutoryDeadline(transferDate),
+        amendedFilingDate: today, // [F7] 경정청구일=오늘 → 도과 경고 활성
         enablePenalty: false,
       });
       setStep(0);
@@ -303,6 +336,18 @@ export function HistoryDetailDrawer({
                 className="w-full rounded-lg border border-amber-400 bg-amber-50 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100 transition-colors dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
               >
                 수정신고 작성
+              </button>
+            )}
+          {route &&
+            record.taxType === "transfer" &&
+            (record.resultData as { mode?: string })?.mode === "single" && (
+              <button
+                type="button"
+                onClick={handleRefundClaim}
+                data-testid="drawer-correction"
+                className="w-full rounded-lg border border-sky-400 bg-sky-50 py-2 text-sm font-medium text-sky-800 hover:bg-sky-100 transition-colors dark:border-sky-700 dark:bg-sky-950/30 dark:text-sky-300"
+              >
+                경정청구 작성
               </button>
             )}
           <button

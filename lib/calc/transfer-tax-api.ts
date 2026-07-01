@@ -9,8 +9,6 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
-import { toDate } from "@/lib/api/date-coerce";
-import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -528,15 +526,22 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(form.amendmentMode
       ? {
           amendment: {
+            correctionKind: form.correctionKind,
             originalDeterminedTax: parseAmount(form.originalDeterminedTax),
-            applyUnderReportingPenalty: form.applyUnderReportingPenalty,
+            // [F6] 경정청구(refund)는 가산세 없음 → 플래그 강제 false(stale 누출 차단)
+            applyUnderReportingPenalty:
+              form.correctionKind === "refund_claim" ? false : form.applyUnderReportingPenalty,
             underReportingReason: form.underReportingReason,
             underReductionMode: form.underReductionMode,
             ...(form.statutoryFilingDeadline ? { statutoryFilingDeadline: form.statutoryFilingDeadline } : {}),
             ...(form.amendedFilingDate ? { amendedFilingDate: form.amendedFilingDate } : {}),
             priorAssessmentNotified: form.priorAssessmentNotified,
-            applyLatePaymentPenalty: form.applyLatePaymentPenalty,
+            applyLatePaymentPenalty:
+              form.correctionKind === "refund_claim" ? false : form.applyLatePaymentPenalty,
             ...(form.amendedPaymentDate ? { amendedPaymentDate: form.amendedPaymentDate } : {}),
+            // 경정청구 전용 — §45의2
+            ...(form.correctionKind === "refund_claim" ? { claimReasonType: form.claimReasonType } : {}),
+            ...(form.posteriorEventDate ? { posteriorEventDate: form.posteriorEventDate } : {}),
           },
         }
       : {}),
@@ -786,34 +791,5 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   return json.data as TransferAPIResult;
 }
 
-/**
- * 거주요건 판정 입력 빌드 — Step4 거주요건 안내 메시지(②)가 엔진 meetsOneHouseResidenceRequirement
- * 호출에 사용. API 변환과 동일 도출(deriveResidencePeriodMonths·proviso 조립)로 단일 진실.
- * 호출 전 form.transferDate·primary.acquisitionDate 존재 보장 필요(toDate는 필수값 미입력 시 throw).
- */
-export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
-  const primary = form.assets?.[0];
-  return {
-    acquisitionDate: toDate(primary?.acquisitionDate, "acquisitionDate"),
-    transferDate: toDate(form.transferDate, "transferDate"),
-    residencePeriodMonths: primary
-      ? deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths)
-      : 0,
-    regionCode: primary?.regionCode || form.regionCode || undefined,
-    wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
-    oneHouseExemptionProviso: form.provisoReason
-      ? {
-          reason: form.provisoReason,
-          ...(form.provisoDepartureDate
-            ? { departureDate: toDate(form.provisoDepartureDate, "provisoDepartureDate") }
-            : {}),
-          ...(form.provisoExpropriationDate
-            ? { expropriationDate: toDate(form.provisoExpropriationDate, "provisoExpropriationDate") }
-            : {}),
-          ...(form.provisoBusinessApprovalDate
-            ? { businessApprovalDate: toDate(form.provisoBusinessApprovalDate, "provisoBusinessApprovalDate") }
-            : {}),
-        }
-      : undefined,
-  };
-}
+// 거주요건 판정 입력 빌드 — transfer-tax-api-residence.ts로 격리 (800줄 정책)
+export { buildResidenceReqInput } from "./transfer-tax-api-residence";

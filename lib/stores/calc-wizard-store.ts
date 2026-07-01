@@ -189,6 +189,15 @@ export interface TransferFormData {
   applyLatePaymentPenalty: boolean;
   /** 수정신고 납부(예정)일(YYYY-MM-DD) — 납부지연 경과일 종점 */
   amendedPaymentDate: string;
+  // ── 경정청구(세액 감소·환급) — 국세기본법 §45의2 ──
+  /** 정정 방향 (amend=수정신고 / refund_claim=경정청구) */
+  correctionKind: "amend" | "refund_claim";
+  /** 경정청구 사유 유형 (ordinary=일반 5년 / posterior=후발적 3개월) */
+  claimReasonType: "ordinary" | "posterior";
+  /** 후발적 사유 안 날(YYYY-MM-DD) — posterior 3개월 기산 (§45의2②) */
+  posteriorEventDate: string;
+  /** 당초 납부일(YYYY-MM-DD, 선택) — 환급가산금 기산일 안내(form-only, 엔진 미전송) */
+  originalPaymentDate: string;
 }
 
 const defaultFormData: TransferFormData = {
@@ -255,6 +264,10 @@ const defaultFormData: TransferFormData = {
   priorAssessmentNotified: false,
   applyLatePaymentPenalty: false,
   amendedPaymentDate: "",
+  correctionKind: "amend",
+  claimReasonType: "ordinary",
+  posteriorEventDate: "",
+  originalPaymentDate: "",
 };
 
 /** defaultFormData를 복사하여 반환하는 팩토리 (MultiTransferTaxCalculator 등 외부에서 사용) */

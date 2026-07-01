@@ -45,6 +45,78 @@ export function AmendmentResultCard({
 }) {
   const [open, setOpen] = useState(false);
 
+  // ── 경정청구(세액 감소·환급) 분기 — hero=환급세액, emerald ──
+  if (detail.correctionKind === "refund_claim") {
+    const refund = detail.refundTax ?? 0;
+    const noRefund = refund === 0;
+    return (
+      <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50/40 p-5 dark:border-emerald-700 dark:bg-emerald-950/20">
+        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300 mb-1">
+          환급 청구세액
+        </p>
+        <p className="text-3xl font-bold">{formatKRW(refund)}</p>
+        {noRefund && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            환급액 없음 — 경정 결정세액이 당초 결정세액 이상입니다 (경정청구 실익 없음).
+          </p>
+        )}
+
+        <div className="mt-4 space-y-1">
+          <Row label="당초 결정세액" value={formatKRW(detail.originalDeterminedTax)} />
+          <Row label="경정 결정세액" value={formatKRW(detail.amendedDeterminedTax)} />
+          <div className="border-t border-emerald-300 pt-1 dark:border-emerald-800">
+            <Row label="환급세액" value={formatKRW(refund)} bold />
+          </div>
+        </div>
+
+        {detail.claimDeadline && (
+          <div className="mt-2">
+            <Row
+              label={`청구기한 (${detail.claimReasonType === "posterior" ? "후발적 3개월" : "일반 5년"})`}
+              value={detail.isDeadlineExceeded ? `${detail.claimDeadline} · 경과 ⚠️` : detail.claimDeadline}
+            />
+          </div>
+        )}
+
+        <div className="mt-2 space-y-0.5">
+          <Row
+            label="참고 · 지방소득세 환급 (지자체 별도 경정청구)"
+            value={formatKRW(detail.refundLocalIncomeTax ?? 0)}
+            muted
+          />
+          <Row label="참고 · 경정 후 전체 세액" value={formatKRW(fullTotalTax)} muted />
+        </div>
+
+        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+          ⓘ 환급금에는 국세환급가산금(납부일 다음날~지급결정일, 연 3.1%)이 가산되며 세무서가 산정·지급합니다.
+        </p>
+
+        {detail.steps.length > 0 && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={() => setOpen((p) => !p)}
+              aria-expanded={open}
+              className={expandToggleClass("emerald")}
+            >
+              {expandToggleLabel(open)} · 산출근거
+            </button>
+            <div className={open ? "mt-2 space-y-1.5" : "mt-2 space-y-1.5 hidden print:block"}>
+              {detail.steps.map((s, i) => (
+                <div key={i}>
+                  <Row label={s.label} value={formatKRW(s.amount)} />
+                  {s.formula && (
+                    <p className="pl-2 text-[11px] text-muted-foreground">{s.formula}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-5 dark:border-amber-700 dark:bg-amber-950/20">
       <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
