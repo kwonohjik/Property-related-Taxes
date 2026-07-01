@@ -729,6 +729,7 @@ export function calculateTransferTax(
     localIncomeTax,
     penaltyDetail,
     totalTax,
+    amendmentDetail,
   } = finalize;
   return {
     isExempt: false,
@@ -785,6 +786,7 @@ export function calculateTransferTax(
     new994Detail,
     unsold989Detail,
     penaltyDetail,
+    amendmentDetail,
     new993Detail: new993FinalResult,
     new99Detail: new99FinalResult,
     unsold988Detail: unsold988FinalResult,

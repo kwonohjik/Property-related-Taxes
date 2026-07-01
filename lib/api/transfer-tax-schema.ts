@@ -19,6 +19,7 @@ import {
   reductionSchema,
   filingPenaltyDetailsSchema,
   delayedPaymentDetailsSchema,
+  amendmentSchema,
   inheritanceValuationSchema,
   inheritedAcquisitionSchema,
   inheritanceHouseValuationSchema,
@@ -468,9 +469,19 @@ export const propertySchema = z
     specialHouseExclusions: specialHouseExclusionSchema,
     filingPenaltyDetails: filingPenaltyDetailsSchema.optional(),
     delayedPaymentDetails: delayedPaymentDetailsSchema.optional(),
+    amendment: amendmentSchema.optional(),
   })
   .superRefine((data, ctx) => {
     addPropertyRefines(data, ctx);
+
+    // 수정신고 ↔ 무신고/과소신고 가산세 상호배타 (동시 전송 금지)
+    if (data.amendment && (data.filingPenaltyDetails || data.delayedPaymentDetails)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["amendment"],
+        message: "수정신고와 무신고/과소신고 가산세는 동시에 적용할 수 없습니다",
+      });
+    }
 
     // 소유자 분리 유효성 (소령 §166⑥, §168②)
     if (data.selfOwns && data.selfOwns !== "both") {

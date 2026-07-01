@@ -171,6 +171,24 @@ export interface TransferFormData {
   unpaidTax: string;
   paymentDeadline: string;
   actualPaymentDate: string;
+
+  // ── 수정신고(경정) — 국세기본법 §45·§48 ──
+  amendmentMode: boolean;
+  /** 당초 결정세액(=당초 납부 본세) — 이력에서 자동 prefill, 수정 가능 */
+  originalDeterminedTax: string;
+  /** 불러온 당초 이력 id (추적용) */
+  amendmentSourceId: string;
+  /** 법정신고기한(YYYY-MM-DD) — 양도일 파생, 수정 가능 (소득세법 §110①) */
+  statutoryFilingDeadline: string;
+  /** 수정신고일(YYYY-MM-DD) — §48② 경과기간 종점 */
+  amendedFilingDate: string;
+  applyUnderReportingPenalty: boolean;
+  underReportingReason: "normal" | "fraudulent" | "offshore_fraud";
+  underReductionMode: "exempt" | "auto_48_2";
+  priorAssessmentNotified: boolean;
+  applyLatePaymentPenalty: boolean;
+  /** 수정신고 납부(예정)일(YYYY-MM-DD) — 납부지연 경과일 종점 */
+  amendedPaymentDate: string;
 }
 
 const defaultFormData: TransferFormData = {
@@ -226,6 +244,17 @@ const defaultFormData: TransferFormData = {
   unpaidTax: "0",
   paymentDeadline: "",
   actualPaymentDate: "",
+  amendmentMode: false,
+  originalDeterminedTax: "",
+  amendmentSourceId: "",
+  statutoryFilingDeadline: "",
+  amendedFilingDate: "",
+  applyUnderReportingPenalty: false,
+  underReportingReason: "normal",
+  underReductionMode: "exempt",
+  priorAssessmentNotified: false,
+  applyLatePaymentPenalty: false,
+  amendedPaymentDate: "",
 };
 
 /** defaultFormData를 복사하여 반환하는 팩토리 (MultiTransferTaxCalculator 등 외부에서 사용) */

@@ -99,9 +99,10 @@ export function generateTitle(
 
   if (taxType === "transfer") {
     const date = extractTransferDate(inputData);
-    if (address && date) return `${label} — ${address} (양도 ${date})`;
-    if (address) return `${label} — ${address}`;
-    if (date) return `${label} — 양도 ${date}`;
+    const label2 = inputData.amendmentMode === true ? `${label} 수정신고` : label;
+    if (address && date) return `${label2} — ${address} (양도 ${date})`;
+    if (address) return `${label2} — ${address}`;
+    if (date) return `${label2} — 양도 ${date}`;
   }
 
   if (taxType === "acquisition") {

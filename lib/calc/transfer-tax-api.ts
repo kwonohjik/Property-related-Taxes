@@ -500,7 +500,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       : {}),
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
     ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
-    ...(form.enablePenalty && form.filingType !== "correct"
+    // 수정신고 모드에서는 무신고/과소신고 가산세 블록을 전송하지 않음 (상호배타)
+    ...(!form.amendmentMode && form.enablePenalty && form.filingType !== "correct"
       ? {
           filingPenaltyDetails: {
             determinedTax: 0,
@@ -514,12 +515,28 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           },
         }
       : {}),
-    ...(form.enablePenalty && form.paymentDeadline
+    ...(!form.amendmentMode && form.enablePenalty && form.paymentDeadline
       ? {
           delayedPaymentDetails: {
             unpaidTax: parseAmount(form.unpaidTax),
             paymentDeadline: form.paymentDeadline,
             actualPaymentDate: form.actualPaymentDate || undefined,
+          },
+        }
+      : {}),
+    // 수정신고(경정) — 국세기본법 §45·§48
+    ...(form.amendmentMode
+      ? {
+          amendment: {
+            originalDeterminedTax: parseAmount(form.originalDeterminedTax),
+            applyUnderReportingPenalty: form.applyUnderReportingPenalty,
+            underReportingReason: form.underReportingReason,
+            underReductionMode: form.underReductionMode,
+            ...(form.statutoryFilingDeadline ? { statutoryFilingDeadline: form.statutoryFilingDeadline } : {}),
+            ...(form.amendedFilingDate ? { amendedFilingDate: form.amendedFilingDate } : {}),
+            priorAssessmentNotified: form.priorAssessmentNotified,
+            applyLatePaymentPenalty: form.applyLatePaymentPenalty,
+            ...(form.amendedPaymentDate ? { amendedPaymentDate: form.amendedPaymentDate } : {}),
           },
         }
       : {}),

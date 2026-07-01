@@ -238,6 +238,11 @@ export interface TransferTaxResult {
    */
   penaltyDetail?: TransferTaxPenaltyResult;
   /**
+   * 수정신고(경정) 상세 결과 — input.amendment 제공 시만 포함.
+   * 추가납부 본세·§48② 감면·신고불성실·납부지연·총 납부세액.
+   */
+  amendmentDetail?: import("./transfer-amendment.types").AmendmentDetail;
+  /**
    * 1990.8.30. 이전 취득 토지 기준시가 환산 상세 결과
    * pre1990Land 제공 시만 포함. UI에 5유형 분류·분모/비율 capping 내역 표시용.
    */

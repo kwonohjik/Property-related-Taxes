@@ -372,6 +372,19 @@ export const delayedPaymentDetailsSchema = z.object({
   actualPaymentDate:  z.string().date().optional(),
 });
 
+/** 수정신고(경정) — 국세기본법 §45·§48 */
+export const amendmentSchema = z.object({
+  originalDeterminedTax:      z.number().int().nonnegative(),
+  applyUnderReportingPenalty: z.boolean(),
+  underReportingReason:       z.enum(["normal", "fraudulent", "offshore_fraud"]),
+  underReductionMode:         z.enum(["exempt", "auto_48_2"]),
+  statutoryFilingDeadline:    z.string().date().optional(),
+  amendedFilingDate:          z.string().date().optional(),
+  priorAssessmentNotified:    z.boolean().optional(),
+  applyLatePaymentPenalty:    z.boolean(),
+  amendedPaymentDate:         z.string().date().optional(),
+});
+
 // ─── 일괄양도 안분 — 상속 보충적평가액 입력 스키마 ───────────────
 
 export const inheritanceValuationSchema = z.object({

@@ -246,7 +246,23 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     if (issue) issues.push(issue);
   }
 
-  // step 3: 가산세 (선택, 검증 없음 — useEffect로 자동 동기화)
+  // step 3: 가산세 / 수정신고
+  if (step === 3 && form.amendmentMode) {
+    if (parseAmount(form.originalDeterminedTax) <= 0)
+      issues.push({ step, message: "당초 결정세액을 입력하세요." });
+    if (form.applyUnderReportingPenalty && form.underReductionMode === "auto_48_2") {
+      if (!form.statutoryFilingDeadline)
+        issues.push({ step, message: "§48② 자동감면 산정을 위해 법정신고기한을 입력하세요." });
+      if (!form.amendedFilingDate)
+        issues.push({ step, message: "§48② 자동감면 산정을 위해 수정신고일을 입력하세요." });
+    }
+    if (form.applyLatePaymentPenalty) {
+      if (!form.statutoryFilingDeadline)
+        issues.push({ step, message: "납부지연가산세 산정을 위해 법정신고기한을 입력하세요." });
+      if (!form.amendedPaymentDate)
+        issues.push({ step, message: "납부지연가산세 산정을 위해 수정신고 납부(예정)일을 입력하세요." });
+    }
+  }
 
   return issues;
 }

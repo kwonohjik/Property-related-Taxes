@@ -340,6 +340,20 @@ export async function POST(request: NextRequest) {
             : undefined,
         }
       : undefined,
+    // 수정신고(경정) — Date 변환 (toOptionalDate 정책)
+    amendment: data.amendment
+      ? {
+          originalDeterminedTax: data.amendment.originalDeterminedTax,
+          applyUnderReportingPenalty: data.amendment.applyUnderReportingPenalty,
+          underReportingReason: data.amendment.underReportingReason,
+          underReductionMode: data.amendment.underReductionMode,
+          statutoryFilingDeadline: toOptionalDate(data.amendment.statutoryFilingDeadline),
+          amendedFilingDate: toOptionalDate(data.amendment.amendedFilingDate),
+          priorAssessmentNotified: data.amendment.priorAssessmentNotified,
+          applyLatePaymentPenalty: data.amendment.applyLatePaymentPenalty,
+          amendedPaymentDate: toOptionalDate(data.amendment.amendedPaymentDate),
+        }
+      : undefined,
     // ⑭ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — Date 변환 필수
     // 주의: toDate()/toOptionalDate() 헬퍼 사용 (lib/api/date-coerce.ts 정책)
     rentalHousingException: data.rentalHousingException

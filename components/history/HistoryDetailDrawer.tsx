@@ -154,6 +154,29 @@ export function HistoryDetailDrawer({
     }
   }
 
+  function handleAmend() {
+    if (!route || record.taxType !== "transfer") return;
+    Promise.all([
+      import("@/lib/stores/calc-wizard-store"),
+      import("@/lib/calc/transfer-amendment-helpers"),
+    ]).then(([{ useCalcWizardStore }, { deriveStatutoryDeadline }]) => {
+      const { updateFormData, setStep } = useCalcWizardStore.getState();
+      const result = (record.resultData as { result?: { determinedTax?: number } }).result;
+      const transferDate = (record.inputData as { transferDate?: string }).transferDate;
+      updateFormData({
+        ...(record.inputData as Parameters<typeof updateFormData>[0]),
+        amendmentMode: true,
+        amendmentSourceId: record.id,
+        originalDeterminedTax: String(result?.determinedTax ?? ""),
+        statutoryFilingDeadline: deriveStatutoryDeadline(transferDate),
+        // 당초 무신고/과소신고 가산세 입력은 수정신고와 상호배타 — 초기화
+        enablePenalty: false,
+      });
+      setStep(0);
+      router.push(route);
+    });
+  }
+
   const summaryItems = extractResultSummaryItems(record.resultData, record.taxType);
 
   async function doDelete() {
@@ -270,6 +293,18 @@ export function HistoryDetailDrawer({
               이 조건으로 재계산
             </button>
           )}
+          {route &&
+            record.taxType === "transfer" &&
+            (record.resultData as { mode?: string })?.mode === "single" && (
+              <button
+                type="button"
+                onClick={handleAmend}
+                data-testid="drawer-amend"
+                className="w-full rounded-lg border border-amber-400 bg-amber-50 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100 transition-colors dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+              >
+                수정신고 작성
+              </button>
+            )}
           <button
             type="button"
             onClick={handleExportSingle}

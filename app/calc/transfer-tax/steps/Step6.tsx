@@ -10,6 +10,7 @@ import {
   expandToggleClass,
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
+import { AmendmentBlock } from "@/components/calc/transfer/AmendmentBlock";
 
 // ============================================================
 // Step 6: 가산세 (선택 입력)
@@ -36,6 +37,10 @@ export function Step6({
   }
   return (
     <div className="space-y-5">
+      {form.amendmentMode ? (
+        <AmendmentBlock form={form} onChange={onChange} />
+      ) : (
+      <>
       <p className="text-sm text-muted-foreground">
         가산세 계산이 필요한 경우에만 입력하세요. (선택 사항)
       </p>
@@ -179,6 +184,8 @@ export function Step6({
           </div>
         </div>
       </ToggleCard>
+      </>
+      )}
     </div>
   );
 }

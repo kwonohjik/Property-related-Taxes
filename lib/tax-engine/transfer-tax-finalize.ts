@@ -37,6 +37,8 @@ import type { Unsold988Result } from "./transfer-reductions/unsold-98-8";
 import type { UnsoldHybridResult } from "./transfer-reductions/unsold-hybrid";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { TransferTaxPenaltyResult } from "./transfer-tax-penalty";
+import { computeAmendment } from "./transfer-tax-amendment";
+import type { AmendmentDetail } from "./types/transfer-amendment.types";
 
 export interface FinalizeArgs {
   input: TransferTaxInput;
@@ -107,6 +109,8 @@ export interface FinalizeResult {
   totalAllPenalty: number;
   // 총 납부세액
   totalTax: number;
+  // 수정신고 (input.amendment 제공 시)
+  amendmentDetail?: AmendmentDetail;
 }
 
 /**
@@ -365,6 +369,15 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     legalBasis: `${TRANSFER.FINAL_TAX} + ${TRANSFER.LOCAL_INCOME_TAX}`,
   });
 
+  // ── STEP 12.5: 수정신고(경정) — 추가납부세액 + 선택적 가산세 (끝 append) ──
+  // 당초 결정세액은 입력값, 수정 결정세액은 이번 run → 2-pass 불필요.
+  const amendmentDetail = input.amendment
+    ? computeAmendment(input.amendment, determinedTax)
+    : undefined;
+  if (amendmentDetail) {
+    for (const s of amendmentDetail.steps) steps.push({ ...s, sub: s.sub ?? true });
+  }
+
   return {
     new993FinalResult,
     new99FinalResult,
@@ -399,6 +412,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     filingDelayedPenalty,
     totalAllPenalty,
     totalTax,
+    amendmentDetail,
   };
 }
 
