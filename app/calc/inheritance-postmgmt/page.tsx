@@ -10,6 +10,7 @@
  */
 
 import { Suspense, useMemo, useState } from "react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { useSearchParams } from "next/navigation";
 
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -82,6 +83,7 @@ function FarmingPostMgmtPageInner() {
   const initialFilingDeadline = sanitizeDateParam(searchParams.get("filingDeadline"));
 
   const [violation, setViolation] = useState<FarmingPostMgmtViolation>("asset_disposed");
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [violationDate, setViolationDate] = useState("");
   const [filingDeadline, setFilingDeadline] = useState(initialFilingDeadline);
   const [originalDeduction, setOriginalDeduction] = useState(initialOriginalDeduction);
@@ -302,11 +304,17 @@ function FarmingPostMgmtPageInner() {
           </div>
 
           {/* breakdown 펼침 */}
-          <details className="border-t border-border pt-3">
-            <summary className="text-xs font-semibold cursor-pointer">
-              ▶ 산식 상세 펼침
-            </summary>
-            <ul className="mt-2 space-y-1 text-[11px]">
+          <div className="border-t border-border pt-3">
+            <button
+              type="button"
+              aria-expanded={breakdownOpen}
+              onClick={() => setBreakdownOpen((v) => !v)}
+              className="flex items-center gap-2 text-xs font-semibold"
+            >
+              <span>산식 상세 펼침</span>
+              <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(breakdownOpen)}</span>
+            </button>
+            <ul className={`${breakdownOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-[11px]`}>
               {result.breakdown.map((step, i) => (
                 <li key={i} className="flex justify-between gap-2">
                   <span className="text-muted-foreground">
@@ -319,7 +327,7 @@ function FarmingPostMgmtPageInner() {
                 </li>
               ))}
             </ul>
-          </details>
+          </div>
         </section>
       )}
     </div>

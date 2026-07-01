@@ -6,6 +6,7 @@
  * 기존 간이 BuildingStdPricePrintView 대체(D-1).
  */
 import { useState } from "react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { NtsReportModel, NtsReportInstance } from "@/lib/calc/nts-report-adapter";
 import { ReportSection1Category } from "./ReportSection1Category";
 import { ReportSection2Overview } from "./ReportSection2Overview";
@@ -65,7 +66,7 @@ export function NtsBuildingStdPriceReport({ model }: { model: NtsReportModel }) 
         className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium print:hidden"
       >
         <span>국세청 「건물 기준시가 계산서」 (인쇄 서식)</span>
-        <span>{open ? "▲" : "▼"}</span>
+        <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(open)}</span>
       </button>
       <div className={`${open ? "block" : "hidden print:block"} bg-white p-3 text-black`}>
         {model.instances.map((inst, i) => (
