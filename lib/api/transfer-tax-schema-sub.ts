@@ -76,15 +76,16 @@ const nblResidenceHistoryRawSchema = z.object({
   hasResidentRegistration: z.boolean(),
 });
 
-/** NBL 지목 — UI 노출 6값 (빌더가 nblLandType truthy시만 전송하므로 "" 미포함) */
+/** NBL 지목 — UI 노출 6값. 무조건 사업용 의제(§168의14③) 성립 시 빌더가 지목 "" 로 전송 → "" 허용 */
 export const NBL_UI_LAND_TYPE_VALUES = [
   "farmland", "forest", "pasture", "housing_site", "villa_land", "other_land",
 ] as const;
 
 export const nonBusinessLandRawSchema = z.object({
-  // 필수 (빌더 가드: nblUseDetailedJudgment && nblLandType && nblZoneType && acquisitionArea && acquisitionDate)
+  // 필수 (빌더 가드: nblUseDetailedJudgment && acquisitionArea && acquisitionDate,
+  //  + 지목·용도지역은 무조건 의제 미성립 시 필수 — 의제 성립 시 "" 허용)
   nblUseDetailedJudgment: z.boolean(),
-  nblLandType: z.enum(NBL_UI_LAND_TYPE_VALUES),
+  nblLandType: z.enum(NBL_UI_LAND_TYPE_VALUES).or(z.literal("")),
   nblZoneType: z.string(),
   acquisitionArea: z.string(),
   acquisitionDate: z.string(),

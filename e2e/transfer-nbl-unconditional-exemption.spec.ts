@@ -90,4 +90,68 @@ test.describe("비사업용 토지 무조건 의제 — UI가 엔진 판정 반�
 
     console.log("✅ NBL 무조건 의제 — 미충족 시 지목별 유지, 충족 시 건너뜀 확인");
   });
+
+  // 회귀: 의제 충족(지목 비활성) 상태에서 계산 진행 시 "지목을 선택" 검증 차단이 없어야 한다.
+  // (수정 전 버그: UI는 지목 비활성인데 validate가 지목 필수 요구 → 계산 불가)
+  test("공익수용 충족 + 지목 미선택 → 계산 통과 + 결과에 사업용 판정 표시", async ({ page }) => {
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    // 양도일 2024-05-01
+    await page.getByTestId("transfer-date").getByLabel("연도").fill("2024");
+    await page.getByTestId("transfer-date").getByLabel("월").fill("05");
+    await page.getByTestId("transfer-date").getByLabel("일").fill("01");
+
+    await expandAssetSection(page, 1);
+    await expandAssetSection(page, 2);
+    await expandAssetSection(page, 3);
+
+    // 자산: 단순토지 → 독립 나대지 → 면적
+    await page.getByRole("button", { name: "단순토지" }).click();
+    await page.getByText("독립 나대지", { exact: true }).click();
+    await page.getByPlaceholder("면적 입력").first().fill("300");
+
+    // 양도가액
+    await inputByLabel(page, "양도가액 (원)").fill("1000000000");
+
+    // 취득원인 매매 → 실거래(환산 미토글) → 취득가액 + 취득일 2018-01-01
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await inputByLabel(page, "취득가액 (원)").fill("400000000");
+    await page.getByLabel("연도", { exact: true }).nth(2).fill("2018");
+    await page.getByLabel("월", { exact: true }).nth(2).fill("01");
+    await page.getByLabel("일", { exact: true }).nth(2).fill("01");
+
+    // 보유 상황 → 비사업용 스위치 → 판정 도움 → 공익수용 토글 + 고시일 2005(가목 충족)
+    await page.getByRole("button", { name: "보유 상황" }).first().click();
+    await page.getByRole("switch", { name: /비사업용 토지/ }).click();
+    await page.getByText("판정 도움 필요", { exact: true }).click();
+    await page.getByRole("switch", { name: /공익사업으로 수용/ }).click();
+    const noticeGroup = page.locator('label:has-text("사업인정고시일")').locator("xpath=..");
+    await noticeGroup.getByLabel("연도", { exact: true }).fill("2005");
+    await noticeGroup.getByLabel("월", { exact: true }).fill("01");
+    await noticeGroup.getByLabel("일", { exact: true }).fill("01");
+
+    // 충족 + 지목 비활성 확인 (지목 미선택 상태)
+    await expect(page.getByText("요건 충족")).toBeVisible();
+    await expect(page.getByTestId("nbl-per-category")).toHaveClass(/pointer-events-none/);
+
+    // 감면·공제 → 가산세 → 계산하기
+    await page.getByRole("button", { name: "감면·공제" }).first().click();
+    await page.getByRole("button", { name: "가산세" }).first().click();
+
+    const calcResp = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    const resp = await calcResp;
+    // 수정 전에는 클라이언트 검증이 차단해 POST 자체가 발생하지 않음 → 이 대기가 timeout(=버그)
+    expect(resp.ok(), `계산 API ${resp.status()} — 지목 검증 차단 의심`).toBe(true);
+
+    // 결과: 비사업용토지 판정 카드(사업용/무조건 의제) 표시 + 지목 오류 없음
+    await expect(page.getByText("비사업용토지 판정 결과")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/지목을 선택하세요/)).toHaveCount(0);
+
+    console.log("✅ NBL 무조건 의제 — 지목 미선택이어도 계산 통과 + 결과 판정 표시 확인");
+  });
 });

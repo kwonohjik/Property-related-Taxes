@@ -8,7 +8,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type {
   NblExemptionEval,
   ToggleExemptionStatus,
-} from "./unconditional-exemption-status";
+} from "@/lib/calc/nbl-unconditional-exemption-status";
 
 export interface UnconditionalExemptionSectionProps {
   asset: AssetForm;
