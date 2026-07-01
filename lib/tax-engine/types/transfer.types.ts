@@ -58,6 +58,10 @@ export type { RedevelopmentInfo, RedevelopmentResult, RedevelopmentBranchDetail,
 import type { FamilyBusinessInheritanceTransferInput } from "../transfer-tax-family-business";
 export type { FamilyBusinessInheritanceTransferInput, FamilyBusinessCgtDetail } from "../transfer-tax-family-business";
 
+// ── 수정신고(경정) 타입 (800줄 정책 — sibling 파일 분리) ──
+import type { AmendmentInput } from "./transfer-amendment.types";
+export type { AmendmentInput, AmendmentDetail, AmendmentUnderReductionMode } from "./transfer-amendment.types";
+
 export interface TransferTaxInput {
   /** 물건 종류 */
   propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building" | "general_building_unit" | "general_building" | "redevelopment_apt";
@@ -514,6 +518,9 @@ export interface TransferTaxInput {
 
   /** 가업상속공제 §97의2④ 의제 취득가액 입력 (선택). 미제공 시 일반 §97 산식 불변. */
   familyBusinessInheritance?: FamilyBusinessInheritanceTransferInput;
+
+  /** 수정신고(경정) 입력 (선택). 제공 시 추가납부세액·가산세 산출 (국세기본법 §45·§48). */
+  amendment?: AmendmentInput;
 }
 
 // TransferReduction union — transfer-reduction-input.types.ts로 분리 (800줄 정책, 2026-06-11)

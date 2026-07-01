@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 // LawArticleModal은 EngineStepsSubToggle로 이전되었으나, 감면 상세 카드 인용 링크화를 위해 재도입 (2026-06-15)
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
@@ -274,6 +275,8 @@ export function TransferTaxResultView({
             </p>
             <p className="text-2xl font-bold mt-1">납부세액 0</p>
           </div>
+        ) : result.amendmentDetail ? (
+          <AmendmentResultCard detail={result.amendmentDetail} fullTotalTax={result.totalTax} />
         ) : (
           <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
             <p className="text-sm font-medium text-muted-foreground mb-1">총 납부세액</p>

@@ -37,7 +37,10 @@ export function extractBusinessKey(
     case "transfer": {
       const addr = extractAddress(inputData);
       const date = extractTransferDate(inputData);
-      return addr || date ? `addr:${addr ?? ""}|${date ?? ""}` : null;
+      if (!addr && !date) return null;
+      // 수정신고는 주소·양도일이 당초와 동일 → |amend 접미로 당초 record 덮어쓰기 방지
+      const suffix = inputData.amendmentMode === true ? "|amend" : "";
+      return `addr:${addr ?? ""}|${date ?? ""}${suffix}`;
     }
     case "acquisition": {
       // jibun/road는 acquisition FormState top-level → extractAddress 동작

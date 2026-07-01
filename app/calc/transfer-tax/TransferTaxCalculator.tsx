@@ -493,6 +493,15 @@ export default function TransferTaxCalculator({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+      {formData.amendmentMode && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50/60 px-4 py-3 text-sm text-amber-900 print:hidden dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+          <p className="font-semibold">📝 수정신고 작성 중</p>
+          <p className="mt-0.5 text-xs leading-relaxed">
+            당초 신고 기준으로 불러왔습니다. 양도가액·취득가액·필요경비를 수정하세요.
+            당초 결정세액은 마지막 단계에서 자동 차감됩니다.
+          </p>
+        </div>
+      )}
       {/* 헤더 */}
       <div className="mb-6 print:hidden">
         <p className="text-xs text-muted-foreground mb-1">한국 부동산 세금 계산기</p>
