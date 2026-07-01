@@ -10,6 +10,7 @@
  */
 
 import { Suspense, useMemo, useState } from "react";
+import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { useSearchParams } from "next/navigation";
 
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -113,6 +114,7 @@ function FamilyBusinessPostMgmtPageInner() {
     sanitizeAmountParam(searchParams.get("originalDeduction"), FB_CAP_30Y),
   );
   const [deathDate, setDeathDate] = useState(searchParams.get("deathDate") ?? "");
+  const [amendOpen, setAmendOpen] = useState(false);
   const [filingDeadline, setFilingDeadline] = useState(searchParams.get("filingDeadline") ?? "");
   const [ofzExemptionActive, setOfzExemptionActive] = useState(searchParams.get("ofz") === "1");
   const [usedDirectInput, setUsedDirectInput] = useState(searchParams.get("direct") === "1");
@@ -445,15 +447,23 @@ function FamilyBusinessPostMgmtPageInner() {
               <div className="rounded-md border border-amber-300 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-300">
                 ⏰ <strong>신고·납부 기한 (§18의2⑨)</strong>: {amendment.amendmentDeadline}까지 (사유발생 월말 + 6개월)
               </div>
-              <details>
-                <summary className="text-xs font-semibold cursor-pointer">▶ 상속세 수정신고 데이터 (별지 제9호서식)</summary>
-                <ul className="mt-2 space-y-1 text-[11px]">
+              <div>
+                <button
+                  type="button"
+                  aria-expanded={amendOpen}
+                  onClick={() => setAmendOpen((v) => !v)}
+                  className="flex items-center gap-2 text-xs font-semibold"
+                >
+                  <span>상속세 수정신고 데이터 (별지 제9호서식)</span>
+                  <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(amendOpen)}</span>
+                </button>
+                <ul className={`${amendOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-[11px]`}>
                   <li className="flex justify-between"><span className="text-muted-foreground">추가 결정세액</span><span className="font-mono tabular-nums">{formatKRW(amendment.additionalDeterminedTax)}</span></li>
                   <li className="flex justify-between"><span className="text-muted-foreground">이자상당액 가산세</span><span className="font-mono tabular-nums">{formatKRW(amendment.interestPenalty)}</span></li>
                   <li className="flex justify-between"><span className="text-muted-foreground">양도세 환원 공제(기납부)</span><span className="font-mono tabular-nums">{formatKRW(amendment.cgtCreditReceived)}</span></li>
                   <li className="flex justify-between font-semibold"><span>최종 납부세액</span><span className="font-mono tabular-nums">{formatKRW(amendment.netPayable)}</span></li>
                 </ul>
-              </details>
+              </div>
             </div>
           )}
         </section>
