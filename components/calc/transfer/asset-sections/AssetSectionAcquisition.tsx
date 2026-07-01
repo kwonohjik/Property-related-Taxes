@@ -61,15 +61,8 @@ export function AssetSectionAcquisition({
 
   return (
     <>
-      {/* 취득 원인 + 원인별 세부 입력 (별도 파일로 분리 — 800줄 정책) */}
-      <CompanionAcquisitionCauseSection
-        asset={asset}
-        onChange={onChange}
-        transferDate={transferDate}
-        isNewConstruction={isNewConstruction}
-      />
-
-      {/* 토글 B — 같은 물건 지분 분할 취득 (첫 자산 idx===0만 진입점) */}
+      {/* 토글 B — 같은 물건 지분 분할 취득 (첫 자산 idx===0만 진입점).
+          취득시기·취득원인이 지분마다 다른 최상위 분기이므로 취득원인·취득일보다 앞에 배치. */}
       {isFirst && (
         <>
           <ToggleCard
@@ -120,6 +113,14 @@ export function AssetSectionAcquisition({
           </Dialog>
         </>
       )}
+
+      {/* 취득 원인 + 원인별 세부 입력 (별도 파일로 분리 — 800줄 정책) */}
+      <CompanionAcquisitionCauseSection
+        asset={asset}
+        onChange={onChange}
+        transferDate={transferDate}
+        isNewConstruction={isNewConstruction}
+      />
 
       {/* 공유 지분율 — 항상 노출 (단독 부분소유·함께양도·지분분할 전부. 구버전 ① 동작 보존).
           토글 B는 "여러 번 나눠 취득(형제 추가)" 진입점, 지분율 입력 자체는 모드 무관. */}

@@ -7,8 +7,10 @@ import { useCalcWizardStore, createDefaultTransferFormData } from "@/lib/stores/
 import { useMultiTransferStore, generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
 import { StepIndicator } from "@/components/calc/StepIndicator";
-import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } from "@/components/calc/shared/WizardSidebar";
+import { WizardSidebar, type WizardSidebarStep } from "@/components/calc/shared/WizardSidebar";
+import { REDUCTION_SHORT_LABELS } from "@/components/calc/transfer/reduction-short-labels";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
@@ -399,99 +401,95 @@ export default function TransferTaxCalculator({
     return null;
   })();
 
-  // ⑥ 장기임대주택 거주주택 비과세 특례 배지 (소령 §155⑳)
-  const rentalExceptionApplied = formData.assets.some(
-    (a) => a.rentalHousingException?.applyException === true,
-  );
-  const rentalExceptionScenario = rentalExceptionApplied
-    ? formData.assets.find((a) => a.rentalHousingException?.applyException)?.rentalHousingException?.scenario
-    : undefined;
+  // 취득가액/필요경비 표시값 — 우선순위:
+  //   직접입력 합계 → 상속 의제 → 계산 결과(환산취득가·적용경비) → 계산 전 "환산 프리뷰".
+  const singleResult = result?.mode === "single" ? result.result : null;
 
-  // 사례 46 — receiveOnly 모드 라벨 분기 (단건만 — 다중 자산 receive 모드는 후속 PR)
-  const isReceiveOnlySingle =
+  // 환산 프리뷰: 단건·단순(토지/주택, 분리·겸용·재개발·다필지 아님) 환산 모드에서
+  //   기준시가·양도가액이 모두 입력되면 엔진 유틸로 환산취득가·개산공제를 계산 전에 미리 산출.
+  //   (dual-truth 회피 — 공식 재구현 대신 calculateEstimatedAcquisitionPrice·applyRate 엔진 유틸 import)
+  const primaryAsset = formData.assets[0];
+  const canPreviewEstimated =
     formData.assets.length === 1 &&
-    formData.assets[0]?.assetKind === "redevelopment_apt" &&
-    formData.assets[0]?.redevReceiveOnlyMode === "yes";
+    !!primaryAsset &&
+    primaryAsset.useEstimatedAcquisition &&
+    !primaryAsset.parcelMode &&
+    !primaryAsset.isMixedUseHouse &&
+    !primaryAsset.hasSeperateLandAcquisitionDate &&
+    primaryAsset.transferType !== "burdened_gift" &&
+    (primaryAsset.assetKind === "land" || primaryAsset.assetKind === "housing");
+  const previewStdAcq = canPreviewEstimated ? parseAmount(primaryAsset.standardPriceAtAcq) : 0;
+  const previewStdTransfer = canPreviewEstimated ? parseAmount(primaryAsset.standardPriceAtTransfer) : 0;
+  const previewSalePrice = canPreviewEstimated ? parseAmount(primaryAsset.actualSalePrice) : 0;
+  const estAcqPreview =
+    previewStdAcq > 0 && previewStdTransfer > 0 && previewSalePrice > 0
+      ? calculateEstimatedAcquisitionPrice(previewSalePrice, previewStdAcq, previewStdTransfer)
+      : 0;
+  const estDeductionPreview = estAcqPreview > 0 ? applyRate(previewStdAcq, 0.03) : 0;
 
-  const sidebarSummary: WizardSidebarSummaryItem[] = [
-    ...(rentalExceptionApplied
-      ? [{
-          label: "[특례] §155⑳ 장기임대주택 거주주택 비과세",
-          value: rentalExceptionScenario === "B" ? "PHRP §161① 안분" : "거주주택 양도 (A)",
-        }]
-      : []),
-    ...(transferSummary.totalSalePrice > 0
-      ? [{
-          label: isReceiveOnlySingle ? "청산금 수령액 (§166①2호 가목)" : "양도가액 합계",
-          value: transferSummary.totalSalePrice,
-        }]
-      : []),
-    // Phase 2 (2026-05-12): 부담부증여 사이드바 메타 — silent fallback 금지 원칙 ⑥
-    ...(transferSummary.burdenedGift
-      ? [
-          {
-            label: transferSummary.burdenedGift.hasOvershoot
-              ? "⚠️ 부담부증여 양도가액 (인수 채무)"
-              : "부담부증여 양도가액 (인수 채무, §159)",
-            value: transferSummary.burdenedGift.assumedDebt,
-            highlight: transferSummary.burdenedGift.hasOvershoot,
-          },
-          {
-            label: "채무비율 (B/C)",
-            value: `${(transferSummary.burdenedGift.debtRatio * 100).toFixed(2)}%${
-              transferSummary.burdenedGift.hasOvershoot ? " — 1 초과! 상증법 §47③ 검토" : ""
-            }`,
-          },
-          // Phase 3: 증여세 결정세액 (result 도착 후만 노출)
-          ...(transferSummary.burdenedGift.giftFinalTax
-            ? [
-                {
-                  label: "증여세 결정세액 (수증자 부담, 상증법 §53·§56·§69)",
-                  value: transferSummary.burdenedGift.giftFinalTax,
-                },
-              ]
-            : []),
-        ]
-      : []),
-    // 겸용주택 미리보기: 주택비율·부수토지·안분 양도가액 (입력만으로 산출 가능)
-    ...(transferSummary.mixedUse && transferSummary.mixedUse.housingRatio > 0
-      ? [
-          {
-            label: "주택연면적 비율",
-            value: `${(transferSummary.mixedUse.housingRatio * 100).toFixed(2)}%`,
-          },
-          {
-            label: "주택부수토지",
-            value: `${transferSummary.mixedUse.residentialLandArea.toFixed(2)} ㎡`,
-          },
-          {
-            label: "상가부수토지",
-            value: `${transferSummary.mixedUse.commercialLandArea.toFixed(2)} ㎡`,
-          },
-        ]
-      : []),
-    ...(transferSummary.mixedUse?.housingTransferPrice
-      ? [{ label: "주택 양도가액(안분)", value: transferSummary.mixedUse.housingTransferPrice }]
-      : []),
-    ...(transferSummary.mixedUse?.commercialTransferPrice
-      ? [{ label: "상가 양도가액(안분)", value: transferSummary.mixedUse.commercialTransferPrice }]
-      : []),
-    ...(inheritedAcqSidebarValue !== null
-      ? [{ label: "상속 취득가액", value: inheritedAcqSidebarValue }]
-      : []),
-    ...(transferSummary.totalAcqPrice > 0
-      ? [{ label: "취득가액 합계", value: transferSummary.totalAcqPrice }]
-      : []),
-    ...(transferSummary.totalNecessaryExpense > 0
-      ? [{ label: "필요경비 합계", value: transferSummary.totalNecessaryExpense }]
-      : []),
-    ...(transferSummary.totalSalePrice > 0 && transferSummary.totalAcqPrice > 0
-      ? [{ label: "양도소득금액", value: transferSummary.netTransferIncome }]
-      : []),
-    ...(transferSummary.estimatedTax !== null
-      ? [{ label: "납부할 세액", value: transferSummary.estimatedTax, highlight: true }]
-      : []),
-  ];
+  const acqPriceDisplay =
+    transferSummary.totalAcqPrice > 0
+      ? transferSummary.totalAcqPrice
+      : inheritedAcqSidebarValue != null
+        ? inheritedAcqSidebarValue
+        : singleResult?.usedEstimatedAcquisition
+          ? singleResult.estimatedBase ?? 0
+          : estAcqPreview;
+  const expenseDisplay =
+    transferSummary.totalNecessaryExpense > 0
+      ? transferSummary.totalNecessaryExpense
+      : singleResult
+        ? singleResult.expenses ?? 0
+        : estDeductionPreview;
+
+  // 환산·감정 모드지만 프리뷰 불가(기준시가 미입력 등) + 계산 전 → "계산 후 표시" placeholder.
+  const acqPending =
+    acqPriceDisplay === 0 && !result &&
+    formData.assets.some((a) => a.useEstimatedAcquisition);
+  const expensePending =
+    expenseDisplay === 0 && !result &&
+    formData.assets.some((a) => a.useEstimatedAcquisition || a.isAppraisalAcquisition);
+
+  // 선택된 감면 조문 (자산별 reductions[] 합집합 — 중복 제거)
+  const appliedReductionTypes = Array.from(
+    new Set(formData.assets.flatMap((a) => a.reductions ?? []).map((r) => r.type)),
+  );
+
+  // 사이드바 요약 — 세로 스택 3금액 + 공제·감면 목록 (납부세액·양도소득금액 미표시).
+  // 값 > 0 이면 금액, 환산·감정 모드 계산 전이면 placeholder, 그 외엔 미표시.
+  const renderSidebarAmount = (label: string, value: number, pending = false) => {
+    if (value <= 0 && !pending) return null;
+    return (
+      <div className="text-sm">
+        <p className="text-muted-foreground">{label}</p>
+        {value > 0 ? (
+          <p className="text-right font-mono tabular-nums">{value.toLocaleString()}</p>
+        ) : (
+          <p className="text-right text-xs text-muted-foreground/50">계산 후 표시</p>
+        )}
+      </div>
+    );
+  };
+
+  const sidebarSummaryContent = (
+    <div className="space-y-2.5">
+      {renderSidebarAmount("양도가액", transferSummary.totalSalePrice)}
+      {renderSidebarAmount("취득가액", acqPriceDisplay, acqPending)}
+      {renderSidebarAmount("필요경비", expenseDisplay, expensePending)}
+      {appliedReductionTypes.length > 0 && (
+        <div className="border-t pt-2">
+          <p className="mb-1 text-sm text-muted-foreground">공제·감면 사항</p>
+          <ul className="space-y-0.5">
+            {appliedReductionTypes.map((t) => (
+              <li key={t} className="text-sm">
+                {REDUCTION_SHORT_LABELS[t]}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -605,12 +603,13 @@ export default function TransferTaxCalculator({
             />
           </div>
 
-          <div className="lg:grid lg:grid-cols-[16rem_1fr] lg:gap-8">
-            {/* 사이드바 (데스크톱) */}
+          <div className="lg:grid lg:grid-cols-[11rem_1fr] lg:gap-8">
+            {/* 사이드바 (데스크톱) — 폭 11rem(기존 16rem 대비 ≈30%↓) */}
             <WizardSidebar
               title="양도소득세"
               steps={sidebarSteps}
-              summary={sidebarSummary}
+              summaryContent={sidebarSummaryContent}
+              className="w-44"
             />
 
             {/* 본문 */}

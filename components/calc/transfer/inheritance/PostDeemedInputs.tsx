@@ -223,11 +223,12 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
         >
           {asset.useSupplementaryHelper && (
             <div className="space-y-3">
-              {/* 토지 */}
+              {/* 토지 — 개별공시지가·면적·보충적평가액 1행 (StandardPriceInput 표준 레이아웃 준용).
+                  단가·면적 각 1/4, 보충적평가액(계산 결과) 2/4. items-start 상단 정렬. */}
               <div className="space-y-2 rounded-md border border-border bg-background p-2.5">
                 <p className="text-xs font-medium text-muted-foreground">토지</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <FieldCard label="개별공시지가" unit="원/㎡">
+                <div className="grid grid-cols-4 items-start gap-2">
+                  <FieldCard label="개별공시지가" unit="원/㎡" stacked>
                     <CurrencyInput
                       label=""
                       hideUnit
@@ -236,18 +237,22 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
                       placeholder="원/㎡"
                     />
                   </FieldCard>
-                  <FieldCard label="면적" unit="㎡">
+                  <FieldCard label="면적" unit="㎡" stacked>
                     <DecimalInput
                       value={asset.supplementaryLandArea}
                       onChange={(v) => handleLandAreaChange(v)}
                     />
                   </FieldCard>
+                  <div className="col-span-2">
+                    <FieldCard label="토지 보충적평가액" unit="원" hint="공시지가 × 면적" stacked>
+                      <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+                        {landTotal
+                          ? landTotal
+                          : <span className="text-muted-foreground/40 text-xs">단가·면적 입력 후 자동 계산</span>}
+                      </div>
+                    </FieldCard>
+                  </div>
                 </div>
-                {landTotal && (
-                  <p className="text-[11px] text-muted-foreground">
-                    토지 보충적평가액: {landTotal}원
-                  </p>
-                )}
               </div>
 
               {/* 건물·주택 */}

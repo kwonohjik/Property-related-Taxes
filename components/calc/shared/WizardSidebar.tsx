@@ -21,8 +21,12 @@ export interface WizardSidebarSummaryItem {
 export interface WizardSidebarProps {
   steps: WizardSidebarStep[];
   summary?: WizardSidebarSummaryItem[];
+  /** summary 배열 대신 렌더할 커스텀 요약 영역 (스택·목록형). 지정 시 summary 무시. */
+  summaryContent?: ReactNode;
   title?: string;
   forceShow?: boolean;
+  /** aside 클래스 override (기본 폭 w-64). tailwind-merge로 w-* 덮어씀. */
+  className?: string;
 }
 
 function renderValue(value: number | string | null, unit?: string): string {
@@ -107,8 +111,10 @@ function SummaryRow({ item }: { item: WizardSidebarSummaryItem }) {
 export function WizardSidebar({
   steps,
   summary,
+  summaryContent,
   title,
   forceShow = false,
+  className,
 }: WizardSidebarProps) {
   return (
     <aside
@@ -116,7 +122,8 @@ export function WizardSidebar({
       className={cn(
         "w-64 shrink-0 space-y-3",
         !forceShow && "hidden lg:block",
-        "lg:sticky lg:top-20 lg:self-start"
+        "lg:sticky lg:top-20 lg:self-start",
+        className
       )}
     >
       {title && (
@@ -135,12 +142,16 @@ export function WizardSidebar({
         </ul>
       </nav>
 
-      {summary && summary.length > 0 && (
-        <div className="rounded-lg border bg-card px-4 py-3 space-y-2">
-          {summary.map((item, i) => (
-            <SummaryRow key={i} item={item} />
-          ))}
-        </div>
+      {summaryContent ? (
+        <div className="rounded-lg border bg-card px-4 py-3">{summaryContent}</div>
+      ) : (
+        summary && summary.length > 0 && (
+          <div className="rounded-lg border bg-card px-4 py-3 space-y-2">
+            {summary.map((item, i) => (
+              <SummaryRow key={i} item={item} />
+            ))}
+          </div>
+        )
       )}
     </aside>
   );
