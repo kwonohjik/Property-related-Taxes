@@ -129,19 +129,14 @@ export function assessSelfCultivationReduction(
     );
   }
 
-  // 요건 3: 면적 요건 — 20,000㎡ 이하
+  // 요건 3: 면적 — 논·밭·과수원 30,000㎡(지특령 §3②3호). 초과 시 감면 전액 거부가 아니라
+  // "그 초과부분만을 경감대상에서 제외"(부분감면). 초과분 비율만큼 경감대상 세액을 축소한다.
   const farmlandArea = input.farmlandArea;
-  if (farmlandArea !== undefined && farmlandArea > ACQUISITION_CONST.SELF_CULTIVATION_MAX_AREA) {
-    ineligibleReasons.push(
-      `취득 농지 면적 초과 (현재 ${farmlandArea.toLocaleString()}㎡, 요건 ${ACQUISITION_CONST.SELF_CULTIVATION_MAX_AREA.toLocaleString()}㎡ 이하)`
-    );
-    warnings.push(
-      `면적 초과분(${(farmlandArea - ACQUISITION_CONST.SELF_CULTIVATION_MAX_AREA).toLocaleString()}㎡)은 감면 제외. ` +
-      `부분 감면이 가능한지 여부는 세무사 확인 권장.`
-    );
-  }
+  const maxArea = ACQUISITION_CONST.SELF_CULTIVATION_MAX_AREA;
+  const isAreaExceeded =
+    farmlandArea !== undefined && farmlandArea > maxArea && farmlandArea > 0;
 
-  // 요건 불충족 시 감면 불가
+  // 요건 불충족(면적 외) 시 감면 불가
   if (ineligibleReasons.length > 0) {
     return {
       isEligible: false,
@@ -152,9 +147,21 @@ export function assessSelfCultivationReduction(
     };
   }
 
-  // 감면액 계산: 취득세 본세 × 50%
+  // 경감대상 본세: 면적 한도 초과 시 한도까지의 비율만 경감대상 (초과분 제외)
+  const eligibleBaseTax = isAreaExceeded
+    ? Math.floor((input.acquisitionTax * maxArea) / (farmlandArea as number))
+    : input.acquisitionTax;
+
+  if (isAreaExceeded) {
+    warnings.push(
+      `취득 농지 면적(${(farmlandArea as number).toLocaleString()}㎡)이 경감대상 한도 ${maxArea.toLocaleString()}㎡ 초과 — ` +
+      `초과분은 경감대상에서 제외되어 한도 비율(${maxArea.toLocaleString()}㎡분)만 감면 적용 (지특령 §3②3호).`
+    );
+  }
+
+  // 감면액 계산: 경감대상 본세 × 50%
   const reductionAmount = Math.floor(
-    input.acquisitionTax * ACQUISITION_CONST.SELF_CULTIVATION_REDUCTION_RATE
+    eligibleBaseTax * ACQUISITION_CONST.SELF_CULTIVATION_REDUCTION_RATE
   );
 
   // 사후 관리 안내 (추징 사유)

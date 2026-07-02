@@ -162,8 +162,8 @@ describe("assessMajorShareholder — 과점주주 간주취득", () => {
   });
 
   it("과점주주 지분율 증가 (55% → 70%): 증가분 15%만 과세", () => {
-    // 이미 과점주주 55% → 70%로 증가: 증가분 15% 과세
-    // 부동소수점: 0.70 - 0.55 = 0.14999... → Math.floor(10억 × 0.14999...) = 149,999,999
+    // 이미 과점주주 55% → 70%로 증가: 증가분 15% 과세.
+    // [L4] 부동소수 뺄셈(0.70−0.55=0.14999…) 노이즈를 제거해 정확히 10억×15%=150,000,000
     const result = assessMajorShareholder({
       corporateAssetValue: 1_000_000_000,
       prevShareRatio: 0.55,
@@ -172,7 +172,7 @@ describe("assessMajorShareholder — 과점주주 간주취득", () => {
     });
     expect(result.isSubjectToTax).toBe(true);
     expect(result.taxableRatio).toBeCloseTo(0.15);
-    expect(result.deemedTaxBase).toBe(149_999_999); // Math.floor(10억 × (0.70-0.55))
+    expect(result.deemedTaxBase).toBe(150_000_000); // 10억 × 15% (부동소수 오차 정정)
     expect(result.warnings[0]).toContain("증가분");
   });
 

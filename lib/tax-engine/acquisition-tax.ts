@@ -26,9 +26,10 @@ import {
   decideTaxRate,
   calcLinearInterpolationTax,
   calcTaxWithAdditional,
-  calcBurdenedGiftTax,
+  type AdditionalTaxResult,
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
+import { computeBurdenedGiftResult } from "./acquisition-tax-burdened";
 import {
   applySpecialRate,
   isValidSpecialRateType,
@@ -149,6 +150,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
         base.prevShareRatio = d.prevShareRatio;
         base.newShareRatio = d.newShareRatio;
         base.taxableRatio = d.taxableRatio;
+        base.corporateAssetValue = d.corporateAssetValue;
       } else if (deemedResult.detail) {
         const d = deemedResult.detail as DeemedLandCategoryResult | DeemedRenovationResult;
         base.prevStandardValue = d.prevStandardValue;
@@ -247,12 +249,19 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     ? input.specialRateType
     : undefined;
 
+  // §11①8 유상거래 주택 여부 — 세율특례 시 (표준−2%)가 아니라 해당세율 × 50% (§15① 단서).
+  // §15① 특례 중 유상거래 주택(§11①8)은 환매(§15①1호)뿐 — 재산분할·공유물분할·상속특례·
+  // 건축물이전·합병은 유상거래가 아니므로 §11①8 미해당(그대로 basicRate−2%).
+  const isOnerousHousingForSpecial =
+    specialRateType === "redemption" && input.propertyType === "housing";
+
   const specialRateResult = applySpecialRate(
     basicRateDecision.appliedRate,
     specialRateType,
     {
       isCorpMetro: effectiveCorpMetro,
       isHeadquarterOrFactorySurcharge: effectiveHqSurcharge,
+      isOnerousHousing: isOnerousHousingForSpecial,
     }
   );
 
@@ -261,13 +270,11 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     warnings.push(specialRateResult.message);
   }
 
-  // §15 세율특례가 적용된 경우 basicRate 보정
-  // 단, §13①② 법인 중과가 이미 적용된 경우 corp 세율을 우선
+  // §15 세율특례가 적용된 경우 basicRate 보정.
+  // 법인 §13①② 중과는 corp 세율로 여기서 덮지 않는다 — effectiveBasicRate는
+  // (1) 사치성 §13⑦ 산식의 '표준세율' 기준, (2) 비중과 최종세율의 기준이므로
+  // 표준세율이어야 한다. 법인 중과와의 경합은 아래 finalRate에서 max로 반영한다.
   const effectiveBasicRate = (() => {
-    if (corpSurchargeResult.isSurcharged && corpSurchargeResult.surchargeRate !== undefined) {
-      // §13①② 중과가 있으면 corp 세율 우선 (§15 특례보다 중과 세율이 높음)
-      return corpSurchargeResult.surchargeRate;
-    }
     if (specialRateResult.isApplied) {
       return specialRateResult.appliedRate;
     }
@@ -317,37 +324,36 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   warnings.push(...surchargeDecision.warnings);
   legalBasis.push(...surchargeDecision.legalBasis);
 
-  // §13①② 법인·공장 중과가 있으면 그 세율을 최종 세율로 우선 사용
-  // (§13의2 다주택 중과와 §13①② 중과는 중복 적용 안 되며 높은 것이 적용됨)
+  // §13①② 법인·공장 중과와 §13의2 다주택·§13⑤⑦ 사치성 중과가 경합하면
+  // 더 높은 세율을 최종 세율로 적용한다(중복 적용이 아니라 max).
+  // (기존 코드는 corp 세율을 무조건 우선해 §13의2①(법인주택 12%)·§13⑦(사치성) 등
+  //  더 높은 중과를 침묵 override하는 결함이 있었음.)
   const finalRate = (() => {
+    const nonCorpRate = resolveFinalRate(effectiveBasicRate, surchargeDecision);
     if (corpSurchargeResult.isSurcharged && corpSurchargeResult.surchargeRate !== undefined) {
-      // §13의2 다주택 중과보다 법인·공장 중과를 우선
-      return corpSurchargeResult.surchargeRate;
+      return Math.max(corpSurchargeResult.surchargeRate, nonCorpRate);
     }
-    return resolveFinalRate(effectiveBasicRate, surchargeDecision);
+    return nonCorpRate;
   })();
 
   // ── Step 7: 세액 계산 ──
   let acquisitionTax: number;
   let burdenedGiftBreakdown: BurdenedGiftBreakdown | undefined;
+  // [M5] 부담부증여는 부가세도 유상/무상 분리 계산 → 여기에 담아 아래 additional 대체
+  let burdenedAdditional: AdditionalTaxResult | undefined;
 
   // P1-6 적용 시 effectiveInput.acquisitionCause === "gift"로 변환되어 분기 미진입.
   if (effectiveInput.acquisitionCause === "burdened_gift" && taxBaseResult.breakdown) {
-    // 부담부증여: 유상/무상 분리 계산
-    const { onerousTaxBase = 0, gratuitousTaxBase = 0 } = taxBaseResult.breakdown;
-    const { onerousTax, gratuitousTax } = calcBurdenedGiftTax(
-      onerousTaxBase,
-      gratuitousTaxBase,
-      input.propertyType,
-      taxBase
+    // 부담부증여: 유상/무상 분리 계산 (§13의2 중과 + 부가세 분리는 헬퍼에 위임)
+    const bgResult = computeBurdenedGiftResult(
+      input,
+      taxBaseResult.breakdown,
+      taxBase,
+      resolvedHouseCount
     );
-    acquisitionTax = onerousTax + gratuitousTax;
-    burdenedGiftBreakdown = {
-      onerousTaxBase,
-      onerousTax,
-      gratuitousTaxBase,
-      gratuitousTax,
-    };
+    acquisitionTax = bgResult.acquisitionTax;
+    burdenedGiftBreakdown = bgResult.breakdown;
+    burdenedAdditional = bgResult.additional; // [M5] 유상/무상 분리 부가세
   } else if (
     basicRateDecision.rateType === "linear_interpolation" &&
     !surchargeDecision.isSurcharged &&
@@ -375,7 +381,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     return undefined;
   })();
 
-  const additional = calcTaxWithAdditional(
+  const additional = burdenedAdditional ?? calcTaxWithAdditional(
     taxBase,
     finalRate,
     acquisitionTax,
@@ -383,7 +389,9 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     input.areaSqm,
     {
       acquisitionCause: effectiveInput.acquisitionCause,
-      isSurcharged: surchargeDecision.isSurcharged,
+      // 법인 §13①② 중과도 isSurcharged로 취급 → 교육세 비중과 (표준세율−2%)×20% 분기
+      // 대신 종전 0.4% 분기 유지 (법인 교육세 정확성은 별건 — 본 수정 범위 밖).
+      isSurcharged: surchargeDecision.isSurcharged || corpSurchargeResult.isSurcharged,
       surchargeType: surchargeTypeForEdu,
       isRuralRegion: input.isRuralRegion,
     }

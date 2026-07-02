@@ -69,14 +69,8 @@ export function Step5({
             />
           }
         >
-          <ToggleCard
-            tone="rose"
-            size="sm"
-            title="수도권 주택"
-            description="취득가액 한도 4억 (비수도권 3억)"
-            checked={form.isMetropolitan}
-            onCheckedChange={(v) => set("isMetropolitan", v)}
-          />
+          {/* [L3] '수도권 주택 4억/3억' 토글 제거 — 2022 개정으로 폐지된 구 규정이며
+              현행은 12억 단일 한도(계산 미반영·카드 본문과 모순되던 사문화 컨트롤). */}
 
           <ToggleCard
             tone="violet"

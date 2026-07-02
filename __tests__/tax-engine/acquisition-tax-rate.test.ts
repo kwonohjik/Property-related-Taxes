@@ -140,9 +140,15 @@ describe("getBasicRate — 상속", () => {
     expect(rate).toBe(0.028);
   });
 
-  it("비주택 상속: 4%", () => {
+  it("비주택(농지 외) 상속: 2.8% (§11①1나)", () => {
+    // 상속 부동산은 §11①1: 농지 2.3%(가) / 농지 외 2.8%(나). 4%(§11①7나)는 유상 기타 전용.
     const { rate } = getBasicRate("land", "inheritance", 300_000_000);
-    expect(rate).toBe(0.04);
+    expect(rate).toBe(0.028);
+  });
+
+  it("건물 상속: 2.8% (§11①1나)", () => {
+    const { rate } = getBasicRate("building", "inheritance", 300_000_000);
+    expect(rate).toBe(0.028);
   });
 
   it("농지 상속: 2.3%", () => {
@@ -186,10 +192,10 @@ describe("getBasicRate — 간주취득", () => {
     expect(rate).toBe(0.02);
   });
 
-  it("건물 개수(deemed_renovation): 원시취득에 해당 → 2.8% (§11①2호 가목)", () => {
-    // 건물 개수는 원시취득이므로 2.8% 적용 (구 2% 아님)
+  it("건물 개수(deemed_renovation): 중과기준세율 2% (§15②1호)", () => {
+    // 개수로 인한 취득은 §15②1호 중과기준세율 2% (면적 증가분만 §11③ 원시취득 2.8%)
     const { rate, isLinearInterpolation } = getBasicRate("building", "deemed_renovation", 50_000_000);
-    expect(rate).toBe(0.028);
+    expect(rate).toBe(0.02);
     expect(isLinearInterpolation).toBe(false);
   });
 });
@@ -375,7 +381,7 @@ describe("calcLocalEducationTax (P4-1 주택 유상거래 분기)", () => {
     expect(result).toBe(2_000_000);
   });
 
-  it("주택 증여 (무상) — 기본 0.4%: 5억×2%×20%=2,000,000원", () => {
+  it("주택 증여 (무상) — §151①1 본문 (3.5%−2%)×20%: 5억×0.3%=1,500,000원", () => {
     const result = calcLocalEducationTax({
       taxBase: 500_000_000,
       appliedRate: 0.035,
@@ -384,6 +390,6 @@ describe("calcLocalEducationTax (P4-1 주택 유상거래 분기)", () => {
       acquisitionCause: "gift",
       isSurcharged: false,
     });
-    expect(result).toBe(2_000_000);
+    expect(result).toBe(1_500_000);
   });
 });

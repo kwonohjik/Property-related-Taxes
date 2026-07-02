@@ -85,12 +85,16 @@ export function getBasicRate(
 } {
   // ── 상속 ──
   if (acquisitionCause === "inheritance") {
-    // 주택 2.8% (§11①5), 농지 2.3% (§11①5 단서), 그 외 4% (§11①7)
-    const rate = propertyType === "housing"
-      ? 0.028
-      : propertyType === "land_farmland"
-        ? 0.023  // 농지 상속: 2.3% (§11①5 단서) — inheritance_farmland 원인과 동일 세율
-        : 0.04;
+    // 지방세법 §11①1: 상속으로 인한 부동산 취득 — 가. 농지 2.3% / 나. 농지 외의 것 2.8%
+    // (4%는 §11①7나 '그 밖의 원인'=유상 기타 전용이므로 상속 부동산에는 적용 불가)
+    const rate =
+      propertyType === "land_farmland"
+        ? 0.023  // 농지 상속(§11①1가): 2.3% — inheritance_farmland 원인과 동일 세율
+        : propertyType === "housing" ||
+            propertyType === "land" ||
+            propertyType === "building"
+          ? 0.028  // 농지 외 부동산 상속(§11①1나): 2.8% (주택·비농지 토지·건물)
+          : 0.04;  // 부동산 외(차량·선박 등)는 §12 등 별도 — 종전 처리 유지
     return { rate, isLinearInterpolation: false, legalBasis: ACQUISITION.BASIC_RATE };
   }
   if (acquisitionCause === "inheritance_farmland") {
@@ -110,9 +114,10 @@ export function getBasicRate(
 
   // ── 간주취득 ──
   if (acquisitionCause === "deemed_renovation") {
-    // 건물 개수(改修)는 원시취득에 해당 (지방세법 §11①2호 가목 — 건축물의 건축·개수)
-    // 원시취득 기본세율 2.8% 적용
-    return { rate: 0.028, isLinearInterpolation: false, legalBasis: ACQUISITION.BASIC_RATE };
+    // 개수(改修)로 인한 취득: 지방세법 §15②1호 — 중과기준세율(2%) 적용.
+    // (면적이 증가하는 개수는 §11③에 따라 그 증가분만 원시취득(2.8%)으로 보나,
+    //  현행 UI는 면적 증가 여부를 입력받지 않으므로 개수 본칙 2%를 적용한다.)
+    return { rate: 0.02, isLinearInterpolation: false, legalBasis: ACQUISITION.DEEMED_ACQUISITION }; // 2%
   }
   if (acquisitionCause === "deemed_land_category" || acquisitionCause === "deemed_major_shareholder") {
     // 지목변경(§7④) 및 과점주주(§7⑤): 2% 적용
@@ -285,9 +290,19 @@ export function calcRuralSpecialTax(input: AdditionalTaxInput): number {
  * 그 외: 과세표준 × 2% × 20% = 과세표준 × 0.4%
  */
 export function calcLocalEducationTax(input: AdditionalTaxInput): number {
-  const { taxBase, acquisitionTax, propertyType, acquisitionCause, isSurcharged, surchargeType } = input;
+  const { taxBase, acquisitionTax, appliedRate, propertyType, acquisitionCause, isSurcharged, surchargeType } = input;
 
-  // [P4-2] 사치성 중과세 매트릭스 (지방세법 §151④ — 사치성 부분 별도 가산)
+  // [M3] §151①1 본문 괄호: 취득물건이 §15②에 해당하는 경우(개수·§7④ 지목변경 등 가액증가·
+  // §7⑤ 과점주주 간주취득)는 지방교육세 과세대상에서 제외한다 → 0원.
+  const isDeemedAcquisition =
+    acquisitionCause === "deemed_renovation" ||
+    acquisitionCause === "deemed_land_category" ||
+    acquisitionCause === "deemed_major_shareholder";
+  if (isDeemedAcquisition) {
+    return 0;
+  }
+
+  // [P4-2] 사치성 중과세 매트릭스 (지방세법 §151①1가 — 본문의 300% 가산분 반영)
   if (surchargeType === "luxury_solo") {
     // 사치성 단독: 과세표준 × 1.4% (표준 0.4% + 사치성 1.0%)
     return Math.floor(taxBase * 0.014);
@@ -298,7 +313,7 @@ export function calcLocalEducationTax(input: AdditionalTaxInput): number {
   }
 
   // [P4-1] 주택 유상거래 + 비중과: 본세 × 50% × 20% = 본세 × 10%
-  // 지방세법 §151①1나: §11①8 가목 세율(1~3%) 적용 취득세액의 50%의 20%
+  // 지방세법 §151①1 본문 괄호: §11①8 세율(1~3%) 적용 취득세액의 50%의 20%
   const isHousingOnerous =
     propertyType === "housing" &&
     ["purchase", "exchange", "auction", "in_kind_investment"].includes(acquisitionCause ?? "");
@@ -307,8 +322,21 @@ export function calcLocalEducationTax(input: AdditionalTaxInput): number {
     return Math.floor(acquisitionTax * 0.5 * 0.2);
   }
 
-  // 그 외 (무상취득·비주택·중과세): 표준세율분 × 20%
-  return Math.floor(taxBase * ACQUISITION_CONST.RURAL_STANDARD_RATE * ACQUISITION_CONST.EDU_RATE);
+  // [H2] §13의2 다주택 중과(§151①1나): §11①7나(4%)에서 중과기준세율(2%)을 뺀 2% 적용액의
+  // 20% = 과세표준 × 0.4% 고정. (중과 세율이 아니라 표준 기준의 나목 산식)
+  if (isSurcharged) {
+    return Math.floor(taxBase * ACQUISITION_CONST.RURAL_STANDARD_RATE * ACQUISITION_CONST.EDU_RATE);
+  }
+
+  // [H2] §151①1 본문: 그 외(상속·무상·원시·비주택 유상 등 비중과) =
+  // 과세표준 × (표준세율 − 중과기준세율 2%) × 20%. 고정 0.4%가 아니라 실제 세율 기준.
+  // 부동소수 오차(0.03−0.02=0.00999…로 1원 과소) 방지: 농특세와 동일한 10만분율 정수 연산.
+  const RATE_SCALE = 100_000;
+  const ratePoints = Math.round(appliedRate * RATE_SCALE);
+  const standardRatePoints = Math.round(ACQUISITION_CONST.RURAL_STANDARD_RATE * RATE_SCALE);
+  const excessRatePoints = Math.max(0, ratePoints - standardRatePoints);
+  const eduBaseAmount = Math.floor((taxBase * excessRatePoints) / RATE_SCALE); // (표준−2%)×과세표준
+  return Math.floor(eduBaseAmount * ACQUISITION_CONST.EDU_RATE); // × 20%
 }
 
 /** 하위 호환 래퍼 — taxBase만 전달 시 구 동작 유지 */
@@ -372,28 +400,42 @@ export function calcBurdenedGiftTax(
   onerousTaxBase: number,
   gratuitousTaxBase: number,
   propertyType: PropertyObjectType,
-  acquisitionValue: number
+  acquisitionValue: number,
+  surchargeRates?: {
+    /** 유상분 §13의2① 다주택 중과세율 (해당 시). 없으면 매매 표준세율(6~9억 선형보간 포함) */
+    onerousRate?: number;
+    /** 무상분 §13의2② 증여 중과세율 (해당 시). 없으면 증여 3.5% */
+    gratuitousRate?: number;
+  }
 ): {
   onerousTax: number;
   gratuitousTax: number;
+  onerousRate: number;
+  gratuitousRate: number;
 } {
-  // 유상 부분: 매매세율 — 세율 구간 판정은 전체 취득가액 기준 (지방세법 § 취득가액 기준 세율 결정)
-  const { rate: onerousRate, isLinearInterpolation } = getBasicRate(propertyType, "purchase", acquisitionValue);
-
+  // 유상 부분: 다주택 중과세율이 있으면 그 세율(flat), 없으면 매매세율
+  // (세율 구간 판정은 전체 취득가액 기준 — 지방세법 §11①8 취득당시가액 기준)
   let onerousTax: number;
-  if (isLinearInterpolation) {
-    // 6~9억 선형보간 구간: 세율 = (전체×2 − 9억)/300억. 이를 5자리 float로 반올림해
-    // 곱하면 유상분에서 최대 ~2,300원 과소(납세자 유리하나 법령 불일치).
-    // 유상분 × 전체기준 보간세율을 BigInt로 정밀 계산 (linearInterpolationRate와 동일 분수).
-    // isLinearInterpolation=true ⇒ 6억<acquisitionValue<9억 ⇒ (전체×2−9억)>3억>0 (음수 없음).
-    const numerator = BigInt(onerousTaxBase) * (BigInt(acquisitionValue) * 2n - 900_000_000n);
-    onerousTax = Number(numerator / 30_000_000_000n);
-  } else {
+  let onerousRate: number;
+  if (surchargeRates?.onerousRate !== undefined) {
+    onerousRate = surchargeRates.onerousRate;
     onerousTax = Math.floor(onerousTaxBase * onerousRate);
+  } else {
+    const basic = getBasicRate(propertyType, "purchase", acquisitionValue);
+    onerousRate = basic.rate;
+    if (basic.isLinearInterpolation) {
+      // 6~9억 선형보간 구간: 유상분 × 전체기준 보간세율을 BigInt로 정밀 계산.
+      // isLinearInterpolation=true ⇒ 6억<acquisitionValue<9억 ⇒ (전체×2−9억)>3억>0 (음수 없음).
+      const numerator = BigInt(onerousTaxBase) * (BigInt(acquisitionValue) * 2n - 900_000_000n);
+      onerousTax = Number(numerator / 30_000_000_000n);
+    } else {
+      onerousTax = Math.floor(onerousTaxBase * onerousRate);
+    }
   }
 
-  // 무상 부분: 증여세율 3.5%
-  const gratuitousTax = Math.floor(gratuitousTaxBase * 0.035);
+  // 무상 부분: 증여 중과세율(§13의2②)이 있으면 그 세율, 없으면 증여 3.5%
+  const gratuitousRate = surchargeRates?.gratuitousRate ?? 0.035;
+  const gratuitousTax = Math.floor(gratuitousTaxBase * gratuitousRate);
 
-  return { onerousTax, gratuitousTax };
+  return { onerousTax, gratuitousTax, onerousRate, gratuitousRate };
 }

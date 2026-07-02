@@ -9,7 +9,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { FormState, OwnedHouseInfo as FormOwnedHouseInfo } from "@/components/calc/acquisition/shared";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
-import type { HouseCountInput, OwnedHouseInfo as EngineOwnedHouseInfo, RightAsset, OfficeAsset } from "@/lib/tax-engine/house-count/types";
+import type { HouseCountInput, OwnedHouseInfo as EngineOwnedHouseInfo, RightAsset, OfficeAsset, PendingAcquisition } from "@/lib/tax-engine/house-count/types";
 
 // ============================================================
 // 헬퍼
@@ -115,6 +115,26 @@ function buildHouseCountInput(form: FormState): HouseCountInput | undefined {
     }
   }
 
+  // [H9] 취득 대상 주택(주택 취득 시)을 pendingAcquisition으로 전달 → 자동 주택수에 +1 반영.
+  // 미전달 시 취득 주택이 누락돼 다주택 중과 임계(2·3주택)를 놓친다.
+  const isHousingAcq = form.propertyType === "housing";
+  const pendingAcquisition: PendingAcquisition | undefined = isHousingAcq
+    ? {
+        isMetropolitan: form.isMetropolitanRegion,
+        acquisitionValue:
+          parseAmount(form.reportedPrice) ?? parseAmount(form.standardValue) ?? 0,
+        areaSqm: form.areaSqm ? parseFloat(form.areaSqm) || undefined : undefined,
+        acquiredViaRight: form.acquiredViaRight || undefined,
+        rightAcquisitionDate: strOrUndef(form.rightAcquisitionDate),
+        isHansiBenefitNewBuild: form.isHansiBenefitNewBuild || undefined,
+        isHansiBenefitLeaseRegistered: form.isHansiBenefitLeaseRegistered || undefined,
+        isHansiBenefitUnsoldApt: form.isHansiBenefitUnsoldApt || undefined,
+      }
+    : undefined;
+
+  // [H10] 주택 수 산정 기준일 = 취득일(잔금일 우선, 없으면 계약일). 미전달 시 엔진이 오늘로 defaulting.
+  const referenceDate = strOrUndef(form.balancePaymentDate) ?? strOrUndef(form.contractDate);
+
   return {
     houses,
     rights,
@@ -122,6 +142,8 @@ function buildHouseCountInput(form: FormState): HouseCountInput | undefined {
     // household 멤버 개별 정보는 FormState 미지원 → 빈 배열 (separateHouseholdReason 단일 필드로 대체)
     household: { members: [] },
     trustedHouseCount: parseInt(form.trustedHouseCount) || 0,
+    pendingAcquisition,
+    referenceDate,
   };
 }
 
@@ -188,8 +210,10 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     // 조정대상지역
     if (form.isRegulatedArea) body.isRegulatedArea = true;
 
-    // 수도권 여부 (1억/2억 한도)
-    if (form.isMetropolitanRegion) body.isMetropolitanRegion = true;
+    // 수도권 여부 (1억/2억 한도) — false도 반드시 전송(mirror-pattern).
+    // `if (…) = true`로 false를 drop하면 엔진 기본값으로 반전되어 비수도권 주택이
+    // 수도권(1억)으로 오판돼 1~2억 저가주택 중과배제를 상실한다.
+    body.isMetropolitanRegion = form.isMetropolitanRegion;
 
     // 정비구역
     if (form.isUrbanRegenerationArea) body.isUrbanRegenerationArea = true;
@@ -394,7 +418,12 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     const dMsd = form.deemedMajorShareholderDate
       ? strOrUndef(form.deemedMajorShareholderDate)
       : undefined;
-    if (dMsd) body.majorShareholderDate = dMsd;
+    if (dMsd) {
+      body.majorShareholderDate = dMsd;
+      // [L2] 취득시기 = 과점주주 도달일 → balancePaymentDate에 매핑
+      // (deemed_land·deemed_reno와 동일. 미설정 시 timing이 오늘로 defaulting해 취득일·신고기한 오표시)
+      body.balancePaymentDate = dMsd;
+    }
   }
 
   if (isDeemedLand) {

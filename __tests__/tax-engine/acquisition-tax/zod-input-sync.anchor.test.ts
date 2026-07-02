@@ -67,7 +67,9 @@ describe("[AT-ZOD] Zod 스키마 ↔ 엔진 입력 동기화", () => {
     expect(viaRoute.reductionAmount).toBe(direct.reductionAmount);
     // 농지 매매 3% = 15,000,000 본세 × 50% 감면 (수정 전에는 strip으로 감면 0)
     expect(viaRoute.reductionAmount).toBe(7_500_000);
-    expect(viaRoute.totalTaxAfterReduction).toBe(10_000_000);
+    // 감면후본세 7,500,000 + 농특세 500,000 + 교육세 1,000,000 = 9,000,000
+    // (교육세는 §151①1 본문 (3%−2%)×20%=0.2% → 1,000,000. 구 고정 0.4%(2,000,000)는 오류였음)
+    expect(viaRoute.totalTaxAfterReduction).toBe(9_000_000);
   });
 
   it("[AT-ZOD-03] 읍·면 95㎡ 주택 — 농특세 100㎡ 한도 면제 유지", () => {

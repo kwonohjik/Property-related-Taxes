@@ -9,6 +9,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
+import { assessMajorShareholder } from "@/lib/tax-engine/acquisition-deemed";
 import type { FormState } from "../shared";
 
 interface Props {
@@ -30,15 +31,26 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
   /** 비과세 확정 케이스 — 상장법인 또는 설립 시 취득 (§7⑤) */
   const isExemptCase = isListed || isFounding;
 
-  // 과세 미리보기 계산
+  // 과세 미리보기 계산 — 엔진(assessMajorShareholder) 단일 진실 재사용.
+  // 폼은 지분율을 퍼센트(0~100)로, 엔진은 소수(0~1)로 다루므로 ÷100 변환.
   const corpVal = parseAmount(form.deemedMajorCorporateAssetValue ?? "") ?? 0;
   const prevR   = parseFloat(form.deemedMajorPrevShareRatio ?? "0") || 0;
   const newR    = parseFloat(form.deemedMajorNewShareRatio  ?? "0") || 0;
-  const taxableRatioPct = Math.max(0, newR - prevR);
-  const deemedBase = corpVal > 0 && taxableRatioPct > 0
-    ? Math.floor(corpVal * taxableRatioPct / 100)
-    : 0;
-  const showPreview = !isExemptCase && corpVal > 0 && newR > prevR;
+  const msh = !isExemptCase && corpVal > 0
+    ? assessMajorShareholder({
+        corporateAssetValue: corpVal,
+        prevShareRatio: prevR / 100,
+        newShareRatio: newR / 100,
+        isListed,
+        isMergerOrSplitShare: false, // UI 미노출 (엔진 분기 잔존)
+        isFoundingShare: isFounding,
+      })
+    : undefined;
+  // 최초 과점주주(비과점→과점)는 취득 후 전체 지분율, 이미 과점주주면 증가분만 과세
+  const isFirstMajor = prevR <= 50 && newR > 50;
+  const taxableRatioPct = (msh?.taxableRatio ?? 0) * 100;
+  const deemedBase = msh?.deemedTaxBase ?? 0;
+  const showPreview = msh?.isSubjectToTax === true;
 
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
@@ -158,7 +170,11 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
           <p className="font-medium text-amber-800">과세 미리보기</p>
           <p className="text-amber-700">
-            과세 지분율 = {prevR}% → {newR}% (증가 {taxableRatioPct.toFixed(2)}%p)
+            {isFirstMajor ? (
+              <>과세 지분율 = 취득 후 <span className="font-medium">전체 {newR}%</span> (최초 과점주주 — §7⑤)</>
+            ) : (
+              <>과세 지분율 = 증가분 {taxableRatioPct.toFixed(2)}%p ({prevR}% → {newR}%)</>
+            )}
           </p>
           <p className="text-amber-700">
             간주취득 과세표준 = {formatKRW(corpVal)} × {taxableRatioPct.toFixed(2)}% = {formatKRW(deemedBase)}

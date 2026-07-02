@@ -62,6 +62,16 @@ function addMonths(dateStr: string, months: number): string {
 }
 
 /**
+ * 해당 날짜가 속한 달의 말일 (YYYY-MM-DD)
+ * 다음 달 0일 = 이번 달 말일
+ */
+function endOfMonth(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + 1, 0);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * 오늘 날짜 (YYYY-MM-DD)
  */
 function today(): string {
@@ -175,7 +185,8 @@ export function determineAcquisitionTiming(
       warnings.push("상속개시일(사망일) 미입력 — 오늘 날짜를 임시 취득일로 사용합니다.");
       return {
         acquisitionDate: fallback,
-        filingDeadline: addMonths(fallback, ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
+        // 상속개시일이 속하는 달의 말일부터 6개월 (지방세법 §20①)
+        filingDeadline: addMonths(endOfMonth(fallback), ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
         timingBasis: "상속개시일 (피상속인 사망일, 미입력 — 임시)",
         legalBasis: ACQUISITION.ACQUISITION_TIMING,
         warnings,
@@ -184,8 +195,8 @@ export function determineAcquisitionTiming(
 
     return {
       acquisitionDate: inheritanceDate,
-      // 상속: 상속개시일로부터 6개월 이내 신고
-      filingDeadline: addMonths(inheritanceDate, ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
+      // 상속: 상속개시일이 속하는 달의 말일부터 6개월 이내 신고 (지방세법 §20①)
+      filingDeadline: addMonths(endOfMonth(inheritanceDate), ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
       timingBasis: `상속개시일(${inheritanceDate}) — 피상속인 사망일`,
       legalBasis: ACQUISITION.ACQUISITION_TIMING,
       warnings,
@@ -201,7 +212,8 @@ export function determineAcquisitionTiming(
       warnings.push("증여계약일 미입력 — 오늘 날짜를 임시 취득일로 사용합니다.");
       return {
         acquisitionDate: fallback,
-        filingDeadline: addDays(fallback, ACQUISITION_CONST.FILING_DEADLINE_DAYS),
+        // §20①: 무상취득(상속 제외)은 취득일 속한 달 말일부터 3개월
+        filingDeadline: addMonths(endOfMonth(fallback), ACQUISITION_CONST.GRATUITOUS_FILING_MONTHS),
         timingBasis: "증여계약일 (미입력 — 임시)",
         legalBasis: ACQUISITION.ACQUISITION_TIMING,
         warnings,
@@ -210,7 +222,8 @@ export function determineAcquisitionTiming(
 
     return {
       acquisitionDate: contractDate,
-      filingDeadline: addDays(contractDate, ACQUISITION_CONST.FILING_DEADLINE_DAYS),
+      // §20①: 무상취득·부담부증여(상속 제외)은 취득일이 속하는 달의 말일부터 3개월 이내 신고
+      filingDeadline: addMonths(endOfMonth(contractDate), ACQUISITION_CONST.GRATUITOUS_FILING_MONTHS),
       timingBasis: `증여계약일(${contractDate})`,
       legalBasis: ACQUISITION.ACQUISITION_TIMING,
       warnings,

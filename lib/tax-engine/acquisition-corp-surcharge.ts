@@ -270,7 +270,22 @@ export function assessCorpSurcharge(input: CorpSurchargeInput): CorpSurchargeRes
     };
   }
 
-  // 8. §13②: 대도시 법인 5년 이내 (표준세율 × 3 - 4%p)
+  // 8-0. 주택 유상취득은 §13의2①(법인 주택 중과)이 전속 적용 → §13②(대도시 법인) 미적용.
+  // §13②의 (표준세율×3 − 4%p) 산식을 주택 표준세율(1~3%)에 적용하면 음수→0%로 붕괴하므로
+  // 반드시 배제하고, 다주택 중과(assessSurcharge §13의2)가 최종세율을 결정하도록 넘긴다.
+  if (isMetroCorpSurcharge && input.propertyType === "housing") {
+    warnings.push(
+      "대도시 법인의 주택 유상취득은 §13②이 아닌 §13의2①(법인 주택 중과 12%)이 적용됩니다."
+    );
+    // isCorpMetroContext=true 유지: 고급주택 등 §13⑦(사치성+대도시법인) 판단에 필요.
+    return noSurcharge(
+      "대도시 법인 주택 취득 — §13의2① 적용 (§13② 미적용)",
+      false,
+      true
+    );
+  }
+
+  // 8. §13②: 대도시 법인 5년 이내 (표준세율 × 3 - 4%p) — 주택 외 부동산
   if (isMetroCorpSurcharge) {
     const multiplier = ACQUISITION_CONST.METRO_CORP_MULTIPLIER; // 3
     const deduction = ACQUISITION_CONST.METRO_CORP_DEDUCTION;   // 0.04

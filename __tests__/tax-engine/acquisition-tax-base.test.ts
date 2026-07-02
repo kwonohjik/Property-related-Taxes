@@ -56,15 +56,16 @@ describe("determineTaxBase — 유상취득", () => {
 // ============================================================
 
 describe("determineTaxBase — 무상취득 (상속)", () => {
-  it("상속 + 시가인정액 있음: 시가인정액 사용", () => {
+  it("상속 + 시가인정액 있어도: 시가표준액 강제 (§10의2②1호)", () => {
+    // 상속은 감정가(시가인정액)가 있어도 §4 시가표준액을 과세표준으로 강제
     const result = determineTaxBase(base({
       acquisitionCause: "inheritance",
       reportedPrice: 0,
       marketValue: 500_000_000,
       standardValue: 400_000_000,
     }));
-    expect(result.method).toBe("recognized_market");
-    expect(result.taxBase).toBe(500_000_000);
+    expect(result.method).toBe("standard_value");
+    expect(result.taxBase).toBe(400_000_000);
   });
 
   it("상속 + 시가인정액 없음: 시가표준액 사용", () => {

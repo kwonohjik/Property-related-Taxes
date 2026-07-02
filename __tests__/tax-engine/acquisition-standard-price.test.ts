@@ -208,9 +208,10 @@ describe("shouldUseStandardPrice", () => {
     expect(result.useStandardPrice).toBe(true);
   });
 
-  it("무상취득(상속) + 시가인정액 있음: 시가인정액 사용", () => {
+  it("무상취득(상속) + 시가인정액 있어도: 시가표준액 강제 (§10의2②1호)", () => {
+    // 상속은 시가인정액(감정가)이 있어도 §4 시가표준액을 강제 적용
     const result = shouldUseStandardPrice("inheritance", 0, 500_000_000, 450_000_000);
-    expect(result.useStandardPrice).toBe(false);
+    expect(result.useStandardPrice).toBe(true);
   });
 
   it("무상취득(증여) + 시가인정액 없음: 시가표준액 사용", () => {

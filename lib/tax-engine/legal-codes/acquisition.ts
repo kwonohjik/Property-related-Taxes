@@ -258,6 +258,8 @@ export const ACQUISITION_CONST = {
   SURCHARGE_GIFT_12: 0.12,
   /** 신고 기한 (일) */
   FILING_DEADLINE_DAYS: 60,
+  /** 무상취득(증여·부담부증여·기부, 상속 제외) 신고기한 — 취득일 속한 달 말일부터 3개월 (지방세법 §20①) */
+  GRATUITOUS_FILING_MONTHS: 3,
   /** 상속 신고 기한 (개월) */
   INHERITANCE_FILING_MONTHS: 6,
   /** 연부취득 최소 기간 (§6 제20호: 2년 이상) */
@@ -284,8 +286,8 @@ export const ACQUISITION_CONST = {
   SELF_CULTIVATION_REDUCTION_RATE: 0.5,
   /** 자경농지 감면 최소 영농 연수 (2년) */
   SELF_CULTIVATION_MIN_YEARS: 2,
-  /** 자경농지 최대 면적 (20,000 ㎡) */
-  SELF_CULTIVATION_MAX_AREA: 20_000,
+  /** 자경농지 경감대상 면적 한도 (논·밭·과수원 30,000㎡ — 지특령 §3②3호). 초과분만 경감 제외(부분감면) */
+  SELF_CULTIVATION_MAX_AREA: 30_000,
   /** 자경농지 거주지-농지 최대 거리 (30 km) */
   SELF_CULTIVATION_MAX_DISTANCE_KM: 30,
 
