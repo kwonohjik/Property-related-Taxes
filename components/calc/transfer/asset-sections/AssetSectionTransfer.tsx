@@ -15,6 +15,8 @@ interface Props {
   bundledSaleMode: BundledSaleMode;
   transferDate?: string;
   contractTotalPrice?: string;
+  /** 주 자산(assets[0]) — 증환지 증가분의 양도시 기준시가 live fallback 소스 */
+  primaryAsset?: AssetForm;
 }
 
 export function AssetSectionTransfer({
@@ -24,7 +26,20 @@ export function AssetSectionTransfer({
   bundledSaleMode,
   transferDate,
   contractTotalPrice,
+  primaryAsset,
 }: Props) {
+  // 증환지 증가분: 당초분(assets[0]) 양도시 기준시가에서 live fallback (증가분 추가 순서와 무관하게 자동).
+  // 사용자가 증가분 카드에서 직접 입력하면 자기 값이 우선(override). API·validate도 동일 fallback.
+  const isReplotInc = !!asset.isReplotIncrement && !!primaryAsset;
+  const fbPerSqm = isReplotInc ? (primaryAsset!.standardPricePerSqmAtTransfer || "") : "";
+  const effPerSqm = asset.standardPricePerSqmAtTransfer || fbPerSqm;
+  const fbTotal = (() => {
+    if (!isReplotInc) return "";
+    const p = parseFloat((fbPerSqm || "").replace(/,/g, ""));
+    const a = parseFloat((asset.transferArea || "").replace(/,/g, ""));
+    return p > 0 && a > 0 ? String(Math.floor(p * a)) : "";
+  })();
+  const effTotal = asset.standardPriceAtTransfer || fbTotal;
   return (
     <>
       {/*
@@ -67,7 +82,7 @@ export function AssetSectionTransfer({
           assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building" || asset.assetKind === "redevelopment_apt") ? "building" : asset.assetKind}
           actualSalePrice={asset.actualSalePrice}
           onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
-          standardPriceAtTransfer={asset.standardPriceAtTransfer}
+          standardPriceAtTransfer={effTotal}
           onStandardPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer: v })}
           singleMode={singleMode}
           jibun={asset.addressJibun || undefined}
@@ -79,7 +94,7 @@ export function AssetSectionTransfer({
           ownershipNumerator={asset.ownershipNumerator}
           ownershipDenominator={asset.ownershipDenominator}
           contractTotalPrice={contractTotalPrice}
-          standardPricePerSqmAtTransfer={asset.standardPricePerSqmAtTransfer}
+          standardPricePerSqmAtTransfer={effPerSqm}
           onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
         />
       )}

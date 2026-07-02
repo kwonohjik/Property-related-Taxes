@@ -731,7 +731,13 @@ export function validateAssetEntry(
       if (!a.actualSalePrice || parseAmount(a.actualSalePrice) <= 0)
         return `${label}: 계약서상 양도가액을 입력하세요.`;
     } else {
-      if (!a.standardPriceAtTransfer || parseAmount(a.standardPriceAtTransfer) <= 0)
+      // 증환지 증가분은 당초분(assets[0]) ㎡당 기준시가 × 증가분 면적으로 파생(live fallback) →
+      // 자기 standardPriceAtTransfer 없어도 통과 (UI/API와 동일 fallback, 모순 차단).
+      const replotIncDerivable =
+        a.isReplotIncrement &&
+        parseAmount(form.assets[0]?.standardPricePerSqmAtTransfer) > 0 &&
+        parseFloat((a.transferArea || "").replace(/,/g, "")) > 0;
+      if (!replotIncDerivable && (!a.standardPriceAtTransfer || parseAmount(a.standardPriceAtTransfer) <= 0))
         return `${label}: 양도시 기준시가를 입력하세요.`;
     }
   }

@@ -71,6 +71,8 @@ describe("증환지 증가분 자동복사 + 면적 정합 (Phase A+B)", () => {
     expect(parseFloat(patch.transferArea)).toBeCloseTo(32, 4);
     // 취득일 = 환지처분확정일 익일 (당초분에서 그대로)
     expect(patch.acquisitionDate).toBe("2007-04-27");
+    // Live fallback 마커 — 당초분 양도시 기준시가 파생 대상
+    expect(patch.isReplotIncrement).toBe(true);
 
     // 소재지 자동복사
     expect(patch.addressRoad).toBe("테헤란로 1");

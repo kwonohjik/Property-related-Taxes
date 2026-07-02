@@ -5,7 +5,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";
@@ -422,8 +422,20 @@ export function buildAssetPayload(
   transferDate: string,
   totalContractPrice?: number,
   totalTransferExpense?: number,
+  primary?: AssetForm,
 ) {
   const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause, asset.expropriationNoticeDate);
+
+  // 증환지 증가분: standardPriceAtTransfer 빈값 시 당초분(primary) ㎡당 × 증가분 면적 파생.
+  // UI live fallback(AssetSectionTransfer)과 동일 규칙 — 증가분 추가 순서 무관하게 안분 키 도달 보장.
+  const replotIncStdAtTransfer =
+    parseAmount(asset.standardPriceAtTransfer) > 0 || !asset.isReplotIncrement || !primary
+      ? undefined
+      : (() => {
+          const p = parseAmount(primary.standardPricePerSqmAtTransfer);
+          const a = parseFloat((asset.transferArea || "").replace(/,/g, ""));
+          return p > 0 && a > 0 ? Math.floor(p * a) : undefined;
+        })();
 
   // 감환지: acquisitionArea에 의제취득면적이 UI에서 이미 계산됨
   const effectiveLandArea = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined;
@@ -489,7 +501,7 @@ export function buildAssetPayload(
     standardPriceAtTransfer:
       parseAmount(asset.standardPriceAtTransfer) > 0
         ? parseAmount(asset.standardPriceAtTransfer)
-        : undefined,
+        : replotIncStdAtTransfer,
     standardPriceAtAcquisition:
       asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition && asset.standardPriceAtAcq
         ? parseAmount(asset.standardPriceAtAcq)

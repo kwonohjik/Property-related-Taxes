@@ -294,6 +294,7 @@ export function CompanionAssetCard({
           bundledSaleMode={bundledSaleMode}
           transferDate={transferDate}
           contractTotalPrice={contractTotalPrice}
+          primaryAsset={primaryAsset}
         />
       </AssetSection>
 

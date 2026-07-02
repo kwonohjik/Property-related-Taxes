@@ -174,6 +174,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     entitlementArea: "",
     allocatedArea: "",
     priorLandArea: "",
+    isReplotIncrement: false,
     isNonBusinessLand: false,
     nblUseDetailedJudgment: false,
     nblLandType: "",
