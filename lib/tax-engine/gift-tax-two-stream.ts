@@ -362,7 +362,9 @@ export function calcGiftTaxTwoStream(
     generationSkipDetail: surchargeResult.detail,
     priorGiftCreditDetail,
     reportingCredit: creditResult.filingCredit,
-    finalTax,
+    // 별지 최하단(⑫/⑱)은 일반분 산식 "⑦−⑩−⑪"이므로 일반 스트림 결정세액만 전달.
+    // 특례세액은 별도 카드(specialStreamTax)로 표시 (메인 경로 gift-tax.ts 규약과 동일).
+    finalTax: ordinaryFinalTax,
     hasPriorGifts: priorAggregation.matchedPriorGifts.length > 0,
     filingCreditBase: creditResult.filingCreditBase,
     foreignTaxCredit: creditResult.foreignTaxCredit,

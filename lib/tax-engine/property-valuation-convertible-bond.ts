@@ -64,7 +64,8 @@ function deriveAccruedInterest(item: EstateItem, valDate: Date): number {
   if (!item.cbInterestBaseDate || !item.cbPrincipal || !item.cbCouponRate) return 0;
   const days = differenceInDays(valDate, asDate(item.cbInterestBaseDate));
   if (days <= 0) return 0;
-  return floorMulDiv([item.cbPrincipal, item.cbCouponRate, days], 100 * 365);
+  // 율%는 소수(2.5·1.75 등) — floorMulDiv 내부 정수화(round)로 통째 반올림되지 않도록 1e4 스케일로 소수부 보존
+  return floorMulDiv([item.cbPrincipal, item.cbCouponRate * 10_000, days], 100 * 10_000 * 365);
 }
 
 /** 배당차액 §57③ — floor(1주당액면 × 배당률 × 주식수 × 일수/365), 사업연도개시~배당기산일 전일 */
@@ -81,7 +82,8 @@ function computeDividendDifference(item: EstateItem): number {
   const fyStart = parseISO(`${dividendBase.getFullYear()}-01-01`);
   const days = differenceInDays(dividendBase, fyStart);
   if (days <= 0) return 0;
-  return floorMulDiv([face, rate, shares, days], 100 * 365);
+  // 배당률%는 소수 — 1e4 스케일로 floorMulDiv 내부 반올림에 의한 소수부 소실 방지
+  return floorMulDiv([face, rate * 10_000, shares, days], 100 * 10_000 * 365);
 }
 
 /**

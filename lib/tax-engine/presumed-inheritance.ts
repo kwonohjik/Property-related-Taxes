@@ -95,7 +95,9 @@ export function evaluatePresumedItem(
     };
   }
 
-  const scrutinyAmount = total;
+  // §15①1호·시행령 §11①1호: 소명대상은 발동한 기간에 따라 결정된다.
+  // 2년 5억 임계 발동 시 2년 전액(1년+1~2년증분), 1년 2억 임계만 발동 시 1년 처분액만.
+  const scrutinyAmount = triggered2Y ? total : item.amountWithin1Y;
   const unverifiedAmount = Math.max(0, scrutinyAmount - item.verifiedUseAmount);
   const baseDeduction = Math.min(
     Math.floor(scrutinyAmount * BASE_DEDUCTION_RATE),
@@ -108,7 +110,9 @@ export function evaluatePresumedItem(
       label: `${label} — 소명대상 합계`,
       amount: scrutinyAmount,
       lawRef: INH.PRESUMPTION,
-      note: `1년 ${item.amountWithin1Y.toLocaleString()} + 2년 ${item.amountWithin2Y.toLocaleString()}`,
+      note: triggered2Y
+        ? `1년 ${item.amountWithin1Y.toLocaleString()} + 2년 ${item.amountWithin2Y.toLocaleString()}`
+        : `1년 처분액 ${item.amountWithin1Y.toLocaleString()} (2년 합 5억 미달 → 1~2년분 ${item.amountWithin2Y.toLocaleString()} 제외)`,
     },
     {
       label: "사용처 확인 금액",

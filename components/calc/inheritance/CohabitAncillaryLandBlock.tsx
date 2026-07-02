@@ -12,6 +12,7 @@
  * 800줄 정책: 별도 파일 분리 (HeirComposition/Step4 인라인 금지).
  */
 
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { AncillaryLandRegion } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -20,10 +21,12 @@ interface CohabitAncillaryLandBlockProps {
   ancillaryLandArea: string;
   buildingFootprintArea: string;
   ancillaryLandRegion: AncillaryLandRegion | "";
+  ancillaryLandStdPrice: string;
   onChange: (patch: {
     ancillaryLandArea?: string;
     buildingFootprintArea?: string;
     ancillaryLandRegion?: AncillaryLandRegion | "";
+    ancillaryLandStdPrice?: string;
   }) => void;
 }
 
@@ -50,23 +53,30 @@ const REGION_OPTIONS: { value: AncillaryLandRegion; label: string; hint: string 
   },
 ];
 
-/** 부수토지 3필드가 부분 입력 상태인지 확인 (validation 안내 전시용) */
+/** 부수토지 4필드가 부분 입력 상태인지 확인 (validation 안내 전시용) */
 function isPartial(
   area: string,
   footprint: string,
   region: AncillaryLandRegion | "",
+  landStdPrice: string,
 ): boolean {
-  const filledCount = [area, footprint, region].filter((v) => v !== "").length;
-  return filledCount > 0 && filledCount < 3;
+  const filledCount = [area, footprint, region, landStdPrice].filter((v) => v !== "").length;
+  return filledCount > 0 && filledCount < 4;
 }
 
 export function CohabitAncillaryLandBlock({
   ancillaryLandArea,
   buildingFootprintArea,
   ancillaryLandRegion,
+  ancillaryLandStdPrice,
   onChange,
 }: CohabitAncillaryLandBlockProps) {
-  const partial = isPartial(ancillaryLandArea, buildingFootprintArea, ancillaryLandRegion);
+  const partial = isPartial(
+    ancillaryLandArea,
+    buildingFootprintArea,
+    ancillaryLandRegion,
+    ancillaryLandStdPrice,
+  );
 
   // 한도 면적 미리보기
   const limitAreaPreview = (() => {
@@ -99,8 +109,9 @@ export function CohabitAncillaryLandBlock({
       {/* 아파트·공동주택 안내 */}
       <div className="rounded-md border border-sky-100 bg-sky-50 dark:border-sky-800 dark:bg-sky-900/10 p-2 text-[10px] text-sky-600 dark:text-sky-400 leading-relaxed">
         <strong>아파트·공동주택가격</strong>에는 부수토지가 포함되어 있어 이 항목을 입력하지
-        않아도 됩니다. 단독주택 대형토지를 별도 자산 항목으로 분리 입력한 경우에만 아래 세 항목을
-        모두 입력하세요.
+        않아도 됩니다. 단독주택 대형토지를 별도 자산 항목으로 분리 입력한 경우에만 아래 네 항목을
+        모두 입력하세요. 개별주택가격은 건물+토지 일체이므로, 초과분은 토지분 공시가격에서만
+        차감하고 건물분은 보존됩니다.
       </div>
 
       {/* 부수토지 실제 면적 */}
@@ -124,6 +135,16 @@ export function CohabitAncillaryLandBlock({
           value={buildingFootprintArea}
           onChange={(v) => onChange({ buildingFootprintArea: v })}
           placeholder="건물이 실제로 정착된 면적 입력 (㎡)"
+        />
+      </div>
+
+      {/* 부수토지 공시가격 (토지분) */}
+      <div className="space-y-1" data-testid="ancillary-land-std-price-input">
+        <CurrencyInput
+          label="부수토지 공시가격 (토지분, 원)"
+          value={ancillaryLandStdPrice}
+          onChange={(v) => onChange({ ancillaryLandStdPrice: v })}
+          hint="개별공시지가 × 부수토지 면적. 초과분은 이 토지분 가액에서만 차감(건물분 보존)."
         />
       </div>
 
@@ -180,8 +201,8 @@ export function CohabitAncillaryLandBlock({
           className="rounded-md border border-rose-200 bg-rose-50/60 dark:border-rose-700 dark:bg-rose-900/20 p-2 text-[10px] text-rose-600 dark:text-rose-400"
           data-testid="ancillary-land-partial-warning"
         >
-          ⚠ 부수토지 면적·건물 정착 면적·지역 구분 세 항목을 모두 입력하거나 모두 비워야 합니다.
-          부분 입력 시 계산 요청이 차단됩니다.
+          ⚠ 부수토지 면적·건물 정착 면적·지역 구분·부수토지 공시가격 네 항목을 모두 입력하거나
+          모두 비워야 합니다. 부분 입력 시 계산 요청이 차단됩니다.
         </div>
       )}
     </div>

@@ -192,6 +192,14 @@ export interface InheritanceDeductionInput {
    * ancillaryLandArea·buildingFootprintArea와 함께 전부 입력 또는 전부 미입력.
    */
   ancillaryLandRegion?: AncillaryLandRegion;
+
+  /**
+   * 주택부수토지 공시가격 (토지분만, 원) — §23의2① 초과분 차감의 기준가액.
+   * 개별주택가격(cohabitHouseStdPrice)은 건물+토지 일체이므로, 한도 초과분은 이 토지분 가액에서만
+   * 비례 차감하고 건물분은 보존한다(§23의2① 주택가액 전액 포함).
+   * ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion과 함께 전부 입력 또는 전부 미입력.
+   */
+  ancillaryLandStdPrice?: number;
 }
 
 /** 상속공제 계산 결과 */

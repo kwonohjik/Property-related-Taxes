@@ -31,6 +31,7 @@ function emptyForm(): ChecklistFormSlice {
     ancillaryLandArea: "",
     buildingFootprintArea: "",
     ancillaryLandRegion: "",
+    ancillaryLandStdPrice: "",
     farmingAssetValue: "",
     farming: undefined,
     familyBusinessValue: "",

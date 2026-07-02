@@ -304,6 +304,7 @@ export function Step4({
                 ancillaryLandArea={form.ancillaryLandArea}
                 buildingFootprintArea={form.buildingFootprintArea}
                 ancillaryLandRegion={form.ancillaryLandRegion}
+                ancillaryLandStdPrice={form.ancillaryLandStdPrice}
                 onChange={(patch) => set(patch)}
               />
             </>
