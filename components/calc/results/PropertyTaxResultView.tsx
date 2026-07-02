@@ -436,7 +436,7 @@ export function PropertyTaxResultView({ result }: Props) {
           />
           <TaxRow
             label={`공정시장가액비율 (${formatRate(fairMarketRatio)})`}
-            amount={Math.floor(publishedPrice * fairMarketRatio)}
+            amount={taxBaseBeforeCap ?? taxBase}
             sub
           />
           <TaxRow
@@ -495,7 +495,11 @@ export function PropertyTaxResultView({ result }: Props) {
         </h3>
         <div className="rounded-md border divide-y">
           <TaxRow
-            label={`적용 세율 (${formatRate(appliedRate)})`}
+            label={
+              appliedRate === 0
+                ? "누진세율 (구간별)"
+                : `적용 세율 (${formatRate(appliedRate)})`
+            }
             amount={calculatedTax}
             sub
           />

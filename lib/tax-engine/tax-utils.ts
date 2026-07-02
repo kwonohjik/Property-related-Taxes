@@ -123,6 +123,18 @@ export function applyRateFraction(amount: number, numer: number, denom: number):
 }
 
 /**
+ * 공정시장가액비율(소수 상수, 예 0.70) 적용 — floor(amount × ratio) 정확 정수.
+ *
+ * applyRate(amount, 0.70)는 0.70의 double 표현(0.6999999999999999…)으로 인해
+ * price × 70/100이 정수가 되는 입력(공시가격 7억 등)에서 Math.floor가 1원 과소산정된다.
+ * 정수 분수연산(applyRateFraction)으로 대체해 정확값을 보장. ratio는 소수 4자리까지 지원.
+ * (Math.round는 세액이 아닌 비율 상수 → 정수 분자 변환용 — "세법은 floor" 원칙 위반 아님)
+ */
+export function applyFairMarketRatio(amount: number, ratio: number): number {
+  return applyRateFraction(amount, Math.round(ratio * 10000), 10000);
+}
+
+/**
  * (a × b) ÷ c — round-half-up(소수 0.5 이상 올림). BigInt로 overflow·정밀도 안전.
  * 안분 산식이 floor 아닌 반올림인 경우(종부세 재산세 공제 §4의3 — 시행령 절사 미규정,
  * 교재·실무 반올림. 상속세 안분 bigIntRoundDiv과 동일 round-half-up).

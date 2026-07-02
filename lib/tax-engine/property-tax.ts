@@ -18,7 +18,7 @@
  *   determinedTax → 종부세 재산세공제 입력
  */
 
-import { applyRate } from "./tax-utils";
+import { applyRate, applyFairMarketRatio } from "./tax-utils";
 import { calcSurtax, calcInstallment } from "./property-tax-surtax";
 import { PROPERTY, PROPERTY_CONST, PROPERTY_CAL, COMPREHENSIVE_LAND } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -114,7 +114,7 @@ export function calcTaxBase(
   ) {
     const fairMarketRatio = PROPERTY_CONST.ONE_HOUSE_FMR_2022_RATIO;
     return {
-      taxBase: applyRate(publishedPrice, fairMarketRatio),
+      taxBase: applyFairMarketRatio(publishedPrice, fairMarketRatio),
       fairMarketRatio,
       legalBasis: PROPERTY.FAIR_MARKET_RATIO_ONE_HOUSE,
     };
@@ -134,7 +134,7 @@ export function calcTaxBase(
           ? PROPERTY_CONST.ONE_HOUSE_FMR_RATIO_2
           : PROPERTY_CONST.ONE_HOUSE_FMR_RATIO_3;
     return {
-      taxBase: applyRate(publishedPrice, fairMarketRatio),
+      taxBase: applyFairMarketRatio(publishedPrice, fairMarketRatio),
       fairMarketRatio,
       legalBasis: PROPERTY.FAIR_MARKET_RATIO_ONE_HOUSE,
     };
@@ -150,7 +150,7 @@ export function calcTaxBase(
     ? PROPERTY.FAIR_MARKET_RATIO_HOUSING
     : PROPERTY.FAIR_MARKET_RATIO_LAND;
 
-  const taxBase = applyRate(publishedPrice, fairMarketRatio);
+  const taxBase = applyFairMarketRatio(publishedPrice, fairMarketRatio);
 
   return { taxBase, fairMarketRatio, legalBasis };
 }
