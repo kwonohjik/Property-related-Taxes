@@ -400,28 +400,42 @@ export function calcBurdenedGiftTax(
   onerousTaxBase: number,
   gratuitousTaxBase: number,
   propertyType: PropertyObjectType,
-  acquisitionValue: number
+  acquisitionValue: number,
+  surchargeRates?: {
+    /** 유상분 §13의2① 다주택 중과세율 (해당 시). 없으면 매매 표준세율(6~9억 선형보간 포함) */
+    onerousRate?: number;
+    /** 무상분 §13의2② 증여 중과세율 (해당 시). 없으면 증여 3.5% */
+    gratuitousRate?: number;
+  }
 ): {
   onerousTax: number;
   gratuitousTax: number;
+  onerousRate: number;
+  gratuitousRate: number;
 } {
-  // 유상 부분: 매매세율 — 세율 구간 판정은 전체 취득가액 기준 (지방세법 § 취득가액 기준 세율 결정)
-  const { rate: onerousRate, isLinearInterpolation } = getBasicRate(propertyType, "purchase", acquisitionValue);
-
+  // 유상 부분: 다주택 중과세율이 있으면 그 세율(flat), 없으면 매매세율
+  // (세율 구간 판정은 전체 취득가액 기준 — 지방세법 §11①8 취득당시가액 기준)
   let onerousTax: number;
-  if (isLinearInterpolation) {
-    // 6~9억 선형보간 구간: 세율 = (전체×2 − 9억)/300억. 이를 5자리 float로 반올림해
-    // 곱하면 유상분에서 최대 ~2,300원 과소(납세자 유리하나 법령 불일치).
-    // 유상분 × 전체기준 보간세율을 BigInt로 정밀 계산 (linearInterpolationRate와 동일 분수).
-    // isLinearInterpolation=true ⇒ 6억<acquisitionValue<9억 ⇒ (전체×2−9억)>3억>0 (음수 없음).
-    const numerator = BigInt(onerousTaxBase) * (BigInt(acquisitionValue) * 2n - 900_000_000n);
-    onerousTax = Number(numerator / 30_000_000_000n);
-  } else {
+  let onerousRate: number;
+  if (surchargeRates?.onerousRate !== undefined) {
+    onerousRate = surchargeRates.onerousRate;
     onerousTax = Math.floor(onerousTaxBase * onerousRate);
+  } else {
+    const basic = getBasicRate(propertyType, "purchase", acquisitionValue);
+    onerousRate = basic.rate;
+    if (basic.isLinearInterpolation) {
+      // 6~9억 선형보간 구간: 유상분 × 전체기준 보간세율을 BigInt로 정밀 계산.
+      // isLinearInterpolation=true ⇒ 6억<acquisitionValue<9억 ⇒ (전체×2−9억)>3억>0 (음수 없음).
+      const numerator = BigInt(onerousTaxBase) * (BigInt(acquisitionValue) * 2n - 900_000_000n);
+      onerousTax = Number(numerator / 30_000_000_000n);
+    } else {
+      onerousTax = Math.floor(onerousTaxBase * onerousRate);
+    }
   }
 
-  // 무상 부분: 증여세율 3.5%
-  const gratuitousTax = Math.floor(gratuitousTaxBase * 0.035);
+  // 무상 부분: 증여 중과세율(§13의2②)이 있으면 그 세율, 없으면 증여 3.5%
+  const gratuitousRate = surchargeRates?.gratuitousRate ?? 0.035;
+  const gratuitousTax = Math.floor(gratuitousTaxBase * gratuitousRate);
 
-  return { onerousTax, gratuitousTax };
+  return { onerousTax, gratuitousTax, onerousRate, gratuitousRate };
 }

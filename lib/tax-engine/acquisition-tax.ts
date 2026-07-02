@@ -26,9 +26,10 @@ import {
   decideTaxRate,
   calcLinearInterpolationTax,
   calcTaxWithAdditional,
-  calcBurdenedGiftTax,
+  type AdditionalTaxResult,
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
+import { computeBurdenedGiftResult } from "./acquisition-tax-burdened";
 import {
   applySpecialRate,
   isValidSpecialRateType,
@@ -337,24 +338,21 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // ── Step 7: 세액 계산 ──
   let acquisitionTax: number;
   let burdenedGiftBreakdown: BurdenedGiftBreakdown | undefined;
+  // [M5] 부담부증여는 부가세도 유상/무상 분리 계산 → 여기에 담아 아래 additional 대체
+  let burdenedAdditional: AdditionalTaxResult | undefined;
 
   // P1-6 적용 시 effectiveInput.acquisitionCause === "gift"로 변환되어 분기 미진입.
   if (effectiveInput.acquisitionCause === "burdened_gift" && taxBaseResult.breakdown) {
-    // 부담부증여: 유상/무상 분리 계산
-    const { onerousTaxBase = 0, gratuitousTaxBase = 0 } = taxBaseResult.breakdown;
-    const { onerousTax, gratuitousTax } = calcBurdenedGiftTax(
-      onerousTaxBase,
-      gratuitousTaxBase,
-      input.propertyType,
-      taxBase
+    // 부담부증여: 유상/무상 분리 계산 (§13의2 중과 + 부가세 분리는 헬퍼에 위임)
+    const bgResult = computeBurdenedGiftResult(
+      input,
+      taxBaseResult.breakdown,
+      taxBase,
+      resolvedHouseCount
     );
-    acquisitionTax = onerousTax + gratuitousTax;
-    burdenedGiftBreakdown = {
-      onerousTaxBase,
-      onerousTax,
-      gratuitousTaxBase,
-      gratuitousTax,
-    };
+    acquisitionTax = bgResult.acquisitionTax;
+    burdenedGiftBreakdown = bgResult.breakdown;
+    burdenedAdditional = bgResult.additional; // [M5] 유상/무상 분리 부가세
   } else if (
     basicRateDecision.rateType === "linear_interpolation" &&
     !surchargeDecision.isSurcharged &&
@@ -382,7 +380,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     return undefined;
   })();
 
-  const additional = calcTaxWithAdditional(
+  const additional = burdenedAdditional ?? calcTaxWithAdditional(
     taxBase,
     finalRate,
     acquisitionTax,
