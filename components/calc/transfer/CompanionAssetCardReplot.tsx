@@ -135,15 +135,38 @@ export function ReplotIncreaseFields({
 
   function handleAddIncrease() {
     if (!increaseM2 || !onAddAsset) return;
+    const areaStr = increaseM2.toFixed(4);
+    // 양도당시 ㎡당 기준시가는 동일 필지라 복사, 총액은 증가분 면적으로 재계산(§166⑥ 안분 키)
+    const perSqm = parseFloat(asset.standardPricePerSqmAtTransfer || "");
+    const stdTotalAtTransfer =
+      isFinite(perSqm) && perSqm > 0 ? String(Math.floor(perSqm * increaseM2)) : "";
     onAddAsset({
       assetLabel: "증환지 증가분",
       assetKind: "land",
       acquisitionDate: asset.acquisitionDate,
-      acquisitionArea: increaseM2.toFixed(4),
-      transferArea: increaseM2.toFixed(4),
+      acquisitionArea: areaStr,
+      transferArea: areaStr,
       areaScenario: "same",
       acquisitionCause: "purchase",
       isPrimaryForHouseholdFlags: false,
+      // ── 당초분과 동일 필드 자동 복사 (동일 필지·동일 양도시점) ──
+      addressRoad: asset.addressRoad,
+      addressJibun: asset.addressJibun,
+      addressDetail: asset.addressDetail,
+      addressDong: asset.addressDong,
+      addressHo: asset.addressHo,
+      buildingName: asset.buildingName,
+      longitude: asset.longitude,
+      latitude: asset.latitude,
+      landNature: asset.landNature,
+      standardPricePerSqmAtTransfer: asset.standardPricePerSqmAtTransfer,
+      standardPriceAtTransfer: stdTotalAtTransfer,
+      standardPriceAtTransferLabel: asset.standardPriceAtTransferLabel,
+      regionCode: asset.regionCode,
+      isRegulatedAreaAtTransfer: asset.isRegulatedAreaAtTransfer,
+      acquisitionSigunguCode: asset.acquisitionSigunguCode,
+      nblLandSigunguCode: asset.nblLandSigunguCode,
+      nblLandSigunguName: asset.nblLandSigunguName,
     });
     setIncreaseAdded(true);
   }
@@ -156,41 +179,42 @@ export function ReplotIncreaseFields({
         증가분 자산을 자동 추가하여 취득가액을 별도 입력하세요.
       </p>
 
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium">환지처분확정일</label>
-        <DateInput
-          value={asset.replottingConfirmDate}
-          onChange={(v) => {
-            const acqDate = v ? calcDayAfter(v) : "";
-            onChange({ replottingConfirmDate: v, acquisitionDate: acqDate });
-          }}
-        />
-        {asset.replottingConfirmDate && (
-          <p className="text-xs text-blue-600">
-            취득일 = {asset.replottingConfirmDate} 다음날 자동 적용
-          </p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">
-            취득 당시 면적 (㎡)
-            <span title="환지처분 전 원래 보유 면적 (권리면적 기준)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">환지처분확정일</label>
+          <DateInput
+            value={asset.replottingConfirmDate}
+            onChange={(v) => {
+              const acqDate = v ? calcDayAfter(v) : "";
+              onChange({ replottingConfirmDate: v, acquisitionDate: acqDate });
+            }}
+          />
+          {asset.replottingConfirmDate && (
+            <p className="text-xs text-blue-600">
+              취득일 = {asset.replottingConfirmDate} 다음날 자동 적용
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            권리면적 (취득·양도 ㎡)
+            <span title="환지처분 전 권리면적 — 환지예정지 지정 시 받기로 한 면적. 이 면적까지는 원래 취득일이 적용되며, 당초분 자산의 취득·양도 면적이 됩니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
           <DecimalInput
             value={asset.acquisitionArea}
-            onChange={(v) => onChange({ acquisitionArea: v, entitlementArea: v })}
+            onChange={(v) => onChange({ acquisitionArea: v, entitlementArea: v, transferArea: v })}
+            data-testid="replot-inc-entitlement-area"
           />
         </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">
-            양도 당시 면적 (㎡)
-            <span title="이번 양도 면적 (증가분 제외, 권리면적 기준)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">
+            교부면적 (전체 받은 ㎡)
+            <span title="환지처분으로 실제 교부받은 전체 면적. 증환지는 교부>권리이며, 초과분(교부−권리)이 증가분 자산으로 분리됩니다. 당초분 자산의 양도면적은 권리면적입니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
           <DecimalInput
-            value={asset.transferArea}
-            onChange={(v) => onChange({ transferArea: v, allocatedArea: v })}
+            value={asset.allocatedArea}
+            onChange={(v) => onChange({ allocatedArea: v })}
+            data-testid="replot-inc-allocated-area"
           />
         </div>
       </div>
@@ -201,7 +225,7 @@ export function ReplotIncreaseFields({
             <span>✓</span>
             <span>
               증가분 자산 <strong>{increaseM2.toFixed(2)}㎡</strong>이 추가되었습니다.
-              아래 카드에서 취득가액을 입력하세요.
+              소재지·양도시 공시가격·토지 성격은 자동 복사됨 — 아래 카드에서 <strong>취득가액(청산금)</strong>만 입력하세요.
             </span>
           </div>
         ) : (
@@ -213,6 +237,7 @@ export function ReplotIncreaseFields({
               <button
                 type="button"
                 onClick={handleAddIncrease}
+                data-testid="replot-inc-add-btn"
                 className="w-full rounded-md border border-orange-300 bg-white px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors"
               >
                 + 증가분 {increaseM2.toFixed(2)}㎡ 자산 자동 추가
