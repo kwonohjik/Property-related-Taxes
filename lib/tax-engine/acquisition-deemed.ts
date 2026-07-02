@@ -132,8 +132,9 @@ export function assessMajorShareholder(
     taxableRatio = newShareRatio;
     warnings.push("최초 과점주주 취득: 취득 후 지분율 전체를 과세 기준으로 적용합니다.");
   } else {
-    // Case 3: 과점주주 → 지분율 증가: 증가분만 과세
-    taxableRatio = newShareRatio - prevShareRatio;
+    // Case 3: 과점주주 → 지분율 증가: 증가분만 과세.
+    // [L4] 부동소수 뺄셈 노이즈(0.6−0.3=0.2999…) 제거 — 과세표준 1원 과소 방지.
+    taxableRatio = Math.round((newShareRatio - prevShareRatio) * 1e12) / 1e12;
     if (taxableRatio <= 0) {
       return {
         isSubjectToTax: false,
@@ -157,6 +158,7 @@ export function assessMajorShareholder(
     prevShareRatio,
     newShareRatio,
     taxableRatio,
+    corporateAssetValue, // 결과 카드 시가표준액 행·산식 표시용
     legalBasis: ACQUISITION.DEEMED_ACQUISITION,
     warnings,
   };

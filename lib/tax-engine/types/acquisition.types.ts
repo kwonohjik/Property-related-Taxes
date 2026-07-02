@@ -691,6 +691,8 @@ export interface AcquisitionTaxResult {
     newShareRatio?: number;
     /** 과세 지분율 (0~1) — 최초 과점주주: 취득 후 전체, 추가 취득: 증가분 */
     taxableRatio?: number;
+    /** 법인 보유 과세대상 자산 시가표준액 합계 (과점주주 전용 — 결과 카드 산식 표시용) */
+    corporateAssetValue?: number;
     // 지목변경·건물개수 전용 필드
     /** 변경/개수 전 시가표준액 */
     prevStandardValue?: number;
@@ -744,6 +746,7 @@ export interface DeemedMajorShareholderResult {
   prevShareRatio: number;
   newShareRatio: number;
   taxableRatio: number;          // 과세 대상 지분율 (증가분 or 신규)
+  corporateAssetValue?: number;  // 법인 보유 과세대상 자산 시가표준액 합계 (산식 표시용)
   legalBasis: string;
   warnings: string[];
 }

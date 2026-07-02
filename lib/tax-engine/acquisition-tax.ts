@@ -150,6 +150,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
         base.prevShareRatio = d.prevShareRatio;
         base.newShareRatio = d.newShareRatio;
         base.taxableRatio = d.taxableRatio;
+        base.corporateAssetValue = d.corporateAssetValue;
       } else if (deemedResult.detail) {
         const d = deemedResult.detail as DeemedLandCategoryResult | DeemedRenovationResult;
         base.prevStandardValue = d.prevStandardValue;

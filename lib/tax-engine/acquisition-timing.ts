@@ -185,7 +185,8 @@ export function determineAcquisitionTiming(
       warnings.push("상속개시일(사망일) 미입력 — 오늘 날짜를 임시 취득일로 사용합니다.");
       return {
         acquisitionDate: fallback,
-        filingDeadline: addMonths(fallback, ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
+        // 상속개시일이 속하는 달의 말일부터 6개월 (지방세법 §20①)
+        filingDeadline: addMonths(endOfMonth(fallback), ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
         timingBasis: "상속개시일 (피상속인 사망일, 미입력 — 임시)",
         legalBasis: ACQUISITION.ACQUISITION_TIMING,
         warnings,
@@ -194,8 +195,8 @@ export function determineAcquisitionTiming(
 
     return {
       acquisitionDate: inheritanceDate,
-      // 상속: 상속개시일로부터 6개월 이내 신고
-      filingDeadline: addMonths(inheritanceDate, ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
+      // 상속: 상속개시일이 속하는 달의 말일부터 6개월 이내 신고 (지방세법 §20①)
+      filingDeadline: addMonths(endOfMonth(inheritanceDate), ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
       timingBasis: `상속개시일(${inheritanceDate}) — 피상속인 사망일`,
       legalBasis: ACQUISITION.ACQUISITION_TIMING,
       warnings,

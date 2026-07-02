@@ -418,7 +418,12 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     const dMsd = form.deemedMajorShareholderDate
       ? strOrUndef(form.deemedMajorShareholderDate)
       : undefined;
-    if (dMsd) body.majorShareholderDate = dMsd;
+    if (dMsd) {
+      body.majorShareholderDate = dMsd;
+      // [L2] 취득시기 = 과점주주 도달일 → balancePaymentDate에 매핑
+      // (deemed_land·deemed_reno와 동일. 미설정 시 timing이 오늘로 defaulting해 취득일·신고기한 오표시)
+      body.balancePaymentDate = dMsd;
+    }
   }
 
   if (isDeemedLand) {

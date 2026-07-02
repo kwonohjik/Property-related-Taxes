@@ -159,23 +159,27 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
             )}
             {detail.taxableRatio !== undefined && (
               <div className="flex justify-between text-muted-foreground">
-                <span>과세 지분율 (증가분)</span>
-                <span>{((detail.taxableRatio ?? 0) * 100).toFixed(2)}%p</span>
+                {/* [L6] 최초 과점주주는 취득 후 전체 지분율, 이미 과점주주면 증가분 */}
+                <span>
+                  과세 지분율 {(detail.prevShareRatio ?? 0) <= 0.5 && (detail.newShareRatio ?? 0) > 0.5 ? "(취득 후 전체)" : "(증가분)"}
+                </span>
+                <span>{((detail.taxableRatio ?? 0) * 100).toFixed(2)}%</span>
               </div>
             )}
-            {detail.prevStandardValue !== undefined && (
+            {detail.corporateAssetValue !== undefined && (
               <div className="flex justify-between text-muted-foreground">
                 <span>법인 보유 자산 시가표준액</span>
-                <span>{formatKRW(detail.prevStandardValue ?? 0)}</span>
+                <span>{formatKRW(detail.corporateAssetValue ?? 0)}</span>
               </div>
             )}
             <div className="border-t border-violet-100 pt-1 flex justify-between font-medium">
               <span>간주취득 과세표준</span>
               <span>{formatKRW(detail.deemedTaxBase)}</span>
             </div>
-            {detail.prevStandardValue !== undefined && detail.taxableRatio !== undefined && (
+            {/* [L6] 과점주주 산식 = 법인 시가표준액 × 과세 지분율 (기존 prevStandardValue는 지목변경 전용이라 항상 누락됐음) */}
+            {detail.corporateAssetValue !== undefined && detail.taxableRatio !== undefined && (
               <p className="text-xs text-muted-foreground">
-                {formatKRW(detail.prevStandardValue ?? 0)} × {((detail.taxableRatio ?? 0) * 100).toFixed(2)}% = {formatKRW(detail.deemedTaxBase)}
+                {formatKRW(detail.corporateAssetValue ?? 0)} × {((detail.taxableRatio ?? 0) * 100).toFixed(2)}% = {formatKRW(detail.deemedTaxBase)}
               </p>
             )}
           </div>

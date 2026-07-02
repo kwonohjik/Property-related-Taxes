@@ -101,22 +101,24 @@ describe("determineAcquisitionTiming — 유상취득", () => {
 // ============================================================
 
 describe("determineAcquisitionTiming — 상속", () => {
-  it("상속개시일(사망일) → 취득일, 신고기한 6개월", () => {
+  it("상속개시일(사망일) → 취득일, 신고기한 = 속한 달 말일부터 6개월 (§20①)", () => {
     const result = determineAcquisitionTiming({
       acquisitionCause: "inheritance",
       balancePaymentDate: "2024-06-01", // 사망일을 balancePaymentDate로 전달
     });
     expect(result.acquisitionDate).toBe("2024-06-01");
-    expect(result.filingDeadline).toBe("2024-12-01"); // 6개월 후
+    // 속한 달 말일(2024-06-30)부터 6개월 → 2024-12-30
+    expect(result.filingDeadline).toBe("2024-12-30");
   });
 
-  it("상속_농지도 동일 규칙 적용", () => {
+  it("상속_농지도 동일 규칙 적용 (말일부터 6개월)", () => {
     const result = determineAcquisitionTiming({
       acquisitionCause: "inheritance_farmland",
       balancePaymentDate: "2024-01-15",
     });
     expect(result.acquisitionDate).toBe("2024-01-15");
-    expect(result.filingDeadline).toBe("2024-07-15");
+    // 말일(2024-01-31)부터 6개월 → 2024-07-31
+    expect(result.filingDeadline).toBe("2024-07-31");
   });
 
   it("상속개시일 미입력: 오늘 날짜, 6개월 신고기한", () => {
@@ -126,10 +128,12 @@ describe("determineAcquisitionTiming — 상속", () => {
     const today = new Date().toISOString().slice(0, 10);
     expect(result.acquisitionDate).toBe(today);
     expect(result.warnings.some((w) => w.includes("미입력"))).toBe(true);
-    // 6개월 신고기한 확인
-    const sixMonthsLater = new Date(today);
-    sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
-    expect(result.filingDeadline).toBe(sixMonthsLater.toISOString().slice(0, 10));
+    // §20①: 상속개시일 속한 달 말일부터 6개월 (엔진 addMonths(endOfMonth(today), 6)와 동일)
+    const eom = new Date(today);
+    eom.setMonth(eom.getMonth() + 1, 0); // 이번 달 말일
+    const deadline = new Date(eom.toISOString().slice(0, 10));
+    deadline.setMonth(deadline.getMonth() + 6);
+    expect(result.filingDeadline).toBe(deadline.toISOString().slice(0, 10));
   });
 });
 
