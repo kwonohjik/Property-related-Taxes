@@ -386,7 +386,7 @@ export interface LandPreviousYearEquivalent {
 /**
  * 직전연도 종합부동산세상당액 자동계산 입력 (세부담상한 — 시행령 §5②).
  * previousYearTotalTax(직접입력)와 상호배타. 별지 제5호서식 부표를 재현하기 위한 입력.
- * v1 범위: 직전연도 단일 주택군(일반/1세대1주택). 직전연도 다주택 중과는 직접입력 모드 사용.
+ * 범위: 직전연도 일반/1세대1주택 + 다주택 중과 자동 판정(taxableHouseCount·isMultiHouseInAdjustedArea 입력 시).
  */
 // PreviousYearAutoInput → comprehensive-prior-year.types.ts (상단 re-export)
 
