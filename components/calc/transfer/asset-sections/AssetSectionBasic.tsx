@@ -332,7 +332,7 @@ export function AssetSectionBasic({
                   }
                 }}
               >
-                <SelectTrigger className="h-9 w-full">
+                <SelectTrigger className="h-9 w-full" data-testid="area-scenario-select">
                   <span className="text-left">
                     {asset.areaScenario === "partial"
                       ? "일부 양도 — 취득 토지 중 일부만 양도"
