@@ -18,6 +18,7 @@
  */
 
 import { applyRate, truncateToThousand } from "./tax-utils";
+import { applyFairMarketRatio } from "./tax-utils";
 import { PROPERTY_CAL, PROPERTY_CONST, PROPERTY_SEPARATE_CONST } from "./legal-codes";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
@@ -375,8 +376,8 @@ export function calculateComprehensiveAggregateTaxBase(
     totalOfficialValue += value;
   }
 
-  // 지방세법 §110 — 과세표준 절사 규정 없음, 원 단위
-  const taxBase = applyRate(totalOfficialValue, fairMarketValueRatio);
+  // 지방세법 §110 — 과세표준 절사 규정 없음, 원 단위 (0.70 double 오차 회피 → 정수 분수연산)
+  const taxBase = applyFairMarketRatio(totalOfficialValue, fairMarketValueRatio);
 
   return { totalOfficialValue, taxBase };
 }

@@ -22,6 +22,7 @@
  */
 
 import { applyRate, truncateToThousand } from "./tax-utils";
+import { applyFairMarketRatio } from "./tax-utils";
 import { PROPERTY_SEPARATE, PROPERTY_SEPARATE_CONST } from "./legal-codes";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
@@ -463,7 +464,7 @@ export function calculateSeparateAggregateTax(
 
   // ── Step 3: 과세표준 계산 (공정시장가액비율 70%, 지방세법상 절사 규정 없음) ──
   const fairMarketValueRatio = PROPERTY_SEPARATE_CONST.FAIR_MARKET_RATIO;
-  const taxBase = applyRate(totalSeparateOfficialValue, fairMarketValueRatio);
+  const taxBase = applyFairMarketRatio(totalSeparateOfficialValue, fairMarketValueRatio);
   legalBasis.push(PROPERTY_SEPARATE.FAIR_MARKET_RATIO);
 
   // ── Step 4: 누진세율 적용 ──

@@ -34,6 +34,7 @@ export interface PropertyEntry {
   // ── 임대주택 합산배제 상세 ──
   rentalRegistrationType: string;
   isEupMyeonArea: boolean;       // 읍·면 지역 여부 (existing_rental §3①3호 전용 — 읍면 100㎡ / 그외 85㎡)
+  isThirtyPlusUnits: boolean;    // 30호 이상 여부 (§3①1·2·7·8호 공시가격 상한 tier)
   rentalRegistrationDate: string;  // YYYY-MM-DD
   rentalStartDate: string;         // YYYY-MM-DD
   currentRent: string;             // 현재 임대료 (원)
@@ -184,6 +185,7 @@ function makeProperty(): PropertyEntry {
     ho: "",
     rentalRegistrationType: "private_purchase_long",
     isEupMyeonArea: false,
+    isThirtyPlusUnits: false,
     rentalRegistrationDate: "",
     rentalStartDate: "",
     currentRent: "",
@@ -492,6 +494,8 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
               priorAssessedValue: p.priorAssessedValue ?? "",
               // ③ normalize: 읍·면 지역 여부 (existing_rental §3①3호 전용) — 구 세션 누락 시 false
               isEupMyeonArea: p.isEupMyeonArea ?? false,
+              // ③ normalize: 30호 이상 여부 (§3①1·2·7·8호 공시가격 tier) — 구 세션 누락 시 false
+              isThirtyPlusUnits: p.isThirtyPlusUnits ?? false,
             }));
           }
           // ── 세부담상한 2단계 통합 마이그레이션 (comprehensive-prior-year-2step) ──

@@ -49,7 +49,7 @@ export function ComprehensiveFilingFormBuppyo5Sub({ result }: Props) {
 
   // ② 공제금액 라벨 — 1주택 시 병기 포맷
   const deductionLabel = is1House
-    ? `${fmtKRW(600_000_000)} (1세대1주택: ${fmtKRW(d.basicDeduction)})`
+    ? `${fmtKRW(d.basicDeductionGeneral)} (1세대1주택: ${fmtKRW(d.basicDeduction)})`
     : fmtKRW(d.basicDeduction);
 
   return (

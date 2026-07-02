@@ -104,7 +104,7 @@ describe("기존임대주택 §3①3호 — 읍면 100㎡ / 그외 85㎡", () =>
   const BASE_EXISTING: RentalExclusionInput = {
     ...BASE,
     registrationType: "existing_rental",
-    assessedValue: 400_000_000,
+    assessedValue: 200_000_000, // 2억 (기존임대 3억 이하 — price 격리, area만 검증)
     location: "metro",
   };
 
@@ -162,7 +162,7 @@ describe("기존임대주택 §3①3호 — 읍면 100㎡ / 그외 85㎡", () =>
 describe("공공지원민간임대 분리 — 건설(§7호) vs 매입(§8호)", () => {
   const BASE_PUBLIC_SUPPORT: RentalExclusionInput = {
     ...BASE,
-    assessedValue: 700_000_000,  // 7억 (수도권 9억 이하)
+    assessedValue: 500_000_000,  // 5억 (매입 수도권 6억·건설 9억 이하 — price 격리, area만 검증)
     location: "metro",
   };
 

@@ -13,7 +13,7 @@
  * G-5 (Min): 종부세법 §9③ 괄호 + 구 지방세법 §122 단서 — 당해연도 ⓐ(부과 재산세)의 상한.
  *   ⓐ = min(당해 표준세율 재산세, 직전 재산세상당액 × §122 구간 상한율).
  *
- * v1 범위: 직전연도 단일 주택군(일반/1세대1주택). 다주택 중과 직전연도는 직접입력 모드 사용.
+ * 범위: 직전연도 일반/1세대1주택 + 다주택 중과(isMultiHouseRate 자동 판정 — taxableHouseCount·isMultiHouseInAdjustedArea 입력 시 housingBracketsMulti 분기).
  */
 
 import { truncateToTenThousand, safeMulDivRound, safeMultiplyThenDivide } from "./tax-utils";
@@ -179,6 +179,8 @@ export function calcPreviousYearEquivalent(
     detail: {
       assessedValue: priorSum,  // echo = 직전 공시 합산 (priorHouseValues 입력 시도 정확)
       basicDeduction,
+      basicDeductionGeneral: p.basicDeductionGeneral, // 연도별 일반 기본공제(6억/9억) echo — 별지5호 병기 라벨용
+
       fairMarketRatio,
       taxBase,
       appliedRate,
