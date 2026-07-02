@@ -189,10 +189,12 @@ export function isComprehensiveYearSupported(assessmentYear: number): boolean {
  *
  * 지방세법 시행령 §109①2호 단서 (KoreanLaw 행위시법 축자 확정):
  *   - 2022년도 1세대1주택(시가표준액 9억 초과 포함): 100분의 45 (제32747호, 단일 비율)
- *   - 그 외 (2021·2023~ 또는 다주택·법인): 100분의 60 (본문)
- *   ※ 2024·2025·2026년도 구간별 43/44/45(재산세 calcTaxBase는 적용 — v3)는 종부세 안분에서 **비대상**
- *     (12억 공제로 종부세 비과세 영역, 1세대1주택 특례 FMR 구간과 비중첩) — 안분 factor는 본문 60% 유지.
- *     ⇒ 재산세 실세액(경로1, calcTaxBase)과 안분 factor(경로2, 본 함수)의 비대칭은 의도적·기존 2026 패턴.
+ *   - 2024·2025·2026년도 1세대1주택: 구간별 43/44/45 (calcTaxBase가 실세액에 적용).
+ *     안분공제는 종부세 과세 1주택(공시 12억 초과)에서만 유효한데, 12억 초과는 필연적으로
+ *     6억 초과 구간이므로 재산세 실세액 FMR은 항상 45%. 안분 factor도 45%로 일치시켜
+ *     재산세 실세액(경로1, calcTaxBase)과 안분 factor(경로2, 본 함수)의 FMR 비대칭
+ *     (이중과세조정 과소공제 → 결정세액 과다)을 제거한다.
+ *   - 그 외 (2021·2023 또는 다주택·법인): 100분의 60 (본문)
  *
  * @param assessmentYear 과세귀속연도
  * @param isOneHouseSingle 1세대1주택자이면서 주택 수가 정확히 1채 (재산세 특례 게이트와 동일)
@@ -203,6 +205,12 @@ export function getPropertyFmrForProration(
 ): number {
   if (assessmentYear === PROPERTY_CONST.ONE_HOUSE_FMR_2022_YEAR && isOneHouseSingle) {
     return PROPERTY_CONST.ONE_HOUSE_FMR_2022_RATIO; // 0.45
+  }
+  if (
+    isOneHouseSingle &&
+    PROPERTY_CONST.ONE_HOUSE_FMR_BRACKET_YEARS.includes(assessmentYear)
+  ) {
+    return PROPERTY_CONST.ONE_HOUSE_FMR_RATIO_3; // 0.45 (>6억 구간 = 종부세 과세영역과 일치)
   }
   return PROPERTY_CONST.FAIR_MARKET_RATIO_HOUSING; // 0.60
 }

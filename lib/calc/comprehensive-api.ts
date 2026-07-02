@@ -190,9 +190,11 @@ const RENTAL_TYPES = new Set([
   "private_construction_rental",
   "private_purchase_rental_long",
   "private_purchase_rental_short",
-  "public_support_rental",
+  "public_support_construction_rental",
+  "public_support_purchase_rental",
   "public_construction_rental",
   "public_purchase_rental",
+  "existing_rental",
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
 ]);
@@ -209,14 +211,16 @@ const OTHER_INFO_TYPES = new Set([
 // export: PropertyListInput onChange 자동매칭에서 재사용 (단일 출처 — UI 설계 §3)
 export function toRegistrationType(exclusionType: string): string {
   const map: Record<string, string> = {
-    private_construction_rental: "private_construction",
-    private_purchase_rental_long: "private_purchase_long",
-    private_purchase_rental_short: "private_purchase_short",
-    public_support_rental: "public_support",
-    public_construction_rental: "public_construction",
-    public_purchase_rental: "public_purchase",
+    private_construction_rental:        "private_construction",
+    private_purchase_rental_long:       "private_purchase_long",
+    private_purchase_rental_short:      "private_purchase_short",
+    public_support_construction_rental: "public_support_construction",
+    public_support_purchase_rental:     "public_support_purchase",
+    public_construction_rental:         "public_construction",
+    public_purchase_rental:             "public_purchase",
+    existing_rental:                    "existing_rental",
     private_short_term_rental_6y_construction: "private_short_term_6y_construction",
-    private_short_term_rental_6y_purchase: "private_short_term_6y_purchase",
+    private_short_term_rental_6y_purchase:     "private_short_term_6y_purchase",
   };
   return map[exclusionType] ?? "private_purchase_long";
 }
@@ -317,6 +321,7 @@ export async function callComprehensiveApi(
           isInitialContract: p.isInitialContract,
           actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
           registrationRevokedDate: p.registrationRevokedDate || undefined,
+          isEupMyeonArea: p.isEupMyeonArea || undefined,
         },
       };
     }

@@ -57,6 +57,7 @@ const FIELD_LABEL: Record<string, string> = {
   rentalStartDate: "임대개시일",
   currentRent: "현재 임대료",
   isInitialContract: "최초 계약 여부",
+  isEupMyeonArea: "읍·면 지역 여부",
   // 중첩: 기타 합산배제(otherInfo)
   otherInfo: "기타 합산배제 정보",
   // 토지(landAggregate·landSeparate·필지)

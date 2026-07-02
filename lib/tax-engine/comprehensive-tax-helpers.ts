@@ -94,7 +94,7 @@ export function toAppurtenantFraction(
 // ============================================================
 
 /**
- * 고령자 공제율 반환 (종합부동산세법 §9②1호, 시행령 §4의2)
+ * 고령자 공제율 반환 (종합부동산세법 §9⑥)
  * 만 60세~: 20% / 65세~: 30% / 70세~: 40%
  */
 export function getSeniorRate(
@@ -109,7 +109,7 @@ export function getSeniorRate(
 }
 
 /**
- * 장기보유 공제율 반환 (종합부동산세법 §9②2호, 시행령 §4의3)
+ * 장기보유 공제율 반환 (종합부동산세법 §9⑧)
  * 5년~: 20% / 10년~: 40% / 15년~: 50%
  */
 export function getLongTermRate(
@@ -168,7 +168,9 @@ export function applyOneHouseDeduction(
       totalAssessedValue: apportionment.totalAssessedValue,
     };
   } else {
-    deductionAmount = Math.floor(taxAfterPropertyCredit * combinedRate);
+    // 안분 경로와 동일한 정수연산(float 곱 금지): floor(base × round(rate×100) / 100)
+    const rateInt = Math.round(combinedRate * 100);
+    deductionAmount = safeMultiplyThenDivide(taxAfterPropertyCredit, rateInt, 100);
   }
 
   // 신고서 ⑦(고령자)·⑧(장기보유) 분리 — 80% 상한 발동 시에도 원 비율(senior:longTerm)로 안분 + 잔액 흡수.

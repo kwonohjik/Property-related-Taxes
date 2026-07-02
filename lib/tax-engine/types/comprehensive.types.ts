@@ -63,11 +63,13 @@ export interface ComprehensiveBracket {
  */
 export type ExclusionType =
   | "private_construction_rental"   // 민간건설임대 (시행령 §3①1호)
-  | "private_purchase_rental_long"  // 민간매입임대 장기일반 (시행령 §3①2호)
-  | "private_purchase_rental_short" // 민간매입임대 단기 구법 (시행령 §3①2호)
-  | "public_support_rental"         // 공공지원민간임대 (시행령 §3①3호)
-  | "public_construction_rental"    // 공공건설임대 (시행령 §3①4호)
-  | "public_purchase_rental"        // 공공매입임대 (시행령 §3①5호)
+  | "private_purchase_rental_long"  // 민간매입임대 장기일반 (시행령 §3①8호)
+  | "private_purchase_rental_short" // 민간매입임대 단기 구법 (시행령 §3①2호 구법)
+  | "public_support_construction_rental" // 공공지원민간임대 건설 (시행령 §3①7호)
+  | "public_support_purchase_rental"     // 공공지원민간임대 매입 (시행령 §3①8호)
+  | "public_construction_rental"    // 공공건설임대 (시행령 §3①1호)
+  | "public_purchase_rental"        // 공공매입임대 (시행령 §3①2호)
+  | "existing_rental"               // 기존임대주택 2005년 이전 등록 (시행령 §3①3호)
   | "private_short_term_rental_6y_construction" // 단기민간임대 건설 6년 (시행령 §3①10호)
   | "private_short_term_rental_6y_purchase"     // 단기민간임대 매입 6년 (시행령 §3①11호)
   | "unsold_housing"                // 미분양주택 (시행령 §4①1호)
@@ -87,9 +89,11 @@ export interface RentalExclusionInput {
     | "private_construction"
     | "private_purchase_long"
     | "private_purchase_short"
-    | "public_support"
+    | "public_support_construction"  // 공공지원민간임대 건설 (시행령 §3①7호)
+    | "public_support_purchase"      // 공공지원민간임대 매입 (시행령 §3①8호)
     | "public_construction"
     | "public_purchase"
+    | "existing_rental"              // 기존임대주택 2005년 이전 등록 (시행령 §3①3호)
     | "private_short_term_6y_construction"  // 단기민간임대 건설 (시행령 §3①10호)
     | "private_short_term_6y_purchase";     // 단기민간임대 매입 (시행령 §3①11호)
   rentalRegistrationDate: Date;    // 임대사업자 등록일
@@ -101,6 +105,8 @@ export interface RentalExclusionInput {
   currentRent: number;             // 현재 임대료
   isInitialContract: boolean;      // 최초 계약 여부
   assessmentDate: Date;            // 과세기준일 (6월 1일)
+  /** 읍·면 지역 여부 (existing_rental §3①3호 전용 — 읍면 100㎡ / 그외 85㎡ 면적 상한) */
+  isEupMyeonArea?: boolean;
 
   // ── 의무임대기간 (시행령 §3① "N년 이상 계속하여 임대") ──
   /** 임대등록 말소일 — 입력 + 과세기준일 이전이면 합산배제 거부 (시행령 §3① 계속임대 위반 확정) */

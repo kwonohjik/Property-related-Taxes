@@ -64,14 +64,14 @@ export function isPropertyTaxObject(objectType: PropertyTaxObjectType): boolean 
 // ============================================================
 
 /**
- * 건축물 유형 분류 (지방세법 §111①1호)
+ * 건축물 유형 분류 (지방세법 §111①2호)
  *
- * - golf_course: 골프장 (§111①1호 가목) — 4%
- * - luxury: 고급오락장·고급별장 (§111①1호 나목) — 4%
- * - factory: 공장 (§111①1호 다목) — 0.5%
- * - general: 그 외 일반 건축물 (§111①1호 라목) — 0.25%
+ * - golf_course: 골프장 (§111①2호 가목) — 4%
+ * - luxury: 고급오락장·고급별장 (§111①2호 가목) — 4%
+ * - factory: 공장 (§111①2호 나목) — 0.5%
+ * - general: 그 외 일반 건축물 (§111①2호 다목) — 0.25%
  *
- * 주택은 별도 세율 체계(§111①2호)를 따르므로 이 함수 대상 아님.
+ * 주택은 별도 세율 체계(§111①3호)를 따르므로 이 함수 대상 아님.
  */
 export function classifyBuilding(
   buildingType: "general" | "golf_course" | "luxury" | "factory" | undefined,
