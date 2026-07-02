@@ -336,12 +336,19 @@ export function calculateTransferTax(
   // (원본 input 기준 시 CB 환산은 취득가·개산공제가 0, §97② swap은 개산공제가 실제 경비와 어긋나 산식 불일치.)
   let gainFormula: string;
   if (effectiveInput.useEstimatedAcquisition) {
-    const expenseLabel = swapApplied ? "필요경비(자본적지출+양도비)" : "개산공제";
-    gainFormula = [
-      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
-      `취득가(환산 ${estimatedBase.toLocaleString()}`,
-      `경비(${expenseLabel} ${appliedExpenses.toLocaleString()}`,
-    ].join(" - ");
+    if (swapApplied) {
+      // §97② 2호 단서: 필요경비 = 자본적지출+양도비 단독 → 환산취득가액은 차감·표시에서 제외.
+      gainFormula = [
+        `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+        `필요경비(자본적지출+양도비 ${appliedExpenses.toLocaleString()}`,
+      ].join(" - ");
+    } else {
+      gainFormula = [
+        `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+        `취득가(환산 ${estimatedBase.toLocaleString()}`,
+        `경비(개산공제 ${appliedExpenses.toLocaleString()}`,
+      ].join(" - ");
+    }
   } else {
     gainFormula = [
       `양도가(${effectiveInput.transferPrice.toLocaleString()}`,

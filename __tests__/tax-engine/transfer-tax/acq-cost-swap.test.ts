@@ -64,9 +64,10 @@ describe("§97② 2호 단서 — 환산취득가/감정가액 모드 필요경�
 
       expect(result.necessaryExpenseMode).toBe("swap_to_direct");
       expect(result.swapApplied).toBe(true);
-      // acquisitionCost = estimated(1억) 유지, expenses = directSide(2억)으로 swap
+      // §97②2호 단서: 필요경비 = 나목(자본+양도비 2억) 단독. 환산취득가액(1억)은 가목에 포함되어
+      // 나목 채택 시 별도 차감하지 않는다 → 양도차익 = 양도가 5억 − 나목 2억 = 3억.
       expect(result.expenses).toBe(200_000_000);
-      expect(result.gain).toBe(500_000_000 - 100_000_000 - 200_000_000); // 200,000,000
+      expect(result.gain).toBe(500_000_000 - 200_000_000); // 300,000,000 (환산취득가 미차감)
       expect(result.swapComparison).toEqual({
         estimatedSide: 103_000_000,
         directSide: 200_000_000,
@@ -93,8 +94,8 @@ describe("§97② 2호 단서 — 환산취득가/감정가액 모드 필요경�
     });
   });
 
-  describe("케이스 4 — 감정가액 모드 + swap 발동", () => {
-    it("자본+양도비 > 감정+개산 → 단서 적용", () => {
+  describe("케이스 4 — 감정가액 모드는 swap 대상 아님 (H-4, §97②2호 단서=환산취득가액 전용)", () => {
+    it("감정가액 모드는 자본+양도비가 커도 본문(감정+개산공제)만 — swap 미적용", () => {
       const input = baseTransferInput({
         transferPrice: 500_000_000,
         acquisitionPrice: 0,
@@ -106,14 +107,15 @@ describe("§97② 2호 단서 — 환산취득가/감정가액 모드 필요경�
       });
       const result = calcTransferGain(input);
 
-      // estimatedSide = 80M(감정) + 3M(3% of 100M) = 83M
-      // directSide = 130M > 83M → swap
+      // §97②2호 단서는 "취득가액을 환산취득가액으로 하는 경우"에 한정 — 감정가액 모드는 대상 아님.
+      // directSide 130M > 감정+개산 83M 이어도 swap 불가 → 본문(감정 80M + 개산공제 3M)만 적용.
       expect(result.usedEstimated).toBe(true);
       expect(result.estimatedBase).toBe(80_000_000);
       expect(result.estimatedDeduction).toBe(3_000_000);
-      expect(result.necessaryExpenseMode).toBe("swap_to_direct");
-      expect(result.expenses).toBe(130_000_000);
-      expect(result.gain).toBe(500_000_000 - 80_000_000 - 130_000_000); // 290,000,000
+      expect(result.necessaryExpenseMode).toBe("estimated_with_deduction");
+      expect(result.swapApplied).toBe(false);
+      expect(result.expenses).toBe(3_000_000); // 개산공제만
+      expect(result.gain).toBe(500_000_000 - 80_000_000 - 3_000_000); // 417,000,000
     });
   });
 

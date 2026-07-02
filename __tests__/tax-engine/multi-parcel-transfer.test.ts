@@ -386,9 +386,9 @@ describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행
 
 // ============================================================
 // MP-SWAP: estimated 방식 §97②2호 단서 swap 표시 reconcile (회귀)
-// 버그: estimated 모드 결과 expenses를 무조건 0으로 덮어써 swap된 자본적지출이
-//       산출근거·UI에서 소실 → "안분가 - 취득가 - 개산공제" 산식이 양도차익과 불일치.
-// 수정: swap 발동 시 estimatedDeduction=0·expenses=directSide·swapApplied=true.
+// §97②2호 단서: 가목(환산취득가+개산공제) < 나목(자본+양도비)이면 필요경비 = 나목 단독.
+// 나목 채택 시 환산취득가액은 가목에 포함되어 별도 차감하지 않는다 → 양도차익 = 안분가 − 나목.
+// 표시필드: swap 발동 시 acquisitionPrice=0·estimatedDeduction=0·expenses=directSide (reconcile 정합).
 // ============================================================
 
 describe("MP-SWAP: estimated swap 표시 reconcile", () => {
@@ -412,10 +412,10 @@ describe("MP-SWAP: estimated swap 표시 reconcile", () => {
     });
     const p = result.parcelResults[0];
     expect(p.swapApplied).toBe(true);
-    expect(p.acquisitionPrice).toBe(200_000_000);     // 환산취득가
+    expect(p.acquisitionPrice).toBe(0);               // 나목 채택 → 환산취득가 미차감(0 표시)
     expect(p.estimatedDeduction).toBe(0);             // 개산공제 미적용 → 0 표시
-    expect(p.expenses).toBe(300_000_000);             // directSide 노출
-    expect(p.transferGain).toBe(500_000_000);         // 1000M - 200M - 300M
+    expect(p.expenses).toBe(300_000_000);             // directSide(나목) 노출
+    expect(p.transferGain).toBe(700_000_000);         // 1000M − 300M (환산취득가 미차감)
     // 표시필드 reconcile: 안분가 - 취득가 - 개산공제 - 경비 = 양도차익
     expect(
       p.allocatedTransferPrice - p.acquisitionPrice - p.estimatedDeduction - p.expenses,

@@ -50,6 +50,11 @@ describe("§97② 단서 swap — 토지/건물 분리 (자산 단위)", () => {
     expect(result!.building.swapApplied).toBe(false);
     expect(result!.building.directExpenses).toBe(0); // 본문 — directExp 차감 안 함
     expect(result!.building.appraisalDeduction).toBe(600_000); // 개산공제만
+
+    // C-2: swap 발동 토지는 필요경비 = 나목(directExp 100M) 단독 → 환산취득가 미차감.
+    expect(result!.land.gain).toBe(300_000_000 - 100_000_000); // 200,000,000 (환산 80M 미차감)
+    // 본문 건물(swap 아님, C-2 영향 없음): 양도가 − 건물환산(40M) − 개산공제(600K)
+    expect(result!.building.gain).toBe(159_400_000);
   });
 
   it("자산별 미입력(undefined) → swap 비활성, 본문만 (개산공제만)", () => {
@@ -103,5 +108,9 @@ describe("§97② 단서 swap — 토지/건물 분리 (자산 단위)", () => {
     expect(result!.building.swapApplied).toBe(true);
     expect(result!.building.directExpenses).toBe(50_000_000);
     expect(result!.building.appraisalDeduction).toBe(0);
+
+    // C-2: 둘 다 swap → 각 필요경비 = 나목 단독(환산취득가 미차감).
+    expect(result!.land.gain).toBe(300_000_000 - 200_000_000); // 100,000,000
+    expect(result!.building.gain).toBe(200_000_000 - 50_000_000); // 150,000,000
   });
 });

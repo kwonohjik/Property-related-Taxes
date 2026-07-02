@@ -144,8 +144,9 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
       return { effectiveDirect: 0, effectiveAppraisalDed: appraisalDed, swapApplied: false };
     }
     const estimatedSide = acqPrice + appraisalDed;
-    if (directExp > estimatedSide) {
-      // 단서 — directExp로 swap (개산공제 미적용)
+    // §97② 2호 단서는 취득가액을 '환산취득가액'으로 하는 경우 전용 — 감정가액 모드는 swap 없이 본문(개산공제)만.
+    if (input.useEstimatedAcquisition && directExp > estimatedSide) {
+      // 단서 — directExp로 swap (개산공제 미적용). 필요경비 = directExp 단독이므로 취득가액도 미차감(gain 산식에서 처리).
       return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: true };
     }
     // 본문 — 개산공제만, directExp 차감 안 함
@@ -164,8 +165,9 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     input.buildingDirectExpenses !== undefined,
   );
 
-  const landGain = landTransferPrice - landAcqPrice - landSwap.effectiveDirect - landSwap.effectiveAppraisalDed;
-  const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingSwap.effectiveDirect - buildingSwap.effectiveAppraisalDed;
+  // §97② 2호 단서 swap 시 필요경비 = directExp 단독 → 환산취득가액(acqPrice) 미차감.
+  const landGain = landTransferPrice - (landSwap.swapApplied ? 0 : landAcqPrice) - landSwap.effectiveDirect - landSwap.effectiveAppraisalDed;
+  const buildingGain = buildingTransferPrice - (buildingSwap.swapApplied ? 0 : buildingAcqPrice) - buildingSwap.effectiveDirect - buildingSwap.effectiveAppraisalDed;
 
   // ⑥ 보유연수 (민법 초일불산입)
   const { years: landHoldingYears } = calculateHoldingPeriod(
