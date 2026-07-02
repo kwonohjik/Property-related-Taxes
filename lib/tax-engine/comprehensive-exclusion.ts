@@ -35,12 +35,14 @@ const MANDATORY_PERIOD_BY_TYPE: Record<
   RentalExclusionInput["registrationType"],
   number
 > = {
-  private_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,   // 5 — §3①1호
-  private_purchase_short: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT, // 5 — §3①2호 (구법)
-  private_purchase_long: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,   // 10 — §3①8호
-  public_support: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,          // 10 — §3①7·8호 (공공지원=장기일반민간임대등)
-  public_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,    // 5 — §3①1호
-  public_purchase: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,        // 5 — §3①2호
+  private_construction:        COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①1호
+  private_purchase_short:      COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①2호 (구법)
+  private_purchase_long:       COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,       // 10 — §3①8호
+  public_support_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,       // 10 — §3①7호
+  public_support_purchase:     COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,       // 10 — §3①8호 (공공지원)
+  public_construction:         COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①1호
+  public_purchase:             COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①2호
+  existing_rental:             COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①3호 (2005년 이전)
   private_short_term_6y_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①10호
   private_short_term_6y_purchase:     COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①11호
 };
@@ -54,7 +56,7 @@ export function validateRentalExclusion(
     failReasons.push(COMPREHENSIVE_EXCL.NO_RENTAL_REGISTRATION);
   }
 
-  const areaLimit = getAreaLimit(input.registrationType);
+  const areaLimit = getAreaLimit(input);
   if (input.area > areaLimit) {
     failReasons.push(
       areaLimit === COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_AREA_CONSTRUCTION
@@ -111,47 +113,74 @@ export function validateRentalExclusion(
   };
 }
 
-/** 전용면적 상한 (㎡) — 건설 단기 149 / 매입 단기 무제한(면적조건 없음) / 기존 6종 85 */
-function getAreaLimit(
-  registrationType: RentalExclusionInput["registrationType"],
-): number {
-  if (registrationType === "private_short_term_6y_construction")
-    return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_AREA_CONSTRUCTION; // 149 — §3①10호가목
-  if (registrationType === "private_short_term_6y_purchase")
-    return Infinity; // 매입 단기(§3①11호)는 면적조건 없음
-  return COMPREHENSIVE_EXCL_CONST.AREA_LIMIT_NATIONAL_HOUSING; // 85 — 기존 6종(회귀 0)
+/**
+ * 전용면적 상한 (㎡)
+ *
+ * 종부세 시행령 §3① 각 호 기준:
+ * - 건설임대 (1·7·10호): 149㎡ 이하
+ * - 매입임대 (2·8·11호): 면적제한 없음 (Infinity)
+ * - 기존임대 (3호, 2005 이전): 읍면 100㎡ / 그외 85㎡
+ */
+function getAreaLimit(input: RentalExclusionInput): number {
+  switch (input.registrationType) {
+    // 건설임대 — 149㎡ (§3①1·7·10호)
+    case "private_construction":
+    case "public_construction":
+    case "public_support_construction":
+    case "private_short_term_6y_construction":
+      return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_AREA_CONSTRUCTION; // 149
+
+    // 매입임대 — 면적제한 없음 (§3①2·8·11호)
+    case "private_purchase_long":
+    case "private_purchase_short":
+    case "public_purchase":
+    case "public_support_purchase":
+    case "private_short_term_6y_purchase":
+      return Infinity;
+
+    // 기존임대 (§3①3호, 2005년 이전) — 읍면 100㎡ / 그외 85㎡
+    case "existing_rental":
+      return input.isEupMyeonArea
+        ? COMPREHENSIVE_EXCL_CONST.AREA_LIMIT_RURAL          // 100
+        : COMPREHENSIVE_EXCL_CONST.AREA_LIMIT_NATIONAL_HOUSING; // 85
+  }
 }
 
 function getPriceLimit(
   registrationType: RentalExclusionInput["registrationType"],
   location: "metro" | "non_metro",
 ): number {
-  if (registrationType === "private_short_term_6y_construction")
-    return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_CONSTRUCTION; // 6억, location 무관 — §3①10호
-  if (registrationType === "private_short_term_6y_purchase")
-    return location === "metro"
-      ? COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_METRO // 4억
-      : COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_NON_METRO; // 2억 — §3①11호
-  if (registrationType === "public_support") {
-    return location === "metro"
-      ? COMPREHENSIVE_EXCL_CONST.PUBLIC_SUPPORT_PRICE_METRO
-      : COMPREHENSIVE_EXCL_CONST.PUBLIC_SUPPORT_PRICE_NON_METRO;
+  switch (registrationType) {
+    case "private_short_term_6y_construction":
+      return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_CONSTRUCTION; // 6억, location 무관 — §3①10호
+    case "private_short_term_6y_purchase":
+      return location === "metro"
+        ? COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_METRO // 4억
+        : COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_NON_METRO; // 2억 — §3①11호
+    case "public_support_construction":
+    case "public_support_purchase":
+      return location === "metro"
+        ? COMPREHENSIVE_EXCL_CONST.PUBLIC_SUPPORT_PRICE_METRO    // 9억
+        : COMPREHENSIVE_EXCL_CONST.PUBLIC_SUPPORT_PRICE_NON_METRO; // 3억
+    default:
+      return location === "metro"
+        ? COMPREHENSIVE_EXCL_CONST.RENTAL_PRICE_METRO    // 6억
+        : COMPREHENSIVE_EXCL_CONST.RENTAL_PRICE_NON_METRO; // 3억
   }
-  return location === "metro"
-    ? COMPREHENSIVE_EXCL_CONST.RENTAL_PRICE_METRO
-    : COMPREHENSIVE_EXCL_CONST.RENTAL_PRICE_NON_METRO;
 }
 
 function getRentalExclusionLegalCode(
   registrationType: RentalExclusionInput["registrationType"],
 ): string {
   switch (registrationType) {
-    case "private_construction":   return COMPREHENSIVE_EXCL.PRIVATE_CONSTRUCTION_RENTAL;
-    case "private_purchase_long":  return COMPREHENSIVE_EXCL.PRIVATE_PURCHASE_RENTAL_LONG;
-    case "private_purchase_short": return COMPREHENSIVE_EXCL.PRIVATE_PURCHASE_RENTAL_SHORT;
-    case "public_support":         return COMPREHENSIVE_EXCL.PUBLIC_SUPPORT_RENTAL;
-    case "public_construction":    return COMPREHENSIVE_EXCL.PUBLIC_CONSTRUCTION_RENTAL;
-    case "public_purchase":        return COMPREHENSIVE_EXCL.PUBLIC_PURCHASE_RENTAL;
+    case "private_construction":        return COMPREHENSIVE_EXCL.PRIVATE_CONSTRUCTION_RENTAL;
+    case "private_purchase_long":       return COMPREHENSIVE_EXCL.PRIVATE_PURCHASE_RENTAL_LONG;
+    case "private_purchase_short":      return COMPREHENSIVE_EXCL.PRIVATE_PURCHASE_RENTAL_SHORT;
+    case "public_support_construction": return COMPREHENSIVE_EXCL.PUBLIC_SUPPORT_CONSTRUCTION_RENTAL;
+    case "public_support_purchase":     return COMPREHENSIVE_EXCL.PUBLIC_SUPPORT_PURCHASE_RENTAL;
+    case "public_construction":         return COMPREHENSIVE_EXCL.PUBLIC_CONSTRUCTION_RENTAL;
+    case "public_purchase":             return COMPREHENSIVE_EXCL.PUBLIC_PURCHASE_RENTAL;
+    case "existing_rental":             return COMPREHENSIVE_EXCL.EXISTING_RENTAL;
     case "private_short_term_6y_construction": return COMPREHENSIVE_EXCL.PRIVATE_SHORT_TERM_RENTAL_6Y_CONSTRUCTION;
     case "private_short_term_6y_purchase":     return COMPREHENSIVE_EXCL.PRIVATE_SHORT_TERM_RENTAL_6Y_PURCHASE;
   }
@@ -242,9 +271,11 @@ export function applyAggregationExclusion(
     "private_construction_rental",
     "private_purchase_rental_long",
     "private_purchase_rental_short",
-    "public_support_rental",
+    "public_support_construction_rental",
+    "public_support_purchase_rental",
     "public_construction_rental",
     "public_purchase_rental",
+    "existing_rental",
     "private_short_term_rental_6y_construction",
     "private_short_term_rental_6y_purchase",
   ];

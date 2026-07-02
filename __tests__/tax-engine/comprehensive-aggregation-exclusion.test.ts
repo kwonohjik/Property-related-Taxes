@@ -52,15 +52,15 @@ describe("validateRentalExclusion — 임대주택 합산배제", () => {
     expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.PRICE_EXCEEDED);
   });
 
-  // T03: 수도권 공공지원민간임대 — 공시가격 8억 → 9억 기준 충족
-  it("T03: 공공지원민간임대 수도권 8억 → 9억 기준 충족 → 합산배제", () => {
+  // T03: 수도권 공공지원민간임대 건설형 — 공시가격 8억 → 9억 기준 충족
+  it("T03: 공공지원민간임대 건설형 수도권 8억 → 9억 기준 충족 → 합산배제", () => {
     const result = validateRentalExclusion({
       ...baseRentalInput,
-      registrationType: "public_support",
+      registrationType: "public_support_construction",
       assessedValue: 800_000_000,
     });
     expect(result.isExcluded).toBe(true);
-    expect(result.reason).toBe(COMPREHENSIVE_EXCL.PUBLIC_SUPPORT_RENTAL);
+    expect(result.reason).toBe(COMPREHENSIVE_EXCL.PUBLIC_SUPPORT_CONSTRUCTION_RENTAL);
   });
 
   // T04: 임대료 증가율 6% → 5% 초과 → 배제 불가
@@ -75,11 +75,14 @@ describe("validateRentalExclusion — 임대주택 합산배제", () => {
     expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.RENT_INCREASE_EXCEEDED);
   });
 
-  // T05: 면적 90㎡ → 85㎡ 초과 → 배제 불가
-  it("T05: 전용면적 90㎡ 초과 → 배제 불가", () => {
+  // T05: 기존임대(§3①3호, 비읍면) 90㎡ → 85㎡ 초과 → 배제 불가
+  // ※ private_purchase_long(매입임대)은 면적 제한 없음(§3①2호) → 수정 시행령 §3① 반영
+  it("T05: 기존임대 전용면적 90㎡(비읍면 85㎡ 기준) 초과 → 배제 불가", () => {
     const result = validateRentalExclusion({
       ...baseRentalInput,
+      registrationType: "existing_rental",
       area: 90,
+      isEupMyeonArea: false,
     });
     expect(result.isExcluded).toBe(false);
     expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.AREA_EXCEEDED);
@@ -114,7 +117,7 @@ describe("validateRentalExclusion — 임대주택 합산배제", () => {
 
 describe("validateRentalExclusion — 의무임대기간 (GAP-1)", () => {
   const baseRentalInput: RentalExclusionInput = {
-    registrationType: "public_support",        // 10년 의무 (※ 공공지원 연수 Do 전 재검증)
+    registrationType: "public_support_construction",  // 10년 의무 — §3①7호 (공공지원 건설형)
     rentalRegistrationDate: new Date("2020-01-01"),
     rentalStartDate: new Date("2020-02-01"),
     assessedValue: 800_000_000,  // 8억 (공공지원 수도권 9억 이하)

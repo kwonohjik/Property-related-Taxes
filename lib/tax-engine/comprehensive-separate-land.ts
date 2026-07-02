@@ -14,7 +14,7 @@
  *   DB 직접 호출 없음 — 세율 데이터는 내부 상수 사용 (DB fallback 구조)
  */
 
-import { applyRate, truncateToTenThousand, safeMultiplyThenDivide } from "./tax-utils";
+import { applyRate, truncateToTenThousand, safeMulDivRound } from "./tax-utils";
 import { COMPREHENSIVE_LAND_CONST, PROPERTY_CONST, PROPERTY_SEPARATE_CONST } from "./legal-codes";
 import type {
   SeparateAggregateLandForComprehensive,
@@ -176,9 +176,8 @@ export function applySeparateLandPropertyTaxCredit(
   }
 
   const ratio = Math.min(numeratorStdTaxEq / denominatorStdTax, 1.0);
-  const creditRaw = Math.floor(
-    safeMultiplyThenDivide(propertyTaxAmount, numeratorStdTaxEq, denominatorStdTax),
-  );
+  // ⓓ 공제할 재산세액 = round-half-up(ⓐ × ⑤ / ⑥) — §4의3 절사 미규정, 주택분과 동일 반올림
+  const creditRaw = safeMulDivRound(propertyTaxAmount, numeratorStdTaxEq, denominatorStdTax);
 
   // 산출세액 초과 불가
   const creditAmount = Math.min(creditRaw, calculatedTax);

@@ -29,9 +29,11 @@ const RENTAL_REG_TYPE_OPTIONS: [string, string][] = [
   ["private_purchase_long", "민간매입임대 장기일반"],
   ["private_purchase_short", "민간매입임대 단기 구법"],
   ["private_construction", "민간건설임대"],
-  ["public_support", "공공지원민간임대"],
+  ["public_support_construction", "공공지원민간임대 건설형 (§7호, 149㎡ 이하)"],
+  ["public_support_purchase", "공공지원민간임대 매입형 (§8호, 면적제한 없음)"],
   ["public_construction", "공공건설임대"],
   ["public_purchase", "공공매입임대"],
+  ["existing_rental", "기존임대주택 (2005년 이전 등록, §3호)"],
   ["private_short_term_6y_construction", "민간건설 단기민간임대 (6년)"],
   ["private_short_term_6y_purchase", "민간매입 단기민간임대 (6년)"],
 ];
@@ -41,9 +43,11 @@ const RENTAL_EXCLUSION_TYPES = new Set([
   "private_construction_rental",
   "private_purchase_rental_long",
   "private_purchase_rental_short",
-  "public_support_rental",
+  "public_support_construction_rental",
+  "public_support_purchase_rental",
   "public_construction_rental",
   "public_purchase_rental",
+  "existing_rental",
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
 ]);
@@ -121,7 +125,23 @@ function RentalExclusionDetail({
             단기민간임대(매입, §3①11호): 공시가격 {property.location === "non_metro" ? "비수도권 2억원" : "수도권 4억원"} 이하 · 6년 이상 임대 · 임대료 5% 금지 · ⚠ 아파트 제외 · 조정대상지역 신규취득 제외(자동판정 안 됨 — 직접 확인)
           </p>
         )}
+        {property.rentalRegistrationType === "existing_rental" && (
+          <p className="text-xs text-muted-foreground">
+            기존임대주택(§3①3호): 2005년 1월 5일 이전 등록 · 공시가격 6억원(수도권) / 3억원(비수도권) 이하 · 5년 이상 임대 · 전용면적 85㎡ 이하 (읍·면 지역은 100㎡ 이하)
+          </p>
+        )}
       </div>
+
+      {/* 읍·면 지역 여부 — existing_rental(§3①3호) 선택 시만 표시 */}
+      {property.rentalRegistrationType === "existing_rental" && (
+        <ToggleCard
+          tone="rose"
+          title="읍·면 지역 소재"
+          description="읍·면 지역은 전용면적 100㎡ 이하 / 그 외는 85㎡ 이하 적용 (시행령 §3①3호)"
+          checked={property.isEupMyeonArea}
+          onCheckedChange={(v) => onUpdate({ isEupMyeonArea: v })}
+        />
+      )}
 
       {/* 임대사업자 등록일 */}
       <div className="space-y-1.5">
