@@ -188,6 +188,7 @@ export function ReplotIncreaseFields({
               const acqDate = v ? calcDayAfter(v) : "";
               onChange({ replottingConfirmDate: v, acquisitionDate: acqDate });
             }}
+            data-testid="replot-inc-confirm-date"
           />
           {asset.replottingConfirmDate && (
             <p className="text-xs text-blue-600">
