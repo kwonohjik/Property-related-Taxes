@@ -186,16 +186,18 @@ export function Step1({
               />
             </FieldCard>
             <FieldCard
-              label="총 양도비 (선택)"
+              label={hasReplotIncrement ? "총 양도비" : "총 양도비 (선택)"}
               unit="원"
               hint={
-                <>
-                  양도 시 1회 발생하는 부대비용 (부동산 중개수수료·인지대 등). 시스템이 자산별
-                  지분율로 <strong>자동 안분</strong>합니다. <strong>이 값을 입력하면 자산 카드 내
-                  &quot;양도비&quot; 입력란은 자동 비활성화</strong>되며 안분된 금액이 표시됩니다.
-                  자산별로 다른 양도비가 있는 예외 상황에서만 자산 카드 양도비 필드를 직접
-                  입력하세요 (그 경우 자산 입력이 우선).
-                </>
+                hasReplotIncrement ? undefined : (
+                  <>
+                    양도 시 1회 발생하는 부대비용 (부동산 중개수수료·인지대 등). 시스템이 자산별
+                    지분율로 <strong>자동 안분</strong>합니다. <strong>이 값을 입력하면 자산 카드 내
+                    &quot;양도비&quot; 입력란은 자동 비활성화</strong>되며 안분된 금액이 표시됩니다.
+                    자산별로 다른 양도비가 있는 예외 상황에서만 자산 카드 양도비 필드를 직접
+                    입력하세요 (그 경우 자산 입력이 우선).
+                  </>
+                )
               }
             >
               <CurrencyInput
@@ -211,12 +213,6 @@ export function Step1({
                 value={form.bundledSaleMode}
                 onChange={(mode) => onChange({ bundledSaleMode: mode })}
               />
-            )}
-            {splitMode === "companion" && hasReplotIncrement && (
-              <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                증환지 증가분 양도 — 당초분과 증가분은 한 필지·한 계약이므로 양도가액을 자산별로 구분 기재할 수 없습니다.
-                양도가액은 <b>양도시 기준시가 비율로 안분</b>됩니다 (소득세법 시행령 §166⑥ 단서).
-              </p>
             )}
           </div>
         )}
