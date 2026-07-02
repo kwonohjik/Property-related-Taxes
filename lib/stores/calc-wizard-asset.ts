@@ -109,6 +109,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   allocatedArea: string;
   /** 환지 이전 종전면적 (㎡, areaScenario=reduction 시, 의제취득면적 산식에 사용) */
   priorLandArea: string;
+  /**
+   * 증환지 증가분 자산 여부 (handleAddIncrease로 자동 추가된 자산).
+   * true 시 당초분(assets[0])에서 양도시 기준시가(㎡당·총액)를 live fallback으로 파생 —
+   * 증가분 추가 순서와 무관하게 자동 반영(당초분을 나중에 조회/입력해도 적용). UI·API·validate 3중.
+   */
+  isReplotIncrement: boolean;
   /** 상속개시일 직전 공시가격: 토지=원/㎡, 주택=원 총액 */
   publishedValueAtInheritance: string;
   /** 직접 입력 취득가액 (매매 actual / 상속 manual / 증여 신고가액) */

@@ -149,6 +149,7 @@ export function ReplotIncreaseFields({
       areaScenario: "same",
       acquisitionCause: "purchase",
       isPrimaryForHouseholdFlags: false,
+      isReplotIncrement: true, // 당초분(assets[0])에서 양도시 기준시가 live fallback 대상
       // ── 당초분과 동일 필드 자동 복사 (동일 필지·동일 양도시점) ──
       addressRoad: asset.addressRoad,
       addressJibun: asset.addressJibun,

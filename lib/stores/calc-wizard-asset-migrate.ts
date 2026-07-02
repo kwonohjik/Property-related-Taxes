@@ -43,6 +43,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   // #3 환산 min[] 특례 보상필드 (Phase 2)
   if (a.compensationPerSqm === undefined) a.compensationPerSqm = "";
   if (a.compensationBasisStdPrice === undefined) a.compensationBasisStdPrice = "";
+  if (a.isReplotIncrement === undefined) a.isReplotIncrement = false;
   // 갭 3b: NBL 유예기간 구 7-union(type·startDate) → 사유코드. 길이 단정 불가 → other_justifiable(12호 event_window) 일원화(손실 0).
   if (Array.isArray(a.nblGracePeriods)) {
     a.nblGracePeriods = (a.nblGracePeriods as Record<string, unknown>[]).map((g) =>
