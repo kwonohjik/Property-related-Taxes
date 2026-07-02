@@ -685,6 +685,16 @@ export function validateAssetEntry(
   // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
   // 자동 안분 fallback 금지 원칙 준수 (부수토지/독립 나대지에 따라 세율 분기가 달라짐)
   if (a.assetKind === "land") {
+    // #3 공익수용 환산 min[] 특례 게이트 — 수용+환산+양도≥2009.02.04 시 보상 2필드 필수
+    // (UI 노출 조건 showValuationMin과 동일 — UI↔validate 모순 방지)
+    if (
+      a.transferCause === "public_expropriation" &&
+      a.useEstimatedAcquisition &&
+      form.transferDate && form.transferDate >= "2009-02-04"
+    ) {
+      if (!parseAmount(a.compensationPerSqm)) return `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`;
+      if (!parseAmount(a.compensationBasisStdPrice)) return `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`;
+    }
     const hasHousingInBundle = form.assets.some(
       (other) =>
         other.assetId !== a.assetId &&

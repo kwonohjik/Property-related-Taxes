@@ -121,6 +121,12 @@ const propertyBaseShape = {
   useEstimatedAcquisition: z.boolean(),
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   standardPriceAtTransfer: z.number().int().positive().optional(),
+  // ⑫ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) — 엔진이 게이트, strip 방지
+  transferCause: z.enum(["general", "public_expropriation"]).optional(),
+  standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
+  transferArea: z.number().positive().optional(),
+  compensationPerSqm: z.number().int().nonnegative().optional(),
+  compensationBasisStdPrice: z.number().int().nonnegative().optional(),
   householdHousingCount: z.number().int().min(0),
   // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 세대 조합원입주권 보유 수 (양도일 현재).
   // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback householdRightCount ?? 0.

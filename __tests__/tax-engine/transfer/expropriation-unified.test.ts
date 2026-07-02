@@ -10,6 +10,9 @@ import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land/types";
 import { toEngineReductions } from "@/lib/calc/transfer-tax-api-reductions";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+import { applyExpropriationValuation } from "@/lib/tax-engine/transfer-tax-expropriation-valuation";
+import { calcTransferGain } from "@/lib/tax-engine/transfer-tax-helpers";
+import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
 const pd = (s: string) => (s ? new Date(s) : undefined);
 
@@ -76,6 +79,75 @@ describe("공익수용 통합 Phase 1 — 판정 분기(취득-시점 조건 독
     // 취득 2012 > 2010(5년 경계), 고시일 2015 > 2006.12.31 → 가·나목 모두 불성립
     const res = checkUnconditionalExemption(nblInput(uncond, "2012-01-01", "2020-01-01"), "farmland");
     expect(res.isExempt).toBe(false);
+  });
+});
+
+describe("공익수용 통합 Phase 2 — #3 환산 양도시 기준시가 min[] (집행기준 99-164-12)", () => {
+  const base = {
+    useEstimatedAcquisition: true,
+    transferCause: "public_expropriation" as const,
+    transferDate: new Date("2020-01-01"),
+    standardPricePerSqmAtTransfer: 1_000_000, // 원/㎡
+    transferArea: 300, // ㎡
+    compensationPerSqm: 600_000, // 최솟값
+    compensationBasisStdPrice: 800_000,
+  };
+
+  it("E6 expr-valuation-min-applies: min(1,000,000·600,000·800,000)=600,000 × 300 = 180,000,000", () => {
+    const r = applyExpropriationValuation(base);
+    expect(r).not.toBeNull();
+    expect(r!.detail.chosenPerSqm).toBe(600_000);
+    expect(r!.denominator).toBe(180_000_000);
+  });
+
+  it("E6b 소수 면적 floor: 600,000 × 300.55 = 180,330,000", () => {
+    const r = applyExpropriationValuation({ ...base, transferArea: 300.55 });
+    expect(r!.denominator).toBe(180_330_000);
+  });
+
+  it("E7 게이트 OFF — 실지취득가(환산 아님) → null(현행 총액 유지)", () => {
+    expect(applyExpropriationValuation({ ...base, useEstimatedAcquisition: false })).toBeNull();
+  });
+
+  it("E7b 게이트 OFF — 양도 2009.02.04 이전 → null", () => {
+    expect(applyExpropriationValuation({ ...base, transferDate: new Date("2009-02-03") })).toBeNull();
+  });
+
+  it("E7c 게이트 OFF — 수용 아님 → null", () => {
+    expect(applyExpropriationValuation({ ...base, transferCause: "general" })).toBeNull();
+  });
+
+  it("E7d 게이트 OFF — 보상필드 미입력 → null", () => {
+    expect(applyExpropriationValuation({ ...base, compensationPerSqm: 0 })).toBeNull();
+  });
+});
+
+describe("공익수용 통합 Phase 2 — calcTransferGain 통합(#3 환산취득가 override)", () => {
+  const gainInput = {
+    transferPrice: 1_000_000_000,
+    acquisitionPrice: 0,
+    useEstimatedAcquisition: true,
+    standardPriceAtAcquisition: 100_000_000, // 취득 총액 기준시가
+    standardPriceAtTransfer: 300_000_000, // 현행 양도 총액(= 1,000,000 × 300)
+    transferDate: new Date("2020-01-01"),
+    transferCause: "public_expropriation" as const,
+    standardPricePerSqmAtTransfer: 1_000_000,
+    transferArea: 300,
+    compensationPerSqm: 600_000,
+    compensationBasisStdPrice: 800_000,
+  } as unknown as TransferTaxInput;
+
+  it("H #3 적용: 환산취득가 = 10억 × 1억 / min분모(1.8억) = 555,555,555 (특례 미적용 3.33억보다↑)", () => {
+    const r = calcTransferGain(gainInput);
+    expect(r.estimatedBase).toBe(Math.floor((1_000_000_000 * 100_000_000) / 180_000_000)); // 555,555,555
+    expect(r.expropriationValuationDetail?.chosenPerSqm).toBe(600_000);
+    expect(r.expropriationValuationDetail?.denominator).toBe(180_000_000);
+  });
+
+  it("H2 특례 미적용(수용 아님) → 현행 분모(3억) = 333,333,333, detail undefined", () => {
+    const r = calcTransferGain({ ...gainInput, transferCause: "general" } as TransferTaxInput);
+    expect(r.estimatedBase).toBe(Math.floor((1_000_000_000 * 100_000_000) / 300_000_000)); // 333,333,333
+    expect(r.expropriationValuationDetail).toBeUndefined();
   });
 });
 
