@@ -366,7 +366,7 @@ export function ComprehensiveFilingFormMain({ result }: Props) {
                 className={`border border-gray-300 ${BESSHI_CELL_AMOUNT}`}
                 data-besshi-cell={besshiTestId("comp-main-", "⑨", "agg-land")}
               >
-                {aggLand?.taxCap ? fmtKRW(Math.max(0, (aggLand.taxCap as { cappedTax: number }).cappedTax === aggLand.determinedTax ? 0 : 0)) : ""}
+                {aggLand?.taxCap ? fmtKRW(Math.max(0, (aggLand.taxBeforeCap ?? 0) - (aggLand.taxCap as { cappedTax: number }).cappedTax)) : ""}
               </td>
               <BlankCell />
             </tr>

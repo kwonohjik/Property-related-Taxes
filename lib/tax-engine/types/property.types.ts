@@ -40,7 +40,7 @@ export type PropertyObjectType =
   | "aircraft";
 
 /**
- * 건축물 세율 유형 (지방세법 §111①3)
+ * 건축물 세율 유형 (지방세법 §111①2호)
  * - general     : 일반 건축물 0.25%
  * - golf_course : 골프장 4%
  * - luxury      : 고급오락장 4%
@@ -83,7 +83,7 @@ export interface PropertyTaxInput {
    */
   priorYearPublishedPrice?: number;
 
-  /** 1세대 1주택 특례 적용 여부 (지방세법 §111③) — 주택 전용 */
+  /** 1세대 1주택 특례 적용 여부 (지방세법 §111의2) — 주택 전용 */
   isOneHousehold?: boolean;
 
   /** 도시지역 내 토지·건축물 여부 → 도시지역분(0.14%) 과세 (지방세법 §112) */
