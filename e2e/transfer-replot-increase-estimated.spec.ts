@@ -18,9 +18,9 @@ test.describe("증환지 환산 모드 — 증가분 자동복사 (PR#473 Phase 
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
     // 양도일
-    await page.getByTestId("transfer-date").getByLabel("연도").fill("2023");
-    await page.getByTestId("transfer-date").getByLabel("월").fill("05");
-    await page.getByTestId("transfer-date").getByLabel("일").fill("01");
+    await page.getByTestId("transfer-date").getByLabel("연도", { exact: true }).fill("2023");
+    await page.getByTestId("transfer-date").getByLabel("월", { exact: true }).fill("05");
+    await page.getByTestId("transfer-date").getByLabel("일", { exact: true }).fill("01");
 
     await expandAssetSection(page, 1);
     // 단순토지
@@ -32,9 +32,9 @@ test.describe("증환지 환산 모드 — 증가분 자동복사 (PR#473 Phase 
 
     // 환지처분확정일
     const confirmDate = page.getByTestId("replot-inc-confirm-date");
-    await confirmDate.getByLabel("연도").fill("2007");
-    await confirmDate.getByLabel("월").fill("04");
-    await confirmDate.getByLabel("일").fill("26");
+    await confirmDate.getByLabel("연도", { exact: true }).fill("2007");
+    await confirmDate.getByLabel("월", { exact: true }).fill("04");
+    await confirmDate.getByLabel("일", { exact: true }).fill("26");
 
     // 권리/교부면적 (Phase B: 권리=당초분 취득·양도 면적, 교부=전체 받은 면적)
     await page.getByTestId("replot-inc-entitlement-area").fill("396.8");
