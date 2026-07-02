@@ -44,14 +44,11 @@ export function ReplotReductionFields({
         <label className="text-sm font-medium">환지처분확정일</label>
         <DateInput
           value={asset.replottingConfirmDate}
-          onChange={(v) => {
-            const acqDate = v ? calcDayAfter(v) : "";
-            onChange({ replottingConfirmDate: v, acquisitionDate: acqDate });
-          }}
+          onChange={(v) => onChange({ replottingConfirmDate: v })}
         />
         {asset.replottingConfirmDate && (
           <p className="text-xs text-blue-600">
-            취득일 = {asset.replottingConfirmDate} 다음날 자동 적용
+            취득일은 ③ 취득정보에 환지 이전 원취득일을 입력하세요
           </p>
         )}
       </div>
