@@ -247,12 +247,19 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     ? input.specialRateType
     : undefined;
 
+  // §11①8 유상거래 주택 여부 — 세율특례 시 (표준−2%)가 아니라 해당세율 × 50% (§15① 단서).
+  // §15① 특례 중 유상거래 주택(§11①8)은 환매(§15①1호)뿐 — 재산분할·공유물분할·상속특례·
+  // 건축물이전·합병은 유상거래가 아니므로 §11①8 미해당(그대로 basicRate−2%).
+  const isOnerousHousingForSpecial =
+    specialRateType === "redemption" && input.propertyType === "housing";
+
   const specialRateResult = applySpecialRate(
     basicRateDecision.appliedRate,
     specialRateType,
     {
       isCorpMetro: effectiveCorpMetro,
       isHeadquarterOrFactorySurcharge: effectiveHqSurcharge,
+      isOnerousHousing: isOnerousHousingForSpecial,
     }
   );
 

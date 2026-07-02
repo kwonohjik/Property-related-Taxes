@@ -258,6 +258,8 @@ export const ACQUISITION_CONST = {
   SURCHARGE_GIFT_12: 0.12,
   /** 신고 기한 (일) */
   FILING_DEADLINE_DAYS: 60,
+  /** 무상취득(증여·부담부증여·기부, 상속 제외) 신고기한 — 취득일 속한 달 말일부터 3개월 (지방세법 §20①) */
+  GRATUITOUS_FILING_MONTHS: 3,
   /** 상속 신고 기한 (개월) */
   INHERITANCE_FILING_MONTHS: 6,
   /** 연부취득 최소 기간 (§6 제20호: 2년 이상) */

@@ -78,6 +78,12 @@ export interface SpecialRateSurchargeContext {
    * true이면 §15 적용 배제 → basicRate 그대로 유지
    */
   isHeadquarterOrFactorySurcharge: boolean;
+  /**
+   * §11①8에 따른 유상거래 주택 여부.
+   * true이면 §15① 본문 단서에 따라 (basicRate − 2%)가 아니라 해당 세율 × 50%를 적용한다.
+   * (예: §15①1호 환매로 취득한 유상거래 주택)
+   */
+  isOnerousHousing?: boolean;
 }
 
 // ============================================================
@@ -172,13 +178,17 @@ export function applySpecialRate(
     };
   }
 
+  // §11①8 유상거래 주택은 §15① 본문 단서: 해당 세율 × 50% (예: 환매 주택)
+  const isOnerousHousing = context.isOnerousHousing === true;
+
   // 3. §13②(대도시 법인 중과) 동시 적용
-  // §15 단서: "(표준세율 - 중과기준세율) × 100분의 300"
+  // §15① 단서: 비주택 (표준세율 − 2%) × 300% / 주택 §11①8 (해당세율 × 50%) × 300%
   if (context.isCorpMetro) {
-    const reduction = ACQUISITION_CONST.SPECIAL_RATE_REDUCTION; // 0.02
     const multiplier = ACQUISITION_CONST.SPECIAL_RATE_WITH_METRO_MULTIPLIER; // 3
-    const reduced = basicRate - reduction;
-    const appliedRate = Math.max(0, reduced) * multiplier;
+    const baseSpecial = isOnerousHousing
+      ? basicRate * 0.5
+      : Math.max(0, basicRate - ACQUISITION_CONST.SPECIAL_RATE_REDUCTION);
+    const appliedRate = baseSpecial * multiplier;
 
     return {
       isApplied: true,
@@ -186,12 +196,16 @@ export function applySpecialRate(
       basicRate,
       rateMode: "special_rate_with_metro",
       legalBasis: `${legalBasis} + ${ACQUISITION.SPECIAL_RATE_WITH_METRO_CORP}`,
-      message: `${label} + §13②(대도시 법인) 동시 적용: (${(basicRate * 100).toFixed(1)}% - 2%) × 3 = ${(appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`,
+      message: isOnerousHousing
+        ? `${label} + §13②(대도시 법인) 동시 적용: (${(basicRate * 100).toFixed(1)}% × 50%) × 3 = ${(appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`
+        : `${label} + §13②(대도시 법인) 동시 적용: (${(basicRate * 100).toFixed(1)}% - 2%) × 3 = ${(appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`,
     };
   }
 
-  // 4. §15 단독 적용: basicRate - 2% (최소 0%)
-  const appliedRate = Math.max(0, basicRate - ACQUISITION_CONST.SPECIAL_RATE_REDUCTION);
+  // 4. §15 단독 적용: 주택 §11①8 → 해당세율 × 50% / 그 외 → basicRate − 2% (최소 0%)
+  const appliedRate = isOnerousHousing
+    ? basicRate * 0.5
+    : Math.max(0, basicRate - ACQUISITION_CONST.SPECIAL_RATE_REDUCTION);
 
   return {
     isApplied: true,
@@ -199,7 +213,9 @@ export function applySpecialRate(
     basicRate,
     rateMode: "special_rate_solo",
     legalBasis,
-    message: `${label}: ${(basicRate * 100).toFixed(1)}% - 2% = ${(appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`,
+    message: isOnerousHousing
+      ? `${label} (유상거래 주택 §11①8): ${(basicRate * 100).toFixed(1)}% × 50% = ${(appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`
+      : `${label}: ${(basicRate * 100).toFixed(1)}% - 2% = ${(appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`,
   };
 }
 

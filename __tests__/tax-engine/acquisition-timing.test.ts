@@ -138,13 +138,14 @@ describe("determineAcquisitionTiming — 상속", () => {
 // ============================================================
 
 describe("determineAcquisitionTiming — 증여·부담부증여·기부", () => {
-  it("증여계약일이 취득일, 신고기한 60일", () => {
+  it("증여계약일이 취득일, 신고기한 = 속한 달 말일부터 3개월 (§20①)", () => {
     const result = determineAcquisitionTiming({
       acquisitionCause: "gift",
       contractDate: "2024-07-01",
     });
     expect(result.acquisitionDate).toBe("2024-07-01");
-    expect(result.filingDeadline).toBe("2024-08-30"); // 60일 후
+    // §20①: 무상취득(상속 제외)은 취득일 속한 달 말일(2024-07-31)부터 3개월 → 2024-10-31
+    expect(result.filingDeadline).toBe("2024-10-31");
   });
 
   it("부담부증여도 계약일 기준", () => {

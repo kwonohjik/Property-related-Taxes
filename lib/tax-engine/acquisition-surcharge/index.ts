@@ -209,7 +209,8 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
     const stdValue = input.wholeHouseStandardValue ?? 0;
     // 저가 배제는 wholeHouseStandardValue가 입력된 경우에만 적용
     if (stdValue > 0) {
-      const isMetro = input.isMetropolitanRegion ?? true;
+      // 폼 기본값(false=비수도권)과 일치시키고, 명문부재 시 납세자 유리(2억 한도) 방향으로 default.
+      const isMetro = input.isMetropolitanRegion ?? false;
       const isUrbanRegen = input.isUrbanRegenerationArea ?? false;
       if (isExemptFromSurcharge_LowValue(stdValue, isMetro, isUrbanRegen)) {
         const limit = isMetro ? "1억원" : "2억원";
