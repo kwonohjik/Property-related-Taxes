@@ -228,6 +228,7 @@ export function ReplotIncreaseFields({
             <span>
               증가분 자산 <strong>{increaseM2.toFixed(2)}㎡</strong>이 추가되었습니다.
               소재지·양도시 공시가격·토지 성격은 자동 복사됨 — 아래 카드에서 <strong>취득가액(청산금)</strong>만 입력하세요.
+              {" "}양도가액은 <strong>맨 위 “총 양도가액”</strong>에 전체 금액을 입력하면 당초분·증가분에 <strong>양도시 기준시가 비율로 자동 안분</strong>됩니다.
             </span>
           </div>
         ) : (
