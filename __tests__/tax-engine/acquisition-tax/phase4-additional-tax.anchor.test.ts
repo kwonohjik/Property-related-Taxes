@@ -47,7 +47,7 @@ describe("P4-1 calcLocalEducationTax 주택 유상거래 분기", () => {
     expect(result).toBe(3_000_000);
   });
 
-  it("#E3 주택 증여(무상): 기본 0.4% = 5억×2%×20%=2,000,000", () => {
+  it("#E3 주택 증여(무상): §151①1 본문 (3.5%−2%)×20% = 5억×0.3%=1,500,000", () => {
     const result = calcLocalEducationTax({
       taxBase: 500_000_000,
       appliedRate: 0.035,
@@ -56,7 +56,7 @@ describe("P4-1 calcLocalEducationTax 주택 유상거래 분기", () => {
       acquisitionCause: "gift",
       isSurcharged: false,
     });
-    expect(result).toBe(2_000_000);
+    expect(result).toBe(1_500_000);
   });
 
   it("#E4 주택 유상거래 중과세(8%): 기본 0.4% = 5억×2%×20%=2,000,000", () => {

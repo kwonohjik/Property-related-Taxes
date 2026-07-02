@@ -345,17 +345,33 @@ describe("[P2-Anchor #P2-5] 자경농지 50% 감면 — §6", () => {
     expect(result.reductionAmount).toBe(0);
   });
 
-  it("#C5 면적 초과 (25,000㎡) → 감면 불가", () => {
+  it("#C5 면적 25,000㎡ (한도 30,000㎡ 이내) → 전액 감면 (지특령 §3②3호)", () => {
     const result = assessSelfCultivationReduction({
       isSelfCultivatedFarmer: true,
       farmingYears: 5,
-      farmlandArea: 25_000, // 요건: 20,000㎡ 이하
+      farmlandArea: 25_000, // 논·밭·과수원 한도 30,000㎡ 이내
       farmlandLocationDistance: 15,
       acquisitionTax: 3_000_000,
       propertyType: "land_farmland",
       acquisitionCause: "purchase",
     });
-    expect(result.isEligible).toBe(false);
+    expect(result.isEligible).toBe(true);
+    expect(result.reductionAmount).toBe(1_500_000); // 3,000,000 × 50%
+  });
+
+  it("#C5b 면적 초과 (60,000㎡) → 초과분만 제외한 부분감면 (지특령 §3②3호)", () => {
+    // 경감대상 = 본세 × (30,000/60,000) = 1,500,000, 감면 = × 50% = 750,000
+    const result = assessSelfCultivationReduction({
+      isSelfCultivatedFarmer: true,
+      farmingYears: 5,
+      farmlandArea: 60_000, // 한도 30,000㎡ 2배 초과
+      farmlandLocationDistance: 15,
+      acquisitionTax: 3_000_000,
+      propertyType: "land_farmland",
+      acquisitionCause: "purchase",
+    });
+    expect(result.isEligible).toBe(true);
+    expect(result.reductionAmount).toBe(750_000);
   });
 
   it("#C6 농지가 아닌 물건 → 자경 감면 미적용", () => {

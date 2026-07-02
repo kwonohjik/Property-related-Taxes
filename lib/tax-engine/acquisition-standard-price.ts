@@ -204,18 +204,22 @@ export function shouldUseStandardPrice(
   marketValue: number | undefined,
   standardValue: number
 ): { useStandardPrice: boolean; reason: string } {
-  // 무상취득(상속·증여·기부) → 시가 없으면 시가표준액
+  // 상속에 따른 무상취득(§10의2②1호): 시가인정액 유무와 무관하게 **항상 시가표준액**.
+  // (증여는 시가인정액 원칙이지만 상속은 시가표준액 강제 — 감정가로 과대과세 방지)
+  if (["inheritance", "inheritance_farmland"].includes(acquisitionCause)) {
+    return { useStandardPrice: true, reason: "상속 무상취득 — 시가표준액 강제 (§10의2②1호)" };
+  }
+
+  // 증여·기부(§10의2②3호·②2호) → 시가인정액 원칙, 없으면 시가표준액
   // (burdened_gift는 determineTaxBase에서 calcBurdenedGiftTaxBase로 선분기되어
   //  이 함수에 도달하지 않으므로 제외 — 도달 시 calcGratuitousTaxBase 경로의 cause만)
-  const isGratuitous = ["inheritance", "inheritance_farmland", "gift", "donation"].includes(
-    acquisitionCause
-  );
+  const isGratuitous = ["gift", "donation"].includes(acquisitionCause);
 
   if (isGratuitous) {
     if (marketValue && marketValue > 0) {
-      return { useStandardPrice: false, reason: "무상취득 — 시가인정액 사용" };
+      return { useStandardPrice: false, reason: "증여 무상취득 — 시가인정액 사용" };
     }
-    return { useStandardPrice: true, reason: "무상취득 — 시가표준액 사용 (시가인정액 없음)" };
+    return { useStandardPrice: true, reason: "증여 무상취득 — 시가표준액 사용 (시가인정액 없음)" };
   }
 
   // 유상취득 → 신고가 없으면 시가표준액

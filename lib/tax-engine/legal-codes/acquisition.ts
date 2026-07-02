@@ -284,8 +284,8 @@ export const ACQUISITION_CONST = {
   SELF_CULTIVATION_REDUCTION_RATE: 0.5,
   /** 자경농지 감면 최소 영농 연수 (2년) */
   SELF_CULTIVATION_MIN_YEARS: 2,
-  /** 자경농지 최대 면적 (20,000 ㎡) */
-  SELF_CULTIVATION_MAX_AREA: 20_000,
+  /** 자경농지 경감대상 면적 한도 (논·밭·과수원 30,000㎡ — 지특령 §3②3호). 초과분만 경감 제외(부분감면) */
+  SELF_CULTIVATION_MAX_AREA: 30_000,
   /** 자경농지 거주지-농지 최대 거리 (30 km) */
   SELF_CULTIVATION_MAX_DISTANCE_KM: 30,
 

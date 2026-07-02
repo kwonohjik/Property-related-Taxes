@@ -261,13 +261,11 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     warnings.push(specialRateResult.message);
   }
 
-  // §15 세율특례가 적용된 경우 basicRate 보정
-  // 단, §13①② 법인 중과가 이미 적용된 경우 corp 세율을 우선
+  // §15 세율특례가 적용된 경우 basicRate 보정.
+  // 법인 §13①② 중과는 corp 세율로 여기서 덮지 않는다 — effectiveBasicRate는
+  // (1) 사치성 §13⑦ 산식의 '표준세율' 기준, (2) 비중과 최종세율의 기준이므로
+  // 표준세율이어야 한다. 법인 중과와의 경합은 아래 finalRate에서 max로 반영한다.
   const effectiveBasicRate = (() => {
-    if (corpSurchargeResult.isSurcharged && corpSurchargeResult.surchargeRate !== undefined) {
-      // §13①② 중과가 있으면 corp 세율 우선 (§15 특례보다 중과 세율이 높음)
-      return corpSurchargeResult.surchargeRate;
-    }
     if (specialRateResult.isApplied) {
       return specialRateResult.appliedRate;
     }
@@ -317,14 +315,16 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   warnings.push(...surchargeDecision.warnings);
   legalBasis.push(...surchargeDecision.legalBasis);
 
-  // §13①② 법인·공장 중과가 있으면 그 세율을 최종 세율로 우선 사용
-  // (§13의2 다주택 중과와 §13①② 중과는 중복 적용 안 되며 높은 것이 적용됨)
+  // §13①② 법인·공장 중과와 §13의2 다주택·§13⑤⑦ 사치성 중과가 경합하면
+  // 더 높은 세율을 최종 세율로 적용한다(중복 적용이 아니라 max).
+  // (기존 코드는 corp 세율을 무조건 우선해 §13의2①(법인주택 12%)·§13⑦(사치성) 등
+  //  더 높은 중과를 침묵 override하는 결함이 있었음.)
   const finalRate = (() => {
+    const nonCorpRate = resolveFinalRate(effectiveBasicRate, surchargeDecision);
     if (corpSurchargeResult.isSurcharged && corpSurchargeResult.surchargeRate !== undefined) {
-      // §13의2 다주택 중과보다 법인·공장 중과를 우선
-      return corpSurchargeResult.surchargeRate;
+      return Math.max(corpSurchargeResult.surchargeRate, nonCorpRate);
     }
-    return resolveFinalRate(effectiveBasicRate, surchargeDecision);
+    return nonCorpRate;
   })();
 
   // ── Step 7: 세액 계산 ──
@@ -383,7 +383,9 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     input.areaSqm,
     {
       acquisitionCause: effectiveInput.acquisitionCause,
-      isSurcharged: surchargeDecision.isSurcharged,
+      // 법인 §13①② 중과도 isSurcharged로 취급 → 교육세 비중과 (표준세율−2%)×20% 분기
+      // 대신 종전 0.4% 분기 유지 (법인 교육세 정확성은 별건 — 본 수정 범위 밖).
+      isSurcharged: surchargeDecision.isSurcharged || corpSurchargeResult.isSurcharged,
       surchargeType: surchargeTypeForEdu,
       isRuralRegion: input.isRuralRegion,
     }
