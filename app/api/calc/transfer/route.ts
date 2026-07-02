@@ -124,6 +124,12 @@ export async function POST(request: NextRequest) {
     useEstimatedAcquisition: data.useEstimatedAcquisition,
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
     standardPriceAtTransfer: data.standardPriceAtTransfer,
+    // ⑭ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) — TypeScript 미감지 영역(침묵 strip 주의)
+    transferCause: data.transferCause,
+    standardPricePerSqmAtTransfer: data.standardPricePerSqmAtTransfer,
+    transferArea: data.transferArea,
+    compensationPerSqm: data.compensationPerSqm,
+    compensationBasisStdPrice: data.compensationBasisStdPrice,
     householdHousingCount: data.householdHousingCount,
     // ⑭ 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 보유 수 (TypeScript 미감지 영역)
     // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback (householdRightCount ?? 0)

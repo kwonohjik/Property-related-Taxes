@@ -28,6 +28,7 @@ import { CommercialBuildingValuationDetailCard } from "@/components/calc/results
 import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/GeneralBuildingValuationDetailCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/RedevelopmentDetailCard";
+import { ExpropriationValuationCard } from "@/components/calc/results/transfer/ExpropriationValuationCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -377,6 +378,10 @@ export function TransferTaxResultView({
         )}
 
         {/* 1990.8.30. 이전 취득 토지 기준시가 환산 상세 */}
+        {result.expropriationValuationDetail && (
+          <ExpropriationValuationCard detail={result.expropriationValuationDetail} />
+        )}
+
         {result.pre1990LandValuationDetail && (
           <div className="rounded-lg border border-amber-500/50 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-2">
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">

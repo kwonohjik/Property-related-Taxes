@@ -193,6 +193,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * NBL publicNoticeDate·§77 businessApprovalDate에 fallback(`섹션필드 || 이 값`)으로 공급.
    */
   expropriationNoticeDate: string;
+  /** #3 보상가액 (원/㎡) — 환산 양도시 기준시가 min[] 특례(집행기준 99-164-12). 환산+토지+양도≥2009.02.04 시만 */
+  compensationPerSqm: string;
+  /** #3 보상산정 기초 기준시가 (원/㎡) — 위 min[]의 3번째 후보 */
+  compensationBasisStdPrice: string;
 
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
   /**

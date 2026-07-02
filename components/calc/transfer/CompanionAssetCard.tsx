@@ -298,7 +298,7 @@ export function CompanionAssetCard({
         />
         {asset.assetKind === "land" && (
           <div className="mt-4">
-            <ExpropriationBlock asset={asset} onChange={onChange} />
+            <ExpropriationBlock asset={asset} onChange={onChange} transferDate={transferDate ?? ""} />
           </div>
         )}
       </AssetSection>

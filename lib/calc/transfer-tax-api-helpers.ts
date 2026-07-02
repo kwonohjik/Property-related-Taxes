@@ -576,3 +576,18 @@ export function buildAssetPayload(
 // ─── 재개발/재건축 (시행령 §166) — RedevelopmentInfo 서브객체 변환 ───
 // buildRedevelopmentPayload는 800줄 정책에 따라 transfer-tax-api-redev.ts로 분리 (2026-05-15).
 export { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
+
+/**
+ * ⑬ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) 엔진 input 필드.
+ * 엔진이 게이트(환산·수용·2009.02.04) 판정 — 여기선 원값만 전달.
+ * 원/㎡=parseAmount(정수), 면적=parseFloat(소수 ㎡).
+ */
+export function buildExpropriationInput(primary: AssetForm) {
+  return {
+    transferCause: primary.transferCause,
+    standardPricePerSqmAtTransfer: parseAmount(primary.standardPricePerSqmAtTransfer) || undefined,
+    transferArea: parseFloat(primary.transferArea) || undefined,
+    compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
+    compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+  };
+}

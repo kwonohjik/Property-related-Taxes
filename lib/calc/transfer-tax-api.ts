@@ -13,7 +13,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload } from "./transfer-tax-api-helpers";
+import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput } from "./transfer-tax-api-helpers";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -377,6 +377,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           : isEstimated
             ? parseAmount(primary.standardPriceAtTransfer) || undefined
             : undefined,
+    // ⑬ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12)
+    ...buildExpropriationInput(primary),
     acquisitionMethod: hasPre1990 || isMixed
       ? ("actual" as const)
       : isSalesCase ? "salesCase"

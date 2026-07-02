@@ -22,6 +22,10 @@ import { TaxRateNotFoundError } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import {
+  applyExpropriationValuation,
+  type ExpropriationValuationDetail,
+} from "./transfer-tax-expropriation-valuation";
+import {
   parseDeductionRules,
   parseProgressiveRate,
   parseSurchargeRate,
@@ -203,6 +207,8 @@ interface TransferGainResult {
     directSide: number;
     chosen: "estimated" | "direct";
   };
+  /** #3 공익수용 환산 양도시 기준시가 min[] 특례 산출근거 (Record) */
+  expropriationValuationDetail?: ExpropriationValuationDetail;
 }
 
 /**
@@ -290,12 +296,24 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   let estimatedDeduction = 0;
   let acquisitionCostBase: number;
   let usedEstimated = false;
+  let expropriationValuationDetail: ExpropriationValuationDetail | undefined;
 
   if (input.useEstimatedAcquisition) {
+    // #3 공익수용 환산 양도시 기준시가 min[] 특례 — 게이트 충족 시 분모(양도시 기준시가) override
+    const exprVal = applyExpropriationValuation({
+      useEstimatedAcquisition: input.useEstimatedAcquisition,
+      transferCause: input.transferCause,
+      transferDate: input.transferDate,
+      standardPricePerSqmAtTransfer: input.standardPricePerSqmAtTransfer,
+      transferArea: input.transferArea,
+      compensationPerSqm: input.compensationPerSqm,
+      compensationBasisStdPrice: input.compensationBasisStdPrice,
+    });
+    if (exprVal) expropriationValuationDetail = exprVal.detail;
     const estimated = calculateEstimatedAcquisitionPrice(
       input.transferPrice,
       input.standardPriceAtAcquisition ?? 0,
-      input.standardPriceAtTransfer ?? 0,
+      exprVal ? exprVal.denominator : (input.standardPriceAtTransfer ?? 0),
     );
     const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
     acquisitionCostBase = estimated;
@@ -336,6 +354,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     necessaryExpenseMode: necessary.mode,
     swapApplied: necessary.mode === "swap_to_direct",
     swapComparison: necessary.swap,
+    expropriationValuationDetail,
   };
 }
 
