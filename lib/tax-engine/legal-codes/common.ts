@@ -69,3 +69,18 @@ export const AMENDMENT_REDUCTION_48_2 = [
   { maxMonths: 18, rate: 0.20 }, // 마
   { maxMonths: 24, rate: 0.10 }, // 바
 ] as const;
+
+// ============================================================
+// 경정청구(세액 감소·환급) — 국세기본법 §45의2·§52 (시행 20260701 검증)
+// ============================================================
+
+/** 국세기본법 §45의2 — 경정 등의 청구 */
+export const CORRECTION_CLAIM_45_2 = "국세기본법 §45의2";
+/** 국세기본법 §52 — 국세환급가산금 */
+export const REFUND_GAIN_52 = "국세기본법 §52";
+/** §45의2① 일반 경정청구 기한(년) — 법정신고기한 후 5년 */
+export const CLAIM_PERIOD_ORDINARY_YEARS = 5;
+/** §45의2② 후발적 경정청구 기한(개월) — 사유 안 날부터 3개월 */
+export const CLAIM_PERIOD_POSTERIOR_MONTHS = 3;
+/** 국세환급가산금 이율(연) — 시행규칙 §19의3(연 1000분의 31). 안내 표기 전용(display-only) */
+export const REFUND_GAIN_RATE_ANNUAL = 0.031;

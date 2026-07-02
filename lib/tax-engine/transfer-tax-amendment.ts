@@ -9,8 +9,16 @@
  * 소득세법 §110① 확정신고기한 기준.
  */
 
-import { addMonths, isAfter } from "date-fns";
-import { AMENDMENT_REDUCTION_48_2, AMENDMENT_48_2, AMENDMENT_48_1_2, PENALTY } from "./legal-codes";
+import { addMonths, addYears, isAfter } from "date-fns";
+import {
+  AMENDMENT_REDUCTION_48_2,
+  AMENDMENT_48_2,
+  AMENDMENT_48_1_2,
+  PENALTY,
+  CORRECTION_CLAIM_45_2,
+  CLAIM_PERIOD_ORDINARY_YEARS,
+  CLAIM_PERIOD_POSTERIOR_MONTHS,
+} from "./legal-codes";
 import { applyRate, truncateToWon } from "./tax-utils";
 import {
   calculateFilingPenalty,
@@ -44,6 +52,99 @@ export function resolveAmendmentReductionRate(
 }
 
 /**
+ * ISO "YYYY-MM-DD" — getUTC* 사용.
+ * date-coerce가 `new Date("YYYY-MM-DD")`=UTC 자정으로 파싱하므로 로컬 getter·`format`·`toISOString`은
+ * UTC-음수 오프셋 환경에서 −1일 드리프트. getUTC*가 tz-안전.
+ */
+function toISODateUTC(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * 경정청구 청구기한 도출 (국세기본법 §45의2).
+ * - ordinary(①): 법정신고기한 + 5년.
+ * - posterior(②): 후발적 사유 안 날 + 3개월.
+ * 날짜 연산(addYears/addMonths) — 일수환산·differenceInCalendarMonths 금지(경계 오판정).
+ */
+export function resolveClaimDeadline(
+  reasonType: "ordinary" | "posterior" | undefined,
+  statutoryFilingDeadline: Date | undefined,
+  posteriorEventDate: Date | undefined,
+): Date | undefined {
+  if (reasonType === "posterior")
+    return posteriorEventDate ? addMonths(posteriorEventDate, CLAIM_PERIOD_POSTERIOR_MONTHS) : undefined;
+  return statutoryFilingDeadline ? addYears(statutoryFilingDeadline, CLAIM_PERIOD_ORDINARY_YEARS) : undefined;
+}
+
+/**
+ * 경정청구 환급세액 계산 (correctionKind="refund_claim").
+ * 환급세액 = max(0, 당초 결정세액 − 경정 결정세액). 국세환급가산금은 세무서 산정(지급결정일 미정) — UI 안내만.
+ */
+function computeRefundClaim(a: AmendmentInput, determinedTax: number): AmendmentDetail {
+  const refundTax = Math.max(0, a.originalDeterminedTax - determinedTax);
+  const refundLocalIncomeTax = applyRate(refundTax, 0.1); // 참고 근사(지자체 별도 경정청구)
+  const claimDeadline = resolveClaimDeadline(
+    a.claimReasonType,
+    a.statutoryFilingDeadline,
+    a.posteriorEventDate,
+  );
+  const isDeadlineExceeded = !!(
+    claimDeadline && a.amendedFilingDate && isAfter(a.amendedFilingDate, claimDeadline)
+  );
+
+  const steps: CalculationStep[] = [
+    {
+      label: "당초 결정세액",
+      formula: "당초 신고·납부한 양도소득세 본세",
+      amount: a.originalDeterminedTax,
+      legalBasis: CORRECTION_CLAIM_45_2,
+    },
+    {
+      label: "경정 결정세액",
+      formula: "정정 후 재계산한 결정세액",
+      amount: determinedTax,
+      legalBasis: CORRECTION_CLAIM_45_2,
+    },
+    {
+      label: "환급세액",
+      formula: `당초 결정세액 ${a.originalDeterminedTax.toLocaleString()} − 경정 결정세액 ${determinedTax.toLocaleString()}`,
+      amount: refundTax,
+      legalBasis: CORRECTION_CLAIM_45_2,
+    },
+    {
+      label: "참고 · 지방소득세 환급 (지자체 별도 경정청구)",
+      formula: `환급세액 ${refundTax.toLocaleString()} × 10%`,
+      amount: refundLocalIncomeTax,
+      legalBasis: "지방세법 제103조의",
+      sub: true,
+    },
+  ];
+
+  return {
+    correctionKind: "refund_claim",
+    originalDeterminedTax: a.originalDeterminedTax,
+    amendedDeterminedTax: determinedTax,
+    // amend 필드 0 (거울상 — refund는 추가납부·가산세 없음)
+    additionalTax: 0,
+    underReportingReductionRate: 0,
+    underReportingPenalty: 0,
+    latePaymentPenalty: 0,
+    additionalLocalIncomeTax: 0,
+    totalPayable: 0,
+    // refund 전용
+    refundTax,
+    refundLocalIncomeTax,
+    claimReasonType: a.claimReasonType,
+    claimDeadline: claimDeadline ? toISODateUTC(claimDeadline) : undefined,
+    isDeadlineExceeded,
+    steps,
+  };
+}
+
+/**
  * 수정신고 추가납부세액 + 선택적 가산세 계산.
  *
  * @param amendment    수정신고 입력
@@ -53,6 +154,10 @@ export function computeAmendment(
   amendment: AmendmentInput,
   determinedTax: number,
 ): AmendmentDetail {
+  // 경정청구(세액 감소·환급) — 방향 분기 (미지정=amend → 기존 경로 바이트 불변)
+  if ((amendment.correctionKind ?? "amend") === "refund_claim")
+    return computeRefundClaim(amendment, determinedTax);
+
   const steps: CalculationStep[] = [];
 
   const additionalTax = Math.max(0, determinedTax - amendment.originalDeterminedTax);

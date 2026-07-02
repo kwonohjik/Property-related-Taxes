@@ -250,6 +250,13 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
   if (step === 3 && form.amendmentMode) {
     if (parseAmount(form.originalDeterminedTax) <= 0)
       issues.push({ step, message: "당초 결정세액을 입력하세요." });
+    // [F5] 경정청구 후발적 사유 → 사유 안 날 필수 (§45의2② 3개월 기산)
+    if (
+      form.correctionKind === "refund_claim" &&
+      form.claimReasonType === "posterior" &&
+      !form.posteriorEventDate
+    )
+      issues.push({ step, message: "후발적 사유를 안 날을 입력하세요." });
     if (form.applyUnderReportingPenalty && form.underReductionMode === "auto_48_2") {
       if (!form.statutoryFilingDeadline)
         issues.push({ step, message: "§48② 자동감면 산정을 위해 법정신고기한을 입력하세요." });

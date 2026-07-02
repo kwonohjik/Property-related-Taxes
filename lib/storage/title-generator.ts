@@ -99,7 +99,12 @@ export function generateTitle(
 
   if (taxType === "transfer") {
     const date = extractTransferDate(inputData);
-    const label2 = inputData.amendmentMode === true ? `${label} 수정신고` : label;
+    const label2 =
+      inputData.amendmentMode === true
+        ? inputData.correctionKind === "refund_claim"
+          ? `${label} 경정청구`
+          : `${label} 수정신고`
+        : label;
     if (address && date) return `${label2} — ${address} (양도 ${date})`;
     if (address) return `${label2} — ${address}`;
     if (date) return `${label2} — 양도 ${date}`;

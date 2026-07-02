@@ -35,49 +35,7 @@ import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/ra
 import {
   propertySchema as inputSchema,
 } from "@/lib/api/transfer-tax-schema";
-import type { inheritedAcquisitionSchema } from "@/lib/api/transfer-tax-schema-sub";
-import type { z } from "zod";
-import type { InheritanceAcquisitionInput } from "@/lib/tax-engine/types/inheritance-acquisition.types";
-
-// ─── 상속 취득가액 의제: zod 입력 → 엔진 입력 변환 ──────────────
-
-function buildInheritedAcquisition(
-  ia: z.infer<typeof inheritedAcquisitionSchema>,
-  transferDate: Date,
-  transferPrice: number,
-): InheritanceAcquisitionInput {
-  const inheritanceDate = new Date(ia.inheritanceStartDate);
-  const { assetKind } = ia;
-
-  if (ia.mode === "pre-deemed") {
-    return {
-      inheritanceDate,
-      assetKind,
-      standardPriceAtDeemedDate: ia.standardPriceAtDeemedDate,
-      standardPriceAtTransfer: ia.standardPriceAtTransfer,
-      transferDate,
-      transferPrice,
-      decedentAcquisitionDate:
-        ia.hasDecedentActualPrice && ia.decedentAcquisitionDate
-          ? new Date(ia.decedentAcquisitionDate)
-          : undefined,
-      decedentActualPrice:
-        ia.hasDecedentActualPrice ? ia.decedentActualPrice : undefined,
-    };
-  }
-
-  // post-deemed
-  return {
-    inheritanceDate,
-    assetKind,
-    reportedValue: ia.reportedValue,
-    reportedMethod: ia.reportedMethod,
-    ...(ia.useSupplementaryHelper && {
-      landAreaM2: ia.landAreaM2,
-      publishedValueAtInheritance: ia.publishedValueAtInheritance,
-    }),
-  };
-}
+import { buildInheritedAcquisition } from "./route-inherited-acquisition";
 
 // ============================================================
 // POST handler (⑫-2, ⑫-3)
@@ -352,6 +310,10 @@ export async function POST(request: NextRequest) {
           priorAssessmentNotified: data.amendment.priorAssessmentNotified,
           applyLatePaymentPenalty: data.amendment.applyLatePaymentPenalty,
           amendedPaymentDate: toOptionalDate(data.amendment.amendedPaymentDate),
+          // 경정청구 — §45의2 (correctionKind·claimReasonType 통과, posteriorEventDate Date 변환)
+          correctionKind: data.amendment.correctionKind,
+          claimReasonType: data.amendment.claimReasonType,
+          posteriorEventDate: toOptionalDate(data.amendment.posteriorEventDate),
         }
       : undefined,
     // ⑭ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — Date 변환 필수

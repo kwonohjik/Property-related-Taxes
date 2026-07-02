@@ -33,6 +33,13 @@ export interface AmendmentInput {
   applyLatePaymentPenalty: boolean;
   /** 수정신고 납부(예정)일 — 납부지연 경과일 종점 */
   amendedPaymentDate?: Date;
+  // ── 경정청구(세액 감소·환급) 확장 — 국세기본법 §45의2 ──
+  /** 정정 방향 (미지정=amend, 기존 수정신고 불변) */
+  correctionKind?: "amend" | "refund_claim";
+  /** 경정청구 사유 유형 (refund_claim 전용): ordinary=일반 5년 / posterior=후발적 3개월 */
+  claimReasonType?: "ordinary" | "posterior";
+  /** 후발적 사유 안 날 — posterior 3개월 기산점 (§45의2②) */
+  posteriorEventDate?: Date;
 }
 
 export interface AmendmentDetail {
@@ -51,5 +58,18 @@ export interface AmendmentDetail {
   additionalLocalIncomeTax: number;
   /** 수정신고 총 납부세액 = 추가본세 + 가산세 */
   totalPayable: number;
+  // ── 경정청구(refund_claim) 전용 — 미지정/amend=기존 수정신고(비파괴) ──
+  /** 정정 방향 */
+  correctionKind?: "amend" | "refund_claim";
+  /** 환급세액 = max(0, 당초 − 경정) */
+  refundTax?: number;
+  /** 참고 — 지방소득세 환급(환급세액×10%, 지자체 별도) */
+  refundLocalIncomeTax?: number;
+  /** 경정청구 사유 유형 */
+  claimReasonType?: "ordinary" | "posterior";
+  /** 청구기한 ISO "YYYY-MM-DD" (§45의2① 5년 / ② 3개월) — Date 아님(JSON 안전) */
+  claimDeadline?: string;
+  /** 청구기한 도과 경고 */
+  isDeadlineExceeded?: boolean;
   steps: CalculationStep[];
 }
