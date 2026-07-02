@@ -68,5 +68,8 @@ test.describe("증환지 환산 모드 — 증가분 자동복사 (PR#473 Phase 
     // ── Phase B 검증: 당초분 양도면적=권리(396.8), 교부면적=전체(429) 분리 ──
     await expect(page.getByTestId("replot-inc-entitlement-area")).toHaveValue("396.8");
     await expect(page.getByTestId("replot-inc-allocated-area")).toHaveValue("429");
+
+    // 증환지 증가분 → 양도가액 결정방식 토글 숨김 (한 필지·한 계약이라 구분 기재 불가 → 안분 강제)
+    await expect(page.getByText("양도가액 결정 방식 (§166⑥)")).toHaveCount(0);
   });
 });
