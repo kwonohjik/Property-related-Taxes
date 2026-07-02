@@ -107,6 +107,8 @@ export interface RentalExclusionInput {
   assessmentDate: Date;            // 과세기준일 (6월 1일)
   /** 읍·면 지역 여부 (existing_rental §3①3호 전용 — 읍면 100㎡ / 그외 85㎡ 면적 상한) */
   isEupMyeonArea?: boolean;
+  /** 합산배제 임대주택 30호 이상 여부 (§3①1·2·7·8호 공시가격 상한 tier — 30호↑ 상향) */
+  isThirtyPlusUnits?: boolean;
 
   // ── 의무임대기간 (시행령 §3① "N년 이상 계속하여 임대") ──
   /** 임대등록 말소일 — 입력 + 과세기준일 이전이면 합산배제 거부 (시행령 §3① 계속임대 위반 확정) */

@@ -65,7 +65,7 @@ export function validateRentalExclusion(
     );
   }
 
-  const priceLimit = getPriceLimit(input.registrationType, input.location);
+  const priceLimit = getPriceLimit(input);
   if (input.assessedValue > priceLimit) {
     failReasons.push(COMPREHENSIVE_EXCL.PRICE_EXCEEDED);
   }
@@ -146,25 +146,39 @@ function getAreaLimit(input: RentalExclusionInput): number {
   }
 }
 
-function getPriceLimit(
-  registrationType: RentalExclusionInput["registrationType"],
-  location: "metro" | "non_metro",
-): number {
-  switch (registrationType) {
+function getPriceLimit(input: RentalExclusionInput): number {
+  const metro = input.location === "metro";
+  const over30 = input.isThirtyPlusUnits === true; // 30호 이상 tier (§3①1·2·7·8호)
+  switch (input.registrationType) {
+    // 단기건설 (§3①10호) — 6억, 수도권·호수 무관
     case "private_short_term_6y_construction":
-      return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_CONSTRUCTION; // 6억, location 무관 — §3①10호
+      return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_CONSTRUCTION; // 6억
+    // 단기매입 (§3①11호) — 4억/2억, 호수 무관
     case "private_short_term_6y_purchase":
-      return location === "metro"
+      return metro
         ? COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_METRO // 4억
-        : COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_NON_METRO; // 2억 — §3①11호
+        : COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_PRICE_PURCHASE_NON_METRO; // 2억
+    // 기존임대 (§3①3호) — 3억, 수도권·호수 무관
+    case "existing_rental":
+      return COMPREHENSIVE_EXCL_CONST.EXISTING_RENTAL_PRICE; // 3억
+    // 장기 건설임대 (§3①1·7호) — 30호미만 9억 / 30호이상 12억, 수도권 무관
+    case "private_construction":
+    case "public_construction":
     case "public_support_construction":
+      return over30
+        ? COMPREHENSIVE_EXCL_CONST.BUILT_RENTAL_PRICE_OVER30 // 12억
+        : COMPREHENSIVE_EXCL_CONST.BUILT_RENTAL_PRICE_UNDER30; // 9억
+    // 매입임대 (§3①2·8호) — 30호미만 6억/3억 / 30호이상 9억/6억
+    case "private_purchase_long":
+    case "private_purchase_short":
+    case "public_purchase":
     case "public_support_purchase":
-      return location === "metro"
-        ? COMPREHENSIVE_EXCL_CONST.PUBLIC_SUPPORT_PRICE_METRO    // 9억
-        : COMPREHENSIVE_EXCL_CONST.PUBLIC_SUPPORT_PRICE_NON_METRO; // 3억
-    default:
-      return location === "metro"
-        ? COMPREHENSIVE_EXCL_CONST.RENTAL_PRICE_METRO    // 6억
+      if (over30)
+        return metro
+          ? COMPREHENSIVE_EXCL_CONST.PURCHASE_PRICE_OVER30_METRO // 9억
+          : COMPREHENSIVE_EXCL_CONST.PURCHASE_PRICE_OVER30_NON_METRO; // 6억
+      return metro
+        ? COMPREHENSIVE_EXCL_CONST.RENTAL_PRICE_METRO // 6억
         : COMPREHENSIVE_EXCL_CONST.RENTAL_PRICE_NON_METRO; // 3억
   }
 }
