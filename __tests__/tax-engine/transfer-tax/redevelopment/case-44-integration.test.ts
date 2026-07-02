@@ -86,3 +86,53 @@ describe("사례 44 통합 anchor — APT-환산-납부-주택출자 (transfer-t
     expect(lthdSteps.length).toBeGreaterThanOrEqual(3);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// H-9 회귀 (코드감사 2026-07-03): 재개발/입주권 경로 신고불성실·납부지연 가산세 누락
+//   수정 전 redevelopment 분기는 penaltyTax:0 하드코딩 + emitPenaltySteps 미호출로
+//   filingPenaltyDetails/delayedPaymentDetails 를 침묵 누락 → totalTax 과소산출.
+//   rental-housing-exception 특례 경로(L-2)와 동일 부류 — emitPenaltySteps 재사용으로 수정.
+// ─────────────────────────────────────────────────────────────
+describe("사례 44 + 무신고 가산세 — 재개발 경로 신고불성실가산세 반영 (H-9 회귀)", () => {
+  const filingPenalty: NonNullable<TransferTaxInput["filingPenaltyDetails"]> = {
+    determinedTax: 56_799_400, // 재개발 산출세액 (route 2-pass 주입값)
+    reductionAmount: 0,
+    priorPaidTax: 0,
+    originalFiledTax: 0,
+    excessRefundAmount: 0,
+    interestSurcharge: 0,
+    filingType: "none", // 무신고 → 20%
+    penaltyReason: "normal",
+  };
+  const penInput: TransferTaxInput = baseTransferInput({
+    propertyType: "redevelopment_apt",
+    transferPrice: 525_000_000,
+    transferDate: new Date("2023-02-16"),
+    acquisitionDate: new Date("2005-04-09"),
+    acquisitionPrice: 0,
+    expenses: 0,
+    useEstimatedAcquisition: true,
+    isOneHousehold: false,
+    householdHousingCount: 2,
+    residencePeriodMonths: 0,
+    redevelopment: case44RedevelopmentInfo(),
+    filingPenaltyDetails: filingPenalty,
+  });
+  const r = calculateTransferTax(penInput, mockRates);
+
+  it("본세·지방소득세 불변 (산출세액 56,799,400 / 지방세 5,679,940)", () => {
+    expect(r.calculatedTax).toBe(56_799_400);
+    expect(r.localIncomeTax).toBe(5_679_940);
+  });
+
+  it("신고불성실가산세(20%) = 11,359,880 · penaltyDetail 부착 (수정 전: 미반영)", () => {
+    // 56,799,400 × 20% = 11,359,880
+    expect(r.penaltyDetail).toBeDefined();
+    expect(r.penaltyDetail!.filingPenalty?.filingPenalty).toBe(11_359_880);
+  });
+
+  it("totalTax = 산출세액 + 지방세 + 가산세 = 73,839,220 (수정 전 62,479,340 과소산출)", () => {
+    // 56,799,400 + 5,679,940 + 11,359,880
+    expect(r.totalTax).toBe(73_839_220);
+  });
+});

@@ -302,7 +302,10 @@ export function calculateTransferTaxAggregate(
   // 유형이 지정되지 않은 감면(reducibleIncome 미노출 레거시 경로)은 건별 단순 합산
   const legacyReductionAmount = assetRecords.reduce((s, r) => {
     if (r.result.isExempt) return s;
-    if (r.result.reductionTypeApplied) return s; // 재계산 경로에서 이미 처리
+    // 재계산 경로(reducibleByType)는 reducibleIncome>0 인 유형만 처리한다.
+    // reductionTypeApplied는 있으나 reducibleIncome 미노출인 세액감면(§97·§98·§99 계열 등)은
+    // 이 레거시 단순합에 포함해야 소실되지 않는다(건별 §127⑦ 이미 적용된 reductionAmount).
+    if (r.result.reductionTypeApplied && (r.result.reducibleIncome ?? 0) > 0) return s;
     return s + (r.result.reductionAmount ?? 0);
   }, 0);
 

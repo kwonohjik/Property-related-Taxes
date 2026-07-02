@@ -13,6 +13,8 @@
  * 법령:
  *   - 소득세법 §97의2④ (mst=285523, 시행 2026-04-21)
  *   - 소득세법 시행령 §163의2③ (mst=286211, 시행 2026-05-22) — FB-CGT-LAW-1 확정
+ *   - 소득세법 시행령 §163⑨ — 상속받은 자산의 §97 취득가액 = 상속개시일 현재 평가액
+ *     (§18의2⑩ 공제의 '§97 적용 양도세'는 상속개시일 평가액 기준 — 피상속인 원취득가 아님)
  *   - 상증법 §18의2⑩ + 상증령 §15㉑
  *
  * 설계 문서: docs/02-design/features/transfer-fb-cgt-credit-integration/engine.design.md
@@ -131,45 +133,21 @@ describe("FB-CGT-LAW-1: 소령 §163의2③ 개인가업 적용률 산식", () =
 
 describe("FB-CGT-CREDIT-NEG-1: 의제 양도세 < 일반 양도세 → creditAmount=0, 양도세는 의제 강제", () => {
   /**
-   * 소법 §97의2④: 본문 강제 (선택 없음)
-   * 상증령 §15㉑ + §18의2⑩ 단서: 양도세 상당액 음수면 0
+   * 소법 §97의2④: 본문 강제 (선택 없음). §18의2⑩ 단서: 양도세 상당액 음수면 0.
    *
-   * 시나리오: 피상속인 취득가가 상속개시일 평가액보다 높을 때
-   *   (예: 피상속인이 비싸게 취득, 가업자산 가치 하락)
-   *   의제 취득가 > 피상속인 원취득가 → 의제 양도세 < 일반 양도세
-   *   → creditAmount = 0 (음수 가드)
-   *   단, 양도세는 §97의2④ 본문 강제 — 의제 산식 그대로 적용
+   * creditAmount = 0 이 나오는 경우 = 의제세액 ≤ 일반세액.
+   * §97 기준가액은 상속개시일 평가액(소령 §163⑨)이므로 의제취득가(blend)가 상속평가 이상일 때만
+   * 의제세액 ≤ 일반세액 → 공제 0. 즉 '피상속인가 ≥ 상속평가'(비정상: 상속 시점 가치 하락) 케이스.
    *
-   * 입력:
-   *   피상속인 취득가 = 500,000,000 (높은 취득가)
-   *   상속개시일 평가액 = 100,000,000 (낮은 평가)
-   *   적용률 = 0.5
-   *   의제 취득가 = 500M×0.5 + 100M×0.5 = 250M + 50M = 300M
-   *
-   *   양도가 = 400,000,000
-   *   일반 산식 양도차익 = 400M - 500M = -100M (손실, finalTax=0)
-   *   의제 산식 양도차익 = 400M - 300M = 100M (이익, 세금 발생)
-   *   → 의제 양도세 > 일반 양도세 이 경우는 creditAmount > 0
-   *
-   * 반대 시나리오 (creditAmount=0 확인):
-   *   피상속인 취득가 = 100,000,000
-   *   상속개시일 평가액 = 500,000,000 (높은 평가)
-   *   적용률 = 0.5
-   *   의제 취득가 = 100M×0.5 + 500M×0.5 = 50M + 250M = 300M
-   *
-   *   양도가 = 400,000,000
-   *   일반 산식 양도차익 = 400M - 100M = 300M (이익 큼)
-   *   의제 산식 양도차익 = 400M - 300M = 100M (이익 작음)
-   *   → 의제 양도세 < 일반 양도세 → creditAmount = 0
-   *
-   * 본 anchor: familyBusinessDetail.creditAmount=0 + totalTax는 의제 산식 기준
+   * 입력: 피상속인가 500M > 상속평가 100M, 적용률 0.5 → 의제 = 250M + 50M = 300M (≥ 상속평가 100M)
+   *   양도 400M — 의제(300M) 차익 100M(세액 12,840,000) vs 일반(상속평가 100M) 차익 300M(세액 70,310,000)
+   *   → creditAmount = max(0, 12,840,000 − 70,310,000) = 0. 양도세는 §97의2④ 의제 산식 강제.
    */
-  it("FB-CGT-CREDIT-NEG-1: 의제 취득가 > 피상속인 취득가 → 의제 양도세 < 일반 → creditAmount=0", () => {
-    // Do 단계 완료 전 이 테스트는 familyBusinessInheritance 필드 미인식으로 실패 예상
+  it("FB-CGT-CREDIT-NEG-1: 피상속인가 ≥ 상속평가(의제세액 ≤ 일반) → creditAmount=0", () => {
     const input = baseTransferInput({
       propertyType: "housing",
       transferPrice:    400_000_000,
-      acquisitionPrice: 100_000_000,  // 피상속인 원취득가 (일반 산식 기준)
+      acquisitionPrice: 500_000_000,  // 피상속인 원취득가 (높음)
       acquisitionDate:  new Date("2015-01-01"),
       transferDate:     new Date("2026-01-01"),
       isOneHousehold:   false,
@@ -177,23 +155,18 @@ describe("FB-CGT-CREDIT-NEG-1: 의제 양도세 < 일반 양도세 → creditAmo
       reductions: [],
       annualBasicDeductionUsed: 0,
       familyBusinessInheritance: {
-        decedentAcquisitionPrice: 100_000_000,
-        inheritanceMarketValue:   500_000_000,  // 높은 상속개시일 평가액
-        fbDeductionAppliedRate:   0.5,          // 의제 취득가 = 50M + 250M = 300M
+        decedentAcquisitionPrice: 500_000_000,  // 높은 피상속인 취득가
+        inheritanceMarketValue:   100_000_000,  // 낮은 상속개시일 평가액
+        fbDeductionAppliedRate:   0.5,          // 의제 취득가 = 250M + 50M = 300M
         inheritanceDate:          "2020-01-01",
       },
     });
 
     const result = calculateTransferTax(input, MOCK_RATES);
 
-    // Do 단계 완료 전 familyBusinessDetail이 없으므로 undefined
-    // Do 완료 후 기대값:
-    //   imputedAcquisitionPrice = 300,000,000
-    //   일반 취득가 100M → 일반 차익 300M → 일반 세액 > 의제 세액
-    //   creditAmount = 0 (음수 가드)
-    expect(result.familyBusinessDetail).toBeDefined();           // Do 완료 후 통과
+    //   의제 취득가 300M ≥ 상속평가 100M → 의제세액 ≤ 일반세액 → creditAmount = 0
+    expect(result.familyBusinessDetail).toBeDefined();
     expect(result.familyBusinessDetail!.creditAmount).toBe(0);  // 음수 가드
-    // 의제 취득가액 확인
     expect(result.familyBusinessDetail!.imputedAcquisitionPrice).toBe(300_000_000);
   });
 });
@@ -216,35 +189,24 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
    *   보유기간: 2015-01-01 ~ 2026-01-01 = 11년 (LTHD 22%)
    *   중과: 없음, 기본공제 250만
    *
-   * 일반 산식 (§97):
-   *   양도차익 = 500M - 100M = 400M
-   *   LTHD = 400M × 0.22 = 88,000,000
-   *   양도소득금액 = 312,000,000
-   *   기본공제 = 2,500,000
-   *   과세표준 = 309,500,000 → 절사 → 309,500,000
-   *   세율: 300M~500M 구간 40%, 누진공제 25,940,000
-   *   산출세액 = 309,500,000 × 0.40 - 25,940,000 = 123,800,000 - 25,940,000 = 97,860,000
-   *   지방소득세 = 97,860,000 × 0.1 = 9,786,000
-   *   totalTax = 107,646,000
+   * 보유기간 2015-01-01~2026-01-01 → LTHD 표1 20% (엔진 실측).
    *
-   * 의제 산식 (§97의2④):
-   *   의제 취득가 = 140,000,000
+   * 일반 산식 (§97) — 기준가액 = 상속개시일 평가액 300M (소령 §163⑨):
+   *   양도차익 = 500M - 300M = 200M
+   *   LTHD = 200M × 0.20 = 40,000,000 → 양도소득금액 160,000,000
+   *   과세표준 = 160,000,000 - 2,500,000 = 157,500,000
+   *   세율: 150M~300M 38%, 누진공제 19,940,000
+   *   산출세액 = 157,500,000 × 0.38 - 19,940,000 = 39,910,000  → cgtUnderSection97
+   *
+   * 의제 산식 (§97의2④) — 의제 취득가 140M:
    *   양도차익 = 500M - 140M = 360M
-   *   LTHD = 360M × 0.22 = 79,200,000
-   *   양도소득금액 = 280,800,000
-   *   기본공제 = 2,500,000
-   *   과세표준 = 278,300,000
-   *   세율: 150M~300M 구간 38%, 누진공제 19,940,000
-   *   산출세액 = 278,300,000 × 0.38 - 19,940,000 = 105,754,000 - 19,940,000 = 85,814,000
-   *   지방소득세 = 85,814,000 × 0.1 = 8,581,400
-   *   totalTax = 94,395,400
+   *   LTHD = 360M × 0.20 = 72,000,000 → 양도소득금액 288,000,000
+   *   과세표준 = 288,000,000 - 2,500,000 = 285,500,000
+   *   산출세액 = 285,500,000 × 0.38 - 19,940,000 = 88,550,000  → cgtUnderSection97_2_4
    *
-   * creditAmount = max(0, 94,395,400 - 107,646,000) = 0 (의제가 더 낮음!)
-   *
-   * ※ 위 수치는 Do 단계 엔진 구현 후 실제 계산값으로 대체.
-   *   현재는 구조 검증용 anchor — 실제 계산값은 Do 완료 후 갱신.
-   *
-   * Do 단계 전 이 테스트는 familyBusinessDetail undefined로 실패 예상.
+   * creditAmount = max(0, 88,550,000 - 39,910,000) = 48,640,000
+   *   (정상 상속: 피상속인가 100M < 상속평가 300M → 의제취득가 < 상속평가 baseline
+   *    → 의제세액 > 일반세액 → 양(+)의 §18의2⑩ 공제가 발생하는 것이 법령상 정상)
    */
   it("FB-CGT-FULL-1: 의제 취득가 140M → familyBusinessDetail 노출 + 양도세 의제 강제", () => {
     const input = baseTransferInput({
@@ -268,34 +230,33 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
 
     const result = calculateTransferTax(input, MOCK_RATES);
 
-    // Do 완료 후 기대값:
+    // 기대값 (§97 기준가액 = 상속개시일 평가액 300M, 소령 §163⑨):
     expect(result.familyBusinessDetail).toBeDefined();
     expect(result.familyBusinessDetail!.imputedAcquisitionPrice).toBe(140_000_000);
     expect(result.familyBusinessDetail!.appliedRate).toBe(0.8);
-    // 양도세는 §97의2④ 본문 강제 (의제 산식 기준)
-    // cgtUnderSection97_2_4 = 의제 취득가 적용 결정세액
-    // cgtUnderSection97 = 피상속인 원취득가 적용 결정세액
-    expect(result.familyBusinessDetail!.cgtUnderSection97_2_4).toBeGreaterThan(0);
-    expect(result.familyBusinessDetail!.cgtUnderSection97).toBeGreaterThan(0);
-    // creditAmount ≥ 0 (음수 가드)
-    expect(result.familyBusinessDetail!.creditAmount).toBeGreaterThanOrEqual(0);
+    // cgtUnderSection97_2_4 = 의제 취득가(140M) 적용 결정세액
+    // cgtUnderSection97 = 상속개시일 평가액(300M) 적용 결정세액 (소령 §163⑨)
+    expect(result.familyBusinessDetail!.cgtUnderSection97_2_4).toBe(88_550_000);
+    expect(result.familyBusinessDetail!.cgtUnderSection97).toBe(39_910_000);
+    // creditAmount = max(0, 의제 − 일반) — 정상 상속에서 양(+)
+    expect(result.familyBusinessDetail!.creditAmount).toBe(48_640_000);
   });
 
   /**
-   * FB-CGT-FULL-POSITIVE: 의제 양도세 > 일반 → creditAmount > 0 시나리오
+   * FB-CGT-FULL-POSITIVE: 정상 상속(피상속인가 < 상속평가) → creditAmount > 0
    *
-   * 피상속인 원취득가 500M (비싸게 취득) vs 상속개시일 평가 100M (가치 하락)
-   * 적용률 0.8 → 의제 취득가 = 500M×0.8 + 100M×0.2 = 400M + 20M = 420M
+   * 피상속인 원취득가 100M < 상속개시일 평가 500M (정상: 상속 시점 가치 상승)
+   * 적용률 0.8 → 의제 취득가 = 100M×0.8 + 500M×0.2 = 80M + 100M = 180M
    *
-   * 일반 §97: 취득가 500M → 양도가 600M → 차익 100M (낮은 세액)
-   * 의제 §97의2④: 취득가 420M → 양도가 600M → 차익 180M (높은 세액)
-   * → creditAmount = 의제 세액 - 일반 세액 > 0
+   * 일반 §97 (기준 = 상속평가 500M, 소령 §163⑨): 양도 600M → 차익 100M → 세액 12,840,000
+   * 의제 §97의2④ (취득가 180M): 양도 600M → 차익 420M → 세액 107,460,000
+   * → creditAmount = 107,460,000 − 12,840,000 = 94,620,000 > 0
    */
-  it("FB-CGT-FULL-POSITIVE: 피상속인 취득가 > 상속개시 평가 + 적용률 0.8 → creditAmount > 0", () => {
+  it("FB-CGT-FULL-POSITIVE: 피상속인가 < 상속평가(정상 상속) → creditAmount > 0", () => {
     const input = baseTransferInput({
       propertyType: "housing",
       transferPrice:    600_000_000,
-      acquisitionPrice: 500_000_000,  // 피상속인 원취득가 (높음)
+      acquisitionPrice: 100_000_000,  // 피상속인 원취득가 (낮음)
       acquisitionDate:  new Date("2015-01-01"),
       transferDate:     new Date("2026-01-01"),
       isOneHousehold:   false,
@@ -304,9 +265,9 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
       reductions: [],
       annualBasicDeductionUsed: 0,
       familyBusinessInheritance: {
-        decedentAcquisitionPrice: 500_000_000,
-        inheritanceMarketValue:   100_000_000,  // 낮은 상속개시일 평가
-        fbDeductionAppliedRate:   0.8,          // 의제 취득가 = 400M + 20M = 420M
+        decedentAcquisitionPrice: 100_000_000,  // 피상속인 원취득가(낮음)
+        inheritanceMarketValue:   500_000_000,  // 상속개시일 평가(높음)
+        fbDeductionAppliedRate:   0.8,          // 의제 취득가 = 80M + 100M = 180M
         inheritanceDate:          "2020-01-01",
       },
     });
@@ -314,10 +275,10 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
     const result = calculateTransferTax(input, MOCK_RATES);
 
     expect(result.familyBusinessDetail).toBeDefined();
-    expect(result.familyBusinessDetail!.imputedAcquisitionPrice).toBe(420_000_000);
-    // 의제 취득가 420M → 차익 180M (세액 발생)
-    // 일반 취득가 500M → 차익 100M (세액 낮음)
-    // creditAmount > 0 예상
+    expect(result.familyBusinessDetail!.imputedAcquisitionPrice).toBe(180_000_000);
+    // 의제 취득가 180M → 차익 420M (세액 107,460,000)
+    // 일반 기준 상속평가 500M → 차익 100M (세액 12,840,000)
+    expect(result.familyBusinessDetail!.creditAmount).toBe(94_620_000);
     expect(result.familyBusinessDetail!.creditAmount).toBeGreaterThan(0);
   });
 
@@ -358,13 +319,13 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
   });
 
   /**
-   * FB-CGT-SSOT-NEG: 의제 ≤ 일반 → creditAmount 0 (음수 가드 single-source)
+   * FB-CGT-SSOT-NEG: 피상속인가 ≥ 상속평가 → 의제세액 ≤ 일반 → creditAmount 0 (음수 가드 single-source)
    */
-  it("FB-CGT-SSOT-NEG: 의제 취득가 > 상속평가(의제세액 낮음) → creditAmount 0", () => {
+  it("FB-CGT-SSOT-NEG: 피상속인가 ≥ 상속평가(의제세액 ≤ 일반) → creditAmount 0", () => {
     const input = baseTransferInput({
       propertyType: "housing",
       transferPrice: 600_000_000,
-      acquisitionPrice: 100_000_000,
+      acquisitionPrice: 500_000_000,
       acquisitionDate: new Date("2015-01-01"),
       transferDate: new Date("2026-01-01"),
       isOneHousehold: false,
@@ -373,9 +334,9 @@ describe("FB-CGT-FULL-1: calculateTransferTax 2회 호출 통합 시나리오", 
       reductions: [],
       annualBasicDeductionUsed: 0,
       familyBusinessInheritance: {
-        decedentAcquisitionPrice: 100_000_000, // 낮은 피상속인 취득가 → 의제세액 ≤ 일반
-        inheritanceMarketValue: 500_000_000,
-        fbDeductionAppliedRate: 0.2,
+        decedentAcquisitionPrice: 500_000_000, // 높은 피상속인 취득가 → 의제세액 ≤ 일반
+        inheritanceMarketValue: 100_000_000,
+        fbDeductionAppliedRate: 0.2,           // 의제 취득가 = 100M + 80M = 180M
         inheritanceDate: "2020-01-01",
       },
     });

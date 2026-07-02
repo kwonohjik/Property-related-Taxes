@@ -360,10 +360,14 @@ export function calcTax(
     ? null
     : holdingMonthsTotal < 12 ? (isHousingLikeProp ? 0.70 : 0.50) :
       holdingMonthsTotal < 24 ? (isHousingLikeProp ? 0.60 : 0.40) :
+      // §104①1호: 분양권은 보유기간과 무관하게 60% 단일세율(2년 이상도 60%).
+      // (주택·조합원입주권은 2년 이상 시 일반 누진세율이므로 여기서 제외 — null 유지.)
+      input.propertyType === "presale_right" ? 0.60 :
       null;
   const shortTermNote =
     holdingMonthsTotal < 12 ? "보유기간 1년 미만 특례세율 적용" :
     holdingMonthsTotal < 24 ? "보유기간 2년 미만 특례세율 적용" :
+    input.propertyType === "presale_right" ? "분양권 60% 세율(소득세법 §104①1호)" :
     undefined;
 
   if (shortTermFlatRate !== null) {
