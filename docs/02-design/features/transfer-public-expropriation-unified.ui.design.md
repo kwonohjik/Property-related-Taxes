@@ -3,11 +3,17 @@
 > 계획서: `docs/00-pm/transfer-public-expropriation-unified.plan.md` · 엔진: `transfer-public-expropriation-unified.engine.design.md`
 > 확정: Step1 인라인 · 기존 Step4/Step5 토글 유지(override).
 
-## 1. 위치 — Step1 자산 카드 신규 블록 `ExpropriationBlock`
+## 1. 위치 — 양도 정보 카드 3지선다(`TransferModeBlock`) + 상세 블록 `ExpropriationBlock`
 
-- 렌더 조건: `assetKind === "land"` (수용 특례는 토지 중심).
-- 배치: Step1 자산 카드의 **양도 정보(AssetSectionTransfer) 인접** — 양도원인은 양도 사건 속성.
-- 컴포넌트: `components/calc/transfer/ExpropriationBlock.tsx` (신규). props `{ asset, onChange, transferDate }` (`onChange: (d: Partial<AssetForm>) => void`; `transferDate`=form-global 양도일, #3 게이트 `≥2009.02.04` 판정에 필요).
+> **2026-07-02 개정**: 양도원인 라디오(일반/공익수용)를 별도 rose 카드로 두던 초기안을 폐기하고,
+> `TransferModeBlock`의 **3지선다(일반 양도 / 부담부증여 / 공익수용·협의매수)**로 통합.
+> **land 전용 게이팅은 버그로 확정·제거** — §77(조특법)은 "토지등"(공익사업법 §2 = 토지·건물·물건·권리)
+> 대상이며 엔진 `asset-kind-gate` standalone = 전 자산 허용. 건물·주택·상가 수용도 §77 감면 대상.
+
+- 렌더 조건: **전 자산 노출** (§77 = 토지등). 단 #1 NBL 사업용 의제 프리필·#3 환산 min[] 특례는 **토지 전용**(내부 게이트).
+- 배치: 양도 정보 카드(`TransferModeBlock`)의 **3지선다 라디오 — 공익수용은 부담부증여 바로 아래**. 선택 시 상세 인라인 펼침.
+- 컴포넌트: `components/calc/transfer/ExpropriationBlock.tsx` (상세 필드 전용 — 라디오는 `TransferModeBlock`으로 이동). props `{ asset, onChange, transferDate }`.
+- 3지선다 → 엔진 2필드 매핑(불변): 공익수용 = `transferType:"regular"` + `transferCause:"public_expropriation"`.
 
 ## 2. 위젯 트리 (ASCII)
 

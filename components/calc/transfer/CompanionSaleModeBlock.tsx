@@ -251,6 +251,7 @@ export function CompanionSaleModeBlock(props: BlockProps) {
             ? "실제 매매계약서상 거래금액"
             : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"
         }
+        data-testid="companion-actual-sale-price"
       />
     );
   }
