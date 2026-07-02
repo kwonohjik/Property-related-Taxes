@@ -56,9 +56,13 @@ export interface BlockProps {
   /** 취득 당시 면적 (㎡) — 취득시 기준시가 자동계산, Pre1990 환산용 */
   acquisitionArea?: string;
   onAcquisitionAreaChange?: (v: string) => void;
+  /** 취득시 기준시가 면적 입력 라벨 커스텀 (증환지 당초분 = "종전토지 면적") */
+  acqAreaLabel?: string;
   /** 양도 당시 면적 (㎡) — 양도시 기준시가 자동계산용 */
   transferArea?: string;
   onTransferAreaChange?: (v: string) => void;
+  /** 양도시 기준시가 면적 입력 라벨 커스텀 (증환지 당초분 = "권리면적") */
+  transferAreaLabel?: string;
   /** 1990 이전 취득 토지 환산 슬라이스 */
   pre1990Form?: Pre1990FormSlice;
   onPre1990Change?: (patch: Partial<Pre1990FormSlice>) => void;

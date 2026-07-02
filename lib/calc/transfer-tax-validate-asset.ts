@@ -491,9 +491,9 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     if (scenario === "increase") {
       if (!asset.replottingConfirmDate) return `${label}: 환지처분확정일을 입력하세요.`;
       if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
-        return `${label}: 취득 당시 면적(권리면적 기준)을 입력하세요.`;
+        return `${label}: 종전토지 면적(③ 취득정보의 취득 당시 면적)을 입력하세요.`;
       if (!asset.transferArea || parseFloat(asset.transferArea) <= 0)
-        return `${label}: 양도 당시 면적을 입력하세요.`;
+        return `${label}: 권리면적(양도 당시 면적)을 입력하세요.`;
     }
   }
 
