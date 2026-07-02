@@ -16,9 +16,11 @@ const exclusionTypeSchema = z.enum([
   "private_construction_rental",
   "private_purchase_rental_long",
   "private_purchase_rental_short",
-  "public_support_rental",
+  "public_support_construction_rental",
+  "public_support_purchase_rental",
   "public_construction_rental",
   "public_purchase_rental",
+  "existing_rental",
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
   "unsold_housing",
@@ -39,9 +41,11 @@ const rentalRegistrationTypeSchema = z.enum([
   "private_construction",
   "private_purchase_long",
   "private_purchase_short",
-  "public_support",
+  "public_support_construction",
+  "public_support_purchase",
   "public_construction",
   "public_purchase",
+  "existing_rental",
   "private_short_term_6y_construction",
   "private_short_term_6y_purchase",
 ]);
@@ -99,6 +103,9 @@ const rentalExclusionInfoSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
     .optional(),
+
+  /** 읍·면 지역 여부 (existing_rental §3①3호 전용 — 읍면 100㎡ / 그외 85㎡ 면적 상한) */
+  isEupMyeonArea: z.boolean().optional(),
 });
 
 // ============================================================
