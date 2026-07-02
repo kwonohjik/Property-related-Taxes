@@ -7,7 +7,6 @@
  * 사후관리 위반 추징 (§8③)
  */
 
-import { differenceInYears } from "date-fns";
 import { safeMultiplyThenDivide, safeMulDivRound } from "./tax-utils";
 import {
   COMPREHENSIVE_CONST,
@@ -94,6 +93,24 @@ export function toAppurtenantFraction(
 // ============================================================
 
 /**
+ * 만 경과연수 (UTC 컴포넌트 기준) — 나이·보유연수 계산.
+ *
+ * 입력 Date는 `new Date("YYYY-MM-DD")`(UTC 자정) date-only 값. date-fns `differenceInYears`는
+ * 로컬 컴포넌트를 읽어, 서버 TZ가 과거 오프셋(1961.8.10 이전 KST=UTC+8:30)을 가질 때 1954~1961년생의
+ * 6/1 경계 만 나이를 1세 저평가하는 함정이 있다(고령자 공제율 10%p 과소·납세자 불리). UTC 컴포넌트는 원문 달력값이라 TZ 독립.
+ */
+function fullYearsUTC(from: Date, to: Date): number {
+  let years = to.getUTCFullYear() - from.getUTCFullYear();
+  if (
+    to.getUTCMonth() < from.getUTCMonth() ||
+    (to.getUTCMonth() === from.getUTCMonth() && to.getUTCDate() < from.getUTCDate())
+  ) {
+    years -= 1;
+  }
+  return years;
+}
+
+/**
  * 고령자 공제율 반환 (종합부동산세법 §9⑥)
  * 만 60세~: 20% / 65세~: 30% / 70세~: 40%
  */
@@ -101,7 +118,7 @@ export function getSeniorRate(
   birthDate: Date,
   assessmentDate: Date,
 ): number {
-  const age = differenceInYears(assessmentDate, birthDate);
+  const age = fullYearsUTC(birthDate, assessmentDate);
   if (age >= COMPREHENSIVE_CONST.SENIOR_AGE_70) return COMPREHENSIVE_CONST.SENIOR_RATE_70;
   if (age >= COMPREHENSIVE_CONST.SENIOR_AGE_65) return COMPREHENSIVE_CONST.SENIOR_RATE_65;
   if (age >= COMPREHENSIVE_CONST.SENIOR_AGE_MIN) return COMPREHENSIVE_CONST.SENIOR_RATE_60;
@@ -116,7 +133,7 @@ export function getLongTermRate(
   acquisitionDate: Date,
   assessmentDate: Date,
 ): number {
-  const years = differenceInYears(assessmentDate, acquisitionDate);
+  const years = fullYearsUTC(acquisitionDate, assessmentDate);
   if (years >= 15) return COMPREHENSIVE_CONST.LONG_TERM_RATE_15Y;
   if (years >= 10) return COMPREHENSIVE_CONST.LONG_TERM_RATE_10Y;
   if (years >= COMPREHENSIVE_CONST.LONG_TERM_MIN_YEARS) return COMPREHENSIVE_CONST.LONG_TERM_RATE_5Y;

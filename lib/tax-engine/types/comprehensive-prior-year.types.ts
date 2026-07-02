@@ -85,6 +85,7 @@ export interface PreviousYearEquivalentResult {
   detail: {
     assessedValue: number;         // 부표 ① 직전연도 공시가격
     basicDeduction: number;        // 부표 ② 공제금액 (1주택 시 추가공제 포함)
+    basicDeductionGeneral: number; // 부표 ② 병기용 일반 기본공제 (연도별 6억/9억) — 1주택 라벨 비교값
     fairMarketRatio: number;       // 부표 ③ 공정시장가액비율 (2021 = 0.95)
     taxBase: number;               // 부표 ④ 종부세 과세표준
     appliedRate: number;           // 부표 ⑤ 세율

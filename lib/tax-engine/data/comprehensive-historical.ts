@@ -101,7 +101,7 @@ const BRACKETS_2023_GENERAL: ComprehensiveBracket[] = [
 /**
  * 2023~ 현행 §9①2호 (3주택 이상) — KoreanLaw §9① 실측.
  * 12억까지는 1호와 동일(0.5/0.7/1.0), 12억 초과부터 중과(2.0/3.0/4.0/5.0).
- * 누진공제는 경계 연속성으로 산출: 12억 경계 1호값 1,020만 = 2.0%×12억−base → base 1,440만.
+ * 누진공제는 경계 연속성으로 산출: 12억 경계값 960만 = 2.0%×12억−base → base 1,440만 (KoreanLaw §9① 별표 역산 일치).
  */
 const BRACKETS_2023_MULTI: ComprehensiveBracket[] = [
   { limit: 300_000_000,   rate: 0.005, deduction: 0 },
