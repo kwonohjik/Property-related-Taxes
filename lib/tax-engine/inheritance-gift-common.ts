@@ -201,15 +201,20 @@ export function calcGenerationSkipSurcharge(
         : 0;
     const adjustedDenominator = totalEstateValue! - denominatorAdjustment;
 
-    // PDF 종합사례 (책 1864): floor(산출세액 × 세대생략재산 / 분모 × 할증율) — 단일 floor
-    surchargeAmount = Math.floor(
-      (computedTax * generationSkipAssetAmount! * surchargeRate) /
-        adjustedDenominator,
+    // PDF 종합사례 (책 1864): floor(산출세액 × 세대생략재산 / 분모 × 할증율) — 단일 floor.
+    // 큰 값 곱셈이 2^53 초과 가능 → 할증율을 정수(×10)로 올려 safeMultiplyThenDivide BigInt 단일 floor (§57 경로와 동일).
+    const surchargeRateTenths = Math.round(surchargeRate * 10); // 0.3 → 3, 0.4 → 4
+    surchargeAmount = safeMultiplyThenDivide(
+      computedTax * surchargeRateTenths,
+      generationSkipAssetAmount!,
+      adjustedDenominator * 10,
     );
     breakdown.push({
       label: `세대생략 할증 — 안분기준 (산출세액 × 세대생략재산 / 분모)`,
-      amount: Math.floor(
-        (computedTax * generationSkipAssetAmount!) / adjustedDenominator,
+      amount: safeMultiplyThenDivide(
+        computedTax,
+        generationSkipAssetAmount!,
+        adjustedDenominator,
       ),
       note: `${generationSkipAssetAmount!.toLocaleString()} / ${adjustedDenominator.toLocaleString()}${
         denominatorAdjustment > 0

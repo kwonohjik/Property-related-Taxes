@@ -7,6 +7,7 @@
  * - 시행규칙 §10의3①: 소득세 상당액 율표 (6구간 2018~2024.3.21 / 7구간 2024.3.22~)
  */
 import { GIFT } from "../legal-codes";
+import { safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import {
   applyExcessDividendRateTable,
@@ -198,14 +199,15 @@ export function computeExcessDividendAmount(
   // 총배당
   const totalDividend = shareholders.reduce((sum, sh) => sum + sh.actualDividend, 0);
 
-  // 특수관계인 지분율 합계
-  const relatedNumer = shareholders
+  // 특수관계인 비례배당: Σ floor(totalDividend × 지분율) — 정수 분수 연산.
+  // (부동소수 백분율 numer×(100/denom) 경로는 denom=10000 등에서 1원 오차 → 개별주주 경로와 동일 정수화)
+  const proportionalDividend = shareholders
     .filter((sh) => sh.role === "related_party")
-    .reduce((sum, sh) => sum + sh.ownershipRatio.numer * (100 / sh.ownershipRatio.denom), 0);
-
-  // 특수관계인 비례배당: totalDividend × (관련 지분율 / 100)
-  // 정수연산: safeMultiplyThenDivide(totalDividend × relatedNumer, 1, 100) 형식
-  const proportionalDividend = Math.floor((totalDividend * relatedNumer) / 100);
+    .reduce(
+      (sum, sh) =>
+        sum + safeMultiplyThenDivide(totalDividend, sh.ownershipRatio.numer, sh.ownershipRatio.denom),
+      0,
+    );
 
   // 특수관계인 실수령 합계
   const relatedActual = shareholders

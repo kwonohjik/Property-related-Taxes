@@ -63,6 +63,7 @@ export interface ChecklistFormSlice {
   ancillaryLandArea: string;
   buildingFootprintArea: string;
   ancillaryLandRegion: string;
+  ancillaryLandStdPrice: string;
   farmingAssetValue: string;
   farming?: unknown; // FarmingInheritanceInput | undefined
   // 수동 항목 종속 필드
@@ -113,7 +114,8 @@ export function autoItemHasValue(form: ChecklistFormSlice, key: AutoChecklistKey
         hasStr(form.cohabitDirectAmount) ||
         hasStr(form.ancillaryLandArea) ||
         hasStr(form.buildingFootprintArea) ||
-        hasStr(form.ancillaryLandRegion)
+        hasStr(form.ancillaryLandRegion) ||
+        hasStr(form.ancillaryLandStdPrice)
       );
     case "farming":
       return hasStr(form.farmingAssetValue) || form.farming != null;

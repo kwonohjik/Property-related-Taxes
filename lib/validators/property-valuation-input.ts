@@ -421,6 +421,8 @@ export const inheritanceDeductionInputSchema = z.object({
       "other",
     ])
     .optional(),
+  // ancillaryLandStdPrice: 부수토지 공시가격(토지분, 원). 초과분 차감 기준가액(건물분 보존).
+  ancillaryLandStdPrice: z.number().nonnegative().optional(),
 });
 
 // ============================================================

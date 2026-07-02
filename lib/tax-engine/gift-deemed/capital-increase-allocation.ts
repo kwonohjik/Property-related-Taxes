@@ -31,7 +31,7 @@ function forfeitedBy(s: CapShareholder): number {
 export function calcCapitalIncreaseAllocation(
   input: CapitalIncreaseAllocationInput,
 ): CapitalIncreaseAllocationResult {
-  const { preIssuePrice: pre, newSharePrice: priceIn, shareholders } = input;
+  const { preIssuePrice: pre, newSharePrice: priceIn, shareholders, direction } = input;
   const preTotal = shareholders.reduce((a, s) => a + s.preShares, 0);
   const issuedActual = shareholders.reduce((a, s) => a + s.subscribedShares, 0);
 
@@ -58,6 +58,10 @@ export function calcCapitalIncreaseAllocation(
   const perShareDiff = Math.abs(perShareAfter - priceIn);
   const ratioMet = perShareDiff >= safeMultiplyThenDivide(perShareAfter, RATIO_NUMER, RATIO_DENOM);
 
+  // §39①: 저가발행(1호) 가목(재배정)·다목(제3자배정)·라목(초과배정)은 특수관계 요건 없음.
+  //        나목(실권주 미배정=실권처리)·고가발행(2호)만 특수관계인 요구.
+  const relationGateApplies = direction === "high" || hasForfeitProcessing;
+
   const relatedSets = new Map(shareholders.map((s) => [s.id, new Set(s.relatedTo ?? [])]));
   const splits: DonationSplit[] = [];
   const perBeneficiary: CapitalIncreaseAllocationResult["perBeneficiary"] = [];
@@ -77,11 +81,14 @@ export function calcCapitalIncreaseAllocation(
           : safeMultiplyThenDivide(b.delta, -d.delta, totalLoss);
       assigned += raw;
       const isRelated = relatedSets.get(b.id)?.has(d.id) ?? false;
-      const taxable = gatedOut || !isRelated ? 0 : raw;
+      const relationExcluded = relationGateApplies && !isRelated;
+      const taxable = gatedOut || relationExcluded ? 0 : raw;
       const excludedReason = gatedOut
         ? "이익이 기준금액(증자후가 30%·3억) 미만"
-        : !isRelated
-          ? "특수관계 부재(§39①2호)"
+        : relationExcluded
+          ? direction === "high"
+            ? "특수관계 부재(§39①2호)"
+            : "특수관계 부재(§39①1호나목)"
           : undefined;
       const row: DonationSplit = { beneficiaryId: b.id, donorId: d.id, value: taxable, excludedReason };
       byDonor.push(row);

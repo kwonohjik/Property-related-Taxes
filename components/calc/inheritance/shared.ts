@@ -185,6 +185,12 @@ export interface FormState extends AppraisalFeeFormFields {
    * ancillaryLandArea·buildingFootprintArea와 함께 전부 또는 전무 입력.
    */
   ancillaryLandRegion: AncillaryLandRegion | "";
+  /**
+   * 주택부수토지 공시가격 (토지분, 원). §23의2① 초과분 차감의 기준가액 — CurrencyInput.
+   * 개별주택가격은 건물+토지 일체이므로 초과분은 이 토지분에서만 차감(건물분 보존).
+   * ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion과 함께 전부 또는 전무 입력.
+   */
+  ancillaryLandStdPrice: string;
 }
 
 export type FormSet = (p: Partial<FormState>) => void;
@@ -258,6 +264,7 @@ export const INITIAL_FORM: FormState = {
   ancillaryLandArea: "",
   buildingFootprintArea: "",
   ancillaryLandRegion: "",
+  ancillaryLandStdPrice: "",
   ...INITIAL_APPRAISAL_FEE_FIELDS,
 };
 

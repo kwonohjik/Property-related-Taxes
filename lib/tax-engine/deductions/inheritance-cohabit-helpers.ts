@@ -398,30 +398,35 @@ const ANCILLARY_LAND_RATIO: Record<AncillaryLandRegion, number> = {
  * §23의2① 주택부수토지 면적한도 초과분 차감 계산.
  *
  * 법령 근거:
- *   §23의2①: "소득세법 §89①3호에 따른 주택부수토지의 가액을 포함"
- *   소득세 시행령 §154⑦: 건물 정착 면적 × 지역별 배율 이내의 토지만 주택부수토지로 인정
+ *   §23의2①: "소득세법 §89①3호에 따른 주택부수토지의 가액을 포함" — 주택(건물)가액은 전액 포함,
+ *            한도 초과 '주택부수토지'만 상속주택가액에서 제외.
+ *   소득세 시행령 §154⑦: 건물 정착 면적 × 지역별 배율 이내의 토지만 주택부수토지로 인정.
  *
  * 전제 (inheritance-cohabit-ancillary-land.plan.md):
- *   아파트·공동주택가격은 부수토지 포함 → ancillaryLandArea 미입력으로 차감 없음.
- *   단독주택 대형토지를 별도 EstateItem으로 분리 입력한 경우에만 해당.
+ *   단독주택 개별주택가격(cohabitHouseStdPrice)은 건물+토지 일체 평가이므로, 초과분은
+ *   '부수토지 가액(ancillaryLandStdPrice)'에서만 비례 차감하고 건물분은 보존해야 한다.
  *
- * 정밀 연산:
- *   adjustedHousePrice = floor(cohabitHouseStdPrice × limitArea / ancillaryLandArea) — 곱셈 먼저
+ * 정밀 연산 (건물분 보존):
+ *   limitReductionAmount = floor(ancillaryLandStdPrice × excessArea / ancillaryLandArea)  ← 초과 토지분만
+ *   adjustedHousePrice   = cohabitHouseStdPrice − limitReductionAmount
+ *   = 건물 + 부수토지 × (한도면적 / 전체면적)  (건물 전액 보존)
  *
- * 미입력 안전 처리:
- *   ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion 중 하나라도 미입력 시
- *   차감 없음 반환 (자동 안분 fallback 금지 정책).
+ * 미입력 안전 처리 (자동 안분 fallback 금지 정책):
+ *   ancillaryLandArea·buildingFootprintArea·ancillaryLandRegion·ancillaryLandStdPrice 중
+ *   하나라도 미입력 시 차감 없음 반환.
  *
  * @param buildingFootprintArea 건물 정착 면적 (㎡)
  * @param ancillaryLandArea 부수토지 실제 면적 (㎡)
  * @param region 지역 구분
- * @param cohabitHouseStdPrice 동거주택 공시가격 (원)
+ * @param cohabitHouseStdPrice 동거주택 공시가격 (건물+토지 결합, 원)
+ * @param ancillaryLandStdPrice 부수토지 공시가격 (토지분만, 원) — 초과분 차감의 기준가액
  */
 export function applyAncillaryLandLimit(
   buildingFootprintArea: number | undefined,
   ancillaryLandArea: number | undefined,
   region: AncillaryLandRegion | undefined,
   cohabitHouseStdPrice: number,
+  ancillaryLandStdPrice: number | undefined,
 ): {
   adjustedHousePrice: number;
   limitArea: number;
@@ -429,11 +434,12 @@ export function applyAncillaryLandLimit(
   excessRatio: number;
   limitReductionAmount: number;
 } {
-  // 3필드 중 하나라도 미입력 시 차감 없음 (전부 또는 전무)
+  // 4필드 중 하나라도 미입력 시 차감 없음 (전부 또는 전무)
   if (
     ancillaryLandArea === undefined ||
     buildingFootprintArea === undefined ||
-    region === undefined
+    region === undefined ||
+    ancillaryLandStdPrice === undefined
   ) {
     return {
       adjustedHousePrice: cohabitHouseStdPrice,
@@ -458,16 +464,17 @@ export function applyAncillaryLandLimit(
     };
   }
 
-  // 정밀 연산: 곱셈 먼저, floor (Math.round 금지)
-  // adjustedHousePrice = floor(cohabitHouseStdPrice × limitArea / ancillaryLandArea)
-  const adjustedHousePrice = Math.floor(
-    (cohabitHouseStdPrice * limitArea) / ancillaryLandArea,
+  // 초과 토지분 가액만 차감(건물분 보존): floor(부수토지공시가격 × 초과면적 / 전체부수토지면적)
+  // 곱셈 먼저, floor (Math.round 금지). 방어: 토지분이 결합가를 넘지 않도록 clamp.
+  const excessLandValue = Math.floor(
+    (ancillaryLandStdPrice * excessArea) / ancillaryLandArea,
   );
-  const limitReductionAmount = cohabitHouseStdPrice - adjustedHousePrice;
+  const limitReductionAmount = Math.min(excessLandValue, cohabitHouseStdPrice);
+  const adjustedHousePrice = Math.max(0, cohabitHouseStdPrice - limitReductionAmount);
   const excessRatio = excessArea / ancillaryLandArea;
 
   return {
-    adjustedHousePrice: Math.max(0, adjustedHousePrice),
+    adjustedHousePrice,
     limitArea,
     excessArea,
     excessRatio,
