@@ -54,6 +54,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     capitalExpenditure: "0",
     transferExpense: "0",
     reductions: [],
+    transferCause: "general",
+    expropriationNoticeDate: "",
     inheritanceValuationMode: "auto",
     inheritanceDate: "",
     inheritanceAssetKind: "land",

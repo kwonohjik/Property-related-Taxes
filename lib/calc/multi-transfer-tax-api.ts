@@ -17,7 +17,7 @@ const isHousingLike = (pt: string) =>
 /** TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용) */
 export function buildPropertyPayload(form: TransferFormData) {
   const primary = form.assets?.[0];
-  const reductions = toEngineReductions(primary?.reductions ?? [], primary?.acquisitionCause ?? "purchase");
+  const reductions = toEngineReductions(primary?.reductions ?? [], primary?.acquisitionCause ?? "purchase", primary?.expropriationNoticeDate);
   const primaryKind = primary?.assetKind ?? "";
 
   // ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (단건 API와 동일 공용 빌더 — drift 차단)

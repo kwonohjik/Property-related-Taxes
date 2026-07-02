@@ -94,9 +94,12 @@ export function buildUnconditionalExemption(
   a: Record<string, unknown>,
   parseDate: ParseDate,
 ): UnconditionalExemptionInput | undefined {
+  // 양도원인=공익수용 단일 선택도 §168의14③3호 의제 판정을 트리거 (섹션 토글 미설정 방어)
+  const isExpropriation =
+    asBool(a.nblExemptPublicExpropriation) || asString(a.transferCause) === "public_expropriation";
   const has =
     asBool(a.nblExemptInheritBefore2007) || asBool(a.nblExemptLongOwned20y) ||
-    asBool(a.nblExemptAncestor8YearFarming) || asBool(a.nblExemptPublicExpropriation) ||
+    asBool(a.nblExemptAncestor8YearFarming) || isExpropriation ||
     asBool(a.nblExemptFactoryAdjacent) || asBool(a.nblExemptJongjoongOwned) ||
     asBool(a.nblExemptUrbanFarmlandJongjoong) || asBool(a.nblExemptInong);
   if (!has) return undefined;
@@ -105,8 +108,9 @@ export function buildUnconditionalExemption(
     inheritanceDate:                     parseDate(asString(a.nblExemptInheritDate)),
     ownedOver20YearsBefore2007:          asBool(a.nblExemptLongOwned20y),
     isAncestor8YearFarming:              asBool(a.nblExemptAncestor8YearFarming),
-    isPublicExpropriation:               asBool(a.nblExemptPublicExpropriation),
-    publicNoticeDate:                    parseDate(asString(a.nblExemptPublicNoticeDate)),
+    isPublicExpropriation:               isExpropriation,
+    // 고시일 fallback: NBL 섹션 미입력 시 Step1 단일 소스(expropriationNoticeDate)
+    publicNoticeDate:                    parseDate(asString(a.nblExemptPublicNoticeDate) || asString(a.expropriationNoticeDate)),
     isFactoryAdjacent:                   asBool(a.nblExemptFactoryAdjacent),
     isJongjoongOwned:                    asBool(a.nblExemptJongjoongOwned),
     jongjoongAcquisitionDate:            parseDate(asString(a.nblExemptJongjoongAcqDate)),

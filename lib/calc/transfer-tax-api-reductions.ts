@@ -12,6 +12,8 @@ import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-sto
 export function toEngineReductions(
   formReductions: AssetReductionForm[],
   acquisitionCause: AssetForm["acquisitionCause"],
+  // 파급C: 매퍼는 asset 컨텍스트 없음 → §77 고시일 fallback 소스를 명시 주입
+  expropriationNoticeDate?: string,
 ) {
   return formReductions.map((r) => {
     if (r.type === "self_farming") {
@@ -67,7 +69,8 @@ export function toEngineReductions(
         cashCompensation: cash,
         bondCompensation: bond,
         bondHoldingYears,
-        businessApprovalDate: r.expropriationApprovalDate,
+        // 고시일 fallback: reduction 미입력 시 Step1 단일 소스(expropriationNoticeDate)
+        businessApprovalDate: r.expropriationApprovalDate || expropriationNoticeDate || "",
       };
     }
     if (r.type === "gb_designated_land") {

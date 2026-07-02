@@ -68,6 +68,9 @@ export function buildNonBusinessLandRaw(
   );
   return {
     ...nblFields,
+    // 공익수용 단일 소스 — 서버 buildUnconditionalExemption의 isExpr·고시일 fallback에 필요(nbl* 미prefix)
+    transferCause: asset.transferCause,
+    expropriationNoticeDate: asset.expropriationNoticeDate,
     acquisitionArea: asset.acquisitionArea,
     acquisitionDate: asset.acquisitionDate,
     transferDate,
