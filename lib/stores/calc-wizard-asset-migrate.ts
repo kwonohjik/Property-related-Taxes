@@ -40,6 +40,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 공익수용·협의매수 (2026-07-02): 양도원인·사업인정고시일 (구 세션 복원 방어)
   if (a.transferCause === undefined) a.transferCause = "general";
   if (a.expropriationNoticeDate === undefined) a.expropriationNoticeDate = "";
+  // #3 환산 min[] 특례 보상필드 (Phase 2)
+  if (a.compensationPerSqm === undefined) a.compensationPerSqm = "";
+  if (a.compensationBasisStdPrice === undefined) a.compensationBasisStdPrice = "";
   // 갭 3b: NBL 유예기간 구 7-union(type·startDate) → 사유코드. 길이 단정 불가 → other_justifiable(12호 event_window) 일원화(손실 0).
   if (Array.isArray(a.nblGracePeriods)) {
     a.nblGracePeriods = (a.nblGracePeriods as Record<string, unknown>[]).map((g) =>

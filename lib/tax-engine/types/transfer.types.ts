@@ -100,6 +100,17 @@ export interface TransferTaxInput {
   standardPriceAtAcquisition?: number;
   /** 양도시 기준시가 (환산취득가 사용 시 필수) */
   standardPriceAtTransfer?: number;
+  // ── #3 공익수용 환산 양도시 기준시가 min[] 특례 (집행기준 99-164-12) — 모두 optional, 미제공 시 현행 ──
+  /** 양도원인 — "public_expropriation" 시 #3 게이트 후보 */
+  transferCause?: "general" | "public_expropriation";
+  /** 양도시 기준시가 (원/㎡) — min[] 첫 후보 */
+  standardPricePerSqmAtTransfer?: number;
+  /** 양도 면적 (㎡) — min[] × 면적 */
+  transferArea?: number;
+  /** 보상가액 (원/㎡) — min[] 후보 */
+  compensationPerSqm?: number;
+  /** 보상산정 기초 기준시가 (원/㎡) — min[] 후보 */
+  compensationBasisStdPrice?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
   /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */

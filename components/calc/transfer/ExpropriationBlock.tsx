@@ -13,14 +13,23 @@ import { getStandaloneDefault } from "./UnifiedReductionPanel-defaults";
  */
 type ExprReduction = Extract<AssetReductionForm, { type: "public_expropriation" }>;
 
+/** #3 환산 min[] 특례 시행 기준일 (수용=양도 시점) — 집행기준 99-164-12 */
+const EXPR_VALUATION_MIN_DATE = "2009-02-04";
+
 export function ExpropriationBlock({
   asset,
   onChange,
+  transferDate,
 }: {
   asset: AssetForm;
   onChange: (d: Partial<AssetForm>) => void;
+  /** form-global 양도일 (YYYY-MM-DD) — #3 게이트 판정 */
+  transferDate: string;
 }) {
   const isExpr = asset.transferCause === "public_expropriation";
+  // #3 환산 min[] 게이트: 환산모드 + 양도 ≥ 2009.02.04
+  const showValuationMin =
+    isExpr && asset.useEstimatedAcquisition && !!transferDate && transferDate >= EXPR_VALUATION_MIN_DATE;
   const expr = asset.reductions?.find(
     (r): r is ExprReduction => r.type === "public_expropriation",
   );
@@ -119,6 +128,32 @@ export function ExpropriationBlock({
               ]}
             />
           </div>
+
+          {showValuationMin && (
+            <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                환산 양도시 기준시가 특례 (집행기준 99-164-12)
+              </p>
+              <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+                수용(2009.02.04 이후) 토지를 환산취득가액으로 계산 시, 양도시 기준시가는
+                아래 셋 중 <b>가장 작은 금액</b>(공시지가·보상 ㎡당·보상산정 기초)이 적용됩니다.
+              </p>
+              <CurrencyInput
+                label="보상가액"
+                value={asset.compensationPerSqm}
+                onChange={(v) => onChange({ compensationPerSqm: v })}
+                hideUnit
+                hint="㎡당 보상가액 (원/㎡)"
+              />
+              <CurrencyInput
+                label="보상산정 기초 기준시가"
+                value={asset.compensationBasisStdPrice}
+                onChange={(v) => onChange({ compensationBasisStdPrice: v })}
+                hideUnit
+                hint="보상 산정의 기초가 된 ㎡당 기준시가 (원/㎡)"
+              />
+            </div>
+          )}
         </div>
       )}
     </section>
