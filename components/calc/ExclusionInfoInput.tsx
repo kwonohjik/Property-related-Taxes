@@ -127,7 +127,7 @@ function RentalExclusionDetail({
         )}
         {property.rentalRegistrationType === "existing_rental" && (
           <p className="text-xs text-muted-foreground">
-            기존임대주택(§3①3호): 2005년 1월 5일 이전 등록 · 공시가격 6억원(수도권) / 3억원(비수도권) 이하 · 5년 이상 임대 · 전용면적 85㎡ 이하 (읍·면 지역은 100㎡ 이하)
+            기존임대주택(§3①3호): 2005년 1월 5일 이전 등록 · 공시가격 3억원 이하 · 5년 이상 임대 · 전용면적 85㎡ 이하 (읍·면 지역은 100㎡ 이하)
           </p>
         )}
       </div>
@@ -140,6 +140,25 @@ function RentalExclusionDetail({
           description="읍·면 지역은 전용면적 100㎡ 이하 / 그 외는 85㎡ 이하 적용 (시행령 §3①3호)"
           checked={property.isEupMyeonArea}
           onCheckedChange={(v) => onUpdate({ isEupMyeonArea: v })}
+        />
+      )}
+
+      {/* 30호 이상 여부 — 건설·매입 임대(§3①1·2·7·8호) 선택 시만 표시 */}
+      {[
+        "private_construction",
+        "public_construction",
+        "public_support_construction",
+        "private_purchase_long",
+        "private_purchase_short",
+        "public_purchase",
+        "public_support_purchase",
+      ].includes(property.rentalRegistrationType) && (
+        <ToggleCard
+          tone="sky"
+          title="30호 이상 임대"
+          description="30호 이상이면 공시가격 상한 상향 — 건설 12억 / 매입 수도권 9억·비수도권 6억 (시행령 §3①1·2·7·8호)"
+          checked={property.isThirtyPlusUnits}
+          onCheckedChange={(v) => onUpdate({ isThirtyPlusUnits: v })}
         />
       )}
 

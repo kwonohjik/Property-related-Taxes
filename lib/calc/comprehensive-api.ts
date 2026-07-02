@@ -322,6 +322,7 @@ export async function callComprehensiveApi(
           actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
           registrationRevokedDate: p.registrationRevokedDate || undefined,
           isEupMyeonArea: p.isEupMyeonArea || undefined,
+          isThirtyPlusUnits: p.isThirtyPlusUnits || undefined,
         },
       };
     }

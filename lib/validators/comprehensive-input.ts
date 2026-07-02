@@ -106,6 +106,8 @@ const rentalExclusionInfoSchema = z.object({
 
   /** 읍·면 지역 여부 (existing_rental §3①3호 전용 — 읍면 100㎡ / 그외 85㎡ 면적 상한) */
   isEupMyeonArea: z.boolean().optional(),
+  /** 30호 이상 여부 (§3①1·2·7·8호 공시가격 상한 tier) */
+  isThirtyPlusUnits: z.boolean().optional(),
 });
 
 // ============================================================
