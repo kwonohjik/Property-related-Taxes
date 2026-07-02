@@ -51,8 +51,8 @@ test.describe("증환지 환산 모드 — 증가분 자동복사 (PR#473 Phase 
     // 증가분(32.2㎡) 자산 자동 추가
     await page.getByTestId("replot-inc-add-btn").click();
 
-    // ── Phase A 검증: 자동복사 성공 배너 ──
-    await expect(page.getByText(/자동 복사됨/)).toBeVisible();
+    // ── Phase A 검증: 증가분 추가 배너 (취득가액 입력 안내) ──
+    await expect(page.getByText(/취득가액\(청산금\)/)).toBeVisible();
 
     // 자산 2 카드(증가분) 생성 + 자산명·면적 확인
     const asset2 = page.locator('[data-asset-card-index="1"]');
@@ -62,8 +62,8 @@ test.describe("증환지 환산 모드 — 증가분 자동복사 (PR#473 Phase 
     await expect(
       asset2.getByRole("textbox", { name: /아파트, 농지/ }),
     ).toHaveValue("증환지 증가분");
-    // 증가분 면적 = 교부 429 − 권리 396.8 = 32.20㎡ (성공 배너에 표시)
-    await expect(page.getByText(/32\.20㎡이 추가되었습니다/)).toBeVisible();
+    // 증가분 면적 = 교부 429 − 권리 396.8 = 32.20㎡ (배너에 표시)
+    await expect(page.getByText(/32\.20㎡가 추가됨/)).toBeVisible();
 
     // ── Phase B 검증: 당초분 양도면적=권리(396.8), 교부면적=전체(429) 분리 ──
     await expect(page.getByTestId("replot-inc-entitlement-area")).toHaveValue("396.8");
