@@ -7,6 +7,7 @@ import { EditTitleDialog } from "./EditTitleDialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { buildBackup } from "@/lib/storage/backup-export";
 import { downloadJson, formatIsoStamp } from "@/lib/utils/file-download";
+import { enterAmendment, enterRefundClaim } from "@/lib/calc/transfer-amendment-entry";
 
 const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
   transfer: "/calc/transfer-tax",
@@ -156,58 +157,13 @@ export function HistoryDetailDrawer({
 
   function handleAmend() {
     if (!route || record.taxType !== "transfer") return;
-    Promise.all([
-      import("@/lib/stores/calc-wizard-store"),
-      import("@/lib/calc/transfer-amendment-helpers"),
-    ]).then(([{ useCalcWizardStore }, { deriveStatutoryDeadline }]) => {
-      const { updateFormData, setStep } = useCalcWizardStore.getState();
-      const result = (record.resultData as { result?: { determinedTax?: number } }).result;
-      const transferDate = (record.inputData as { transferDate?: string }).transferDate;
-      updateFormData({
-        ...(record.inputData as Parameters<typeof updateFormData>[0]),
-        amendmentMode: true,
-        correctionKind: "amend",
-        amendmentSourceId: record.id,
-        originalDeterminedTax: String(result?.determinedTax ?? ""),
-        statutoryFilingDeadline: deriveStatutoryDeadline(transferDate),
-        // 당초 무신고/과소신고 가산세 입력은 수정신고와 상호배타 — 초기화
-        enablePenalty: false,
-      });
-      setStep(0);
-      router.push(route);
-    });
+    enterAmendment(record, router);
   }
 
   // 경정청구(세액 감소·환급) 진입 — 수정신고와 방향만 다름(correctionKind)
   function handleRefundClaim() {
     if (!route || record.taxType !== "transfer") return;
-    Promise.all([
-      import("@/lib/stores/calc-wizard-store"),
-      import("@/lib/calc/transfer-amendment-helpers"),
-    ]).then(([{ useCalcWizardStore }, { deriveStatutoryDeadline }]) => {
-      const { updateFormData, setStep } = useCalcWizardStore.getState();
-      const result = (record.resultData as { result?: { determinedTax?: number } }).result;
-      const transferDate = (record.inputData as { transferDate?: string }).transferDate;
-      const now = new Date();
-      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-        now.getDate(),
-      ).padStart(2, "0")}`;
-      updateFormData({
-        ...(record.inputData as Parameters<typeof updateFormData>[0]),
-        amendmentMode: true,
-        correctionKind: "refund_claim",
-        // [F6] 경정청구는 가산세 없음 — amend 플래그 초기화
-        applyUnderReportingPenalty: false,
-        applyLatePaymentPenalty: false,
-        amendmentSourceId: record.id,
-        originalDeterminedTax: String(result?.determinedTax ?? ""),
-        statutoryFilingDeadline: deriveStatutoryDeadline(transferDate),
-        amendedFilingDate: today, // [F7] 경정청구일=오늘 → 도과 경고 활성
-        enablePenalty: false,
-      });
-      setStep(0);
-      router.push(route);
-    });
+    enterRefundClaim(record, router);
   }
 
   const summaryItems = extractResultSummaryItems(record.resultData, record.taxType);

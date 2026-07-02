@@ -49,9 +49,9 @@ test("ER: 이력 수정 클릭 시 상속개시일·상속인 복원 (빈 폼 �
     page.getByText(/이력에 자동 저장되었습니다/).first(),
   ).toBeVisible({ timeout: 15_000 });
 
-  // /history 이동 → 수정 클릭
+  // /history 이동 → 편집 클릭 (카드 "수정" 라벨이 "편집"으로 변경됨 — 재계산/복원 진입)
   await page.goto("/history");
-  const editBtn = page.getByRole("button", { name: /수정/ }).first();
+  const editBtn = page.getByRole("button", { name: "편집", exact: true }).first();
   await expect(editBtn).toBeVisible({ timeout: 10_000 });
   await editBtn.click();
 

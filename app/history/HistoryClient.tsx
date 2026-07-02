@@ -7,6 +7,7 @@ import { calculationRepository } from "@/lib/storage/calculation-repository";
 import { clientRepository } from "@/lib/storage/client-repository";
 import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
+import { enterAmendment, enterRefundClaim } from "@/lib/calc/transfer-amendment-entry";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
@@ -562,7 +563,32 @@ export function HistoryClient() {
                   )}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
+                {record.taxType === "transfer" &&
+                  (record.resultData as { mode?: string })?.mode === "single" && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          enterAmendment(record, router);
+                        }}
+                        className="rounded-md border border-amber-400 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 transition-colors dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+                      >
+                        수정신고
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          enterRefundClaim(record, router);
+                        }}
+                        className="rounded-md border border-sky-400 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100 transition-colors dark:border-sky-700 dark:bg-sky-950/30 dark:text-sky-300"
+                      >
+                        경정청구
+                      </button>
+                    </>
+                  )}
                 {TAX_TYPE_ROUTES[record.taxType] && (
                   <button
                     type="button"
@@ -572,7 +598,7 @@ export function HistoryClient() {
                     }}
                     className="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted/60 transition-colors"
                   >
-                    수정
+                    편집
                   </button>
                 )}
                 <button
