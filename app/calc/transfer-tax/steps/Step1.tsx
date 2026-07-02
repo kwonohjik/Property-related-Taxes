@@ -165,7 +165,17 @@ export function Step1({
               label="총 양도가액"
               required
               unit="원"
-              hint="주된 자산 + 동반 자산(또는 전 지분 100%) 합계 금액을 입력하세요"
+              badge={hasReplotIncrement ? "증환지 양도가액 입력란" : undefined}
+              className={
+                hasReplotIncrement
+                  ? "border-amber-300 bg-amber-50/50 ring-1 ring-amber-200"
+                  : undefined
+              }
+              hint={
+                hasReplotIncrement
+                  ? "증환지 — 여기에 당초분 + 증가분 합계 양도가액을 입력하세요. 양도시 기준시가 비율로 각 자산에 자동 안분됩니다 (자산 카드에는 양도가액 입력란이 없습니다)."
+                  : "주된 자산 + 동반 자산(또는 전 지분 100%) 합계 금액을 입력하세요"
+              }
             >
               <CurrencyInput
                 label=""

@@ -71,5 +71,9 @@ test.describe("증환지 환산 모드 — 증가분 자동복사 (PR#473 Phase 
 
     // 증환지 증가분 → 양도가액 결정방식 토글 숨김 (한 필지·한 계약이라 구분 기재 불가 → 안분 강제)
     await expect(page.getByText("양도가액 결정 방식 (§166⑥)")).toHaveCount(0);
+
+    // 양도가액 입력 위치 안내: 증가분 배너 + 상단 "총 양도가액" 강조 badge
+    await expect(page.getByText(/맨 위.*총 양도가액/)).toBeVisible();
+    await expect(page.getByText("증환지 양도가액 입력란")).toBeVisible();
   });
 });
