@@ -18,7 +18,7 @@
  * Pure function — DB 호출 없음.
  */
 
-import { subYears, isBefore } from "date-fns";
+import { subYears, isBefore, parseISO } from "date-fns";
 import { GIFT } from "./legal-codes";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import type { CalculationStep, EstateItem } from "./types/inheritance-gift.types";
@@ -202,10 +202,11 @@ export function deriveFarmlandReduction(
   const currentTotalGiftValue = valuatedAmounts.reduce((s, v) => s + (v ?? 0), 0);
 
   // §71② 5년 기감면 누계 (수증자별, donor 무관). §47② 10년 합산과 별개 비대칭.
-  const boundary5yr = subYears(new Date(giftDate), 5);
+  // new Date(x) 직접호출 금지(CLAUDE.md) — parseISO 통일 (gift-prior-aggregation §47② 경계와 동일 패턴)
+  const boundary5yr = subYears(parseISO(giftDate), 5);
   const priorReductionWithin5Years = priorGifts.reduce((s, p) => {
     if (!p.farmlandReductionApplied) return s;
-    if (isBefore(new Date(p.giftDate), boundary5yr)) return s; // 5년 초과 제외
+    if (isBefore(parseISO(p.giftDate), boundary5yr)) return s; // 5년 초과 제외
     return s + (p.farmlandReductionAmount ?? 0);
   }, 0);
 

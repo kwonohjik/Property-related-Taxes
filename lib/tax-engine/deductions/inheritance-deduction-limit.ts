@@ -69,12 +69,13 @@ export function applyDeductionLimit(
         : 0;
     ceiling = Math.max(0, taxableEstateValue - legateeNonHeir - netPriorGiftDeducted);
   } else {
-    // legacy fallback
+    // legacy fallback — §24 단서(제3호 사전증여는 과세가액 5억 초과 시에만 차감)를 Phase D와 동일 적용.
     totalGift = priorGiftToHeirTotal;
     giftDeductions = 0;
     legateeNonHeir = 0;
-    netPriorGiftDeducted = priorGiftToHeirTotal;
-    ceiling = Math.max(0, taxableEstateValue - priorGiftToHeirTotal);
+    netPriorGiftDeducted =
+      taxableEstateValue > SECTION24_GIFT_DEDUCTION_THRESHOLD ? priorGiftToHeirTotal : 0;
+    ceiling = Math.max(0, taxableEstateValue - netPriorGiftDeducted);
   }
 
   const limitedDeduction = Math.min(rawTotalDeduction, ceiling);

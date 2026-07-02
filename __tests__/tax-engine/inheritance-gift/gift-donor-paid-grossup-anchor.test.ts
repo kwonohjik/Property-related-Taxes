@@ -326,6 +326,20 @@ describe("C-10: besshi10 ㉓ 증여재산가산액 오귀속 방지", () => {
     const donorPaidTax = result.donorPaidTaxGrossUp!.donorPaidTax;
     expect(result.aggregatedGiftValue).toBe(500_000_000 + donorPaidTax);
   });
+
+  it("[C-10b] 대납(D>0) 시 ㉔ 산식 라벨에 대납 재차증여(§36) 명시 — 자기정합 (리뷰 #15)", () => {
+    const input: GiftTaxInput = {
+      ...baseParentChildInput,
+      donorPaysGiftTax: true,
+      donorHasJointLiability: false,
+    };
+    const result = calcGiftTaxWithDonorPaidTax(input);
+    const row24 = result.besshi10Rows.find((r) => r.number === "㉔");
+    expect(row24).toBeDefined();
+    // ㉓는 순수 §47②(대납 미포함)이므로 ㉔ formula가 대납분 D를 명시해야 표시값 ↔ 산식 자기정합.
+    expect(row24!.formula).toContain("대납");
+    expect(row24!.amount).toBe(result.aggregatedGiftValue);
+  });
 });
 
 // ──────────────────────────────────────────────────────────────

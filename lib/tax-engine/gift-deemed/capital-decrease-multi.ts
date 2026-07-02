@@ -41,8 +41,11 @@ export function calcCapitalDecreaseMulti(input: CapitalDecreaseInput): DeemedGif
   // ─── (3) 저가/고가 판정 + 고가 액면 게이트 ───
   const redeemers = sh.filter((s) => s.redeemedShares > 0); // 감자주주
   const survivors = sh.filter((s) => s.redeemedShares === 0); // 잔존주주
-  const firstRedeemPrice = redeemers[0]?.redemptionPricePerShare ?? 0;
-  const caseType: "low" | "high" = firstRedeemPrice > evalPrice ? "high" : "low";
+  // 저가/고가는 감자주주 전원 기준 판정 (redeemers[0] 순서의존 제거): 전원 고가여야 high, 아니면 low.
+  const caseType: "low" | "high" =
+    redeemers.length > 0 && redeemers.every((s) => (s.redemptionPricePerShare ?? 0) > evalPrice)
+      ? "high"
+      : "low";
   // 고가 액면 게이트(§29의2①2호 "평가액이 액면가액에 미달하는 경우로 한정") — 고가 판정 시에만
   const faceGateFail = caseType === "high" && (faceValue == null || evalPrice >= faceValue);
 
@@ -116,7 +119,8 @@ export function calcCapitalDecreaseMulti(input: CapitalDecreaseInput): DeemedGif
     const ratioNumer =
       caseType === "high"
         ? (rcpt.redemptionPricePerShare ?? 0) - evalPrice
-        : evalPrice - (relatedDonors[0].redemptionPricePerShare ?? 0);
+        : // 저가: 특수관계 증여자 중 최저 소각가(최대 차액) 기준 — relatedDonors[0] 순서의존 제거
+          evalPrice - Math.min(...relatedDonors.map((d) => d.redemptionPricePerShare ?? 0));
     const threshold = ratioNumer >= applyRate(evalPrice, 0.3) ? 0 : ABSOLUTE_THRESHOLD;
     if (!(rawTotal > 0 && rawTotal >= threshold)) return reject("기준금액 미달", threshold);
 

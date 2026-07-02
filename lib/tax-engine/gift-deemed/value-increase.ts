@@ -1,5 +1,5 @@
 /** (Phase 3) 재산 취득 후 재산가치 증가에 따른 이익의 증여 (§42의3 · 시행령 §32의3) */
-import { differenceInYears, parseISO } from "date-fns";
+import { differenceInYears, parseISO, addYears, isAfter } from "date-fns";
 import { GIFT } from "../legal-codes";
 import { safeMultiplyThenDivide } from "../tax-utils";
 import type { CalculationStep } from "../types/inheritance-gift.types";
@@ -59,12 +59,16 @@ export function calcValueIncreaseGift(input: ValueIncreaseInput): DeemedGiftResu
   const { acquisitionCause, valueIncreaseReason, acquisitionDate, eventDate } = input;
   const hasDates = !!acquisitionDate && !!eventDate;
   const holdingYears = hasDates ? differenceInYears(parseISO(eventDate!), parseISO(acquisitionDate!)) : undefined;
+  // "5년 이내"는 일수 기준 판정 — differenceInYears(절사)로 5년10개월을 '이내'로 오표시하지 않도록.
+  const withinFiveYears = hasDates
+    ? !isAfter(parseISO(eventDate!), addYears(parseISO(acquisitionDate!), 5))
+    : undefined;
   const hasDetail = !!valueIncreaseReason || !!acquisitionCause || hasDates;
   const valueIncreaseDetail = hasDetail
     ? {
         acquisitionCauseLabel: acquisitionCause ? CAUSE_LABEL[acquisitionCause] : undefined,
         reasonLabel: valueIncreaseReason ? REASON_LABEL[valueIncreaseReason] : undefined,
-        withinFiveYears: holdingYears !== undefined ? holdingYears <= 5 : undefined,
+        withinFiveYears,
         holdingYears,
         isExchangeListingNotice: valueIncreaseReason === "similar" ? true : undefined,
       }
