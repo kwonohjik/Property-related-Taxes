@@ -423,7 +423,7 @@ export function buildAssetPayload(
   totalContractPrice?: number,
   totalTransferExpense?: number,
 ) {
-  const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause);
+  const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause, asset.expropriationNoticeDate);
 
   // 감환지: acquisitionArea에 의제취득면적이 UI에서 이미 계산됨
   const effectiveLandArea = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined;

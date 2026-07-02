@@ -185,6 +185,15 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   transferType: "" | "regular" | "burdened_gift";
 
+  // ── 공익수용·협의매수 (양도원인) — #1 NBL 의제·#2 §77 감면·#3 환산 min[] 공용 사실 ──
+  /** 양도원인 — 공익수용·협의매수 여부 (assetKind==="land" 전용). 기본 "general" */
+  transferCause: "general" | "public_expropriation";
+  /**
+   * 사업인정고시일 (YYYY-MM-DD) — NBL(§168의14③3호)·§77 고시일 단일 소스.
+   * NBL publicNoticeDate·§77 businessApprovalDate에 fallback(`섹션필드 || 이 값`)으로 공급.
+   */
+  expropriationNoticeDate: string;
+
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
   /**
    * 사용승인일 (YYYY-MM-DD) — 영 §162①4호 취득일 기준.

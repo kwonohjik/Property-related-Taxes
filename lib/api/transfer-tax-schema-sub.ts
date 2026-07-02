@@ -90,6 +90,9 @@ export const nonBusinessLandRawSchema = z.object({
   acquisitionArea: z.string(),
   acquisitionDate: z.string(),
   transferDate: z.string(),
+  // 공익수용 단일 소스 (서버 isExpr·고시일 fallback) — z.object strip 방지
+  transferCause: z.enum(["general", "public_expropriation"]).optional(),
+  expropriationNoticeDate: z.string().optional(),
   // 공통
   nblDeemedTransferReason: z.string().optional(),
   nblDeemedTransferDate: z.string().optional(),

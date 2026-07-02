@@ -45,7 +45,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   if (!primary) throw new Error("자산이 없습니다.");
 
   // ── 대표 자산 감면 (자산별 reductions 배열에서 빌드) ──
-  const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause);
+  const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause, primary.expropriationNoticeDate);
 
   // ── ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (서버 buildNblEngineInput이 nested+Date 변환) ──
   const nblRaw = buildNonBusinessLandRaw(primary, form.transferDate);

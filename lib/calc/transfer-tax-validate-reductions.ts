@@ -58,8 +58,10 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           const cash = parseAmount(r.expropriationCash || "0");
           const bond = parseAmount(r.expropriationBond || "0");
           if (cash + bond <= 0) return fail("현금 또는 채권 보상액 중 최소 하나를 입력하세요.");
-          if (!r.expropriationApprovalDate) return fail("사업인정고시일을 선택하세요.");
-          if (form.transferDate && r.expropriationApprovalDate >= form.transferDate)
+          // 고시일 fallback: reduction 미입력 시 Step1 단일 소스(expropriationNoticeDate) — UI↔validate 모순 방지
+          const approvalDate = r.expropriationApprovalDate || asset.expropriationNoticeDate;
+          if (!approvalDate) return fail("사업인정고시일을 선택하세요.");
+          if (form.transferDate && approvalDate >= form.transferDate)
             return fail("사업인정고시일은 양도일보다 이전이어야 합니다.");
         }
         if (r.type === "gb_designated_land") {
