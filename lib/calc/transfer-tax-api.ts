@@ -683,7 +683,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               : undefined,
           companionAssets: form.assets
             .slice(1)
-            .map((a) => buildAssetPayload(a, form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0])),
+            .map((a) => buildAssetPayload(a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0])),
           bundledSaleMode: form.bundledSaleMode,
           // primary 양도가액 (actual 모드 전용).
           // 지분 모드는 contractTotalPrice × ratio 자동 입력 (companion buildAssetPayload와 일관)

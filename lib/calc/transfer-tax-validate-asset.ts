@@ -726,8 +726,10 @@ export function validateAssetEntry(
   // 자동 결정되므로 actualSalePrice·standardPriceAtTransfer 모두 검증 면제.
   // 동일 물건 지분 단계취득 케이스(사례 27)에서 안분 키 입력 강요 차단.
   const isFractionalAsset = ownN < ownD;
+  // 증환지 증가분 존재 시 양도가액 구분 기재(actual) 불가 → 양도시 기준시가 안분 강제 (Step1 토글 숨김과 일치)
+  const effBundledMode = form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode;
   if (form.assets.length > 1 && !isFractionalAsset) {
-    if (form.bundledSaleMode === "actual") {
+    if (effBundledMode === "actual") {
       if (!a.actualSalePrice || parseAmount(a.actualSalePrice) <= 0)
         return `${label}: 계약서상 양도가액을 입력하세요.`;
     } else {

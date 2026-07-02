@@ -51,6 +51,13 @@ export function Step1({
   });
   const [pendingCompanionOff, setPendingCompanionOff] = useState(false);
 
+  // 증환지 증가분 존재 시: 당초분·증가분은 한 필지·한 계약이라 양도가액 구분 기재(actual)가 불가능.
+  // 양도시 기준시가 안분(§166⑥ 단서)만 유효 → 결정방식 토글 숨김 + apportioned 강제(파생).
+  const hasReplotIncrement = form.assets.some((a) => a.isReplotIncrement);
+  const effBundledSaleMode: "actual" | "apportioned" = hasReplotIncrement
+    ? "apportioned"
+    : form.bundledSaleMode;
+
   // 토글 A — 함께 양도(다른 물건 N개)
   function handleCompanionToggle(yes: boolean) {
     if (yes) {
@@ -189,11 +196,17 @@ export function Step1({
                 placeholder="중개수수료 등 양도 부대비용 (전체 1건)"
               />
             </FieldCard>
-            {splitMode === "companion" && (
+            {splitMode === "companion" && !hasReplotIncrement && (
               <BundledSaleModeToggle
                 value={form.bundledSaleMode}
                 onChange={(mode) => onChange({ bundledSaleMode: mode })}
               />
+            )}
+            {splitMode === "companion" && hasReplotIncrement && (
+              <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                증환지 증가분 양도 — 당초분과 증가분은 한 필지·한 계약이므로 양도가액을 자산별로 구분 기재할 수 없습니다.
+                양도가액은 <b>양도시 기준시가 비율로 안분</b>됩니다 (소득세법 시행령 §166⑥ 단서).
+              </p>
             )}
           </div>
         )}
@@ -201,7 +214,7 @@ export function Step1({
         {/* 자산 카드 리스트 */}
         <CompanionAssetsSection
           assets={form.assets}
-          bundledSaleMode={form.bundledSaleMode}
+          bundledSaleMode={effBundledSaleMode}
           onChange={updateAssets}
           singleMode={splitMode === "none"}
           transferDate={form.transferDate}
