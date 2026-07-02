@@ -272,15 +272,16 @@ function AssetReductionBlock({
           <div>
             <label className="block text-xs font-medium mb-1">사업인정고시일</label>
             <DateInput
-              value={expropriation.expropriationApprovalDate}
+              value={expropriation.expropriationApprovalDate || asset.expropriationNoticeDate}
               onChange={(v) =>
                 updateReduction("public_expropriation", {
                   expropriationApprovalDate: v,
                 } as Partial<AssetReductionForm>)
               }
+              data-testid="expr-77-notice-date"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              부칙 §53 적용 판정용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도 시 종전 감면율).
+              ①양도정보(공익수용)에서 자동 반영 · 부칙 §53 적용 판정용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도 시 종전 감면율).
             </p>
           </div>
         </div>

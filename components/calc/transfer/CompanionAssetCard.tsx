@@ -26,7 +26,6 @@ import { summarizeAssetSections } from "./asset-section-summary";
 import { AssetSection } from "./AssetSection";
 import { AssetSectionBasic } from "./asset-sections/AssetSectionBasic";
 import { AssetSectionTransfer } from "./asset-sections/AssetSectionTransfer";
-import { ExpropriationBlock } from "./ExpropriationBlock";
 import { AssetSectionAcquisition } from "./asset-sections/AssetSectionAcquisition";
 import type { AssetSplitMode } from "./OwnershipRatioInput";
 import { AssetSectionExpense } from "./asset-sections/AssetSectionExpense";
@@ -296,11 +295,6 @@ export function CompanionAssetCard({
           transferDate={transferDate}
           contractTotalPrice={contractTotalPrice}
         />
-        {asset.assetKind === "land" && (
-          <div className="mt-4">
-            <ExpropriationBlock asset={asset} onChange={onChange} transferDate={transferDate ?? ""} />
-          </div>
-        )}
       </AssetSection>
 
       {/* ③ 취득정보 */}

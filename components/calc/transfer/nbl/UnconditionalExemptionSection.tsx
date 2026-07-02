@@ -140,9 +140,13 @@ export function UnconditionalExemptionSection({
         <div>
           <label className="block text-xs text-muted-foreground mb-1">사업인정고시일</label>
           <DateInput
-            value={asset.nblExemptPublicNoticeDate}
+            value={asset.nblExemptPublicNoticeDate || asset.expropriationNoticeDate}
             onChange={(v) => onAssetChange({ nblExemptPublicNoticeDate: v })}
+            data-testid="nbl-expr-notice-date"
           />
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            ①양도정보(공익수용)의 사업인정고시일에서 자동 반영 · 다르면 직접 수정
+          </p>
         </div>
         <ExemptionStatusBadge status={status.perToggle.publicExpropriation} />
       </ToggleCard>
