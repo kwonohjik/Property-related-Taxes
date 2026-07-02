@@ -17,8 +17,8 @@
  *   TC-11: 상업지역 3배
  *   TC-12: 공업지역 4배
  *   TC-13: 주거지역 5배
- *   TC-14: 녹지지역 5배
- *   TC-15: 관리지역 5배
+ *   TC-14: 녹지지역 7배
+ *   TC-15: 관리지역 7배
  *   TC-16: 농림지역 7배
  *   TC-17: 자연환경보전지역 7배
  *
@@ -229,7 +229,7 @@ describe("P4-09: 용도지역별 기준면적 배율 7종", () => {
     { district: "industrial",      multiplier: 4, label: "공업지역 4배" },
     { district: "residential",     multiplier: 5, label: "주거지역 5배" },
     { district: "green",           multiplier: 7, label: "녹지지역 7배" },
-    { district: "management",      multiplier: 5, label: "관리지역 5배" },
+    { district: "management",      multiplier: 7, label: "관리지역(도시지역 외) 7배" }, // §101② 도시지역 외의 용도지역 = 7배 (구 5배 오류 정정)
     { district: "agricultural",    multiplier: 7, label: "농림지역 7배" },
     { district: "nature_preserve", multiplier: 7, label: "자연환경보전지역 7배" },
   ];

@@ -377,7 +377,7 @@ export const PROPERTY_SEPARATE_CONST = {
     industrial:      4,  // 공업지역 4배
     residential:     5,  // 주거지역 5배
     green:           7,  // 녹지지역 7배
-    management:      5,  // 관리지역 5배
+    management:      7,  // 관리지역(도시지역 외의 용도지역) 7배 — 시행령 §101②
     agricultural:    7,  // 농림지역 7배
     nature_preserve: 7,  // 자연환경보전지역 7배
   } as const,
