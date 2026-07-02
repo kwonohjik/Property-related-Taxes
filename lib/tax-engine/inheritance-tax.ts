@@ -41,6 +41,7 @@ import {
   computePriorGiftDeductionForLimit,
 } from "./deductions/inheritance-deductions";
 import { calcRelationDeduction } from "./deductions/gift-deductions";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
 import { calcCulturalHeritageDeferral } from "./inheritance-cultural-heritage-deferral";
 import {
@@ -362,10 +363,10 @@ export function calcInheritanceTax(
       const spouseShareEntry = legalForSpouse.shares.find(
         (s) => s.heirId === spouseHeir.id,
       );
-      const spouseRatio = spouseShareEntry
-        ? spouseShareEntry.numerator / legalForSpouse.denominator
-        : 0;
-      const spouseLegalShareRaw = Math.floor(numeratorCorrected * spouseRatio);
+      const sNum = spouseShareEntry?.numerator ?? 0;
+      const spouseRatio = spouseShareEntry ? sNum / legalForSpouse.denominator : 0;
+      // 정수 분자·분모 연산 (float 비율 곱셈은 무한소수에서 1원 오차 — distributeByLegalShares 패턴)
+      const spouseLegalShareRaw = safeMultiplyThenDivide(numeratorCorrected, sNum, legalForSpouse.denominator);
       computedSpouseLegalShare = Math.max(0, spouseLegalShareRaw - spouseGiftTaxBase);
 
       allBreakdown.push({
