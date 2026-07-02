@@ -630,6 +630,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               onPricePerSqmChange={handleAcqPricePerSqmChange}
               area={props.acquisitionArea}
               onAreaChange={props.onAcquisitionAreaChange}
+              areaLabel={props.acqAreaLabel}
               jibun={props.jibun}
               dong={props.dong}
               ho={props.ho}
@@ -667,6 +668,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               onPricePerSqmChange={onTransferPricePerSqmChange}
               area={props.transferArea}
               onAreaChange={props.onTransferAreaChange}
+              areaLabel={props.transferAreaLabel}
               jibun={props.jibun}
               dong={props.dong}
               ho={props.ho}

@@ -143,7 +143,8 @@ export function ReplotIncreaseFields({
     onAddAsset({
       assetLabel: "증환지 증가분",
       assetKind: "land",
-      acquisitionDate: asset.acquisitionDate,
+      // 증가분 취득일 = 환지처분확정일 익일 (당초분은 원취득일이라 그대로 복사하지 않음)
+      acquisitionDate: asset.replottingConfirmDate ? calcDayAfter(asset.replottingConfirmDate) : "",
       acquisitionArea: areaStr,
       transferArea: areaStr,
       areaScenario: "same",
@@ -185,26 +186,23 @@ export function ReplotIncreaseFields({
           <label className="text-sm font-medium">환지처분확정일</label>
           <DateInput
             value={asset.replottingConfirmDate}
-            onChange={(v) => {
-              const acqDate = v ? calcDayAfter(v) : "";
-              onChange({ replottingConfirmDate: v, acquisitionDate: acqDate });
-            }}
+            onChange={(v) => onChange({ replottingConfirmDate: v })}
             data-testid="replot-inc-confirm-date"
           />
           {asset.replottingConfirmDate && (
             <p className="text-xs text-blue-600">
-              취득일 = {asset.replottingConfirmDate} 다음날 자동 적용
+              증가분 취득일 = {asset.replottingConfirmDate} 다음날 · 당초분 취득일은 ③ 취득정보에 원취득일을 입력하세요
             </p>
           )}
         </div>
         <div className="space-y-1.5">
           <label className="text-sm font-medium">
-            권리면적 (취득·양도 ㎡)
-            <span title="환지처분 전 권리면적 — 환지예정지 지정 시 받기로 한 면적. 이 면적까지는 원래 취득일이 적용되며, 당초분 자산의 취득·양도 면적이 됩니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
+            권리면적 (양도 당시 ㎡)
+            <span title="환지처분 전 권리면적 — 환지예정지 지정 시 받기로 한 면적. 당초분 자산의 양도면적이 됩니다. (취득면적=종전토지 면적은 ③ 취득정보에 입력)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
           <DecimalInput
-            value={asset.acquisitionArea}
-            onChange={(v) => onChange({ acquisitionArea: v, entitlementArea: v, transferArea: v })}
+            value={asset.entitlementArea}
+            onChange={(v) => onChange({ entitlementArea: v, transferArea: v })}
             data-testid="replot-inc-entitlement-area"
           />
         </div>

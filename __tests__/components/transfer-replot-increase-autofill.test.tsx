@@ -23,15 +23,16 @@ function baseAsset(overrides: Partial<AssetForm> = {}): AssetForm {
 }
 
 describe("증환지 증가분 자동복사 + 면적 정합 (Phase A+B)", () => {
-  it("Phase B: 권리면적 입력 → acquisitionArea·entitlementArea·transferArea 동시 write (당초분 양도면적=권리)", () => {
+  it("Phase B: 권리면적 입력 → entitlementArea·transferArea write (당초분 양도면적=권리, acquisitionArea 미오염)", () => {
     const onChange = vi.fn();
     render(<ReplotIncreaseFields asset={baseAsset()} onChange={onChange} onAddAsset={vi.fn()} />);
     fireEvent.change(screen.getByTestId("replot-inc-entitlement-area"), { target: { value: "396.8" } });
     expect(onChange).toHaveBeenCalledWith({
-      acquisitionArea: "396.8",
       entitlementArea: "396.8",
       transferArea: "396.8",
     });
+    // 취득면적(acquisitionArea)은 건드리지 않음 — 종전토지 면적은 ③ 취득정보에서 별도 입력
+    expect(onChange.mock.calls[0][0]).not.toHaveProperty("acquisitionArea");
   });
 
   it("Phase B: 교부면적 입력 → allocatedArea만 write (transferArea 미오염)", () => {
@@ -48,9 +49,8 @@ describe("증환지 증가분 자동복사 + 면적 정합 (Phase A+B)", () => {
     const asset = baseAsset({
       entitlementArea: "400",
       allocatedArea: "432",
-      acquisitionArea: "400",
       transferArea: "400",
-      acquisitionDate: "2007-04-27",
+      replottingConfirmDate: "2007-04-26",
       addressRoad: "테헤란로 1",
       addressJibun: "서울시 강남구 역삼동 1",
       landNature: "standalone",
@@ -69,7 +69,7 @@ describe("증환지 증가분 자동복사 + 면적 정합 (Phase A+B)", () => {
     // 면적: 증가분 = 432 − 400 = 32
     expect(parseFloat(patch.acquisitionArea)).toBeCloseTo(32, 4);
     expect(parseFloat(patch.transferArea)).toBeCloseTo(32, 4);
-    // 취득일 = 환지처분확정일 익일 (당초분에서 그대로)
+    // 취득일 = 환지처분확정일(2007-04-26) 익일 (증가분은 환지익일 자동)
     expect(patch.acquisitionDate).toBe("2007-04-27");
     // Live fallback 마커 — 당초분 양도시 기준시가 파생 대상
     expect(patch.isReplotIncrement).toBe(true);

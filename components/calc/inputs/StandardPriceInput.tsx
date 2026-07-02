@@ -41,6 +41,8 @@ interface Props {
   /** 기준일 (양도일·취득일·과세기준일 등) — 조회 연도 기본값 계산에 사용 */
   referenceDate?: string;
   label?: string;
+  /** 면적 입력 라벨 커스텀 (기본 "면적 (㎡)"). land/building_non_residential area-mode 전용. */
+  areaLabel?: string;
   /** label을 시각적으로 숨기고 input aria-label로만 노출 (getByLabel·접근성). 기본 false */
   hideLabel?: boolean;
   hint?: string;
@@ -79,6 +81,7 @@ export function StandardPriceInput({
   ho,
   referenceDate,
   label,
+  areaLabel,
   hideLabel = false,
   hint,
   required = false,
@@ -227,7 +230,7 @@ export function StandardPriceInput({
             disabled={pricePerSqmDisabled}
           />
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium">면적 (㎡)</label>
+            <label className="block text-sm font-medium">{areaLabel ?? "면적 (㎡)"}</label>
             <input
               type="number"
               step="0.01"

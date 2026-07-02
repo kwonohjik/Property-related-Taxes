@@ -145,8 +145,10 @@ export function CompanionAcquisitionCauseSection({
           assetKind={asset.assetKind}
           acquisitionArea={asset.acquisitionArea || undefined}
           onAcquisitionAreaChange={(v) => onChange({ acquisitionArea: v })}
+          acqAreaLabel={asset.areaScenario === "increase" ? "종전토지 면적 (㎡)" : undefined}
           transferArea={asset.transferArea || undefined}
           onTransferAreaChange={(v) => onChange({ transferArea: v })}
+          transferAreaLabel={asset.areaScenario === "increase" ? "권리면적 (㎡)" : undefined}
           standardPricePerSqmAtAcq={asset.standardPricePerSqmAtAcq}
           onStandardPricePerSqmAtAcqChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
           standardPricePerSqmAtTransfer={asset.standardPricePerSqmAtTransfer}
