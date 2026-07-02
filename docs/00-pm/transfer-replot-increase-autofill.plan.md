@@ -207,7 +207,7 @@ function handleAddIncrease() {
 
 **핵심 결론 불변**: 자동복사(Phase A) 설계와 이중계상 선결검증(Phase B) 필요성은 유지되며, §6 근거는 실측으로 강화됨. 남은 미확정은 **이중계상의 세액영향 정도**뿐 → Phase B 앵커로 확정.
 
-## 13. 구현 완료 (2026-07-02, 미커밋)
+## 13. 구현 완료 (2026-07-02) — ✅ PR#473 머지 (master b69bf826)
 
 Phase A + B 모두 구현. `components/calc/transfer/CompanionAssetCardReplot.tsx` (순수 UI, 엔진/API/Zod/validate 무변경).
 
@@ -215,4 +215,4 @@ Phase A + B 모두 구현. `components/calc/transfer/CompanionAssetCardReplot.ts
 - **Phase A (자동복사)**: `handleAddIncrease` patch에 소재지 8필드·`landNature`·`standardPricePerSqmAtTransfer`(복사)·`standardPriceAtTransfer`(=`floor(perSqm×증가분면적)` 재계산)·`standardPriceAtTransferLabel`·`regionCode`·시군구 복사. 취득가액(청산금)만 사용자 입력.
 - testid 3종(`replot-inc-entitlement-area`·`replot-inc-allocated-area`·`replot-inc-add-btn`) + 배너 문구 보강.
 
-**검증**: `tsc` 0건 · `eslint` clean · RTL 앵커 `__tests__/components/transfer-replot-increase-autofill.test.tsx` 4/4 · **전체 vitest 9941 pass**. 브라우저: RTL 컴포넌트 앵커(자동복사 patch·면적 write) + 엔진 세액 앵커(§6)로 검증. E2E는 환지 입력 흐름 flaky·기존 부재로 미작성(로직은 RTL로 결정적 검증). **미커밋 — 사용자 머지 지시 대기.**
+**검증**: `tsc` 0건 · `eslint` clean · RTL 앵커 `__tests__/components/transfer-replot-increase-autofill.test.tsx` 4/4 · **전체 vitest 9941 pass**. 브라우저: RTL 컴포넌트 앵커(자동복사 patch·면적 write) + 엔진 세액 앵커(§6)로 검증. E2E는 환지 입력 흐름 flaky·기존 부재로 미작성(로직은 RTL로 결정적 검증). **✅ PR#473 머지 (master b69bf826).**
