@@ -365,6 +365,9 @@ export function buildBurdenedGiftBreakdown(params: {
     //   donorRelation은 수증자 관점, donor는 증여자 관점.
     //   부담부증여 일반 시나리오: 증여자가 부모인 경우 "father" (단순화, 양친 구분 후속 PR).
     //   isGenerationSkip=true 면 donor=grandparent.
+    // 수증자 관점 DonorRelation → 증여자 관점 GiftDonorRelation (deriveDonorRelation의 역).
+    //   증여자가 직계존속(수증자 기준 lineal_ascendant_*) → "father"(그룹 A 대표).
+    //   수증자가 직계비속(donorRelation === lineal_descendant) → "lineal_descendant"(그룹 D).
     const giftDonor: import("./types/inheritance-gift.types").GiftDonorRelation =
       info.isGenerationSkip
         ? "grandparent"
@@ -374,8 +377,8 @@ export function buildBurdenedGiftBreakdown(params: {
             ? "other_relative"
             : donorRelation === "lineal_ascendant_adult" ||
                 donorRelation === "lineal_ascendant_minor"
-              ? "lineal_descendant"
-              : "father";
+              ? "father"
+              : "lineal_descendant";
     const giftResult = calcGiftTax({
       giftDate: giftDateStr,
       donorRelation,

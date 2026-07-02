@@ -635,7 +635,10 @@ export function calcHeirAllocation(
   //   최다 과세표준상당액(taxBaseShare) 비-corp 상속인에 잔차 흡수 → Σ indirect==indirectNumerator,
   //   Σ computedTaxShare==distributableTax 정확 보존. 흡수 상속인의 하류 필드 재계산.
   {
-    const nonCorp = heirs.filter((h) => !isForProfitCorporate(h) && perHeir[h.id]);
+    // §3의2① 납부의무자만 잔액 흡수 대상 (비상속인 사전증여자 등 isTaxPayer=false 제외 — 세액 오귀속 방지)
+    const nonCorp = heirs.filter(
+      (h) => !isForProfitCorporate(h) && perHeir[h.id] && perHeir[h.id].isTaxPayer,
+    );
     if (nonCorp.length > 0 && indirectDenominator > 0 && computedTaxShareDenominator > 0) {
       const absorber = nonCorp.reduce((a, b) =>
         perHeir[b.id].taxBaseShare > perHeir[a.id].taxBaseShare ? b : a,

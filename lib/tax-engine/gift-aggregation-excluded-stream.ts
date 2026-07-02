@@ -13,6 +13,7 @@ import { GIFT as GIFT_LAW } from "./legal-codes";
 import {
   evaluateAllEstateItems,
   resolveValuationMethod,
+  COLLATERAL_DEBT_NOTICE,
 } from "./property-valuation";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
 import {
@@ -70,7 +71,9 @@ export function calcAggregationExcludedStream(
   // 평가
   const valuationResults = evaluateAllEstateItems(items);
   const grossValue = valuationResults.reduce((s, v) => s + v.valuatedAmount, 0);
-  for (const vr of valuationResults) warnings.push(...vr.warnings);
+  // §14 담보채무 안내는 상속세 전용 → 증여 결과에서 제외 (메인 스트림 gift-tax.ts와 동일 필터)
+  for (const vr of valuationResults)
+    warnings.push(...vr.warnings.filter((w) => w !== COLLATERAL_DEBT_NOTICE));
   breakdown.push({
     label: "합산배제증여재산 평가액 (§47①)",
     amount: grossValue,

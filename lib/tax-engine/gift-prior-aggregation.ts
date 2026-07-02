@@ -250,6 +250,9 @@ export function aggregatePriorGiftsForGift(
       if (!g.donor || !isSameDonorGroup(g.donor, currentDonor)) return false;
       if (!g.donorDeceasedDate) return false;
       if (!isBefore(parseISO(g.donorDeceasedDate), current)) return false; // 금번 전 사망
+      // 직전회차 증여일 당시 생존해야 그 회차 ⑦(부·모 합산)에 포함됨 — 그 전 사망이면 이미 제외돼
+      // 곱셈안분 분모(gross)에 넣으면 ⑧ 과소 산정(서일46014-11750 '직전회차=합산' 전제 불성립).
+      if (isBefore(parseISO(g.donorDeceasedDate), parseISO(mostRecent.giftDate))) return false;
       const d = parseISO(g.giftDate);
       return (
         !isBefore(d, subBoundaryDeceased) && // 직전회차 10년 내 (직전 합산에 포함됐던 회차)

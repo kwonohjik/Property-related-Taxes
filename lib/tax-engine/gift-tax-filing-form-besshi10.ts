@@ -110,6 +110,9 @@ export function buildBesshi10Rows(
   const r = partialResult;
   const split = deriveRelationDeductionSplit(input.donor, r.deductionDetail);
   const priorAddition = derivePriorGiftAddition(r);
+  // §36 대납 gross-up 재차증여분(D). ㉓ 증여재산가산액은 순수 §47② 합산만 유지(대납 오귀속 방지, C-10),
+  // ㉔ 증여세과세가액은 D 포함(aggregatedGiftValue)이므로 D>0이면 ㉔ 산식 라벨에 대납분을 명시해 자기정합 유지.
+  const donorPaidTaxAddition = r.donorPaidTaxGrossUp?.donorPaidTax ?? 0;
   const surcharge = r.generationSkipSurchargeDetail?.additionalSurcharge ?? 0;
   const computedTaxTotal = r.computedTax + surcharge;
   const rateLabel = resolveBracketLabel(r.taxBase, brackets);
@@ -127,7 +130,7 @@ export function buildBesshi10Rows(
     { number: "㉑", column: "left", label: "장애인 신탁 재산가액 (불산입)",   amount: r.disabledTrustExclusion ?? 0,             display: "amount", lawRef: "§52의2" },
     { number: "㉒", column: "left", label: "채무액",                          amount: r.debtAssumed ?? 0,                        display: "amount", lawRef: "§47" },
     { number: "㉓", column: "left", label: "증여재산가산액",                  amount: priorAddition,                             display: "amount", formula: "동일인 10년 합산", lawRef: "§47②" },
-    { number: "㉔", column: "left", label: "증여세과세가액",                  amount: r.aggregatedGiftValue,                     display: "amount", formula: "⑰−⑱−⑲−⑳−㉑−㉒+㉓", lawRef: "§47" },
+    { number: "㉔", column: "left", label: "증여세과세가액",                  amount: r.aggregatedGiftValue,                     display: "amount", formula: donorPaidTaxAddition > 0 ? "⑰−⑱−⑲−⑳−㉑−㉒+㉓+대납 재차증여(§36)" : "⑰−⑱−⑲−⑳−㉑−㉒+㉓", lawRef: "§47" },
     { number: "㉕", column: "left", label: "증여재산공제 — 배우자",           amount: split.spouse,                              display: "amount", lawRef: "§53" },
     { number: "㉖", column: "left", label: "증여재산공제 — 직계존비속",       amount: split.lineal,                              display: "amount", lawRef: "§53·§53의2" },
     { number: "㉗", column: "left", label: "증여재산공제 — 그 밖의 친족",     amount: split.other,                               display: "amount", lawRef: "§53" },
