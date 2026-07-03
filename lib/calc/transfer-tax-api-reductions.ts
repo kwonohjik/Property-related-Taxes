@@ -89,6 +89,8 @@ export function toEngineReductions(
         type: "replacement_land_comp" as const,
         cashCompensation: parseAmount(r.rlCashComp || "0"),
         replacementLandComp: parseAmount(r.rlLandComp || "0"),
+        // 고시일: Step1 단일 소스(expropriationNoticeDate) 재사용 — §77의2① 소급 2년 취득요건용
+        businessApprovalDate: expropriationNoticeDate || undefined,
       };
     }
     // ── Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본격 변환 ──

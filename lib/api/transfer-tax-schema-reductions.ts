@@ -77,6 +77,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     type: z.literal("replacement_land_comp"),
     cashCompensation: z.number().int().nonnegative(),
     replacementLandComp: z.number().int().nonnegative(),
+    // §77의2① 소급 2년 취득요건 — 자산-수준 사업인정고시일 재사용(미상 시 생략)
+    businessApprovalDate: z.string().date().optional(),
   }).refine(
     (v) => v.replacementLandComp > 0,
     { message: "대토보상액은 0보다 커야 합니다" },

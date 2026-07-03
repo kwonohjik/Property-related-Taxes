@@ -15,6 +15,13 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
     if (r.type === "public_expropriation") {
       return { ...r, businessApprovalDate: new Date(r.businessApprovalDate) };
     }
+    // §77의2 대토보상 — 사업인정고시일 string → Date 변환 (⑭, optional). 미상 시 undefined 유지
+    if (r.type === "replacement_land_comp") {
+      return {
+        ...r,
+        businessApprovalDate: r.businessApprovalDate ? new Date(r.businessApprovalDate) : undefined,
+      };
+    }
     if (r.type === "gb_designated_land") {
       return {
         ...r,

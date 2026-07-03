@@ -16,6 +16,7 @@
  * ⚠️ sunset(2026-12-31)은 **양도일** 기준.
  */
 
+import { subYears } from "date-fns";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import { getInvoluntaryTransferLimits } from "./public-expropriation-reduction";
@@ -29,6 +30,10 @@ export interface ReplacementLandInput {
   /** 대토(토지) 보상액 (원) — 감면 대상 */
   replacementLandComp: number;
   transferDate: Date;
+  /** 취득일 (상속 시 피상속인 취득일) — §77의2① 소급 2년 취득요건 검증용. 미입력 시 요건 미검증(백워드 호환) */
+  acquisitionDate?: Date;
+  /** 사업인정고시일 — §77의2① '고시일(고시 전 양도 시 양도일) 소급 2년 이전 취득' 기준. 미입력 시 요건 미검증 */
+  businessApprovalDate?: Date;
   calculatedTax: number;
   /** 양도소득금액 = 양도차익 − 장기보유특별공제 (기본공제 차감 전) */
   transferIncome: number;
@@ -86,6 +91,20 @@ export function calculateReplacementLandReduction(
   }
   if (input.replacementLandComp <= 0) {
     return ineligible("대토보상액이 0 이하입니다 (대토보상분만 감면 대상)", annualLimit);
+  }
+  // §77의2① 취득시기 요건 — 사업인정고시일(고시 전 양도 시 양도일) 소급 2년 이전 취득.
+  // 두 날짜 모두 존재할 때만 검증(미입력 시 skip — 법 근거 없는 차단 방지, 백워드 호환).
+  if (input.acquisitionDate !== undefined && input.businessApprovalDate !== undefined) {
+    const acqBaselineDate =
+      input.transferDate < input.businessApprovalDate
+        ? input.transferDate
+        : input.businessApprovalDate;
+    if (input.acquisitionDate > subYears(acqBaselineDate, 2)) {
+      return ineligible(
+        "사업인정고시일 소급 2년 이내에 취득한 토지입니다 (§77의2① 취득시기 요건 미충족)",
+        annualLimit,
+      );
+    }
   }
   if (input.calculatedTax <= 0 || input.transferIncome <= 0 || input.taxBase <= 0) {
     return ineligible(

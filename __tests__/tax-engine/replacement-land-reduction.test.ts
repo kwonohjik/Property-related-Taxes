@@ -79,6 +79,57 @@ describe("R77-2-4: 대토보상 0 → 비적격", () => {
   });
 });
 
+describe("R77-2-ACQ: §77의2① 사업인정고시일 소급 2년 이전 취득 요건", () => {
+  const acqBase = {
+    ...base,
+    cashCompensation: 100_000_000,
+    replacementLandComp: 100_000_000,
+  } as const;
+
+  it("취득일이 고시일 소급 2년 이전 → 요건 충족(적격)", () => {
+    // 고시일 2026-04-01 소급 2년 = 2024-04-01. 취득 2024-01-01 (그 이전) → 충족
+    const r = calculateReplacementLandReduction({
+      ...acqBase,
+      businessApprovalDate: new Date("2026-04-01"),
+      acquisitionDate: new Date("2024-01-01"),
+    });
+    expect(r.isEligible).toBe(true);
+    expect(r.reductionAmount).toBe(10_256_410);
+  });
+
+  it("취득일이 고시일 소급 2년 이내 → 취득시기 요건 미충족(비적격)", () => {
+    // 고시일 2026-04-01 소급 2년 = 2024-04-01. 취득 2025-01-01 (2년 이내) → 미충족
+    const r = calculateReplacementLandReduction({
+      ...acqBase,
+      businessApprovalDate: new Date("2026-04-01"),
+      acquisitionDate: new Date("2025-01-01"),
+    });
+    expect(r.isEligible).toBe(false);
+    expect(r.notEligibleReason).toContain("§77의2①");
+  });
+
+  it("고시 전 양도 → 양도일 기준 소급 2년 판정", () => {
+    // 양도 2026-05-01 < 고시 2026-08-01 → baseline=양도일. 소급 2년 = 2024-05-01.
+    // 취득 2024-06-01 (baseline 이후) → 미충족
+    const r = calculateReplacementLandReduction({
+      ...acqBase,
+      businessApprovalDate: new Date("2026-08-01"),
+      acquisitionDate: new Date("2024-06-01"),
+    });
+    expect(r.isEligible).toBe(false);
+    expect(r.notEligibleReason).toContain("취득시기");
+  });
+
+  it("고시일 미입력 → 취득요건 미검증(백워드 호환, 적격 유지)", () => {
+    const r = calculateReplacementLandReduction({
+      ...acqBase,
+      acquisitionDate: new Date("2025-01-01"), // 최근 취득이어도 고시일 없으면 미검증
+    });
+    expect(r.isEligible).toBe(true);
+    expect(r.reductionAmount).toBe(10_256_410);
+  });
+});
+
 describe("R77-2-5: §133② 연간 한도 2억 capping", () => {
   it("raw > 2억이면 2억으로 capping", () => {
     const r = calculateReplacementLandReduction({
