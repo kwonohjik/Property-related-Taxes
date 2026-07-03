@@ -12,6 +12,8 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { GRACE_REASON_SPECS } from "@/lib/tax-engine/non-business-land/grace-reason-period";
 import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
+import { isUrbanResidentialCommercialIndustrial } from "@/lib/tax-engine/non-business-land/urban-area";
+import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
 
 /** 비사업용 토지 정밀판정(nblUseDetailedJudgment) 필수 입력 검증. 첫 오류 메시지 또는 null. */
@@ -32,6 +34,17 @@ export function validateNblDetailedJudgment(
 
   // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵
   if (nblExempt) return null;
+
+  // 주택부수토지(§168-12) 도시지역 주·상·공 배율은 수도권 여부에 따라 3배/5배로 갈린다.
+  // 미선택 시 엔진(housing-land.ts)이 수도권(불리)로 default 적용 → 유리-default 정책상 계산 전 차단.
+  // 배율이 실제로 달라지는 urban 주·상·공 zoneType에서만 요구(녹지·도시 外는 수도권 무관 → 차단 금지).
+  if (
+    asset.nblLandType === "housing_site" &&
+    isUrbanResidentialCommercialIndustrial(asset.nblZoneType as ZoneType) &&
+    !asset.nblIsMetropolitanArea
+  ) {
+    return `${label}: 주택부수토지 도시지역 주·상·공은 수도권 여부에 따라 배율이 달라집니다(수도권 3배 / 수도권 밖 5배). 수도권 여부를 선택하세요.`;
+  }
 
   // §168의14② 양도일 의제 — 사유 선택 시 의제일 필수 (자동 fallback 금지)
   if (asset.nblDeemedTransferReason && asset.nblDeemedTransferReason !== "none" && !asset.nblDeemedTransferDate)
