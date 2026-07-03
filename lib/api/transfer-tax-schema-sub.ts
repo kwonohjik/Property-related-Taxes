@@ -93,6 +93,10 @@ export const nonBusinessLandRawSchema = z.object({
   // 공익수용 단일 소스 (서버 isExpr·고시일 fallback) — z.object strip 방지
   transferCause: z.enum(["general", "public_expropriation"]).optional(),
   expropriationNoticeDate: z.string().optional(),
+  // §168의14③3호나목 취득일 소급 — 상속=피상속인 취득일 / 이월과세=증여자 취득일 (strip 방지)
+  acquisitionCause: z.string().optional(),
+  decedentAcquisitionDate: z.string().optional(),
+  donorAcquisitionDate: z.string().optional(),
   // 공통
   nblDeemedTransferReason: z.string().optional(),
   nblDeemedTransferDate: z.string().optional(),

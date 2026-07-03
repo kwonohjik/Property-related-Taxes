@@ -132,6 +132,56 @@ describe("§168-14 ③3호 — 공익수용", () => {
   });
 });
 
+// B5 회귀 — §168의14③3호나목 취득일 소급 (상속=피상속인 취득일 / 이월과세=증여자 취득일)
+describe("[B5] §168-14 ③3호나목 취득일 소급", () => {
+  it("상속: 양수인 취득일(상속개시일)은 5년 이내이나 피상속인 취득일이 5년 이전 → 의제 적용", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        acquisitionDate: d("2018-01-01"), // 상속개시일 — 고시일 2.5년 전(단독으론 미적용)
+        unconditionalExemption: {
+          isPublicExpropriation: true,
+          publicNoticeDate: d("2020-06-01"),
+          expropriationAcquisitionDate: d("2010-01-01"), // 피상속인 취득일 — 고시일 10년 전
+        },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(true);
+    expect(r.reason).toBe("public_expropriation");
+    expect(r.detail).toContain("2010-01-01"); // 소급 취득일 표시
+  });
+
+  it("소급 취득일 미제공 시 양수인 취득일 fallback → 5년 이내면 미적용 (회귀 baseline)", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        acquisitionDate: d("2018-01-01"),
+        unconditionalExemption: {
+          isPublicExpropriation: true,
+          publicNoticeDate: d("2020-06-01"),
+          // expropriationAcquisitionDate 미제공 → input.acquisitionDate(2018) 사용
+        },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(false);
+  });
+
+  it("피상속인 취득일도 5년 이내이면 미적용", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        acquisitionDate: d("2019-01-01"),
+        unconditionalExemption: {
+          isPublicExpropriation: true,
+          publicNoticeDate: d("2020-06-01"),
+          expropriationAcquisitionDate: d("2017-01-01"), // 고시일 3.5년 전 — 여전히 5년 이내
+        },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(false);
+  });
+});
+
 describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내", () => {
   it("플래그 true + 농지 → 의제", () => {
     const r = checkUnconditionalExemption(

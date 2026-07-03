@@ -96,12 +96,15 @@ export function checkUnconditionalExemption(
       };
     }
     // 5년 전 취득 기준 (2021 개정 현행 단일 기준)
+    // 취득일 소급(시행령 §168의14③3호나목 괄호): 상속=피상속인 취득일 / §97의2① 이월과세=증여자 취득일.
+    // 미제공 시 양수인 취득일(input.acquisitionDate=상속개시일/증여일) fallback.
+    const acqDateForExpropriation = u.expropriationAcquisitionDate ?? input.acquisitionDate;
     const boundary5y = addYears(u.publicNoticeDate, -5);
-    if (input.acquisitionDate <= boundary5y) {
+    if (acqDateForExpropriation <= boundary5y) {
       return {
         isExempt: true,
         reason: "public_expropriation",
-        detail: `공익사업 협의매수·수용 — 고시일 ${u.publicNoticeDate.toISOString().slice(0, 10)} 5년 이전 취득`,
+        detail: `공익사업 협의매수·수용 — 고시일 ${u.publicNoticeDate.toISOString().slice(0, 10)} 5년 이전 취득 (취득일 ${acqDateForExpropriation.toISOString().slice(0, 10)})`,
         legalBasis: "시행령 §168조의14 ③ 3호 나목",
       };
     }

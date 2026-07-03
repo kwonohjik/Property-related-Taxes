@@ -103,6 +103,15 @@ export function buildUnconditionalExemption(
     asBool(a.nblExemptFactoryAdjacent) || asBool(a.nblExemptJongjoongOwned) ||
     asBool(a.nblExemptUrbanFarmlandJongjoong) || asBool(a.nblExemptInong);
   if (!has) return undefined;
+  // §168의14③3호나목 취득일 소급: 상속=피상속인 취득일 / §97의2①(carryover_gift)=증여자 취득일.
+  // 그 외(직접취득·일반증여)는 undefined → 엔진이 양수인 취득일로 fallback.
+  const cause = asString(a.acquisitionCause);
+  const expropriationAcquisitionDate =
+    cause === "inheritance"
+      ? parseDate(asString(a.decedentAcquisitionDate))
+      : cause === "carryover_gift"
+        ? parseDate(asString(a.donorAcquisitionDate))
+        : undefined;
   return {
     isInheritedBefore2007:               asBool(a.nblExemptInheritBefore2007),
     inheritanceDate:                     parseDate(asString(a.nblExemptInheritDate)),
@@ -111,6 +120,7 @@ export function buildUnconditionalExemption(
     isPublicExpropriation:               isExpropriation,
     // 고시일 fallback: NBL 섹션 미입력 시 Step1 단일 소스(expropriationNoticeDate)
     publicNoticeDate:                    parseDate(asString(a.nblExemptPublicNoticeDate) || asString(a.expropriationNoticeDate)),
+    expropriationAcquisitionDate,
     isFactoryAdjacent:                   asBool(a.nblExemptFactoryAdjacent),
     isJongjoongOwned:                    asBool(a.nblExemptJongjoongOwned),
     jongjoongAcquisitionDate:            parseDate(asString(a.nblExemptJongjoongAcqDate)),
