@@ -246,9 +246,13 @@ function calcNecessaryExpense(
 
   const estimatedSide = estimatedBase + estimatedDeduction;
 
-  if (swapEligible && directSide > estimatedSide) {
-    // §97② 2호 단서 — 환산+개산 < 자본+양도비 → 자본+양도비 적용
-    // acquisitionCost는 estimatedBase 유지, expenses를 directSide로 교체
+  // §97② 2호 단서는 취득가액을 '환산취득가액'으로 하는 경우에 한정한다.
+  // (감정가액·매매사례가액 모드는 단서 대상 아님 — 본문 = 취득가액 + 개산공제만 적용.)
+  const isConversionMode = input.useEstimatedAcquisition === true;
+  if (isConversionMode && swapEligible && directSide > estimatedSide) {
+    // §97② 2호 단서 — 가목(환산취득가액+개산공제) < 나목(자본적지출+양도비)인 경우
+    // 나목의 금액을 '필요경비'로 한다. 필요경비 전체가 나목이므로 환산취득가액은
+    // 별도 차감하지 않는다(양도차익 = 양도가액 − 나목). 차감 제외는 calcTransferGain에서 처리.
     return {
       expensesApplied: directSide,
       mode: "swap_to_direct",
@@ -343,7 +347,10 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   }
 
   const necessary = calcNecessaryExpense(input, estimatedBase, estimatedDeduction, usedEstimated);
-  const gain = input.transferPrice - acquisitionCostBase - necessary.expensesApplied;
+  // §97② 2호 단서 swap(나목 채택) 시 필요경비 = 자본적지출+양도비 단독이므로
+  // 환산취득가액(acquisitionCostBase)은 차감하지 않는다(양도차익 = 양도가액 − 나목).
+  const acqCostForGain = necessary.mode === "swap_to_direct" ? 0 : acquisitionCostBase;
+  const gain = input.transferPrice - acqCostForGain - necessary.expensesApplied;
   const flooredGain = input.skipLossFloor ? gain : Math.max(0, gain);
   return {
     gain: flooredGain,

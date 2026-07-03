@@ -92,6 +92,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               ? "§99의3 PHD 환산 모드: 환산 결과가 0입니다. 토지 공시지가·면적·최초공시 정보를 모두 입력했는지 확인 후 '적용' 버튼을 클릭하세요."
               : "§99의3 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)");
           }
+          // 전용면적 필수 — 2002.12.31 이전 취득 고가주택(165/149㎡ AND 6억) 판정. §99/§98의8/§99의2와 동일 패턴.
+          if (!(parseDecimal(r.exclusiveAreaSqm993 || "") > 0))
+            return fail("§99의3 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정).");
           // 5년 시점 기준시가 필수 (5년 후 양도인 경우 안분 산식에 사용)
           if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
             return fail("§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)");

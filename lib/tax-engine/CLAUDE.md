@@ -123,14 +123,16 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 - **감정가액 + 개산공제 자동 (§163⑥)**: `acquisitionMethod === "appraisal"` 시 `취득시 기준시가 × 3%` 자동 적용 (`calcTransferGain`).
 - **토지/건물 분리 양도차익 (§166⑥)**: `hasSeperateLandAcquisitionDate === true` 시 `transfer-tax-split-gain.ts` 활성. PHD 취득시 참조일은 **`landAcquisitionDate`** (건물 취득일 아님).
 
-## §97② 2호 단서 swap (2026-05-03)
+## §97② 2호 단서 swap (2026-05-03, 2026-07-03 법령정정)
 
-환산취득가액·감정가액 모드에서 **(환산 + 개산공제) < (자본적지출 + 양도비)** 이면 후자를 필요경비로 swap.
+**환산취득가액 모드 전용**(감정가액·매매사례가액 제외 — 소득세법 §97②2호 단서는 "취득가액을 **환산취득가액**으로 하는 경우"에 한정). 가목(환산취득가액 + 개산공제) < 나목(자본적지출 + 양도비)이면 **나목을 필요경비 '전체'로** 한다(가목·나목 **택일=max**, 합산 아님).
+
+**⚠️ 핵심**: 가목은 "환산취득가액 + 개산공제"이므로 나목 채택 시 **환산취득가액은 필요경비에 포함되지 않는다**. 양도차익 = **양도가액 − 나목(자본+양도비)**. 환산취득가액을 별도 차감하면 이중차감(2026-07-03 코드감사·조세심판원 조심2016서2576·소득세법 §97②2호 원문으로 정정). ⇒ 이전 "acquisitionCost는 estimatedBase 유지, expenses만 swap" 모델은 **법령상 오류였음**.
 
 - **입력**: `TransferTaxInput.capitalExpenditure?` + `transferExpense?`. 두 필드 모두 undefined이면 swap 비활성 (legacy `expenses` 동작).
-- **환산 모드 본문**: `expenses = 개산공제만` (legacy `expenses` 필드 차감 안 함 — 이전 버그 수정됨).
-- **swap 비교**: `swapEligible && directSide > estimatedSide` → `expensesApplied = directSide`.
-- **결과**: `TransferTaxResult.swapApplied?` + `swapComparison?` 노출.
+- **환산 모드 본문(비-swap)**: `expenses = 개산공제만` (legacy `expenses` 필드 차감 안 함). 양도차익 = 양도가 − 환산취득가 − 개산공제.
+- **swap 발동**(`useEstimatedAcquisition && directSide > estimatedSide`): `expensesApplied = directSide`, 그리고 **양도차익 계산에서 환산취득가액(acquisitionCostBase) 미차감**(`calcTransferGain`/`calcSplitGain`/`multi-parcel` 모두 `swapApplied` 시 취득가 항 제외). 감정가액 모드는 swap 대상 아님.
+- **결과**: `TransferTaxResult.swapApplied?` + `swapComparison?` 노출. 표시 산식·다필지 카드도 swap 시 취득가 항 제외(reconcile).
 - **다필지 모드**: `ParcelInput.capitalExpenditure?`/`transferExpense?` — 필지별 독립 swap.
 - **토지/건물 분리**: `SplitPartResult.swapApplied?` — 자산 단위 독립 swap (`landDirectExpenses`/`buildingDirectExpenses` 명시 입력 시만).
 - **헬퍼**: `calcNecessaryExpense()` (`transfer-tax-helpers.ts`) 내부 — 직접 호출 금지.

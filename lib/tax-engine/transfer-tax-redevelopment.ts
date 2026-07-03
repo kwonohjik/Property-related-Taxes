@@ -24,6 +24,8 @@ import { calcBasicDeduction } from "./transfer-tax-helpers";
 import { applyRate, truncateToWon } from "./tax-utils";
 import { REDEVELOPMENT, TRANSFER } from "./legal-codes";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
+import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
+import { computeAmendment } from "./transfer-tax-amendment";
 import type {
   TransferTaxInput,
   TransferTaxResult,
@@ -193,24 +195,50 @@ export function calculateRedevelopmentTax(
   });
 
   // ─ Step G: 지방소득세 (10%, 원 미만 절사) ─
-  const localIncomeTax = truncateToWon(applyRate(taxResult.calculatedTax, 0.1));
-  if (taxResult.calculatedTax > 0) {
+  // 재개발 경로는 §114조의2 환산가액적용가산세 대상이 아니므로 determinedTax = 산출세액.
+  const determinedTax = taxResult.calculatedTax;
+  const localIncomeTax = truncateToWon(applyRate(determinedTax, 0.1));
+  if (determinedTax > 0) {
     steps.push({
       label: "지방소득세",
-      formula: `${taxResult.calculatedTax.toLocaleString()} × 10%`,
+      formula: `${determinedTax.toLocaleString()} × 10%`,
       amount: localIncomeTax,
       legalBasis: TRANSFER.LOCAL_INCOME_TAX,
     });
   }
 
+  // ─ Step G.5: 신고불성실·납부지연 가산세 (국세기본법 §47의2~4) ─
+  // 일반 finalize 경로와 동일하게 emitPenaltySteps 재사용 — 재개발/입주권 양도도
+  // 가산세는 자산 종류와 무관한 보편 항목이다. 입력에 filingPenaltyDetails·
+  // delayedPaymentDetails가 없으면 filingDelayedPenalty=0·step 미푸시로 기존 동작 불변(additive).
+  const { penaltyDetail, filingDelayedPenalty, totalAllPenalty } = emitPenaltySteps(
+    input,
+    steps,
+    determinedTax,
+    0, // penaltyTax(§114조의2 환산가액적용가산세) — 재개발 경로 미해당
+    0, // penaltyBase
+    undefined,
+  );
+
   // ─ Step H: 세액합계 ─
-  const totalTax = taxResult.calculatedTax + localIncomeTax;
+  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty;
   steps.push({
     label: "세액합계",
-    formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`,
+    formula: filingDelayedPenalty > 0
+      ? `총결정세액 ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`
+      : `산출세액 ${determinedTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`,
     amount: totalTax,
     legalBasis: REDEVELOPMENT.GAIN_BASE,
   });
+
+  // ─ Step H.5: 수정신고(경정) — 추가납부세액 + 선택적 가산세 (끝 append) ─
+  // input.amendment 없으면 undefined → 무영향(additive). finalize STEP 12.5와 동일 패턴.
+  const amendmentDetail = input.amendment
+    ? computeAmendment(input.amendment, determinedTax)
+    : undefined;
+  if (amendmentDetail) {
+    for (const s of amendmentDetail.steps) steps.push({ ...s, sub: s.sub ?? true });
+  }
 
   // ─ Step I: TransferTaxResult 빌드 ─
   return {
@@ -229,11 +257,13 @@ export function calculateRedevelopmentTax(
     isSurchargeSuspended: taxResult.surchargeSuspended,
     surchargeRate: taxResult.surchargeRate,
     reductionAmount: 0,
-    determinedTax: taxResult.calculatedTax,
+    determinedTax,
     penaltyTax: 0,
     penaltyBase: 0,
     localIncomeTax,
+    penaltyDetail,
     totalTax,
+    amendmentDetail,
     steps,
     // 재개발 상세 부착
     redevelopmentDetail: redevAfterRight,

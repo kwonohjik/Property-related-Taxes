@@ -246,11 +246,13 @@ export function applyFamilyBusinessCgtStep(
     { acquisitionOverride: imputedAcquisitionPrice },
   );
 
-  // 3. 원취득가액으로 재귀 호출 (일반 §97 산식) — decedentAcquisitionPrice 사용
+  // 3. 상속개시일 평가액으로 재귀 호출 (일반 §97 산식)
+  //    소득세법 시행령 §163⑨: 상속받은 자산의 §97①1호 취득가액 = 상속개시일 현재 평가액.
+  //    (피상속인 원취득가액은 §97의2④의 의제취득가 산식 구성요소일 뿐 §97 기준가액이 아니다.)
   const regularResult = calcFn(
     inputWithoutFb,
     rates,
-    { acquisitionOverride: fb.decedentAcquisitionPrice },
+    { acquisitionOverride: fb.inheritanceMarketValue },
   );
 
   // 4. §18의2⑩ creditAmount 산출 + FamilyBusinessCgtDetail 조립

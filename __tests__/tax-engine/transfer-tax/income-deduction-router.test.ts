@@ -65,3 +65,38 @@ describe("[M-1] income-deduction-router eligible-우선", () => {
     expect(resolveIncomeDeduction(undefined, CTX).reducible).toBe(0);
   });
 });
+
+// B4 회귀 — §99의3 고가주택 면적기준(2002.12.31 이전 취득) 배제가 라우터에서 area를 전달해 발동
+describe("[B4] §99의3 고가주택 면적기준 배제 (exclusiveAreaSqm993 배선)", () => {
+  const CTX993 = {
+    transferDate: new Date("2004-06-01"),   // 취득 2002 → 5년 내 양도(차감 경로)
+    acquisitionDate: new Date("2002-06-01"),
+    transferPrice: 800_000_000,             // > 6억
+    transferIncome: 300_000_000,
+  };
+  const R993_BASE = {
+    type: "new_99_3",
+    contractDate993: new Date("2002-06-01"), // 2002.09.30 이전 → 고가주택 면적기준 165㎡
+    standardPriceAtAcquisition993: 200_000_000,
+    standardPriceAt5Years: 300_000_000,
+    standardPriceAtTransfer993: 400_000_000,
+    region993: "outside_speculation",
+    acquisitionType993: "from_builder",
+    isResident993: true,
+    isHousingConstructionBusiness993: false,
+    hasOccupancyAtContract: false,
+  };
+  const R993_HIGH = { ...R993_BASE, exclusiveAreaSqm993: 175 }; // ≥165㎡ → 고가주택
+  const R993_OK = { ...R993_BASE, exclusiveAreaSqm993: 140 };   // <165㎡ → 고가주택 아님
+
+  it("전용 175㎡(≥165) + 양도 8억(>6억) → 고가주택 배제(부적격)", () => {
+    const res = resolveIncomeDeduction([R993_HIGH], CTX993);
+    expect(res.eligibleId).toBeUndefined(); // 수정 전(area=0 하드코딩)에는 적격으로 오처리
+  });
+
+  it("전용 140㎡(<165) → 고가주택 아님(적격, 차감 발생)", () => {
+    const res = resolveIncomeDeduction([R993_OK], CTX993);
+    expect(res.eligibleId).toBe("new_99_3");
+    expect(res.reducible).toBeGreaterThan(0);
+  });
+});

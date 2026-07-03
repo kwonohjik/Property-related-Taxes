@@ -67,9 +67,9 @@ const G4_GAIN_ESTIMATED_NO_SWAP = LAND_ALLOC_PRICE - G4_ESTIMATED_BASE - G4_APPR
 const G4_BIG_CAPITAL_EXP = 150_000_000; // 자본적지출 1.5억
 const G4_BIG_DIRECT_SIDE = G4_BIG_CAPITAL_EXP + G4_TRANSFER_EXP; // 160,000,000
 
-// swap 발동: acquisitionCost = estimatedBase, expenses = bigDirect
-// skipLossFloor=true 로 손실 그대로 반환
-const G4_GAIN_SWAP = LAND_ALLOC_PRICE - G4_ESTIMATED_BASE - G4_BIG_DIRECT_SIDE; // -98,452,299
+// §97②2호 단서 swap: 필요경비 = 나목(directSide) 단독 → 환산취득가액 미차감.
+//   양도차익 = 안분가 − directSide (환산취득가 제외).
+const G4_GAIN_SWAP = LAND_ALLOC_PRICE - G4_BIG_DIRECT_SIDE; // 57,542,381 (양수)
 
 // ============================================================
 // 헬퍼 팩토리
@@ -184,33 +184,29 @@ describe("사례 28 Group G — §97② swap × 부수토지 일체과세 (G-4 c
   });
 
   /**
-   * T-31: 환산 모드 — swap 발동 → 양도손실, 산출세액 = 0
+   * T-31: 환산 모드 — swap 발동 (§97②2호 단서, 나목 채택)
    *
    * directSide(160,000,000) > estimatedSide(158,394,680) → swap 발동.
-   * swap 후: acquisitionCost = estimatedBase(155,994,680), expenses = 160,000,000.
-   * 양도차익 = 217,542,381 - 155,994,680 - 160,000,000 = -98,452,299 (손실)
+   * 필요경비 = 나목(directSide 160,000,000) 단독. 환산취득가액(155,994,680)은 가목에 포함되어
+   * 나목 채택 시 별도 차감하지 않는다(소득세법 §97②2호 단서).
+   * 양도차익 = 217,542,381 − 160,000,000 = 57,542,381 (양수)
    *
-   * 엔진 동작: transferGain ≤ 0 → 양도손실 조기 반환 경로(소득세법 §92)
-   *   calculatedTax = 0, totalTax = 0 (가산세 없음)
-   *
-   * 법령 원칙 확인:
-   *   §97② 단서 swap은 필요경비 인정 방식만 규정 — 세율 결정(§104①)과 독립.
-   *   손실 경로에서 세율이 적용되지 않는 것은 양도손실에 산출세액이 없기 때문이며
-   *   부수토지 일체과세 원리(§89①3호·영§154⑦) 자체가 무효화되는 것이 아님.
-   *
-   * 참조 테스트: T-30에서 swap 미발동 시 70% 세율이 정상 적용됨을 확인 (회귀 방어).
+   * 세액: 보유 <3년 → LTHD 0, 기본공제 250만 → 과세표준 55,042,381.
+   *   부수토지 일체과세 70%(§89①3호·영§154⑦, primaryContext 6개월<1년) → 산출세액 38,529,666.
+   *   지방소득세 3,852,966, 세액합계 42,382,632.
+   *   (swap은 필요경비 인정 방식만 규정 — 세율 70%는 primaryContextForCompanionRate 기반, swap 무관.)
    */
-  it("T-31 환산 모드 swap 발동 → 양도손실 — transferGain = -98,452,299, 산출세액 = 0", () => {
+  it("T-31 환산 모드 swap 발동 → 필요경비=나목 단독(환산 미차감), 양도차익 57,542,381 · 70% 과세", () => {
     const result = calculateTransferTax(
       makeLandInputG4Estimated(G4_BIG_CAPITAL_EXP),
       makeMockRates(),
     );
-    // swap 발동 → 양도손실 경로 (transferGain ≤ 0 → 조기 반환)
-    expect(result.transferGain).toBe(G4_GAIN_SWAP); // -98,452,299
-    expect(result.calculatedTax).toBe(0);
-    expect(result.totalTax).toBe(0);
-    // 손실 경로에서 세율 미적용(appliedRate=0) — swap이 세율 결정에 영향 없음을 T-30으로 보완
-    expect(result.appliedRate).toBe(0);
+    // §97②2호 단서 swap: 필요경비 = directSide 단독, 환산취득가 미차감
+    expect(result.transferGain).toBe(G4_GAIN_SWAP); // 57,542,381
+    expect(result.taxBase).toBe(55_042_381);        // 57,542,381 − 기본공제 250만 (LTHD 0)
+    expect(result.appliedRate).toBe(0.70);          // 부수토지 일체과세 70% (swap 무관)
+    expect(result.calculatedTax).toBe(38_529_666);  // floor(55,042,381 × 70%)
+    expect(result.totalTax).toBe(42_382_632);       // 산출세액 + 지방소득세 3,852,966
   });
 
   /**

@@ -333,7 +333,10 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     }
 
     // P-3: 양도차익
-    const rawGain = allocatedPrice - acquisitionPrice - expenses;
+    // §97② 2호 단서 swap 시 필요경비 = 자본+양도비(expenses) 단독 → 환산취득가액 미차감.
+    const rawGain = swapApplied
+      ? allocatedPrice - expenses
+      : allocatedPrice - acquisitionPrice - expenses;
     const transferGain = Math.max(0, rawGain);
 
     if (rawGain < 0) {
@@ -354,8 +357,9 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     parcelResults.push({
       id: parcel.id,
       allocatedTransferPrice: allocatedPrice,
-      acquisitionPrice,
-      // swap 발동 시 개산공제는 미적용 → 0 표시. expenses에 directSide 노출(산식 reconcile).
+      // swap 발동 시 필요경비 = 나목(자본+양도비) 단독 → 환산취득가액은 차감·표시에서 제외(0).
+      // 개산공제도 미적용(0), expenses에 directSide 노출 → 산식 reconcile(양도가 − 0 − 0 − directSide).
+      acquisitionPrice: swapApplied ? 0 : acquisitionPrice,
       estimatedDeduction: swapApplied ? 0 : estimatedDeduction,
       expenses:
         parcel.acquisitionMethod === "estimated"

@@ -197,7 +197,7 @@ function evalNew993(
       standardPriceAtTransfer:
         (r993.standardPriceAtTransfer993 as number | undefined) ?? ctx.standardPriceAtTransfer ?? 0,
       transferPrice: ctx.transferPrice,
-      exclusiveAreaSqm: 0, // 자산 면적 정보가 별도 — 고가주택 면적 기준은 호출자에서 사전 검증 권장
+      exclusiveAreaSqm: (r993.exclusiveAreaSqm993 as number | undefined) ?? 0, // 고가주택 면적기준(2002.12.31 이전 취득) 판정용
       region: (r993.region993 as "outside_speculation" | "speculation" | undefined) ?? "outside_speculation",
       isResident: (r993.isResident993 as boolean | undefined) ?? true,
       isHousingConstructionBusiness: (r993.isHousingConstructionBusiness993 as boolean | undefined) ?? false,

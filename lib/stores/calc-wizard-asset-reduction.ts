@@ -87,6 +87,8 @@ export type AssetReductionForm =
       standardPriceAtAcquisition993: string;
       /** 양도시 기준시가 (원) — 자산의 standardPriceAtTransfer와 별개로 §99의3 전용 입력 (필요 시) */
       standardPriceAtTransfer993?: string;
+      /** 전용면적(㎡) — 고가주택 판정용 (2002.12.31 이전 취득: 165/149㎡ AND 6억 초과). */
+      exclusiveAreaSqm993: string;
       /** 지역 — 가격 급등 지역 내/외 (서울·과천·5대 신도시) */
       region993: "outside_speculation" | "speculation";
       /** 취득 유형 — 1호(주건업 취득) | 2호(자기건설) */

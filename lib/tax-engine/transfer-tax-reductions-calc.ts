@@ -175,6 +175,7 @@ export function calcReductions(
       bondCompensation: reduction.bondCompensation,
       bondHoldingYears: reduction.bondHoldingYears ?? null,
       businessApprovalDate: reduction.businessApprovalDate,
+      acquisitionDate, // §77① '고시일 소급 2년 이전 취득' 요건 검증 (상속 시 피상속인 취득일)
       transferDate,
       calculatedTax,
       transferIncome,

@@ -89,6 +89,30 @@ describe("C-2 임야 PDF p.1700 흐름도", () => {
     expect(r.steps.some((s) => s.id === "forest_siup_zone" && s.status === "NOT_APPLICABLE")).toBe(true);
   });
 
+  it("시업중 임야(산림경영계획 인가만, 공익플래그 X) + 재촌 X + 도시지역 밖 → 사업용 (B1 회귀 §168조의9①2호가목)", () => {
+    // '산림경영계획 인가'만 체크(isPublicInterest 미설정)한 시업중 임야는 재촌 여부와 무관하게
+    // §168조의9①2호가목으로 사업용(도시지역 밖). 게이트에서 시업중을 누락하면 비사업용 오판.
+    const r = judgeForest(
+      base({
+        forestDetail: { hasForestPlan: true },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
+    expect(r.reason).toContain("도시지역 밖");
+    expect(r.steps.some((s) => s.id === "forest_siup_zone" && s.status === "PASS")).toBe(true);
+  });
+
+  it("특수산림사업지구 임야(공익플래그 X) + 재촌 X + 도시지역 밖 → 사업용 (B1 회귀 §168조의9①2호나목)", () => {
+    const r = judgeForest(
+      base({
+        forestDetail: { isSpecialForestZone: true },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
+  });
+
   it("시업중 임야 + 도시지역 內 + 편입 5년 경과 → 비사업용 (지역기준 적용)", () => {
     const r = judgeForest(
       base({

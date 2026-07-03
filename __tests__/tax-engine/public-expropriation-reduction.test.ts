@@ -42,6 +42,48 @@ describe("R77-1: 현금 단독 감면 10%", () => {
   });
 });
 
+describe("R77-ACQ: §77① 고시일 소급 2년 이전 취득 요건 (B2 회귀)", () => {
+  const baseInput = {
+    cashCompensation: 100_000_000,
+    bondCompensation: 0,
+    businessApprovalDate: new Date("2020-01-01"),
+    transferDate: new Date("2023-02-16"),
+    calculatedTax: 50_000_000,
+    transferIncome: 100_000_000,
+    basicDeduction: 2_500_000,
+    taxBase: 97_500_000,
+  };
+
+  it("취득일이 고시일 2년 이내(2019-06-01) → 부적격, 감면 0", () => {
+    // cutoff = 고시일(2020-01-01) − 2년 = 2018-01-01. 취득 2019-06-01 > cutoff → 부적격
+    const r = calculatePublicExpropriationReduction({ ...baseInput, acquisitionDate: new Date("2019-06-01") });
+    expect(r.isEligible).toBe(false);
+    expect(r.reductionAmount).toBe(0);
+    expect(r.notEligibleReason).toContain("2년 이전");
+  });
+
+  it("취득일이 고시일 2년 이전(2017-06-01) → 적격, 감면 5,000,000", () => {
+    const r = calculatePublicExpropriationReduction({ ...baseInput, acquisitionDate: new Date("2017-06-01") });
+    expect(r.isEligible).toBe(true);
+    expect(r.reductionAmount).toBe(5_000_000);
+  });
+
+  it("고시 전 양도 시 기준일=양도일 — 취득 2022-01-01(양도일 2년 이내) → 부적격", () => {
+    // 고시일 2025-01-01(미래), 양도 2023-02-16(고시 전) → 기준일=양도일. cutoff=2021-02-16. 취득 2022-01-01 > cutoff
+    const r = calculatePublicExpropriationReduction({
+      ...baseInput,
+      businessApprovalDate: new Date("2025-01-01"),
+      acquisitionDate: new Date("2022-01-01"),
+    });
+    expect(r.isEligible).toBe(false);
+  });
+
+  it("acquisitionDate 미제공 → 요건 미검증(하위호환), 적격 유지", () => {
+    const r = calculatePublicExpropriationReduction(baseInput);
+    expect(r.isEligible).toBe(true);
+  });
+});
+
 describe("R77-2: 채권 단독 감면 15%", () => {
   it("채권 2억 · 산출세액 30,000,000 / 과세표준 197,500,000", () => {
     const result = calculatePublicExpropriationReduction({

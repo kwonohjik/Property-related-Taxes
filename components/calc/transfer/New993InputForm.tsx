@@ -8,6 +8,7 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -117,6 +118,12 @@ export function New993InputForm({
           <label className="mb-1 block text-xs font-medium">양도시 기준시가 (원, 선택)</label>
           <CurrencyInput label="" value={value.standardPriceAtTransfer993 ?? ""} onChange={(v) => onUpdate("standardPriceAtTransfer993", v)} />
           <p className="mt-1 text-[10px] text-muted-foreground">미입력 시 자산의 양도시 기준시가 사용</p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
+          <DecimalInput value={value.exclusiveAreaSqm993} onChange={(v) => onUpdate("exclusiveAreaSqm993", v)} />
+          <p className="mt-1 text-[10px] text-muted-foreground">2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
 

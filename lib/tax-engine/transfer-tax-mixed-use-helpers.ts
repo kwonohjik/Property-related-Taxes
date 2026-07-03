@@ -593,7 +593,7 @@ export function calcCommercialGainSplit(
 
 // ──────────────────────────────────────────────────────────────
 // 6. 장기보유공제율 계산
-//    표2: 1세대1주택 거주 2년+ → Math.min(holdYears×4% + resYears×4%, 80%)
+//    표2: 1세대1주택 거주 2년+ → min(holdYears×4%,40%) + min(resYears×4%,40%) (합계 최대 80%)
 //    표1: 그 외 → Math.min(holdYears×2%, 30%)
 // ──────────────────────────────────────────────────────────────
 
@@ -604,7 +604,12 @@ export function calcLongTermRate(
 ): number {
   if (holdingYears < 3) return 0;
   if (useTable2) {
-    return Math.min(holdingYears * 0.04 + residenceYears * 0.04, 0.80);
+    // §95② 별표: 보유분·거주분 '각각' 연 4%·최대 40% 상한을 적용한 뒤 합산(합계 최대 80%).
+    // 합산 후 80% 상한만 적용하면 (예: 보유 18년·거주 2년) 보유분이 40%를 넘어 과대 공제된다.
+    // 메인 엔진(transfer-tax-helpers.ts)의 표2 산식과 동일하게 각 상한 후 합산.
+    const holdingPart = Math.min(holdingYears * 0.04, 0.40);
+    const residencePart = Math.min(residenceYears * 0.04, 0.40);
+    return holdingPart + residencePart;
   }
   return Math.min(holdingYears * 0.02, 0.30);
 }
