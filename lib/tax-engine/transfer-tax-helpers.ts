@@ -302,6 +302,10 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   let usedEstimated = false;
   let expropriationValuationDetail: ExpropriationValuationDetail | undefined;
 
+  // 개산공제율 (소득세법 시행령 §163⑥1호·2호가목): 토지·건물·주택 = 3/100.
+  // 단, §104③ 미등기양도자산은 3/1000(0.3%).
+  const estimatedDeductionRate = input.isUnregistered ? 0.003 : 0.03;
+
   if (input.useEstimatedAcquisition) {
     // #3 공익수용 환산 양도시 기준시가 min[] 특례 — 게이트 충족 시 분모(양도시 기준시가) override
     const exprVal = applyExpropriationValuation({
@@ -319,7 +323,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
       input.standardPriceAtAcquisition ?? 0,
       exprVal ? exprVal.denominator : (input.standardPriceAtTransfer ?? 0),
     );
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
+    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
     acquisitionCostBase = estimated;
     estimatedBase = estimated;
     estimatedDeduction = deduction;
@@ -327,7 +331,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   } else if (input.acquisitionMethod === "appraisal") {
     // 감정가액 모드: 소득세법 시행령 §163⑥에 따라 환산취득가와 동일하게 개산공제 자동 적용.
     const appraisal = input.appraisalValue ?? input.acquisitionPrice;
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
+    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
     acquisitionCostBase = appraisal;
     estimatedBase = appraisal;
     estimatedDeduction = deduction;
@@ -337,7 +341,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     // §163⑫(§97①1호나목 매매사례가액)·§97②2호·§163⑥에 따라 환산취득가·감정가액과
     // 동일하게 필요경비 개산공제(취득시 기준시가 × 3%)를 자동 적용한다.
     const salesCase = input.similarSalesValue ?? input.acquisitionPrice;
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, 0.03);
+    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
     acquisitionCostBase = salesCase;
     estimatedBase = salesCase;
     estimatedDeduction = deduction;

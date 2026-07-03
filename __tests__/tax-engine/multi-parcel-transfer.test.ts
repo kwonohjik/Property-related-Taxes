@@ -124,6 +124,21 @@ describe("MP-4: 개산공제 (취득기준시가 × 3%)", () => {
   });
 });
 
+// ── MP-4b (B8): 미등기양도자산 개산공제 0.3% (시행령 §163⑥1호 단서) ──
+describe("MP-4b: 미등기 개산공제 (취득기준시가 × 3/1000)", () => {
+  it("미등기 필지 개산공제 = 117,894 (3% 1,178,940의 1/10)", () => {
+    // standardAtAcq = floor(490 × 80,200) = 39,298,000
+    // 미등기 개산공제 = floor(39,298,000 × 0.003) = 117,894
+    const input: MultiParcelInput = {
+      totalTransferPrice: 525_000_000,
+      transferDate: TRANSFER_DATE,
+      parcels: [{ ...PARCEL_1, isUnregistered: true }, PARCEL_2],
+    };
+    const result = calculateMultiParcelTransfer(input);
+    expect(result.parcelResults[0].estimatedDeduction).toBe(117_894);
+  });
+});
+
 // ── MP-5: 환지확정일 익일 보정 ──
 describe("MP-5: 환지확정일 익일 취득일 의제", () => {
   it("replottingConfirmDate + 1일이 effectiveAcquisitionDate가 된다", () => {
