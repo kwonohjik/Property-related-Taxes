@@ -111,6 +111,23 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...r,
         };
       }
+      // B4 §99의3 (2026-07-03): exclusiveAreaSqm993 등 본 필드 누락 보정 (③) — 구 세션(면적기준 배선 전) 복원 시 validate 차단·controlled input 경고 방어
+      if (r && r.type === "new_99_3") {
+        return {
+          contractDate993: "",
+          usageApprovalDate993: "",
+          standardPriceAt5Years: "",
+          standardPriceAtAcquisition993: "",
+          standardPriceAtTransfer993: "",
+          exclusiveAreaSqm993: "",
+          region993: "outside_speculation",
+          acquisitionType993: "from_builder",
+          hasOccupancyAtContract: false,
+          isResident993: true,
+          isHousingConstructionBusiness993: false,
+          ...r,
+        };
+      }
       // P1 §98의8 (2026-06-11): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "unsold_98_8") {
         return {
