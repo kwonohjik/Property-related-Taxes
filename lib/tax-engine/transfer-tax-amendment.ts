@@ -12,6 +12,7 @@
 import { addMonths, addYears, isAfter } from "date-fns";
 import {
   AMENDMENT_REDUCTION_48_2,
+  AMENDMENT_45,
   AMENDMENT_48_2,
   AMENDMENT_48_1_2,
   PENALTY,
@@ -165,7 +166,7 @@ export function computeAmendment(
     label: "추가 납부 본세",
     formula: `수정 결정세액 ${determinedTax.toLocaleString()} − 당초 결정세액 ${amendment.originalDeterminedTax.toLocaleString()}`,
     amount: additionalTax,
-    legalBasis: "국세기본법 §45",
+    legalBasis: AMENDMENT_45,
   });
 
   // ── 신고불성실가산세 (§47의3, §48② 감면 대상) ──
@@ -250,7 +251,7 @@ export function computeAmendment(
       underReportingPenalty > 0 ? ` + 신고불성실 ${underReportingPenalty.toLocaleString()}` : ""
     }${latePaymentPenalty > 0 ? ` + 납부지연 ${latePaymentPenalty.toLocaleString()}` : ""}`,
     amount: totalPayable,
-    legalBasis: "국세기본법 §45",
+    legalBasis: AMENDMENT_45,
   });
 
   return {
