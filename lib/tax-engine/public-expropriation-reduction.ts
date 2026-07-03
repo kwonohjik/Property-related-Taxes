@@ -32,6 +32,8 @@ export function getInvoluntaryTransferLimits(
 export const AMENDED_2025_TRANSFER_CUTOFF = new Date("2025-01-01T00:00:00");
 export const LEGACY_APPROVAL_CUTOFF = new Date("2015-12-31T23:59:59");
 export const LEGACY_TRANSFER_CUTOFF = new Date("2017-12-31T23:59:59");
+/** 조특법 §77① 일몰 — 2026.12.31 이전 양도분에 한정(양도일 기준). */
+export const PUBLIC_EXPROPRIATION_SUNSET = new Date("2026-12-31T23:59:59");
 
 export interface PublicExpropriationReductionInput {
   cashCompensation: number;
@@ -123,13 +125,17 @@ export function calculatePublicExpropriationReduction(
   const failsAcqRequirement =
     input.acquisitionDate !== undefined && input.acquisitionDate > subYears(acqBaselineDate, 2);
 
+  // 조특법 §77① 일몰: 2026.12.31 이전 양도분에 한정(양도일 기준).
+  const failsSunset = input.transferDate > PUBLIC_EXPROPRIATION_SUNSET;
+
   // 비적격 조기 반환
   if (
     totalCompensation <= 0 ||
     input.calculatedTax <= 0 ||
     input.transferIncome <= 0 ||
     input.taxBase <= 0 ||
-    failsAcqRequirement
+    failsAcqRequirement ||
+    failsSunset
   ) {
     return {
       isEligible: false,
@@ -148,7 +154,9 @@ export function calculatePublicExpropriationReduction(
       ).annual,
       legalBasis: TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
       warnings,
-      notEligibleReason: failsAcqRequirement
+      notEligibleReason: failsSunset
+        ? "양도일이 2026-12-31 이후입니다 (조특법 §77① 일몰)"
+        : failsAcqRequirement
         ? "사업인정고시일부터 소급 2년 이전에 취득한 토지등이 아닙니다(조특법 §77①)"
         : totalCompensation <= 0
           ? "보상액(현금+채권) 합계가 0 이하입니다"

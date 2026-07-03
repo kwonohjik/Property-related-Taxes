@@ -15,8 +15,26 @@ import { describe, it, expect } from "vitest";
 import {
   evaluateNew993,
   isHighValueHouseUnder993,
+  isWithin5YearsCheck,
   type New993Input,
 } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+
+// B5-LOW #18 회귀 — isWithin5YearsCheck 윤년 처리 (addYears, 민법 §160③)
+describe("[LOW-18] isWithin5YearsCheck 윤년 경계", () => {
+  it("2020-02-29 취득 + 2025-02-28 양도 → 5년 내(응당일 없으면 말일 만료)", () => {
+    // addYears(2020-02-29, 5) = 2025-02-28. setFullYear는 2025-03-01로 밀림(1일 오차).
+    expect(isWithin5YearsCheck(new Date("2020-02-29"), new Date("2025-02-28"))).toBe(true);
+  });
+
+  it("2020-02-29 취득 + 2025-03-01 양도 → 5년 후(2025-02-28 초과)", () => {
+    expect(isWithin5YearsCheck(new Date("2020-02-29"), new Date("2025-03-01"))).toBe(false);
+  });
+
+  it("평년 취득은 정확히 5년 응당일까지 5년 내", () => {
+    expect(isWithin5YearsCheck(new Date("2019-06-01"), new Date("2024-06-01"))).toBe(true);
+    expect(isWithin5YearsCheck(new Date("2019-06-01"), new Date("2024-06-02"))).toBe(false);
+  });
+});
 
 // ============================================================================
 // 테스트 픽스처: 기본 적합 입력 (모든 적용 배제 통과)

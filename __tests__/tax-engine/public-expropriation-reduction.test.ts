@@ -84,6 +84,30 @@ describe("R77-ACQ: §77① 고시일 소급 2년 이전 취득 요건 (B2 회귀
   });
 });
 
+describe("R77-SUNSET: §77① 일몰 2026-12-31 (양도일 기준)", () => {
+  const base = {
+    cashCompensation: 100_000_000,
+    bondCompensation: 0,
+    businessApprovalDate: new Date("2020-01-01"),
+    calculatedTax: 50_000_000,
+    transferIncome: 100_000_000,
+    basicDeduction: 2_500_000,
+    taxBase: 97_500_000,
+  };
+
+  it("2026-12-31 양도 → 적격(일몰 경계 이내)", () => {
+    const r = calculatePublicExpropriationReduction({ ...base, transferDate: new Date("2026-12-31") });
+    expect(r.isEligible).toBe(true);
+  });
+
+  it("2027-01-01 양도 → 부적격(일몰 초과)", () => {
+    const r = calculatePublicExpropriationReduction({ ...base, transferDate: new Date("2027-01-01") });
+    expect(r.isEligible).toBe(false);
+    expect(r.reductionAmount).toBe(0);
+    expect(r.notEligibleReason).toContain("일몰");
+  });
+});
+
 describe("R77-2: 채권 단독 감면 15%", () => {
   it("채권 2억 · 산출세액 30,000,000 / 과세표준 197,500,000", () => {
     const result = calculatePublicExpropriationReduction({

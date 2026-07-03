@@ -27,6 +27,7 @@
  * anchor: docs/02-design/features/anchors/reduction-99-3-case-2023.md
  */
 
+import { addYears } from "date-fns";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { applyRate } from "../tax-utils";
 
@@ -189,8 +190,9 @@ export function isHighValueHouseUnder993(
  * 동일 일자는 "5년 내" (취득일 + 5년 = 양도일).
  */
 export function isWithin5YearsCheck(acquisitionDate: Date, transferDate: Date): boolean {
-  const fiveYearMark = new Date(acquisitionDate);
-  fiveYearMark.setFullYear(fiveYearMark.getFullYear() + 5);
+  // date-fns addYears — 윤년(2/29 취득) 응당일 없으면 말일(2/28)로 만료(민법 §160③).
+  // setFullYear는 2/29+5년을 3/1로 롤오버해 1일 밀림 → 코드베이스 date-fns 관례로 통일.
+  const fiveYearMark = addYears(acquisitionDate, 5);
   return transferDate <= fiveYearMark;
 }
 

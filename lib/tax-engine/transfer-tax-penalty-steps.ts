@@ -5,7 +5,7 @@
  * 외부 import 호환을 위해 transfer-tax-helpers.ts에서 re-export 유지.
  */
 
-import { TRANSFER } from "./legal-codes";
+import { TRANSFER, PENALTY } from "./legal-codes";
 import {
   calculateTransferTaxPenalty,
   type TransferTaxPenaltyResult,
@@ -76,7 +76,7 @@ export function emitPenaltySteps(
         label: `납부지연가산세 (${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%)`,
         formula: `미납세액 ${d.unpaidTax.toLocaleString()} × ${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%`,
         amount: d.delayedPaymentPenalty,
-        legalBasis: "국세기본법 §47의4",
+        legalBasis: PENALTY.DELAYED_PAYMENT,
         sub: true,
       });
     }
