@@ -61,7 +61,7 @@ PDF는 `textAlign: "right"` + 고정 `width` 셀로 우측정렬. 폰트는 `BES
 신규 신고서/표는 아래 공용 렌더러를 우선 재사용:
 
 - **`components/calc/results/shared/BesshiRow.tsx`** (`BesshiRow`·`BesshiColumn`) — 별지 제9·10호 양식 금액 행. 금액 셀이 이미 본 패턴 적용. ([[besshi-form-replica]]와 함께)
-- `HeirAllocationSummaryTable` 등 기존 표는 `tabular-nums` 기반 — 콤마 어긋남 보고 시 `font-mono` 추가로 마이그레이션.
+- `HeirAllocationSummaryTable` 숫자 셀은 `font-mono` 마이그레이션 완료(커밋 `3e34fd69`) — 아직 `tabular-nums` 단독인 기존 표는 콤마 어긋남 보고 시 `font-mono` 추가로 마이그레이션.
 
 직접 표를 만들 때도 금액 셀에 위 4개 클래스를 그대로 적용한다.
 

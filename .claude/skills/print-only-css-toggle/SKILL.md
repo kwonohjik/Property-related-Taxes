@@ -1,6 +1,6 @@
 ---
 name: print-only-css-toggle
-description: 결과 화면 펼침/접힘 토글에서 인쇄 시 자동 펼침을 useEffect·isPrinting 상태 추적 없이 CSS-only로 구현. `className={open ? "block" : "hidden print:block"}` 단일 패턴 + 토글 버튼은 `print:hidden`. 다크모드 강제 흰 배경과 함께 PDF 출력 품질 직결.
+description: '결과 화면 펼침/접힘 토글에서 인쇄 시 자동 펼침을 useEffect·isPrinting 상태 추적 없이 CSS-only로 구현. `className={open ? "block" : "hidden print:block"}` 단일 패턴 + 토글 버튼은 `print:hidden`. 다크모드 강제 흰 배경과 함께 PDF 출력 품질 직결.'
 trigger: print 자동 펼침, 인쇄 시 펼침, print:block, hidden print:block, isPrinting 추적, useEffect 인쇄, 인쇄 미디어쿼리, window.print, PDF 출력 펼침, 토글 인쇄
 ---
 
@@ -79,7 +79,8 @@ const [isPrint, setIsPrint] = useState(
   className="... print:hidden"
 >
   <span>카드 제목</span>
-  <span>{open ? "▲" : "▼"}</span>
+  {/* 라벨·모양은 ExpandToggleButton 표준 — components/calc/results/shared/ExpandToggleButton.tsx */}
+  <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(open)}</span>
 </button>
 
 {/* 카드 컨텐츠 — 사용자 토글 + 인쇄 시 강제 펼침 */}
@@ -107,37 +108,43 @@ const [isPrint, setIsPrint] = useState(
 
 ## 실제 사례
 
-본 프로젝트 `GiftTaxResultView.tsx` 평가 명세서 카드 (커밋 `56e11ae`):
+본 프로젝트 `GiftTaxResultView.tsx` 평가 명세서 카드 (도입 커밋 `56e11ae`, 현행은 ExpandToggleButton 표준 + 가로 스크롤 적용):
 
 ```tsx
-<div className="border rounded-xl overflow-hidden">
+<div className="border rounded-xl">
   <button
     type="button"
     onClick={() => setShowValuation((v) => !v)}
     className="... print:hidden"
   >
     <span>증여재산 및 평가명세서 (별지 제10호서식 부표 1) — {N}건</span>
-    <span>{showValuation ? "▲" : "▼"}</span>
+    <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(showValuation)}</span>
   </button>
-  <div className={showValuation ? "block p-4" : "hidden print:block print:p-0"}>
-    <GiftTaxValuationFormTable {...props} />
-  </div>
+  {showValuation ? (
+    <HorizontalScrollContainer hint="← → 좌우 스크롤 또는 thumb 드래그로 모든 컬럼 보기">
+      <GiftTaxValuationFormTable {...props} />
+    </HorizontalScrollContainer>
+  ) : (
+    <div className="hidden print:block print:p-0 print:overflow-visible">
+      <GiftTaxValuationFormTable {...props} />
+    </div>
+  )}
 </div>
 ```
 
-→ 사용자가 화면에서 토글 닫아도 `🖨️ PDF / 인쇄` 클릭 시 자동 펼침. useEffect 0줄.
+→ 사용자가 화면에서 토글 닫아도 `PrintSelectionPanel`의 `선택 항목 인쇄` 클릭 시(해당 카드를 출력 항목으로 선택한 경우 — `PrintSection`) 자동 펼침. useEffect 0줄.
 
 ## 추가 패턴 — 인쇄 시 추가 헤더·푸터
 
-인쇄 전용 정보(페이지 번호·법적 고지·로고 등)는 `screen:hidden print:block`:
+인쇄 전용 정보(페이지 번호·법적 고지·로고 등)는 `hidden print:block`:
 
 ```tsx
-<div className="screen:hidden print:block text-[10px] text-center mt-4">
+<div className="hidden print:block text-[10px] text-center mt-4">
   ※ 본 출력물은 ... 참고용입니다. 정확한 신고는 ...
 </div>
 ```
 
-(`screen:` variant가 Tailwind에 없으면 `hidden print:block`도 동일 효과)
+(Tailwind에는 `screen:` variant가 없다 — 본 프로젝트 Tailwind v4 실측에서 `screen:hidden`은 CSS를 전혀 생성하지 않아 화면에서도 그대로 노출된다. 반드시 `hidden print:block`을 사용.)
 
 ## 인쇄용 추가 정책 (besshi-form-replica와 연관)
 
@@ -167,7 +174,7 @@ it("토글 버튼은 print:hidden", () => {
 });
 ```
 
-실제 인쇄 효과는 **브라우저 미리보기 수동 검증**.
+실제 인쇄 효과는 **Playwright E2E**(`e2e/*.spec.ts`)로 검증 — 사용자 수동 확인 안내 금지 ([[feedback_browser_verify_with_playwright]]).
 
 ## 안티패턴 체크리스트
 
@@ -185,7 +192,7 @@ it("토글 버튼은 print:hidden", () => {
 - [ ] (양식인 경우) `print:bg-white print:text-black` 강제 흰 배경
 - [ ] useState/useEffect로 isPrinting 추적 코드 0건
 - [ ] 클래스명 anchor 1건 이상 (선택적)
-- [ ] 브라우저 인쇄 미리보기 수동 확인 (사용자 검증 필요)
+- [ ] 인쇄 미리보기 Playwright E2E 검증 (`e2e/*.spec.ts` — 사용자 수동 확인 안내 금지)
 
 ## 관련 정책
 

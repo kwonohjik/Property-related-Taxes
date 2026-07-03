@@ -8,7 +8,7 @@ trigger: 별지 서식, 별지 제N호, 부표, 신고서 양식 재현, 신고�
 
 상속세·증여세·양도세 등 한국 세법 시행규칙 [별지 제N호서식] PDF 양식을 React 컴포넌트로 1:1 재현하는 표준 절차·구조·정책.
 
-본 세션 사례: **별지 제10호서식 부표 1 (증여재산 및 평가명세서, 개정 2026.3.20.)** — `GiftTaxValuationFormTable.tsx`(366줄) + anchor 10건 + 코드표 3종(재산구분 9·재산종류 14·평가기준 8) 검증.
+본 세션 사례: **별지 제10호서식 부표 1 (증여재산 및 평가명세서, 개정 2026.3.20.)** — `GiftTaxValuationFormTable.tsx`(현재 420줄) + anchor 18건 + 코드표 3종(재산구분 9·재산종류 14·평가기준 8) 검증.
 
 ## 적용 시점
 
@@ -76,7 +76,7 @@ mcp__claude_ai_KoreanLaw__get_annexes({
 
 ### Phase 2 — Design 단계
 
-- **케이스 매트릭스** (자산 1·N건·N+M건·자기일관성·코드 매핑 9종·자기일관성) 사전 enumerate
+- **케이스 매트릭스** (자산 1·N건·N+M건·자기일관성·코드 매핑 전수 — 현행 enum grep 기준) 사전 enumerate
 - **Props 시그니처** — entity 배열 + 합계 number들 + optional 분리 필드 + Phase 2용 prop placeholder
 - **컬럼 폭 표** — A4 인쇄 영역(794px @ 96dpi) 안 수용. `min-w-[Npx]` + `overflow-x-auto`
 - **계 영역 구조** — rowSpan 결합(예: "과세가액 불산입액" rowSpan=3) 명시
@@ -216,7 +216,7 @@ export function BesshiNFormTable({ /* props */ }: Props) {
 | `col-{slug}` | 각 컬럼 칸 (`col-property-class`·`col-amount` 등) |
 | `row-N-{name}` | 계 영역 ⑨~⑮ 행 (`row-9-gross`·`row-15-sum`) |
 
-★ 부표 칸 번호(①~⑮)를 testid에 그대로 동결 — [[feedback-pdf-table-row-one-to-one-mapping]] 자동 준수.
+★ 부표 칸 번호(①~⑮)를 testid에 그대로 동결 — [[feedback_pdf_table_row_one_to_one_mapping]] 자동 준수.
 
 ## 검증 anchor (최소 8건)
 
@@ -245,7 +245,7 @@ export function BesshiNFormTable({ /* props */ }: Props) {
 
 ### "원" 단위 표기 금지
 
-[[feedback-no-won-suffix]] — `formatKRW` 결과 끝 "원" 미부착 (콤마만).
+[[feedback_no_won_suffix]] — `formatKRW` 결과 끝 "원" 미부착 (콤마만).
 
 ### 인쇄 가로 폭
 
@@ -266,15 +266,15 @@ useEffect로 `isPrinting` 추적 안티패턴 차단. 토글 버튼은 `print:hi
 - **Phase 1**: 현재 enum으로 매핑 가능한 코드만 — fallback 12(기타) 또는 가장 가까운 코드
 - **Phase 2** (별도 PR): enum 확장 + 본 컴포넌트 매핑 추가 — `// Phase 2 — ...` 주석으로 표시 + Props placeholder
 
-본 세션 사례 — AssetCategory 9종 → 부표 1 코드 14종 중 7개만 매핑. 04 개별주택·06 오피스텔·08 취득권리·13 가상자산·14 서화골동품은 Phase 2.
+본 세션 사례(당시) — AssetCategory 9종 → 부표 1 코드 14종 중 7개만 매핑. 04 개별주택·06 오피스텔·08 취득권리·13 가상자산·14 서화골동품은 Phase 2. 이후 AssetCategory는 16종으로 확장(crypto_asset 포함 — `ESTATE_ITEM_TYPE_CODE`는 exhaustive Record, 전용코드 부재 자산은 11/12 fallback)됐으므로 매핑표는 반드시 현행 enum grep 기준으로 재작성.
 
 ## 정책·메모리 참조
 
 - ★ [[korean-law-citation-verify]] — 양식 본문·코드표는 MCP 검증 후 인용. 사용자 PDF 라벨도 약칭/구판 가능
-- ★ [[feedback-pdf-table-row-one-to-one-mapping]] — 부표 칸 번호 ①~⑮ → testid·props·anchor 동결
-- ★ [[feedback-no-won-suffix]] — 금액 끝 "원" 미부착
+- ★ [[feedback_pdf_table_row_one_to_one_mapping]] — 부표 칸 번호 ①~⑮ → testid·props·anchor 동결
+- ★ [[feedback_no_won_suffix]] — 금액 끝 "원" 미부착
 - ★ [[pre-do-anchor-verification]] — Plan/Design 후 Do 진입 전 anchor 1건 우선 작성
-- ★ [[echo-field-pattern]] — 엔진 산식 변경 없이 표시 산식 역산 보완
+- ★ [[engine-formula-reverse-derive]] — 엔진 산식 변경 없이 표시 산식 역산 보완 (엔진이 직접 노출해야 하는 경우는 [[echo-field-pattern]])
 
 ## 후속 작업 분리 가이드
 

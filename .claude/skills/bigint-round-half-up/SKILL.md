@@ -1,6 +1,6 @@
 ---
 name: bigint-round-half-up
-description: 다단계 안분 산식(분자×분자/분모)에서 JS Number 2^53 한계 초과 시 정밀도 손실로 1원 오차가 발생하는 문제를 BigInt round-half-up 헬퍼로 해결. PDF anchor와 1원 차이 발생 시 PDF 자체 round 일관성 오기 판정·1원 toleranc 적용 정책 포함.
+description: 다단계 안분 산식(분자×분자/분모)에서 JS Number 2^53 한계 초과 시 정밀도 손실로 1원 오차가 발생하는 문제를 BigInt round-half-up 헬퍼로 해결. PDF anchor와 1원 차이 발생 시 PDF 자체 round 일관성 오기 판정·1원 tolerance 적용 정책 포함.
 trigger: BigInt, round half up, 안분, 정밀도, 1원 차이, PDF anchor, 분자 분모, allocation, proration, precision loss, 2^53, Number.MAX_SAFE_INTEGER, floor 분자 곱셈, Math.floor 곱셈
 ---
 
@@ -16,7 +16,7 @@ trigger: BigInt, round half up, 안분, 정밀도, 1원 차이, PDF anchor, 분�
 
 ## 1. BigInt round-half-up 헬퍼
 
-`lib/tax-engine/{module}.ts` 내 모듈-국지 헬퍼로 정의 (export 불요):
+우선 `lib/tax-engine/tax-utils.ts`의 공용 `safeMulDivRound(a, b, c)`를 import해 사용. 분자를 BigInt로 직접 조립해야 하는 경우만 `lib/tax-engine/{module}.ts` 내 모듈-국지 헬퍼로 정의 (export 불요):
 
 ```ts
 /**
@@ -64,7 +64,7 @@ const allocated = Math.floor(distributableAmount * ratio);
 
 PDF 책의 안분식이 round 일관성 부족 (예: .46 → +1 vs .87 → 0)으로 1원 오차 발생 시:
 
-### 옵션 A — anchor toleranc 적용 (권장)
+### 옵션 A — anchor tolerance 적용 (권장)
 ```ts
 // PDF 432,871,250 vs 우리 계산 432,871,249 (1원 차이, PDF 산식 .46<.5에도 +1 round — 다른 사례 .45→0과 비일관성)
 expect(Math.abs(result - 432_871_250)).toBeLessThanOrEqual(1);
@@ -78,12 +78,12 @@ expect(result).toBe(432_871_249);
 ```
 
 **옵션 선택 기준**:
-- 합계 anchor가 강제되는 경우 → A (1원 toleranc + 명시 주석)
+- 합계 anchor가 강제되는 경우 → A (1원 tolerance + 명시 주석)
 - 단일 anchor만 검증 → B (정확값으로 정정 + PDF 오기 명시)
 
 ## 4. 실제 사례 (본 프로젝트 inheritance-allocation.ts)
 
-`lib/tax-engine/inheritance-allocation.ts` 의 3개 호출 위치:
+`lib/tax-engine/inheritance-allocation.ts` 의 5개 호출 위치 중 대표 3곳 (그 외: PRE-4 anchor용 `calcHeirTaxBaseShare` 간접배부, T10 잔액 흡수 후 §28 한도 재계산):
 
 ```ts
 // 13-6: 간접배부 = floor(indirectNumerator × (taxableValueShare − giftAmount) / indirectDenominator)
@@ -102,8 +102,8 @@ const computedTaxShare = computedTaxShareDenominator > 0
     )
   : 0;
 
-// 13-10: 사전증여세액공제 한도
-const limit = bigIntRoundDiv(
+// 13-10: 사전증여세액공제 (§28 안분 한도)
+priorGiftCreditLimitForEcho = bigIntRoundDiv(
   BigInt(computedTaxShare) * BigInt(directTaxBaseShare),
   BigInt(taxBaseShare),
 );
@@ -111,8 +111,8 @@ const limit = bigIntRoundDiv(
 
 검증:
 - PDF 손녀 indirect = `1,865M × 500M / 5,815M = 160,361,134.9956...` → round = **160,361,135** ✓
-- PDF 장남 산출세액상당액 = `1,477.5M × 1,658,469,476 / 3,475M = 705,147,812.something` → round = **705,147,813** ✓
-- PDF 배우자 산출세액상당액 = `1,477.5M × 1,101,319,862 / 3,475M = 468,259,020.46` → round = 468,259,020 ↔ PDF 468,259,021 (1원 toleranc)
+- PDF 장남 산출세액상당액 = `1,477.5M × 1,658,469,476 / 3,475M = 705,147,813.1769...` → round = **705,147,813** ✓ (T10 잔액 흡수 후 최종 anchor는 705,147,814)
+- PDF 배우자 산출세액상당액 = `1,477.5M × 1,101,319,862 / 3,475M = 468,259,020.46` → round = 468,259,020 ↔ PDF 468,259,021 (1원 tolerance)
 
 ## 5. 신고세액공제 등 추가 round 위치
 
@@ -130,18 +130,18 @@ const filingCredit = isFiledOnTime
 
 - **세법 표준 floor** (CLAUDE.md 정수 연산 정책)와 **PDF 안분 round** 의 차이를 모듈 주석에 명시
 - 안분 산식만 round 적용, 세율 적용·천원미만 절사 등은 floor 유지
-- `lib/tax-engine/tax-utils.ts`의 기존 `safeMultiply`는 BigInt fallback이지만 round 안 함 — 안분 전용 헬퍼 별도 정의
+- `lib/tax-engine/tax-utils.ts`의 기존 `safeMultiply`는 BigInt fallback이지만 round 안 함. 공용 round-half-up 안분 헬퍼는 `safeMulDivRound(a, b, c)`로 tax-utils.ts에 이미 export됨(종부세·합병 §38 등 6개+ 모듈 사용) — 신규 안분은 이를 import
 
 ## 7. anchor 작성 체크리스트
 
 - [ ] 분자가 두 큰 수의 곱이면 — 손계산으로 정확 값 산출 (BigInt 또는 Python `(a*b)//c + (1 if (a*b)%c*2 >= c else 0)`)
 - [ ] PDF 값과 차이 발견 시 — 다른 사례의 round 처리와 비교 (일관성 확인)
 - [ ] 1원 차이 발견 시 — 옵션 A·B 명시적 결정 + 주석에 PDF 오기 판단 근거
-- [ ] 합계 anchor도 같은 toleranc 적용 (배우자 1원 차이가 4명 합계에 그대로 전파됨)
+- [ ] 합계 anchor도 같은 tolerance 적용 (배우자 1원 차이가 4명 합계에 그대로 전파됨)
 
 ## 8. 회귀 보호
 
-`bigIntRoundDiv` 헬퍼 단위 테스트 anchor 1건 추가 권장:
+`bigIntRoundDiv` 헬퍼 단위 테스트 anchor 1건 추가 권장 (모듈-국지 미export라 직접 import 불가 — 테스트용 export 추가 또는 동일 로직의 공용 `safeMulDivRound`로 검증):
 
 ```ts
 it("bigIntRoundDiv .9956 → +1 (PDF 안분 round)", () => {

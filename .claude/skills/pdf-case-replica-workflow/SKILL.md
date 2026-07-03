@@ -1,6 +1,6 @@
 ---
 name: pdf-case-replica-workflow
-description: 세무 교재·집행기준 PDF 사례를 100% 재현하기 위한 6-커밋 표준 워크플로. Plan → Design(케이스 매트릭스) → Pre-Do anchor → 환류 → Phase A~F 엔진 분리 → Phase H 통합 anchor → Phase G UI(Zod·API·결과 카드·위젯·사이드바·통합)까지. 외부 린터 자동 변경 대응·800줄 정책·1원 toleranc 정책 강제.
+description: 세무 교재·집행기준 PDF 사례를 100% 재현하기 위한 6-커밋 표준 워크플로. Plan → Design(케이스 매트릭스) → Pre-Do anchor → 환류 → Phase A~F 엔진 분리 → Phase H 통합 anchor → Phase G UI(Zod·API·결과 카드·위젯·사이드바·통합)까지. 외부 린터 자동 변경 대응·800줄 정책·1원 tolerance 정책 강제.
 trigger: PDF 사례, 사례 재현, 100% 재현, anchor 일치, 교재 사례, 집행기준 사례, 종합사례, PDF replica, case study, anchor matching, 사례 구현, 사례 anchor
 ---
 
@@ -10,7 +10,7 @@ trigger: PDF 사례, 사례 재현, 100% 재현, anchor 일치, 교재 사례, �
 
 ## 적용 시점
 
-- 세무 교재 PDF 사례 (예: 양도코리아, 상속세 종합사례) 100% 재현 요구
+- 세무 교재 PDF 사례 (예: 예제 양도세 사례, 상속세 종합사례) 100% 재현 요구
 - 단일 사례가 여러 세법 조문을 교차 (§13·§15·§19·§24·§26·§27·§28·§3의2 등)
 - 합계 anchor + 상속인·자산별 anchor 30+ 건 검증 필요
 - 신규 엔진 모듈 3개 이상 + UI 위젯 4개 이상 + 마법사 분할
@@ -66,7 +66,7 @@ trigger: PDF 사례, 사례 재현, 100% 재현, anchor 일치, 교재 사례, �
 **산출물**:
 - `lib/stores/{tax-type}-summary.ts` — computeXxxSummary 순수 함수 (4필드 + 보조)
 - `components/calc/{tax-type}/XxxSidebar.tsx` — useMemo 래핑
-- `__tests__/tax-engine/{tax-type}/summary.test.ts` — anchor 4건
+- `__tests__/tax-engine/{tax-type}/{tax-type}-summary.test.ts` — anchor 4건
 - `tax-summary-sidebar-pattern` skill 적용
 
 ### 커밋 6 — InheritanceTaxForm 사이드바 통합
@@ -74,7 +74,7 @@ trigger: PDF 사례, 사례 재현, 100% 재현, anchor 일치, 교재 사례, �
 **산출물**:
 - `XxxTaxForm.tsx` grid 레이아웃 1줄 추가 + import 1줄
 
-## 1원 toleranc 정책 (PDF round 비일관성 대응)
+## 1원 tolerance 정책 (PDF round 비일관성 대응)
 
 PDF 책 안분식이 일관성 없는 round 처리 시 (`bigint-round-half-up` skill 참조):
 
@@ -115,7 +115,7 @@ expect(Math.abs(result - 432_871_250)).toBeLessThanOrEqual(1);
 
 ## 케이스 매트릭스 — Design 문서 강제
 
-Plan/Design 단계에서 모든 분기를 사전 enumerate (CLAUDE.md `feedback_design_law_cases`):
+Plan/Design 단계에서 모든 분기를 사전 enumerate (메모리 `feedback_design_law_cases`):
 
 | ID | 케이스 | 입력 단서 | 기대 동작 | 법령 |
 |---|---|---|---|---|
@@ -128,16 +128,16 @@ Plan/Design 단계에서 모든 분기를 사전 enumerate (CLAUDE.md `feedback_
 ## anchor 작성 체크리스트
 
 - [ ] PDF 표 모든 수치를 사전 손계산 (외부 자료 추종 금지 — `feedback_transfer_year_tax_rate`)
-- [ ] 누진공제·세율표 정확값 사용 (CLAUDE.md `feedback_progressive_deduction_accuracy`)
+- [ ] 누진공제·세율표 정확값 사용 (메모리 `feedback_progressive_deduction_accuracy`)
 - [ ] 안분 산식은 `bigint-round-half-up` 헬퍼
-- [ ] 1원 차이 발견 시 명시적 결정 (toleranc vs 정정)
+- [ ] 1원 차이 발견 시 명시적 결정 (tolerance vs 정정)
 - [ ] cross-cutting anchor (재산정 시 모든 분기 영향 확인)
 
 ## 모호 사항 처리 5범주
 
 작업 중 발견되는 모호 사항을 Plan §6에 사전 분류:
 
-1. **PDF 자체 오기** — 명시적 결정 + 1원 toleranc
+1. **PDF 자체 오기** — 명시적 결정 + 1원 tolerance
 2. **법령 인용 차이** — KoreanLaw MCP 검증 (`korean-law-citation-verify` skill)
 3. **PDF 명시 안 된 안분** — fixture에서 PDF 결과 표 역산 가정
 4. **신규 enum 결정** — Heir·Relation 확장 등 옵션 A·B 명시
@@ -150,12 +150,12 @@ Plan/Design 단계에서 모든 분기를 사전 enumerate (CLAUDE.md `feedback_
 | 총 커밋 수 | 6 |
 | 신규 엔진 모듈 | 3 (`presumed-inheritance`·`inheritance-corporate-exemption`·`inheritance-allocation`) |
 | 신규 타입 | 14 (Heir·EstateItem·PriorGift·InheritanceTaxInput 확장 + 8 신규) |
-| 신규 위젯 | 5 (`HeirAllocationInput`·`DebtAllocationInput`·`PresumedInheritanceInput`·`steps`·`step4-5`) |
-| 신규 모듈 (UI/storage/api) | 5 (`shared.ts`·`InheritanceSidebar`·`HeirAllocationTable`·`inheritance-api.ts`·`inheritance-validate.ts`·`inheritance-summary.ts`) |
-| 신규 anchor | 67 (PRE 6 + 통합 58 + summary 4) |
+| 신규 위젯 | 5 (`HeirAllocationInput`·`DebtAllocationInput`·`PresumedInheritanceInput`·`steps`·`step4-5` — step4-5는 이후 steps로 재병합·삭제, 현행 분할은 `Step4Deductions` 등) |
+| 신규 모듈 (UI/storage/api) | 6 (`shared.ts`·`InheritanceSidebar`·`HeirAllocationTable`(이후 삭제 — `HeirAllocationSummaryTable`로 일원화)·`inheritance-api.ts`·`inheritance-validate.ts`·`inheritance-summary.ts`) |
+| 신규 anchor | 67 (PRE 6 + 통합 57 + summary 4) |
 | 전체 회귀 | 0건 (4,043/4,045 통과) |
 | InheritanceTaxForm | 818 → 345줄 (800줄 정책 통과) |
-| 14 동기화 지점 | 12 완성 / 1 후속 / 2 n/a |
+| 14 동기화 지점 | 11 완성 / 1 후속(③ normalize) / 2 n/a(⑩⑪ 단건 모드) |
 
 ## 다음 사례 적용 시 1줄 호출
 

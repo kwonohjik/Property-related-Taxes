@@ -35,7 +35,7 @@ const PROPERTY_TYPE_CODE = {
 };
 ```
 
-**실제 AssetCategory enum** (`lib/tax-engine/types/inheritance-gift.types.ts:50`):
+**실제 AssetCategory enum** (당시 `lib/tax-engine/types/inheritance-gift.types.ts:50` — 현재는 800줄 분리로 `lib/tax-engine/types/inheritance-gift-estate.types.ts:42`, 16종으로 확장):
 ```ts
 export type AssetCategory =
   | "real_estate_land"       // ✅ "land" 아님
@@ -56,7 +56,7 @@ export type AssetCategory =
 ```bash
 grep -n "type SomeEnum\|export const SomeEnum\|enum SomeEnum" lib/**/*.ts
 # 또는
-grep -nA 15 "type AssetCategory =" lib/tax-engine/types/inheritance-gift.types.ts
+grep -nA 17 "type AssetCategory =" lib/tax-engine/types/inheritance-gift-estate.types.ts
 ```
 
 ### 2. 매핑 표 첫 줄에 검증 인용 명시
@@ -64,9 +64,11 @@ grep -nA 15 "type AssetCategory =" lib/tax-engine/types/inheritance-gift.types.t
 ```markdown
 ### 3.3 ② 재산종류코드 매핑
 
-★ **AssetCategory 실제 enum 값** (`lib/tax-engine/types/inheritance-gift.types.ts:50-59`) — 9종:
+★ **AssetCategory 실제 enum 값** (`lib/tax-engine/types/inheritance-gift-estate.types.ts:42-58`) — 16종:
 `real_estate_land` / `real_estate_building` / `real_estate_apartment` /
-`listed_stock` / `unlisted_stock` / `cash` / `financial` / `deposit` / `other`
+`listed_stock` / `unlisted_stock` / `cash` / `financial` / `deposit` /
+`superficies` / `intangible_ip` / `receivable` / `convertible_bond` /
+`trust_benefit` / `periodic_payment` / `crypto_asset` / `other`
 
 | 코드 | 외부 정의 | 매핑 대상 (실제 enum) | 비고 |
 |---|---|---|---|
@@ -111,7 +113,7 @@ function toPropertyTypeCode(category: EstateItem["category"]): string {
 ## anchor 패턴
 
 ```ts
-it("코드 매핑 전수 — 실제 enum 9종", () => {
+it("코드 매핑 전수 — 실제 enum 16종", () => {
   const cases: Array<[AssetCategory, string]> = [
     ["cash", "01"],
     ["real_estate_land", "02"],
@@ -142,7 +144,7 @@ it("코드 매핑 전수 — 실제 enum 9종", () => {
 
 ## 관련 정책
 
-- ★ [[feedback-enum-substring-match-forbidden]] — exact 비교 강제 정책 (`includes` 금지)
+- ★ [[feedback_enum_substring_match_forbidden]] — exact 비교 강제 정책 (`includes` 금지)
 - ★ [[besshi-form-replica]] — 부표 코드 매핑에서 본 정책 강제 적용
 - ★ [[policy-check]] — 작업 시작 시 MEMORY.md 검색 정책 (본 정책도 포함)
 - ★ [[korean-law-citation-verify]] — 외부 코드 출처 자체도 MCP 검증 (이중 안전망)
