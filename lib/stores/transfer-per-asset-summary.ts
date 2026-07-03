@@ -147,7 +147,11 @@ export function computeTransferPerAssetSummary(
   const rows: TransferAssetSummaryRow[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
     const fractional = ratio < 1;
-    const bundledMatch = bundledResult?.apportionment.apportioned.find((p) => p.assetId === a.assetId);
+    // bundled 결과의 primary(주 자산) 엔트리는 route.ts에서 assetId "primary"로 하드코딩됨
+    // (companion만 실제 assetId 유지) → i===0 은 "primary"로 매칭. 미러링 누락 시
+    // 주 자산이 bundledMatch 실패 → salePending("계산 후 표시")로 잘못 빠짐.
+    const bundledAssetId = i === 0 ? "primary" : a.assetId;
+    const bundledMatch = bundledResult?.apportionment.apportioned.find((p) => p.assetId === bundledAssetId);
 
     // ── 양도가액 ──
     let salePrice = 0;
