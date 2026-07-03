@@ -119,10 +119,23 @@ export function judgeForest(
     });
   }
 
-  // ── Step 3-1-1: 공익·산림보호·사업관련 임야 기간기준 ─────────────────
+  // ── Step 3-1-1: 공익·산림보호·사업관련·시업중/특수지구 임야 기간기준 ──
   const publicProtected = isPublicOrProtected(input);
   const related = isBusinessRelatedForest(input);
-  const applies = publicProtected || related.applies;
+  // §168조의9①2호가목(산림경영계획 시업중)·나목(특수산림사업지구)은 그 자체가 공익·산림보호 임야로
+  // 재촌 여부와 무관하게 기간기준 판정 대상이다(이후 Step 3-2에서 지역기준 적용). 게이트에서 누락하면
+  // '산림경영계획 인가'만 체크한 시업중 임야가 비사업용으로 오판되므로 반드시 포함한다.
+  const inSiupOrSpecialZone =
+    input.forestDetail?.hasForestPlan === true ||
+    input.forestDetail?.isSpecialForestZone === true;
+  const applies = publicProtected || related.applies || inSiupOrSpecialZone;
+  const entryReason = publicProtected
+    ? "공익·산림보호 임야"
+    : related.applies
+      ? related.reason
+      : "산림경영계획 시업중·특수산림사업지구";
+  // 시업중/특수지구는 §168조의9①(FOREST_PUBLIC) 소속. 거주·사업관련(③)만 FOREST_BUSINESS.
+  const entryLegal = !publicProtected && related.applies ? NBL.FOREST_BUSINESS : NBL.FOREST_PUBLIC;
 
   let r2: PeriodCriteriaResult | null = null;
   if (applies) {
@@ -131,41 +144,37 @@ export function judgeForest(
     if (!r2.meets) {
       steps.push({
         id: "forest_public_business",
-        label: "Step 3-1-1 공익·사업관련 임야 기간기준",
+        label: "Step 3-1-1 공익·사업관련·시업중 임야 기간기준",
         status: "FAIL",
-        detail: `해당(${publicProtected ? "공익·산림보호" : related.reason})이나 기간기준 미충족`,
-        legalBasis: publicProtected ? NBL.FOREST_PUBLIC : NBL.FOREST_BUSINESS,
+        detail: `해당(${entryReason})이나 기간기준 미충족`,
+        legalBasis: entryLegal,
       });
-      return buildFail("공익/사업관련 임야이나 기간기준 미충족", steps, appliedLaws, warnings, {
+      return buildFail("공익/사업관련/시업중 임야이나 기간기준 미충족", steps, appliedLaws, warnings, {
         r: r2, totalOwnershipDays, residencePeriodsUsed: residencePeriods,
       });
     }
-    appliedLaws.push(publicProtected ? NBL.FOREST_PUBLIC : NBL.FOREST_BUSINESS);
+    appliedLaws.push(entryLegal);
     steps.push({
       id: "forest_public_business",
-      label: "Step 3-1-1 공익·사업관련 임야 기간기준",
+      label: "Step 3-1-1 공익·사업관련·시업중 임야 기간기준",
       status: "PASS",
-      detail: publicProtected ? "공익·산림보호 임야" : `거주·사업관련: ${related.reason}`,
-      legalBasis: publicProtected ? NBL.FOREST_PUBLIC : NBL.FOREST_BUSINESS,
+      detail: entryReason,
+      legalBasis: entryLegal,
     });
   } else {
     steps.push({
       id: "forest_public_business",
-      label: "Step 3-1-1 공익·사업관련 임야 기간기준",
+      label: "Step 3-1-1 공익·사업관련·시업중 임야 기간기준",
       status: "FAIL",
-      detail: "공익·산림보호 및 거주·사업관련 사유 모두 미해당",
+      detail: "공익·산림보호·거주/사업관련·시업중/특수지구 사유 모두 미해당",
       legalBasis: NBL.FOREST_BUSINESS,
     });
-    return buildFail("재촌 미충족 + 공익/사업관련 미해당 → 비사업용", steps, appliedLaws, warnings, {
+    return buildFail("재촌 미충족 + 공익/사업관련/시업중 미해당 → 비사업용", steps, appliedLaws, warnings, {
       r: r1, totalOwnershipDays, residencePeriodsUsed: residencePeriods,
     });
   }
 
-  // ── Step 3-2: 산림법 시업중 · 특수산림사업지구? ────────────────────
-  const inSiupOrSpecialZone =
-    input.forestDetail?.hasForestPlan === true ||
-    input.forestDetail?.isSpecialForestZone === true;
-
+  // ── Step 3-2: 산림법 시업중 · 특수산림사업지구? (inSiupOrSpecialZone은 Step 3-1-1에서 산정) ──
   if (!inSiupOrSpecialZone) {
     steps.push({
       id: "forest_siup_zone",

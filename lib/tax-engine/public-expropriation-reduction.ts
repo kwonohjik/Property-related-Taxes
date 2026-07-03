@@ -1,3 +1,4 @@
+import { subYears } from "date-fns";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 
@@ -37,6 +38,8 @@ export interface PublicExpropriationReductionInput {
   bondCompensation: number;
   bondHoldingYears?: 3 | 5 | null;
   businessApprovalDate: Date;
+  /** 취득일(상속 시 피상속인 취득일) — §77① '고시일 소급 2년 이전 취득' 요건 검증용. 미제공 시 요건 미검증(하위호환). */
+  acquisitionDate?: Date;
   transferDate: Date;
   calculatedTax: number;
   /** 양도소득금액 = 양도차익 − 장기보유특별공제 (기본공제 차감 전) */
@@ -113,12 +116,20 @@ export function calculatePublicExpropriationReduction(
   const warnings: string[] = [];
   const totalCompensation = input.cashCompensation + input.bondCompensation;
 
+  // 조특법 §77①: 사업인정고시일(고시 전 양도 시 양도일)부터 소급 2년 이전에 취득한 토지등에 한정.
+  // acquisitionDate 미제공 시 검증 불가로 통과(하위호환) — 메인 파이프라인은 자산 취득일을 전달한다.
+  const acqBaselineDate =
+    input.transferDate < input.businessApprovalDate ? input.transferDate : input.businessApprovalDate;
+  const failsAcqRequirement =
+    input.acquisitionDate !== undefined && input.acquisitionDate > subYears(acqBaselineDate, 2);
+
   // 비적격 조기 반환
   if (
     totalCompensation <= 0 ||
     input.calculatedTax <= 0 ||
     input.transferIncome <= 0 ||
-    input.taxBase <= 0
+    input.taxBase <= 0 ||
+    failsAcqRequirement
   ) {
     return {
       isEligible: false,
@@ -137,8 +148,9 @@ export function calculatePublicExpropriationReduction(
       ).annual,
       legalBasis: TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
       warnings,
-      notEligibleReason:
-        totalCompensation <= 0
+      notEligibleReason: failsAcqRequirement
+        ? "사업인정고시일부터 소급 2년 이전에 취득한 토지등이 아닙니다(조특법 §77①)"
+        : totalCompensation <= 0
           ? "보상액(현금+채권) 합계가 0 이하입니다"
           : input.calculatedTax <= 0
             ? "산출세액이 0 이하입니다"
