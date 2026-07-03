@@ -409,6 +409,7 @@ export function calculateTransferTaxAggregate(
       capitalExpenditureForDisplay: r.singleInput.capitalExpenditure ?? 0,
       determinedTax: r.result.determinedTax,
       transferGain: r.result.transferGain,
+      exemptGrossGain: r.result.exemptGrossGain, // [echo] 비과세 gross (표시 전용). transferGain·:444 불변.
       longTermHoldingDeduction: r.lthd,
       income: r.income,
       rateGroup: r.rateGroup,

@@ -656,7 +656,9 @@ export function buildRows(
     const capExp = result.capitalExpenditureForDisplay ?? 0;
     const engineExpenses = result.expenses ?? 0;
     const totalEngineExpenses = engineExpenses > 0 ? engineExpenses : totalExpenses;
-    const engineAcqPrice = totalTransferPrice - result.transferGain - totalEngineExpenses;
+    // 비과세 자산은 transferGain=0 → exemptGrossGain echo로 취득가액 역산 (그렇지 않으면 취득가액=양도가액−경비로 왜곡).
+    const effGainForAcq = result.isExempt ? (result.exemptGrossGain ?? 0) : result.transferGain;
+    const engineAcqPrice = totalTransferPrice - effGainForAcq - totalEngineExpenses;
     const displayAcqPrice = engineAcqPrice + capExp;
     const displayExpenses = Math.max(0, totalEngineExpenses - capExp);
     setNum("acquisitionPrice", "total", displayAcqPrice > 0 ? displayAcqPrice : null);
@@ -671,9 +673,11 @@ export function buildRows(
 
   // redev 모드는 분기 합으로 이미 설정됨 — 덮어쓰지 않음.
   if (!isRedevMode) {
-    setNum("transferGain", "total", result.transferGain);
-    setNum("exemptGain", "total", isRH ? 0 : Math.max(0, result.transferGain - result.taxableGain));
-    setNum("taxableGain", "total", isRH ? result.transferGain : result.taxableGain);
+    // 비과세 자산은 transferGain=0 → exemptGrossGain echo 사용 (전체·비과세 양도차익 표시).
+    const effGain = result.isExempt ? (result.exemptGrossGain ?? 0) : result.transferGain;
+    setNum("transferGain", "total", effGain);
+    setNum("exemptGain", "total", isRH ? 0 : Math.max(0, effGain - result.taxableGain));
+    setNum("taxableGain", "total", isRH ? effGain : result.taxableGain);
   }
   setNum("ltDeduction", "total", result.longTermHoldingDeduction);
 
