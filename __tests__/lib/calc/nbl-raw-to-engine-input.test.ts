@@ -151,6 +151,31 @@ describe("[NBL-REQ] buildNblEngineInput — raw → 엔진 input(nested + Date)"
     expect(input!.revenueTest?.otherLandValue).toBe(400_000_000);
   });
 
+  it("[B5] 상속 공익수용 — 피상속인 취득일 소급이 unconditionalExemption.expropriationAcquisitionDate로 운반·해소", () => {
+    const asset = {
+      ...makeDefaultAsset(1),
+      assetKind: "land",
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1000",
+      acquisitionDate: "2018-01-01",      // 상속개시일
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: "2010-01-01", // 피상속인 취득일 (소급 대상)
+      transferCause: "public_expropriation",
+      expropriationNoticeDate: "2020-06-01",
+    } as unknown as Parameters<typeof buildNonBusinessLandRaw>[0];
+
+    const raw = buildNonBusinessLandRaw(asset, "2026-07-02");
+    // prefix-pick 외 명시 운반 필드 확인
+    expect(raw!.acquisitionCause).toBe("inheritance");
+    expect(raw!.decedentAcquisitionDate).toBe("2010-01-01");
+
+    const input = buildNblEngineInput(raw as never);
+    expect(input!.unconditionalExemption?.expropriationAcquisitionDate).toEqual(new Date("2010-01-01"));
+    expect(input!.unconditionalExemption?.publicNoticeDate).toEqual(new Date("2020-06-01"));
+  });
+
   it("공통안분 토글 OFF → 공통 필드 미매핑(undefined)", () => {
     const asset = {
       ...makeDefaultAsset(1),

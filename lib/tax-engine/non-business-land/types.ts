@@ -159,6 +159,12 @@ export interface UnconditionalExemptionInput {
   isAncestor8YearFarming?: boolean;
   isPublicExpropriation?: boolean;
   publicNoticeDate?: Date;
+  /**
+   * §168의14③3호나목 '취득일 소급' — 취득일(상속받은 토지는 피상속인 취득일,
+   * §97의2① 이월과세는 증여자 취득일)이 고시일 5년 이전인지 판정하는 기준일.
+   * 미제공 시 input.acquisitionDate(양수인 취득일=상속개시일/증여일) fallback.
+   */
+  expropriationAcquisitionDate?: Date;
   isFactoryAdjacent?: boolean;
   isInong?: boolean;
   inongDate?: Date;

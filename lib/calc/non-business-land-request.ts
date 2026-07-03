@@ -71,6 +71,10 @@ export function buildNonBusinessLandRaw(
     // 공익수용 단일 소스 — 서버 buildUnconditionalExemption의 isExpr·고시일 fallback에 필요(nbl* 미prefix)
     transferCause: asset.transferCause,
     expropriationNoticeDate: asset.expropriationNoticeDate,
+    // §168의14③3호나목 취득일 소급 — 상속=피상속인 취득일 / 이월과세=증여자 취득일(carryover 중첩)
+    acquisitionCause: asset.acquisitionCause,
+    decedentAcquisitionDate: asset.decedentAcquisitionDate,
+    donorAcquisitionDate: asset.carryover?.donorAcquisitionDate,
     acquisitionArea: asset.acquisitionArea,
     acquisitionDate: asset.acquisitionDate,
     transferDate,
