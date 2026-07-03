@@ -20,6 +20,10 @@ export type AssetReductionForm =
       selfFarmingIncorporationZone?: "residential" | "commercial" | "industrial" | "";
       /** 편입일 당시 기준시가 (원) */
       selfFarmingStandardPriceAtIncorporation?: string;
+      /** 취득시 기준시가 (원) — 편입 부분감면 비율 산정용(실지 모드 전용 입력, 환산 모드는 자산-수준 fallback) */
+      selfFarmingStandardPriceAtAcquisition?: string;
+      /** 양도시 기준시가 (원) — 편입 부분감면 비율 산정용(실지 모드 전용 입력, 환산 모드는 자산-수준 fallback) */
+      selfFarmingStandardPriceAtTransfer?: string;
     }
   | {
       type: "long_term_rental";

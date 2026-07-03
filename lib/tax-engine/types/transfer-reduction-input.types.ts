@@ -32,6 +32,13 @@ export type TransferReduction =
        * `standardPriceAtAcquisition`·`standardPriceAtTransfer`(TransferTaxInput 기본)와 같은 단위여야 한다.
        */
       standardPriceAtIncorporation?: number;
+      /**
+       * 취득시 기준시가 (원) — 편입 부분감면 전용 입력. 미제공 시 엔진이 자산-수준
+       * TransferTaxInput.standardPriceAtAcquisition(환산 모드)로 fallback. 실지 모드는 본 필드로 입력.
+       */
+      standardPriceAtAcquisition?: number;
+      /** 양도시 기준시가 (원) — 편입 부분감면 전용 입력. 미제공 시 자산-수준 standardPriceAtTransfer fallback. */
+      standardPriceAtTransfer?: number;
     }
   | { type: "long_term_rental"; rentalYears: number; rentIncreaseRate: number }
   | { type: "new_housing"; region: "metropolitan" | "non_metropolitan" }
