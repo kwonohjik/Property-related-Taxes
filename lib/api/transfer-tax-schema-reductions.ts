@@ -38,6 +38,10 @@ export const reductionSchema = z.discriminatedUnion("type", [
     incorporationZoneType: z.enum(["residential", "commercial", "industrial"]).optional(),
     /** 편입일 당시 기준시가 (원 총액 또는 ㎡당, 취득·양도시 기준시가와 동일 단위) */
     standardPriceAtIncorporation: z.number().int().nonnegative().optional(),
+    /** 취득시 기준시가 (원) — 편입 부분감면 비율 산정. 미제공 시 자산-수준 fallback */
+    standardPriceAtAcquisition: z.number().int().nonnegative().optional(),
+    /** 양도시 기준시가 (원) — 편입 부분감면 비율 산정. 미제공 시 자산-수준 fallback */
+    standardPriceAtTransfer: z.number().int().nonnegative().optional(),
   }),
   z.object({
     type: z.literal("long_term_rental"),

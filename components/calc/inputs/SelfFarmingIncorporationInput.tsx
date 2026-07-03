@@ -27,16 +27,24 @@ interface SelfFarmingIncorporationInputProps {
   selfFarmingIncorporationDate: string;
   selfFarmingIncorporationZone: "residential" | "commercial" | "industrial" | "";
   selfFarmingStandardPriceAtIncorporation: string;
+  selfFarmingStandardPriceAtAcquisition: string;
+  selfFarmingStandardPriceAtTransfer: string;
   onChange: (patch: Partial<{
     useSelfFarmingIncorporation: boolean;
     selfFarmingIncorporationDate: string;
     selfFarmingIncorporationZone: "residential" | "commercial" | "industrial" | "";
     selfFarmingStandardPriceAtIncorporation: string;
+    selfFarmingStandardPriceAtAcquisition: string;
+    selfFarmingStandardPriceAtTransfer: string;
   }>) => void;
   /** vworld 조회용 지번 주소 */
   jibun?: string;
   /** 면적 (㎡) — 기준시가 자동 계산용 */
   landAreaM2?: string;
+  /** 취득일 — 취득시 기준시가 공시지가 조회 기준연도 */
+  acquisitionDate?: string;
+  /** 양도일 — 양도시 기준시가 공시지가 조회 기준연도 */
+  transferDate?: string;
 }
 
 export function SelfFarmingIncorporationInput({
@@ -44,9 +52,13 @@ export function SelfFarmingIncorporationInput({
   selfFarmingIncorporationDate,
   selfFarmingIncorporationZone,
   selfFarmingStandardPriceAtIncorporation,
+  selfFarmingStandardPriceAtAcquisition,
+  selfFarmingStandardPriceAtTransfer,
   onChange,
   jibun,
   landAreaM2,
+  acquisitionDate,
+  transferDate,
 }: SelfFarmingIncorporationInputProps) {
   return (
     <ToggleCard
@@ -58,11 +70,17 @@ export function SelfFarmingIncorporationInput({
         onChange({
           useSelfFarmingIncorporation: v,
           ...(v
-            ? {}
+            ? {
+                // 토글 ON 시 controlled input 초기화 (기존 편입시 기준시가 패턴)
+                selfFarmingStandardPriceAtAcquisition: selfFarmingStandardPriceAtAcquisition || "",
+                selfFarmingStandardPriceAtTransfer: selfFarmingStandardPriceAtTransfer || "",
+              }
             : {
                 selfFarmingIncorporationDate: "",
                 selfFarmingIncorporationZone: "",
                 selfFarmingStandardPriceAtIncorporation: "",
+                selfFarmingStandardPriceAtAcquisition: "",
+                selfFarmingStandardPriceAtTransfer: "",
               }),
         })
       }
@@ -112,6 +130,41 @@ export function SelfFarmingIncorporationInput({
               hint="편입일 직전 개별공시지가 × 토지면적(㎡)"
               enableLookup={true}
             />
+          </div>
+
+          {/* 취득시·양도시 기준시가 — 편입 비율 = (편입−취득)/(양도−취득). 실지 모드 필수 입력 */}
+          <p className="text-[11px] text-muted-foreground -mb-1">
+            편입 부분감면 비율 = (편입시 − 취득시) ÷ (양도시 − 취득시) 기준시가. 실지거래가액 양도도 아래 3점이 필요합니다.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium">취득시 기준시가 <span className="text-xs text-muted-foreground font-normal">(원)</span></label>
+              <StandardPriceInput
+                propertyKind="land"
+                totalPrice={selfFarmingStandardPriceAtAcquisition}
+                onTotalPriceChange={(v) => onChange({ selfFarmingStandardPriceAtAcquisition: v })}
+                area={landAreaM2}
+                jibun={jibun}
+                referenceDate={acquisitionDate}
+                label=""
+                hint="취득일 직전 개별공시지가 × 면적(환산 모드는 자산 기준시가 자동)"
+                enableLookup={true}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium">양도시 기준시가 <span className="text-xs text-muted-foreground font-normal">(원)</span></label>
+              <StandardPriceInput
+                propertyKind="land"
+                totalPrice={selfFarmingStandardPriceAtTransfer}
+                onTotalPriceChange={(v) => onChange({ selfFarmingStandardPriceAtTransfer: v })}
+                area={landAreaM2}
+                jibun={jibun}
+                referenceDate={transferDate}
+                label=""
+                hint="양도일 직전 개별공시지가 × 면적(환산 모드는 자산 기준시가 자동)"
+                enableLookup={true}
+              />
+            </div>
           </div>
       </div>
     </ToggleCard>

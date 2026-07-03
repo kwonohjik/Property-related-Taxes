@@ -23,6 +23,13 @@ export function toEngineReductions(
       const incorpStdPrice = r.useSelfFarmingIncorporation
         ? parseAmount(r.selfFarmingStandardPriceAtIncorporation ?? "")
         : 0;
+      // 편입 부분감면 취득·양도시 기준시가 (실지 모드 전용 입력) — 편입 ON 시만
+      const incorpStdAcq = r.useSelfFarmingIncorporation
+        ? parseAmount(r.selfFarmingStandardPriceAtAcquisition ?? "")
+        : 0;
+      const incorpStdTransfer = r.useSelfFarmingIncorporation
+        ? parseAmount(r.selfFarmingStandardPriceAtTransfer ?? "")
+        : 0;
       return {
         type: "self_farming" as const,
         farmingYears: parseInt(r.farmingYears) || 0,
@@ -32,6 +39,8 @@ export function toEngineReductions(
         ...(incorpDate ? { incorporationDate: incorpDate } : {}),
         ...(incorpZone ? { incorporationZoneType: incorpZone } : {}),
         ...(incorpStdPrice > 0 ? { standardPriceAtIncorporation: incorpStdPrice } : {}),
+        ...(incorpStdAcq > 0 ? { standardPriceAtAcquisition: incorpStdAcq } : {}),
+        ...(incorpStdTransfer > 0 ? { standardPriceAtTransfer: incorpStdTransfer } : {}),
       };
     }
     if (r.type === "long_term_rental") {

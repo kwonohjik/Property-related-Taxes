@@ -272,9 +272,10 @@ export function calcReductions(
           transferDate: transferDate!,
           incorporationDate: reduction.incorporationDate,
           incorporationZoneType: reduction.incorporationZoneType,
-          standardPriceAtAcquisition,
+          // 편입 부분감면 기준시가: reduction 전용 입력 우선(실지 모드), 없으면 자산-수준(환산 모드) fallback
+          standardPriceAtAcquisition: reduction.standardPriceAtAcquisition ?? standardPriceAtAcquisition,
           standardPriceAtIncorporation: reduction.standardPriceAtIncorporation,
-          standardPriceAtTransfer,
+          standardPriceAtTransfer: reduction.standardPriceAtTransfer ?? standardPriceAtTransfer,
         });
         selfFarmingReductionDetail = sfResult;
 

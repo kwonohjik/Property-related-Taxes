@@ -171,11 +171,15 @@ function AssetReductionBlock({
             selfFarmingIncorporationDate={selfFarming.selfFarmingIncorporationDate ?? ""}
             selfFarmingIncorporationZone={selfFarming.selfFarmingIncorporationZone ?? ""}
             selfFarmingStandardPriceAtIncorporation={selfFarming.selfFarmingStandardPriceAtIncorporation ?? ""}
+            selfFarmingStandardPriceAtAcquisition={selfFarming.selfFarmingStandardPriceAtAcquisition ?? ""}
+            selfFarmingStandardPriceAtTransfer={selfFarming.selfFarmingStandardPriceAtTransfer ?? ""}
             onChange={(patch) =>
               updateReduction("self_farming", patch as Partial<AssetReductionForm>)
             }
             jibun={asset.addressJibun || undefined}
             landAreaM2={asset.assetKind === "land" ? asset.acquisitionArea : undefined}
+            acquisitionDate={asset.acquisitionDate || undefined}
+            transferDate={transferDate || undefined}
           />
         </div>
       )}

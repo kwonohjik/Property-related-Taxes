@@ -5,6 +5,7 @@
  * 반환: 실패 시 ValidationIssue, 통과 시 null.
  */
 
+import { addYears } from "date-fns";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
@@ -72,6 +73,29 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         if (r.type === "replacement_land_comp") {
           if (parseAmount(r.rlLandComp || "0") <= 0)
             return fail("대토(토지) 보상액을 입력하세요 (대토보상분만 감면 대상).");
+        }
+        if (r.type === "self_farming") {
+          // 편입 부분감면(조특령 §66⑤⑥) 기준시가 3점 필수 — 엔진 silent-0 정확 미러.
+          // 발동 조건: 편입 ON + 편입일≥2002-01-01 + 양도일≤편입일+3년(유예 내). 그 외는 엔진이
+          // 전액감면/graceExpired로 별도 처리하므로 차단 금지(UI↔validate 모순 방지).
+          if (r.useSelfFarmingIncorporation && r.selfFarmingIncorporationDate && form.transferDate) {
+            const incorpDate = new Date(r.selfFarmingIncorporationDate);
+            const transferDate = new Date(form.transferDate);
+            if (incorpDate >= new Date("2002-01-01") && transferDate <= addYears(incorpDate, 3)) {
+              // 3점: 취득·양도시는 reduction 전용 입력 OR 자산-수준(환산 모드) fallback — API·엔진 동일 소스
+              const hasAcq =
+                parseAmount(r.selfFarmingStandardPriceAtAcquisition || "") > 0 ||
+                parseAmount(asset.standardPriceAtAcq || "") > 0;
+              const hasIncorp = parseAmount(r.selfFarmingStandardPriceAtIncorporation || "") > 0;
+              const hasTransfer =
+                parseAmount(r.selfFarmingStandardPriceAtTransfer || "") > 0 ||
+                parseAmount(asset.standardPriceAtTransfer || "") > 0;
+              if (!hasAcq || !hasIncorp || !hasTransfer)
+                return fail(
+                  "편입일 부분감면(조특령 §66⑤⑥): 취득·편입·양도 시점 기준시가를 모두 입력하세요.",
+                );
+            }
+          }
         }
         // Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본 요건 검증
         if (r.type === "new_99_3") {
