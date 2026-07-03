@@ -71,6 +71,7 @@ const ROW_LABELS: Record<string, string> = {
   exemptGain: "비과세 양도차익",
   taxableGain: "과세대상 양도차익",
   acquisitionPrice: "취득가액",
+  expenses: "필요경비",
   calculatedTax: "산출세액",
   reductionTax: "감면세액",
   determinedTax: "결정세액",
@@ -151,6 +152,33 @@ describe("신고서 양식 비과세 gross + 감면 cap (Pre-Do anchor)", () => 
     expect(rowVal(rows, "taxableGain", "total")).toBe(0);
     // 취득가액 = 500,000,000 − 200,000,000(gross) − 0 = 300,000,000 (양도가액 아님)
     expect(rowVal(rows, "acquisitionPrice", "total")).toBe(300_000_000);
+  });
+
+  // A-8: 환산 비과세 자산 cross-foot — 필요경비=개산공제, 양도가액−취득가액−필요경비=전체양도차익
+  it("A-8 집계 환산 비과세 — 필요경비=개산공제, 컬럼 교차검산 정합", () => {
+    // 주택: 환산(취득기준시가 120M, 양도기준시가 300M) → 환산취득가 200M, 개산공제 3.6M, gross 296.4M
+    const estHouse: TransferTaxItemInput = {
+      ...houseItem,
+      propertyId: "estHouse",
+      acquisitionPrice: 0,
+      useEstimatedAcquisition: true,
+      standardPriceAtAcquisition: 120_000_000,
+      standardPriceAtTransfer: 300_000_000,
+    };
+    const agg = calculateTransferTaxAggregate(
+      { taxYear: 2024, properties: [estHouse, farmItem], annualBasicDeductionUsed: 0 },
+      rates,
+    );
+    const meta: AggregateMeta = { properties: agg.properties, aggregated: agg };
+    const rows = buildAggregateRows(aggregateToFilingResult(agg), meta, undefined);
+
+    const sale = rowVal(rows, "transferGain", "estHouse"); // 전체 양도차익
+    const acq = rowVal(rows, "acquisitionPrice", "estHouse") as number;
+    const exp = rowVal(rows, "expenses", "estHouse") as number;
+    expect(sale).toBe(296_400_000);
+    expect(exp).toBe(3_600_000); // 개산공제 (120M × 3%)
+    // 양도가액 500,000,000 − 취득가액 − 필요경비 = 전체 양도차익 (교차검산)
+    expect(500_000_000 - acq - exp).toBe(296_400_000);
   });
 
   // A-7: blast radius — 집계 totalTransferGain은 비과세 자산 0 기여 (PDF·:444 불변)
