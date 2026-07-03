@@ -383,8 +383,11 @@ export function calculateTransferTaxAggregate(
           ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
           : 0)
       : r.singleInput.acquisitionPrice;
+    // 비과세 자산: gross(exemptGrossGain)와 취득가액으로 필요경비 역산(환산 시 개산공제분).
+    //   → 신고서 양식 컬럼 교차검산(양도가액 − 취득가액 − 필요경비 = 전체 양도차익) 정합.
+    // 비-비과세: 엔진 transferGain으로 역산(개산공제·양도비 포함).
     const effectiveNecessaryExpense = r.result.isExempt
-      ? 0
+      ? Math.max(0, r.singleInput.transferPrice - effectiveAcquisitionPrice - (r.result.exemptGrossGain ?? 0))
       : r.singleInput.transferPrice - effectiveAcquisitionPrice - r.result.transferGain;
 
     // 다건 컨텍스트 자산별 산출세액·결정세액 (참고).
