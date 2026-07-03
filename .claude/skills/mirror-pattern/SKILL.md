@@ -79,7 +79,7 @@ if (directLandPerSqm <= 0 && phdLandPerSqm <= 0) {
 새 동기화·미러링 코드 작성 시:
 - [ ] useEffect 안에 `onChange({ ... })`가 있는가? → 위 예외 케이스인지 재확인, 아니면 fallback 패턴으로 전환
 - [ ] UI/사이드바/API/Validate 4곳 모두 같은 fallback이 적용되었는가?
-- [ ] `npx tsc --noEmit` + 회귀 테스트 + 브라우저 수동 확인 (Maximum update depth 오류 없음 확인)
+- [ ] `npx tsc --noEmit` + 회귀 테스트 + 브라우저 확인은 Playwright E2E(`e2e/*.spec.ts`)로 실증 (Maximum update depth 오류 없음 확인)
 
 ## 관련 메모리
 

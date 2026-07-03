@@ -1,7 +1,7 @@
 ---
 name: single-response-do-execution
 description: 다단계 구현(Do)을 단일 응답 내에서 끝까지 완주하는 실행 규율 계약 — TODO.md 체크박스 생명주기 + 작업별 갱신 + 갭 분석 + 완료 카운트 게이트 + 중간 종료 금지 + BLOCKER 프로토콜 + 커밋 전 코드 품질 정적 검토 게이트 + 커밋 위생. 거짓 완료 보고와 "Phase A 완료, B 시작합니다" 후 자율 중단을 차단한다. 사용자가 "구현 시작, 단일 응답으로 완주" 또는 다단계 코드 작업을 TODO 추적과 함께 지시할 때 적용.
-trigger: 구현 시작, 단일 응답 완주, TODO 작성, todo.md, 완주, 미완료 0, 갭 분석, 끝까지 구현, do 실행, single response, implementation loop, 완료 게이트, 커밋하고 푸시, 9단계 구현, 코드 품질 검토, 커밋 전 품질 게이트, code review
+trigger: 구현 시작, 단일 응답 완주, TODO 작성, todo.md, 완주, 미완료 0, 갭 분석, 끝까지 구현, do 실행, single response, implementation loop, 완료 게이트, 커밋하고 푸시, 10단계 구현, 코드 품질 검토, 커밋 전 품질 게이트, code review
 ---
 
 # single-response-do-execution — Do 단일 응답 실행 규율

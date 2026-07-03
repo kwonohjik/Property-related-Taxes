@@ -1,6 +1,6 @@
 ---
 name: formula-display-builder
-description: 결과 화면에서 세금 산출근거 산식을 변수 배지(⑭⑮⑯⑦) + 변수값 + fine-print + 분기 안내(rose 무효·amber 특례)로 표시하는 표준 UI 패턴. 펼침 토글·접근성·자기일관 검증 anchor를 포함.
+description: 결과 화면에서 세금 산출근거 산식을 한국어 풀어쓰기 산식 + 값 인라인(Amt) + fine-print + 분기 안내(rose 무효·amber 특례)로 표시하는 표준 UI 패턴. 펼침 토글·접근성·자기일관 검증 anchor를 포함.
 trigger: 산출근거, 산식 표시, formula builder, 변수 배지, 신고서 변수 노출, 펼침 토글, ⑭ ⑮ ⑯, ⑦합계, fine-print, 산식 펼침
 ---
 
@@ -37,7 +37,7 @@ interface CreditRowProps {
 
 function CreditRow({ label, amount, lawRef, highlight, formula }: CreditRowProps) {
   const [expanded, setExpanded] = useState(false);
-  if (amount === 0) return null;
+  if (amount === 0 && !formula) return null; // formula 있으면 amount=0이어도 배제 사유 안내 렌더 (§30의5⑪)
   return (
     <div className="space-y-1">
       <div className={cardCls}>
@@ -48,11 +48,11 @@ function CreditRow({ label, amount, lawRef, highlight, formula }: CreditRowProps
             <button
               type="button"
               onClick={() => setExpanded((p) => !p)}
-              className="text-[10px] text-gray-500 hover:text-violet-700"
+              className="text-[10px] text-gray-500 hover:text-violet-700 print:hidden"
               aria-expanded={expanded}
               aria-label={`${label} 산출근거 ${expanded ? "닫기" : "펼치기"}`}
             >
-              {expanded ? "▼ 산출근거" : "▶ 산출근거"}
+              {expanded ? "▲ 산출근거" : "▼ 산출근거"}
             </button>
           )}
         </div>
@@ -177,7 +177,7 @@ const section69Formula =
     : undefined;
 
 <CreditRow
-  label="신고세액공제 (3%)"
+  label={`신고세액공제 (${(credit.filingCreditRate ?? 0.03) * 100}%)`}  // §69 연도별 공제율(10/7/5/3)
   amount={credit.filingCredit}
   lawRef="§69"
   formula={section69Formula}  // undefined → 펼침 토글 미렌더
@@ -210,7 +210,6 @@ it("F-3: 부록 A 자기일관 — 산식 검증값", () => {
   });
   // 산식 자기일관 검증
   // ⑮ = floor(380M × 600M / 1000M) = 228M
-  expect(result.creditLimit).toBe(228_000_000);
   // ⑯ = Min(240M, 228M) = 228M
   expect(result.giftTaxCredit).toBe(228_000_000);
   // base = 380M - 228M = 152M (echo)
@@ -229,7 +228,7 @@ it("F-3: 부록 A 자기일관 — 산식 검증값", () => {
 - "왜 이 산식?"이 fine-print에 없음 → 사용자 혼동
 - 산식 데이터가 UI 빌더 안에서 직접 계산 → 엔진과 분리 (drift 위험)
 - 펼침 토글이 항상 펼쳐진 상태 → 화면 부담
-- amount=0인 행에 산식만 표시 → CreditRow null 반환 정책 위반
+- amount=0이고 formula도 없는 행 렌더 → CreditRow null 반환 정책 위반 (formula가 있으면 amount=0이어도 배제 사유 안내를 위해 렌더 — §30의5⑪ 신고세액공제 배제 등)
 
 ## 워크플로
 
@@ -260,7 +259,7 @@ it("F-3: 부록 A 자기일관 — 산식 검증값", () => {
 
 - **증여세 §28·§69 산출근거 표시** (`68a2e50`)
   - buildSection28Formula·buildSection69Formula 빌더 2종
-  - Var 배지 (⑭⑮⑯⑦⑤_prior⑤·기준세액·⑦합계)
+  - Var 배지 (⑭⑮⑯⑦⑤_prior⑤·기준세액·⑦합계) — 도입 당일 `2b95391c`에서 Amt 인라인 + 한국어 풀어쓰기로 개편 (현행 파일에 Var 미존재)
   - fine-print 2종 + 무효(rose)·특례(amber) 분기 안내
   - 자기일관 anchor F-3·F-9 검증
   - `components/calc/TaxCreditBreakdownCard.tsx`
@@ -268,6 +267,6 @@ it("F-3: 부록 A 자기일관 — 산식 검증값", () => {
 ## 관련 정책 메모리
 
 - [[echo-field-pattern]] — 엔진 결과 echo 필드 표준 패턴
-- [[feedback-result-view-korean-formula]] — 결과 산식은 한국어·법정 용어, 변수 약어·floor 금지
-- [[feedback-pdf-table-row-one-to-one-mapping]] — 신고서 PDF 행 번호 ↔ 변수명 1:1 매핑
-- [[feedback-tax-calculation-principle]] — 산식·근거 명확 노출로 납세자 검증 가능
+- [[feedback_result_view_korean_formula]] — 결과 산식은 한국어·법정 용어, 변수 약어·floor 금지
+- [[feedback_pdf_table_row_one_to_one_mapping]] — 신고서 PDF 행 번호 ↔ 변수명 1:1 매핑
+- [[feedback_tax_calculation_principle]] — 산식·근거 명확 노출로 납세자 검증 가능

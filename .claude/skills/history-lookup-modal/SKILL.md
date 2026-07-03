@@ -1,12 +1,12 @@
 ---
 name: history-lookup-modal
-description: IndexedDB(또는 Supabase) 이력에서 자동 조회 후 폼에 채워주는 모달 UI 표준 패턴. lib/calc mediator + filterCandidates 순수 함수 + Dialog 기반 모달 + sourceCalculationId 메타 + 자동 채움 후 수정 시 배지 제거.
+description: IndexedDB 이력에서 자동 조회 후 폼에 채워주는 모달 UI 표준 패턴. lib/calc mediator + filterCandidates 순수 함수 + Dialog 기반 모달 + sourceCalculationId 메타 + 자동 채움 후 수정 시 배지 제거.
 trigger: 이력 조회, history lookup, 이력 모달, calculation history, 사전 회차 조회, calculation lookup, 자동 채움 모달, IndexedDB 조회 모달, 자동 조회
 ---
 
 # history-lookup-modal — 이력 자동 조회 모달 표준 패턴
 
-저장된 계산 이력(IndexedDB / Supabase `calculations`)에서 동일인·동일 의뢰인 회차를 자동 조회하여 사용자가 선택해 폼에 자동 채워주는 표준 모달 UI 패턴.
+저장된 계산 이력(IndexedDB `calculations` 테이블 — 로컬 우선 일원화, Supabase 이력 저장 제거됨)에서 동일인·동일 의뢰인 회차를 자동 조회하여 사용자가 선택해 폼에 자동 채워주는 표준 모달 UI 패턴.
 
 ## 적용 시점
 
@@ -105,7 +105,7 @@ export interface PriorGift {
 
 → UI에서 "📋 이력 기반" 배지 표시. 사용자가 수정하면 sourceCalculationId 자동 제거.
 
-### 2. 4-필드 9개 동기화 지점 매핑
+### 2. 4-필드 14개 동기화 지점 매핑
 
 | # | 영향 |
 |---|---|
@@ -117,7 +117,8 @@ export interface PriorGift {
 | ⑥ 사이드바 | 영향 없음 |
 | ⑦ 결과 카드 | 출처 배지 표시 (선택) |
 | ⑧ Validation | 메타라 검증 안 함 |
-| ⑨ Zod | optional 안전망 추가 |
+| ⑫ Zod 입력 객체 | optional 안전망 추가 |
+| ⑨⑩ enum·⑪ fallback·⑬ body spread·⑭ Route 매핑 | ④ strip으로 엔진 미도달 — 영향 없음 |
 
 ### 3. 사용자 수정 감지 → 배지 자동 제거
 
@@ -164,7 +165,7 @@ filterCandidates(records, currentGiftDate, currentClientId, excludeIds)
 ### Step 1: 메타 필드 추가
 
 ```ts
-// types/{domain}.types.ts
+// lib/tax-engine/types/{domain}.types.ts
 interface {Target} {
   // 기존 ...
   sourceCalculationId?: string;
@@ -216,13 +217,13 @@ export function candidateTo{Target}(c: {Domain}Candidate): {Target} { /* ... */ 
 ### Step 5: buildInput에서 strip (지점 ④)
 
 ```ts
-// {Form}.tsx::buildInput()
+// lib/calc/{tax}-api.ts::build{Tax}Input()
 priorGiftsWithin10Years: form.priorGifts.map(
   ({ sourceCalculationId: _src, ...rest }) => rest
 )
 ```
 
-### Step 6: Zod schema 안전망 (지점 ⑨)
+### Step 6: Zod schema 안전망 (지점 ⑫)
 
 ```ts
 // lib/validators/{domain}-input.ts
@@ -265,7 +266,7 @@ export const targetSchema = z.object({
 
 ## 후속 PR 분리 항목 (재사용 시)
 
-1. **상속세 사전증여** — 같은 패턴 (`mode="inheritance"` 분기)
+1. **상속세 사전증여** ✅ 구현 완료 — `mode="inheritance"` 분기 + `filterInheritancePriorGiftCandidates`
 2. **양도세 다건 입력** — 같은 사용자의 과거 양도 회차
 3. **주식 양도세 보유종목** — 같은 종목 이전 매수 이력
 4. **세무사 의뢰인 필터** — clientId 기반 격리
@@ -280,5 +281,5 @@ export const targetSchema = z.object({
 ## 관련 스킬
 
 - [[echo-field-pattern]] — sourceCalculationId는 결과 echo가 아닌 입력 메타 (반대 방향)
-- [[tax-field-add]] — 9개 동기화 지점 강제
+- [[tax-field-add]] — 14개 동기화 지점 강제
 - [[policy-check]] — Lookup 시작 전 MEMORY에서 관련 정책 검색

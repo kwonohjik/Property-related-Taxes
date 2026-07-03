@@ -153,7 +153,7 @@ return <Row formula={formula} ... />;
 
 → **UI는 항상 `!== undefined` 가드** + **펼침 토글 자체 미렌더**가 단일 진실 처리.
 
-## 동기화 지점 8/9 점검
+## 동기화 지점 14 점검
 
 | # | 영향 |
 |---|---|
@@ -165,7 +165,12 @@ return <Row formula={formula} ... />;
 | ⑥ 사이드바 | X |
 | ⑦ 결과 카드 | ✓ 펼침/표시 |
 | ⑧ Validation | X |
-| ⑨ Zod | X (결과만 영향) |
+| ⑨ Zod enum 메인 | X (echo는 결과 필드 — 입력 스키마 무영향) |
+| ⑩ Zod enum 컴패니언 | X |
+| ⑪ 자산-수준 acquisitionDate fallback | X |
+| ⑫ Zod 입력 객체 정의 | X |
+| ⑬ callTransferTaxAPI body spread | X |
+| ⑭ Route handler 엔진 input 매핑 | X |
 
 ## 위반 시 신호
 
@@ -177,7 +182,7 @@ return <Row formula={formula} ... />;
 
 ## 참고 사례
 
-- **증여세 §69 산출근거 표시** (`d68a2e50`)
+- **증여세 §69 산출근거 표시** (`68a2e507`)
   - `filingCreditBase` + `totalComputedTaxWithSurcharge` 2필드 echo
   - 엔진 산식 변경 0, return 2줄 추가
   - 부록 A 자기일관 anchor 10건 통과
@@ -187,6 +192,6 @@ return <Row formula={formula} ... />;
 
 ## 관련 정책
 
-- [[feedback-engine-comment-vs-impl-drift]] — echo 필드 JSDoc 산식 표현은 실제 엔진 산식과 일치 (드리프트 방지)
-- [[feedback-validation-sync-8th-point]] — optional echo는 validation 영향 0
+- [[feedback_engine_comment_vs_impl_drift]] — echo 필드 JSDoc 산식 표현은 실제 엔진 산식과 일치 (드리프트 방지)
+- [[feedback_validation_sync_8th_point]] — optional echo는 validation 영향 0
 - 800줄 정책 — 결과 타입 파일이 큰 경우 echo 필드 추가가 800줄 초과를 유발할 수 있음. 분리 별도 PR

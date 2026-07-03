@@ -1,12 +1,12 @@
 ---
 name: tax-field-add
-description: 세금 엔진 input/result에 새 필드를 추가하거나 변경할 때 8개 동기화 지점(타입·initial·normalize·API·UI·사이드바·결과·validation)을 모두 점검·구현. CLAUDE.md Definition of Done 강제. UI 통과↔validate 차단 같은 모순 사전 차단.
-trigger: 필드 추가, input 추가, AssetForm 필드, 동기화 지점, 8개 지점, 7개 지점, sync points, field add, add input
+description: 세금 엔진 input/result에 새 필드를 추가하거나 변경할 때 14개 동기화 지점(클라이언트 8 — 타입·initial·normalize·API·UI·사이드바·결과·validation + API/Route 6 — Zod 스키마·body spread·Route 매핑)을 모두 점검·구현. CLAUDE.md Definition of Done 강제. UI 통과↔validate 차단 같은 모순 사전 차단.
+trigger: 필드 추가, input 추가, AssetForm 필드, 동기화 지점, 14개 지점, 8개 지점, sync points, field add, add input
 ---
 
-# tax-field-add — 세금 필드 추가 8개 동기화 지점
+# tax-field-add — 세금 필드 추가 14개 동기화 지점
 
-세금 엔진(`lib/tax-engine/*.ts`) 또는 Form 상태(`AssetForm`/`FormData`)에 새 필드를 추가하거나 기존 필드의 의미를 변경할 때 사용. CLAUDE.md의 "UI 통합 8개 동기화 지점" Definition of Done을 자동 강제.
+세금 엔진(`lib/tax-engine/*.ts`) 또는 Form 상태(`AssetForm`/`FormData`)에 새 필드를 추가하거나 기존 필드의 의미를 변경할 때 사용. CLAUDE.md의 "Definition of Done — 14개 동기화 지점"을 자동 강제.
 
 ## 적용 시점
 
@@ -14,15 +14,17 @@ trigger: 필드 추가, input 추가, AssetForm 필드, 동기화 지점, 8개 �
 - 엔진 `Input` 또는 `Result` 타입에 새 키를 추가할 때
 - 기존 필드에 fallback(다른 필드로 대체)을 도입할 때
 
-## 8개 동기화 지점 체크리스트
+## 14개 동기화 지점 체크리스트
 
-세목별 위치는 `{tax-type}` = `transfer` / `acquisition` / `property` / `comprehensive` / `inheritance-gift` 중 하나로 치환.
+클라이언트 8개(①~⑧)는 아래 표. **API/Route 6개(⑨~⑭)**도 함께 점검: ⑨Zod enum 메인 · ⑩Zod enum 컴패니언+`addPropertyRefines` · ⑪자산-수준 `acquisitionDate` fallback · ⑫Zod 입력 객체 정의 · ⑬`callTransferTaxAPI` body spread · ⑭Route handler 엔진 input 매핑(Date 변환). ⑫⑬⑭는 TypeScript 미감지 — 누락 시 침묵 stripping/엔진 미도달.
+
+세목별 위치는 `{tax-type}` = `transfer` / `acquisition` / `property` / `comprehensive` / `inheritance` / `gift` 로 치환 (`components/calc/`·`app/api/calc/` 디렉터리명 공통). 단 `lib/calc` 파일 접두어는 상이 — 양도 `transfer-tax-api.ts`·`transfer-tax-validate.ts` · 취득 `acquisition-tax-api.ts`·`acquisition-tax-validate.ts` · 종부 `comprehensive-api.ts` · 상속 `inheritance-api.ts`·`inheritance-validate.ts` · 증여 `gift-api.ts`. 재산세(property)는 `lib/calc`에 API/validate 파일 없음 — 폼 상태·변환은 `components/calc/property/shared.ts`.
 
 | # | 지점 | 위치 |
 |---|---|---|
 | ① | 폼 상태 타입 | `lib/stores/calc-wizard-asset.ts`·`calc-wizard-store.ts` 또는 `components/calc/{tax-type}/shared.ts` |
-| ② | initial value | `createInitialAssetForm` / `INITIAL_FORM_DATA` / `INITIAL_FORM` |
-| ③ | normalize fallback | `normalizeAsset` 등 — sessionStorage 마이그레이션 호환 |
+| ② | initial value | `makeDefaultAsset`(`calc-wizard-asset-factory.ts`) / `createDefaultTransferFormData` / `INITIAL_FORM` |
+| ③ | normalize fallback | `migrateAsset`(`lib/stores/calc-wizard-asset-migrate.ts`)·`normalizeAcquisitionForm` 등 — sessionStorage 마이그레이션 호환 |
 | ④ | API 변환 | `lib/calc/{tax-type}-api.ts` (없으면 route handler 진입 변환) |
 | ⑤ | UI 입력 위젯 | 마법사 단계 컴포넌트 — 활성화 조건·tone 색상·UI 순서=계산 로직 순서 |
 | ⑥ | 사이드바 합계 (해당 시) | `compute*Summary` selector |
@@ -36,23 +38,23 @@ trigger: 필드 추가, input 추가, AssetForm 필드, 동기화 지점, 8개 �
    - `feedback_useeffect_store_mirror_forbidden.md` (cross-field 동기화 패턴)
    - `feedback_zustand_selector.md` (selector 무한 루프)
 
-2. **8개 지점 사전 매핑**: 변경할 필드별로 위 8개 위치를 기록 (디자인 문서 또는 plan 파일).
+2. **14개 지점 사전 매핑**: 변경할 필드별로 위 14개 위치를 기록 (디자인 문서 또는 plan 파일).
 
 3. **fallback 도입 시 ⑧ 동시 작업**: `lib/calc/{tax-type}-api.ts`에 `parseAmount(a) || parseAmount(b)` 패턴을 추가했으면, 즉시 `lib/calc/{tax-type}-validate.ts`도 같은 fallback 인식하도록 수정. 두 파일을 한 turn에 함께 편집.
 
 4. **자동 누락 검출** (작업 완료 직전):
    ```bash
-   # 새 필드명으로 8개 위치 grep
-   grep -rn "{newField}" lib/stores/calc-wizard-*.ts \
-     lib/calc/{tax-type}-api.ts lib/calc/{tax-type}-validate.ts \
-     components/calc/{tax-type}/ components/calc/results/{TaxType}ResultView.tsx
+   # 새 필드명으로 14개 위치 grep (⑫⑬⑭ 포함)
+   grep -rn "{newField}" lib/stores/calc-wizard-*.ts lib/calc/ \
+     components/calc/{tax-type}/ components/calc/results/{TaxType}ResultView.tsx \
+     lib/api/ app/api/calc/{tax-type}/
    ```
-   각 8개 지점에 최소 1번씩 등장해야 함 (해당 안되는 지점은 명시적으로 N/A 표기).
+   각 14개 지점에 최소 1번씩 등장해야 함 (해당 안되는 지점은 명시적으로 N/A 표기). ⑫⑬⑭는 TypeScript 미감지 — grep 자가 점검 필수.
 
 5. **회귀 검증**:
    - `npx tsc --noEmit` 0건
    - `npx vitest run __tests__/tax-engine/{tax-type}/`
-   - 브라우저 수동 또는 "수동 미수행" 명시
+   - 브라우저 확인은 Playwright E2E(`e2e/*.spec.ts`)로 실증 — 수동 안내 금지 ([[feedback_browser_verify_with_playwright]])
    - (권장) `ui-engine-sync-checker` 호출
 
 ## 자주 누락되는 패턴
@@ -65,6 +67,6 @@ trigger: 필드 추가, input 추가, AssetForm 필드, 동기화 지점, 8개 �
 
 작업 완료 시 다음을 명시:
 - 추가/변경 필드 목록
-- 8개 지점별 수정 위치 (라인 번호)
+- 14개 지점별 수정 위치 (라인 번호)
 - 회귀 검증 결과
 - 누락 발견 시 즉시 수정한 항목

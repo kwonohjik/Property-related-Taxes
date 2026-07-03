@@ -1,17 +1,17 @@
 ---
 name: tax-summary-sidebar-pattern
-description: 세금 마법사 사이드바 합계 카드 표준 패턴. computeXxxSummary 순수 함수 (lib/stores/) + useMemo 래핑 + 0원·null 미표시 + result 도착 전후 분기 (입력값 추정 vs 엔진값). 데스크톱 sticky / 모바일 상단 grid 레이아웃. 무한 루프 방지 정책 강제.
+description: 세금 마법사 사이드바 합계 카드 표준 패턴. computeXxxSummary 순수 함수 (lib/stores/) + useMemo 래핑 + 0원·null 미표시 + result 도착 전후 분기 (입력값 추정 vs 엔진값). 데스크톱 좌측 sticky / 모바일 숨김(필요 시 별도 상단 바) 레이아웃. 무한 루프 방지 정책 강제.
 trigger: 사이드바, sidebar, summary, compute summary, 합계 미리보기, 마법사 합계, useMemo selector, 사이드바 합계, 합계 카드, 8개 동기화 지점 ⑥, 지점 6
 ---
 
 # tax-summary-sidebar-pattern — 마법사 사이드바 합계 표준
 
-세금 마법사 우측(또는 상단) 합계 카드 표준 구현. 입력 도중 실시간 추정값 + 결과 도착 후 엔진 정확값을 일관되게 표시.
+세금 마법사 좌측(데스크톱) 합계 카드 표준 구현. 입력 도중 실시간 추정값 + 결과 도착 후 엔진 정확값을 일관되게 표시.
 
 ## 적용 시점
 
-- 신규 세목 마법사에 사이드바 추가 (양도세는 적용·상속세 본 세션 추가 / 증여·취득·재산·종부 미적용)
-- 8개 동기화 지점 ⑥ (사이드바 합계) 작업 시
+- 신규 세목 마법사에 사이드바 추가 (양도·상속·취득·주식양도 적용 / 증여·재산·종부 미적용)
+- 클라이언트 8개 동기화 지점(전체 14개 중 ①~⑧)의 ⑥ 사이드바 합계 작업 시
 - 기존 마법사가 result 도착 전 합계를 표시하지 못하는 경우
 
 ## 표준 구조 — 2 파일
@@ -156,21 +156,21 @@ function Row({ label, value, sub, highlight, tone }: RowProps) {
 
 ```tsx
 // XxxTaxForm.tsx
-<div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
+<div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-6 items-start">
+  <aside className="hidden lg:block lg:sticky lg:top-36 self-start">
+    <XxxSidebar form={form} result={result} />
+  </aside>
   <div className="min-h-[300px]">
     {/* 마법사 step 콘텐츠 */}
   </div>
-  <aside className="lg:sticky lg:top-4 self-start order-first lg:order-last">
-    <XxxSidebar form={form} result={result} />
-  </aside>
 </div>
 ```
 
-**모바일 배치**: `order-first lg:order-last` — 모바일에서는 콘텐츠 위에, 데스크톱에서는 우측 sticky.
+**모바일 배치**: 사이드바는 `hidden lg:block` — 데스크톱(lg 이상)에서만 좌측 sticky. 모바일 합계는 별도 상단 바(상속세 `InheritanceMobileSummaryBar.tsx`)로 분리 노출.
 
 ## anchor 테스트 4건 표준
 
-`__tests__/tax-engine/{tax-type}/summary.test.ts`:
+`__tests__/tax-engine/{tax-type}/{tax-type}-summary.test.ts`:
 
 ```ts
 describe("computeXxxSummary — 4필드", () => {
@@ -201,26 +201,27 @@ describe("computeXxxSummary — 4필드", () => {
 |---|---|---|
 | Z1 | useMemo 없이 사용 금지 | 매 렌더 새 객체 → useSyncExternalStore 무한 루프 |
 | Z2 | 의존성 배열에 `[form, result]`만 | preserve-manual-memoization ESLint 충돌 회피 |
-| Z3 | 0원·null 미표시 | "입력 가능한 값만" 노출 (CLAUDE.md `feedback_사이드바_합계`) |
+| Z3 | 0원·null 미표시 | "계산 가능한 항목만" 노출 (루트 CLAUDE.md UI 작성 원칙 — 사이드바 합계는 계산 가능한 항목만 0원 제외) |
 | Z4 | result 도착 전후 분기 | `result?.xxx ?? inputEstimate` 패턴 일관 |
 | Z5 | tone 색조 정책 | indigo(highlight) / emerald(add) / rose(sub) / primary(final) |
-| Z6 | sticky 위치 | `lg:sticky lg:top-4 self-start` (스크롤 시 따라감) |
+| Z6 | sticky 위치 | `lg:sticky` + 헤더 높이 오프셋(상속 `lg:top-36`·WizardSidebar `lg:top-20`) + `self-start` (스크롤 시 따라감) |
 
 ## 본 프로젝트 적용 사례
 
 | 세목 | 위치 | 4필드 |
 |---|---|---|
-| 양도세 | `lib/stores/calc-wizard-store.ts` (`computeTransferSummary`) | 양도가액·취득가액·필요경비·납부세액 |
+| 양도세 | `lib/stores/calc-wizard-store.ts` (`computeTransferSummary`) | 양도가액·취득가액·필요경비·양도소득금액·납부세액 (5필드) |
 | 상속세 | `lib/stores/inheritance-summary.ts` (`computeInheritanceSummary`) | 총상속·과세가액·과세표준·자진납부세액 |
-| 증여세·취득세·재산세·종부세 | **미구현** — 본 skill 적용 대상 |
+| 취득세 | `components/calc/acquisition/AcquisitionSidebar.tsx` (`computeAcquisitionSummary` — 동일 파일 내, WizardSidebar 기반, form만 입력) | 취득가액·시가표준액·예상 세율·간주취득 과세표준 |
+| 증여세·재산세·종부세 | **미구현** — 본 skill 적용 대상 |
 
 ## 신규 세목 추가 워크플로
 
 1. `lib/stores/{tax-type}-summary.ts` 신규 — 4필드 + 보조 메타 정의
 2. `components/calc/{tax-type}/XxxSidebar.tsx` 신규 — useMemo 래핑
 3. `XxxTaxForm.tsx` grid 레이아웃 1줄 추가
-4. `__tests__/tax-engine/{tax-type}/summary.test.ts` anchor 4건
-5. 회귀 0건 확인 + 8개 동기화 지점 ⑥ 체크박스 완료
+4. `__tests__/tax-engine/{tax-type}/{tax-type}-summary.test.ts` anchor 4건
+5. 회귀 0건 확인 + 클라이언트 8개 동기화 지점 ⑥ 체크박스 완료
 
 ## 트러블슈팅
 

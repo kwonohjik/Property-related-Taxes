@@ -146,6 +146,6 @@ Plan/Design 완료
 
 ## 관련 메모리
 
-- [[feedback-pre-anchor-verification]] ★★★ — 본 정책의 정식 메모리
-- [[feedback-engine-comment-vs-impl-drift]] — Pre-Do anchor가 드리프트 탐지 도구
-- [[feedback-anchor-correction-legal-priority]] — anchor 갱신 시 법령 정합 우선
+- [[feedback_pre_anchor_verification]] ★★★ — 본 정책의 정식 메모리
+- [[feedback_engine_comment_vs_impl_drift]] — Pre-Do anchor가 드리프트 탐지 도구
+- [[feedback_anchor_correction_legal_priority]] — anchor 갱신 시 법령 정합 우선

@@ -1,6 +1,6 @@
 ---
 name: single-source-engine-helper
-description: UI·Storage·Validation 등 외부 모듈이 세금 엔진 헬퍼(isSameDonorGroup·isSurchargeSuspended·differenceInYears 등)를 직접 import 재사용하는 정책. 별도 매칭/판정 함수 재정의 금지. 엔진 변경 시 자동 추종 보장.
+description: UI·Storage·Validation 등 외부 모듈이 세금 엔진 헬퍼(isSameDonorGroup·isSurchargeSuspended·getMajorShareholderThreshold 등)를 직접 import 재사용하는 정책. 별도 매칭/판정 함수 재정의 금지. 엔진 변경 시 자동 추종 보장.
 trigger: single source, 엔진 헬퍼 재사용, isSameDonorGroup, isSurchargeSuspended, 매칭 헬퍼, 판정 함수 재사용, 그룹 매칭, 단일 진실, engine helper reuse
 ---
 
@@ -27,7 +27,7 @@ UI·Storage·Validation 등의 외부 모듈이 세금 엔진의 **그룹 매칭
 
 ```ts
 // ✅ 좋은 예 — 엔진에 단일 진실
-// lib/tax-engine/gift-prior-aggregation.ts:51
+// lib/tax-engine/gift-prior-aggregation.ts:52
 export function isSameDonorGroup(
   a: GiftDonorRelation,
   b: GiftDonorRelation,
@@ -35,7 +35,7 @@ export function isSameDonorGroup(
   return getDonorGroup(a) === getDonorGroup(b);
 }
 
-// lib/calc/prior-gift-lookup.ts (UI mediator)
+// components/calc/gift/SimultaneousGiftCard.tsx (UI)
 import { isSameDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 // 직접 재사용 — UI는 별도 매칭 정의 안 함
 
@@ -77,13 +77,17 @@ function isMajorShareholder(market, ownership) {
 // → 시간 경과 시 엔진과 다른 값으로 drift (사례: KONEX 3% 오표시)
 
 // ✅ 좋은 예 — 엔진 헬퍼 export → UI import
-// lib/tax-engine/stock-transfer/major-shareholder.ts
-export function getMajorShareholderThreshold(market: Market, date: string): number {
+// lib/tax-engine/stock-transfer/stock-rate-tables.ts
+export function getMajorShareholderThreshold(
+  marketType: "kospi" | "kosdaq" | "konex" | "unlisted",
+  priorYearEndDate: Date,
+  options?: { isVentureCompany?: boolean },
+): MajorShareholderThreshold {
   // 시기별·시장별 매트릭스 단일 정의
 }
 
-// UI
-import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/major-shareholder";
+// UI — components/calc/stock-transfer/MajorShareholderBlock.tsx · major-sync.ts
+import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
 ```
 
 ## 표준 워크플로
@@ -91,7 +95,7 @@ import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/ma
 ### Step 1: 엔진 헬퍼 export 확인
 
 ```bash
-grep -n "export function {함수명}" lib/tax-engine/
+grep -rn "export function {함수명}" lib/tax-engine/
 ```
 
 존재하지 않으면 → 먼저 엔진에 헬퍼 추가 (별도 PR).
@@ -100,7 +104,7 @@ grep -n "export function {함수명}" lib/tax-engine/
 
 ```ts
 import { isSameDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
-import { isSurchargeSuspended } from "@/lib/tax-engine/multi-house-surcharge-helpers";
+import { isSurchargeSuspended } from "@/lib/tax-engine/tax-utils";
 import { differenceInYears } from "date-fns";  // 외부 OK
 ```
 
@@ -120,7 +124,7 @@ it("그룹 매칭 anchor", () => {
 ### Step 4: 문서화에 엔진 함수명 인용
 
 ```markdown
-**§47 그룹 매칭**: `isSameDonorGroup`(`lib/tax-engine/gift-prior-aggregation.ts:51`) 직접 재사용.
+**§47 그룹 매칭**: `isSameDonorGroup`(`lib/tax-engine/gift-prior-aggregation.ts:52`) 직접 재사용.
 별도 매칭 함수 정의 금지.
 ```
 
@@ -141,12 +145,12 @@ lib/calc/  UI/      Storage/  __tests__/
 
 ## 본 PR 사례
 
-**증여세 사전증여 이력 자동 조회** (커밋 d239db9):
-- `lib/calc/prior-gift-lookup.ts:filterPriorGiftCandidates` 에서
+**증여세 사전증여 이력 자동 조회** (기능 커밋 6ddd56a3 — 이후 d239db9에서 clientId 기반 매칭으로 단순화):
+- `lib/calc/prior-gift-lookup.ts:filterPriorGiftCandidates` 는 clientId 정확 일치로 후보 격리 (isSameDonorGroup 미사용)
+- §47 동일인 그룹 판정은 엔진 `isSameDonorGroup` 단일 진실 — 현행 UI 소비처:
   ```ts
+  // components/calc/gift-tax-form-validate.ts · components/calc/gift/SimultaneousGiftCard.tsx
   import { isSameDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
-  // ...
-  const matchType = isSameDonorGroup(input.donor, currentDonor) ? "same_group" : "other";
   ```
 - 별도 매칭 함수 정의 0건
 - 엔진 그룹 정의(`A=부·모`·`B=조부모`·`C=배우자`·`D=직계비속`·`E=형제자매`·`F=기타친족`·`G=기타`) 자동 추종
@@ -160,14 +164,14 @@ lib/calc/  UI/      Storage/  __tests__/
 
 | 헬퍼 | 위치 | 의미 |
 |---|---|---|
-| `isSameDonorGroup` | `gift-prior-aggregation.ts:51` | §47 ② 동일인 그룹 (부·모/조부모/배우자 등 7그룹) |
-| `getDonorGroup` | `gift-prior-aggregation.ts:31` | donor → 그룹 A~G |
-| `isSurchargeSuspended` | `multi-house-surcharge-helpers.ts` | 중과 유예 시점 판정 |
-| `resolveLTHDStartDate` | `transfer-tax-finalize.ts` | LTHD 기산일 결정 (재개발·용도변경) |
-| `getEffectiveAcquisitionDate` | `transfer-tax-helpers.ts` | 의제·승계 취득일 결정 |
+| `isSameDonorGroup` | `gift-prior-aggregation.ts:52` | §47 ② 동일인 그룹 (부·모/조부모/배우자 등 7그룹) |
+| `getDonorGroup` | `gift-prior-aggregation.ts:32` | donor → 그룹 A~G |
+| `isSurchargeSuspended` | `tax-utils.ts` | 중과 유예 시점 판정 |
+| `resolveLTHDStartDate` | `transfer-tax-lthd-start.ts` | LTHD 기산일 결정 (재개발·용도변경) |
+| `getEffectiveAcquisitionDate` | `transfer-tax-lthd-start.ts` | 의제·승계 취득일 결정 |
 | `checkReductionPeriod` | `transfer-reductions/period-check.ts` | 감면 일몰 시한 검증 |
-| `getMajorShareholderThreshold` | (계획) `stock-transfer/major-shareholder.ts` | 시기별·시장별 대주주 임계 |
-| `getDonorGroup` | `inheritance-gift-tax-credit.ts` (`§57`) | 세대생략 대상 판정 |
+| `getMajorShareholderThreshold` | `stock-transfer/stock-rate-tables.ts` | 시기별·시장별 대주주 임계 |
+| `getDonorGroup` | `gift-prior-aggregation.ts:32` (`gift-tax.ts` §57 할증에서 재사용) | 세대생략 대상 판정 |
 
 ## 위반 시 신호
 
@@ -179,9 +183,9 @@ lib/calc/  UI/      Storage/  __tests__/
 
 ## 관련 정책
 
-- [[feedback-ui-engine-dual-truth-avoidance]] ★★★ — UI·엔진 단일 진실 강제
-- [[feedback-enum-substring-match-forbidden]] ★★★ — `.includes()` 매칭 금지
-- [[feedback-korean-law-82-vs-81-2-drift]] — 엔진 헬퍼 single source 재사용
+- [[feedback_ui_engine_dual_truth_avoidance]] ★★★ — UI·엔진 단일 진실 강제
+- [[feedback_enum_substring_match_forbidden]] ★★★ — `.includes()` 매칭 금지
+- [[feedback_korean_law_82_vs_81_2_drift]] — 위임 체인 최종 본칙까지 검증 후 인용 (추정 인용 금지)
 - [[history-lookup-modal]] — Mediator에서 엔진 헬퍼 재사용 (본 PR 사례)
 - [[echo-field-pattern]] — echo 필드 산식도 엔진 변수 직접 echo (재정의 금지)
 

@@ -1,6 +1,6 @@
 ---
 name: plan-design-self-review-loop
-description: 계획·설계·UI 디자인 문서의 13단계 자가 검토 루프 — 계획 검토×2 → 엔진설계 생성·검토×2 → 통합비교 → UI설계 생성·검토. 검토(오류/누락/모순/개선/UI누락) → 정정 → 재검토를 다중 사이클로 강제하여 1회 검토로 놓치는 결함을 잡는다. 사용자가 "오류 누락 모순 검토하세요"를 요청하거나 계획·설계 문서 완성 직후 적용.
+description: 계획·설계·UI 디자인 문서의 13단계 자가 검토 루프 — 계획 검토×2 → 엔진설계 생성·검토×2 → 통합비교 → UI설계 생성·검토. 검토(오류/누락/모순/정책위반/개선/UI누락) → 정정 → 재검토를 다중 사이클로 강제하여 1회 검토로 놓치는 결함을 잡는다. 사용자가 "오류 누락 모순 검토하세요"를 요청하거나 계획·설계 문서 완성 직후 적용.
 trigger: 자가 검토, 13단계 검토, 11단계 검토, 오류 누락 모순 검토, 검토하세요, 계획 검토, 디자인 검토, 통합 비교, 문서 정합, self review, doc review loop, plan design review, 정정 반영
 ---
 
@@ -58,7 +58,7 @@ trigger: 자가 검토, 13단계 검토, 11단계 검토, 오류 누락 모순 �
 
 STEP 5(`.engine.design.md`)·STEP 12(`.ui.design.md`)는 **디자인 문서를 디스크에 실제 생성**하는 단계다. "계획서에 설계가 이미 통합돼 있다"·"단일 통합 문서다"를 이유로 **건너뛰지 말 것** (위반 사례: 통합 계획서 §엔진/§UI 섹션 검토로 STEP 5/12를 대체 시도 → 디자인 문서 미생성).
 
-- 계획서(`docs/00-pm/*.plan.md`)와 디자인 문서(`docs/02-design/features/{feature}.engine.design.md`·`.ui.design.md`)는 PDCA상 **별개 산출물** (CLAUDE.md Design 단계: `_template.engine.design.md` 복사 + 케이스 인벤토리 표 행≥1).
+- 계획서(`docs/00-pm/*.plan.md`)와 디자인 문서(`docs/02-design/features/{feature}.engine.design.md`·`.ui.design.md`)는 PDCA상 **별개 산출물** (`docs/00-pm/feature-workflow.md` Design 단계: `_template.engine.design.md` 복사 + 케이스 인벤토리 표 행≥1).
 - 계획서에 엔진/UI 설계가 통합돼 있어도 그 내용을 **디자인 문서 형식으로 구체화**해 별도 파일 생성 (케이스 인벤토리·input/result 타입·알고리즘·동기화 지점·위젯 ASCII).
 - 두 파일이 디스크에 존재해야 13단계 완료 — 검토만으로 대체하면 **미완료**.
 

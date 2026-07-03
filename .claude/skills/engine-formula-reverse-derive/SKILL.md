@@ -1,12 +1,12 @@
 ---
 name: engine-formula-reverse-derive
-description: 엔진이 결과 객체에 직접 노출하지 않는 중간 계산값(priorAggregation·deductionResidual 등)을 신고서 양식 표시값에 노출해야 할 때, 엔진 산식을 역산해서 다른 결과 필드 조합으로 재구성하는 패턴. 엔진 변경 0·음수 가드 필수·자기일관성 anchor로 검증.
+description: 엔진이 결과 객체에 직접 노출하지 않는 중간 계산값(priorAggregation 등)을 신고서 양식 표시값에 노출해야 할 때, 엔진 산식을 역산해서 다른 결과 필드 조합으로 재구성하는 패턴. 엔진 변경 0·음수 가드 필수·자기일관성 anchor로 검증.
 trigger: 엔진 산식 역산, formula reverse, 표시값 역산, 중간값 재구성, 결과 필드 조합, 신고서 양식 표시, ⑭ 산식, priorAggregation 노출, 음수 가드, max(0
 ---
 
 # engine-formula-reverse-derive — 엔진 산식 역산으로 신고서 표시값 도출
 
-엔진이 내부적으로 사용하는 중간 계산값(`priorAggregation`·`deductionResidual`·`apportionedBase` 등)을 결과 객체에 직접 노출하지 않을 때, **양식 표시 산식을 엔진 산식의 다른 결과 필드 조합으로 재구성**하는 패턴.
+엔진이 내부적으로 사용하는 중간 계산값(`priorAggregation` 등)을 결과 객체에 직접 노출하지 않을 때, **양식 표시 산식을 엔진 산식의 다른 결과 필드 조합으로 재구성**하는 패턴.
 
 `echo-field-pattern`의 보완재 — echo가 안 되는 케이스(엔진 변경이 회귀 위험)의 fallback 정책.
 
@@ -34,7 +34,7 @@ function computeRow14(aggregated: number, gross: number): number {
 }
 ```
 
-**엔진 실제 산식** (`lib/tax-engine/gift-tax.ts:108-110`):
+**엔진 당시 산식** (`lib/tax-engine/gift-tax.ts` — 현행 154·168행은 채무인수 `assumedDebtTotal` 차감·대납가산 `donorPaidTaxAddition` 항이 추가됨, 역산 전 재-grep 필수):
 ```ts
 netCurrentGiftValue = max(0, grossGiftValue - exemptAmount);
 aggregatedGiftValue = netCurrentGiftValue + priorAggregation.totalAmount;
@@ -59,7 +59,7 @@ grep -nB 2 -A 5 "aggregatedGiftValue\s*=" lib/tax-engine/gift-tax.ts
 ```
 
 ```ts
-// 예시 결과:
+// 예시 결과 (세션 당시 산식 — 현행 엔진은 채무인수 assumedDebtTotal 차감·대납가산 donorPaidTaxAddition 항이 추가됨. 반드시 재-grep한 실제 출력 사용):
 const netCurrentGiftValue = Math.max(0, grossGiftValue - exemptAmount);
 const aggregatedGiftValue = netCurrentGiftValue + priorAggregation.totalAmount;
 ```
@@ -137,7 +137,7 @@ function computeBranchN(total: number, others: number[]): number {
 }
 ```
 
-[[feedback-floor-residual-absorption]]와 연관.
+[[feedback_floor_residual_absorption]]와 연관.
 
 ## 안티패턴
 
