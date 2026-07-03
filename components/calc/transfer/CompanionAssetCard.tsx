@@ -326,7 +326,7 @@ export function CompanionAssetCard({
       {/* ④ 필요경비 */}
       <AssetSection
         num={4}
-        title="필요경비"
+        title="자본적 지출, 필요경비"
         tone="slate"
         summary={summary.expense.label}
         status={status(summary.expense.filled)}

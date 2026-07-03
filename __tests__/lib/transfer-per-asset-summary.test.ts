@@ -132,10 +132,12 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
       result: {
         mode: "bundled",
         apportionment: {
-          // 순서를 폼과 반대로 넣어 assetId 매칭을 검증
+          // 주 자산(index 0)은 route.ts에서 assetId "primary"로 하드코딩되고 companion만
+          // 실제 assetId를 유지 → primary는 "primary", 자산2는 "B"로 매칭. 순서를 폼과 반대로
+          // 넣어 companion assetId 매칭(위치 무관)을 검증.
           apportioned: [
             { assetId: "B", allocatedSalePrice: 90_000_000, allocatedAcquisitionPrice: 40_000_000, allocatedExpenses: 1_000_000, saleMode: "apportioned" },
-            { assetId: "A", allocatedSalePrice: 135_000_000, allocatedAcquisitionPrice: 80_000_000, allocatedExpenses: 2_000_000, saleMode: "apportioned" },
+            { assetId: "primary", allocatedSalePrice: 135_000_000, allocatedAcquisitionPrice: 80_000_000, allocatedExpenses: 2_000_000, saleMode: "apportioned" },
           ],
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

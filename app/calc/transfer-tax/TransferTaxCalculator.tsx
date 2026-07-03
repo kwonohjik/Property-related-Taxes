@@ -374,8 +374,9 @@ export default function TransferTaxCalculator({
   // 자산별 산출(computeTransferPerAssetSummary). 값 > 0 이면 금액, pending 이면 «계산 후 표시»,
   // 그 외엔 라인 미표시. 자산이 2건 이상일 때만 자산 헤더 + 합계 양도가액 노출.
   const showAssetHeader = perAssetSummary.rows.length >= 2;
+  // 라벨(양도가액·취득가액·필요경비)은 항상 표시. 값 > 0 이면 금액,
+  // pending 이면 «계산 후 표시», 그 외(미입력·해당없음)엔 «-».
   const renderSidebarAmount = (label: string, value: number, pending: boolean, note?: string) => {
-    if (value <= 0 && !pending) return null;
     return (
       <div className="text-sm">
         <div className="flex items-baseline justify-between gap-2">
@@ -384,8 +385,10 @@ export default function TransferTaxCalculator({
         </div>
         {value > 0 ? (
           <p className="text-right font-mono tabular-nums">{value.toLocaleString()}</p>
-        ) : (
+        ) : pending ? (
           <p className="text-right text-xs text-muted-foreground/50">계산 후 표시</p>
+        ) : (
+          <p className="text-right text-xs text-muted-foreground/50">-</p>
         )}
       </div>
     );
@@ -393,14 +396,15 @@ export default function TransferTaxCalculator({
 
   const sidebarSummaryContent = (
     <div className="space-y-3">
-      {perAssetSummary.rows.map((row) => {
+      {perAssetSummary.rows.map((row, i) => {
         const saleNote = row.saleIsApportioned
           ? "기준시가 안분"
           : row.ownershipRatio < 1
             ? `지분 ${(row.ownershipRatio * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
             : undefined;
         return (
-          <div key={row.assetId} className="space-y-1.5">
+          // 자산 2건 이상일 때 자산 사이에 구분선(상단 border) 삽입
+          <div key={row.assetId} className={`space-y-1.5${i > 0 ? " border-t pt-3" : ""}`}>
             {showAssetHeader && (
               <p className="text-xs font-semibold text-foreground/80">
                 자산 {row.index} — {ASSET_KIND_LABELS[row.assetKind] ?? row.assetLabel}
@@ -409,9 +413,10 @@ export default function TransferTaxCalculator({
             {renderSidebarAmount("양도가액", row.salePrice, row.salePending, saleNote)}
             {renderSidebarAmount("취득가액", row.acqPrice, row.acqPending)}
             {renderSidebarAmount("필요경비", row.expense, row.expensePending)}
-            {row.reductionTypes.length > 0 && (
-              <div className="border-t pt-1.5">
-                <p className="mb-1 text-sm text-muted-foreground">공제·감면 사항</p>
+            {/* 공제·감면 사항 라벨은 항상 표시 (감면 없으면 «-») */}
+            <div className="border-t pt-1.5">
+              <p className="mb-1 text-sm text-muted-foreground">공제·감면 사항</p>
+              {row.reductionTypes.length > 0 ? (
                 <ul className="space-y-0.5">
                   {row.reductionTypes.map((t) => (
                     <li key={t} className="text-sm">
@@ -419,8 +424,10 @@ export default function TransferTaxCalculator({
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground/50">-</p>
+              )}
+            </div>
           </div>
         );
       })}
