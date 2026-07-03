@@ -221,6 +221,32 @@ export async function callMultiTransferTaxAPI(
     basicDeductionAllocation: multiForm.basicDeductionAllocation,
     // ⑬ §133 5년 누적 한도 — 인별 이력 (TypeScript 미감지 영역, 누락 시 침묵 stripping)
     priorReductionUsage: mergePriorReductionUsage(properties),
+    // [B3] 신고서 단위 수정신고·경정청구 — 단건 payload(transfer-tax-api.ts:528)와 동형.
+    ...(multiForm.amendmentMode
+      ? {
+          amendment: {
+            correctionKind: multiForm.correctionKind,
+            originalDeterminedTax: parseAmount(multiForm.originalDeterminedTax),
+            // [F6] 경정청구(refund)는 가산세 없음 → 플래그 강제 false(stale 누출 차단)
+            applyUnderReportingPenalty:
+              multiForm.correctionKind === "refund_claim" ? false : multiForm.applyUnderReportingPenalty,
+            underReportingReason: multiForm.underReportingReason,
+            underReductionMode: multiForm.underReductionMode,
+            ...(multiForm.statutoryFilingDeadline
+              ? { statutoryFilingDeadline: multiForm.statutoryFilingDeadline }
+              : {}),
+            ...(multiForm.amendedFilingDate ? { amendedFilingDate: multiForm.amendedFilingDate } : {}),
+            priorAssessmentNotified: multiForm.priorAssessmentNotified,
+            applyLatePaymentPenalty:
+              multiForm.correctionKind === "refund_claim" ? false : multiForm.applyLatePaymentPenalty,
+            ...(multiForm.amendedPaymentDate ? { amendedPaymentDate: multiForm.amendedPaymentDate } : {}),
+            ...(multiForm.correctionKind === "refund_claim"
+              ? { claimReasonType: multiForm.claimReasonType }
+              : {}),
+            ...(multiForm.posteriorEventDate ? { posteriorEventDate: multiForm.posteriorEventDate } : {}),
+          },
+        }
+      : {}),
   };
 
   const res = await fetch("/api/calc/transfer/multi", {

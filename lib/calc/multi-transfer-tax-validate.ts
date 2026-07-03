@@ -139,6 +139,28 @@ export function validateMultiSettings(form: MultiTransferFormData): string | nul
   const used = parseAmount(form.annualBasicDeductionUsed);
   if (used > 2_500_000) return "연간 기사용 기본공제는 250만원을 초과할 수 없습니다.";
 
+  // [B8] 신고서 단위 수정신고·경정청구 검증 (단건 transfer-tax-validate step3 amendment 블록 이식)
+  if (form.amendmentMode) {
+    if (parseAmount(form.originalDeterminedTax) <= 0) return "당초 결정세액을 입력하세요.";
+    // 경정청구 후발적 사유 → 사유 안 날 필수 (§45의2② 3개월 기산)
+    if (
+      form.correctionKind === "refund_claim" &&
+      form.claimReasonType === "posterior" &&
+      !form.posteriorEventDate
+    ) {
+      return "후발적 사유를 안 날을 입력하세요.";
+    }
+    if (form.applyUnderReportingPenalty && form.underReductionMode === "auto_48_2") {
+      if (!form.statutoryFilingDeadline) return "§48② 자동감면 산정을 위해 법정신고기한을 입력하세요.";
+      if (!form.amendedFilingDate) return "§48② 자동감면 산정을 위해 수정신고일을 입력하세요.";
+    }
+    if (form.applyLatePaymentPenalty) {
+      if (!form.statutoryFilingDeadline) return "납부지연가산세 산정을 위해 법정신고기한을 입력하세요.";
+      if (!form.amendedPaymentDate)
+        return "납부지연가산세 산정을 위해 수정신고 납부(예정)일을 입력하세요.";
+    }
+  }
+
   return null;
 }
 

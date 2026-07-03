@@ -7,7 +7,7 @@ import { calculationRepository } from "@/lib/storage/calculation-repository";
 import { clientRepository } from "@/lib/storage/client-repository";
 import { useUserProfile } from "@/lib/storage/use-user-profile";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
-import { enterAmendment, enterRefundClaim } from "@/lib/calc/transfer-amendment-entry";
+import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
@@ -564,8 +564,7 @@ export function HistoryClient() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
-                {record.taxType === "transfer" &&
-                  (record.resultData as { mode?: string })?.mode === "single" && (
+                {classifyAmendableTransfer(record) !== null && (
                     <>
                       <button
                         type="button"

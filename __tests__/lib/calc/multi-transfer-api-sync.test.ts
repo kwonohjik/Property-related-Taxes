@@ -47,6 +47,22 @@ function makeMultiForm(props: PropertyItem[]): MultiTransferFormData {
     activeStep: "settings",
     annualBasicDeductionUsed: "0",
     basicDeductionAllocation: "MAX_BENEFIT",
+    // 정정(수정신고·경정청구) 기본값
+    amendmentMode: false,
+    correctionKind: "amend",
+    originalDeterminedTax: "",
+    amendmentSourceId: "",
+    statutoryFilingDeadline: "",
+    amendedFilingDate: "",
+    applyUnderReportingPenalty: false,
+    underReportingReason: "normal",
+    underReductionMode: "exempt",
+    priorAssessmentNotified: false,
+    applyLatePaymentPenalty: false,
+    amendedPaymentDate: "",
+    claimReasonType: "ordinary",
+    posteriorEventDate: "",
+    originalPaymentDate: "",
   };
 }
 

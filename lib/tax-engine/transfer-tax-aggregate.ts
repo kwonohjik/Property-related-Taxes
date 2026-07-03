@@ -18,6 +18,7 @@ import {
   type TransferTaxInput,
   type CalculationStep,
 } from "./transfer-tax";
+import { computeAmendment } from "./transfer-tax-amendment";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import {
@@ -109,6 +110,9 @@ export function calculateTransferTaxAggregate(
       annualBasicDeductionUsed: 0,
       skipBasicDeduction: true,
       skipLossFloor: true,
+      // [E4] 신고서 단위 amendment가 route에서 primary item에 spread돼도 자산별 계산에
+      // 누수되지 않도록 strip. 정정은 아래 집계 결정세액에 대해 1회만 계산한다(§3.3 누수 버그 수정).
+      amendment: undefined,
     };
     const result = calculateTransferTax(singleInput, rates);
     return { item, singleInput, result };
@@ -333,6 +337,13 @@ export function calculateTransferTaxAggregate(
 
   const determinedTaxBeforePenalty = Math.max(0, calculatedTax - reductionAmount);
 
+  // M-8.5: 신고서 단위 수정신고·경정청구 정정 (국세기본법 §45·§45의2).
+  // 집계 결정세액을 당초 결정세액과 비교 → 추가납부/환급. 단건 finalize STEP 12.5와 동형.
+  // correctionKind ?? "amend" 내부 분기(refund면 computeRefundClaim 자동 호출).
+  const amendmentDetail = input.amendment
+    ? computeAmendment(input.amendment, determinedTaxBeforePenalty)
+    : undefined;
+
   // M-9: 가산세 — 자산별 §114의2 + 자산별 신고불성실/납부지연 합산
   const perAssetBuildingPenalty = assetRecords.reduce(
     (s, r) => s + (r.result.isExempt ? 0 : r.result.penaltyTax ?? 0),
@@ -470,6 +481,7 @@ export function calculateTransferTaxAggregate(
     totalTax,
     steps,
     warnings,
+    ...(amendmentDetail ? { amendmentDetail } : {}),
   };
 }
 

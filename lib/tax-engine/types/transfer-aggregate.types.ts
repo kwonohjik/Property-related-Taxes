@@ -15,7 +15,12 @@
  */
 
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
-import type { TransferTaxInput, CalculationStep } from "./transfer.types";
+import type {
+  TransferTaxInput,
+  CalculationStep,
+  AmendmentInput,
+  AmendmentDetail,
+} from "./transfer.types";
 import type { PublicExpropriationReductionResult } from "../public-expropriation-reduction";
 import type { ReplacementLandResult } from "../replacement-land-reduction";
 import type { GbDesignatedLandResult } from "../gb-designated-land-reduction";
@@ -57,6 +62,12 @@ export interface AggregateTransferInput {
   basicDeductionAllocation?: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER";
   /** 과거 4개 과세연도 감면 이력 (§133 5년 누적 한도 계산용, 사용자 직접 입력) */
   priorReductionUsage?: { year: number; type: string; amount: number }[];
+  /**
+   * 신고서 단위 수정신고·경정청구 (국세기본법 §45·§45의2).
+   * 다자산은 합산 결정세액 1개에 대해 정정하므로 filing-level. 단건 AmendmentInput 재사용.
+   * 미지정 시 amendmentDetail 미생성(기존 동작 불변).
+   */
+  amendment?: AmendmentInput;
 }
 
 /** 자산별 breakdown */
@@ -270,6 +281,13 @@ export interface AggregateTransferResult {
   reductionBreakdown: ReductionBreakdownEntry[];
   /** 결정세액 = max(0, calculatedTax - reductionAmount) */
   determinedTax: number;
+
+  /**
+   * 신고서 단위 수정신고·경정청구 정정 상세 (input.amendment 지정 시).
+   * = computeAmendment(input.amendment, determinedTax). refund 필드(refundTax·claimDeadline 등) 포함.
+   * 미지정 시 undefined (기존 동작 불변). 단건 AmendmentDetail 재사용 — JSON 안전(Record/원시값).
+   */
+  amendmentDetail?: AmendmentDetail;
 
   /** 자산별 §114의2 + 자산별 신고불성실/납부지연 합계 (자산별 상세는 properties[i].penaltyDetail). */
   penaltyTax: number;

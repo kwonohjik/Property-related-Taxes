@@ -12,6 +12,7 @@ import { WizardSidebar, type WizardSidebarStep } from "@/components/calc/shared/
 import { REDUCTION_SHORT_LABELS } from "@/components/calc/transfer/reduction-short-labels";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
+import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
@@ -516,6 +517,15 @@ export default function TransferTaxCalculator({
             </div>
           </div>
         ) : (
+          <>
+          {(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).aggregated.amendmentDetail && (
+            <AmendmentResultCard
+              detail={
+                (result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).aggregated.amendmentDetail!
+              }
+              fullTotalTax={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).aggregated.totalTax}
+            />
+          )}
           <BundledAllocationCard
             apportionment={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).apportionment}
             aggregated={(result as import("@/lib/calc/transfer-tax-api").BundledTransferResult).aggregated}
@@ -541,6 +551,7 @@ export default function TransferTaxCalculator({
             }}
             onReset={handleReset}
           />
+          </>
         )
       ) : (
         <>

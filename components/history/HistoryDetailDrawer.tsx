@@ -7,7 +7,7 @@ import { EditTitleDialog } from "./EditTitleDialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { buildBackup } from "@/lib/storage/backup-export";
 import { downloadJson, formatIsoStamp } from "@/lib/utils/file-download";
-import { enterAmendment, enterRefundClaim } from "@/lib/calc/transfer-amendment-entry";
+import { enterAmendment, enterRefundClaim, classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 
 const TAX_TYPE_ROUTES: Partial<Record<string, string>> = {
   transfer: "/calc/transfer-tax",
@@ -283,8 +283,7 @@ export function HistoryDetailDrawer({
             </button>
           )}
           {route &&
-            record.taxType === "transfer" &&
-            (record.resultData as { mode?: string })?.mode === "single" && (
+            classifyAmendableTransfer(record) !== null && (
               <button
                 type="button"
                 onClick={handleAmend}
@@ -295,8 +294,7 @@ export function HistoryDetailDrawer({
               </button>
             )}
           {route &&
-            record.taxType === "transfer" &&
-            (record.resultData as { mode?: string })?.mode === "single" && (
+            classifyAmendableTransfer(record) !== null && (
               <button
                 type="button"
                 onClick={handleRefundClaim}

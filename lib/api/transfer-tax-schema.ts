@@ -726,6 +726,8 @@ export const multiInputSchema = z
       .enum(["MAX_BENEFIT", "FIRST", "EARLIEST_TRANSFER"])
       .default("MAX_BENEFIT"),
     // 가산세는 자산별로 입력 (propertyItemSchema.filingPenaltyDetails / delayedPaymentDetails).
+    // [B4] 신고서 단위 수정신고·경정청구 (국세기본법 §45·§45의2) — 단건 amendmentSchema 재사용.
+    amendment: amendmentSchema.optional(),
   })
   .superRefine((data, ctx) => {
     // taxYear 일관성 — 모든 양도일이 taxYear 내에 있어야 함
