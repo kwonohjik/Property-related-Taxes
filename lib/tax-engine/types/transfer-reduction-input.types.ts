@@ -62,6 +62,8 @@ export type TransferReduction =
       type: "replacement_land_comp";
       cashCompensation: number;
       replacementLandComp: number;
+      /** 사업인정고시일 — §77의2① 소급 2년 취득요건. 자산-수준 expropriationNoticeDate 재사용(고시일 미상 시 undefined → 요건 미검증) */
+      businessApprovalDate?: Date;
     }
   // Phase 1 (2026-05-06): 23개 조문 인벤토리 stub union — 별도 파일 분리 (800줄 정책)
   | TransferReductionStub;

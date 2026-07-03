@@ -420,6 +420,13 @@ export function mapCompanionReductions(
     if (r.type === "public_expropriation") {
       return { ...r, businessApprovalDate: new Date(r.businessApprovalDate!) } as TransferReduction;
     }
+    // §77의2 대토보상 — 사업인정고시일 string → Date (optional). 미상 시 undefined (Date<string 비교 함정 방지)
+    if (r.type === "replacement_land_comp") {
+      return {
+        ...r,
+        businessApprovalDate: r.businessApprovalDate ? new Date(r.businessApprovalDate) : undefined,
+      } as TransferReduction;
+    }
     if (r.type === "self_farming") {
       return {
         ...r,

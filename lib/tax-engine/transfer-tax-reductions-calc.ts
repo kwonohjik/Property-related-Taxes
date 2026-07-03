@@ -220,6 +220,8 @@ export function calcReductions(
     const result = calculateReplacementLandReduction({
       cashCompensation: reduction.cashCompensation,
       replacementLandComp: reduction.replacementLandComp,
+      businessApprovalDate: reduction.businessApprovalDate,
+      acquisitionDate, // §77의2① '고시일 소급 2년 이전 취득' 요건 검증 (상속 시 피상속인 취득일)
       transferDate,
       calculatedTax,
       transferIncome,
