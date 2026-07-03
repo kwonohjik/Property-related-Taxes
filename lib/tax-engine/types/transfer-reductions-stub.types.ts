@@ -104,6 +104,7 @@ export type TransferReductionStub =
       standardPriceAt5Years?: number;
       standardPriceAtAcquisition993?: number;
       standardPriceAtTransfer993?: number;
+      exclusiveAreaSqm993?: number;
       region993?: "outside_speculation" | "speculation";
       acquisitionType993?: "from_builder" | "self_built";
       hasOccupancyAtContract?: boolean;

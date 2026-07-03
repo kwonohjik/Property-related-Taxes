@@ -106,6 +106,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       standardPriceAt5Years: "",
       standardPriceAtAcquisition993: "",
       standardPriceAtTransfer993: "",
+      exclusiveAreaSqm993: "",
       region993: "outside_speculation",
       acquisitionType993: "from_builder",
       hasOccupancyAtContract: false,

@@ -173,6 +173,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtAcquisition993: z.number().int().nonnegative().optional(),
     /** 양도시 기준시가 (원) */
     standardPriceAtTransfer993: z.number().int().nonnegative().optional(),
+    /** 전용면적(㎡) — 고가주택 판정(2002.12.31 이전 취득) */
+    exclusiveAreaSqm993: z.number().nonnegative().optional(),
     /** 지역 — 가격 급등 지역 내/외 */
     region993: z.enum(["outside_speculation", "speculation"]).optional(),
     /** 취득 유형 — 1호 / 2호 */

@@ -102,6 +102,7 @@ export function toEngineReductions(
         standardPriceAtTransfer993: r.standardPriceAtTransfer993
           ? parseAmount(r.standardPriceAtTransfer993)
           : undefined,
+        exclusiveAreaSqm993: parseDecimal(r.exclusiveAreaSqm993 || "") || undefined,
         region993: r.region993,
         acquisitionType993: r.acquisitionType993,
         hasOccupancyAtContract: r.hasOccupancyAtContract ?? false,
