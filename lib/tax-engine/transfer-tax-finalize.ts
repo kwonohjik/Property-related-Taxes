@@ -19,6 +19,7 @@ import {
   emitPenaltySteps,
   getReductionLegalBasis,
   buildMultiHouseSurchargeDetail,
+  calcTransferGain,
   type ParsedRates,
   type CommercialBuildingStepResult,
 } from "./transfer-tax-helpers";
@@ -492,6 +493,8 @@ export function buildExemptEarlyResult(p: {
     specialHouseExclusionDetail: p.specialHouseExclusionDetail,
     warnings: p.warnings,
     transferGain: 0,
+    // [echo] 표시 전용 gross 양도차익 — 세액 로직·transferGain(0) 불변. 순수함수 calcTransferGain 재사용.
+    exemptGrossGain: Math.max(0, calcTransferGain(p.effectiveInput).gain),
     taxableGain: 0,
     usedEstimatedAcquisition: p.effectiveInput.useEstimatedAcquisition,
     longTermHoldingDeduction: 0,

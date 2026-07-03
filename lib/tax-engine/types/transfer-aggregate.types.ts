@@ -80,6 +80,8 @@ export interface PerPropertyBreakdown {
   determinedTax: number;
   /** 양도차익 (skipLossFloor=true → 음수 가능) */
   transferGain: number;
+  /** [echo] 전액 비과세 자산 gross 양도차익 (표시 전용). result.exemptGrossGain 패스스루. */
+  exemptGrossGain?: number;
   /** 장기보유특별공제 */
   longTermHoldingDeduction: number;
   /**

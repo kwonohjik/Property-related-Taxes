@@ -48,6 +48,13 @@ export interface TransferTaxResult {
   warnings?: string[];
   /** 양도차익 */
   transferGain: number;
+  /**
+   * [echo] 전액 비과세 자산의 gross 양도차익 (양도가액 − 취득가액 − 필요경비).
+   * 비과세 조기반환(buildExemptEarlyResult) 시 `transferGain`은 0으로 유지되므로,
+   * 신고서 양식 표시(전체·비과세 양도차익, 단건 취득가액 역산)에서만 사용하는 echo.
+   * 비과세가 아니면 undefined. 세액 계산에는 미사용.
+   */
+  exemptGrossGain?: number;
   /** 과세 양도차익 (12억 초과분 안분 후) */
   taxableGain: number;
   /** 환산취득가 사용 여부 */

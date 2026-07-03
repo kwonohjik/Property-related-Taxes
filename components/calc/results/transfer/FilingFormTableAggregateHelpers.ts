@@ -128,12 +128,15 @@ export function buildAggregateRows(
     setNum("expenses", col, displayExp);
 
     // 양도차익 / 비과세 / 과세대상 (자산별 역산)
-    // assetTaxableGain = max(0, income) + 장특공제 (income = taxableGain - 장특)
-    const transferGain = p.transferGain;
+    // 비과세 자산은 엔진 transferGain=0 → exemptGrossGain echo 사용 (전액 비과세 → 과세대상 0).
+    // 비-비과세는 assetTaxableGain = max(0, income) + 장특공제 (income = taxableGain - 장특).
+    const transferGain = p.isExempt ? (p.exemptGrossGain ?? 0) : p.transferGain;
     const longTermDed = p.longTermHoldingDeduction;
-    const assetTaxableGain = transferGain > 0
-      ? Math.min(transferGain, Math.max(0, p.income) + longTermDed)
-      : transferGain;
+    const assetTaxableGain = p.isExempt
+      ? 0
+      : transferGain > 0
+        ? Math.min(transferGain, Math.max(0, p.income) + longTermDed)
+        : transferGain;
     const assetExemptGain = Math.max(0, transferGain - assetTaxableGain);
     setNum("transferGain", col, transferGain);
     setNum("exemptGain", col, assetExemptGain);
@@ -171,7 +174,8 @@ export function buildAggregateRows(
 
     // 자산별 세액 (참고)
     setNum("calculatedTax", col, p.refCalculatedTax);
-    setNum("reductionTax", col, p.reductionAggregated > 0 ? p.reductionAggregated : 0);
+    // 감면세액 ≤ 산출세액, «산출 − 감면 = 결정» 자기일관 (reductionAggregated 미cap 표시 정정).
+    setNum("reductionTax", col, Math.max(0, p.refCalculatedTax - p.refDeterminedTax));
     setNum("determinedTax", col, p.refDeterminedTax);
     const assetPenalty = (p.penaltyTax ?? 0) + (p.filingDelayedPenaltyTax ?? 0);
     setNum("penaltyTax", col, assetPenalty);
