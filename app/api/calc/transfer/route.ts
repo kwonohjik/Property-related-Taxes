@@ -638,6 +638,8 @@ export async function POST(request: NextRequest) {
           properties: items,
           annualBasicDeductionUsed: data.annualBasicDeductionUsed,
           priorReductionUsage: data.priorReductionUsage ?? [],
+          // [A1] 신고서 단위 수정신고·경정청구 — engineInput.amendment는 상단(:308~)에서 Date 변환 완료.
+          amendment: engineInput.amendment,
         },
         rates,
       );

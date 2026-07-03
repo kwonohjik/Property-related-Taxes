@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, ArrowRight, Calculator, Plus, ChevronLeft } from "lucide-react";
 import { AssetTabBar } from "@/components/calc/transfer/AssetTabBar";
 import { AggregateSettingsPanel } from "@/components/calc/transfer/AggregateSettingsPanel";
+import { AmendmentBlock } from "@/components/calc/transfer/AmendmentBlock";
 import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTransferTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -255,16 +256,11 @@ export default function MultiTransferTaxCalculator() {
 
   // 로컬 IndexedDB 자동저장 — 다건 양도세 결과를 transfer로 통합 저장(계획서 §4-0).
   // Supabase 저장(아래 handleCalculate)과 병행 — 트랙 B에서 Supabase만 제거 예정.
+  // [B0] 전체 MultiTransferFormData를 저장 — 이력에서 다건 수정신고·경정청구 재진입 시
+  // 모든 자산 폼(properties[].form)을 hydrate하려면 stub이 아닌 전체 폼이 필요(계획서 §Track B).
   const autoSaveInput = useMemo(
-    () => ({
-      __multiTransfer: true,
-      taxYear: form.taxYear,
-      properties: form.properties.map((p) => ({
-        propertyId: p.propertyId,
-        propertyLabel: p.propertyLabel,
-      })),
-    }),
-    [form.taxYear, form.properties],
+    () => ({ __multiTransfer: true, ...form }),
+    [form],
   );
   useAutoSaveCalculation({
     taxType: "transfer",
@@ -536,6 +532,28 @@ export default function MultiTransferTaxCalculator() {
           </CardHeader>
           <CardContent className="space-y-6">
             <AggregateSettingsPanel form={form} onChange={setForm} />
+
+            {/* [B2] 신고서 단위 수정신고·경정청구 — 이력에서 진입 시(amendmentMode) 노출.
+                AmendmentBlock은 단건 TransferFormData 컨트롤드 → 동일 필드명 캐스팅 재사용(UI설계 B2). */}
+            {form.amendmentMode && (
+              <div className="space-y-3">
+                <div
+                  className={
+                    form.correctionKind === "refund_claim"
+                      ? "rounded-lg border border-sky-300 bg-sky-50 p-3 text-sm text-sky-800 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200"
+                      : "rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+                  }
+                >
+                  {form.correctionKind === "refund_claim"
+                    ? "📄 경정청구 작성 중 — 당초 신고 기준을 불러왔습니다. 과다신고 항목(양도가액·취득가액·필요경비)을 정정하세요."
+                    : "📄 수정신고 작성 중 — 당초 신고 기준을 불러왔습니다. 정정할 항목을 수정하세요."}
+                </div>
+                <AmendmentBlock
+                  form={form as unknown as TransferFormData}
+                  onChange={(d) => setForm(d as unknown as Parameters<typeof setForm>[0])}
+                />
+              </div>
+            )}
 
             <div className="flex justify-between pt-4 border-t">
               <Button

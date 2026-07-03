@@ -256,6 +256,24 @@ export async function POST(request: NextRequest) {
     // ⑭ §133 5년 누적 한도 — aggregate M-8(applyFiveYearLimits)에서 소비.
     // optional 필드라 TypeScript가 누락을 감지하지 못함 — 누락 시 5년 capping 상시 비활성.
     priorReductionUsage: data.priorReductionUsage ?? [],
+    // [B5] 신고서 단위 수정신고·경정청구 — 단건 route(:308~)와 동형 Date 변환.
+    // amendment ⊥ 자산별 가산세라 2-pass에서 무해(§7.4). finalInput 스프레드로 2차 pass에 반영.
+    amendment: data.amendment
+      ? {
+          originalDeterminedTax: data.amendment.originalDeterminedTax,
+          applyUnderReportingPenalty: data.amendment.applyUnderReportingPenalty,
+          underReportingReason: data.amendment.underReportingReason,
+          underReductionMode: data.amendment.underReductionMode,
+          statutoryFilingDeadline: toOptionalDate(data.amendment.statutoryFilingDeadline),
+          amendedFilingDate: toOptionalDate(data.amendment.amendedFilingDate),
+          priorAssessmentNotified: data.amendment.priorAssessmentNotified,
+          applyLatePaymentPenalty: data.amendment.applyLatePaymentPenalty,
+          amendedPaymentDate: toOptionalDate(data.amendment.amendedPaymentDate),
+          correctionKind: data.amendment.correctionKind,
+          claimReasonType: data.amendment.claimReasonType,
+          posteriorEventDate: toOptionalDate(data.amendment.posteriorEventDate),
+        }
+      : undefined,
   };
 
   try {

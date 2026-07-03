@@ -33,6 +33,25 @@ export interface MultiTransferFormData {
   annualBasicDeductionUsed: string;
   basicDeductionAllocation: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER";
   // 가산세는 자산별로 입력 — 자산 form(TransferFormData)에 보관됨.
+
+  // ── 신고서 단위 수정신고·경정청구 (filing-level, 단건 TransferFormData와 동일 필드명 —
+  //    AmendmentBlock을 form 캐스팅으로 재사용하기 위한 전제. 계획서 §5.3·UI B2) ──
+  amendmentMode: boolean;
+  correctionKind: "amend" | "refund_claim";
+  originalDeterminedTax: string;
+  amendmentSourceId: string;
+  statutoryFilingDeadline: string;
+  amendedFilingDate: string;
+  applyUnderReportingPenalty: boolean;
+  underReportingReason: "normal" | "fraudulent" | "offshore_fraud";
+  underReductionMode: "exempt" | "auto_48_2";
+  priorAssessmentNotified: boolean;
+  applyLatePaymentPenalty: boolean;
+  amendedPaymentDate: string;
+  claimReasonType: "ordinary" | "posterior";
+  posteriorEventDate: string;
+  /** 당초 납부일(환급가산금 기산 안내용, form-only) — AmendmentBlock refund 분기에서 사용 */
+  originalPaymentDate: string;
 }
 
 const defaultFormData: MultiTransferFormData = {
@@ -42,6 +61,22 @@ const defaultFormData: MultiTransferFormData = {
   activeStep: "list",
   annualBasicDeductionUsed: "0",
   basicDeductionAllocation: "MAX_BENEFIT",
+  // 정정(수정신고·경정청구) 기본값 — 단건 defaultFormData와 동일
+  amendmentMode: false,
+  correctionKind: "amend",
+  originalDeterminedTax: "",
+  amendmentSourceId: "",
+  statutoryFilingDeadline: "",
+  amendedFilingDate: "",
+  applyUnderReportingPenalty: false,
+  underReportingReason: "normal",
+  underReductionMode: "exempt",
+  priorAssessmentNotified: false,
+  applyLatePaymentPenalty: false,
+  amendedPaymentDate: "",
+  claimReasonType: "ordinary",
+  posteriorEventDate: "",
+  originalPaymentDate: "",
 };
 
 interface MultiTransferState {

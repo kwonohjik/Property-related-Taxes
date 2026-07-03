@@ -18,6 +18,7 @@ import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
+import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -688,6 +689,10 @@ export function MultiTransferTaxResultView({
 
   return (
     <div className="space-y-4">
+      {/* [B6] 신고서 단위 수정신고·경정청구 정정 카드 (당초 대비 추가납부/환급 hero) */}
+      {result.amendmentDetail && (
+        <AmendmentResultCard detail={result.amendmentDetail} fullTotalTax={result.totalTax} />
+      )}
       {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
       <PrintSelectionPanel
         allGroups={MULTI_TRANSFER_PRINT_SECTIONS}

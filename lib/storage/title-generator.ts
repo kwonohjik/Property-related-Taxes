@@ -35,6 +35,17 @@ export function extractAddress(input: Record<string, unknown>): string | null {
     const addr = road?.trim() || jibun?.trim();
     if (addr) return addr;
   }
+  // [S3] 다건 직접입력(MultiTransferFormData): properties[0].form.assets[0]
+  const properties = input.properties as
+    | Array<{ form?: { assets?: Array<Record<string, unknown>> } }>
+    | undefined;
+  if (Array.isArray(properties) && properties.length > 0) {
+    const firstAsset = properties[0]?.form?.assets?.[0];
+    const road = firstAsset?.addressRoad as string | undefined;
+    const jibun = firstAsset?.addressJibun as string | undefined;
+    const addr = road?.trim() || jibun?.trim();
+    if (addr) return addr;
+  }
   // 취득세 등 단일 구조 — road/jibun 또는 addressRoad/addressJibun 모두 인식
   const road = (input.road ?? input.addressRoad) as string | undefined;
   const jibun = (input.jibun ?? input.addressJibun) as string | undefined;
@@ -43,7 +54,14 @@ export function extractAddress(input: Record<string, unknown>): string | null {
 
 export function extractTransferDate(input: Record<string, unknown>): string | null {
   // transferDate는 TransferFormData top-level 필드
-  return formatDate(input.transferDate as string | undefined);
+  const direct = formatDate(input.transferDate as string | undefined);
+  if (direct) return direct;
+  // [S3] 다건 직접입력: properties[0].form.transferDate (top-level transferDate 부재)
+  const properties = input.properties as Array<{ form?: { transferDate?: string } }> | undefined;
+  if (Array.isArray(properties) && properties.length > 0) {
+    return formatDate(properties[0]?.form?.transferDate);
+  }
+  return null;
 }
 
 /**
