@@ -7,7 +7,6 @@ import { useCalcWizardStore, createDefaultTransferFormData } from "@/lib/stores/
 import { useMultiTransferStore, generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { WizardSidebar, type WizardSidebarStep } from "@/components/calc/shared/WizardSidebar";
 import { REDUCTION_SHORT_LABELS } from "@/components/calc/transfer/reduction-short-labels";
@@ -22,7 +21,8 @@ import type { StepStatus } from "@/components/calc/StepIndicator";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
-import { computeTransferSummary } from "@/lib/stores/calc-wizard-store";
+import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
+import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { runTransferManualSave, formatTransferSaveMessage } from "@/components/calc/transfer-tax-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
@@ -66,10 +66,10 @@ export default function TransferTaxCalculator({
   const [isPenaltyLoading, setIsPenaltyLoading] = useState(false);
   /** 가산세 계산하기로 얻은 결정세액 — unpaidTax 자동 계산용 */
   const [calcDeterminedTax, setCalcDeterminedTax] = useState<number | null>(null);
-  const transferSummary = useMemo(
-    () => computeTransferSummary(formData, result),
+  const perAssetSummary = useMemo(
+    () => computeTransferPerAssetSummary(formData, result),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [formData.assets, formData.contractTotalPrice, result]
+    [formData.assets, formData.contractTotalPrice, formData.bundledSaleMode, result]
   );
 
   // 로그인 상태 확인 (클라이언트 사이드)
@@ -370,91 +370,18 @@ export default function TransferTaxCalculator({
     onClick: () => { clearError(); setStep(i); },
   }));
 
-  // 입력된 값을 기준으로 계산 가능한 항목만 사이드바에 표시.
-  //   양도가액 합계:  actualSalePrice 입력 시
-  //   취득가액 합계:  fixedAcquisitionPrice 입력 시 (실가/감정 모드만, 환산은 엔진 계산)
-  //   필요경비 합계:  directExpenses 입력 시
-  //   양도소득금액:  양도가액 + 취득가액 모두 입력된 경우 (환산 모드에선 API 결과 필요)
-  //   납부할 세액:   API 계산 완료 시
-  // 상속 취득가액 의제 — case B는 사용자 입력 즉시, case A는 API 응답 후 표시
-  const inheritedAcqSidebarValue = (() => {
-    const primaryAsset = formData.assets[0];
-    if (!primaryAsset || primaryAsset.inheritanceMode === null || !primaryAsset.inheritanceStartDate) {
-      return null;
-    }
-    // case B: 신고가액 즉시 표시
-    if (primaryAsset.inheritanceMode === "post-deemed") {
-      const v = parseAmount(primaryAsset.inheritanceReportedValue);
-      return v > 0 ? v : null;
-    }
-    // case A: API 응답 후 inheritedAcquisitionDetail에서 표시
-    if (result?.mode === "single" && result.result.inheritedAcquisitionDetail) {
-      return result.result.inheritedAcquisitionDetail.acquisitionPrice || null;
-    }
-    return null;
-  })();
-
-  // 취득가액/필요경비 표시값 — 우선순위:
-  //   직접입력 합계 → 상속 의제 → 계산 결과(환산취득가·적용경비) → 계산 전 "환산 프리뷰".
-  const singleResult = result?.mode === "single" ? result.result : null;
-
-  // 환산 프리뷰: 단건·단순(토지/주택, 분리·겸용·재개발·다필지 아님) 환산 모드에서
-  //   기준시가·양도가액이 모두 입력되면 엔진 유틸로 환산취득가·개산공제를 계산 전에 미리 산출.
-  //   (dual-truth 회피 — 공식 재구현 대신 calculateEstimatedAcquisitionPrice·applyRate 엔진 유틸 import)
-  const primaryAsset = formData.assets[0];
-  const canPreviewEstimated =
-    formData.assets.length === 1 &&
-    !!primaryAsset &&
-    primaryAsset.useEstimatedAcquisition &&
-    !primaryAsset.parcelMode &&
-    !primaryAsset.isMixedUseHouse &&
-    !primaryAsset.hasSeperateLandAcquisitionDate &&
-    primaryAsset.transferType !== "burdened_gift" &&
-    (primaryAsset.assetKind === "land" || primaryAsset.assetKind === "housing");
-  const previewStdAcq = canPreviewEstimated ? parseAmount(primaryAsset.standardPriceAtAcq) : 0;
-  const previewStdTransfer = canPreviewEstimated ? parseAmount(primaryAsset.standardPriceAtTransfer) : 0;
-  const previewSalePrice = canPreviewEstimated ? parseAmount(primaryAsset.actualSalePrice) : 0;
-  const estAcqPreview =
-    previewStdAcq > 0 && previewStdTransfer > 0 && previewSalePrice > 0
-      ? calculateEstimatedAcquisitionPrice(previewSalePrice, previewStdAcq, previewStdTransfer)
-      : 0;
-  const estDeductionPreview = estAcqPreview > 0 ? applyRate(previewStdAcq, 0.03) : 0;
-
-  const acqPriceDisplay =
-    transferSummary.totalAcqPrice > 0
-      ? transferSummary.totalAcqPrice
-      : inheritedAcqSidebarValue != null
-        ? inheritedAcqSidebarValue
-        : singleResult?.usedEstimatedAcquisition
-          ? singleResult.estimatedBase ?? 0
-          : estAcqPreview;
-  const expenseDisplay =
-    transferSummary.totalNecessaryExpense > 0
-      ? transferSummary.totalNecessaryExpense
-      : singleResult
-        ? singleResult.expenses ?? 0
-        : estDeductionPreview;
-
-  // 환산·감정 모드지만 프리뷰 불가(기준시가 미입력 등) + 계산 전 → "계산 후 표시" placeholder.
-  const acqPending =
-    acqPriceDisplay === 0 && !result &&
-    formData.assets.some((a) => a.useEstimatedAcquisition);
-  const expensePending =
-    expenseDisplay === 0 && !result &&
-    formData.assets.some((a) => a.useEstimatedAcquisition || a.isAppraisalAcquisition);
-
-  // 선택된 감면 조문 (자산별 reductions[] 합집합 — 중복 제거)
-  const appliedReductionTypes = Array.from(
-    new Set(formData.assets.flatMap((a) => a.reductions ?? []).map((r) => r.type)),
-  );
-
-  // 사이드바 요약 — 세로 스택 3금액 + 공제·감면 목록 (납부세액·양도소득금액 미표시).
-  // 값 > 0 이면 금액, 환산·감정 모드 계산 전이면 placeholder, 그 외엔 미표시.
-  const renderSidebarAmount = (label: string, value: number, pending = false) => {
+  // 사이드바 요약 — 자산별 카드(자산 1·2·…). 안분 모드 양도가액은 §166⑥ 기준시가 비율로
+  // 자산별 산출(computeTransferPerAssetSummary). 값 > 0 이면 금액, pending 이면 «계산 후 표시»,
+  // 그 외엔 라인 미표시. 자산이 2건 이상일 때만 자산 헤더 + 합계 양도가액 노출.
+  const showAssetHeader = perAssetSummary.rows.length >= 2;
+  const renderSidebarAmount = (label: string, value: number, pending: boolean, note?: string) => {
     if (value <= 0 && !pending) return null;
     return (
       <div className="text-sm">
-        <p className="text-muted-foreground">{label}</p>
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-muted-foreground">{label}</span>
+          {note && <span className="text-xs text-muted-foreground/70">{note}</span>}
+        </div>
         {value > 0 ? (
           <p className="text-right font-mono tabular-nums">{value.toLocaleString()}</p>
         ) : (
@@ -465,20 +392,44 @@ export default function TransferTaxCalculator({
   };
 
   const sidebarSummaryContent = (
-    <div className="space-y-2.5">
-      {renderSidebarAmount("양도가액", transferSummary.totalSalePrice)}
-      {renderSidebarAmount("취득가액", acqPriceDisplay, acqPending)}
-      {renderSidebarAmount("필요경비", expenseDisplay, expensePending)}
-      {appliedReductionTypes.length > 0 && (
-        <div className="border-t pt-2">
-          <p className="mb-1 text-sm text-muted-foreground">공제·감면 사항</p>
-          <ul className="space-y-0.5">
-            {appliedReductionTypes.map((t) => (
-              <li key={t} className="text-sm">
-                {REDUCTION_SHORT_LABELS[t]}
-              </li>
-            ))}
-          </ul>
+    <div className="space-y-3">
+      {perAssetSummary.rows.map((row) => {
+        const saleNote = row.saleIsApportioned
+          ? "기준시가 안분"
+          : row.ownershipRatio < 1
+            ? `지분 ${(row.ownershipRatio * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
+            : undefined;
+        return (
+          <div key={row.assetId} className="space-y-1.5">
+            {showAssetHeader && (
+              <p className="text-xs font-semibold text-foreground/80">
+                자산 {row.index} — {ASSET_KIND_LABELS[row.assetKind] ?? row.assetLabel}
+              </p>
+            )}
+            {renderSidebarAmount("양도가액", row.salePrice, row.salePending, saleNote)}
+            {renderSidebarAmount("취득가액", row.acqPrice, row.acqPending)}
+            {renderSidebarAmount("필요경비", row.expense, row.expensePending)}
+            {row.reductionTypes.length > 0 && (
+              <div className="border-t pt-1.5">
+                <p className="mb-1 text-sm text-muted-foreground">공제·감면 사항</p>
+                <ul className="space-y-0.5">
+                  {row.reductionTypes.map((t) => (
+                    <li key={t} className="text-sm">
+                      {REDUCTION_SHORT_LABELS[t]}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {showAssetHeader && perAssetSummary.totalSalePrice > 0 && (
+        <div className="flex items-baseline justify-between gap-2 border-t pt-2 text-sm font-semibold">
+          <span>합계 양도가액</span>
+          <span className="text-right font-mono tabular-nums">
+            {perAssetSummary.totalSalePrice.toLocaleString()}
+          </span>
         </div>
       )}
     </div>
