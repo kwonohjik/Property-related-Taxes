@@ -30,6 +30,14 @@ export const temporaryTwoHouseSchema = z.object({
   newAcquisitionDate: z.string().date(),
 });
 
+// ⑫ §156의2⑤ 대체주택 비과세 특례 Zod 스키마
+export const replacementHouseSchema = z.object({
+  businessApprovalDate: z.string().date(),
+  completionDate: z.string().date(),
+  replacementResidenceMonths: z.number().int().nonnegative(),
+  willResideNewHouse: z.boolean(),
+});
+
 // (제거 2026-06-16) 구 nonBusinessLandDetailsSchema 전용 leaf —
 //   businessUsePeriodSchema·gracePeriodSchema·LAND_TYPE_VALUES·ZONE_TYPE_VALUES·
 //   REVENUE_BUSINESS_TYPES·revenueTestSchema 는 raw 스키마(아래) 전환으로 dead → 삭제.

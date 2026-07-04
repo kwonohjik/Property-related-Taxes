@@ -17,6 +17,12 @@ import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
+// §156의2⑤ 대체주택 특례 — 신축주택 완성 후 대체주택 양도 기한.
+// 2023.01.12 이후 양도분부터 3년(구 2년). 소득세법 시행령 부칙(대통령령 제33267호).
+const REPLACEMENT_HOUSE_3YR_TRANSFER_START = new Date("2023-01-12");
+const REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW = 3;
+const REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD = 2;
+
 /**
  * 거주요건 판정 입력 — TransferTaxInput의 부분집합. UI(Step4 안내 메시지)와 엔진이 공용.
  * resolveExemptionProviso·resolveWasRegulatedAtAcquisition·meetsOneHouseResidenceRequirement 입력.
@@ -163,6 +169,46 @@ export function checkExemption(
 
   if (!input.isOneHousehold || input.propertyType !== "housing") {
     return { isExempt: false, isPartialExempt: false };
+  }
+
+  // E-5: §156의2⑤ 대체주택 특례 — 재개발·재건축 시행기간 중 거주 목적 대체주택.
+  // 신축주택+대체주택 2주택이나 대체주택 양도를 1세대1주택으로 의제(§154① 보유·거주 요건 면제).
+  // 요건 미충족 시 fall through(일반 과세). 사후관리(§156의2⑬) 경고는 결과 warnings에서 별도 처리.
+  if (input.replacementHouse) {
+    const rh = input.replacementHouse;
+    // ① 사업시행인가일 이후 대체주택 취득 + 1년 이상 거주
+    const meetsAcquisition =
+      input.acquisitionDate >= rh.businessApprovalDate &&
+      Math.floor(rh.replacementResidenceMonths / 12) >= 1;
+    // ④ 신축주택 완성 전 또는 완성 후 3년(2023.01.12 이후 양도분; 구 2년)내 대체주택 양도
+    const deadlineYears =
+      input.transferDate >= REPLACEMENT_HOUSE_3YR_TRANSFER_START
+        ? REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW
+        : REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD;
+    const meetsTransferTiming =
+      input.transferDate < rh.completionDate ||
+      input.transferDate <= addYears(rh.completionDate, deadlineYears);
+    // ③ 신축주택 1년 이상 거주 (전제 — 자기선언, 미충족 시 §156의2⑬ 추징)
+    const meetsNewHouseResidence = rh.willResideNewHouse === true;
+
+    if (meetsAcquisition && meetsTransferTiming && meetsNewHouseResidence) {
+      const priceCheck =
+        input.burdenedGiftDenominator ??
+        input.totalPropertyTransferPrice ??
+        input.transferPrice;
+      if (priceCheck <= rule.maxExemptPrice) {
+        return {
+          isExempt: true,
+          isPartialExempt: false,
+          exemptReason: "대체주택 특례 비과세 (§156의2⑤)",
+        };
+      }
+      return {
+        isExempt: false,
+        isPartialExempt: true,
+        exemptReason: "대체주택 특례 고가주택 (§156의2⑤)",
+      };
+    }
   }
 
   // E-3: 일시적 2주택

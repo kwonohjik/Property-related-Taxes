@@ -140,6 +140,15 @@ export async function POST(request: NextRequest) {
             newAcquisitionDate: toDate(p.temporaryTwoHouse.newAcquisitionDate, "temporaryTwoHouse.newAcquisitionDate"),
           }
         : undefined,
+      // ⑭ §156의2⑤ 대체주택 비과세 특례 — string 일자 → Date 변환 (date-coerce)
+      replacementHouse: p.replacementHouse
+        ? {
+            businessApprovalDate: toDate(p.replacementHouse.businessApprovalDate, "replacementHouse.businessApprovalDate"),
+            completionDate: toDate(p.replacementHouse.completionDate, "replacementHouse.completionDate"),
+            replacementResidenceMonths: p.replacementHouse.replacementResidenceMonths,
+            willResideNewHouse: p.replacementHouse.willResideNewHouse,
+          }
+        : undefined,
       // 감면 매핑 — 단건 route와 공용 (rental §97 시리즈 Date 변환 포함, 2026-06-11)
       reductions: mapReductionsToEngine(p.reductions),
       // ⑭ NBL 정밀판정: 단건 route와 동일 공용 헬퍼 (raw 평면 → nested + Date)
