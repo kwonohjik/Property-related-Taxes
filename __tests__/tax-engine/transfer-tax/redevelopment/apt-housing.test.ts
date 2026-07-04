@@ -2,7 +2,7 @@
  * 재개발/재건축 — 완공 APT 양도 / 주택출자 (사례 44·45·46) 격리 anchor 테스트
  *
  * 범위: redevelopment.ts orchestrator (runRedevelopment) 직접 호출 검증.
- * 본 spec 은 양도세 전체 산출세액(56,799,400)이 아닌 RedevelopmentResult 까지 검증.
+ * 본 spec 은 양도세 전체 산출세액(55,836,614)이 아닌 RedevelopmentResult 까지 검증.
  * 전체 산출세액 anchor 는 transfer-tax.ts 통합 후 별도 spec.
  *
  * 법령 근거 검증:
@@ -55,24 +55,24 @@ describe("사례 44 — APT 양도 / 주택출자 / 환산 / 청산금 납부 (�
     expect(result.settlement.gain).toBe(63_341_217);
   });
 
-  it("기존건물분 LTHD 보유기간 = 취득일~신축양도일 17년 10개월 (§166⑤2호나목)", () => {
-    // 2005-04-09 → 2023-02-16
-    expect(result.preApproval.holdingMonths).toBe(214); // 17 × 12 + 10
-    expect(result.postApprovalExistingHouse.holdingMonths).toBe(214);
+  it("기존건물분 LTHD 보유기간 = 취득일~신축양도일 20년 10개월 (§166⑤2호나목)", () => {
+    // 2005-04-09 → 2026-02-16
+    expect(result.preApproval.holdingMonths).toBe(250); // 20 × 12 + 10
+    expect(result.postApprovalExistingHouse.holdingMonths).toBe(250);
   });
 
-  it("기존건물분 LTHD율 = 30% (보유 17년 ≥ 15년, 표1 캡)", () => {
+  it("기존건물분 LTHD율 = 30% (보유 20년 ≥ 15년, 표1 캡)", () => {
     expect(result.preApproval.lthdRate).toBe(0.3);
     expect(result.postApprovalExistingHouse.lthdRate).toBe(0.3);
   });
 
-  it("청산금 납부분 LTHD 보유기간 = 관리처분~신축양도일 13년 3개월 (§166⑤2호가목)", () => {
-    // 2009-10-23 → 2023-02-16
-    expect(result.settlement.holdingMonths).toBe(159); // 13 × 12 + 3
+  it("청산금 납부분 LTHD 보유기간 = 관리처분~신축양도일 16년 3개월 (§166⑤2호가목)", () => {
+    // 2009-10-23 → 2026-02-16
+    expect(result.settlement.holdingMonths).toBe(195); // 16 × 12 + 3
   });
 
-  it("청산금 납부분 LTHD율 = 26% (보유 13년, 표1 매년 2% 가산)", () => {
-    expect(result.settlement.lthdRate).toBe(0.26);
+  it("청산금 납부분 LTHD율 = 30% (보유 16년 ≥ 15년, 표1 캡 — 2023판 13년 26%와 상이)", () => {
+    expect(result.settlement.lthdRate).toBe(0.3);
   });
 
   it("인가전 LTHD = floor(75,445,919 × 30%) = 22,633,775", () => {
@@ -87,13 +87,13 @@ describe("사례 44 — APT 양도 / 주택출자 / 환산 / 청산금 납부 (�
     expect(result.postApprovalExistingHouse.lthd).toBe(44_897_634);
   });
 
-  it("청산금 납부분 LTHD = floor(63,341,216 × 26%) = 16,468,716", () => {
-    expect(result.settlement.lthd).toBe(16_468_716);
+  it("청산금 납부분 LTHD = floor(63,341,217 × 30%) = 19,002,365", () => {
+    expect(result.settlement.lthd).toBe(19_002_365);
   });
 
-  it("합계 LTHD = 84,000,125 (분배법칙 = 묶음 LTHD, xlsx 84,000,126 와 1원 차이)", () => {
-    // 22,633,775 + 44,897,634 + 16,468,716 = 84,000,125
-    expect(result.total.lthd).toBe(84_000_125);
+  it("합계 LTHD = 86,533,774 (분배법칙 = 묶음 LTHD, SW 86,533,774 일치)", () => {
+    // 22,633,775 + 44,897,634 + 19,002,365 = 86,533,774
+    expect(result.total.lthd).toBe(86_533_774);
   });
 
   it("합계 양도차익 = 288,445,917 (xlsx 일치)", () => {
@@ -101,9 +101,9 @@ describe("사례 44 — APT 양도 / 주택출자 / 환산 / 청산금 납부 (�
     expect(result.total.gain).toBe(288_445_917);
   });
 
-  it("양도소득금액 = 204,445,792 (합계 양도차익 − 합계 LTHD, xlsx 204,445,791 와 1원 차이)", () => {
-    // 288,445,917 − 84,000,125 = 204,445,792
-    expect(result.total.taxableIncome).toBe(204_445_792);
+  it("양도소득금액 = 201,912,143 (합계 양도차익 − 합계 LTHD, SW 201,912,142 와 1원 차이)", () => {
+    // 288,445,917 − 86,533,774 = 201,912,143
+    expect(result.total.taxableIncome).toBe(201_912_143);
   });
 });
 

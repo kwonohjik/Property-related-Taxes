@@ -4,10 +4,10 @@
  * 본 spec 은 transfer-tax.ts 의 calculateTransferTax() 진입점을 통해 redevelopment 분기 라우팅
  * → RedevelopmentResult → 기본공제·과세표준·산출세액·지방소득세·세액합계 까지 전체 흐름 검증.
  *
- * ★ Primary anchor (xlsx 양도코리아 정합):
- *   산출세액   56,799,400
- *   지방소득세  5,679,940
- *   세액합계   62,479,340
+ * ★ Primary anchor (양도코리아 SW 2026 개정판 스크린샷 — 양도일 2026-02-16):
+ *   산출세액   55,836,613 (엔진 55,836,614, BigInt floor ±1원)
+ *   지방소득세  5,583,661
+ *   세액합계   61,420,274 (엔진 61,420,275, ±1원)
  */
 
 import { describe, it, expect } from "vitest";
@@ -21,7 +21,7 @@ describe("사례 44 통합 anchor — APT-환산-납부-주택출자 (transfer-t
   const input: TransferTaxInput = baseTransferInput({
     propertyType: "redevelopment_apt",
     transferPrice: 525_000_000,
-    transferDate: new Date("2023-02-16"),
+    transferDate: new Date("2026-02-16"),
     acquisitionDate: new Date("2005-04-09"),
     acquisitionPrice: 0, // 환산 모드 — actualAcquisitionPrice 미사용
     expenses: 0,
@@ -49,34 +49,34 @@ describe("사례 44 통합 anchor — APT-환산-납부-주택출자 (transfer-t
     expect(result.transferGain).toBe(288_445_917);
   });
 
-  it("합계 LTHD = 84,000,125 (분배법칙, xlsx 84,000,126 와 ±1원)", () => {
-    expect(result.longTermHoldingDeduction).toBe(84_000_125);
+  it("합계 LTHD = 86,533,774 (분배법칙, SW 86,533,774 일치 — 청산금분 30%)", () => {
+    expect(result.longTermHoldingDeduction).toBe(86_533_774);
   });
 
-  it("양도소득금액 = 204,445,792 (288,445,917 − 84,000,125, xlsx 204,445,791 와 ±1원)", () => {
-    expect(result.redevelopmentDetail?.total.taxableIncome).toBe(204_445_792);
+  it("양도소득금액 = 201,912,143 (288,445,917 − 86,533,774, SW 201,912,142 와 ±1원)", () => {
+    expect(result.redevelopmentDetail?.total.taxableIncome).toBe(201_912_143);
   });
 
   it("기본공제 = 2,500,000", () => {
     expect(result.basicDeduction).toBe(2_500_000);
   });
 
-  it("과세표준 = 201,945,792 (204,445,792 − 2,500,000)", () => {
-    expect(result.taxBase).toBe(201_945_792);
+  it("과세표준 = 199,412,143 (201,912,143 − 2,500,000, SW 199,412,142 와 ±1원)", () => {
+    expect(result.taxBase).toBe(199_412_143);
   });
 
-  it("★ 산출세액 = 56,799,400 (xlsx 일치)", () => {
-    // 201,945,792 × 38% − 19,940,000 = 76,739,400 − 19,940,000 = 56,799,400
-    expect(result.calculatedTax).toBe(56_799_400);
+  it("★ 산출세액 = 55,836,614 (SW 55,836,613 와 ±1원, BigInt floor)", () => {
+    // 199,412,143 × 38% − 19,940,000 = 75,776,614 − 19,940,000 = 55,836,614
+    expect(result.calculatedTax).toBe(55_836_614);
   });
 
-  it("★ 지방소득세 = 5,679,940 (xlsx 일치)", () => {
-    // 56,799,400 × 10%
-    expect(result.localIncomeTax).toBe(5_679_940);
+  it("★ 지방소득세 = 5,583,661 (SW 일치)", () => {
+    // 55,836,614 × 10%
+    expect(result.localIncomeTax).toBe(5_583_661);
   });
 
-  it("★ 세액합계 = 62,479,340 (xlsx 일치)", () => {
-    expect(result.totalTax).toBe(62_479_340);
+  it("★ 세액합계 = 61,420,275 (SW 61,420,274 와 ±1원)", () => {
+    expect(result.totalTax).toBe(61_420_275);
   });
 
   it("steps 에 LTHD 3줄 emit (인가전 / 인가후 기존 / 청산금)", () => {
@@ -95,7 +95,7 @@ describe("사례 44 통합 anchor — APT-환산-납부-주택출자 (transfer-t
 // ─────────────────────────────────────────────────────────────
 describe("사례 44 + 무신고 가산세 — 재개발 경로 신고불성실가산세 반영 (H-9 회귀)", () => {
   const filingPenalty: NonNullable<TransferTaxInput["filingPenaltyDetails"]> = {
-    determinedTax: 56_799_400, // 재개발 산출세액 (route 2-pass 주입값)
+    determinedTax: 55_836_614, // 재개발 산출세액 (route 2-pass 주입값)
     reductionAmount: 0,
     priorPaidTax: 0,
     originalFiledTax: 0,
@@ -107,7 +107,7 @@ describe("사례 44 + 무신고 가산세 — 재개발 경로 신고불성실�
   const penInput: TransferTaxInput = baseTransferInput({
     propertyType: "redevelopment_apt",
     transferPrice: 525_000_000,
-    transferDate: new Date("2023-02-16"),
+    transferDate: new Date("2026-02-16"),
     acquisitionDate: new Date("2005-04-09"),
     acquisitionPrice: 0,
     expenses: 0,
@@ -120,19 +120,19 @@ describe("사례 44 + 무신고 가산세 — 재개발 경로 신고불성실�
   });
   const r = calculateTransferTax(penInput, mockRates);
 
-  it("본세·지방소득세 불변 (산출세액 56,799,400 / 지방세 5,679,940)", () => {
-    expect(r.calculatedTax).toBe(56_799_400);
-    expect(r.localIncomeTax).toBe(5_679_940);
+  it("본세·지방소득세 불변 (산출세액 55,836,614 / 지방세 5,583,661)", () => {
+    expect(r.calculatedTax).toBe(55_836_614);
+    expect(r.localIncomeTax).toBe(5_583_661);
   });
 
-  it("신고불성실가산세(20%) = 11,359,880 · penaltyDetail 부착 (수정 전: 미반영)", () => {
-    // 56,799,400 × 20% = 11,359,880
+  it("신고불성실가산세(20%) = 11,167,322 · penaltyDetail 부착 (수정 전: 미반영)", () => {
+    // 55,836,614 × 20% = 11,167,322
     expect(r.penaltyDetail).toBeDefined();
-    expect(r.penaltyDetail!.filingPenalty?.filingPenalty).toBe(11_359_880);
+    expect(r.penaltyDetail!.filingPenalty?.filingPenalty).toBe(11_167_322);
   });
 
-  it("totalTax = 산출세액 + 지방세 + 가산세 = 73,839,220 (수정 전 62,479,340 과소산출)", () => {
-    // 56,799,400 + 5,679,940 + 11,359,880
-    expect(r.totalTax).toBe(73_839_220);
+  it("totalTax = 산출세액 + 지방세 + 가산세 = 72,587,597 (가산세 반영, H-9 회귀)", () => {
+    // 55,836,614 + 5,583,661 + 11,167,322
+    expect(r.totalTax).toBe(72_587_597);
   });
 });
