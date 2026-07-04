@@ -164,6 +164,15 @@ export async function POST(request: NextRequest) {
           newAcquisitionDate: new Date(data.temporaryTwoHouse.newAcquisitionDate),
         }
       : undefined,
+    // ⑭ §156의2⑤ 대체주택 비과세 특례 — string 일자 → Date 변환 (date-coerce)
+    replacementHouse: data.replacementHouse
+      ? {
+          businessApprovalDate: toDate(data.replacementHouse.businessApprovalDate, "replacementHouse.businessApprovalDate"),
+          completionDate: toDate(data.replacementHouse.completionDate, "replacementHouse.completionDate"),
+          replacementResidenceMonths: data.replacementHouse.replacementResidenceMonths,
+          willResideNewHouse: data.replacementHouse.willResideNewHouse,
+        }
+      : undefined,
     // 감면 매핑 — route-reductions-mapper.ts로 분리 (800줄 정책, 2026-06-11)
     reductions: mapReductionsToEngine(data.reductions),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,

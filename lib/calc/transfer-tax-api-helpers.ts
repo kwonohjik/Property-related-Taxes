@@ -5,7 +5,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";
@@ -601,5 +601,20 @@ export function buildExpropriationInput(primary: AssetForm) {
     transferArea: parseFloat(primary.transferArea) || undefined,
     compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
     compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+  };
+}
+
+// ─── ④⑬ §156의2⑤ 대체주택 비과세 특례 FLAT → nested (TS 미감지 영역 — 누락 시 침묵 strip) ───
+/** 폼 → replacementHouse nested payload. 토글 OFF 또는 필수 날짜 미입력 시 {} */
+export function buildReplacementHousePayload(form: TransferFormData): object {
+  if (!form.replacementHouseSpecial || !form.replBusinessApprovalDate || !form.replCompletionDate)
+    return {};
+  return {
+    replacementHouse: {
+      businessApprovalDate: form.replBusinessApprovalDate,
+      completionDate: form.replCompletionDate,
+      replacementResidenceMonths: parseInt(form.replResidenceMonths || "0", 10),
+      willResideNewHouse: form.replWillResideNewHouse,
+    },
   };
 }

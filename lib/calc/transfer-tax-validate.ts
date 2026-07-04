@@ -177,6 +177,18 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     if (houses.length > 0 && form.gracePeriod && !form.gracePeriod.contractDate)
       issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
 
+    // ⑧ §156의2⑤ 대체주택 특례 — 토글 ON 시 4필드 필수 (자동 안분 fallback 금지)
+    if (form.replacementHouseSpecial) {
+      if (!form.replBusinessApprovalDate)
+        issues.push({ step, message: "대체주택 특례: 사업시행계획인가일을 입력하세요." });
+      if (!form.replCompletionDate)
+        issues.push({ step, message: "대체주택 특례: 신축주택 준공일을 입력하세요." });
+      if (!form.replResidenceMonths || parseInt(form.replResidenceMonths, 10) <= 0)
+        issues.push({ step, message: "대체주택 특례: 대체주택 거주개월수를 1개월 이상 입력하세요." });
+      if (!form.replWillResideNewHouse)
+        issues.push({ step, message: "대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다." });
+    }
+
     // ⑧ §154① 단서 — 사유별 필수 입력 (미입력 시 침묵 비과세 미적용 차단 — feedback_no_silent_apportion_fallback)
     if (
       (form.provisoReason === "overseas_migration" || form.provisoReason === "overseas_residence") &&

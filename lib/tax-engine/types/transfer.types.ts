@@ -146,6 +146,22 @@ export interface TransferTaxInput {
     newAcquisitionDate: Date;
   };
   /**
+   * §156의2⑤ 대체주택 비과세 특례 — 재개발·재건축 시행기간 중 거주목적 대체주택 취득 후 양도.
+   * 양도 대상 = 대체주택 (acquisitionDate·transferDate·transferPrice 등은 대체주택 값).
+   * checkExemption E-5 분기에서 요건 판정 → 1세대1주택 의제(§154① 보유·거주 요건 면제).
+   * 설계: docs/02-design/features/transfer-replacement-house-156-2-5.engine.design.md
+   */
+  replacementHouse?: {
+    /** 사업시행계획인가일 (대체주택은 이 날 이후 취득 요건) */
+    businessApprovalDate: Date;
+    /** 재개발·재건축 신축주택 준공(완성)일 (완성 후 3년내 양도·이사 기산) */
+    completionDate: Date;
+    /** 대체주택 거주개월수 (1년 이상 요건) */
+    replacementResidenceMonths: number;
+    /** 신축주택 1년 이상 거주 자기선언 (§156의2⑬ 사후관리 전제) */
+    willResideNewHouse: boolean;
+  };
+  /**
    * §154① 단서 — 1세대1주택 비과세 보유·거주 요건 면제 사유 (소득세법 시행령 §154 ① 단서).
    * 폼은 FLAT(provisoReason 등), API 변환 시 이 nested 객체로 조립. 미지정 시 본문 요건만 판정.
    * 1·2·3호 = 보유+거주 면제, 5호 = 거주만 면제. 거주 충족(1호 5년·3호 1년)은 residencePeriodMonths 재사용.

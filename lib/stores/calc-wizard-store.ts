@@ -96,6 +96,12 @@ export interface TransferFormData {
   temporaryTwoHouseSpecial: boolean;
   previousHouseAcquisitionDate: string;
   newHouseAcquisitionDate: string;
+  // §156의2⑤ 대체주택 비과세 특례 FLAT 필드 (API에서 replacementHouse nested로 조립)
+  replacementHouseSpecial: boolean;
+  replBusinessApprovalDate: string;   // 사업시행계획인가일
+  replCompletionDate: string;         // 신축주택 준공일
+  replResidenceMonths: string;        // 대체주택 거주개월수 (숫자 문자열)
+  replWillResideNewHouse: boolean;    // 신축주택 1년 이상 거주 자기선언
   marriageDate: string;
   parentalCareMergeDate: string;
   // §154① 단서 — 비과세 보유·거주 요건 면제 사유 (FLAT; API에서 oneHouseExemptionProviso로 조립)
@@ -230,6 +236,11 @@ const defaultFormData: TransferFormData = {
   temporaryTwoHouseSpecial: false,
   previousHouseAcquisitionDate: "",
   newHouseAcquisitionDate: "",
+  replacementHouseSpecial: false,
+  replBusinessApprovalDate: "",
+  replCompletionDate: "",
+  replResidenceMonths: "",
+  replWillResideNewHouse: false,
   marriageDate: "",
   parentalCareMergeDate: "",
   provisoReason: "",
