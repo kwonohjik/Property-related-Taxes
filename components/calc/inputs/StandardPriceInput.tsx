@@ -59,6 +59,8 @@ interface Props {
   forceYear?: string;
   /** 조회 성공 시 콜백 — 조회 연도·가격 전달 (직전연도 자동 조회 등 연계용) */
   onLookupSuccess?: (info: { year: string; price: number }) => void;
+  /** true이면 단가칸을 넓히고(40%) 면적을 좁힘(20%) + 단가 라벨 단축 — 반폭 레이아웃(2-col) 줄바꿈 방지. 기본 false */
+  unitPriceWide?: boolean;
 }
 
 /**
@@ -91,6 +93,7 @@ export function StandardPriceInput({
   onSourceChange,
   forceYear,
   onLookupSuccess,
+  unitPriceWide = false,
 }: Props) {
   const isAreaMode =
     !forceTotalMode &&
@@ -101,6 +104,10 @@ export function StandardPriceInput({
   // 호출부가 area/onAreaChange를 제어하지 않으면 내부 state로 관리(uncontrolled fallback).
   const [internalArea, setInternalArea] = useState("");
   const areaValue = area ?? internalArea;
+  // 단가도 동일 uncontrolled fallback — 호출부가 pricePerSqm/onPricePerSqmChange를 제어하지 않아도
+  // 조회·수동입력 단가가 칸에 표시되고 단가×면적 총액 자동계산이 동작하게 한다.
+  const [internalPricePerSqm, setInternalPricePerSqm] = useState("");
+  const pricePerSqmValue = pricePerSqm ?? internalPricePerSqm;
 
   const { loading, msg, year, setYear, yearOptions, announcedLabel, noticeDate, lastAreaRef, lookup } =
     useStandardPriceLookup(propertyType);
@@ -121,7 +128,8 @@ export function StandardPriceInput({
 
   // ── 단가 변경 → 총액 자동계산 ──────────────────────────────────
   function handlePricePerSqmChange(v: string) {
-    onPricePerSqmChange?.(v);
+    if (onPricePerSqmChange) onPricePerSqmChange(v);
+    else setInternalPricePerSqm(v);
     const sqm = parseFloat(v.replace(/,/g, "") || "0");
     const areaNum = parseFloat(areaValue.replace(/,/g, "") || "0");
     if (sqm > 0 && areaNum > 0) {
@@ -136,7 +144,7 @@ export function StandardPriceInput({
     if (onAreaChange) onAreaChange(v);
     else setInternalArea(v);
     const areaNum = parseFloat(v || "0");
-    const sqm = parseFloat(pricePerSqm?.replace(/,/g, "") || "0");
+    const sqm = parseFloat(pricePerSqmValue.replace(/,/g, "") || "0");
     if (sqm > 0 && areaNum > 0) {
       const computed = String(Math.floor(sqm * areaNum));
       onTotalPriceChange(computed);
@@ -156,8 +164,9 @@ export function StandardPriceInput({
     if (price === null) return;
 
     if (isAreaMode) {
-      // 단가 저장
-      onPricePerSqmChange?.(String(price));
+      // 단가 저장 (controlled면 콜백, uncontrolled면 내부 state)
+      if (onPricePerSqmChange) onPricePerSqmChange(String(price));
+      else setInternalPricePerSqm(String(price));
       // 면적 자동 채움 — 빈 칸일 때만(사용자 입력 보호). 조회된 필지면적(lndpclAr, ㎡).
       let areaNum = parseFloat(areaValue.replace(/,/g, "") || "0");
       const fetchedArea = lastAreaRef.current;
@@ -183,12 +192,22 @@ export function StandardPriceInput({
   // ── 단가·면적이 모두 입력된 경우만 힌트 표시 ─────────────────────
   const autoCalcHint =
     isAreaMode &&
-    parseFloat(pricePerSqm?.replace(/,/g, "") || "0") > 0 &&
+    parseFloat(pricePerSqmValue.replace(/,/g, "") || "0") > 0 &&
     parseFloat(areaValue.replace(/,/g, "") || "0") > 0
       ? "단가 × 면적 자동계산"
       : undefined;
 
   const effectiveHint = autoCalcHint ?? hint;
+
+  // 총액칸 라벨 — 단가·면적칸과 같은 라벨 높이를 확보해 3칸 input을 같은 라인에 정렬한다.
+  // 호출부가 label=""(빈 라벨)을 주면 라벨 줄이 붕괴해 총액 input만 위로 뜨므로,
+  // area-mode 넓은 레이아웃(unitPriceWide)에서는 빈 라벨을 "금액 (원)"으로 보정한다.
+  const totalPriceLabel =
+    label === undefined
+      ? "공시가격 총액 (원)"
+      : label === "" && unitPriceWide
+        ? "금액 (원)"
+        : label;
 
   return (
     <div className="space-y-2">
@@ -221,14 +240,16 @@ export function StandardPriceInput({
           상단 정렬(items-start): 라벨이 한 줄로 높이가 같아 세 입력칸이 같은 라인에 오고,
           총액 아래 hint(자동계산 안내)가 입력칸 정렬을 밀어올리지 않게 한다. */}
       {isAreaMode ? (
-        <div className="grid grid-cols-4 items-start gap-3">
-          <CurrencyInput
-            label="㎡당 단가 (원/㎡)"
-            value={pricePerSqm ?? ""}
-            onChange={handlePricePerSqmChange}
-            placeholder={pricePerSqmDisabled ? "토지등급 환산 자동" : "공시지가 단가"}
-            disabled={pricePerSqmDisabled}
-          />
+        <div className={cn("grid items-start gap-3", unitPriceWide ? "grid-cols-5" : "grid-cols-4")}>
+          <div className={unitPriceWide ? "col-span-2" : undefined}>
+            <CurrencyInput
+              label={unitPriceWide ? "㎡당 단가" : "㎡당 단가 (원/㎡)"}
+              value={pricePerSqmValue}
+              onChange={handlePricePerSqmChange}
+              placeholder={pricePerSqmDisabled ? "토지등급 환산 자동" : "공시지가 단가"}
+              disabled={pricePerSqmDisabled}
+            />
+          </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">{areaLabel ?? "면적 (㎡)"}</label>
             <input
@@ -243,7 +264,7 @@ export function StandardPriceInput({
           </div>
           <div className="col-span-2">
             <CurrencyInput
-              label={label ?? "공시가격 총액 (원)"}
+              label={totalPriceLabel}
               hideLabel={hideLabel}
               value={totalPrice}
               onChange={handleTotalPriceChange}
@@ -292,7 +313,7 @@ export function StandardPriceInput({
 
       {/* 단가만 있고 면적이 없을 때 안내 */}
       {isAreaMode &&
-        parseFloat(pricePerSqm?.replace(/,/g, "") || "0") > 0 &&
+        parseFloat(pricePerSqmValue.replace(/,/g, "") || "0") > 0 &&
         !parseFloat(areaValue.replace(/,/g, "") || "0") && (
           <p className="text-xs text-muted-foreground">
             면적(㎡)을 입력하면 총액이 자동 계산됩니다.

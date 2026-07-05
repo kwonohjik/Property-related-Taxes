@@ -180,6 +180,7 @@ function AssetReductionBlock({
             landAreaM2={asset.assetKind === "land" ? asset.acquisitionArea : undefined}
             acquisitionDate={asset.acquisitionDate || undefined}
             transferDate={transferDate || undefined}
+            assetStandardPriceAtAcq={asset.standardPriceAtAcq || undefined}
           />
         </div>
       )}

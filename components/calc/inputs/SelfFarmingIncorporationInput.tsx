@@ -15,12 +15,21 @@ import { Label } from "@/components/ui/label";
 import { DateInput } from "@/components/ui/date-input";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 
 const ZONE_OPTIONS = [
   { value: "residential", label: "주거지역" },
   { value: "commercial", label: "상업지역" },
   { value: "industrial", label: "공업지역" },
 ] as const;
+
+/**
+ * 의제취득일(소득세법 부칙 1985.1.1. 개정 §98) — 1984.12.31. 이전 취득은 1985.1.1. 취득으로 간주.
+ * 앱은 1985.1.1. 미만 취득일을 "1985-01-01"로 클램핑하므로(CompanionAcqPurchaseBlock),
+ * 판정은 `<=`로 한다(동일: CompanionAcqPurchaseBlock 의제취득 배지 판정).
+ * 이 시점은 개별공시지가(최초 1990) 부재 → 취득시 기준시가는 자산-수준 환산값을 자동 사용.
+ */
+const DEEMED_ACQUISITION_DATE = "1985-01-01";
 
 interface SelfFarmingIncorporationInputProps {
   useSelfFarmingIncorporation: boolean;
@@ -45,6 +54,8 @@ interface SelfFarmingIncorporationInputProps {
   acquisitionDate?: string;
   /** 양도일 — 양도시 기준시가 공시지가 조회 기준연도 */
   transferDate?: string;
+  /** 자산 목록의 취득시 기준시가(총액). 의제취득(≤1985.1.1) 시 읽기전용 자동 표시 소스. 엔진 fallback과 동일 값. */
+  assetStandardPriceAtAcq?: string;
 }
 
 export function SelfFarmingIncorporationInput({
@@ -59,7 +70,16 @@ export function SelfFarmingIncorporationInput({
   landAreaM2,
   acquisitionDate,
   transferDate,
+  assetStandardPriceAtAcq,
 }: SelfFarmingIncorporationInputProps) {
+  // 의제취득(≤1985.1.1): 개별공시지가 부재 → 취득시 기준시가는 조회 불가.
+  // 자산-수준 값을 읽기전용 자동 표시하고 연도 드롭다운·조회 UI를 숨긴다(엔진은 이미 자산값 fallback).
+  const isDeemedAcq = !!acquisitionDate && acquisitionDate <= DEEMED_ACQUISITION_DATE;
+  // 표시값은 엔진 fallback 식(`reduction ?? asset`)과 동일하게 미러 — 표시≠엔진 drift 방지.
+  const effectiveAcqPrice =
+    parseAmount(selfFarmingStandardPriceAtAcquisition) > 0
+      ? parseAmount(selfFarmingStandardPriceAtAcquisition)
+      : parseAmount(assetStandardPriceAtAcq ?? "");
   return (
     <ToggleCard
       tone="amber"
@@ -129,6 +149,7 @@ export function SelfFarmingIncorporationInput({
               label=""
               hint="편입일 직전 개별공시지가 × 토지면적(㎡)"
               enableLookup={true}
+              unitPriceWide
             />
           </div>
 
@@ -139,17 +160,37 @@ export function SelfFarmingIncorporationInput({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium">취득시 기준시가 <span className="text-xs text-muted-foreground font-normal">(원)</span></label>
-              <StandardPriceInput
-                propertyKind="land"
-                totalPrice={selfFarmingStandardPriceAtAcquisition}
-                onTotalPriceChange={(v) => onChange({ selfFarmingStandardPriceAtAcquisition: v })}
-                area={landAreaM2}
-                jibun={jibun}
-                referenceDate={acquisitionDate}
-                label=""
-                hint="취득일 직전 개별공시지가 × 면적(환산 모드는 자산 기준시가 자동)"
-                enableLookup={true}
-              />
+              {isDeemedAcq ? (
+                effectiveAcqPrice > 0 ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 space-y-1">
+                    <div className="text-right font-mono tabular-nums whitespace-nowrap text-sm font-medium">
+                      {effectiveAcqPrice.toLocaleString()}
+                    </div>
+                    <p className="text-[11px] text-amber-700">
+                      1985.1.1. 이전 취득(취득시기 의제) — 자산 목록의 취득시 기준시가를 자동 적용합니다.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2">
+                    <p className="text-[11px] text-amber-700">
+                      1985.1.1. 이전 취득(취득시기 의제) — 개별공시지가 조회 불가. 자산 목록에서 취득시 기준시가(환산 등)를 먼저 입력하세요.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <StandardPriceInput
+                  propertyKind="land"
+                  totalPrice={selfFarmingStandardPriceAtAcquisition}
+                  onTotalPriceChange={(v) => onChange({ selfFarmingStandardPriceAtAcquisition: v })}
+                  area={landAreaM2}
+                  jibun={jibun}
+                  referenceDate={acquisitionDate}
+                  label=""
+                  hint="취득일 직전 개별공시지가 × 면적(환산 모드는 자산 기준시가 자동)"
+                  enableLookup={true}
+                  unitPriceWide
+                />
+              )}
             </div>
             <div className="space-y-1.5">
               <label className="block text-sm font-medium">양도시 기준시가 <span className="text-xs text-muted-foreground font-normal">(원)</span></label>
@@ -163,6 +204,7 @@ export function SelfFarmingIncorporationInput({
                 label=""
                 hint="양도일 직전 개별공시지가 × 면적(환산 모드는 자산 기준시가 자동)"
                 enableLookup={true}
+                unitPriceWide
               />
             </div>
           </div>
