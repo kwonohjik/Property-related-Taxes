@@ -46,6 +46,13 @@ describe("getDefaultPriceYear — 평가기준일 기준 공시연도 기본값"
     const y = getDefaultPriceYear("", "housing");
     expect(y).toMatch(/^\d{4}$/);
   });
+
+  // 의제취득(1985.1.1) 취득시 기준시가 드롭다운 2026 표시 버그 원인 고정 (작업 4):
+  // 클램핑된 "1985-01-01"(land)은 5.31 이전 → 1984 도출. yearOptions는 현재연도~1985뿐이라
+  // 1984가 옵션에 없어 select가 초기값(현재연도)을 못 벗어남 → 드롭다운 숨김이 정답.
+  it("의제취득: 토지 1985-01-01 → 1984 (yearOptions 밖 → 드롭다운 숨김 트리거)", () => {
+    expect(getDefaultPriceYear("1985-01-01", "land")).toBe("1984");
+  });
 });
 
 describe("isNoticeAfterReference — 실제 고시일 경계 검증 (과대선택 경고)", () => {

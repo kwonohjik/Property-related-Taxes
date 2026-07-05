@@ -77,7 +77,7 @@ export function Pre1990LandValuationInput({
 }: Props) {
   const mode = form.pre1990GradeMode ?? "number";
   const [lookupLoading, setLookupLoading] = useState(false);
-  const [lookupMsg, setLookupMsg] = useState<{ text: string; kind: "ok" | "err" } | null>(null);
+  const [lookupMsg, setLookupMsg] = useState<{ text: string; kind: "ok" | "warn" | "err" } | null>(null);
 
   const previews = {
     current: tryResolveGrade(mode, form.pre1990Grade_current),
@@ -124,6 +124,15 @@ export function Pre1990LandValuationInput({
     previews.atAcq?.value,
   ]);
 
+  /** 지정 연도의 개별공시지가(원/㎡) 조회. 없으면 0. 네트워크 오류는 throw. */
+  async function fetchLandPrice(year: string): Promise<number> {
+    const params = new URLSearchParams({ jibun: jibun!, propertyType: "land", year });
+    const res = await fetch(`/api/address/standard-price?${params}`);
+    if (!res.ok) return 0;
+    const data = await res.json();
+    return data.price ?? data.pricePerSqm ?? 0;
+  }
+
   async function handleLookup1990Price() {
     if (!jibun) {
       setLookupMsg({ text: "먼저 소재지를 검색·선택하세요. (지번 주소 필요)", kind: "err" });
@@ -132,24 +141,28 @@ export function Pre1990LandValuationInput({
     setLookupLoading(true);
     setLookupMsg(null);
     try {
-      const params = new URLSearchParams({
-        jibun,
-        propertyType: "land",
-        year: "1990",
-      });
-      const res = await fetch(`/api/address/standard-price?${params}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setLookupMsg({ text: data?.error?.message ?? "공시가격 조회 실패", kind: "err" });
+      // 개별공시지가 최초 고시일은 1990.8.30.이지만 Vworld 공시지가 API는 1991년분부터 제공한다.
+      // 1990년 조회가 비면 1991년 최초 공시분으로 대체하고 경고 안내를 띄운다.
+      const price1990 = await fetchLandPrice("1990");
+      if (price1990 > 0) {
+        onChange({ pre1990PricePerSqm_1990: String(price1990) });
+        setLookupMsg({ text: `1990년 개별공시지가: ${price1990.toLocaleString()}/㎡`, kind: "ok" });
         return;
       }
-      const price = data.price ?? data.pricePerSqm ?? 0;
-      if (price > 0) {
-        onChange({ pre1990PricePerSqm_1990: String(price) });
-        setLookupMsg({ text: `1990년 개별공시지가: ${price.toLocaleString()}/㎡`, kind: "ok" });
-      } else {
-        setLookupMsg({ text: "1990년 가격 정보 없음 — 직접 입력해주세요.", kind: "err" });
+
+      const price1991 = await fetchLandPrice("1991");
+      if (price1991 > 0) {
+        onChange({ pre1990PricePerSqm_1990: String(price1991) });
+        setLookupMsg({
+          text:
+            `⚠ 1990년 개별공시지가는 자동조회가 제공되지 않아 1991년 최초 공시분(${price1991.toLocaleString()}/㎡)으로 대체했습니다. ` +
+            "정확한 1990.8.30. 개별공시지가는 부동산공시가격 알리미(realtyprice.kr)에서 확인해 직접 수정하세요.",
+          kind: "warn",
+        });
+        return;
       }
+
+      setLookupMsg({ text: "1990~1991년 가격 정보 없음 — 직접 입력해주세요.", kind: "err" });
     } catch {
       setLookupMsg({ text: "네트워크 오류 — 직접 입력해주세요.", kind: "err" });
     } finally {
@@ -202,7 +215,15 @@ export function Pre1990LandValuationInput({
               </button>
             </div>
             {lookupMsg && (
-              <p className={`text-xs ${lookupMsg.kind === "ok" ? "text-green-700 dark:text-green-400" : "text-destructive"}`}>
+              <p
+                className={`text-xs ${
+                  lookupMsg.kind === "ok"
+                    ? "text-green-700 dark:text-green-400"
+                    : lookupMsg.kind === "warn"
+                      ? "text-amber-700 dark:text-amber-400"
+                      : "text-destructive"
+                }`}
+              >
                 {lookupMsg.text}
               </p>
             )}
