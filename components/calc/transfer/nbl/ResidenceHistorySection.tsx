@@ -91,6 +91,7 @@ export function ResidenceHistorySection({
           >
             <div data-testid="nbl-residence-address-search">
               <AddressSearch
+                disableUnits
                 value={{ road: "", jibun: "", building: "", detail: "", lng: h.lng ?? "", lat: h.lat ?? "" }}
                 onChange={(v) => {
                   if (!v.pnu) return; // 주소 선택 시에만 반영

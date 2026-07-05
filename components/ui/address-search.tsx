@@ -63,9 +63,14 @@ interface AddressSearchProps {
   onChange: (v: AddressValue) => void;
   className?: string;
   disabled?: boolean;
+  /**
+   * true이면 공동주택 세대(동/호) 조회·상세주소 입력을 생략(경량 모드).
+   * 시·군·구·좌표만 필요한 용도(예: NBL 재촌 거주지)에서 불필요한 공시가격 API 호출을 막는다.
+   */
+  disableUnits?: boolean;
 }
 
-export function AddressSearch({ value, onChange, className, disabled }: AddressSearchProps) {
+export function AddressSearch({ value, onChange, className, disabled, disableUnits }: AddressSearchProps) {
   const [query, setQuery] = useState(value.road || value.jibun || "");
   const [results, setResults] = useState<AddressResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -185,7 +190,7 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
       lat: r.lat,
       pnu: r.pnu,
     });
-    if (r.pnu || r.jibun) void fetchUnits(r.pnu, r.jibun);
+    if (!disableUnits && (r.pnu || r.jibun)) void fetchUnits(r.pnu, r.jibun);
   }
 
   function handleDetailChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -323,8 +328,8 @@ export function AddressSearch({ value, onChange, className, disabled }: AddressS
         </div>
       )}
 
-      {/* 상세주소 */}
-      {hasSelected && (
+      {/* 상세주소 (경량 모드에서는 동/호·상세 입력 생략) */}
+      {!disableUnits && hasSelected && (
         <div className="space-y-2">
           {unitsLoading ? (
             <div className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
