@@ -65,6 +65,15 @@ export function NblSectionContainer({
     [asset, transferDate],
   );
 
+  // §66 자경 편입 부분감면 편입일 — NBL 도시편입일 미입력 시 판정에 자동 적용됨(buildNonBusinessLandRaw fallback).
+  // UI에도 자동 적용 사실을 표시해 표시↔판정 일관성 확보.
+  const sfIncorporationDate = (() => {
+    const sf = asset.reductions?.find((r) => r.type === "self_farming");
+    return sf?.type === "self_farming" && sf.useSelfFarmingIncorporation
+      ? sf.selfFarmingIncorporationDate
+      : undefined;
+  })();
+
   if (!asset.nblUseDetailedJudgment) {
     return (
       <div className="space-y-2">
@@ -187,6 +196,11 @@ export function NblSectionContainer({
               placeholder="YYYY-MM-DD"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
+            {!asset.nblUrbanIncorporationDate && sfIncorporationDate && (
+              <p className="mt-1 text-xs text-amber-700">
+                감면의 편입일 {sfIncorporationDate} 자동 적용 (편입 3년 유예 판정). 다르면 직접 입력하세요.
+              </p>
+            )}
             <NblUrbanZoneCheckButton jibun={asset.addressJibun} transferDate={transferDate ?? ""} />
           </FieldCard>
           <FieldCard label="공동소유 지분" hint="예: 0.5 (50%), 기본 1">
