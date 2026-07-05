@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { searchSigungu } from "@/lib/korean-law/sigungu-codes";
 
 export interface SigunguSelectProps {
@@ -20,6 +20,12 @@ export function SigunguSelect({
 }: SigunguSelectProps) {
   const [query, setQuery] = useState(name);
   const [open, setOpen] = useState(false);
+
+  // 외부 name 값 변경(자산 소재지 자동채움·주소검색 자동입력 등)을 표시에 반영.
+  // 사용자가 직접 타이핑하는 동안엔 name(부모 store)이 바뀌지 않으므로 입력을 덮어쓰지 않는다.
+  useEffect(() => {
+    setQuery(name);
+  }, [name]);
 
   const results = open ? searchSigungu(query) : [];
 
