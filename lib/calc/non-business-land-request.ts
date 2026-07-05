@@ -66,8 +66,17 @@ export function buildNonBusinessLandRaw(
   const nblFields = Object.fromEntries(
     Object.entries(asset).filter(([k]) => k.startsWith("nbl")),
   );
+  // §66 자경 편입 부분감면의 편입일과 NBL 도시편입일은 동일 사건(농지의 도시지역 편입)이다.
+  // NBL 도시편입일 미입력 시 §66 감면 편입일로 fallback → 편입 3년 유예(소득세법 시행령 §168의8⑤⑥)
+  // 판정이 실행되어, 편입 전 재촌·자경 농지의 편입 3년 이내 양도가 사업용으로 올바로 판정된다.
+  const sf = asset.reductions?.find((r) => r.type === "self_farming");
+  const selfFarmingIncorpDate =
+    sf?.type === "self_farming" && sf.useSelfFarmingIncorporation
+      ? sf.selfFarmingIncorporationDate
+      : undefined;
   return {
     ...nblFields,
+    nblUrbanIncorporationDate: asset.nblUrbanIncorporationDate || selfFarmingIncorpDate || "",
     // 공익수용 단일 소스 — 서버 buildUnconditionalExemption의 isExpr·고시일 fallback에 필요(nbl* 미prefix)
     transferCause: asset.transferCause,
     expropriationNoticeDate: asset.expropriationNoticeDate,
