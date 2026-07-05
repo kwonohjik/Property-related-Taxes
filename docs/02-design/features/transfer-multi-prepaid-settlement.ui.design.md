@@ -40,7 +40,7 @@
 ```
 - **필터**: `taxType==="transfer"` + `classifyLoadableTransfer≠null` + **활성 clientId**(세무사 모드 격리) + **동일 taxYear만**(D3, 다른 연도 비활성+사유). 이미 세션에 있는 record는 "불러옴" 배지(dedup 경고).
 - **단건 선택** → `appendSingleRecordAsProperty(record)`: `addProperty(form=record.inputData)`, `priorPaidTax` 자동값 `+= String(record.resultData.result.determinedTax)`, `sourceCalculationId` 메타. ⚠️ **stray blank 정리(STEP 13 High)**: 마운트 useEffect(`MultiTransferTaxCalculator:366-368`)가 신규 진입 시 빈 property 1건 auto-add → append 전 **미입력 빈 property는 제거/재사용**(빈+로드 자산 중복 방지). ⚠️ **append도 `priorPaidTaxEdited=true`면 Dialog 확인**(replace와 동일 — 수동편집값에 침묵 가산 방지).
-- **폐기 Dialog 발동조건 명문화**: 다건 replace는 **기존 properties>0 OR priorPaidTaxEdited=true** 시 Dialog. 단건 append는 edited=true 시 Dialog.
+- **폐기 Dialog 발동조건**(구현): **다건 replace**만 기존 properties(비-blank)>0 OR priorPaidTaxEdited=true 시 Dialog. **단건 append**는 Dialog 대신 `edited=true`면 **자동채움 skip(수동값 보존)** — 데이터 손실 없어 확인 불필요(설계 대비 완화, 의도=수동편집 존중 동일).
 - **다건 선택** → `loadMultiRecordIntoSession(record)`: `enterMultiAmendment` 골격 재사용(정정 플래그 없이), properties[] **replace** hydrate, `priorPaidTax` 자동값 `= String(record.determinedTax)`, `priorPaidTaxEdited=false`, `setActiveClientId`. **기존 편집값 존재 시 폐기 확인 Dialog**(feedback_dialog_data_discard_confirm, native confirm 금지).
 - **참고 배너**(모달 하단·설정 패널): "자동값은 참고입니다. 실제 예정신고 납부액으로 확인하세요." (§2-A 확정 basis≠예정 basis).
 
