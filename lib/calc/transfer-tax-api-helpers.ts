@@ -378,6 +378,43 @@ export function isFractionalOwnership(asset: AssetForm): boolean {
   );
 }
 
+/**
+ * ⑬ 1990.8.30. 이전 취득 토지 기준시가 환산 sub-object 빌드 (단건·다건 공용 단일 진실).
+ *
+ * 엔진 STEP 0.4(`transfer-tax.ts`)가 pre1990Land 존재 시 취득기준시가를 grade에서 재산출하고
+ * acquisitionPrice=0·useEstimatedAcquisition=true를 override한다. 양도시 기준시가는 상위
+ * standardPriceAtTransfer로 공급하므로 sub-object에 담지 않는다(pTsf 제거).
+ *
+ * 필수 필드(등급 3종·면적·1990 ㎡당가) 미충족 시 `{}` 반환 — 상위 spread에서 무해.
+ */
+export function buildPre1990LandPayload(
+  primary: AssetForm,
+  transferDate: string,
+): { pre1990Land: object } | Record<string, never> {
+  const buildGrade = (raw: string) => {
+    const n = Number(raw.replace(/,/g, ""));
+    if (!Number.isFinite(n) || n <= 0) return undefined;
+    return primary.pre1990GradeMode === "number" ? Math.trunc(n) : { gradeValue: n };
+  };
+  const gCur = buildGrade(primary.pre1990Grade_current ?? "");
+  const gPrev = buildGrade(primary.pre1990Grade_prev ?? "");
+  const gAcq = buildGrade(primary.pre1990Grade_atAcq ?? "");
+  const areaSqm = parseFloat((primary.acquisitionArea ?? "").replace(/,/g, "")) || 0;
+  const p1990 = parseAmount(primary.pre1990PricePerSqm_1990 ?? "");
+  if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0) return {};
+  return {
+    pre1990Land: {
+      acquisitionDate: primary.acquisitionDate,
+      transferDate,
+      areaSqm,
+      pricePerSqm_1990: p1990,
+      grade_1990_0830: gCur,
+      gradePrev_1990_0830: gPrev,
+      gradeAtAcquisition: gAcq,
+    },
+  };
+}
+
 /** 100% 기준 금액에 지분 비율을 적용 (정수 floor). */
 export function applyRatio(amount: number, ratio: number): number {
   return Math.floor(amount * ratio);

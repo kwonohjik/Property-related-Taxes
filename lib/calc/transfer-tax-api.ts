@@ -13,7 +13,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload } from "./transfer-tax-api-helpers";
+import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -704,36 +704,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional),
     // ── 상속 주택 환산취득가 보조 입력 (3-시점, < 2005-04-30) — sibling 격리 ──
     ...buildInheritedHouseValuationPayload(primary, form.transferDate),
-    // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용) ──
-    ...(hasPre1990
-      ? (() => {
-          const buildGrade = (raw: string) => {
-            const n = Number(raw.replace(/,/g, ""));
-            if (!Number.isFinite(n) || n <= 0) return undefined;
-            return primary.pre1990GradeMode === "number"
-              ? Math.trunc(n)
-              : { gradeValue: n };
-          };
-          const gCur = buildGrade(primary.pre1990Grade_current ?? "");
-          const gPrev = buildGrade(primary.pre1990Grade_prev ?? "");
-          const gAcq = buildGrade(primary.pre1990Grade_atAcq ?? "");
-          const areaSqm = parseFloat((primary.acquisitionArea ?? "").replace(/,/g, "")) || 0;
-          const p1990 = parseAmount(primary.pre1990PricePerSqm_1990 ?? "");
-          // pTsf 제거: 양도시 기준시가는 standardPriceAtTransfer(상위)로 공급하므로 pre1990Land 페이로드 불필요.
-          if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0) return {};
-          return {
-            pre1990Land: {
-              acquisitionDate: primary.acquisitionDate,
-              transferDate: form.transferDate,
-              areaSqm,
-              pricePerSqm_1990: p1990,
-              grade_1990_0830: gCur,
-              gradePrev_1990_0830: gPrev,
-              gradeAtAcquisition: gAcq,
-            },
-          };
-        })()
-      : {}),
+    // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용, 단건·다건 공용 헬퍼) ──
+    ...(hasPre1990 ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     // 겸용주택 분리계산 입력
     ...(mixedUsePayload ? { mixedUse: mixedUsePayload } : {}),
     // 배우자등 이월과세 (§97조의2)

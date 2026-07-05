@@ -5,7 +5,8 @@
  *   M-2 — buildPropertyPayload가 deprecated 폼-전역 form.acquisitionMethod/appraisalValue에
  *         의존하던 결함 → 자산-수준 isAppraisalAcquisition/useEstimatedAcquisition으로 전환.
  *   H-2 — 합산 경로가 구조적으로 처리 못 하는 sub-object 모드(부담부증여·재개발·겸용·이월과세·
- *         PHD·일반/상업건물·다필지·1990·가업상속·토지건물분리·companion)를 명시 차단.
+ *         PHD·일반/상업건물·다필지·가업상속·토지건물분리·companion)를 명시 차단.
+ *         (1990 환산은 2026-07-06 route ⑭·엔진 지원으로 차단 해제 — multi-transfer-pre1990-support.test.ts)
  *         per-asset 단건 엔진이 honor하는 단순 스칼라(assetContractDate·capitalExpenditure·
  *         transferExpense·householdRightCount)는 build에서 전송.
  */
@@ -147,7 +148,7 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     ["일반건물", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "general_building" }; }],
     ["이월과세", (f) => { f.assets[0] = { ...f.assets[0], acquisitionCause: "carryover_gift" }; }],
     ["PHD", (f) => { f.assets[0] = { ...f.assets[0], usePreHousingDisclosure: true }; }],
-    ["1990토지", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "land", pre1990Enabled: true }; }],
+    // "1990토지"는 2026-07-06 지원 전환 — 아래 별도 통과 테스트로 이동.
     ["다필지", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "land", parcelMode: true }; }],
     ["토지건물분리", (f) => { f.assets[0] = { ...f.assets[0], hasSeperateLandAcquisitionDate: true }; }],
     // [리뷰 H-1] 차감형·세액감면형·세율특칙 감면 — 다건 합산 미지원

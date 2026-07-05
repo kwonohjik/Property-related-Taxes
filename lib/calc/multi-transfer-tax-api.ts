@@ -8,7 +8,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
-import { toEngineReductions, toRentalHousingExceptionApi } from "@/lib/calc/transfer-tax-api-helpers";
+import { toEngineReductions, toRentalHousingExceptionApi, buildPre1990LandPayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 
 const isHousingLike = (pt: string) =>
@@ -19,6 +19,11 @@ export function buildPropertyPayload(form: TransferFormData) {
   const primary = form.assets?.[0];
   const reductions = toEngineReductions(primary?.reductions ?? [], primary?.acquisitionCause ?? "purchase", primary?.expropriationNoticeDate);
   const primaryKind = primary?.assetKind ?? "";
+
+  // ⑬ 1990.8.30. 이전 취득 토지 기준시가 환산 — 단건과 동일 게이트·공용 헬퍼.
+  // pre1990은 useEstimatedAcquisition=true를 선행 조건으로 하므로 위 isEstimated 경로가
+  // acquisitionPrice·expenses=0·standardPriceAt{Acq,Transfer} 전송을 이미 담당한다(무변경).
+  const hasPre1990 = (primary?.pre1990Enabled ?? false) && primaryKind === "land";
 
   // ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (단건 API와 동일 공용 빌더 — drift 차단)
   const nblRaw = primary ? buildNonBusinessLandRaw(primary, form.transferDate) : undefined;
@@ -72,8 +77,9 @@ export function buildPropertyPayload(form: TransferFormData) {
   const rhPayload = primary ? toRentalHousingExceptionApi(primary) : undefined;
 
   // 주의: 부담부증여·재개발(§166)·겸용주택·이월과세(§97의2)·일반건물/상업용 환산·PHD(§164⑤)·
-  // 1990 환산·다필지·토지/건물 분리·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산
-  // route(⑭)가 매핑하지 않으므로 여기서 전송하지 않는다 — validateMultiSupportedModes에서 명시 차단.
+  // 다필지·토지/건물 분리·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산 route(⑭)가
+  // 매핑하지 않으므로 여기서 전송하지 않는다 — validateMultiSupportedMode에서 명시 차단.
+  // (1990 환산은 route ⑭·엔진이 지원 — 아래 pre1990Land spread로 전송.)
   return {
     propertyType: primaryKind,
     transferPrice: parseAmount(form.contractTotalPrice),
@@ -137,6 +143,8 @@ export function buildPropertyPayload(form: TransferFormData) {
         }
       : {}),
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
+    // ⑬ 1990.8.30. 이전 취득 토지 환산 (route ⑭·엔진 STEP 0.4 지원) — 단건과 공용 헬퍼
+    ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
     ...(form.parentalCareMergeDate
