@@ -6,9 +6,8 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
-import { SigunguSelect } from "./shared/SigunguSelect";
 import { AddressSearch } from "@/components/ui/address-search";
-import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
+import { extractSidoSigunguName } from "@/lib/calc/address-sigungu-name";
 import type { AssetForm, ResidenceHistoryInput } from "@/lib/stores/calc-wizard-store";
 
 export interface ResidenceHistorySectionProps {
@@ -98,21 +97,19 @@ export function ResidenceHistorySection({
                   const code5 = v.pnu.slice(0, 5); // PNU 앞 5자리 = 시·군·구 (NBL 5자리계)
                   updateHistory(i, {
                     sigunguCode: code5,
-                    sigunguName: lookupSigungu(code5)?.name ?? h.sigunguName,
+                    // 표시 이름은 주소 문자열에서 파싱 — 시군구 코드 테이블 누락 시군구도 인식.
+                    sigunguName: extractSidoSigunguName(v.jibun || v.road) || h.sigunguName,
                     lat: v.lat || undefined,
                     lng: v.lng || undefined,
                   });
                 }}
               />
             </div>
-          </FieldCard>
-
-          <FieldCard label="시군구" hint="주소 검색이 어려운 경우 시·군·구를 직접 선택/입력하세요 (이 경우 30km 판정은 미적용)">
-            <SigunguSelect
-              code={h.sigunguCode}
-              name={h.sigunguName}
-              onChange={(c, n) => updateHistory(i, { sigunguCode: c, sigunguName: n })}
-            />
+            {h.sigunguName && (
+              <p className="mt-1 text-xs text-emerald-700">
+                시·군·구 <span className="font-medium">{h.sigunguName}</span> 자동 인식됨
+              </p>
+            )}
           </FieldCard>
 
           <ToggleCard

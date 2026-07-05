@@ -6,6 +6,7 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SigunguSelect } from "./shared/SigunguSelect";
-import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
+import { extractSidoSigunguName } from "@/lib/calc/address-sigungu-name";
 import { UnconditionalExemptionSection } from "./UnconditionalExemptionSection";
 import { ResidenceHistorySection } from "./ResidenceHistorySection";
 import { GracePeriodSection } from "./GracePeriodSection";
@@ -75,10 +76,15 @@ export function NblSectionContainer({
       : undefined;
   })();
 
-  // 토지 소재지 = 양도 물건 소재지 자동연동 — acquisitionSigunguCode(10자리)를 5자리 정규화해 표시.
+  // 도시편입일 직접입력값이 유효한 YYYY-MM-DD인지 — 깨진 형식(과거 raw text로 저장된 "20230214" 등)은
+  // 미입력으로 간주해 §66 편입일 fallback이 동작하도록 한다. buildNonBusinessLandRaw의 판정 규칙과 일치(표시↔판정).
+  const nblIncorpDateIsValid = /^\d{4}-\d{2}-\d{2}$/.test(asset.nblUrbanIncorporationDate);
+
+  // 토지 소재지 = 양도 물건 소재지 자동연동. 판정용 코드는 acquisitionSigunguCode(10자리)를 5자리로 정규화,
+  // 표시용 이름은 자산 주소 문자열에서 파싱(시군구 코드 테이블 누락 시군구도 표시됨).
   // nblLandSigunguCode 미입력 시 fallback으로 판정에 사용됨(buildNonBusinessLandRaw). 표시로 일관성 확보.
   const acqSigungu5 = (asset.acquisitionSigunguCode || "").slice(0, 5);
-  const acqSigunguName = acqSigungu5 ? lookupSigungu(acqSigungu5)?.name : undefined;
+  const acqSigunguName = extractSidoSigunguName(asset.addressJibun || asset.addressRoad) || undefined;
 
   if (!asset.nblUseDetailedJudgment) {
     return (
@@ -170,13 +176,13 @@ export function NblSectionContainer({
                 trailing={<LawArticleModal legalBasis="소득세법 시행령 §168의8" label="§168의8②·9②" />}
               >
                 <SigunguSelect
-                  code={asset.nblLandSigunguCode}
-                  name={asset.nblLandSigunguName}
+                  code={asset.nblLandSigunguCode || acqSigungu5}
+                  name={asset.nblLandSigunguName || (acqSigunguName ?? "")}
                   onChange={(c, n) => onAssetChange({ nblLandSigunguCode: c, nblLandSigunguName: n })}
                 />
                 {!asset.nblLandSigunguCode && acqSigunguName && (
                   <p className="mt-1 text-xs text-amber-700">
-                    양도 물건 소재지 {acqSigunguName} 자동 적용 (직접 선택 시 변경).
+                    양도 물건 소재지 {acqSigunguName} 자동 입력됨 (직접 수정 가능).
                   </p>
                 )}
               </FieldCard>
@@ -200,14 +206,11 @@ export function NblSectionContainer({
         {/* 5. 공통 지원 필드 */}
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldCard label="도시편입일" hint="도시지역 편입 시 3년 유예 적용. 편입일은 토지이용계획확인원에서 확인해 입력하세요(자동조회 불가)">
-            <input
-              type="text"
-              value={asset.nblUrbanIncorporationDate}
-              onChange={(e) => onAssetChange({ nblUrbanIncorporationDate: e.target.value })}
-              placeholder="YYYY-MM-DD"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <DateInput
+              value={nblIncorpDateIsValid ? asset.nblUrbanIncorporationDate : ""}
+              onChange={(v) => onAssetChange({ nblUrbanIncorporationDate: v })}
             />
-            {!asset.nblUrbanIncorporationDate && sfIncorporationDate && (
+            {!nblIncorpDateIsValid && sfIncorporationDate && (
               <p className="mt-1 text-xs text-amber-700">
                 감면의 편입일 {sfIncorporationDate} 자동 적용 (편입 3년 유예 판정). 다르면 직접 입력하세요.
               </p>

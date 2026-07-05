@@ -74,12 +74,18 @@ export function buildNonBusinessLandRaw(
     sf?.type === "self_farming" && sf.useSelfFarmingIncorporation
       ? sf.selfFarmingIncorporationDate
       : undefined;
+  // 도시편입일 직접입력이 유효한 YYYY-MM-DD가 아니면(과거 raw text 입력으로 저장된 "20230214" 등)
+  // 미입력으로 간주해 §66 편입일 fallback이 동작하게 한다. new Date("20230214")=Invalid → toOptionalDate=undefined
+  // → 편입유예 미적용 → 재촌·자경 농지가 비사업용으로 오판되던 문제 방지.
+  const directIncorpDate = /^\d{4}-\d{2}-\d{2}$/.test(asset.nblUrbanIncorporationDate || "")
+    ? asset.nblUrbanIncorporationDate
+    : "";
   // 토지 소재지 시·군·구: NBL 전용값 우선, 미입력 시 양도 물건 소재지(acquisitionSigunguCode)로 fallback.
   // acquisitionSigunguCode는 10자리("XXXXX00000") → 5자리로 정규화(NBL sigungu-codes는 5자리계).
   const acqSigungu5 = (asset.acquisitionSigunguCode || "").slice(0, 5);
   return {
     ...nblFields,
-    nblUrbanIncorporationDate: asset.nblUrbanIncorporationDate || selfFarmingIncorpDate || "",
+    nblUrbanIncorporationDate: directIncorpDate || selfFarmingIncorpDate || "",
     nblLandSigunguCode: asset.nblLandSigunguCode || acqSigungu5,
     // 농지 좌표(직선거리 30km 재촌 판정 기준점) — 양도 물건 주소검색 시 세팅됨.
     nblLandLat: asset.latitude,
