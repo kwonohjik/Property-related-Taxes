@@ -37,6 +37,9 @@ export interface ResidenceHistoryInput {
   startDate: string;
   endDate: string;
   hasResidentRegistration: boolean;
+  /** 거주지 좌표 (직선거리 30km 재촌 판정, §153③3호) — string. form-mapper에서 number 파싱. */
+  lat?: string;
+  lng?: string;
 }
 
 /** 유예기간 raw 항목 (§168의14①·§83의5①) — 종료일은 사유별 법정기간으로 자동산정 */

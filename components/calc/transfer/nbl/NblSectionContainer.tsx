@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SigunguSelect } from "./shared/SigunguSelect";
+import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
 import { UnconditionalExemptionSection } from "./UnconditionalExemptionSection";
 import { ResidenceHistorySection } from "./ResidenceHistorySection";
 import { GracePeriodSection } from "./GracePeriodSection";
@@ -73,6 +74,11 @@ export function NblSectionContainer({
       ? sf.selfFarmingIncorporationDate
       : undefined;
   })();
+
+  // 토지 소재지 = 양도 물건 소재지 자동연동 — acquisitionSigunguCode(10자리)를 5자리 정규화해 표시.
+  // nblLandSigunguCode 미입력 시 fallback으로 판정에 사용됨(buildNonBusinessLandRaw). 표시로 일관성 확보.
+  const acqSigungu5 = (asset.acquisitionSigunguCode || "").slice(0, 5);
+  const acqSigunguName = acqSigungu5 ? lookupSigungu(acqSigungu5)?.name : undefined;
 
   if (!asset.nblUseDetailedJudgment) {
     return (
@@ -160,7 +166,7 @@ export function NblSectionContainer({
             <div data-testid="nbl-land-sigungu">
               <FieldCard
                 label="토지 소재지 (시·군·구)"
-                hint="재촌 판정 — 거주지와 동일/연접 시·군·구 매칭에 사용됩니다."
+                hint="재촌 판정 — 거주지와 동일/연접 시·군·구 또는 직선거리 30km 매칭에 사용됩니다."
                 trailing={<LawArticleModal legalBasis="소득세법 시행령 §168의8" label="§168의8②·9②" />}
               >
                 <SigunguSelect
@@ -168,6 +174,11 @@ export function NblSectionContainer({
                   name={asset.nblLandSigunguName}
                   onChange={(c, n) => onAssetChange({ nblLandSigunguCode: c, nblLandSigunguName: n })}
                 />
+                {!asset.nblLandSigunguCode && acqSigunguName && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    양도 물건 소재지 {acqSigunguName} 자동 적용 (직접 선택 시 변경).
+                  </p>
+                )}
               </FieldCard>
             </div>
             <ResidenceHistorySection asset={asset} onAssetChange={onAssetChange} />

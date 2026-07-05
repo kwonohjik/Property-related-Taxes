@@ -20,6 +20,9 @@ export interface ResidenceHistoryInput {
   endDate: string;
   /** 주민등록 여부 — 임야 재촌 필수 요건 */
   hasResidentRegistration: boolean;
+  /** 거주지 좌표 (직선거리 30km 재촌 판정용, §153③3호) — 주소검색 파생. string 저장. */
+  lat?: string;
+  lng?: string;
 }
 
 /** 사업용 사용기간 1건 — 목장 사육기간·별장 사용기간 등 (start/end 직접 입력) */

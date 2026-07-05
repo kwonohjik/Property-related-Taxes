@@ -14,6 +14,7 @@ import type {
   OwnerResidenceHistory,
 } from "./types";
 import { mergeOverlappingPeriods } from "./utils/period-math";
+import { haversineKm } from "@/lib/geo/haversine";
 
 export interface ComputeResidenceOptions {
   /** 임야 재촌 판정 시 true — 주민등록 있는 이력만 인정 */
@@ -32,12 +33,11 @@ function isHistoryWithinResidence(
   history: OwnerResidenceHistory,
   landLocation: LocationInfo | undefined,
   adjacent: string[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _distanceLimitKm: number,
+  distanceLimitKm: number,
 ): boolean {
   if (!landLocation) return false;
 
-  // 1. 시·군·구 코드 일치
+  // 1. 시·군·구 코드 일치 (§153③1호)
   if (
     history.sigunguCode &&
     landLocation.sigunguCode &&
@@ -46,25 +46,26 @@ function isHistoryWithinResidence(
     return true;
   }
 
-  // 2. 코드 없으면 명칭 비교 (fallback)
-  if (
-    !history.sigunguCode &&
-    !landLocation.sigunguCode &&
-    history.sidoName &&
-    history.sigunguName
-  ) {
-    // 명칭 비교는 정확한 코드 매칭 불가 — 연접/거리 판정은 외부 주입 필수
-    // 동일 명칭 판정만 수행 (추후 LocationInfo 명칭 필드 추가 시 확장)
-  }
-
-  // 3. 연접 시·군·구
+  // 2. 연접 시·군·구 (§153③2호)
   if (history.sigunguCode && adjacent.includes(history.sigunguCode)) {
     return true;
   }
 
-  // 4. 직선거리 30km 이내 (LocationInfo에 distanceKm이 주입된 경우)
-  // 주거 이력 자체에는 거리 정보가 없으므로 landLocation.distanceKm 대체로 활용 불가.
-  // 거리 기반 재촌은 현재는 landLocation.distanceKm이 있을 때만 전체 이력에 일괄 적용.
+  // 3. 직선거리 30km 이내 (§153③3호) — 농지·거주지 좌표 모두 있을 때 haversine.
+  //    좌표 결측 시 스킵(판정 축소 아님 — 1·2 유지). 알고리즘 미러: farming-residence-check.ts.
+  if (
+    landLocation.lat !== undefined &&
+    landLocation.lng !== undefined &&
+    history.lat !== undefined &&
+    history.lng !== undefined
+  ) {
+    const dist = haversineKm(
+      { lat: landLocation.lat, lng: landLocation.lng },
+      { lat: history.lat, lng: history.lng },
+    );
+    if (dist <= distanceLimitKm) return true;
+  }
+
   return false;
 }
 
