@@ -74,9 +74,6 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (a.usePreHousingDisclosure) {
     return "개별주택가격 미공시 환산취득가(§164⑤)는 단건 계산기에서만 지원됩니다.";
   }
-  if (a.pre1990Enabled && a.assetKind === "land") {
-    return "1990.8.30. 이전 취득 토지 기준시가 환산은 단건 계산기에서만 지원됩니다.";
-  }
   if (a.parcelMode && a.assetKind === "land") {
     return "다필지 토지는 단건 계산기에서만 지원됩니다.";
   }

@@ -53,12 +53,12 @@ test.describe("1990.8.30 이전 취득 토지 환산 — 양도시 기준시가"
     await page.getByLabel("일", { exact: true }).nth(2).fill("01");
     await page.waitForTimeout(700);
 
-    // pre1990 입력: 1990.8.30. 개별공시지가 + 토지등급 3개(등급번호 모드 기본)
+    // pre1990 입력: 1990.8.30. 개별공시지가 + 토지등급 3개(등급번호 모드 기본).
+    // 등급 입력은 label 기반 타겟 — placeholder는 gradeMode에 따라 "등급 번호"/"등급가액"으로 가변.
     await page.getByPlaceholder("㎡당 가액 입력").fill("100000");
-    const grades = page.getByPlaceholder("등급 번호 또는 등급가액 입력");
-    await grades.nth(0).fill("100"); // 1990.8.30. 현재 등급
-    await grades.nth(1).fill("100"); // 1990.8.30. 직전 등급
-    await grades.nth(2).fill("100"); // 취득시 유효 등급
+    await getInputByLabel(page, "현재 등급").first().fill("100"); // 1990.8.30. 현재 등급
+    await getInputByLabel(page, "직전 등급").first().fill("100"); // 1990.8.30. 직전 등급
+    await getInputByLabel(page, "취득시 유효 등급").first().fill("100"); // 취득시 유효 등급
 
     // 양도시 기준시가: 양도시 섹션 스코프의 ㎡당 단가 222,200 (× 2417 = 537,057,400)
     await page
