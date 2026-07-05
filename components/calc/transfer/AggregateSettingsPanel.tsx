@@ -97,6 +97,35 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
         </RadioGroup>
       </div>
 
+      {/* 예정신고 기납부세액 정산 (§111③) */}
+      <div className="space-y-3 border-t pt-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Label>예정신고 기납부세액</Label>
+          <LawArticleModal legalBasis="소득세법 §111③" label="§111③ 확정신고 정산" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 max-w-xl">
+          <div>
+            <CurrencyInput
+              label="예정신고 기납부세액 (양도소득세)"
+              value={form.priorPaidTax}
+              onChange={(v) => onChange({ priorPaidTax: v })}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">양도소득세(국세) 예정신고 납부액</p>
+          </div>
+          <div>
+            <CurrencyInput
+              label="예정신고 기납부 지방소득세"
+              value={form.priorPaidLocalTax}
+              onChange={(v) => onChange({ priorPaidLocalTax: v })}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">지방소득세 예정신고 납부액</p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          확정신고 시 결정세액에서 공제되어 추가납부·환급액을 산출합니다. 실제 예정신고 납부액을 입력하세요.
+        </p>
+      </div>
+
       <p className="text-xs text-muted-foreground border-t pt-4">
         가산세(신고불성실·납부지연)는 자산별로 다를 수 있어 각 자산 편집 마법사 마지막 단계에서 입력합니다.
       </p>

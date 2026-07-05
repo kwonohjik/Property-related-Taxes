@@ -19,6 +19,7 @@ import {
   type CalculationStep,
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { computeSettlement } from "./transfer-tax-settlement";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import {
@@ -367,6 +368,19 @@ export function calculateTransferTaxAggregate(
     amount: totalTax,
   });
 
+  // M-11: 예정신고 기납부세액 정산 (소득세법 §111③) — 항상 실행(P??0).
+  // amendment 와 상호배타는 validate/UI 가드이며 엔진은 방어적으로 항상 처리한다.
+  const settlement = computeSettlement({
+    determinedTax: determinedTaxBeforePenalty,
+    penaltyTax,
+    localIncomeTax,
+    priorPaidTax: input.priorPaidTax ?? 0,
+    priorPaidLocalTax: input.priorPaidLocalTax ?? 0,
+  });
+  if (settlement.priorPaidTax > 0 || settlement.priorPaidLocalTax > 0) {
+    steps.push(settlement.step);
+  }
+
   // properties breakdown 조립 — 합산 재계산 후 건별 배분액 포함
   const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => {
     const reductionType = r.result.reductionTypeApplied;
@@ -475,6 +489,12 @@ export function calculateTransferTaxAggregate(
     reductionAmount,
     reductionBreakdown,
     determinedTax: determinedTaxBeforePenalty,
+    priorPaidTax: settlement.priorPaidTax,
+    priorPaidLocalTax: settlement.priorPaidLocalTax,
+    settlementAdditionalPayable: settlement.settlementAdditionalPayable,
+    settlementRefund: settlement.settlementRefund,
+    settlementLocalPayable: settlement.settlementLocalPayable,
+    settlementTotalDue: settlement.settlementTotalDue,
     penaltyTax,
     // 가산세 상세는 자산별로 properties[i].penaltyDetail 에서 노출.
     localIncomeTax,
