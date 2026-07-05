@@ -96,37 +96,20 @@ export function MultiTransferTaxSummaryCard({
   result,
   properties: _properties,
   taxYear,
-  priorPaidTax,
-  priorPaidLocalTax = 0,
 }: {
   result: AggregateTransferResult;
   properties: PropertyItem[];
   taxYear: number;
-  /** 명시적 기납부세액 (override). 미지정 시 앞 자산들의 결정세액 합으로 자동 계산 */
-  priorPaidTax?: number;
-  priorPaidLocalTax?: number;
 }) {
   // 단순 합산 — 엔진이 이미 단건별 결정세액 등을 포함
   const sums = sumFromBreakdown(result.properties);
 
-  // 기납부세액 자동 계산: 마지막 물건 직전까지의 결정세액 합 (다건 컨텍스트 기준).
-  // p.determinedTax는 단건 엔진이 skipBasicDeduction=true로 산출한 부정확한 값이므로,
-  // 엔진이 다건 컨텍스트로 미리 계산한 refDeterminedTax(과세표준 기여분 기준)를 사용한다.
-  // getRefDeterminedTax는 누락 시 인라인 재계산 fallback이 있어 NaN 차단.
-  const autoPriorPaid = result.properties
-    .slice(0, -1)
-    .reduce((s, p) => s + getRefDeterminedTax(p), 0);
-  const effectivePriorPaid = priorPaidTax ?? autoPriorPaid;
-
-  // 이번에 납부할 국세 = 결정세액 + 가산세 - 기납부세액
-  const currentTaxDue = Math.max(
-    0,
-    result.determinedTax + result.penaltyTax - effectivePriorPaid,
-  );
-  // 지방세 납부할 세액 = 지방세 결정세액 - 지방세 기납부 세액
-  const currentLocalTaxDue = Math.max(0, result.localIncomeTax - priorPaidLocalTax);
-  // 최종 납부할 세액
-  const totalDue = currentTaxDue + currentLocalTaxDue;
+  // 확정신고 기납부세액 정산 (§111③) — 엔진 단일진실(approach A). UI 재계산 금지.
+  // 기존 autoPriorPaid(앞 자산 결정세액 단순합)는 §107② 위반이라 제거, 엔진 settlement 필드 read.
+  const effectivePriorPaid = result.priorPaidTax;
+  const priorPaidLocalTax = result.priorPaidLocalTax;
+  const currentTaxDue = result.settlementAdditionalPayable;
+  const totalDue = result.settlementTotalDue;
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -180,7 +163,11 @@ export function MultiTransferTaxSummaryCard({
         <ResultRow label="결정세액" value={result.determinedTax} highlight />
         <ResultRow label="가산세" value={result.penaltyTax} />
         <ResultRow label="기납부세액" value={-effectivePriorPaid} />
-        <ResultRow label="이번에 납부할 세액" value={currentTaxDue} highlight />
+        {result.settlementRefund > 0 ? (
+          <ResultRow label="환급세액 (국세)" value={result.settlementRefund} highlight />
+        ) : (
+          <ResultRow label="이번에 납부할 세액" value={currentTaxDue} highlight />
+        )}
 
         <Separator />
 

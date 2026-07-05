@@ -74,10 +74,6 @@ interface MultiTransferTaxResultViewProps {
   taxYear: number;
   isLoggedIn?: boolean;
   savedId?: string | null;
-  /** 기납부세액 (국세) — 이전 회차 양도분의 결정세액 등 */
-  priorPaidTax?: number;
-  /** 기납부 지방소득세 */
-  priorPaidLocalTax?: number;
 }
 
 function formatKRW(amount: number): string {
@@ -653,8 +649,6 @@ export function MultiTransferTaxResultView({
   properties,
   taxYear,
   isLoggedIn,
-  priorPaidTax,
-  priorPaidLocalTax,
 }: MultiTransferTaxResultViewProps) {
   // showSteps는 명세서 카드의 EngineStepsSubToggle로 통합됨 (2026-05-12)
   const [isPdfLoading, setIsPdfLoading] = useState(false);
@@ -710,8 +704,6 @@ export function MultiTransferTaxResultView({
         result={result}
         properties={properties}
         taxYear={taxYear}
-        priorPaidTax={priorPaidTax}
-        priorPaidLocalTax={priorPaidLocalTax}
       />
       </PrintSection>
 

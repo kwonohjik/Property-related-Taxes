@@ -68,6 +68,14 @@ export interface AggregateTransferInput {
    * 미지정 시 amendmentDetail 미생성(기존 동작 불변).
    */
   amendment?: AmendmentInput;
+  /**
+   * 예정신고 기납부세액 총액 (양도소득세 국세분, 원). 확정신고 정산 시 결정세액에서 공제(§111③).
+   * 미지정 시 0 — 자동 안분·추정 없음. 명칭은 transfer-tax-penalty.ts priorPaidTax와 일관.
+   * ⚠️ amendment 와 동시 지정은 validate/UI 상호배타 가드(엔진은 항상 처리).
+   */
+  priorPaidTax?: number;
+  /** 예정신고 기납부 지방소득세 (원). 미지정 0. */
+  priorPaidLocalTax?: number;
 }
 
 /** 자산별 breakdown */
@@ -281,6 +289,19 @@ export interface AggregateTransferResult {
   reductionBreakdown: ReductionBreakdownEntry[];
   /** 결정세액 = max(0, calculatedTax - reductionAmount) */
   determinedTax: number;
+
+  /** [echo] 예정신고 기납부세액 (국세, §111③). 미지정 0 */
+  priorPaidTax: number;
+  /** [echo] 예정신고 기납부 지방소득세. 미지정 0 */
+  priorPaidLocalTax: number;
+  /** 국세 이번 납부할세액 = max(0, (determinedTax + penaltyTax) − priorPaidTax) */
+  settlementAdditionalPayable: number;
+  /** 국세 환급 = max(0, priorPaidTax − (determinedTax + penaltyTax)) */
+  settlementRefund: number;
+  /** 지방 이번 납부할세액 = max(0, localIncomeTax − priorPaidLocalTax) */
+  settlementLocalPayable: number;
+  /** 최종 납부할세액 = settlementAdditionalPayable + settlementLocalPayable */
+  settlementTotalDue: number;
 
   /**
    * 신고서 단위 수정신고·경정청구 정정 상세 (input.amendment 지정 시).

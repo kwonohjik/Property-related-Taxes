@@ -26,6 +26,8 @@ export const PENALTY = {
   PRELIMINARY_DEADLINE: "소득세법 §105",
   /** 소득세법 §110 — 양도소득 확정신고 기한 (다음해 5.1~5.31) */
   FINAL_DEADLINE:       "소득세법 §110",
+  /** 소득세법 §111③ — 확정신고납부 시 예정신고 산출세액 공제(기납부세액 정산) */
+  FINAL_RETURN_SETTLEMENT: "소득세법 §111③",
 } as const;
 
 /** 가산세 수치 상수 */

@@ -15,6 +15,8 @@ export interface PropertyItem {
   form: TransferFormData;
   /** 건별 완성도 (0~100%) — UI 표시용 */
   completionPercent: number;
+  /** 이력에서 불러온 경우 원본 계산 id (provenance, 중복 로드 경고용) */
+  sourceCalculationId?: string;
 }
 
 /** 4단계 플로우 */
@@ -32,6 +34,12 @@ export interface MultiTransferFormData {
   // 공통 설정 (Step C)
   annualBasicDeductionUsed: string;
   basicDeductionAllocation: "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER";
+  /** 예정신고 기납부세액 (국세, 원 문자열). 확정신고 정산 §111③. 미입력 "0" */
+  priorPaidTax: string;
+  /** 예정신고 기납부 지방소득세 (원 문자열). 미입력 "0" */
+  priorPaidLocalTax: string;
+  /** 기납부세액이 사용자 수동편집됐는지(=true면 불러오기 자동채움이 덮어쓰지 않음, 배지 제거) */
+  priorPaidTaxEdited: boolean;
   // 가산세는 자산별로 입력 — 자산 form(TransferFormData)에 보관됨.
 
   // ── 신고서 단위 수정신고·경정청구 (filing-level, 단건 TransferFormData와 동일 필드명 —
@@ -61,6 +69,9 @@ const defaultFormData: MultiTransferFormData = {
   activeStep: "list",
   annualBasicDeductionUsed: "0",
   basicDeductionAllocation: "MAX_BENEFIT",
+  priorPaidTax: "0",
+  priorPaidLocalTax: "0",
+  priorPaidTaxEdited: false,
   // 정정(수정신고·경정청구) 기본값 — 단건 defaultFormData와 동일
   amendmentMode: false,
   correctionKind: "amend",

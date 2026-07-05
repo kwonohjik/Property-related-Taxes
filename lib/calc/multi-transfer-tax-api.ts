@@ -219,6 +219,9 @@ export async function callMultiTransferTaxAPI(
     properties: propertiesPayload,
     annualBasicDeductionUsed: parseAmount(multiForm.annualBasicDeductionUsed),
     basicDeductionAllocation: multiForm.basicDeductionAllocation,
+    // 확정신고 기납부세액 정산 (§111③) — filing-level. 미입력 "0" → 0.
+    priorPaidTax: parseAmount(multiForm.priorPaidTax ?? "0"),
+    priorPaidLocalTax: parseAmount(multiForm.priorPaidLocalTax ?? "0"),
     // ⑬ §133 5년 누적 한도 — 인별 이력 (TypeScript 미감지 영역, 누락 시 침묵 stripping)
     priorReductionUsage: mergePriorReductionUsage(properties),
     // [B3] 신고서 단위 수정신고·경정청구 — 단건 payload(transfer-tax-api.ts:528)와 동형.

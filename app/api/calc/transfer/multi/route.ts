@@ -262,6 +262,9 @@ export async function POST(request: NextRequest) {
     properties,
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
     basicDeductionAllocation: data.basicDeductionAllocation,
+    // 확정신고 기납부세액 정산 (§111③) — filing-level. finalInput 스프레드로 2-pass 모두 반영.
+    priorPaidTax: data.priorPaidTax,
+    priorPaidLocalTax: data.priorPaidLocalTax,
     // ⑭ §133 5년 누적 한도 — aggregate M-8(applyFiveYearLimits)에서 소비.
     // optional 필드라 TypeScript가 누락을 감지하지 못함 — 누락 시 5년 capping 상시 비활성.
     priorReductionUsage: data.priorReductionUsage ?? [],

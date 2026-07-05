@@ -728,6 +728,9 @@ export const multiInputSchema = z
     basicDeductionAllocation: z
       .enum(["MAX_BENEFIT", "FIRST", "EARLIEST_TRANSFER"])
       .default("MAX_BENEFIT"),
+    // 확정신고 기납부세액 정산 (§111③) — filing-level. 음수 차단.
+    priorPaidTax: z.number().int().nonnegative().default(0),
+    priorPaidLocalTax: z.number().int().nonnegative().default(0),
     // 가산세는 자산별로 입력 (propertyItemSchema.filingPenaltyDetails / delayedPaymentDetails).
     // [B4] 신고서 단위 수정신고·경정청구 (국세기본법 §45·§45의2) — 단건 amendmentSchema 재사용.
     amendment: amendmentSchema.optional(),

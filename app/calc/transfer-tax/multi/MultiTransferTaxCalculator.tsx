@@ -20,6 +20,7 @@ import {
   generatePropertyId,
   type PropertyItem,
   type MultiStep,
+  type MultiTransferFormData,
 } from "@/lib/stores/multi-transfer-tax-store";
 import {
   useCalcWizardStore,
@@ -36,6 +37,23 @@ import {
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import TransferTaxCalculator from "../TransferTaxCalculator";
+import { MultiTransferHistoryLoadModal } from "@/components/calc/transfer/MultiTransferHistoryLoadModal";
+import {
+  extractLoadPriorPaid,
+  buildPropertyFromSingleRecord,
+  buildPropertiesFromMultiRecord,
+  isBlankProperty,
+} from "@/lib/calc/transfer-multi-load-entry";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import type { CalculationRecord } from "@/lib/storage/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const STEPS: MultiStep[] = ["list", "edit", "settings", "result"];
 const STEP_LABELS = ["자산 목록", "자산 편집", "공통 설정", "계산 결과"];
@@ -54,6 +72,7 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
 interface StepListProps {
   properties: PropertyItem[];
   onAdd: () => void;
+  onLoad: () => void;
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
   onNext: () => void;
@@ -61,7 +80,7 @@ interface StepListProps {
   onReset: () => void;
 }
 
-function StepList({ properties, onAdd, onEdit, onRemove, onNext, onPrev, onReset }: StepListProps) {
+function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev, onReset }: StepListProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
@@ -77,10 +96,15 @@ function StepList({ properties, onAdd, onEdit, onRemove, onNext, onPrev, onReset
       {properties.length === 0 ? (
         <div className="flex flex-col items-center gap-4 py-12 border-2 border-dashed border-border rounded-lg">
           <p className="text-muted-foreground text-sm">아직 추가된 자산이 없습니다.</p>
-          <Button type="button" onClick={onAdd} className="gap-2">
-            <Plus className="h-4 w-4" />
-            첫 번째 양도 건 추가
-          </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button type="button" onClick={onAdd} className="gap-2">
+              <Plus className="h-4 w-4" />
+              첫 번째 양도 건 추가
+            </Button>
+            <Button type="button" variant="outline" onClick={onLoad} data-testid="multi-load-history-btn" className="gap-2">
+              📂 이력에서 불러오기
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -127,15 +151,26 @@ function StepList({ properties, onAdd, onEdit, onRemove, onNext, onPrev, onReset
           ))}
 
           {properties.length < 20 && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2 border-dashed"
-              onClick={onAdd}
-            >
-              <Plus className="h-4 w-4" />
-              양도 건 추가
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 gap-2 border-dashed"
+                onClick={onAdd}
+              >
+                <Plus className="h-4 w-4" />
+                양도 건 추가
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={onLoad}
+                data-testid="multi-load-history-btn"
+              >
+                📂 이력에서 불러오기
+              </Button>
+            </div>
           )}
         </div>
       )}
@@ -251,8 +286,64 @@ export default function MultiTransferTaxCalculator() {
   );
 
   const [error, setError] = useState<string | null>(null);
+  const [loadModalOpen, setLoadModalOpen] = useState(false);
+  const [pendingMultiRecord, setPendingMultiRecord] = useState<CalculationRecord | null>(null);
 
   const { activeClientId } = useProfessionalStore();
+
+  // 이력 불러오기 (Phase 2) — 이미 로드한 record id 집합(중복 경고)
+  const existingSourceIds = useMemo(
+    () => new Set(form.properties.map((p) => p.sourceCalculationId).filter(Boolean) as string[]),
+    [form.properties],
+  );
+
+  // 단건 이력 → 자산 1건 append. 빈(미입력) 자산은 정리. 기납부 참고 자동채움(미편집 시 누적).
+  const handleLoadSingle = useCallback(
+    (record: CalculationRecord) => {
+      const pp = extractLoadPriorPaid(record, "single");
+      const kept = form.properties.filter((p) => !isBlankProperty(p));
+      const newProp = buildPropertyFromSingleRecord(record, `양도 ${kept.length + 1}번`);
+      const updates: Partial<MultiTransferFormData> = {
+        properties: [...kept, newProp],
+        activeStep: "list",
+      };
+      if (!form.priorPaidTaxEdited) {
+        updates.priorPaidTax = String(parseAmount(form.priorPaidTax ?? "0") + pp.national);
+        updates.priorPaidLocalTax = String(parseAmount(form.priorPaidLocalTax ?? "0") + pp.local);
+      }
+      setForm(updates);
+    },
+    [form.properties, form.priorPaidTax, form.priorPaidLocalTax, form.priorPaidTaxEdited, setForm],
+  );
+
+  // 다건 이력 → 세션 전체 replace. 기납부 참고 자동채움(미편집 시 record 결정세액).
+  const doLoadMulti = useCallback(
+    (record: CalculationRecord) => {
+      const pp = extractLoadPriorPaid(record, "multi");
+      const updates: Partial<MultiTransferFormData> = {
+        properties: buildPropertiesFromMultiRecord(record),
+        activeStep: "settings",
+        activePropertyIndex: 0,
+      };
+      if (!form.priorPaidTaxEdited) {
+        updates.priorPaidTax = String(pp.national);
+        updates.priorPaidLocalTax = String(pp.local);
+      }
+      setForm(updates);
+    },
+    [form.priorPaidTaxEdited, setForm],
+  );
+
+  // 다건 replace는 기존 입력·편집값 있으면 폐기 확인(Dialog, native confirm 금지)
+  const handleLoadMulti = useCallback(
+    (record: CalculationRecord) => {
+      const hasRealData =
+        form.properties.some((p) => !isBlankProperty(p)) || form.priorPaidTaxEdited;
+      if (hasRealData) setPendingMultiRecord(record);
+      else doLoadMulti(record);
+    },
+    [form.properties, form.priorPaidTaxEdited, doLoadMulti],
+  );
 
   // 로컬 IndexedDB 자동저장 — 다건 양도세 결과를 transfer로 통합 저장(계획서 §4-0).
   // Supabase 저장(아래 handleCalculate)과 병행 — 트랙 B에서 Supabase만 제거 예정.
@@ -419,7 +510,7 @@ export default function MultiTransferTaxCalculator() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 space-y-6">
+    <div className="max-w-6xl mx-auto py-8 px-4 space-y-6">
       {/* 헤더 */}
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -476,6 +567,7 @@ export default function MultiTransferTaxCalculator() {
             <StepList
               properties={form.properties}
               onAdd={handleAddProperty}
+              onLoad={() => setLoadModalOpen(true)}
               onEdit={handleEditProperty}
               onRemove={(i) => removeProperty(i)}
               onNext={() => setStep("settings")}
@@ -507,6 +599,16 @@ export default function MultiTransferTaxCalculator() {
             <span className="text-sm text-muted-foreground">
               편집 중: {form.properties[form.activePropertyIndex]?.propertyLabel}
             </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setLoadModalOpen(true)}
+              data-testid="multi-load-history-btn"
+              className="ml-auto gap-1"
+            >
+              📂 이력에서 불러오기
+            </Button>
           </div>
 
           <AssetTabBar
@@ -633,6 +735,43 @@ export default function MultiTransferTaxCalculator() {
           </Card>
         </div>
       )}
+
+      <MultiTransferHistoryLoadModal
+        open={loadModalOpen}
+        onOpenChange={setLoadModalOpen}
+        taxYear={form.taxYear}
+        activeClientId={activeClientId}
+        existingSourceIds={existingSourceIds}
+        onSelectSingle={handleLoadSingle}
+        onSelectMulti={handleLoadMulti}
+      />
+
+      <Dialog
+        open={!!pendingMultiRecord}
+        onOpenChange={(o) => { if (!o) setPendingMultiRecord(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>현재 입력을 대체할까요?</DialogTitle>
+            <DialogDescription>
+              다건 이력을 불러오면 현재 입력한 자산·기납부세액이 모두 대체됩니다. 계속하시겠습니까?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPendingMultiRecord(null)}>
+              취소
+            </Button>
+            <Button
+              onClick={() => {
+                if (pendingMultiRecord) doLoadMulti(pendingMultiRecord);
+                setPendingMultiRecord(null);
+              }}
+            >
+              대체하고 불러오기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <DisclaimerBanner />
     </div>
