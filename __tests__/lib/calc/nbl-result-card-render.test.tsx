@@ -37,6 +37,37 @@ describe("[NBL-CARD] ⑦ 판정 상세 렌더 (raw→engine→judgment→card)",
     expect(judgment.judgmentReason.length).toBeGreaterThan(0);
   });
 
+  it("재촌 echo: 농지 + 거주지 30km 이내 → 카드에 재촌 인정 근거(직선거리 30km) 렌더", () => {
+    const input = buildNblEngineInput({
+      nblUseDetailedJudgment: true,
+      nblLandType: "farmland",
+      nblZoneType: "general_residential",
+      acquisitionArea: "1000",
+      acquisitionDate: "2018-01-01",
+      transferDate: "2026-06-01",
+      nblLandSigunguCode: "11110",
+      nblLandLat: "37.5665",
+      nblLandLng: "126.978",
+      nblResidenceHistories: [
+        {
+          sigunguCode: "99999", // 비동일·비연접
+          sigunguName: "타지역",
+          startDate: "2018-01-01",
+          endDate: "2020-01-01",
+          hasResidentRegistration: true,
+          lat: "37.4563", // 인천 ≈27km
+          lng: "126.7052",
+        },
+      ],
+    } as never);
+    const judgment = judgeNonBusinessLand(input!, DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(judgment.residenceMatch?.matchType).toBe("within_30km");
+
+    const { container } = render(<NonBusinessLandResultCard judgment={judgment} />);
+    expect(container.textContent).toMatch(/재촌 인정 근거/);
+    expect(container.textContent).toMatch(/직선거리 30km 이내/);
+  });
+
   it("F3: 목장 기준면적 초과 → 부분안분 안내문(비사업용 비율·목장 §168의10③·기타토지 §168의11①) 렌더", () => {
     const input = buildNblEngineInput({
       nblUseDetailedJudgment: true,

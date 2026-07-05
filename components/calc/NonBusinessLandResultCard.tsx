@@ -20,6 +20,23 @@ function formatDeemedDate(d: Date | string): string {
   return typeof d === "string" ? d.slice(0, 10) : d.toISOString().slice(0, 10);
 }
 
+/** 재촌 인정 방법 라벨 (소득세법 시행령 §153③ — 동일/연접/직선거리 30km). */
+function residenceMatchLabel(m: {
+  matchType: "same" | "adjacent" | "within_30km";
+  distanceKm?: number;
+}): string {
+  switch (m.matchType) {
+    case "same":
+      return "농지 소재 시·군·구 내 거주 (§153③1호)";
+    case "adjacent":
+      return "농지와 연접한 시·군·구 거주 (§153③2호)";
+    case "within_30km":
+      return `직선거리 30km 이내 거주 (§153③3호${
+        m.distanceKm !== undefined ? ` — 실측 ${m.distanceKm.toFixed(1)}km` : ""
+      })`;
+  }
+}
+
 export function NonBusinessLandResultCard({ judgment }: Props) {
   const isNonBusiness = judgment.isNonBusinessLand;
   const exemption = judgment.unconditionalExemption;
@@ -218,6 +235,14 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
           <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
             비사업용 면적분(전체의 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다. (기준면적 초과분 — 목장 §168의10③·기타토지 §168의11①, 건축물 바닥면적 외 부속토지 §101①2호나목, 복합용도 건축물 §168의11⑥, 연접 다필지 §168의11⑤.)
           </p>
+        </div>
+      )}
+
+      {/* 재촌 인정 근거 (동일/연접/직선거리 30km — §153③) */}
+      {judgment.residenceMatch && (
+        <div className="px-4 py-3 border-b border-border">
+          <p className="text-xs font-medium text-muted-foreground mb-1">재촌 인정 근거</p>
+          <p className="text-xs text-foreground">{residenceMatchLabel(judgment.residenceMatch)}</p>
         </div>
       )}
 

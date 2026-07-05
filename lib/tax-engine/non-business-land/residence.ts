@@ -25,17 +25,26 @@ export interface ComputeResidenceOptions {
   distanceLimitKm?: number;
 }
 
+/** 재촌 인정 방법 (§153③1호 동일 / 2호 연접 / 3호 직선거리 30km). */
+export type ResidenceMatchType = "same" | "adjacent" | "within_30km";
+
+/** 재촌 매칭 요약 — 방법 + 30km 매칭 시 실측 거리(km). */
+export interface ResidenceMatchSummary {
+  matchType: ResidenceMatchType;
+  distanceKm?: number;
+}
+
 /**
- * 단일 주거 이력이 토지 소재지 재촌 요건을 충족하는지.
+ * 단일 주거 이력의 재촌 매칭 방법. 미충족이면 null.
  * 우선순위: 시·군·구 코드 일치 > 연접 시·군·구 > 직선거리 30km 이내.
  */
-function isHistoryWithinResidence(
+function matchHistoryResidence(
   history: OwnerResidenceHistory,
   landLocation: LocationInfo | undefined,
   adjacent: string[],
   distanceLimitKm: number,
-): boolean {
-  if (!landLocation) return false;
+): ResidenceMatchSummary | null {
+  if (!landLocation) return null;
 
   // 1. 시·군·구 코드 일치 (§153③1호)
   if (
@@ -43,12 +52,12 @@ function isHistoryWithinResidence(
     landLocation.sigunguCode &&
     history.sigunguCode === landLocation.sigunguCode
   ) {
-    return true;
+    return { matchType: "same" };
   }
 
   // 2. 연접 시·군·구 (§153③2호)
   if (history.sigunguCode && adjacent.includes(history.sigunguCode)) {
-    return true;
+    return { matchType: "adjacent" };
   }
 
   // 3. 직선거리 30km 이내 (§153③3호) — 농지·거주지 좌표 모두 있을 때 haversine.
@@ -63,10 +72,59 @@ function isHistoryWithinResidence(
       { lat: landLocation.lat, lng: landLocation.lng },
       { lat: history.lat, lng: history.lng },
     );
-    if (dist <= distanceLimitKm) return true;
+    if (dist <= distanceLimitKm) return { matchType: "within_30km", distanceKm: dist };
   }
 
-  return false;
+  return null;
+}
+
+/**
+ * 단일 주거 이력이 토지 소재지 재촌 요건을 충족하는지 (boolean — 기존 소비처 호환).
+ */
+function isHistoryWithinResidence(
+  history: OwnerResidenceHistory,
+  landLocation: LocationInfo | undefined,
+  adjacent: string[],
+  distanceLimitKm: number,
+): boolean {
+  return matchHistoryResidence(history, landLocation, adjacent, distanceLimitKm) !== null;
+}
+
+/**
+ * 소유자 주거 이력 중 재촌 인정된 "가장 강한" 매칭 요약 (결과 카드 표시용 echo).
+ * 우선순위 same > adjacent > within_30km. within_30km 다건은 최단 거리.
+ * 판정 로직 무영향 — 표시 전용. 재촌 이력이 없으면 undefined.
+ */
+export function computeResidenceMatchSummary(
+  histories: OwnerResidenceHistory[] | undefined,
+  landLocation: LocationInfo | undefined,
+  options: ComputeResidenceOptions = {},
+): ResidenceMatchSummary | undefined {
+  if (!histories || histories.length === 0) return undefined;
+  const {
+    requireResidentRegistration = false,
+    adjacentSigunguCodes = [],
+    distanceLimitKm = 30,
+  } = options;
+  const rank: Record<ResidenceMatchType, number> = { same: 3, adjacent: 2, within_30km: 1 };
+
+  let best: ResidenceMatchSummary | undefined;
+  for (const h of histories) {
+    if (requireResidentRegistration && !h.hasResidentRegistration) continue;
+    if (h.endDate <= h.startDate) continue;
+    const m = matchHistoryResidence(h, landLocation, adjacentSigunguCodes, distanceLimitKm);
+    if (!m) continue;
+    if (
+      !best ||
+      rank[m.matchType] > rank[best.matchType] ||
+      (m.matchType === "within_30km" &&
+        best.matchType === "within_30km" &&
+        (m.distanceKm ?? Infinity) < (best.distanceKm ?? Infinity))
+    ) {
+      best = m;
+    }
+  }
+  return best;
 }
 
 /**

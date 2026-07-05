@@ -28,6 +28,7 @@ import { judgeHousingLand } from "./housing-land";
 import { judgeVillaLand } from "./villa-land";
 import { judgeOtherLand } from "./other-land";
 import { checkIncorporationGrace } from "./period-criteria";
+import { computeResidenceMatchSummary } from "./residence";
 import { applyCoOwnershipRatio } from "./co-ownership";
 
 /**
@@ -239,6 +240,16 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
   const action = categoryResult?.action;
   const redirectHint = categoryResult?.redirectHint;
 
+  // 재촌 인정 근거 (echo — 표시 전용, 판정 로직 무영향). 재촌 판정 대상인 농지·임야만.
+  const residenceMatch =
+    input.landType === "farmland" || input.landType === "forest"
+      ? computeResidenceMatchSummary(input.ownerProfile?.residenceHistories, input.landLocation, {
+          adjacentSigunguCodes: input.adjacentSigunguCodes,
+          distanceLimitKm: rules.farmlandDistanceKm,
+          requireResidentRegistration: input.landType === "forest",
+        })
+      : undefined;
+
   return {
     isNonBusinessLand,
     judgmentReason: reason,
@@ -271,6 +282,7 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
     warnings,
     judgmentSteps: steps,
     residencePeriodsUsed: categoryResult?.residencePeriodsUsed,
+    residenceMatch,
   };
 }
 

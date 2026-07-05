@@ -624,6 +624,8 @@ export interface NonBusinessLandJudgment {
 
   /** v2: 실제로 산출된 재촌 기간 (농지·임야 디버깅·감사용) */
   residencePeriodsUsed?: DateInterval[];
+  /** 재촌 인정 근거 (동일/연접/직선거리 30km + 거리) — 결과 카드 표시용 echo. */
+  residenceMatch?: { matchType: "same" | "adjacent" | "within_30km"; distanceKm?: number };
 }
 
 // ============================================================
