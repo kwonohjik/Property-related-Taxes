@@ -74,9 +74,16 @@ export function buildNonBusinessLandRaw(
     sf?.type === "self_farming" && sf.useSelfFarmingIncorporation
       ? sf.selfFarmingIncorporationDate
       : undefined;
+  // 토지 소재지 시·군·구: NBL 전용값 우선, 미입력 시 양도 물건 소재지(acquisitionSigunguCode)로 fallback.
+  // acquisitionSigunguCode는 10자리("XXXXX00000") → 5자리로 정규화(NBL sigungu-codes는 5자리계).
+  const acqSigungu5 = (asset.acquisitionSigunguCode || "").slice(0, 5);
   return {
     ...nblFields,
     nblUrbanIncorporationDate: asset.nblUrbanIncorporationDate || selfFarmingIncorpDate || "",
+    nblLandSigunguCode: asset.nblLandSigunguCode || acqSigungu5,
+    // 농지 좌표(직선거리 30km 재촌 판정 기준점) — 양도 물건 주소검색 시 세팅됨.
+    nblLandLat: asset.latitude,
+    nblLandLng: asset.longitude,
     // 공익수용 단일 소스 — 서버 buildUnconditionalExemption의 isExpr·고시일 fallback에 필요(nbl* 미prefix)
     transferCause: asset.transferCause,
     expropriationNoticeDate: asset.expropriationNoticeDate,

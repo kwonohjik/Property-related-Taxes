@@ -7,6 +7,8 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { SigunguSelect } from "./shared/SigunguSelect";
+import { AddressSearch } from "@/components/ui/address-search";
+import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
 import type { AssetForm, ResidenceHistoryInput } from "@/lib/stores/calc-wizard-store";
 
 export interface ResidenceHistorySectionProps {
@@ -83,7 +85,28 @@ export function ResidenceHistorySection({
             </div>
           </div>
 
-          <FieldCard label="시군구">
+          <FieldCard
+            label="거주지 주소 검색"
+            hint="주소 검색 시 시·군·구와 좌표가 자동 입력됩니다 (직선거리 30km 재촌 판정용, §153③3호)"
+          >
+            <div data-testid="nbl-residence-address-search">
+              <AddressSearch
+                value={{ road: "", jibun: "", building: "", detail: "", lng: h.lng ?? "", lat: h.lat ?? "" }}
+                onChange={(v) => {
+                  if (!v.pnu) return; // 주소 선택 시에만 반영
+                  const code5 = v.pnu.slice(0, 5); // PNU 앞 5자리 = 시·군·구 (NBL 5자리계)
+                  updateHistory(i, {
+                    sigunguCode: code5,
+                    sigunguName: lookupSigungu(code5)?.name ?? h.sigunguName,
+                    lat: v.lat || undefined,
+                    lng: v.lng || undefined,
+                  });
+                }}
+              />
+            </div>
+          </FieldCard>
+
+          <FieldCard label="시군구" hint="주소 검색이 어려운 경우 시·군·구를 직접 선택/입력하세요 (이 경우 30km 판정은 미적용)">
             <SigunguSelect
               code={h.sigunguCode}
               name={h.sigunguName}

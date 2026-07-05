@@ -82,6 +82,9 @@ const nblResidenceHistoryRawSchema = z.object({
   startDate: z.string(),
   endDate: z.string(),
   hasResidentRegistration: z.boolean(),
+  // 거주지 좌표 (직선거리 30km 재촌 판정, §153③3호) — 주소검색 파생. string→number는 form-mapper.
+  lat: z.string().optional(),
+  lng: z.string().optional(),
 });
 
 /** NBL 지목 — UI 노출 6값. 무조건 사업용 의제(§168의14③) 성립 시 빌더가 지목 "" 로 전송 → "" 허용 */
@@ -114,6 +117,9 @@ export const nonBusinessLandRawSchema = z.object({
   nblFarmerResidenceDistance: z.string().optional(),
   nblLandSigunguCode: z.string().optional(),
   nblLandSigunguName: z.string().optional(),
+  // 농지 좌표 (직선거리 30km 재촌 판정 기준점) — 양도 물건 주소검색 파생. string→number는 form-mapper.
+  nblLandLat: z.string().optional(),
+  nblLandLng: z.string().optional(),
   // 농지
   nblFarmingSelf: z.boolean().optional(),
   nblFarmlandIsWeekendFarm: z.boolean().optional(),

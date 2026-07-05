@@ -110,6 +110,9 @@ export interface LocationInfo {
   sigunguCode?: string;
   distanceKm?: number;
   hasResidentRegistration?: boolean;
+  /** 좌표 (직선거리 30km 재촌 판정용, §153③3호). 농지=asset 좌표 파생. */
+  lat?: number;
+  lng?: number;
 }
 
 /**
@@ -128,6 +131,9 @@ export interface OwnerResidenceHistory {
   endDate: Date;
   /** 주민등록 여부 — 임야 재촌 필수 요건 */
   hasResidentRegistration: boolean;
+  /** 거주지 좌표 (직선거리 30km 재촌 판정용, §153③3호). 주소검색 파생. */
+  lat?: number;
+  lng?: number;
 }
 
 /** 소유자 프로필 (신규) */
