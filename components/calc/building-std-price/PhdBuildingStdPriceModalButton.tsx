@@ -1,13 +1,14 @@
 "use client";
 
 /**
- * PHD 3시점 건물기준시가 "일괄 계산" 버튼 (양도 §164⑤).
+ * PHD 3시점 건물기준시가 "일괄 계산" 버튼 (양도 §164⑤) — Phase 2 겸용(Option B).
  *
- * 같은 건물이므로 구조·용도·연면적·신축연도를 1회 입력하고, 취득·최초공시·양도 3시점의
- * ㎡당 공시지가(위젯에서 prefill)로 시점별 건물기준시가를 일괄 산출한다.
- * "모두 적용" 시 산출된 시점만 부모 3필드에 주입(미산출 시점은 미변경 → 수동값 보존).
+ * 같은 건물의 부분(층/구역)별 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점의
+ * ㎡당 공시지가(위젯 prefill)로 시점별 건물기준시가를 일괄 산출한다.
+ *  - housing(주택분)은 3시점, commercial(상가분)은 **양도시에만** 산출(Option B).
+ *  - 층별 구조·용도 상이는 compositeParts로 합산. "모두 적용" 시 산출된 값만 부모 필드에 주입.
  *
- * 산출 규칙: lib/calc/phd-building-std-batch.ts (≤2000 최초공시는 고시표 부재로 미지원).
+ * 산출 규칙: lib/calc/phd-building-std-batch.ts (≤2000·당시 주택 용도 상가는 미산출·수동 유지).
  */
 import { useState } from "react";
 import {
@@ -26,13 +27,15 @@ import { BuildingUsageSelect } from "./BuildingUsageSelect";
 import {
   computePhdThreePointStdPrice,
   type PhdBatchResult,
+  type PhdBatchPart,
+  type PhdPartCategory,
 } from "@/lib/calc/phd-building-std-batch";
 
-/** 시점별 적용 결과 — 산출된 시점만 채워짐(원 정수) */
+/** 시점별 적용 결과 — 산출된 카테고리만 채워짐(원 정수) */
 export interface PhdThreePointApply {
-  acquisition?: number;
-  firstDisclosure?: number;
-  transfer?: number;
+  acquisition?: { housing?: number; commercial?: number };
+  firstDisclosure?: { housing?: number; commercial?: number };
+  transfer?: { housing?: number; commercial?: number };
 }
 
 interface PointMeta {
@@ -48,6 +51,16 @@ interface Props {
   points: PointMeta[];
   onApply: (v: PhdThreePointApply) => void;
   buttonLabel?: string;
+  /** 겸용주택 — 부분별 주택/상가 카테고리 입력 노출. 미설정=주택 단일(단독). */
+  enableCommercial?: boolean;
+}
+
+/** 편집 중 부분 행(연면적은 문자열 입력) */
+interface PartRow {
+  structureKey: string;
+  usageNo: string;
+  floorArea: string;
+  category: PhdPartCategory;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -56,19 +69,23 @@ const POINT_LABEL: Record<PointMeta["key"], string> = {
   firstDisclosure: "최초공시일",
   transfer: "양도시",
 };
+const emptyRow = (category: PhdPartCategory = "housing"): PartRow => ({
+  structureKey: "",
+  usageNo: "",
+  floorArea: "",
+  category,
+});
 
 export function PhdBuildingStdPriceModalButton({
   points,
   onApply,
-  buttonLabel = "3시점 건물기준시가 일괄 계산",
+  buttonLabel,
+  enableCommercial = false,
 }: Props) {
   const [open, setOpen] = useState(false);
-  // 건물 정보(3시점 공통)
-  const [structureKey, setStructureKey] = useState("");
-  const [usageNo, setUsageNo] = useState("");
-  const [floorArea, setFloorArea] = useState("");
   const [builtYear, setBuiltYear] = useState("");
-  // 시점별 공시지가(원/㎡) — prefill 초기값
+  const [rows, setRows] = useState<PartRow[]>([emptyRow()]);
+  // 시점별 공시지가(원/㎡)
   const [landPrices, setLandPrices] = useState<Record<string, string>>(() =>
     Object.fromEntries(points.map((p) => [p.key, p.landPricePerM2])),
   );
@@ -81,16 +98,31 @@ export function PhdBuildingStdPriceModalButton({
     points.find((p) => p.key === "firstDisclosure")?.year ??
     points.find((p) => p.key === "acquisition")?.year;
 
+  const label =
+    buttonLabel ??
+    (enableCommercial ? "3시점 주택·상가 건물기준시가 일괄 계산" : "3시점 건물기준시가 일괄 계산");
+
+  function updateRow(idx: number, patch: Partial<PartRow>) {
+    setRows((rs) => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  }
+
   function handleCalc() {
     setError(null);
     setResult(null);
-    const area = parseDecimal(floorArea);
     const built = Math.floor(parseDecimal(builtYear));
-    if (!structureKey || !usageNo || area <= 0 || built <= 0) {
-      setError("구조·용도·연면적·신축연도를 모두 입력하세요.");
+    if (built <= 0) {
+      setError("신축연도를 입력하세요.");
       return;
     }
-    const building = { structureKey, usageNo: Number(usageNo), floorArea: area, builtYear: built };
+    const parts: PhdBatchPart[] = [];
+    for (const r of rows) {
+      const area = parseDecimal(r.floorArea);
+      if (!r.structureKey || !r.usageNo || area <= 0) {
+        setError("각 부분의 구조·용도·연면적을 모두 입력하세요.");
+        return;
+      }
+      parts.push({ structureKey: r.structureKey, usageNo: Number(r.usageNo), floorArea: area, category: r.category });
+    }
     const pt = (key: PointMeta["key"]) => {
       const p = points.find((x) => x.key === key);
       if (!p || !p.year) return undefined;
@@ -101,7 +133,7 @@ export function PhdBuildingStdPriceModalButton({
     try {
       setResult(
         computePhdThreePointStdPrice({
-          building,
+          building: { builtYear: built, parts },
           acquisition: pt("acquisition"),
           firstDisclosure: pt("firstDisclosure"),
           transfer: pt("transfer"),
@@ -124,12 +156,16 @@ export function PhdBuildingStdPriceModalButton({
   }
 
   const computedCount = result
-    ? [result.acquisition, result.firstDisclosure, result.transfer].filter((v) => v != null).length
+    ? [result.acquisition?.housing, result.firstDisclosure?.housing, result.transfer?.housing, result.transfer?.commercial].filter(
+        (v) => v != null,
+      ).length
     : 0;
 
   // 모달 열 때 현재 위젯 공시지가로 재시드(지연 초기화는 최초 1회뿐 → 신규 입력 stale 방지).
   function handleOpen() {
     setLandPrices(Object.fromEntries(points.map((p) => [p.key, p.landPricePerM2])));
+    setRows([emptyRow()]);
+    setBuiltYear("");
     setResult(null);
     setError(null);
     setOpen(true);
@@ -138,39 +174,85 @@ export function PhdBuildingStdPriceModalButton({
   return (
     <>
       <Button type="button" variant="outline" size="xs" onClick={handleOpen}>
-        {buttonLabel}
+        {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          className="max-h-[88vh] overflow-y-auto sm:max-w-[min(44rem,calc(100%-2rem))] w-full shadow-2xl"
+          className="max-h-[88vh] overflow-y-auto sm:max-w-[min(46rem,calc(100%-2rem))] w-full shadow-2xl"
           overlayClassName="bg-black/60"
           forceOverlay
         >
           <DialogHeader>
             <DialogTitle>3시점 건물 기준시가 일괄 계산</DialogTitle>
             <DialogDescription>
-              같은 건물의 구조·용도·연면적을 한 번 입력하면 취득·최초공시·양도 3시점 건물기준시가를
-              함께 산출합니다. 계산 후 “모두 적용”을 누르면 각 시점 필드에 채워집니다.
+              {enableCommercial
+                ? "층/구역별 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점 주택분 건물기준시가와 양도시 상가분을 함께 산출합니다."
+                : "같은 건물의 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점 건물기준시가를 함께 산출합니다."}{" "}
+              계산 후 “모두 적용”을 누르면 각 시점 필드에 채워집니다.
             </DialogDescription>
           </DialogHeader>
 
-          {/* 건물 정보(공통) */}
+          {/* 신축연도(건물 공통) */}
           <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
             <p className="text-xs font-semibold text-sky-700">건물 정보 (3시점 공통)</p>
-            <div className="grid grid-cols-2 gap-2">
-              <FieldCard label="구조" hint="국세청 구조지수표">
-                <BuildingStructureSelect year={optionYear} value={structureKey} onChange={setStructureKey} />
-              </FieldCard>
-              <FieldCard label="용도" hint="국세청 용도지수표">
-                <BuildingUsageSelect year={optionYear} value={usageNo} onChange={setUsageNo} />
-              </FieldCard>
-              <FieldCard label="연면적" unit="㎡">
-                <DecimalInput value={floorArea} onChange={setFloorArea} placeholder="건물 연면적" />
-              </FieldCard>
-              <FieldCard label="신축연도" hint="준공연도 4자리">
-                <DecimalInput value={builtYear} onChange={setBuiltYear} placeholder="신축연도 (4자리)" />
-              </FieldCard>
+            <FieldCard label="신축연도" hint="준공연도 4자리">
+              <DecimalInput value={builtYear} onChange={setBuiltYear} placeholder="신축연도 (4자리)" />
+            </FieldCard>
+          </div>
+
+          {/* 부분(층/구역) 목록 */}
+          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-amber-700">
+                {enableCommercial ? "부분(층/구역) — 구조·용도·연면적·구분" : "구조·용도·연면적"}
+              </p>
+              {enableCommercial && (
+                <Button type="button" variant="outline" size="xs" onClick={() => setRows((rs) => [...rs, emptyRow(rs.length ? rs[rs.length - 1].category : "housing")])}>
+                  + 부분 추가
+                </Button>
+              )}
             </div>
+            {rows.map((row, idx) => (
+              <div key={idx} className="space-y-2 rounded-md border border-amber-200/60 bg-white/50 p-2">
+                {enableCommercial && (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="inline-flex overflow-hidden rounded-md border border-amber-300 text-xs">
+                      {(["housing", "commercial"] as const).map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => updateRow(idx, { category: cat })}
+                          className={`px-3 py-1 ${row.category === cat ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-800"}`}
+                        >
+                          {cat === "housing" ? "주택" : "상가"}
+                        </button>
+                      ))}
+                    </div>
+                    {rows.length > 1 && (
+                      <Button type="button" variant="ghost" size="xs" onClick={() => setRows((rs) => rs.filter((_, i) => i !== idx))}>
+                        삭제
+                      </Button>
+                    )}
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <FieldCard label="구조" hint="국세청 구조지수표">
+                    <BuildingStructureSelect year={optionYear} value={row.structureKey} onChange={(v) => updateRow(idx, { structureKey: v })} />
+                  </FieldCard>
+                  <FieldCard label="용도" hint="국세청 용도지수표">
+                    <BuildingUsageSelect year={optionYear} value={row.usageNo} onChange={(v) => updateRow(idx, { usageNo: v })} />
+                  </FieldCard>
+                  <FieldCard label="연면적" unit="㎡">
+                    <DecimalInput value={row.floorArea} onChange={(v) => updateRow(idx, { floorArea: v })} placeholder="연면적" />
+                  </FieldCard>
+                </div>
+              </div>
+            ))}
+            {enableCommercial && (
+              <p className="text-[11px] text-amber-700">
+                취득·최초공시 시점 상가분은 자동 산출에서 제외됩니다 — 해당 필드는 홈택스에서 직접 조회·입력하세요.
+              </p>
+            )}
           </div>
 
           {/* 시점별 공시지가 */}
@@ -203,23 +285,33 @@ export function PhdBuildingStdPriceModalButton({
           {result && (
             <div className="space-y-2 border-t pt-3">
               {(["acquisition", "firstDisclosure", "transfer"] as const).map((k) => {
-                const v = result[k];
+                const pr = result[k];
                 return (
-                  <div key={k} className="flex justify-between text-sm">
-                    <span>{POINT_LABEL[k]} 건물기준시가</span>
-                    <span className="font-mono tabular-nums font-semibold">
-                      {v != null ? `${fmt(v)} 원` : "—"}
-                    </span>
+                  <div key={k} className="space-y-0.5">
+                    <div className="flex justify-between text-sm">
+                      <span>{POINT_LABEL[k]} 주택건물 기준시가</span>
+                      <span className="font-mono tabular-nums font-semibold">
+                        {pr?.housing != null ? `${fmt(pr.housing)} 원` : "—"}
+                      </span>
+                    </div>
+                    {enableCommercial && k === "transfer" && (
+                      <div className="flex justify-between text-sm">
+                        <span>{POINT_LABEL[k]} 상가건물 기준시가</span>
+                        <span className="font-mono tabular-nums font-semibold">
+                          {pr?.commercial != null ? `${fmt(pr.commercial)} 원` : "—"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
               {result.unsupported.map((u, i) => (
                 <p key={i} className="rounded bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
-                  {POINT_LABEL[u.point]} 미산출 — {u.reason}
+                  {POINT_LABEL[u.point]} {u.category === "commercial" ? "상가" : "주택"}건물 미산출 — {u.reason}
                 </p>
               ))}
               <Button type="button" size="sm" onClick={handleApplyAll} disabled={computedCount === 0}>
-                모두 적용 ({computedCount}개 시점)
+                모두 적용 ({computedCount}개)
               </Button>
             </div>
           )}

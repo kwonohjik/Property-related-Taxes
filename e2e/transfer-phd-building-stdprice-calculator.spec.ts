@@ -86,7 +86,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
     await modal.getByText("용도 선택").first().click();
     await page.getByRole("option", { name: /아파트/ }).first().click();
-    await modal.getByPlaceholder("건물 연면적").fill("100");
+    await modal.getByPlaceholder("연면적").fill("100");
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
 
     // 양도시 공시지가만 입력 (취득/최초공시는 연도 미상) — 시점별 원/㎡ 3칸 중 마지막=양도
@@ -162,7 +162,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
     await modal.getByText("용도 선택").first().click();
     await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
-    await modal.getByPlaceholder("건물 연면적").fill("150");
+    await modal.getByPlaceholder("연면적").fill("150");
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2000");
 
     // 시점별 공시지가 3칸(취득/최초공시/양도)
@@ -197,5 +197,83 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
       [0, 1, 2].map((i) => buildingInputs.nth(i).inputValue()),
     );
     console.log("[T3] 적용된 3필드 값:", vals2.join(" / "), values);
+  });
+
+  test("T4: 겸용 PHD — 일괄 모달 주택/상가 UI 렌더 + 양도 상가건물 산출", async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    // 양도일 2025 · 취득일 2010(≥2001)
+    await fillDateAndVerify(page, { year: "2025", month: "05", day: "01" }, {
+      scope: page.getByTestId("transfer-date"),
+    });
+
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+
+    // 겸용주택 분리계산 ON (자산 카드 상단 — section 1 열린 상태)
+    await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
+
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+
+    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+      year: "2010",
+      month: "06",
+      day: "15",
+    });
+
+    // 면적 입력 (겸용 확장 패널)
+    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
+    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
+
+    // PHD(개별주택가격 미공시) ON
+    await page.getByRole("switch", { name: /개별주택가격 미공시/ }).click();
+
+    // 겸용 PHD 일괄 버튼 (주택·상가 라벨)
+    const batchBtn = page.getByRole("button", { name: "3시점 주택·상가 건물기준시가 일괄 계산" });
+    await expect(batchBtn).toHaveCount(1);
+    await batchBtn.click();
+
+    const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
+    await expect(modal).toBeVisible();
+    // 겸용 UI: 부분 추가 + 카테고리(주택/상가)
+    await expect(modal.getByRole("button", { name: "+ 부분 추가" })).toHaveCount(1);
+    await expect(modal.getByRole("button", { name: "상가", exact: true }).first()).toBeVisible();
+
+    // 신축연도 + 부분1 주택
+    await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
+    await modal.getByText("구조 선택").first().click();
+    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+    await modal.getByText("용도 선택").first().click();
+    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    await modal.getByPlaceholder("연면적").first().fill("120");
+
+    // 부분2 상가
+    await modal.getByRole("button", { name: "+ 부분 추가" }).click();
+    // 두 번째 행 카테고리 상가로
+    await modal.getByRole("button", { name: "상가", exact: true }).nth(1).click();
+    await modal.getByText("구조 선택").first().click();
+    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+    await modal.getByText("용도 선택").first().click();
+    await page.getByRole("option", { name: /근린생활/ }).first().click();
+    await modal.getByPlaceholder("연면적").last().fill("80");
+
+    // 양도 공시지가
+    await modal.getByPlaceholder("원/㎡").last().fill("3486000");
+
+    await modal.getByRole("button", { name: "3시점 계산하기" }).click();
+
+    // 양도시 상가건물 산출 노출 + 모두 적용
+    await expect(modal.getByText("양도시 상가건물 기준시가")).toBeVisible();
+    const applyBtn = modal.getByRole("button", { name: /모두 적용/ });
+    await expect(applyBtn).toBeVisible();
+    const shown = await modal.locator("span.font-mono").allInnerTexts();
+    console.log("[T4] 겸용 산출값:", shown.join(" / "));
+    await applyBtn.click();
+    await expect(modal).toBeHidden();
   });
 });
