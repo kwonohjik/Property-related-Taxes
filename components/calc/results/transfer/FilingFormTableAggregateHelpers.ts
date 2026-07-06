@@ -180,7 +180,7 @@ export function buildAggregateRows(
     );
     setNum("reductionTargetIncome2", col, 0);
     setNum("incomeAmountAfter", col, p.incomeAfterOffset);
-    setNum("priorIncomeAmount", col, 0);
+    setNum("priorIncomeAmount", col, null); // 신고서 단위 개념 — 자산별 "-" (합계만 산정)
 
     // 합산-only 행 — 자산 셀 null
     setNum("basicDeduction", col, null);
@@ -253,7 +253,21 @@ export function buildAggregateRows(
   );
   setNum("reductionTargetIncome2", "total", 0);
   setNum("incomeAmountAfter", "total", aggregated.totalIncomeAfterOffset);
-  setNum("priorIncomeAmount", "total", 0);
+  // 기신고 양도소득금액 (§103) — 가장 늦은 신고일(확정신고분)보다 신고일이 빠른 자산들의 양도소득금액 합산.
+  //   신고일 = form.filingDate(입력값) → 없으면 statutoryFilingDeadline(법정신고기한, 양도일 파생) fallback.
+  //   bundled(propertyFormMap 미주입)은 filingDates 전부 "" → maxFiling "" → priorIncome 0 (회귀 0).
+  const priorFilingDates = properties.map((p) => {
+    const f = aggregate.propertyFormMap?.get(p.propertyId);
+    return f?.filingDate || f?.statutoryFilingDeadline || "";
+  });
+  const maxFilingDate = [...priorFilingDates].filter(Boolean).sort().at(-1) ?? "";
+  let priorReportedIncome = 0;
+  properties.forEach((p, i) => {
+    if (priorFilingDates[i] && maxFilingDate && priorFilingDates[i] < maxFilingDate) {
+      priorReportedIncome += p.income;
+    }
+  });
+  setNum("priorIncomeAmount", "total", priorReportedIncome);
   setNum("basicDeduction", "total", aggregated.basicDeduction);
   setNum("taxBase", "total", aggregated.taxBase);
   setNum("calculatedTax", "total", aggregated.calculatedTax);

@@ -6,7 +6,7 @@
 - **요청 (3건)**:
   1. **자산2번 양도일 오류 수정** — 신고서 양식(합산) 표의 "양도일자" 행이 합계·자산1·자산2 모두 `2026-01-12`(자산1 양도일)로 표시됨. 자산2 실제 양도일은 `2026-03-25`.
   2. **기납부·차감납부세액 행 추가** — (a) 합계란 "총결정세액" 바로 아래에 기납부세액·차감납부세액, (b) 지방소득세 "결정세액" 하단에 기납부세액·차감납부세액.
-  3. **기신고 양도소득금액 표시** — 신고서 양식 "기신고 양도소득금액" 행이 항상 0(미구현). **예정신고 이력에서 자동 파생**(사용자 확정, 2026-07-06)해 채움.
+  3. **기신고 양도소득금액 표시** — 신고서 양식 "기신고 양도소득금액" 행이 항상 0(미구현). **다건 내 가장 늦은 신고일 자산(확정신고분)보다 신고일이 빠른 자산들의 양도소득금액 합산**(사용자 확정, 2026-07-06)으로 산정.
 
 ## 규모·Phase 분리 (핵심)
 
@@ -14,12 +14,12 @@
 |---|---|---|---|
 | ① 양도일자(+취득일·보유기간·거주기간 동반) | 작음~중간 | 배선 버그, **엔진 무변경** | **A** |
 | ② 기납부·차감납부 4행 | 작음 | additive, 데이터 이미 존재(`priorPaidTax` 등) | **A** |
-| ③ 기신고 양도소득금액 | **대 (14-sync 신규 입력)** | `priorPaidTax` 패턴 미러 — store·Zod·엔진 input·result echo·이력 자동채움·편집 위젯·신고서 배선 | **B** |
+| ③ 기신고 양도소득금액 | **작음 (경량 display 계산, 엔진 무변경)** | 다건 내부 신고일 비교 → 빠른 자산 income 합산. Phase A `propertyFormMap` 재사용 | **B** |
 
 - **Phase A**(①②): 신고서 양식 표시 정정. 엔진 input/result 무변경(②는 기존 필드 표시). 빠르게 완결 가능.
-- **Phase B**(③): `priorPaidTax`(다건 기납부 정산, memory `project_transfer_multi_prepaid_settlement_plan`)와 완전 동일한 14-sync 신규 입력 필드. 별도 규모 → A와 분리 실행.
+- **Phase B**(③): 다건 내부 신고일 비교 → 빠른 자산 income 합산 (엔진 무변경, Phase A `propertyFormMap` 재사용). ③만 별도 Phase로 분리 실행(신고일 기준 사용자 확정 선행 필요했음).
 
-> ①②는 #512가 드러낸 신고서 양식 결함 정정이고, ③은 신규 입력 기능이다. A를 먼저 ship하고 B를 후속으로 진행 권장(§6-4).
+> ①②는 #512가 드러낸 신고서 양식 결함 정정이고, ③은 신고일 비교 기반 파생 표시다. A를 먼저 ship하고 B를 후속으로 진행 권장(§6-4).
 
 ---
 
@@ -90,38 +90,41 @@
 
 ---
 
-## 3. 수정 3 — 기신고 양도소득금액 (Phase B, 14-sync 신규 입력)
+## 3. 수정 3 — 기신고 양도소득금액 (Phase B, 경량 display 계산)
 
-### 근본: 표시 버그 아닌 미구현
-- `priorIncomeAmount` 행 3곳 하드코딩 0: `FilingFormTableAggregateHelpers.ts:169`(자산별)·`:236`(합계)·`FilingFormTableHelpers.ts:768`(단건). 상세명세서 `DetailedStatementHelpers.ts:524`도 0 + "기신고분 미반영" 주석. 채울 엔진 필드·입력 전무.
+### 사용자 확정 로직 (2026-07-06) — 이력 파생 아님, 다건 내부 신고일 비교
+"14-sync 이력 파생" 폐기. **다건 내부 자산들의 신고일 비교 후 income 합산**:
+- 각 자산 **신고일** = `form.filingDate`(입력값) → 없으면 `form.statutoryFilingDeadline`(법정신고기한, 양도일 파생) fallback (사용자 확정: "신고일 입력값, 없으면 법정신고기한")
+- **가장 늦은 신고일 자산 = 확정신고분**. 그보다 신고일이 빠른 자산들의 **양도소득금액(`PerPropertyBreakdown.income`) 단순 합산** = 기신고 양도소득금액 (§103 확정신고 시 예정신고분 합산)
 
-### 데이터 소스 (사용자 확정: 예정신고 이력 자동 파생)
-`priorPaidTax`(기납부세액)와 동일 정산 맥락. 이력 record.resultData에서 양도소득금액 추출:
-- **multi record**: `AggregateTransferResult.totalIncomeAfterOffset`(`transfer-aggregate.types.ts:264`) clean 필드 ✅
-- **single record**: 양도소득금액 단일 필드 없음 → `taxableGain − longTermHoldingDeduction` 계산 (lossy, §99의3 reducible 미반영) ⚠️ (§6-6)
+### 데이터 — 이미 전부 존재 (엔진·입력 변경 0, 14-sync 폐기)
+- 신고일: `aggregate.propertyFormMap.get(pid)?.filingDate || .statutoryFilingDeadline` (**Phase A에서 추가한 propertyFormMap 재사용** — 신규 맵 불요)
+- 양도소득금액: `properties[i].income`(`transfer-aggregate.types.ts:110`)
+→ store·Zod·엔진 input·result echo·자동채움·위젯 **전부 불요**. `buildAggregateRows` 합계 열 계산 1곳만.
 
-### 구현 — `priorPaidTax` 14-sync 파이프라인 미러
-> 추출 소스는 다름(priorPaidTax=이력 `determinedTax` 세액, 기신고 소득=이력 `totalIncomeAfterOffset` 소득금액)이나 **store→api→zod→route→engine input→result echo 파이프라인·계층은 동일 미러** (검토 #4). 엔진은 저장만·계산 안 함.
-| # | 지점 | 위치 |
-|---|---|---|
-| ① store | `priorReportedIncome: string` + `priorReportedIncomeEdited: boolean` | `multi-transfer-tax-store.ts` (priorPaidTax/Edited 미러) |
-| ② 자동채움 | `extractLoadPriorReportedIncome`(형제) — multi=`rd.totalIncomeAfterOffset`, single=`taxableGain−LTHD`. `!edited` 게이트 | `transfer-multi-load-entry.ts` + `MultiTransferTaxCalculator.tsx:302,319` |
-| ③④ API 변환 | parseAmount → body | `lib/calc/multi-transfer-tax-api.ts` |
-| ⑫ Zod | `priorReportedIncome?: number` | `transfer-tax-schema.ts` `multiInputSchema` |
-| ⑭ Route | 엔진 input 매핑 | `app/api/calc/transfer/multi/route.ts` |
-| 엔진 input | `priorReportedIncome?` (저장만, 계산 안 함) | `AggregateTransferInput` |
-| 엔진 result echo | `priorReportedIncome` | `AggregateTransferResult` |
-| ⑦ 신고서 배선 | 합계 `priorIncomeAmount`(`:236`) = `aggregated.priorReportedIncome`; 자산별(`:169`) null("-") | `FilingFormTableAggregateHelpers.ts` |
-| ⑤ 편집 위젯 | priorPaidTax 옆 입력(onChange→`priorReportedIncomeEdited=true`) | `AggregateSettingsPanel` |
-| ⑧ validation | fallback 동기화 | `lib/calc/*-validate.ts` |
-| ⑥ 사이드바 | **반영 불필요** — 기신고 소득은 세액 무영향 display echo (≠priorPaidTax는 납부세액 변경). 검토 A5 | `computeXxxSummary` 수정 없음 |
+### 구현 (`FilingFormTableAggregateHelpers.ts` — Phase A와 동일 파일)
+합계 열 `priorIncomeAmount`(`:236` 현재 하드코딩 0)를 계산으로 교체:
+```
+const filingDates = properties.map((p) => {
+  const f = aggregate.propertyFormMap?.get(p.propertyId);
+  return f?.filingDate || f?.statutoryFilingDeadline || "";
+});
+const maxFiling = filingDates.filter(Boolean).sort().at(-1) ?? "";
+let priorIncome = 0;
+properties.forEach((p, i) => {
+  if (filingDates[i] && maxFiling && filingDates[i] < maxFiling) priorIncome += p.income;
+});
+setNum("priorIncomeAmount", "total", priorIncome);
+```
+- 날짜 비교 = "YYYY-MM-DD" **사전순 = 시간순**. 모든 신고일 동일 시 `priorIncome=0`.
+- 자산별(`:169`): 현재 `0` → **null("-")**로 정정 (신고서 단위 개념, 과세표준 등 합산-only 행과 일관).
+- 단건 `FilingFormTableHelpers.ts:768`·상세명세서 `:524`는 **범위 밖**(다건 전용, §6-5).
 
-> 미러 원본 = memory `project_transfer_multi_prepaid_settlement_plan`(priorPaidTax 정산): store→api→zod→route→engine→echo 전 지점 레퍼런스.
-> - `priorReportedIncomeEdited`는 **UI 전용** — API body·Zod 미포함 (priorPaidTaxEdited 관례, 검토 #7).
-> - **마운트 타이밍 가드**: `MultiTransferTaxCalculator.tsx:280` mount useEffect(잔존 property 정리)와 자동채움 충돌 방지 — priorPaidTax가 이미 겪은 "auto-add blank ↔ append stray blank" 가드를 동일 재사용 (검토 A6).
+### bundled(§166⑥) 무영향
+propertyFormMap 미주입 → `filingDates` 전부 `""` → `maxFiling=""` → 조건 `filingDates[i] < maxFiling` 항상 false → `priorIncome=0` (기존 0 동작 유지). 회귀 0.
 
 ### 별건 버그 (범위 밖, 발견 기록)
-`extractLoadPriorPaid` single 분기(`transfer-multi-load-entry.ts:26`)가 `rd.result?.determinedTax`(중첩 `.result`)를 읽으나 single 저장은 flat(`TransferTaxCalculator.tsx:100` `resultData: result`) → single 이력 불러오기 시 priorPaidTax 자동채움이 0으로 빠질 가능성. **별건**(요청 3건과 무관) — 확인 후 별도 처리 권장.
+`extractLoadPriorPaid` single 분기(`transfer-multi-load-entry.ts:26`)가 `rd.result?.determinedTax`(중첩 `.result`)를 읽으나 single 저장은 flat(`TransferTaxCalculator.tsx:100`) → single 이력 불러오기 시 priorPaidTax 자동채움이 0으로 빠질 가능성. **별건** — 확인 후 별도 처리 권장.
 
 ---
 
@@ -138,11 +141,12 @@
 | C7 | 지방세 기납부 | 지방세 결정 하단 기납부·차감납부 정상 |
 | C8 | bundled(§166⑥) 회귀 | propertyFormMap 미주입 → 기존 동작 그대로 (양도일·행 무변경) |
 | C9 | 자산별 컬럼 기납부 행 | null → "-" |
-| C10 | (B) multi 이력 불러오기 → 기신고 소득 | `totalIncomeAfterOffset` 합산 → 기신고 양도소득금액 행 표시 |
-| C11 | (B) 기신고 소득 미입력 | 0 (기존 동작, 회귀 없음) |
-| C12 | (B) 사용자 수동편집 후 재-불러오기 | `priorReportedIncomeEdited=true` → 자동채움 skip (수동값 보존) |
+| C10 | (B) 신고일 상이 2자산 (np1 빠름·np2 늦음) | 기신고 양도소득금액 합계 = np1 income (>0) |
+| C11 | (B) 신고일 모두 동일 | 기신고 양도소득금액 = 0 (아무도 "빠르지" 않음) |
+| C12 | (B) filingDate 비어있음 → statutoryFilingDeadline fallback | 법정신고기한 순으로 비교 |
+| C13 | (B) bundled(§166⑥) | propertyFormMap 미주입 → 0 (회귀 0) |
 
-> Phase A = C1~C9(엔진 무변경), Phase B = C10~C12(신규 입력).
+> Phase A = C1~C9(엔진 무변경 신고서 정정), Phase B = C10~C13(경량 display 계산, 엔진 무변경).
 
 ---
 
@@ -152,8 +156,8 @@
 1. **양도일**: `[data-print-id="form-table"]` 내 자산2 컬럼 셀에 자산2 양도일(2026-03-01 등)이 표시, 자산1 값과 다름을 assert (구현 전 실패 → 후 통과).
 2. **기납부·차감납부**: 시드에 `priorPaidTax`/`priorPaidLocalTax` 부여 → "차감납부할세액" 행 + 값(총결정−기납부) assert. (기납부 0이면 차감=총결정 확인)
 
-**Phase B** (③ 착수 시):
-3. **기신고 양도소득금액**: multi 이력 시드(resultData.totalIncomeAfterOffset) → 불러오기 → "기신고 양도소득금액" 행에 합산값 표시 assert. 미입력 시 0(회귀) 확인.
+**Phase B**:
+3. **기신고 양도소득금액**: 자산별 `filingDate` 상이 시드(np1 빠름·np2 늦음) → 신고서 양식 합계 "기신고 양도소득금액" 행 값 ≠ 0 (= np1 income) assert. 구현 전 0 → 실패.
 
 ---
 
@@ -166,10 +170,9 @@
 - [ ] 전체 vitest (pre-push) — `feedback_print_leaf_add_unit_test_sync`: 이번은 leaf 추가 아님(행 추가)이나, aggregate 행 개수를 하드코딩한 테스트가 있으면 동기화
 - [ ] 800줄: `FilingFormTableAggregateHelpers.ts` 현재 라인 수 확인 (4행 + per-property 로직 추가)
 - [ ] bundled 회귀 (C8) — BundledAllocationCard 신고서 양식 무변경 확인
-- [ ] **(Phase B) 14-sync 전지점** — memory `feedback_api_zod_schema_sync` ⑫⑬⑭ grep 자가점검. store·Zod·route·엔진 input·result echo·validation 누락 0
-- [ ] **(Phase B) priorPaidTax 회귀** — 신규 필드 추가가 기존 정산(priorPaidTax) 경로 무영향 확인
-- [ ] **(Phase B) 엔진 회귀 테스트 신설** — `multi-prepaid-settlement.test.ts`의 priorPaidTax S4(미지정→불변) 동형으로 `priorReportedIncome` 미지정→result 불변 anchor (검토 A4)
-- [ ] **(Phase A) 기존 신고서 테스트** — `filing-form-exempt-gain-reduction-cap.test.tsx`는 label 기반 행 조회라 4행 추가에 안전(검토 A5-해소)하나 회귀 실행은 유지
+- [ ] **(Phase B) 신고일 비교 로직** — 신고일 상이 anchor(np1 빠름·np2 확정) 통과. `filingDate`→`propertyFormMap`→income 합산 경로 검증 (엔진 무변경, 14-sync 폐기)
+- [ ] **(Phase B) bundled 회귀** — propertyFormMap 미주입 → `maxFiling=""` → priorIncome 0 (기존 0 동작 유지)
+- [ ] **(Phase A/B 공통) 기존 신고서 테스트** — `filing-form-exempt-gain-reduction-cap.test.tsx`는 label 기반 행 조회라 행 추가·자산별 null 변경에 안전(검토 A5-해소)하나 회귀 실행 유지
 
 ---
 
@@ -177,8 +180,8 @@
 1. **수정1 스코프**: 양도일만 vs 취득일·보유기간 동반. 근본 원인이 `findAssetByPropertyId` bundled 가정이라 propertyFormMap 우선 조회 한 번으로 **모두 정상화** → 동반 수정 권장(추가 비용 0, 취득일 "-" 버그도 해소). **권장: 동반.**
 2. **수정2 환급 표기 (C6)**: 기납부 > 총결정이면 `settlementRefund>0`. "차감납부할세액" 행에 (ㄱ) 0 표기 + 별도 "환급세액" 행, (ㄴ) 음수 표기 중 선택. summary 카드는 별도 "환급세액 (국세)" 행(`:166-167`) 방식 → **일관성 위해 (ㄱ) 권장**(차감납부=0, 환급>0 시 환급 행 추가 표시).
 3. **부호 표시**: FilingFormTable 차감행 관례(양수+라벨) vs summary(음수 렌더). 신고서 양식은 기존 관례(양수) 유지, 값은 summary와 동일 소스.
-4. **Phase 분리 실행 (③)**: ①② (Phase A, 엔진 무변경 신고서 정정)를 먼저 완결·ship, ③ (Phase B, 14-sync 신규 입력)을 후속. **권장: A 먼저.** ③을 A에 합치면 규모·회귀면이 커져 A의 빠른 정정이 지연됨.
+4. **Phase 분리 실행 (③)**: ①② (Phase A, 엔진 무변경 신고서 정정)를 먼저 완결·ship, ③ (Phase B, 경량 신고일 비교 계산)을 후속. **권장: A 먼저.** ③은 신고일 기준 사용자 확정이 선행돼야 해 분리가 자연스러웠음.
 5. **단건 `priorIncomeAmount`(`FilingFormTableHelpers.ts:768`) 범위**: ③은 다건 전용. 단건 신고서의 동일 하드코딩 0 행은 이번 범위 밖. **권장: 다건만** (단건 예정신고 정산은 별건 기능).
-6. **single 이력 소득금액 lossy 계산 (③)**: single record엔 양도소득금액 clean 필드가 없어 `taxableGain − LTHD`로 계산 (§99의3 reducible·비과세 미반영으로 부정확 가능). multi 이력은 `totalIncomeAfterOffset` 정확. **판단 필요**: (ㄱ) single도 근사 계산 허용, (ㄴ) single 불러오기 시 기신고 소득 자동채움 제외(수동만). 다건 정산은 multi 이력 위주(§107 telescoping)이므로 (ㄴ)이 안전할 수 있음 — Phase B 착수 시 사용자 확인.
+6. **③ 데이터 소스 (해소)**: 초안의 "예정신고 이력 파생(14-sync 신규 입력)"은 **폐기**. 사용자 확정(2026-07-06)으로 **다건 내부 신고일 비교 → 빠른 자산 income 합산**(엔진 무변경, propertyFormMap 재사용)으로 변경 → single/multi 이력 비대칭·lossy 계산 이슈 자체가 소멸. 신고일 기준 = `filingDate` 우선, 없으면 `statutoryFilingDeadline`.
 
-> 권장안(1 동반, 2-ㄱ, 3 양수, 4 A먼저, 5 다건만)으로 진행 예정. 6은 Phase B 착수 시 확인. 확정 후 `plan-design-self-review-loop` 검토 → Pre-Do anchor → Do.
+> 권장안(1 동반, 2-ㄱ, 3 양수, 4 A먼저, 5 다건만)으로 진행. 6은 사용자 확정으로 경량화됨. Phase A ship 완료(PR), Phase B는 본 계획대로 구현·검증 완료.
