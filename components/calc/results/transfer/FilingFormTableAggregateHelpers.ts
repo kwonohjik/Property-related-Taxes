@@ -21,6 +21,7 @@ import {
   getAcqDateForCard,
 } from "./FilingFormTableHelpers";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
+import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
 
 export function buildAggregateRows(
   _result: TransferTaxResult,
@@ -260,12 +261,11 @@ export function buildAggregateRows(
     const f = aggregate.propertyFormMap?.get(p.propertyId);
     return f?.filingDate || f?.statutoryFilingDeadline || "";
   });
-  const maxFilingDate = [...priorFilingDates].filter(Boolean).sort().at(-1) ?? "";
+  // 신고일 필터는 기납부세액(§111③)과 단일 출처 공유 — computeAutoPriorPaid와 대칭.
+  const priorIdx = new Set(selectPriorFiledIndices(priorFilingDates));
   let priorReportedIncome = 0;
   properties.forEach((p, i) => {
-    if (priorFilingDates[i] && maxFilingDate && priorFilingDates[i] < maxFilingDate) {
-      priorReportedIncome += p.income;
-    }
+    if (priorIdx.has(i)) priorReportedIncome += p.income;
   });
   setNum("priorIncomeAmount", "total", priorReportedIncome);
   setNum("basicDeduction", "total", aggregated.basicDeduction);

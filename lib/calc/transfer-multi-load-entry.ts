@@ -42,12 +42,16 @@ export function extractLoadPriorPaid(
 /** single record → 새 자산(PropertyItem). 라벨은 호출부에서 순번 부여. */
 export function buildPropertyFromSingleRecord(record: CalculationRecord, label: string): PropertyItem {
   const form = record.inputData as unknown as TransferFormData;
+  // 자산별 예정신고 세액 포착 — 신고일 필터 기납부세액(§111③) 산정용(computeAutoPriorPaid)
+  const pp = extractLoadPriorPaid(record, "single");
   return {
     propertyId: generatePropertyId(),
     propertyLabel: label,
     form,
     completionPercent: calcPropertyCompletion(form),
     sourceCalculationId: record.id,
+    priorPaidNational: pp.national,
+    priorPaidLocal: pp.local,
   };
 }
 
