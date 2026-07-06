@@ -292,8 +292,13 @@ function TransferSplitSection({ r }: { r: R }) {
 }
 
 function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
-  // summary 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (다건 합산 계산, 검토 U1)
-  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("summary")) return null;
+  // form-table(1차 소유)·summary(회귀호환 별칭) 대표 노드 — 둘 다 미포함일 때만 null (단일 렌더, 중복 없음)
+  if (
+    selectedSectionIds !== undefined &&
+    !selectedSectionIds.includes("summary") &&
+    !selectedSectionIds.includes("form-table")
+  )
+    return null;
   const props = Array.isArray(r.properties) ? (r.properties as R[]) : [];
   const lossTable = Array.isArray(r.lossOffsetTable) ? (r.lossOffsetTable as R[]) : [];
   const comparedTax = str(r.comparedTaxApplied) ?? "none";
