@@ -41,6 +41,7 @@ import {
   buildPropertyFromSingleRecord,
   buildPropertiesFromMultiRecord,
   isBlankProperty,
+  backfillPriorPaid,
 } from "@/lib/calc/transfer-multi-load-entry";
 import type { CalculationRecord } from "@/lib/storage/types";
 import {
@@ -474,7 +475,14 @@ export default function MultiTransferTaxCalculator() {
 
     setIsCalculating(true);
     try {
-      const res = await callMultiTransferTaxAPI(form, form.properties);
+      // 기납부세액(§111③) self-heal — 예정세액 미포착 자산(구세션·구 저장분)을 이력에서 backfill
+      const properties = form.priorPaidTaxEdited
+        ? form.properties
+        : await backfillPriorPaid(form.properties);
+      if (properties !== form.properties && properties.some((p, i) => p !== form.properties[i])) {
+        setForm({ properties });
+      }
+      const res = await callMultiTransferTaxAPI(form, properties);
       setResult(res);
       setStep("result");
       // 이력 저장은 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)

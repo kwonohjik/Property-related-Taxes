@@ -4,6 +4,7 @@ import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-tra
 import { generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
+import { calculationRepository } from "@/lib/storage/calculation-repository";
 
 /**
  * 다건 양도세 "이력 불러오기" 진입 헬퍼 (Phase 2).
@@ -67,4 +68,28 @@ export function buildPropertiesFromMultiRecord(record: CalculationRecord): Prope
 /** 미입력(빈) 자산 여부 — 마운트 auto-add된 blank property 정리용 */
 export function isBlankProperty(p: PropertyItem): boolean {
   return p.completionPercent === 0 && !p.form?.transferDate;
+}
+
+/**
+ * 자산별 예정세액(priorPaidNational/Local) backfill — 신고일 필터 기납부세액(§111③) 산정 self-heal.
+ *
+ * priorPaidNational 포착(buildPropertyFromSingleRecord) 이전에 로드된 자산·저장 이력은 이 필드가 없어
+ * computeAutoPriorPaid가 0을 반환한다. 각 자산의 sourceCalculationId로 원본 단건 record를 되살려 채운다.
+ * 이미 값이 있거나 sourceCalculationId가 없으면(수동 추가) 그대로 둔다. record 조회 실패도 무변경.
+ */
+export async function backfillPriorPaid(properties: PropertyItem[]): Promise<PropertyItem[]> {
+  return Promise.all(
+    properties.map(async (p) => {
+      if (p.priorPaidNational !== undefined || !p.sourceCalculationId) return p;
+      try {
+        const rec = await calculationRepository.get(p.sourceCalculationId);
+        // 단건 record만 자산별 standalone 예정세액 보유(다건 record는 aggregate 결과뿐)
+        if (!rec || classifyLoadableTransfer(rec) !== "single") return p;
+        const pp = extractLoadPriorPaid(rec, "single");
+        return { ...p, priorPaidNational: pp.national, priorPaidLocal: pp.local };
+      } catch {
+        return p;
+      }
+    }),
+  );
 }
