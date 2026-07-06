@@ -29,10 +29,11 @@ function landAsset(price: string, area: string) {
   };
 }
 
-function propertyForm(price: string, transferDate: string) {
+function propertyForm(price: string, transferDate: string, filingDate = "", acqPrice = price) {
   return {
-    assets: [landAsset(price, "1000")],
+    assets: [landAsset(acqPrice, "1000")],
     transferDate,
+    filingDate,
     contractTotalPrice: price,
     householdHousingCount: "1",
     isRegulatedArea: false,
@@ -41,6 +42,32 @@ function propertyForm(price: string, transferDate: string) {
     isOneHousehold: false,
   };
 }
+
+// 신고일 상이 record — np1 신고일 빠름(기신고분), np2 늦음(확정신고분)
+const MULTI_RECORD_PRIOR = {
+  id: "e2e-multi-filing-prior",
+  userId: "local-user",
+  taxType: "transfer",
+  title: "다건 기신고 소득 (E2E)",
+  inputData: {
+    __multiTransfer: true,
+    taxYear: 2026,
+    properties: [
+      { propertyId: "np1", propertyLabel: "건1", completionPercent: 100, form: propertyForm("826000000", "2026-01-01", "2026-03-31", "400000000") },
+      { propertyId: "np2", propertyLabel: "건2", completionPercent: 100, form: propertyForm("325000000", "2026-03-01", "2026-05-31", "150000000") },
+    ],
+    activePropertyIndex: 0,
+    activeStep: "settings",
+    annualBasicDeductionUsed: "0",
+    basicDeductionAllocation: "MAX_BENEFIT",
+  },
+  resultData: { determinedTax: 0, totalTax: 0, properties: [{ propertyId: "np1" }, { propertyId: "np2" }] },
+  taxLawVersion: "2026",
+  linkedCalculationId: null,
+  clientId: null,
+  createdAt: "2026-07-06T00:00:00.000Z",
+  updatedAt: "2026-07-06T00:00:00.000Z",
+};
 
 const MULTI_RECORD = {
   id: "e2e-multi-filing-1",
@@ -150,5 +177,29 @@ test.describe("다건 결과탭 상단 신고서 양식 (합계+자산별)", () 
     await expect(filingSection.getByText("2026-03-01")).toBeVisible({ timeout: 15000 });
     // 수정②: 차감납부할세액 행 렌더 (기납부 0 → 차감납부=총결정세액)
     await expect(filingSection.getByText("차감납부할세액")).toBeVisible({ timeout: 15000 });
+  });
+
+  // Phase B anchor — 기신고 양도소득금액(수정③): 신고일 빠른 자산 income 합산
+  test("기신고 양도소득금액 합계가 신고일 빠른 자산 income으로 채워진다", async ({ page }) => {
+    await seedRecord(page, MULTI_RECORD_PRIOR);
+    await page.goto("/calc/transfer-tax/multi");
+
+    await page.getByTestId("multi-load-history-btn").first().click();
+    await expect(page.getByText("다건 기신고 소득 (E2E)")).toBeVisible({ timeout: 15000 });
+    await page.getByTestId(`load-record-${MULTI_RECORD_PRIOR.id}`).click();
+
+    const respPromise = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/transfer/multi") && r.request().method() === "POST",
+      { timeout: 15000 },
+    );
+    await page.getByRole("button", { name: "세액 계산" }).click();
+    expect((await respPromise).status()).toBe(200);
+    await expect(page.getByText("건별 상세").first()).toBeVisible({ timeout: 15000 });
+
+    // 수정③: 기신고 양도소득금액 행 합계 셀 ≠ 0 (np1 income, 신고일 2026-03-31 < 마지막 2026-05-31)
+    const filingSection = page.locator('[data-print-id="form-table"]');
+    const priorRow = filingSection.locator("tr", { hasText: "기신고 양도소득금액" });
+    const totalCell = priorRow.locator("td, th").nth(1);
+    await expect(totalCell).not.toHaveText("0", { timeout: 15000 });
   });
 });
