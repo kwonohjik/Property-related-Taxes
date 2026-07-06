@@ -276,4 +276,125 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await applyBtn.click();
     await expect(modal).toBeHidden();
   });
+
+  // 겸용(Case B) 진입 — 겸용 토글 + 면적 + 취득일 + PHD. 반환 = MixedUsePHD 섹션 로케이터.
+  async function gotoMixedPhd(page: Page) {
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await fillDateAndVerify(page, { year: "2025", month: "05", day: "01" }, {
+      scope: page.getByTestId("transfer-date"),
+    });
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+      year: "2010",
+      month: "06",
+      day: "15",
+    });
+    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
+    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
+    await page.getByRole("switch", { name: /개별주택가격 미공시/ }).click();
+    return page
+      .locator("div.bg-primary\\/5")
+      .filter({ hasText: "개별주택가격 미공시 취득" })
+      .first();
+  }
+
+  test("T5: 겸용 3시점 공시지가 전부 입력 → housing 3시점 + 양도 상가 산출·적용", async ({ page }) => {
+    test.setTimeout(150_000);
+    const mixedPhd = await gotoMixedPhd(page);
+    await expect(mixedPhd).toBeVisible();
+
+    // 최초 고시일 2015 (MixedUsePHD 섹션 내 최초 고시일)
+    await fillDateExact(mixedPhd, { year: "2015", month: "04", day: "30" });
+
+    await mixedPhd.getByRole("button", { name: "3시점 주택·상가 건물기준시가 일괄 계산" }).click();
+    const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
+    await expect(modal).toBeVisible();
+
+    await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
+    // 부분1 주택
+    await modal.getByText("구조 선택").first().click();
+    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+    await modal.getByText("용도 선택").first().click();
+    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    await modal.getByPlaceholder("연면적").first().fill("120");
+    // 부분2 상가
+    await modal.getByRole("button", { name: "+ 부분 추가" }).click();
+    await modal.getByRole("button", { name: "상가", exact: true }).nth(1).click();
+    await modal.getByText("구조 선택").first().click();
+    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+    await modal.getByText("용도 선택").first().click();
+    await page.getByRole("option", { name: /근린생활/ }).first().click();
+    await modal.getByPlaceholder("연면적").last().fill("80");
+
+    // 3시점 공시지가 전부
+    const land = modal.getByPlaceholder("원/㎡");
+    await land.nth(0).fill("2000000");
+    await land.nth(1).fill("2200000");
+    await land.nth(2).fill("3486000");
+
+    await modal.getByRole("button", { name: "3시점 계산하기" }).click();
+
+    // housing 3 + 양도 commercial = 4개 산출
+    const applyBtn = modal.getByRole("button", { name: /모두 적용/ });
+    await expect(applyBtn).toBeVisible();
+    await expect(applyBtn).toContainText("4개");
+    await expect(modal.getByText("양도시 상가건물 기준시가")).toBeVisible();
+    const shown = await modal.locator("span.font-mono").allInnerTexts();
+    console.log("[T5] 겸용 3시점 산출값:", shown.join(" / "));
+    await applyBtn.click();
+    await expect(modal).toBeHidden();
+  });
+
+  test("T6: 겸용 Case A — splitMode 진입 + F9 게이팅(주택건물 버튼 숨김·상가건물 버튼 존치)", async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await fillDateAndVerify(page, { year: "2025", month: "05", day: "01" }, {
+      scope: page.getByTestId("transfer-date"),
+    });
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
+    // 보유 중 일부 용도변경 ON (겸용 ON 후 활성) — direction 기본 house_to_commercial
+    await page.getByRole("switch", { name: "보유 중 일부 용도변경" }).click();
+    // 용도변경일 2018
+    await fillDateExact(
+      page.locator("div").filter({ hasText: /^용도변경일/ }).first(),
+      { year: "2018", month: "06", day: "15" },
+    );
+
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+      year: "2010",
+      month: "06",
+      day: "15",
+    });
+    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
+    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
+    await page.getByRole("switch", { name: /개별주택가격 미공시/ }).click();
+
+    const mixedPhd = page
+      .locator("div.bg-primary\\/5")
+      .filter({ hasText: "개별주택가격 미공시 취득" })
+      .first();
+    await expect(mixedPhd).toBeVisible();
+    // 최초고시일 2015 < 용도변경일 2018 → Case A(splitMode·4부분)
+    await fillDateExact(mixedPhd, { year: "2015", month: "04", day: "30" });
+    // splitMode 신호: 상가건물 기준시가 필드 노출
+    await expect(mixedPhd.getByText("상가건물 기준시가").first()).toBeVisible();
+
+    // F9: 일괄 버튼 1개 + 주택건물 버튼 숨김·상가건물 버튼 존치 → "건물 기준시가 계산" = 취득·최초공시 상가 2개
+    await expect(mixedPhd.getByRole("button", { name: /주택·상가 건물기준시가 일괄 계산/ })).toHaveCount(1);
+    await expect(mixedPhd.getByRole("button", { name: "건물 기준시가 계산" })).toHaveCount(2);
+  });
 });
