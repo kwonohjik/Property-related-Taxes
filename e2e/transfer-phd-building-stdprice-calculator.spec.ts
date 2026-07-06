@@ -15,6 +15,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { fillDateAndVerify } from "./_helpers/tax-flow";
 
 async function gotoPhdWidget(page: Page) {
   await page.goto("/calc/transfer-tax");
@@ -34,9 +35,20 @@ async function gotoPhdWidget(page: Page) {
     .click();
 }
 
+// exact 라벨 날짜 채움 — 스위치 aria-label("…취득일 다름")의 "일" substring 오매칭 회피
+async function fillDateExact(
+  scope: ReturnType<Page["locator"]>,
+  d: { year: string; month: string; day: string },
+) {
+  await scope.getByLabel("연도", { exact: true }).first().fill(d.year);
+  await scope.getByLabel("월", { exact: true }).first().fill(d.month);
+  await scope.getByLabel("일", { exact: true }).first().fill(d.day);
+}
+
 function phdSection(page: Page) {
+  // PHD 패널 루트(bg-primary/5)로 한정 — div.rounded-md 최외곽은 섹션3까지 포함되어 날짜 스코프 오염
   return page
-    .locator("div.rounded-md")
+    .locator('div.bg-primary\\/5')
     .filter({ hasText: "주택공시가격 미공시 취득 (3-시점 환산)" })
     .first();
 }
@@ -100,5 +112,90 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
       .first()
       .locator("xpath=preceding::input[1]");
     await expect(acqBuildingInput).toHaveValue("");
+  });
+
+  test("T3: 단독주택 3시점(취득 2003·최초고시 2005·양도 2025) 모두 계산·적용", async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    // 양도일 2025
+    await fillDateAndVerify(page, { year: "2025", month: "05", day: "01" }, {
+      scope: page.getByTestId("transfer-date"),
+    });
+
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+
+    // 취득일 2003 (< 2005.4.29 → 개별주택가격 미공시 PHD 자동 활성)
+    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+      year: "2003",
+      month: "06",
+      day: "15",
+    });
+
+    // PHD 토글이 자동 체크 안됐으면 수동 ON
+    const phdToggle = page
+      .locator('[data-slot="toggle-card"]')
+      .filter({ hasText: "취득 당시 개별주택가격 미공시" })
+      .getByRole("switch");
+    if ((await phdToggle.getAttribute("aria-checked")) !== "true") {
+      await phdToggle.click();
+    }
+
+    const phd = phdSection(page);
+    await expect(phd).toBeVisible();
+
+    // 최초 고시일 2005-04-30 (PHD 섹션 내 유일한 DateInput)
+    await fillDateExact(phd, { year: "2005", month: "04", day: "30" });
+
+    // 일괄 계산 모달
+    await phd.getByRole("button", { name: "3시점 건물기준시가 일괄 계산" }).click();
+    const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
+    await expect(modal).toBeVisible();
+
+    await modal.getByText("구조 선택").first().click();
+    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+    await modal.getByText("용도 선택").first().click();
+    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    await modal.getByPlaceholder("건물 연면적").fill("150");
+    await modal.getByPlaceholder("신축연도 (4자리)").fill("2000");
+
+    // 시점별 공시지가 3칸(취득/최초공시/양도)
+    const landInputs = modal.getByPlaceholder("원/㎡");
+    await landInputs.nth(0).fill("2000000");
+    await landInputs.nth(1).fill("2200000");
+    await landInputs.nth(2).fill("3486000");
+
+    await modal.getByRole("button", { name: "3시점 계산하기" }).click();
+
+    // 3시점 모두 산출 → "모두 적용 (3개 시점)"
+    const applyBtn = modal.getByRole("button", { name: /모두 적용/ });
+    await expect(applyBtn).toBeVisible();
+    await expect(applyBtn).toContainText("3개");
+
+    // 산출값 로깅(관찰용)
+    const shown = await modal.locator("span.font-mono").allInnerTexts();
+    console.log("[T3] 3시점 산출값:", shown.join(" / "));
+
+    await applyBtn.click();
+    await expect(modal).toBeHidden();
+
+    // 3개 건물기준시가 필드 모두 채워짐(빈 값 아님)
+    const buildingInputs = phd
+      .getByText("국세청 건물기준시가 (원) — 양도·취득 당시 기준시가", { exact: true })
+      .locator("xpath=preceding::input[1]");
+    await expect(buildingInputs.nth(0)).not.toHaveValue("");
+    await expect(buildingInputs.nth(1)).not.toHaveValue("");
+    await expect(buildingInputs.nth(2)).not.toHaveValue("");
+    const values = await buildingInputs.allInnerTexts().catch(() => []);
+    const vals2 = await Promise.all(
+      [0, 1, 2].map((i) => buildingInputs.nth(i).inputValue()),
+    );
+    console.log("[T3] 적용된 3필드 값:", vals2.join(" / "), values);
   });
 });
