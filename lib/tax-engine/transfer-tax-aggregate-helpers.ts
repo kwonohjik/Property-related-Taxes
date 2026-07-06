@@ -273,7 +273,8 @@ export function allocateBasicDeduction(
 
   let sorted: typeof eligible;
   if (strategy === "FIRST") {
-    sorted = [...eligible].sort((a, b) => a.transferDate.getTime() - b.transferDate.getTime());
+    // 입력 순서 우선 — 목록 첫 번째 자산(idx 오름차순). 양도일 순(EARLIEST_TRANSFER)과 구분.
+    sorted = [...eligible].sort((a, b) => a.idx - b.idx);
   } else if (strategy === "EARLIEST_TRANSFER") {
     sorted = [...eligible].sort((a, b) => a.transferDate.getTime() - b.transferDate.getTime());
   } else {
