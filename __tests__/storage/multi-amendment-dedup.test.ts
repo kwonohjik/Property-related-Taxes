@@ -7,6 +7,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { extractBusinessKey } from "@/lib/storage/business-key";
+import { generateTitle } from "@/lib/storage/title-generator";
 
 const base = {
   __multiTransfer: true,
@@ -47,5 +48,40 @@ describe("M-A7 다건 수정신고·경정청구 businessKey 3-record 공존", (
     expect(new Set([original, amended, refund]).size).toBe(3);
     expect(amended).toContain("|amend");
     expect(refund).toContain("|refund");
+  });
+
+  // A1 (계획서 §5) — 다건 원본 키가 동일 물건 단건 키와 달라야 함(덮어쓰기 방지).
+  it("다건 당초 키 ≠ 동일 물건 단건 키 (|multi 접미)", () => {
+    const multiKey = extractBusinessKey("transfer", { ...base, amendmentMode: false });
+    const singleKey = extractBusinessKey("transfer", {
+      assets: [{ addressJibun: "서울 강남구 대치동 1-1" }],
+      transferDate: "2026-02-15",
+    });
+    expect(multiKey).not.toBe(singleKey);
+    expect(multiKey).toContain("|multi");
+    expect(singleKey).not.toContain("|multi");
+  });
+
+  // 라벨(계획서 §3.2) — 다건 이력 카드 제목에 "(다건)" 병기, 단건은 미병기.
+  it("generateTitle: 다건 → '양도소득세 (다건)', 단건 → '양도소득세'", () => {
+    const multiTitle = generateTitle("transfer", { ...base, amendmentMode: false }, "2026-07-06");
+    expect(multiTitle).toContain("양도소득세 (다건)");
+    const singleTitle = generateTitle(
+      "transfer",
+      { assets: [{ addressJibun: "서울 강남구 대치동 1-1" }], transferDate: "2026-02-15" },
+      "2026-07-06",
+    );
+    expect(singleTitle).toContain("양도소득세");
+    expect(singleTitle).not.toContain("(다건)");
+  });
+
+  // 다건 + 수정신고 라벨 합성.
+  it("generateTitle: 다건 수정신고 → '양도소득세 (다건) 수정신고'", () => {
+    const title = generateTitle(
+      "transfer",
+      { ...base, amendmentMode: true, correctionKind: "amend" },
+      "2026-07-06",
+    );
+    expect(title).toContain("양도소득세 (다건) 수정신고");
   });
 });

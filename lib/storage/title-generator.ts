@@ -117,12 +117,14 @@ export function generateTitle(
 
   if (taxType === "transfer") {
     const date = extractTransferDate(inputData);
+    // 다건(multi)은 저장 taxType이 "transfer"라 라벨만으로는 단건과 구분 불가 → "(다건)" 병기
+    const baseLabel = inputData.__multiTransfer === true ? `${label} (다건)` : label;
     const label2 =
       inputData.amendmentMode === true
         ? inputData.correctionKind === "refund_claim"
-          ? `${label} 경정청구`
-          : `${label} 수정신고`
-        : label;
+          ? `${baseLabel} 경정청구`
+          : `${baseLabel} 수정신고`
+        : baseLabel;
     if (address && date) return `${label2} — ${address} (양도 ${date})`;
     if (address) return `${label2} — ${address}`;
     if (date) return `${label2} — 양도 ${date}`;
