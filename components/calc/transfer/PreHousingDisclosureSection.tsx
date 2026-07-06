@@ -171,6 +171,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           landArea={asset.acquisitionArea || undefined}
           stdPriceSnapshotPrefix={`bsp-${asset.assetId}-phd`}
           stdPriceAddress={stdPriceAddress}
+          enableBatchCalc
           // 취득시 — PHD는 토지 취득일 기준 (건물과 다를 수 있음)
           acquisitionDate={asset.landAcquisitionDate || asset.acquisitionDate}
           landPriceYearAtAcq={asset.phdLandPriceYearAtAcq}
