@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import type { AddressValue } from "@/components/ui/address-search";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
 
 // ─── Props ────────────────────────────────────────────────────────
@@ -117,6 +119,14 @@ export interface ThreePointStandardPriceInputProps {
    * Case A 4-part 통합 모드에서 양도시 섹션이 외부(MixedUseStandardPriceInputs)로 이동 시 사용.
    */
   hideTransferColumn?: boolean;
+  /**
+   * 건물기준시가 계산기 모달(BuildingStdPriceModalButton) snapshotKey 접두.
+   * 예: `bsp-${assetId}-phd`. 주입 시 시점·주택/상가별 고유 key로 입력 스냅샷 복원.
+   * 미주입 시 계산기 버튼은 표시되나 스냅샷 복원은 생략.
+   */
+  stdPriceSnapshotPrefix?: string;
+  /** 건물기준시가 계산기 모달 소재지 주소 prefill (미주입 시 모달 내 재입력). */
+  stdPriceAddress?: AddressValue;
 }
 
 // ─── 라벨 매핑 ──────────────────────────────────────────────────
@@ -210,6 +220,12 @@ interface PointBlockProps {
   commercialLandArea?: string;
   commercialBuildingStdPrice?: string;
   onCommercialBuildingStdPriceChange?: (v: string) => void;
+  /** 건물기준시가(주택) 계산기 snapshotKey. 미주입 시 스냅샷 복원 없이 버튼 표시. */
+  buildingStdSnapshotKey?: string;
+  /** split 상가건물 계산기 snapshotKey. */
+  commercialBuildingStdSnapshotKey?: string;
+  /** 계산기 모달 소재지 주소 prefill. */
+  stdPriceAddress?: AddressValue;
 }
 
 function PointBlock({
@@ -233,6 +249,9 @@ function PointBlock({
   commercialLandArea,
   commercialBuildingStdPrice,
   onCommercialBuildingStdPriceChange,
+  buildingStdSnapshotKey,
+  commercialBuildingStdSnapshotKey,
+  stdPriceAddress,
 }: PointBlockProps) {
   const toneClasses = tone ? TONE_CLASSES[tone] : null;
   const labels = resolveLabels(targetLabel, useWholeBuildingLabels);
@@ -450,34 +469,56 @@ function PointBlock({
 
           {/* Case A 분리 모드 — 주택건물/상가건물 기준시가 (사용자 입력, 2 컬럼) */}
           <div className="grid grid-cols-2 gap-2">
-            <FieldCard
-              label="주택건물 기준시가"
-              unit="원"
-              hint="홈택스 — 양도시 주택 부분에 해당하는 면적의 당시 건물 기준시가"
-              required
-            >
-              <CurrencyInput
-                label=""
-                value={buildingStdPrice}
-                onChange={onBuildingStdPriceChange}
-                placeholder="원"
-                hideUnit
-              />
-            </FieldCard>
-            <FieldCard
-              label="상가건물 기준시가"
-              unit="원"
-              hint="홈택스 — 양도시 상가 부분에 해당하는 면적의 당시 건물 기준시가"
-              required
-            >
-              <CurrencyInput
-                label=""
-                value={commercialBuildingStdPrice ?? ""}
-                onChange={onCommercialBuildingStdPriceChange ?? (() => {})}
-                placeholder="원"
-                hideUnit
-              />
-            </FieldCard>
+            <div className="space-y-1">
+              <FieldCard
+                label="주택건물 기준시가"
+                unit="원"
+                hint="홈택스 — 양도시 주택 부분에 해당하는 면적의 당시 건물 기준시가"
+                required
+              >
+                <CurrencyInput
+                  label=""
+                  value={buildingStdPrice}
+                  onChange={onBuildingStdPriceChange}
+                  placeholder="원"
+                  hideUnit
+                />
+              </FieldCard>
+              <div className="flex justify-end">
+                <BuildingStdPriceModalButton
+                  lockedTaxType="transfer"
+                  initialAddress={stdPriceAddress}
+                  snapshotKey={buildingStdSnapshotKey}
+                  onApply={(v) => onBuildingStdPriceChange(String(v))}
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <FieldCard
+                label="상가건물 기준시가"
+                unit="원"
+                hint="홈택스 — 양도시 상가 부분에 해당하는 면적의 당시 건물 기준시가"
+                required
+              >
+                <CurrencyInput
+                  label=""
+                  value={commercialBuildingStdPrice ?? ""}
+                  onChange={onCommercialBuildingStdPriceChange ?? (() => {})}
+                  placeholder="원"
+                  hideUnit
+                />
+              </FieldCard>
+              {onCommercialBuildingStdPriceChange && (
+                <div className="flex justify-end">
+                  <BuildingStdPriceModalButton
+                    lockedTaxType="transfer"
+                    initialAddress={stdPriceAddress}
+                    snapshotKey={commercialBuildingStdSnapshotKey}
+                    onApply={(v) => onCommercialBuildingStdPriceChange(String(v))}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </>
       ) : (
@@ -504,6 +545,14 @@ function PointBlock({
               hideUnit
             />
           </FieldCard>
+          <div className="flex justify-end">
+            <BuildingStdPriceModalButton
+              lockedTaxType="transfer"
+              initialAddress={stdPriceAddress}
+              snapshotKey={buildingStdSnapshotKey}
+              onApply={(v) => onBuildingStdPriceChange(String(v))}
+            />
+          </div>
         </>
       )}
 
@@ -587,6 +636,9 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         commercialLandArea={props.commercialLandArea}
         commercialBuildingStdPrice={props.commercialBuildingStdPriceAtAcq}
         onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtAcqChange}
+        buildingStdSnapshotKey={props.stdPriceSnapshotPrefix ? `${props.stdPriceSnapshotPrefix}-acq` : undefined}
+        commercialBuildingStdSnapshotKey={props.stdPriceSnapshotPrefix ? `${props.stdPriceSnapshotPrefix}-acq-commercial` : undefined}
+        stdPriceAddress={props.stdPriceAddress}
       />
 
       <PointBlock
@@ -608,6 +660,9 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         commercialLandArea={props.commercialLandArea}
         commercialBuildingStdPrice={props.commercialBuildingStdPriceAtFirst}
         onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtFirstChange}
+        buildingStdSnapshotKey={props.stdPriceSnapshotPrefix ? `${props.stdPriceSnapshotPrefix}-first` : undefined}
+        commercialBuildingStdSnapshotKey={props.stdPriceSnapshotPrefix ? `${props.stdPriceSnapshotPrefix}-first-commercial` : undefined}
+        stdPriceAddress={props.stdPriceAddress}
       />
 
       {!props.hideTransferColumn && (
@@ -631,6 +686,9 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
           commercialLandArea={props.commercialLandArea}
           commercialBuildingStdPrice={props.commercialBuildingStdPriceAtTransfer}
           onCommercialBuildingStdPriceChange={props.onCommercialBuildingStdPriceAtTransferChange}
+          buildingStdSnapshotKey={props.stdPriceSnapshotPrefix ? `${props.stdPriceSnapshotPrefix}-transfer` : undefined}
+          commercialBuildingStdSnapshotKey={props.stdPriceSnapshotPrefix ? `${props.stdPriceSnapshotPrefix}-transfer-commercial` : undefined}
+          stdPriceAddress={props.stdPriceAddress}
         />
       )}
     </div>

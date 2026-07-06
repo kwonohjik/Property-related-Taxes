@@ -67,6 +67,16 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
 
   const priceLabel = PRICE_LABEL[housingType];
 
+  // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
+  const stdPriceAddress = {
+    road: asset.addressRoad,
+    jibun: asset.addressJibun,
+    building: asset.buildingName,
+    detail: asset.addressDetail,
+    lng: asset.longitude,
+    lat: asset.latitude,
+  };
+
   return (
     <div className="space-y-4 rounded-md border border-primary/30 bg-primary/5 p-4">
       {/* 헤더 */}
@@ -159,6 +169,8 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         <ThreePointStandardPriceInput
           jibun={asset.addressJibun || undefined}
           landArea={asset.acquisitionArea || undefined}
+          stdPriceSnapshotPrefix={`bsp-${asset.assetId}-phd`}
+          stdPriceAddress={stdPriceAddress}
           // 취득시 — PHD는 토지 취득일 기준 (건물과 다를 수 있음)
           acquisitionDate={asset.landAcquisitionDate || asset.acquisitionDate}
           landPriceYearAtAcq={asset.phdLandPriceYearAtAcq}

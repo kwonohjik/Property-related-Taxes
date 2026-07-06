@@ -220,6 +220,15 @@ export function MixedUsePreHousingDisclosureSection({
         <ThreePointStandardPriceInput
           targetLabel="주택"
           jibun={asset.addressJibun || undefined}
+          stdPriceSnapshotPrefix={`bsp-${asset.assetId}-phd`}
+          stdPriceAddress={{
+            road: asset.addressRoad,
+            jibun: asset.addressJibun,
+            building: asset.buildingName,
+            detail: asset.addressDetail,
+            lng: asset.longitude,
+            lat: asset.latitude,
+          }}
           landArea={effectiveLandArea > 0 ? effectiveLandArea.toFixed(4) : undefined}
           // Case A: ③ 양도시 컬럼은 MixedUseStandardPriceInputs 양도시 섹션으로 통합
           hideTransferColumn={isCaseA}
