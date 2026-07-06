@@ -20,7 +20,6 @@ import {
   generatePropertyId,
   type PropertyItem,
   type MultiStep,
-  type MultiTransferFormData,
 } from "@/lib/stores/multi-transfer-tax-store";
 import {
   useCalcWizardStore,
@@ -39,12 +38,10 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import TransferTaxCalculator from "../TransferTaxCalculator";
 import { MultiTransferHistoryLoadModal } from "@/components/calc/transfer/MultiTransferHistoryLoadModal";
 import {
-  extractLoadPriorPaid,
   buildPropertyFromSingleRecord,
   buildPropertiesFromMultiRecord,
   isBlankProperty,
 } from "@/lib/calc/transfer-multi-load-entry";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { CalculationRecord } from "@/lib/storage/types";
 import {
   Dialog,
@@ -297,41 +294,28 @@ export default function MultiTransferTaxCalculator() {
     [form.properties],
   );
 
-  // 단건 이력 → 자산 1건 append. 빈(미입력) 자산은 정리. 기납부 참고 자동채움(미편집 시 누적).
+  // 단건 이력 → 자산 1건 append. 빈(미입력) 자산은 정리.
+  // 기납부세액은 신고일 필터(§111③, computeAutoPriorPaid)로 미편집 시 자동 파생 — 여기서 누적하지 않음.
   const handleLoadSingle = useCallback(
     (record: CalculationRecord) => {
-      const pp = extractLoadPriorPaid(record, "single");
       const kept = form.properties.filter((p) => !isBlankProperty(p));
       const newProp = buildPropertyFromSingleRecord(record, `양도 ${kept.length + 1}번`);
-      const updates: Partial<MultiTransferFormData> = {
-        properties: [...kept, newProp],
-        activeStep: "list",
-      };
-      if (!form.priorPaidTaxEdited) {
-        updates.priorPaidTax = String(parseAmount(form.priorPaidTax ?? "0") + pp.national);
-        updates.priorPaidLocalTax = String(parseAmount(form.priorPaidLocalTax ?? "0") + pp.local);
-      }
-      setForm(updates);
+      setForm({ properties: [...kept, newProp], activeStep: "list" });
     },
-    [form.properties, form.priorPaidTax, form.priorPaidLocalTax, form.priorPaidTaxEdited, setForm],
+    [form.properties, setForm],
   );
 
-  // 다건 이력 → 세션 전체 replace. 기납부 참고 자동채움(미편집 시 record 결정세액).
+  // 다건 이력 → 세션 전체 replace. 다건 record는 aggregate 결과만이라 자산별 예정세액 부재
+  // → 기납부세액 auto-fill 없음(0, 사용자 수동확정). 계획서 §7-2.
   const doLoadMulti = useCallback(
     (record: CalculationRecord) => {
-      const pp = extractLoadPriorPaid(record, "multi");
-      const updates: Partial<MultiTransferFormData> = {
+      setForm({
         properties: buildPropertiesFromMultiRecord(record),
         activeStep: "settings",
         activePropertyIndex: 0,
-      };
-      if (!form.priorPaidTaxEdited) {
-        updates.priorPaidTax = String(pp.national);
-        updates.priorPaidLocalTax = String(pp.local);
-      }
-      setForm(updates);
+      });
     },
-    [form.priorPaidTaxEdited, setForm],
+    [setForm],
   );
 
   // 다건 replace는 기존 입력·편집값 있으면 폐기 확인(Dialog, native confirm 금지)

@@ -17,6 +17,13 @@ export interface PropertyItem {
   completionPercent: number;
   /** 이력에서 불러온 경우 원본 계산 id (provenance, 중복 로드 경고용) */
   sourceCalculationId?: string;
+  /**
+   * 이력 불러오기 시 포착한 예정신고 납부세액(standalone, 국세·지방).
+   * 신고일 필터 기납부세액(§111③) 산정용 — computeAutoPriorPaid.
+   * 수동 추가 자산은 미보유(undefined → 0 기여).
+   */
+  priorPaidNational?: number;
+  priorPaidLocal?: number;
 }
 
 /** 4단계 플로우 */

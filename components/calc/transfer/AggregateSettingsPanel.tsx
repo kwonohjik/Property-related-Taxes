@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -12,6 +13,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
+import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 
 interface AggregateSettingsPanelProps {
   form: MultiTransferFormData;
@@ -19,6 +21,13 @@ interface AggregateSettingsPanelProps {
 }
 
 export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPanelProps) {
+  // 미편집 시 기납부세액 = 신고일 필터 자동 파생(§111③). 편집 시 사용자 입력값 표시.
+  const derived = useMemo(() => computeAutoPriorPaid(form.properties), [form.properties]);
+  const priorPaidTaxValue = form.priorPaidTaxEdited ? form.priorPaidTax : String(derived.national);
+  const priorPaidLocalValue = form.priorPaidTaxEdited
+    ? form.priorPaidLocalTax
+    : String(derived.local);
+  const showAutoBadge = !form.priorPaidTaxEdited && (derived.national > 0 || derived.local > 0);
   return (
     <div className="space-y-6">
       {/* 과세연도 */}
@@ -103,22 +112,21 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
         <div className="flex flex-wrap items-center gap-1.5">
           <Label>예정신고 기납부세액</Label>
           <LawArticleModal legalBasis="소득세법 §111③" label="§111③ 확정신고 정산" />
-          {!form.priorPaidTaxEdited &&
-            (form.priorPaidTax !== "0" || form.priorPaidLocalTax !== "0") && (
-              <Badge
-                variant="secondary"
-                data-testid="prior-paid-tax-auto-badge"
-                className="bg-sky-100 text-sky-700 text-[10px]"
-              >
-                자동 (참고)
-              </Badge>
-            )}
+          {showAutoBadge && (
+            <Badge
+              variant="secondary"
+              data-testid="prior-paid-tax-auto-badge"
+              className="bg-sky-100 text-sky-700 text-[10px]"
+            >
+              자동 (참고)
+            </Badge>
+          )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 max-w-xl">
           <div>
             <CurrencyInput
               label="예정신고 기납부세액 (양도소득세)"
-              value={form.priorPaidTax}
+              value={priorPaidTaxValue}
               onChange={(v) => onChange({ priorPaidTax: v, priorPaidTaxEdited: true })}
             />
             <p className="mt-1 text-xs text-muted-foreground">양도소득세(국세) 예정신고 납부액</p>
@@ -126,7 +134,7 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
           <div>
             <CurrencyInput
               label="예정신고 기납부 지방소득세"
-              value={form.priorPaidLocalTax}
+              value={priorPaidLocalValue}
               onChange={(v) => onChange({ priorPaidLocalTax: v, priorPaidTaxEdited: true })}
             />
             <p className="mt-1 text-xs text-muted-foreground">지방소득세 예정신고 납부액</p>
