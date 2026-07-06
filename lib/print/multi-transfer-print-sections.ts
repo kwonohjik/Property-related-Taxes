@@ -10,8 +10,9 @@
  * PR-F2: 기존 자체 printScoped(body[data-print-scope] CSS scope) → PrintSelectionPanel 통일.
  *   ⚠️ printScoped와 PrintSection(print:hidden) 공존 불가(미선택 시 scope 인쇄 무효) → printScoped 완전 제거.
  *
- * pdf 채널 = summary(합산 결과) 1종.
- *   ResultPdfDocument TransferMultiSection이 다건 합산 계산 흐름 렌더(상세명세서·자산별 등은 화면 인쇄로만, 검토 U1).
+ * pdf 채널 = form-table(신고서 양식)·summary(합산 결과) 2종.
+ *   ResultPdfDocument TransferMultiSection이 다건 합산 신고서 양식 렌더(form-table 1차 소유, summary 회귀호환 별칭).
+ *   상세명세서 등은 화면 인쇄로만(검토 U1).
  */
 
 import {
@@ -28,8 +29,9 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 6종 (exact 매칭) */
+/** 선택 가능 leaf 7종 (exact 매칭) */
 export type MultiTransferPrintSectionId =
+  | "form-table"
   | "summary"
   | "detailed-statement"
   | "reduction-recalc"
@@ -50,7 +52,9 @@ export const MULTI_TRANSFER_PRINT_SECTIONS: MultiTransferPrintSectionGroup[] = [
     id: "group:summary",
     label: "합산",
     children: [
-      // 서버 PDF: ResultPdfDocument 다건 합산 계산(TransferMultiSection)으로 표현 가능 → pdf 채널
+      // 상단 합산 신고서 양식(FilingFormTable aggregate, 합계+자산별 컬럼). PDF는 TransferMultiSection 세로형(1차 소유).
+      { id: "form-table", label: "신고서 양식", channel: SCREEN_PDF },
+      // 서버 PDF: ResultPdfDocument 다건 합산 계산(TransferMultiSection)으로 표현 가능 → pdf 채널(회귀호환 별칭)
       { id: "summary", label: "합산 결과", channel: SCREEN_PDF },
       { id: "detailed-statement", label: "계산결과 상세명세서", channel: SCREEN },
     ],

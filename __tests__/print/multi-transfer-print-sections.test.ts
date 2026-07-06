@@ -4,7 +4,7 @@
  *
  * ⚠️ 구현 전 작성 — `lib/print/multi-transfer-print-sections.ts` 미존재 시 RED(import 실패).
  *
- * pdf 채널 = summary(합산 결과) 1종. TransferMultiSection이 다건 합산 계산 흐름(검토 U1).
+ * pdf 채널 = form-table(신고서 양식)·summary(합산 결과) 2종. TransferMultiSection이 다건 합산 신고서 양식 렌더(form-table 1차 소유, summary 회귀호환 별칭).
  *   기존 자체 printScoped(CSS body scope) → PrintSelectionPanel 통일.
  */
 import { describe, it, expect } from "vitest";
@@ -18,8 +18,9 @@ import {
   type MultiTransferPrintSectionId,
 } from "@/lib/print/multi-transfer-print-sections";
 
-// 설계 §2.6 기준 leaf 6종
+// 설계 §2.6 기준 leaf 7종 (form-table = 상단 합산 신고서 양식 추가)
 const ALL_LEAVES: MultiTransferPrintSectionId[] = [
+  "form-table",
   "summary",
   "detailed-statement",
   "reduction-recalc",
@@ -28,7 +29,7 @@ const ALL_LEAVES: MultiTransferPrintSectionId[] = [
   "per-property",
 ];
 
-const PDF_LEAVES: MultiTransferPrintSectionId[] = ["summary"];
+const PDF_LEAVES: MultiTransferPrintSectionId[] = ["form-table", "summary"];
 
 describe("양도세(다중) 선택 출력 레지스트리 — Pre-Do anchor (PR-F2)", () => {
   it("PD-mtr-1: 선택 0건이면 모든 섹션이 print:hidden", () => {
@@ -47,7 +48,7 @@ describe("양도세(다중) 선택 출력 레지스트리 — Pre-Do anchor (PR-
     }
   });
 
-  it("PD-mtr-3: flattenPrintSectionIds는 6개 유니크 leaf, group: 접두 없음", () => {
+  it("PD-mtr-3: flattenPrintSectionIds는 7개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);
@@ -57,7 +58,7 @@ describe("양도세(다중) 선택 출력 레지스트리 — Pre-Do anchor (PR-
     }
   });
 
-  it("PD-mtr-4: pdfEligibleIds는 summary 1종 (합산 계산 대표)", () => {
+  it("PD-mtr-4: pdfEligibleIds는 form-table·summary 2종 (신고서 양식 + 합산 계산 대표)", () => {
     const ids = pdfEligibleIds();
     expect([...ids].sort()).toEqual([...PDF_LEAVES].sort());
   });

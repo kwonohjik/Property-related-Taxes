@@ -17,6 +17,7 @@ import type {
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
+import { MultiTransferFilingFormSection } from "@/components/calc/results/transfer/MultiTransferFilingFormSection";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
@@ -659,6 +660,7 @@ export function MultiTransferTaxResultView({
   // 현재 결과뷰에 실제 렌더되는 leaf id (설계 §2.6 — sub 컴포넌트 내부 가드라 6개 항상)
   const availablePrintIds = useMemo<Set<MultiTransferPrintSectionId>>(() => {
     const s = new Set<MultiTransferPrintSectionId>();
+    s.add("form-table");
     s.add("summary");
     s.add("detailed-statement");
     s.add("reduction-recalc");
@@ -697,6 +699,11 @@ export function MultiTransferTaxResultView({
         pdfReady={true}
         pdfBusy={isPdfLoading}
       />
+
+      {/* 상단 합산 신고서 양식 (합계 + 자산별 컬럼) — 단건 결과와 동일 위치 */}
+      <PrintSection id="form-table" selectedIds={selectedPrintIds}>
+        <MultiTransferFilingFormSection result={result} properties={properties} />
+      </PrintSection>
 
       {/* 합산 결과 카드 */}
       <PrintSection id="summary" selectedIds={selectedPrintIds}>
