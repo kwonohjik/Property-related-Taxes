@@ -5,6 +5,7 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /**
  * 다건 결과탭 상단 합산 신고서 양식 (합계 + 자산별 컬럼).
@@ -28,8 +29,12 @@ export function MultiTransferFilingFormSection({
     const adapted = aggregateToFilingResult(result);
     const ownershipMap = new Map<string, { numerator: number; denominator: number }>();
     const landNatureMap = new Map<string, "appurtenant" | "standalone">();
+    // propertyId → form (자산별 양도일·취득일·거주기간 파생 — buildAggregateRows가 컬럼별로 읽음)
+    const propertyFormMap = new Map<string, TransferFormData>();
     for (const p of result.properties) {
-      const asset = properties.find((x) => x.propertyId === p.propertyId)?.form?.assets[0];
+      const prop = properties.find((x) => x.propertyId === p.propertyId);
+      if (prop?.form) propertyFormMap.set(p.propertyId, prop.form);
+      const asset = prop?.form?.assets[0];
       if (!asset) continue;
       const numerator = parseInt(asset.ownershipNumerator ?? "100", 10);
       const denominator = parseInt(asset.ownershipDenominator ?? "100", 10);
@@ -52,6 +57,7 @@ export function MultiTransferFilingFormSection({
         aggregated: result,
         ownershipMap: ownershipMap.size > 0 ? ownershipMap : undefined,
         landNatureMap: landNatureMap.size > 0 ? landNatureMap : undefined,
+        propertyFormMap: propertyFormMap.size > 0 ? propertyFormMap : undefined,
       },
     };
   }, [result, properties]);

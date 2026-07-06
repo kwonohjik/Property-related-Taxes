@@ -37,6 +37,11 @@ export interface AggregateMeta {
    * 사례 28 landNature 명시 입력 정책에 따라 토지 자산은 성격을 명시.
    */
   landNatureMap?: Map<string, "appurtenant" | "standalone">;
+  /**
+   * propertyId → 해당 property의 form (다건 multi 전용 — 자산별 양도일·취득일·거주기간 파생).
+   * multi는 N개 개별 filing이라 각 property가 자기 form을 가짐. bundled(1 formData) 미주입 시 기존 formData 폴백.
+   */
+  propertyFormMap?: Map<string, TransferFormData>;
 }
 
 export interface FilingFormTableProps {

@@ -128,4 +128,27 @@ test.describe("다건 결과탭 상단 신고서 양식 (합계+자산별)", () 
     const summaryBox = await summarySection.boundingBox();
     expect(filingBox && summaryBox && filingBox.y < summaryBox.y).toBeTruthy();
   });
+
+  // Phase A anchor — 자산별 양도일(수정①) + 기납부·차감납부 행(수정②)
+  test("자산별 양도일이 각 자산 실제값으로 표시되고 차감납부할세액 행이 렌더된다", async ({ page }) => {
+    await page.goto("/calc/transfer-tax/multi");
+
+    await page.getByTestId("multi-load-history-btn").first().click();
+    await expect(page.getByText("다건 신고서 양식 (E2E)")).toBeVisible({ timeout: 15000 });
+    await page.getByTestId(`load-record-${MULTI_RECORD.id}`).click();
+
+    const respPromise = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/transfer/multi") && r.request().method() === "POST",
+      { timeout: 15000 },
+    );
+    await page.getByRole("button", { name: "세액 계산" }).click();
+    expect((await respPromise).status()).toBe(200);
+    await expect(page.getByText("건별 상세").first()).toBeVisible({ timeout: 15000 });
+
+    const filingSection = page.locator('[data-print-id="form-table"]');
+    // 수정①: 자산2 양도일(2026-03-01)이 신고서 양식에 표시 (버그 시 자산1 값 2026-01-01만 존재)
+    await expect(filingSection.getByText("2026-03-01")).toBeVisible({ timeout: 15000 });
+    // 수정②: 차감납부할세액 행 렌더 (기납부 0 → 차감납부=총결정세액)
+    await expect(filingSection.getByText("차감납부할세액")).toBeVisible({ timeout: 15000 });
+  });
 });
