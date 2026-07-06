@@ -7,6 +7,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 
@@ -61,6 +62,18 @@ export function MixedUseStandardPriceInputs({
 
   // 취득 기준일: 토지 취득일 우선, 없으면 건물 취득일
   const acqReferenceDate = asset.landAcquisitionDate || asset.acquisitionDate;
+
+  // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
+  const stdPriceAddress = {
+    road: asset.addressRoad,
+    jibun: asset.addressJibun,
+    building: asset.buildingName,
+    detail: asset.addressDetail,
+    lng: asset.longitude,
+    lat: asset.latitude,
+  };
+  // snapshotKey는 대상 폼 필드 기준(§4.4) — 같은 필드가 Case A/B에서 다른 컴포넌트로 렌더돼도 스냅샷 공유
+  const bspPrefix = `bsp-${asset.assetId}-phd`;
 
   // Case A 4부분 안분 — 최초공시일 < 용도변경일
   const isCaseA = useMemo(() => {
@@ -133,24 +146,44 @@ export function MixedUseStandardPriceInputs({
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <FieldCard label="* 주택건물 기준시가" hint="홈택스 — 양도시 주택 부분에 해당하는 면적의 당시 건물 기준시가">
-                <CurrencyInput
-                  label=""
-                  value={asset.phdBuildingStdPriceAtTransfer}
-                  onChange={(v) => onChange({ phdBuildingStdPriceAtTransfer: v })}
-                  placeholder="원"
-                  hideUnit
-                />
-              </FieldCard>
-              <FieldCard label="* 상가건물 기준시가" hint="홈택스 — 양도시 상가 부분에 해당하는 면적의 당시 건물 기준시가">
-                <CurrencyInput
-                  label=""
-                  value={asset.mixedTransferCommercialBuildingPrice}
-                  onChange={(v) => onChange({ mixedTransferCommercialBuildingPrice: v })}
-                  placeholder="원"
-                  hideUnit
-                />
-              </FieldCard>
+              <div className="space-y-1">
+                <FieldCard label="* 주택건물 기준시가" hint="홈택스 — 양도시 주택 부분에 해당하는 면적의 당시 건물 기준시가">
+                  <CurrencyInput
+                    label=""
+                    value={asset.phdBuildingStdPriceAtTransfer}
+                    onChange={(v) => onChange({ phdBuildingStdPriceAtTransfer: v })}
+                    placeholder="원"
+                    hideUnit
+                  />
+                </FieldCard>
+                <div className="flex justify-end">
+                  <BuildingStdPriceModalButton
+                    lockedTaxType="transfer"
+                    initialAddress={stdPriceAddress}
+                    snapshotKey={`${bspPrefix}-transfer`}
+                    onApply={(v) => onChange({ phdBuildingStdPriceAtTransfer: String(v) })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <FieldCard label="* 상가건물 기준시가" hint="홈택스 — 양도시 상가 부분에 해당하는 면적의 당시 건물 기준시가">
+                  <CurrencyInput
+                    label=""
+                    value={asset.mixedTransferCommercialBuildingPrice}
+                    onChange={(v) => onChange({ mixedTransferCommercialBuildingPrice: v })}
+                    placeholder="원"
+                    hideUnit
+                  />
+                </FieldCard>
+                <div className="flex justify-end">
+                  <BuildingStdPriceModalButton
+                    lockedTaxType="transfer"
+                    initialAddress={stdPriceAddress}
+                    snapshotKey={`${bspPrefix}-transfer-commercial`}
+                    onApply={(v) => onChange({ mixedTransferCommercialBuildingPrice: String(v) })}
+                  />
+                </div>
+              </div>
             </div>
             <div className="rounded-lg bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-900 flex justify-between">
               <span>4부분 합산기준시가 (주택분토지+주택건물+상가분토지+상가건물)</span>
@@ -171,6 +204,14 @@ export function MixedUseStandardPriceInputs({
                 placeholder="양도시 상가건물 기준시가"
               />
             </FieldCard>
+            <div className="flex justify-end">
+              <BuildingStdPriceModalButton
+                lockedTaxType="transfer"
+                initialAddress={stdPriceAddress}
+                snapshotKey={`${bspPrefix}-transfer-commercial`}
+                onApply={(v) => onChange({ mixedTransferCommercialBuildingPrice: String(v) })}
+              />
+            </div>
             <LandPriceLookupField
               pricePerSqm={asset.mixedTransferLandPricePerSqm}
               onPricePerSqmChange={(v) => onChange({ mixedTransferLandPricePerSqm: v })}
@@ -271,6 +312,14 @@ export function MixedUseStandardPriceInputs({
                 placeholder="취득시 상가건물 기준시가 (필수)"
               />
             </FieldCard>
+            <div className="flex justify-end">
+              <BuildingStdPriceModalButton
+                lockedTaxType="transfer"
+                initialAddress={stdPriceAddress}
+                snapshotKey={`${bspPrefix}-acq-commercial`}
+                onApply={(v) => onChange({ mixedAcqCommercialBuildingPrice: String(v) })}
+              />
+            </div>
 
             <LandPriceLookupField
               pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}

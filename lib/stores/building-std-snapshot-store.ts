@@ -5,7 +5,8 @@
  * snapshotKey로 보관 → 재오픈 시 복원(정정 지원). 결과 총액만 자산에 저장하던 한계 보완.
  *
  * - EstateItem/AssetForm 타입·initial·normalize·Zod에 진입하지 않는 별도 UI 스토어(엔진/API 무관).
- * - key 규약: 상증 `bsp-estate-${item.id}` / 양도 `bsp-${asset.assetId}-{gb|cb}-{acq|transfer}`.
+ * - key 규약: 상증 `bsp-estate-${item.id}` / 양도 `bsp-${asset.assetId}-{gb|cb}-{acq|transfer}`
+ *   · PHD 3시점 계산기: `bsp-${asset.assetId}-phd-{acq|first|transfer}` (split 상가는 `…-commercial` 접미).
  * - sessionStorage persist → 새로고침 후에도 복원(키 = 영속 id 기반).
  */
 import { create } from "zustand";
