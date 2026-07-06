@@ -116,13 +116,26 @@ export function calculateTransferTaxAggregate(
       amendment: undefined,
     };
     const result = calculateTransferTax(singleInput, rates);
-    return { item, singleInput, result };
+    // 정밀 NBL 판정이 원시 플래그를 override한 경우, 결과가 노출한 판정값으로 item을 교정.
+    // (원시 isNonBusinessLand=사용자 체크박스 vs 정밀판정=사업용 불일치 시 그룹·세율 오적용 방지)
+    const nblJudgment = result.nonBusinessLandJudgmentDetail;
+    const nblOverride = nblJudgment
+      ? {
+          isNonBusinessLand: nblJudgment.isNonBusinessLand,
+          nonBusinessLandAreaRatio: nblJudgment.surcharge.nonBusinessAreaRatio,
+        }
+      : undefined;
+    const correctedItem: TransferTaxItemInput = nblOverride ? { ...item, ...nblOverride } : item;
+    const correctedSingleInput: TransferTaxInput = nblOverride
+      ? { ...singleInput, ...nblOverride }
+      : singleInput;
+    return { item, correctedItem, correctedSingleInput, singleInput, result };
   });
 
-  // M-2: 세율군 분류
+  // M-2: 세율군 분류 — 정밀판정 교정 item 기준 (원시 플래그 오분류 방지)
   const classified = perAsset.map((pa) => ({
     ...pa,
-    rateGroup: classifyRateGroup(pa.item, pa.result),
+    rateGroup: classifyRateGroup(pa.correctedItem, pa.result),
   }));
 
   // 자산별 원시 income 및 세율군 정리
