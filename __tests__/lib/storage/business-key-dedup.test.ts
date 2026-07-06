@@ -125,4 +125,20 @@ describe("[비즈니스 키 dedup] 저장", () => {
     expect(list.length).toBe(1);
     expect(list[0].businessKey).toBeUndefined(); // 키 미부여(폴백)
   });
+
+  // B-8 (계획서 §5 통합 anchor) — 같은 물건 단건·다건은 별도 2 record(다건이 단건 덮어쓰기 금지)
+  it("B-8 (C3): 단건 저장 → 같은 물건 다건 저장 → 2건 공존", async () => {
+    const repo = createCalculationRepository(UID);
+    const single = { assets: [{ addressJibun: "강남 1-1" }], transferDate: "2026-02-15" };
+    const multi = {
+      __multiTransfer: true,
+      properties: [{ form: { assets: [{ addressJibun: "강남 1-1" }], transferDate: "2026-02-15" } }],
+    };
+    await repo.saveOrUpdateByBusinessKey(rec("inheritance" as never, single, { taxType: "transfer" }));
+    await repo.saveOrUpdateByBusinessKey(rec("inheritance" as never, multi, { taxType: "transfer" }));
+    const list = await repo.list({ taxType: "transfer" });
+    expect(list.length).toBe(2);
+    const keys = list.map((r) => r.businessKey).sort();
+    expect(keys).toEqual(["addr:강남 1-1|2026.02.15", "addr:강남 1-1|2026.02.15|multi"]);
+  });
 });

@@ -38,15 +38,17 @@ export function extractBusinessKey(
       const addr = extractAddress(inputData);
       const date = extractTransferDate(inputData);
       if (!addr && !date) return null;
+      // 다건(multi)은 첫 자산 주소·양도일이 동일 물건 단건과 겹침 → |multi 접미로 단건 record 덮어쓰기 방지
+      const multiSuffix = inputData.__multiTransfer === true ? "|multi" : "";
       // 수정신고·경정청구는 주소·양도일이 당초와 동일 → 접미로 당초 record 덮어쓰기 방지
       // (당초·수정신고|amend·경정청구|refund 3-record 공존)
-      const suffix =
+      const amendSuffix =
         inputData.amendmentMode === true
           ? inputData.correctionKind === "refund_claim"
             ? "|refund"
             : "|amend"
           : "";
-      return `addr:${addr ?? ""}|${date ?? ""}${suffix}`;
+      return `addr:${addr ?? ""}|${date ?? ""}${multiSuffix}${amendSuffix}`;
     }
     case "acquisition": {
       // jibun/road는 acquisition FormState top-level → extractAddress 동작
