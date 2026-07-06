@@ -50,6 +50,9 @@ export function buildAggregateRows(
   function findAssetByPropertyId(pid: string): AssetForm | undefined {
     // NOTE: 이 함수 결과로 반환된 AssetForm의 landNature로
     // 컬럼 라벨 suffix "(부수토지)" / "(독립 나대지)"를 표시할 수 있음 — buildAggregateRows 호출부에서 사용.
+    // 다건 multi: 각 property가 자기 form을 가짐 → propertyFormMap 우선 (bundled는 미주입 → 아래 formData 폴백)
+    const fromPropertyForm = aggregate.propertyFormMap?.get(pid)?.assets[0];
+    if (fromPropertyForm) return fromPropertyForm;
     if (!formData) return undefined;
     if (pid === "primary") return formData.assets[0];
     // 일반건물(토지+건물 일괄) — 토지·건물 분해된 카드는 모두 assets[0]에서 취득일·필요경비 메타 가져옴
@@ -71,7 +74,16 @@ export function buildAggregateRows(
   // (getAcqDateForCard는 FilingFormTableHelpers.ts로 이전 — DRY 정리, DetailedStatementHelpers와 공유)
 
   // 합계 열 — 머리 정보 (자산별이라 합계는 양도일자만 채움)
-  setStr("transferDate", "total", fmtDate(transferDate));
+  // 자산 양도일이 모두 동일하면 그 값, 다르면 "-" (상이 양도일은 대표값 무의미)
+  const allColTransferDates = properties.map(
+    (p) => aggregate.propertyFormMap?.get(p.propertyId)?.transferDate ?? transferDate,
+  );
+  const uniqTransferDates = new Set(allColTransferDates.filter(Boolean));
+  setStr(
+    "transferDate",
+    "total",
+    uniqTransferDates.size === 1 ? fmtDate([...uniqTransferDates][0]!) : "-",
+  );
   setStr("acquisitionDate", "total", "-");
   setStr("holdingPeriod", "total", "-");
   setStr("moveOut", "total", "-");
@@ -92,25 +104,27 @@ export function buildAggregateRows(
 
   for (const p of properties) {
     const col = p.propertyId;
+    // 다건 multi: 자산별 양도일 (bundled는 propertyFormMap 미주입 → 단일 transferDate 폴백)
+    const colTransferDate = aggregate.propertyFormMap?.get(col)?.transferDate ?? transferDate;
     const a = findAssetByPropertyId(col);
     // GB 카드별 정확한 취득일(원건물=건물취득일·증축건물=증축일·토지=토지취득일).
     // 일반 자산은 asset.acquisitionDate 그대로.
     const acqDate = getAcqDateForCard(a, col);
 
     // 머리 정보
-    setStr("transferDate", col, fmtDate(transferDate));
+    setStr("transferDate", col, fmtDate(colTransferDate));
     setStr("acquisitionDate", col, fmtDate(acqDate));
-    setStr("holdingPeriod", col, holdingPeriodFromDates(acqDate, transferDate));
+    setStr("holdingPeriod", col, holdingPeriodFromDates(acqDate, colTransferDate));
 
     const periods = a?.residenceInputMode === "interval" ? a.residencePeriods ?? [] : [];
     const firstMoveIn = periods.length > 0 ? periods[0].moveInDate : "";
     const lastMoveOut = periods.length > 0
-      ? (periods[periods.length - 1].moveOutDate || transferDate)
+      ? (periods[periods.length - 1].moveOutDate || colTransferDate)
       : "";
     const residenceMs = (() => {
       if (a?.residenceInputMode === "interval" && periods.length > 0) {
         return periods.reduce((sum, pp) => {
-          const end = pp.moveOutDate || transferDate;
+          const end = pp.moveOutDate || colTransferDate;
           return sum + holdingMonthsFromDates(pp.moveInDate, end);
         }, 0);
       }
@@ -143,7 +157,7 @@ export function buildAggregateRows(
     setNum("taxableGain", col, assetTaxableGain);
 
     // 장기보유공제 (계 + 보유분/거주분 분리)
-    const holdingMs = holdingMonthsFromDates(acqDate, transferDate);
+    const holdingMs = holdingMonthsFromDates(acqDate, colTransferDate);
     // useTable2: 거주 ≥ 24개월 휴리스틱 (단건과 동일)
     const useTable2 = residenceMs >= 24;
     const split = splitLtDeduction(longTermDed, holdingMs, residenceMs, useTable2);
@@ -191,6 +205,12 @@ export function buildAggregateRows(
     setNum("localCalculatedTax", col, null);
     setNum("localReduction", col, null);
     setNum("localDeterminedTax", col, null);
+
+    // 기납부·차감납부 (§111③ 예정신고 정산) — 신고서 단위 개념, 자산별 null
+    setNum("priorPaidTax", col, null);
+    setNum("deductedPayable", col, null);
+    setNum("priorPaidLocalTax", col, null);
+    setNum("deductedLocalPayable", col, null);
 
     // 합계 누적
     sumTransferPrice += p.transferPrice;
@@ -246,6 +266,11 @@ export function buildAggregateRows(
   setNum("localCalculatedTax", "total", localCalcTotal);
   setNum("localReduction", "total", 0);
   setNum("localDeterminedTax", "total", aggregated.localIncomeTax);
+  // 기납부·차감납부 (§111③ 예정신고 정산) — 합계 열만. MultiTransferTaxSummaryCard와 동일 엔진 필드(절대값).
+  setNum("priorPaidTax", "total", aggregated.priorPaidTax);
+  setNum("deductedPayable", "total", aggregated.settlementAdditionalPayable);
+  setNum("priorPaidLocalTax", "total", aggregated.priorPaidLocalTax);
+  setNum("deductedLocalPayable", "total", aggregated.settlementLocalPayable);
 
   const acqDateRowLabel = acquisitionDateLabel
     ? `취득일자 ${acquisitionDateLabel}`
@@ -278,11 +303,15 @@ export function buildAggregateRows(
     ["reductionTax", "감면세액"],
     ["determinedTax", "결정세액", { highlight: true }],
     ["penaltyTax", "가산세액"],
-    ["totalDeterminedTax", "총결정세액", { highlight: true, separatorAfter: true }],
+    ["totalDeterminedTax", "총결정세액", { highlight: true }],
+    ["priorPaidTax", "기납부세액 (예정신고, §111③)"],
+    ["deductedPayable", "차감납부할세액", { highlight: true, separatorAfter: true }],
     ["ruralSurtax", "농어촌특별세 (§99의3 등)"],
     ["localCalculatedTax", "지방소득세 산출세액"],
     ["localReduction", "지방세 감면세액"],
     ["localDeterminedTax", "지방세 결정세액", { highlight: true }],
+    ["priorPaidLocalTax", "기납부세액 (지방, 예정신고)"],
+    ["deductedLocalPayable", "차감납부할 지방소득세", { highlight: true }],
   ];
 
   return rowOrder.map(([key, label, opts]) => ({
