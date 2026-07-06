@@ -25,6 +25,10 @@ import {
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import {
+  PhdBuildingStdPriceModalButton,
+  type PhdThreePointApply,
+} from "@/components/calc/building-std-price/PhdBuildingStdPriceModalButton";
 import type { AddressValue } from "@/components/ui/address-search";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
 
@@ -127,6 +131,11 @@ export interface ThreePointStandardPriceInputProps {
   stdPriceSnapshotPrefix?: string;
   /** 건물기준시가 계산기 모달 소재지 주소 prefill (미주입 시 모달 내 재입력). */
   stdPriceAddress?: AddressValue;
+  /**
+   * true 시 시점별 필드별 계산기 버튼 대신 **3시점 일괄 계산 버튼 1개**를 노출한다.
+   * (단일 주택 PHD 전용. 미주입 시 기존 필드별 버튼 유지 — mixed-use 회귀 방지.)
+   */
+  enableBatchCalc?: boolean;
 }
 
 // ─── 라벨 매핑 ──────────────────────────────────────────────────
@@ -226,6 +235,8 @@ interface PointBlockProps {
   commercialBuildingStdSnapshotKey?: string;
   /** 계산기 모달 소재지 주소 prefill. */
   stdPriceAddress?: AddressValue;
+  /** true 시 이 시점 필드별 계산기 버튼 미표시(3시점 일괄 버튼으로 대체). */
+  hideBuildingCalcButton?: boolean;
 }
 
 function PointBlock({
@@ -252,6 +263,7 @@ function PointBlock({
   buildingStdSnapshotKey,
   commercialBuildingStdSnapshotKey,
   stdPriceAddress,
+  hideBuildingCalcButton,
 }: PointBlockProps) {
   const toneClasses = tone ? TONE_CLASSES[tone] : null;
   const labels = resolveLabels(targetLabel, useWholeBuildingLabels);
@@ -484,14 +496,16 @@ function PointBlock({
                   hideUnit
                 />
               </FieldCard>
-              <div className="flex justify-end">
-                <BuildingStdPriceModalButton
-                  lockedTaxType="transfer"
-                  initialAddress={stdPriceAddress}
-                  snapshotKey={buildingStdSnapshotKey}
-                  onApply={(v) => onBuildingStdPriceChange(String(v))}
-                />
-              </div>
+              {!hideBuildingCalcButton && (
+                <div className="flex justify-end">
+                  <BuildingStdPriceModalButton
+                    lockedTaxType="transfer"
+                    initialAddress={stdPriceAddress}
+                    snapshotKey={buildingStdSnapshotKey}
+                    onApply={(v) => onBuildingStdPriceChange(String(v))}
+                  />
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <FieldCard
@@ -508,7 +522,7 @@ function PointBlock({
                   hideUnit
                 />
               </FieldCard>
-              {onCommercialBuildingStdPriceChange && (
+              {!hideBuildingCalcButton && onCommercialBuildingStdPriceChange && (
                 <div className="flex justify-end">
                   <BuildingStdPriceModalButton
                     lockedTaxType="transfer"
@@ -545,14 +559,16 @@ function PointBlock({
               hideUnit
             />
           </FieldCard>
-          <div className="flex justify-end">
-            <BuildingStdPriceModalButton
-              lockedTaxType="transfer"
-              initialAddress={stdPriceAddress}
-              snapshotKey={buildingStdSnapshotKey}
-              onApply={(v) => onBuildingStdPriceChange(String(v))}
-            />
-          </div>
+          {!hideBuildingCalcButton && (
+            <div className="flex justify-end">
+              <BuildingStdPriceModalButton
+                lockedTaxType="transfer"
+                initialAddress={stdPriceAddress}
+                snapshotKey={buildingStdSnapshotKey}
+                onApply={(v) => onBuildingStdPriceChange(String(v))}
+              />
+            </div>
+          )}
         </>
       )}
 
@@ -614,10 +630,32 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
   // 양도시는 Case A 여부와 무관하게 항상 겸용 상태 (주택분만)
   const transferLabel = `③ 양도시 ${targetSuffix}기준시가`;
 
+  // 3시점 일괄 계산 — 연도는 이벤트 날짜에서 도출(공시지가 기준연도 landPriceYear*와 구분).
+  const yearOf = (d?: string) => {
+    const y = d && /^\d{4}/.test(d) ? Number(d.slice(0, 4)) : NaN;
+    return Number.isFinite(y) && y > 1900 ? y : undefined;
+  };
+  const batchPoints = [
+    { key: "acquisition" as const, label: "취득시", year: yearOf(props.acquisitionDate), landPricePerM2: props.landPricePerSqmAtAcq },
+    { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(props.firstDisclosureDate), landPricePerM2: props.landPricePerSqmAtFirst },
+    { key: "transfer" as const, label: "양도시", year: yearOf(props.transferDate), landPricePerM2: props.landPricePerSqmAtTransfer },
+  ];
+  const applyBatch = (v: PhdThreePointApply) => {
+    if (v.acquisition != null) props.onBuildingStdPriceAtAcqChange(String(v.acquisition));
+    if (v.firstDisclosure != null) props.onBuildingStdPriceAtFirstChange(String(v.firstDisclosure));
+    if (v.transfer != null) props.onBuildingStdPriceAtTransferChange(String(v.transfer));
+  };
+
   return (
     <div className="space-y-3">
+      {props.enableBatchCalc && (
+        <div className="flex justify-end">
+          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} />
+        </div>
+      )}
       <PointBlock
         label={acqLabel}
+        hideBuildingCalcButton={props.enableBatchCalc}
         tone="amber"
         referenceDate={props.acquisitionDate}
         selectedYear={props.landPriceYearAtAcq}
@@ -643,6 +681,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
 
       <PointBlock
         label={firstLabel}
+        hideBuildingCalcButton={props.enableBatchCalc}
         tone="violet"
         referenceDate={props.firstDisclosureDate}
         selectedYear={props.landPriceYearAtFirst}
@@ -668,6 +707,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
       {!props.hideTransferColumn && (
         <PointBlock
           label={transferLabel}
+          hideBuildingCalcButton={props.enableBatchCalc}
           tone="emerald"
           referenceDate={props.transferDate}
           selectedYear={props.landPriceYearAtTransfer}
