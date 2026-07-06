@@ -522,7 +522,8 @@ function PointBlock({
                   hideUnit
                 />
               </FieldCard>
-              {!hideBuildingCalcButton && onCommercialBuildingStdPriceChange && (
+              {/* 상가건물 버튼은 배치 게이팅과 무관하게 존치 — Option B: 취득/최초공시 상가는 배치 미산출·수동(F9·C4) */}
+              {onCommercialBuildingStdPriceChange && (
                 <div className="flex justify-end">
                   <BuildingStdPriceModalButton
                     lockedTaxType="transfer"
@@ -640,17 +641,25 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(props.firstDisclosureDate), landPricePerM2: props.landPricePerSqmAtFirst },
     { key: "transfer" as const, label: "양도시", year: yearOf(props.transferDate), landPricePerM2: props.landPricePerSqmAtTransfer },
   ];
+  // Option B: housing 3시점 + 양도 commercial만 라우팅. 취득/최초공시 commercial은 배치 미산출(C4·수동).
   const applyBatch = (v: PhdThreePointApply) => {
-    if (v.acquisition != null) props.onBuildingStdPriceAtAcqChange(String(v.acquisition));
-    if (v.firstDisclosure != null) props.onBuildingStdPriceAtFirstChange(String(v.firstDisclosure));
-    if (v.transfer != null) props.onBuildingStdPriceAtTransferChange(String(v.transfer));
+    if (v.acquisition?.housing != null) props.onBuildingStdPriceAtAcqChange(String(v.acquisition.housing));
+    if (v.firstDisclosure?.housing != null) props.onBuildingStdPriceAtFirstChange(String(v.firstDisclosure.housing));
+    if (v.transfer?.housing != null) props.onBuildingStdPriceAtTransferChange(String(v.transfer.housing));
+    if (v.transfer?.commercial != null)
+      props.onCommercialBuildingStdPriceAtTransferChange?.(String(v.transfer.commercial));
   };
+
+  // 겸용 — 배치가 산출하는 양도 commercial 라우팅 콜백이 있거나(또는 Case A split) 부분별 주택/상가 입력 노출.
+  // enableCommercial 조건은 applyBatch 라우팅(transfer-commercial=onCommercialBuildingStdPriceAtTransferChange)과 일치시킨다(M1).
+  const enableCommercial =
+    splitMode || props.onCommercialBuildingStdPriceAtTransferChange != null;
 
   return (
     <div className="space-y-3">
       {props.enableBatchCalc && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} />
+          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} />
         </div>
       )}
       <PointBlock

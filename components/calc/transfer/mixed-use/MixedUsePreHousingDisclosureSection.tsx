@@ -219,6 +219,7 @@ export function MixedUsePreHousingDisclosureSection({
 
         <ThreePointStandardPriceInput
           targetLabel="주택"
+          enableBatchCalc
           jibun={asset.addressJibun || undefined}
           stdPriceSnapshotPrefix={`bsp-${asset.assetId}-phd`}
           stdPriceAddress={{
