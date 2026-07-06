@@ -100,6 +100,15 @@ export function monthsBetween(from: Date, to: Date): number {
 
 export interface AssetRecord {
   item: TransferTaxItemInput;
+  /**
+   * 정밀 NBL 판정(result.nonBusinessLandJudgmentDetail)으로 교정한 입력.
+   * 원시 isNonBusinessLand는 사용자 체크박스라 정밀판정과 어긋날 수 있어,
+   * 그룹 분류·세율 재계산은 반드시 이 교정본을 사용한다(사업용 오중과 방지).
+   * - correctedItem: classifyRateGroup용 (TransferTaxItemInput)
+   * - correctedSingleInput: calcTax용 (TransferTaxInput)
+   */
+  correctedItem: TransferTaxItemInput;
+  correctedSingleInput: TransferTaxInput;
   singleInput: TransferTaxInput;
   result: TransferTaxResult;
   rateGroup: RateGroup;
@@ -341,14 +350,14 @@ export function aggregateByGroup(
       // calcTax를 자산 입력으로 재호출하여 §104①후단(비사업용+단기 큰 세액) 분기까지 정확히 반영.
       const perAsset = idxList.map((i) => {
         const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
-        const tr = calcTax(assetTaxBase, parsedRates, records[i].singleInput);
+        const tr = calcTax(assetTaxBase, parsedRates, records[i].correctedSingleInput);
         return { rate: tr.appliedRate, tax: tr.calculatedTax };
       });
       const uniformRate = perAsset.every((p) => p.rate === perAsset[0].rate);
       if (uniformRate) {
         // 동일 세율(예: 일괄양도 일체과세 70% — 사례 28)은 합산 과세표준 × 세율로 1회 floor.
         // 자산별 floor 합산은 floor 횟수 차이로 ±N원 오차가 나므로 동일 세율은 기존 합산 방식 유지.
-        const tr = calcTax(groupTaxBase, parsedRates, records[idxList[0]].singleInput);
+        const tr = calcTax(groupTaxBase, parsedRates, records[idxList[0]].correctedSingleInput);
         groupCalculatedTax = tr.calculatedTax;
         appliedRate = tr.appliedRate;
       } else {
@@ -363,7 +372,7 @@ export function aggregateByGroup(
       // 누진세율 호(progressive·multi_house_surcharge·non_business_land) 및 미등기 단일 70%는
       // 동일 호 합산이 정확하므로 그룹 합산 과세표준에 대표 세율을 적용한다.
       const rep = records[idxList[0]];
-      const taxResult = calcTax(groupTaxBase, parsedRates, rep.singleInput);
+      const taxResult = calcTax(groupTaxBase, parsedRates, rep.correctedSingleInput);
       groupCalculatedTax = taxResult.calculatedTax;
       appliedRate = taxResult.appliedRate;
       surchargeRate = taxResult.surchargeRate;
