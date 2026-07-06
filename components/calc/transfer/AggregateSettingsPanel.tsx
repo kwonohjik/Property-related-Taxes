@@ -59,6 +59,7 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
         <div className="max-w-xs">
           <CurrencyInput
             label="연간 기사용 기본공제"
+            hideLabel
             value={form.annualBasicDeductionUsed}
             onChange={(v) => onChange({ annualBasicDeductionUsed: v })}
           />
