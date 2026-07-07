@@ -30,6 +30,10 @@ import {
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
 import { calculatePre1990LandValuation } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
+import {
+  PhdBuildingStdPriceModalButton,
+  type PhdThreePointApply,
+} from "@/components/calc/building-std-price/PhdBuildingStdPriceModalButton";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── 공시지가 조회 + 토지기준시가 서브 컴포넌트 ──────────────────────────
@@ -154,6 +158,12 @@ const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 /** 1990.8.30. 이전 취득 분기 기준 */
 const PRE_1990_DATE = "1990-08-30";
 
+/** YYYY-MM-DD → 연도(number) or undefined (1900 이하·미입력 제외) */
+function yearOf(d?: string): number | undefined {
+  const y = d && /^\d{4}/.test(d) ? Number(d.slice(0, 4)) : undefined;
+  return y && y > 1900 ? y : undefined;
+}
+
 const LAW_BADGE_CLASS =
   "inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium " +
   "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
@@ -169,6 +179,34 @@ interface Props {
 export function HouseValuationSection({ asset, onChange, transferDate }: Props) {
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
   const isBefore1990 = !!inheritanceDate && inheritanceDate < PRE_1990_DATE;
+
+  // 3시점 건물기준시가 일괄 계산기 배선(§164⑤).
+  // F2: 계산기(구조·용도 방식 국세청 건물기준시가)는 단독주택 전용 — 공동주택은 미노출.
+  const isHouseIndividual = asset.inheritanceAssetKind === "house_individual";
+  const batchPoints = useMemo(() => {
+    const firstRef = asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE;
+    return [
+      { key: "acquisition" as const, label: "취득시(상속)", year: yearOf(inheritanceDate), landPricePerM2: asset.inhHouseValLandPricePerSqmAtInheritance },
+      { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(firstRef), landPricePerM2: asset.inhHouseValLandPricePerSqmAtFirst },
+      { key: "transfer" as const, label: "양도시", year: yearOf(transferDate), landPricePerM2: asset.inhHouseValLandPricePerSqmAtTransfer },
+    ];
+  }, [
+    inheritanceDate,
+    transferDate,
+    asset.inhHouseValFirstDisclosureDate,
+    asset.inhHouseValLandPricePerSqmAtInheritance,
+    asset.inhHouseValLandPricePerSqmAtFirst,
+    asset.inhHouseValLandPricePerSqmAtTransfer,
+  ]);
+
+  // F1: 산출값을 3필드에 단일 onChange patch로 병합(3연속 호출 아님 — stale-clobber 차단).
+  const applyBatch = (v: PhdThreePointApply) => {
+    const patch: Partial<AssetForm> = {};
+    if (v.transfer?.housing != null) patch.inhHouseValBuildingStdPriceAtTransfer = String(v.transfer.housing);
+    if (v.firstDisclosure?.housing != null) patch.inhHouseValBuildingStdPriceAtFirst = String(v.firstDisclosure.housing);
+    if (v.acquisition?.housing != null) patch.inhHouseValBuildingStdPriceAtInheritance = String(v.acquisition.housing);
+    if (Object.keys(patch).length) onChange(patch);
+  };
 
   // 1990 이전 토지기준시가는 매 렌더 시 동기적으로 직접 계산 (useEffect 콜백 의존성 제거).
   // 엔진 측은 어차피 inheritedHouseValuation.pre1990 등급 데이터를 받아 자체 계산하므로
@@ -262,6 +300,13 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           </span>
         )}
       </p>
+
+      {/* 3시점 건물기준시가 일괄 계산기 — 단독주택 전용(F2) */}
+      {isHouseIndividual && (
+        <div className="flex justify-end">
+          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} />
+        </div>
+      )}
 
       {/* ① 토지 면적 */}
       <FieldCard label="토지 면적" unit="㎡" hint="주택 부수 토지 면적(㎡). 3시점 토지 기준시가 계산의 기준값.">
