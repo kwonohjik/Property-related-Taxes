@@ -28,8 +28,11 @@ import {
   computePhdThreePointStdPrice,
   type PhdBatchResult,
   type PhdBatchPart,
+  type PhdBatchInput,
   type PhdPartCategory,
 } from "@/lib/calc/phd-building-std-batch";
+import { phdBatchToSnapshots } from "@/lib/calc/phd-batch-snapshots";
+import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 
 /** 시점별 적용 결과 — 산출된 카테고리만 채워짐(원 정수) */
 export interface PhdThreePointApply {
@@ -59,6 +62,12 @@ interface Props {
    * 미설정(Case B·단독)=취득·최초공시 상가 미산출(수동).
    */
   commercialAcqFirstMode?: boolean;
+  /**
+   * 건물 기준시가 스냅샷 저장 접두(예: `bsp-${assetId}-phd`). 주입 시 "모두 적용" 시점에
+   * 각 시점·카테고리를 스냅샷으로 재구성 저장 → 결과탭 「건물 기준시가 계산서」 재유도.
+   * 미주입 시 스냅샷 저장 생략(종전 동작).
+   */
+  snapshotPrefix?: string;
 }
 
 /** 편집 중 부분 행(연면적은 문자열 입력) */
@@ -88,6 +97,7 @@ export function PhdBuildingStdPriceModalButton({
   buttonLabel,
   enableCommercial = false,
   commercialAcqFirstMode = false,
+  snapshotPrefix,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [builtYear, setBuiltYear] = useState("");
@@ -97,7 +107,10 @@ export function PhdBuildingStdPriceModalButton({
     Object.fromEntries(points.map((p) => [p.key, p.landPricePerM2])),
   );
   const [result, setResult] = useState<PhdBatchResult | null>(null);
+  // 마지막 계산에 쓴 입력 — "모두 적용" 시 스냅샷 재구성용
+  const [computedInput, setComputedInput] = useState<PhdBatchInput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const replaceSnapshotsByPrefix = useBuildingStdSnapshotStore((s) => s.replaceSnapshotsByPrefix);
 
   // 구조·용도 옵션 기준 연도 — 최근(양도) 우선(옵션 커버리지 안전)
   const optionYear =
@@ -118,6 +131,7 @@ export function PhdBuildingStdPriceModalButton({
   function handleCalc() {
     setError(null);
     setResult(null);
+    setComputedInput(null);
     const built = Math.floor(parseDecimal(builtYear));
     if (built <= 0) {
       setError("신축연도를 입력하세요.");
@@ -149,14 +163,14 @@ export function PhdBuildingStdPriceModalButton({
       return { year: p.year, landPricePerM2: land };
     };
     try {
-      setResult(
-        computePhdThreePointStdPrice({
-          building: { builtYear: built, parts },
-          acquisition: pt("acquisition"),
-          firstDisclosure: pt("firstDisclosure"),
-          transfer: pt("transfer"),
-        }),
-      );
+      const input: PhdBatchInput = {
+        building: { builtYear: built, parts },
+        acquisition: pt("acquisition"),
+        firstDisclosure: pt("firstDisclosure"),
+        transfer: pt("transfer"),
+      };
+      setComputedInput(input);
+      setResult(computePhdThreePointStdPrice(input));
     } catch (e) {
       setError(e instanceof Error ? e.message : "계산 실패");
     }
@@ -164,6 +178,10 @@ export function PhdBuildingStdPriceModalButton({
 
   function handleApplyAll() {
     if (!result) return;
+    // 산출 근거 스냅샷 저장(재구성) — 결과탭 「건물 기준시가 계산서」 재유도용. prefix 미주입 시 생략.
+    if (snapshotPrefix && computedInput) {
+      replaceSnapshotsByPrefix(snapshotPrefix, phdBatchToSnapshots(computedInput, snapshotPrefix));
+    }
     onApply({
       acquisition: result.acquisition,
       firstDisclosure: result.firstDisclosure,
@@ -190,6 +208,7 @@ export function PhdBuildingStdPriceModalButton({
     setRows([emptyRow()]);
     setBuiltYear("");
     setResult(null);
+    setComputedInput(null);
     setError(null);
     setOpen(true);
   }

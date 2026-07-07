@@ -22,13 +22,21 @@ const INSTANCE_TITLE: Record<NtsReportInstance["markCell"], string> = {
   gift: "증여 건물 기준시가 계산",
 };
 
-function ReportInstance({ inst }: { inst: NtsReportInstance }) {
+function ReportInstance({
+  inst,
+  titleOverride,
+  markCellOverride,
+}: {
+  inst: NtsReportInstance;
+  titleOverride?: string;
+  markCellOverride?: NtsReportInstance["markCell"];
+}) {
   return (
     <div className="mb-6 break-after-page last:break-after-auto">
       <h3 className="mb-2 text-center text-[14px] font-bold text-black">
-        건물 기준시가 계산서 — {INSTANCE_TITLE[inst.markCell]}
+        건물 기준시가 계산서 — {titleOverride ?? INSTANCE_TITLE[inst.markCell]}
       </h3>
-      <ReportSection1Category markCell={inst.markCell} dateLabel={inst.dateLabel} acqNoteLabel={inst.acqNoteLabel} />
+      <ReportSection1Category markCell={markCellOverride ?? inst.markCell} dateLabel={inst.dateLabel} acqNoteLabel={inst.acqNoteLabel} />
       <ReportSection2Overview inst={inst} />
       <ReportEvalTable
         title="Ⅲ. 건물의 평가"
@@ -53,7 +61,17 @@ function ReportInstance({ inst }: { inst: NtsReportInstance }) {
   );
 }
 
-export function NtsBuildingStdPriceReport({ model }: { model: NtsReportModel }) {
+export function NtsBuildingStdPriceReport({
+  model,
+  titleOverride,
+  markCellOverride,
+}: {
+  model: NtsReportModel;
+  /** 시점·맥락 라벨(예: PHD 3시점 "양도 취득시 · 주택분 (2003년)"). 미주입 시 기본 제목(상속/증여/양도). */
+  titleOverride?: string;
+  /** Ⅰ.구분 마킹 override(예: PHD 양도 맥락 취득당시/양도당시). 미주입 시 모델 markCell(상속/증여). */
+  markCellOverride?: NtsReportInstance["markCell"];
+}) {
   const [open, setOpen] = useState(false);
   if (model.instances.length === 0) return null;
 
@@ -65,12 +83,12 @@ export function NtsBuildingStdPriceReport({ model }: { model: NtsReportModel }) 
         aria-expanded={open}
         className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-sm font-medium print:hidden"
       >
-        <span>국세청 「건물 기준시가 계산서」 (인쇄 서식)</span>
+        <span>국세청 「건물 기준시가 계산서」{titleOverride ? ` — ${titleOverride}` : " (인쇄 서식)"}</span>
         <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(open)}</span>
       </button>
       <div className={`${open ? "block" : "hidden print:block"} bg-white p-3 text-black`}>
         {model.instances.map((inst, i) => (
-          <ReportInstance key={i} inst={inst} />
+          <ReportInstance key={i} inst={inst} titleOverride={titleOverride} markCellOverride={markCellOverride} />
         ))}
         {model.apportionment && model.apportionment.rows.length > 0 && (
           <ReportSection5Apportion apportionment={model.apportionment} />

@@ -13,16 +13,10 @@
 import { useMemo } from "react";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import { toEngineInput, buildNtsReportContext } from "@/lib/calc/building-std-price-form";
+import { idOfSnapshotKey, phdTimepointLabel } from "@/lib/calc/building-std-snapshot-keys";
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
-import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
+import { buildNtsReportModel, type NtsReportModel, type NtsReportInstance } from "@/lib/calc/nts-report-adapter";
 import { NtsBuildingStdPriceReport } from "@/components/calc/building-std-price/nts-report/NtsBuildingStdPriceReport";
-
-/** 스냅샷 키에서 자산/재산 id 추출 (소속 판정용). */
-function idOfSnapshotKey(key: string): string {
-  return key.startsWith("bsp-estate-")
-    ? key.slice("bsp-estate-".length)
-    : key.replace(/^bsp-/, "").replace(/-(gb|cb)-(acq|transfer)$/, "");
-}
 
 /** inputData에 소속된 건물 기준시가 스냅샷이 있으면 true (결과뷰 availablePrintIds 판정용). */
 export function hasBuildingStdReport(inputData: Record<string, unknown> | undefined): boolean {
@@ -46,20 +40,47 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
   const snapshots = useBuildingStdSnapshotStore((s) => s.snapshots);
 
   const reports = useMemo(() => {
-    if (!inputData) return [] as { key: string; model: NtsReportModel }[];
+    type ReportItem = {
+      key: string;
+      model: NtsReportModel;
+      titleOverride?: string;
+      markCellOverride?: NtsReportInstance["markCell"];
+      rank: number;
+    };
+    if (!inputData) return [] as ReportItem[];
     const inputStr = JSON.stringify(inputData);
-    const out: { key: string; model: NtsReportModel }[] = [];
+    const out: ReportItem[] = [];
+    let seq = 0;
     for (const [key, snap] of Object.entries(snapshots)) {
       const id = idOfSnapshotKey(key);
       if (id === "" || !inputStr.includes(id)) continue;
       try {
         const result = calcBuildingStandardPrice(toEngineInput(snap));
         const model = buildNtsReportModel(buildNtsReportContext(snap), result);
-        if (model.instances.length > 0) out.push({ key, model });
+        if (model.instances.length === 0) continue;
+        // PHD 3시점(일괄) 스냅샷은 시점·주택/상가 라벨을 헤딩으로 명시(양도 맥락) — C1.
+        const tp = phdTimepointLabel(key);
+        const titleOverride = tp
+          ? `양도 ${tp.timepoint} · ${tp.category === "commercial" ? "상가분" : "주택분"}${snap.valuationYear ? ` (${snap.valuationYear}년)` : ""}`
+          : undefined;
+        // Ⅰ.구분 마킹 — 상속(재구성 taxType) 대신 양도 맥락으로: 취득시·최초공시일=취득당시(2001↑), 양도시=양도당시.
+        const markCellOverride: NtsReportInstance["markCell"] | undefined = tp
+          ? tp.timepoint === "양도시"
+            ? "transfer"
+            : "acq2001"
+          : undefined;
+        // PHD는 취득→최초공시→양도, 주택→상가 순으로 정렬. 비-PHD는 삽입 순서 유지.
+        const rank = tp
+          ? ({ 취득시: 0, 최초공시일: 1, 양도시: 2 }[tp.timepoint] ?? 0) * 2 +
+            (tp.category === "commercial" ? 1 : 0)
+          : 100 + seq;
+        seq++;
+        out.push({ key, model, titleOverride, markCellOverride, rank });
       } catch {
         // 스냅샷이 불완전/구버전이면 graceful 생략 (서식 미표시).
       }
     }
+    out.sort((a, b) => a.rank - b.rank);
     return out;
   }, [snapshots, inputData]);
 
@@ -67,8 +88,8 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
 
   return (
     <div className="space-y-6">
-      {reports.map(({ key, model }) => (
-        <NtsBuildingStdPriceReport key={key} model={model} />
+      {reports.map(({ key, model, titleOverride, markCellOverride }) => (
+        <NtsBuildingStdPriceReport key={key} model={model} titleOverride={titleOverride} markCellOverride={markCellOverride} />
       ))}
     </div>
   );

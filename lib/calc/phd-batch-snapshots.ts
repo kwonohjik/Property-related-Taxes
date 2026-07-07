@@ -1,0 +1,101 @@
+/**
+ * PHD 3시점 일괄 산출 → 건물 기준시가 계산서 스냅샷 재구성.
+ *
+ * 계획서: docs/02-design/features/building-std-report-result-tab-phd-batch.plan.md
+ * anchor: __tests__/calc/phd-batch-snapshots.test.ts
+ *
+ * 일괄 모달은 최종 금액만 필드에 적용하므로, 결과탭 계산서(BuildingStdPriceReportSection)가
+ * 재유도할 수 있도록 각 (시점, 카테고리)를 `BuildingStdPriceFormState`(valuation 모드) 스냅샷으로
+ * 재구성한다. 재유도 총액 = 배치 적용 금액(자기일관성) — 규율:
+ *  - (A) 단일부분 floorArea = 카테고리 부분 소계.  - (B) 시점당 1스냅샷.
+ *  - (C) ≤2000 취득(acqBase, transfer 모드 산식)은 valuation 재현 불가 → 생략.
+ *  - (D) Case A 상가 취득·최초공시는 당시 주택 용도(acqFirstUsageNo)로 매핑.
+ */
+import {
+  initialBuildingStdPriceForm,
+  emptyCompositePart,
+  type BuildingStdPriceFormState,
+} from "@/lib/calc/building-std-price-form";
+import {
+  BUILDING_STD_FIRST_YEAR,
+  type PhdBatchInput,
+  type PhdBatchPart,
+  type PhdBatchPoint,
+} from "@/lib/calc/phd-building-std-batch";
+
+/** 부분목록 + 시점 → valuation 모드 스냅샷(배치 엔진 호출과 동일 입력형). */
+function buildValuationSnapshot(
+  parts: PhdBatchPart[],
+  builtYear: number,
+  point: PhdBatchPoint,
+): BuildingStdPriceFormState {
+  const head = parts[0];
+  const composite = parts.length > 1;
+  const sumArea = parts.reduce((s, p) => s + p.floorArea, 0);
+  return {
+    ...initialBuildingStdPriceForm,
+    taxType: "inheritance_gift",
+    inheritanceGiftKind: "inheritance",
+    builtYear: String(builtYear),
+    valuationYear: String(point.year),
+    valLandPrice: String(point.landPricePerM2),
+    // 단일: head 면적 / 복합: 합계(복합에선 top-level floorArea 미사용, 각 part 면적 사용)
+    floorArea: String(composite ? sumArea : head.floorArea),
+    valStructureKey: head.structureKey,
+    valUsageNo: String(head.usageNo),
+    adjustmentMode: "manual",
+    compositeMode: composite,
+    compositeParts: composite
+      ? parts.map((p) => ({
+          ...emptyCompositePart(),
+          structureKey: p.structureKey,
+          usageNo: String(p.usageNo),
+          floorArea: String(p.floorArea),
+        }))
+      : [emptyCompositePart()],
+  };
+}
+
+/**
+ * 배치 입력 → 스냅샷 맵. 키: `${prefix}-{acq|first|transfer}[-commercial]`.
+ * computePhdThreePointStdPrice와 동일한 시점×카테고리 산정 로직을 미러(산출되는 슬롯만 스냅샷 생성).
+ */
+export function phdBatchToSnapshots(
+  input: PhdBatchInput,
+  prefix: string,
+): Record<string, BuildingStdPriceFormState> {
+  const { building, acquisition, firstDisclosure, transfer } = input;
+  const { builtYear, parts } = building;
+  const housing = parts.filter((p) => p.category === "housing");
+  const commercial = parts.filter((p) => p.category === "commercial");
+  const out: Record<string, BuildingStdPriceFormState> = {};
+
+  // ≥2001 valuation 재현 가능한 시점만 스냅샷 생성(≤2000 acqBase는 C조건으로 생략).
+  const add = (
+    pointKeyword: "acq" | "first" | "transfer",
+    category: "housing" | "commercial",
+    snapParts: PhdBatchPart[],
+    point: PhdBatchPoint | undefined,
+  ) => {
+    if (!point || snapParts.length === 0 || point.year < BUILDING_STD_FIRST_YEAR) return;
+    const key = `${prefix}-${pointKeyword}${category === "commercial" ? "-commercial" : ""}`;
+    out[key] = buildValuationSnapshot(snapParts, builtYear, point);
+  };
+
+  // housing — 3시점
+  add("acq", "housing", housing, acquisition);
+  add("first", "housing", housing, firstDisclosure);
+  add("transfer", "housing", housing, transfer);
+
+  // commercial 양도 — 상가 용도 그대로
+  add("transfer", "commercial", commercial, transfer);
+
+  // commercial 취득·최초공시 — Case A(acqFirstUsageNo)면 당시 주택 용도로 매핑
+  if (commercial.some((p) => p.acqFirstUsageNo != null)) {
+    const atPre = commercial.map((p) => ({ ...p, usageNo: p.acqFirstUsageNo ?? p.usageNo }));
+    add("acq", "commercial", atPre, acquisition);
+    add("first", "commercial", atPre, firstDisclosure);
+  }
+
+  return out;
+}

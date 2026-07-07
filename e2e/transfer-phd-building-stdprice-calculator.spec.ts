@@ -284,6 +284,17 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await expect(buildingInputs.nth(0)).not.toHaveValue("");
     await expect(buildingInputs.nth(1)).not.toHaveValue("");
     await expect(buildingInputs.nth(2)).not.toHaveValue("");
+
+    // GAP1: 일괄 적용이 건물기준시가 스냅샷을 저장했는지(결과탭 계산서 재유도용)
+    const snapKeys = await page.evaluate(() => {
+      const raw = sessionStorage.getItem("building-std-snapshots");
+      if (!raw) return [] as string[];
+      return Object.keys(JSON.parse(raw)?.state?.snapshots ?? {});
+    });
+    console.log("[T8] 저장된 스냅샷 키:", snapKeys.join(", "));
+    expect(snapKeys.some((k) => /-phd-acq$/.test(k))).toBe(true);
+    expect(snapKeys.some((k) => /-phd-first$/.test(k))).toBe(true);
+    expect(snapKeys.some((k) => /-phd-transfer$/.test(k))).toBe(true);
   });
 
   test("T4: 겸용 PHD — 일괄 모달 주택/상가 UI 렌더 + 양도 상가건물 산출", async ({ page }) => {

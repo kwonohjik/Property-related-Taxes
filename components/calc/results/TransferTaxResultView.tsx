@@ -39,6 +39,7 @@ import {
   BuildingStdPriceReportSection,
   hasBuildingStdReport,
 } from "@/components/calc/results/BuildingStdPriceReportSection";
+import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
 import {
   TRANSFER_PRINT_SECTIONS,
   type TransferPrintSectionId,
@@ -148,6 +149,8 @@ export function TransferTaxResultView({
         taxType: "transfer",
         taxTypeLabel: "양도소득세",
         resultData: result as unknown as Record<string, unknown>,
+        // 건물 기준시가 계산서(building-std-report) PDF는 inputData.buildingStdSnapshots에서 재유도.
+        inputData: { buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData?.assets }) },
         filenamePrefix: "양도소득세_계산결과",
       },
       pdfSections,
