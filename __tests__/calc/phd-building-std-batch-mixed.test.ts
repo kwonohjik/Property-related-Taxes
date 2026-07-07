@@ -98,4 +98,45 @@ describe("computePhdThreePointStdPrice — 겸용 Option B", () => {
     expect(r.acquisition?.housing).toBeGreaterThan(0);
     expect(r.transfer?.housing).toBeGreaterThan(0);
   });
+
+  it("A5: Case A — acqFirstUsageNo 주입 시 취득·최초공시 상가 = 주택 용도지수(재일46014-2396)", () => {
+    // 양도시 상가 용도(#14, 용도지수가 주택 #2와 명확히 다름)이나 취득·최초공시 당시엔 주택(#2)이었음
+    const COMM = 14;
+    const commercialCaseA = { structureKey: "rc", usageNo: COMM, floorArea: 80, category: "commercial" as const, acqFirstUsageNo: 2 };
+    const r = computePhdThreePointStdPrice({
+      building: { builtYear: 2010, parts: [H(120), commercialCaseA] },
+      acquisition: ACQ,
+      firstDisclosure: FIRST,
+      transfer: TRANSFER,
+    });
+    // 취득·최초공시 상가 산출됨(주택 용도 #2로 평가)
+    expect(r.acquisition?.commercial).toBeGreaterThan(0);
+    expect(r.firstDisclosure?.commercial).toBeGreaterThan(0);
+    // 등가: 취득·최초공시 상가 = 상가면적을 주택 용도(#2)로 valuation
+    expect(r.acquisition?.commercial).toBe(
+      directComposite([{ structureKey: "rc", usageNo: 2, floorArea: 80 }], 2014, ACQ.landPricePerM2, 2010),
+    );
+    expect(r.firstDisclosure?.commercial).toBe(
+      directComposite([{ structureKey: "rc", usageNo: 2, floorArea: 80 }], 2016, FIRST.landPricePerM2, 2010),
+    );
+    // 양도 상가 = 상가 용도(#14) 그대로
+    expect(r.transfer?.commercial).toBe(
+      directComposite([{ structureKey: "rc", usageNo: COMM, floorArea: 80 }], 2025, TRANSFER.landPricePerM2, 2010),
+    );
+    // mapping 실증: 취득 상가(주택 용도 #2) ≠ 상가 용도(#14)로 평가한 값
+    const acqAsCommercial = directComposite([{ structureKey: "rc", usageNo: COMM, floorArea: 80 }], 2014, ACQ.landPricePerM2, 2010);
+    expect(r.acquisition?.commercial).not.toBe(acqAsCommercial);
+  });
+
+  it("A6(회귀): acqFirstUsageNo 미주입(Case B·단독) → 취득·최초공시 상가 미산출", () => {
+    const r = computePhdThreePointStdPrice({
+      building: { builtYear: 2010, parts: [H(120), C(80)] }, // C=acqFirstUsageNo 없음
+      acquisition: ACQ,
+      firstDisclosure: FIRST,
+      transfer: TRANSFER,
+    });
+    expect(r.acquisition?.commercial).toBeUndefined();
+    expect(r.firstDisclosure?.commercial).toBeUndefined();
+    expect(r.transfer?.commercial).toBeGreaterThan(0); // 양도만
+  });
 });
