@@ -113,10 +113,10 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
   });
 
   // BSP-06: 양도 2시점 일반(취득 2015 / 양도 2025, 구조 rc·용도#1·built 2010·면적 100). 조정율 미적용.
-  // 취득 2015: 650,000×100×110×125÷1e6=893,750 ×잔가0.920(★2015년 50년버킷 잔존율 0.20·step0.016·경과5)
-  //   =822,250→822,000 ×100=82,200,000  (★연도별 잔가율표: 50·40년 버킷 2015년까지 잔존율 0.20)
+  // 취득 2015: 650,000×100×110×125÷1e6=893,750 ×잔가0.900(★2015=era-B rc=Ⅱ(40년)·잔존율0.20·step0.02·경과5)
+  //   =804,375→804,000 ×100=80,400,000  (★내용연수 "+10" 경계 2016 — 2015는 아직 era-B 40년버킷)
   // 양도 2025: 1,234,200 ×잔가0.730(2025년 잔존율 0.10·경과15)=900,966→900,000 ×100=90,000,000
-  it("BSP-06 양도 2시점: 취득 82,200,000 / 양도 90,000,000", () => {
+  it("BSP-06 양도 2시점: 취득 80,400,000 / 양도 90,000,000", () => {
     const input: BuildingStandardPriceInput = {
       taxType: "transfer",
       floorArea: 100,
@@ -127,8 +127,8 @@ describe("BSP Pre-Do anchor (PDF 2025 손계산) — Phase B 엔진", () => {
       transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: 7_500_000 }, // 2025 위치 132
     };
     const r = calcBuildingStandardPrice(input);
-    expect(r.acquisition?.residualRate).toBe(0.92); // 2015년 50년버킷 잔존율 0.20
-    expect(r.acquisition?.standardPrice).toBe(82_200_000);
+    expect(r.acquisition?.residualRate).toBe(0.9); // 2015=era-B rc=Ⅱ(40년)·잔존율0.20·경과5
+    expect(r.acquisition?.standardPrice).toBe(80_400_000);
     expect(r.transfer?.standardPrice).toBe(90_000_000);
     expect(r.acquisition?.appliedLandPriceYear).toBe(2015);
   });
