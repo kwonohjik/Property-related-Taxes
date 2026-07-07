@@ -199,6 +199,93 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     console.log("[T3] 적용된 3필드 값:", vals2.join(" / "), values);
   });
 
+  test("T8: 단독 다부분 — 층별 구조·용도 상이 부분 추가(상가 카테고리 없음) → 3시점 3개 산출·적용", async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    await fillDateAndVerify(page, { year: "2025", month: "05", day: "01" }, {
+      scope: page.getByTestId("transfer-date"),
+    });
+
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+
+    // 취득일 2003 (< 2005.4.29 → PHD 자동 활성)
+    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+      year: "2003",
+      month: "06",
+      day: "15",
+    });
+    const phdToggle = page
+      .locator('[data-slot="toggle-card"]')
+      .filter({ hasText: "취득 당시 개별주택가격 미공시" })
+      .getByRole("switch");
+    if ((await phdToggle.getAttribute("aria-checked")) !== "true") {
+      await phdToggle.click();
+    }
+
+    const phd = phdSection(page);
+    await expect(phd).toBeVisible();
+    await fillDateExact(phd, { year: "2005", month: "04", day: "30" });
+
+    await phd.getByRole("button", { name: "3시점 건물기준시가 일괄 계산" }).click();
+    const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
+    await expect(modal).toBeVisible();
+
+    // 단독에도 부분 추가 노출 + 상가 카테고리는 없음
+    await expect(modal.getByRole("button", { name: "+ 부분 추가" })).toHaveCount(1);
+    await expect(modal.getByRole("button", { name: "상가", exact: true })).toHaveCount(0);
+
+    await modal.getByPlaceholder("신축연도 (4자리)").fill("2000");
+    // 부분1 (예: 1층 주택)
+    await modal.getByText("구조 선택").first().click();
+    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+    await modal.getByText("용도 선택").first().click();
+    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    await modal.getByPlaceholder("연면적").first().fill("90");
+
+    // 부분2 (예: 2층 — 용도 상이) 추가
+    await modal.getByRole("button", { name: "+ 부분 추가" }).click();
+    await expect(modal.getByText(/^부분 2$/)).toBeVisible();
+    await modal.getByText("구조 선택").first().click();
+    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
+    await modal.getByText("용도 선택").first().click();
+    await page.getByRole("option", { name: /아파트/ }).first().click();
+    await modal.getByPlaceholder("연면적").last().fill("60");
+
+    // 3시점 공시지가 전부(취득·최초공시·양도 모두 ≥2001 → 3개 산출)
+    const land = modal.getByPlaceholder("원/㎡");
+    await land.nth(0).fill("2000000");
+    await land.nth(1).fill("2200000");
+    await land.nth(2).fill("3486000");
+
+    await modal.getByRole("button", { name: "3시점 계산하기" }).click();
+
+    const applyBtn = modal.getByRole("button", { name: /모두 적용/ });
+    await expect(applyBtn).toBeVisible();
+    await expect(applyBtn).toContainText("3개");
+    // 단독 라벨은 "주택건물"이 아닌 "건물"
+    await expect(modal.getByText(/취득시 건물 기준시가/)).toBeVisible();
+    const shown = await modal.locator("span.font-mono").allInnerTexts();
+    console.log("[T8] 단독 다부분 3시점 산출값:", shown.join(" / "));
+
+    await applyBtn.click();
+    await expect(modal).toBeHidden();
+
+    // 3개 건물기준시가 필드 모두 채워짐
+    const buildingInputs = phd
+      .getByText("국세청 건물기준시가 (원) — 양도·취득 당시 기준시가", { exact: true })
+      .locator("xpath=preceding::input[1]");
+    await expect(buildingInputs.nth(0)).not.toHaveValue("");
+    await expect(buildingInputs.nth(1)).not.toHaveValue("");
+    await expect(buildingInputs.nth(2)).not.toHaveValue("");
+  });
+
   test("T4: 겸용 PHD — 일괄 모달 주택/상가 UI 렌더 + 양도 상가건물 산출", async ({ page }) => {
     test.setTimeout(150_000);
     await page.goto("/calc/transfer-tax");

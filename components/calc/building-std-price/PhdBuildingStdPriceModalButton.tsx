@@ -108,6 +108,8 @@ export function PhdBuildingStdPriceModalButton({
   const label =
     buttonLabel ??
     (enableCommercial ? "3시점 주택·상가 건물기준시가 일괄 계산" : "3시점 건물기준시가 일괄 계산");
+  // 단독은 상가 구분이 없어 "주택건물"이 아닌 "건물"로 표기(겸용만 주택/상가 구분).
+  const housingNoun = enableCommercial ? "주택건물" : "건물";
 
   function updateRow(idx: number, patch: Partial<PartRow>) {
     setRows((rs) => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
@@ -208,7 +210,7 @@ export function PhdBuildingStdPriceModalButton({
             <DialogDescription>
               {enableCommercial
                 ? "층/구역별 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점 주택분 건물기준시가와 양도시 상가분을 함께 산출합니다."
-                : "같은 건물의 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점 건물기준시가를 함께 산출합니다."}{" "}
+                : "같은 건물의 층/구역별 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점 건물기준시가를 함께 산출합니다."}{" "}
               계산 후 “모두 적용”을 누르면 각 시점 필드에 채워집니다.
             </DialogDescription>
           </DialogHeader>
@@ -225,30 +227,32 @@ export function PhdBuildingStdPriceModalButton({
           <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-amber-700">
-                {enableCommercial ? "부분(층/구역) — 구조·용도·연면적·구분" : "구조·용도·연면적"}
+                {enableCommercial ? "부분(층/구역) — 구조·용도·연면적·구분" : "부분(층/구역) — 구조·용도·연면적"}
               </p>
-              {enableCommercial && (
-                <Button type="button" variant="outline" size="xs" onClick={() => setRows((rs) => [...rs, emptyRow(rs.length ? rs[rs.length - 1].category : "housing")])}>
-                  + 부분 추가
-                </Button>
-              )}
+              <Button type="button" variant="outline" size="xs" onClick={() => setRows((rs) => [...rs, emptyRow(rs.length ? rs[rs.length - 1].category : "housing")])}>
+                + 부분 추가
+              </Button>
             </div>
             {rows.map((row, idx) => (
               <div key={idx} className="space-y-2 rounded-md border border-amber-200/60 bg-white/50 p-2">
-                {enableCommercial && (
+                {(enableCommercial || rows.length > 1) && (
                   <div className="flex items-center justify-between gap-2">
-                    <div className="inline-flex overflow-hidden rounded-md border border-amber-300 text-xs">
-                      {(["housing", "commercial"] as const).map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => updateRow(idx, { category: cat })}
-                          className={`px-3 py-1 ${row.category === cat ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-800"}`}
-                        >
-                          {cat === "housing" ? "주택" : "상가"}
-                        </button>
-                      ))}
-                    </div>
+                    {enableCommercial ? (
+                      <div className="inline-flex overflow-hidden rounded-md border border-amber-300 text-xs">
+                        {(["housing", "commercial"] as const).map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => updateRow(idx, { category: cat })}
+                            className={`px-3 py-1 ${row.category === cat ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-800"}`}
+                          >
+                            {cat === "housing" ? "주택" : "상가"}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[11px] font-medium text-amber-700">부분 {idx + 1}</span>
+                    )}
                     {rows.length > 1 && (
                       <Button type="button" variant="ghost" size="xs" onClick={() => setRows((rs) => rs.filter((_, i) => i !== idx))}>
                         삭제
@@ -312,7 +316,7 @@ export function PhdBuildingStdPriceModalButton({
                 return (
                   <div key={k} className="space-y-0.5">
                     <div className="flex justify-between text-sm">
-                      <span>{POINT_LABEL[k]} 주택건물 기준시가</span>
+                      <span>{POINT_LABEL[k]} {housingNoun} 기준시가</span>
                       <span className="font-mono tabular-nums font-semibold">
                         {pr?.housing != null ? `${fmt(pr.housing)} 원` : "—"}
                       </span>
@@ -330,7 +334,7 @@ export function PhdBuildingStdPriceModalButton({
               })}
               {result.unsupported.map((u, i) => (
                 <p key={i} className="rounded bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
-                  {POINT_LABEL[u.point]} {u.category === "commercial" ? "상가" : "주택"}건물 미산출 — {u.reason}
+                  {POINT_LABEL[u.point]} {u.category === "commercial" ? "상가건물" : housingNoun} 미산출 — {u.reason}
                 </p>
               ))}
               <Button type="button" size="sm" onClick={handleApplyAll} disabled={computedCount === 0}>
