@@ -11,8 +11,14 @@ import {
 import { useBuildingStdSnapshotStore } from "../../lib/stores/building-std-snapshot-store";
 import { phdBatchToSnapshots } from "../../lib/calc/phd-batch-snapshots";
 
+const tp = (usageNo: number) => ({ structureKey: "rc", usageNo });
 const INPUT = {
-  building: { builtYear: 2010, parts: [{ structureKey: "rc", usageNo: 2, floorArea: 100, category: "housing" as const }] },
+  building: {
+    builtYear: 2010,
+    parts: [
+      { floorArea: 100, category: "housing" as const, acquisition: tp(2), firstDisclosure: tp(2), transfer: tp(2) },
+    ],
+  },
   acquisition: { year: 2014, landPricePerM2: 2_360_000 },
   firstDisclosure: { year: 2016, landPricePerM2: 2_369_000 },
   transfer: { year: 2025, landPricePerM2: 3_486_000 },

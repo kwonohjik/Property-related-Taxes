@@ -4,7 +4,13 @@
 import { describe, it, expect } from "vitest";
 import { computePhdThreePointStdPrice } from "../../lib/calc/phd-building-std-batch";
 
-const building = { builtYear: 2010, parts: [{ structureKey: "rc", usageNo: 1, floorArea: 100, category: "housing" as const }] };
+const tp = (usageNo: number) => ({ structureKey: "rc", usageNo });
+const building = {
+  builtYear: 2010,
+  parts: [
+    { floorArea: 100, category: "housing" as const, acquisition: tp(1), firstDisclosure: tp(1), transfer: tp(1) },
+  ],
+};
 
 describe("computePhdThreePointStdPrice", () => {
   it("단독주택 3시점(취득 2014·최초공시 2005·양도 2025) housing 모두 산출", () => {

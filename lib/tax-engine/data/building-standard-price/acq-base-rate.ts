@@ -6,9 +6,9 @@
  *
  * 2000.12.31 이전 취득 건물 전용(소득세법 시행령 §164⑤). 그룹: I(40년)/II(30년)/III(20년).
  *   신축연도 행: 2000 ~ 그룹별 최저(I=1945이전/II=1955이전/III=1965이전).
- *   취득연도 열: 2000 ~ 1986 + 1985(=1985년이전).
- * 키 정규화: 1985년이전 취득 → 1985 / 그룹 최저 이전 신축 → 1945·1955·1965.
- * 값 없는 셀(취득<신축, 삼각 밖) = 미수록 → resolve undefined.
+ *   취득연도 열: 2000 ~ 1986 + 1985(=1985년이전). ※ 각 행의 취득 상한 = 신축 + 내용연수(대각 컷오프).
+ * 키 정규화: §8① 1985년이전 취득 → 1985 / §8⑤ 내용연수 초과 취득(신축<취득−내용연수) → 신축=취득−내용연수 치환 / §8③ 그룹 최저 이전 신축 → 1945·1955·1965.
+ * 값 없는 셀(취득<신축=완공전취득 §8④ 등) = 미수록 → resolve undefined.
  */
 import type { AcqBaseRateGroup } from "../../types/building-standard-price.types";
 
@@ -164,8 +164,15 @@ export const ACQ_BASE_RATE: Readonly<Record<AcqBaseRateGroup, Readonly<Record<nu
 
 const GROUP_MIN_BUILT: Readonly<Record<AcqBaseRateGroup, number>> = { I: 1945, II: 1955, III: 1965 };
 
+/** 산정기준율 그룹별 내용연수(고시 §8⑤ 역산·표 대각 컷오프 기준) — I=40 / II=30 / III=20. */
+const DURABLE_BY_GROUP: Readonly<Record<AcqBaseRateGroup, number>> = { I: 40, II: 30, III: 20 };
+
 /**
- * 산정기준율 조회. builtYear/acqYear를 표 버킷으로 정규화(≤최저 신축, ≤1985 취득).
+ * 산정기준율 조회. builtYear/acqYear를 표 버킷으로 정규화.
+ * - §8①: 취득연도 ≤1985 → 1985(이전) 버킷.
+ * - §8⑤: 취득연도에서 내용연수를 역산한 종료 연도(취득−내용연수) 이전 신축 → 그 종료 연도를 신축연도로 치환
+ *   (표의 취득연도 상한은 신축+내용연수 대각선 → 내용연수 초과 취득은 치환해야 셀에 안착). base2001은 실제 신축연도 유지.
+ * - §8③: 신축연도 그룹 최저행(I=1945/II=1955/III=1965) 클램프. (1985 클램프 금지.)
  * 취득연도 > 2000(2001 이후)이거나 해당 셀 미수록(취득<신축 등) 시 undefined.
  */
 export function resolveAcqBaseRate(
@@ -174,7 +181,8 @@ export function resolveAcqBaseRate(
   acqYear: number,
 ): number | undefined {
   if (acqYear > 2000) return undefined;
-  const bKey = builtYear <= GROUP_MIN_BUILT[group] ? GROUP_MIN_BUILT[group] : builtYear;
-  const aKey = acqYear <= 1985 ? 1985 : acqYear;
+  const aKey = acqYear <= 1985 ? 1985 : acqYear; // §8① 취득연도 의제
+  const builtEff = Math.max(builtYear, aKey - DURABLE_BY_GROUP[group]); // §8⑤ 내용연수 종료연도 치환
+  const bKey = builtEff <= GROUP_MIN_BUILT[group] ? GROUP_MIN_BUILT[group] : builtEff; // §8③ 그룹 최저행
   return ACQ_BASE_RATE[group][bKey]?.[aKey];
 }

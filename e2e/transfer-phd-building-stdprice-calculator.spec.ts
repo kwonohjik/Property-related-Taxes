@@ -45,6 +45,21 @@ async function fillDateExact(
   await scope.getByLabel("일", { exact: true }).first().fill(d.day);
 }
 
+// 시점별 구조·용도 블록 — 미선택 콤보(placeholder)를 count개 순차로 채움. DOM 순서=부분1(취득·최초·양도)→부분2…
+async function fillCombos(
+  page: Page,
+  modal: ReturnType<Page["locator"]>,
+  placeholder: "구조 선택" | "용도 선택",
+  optionRe: RegExp,
+  count: number,
+) {
+  for (let i = 0; i < count; i++) {
+    if ((await modal.getByText(placeholder).count()) === 0) break; // 시점 블록 수 < count(예: 최초공시 미설정) → 조기 종료
+    await modal.getByText(placeholder).first().click();
+    await page.getByRole("option", { name: optionRe }).first().click();
+  }
+}
+
 function phdSection(page: Page) {
   // PHD 패널 루트(bg-primary/5)로 한정 — div.rounded-md 최외곽은 섹션3까지 포함되어 날짜 스코프 오염
   return page
@@ -158,10 +173,9 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
     await expect(modal).toBeVisible();
 
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    // 시점별 3블록(취득 2003·최초공시 2005·양도 2025) — 구조·용도 동일
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 3);
+    await fillCombos(page, modal, "용도 선택", /단독|다가구|주택/, 3);
     await modal.getByPlaceholder("연면적").fill("150");
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2000");
 
@@ -242,20 +256,16 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await expect(modal.getByRole("button", { name: "상가", exact: true })).toHaveCount(0);
 
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2000");
-    // 부분1 (예: 1층 주택)
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    // 부분1 (1층 주택) — 시점별 3블록 단독
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 3);
+    await fillCombos(page, modal, "용도 선택", /단독|다가구|주택/, 3);
     await modal.getByPlaceholder("연면적").first().fill("90");
 
-    // 부분2 (예: 2층 — 용도 상이) 추가
+    // 부분2 (2층 — 용도 상이 아파트) 추가 — 시점별 3블록
     await modal.getByRole("button", { name: "+ 부분 추가" }).click();
     await expect(modal.getByText(/^부분 2$/)).toBeVisible();
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /아파트/ }).first().click();
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 3);
+    await fillCombos(page, modal, "용도 선택", /아파트/, 3);
     await modal.getByPlaceholder("연면적").last().fill("60");
 
     // 3시점 공시지가 전부(취득·최초공시·양도 모두 ≥2001 → 3개 산출)
@@ -344,20 +354,16 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
 
     // 신축연도 + 부분1 주택
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 3);
+    await fillCombos(page, modal, "용도 선택", /단독|다가구|주택/, 3);
     await modal.getByPlaceholder("연면적").first().fill("120");
 
     // 부분2 상가
     await modal.getByRole("button", { name: "+ 부분 추가" }).click();
     // 두 번째 행 카테고리 상가로
     await modal.getByRole("button", { name: "상가", exact: true }).nth(1).click();
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /근린생활/ }).first().click();
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 1);
+    await fillCombos(page, modal, "용도 선택", /근린생활/, 1);
     await modal.getByPlaceholder("연면적").last().fill("80");
 
     // 양도 공시지가
@@ -417,18 +423,14 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
 
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
     // 부분1 주택
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 3);
+    await fillCombos(page, modal, "용도 선택", /단독|다가구|주택/, 3);
     await modal.getByPlaceholder("연면적").first().fill("120");
     // 부분2 상가
     await modal.getByRole("button", { name: "+ 부분 추가" }).click();
     await modal.getByRole("button", { name: "상가", exact: true }).nth(1).click();
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /근린생활/ }).first().click();
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 1);
+    await fillCombos(page, modal, "용도 선택", /근린생활/, 1);
     await modal.getByPlaceholder("연면적").last().fill("80");
 
     // 3시점 공시지가 전부
@@ -533,18 +535,14 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
 
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
     // 부분1 주택
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /단독|다가구|주택/ }).first().click();
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 3);
+    await fillCombos(page, modal, "용도 선택", /단독|다가구|주택/, 3);
     await modal.getByPlaceholder("연면적").first().fill("120");
     // 부분2 상가
     await modal.getByRole("button", { name: "+ 부분 추가" }).click();
     await modal.getByRole("button", { name: "상가", exact: true }).nth(1).click();
-    await modal.getByText("구조 선택").first().click();
-    await page.getByRole("option", { name: /철근콘크리트조/ }).first().click();
-    await modal.getByText("용도 선택").first().click();
-    await page.getByRole("option", { name: /근린생활/ }).first().click();
+    await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 1);
+    await fillCombos(page, modal, "용도 선택", /근린생활/, 1);
     await modal.getByPlaceholder("연면적").last().fill("80");
 
     const land = modal.getByPlaceholder("원/㎡");
@@ -566,6 +564,65 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
 
     await applyBtn.click();
     await expect(modal).toBeHidden();
+  });
+
+  test("T10: 단독 취득 2000이전(1999) 시점별 용도 — 취득 6,044,400 (홈택스 일치)", async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    // 양도일 2026
+    await fillDateAndVerify(page, { year: "2026", month: "05", day: "01" }, {
+      scope: page.getByTestId("transfer-date"),
+    });
+
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+
+    // 취득일 1999 (< 2005.4.29 → PHD 자동 활성, ≤2000 → 산정기준율 경로)
+    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+      year: "1999", month: "06", day: "15",
+    });
+    const phdToggle = page
+      .locator('[data-slot="toggle-card"]')
+      .filter({ hasText: "취득 당시 개별주택가격 미공시" })
+      .getByRole("switch");
+    if ((await phdToggle.getAttribute("aria-checked")) !== "true") {
+      await phdToggle.click();
+    }
+
+    const phd = phdSection(page);
+    await expect(phd).toBeVisible();
+    await fillDateExact(phd, { year: "2005", month: "04", day: "30" });
+
+    await phd.getByRole("button", { name: "3시점 건물기준시가 일괄 계산" }).click();
+    const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
+    await expect(modal).toBeVisible();
+
+    await modal.getByPlaceholder("신축연도 (4자리)").fill("1966");
+    // 시점별 3블록(취득 2001체계·최초공시 2005·양도 2026) — 구조 시멘트블록조, 용도 단독(각 체계 첫 단독옵션)
+    await fillCombos(page, modal, "구조 선택", /시멘트블록/, 3);
+    await fillCombos(page, modal, "용도 선택", /단독/, 3);
+    await modal.getByPlaceholder("연면적").fill("115");
+
+    // 시점별 공시지가 취득 930,000 / 최초공시 1,470,000 / 양도 2,548,000
+    const land = modal.getByPlaceholder("원/㎡");
+    await land.nth(0).fill("930000");
+    await land.nth(1).fill("1470000");
+    await land.nth(2).fill("2548000");
+
+    await modal.getByRole("button", { name: "3시점 계산하기" }).click();
+
+    // 취득당시(1999) = 6,044,400 (5,520,000 × 1.095) — 홈택스 실측 일치
+    await expect(modal.getByText("6,044,400")).toBeVisible();
+    const shown = await modal.locator("span.font-mono").allInnerTexts();
+    console.log("[T10] 3시점 산출값:", shown.join(" / "));
+    const applyBtn = modal.getByRole("button", { name: /모두 적용/ });
+    await expect(applyBtn).toContainText("3개");
   });
 
   test("T9: 토지·건물 취득일 다름 — PHD 취득 시점은 건물 취득일(2014) 기준(2013 아님)", async ({ page }) => {
