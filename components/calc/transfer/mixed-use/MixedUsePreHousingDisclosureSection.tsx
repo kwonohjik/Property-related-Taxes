@@ -261,8 +261,9 @@ export function MixedUsePreHousingDisclosureSection({
           onCommercialBuildingStdPriceAtTransferChange={(v) =>
             onChange({ mixedTransferCommercialBuildingPrice: v })
           }
-          // 취득시 — 토지 취득일 기준
-          acquisitionDate={asset.landAcquisitionDate || asset.acquisitionDate}
+          // 취득시 — PHD 3시점은 건물 취득일 기준(§164⑤ 주택 환산·건물 위치지수·신축연도 이후).
+          // 토지 취득일 아님(2026-04 회귀 정정). acqDate(:77 토지일)는 pre-1990 래치 전용으로 유지.
+          acquisitionDate={asset.acquisitionDate}
           landPriceYearAtAcq={asset.phdLandPriceYearAtAcq}
           landPriceYearAtAcqIsManual={asset.phdLandPriceYearAtAcqIsManual}
           onLandPriceYearAtAcqChange={(year, isManual) =>
