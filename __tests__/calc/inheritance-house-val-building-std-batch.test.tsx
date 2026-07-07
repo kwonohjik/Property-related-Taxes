@@ -88,8 +88,9 @@ describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산기 �
     });
   });
 
-  it("F3: pre-1990 상속취득 → 취득시 공시지가 seed = 등급가액 환산 per-sqm(>0)", () => {
-    // 개별공시지가 미존재(1983) → pre-1990 등급가액 환산 per-sqm를 취득시 위치지수로 자동 주입.
+  it("F3: pre-2001 상속취득 → 취득시 공시지가 seed = 빈 값(2001.1.1. 공시지가는 모달 직접 입력)", () => {
+    // 국세청 건물기준시가는 2001.1.1. 최초 고시(§164⑤) → pre-2001 취득은 위치지수 공시지가를 2001.1.1.
+    // 현재 값으로 모달에서 직접 입력. §164④ 1990.8.30 이전 등급가액 환산값(토지 트랙)을 자동 주입하지 않는다.
     render(
       <HouseValuationSection
         asset={{
@@ -110,6 +111,6 @@ describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산기 �
       />,
     );
     const acqLand = screen.getByTestId("phd-batch-stub").getAttribute("data-acq-land");
-    expect(Number(acqLand)).toBeGreaterThan(0);
+    expect(acqLand ?? "").toBe("");
   });
 });

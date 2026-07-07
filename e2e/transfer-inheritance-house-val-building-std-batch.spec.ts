@@ -95,6 +95,11 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
     const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
     await expect(modal).toBeVisible();
 
+    // pre-2001 취득(1983) → 취득시 공시지가 라벨 "(2001년 기준)" + 힌트 렌더, 자동주입 없이 빈 값
+    await expect(modal.getByText("취득시 (2001년 기준) 공시지가")).toBeVisible();
+    await expect(modal.getByText("2001.1.1. 현재 공시지가를 입력하세요")).toBeVisible();
+    await expect(modal.getByPlaceholder("원/㎡").nth(0)).toHaveValue("");
+
     await modal.getByPlaceholder("신축연도 (4자리)").fill("1982");
     // 시점별 3블록(취득 2001체계·최초 2005·양도 2026) 구조·용도
     await fillCombos(page, modal, "구조 선택", /철근콘크리트조|연와조/, 3);
