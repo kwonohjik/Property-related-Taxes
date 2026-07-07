@@ -307,14 +307,12 @@ describe("E-6: Excel 13번 — 상속주택 환산가액 전체 통합 시나리
 
     // inheritedHouseValuationDetail 존재 + anchor 검증
     expect(result.inheritedHouseValuationDetail).toBeDefined();
-    expect(result.inheritedHouseValuationDetail!.totalStdPriceAtInheritance).toBe(
-      fx.expected.autoEstimatedTotalStdAtInheritance,   // 263,583,686 (토지 + P_A_est)
-    );
-    expect(result.inheritedHouseValuationDetail!.totalStdPriceAtTransfer).toBe(
-      fx.expected.totalStdAtTransfer,       // 1,269,486,250 — Excel C36
-    );
+    // §164⑦ 추정 Sum_A(토지+건물) = 110,246,831 + 38,135,580 = 148,382,411 (Excel C37)
+    expect(result.inheritedHouseValuationDetail!.sumAtInheritance).toBe(148_382_411);
+    // 양도 개별주택가격 P_T (환산 분모, Excel C30) — 토지+건물 합계(C36) 아님
+    expect(result.inheritedHouseValuationDetail!.housePriceAtTransfer).toBe(1_287_000_000);
     expect(result.inheritedHouseValuationDetail!.housePriceAtInheritanceUsed).toBe(
-      fx.expected.autoEstimatedHousePrice,   // 153,336,855 — §164⑤ 자동 추정
+      fx.expected.autoEstimatedHousePrice,   // 153,336,855 — §164⑦ 자동 추정 (Excel C31)
     );
     expect(result.inheritedHouseValuationDetail!.pre1990Result).toBeDefined();
     expect(result.inheritedHouseValuationDetail!.pre1990Result!.pricePerSqmAtAcquisition).toBe(

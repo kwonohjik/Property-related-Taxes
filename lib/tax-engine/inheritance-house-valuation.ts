@@ -63,22 +63,20 @@ export function calculateInheritanceHouseValuation(
     landStdAtFirstDisclosure,
   );
 
-  // ── Step 4: 합계 기준시가 3시점 ──
-  // 양도시: buildingStdPriceAtTransfer 제공 시 우선 사용, 미제공 시 P_T(개별주택가격) 사용
-  const buildingAtTransfer = input.buildingStdPriceAtTransfer ?? input.housePriceAtTransfer;
-  const totalStdPriceAtInheritance      = landStdAtInheritance + housePriceAtInheritanceUsed;
-  const totalStdPriceAtTransfer         = landStdAtTransfer + buildingAtTransfer;
-  const totalStdPriceAtFirstDisclosure  = landStdAtFirstDisclosure + input.housePriceAtFirstDisclosure;
+  // ── Step 4: §164⑦ 취득당시 개별주택가격 추정용 합계기준시가 (토지 + 건물) ──
+  // 환산취득가는 개별주택가격 단일값(취득 est ÷ 양도 P_T)을 사용하므로, 이 sum은 추정 ratio 전용.
+  const buildingStdAtInheritance     = input.buildingStdPriceAtInheritance ?? 0;
+  const buildingStdAtFirstDisclosure = input.buildingStdPriceAtFirstDisclosure ?? 0;
+  const sumAtInheritance     = landStdAtInheritance + buildingStdAtInheritance;
+  const sumAtFirstDisclosure = landStdAtFirstDisclosure + buildingStdAtFirstDisclosure;
 
   const formula = buildFormula(
     input,
     landPricePerSqmAtInheritance,
-    landStdAtInheritance,
-    landStdAtTransfer,
     housePriceAtInheritanceUsed,
     estimationMethod,
-    totalStdPriceAtInheritance,
-    totalStdPriceAtTransfer,
+    sumAtInheritance,
+    sumAtFirstDisclosure,
     pre1990Result,
   );
 
@@ -89,13 +87,16 @@ export function calculateInheritanceHouseValuation(
   ].join(" · ");
 
   return {
-    totalStdPriceAtInheritance,
-    totalStdPriceAtTransfer,
-    totalStdPriceAtFirstDisclosure,
+    sumAtInheritance,
+    sumAtFirstDisclosure,
     landStdAtInheritance,
     landStdAtTransfer,
     landStdAtFirstDisclosure,
+    buildingStdAtInheritance,
+    buildingStdAtFirstDisclosure,
+    housePriceAtFirstDisclosure: input.housePriceAtFirstDisclosure,
     housePriceAtInheritanceUsed,
+    housePriceAtTransfer: input.housePriceAtTransfer,
     estimationMethod,
     pre1990Result,
     formula,
@@ -198,7 +199,7 @@ function resolveHousePriceAtInheritance(
     };
   }
 
-  // §164⑤ 정식 공식:
+  // §164⑦(⑤ 준용) 정식 공식 — 개별주택가격(부수토지 포함) 추정:
   //   P_A_est = P_F × (취득시 토지기준시가 + 취득시 건물기준시가)
   //                  / (최초고시 토지기준시가 + 최초고시 건물기준시가)
   // - P_F = housePriceAtFirstDisclosure (최초 공시된 개별주택가격, 분자 승수)
@@ -219,22 +220,14 @@ function resolveHousePriceAtInheritance(
 function buildFormula(
   input: InheritanceHouseValuationInput,
   landPricePerSqmAtInheritance: number,
-  landStdAtInheritance: number,
-  landStdAtTransfer: number,
   housePriceAtInheritanceUsed: number,
   estimationMethod: HousePriceEstimationMethod,
-  totalStdPriceAtInheritance: number,
-  totalStdPriceAtTransfer: number,
+  sumAtInheritance: number,
+  sumAtFirstDisclosure: number,
   pre1990Result: ReturnType<typeof calculatePre1990LandValuation> | undefined,
 ): string {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const lines: string[] = [];
-
-  // 양도시 합계
-  lines.push(`양도시 합계 기준시가`);
-  lines.push(`  = 양도시 토지(${fmt(input.landArea)}㎡ × ${fmt(input.landPricePerSqmAtTransfer)}/㎡) + 양도시 주택가격(${fmt(input.housePriceAtTransfer)}`);
-  lines.push(`  = ${fmt(landStdAtTransfer)} + ${fmt(input.housePriceAtTransfer)} = ${fmt(totalStdPriceAtTransfer)}`);
-  lines.push(``);
 
   // 상속개시일 토지단가
   if (pre1990Result) {
@@ -245,20 +238,21 @@ function buildFormula(
   }
   lines.push(``);
 
-  // 상속개시일 주택가격
+  // 취득당시 개별주택가격 (§164⑦ 추정 또는 직접 입력) — 부수토지 포함 단일값
   if (estimationMethod === "user_override") {
-    lines.push(`상속개시일 주택가격 = ${fmt(housePriceAtInheritanceUsed)} (직접 입력)`);
+    lines.push(`취득당시 개별주택가격 = ${fmt(housePriceAtInheritanceUsed)} (직접 입력)`);
   } else {
-    lines.push(`상속개시일 주택가격 추정 (§164⑤ 토지 비율)`);
-    lines.push(`  = 최초고시 주택가격(${fmt(input.housePriceAtFirstDisclosure)}) × 상속개시일 토지기준시가 / 최초고시 토지기준시가`);
+    lines.push(`취득당시 개별주택가격 추정 (§164⑦ · ⑤ 준용)`);
+    lines.push(`  = 최초공시 개별주택가격(${fmt(input.housePriceAtFirstDisclosure)}) × 취득 합계기준시가 ÷ 최초공시 합계기준시가`);
+    lines.push(`  = ${fmt(input.housePriceAtFirstDisclosure)} × ${fmt(sumAtInheritance)} ÷ ${fmt(sumAtFirstDisclosure)}`);
     lines.push(`  = ${fmt(housePriceAtInheritanceUsed)}`);
+    lines.push(`  (합계기준시가 = 토지기준시가 + 건물기준시가)`);
   }
   lines.push(``);
 
-  // 상속개시일 합계
-  lines.push(`상속개시일 합계 기준시가`);
-  lines.push(`  = 토지(${fmt(landStdAtInheritance)}) + 주택(${fmt(housePriceAtInheritanceUsed)})`);
-  lines.push(`  = ${fmt(totalStdPriceAtInheritance)}`);
+  // 환산취득가액 — 취득/양도 개별주택가격 비율 (토지 별도 가산 없음, 부수토지 포함)
+  lines.push(`환산취득가액 = 양도가액 × (취득당시 개별주택가격 ÷ 양도당시 개별주택가격)`);
+  lines.push(`  = 양도가액 × (${fmt(housePriceAtInheritanceUsed)} ÷ ${fmt(input.housePriceAtTransfer)})`);
 
   return lines.join("\n");
 }

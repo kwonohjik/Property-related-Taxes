@@ -42,9 +42,9 @@ describe("Excel 13번 케이스 — 상속주택 환산가액 anchor", () => {
     expect(r.landStdAtInheritance).toBe(fx.expected.landStdAtInheritance);
   });
 
-  it("상속개시일 합계 기준시가 148,382,411원 일치 (Excel C37)", () => {
+  it("취득 합계기준시가(토지+건물, §164⑦ Sum_A) 148,382,411원 일치 (Excel C37)", () => {
     const r = calculateInheritanceHouseValuation(input);
-    expect(r.totalStdPriceAtInheritance).toBe(fx.expected.totalStdAtInheritance);
+    expect(r.sumAtInheritance).toBe(fx.expected.totalStdAtInheritance);
   });
 
   it("양도시 토지 기준시가 1,243,350,000원 일치", () => {
@@ -52,9 +52,9 @@ describe("Excel 13번 케이스 — 상속주택 환산가액 anchor", () => {
     expect(r.landStdAtTransfer).toBe(fx.expected.landStdAtTransfer);
   });
 
-  it("양도시 합계 기준시가 1,269,486,250원 일치 (Excel C36)", () => {
+  it("양도 개별주택가격 P_T 1,287,000,000원 (환산 분모, 부수토지 포함)", () => {
     const r = calculateInheritanceHouseValuation(input);
-    expect(r.totalStdPriceAtTransfer).toBe(fx.expected.totalStdAtTransfer);
+    expect(r.housePriceAtTransfer).toBe(fx.housePriceAtTransfer);
   });
 
   it("주택가격 override 모드로 동작", () => {
@@ -103,14 +103,14 @@ describe("1990-08-30 이후 상속 — 개별공시지가 직접 입력", () => 
     expect(r.landStdAtInheritance).toBe(80_000_000);
   });
 
-  it("합계 기준시가 = 80,000,000 + 100,000,000 = 180,000,000", () => {
+  it("취득 합계기준시가(토지+건물, 건물 미입력 → 토지만) = 80,000,000", () => {
     const r = calculateInheritanceHouseValuation(input);
-    expect(r.totalStdPriceAtInheritance).toBe(180_000_000);
+    expect(r.sumAtInheritance).toBe(80_000_000);
   });
 
-  it("양도시 합계 = 500,000,000 + 300,000,000 = 800,000,000", () => {
+  it("양도 개별주택가격 P_T = 300,000,000 (환산 분모)", () => {
     const r = calculateInheritanceHouseValuation(input);
-    expect(r.totalStdPriceAtTransfer).toBe(800_000_000);
+    expect(r.housePriceAtTransfer).toBe(300_000_000);
   });
 });
 
@@ -140,7 +140,7 @@ describe("1990-08-30 이전 + 주택가격 자동 추정 (estimationMethod=estim
     expect(r.estimationMethod).toBe("estimated_phd");
   });
 
-  it("추정값 = §164⑤ 정식 공식: P_F × sumA / sumF (buildingStdAtFirst 미입력 시 sumF = landStdF)", () => {
+  it("추정값 = §164⑦ 정식 공식: P_F × sumA / sumF (buildingStdAtFirst 미입력 시 sumF = landStdF)", () => {
     const r = calculateInheritanceHouseValuation(input);
     // landStdA = floor(184.2 × 598,517) = 110,246,831
     // buildingA = 0 (buildingStdPriceAtInheritance 미입력)
@@ -156,9 +156,9 @@ describe("1990-08-30 이전 + 주택가격 자동 추정 (estimationMethod=estim
     expect(r.housePriceAtInheritanceUsed).toBe(expected);
   });
 
-  it("합계 기준시가 = landStdA + 추정 주택가격", () => {
+  it("취득 합계기준시가(§164⑦ Sum_A) = 토지 + 건물", () => {
     const r = calculateInheritanceHouseValuation(input);
-    expect(r.totalStdPriceAtInheritance).toBe(r.landStdAtInheritance + r.housePriceAtInheritanceUsed);
+    expect(r.sumAtInheritance).toBe(r.landStdAtInheritance + r.buildingStdAtInheritance);
   });
 });
 
@@ -247,8 +247,8 @@ describe("경계값 테스트", () => {
       housePriceAtInheritanceOverride: 38_135_580,
     });
     expect(Number.isInteger(r.landStdAtInheritance)).toBe(true);
-    expect(Number.isInteger(r.totalStdPriceAtInheritance)).toBe(true);
-    expect(Number.isInteger(r.totalStdPriceAtTransfer)).toBe(true);
+    expect(Number.isInteger(r.sumAtInheritance)).toBe(true);
+    expect(Number.isInteger(r.sumAtFirstDisclosure)).toBe(true);
   });
 });
 
