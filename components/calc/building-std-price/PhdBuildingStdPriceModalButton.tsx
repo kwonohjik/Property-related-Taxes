@@ -53,6 +53,12 @@ interface Props {
   buttonLabel?: string;
   /** 겸용주택 — 부분별 주택/상가 카테고리 입력 노출. 미설정=주택 단일(단독). */
   enableCommercial?: boolean;
+  /**
+   * Case A(용도변경 house_to_commercial + 최초공시<용도변경) — 취득·최초공시 상가건물도
+   * 당시 주택 용도로 자동 산출. 상가 부분에 주택 대표 usageNo(acqFirstUsageNo) 주입.
+   * 미설정(Case B·단독)=취득·최초공시 상가 미산출(수동).
+   */
+  commercialAcqFirstMode?: boolean;
 }
 
 /** 편집 중 부분 행(연면적은 문자열 입력) */
@@ -81,6 +87,7 @@ export function PhdBuildingStdPriceModalButton({
   onApply,
   buttonLabel,
   enableCommercial = false,
+  commercialAcqFirstMode = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [builtYear, setBuiltYear] = useState("");
@@ -123,6 +130,15 @@ export function PhdBuildingStdPriceModalButton({
       }
       parts.push({ structureKey: r.structureKey, usageNo: Number(r.usageNo), floorArea: area, category: r.category });
     }
+    // Case A: 취득·최초공시 상가 = 당시 주택 용도(주된 주택 행 usageNo) 주입 → 자동 산출 활성
+    if (commercialAcqFirstMode) {
+      const firstHousing = parts.find((p) => p.category === "housing");
+      if (firstHousing) {
+        for (const p of parts) {
+          if (p.category === "commercial") p.acqFirstUsageNo = firstHousing.usageNo;
+        }
+      }
+    }
     const pt = (key: PointMeta["key"]) => {
       const p = points.find((x) => x.key === key);
       if (!p || !p.year) return undefined;
@@ -156,9 +172,14 @@ export function PhdBuildingStdPriceModalButton({
   }
 
   const computedCount = result
-    ? [result.acquisition?.housing, result.firstDisclosure?.housing, result.transfer?.housing, result.transfer?.commercial].filter(
-        (v) => v != null,
-      ).length
+    ? [
+        result.acquisition?.housing,
+        result.firstDisclosure?.housing,
+        result.transfer?.housing,
+        result.acquisition?.commercial,
+        result.firstDisclosure?.commercial,
+        result.transfer?.commercial,
+      ].filter((v) => v != null).length
     : 0;
 
   // 모달 열 때 현재 위젯 공시지가로 재시드(지연 초기화는 최초 1회뿐 → 신규 입력 stale 방지).
@@ -250,7 +271,9 @@ export function PhdBuildingStdPriceModalButton({
             ))}
             {enableCommercial && (
               <p className="text-[11px] text-amber-700">
-                취득·최초공시 시점 상가분은 자동 산출에서 제외됩니다 — 해당 필드는 홈택스에서 직접 조회·입력하세요.
+                {commercialAcqFirstMode
+                  ? "취득·최초공시 시점 상가분은 당시 실제 용도(주택)로 자동 산출됩니다 (재일46014-2396)."
+                  : "취득·최초공시 시점 상가분은 자동 산출에서 제외됩니다 — 해당 필드는 홈택스에서 직접 조회·입력하세요."}
               </p>
             )}
           </div>
@@ -294,7 +317,7 @@ export function PhdBuildingStdPriceModalButton({
                         {pr?.housing != null ? `${fmt(pr.housing)} 원` : "—"}
                       </span>
                     </div>
-                    {enableCommercial && k === "transfer" && (
+                    {enableCommercial && (k === "transfer" || commercialAcqFirstMode) && (
                       <div className="flex justify-between text-sm">
                         <span>{POINT_LABEL[k]} 상가건물 기준시가</span>
                         <span className="font-mono tabular-nums font-semibold">

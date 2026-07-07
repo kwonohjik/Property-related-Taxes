@@ -522,8 +522,8 @@ function PointBlock({
                   hideUnit
                 />
               </FieldCard>
-              {/* 상가건물 버튼은 배치 게이팅과 무관하게 존치 — Option B: 취득/최초공시 상가는 배치 미산출·수동(F9·C4) */}
-              {onCommercialBuildingStdPriceChange && (
+              {/* 상가건물 버튼 — Phase 2.1: 배치가 취득·최초공시 상가도 산출하므로 배치 게이팅에 종속(숨김) */}
+              {!hideBuildingCalcButton && onCommercialBuildingStdPriceChange && (
                 <div className="flex justify-end">
                   <BuildingStdPriceModalButton
                     lockedTaxType="transfer"
@@ -641,11 +641,15 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(props.firstDisclosureDate), landPricePerM2: props.landPricePerSqmAtFirst },
     { key: "transfer" as const, label: "양도시", year: yearOf(props.transferDate), landPricePerM2: props.landPricePerSqmAtTransfer },
   ];
-  // Option B: housing 3시점 + 양도 commercial만 라우팅. 취득/최초공시 commercial은 배치 미산출(C4·수동).
+  // housing 3시점 + commercial(양도 항상, 취득·최초공시는 Case A 산출 시) 라우팅. 값 있는 시점만.
   const applyBatch = (v: PhdThreePointApply) => {
     if (v.acquisition?.housing != null) props.onBuildingStdPriceAtAcqChange(String(v.acquisition.housing));
     if (v.firstDisclosure?.housing != null) props.onBuildingStdPriceAtFirstChange(String(v.firstDisclosure.housing));
     if (v.transfer?.housing != null) props.onBuildingStdPriceAtTransferChange(String(v.transfer.housing));
+    if (v.acquisition?.commercial != null)
+      props.onCommercialBuildingStdPriceAtAcqChange?.(String(v.acquisition.commercial));
+    if (v.firstDisclosure?.commercial != null)
+      props.onCommercialBuildingStdPriceAtFirstChange?.(String(v.firstDisclosure.commercial));
     if (v.transfer?.commercial != null)
       props.onCommercialBuildingStdPriceAtTransferChange?.(String(v.transfer.commercial));
   };
@@ -659,7 +663,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     <div className="space-y-3">
       {props.enableBatchCalc && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} />
+          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} />
         </div>
       )}
       <PointBlock

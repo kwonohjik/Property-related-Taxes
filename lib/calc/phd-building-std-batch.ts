@@ -25,6 +25,14 @@ export interface PhdBatchPart {
   usageNo: number;
   floorArea: number;
   category: PhdPartCategory;
+  /**
+   * 겸용 Case A(용도변경 house_to_commercial + 최초공시<용도변경) 상가 부분 전용 —
+   * 취득·최초공시 시점의 당시 실제 용도(주택) 용도번호. 그 시점엔 이 면적이 주택이었으므로
+   * 주택 용도지수로 평가한다(재일46014-2396: 취득시 기준시가 용도=취득일 현재 실제 용도).
+   * 지정 시 acq/first commercial 산출 활성(양도시는 본 부분의 usageNo=상가 용도 그대로).
+   * 미지정 시 acq/first commercial 미산출(Case B·단독 = Phase 2 동작).
+   */
+  acqFirstUsageNo?: number;
 }
 
 export interface PhdBatchBuilding {
@@ -158,9 +166,11 @@ function computeCategory(
 }
 
 /**
- * 3시점 건물기준시가를 각 시점 독립 산출(Option B).
+ * 3시점 건물기준시가를 각 시점 독립 산출.
  *  - housing: 취득·최초공시·양도 전부.
- *  - commercial: 양도시에만(취득·최초공시 상가는 당시 주택 용도 — 배치 미산출).
+ *  - commercial 양도시: 항상(상가 용도).
+ *  - commercial 취득·최초공시: 상가 부분에 `acqFirstUsageNo`(당시 주택 용도)가 있을 때만(Case A) —
+ *    각 부분 usageNo를 acqFirstUsageNo로 매핑해 주택 용도지수로 평가(재일46014-2396). 미주입 시 미산출.
  */
 export function computePhdThreePointStdPrice(input: PhdBatchInput): PhdBatchResult {
   const { building, acquisition, firstDisclosure, transfer } = input;
@@ -175,8 +185,17 @@ export function computePhdThreePointStdPrice(input: PhdBatchInput): PhdBatchResu
   computeCategory(result, "firstDisclosure", "housing", housing, builtYear, firstDisclosure, false);
   computeCategory(result, "transfer", "housing", housing, builtYear, transfer, false);
 
-  // commercial — 양도시에만(Option B)
+  // commercial 양도시 — 상가 용도(부분 usageNo 그대로)
   computeCategory(result, "transfer", "commercial", commercial, builtYear, transfer, false);
+
+  // commercial 취득·최초공시 — Case A(acqFirstUsageNo 주입) 시 당시 주택 용도로 매핑해 산출.
+  // 규약: caller는 모든 commercial 부분에 acqFirstUsageNo를 일괄 주입한다(모달이 그렇게 함).
+  //       미주입 부분은 자기 usageNo(상가) fallback되므로, 부분 혼재 주입은 caller 책임.
+  if (commercial.some((p) => p.acqFirstUsageNo != null)) {
+    const atPreConversion = commercial.map((p) => ({ ...p, usageNo: p.acqFirstUsageNo ?? p.usageNo }));
+    computeCategory(result, "acquisition", "commercial", atPreConversion, builtYear, acquisition, true);
+    computeCategory(result, "firstDisclosure", "commercial", atPreConversion, builtYear, firstDisclosure, false);
+  }
 
   return result;
 }
