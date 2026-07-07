@@ -183,35 +183,11 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   // 3시점 건물기준시가 일괄 계산기 배선(§164⑤).
   // F2: 계산기(구조·용도 방식 국세청 건물기준시가)는 단독주택 전용 — 공동주택은 미노출.
   const isHouseIndividual = asset.inheritanceAssetKind === "house_individual";
-  const batchPoints = useMemo(() => {
-    const firstRef = asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE;
-    return [
-      { key: "acquisition" as const, label: "취득시(상속)", year: yearOf(inheritanceDate), landPricePerM2: asset.inhHouseValLandPricePerSqmAtInheritance },
-      { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(firstRef), landPricePerM2: asset.inhHouseValLandPricePerSqmAtFirst },
-      { key: "transfer" as const, label: "양도시", year: yearOf(transferDate), landPricePerM2: asset.inhHouseValLandPricePerSqmAtTransfer },
-    ];
-  }, [
-    inheritanceDate,
-    transferDate,
-    asset.inhHouseValFirstDisclosureDate,
-    asset.inhHouseValLandPricePerSqmAtInheritance,
-    asset.inhHouseValLandPricePerSqmAtFirst,
-    asset.inhHouseValLandPricePerSqmAtTransfer,
-  ]);
-
-  // F1: 산출값을 3필드에 단일 onChange patch로 병합(3연속 호출 아님 — stale-clobber 차단).
-  const applyBatch = (v: PhdThreePointApply) => {
-    const patch: Partial<AssetForm> = {};
-    if (v.transfer?.housing != null) patch.inhHouseValBuildingStdPriceAtTransfer = String(v.transfer.housing);
-    if (v.firstDisclosure?.housing != null) patch.inhHouseValBuildingStdPriceAtFirst = String(v.firstDisclosure.housing);
-    if (v.acquisition?.housing != null) patch.inhHouseValBuildingStdPriceAtInheritance = String(v.acquisition.housing);
-    if (Object.keys(patch).length) onChange(patch);
-  };
 
   // 1990 이전 토지기준시가는 매 렌더 시 동기적으로 직접 계산 (useEffect 콜백 의존성 제거).
   // 엔진 측은 어차피 inheritedHouseValuation.pre1990 등급 데이터를 받아 자체 계산하므로
   // 별도 store 저장은 불필요. Pre1990LandValuationInput 의 onCalculatedPrice 콜백은 noop.
-  const pre1990LandTotal = useMemo<number | null>(() => {
+  const pre1990Land = useMemo<{ total: number; pricePerSqm: number } | null>(() => {
     if (!isBefore1990) return null;
     if (!asset.pre1990Enabled) return null;
     if (!inheritanceDate) return null;
@@ -246,7 +222,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         gradePrev_1990_0830: gPrev,
         gradeAtAcquisition: gAcq,
       });
-      return r.standardPriceAtAcquisition;
+      return { total: r.standardPriceAtAcquisition, pricePerSqm: r.pricePerSqmAtAcquisition };
     } catch {
       return null;
     }
@@ -262,6 +238,38 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
     inheritanceDate,
     transferDate,
   ]);
+
+  // 3시점 일괄 계산기 points — 취득시 공시지가(위치지수 driver)는 pre-1990이면 등급가액 환산 per-sqm
+  // (개별공시지가 미존재) 자동 주입, 그 외는 store의 상속개시일 개별공시지가.
+  const batchPoints = useMemo(() => {
+    const firstRef = asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE;
+    const acqLandPerM2 = isBefore1990
+      ? (pre1990Land ? String(pre1990Land.pricePerSqm) : "")
+      : asset.inhHouseValLandPricePerSqmAtInheritance;
+    return [
+      { key: "acquisition" as const, label: "취득시(상속)", year: yearOf(inheritanceDate), landPricePerM2: acqLandPerM2 },
+      { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(firstRef), landPricePerM2: asset.inhHouseValLandPricePerSqmAtFirst },
+      { key: "transfer" as const, label: "양도시", year: yearOf(transferDate), landPricePerM2: asset.inhHouseValLandPricePerSqmAtTransfer },
+    ];
+  }, [
+    inheritanceDate,
+    transferDate,
+    isBefore1990,
+    pre1990Land,
+    asset.inhHouseValFirstDisclosureDate,
+    asset.inhHouseValLandPricePerSqmAtInheritance,
+    asset.inhHouseValLandPricePerSqmAtFirst,
+    asset.inhHouseValLandPricePerSqmAtTransfer,
+  ]);
+
+  // F1: 산출값을 3필드에 단일 onChange patch로 병합(3연속 호출 아님 — stale-clobber 차단).
+  const applyBatch = (v: PhdThreePointApply) => {
+    const patch: Partial<AssetForm> = {};
+    if (v.transfer?.housing != null) patch.inhHouseValBuildingStdPriceAtTransfer = String(v.transfer.housing);
+    if (v.firstDisclosure?.housing != null) patch.inhHouseValBuildingStdPriceAtFirst = String(v.firstDisclosure.housing);
+    if (v.acquisition?.housing != null) patch.inhHouseValBuildingStdPriceAtInheritance = String(v.acquisition.housing);
+    if (Object.keys(patch).length) onChange(patch);
+  };
 
   // Pre1990LandValuationInput 의 onCalculatedPrice 콜백 — 위 useMemo 가 동일 결과를
   // 동기로 산출하므로 별도 동작 불필요. 콜백 prop 삭제 시 컴포넌트 시그니처를 건드려야 해
@@ -489,7 +497,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           // 1990이후: store의 개별공시지가(per-sqm) × 면적
           const landPricePerSqmAtInheritance = parseAmount(asset.inhHouseValLandPricePerSqmAtInheritance);
           const landStdA = isBefore1990
-            ? (pre1990LandTotal ?? 0)
+            ? (pre1990Land?.total ?? 0)
             : Math.floor(landPricePerSqmAtInheritance * area);
           const buildingA = parseAmount(asset.inhHouseValBuildingStdPriceAtInheritance) || 0;
           const landStdF = Math.floor(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst) * area);
