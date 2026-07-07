@@ -18,14 +18,17 @@ import {
 } from "@/lib/calc/building-std-price-form";
 import {
   BUILDING_STD_FIRST_YEAR,
+  partAtPoint,
   type PhdBatchInput,
   type PhdBatchPart,
   type PhdBatchPoint,
+  type PointKey,
+  type ResolvedPart,
 } from "@/lib/calc/phd-building-std-batch";
 
-/** 부분목록 + 시점 → valuation 모드 스냅샷(배치 엔진 호출과 동일 입력형). */
+/** 시점 해석된 부분목록 + 시점 → valuation 모드 스냅샷(배치 엔진 호출과 동일 입력형). */
 function buildValuationSnapshot(
-  parts: PhdBatchPart[],
+  parts: ResolvedPart[],
   builtYear: number,
   point: PhdBatchPoint,
 ): BuildingStdPriceFormState {
@@ -70,32 +73,36 @@ export function phdBatchToSnapshots(
   const commercial = parts.filter((p) => p.category === "commercial");
   const out: Record<string, BuildingStdPriceFormState> = {};
 
+  const KEYWORD: Record<PointKey, "acq" | "first" | "transfer"> = {
+    acquisition: "acq",
+    firstDisclosure: "first",
+    transfer: "transfer",
+  };
+
   // ≥2001 valuation 재현 가능한 시점만 스냅샷 생성(≤2000 acqBase는 C조건으로 생략).
+  // 각 부분을 해당 시점 구조·용도로 해석(partAtPoint 공유) — 미지정 부분 제외.
   const add = (
-    pointKeyword: "acq" | "first" | "transfer",
+    key: PointKey,
     category: "housing" | "commercial",
-    snapParts: PhdBatchPart[],
+    catParts: PhdBatchPart[],
     point: PhdBatchPoint | undefined,
   ) => {
-    if (!point || snapParts.length === 0 || point.year < BUILDING_STD_FIRST_YEAR) return;
-    const key = `${prefix}-${pointKeyword}${category === "commercial" ? "-commercial" : ""}`;
-    out[key] = buildValuationSnapshot(snapParts, builtYear, point);
+    if (!point || catParts.length === 0 || point.year < BUILDING_STD_FIRST_YEAR) return;
+    const resolved = catParts.map((p) => partAtPoint(p, key)).filter((r): r is ResolvedPart => r != null);
+    if (resolved.length !== catParts.length) return; // 시점 미입력(Case B 상가 등) → 스냅샷 생략
+    const snapKey = `${prefix}-${KEYWORD[key]}${category === "commercial" ? "-commercial" : ""}`;
+    out[snapKey] = buildValuationSnapshot(resolved, builtYear, point);
   };
 
   // housing — 3시점
-  add("acq", "housing", housing, acquisition);
-  add("first", "housing", housing, firstDisclosure);
+  add("acquisition", "housing", housing, acquisition);
+  add("firstDisclosure", "housing", housing, firstDisclosure);
   add("transfer", "housing", housing, transfer);
 
-  // commercial 양도 — 상가 용도 그대로
+  // commercial — 양도 항상 / 취득·최초공시는 시점 구조·용도(Case A 주택 값)가 지정됐을 때만
   add("transfer", "commercial", commercial, transfer);
-
-  // commercial 취득·최초공시 — Case A(acqFirstUsageNo)면 당시 주택 용도로 매핑
-  if (commercial.some((p) => p.acqFirstUsageNo != null)) {
-    const atPre = commercial.map((p) => ({ ...p, usageNo: p.acqFirstUsageNo ?? p.usageNo }));
-    add("acq", "commercial", atPre, acquisition);
-    add("first", "commercial", atPre, firstDisclosure);
-  }
+  add("acquisition", "commercial", commercial, acquisition);
+  add("firstDisclosure", "commercial", commercial, firstDisclosure);
 
   return out;
 }

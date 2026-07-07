@@ -12,8 +12,15 @@ import { phdBatchToSnapshots } from "../../lib/calc/phd-batch-snapshots";
 import { toEngineInput, type BuildingStdPriceFormState } from "../../lib/calc/building-std-price-form";
 import { calcBuildingStandardPrice } from "../../lib/tax-engine/building-standard-price";
 
-const H = (floorArea: number) => ({ structureKey: "rc", usageNo: 2, floorArea, category: "housing" as const });
-const C = (floorArea: number) => ({ structureKey: "rc", usageNo: 41, floorArea, category: "commercial" as const });
+const tp = (usageNo: number) => ({ structureKey: "rc", usageNo });
+const H = (floorArea: number) => ({
+  floorArea,
+  category: "housing" as const,
+  acquisition: tp(2),
+  firstDisclosure: tp(2),
+  transfer: tp(2),
+});
+const C = (floorArea: number) => ({ floorArea, category: "commercial" as const, transfer: tp(41) });
 
 const ACQ = { year: 2014, landPricePerM2: 2_360_000 };
 const FIRST = { year: 2016, landPricePerM2: 2_369_000 };
@@ -60,7 +67,13 @@ describe("phdBatchToSnapshots — 라운드트립 등가", () => {
 
   it("겸용 Case A — 취득·최초 상가 = 당시 주택 용도(D조건) 등가", () => {
     const COMM = 14;
-    const commA = { structureKey: "rc", usageNo: COMM, floorArea: 80, category: "commercial" as const, acqFirstUsageNo: 2 };
+    const commA = {
+      floorArea: 80,
+      category: "commercial" as const,
+      transfer: tp(COMM),
+      acquisition: tp(2), // 당시 주택 용도
+      firstDisclosure: tp(2),
+    };
     const input = { building: { builtYear: 2010, parts: [H(120), commA] }, acquisition: ACQ, firstDisclosure: FIRST, transfer: TRANSFER };
     const batch = computePhdThreePointStdPrice(input);
     const snaps = phdBatchToSnapshots(input, PREFIX);

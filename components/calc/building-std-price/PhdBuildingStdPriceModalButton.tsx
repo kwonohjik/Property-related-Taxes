@@ -70,12 +70,16 @@ interface Props {
   snapshotPrefix?: string;
 }
 
-/** 편집 중 부분 행(연면적은 문자열 입력) */
+/** 편집 중 부분 행 — 시점별 구조·용도(연도 체계 상이) + 공통 연면적 */
 interface PartRow {
-  structureKey: string;
-  usageNo: string;
   floorArea: string;
   category: PhdPartCategory;
+  acqStructureKey: string;
+  acqUsageNo: string;
+  firstStructureKey: string;
+  firstUsageNo: string;
+  transferStructureKey: string;
+  transferUsageNo: string;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -85,10 +89,14 @@ const POINT_LABEL: Record<PointMeta["key"], string> = {
   transfer: "양도시",
 };
 const emptyRow = (category: PhdPartCategory = "housing"): PartRow => ({
-  structureKey: "",
-  usageNo: "",
   floorArea: "",
   category,
+  acqStructureKey: "",
+  acqUsageNo: "",
+  firstStructureKey: "",
+  firstUsageNo: "",
+  transferStructureKey: "",
+  transferUsageNo: "",
 });
 
 export function PhdBuildingStdPriceModalButton({
@@ -112,11 +120,12 @@ export function PhdBuildingStdPriceModalButton({
   const [error, setError] = useState<string | null>(null);
   const replaceSnapshotsByPrefix = useBuildingStdSnapshotStore((s) => s.replaceSnapshotsByPrefix);
 
-  // 구조·용도 옵션 기준 연도 — 최근(양도) 우선(옵션 커버리지 안전)
-  const optionYear =
-    points.find((p) => p.key === "transfer")?.year ??
-    points.find((p) => p.key === "firstDisclosure")?.year ??
-    points.find((p) => p.key === "acquisition")?.year;
+  // 시점별 구조·용도 옵션 기준 연도 — 각 시점의 연도 체계. ≤2000은 2001 체계(엔진 acqBase가 2001표 사용).
+  const yearOf = (k: PointMeta["key"]) => points.find((p) => p.key === k)?.year;
+  const schemeYear = (y: number | undefined) => (y != null && y <= 2000 ? 2001 : y);
+  const acqOptionYear = schemeYear(yearOf("acquisition"));
+  const firstOptionYear = schemeYear(yearOf("firstDisclosure"));
+  const transferOptionYear = schemeYear(yearOf("transfer"));
 
   const label =
     buttonLabel ??
@@ -137,21 +146,36 @@ export function PhdBuildingStdPriceModalButton({
       setError("신축연도를 입력하세요.");
       return;
     }
+    const at = (sk: string, uno: string) =>
+      sk && uno ? { structureKey: sk, usageNo: Number(uno) } : undefined;
     const parts: PhdBatchPart[] = [];
     for (const r of rows) {
       const area = parseDecimal(r.floorArea);
-      if (!r.structureKey || !r.usageNo || area <= 0) {
-        setError("각 부분의 구조·용도·연면적을 모두 입력하세요.");
+      const transfer = at(r.transferStructureKey, r.transferUsageNo);
+      if (!transfer || area <= 0) {
+        setError("각 부분의 양도당시 구조·용도·연면적을 입력하세요.");
         return;
       }
-      parts.push({ structureKey: r.structureKey, usageNo: Number(r.usageNo), floorArea: area, category: r.category });
+      // 취득·최초공시 구조·용도는 주택 부분에서만(상가는 UI 숨김 → Case A 자동주입/Case B 미산출).
+      // 카테고리 전환 시 잔존값 누수 방지.
+      const isHousing = r.category === "housing";
+      parts.push({
+        floorArea: area,
+        category: r.category,
+        transfer,
+        acquisition: isHousing ? at(r.acqStructureKey, r.acqUsageNo) : undefined,
+        firstDisclosure: isHousing ? at(r.firstStructureKey, r.firstUsageNo) : undefined,
+      });
     }
-    // Case A: 취득·최초공시 상가 = 당시 주택 용도(주된 주택 행 usageNo) 주입 → 자동 산출 활성
+    // Case A: 취득·최초공시 상가 = 당시 주택 구조·용도(주된 주택 행) 주입 → 자동 산출 활성
     if (commercialAcqFirstMode) {
       const firstHousing = parts.find((p) => p.category === "housing");
       if (firstHousing) {
         for (const p of parts) {
-          if (p.category === "commercial") p.acqFirstUsageNo = firstHousing.usageNo;
+          if (p.category === "commercial") {
+            p.acquisition = firstHousing.acquisition;
+            p.firstDisclosure = firstHousing.firstDisclosure;
+          }
         }
       }
     }
@@ -279,13 +303,47 @@ export function PhdBuildingStdPriceModalButton({
                     )}
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                  <FieldCard label="구조" hint="국세청 구조지수표">
-                    <BuildingStructureSelect year={optionYear} value={row.structureKey} onChange={(v) => updateRow(idx, { structureKey: v })} />
-                  </FieldCard>
-                  <FieldCard label="용도" hint="국세청 용도지수표">
-                    <BuildingUsageSelect year={optionYear} value={row.usageNo} onChange={(v) => updateRow(idx, { usageNo: v })} />
-                  </FieldCard>
+                <div className="space-y-2">
+                  {/* 취득당시 (취득 연도 체계) — 주택만. 상가 취득·최초공시는 Case A 주택값 자동/Case B 미산출 → 숨김 */}
+                  {row.category === "housing" && acqOptionYear != null && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 space-y-2">
+                      <p className="text-[11px] font-semibold text-amber-700">취득당시 (구조·용도 — {acqOptionYear}년 체계)</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <FieldCard label="구조" hint="국세청 구조지수표">
+                          <BuildingStructureSelect year={acqOptionYear} value={row.acqStructureKey} onChange={(v) => updateRow(idx, { acqStructureKey: v })} />
+                        </FieldCard>
+                        <FieldCard label="용도" hint="국세청 용도지수표">
+                          <BuildingUsageSelect year={acqOptionYear} value={row.acqUsageNo} onChange={(v) => updateRow(idx, { acqUsageNo: v })} />
+                        </FieldCard>
+                      </div>
+                    </div>
+                  )}
+                  {/* 최초공시 (최초공시 연도 체계) — 주택만(상가 사유 위와 동일) */}
+                  {row.category === "housing" && firstOptionYear != null && (
+                    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2 space-y-2">
+                      <p className="text-[11px] font-semibold text-violet-700">최초공시 (구조·용도 — {firstOptionYear}년 체계)</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <FieldCard label="구조" hint="국세청 구조지수표">
+                          <BuildingStructureSelect year={firstOptionYear} value={row.firstStructureKey} onChange={(v) => updateRow(idx, { firstStructureKey: v })} />
+                        </FieldCard>
+                        <FieldCard label="용도" hint="국세청 용도지수표">
+                          <BuildingUsageSelect year={firstOptionYear} value={row.firstUsageNo} onChange={(v) => updateRow(idx, { firstUsageNo: v })} />
+                        </FieldCard>
+                      </div>
+                    </div>
+                  )}
+                  {/* 양도당시 (양도 연도 체계) — 항상 */}
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
+                    <p className="text-[11px] font-semibold text-emerald-700">양도당시 (구조·용도 — {transferOptionYear}년 체계)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <FieldCard label="구조" hint="국세청 구조지수표">
+                        <BuildingStructureSelect year={transferOptionYear} value={row.transferStructureKey} onChange={(v) => updateRow(idx, { transferStructureKey: v })} />
+                      </FieldCard>
+                      <FieldCard label="용도" hint="국세청 용도지수표">
+                        <BuildingUsageSelect year={transferOptionYear} value={row.transferUsageNo} onChange={(v) => updateRow(idx, { transferUsageNo: v })} />
+                      </FieldCard>
+                    </div>
+                  </div>
                   <FieldCard label="연면적" unit="㎡">
                     <DecimalInput value={row.floorArea} onChange={(v) => updateRow(idx, { floorArea: v })} placeholder="연면적" />
                   </FieldCard>
