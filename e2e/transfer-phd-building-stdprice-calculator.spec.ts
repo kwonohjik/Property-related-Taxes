@@ -567,4 +567,57 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await applyBtn.click();
     await expect(modal).toBeHidden();
   });
+
+  test("T9: 토지·건물 취득일 다름 — PHD 취득 시점은 건물 취득일(2014) 기준(2013 아님)", async ({ page }) => {
+    test.setTimeout(150_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    await fillDateAndVerify(page, { year: "2026", month: "09", day: "01" }, {
+      scope: page.getByTestId("transfer-date"),
+    });
+
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+
+    // 건물 취득일 2014-09-14
+    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+      year: "2014", month: "09", day: "14",
+    });
+
+    // 토지·건물 취득일 다름 ON → 토지 취득일 2013-06-01
+    await page.getByRole("switch", { name: "토지·건물 취득일 다름" }).click();
+    await fillDateExact(
+      page.locator("div").filter({ hasText: /^토지 취득일/ }).first(),
+      { year: "2013", month: "06", day: "01" },
+    );
+
+    // PHD(개별주택가격 미공시) ON
+    const phdToggle = page
+      .locator('[data-slot="toggle-card"]')
+      .filter({ hasText: "취득 당시 개별주택가격 미공시" })
+      .getByRole("switch");
+    if ((await phdToggle.getAttribute("aria-checked")) !== "true") {
+      await phdToggle.click();
+    }
+
+    const phd = phdSection(page);
+    await expect(phd).toBeVisible();
+    await fillDateExact(phd, { year: "2015", month: "04", day: "30" });
+
+    // 취득 공시지가 연도 자동 = 2014(건물), 토지일 2013 아님
+    await expect(phd.getByText(/2014년 \(자동\)/).first()).toBeVisible();
+    await expect(phd.getByText("2013년 (자동)")).toHaveCount(0);
+
+    // 일괄 모달 취득시 라벨 = 2014년
+    await phd.getByRole("button", { name: "3시점 건물기준시가 일괄 계산" }).click();
+    const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
+    await expect(modal).toBeVisible();
+    await expect(modal.getByText(/취득시 \(2014년\)/)).toBeVisible();
+    await expect(modal.getByText(/취득시 \(2013년\)/)).toHaveCount(0);
+  });
 });
