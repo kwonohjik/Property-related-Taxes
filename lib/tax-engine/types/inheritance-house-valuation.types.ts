@@ -6,7 +6,7 @@
  * 3-시점 비율 환산으로 상속개시일 합계 기준시가를 자동 산출한다.
  *
  * 근거 조문:
- *   - 소득세법 시행령 §164⑤ — 개별주택가격 미공시 취득시 기준시가 추정
+ *   - 소득세법 시행령 §164⑦(⑤ 준용) — 개별주택가격(부수토지 포함) 미공시 취득시 기준시가 추정
  *   - 소득세법 시행령 §176조의2④ — 의제취득일 전 상속: max(환산, 실가×CPI)
  *   - 소득세법 시행령 §163⑥ — 개산공제 = 취득시 기준시가 × 3%
  *   - 소득세법 시행규칙 §80⑥ — 1990.8.30. 이전 취득 토지 등급가액 환산
@@ -105,25 +105,31 @@ export interface InheritanceHouseValuationInput {
 /** 주택가격 추정 방법 */
 export type HousePriceEstimationMethod =
   | "user_override"    // 사용자 직접 입력
-  | "estimated_phd";   // 토지 비율로 자동 추정 (§164⑤)
+  | "estimated_phd";   // 합계기준시가(토지+건물) 비율로 개별주택가격 자동 추정 (§164⑦·⑤ 준용)
 
 export interface InheritanceHouseValuationResult {
-  // ── 합계 기준시가 3시점 ──
-  /** 상속개시일 합계 기준시가 (토지 + 추정 주택가격) */
-  totalStdPriceAtInheritance: number;
-  /** 양도시 합계 기준시가 (토지 + 양도시 주택가격) */
-  totalStdPriceAtTransfer: number;
-  /** 최초고시 합계 기준시가 (검증용) */
-  totalStdPriceAtFirstDisclosure: number;
+  // ── §164⑦ 취득당시 개별주택가격 추정용 합계기준시가 (토지 + 건물, estimated 모드) ──
+  /** 취득(상속개시일) 합계기준시가 Sum_A = landStdAtInheritance + buildingStdAtInheritance (§164⑦ 분자) */
+  sumAtInheritance: number;
+  /** 최초고시 합계기준시가 Sum_F = landStdAtFirstDisclosure + buildingStdAtFirstDisclosure (§164⑦ 분모) */
+  sumAtFirstDisclosure: number;
 
-  // ── 토지 기준시가 ──
+  // ── 토지 기준시가 (개별공시지가 × 면적) ──
   landStdAtInheritance: number;
   landStdAtTransfer: number;
   landStdAtFirstDisclosure: number;
 
-  // ── 주택 기준시가 ──
-  /** 상속개시일 시점 주택가격 (override 또는 추정값) */
+  // ── 건물 기준시가 (국세청, §164⑦ 추정 sum 성분 echo) ──
+  buildingStdAtInheritance: number;
+  buildingStdAtFirstDisclosure: number;
+
+  // ── 개별주택가격 (환산취득가 분자/분모, 부수토지 포함 단일값) ──
+  /** 최초 공시 개별주택가격 P_F (§164⑦ 추정 승수) */
+  housePriceAtFirstDisclosure: number;
+  /** 취득(상속개시일) 개별주택가격 = §164⑦ 추정값 또는 직접 입력 override (환산 분자) */
   housePriceAtInheritanceUsed: number;
+  /** 양도 개별주택가격 P_T (환산 분모, 부수토지 포함) */
+  housePriceAtTransfer: number;
   estimationMethod: HousePriceEstimationMethod;
 
   // ── 1990 환산 상세 (pre1990 입력이 있을 때) ──

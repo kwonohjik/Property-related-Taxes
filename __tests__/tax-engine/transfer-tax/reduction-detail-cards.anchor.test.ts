@@ -350,12 +350,11 @@ describe("A-4: inheritedHouseValuationDetail anchor", () => {
     // housePriceAtInheritanceUsed = override 값
     expect(d.housePriceAtInheritanceUsed).toBe(50_000_000);
 
-    // totalStdPriceAtInheritance = 토지 80,000,000 + 주택 50,000,000 = 130,000,000
-    expect(d.totalStdPriceAtInheritance).toBe(130_000_000);
+    // sumAtInheritance = 토지 80,000,000 + 건물 20,000,000 = 100,000,000 (§164⑦ Sum_A)
+    expect(d.sumAtInheritance).toBe(100_000_000);
 
-    // totalStdPriceAtTransfer = 토지 300,000,000 + buildingStdPriceAtTransfer 50,000,000 = 350,000,000
-    // (buildingStdPriceAtTransfer 있으면 housePriceAtTransfer 대신 이걸 씀 — inheritance-house-valuation.ts:68)
-    expect(d.totalStdPriceAtTransfer).toBe(350_000_000);
+    // 양도 개별주택가격 P_T = 400,000,000 (환산 분모, 부수토지 포함) — 토지+건물 합계 아님
+    expect(d.housePriceAtTransfer).toBe(400_000_000);
 
     // formula, legalBasis 문자열 존재 확인
     expect(typeof d.formula).toBe("string");
