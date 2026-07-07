@@ -38,10 +38,13 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(hasBuildingStdReport(inputData)).toBe(true);
     render(<BuildingStdPriceReportSection inputData={inputData} />);
 
-    // 시점 라벨 — 상속/증여 제목이 아니라 양도 맥락 + 취득/최초공시/양도 구분
-    expect(screen.getAllByText(/양도 취득시 · 주택분/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/양도 최초공시일 · 주택분/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/양도 양도시 · 주택분/).length).toBeGreaterThan(0);
+    // 시점 라벨 — 취득/최초공시/양도 시점 구분("양도" 접두 제거: 양도·상속 공용)
+    expect(screen.getAllByText(/취득시 · 주택분/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/최초공시일 · 주택분/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/양도시 · 주택분/).length).toBeGreaterThan(0);
+    // "양도" 접두 제거 확인 (상속 맥락 오표기 방지)
+    expect(screen.queryByText(/양도 취득시/)).toBeNull();
+    expect(screen.queryByText(/양도 최초공시일/)).toBeNull();
     // 상속 제목 미노출(맥락 정정)
     expect(screen.queryByText(/상속 건물 기준시가 계산/)).toBeNull();
     // Ⅰ.구분 — 상속세 열 마킹 없음(양도 맥락). 취득당시(2001↑)·양도당시에 ○.

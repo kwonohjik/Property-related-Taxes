@@ -312,7 +312,11 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       {/* 3시점 건물기준시가 일괄 계산기 — 단독주택 전용(F2) */}
       {isHouseIndividual && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} />
+          <PhdBuildingStdPriceModalButton
+            points={batchPoints}
+            onApply={applyBatch}
+            snapshotPrefix={`bsp-${asset.assetId}-phd`}
+          />
         </div>
       )}
 

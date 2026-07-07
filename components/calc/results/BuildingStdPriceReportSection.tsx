@@ -58,10 +58,11 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         const result = calcBuildingStandardPrice(toEngineInput(snap));
         const model = buildNtsReportModel(buildNtsReportContext(snap), result);
         if (model.instances.length === 0) continue;
-        // PHD 3시점(일괄) 스냅샷은 시점·주택/상가 라벨을 헤딩으로 명시(양도 맥락) — C1.
+        // PHD 3시점(일괄) 스냅샷은 시점·주택/상가 라벨을 헤딩으로 명시(양도·상속 공용) — C1.
+        // "양도" 접두는 제거: 상속취득 경로에서도 동일 서식을 쓰므로 시점명만 표기.
         const tp = phdTimepointLabel(key);
         const titleOverride = tp
-          ? `양도 ${tp.timepoint} · ${tp.category === "commercial" ? "상가분" : "주택분"}${snap.valuationYear ? ` (${snap.valuationYear}년)` : ""}`
+          ? `${tp.timepoint} · ${tp.category === "commercial" ? "상가분" : "주택분"}${snap.valuationYear ? ` (${snap.valuationYear}년)` : ""}`
           : undefined;
         // Ⅰ.구분 마킹 — 상속(재구성 taxType) 대신 양도 맥락으로: 취득시·최초공시일=취득당시(2001↑), 양도시=양도당시.
         const markCellOverride: NtsReportInstance["markCell"] | undefined = tp
