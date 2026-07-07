@@ -243,19 +243,20 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   // (개별공시지가 미존재) 자동 주입, 그 외는 store의 상속개시일 개별공시지가.
   const batchPoints = useMemo(() => {
     const firstRef = asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE;
-    const acqLandPerM2 = isBefore1990
-      ? (pre1990Land ? String(pre1990Land.pricePerSqm) : "")
-      : asset.inhHouseValLandPricePerSqmAtInheritance;
+    // 국세청 건물기준시가(신축가격기준액 방식)는 2001.1.1. 최초 고시 → 그 이전 취득 건물의 위치지수
+    // 공시지가는 2001.1.1. 현재 공시지가를 사용(§164⑤). 상속개시일 개별공시지가·§164④ 1990.8.30
+    // 이전 등급가액 환산값(토지 트랙)을 건물 위치지수로 전용하지 않는다 → 빈 값 시드 + 모달 힌트로 안내.
+    const acqYear = yearOf(inheritanceDate);
+    const acqLandPerM2 =
+      acqYear != null && acqYear <= 2000 ? "" : asset.inhHouseValLandPricePerSqmAtInheritance;
     return [
-      { key: "acquisition" as const, label: "취득시(상속)", year: yearOf(inheritanceDate), landPricePerM2: acqLandPerM2 },
+      { key: "acquisition" as const, label: "취득시(상속)", year: acqYear, landPricePerM2: acqLandPerM2 },
       { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(firstRef), landPricePerM2: asset.inhHouseValLandPricePerSqmAtFirst },
       { key: "transfer" as const, label: "양도시", year: yearOf(transferDate), landPricePerM2: asset.inhHouseValLandPricePerSqmAtTransfer },
     ];
   }, [
     inheritanceDate,
     transferDate,
-    isBefore1990,
-    pre1990Land,
     asset.inhHouseValFirstDisclosureDate,
     asset.inhHouseValLandPricePerSqmAtInheritance,
     asset.inhHouseValLandPricePerSqmAtFirst,

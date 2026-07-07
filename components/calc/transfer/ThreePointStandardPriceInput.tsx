@@ -636,8 +636,12 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     const y = d && /^\d{4}/.test(d) ? Number(d.slice(0, 4)) : NaN;
     return Number.isFinite(y) && y > 1900 ? y : undefined;
   };
+  // 취득연도 ≤ 2000이면 건물기준시가는 2001.1.1. 체계로 산정하므로 위치지수 공시지가도 2001.1.1. 현재 값을
+  // 모달에서 직접 입력(§164⑤). props.landPricePerSqmAtAcq(취득연도 공시지가·토지 트랙)를 전용하지 않고 빈 값 시드.
+  const acqYear = yearOf(props.acquisitionDate);
+  const acqLandPerM2 = acqYear != null && acqYear <= 2000 ? "" : props.landPricePerSqmAtAcq;
   const batchPoints = [
-    { key: "acquisition" as const, label: "취득시", year: yearOf(props.acquisitionDate), landPricePerM2: props.landPricePerSqmAtAcq },
+    { key: "acquisition" as const, label: "취득시", year: acqYear, landPricePerM2: acqLandPerM2 },
     { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(props.firstDisclosureDate), landPricePerM2: props.landPricePerSqmAtFirst },
     { key: "transfer" as const, label: "양도시", year: yearOf(props.transferDate), landPricePerM2: props.landPricePerSqmAtTransfer },
   ];

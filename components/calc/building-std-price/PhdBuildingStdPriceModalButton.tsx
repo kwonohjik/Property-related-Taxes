@@ -365,9 +365,21 @@ export function PhdBuildingStdPriceModalButton({
             {points.map((p) => (
               <FieldCard
                 key={p.key}
-                label={`${POINT_LABEL[p.key]}${p.year ? ` (${p.year}년)` : " (연도 미상)"} 공시지가`}
+                label={`${POINT_LABEL[p.key]}${
+                  p.key === "acquisition" && p.year != null && p.year <= 2000
+                    ? " (2001년 기준)"
+                    : p.year
+                      ? ` (${p.year}년)`
+                      : " (연도 미상)"
+                } 공시지가`}
                 unit="원/㎡"
-                hint={p.year ? undefined : "해당 시점 날짜 미입력 — 계산 제외"}
+                hint={
+                  !p.year
+                    ? "해당 시점 날짜 미입력 — 계산 제외"
+                    : p.key === "acquisition" && p.year <= 2000
+                      ? "2001.1.1. 현재 공시지가를 입력하세요"
+                      : undefined
+                }
               >
                 <CurrencyInput
                   label=""
