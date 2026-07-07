@@ -42,7 +42,7 @@ describe("building-std-price 폼 변환 (④) — 엔진 anchor 연동", () => {
     expect(r.valuation?.standardPrice).toBe(224_600_000);
   });
 
-  it("BSP-06 양도 2시점 폼 → 취득 82,200,000 / 양도 90,000,000", () => {
+  it("BSP-06 양도 2시점 폼 → 취득 80,400,000 / 양도 90,000,000", () => {
     const f = form({
       taxType: "transfer",
       floorArea: "100",
@@ -58,7 +58,7 @@ describe("building-std-price 폼 변환 (④) — 엔진 anchor 연동", () => {
     });
     expect(validateBuildingStdPriceForm(f)).toBeNull();
     const r = calcBuildingStandardPrice(toEngineInput(f));
-    expect(r.acquisition?.standardPrice).toBe(82_200_000); // 2015년 50년버킷 잔존율 0.20
+    expect(r.acquisition?.standardPrice).toBe(80_400_000); // 2015=era-B rc=Ⅱ(40년)·경과5·잔가0.90
     expect(r.transfer?.standardPrice).toBe(90_000_000);
   });
 

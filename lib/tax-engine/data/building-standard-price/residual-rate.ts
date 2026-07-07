@@ -8,10 +8,11 @@
  *
  * ★★★ **3개 시대 (구조→내용연수 멤버십)** — 멤버십 resolver(resolveResidualGroupForYear)가 흡수:
  *   - **2001~2002 (3그룹)**: I=40·II=30·III=20년. (resolveResidualGroup2001)
- *   - **2003~2012 (era-B)**: 4그룹 I=50·II=40·III=30·IV=20년. 통나무·철골콘크리트만 50년,
+ *   - **2003~2015 (era-B)**: 4그룹 I=50·II=40·III=30·IV=20년. 통나무·철골콘크리트만 50년,
  *       철근콘크리트·석조·PC·목구조=40년, 연와·시멘트벽돌·철골·스틸하우스·황토·목조=30년,
  *       시멘트블록·경량철골·철파이프·석회흙벽돌·돌담토담·기계식=20년. (resolveResidualGroupEraB)
- *   - **2013~2026 (era-C, 현행)**: 모든 구조 내용연수 +10(상한50·철파이프 20 유지).
+ *   - **2016~2026 (era-C, 현행)**: 모든 구조 내용연수 +10(상한50·철파이프 20 유지).
+ *       내용연수 "+10" 경계 = 2016(잔존율 개정 0.2→0.1과 동일 개정 — 홈택스 실측: 2015 era-B / 2016 era-C).
  *       철근콘크리트=50·연와=40·시멘트블록=30·철파이프=20년. (resolveResidualGroup = STRUCTURE_META)
  *
  * ★★★ **최저잔가율(잔존율)도 내용연수 버킷·평가연도별 상이** (연도별 잔가율표 floor 실측):
@@ -27,7 +28,7 @@
  */
 import type { ResidualRateGroup } from "../../types/building-standard-price.types";
 
-/** era-C(2013~) 그룹별 내용연수. 3그룹·era-B는 멤버십 resolver가 그룹 레터로 흡수 */
+/** era-C(2016~) 그룹별 내용연수. 3그룹·era-B는 멤버십 resolver가 그룹 레터로 흡수 */
 export const RESIDUAL_RATE_DURABLE_YEARS: Readonly<Record<ResidualRateGroup, number>> = Object.freeze({
   I: 50,
   II: 40,

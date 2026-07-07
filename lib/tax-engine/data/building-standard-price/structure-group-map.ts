@@ -96,9 +96,9 @@ export function resolveResidualGroup2001(structureKey: string): ResidualRateGrou
 }
 
 /**
- * era-B(2003~2012) 내용연수 = era-C(현행) 내용연수 − 10(하한 20), 고정 예외.
+ * era-B(2003~2015) 내용연수 = era-C(현행) 내용연수 − 10(하한 20), 고정 예외.
  *   통나무·철골콘크리트(이미 50년 유지) / 철파이프·컨테이너(20년 유지) / 황토(현행도 30년 유지).
- * 연도별 잔가율표 2003~2012 헤더 실측과 전 구조 일치(2026-06-11).
+ * 연도별 잔가율표 2003~2015 헤더 실측과 전 구조 일치(2026-06-11).
  */
 const ERA_B_DURABLE_FIXED: Readonly<Record<string, number>> = Object.freeze({
   solid_wood: 50,
@@ -114,18 +114,20 @@ function durableEraB(structureKey: string): number {
   return Math.max(20, eraC - 10);
 }
 
-/** era-B(2003~2012) 잔가율 그룹 레터(구조→내용연수 −10 반영) */
+/** era-B(2003~2015) 잔가율 그룹 레터(구조→내용연수 −10 반영) */
 export function resolveResidualGroupEraB(structureKey: string): ResidualRateGroup {
   return durableYearsToResidualGroup(durableEraB(structureKey));
 }
 
 /**
  * 평가연도별 잔가율 그룹 레터(구조→그룹). 시대별 멤버십:
- *   ≤2002 = 3그룹(resolveResidualGroup2001) / 2003~2012 = era-B / ≥2013 = era-C(현행).
+ *   ≤2002 = 3그룹(resolveResidualGroup2001) / 2003~2015 = era-B / ≥2016 = era-C(현행).
+ * 내용연수 "+10" 개정 경계 = 2016년(국세청 홈택스 실측: 2015=era-B / 2016=era-C).
+ * 잔존율 개정(50·40년 0.2→0.1)·구조지수 8행→11행 체계 개편과 **동일한 2016년 개정**.
  */
 export function resolveResidualGroupForYear(structureKey: string, valuationYear: number): ResidualRateGroup {
   if (valuationYear <= 2002) return resolveResidualGroup2001(structureKey);
-  if (valuationYear <= 2012) return resolveResidualGroupEraB(structureKey);
+  if (valuationYear <= 2015) return resolveResidualGroupEraB(structureKey);
   return resolveResidualGroup(structureKey);
 }
 
