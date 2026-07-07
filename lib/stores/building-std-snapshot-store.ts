@@ -16,6 +16,14 @@ import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-fo
 interface BuildingStdSnapshotState {
   snapshots: Record<string, BuildingStdPriceFormState>;
   saveSnapshot: (key: string, snapshot: BuildingStdPriceFormState) => void;
+  /**
+   * `${prefix}-…` 접두 키를 모두 교체(제거 후 새 스냅샷 설정) — 원자적.
+   * PHD 일괄 계산 재적용 시 부분 제거·시점 축소로 생긴 stale 계산서 방지.
+   */
+  replaceSnapshotsByPrefix: (
+    prefix: string,
+    snapshots: Record<string, BuildingStdPriceFormState>,
+  ) => void;
 }
 
 export const useBuildingStdSnapshotStore = create<BuildingStdSnapshotState>()(
@@ -24,6 +32,13 @@ export const useBuildingStdSnapshotStore = create<BuildingStdSnapshotState>()(
       snapshots: {},
       saveSnapshot: (key, snapshot) =>
         set((s) => ({ snapshots: { ...s.snapshots, [key]: snapshot } })),
+      replaceSnapshotsByPrefix: (prefix, snapshots) =>
+        set((s) => {
+          const kept = Object.fromEntries(
+            Object.entries(s.snapshots).filter(([k]) => !k.startsWith(`${prefix}-`)),
+          );
+          return { snapshots: { ...kept, ...snapshots } };
+        }),
     }),
     {
       name: "building-std-snapshots",

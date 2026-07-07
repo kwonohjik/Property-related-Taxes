@@ -6,13 +6,15 @@ import { clientRepository } from "./client-repository";
 import { generateTitle } from "./title-generator";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
+import { idOfSnapshotKey } from "@/lib/calc/building-std-snapshot-keys";
 import type { LocalTaxType } from "./types";
 
 /**
- * 이번 계산에 관련된 건물 기준시가 스냅샷만 추출(이력 동반 저장용).
+ * 이번 계산에 관련된 건물 기준시가 스냅샷만 추출(이력 동반 저장·클라이언트 PDF용).
  * 키에 박힌 자산/재산 id가 inputData에 등장하면 이 계산 소속으로 판정 — 세목 무관(transfer assetId·estate id 공통).
+ * 소속판정 정규식은 building-std-snapshot-keys의 idOfSnapshotKey 단일 출처(gb/cb/phd·estate 공통).
  */
-function extractRelevantBuildingStdSnapshots(
+export function extractRelevantBuildingStdSnapshots(
   inputData: Record<string, unknown>,
 ): Record<string, BuildingStdPriceFormState> | undefined {
   const all = useBuildingStdSnapshotStore.getState().snapshots;
@@ -21,10 +23,7 @@ function extractRelevantBuildingStdSnapshots(
   const inputStr = JSON.stringify(inputData);
   const relevant: Record<string, BuildingStdPriceFormState> = {};
   for (const k of keys) {
-    // bsp-estate-${id} | bsp-${assetId}-{gb|cb}-{acq|transfer}
-    const id = k.startsWith("bsp-estate-")
-      ? k.slice("bsp-estate-".length)
-      : k.replace(/^bsp-/, "").replace(/-(gb|cb)-(acq|transfer)$/, "");
+    const id = idOfSnapshotKey(k);
     if (id && inputStr.includes(id)) relevant[k] = all[k];
   }
   return Object.keys(relevant).length > 0 ? relevant : undefined;
