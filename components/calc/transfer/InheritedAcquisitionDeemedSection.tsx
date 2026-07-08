@@ -84,7 +84,7 @@ export function InheritedAcquisitionDeemedSection({ asset, onChange, transferDat
         <PreDeemedInputs asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
       {mode === "post-deemed" && (
-        <PostDeemedInputs asset={asset} onChange={onChange} />
+        <PostDeemedInputs asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
     </div>
   );

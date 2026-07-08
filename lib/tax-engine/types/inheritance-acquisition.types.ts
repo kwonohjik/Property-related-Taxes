@@ -93,6 +93,14 @@ export interface InheritanceAcquisitionInput {
   /** 신고 시 적용한 평가방법 */
   reportedMethod?: InheritanceAcquisitionMethod;
 
+  /**
+   * 개별주택가격 미공시 상속주택의 §164⑦ 취득당시 기준시가 (원, 미스케일).
+   * post-deemed(의제취득일 이후) 주택 & 상속개시일 < 2005-04-30 시,
+   * 취득가액 = max(reportedValue[① 상증법 평가액], 이 값[② §164⑦]). 소령 §163⑨2호.
+   * helpers가 houseValuationResult.housePriceAtInheritanceUsed로 주입. 양도가 스케일 없음.
+   */
+  houseValuationStdPrice?: number;
+
   // ── 의제취득일 전 상속 (case A): 환산가액 + 물가상승률 ──
 
   /** 피상속인 취득일 — 물가상승률 산정 기준 */
