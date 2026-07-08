@@ -207,7 +207,14 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
               }
               inheritanceAssetKind={asset.inheritanceAssetKind}
               onInheritanceAssetKindChange={(v) =>
-                onChange({ inheritanceAssetKind: v })
+                onChange({
+                  inheritanceAssetKind: v,
+                  // 자산구분 변경 시 보충적평가 보조계산 입력 초기화(토지↔주택 stale 방지)
+                  useSupplementaryHelper: false,
+                  supplementaryLandUnitPrice: "",
+                  supplementaryLandArea: "",
+                  supplementaryBuildingValue: "",
+                })
               }
               inheritanceDate={asset.inheritanceDate}
               onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
