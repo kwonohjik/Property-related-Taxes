@@ -54,10 +54,12 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   const method = (asset.inheritanceValuationMethod || "") as ValuationMethod;
   const isSupplementary = method === "supplementary";
 
-  // 주택 자산 + 상속개시일 < 2005-04-30 → HouseValuationSection 보조 노출
+  // 주택 자산 + 상속개시일 < 2005-04-30(개별주택가격 미공시) → §164⑦ 환산 위젯 노출.
+  // 평가방법(isSupplementary) 무관 — §163⑨2호는 상증법 평가액과 §164⑦을 비교하여 큰 금액을
+  // 취득가액으로 하므로, ②(§164⑦)는 ①의 평가방법과 독립적으로 항상 산정 대상.
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
   const isHouse = asset.inheritanceAssetKind === "house_individual" || asset.inheritanceAssetKind === "house_apart";
-  const showHouseValuation = isHouse && isSupplementary && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
+  const showHouseValuation = isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
 
   // 보충적평가 보조계산: 토지 단가 × 면적 = 자동 합산
   const [landTotal, setLandTotal] = useState(() => {
@@ -66,13 +68,13 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
     return unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
   });
 
-  // 보충적평가 보조계산: 합산 → inheritanceReportedValue 동기화.
+  // 보충적평가 보조계산: 합산 → publishedValueAtInheritance(① 상증법 평가액, 엔진 실경로) 동기화.
   // memory `mirror-pattern` — useEffect→store 미러링 금지. onChange 핸들러에서 직접 패치.
   // 보조계산 활성 시에만 패치(미활성이면 수동 입력 보존). total 0이면 "" 로 초기화(stale 방지).
   function reportedPatch(landTotalStr: string, buildingStr: string) {
     if (!asset.useSupplementaryHelper || !isSupplementary) return {};
     const total = parseAmount(landTotalStr) + parseAmount(buildingStr);
-    return { inheritanceReportedValue: total > 0 ? total.toLocaleString() : "" };
+    return { publishedValueAtInheritance: total > 0 ? total.toLocaleString() : "" };
   }
 
   function handleLandUnitPriceChange(v: string) {
@@ -169,8 +171,8 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
           <CurrencyInput
             label=""
             hideUnit
-            value={asset.inheritanceReportedValue}
-            onChange={(v) => onChange({ inheritanceReportedValue: v })}
+            value={asset.publishedValueAtInheritance}
+            onChange={(v) => onChange({ publishedValueAtInheritance: v })}
             placeholder="신고가액 입력 (원)"
           />
         </FieldCard>
@@ -214,7 +216,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
               const total = parseAmount(landTotal) + parseAmount(asset.supplementaryBuildingValue);
               onChange({
                 useSupplementaryHelper: true,
-                inheritanceReportedValue: total > 0 ? total.toLocaleString() : "",
+                publishedValueAtInheritance: total > 0 ? total.toLocaleString() : "",
               });
             } else {
               onChange({ useSupplementaryHelper: v });
@@ -285,13 +287,20 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
         </ToggleCard>
       )}
 
-      {/* 주택 + 보충적평가 + 미공시: 3-시점 보조 계산기 */}
+      {/* 주택 미공시(2005-04-30 이전 상속): §164⑦ 환산 위젯 — §163⑨2호 max(상증법 평가액, §164⑦) */}
       {showHouseValuation && (
-        <HouseValuationSection
-          asset={asset}
-          onChange={onChange}
-          transferDate={transferDate}
-        />
+        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-3">
+          <p className="text-xs font-medium text-amber-800">
+            개별주택가격 미공시(2005.4.30. 이전 상속) — 아래 §164⑦ 환산으로 취득당시 기준시가를 산정합니다.
+            취득가액은 위 상속세 신고가액(상증법 평가액)과 §164⑦ 환산액 중 <strong>큰 금액</strong>으로 자동
+            적용됩니다 (소득세법 시행령 §163⑨2호).
+          </p>
+          <HouseValuationSection
+            asset={asset}
+            onChange={onChange}
+            transferDate={transferDate}
+          />
+        </div>
       )}
     </div>
   );
