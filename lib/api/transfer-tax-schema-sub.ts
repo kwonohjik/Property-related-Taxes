@@ -591,7 +591,7 @@ export const parcelSchema = z.object({
 // ─── 상속 부동산 취득가액 의제 스키마 (소령 §176조의2④·§163⑨) ──
 
 export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
-  // case A: 의제취득일(1985.1.1.) 전 상속 — max(환산가액, 피상속인 실가×물가상승률)
+  // case A: 의제취득일(1985.1.1.) 전 상속·증여 — max(① 상증법 평가액, ③ 환산취득가)
   z
     .object({
       mode: z.literal("pre-deemed"),
@@ -599,6 +599,8 @@ export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
       inheritanceStartDate: z.string().date(),
       /** 자산 종류 */
       assetKind: z.enum(["land", "house_individual", "house_apart"]),
+      /** ① 상증법 §60~66 평가액 (상속세 신고가액) — max(①,③) 후보 */
+      reportedValue: z.number().int().nonnegative().optional(),
       /** 의제취득일(1985.1.1.) 시점 기준시가 (원) */
       standardPriceAtDeemedDate: z.number().int().nonnegative().optional(),
       /** 양도시 기준시가 (원) */

@@ -18,16 +18,11 @@ export function buildInheritedAcquisition(
     return {
       inheritanceDate,
       assetKind,
+      reportedValue: ia.reportedValue, // ① 상증법 평가액 (max(①,③) 후보)
       standardPriceAtDeemedDate: ia.standardPriceAtDeemedDate,
       standardPriceAtTransfer: ia.standardPriceAtTransfer,
       transferDate,
       transferPrice,
-      decedentAcquisitionDate:
-        ia.hasDecedentActualPrice && ia.decedentAcquisitionDate
-          ? new Date(ia.decedentAcquisitionDate)
-          : undefined,
-      decedentActualPrice:
-        ia.hasDecedentActualPrice ? ia.decedentActualPrice : undefined,
     };
   }
 

@@ -35,22 +35,23 @@ export function buildInheritedAcquisitionPayload(
   if (isPreDeemed) {
     const stdAtDeemed = parseAmount(primary.standardPriceAtAcq);
     const stdAtTransfer = parseAmount(primary.standardPriceAtTransfer);
-    const hasDecPrice = !!primary.hasDecedentActualPrice;
-    const decPrice = parseAmount(primary.decedentAcquisitionPrice);
-    const decPriceValid = hasDecPrice && decPrice > 0 && !!primary.decedentAcquisitionDate;
+    // ① 상증법 §60~66 평가액(상속세 신고가액) — 지분 모드 시 × ratio (post-deemed와 일관)
+    const reportedRaw = parseAmount(primary.publishedValueAtInheritance);
+    const reportedValue =
+      reportedRaw > 0
+        ? primaryFractional
+          ? applyRatio(reportedRaw, primaryRatio)
+          : reportedRaw
+        : undefined;
 
     return {
       inheritedAcquisition: {
         mode: "pre-deemed" as const,
         inheritanceStartDate,
         assetKind: primary.inheritanceAssetKind,
+        ...(reportedValue && { reportedValue }),
         ...(stdAtDeemed > 0 && { standardPriceAtDeemedDate: stdAtDeemed }),
         ...(stdAtTransfer > 0 && { standardPriceAtTransfer: stdAtTransfer }),
-        hasDecedentActualPrice: decPriceValid,
-        ...(decPriceValid && {
-          decedentAcquisitionDate: primary.decedentAcquisitionDate,
-          decedentActualPrice: decPrice,
-        }),
       },
     };
   }
