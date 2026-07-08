@@ -227,7 +227,16 @@ export function CompanionAcquisitionCauseSection({
           valuationMode={asset.inheritanceValuationMode}
           onValuationModeChange={(mode) => onChange({ inheritanceValuationMode: mode })}
           inheritanceAssetKind={asset.inheritanceAssetKind}
-          onInheritanceAssetKindChange={(v) => onChange({ inheritanceAssetKind: v })}
+          onInheritanceAssetKindChange={(v) =>
+            onChange({
+              inheritanceAssetKind: v,
+              // 자산구분 변경 시 보충적평가 보조계산 입력 초기화(토지↔주택 stale 방지)
+              useSupplementaryHelper: false,
+              supplementaryLandUnitPrice: "",
+              supplementaryLandArea: "",
+              supplementaryBuildingValue: "",
+            })
+          }
           inheritanceDate={asset.inheritanceDate}
           onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
           landAreaM2={asset.acquisitionArea}
