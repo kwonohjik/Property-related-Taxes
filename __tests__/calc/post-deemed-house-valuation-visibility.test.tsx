@@ -10,6 +10,7 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { PostDeemedInputs } from "../../components/calc/transfer/inheritance/PostDeemedInputs";
+import { CompanionAcqInheritanceBlock } from "../../components/calc/transfer/CompanionAcqInheritanceBlock";
 import { makeDefaultAsset } from "../../lib/stores/calc-wizard-asset-factory";
 
 // 실제 3시점 환산 위젯(구조·용도 select) 대신 계산 자체는 별도 anchor 커버 — 여기선 노출/바인딩만.
@@ -80,5 +81,51 @@ describe("post-deemed 상속주택 §164⑦ 환산 진입(P2) + 신고가액 단
       ([patch]) => patch && "inheritanceReportedValue" in patch,
     );
     expect(calledWithReported).toBe(false);
+  });
+});
+
+// ─── Q3: post-deemed 주택 상단 "직전 고시 주택가격" 중복 필드 숨김 ──
+function blockProps(overrides = {}) {
+  const noop = () => {};
+  return {
+    assetId: "asset-1",
+    acquisitionDate: "1998-07-01", // post-deemed
+    onAcquisitionDateChange: noop,
+    decedentAcquisitionDate: "",
+    onDecedentAcquisitionDateChange: noop,
+    valuationMode: "auto" as const,
+    onValuationModeChange: noop,
+    inheritanceAssetKind: "house_individual" as const,
+    onInheritanceAssetKindChange: noop,
+    inheritanceDate: "1998-07-01",
+    onInheritanceDateChange: noop,
+    landAreaM2: "",
+    publishedValueAtInheritance: "",
+    onPublishedValueAtInheritanceChange: noop,
+    fixedAcquisitionPrice: "",
+    onFixedAcquisitionPriceChange: noop,
+    ...overrides,
+  };
+}
+
+const HOUSE_FIELD = /직전 고시 주택가격/;
+const REDIRECT = /취득가액 의제 특례/;
+
+describe("Q3: post-deemed 주택 상단 직전고시주택가격 중복 필드 숨김", () => {
+  it("post-deemed 주택 → 상단 '직전 고시 주택가격' 숨김 + 하단 안내 노출", () => {
+    render(<CompanionAcqInheritanceBlock {...blockProps()} />);
+    expect(screen.queryByText(HOUSE_FIELD)).toBeNull();
+    expect(screen.queryAllByText(REDIRECT).length).toBeGreaterThan(0);
+  });
+
+  it("pre-deemed 주택(1983) → 상단 '직전 고시 주택가격' 노출", () => {
+    render(<CompanionAcqInheritanceBlock {...blockProps({ acquisitionDate: "1983-07-26", inheritanceDate: "1983-07-26" })} />);
+    expect(screen.queryAllByText(HOUSE_FIELD).length).toBeGreaterThan(0);
+    expect(screen.queryByText(REDIRECT)).toBeNull();
+  });
+
+  it("post-deemed 토지 → 상단 필드 유지(주택 전용 숨김 아님)", () => {
+    render(<CompanionAcqInheritanceBlock {...blockProps({ inheritanceAssetKind: "land" })} />);
+    expect(screen.queryByText(REDIRECT)).toBeNull();
   });
 });

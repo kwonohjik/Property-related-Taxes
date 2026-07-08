@@ -29,8 +29,6 @@ export interface InheritanceAcquisitionFormSlice {
     | "similar_sale"
     | "supplementary"
     | "";
-  /** 평가 근거 메모 (감정평가서 번호·매매사례 일자 등, 선택) */
-  inheritanceValuationEvidence: string;
   /** 보충적평가 보조계산 사용 여부 (case B + supplementary 선택 시) */
   useSupplementaryHelper: boolean;
   /** 보조계산: 토지 면적 (㎡) */

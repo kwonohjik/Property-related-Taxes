@@ -326,7 +326,6 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.decedentAcquisitionPrice) a.decedentAcquisitionPrice = "";
   if (!a.inheritanceReportedValue) a.inheritanceReportedValue = "";
   if (!a.inheritanceValuationMethod) a.inheritanceValuationMethod = "";
-  if (!a.inheritanceValuationEvidence) a.inheritanceValuationEvidence = "";
   if (a.useSupplementaryHelper === undefined) a.useSupplementaryHelper = false;
   if (!a.supplementaryLandArea) a.supplementaryLandArea = "";
   if (!a.supplementaryLandUnitPrice) a.supplementaryLandUnitPrice = "";

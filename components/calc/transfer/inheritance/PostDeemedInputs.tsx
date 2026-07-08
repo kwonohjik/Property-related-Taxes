@@ -178,23 +178,6 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
         </FieldCard>
       )}
 
-      {/* 평가 근거 메모 */}
-      {method && (
-        <FieldCard
-          label="평가 근거 메모"
-          hint="감정평가서 번호·매매사례 일자 등 (선택)"
-        >
-          <input
-            type="text"
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            value={asset.inheritanceValuationEvidence}
-            onChange={(e) => onChange({ inheritanceValuationEvidence: e.target.value })}
-            placeholder="예: 감정평가 2022-1234호"
-            maxLength={200}
-          />
-        </FieldCard>
-      )}
-
       {/* ③ 보충적평가 보조계산 (supplementary 선택 시만) */}
       {isSupplementary && (
         <ToggleCard
