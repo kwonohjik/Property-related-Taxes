@@ -169,6 +169,27 @@ function buildPreDeemedFormula(
 // ─── Case B: 의제취득일(1985.1.1.) 이후 상속 ─────────────────────────────
 
 function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisitionResult {
+  // 개별주택가격 미공시 상속주택(§163⑨2호): 취득가액 = max(① 상증법 평가액[reportedValue], ② §164⑦ 취득당시 기준시가).
+  // ③(환산취득가/양도가 스케일) 적용 불가. ①·② 실지거래가액 의제 → 개산공제 없음(추가 처리 없이 acquisitionPrice만 반환).
+  if (input.houseValuationStdPrice !== undefined && input.houseValuationStdPrice > 0) {
+    const reported =
+      input.reportedValue !== undefined && input.reportedValue >= 0
+        ? Math.floor(input.reportedValue)
+        : 0;
+    const houseStd = Math.floor(input.houseValuationStdPrice);
+    const sec164Wins = houseStd >= reported;
+    const acquisitionPrice = sec164Wins ? houseStd : reported;
+    return {
+      acquisitionPrice,
+      method: "supplementary",
+      legalBasis: TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX,
+      formula:
+        `max(상증법 평가액 ${reported.toLocaleString()}, ` +
+        `§164⑦ 취득당시 기준시가 ${houseStd.toLocaleString()}) = ${acquisitionPrice.toLocaleString()} ` +
+        `(개별주택가격 미공시 · ${sec164Wins ? "§164⑦ 채택" : "상증법 평가액 채택"})`,
+    };
+  }
+
   // 상속세 신고가액이 입력된 경우 그대로 취득가액으로 사용
   if (input.reportedValue !== undefined && input.reportedValue >= 0 && input.reportedMethod) {
     return {

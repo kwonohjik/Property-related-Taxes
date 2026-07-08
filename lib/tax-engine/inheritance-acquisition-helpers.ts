@@ -89,9 +89,15 @@ function resolveInheritedAcquisitionInput(
     base.inheritanceDate.getTime() < HOUSE_FIRST_DISCLOSURE_DATE.getTime() &&
     (base.assetKind === "house_individual" || base.assetKind === "house_apart");
 
-  // case A + 주택 미공시: houseValuationResult로 standardPriceAtDeemedDate / standardPriceAtTransfer 주입
+  // case A(pre-deemed) + 주택 미공시: houseValuationResult로 standardPriceAtDeemedDate / standardPriceAtTransfer 주입
+  // (§176조의2④ 환산취득가 = 양도가 × 취득기준시가/양도기준시가)
   const shouldInjectHouseValuation =
     houseValuationResult && isPreDeemed && isHousePreDisclosure && !base.standardPriceAtDeemedDate;
+
+  // case B(post-deemed) + 주택 미공시: §164⑦ 취득당시 기준시가를 max(①,②) 비교용으로 주입 (소령 §163⑨2호)
+  // ③(환산취득가/양도가 스케일) 적용 불가 → housePriceAtInheritanceUsed(②, 미스케일)만 취함
+  const shouldInjectPostDeemedHouseMax =
+    !!houseValuationResult && !isPreDeemed && isHousePreDisclosure;
 
   // case A + 토지: STEP 0.4 결과 자동 주입 (사용자가 standardPriceAtDeemedDate 미입력 시, 주택 주입보다 낮은 우선순위)
   const shouldInjectPre1990 =
@@ -114,6 +120,9 @@ function resolveInheritedAcquisitionInput(
     ...base,
     standardPriceAtDeemedDate,
     standardPriceAtTransfer,
+    ...(shouldInjectPostDeemedHouseMax && {
+      houseValuationStdPrice: houseValuationResult!.housePriceAtInheritanceUsed,
+    }),
     transferDate: base.transferDate ?? rawInput.transferDate,
     transferPrice: base.transferPrice ?? rawInput.transferPrice,
   };
