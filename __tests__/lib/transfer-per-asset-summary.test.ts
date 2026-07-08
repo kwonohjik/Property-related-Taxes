@@ -205,8 +205,8 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
     expect(s.totalSalePrice).toBe(225_000_000); // 합계 무결성
   });
 
-  // A-8: 상속의제 (post-deemed) 회귀
-  it("A-8 상속의제 post-deemed — 취득가액=신고가액", () => {
+  // A-8: 상속의제 (post-deemed) 회귀 — 신고가액(상증법 평가액)은 엔진 실경로 publishedValueAtInheritance (P3)
+  it("A-8 상속의제 post-deemed — 취득가액=신고가액(publishedValueAtInheritance)", () => {
     useCalcWizardStore.setState((st) => ({
       formData: {
         ...st.formData,
@@ -219,7 +219,7 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
             actualSalePrice: "600000000",
             inheritanceMode: "post-deemed",
             inheritanceStartDate: "2020-01-01",
-            inheritanceReportedValue: "400000000",
+            publishedValueAtInheritance: "400000000",
           },
         ],
       },

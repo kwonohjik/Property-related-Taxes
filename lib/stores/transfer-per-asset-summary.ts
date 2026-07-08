@@ -184,7 +184,10 @@ export function computeTransferPerAssetSummary(
     } else if (acqPrice === 0 && isSingle) {
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)
       if (a.inheritanceMode === "post-deemed" && a.inheritanceStartDate) {
-        acqPrice = parseRaw(a.inheritanceReportedValue);
+        // 계산 결과(§163⑨2호 max(상증법 평가액, §164⑦)) 우선, 미계산 시 상증법 평가액(엔진 실경로) 프리뷰
+        acqPrice =
+          singleResult?.inheritedAcquisitionDetail?.acquisitionPrice ||
+          parseRaw(a.publishedValueAtInheritance);
       } else if (
         a.inheritanceMode === "pre-deemed" &&
         a.inheritanceStartDate &&
