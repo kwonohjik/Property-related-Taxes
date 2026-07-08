@@ -122,7 +122,9 @@ max(③ 환산취득가[converted], 피상속인취득가 × CPI[inflationAdjust
 - 해석: 해설서의 "② §164④~⑦ 가액"은 **환산 분자와 구분되는 "취득당시 기준시가"** 이며, 정상 케이스(양도가 > 양도시기준시가)에선 항상 ③ 환산 < 그 값이 아니라 오히려 ③ ≥ ②가 되어 ②가 거의 채택되지 않음. Excel이 이를 반영.
 - **∴ Phase 1은 max(①,③)로 확정**(Excel anchor 보존). ②는 별도 §164 취득당시 기준시가 값·시점을 확정한 뒤 Phase 2에서 재검토.
 
-**Phase 2 (미구현)**: ① reportedValue **pre-deemed 배관**(Zod/API/route — 현재 pre-deemed는 reportedValue 미송신 → 실사용 시 ①이 엔진에 미도달) · UI(피상속인 실가 토글 제거 — 현재 엔진이 값 무시하는 dead 입력 · ① 상속세 신고가액 입력 추가) · ② §164 취득당시 기준시가 후보 재설계 · `decedentActualPrice`/`decedentAcquisitionDate` 타입·Zod 제거(스토어 공유필드 제외).
+**Phase 2 (✅완료, 미커밋)**: ① reportedValue **pre-deemed 배관** 완료 — Zod pre-deemed에 `reportedValue` 추가, API 빌더(`transfer-tax-api-inheritance.ts`)가 `publishedValueAtInheritance`→`reportedValue`(지분 × ratio) 송신, route 매핑. UI(`PreDeemedInputs.tsx`) 피상속인 실가 토글 제거 → ① 상속세 신고가액 입력 추가, `DateInput` orphan import 정리. anchor `__tests__/calc/pre-deemed-reported-value-plumbing.test.ts` 3건. 검증: tsc 0·lint 0·2,428 tests. (API에서 decedent 필드 미송신 → 엔진 dead 필드 무해.)
+
+**Phase 3 (미착수)**: ② §164 취득당시 기준시가 후보 재설계(값·시점 확정 필요, 환산 분자와 구분) · `decedentActualPrice`/`decedentAcquisitionDate` 엔진 타입·Zod 완전 제거(스토어 공유필드 `decedentAcquisitionDate` 제외).
 
 ## 8. 범위 외
 - 의제취득일 현재 매매사례가액·감정가액(③ 나머지) — 후속.
