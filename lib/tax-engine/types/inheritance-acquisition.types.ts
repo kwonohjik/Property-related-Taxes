@@ -101,15 +101,15 @@ export interface InheritanceAcquisitionInput {
    */
   houseValuationStdPrice?: number;
 
-  // ── 의제취득일 전 상속 (case A): 환산가액 + 물가상승률 ──
+  // ── 의제취득일 전 상속·증여 (case A): max(①,②,③) ──
 
-  /** 피상속인 취득일 — 물가상승률 산정 기준 */
+  /** @deprecated 물가상승률 방식 폐지(상속·증여 미적용). Phase 2에서 제거 예정 — 엔진 미사용 */
   decedentAcquisitionDate?: Date;
 
-  /** 피상속인 실지취득가액 (원) — 입증 가능한 경우만 입력 */
+  /** @deprecated 물가상승률 방식 폐지(상속·증여 미적용). Phase 2에서 제거 예정 — 엔진 미사용 */
   decedentActualPrice?: number;
 
-  /** 양도일 — CPI 비율 분자 시점 */
+  /** 양도일 */
   transferDate?: Date;
 
   /** 양도가액 (원) — 환산취득가 공식의 분자 */
@@ -126,20 +126,24 @@ export interface InheritanceAcquisitionInput {
   standardPriceAtTransfer?: number;
 }
 
-/** 의제취득일 전 상속(case A) 계산 내역 */
+/**
+ * 의제취득일 전 상속·증여(case A) 취득가액 후보.
+ * 취득가액 = max(① 상증법 §60~66 평가액, ③ 환산취득가). [Phase 1]
+ * 근거: 소령 §163⑨·§176조의2④, 국심2003부602·2003서3266, 조심2023서0676.
+ * ※ 상속·증여 자산엔 생산자물가상승률 방식(§176조의2④2호) 부적용
+ *   (호2 base=취득당시 실지거래가액·매매·감정가액이 무상취득엔 부존재).
+ * ※ ② 소령 §164④~⑦ 취득당시 기준시가는 Phase 2에서 별도 후보로 추가 예정
+ *   (환산 분자 standardPriceAtDeemedDate와 구분되는 값·시점 확정 필요).
+ */
+export type PreDeemedSelectedMethod = "reported" | "converted";
+
 export interface PreDeemedBreakdown {
-  /** 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가) */
+  /** ① 상증법 §60~66 평가액 (상속세 신고가액) — null=미입력 */
+  reportedAmount: number | null;
+  /** ③ 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가) */
   convertedAmount: number;
-  /** 취득실가 × 물가상승률 (null = 피상속인 실가 미입증) */
-  inflationAdjustedAmount: number | null;
-  /** 선택된 방법 */
-  selectedMethod: "converted" | "inflation_adjusted";
-  /** 피상속인 취득 연도 */
-  cpiFromYear: number;
-  /** 양도 연도 */
-  cpiToYear: number;
-  /** 물가상승률 비율 (양도시 CPI ÷ 취득시 CPI) */
-  cpiRatio: number;
+  /** 채택된 후보 (max) */
+  selectedMethod: PreDeemedSelectedMethod;
 }
 
 export interface InheritanceAcquisitionResult {
