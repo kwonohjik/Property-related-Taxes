@@ -108,7 +108,6 @@ export function migrateLegacyForm(
   if (!primaryAsset.decedentAcquisitionPrice) primaryAsset.decedentAcquisitionPrice = "";
   if (!primaryAsset.inheritanceReportedValue) primaryAsset.inheritanceReportedValue = "";
   if (!primaryAsset.inheritanceValuationMethod) primaryAsset.inheritanceValuationMethod = "";
-  if (!primaryAsset.inheritanceValuationEvidence) primaryAsset.inheritanceValuationEvidence = "";
   if (primaryAsset.useSupplementaryHelper === undefined) primaryAsset.useSupplementaryHelper = false;
   if (!primaryAsset.supplementaryLandArea) primaryAsset.supplementaryLandArea = "";
   if (!primaryAsset.supplementaryLandUnitPrice) primaryAsset.supplementaryLandUnitPrice = "";

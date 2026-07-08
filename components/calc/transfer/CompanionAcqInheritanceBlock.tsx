@@ -63,7 +63,18 @@ interface BlockProps {
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
 
+// 의제취득일(1985.1.1.) — 소득세법 부칙. 이후 상속은 취득가액을 하단 "취득가액 의제 특례"에서 입력.
+const DEEMED_ACQUISITION_DATE_STR = "1985-01-01";
+
 export function CompanionAcqInheritanceBlock(props: BlockProps) {
+  // post-deemed(의제취득일 이후) 주택: 취득가액(① 상증법 평가액)은 하단 "상속세 신고가액"에서 단일 입력.
+  // → 상단 "직전 고시 주택가격"(같은 publishedValueAtInheritance)은 중복이므로 숨김. 토지·pre-deemed는 유지.
+  const isPostDeemed =
+    !!props.acquisitionDate && props.acquisitionDate >= DEEMED_ACQUISITION_DATE_STR;
+  const isHouseKind =
+    props.inheritanceAssetKind === "house_individual" ||
+    props.inheritanceAssetKind === "house_apart";
+
   // 토지 모드: 공시지가 단가(원/㎡)를 publishedValueAtInheritance에 저장하되,
   // StandardPriceInput의 totalPrice에는 단가×면적 계산 결과(총액)를 표시한다.
   // 단, 엔진은 publishedValueAtInheritance(단가)를 받으므로 별도 totalPrice state로 관리.
@@ -194,9 +205,9 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
               </div>
             )}
 
-            {/* 주택: totalPrice = publishedValueAtInheritance (총액 직접 저장) */}
-            {(props.inheritanceAssetKind === "house_individual" ||
-              props.inheritanceAssetKind === "house_apart") && (
+            {/* 주택: totalPrice = publishedValueAtInheritance (총액 직접 저장).
+                post-deemed(의제취득일 이후)는 하단 "상속세 신고가액"으로 일원화 → 상단 중복 필드 숨김. */}
+            {isHouseKind && !isPostDeemed && (
               <StandardPriceInput
                 propertyKind={props.inheritanceAssetKind}
                 totalPrice={props.publishedValueAtInheritance}
@@ -207,6 +218,13 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
                 referenceDate={props.inheritanceDate}
                 label="상속개시일 직전 고시 주택가격 (원)"
               />
+            )}
+            {isHouseKind && isPostDeemed && (
+              <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                의제취득일(1985.1.1.) 이후 상속 — 취득가액(상속세 신고가액·보충적평가액)은 아래
+                <strong className="text-foreground"> &lsquo;취득가액 의제 특례&rsquo;의 &lsquo;상속세 신고가액&rsquo;</strong>에
+                입력하세요. (개별주택가격 미공시 시 §164⑦ 환산도 그 아래에서 산정)
+              </p>
             )}
           </div>
         )}

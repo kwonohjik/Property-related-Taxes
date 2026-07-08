@@ -274,7 +274,6 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     decedentAcquisitionPrice: "",
     inheritanceReportedValue: "",
     inheritanceValuationMethod: "",
-    inheritanceValuationEvidence: "",
     useSupplementaryHelper: false,
     supplementaryLandArea: "",
     supplementaryLandUnitPrice: "",
