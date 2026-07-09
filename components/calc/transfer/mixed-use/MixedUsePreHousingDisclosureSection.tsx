@@ -287,13 +287,6 @@ export function MixedUsePreHousingDisclosureSection({
           // 값은 phdLandPricePerSqm* (미입력 시 섹션 2 mixed 값으로 prefill·fallback).
         />
       </div>
-
-      <p className="text-[11px] text-muted-foreground">
-        공시지가는{" "}
-        <span className="font-medium">부동산공시가격알리미(realtyprice.kr)</span>
-        에서, 건물기준시가는{" "}
-        <span className="font-medium">국세청 홈택스 &gt; 기준시가 조회</span>를 이용하세요.
-      </p>
     </div>
   );
 }
