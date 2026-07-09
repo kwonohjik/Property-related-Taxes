@@ -27,10 +27,10 @@ app/calc/transfer-tax/                  # 양도세: Step1↔Step3 통합 후 4�
 # (Step3.tsx 폐지: 취득 정보가 자산 카드 안으로 통합됨)
 
 components/calc/acquisition/
-├── shared.ts       # 상수·FormState·INITIAL_FORM·validateStep·callAPI·CSS classes
-├── Step0.tsx       # 취득 정보
-└── Step1.tsx       # 물건 상세
-# (Step 2/3은 main 파일에 inline — result/setForm 결합이 높음)
+├── shared.ts          # 상수·FormState·INITIAL_FORM·validateStep·CSS classes (API 호출은 lib/calc/acquisition-tax-api.ts)
+├── Step0.tsx ~ Step5.tsx  # 6단계 전부 별도 파일
+├── normalize.ts · deemed/ # 폼 정규화 + 간주취득
+└── AcquisitionSidebar.tsx
 ```
 
 **파일명 vs UI 인덱스 주의 (양도세)**: 파일명은 historical naming(Step1·Step4·Step5·Step6)을 유지하지만 마법사 UI는 0~3 인덱스. `STEPS_SINGLE = ["자산 목록", "보유 상황", "감면·공제", "가산세"]`. `stepComponentsAll`이 매핑.
@@ -57,7 +57,7 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 
 **1990 환산 표시 조건**: `assetKind === "land"` AND `acquisitionDate < "1990-08-30"` AND 환산취득가 모드. 토지 외 자산은 토지등급 환산 미적용 (법령상 토지 전용).
 
-**sessionStorage 마이그레이션**: `lib/stores/calc-wizard-migration.ts`의 `migrateLegacyForm`이 legacy 폼-전역 13필드 → assets[0]로 자동 이전. `currentStep` 5→4 인덱스 매핑(`STEP_MIGRATION`).
+**sessionStorage 마이그레이션**: `lib/stores/calc-wizard-migration.ts`의 `migrateLegacyForm`이 legacy 폼-전역 13필드 → assets[0]로 자동 이전.
 
 ## 공용 입력 컴포넌트 (절대 규칙)
 
@@ -95,11 +95,10 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 
 ## Zustand 마법사 Store (`lib/stores/calc-wizard-store.ts`)
 
-- sessionStorage persist. 비로그인 계산 결과 보존 → 로그인 후 Server Action으로 이력 마이그레이션.
+- sessionStorage persist. 비로그인 계산 결과 보존 → 로그인 후 이력 마이그레이션 (로컬 IndexedDB — Server Action 미경유).
 - **`result` 필드는 partialize에서 제외**: 민감정보 + Date 직렬화 문제.
 - `pendingMigration` 플래그로 마이그레이션 1회성 보장.
 - **legacy 폼 마이그레이션은 `lib/stores/calc-wizard-migration.ts`로 분리** (800줄 정책 준수). `migrateLegacyForm(legacy, defaultFormData)`로 호출.
-- **`currentStep` 자동 마이그레이션**: 5단계→4단계 인덱스 매핑(`STEP_MIGRATION`)이 `merge` 함수에 내장.
 
 ### useTransferSummary — 사이드바 합계 selector
 
@@ -126,17 +125,17 @@ const transferSummary = useMemo(
 | 종합부동산세 | `comprehensive-tax-ui-senior` |
 | 상속·증여 | `inheritance-gift-tax-ui-senior` |
 
-**자동 검증**: 작업 완료 직후 `ui-engine-sync-checker` 호출로 8개 동기화 지점 매핑 누락 점검.
+**자동 검증**: 작업 완료 직후 `ui-engine-sync-checker` 호출로 클라이언트 8개 동기화 지점 매핑 누락 점검.
 
-## UI 통합 8개 동기화 지점 (Definition of Done — 강제)
+## UI 통합 8개 동기화 지점 (Definition of Done — 강제 · 루트 CLAUDE.md 14지점 중 클라이언트 8)
 
 엔진 input·result 타입에 새 필드가 추가되거나 변경될 때 다음이 **모두** 동기화되어야 작업 완료. 하나라도 누락되면 미완료.
 
 | # | 지점 | 위치 |
 |---|---|---|
 | ① | 폼 상태 타입 (FormData/AssetForm) | `lib/stores/calc-wizard-asset.ts` · `calc-wizard-store.ts` 또는 `components/calc/{tax-type}/shared.ts` |
-| ② | initial value | 동상 (`createInitialAssetForm` / `INITIAL_FORM_DATA` / `INITIAL_FORM`) |
-| ③ | normalize fallback | 동상 (`normalizeAsset` 등) — sessionStorage 마이그레이션 호환 |
+| ② | initial value | 동상 (`makeDefaultAsset` / `defaultFormData` / `INITIAL_FORM`) |
+| ③ | normalize fallback | 동상 (`migrateAsset` 등) — sessionStorage 마이그레이션 호환 |
 | ④ | API 변환 | `lib/calc/{tax-type}-api.ts` (없으면 route handler 진입 변환) |
 | ⑤ | UI 입력 위젯 | 마법사 단계 컴포넌트 — 활성화 조건·tone 색상 고려 |
 | ⑥ | 사이드바 합계 (해당 시) | `compute*Summary` selector |
@@ -211,7 +210,7 @@ const transferSummary = useMemo(
 
 - 자동 계산 결과 박스도 해당 카드의 색조로 통일 (`bg-*/100/60 border border-*/200`)
 - 카드 간 간격은 `space-y-3`
-- **대표 구현**: `components/calc/transfer/mixed-use/` (MixedUseSection ①~⑤)
+- **대표 구현**: `components/calc/transfer/mixed-use/` (면적·기준시가·거주 섹션 ①~⑤)
 
 ## 토글 가시성 원칙 — ToggleCard (강제 규칙)
 

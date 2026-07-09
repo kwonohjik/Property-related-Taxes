@@ -12,9 +12,9 @@
 
 import { useEffect, useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ThreePointStandardPriceInput } from "../ThreePointStandardPriceInput";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { derivePre1990PhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
@@ -29,7 +29,7 @@ interface Props {
 
 function LegalBadge() {
   return (
-    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
+    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
       소득세법 시행령 §164 ⑤
     </span>
   );
@@ -111,37 +111,51 @@ export function MixedUsePreHousingDisclosureSection({
         <LegalBadge />
       </div>
 
-      {/* ① 주택부수토지 면적 (수정 가능) */}
-      <FieldCard
-        label={hasUsageChange ? "주택부수토지 면적 (양도시 기준)" : "주택부수토지 면적"}
-        hint={
-          hasUsageChange
-            ? `용도변경 입력 감지 — 양도시 면적 ${autoLandArea.toFixed(2)} ㎡ 자동 적용. 취득시 면적은 용도변경 입력값으로 별도 계산되어 취득시 개별주택가격 역산에 자동 반영됩니다.`
-            : autoLandArea > 0
-            ? `자동 계산: ${autoLandArea.toFixed(2)} ㎡ (전체 토지 × 주택연면적 비율). 최초 공시 당시 전체가 주택이었다면 전체 토지 면적으로 수정하세요.`
-            : "면적 정보가 없어 자동 계산 불가. 직접 입력하세요."
-        }
-        unit="㎡"
-      >
-        <DecimalInput
-          value={asset.phdResidentialLandArea}
-          onChange={(v) => onChange({ phdResidentialLandArea: v })}
-          placeholder={autoLandArea > 0 ? autoLandArea.toFixed(2) : "면적 입력"}
-          disabled={hasUsageChange}
-        />
-      </FieldCard>
+      {/* ①② 주택부수토지 면적 · 최초 고시일 (한 행) */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FieldCard
+          label={hasUsageChange ? "주택부수토지 면적 (양도시 기준)" : "주택부수토지 면적"}
+          unit="㎡"
+          stacked
+        >
+          <DecimalInput
+            value={asset.phdResidentialLandArea}
+            onChange={(v) => onChange({ phdResidentialLandArea: v })}
+            placeholder={autoLandArea > 0 ? autoLandArea.toFixed(2) : "면적 입력"}
+            disabled={hasUsageChange}
+          />
+        </FieldCard>
 
-      {/* ② 최초 고시일 */}
-      <FieldCard
-        label="최초 고시일"
-        required
-        hint="개별주택가격이 처음 고시된 날짜 (주택공시가격알리미 확인)"
-      >
-        <DateInput
-          value={asset.phdFirstDisclosureDate}
-          onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
+        <FieldCard label="최초 고시일" required stacked>
+          <DateInput
+            value={asset.phdFirstDisclosureDate}
+            onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
+          />
+        </FieldCard>
+      </div>
+
+      {/* ③④ 최초 고시 개별주택가격 · 양도시 개별주택가격 (한 행, StandardPriceInput 자동조회) */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StandardPriceInput
+          propertyKind="house_individual"
+          totalPrice={asset.phdFirstDisclosureHousingPrice}
+          onTotalPriceChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          referenceDate={asset.phdFirstDisclosureDate}
+          label="최초 고시 개별주택가격"
+          required
         />
-      </FieldCard>
+        {/* 양도시 개별주택가격 — 단일 입력(상단 양도 sub-block은 PHD ON 시 숨김) */}
+        <StandardPriceInput
+          propertyKind="house_individual"
+          totalPrice={asset.mixedTransferHousingPrice}
+          onTotalPriceChange={(v) => onChange({ mixedTransferHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          referenceDate={transferDate}
+          label="양도시 개별주택가격"
+          required
+        />
+      </div>
 
       {/* 최초공시일 < 용도변경일 진입 안내 — Case A 4부분 분리 모드 */}
       {isCaseA && (
@@ -155,40 +169,6 @@ export function MixedUsePreHousingDisclosureSection({
           </p>
         </div>
       )}
-
-      {/* ③ 최초 고시 개별주택가격 */}
-      <FieldCard
-        label="최초 고시 개별주택가격"
-        required
-        hint="최초 고시일 당시 공시된 개별주택가격 (원)"
-        unit="원"
-      >
-        <CurrencyInput
-          label=""
-          value={asset.phdFirstDisclosureHousingPrice}
-          onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
-          placeholder="원"
-          hideUnit
-          required
-        />
-      </FieldCard>
-
-      {/* ④ 양도시 개별주택가격 — 위 양도시 기준시가 섹션 값을 자동 사용 (read-only) */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold text-amber-800">양도시 개별주택가격 (자동)</p>
-            <p className="mt-1 text-caption text-amber-700">
-              위 양도시 기준시가 섹션의 개별주택공시가격을 자동으로 사용합니다.
-            </p>
-          </div>
-          <p className="whitespace-nowrap text-sm font-semibold text-amber-900">
-            {parseAmount(asset.mixedTransferHousingPrice) > 0
-              ? `${parseAmount(asset.mixedTransferHousingPrice).toLocaleString()}`
-              : "양도시 기준시가 섹션에서 입력하세요"}
-          </p>
-        </div>
-      </div>
 
       {/* ⑤ 1990.8.30. 이전 취득 토지 환산 (조건부) */}
       {isPre1990 && (
@@ -303,22 +283,10 @@ export function MixedUsePreHousingDisclosureSection({
           onBuildingStdPriceAtTransferChange={(v) =>
             onChange({ phdBuildingStdPriceAtTransfer: v })
           }
-          // 겸용주택 — 토지는 같은 지번이므로 섹션 2의 공시지가를 자동 미러링 (read-only 표시)
-          landAutoSyncAtAcq={{
-            label: "위 취득시 기준시가 섹션의 개별공시지가를 자동 사용",
-          }}
-          landAutoSyncAtTransfer={{
-            label: "위 양도시 기준시가 섹션의 개별공시지가를 자동 사용",
-          }}
+          // 주택부수토지 공시지가는 독립 입력 — 연도 선택·Vworld 조회 버튼 노출.
+          // 값은 phdLandPricePerSqm* (미입력 시 섹션 2 mixed 값으로 prefill·fallback).
         />
       </div>
-
-      <p className="text-caption text-muted-foreground">
-        공시지가는{" "}
-        <span className="font-medium">부동산공시가격알리미(realtyprice.kr)</span>
-        에서, 건물기준시가는{" "}
-        <span className="font-medium">국세청 홈택스 &gt; 기준시가 조회</span>를 이용하세요.
-      </p>
     </div>
   );
 }

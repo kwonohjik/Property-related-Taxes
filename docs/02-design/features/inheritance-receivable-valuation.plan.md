@@ -277,5 +277,5 @@ export function resolveReceivableDiscountRate(valuationDate: string): RateFracti
 - ✅ receivable vs financial 분리(`evaluateFinancial`=marketValue 단순평가) · ✅ 증여 공용(`GIFT_CATEGORIES`=estate-category-meta.ts:39) · ✅ 간주상속 미포함
 
 ---
-**다음 단계**: 본 계획서 자가검토(스킬 `plan-self-review` 또는 `plan-design-self-review-loop`) →
+**다음 단계**: 본 계획서 자가검토(스킬 `plan-design-self-review-loop`) →
 엔진·UI 설계문서 분리 생성 → Pre-Do anchor 착수.

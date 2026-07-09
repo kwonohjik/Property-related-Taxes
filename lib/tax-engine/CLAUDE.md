@@ -18,16 +18,16 @@ lib/tax-engine/
 │   ├── comprehensive.ts       # COMPREHENSIVE, COMPREHENSIVE_LAND, COMPREHENSIVE_EXCL
 │   ├── inheritance-gift.ts    # INH, GIFT, VALUATION, TAX_CREDIT
 │   └── common.ts              # PENALTY, PENALTY_CONST (국세기본법 공통)
-├── non-business-land/         # 비사업용 토지 판정 v2 (14 서브모듈)
+├── non-business-land/         # 비사업용 토지 판정 v2 (20+ 서브모듈)
 │   ├── engine.ts              # judgeNonBusinessLand() 진입점
 │   ├── farmland.ts / forest.ts / pasture.ts / villa-land.ts / ...
 │   └── types.ts               # NonBusinessLandInput, 판정 결과 타입
-├── transfer-reductions/       # 감면 23개 조문 라우터 (Phase 1 골격, Phase 2~ 본격 구현)
+├── transfer-reductions/       # 감면 23개 조문 라우터 (대부분 구현 완료 — metadata.isFullyImplemented 기준)
 │   ├── index.ts               # evaluateReduction(input) 단일 진입점 + re-export
 │   ├── metadata.ts            # REDUCTION_METADATA (23개 조문 UI라벨·효과·isFullyImplemented)
 │   ├── period-check.ts        # checkReductionPeriod(id, ctx) — 일몰 시한 검증 (매매계약일 우선)
 │   ├── phd-helper.ts          # §164⑤ 환산 보조 — 신축주택 감면 조문의 "취득시 기준시가" 자동 도출
-│   ├── new-99-3.ts            # §99의3 신축주택 과세특례 (Phase 2 완전구현 1호)
+│   ├── new-99-3.ts            # §99의3 신축주택 과세특례 (완전구현 조문 예시)
 │   └── types.ts               # TransferReductionId · ReductionCategory 공개 타입
 └── schemas/rate-table.schema.ts  # DB jsonb 스키마 (parseProgressiveRate 등)
 ```
@@ -35,7 +35,7 @@ lib/tax-engine/
 ## 파일 분할 규칙
 
 - **Orchestrator**는 매개변수 주입받은 `TaxRatesMap`으로 파싱 → 헬퍼 조립 → 결과 반환에만 집중. 계산 로직 세부는 helpers에 위임.
-- **Helpers 파일 분리 기준**: 메인 파일이 800줄 초과 + 내부 헬퍼가 5개 이상이면 `{tax-type}-helpers.ts` 로 분리 (예: `transfer-tax.ts` 1,470→706줄).
+- **Helpers 파일 분리 기준**: 메인 파일이 800줄 초과 + 내부 헬퍼가 5개 이상이면 `{tax-type}-helpers.ts` 로 분리 (예: `transfer-tax.ts` 1,470→≈800줄).
 - **타입 파일 분리 기준**: 공개 타입이 3개 이상이고 엔진 외부(API·UI·테스트)에서 import되면 `types/` 로 분리. Orchestrator에서는 `export type { X } from "./types/..."` 로 재수출해 하위 호환 유지.
 - **legal-codes 세목별 분리**: 공유 상수 파일은 barrel (`legal-codes.ts`가 `export * from "./legal-codes/*"`). 세목 간 병합 충돌 방지.
 
@@ -82,7 +82,7 @@ const best = candidates.reduce((a, b) => a.amount >= b.amount ? a : b, { amount:
 const reductionAmount = Math.min(best.amount, calculatedTax);
 ```
 
-참고 구현: `transfer-tax-helpers.ts` 의 `calcReductions()`.
+참고 구현: `transfer-tax-reductions-calc.ts` 의 `calcReductions()` (`transfer-tax-rate-calc.ts` 에서 re-export).
 
 ## DB 세율 맵 형식
 
@@ -101,7 +101,7 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 - `comprehensive-tax.ts` → `property-tax.ts` (재산세 결과를 종부세 재산세 비율 안분 공제에 사용). **역방향 금지**.
 - `transfer-tax-aggregate.ts` → `transfer-tax.ts` (다건 양도 오케스트레이션은 단건 엔진을 반복 호출).
 - `transfer-tax.ts` → `multi-house-surcharge.ts` / `non-business-land/engine.ts` / `rental-housing-reduction.ts` / `new-housing-reduction.ts` / `public-expropriation-reduction.ts` / `transfer-tax-penalty.ts` / `pre-1990-land-valuation.ts` / `multi-parcel-transfer.ts` (서브엔진 fan-out).
-- `transfer-reductions/index.ts` — 독립 라우터. Phase 1: 시한 검증만. Phase 2~: 각 조문별 모듈(`new-99-3.ts` 등)이 switch 분기로 추가됨. `transfer-tax.ts` STEP 4.6~7.5에서 직접 호출 (§99의3은 이미 통합됨). 신규 조문 추가 시 `calcReductions()` 후보 배열에 push.
+- `transfer-reductions/index.ts` — 독립 라우터. 각 조문별 모듈(`new-99-3.ts` 등)이 switch 분기로 통합됨. `transfer-tax.ts` STEP 4.6~7.5에서 직접 호출. 신규 조문 추가 시 `calcReductions()` 후보 배열에 push.
 - `transfer-tax-mixed-use.ts` → `transfer-tax-mixed-use-helpers.ts` → `transfer-tax-mixed-use-fourpart.ts` (Case A 4부분 안분 어댑터) / `transfer-tax-mixed-use-totals.ts` (조립 헬퍼) / `transfer-tax-pre-housing-disclosure.ts` (PHD §164⑤).
 
 서브엔진은 상위 엔진 import 금지 (순환 금지).

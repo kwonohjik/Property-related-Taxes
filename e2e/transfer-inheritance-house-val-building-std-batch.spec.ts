@@ -95,10 +95,12 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
     const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
     await expect(modal).toBeVisible();
 
-    // pre-2001 취득(1983) → 취득시 공시지가 라벨 "(2001년 기준)" + 힌트 렌더, 자동주입 없이 빈 값
+    // pre-2001 취득(1983) → 취득시 공시지가 라벨 "(2001년 기준)" + placeholder 안내, 자동주입 없이 빈 값
+    // (취득≤2000 필드는 placeholder가 "2001.1.1. …"로 분리 — 최초·양도만 "원/㎡")
     await expect(modal.getByText("취득시 (2001년 기준) 공시지가")).toBeVisible();
-    await expect(modal.getByText("2001.1.1. 현재 공시지가를 입력하세요")).toBeVisible();
-    await expect(modal.getByPlaceholder("원/㎡").nth(0)).toHaveValue("");
+    const acqLandInput = modal.getByPlaceholder("2001.1.1. 현재 공시지가를 입력하세요");
+    await expect(acqLandInput).toBeVisible();
+    await expect(acqLandInput).toHaveValue("");
 
     await modal.getByPlaceholder("신축연도 (4자리)").fill("1982");
     // 시점별 3블록(취득 2001체계·최초 2005·양도 2026) 구조·용도
@@ -106,11 +108,11 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
     await fillCombos(page, modal, "용도 선택", /단독|주택/, 3);
     await modal.getByPlaceholder("연면적").fill("253.75");
 
-    // 시점별 공시지가 — 취득(1983)·최초(2005)·양도(2026)
-    const land = modal.getByPlaceholder("원/㎡");
-    await land.nth(0).fill("598517");
-    await land.nth(1).fill("1560000");
-    await land.nth(2).fill("6750000");
+    // 시점별 공시지가 — 취득(1983, "2001.1.1." placeholder)·최초(2005)·양도(2026, "원/㎡")
+    await acqLandInput.fill("598517");
+    const land = modal.getByPlaceholder("원/㎡"); // 최초·양도 2개
+    await land.nth(0).fill("1560000");
+    await land.nth(1).fill("6750000");
 
     await modal.getByRole("button", { name: "3시점 계산하기" }).click();
     const applyBtn = modal.getByRole("button", { name: /모두 적용/ });
