@@ -10,6 +10,8 @@ trigger: 자가 검토, 13단계 검토, 11단계 검토, 오류 누락 모순 �
 
 **v2 (2026-07-03)**: 실측 결과 "중" 규모도 22분이 걸려 호출을 꺼리게 되는 문제가 확인되어 STEP 1/6/13 fork 병렬화 + STEP 3/8/9 blast-radius 재검토 + effort 분리를 도입. 단계 수·이름·번호는 불변(다른 문서의 "STEP 3" 등 참조 유지). 근거·성과 목표는 `REVISION-PLAN.md` 참조.
 
+**v3 (2026-07-10)**: 중복이던 `plan-self-review` Workflow(`.claude/workflows/plan-self-review.js`)를 폐기(throw-stub)하고, 그 고유값(findings JSON 스키마·결정적 verdict 게이트 — 아래 § 검토 표 형식)을 이 스킬로 **이관**. plan.md forward-pointer 8곳을 이 스킬로 재배선. 이 스킬이 계획·설계 자가검토의 **단일 도구**다(Workflow 재도입 금지 — fork는 Workflow 내부 호출 불가라 컨텍스트 상속·재-Read 제거를 재현할 수 없음). 근거: memory `feedback_plan_design_self_review_over_workflow`.
+
 ## 적용 시점
 
 - 사용자가 "오류·누락·모순·개선 검토하세요"를 **1회 이상** 요청
@@ -35,6 +37,8 @@ trigger: 자가 검토, 13단계 검토, 11단계 검토, 오류 누락 모순 �
 판정 기준: **엔진 input/result 타입이 바뀌면 "대"**(14 동기화 지점·디자인 문서 필수). UI·문서만 바뀌면 소/중. 아래 ⚠️ STEP 5·12 생략 금지는 **"대" 규모 전제** — 소/중은 디자인 문서 자체가 N/A다.
 
 STEP 3/8/9의 blast-radius 재검토(아래 § 참조)는 규모 무관 항상 적용 — 소 규모라고 재검토 자체를 생략하지 않는다.
+
+**생성 게이트 (재생성 금지 = 리뷰 전용, v3)**: STEP 5/12 설계 문서가 **디스크에 이미 존재하면 재생성하지 않고 곧바로 검토**한다 — 편집→재검토(iterate) 경로에서 생성비용 0. STEP 5/12 생성은 문서가 **없을 때만**(주로 대 규모 최초 1회) 수행하며, 이때의 설계 문서 저작은 output-bound 본질비용이라 어느 방식으로도 제거되지 않는다 → effort는 `high`로 충분하다(opus 모델은 품질 완충으로 유지, `max`는 과잉). 이 게이트는 아래 "⚠️ STEP 5·12 생략 금지"(문서가 필요한데 없으면 만들라)와 **상보적**이다 — 없으면 만들되, 있으면 재생성하지 말 것.
 
 ## 표준 13단계
 
@@ -92,6 +96,23 @@ STEP 5(`.engine.design.md`)·STEP 12(`.ui.design.md`)는 **디자인 문서를 �
 
 - **6 카테고리**: 오류(인용·산식·시그니처) / 누락(필드·행·소스) / 모순(문서 내·문서 간 dual-truth) / **정책위반**(memory feedback_* — 자동 안분 fallback·useEffect 미러링·3중 패턴·14 동기화 지점) / 개선(단순화·일관성) / UI누락(위젯·바인딩·testid)
 - **4 우선순위**: Critical(빌드 깨짐·dual-truth·정책위반) > High(정확도·정합) > Medium > Low
+
+### findings 구조화 출력 + 종료 판정 게이트 (폐기된 workflow에서 이관 — 강제)
+
+마크다운 검토 표에 더해, fork 병렬 검토 결과를 병합할 때 각 발견을 아래 필드로 구조화하고 **file:line 키로 dedup**한다(서로 다른 fork가 같은 결함을 다른 카테고리로 중복 보고할 수 있음). 세무 컴플라이언스 도메인의 감사성·재현성 인프라다.
+
+- `category`: 오류 | 누락 | 모순 | 정책위반 | 개선 | UI누락
+- `severity`: critical | high | medium | low
+- `location`: **file:line 또는 섹션·표 위치(필수)** — 불확실하면 grep/Read 실측으로 확정
+- `issue`: 결함 서술 · `fix`: 구체 수정안
+- `legalBasis`: 관련 법령 조문 — **KoreanLaw MCP로 위임 체인 끝(본칙·시행령·시행규칙)까지 검증된 것만** 기재. 미검증은 "확인 필요"(추정 인용 금지)
+
+**종료 판정 게이트 (verdict — 기계적 종료 조건, Do 진입 게이트)**:
+- 미해소 **critical/high가 1건이라도** 남으면 → `blocked` (Do 진입 금지)
+- mustFix 0건 · 재검토 newIssues 0건 → `clean`
+- 그 외 → `needs-fix` (mustFix를 Do 진입 전 처리)
+
+생성·정정으로 문서 파일이 실제 편집됐으면 `git diff`로 확인 후 판정한다.
 
 ## 핵심 원칙
 

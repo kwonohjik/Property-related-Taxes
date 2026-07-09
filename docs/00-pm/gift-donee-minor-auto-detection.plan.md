@@ -227,4 +227,4 @@ export function resolveIsMinorDonee(form: {
 
 ## 13. 다음 수순
 
-`plan-self-review` 워크플로(엔진·UI 설계 생성 + 13단계 자가검증) → `pre-do-anchor-verification`(A-3/A-4 경계 우선) → `single-response-do-execution`.
+`plan-design-self-review-loop` 스킬(엔진·UI 설계 생성 + 13단계 자가검증) → `pre-do-anchor-verification`(A-3/A-4 경계 우선) → `single-response-do-execution`.

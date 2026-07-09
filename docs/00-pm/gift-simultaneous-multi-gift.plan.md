@@ -245,6 +245,6 @@ return GiftTaxResult[]  (+ 합계는 결과뷰에서 Σ finalTax)
 ## 12. 다음 단계
 
 1. 이 계획서 리뷰 → D-1~D-6 결정.
-2. `/plan-self-review` 또는 plan-self-review 워크플로로 엔진·UI 설계 생성 + 13단계 자가검증.
+2. `plan-design-self-review-loop` 스킬로 엔진·UI 설계 생성 + 13단계 자가검증.
 3. Phase 0 Pre-Do anchor 작성 → 설계 환류.
 4. Phase 1부터 구현.

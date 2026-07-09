@@ -195,7 +195,7 @@ C: (2γ+3ρ₃)/5 = [ 2 × { P₃ + (a·(2α+3ρ₁)/5 + b·(2β+3ρ₂)/5) − 
 2. **Pre-Do 법령 검증**: KoreanLaw로 §54③④·§53⑧4호·준칙 §60② 본문 추적 → `legal-verification.md`.
 3. **Pre-Do anchor**: 사례 Ⅱ·Ⅲ 1원-정확 anchor 작성·실행(실패 확보) + 사례 Ⅰ β 불일치 규명.
 4. **DESIGN**: engine.design.md(케이스 매트릭스 동결·수식·정수 절사 시점) + ui.design.md(14지점) 병렬.
-5. **plan-self-review**: 13단계 자가검토 루프(오류/누락/모순/개선/UI누락).
+5. **plan-design-self-review-loop**: 13단계 자가검토 루프(오류/누락/모순/개선/UI누락).
 6. **DO**: 엔진(타입→연립방정식 모듈→orchestrator 통합→C2 자산반영) → UI(⑤⑥⑦) 시퀀셜.
 7. **CHECK**: `ui-engine-sync-checker`(14지점) + `gap-detector`(matchRate≥90).
 8. **QA/E2E**: 세목 spec + 회귀 baseline 대조. **REPORT**.

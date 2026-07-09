@@ -107,7 +107,7 @@ aggregate 흐름(공통): 두 경로 모두 `calculateTransferTaxAggregate` 직�
 | `extensionStdPriceAtAcquisition` | 원 | 증축부분 **취득(증축완공)당시** 기준시가 | 신규 **(기본안: 단일 추가 필드)** |
 | `extensionStdPriceAtTransfer` | 원 | 증축부분 **양도당시** 기준시가 | **조건부 신규** — 산식 상쇄 시 삭제(아래 기본안 참조) |
 
-**산식 후보 (🔍 plan-self-review에서 engine-senior + KoreanLaw §176의2②2호로 최종 검증)**:
+**산식 후보 (🔍 plan-design-self-review-loop에서 engine-senior + KoreanLaw §176의2②2호로 최종 검증)**:
 
 ```
 증축부분 환산취득가 = 증축부분 양도가액 × (extensionStdPriceAtAcquisition ÷ extensionStdPriceAtTransfer)
@@ -115,7 +115,7 @@ aggregate 흐름(공통): 두 경로 모두 `calculateTransferTaxAggregate` 직�
 가산세 = 증축부분 환산취득가 × 5%
 ```
 
-- **기본안 = 단일 입력 필드(`extensionStdPriceAtAcquisition`만)**: 위 식 전개 시 `extensionStdPriceAtTransfer`가 분자·분모에서 상쇄되어 `증축부분 환산취득가 = 채무안분 건물양도가 × (증축취득기준시가 ÷ 건물전체 양도기준시가)`로 단순화된다(신축 K-5가 이미 전체 양도가·전체 양도기준시가를 보유). 별도 `extensionStdPriceAtTransfer`를 명시 입력으로 두는 것은 단일사용 추상화이며 입력 부담·14지점·Zod·E2E 동기화 비용을 1필드분 증가시킨다. **plan-self-review에서 KoreanLaw §176의2②2호로 상쇄를 먼저 확정**하고, 상쇄가 확인되면 `extensionStdPriceAtTransfer` 필드를 삭제하여 입력을 1필드로 최소화한다. (상쇄 미확인 시에 한해 2필드 유지 — 추정 단정 금지.)
+- **기본안 = 단일 입력 필드(`extensionStdPriceAtAcquisition`만)**: 위 식 전개 시 `extensionStdPriceAtTransfer`가 분자·분모에서 상쇄되어 `증축부분 환산취득가 = 채무안분 건물양도가 × (증축취득기준시가 ÷ 건물전체 양도기준시가)`로 단순화된다(신축 K-5가 이미 전체 양도가·전체 양도기준시가를 보유). 별도 `extensionStdPriceAtTransfer`를 명시 입력으로 두는 것은 단일사용 추상화이며 입력 부담·14지점·Zod·E2E 동기화 비용을 1필드분 증가시킨다. **plan-design-self-review-loop에서 KoreanLaw §176의2②2호로 상쇄를 먼저 확정**하고, 상쇄가 확인되면 `extensionStdPriceAtTransfer` 필드를 삭제하여 입력을 1필드로 최소화한다. (상쇄 미확인 시에 한해 2필드 유지 — 추정 단정 금지.)
 - **삽입 위치**: `burdened-gift-apportionment.ts` K-5 분기(`:309-321`) 또는 그 직후. 신축(buildingType≠"extension")은 기존 `perAsset.building.acquisitionPrice` 유지, 증축만 별도 base 산출.
 - **base 전달**: step override(`transfer-tax-burdened-gift-step.ts:66-72`)의 `estimatedBase`를 증축 시 위 값으로 교체.
 
@@ -128,7 +128,7 @@ aggregate 흐름(공통): 두 경로 모두 `calculateTransferTaxAggregate` 직�
 
 ### A-3. rate-calc 게이트 (변경 불요, 정합 확인만)
 
-`transfer-tax-rate-calc.ts:67-70`의 85㎡·2020·5년 게이트는 이미 정확. 🔍 확인 필요: 85㎡ 기준이 **증축부분 면적**(extensionFloorArea)임을 법령으로 재확인 — 현행 코드는 `extensionFloorArea`를 봄(전체면적 아님) → 법문 "증축의 경우 바닥면적 합계 85㎡ 초과"와 정합 추정, plan-self-review에서 KoreanLaw 확정.
+`transfer-tax-rate-calc.ts:67-70`의 85㎡·2020·5년 게이트는 이미 정확. 🔍 확인 필요: 85㎡ 기준이 **증축부분 면적**(extensionFloorArea)임을 법령으로 재확인 — 현행 코드는 `extensionFloorArea`를 봄(전체면적 아님) → 법문 "증축의 경우 바닥면적 합계 85㎡ 초과"와 정합 추정, plan-design-self-review-loop에서 KoreanLaw 확정.
 
 ### A-4. 증여세 14지점 (증축 신규필드)
 
@@ -209,7 +209,7 @@ aggregate 흐름(공통): 두 경로 모두 `calculateTransferTaxAggregate` 직�
 - 신규 평가 UI variant(토지+건물 일괄 시가/보충적평가) — estate-card variant 신설.
 - `BurdenedGiftTransferSection.tsx:127-132` 분기 추가.
 - 14지점 전수(①~⑭) + 부담부 K-5 신축/증축 입력.
-- 🔍 확인 필요: 증여 평가체계에서 토지+건물 일괄을 단일 자산으로 둘지, 기존처럼 분리(land+building) 유지하고 일괄만 신규로 둘지 — **개념 중복** 검토(증여는 통상 분리 입력). plan-self-review에서 inheritance-gift-tax-ui-senior 판정.
+- 🔍 확인 필요: 증여 평가체계에서 토지+건물 일괄을 단일 자산으로 둘지, 기존처럼 분리(land+building) 유지하고 일괄만 신규로 둘지 — **개념 중복** 검토(증여는 통상 분리 입력). plan-design-self-review-loop에서 inheritance-gift-tax-ui-senior 판정.
 
 ---
 
@@ -269,7 +269,7 @@ B-3: 증여 general_building 카테고리 신설 (별도 plan/design + 독립 PR
 
 | 항목 | 구분 | 처리 |
 |---|---|---|
-| 증축부분 환산취득가 산식 확정 | 🔍 미검증 | plan-self-review에서 engine-senior + KoreanLaw §176의2②2호 |
+| 증축부분 환산취득가 산식 확정 | 🔍 미검증 | plan-design-self-review-loop에서 engine-senior + KoreanLaw §176의2②2호 |
 | step override buildingType/extensionFloorArea 흐름 | 🔍 미검증 | Pre-Do anchor 실증 |
 | 85㎡ = 증축부분 면적 기준 | 🔍 미검증 | KoreanLaw 확정 |
 | 신축 2018-01-01·증축 2020-01-01 시행일 게이트 부칙(시행일·적용례) | 🔍 현행값 유지·부칙 미검증 | 현행 `rate-calc.ts:60·68` 게이트값 유지. 연혁 API 미응답 → KoreanLaw eflaw 재조회 후속과제 등록. 단정 금지 |
@@ -277,7 +277,7 @@ B-3: 증여 general_building 카테고리 신설 (별도 plan/design + 독립 PR
 | 양도 SelfBuiltSection 증축 현황 | ✅ 검증 완료(3.1) | `SelfBuiltSection.tsx:60-102` 신축/증축 구분 버튼 + extensionFloorArea input 존재 — 증축부분 기준시가 2필드만 추가 |
 | general_building 증축(사례 33) 기존 구현 | ✅ 검증 완료(3.1·3.2) | `general-building-extension.ts:343·352·358·359` 건물2 §114조의2 발동 — 잔여 갭은 건물2 카드 85㎡ 게이트(buildingType/extensionFloorArea)뿐 |
 | 양도 general_building 일반양도 신축 누락 = 의도 vs 갭 | 결정 필요 | 사용자/설계 — 본 Phase 포함 여부 |
-| 증여 general_building 개념 중복(분리 vs 일괄) | 결정 필요 | plan-self-review UI-senior |
+| 증여 general_building 개념 중복(분리 vs 일괄) | 결정 필요 | plan-design-self-review-loop UI-senior |
 | 과대부과(증축 전체 base) | 위험 | A-1 분리산출로 차단, anchor P2-1 가드 |
 | 회귀(신축·K-4·일반양도) | 위험 | P2-4·P2-8 + 전체 npm test |
 | 침묵 strip(⑫⑬⑭) | 위험 | 신규 필드 Zod+body+route grep 자가점검 |
@@ -286,7 +286,7 @@ B-3: 증여 general_building 카테고리 신설 (별도 plan/design + 독립 PR
 
 ## 10. 후속 단계
 
-1. **plan-self-review** 13단계 — 본 계획서 입력, 엔진·UI 설계 생성 + 증축 산식·증여 general_building 모델 독립 검토. (`Workflow({ name: "plan-self-review", args: "docs/00-pm/burdened-gift-114-2-penalty-phase2.plan.md" })`)
+1. **plan-design-self-review-loop** 13단계 — 본 계획서 입력, 엔진·UI 설계 생성 + 증축 산식·증여 general_building 모델 독립 검토. (fork 기반 스킬로 실행. 설계 문서 '생성'이 필요하면 `docs/00-pm/feature-workflow.md`의 엔진+UI 시니어 병렬 호출. 구 Workflow 도구는 폐기됨.)
 2. `.engine.design.md` · `.ui.design.md` 생성(증축 산식·B경로·증여 카테고리).
 3. **pre-do-anchor-verification** → P2-1/P2-5 우선 실증.
 4. **single-response-do-execution** Do (PR 분할).
