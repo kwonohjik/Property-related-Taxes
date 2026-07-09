@@ -235,6 +235,9 @@ export function MixedUsePreHousingDisclosureSection({
           hideTransferColumn={isCaseA}
           // Case A 4부분 분리 모드 — ①·② 시점에서 토지·건물을 주택분/상가분 2 컬럼으로 분리
           splitHousingCommercialForAcqAndFirst={isCaseA}
+          // Case A는 자산-우선(주택/상가 × 3시점) 전치 렌더. splitMode(데이터·배치)와 직교.
+          // 양도까지 위젯이 흡수하므로 legacy 양도 4부분 섹션은 미렌더(MixedUseLegacyStdPrice).
+          layout={isCaseA ? "asset-major" : undefined}
           housingLandArea={
             isCaseA && residential > 0 && totalFloor > 0
               ? autoLandArea.toFixed(2)
