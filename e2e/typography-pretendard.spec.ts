@@ -27,3 +27,21 @@ test("html/body 폰트가 Pretendard로 배선된다 (P0)", async ({ page }) => 
   // Pretendard 배선 성공 시 해시 패밀리명(__pretendard_*)에 'pretendard' 토큰 포함.
   expect(fontFamily.toLowerCase()).toContain("pretendard");
 });
+
+/**
+ * Phase 1 앵커 — 마법사 단계 제목(h2) 16→18px 승격.
+ * 승격 전: text-base(16px) — 단계 제목과 섹션 제목이 동일 크기(계층 붕괴).
+ * 승격 후: text-lg(18px) — 페이지 24 → 단계 18 → 섹션 16 계층 분리.
+ */
+test("마법사 단계 제목(h2)이 18px(text-lg)로 승격된다 (P1)", async ({ page }) => {
+  await page.goto("/calc/transfer-tax");
+  await page.locator("h2").first().waitFor({ state: "visible" });
+
+  // 페이지 내 h2 중 단계 제목(text-lg=18px)이 존재하는지 — 사이드바 h2(text-sm=14px)와 공존.
+  const sizes = await page
+    .locator("h2")
+    .evaluateAll((els) => els.map((e) => getComputedStyle(e).fontSize));
+  console.log("[anchor] transfer-tax h2 fontSizes:", JSON.stringify(sizes));
+
+  expect(sizes).toContain("18px");
+});

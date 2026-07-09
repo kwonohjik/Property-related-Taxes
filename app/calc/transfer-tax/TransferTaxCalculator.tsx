@@ -581,7 +581,7 @@ export default function TransferTaxCalculator({
             {/* 본문 */}
             <main className="min-w-0">
               {/* 단계 제목 */}
-              <h2 className="text-base font-semibold mb-4">
+              <h2 className="text-lg font-semibold mb-4">
                 {STEP_TITLES[currentStep]}
               </h2>
 
