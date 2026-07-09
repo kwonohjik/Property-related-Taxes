@@ -16,6 +16,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
+import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── Props ────────────────────────────────────────────────────────
@@ -60,6 +61,23 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
   const [housingType, setHousingType] = useState<HousingType>("individual");
 
   const priceLabel = PRICE_LABEL[housingType];
+
+  // ── 개별/공동주택 공시가격 자동조회 (부동산공시가격알리미 / NED API) ──
+  // 최초고시가격은 최초 고시일 연도, 양도시가격은 양도일 연도로 조회. 단일 소스 훅 재사용.
+  const jibun = asset.addressJibun ?? "";
+  const firstLookup = useStandardPriceLookup("housing");
+  const transferLookup = useStandardPriceLookup("housing");
+
+  const onLookupFirst = async () => {
+    const year = getDefaultPriceYear(asset.phdFirstDisclosureDate, "housing");
+    const price = await firstLookup.lookup({ jibun, propertyType: "housing", year });
+    if (price && price > 0) onChange({ phdFirstDisclosureHousingPrice: String(price) });
+  };
+  const onLookupTransfer = async () => {
+    const year = getDefaultPriceYear(transferDate, "housing");
+    const price = await transferLookup.lookup({ jibun, propertyType: "housing", year });
+    if (price && price > 0) onChange({ phdTransferHousingPrice: String(price) });
+  };
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
   const stdPriceAddress = {
@@ -116,25 +134,69 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
       {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행) */}
       <div className="grid gap-4 sm:grid-cols-2">
         <FieldCard label={priceLabel.first} required unit="원" stacked>
-          <CurrencyInput
-            label=""
-            value={asset.phdFirstDisclosureHousingPrice}
-            onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
-            placeholder="원"
-            hideUnit
-            required
-          />
+          <div className="space-y-1.5">
+            <div className="flex gap-2">
+              <div className="flex-1 min-w-0">
+                <CurrencyInput
+                  label=""
+                  value={asset.phdFirstDisclosureHousingPrice}
+                  onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
+                  placeholder="원"
+                  hideUnit
+                  required
+                />
+              </div>
+              <button
+                type="button"
+                onClick={onLookupFirst}
+                disabled={!jibun || firstLookup.loading}
+                className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
+              >
+                {firstLookup.loading ? "조회 중…" : "공시가격 조회"}
+              </button>
+            </div>
+            {firstLookup.msg && (
+              <p className={`text-[11px] ${firstLookup.msg.kind === "err" ? "text-destructive" : "text-muted-foreground"}`}>
+                {firstLookup.msg.text}
+              </p>
+            )}
+            {!jibun && (
+              <p className="text-[11px] text-muted-foreground">소재지 지번 입력 후 조회 가능합니다</p>
+            )}
+          </div>
         </FieldCard>
 
         <FieldCard label={priceLabel.transfer} required unit="원" stacked>
-          <CurrencyInput
-            label=""
-            value={asset.phdTransferHousingPrice}
-            onChange={(v) => onChange({ phdTransferHousingPrice: v })}
-            placeholder="원"
-            hideUnit
-            required
-          />
+          <div className="space-y-1.5">
+            <div className="flex gap-2">
+              <div className="flex-1 min-w-0">
+                <CurrencyInput
+                  label=""
+                  value={asset.phdTransferHousingPrice}
+                  onChange={(v) => onChange({ phdTransferHousingPrice: v })}
+                  placeholder="원"
+                  hideUnit
+                  required
+                />
+              </div>
+              <button
+                type="button"
+                onClick={onLookupTransfer}
+                disabled={!jibun || transferLookup.loading}
+                className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
+              >
+                {transferLookup.loading ? "조회 중…" : "공시가격 조회"}
+              </button>
+            </div>
+            {transferLookup.msg && (
+              <p className={`text-[11px] ${transferLookup.msg.kind === "err" ? "text-destructive" : "text-muted-foreground"}`}>
+                {transferLookup.msg.text}
+              </p>
+            )}
+            {!jibun && (
+              <p className="text-[11px] text-muted-foreground">소재지 지번 입력 후 조회 가능합니다</p>
+            )}
+          </div>
         </FieldCard>
       </div>
 
