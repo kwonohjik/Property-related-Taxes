@@ -137,17 +137,17 @@ export function ComprehensiveFilingFormMain({ result }: Props) {
       {/* 서식 헤더 */}
       <div className="text-center mb-2">
         <p className="text-sm font-bold">{header.titleTemplate(year)}</p>
-        <p className="text-[10px] text-gray-500">
+        <p className="text-micro text-gray-500">
           {header.formCode} ({header.revised})
           <span className="ml-2 text-amber-600">※ {header.hint}</span>
         </p>
-        <p className="text-[10px] text-gray-500 mt-0.5">
+        <p className="text-micro text-gray-500 mt-0.5">
           정기신고 ☑ (정기신고란에 체크)
         </p>
       </div>
 
       {/* 신고 구분 안내 */}
-      <div className="mb-2 text-[10px] text-gray-600 border border-gray-300 rounded px-2 py-1">
+      <div className="mb-2 text-micro text-gray-600 border border-gray-300 rounded px-2 py-1">
         신고 구분: 정기신고 / 과세기준일: {result.assessmentDate}
       </div>
 
@@ -658,7 +658,7 @@ export function ComprehensiveFilingFormMain({ result }: Props) {
       </div>
 
       {/* 구비서류 안내 */}
-      <div className="mt-3 border border-gray-300 rounded px-2 py-1.5 text-[10px] text-gray-600">
+      <div className="mt-3 border border-gray-300 rounded px-2 py-1.5 text-micro text-gray-600">
         <p className="font-semibold mb-1">구비서류</p>
         <ol className="list-decimal pl-4 space-y-0.5">
           {REQUIRED_DOCS.map((doc, i) => <li key={i}>{doc}</li>)}
@@ -666,7 +666,7 @@ export function ComprehensiveFilingFormMain({ result }: Props) {
       </div>
 
       {/* 서명란 */}
-      <div className="mt-2 flex justify-between items-end text-[10px] text-gray-600">
+      <div className="mt-2 flex justify-between items-end text-micro text-gray-600">
         <div>
           <p>위와 같이 신고합니다.</p>
           <p>신고인 (서명 또는 인) ___________</p>
@@ -677,7 +677,7 @@ export function ComprehensiveFilingFormMain({ result }: Props) {
       </div>
 
       {/* 용지규격 */}
-      <p className="text-[9px] text-gray-400 text-right mt-1">{PAPER_SPEC}</p>
+      <p className="text-micro text-gray-400 text-right mt-1">{PAPER_SPEC}</p>
     </div>
   );
 }

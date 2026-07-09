@@ -57,7 +57,7 @@ export function NewHousingReductionDetailCard({ detail }: Props) {
             신축주택 양도소득세 감면 — 감면 불가
           </p>
           {articleLabel && (
-            <span className="text-[10px] text-amber-800 dark:text-amber-400">
+            <span className="text-micro text-amber-800 dark:text-amber-400">
               조세특례제한법 {articleLabel}
             </span>
           )}
@@ -94,7 +94,7 @@ export function NewHousingReductionDetailCard({ detail }: Props) {
           </span>
         )}
         {reductionScope && (
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-micro text-muted-foreground">
             {reductionScope === "tax_amount" ? "산출세액 기준 감면" : "양도차익 기준 감면"}
           </span>
         )}
@@ -103,13 +103,13 @@ export function NewHousingReductionDetailCard({ detail }: Props) {
       {/* 핵심 수치 */}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded border border-emerald-200 bg-emerald-50/80 dark:border-emerald-800/30 dark:bg-emerald-950/30 p-2.5 text-center">
-          <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">감면세액</p>
+          <p className="text-micro text-emerald-700 dark:text-emerald-400 font-medium">감면세액</p>
           <p className="text-sm font-mono font-semibold text-emerald-900 dark:text-emerald-200 mt-0.5">
             {formatN(reductionAmount)}
           </p>
         </div>
         <div className="rounded border border-sky-200 bg-sky-50/60 dark:border-sky-800/30 dark:bg-sky-950/20 p-2.5 text-center">
-          <p className="text-[10px] text-sky-700 dark:text-sky-400 font-medium">적용 감면율</p>
+          <p className="text-micro text-sky-700 dark:text-sky-400 font-medium">적용 감면율</p>
           <p className="text-sm font-mono font-semibold text-sky-900 dark:text-sky-200 mt-0.5">
             {formatRate(reductionRate)}
           </p>

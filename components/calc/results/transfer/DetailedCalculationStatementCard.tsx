@@ -89,7 +89,7 @@ export function DetailedCalculationStatementCard({
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
               📋 계산결과 상세명세서
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-caption text-slate-500 mt-0.5">
               신고서 양식 32 항목별 산식·변수값·법령 근거. 다건 모드는 자산별 펼침으로 검증.
             </p>
           </div>
@@ -119,7 +119,7 @@ export function DetailedCalculationStatementCard({
                   사유: {result.exemptReason}
                 </p>
               )}
-              <p className="text-[11px] text-emerald-700/70 mt-1">
+              <p className="text-caption text-emerald-700/70 mt-1">
                 아래 32 항목은 산식·법령 근거 검증용으로 표시됩니다 (대부분 0원).
               </p>
             </div>
@@ -235,7 +235,7 @@ function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[
       <div className="flex items-center gap-2 mb-1">
         <span
           className={cn(
-            "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold select-none",
+            "flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none",
             tone.badge,
           )}
         >
@@ -275,7 +275,7 @@ function ItemRow({ item }: { item: StatementItem }) {
               <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className="print:hidden inline-flex h-4 w-4 items-center justify-center rounded text-[10px] text-muted-foreground hover:text-foreground"
+                className="print:hidden inline-flex h-4 w-4 items-center justify-center rounded text-micro text-muted-foreground hover:text-foreground"
                 aria-label={open ? "자산별 닫기" : "자산별 펼치기"}
               >
                 {open ? "▲" : "▼"}
@@ -291,7 +291,7 @@ function ItemRow({ item }: { item: StatementItem }) {
             </p>
           )}
           {item.note && (
-            <p className="text-[11px] text-amber-700 mt-0.5 ml-6 italic break-words">
+            <p className="text-caption text-amber-700 mt-0.5 ml-6 italic break-words">
               ※ {item.note}
             </p>
           )}
@@ -336,7 +336,7 @@ function PerAssetRow({ row }: { row: PerAssetValue }) {
         </p>
         {row.formula && (
           // 자산별 산식(예: "330,000,000 × 339,492,000 / (...)") 줄바꿈 처리.
-          <p className="text-[10px] text-muted-foreground mt-0.5 ml-3 break-words leading-relaxed">
+          <p className="text-micro text-muted-foreground mt-0.5 ml-3 break-words leading-relaxed">
             {row.formula}
           </p>
         )}

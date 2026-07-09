@@ -49,7 +49,7 @@ export function BesshiRow({
       <td className="py-1.5 px-2 text-sm text-gray-900 dark:text-gray-100">
         <span>{row.label}</span>
         {row.formula && row.display !== "rate" && (
-          <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
+          <span className="ml-1 text-micro text-gray-500 dark:text-gray-400">
             ({row.formula})
           </span>
         )}
@@ -69,7 +69,7 @@ export function BesshiRow({
         )}
       </td>
       {showLaw && (
-        <td className="py-1.5 px-2 text-[10px] text-gray-500 dark:text-gray-400 w-24">
+        <td className="py-1.5 px-2 text-micro text-gray-500 dark:text-gray-400 w-24">
           {row.lawRef ?? ""}
         </td>
       )}

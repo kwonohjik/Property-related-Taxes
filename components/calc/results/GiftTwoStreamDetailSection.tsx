@@ -74,7 +74,7 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
           />
           {/* §30의5⑫ §69 신고세액공제 배제 안내 */}
           {result.creditDetail?.specialTreatmentCredit === 0 && (
-            <div className="px-4 py-2.5 text-[11px] text-amber-700 dark:text-amber-400">
+            <div className="px-4 py-2.5 text-caption text-amber-700 dark:text-amber-400">
               신고세액공제(§69) 배제 — §30의5⑫(§30의6⑤ 준용): 조특법 과세특례 선택 시 신고세액공제 미적용
             </div>
           )}

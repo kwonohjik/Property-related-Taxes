@@ -58,14 +58,14 @@ export function LumpSumDetailCard({ detail, triggerLabel, triggerValue }: Props)
             tone="blue"
           />
           {detail.selectedMethod === "lump_sum" && (
-            <div className="px-3 py-1.5 text-[11px] text-muted-foreground">
+            <div className="px-3 py-1.5 text-caption text-muted-foreground">
               {detail.forcedByUnfiled
                 ? "무신고로 일괄공제 5억원 고정 (§21① 단서) — 기초·인적공제 합계가 5억을 초과해도 5억만 적용"
                 : "기초·인적공제 합계보다 일괄공제가 크므로 일괄공제 적용 (§21①)"}
             </div>
           )}
           {detail.spouseSoleHeirExclusion && (
-            <div className="px-3 py-1.5 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
+            <div className="px-3 py-1.5 text-caption text-amber-700 dark:text-amber-300 bg-amber-50/40 dark:bg-amber-950/20">
               ⓘ 배우자 단독상속 — 일괄공제 배제 (§21②), 기초+인적공제만 적용
             </div>
           )}

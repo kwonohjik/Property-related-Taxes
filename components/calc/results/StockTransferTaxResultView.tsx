@@ -604,25 +604,25 @@ function MajorShareholderResultCard({
         대주주 판정 ({lawRef})
         {/* Phase B (2026-05-19) — 비상장 벤처기업 임계 적용 배지 */}
         {t.isVentureRule && (
-          <span className="inline-flex items-center rounded-full bg-violet-200 px-2 py-0.5 text-[10px] font-bold text-violet-900">
+          <span className="inline-flex items-center rounded-full bg-violet-200 px-2 py-0.5 text-micro font-bold text-violet-900">
             비상장 벤처기업 임계 적용 (시총 40억)
           </span>
         )}
         {/* F-15·F-16 (2026-05-19) — 대차/사모펀드 자동 가산 적용 배지 */}
         {t.shareAugmentationApplied && (
-          <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+          <span className="inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-900">
             대차·사모펀드 자동 가산 ({t.augmentedShares?.toLocaleString() ?? 0}주)
           </span>
         )}
         {/* F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override 배지 */}
         {t.judgmentBasis && t.judgmentBasis !== "default" && (
-          <span className="inline-flex items-center rounded-full bg-rose-200 px-2 py-0.5 text-[10px] font-bold text-rose-900">
+          <span className="inline-flex items-center rounded-full bg-rose-200 px-2 py-0.5 text-micro font-bold text-rose-900">
             특수 판정 기준일 적용
           </span>
         )}
         {/* F-24 (2026-05-19) — 본인 미보유 강제 합산 배지 */}
         {t.forcedCombinedJudgment && (
-          <span className="inline-flex items-center rounded-full bg-sky-200 px-2 py-0.5 text-[10px] font-bold text-sky-900">
+          <span className="inline-flex items-center rounded-full bg-sky-200 px-2 py-0.5 text-micro font-bold text-sky-900">
             본인 미보유 → 특수관계인 합산 강제
           </span>
         )}

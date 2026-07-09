@@ -60,7 +60,7 @@ function DeductionLimitContent({
   return (
     <DetailTable>
       {/* ㉯ 한도 산정 4행 */}
-      <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
+      <div className="px-3 py-1 text-caption font-semibold text-muted-foreground bg-muted/30">
         ㉯ §24 한도 산정
       </div>
       <DetailRow
@@ -126,7 +126,7 @@ function DeductionLimitContent({
       />
 
       {/* ㉮ 한도 적용 */}
-      <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
+      <div className="px-3 py-1 text-caption font-semibold text-muted-foreground bg-muted/30">
         ㉮ 한도 적용
       </div>
       {raw !== undefined && (
@@ -148,7 +148,7 @@ function DeductionLimitContent({
 
       {/* 한도 초과 강조 */}
       {detail.wasCapped && (
-        <div className="px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-950/20">
+        <div className="px-3 py-2 text-caption text-amber-700 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-950/20">
           한도 초과 — 공제 제한: 신청액 {formatKRW(raw ?? 0)} 중{" "}
           {formatKRW((raw ?? 0) - detail.limitedDeduction)} 미적용
         </div>

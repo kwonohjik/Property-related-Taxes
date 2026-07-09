@@ -394,7 +394,7 @@ export function TransferTaxResultView({
             <div className="text-xs space-y-1 mt-2">
               <div>
                 <span className="text-muted-foreground">공식: </span>
-                <code className="text-[11px]">{result.pre1990LandValuationDetail.breakdown.formula}</code>
+                <code className="text-caption">{result.pre1990LandValuationDetail.breakdown.formula}</code>
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2">
                 <span className="text-muted-foreground">취득시 등급가액</span>
@@ -418,7 +418,7 @@ export function TransferTaxResultView({
                   {result.pre1990LandValuationDetail.warnings.map((w, i) => <li key={i}>{w}</li>)}
                 </ul>
               )}
-              <p className="text-[10px] text-muted-foreground pt-1">{result.pre1990LandValuationDetail.breakdown.legalBasis}</p>
+              <p className="text-micro text-muted-foreground pt-1">{result.pre1990LandValuationDetail.breakdown.legalBasis}</p>
             </div>
           </div>
         )}

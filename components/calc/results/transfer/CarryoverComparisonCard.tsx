@@ -43,7 +43,7 @@ function ScenarioCol({ label, adopted, children, determinedTax }: ScenarioColPro
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-muted-foreground">{label}</p>
         {adopted && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-caption font-bold text-emerald-700">
             ✓ 채택 (더 큰 세액)
           </span>
         )}
@@ -55,7 +55,7 @@ function ScenarioCol({ label, adopted, children, determinedTax }: ScenarioColPro
           adopted ? "border-emerald-300 bg-emerald-100/60" : "border-border bg-muted/30",
         )}
       >
-        <p className="text-[11px] text-muted-foreground mb-0.5">결정세액</p>
+        <p className="text-caption text-muted-foreground mb-0.5">결정세액</p>
         <p className="text-base font-bold tabular-nums">{fmt(determinedTax)}</p>
       </div>
     </div>
@@ -97,12 +97,12 @@ function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted
           />
         )}
         {a.donorCapexGuardApplied && (
-          <p className="text-[10px] text-amber-600 pl-2">
+          <p className="text-micro text-amber-600 pl-2">
             * 증여자 자본적지출: 2024.1.1. 이전 양도 — 가드 발동, 0 처리
           </p>
         )}
         {a.giftTaxLimitApplied && (
-          <p className="text-[10px] text-amber-600 pl-2">
+          <p className="text-micro text-amber-600 pl-2">
             * 증여세 한도 발동 — 잔액한도 {fmt(a.giftTaxLimitCap)} 적용
           </p>
         )}
@@ -163,7 +163,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">이월과세 비교과세 결과</p>
-        <span className="text-[11px] text-muted-foreground">소득세법 §97조의2</span>
+        <span className="text-caption text-muted-foreground">소득세법 §97조의2</span>
       </div>
 
       {/* 적용기간 */}

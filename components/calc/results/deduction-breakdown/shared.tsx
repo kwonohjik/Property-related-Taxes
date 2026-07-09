@@ -150,7 +150,7 @@ export function ExpandButton({
         e.stopPropagation();
         onClick();
       }}
-      className="ml-2 inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-muted transition-colors"
+      className="ml-2 inline-flex items-center justify-center rounded px-1.5 py-0.5 text-micro text-muted-foreground hover:bg-muted transition-colors"
       aria-label={expanded ? "접기" : "펼치기"}
     >
       {expanded ? "▲" : "▼"}

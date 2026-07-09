@@ -33,7 +33,7 @@ const METHOD_LABELS: Record<InheritanceAcquisitionResult["method"], string> = {
 /** 후보 선택 배지 */
 function SelectedBadge() {
   return (
-    <span className="ml-1 text-[10px] rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-1.5 py-0.5">
+    <span className="ml-1 text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-1.5 py-0.5">
       선택
     </span>
   );
@@ -49,8 +49,8 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
         <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
           상속 취득가액 의제 계산
         </p>
-        <span className="text-[10px] text-muted-foreground">{legalBasis}</span>
-        <span className="text-[10px] rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">
+        <span className="text-micro text-muted-foreground">{legalBasis}</span>
+        <span className="text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">
           {METHOD_LABELS[method]}
         </span>
       </div>

@@ -115,7 +115,7 @@ export function PersonalDeductionDetailCard({
           />
 
           {/* §20③ 안내 */}
-          <div className="px-3 py-1.5 text-[11px] text-muted-foreground">
+          <div className="px-3 py-1.5 text-caption text-muted-foreground">
             ※ 미성년자·장애인 연수는 1년 미만을 1년으로 올림 (상증법 §20③)
           </div>
         </DetailTable>

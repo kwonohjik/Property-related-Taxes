@@ -482,7 +482,7 @@ function CalculationRouteCard({
     <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-2">
       <div className="flex items-start justify-between mb-1">
         <h4 className="font-semibold text-sm text-blue-900">계산 경로 (학습·검증용)</h4>
-        <span className="text-[10px] text-blue-700">&quot;왜 이 세액인지&quot; 설명</span>
+        <span className="text-micro text-blue-700">&quot;왜 이 세액인지&quot; 설명</span>
       </div>
       <MetaRow label="취득시 주택공시가격" value={ACQ_SOURCE_LABEL[route.housingAcqPriceSource]} />
       <MetaRow label="환산취득가액 경로" value={CONVERSION_ROUTE_LABEL[route.acquisitionConversionRoute]} />
@@ -517,7 +517,7 @@ function ResultSection({
     <div className="rounded-xl border bg-card p-4 space-y-2">
       <div className="flex items-start justify-between mb-2">
         <h4 className="font-semibold text-sm">{title}</h4>
-        <span className="text-[10px] text-muted-foreground text-right max-w-[140px]">{basis}</span>
+        <span className="text-micro text-muted-foreground text-right max-w-[140px]">{basis}</span>
       </div>
       {children}
     </div>
@@ -548,7 +548,7 @@ function Row({
         </span>
       </div>
       {formula && (
-        <p className="text-[11px] text-muted-foreground/80 leading-snug pl-2 border-l-2 border-muted">
+        <p className="text-caption text-muted-foreground/80 leading-snug pl-2 border-l-2 border-muted">
           {formula}
         </p>
       )}
@@ -582,17 +582,17 @@ function PartialUsageChangeCard({
         </p>
         <div className="flex items-center gap-1.5 flex-wrap">
           {isPhdCaseA && (
-            <span className="inline-flex items-center rounded-md border border-rose-300 bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-900">
+            <span className="inline-flex items-center rounded-md border border-rose-300 bg-rose-100 px-2 py-0.5 text-caption font-semibold text-rose-900">
               최초공시일 &lt; 용도변경일 — 건물 전체 기준으로 취득시 주택가격 역산
             </span>
           )}
           {isPhdCaseB && (
-            <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">
+            <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-caption font-semibold text-violet-900">
               최초공시일 ≥ 용도변경일 — 주택 부분만 기준으로 취득시 주택가격 역산
             </span>
           )}
           {isCommToHouse && (
-            <span className="inline-flex items-center rounded-md border border-yellow-300 bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-900">
+            <span className="inline-flex items-center rounded-md border border-yellow-300 bg-yellow-100 px-2 py-0.5 text-caption font-semibold text-yellow-900">
               ⚠ 법령 적용에 보수 검토 필요
             </span>
           )}
@@ -608,21 +608,21 @@ function PartialUsageChangeCard({
       </p>
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-md bg-white/60 border border-amber-200 px-3 py-2">
-          <div className="text-[11px] text-amber-700">취득시 주택 연면적</div>
+          <div className="text-caption text-amber-700">취득시 주택 연면적</div>
           <div className="font-mono text-amber-900">{puc.acqResidentialArea.toFixed(2)}㎡</div>
         </div>
         <div className="rounded-md bg-white/60 border border-amber-200 px-3 py-2">
-          <div className="text-[11px] text-amber-700">취득시 상가 연면적</div>
+          <div className="text-caption text-amber-700">취득시 상가 연면적</div>
           <div className="font-mono text-amber-900">{puc.acqCommercialArea.toFixed(2)}㎡</div>
         </div>
       </div>
       {puc.isAreaCustomized && (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           ※ 사용자가 취득시 면적을 직접 입력함 (자동값 대신 수동값 사용)
         </p>
       )}
       {isPhdCaseA && (
-        <div className="rounded-md bg-rose-50 border border-rose-200 px-3 py-2 text-[11px] text-rose-900 space-y-1 leading-relaxed">
+        <div className="rounded-md bg-rose-50 border border-rose-200 px-3 py-2 text-caption text-rose-900 space-y-1 leading-relaxed">
           <p className="font-semibold">취득시 개별주택가격 역산 산식 — 건물 전체 기준 (시행령 §164⑤)</p>
           <p>
             역산한 취득시 개별주택가격 = 최초공시 개별주택가격 × (취득시 토지기준시가 + 취득시 건물기준시가) ÷ (최초공시 토지기준시가 + 최초공시 건물기준시가)
@@ -633,7 +633,7 @@ function PartialUsageChangeCard({
         </div>
       )}
       {reason && (
-        <p className="text-[11px] text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed">
+        <p className="text-caption text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed">
           💡 {reason}
         </p>
       )}
@@ -664,18 +664,18 @@ function UsagePeriodSplitCard({
         <p className="text-sm font-semibold text-violet-900">
           용도변경일 기반 LTHD 분리 계산
         </p>
-        <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">
+        <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-caption font-semibold text-violet-900">
           집행기준 89-154-24
         </span>
       </div>
-      <p className="text-[11px] text-violet-800 leading-relaxed">
+      <p className="text-caption text-violet-800 leading-relaxed">
         용도변경일 입력 시 양도차익을 시간 비례로 분할하여, 각 기간의 보유연수로 장기보유특별공제를 적용합니다.
         주택으로 사용한 기간을 통산하는 집행기준 취지를 반영.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
         <div className="rounded-md bg-white/60 border border-violet-200 px-3 py-2 space-y-1">
-          <div className="text-[11px] text-violet-700 font-semibold">{period1Label}</div>
+          <div className="text-caption text-violet-700 font-semibold">{period1Label}</div>
           <div className="flex justify-between text-xs text-violet-800">
             <span>기간</span>
             <span className="font-mono">{fmtDays(ups.period1Days)}</span>
@@ -693,7 +693,7 @@ function UsagePeriodSplitCard({
         </div>
 
         <div className="rounded-md bg-white/60 border border-violet-200 px-3 py-2 space-y-1">
-          <div className="text-[11px] text-violet-700 font-semibold">Period 2 (혼용 — 양도시점 비율)</div>
+          <div className="text-caption text-violet-700 font-semibold">Period 2 (혼용 — 양도시점 비율)</div>
           <div className="flex justify-between text-xs text-violet-800">
             <span>기간</span>
             <span className="font-mono">{fmtDays(ups.period2Days)}</span>

@@ -67,12 +67,12 @@ export function SpecialHouseExclusionDetailCard({ detail }: Props) {
             {!e.eligible && e.reason && (
               <p className="text-rose-900/90 dark:text-rose-200/90">{e.reason}</p>
             )}
-            <p className="text-[10px] text-muted-foreground">근거 조문: {e.legalBasis}</p>
+            <p className="text-micro text-muted-foreground">근거 조문: {e.legalBasis}</p>
           </div>
         ))}
       </div>
 
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-micro text-muted-foreground">
         ※ 다주택 중과세율 판정의 주택 수에는 반영되지 않습니다 (소득세법 시행령 §167의3 별개)
       </p>
     </div>

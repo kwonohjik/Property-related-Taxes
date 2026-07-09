@@ -132,7 +132,7 @@ export function DeemedGiftResultView({
               ) : null}
             </div>
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="mt-2 text-caption text-muted-foreground">
             증여의제 수증자 = 명의자 / 납세의무자 = 실제소유자 (§4의2②, 2018.12.31 개정 후). 합산배제증여재산 — 동일인 10년 합산·증여재산공제 비적용 (§47①).
           </p>
         </div>
@@ -424,7 +424,7 @@ export function DeemedGiftResultView({
               </p>
             );
           })}
-          <p className="mt-2 text-[11px] text-muted-foreground">동일인 자기증여분 차감(재산세과-799). 각 수증자 §28④ 기준금액(합병후평가 30%·3억 중 적은 금액) 개별 판정.</p>
+          <p className="mt-2 text-caption text-muted-foreground">동일인 자기증여분 차감(재산세과-799). 각 수증자 §28④ 기준금액(합병후평가 30%·3억 중 적은 금액) 개별 판정.</p>
         </div>
       )}
 

@@ -89,7 +89,7 @@ export function InheritanceFilingFormTable({
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
             사전증여재산 명세 (상증법 §13)
           </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-caption text-gray-500 dark:text-gray-400 mt-0.5">
             상속세 및 증여세법 시행규칙 별지 제9호서식 부표 1 (가산하는 증여재산가액) 보조 명세 · 영리법인은 부표 5 별도 양식
           </p>
         </div>
@@ -140,7 +140,7 @@ export function InheritanceFilingFormTable({
             <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
               ⓘ §13 합산 기간 도과 — 참고 표시 (상속세 과세가액에 포함되지 않음)
             </p>
-            <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-0.5">
+            <p className="text-micro text-amber-700 dark:text-amber-400 mt-0.5">
               상속인 10년 / 비상속인·영리법인 5년 도과 행. 영리법인은 §3의2② 면제도 미발동.
             </p>
           </div>
@@ -214,7 +214,7 @@ function renderGiftRow(
       <td className="px-3 py-2">
         {recipient}
         {isCorporate && (
-          <span className="ml-1 inline-flex items-center gap-0.5 text-[9px] bg-violet-200 text-violet-800 rounded px-1.5 py-0.5">
+          <span className="ml-1 inline-flex items-center gap-0.5 text-micro bg-violet-200 text-violet-800 rounded px-1.5 py-0.5">
             🏢
           </span>
         )}
@@ -229,12 +229,12 @@ function renderGiftRow(
       </td>
       <td className="px-3 py-2 text-right font-mono">
         {isCorporate ? (
-          <span className="text-[10px]">— (§4의2③ 비과세)</span>
+          <span className="text-micro">— (§4의2③ 비과세)</span>
         ) : (
           formatKRW(gift.giftTaxPaid)
         )}
       </td>
-      <td className="px-3 py-2 text-[10px]">
+      <td className="px-3 py-2 text-micro">
         {/* PR 3 (2026-05-22): 재산구분코드 표시 (A21/A22 등) */}
         <span className="inline-block bg-gray-100 dark:bg-gray-800 rounded px-1 mr-1 font-mono">
           {kindCode}

@@ -90,7 +90,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       {isPreDisclosure && (
         <div>
           <p className="text-xs font-medium text-amber-800 mb-1">기준시가합 (소득세법 시행령 §164①)</p>
-          <p className="text-[11px] text-muted-foreground mb-2">= 개별공시지가(원/㎡) × 대지면적(㎡) + 건물 기준시가 총액(원)</p>
+          <p className="text-caption text-muted-foreground mb-2">= 개별공시지가(원/㎡) × 대지면적(㎡) + 건물 기준시가 총액(원)</p>
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-amber-200">
@@ -143,7 +143,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       {/* 개산공제 */}
       <div>
         <p className="text-xs font-medium text-amber-800">기타필요경비 (개산공제)</p>
-        <p className="text-[11px] text-muted-foreground mb-1">= 환산취득가 × 3% (소득세법 §97②2호 + 시행령 §163⑥ 토지·건물 3%)</p>
+        <p className="text-caption text-muted-foreground mb-1">= 환산취득가 × 3% (소득세법 §97②2호 + 시행령 §163⑥ 토지·건물 3%)</p>
         <table className="w-full border-collapse">
           <tbody>
             <Row label={`개산공제 합계 = INT(${formatKRW(detail.estimatedAcquisitionTotal)} × 3%)`} value={detail.estimatedDeductionTotal} highlight />
@@ -200,10 +200,10 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <tbody>
               <Row label={`양도차익 = 양도가액 ${formatKRW(transferPrice)} − 환산취득가 ${formatKRW(detail.estimatedAcquisitionTotal)} − 개산공제 ${formatKRW(detail.estimatedDeductionTotal)}`} value={acquisitionGain} />
               {holdingText && (
-                <tr><td colSpan={2} className="py-1 text-[11px] text-muted-foreground">보유기간: {holdingText}</td></tr>
+                <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">보유기간: {holdingText}</td></tr>
               )}
               {lthdRatePct && (
-                <tr><td colSpan={2} className="py-1 text-[11px] text-muted-foreground">장특공률: MIN(15, 보유연수) × 2% = {lthdRatePct} (상한 30%, 소법 §95② 표1 일반자산)</td></tr>
+                <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">장특공률: MIN(15, 보유연수) × 2% = {lthdRatePct} (상한 30%, 소법 §95② 표1 일반자산)</td></tr>
               )}
               {longTermDeduction !== undefined && (
                 <Row label={`장기보유특별공제 = INT(양도차익 ${formatKRW(acquisitionGain)} × ${lthdRatePct ?? "장특공률"})`} value={longTermDeduction} />
@@ -226,7 +226,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             </tbody>
           </table>
           {taxAmount !== undefined && localTax !== undefined && (
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-micro text-muted-foreground mt-1">
               ※ 지방소득세는 §103조의3 자체 누진세율표 직접 적용 (산출세액 × 10% 가정 금지)
             </p>
           )}
