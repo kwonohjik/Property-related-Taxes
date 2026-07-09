@@ -147,7 +147,6 @@ function resolveLabels(targetLabel?: string, useWholeBuildingLabels?: boolean) {
       landStdPrice: "전체 토지기준시가",
       landStdPriceHint: "공시지가 × 전체 토지면적 (주택+상가 전체)",
       buildingStdPrice: "전체 건물 기준시가",
-      buildingStdPriceHint: "국세청 건물기준시가 — 당시 건물 전체 (주택+상가 합계, 당시는 모두 주택)",
       totalLabel: "건물+토지 기준시가 합계",
     };
   }
@@ -158,7 +157,6 @@ function resolveLabels(targetLabel?: string, useWholeBuildingLabels?: boolean) {
       landStdPrice: "주택부수토지 기준시가",
       landStdPriceHint: "주택부수토지 공시지가 × 면적",
       buildingStdPrice: "주택 건물기준시가",
-      buildingStdPriceHint: "국세청 건물기준시가 — 주택건물(상가건물 제외)",
       totalLabel: "주택분 기준시가 합계",
     };
   }
@@ -168,7 +166,6 @@ function resolveLabels(targetLabel?: string, useWholeBuildingLabels?: boolean) {
     landStdPrice: "토지기준시가",
     landStdPriceHint: "공시지가(원/㎡) × 토지면적(㎡)",
     buildingStdPrice: "건물기준시가",
-    buildingStdPriceHint: "국세청 건물기준시가 (원) — 양도·취득 당시 기준시가",
     totalLabel: "기준시가 합계",
   };
 }
@@ -536,7 +533,7 @@ export function PointBlock({
       ) : (
         <>
           {/* 일반 모드 — 토지기준시가는 위 행(rowMode)에 배치, 여기선 건물기준시가만 */}
-          <FieldCard label={labels.buildingStdPrice} unit="원" hint={labels.buildingStdPriceHint}>
+          <FieldCard label={labels.buildingStdPrice} unit="원">
             <CurrencyInput
               label=""
               value={buildingStdPrice}

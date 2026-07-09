@@ -112,6 +112,11 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
             value={asset.phdFirstDisclosureDate}
             onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
           />
+          {housingType === "apartment" && (
+            <p className="mt-1 text-caption text-amber-700">
+              공동주택(아파트)의 경우 최초고시 이전 취득 시 1993.2.1 또는 1990.4.30이 최초고시일에 해당합니다.
+            </p>
+          )}
         </FieldCard>
       </div>
 
@@ -192,25 +197,6 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
             onChange({ phdBuildingStdPriceAtTransfer: v })
           }
         />
-      </div>
-
-      {/* 안내 문구 */}
-      <div className="space-y-1 text-caption text-muted-foreground">
-        <p>
-          주택공시가격은{" "}
-          <span className="font-medium">부동산공시가격알리미(realtyprice.kr)</span>
-          에서 조회하실 수 있습니다.
-        </p>
-        <p>
-          건물기준시가(원)는{" "}
-          <span className="font-medium">국세청 홈택스 &gt; 기준시가 조회</span>에서
-          연도별 값을 직접 확인 후 입력하세요.
-          {housingType === "apartment" && (
-            <span className="block mt-0.5 text-amber-700">
-              공동주택(아파트)의 경우 최초고시 이전 취득 시 1993.2.1 또는 1990.4.30이 최초고시일에 해당합니다.
-            </span>
-          )}
-        </p>
       </div>
     </div>
   );
