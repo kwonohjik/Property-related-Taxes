@@ -152,24 +152,8 @@ export function MixedUseExpandedPanel({
         jibun={jibun}
       />
 
-      {/* ④ 거주 기간 입력 */}
+      {/* ④ 거주 기간 입력 (수도권 배율 지역은 ① 통합 카드로 흡수됨) */}
       <MixedUseResidencyInput asset={asset} onChange={onChange} sectionNum={4} />
-
-      {/* ⑤ 수도권 여부 */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">5</span>
-          <p className="text-xs font-semibold text-rose-700">부수토지 배율 지역</p>
-          <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
-        </div>
-        <ToggleCard
-          tone="rose"
-          title="수도권 지역"
-          description="배율 3배·5배 구분 — 수도권 주·상·공: 3배 / 수도권 녹지·밖: 5배 / 도시 외: 10배 (시행령 §168의12)"
-          checked={!!asset.mixedIsMetropolitanArea}
-          onCheckedChange={(v) => onChange({ mixedIsMetropolitanArea: v })}
-        />
-      </div>
     </div>
   );
 }

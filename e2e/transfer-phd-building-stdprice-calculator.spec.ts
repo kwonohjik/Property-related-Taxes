@@ -334,8 +334,8 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     });
 
     // 면적 입력 (겸용 확장 패널)
-    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
-    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("주택 전용면적").fill("120");
+    await page.getByPlaceholder("상가(비주택) 전용면적").fill("80");
     await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
 
     // PHD(개별주택가격 미공시) ON
@@ -399,8 +399,8 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
       month: "06",
       day: "15",
     });
-    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
-    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("주택 전용면적").fill("120");
+    await page.getByPlaceholder("상가(비주택) 전용면적").fill("80");
     await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
     await page.getByRole("switch", { name: /개별주택가격 미공시/ }).click();
     return page
@@ -478,8 +478,8 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
       month: "06",
       day: "15",
     });
-    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
-    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("주택 전용면적").fill("120");
+    await page.getByPlaceholder("상가(비주택) 전용면적").fill("80");
     await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
     await page.getByRole("switch", { name: /개별주택가격 미공시/ }).click();
 
@@ -518,8 +518,8 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
       year: "2010", month: "06", day: "15",
     });
-    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
-    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("주택 전용면적").fill("120");
+    await page.getByPlaceholder("상가(비주택) 전용면적").fill("80");
     await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
     await page.getByRole("switch", { name: /개별주택가격 미공시/ }).click();
 

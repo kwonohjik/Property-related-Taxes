@@ -5,6 +5,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
+import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { migrateLegacyForm } from "./calc-wizard-migration";
 import {
   makeDefaultAsset,
@@ -462,11 +463,18 @@ export function computeTransferSummary(
     const residentialFloor = parseFloat(primary.residentialFloorArea || "0") || 0;
     const commercialFloor = parseFloat(primary.nonResidentialFloorArea || "0") || 0;
     const totalLand = parseFloat(primary.mixedUseTotalLandArea || "0") || 0;
-    const totalFloor = residentialFloor + commercialFloor;
-    const housingRatioByArea = totalFloor > 0 ? residentialFloor / totalFloor : 0;
-    // 소수점 2자리 반올림 — 화면 표시와 계산값 일치
-    const residentialLandArea = parseFloat((totalLand * housingRatioByArea).toFixed(2));
-    const commercialLandArea = parseFloat((totalLand - residentialLandArea).toFixed(2));
+    // 부수토지 안분 — leaf 헬퍼 단일 소스 + override 반영 (PHD OFF 전용, three-state)
+    const overrideStr = primary.mixedResidentialLandAreaOverride ?? "";
+    const hasOverride = !primary.usePreHousingDisclosure && overrideStr.trim() !== "";
+    const mixedDerived = computeDerivedAreas({
+      residentialFloorArea: residentialFloor,
+      nonResidentialFloorArea: commercialFloor,
+      buildingFootprintArea: parseFloat(primary.buildingFootprintArea || "0") || 0,
+      totalLandArea: totalLand,
+      ...(hasOverride ? { residentialLandAreaOverride: parseFloat(overrideStr) || 0 } : {}),
+    });
+    const housingRatioByArea = mixedDerived.residentialRatio;
+    const commercialLandArea = mixedDerived.commercialLandArea;
 
     // 양도가액 안분: 기준시가 합계 비율
     const housingStdPrice = parseRaw(primary.mixedTransferHousingPrice);
@@ -487,7 +495,7 @@ export function computeTransferSummary(
 
     mixedUse = {
       housingRatio: housingRatioByArea,
-      residentialLandArea,
+      residentialLandArea: mixedDerived.residentialLandArea,
       commercialLandArea,
       housingTransferPrice,
       commercialTransferPrice,

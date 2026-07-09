@@ -40,6 +40,8 @@ export const mixedUseAssetSchema = z.object({
   nonResidentialFloorArea: z.number().positive(),
   buildingFootprintArea: z.number().positive(),
   totalLandArea: z.number().positive(),
+  /** 주택 부수토지 면적 수동 지정 (㎡) — PHD OFF 전용, 0 적법(three-state) */
+  residentialLandAreaOverride: z.number().nonnegative().optional(),
   landAcquisitionDate: z.string().date(),
   buildingAcquisitionDate: z.string().date(),
   transferStandardPrice: mixedUseStandardPriceSchema,

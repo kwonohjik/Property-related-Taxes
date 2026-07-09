@@ -2,7 +2,8 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { computeDerivedAreas, round2 } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
@@ -39,13 +40,30 @@ export function MixedUseAssetMajorStdPrice({
 }: Props) {
   const residential = parseDecimal(asset.residentialFloorArea);
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
-  const totalFloor = residential + commercial;
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
 
-  // 소수점 2자리 반올림 — 화면 표시(toFixed(2))와 계산값 일치 (feedback_area_rounding_consistency)
-  const commercialLandArea = parseFloat(
-    (totalFloor > 0 ? totalLand * (commercial / totalFloor) : 0).toFixed(2),
-  );
+  // 부수토지 안분 — leaf 헬퍼 단일 소스 + override(주택 부수토지) 반영 (three-state: 빈값→자동).
+  // PHD ON이면 phdResidentialLandArea가 담당하므로 override 배타(입력칸 숨김).
+  const overrideStr = asset.mixedResidentialLandAreaOverride ?? "";
+  const hasOverride = !asset.usePreHousingDisclosure && overrideStr.trim() !== "";
+  const derived = computeDerivedAreas({
+    residentialFloorArea: residential,
+    nonResidentialFloorArea: commercial,
+    buildingFootprintArea: parseDecimal(asset.buildingFootprintArea),
+    totalLandArea: totalLand,
+    ...(hasOverride ? { residentialLandAreaOverride: parseDecimal(overrideStr) } : {}),
+  });
+  const commercialLandArea = derived.commercialLandArea;
+
+  // 상가 부수토지 칸 편집 → 주택 override 역산 저장 (엔진 축은 주택, mirror onChange 1곳)
+  const onCommercialLandChange = (v: string) => {
+    if (v.trim() === "") {
+      onChange({ mixedResidentialLandAreaOverride: "" });
+      return;
+    }
+    const resid = round2(totalLand - (parseDecimal(v) || 0));
+    onChange({ mixedResidentialLandAreaOverride: String(resid) });
+  };
 
   // 양도시 상가부분 자동 계산
   const transferLandPerSqm = parseAmount(asset.mixedTransferLandPricePerSqm) ?? 0;
@@ -199,6 +217,22 @@ export function MixedUseAssetMajorStdPrice({
             }
           />
         </div>
+
+        {/* 상가부수토지 면적 (자동 안분·수정 가능) — PHD OFF 전용, 편집 시 주택분 자동 조정(양시점 공통) */}
+        {!asset.usePreHousingDisclosure && totalLand > 0 && (
+          <FieldCard
+            label="상가부수토지 면적 (㎡)"
+            hint="전체 토지 × 상가연면적 비율 자동 안분. 수정 시 주택분이 자동 조정되며 취득·양도 양시점에 공통 반영됩니다."
+          >
+            <DecimalInput
+              value={hasOverride ? String(commercialLandArea) : ""}
+              onChange={onCommercialLandChange}
+              placeholder={commercialLandArea > 0 ? commercialLandArea.toFixed(2) : "자동 안분"}
+              unit="㎡"
+              data-testid="mixed-commercial-land-override"
+            />
+          </FieldCard>
+        )}
 
         {/* 상가부수토지 개별공시지가 — 양도/취득 (세로 스택: 기준연도 드롭다운 폭 확보) */}
         <p className="text-xs font-medium text-slate-600">상가부수토지 개별공시지가</p>

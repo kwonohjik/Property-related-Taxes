@@ -147,14 +147,25 @@ export interface GeneralBuildingFormSlice {
   // ── 겸용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 겸용주택 여부 토글 */
   isMixedUseHouse: boolean;
-  /** 주택 연면적 (㎡) */
+  /** 주택 전용면적 (㎡) — 공통면적 안분 전 (연면적 파생 원천) */
+  residentialExclusiveArea: string;
+  /** 상가 전용면적 (㎡) — 공통면적 안분 전 */
+  commercialExclusiveArea: string;
+  /** 공통(공용)면적 (㎡) — 전용면적 비율로 안분 */
+  commonArea: string;
+  /** 주택 연면적 (㎡) — 전용+공통안분 파생 결과 (UI read-only) */
   residentialFloorArea: string;
-  /** 비주택(상가·사무·근린·주차장) 연면적 합계 (㎡) */
+  /** 비주택(상가·사무·근린·주차장) 연면적 합계 (㎡) — 파생 결과 */
   nonResidentialFloorArea: string;
   /** 건물 정착면적 = 1층 면적 (㎡) */
   buildingFootprintArea: string;
   /** 전체 토지 면적 (㎡) — 겸용주택용 */
   mixedUseTotalLandArea: string;
+  /**
+   * 주택 부수토지 면적 수동 지정 (㎡) — PHD OFF 전용, 취득·양도 양시점 공통.
+   * 빈값=자동 안분(전체 × 주택연면적비율). UI는 상가칸 편집→역산(전체−상가) 저장.
+   */
+  mixedResidentialLandAreaOverride: string;
   /** 거주기간 (년) — 장기보유공제 표2 판정 */
   mixedUseResidencePeriodYears: string;
   /** 양도시 개별주택공시가격 (원) */

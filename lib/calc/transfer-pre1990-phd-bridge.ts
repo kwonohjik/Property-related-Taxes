@@ -16,6 +16,7 @@ import {
   type LandGradeInput,
 } from "@/lib/tax-engine/pre-1990-land-valuation";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { round2 } from "@/lib/tax-engine/mixed-use-derived-areas";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const parseArea = (raw: string | undefined): number =>
@@ -30,9 +31,7 @@ export function derivePhdResidentialLandArea(asset: AssetForm): number {
   const commercial = parseArea(asset.nonResidentialFloorArea);
   const totalLand = parseArea(asset.mixedUseTotalLandArea);
   const totalFloor = residential + commercial;
-  const autoLandArea = parseFloat(
-    (totalFloor > 0 ? totalLand * (residential / totalFloor) : 0).toFixed(2),
-  );
+  const autoLandArea = round2(totalFloor > 0 ? totalLand * (residential / totalFloor) : 0);
   return parseArea(asset.phdResidentialLandArea) || autoLandArea;
 }
 

@@ -11,10 +11,14 @@ import type { AssetForm } from "./calc-wizard-asset";
 export const MIXED_USE_DEFAULTS: Pick<
   AssetForm,
   | "isMixedUseHouse"
+  | "residentialExclusiveArea"
+  | "commercialExclusiveArea"
+  | "commonArea"
   | "residentialFloorArea"
   | "nonResidentialFloorArea"
   | "buildingFootprintArea"
   | "mixedUseTotalLandArea"
+  | "mixedResidentialLandAreaOverride"
   | "mixedUseResidencePeriodYears"
   | "mixedTransferHousingPrice"
   | "mixedTransferCommercialBuildingPrice"
@@ -30,10 +34,14 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "partialChangeDate"
 > = {
   isMixedUseHouse: false,
+  residentialExclusiveArea: "",
+  commercialExclusiveArea: "",
+  commonArea: "",
   residentialFloorArea: "",
   nonResidentialFloorArea: "",
   buildingFootprintArea: "",
   mixedUseTotalLandArea: "",
+  mixedResidentialLandAreaOverride: "",
   mixedUseResidencePeriodYears: "",
   mixedTransferHousingPrice: "",
   mixedTransferCommercialBuildingPrice: "",
@@ -57,10 +65,16 @@ export const MIXED_USE_DEFAULTS: Pick<
 export function migrateMixedUseFields(a: Record<string, unknown>): void {
   // 겸용주택 분리계산 필드 (기존)
   if (a.isMixedUseHouse === undefined) a.isMixedUseHouse = false;
+  if (!a.residentialExclusiveArea) a.residentialExclusiveArea = "";
+  if (!a.commercialExclusiveArea) a.commercialExclusiveArea = "";
+  if (!a.commonArea) a.commonArea = "";
+  // ⚠️ legacy 이력 회귀 방지 (R1): residentialFloorArea 는 직접입력 값이 있을 수 있으므로
+  // 전용/공통이 없어도 기존 연면적을 보존한다 (덮어쓰기 금지).
   if (!a.residentialFloorArea) a.residentialFloorArea = "";
   if (!a.nonResidentialFloorArea) a.nonResidentialFloorArea = "";
   if (!a.buildingFootprintArea) a.buildingFootprintArea = "";
   if (!a.mixedUseTotalLandArea) a.mixedUseTotalLandArea = "";
+  if (!a.mixedResidentialLandAreaOverride) a.mixedResidentialLandAreaOverride = "";
   if (!a.mixedUseResidencePeriodYears) a.mixedUseResidencePeriodYears = "";
   if (!a.mixedTransferHousingPrice) a.mixedTransferHousingPrice = "";
   if (!a.mixedTransferCommercialBuildingPrice) a.mixedTransferCommercialBuildingPrice = "";

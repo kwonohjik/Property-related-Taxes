@@ -44,6 +44,14 @@ export interface MixedUseAssetInput {
   buildingFootprintArea: number;
   /** 전체 토지 면적 */
   totalLandArea: number;
+  /**
+   * [신규] 주택 부수토지 면적 수동 지정 (㎡) — PHD OFF(일반 §97) 전용.
+   * ⚠️ 취득·양도 양시점 공통 필지 면적(용도변경 없으면 acqDerived=derived). 시점 무관.
+   * 미제공(undefined) 시 `totalLandArea × 주택연면적비율`로 자동 산출. 0은 적법(three-state).
+   * PHD ON 경로는 preHousingDisclosure.landArea가 담당하므로 배타 —
+   * API 변환에서 usePreHousingDisclosure=false일 때만 주입.
+   */
+  residentialLandAreaOverride?: number;
 
   // ── 분리 취득일 ──
   /** 토지 취득일. 사례14 = 1992-01-01 */
