@@ -211,7 +211,7 @@ MixedUseSection.tsx  (MixedUseExpandedPanel)
 
 ## 12. 단계별 실행 계획
 
-1. **plan-self-review(진행 중)** — 계획 검토×2 + 통합비교 + UI 디자인 생성·검토. *(verify: 정정 누적·재검토)*
+1. **plan-design-self-review-loop(진행 중)** — 계획 검토×2 + 통합비교 + UI 디자인 생성·검토. *(verify: 정정 누적·재검토)*
 2. **Pre-Do anchor** — 케이스 2 폼→페이로드 anchor 1건. *(verify: 재편 전 baseline 페이로드 확보)*
 3. **Do-1** `BuildingStdPriceModalButton` `onApplyBoth` 추가. *(verify: tsc 0, 기존 사용처 무영향)*
 4. **Do-2** `MixedUseStandardPriceInputs` 최상위 `hasPartialUsageChange` 분기 + 자산-우선 레이아웃 + 상가 모달 통합. *(verify: tsc 0, `hasPartialUsageChange===true` 분기 diff 무변경)*

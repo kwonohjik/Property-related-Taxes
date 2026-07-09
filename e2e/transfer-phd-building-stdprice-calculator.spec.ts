@@ -610,10 +610,11 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await modal.getByPlaceholder("연면적").fill("115");
 
     // 시점별 공시지가 취득 930,000 / 최초공시 1,470,000 / 양도 2,548,000
-    const land = modal.getByPlaceholder("원/㎡");
-    await land.nth(0).fill("930000");
-    await land.nth(1).fill("1470000");
-    await land.nth(2).fill("2548000");
+    // 취득(≤2000) 필드는 placeholder가 "2001.1.1. 현재 공시지가를 입력하세요"로 분리됨.
+    await modal.getByPlaceholder("2001.1.1. 현재 공시지가를 입력하세요").fill("930000");
+    const land = modal.getByPlaceholder("원/㎡"); // 최초공시·양도 2개
+    await land.nth(0).fill("1470000");
+    await land.nth(1).fill("2548000");
 
     await modal.getByRole("button", { name: "3시점 계산하기" }).click();
 

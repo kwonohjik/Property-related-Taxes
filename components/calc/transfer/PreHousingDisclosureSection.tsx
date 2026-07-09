@@ -47,12 +47,6 @@ const HOUSING_TYPE_OPTIONS: { value: HousingType; label: string; description: st
   { value: "apartment",  label: "공동주택 (아파트)", description: "공동주택가격 기준 (부동산공시가격알리미)" },
 ];
 
-// 주택유형별 최초고시일 안내 텍스트
-const FIRST_DISCLOSURE_GUIDE: Record<HousingType, string> = {
-  individual: "개별주택가격이 처음으로 고시된 날짜 — 단독주택 최초고시 2005.4.30 (주택공시가격알리미 확인)",
-  apartment:  "공동주택가격이 처음으로 고시된 날짜 — 아파트 최초고시 1993.2.1 또는 1990.4.30 (주택공시가격알리미 확인)",
-};
-
 // 주택유형별 공시가격 라벨
 const PRICE_LABEL: Record<HousingType, { first: string; transfer: string }> = {
   individual: { first: "최초 고시 개별주택가격",  transfer: "양도시 개별주택가격" },
@@ -101,65 +95,48 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         tone="amber"
       />
 
-      {/* ① 토지 면적 */}
-      <FieldCard
-        label="토지 면적"
-        required
-        hint="단위공시지가(원/㎡) × 면적으로 기준시가 계산 — 등기부등본의 토지 면적 기재"
-        unit="㎡"
-      >
-        <DecimalInput
-          placeholder="토지 면적 입력"
-          value={asset.acquisitionArea}
-          onChange={(v) => onChange({ acquisitionArea: v })}
-        />
-      </FieldCard>
+      {/* ①② 토지 면적 · 최초 고시일 (한 행) */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FieldCard label="토지 면적" required unit="㎡" stacked>
+          <DecimalInput
+            placeholder="토지 면적 입력"
+            value={asset.acquisitionArea}
+            onChange={(v) => onChange({ acquisitionArea: v })}
+          />
+        </FieldCard>
 
-      {/* ② 최초 고시일 */}
-      <FieldCard
-        label="최초 고시일"
-        required
-        hint={FIRST_DISCLOSURE_GUIDE[housingType]}
-      >
-        <DateInput
-          value={asset.phdFirstDisclosureDate}
-          onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
-        />
-      </FieldCard>
+        <FieldCard label="최초 고시일" required stacked>
+          <DateInput
+            value={asset.phdFirstDisclosureDate}
+            onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
+          />
+        </FieldCard>
+      </div>
 
-      {/* ③ 최초 고시 주택공시가격 P_F */}
-      <FieldCard
-        label={priceLabel.first}
-        required
-        hint="최초 고시일 당시 공시된 주택공시가격 (원) — 부동산공시가격알리미(realtyprice.kr) 조회"
-        unit="원"
-      >
-        <CurrencyInput
-          label=""
-          value={asset.phdFirstDisclosureHousingPrice}
-          onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
-          placeholder="원"
-          hideUnit
-          required
-        />
-      </FieldCard>
+      {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행) */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FieldCard label={priceLabel.first} required unit="원" stacked>
+          <CurrencyInput
+            label=""
+            value={asset.phdFirstDisclosureHousingPrice}
+            onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
+            placeholder="원"
+            hideUnit
+            required
+          />
+        </FieldCard>
 
-      {/* ④ 양도시 주택공시가격 P_T */}
-      <FieldCard
-        label={priceLabel.transfer}
-        required
-        hint="양도일 당시 공시된 주택공시가격 P_T (원) — 양도일 기준 부동산공시가격알리미 조회"
-        unit="원"
-      >
-        <CurrencyInput
-          label=""
-          value={asset.phdTransferHousingPrice}
-          onChange={(v) => onChange({ phdTransferHousingPrice: v })}
-          placeholder="원"
-          hideUnit
-          required
-        />
-      </FieldCard>
+        <FieldCard label={priceLabel.transfer} required unit="원" stacked>
+          <CurrencyInput
+            label=""
+            value={asset.phdTransferHousingPrice}
+            onChange={(v) => onChange({ phdTransferHousingPrice: v })}
+            placeholder="원"
+            hideUnit
+            required
+          />
+        </FieldCard>
+      </div>
 
       {/* ⑤ 3-시점 기준시가 입력 */}
       <div className="space-y-2">
