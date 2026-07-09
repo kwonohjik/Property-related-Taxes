@@ -37,6 +37,8 @@
 
 **11 파일 · 14 트리거 사이트** (F9 정정). 동일 모달을 서로 다른 스타일로 여는 경우(#7·#8 RtmsSimilarSalesModal / #12 MultiTransfer ×3)까지 있어 불일치가 확연.
 
+> **[Do 환류 2026-07-10]** 인벤토리 누락 1건 발견: `CompositePartsSection`의 **부분-수준 "특성 계산" 런처 쌍**(다시계산 인라인 링크 + "부분 특성으로 계산 열기" chip, `setOpenPartIdx`→Dialog). #3 건물-수준과 동일 계열이라 Do에서 함께 변환(chip→`modalLauncher`, 링크→녹색). → 최종 **12 파일 · 15 chip 사이트 + 인라인 링크 2개(녹색)**.
+
 ### 1.2 함정 (실측 확인)
 
 - **다수가 native `<button>`**(#5·6·7·8·9·10·11) — shadcn `<Button>`이 아니라 variant 적용 전 **구조 변환** 필요(className만이 아님).

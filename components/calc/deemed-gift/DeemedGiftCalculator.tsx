@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { Button } from "@/components/ui/button";
 import {
   DeemedTypeSelector,
   DEEMED_TYPE_META,
@@ -103,14 +104,16 @@ export function DeemedGiftCalculator() {
               증여일 {form.giftDate || "미입력"}
             </p>
           </div>
-          <button
+          <Button
             type="button"
+            variant="modalLauncher"
+            size="xs"
             onClick={() => setModalOpen(true)}
             data-testid="deemed-edit-btn"
-            className="shrink-0 rounded-md border border-rose-300 bg-white/70 px-3 py-1.5 text-xs font-medium text-rose-800 hover:bg-rose-100/60"
+            className="shrink-0"
           >
             수정
-          </button>
+          </Button>
         </div>
       )}
 

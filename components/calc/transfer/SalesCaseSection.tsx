@@ -14,7 +14,7 @@
 import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { RtmsSimilarSalesModal } from "@/components/calc/inheritance/estate-card/variants/RtmsSimilarSalesModal";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export interface SalesCaseSectionProps {
   /** 매매사례가액 (원 문자열) */
@@ -83,19 +83,15 @@ export function SalesCaseSection({
           }}
           hint="소득세법 §176의2③1호: 취득일 전후 3개월 내 유사 면적·용도 매매사례 확인 가격. 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
         />
-        <button
+        <Button
           type="button"
+          variant="modalLauncher"
+          size="default"
           onClick={() => setRtmsOpen(true)}
           disabled={rtmsDisabled}
-          className={cn(
-            "rounded-md border px-3 py-1.5 text-sm font-medium transition-all",
-            rtmsDisabled
-              ? "cursor-not-allowed border-muted bg-muted/40 text-muted-foreground"
-              : "border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100",
-          )}
         >
           실거래가 자동조회 (RTMS)
-        </button>
+        </Button>
         {rtmsDisabled && (
           <p className="text-caption text-muted-foreground">
             자동조회를 사용하려면 취득 주소·면적을 먼저 입력하세요.

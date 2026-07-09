@@ -697,13 +697,13 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                     <button
                       type="button"
                       onClick={() => setAdjOpen(true)}
-                      className="text-xs font-medium text-violet-700 underline underline-offset-2 hover:text-violet-900"
+                      className="text-xs font-medium text-green-700 underline underline-offset-2 hover:text-green-900"
                     >
                       다시 계산
                     </button>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={() => setAdjOpen(true)}>
+                  <Button variant="modalLauncher" size="sm" onClick={() => setAdjOpen(true)}>
                     건물 특성으로 계산 열기
                   </Button>
                 )
