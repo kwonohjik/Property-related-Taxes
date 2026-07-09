@@ -93,7 +93,10 @@ export function MixedUseLegacyStdPrice({
 
   return (
     <div className="space-y-3">
-      {/* ── 양도시 기준시가 ─────────────────────────── */}
+      {/* ── 양도시 기준시가 ───────────────────────────
+          Case A(항상 PHD ON)에서 개별주택공시가격을 숨기면 헤더만 남는 빈 박스가 되므로
+          sub-block 전체를 {!(isCaseA && PHD)} 로 가드. non-Case-A는 상가 필드가 남아 정상. */}
+      {!(isCaseA && asset.usePreHousingDisclosure) && (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
           {transferSectionNum !== undefined && (
@@ -106,14 +109,17 @@ export function MixedUseLegacyStdPrice({
           </p>
         </div>
 
-        <FieldCard label="개별주택공시가격" hint="주택건물+주택부수토지 일괄">
-          <CurrencyInput
-            label=""
-            value={asset.mixedTransferHousingPrice}
-            onChange={(v) => onChange({ mixedTransferHousingPrice: v })}
-            placeholder="양도시 개별주택공시가격"
-          />
-        </FieldCard>
+        {/* PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 */}
+        {!asset.usePreHousingDisclosure && (
+          <FieldCard label="개별주택공시가격" hint="주택건물+주택부수토지 일괄">
+            <CurrencyInput
+              label=""
+              value={asset.mixedTransferHousingPrice}
+              onChange={(v) => onChange({ mixedTransferHousingPrice: v })}
+              placeholder="양도시 개별주택공시가격"
+            />
+          </FieldCard>
+        )}
 
         {/* Case A(용도변경 4부분)는 자산-우선 위젯(취득시 섹션 PHD, layout=asset-major)이 양도까지 흡수 — 별도 양도 4부분 미렌더. */}
         {!isCaseA && (
@@ -167,6 +173,7 @@ export function MixedUseLegacyStdPrice({
           </>
         )}
       </div>
+      )}
 
       {/* ── 취득시 기준시가 ─────────────────────────── */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
