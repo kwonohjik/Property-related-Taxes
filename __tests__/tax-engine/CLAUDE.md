@@ -15,7 +15,7 @@ __tests__/tax-engine/
 │   ├── reductions-and-exempt.test.ts
 │   ├── edge-and-overlap.test.ts
 │   └── integration.test.ts
-├── non-business-land/         # 엔진 서브모듈별 대응 테스트 (14 파일)
+├── non-business-land/         # 엔진 서브모듈별 대응 테스트 (23 파일)
 │   ├── engine.test.ts / farmland.test.ts / forest.test.ts / ...
 │   └── qa-{period-criteria,land-type-flow,integration}.test.ts
 ├── multi-house-surcharge/     # 시나리오별 분할

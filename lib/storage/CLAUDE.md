@@ -7,7 +7,7 @@ IndexedDB(Dexie.js) 기반 로컬 저장소. 향후 Supabase 도입 시 **데이
 ```
 constants.ts              # LOCAL_USER_ID 상수
 types.ts                  # UserProfile · CalculationRecord · LocalTaxType
-db.ts                     # Dexie v1 + 복합 인덱스 3종
+db.ts                     # Dexie v6 (userProfile·calculations·clients·캐시) + 복합 인덱스 4종
 current-user.ts           # getCurrentUserId() — Supabase 교체 단일 지점
 user-repository.ts        # createUserRepository(uid) 클로저 패턴
 calculation-repository.ts # createCalculationRepository(uid)
@@ -15,7 +15,7 @@ title-generator.ts        # 세목별 자동 title 생성
 use-auto-save-calculation.ts  # 결과 화면 마운트 시 자동 저장 훅
 migrations/
   reduction-reclassification.ts  # 기존 이력의 §99의3 'unsold_housing' → 'new_99_3' 재분류
-                                 # ⚠️ 함수만 작성됨 — db.ts v4 스키마 연결은 Phase 2 활성화 대기
+                                 # db.ts v4 upgrade에서 migrateReductionReclassification() 호출로 배선 완료
 ```
 
 ## 핵심 규칙
@@ -30,7 +30,7 @@ migrations/
 
 ```ts
 calculations: "id, userId, taxType, createdAt,
-  [userId+createdAt], [userId+taxType+createdAt], [userId+linkedCalculationId]"
+  [userId+createdAt], [userId+taxType+createdAt], [userId+linkedCalculationId], [userId+clientId+createdAt]"
 ```
 
 ## 세목별 결과 화면에 자동 저장 통합
@@ -44,7 +44,7 @@ useAutoSaveCalculation({
 });
 ```
 
-구현 완료: 6대 세목 전부 + 주식 양도세 (결과 화면 자동 저장 + 수동 `SaveButton`). 세목별 Calculator/Form/page에 동일 패턴 적용 (이력 dedup은 content-hash id 정규화 — `canonicalizeVolatileIds`).
+구현 완료: 6대 세목 전부 + 주식 양도세 (결과 화면 자동 저장 + 수동 `SaveButton`). 세목별 Calculator/Form/page에 동일 패턴 적용 (이력 dedup은 businessKey 기반 — `extractBusinessKey` / `saveOrUpdateByBusinessKey`, `business-key.ts`).
 
 ## resultData 구조 주의
 
