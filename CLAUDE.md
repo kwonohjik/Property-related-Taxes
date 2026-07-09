@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 구현 현황: 6대 세목 + 주식양도세 전부 엔진·UI·API·결과뷰·테스트 완료. 계산 결과 선택 출력 공통화(8 결과뷰). 상속·증여세는 별지 서식(별지9호·부표2·3·5 등) PDF 재현까지 확장.
 - 최근 완료 이력: [`docs/00-pm/recent-completions.md`](docs/00-pm/recent-completions.md). (초기 로드맵은 현황과 차이 큼 — Next.js 16·6세목 완료 미반영.)
-- 양도세 감면 23개 조문 확장: `lib/tax-engine/transfer-reductions/` 골격 + §99의3 완료, 나머지 후속 대기.
+- 양도세 감면 23개 조문 확장: `lib/tax-engine/transfer-reductions/` 대부분 구현 완료 (`metadata.isFullyImplemented` 기준).
 
 ## ⚠️ Next.js 16 주의사항
 
@@ -59,7 +59,7 @@ scripts/ship.sh <branch> "<commit message>" --auto   # CI 통과 후 자동 머�
 
 ## Tech Stack
 
-Next.js 16 (App Router, React 19, Turbopack) + TS strict / shadcn(BaseUI) + Tailwind v4 + zustand / Next Route Handlers + Server Actions (`actions/calculations.ts`) / Supabase (Auth + Postgres) / vitest + jsdom + RTL / Playwright E2E / Sentry (`tax_type`·`request_id` 태그).
+Next.js 16 (App Router, React 19, Turbopack) + TS strict / shadcn(BaseUI) + Tailwind v4 + zustand / Next Route Handlers (`app/api/**`) / Supabase (Auth + Postgres) / vitest + jsdom + RTL / Playwright E2E / Sentry (`tax_type`·`request_id` 태그).
 
 ## Architecture — 2-Layer Tax Engine
 
@@ -70,7 +70,7 @@ Layer 1: Orchestrator (app/api/calc/{tax-type}/route.ts)
   → Zod 검증 (discriminatedUnion 감면 스키마)
   → preloadTaxRates() Supabase RPC 일괄 로드
   → Pure Engine 호출 (세율 데이터 매개변수 전달)
-  → saveCalculation() Server Action (로그인 시 이력 저장)
+  → (이력 저장은 서버 미경유 — 결과 화면 마운트 시 클라이언트 IndexedDB 자동 저장, lib/storage)
 
 Layer 2: Pure Engine (lib/tax-engine/*.ts)
   → DB 직접 호출 없음, 순수 함수
@@ -114,11 +114,11 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 
 **Supabase / DB**: `supabase/migrations/`(tax_rates·regulated_areas·standard_prices·users·calculations). 시딩 `npm run seed:tax-rates`. 환경변수 미설정 시 graceful 통과(로컬 개발 가능). `DISTINCT ON` 미지원 → DB Function `preload_tax_rates()`.
 
-**Route Protection (`proxy.ts`)**: 보호 `/history`·`/api/history`·`/api/pdf`. 미보호 `/api/calc/*`·`/api/law/*`(비로그인 계산 허용).
+**Route Protection (`proxy.ts`)**: `updateSession`으로 Auth 세션만 유지 — 이력 로컬 IndexedDB 일원화로 보호 라우트(`/api/history`·`/api/pdf`) 제거됨(proxy.ts:4). 모든 계산·법령 라우트 비로그인 허용.
 
 **로컬 저장소**: IndexedDB(Dexie). 비로그인 sessionStorage 보존→로그인 후 마이그레이션. zustand `result`는 partialize 제외. Store 마이그: `lib/stores/calc-wizard-migration.ts`. 상세: [lib/storage/CLAUDE.md](lib/storage/CLAUDE.md).
 
-**법령 리서치 (`/law`)**: 법제처 Open API 직접 호출(`KOREAN_LAW_OC`). Routes `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain,route-router,applicable-law}/route.ts`. Client barrel `lib/korean-law/client.ts`(5파일). 별칭 52종 `aliases.ts`. 캐시 `.legal-cache/` 7일 TTL.
+**법령 리서치 (`/law`)**: 법제처 Open API 직접 호출(`KOREAN_LAW_OC`). Routes `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain,route-router,applicable-law}/route.ts`. Client barrel `lib/korean-law/client.ts`(5파일). 별칭 다수 `aliases.ts`. 캐시 `.legal-cache/` 7일 TTL.
 
 - **통합 검색 + Query Router**(`lib/korean-law/router/query-router.ts`): 자연어 질의를 정규식 패턴으로 도구 자동 라우팅. 우선순위 0=행위시법(`applicable_law`)·개정신구대조(`amendment_article`), 1=조문(제 포함), 2=조문(제 생략), 10~=개정·판례·별표 등. `UnifiedSearchBar`→`/api/law/route-router`→`LawResearchClient` 탭 전환.
 - **v4.4 고도화(korean-law-mcp 동급)**:

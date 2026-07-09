@@ -142,6 +142,6 @@
 ## 6. 다음 단계
 
 1. **스코프 3개 확정** (§1) — 사용자 승인.
-2. 확정 후 `plan-self-review` 스킬로 엔진·UI 설계 생성 + 13단계 자가검증.
+2. 확정 후 `plan-design-self-review-loop` 스킬로 엔진·UI 설계 생성 + 13단계 자가검증.
 3. Pre-Do anchor 우선 작성 → 산식 환류. (🔴 정정: '자본환원율 max' anchor는 capRate 변경 금지로 폐기; capRate=§17 고정 10% 유지 회귀 anchor로 대체. 3:2 가중평균 anchor는 B·C deferred로 후속.)
 4. **1차 구현 범위 = D(시점 안내)+E(평가기관 메타)** 순차 구현 (single-response Do). Phase A(자본환원율)는 차입금×1.5 1차 출처 확정 시까지 보류, Phase B·C(구법 산식)는 실 사례 1건 확보 시 후속, Phase D(양도세)는 스코프 제외.

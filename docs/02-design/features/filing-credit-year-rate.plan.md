@@ -161,4 +161,4 @@ export interface FilingCreditInput {
 
 ## 9. 후속 제안
 
-- 본 plan 확정 후 `plan-self-review`(13단계 독립 검토) 또는 `pre-do-anchor-verification` 스킬로 진입 권장.
+- 본 plan 확정 후 `plan-design-self-review-loop`(13단계 독립 검토) 또는 `pre-do-anchor-verification` 스킬로 진입 권장.

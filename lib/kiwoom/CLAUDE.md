@@ -15,7 +15,7 @@ KOSPI 2,452 + KOSDAQ 1,823 + KONEX 109 = **4,384 종목** (ka10099 `mrkt_tp=0/10
 | 평가기준일 전후 2개월 (상속·증여) | §63①1가목 | `/api/kiwoom/valuation-2month` |
 | 단건 (대주주 시총) | §157① | `/api/kiwoom/daily-close` |
 
-종목명 typeahead: `/api/kiwoom/search-by-name` (마스터 4,384 종목 부분 일치).
+종목명 typeahead: `/api/kiwoom/search-by-name` (마스터 전종목 부분 일치).
 
 ## 인프라 파일
 
@@ -44,4 +44,4 @@ KOSPI 2,452 + KOSDAQ 1,823 + KONEX 109 = **4,384 종목** (ka10099 `mrkt_tp=0/10
 
 ## 테스트
 
-`__tests__/kiwoom/` (40 anchor) — calendar·averages·market-mapping·dedup·stock-master·daily-close·post-listing·integration.
+`__tests__/kiwoom/` — calendar·averages·market-mapping·dedup·stock-master·daily-close·post-listing·integration.
