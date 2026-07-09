@@ -106,7 +106,7 @@ export function MultiHouseSurchargeDetailCard({ detail }: Props) {
                 <span className="mt-0.5 shrink-0 text-muted-foreground">–</span>
                 <div>
                   <span className="text-xs text-muted-foreground">주택 {h.houseId.replace("selling", "양도 주택")} </span>
-                  <span className="inline-block text-[11px] bg-muted/60 rounded px-1.5 py-0.5 font-medium">
+                  <span className="inline-block text-caption bg-muted/60 rounded px-1.5 py-0.5 font-medium">
                     {EXCLUDED_REASON_LABEL[h.reason] ?? h.reason}
                   </span>
                   <p className="text-xs text-muted-foreground/80 mt-0.5">{h.detail}</p>
@@ -127,7 +127,7 @@ export function MultiHouseSurchargeDetailCard({ detail }: Props) {
             {detail.excludedPresaleRights!.map((p) => (
               <div key={p.id} className="flex items-start gap-2">
                 <span className="mt-0.5 shrink-0 text-muted-foreground">–</span>
-                <span className="inline-block text-[11px] bg-muted/60 rounded px-1.5 py-0.5 font-medium">
+                <span className="inline-block text-caption bg-muted/60 rounded px-1.5 py-0.5 font-medium">
                   혼인합가 배우자 보유 차감 (§167의4⑤)
                 </span>
               </div>

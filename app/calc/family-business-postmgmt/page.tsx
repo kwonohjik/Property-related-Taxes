@@ -237,7 +237,7 @@ function FamilyBusinessPostMgmtPageInner() {
             </label>
             <DateInput value={filingDeadline} onChange={setFilingDeadline} />
             {!filingDeadline && autoFilingDeadline && (
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-micro text-muted-foreground">
                 자동: {autoFilingDeadline} (사망월 말일 + 6개월). 직접 입력 시 우선.
               </p>
             )}
@@ -255,7 +255,7 @@ function FamilyBusinessPostMgmtPageInner() {
               className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="0.022"
             />
-            <p className="text-[10px] text-muted-foreground">예: 0.022 = 연 2.2% (시점별 개정 — 국세청 고시 확인)</p>
+            <p className="text-micro text-muted-foreground">예: 0.022 = 연 2.2% (시점별 개정 — 국세청 고시 확인)</p>
           </div>
         </div>
         <ToggleCard
@@ -285,14 +285,14 @@ function FamilyBusinessPostMgmtPageInner() {
         {violations.map((v, idx) => (
           <div key={idx} data-testid={`violation-${idx}`} className="rounded-lg border border-rose-200 bg-rose-50/40 dark:bg-rose-950/20 dark:border-rose-800 p-3 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800">
                 {idx + 1}
               </span>
               {violations.length > 1 && (
                 <button
                   type="button"
                   onClick={() => setViolations((p) => p.filter((_, i) => i !== idx))}
-                  className="text-[11px] text-rose-600 hover:text-rose-800 underline"
+                  className="text-caption text-rose-600 hover:text-rose-800 underline"
                 >
                   삭제
                 </button>
@@ -405,7 +405,7 @@ function FamilyBusinessPostMgmtPageInner() {
           {/* 위반별 표 */}
           <div className="border-t border-border pt-3">
             <p className="text-xs font-semibold mb-2">위반별 상세</p>
-            <table className="w-full text-[11px]">
+            <table className="w-full text-caption">
               <thead>
                 <tr className="text-muted-foreground text-left">
                   <th className="py-1">위반일</th>
@@ -457,7 +457,7 @@ function FamilyBusinessPostMgmtPageInner() {
                   <span>상속세 수정신고 데이터 (별지 제9호서식)</span>
                   <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(amendOpen)}</span>
                 </button>
-                <ul className={`${amendOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-[11px]`}>
+                <ul className={`${amendOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-caption`}>
                   <li className="flex justify-between"><span className="text-muted-foreground">추가 결정세액</span><span className="font-mono tabular-nums">{formatKRW(amendment.additionalDeterminedTax)}</span></li>
                   <li className="flex justify-between"><span className="text-muted-foreground">이자상당액 가산세</span><span className="font-mono tabular-nums">{formatKRW(amendment.interestPenalty)}</span></li>
                   <li className="flex justify-between"><span className="text-muted-foreground">양도세 환원 공제(기납부)</span><span className="font-mono tabular-nums">{formatKRW(amendment.cgtCreditReceived)}</span></li>

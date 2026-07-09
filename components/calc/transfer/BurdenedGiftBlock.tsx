@@ -238,7 +238,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
                 <span className="text-xs font-semibold text-amber-800">실지취득가액 입력</span>
                 <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
               </div>
-              <div className="rounded border border-violet-200 bg-violet-50 p-2 text-[11px] text-violet-800">
+              <div className="rounded border border-violet-200 bg-violet-50 p-2 text-caption text-violet-800">
                 개산공제(§163⑥ 3%) 미적용 — 실지거래가액 경로이므로 자본적지출·양도비를 필요경비로 공제합니다 (양도분 채무비율 안분).
               </div>
               {asset.assetKind === "general_building" ? (
@@ -285,7 +285,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
 
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
           {asset.bgAcquisitionMethod === "converted" && (
-            <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-[11px] text-amber-800">
+            <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
               환산취득가액 = 양도가액(채무액) × 취득시 기준시가 ÷ 양도시 기준시가 (시행령 §176의2②2호).
               {asset.assetKind === "general_building"
                 ? " 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 입력하세요."
@@ -299,7 +299,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
       {/* ④ 증여재산 평가용 건물 기준시가 (상증법 §61 — 층별 가감율 적용) */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
             §61
           </span>
           <p className="text-xs font-semibold text-emerald-800">
@@ -323,7 +323,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
       {/* ⑤ Phase 3 — 증여세 통합 입력 (수증자 정보) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             §53
           </span>
           <p className="text-xs font-semibold text-violet-800">
@@ -336,7 +336,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
             <LawArticleModal legalBasis="상속세및증여세법 §69" label="상증법 §69" />
           </div>
         </div>
-        <p className="text-[11px] text-violet-700">
+        <p className="text-caption text-violet-700">
           무상이전분(증여가액 C − 채무액 B)에 대한 증여세 동시 산출. 수증자가 별도 신고·납부.
         </p>
         <FieldCard

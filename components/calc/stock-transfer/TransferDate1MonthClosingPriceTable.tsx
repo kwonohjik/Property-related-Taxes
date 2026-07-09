@@ -111,7 +111,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
           1
         </span>
         <p className="text-xs font-semibold text-amber-700">
@@ -120,7 +120,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
       </div>
 
       {anchorShifted && (
-        <p className="text-[11px] text-amber-700/90 leading-relaxed">
+        <p className="text-caption text-amber-700/90 leading-relaxed">
           양도일 <strong>{form.transferDate}</strong>이(가) 휴장일이므로 직전 거래일{" "}
           <strong>{anchor}</strong>을(를) 기산점으로 1개월 범위를 산정했습니다.
         </p>
@@ -151,7 +151,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
                       {idx + 1}. {displayDates[idx] || "-"}
                     </span>
                     {nonTrading ? (
-                      <div className="rounded-md border border-amber-200/60 bg-amber-100/40 px-3 py-2 text-[11px] text-amber-700 select-none">
+                      <div className="rounded-md border border-amber-200/60 bg-amber-100/40 px-3 py-2 text-caption text-amber-700 select-none">
                         {label}
                       </div>
                     ) : (

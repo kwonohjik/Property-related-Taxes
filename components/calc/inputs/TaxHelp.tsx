@@ -93,7 +93,7 @@ export function TaxHelp({
     ? Array.isArray(legalBasis) ? legalBasis : [legalBasis]
     : [];
 
-  const iconSize = size === "sm" ? "h-3.5 w-3.5 text-[10px]" : "h-4 w-4 text-xs";
+  const iconSize = size === "sm" ? "h-3.5 w-3.5 text-micro" : "h-4 w-4 text-xs";
 
   return (
     <>
@@ -105,7 +105,7 @@ export function TaxHelp({
           onClick={() => setOpen(true)}
           className={`inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50/70 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-colors select-none ${className ?? ""}`}
         >
-          <span aria-hidden className="text-[11px]">ⓘ</span>
+          <span aria-hidden className="text-caption">ⓘ</span>
           {triggerLabel}
         </button>
       ) : (

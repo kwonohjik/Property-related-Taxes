@@ -97,7 +97,7 @@ function AssetTab({
         <div className="flex items-center gap-1">
           <Badge
             variant={isReady ? "default" : "secondary"}
-            className="text-[10px] px-1 py-0 h-4"
+            className="text-micro px-1 py-0 h-4"
           >
             {pct}%
           </Badge>

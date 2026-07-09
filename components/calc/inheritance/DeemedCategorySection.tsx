@@ -88,19 +88,19 @@ export function DeemedCategorySection({
 
       {/* deemedCategory별 안내 */}
       {item.deemedCategory === "insurance" && (
-        <p className="text-[11px] text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
+        <p className="text-caption text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
           ⓘ §8① 피상속인이 보험계약자인 생명·손해보험. §8② 실질 납부자가 피상속인이면 포함.
         </p>
       )}
       {item.deemedCategory === "trust" && (
         <>
-          <p className="text-[11px] text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
+          <p className="text-caption text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
             ⓘ §22 금융재산공제는 <strong>금전신탁만 적용</strong> (상증령 §19①). 부동산·증권신탁은 미적용.
             <br />
             §33① 수익자 분 신탁이익은 상속재산 제외.
           </p>
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold text-violet-700 dark:text-violet-300">
+            <p className="text-micro font-semibold text-violet-700 dark:text-violet-300">
               신탁 유형 선택
             </p>
             <RadioCardGroup<"cash_trust" | "real_estate" | "security" | "other">
@@ -112,7 +112,7 @@ export function DeemedCategorySection({
               onChange={(v) => onUpdate({ ...item, trustType: v })}
             />
             {!item.trustType && (
-              <p className="text-[10px] text-amber-700 dark:text-amber-300">
+              <p className="text-micro text-amber-700 dark:text-amber-300">
                 ⚠️ 신탁 유형 미선택 — §22 미적용으로 처리됩니다.
               </p>
             )}
@@ -120,7 +120,7 @@ export function DeemedCategorySection({
         </>
       )}
       {item.deemedCategory === "retirement" && (
-        <p className="text-[11px] text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
+        <p className="text-caption text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
           <strong>제외 항목 (§10 1~6호)</strong>: 국민연금·공무원연금·사립학교교직원연금·군인연금 유족급여,
           산재 유족보상, 업무상 사망 유족보상금 등은 간주상속재산 아님. §22 미적용.
         </p>

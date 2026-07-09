@@ -98,7 +98,7 @@ export function BesshiBuppyo2Section({
             <Buppyo2HeirSheet key={d.heirId} heirData={d} idx={idx} />
           ))}
 
-          <p className="mt-2 text-[10px] text-slate-500">
+          <p className="mt-2 text-micro text-slate-500">
             ※ 주민등록번호·주소·단가 등 미수집 칸과 비과세·과세가액불산입 세부 항목은
             자동 산출되지 않습니다 — 인쇄 후 수기 작성.
           </p>

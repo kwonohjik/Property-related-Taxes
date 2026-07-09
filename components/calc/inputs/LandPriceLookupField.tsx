@@ -127,19 +127,19 @@ export function LandPriceLookupField({
 
   const yearBadge = isManual ? (
     <span className="flex items-center gap-1">
-      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-micro font-medium text-amber-700">
         수동
       </span>
       <button
         type="button"
         onClick={handleResetToAuto}
-        className="text-[10px] text-primary underline underline-offset-2 hover:no-underline"
+        className="text-micro text-primary underline underline-offset-2 hover:no-underline"
       >
         ↻ 자동
       </button>
     </span>
   ) : effectiveYear ? (
-    <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700">
       자동
     </span>
   ) : null;
@@ -184,7 +184,7 @@ export function LandPriceLookupField({
           <p className="mt-1 text-xs text-destructive">{lookupError}</p>
         )}
         {!canLookup && (
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-caption text-muted-foreground">
             소재지 입력 후 조회 가능합니다
           </p>
         )}

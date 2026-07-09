@@ -44,7 +44,7 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
       isExcluded ? "border-rose-300 bg-rose-50/60" : "border-amber-300 bg-amber-50/60"
     }`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold select-none ${
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none ${
           isExcluded ? "bg-rose-200 text-rose-800" : "bg-amber-200 text-amber-800"
         }`}>{sectionNum}</span>
         <p className={`text-xs font-semibold ${isExcluded ? "text-rose-800" : "text-amber-800"}`}>
@@ -57,16 +57,16 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
       {isExcluded ? (
         <div className="rounded border border-rose-300 bg-rose-100/60 p-3 text-xs text-rose-800">
           ⚠️ <strong>영업권 자동 배제 (상증령 §55 ③)</strong>
-          <ul className="list-disc ml-4 mt-1 text-[11px] space-y-0.5">
+          <ul className="list-disc ml-4 mt-1 text-caption space-y-0.5">
             {goodwill.excludedByLaw === "liquidation" && <li>1호 — 청산절차 진행 (§54④ 1호 + §55③ 1호)</li>}
             {goodwill.excludedByLaw === "real_estate_80" && <li>1호 — 부동산 80% 이상 (§54④ 3호 + §55③ 1호)</li>}
             {goodwill.excludedByLaw === "lt3y" && <li>2호 — 사업개시 3년 미만 (§54④ 2호 + §55③ 2호)</li>}
             {goodwill.excludedByLaw === "continuous_loss_3y" && <li>3호 — 평가기준일 직전 3년 계속 결손법인</li>}
           </ul>
-          <p className="mt-2 text-[11px] font-bold">자. 영업권 평가액 = 0원</p>
+          <p className="mt-2 text-caption font-bold">자. 영업권 평가액 = 0원</p>
         </div>
       ) : (
-        <table className="w-full text-[11px]">
+        <table className="w-full text-caption">
           <tbody>
             <RowDisplay cellNum="가" label="3년 가중평균 순손익액" value={goodwill.weightedAvg3y} hint="§59③ 준용 §56① — 회사 전체" />
             <RowDisplay cellNum="나" label="가 × 50%" value={goodwill.weightedAvgHalf} />
@@ -117,7 +117,7 @@ function RowDisplay({ cellNum, label, value, unit = "원", hint, emphasized }: R
       <td className={`py-1 pr-2 font-mono ${emphasized ? "text-amber-900 font-bold" : "text-amber-700"}`}>{cellNum}.</td>
       <td className="py-1 px-1">
         <div className={emphasized ? "font-semibold text-amber-900" : ""}>{label}</div>
-        {hint && <div className="text-[10px] text-gray-500">{hint}</div>}
+        {hint && <div className="text-micro text-gray-500">{hint}</div>}
       </td>
       <td className={`py-1 pl-1 text-right font-mono ${emphasized ? "text-amber-900 font-bold" : ""}`}>
         {fmt(value)}{unit}

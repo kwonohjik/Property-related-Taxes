@@ -23,10 +23,10 @@ import type { Besshi6_2Data } from "@/lib/calc/cohabit-besshi-data";
 import { B6_2_EXCEPTION_TYPES } from "./deduction-besshi-constants";
 
 const H =
-  "border border-black p-1 bg-gray-100 text-[10px] font-medium text-center align-middle";
-const V = "border border-black p-1 text-[10px] align-middle";
+  "border border-black p-1 bg-gray-100 text-micro font-medium text-center align-middle";
+const V = "border border-black p-1 text-micro align-middle";
 const A =
-  "border border-black p-1 text-[10px] text-right font-mono tabular-nums whitespace-nowrap align-middle";
+  "border border-black p-1 text-micro text-right font-mono tabular-nums whitespace-nowrap align-middle";
 
 function chk(label: string, on: boolean | undefined): string {
   if (on === undefined) return `[ ] ${label}`;
@@ -68,7 +68,7 @@ export function Besshi6_2Section2({ data }: Props) {
             </th>
             {/* 빈: col5-19=span15 */}
             <td className={V} colSpan={15}>
-              <span className="text-[9px] text-gray-400">(인쇄 후 수기 작성)</span>
+              <span className="text-micro text-gray-400">(인쇄 후 수기 작성)</span>
             </td>
           </tr>
 
@@ -80,7 +80,7 @@ export function Besshi6_2Section2({ data }: Props) {
             </th>
             {/* 빈: col5-6=span2 */}
             <td className={V} colSpan={2}>
-              <span className="text-[9px] text-gray-400">(인쇄 후 수기 작성)</span>
+              <span className="text-micro text-gray-400">(인쇄 후 수기 작성)</span>
             </td>
             {/* ①동거기간 라벨: col7-9=span3 */}
             <th className={H} colSpan={3}>
@@ -142,8 +142,8 @@ export function Besshi6_2Section2({ data }: Props) {
             </td>
             {/* ④예외유형 라벨: col11-17=span7 */}
             <td className={V} colSpan={7}>
-              <span className="text-[10px] font-medium">④ 예외유형</span>
-              <span className="ml-1 text-[9px] text-gray-400">
+              <span className="text-micro font-medium">④ 예외유형</span>
+              <span className="ml-1 text-micro text-gray-400">
                 (인쇄 후 수기 — 해당번호 기재)
               </span>
             </td>
@@ -154,7 +154,7 @@ export function Besshi6_2Section2({ data }: Props) {
       </table>
 
       {/* ④ 예외유형 범례 캡션 */}
-      <p className="mt-1 text-[9px] text-gray-500 leading-relaxed">
+      <p className="mt-1 text-micro text-gray-500 leading-relaxed">
         <span className="font-medium">④ 예외유형:</span>{" "}
         {B6_2_EXCEPTION_TYPES.join(" / ")}
       </p>
@@ -211,7 +211,7 @@ export function Besshi6_2Section2({ data }: Props) {
             <th className={H} colSpan={7}>
               ⑦ 무주택자
               <br />
-              <span className="font-normal text-[9px]">
+              <span className="font-normal text-micro">
                 (피상속인과 공동으로 1세대 1주택을 보유한 자 포함)
               </span>
             </th>
@@ -245,7 +245,7 @@ export function Besshi6_2Section2({ data }: Props) {
               </td>
               {/* ⑦무주택: col11-17=span7 */}
               <td className={V} colSpan={7}>
-                <span className="text-[9px] text-gray-400">(인쇄 후 수기)</span>
+                <span className="text-micro text-gray-400">(인쇄 후 수기)</span>
               </td>
               {/* ⑧충족지분: col18-19=span2 */}
               <td className={A} colSpan={2}>

@@ -38,7 +38,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -107,7 +107,7 @@ export function New99InputForm({ value, onChange }: Props) {
             onChange={(v) => onChange({ standardPriceAt5Years99: v })}
             label=""
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §99① 후단)
           </p>
         </div>
@@ -122,7 +122,7 @@ export function New99InputForm({ value, onChange }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
           <DecimalInput value={value.exclusiveAreaSqm99} onChange={(v) => onChange({ exclusiveAreaSqm99: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             고가주택 판정용 — 1998~2002.9 계약 기준은 전용 165㎡ 이상이면서 양도가 6억 초과 시 적용
             제외 (법 §99① 단서). 부수토지는 건물 연면적 2배 이내 토지를 포함해 입력합니다
           </p>
@@ -167,7 +167,7 @@ export function New99InputForm({ value, onChange }: Props) {
         />
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 5년 이내 양도 시 취득일부터 양도일까지 발생한 양도소득금액 전액,
           5년 후 양도 시 취득일부터 5년간 발생한 양도소득금액을 과세대상소득금액에서 뺍니다 (법 §99①).

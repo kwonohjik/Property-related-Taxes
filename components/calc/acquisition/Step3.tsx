@@ -347,7 +347,7 @@ export function Step3({
       {isGiftLike && (
         <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-3">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">★</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">★</span>
             <p className="text-xs font-semibold text-rose-700">무상취득 중과 배제 단서</p>
             <TaxHelp
               title="무상취득 중과 배제 단서 (시행령 §28의6②)"

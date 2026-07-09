@@ -60,7 +60,7 @@ function AssetSection({
         const tone = SUB_TONE[p.tone];
         return (
           <div key={p.key} className={`rounded-md border p-2 space-y-1 ${tone.box}`}>
-            <p className={`text-[11px] font-semibold ${tone.text}`}>{p.label}</p>
+            <p className={`text-caption font-semibold ${tone.text}`}>{p.label}</p>
             <FieldCard label={`${label}건물 기준시가`} hint="국세청 홈택스 > 기준시가 조회">
               <CurrencyInput
                 label=""
@@ -70,7 +70,7 @@ function AssetSection({
                 hideUnit
               />
             </FieldCard>
-            <div className="flex justify-between text-[11px] text-slate-600 px-1">
+            <div className="flex justify-between text-caption text-slate-600 px-1">
               <span>{label}분 토지기준시가 (자동)</span>
               <span className="font-mono tabular-nums">{fmt(landStd)}</span>
             </div>

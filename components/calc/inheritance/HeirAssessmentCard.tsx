@@ -58,7 +58,7 @@ export function HeirAssessmentCard({
           {heirShortLabel(heir)}
         </p>
         <span
-          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+          className={`text-micro font-semibold px-1.5 py-0.5 rounded ${
             evalResult.eligible
               ? "bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100"
               : "bg-amber-200 text-amber-900 dark:bg-amber-800 dark:text-amber-100"
@@ -161,7 +161,7 @@ export function HeirAssessmentCard({
       />
 
       {!evalResult.eligible && evalResult.reasons.length > 0 && (
-        <ul className="text-[10px] text-amber-800 dark:text-amber-200 list-disc pl-4">
+        <ul className="text-micro text-amber-800 dark:text-amber-200 list-disc pl-4">
           {evalResult.reasons.map((r, i) => (
             <li key={i}>{r}</li>
           ))}

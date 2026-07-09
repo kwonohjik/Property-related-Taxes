@@ -117,7 +117,7 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
             <Badge
               variant="secondary"
               data-testid="prior-paid-tax-auto-badge"
-              className="bg-sky-100 text-sky-700 text-[10px]"
+              className="bg-sky-100 text-sky-700 text-micro"
             >
               자동 (참고)
             </Badge>

@@ -294,7 +294,7 @@ export function PhdBuildingStdPriceModalButton({
                         ))}
                       </div>
                     ) : (
-                      <span className="text-[11px] font-medium text-amber-700">부분 {idx + 1}</span>
+                      <span className="text-caption font-medium text-amber-700">부분 {idx + 1}</span>
                     )}
                     {rows.length > 1 && (
                       <Button type="button" variant="ghost" size="xs" onClick={() => setRows((rs) => rs.filter((_, i) => i !== idx))}>
@@ -307,7 +307,7 @@ export function PhdBuildingStdPriceModalButton({
                   {/* 취득당시 (취득 연도 체계) — 주택만. 상가 취득·최초공시는 Case A 주택값 자동/Case B 미산출 → 숨김 */}
                   {row.category === "housing" && acqOptionYear != null && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 space-y-2">
-                      <p className="text-[11px] font-semibold text-amber-700">취득당시 (구조·용도 — {acqOptionYear}년 체계)</p>
+                      <p className="text-caption font-semibold text-amber-700">취득당시 (구조·용도 — {acqOptionYear}년 체계)</p>
                       <div className="grid grid-cols-2 gap-2">
                         <FieldCard label="구조" hint="국세청 구조지수표">
                           <BuildingStructureSelect year={acqOptionYear} value={row.acqStructureKey} onChange={(v) => updateRow(idx, { acqStructureKey: v })} />
@@ -321,7 +321,7 @@ export function PhdBuildingStdPriceModalButton({
                   {/* 최초공시 (최초공시 연도 체계) — 주택만(상가 사유 위와 동일) */}
                   {row.category === "housing" && firstOptionYear != null && (
                     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2 space-y-2">
-                      <p className="text-[11px] font-semibold text-violet-700">최초공시 (구조·용도 — {firstOptionYear}년 체계)</p>
+                      <p className="text-caption font-semibold text-violet-700">최초공시 (구조·용도 — {firstOptionYear}년 체계)</p>
                       <div className="grid grid-cols-2 gap-2">
                         <FieldCard label="구조" hint="국세청 구조지수표">
                           <BuildingStructureSelect year={firstOptionYear} value={row.firstStructureKey} onChange={(v) => updateRow(idx, { firstStructureKey: v })} />
@@ -334,7 +334,7 @@ export function PhdBuildingStdPriceModalButton({
                   )}
                   {/* 양도당시 (양도 연도 체계) — 항상 */}
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
-                    <p className="text-[11px] font-semibold text-emerald-700">양도당시 (구조·용도 — {transferOptionYear}년 체계)</p>
+                    <p className="text-caption font-semibold text-emerald-700">양도당시 (구조·용도 — {transferOptionYear}년 체계)</p>
                     <div className="grid grid-cols-2 gap-2">
                       <FieldCard label="구조" hint="국세청 구조지수표">
                         <BuildingStructureSelect year={transferOptionYear} value={row.transferStructureKey} onChange={(v) => updateRow(idx, { transferStructureKey: v })} />
@@ -351,7 +351,7 @@ export function PhdBuildingStdPriceModalButton({
               </div>
             ))}
             {enableCommercial && (
-              <p className="text-[11px] text-amber-700">
+              <p className="text-caption text-amber-700">
                 {commercialAcqFirstMode
                   ? "취득·최초공시 시점 상가분은 당시 실제 용도(주택)로 자동 산출됩니다 (재일46014-2396)."
                   : "취득·최초공시 시점 상가분은 자동 산출에서 제외됩니다 — 해당 필드는 홈택스에서 직접 조회·입력하세요."}

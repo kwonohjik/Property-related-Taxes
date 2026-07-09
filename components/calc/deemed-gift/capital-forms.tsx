@@ -38,7 +38,7 @@ function ShareholderRows({
   return (
     <div className={`space-y-2 rounded-lg border ${border} p-2`}>
       <p className={`text-xs font-semibold ${text}`}>{label}</p>
-      <p className="text-[11px] text-muted-foreground">{hint}</p>
+      <p className="text-caption text-muted-foreground">{hint}</p>
       {rows.map((r, i) => (
         <div key={i} className="flex items-center gap-2">
           <input
@@ -144,7 +144,7 @@ export function MergerFields({ form, set }: Props) {
           {!splitNet && (
             <>
               <CurrencyInput label={form.mrgIsSplitMerger ? "과대평가(이익측)법인 1주당 평가가액 (보충평가액)" : "과대평가(이익측)법인 1주당 평가가액"} value={form.mrgOvervaluedPrice} onChange={(v) => set({ mrgOvervaluedPrice: v })} placeholder="1주당 평가가액 (원)" data-testid="mrg-over-price" />
-              <p className="text-[11px] text-emerald-700">합병비율 산정상 상대적으로 과대평가된(이익을 얻는) 측 법인. 1주 평가액 크기와 무관.</p>
+              <p className="text-caption text-emerald-700">합병비율 산정상 상대적으로 과대평가된(이익을 얻는) 측 법인. 1주 평가액 크기와 무관.</p>
             </>
           )}
           {!useSh && (
@@ -306,7 +306,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
     <div className="space-y-3">
       <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800">1</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800">1</span>
           <p className="text-xs font-semibold text-sky-700">증자 개요</p>
         </div>
         <RadioCardGroup
@@ -328,7 +328,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
       <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800">2</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800">2</span>
             <p className="text-xs font-semibold text-emerald-700">주주 목록 (증자 전 보유·배정·인수)</p>
           </div>
           <button type="button" onClick={addRow} data-testid="ci-alloc-add-row" className="rounded-md border border-emerald-300 bg-white/70 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100/60">
@@ -359,7 +359,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
               <CurrencyInput hideUnit label="재배정·제3자·초과" value={r.reallocatedShares} onChange={(v) => updateRow(r.id, { reallocatedShares: v })} placeholder="재배정/제3자/초과 신주수" />
             </div>
             <div className="space-y-1">
-              <p className="text-[11px] text-emerald-700">특수관계인 (이 주주에게 증여한 자)</p>
+              <p className="text-caption text-emerald-700">특수관계인 (이 주주에게 증여한 자)</p>
               <div className="flex flex-wrap gap-1.5" data-testid={`ci-alloc-related-${idx}`}>
                 {rows.filter((o) => o.id !== r.id).map((o) => {
                   const on = r.relatedTo.includes(o.id);
@@ -380,7 +380,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
             </div>
           </div>
         ))}
-        <p className="text-[11px] text-muted-foreground">증자 후 1주당 평가가액·증여재산가액은 입력값으로 자동 계산(자동 안분 없음). 특수관계인 없는 자에게 귀속된 이익은 과세 제외.</p>
+        <p className="text-caption text-muted-foreground">증자 후 1주당 평가가액·증여재산가액은 입력값으로 자동 계산(자동 안분 없음). 특수관계인 없는 자에게 귀속된 이익은 과세 제외.</p>
       </div>
     </div>
   );
@@ -489,7 +489,7 @@ function CsNumericSection({
   return (
     <div className={`space-y-2 rounded-lg border ${t.box} p-3`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>{num}</span>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>{num}</span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
       </div>
       <CurrencyInput label="증자 전 1주당 평가가액" value={v(keys.prePrice)} onChange={on(keys.prePrice)} placeholder={`${ph} 증자 전 1주당 평가가액 (원)`} />

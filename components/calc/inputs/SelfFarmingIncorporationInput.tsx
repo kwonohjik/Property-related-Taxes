@@ -154,7 +154,7 @@ export function SelfFarmingIncorporationInput({
           </div>
 
           {/* 취득시·양도시 기준시가 — 편입 비율 = (편입−취득)/(양도−취득). 실지 모드 필수 입력 */}
-          <p className="text-[11px] text-muted-foreground -mb-1">
+          <p className="text-caption text-muted-foreground -mb-1">
             편입 부분감면 비율 = (편입시 − 취득시) ÷ (양도시 − 취득시) 기준시가. 실지거래가액 양도도 아래 3점이 필요합니다.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -166,13 +166,13 @@ export function SelfFarmingIncorporationInput({
                     <div className="text-right font-mono tabular-nums whitespace-nowrap text-sm font-medium">
                       {effectiveAcqPrice.toLocaleString()}
                     </div>
-                    <p className="text-[11px] text-amber-700">
+                    <p className="text-caption text-amber-700">
                       1985.1.1. 이전 취득(취득시기 의제) — 자산 목록의 취득시 기준시가를 자동 적용합니다.
                     </p>
                   </div>
                 ) : (
                   <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2">
-                    <p className="text-[11px] text-amber-700">
+                    <p className="text-caption text-amber-700">
                       1985.1.1. 이전 취득(취득시기 의제) — 개별공시지가 조회 불가. 자산 목록에서 취득시 기준시가(환산 등)를 먼저 입력하세요.
                     </p>
                   </div>

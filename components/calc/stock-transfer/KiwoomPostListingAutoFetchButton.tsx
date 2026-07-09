@@ -211,10 +211,10 @@ export function KiwoomPostListingAutoFetchButton({
           </button>
           {showDetail && (
             <div className="rounded border border-emerald-300 bg-white p-2 space-y-1 max-h-96 overflow-y-auto">
-              <p className="text-[10px] text-emerald-700 sticky top-0 bg-white pb-1 border-b border-emerald-100">
+              <p className="text-micro text-emerald-700 sticky top-0 bg-white pb-1 border-b border-emerald-100">
                 상장일 이후 1개월 일자별 종가 — 거래일만 분모 산입 (상증령 §52의2④ 공휴일·토요일 제외)
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-caption font-mono">
                 {info.slotDates.map((iso, i) => {
                   const close = info.closingPrices[i];
                   const label = info.weekendLabels[i];
@@ -232,7 +232,7 @@ export function KiwoomPostListingAutoFetchButton({
                   );
                 })}
               </div>
-              <p className="text-[10px] text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white">
+              <p className="text-micro text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white">
                 합계 = {info.sum.toLocaleString()} · 거래일 = {info.tradingDays} · 평균 = floor(합계/거래일) = {info.average.toLocaleString()}
               </p>
             </div>

@@ -48,19 +48,19 @@ export function Page4ValuationDeltaTable({ raw }: Page4ValuationDeltaTableProps)
 
   return (
     <section aria-label="제4쪽 평가차액">
-      <div className="flex items-center justify-between text-[10px] text-gray-600">
+      <div className="flex items-center justify-between text-micro text-gray-600">
         <span>{C5.unitNote}</span>
         <span>{C5.pageNote}</span>
       </div>
       <SectionTitle>{C5.header}</SectionTitle>
 
       {/* 헤더 바 */}
-      <div className="flex border border-black text-[10px] font-semibold">
+      <div className="flex border border-black text-micro font-semibold">
         <div className="flex-1 p-1 border-r border-black">{C5.calcTitle}</div>
-        <div className="flex-1 p-1 text-right text-[9px] font-normal text-gray-600">{C5.crossRef}</div>
+        <div className="flex-1 p-1 text-right text-micro font-normal text-gray-600">{C5.crossRef}</div>
       </div>
 
-      <table className="w-full border-collapse border border-black mb-3 text-[10px]">
+      <table className="w-full border-collapse border border-black mb-3 text-micro">
         <tbody>
           {/* 블록 헤더 */}
           <tr className="bg-gray-100 print:bg-gray-100 font-bold text-center">
@@ -68,7 +68,7 @@ export function Page4ValuationDeltaTable({ raw }: Page4ValuationDeltaTableProps)
             <td colSpan={4} className={TD_DIV}>{C5.liabilityBlock}</td>
           </tr>
           {/* 컬럼 헤더 */}
-          <tr className="bg-gray-50 print:bg-gray-50 text-[9px]">
+          <tr className="bg-gray-50 print:bg-gray-50 text-micro">
             {C5.columns.map((c, i) => (
               <td key={`a-${i}`} className={`${TD} ${i > 0 ? "text-right" : ""}`}>{c}</td>
             ))}
@@ -113,17 +113,17 @@ export function Page4ValuationDeltaTable({ raw }: Page4ValuationDeltaTableProps)
       </table>
 
       {isTotalMode && resolved.evaluationDelta !== 0 && (
-        <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-3">
+        <p className="text-micro text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-3">
           {C5.totalModeNote}
         </p>
       )}
 
       {/* 작성방법 */}
-      <div className="bg-gray-100 print:bg-gray-100 text-center text-[10px] font-bold py-1 border border-black">
+      <div className="bg-gray-100 print:bg-gray-100 text-center text-micro font-bold py-1 border border-black">
         {C5.guideTitle}
       </div>
-      <p className="text-[9px] leading-relaxed px-1 py-1">{C5.guideBody}</p>
-      <ol className="text-[9px] leading-relaxed px-1 list-none space-y-0.5">
+      <p className="text-micro leading-relaxed px-1 py-1">{C5.guideBody}</p>
+      <ol className="text-micro leading-relaxed px-1 list-none space-y-0.5">
         {C5.guideItems.map((item, i) => (
           <li key={i}>{`${i + 1}. ${item}`}</li>
         ))}

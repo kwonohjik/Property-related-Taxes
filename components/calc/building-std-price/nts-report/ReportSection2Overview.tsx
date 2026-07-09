@@ -6,8 +6,8 @@
 import type { NtsReportInstance } from "@/lib/calc/nts-report-adapter";
 import { fmt, idx2, ratio, AMOUNT_CELL } from "./format";
 
-const TD = "border border-neutral-400 px-1.5 py-1 text-center text-[11px] text-black";
-const TH = "border border-neutral-400 px-1.5 py-1 text-center text-[11px] font-semibold text-black bg-neutral-100";
+const TD = "border border-neutral-400 px-1.5 py-1 text-center text-caption text-black";
+const TH = "border border-neutral-400 px-1.5 py-1 text-center text-caption font-semibold text-black bg-neutral-100";
 
 export function ReportSection2Overview({ inst }: { inst: NtsReportInstance }) {
   const groupLabel = inst.durableYears

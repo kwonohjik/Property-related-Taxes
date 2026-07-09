@@ -96,12 +96,12 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
       {/* 섹션 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             2
           </span>
           <p className="text-xs font-semibold text-amber-700">연부 회차 정보</p>
           {installments.length > 0 && (
-            <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+            <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-micro font-medium text-amber-800">
               {installments.length}회차
             </span>
           )}

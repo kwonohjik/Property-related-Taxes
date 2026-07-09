@@ -90,7 +90,7 @@ export function resolveDebtBadges(item: DebtItem, heirs: Heir[]): DebtBadge[] {
 function ReadonlyDebtBadge({ badge }: { badge: DebtBadge }) {
   return (
     <span
-      className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full border ${BADGE_TONE_CLASSES[badge.tone]}`}
+      className={`inline-flex items-center text-micro px-1.5 py-0.5 rounded-full border ${BADGE_TONE_CLASSES[badge.tone]}`}
     >
       {badge.label}
     </span>
@@ -143,7 +143,7 @@ function DebtItemTableRow({
       {/* 분류 칩 */}
       <td className="pl-3 py-1.5 whitespace-nowrap">
         <span
-          className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${style.chipClass}`}
+          className={`text-micro px-1.5 py-0.5 rounded-full font-semibold ${style.chipClass}`}
         >
           {style.label}
         </span>
@@ -216,7 +216,7 @@ export function DebtItemTableView({
             <th className="py-2 text-left pl-2 text-gray-500 font-medium">
               분배·옵션
             </th>
-            <th className="w-16 py-2 text-right pr-3 text-gray-400 font-medium text-[10px]">
+            <th className="w-16 py-2 text-right pr-3 text-gray-400 font-medium text-micro">
               편집
             </th>
           </tr>

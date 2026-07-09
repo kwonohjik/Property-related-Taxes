@@ -86,7 +86,7 @@ function CandidateCard({
           {candidate.deathDate} 상속 · {candidate.title}
         </div>
         {candidate.usedDirectInput && (
-          <span className="text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5">
+          <span className="text-micro bg-violet-100 text-violet-800 rounded px-2 py-0.5">
             직접입력 모드
           </span>
         )}
@@ -121,7 +121,7 @@ function CandidateCard({
             <div className="flex items-center justify-between">
               <div>
                 <span className="font-medium text-gray-900">{a.name}</span>
-                <span className="ml-2 text-[10px] text-gray-500">
+                <span className="ml-2 text-micro text-gray-500">
                   · {CATEGORY_LABEL[a.category] ?? a.category}
                 </span>
               </div>
@@ -134,7 +134,7 @@ function CandidateCard({
       </div>
 
       {/* decedentAcquisitionPrice 안내 */}
-      <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 text-[10px] text-rose-800">
+      <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 text-micro text-rose-800">
         ⚠️ 피상속인 원취득가액은 상속세 마법사에서 추적하지 않습니다 — 선택 후 별도 입력하세요.
       </div>
     </div>
@@ -275,7 +275,7 @@ export function FamilyBusinessInheritanceHistoryModal({
                 {Object.entries(warningsByReason).map(([reason, ws]) => (
                   <li key={reason}>
                     <span className="text-gray-500">[{reason}]</span> {ws.length}건
-                    <ul className="ml-4 text-[11px] text-gray-600">
+                    <ul className="ml-4 text-caption text-gray-600">
                       {ws.slice(0, 3).map((w, i) => (
                         <li key={i}>· {w.message}</li>
                       ))}

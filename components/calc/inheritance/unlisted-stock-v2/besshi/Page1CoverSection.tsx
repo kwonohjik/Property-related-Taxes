@@ -31,7 +31,7 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
   return (
     <section aria-label="제1쪽 평가대상 + 1주당 가액의 평가">
       <SectionTitle>1. 평가대상 비상장법인</SectionTitle>
-      <table className="w-full border-collapse border border-black mb-3 text-[10px]">
+      <table className="w-full border-collapse border border-black mb-3 text-micro">
         <tbody>
           <tr>
             <td className="border border-black p-2 bg-gray-100">법인명</td>
@@ -64,7 +64,7 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
 
       {/* 2. 순자산가치로만 평가 — 6행 상시 표시 */}
       <SectionTitle>2. 순자산가치로만 평가하는 경우 [v] 표시 (상증령 §54④)</SectionTitle>
-      <table className="w-full border-collapse border border-black mb-3 text-[10px]">
+      <table className="w-full border-collapse border border-black mb-3 text-micro">
         <tbody>
           {NET_ASSET_REASON_ROWS.map((row) => (
             <tr

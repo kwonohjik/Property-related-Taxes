@@ -63,7 +63,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
       {/* ① 등록·신분 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             ①
           </span>
           <p className="text-xs font-semibold text-violet-700">등록·신분</p>
@@ -79,7 +79,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
         />
 
         <div className="rounded-md border border-dashed border-violet-300 bg-violet-50/80 px-3 py-2">
-          <p className="text-[10px] text-violet-800">
+          <p className="text-micro text-violet-800">
             ℹ️ 소령 §167의3①2호 장기임대주택(민간건설·민간매입·공공건설·공공매입)을 <strong>6년 이상</strong> 임대해야 합니다.
             미등기 양도 등 소득세법 §95① 단서 해당 시 적용 배제됩니다.
           </p>
@@ -89,24 +89,24 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
       {/* ② 추가공제율 안내 (§95② 보유기간 공제율에 가산) */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             ②
           </span>
           <p className="text-xs font-semibold text-amber-700">임대기간별 추가공제율 (§97의4①)</p>
         </div>
 
-        <p className="text-[10px] text-amber-800">
+        <p className="text-micro text-amber-800">
           §95② 보유기간별 장기보유특별공제율에 아래 추가율을 <strong>가산</strong>합니다 (대체 아님).
         </p>
         <div className="rounded-md border border-amber-200 bg-white/70 divide-y divide-amber-100">
           {ADDITIONAL_RATE_ROWS.map(([label, rate]) => (
-            <div key={label} className="flex items-center justify-between px-2.5 py-1 text-[11px]">
+            <div key={label} className="flex items-center justify-between px-2.5 py-1 text-caption">
               <span className="text-muted-foreground">{label}</span>
               <span className="font-mono font-semibold text-amber-900">{rate}</span>
             </div>
           ))}
         </div>
-        <p className="text-[10px] text-amber-700">
+        <p className="text-micro text-amber-700">
           ※ 적용 추가율은 공실 차감 후 유효임대기간으로 엔진이 산정합니다.
         </p>
       </div>
@@ -125,7 +125,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
           <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
           <span className="font-mono font-medium text-emerald-900">{rentalDuration}</span>
         </div>
-        <p className="text-[10px] text-emerald-700">
+        <p className="text-micro text-emerald-700">
           ※ 공실 차감 후 실제 유효임대기간과 적용 추가율은 엔진이 계산합니다.
         </p>
       </div>

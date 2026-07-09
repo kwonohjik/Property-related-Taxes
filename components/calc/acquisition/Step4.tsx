@@ -70,7 +70,7 @@ export function Step4({
       {isCorporation && (
         <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-3">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">1</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">1</span>
             <p className="text-xs font-semibold text-rose-700">법인·공장 중과 (§13①②)</p>
             <TaxHelp
               title="본점·주사무소 중과 vs 산업단지 (§13①②)"
@@ -249,7 +249,7 @@ export function Step4({
       {/* 세율특례 §15 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">2</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">2</span>
           <p className="text-xs font-semibold text-violet-700">세율특례 §15① (7호)</p>
           <TaxHelp
             title="세율특례 §15① (7호)"

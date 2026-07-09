@@ -6,8 +6,8 @@
  */
 import type { NtsMarkCell } from "@/lib/calc/nts-report-adapter";
 
-const TD = "border border-neutral-400 px-1.5 py-1 text-center text-[11px] text-black";
-const TH = "border border-neutral-400 px-1.5 py-1 text-center text-[11px] font-semibold text-black bg-neutral-100";
+const TD = "border border-neutral-400 px-1.5 py-1 text-center text-caption text-black";
+const TH = "border border-neutral-400 px-1.5 py-1 text-center text-caption font-semibold text-black bg-neutral-100";
 
 const mark = (cell: NtsMarkCell, active: NtsMarkCell, text?: string) =>
   cell === active ? (text ? text : "○") : "";

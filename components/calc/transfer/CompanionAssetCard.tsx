@@ -201,17 +201,17 @@ export function CompanionAssetCard({
             자산 {index + 1} — {kindLabel}
           </span>
           {isPrimary && (
-            <span className="inline-flex rounded bg-primary/10 px-2 py-0.5 text-[10px] text-primary font-medium">
+            <span className="inline-flex rounded bg-primary/10 px-2 py-0.5 text-micro text-primary font-medium">
               주 자산
             </span>
           )}
           {bundledSaleMode === "actual" && (
-            <span className="inline-flex rounded bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700">
+            <span className="inline-flex rounded bg-amber-100 px-2 py-0.5 text-micro text-amber-700">
               계약서 가액
             </span>
           )}
           {showUnifiedBadge && (
-            <span className="inline-flex rounded bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] text-amber-800">
+            <span className="inline-flex rounded bg-amber-100 border border-amber-300 px-2 py-0.5 text-micro text-amber-800">
               주택·부수토지 일체과세 자동 적용 중 (§89·영 §154⑦, 재산-53·재산-1354)
             </span>
           )}

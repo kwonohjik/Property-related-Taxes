@@ -338,19 +338,19 @@ export function PointBlock({
 
   const yearBadge = isManual ? (
     <span className="flex items-center gap-1">
-      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-micro font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
         수동
       </span>
       <button
         type="button"
         onClick={handleResetToAuto}
-        className="text-[10px] text-primary underline underline-offset-2 hover:no-underline"
+        className="text-micro text-primary underline underline-offset-2 hover:no-underline"
       >
         ↻ 자동
       </button>
     </span>
   ) : (
-    <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
+    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
       자동
     </span>
   );
@@ -374,7 +374,7 @@ export function PointBlock({
         <FieldCard
           label="공시지가 연도"
           badge={
-            <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
+            <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
               자동
             </span>
           }
@@ -386,7 +386,7 @@ export function PointBlock({
               <span className="text-muted-foreground/50">기준일 미입력</span>
             )}
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">{landAutoSync.label}</p>
+          <p className="mt-1 text-caption text-muted-foreground">{landAutoSync.label}</p>
         </FieldCard>
       ) : (
         <FieldCard label="공시지가 연도" badge={yearBadge}>
@@ -428,7 +428,7 @@ export function PointBlock({
             <p className="mt-1 text-xs text-destructive">{lookupError}</p>
           )}
           {!canLookup && (
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-caption text-muted-foreground">
               지번 주소 입력 후 조회 가능합니다
             </p>
           )}

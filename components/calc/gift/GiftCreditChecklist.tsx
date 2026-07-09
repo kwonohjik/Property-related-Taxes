@@ -46,8 +46,8 @@ const GROUP_TONE: Record<GiftCreditGroup, ChipTone> = {
 };
 
 const GROUP_HEADER: Record<ChipTone, string> = {
-  sky: "text-sky-700 dark:text-sky-300 font-semibold text-[11px] uppercase tracking-wide",
-  violet: "text-violet-700 dark:text-violet-300 font-semibold text-[11px] uppercase tracking-wide",
+  sky: "text-sky-700 dark:text-sky-300 font-semibold text-caption uppercase tracking-wide",
+  violet: "text-violet-700 dark:text-violet-300 font-semibold text-caption uppercase tracking-wide",
 };
 const CHIP_ON: Record<ChipTone, string> = {
   sky: "border-sky-300 bg-sky-100/80 text-sky-800 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200",
@@ -79,13 +79,13 @@ function CreditChip({
       aria-pressed={active}
       title={active ? `${meta.label} — 클릭하여 접기 (값 보존)` : `${meta.label} — 클릭하여 입력란 열기`}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium cursor-pointer transition-colors",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-caption font-medium cursor-pointer transition-colors",
         active ? CHIP_ON[tone] : CHIP_OFF[tone],
       )}
     >
       <span
         className={cn(
-          "flex h-3.5 w-3.5 items-center justify-center rounded border text-[9px] font-bold shrink-0",
+          "flex h-3.5 w-3.5 items-center justify-center rounded border text-micro font-bold shrink-0",
           active ? CHECK_ON[tone] : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",
         )}
       >

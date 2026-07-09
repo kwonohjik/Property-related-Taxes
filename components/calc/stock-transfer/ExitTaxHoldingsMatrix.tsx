@@ -127,7 +127,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
           {/* 행 헤더 */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
                 {idx + 1}
               </span>
               <p className="text-xs font-semibold text-amber-700">
@@ -240,7 +240,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="출국일 실제 거래가액 (주당)"
               />
-              <p className="text-[11px] text-gray-500">
+              <p className="text-caption text-gray-500">
                 §178의9① — 출국일에 실제 거래된 가액. 자동 조회 없음, 직접 입력 필수.
               </p>
             </div>
@@ -258,7 +258,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="출국일 직전 1개월 종가 평균"
               />
-              <p className="text-[11px] text-gray-500">
+              <p className="text-caption text-gray-500">
                 출국일 이전 1개월간 종가 산술 평균. 상장주식에 적용.
               </p>
             </div>
@@ -276,7 +276,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="전후 각 3개월 매매사례가액"
               />
-              <p className="text-[11px] text-gray-500">
+              <p className="text-caption text-gray-500">
                 §178의9②2호 가목 — 출국일 전후 각 3개월 이내 동일 주식 매매사례가액.
               </p>
             </div>
@@ -294,7 +294,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="비상장 기준시가 (매매사례 없는 경우)"
               />
-              <p className="text-[11px] text-gray-500">
+              <p className="text-caption text-gray-500">
                 §99①4 — 매매사례가액이 없는 비상장주식의 보충적 평가액.
               </p>
             </div>

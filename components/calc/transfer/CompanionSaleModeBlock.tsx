@@ -42,7 +42,7 @@ export function BundledSaleModeToggle({ value, onChange }: ToggleProps) {
           )}
         >
           <div className="text-sm font-semibold">실가 (계약서 구분 기재)</div>
-          <div className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+          <div className="text-caption text-muted-foreground leading-tight mt-0.5">
             계약서에 자산별 가액이 명시됨 — 그대로 사용
           </div>
         </button>
@@ -57,7 +57,7 @@ export function BundledSaleModeToggle({ value, onChange }: ToggleProps) {
           )}
         >
           <div className="text-sm font-semibold">안분 (기준시가 비율)</div>
-          <div className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+          <div className="text-caption text-muted-foreground leading-tight mt-0.5">
             구분 불분명 — 양도시 기준시가 비율로 안분
           </div>
         </button>
@@ -193,13 +193,13 @@ function FractionalAutoSalePriceCard({
   const ratioPct = ratio > 0 ? (ratio * 100).toFixed(2).replace(/\.?0+$/, "") : "—";
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50/50 px-3 py-2">
-      <div className="text-[11px] font-medium text-amber-700 mb-0.5">
+      <div className="text-caption font-medium text-amber-700 mb-0.5">
         자동 계산 (총 양도가액 × 지분율)
       </div>
       <div className="font-mono text-base font-semibold text-amber-900">
         {allocated.toLocaleString()} 원
       </div>
-      <div className="text-[10px] text-amber-700 mt-0.5">
+      <div className="text-micro text-amber-700 mt-0.5">
         {total.toLocaleString()} × {numerator || "?"}/{denominator || "?"} = {ratioPct}% × 총양도가
       </div>
     </div>

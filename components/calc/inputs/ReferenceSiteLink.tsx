@@ -69,7 +69,7 @@ export function ReferenceSiteLinks({
           href={s.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-0.5 rounded border border-border/60 px-1.5 py-0.5 text-[10px] text-muted-foreground/70 transition-colors hover:border-primary/50 hover:text-primary"
+          className="inline-flex items-center gap-0.5 rounded border border-border/60 px-1.5 py-0.5 text-micro text-muted-foreground/70 transition-colors hover:border-primary/50 hover:text-primary"
         >
           {s.label} ↗
         </a>

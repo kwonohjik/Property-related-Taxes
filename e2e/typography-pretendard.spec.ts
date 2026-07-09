@@ -45,3 +45,27 @@ test("마법사 단계 제목(h2)이 18px(text-lg)로 승격된다 (P1)", async 
 
   expect(sizes).toContain("18px");
 });
+
+/**
+ * Phase 3 앵커 — 오프스케일 커스텀 유틸이 실사용되어 정확히 렌더되는지.
+ * P0에서 정의만 했고(미사용→Tailwind 미생성), P3에서 258파일이 사용 → 이제 번들에 생성됨.
+ */
+test("커스텀 유틸 text-micro=10px · text-caption=11px 렌더 (P3)", async ({ page }) => {
+  await page.goto("/");
+  const sizes = await page.evaluate(() => {
+    const measure = (cls: string) => {
+      const el = document.createElement("span");
+      el.className = cls;
+      el.textContent = "가";
+      document.body.appendChild(el);
+      const fs = getComputedStyle(el).fontSize;
+      el.remove();
+      return fs;
+    };
+    return { micro: measure("text-micro"), caption: measure("text-caption") };
+  });
+  console.log("[anchor] micro/caption fontSize:", JSON.stringify(sizes));
+
+  expect(sizes.micro).toBe("10px");
+  expect(sizes.caption).toBe("11px");
+});

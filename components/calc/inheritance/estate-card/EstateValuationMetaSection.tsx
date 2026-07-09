@@ -36,7 +36,7 @@ export function EstateValuationMetaSection({ item, onUpdate }: Props) {
   return (
     <div className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50/40 p-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
           §
         </span>
         <p className="text-xs font-semibold text-emerald-700">

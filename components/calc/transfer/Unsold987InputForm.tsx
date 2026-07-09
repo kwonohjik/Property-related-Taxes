@@ -35,7 +35,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -58,7 +58,7 @@ export function Unsold987InputForm({ value, onChange }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
           <DateInput value={value.contractDate987} onChange={(v) => onChange({ contractDate987: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             2012.9.24~2012.12.31 중 사업주체등과 최초로 체결한 매매계약 — 계약금을 납부한
             경우에 한정합니다 (법 §98의7①). 취득일·양도일은 자산 기본 입력을 사용합니다
           </p>
@@ -73,7 +73,7 @@ export function Unsold987InputForm({ value, onChange }: Props) {
             onChange={(v) => onChange({ acquisitionPrice987: v })}
             label=""
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             9억원 이하 — 사업주체등과 실제 거래한 가액 (취득세 및 그 밖의 부대비용 제외,
             조특령 §98의6②1호)
           </p>
@@ -127,7 +127,7 @@ export function Unsold987InputForm({ value, onChange }: Props) {
             onChange={(v) => onChange({ standardPriceAt5Years987: v })}
             label=""
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §40①)
           </p>
         </div>
@@ -141,7 +141,7 @@ export function Unsold987InputForm({ value, onChange }: Props) {
         </div>
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 취득일부터 5년 이내 양도 시 양도소득세 100%를 감면하고, 5년이 지난 후
           양도 시 취득일부터 5년간 발생한 양도소득금액을 과세대상소득금액에서 공제합니다 (법 §98의7①).

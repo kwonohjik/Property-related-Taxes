@@ -251,14 +251,14 @@ export function UnlistedStockV2Card({
           📂 이력 조회
         </button>
       </div>
-      <p className="text-[11px] text-indigo-700/80">
+      <p className="text-caption text-indigo-700/80">
         상증법 §63 ① 나목 + 상증령 §54·§55·§56·§59 + 상증규 §17·§17의2·§17의3·§19 (KoreanLaw 1차+2차 검증 완료)
       </p>
 
       {/* PR-H: 이력 출처 배지 — sourceCalculationId 부착 시만 표시 */}
       {sourceCalculationId && (
         <p
-          className="text-[10px] text-sky-700 bg-sky-50 border border-sky-200 rounded px-2 py-1 inline-block"
+          className="text-micro text-sky-700 bg-sky-50 border border-sky-200 rounded px-2 py-1 inline-block"
           data-testid="source-calculation-id-badge"
         >
           📂 이력에서 자동 채움 · 평가기준일·보유주식수·할증은 사용자 입력 보존

@@ -201,7 +201,7 @@ export function GiftRowEditor({
             </span>
             {gift.sourceCalculationId && (
               <span
-                className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5"
+                className="inline-flex items-center gap-1 text-micro bg-violet-100 text-violet-800 rounded px-2 py-0.5"
                 title="이 사전증여는 저장된 증여세 이력에서 자동 입력되었습니다. 필드를 수정하면 배지가 사라집니다."
               >
                 📋 이력 기반
@@ -209,7 +209,7 @@ export function GiftRowEditor({
             )}
             {isCorporate && (
               <span
-                className="inline-flex items-center gap-1 text-[10px] bg-violet-100 text-violet-800 rounded px-2 py-0.5"
+                className="inline-flex items-center gap-1 text-micro bg-violet-100 text-violet-800 rounded px-2 py-0.5"
                 title="영리법인 사전증여 — 상증법 §13①2호 5년 합산 · §3의2② + 집행기준 28-0-1 면제"
                 aria-label="영리법인 사전증여 — 상증법 §13① · §3의2② · 집행기준 28-0-1"
               >
@@ -267,7 +267,7 @@ export function GiftRowEditor({
               </option>
             ))}
           </select>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="text-caption text-gray-500 dark:text-gray-400">
             현재 증여자와 동일인 그룹(부·모 또는 조부모)만 §47 합산 대상. §53 증여재산공제 관계도 이 값에서 자동 도출됩니다.
           </p>
         </div>
@@ -332,7 +332,7 @@ export function GiftRowEditor({
             {gift.doneeId && matchedHeir && (
               <div
                 data-testid="gift-donee-summary"
-                className="rounded-md bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 px-3 py-2 text-[11px] text-violet-700 dark:text-violet-300"
+                className="rounded-md bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 px-3 py-2 text-caption text-violet-700 dark:text-violet-300"
               >
                 {donorSummaryLabel(matchedHeir)}
                 {matchedHeir.name ? ` (${matchedHeir.name})` : ""}
@@ -347,7 +347,7 @@ export function GiftRowEditor({
             {gift.doneeId && !matchedHeir && (
               <p
                 data-testid="gift-donee-orphan"
-                className="text-[11px] text-amber-600 dark:text-amber-400"
+                className="text-caption text-amber-600 dark:text-amber-400"
               >
                 ⚠️ 지정한 수증자가 상속인 목록에서 삭제되었습니다 — 수증자를 다시 선택하세요.
               </p>
@@ -355,7 +355,7 @@ export function GiftRowEditor({
 
             {/* 미선택 안내 */}
             {!gift.doneeId && (
-              <p className="text-[11px] text-sky-600 dark:text-sky-400">
+              <p className="text-caption text-sky-600 dark:text-sky-400">
                 ⓘ 수증자를 지정하면 상속인별 배부표 ② 사전증여 열에 반영됩니다. (미지정 시 합산만)
               </p>
             )}
@@ -508,7 +508,7 @@ export function GiftRowEditor({
         isInheritancePriorGiftMarriageBirthEligible(gift.doneeRelation) && (
           <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
                 §53의2
               </span>
               <p className="text-xs font-semibold text-sky-700">
@@ -516,7 +516,7 @@ export function GiftRowEditor({
               </p>
             </div>
             {gift.giftTaxBase != null ? (
-              <p className="text-[11px] text-sky-600 dark:text-sky-400">
+              <p className="text-caption text-sky-600 dark:text-sky-400">
                 ⓘ 과세표준을 직접 입력한 경우 §53의2는 이미 반영된 것으로 간주합니다.
               </p>
             ) : (
@@ -537,7 +537,7 @@ export function GiftRowEditor({
             {!gift.doneeId &&
               gift.marriageBirthDeduction != null &&
               gift.marriageBirthDeduction > 0 && (
-                <p className="text-[11px] text-sky-600 dark:text-sky-400">
+                <p className="text-caption text-sky-600 dark:text-sky-400">
                   ⓘ 동일 수증자에게 혼인·출산을 여러 건 입력할 때는 위 <strong>수증자 선택</strong>으로
                   지정하세요. 수증자를 지정하지 않으면 합산 1억 한도가 건별로 적용됩니다(§53의2③).
                 </p>
@@ -582,7 +582,7 @@ export function GiftRowEditor({
               }
             />
             {showAutoBadge && (
-              <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+              <p className="text-caption text-emerald-600 dark:text-emerald-400">
                 🧮 자동계산 (증여재산가액 − §53 공제 → §56 세율). 직접 입력 시 자동 갱신 중지.
               </p>
             )}
@@ -598,7 +598,7 @@ export function GiftRowEditor({
       {(showGiftPhaseA || showSpecialType) && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
               §30
             </span>
             <p className="text-xs font-semibold text-emerald-700">
@@ -624,14 +624,14 @@ export function GiftRowEditor({
             ]}
           />
           {gift.specialTreatmentType === "startup" && (
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+            <p className="text-caption text-emerald-700 dark:text-emerald-400">
               {showGiftPhaseA
                 ? "§30의5① 후단 — 창업자금은 증여 시기와 무관하게 현재 신고분과 합산됩니다. §47②(10년 합산)에서 제외되어 별도 특례 스트림으로 계산됩니다."
                 : "§30의5⑧⑨ — 창업자금은 §13 10년/5년 기간과 관계없이 상속세 과세가액에 가산됩니다 (조특법 §30의5⑨)."}
             </p>
           )}
           {gift.specialTreatmentType === "family_business" && (
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+            <p className="text-caption text-emerald-700 dark:text-emerald-400">
               {showGiftPhaseA
                 ? "§30의6 — 가업승계는 §30의5 제8항~제13항 준용. 과거 가업승계 prior는 기간무관 합산됩니다."
                 : "§30의6⑤ — 가업승계 주식은 §30의5⑧~⑬ 준용. §13 기간과 관계없이 상속세 과세가액에 가산됩니다."}
@@ -639,7 +639,7 @@ export function GiftRowEditor({
           )}
           {/* 상속세 모드 — 특례 prior의 §28/§30의5⑩ 공제액 입력 (증여 당시 납부한 증여세액) */}
           {showSpecialType && !showGiftPhaseA && gift.specialTreatmentType && (
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+            <p className="text-caption text-emerald-600 dark:text-emerald-400">
               ⓘ §30의5⑩ — 창업자금·가업승계 특례 증여세액은 상속세 산출세액에서 전액 직접 공제됩니다 (§28 안분 한도 미적용). 증여 당시 납부한 증여세를 아래 &quot;기납부 증여세&quot; 란에 입력하세요.
             </p>
           )}

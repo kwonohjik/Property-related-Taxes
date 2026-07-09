@@ -30,7 +30,7 @@ interface Props {
 
 function LegalBadge() {
   return (
-    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
       소득세법 시행령 §164 ⑤
     </span>
   );
@@ -215,7 +215,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
       </div>
 
       {/* 안내 문구 */}
-      <div className="space-y-1 text-[11px] text-muted-foreground">
+      <div className="space-y-1 text-caption text-muted-foreground">
         <p>
           주택공시가격은{" "}
           <span className="font-medium">부동산공시가격알리미(realtyprice.kr)</span>

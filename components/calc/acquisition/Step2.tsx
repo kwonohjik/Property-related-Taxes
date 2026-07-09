@@ -44,7 +44,7 @@ function OwnedHouseCard({
     <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
             {index + 1}
           </span>
           <p className="text-xs font-semibold text-sky-700">보유 주택 #{index + 1}</p>
@@ -294,7 +294,7 @@ export function Step2({
       {/* 취득 후 보유 주택 수 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">1</span>
           <p className="text-xs font-semibold text-sky-700">취득 후 보유 주택 수</p>
           <TaxHelp
             title="보유 주택 수 산정 — 11개 제외 항목"
@@ -472,7 +472,7 @@ export function Step2({
       {/* 취득 주택 자체 한시 특례 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">3</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">3</span>
           <p className="text-xs font-semibold text-violet-700">취득 주택 한시 특례 (주택 수 제외)</p>
           <TaxHelp
             title="한시 특례 — 주택 수 제외 (시행령 §28의4②)"

@@ -53,7 +53,7 @@ export function Section53_8_2Fields({ value, onChange, idPrefix, transferTypeDef
         <p className="text-xs font-semibold text-emerald-700">§53⑧2호 전부매각 요건</p>
         <LawArticleModal legalBasis="상속세 및 증여세법 시행령 §49" label="§49①1호" />
       </div>
-      <p className="text-[11px] text-emerald-700/80">
+      <p className="text-caption text-emerald-700/80">
         ⓘ 매각대금에 경영권 프리미엄이 포함돼 시가로 인정되는 경우 — 요건 모두 충족 시 할증평가
         제외. (상속=평가기준일 ±6월 / 증여=전6·후3월 내 매매계약)
       </p>

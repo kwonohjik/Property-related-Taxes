@@ -121,7 +121,7 @@ function ShareholderRow({
       <div className="grid grid-cols-2 gap-2">
         {/* ⑦ 구분 */}
         <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
+          <label className="block text-micro font-medium text-gray-600 dark:text-gray-400">
             ⑦ 구분
           </label>
           <select
@@ -160,14 +160,14 @@ function ShareholderRow({
 
           {/* 자연인 상속인 0명 hint */}
           {naturalHeirs.length === 0 && (
-            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+            <p className="text-micro text-gray-400 dark:text-gray-500">
               상속인을 먼저 추가하면 자동채움됩니다
             </p>
           )}
 
           {/* dangling 경고 배지 */}
           {isDangling && (
-            <p className="text-[10px] text-amber-600 dark:text-amber-400">
+            <p className="text-micro text-amber-600 dark:text-amber-400">
               ⚠ 상속인 (미연결) — ⑦을 다시 선택해주세요
             </p>
           )}
@@ -175,7 +175,7 @@ function ShareholderRow({
 
         {/* ⑩ 지분율 */}
         <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
+          <label className="block text-micro font-medium text-gray-600 dark:text-gray-400">
             ⑩ 지분율 (%)
           </label>
           <input
@@ -201,7 +201,7 @@ function ShareholderRow({
 
         {/* ⑧ 성명 */}
         <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
+          <label className="block text-micro font-medium text-gray-600 dark:text-gray-400">
             ⑧ 성명
             {shareholder.heirRef && (
               <span className="ml-1 text-violet-600 dark:text-violet-400">
@@ -230,7 +230,7 @@ function ShareholderRow({
 
         {/* ⑨ 주민등록번호 (옵션) */}
         <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-gray-600 dark:text-gray-400">
+          <label className="block text-micro font-medium text-gray-600 dark:text-gray-400">
             ⑨ 주민등록번호 (선택)
             {shareholder.heirRef && (
               <span className="ml-1 text-violet-600 dark:text-violet-400">
@@ -261,7 +261,7 @@ function ShareholderRow({
         <button
           type="button"
           onClick={onRemove}
-          className="text-[10px] text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+          className="text-micro text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
         >
           삭제
         </button>
@@ -359,7 +359,7 @@ export function CorporateHeirFields({
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 dark:border-violet-700 dark:bg-violet-900/20 p-3 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
           5
         </span>
         <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
@@ -405,7 +405,7 @@ export function CorporateHeirFields({
           </p>
           <span
             className={
-              "text-[10px] font-mono " +
+              "text-micro font-mono " +
               (sumOver ? "text-red-600 font-bold" : "text-gray-500")
             }
           >
@@ -413,7 +413,7 @@ export function CorporateHeirFields({
           </span>
         </div>
         {sumOver && (
-          <p className="text-[10px] text-red-600">
+          <p className="text-micro text-red-600">
             ⚠ 지분율 합이 100%를 초과합니다 (외부 주주분 제외).
           </p>
         )}

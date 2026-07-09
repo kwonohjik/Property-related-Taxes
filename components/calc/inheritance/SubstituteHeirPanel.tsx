@@ -82,7 +82,7 @@ export function SubstituteHeirPanel({
         <div className="space-y-3" data-testid={`heir-substitute-panel-${index}`}>
           {/* ① 원래순위 (§1001: 1순위 직계비속·3순위 형제자매만) */}
           <div className="space-y-1">
-            <p className="text-[11px] font-medium text-rose-700 dark:text-rose-300">
+            <p className="text-caption font-medium text-rose-700 dark:text-rose-300">
               피대습자의 원래 상속순위 (§1001)
             </p>
             <RadioCardGroup
@@ -103,7 +103,7 @@ export function SubstituteHeirPanel({
 
           {/* 피대습자 성명 (선택, 표시 전용) — 그룹 라벨·신고서 표시 */}
           <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-rose-700 dark:text-rose-300">
+            <label className="block text-caption font-medium text-rose-700 dark:text-rose-300">
               피대습자(사망한 분) 성명 (선택)
             </label>
             <input
@@ -120,7 +120,7 @@ export function SubstituteHeirPanel({
 
           {/* ② 대습 그룹 — 같은 피대습자를 갈음하는 대습상속인끼리 묶음 */}
           <div className="space-y-1">
-            <p className="text-[11px] font-medium text-rose-700 dark:text-rose-300">
+            <p className="text-caption font-medium text-rose-700 dark:text-rose-300">
               대습 그룹 (같은 피대습자끼리 묶음)
             </p>
             <RadioCardGroup
@@ -154,7 +154,7 @@ export function SubstituteHeirPanel({
 
           {/* ③ 역할 (§1010②/§1009 재분배: spouse 1.5 : descendant 1) */}
           <div className="space-y-1">
-            <p className="text-[11px] font-medium text-rose-700 dark:text-rose-300">
+            <p className="text-caption font-medium text-rose-700 dark:text-rose-300">
               대습 그룹 내 역할 (§1010②)
             </p>
             <RadioCardGroup

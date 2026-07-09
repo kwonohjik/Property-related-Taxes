@@ -9,9 +9,9 @@ import type { Besshi1Data } from "@/lib/calc/deduction-besshi-data";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { B1, B1_COLS, PAPER_FOOTER, HANDWRITE_NOTE } from "./deduction-besshi-constants";
 
-const HEAD = "border border-black p-1 bg-gray-100 text-[10px] font-medium text-center align-middle";
-const VAL = "border border-black p-1 text-[10px] align-middle";
-const AMT = "border border-black p-1 text-[10px] text-right font-mono tabular-nums whitespace-nowrap align-middle";
+const HEAD = "border border-black p-1 bg-gray-100 text-micro font-medium text-center align-middle";
+const VAL = "border border-black p-1 text-micro align-middle";
+const AMT = "border border-black p-1 text-micro text-right font-mono tabular-nums whitespace-nowrap align-middle";
 
 function chk(label: string, on: boolean | undefined): string {
   return `${on ? "[√]" : "[ ]"} ${label}`;
@@ -33,11 +33,11 @@ function ColGroup({ widths }: { widths: readonly string[] }) {
 export function Besshi1FormTable({ data }: { data: Besshi1Data }) {
   return (
     <div className="bg-white p-3 text-black print:bg-white print:text-black" data-testid="b1-root">
-      <p className="text-[9px] text-gray-600">{B1.subtitle}</p>
+      <p className="text-micro text-gray-600">{B1.subtitle}</p>
       <h3 className="my-1 text-center text-base font-bold">{B1.title}</h3>
 
       {/* 가. 가업현황 */}
-      <p className="mb-1 mt-2 text-[11px] font-bold">가. 가업현황</p>
+      <p className="mb-1 mt-2 text-caption font-bold">가. 가업현황</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={B1_COLS.pair} />
         <tbody>
@@ -57,7 +57,7 @@ export function Besshi1FormTable({ data }: { data: Besshi1Data }) {
       </table>
 
       {/* 나. 중소·중견 여부 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">나. 중소기업 또는 중견기업 여부</p>
+      <p className="mb-1 mt-3 text-caption font-bold">나. 중소기업 또는 중견기업 여부</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={B1_COLS.sme} />
         <tbody>
@@ -77,7 +77,7 @@ export function Besshi1FormTable({ data }: { data: Besshi1Data }) {
       </table>
 
       {/* 다. 피상속인 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">다. 피상속인</p>
+      <p className="mb-1 mt-3 text-caption font-bold">다. 피상속인</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={B1_COLS.pair} />
         <tbody>
@@ -99,7 +99,7 @@ export function Besshi1FormTable({ data }: { data: Besshi1Data }) {
       </table>
 
       {/* 라. 가업상속인 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">라. 가업상속인</p>
+      <p className="mb-1 mt-3 text-caption font-bold">라. 가업상속인</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={B1_COLS.pair} />
         <tbody>
@@ -115,7 +115,7 @@ export function Besshi1FormTable({ data }: { data: Besshi1Data }) {
       </table>
 
       {/* 마. 가업상속 재산가액 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">마. 가업상속 재산가액</p>
+      <p className="mb-1 mt-3 text-caption font-bold">마. 가업상속 재산가액</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={B1_COLS.asset} />
         <thead>
@@ -154,11 +154,11 @@ export function Besshi1FormTable({ data }: { data: Besshi1Data }) {
         </tbody>
       </table>
       {data.appliedCap != null ? (
-        <p className="mt-1 text-[9px] text-gray-500">※ 적용 한도: {formatKRW(data.appliedCap)} (영위기간 기준)</p>
+        <p className="mt-1 text-micro text-gray-500">※ 적용 한도: {formatKRW(data.appliedCap)} (영위기간 기준)</p>
       ) : null}
 
-      <p className="mt-2 text-[8px] text-gray-500">{HANDWRITE_NOTE}</p>
-      <p className="mt-1 text-right text-[8px] text-gray-500">{PAPER_FOOTER}</p>
+      <p className="mt-2 text-micro text-gray-500">{HANDWRITE_NOTE}</p>
+      <p className="mt-1 text-right text-micro text-gray-500">{PAPER_FOOTER}</p>
     </div>
   );
 }

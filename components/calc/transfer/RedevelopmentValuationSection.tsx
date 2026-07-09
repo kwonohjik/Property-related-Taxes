@@ -179,7 +179,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         ) : (
           <>
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">5</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">5</span>
           <p className="text-xs font-semibold text-rose-700">환산 기준시가</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -223,7 +223,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
 
         {isPreDisclosureTriggered && (
           <div className="rounded-md border border-rose-200 bg-rose-50/60 p-3 space-y-3">
-            <p className="text-[11px] font-semibold text-rose-700">
+            <p className="text-caption font-semibold text-rose-700">
               §164⑦ 본문 발동 — PHD 패턴: 취득당시 라목값 P_A = floor(A × Sum_A / Sum_F)
             </p>
 
@@ -244,7 +244,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             </FieldCard>
 
             <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
-              <p className="text-[11px] font-semibold text-rose-700">취득시 (Sum_A 산정)</p>
+              <p className="text-caption font-semibold text-rose-700">취득시 (Sum_A 산정)</p>
               <LandPriceLookupField
                 label="취득시 개별공시지가 (원/㎡)"
                 hint="Vworld API 조회 — 기준연도 = 취득연도"
@@ -264,7 +264,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             </div>
 
             <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
-              <p className="text-[11px] font-semibold text-rose-700">최초공시 당시 (Sum_F 산정)</p>
+              <p className="text-caption font-semibold text-rose-700">최초공시 당시 (Sum_F 산정)</p>
               <LandPriceLookupField
                 label="최초공시 당시 개별공시지가 (원/㎡)"
                 hint="Vworld API 조회 — 기준연도 = 최초공시연도 (단독 2005, 공동 2006)"
@@ -381,17 +381,17 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       {/* 안내 헤더 */}
       <div className="rounded-md border border-amber-200 bg-amber-50/70 p-2 space-y-1">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">5</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">5</span>
           <p className="text-xs font-semibold text-amber-700">토지 출자 — §166③ 비율 환산 (사례 37)</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
           <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
         </div>
-        <p className="text-[11px] text-amber-700">
+        <p className="text-caption text-amber-700">
           환산취득가 = floor(권리가액 × <strong>취득당시 토지기준시가</strong> / <strong>관리처분 직전 토지기준시가</strong>)
         </p>
-        <p className="text-[11px] text-amber-600">
+        <p className="text-caption text-amber-600">
           기준시가 = 개별공시지가 (원/㎡) × 면적 (㎡) — Vworld 자동 조회 가능
         </p>
       </div>
@@ -431,7 +431,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       />
 
       {/* §99①1호 시점 모호성 안내 */}
-      <div className="rounded-md border border-violet-200 bg-violet-50/70 p-2 text-[11px] text-violet-700 space-y-0.5">
+      <div className="rounded-md border border-violet-200 bg-violet-50/70 p-2 text-caption text-violet-700 space-y-0.5">
         <p className="font-semibold">§99①1호 시점 모호성 안내</p>
         <p>관리처분 인가일 직전 공시기준일 해석이 실무상 분분합니다.</p>
         <p>• 2007년 개정 전 취득 시 공시기준일 2006.1.1 기준값을 사용하는 견해가 있습니다.</p>
@@ -465,7 +465,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
               인가후 양도차익 = 양도가액 − 권리가액 − 청산금 = <strong>{fmt(preview.postApprovalGain)}</strong>
             </p>
           )}
-          <div className="mt-1 rounded border border-rose-200 bg-rose-50/70 p-1 text-[10px] text-rose-700">
+          <div className="mt-1 rounded border border-rose-200 bg-rose-50/70 p-1 text-micro text-rose-700">
             인가후 분 LTHD = 0 — 소득세법 §95② 별표2 [비고] 1호
           </div>
         </div>

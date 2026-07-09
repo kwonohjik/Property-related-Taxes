@@ -72,7 +72,7 @@ export function UrbanAreaLookup({ jibun, onApply }: Props) {
           >
             도시지역분 적용 (토글 ON)
           </button>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-caption text-muted-foreground">
             최종 과세 여부는 지방의회 의결 고시 지역인지에 따릅니다. 적용 전
             확인하세요.
           </p>

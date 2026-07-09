@@ -101,7 +101,7 @@ export function MixedUseAssetMajorStdPrice({
       <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
         <div className="flex items-center gap-2">
           {housingSectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-micro font-bold text-slate-700 select-none">
               {housingSectionNum}
             </span>
           )}
@@ -110,7 +110,7 @@ export function MixedUseAssetMajorStdPrice({
 
         {/* 양도 sub-block */}
         <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
-          <p className="text-[11px] font-semibold text-emerald-700">양도시</p>
+          <p className="text-caption font-semibold text-emerald-700">양도시</p>
           <FieldCard label="개별주택공시가격" hint="주택건물+주택부수토지 일괄">
             <CurrencyInput
               label=""
@@ -124,7 +124,7 @@ export function MixedUseAssetMajorStdPrice({
         {/* 취득 sub-block — PHD 토글(amber)이 시점 인디케이터 역할.
             §11-6: PHD ON 시 위젯 자체 tone(amber/violet/emerald PointBlock)에 위임 — 별도 amber 컨테이너 미추가 */}
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold text-amber-700">취득시</p>
+          <p className="text-caption font-semibold text-amber-700">취득시</p>
           <ToggleCard
             tone="amber"
             size="sm"
@@ -168,7 +168,7 @@ export function MixedUseAssetMajorStdPrice({
       <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
         <div className="flex items-center gap-2">
           {commercialSectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-micro font-bold text-slate-700 select-none">
               {commercialSectionNum}
             </span>
           )}
@@ -178,13 +178,13 @@ export function MixedUseAssetMajorStdPrice({
         {/* 상가건물 기준시가 — 양도/취득 나란히 + 통합 계산 모달 */}
         <p className="text-xs font-medium text-slate-600">
           상가건물 기준시가{" "}
-          <span className="text-[10px] font-normal text-slate-500">
+          <span className="text-micro font-normal text-slate-500">
             (토지 제외 — 국세청 홈택스 &gt; 기준시가 조회)
           </span>
         </p>
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1">
-            <p className="text-[11px] font-semibold text-emerald-700">양도시</p>
+            <p className="text-caption font-semibold text-emerald-700">양도시</p>
             <CurrencyInput
               label=""
               value={asset.mixedTransferCommercialBuildingPrice}
@@ -194,7 +194,7 @@ export function MixedUseAssetMajorStdPrice({
             />
           </div>
           <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1">
-            <p className="text-[11px] font-semibold text-amber-700">취득시</p>
+            <p className="text-caption font-semibold text-amber-700">취득시</p>
             <CurrencyInput
               label=""
               value={asset.mixedAcqCommercialBuildingPrice}
@@ -237,7 +237,7 @@ export function MixedUseAssetMajorStdPrice({
         {/* 상가부수토지 개별공시지가 — 양도/취득 (세로 스택: 기준연도 드롭다운 폭 확보) */}
         <p className="text-xs font-medium text-slate-600">상가부수토지 개별공시지가</p>
         <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1">
-          <p className="text-[11px] font-semibold text-emerald-700">양도시</p>
+          <p className="text-caption font-semibold text-emerald-700">양도시</p>
           <LandPriceLookupField
             pricePerSqm={asset.mixedTransferLandPricePerSqm}
             onPricePerSqmChange={(v) => onChange({ mixedTransferLandPricePerSqm: v })}
@@ -250,7 +250,7 @@ export function MixedUseAssetMajorStdPrice({
           />
         </div>
         <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1">
-          <p className="text-[11px] font-semibold text-amber-700">취득시</p>
+          <p className="text-caption font-semibold text-amber-700">취득시</p>
           <LandPriceLookupField
             pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
             onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}

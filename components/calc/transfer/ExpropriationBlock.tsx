@@ -147,7 +147,7 @@ export function ExpropriationBlock({
           <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
             환산 양도시 기준시가 특례 (집행기준 99-164-12)
           </p>
-          <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+          <p className="text-caption leading-relaxed text-amber-700 dark:text-amber-400">
             수용(2009.02.04 이후) 토지를 환산취득가액으로 계산 시, 양도시 기준시가는
             다음 <b>세 가지 중 가장 작은 금액</b>(원/㎡)이 적용됩니다.
           </p>

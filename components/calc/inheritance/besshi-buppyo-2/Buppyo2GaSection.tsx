@@ -9,10 +9,10 @@ import type { Buppyo2SectionA } from "@/lib/calc/besshi-buppyo-2-data";
 import { BP2_GA_LABELS as G } from "./besshi-buppyo-2-constants";
 
 const HEAD =
-  "border border-black p-1 bg-gray-100 dark:bg-gray-800 text-[10px] font-medium text-center align-middle";
-const CELL = "border border-black p-1 text-[11px] text-center align-middle";
+  "border border-black p-1 bg-gray-100 dark:bg-gray-800 text-micro font-medium text-center align-middle";
+const CELL = "border border-black p-1 text-caption text-center align-middle";
 const AMT =
-  "border border-black p-1 text-[11px] text-right font-mono tabular-nums whitespace-nowrap align-middle";
+  "border border-black p-1 text-caption text-right font-mono tabular-nums whitespace-nowrap align-middle";
 const NBSP = " ";
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -28,7 +28,7 @@ export function Buppyo2GaSection({
   const t = (k: string) => `buppyo2-ga-${idx}-${k}`;
   return (
     <div data-testid={`buppyo2-heir-${idx}-ga`}>
-      <p className="mb-1 text-[11px] font-semibold">가. 상속인별 상속현황</p>
+      <p className="mb-1 text-caption font-semibold">가. 상속인별 상속현황</p>
       <table className="w-full border-collapse">
         <thead>
           <tr>

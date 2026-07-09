@@ -246,7 +246,7 @@ export function Step0({
           G-M3: donor 변경 시 donorRelation 자동 도출 (단일 진실화) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             §47
           </span>
           <p className="text-xs font-semibold text-violet-700">
@@ -278,7 +278,7 @@ export function Step0({
         </select>
         {/* G-M2b: 세대생략 §57은 donor=grandparent이면 자동 적용됨을 안내 */}
         {form.donor === "grandparent" && (
-          <p className="text-[11px] text-rose-700 bg-rose-50/70 rounded px-2 py-1">
+          <p className="text-caption text-rose-700 bg-rose-50/70 rounded px-2 py-1">
             조부모→손자녀 증여 — 세대생략 §57 할증 30% (또는 미성년+20억 초과 시 40%) 자동 적용됩니다.
           </p>
         )}
@@ -334,7 +334,7 @@ function SectionAddButton({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-[11px] font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+      className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-caption font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
     >
       + {label}
     </button>

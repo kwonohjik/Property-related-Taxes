@@ -29,7 +29,7 @@ interface Props {
 
 function LegalBadge() {
   return (
-    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
       소득세법 시행령 §164 ⑤
     </span>
   );
@@ -178,7 +178,7 @@ export function MixedUsePreHousingDisclosureSection({
         <div className="flex items-baseline justify-between gap-3">
           <div>
             <p className="text-xs font-semibold text-amber-800">양도시 개별주택가격 (자동)</p>
-            <p className="mt-1 text-[11px] text-amber-700">
+            <p className="mt-1 text-caption text-amber-700">
               위 양도시 기준시가 섹션의 개별주택공시가격을 자동으로 사용합니다.
             </p>
           </div>
@@ -313,7 +313,7 @@ export function MixedUsePreHousingDisclosureSection({
         />
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-caption text-muted-foreground">
         공시지가는{" "}
         <span className="font-medium">부동산공시가격알리미(realtyprice.kr)</span>
         에서, 건물기준시가는{" "}

@@ -173,14 +173,14 @@ function FarmingPostMgmtPageInner() {
             상속세 신고기한 (§67 — 상속개시일 + 6개월)
           </label>
           <DateInput value={filingDeadline} onChange={setFilingDeadline} />
-          <p className="text-[10px] text-muted-foreground">이자상당액 기산일 산정용</p>
+          <p className="text-micro text-muted-foreground">이자상당액 기산일 산정용</p>
         </div>
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             위반 발생일
           </label>
           <DateInput value={violationDate} onChange={setViolationDate} />
-          <p className="text-[10px] text-muted-foreground">§18의3④ 또는 §18의3⑥2호 사유 발생일</p>
+          <p className="text-micro text-muted-foreground">§18의3④ 또는 §18의3⑥2호 사유 발생일</p>
         </div>
         <CurrencyInput
           label="공제받은 영농상속공제액"
@@ -206,7 +206,7 @@ function FarmingPostMgmtPageInner() {
             className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder="0.029"
           />
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             예: 0.029 = 연 2.9% (시점별 개정 — 국세청 고시 확인)
           </p>
         </div>
@@ -216,7 +216,7 @@ function FarmingPostMgmtPageInner() {
       {isFourthParaViolation && (
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">정당한 사유 (§16⑥, 선택)</h2>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             적용 시 추징 면제. 사유에 해당하지 않으면 빈칸 유지.
           </p>
           <RadioCardGroup<FarmingPostMgmtJustifiedReason | "">
@@ -243,7 +243,7 @@ function FarmingPostMgmtPageInner() {
                   법인주식 처분 후에도 <strong>최대주주 지위 유지</strong> (§16⑥6호 단서)
                 </span>
               </label>
-              <p className="text-[10px] text-emerald-700 dark:text-emerald-300">
+              <p className="text-micro text-emerald-700 dark:text-emerald-300">
                 미체크 시 정당사유 불인정 → 추징 적용
               </p>
             </div>
@@ -314,12 +314,12 @@ function FarmingPostMgmtPageInner() {
               <span>산식 상세 펼침</span>
               <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(breakdownOpen)}</span>
             </button>
-            <ul className={`${breakdownOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-[11px]`}>
+            <ul className={`${breakdownOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-caption`}>
               {result.breakdown.map((step, i) => (
                 <li key={i} className="flex justify-between gap-2">
                   <span className="text-muted-foreground">
                     {step.label}
-                    {step.note && <span className="block text-[10px] text-gray-500">{step.note}</span>}
+                    {step.note && <span className="block text-micro text-gray-500">{step.note}</span>}
                   </span>
                   {step.amount !== 0 && (
                     <span className="font-mono">{formatKRW(step.amount)}</span>
