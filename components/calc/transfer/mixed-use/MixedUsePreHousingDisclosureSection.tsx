@@ -12,9 +12,9 @@
 
 import { useEffect, useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ThreePointStandardPriceInput } from "../ThreePointStandardPriceInput";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { derivePre1990PhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
@@ -134,30 +134,27 @@ export function MixedUsePreHousingDisclosureSection({
         </FieldCard>
       </div>
 
-      {/* ③④ 최초 고시 개별주택가격 · 양도시 개별주택가격 (한 행, 둘 다 편집) */}
+      {/* ③④ 최초 고시 개별주택가격 · 양도시 개별주택가격 (한 행, StandardPriceInput 자동조회) */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <FieldCard label="최초 고시 개별주택가격" required unit="원" stacked>
-          <CurrencyInput
-            label=""
-            value={asset.phdFirstDisclosureHousingPrice}
-            onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
-            placeholder="원"
-            hideUnit
-            required
-          />
-        </FieldCard>
-
-        {/* 양도시 개별주택가격 — 양도시 개별주택공시가격의 단일 입력(상단 양도 sub-block은 PHD ON 시 숨김) */}
-        <FieldCard label="양도시 개별주택가격" required unit="원" stacked>
-          <CurrencyInput
-            label=""
-            value={asset.mixedTransferHousingPrice}
-            onChange={(v) => onChange({ mixedTransferHousingPrice: v })}
-            placeholder="양도시 개별주택공시가격"
-            hideUnit
-            required
-          />
-        </FieldCard>
+        <StandardPriceInput
+          propertyKind="house_individual"
+          totalPrice={asset.phdFirstDisclosureHousingPrice}
+          onTotalPriceChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          referenceDate={asset.phdFirstDisclosureDate}
+          label="최초 고시 개별주택가격"
+          required
+        />
+        {/* 양도시 개별주택가격 — 단일 입력(상단 양도 sub-block은 PHD ON 시 숨김) */}
+        <StandardPriceInput
+          propertyKind="house_individual"
+          totalPrice={asset.mixedTransferHousingPrice}
+          onTotalPriceChange={(v) => onChange({ mixedTransferHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          referenceDate={transferDate}
+          label="양도시 개별주택가격"
+          required
+        />
       </div>
 
       {/* 최초공시일 < 용도변경일 진입 안내 — Case A 4부분 분리 모드 */}

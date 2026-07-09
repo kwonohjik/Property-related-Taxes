@@ -18,6 +18,7 @@
 import { useMemo, useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
@@ -351,17 +352,15 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           landArea={asset.inhHouseValLandArea}
           jibun={asset.addressJibun || undefined}
         />
-        <FieldCard label="양도 당시 공시된 개별주택 가격" unit="원" hint="홈택스/부동산공시가격알리미 — 양도일 직전 공시된 개별주택가격" className="sm:grid-cols-[220px_1fr]">
-          <div className="w-1/2">
-            <CurrencyInput
-              label=""
-              hideUnit
-              value={asset.inhHouseValHousePriceAtTransfer}
-              onChange={(v) => onChange({ inhHouseValHousePriceAtTransfer: v })}
-              placeholder="홈택스 개별주택가격 조회"
-            />
-          </div>
-        </FieldCard>
+        <StandardPriceInput
+          propertyKind="house_individual"
+          totalPrice={asset.inhHouseValHousePriceAtTransfer}
+          onTotalPriceChange={(v) => onChange({ inhHouseValHousePriceAtTransfer: v })}
+          jibun={asset.addressJibun || undefined}
+          referenceDate={transferDate}
+          label="양도 당시 공시된 개별주택 가격"
+          hint="홈택스/부동산공시가격알리미 — 양도일 직전 공시된 개별주택가격"
+        />
         <FieldCard label="양도당시 건물기준시가" unit="원" hint="국세청 기준시가 — 양도시 합계 기준시가의 건물 성분. 미입력 시 P_T로 대체." className="sm:grid-cols-[160px_1fr]">
           <div className="w-1/2">
             <CurrencyInput
@@ -393,17 +392,15 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           landArea={asset.inhHouseValLandArea}
           jibun={asset.addressJibun || undefined}
         />
-        <FieldCard label="최초 공시된 개별주택가격" unit="원" hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격. §164⑤ 추정 공식의 분자 승수." className="sm:grid-cols-[185px_1fr]">
-          <div className="w-1/2">
-            <CurrencyInput
-              label=""
-              hideUnit
-              value={asset.inhHouseValHousePriceAtFirst}
-              onChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
-              placeholder="홈택스 개별주택가격 조회"
-            />
-          </div>
-        </FieldCard>
+        <StandardPriceInput
+          propertyKind="house_individual"
+          totalPrice={asset.inhHouseValHousePriceAtFirst}
+          onTotalPriceChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
+          jibun={asset.addressJibun || undefined}
+          referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
+          label="최초 공시된 개별주택가격"
+          hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격. §164⑤ 추정 공식의 분자 승수."
+        />
         <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — 취득시 개별주택가격 역산 시 최초공시 합계(토지기준시가 + 이 값)의 건물 부분. 개별주택가격과 별개입니다." className="sm:grid-cols-[200px_1fr]">
           <div className="w-1/2">
             <CurrencyInput

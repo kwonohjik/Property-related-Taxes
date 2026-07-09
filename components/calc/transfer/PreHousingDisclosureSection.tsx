@@ -11,12 +11,11 @@
 
 import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
-import { useStandardPriceLookup, getDefaultPriceYear } from "@/lib/hooks/useStandardPriceLookup";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── Props ────────────────────────────────────────────────────────
@@ -61,23 +60,8 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
   const [housingType, setHousingType] = useState<HousingType>("individual");
 
   const priceLabel = PRICE_LABEL[housingType];
-
-  // ── 개별/공동주택 공시가격 자동조회 (부동산공시가격알리미 / NED API) ──
-  // 최초고시가격은 최초 고시일 연도, 양도시가격은 양도일 연도로 조회. 단일 소스 훅 재사용.
-  const jibun = asset.addressJibun ?? "";
-  const firstLookup = useStandardPriceLookup("housing");
-  const transferLookup = useStandardPriceLookup("housing");
-
-  const onLookupFirst = async () => {
-    const year = getDefaultPriceYear(asset.phdFirstDisclosureDate, "housing");
-    const price = await firstLookup.lookup({ jibun, propertyType: "housing", year });
-    if (price && price > 0) onChange({ phdFirstDisclosureHousingPrice: String(price) });
-  };
-  const onLookupTransfer = async () => {
-    const year = getDefaultPriceYear(transferDate, "housing");
-    const price = await transferLookup.lookup({ jibun, propertyType: "housing", year });
-    if (price && price > 0) onChange({ phdTransferHousingPrice: String(price) });
-  };
+  // 개별/공동주택 공시가격 자동조회 — StandardPriceInput 재사용 (propertyKind로 분기)
+  const housePropertyKind = housingType === "apartment" ? "house_apart" : "house_individual";
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
   const stdPriceAddress = {
@@ -131,73 +115,30 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         </FieldCard>
       </div>
 
-      {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행) */}
+      {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행, StandardPriceInput 자동조회) */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <FieldCard label={priceLabel.first} required unit="원" stacked>
-          <div className="space-y-1.5">
-            <div className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <CurrencyInput
-                  label=""
-                  value={asset.phdFirstDisclosureHousingPrice}
-                  onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
-                  placeholder="원"
-                  hideUnit
-                  required
-                />
-              </div>
-              <button
-                type="button"
-                onClick={onLookupFirst}
-                disabled={!jibun || firstLookup.loading}
-                className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
-              >
-                {firstLookup.loading ? "조회 중…" : "공시가격 조회"}
-              </button>
-            </div>
-            {firstLookup.msg && (
-              <p className={`text-[11px] ${firstLookup.msg.kind === "err" ? "text-destructive" : "text-muted-foreground"}`}>
-                {firstLookup.msg.text}
-              </p>
-            )}
-            {!jibun && (
-              <p className="text-[11px] text-muted-foreground">소재지 지번 입력 후 조회 가능합니다</p>
-            )}
-          </div>
-        </FieldCard>
-
-        <FieldCard label={priceLabel.transfer} required unit="원" stacked>
-          <div className="space-y-1.5">
-            <div className="flex gap-2">
-              <div className="flex-1 min-w-0">
-                <CurrencyInput
-                  label=""
-                  value={asset.phdTransferHousingPrice}
-                  onChange={(v) => onChange({ phdTransferHousingPrice: v })}
-                  placeholder="원"
-                  hideUnit
-                  required
-                />
-              </div>
-              <button
-                type="button"
-                onClick={onLookupTransfer}
-                disabled={!jibun || transferLookup.loading}
-                className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
-              >
-                {transferLookup.loading ? "조회 중…" : "공시가격 조회"}
-              </button>
-            </div>
-            {transferLookup.msg && (
-              <p className={`text-[11px] ${transferLookup.msg.kind === "err" ? "text-destructive" : "text-muted-foreground"}`}>
-                {transferLookup.msg.text}
-              </p>
-            )}
-            {!jibun && (
-              <p className="text-[11px] text-muted-foreground">소재지 지번 입력 후 조회 가능합니다</p>
-            )}
-          </div>
-        </FieldCard>
+        <StandardPriceInput
+          propertyKind={housePropertyKind}
+          totalPrice={asset.phdFirstDisclosureHousingPrice}
+          onTotalPriceChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
+          referenceDate={asset.phdFirstDisclosureDate}
+          label={priceLabel.first}
+          required
+        />
+        <StandardPriceInput
+          propertyKind={housePropertyKind}
+          totalPrice={asset.phdTransferHousingPrice}
+          onTotalPriceChange={(v) => onChange({ phdTransferHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
+          referenceDate={transferDate}
+          label={priceLabel.transfer}
+          required
+        />
       </div>
 
       {/* ⑤ 3-시점 기준시가 입력 */}

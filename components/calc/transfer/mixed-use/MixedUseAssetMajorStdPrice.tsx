@@ -5,6 +5,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { computeDerivedAreas, round2 } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -112,14 +113,15 @@ export function MixedUseAssetMajorStdPrice({
         {!asset.usePreHousingDisclosure && (
           <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
             <p className="text-[11px] font-semibold text-emerald-700">양도시</p>
-            <FieldCard label="개별주택공시가격" hint="주택건물+주택부수토지 일괄">
-              <CurrencyInput
-                label=""
-                value={asset.mixedTransferHousingPrice}
-                onChange={(v) => onChange({ mixedTransferHousingPrice: v })}
-                placeholder="양도시 개별주택공시가격"
-              />
-            </FieldCard>
+            <StandardPriceInput
+              propertyKind="house_individual"
+              totalPrice={asset.mixedTransferHousingPrice}
+              onTotalPriceChange={(v) => onChange({ mixedTransferHousingPrice: v })}
+              jibun={asset.addressJibun || undefined}
+              referenceDate={transferDate}
+              label="개별주택공시가격"
+              hint="주택건물+주택부수토지 일괄"
+            />
           </div>
         )}
 
@@ -153,14 +155,15 @@ export function MixedUseAssetMajorStdPrice({
 
           {!asset.usePreHousingDisclosure && (
             <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2">
-              <FieldCard label="개별주택공시가격" hint="미공시 시 비워두세요 — 위 §164⑤ 토글 사용">
-                <CurrencyInput
-                  label=""
-                  value={asset.mixedAcqHousingPrice}
-                  onChange={(v) => onChange({ mixedAcqHousingPrice: v })}
-                  placeholder="취득시 개별주택공시가격 (미공시 시 빈값)"
-                />
-              </FieldCard>
+              <StandardPriceInput
+                propertyKind="house_individual"
+                totalPrice={asset.mixedAcqHousingPrice}
+                onTotalPriceChange={(v) => onChange({ mixedAcqHousingPrice: v })}
+                jibun={asset.addressJibun || undefined}
+                referenceDate={acqReferenceDate}
+                label="개별주택공시가격"
+                hint="미공시 시 비워두세요 — 위 §164⑤ 토글 사용"
+              />
             </div>
           )}
         </div>
