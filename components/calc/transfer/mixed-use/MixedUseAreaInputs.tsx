@@ -23,6 +23,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
   const commercial = parseDecimal(asset.nonResidentialFloorArea) ?? 0;
   const total = residential + commercial;
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea) ?? 0;
+  const footprint = parseDecimal(asset.buildingFootprintArea) ?? 0;
 
   // 부수토지 파생(주택/상가) — override(주택) 반영 (PHD OFF 전용, 상가 기준시가란과 동일 leaf)
   const overrideStr = asset.mixedResidentialLandAreaOverride ?? "";
@@ -123,9 +124,9 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           </div>
         </div>
 
-        {/* 계산 결과 4열 한 행 (연면적 + 부수토지) — 항상 표시, 미입력은 "—" */}
+        {/* 계산 결과 6열 한 행 (연면적 + 정착면적 + 부수토지) — 항상 표시, 미입력은 "—" */}
         <div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-3 py-2 rounded-lg bg-sky-100/60 border border-sky-200"
+          className="grid grid-cols-3 sm:grid-cols-6 gap-2 px-3 py-2 rounded-lg bg-sky-100/60 border border-sky-200"
           data-testid="mixed-derived-floor"
         >
           <div>
@@ -138,6 +139,20 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <span className="block text-[11px] text-sky-700">상가 연면적</span>
             <span className="font-semibold text-sky-900">
               {total > 0 ? `${commercial.toFixed(2)}㎡` : "—"}
+            </span>
+          </div>
+          <div>
+            <span className="block text-[11px] text-sky-700">주택 정착면적</span>
+            <span className="font-semibold text-sky-900">
+              {footprint > 0 && total > 0 ? `${derived.residentialFootprintArea.toFixed(2)}㎡` : "—"}
+            </span>
+          </div>
+          <div>
+            <span className="block text-[11px] text-sky-700">상가 정착면적</span>
+            <span className="font-semibold text-sky-900">
+              {footprint > 0 && total > 0
+                ? `${round2(footprint - derived.residentialFootprintArea).toFixed(2)}㎡`
+                : "—"}
             </span>
           </div>
           <div>
