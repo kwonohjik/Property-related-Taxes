@@ -227,7 +227,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               />
             </FieldCard>
             <div className="flex justify-end">
-              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-acq`} onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
+              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-acq`} applyTimePoint="acquisition" onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
             </div>
             {/* 최초고시시(2005) — amber */}
             <FieldCard
@@ -257,7 +257,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 />
               </FieldCard>
               <div className="mt-1 flex justify-end">
-                <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-transfer`} onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
+                <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-transfer`} applyTimePoint="transfer" onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
               </div>
             </div>
           </div>
