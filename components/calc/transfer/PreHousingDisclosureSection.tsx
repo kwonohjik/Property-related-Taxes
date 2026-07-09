@@ -11,11 +11,11 @@
 
 import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── Props ────────────────────────────────────────────────────────
@@ -60,6 +60,8 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
   const [housingType, setHousingType] = useState<HousingType>("individual");
 
   const priceLabel = PRICE_LABEL[housingType];
+  // 개별/공동주택 공시가격 자동조회 — StandardPriceInput 재사용 (propertyKind로 분기)
+  const housePropertyKind = housingType === "apartment" ? "house_apart" : "house_individual";
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
   const stdPriceAddress = {
@@ -113,29 +115,30 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         </FieldCard>
       </div>
 
-      {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행) */}
+      {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행, StandardPriceInput 자동조회) */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <FieldCard label={priceLabel.first} required unit="원" stacked>
-          <CurrencyInput
-            label=""
-            value={asset.phdFirstDisclosureHousingPrice}
-            onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
-            placeholder="원"
-            hideUnit
-            required
-          />
-        </FieldCard>
-
-        <FieldCard label={priceLabel.transfer} required unit="원" stacked>
-          <CurrencyInput
-            label=""
-            value={asset.phdTransferHousingPrice}
-            onChange={(v) => onChange({ phdTransferHousingPrice: v })}
-            placeholder="원"
-            hideUnit
-            required
-          />
-        </FieldCard>
+        <StandardPriceInput
+          propertyKind={housePropertyKind}
+          totalPrice={asset.phdFirstDisclosureHousingPrice}
+          onTotalPriceChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
+          referenceDate={asset.phdFirstDisclosureDate}
+          label={priceLabel.first}
+          required
+        />
+        <StandardPriceInput
+          propertyKind={housePropertyKind}
+          totalPrice={asset.phdTransferHousingPrice}
+          onTotalPriceChange={(v) => onChange({ phdTransferHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
+          referenceDate={transferDate}
+          label={priceLabel.transfer}
+          required
+        />
       </div>
 
       {/* ⑤ 3-시점 기준시가 입력 */}

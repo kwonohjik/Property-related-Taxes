@@ -17,6 +17,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
@@ -187,16 +188,15 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
           <LawArticleModal legalBasis="소득세법 시행령 §176의2 ② 2호" label="시행령 §176의2②2호" />
         </div>
 
-        <FieldCard
+        <StandardPriceInput
+          propertyKind="house_individual"
+          totalPrice={asset.redevManagementDisposalHousingPrice}
+          onTotalPriceChange={(v) => onChange({ redevManagementDisposalHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          referenceDate={asset.redevApprovalDate}
           label="D. 관리처분 인가일 개별주택공시가격"
           hint="§166③ 분모 — 양도 의제 시점의 §99①1호 라목 단일 라목값"
-        >
-          <CurrencyInput label=""
-            value={asset.redevManagementDisposalHousingPrice}
-            onChange={(v) => onChange({ redevManagementDisposalHousingPrice: v })}
-            hideUnit
-          />
-        </FieldCard>
+        />
 
         <FieldCard
           label="최초공시일"
@@ -209,16 +209,15 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         </FieldCard>
 
         {!isPreDisclosureTriggered && (
-          <FieldCard
+          <StandardPriceInput
+            propertyKind="house_individual"
+            totalPrice={asset.redevAcquisitionHousingPrice}
+            onTotalPriceChange={(v) => onChange({ redevAcquisitionHousingPrice: v })}
+            jibun={asset.addressJibun || undefined}
+            referenceDate={asset.acquisitionDate}
             label="취득당시 개별주택공시가격"
             hint="§166③ 분자 — 취득당시 §99①1호 라목 단일 라목값 (취득일 ≥ 최초공시일)"
-          >
-            <CurrencyInput label=""
-              value={asset.redevAcquisitionHousingPrice}
-              onChange={(v) => onChange({ redevAcquisitionHousingPrice: v })}
-              hideUnit
-            />
-          </FieldCard>
+          />
         )}
 
         {isPreDisclosureTriggered && (
@@ -227,13 +226,15 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               §164⑦ 본문 발동 — PHD 패턴: 취득당시 라목값 P_A = floor(A × Sum_A / Sum_F)
             </p>
 
-            <FieldCard label="A. 최초공시 주택가격" hint="국토교통부장관이 최초로 공시한 주택가격 (단일 라목값)">
-              <CurrencyInput label=""
-                value={asset.redevFirstDisclosureHousingPrice}
-                onChange={(v) => onChange({ redevFirstDisclosureHousingPrice: v })}
-                hideUnit
-              />
-            </FieldCard>
+            <StandardPriceInput
+              propertyKind="house_individual"
+              totalPrice={asset.redevFirstDisclosureHousingPrice}
+              onTotalPriceChange={(v) => onChange({ redevFirstDisclosureHousingPrice: v })}
+              jibun={asset.addressJibun || undefined}
+              referenceDate={asset.redevFirstDisclosureDate}
+              label="A. 최초공시 주택가격"
+              hint="국토교통부장관이 최초로 공시한 주택가격 (단일 라목값)"
+            />
 
             <FieldCard label="토지면적 (㎡)" hint="시점별 동일 가정 — 환지·합병으로 면적이 다른 케이스는 후속 PR">
               <DecimalInput

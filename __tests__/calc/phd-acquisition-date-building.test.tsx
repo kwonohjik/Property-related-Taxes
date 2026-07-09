@@ -25,8 +25,10 @@ describe("PHD 취득 기준시점 — 건물 취득일 기준", () => {
       <PreHousingDisclosureSection asset={asset} transferDate="2025-09-01" onChange={() => {}} />,
     );
 
-    // 취득 블록 공시지가 연도 = 2014(건물). 2013(토지)이 아님.
-    expect(screen.queryByText(/2013년/)).toBeNull();
-    expect(screen.getAllByText(/2014년/).length).toBeGreaterThan(0);
+    // 취득 블록 공시지가 연도 추천값 = 2014(건물). 2013(토지)이 아님.
+    // "(자동)" 추천 포맷으로 한정 — 주택가격 조회(StandardPriceInput) 연도 드롭다운의
+    // 비선택 <option>(전 연도 나열, 2013 포함)에 오매칭되지 않도록.
+    expect(screen.queryByText(/2013년 \(자동\)/)).toBeNull();
+    expect(screen.getAllByText(/2014년 \(자동\)/).length).toBeGreaterThan(0);
   });
 });

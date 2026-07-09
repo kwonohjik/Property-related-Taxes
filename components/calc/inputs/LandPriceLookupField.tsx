@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/select";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
 
 export interface LandPriceLookupFieldProps {
@@ -145,11 +144,13 @@ export function LandPriceLookupField({
   ) : null;
 
   return (
-    <div className="space-y-1.5">
-      {/* 기준연도 선택 + 조회 버튼 */}
-      <FieldCard label="공시지가 기준연도" badge={yearBadge}>
-        <div className="flex gap-2">
-          <div className="flex-1">
+    // 컴팩트 3열 — 공시지가 연도(Select+조회 인라인) | 개별공시지가 | 토지기준시가
+    // (ThreePointStandardPriceInput PointBlock 레이아웃과 통일)
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      {/* ① 공시지가 연도 — Select + 조회 버튼 인라인 */}
+      <FieldCard label="공시지가 연도" badge={yearBadge} stacked>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
             <Select
               value={effectiveYear}
               onValueChange={handleYearSelect}
@@ -183,41 +184,32 @@ export function LandPriceLookupField({
         {lookupError && (
           <p className="mt-1 text-xs text-destructive">{lookupError}</p>
         )}
-        {!canLookup && (
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            소재지 입력 후 조회 가능합니다
-          </p>
-        )}
-        <ReferenceSiteLinks
-          className="mt-1.5"
-          sites={[REFERENCE_SITES.landPrice, REFERENCE_SITES.landRegister]}
+      </FieldCard>
+
+      {/* ② 개별공시지가 */}
+      <FieldCard label={label} hint={hint} unit="원/㎡" stacked>
+        <CurrencyInput
+          label=""
+          value={pricePerSqm}
+          onChange={onPricePerSqmChange}
+          placeholder={placeholder}
+          hideUnit
         />
       </FieldCard>
 
-      {/* 공시지가 입력 + 토지기준시가 결과 — 2열 셀이 좁아 stacked(라벨 상단·입력 전폭)로 금액폭 확보 */}
-      <div className="grid grid-cols-2 gap-2">
-        <FieldCard label={label} hint={hint} unit="원/㎡" stacked>
-          <CurrencyInput
-            label=""
-            value={pricePerSqm}
-            onChange={onPricePerSqmChange}
-            placeholder={placeholder}
-            hideUnit
-          />
-        </FieldCard>
-        <FieldCard
-          label="토지기준시가"
-          hint={area ? `${area.toFixed(2)}㎡ × 공시지가` : "① 면적 섹션의 토지면적 입력 후 자동 계산"}
-          unit="원"
-          stacked
-        >
-          <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
-            {landStdPrice !== null
-              ? landStdPrice.toLocaleString()
-              : <span className="text-muted-foreground/40 text-xs">① 면적 입력 후 자동 계산</span>}
-          </div>
-        </FieldCard>
-      </div>
+      {/* ③ 토지기준시가 (자동 계산) */}
+      <FieldCard
+        label="토지기준시가"
+        hint={area ? `${area.toFixed(2)}㎡ × 공시지가` : "면적 입력 후 자동 계산"}
+        unit="원"
+        stacked
+      >
+        <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+          {landStdPrice !== null
+            ? landStdPrice.toLocaleString()
+            : <span className="text-muted-foreground/40 text-xs">면적 입력 후 자동 계산</span>}
+        </div>
+      </FieldCard>
     </div>
   );
 }

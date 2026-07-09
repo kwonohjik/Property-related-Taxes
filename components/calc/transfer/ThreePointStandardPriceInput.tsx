@@ -344,11 +344,11 @@ export function PointBlock({
   // 비-split·비-landOnly 시 연도·공시지가·토지기준시가를 한 행(3열)으로 배치.
   const rowMode = !splitMode && !landOnly;
 
-  // ── 공시지가 기준 연도 (조회 버튼 포함) ──
+  // ── 공시지가 기준 연도 (조회 버튼을 연도 select 오른쪽에 인라인 배치) ──
   const yearField = (
     <FieldCard label="공시지가 연도" badge={yearBadge} stacked={rowMode}>
-      <div className="flex flex-wrap gap-2">
-        <div className="min-w-[7rem] flex-1">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
           <Select
             value={effectiveYear}
             onValueChange={handleYearSelect}
@@ -383,11 +383,6 @@ export function PointBlock({
       </div>
       {lookupError && (
         <p className="mt-1 text-xs text-destructive">{lookupError}</p>
-      )}
-      {!canLookup && (
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          지번 주소 입력 후 조회 가능합니다
-        </p>
       )}
     </FieldCard>
   );
