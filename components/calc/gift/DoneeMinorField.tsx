@@ -77,7 +77,7 @@ export function DoneeMinorField({
       {autoMinor !== null ? (
         // 자동판정 성공 → 읽기전용 배지 (수동 토글 숨김)
         <div
-          className="rounded-md border border-violet-200 bg-violet-100/60 px-3 py-2 text-[12px] text-violet-900"
+          className="rounded-md border border-violet-200 bg-violet-100/60 px-3 py-2 text-xs text-violet-900"
           data-testid="donee-minor-auto-badge"
         >
           생년월일 {parsed?.birthDate} · 증여일 기준 만 {age}세 →{" "}

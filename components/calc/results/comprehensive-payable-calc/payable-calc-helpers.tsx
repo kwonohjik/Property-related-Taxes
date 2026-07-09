@@ -109,7 +109,7 @@ export function Bullet({
 }) {
   return (
     <div
-      className="flex items-baseline gap-1.5 py-0.5 text-[13px] text-muted-foreground"
+      className="flex items-baseline gap-1.5 py-0.5 text-xs text-muted-foreground"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
       data-testid={testId}
     >
@@ -131,7 +131,7 @@ export function DashBullet({
 }) {
   return (
     <div
-      className="flex items-baseline gap-1.5 py-0.5 text-[13px] text-muted-foreground"
+      className="flex items-baseline gap-1.5 py-0.5 text-xs text-muted-foreground"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
       data-testid={testId}
     >
@@ -145,7 +145,7 @@ export function DashBullet({
 export function ParcelDot({ children, indent = 3 }: { children: ReactNode; indent?: number }) {
   return (
     <div
-      className="flex items-baseline gap-1.5 py-0.5 text-[12px] text-muted-foreground"
+      className="flex items-baseline gap-1.5 py-0.5 text-xs text-muted-foreground"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
     >
       <span className="select-none">•</span>
@@ -158,7 +158,7 @@ export function ParcelDot({ children, indent = 3 }: { children: ReactNode; inden
 export function JurisdictionHeader({ name, indent = 1 }: { name: string; indent?: number }) {
   return (
     <div
-      className="py-0.5 text-[13px] font-semibold text-sky-700 dark:text-sky-300"
+      className="py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-300"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
     >
       ≪{name} 토지≫

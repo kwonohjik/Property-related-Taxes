@@ -55,7 +55,7 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
       </div>
 
       {isExcluded ? (
-        <div className="rounded border border-rose-300 bg-rose-100/60 p-3 text-[12px] text-rose-800">
+        <div className="rounded border border-rose-300 bg-rose-100/60 p-3 text-xs text-rose-800">
           ⚠️ <strong>영업권 자동 배제 (상증령 §55 ③)</strong>
           <ul className="list-disc ml-4 mt-1 text-[11px] space-y-0.5">
             {goodwill.excludedByLaw === "liquidation" && <li>1호 — 청산절차 진행 (§54④ 1호 + §55③ 1호)</li>}

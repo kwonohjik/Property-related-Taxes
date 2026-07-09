@@ -193,7 +193,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
       {/* 사례 48 — 승계조합원 단순 차감 산식 (§166 안분 우회) */}
       {successorMemberApplied && successorMemberDetail && (
-        <div className="rounded-md bg-rose-50 border border-rose-200 p-3 text-[12px] text-rose-900 space-y-2 leading-relaxed">
+        <div className="rounded-md bg-rose-50 border border-rose-200 p-3 text-xs text-rose-900 space-y-2 leading-relaxed">
           <div className="space-y-0.5">
             <div className="font-semibold">보유기간 기산일 = 준공일 (사용검사필증 교부일)</div>
             <div>

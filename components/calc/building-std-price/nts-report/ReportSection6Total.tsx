@@ -16,7 +16,7 @@ export function ReportSection6Total({ inst }: { inst: NtsReportInstance }) {
   const acq = inst.acqBase;
   return (
     <section className="mb-3 break-inside-avoid">
-      <h4 className="mb-1 text-[12px] font-bold text-black">Ⅵ. 평가대상 건물 기준시가 및 부속토지 평가액 합계</h4>
+      <h4 className="mb-1 text-xs font-bold text-black">Ⅵ. 평가대상 건물 기준시가 및 부속토지 평가액 합계</h4>
       <table className="w-full border-collapse text-black">
         <tbody>
           <tr>

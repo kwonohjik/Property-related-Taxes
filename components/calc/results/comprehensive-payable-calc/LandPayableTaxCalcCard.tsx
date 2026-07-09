@@ -213,7 +213,7 @@ function LandStep4({
         <GaNaDaLine prefix="나" label={`직전연도('${pyr}년) 총세액상당액`} formula="(직접 입력)" amount={cap.previousYearTotalTax} testId={`${testPrefix}-payable-step4-na`} />
       )}
       <GaNaDaLine prefix="다" label={`해당연도('${yr}년) 세부담 상한액`} formula={`(나 × ${pct(cap.capRate)})`} amount={cap.capAmount} testId={`${testPrefix}-payable-step4-da`} />
-      <p className="py-0.5 text-[13px] leading-relaxed text-muted-foreground" style={{ paddingLeft: `${2 * 14 + 18}px` }}>
+      <p className="py-0.5 text-xs leading-relaxed text-muted-foreground" style={{ paddingLeft: `${2 * 14 + 18}px` }}>
         {`해당연도('${yr}년) 총세액상당액 ${won(cur)}(가)이 세부담 상한액 ${won(cap.capAmount)}(다)을 ${
           excess > 0 ? "초과하므로" : "초과하지 않으므로"
         } 세부담 상한 초과금액은 "${won(excess)}"입니다.`}

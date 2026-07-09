@@ -122,7 +122,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           data-testid="besshi-form-toggle"
-          className="flex-1 text-left text-[12px] font-semibold text-gray-700 hover:text-gray-900"
+          className="flex-1 text-left text-xs font-semibold text-gray-700 hover:text-gray-900"
         >
           📄 별지 제4호 부표3 비상장주식 평가서 (인쇄 미리보기){" "}
           <span className={expandToggleClass("slate")}>{expandToggleLabel(open)}</span>

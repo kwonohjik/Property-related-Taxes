@@ -69,7 +69,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
 
   if (!result) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-[12px] text-gray-500">
+      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-xs text-gray-500">
         입력값을 채우면 평가 결과가 자동 계산됩니다.
       </div>
     );
@@ -89,7 +89,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
       </div>
 
       {/* ③·④·⑤·⑥-㉠·㉡·⑥ */}
-      <div className="space-y-2 text-[12px]">
+      <div className="space-y-2 text-xs">
         <ResultRow
           cellNum="③"
           label="순자산가액"

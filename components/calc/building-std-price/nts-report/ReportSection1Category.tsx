@@ -23,7 +23,7 @@ export function ReportSection1Category({
 }) {
   return (
     <section className="mb-3">
-      <h4 className="mb-1 text-[12px] font-bold text-black">Ⅰ. 구분</h4>
+      <h4 className="mb-1 text-xs font-bold text-black">Ⅰ. 구분</h4>
       <table className="w-full border-collapse text-black">
         <thead>
           <tr>

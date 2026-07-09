@@ -26,7 +26,7 @@ export function ReportSection5Apportion({ apportionment }: { apportionment: Anci
   const rowCell = (row: AncillaryApportionRow, kind: AncillaryFacilityKind) => area(row.byKind[kind]);
   return (
     <section className="mb-3 break-inside-avoid">
-      <h4 className="mb-1 text-[12px] font-bold text-black">Ⅴ. 주용도에 의한 부속시설 면적 안분</h4>
+      <h4 className="mb-1 text-xs font-bold text-black">Ⅴ. 주용도에 의한 부속시설 면적 안분</h4>
       <p className="mb-1 text-[10px] text-neutral-600">
         ＊ At = ΣAi, Bi = Ai ÷ At, Ci = Ct × Bi … Hi = Ht × Bi
       </p>

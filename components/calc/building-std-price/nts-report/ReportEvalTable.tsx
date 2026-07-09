@@ -35,7 +35,7 @@ export function ReportEvalTable({
 }) {
   return (
     <section className="mb-4 break-inside-avoid">
-      <h4 className="mb-1 text-[12px] font-bold text-black">{title}</h4>
+      <h4 className="mb-1 text-xs font-bold text-black">{title}</h4>
       <p className="mb-1 text-[10px] text-neutral-600">
         ＊ ⑧ = ⓐ × ① × ② × ⑥ × ⑦ × ⓧ·ⓨ·ⓩ(천원미만 절사) ⑩ = ⑧ × ⑨
       </p>

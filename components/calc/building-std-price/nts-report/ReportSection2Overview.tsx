@@ -15,7 +15,7 @@ export function ReportSection2Overview({ inst }: { inst: NtsReportInstance }) {
     : "";
   return (
     <section className="mb-3">
-      <h4 className="mb-1 text-[12px] font-bold text-black">Ⅱ. 건물 기본현황</h4>
+      <h4 className="mb-1 text-xs font-bold text-black">Ⅱ. 건물 기본현황</h4>
       <table className="w-full border-collapse text-black">
         <tbody>
           <tr>
