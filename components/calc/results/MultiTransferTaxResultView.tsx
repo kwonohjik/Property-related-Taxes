@@ -251,7 +251,7 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-[10px]",
+                  "text-micro",
                   row.scope === "same_group" ? "border-blue-300 text-blue-700" : "border-purple-300 text-purple-700",
                 )}
               >
@@ -319,7 +319,7 @@ function PropertyBreakdownAccordion({
           <span className="font-medium">{breakdown.propertyLabel}</span>
           <span
             className={cn(
-              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+              "inline-flex items-center rounded-full px-2 py-0.5 text-micro font-medium",
               RATE_GROUP_COLORS[breakdown.rateGroup],
             )}
           >
@@ -557,7 +557,7 @@ function DetailRow({
           <p className="text-xs text-muted-foreground/70 mt-0.5 break-words">{formula}</p>
         )}
         {legalBasis && (
-          <p className="text-[10px] text-muted-foreground/50 mt-0.5">{legalBasis}</p>
+          <p className="text-micro text-muted-foreground/50 mt-0.5">{legalBasis}</p>
         )}
       </div>
       <span
@@ -588,7 +588,7 @@ function GroupTaxCards({ result }: { result: AggregateTransferResult }) {
             <div key={g.group} className="flex items-center gap-3 text-sm">
               <span
                 className={cn(
-                  "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-micro font-medium",
                   RATE_GROUP_COLORS[g.group],
                 )}
               >

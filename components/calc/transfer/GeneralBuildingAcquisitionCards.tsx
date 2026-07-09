@@ -318,7 +318,7 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             <p className="text-xs text-amber-800 font-semibold">
               환산취득가액 가산세 적용 대상 — 건물 환산취득가액의 5% (소득세법 §114조의2 ①)
             </p>
-            <p className="text-[11px] text-amber-700">
+            <p className="text-caption text-amber-700">
               ※ 잠정 안내 — 정확한 가산세 발동 여부는 계산 결과에서 확인
             </p>
           </div>

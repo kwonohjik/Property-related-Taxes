@@ -74,7 +74,7 @@ export function FamilyBusinessHeirSelector({
 
   if (naturalHeirs.length === 0) {
     return (
-      <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 p-3 text-[11px] text-sky-700 dark:text-sky-300">
+      <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 p-3 text-caption text-sky-700 dark:text-sky-300">
         자연인 상속인을 먼저 등록하면 가업상속인을 선택할 수 있습니다.
       </div>
     );
@@ -85,7 +85,7 @@ export function FamilyBusinessHeirSelector({
   return (
     <div className="space-y-2" data-testid="fb-heir-selector">
       {autoSelected && (
-        <div className="rounded bg-sky-100/70 dark:bg-sky-900/30 px-2 py-1 text-[10px] text-sky-700 dark:text-sky-300">
+        <div className="rounded bg-sky-100/70 dark:bg-sky-900/30 px-2 py-1 text-micro text-sky-700 dark:text-sky-300">
           상속인이 1명이므로 자동 선택됩니다.
         </div>
       )}
@@ -117,7 +117,7 @@ export function FamilyBusinessHeirSelector({
       {/* 선택된 Heir의 birthDate 미입력 → heirBirthDate DateInput */}
       {effectiveHeirId && !selectedHeir?.birthDate && (
         <div className="space-y-1 rounded-md border border-sky-200 bg-sky-50/40 dark:bg-sky-950/20 p-2">
-          <p className="text-[11px] text-sky-700 dark:text-sky-300">
+          <p className="text-caption text-sky-700 dark:text-sky-300">
             생년월일을 입력하면 18세(§15③2호 가) 자동판정을 수행합니다.
           </p>
           <DateInput
@@ -125,7 +125,7 @@ export function FamilyBusinessHeirSelector({
             onChange={(v) => onChange({ heirBirthDate: v || undefined })}
           />
           {ageLabel && (
-            <p className="text-[11px] text-sky-600 dark:text-sky-400">{ageLabel}</p>
+            <p className="text-caption text-sky-600 dark:text-sky-400">{ageLabel}</p>
           )}
         </div>
       )}

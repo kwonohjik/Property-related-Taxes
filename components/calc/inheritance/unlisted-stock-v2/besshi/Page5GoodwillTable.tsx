@@ -68,7 +68,7 @@ function P5Tr({
           i === 0 ? (
             <span key={i}>{ln}</span>
           ) : (
-            <span key={i} className="text-[9px] text-gray-500 ml-1">
+            <span key={i} className="text-micro text-gray-500 ml-1">
               {ln}
             </span>
           ),
@@ -76,7 +76,7 @@ function P5Tr({
       </td>
       <td className={`${TD} text-right font-mono w-36`}>{amount === undefined ? "" : renderDelta(amount)}</td>
       <td
-        className={`${TD} text-center text-[9px] w-44 ${col3 ? "text-gray-700" : "bg-gray-100 print:bg-gray-100"}`}
+        className={`${TD} text-center text-micro w-44 ${col3 ? "text-gray-700" : "bg-gray-100 print:bg-gray-100"}`}
       >
         {col3 ?? ""}
       </td>
@@ -98,12 +98,12 @@ export function Page5GoodwillTable({
 
   return (
     <section aria-label="제5쪽 6. 영업권">
-      <div className="flex items-center justify-between text-[10px] text-gray-600">
+      <div className="flex items-center justify-between text-micro text-gray-600">
         <span>{P5.unitNote}</span>
         <span>{P5.pageNote}</span>
       </div>
       <SectionTitle>{P5.header}</SectionTitle>
-      <table className="w-full border-collapse border border-black mb-3 text-[10px]">
+      <table className="w-full border-collapse border border-black mb-3 text-micro">
         <tbody>
           <P5Tr testid="p5-가" cellNum="가" labelLines={[P5.weightedAvgLabel]} amount={goodwill.weightedAvg3y} col3={P5.weightedAvgFormula} variant="head" />
           <P5Tr testid="p5-가-①" cellNum="①" labelLines={[P5.fy1Label, `(${fyb[0].label})`]} amount={fyb[0].finalNetIncome} />
@@ -124,7 +124,7 @@ export function Page5GoodwillTable({
       {/* §55③ 자동배제 사유 badge */}
       {goodwill.excludedByLaw && (
         <p
-          className="text-[10px] bg-rose-50 border border-rose-200 p-2 text-rose-800 print:bg-rose-50"
+          className="text-micro bg-rose-50 border border-rose-200 p-2 text-rose-800 print:bg-rose-50"
           data-testid="p5-excluded-badge"
           data-besshi-cell="p5-excluded-badge"
         >
@@ -135,7 +135,7 @@ export function Page5GoodwillTable({
       {/* PR-G2: §59③ 추정이익 준용 — 가.(weightedAvg3y)가 추정이익×주식수 환산임을 안내 */}
       {estimatedProfitApplied && goodwill.goodwillFinal > 0 && (
         <p
-          className="text-[10px] text-violet-800 bg-violet-50 p-2 border border-violet-200 mt-2 print:bg-violet-50"
+          className="text-micro text-violet-800 bg-violet-50 p-2 border border-violet-200 mt-2 print:bg-violet-50"
           data-testid="p5-section59-3"
         >
           ※ 가.(최근 3년 순손익액 가중평균)은 §59③ 준용 §56②에 따라 추정이익 평균가액
@@ -146,7 +146,7 @@ export function Page5GoodwillTable({
       {/* OQ-1: 나-마 양수인데 자=0 시 footer 안내 (사례 6 대응) */}
       {showZeroAnomalyFooter && (
         <p
-          className="text-[10px] text-amber-700 bg-amber-50 p-2 border border-amber-200 mt-2 print:bg-amber-50"
+          className="text-micro text-amber-700 bg-amber-50 p-2 border border-amber-200 mt-2 print:bg-amber-50"
           data-testid="p5-zero-anomaly-footer"
         >
           ※ 나(가 × 50%) − 마(다 × 라) = {fmt(naMinusMa)} 양수이나 5년 PV 산식 적용 후 영업권 평가액이 0으로

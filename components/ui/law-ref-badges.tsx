@@ -16,7 +16,7 @@ export interface LawRefBadge {
 }
 
 const BADGE_CLASS =
-  "inline-flex items-center text-[11px] leading-none text-blue-700/90 border border-blue-200 bg-blue-50/60 rounded px-1.5 py-0.5 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800 transition-colors cursor-pointer dark:text-blue-300/90 dark:border-blue-900/50 dark:bg-blue-950/30";
+  "inline-flex items-center text-caption leading-none text-blue-700/90 border border-blue-200 bg-blue-50/60 rounded px-1.5 py-0.5 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800 transition-colors cursor-pointer dark:text-blue-300/90 dark:border-blue-900/50 dark:bg-blue-950/30";
 
 export function LawRefBadges({
   refs,

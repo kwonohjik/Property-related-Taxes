@@ -88,14 +88,14 @@ export function CorporateExemptionSection({
       {/* 단일 헤더 */}
       <div className="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-200 dark:border-violet-800 flex items-center gap-2 justify-between">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1 text-[10px] bg-violet-200 text-violet-800 rounded px-2 py-0.5">
+          <span className="inline-flex items-center gap-1 text-micro bg-violet-200 text-violet-800 rounded px-2 py-0.5">
             §3의2②
           </span>
           <div>
             <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
               영리법인 상속세 면제 (§3의2②)
             </p>
-            <p className="text-[11px] text-violet-700 dark:text-violet-300 mt-0.5">
+            <p className="text-caption text-violet-700 dark:text-violet-300 mt-0.5">
               집행기준 28-0-1 · 상속세 및 증여세법 시행규칙 별지 제9호서식 부표 5
             </p>
           </div>
@@ -171,10 +171,10 @@ export function CorporateExemptionSection({
                       className="border-b border-gray-100 dark:border-gray-800 bg-violet-50/20 dark:bg-violet-900/10"
                     >
                       <td className="px-3 py-2">{heir?.name ?? "—"}</td>
-                      <td className="px-3 py-2 font-mono text-[10px]">
+                      <td className="px-3 py-2 font-mono text-micro">
                         {heir?.businessRegistrationNumber ?? "—"}
                       </td>
-                      <td className="px-3 py-2 text-[10px]">
+                      <td className="px-3 py-2 text-micro">
                         {heir?.businessAddress ?? "—"}
                       </td>
                       <td className="px-3 py-2 text-right font-mono">
@@ -216,7 +216,7 @@ export function CorporateExemptionSection({
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
               나. 상속세 납부 대상자
             </p>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-micro text-gray-500 dark:text-gray-400 mt-0.5">
               ⑪ 면제분 납부세액 = (⑤ 면제세액 − ⑥ ④×10%) × ⑩ 지분율
             </p>
           </div>
@@ -274,7 +274,7 @@ function renderShareholderRows(
           className="border-b border-gray-100 dark:border-gray-800 text-gray-400"
         >
           <td className="px-3 py-2">{corporateName}</td>
-          <td className="px-3 py-2 text-[10px]" colSpan={5}>
+          <td className="px-3 py-2 text-micro" colSpan={5}>
             상속인·직계비속 주주 미입력 — ⑪ 환원 없음
           </td>
         </tr>,
@@ -295,11 +295,11 @@ function renderShareholderRows(
           className="border-b border-gray-100 dark:border-gray-800"
         >
           <td className="px-3 py-2">{corporateName}</td>
-          <td className="px-3 py-2 text-[10px]">
+          <td className="px-3 py-2 text-micro">
             {sh ? SHAREHOLDER_RELATION_LABEL[sh.relation] : "—"}
           </td>
           <td className="px-3 py-2">{displayName}</td>
-          <td className="px-3 py-2 font-mono text-[10px]">
+          <td className="px-3 py-2 font-mono text-micro">
             {displayRrn ?? "—"}
           </td>
           <td className="px-3 py-2 text-right font-mono">

@@ -31,7 +31,7 @@ export function SettlementExemptionGuideCard({ asset, effective }: Props) {
 
   if (isUnderHighValue && isEligible) {
     return (
-      <div className="rounded-md border border-rose-300 bg-rose-100/70 p-2 text-[11px] text-rose-900 mt-2">
+      <div className="rounded-md border border-rose-300 bg-rose-100/70 p-2 text-caption text-rose-900 mt-2">
         <p className="font-semibold">청산금 수령분 1세대1주택 비과세 자동 적용</p>
         <p className="mt-1">
           인가일 평가액 <span className="font-mono">{rights.toLocaleString()}</span> ≤ 12억 + 1세대1주택 비과세 요건 충족
@@ -43,7 +43,7 @@ export function SettlementExemptionGuideCard({ asset, effective }: Props) {
   }
   if (!isUnderHighValue && isEligible) {
     return (
-      <div className="rounded-md border border-amber-300 bg-amber-100/60 p-2 text-[11px] text-amber-900 mt-2">
+      <div className="rounded-md border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-900 mt-2">
         <p className="font-semibold">고가주택 → 청산금 수령분 과세 적용 (후속 PR)</p>
         <p className="mt-1">
           인가일 평가액 <span className="font-mono">{rights.toLocaleString()}</span> {">"} 12억 → 청산금 수령분도 고가주택 안분 대상.
@@ -53,7 +53,7 @@ export function SettlementExemptionGuideCard({ asset, effective }: Props) {
     );
   }
   return (
-    <div className="rounded-md border border-slate-300 bg-slate-100/70 p-2 text-[11px] text-slate-700 mt-2">
+    <div className="rounded-md border border-slate-300 bg-slate-100/70 p-2 text-caption text-slate-700 mt-2">
       <p className="font-semibold">청산금 수령분 비과세 미적용</p>
       <p className="mt-1">
         1세대1주택 비과세 요건 미충족 → 청산금 수령분도 정상 과세됩니다.

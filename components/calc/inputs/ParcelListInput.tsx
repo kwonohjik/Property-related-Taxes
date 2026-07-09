@@ -472,7 +472,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
                   />
                 </div>
                 {p.acquisitionMethod === "estimated" && (
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-caption text-muted-foreground">
                     환산 모드: (자본+양도비) &gt; (환산+개산공제) 시 §97② 단서 적용
                   </p>
                 )}

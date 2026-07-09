@@ -157,7 +157,7 @@ export function ClientsSection() {
                         <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{c.memo}</p>
                       )}
                       {c.lastUsedAt && (
-                        <p className="mt-1 text-[10px] text-muted-foreground/60">
+                        <p className="mt-1 text-micro text-muted-foreground/60">
                           최근 사용: {new Date(c.lastUsedAt).toLocaleDateString("ko-KR")}
                         </p>
                       )}

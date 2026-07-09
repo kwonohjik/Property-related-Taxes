@@ -114,17 +114,17 @@ export function BuildingRegisterLookupField({
         {isLookingUp ? "조회 중…" : "건축물대장 조회"}
       </button>
       {!pnu && (
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <p className="mt-1 text-caption text-muted-foreground">
           소재지 입력 후 조회 가능합니다
         </p>
       )}
       {pnu && !year && (
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <p className="mt-1 text-caption text-muted-foreground">
           평가/양도 연도 입력 후 조회 가능합니다
         </p>
       )}
       {pnu && year && disabled && (
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <p className="mt-1 text-caption text-muted-foreground">
           복합구조·기계식주차·공동주택 환산 모드는 직접 입력하세요
         </p>
       )}
@@ -132,10 +132,10 @@ export function BuildingRegisterLookupField({
         <p className="mt-1 text-xs text-destructive">{lookupError}</p>
       )}
       {summary && (
-        <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <p className="mt-1 flex items-center gap-1.5 text-caption text-muted-foreground">
           <span>{summary}</span>
           {confidence === "medium" && (
-            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-micro font-medium text-amber-700">
               확인 권장
             </span>
           )}

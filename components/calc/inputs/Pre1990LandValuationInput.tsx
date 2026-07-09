@@ -270,7 +270,7 @@ export function Pre1990LandValuationInput({
             />
           </div>
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             ※ 토지대장 및 부동산공시가격 알리미(realtyprice.kr)에서 조회 가능합니다.
             1990.1.1. 등급조정이 없었다면 직전 등급은 현재 등급과 동일하게 입력하세요.
           </p>
@@ -312,7 +312,7 @@ function GradeField({
         )}
       </div>
       {value && !preview && (
-        <p className="text-[11px] text-destructive">등급 범위 밖이거나 올바르지 않은 값입니다.</p>
+        <p className="text-caption text-destructive">등급 범위 밖이거나 올바르지 않은 값입니다.</p>
       )}
     </div>
   );

@@ -57,8 +57,8 @@ export function ComprehensiveFilingFormBuppyo5Sub({ result }: Props) {
       {/* 헤더 */}
       <div className="text-center mb-2">
         <p className="text-sm font-bold">{header.titleTemplate(year)}</p>
-        <p className="text-[10px] text-gray-500">{header.formCode} ({header.revised})</p>
-        <p className="text-[10px] text-amber-600">※ 주택만 기재 (토지 행은 빈칸)</p>
+        <p className="text-micro text-gray-500">{header.formCode} ({header.revised})</p>
+        <p className="text-micro text-amber-600">※ 주택만 기재 (토지 행은 빈칸)</p>
       </div>
 
       <div className="overflow-x-auto">
@@ -98,7 +98,7 @@ export function ComprehensiveFilingFormBuppyo5Sub({ result }: Props) {
               <td className={`border border-gray-300 ${BESSHI_CELL_LABEL}`}>
                 공제금액
                 {is1House && (
-                  <span className="ml-1 text-[10px] text-gray-500">(일반 / 1주택 병기)</span>
+                  <span className="ml-1 text-micro text-gray-500">(일반 / 1주택 병기)</span>
                 )}
               </td>
               <td
@@ -232,7 +232,7 @@ export function ComprehensiveFilingFormBuppyo5Sub({ result }: Props) {
               <td className={`border border-gray-300 ${BESSHI_CELL_NO}`}>⑪</td>
               <td className={`border border-gray-300 ${BESSHI_CELL_LABEL}`}>
                 1세대1주택자 세액공제액
-                <span className="ml-1 text-[10px] text-gray-500">
+                <span className="ml-1 text-micro text-gray-500">
                   ({fmtPct(d.oneHouseDeductionRate)} 적용)
                 </span>
               </td>

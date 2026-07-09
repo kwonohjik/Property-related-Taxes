@@ -88,7 +88,7 @@ function SectionBox({
     <div className={`rounded-lg border border-${tone}-200 bg-${tone}-50/40 p-4 space-y-3`}>
       <div className="flex items-center gap-2">
         <span
-          className={`flex h-5 w-5 items-center justify-center rounded-full bg-${tone}-200 text-[10px] font-bold text-${tone}-800 select-none`}
+          className={`flex h-5 w-5 items-center justify-center rounded-full bg-${tone}-200 text-micro font-bold text-${tone}-800 select-none`}
         >
           {n}
         </span>

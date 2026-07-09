@@ -125,7 +125,7 @@ export function YearColumn({
     <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2" onKeyDown={handleKeyDown} data-enter-nav="off">
       <p className="text-xs font-semibold text-sky-800">{COL_LABEL[col]} 사업연도</p>
 
-      <p className="text-[10px] font-semibold text-sky-700 mt-2">자산</p>
+      <p className="text-micro font-semibold text-sky-700 mt-2">자산</p>
       <FieldCard label="1. 재무상태표상 자산가액">
         <CurrencyInput label="" hideUnit value={getField(form, totalKey)}
           onChange={(v) => onChange({ [totalKey]: v } as Partial<StockTransferFormData>)}
@@ -146,7 +146,7 @@ export function YearColumn({
         </FieldCard>
       ))}
 
-      <p className="text-[10px] font-semibold text-sky-700 mt-3">부채</p>
+      <p className="text-micro font-semibold text-sky-700 mt-3">부채</p>
       <FieldCard label="8. 재무상태표상 부채액">
         <CurrencyInput label="" hideUnit value={getField(form, liabTotalKey)}
           onChange={(v) => onChange({ [liabTotalKey]: v } as Partial<StockTransferFormData>)}
@@ -192,7 +192,7 @@ export function PostListingNetAssetStatement({ form, onChange, mode }: PostListi
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
           3
         </span>
         <p className="text-xs font-semibold text-sky-700">

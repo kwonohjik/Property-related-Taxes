@@ -33,7 +33,7 @@ const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 const LAND_FIRST_DISCLOSURE_DATE = "1990-08-30";
 
 const LAW_BADGE_CLASS =
-  "inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium " +
+  "inline-flex items-center rounded px-1.5 py-0.5 text-caption font-medium " +
   "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
   "hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors shrink-0 whitespace-nowrap cursor-pointer";
 
@@ -284,7 +284,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
                     <p className="text-sm font-semibold">
                       {label}: {previewTotal.toLocaleString()}
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                    <p className="text-caption text-muted-foreground mt-0.5">
                       위 금액이 신고가액 필드에 자동 반영됩니다
                     </p>
                   </div>

@@ -63,8 +63,8 @@ interface Props {
   paymentInKindAmount?: number;
 }
 
-const HEAD = "border border-black p-1.5 bg-gray-100 dark:bg-gray-800 text-[11px] font-medium align-middle";
-const VAL = "border border-black p-1.5 text-[11px] font-mono align-middle";
+const HEAD = "border border-black p-1.5 bg-gray-100 dark:bg-gray-800 text-caption font-medium align-middle";
+const VAL = "border border-black p-1.5 text-caption font-mono align-middle";
 
 function chk(label: string, checked: boolean): string {
   return `${checked ? "[V]" : "[ ]"} ${label}`;
@@ -112,11 +112,11 @@ export function FilingForm9CoverSection({
         <div className="print:bg-white print:text-black">
           {/* 제목 */}
           <header className="mb-2 text-center">
-            <p className="text-[10px] text-slate-500">{FF9_FORM_SUBTITLE}</p>
+            <p className="text-micro text-slate-500">{FF9_FORM_SUBTITLE}</p>
             <p className="text-lg font-bold tracking-wide text-slate-900 dark:text-slate-50">
               {FF9_FORM_TITLE}
             </p>
-            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+            <p className="text-caption text-slate-600 dark:text-slate-300">
               {FF9_FILING_KINDS.map((k) => `[ ] ${k}`).join("   ")}
             </p>
           </header>
@@ -200,7 +200,7 @@ export function FilingForm9CoverSection({
           </div>
 
           {/* 확인 문구 + 서명란 */}
-          <div className="mt-3 space-y-2 text-[11px] text-slate-700 dark:text-slate-200">
+          <div className="mt-3 space-y-2 text-caption text-slate-700 dark:text-slate-200">
             <p>{FF9_CONFIRM_TEXT}</p>
             <p className="text-right">
               {data.filingDueDate ? `${data.filingDueDate}    ` : ""}신고인 (서명 또는 인)
@@ -210,7 +210,7 @@ export function FilingForm9CoverSection({
           </div>
 
           {/* 하단 제출서류 / 담당공무원 / 수수료 */}
-          <div className="mt-3 border border-black text-[10px]">
+          <div className="mt-3 border border-black text-micro">
             <div className="flex border-b border-black">
               <div className={`${HEAD} w-32 shrink-0`}>신청(신고)인 제출서류</div>
               <div className="p-1.5">
@@ -235,13 +235,13 @@ export function FilingForm9CoverSection({
           </div>
 
           {/* 행정정보 공동이용 동의서 */}
-          <div className="mt-2 border border-black p-2 text-[10px]">
+          <div className="mt-2 border border-black p-2 text-micro">
             <p className="text-center font-semibold">{FF9_CONSENT_TITLE}</p>
             <p className="mt-1 text-slate-700 dark:text-slate-300">{FF9_CONSENT_TEXT}</p>
             <p className="mt-1 text-right">신청인 (서명 또는 인)</p>
           </div>
 
-          <p className="mt-2 text-[10px] text-slate-500">
+          <p className="mt-2 text-micro text-slate-500">
             ※ 식별정보(성명·주민등록번호·주소 등)·납부방법 금액은 자동 산출되지 않습니다 — 인쇄 후 수기 작성.
           </p>
         </div>

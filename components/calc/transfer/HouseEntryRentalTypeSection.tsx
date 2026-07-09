@@ -74,7 +74,7 @@ export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
     <div className="space-y-3 pt-1">
       {/* 유형 선택 (가~자목) */}
       <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">
+        <label className="block text-caption text-muted-foreground font-medium">
           장기임대주택 유형 <span className="text-muted-foreground/60 font-normal">(미선택 시 등록임대 5년 단순 판정)</span>
         </label>
         <RadioCardGroup
@@ -93,7 +93,7 @@ export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
       {/* 선택 유형이 요구하는 필드만 조건부 노출 */}
       {fields.length > 0 && (
         <div className="space-y-2.5 rounded-md border border-violet-200/70 bg-violet-50/30 p-2.5">
-          <p className="text-[11px] text-violet-700/80">
+          <p className="text-caption text-violet-700/80">
             선택한 유형의 중과배제 요건 입력 — 미입력·미충족 시 주택 수에 산입됩니다.
           </p>
           {fields.map((key) => {
@@ -113,7 +113,7 @@ export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
             if (meta.kind === "area") {
               return (
                 <div key={key as string} className="space-y-1">
-                  <label className="block text-[11px] text-muted-foreground font-medium">
+                  <label className="block text-caption text-muted-foreground font-medium">
                     {meta.label} (㎡)
                   </label>
                   <DecimalInput
@@ -121,14 +121,14 @@ export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
                     onChange={(v) => setStr(key, v)}
                     placeholder={meta.label}
                   />
-                  {meta.hint && <p className="text-[11px] text-muted-foreground/70">{meta.hint}</p>}
+                  {meta.hint && <p className="text-caption text-muted-foreground/70">{meta.hint}</p>}
                 </div>
               );
             }
             if (meta.kind === "date") {
               return (
                 <div key={key as string} className="space-y-1">
-                  <label className="block text-[11px] text-muted-foreground font-medium">{meta.label}</label>
+                  <label className="block text-caption text-muted-foreground font-medium">{meta.label}</label>
                   <DateInput value={(house[key] as string) ?? ""} onChange={(v) => setStr(key, v)} />
                 </div>
               );

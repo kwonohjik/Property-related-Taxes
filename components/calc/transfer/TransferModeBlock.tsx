@@ -109,7 +109,7 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
   return (
     <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/70 p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-[10px] font-bold text-fuchsia-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-micro font-bold text-fuchsia-800 select-none">
           💎
         </span>
         <p className="text-sm font-semibold text-fuchsia-900">양도 정보</p>

@@ -89,7 +89,7 @@ export function DebtItemEditor({ item, heirs, onUpdate }: DebtItemEditorProps) {
       {/* 상속개시자료 요약 4표 — Table C 채권자/비고 (2026-05-28) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-md border border-slate-200 bg-slate-50/40 p-2">
         <div>
-          <label className="block text-[11px] font-medium text-slate-600 mb-1">
+          <label className="block text-caption font-medium text-slate-600 mb-1">
             채권자 주소 (Table C)
           </label>
           <input
@@ -103,7 +103,7 @@ export function DebtItemEditor({ item, heirs, onUpdate }: DebtItemEditorProps) {
           />
         </div>
         <div>
-          <label className="block text-[11px] font-medium text-slate-600 mb-1">
+          <label className="block text-caption font-medium text-slate-600 mb-1">
             채무 발생일 (Table C 비고)
           </label>
           <DateInput

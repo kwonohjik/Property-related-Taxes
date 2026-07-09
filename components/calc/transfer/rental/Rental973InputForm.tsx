@@ -71,7 +71,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
       {/* ① 등록·신분 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             ①
           </span>
           <p className="text-xs font-semibold text-violet-700">등록·신분</p>
@@ -138,7 +138,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
       {/* ② 임대 개시 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             ②
           </span>
           <p className="text-xs font-semibold text-violet-700">임대 개시 정보</p>
@@ -151,7 +151,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
             value={value.officialPriceAtStart}
             onChange={(v) => onChange({ officialPriceAtStart: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 (령 §97의3③4호)
           </p>
         </div>
@@ -192,7 +192,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
           <span className="font-mono font-medium text-emerald-900">{rentalDuration}</span>
         </div>
-        <p className="text-[10px] text-emerald-700">
+        <p className="text-micro text-emerald-700">
           ※ 2022.12.31 이전 등록분은 8년 이상 50%, 10년 이상 70%. 2023.1.1 이후 등록분은 10년 이상 70%만 적용됩니다.
           공실 차감 후 실제 유효임대기간은 엔진이 계산합니다.
         </p>

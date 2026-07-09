@@ -33,7 +33,7 @@ function ReportInstance({
 }) {
   return (
     <div className="mb-6 break-after-page last:break-after-auto">
-      <h3 className="mb-2 text-center text-[14px] font-bold text-black">
+      <h3 className="mb-2 text-center text-sm font-bold text-black">
         건물 기준시가 계산서 — {titleOverride ?? INSTANCE_TITLE[inst.markCell]}
       </h3>
       <ReportSection1Category markCell={markCellOverride ?? inst.markCell} dateLabel={inst.dateLabel} acqNoteLabel={inst.acqNoteLabel} />

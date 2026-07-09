@@ -52,7 +52,7 @@ function ReqRow({
         <span className={ok ? "" : "text-rose-700 dark:text-rose-300"}>
           {label}
         </span>
-        <span className="block text-[11px] text-gray-500">{detail}</span>
+        <span className="block text-caption text-gray-500">{detail}</span>
       </span>
     </div>
   );
@@ -138,7 +138,7 @@ export function PaymentInKindCard({
                 <span>▶ 허용한도 = min(①,②)</span>
                 <span className={amountCell}>{formatKRW(data.allowedLimit)}</span>
               </div>
-              <div className="flex justify-between text-[11px] text-gray-500">
+              <div className="flex justify-between text-caption text-gray-500">
                 <span>· 비상장주식 별도한도(§73④, 기준=과세가액)</span>
                 <span className={amountCell}>{formatKRW(data.unlistedStockCap)}</span>
               </div>
@@ -162,7 +162,7 @@ export function PaymentInKindCard({
                   <span>
                     {s.order} {s.label}
                     {s.note ? (
-                      <span className="text-[10px] text-amber-600"> ※{s.note}</span>
+                      <span className="text-micro text-amber-600"> ※{s.note}</span>
                     ) : null}
                   </span>
                   <span className={amountCell}>
@@ -175,7 +175,7 @@ export function PaymentInKindCard({
         )}
 
         {/* 경고·안내 */}
-        <div className={`space-y-1 text-[11px] text-gray-500 ${divider}`}>
+        <div className={`space-y-1 text-caption text-gray-500 ${divider}`}>
           <p>
             ※ 물납 신청은 상속세 신고기한까지(상속개시월 말일 + {filingMonths}개월).
           </p>

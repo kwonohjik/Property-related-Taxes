@@ -317,7 +317,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
       )}
 
       {/* ── 면책 고지 ── */}
-      <div className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-[11px] text-slate-400 leading-relaxed">
+      <div className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-caption text-slate-400 leading-relaxed">
         국외전출세는 2016.1.1. 도입 후 개정이 잦아 출국일 당시 시행 법령 확인이 필요합니다.
         본 계산 결과는 참고용이며 세무전문가 확인을 권장합니다.
       </div>

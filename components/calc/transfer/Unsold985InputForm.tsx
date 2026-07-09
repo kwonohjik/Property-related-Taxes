@@ -33,7 +33,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -55,7 +55,7 @@ export function Unsold985InputForm({ value, onChange }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
           <DateInput value={value.contractDate985} onChange={(v) => onChange({ contractDate985: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             2010.2.11 현재 수도권 밖 미분양주택을 2011.4.30까지 사업주체등과 최초 매매계약
             (계약금 납부 포함 — 법 §98의5①)
           </p>
@@ -69,7 +69,7 @@ export function Unsold985InputForm({ value, onChange }: Props) {
             value={value.priceReductionRatePct985}
             onChange={(v) => onChange({ priceReductionRatePct985: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             (최초 입주자 모집공고에 공시된 분양가격 − 실제 매매가격) ÷ 최초 공시 분양가격 × 100.
             10% 이하 = 감면율 60% / 10% 초과 20% 이하 = 80% / 20% 초과 = 100% (법 §98의5①각호)
           </p>
@@ -134,7 +134,7 @@ export function Unsold985InputForm({ value, onChange }: Props) {
         </div>
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 5년 이내 양도 시 양도소득세 × 인하율별 감면율을 감면하고, 5년 후 양도 시
           5년간 발생 양도소득금액 × 감면율을 공제합니다 (법 §98의5①).

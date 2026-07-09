@@ -46,7 +46,7 @@ export function OwnershipRatioInput({
       label="공유 지분율"
       trailing={
         fractional ? (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-800">
             지분 모드
           </span>
         ) : null

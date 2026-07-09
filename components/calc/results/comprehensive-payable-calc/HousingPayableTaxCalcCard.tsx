@@ -540,7 +540,7 @@ function Step5({
         {won(cap.capAmount)} = {won(cap.previousYearTotalTax)} × {pct(cap.capRate)}
       </Bullet>
       <p
-        className="py-0.5 text-[13px] leading-relaxed text-muted-foreground"
+        className="py-0.5 text-xs leading-relaxed text-muted-foreground"
         style={{ paddingLeft: `${2 * 14 + 18}px` }}
         data-testid="payable-step5-judgment"
       >

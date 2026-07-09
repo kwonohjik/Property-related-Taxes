@@ -104,7 +104,7 @@ export function ListedStockValuationPreviewCard({ item }: Props) {
       </div>
       {premiumExclusionLabel && (
         <div
-          className="text-[11px] text-amber-700 dark:text-amber-300"
+          className="text-caption text-amber-700 dark:text-amber-300"
           data-testid="ls-preview-premium-exclusion"
         >
           ※ 할증 배제 사유: {premiumExclusionLabel} (할증율 {premiumPctLabel})

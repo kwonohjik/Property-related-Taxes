@@ -203,7 +203,7 @@ export function Step1Basic() {
             label: String(y),
             trailing:
               y === currentYear ? (
-                <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-[10px] font-bold text-sky-800">
+                <span className="rounded-full bg-sky-200 px-1.5 py-0.5 text-micro font-bold text-sky-800">
                   현재
                 </span>
               ) : undefined,

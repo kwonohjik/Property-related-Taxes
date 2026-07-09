@@ -26,7 +26,7 @@ const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 const PRE_1990_DATE = "1990-08-30";
 
 const LAW_BADGE_CLASS =
-  "inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium " +
+  "inline-flex items-center rounded px-1.5 py-0.5 text-caption font-medium " +
   "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
   "hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors shrink-0 whitespace-nowrap cursor-pointer";
 
@@ -349,7 +349,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         />
       </FieldCard>
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-caption text-muted-foreground">
         취득가액 = max(① 상속세 신고가액, ③ 환산취득가). 환산취득가 = 양도가액 × (의제취득일 기준시가 ÷ 양도시 기준시가)
       </p>
     </div>

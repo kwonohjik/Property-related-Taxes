@@ -59,7 +59,7 @@ export function CasualtyLossSection({
       {/* ① 재난 정보 (sky 카드) */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
             1
           </span>
           <p className="text-xs font-semibold text-sky-700">재난 정보</p>
@@ -96,7 +96,7 @@ export function CasualtyLossSection({
       {/* ② 손실 산정 (rose 카드) */}
       <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">
             2
           </span>
           <p className="text-xs font-semibold text-rose-700">손실 산정</p>

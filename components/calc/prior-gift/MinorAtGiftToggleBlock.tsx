@@ -38,7 +38,7 @@ export function MinorAtGiftToggleBlock({
       new Date(heirBirthDate),
     );
     return (
-      <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+      <p className="text-caption text-emerald-600 dark:text-emerald-400">
         ⓘ 증여 당시 만 {ageAtGift}세 (자동 판정 — §53 공제 자동 적용).
         {ageAtGift < 19
           ? " 미성년 직계존속 공제 2천만 원 적용."

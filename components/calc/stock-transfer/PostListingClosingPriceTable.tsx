@@ -170,7 +170,7 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
           1
         </span>
         <p className="text-xs font-semibold text-emerald-700">
@@ -197,7 +197,7 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
                       {idx + 1}. {displayDates[idx] || "-"}
                     </span>
                     {isWeekend ? (
-                      <div className="rounded-md border border-emerald-200/60 bg-emerald-100/40 px-3 py-2 text-[11px] text-emerald-700 select-none">
+                      <div className="rounded-md border border-emerald-200/60 bg-emerald-100/40 px-3 py-2 text-caption text-emerald-700 select-none">
                         {weekendLabel} · 거래일 제외
                       </div>
                     ) : (

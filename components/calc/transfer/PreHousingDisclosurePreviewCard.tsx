@@ -164,7 +164,7 @@ export function PreHousingDisclosurePreviewCard({ transferPrice, phdInput }: Pro
         <Row label="건물 개산공제" value={formatKRW(result.buildingLumpDeduction)} sub />
       </div>
 
-      <p className="text-[10px] text-muted-foreground pt-1 border-t border-border mt-1">
+      <p className="text-micro text-muted-foreground pt-1 border-t border-border mt-1">
         * 이 금액은 입력값 기반 추정이며, 최종 계산은 &apos;계산하기&apos; 버튼 클릭 후 확정됩니다.
       </p>
     </div>

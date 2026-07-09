@@ -150,7 +150,7 @@ export function FamilyBusinessCategorySection({
             options={options}
             onChange={(v) => onUpdate({ ...item, familyBusinessCategory: v })}
           />
-          <p className="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/30 rounded p-2">
+          <p className="text-micro text-amber-700 dark:text-amber-300 bg-amber-100/60 dark:bg-amber-900/30 rounded p-2">
             ⓘ {FB_CATEGORY_OPTIONS.find((o) => o.value === item.familyBusinessCategory)?.description}
           </p>
         </div>

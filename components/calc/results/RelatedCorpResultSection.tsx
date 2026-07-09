@@ -109,7 +109,7 @@ export function RelatedCorpResultSection({ result }: { result: DeemedGiftResult 
         <p className="text-xs font-semibold text-amber-800">보유비율 산출 내역 (직접·간접 raw)</p>
         <table className="mt-1 w-full text-xs">
           <thead>
-            <tr className="text-[11px] text-muted-foreground">
+            <tr className="text-caption text-muted-foreground">
               <th className="text-left">수증자</th>
               <th className="text-right">직접보유 raw</th>
               <th className="text-right">간접보유 raw</th>
@@ -133,12 +133,12 @@ export function RelatedCorpResultSection({ result }: { result: DeemedGiftResult 
             ))}
           </tbody>
         </table>
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <p className="mt-1 text-caption text-muted-foreground">
           간접이익=0은 &quot;미작동&quot;이 아닙니다. 간접보유 전부를 한계보유비율 차감에 우선 사용하여 직접이익에 산입합니다 (§34의3⑬).
         </p>
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-caption text-muted-foreground">
         ※ 교재는 거래비율차감후 8.33% 반올림 적용 시 갑 직접이익을 20,510,000원대로 표시. 본 시스템은 정확분수(1/12) 정수연산으로 20,520,000원 산출.
       </p>
     </div>

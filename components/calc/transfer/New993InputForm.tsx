@@ -46,7 +46,7 @@ export function New993InputForm({
       {/* Round 9 정정 (2026-05-06): 1호(주건업) 시한 기준은 상단 "매매계약일"을 재사용. 본 폼에서는 입력 X. */}
       {value.acquisitionType993 === "from_builder" && (
         <div className="rounded-md border border-dashed border-primary/40 bg-primary/10 px-2.5 py-1.5">
-          <p className="text-[10px] text-primary leading-relaxed">
+          <p className="text-micro text-primary leading-relaxed">
             ℹ️ 1호 매매계약일은 <strong>상단 펼침 영역의 &ldquo;매매계약일 (분양/매매)&rdquo;</strong>을 사용합니다.
             §99의3 시한 판정 + 고가주택 적용기준일이 동일하게 처리됩니다.
           </p>
@@ -98,32 +98,32 @@ export function New993InputForm({
           <div>
             <label className="mb-1 block text-xs font-medium">사용승인일</label>
             <DateInput value={value.usageApprovalDate993 ?? ""} onChange={(v) => onUpdate("usageApprovalDate993", v)} />
-            <p className="mt-1 text-[10px] text-muted-foreground">2001.5.23~2003.6.30 시한</p>
+            <p className="mt-1 text-micro text-muted-foreground">2001.5.23~2003.6.30 시한</p>
           </div>
         )}
 
         <div>
           <label className="mb-1 block text-xs font-medium">취득시 기준시가 (원)</label>
           <CurrencyInput label="" value={value.standardPriceAtAcquisition993} onChange={(v) => onUpdate("standardPriceAtAcquisition993", v)} />
-          <p className="mt-1 text-[10px] text-muted-foreground">최초고시 전 취득 시 아래 PHD 환산 자동 적용 가능</p>
+          <p className="mt-1 text-micro text-muted-foreground">최초고시 전 취득 시 아래 PHD 환산 자동 적용 가능</p>
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium">5년 시점 기준시가 (원)</label>
           <CurrencyInput label="" value={value.standardPriceAt5Years} onChange={(v) => onUpdate("standardPriceAt5Years", v)} />
-          <p className="mt-1 text-[10px] text-muted-foreground">취득일 + 5년 시점 인접 고시일 가격</p>
+          <p className="mt-1 text-micro text-muted-foreground">취득일 + 5년 시점 인접 고시일 가격</p>
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium">양도시 기준시가 (원, 선택)</label>
           <CurrencyInput label="" value={value.standardPriceAtTransfer993 ?? ""} onChange={(v) => onUpdate("standardPriceAtTransfer993", v)} />
-          <p className="mt-1 text-[10px] text-muted-foreground">미입력 시 자산의 양도시 기준시가 사용</p>
+          <p className="mt-1 text-micro text-muted-foreground">미입력 시 자산의 양도시 기준시가 사용</p>
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
           <DecimalInput value={value.exclusiveAreaSqm993} onChange={(v) => onUpdate("exclusiveAreaSqm993", v)} />
-          <p className="mt-1 text-[10px] text-muted-foreground">2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
+          <p className="mt-1 text-micro text-muted-foreground">2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
 
@@ -197,7 +197,7 @@ export function New993InputForm({
         />
       </div>
 
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-micro text-muted-foreground">
         ※ 5년 내 양도 = 양도소득금액 전액 차감 / 5년 후 양도 = 5년 안분 산식 적용
       </p>
     </div>

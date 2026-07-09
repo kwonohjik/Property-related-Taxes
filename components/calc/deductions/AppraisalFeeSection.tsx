@@ -21,7 +21,7 @@ interface AppraisalFeeSectionProps {
 
 const subCardClass =
   "space-y-2 rounded-md border border-sky-200 bg-sky-50/40 p-2 dark:border-sky-900 dark:bg-sky-950/20";
-const subTitleClass = "text-[11px] font-semibold text-sky-700 dark:text-sky-300";
+const subTitleClass = "text-caption font-semibold text-sky-700 dark:text-sky-300";
 
 export function AppraisalFeeSection({
   taxType,
@@ -37,7 +37,7 @@ export function AppraisalFeeSection({
       <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
         감정평가수수료 공제 ({lawLabel})
       </p>
-      <p className="text-[11px] text-violet-600/80 dark:text-violet-400/80">
+      <p className="text-caption text-violet-600/80 dark:text-violet-400/80">
         재산 평가에 든 감정평가 수수료를 과세표준에서 공제합니다. 해당 항목만 입력하세요(미입력 시 0).
       </p>
 

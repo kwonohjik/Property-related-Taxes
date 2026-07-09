@@ -153,20 +153,20 @@ export function NetAssetCalculationTable({
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">{sectionNum}</span>
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">{sectionNum}</span>
         <p className="text-xs font-semibold text-violet-700">
           순자산가액 (별지 2~3쪽 + §55·§17의2){" "}
           <LawArticleModal legalBasis="상증령 §55" label="§55" />{" "}
           <LawArticleModal legalBasis="상증규 §17의2" label="규§17의2" />
         </p>
       </div>
-      <p className="text-[11px] text-violet-700/80">
+      <p className="text-caption text-violet-700/80">
         자산총액 ⑧ − 부채총액 ⑲ = 다.영업권 포함 전 순자산가액 (§55① 후단 — 0 이하 시 0)
       </p>
 
       {/* 자산총액 표 */}
       <div className="rounded border border-emerald-200 bg-emerald-50/60 p-2 space-y-1">
-        <p className="text-[11px] font-semibold text-emerald-800">가. 자산총액</p>
+        <p className="text-caption font-semibold text-emerald-800">가. 자산총액</p>
         {ASSET_ROWS.map((row) => {
           // ② 평가차액은 행 단위 입력(4번 표) 활성 시 read-only + 보정값 표시 (dual-truth 방지)
           const isDeltaRowLocked = row.key === "assetValuationDelta" && isDeltaRowMode;
@@ -175,16 +175,16 @@ export function NetAssetCalculationTable({
             : netAssetValueRaw[row.key];
           return (
             <div key={row.key} className="grid grid-cols-[16rem_1fr] items-center gap-2 py-0.5">
-              <div className="text-[11px]">
+              <div className="text-caption">
                 <span className={`font-mono ${row.sign === "+" ? "text-emerald-700" : "text-rose-700"}`}>
                   {row.cellNum} {row.sign}
                 </span>{" "}
                 {row.label}
                 {row.description && (
-                  <span className="block text-[10px] text-gray-500">({row.description})</span>
+                  <span className="block text-micro text-gray-500">({row.description})</span>
                 )}
                 {isDeltaRowLocked && (
-                  <span className="block text-[10px] text-emerald-700">
+                  <span className="block text-micro text-emerald-700">
                     ④ 평가차액 표(자산 합 − 부채 합)에서 자동 계산
                   </span>
                 )}
@@ -201,7 +201,7 @@ export function NetAssetCalculationTable({
             </div>
           );
         })}
-        <div className="border-t border-emerald-300 pt-1 mt-1 flex justify-between text-[11px] font-bold text-emerald-900">
+        <div className="border-t border-emerald-300 pt-1 mt-1 flex justify-between text-caption font-bold text-emerald-900">
           <span>⑧ 자산총액 소계</span>
           <span className="font-mono">{totalAssets.toLocaleString()}원</span>
         </div>
@@ -209,16 +209,16 @@ export function NetAssetCalculationTable({
 
       {/* 부채총액 표 */}
       <div className="rounded border border-rose-200 bg-rose-50/60 p-2 space-y-1">
-        <p className="text-[11px] font-semibold text-rose-800">나. 부채총액</p>
+        <p className="text-caption font-semibold text-rose-800">나. 부채총액</p>
         {LIABILITY_ROWS.map((row) => (
           <div key={row.key} className="grid grid-cols-[16rem_1fr] items-center gap-2 py-0.5">
-            <div className="text-[11px]">
+            <div className="text-caption">
               <span className={`font-mono ${row.sign === "+" ? "text-rose-700" : "text-emerald-700"}`}>
                 {row.cellNum} {row.sign}
               </span>{" "}
               {row.label}
               {row.description && (
-                <span className="block text-[10px] text-gray-500">({row.description})</span>
+                <span className="block text-micro text-gray-500">({row.description})</span>
               )}
             </div>
             <CurrencyInput
@@ -231,7 +231,7 @@ export function NetAssetCalculationTable({
             />
           </div>
         ))}
-        <div className="border-t border-rose-300 pt-1 mt-1 flex justify-between text-[11px] font-bold text-rose-900">
+        <div className="border-t border-rose-300 pt-1 mt-1 flex justify-between text-caption font-bold text-rose-900">
           <span>⑲ 부채총액 소계</span>
           <span className="font-mono">{totalLiabilities.toLocaleString()}원</span>
         </div>
@@ -248,13 +248,13 @@ export function NetAssetCalculationTable({
         variant="card"
       >
         <div className="space-y-1.5">
-          <p className="text-[11px] text-violet-700/80">
+          <p className="text-caption text-violet-700/80">
             ※ 일반 충당금 ⑮ (§17의2 4호 단서 가)는 모든 법인 적용. 본 토글은 보험사업법인·보험회사에 한정 적용.
           </p>
           <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
-            <div className="text-[11px]">
+            <div className="text-caption">
               <span className="font-mono text-violet-700">+ 책임준비금</span>
-              <span className="block text-[10px] text-gray-500">(법인세법 §30① / 보험업법 §120 — §17의2 4호 단서 나·다)</span>
+              <span className="block text-micro text-gray-500">(법인세법 §30① / 보험업법 §120 — §17의2 4호 단서 나·다)</span>
             </div>
             <CurrencyInput
               label="책임준비금"
@@ -266,9 +266,9 @@ export function NetAssetCalculationTable({
             />
           </div>
           <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
-            <div className="text-[11px]">
+            <div className="text-caption">
               <span className="font-mono text-violet-700">+ 비상위험준비금</span>
-              <span className="block text-[10px] text-gray-500">(법인세법 §31① — §17의2 4호 단서 나·다)</span>
+              <span className="block text-micro text-gray-500">(법인세법 §31① — §17의2 4호 단서 나·다)</span>
             </div>
             <CurrencyInput
               label="비상위험준비금"
@@ -280,9 +280,9 @@ export function NetAssetCalculationTable({
             />
           </div>
           <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
-            <div className="text-[11px]">
+            <div className="text-caption">
               <span className="font-mono text-violet-700">+ 해약환급금준비금</span>
-              <span className="block text-[10px] text-gray-500">(법인세법 §32① — §17의2 4호 단서 다, 보험회사 한정)</span>
+              <span className="block text-micro text-gray-500">(법인세법 §32① — §17의2 4호 단서 다, 보험회사 한정)</span>
             </div>
             <CurrencyInput
               label="해약환급금준비금"
@@ -299,8 +299,8 @@ export function NetAssetCalculationTable({
       {/* 영업권 포함 전 순자산가액 */}
       <div className="rounded border-2 border-violet-400 bg-violet-100/80 p-3 flex justify-between items-center">
         <div>
-          <p className="text-[11px] font-bold text-violet-900">다. 영업권 포함 전 순자산가액</p>
-          <p className="text-[10px] text-violet-700">= 자산총액 ⑧ − 부채총액 ⑲ {netAssetBeforeGoodwill === 0 && totalAssets - totalLiabilities < 0 && "(§55① 후단 — 0 이하 → 0)"}</p>
+          <p className="text-caption font-bold text-violet-900">다. 영업권 포함 전 순자산가액</p>
+          <p className="text-micro text-violet-700">= 자산총액 ⑧ − 부채총액 ⑲ {netAssetBeforeGoodwill === 0 && totalAssets - totalLiabilities < 0 && "(§55① 후단 — 0 이하 → 0)"}</p>
         </div>
         <span className="font-mono text-sm font-bold text-violet-900">
           {netAssetBeforeGoodwill.toLocaleString()}원

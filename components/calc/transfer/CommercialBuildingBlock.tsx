@@ -106,7 +106,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {hasEra && (
           <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
                 1
               </span>
               <p className="text-xs font-semibold text-sky-700">면적 정보 (㎡)</p>
@@ -156,7 +156,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {hasEra && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
                 2
               </span>
               <p className="text-xs font-semibold text-emerald-700">호별 ㎡당 고시가 (원/㎡)</p>
@@ -205,7 +205,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {isPreDisclosure && (
           <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
                 3
               </span>
               <p className="text-xs font-semibold text-amber-700">건물 기준시가 — 3시점 (원, 총액)</p>
@@ -267,7 +267,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {hasEra && (
           <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
                 {isPreDisclosure ? "4" : "3"}
               </span>
               <p className="text-xs font-semibold text-amber-700">개별공시지가 — {isPreDisclosure ? "3시점" : "2시점"} (원/㎡)</p>
@@ -275,7 +275,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
 
             {/* 취득시 — amber (공통 필수) */}
             <div>
-              <p className="mb-1 text-[11px] font-medium text-amber-700">취득시</p>
+              <p className="mb-1 text-caption font-medium text-amber-700">취득시</p>
               <LandPriceLookupField
                 label="취득시 개별공시지가"
                 pricePerSqm={asset.cbLandPricePerSqmAtAcq}
@@ -289,7 +289,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             {/* 최초고시시(2005) — amber (pre_disclosure 시만 필수) */}
             {isPreDisclosure && (
               <div>
-                <p className="mb-1 text-[11px] font-medium text-amber-700">최초고시시(2005)</p>
+                <p className="mb-1 text-caption font-medium text-amber-700">최초고시시(2005)</p>
                 <LandPriceLookupField
                   label="최초고시시(2005) 개별공시지가"
                   pricePerSqm={asset.cbLandPricePerSqmAtFirst}
@@ -303,7 +303,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
 
             {/* 양도시 — emerald (공통 필수) */}
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
-              <p className="mb-1 text-[11px] font-medium text-emerald-700">양도시</p>
+              <p className="mb-1 text-caption font-medium text-emerald-700">양도시</p>
               <LandPriceLookupField
                 label="양도시 개별공시지가"
                 pricePerSqm={asset.cbLandPricePerSqmAtTransfer}

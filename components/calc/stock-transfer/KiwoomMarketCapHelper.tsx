@@ -167,10 +167,10 @@ export function KiwoomMarketCapHelper({
             </p>
           </div>
           <div className="rounded border border-emerald-300 bg-white p-2 space-y-1.5">
-            <p className="text-[10px] text-emerald-700 border-b border-emerald-100 pb-1">
+            <p className="text-micro text-emerald-700 border-b border-emerald-100 pb-1">
               시총 산식 검증 (시행령 §157①)
             </p>
-            <div className="space-y-0.5 font-mono text-[11px]">
+            <div className="space-y-0.5 font-mono text-caption">
               <div className="flex justify-between">
                 <span>종가 × 본인 단독 보유 주식수</span>
                 <span className="tabular-nums">
@@ -190,7 +190,7 @@ export function KiwoomMarketCapHelper({
               )}
             </div>
             {isLargestShareholderGroup && (
-              <div className="space-y-0.5 font-mono text-[11px] pt-1 border-t border-emerald-100">
+              <div className="space-y-0.5 font-mono text-caption pt-1 border-t border-emerald-100">
                 <div className="flex justify-between">
                   <span>종가 × 합산 보유 주식수</span>
                   <span className="tabular-nums">

@@ -113,10 +113,10 @@ export function ShortTermReinheritSection({
 
           {/* 재상속분 재산 목록 (재산별 구분) */}
           <div className="rounded-md border border-sky-100 bg-white/60 p-2.5 space-y-2">
-            <p className="text-[11px] font-semibold text-sky-700">
+            <p className="text-caption font-semibold text-sky-700">
               재상속분 재산 (재산별 구분 — 집행 30-22-1②)
             </p>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="text-caption text-gray-500 dark:text-gray-400">
               피상속인이 1차에서 받아 다시 상속되는 재산을 종류별로 입력. 가액은{" "}
               <b>1차 상속 당시 평가액</b>(2차 평가액 아님).
             </p>

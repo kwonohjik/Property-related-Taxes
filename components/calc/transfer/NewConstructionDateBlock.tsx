@@ -67,7 +67,7 @@ export function NewConstructionDateBlock({
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
       {/* 섹션 헤더 */}
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
           §
         </span>
         <p className="text-xs font-semibold text-amber-700">
@@ -75,7 +75,7 @@ export function NewConstructionDateBlock({
         </p>
       </div>
 
-      <p className="text-[11px] text-amber-600 leading-relaxed">
+      <p className="text-caption text-amber-600 leading-relaxed">
         자가건축 주택의 취득일은 사용승인일·사용검사필증 교부일·임시사용승인일·사실상 사용일 중
         <strong> 가장 이른 날</strong>을 기준으로 합니다.
       </p>
@@ -83,7 +83,7 @@ export function NewConstructionDateBlock({
       {/* ① 사용승인일 — 필수 */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             ①
           </span>
           <p className="text-xs font-semibold text-amber-700">사용승인일 (필수)</p>
@@ -104,7 +104,7 @@ export function NewConstructionDateBlock({
       {/* ② 사용검사필증 교부일 — 선택 (G-5) */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             ②
           </span>
           <p className="text-xs font-semibold text-amber-700">사용검사필증 교부일 (선택)</p>
@@ -124,7 +124,7 @@ export function NewConstructionDateBlock({
       {/* ③ 임시사용승인일 — 선택 */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             ③
           </span>
           <p className="text-xs font-semibold text-amber-700">임시사용승인일 (선택)</p>
@@ -144,7 +144,7 @@ export function NewConstructionDateBlock({
       {/* ④ 사실상 사용일 — 선택 */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             ④
           </span>
           <p className="text-xs font-semibold text-amber-700">사실상 사용일 (선택)</p>
@@ -162,7 +162,7 @@ export function NewConstructionDateBlock({
       </div>
 
       {/* 자동 판정 안내 박스 */}
-      <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-[11px] text-amber-800 space-y-0.5">
+      <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-caption text-amber-800 space-y-0.5">
         <p className="font-semibold">자동 취득일 판정:</p>
         {earliest ? (
           <p>

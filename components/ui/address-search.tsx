@@ -266,7 +266,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
                       <span className="font-medium">{r.road || r.jibun}</span>
                       {r.road && r.jibun && (
                         <span className="text-xs text-muted-foreground">
-                          <span className="inline-block rounded bg-muted px-1.5 py-0.5 mr-1 text-[10px] font-medium">
+                          <span className="inline-block rounded bg-muted px-1.5 py-0.5 mr-1 text-micro font-medium">
                             지번
                           </span>
                           {r.jibun}
@@ -298,7 +298,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
             <div className="space-y-0.5">
               {value.road && (
                 <p>
-                  <span className="inline-block rounded bg-primary/10 px-1.5 py-0.5 mr-1 text-[10px] font-semibold text-primary">
+                  <span className="inline-block rounded bg-primary/10 px-1.5 py-0.5 mr-1 text-micro font-semibold text-primary">
                     도로명
                   </span>
                   <span className="font-medium">{value.road}</span>
@@ -306,7 +306,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
               )}
               {value.jibun && (
                 <p className="text-xs text-muted-foreground">
-                  <span className="inline-block rounded bg-muted px-1.5 py-0.5 mr-1 text-[10px] font-medium">
+                  <span className="inline-block rounded bg-muted px-1.5 py-0.5 mr-1 text-micro font-medium">
                     지번
                   </span>
                   {value.jibun}
@@ -508,7 +508,7 @@ function HoSelector({
                   key={floor}
                   ref={(el) => { floorRefs.current[floor] = el; }}
                 >
-                  <div className="px-3 py-0.5 text-[10px] font-semibold text-muted-foreground bg-muted/50 sticky top-0">
+                  <div className="px-3 py-0.5 text-micro font-semibold text-muted-foreground bg-muted/50 sticky top-0">
                     {floor}
                   </div>
                   {floorGroups[floor].map((ho) => (
@@ -534,7 +534,7 @@ function HoSelector({
                   key={floor}
                   type="button"
                   onClick={() => scrollToFloor(floor)}
-                  className="px-1 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-center leading-tight"
+                  className="px-1 py-0.5 text-micro text-muted-foreground hover:text-foreground hover:bg-accent transition-colors text-center leading-tight"
                 >
                   {floor.replace("층", "")}
                 </button>

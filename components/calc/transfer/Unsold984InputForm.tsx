@@ -42,7 +42,7 @@ export function Unsold984InputForm({ value, onChange }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">매매계약일 (선택)</label>
           <DateInput value={value.contractDate984} onChange={(v) => onChange({ contractDate984: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             취득기간 2009.3.16~2010.2.11 — 자산의 취득일이 기간 내이면 비워 두어도 됩니다.
             2010.2.11까지 매매계약 체결 + 계약금 납부한 경우 포함 (법 §98의4)
           </p>
@@ -60,7 +60,7 @@ export function Unsold984InputForm({ value, onChange }: Props) {
         />
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>· 적용 효과: 양도소득세의 100분의 10에 상당하는 세액을 감면합니다 (5년 구분 없음 — 법 §98의4).</p>
         <p>· 농어촌특별세: 감면세액의 20%가 부과됩니다 (농어촌특별세법 §5).</p>
         <p>

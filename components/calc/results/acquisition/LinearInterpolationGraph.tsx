@@ -87,7 +87,7 @@ export function LinearInterpolationGraph({ acquisitionValue, appliedRate }: Prop
         />
 
         {/* 좌측 라벨: 6억 / 1% */}
-        <text x={PAD_L} y={BAR_Y - 8} className="fill-muted-foreground text-[10px]" fontSize={10} textAnchor="middle">
+        <text x={PAD_L} y={BAR_Y - 8} className="fill-muted-foreground text-micro" fontSize={10} textAnchor="middle">
           6억
         </text>
         <text x={PAD_L} y={H - 4} className="fill-muted-foreground" fontSize={9} textAnchor="middle">
@@ -126,7 +126,7 @@ export function LinearInterpolationGraph({ acquisitionValue, appliedRate }: Prop
       </div>
 
       {/* 산식 풀이 */}
-      <div className="text-[11px] text-muted-foreground space-y-0.5 font-mono bg-muted/30 rounded p-2">
+      <div className="text-caption text-muted-foreground space-y-0.5 font-mono bg-muted/30 rounded p-2">
         <p>세율 = (취득가액 × 2 ÷ 3억 − 3) ÷ 100</p>
         <p>
           = ({numeratorStr} − 3) ÷ 100
@@ -138,7 +138,7 @@ export function LinearInterpolationGraph({ acquisitionValue, appliedRate }: Prop
       </div>
 
       {/* 경계값 안내 */}
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-micro text-muted-foreground">
         6억 정확히 → 1%, 9억 정확히 → 3% (경계값 직접 매핑, 보간 미적용)
       </p>
     </div>

@@ -91,7 +91,7 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
           <p className="text-xs font-semibold text-foreground mb-1">§168의11② 수입금액비율</p>
           <p className="text-xs text-muted-foreground">{judgment.revenueTestDetail.detail}</p>
           {judgment.revenueTestDetail.annualizationApplied && (
-            <div className="mt-1.5 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2.5 py-1.5 text-[11px] text-amber-800 dark:text-amber-200 space-y-0.5">
+            <div className="mt-1.5 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2.5 py-1.5 text-caption text-amber-800 dark:text-amber-200 space-y-0.5">
               <p className="font-medium">§168의11③3호 연환산 적용</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
                 {judgment.revenueTestDetail.currentBusinessDays !== undefined && (
@@ -118,7 +118,7 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
             </div>
           )}
           {(judgment.revenueTestDetail.deemedRentCurrent > 0 || judgment.revenueTestDetail.deemedRentPrior > 0) && (
-            <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-[11px] text-violet-800 dark:text-violet-200 space-y-0.5">
+            <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-caption text-violet-800 dark:text-violet-200 space-y-0.5">
               <p className="font-medium">§168의11③1호 간주임대료 합산</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
                 <span>당해 간주임대료</span>
@@ -133,7 +133,7 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
             </div>
           )}
           {(judgment.revenueTestDetail.commonApportionedCurrent > 0 || judgment.revenueTestDetail.commonApportionedPrior > 0) && (
-            <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-[11px] text-violet-800 dark:text-violet-200 space-y-0.5">
+            <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-caption text-violet-800 dark:text-violet-200 space-y-0.5">
               <p className="font-medium">§168의11③2호 공통수입 안분</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
                 <span>당해 안분액</span>
@@ -148,7 +148,7 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
             </div>
           )}
           {judgment.revenueTestDetail.deemedRateUnavailable && (
-            <p className="mt-1.5 text-[11px] text-rose-600 dark:text-rose-400">
+            <p className="mt-1.5 text-caption text-rose-600 dark:text-rose-400">
               ⚠️ 전세금·보증금이 입력되었으나 해당 과세연도의 정기예금이자율(부가세칙 §47)이 미등재되어 간주임대료를 적용하지 못했습니다. 해당 연도 율 확인이 필요합니다.
             </p>
           )}
@@ -209,8 +209,8 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
           </div>
           {area.contiguousNblDetail && area.contiguousNblDetail.length > 0 && (
             <div className="mt-3 rounded-md border border-border/60 overflow-hidden">
-              <p className="text-[11px] font-medium text-muted-foreground px-2 py-1 bg-muted/30">§168의11⑤ 연접 다필지 — 취득시기순 비사업용 귀속</p>
-              <table className="w-full text-[11px]">
+              <p className="text-caption font-medium text-muted-foreground px-2 py-1 bg-muted/30">§168의11⑤ 연접 다필지 — 취득시기순 비사업용 귀속</p>
+              <table className="w-full text-caption">
                 <thead>
                   <tr className="text-muted-foreground border-b border-border/60">
                     <th className="text-left font-medium px-2 py-1">필지</th>
@@ -232,7 +232,7 @@ export function NonBusinessLandResultCard({ judgment }: Props) {
               </table>
             </div>
           )}
-          <p className="text-[11px] text-muted-foreground mt-2 leading-snug">
+          <p className="text-caption text-muted-foreground mt-2 leading-snug">
             비사업용 면적분(전체의 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다. (기준면적 초과분 — 목장 §168의10③·기타토지 §168의11①, 건축물 바닥면적 외 부속토지 §101①2호나목, 복합용도 건축물 §168의11⑥, 연접 다필지 §168의11⑤.)
           </p>
         </div>
@@ -315,7 +315,7 @@ function StepItem({ step }: { step: JudgmentStep }) {
         </div>
         <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{step.detail}</p>
         {step.legalBasis && (
-          <span className="inline-block mt-1 text-[10px] text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5">{step.legalBasis}</span>
+          <span className="inline-block mt-1 text-micro text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5">{step.legalBasis}</span>
         )}
       </div>
     </li>

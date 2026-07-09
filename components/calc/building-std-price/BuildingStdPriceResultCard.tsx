@@ -36,7 +36,7 @@ function BreakdownCard({ title, tone, bd, floorArea, sameYearBadge }: CardProps)
       <div className="flex items-center justify-between">
         <h3 className={`text-sm font-bold ${t.head}`}>{title}</h3>
         {sameYearBadge && (
-          <span className="rounded-full bg-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-800">
+          <span className="rounded-full bg-rose-200 px-2 py-0.5 text-caption font-semibold text-rose-800">
             §164⑧ 환산 적용
           </span>
         )}
@@ -116,7 +116,7 @@ export function BuildingStdPriceResultCard({ result, floorArea }: Props) {
         />
       )}
       <BuildingStdPriceAdvancedResult result={result} />
-      <p className="text-[11px] leading-relaxed text-slate-400">{result.legalBasis}</p>
+      <p className="text-caption leading-relaxed text-slate-400">{result.legalBasis}</p>
       {result.warnings.map((w, i) => (
         <p key={i} className="text-xs text-amber-700">
           ⚠️ {w}

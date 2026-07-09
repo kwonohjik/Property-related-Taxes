@@ -34,7 +34,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -81,19 +81,19 @@ export function Unsold983InputForm({ value, onChange }: Props) {
             <div>
               <label className="mb-1 block text-xs font-medium">착공일</label>
               <DateInput value={value.constructionStartDate983} onChange={(v) => onChange({ constructionStartDate983: v })} />
-              <p className="mt-1 text-[10px] text-muted-foreground">착공일이 불분명하면 착공신고서 제출일 (법 §98의3②)</p>
+              <p className="mt-1 text-micro text-muted-foreground">착공일이 불분명하면 착공신고서 제출일 (법 §98의3②)</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium">사용승인·사용검사일 (임시사용승인 포함)</label>
               <DateInput value={value.usageApprovalDate983} onChange={(v) => onChange({ usageApprovalDate983: v })} />
-              <p className="mt-1 text-[10px] text-muted-foreground">착공일과 사용승인일 모두 2009.2.12~2010.2.11 기간 내</p>
+              <p className="mt-1 text-micro text-muted-foreground">착공일과 사용승인일 모두 2009.2.12~2010.2.11 기간 내</p>
             </div>
           </>
         ) : (
           <div>
             <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
             <DateInput value={value.contractDate983} onChange={(v) => onChange({ contractDate983: v })} />
-            <p className="mt-1 text-[10px] text-muted-foreground">
+            <p className="mt-1 text-micro text-muted-foreground">
               2010.2.11까지 매매계약 체결 + 계약금 납부한 경우 포함 (법 §98의3①)
             </p>
           </div>
@@ -199,7 +199,7 @@ export function Unsold983InputForm({ value, onChange }: Props) {
         </div>
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 5년 이내 양도 시 양도소득세 100%(수도권과밀억제권역 60%)를 감면하고, 5년 후
           양도 시 5년간 발생 양도소득금액(과밀은 그 60%)을 공제합니다 (법 §98의3①).

@@ -29,7 +29,7 @@ import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 // ── 법령 배지 ────────────────────────────────────────────────────
 function LegalBadge({ text }: { text: string }) {
   return (
-    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
       {text}
     </span>
   );
@@ -90,7 +90,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
       {/* ① 증여 기본 정보 */}
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
         <div className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">1</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">1</span>
           <p className="text-xs font-semibold text-amber-700">증여 기본 정보</p>
         </div>
 
@@ -131,7 +131,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
       {/* ② 증여자 취득가액 */}
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
         <div className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">2</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">2</span>
           <p className="text-xs font-semibold text-amber-700">증여자 취득가액</p>
         </div>
 
@@ -179,7 +179,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
       {/* ③ 필요경비 가산 */}
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
         <div className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">3</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">3</span>
           <p className="text-xs font-semibold text-amber-700">필요경비 가산</p>
         </div>
 
@@ -218,7 +218,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
       {/* ④ 비교과세 기준 — Scenario B 취득가 */}
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
         <div className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">4</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">4</span>
           <p className="text-xs font-semibold text-amber-700">비교과세 기준 (미적용 시나리오)</p>
         </div>
 

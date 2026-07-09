@@ -32,7 +32,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">매매계약일 (선택)</label>
           <DateInput value={value.contractDate98} onChange={(v) => onChange({ contractDate98: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             취득기간 ① 1995.11.1~1997.12.31 / ③ 1998.3.1~1998.12.31 — 자산 취득일이 기간 내이면
             비워 두어도 됩니다 (시한 내 계약 + 계약금 납부한 경우 포함, 법 §98①·③)
           </p>
@@ -78,7 +78,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         />
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과 (①1호 양도소득세 방식): 세율을 §104①에도 불구하고 100분의 20 단일세율로
           적용합니다 — 누진·단기보유·중과세율을 대체합니다 (법 §98①1호).

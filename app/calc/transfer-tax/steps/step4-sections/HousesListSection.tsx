@@ -38,7 +38,7 @@ import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-stor
 // ============================================================
 
 const CHIP_BASE =
-  "inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full border select-none";
+  "inline-flex items-center text-micro px-1.5 py-0.5 rounded-full border select-none";
 const CHIP_SKY =
   "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800";
 const CHIP_AMBER =
@@ -122,7 +122,7 @@ function HouseTableRow({ house, idx, onEdit, onRemove }: RowProps) {
           <button
             type="button"
             onClick={onEdit}
-            className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+            className="inline-flex items-center gap-1 text-caption text-primary hover:underline"
             aria-label={`주택 ${idx + 1} 편집`}
           >
             <Settings className="h-3 w-3" />
@@ -131,7 +131,7 @@ function HouseTableRow({ house, idx, onEdit, onRemove }: RowProps) {
           <button
             type="button"
             onClick={onRemove}
-            className="text-[11px] text-destructive hover:underline"
+            className="text-caption text-destructive hover:underline"
             aria-label={`주택 ${idx + 1} 삭제`}
           >
             삭제
@@ -192,14 +192,14 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
           <div className="space-y-3 pt-1">
             {/* 매매계약일 */}
             <div className="space-y-1">
-              <label className="block text-[11px] text-muted-foreground font-medium">
+              <label className="block text-caption text-muted-foreground font-medium">
                 매매계약일 <span className="text-rose-500">*</span>
               </label>
               <DateInput
                 value={gp.contractDate}
                 onChange={(v) => patchGp({ contractDate: v })}
               />
-              <p className="text-[11px] text-muted-foreground/70">
+              <p className="text-caption text-muted-foreground/70">
                 2022.5.10 ~ 2026.5.9 사이 계약 여부를 정밀 판정합니다.
               </p>
             </div>
@@ -232,7 +232,7 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
 
             {/* 조정대상지역 최초 지정일 (optional) */}
             <div className="space-y-1">
-              <label className="block text-[11px] text-muted-foreground font-medium">
+              <label className="block text-caption text-muted-foreground font-medium">
                 조정대상지역 최초 지정일{" "}
                 <span className="text-muted-foreground/60 font-normal">(선택)</span>
               </label>
@@ -240,7 +240,7 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
                 value={gp.areaDesignatedDate ?? ""}
                 onChange={(v) => patchGp({ areaDesignatedDate: v || undefined })}
               />
-              <p className="text-[11px] text-muted-foreground/70">
+              <p className="text-caption text-muted-foreground/70">
                 2025.10.16 이후 신규 지정 지역인 경우 입력 (공고일 이전 계약 특례 판정)
               </p>
             </div>

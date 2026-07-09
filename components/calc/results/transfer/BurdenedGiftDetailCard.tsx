@@ -81,7 +81,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
       <table className="w-full text-xs border-collapse">
         <tbody>
           <tr>
-            <td colSpan={2} className="py-1 pr-2 text-[11px] font-semibold text-fuchsia-700">
+            <td colSpan={2} className="py-1 pr-2 text-caption font-semibold text-fuchsia-700">
               양도세 보충적평가 (자산별 양도가액 안분 분모)
             </td>
           </tr>
@@ -104,7 +104,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
           {bg.giftValuation && bg.giftValuation.max !== bg.sangjeungbeopValuation.max && (
             <>
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pt-2 text-[11px] font-semibold text-fuchsia-700">
+                <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700">
                   증여재산 평가 (취득가액 안분·채무비율 분모 — 상증법 §61 층별 가감율 적용)
                 </td>
               </tr>
@@ -128,7 +128,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
           </tr>
           {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}
           <tr className="border-t border-fuchsia-300">
-            <td colSpan={2} className="py-1 pr-2 pt-2 text-[11px] font-semibold text-fuchsia-700">
+            <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700">
               자산별 취득가액 ({ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed})
             </td>
           </tr>
@@ -176,7 +176,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                 </tr>
               )}
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pl-3 text-[11px] text-fuchsia-600">
+                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600">
                   ※ 실지취득가 모드 — 개산공제(§163⑥) 미적용, 자본적지출·양도비를 채무비율 안분하여 필요경비 반영
                 </td>
               </tr>

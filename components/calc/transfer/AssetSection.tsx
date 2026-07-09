@@ -5,7 +5,7 @@
  *
  * 계획: docs/00-pm/transfer-asset-input-progressive-disclosure.plan.md §4-1
  * - tone 정적 Record (dynamic bg-${tone} 금지 — JIT purge 안전). CollapsibleHintCard HINT_CARD_TONE 컨벤션.
- * - 내부 블록의 원형 번호(h-5 w-5 text-[10px])와 구분되는 **굵은 제목 + 큰 번호 배지**(M1).
+ * - 내부 블록의 원형 번호(h-5 w-5 text-micro)와 구분되는 **굵은 제목 + 큰 번호 배지**(M1).
  * - 접힌 본문은 hidden print:block (인쇄 자동 펼침 — print-only-css-toggle).
  * - 상태(open)는 부모 로컬 state — useEffect→store 미러링 없음.
  * - a11y: 헤더 = <button aria-expanded>. forceOpen(검증 오류) 시 강제 펼침.

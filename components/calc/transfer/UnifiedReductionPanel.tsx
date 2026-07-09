@@ -511,7 +511,7 @@ function GroupCategorySection({
                 <DateInput value={assetContractDate} onChange={onAssetContractDateChange} />
               </div>
             </div>
-            <p className="mt-1.5 text-[10px] text-muted-foreground leading-relaxed">
+            <p className="mt-1.5 text-micro text-muted-foreground leading-relaxed">
               ※ 분양·매매계약 + 계약금 납부 시점. <strong>신축·미분양·임대 감면 시한 판정의 1차 기준</strong>.
               미입력 시 자산의 취득일을 사용합니다 (조문 단서 &ldquo;매매계약 + 계약금 = 취득&rdquo;).
             </p>

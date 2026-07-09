@@ -81,7 +81,7 @@ export function AutoSuggestBadge({
           </p>
           <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
             {formatKrw(suggestedNum)}원
-            <span className="ml-2 text-[10px] font-normal text-gray-500">
+            <span className="ml-2 text-micro font-normal text-gray-500">
               {suggestion.reason}
             </span>
           </p>
@@ -112,7 +112,7 @@ export function AutoSuggestBadge({
             <button
               type="button"
               onClick={() => onApply(emptyValue)}
-              className="text-[10px] text-gray-500 underline print:hidden"
+              className="text-micro text-gray-500 underline print:hidden"
             >
               되돌리기
             </button>
@@ -133,7 +133,7 @@ export function AutoSuggestBadge({
 
       {/* 산식 펼침 — 인쇄 시 자동 펼침 */}
       <div className={open ? "block" : "hidden print:block"}>
-        <ul className="space-y-0.5 rounded bg-white/60 dark:bg-gray-900/40 p-2 text-[11px] text-gray-700 dark:text-gray-300">
+        <ul className="space-y-0.5 rounded bg-white/60 dark:bg-gray-900/40 p-2 text-caption text-gray-700 dark:text-gray-300">
           {suggestion.breakdown.map((line, i) => (
             <li key={i}>· {line}</li>
           ))}
@@ -142,7 +142,7 @@ export function AutoSuggestBadge({
 
       {/* 안내 메시지 */}
       {suggestion.notes && suggestion.notes.length > 0 && (
-        <ul className="space-y-0.5 text-[10px] text-amber-700 dark:text-amber-300">
+        <ul className="space-y-0.5 text-micro text-amber-700 dark:text-amber-300">
           {suggestion.notes.map((note, i) => (
             <li key={i}>{note}</li>
           ))}
@@ -150,12 +150,12 @@ export function AutoSuggestBadge({
       )}
 
       {isMatch && (
-        <p className="text-[10px] text-emerald-700 dark:text-emerald-300">
+        <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ✓ 자동 채움 적용됨
         </p>
       )}
       {isMismatch && (
-        <p className="text-[10px] text-amber-700 dark:text-amber-300">
+        <p className="text-micro text-amber-700 dark:text-amber-300">
           ⚠️ 현재 입력값({formatKrw(currentNum)}원)이 자동 제안값과 다릅니다.
         </p>
       )}

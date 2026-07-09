@@ -58,7 +58,7 @@ function SectionCard({
     <section className={`rounded-lg border p-3 space-y-3 ${t.card}`}>
       <div className="flex items-center gap-2">
         <span
-          className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold select-none ${t.badge}`}
+          className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none ${t.badge}`}
         >
           {num}
         </span>
@@ -328,7 +328,7 @@ export function PropertyCardEditor({
               advancedBadges.map((b) => (
                 <span
                   key={b}
-                  className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700"
+                  className="inline-flex items-center text-micro px-1.5 py-0.5 rounded-full border border-violet-200 bg-violet-50 text-violet-700"
                 >
                   {b}
                 </span>
@@ -341,7 +341,7 @@ export function PropertyCardEditor({
           />
         </div>
         {!showAdvanced && (
-          <p className="mt-1.5 text-[11px] text-slate-500">
+          <p className="mt-1.5 text-caption text-slate-500">
             소유자 분리 · 다가구주택 · 합산배제 신청 · §8④ 의제 특례
           </p>
         )}

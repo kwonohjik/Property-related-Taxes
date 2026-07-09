@@ -24,7 +24,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
   return (
     <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2.5">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">
           ④
         </span>
         <p className="text-xs font-semibold text-rose-700">특수 배제 사유 (2주택·인구감소)</p>
@@ -47,16 +47,16 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
       >
         <div className="space-y-2 pt-1">
           <div className="space-y-1">
-            <label className="block text-[11px] text-muted-foreground font-medium">거주기간 (년)</label>
+            <label className="block text-caption text-muted-foreground font-medium">거주기간 (년)</label>
             <DecimalInput
               value={house.unavoidableResidenceYears ?? ""}
               onChange={(v) => onUpdate({ unavoidableResidenceYears: v || undefined })}
               placeholder="거주기간 입력"
             />
-            <p className="text-[11px] text-muted-foreground/70">1년 이상이어야 배제 적용</p>
+            <p className="text-caption text-muted-foreground/70">1년 이상이어야 배제 적용</p>
           </div>
           <div className="space-y-1">
-            <label className="block text-[11px] text-muted-foreground font-medium">
+            <label className="block text-caption text-muted-foreground font-medium">
               사유 해소일 <span className="text-muted-foreground/60 font-normal">(해소 시 — 이후 3년 이내 양도)</span>
             </label>
             <DateInput
@@ -82,7 +82,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
         description="소송으로 취득하거나 소송 진행 중 (소령 §167의10①8호)"
       >
         <div className="space-y-1 pt-1">
-          <label className="block text-[11px] text-muted-foreground font-medium">
+          <label className="block text-caption text-muted-foreground font-medium">
             소송 취득일 <span className="text-muted-foreground/60 font-normal">(취득 완료 시 — 3년 이내 배제. 미입력=진행 중)</span>
           </label>
           <DateInput
@@ -125,7 +125,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
             title="세컨드홈 특례 등록"
           />
           <div className="space-y-1">
-            <label className="block text-[11px] text-muted-foreground font-medium">지역 유형 (가액 한도)</label>
+            <label className="block text-caption text-muted-foreground font-medium">지역 유형 (가액 한도)</label>
             <RadioCardGroup
               name={`house-pop-area-${house.id}`}
               layout="inline"

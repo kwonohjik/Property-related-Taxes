@@ -52,7 +52,7 @@ export function VillaLandDetailSection({
           {/* ① 면적 요건 (§168의13①1호) */}
           <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
                 1
               </span>
               <p className="text-xs font-semibold text-sky-700">면적 요건 (①1호)</p>
@@ -74,7 +74,7 @@ export function VillaLandDetailSection({
           {/* ② 기준시가 요건 (§168의13①2호) */}
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
                 2
               </span>
               <p className="text-xs font-semibold text-emerald-700">기준시가 요건 (①2호)</p>
@@ -93,7 +93,7 @@ export function VillaLandDetailSection({
           {/* ③ 지역 요건 (§168의13①3호) */}
           <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">
                 3
               </span>
               <p className="text-xs font-semibold text-rose-700">지역 요건 (①3호)</p>

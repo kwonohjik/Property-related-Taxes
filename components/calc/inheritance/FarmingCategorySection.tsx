@@ -137,7 +137,7 @@ export function FarmingCategorySection({
             options={options}
             onChange={(v) => onUpdate({ ...item, farmingCategory: v })}
           />
-          <p className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 rounded p-2">
+          <p className="text-micro text-emerald-700 dark:text-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/30 rounded p-2">
             ⓘ {FARMING_CATEGORY_OPTIONS.find((o) => o.value === item.farmingCategory)?.description}
           </p>
           {/* D-4: §16⑤1호 영농 사용 개시일 + 자동판정 배지 */}
@@ -157,23 +157,23 @@ export function FarmingCategorySection({
             deathDate ? (
               item.farmingUseStartDate <= twoYearsBefore(deathDate) ? (
                 <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-2">
-                  <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-200">
+                  <p className="text-caption font-semibold text-emerald-800 dark:text-emerald-200">
                     ✓ 2년 요건 충족 — 본 자산은 영농상속재산가액에 포함됩니다 (§16⑤1호)
                   </p>
                 </div>
               ) : (
                 <div className="rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-800 p-2">
-                  <p className="text-[11px] font-semibold text-rose-800 dark:text-rose-200">
+                  <p className="text-caption font-semibold text-rose-800 dark:text-rose-200">
                     ✗ 2년 미충족 — 본 자산은 영농상속재산가액에서 제외됩니다 (§16⑤1호)
                   </p>
-                  <p className="text-[10px] text-rose-700 dark:text-rose-300 mt-0.5">
+                  <p className="text-micro text-rose-700 dark:text-rose-300 mt-0.5">
                     상속개시일 2년 전({twoYearsBefore(deathDate)}) 이후 영농 사용 시작
                   </p>
                 </div>
               )
             ) : (
               <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-2">
-                <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+                <p className="text-caption font-semibold text-amber-800 dark:text-amber-200">
                   ⓘ 상속개시일(Step0)을 입력하면 2년 요건 자동 판정됩니다
                 </p>
               </div>
@@ -215,16 +215,16 @@ export function FarmingCategorySection({
               data-testid="farming-residence-or-non-target-notice"
               className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800 p-2.5 space-y-1.5"
             >
-              <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+              <p className="text-caption font-semibold text-amber-800 dark:text-amber-200">
                 ⓘ 거주지 OR 자동 검증 비대상 (§16②1호나)
               </p>
-              <p className="text-[10px] text-amber-700 dark:text-amber-300 leading-relaxed">
+              <p className="text-micro text-amber-700 dark:text-amber-300 leading-relaxed">
                 시행령 §16②1호나 거주지 30km 자동 검증은 <strong>농지·초지·산림지 3종</strong>
                 {item.farmingCategory === "agricultural_building"
                   ? " 한정입니다. 농업용 건축물은 §16⑤바목 영농상속재산이지만 거주지 요건의 \"농지등\"에 포함되지 않으므로 자산 좌표를 입력해도 자동 검증에 반영되지 않습니다."
                   : " 한정입니다. 염전은 §16⑤사목 영농상속재산이지만 거주지 요건의 \"농지등\"에 포함되지 않으므로 자산 좌표를 입력해도 자동 검증에 반영되지 않습니다."}
               </p>
-              <p className="text-[10px] text-amber-700 dark:text-amber-300">
+              <p className="text-micro text-amber-700 dark:text-amber-300">
                 좌표 입력은 <strong>선택 사항</strong>입니다 (소재지 식별·표시 용도). 거주지 30km
                 요건 충족 여부는 같이 보유한 농지·초지·산림지 자산 기준으로 평가됩니다.
               </p>

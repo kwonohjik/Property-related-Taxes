@@ -113,7 +113,7 @@ export function SplitPaymentCard({
               {formatKRW(split.firstPayment)}
             </span>
           </div>
-          <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+          <div className="mt-0.5 flex items-center justify-between text-caption text-gray-500 dark:text-gray-400">
             <span>= 납부할 세액 − 분납액</span>
             {filingDeadline && <span>기한 {filingDeadline}</span>}
           </div>
@@ -126,7 +126,7 @@ export function SplitPaymentCard({
               {formatKRW(split.secondPayment)}
             </span>
           </div>
-          <div className="mt-0.5 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+          <div className="mt-0.5 flex items-center justify-between text-caption text-gray-500 dark:text-gray-400">
             <span>= 분납 신청액 (최대 50%)</span>
             {installmentDueDate && (
               <span data-testid="split-payment-due-date">
@@ -139,14 +139,14 @@ export function SplitPaymentCard({
         {split.warnings.length > 0 && (
           <div className="border-t border-sky-100 dark:border-sky-800 pt-2 space-y-1">
             {split.warnings.map((w, i) => (
-              <p key={i} className="text-[11px] text-amber-700 dark:text-amber-300">
+              <p key={i} className="text-caption text-amber-700 dark:text-amber-300">
                 {w}
               </p>
             ))}
           </div>
         )}
 
-        <p className="border-t border-sky-100 dark:border-sky-800 pt-2 text-[11px] text-gray-500 dark:text-gray-400">
+        <p className="border-t border-sky-100 dark:border-sky-800 pt-2 text-caption text-gray-500 dark:text-gray-400">
           ※ 분납 시 납세담보 제공이 필요하지 않습니다. 분납 금액은 §70② 한도
           이내에서 납세자가 선택합니다.
         </p>

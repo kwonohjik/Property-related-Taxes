@@ -65,7 +65,7 @@ export function SalesCaseSection({
             매매사례가액 (원) <span className="text-destructive">*</span>
           </span>
           {similarSalesSource === "rtms_auto" && (
-            <span className="inline-flex items-center rounded border border-sky-300 bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800">
+            <span className="inline-flex items-center rounded border border-sky-300 bg-sky-100 px-1.5 py-0.5 text-micro font-semibold text-sky-800">
               실거래가 자동조회
             </span>
           )}
@@ -97,7 +97,7 @@ export function SalesCaseSection({
           실거래가 자동조회 (RTMS)
         </button>
         {rtmsDisabled && (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             자동조회를 사용하려면 취득 주소·면적을 먼저 입력하세요.
           </p>
         )}

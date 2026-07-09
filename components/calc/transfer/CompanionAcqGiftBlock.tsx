@@ -37,7 +37,7 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
             value={props.donorAcquisitionDate}
             onChange={props.onDonorAcquisitionDateChange}
           />
-          <p className="text-[11px] text-muted-foreground">단기보유 통산용 (소득세법 §104②2호)</p>
+          <p className="text-caption text-muted-foreground">단기보유 통산용 (소득세법 §104②2호)</p>
         </div>
       </div>
 

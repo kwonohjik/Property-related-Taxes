@@ -80,12 +80,12 @@ export function EvaluationCommitteeFilingGuideCard({
               data-testid={`evaluation-committee-attachment-${item.no}`}
             >
               <div className="flex gap-1.5">
-                <span className="flex h-4 w-4 items-center justify-center rounded bg-sky-600 text-[10px] font-bold text-white shrink-0">
+                <span className="flex h-4 w-4 items-center justify-center rounded bg-sky-600 text-micro font-bold text-white shrink-0">
                   ({item.no})
                 </span>
                 <div>
                   <p className="font-semibold text-sky-900">{item.title}</p>
-                  <p className="text-sky-700/80 text-[11px] mt-0.5">{item.desc}</p>
+                  <p className="text-sky-700/80 text-caption mt-0.5">{item.desc}</p>
                 </div>
               </div>
             </li>
@@ -102,7 +102,7 @@ export function EvaluationCommitteeFilingGuideCard({
           ② 신청·통지 기한 (§49의2④ — {taxKind === "inheritance" ? "상속세" : "증여세"})
         </p>
         <p className="text-sky-700">{deadlineLabel}</p>
-        <p className="text-sky-700/70 text-[10px]">
+        <p className="text-sky-700/70 text-micro">
           ※ 신청기한 미준수 시 평가심의위 부의 불가 — 보충적 평가가액으로 신고 (§54①·②)
         </p>
       </section>

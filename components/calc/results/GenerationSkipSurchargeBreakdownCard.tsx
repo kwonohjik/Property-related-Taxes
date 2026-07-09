@@ -63,7 +63,7 @@ export function GenerationSkipSurchargeBreakdownCard({
             상증법 §57·§57②
           </span>
           {isHigherRate && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-200 text-rose-800 dark:bg-rose-800 dark:text-rose-100">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-micro font-semibold bg-rose-200 text-rose-800 dark:bg-rose-800 dark:text-rose-100">
               미성년 + 20억 초과 → 40%
             </span>
           )}
@@ -200,7 +200,7 @@ export function GenerationSkipSurchargeBreakdownCard({
           />
 
           {/* PDF 박스 산식 (참고) */}
-          <div className="mt-3 pt-3 border-t border-rose-200/60 dark:border-rose-800/40 text-[11px] text-rose-700/80 dark:text-rose-300/80">
+          <div className="mt-3 pt-3 border-t border-rose-200/60 dark:border-rose-800/40 text-caption text-rose-700/80 dark:text-rose-300/80">
             <div className="font-semibold mb-1">참고 — 상증법 §57 산식</div>
             <div>
               할증과세액 = 증여세 산출세액 × (수증자 부모 제외 직계존속으로부터 증여받은 재산가액 ÷ 총증여재산가액) × {ratePct}% − 기할증과세액
@@ -262,7 +262,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
             <button
               type="button"
               onClick={() => setExpanded((p) => !p)}
-              className="text-[10px] text-gray-500 hover:text-rose-700 dark:hover:text-rose-300 transition-colors print:hidden"
+              className="text-micro text-gray-500 hover:text-rose-700 dark:hover:text-rose-300 transition-colors print:hidden"
               aria-expanded={expanded}
               aria-label={`${label} 산출근거 ${expanded ? "닫기" : "펼치기"}`}
             >
@@ -283,7 +283,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
         </span>
       </div>
       {expanded && formula && (
-        <div className="ml-3 px-3 py-2 text-[11px] text-gray-600 dark:text-gray-400 bg-rose-50/60 dark:bg-rose-900/20 rounded-md space-y-1 print:block">
+        <div className="ml-3 px-3 py-2 text-caption text-gray-600 dark:text-gray-400 bg-rose-50/60 dark:bg-rose-900/20 rounded-md space-y-1 print:block">
           {formula}
         </div>
       )}

@@ -156,7 +156,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           <div className="flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2">
             <div className="text-xs text-emerald-800">
               <p className="font-semibold">상속세 이력에서 자동 채우기</p>
-              <p className="text-[10px] text-emerald-600 mt-0.5">
+              <p className="text-micro text-emerald-600 mt-0.5">
                 적용률·상속개시일·평가액 자동 prefill (원취득가액은 별도 입력)
               </p>
             </div>
@@ -254,7 +254,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
                 {" = "}
                 <strong>{previewValue.toLocaleString()}</strong>
               </p>
-              <p className="text-[10px] text-emerald-600">
+              <p className="text-micro text-emerald-600">
                 ※ 최종 의제 취득가액은 엔진 계산 결과로 확인하세요. 일반 §97 산식과 비교과세 후 불리한 경우 §18의2⑩ 공제 적용.
               </p>
             </div>

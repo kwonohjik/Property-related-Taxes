@@ -293,7 +293,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         {/* ① 면적·규모 (sky) — 항상 표시 */}
         <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">①</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">①</span>
             <p className="text-xs font-semibold text-sky-700">면적·규모</p>
           </div>
 
@@ -319,13 +319,13 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         {/* ② 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율 결정) */}
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">②</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">②</span>
             <p className="text-xs font-semibold text-emerald-700">양도시 기준시가 (토지·건물 안분 비율)</p>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
           </div>
-          <p className="text-[11px] text-emerald-600">
+          <p className="text-caption text-emerald-600">
             {isEstimated
               ? "환산취득가 분모 + 양도가액 안분 기준. 취득 기준시가는 아래 ③ 섹션에서 별도 입력."
               : "실거래가 합계를 토지·건물로 안분하는 기준시가 (§166⑥). 취득가액도 같은 비율로 안분됩니다."}
@@ -353,7 +353,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         {(isEstimated || asset.gbHasExtension || asset.transferType === "burdened_gift") && (
           <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">③</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">③</span>
               <p className="text-xs font-semibold text-amber-700">취득시 기준시가 (환산 분자 + 개산공제 기준)</p>
               <LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />
             </div>
@@ -570,7 +570,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
                 <p className="font-semibold">
                   안분 미리보기 (참고용)
-                  <span className="ml-1.5 rounded-full px-1.5 py-0.5 bg-amber-200 text-amber-900 text-[10px]">
+                  <span className="ml-1.5 rounded-full px-1.5 py-0.5 bg-amber-200 text-amber-900 text-micro">
                     원건물 {allocationPreview.isOriginActual ? "실가" : "환산"} + 증축 {allocationPreview.extMode === "actual" ? "실가" : "환산"}
                   </span>
                 </p>
@@ -583,7 +583,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                   건물2 취득가: {fmt(allocationPreview.b2Acq)}
                   {allocationPreview.extMode === "actual" ? " (실거래가)" : " (환산취득가)"}
                 </p>
-                <p className="text-[10px] text-amber-700">엔진 실제 계산값은 결과 단계에서 확인됩니다.</p>
+                <p className="text-micro text-amber-700">엔진 실제 계산값은 결과 단계에서 확인됩니다.</p>
               </div>
             )}
           </ToggleCard>
@@ -592,15 +592,15 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         {/* ④ 비사업용토지 판정 (rose) — 항상 표시 */}
         <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">④</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">④</span>
             <p className="text-xs font-semibold text-rose-700">비사업용토지 판정</p>
-            <span className="text-[10px] text-rose-500">(§104의3·§168의12)</span>
+            <span className="text-micro text-rose-500">(§104의3·§168의12)</span>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
             <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
           </div>
-          <p className="text-[11px] text-rose-600">
+          <p className="text-caption text-rose-600">
             부수토지 한도 = 수평투영면적 × 용도지역 배율. 초과분에만 +10%p 중과.
           </p>
 

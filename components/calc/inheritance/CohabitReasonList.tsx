@@ -102,11 +102,11 @@ function ReasonRow({ reason, index, onUpdate, onRemove }: ReasonRowProps) {
     >
       {/* 행 헤더: 번호 + 효과 배지 + 삭제 */}
       <div className="flex items-center gap-2">
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-800 text-[9px] font-bold text-violet-700 dark:text-violet-300 select-none">
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-800 text-micro font-bold text-violet-700 dark:text-violet-300 select-none">
           {index + 1}
         </span>
         <span
-          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${badge.cls}`}
+          className={`text-micro font-semibold px-1.5 py-0.5 rounded border ${badge.cls}`}
           data-testid={`cohabit-reason-effect-badge-${index}`}
         >
           {badge.label}
@@ -114,7 +114,7 @@ function ReasonRow({ reason, index, onUpdate, onRemove }: ReasonRowProps) {
         <button
           type="button"
           onClick={onRemove}
-          className="ml-auto text-[10px] text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-200 font-medium"
+          className="ml-auto text-micro text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-200 font-medium"
           data-testid={`cohabit-reason-remove-${index}`}
           aria-label={`${index + 1}번 사유 삭제`}
         >
@@ -124,7 +124,7 @@ function ReasonRow({ reason, index, onUpdate, onRemove }: ReasonRowProps) {
 
       {/* 유형 Select */}
       <div className="space-y-0.5">
-        <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400">
+        <label className="block text-micro font-medium text-gray-500 dark:text-gray-400">
           사유 유형
         </label>
         <Select
@@ -150,7 +150,7 @@ function ReasonRow({ reason, index, onUpdate, onRemove }: ReasonRowProps) {
       {/* 시작일·종료일 */}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-0.5">
-          <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400">
+          <label className="block text-micro font-medium text-gray-500 dark:text-gray-400">
             사유 시작일
           </label>
           <DateInput
@@ -160,7 +160,7 @@ function ReasonRow({ reason, index, onUpdate, onRemove }: ReasonRowProps) {
           />
         </div>
         <div className="space-y-0.5">
-          <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400">
+          <label className="block text-micro font-medium text-gray-500 dark:text-gray-400">
             사유 종료일
           </label>
           <DateInput
@@ -174,7 +174,7 @@ function ReasonRow({ reason, index, onUpdate, onRemove }: ReasonRowProps) {
       {/* 유형별 안내/경고 */}
       {reason.type === "overseas_grad" && (
         <div
-          className="rounded border border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20 px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-300"
+          className="rounded border border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20 px-2 py-1.5 text-micro text-amber-700 dark:text-amber-300"
           data-testid={`cohabit-reason-overseas-warning-${index}`}
         >
           국외 대학원은 부득이한 사유에 해당하지 않습니다(재조세-434). 이 기간은 동거 계속성이
@@ -182,12 +182,12 @@ function ReasonRow({ reason, index, onUpdate, onRemove }: ReasonRowProps) {
         </div>
       )}
       {reason.type === "medical" && (
-        <div className="rounded border border-violet-100 bg-violet-50/60 dark:border-violet-700 dark:bg-violet-900/20 px-2 py-1 text-[10px] text-violet-600 dark:text-violet-400">
+        <div className="rounded border border-violet-100 bg-violet-50/60 dark:border-violet-700 dark:bg-violet-900/20 px-2 py-1 text-micro text-violet-600 dark:text-violet-400">
           질병 요양은 1년(365일) 이상인 경우에만 인정됩니다(시행규칙 §9의2①3호).
         </div>
       )}
       {reason.type === "reconstruction_lease" && (
-        <div className="rounded border border-emerald-200 bg-emerald-50/60 dark:border-emerald-700 dark:bg-emerald-900/20 px-2 py-1 text-[10px] text-emerald-700 dark:text-emerald-300">
+        <div className="rounded border border-emerald-200 bg-emerald-50/60 dark:border-emerald-700 dark:bg-emerald-900/20 px-2 py-1 text-micro text-emerald-700 dark:text-emerald-300">
           재건축 기간 전세 거주는 동거기간에 산입합니다(국세청 재산-248). 단, 해석례이므로
           세무사 확인을 권장합니다.
         </div>
@@ -220,7 +220,7 @@ export function CohabitReasonList({ reasons, onChange }: CohabitReasonListProps)
   return (
     <div className="space-y-2" data-testid="cohabit-reason-list">
       {reasons.length === 0 && (
-        <p className="text-[10px] text-violet-500 dark:text-violet-400 italic">
+        <p className="text-micro text-violet-500 dark:text-violet-400 italic">
           사유 행이 없습니다. 아래 &ldquo;사유 추가&rdquo; 버튼으로 입력하세요.
         </p>
       )}

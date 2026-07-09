@@ -30,15 +30,15 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
 const SKY_SECTION = "rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2.5";
 const SKY_HEADER = "text-xs font-semibold text-sky-700";
-const SKY_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none";
+const SKY_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none";
 
 const AMBER_SECTION = "rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2.5";
 const AMBER_HEADER = "text-xs font-semibold text-amber-700";
-const AMBER_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none";
+const AMBER_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none";
 
 const VIOLET_SECTION = "rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2.5";
 const VIOLET_HEADER = "text-xs font-semibold text-violet-700";
-const VIOLET_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none";
+const VIOLET_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none";
 
 // ============================================================
 // Props
@@ -65,7 +65,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
 
       {/* 지역 구분 */}
       <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">지역 구분</label>
+        <label className="block text-caption text-muted-foreground font-medium">지역 구분</label>
         <RadioCardGroup
           name={`house-region-${house.id}`}
           layout="inline"
@@ -81,7 +81,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
 
       {/* 취득일 */}
       <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">취득일</label>
+        <label className="block text-caption text-muted-foreground font-medium">취득일</label>
         <DateInput
           value={house.acquisitionDate}
           onChange={(v) => onUpdate({ acquisitionDate: v })}
@@ -107,7 +107,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
 
       {/* 전용면적 */}
       <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">전용면적 (㎡)</label>
+        <label className="block text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
         <DecimalInput
           value={house.exclusiveArea ?? ""}
           onChange={(v) => onUpdate({ exclusiveArea: v })}
@@ -117,17 +117,17 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
 
       {/* 준공일 (가목 소형신축 3호) */}
       <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">준공일</label>
+        <label className="block text-caption text-muted-foreground font-medium">준공일</label>
         <DateInput
           value={house.completionDate ?? ""}
           onChange={(v) => onUpdate({ completionDate: v })}
         />
-        <p className="text-[10px] text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
+        <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
       </div>
 
       {/* 특례 chip */}
       <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">특례 구분</label>
+        <label className="block text-caption text-muted-foreground font-medium">특례 구분</label>
         <div className="flex flex-wrap gap-2">
           <ToggleCard
             variant="chip"
@@ -164,7 +164,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           판정 필수필드(취득가액·전용면적) 미입력 시 침묵 미적용 안내 (소령 §167의3①12 가·나목) */}
       {(house.isUnsoldNewHouse || !!house.completionDate) &&
         (!house.acquisitionPrice || !house.exclusiveArea) && (
-          <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-[11px] text-amber-700">
+          <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-caption text-amber-700">
             신축·준공후미분양 특례 판정에는 취득가액·전용면적 입력이 필요합니다. 미입력 시 특례가 적용되지 않습니다.
           </p>
         )}
@@ -172,7 +172,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
       {/* #2a 혼인합가 — 배우자 단독 보유 (혼인합가일 입력 시에만 노출) */}
       {showSpouseOwned && (
         <div className="space-y-1">
-          <label className="block text-[11px] text-muted-foreground font-medium">혼인 합가</label>
+          <label className="block text-caption text-muted-foreground font-medium">혼인 합가</label>
           <ToggleCard
             variant="chip"
             tone="violet"
@@ -180,7 +180,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
             onCheckedChange={(v) => onUpdate({ isSpouseOwned: v })}
             title="배우자 단독 보유 주택"
           />
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             혼인 전부터 배우자가 보유 — 3주택↑ 혼인 5년내 양도 시 주택 수 차감 (§167의3⑨)
           </p>
         </div>
@@ -215,12 +215,12 @@ function InheritanceSection({ house, onUpdate }: Props) {
       >
         {/* ON 시만 상속개시일 노출 */}
         <div className="space-y-1 pt-1">
-          <label className="block text-[11px] text-muted-foreground font-medium">상속개시일</label>
+          <label className="block text-caption text-muted-foreground font-medium">상속개시일</label>
           <DateInput
             value={house.inheritedDate ?? ""}
             onChange={(v) => onUpdate({ inheritedDate: v || undefined })}
           />
-          <p className="text-[11px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             상속 후 5년 이내이면 주택 수 산정에서 자동 배제됩니다.
           </p>
         </div>
@@ -279,14 +279,14 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
           >
             <div className="space-y-2 pt-1">
               <div className="space-y-1">
-                <label className="block text-[11px] text-muted-foreground font-medium">임대사업자 등록일</label>
+                <label className="block text-caption text-muted-foreground font-medium">임대사업자 등록일</label>
                 <DateInput
                   value={house.rentalRegistrationDate ?? ""}
                   onChange={(v) => onUpdate({ rentalRegistrationDate: v || undefined })}
                 />
               </div>
               <div className="space-y-1">
-                <label className="block text-[11px] text-muted-foreground font-medium">사업자 등록일</label>
+                <label className="block text-caption text-muted-foreground font-medium">사업자 등록일</label>
                 <DateInput
                   value={house.businessRegistrationDate ?? ""}
                   onChange={(v) => onUpdate({ businessRegistrationDate: v || undefined })}
@@ -297,18 +297,18 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
 
           {/* 임대기간(년) */}
           <div className="space-y-1">
-            <label className="block text-[11px] text-muted-foreground font-medium">임대기간 (년)</label>
+            <label className="block text-caption text-muted-foreground font-medium">임대기간 (년)</label>
             <DecimalInput
               value={house.rentalPeriodYears ?? ""}
               onChange={(v) => onUpdate({ rentalPeriodYears: v || undefined })}
               placeholder="임대기간 입력"
             />
-            <p className="text-[11px] text-muted-foreground/70">5년 이상 시 주택 수 배제 대상</p>
+            <p className="text-caption text-muted-foreground/70">5년 이상 시 주택 수 배제 대상</p>
           </div>
 
           {/* 임대사업자 말소일 (optional) */}
           <div className="space-y-1">
-            <label className="block text-[11px] text-muted-foreground font-medium">
+            <label className="block text-caption text-muted-foreground font-medium">
               임대사업자 말소일{" "}
               <span className="text-muted-foreground/60 font-normal">(양도 전 말소 시 입력)</span>
             </label>
@@ -316,7 +316,7 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
               value={house.rentalCancelledDate ?? ""}
               onChange={(v) => onUpdate({ rentalCancelledDate: v || undefined })}
             />
-            <p className="text-[11px] text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground/70">
               양도일 이전 말소된 경우 임대 배제 특례가 해제될 수 있습니다.
             </p>
           </div>

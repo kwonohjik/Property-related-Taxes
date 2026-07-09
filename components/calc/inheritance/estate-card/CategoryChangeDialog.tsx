@@ -187,7 +187,7 @@ export function CategoryChangeDialog({
                   </li>
                 ))}
               </ul>
-              <p className="text-[11px] text-amber-700 dark:text-amber-300 pt-1">
+              <p className="text-caption text-amber-700 dark:text-amber-300 pt-1">
                 ※ 자산명·평가액·협의분할은 보존
               </p>
             </div>

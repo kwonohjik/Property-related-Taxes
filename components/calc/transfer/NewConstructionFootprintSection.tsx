@@ -119,7 +119,7 @@ export function NewConstructionFootprintSection({
     <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
       {/* 섹션 헤더 */}
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
           §
         </span>
         <p className="text-xs font-semibold text-sky-700">
@@ -127,7 +127,7 @@ export function NewConstructionFootprintSection({
         </p>
       </div>
 
-      <p className="text-[11px] text-sky-600 leading-relaxed">
+      <p className="text-caption text-sky-600 leading-relaxed">
         주택과 함께 양도되는 부수토지의 인정 한도 = 건물 정착면적 × 배율.
         수도권 도시지역(주거·상업·공업)은 3배, 수도권 녹지·수도권 외 도시지역은 5배, 도시지역 외는 10배입니다.
         한도 초과분은 일반 나대지로 분리하여 토지 보유기간 기준 세율을 적용합니다.
@@ -136,7 +136,7 @@ export function NewConstructionFootprintSection({
       {/* ① 건물 정착면적 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
             ①
           </span>
           <p className="text-xs font-semibold text-sky-700">건물 정착면적 (㎡)</p>
@@ -155,7 +155,7 @@ export function NewConstructionFootprintSection({
       {/* ② 부수토지 zone (3/5/10배) */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
             ②
           </span>
           <p className="text-xs font-semibold text-sky-700">소재지 구분 (영 §154⑦)</p>
@@ -172,14 +172,14 @@ export function NewConstructionFootprintSection({
             description: opt.description,
           }))}
         />
-        <p className="text-[11px] text-sky-600">
+        <p className="text-caption text-sky-600">
           수도권정비계획법·국토계획법상 소재지에 따라 정착면적 배율이 달라집니다. 잘 모르겠으면 가장 보수적인 &quot;수도권 도시지역(주거·상업·공업) 3배&quot;를 선택하세요.
         </p>
       </div>
 
       {/* 자동 계산 결과 박스 */}
       {footprint > 0 && (
-        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-[11px] text-sky-800 space-y-1">
+        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-caption text-sky-800 space-y-1">
           <p className="font-semibold">부수토지 인정 한도 계산:</p>
           <p>
             건물 정착면적 {buildingFootprintArea}㎡ × {multiplier}배({zoneLabel(appurtenantLandZone)}) = <strong>{limitArea.toFixed(2)}㎡</strong>

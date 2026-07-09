@@ -261,7 +261,7 @@ export function OtherLandDetailSection({
       {/* §168의11① 호별 면적기준 정밀판정 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 dark:bg-sky-950/20 dark:border-sky-800 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">1</span>
           <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">§168의11① 거주·사업관련 토지 (호별 면적기준)</p>
           <LawArticleModal legalBasis="소득세법 시행령 §168의11①" label="§168의11①" />
         </div>
@@ -502,7 +502,7 @@ export function OtherLandDetailSection({
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">§168의11⑥ 복합용도 건축물 부속토지 안분</p>
             <LawArticleModal legalBasis="소득세법 시행령 §168의11⑥" label="§168의11⑥" />
           </div>
-          <p className="text-[11px] text-muted-foreground leading-snug">
+          <p className="text-caption text-muted-foreground leading-snug">
             건축물이 거주·특정사업 사용분(특정용도분)과 그 외로 함께 사용될 때, 특정용도분 부속토지만 사업용으로 보고 안분합니다. 선택 시 위 호별 기준면적(§168의11①)은 적용하지 않습니다.
           </p>
           <RadioCardGroup
@@ -574,7 +574,7 @@ export function OtherLandDetailSection({
             {/* §168의11③3호 당해 연환산 — 사업개시일(선택) + 영위일수·환산 preview */}
             <div className="rounded-lg border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 dark:border-amber-800 p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">연</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">연</span>
                 <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">당해 과세기간 연환산 (§168의11③3호)</p>
                 <LawArticleModal legalBasis="소득세법 시행령 §168의11③" label="§168의11③" />
               </div>
@@ -588,10 +588,10 @@ export function OtherLandDetailSection({
                     <p className="font-semibold">연간환산 수입금액 = {revenuePreview.annualized.toLocaleString()}원</p>
                   </div>
                 ) : (
-                  <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80">영위 {revenuePreview.days}일 = {revenuePreview.taxYear}년 총일수 → 환산 없음(raw 그대로)</p>
+                  <p className="text-caption text-amber-700/80 dark:text-amber-300/80">영위 {revenuePreview.days}일 = {revenuePreview.taxYear}년 총일수 → 환산 없음(raw 그대로)</p>
                 )
               ) : (
-                <p className="text-[11px] text-muted-foreground">당해 수입금액·양도일·취득일 입력 시 연환산 금액이 표시됩니다.</p>
+                <p className="text-caption text-muted-foreground">당해 수입금액·양도일·취득일 입력 시 연환산 금액이 표시됩니다.</p>
               )}
             </div>
             <NblLandValueAutoFetchButton
@@ -619,11 +619,11 @@ export function OtherLandDetailSection({
             {/* §168의11③1호 간주임대료 — 전세금·보증금 (부가세령 §65①·시행규칙 §47) */}
             <div className="rounded-lg border border-violet-200 bg-violet-50/40 dark:bg-violet-950/20 dark:border-violet-800 p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">임</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">임</span>
                 <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">전세금·보증금 간주임대료 (§168의11③1호)</p>
                 <LawArticleModal legalBasis="부가가치세법 시행령 §65①" label="간주임대료" />
               </div>
-              <p className="text-[11px] text-muted-foreground leading-snug">전세·임대보증금이 있으면 정기예금이자율(부가세칙 §47, 현행 연 3.1%)로 환산한 간주임대료를 수입금액에 합산합니다. 입력 시에만 적용.</p>
+              <p className="text-caption text-muted-foreground leading-snug">전세·임대보증금이 있으면 정기예금이자율(부가세칙 §47, 현행 연 3.1%)로 환산한 간주임대료를 수입금액에 합산합니다. 입력 시에만 적용.</p>
               <FieldCard label="당해 전세금·보증금" unit="원">
                 <CurrencyInput label="당해 보증금" hideLabel hideUnit value={asset.nblRevenueCurrentDeposit} onChange={(v) => onAssetChange({ nblRevenueCurrentDeposit: v })} />
               </FieldCard>
