@@ -53,8 +53,8 @@ test.describe("겸용주택 자산-우선 — 상가건물 통합 모달", () =>
     });
 
     // 면적 (① 면적 섹션 — 부모 MixedUseExpandedPanel 렌더)
-    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
-    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("주택 전용면적").fill("120");
+    await page.getByPlaceholder("상가(비주택) 전용면적").fill("80");
     await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
 
     // PHD(개별주택가격 미공시)는 켜지 않음 → 자산-우선 레이아웃

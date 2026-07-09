@@ -140,6 +140,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     nonResidentialFloorArea: parseFloat(primary.nonResidentialFloorArea) || 0,
     buildingFootprintArea: parseFloat(primary.buildingFootprintArea) || 0,
     totalLandArea: parseFloat(primary.mixedUseTotalLandArea) || 0,
+    // 주택 부수토지 override — three-state(빈값→undefined, 0→0 보존). PHD OFF 전용(ON은 phdResidentialLandArea 담당, 배타).
+    ...(!primary.usePreHousingDisclosure && primary.mixedResidentialLandAreaOverride?.trim() !== ""
+      ? { residentialLandAreaOverride: parseFloat(primary.mixedResidentialLandAreaOverride) || 0 }
+      : {}),
     landAcquisitionDate: primary.landAcquisitionDate || primary.acquisitionDate,
     buildingAcquisitionDate: primary.acquisitionDate,
     transferStandardPrice: {

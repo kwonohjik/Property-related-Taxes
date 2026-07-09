@@ -24,38 +24,17 @@ import type {
 } from "./types/transfer-mixed-use.types";
 import type { TaxBracket } from "./types";
 import { calculateProgressiveTax } from "./tax-utils";
+import { computeDerivedAreas, round2 } from "./mixed-use-derived-areas";
 
 // ──────────────────────────────────────────────────────────────
 // 1. 면적 파생값 계산
 // ──────────────────────────────────────────────────────────────
 
-/** 소수점 2자리 반올림 — UI 표시값(toFixed(2))과 엔진 계산값을 일치시켜
- *  사용자 기대값(76.51 × 단가)과 결과값이 어긋나지 않도록 한다. */
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
-}
-
-export function computeDerivedAreas(asset: MixedUseAssetInput): MixedUseDerivedAreas {
-  const total = asset.residentialFloorArea + asset.nonResidentialFloorArea;
-  if (total <= 0) {
-    return {
-      residentialRatio: 0,
-      residentialLandArea: 0,
-      commercialLandArea: round2(asset.totalLandArea),
-      residentialFootprintArea: 0,
-    };
-  }
-  const residentialRatio = asset.residentialFloorArea / total;
-  // 부수토지 면적은 UI에서 소수점 2자리로 표시되므로 엔진에서도 동일 정밀도 사용
-  const residentialLandArea = round2(asset.totalLandArea * residentialRatio);
-  const commercialLandArea = round2(asset.totalLandArea - residentialLandArea);
-  return {
-    residentialRatio,
-    residentialLandArea,
-    commercialLandArea,
-    residentialFootprintArea: round2(asset.buildingFootprintArea * residentialRatio),
-  };
-}
+// round2 · computeDerivedAreas 는 leaf 모듈 `./mixed-use-derived-areas` 로 추출되어
+// UI·사이드바·bridge·엔진이 단일 소스를 공유한다. 여기서는 재export 하여 하위 호환 유지.
+// `MixedUseAssetInput` 은 leaf 파라미터(residentialLandAreaOverride? 포함) 구조를 만족하므로
+// 호출부 `computeDerivedAreas(asset)` 가 그대로 override 를 자동 전파한다 (취득·양도 양시점).
+export { computeDerivedAreas };
 
 /**
  * 취득시 면적 파생값 산출 — 보유 중 일부 용도변경 (시행령 §166⑥).

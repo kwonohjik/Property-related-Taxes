@@ -49,8 +49,8 @@ test.describe("겸용주택 Case A — 자산-우선 전치", () => {
       month: "06",
       day: "15",
     });
-    await page.getByPlaceholder("양도시 주거용 합계 면적").fill("120");
-    await page.getByPlaceholder("양도시 비주택 합계 면적").fill("80");
+    await page.getByPlaceholder("주택 전용면적").fill("120");
+    await page.getByPlaceholder("상가(비주택) 전용면적").fill("80");
     await page.getByPlaceholder("건축물대장의 건축면적").fill("100");
     await page.getByRole("switch", { name: /개별주택가격 미공시/ }).click();
 

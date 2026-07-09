@@ -2,6 +2,9 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { round2 } from "@/lib/tax-engine/mixed-use-derived-areas";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -10,7 +13,12 @@ interface Props {
   sectionNum?: number;
 }
 
-/** 면적 입력 (주택연면적·상가연면적·정착면적·토지면적 + 주택비율 자동표시) */
+/**
+ * 면적·부수토지·지역 통합 카드 (섹션 ①).
+ * - 전용/공통면적 입력 → 공통면적을 전용비율로 안분해 주택/상가 연면적 자동 파생(read-only).
+ * - 부수토지 안분은 아래 상가 기준시가란에서 자동 표시·수정 (dual display 회피).
+ * - 수도권 배율 지역 토글(§168의12) 흡수.
+ */
 export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
   const residential = parseDecimal(asset.residentialFloorArea) ?? 0;
   const commercial = parseDecimal(asset.nonResidentialFloorArea) ?? 0;
@@ -18,68 +26,126 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
   const housingRatioText =
     total > 0 ? `${((residential / total) * 100).toFixed(2)}%` : "—";
 
+  // 전용/공통 변경 → 연면적 파생(같은 patch 동시 write, useEffect 미러링 없음).
+  const onExclusiveChange = (patch: Partial<AssetForm>) => {
+    const next = { ...asset, ...patch };
+    const exR = parseDecimal(next.residentialExclusiveArea) ?? 0;
+    const exC = parseDecimal(next.commercialExclusiveArea) ?? 0;
+    const common = parseDecimal(next.commonArea) ?? 0;
+    const exTotal = exR + exC;
+    if (exTotal > 0) {
+      const r = round2(exR + (common * exR) / exTotal);
+      const c = round2(exTotal + common) - r; // 잔액흡수: 합 = 전용합+공통 보장
+      onChange({ ...patch, residentialFloorArea: String(r), nonResidentialFloorArea: String(c) });
+    } else {
+      // 전용 둘 다 빈값이면 연면적 write 안 함 (legacy 이력 보존)
+      onChange(patch);
+    }
+  };
+
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+    <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-3">
       <div className="flex items-center gap-2">
         {sectionNum !== undefined && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-800 select-none">
             {sectionNum}
           </span>
         )}
-        <p className="text-xs font-semibold text-sky-700">면적 정보 (건축물대장 기준)</p>
+        <p className="text-xs font-semibold text-slate-700">면적·부수토지·지역 정보</p>
       </div>
 
-      <FieldCard
-        label="주택 연면적 (산정면적, ㎡)"
-        hint="개별주택가격확인서의 '산정면적' — 양도시 주거용 합계 (예: 1층 단독주택)"
-      >
-        <DecimalInput
-          value={asset.residentialFloorArea}
-          onChange={(v) => onChange({ residentialFloorArea: v })}
-          placeholder="양도시 주거용 합계 면적"
-          unit="㎡"
-        />
-      </FieldCard>
+      {/* 면적 소그룹 (sky) */}
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+        <p className="text-xs font-semibold text-sky-700">면적 (건축물대장 기준)</p>
 
-      <FieldCard
-        label="상가 연면적 (㎡)"
-        hint="비주택 합계 — 근린생활시설·사무·주차장 (양도시점 기준)"
-      >
-        <DecimalInput
-          value={asset.nonResidentialFloorArea}
-          onChange={(v) => onChange({ nonResidentialFloorArea: v })}
-          placeholder="양도시 비주택 합계 면적"
-          unit="㎡"
-        />
-      </FieldCard>
+        <FieldCard label="주택 전용면적 (㎡)" hint="건축물대장 주택 전용면적 — 공통면적 안분 전">
+          <DecimalInput
+            value={asset.residentialExclusiveArea}
+            onChange={(v) => onExclusiveChange({ residentialExclusiveArea: v })}
+            placeholder="주택 전용면적"
+            unit="㎡"
+          />
+        </FieldCard>
 
-      <FieldCard
-        label="건물 정착면적 (수평 투영면적, ㎡)"
-        hint="건축물대장의 건축면적(수평 투영면적) — 부수토지 배율(3·5·10배) 초과 판정 기준"
-      >
-        <DecimalInput
-          value={asset.buildingFootprintArea}
-          onChange={(v) => onChange({ buildingFootprintArea: v })}
-          placeholder="건축물대장의 건축면적"
-          unit="㎡"
-        />
-      </FieldCard>
+        <FieldCard label="상가 전용면적 (㎡)" hint="건축물대장 상가(비주택) 전용면적">
+          <DecimalInput
+            value={asset.commercialExclusiveArea}
+            onChange={(v) => onExclusiveChange({ commercialExclusiveArea: v })}
+            placeholder="상가(비주택) 전용면적"
+            unit="㎡"
+          />
+        </FieldCard>
 
-      <FieldCard label="전체 토지 면적 (㎡)">
-        <DecimalInput
-          value={asset.mixedUseTotalLandArea}
-          onChange={(v) => onChange({ mixedUseTotalLandArea: v })}
-          placeholder="전체 토지 면적"
-          unit="㎡"
-        />
-      </FieldCard>
+        <FieldCard label="공통면적 (㎡)" hint="공용면적 — 주택·상가 전용면적 비율로 안분">
+          <DecimalInput
+            value={asset.commonArea}
+            onChange={(v) => onExclusiveChange({ commonArea: v })}
+            placeholder="공용(공통)면적"
+            unit="㎡"
+          />
+        </FieldCard>
 
-      {total > 0 && (
-        <div className="px-3 py-2 rounded-lg bg-sky-100/60 text-sm border border-sky-200">
-          <span className="text-sky-700">주택연면적 비율: </span>
-          <span className="font-semibold text-sky-900">{housingRatioText}</span>
+        {total > 0 && (
+          <div
+            className="px-3 py-2 rounded-lg bg-sky-100/60 text-sm border border-sky-200"
+            data-testid="mixed-derived-floor"
+          >
+            <div>
+              <span className="text-sky-700">주택 연면적: </span>
+              <span className="font-semibold text-sky-900">{residential.toFixed(2)}㎡</span>
+              <span className="text-sky-700"> / 상가 연면적: </span>
+              <span className="font-semibold text-sky-900">{commercial.toFixed(2)}㎡</span>
+            </div>
+            <div className="text-xs text-sky-700">
+              주택연면적 비율: <span className="font-semibold">{housingRatioText}</span>
+              {" — 공통면적을 전용면적 비율로 안분한 값 (개별주택가격 산정면적과 다르면 전용/공통을 조정하세요)"}
+            </div>
+          </div>
+        )}
+
+        <FieldCard
+          label="건물 정착면적 (수평 투영면적, ㎡)"
+          hint="건축물대장의 건축면적(수평 투영면적) — 부수토지 배율(3·5·10배) 초과 판정 기준"
+        >
+          <DecimalInput
+            value={asset.buildingFootprintArea}
+            onChange={(v) => onChange({ buildingFootprintArea: v })}
+            placeholder="건축물대장의 건축면적"
+            unit="㎡"
+          />
+        </FieldCard>
+
+        <FieldCard label="전체 토지 면적 (㎡)">
+          <DecimalInput
+            value={asset.mixedUseTotalLandArea}
+            onChange={(v) =>
+              // 전체 토지 변경 시 부수토지 override 클리어 (stale 방지, ui.design §5 U1)
+              onChange({ mixedUseTotalLandArea: v, mixedResidentialLandAreaOverride: "" })
+            }
+            placeholder="전체 토지 면적"
+            unit="㎡"
+          />
+        </FieldCard>
+
+        <p className="text-[11px] text-sky-700/80">
+          ※ 주택·상가 부수토지 면적은 아래 상가 기준시가란에서 자동 표시·수정합니다.
+        </p>
+      </div>
+
+      {/* 지역 소그룹 (rose) */}
+      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-rose-700">부수토지 배율 지역</p>
+          <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
         </div>
-      )}
+        <ToggleCard
+          tone="rose"
+          title="수도권 지역"
+          description="배율 3배·5배 구분 — 수도권 주·상·공: 3배 / 수도권 녹지·밖: 5배 / 도시 외: 10배 (시행령 §168의12)"
+          checked={!!asset.mixedIsMetropolitanArea}
+          onCheckedChange={(v) => onChange({ mixedIsMetropolitanArea: v })}
+        />
+      </div>
     </div>
   );
 }
