@@ -27,6 +27,12 @@ interface Props {
    * 겸용주택 상가건물처럼 한 번 계산으로 두 시점 필드를 동시 채울 때 사용.
    */
   onApplyBoth?: (acquisition: number, transfer: number) => void;
+  /**
+   * 이 모달이 특정 시점 필드에만 연결될 때 지정 — 해당 시점의 적용 버튼만 노출(반대 시점 버튼 숨김).
+   * "acquisition" → "취득시 적용"만, "transfer" → "양도시 적용"만. 오적용(반대 필드 덮어쓰기) 방지.
+   * 단일 시점만 필요한 자산(일반건물 실가 모드의 양도시 등)에도 안전. onApplyBoth 미지정 시 사용.
+   */
+  applyTimePoint?: "acquisition" | "transfer";
   buttonLabel?: string;
   /** 호출 세목 고정 — 양도="transfer" / 상속·증여="inheritance_gift". 지정 시 세목 라디오 숨김 */
   lockedTaxType?: BuildingStdPriceFormState["taxType"];
@@ -44,6 +50,7 @@ const fmt = (n: number) => n.toLocaleString("ko-KR");
 export function BuildingStdPriceModalButton({
   onApply,
   onApplyBoth,
+  applyTimePoint,
   buttonLabel = "건물 기준시가 계산",
   lockedTaxType,
   initialAddress,
@@ -141,12 +148,12 @@ export function BuildingStdPriceModalButton({
                     취득·양도 모두 적용 (취득 {fmt(result.acquisition!.standardPrice)} / 양도 {fmt(result.transfer!.standardPrice)})
                   </Button>
                 )}
-                {result.acquisition && !bothMode && (
+                {result.acquisition && !bothMode && applyTimePoint !== "transfer" && (
                   <Button type="button" size="sm" variant="secondary" onClick={() => apply(result.acquisition!.standardPrice)}>
                     취득시 적용 ({fmt(result.acquisition.standardPrice)})
                   </Button>
                 )}
-                {result.transfer && !bothMode && (
+                {result.transfer && !bothMode && applyTimePoint !== "acquisition" && (
                   <Button type="button" size="sm" onClick={() => apply(result.transfer!.standardPrice)}>
                     양도시 적용 ({fmt(result.transfer.standardPrice)})
                   </Button>
