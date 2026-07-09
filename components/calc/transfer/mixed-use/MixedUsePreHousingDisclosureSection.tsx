@@ -101,12 +101,6 @@ export function MixedUsePreHousingDisclosureSection({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold">개별주택가격 미공시 취득 (3-시점 환산)</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            겸용주택의 주택부분 취득시 개별주택가격을 최초 공시일 기준으로 역산합니다.
-            토지면적은 주택부수토지(자동 계산)를 사용합니다.
-            {isPre1990 && " 1990.8.30. 이전 취득 토지는 토지등급가액 환산 결과를 자동 적용합니다."}
-            {hasUsageChange && !isCaseA && " 보유 중 일부 용도변경 입력이 있어 취득시·양도시 주택부수토지 면적이 시점별로 자동 분리되어 취득시 개별주택가격 역산에 적용됩니다 (최초공시일 면적은 용도변경일 기준 자동 판정)."}
-          </p>
         </div>
         <LegalBadge />
       </div>

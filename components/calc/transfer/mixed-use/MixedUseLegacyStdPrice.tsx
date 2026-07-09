@@ -197,7 +197,7 @@ export function MixedUseLegacyStdPrice({
           title="취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 환산)"
           description={
             useEstimatedAcquisition
-              ? "1996년 최초 고시 이전 취득 시 활성화"
+              ? "개별주택가격 최초 공시 이전 취득 시 활성화"
               : "활성화 시 환산취득가 모드로 자동 전환"
           }
           checked={!!asset.usePreHousingDisclosure}

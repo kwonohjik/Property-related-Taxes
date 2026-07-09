@@ -91,27 +91,6 @@ export function MixedUseExpandedPanel({
 
   return (
     <div className="mt-4 border-t pt-4 space-y-3">
-      {/* 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 적용 여부 안내 */}
-      <div
-        className={`rounded-md px-3 py-2 text-xs border ${
-          asset.isOneHousehold
-            ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
-            : "bg-amber-50/60 border-amber-200 text-amber-900"
-        }`}
-      >
-        {asset.isOneHousehold ? (
-          <>
-            <span className="font-semibold">✓ 1세대 1주택 비과세 요건 충족</span>{" "}
-            — 주택분 양도가액 12억 이하 비과세, 거주 2년+ 시 표2 거주공제 (최대 80%) 적용 가능
-          </>
-        ) : (
-          <>
-            <span className="font-semibold">⚠ 1세대 1주택 비과세 미적용</span>{" "}
-            — 주택분 전액 과세, 표1 장기보유공제 (다주택자·2년 미거주 등). 자산 정보 영역의 1세대 1주택 토글을 확인하세요.
-          </>
-        )}
-      </div>
-
       {/* 2022.1.1 이전 경고 */}
       {!isAfter2022 && (
         <div className="px-3 py-2 rounded-lg bg-red-50 text-red-800 text-sm">
