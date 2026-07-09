@@ -123,7 +123,7 @@ export function FbHeirRequirementsSection({
     <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-3 space-y-3">
       {/* 섹션 헤더 */}
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
           4
         </span>
         <p className="text-xs font-semibold text-sky-700 dark:text-sky-200">
@@ -133,7 +133,7 @@ export function FbHeirRequirementsSection({
 
       {/* 신고기한 표시 */}
       {filingDeadline && (
-        <div className="rounded bg-sky-100/60 dark:bg-sky-900/30 px-2 py-1 text-[10px] text-sky-700 dark:text-sky-300">
+        <div className="rounded bg-sky-100/60 dark:bg-sky-900/30 px-2 py-1 text-micro text-sky-700 dark:text-sky-300">
           신고기한 (§67): {filingDeadline}
         </div>
       )}
@@ -153,7 +153,7 @@ export function FbHeirRequirementsSection({
 
       {/* ── 가. 18세 이상 ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+        <p className="text-caption font-semibold text-sky-700 dark:text-sky-300">
           가. 18세 이상 (상증령 §15③2호 가)
         </p>
         <FbAutoCheckPreviewCard
@@ -174,28 +174,28 @@ export function FbHeirRequirementsSection({
             </button>
             {openAdult && (
               <div className="mt-1.5 space-y-1" data-testid="fb-override-adult">
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-micro text-muted-foreground">
                   undefined로 되돌리면 자동판정으로 복귀합니다.
                 </p>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => onChange({ heirIsAdultOverride: true })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirIsAdultOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirIsAdultOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
                   >
                     충족 (수동)
                   </button>
                   <button
                     type="button"
                     onClick={() => onChange({ heirIsAdultOverride: false })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirIsAdultOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirIsAdultOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
                   >
                     미충족 (수동)
                   </button>
                   <button
                     type="button"
                     onClick={() => onChange({ heirIsAdultOverride: undefined })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirIsAdultOverride === undefined ? "bg-sky-100 border-sky-400 text-sky-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirIsAdultOverride === undefined ? "bg-sky-100 border-sky-400 text-sky-800" : "border-border bg-background"}`}
                   >
                     자동 복귀
                   </button>
@@ -208,7 +208,7 @@ export function FbHeirRequirementsSection({
 
       {/* ── 나. 2년 이상 가업 종사 ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+        <p className="text-caption font-semibold text-sky-700 dark:text-sky-300">
           나. 2년 이상 가업 종사 (상증령 §15③2호 나)
         </p>
         {/* 65세 미만 사망 단서 토글 */}
@@ -224,7 +224,7 @@ export function FbHeirRequirementsSection({
         {/* 종사시작일 DateInput */}
         {!earlyDeath && (
           <div className="space-y-1">
-            <label className="block text-[10px] font-medium text-sky-700 dark:text-sky-300">
+            <label className="block text-micro font-medium text-sky-700 dark:text-sky-300">
               가업종사 시작일
             </label>
             <DateInput
@@ -255,21 +255,21 @@ export function FbHeirRequirementsSection({
                   <button
                     type="button"
                     onClick={() => onChange({ heirTwoYearEngagementOverride: true })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirTwoYearEngagementOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirTwoYearEngagementOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
                   >
                     충족 (수동)
                   </button>
                   <button
                     type="button"
                     onClick={() => onChange({ heirTwoYearEngagementOverride: false })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirTwoYearEngagementOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirTwoYearEngagementOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
                   >
                     미충족 (수동)
                   </button>
                   <button
                     type="button"
                     onClick={() => onChange({ heirTwoYearEngagementOverride: undefined })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirTwoYearEngagementOverride === undefined ? "bg-sky-100 border-sky-400 text-sky-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirTwoYearEngagementOverride === undefined ? "bg-sky-100 border-sky-400 text-sky-800" : "border-border bg-background"}`}
                   >
                     자동 복귀
                   </button>
@@ -282,11 +282,11 @@ export function FbHeirRequirementsSection({
 
       {/* ── 다. 신고기한 임원취임 ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+        <p className="text-caption font-semibold text-sky-700 dark:text-sky-300">
           다. 신고기한까지 임원 취임 (상증령 §15③2호 다)
         </p>
         <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-sky-700 dark:text-sky-300">
+          <label className="block text-micro font-medium text-sky-700 dark:text-sky-300">
             임원 취임일
           </label>
           <DateInput
@@ -316,21 +316,21 @@ export function FbHeirRequirementsSection({
                   <button
                     type="button"
                     onClick={() => onChange({ heirOfficerByFilingDeadlineOverride: true })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirOfficerByFilingDeadlineOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirOfficerByFilingDeadlineOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
                   >
                     충족 (수동)
                   </button>
                   <button
                     type="button"
                     onClick={() => onChange({ heirOfficerByFilingDeadlineOverride: false })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirOfficerByFilingDeadlineOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirOfficerByFilingDeadlineOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
                   >
                     미충족 (수동)
                   </button>
                   <button
                     type="button"
                     onClick={() => onChange({ heirOfficerByFilingDeadlineOverride: undefined })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirOfficerByFilingDeadlineOverride === undefined ? "bg-sky-100 border-sky-400 text-sky-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirOfficerByFilingDeadlineOverride === undefined ? "bg-sky-100 border-sky-400 text-sky-800" : "border-border bg-background"}`}
                   >
                     자동 복귀
                   </button>
@@ -343,11 +343,11 @@ export function FbHeirRequirementsSection({
 
       {/* ── 라. 2년내 대표이사 취임 ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+        <p className="text-caption font-semibold text-sky-700 dark:text-sky-300">
           라. 신고기한 후 2년 이내 대표이사 취임 (상증령 §15③2호 라)
         </p>
         <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-sky-700 dark:text-sky-300">
+          <label className="block text-micro font-medium text-sky-700 dark:text-sky-300">
             대표이사 취임(예정)일
           </label>
           <DateInput
@@ -377,21 +377,21 @@ export function FbHeirRequirementsSection({
                   <button
                     type="button"
                     onClick={() => onChange({ heirCEOWithinTwoYearsOverride: true })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirCEOWithinTwoYearsOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirCEOWithinTwoYearsOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
                   >
                     충족 (수동)
                   </button>
                   <button
                     type="button"
                     onClick={() => onChange({ heirCEOWithinTwoYearsOverride: false })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirCEOWithinTwoYearsOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirCEOWithinTwoYearsOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
                   >
                     미충족 (수동)
                   </button>
                   <button
                     type="button"
                     onClick={() => onChange({ heirCEOWithinTwoYearsOverride: undefined })}
-                    className={`px-2 py-1 text-[10px] rounded border ${fb.heirCEOWithinTwoYearsOverride === undefined ? "bg-sky-100 border-sky-400 text-sky-800" : "border-border bg-background"}`}
+                    className={`px-2 py-1 text-micro rounded border ${fb.heirCEOWithinTwoYearsOverride === undefined ? "bg-sky-100 border-sky-400 text-sky-800" : "border-border bg-background"}`}
                   >
                     자동 복귀
                   </button>

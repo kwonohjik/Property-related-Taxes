@@ -83,7 +83,7 @@ export function OtherUnlistedHoldingSection({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {sectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
               {sectionNum}
             </span>
           )}
@@ -96,7 +96,7 @@ export function OtherUnlistedHoldingSection({
             type="button"
             onClick={addRow}
             disabled={rows.length >= MAX_ROWS}
-            className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white disabled:opacity-40"
+            className="rounded-md bg-emerald-600 px-2 py-1 text-caption font-semibold text-white disabled:opacity-40"
           >
             + 보유 추가
           </button>
@@ -133,7 +133,7 @@ export function OtherUnlistedHoldingSection({
               <button
                 type="button"
                 onClick={() => removeRow(idx)}
-                className="rounded px-1.5 py-1 text-[11px] text-rose-600 hover:bg-rose-50"
+                className="rounded px-1.5 py-1 text-caption text-rose-600 hover:bg-rose-50"
               >
                 삭제
               </button>
@@ -143,7 +143,7 @@ export function OtherUnlistedHoldingSection({
               <LabeledNum label="보유 주식수" value={h.holdingShares} onChange={(v) => setRow(idx, { holdingShares: v })} />
               <LabeledNum label="발행주식총수" value={h.totalShares} onChange={(v) => setRow(idx, { totalShares: v })} />
               <LabeledNum label="자기주식 (분모제외)" value={h.treasuryShares ?? 0} onChange={(v) => setRow(idx, { treasuryShares: v })} />
-              <div className="flex items-end pb-1 text-[11px] font-medium">
+              <div className="flex items-end pb-1 text-caption font-medium">
                 {r === null ? (
                   <span className="text-muted-foreground">발행주식총수 입력 필요</span>
                 ) : (
@@ -202,7 +202,7 @@ export function OtherUnlistedHoldingSection({
                   )}
                 </ToggleCard>
                 {!hasCounterparty && (
-                  <p className="text-[11px] text-amber-700">
+                  <p className="text-caption text-amber-700">
                     상호출자가 아니면 상대 보충적평가가액을 직접 산정해 시가/장부 중 큰 값으로 처리하세요.
                   </p>
                 )}

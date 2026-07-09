@@ -66,7 +66,7 @@ export function CompanionAcquisitionCauseSection({
                 : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
             )}
           >
-            <div className="text-[13px] font-semibold whitespace-nowrap">{opt.label}</div>
+            <div className="text-sm font-semibold whitespace-nowrap">{opt.label}</div>
           </button>
         ))}
       </div>

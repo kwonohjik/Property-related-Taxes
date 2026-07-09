@@ -48,7 +48,7 @@ function MiniCard({
   return (
     <div className={`rounded-md border p-2.5 space-y-2 ${t.border} ${t.bg}`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${t.badge}`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold ${t.badge}`}>
           {num}
         </span>
         <span className={`text-xs font-semibold ${t.text}`}>{title}</span>
@@ -62,7 +62,7 @@ export function ApartmentConversionSection({ value, onChange, jibun, acquisition
   const refDate = (year?: string) => (year ? `${year}-06-01` : undefined);
   return (
     <div className="space-y-2.5">
-      <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-[11px] text-violet-700">
+      <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-caption text-violet-700">
         공동주택기준시가가 고시되기 전에 취득한 경우, 최초고시 기준시가를 토지·건물 비율로 취득당시 가액으로 환산합니다.
         취득연도는 위 「취득 시점」의 취득연도를 사용합니다.
       </p>

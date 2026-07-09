@@ -35,7 +35,7 @@ function FarmingDetailContent({ detail }: { detail: FarmingDeductionDetail }) {
   if (!detail.evaluated) {
     return (
       <div className="mx-4 my-2 rounded-md border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 p-2">
-        <p className="text-[11px] text-violet-700 dark:text-violet-300">
+        <p className="text-caption text-violet-700 dark:text-violet-300">
           ⓘ 요건 미평가 (legacy 모드). Step4에서 영농상속공제 요건 입력을 활성화하면 자격을 자동 평가합니다.
         </p>
       </div>
@@ -45,10 +45,10 @@ function FarmingDetailContent({ detail }: { detail: FarmingDeductionDetail }) {
   if (!detail.eligible && detail.appliedAssetValue > 0) {
     return (
       <div className="mx-4 my-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-2 space-y-1">
-        <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+        <p className="text-caption font-semibold text-amber-800 dark:text-amber-200">
           입력 자산 {formatKRW(detail.appliedAssetValue)} — 자격 미충족으로 공제 적용 불가
         </p>
-        <ul className="space-y-0.5 text-[10px] text-amber-700 dark:text-amber-300 list-disc pl-4">
+        <ul className="space-y-0.5 text-micro text-amber-700 dark:text-amber-300 list-disc pl-4">
           {detail.ineligibleReasons.map((r, i) => (
             <li key={i}>{r}</li>
           ))}
@@ -59,7 +59,7 @@ function FarmingDetailContent({ detail }: { detail: FarmingDeductionDetail }) {
 
   if (detail.cappedDeduction === 0) {
     return (
-      <div className="mx-4 my-2 text-[11px] text-gray-500 dark:text-gray-400">
+      <div className="mx-4 my-2 text-caption text-gray-500 dark:text-gray-400">
         ⓘ {detail.eligible ? "영농 자산 미입력" : "자격 미충족 + 자산 미입력"}
       </div>
     );
@@ -69,20 +69,20 @@ function FarmingDetailContent({ detail }: { detail: FarmingDeductionDetail }) {
   const capped = detail.appliedAssetValue > limit;
   return (
     <div className="mx-4 my-2 space-y-1">
-      <div className="text-[11px] text-gray-600 dark:text-gray-400">
+      <div className="text-caption text-gray-600 dark:text-gray-400">
         ⓘ 영농자산 {formatKRW(detail.appliedAssetValue)}
         {` · 적용 한도 ${(limit / 100_000_000).toLocaleString("ko-KR")}억 (상속개시 연도 기준)`}
         {capped && ` → 한도 적용 ${formatKRW(detail.cappedDeduction)}`}
       </div>
       {detail.qualifiedHeirCount !== undefined && detail.totalHeirCount !== undefined && (
-        <div className="text-[10px] text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
+        <div className="text-micro text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/30 rounded p-2">
           부록 A — 자격 충족 상속인{" "}
           <span className="font-semibold">{detail.qualifiedHeirCount}명</span> / 전체{" "}
           {detail.totalHeirCount}명 (시행령 §16⑤ 본문)
         </div>
       )}
       {detail.residence && (
-        <div className="text-[10px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 rounded p-2">
+        <div className="text-micro text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 rounded p-2">
           {detail.residence.decedentMatchKind === null && detail.residence.heirMatchKind === null ? (
             <span>거주지: 사용자 명시 (자동 거주지 검증 미수행 — 좌표·코드 미입력)</span>
           ) : (

@@ -126,7 +126,7 @@ export function PreIpoListingToggle({
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
           {sectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
               {sectionNum}
             </span>
           )}

@@ -123,7 +123,7 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
             value={props.decedentAcquisitionDate}
             onChange={props.onDecedentAcquisitionDateChange}
           />
-          <p className="text-[11px] text-muted-foreground">단기보유 통산용 (소득세법 §104②1호)</p>
+          <p className="text-caption text-muted-foreground">단기보유 통산용 (소득세법 §104②1호)</p>
         </div>
       </div>
 

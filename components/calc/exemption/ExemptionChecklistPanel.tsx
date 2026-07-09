@@ -29,8 +29,8 @@ import type { ExemptionRule } from "@/lib/tax-engine/exemption-rules";
 // ────────────────────────────────────────────────────
 
 const GROUP_HEADER: Record<"sky" | "violet", string> = {
-  sky: "text-sky-700 dark:text-sky-300 font-semibold text-[11px] uppercase tracking-wide",
-  violet: "text-violet-700 dark:text-violet-300 font-semibold text-[11px] uppercase tracking-wide",
+  sky: "text-sky-700 dark:text-sky-300 font-semibold text-caption uppercase tracking-wide",
+  violet: "text-violet-700 dark:text-violet-300 font-semibold text-caption uppercase tracking-wide",
 };
 
 const GROUP_DIVIDER: Record<"sky" | "violet", string> = {
@@ -39,13 +39,13 @@ const GROUP_DIVIDER: Record<"sky" | "violet", string> = {
 };
 
 const CHIP_ON: Record<"sky" | "violet", string> = {
-  sky: "inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-100/80 px-2.5 py-1 text-[11px] font-medium text-sky-800 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200 cursor-pointer",
-  violet: "inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-100/80 px-2.5 py-1 text-[11px] font-medium text-violet-800 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-200 cursor-pointer",
+  sky: "inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-100/80 px-2.5 py-1 text-caption font-medium text-sky-800 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200 cursor-pointer",
+  violet: "inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-100/80 px-2.5 py-1 text-caption font-medium text-violet-800 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-200 cursor-pointer",
 };
 
 const CHIP_OFF: Record<"sky" | "violet", string> = {
-  sky: "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-[11px] font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-sky-300 hover:bg-sky-50/60",
-  violet: "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-[11px] font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-violet-300 hover:bg-violet-50/60",
+  sky: "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-sky-300 hover:bg-sky-50/60",
+  violet: "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-violet-300 hover:bg-violet-50/60",
 };
 
 const CHECK_BOX_ON: Record<"sky" | "violet", string> = {
@@ -108,7 +108,7 @@ function ExemptionChip({
       {/* 체크박스 역할 시각 표시 */}
       <span
         className={cn(
-          "flex h-3.5 w-3.5 items-center justify-center rounded border text-[9px] font-bold shrink-0",
+          "flex h-3.5 w-3.5 items-center justify-center rounded border text-micro font-bold shrink-0",
           active
             ? CHECK_BOX_ON[group]
             : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",
@@ -175,7 +175,7 @@ export function ExemptionChecklistPanel({
       {/* 금액 미입력 경고 배지 (체크만 하고 값 없는 항목) */}
       {warningCount > 0 && (
         <div>
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-200">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-micro font-medium text-amber-800 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-200">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
             {warningCount}개 항목 — 금액 미입력
           </span>

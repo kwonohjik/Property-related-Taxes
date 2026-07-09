@@ -37,7 +37,7 @@ export function CrossHoldingResultCard({
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
       <div className="flex items-center gap-2">
         {sectionNum !== undefined && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
             {sectionNum}
           </span>
         )}
@@ -46,7 +46,7 @@ export function CrossHoldingResultCard({
         </p>
       </div>
 
-      <table className="w-full text-[11px]">
+      <table className="w-full text-caption">
         <thead>
           <tr className="text-muted-foreground">
             <th className="text-left font-medium">발행법인</th>
@@ -72,7 +72,7 @@ export function CrossHoldingResultCard({
         </tbody>
       </table>
 
-      <div className="rounded bg-emerald-100/60 px-2 py-1.5 text-[11px] text-emerald-800">
+      <div className="rounded bg-emerald-100/60 px-2 py-1.5 text-caption text-emerald-800">
         ②평가차액 자동 주입액 ={" "}
         <span className="font-mono tabular-nums font-semibold">
           {won(reflection.assetValuationDeltaInjection)}

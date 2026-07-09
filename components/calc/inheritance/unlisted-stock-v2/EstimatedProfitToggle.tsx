@@ -187,7 +187,7 @@ export function EstimatedProfitToggle({
     <>
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             {sectionNum}
           </span>
           <p className="text-xs font-semibold text-violet-700">추정이익 갈음 (선택)</p>
@@ -227,7 +227,7 @@ export function EstimatedProfitToggle({
                       className="rounded-md border border-violet-200 bg-violet-50/60 p-2.5 space-y-2"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-semibold text-violet-800">
+                        <span className="text-caption font-semibold text-violet-800">
                           평가기관 {idx + 1}
                         </span>
                         {value.agencyEstimates.length > 2 && (
@@ -243,13 +243,13 @@ export function EstimatedProfitToggle({
                       </div>
                       {/* 기관 유형 선택 — RadioCardGroup inline */}
                       <div data-testid={`estimated-profit-agency-type-${idx}`}>
-                        <p className="text-[10px] text-violet-700 mb-1">
+                        <p className="text-micro text-violet-700 mb-1">
                           유형{" "}
                           <span className="text-violet-500">
                             (<LawArticleModal
                               legalBasis={VALUATION.UNLISTED_ESTIMATED_AGENCY_TYPE}
                               label={VALUATION.UNLISTED_ESTIMATED_AGENCY_TYPE}
-                              className="text-[10px]"
+                              className="text-micro"
                             />)
                           </span>
                         </p>
@@ -352,7 +352,7 @@ export function EstimatedProfitToggle({
                   {preview.evaluationMethod && (
                     <div className="flex items-center gap-1.5">
                       <span
-                        className={`rounded-sm px-1.5 py-0.5 text-[10px] font-medium border ${
+                        className={`rounded-sm px-1.5 py-0.5 text-micro font-medium border ${
                           preview.evaluationMethod === "legacy"
                             ? "bg-amber-100 border-amber-300 text-amber-700"
                             : "bg-violet-100 border-violet-300 text-violet-700"
@@ -362,7 +362,7 @@ export function EstimatedProfitToggle({
                         {preview.evaluationMethod === "legacy" ? "구법 안내" : "현행"}
                       </span>
                       <span
-                        className={`text-[10px] leading-snug ${
+                        className={`text-micro leading-snug ${
                           preview.evaluationMethod === "legacy" ? "text-amber-700" : "text-violet-700"
                         }`}
                       >

@@ -92,7 +92,7 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
           {/* 직접 입력 모드 */}
           {detail.usedDirectInput && (
             <div className="mx-4 mb-2 rounded-md border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 p-2">
-              <p className="text-[11px] text-violet-700 dark:text-violet-300">
+              <p className="text-caption text-violet-700 dark:text-violet-300">
                 ⓘ 가업상속공제 직접 입력 모드 — 요건 판정 우회 (한도 600억). 사후관리 위반 시 추징 (별도 Phase F).
               </p>
             </div>
@@ -101,10 +101,10 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
           {/* 자격 미충족 */}
           {!detail.eligible && detail.ineligibleReasons && detail.ineligibleReasons.length > 0 && (
             <div className="mx-4 mb-2 rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-800 p-2 space-y-1">
-              <p className="text-[11px] font-semibold text-rose-800 dark:text-rose-200">
+              <p className="text-caption font-semibold text-rose-800 dark:text-rose-200">
                 가업상속공제 자격 미충족 — 공제 적용 불가
               </p>
-              <ul className="space-y-0.5 text-[10px] text-rose-700 dark:text-rose-300 list-disc pl-4">
+              <ul className="space-y-0.5 text-micro text-rose-700 dark:text-rose-300 list-disc pl-4">
                 {detail.ineligibleReasons.map((r, i) => (
                   <li key={i}>{FamilyBusinessIneligibleReasonLabels[r] ?? r}</li>
                 ))}
@@ -115,7 +115,7 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
           {/* 복수가업 순차공제 (상증령 §15④ · 상증칙 §5) */}
           {detail.eligible && !detail.usedDirectInput && detail.multipleBusinessDetail && (
             <DetailTable>
-              <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
+              <div className="px-3 py-1 text-caption font-semibold text-muted-foreground bg-muted/30">
                 복수가업 순차공제 (상증령 §15④ · 상증칙 §5) — 총한도{" "}
                 {formatBillion(detail.multipleBusinessDetail.totalCap)}
               </div>
@@ -137,7 +137,7 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
           {/* 자격 충족 — 단일 가업 한도표 + 공제액 */}
           {detail.eligible && !detail.usedDirectInput && !detail.multipleBusinessDetail && (
             <DetailTable>
-              <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
+              <div className="px-3 py-1 text-caption font-semibold text-muted-foreground bg-muted/30">
                 영위 연수별 한도 (§18의2 ①)
               </div>
               {FAMILY_BUSINESS_CAP_TABLE.map((row) => (
@@ -178,7 +178,7 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
 
           {/* 기회발전특구 특례 */}
           {detail.ofzExemptionActive && (
-            <div className="mx-4 mb-2 rounded-md border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 dark:border-emerald-800 p-2 text-[10px] text-emerald-800 dark:text-emerald-300">
+            <div className="mx-4 mb-2 rounded-md border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20 dark:border-emerald-800 p-2 text-micro text-emerald-800 dark:text-emerald-300">
               <p className="font-semibold">기회발전특구 특례 적용 (상증령 §15㉕)</p>
               <p>본사 특구 소재·이전 + 상시근무인원 50% 이상 → 2년 내 대표이사 취임 요건 면제</p>
             </div>
@@ -186,7 +186,7 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
 
           {/* 중견기업 200% 가드 */}
           {detail.mediumGuard && (
-            <div className="mx-4 mb-2 rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-[10px] text-sky-800 dark:text-sky-300">
+            <div className="mx-4 mb-2 rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-micro text-sky-800 dark:text-sky-300">
               <p className="font-semibold mb-1">§18의2② 200% 가드 (중견기업)</p>
               {detail.mediumGuard.active === false ? (
                 <p>
@@ -206,7 +206,7 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
 
           {/* 요건 자동판정 메타 (Phase 1 — resolvedRequirements) */}
           {detail.resolvedRequirements && (
-            <div className="mx-4 mb-2 rounded-md border border-sky-200 bg-sky-50/40 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-[10px] text-sky-800 dark:text-sky-300 space-y-1">
+            <div className="mx-4 mb-2 rounded-md border border-sky-200 bg-sky-50/40 dark:bg-sky-950/20 dark:border-sky-800 p-2 text-micro text-sky-800 dark:text-sky-300 space-y-1">
               <p className="font-semibold">요건 자동판정 근거 (상증령 §15③2호)</p>
               {/* 가업상속인명 (id 직접 노출 금지) */}
               {heirId && (

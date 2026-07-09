@@ -102,7 +102,7 @@ export function CollapsibleEstateGroup({
             {sectionNum !== undefined && (
               <span
                 data-testid={`estate-group-badge-${groupKey}`}
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold select-none ${TONE_BADGE[tone]}`}
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-micro font-bold select-none ${TONE_BADGE[tone]}`}
               >
                 {sectionNum}
               </span>

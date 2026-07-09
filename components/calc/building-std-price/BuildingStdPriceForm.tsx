@@ -114,7 +114,7 @@ function SectionCard({
   return (
     <div className={`rounded-lg border p-3 space-y-2.5 ${t.border} ${t.bg}`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${t.badge}`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold ${t.badge}`}>
           {num}
         </span>
         <span className={`text-sm font-semibold ${t.text}`}>{title}</span>
@@ -296,12 +296,12 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       {!isMech && (
         <div className="space-y-1.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800">
               ＠
             </span>
             <span className="text-sm font-semibold text-rose-700">소재지 (공시지가 조회용)</span>
           </div>
-          <p className="text-[11px] text-rose-600/90">
+          <p className="text-caption text-rose-600/90">
             주소를 입력하면 아래 ㎡당 개별공시지가를 연도별로 자동 조회할 수 있습니다. 미입력 시 직접 입력하세요.
           </p>
           <AddressSearch

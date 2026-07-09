@@ -419,7 +419,7 @@ export function InheritanceTaxResultView({
           <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
             영농상속공제 사후관리 안내 (§18의3④ + §16⑦⑧)
           </p>
-          <p className="text-[11px] text-blue-700 dark:text-blue-300">
+          <p className="text-caption text-blue-700 dark:text-blue-300">
             상속개시일부터 5년 이내 영농상속재산을 처분하거나 영농 종사를 중단하면
             공제받은 금액 100%가 추징되고 이자상당액이 가산됩니다. 조세포탈·회계부정 형 확정 시 5년 무관 추징.
           </p>
@@ -438,7 +438,7 @@ export function InheritanceTaxResultView({
           <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
             가업상속공제 사후관리 안내 (§18의2⑤ + §15⑮⑯)
           </p>
-          <p className="text-[11px] text-blue-700 dark:text-blue-300">
+          <p className="text-caption text-blue-700 dark:text-blue-300">
             상속개시일부터 5년 이내 가업용 자산 40% 이상 처분·가업 미종사·지분 감소·고용 미달(정규직&총급여 각 목 모두 90% 미달) 시
             공제받은 금액이 추징되고 이자상당액이 가산됩니다. 위반일 말일부터 6개월 이내 신고·납부 의무.
           </p>
@@ -595,7 +595,7 @@ export function InheritanceTaxResultView({
           className="rounded-md border border-border bg-muted/30 px-3 py-2 print:hidden"
           data-testid="result-edit-steps"
         >
-          <p className="mb-1.5 text-[11px] text-muted-foreground">
+          <p className="mb-1.5 text-caption text-muted-foreground">
             입력 단계로 돌아가 수정
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -604,7 +604,7 @@ export function InheritanceTaxResultView({
                 key={label}
                 type="button"
                 onClick={() => onEditStep(i)}
-                className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
+                className="rounded-full border border-border bg-background px-2.5 py-1 text-caption font-medium hover:bg-muted transition-colors"
               >
                 {i + 1}. {label}
               </button>

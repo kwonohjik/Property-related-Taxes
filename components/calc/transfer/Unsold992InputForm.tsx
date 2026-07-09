@@ -39,7 +39,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -94,7 +94,7 @@ export function Unsold992InputForm({ value, onChange }: Props) {
               value={value.usageApprovalDate992}
               onChange={(v) => onChange({ usageApprovalDate992: v })}
             />
-            <p className="mt-1 text-[10px] text-muted-foreground">
+            <p className="mt-1 text-micro text-muted-foreground">
               2013.4.1~2013.12.31 과세특례 취득기간 중 사용승인·사용검사 (조특령 §99의2①8호)
             </p>
           </div>
@@ -105,7 +105,7 @@ export function Unsold992InputForm({ value, onChange }: Props) {
               value={value.contractDate992}
               onChange={(v) => onChange({ contractDate992: v })}
             />
-            <p className="mt-1 text-[10px] text-muted-foreground">
+            <p className="mt-1 text-micro text-muted-foreground">
               2013.4.1~2013.12.31 중 최초로 체결한 매매계약 — 동기간 중 계약 체결 + 계약금
               지급한 경우 포함 (법 §99의2①)
             </p>
@@ -121,7 +121,7 @@ export function Unsold992InputForm({ value, onChange }: Props) {
             onChange={(v) => onChange({ acquisitionPrice992: v })}
             label=""
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             취득세 및 그 밖의 부대비용 제외 (조특령 §99의2②1호 후단)
           </p>
         </div>
@@ -131,7 +131,7 @@ export function Unsold992InputForm({ value, onChange }: Props) {
             value={value.exclusiveAreaSqm992}
             onChange={(v) => onChange({ exclusiveAreaSqm992: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             6억원 이하이거나 85㎡ 이하 — 둘 다 초과하는 경우에만 제외됩니다 (령 §99의2②1호)
           </p>
         </div>
@@ -215,7 +215,7 @@ export function Unsold992InputForm({ value, onChange }: Props) {
             onChange={(v) => onChange({ standardPriceAt5Years992: v })}
             label=""
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §40①)
           </p>
         </div>
@@ -229,7 +229,7 @@ export function Unsold992InputForm({ value, onChange }: Props) {
         </div>
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 취득일부터 5년 이내 양도 시 양도소득세 100%를 감면하고, 5년이 지난 후
           양도 시 취득일부터 5년간 발생한 양도소득금액을 과세대상소득금액에서 공제합니다 (법 §99의2①).

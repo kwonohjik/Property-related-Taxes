@@ -87,11 +87,11 @@ export function FbAutoCheckPreviewCard({ autoMet, override, formula, lawLabel, t
   return (
     <div
       data-testid={testId}
-      className={`rounded-md border px-3 py-2 text-[11px] ${styles.border} ${styles.bg} ${styles.text}`}
+      className={`rounded-md border px-3 py-2 text-caption ${styles.border} ${styles.bg} ${styles.text}`}
     >
       <span className="font-semibold mr-1">{icon}</span>
       <span>{message}</span>
-      <span className="ml-2 opacity-70 text-[10px]">{lawLabel}</span>
+      <span className="ml-2 opacity-70 text-micro">{lawLabel}</span>
     </div>
   );
 }

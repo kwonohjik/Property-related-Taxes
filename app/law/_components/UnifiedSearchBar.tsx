@@ -131,7 +131,7 @@ export function UnifiedSearchBar({
           <span className="font-medium">
             [{lastRoute.confidence === "high" ? "✓" : lastRoute.confidence === "low" ? "⚠" : "→"}]
           </span>{" "}
-          <span className="font-mono text-[10px]">{lastRoute.patternName}</span> · {lastRoute.reason}
+          <span className="font-mono text-micro">{lastRoute.patternName}</span> · {lastRoute.reason}
         </div>
       )}
 

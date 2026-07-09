@@ -33,7 +33,7 @@ function SectionAddButton({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-[11px] font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+      className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-caption font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
     >
       + {label}
     </button>

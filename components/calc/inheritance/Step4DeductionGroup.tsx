@@ -121,7 +121,7 @@ export function Step4DeductionGroup({
           {hasData && (
             <span
               className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                "shrink-0 rounded-full px-2 py-0.5 text-micro font-medium",
                 t.badge,
               )}
             >

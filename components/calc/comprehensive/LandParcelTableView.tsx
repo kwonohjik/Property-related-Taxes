@@ -104,7 +104,7 @@ export function LandParcelTableView({
             <th className="py-2 text-right pr-2 text-gray-500 font-medium">면적</th>
             <th className="py-2 text-right pr-2 text-gray-500 font-medium">지분</th>
             <th className="py-2 text-right pr-2 text-gray-500 font-medium">공시지가</th>
-            <th className="w-12 py-2 text-right pr-3 text-gray-400 font-medium text-[10px]">편집</th>
+            <th className="w-12 py-2 text-right pr-3 text-gray-400 font-medium text-micro">편집</th>
           </tr>
         </thead>
         <tbody>

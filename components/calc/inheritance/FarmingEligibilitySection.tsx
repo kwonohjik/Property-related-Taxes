@@ -69,7 +69,7 @@ function ResidenceAddressField({
   };
   return (
     <div className="space-y-1">
-      <label className="block text-[11px] font-medium text-emerald-800 dark:text-emerald-200">
+      <label className="block text-caption font-medium text-emerald-800 dark:text-emerald-200">
         {label} (Vworld 주소 검색)
       </label>
       <AddressSearch
@@ -498,10 +498,10 @@ export function FarmingEligibilitySection({
                     if (auto === undefined) return null;
                     return (
                       <div className="rounded-md border border-violet-300 bg-violet-100/60 dark:bg-violet-900/30 dark:border-violet-700 p-2">
-                        <p className="text-[11px] font-semibold text-violet-900 dark:text-violet-100">
+                        <p className="text-caption font-semibold text-violet-900 dark:text-violet-100">
                           🤖 자동 자격자 도출 — {auto.length}명 / {heirs.length}명
                         </p>
-                        <p className="text-[10px] text-violet-800 dark:text-violet-200">
+                        <p className="text-micro text-violet-800 dark:text-violet-200">
                           {auto.length === 0
                             ? "자격 충족 상속인 없음 — 영농상속재산가액 0"
                             : `자격자: ${auto.map((id) => heirs.find((h) => h.id === id)?.name || id).join(", ")}`}
@@ -522,7 +522,7 @@ export function FarmingEligibilitySection({
                   <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
                     자격자 직접 조정 (override) — §16⑤ 본문
                   </p>
-                  <p className="text-[10px] text-violet-700 dark:text-violet-300">
+                  <p className="text-micro text-violet-700 dark:text-violet-300">
                     미선택 시 위 자동 도출 결과를 적용합니다. 직접 선택하면 자동 판정을 무시하고
                     명시 지정한 자격자 기준으로 영농상속재산가액이 산정됩니다.
                   </p>
@@ -532,7 +532,7 @@ export function FarmingEligibilitySection({
                   <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
                     자격 충족 상속인 선택 (§16⑤ 본문)
                   </p>
-                  <p className="text-[10px] text-violet-700 dark:text-violet-300">
+                  <p className="text-micro text-violet-700 dark:text-violet-300">
                     미체크 시 전체 상속인이 자격 충족된 것으로 간주 (전체 영농자산 합산). 1명 이상 체크하면
                     heirAllocations 중 해당 상속인 분배분만 영농상속재산가액에 합산됩니다.
                   </p>
@@ -565,7 +565,7 @@ export function FarmingEligibilitySection({
                 <button
                   type="button"
                   onClick={() => update({ qualifiedHeirIds: undefined })}
-                  className="text-[10px] underline text-violet-700 dark:text-violet-300 hover:text-violet-900"
+                  className="text-micro underline text-violet-700 dark:text-violet-300 hover:text-violet-900"
                 >
                   {farming.heirAssessments !== undefined
                     ? "↺ 자동 도출 결과로 되돌리기"
@@ -586,10 +586,10 @@ export function FarmingEligibilitySection({
                 if (!differs) return null;
                 return (
                   <div className="rounded-md border border-amber-300 bg-amber-50/60 dark:bg-amber-900/30 dark:border-amber-700 p-2">
-                    <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+                    <p className="text-caption font-semibold text-amber-800 dark:text-amber-200">
                       ⚠ 명시 지정이 자동 판정과 다릅니다
                     </p>
-                    <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                    <p className="text-micro text-amber-700 dark:text-amber-300">
                       법령 자동 판정(§16③)과 다른 자격자를 지정했습니다. 명시 지정한 자격자
                       기준으로 영농상속재산가액이 산정됩니다.
                     </p>
@@ -605,7 +605,7 @@ export function FarmingEligibilitySection({
               <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
                 📍 거주지 좌표 자동 검증 (선택, §16②1호나)
               </p>
-              <p className="text-[10px] text-emerald-700 dark:text-emerald-300">
+              <p className="text-micro text-emerald-700 dark:text-emerald-300">
                 Vworld 주소 검색 시 좌표 자동 저장 → 자산 소재지와 Haversine 30km 자동 비교
                 (안내용 — 사용자 명시 토글 우선)
               </p>
@@ -679,7 +679,7 @@ export function FarmingEligibilitySection({
                 <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
                   ⚠️ 자격 미충족
                 </p>
-                <ul className="space-y-0.5 text-[10px] text-amber-700 dark:text-amber-300 list-disc pl-4">
+                <ul className="space-y-0.5 text-micro text-amber-700 dark:text-amber-300 list-disc pl-4">
                   {evalResult.reasons.map((r, i) => (
                     <li key={i}>{r}</li>
                   ))}

@@ -319,19 +319,19 @@ export function PointBlock({
 
   const yearBadge = isManual ? (
     <span className="flex items-center gap-1">
-      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-micro font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
         수동
       </span>
       <button
         type="button"
         onClick={handleResetToAuto}
-        className="text-[10px] text-primary underline underline-offset-2 hover:no-underline"
+        className="text-micro text-primary underline underline-offset-2 hover:no-underline"
       >
         ↻ 자동
       </button>
     </span>
   ) : (
-    <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
+    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
       자동
     </span>
   );

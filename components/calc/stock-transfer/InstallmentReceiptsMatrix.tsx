@@ -139,7 +139,7 @@ export function InstallmentReceiptsMatrix({
                 <button
                   type="button"
                   onClick={() => removeRow(idx)}
-                  className="text-[10px] text-rose-400 hover:text-rose-600 underline"
+                  className="text-micro text-rose-400 hover:text-rose-600 underline"
                   aria-label={`${idx + 1}번째 수령 삭제`}
                 >
                   삭제

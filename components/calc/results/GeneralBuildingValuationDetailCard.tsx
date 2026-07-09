@@ -63,7 +63,7 @@ function SectionTitle({ number, text, tone }: { number: string; text: string; to
   }[tone];
   return (
     <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${bgClass}`}>
-      <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold select-none ${toneClass.split(" ").slice(0, 2).join(" ")}`}>
+      <span className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none ${toneClass.split(" ").slice(0, 2).join(" ")}`}>
         {number}
       </span>
       <p className={`text-xs font-semibold ${textClass}`}>{text}</p>
@@ -146,7 +146,7 @@ export function GeneralBuildingValuationDetailCard({
     <div className="rounded-xl border border-violet-200 bg-violet-50/20 p-4 space-y-4">
       <h3 className="text-sm font-bold text-violet-900">
         일반건물(토지+건물 일괄) 환산취득가 산정 근거
-        <span className="ml-2 text-[10px] font-normal text-violet-500">
+        <span className="ml-2 text-micro font-normal text-violet-500">
           (소득세법 시행령 §176의2② · §163⑥ · §102②)
         </span>
       </h3>
@@ -356,7 +356,7 @@ export function GeneralBuildingValuationDetailCard({
                 </span>
                 {' '}({Math.round(('nonBusinessRatio' in detail ? (detail as { nonBusinessRatio?: number }).nonBusinessRatio ?? 0 : 0) * 100)}%) 비사업용 — +10%p 중과
               </p>
-              <p className="text-[10px] text-rose-600">토지 카드 사업용·비사업용 분리 계산</p>
+              <p className="text-micro text-rose-600">토지 카드 사업용·비사업용 분리 계산</p>
             </>
         }
       </div>

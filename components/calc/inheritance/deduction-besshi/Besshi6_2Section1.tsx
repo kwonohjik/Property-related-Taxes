@@ -15,8 +15,8 @@
 import type { Besshi6_2Data } from "@/lib/calc/cohabit-besshi-data";
 
 const H =
-  "border border-black p-1 bg-gray-100 text-[10px] font-medium text-center align-middle";
-const V = "border border-black p-1 text-[10px] align-middle";
+  "border border-black p-1 bg-gray-100 text-micro font-medium text-center align-middle";
+const V = "border border-black p-1 text-micro align-middle";
 
 const COLS_19 = Array.from({ length: 19 }, () => (100 / 19).toFixed(4) + "%");
 
@@ -113,7 +113,7 @@ export function Besshi6_2Section1({ data }: Props) {
             주소
           </th>
           <td className={V} colSpan={15}>
-            <span className="text-[9px] text-gray-400">(인쇄 후 수기 작성)</span>
+            <span className="text-micro text-gray-400">(인쇄 후 수기 작성)</span>
           </td>
         </tr>
       </tbody>

@@ -159,7 +159,7 @@ function Row({ label, value, sub, highlight, tone }: RowProps) {
         {label}
       </p>
       {sub && (
-        <p className="text-[10px] text-muted-foreground/80">{sub}</p>
+        <p className="text-micro text-muted-foreground/80">{sub}</p>
       )}
       <span className={`text-sm font-mono tabular-nums whitespace-nowrap ${valueClass}`}>
         {value}

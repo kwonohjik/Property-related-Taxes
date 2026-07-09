@@ -83,7 +83,7 @@ export function GiftTaxBaseModeBlock({
 
       {/* auto 선택 시 안내 */}
       {mode === "auto" && (
-        <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+        <p className="text-caption text-emerald-600 dark:text-emerald-400">
           ⓘ §53 관계공제(수증자 관점)를 적용해 과세표준을 자동 도출합니다. 증여세 신고서가 있으면 직접 입력을 선택하세요.
         </p>
       )}

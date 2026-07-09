@@ -92,7 +92,7 @@ export function RedevelopmentRightExemptionSection({
   return (
     <div className="space-y-3">
       {/* §0-A sky 안내 카드 — 입주권 양도 LTHD 구조 */}
-      <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-[11px] text-sky-900 leading-relaxed">
+      <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-caption text-sky-900 leading-relaxed">
         <p className="font-semibold mb-0.5">관리처분 인가 후 조합원입주권 양도 — 과세 구조 안내</p>
         <p>
           인가전 양도차익만 장기보유특별공제(LTHD) 대상입니다 (§95② 단서 + §94①2호). 인가후 분 및 청산금 분 양도차익에는 LTHD가 적용되지 않습니다.
@@ -110,7 +110,7 @@ export function RedevelopmentRightExemptionSection({
       {/* §⑥ violet: 1세대1입주권 비과세 카드 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">⑥</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">⑥</span>
           <p className="text-xs font-semibold text-violet-700">1세대1입주권 비과세 요건 (§89①4호 가목)</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -152,7 +152,7 @@ export function RedevelopmentRightExemptionSection({
             </FieldCard>
 
             {/* Step3 보유 상황 안내 링크 */}
-            <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 text-[11px] text-violet-900 leading-relaxed">
+            <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 text-caption text-violet-900 leading-relaxed">
               <p className="font-semibold">Step 2 보유 상황 입력 필요</p>
               <p className="mt-0.5">
                 §89①4호 가목 본문: 양도일 현재 다른 주택 없음 + 1입주권만 보유.
@@ -166,7 +166,7 @@ export function RedevelopmentRightExemptionSection({
 
             {/* 12억 초과 자동 안내 */}
             {isHighValue && (
-              <div className="rounded-md border border-violet-300 bg-violet-100/70 p-2.5 text-[11px] text-violet-900">
+              <div className="rounded-md border border-violet-300 bg-violet-100/70 p-2.5 text-caption text-violet-900">
                 <p className="font-semibold">양도가액 12억 초과 → §89①4호 가목 단서 안분과세 적용</p>
                 <p className="mt-0.5">
                   비과세 요건 충족 시 전액 비과세가 아닌 12억 초과분에 대해 과세됩니다 (§95③ + 시행령 §160 준용).
@@ -180,7 +180,7 @@ export function RedevelopmentRightExemptionSection({
             )}
 
             {/* C-1 (c) 면책 문구 — 토글 ON 시만 노출 */}
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
+            <p className="text-micro text-muted-foreground leading-relaxed">
               본 토글은 사용자 자기선언이며 인가일 기준 보유·거주요건 충족 여부는 §89①3호 가목·시행령 §154에 따라
               별도 세무서 판단이 적용될 수 있습니다. 본 계산기 결과는 세무대리·세무서 확인을 대체하지 않습니다.
             </p>
@@ -189,7 +189,7 @@ export function RedevelopmentRightExemptionSection({
 
         {/* C-1 (b) rose 경고 카드 — 조건부 노출 (차단 아님, 자기선언 우선) */}
         {warningState && (
-          <div className="rounded-md border border-rose-300 bg-rose-50/70 p-2.5 text-[11px] text-rose-900 space-y-1">
+          <div className="rounded-md border border-rose-300 bg-rose-50/70 p-2.5 text-caption text-rose-900 space-y-1">
             <p className="font-semibold">⚠️ 비과세 요건 미충족 가능성</p>
             {warningState.holdingWarning && (
               <p>
@@ -203,7 +203,7 @@ export function RedevelopmentRightExemptionSection({
                 거주 요건 미충족 시 비과세 불인정될 수 있습니다.
               </p>
             )}
-            <p className="text-rose-700 text-[10px]">
+            <p className="text-rose-700 text-micro">
               ※ 차단 아님 — 토글 ON 유지 가능. 자기선언 우선. 세무 전문가 확인 권장.
             </p>
           </div>

@@ -126,7 +126,7 @@ export function ReductionPhdInput({
                 value={value.firstDisclosureDate ?? ""}
                 onChange={(v) => onChange({ firstDisclosureDate: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">공동주택가격/개별주택가격 최초 고시일</p>
+              <p className="mt-1 text-micro text-muted-foreground">공동주택가격/개별주택가격 최초 고시일</p>
             </div>
 
             <div>
@@ -136,7 +136,7 @@ export function ReductionPhdInput({
                 value={value.firstDisclosurePrice ?? ""}
                 onChange={(v) => onChange({ firstDisclosurePrice: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">최초고시 P_F 값</p>
+              <p className="mt-1 text-micro text-muted-foreground">최초고시 P_F 값</p>
             </div>
 
             <div>
@@ -156,7 +156,7 @@ export function ReductionPhdInput({
                 value={value.landPricePerSqmAtAcq ?? ""}
                 onChange={(v) => onChange({ landPricePerSqmAtAcq: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">취득연도 개별공시지가</p>
+              <p className="mt-1 text-micro text-muted-foreground">취득연도 개별공시지가</p>
             </div>
 
             <div>
@@ -166,7 +166,7 @@ export function ReductionPhdInput({
                 value={value.landPricePerSqmAtFirst ?? ""}
                 onChange={(v) => onChange({ landPricePerSqmAtFirst: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">최초공시연도 개별공시지가</p>
+              <p className="mt-1 text-micro text-muted-foreground">최초공시연도 개별공시지가</p>
             </div>
 
             <div>
@@ -176,7 +176,7 @@ export function ReductionPhdInput({
                 value={value.buildingStdAtAcq ?? ""}
                 onChange={(v) => onChange({ buildingStdAtAcq: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
+              <p className="mt-1 text-micro text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
             </div>
 
             <div>
@@ -186,7 +186,7 @@ export function ReductionPhdInput({
                 value={value.buildingStdAtFirst ?? ""}
                 onChange={(v) => onChange({ buildingStdAtFirst: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">미입력 시 취득시와 동일 가정</p>
+              <p className="mt-1 text-micro text-muted-foreground">미입력 시 취득시와 동일 가정</p>
             </div>
           </div>
 
@@ -196,7 +196,7 @@ export function ReductionPhdInput({
               <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
                 환산 결과 (소득세법 §164⑤)
               </p>
-              <div className="space-y-0.5 text-[11px] text-amber-800 dark:text-amber-300">
+              <div className="space-y-0.5 text-caption text-amber-800 dark:text-amber-300">
                 {result.formulaSteps.map((s, i) => (
                   <p key={i}>
                     <span className="opacity-70">{s.label}: </span>
@@ -220,7 +220,7 @@ export function ReductionPhdInput({
           )}
 
           {!result && isOn && (
-            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+            <p className="text-caption text-amber-700 dark:text-amber-400">
               ⚠ 환산을 위해 최초공시일·최초공시가격·토지면적·취득시·최초공시시 토지 공시지가를 모두 입력하세요.
             </p>
           )}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SelectOnFocusProvider } from "@/components/providers/SelectOnFocusProvider";
@@ -9,9 +10,13 @@ import { HeaderClientBanner } from "@/components/layout/HeaderClientBanner";
 import Link from "next/link";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// 한글+영문 단일 sans — Pretendard Variable self-host (OFL 1.1, app/fonts/).
+// 기존 Geist Sans는 --font-sans 순환참조로 미배선 + 한글 글리프 없음 → Pretendard로 대체.
+const pretendard = localFont({
+  src: "./fonts/PretendardVariable.woff2",
+  variable: "--font-pretendard",
+  display: "swap",
+  weight: "100 900",
 });
 
 const geistMono = Geist_Mono({
@@ -56,7 +61,7 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${pretendard.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">

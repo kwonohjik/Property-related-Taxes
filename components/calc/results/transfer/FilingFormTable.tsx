@@ -83,18 +83,18 @@ export function FilingFormTable({
                   {title}
                 </h3>
                 {adopted === true && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-caption font-bold text-emerald-700">
                     ✓ 신고 채택
                   </span>
                 )}
                 {adopted === false && (
-                  <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
+                  <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-caption font-medium text-zinc-500">
                     참고
                   </span>
                 )}
                 {isBurdenedGift && (
                   <span
-                    className="inline-flex items-center rounded-full bg-fuchsia-100 px-2 py-0.5 text-[11px] font-semibold text-fuchsia-700 border border-fuchsia-300"
+                    className="inline-flex items-center rounded-full bg-fuchsia-100 px-2 py-0.5 text-caption font-semibold text-fuchsia-700 border border-fuchsia-300"
                     title="양도가/취득가 모두 소득세법 시행령 §159①1·2호로 채무비율 × 자산별 기준시가 환산"
                   >
                     §159①1호 환산
@@ -111,7 +111,7 @@ export function FilingFormTable({
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>
+            <p className="text-caption text-slate-500 mt-0.5">{subtitle}</p>
           </div>
 
           {/* 열 수에 따라 테이블 폭 자동 조정 */}
@@ -173,12 +173,12 @@ export function FilingFormTable({
                       >
                         {fmtCell(row.values[c.key])}
                         {roseNote && (
-                          <div className="text-[10px] font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div className="text-micro font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right">
                             {roseNote}
                           </div>
                         )}
                         {note && (
-                          <div className="text-[10px] font-sans font-normal text-slate-500 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div className="text-micro font-sans font-normal text-slate-500 leading-tight mt-0.5 whitespace-normal text-right">
                             {note}
                           </div>
                         )}

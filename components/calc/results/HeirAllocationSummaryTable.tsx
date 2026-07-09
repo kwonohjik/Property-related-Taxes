@@ -54,7 +54,7 @@ export function HeirAllocationSummaryTable({
           className="text-base font-semibold text-violet-900 dark:text-violet-100 flex items-center gap-2"
         >
           {sectionNum !== undefined && (
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 dark:bg-violet-700 dark:text-violet-100 select-none">
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 dark:bg-violet-700 dark:text-violet-100 select-none">
               {sectionNum}
             </span>
           )}
@@ -219,7 +219,7 @@ export function HeirAllocationSummaryTable({
         </table>
       </HorizontalScrollContainer>
 
-      <p className="mt-3 text-[10px] text-violet-700 dark:text-violet-300">
+      <p className="mt-3 text-micro text-violet-700 dark:text-violet-300">
         산출 근거:
         <LawArticleModal
           legalBasis="상증법 §3의2②"

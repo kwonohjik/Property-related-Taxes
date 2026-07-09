@@ -133,7 +133,7 @@ export function MultiTransferHistoryLoadModal({
                       </Badge>
                       <span className="truncate font-medium">{r.title}</span>
                       {already && (
-                        <Badge variant="secondary" className="text-[10px]">불러옴</Badge>
+                        <Badge variant="secondary" className="text-micro">불러옴</Badge>
                       )}
                     </div>
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">

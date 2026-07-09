@@ -264,13 +264,13 @@ export function AssetSectionBasic({
                 )}
               >
                 <div className="text-sm font-semibold">{opt.label}</div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-caption text-muted-foreground">
                   {opt.desc}
                 </div>
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             ※ 승계조합원은 장기보유특별공제 미적용 (소득세법 §95② 단서)
           </p>
         </div>

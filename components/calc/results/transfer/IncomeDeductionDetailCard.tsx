@@ -71,7 +71,7 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
             </ul>
           </div>
         )}
-        <p className="text-[10px] text-rose-700 dark:text-rose-400">근거 조문: {result.legalBasis}</p>
+        <p className="text-micro text-rose-700 dark:text-rose-400">근거 조문: {result.legalBasis}</p>
       </div>
     );
   }
@@ -105,7 +105,7 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
           <div key={i} className="text-xs">
             <span className="font-medium text-emerald-900 dark:text-emerald-200">{s.label}</span>
             {s.formula && (
-              <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">{s.formula}</p>
+              <p className="text-caption text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">{s.formula}</p>
             )}
           </div>
         ))}
@@ -125,7 +125,7 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
 
       {result.ruralSurtax > 0 && (
         <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
-          <p className="text-[11px] text-sky-900 dark:text-sky-300">
+          <p className="text-caption text-sky-900 dark:text-sky-300">
             농어촌특별세: 감면세액 {result.taxReductionForRuralSurtax.toLocaleString()} × 20% ={" "}
             {result.ruralSurtax.toLocaleString()} (농어촌특별세법 §5 — 총 납부세액에 합산)
           </p>
@@ -133,13 +133,13 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
       )}
       {isRuralExempt && (
         <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
-          <p className="text-[11px] text-sky-900 dark:text-sky-300">
+          <p className="text-caption text-sky-900 dark:text-sky-300">
             농어촌특별세 비과세 (농어촌특별세법 시행령 §4⑦1호)
           </p>
         </div>
       )}
 
-      <p className="text-[10px] text-emerald-700 dark:text-emerald-400">
+      <p className="text-micro text-emerald-700 dark:text-emerald-400">
         근거 조문: {result.legalBasis}
         {showSurchargeNote
           ? " · 본 감면 주택 양도 시 다주택 중과세율은 적용되지 않습니다 (소득세법 시행령 §167의3①5호·§167의10①2호)"

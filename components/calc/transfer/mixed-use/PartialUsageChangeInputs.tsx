@@ -55,7 +55,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
       {/* 섹션 헤더 */}
       <div className="flex items-center gap-2">
         {sectionNum !== undefined && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             {sectionNum}
           </span>
         )}
@@ -105,7 +105,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
       </div>
 
       {/* 안내 (이슈 4 — 항상 노출) */}
-      <p className="text-[11px] text-amber-700/80 leading-relaxed">
+      <p className="text-caption text-amber-700/80 leading-relaxed">
         ※ 증축·일부 멸실 등으로 취득시 면적이 양도시 합계와 다른 경우 직접 수정하세요.
       </p>
 

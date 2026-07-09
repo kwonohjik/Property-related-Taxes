@@ -32,7 +32,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
         <h3 className="font-semibold text-violet-900">
           취득 후 상장 환산취득가 (소령 §165⑤)
         </h3>
-        <span className="text-[10px] uppercase rounded-full bg-violet-200 text-violet-800 px-2 py-0.5">
+        <span className="text-micro uppercase rounded-full bg-violet-200 text-violet-800 px-2 py-0.5">
           {post.detail?.mode ?? "simple"} mode
         </span>
       </div>
@@ -103,14 +103,14 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           <strong>{result.acquisitionPrice.toLocaleString()}</strong>
         </p>
         {result.valuationDetail?.transferDailyModeUsed && (
-          <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+          <p className="text-caption text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
             ✓ 양도일 직전 1개월 종가 일자별 입력 모드 — 자동 산정 평균{" "}
             <strong>{(result.valuationDetail?.transferDailyAverage ?? 0).toLocaleString()}</strong>
             {" "}을 §163⑨ 환산 분모로 사용
           </p>
         )}
         {result.valuationDetail?.conversionUsedFallback && (
-          <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1">
+          <p className="text-caption text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1">
             ⚠ 양도일 직전 1개월 종가평균 미입력 — 1주당 양도가({(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()})를 §163⑨ 환산 분모로 자동 사용.
             정확한 환산을 위해 PostListing 카드의 &quot;양도일 직전 1개월 종가 평균&quot;에 실제 값을 입력하세요.
           </p>
@@ -118,13 +118,13 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
       </div>
 
       {/* 80% 하한 미적용 안내 (Round 4 C-05) */}
-      <div className="mt-2 pt-2 border-t border-violet-200 text-[10px] text-violet-700">
+      <div className="mt-2 pt-2 border-t border-violet-200 text-micro text-violet-700">
         ※ 환산비율 산정에는 80% 하한이 적용되지 않습니다 (양도일 비상장 평가와 별개 — §165④1 단서)
         {post.monthlyAccrualApplied && " · 시행규칙 §81④ 월할 가산 발동"}
       </div>
 
       {/* 법조문 배지 — G-07 LawArticleModal 통합 */}
-      <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
+      <div className="mt-1 flex flex-wrap gap-1 text-micro">
         <LawArticleModal
           legalBasis="소득세법 시행령 §165 ⑤"
           label="§165⑤"

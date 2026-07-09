@@ -42,7 +42,7 @@ const CHECK_ON: Record<ChipTone, string> = {
 };
 
 const CHIP_BASE =
-  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors select-none cursor-pointer";
+  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-caption font-medium transition-colors select-none cursor-pointer";
 
 const CHIP_OFF_BASE =
   "border-gray-200 bg-gray-50/80 text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400";
@@ -83,7 +83,7 @@ export function ToggleChip({
     >
       <span
         className={cn(
-          "flex h-3.5 w-3.5 items-center justify-center rounded border text-[9px] font-bold shrink-0",
+          "flex h-3.5 w-3.5 items-center justify-center rounded border text-micro font-bold shrink-0",
           checked
             ? CHECK_ON[tone]
             : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",

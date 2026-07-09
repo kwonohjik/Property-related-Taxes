@@ -223,7 +223,7 @@ export function PrintSelectionPanel({
         </div>
       </div>
       {onPrintPdf && !pdfReady && (
-        <p className="mt-2 text-[11px] text-sky-600 dark:text-sky-400">
+        <p className="mt-2 text-caption text-sky-600 dark:text-sky-400">
           ※ 서버 PDF는 로그인·저장 후 이용할 수 있습니다. 비로그인 시 “선택 항목 인쇄”의 PDF 저장을 이용하세요.
         </p>
       )}

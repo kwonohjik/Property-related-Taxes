@@ -76,10 +76,10 @@ export function StockFilingFormTable({
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>
+            <p className="text-caption text-slate-500 mt-0.5">{subtitle}</p>
             {/* 신고서 헤더 메타 정보 (§4.2 디자인) */}
             {(taxpayerName || stockName || stockCode || brokerName || accountNumber || filingYear) && (
-              <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-0.5 text-[11px] text-slate-600 border-t border-slate-200 pt-2">
+              <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-0.5 text-caption text-slate-600 border-t border-slate-200 pt-2">
                 {taxpayerName && (
                   <div className="flex gap-1"><span className="text-slate-400">양도인:</span><span>{taxpayerName}</span></div>
                 )}
@@ -171,12 +171,12 @@ export function StockFilingFormTable({
                       >
                         {fmtCell(row.values[c.key])}
                         {roseNote && (
-                          <div className="text-[10px] font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div className="text-micro font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right">
                             {roseNote}
                           </div>
                         )}
                         {note && (
-                          <div className="text-[10px] font-sans font-normal text-slate-500 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div className="text-micro font-sans font-normal text-slate-500 leading-tight mt-0.5 whitespace-normal text-right">
                             {note}
                           </div>
                         )}
@@ -189,7 +189,7 @@ export function StockFilingFormTable({
           </table>
 
           {/* 주석 */}
-          <div className="px-4 py-2 bg-slate-50/50 border-t border-slate-200 text-[11px] text-slate-400 space-y-0.5">
+          <div className="px-4 py-2 bg-slate-50/50 border-t border-slate-200 text-caption text-slate-400 space-y-0.5">
             <p>* 금액 단위: 원. 본세·가산세 10원 미만 절사 (국고금 관리법 §47①).</p>
             <p>* 지방소득세: 산출세액 × 10%, 10원 미만 절사 (지방세법 §103의3).</p>
             <p>* 본 표는 참고용입니다. 실제 신고는 양도소득세 과세표준 신고서 (별지 제84호 서식)를 사용하세요.</p>

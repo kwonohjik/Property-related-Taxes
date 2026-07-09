@@ -30,7 +30,7 @@ export function ExcessDividendFields({ form, set }: Props) {
       {/* ── 섹션 1: 주주 입력 (배당지급일=증여일은 상단 공통 증여일 사용 — §41의2①) ── */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
             1
           </span>
           <p className="text-xs font-semibold text-sky-700">
@@ -46,7 +46,7 @@ export function ExcessDividendFields({ form, set }: Props) {
       {/* ── 섹션 3: 소득세 상당액 모드 ── */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             2
           </span>
           <p className="text-xs font-semibold text-amber-700">소득세 상당액 확정 여부 — 시행규칙 §10의3</p>
@@ -140,7 +140,7 @@ export function ExcessDividendFields({ form, set }: Props) {
       {/* ── 섹션 4: 증여세 계산 맥락 (giftTaxContext) — 정산·구법 결과 표시용 ── */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             3
           </span>
           <p className="text-xs font-semibold text-violet-700">
@@ -555,7 +555,7 @@ export function SpecificCorpFields({ form, set }: Props) {
       {/* ── 섹션 1: 입력 방식 + 거래이익 ── */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">1</span>
           <p className="text-xs font-semibold text-sky-700">입력 방식 선택</p>
         </div>
         <RadioCardGroup
@@ -588,7 +588,7 @@ export function SpecificCorpFields({ form, set }: Props) {
       {/* ── 섹션 2: 법인세 상당액 ── */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">2</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">2</span>
           <p className="text-xs font-semibold text-amber-700">법인세 상당액 (시행령 §34의5④2호)</p>
         </div>
         <RadioCardGroup
@@ -648,7 +648,7 @@ export function SpecificCorpFields({ form, set }: Props) {
       {/* ── 섹션 3: 지분율 or 주주 명단 ── */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">3</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">3</span>
           <p className="text-xs font-semibold text-violet-700">
             {isRoster ? "발행주식 총수 + 주주 명단" : "지배주주등 주식보유비율"}
           </p>
@@ -678,7 +678,7 @@ export function SpecificCorpFields({ form, set }: Props) {
       {/* ── 섹션 4: §45의5② 한도 — 증여재산공제 ── */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">4</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">4</span>
           <p className="text-xs font-semibold text-emerald-700">§45의5② 한도 — 증여재산공제 (선택)</p>
         </div>
         <CurrencyInput

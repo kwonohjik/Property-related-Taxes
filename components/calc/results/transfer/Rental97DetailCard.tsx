@@ -54,7 +54,7 @@ export function Rental97DetailCard({ detail, effectLabel }: Props) {
             </ul>
           </div>
         )}
-        <p className="text-[10px] text-rose-700 dark:text-rose-400">
+        <p className="text-micro text-rose-700 dark:text-rose-400">
           근거 조문: {detail.legalBasis}
         </p>
       </div>
@@ -115,12 +115,12 @@ export function Rental97DetailCard({ detail, effectLabel }: Props) {
         </div>
 
         {lthdEffect.rentalGainRatio < 1 && (
-          <p className="text-[10px] text-violet-700 dark:text-violet-400">
+          <p className="text-micro text-violet-700 dark:text-violet-400">
             ※ 임대기간 분 양도차익 한정 적용 — 조특령 §97의3⑤ 기준시가 안분
           </p>
         )}
 
-        <p className="text-[10px] text-muted-foreground">근거 조문: {detail.legalBasis}</p>
+        <p className="text-micro text-muted-foreground">근거 조문: {detail.legalBasis}</p>
       </div>
     );
   }
@@ -143,7 +143,7 @@ export function Rental97DetailCard({ detail, effectLabel }: Props) {
             {ARTICLE_LABELS[detail.id] ?? detail.id}
           </span>
           {taxEffect.isFullExemption && (
-            <span className="text-[10px] rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5">
+            <span className="text-micro rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5">
               전액 감면
             </span>
           )}
@@ -171,7 +171,7 @@ export function Rental97DetailCard({ detail, effectLabel }: Props) {
           )}
         </div>
 
-        <p className="text-[10px] text-muted-foreground">근거 조문: {detail.legalBasis}</p>
+        <p className="text-micro text-muted-foreground">근거 조문: {detail.legalBasis}</p>
       </div>
     );
   }

@@ -8,15 +8,15 @@
 import type { NtsReportInstance } from "@/lib/calc/nts-report-adapter";
 import { fmt, AMOUNT_CELL } from "./format";
 
-const TD = "border border-neutral-400 px-1.5 py-1 text-center text-[11px] text-black";
-const TH = "border border-neutral-400 px-1.5 py-1 text-center text-[11px] font-semibold text-black bg-neutral-100";
+const TD = "border border-neutral-400 px-1.5 py-1 text-center text-caption text-black";
+const TH = "border border-neutral-400 px-1.5 py-1 text-center text-caption font-semibold text-black bg-neutral-100";
 
 export function ReportSection6Total({ inst }: { inst: NtsReportInstance }) {
   const grandTotal = inst.buildingTotal + inst.landValue;
   const acq = inst.acqBase;
   return (
     <section className="mb-3 break-inside-avoid">
-      <h4 className="mb-1 text-[12px] font-bold text-black">Ⅵ. 평가대상 건물 기준시가 및 부속토지 평가액 합계</h4>
+      <h4 className="mb-1 text-xs font-bold text-black">Ⅵ. 평가대상 건물 기준시가 및 부속토지 평가액 합계</h4>
       <table className="w-full border-collapse text-black">
         <tbody>
           <tr>
@@ -38,7 +38,7 @@ export function ReportSection6Total({ inst }: { inst: NtsReportInstance }) {
 
       {acq && (
         <>
-          <p className="mt-2 mb-1 text-[11px] font-bold text-black">
+          <p className="mt-2 mb-1 text-caption font-bold text-black">
             ※ 2000.12.31 이전 취득 시 취득당시 기준시가 계산
           </p>
           <table className="w-full border-collapse text-black">

@@ -48,7 +48,7 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
             {index + 1}
           </span>
           <p className="text-xs font-semibold text-emerald-700">임대주택 {index + 1}호</p>
@@ -289,7 +289,7 @@ export function RentalHousingExceptionSection({
       {/* ① 임대주택 정보 */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
             1
           </span>
           <p className="text-xs font-semibold text-emerald-700">임대주택 정보</p>
@@ -325,7 +325,7 @@ export function RentalHousingExceptionSection({
       {rh.scenario === "B" && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
               2
             </span>
             <p className="text-xs font-semibold text-amber-700">직전거주주택 + 3-시점 기준시가</p>
@@ -433,7 +433,7 @@ export function RentalHousingExceptionSection({
         return (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
                 {rh.scenario === "B" ? 3 : 2}
               </span>
               <p className="text-xs font-semibold text-violet-700">거주주택 요건 충족 상태</p>
@@ -453,7 +453,7 @@ export function RentalHousingExceptionSection({
                 <span className="ml-2 text-xs text-muted-foreground">
                   {liveMonths > 0 && `(${Math.floor(liveMonths / 12)}년 ${liveMonths % 12}개월)`}
                 </span>
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-caption text-muted-foreground">
                   ※ 보유 상황 단계의 &quot;거주기간(개월)&quot; 필드와 동일한 값입니다. 어디서 입력해도 자동 동기화됩니다.
                 </p>
               </FieldCard>
@@ -487,7 +487,7 @@ export function RentalHousingExceptionSection({
               </div>
 
               {(!livePass || !holdPass) && (
-                <div className="mt-1.5 rounded border border-rose-200 bg-rose-50/60 p-1.5 text-[11px] text-rose-800">
+                <div className="mt-1.5 rounded border border-rose-200 bg-rose-50/60 p-1.5 text-caption text-rose-800">
                   거주주택 요건이 충족되지 않으면 본 특례가 적용되지 않고 일반 양도소득세로 계산됩니다.
                 </div>
               )}

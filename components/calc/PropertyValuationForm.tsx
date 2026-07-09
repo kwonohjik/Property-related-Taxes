@@ -251,10 +251,10 @@ export function PropertyValuationForm({
           {/* 상속세 모드 전용: 간주상속재산 분류 사전 선택 → 카드 필터링 */}
           {mode === "inheritance" && (
             <div className="rounded-md border border-violet-200 dark:border-violet-800 bg-violet-50/40 dark:bg-violet-950/20 p-2.5 space-y-1.5">
-              <p className="text-[11px] font-semibold text-violet-800 dark:text-violet-200">
+              <p className="text-caption font-semibold text-violet-800 dark:text-violet-200">
                 간주상속재산 분류 (§8·§9·§10) — 선택하면 해당 분류에 맞는 재산 종류만 표시됩니다
               </p>
-              <div className="flex flex-wrap gap-1.5 text-[11px]">
+              <div className="flex flex-wrap gap-1.5 text-caption">
                 {([
                   { v: "none", label: "일반 상속재산" },
                   { v: "insurance", label: "보험금 (§8)" },
@@ -280,7 +280,7 @@ export function PropertyValuationForm({
                 })}
               </div>
               {pendingDeemed !== "none" && (
-                <p className="text-[11px] text-violet-700 dark:text-violet-300 pt-0.5">
+                <p className="text-caption text-violet-700 dark:text-violet-300 pt-0.5">
                   ⓘ {DEEMED_FILTER_NOTE[pendingDeemed]}
                 </p>
               )}

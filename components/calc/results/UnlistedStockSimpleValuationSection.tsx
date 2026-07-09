@@ -105,7 +105,7 @@ export function UnlistedStockSimpleValuationSection({
                   </tr>
                 </tbody>
               </table>
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-caption text-muted-foreground">
                 ※ 시행령 §54 보충적 평가(간편). 최대주주 할증(§63③)·최종 평가액은 재산
                 평가 내역을 확인하세요.
               </p>

@@ -86,24 +86,24 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {sectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">{sectionNum}</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">{sectionNum}</span>
           )}
           <p className="text-xs font-semibold text-amber-700">자본금 변동사항 (§56③·⑤ + §17의3⑤)</p>
         </div>
         <button
           type="button"
           onClick={addRow}
-          className="px-3 py-1 text-[11px] border border-amber-300 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-800"
+          className="px-3 py-1 text-caption border border-amber-300 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-800"
         >
           + 변동 추가
         </button>
       </div>
-      <p className="text-[11px] text-amber-700/80">
+      <p className="text-caption text-amber-700/80">
         평가기준일 이전 3년 이내 유상증자·무상증자·감자. 유상증자는 §56⑤로 이전 사업연도 순손익액에 가산. 환산주식수는 §17의3⑤로 자동 산정.
       </p>
 
       {capitalChanges.length === 0 ? (
-        <div className="rounded border border-dashed border-amber-300 bg-white/60 p-4 text-center text-[11px] text-amber-700">
+        <div className="rounded border border-dashed border-amber-300 bg-white/60 p-4 text-center text-caption text-amber-700">
           자본금 변동 없음 — 환산주식수 = 평가시점 발행주식수 (단순 케이스)
         </div>
       ) : (
@@ -114,7 +114,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                 <select
                   value={c.changeType}
                   onChange={(e) => updateRow(idx, { changeType: e.target.value as UnlistedCapitalChange["changeType"] })}
-                  className={`px-2 py-1 text-[11px] border rounded font-semibold ${CHANGE_TYPE_TONE[c.changeType]}`}
+                  className={`px-2 py-1 text-caption border rounded font-semibold ${CHANGE_TYPE_TONE[c.changeType]}`}
                 >
                   <option value="paid_in">유상증자</option>
                   <option value="free_issue">무상증자</option>
@@ -124,7 +124,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                 <button
                   type="button"
                   onClick={() => setDeleteIdx(idx)}
-                  className="text-[11px] text-rose-600 hover:text-rose-800 underline"
+                  className="text-caption text-rose-600 hover:text-rose-800 underline"
                 >
                   삭제
                 </button>
@@ -180,13 +180,13 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
               )}
 
               {c.changeType === "free_issue" && (
-                <p className="text-[10px] text-emerald-700/80 italic">
+                <p className="text-micro text-emerald-700/80 italic">
                   ※ 무상증자는 §56⑤ 미적용 — 순손익액 조정 없음. 환산주식수만 영향 (§17의3⑤)
                 </p>
               )}
 
               {c.changeType === "free_reduction" && (
-                <p className="text-[10px] text-rose-700/80 italic">
+                <p className="text-micro text-rose-700/80 italic">
                   ※ 무상감자는 §56⑤ 미적용 — 순손익액 조정 없음. 환산주식수만 영향 (§17의3⑤ 2호, 유·무상 공통)
                 </p>
               )}

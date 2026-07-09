@@ -377,7 +377,7 @@ export function AdjustmentRateModal({
           )}
         </div>
 
-        <p className="rounded-md bg-violet-50/60 px-2.5 py-1.5 text-[11px] text-violet-700">
+        <p className="rounded-md bg-violet-50/60 px-2.5 py-1.5 text-caption text-violet-700">
           {showBuilding && (
             <>II 구분(최고층수·연면적·지능형)은 <b>가장 높은 지수 1개</b>만 적용됩니다(중복 방지).</>
           )}

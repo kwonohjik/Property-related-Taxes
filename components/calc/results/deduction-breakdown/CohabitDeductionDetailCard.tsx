@@ -73,7 +73,7 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
           {/* isExcluded 미적용 배지 (1+1 입주권 / 분양권) */}
           {isExcluded && exclusionReason && (
             <span
-              className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700 rounded px-1.5 py-0.5"
+              className="text-micro font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700 rounded px-1.5 py-0.5"
               data-testid="cohabit-excluded-badge"
             >
               {EXCLUSION_REASON_LABEL[exclusionReason]}
@@ -82,7 +82,7 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
           {/* meetsRequirement=false 경고 배지 */}
           {!isExcluded && cy && !cy.meetsRequirement && (
             <span
-              className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700 rounded px-1.5 py-0.5"
+              className="text-micro font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700 rounded px-1.5 py-0.5"
               data-testid="cohabit-years-warning-badge"
             >
               동거 {cy.effectiveYears}년 (10년 미달)
@@ -91,7 +91,7 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
           {/* hasOverseasGradWarning 배지 */}
           {!isExcluded && cy?.hasOverseasGradWarning && (
             <span
-              className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded px-1.5 py-0.5"
+              className="text-micro font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded px-1.5 py-0.5"
               data-testid="cohabit-overseas-warning-badge"
             >
               국외대학원 불인정

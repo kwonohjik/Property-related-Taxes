@@ -49,7 +49,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             §47
           </span>
           <p className="text-xs font-semibold text-violet-800">
@@ -68,7 +68,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
           + 사전증여 추가
         </button>
       </div>
-      <p className="text-[11px] text-violet-700">
+      <p className="text-caption text-violet-700">
         동일 증여자가 동일 수증자에게 10년 이내 한 증여재산을 합산하여 누진세율 적용(§47②).
         §58 기납부세액공제(이중과세 방지) 적용을 위해 <strong>당시 산출세액·과세표준</strong> 입력 필수 —
         미입력 시 합산 누진만 적용되고 공제가 누락됩니다.
@@ -86,27 +86,27 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
               className="rounded-md border border-violet-200 bg-white p-2 space-y-1.5"
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold text-violet-800">
+                <p className="text-caption font-semibold text-violet-800">
                   사전증여 #{idx + 1}
                 </p>
                 <button
                   type="button"
                   onClick={() => removeRow(idx)}
-                  className="text-[11px] text-rose-700 hover:text-rose-900 px-1.5 py-0.5 rounded border border-rose-200"
+                  className="text-caption text-rose-700 hover:text-rose-900 px-1.5 py-0.5 rounded border border-rose-200"
                 >
                   삭제
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
-                  <p className="text-[10px] text-violet-700 mb-0.5">증여일</p>
+                  <p className="text-micro text-violet-700 mb-0.5">증여일</p>
                   <DateInput
                     value={row.giftDate}
                     onChange={(v) => updateRow(idx, { giftDate: v })}
                   />
                 </div>
                 <div>
-                  <p className="text-[10px] text-violet-700 mb-0.5">
+                  <p className="text-micro text-violet-700 mb-0.5">
                     당시 증여재산가액
                   </p>
                   <CurrencyInput
@@ -117,7 +117,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
                   />
                 </div>
                 <div>
-                  <p className="text-[10px] text-violet-700 mb-0.5">
+                  <p className="text-micro text-violet-700 mb-0.5">
                     당시 납부 증여세액
                   </p>
                   <CurrencyInput
@@ -131,7 +131,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
               {/* §58 Phase A 안분 필수 — 당시 산출세액·과세표준 (PR3) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-md border border-violet-200 bg-violet-50/60 p-1.5">
                 <div>
-                  <p className="text-[10px] text-violet-700 mb-0.5">
+                  <p className="text-micro text-violet-700 mb-0.5">
                     당시 산출세액 (§58 공제)
                   </p>
                   <CurrencyInput
@@ -142,7 +142,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
                   />
                 </div>
                 <div>
-                  <p className="text-[10px] text-violet-700 mb-0.5">
+                  <p className="text-micro text-violet-700 mb-0.5">
                     당시 과세표준 (§58 한도)
                   </p>
                   <CurrencyInput

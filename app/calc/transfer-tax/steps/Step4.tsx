@@ -167,7 +167,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 </p>
               )}
               {regulatedAuto.confidence !== "high" && (
-                <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                <p className="text-caption text-amber-700 dark:text-amber-400">
                   ⚠️ 신뢰도: {regulatedAuto.confidence} — 시군구 일부만 지정된 경우 아래 체크박스를 수동 확인하세요.
                 </p>
               )}
@@ -277,7 +277,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               {form.isOneHousehold && form.householdRightCount === "1" && form.householdHousingCount === "0" && (
                 <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900">
                   <p className="font-medium">1세대1입주권 비과세 요건 (양도일 현재)</p>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-violet-800">
+                  <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
                     다른 주택 없음(0채) + 1입주권만(1개) 조건 충족.
                     자산 카드의 §⑥ 비과세 토글 ON 및 인가일 기준 보유·거주요건도 함께 확인하세요.
                   </p>
@@ -319,7 +319,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           {residenceShortfall && (
             <div className="rounded-lg border border-rose-200 bg-rose-50/40 px-3 py-2 text-xs text-rose-900">
               <p className="font-medium">⚠️ 조정대상지역 거주요건(2년) 불충족</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-rose-800">
+              <p className="mt-0.5 text-caption leading-relaxed text-rose-800">
                 취득 당시 조정대상지역 주택은 2년 이상 거주해야 1세대1주택 비과세가 적용됩니다.
                 현재 거주기간으로는 비과세가 배제될 수 있습니다.
               </p>
@@ -362,7 +362,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           {primaryKind === "housing" && form.isRegulatedArea && (
             <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
               <p className="font-medium">⚠️ 양도일 현재 조정대상지역</p>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-amber-800">
+              <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
                 조정대상지역 주택 양도는 중과세 적용 여부를 검토하세요.
               </p>
             </div>
@@ -551,7 +551,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 <li>• 토지 소재지와 <strong>연접한 시·군·구</strong>에 거주</li>
                 <li>• 토지 소재지와 거주지 사이 <strong>직선거리 30km 이내</strong></li>
               </ul>
-              <p className="text-muted-foreground/70 text-[10px] mt-1">소득세법 시행령 §168조의8 — 정밀 판정을 원하시면 세무사 확인 권장</p>
+              <p className="text-muted-foreground/70 text-micro mt-1">소득세법 시행령 §168조의8 — 정밀 판정을 원하시면 세무사 확인 권장</p>
             </div>
 
             {/* 판정 상태 라디오 */}

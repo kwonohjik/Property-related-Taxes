@@ -93,7 +93,7 @@ export function MarketCapHintsCard() {
           </span>
         </li>
       </ul>
-      <p className="mt-3 rounded-md bg-sky-100/70 px-2 py-1 text-[10px] text-sky-700">
+      <p className="mt-3 rounded-md bg-sky-100/70 px-2 py-1 text-micro text-sky-700">
         ※ 본 앱은 자동 가산하지 않습니다 — 위 항목이 해당되면 시가총액 입력값에 사전 반영해 주세요.
       </p>
     </CollapsibleHintCard>
@@ -124,7 +124,7 @@ export function IssuedSharesHintsCard() {
           </span>
         </li>
       </ul>
-      <p className="mt-3 rounded-md bg-emerald-100/70 px-2 py-1 text-[10px] text-emerald-700">
+      <p className="mt-3 rounded-md bg-emerald-100/70 px-2 py-1 text-micro text-emerald-700">
         ※ 본 앱은 자동 가산하지 않습니다 — 위 항목을 포함한 총 발행주식수를 입력해 주세요.
       </p>
     </CollapsibleHintCard>
@@ -171,7 +171,7 @@ export function SpecialEntityHintsCard() {
           </span>
         </li>
       </ul>
-      <p className="mt-3 rounded-md bg-rose-100/70 px-2 py-1 text-[10px] text-rose-700">
+      <p className="mt-3 rounded-md bg-rose-100/70 px-2 py-1 text-micro text-rose-700">
         ※ 위 케이스 해당 시 본인·합산 시총·지분율 입력값에 사전 반영해 주세요.
       </p>
     </CollapsibleHintCard>
@@ -209,7 +209,7 @@ export function CombinedShareHintsCard() {
           </span>
         </li>
       </ul>
-      <p className="mt-3 rounded-md bg-amber-100/70 px-2 py-1 text-[10px] text-amber-700">
+      <p className="mt-3 rounded-md bg-amber-100/70 px-2 py-1 text-micro text-amber-700">
         ※ 본 앱은 자동 가산하지 않습니다 — 위 항목 해당 시 합산 시총·지분율 입력값에 사전 반영해 주세요.
       </p>
     </CollapsibleHintCard>

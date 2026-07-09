@@ -71,7 +71,7 @@ function CompositeTable({
           </tfoot>
         </table>
       </div>
-      <p className="text-[11px] text-violet-600">
+      <p className="text-caption text-violet-600">
         각 부분 = ㎡당 금액 × 면적(1,000원 미만 절사 후). 공용 부속시설은 주용도 면적비율로 안분합니다.
       </p>
     </div>

@@ -35,7 +35,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {/* ① 등록·신분 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             ①
           </span>
           <p className="text-xs font-semibold text-violet-700">등록·신분</p>
@@ -61,7 +61,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             />
             <span className="text-xs text-muted-foreground">년 (1986~2000 신축)</span>
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             §97①1호 — 1986~2000년 사이 신축된 주택
           </p>
         </div>
@@ -80,7 +80,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {isProviso && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
               ②
             </span>
             <p className="text-xs font-semibold text-amber-700">단서 분기 — 100% 감면 요건</p>

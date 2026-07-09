@@ -40,7 +40,7 @@ export function HeaderProfileBadge() {
       className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted/60 transition-colors"
       title="프로필 수정"
     >
-      <span className="inline-block w-5 h-5 rounded-full bg-primary/15 text-primary text-center leading-5 font-semibold text-[10px]">
+      <span className="inline-block w-5 h-5 rounded-full bg-primary/15 text-primary text-center leading-5 font-semibold text-micro">
         {displayName.charAt(0).toUpperCase()}
       </span>
       <span>{displayName}</span>

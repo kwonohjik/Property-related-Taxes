@@ -202,15 +202,15 @@ function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransfe
               <th className="pb-1 pr-2 text-left font-normal">구분</th>
               <th className="pb-1 pr-2 text-right font-normal">
                 토지
-                <span className="ml-1 text-[10px] text-sky-600">(1001)</span>
+                <span className="ml-1 text-micro text-sky-600">(1001)</span>
               </th>
               <th className="pb-1 pr-2 text-right font-normal">
                 건물1
-                <span className="ml-1 text-[10px] text-emerald-600">(3001)</span>
+                <span className="ml-1 text-micro text-emerald-600">(3001)</span>
               </th>
               <th className="pb-1 pr-2 text-right font-normal">
                 건물2
-                <span className="ml-1 text-[10px] text-fuchsia-600">(3002·증축)</span>
+                <span className="ml-1 text-micro text-fuchsia-600">(3002·증축)</span>
               </th>
               <th className="pb-1 text-right font-normal">합계</th>
             </tr>
@@ -233,7 +233,7 @@ function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransfe
               <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.acquisitionPrice)}</td>
               <td className="py-1 pr-2 text-right font-mono">
                 {formatKRW(bld2.acquisitionPrice)}
-                <span className="ml-1 text-[10px] text-fuchsia-600">(환산)</span>
+                <span className="ml-1 text-micro text-fuchsia-600">(환산)</span>
               </td>
               <td className="py-1 text-right font-mono font-semibold">
                 {formatKRW(land.acquisitionPrice + bld1.acquisitionPrice + bld2.acquisitionPrice)}
@@ -246,7 +246,7 @@ function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransfe
               <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.necessaryExpense)}</td>
               <td className="py-1 pr-2 text-right font-mono">
                 {formatKRW(bld2.necessaryExpense)}
-                <span className="ml-1 text-[10px] text-muted-foreground">(개산공제 §163⑥)</span>
+                <span className="ml-1 text-micro text-muted-foreground">(개산공제 §163⑥)</span>
               </td>
               <td className="py-1 text-right font-mono font-semibold">
                 {formatKRW(land.necessaryExpense + bld1.necessaryExpense + bld2.necessaryExpense)}
@@ -292,7 +292,7 @@ function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransfe
             </tr>
             {/* 영 §102② 통산 흡수 */}
             <tr className="border-b border-border/40">
-              <td className="py-1 pr-2 text-muted-foreground text-[11px]">
+              <td className="py-1 pr-2 text-muted-foreground text-caption">
                 결손 통산 (영§102②)
               </td>
               <td className="py-1 pr-2 text-right font-mono text-rose-600 text-xs">{landOffsetRow}</td>

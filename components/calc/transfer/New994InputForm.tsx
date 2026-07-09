@@ -57,7 +57,7 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
       {/* ① 취득 정보 */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             ①
           </span>
           <p className="text-xs font-semibold text-amber-700">{houseLabel} 취득 정보</p>
@@ -68,7 +68,7 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
             value={value.ruralHouseAcquisitionDate}
             onChange={(v) => onChange({ ruralHouseAcquisitionDate: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             취득기간 {isHometown ? "2009.1.1" : "2003.8.1"}~2028.12.31 — 일반주택(양도 주택)을 먼저
             취득한 후 취득한 {houseLabel}이어야 합니다 (§99의4①)
           </p>
@@ -78,7 +78,7 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
       {/* ② 가액 요건 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
             ②
           </span>
           <p className="text-xs font-semibold text-sky-700">가액 요건</p>
@@ -90,7 +90,7 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
             value={value.ruralHouseStdPrice}
             onChange={(v) => onChange({ ruralHouseStdPrice: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             주택과 부속토지 합계 — 3억 이하 (등록 한옥 4억) 요건 (§99의4①)
           </p>
         </div>
@@ -107,7 +107,7 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
       {/* ③ 소재지·자격 */}
       <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">
             ③
           </span>
           <p className="text-xs font-semibold text-rose-700">소재지·자격 요건</p>
@@ -151,12 +151,12 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
           </span>
         </div>
         {holdingYears !== null && holdingYears < 3 && (
-          <p className="text-[10px] text-amber-700">
+          <p className="text-micro text-amber-700">
             ⚠ 보유 3년 미만 — 양도 후에도 특례는 적용되지만(④), 이후 {houseLabel}을 3년 이상
             보유하지 못하게 되면 줄어든 세액을 2개월 내 납부해야 합니다 (§99의4⑥)
           </p>
         )}
-        <p className="text-[10px] text-emerald-700">
+        <p className="text-micro text-emerald-700">
           ※ 적격 여부·1세대1주택 판정은 계산 시 엔진이 수행합니다. 다주택 중과 주택 수에는
           반영되지 않습니다.
         </p>

@@ -117,7 +117,7 @@ export function YearColumn({
       <p className="text-xs font-semibold text-amber-800">{COL_LABEL[col]} 사업연도</p>
 
       {/* 가산 4행 */}
-      <p className="text-[10px] font-semibold text-amber-700 mt-2">A. 가산항목</p>
+      <p className="text-micro font-semibold text-amber-700 mt-2">A. 가산항목</p>
       {addKeys.map((k, i) => (
         <FieldCard key={k} label={ADD_LABELS[i]}>
           <CurrencyInput
@@ -130,7 +130,7 @@ export function YearColumn({
       ))}
 
       {/* 차감 12행 */}
-      <p className="text-[10px] font-semibold text-amber-700 mt-3">B. 차감항목</p>
+      <p className="text-micro font-semibold text-amber-700 mt-3">B. 차감항목</p>
       {subKeys.map((k, i) => (
         <FieldCard key={k} label={SUB_LABELS[i]}>
           <CurrencyInput
@@ -143,7 +143,7 @@ export function YearColumn({
       ))}
 
       {/* 보조 — 주식수 + 환원율 */}
-      <p className="text-[10px] font-semibold text-amber-700 mt-3">환산 보조</p>
+      <p className="text-micro font-semibold text-amber-700 mt-3">환산 보조</p>
       <FieldCard label="20. 환산주식수" hint="사업연도말 주식 또는 환산주식수 (주)">
         <CurrencyInput
           label="" hideUnit
@@ -180,7 +180,7 @@ export function PostListingNetIncomeStatement({ form, onChange, mode }: PostList
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
           2
         </span>
         <p className="text-xs font-semibold text-amber-700">

@@ -68,7 +68,7 @@ export function ResidenceCheckPreviewCard({
   if (decedentAutoMet === null && heirAutoMet === null) {
     return (
       <div className="rounded-md border border-gray-200 bg-gray-50/40 dark:bg-gray-900/20 dark:border-gray-700 p-2">
-        <p className="text-[11px] text-gray-600 dark:text-gray-400">
+        <p className="text-caption text-gray-600 dark:text-gray-400">
           ⓘ 좌표 또는 자산 위치 미입력 — 자동 검증 보류
         </p>
       </div>
@@ -92,17 +92,17 @@ export function ResidenceCheckPreviewCard({
   return (
     <div className="space-y-1">
       <div className={`rounded-md border ${toneClasses} p-2`}>
-        <p className="text-[11px] font-semibold">
+        <p className="text-caption font-semibold">
           🤖 §16②1호나 거주지 OR 자동 검증
         </p>
-        <p className="text-[10px] mt-0.5">
+        <p className="text-micro mt-0.5">
           피상속인 — {labelMatchKind(decedentMatchKind)}
           {decedentMinDistanceKm !== null && ` (${formatKm(decedentMinDistanceKm)})`}
           {" · "}
           상속인 — {labelMatchKind(heirMatchKind)}
           {heirMinDistanceKm !== null && ` (${formatKm(heirMinDistanceKm)})`}
         </p>
-        <p className="text-[10px] mt-0.5 opacity-80">
+        <p className="text-micro mt-0.5 opacity-80">
           ※ 연접 시·군·구 매트릭스는 Phase 1 데이터 주입 후 활성 (옵션 A — 사용자 명시 우선)
         </p>
       </div>
@@ -157,7 +157,7 @@ function ConflictRow({
       : "border-sky-300 bg-sky-50 dark:bg-sky-950/20 dark:border-sky-800 text-sky-800 dark:text-sky-200";
   return (
     <div className={`rounded-md border ${classes} p-2`}>
-      <p className="text-[10px]">
+      <p className="text-micro">
         <span className="font-semibold">{tone === "warn" ? "⚠️" : "ℹ️"} {label}</span> — {text}
       </p>
     </div>

@@ -393,7 +393,7 @@ export function GiftTaxResultView({
               </tr>
             </tbody>
           </table>
-          <p className="text-[10px] text-sky-600 dark:text-sky-400">
+          <p className="text-micro text-sky-600 dark:text-sky-400">
             수증자 총 납부세액 합계 = 건 0 결정세액 + 건 1 결정세액 + … + 건 N 결정세액
           </p>
         </div>
@@ -423,7 +423,7 @@ export function GiftTaxResultView({
                   </span>
                   {pg.sourceCalculationId && (
                     <span
-                      className="inline-flex items-center gap-0.5 text-[10px] bg-violet-100 text-violet-800 rounded px-1.5 py-0.5"
+                      className="inline-flex items-center gap-0.5 text-micro bg-violet-100 text-violet-800 rounded px-1.5 py-0.5"
                       title="저장된 증여세 이력에서 자동 입력된 회차"
                     >
                       📋 이력

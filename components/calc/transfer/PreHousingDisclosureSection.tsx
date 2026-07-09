@@ -30,7 +30,7 @@ interface Props {
 
 function LegalBadge() {
   return (
-    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
       소득세법 시행령 §164 ⑤
     </span>
   );
@@ -113,7 +113,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
             onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
           />
           {housingType === "apartment" && (
-            <p className="mt-1 text-[11px] text-amber-700">
+            <p className="mt-1 text-caption text-amber-700">
               공동주택(아파트)의 경우 최초고시 이전 취득 시 1993.2.1 또는 1990.4.30이 최초고시일에 해당합니다.
             </p>
           )}

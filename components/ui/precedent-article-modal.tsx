@@ -66,7 +66,7 @@ export function PrecedentArticleModal({
         onClick={() => setOpen(true)}
         className={
           className ??
-          "inline-block mt-1 text-[10px] text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5 hover:text-primary hover:border-primary/50 transition-colors cursor-pointer"
+          "inline-block mt-1 text-micro text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5 hover:text-primary hover:border-primary/50 transition-colors cursor-pointer"
         }
       >
         {label ?? citation} ↗

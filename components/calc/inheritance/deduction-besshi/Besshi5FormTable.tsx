@@ -14,9 +14,9 @@ import {
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { B5, B5_COLS, B5_LIMIT_TABLE, PAPER_FOOTER, HANDWRITE_NOTE } from "./deduction-besshi-constants";
 
-const HEAD = "border border-black p-1 bg-gray-100 text-[10px] font-medium text-center align-middle";
-const VAL = "border border-black p-1 text-[10px] align-middle";
-const AMT = "border border-black p-1 text-[10px] text-right font-mono tabular-nums whitespace-nowrap align-middle";
+const HEAD = "border border-black p-1 bg-gray-100 text-micro font-medium text-center align-middle";
+const VAL = "border border-black p-1 text-micro align-middle";
+const AMT = "border border-black p-1 text-micro text-right font-mono tabular-nums whitespace-nowrap align-middle";
 
 function pad(len: number, fixed: number): number[] {
   return Array.from({ length: Math.max(0, fixed - len) }, (_, i) => i);
@@ -79,11 +79,11 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
   const [limitOpen, setLimitOpen] = useState(false);
   return (
     <div className="bg-white p-3 text-black print:bg-white print:text-black" data-testid="b5-root">
-      <p className="text-[9px] text-gray-600">{B5.subtitle}</p>
+      <p className="text-micro text-gray-600">{B5.subtitle}</p>
       <h3 className="my-1 text-center text-base font-bold">{B5.title}</h3>
 
       {/* 1. 인적사항 */}
-      <p className="mb-1 mt-2 text-[11px] font-bold">1. 피상속인 및 신고인(상속인) 인적사항</p>
+      <p className="mb-1 mt-2 text-caption font-bold">1. 피상속인 및 신고인(상속인) 인적사항</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={B5_COLS.person} />
         <tbody>
@@ -103,14 +103,14 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
       </table>
 
       {/* 2. 금융재산·금융채무 명세 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">2. 금융재산 및 금융채무 명세</p>
-      <p className="text-[10px] text-gray-700">가-1. 금융재산</p>
+      <p className="mb-1 mt-3 text-caption font-bold">2. 금융재산 및 금융채무 명세</p>
+      <p className="text-micro text-gray-700">가-1. 금융재산</p>
       <FinancialTable rows={data.assetRows} totalLabel="① 합계" total={data.assetTotal} totalTestId="b5-①" rowPrefix="b5-가1" />
-      <p className="mt-2 text-[10px] text-gray-700">가-2. 금융채무</p>
+      <p className="mt-2 text-micro text-gray-700">가-2. 금융채무</p>
       <FinancialTable rows={data.debtRows} totalLabel="② 합계" total={data.debtTotal} totalTestId="b5-②" rowPrefix="b5-가2" />
 
       {/* 3. 공제금액 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">3. 금융재산 상속공제금액</p>
+      <p className="mb-1 mt-3 text-caption font-bold">3. 금융재산 상속공제금액</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={B5_COLS.amount} />
         <tbody>
@@ -130,7 +130,7 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
       </table>
 
       {/* 한도액 표 (작성방법) */}
-      <div className="mt-2 text-[9px] text-gray-600">
+      <div className="mt-2 text-micro text-gray-600">
         <button
           type="button"
           onClick={() => setLimitOpen((o) => !o)}
@@ -158,8 +158,8 @@ export function Besshi5FormTable({ data }: { data: Besshi5Data }) {
         </table>
       </div>
 
-      <p className="mt-2 text-[8px] text-gray-500">{HANDWRITE_NOTE}</p>
-      <p className="mt-1 text-right text-[8px] text-gray-500">{PAPER_FOOTER}</p>
+      <p className="mt-2 text-micro text-gray-500">{HANDWRITE_NOTE}</p>
+      <p className="mt-1 text-right text-micro text-gray-500">{PAPER_FOOTER}</p>
     </div>
   );
 }

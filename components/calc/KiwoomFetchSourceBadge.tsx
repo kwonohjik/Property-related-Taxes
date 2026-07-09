@@ -32,7 +32,7 @@ export function KiwoomFetchSourceBadge({ fetchedAt, label = "키움 자동조회
   const formatted = formatKstDateTime(fetchedAt);
   if (!formatted) return null;
   return (
-    <div className="inline-flex items-center gap-1 text-[10px] text-sky-700 bg-sky-50 border border-sky-200 rounded px-2 py-0.5">
+    <div className="inline-flex items-center gap-1 text-micro text-sky-700 bg-sky-50 border border-sky-200 rounded px-2 py-0.5">
       <span>🔍</span>
       <span>
         {label} <strong>{formatted}</strong> KST

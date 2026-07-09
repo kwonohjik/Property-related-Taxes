@@ -49,7 +49,7 @@ export function LandParcelsSection({ parcels, onChange, jibun, referenceDate }: 
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="text-[11px] text-rose-600 underline underline-offset-2 hover:no-underline"
+                className="text-caption text-rose-600 underline underline-offset-2 hover:no-underline"
               >
                 삭제
               </button>

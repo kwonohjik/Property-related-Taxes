@@ -42,14 +42,14 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
         <p className="text-sm font-semibold text-sky-900 dark:text-sky-200">
           상속주택 환산취득가액 계산
         </p>
-        <span className="text-[10px] text-muted-foreground">{legalBasis}</span>
+        <span className="text-micro text-muted-foreground">{legalBasis}</span>
         {estimationMethod === "estimated_phd" && (
-          <span className="text-[10px] rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5">
+          <span className="text-micro rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5">
             §164⑦ 개별주택가격 추정
           </span>
         )}
         {estimationMethod === "user_override" && (
-          <span className="text-[10px] rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5">
+          <span className="text-micro rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5">
             사용자 직접 입력
           </span>
         )}
@@ -107,7 +107,7 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
               </tbody>
             </table>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             취득당시 개별주택가격 = 최초공시 개별주택가격{" "}
             <span className="font-mono text-foreground">{formatN(housePriceAtFirstDisclosure)}</span>
             {" "}× ({formatN(sumAtInheritance)} ÷ {formatN(sumAtFirstDisclosure)}) ={" "}
@@ -132,7 +132,7 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">
             1990.8.30 이전 환산 상세
-            <span className="ml-1 text-[10px] text-muted-foreground font-normal">
+            <span className="ml-1 text-micro text-muted-foreground font-normal">
               (소득세법 시행령 제164조 제4항)
             </span>
           </p>

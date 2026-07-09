@@ -119,7 +119,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
           onChange={(v) => onUpdate({ birthDate: v || undefined })}
         />
         {!dep.birthDate && (
-          <p className="text-[11px] text-amber-600 dark:text-amber-400">
+          <p className="text-caption text-amber-600 dark:text-amber-400">
             생년월일을 입력해야 미성년·연로자·장애인공제를 계산합니다.
           </p>
         )}
@@ -155,7 +155,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
             ]}
           />
           {!dep.gender && (
-            <p className="text-[11px] text-violet-600 dark:text-violet-400">
+            <p className="text-caption text-violet-600 dark:text-violet-400">
               성별을 선택해야 장애인공제 기대여명을 계산합니다.
             </p>
           )}
@@ -167,7 +167,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
         <button
           type="button"
           onClick={onRemove}
-          className="text-[11px] font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
+          className="text-caption font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
         >
           이 동거가족 삭제
         </button>
@@ -238,7 +238,7 @@ export function CohabitantDependentSection({
       {/* 헤더 — 섹션 ③ (상속인·수유자 ② 다음 독립 섹션) */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
             3
           </span>
           <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
@@ -248,7 +248,7 @@ export function CohabitantDependentSection({
         <button
           type="button"
           onClick={handleAdd}
-          className="shrink-0 rounded-md border border-sky-300 bg-sky-100 px-2.5 py-1 text-[11px] font-medium text-sky-800 hover:bg-sky-200 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200"
+          className="shrink-0 rounded-md border border-sky-300 bg-sky-100 px-2.5 py-1 text-caption font-medium text-sky-800 hover:bg-sky-200 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200"
         >
           + 동거가족 추가
         </button>
@@ -271,7 +271,7 @@ export function CohabitantDependentSection({
 
       {/* 빈 상태 안내 */}
       {deps.length === 0 && (
-        <p className="text-[11px] text-sky-600 dark:text-sky-400">
+        <p className="text-caption text-sky-600 dark:text-sky-400">
           동거가족이 있으면 &quot;+ 동거가족 추가&quot;를 눌러 입력하세요.
         </p>
       )}

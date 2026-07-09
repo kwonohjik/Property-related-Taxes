@@ -20,12 +20,12 @@ const HINT_TONE_CLASSES: Record<"amber" | "emerald", { container: string; text: 
   amber: {
     container:
       "rounded-md border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 dark:border-amber-800 p-2 mb-1",
-    text: "text-[11px] text-amber-800 dark:text-amber-200",
+    text: "text-caption text-amber-800 dark:text-amber-200",
   },
   emerald: {
     container:
       "rounded-md border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-2 mb-1",
-    text: "text-[11px] text-emerald-800 dark:text-emerald-200",
+    text: "text-caption text-emerald-800 dark:text-emerald-200",
   },
 };
 

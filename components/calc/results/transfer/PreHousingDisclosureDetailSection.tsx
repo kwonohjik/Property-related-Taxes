@@ -31,7 +31,7 @@ function PhdRow({ label, value, formula, highlight }: PhdRowProps) {
           {fmt(value)}
         </span>
       </div>
-      <p className="mt-0.5 text-[11px] text-muted-foreground leading-relaxed">{formula}</p>
+      <p className="mt-0.5 text-caption text-muted-foreground leading-relaxed">{formula}</p>
     </div>
   );
 }
@@ -100,7 +100,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
 
       {/* 4. 양도가액 분리 */}
       <div className="pt-2 mt-2 border-t border-border">
-        <p className="text-[11px] font-medium text-muted-foreground mb-1">
+        <p className="text-caption font-medium text-muted-foreground mb-1">
           양도가액 분리 (양도시 기준시가 비율 적용)
         </p>
         <PhdRow
@@ -124,7 +124,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
 
       {/* 5. 환산취득가 분리 */}
       <div className="pt-2 mt-2 border-t border-border">
-        <p className="text-[11px] font-medium text-muted-foreground mb-1">
+        <p className="text-caption font-medium text-muted-foreground mb-1">
           환산취득가 분리 (취득시 추정 기준시가 비율 적용)
         </p>
         <PhdRow
@@ -153,7 +153,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
 
       {/* 6. 개산공제 */}
       <div className="pt-2 mt-2 border-t border-border">
-        <p className="text-[11px] font-medium text-muted-foreground mb-1">
+        <p className="text-caption font-medium text-muted-foreground mb-1">
           개산공제 (소득세법 시행령 §163 ⑥)
         </p>
         <PhdRow

@@ -116,15 +116,15 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
           </>
         )}
         {stx.warning && (
-          <p className="text-amber-600 text-[10px]">{stx.warning}</p>
+          <p className="text-amber-600 text-micro">{stx.warning}</p>
         )}
-        <p className="text-[10px] text-slate-400">{stx.rateReference}</p>
+        <p className="text-micro text-slate-400">{stx.rateReference}</p>
         {showExpenseInclusionHint ? (
-          <p className="text-[10px] text-sky-600">
+          <p className="text-micro text-sky-600">
             ※ 이 금액을 필요경비에 포함하여 직접 입력하세요 (자동 합산 안 됨).
           </p>
         ) : (
-          <p className="text-[10px] text-rose-400">
+          <p className="text-micro text-rose-400">
             증권거래세는 양도소득세와 별도 납부 의무입니다.
           </p>
         )}
@@ -141,7 +141,7 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
           <h3 className="text-sm font-bold text-sky-800 dark:text-sky-200">
             증권거래세 (정보용)
           </h3>
-          <span className="text-[10px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full">
+          <span className="text-micro bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full">
             양도소득세와 별도 납부
           </span>
           <LawArticleModal legalBasis="증권거래세법 시행령 §5" label="증거세령§5" />
@@ -200,7 +200,7 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
           </div>
         )}
       </div>
-      <div className="px-4 pb-3 text-[11px] text-slate-400 space-y-0.5">
+      <div className="px-4 pb-3 text-caption text-slate-400 space-y-0.5">
         <p>증권거래세는 원칙적으로 증권회사 등이 원천징수합니다.</p>
         <p>장외거래·비상장주식 직접양도의 경우 양도자가 자진신고·납부합니다.</p>
         <p>본 산출액은 참고용입니다. 실제 납부세액은 거래 방식에 따라 다릅니다.</p>

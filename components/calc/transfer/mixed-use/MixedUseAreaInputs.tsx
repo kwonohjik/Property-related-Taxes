@@ -57,7 +57,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
     <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-3">
       <div className="flex items-center gap-2">
         {sectionNum !== undefined && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-micro font-bold text-slate-800 select-none">
             {sectionNum}
           </span>
         )}
@@ -130,25 +130,25 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           data-testid="mixed-derived-floor"
         >
           <div>
-            <span className="block text-[11px] text-sky-700">주택 연면적</span>
+            <span className="block text-caption text-sky-700">주택 연면적</span>
             <span className="font-semibold text-sky-900">
               {total > 0 ? `${residential.toFixed(2)}㎡` : "—"}
             </span>
           </div>
           <div>
-            <span className="block text-[11px] text-sky-700">상가 연면적</span>
+            <span className="block text-caption text-sky-700">상가 연면적</span>
             <span className="font-semibold text-sky-900">
               {total > 0 ? `${commercial.toFixed(2)}㎡` : "—"}
             </span>
           </div>
           <div>
-            <span className="block text-[11px] text-sky-700">주택 정착면적</span>
+            <span className="block text-caption text-sky-700">주택 정착면적</span>
             <span className="font-semibold text-sky-900">
               {footprint > 0 && total > 0 ? `${derived.residentialFootprintArea.toFixed(2)}㎡` : "—"}
             </span>
           </div>
           <div>
-            <span className="block text-[11px] text-sky-700">상가 정착면적</span>
+            <span className="block text-caption text-sky-700">상가 정착면적</span>
             <span className="font-semibold text-sky-900">
               {footprint > 0 && total > 0
                 ? `${round2(footprint - derived.residentialFootprintArea).toFixed(2)}㎡`
@@ -156,20 +156,20 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             </span>
           </div>
           <div>
-            <span className="block text-[11px] text-sky-700">주택 부수토지</span>
+            <span className="block text-caption text-sky-700">주택 부수토지</span>
             <span className="font-semibold text-sky-900">
               {totalLand > 0 ? `${derived.residentialLandArea.toFixed(2)}㎡` : "—"}
             </span>
           </div>
           <div>
-            <span className="block text-[11px] text-sky-700">상가 부수토지</span>
+            <span className="block text-caption text-sky-700">상가 부수토지</span>
             <span className="font-semibold text-sky-900">
               {totalLand > 0 ? `${derived.commercialLandArea.toFixed(2)}㎡` : "—"}
             </span>
           </div>
         </div>
 
-        <p className="text-[11px] text-sky-700/80">
+        <p className="text-caption text-sky-700/80">
           ※ 주택·상가 부수토지 면적은 아래 상가 기준시가란에서 수정합니다.
         </p>
       </div>

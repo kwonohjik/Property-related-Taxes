@@ -52,7 +52,7 @@ export function AssetSectionTransfer({
       {asset.transferType === "burdened_gift" && (
         <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-[10px] font-bold text-fuchsia-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-micro font-bold text-fuchsia-800 select-none">
               §159
             </span>
             <p className="text-sm font-semibold text-fuchsia-900">
@@ -63,7 +63,7 @@ export function AssetSectionTransfer({
             부담부증여(소득세법 시행령 §159)에서는 <b>양도가액 = 인수 채무액 × (자산별 평가가액 ÷ 증여가액)</b>으로
             엔진이 자동 산정합니다. 채무액·평가액은 위 <b>양도 정보</b> 카드(인수 채무 + 임대 평가 보조)에서 입력하세요.
           </p>
-          <p className="text-[11px] text-fuchsia-700">
+          <p className="text-caption text-fuchsia-700">
             ※ 아래 <b>양도시 기준시가</b> 입력은 §159 분모(증여가액 C)의 보충적 평가 산정에 사용됩니다 (기준시가 모드).
           </p>
         </div>

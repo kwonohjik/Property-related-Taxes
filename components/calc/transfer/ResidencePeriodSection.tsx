@@ -143,12 +143,12 @@ export function ResidencePeriodSection({
                     </FieldCard>
                   </div>
                   {isMoveInOnly && (
-                    <p className="text-[11px] text-rose-600">
+                    <p className="text-caption text-rose-600">
                       입주일이 입력되었는데 퇴거일이 비어 있습니다. 퇴거일을 입력하세요.
                       (양도일까지 거주한 경우 양도일을 퇴거일로 입력)
                     </p>
                   )}
-                  <p className="text-[11px] text-violet-700">
+                  <p className="text-caption text-violet-700">
                     이 구간 거주: {fmtPeriod(m)}
                   </p>
                 </div>

@@ -168,7 +168,7 @@ export function PriorGiftInput({
         </div>
       </div>
       {mode === "gift" && !canLookup && (
-        <p className="text-[11px] text-gray-500 -mt-2">
+        <p className="text-caption text-gray-500 -mt-2">
           ※ 이력 조회는 1단계 증여일·증여자 관계가 입력된 후 활성화됩니다.
         </p>
       )}

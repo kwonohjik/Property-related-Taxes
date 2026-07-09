@@ -223,7 +223,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
       {/* 헤더 — ② 섹션 타이틀(번호·제목) + 우측 6명·추가버튼 (동거가족 ③과 동형) */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             2
           </span>
           <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
@@ -242,7 +242,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
                 setShowAddPanel(true);
                 setAddStep("kind");
               }}
-              className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-[11px] font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+              className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-caption font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
             >
               + 상속인 추가
             </button>

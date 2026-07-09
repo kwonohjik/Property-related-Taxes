@@ -153,13 +153,13 @@ function CandidateRow({ candidate, isSelected, onToggle }: CandidateRowProps) {
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* 추천 배지 (§49② 가장 가까운 날) */}
             {isRecommended && (
-              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-micro font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
                 ★ §49② 추천
               </span>
             )}
             {/* 평가기간 외 배지 */}
             {!isWithinPeriod && (
-              <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-300">
+              <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-micro font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-300">
                 평가기간 외
               </span>
             )}
@@ -167,7 +167,7 @@ function CandidateRow({ candidate, isSelected, onToggle }: CandidateRowProps) {
             {isDirectTrade && (
               <span
                 title="직거래는 특수관계인 거래 가능성이 높습니다 (§49①1호가목)"
-                className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
               >
                 ⚠️ 직거래
               </span>
@@ -444,7 +444,7 @@ export function RtmsSimilarSalesModal({
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                 신고일 (선택 — §49④)
               </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              <p className="text-caption text-gray-500 dark:text-gray-400">
                 신고일 입력 시 그 이후 거래는 유사매매사례에서 제외됩니다 (상증령 §49④ 괄호).
                 통상 신고 전 시뮬레이션이므로 미입력이 기본입니다.
               </p>
@@ -563,7 +563,7 @@ export function RtmsSimilarSalesModal({
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="text-[11px] text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-2"
+                  className="text-caption text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-2"
                 >
                   {allSelected ? "전체 해제" : "전체 선택"}
                 </button>

@@ -30,7 +30,7 @@ export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBloc
       {/* 취득 매매사례 (amber tone) */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
             1
           </span>
           <p className="text-xs font-semibold text-amber-700">취득 매매사례가액 (영§176의2③1호)</p>
@@ -61,7 +61,7 @@ export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBloc
       {/* 양도 매매사례 (emerald tone) */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
             2
           </span>
           <p className="text-xs font-semibold text-emerald-700">양도 매매사례가액 (선택)</p>

@@ -165,7 +165,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm font-medium">{acqDateLabel}</span>
           {isDeemedAcquisitionDate && (
-            <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+            <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-micro font-semibold text-amber-900">
               의제취득(§98)
             </span>
           )}
@@ -194,7 +194,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           onBlur={handleAcquisitionDateBlur}
         />
         {/* 8-B-4: 취득일 안내 hint */}
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
+        <p className="text-caption text-muted-foreground leading-relaxed">
           ※ 1985.1.1 이전 취득은 모두 1985.1.1로 입력 (의제취득, 소득세법 §98).
         </p>
         {dateClampMsg && (
@@ -204,7 +204,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         )}
         {/* 8-B-5: 의제취득 + 분리 토글 ON 시 안내 (토지·건물 동일일 권장) */}
         {isDeemedAcquisitionDate && props.hasSeperateLandAcquisitionDate && !isMixedUse && (
-          <p className="text-[11px] text-amber-700 leading-relaxed">
+          <p className="text-caption text-amber-700 leading-relaxed">
             ⚠ 의제취득(1985.1.1)은 토지·건물이 동일 취득일로 의제됩니다. 분리 토글 비활성화 권장.
           </p>
         )}
@@ -264,7 +264,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 hint="※ 1985.1.1 이전 취득은 모두 1985.1.1로 입력 (의제취득, 소득세법 §98)."
                 trailing={
                   isLandDeemedAcquisitionDate ? (
-                    <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                    <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-micro font-semibold text-amber-900">
                       의제취득(§98)
                     </span>
                   ) : undefined
@@ -352,7 +352,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             &lsquo;부담부증여&rsquo; 카드의 <b>취득가액 산정방식</b>에서 선택). 따라서 일반 취득가액 산정 방식·실거래가
             입력은 여기서 표시하지 않습니다.
           </p>
-          <p className="text-[11px] text-fuchsia-700">
+          <p className="text-caption text-fuchsia-700">
             ※ 산식에 필요한 <b>취득시 기준시가</b>는 위 &lsquo;양도 정보 — 인수 채무&rsquo; 카드 및 토지 면적·공시지가
             입력에서 자동 도출됩니다. 보유기간·기산점 산정에 필요한 <b>취득일·취득원인</b>은 위 라디오에서 그대로 입력하세요.
           </p>
@@ -375,7 +375,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             아래 <b>§166②1호 재개발 일정·금액</b> 섹션의 입력값에서 엔진이 자동 산정합니다.
             따라서 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
           </p>
-          <p className="text-[11px] text-violet-700">
+          <p className="text-caption text-violet-700">
             ※ 인가전 분의 <b>환산취득가</b>(시행령 §166③ + §164⑦ 본문)는 아래 §166 섹션 내 환산취득가 토글에서 입력합니다.
           </p>
         </div>
@@ -408,7 +408,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             )}
           >
             <div className="text-sm font-semibold">실거래가</div>
-            <div className="text-[11px] text-muted-foreground leading-tight">
+            <div className="text-caption text-muted-foreground leading-tight">
               계약서상 실거래가
             </div>
           </button>
@@ -432,7 +432,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             )}
           >
             <div className="text-sm font-semibold">환산취득가</div>
-            <div className="text-[11px] text-muted-foreground leading-tight">
+            <div className="text-caption text-muted-foreground leading-tight">
               양도가 × 기준시가 비율
             </div>
           </button>
@@ -453,7 +453,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               )}
             >
               <div className="text-sm font-semibold">감정가액</div>
-              <div className="text-[11px] text-muted-foreground leading-tight">
+              <div className="text-caption text-muted-foreground leading-tight">
                 개산공제 자동 적용
               </div>
             </button>
@@ -475,7 +475,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               )}
             >
               <div className="text-sm font-semibold">매매사례가액</div>
-              <div className="text-[11px] text-muted-foreground leading-tight">
+              <div className="text-caption text-muted-foreground leading-tight">
                 §176의2③1호 추계
               </div>
             </button>
@@ -499,7 +499,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               )}
             >
               <div className="text-sm font-semibold text-amber-900">토지·건물 일괄 (증축분 별도)</div>
-              <div className="text-[11px] text-amber-700 leading-tight">
+              <div className="text-caption text-amber-700 leading-tight">
                 토지·원건물 실거래가 + 증축분 환산취득가
               </div>
             </button>

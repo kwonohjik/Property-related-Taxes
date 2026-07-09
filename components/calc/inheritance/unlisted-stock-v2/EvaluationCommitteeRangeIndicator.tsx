@@ -94,7 +94,7 @@ export function EvaluationCommitteeRangeIndicator({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-700">
+      <div className="grid grid-cols-3 gap-2 text-caption text-slate-700">
         <div>
           <span className="font-semibold">70% 하한</span>
           <br />

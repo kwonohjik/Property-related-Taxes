@@ -101,7 +101,7 @@ export function MixedUseLegacyStdPrice({
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
           {transferSectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
               {transferSectionNum}
             </span>
           )}
@@ -181,7 +181,7 @@ export function MixedUseLegacyStdPrice({
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
           {acqSectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
               {acqSectionNum}
             </span>
           )}

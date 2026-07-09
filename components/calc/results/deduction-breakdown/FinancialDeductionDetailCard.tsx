@@ -73,14 +73,14 @@ export function FinancialDeductionDetailCard({
           {hasCountInfo && (
             <div className="px-4 pb-1 -mt-1 space-y-0.5">
               {(eligibleAssets.length > 0 || eligibleDebts.length > 0) && (
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 pl-3">
+                <p className="text-caption text-gray-500 dark:text-gray-400 pl-3">
                   ⓘ §22 대상: 자산 {eligibleAssets.length}건 ({formatKRW(assetTotal)}) − 채무{" "}
                   {eligibleDebts.length}건 ({formatKRW(debtTotal)})
                 </p>
               )}
               {excludedBySection22.length > 0 && (
                 <p
-                  className="text-[11px] text-rose-600 dark:text-rose-400 pl-3"
+                  className="text-caption text-rose-600 dark:text-rose-400 pl-3"
                   data-testid="section22-excluded-badge"
                 >
                   ⓘ 법 §22②에 따라 최대주주 보유주식 {excludedBySection22.length}건 제외 (평가액 합계{" "}
@@ -113,7 +113,7 @@ export function FinancialDeductionDetailCard({
               />
 
               {/* 공제 산식 */}
-              <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
+              <div className="px-3 py-1 text-caption font-semibold text-muted-foreground bg-muted/30">
                 공제 산식
               </div>
               <DetailRow

@@ -122,7 +122,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           data-testid="besshi-form-toggle"
-          className="flex-1 text-left text-[12px] font-semibold text-gray-700 hover:text-gray-900"
+          className="flex-1 text-left text-xs font-semibold text-gray-700 hover:text-gray-900"
         >
           📄 별지 제4호 부표3 비상장주식 평가서 (인쇄 미리보기){" "}
           <span className={expandToggleClass("slate")}>{expandToggleLabel(open)}</span>
@@ -149,10 +149,10 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
         aria-label="비상장주식 등 평가서 (별지 제4호 부표3)"
       >
         <div
-          className="p-6 print:p-0 text-black bg-white dark:bg-white dark:text-black text-[11px] font-serif print:w-full print:max-w-none"
+          className="p-6 print:p-0 text-black bg-white dark:bg-white dark:text-black text-caption font-serif print:w-full print:max-w-none"
         >
           <h1 className="text-center text-base font-bold mb-4">비상장주식 등 평가서</h1>
-          <p className="text-right text-[10px] mb-2">
+          <p className="text-right text-micro mb-2">
             평가심의위원회 운영 규정 별지 제4호 서식 부표3 (2025.07.10. 개정)
           </p>
 
@@ -162,7 +162,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           {/* PR-L/L2: §63② 기업공개·상장신청 준비 중 평가 적용 시 ⑥ 최종평가액 반영 안내 (preparationType 분기) */}
           {result?.preIpoListingResult?.applied && (
             <p
-              className="text-[10px] text-emerald-800 bg-emerald-50 border border-emerald-200 p-1.5 mt-1 print:bg-emerald-50"
+              className="text-micro text-emerald-800 bg-emerald-50 border border-emerald-200 p-1.5 mt-1 print:bg-emerald-50"
               data-testid="besshi-pre-ipo-note"
             >
               ※ ⑥ 최종 1주당 평가액은{" "}
@@ -211,7 +211,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           {result && <Page6NetIncomeBreakdown result={result} />}
 
           {/* 푸터 */}
-          <p className="text-center text-[9px] text-gray-600 mt-6 print:mt-12">
+          <p className="text-center text-micro text-gray-600 mt-6 print:mt-12">
             ※ 본 양식은 평가심의위원회 운영규정 별지 제4호 서식 부표3을 기준으로 작성되었습니다.
             <br />
             KoreanLaw MCP 검증: 상증법 §63·시행령 §54·§55·§56·§59 + 시행규칙 §17·§17의2·§17의3·§19 (2026-05-22)

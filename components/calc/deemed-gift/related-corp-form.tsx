@@ -57,7 +57,7 @@ function SectionHeader({ num, tone, title }: { num: number; tone: string; title:
   const c = TONE_CLASS[tone] ?? TONE_CLASS.sky;
   return (
     <div className="flex items-center gap-2">
-      <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold select-none ${c.badge}`}>
+      <span className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none ${c.badge}`}>
         {num}
       </span>
       <p className={`text-xs font-semibold ${c.text}`}>{title}</p>
@@ -213,7 +213,7 @@ export function RelatedCorpFields({ form, set }: Props) {
               <FieldCard label="수혜법인 직접지분" unit="%">
                 <DecimalInput value={row.stakeInBeneficiaryPctStr} onChange={(v) => updIntermediary(idx, { ...row, stakeInBeneficiaryPctStr: v })} placeholder="수혜법인 지분율" />
               </FieldCard>
-              <p className="text-[11px] font-medium text-amber-700">개인소유주 (§⑱ 자동판정 — 지배주주등 합산 30%↑)</p>
+              <p className="text-caption font-medium text-amber-700">개인소유주 (§⑱ 자동판정 — 지배주주등 합산 30%↑)</p>
               {row.owners.map((owner, oIdx) => (
                 <div key={oIdx} className="flex items-center gap-2">
                   <select
@@ -338,7 +338,7 @@ export function RelatedCorpFields({ form, set }: Props) {
             )}
             {row.isRelated && row.exclusionType === "" && (
               <div className="rounded border border-violet-100 bg-violet-50/60 p-2">
-                <p className="text-[11px] font-medium text-violet-700">§⑭3호 지배주주등 보유비율 (이 법인에 출자한 수증자)</p>
+                <p className="text-caption font-medium text-violet-700">§⑭3호 지배주주등 보유비율 (이 법인에 출자한 수증자)</p>
                 {row.rulingStakes.map((stake, sIdx) => (
                   <div key={sIdx} className="mt-1 flex items-center gap-2">
                     <select

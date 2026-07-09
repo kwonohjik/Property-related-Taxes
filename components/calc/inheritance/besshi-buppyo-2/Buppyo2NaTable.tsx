@@ -24,11 +24,11 @@ const OVERSEAS_CHK = "[ ]여 [ ]부";
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
 const HEAD =
-  "border border-black p-1 bg-gray-100 dark:bg-gray-800 text-[9px] font-medium text-center align-middle";
-const C = "border border-black p-1 text-[10px] text-center align-middle";
-const L = "border border-black p-1 text-[10px] text-left align-middle";
+  "border border-black p-1 bg-gray-100 dark:bg-gray-800 text-micro font-medium text-center align-middle";
+const C = "border border-black p-1 text-micro text-center align-middle";
+const L = "border border-black p-1 text-micro text-left align-middle";
 const AMT =
-  "border border-black p-1 text-[10px] text-right font-mono tabular-nums whitespace-nowrap align-middle";
+  "border border-black p-1 text-micro text-right font-mono tabular-nums whitespace-nowrap align-middle";
 
 function NaColgroup() {
   return (

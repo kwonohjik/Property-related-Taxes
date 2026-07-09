@@ -60,7 +60,7 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
               <p className="text-xs font-semibold text-violet-700">보유 감면주택 {idx + 1}</p>
               <button
                 type="button"
-                className="text-[11px] text-rose-600 hover:underline"
+                className="text-caption text-rose-600 hover:underline"
                 onClick={() => onChange(items.filter((_, i) => i !== idx))}
               >
                 삭제
@@ -84,13 +84,13 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
                 </SelectContent>
               </Select>
               {it.article === "new_99" && (
-                <p className="mt-1 text-[10px] text-rose-600">
+                <p className="mt-1 text-micro text-rose-600">
                   §99②는 다른 주택을 2007.12.31까지 양도하는 경우에만 적용됩니다 — 그 이후 양도분은
                   주택 수 제외가 적용되지 않습니다.
                 </p>
               )}
               {it.article === "unsold_98_3" && (
-                <p className="mt-1 text-[10px] text-amber-700">
+                <p className="mt-1 text-micro text-amber-700">
                   비거주자는 2009.3.16~2010.2.11 취득(계약)분만 해당합니다 — 2009.2.12~3.15 취득분은
                   거주자에게만 적용됩니다 (조특법 §98의3①). 아래 요건 확인 토글은 본인 거주 구분에 따른
                   취득기간 충족을 포함해 확인한 것으로 간주됩니다.
@@ -110,7 +110,7 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
                 value={it.houseContractDate}
                 onChange={(v) => updateRow(idx, { houseContractDate: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="mt-1 text-micro text-muted-foreground">
                 취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다
               </p>
             </div>

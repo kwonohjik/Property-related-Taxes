@@ -59,7 +59,7 @@ export function CorporateGiftCreditDetailCard({
             );
           })}
           <SubTotalRow label="ⓒ 공제할 증여세액 = Min(ⓐ, ⓑ)" value={formatKRW(exemption)} />
-          <div className="px-3 py-2 text-[11px] text-muted-foreground leading-relaxed">
+          <div className="px-3 py-2 text-caption text-muted-foreground leading-relaxed">
             ⓘ 합계행 공제 한도 {formatKRW(limitDisplay)}는 산출세액+세대생략(⑨ 소계) 기준(할증 포함),
             영리법인 행 한도는 산출세액(⑦) 기준(할증 미포함)으로 차이가 있습니다. 주주 환원 명세는 별지 부표5 참조.
           </div>

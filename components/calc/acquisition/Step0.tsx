@@ -81,7 +81,7 @@ export function Step0({
       {/* 취득자 유형 — violet 카드 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">1</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">1</span>
           <p className="text-xs font-semibold text-violet-700">취득자 유형</p>
           <TaxHelp
             title="법인 취득자 — 휴면법인 판정"
@@ -122,10 +122,10 @@ export function Step0({
       {/* 물건 유형 — sky 카드 (간주취득 시 자동 설정, 읽기 전용 표시) */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">2</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">2</span>
           <p className="text-xs font-semibold text-sky-700">물건 유형</p>
           {isDeemed && (
-            <span className="text-[10px] rounded-full bg-violet-100 text-violet-700 px-1.5 py-0.5 font-medium">자동 설정</span>
+            <span className="text-micro rounded-full bg-violet-100 text-violet-700 px-1.5 py-0.5 font-medium">자동 설정</span>
           )}
         </div>
         <select
@@ -148,7 +148,7 @@ export function Step0({
       {/* 취득 원인 — violet 카드 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">3</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">3</span>
           <p className="text-xs font-semibold text-violet-700">취득 원인</p>
           <TaxHelp
             title="신축·증축 취득 (원시취득)"

@@ -235,7 +235,7 @@ function CandidateCard({ candidate, onSelect, variant = "same" }: CandidateCardP
       data-testid={`candidate-card-${candidate.calculationId}`}
     >
       <div className="flex items-center gap-2 mb-1">
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${badgeTone}`}>
+        <span className={`text-micro font-bold px-1.5 py-0.5 rounded ${badgeTone}`}>
           [{taxTypeLabel}]
         </span>
         <span className="text-sm font-semibold">{candidate.corpName}</span>

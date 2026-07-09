@@ -16,9 +16,9 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { Besshi6_2Data } from "@/lib/calc/cohabit-besshi-data";
 
 const H =
-  "border border-black p-1 bg-gray-100 text-[10px] font-medium text-center align-middle";
+  "border border-black p-1 bg-gray-100 text-micro font-medium text-center align-middle";
 const A =
-  "border border-black p-1 text-[10px] text-right font-mono tabular-nums whitespace-nowrap align-middle";
+  "border border-black p-1 text-micro text-right font-mono tabular-nums whitespace-nowrap align-middle";
 
 const COLS_19 = Array.from({ length: 19 }, () => (100 / 19).toFixed(4) + "%");
 

@@ -36,7 +36,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -92,14 +92,14 @@ export function Unsold986InputForm({ value, onChange }: Props) {
             onChange={(v) => onChange({ stdPriceSumAtBase986: v })}
             label=""
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             6억원 초과 시 제외됩니다 (조특령 §98의5② 단서 — 취득가액이 아닌 기준시가 합계 기준)
           </p>
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium">연면적 (공동주택은 전용면적, ㎡)</label>
           <DecimalInput value={value.floorAreaSqm986} onChange={(v) => onChange({ floorAreaSqm986: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">149㎡ 초과 시 제외됩니다</p>
+          <p className="mt-1 text-micro text-muted-foreground">149㎡ 초과 시 제외됩니다</p>
         </div>
       </SectionShell>
 
@@ -109,12 +109,12 @@ export function Unsold986InputForm({ value, onChange }: Props) {
             <div>
               <label className="mb-1 block text-xs font-medium">임대계약 체결일</label>
               <DateInput value={value.rentalContractDate986} onChange={(v) => onChange({ rentalContractDate986: v })} />
-              <p className="mt-1 text-[10px] text-muted-foreground">2011.12.31 이전 체결에 한정 (법 §98의6①2호)</p>
+              <p className="mt-1 text-micro text-muted-foreground">2011.12.31 이전 체결에 한정 (법 §98의6①2호)</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium">임대개시일</label>
               <DateInput value={value.rentalStartDate986} onChange={(v) => onChange({ rentalStartDate986: v })} />
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="mt-1 text-micro text-muted-foreground">
                 사업자등록(소법 §168)과 임대사업자등록(민특법 §5) 후 임대를 개시한 날부터 기산 (조특령 §98의5⑤1호)
               </p>
             </div>
@@ -128,7 +128,7 @@ export function Unsold986InputForm({ value, onChange }: Props) {
                 value={value.inheritedRentalMonths986}
                 onChange={(v) => onChange({ inheritedRentalMonths986: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">피상속인의 임대기간 합산 (조특령 §98의5⑤2호)</p>
+              <p className="mt-1 text-micro text-muted-foreground">피상속인의 임대기간 합산 (조특령 §98의5⑤2호)</p>
             </div>
           </>
         ) : (
@@ -200,7 +200,7 @@ export function Unsold986InputForm({ value, onChange }: Props) {
         </div>
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 5년 이내 양도 시 양도소득세 50% 감면(1호 한정), 5년 후 양도 시 5년간 발생
           양도소득금액의 50%를 공제합니다 (법 §98의6①).

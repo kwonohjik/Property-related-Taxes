@@ -276,10 +276,10 @@ function ExemptionGroupSection({
           <span className={cn("text-xs font-semibold", headerClass)}>
             {title}
           </span>
-          <span className="text-[10px] font-normal text-gray-400 dark:text-gray-500">
+          <span className="text-micro font-normal text-gray-400 dark:text-gray-500">
             {subtitle}
           </span>
-          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", badgeClass)}>
+          <span className={cn("rounded-full px-2 py-0.5 text-micro font-medium", badgeClass)}>
             {checkedCount}개 선택
           </span>
         </div>

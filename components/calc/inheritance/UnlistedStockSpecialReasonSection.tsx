@@ -33,7 +33,7 @@ const OPTIONS: RadioCardOption<UnlistedAssetValueOnlyReason>[] = [
     label: "3호 — 부동산 비율 80% 이상",
     description: "법인 자산총액 중 부동산 비율 80% 이상",
     trailing: (
-      <span className="text-[10px] text-amber-700 dark:text-amber-400 whitespace-nowrap">
+      <span className="text-micro text-amber-700 dark:text-amber-400 whitespace-nowrap">
         단서 (조건부)
       </span>
     ),
@@ -44,7 +44,7 @@ const OPTIONS: RadioCardOption<UnlistedAssetValueOnlyReason>[] = [
     label: "5호 — 주식 등 가액 80% 이상",
     description: "법인 자산총액 중 주식 등 가액 80% 이상",
     trailing: (
-      <span className="text-[10px] text-amber-700 dark:text-amber-400 whitespace-nowrap">
+      <span className="text-micro text-amber-700 dark:text-amber-400 whitespace-nowrap">
         단서 (조건부)
       </span>
     ),
@@ -85,7 +85,7 @@ export function UnlistedStockSpecialReasonSection({
       }}
     >
       <div className="space-y-2">
-        <p className="text-[11px] text-rose-700 dark:text-rose-300">
+        <p className="text-caption text-rose-700 dark:text-rose-300">
           ※ 시행령 §54④ 각 호 사유 — 1·2·6호는 무조건 순자산가치 / 3·5호는 단서 적용
           (가중평균 &lt; 1주당 순자산가치인 경우에만)
         </p>
