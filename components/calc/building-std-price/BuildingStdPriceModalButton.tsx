@@ -95,7 +95,13 @@ export function BuildingStdPriceModalButton({
 
   return (
     <>
-      <Button type="button" variant="outline" size="xs" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="xs"
+        className="border-green-200 bg-green-100 text-green-700 hover:bg-green-200 hover:text-green-800"
+        onClick={() => setOpen(true)}
+      >
         {buttonLabel}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
