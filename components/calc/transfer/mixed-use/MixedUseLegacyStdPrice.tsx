@@ -66,7 +66,7 @@ export function MixedUseLegacyStdPrice({
   const fmtSqm = (v: number) => `${v.toFixed(2)}㎡`;
 
   // 취득 기준일 — 취득시 개별공시지가(건물 위치지수 산정용): 건물 취득일 기준
-  // (§164⑤ 주택 환산·신축연도 이후). 토지 취득일 아님(2026-04 회귀 정정).
+  // (§164⑦ 주택 환산·신축연도 이후). 토지 취득일 아님(2026-04 회귀 정정).
   const acqReferenceDate = asset.acquisitionDate;
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
@@ -194,7 +194,7 @@ export function MixedUseLegacyStdPrice({
         <ToggleCard
           tone="amber"
           size="sm"
-          title="취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 환산)"
+          title="취득 당시 개별주택가격 미공시 (§164⑦ 3-시점 환산)"
           description={
             useEstimatedAcquisition
               ? "개별주택가격 최초 공시 이전 취득 시 활성화"
@@ -230,7 +230,7 @@ export function MixedUseLegacyStdPrice({
                   jibun={jibun}
                   referenceDate={acqReferenceDate}
                   label="개별주택공시가격"
-                  hint="미공시 시 비워두세요 — 위 §164⑤ 토글 사용"
+                  hint="미공시 시 비워두세요 — 위 §164⑦ 토글 사용"
                 />
               )}
 
@@ -265,7 +265,7 @@ export function MixedUseLegacyStdPrice({
               area={commercialLandArea > 0 ? commercialLandArea : undefined}
               referenceDate={acqReferenceDate}
               jibun={jibun}
-              label="취득시 개별공시지가(상가)(원/㎡)"
+              label="개별공시지가 (원/㎡)"
               hint={
                 asset.partialChangeDirection === "house_to_commercial"
                   ? "취득 당시 동일 토지의 개별공시지가 — 직접 조회·입력 (필수)"

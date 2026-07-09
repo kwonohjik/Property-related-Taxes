@@ -1,18 +1,20 @@
 "use client";
 
 /**
- * 겸용주택 + 개별주택가격 미공시 (§164⑤) 3-시점 환산 패널
+ * 겸용주택 + 개별주택가격 미공시 (§164⑦) 3-시점 환산 패널
  *
  * 일반 자산용 PreHousingDisclosureSection과 동일한 PHD 알고리즘을 사용하지만:
  *  - 토지 면적은 겸용주택의 "주택부수토지" 면적으로 자동 계산되어 readonly 표시
  *  - 양도시 개별주택가격은 mixedTransferHousingPrice를 자동 mirror
  *
- * 법령 근거: 소득세법 시행령 §164 ⑤
+ * 법령 근거: 소득세법 시행령 §164 ⑦ (개별주택가격·공동주택가격 미공시 주택 환산.
+ *   건물분 기준시가는 §164⑤ 준용)
  */
 
 import { useEffect, useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ThreePointStandardPriceInput } from "../ThreePointStandardPriceInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -29,9 +31,11 @@ interface Props {
 
 function LegalBadge() {
   return (
-    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
-      소득세법 시행령 §164 ⑤
-    </span>
+    <LawArticleModal
+      legalBasis="소득세법 시행령 §164 ⑦"
+      label="소득세법 시행령 §164⑦"
+      className="inline-flex items-center rounded border border-blue-200 bg-blue-50/60 px-1.5 py-0.5 text-micro font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer dark:text-blue-300 dark:border-blue-900/50 dark:bg-blue-950/30"
+    />
   );
 }
 
@@ -58,7 +62,7 @@ export function MixedUsePreHousingDisclosureSection({
     !!asset.partialChangeDirection &&
     !!asset.partialChangeDate;
 
-  // PHD §164⑤ Case A 식별 — 최초공시일 < 용도변경일 (전체 건물이 주택이었던 시점)
+  // PHD §164⑦ Case A 식별 — 최초공시일 < 용도변경일 (전체 건물이 주택이었던 시점)
   // Case A: 취득시·최초공시 시점 입력란은 "전체 건물 기준시가" 의미 (주택+상가 합계 = 그 시점엔 모두 주택)
   // Case B: 모든 시점이 겸용 상태 → "주택분만" 의미 (현재 로직)
   const isCaseA = useMemo(() => {
@@ -238,7 +242,7 @@ export function MixedUsePreHousingDisclosureSection({
           onCommercialBuildingStdPriceAtTransferChange={(v) =>
             onChange({ mixedTransferCommercialBuildingPrice: v })
           }
-          // 취득시 — PHD 3시점은 건물 취득일 기준(§164⑤ 주택 환산·건물 위치지수·신축연도 이후).
+          // 취득시 — PHD 3시점은 건물 취득일 기준(§164⑦ 주택 환산·건물 위치지수·신축연도 이후).
           // 토지 취득일 아님(2026-04 회귀 정정). acqDate(:77 토지일)는 pre-1990 래치 전용으로 유지.
           acquisitionDate={asset.acquisitionDate}
           landPriceYearAtAcq={asset.phdLandPriceYearAtAcq}
