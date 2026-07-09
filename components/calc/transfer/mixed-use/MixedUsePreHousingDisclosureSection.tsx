@@ -303,13 +303,8 @@ export function MixedUsePreHousingDisclosureSection({
           onBuildingStdPriceAtTransferChange={(v) =>
             onChange({ phdBuildingStdPriceAtTransfer: v })
           }
-          // 겸용주택 — 토지는 같은 지번이므로 섹션 2의 공시지가를 자동 미러링 (read-only 표시)
-          landAutoSyncAtAcq={{
-            label: "위 취득시 기준시가 섹션의 개별공시지가를 자동 사용",
-          }}
-          landAutoSyncAtTransfer={{
-            label: "위 양도시 기준시가 섹션의 개별공시지가를 자동 사용",
-          }}
+          // 주택부수토지 공시지가는 독립 입력 — 연도 선택·Vworld 조회 버튼 노출.
+          // 값은 phdLandPricePerSqm* (미입력 시 섹션 2 mixed 값으로 prefill·fallback).
         />
       </div>
 

@@ -39,6 +39,11 @@ export interface PhdThreePointApply {
   acquisition?: { housing?: number; commercial?: number };
   firstDisclosure?: { housing?: number; commercial?: number };
   transfer?: { housing?: number; commercial?: number };
+  /**
+   * 시점별 입력 공시지가(원/㎡, 문자열) — 외부 3시점 섹션 되돌려쓰기용.
+   * 값 입력된 시점만 포함. 취득≤2000 2001값 게이팅은 소비 측(applyBatch)에서 처리.
+   */
+  landPrices?: { acquisition?: string; firstDisclosure?: string; transfer?: string };
 }
 
 interface PointMeta {
@@ -206,10 +211,16 @@ export function PhdBuildingStdPriceModalButton({
     if (snapshotPrefix && computedInput) {
       replaceSnapshotsByPrefix(snapshotPrefix, phdBatchToSnapshots(computedInput, snapshotPrefix));
     }
+    // 입력된 시점 공시지가만 외부 섹션으로 되돌려쓰기(빈값은 외부 미변경).
+    const lp: NonNullable<PhdThreePointApply["landPrices"]> = {};
+    if ((landPrices.acquisition ?? "").trim()) lp.acquisition = landPrices.acquisition;
+    if ((landPrices.firstDisclosure ?? "").trim()) lp.firstDisclosure = landPrices.firstDisclosure;
+    if ((landPrices.transfer ?? "").trim()) lp.transfer = landPrices.transfer;
     onApply({
       acquisition: result.acquisition,
       firstDisclosure: result.firstDisclosure,
       transfer: result.transfer,
+      landPrices: lp,
     });
     setOpen(false);
     setResult(null);
@@ -373,20 +384,18 @@ export function PhdBuildingStdPriceModalButton({
                       : " (연도 미상)"
                 } 공시지가`}
                 unit="원/㎡"
-                hint={
-                  !p.year
-                    ? "해당 시점 날짜 미입력 — 계산 제외"
-                    : p.key === "acquisition" && p.year <= 2000
-                      ? "2001.1.1. 현재 공시지가를 입력하세요"
-                      : undefined
-                }
+                hint={!p.year ? "해당 시점 날짜 미입력 — 계산 제외" : undefined}
               >
                 <CurrencyInput
                   label=""
                   hideUnit
                   value={landPrices[p.key] ?? ""}
                   onChange={(v) => setLandPrices((s) => ({ ...s, [p.key]: v }))}
-                  placeholder="원/㎡"
+                  placeholder={
+                    p.key === "acquisition" && p.year != null && p.year <= 2000
+                      ? "2001.1.1. 현재 공시지가를 입력하세요"
+                      : "원/㎡"
+                  }
                 />
               </FieldCard>
             ))}
