@@ -123,34 +123,36 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           </div>
         </div>
 
-        {/* 계산 결과 4열 한 행 (연면적 + 부수토지) */}
-        {total > 0 && (
-          <div
-            className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-3 py-2 rounded-lg bg-sky-100/60 border border-sky-200"
-            data-testid="mixed-derived-floor"
-          >
-            <div>
-              <span className="block text-[11px] text-sky-700">주택 연면적</span>
-              <span className="font-semibold text-sky-900">{residential.toFixed(2)}㎡</span>
-            </div>
-            <div>
-              <span className="block text-[11px] text-sky-700">상가 연면적</span>
-              <span className="font-semibold text-sky-900">{commercial.toFixed(2)}㎡</span>
-            </div>
-            <div>
-              <span className="block text-[11px] text-sky-700">주택 부수토지</span>
-              <span className="font-semibold text-sky-900">
-                {totalLand > 0 ? `${derived.residentialLandArea.toFixed(2)}㎡` : "—"}
-              </span>
-            </div>
-            <div>
-              <span className="block text-[11px] text-sky-700">상가 부수토지</span>
-              <span className="font-semibold text-sky-900">
-                {totalLand > 0 ? `${derived.commercialLandArea.toFixed(2)}㎡` : "—"}
-              </span>
-            </div>
+        {/* 계산 결과 4열 한 행 (연면적 + 부수토지) — 항상 표시, 미입력은 "—" */}
+        <div
+          className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-3 py-2 rounded-lg bg-sky-100/60 border border-sky-200"
+          data-testid="mixed-derived-floor"
+        >
+          <div>
+            <span className="block text-[11px] text-sky-700">주택 연면적</span>
+            <span className="font-semibold text-sky-900">
+              {total > 0 ? `${residential.toFixed(2)}㎡` : "—"}
+            </span>
           </div>
-        )}
+          <div>
+            <span className="block text-[11px] text-sky-700">상가 연면적</span>
+            <span className="font-semibold text-sky-900">
+              {total > 0 ? `${commercial.toFixed(2)}㎡` : "—"}
+            </span>
+          </div>
+          <div>
+            <span className="block text-[11px] text-sky-700">주택 부수토지</span>
+            <span className="font-semibold text-sky-900">
+              {totalLand > 0 ? `${derived.residentialLandArea.toFixed(2)}㎡` : "—"}
+            </span>
+          </div>
+          <div>
+            <span className="block text-[11px] text-sky-700">상가 부수토지</span>
+            <span className="font-semibold text-sky-900">
+              {totalLand > 0 ? `${derived.commercialLandArea.toFixed(2)}㎡` : "—"}
+            </span>
+          </div>
+        </div>
 
         <p className="text-[11px] text-sky-700/80">
           ※ 주택·상가 부수토지 면적은 아래 상가 기준시가란에서 수정합니다.
