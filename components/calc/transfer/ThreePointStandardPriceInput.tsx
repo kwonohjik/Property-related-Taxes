@@ -25,6 +25,7 @@ import {
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { ThreePointAssetMajorRender } from "./ThreePointAssetMajorRender";
 import {
   PhdBuildingStdPriceModalButton,
   type PhdThreePointApply,
@@ -136,6 +137,11 @@ export interface ThreePointStandardPriceInputProps {
    * (단일 주택 PHD 전용. 미주입 시 기존 필드별 버튼 유지 — mixed-use 회귀 방지.)
    */
   enableBatchCalc?: boolean;
+  /**
+   * 렌더 축. "asset-major"(겸용 Case A 전용) 시 시점별 대신 자산별(주택/상가) 그룹 × 3시점으로 전치.
+   * splitMode(데이터·6값 배치)와 직교 — asset-major는 splitMode=true 유지 전제.
+   */
+  layout?: "time-major" | "asset-major";
 }
 
 // ─── 라벨 매핑 ──────────────────────────────────────────────────
@@ -237,9 +243,11 @@ interface PointBlockProps {
   stdPriceAddress?: AddressValue;
   /** true 시 이 시점 필드별 계산기 버튼 미표시(3시점 일괄 버튼으로 대체). */
   hideBuildingCalcButton?: boolean;
+  /** true 시 토지(연도+공시지가)만 렌더하고 건물·합계는 생략 — asset-major 전치에서 토지 3시점 공용 재사용. */
+  landOnly?: boolean;
 }
 
-function PointBlock({
+export function PointBlock({
   label,
   tone,
   referenceDate,
@@ -264,6 +272,7 @@ function PointBlock({
   commercialBuildingStdSnapshotKey,
   stdPriceAddress,
   hideBuildingCalcButton,
+  landOnly,
 }: PointBlockProps) {
   const toneClasses = tone ? TONE_CLASSES[tone] : null;
   const labels = resolveLabels(targetLabel, useWholeBuildingLabels);
@@ -451,6 +460,8 @@ function PointBlock({
         )}
       </FieldCard>
 
+      {!landOnly && (
+      <>
       {splitMode ? (
         <>
           {/* Case A 분리 모드 — 주택분/상가분 토지기준시가 (자동 계산, 2 컬럼) */}
@@ -610,6 +621,8 @@ function PointBlock({
           </div>
         );
       })()}
+      </>
+      )}
     </div>
   );
 }
@@ -670,6 +683,10 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
           <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} />
         </div>
       )}
+      {props.layout === "asset-major" ? (
+        <ThreePointAssetMajorRender {...props} />
+      ) : (
+      <>
       <PointBlock
         label={acqLabel}
         hideBuildingCalcButton={props.enableBatchCalc}
@@ -747,6 +764,8 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
           commercialBuildingStdSnapshotKey={props.stdPriceSnapshotPrefix ? `${props.stdPriceSnapshotPrefix}-transfer-commercial` : undefined}
           stdPriceAddress={props.stdPriceAddress}
         />
+      )}
+      </>
       )}
     </div>
   );

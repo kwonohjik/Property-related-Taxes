@@ -46,7 +46,6 @@ export function MixedUseLegacyStdPrice({
   const commercialLandArea = parseFloat(
     (totalFloor > 0 ? totalLand * (commercial / totalFloor) : 0).toFixed(2),
   );
-  const residentialLandArea = parseFloat((totalLand - commercialLandArea).toFixed(2));
 
   // 양도시 상가부분 자동 계산
   const transferLandPerSqm = parseAmount(asset.mixedTransferLandPricePerSqm) ?? 0;
@@ -90,15 +89,7 @@ export function MixedUseLegacyStdPrice({
     return !isNaN(fd.getTime()) && !isNaN(uc.getTime()) && fd < uc;
   }, [asset.hasPartialUsageChange, asset.partialChangeDirection, asset.phdFirstDisclosureDate, asset.partialChangeDate]);
 
-  // Case A 4부분: 공시지가 × 각 토지면적 자동 계산
-  const transferLandPerSqmForFour = parseAmount(
-    asset.phdLandPricePerSqmAtTransfer || asset.mixedTransferLandPricePerSqm,
-  );
-  const transferHousingLandStd = Math.floor(transferLandPerSqmForFour * residentialLandArea);
-  const transferCommercialLandStdFour = Math.floor(transferLandPerSqmForFour * commercialLandArea);
-  const transferHousingBuildingStd = parseAmount(asset.phdBuildingStdPriceAtTransfer) ?? 0;
-  const transferFourPartTotal =
-    transferHousingLandStd + transferHousingBuildingStd + transferCommercialLandStdFour + transferCommercialBuilding;
+  // (Case A 양도 4부분 파생은 자산-우선 위젯으로 이관 — legacy에서 제거)
 
   return (
     <div className="space-y-3">
@@ -110,7 +101,9 @@ export function MixedUseLegacyStdPrice({
               {transferSectionNum}
             </span>
           )}
-          <p className="text-xs font-semibold text-emerald-700">양도시 기준시가</p>
+          <p className="text-xs font-semibold text-emerald-700">
+            {isCaseA ? "양도시 개별주택공시가격" : "양도시 기준시가"}
+          </p>
         </div>
 
         <FieldCard label="개별주택공시가격" hint="주택건물+주택부수토지 일괄">
@@ -122,81 +115,8 @@ export function MixedUseLegacyStdPrice({
           />
         </FieldCard>
 
-        {isCaseA ? (
-          /* Case A 4부분 통합 레이아웃 — 이미지 12와 동일 구조 */
-          <>
-            <LandPriceLookupField
-              pricePerSqm={asset.phdLandPricePerSqmAtTransfer || asset.mixedTransferLandPricePerSqm}
-              onPricePerSqmChange={(v) => {
-                onChange({ phdLandPricePerSqmAtTransfer: v, mixedTransferLandPricePerSqm: v });
-              }}
-              area={totalLand > 0 ? totalLand : undefined}
-              referenceDate={transferDate}
-              jibun={jibun}
-              label="공시지가 (원/㎡)"
-              hint="주택+상가 전체 토지 공시지가"
-              placeholder="양도시 개별공시지가 /㎡"
-            />
-            {(residentialLandArea > 0 || commercialLandArea > 0) && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-md border border-emerald-200 bg-emerald-50/40 px-3 py-2 text-xs">
-                  <p className="text-emerald-700 font-medium">주택분 토지기준시가</p>
-                  <p className="font-mono text-sm mt-1 text-emerald-900">{fmtKrw(transferHousingLandStd)}</p>
-                  <p className="text-[10px] text-emerald-600">공시지가 × 주택부수토지 ({fmtSqm(residentialLandArea)})</p>
-                </div>
-                <div className="rounded-md border border-emerald-200 bg-emerald-50/40 px-3 py-2 text-xs">
-                  <p className="text-emerald-700 font-medium">상가분 토지기준시가</p>
-                  <p className="font-mono text-sm mt-1 text-emerald-900">{fmtKrw(transferCommercialLandStdFour)}</p>
-                  <p className="text-[10px] text-emerald-600">공시지가 × 상가부수토지 ({fmtSqm(commercialLandArea)})</p>
-                </div>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <FieldCard label="* 주택건물 기준시가" hint="홈택스 — 양도시 주택 부분에 해당하는 면적의 당시 건물 기준시가">
-                  <CurrencyInput
-                    label=""
-                    value={asset.phdBuildingStdPriceAtTransfer}
-                    onChange={(v) => onChange({ phdBuildingStdPriceAtTransfer: v })}
-                    placeholder="원"
-                    hideUnit
-                  />
-                </FieldCard>
-                <div className="flex justify-end">
-                  <BuildingStdPriceModalButton
-                    lockedTaxType="transfer"
-                    initialAddress={stdPriceAddress}
-                    snapshotKey={`${bspPrefix}-transfer`}
-                    onApply={(v) => onChange({ phdBuildingStdPriceAtTransfer: String(v) })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <FieldCard label="* 상가건물 기준시가" hint="홈택스 — 양도시 상가 부분에 해당하는 면적의 당시 건물 기준시가">
-                  <CurrencyInput
-                    label=""
-                    value={asset.mixedTransferCommercialBuildingPrice}
-                    onChange={(v) => onChange({ mixedTransferCommercialBuildingPrice: v })}
-                    placeholder="원"
-                    hideUnit
-                  />
-                </FieldCard>
-                <div className="flex justify-end">
-                  <BuildingStdPriceModalButton
-                    lockedTaxType="transfer"
-                    initialAddress={stdPriceAddress}
-                    snapshotKey={`${bspPrefix}-transfer-commercial`}
-                    onApply={(v) => onChange({ mixedTransferCommercialBuildingPrice: String(v) })}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="rounded-lg bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-900 flex justify-between">
-              <span>4부분 합산기준시가 (주택분토지+주택건물+상가분토지+상가건물)</span>
-              <span>{fmtKrw(transferFourPartTotal)}</span>
-            </div>
-          </>
-        ) : (
+        {/* Case A(용도변경 4부분)는 자산-우선 위젯(취득시 섹션 PHD, layout=asset-major)이 양도까지 흡수 — 별도 양도 4부분 미렌더. */}
+        {!isCaseA && (
           /* 일반(비-Case A) 레이아웃 — 기존 유지 */
           <>
             <FieldCard
@@ -256,7 +176,9 @@ export function MixedUseLegacyStdPrice({
               {acqSectionNum}
             </span>
           )}
-          <p className="text-xs font-semibold text-amber-700">취득시 기준시가</p>
+          <p className="text-xs font-semibold text-amber-700">
+            {isCaseA ? "주택·상가 기준시가 (취득·최초공시·양도 3시점)" : "취득시 기준시가"}
+          </p>
         </div>
 
         {/* PHD 토글 — 항상 표시. 체크 시 환산취득가 모드 자동 전환 */}
