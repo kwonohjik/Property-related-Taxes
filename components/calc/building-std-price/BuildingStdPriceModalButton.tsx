@@ -20,7 +20,13 @@ interface Props {
    * 선택한 시점의 건물 기준시가(원, 정수)를 받아 대상 필드에 주입.
    * 상증 경로 B는 부수토지 평가액(§61①1호, landStandardPrice)도 함께 전달 — 호출부가 부수토지 필드에 자동 채움.
    */
-  onApply: (standardPrice: number, landStandardPrice?: number) => void;
+  onApply?: (standardPrice: number, landStandardPrice?: number) => void;
+  /**
+   * 지정 시 — result.acquisition·result.transfer가 모두 있으면 결과 카드에
+   * "취득·양도 모두 적용" 단일 버튼만 노출(개별 취득/양도 버튼 숨김 → 오적용 방지).
+   * 겸용주택 상가건물처럼 한 번 계산으로 두 시점 필드를 동시 채울 때 사용.
+   */
+  onApplyBoth?: (acquisition: number, transfer: number) => void;
   buttonLabel?: string;
   /** 호출 세목 고정 — 양도="transfer" / 상속·증여="inheritance_gift". 지정 시 세목 라디오 숨김 */
   lockedTaxType?: BuildingStdPriceFormState["taxType"];
@@ -37,6 +43,7 @@ const fmt = (n: number) => n.toLocaleString("ko-KR");
 
 export function BuildingStdPriceModalButton({
   onApply,
+  onApplyBoth,
   buttonLabel = "건물 기준시가 계산",
   lockedTaxType,
   initialAddress,
@@ -56,13 +63,28 @@ export function BuildingStdPriceModalButton({
   );
 
   const apply = (v: number, land?: number) => {
-    onApply(v, land && land > 0 ? land : undefined);
+    onApply?.(v, land && land > 0 ? land : undefined);
     if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, formSnapshot);
     setOpen(false);
     setResult(null);
     setError(null);
     setLandStandardPrice(0);
   };
+
+  // 취득·양도 동시 적용 — 겸용 상가건물 등 한 번 계산으로 두 시점 필드를 함께 채움.
+  const applyBoth = (acq: number, transfer: number) => {
+    onApplyBoth?.(acq, transfer);
+    if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, formSnapshot);
+    setOpen(false);
+    setResult(null);
+    setError(null);
+    setLandStandardPrice(0);
+  };
+
+  // onApplyBoth 지정 = 통합 모드 — 개별 취득/양도 버튼을 숨겨 오적용을 원천 차단.
+  const bothMode = !!onApplyBoth;
+  // 통합 버튼은 취득·양도 단일건물 결과가 모두 있을 때만 노출.
+  const showBothButton = bothMode && !!result?.acquisition && !!result?.transfer;
 
   return (
     <>
@@ -110,15 +132,29 @@ export function BuildingStdPriceModalButton({
                     이 금액 적용 ({fmt(result.valuation.standardPrice)})
                   </Button>
                 )}
-                {result.acquisition && (
+                {showBothButton && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => applyBoth(result.acquisition!.standardPrice, result.transfer!.standardPrice)}
+                  >
+                    취득·양도 모두 적용 (취득 {fmt(result.acquisition!.standardPrice)} / 양도 {fmt(result.transfer!.standardPrice)})
+                  </Button>
+                )}
+                {result.acquisition && !bothMode && (
                   <Button type="button" size="sm" variant="secondary" onClick={() => apply(result.acquisition!.standardPrice)}>
                     취득시 적용 ({fmt(result.acquisition.standardPrice)})
                   </Button>
                 )}
-                {result.transfer && (
+                {result.transfer && !bothMode && (
                   <Button type="button" size="sm" onClick={() => apply(result.transfer!.standardPrice)}>
                     양도시 적용 ({fmt(result.transfer.standardPrice)})
                   </Button>
+                )}
+                {bothMode && result && !showBothButton && (
+                  <p className="text-xs text-muted-foreground">
+                    취득·양도 두 시점 정보를 모두 입력해 계산하면 한 번에 적용됩니다.
+                  </p>
                 )}
                 {/* 복합구조(상증 1시점) — compositeTotal 합계 + 부수토지 함께 적용 */}
                 {result.compositeTotal != null && (
