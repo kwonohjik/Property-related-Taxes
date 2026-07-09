@@ -228,6 +228,8 @@
 2. 사용자 확인 후 **Phase 0**(커스텀 유틸 2종 + Pretendard·배선 + grep 체크 골격) 착수 → **Pre-Do 앵커: 폰트 확정 후 대표 마법사 1개 baseline(light·dark) 우선 확보** + `getComputedStyle` 단언.
 3. Phase별 ship/PR 분리(P0~P3 1차, P4~P5 2차).
 
+**진행 결과(2026-07-10)**: P0~P5 전량 구현·로컬 커밋 완료(6커밋 dcd2c7d0~) — 임의 크기 폰트 **1521→0**, Pretendard self-host 배선, step-title 16→18 승격, 커스텀 유틸 `text-caption`/`text-micro`, **pre-push grep 게이트 활성화**, `components/calc/CLAUDE.md` 규칙 신설. 앵커 3건 PASS(Pretendard·step-title=18·micro=10/caption=11) · 전체 vitest **10261 passed / 0 failed**. **미푸시**(승인 후 ship).
+
 ---
 
 ## 참고

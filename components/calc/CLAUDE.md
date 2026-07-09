@@ -282,3 +282,24 @@ ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수
 - 잘못된 예: `placeholder="예: 91.78"`, `placeholder="예: 10,000,000"`
 - 올바른 예: `placeholder="양도시 주거용 합계 면적"`, `placeholder="금액 입력 (원)"`
 - 입력 형식 안내가 필요하면 FieldCard의 `hint` prop에 한국어로 작성
+
+## 라벨 타이포그래피 규칙 (전 세목 공통 — 2026-07-10 표준화)
+
+폰트 = **Pretendard**(self-host, `app/fonts/PretendardVariable.woff2`, `app/layout.tsx` next/font/local). 라벨 크기는 **역할 → 정본 클래스**로 고정한다. 임의 크기 폰트(`text-[Npx]`·`text-[Nrem]`·`text-[Nem]`) **금지** — `scripts/check-font-sizes.sh`가 **pre-push에서 하드블록**(CI는 비차단이라 pre-push가 진짜 게이트).
+
+| 역할 | 정본 클래스 | 크기 |
+|---|---|---|
+| 계산기 페이지 제목 (h1) | `text-2xl` | 24px |
+| 마법사 단계 제목 (h2) | `text-lg` | 18px |
+| 섹션 헤더 제목 | `text-base` | 16px |
+| 필드 라벨 · 옵션 제목 | `text-sm` | 14px |
+| hint · 단위 · 배지 · 경고 · 서브섹션 제목 | `text-xs` | 12px |
+| 캡션 · fine print · 보조 본문 | `text-caption` | 11px |
+| 번호배지 · pill · 상첨자 극소 chrome | `text-micro` | 10px |
+
+- **온-스케일(12~24)은 내장 Tailwind 클래스가 정본** — 같은 크기에 새 토큰명 신설 금지(`text-hint` 같은 중복 이름 = 원래 병 재생산).
+- **오프스케일 2종만 커스텀**: `text-caption`(11)·`text-micro`(10) — `app/globals.css` `@utility`, **font-size만**(행간은 기존 `leading-*`가 제어).
+- 굵기는 토큰 미포함 — 역할별 표준 굵기를 `font-medium`/`font-semibold`로 병기.
+- `font-mono`(금액 칼럼)는 대상 아님([amount-column-align] 스킬).
+- 배지·chrome엔 `text-micro`(10), 읽는 보조 텍스트엔 `text-caption`(11) — 크기가 곧 chrome/text 구분.
+- 설계·근거: `docs/02-design/features/ui-label-typography-standardization.plan.md`.
