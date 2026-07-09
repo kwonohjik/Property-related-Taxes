@@ -265,7 +265,7 @@ export function MixedUseLegacyStdPrice({
               area={commercialLandArea > 0 ? commercialLandArea : undefined}
               referenceDate={acqReferenceDate}
               jibun={jibun}
-              label="취득시 개별공시지가(상가)(원/㎡)"
+              label="개별공시지가 (원/㎡)"
               hint={
                 asset.partialChangeDirection === "house_to_commercial"
                   ? "취득 당시 동일 토지의 개별공시지가 — 직접 조회·입력 (필수)"

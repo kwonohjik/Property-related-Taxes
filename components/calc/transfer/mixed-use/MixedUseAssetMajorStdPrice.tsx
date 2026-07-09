@@ -262,7 +262,7 @@ export function MixedUseAssetMajorStdPrice({
             area={commercialLandArea > 0 ? commercialLandArea : undefined}
             referenceDate={acqReferenceDate}
             jibun={jibun}
-            label="취득시 개별공시지가(상가)(원/㎡)"
+            label="개별공시지가 (원/㎡)"
             hint="상가부수토지 기준시가 자동 계산용 (필수)"
             placeholder="취득시 개별공시지가 /㎡"
           />
