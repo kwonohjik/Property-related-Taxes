@@ -17,6 +17,7 @@
 import { useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { Button } from "@/components/ui/button";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { EstateBodySection } from "./EstateBodySection";
@@ -423,20 +424,17 @@ function ValuationAccordionFields({
 
             {/* 아파트 전용 자동조회 버튼 */}
             {cat === "real_estate_apartment" && (
-              <button
+              <Button
                 type="button"
+                variant="modalLauncher"
+                size="xs"
                 disabled={rtmsDisabled}
                 title={rtmsDisabled ? rtmsDisabledReason : "RTMS 실거래가 자동조회 (국토교통부)"}
                 onClick={() => setRtmsModalOpen(true)}
-                className={[
-                  "shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  rtmsDisabled
-                    ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500"
-                    : "border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-300 dark:hover:bg-sky-900/60",
-                ].join(" ")}
+                className="shrink-0"
               >
                 자동조회
-              </button>
+              </Button>
             )}
           </div>
 

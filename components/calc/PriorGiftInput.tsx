@@ -11,6 +11,7 @@
 
 import { useMemo, useState } from "react";
 import { PriorGiftHistoryModal } from "@/components/calc/gift/PriorGiftHistoryModal";
+import { Button } from "@/components/ui/button";
 import { GiftRowEditor } from "@/components/calc/prior-gift/GiftRowEditor";
 import { PriorGiftTableView } from "@/components/calc/prior-gift/PriorGiftTableView";
 import { AggregationSummary } from "@/components/calc/prior-gift/AggregationSummary";
@@ -140,8 +141,10 @@ export function PriorGiftInput({
         </div>
         <div className="flex items-center gap-2">
           {(mode === "gift" || mode === "inheritance") && (
-            <button
+            <Button
               type="button"
+              variant="modalLauncher"
+              size="xs"
               onClick={() => setHistoryModalOpen(true)}
               disabled={!canLookup}
               title={
@@ -153,14 +156,9 @@ export function PriorGiftInput({
                     ? "저장된 증여세 이력에서 사전증여를 선택해 자동 입력합니다 (상속개시일 기준 10년 이내)"
                     : "현재 수증자(=의뢰인)의 저장된 증여세 이력에서 사전증여를 선택해 자동 입력합니다"
               }
-              className={`text-xs rounded-md border px-3 py-1.5 transition-colors ${
-                canLookup
-                  ? "border-violet-300 bg-violet-50 hover:bg-violet-100 text-violet-700"
-                  : "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
-              }`}
             >
               📋 이력에서 조회
-            </button>
+            </Button>
           )}
           {gifts.length > 0 && (
             <span className="text-xs text-gray-400">{gifts.length}건</span>

@@ -95,7 +95,7 @@ export function BuildingStdPriceModalButton({
 
   return (
     <>
-      <Button type="button" variant="outline" size="xs" onClick={() => setOpen(true)}>
+      <Button type="button" variant="modalLauncher" size="xs" onClick={() => setOpen(true)}>
         {buttonLabel}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

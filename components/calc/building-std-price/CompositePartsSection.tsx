@@ -108,10 +108,10 @@ export function CompositePartsSection({
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-bold text-violet-800">건물 전체 특성 (전 부분 공통)</p>
             <Button
-              variant="default"
+              variant="modalLauncher"
               size="sm"
               onClick={() => setBuildingModalOpen(true)}
-              className="shrink-0 bg-violet-600 hover:bg-violet-700 text-white"
+              className="shrink-0"
             >
               {buildingFeatureCount > 0 ? "다시 계산" : "건물 특성으로 계산"}
             </Button>
@@ -188,13 +188,13 @@ export function CompositePartsSection({
                     <button
                       type="button"
                       onClick={() => setOpenPartIdx(i)}
-                      className="text-xs font-medium text-violet-700 underline underline-offset-2 hover:text-violet-900"
+                      className="text-xs font-medium text-green-700 underline underline-offset-2 hover:text-green-900"
                     >
                       다시 계산
                     </button>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={() => setOpenPartIdx(i)}>
+                  <Button variant="modalLauncher" size="sm" onClick={() => setOpenPartIdx(i)}>
                     부분 특성으로 계산 열기
                   </Button>
                 )

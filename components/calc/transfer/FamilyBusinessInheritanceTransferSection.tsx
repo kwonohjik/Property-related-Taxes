@@ -24,6 +24,7 @@
 import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { Button } from "@/components/ui/button";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
@@ -160,13 +161,14 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
                 적용률·상속개시일·평가액 자동 prefill (원취득가액은 별도 입력)
               </p>
             </div>
-            <button
+            <Button
               type="button"
+              variant="modalLauncher"
+              size="xs"
               onClick={() => setLookupOpen(true)}
-              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
             >
               📋 이력 조회
-            </button>
+            </Button>
           </div>
 
           <FamilyBusinessInheritanceHistoryModal

@@ -12,6 +12,7 @@
 
 import { useMemo, useState } from "react";
 import { CorporateInfoSection } from "./CorporateInfoSection";
+import { Button } from "@/components/ui/button";
 import { UnlistedStockHistoryModal } from "./UnlistedStockHistoryModal";
 import { FiscalYearAdjustmentTable } from "./FiscalYearAdjustmentTable";
 import { MergerNetIncomeBlock, MERGER_INITIAL_STATE } from "./MergerNetIncomeBlock";
@@ -241,15 +242,16 @@ export function UnlistedStockV2Card({
           </h3>
         </div>
         {/* PR-H: 이력 자동 조회 버튼 */}
-        <button
+        <Button
           type="button"
+          variant="modalLauncher"
+          size="xs"
           onClick={() => setHistoryOpen(true)}
-          className="text-xs px-2.5 py-1 rounded border border-indigo-300 bg-white hover:bg-indigo-100 text-indigo-700 font-medium transition-colors"
           data-testid="open-unlisted-stock-history-modal"
           title="기존 평가 이력에서 법인 정보를 자동으로 채웁니다"
         >
           📂 이력 조회
-        </button>
+        </Button>
       </div>
       <p className="text-caption text-indigo-700/80">
         상증법 §63 ① 나목 + 상증령 §54·§55·§56·§59 + 상증규 §17·§17의2·§17의3·§19 (KoreanLaw 1차+2차 검증 완료)

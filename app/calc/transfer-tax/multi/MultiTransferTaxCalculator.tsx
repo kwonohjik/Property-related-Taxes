@@ -99,7 +99,7 @@ function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev,
               <Plus className="h-4 w-4" />
               첫 번째 양도 건 추가
             </Button>
-            <Button type="button" variant="outline" onClick={onLoad} data-testid="multi-load-history-btn" className="gap-2">
+            <Button type="button" variant="modalLauncher" onClick={onLoad} data-testid="multi-load-history-btn" className="gap-2">
               📂 이력에서 불러오기
             </Button>
           </div>
@@ -161,7 +161,7 @@ function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev,
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="modalLauncher"
                 className="gap-2"
                 onClick={onLoad}
                 data-testid="multi-load-history-btn"
@@ -593,7 +593,7 @@ export default function MultiTransferTaxCalculator() {
             </span>
             <Button
               type="button"
-              variant="outline"
+              variant="modalLauncher"
               size="sm"
               onClick={() => setLoadModalOpen(true)}
               data-testid="multi-load-history-btn"

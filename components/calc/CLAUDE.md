@@ -302,3 +302,14 @@ ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수
 - `font-mono`(금액 칼럼)는 대상 아님([amount-column-align] 스킬).
 - 배지·chrome엔 `text-micro`(10), 읽는 보조 텍스트엔 `text-caption`(11) — 크기가 곧 chrome/text 구분.
 - 설계·근거: `docs/02-design/features/ui-label-typography-standardization.plan.md`.
+
+## 모달 런처 버튼 규칙 (전 세목 공통 — 2026-07-10)
+
+하위 모달(Dialog)을 여는 **런처 버튼**(계산·조회 헬퍼·이력 불러오기)은 `<Button variant="modalLauncher">`(연녹색, "자동" 배지 톤 `bg-green-100/text-green-700`) 사용. `components/ui/button.tsx` 단일 소스(dark override 없음 — 배지와 전 테마 동일).
+
+- **native `<button>`로 런처 신규 작성 금지** → `<Button variant="modalLauncher" size={...}>`.
+- **size**: 라벨 12px면 `xs`/`sm`, **14px면 `default`**(Button `sm`·`xs`는 둘 다 12px, `default`만 14px).
+- `data-testid`·`title`·`disabled`는 `<Button>`이 `...props`로 통과 → **그대로 전달**(테스트 셀렉터·툴팁·비활성 사유 보존).
+- **제외**(이 variant 아님): 항목 추가/편집(+add) 에디터, 드롭다운(autocomplete·시군구·주소검색), 도움말 ⓘ(`TaxHelp`), 법조문/판례 인용 링크(`LawArticleModal` 등), 확인/폐기 다이얼로그.
+- 인라인 "다시 계산" 재오픈 링크는 chip 대신 녹색 텍스트 링크(`text-green-700 underline`) 유지 가능.
+- 설계: `docs/02-design/features/modal-launcher-button-style.plan.md`.

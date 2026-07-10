@@ -250,7 +250,7 @@ export function PhdBuildingStdPriceModalButton({
 
   return (
     <>
-      <Button type="button" variant="outline" size="xs" onClick={handleOpen}>
+      <Button type="button" variant="modalLauncher" size="xs" onClick={handleOpen}>
         {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
