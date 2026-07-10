@@ -102,7 +102,7 @@ const reductionAmount = Math.min(best.amount, calculatedTax);
 - `transfer-tax-aggregate.ts` → `transfer-tax.ts` (다건 양도 오케스트레이션은 단건 엔진을 반복 호출).
 - `transfer-tax.ts` → `multi-house-surcharge.ts` / `non-business-land/engine.ts` / `rental-housing-reduction.ts` / `new-housing-reduction.ts` / `public-expropriation-reduction.ts` / `transfer-tax-penalty.ts` / `pre-1990-land-valuation.ts` / `multi-parcel-transfer.ts` (서브엔진 fan-out).
 - `transfer-reductions/index.ts` — 독립 라우터. 각 조문별 모듈(`new-99-3.ts` 등)이 switch 분기로 통합됨. `transfer-tax.ts` STEP 4.6~7.5에서 직접 호출. 신규 조문 추가 시 `calcReductions()` 후보 배열에 push.
-- `transfer-tax-mixed-use.ts` → `transfer-tax-mixed-use-helpers.ts` → `transfer-tax-mixed-use-fourpart.ts` (Case A 4부분 안분 어댑터) / `transfer-tax-mixed-use-totals.ts` (조립 헬퍼) / `transfer-tax-pre-housing-disclosure.ts` (PHD §164⑤).
+- `transfer-tax-mixed-use.ts` → `transfer-tax-mixed-use-helpers.ts` → `transfer-tax-mixed-use-fourpart.ts` (Case A 4부분 안분 어댑터) / `transfer-tax-mixed-use-totals.ts` (조립 헬퍼) / `transfer-tax-pre-housing-disclosure.ts` (PHD §164⑦ — 건물분은 §164⑤ 준용).
 
 서브엔진은 상위 엔진 import 금지 (순환 금지).
 
