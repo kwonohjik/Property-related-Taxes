@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { withResolvedEvaluationDelta } from "@/lib/tax-engine/property-valuation/evaluation-delta";
 import type { UnlistedNetAssetCalculation } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
@@ -151,15 +152,19 @@ export function NetAssetCalculationTable({
   }, [effectiveRaw]);
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">{sectionNum}</span>
-        <p className="text-xs font-semibold text-violet-700">
+    <ToneCard
+      tone="violet"
+      sectionNum={sectionNum}
+      bodyClassName="space-y-3"
+      title={
+        <>
           순자산가액 (별지 2~3쪽 + §55·§17의2){" "}
           <LawArticleModal legalBasis="상증령 §55" label="§55" />{" "}
           <LawArticleModal legalBasis="상증규 §17의2" label="규§17의2" />
-        </p>
-      </div>
+        </>
+      }
+      noDark
+    >
       <p className="text-caption text-violet-700/80">
         자산총액 ⑧ − 부채총액 ⑲ = 다.영업권 포함 전 순자산가액 (§55① 후단 — 0 이하 시 0)
       </p>
@@ -306,6 +311,6 @@ export function NetAssetCalculationTable({
           {netAssetBeforeGoodwill.toLocaleString()}원
         </span>
       </div>
-    </div>
+    </ToneCard>
   );
 }
