@@ -7,6 +7,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { type DeemedFormState, type CapTableRow, makeCapTableRow } from "./shared";
 import { CapitalDecreaseShareholderTable } from "./CapitalDecreaseShareholderTable";
 // §39의3 현물출자 폼은 contribution-form.tsx로 분리(800줄 정책). re-export로 import 경로 보존.
@@ -79,7 +80,7 @@ export function MergerFields({ form, set }: Props) {
   const isAuto = useSh || form.mrgMergedPriceMode === "auto";
   const splitNet = form.mrgIsSplitMerger && form.mrgSplitMode === "net_asset_ratio"; // 과대평가 1주평가 안분 대체
   return (
-    <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+    <ToneCard tone="emerald" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="mrg-case"
@@ -209,7 +210,7 @@ export function MergerFields({ form, set }: Props) {
           <CurrencyInput label="대주주등 주식수" value={form.mrgMajorShares} onChange={(v) => set({ mrgMajorShares: v })} placeholder="대주주등 주식수" />
         </>
       )}
-    </div>
+    </ToneCard>
   );
 }
 
@@ -226,7 +227,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
   const needsRatio = isHigh && form.ciSubType !== "forfeited_realloc"; // 고가 나·다·라목 비율가중
   const sharesLabel = CI_SHARES_LABEL[form.ciSubType];
   return (
-    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
+    <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="ci-direction"
@@ -273,7 +274,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
           description="이익을 증여한 소액주주(1%·액면3억 미만)가 2명 이상이면 1명으로 보고 계산"
         />
       )}
-    </div>
+    </ToneCard>
   );
 }
 
@@ -304,11 +305,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800">1</span>
-          <p className="text-xs font-semibold text-sky-700">증자 개요</p>
-        </div>
+      <ToneCard tone="sky" sectionNum={1} title="증자 개요" bodyClassName="space-y-2" noDark>
         <RadioCardGroup
           lawLinks="상증법"
           name="ci-alloc-direction"
@@ -323,18 +320,20 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
         />
         <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciAllocPrePrice} onChange={(v) => set({ ciAllocPrePrice: v })} placeholder="증자 전 1주당 평가가액 (원)" />
         <CurrencyInput label="신주 1주당 인수가액" value={form.ciAllocNewPrice} onChange={(v) => set({ ciAllocNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
-      </div>
+      </ToneCard>
 
-      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800">2</span>
-            <p className="text-xs font-semibold text-emerald-700">주주 목록 (증자 전 보유·배정·인수)</p>
-          </div>
-          <button type="button" onClick={addRow} data-testid="ci-alloc-add-row" className="rounded-md border border-emerald-300 bg-white/70 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100/60">
+      <ToneCard
+        tone="emerald"
+        sectionNum={2}
+        title="주주 목록 (증자 전 보유·배정·인수)"
+        bodyClassName="space-y-2"
+        noDark
+        titleExtra={
+          <button type="button" onClick={addRow} data-testid="ci-alloc-add-row" className="ml-auto rounded-md border border-emerald-300 bg-white/70 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100/60">
             + 주주 추가
           </button>
-        </div>
+        }
+      >
         {rows.map((r, idx) => (
           <div key={r.id} className="space-y-2 rounded-md border border-emerald-100 bg-white/60 p-2.5" data-testid={`ci-alloc-row-${idx}`}>
             <div className="flex items-center gap-2">
@@ -381,7 +380,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
           </div>
         ))}
         <p className="text-caption text-muted-foreground">증자 후 1주당 평가가액·증여재산가액은 입력값으로 자동 계산(자동 안분 없음). 특수관계인 없는 자에게 귀속된 이익은 과세 제외.</p>
-      </div>
+      </ToneCard>
     </div>
   );
 }
@@ -391,7 +390,7 @@ export function CapitalDecreaseFields({ form, set }: Props) {
   const isHigh = form.cdCaseType === "high";
   const isMulti = form.cdMode === "multi";
   return (
-    <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="cd-mode"
@@ -440,7 +439,7 @@ export function CapitalDecreaseFields({ form, set }: Props) {
           )}
         </>
       )}
-    </div>
+    </ToneCard>
   );
 }
 
@@ -513,7 +512,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
   const needsRatio = isHigh && form.csSubType !== "forfeited_realloc";
   const sharesLabel = CI_SHARES_LABEL[form.csSubType];
   return (
-    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="cs-direction"
@@ -580,7 +579,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
           ratioDenom: "csIssueRatioDenomShares",
         }}
       />
-    </div>
+    </ToneCard>
   );
 }
 
@@ -589,7 +588,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
   const ct = form.cbCaseType;
   const isConversion = ct === "conversion" || ct === "conversion_reverse";
   return (
-    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="cb-case"
@@ -677,6 +676,6 @@ export function ConvertibleBondFields({ form, set }: Props) {
           <DecimalInput value={form.cbRelatedPreRatioPct} onChange={(v) => set({ cbRelatedPreRatioPct: v })} />
         </FieldCard>
       )}
-    </div>
+    </ToneCard>
   );
 }
