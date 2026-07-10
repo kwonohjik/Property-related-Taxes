@@ -43,6 +43,7 @@ import { isInheritancePriorGiftMarriageBirthEligible } from "@/lib/calc/prior-gi
 import { GiftTaxBaseModeBlock } from "@/components/calc/prior-gift/GiftTaxBaseModeBlock";
 import { MinorAtGiftToggleBlock } from "@/components/calc/prior-gift/MinorAtGiftToggleBlock";
 import { GiftRowBesshiSection } from "@/components/calc/prior-gift/GiftRowBesshiSection";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 // ============================================================
 // 수증자 select 헬퍼 — 파생 로직은 lib/calc/prior-gift-donee-derive.ts 단일 진실,
@@ -506,15 +507,7 @@ export function GiftRowEditor({
        * giftTaxBase 입력 건은 §53의2 이미 반영 → 위젯 숨김 + 안내 표시 */}
       {showIsHeir &&
         isInheritancePriorGiftMarriageBirthEligible(gift.doneeRelation) && (
-          <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-                §53의2
-              </span>
-              <p className="text-xs font-semibold text-sky-700">
-                혼인·출산 증여재산공제 (직계존속 한정)
-              </p>
-            </div>
+          <ToneCard tone="sky" sectionNum="§53의2" title="혼인·출산 증여재산공제 (직계존속 한정)" bodyClassName="space-y-2" noDark>
             {gift.giftTaxBase != null ? (
               <p className="text-caption text-sky-600 dark:text-sky-400">
                 ⓘ 과세표준을 직접 입력한 경우 §53의2는 이미 반영된 것으로 간주합니다.
@@ -542,7 +535,7 @@ export function GiftRowEditor({
                   지정하세요. 수증자를 지정하지 않으면 합산 1억 한도가 건별로 적용됩니다(§53의2③).
                 </p>
               )}
-          </div>
+          </ToneCard>
         )}
 
       {/* 세액 입력란 — 자동계산(수정 가능). 영리법인은 §3의2② 산출세액 상당액, 그 외는 기납부 증여세.
@@ -596,15 +589,7 @@ export function GiftRowEditor({
        * donor·⑤·⑦·할증·⑫ 블록(§47 카드)은 showGiftPhaseA 단독 유지(상속 모드 숨김).
        */}
       {(showGiftPhaseA || showSpecialType) && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-              §30
-            </span>
-            <p className="text-xs font-semibold text-emerald-700">
-              이 사전증여의 조특법 과세특례 여부
-            </p>
-          </div>
+        <ToneCard tone="emerald" sectionNum="§30" title="이 사전증여의 조특법 과세특례 여부" bodyClassName="space-y-2" noDark>
           <RadioCardGroup<"none" | "startup" | "family_business">
             name={`priorGiftSpecialType-${index}`}
             tone="emerald"
@@ -673,7 +658,7 @@ export function GiftRowEditor({
               }
             />
           )}
-        </div>
+        </ToneCard>
       )}
 
       {/* 세대생략 할증 — 증여세 모드 전용, §30 다음 독립 배치 (구 §47 카드에서 분리).
