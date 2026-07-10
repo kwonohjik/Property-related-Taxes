@@ -23,6 +23,7 @@ import { useMemo } from "react";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 type AppurtenantLandZone =
   | "metropolitan_residential"
@@ -116,16 +117,7 @@ export function NewConstructionFootprintSection({
   }, [footprint, companionArea, limitArea, excessArea, isExcess, hasCompanionArea]);
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-      {/* 섹션 헤더 */}
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-          §
-        </span>
-        <p className="text-xs font-semibold text-sky-700">
-          부수토지 한도 산정 (소득세법 시행령 §154⑦)
-        </p>
-      </div>
+    <ToneCard tone="sky" sectionNum="§" bodyClassName="space-y-3" title="부수토지 한도 산정 (소득세법 시행령 §154⑦)" noDark>
 
       <p className="text-caption text-sky-600 leading-relaxed">
         주택과 함께 양도되는 부수토지의 인정 한도 = 건물 정착면적 × 배율.
@@ -134,13 +126,7 @@ export function NewConstructionFootprintSection({
       </p>
 
       {/* ① 건물 정착면적 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-sky-700">건물 정착면적 (㎡)</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="①" title="건물 정착면적 (㎡)" noDark>
         <FieldCard
           label="건물 정착면적 (㎡)"
           hint="건물이 지면에 접한 1층 바닥면적(㎡)입니다. 소수점 2자리까지 입력 가능."
@@ -150,16 +136,10 @@ export function NewConstructionFootprintSection({
             onChange={onBuildingFootprintAreaChange}
           />
         </FieldCard>
-      </div>
+      </ToneCard>
 
       {/* ② 부수토지 zone (3/5/10배) */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-sky-700">소재지 구분 (영 §154⑦)</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="②" title="소재지 구분 (영 §154⑦)" noDark>
         <RadioCardGroup
           name="appurtenantLandZone"
           tone="sky"
@@ -175,7 +155,7 @@ export function NewConstructionFootprintSection({
         <p className="text-caption text-sky-600">
           수도권정비계획법·국토계획법상 소재지에 따라 정착면적 배율이 달라집니다. 잘 모르겠으면 가장 보수적인 &quot;수도권 도시지역(주거·상업·공업) 3배&quot;를 선택하세요.
         </p>
-      </div>
+      </ToneCard>
 
       {/* 자동 계산 결과 박스 */}
       {footprint > 0 && (
@@ -206,6 +186,6 @@ export function NewConstructionFootprintSection({
           결과 표에서 &quot;토지(부수)&quot;와 &quot;토지(한도초과)&quot; 행이 분리 표시됩니다.
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }
