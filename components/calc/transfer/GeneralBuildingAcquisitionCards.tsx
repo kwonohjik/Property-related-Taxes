@@ -20,6 +20,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 // BurdenedGiftBlock import 제거 — Phase 2 (2026-05-12): TransferModeBlock에서 사용
@@ -77,7 +78,7 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
     <div className="space-y-3">
 
       {/* ── 📌 토지 취득 카드 (sky) ── */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
+      <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
         <div className="flex items-center gap-2">
           <span className="text-base">📌</span>
           <p className="text-xs font-semibold text-sky-700">토지 취득</p>
@@ -268,10 +269,10 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
          * Phase 2 (2026-05-12): 부담부증여 BurdenedGiftBlock은 TransferModeBlock(양도 정보 카드)로 이동.
          * 취득 정보 카드에서는 증여자의 당초 취득 정보(매매·상속·증여·이월과세)만 받음.
          */}
-      </div>
+      </ToneCard>
 
       {/* ── 🏗 건물 취득 카드 (amber) ── */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
+      <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
         <div className="flex items-center gap-2">
           <span className="text-base">🏗</span>
           <p className="text-xs font-semibold text-amber-700">건물 취득</p>
@@ -325,7 +326,7 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
         )}
 
         {/* 건물 상속·증여 보조 입력은 후속 PR에서 구현 (본 PR 스코프 미포함) */}
-      </div>
+      </ToneCard>
 
     </div>
   );
