@@ -10,6 +10,7 @@
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold98Form = Extract<AssetReductionForm, { type: "unsold_98" }>;
@@ -27,8 +28,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         <LawArticleModal legalBasis="조세특례제한법 시행령 §98" label="조특령 §98" />
       </div>
 
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-sky-700">① 취득·계약 시기</p>
+      <ToneCard tone="sky" title="① 취득·계약 시기" noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">매매계약일 (선택)</label>
           <DateInput value={value.contractDate98} onChange={(v) => onChange({ contractDate98: v })} />
@@ -37,10 +37,9 @@ export function Unsold98InputForm({ value, onChange }: Props) {
             비워 두어도 됩니다 (시한 내 계약 + 계약금 납부한 경우 포함, 법 §98①·③)
           </p>
         </div>
-      </div>
+      </ToneCard>
 
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-rose-700">② 자격 요건 확인</p>
+      <ToneCard tone="rose" title="② 자격 요건 확인" noDark>
         <ToggleCard
           tone="rose"
           title="국민주택규모 이하"
@@ -76,7 +75,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
           checked={value.rentedFor5Years98}
           onCheckedChange={(v) => onChange({ rentedFor5Years98: v })}
         />
-      </div>
+      </ToneCard>
 
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>

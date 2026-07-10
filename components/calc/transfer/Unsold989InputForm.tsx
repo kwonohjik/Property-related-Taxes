@@ -15,6 +15,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold989Form = Extract<AssetReductionForm, { type: "unsold_98_9" }>;
@@ -33,13 +34,7 @@ export function Unsold989InputForm({ value, onChange }: Props) {
       </div>
 
       {/* ① 취득 정보 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-sky-700">준공후미분양주택 취득 정보</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="①" title="준공후미분양주택 취득 정보" noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">준공후미분양주택 취득일</label>
           <DateInput
@@ -51,16 +46,10 @@ export function Unsold989InputForm({ value, onChange }: Props) {
             취득한 후에 종전주택을 양도해야 합니다 (§98의9①)
           </p>
         </div>
-      </div>
+      </ToneCard>
 
       {/* ② 가액·면적 요건 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-sky-700">가액·면적 요건</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="②" title="가액·면적 요건" noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">취득가액</label>
           <CurrencyInput
@@ -83,16 +72,10 @@ export function Unsold989InputForm({ value, onChange }: Props) {
             전용면적 85㎡ 이하 (조특령 §98의8①1호)
           </p>
         </div>
-      </div>
+      </ToneCard>
 
       {/* ③ 소재지·자격 */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">
-            ③
-          </span>
-          <p className="text-xs font-semibold text-rose-700">소재지·자격 요건</p>
-        </div>
+      <ToneCard tone="rose" sectionNum="③" title="소재지·자격 요건" noDark>
         <ToggleCard
           checked={value.isNonCapitalRegion}
           onCheckedChange={(v) => onChange({ isNonCapitalRegion: v })}
@@ -114,7 +97,7 @@ export function Unsold989InputForm({ value, onChange }: Props) {
           description="사업주체·분양사업자·시공자로부터 최초 매매계약 + 사용검사 후 선착순 공급분 + 시장·군수·구청장 확인 날인 매매계약서 보유 (조특령 §98의8①3~5호·②)"
           tone="rose"
         />
-      </div>
+      </ToneCard>
 
       {/* emerald 안내 */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1">
