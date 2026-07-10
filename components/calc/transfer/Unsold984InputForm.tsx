@@ -9,6 +9,7 @@
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold984Form = Extract<AssetReductionForm, { type: "unsold_98_4" }>;
@@ -26,8 +27,7 @@ export function Unsold984InputForm({ value, onChange }: Props) {
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
 
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-rose-700">① 적용 주체</p>
+      <ToneCard tone="rose" title="① 적용 주체" noDark>
         <ToggleCard
           tone="rose"
           title="국내사업장 없는 비거주자"
@@ -35,10 +35,9 @@ export function Unsold984InputForm({ value, onChange }: Props) {
           checked={value.isNonResidentNoPe984}
           onCheckedChange={(v) => onChange({ isNonResidentNoPe984: v })}
         />
-      </div>
+      </ToneCard>
 
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-sky-700">② 취득·계약 시기</p>
+      <ToneCard tone="sky" title="② 취득·계약 시기" noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">매매계약일 (선택)</label>
           <DateInput value={value.contractDate984} onChange={(v) => onChange({ contractDate984: v })} />
@@ -47,10 +46,9 @@ export function Unsold984InputForm({ value, onChange }: Props) {
             2010.2.11까지 매매계약 체결 + 계약금 납부한 경우 포함 (법 §98의4)
           </p>
         </div>
-      </div>
+      </ToneCard>
 
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-rose-700">③ 대상 주택</p>
+      <ToneCard tone="rose" title="③ 대상 주택" noDark>
         <ToggleCard
           tone="rose"
           title="§98의3 미분양주택이 아닌 주택"
@@ -58,7 +56,7 @@ export function Unsold984InputForm({ value, onChange }: Props) {
           checked={value.isNotUnsold983House984}
           onCheckedChange={(v) => onChange({ isNotUnsold983House984: v })}
         />
-      </div>
+      </ToneCard>
 
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>· 적용 효과: 양도소득세의 100분의 10에 상당하는 세액을 감면합니다 (5년 구분 없음 — 법 §98의4).</p>
