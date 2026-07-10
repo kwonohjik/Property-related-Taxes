@@ -153,6 +153,11 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
 
   // 연도 Select 값 → 공시지가 조회 기준일 합성(6/1 = 해당 연도 공시 추천). 빈값이면 미전달.
   const landRefDate = (year: string) => (year ? `${year}-06-01` : undefined);
+  // 공시지가 추천연도는 실제 이벤트 일자(완성형 YYYY-MM-DD)로 판정한다 — 개별공시지가 공시일(5.31)
+  // 이하 양도·취득·평가는 전년도 공시지가 적용(feedback_standard_price_year_164_3_prior).
+  // 일자 미입력 시 연도만으로 YYYY-06-01 fallback(해당연도 기본).
+  const landRefFromEvent = (eventDate: string, year: string) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(eventDate) ? eventDate : landRefDate(year);
   const jibun = f.addressJibun || undefined;
   // 부속토지 면적 — 토지기준시가(= 공시지가 × 면적) 표시용. 취득·양도·평가 공통(동일 필지).
   const landArea = parseFloat(f.landAreaM2.replace(/,/g, "")) || undefined;
@@ -186,12 +191,22 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
     const iy = indexYearOverride ?? parseInt(newYear, 10);
     const structOk = !Number.isNaN(iy) && listStructureOptions(iy).some((o) => o.key === f[structKey]);
     const usageOk = !Number.isNaN(iy) && listUsageOptions(iy).some((o) => String(o.no) === f[usageKey]);
-    setF((prev) => ({
-      ...prev,
-      [yearKey]: newYear,
-      [structKey]: structOk ? prev[structKey] : "",
-      [usageKey]: usageOk ? prev[usageKey] : "",
-    }));
+    setF((prev) => {
+      const next: BuildingStdPriceFormState = {
+        ...prev,
+        [yearKey]: newYear,
+        [structKey]: structOk ? prev[structKey] : "",
+        [usageKey]: usageOk ? prev[usageKey] : "",
+      };
+      // 취득연도 ≤2000↔≥2001 경계 교차 시 취득 공시지가 초기화 — 2001.1.1 위치지수값과
+      // 취득연도 토지값은 의미가 달라 이월하면 오입력(fixedYear=2001 정정과 짝).
+      if (yearKey === "acquisitionYear") {
+        const oldPre2001 = parseInt(prev.acquisitionYear, 10) <= 2000;
+        const newPre2001 = parseInt(newYear, 10) <= 2000;
+        if (oldPre2001 !== newPre2001) next.acqLandPrice = "";
+      }
+      return next;
+    });
   };
 
   // 상속·증여: eventDate → valuationYear 도출 + 새 연도 지수표에 없는 구조/용도 초기화(가드).
@@ -409,26 +424,41 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               </p>
             )}
             {!isMech && !apartmentConv && !composite && (
-              <>
-                <FieldCard label="취득당시 구조">
+              <div className="grid grid-cols-2 gap-2">
+                <FieldCard label="취득당시 구조" stacked>
                   <BuildingStructureSelect year={acqIndexYear} value={f.acqStructureKey} onChange={(v) => set("acqStructureKey", v)} />
                 </FieldCard>
-                <FieldCard label="취득당시 용도">
+                <FieldCard label="취득당시 용도" stacked>
                   <BuildingUsageSelect year={acqIndexYear} value={f.acqUsageNo} onChange={(v) => set("acqUsageNo", v)} />
                 </FieldCard>
-              </>
+              </div>
             )}
-            {!isMech && !apartmentConv && (
-              <LandPriceLookupField
-                pricePerSqm={f.acqLandPrice}
-                onPricePerSqmChange={(v) => set("acqLandPrice", v)}
-                area={landArea}
-                jibun={jibun}
-                referenceDate={landRefDate(f.acquisitionYear)}
-                label="취득당시 ㎡당 개별공시지가"
-                hint="여러 필지면 면적 가중평균한 ㎡당 가액"
-              />
-            )}
+            {!isMech && !apartmentConv &&
+              (acqIndexYear === 2001 ? (
+                // 2000.12.31 이전 취득 — 위치지수는 2001.1.1 현재 공시지가 기준(고시 §6①·소령 §164⑤).
+                // 취득연도 공시지가가 아닌 2001.1.1 값으로 고정. 토지기준시가 표시는 숨김(이 값은
+                // 위치지수 산정용일 뿐 취득 토지가액 아님 — 배치 모달과 동일 동작).
+                <LandPriceLookupField
+                  pricePerSqm={f.acqLandPrice}
+                  onPricePerSqmChange={(v) => set("acqLandPrice", v)}
+                  jibun={jibun}
+                  fixedYear={2001}
+                  hideLandStdPrice
+                  label="취득당시 위치지수용 ㎡당 개별공시지가 (2001.1.1 기준)"
+                  placeholder="2001.1.1. 현재 공시지가"
+                  hint="§164⑤ — 2001.1.1 현재 개별공시지가로 위치지수 산정"
+                />
+              ) : (
+                <LandPriceLookupField
+                  pricePerSqm={f.acqLandPrice}
+                  onPricePerSqmChange={(v) => set("acqLandPrice", v)}
+                  area={landArea}
+                  jibun={jibun}
+                  referenceDate={landRefFromEvent(f.acquisitionEventDate, f.acquisitionYear)}
+                  label="취득당시 ㎡당 개별공시지가"
+                  hint="여러 필지면 면적 가중평균한 ㎡당 가액"
+                />
+              ))}
           </SectionCard>
 
           {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별) */}
@@ -495,22 +525,22 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               </p>
             )}
             {!isMech && !sameYear && !composite && (
-              <>
-                <FieldCard label="양도당시 구조">
+              <div className="grid grid-cols-2 gap-2">
+                <FieldCard label="양도당시 구조" stacked>
                   <BuildingStructureSelect
                     year={f.transferYear ? parseInt(f.transferYear, 10) : undefined}
                     value={f.transStructureKey}
                     onChange={(v) => set("transStructureKey", v)}
                   />
                 </FieldCard>
-                <FieldCard label="양도당시 용도">
+                <FieldCard label="양도당시 용도" stacked>
                   <BuildingUsageSelect
                     year={f.transferYear ? parseInt(f.transferYear, 10) : undefined}
                     value={f.transUsageNo}
                     onChange={(v) => set("transUsageNo", v)}
                   />
                 </FieldCard>
-              </>
+              </div>
             )}
             {!isMech && !sameYear && (
               <LandPriceLookupField
@@ -518,7 +548,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 onPricePerSqmChange={(v) => set("transLandPrice", v)}
                 area={landArea}
                 jibun={jibun}
-                referenceDate={landRefDate(f.transferYear)}
+                referenceDate={landRefFromEvent(f.eventDate, f.transferYear)}
                 label="양도당시 ㎡당 개별공시지가"
               />
             )}
@@ -646,7 +676,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                     parcels={f.landParcels}
                     onChange={(parcels) => set("landParcels", parcels)}
                     jibun={jibun}
-                    referenceDate={landRefDate(f.valuationYear)}
+                    referenceDate={landRefFromEvent(f.eventDate, f.valuationYear)}
                   />
                 </ToggleCard>
 
@@ -656,7 +686,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                     onPricePerSqmChange={(v) => set("valLandPrice", v)}
                     area={landArea}
                     jibun={jibun}
-                    referenceDate={landRefDate(f.valuationYear)}
+                    referenceDate={landRefFromEvent(f.eventDate, f.valuationYear)}
                     label="㎡당 개별공시지가"
                     hint="2001~2002년 평가는 해당연도 1.1 기준"
                   />
