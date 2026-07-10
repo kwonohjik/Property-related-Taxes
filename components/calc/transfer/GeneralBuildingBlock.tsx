@@ -21,6 +21,7 @@
 import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -291,11 +292,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         )}
 
         {/* ① 면적·규모 (sky) — 항상 표시 */}
-        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">①</span>
-            <p className="text-xs font-semibold text-sky-700">면적·규모</p>
-          </div>
+        <ToneCard tone="sky" sectionNum="①" title="면적·규모" noDark>
 
           <FieldCard label="토지면적" unit="㎡" hint="등기부등본 또는 토지대장 기재 토지면적 (㎡)">
             <DecimalInput value={asset.gbLandArea} onChange={(v) => onChange({ gbLandArea: v })} />
@@ -314,14 +311,10 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           >
             <DecimalInput value={asset.gbBuildingFootprintArea} onChange={(v) => onChange({ gbBuildingFootprintArea: v })} />
           </FieldCard>
-        </div>
+        </ToneCard>
 
         {/* ② 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율 결정) */}
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">②</span>
-            <p className="text-xs font-semibold text-emerald-700">양도시 기준시가 (토지·건물 안분 비율)</p>
-          </div>
+        <ToneCard tone="emerald" sectionNum="②" title="양도시 기준시가 (토지·건물 안분 비율)" noDark>
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
           </div>
@@ -347,16 +340,17 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           <div className="flex justify-end">
             <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-transfer`} applyTimePoint="transfer" prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
           </div>
-        </div>
+        </ToneCard>
 
         {/* ③ 취득시 기준시가 (amber) — 환산취득가 / 일괄(증축) / 부담부증여(§159①1호 환산) 모드 */}
         {(isEstimated || asset.gbHasExtension || asset.transferType === "burdened_gift") && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">③</span>
-              <p className="text-xs font-semibold text-amber-700">취득시 기준시가 (환산 분자 + 개산공제 기준)</p>
-              <LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />
-            </div>
+          <ToneCard
+            tone="amber"
+            sectionNum="③"
+            title="취득시 기준시가 (환산 분자 + 개산공제 기준)"
+            titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />}
+            noDark
+          >
 
             <LandPriceLookupField
               label="취득시 토지 공시지가"
@@ -395,7 +389,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                 </p>
               </div>
             )}
-          </div>
+          </ToneCard>
         )}
 
         {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄(증축분 별도)" 모드에서 표시.
@@ -590,12 +584,13 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         )}
 
         {/* ④ 비사업용토지 판정 (rose) — 항상 표시 */}
-        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">④</span>
-            <p className="text-xs font-semibold text-rose-700">비사업용토지 판정</p>
-            <span className="text-micro text-rose-500">(§104의3·§168의12)</span>
-          </div>
+        <ToneCard
+          tone="rose"
+          sectionNum="④"
+          title="비사업용토지 판정"
+          titleExtra={<span className="text-micro text-rose-500">(§104의3·§168의12)</span>}
+          noDark
+        >
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
             <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
@@ -669,7 +664,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               무허가건축물 — 토지 전체 비사업용 (배율 계산 없음)
             </div>
           )}
-        </div>
+        </ToneCard>
 
         {/* ⑦ 주택→상가 용도변경 (fuchsia) — 사례 35 (사전법규재산 2022-684·881) */}
         <ToggleCard
