@@ -13,6 +13,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 function dateToStr(d: Date): string {
@@ -82,22 +83,22 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
   }
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {sectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">{sectionNum}</span>
-          )}
-          <p className="text-xs font-semibold text-amber-700">자본금 변동사항 (§56③·⑤ + §17의3⑤)</p>
-        </div>
+    <ToneCard
+      tone="amber"
+      sectionNum={sectionNum}
+      bodyClassName="space-y-3"
+      title="자본금 변동사항 (§56③·⑤ + §17의3⑤)"
+      titleExtra={
         <button
           type="button"
           onClick={addRow}
-          className="px-3 py-1 text-caption border border-amber-300 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-800"
+          className="ml-auto px-3 py-1 text-caption border border-amber-300 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-800"
         >
           + 변동 추가
         </button>
-      </div>
+      }
+      noDark
+    >
       <p className="text-caption text-amber-700/80">
         평가기준일 이전 3년 이내 유상증자·무상증자·감자. 유상증자는 §56⑤로 이전 사업연도 순손익액에 가산. 환산주식수는 §17의3⑤로 자동 산정.
       </p>
@@ -222,6 +223,6 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </ToneCard>
   );
 }
