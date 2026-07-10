@@ -28,6 +28,7 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 
 interface Props {
@@ -104,13 +105,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
 
         {/* ① 면적 섹션 (sky) — cbEra 선택 후 표시 */}
         {hasEra && (
-          <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-                1
-              </span>
-              <p className="text-xs font-semibold text-sky-700">면적 정보 (㎡)</p>
-            </div>
+          <ToneCard tone="sky" sectionNum="1" title="면적 정보 (㎡)" noDark>
             <FieldCard
               label="전용면적"
               unit="㎡"
@@ -149,18 +144,12 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 연면적 (전용+공유) = <span className="font-semibold">{totalFloorArea.toLocaleString()} ㎡</span>
               </div>
             )}
-          </div>
+          </ToneCard>
         )}
 
         {/* ② 호별 ㎡당 고시가 (emerald/amber) — cbEra 선택 후 표시 */}
         {hasEra && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-                2
-              </span>
-              <p className="text-xs font-semibold text-emerald-700">호별 ㎡당 고시가 (원/㎡)</p>
-            </div>
+          <ToneCard tone="emerald" sectionNum="2" title="호별 ㎡당 고시가 (원/㎡)" noDark>
             <div className="text-xs text-emerald-700 mb-1">
               국세청 홈택스 → 기준시가 조회 → 오피스텔 및 상업용건물 기준시가 → 호별로 고시된 ㎡당 가액 확인
             </div>
@@ -198,18 +187,12 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 />
               </FieldCard>
             </div>
-          </div>
+          </ToneCard>
         )}
 
         {/* ③ 건물 기준시가 3시점 — 총액 (pre_disclosure 시만 표시) */}
         {isPreDisclosure && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-                3
-              </span>
-              <p className="text-xs font-semibold text-amber-700">건물 기준시가 — 3시점 (원, 총액)</p>
-            </div>
+          <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 3시점 (원, 총액)" noDark>
             <div className="text-xs text-amber-700 mb-1">
               국세청 홈택스 &gt; 세금신고 &gt; 양도소득세 &gt; 기준시가 조회 → 건물분 ㎡당 가액 × 연면적(전유+공용 보정계수 반영) = <b>건물 기준시가 총액</b>으로 환산해 입력
             </div>
@@ -260,18 +243,18 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-transfer`} applyTimePoint="transfer" prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
               </div>
             </div>
-          </div>
+          </ToneCard>
         )}
 
         {/* ④ 개별공시지가 3시점 (amber+emerald) — cbEra 선택 후 표시 */}
         {hasEra && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-                {isPreDisclosure ? "4" : "3"}
-              </span>
-              <p className="text-xs font-semibold text-amber-700">개별공시지가 — {isPreDisclosure ? "3시점" : "2시점"} (원/㎡)</p>
-            </div>
+          <ToneCard
+            tone="amber"
+            sectionNum={isPreDisclosure ? "4" : "3"}
+            title={`개별공시지가 — ${isPreDisclosure ? "3시점" : "2시점"} (원/㎡)`}
+            bodyClassName="space-y-3"
+            noDark
+          >
 
             {/* 취득시 — amber (공통 필수) */}
             <div>
@@ -313,7 +296,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 jibun={asset.addressJibun || undefined}
               />
             </div>
-          </div>
+          </ToneCard>
         )}
       </div>
     </ToggleCard>
