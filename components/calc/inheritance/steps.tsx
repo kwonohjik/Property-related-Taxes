@@ -18,6 +18,7 @@ import { PriorGiftInput } from "@/components/calc/PriorGiftInput";
 import { HeirComposition } from "@/components/calc/HeirComposition";
 import { CohabitantDependentSection } from "./CohabitantDependentSection";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DebtAllocationInput } from "./DebtAllocationInput";
 import {
   Dialog,
@@ -67,14 +68,7 @@ export function Step0({
   return (
     <div className="space-y-3">
       {/* 섹션 ① — 피상속인 기본 정보 (sky tone) */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-            1
-          </span>
-          <p className="text-xs font-semibold text-sky-700">피상속인 기본 정보</p>
-        </div>
-
+      <ToneCard tone="sky" sectionNum={1} title="피상속인 기본 정보" bodyClassName="space-y-3" noDark>
         {/* 1행 — 항상 3컬럼 고정 (성명·주민등록번호·상속개시일) */}
         <div className="grid grid-cols-3 gap-3">
           <div className="min-w-0 space-y-1.5">
@@ -133,10 +127,10 @@ export function Step0({
             onChange={(v) => set({ decedentAddress: v })}
           />
         </div>
-      </div>
+      </ToneCard>
 
       {/* 섹션 ② — 상속인·수유자 구성 (violet tone). 헤더(번호·제목·6명·추가버튼)는 HeirComposition이 렌더 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+      <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
         {/* B-2 (2026-06-01): deathDate 전달 — legatee 미성년 자동 판정용 */}
         <HeirComposition heirs={form.heirs} onChange={setHeirs} deathDate={form.deathDate} />
         <CollapsibleHintCard tone="sky" summary="협의분할·법정상속분 배분 안내">
@@ -145,7 +139,7 @@ export function Step0({
             <strong> 법정상속분</strong>(배우자 1.5 : 직계비속·직계존속 1)으로 자동 배분됩니다.
           </p>
         </CollapsibleHintCard>
-      </div>
+      </ToneCard>
 
       {/* 섹션 ③ — 동거가족 인적공제 (비상속인 부양가족, 시령 §18①) — ② 밖 독립 섹션 */}
       <CohabitantDependentSection

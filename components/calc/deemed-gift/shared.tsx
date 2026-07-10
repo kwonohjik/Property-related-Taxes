@@ -11,6 +11,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   RadioCardGroup,
   type RadioCardOption,
@@ -191,7 +192,7 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
 
 function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
-    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="tb-beneficiary"
@@ -224,8 +225,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
       </div>
 
       {/* 증여시기 분리 (§33①1·2호 별개 증여 · §25①) */}
-      <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
-        <p className="text-xs font-semibold text-violet-700">증여시기 (원본·수익 별개 — §33①·§25①)</p>
+      <ToneCard tone="violet" title="증여시기 (원본·수익 별개 — §33①·§25①)" bodyClassName="space-y-2" noDark>
         {form.tbBeneficiaryType !== "diff_principal" && (
           <div className="space-y-1" data-testid="tb-income-gift-date">
             <label className="block text-xs text-violet-700">수익권 증여시기 (수익 최초지급일 등)</label>
@@ -252,7 +252,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
           ]}
         />
         <p className="text-xs text-muted-foreground">증여시기 종류(§25①) — 위 날짜의 의미를 선택.</p>
-      </div>
+      </ToneCard>
 
       {/* 정기금 유형 (§61②→§62) */}
       <RadioCardGroup
@@ -281,8 +281,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
         </div>
       )}
       {form.tbAnnuityType === "lifetime" && (
-        <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
-          <p className="text-xs font-semibold text-sky-700">종신 기대여명 (§62 3호 — 2023 생명표, 소수점 버림)</p>
+        <ToneCard tone="sky" title="종신 기대여명 (§62 3호 — 2023 생명표, 소수점 버림)" bodyClassName="space-y-2" noDark>
           <RadioCardGroup
             name="tb-gender"
             tone="sky"
@@ -304,17 +303,17 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
               <DecimalInput value={form.tbExpectedRemainingYears} onChange={(v) => set({ tbExpectedRemainingYears: v })} placeholder="미입력 시 생명표 조회" />
             </div>
           </div>
-        </div>
+        </ToneCard>
       )}
 
       <CurrencyInput label="해지·철회 일시금 (선택)" value={form.tbSurrenderValue} onChange={(v) => set({ tbSurrenderValue: v })} hint="평가액보다 크면 일시금으로 평가 (§61① 단서)" />
-    </div>
+    </ToneCard>
   );
 }
 
 function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
-    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
+    <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="ins-case"
@@ -343,13 +342,13 @@ function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         title="상속재산으로 보는 보험금 (§34②)"
         description="§8에 따라 상속재산에 해당하면 증여세 미적용"
       />
-    </div>
+    </ToneCard>
   );
 }
 
 function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
-    <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+    <ToneCard tone="emerald" bodyClassName="space-y-3" noDark>
       <div className="flex justify-end">
         <TaxHelp
           triggerLabel="특수관계인 범위 조회"
@@ -399,13 +398,13 @@ function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         title="과세제외 거래 (§35③)"
         description="법인세법 §52② 시가 해당·거래소 상장 시가거래 등"
       />
-    </div>
+    </ToneCard>
   );
 }
 
 function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
-    <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="debt-occur"
@@ -420,7 +419,7 @@ function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
       />
       <CurrencyInput label="면제·인수·변제 채무액" value={form.debtForgiven} onChange={(v) => set({ debtForgiven: v })} placeholder="채무액 (원)" />
       <CurrencyInput label="보상(지급)액" value={form.debtCompensation} onChange={(v) => set({ debtCompensation: v })} />
-    </div>
+    </ToneCard>
   );
 }
 
@@ -433,7 +432,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   const loans = form.loanLoans;
   const isMulti = loans !== undefined;
   return (
-    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       <div data-testid="loan-multi-toggle">
         <ToggleCard
           lawLinks="상증법"
@@ -449,8 +448,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         <>
           <CurrencyInput label="대출금액" value={form.loanAmount} onChange={(v) => set({ loanAmount: v })} hint="증여이익(대출금×4.6%−실제이자)이 1천만 이상이면 과세" placeholder="대출금액 (원)" />
           <CurrencyInput label="실제 지급이자" value={form.loanInterest} onChange={(v) => set({ loanInterest: v })} hint="다년 기간 입력 시 연간 실제이자" placeholder="실제 지급이자 (무이자면 빈칸)" />
-          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
-            <p className="text-xs font-semibold text-amber-700">대출 기간 (선택 — 입력 시 §41의4② 매년 별개 증여로 분할)</p>
+          <ToneCard tone="amber" title="대출 기간 (선택 — 입력 시 §41의4② 매년 별개 증여로 분할)" bodyClassName="space-y-2" noDark>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1" data-testid="loan-start-date">
                 <label className="block text-xs text-amber-700">대출 시작일</label>
@@ -462,7 +460,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">마지막 해가 1년 미만이면 일수 안분(÷365). 비우면 1년분 단건.</p>
-          </div>
+          </ToneCard>
         </>
       )}
 
@@ -519,6 +517,6 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           title="거래관행상 정당한 사유 있음 (§41의4③)"
         />
       )}
-    </div>
+    </ToneCard>
   );
 }

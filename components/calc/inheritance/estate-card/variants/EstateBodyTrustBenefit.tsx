@@ -14,6 +14,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import type { TrustBeneficiaryType, TrustAssetComponent, AnnuityKindType } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -74,8 +75,7 @@ export function EstateBodyTrustBenefit({ item, onUpdate }: VariantBodyProps) {
         </FieldCard>
 
         {/* ② 신탁재산 구성 (결정 B 경량 — Σ value = 신탁재산 가액) */}
-        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-          <p className="text-xs font-semibold text-sky-700">신탁재산 구성 (평가기준일 현재 가액)</p>
+        <ToneCard tone="sky" title="신탁재산 구성 (평가기준일 현재 가액)" bodyClassName="space-y-2" noDark>
           {assets.map((row, idx) => (
             <div key={idx} data-testid={`trust-asset-row-${idx}`} className="flex items-end gap-2 rounded-md border border-sky-200/70 bg-sky-50/30 p-2">
               <div className="flex-1">
@@ -102,7 +102,7 @@ export function EstateBodyTrustBenefit({ item, onUpdate }: VariantBodyProps) {
           <button type="button" onClick={addAsset} data-testid="trust-asset-add" className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100">
             + 신탁재산 항목 추가
           </button>
-        </div>
+        </ToneCard>
 
         {needsIncome && (
           <>

@@ -11,6 +11,7 @@
 
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -326,8 +327,7 @@ export function EstateBodyConvertibleBond({ item, onUpdate, valuationDate }: Var
               )}
 
               {/* 배당차액 §57③ — auto-derive + override */}
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-                <p className="text-xs font-semibold text-emerald-700">배당차액 (§57③) — 자동 산정 입력</p>
+              <ToneCard tone="emerald" title="배당차액 (§57③) — 자동 산정 입력" bodyClassName="space-y-2" noDark>
                 <FieldCard label="1주당 액면가액" unit="원">
                   <CurrencyInput
                     label="1주당 액면가액"
@@ -370,7 +370,7 @@ export function EstateBodyConvertibleBond({ item, onUpdate, valuationDate }: Var
                     data-testid={`cb-dividend-override-${item.id}`}
                   />
                 </FieldCard>
-              </div>
+              </ToneCard>
             </ToggleCard>
           </div>
         )}

@@ -18,6 +18,7 @@
 
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   CATEGORY_LABELS,
 } from "@/components/calc/inheritance/estate-card/estate-category-meta";
@@ -119,15 +120,13 @@ export function SpecialTreatmentAssetSelector({
       );
     }
     return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-            §
-          </span>
-          <p className="text-xs font-semibold text-emerald-700">
-            특례 귀속 자산 ({streamLabel}) — 자동 귀속
-          </p>
-        </div>
+      <ToneCard
+        tone="emerald"
+        sectionNum="§"
+        bodyClassName="space-y-2"
+        noDark
+        title={<>특례 귀속 자산 ({streamLabel}) — 자동 귀속</>}
+      >
         <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2">
           <span className="text-sm text-emerald-800 font-medium">{label}</span>
           <span className="text-sm font-mono text-emerald-800">
@@ -137,21 +136,19 @@ export function SpecialTreatmentAssetSelector({
         <p className="text-caption text-emerald-600">
           자산이 1개이므로 전체가 {streamLabel} 특례 스트림으로 자동 귀속됩니다.
         </p>
-      </div>
+      </ToneCard>
     );
   }
 
   // 자산 N≥2 — 멀티선택 체크박스
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-          §
-        </span>
-        <p className="text-xs font-semibold text-emerald-700">
-          특례 귀속 자산 선택 ({streamLabel})
-        </p>
-      </div>
+    <ToneCard
+      tone="emerald"
+      sectionNum="§"
+      bodyClassName="space-y-2"
+      noDark
+      title={<>특례 귀속 자산 선택 ({streamLabel})</>}
+    >
       <p className="text-caption text-emerald-600">
         {streamLabel} 과세특례를 적용할 자산을 선택하세요. 미선택 자산은 일반 스트림(§47·§53·§56)으로 계산됩니다.
       </p>
@@ -211,6 +208,6 @@ export function SpecialTreatmentAssetSelector({
           );
         })}
       </div>
-    </div>
+    </ToneCard>
   );
 }

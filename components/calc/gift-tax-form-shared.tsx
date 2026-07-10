@@ -29,6 +29,7 @@ import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { GiftCreditChecklist } from "@/components/calc/gift/GiftCreditChecklist";
 import { DoneeMinorField } from "@/components/calc/gift/DoneeMinorField";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 // ============================================================
 // 폼 상태 타입
@@ -244,15 +245,7 @@ export function Step0({
 
       {/* Phase A: 증여자 (donor) — §47 합산 그룹 + §57 적용 판정
           G-M3: donor 변경 시 donorRelation 자동 도출 (단일 진실화) */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            §47
-          </span>
-          <p className="text-xs font-semibold text-violet-700">
-            증여자 (동일인 합산 그룹 + §57 적용 판정)
-          </p>
-        </div>
+      <ToneCard tone="violet" sectionNum="§47" title="증여자 (동일인 합산 그룹 + §57 적용 판정)" bodyClassName="space-y-2" noDark>
         <select
           value={form.donor}
           onChange={(e) => {
@@ -292,7 +285,7 @@ export function Step0({
             onCheckedChange={(v) => set({ isSubstituteGift: v })}
           />
         )}
-      </div>
+      </ToneCard>
 
       {/* G-M2: 수증자 미성년 — 주민번호 자동판정(증여일 기준 만19세) 우선 + 수동 토글 fallback(D-1).
           donor=grandparent 포함 직계존속 전체 노출 (§57① 40% 판정: 미성년 AND 20억 초과) */}

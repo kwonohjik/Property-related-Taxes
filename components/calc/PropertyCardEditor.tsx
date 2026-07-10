@@ -13,6 +13,7 @@
 
 import { useMemo, useState } from "react";
 import { parseAmount, formatKRW, CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -370,24 +371,24 @@ export function PropertyCardEditor({
                   ]}
                 />
                 {/* 당해연도 시가표준액 */}
-                <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-                  <p className="text-xs font-semibold text-amber-700">당해연도 시가표준액</p>
+                <ToneCard tone="amber" title="당해연도 시가표준액" bodyClassName="space-y-2" noDark>
                   <div className="grid grid-cols-2 gap-3">
                     <CurrencyInput label="토지" value={property.landStdValue} onChange={(v) => onUpdate({ landStdValue: v })} hideUnit />
                     <CurrencyInput label="건물" value={property.buildingStdValue} onChange={(v) => onUpdate({ buildingStdValue: v })} hideUnit />
                   </div>
-                </div>
+                </ToneCard>
                 {/* 직전연도 시가표준액 (세부담상한 자동계산용) */}
-                <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-                  <p className="text-xs font-semibold text-amber-700">
-                    직전연도 시가표준액{" "}
-                    <span className="font-normal text-muted-foreground">(세부담상한 자동계산 시)</span>
-                  </p>
+                <ToneCard
+                  tone="amber"
+                  bodyClassName="space-y-2"
+                  noDark
+                  title={<>직전연도 시가표준액{" "}<span className="font-normal text-muted-foreground">(세부담상한 자동계산 시)</span></>}
+                >
                   <div className="grid grid-cols-2 gap-3">
                     <CurrencyInput label="토지" value={property.priorLandStdValue} onChange={(v) => onUpdate({ priorLandStdValue: v })} hideUnit />
                     <CurrencyInput label="건물" value={property.priorBuildingStdValue} onChange={(v) => onUpdate({ priorBuildingStdValue: v })} hideUnit />
                   </div>
-                </div>
+                </ToneCard>
                 {/* 안분비율 자동 표시 — 양 시가표준액 >0 시만 (0-division 가드) */}
                 {(() => {
                   const land = parseAmount(property.landStdValue);
