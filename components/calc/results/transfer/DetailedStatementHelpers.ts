@@ -57,7 +57,7 @@ export function findStepByLabel(
 ): CalculationStep | undefined {
   if (!steps) return undefined;
   for (const kw of keywords) {
-    const found = steps.find((s) => s.label.includes(kw));
+    const found = steps.find((s) => s.label?.includes(kw));
     if (found) return found;
   }
   return undefined;

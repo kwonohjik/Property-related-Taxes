@@ -100,7 +100,7 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 **API Date 직렬화** — `lib/api/date-coerce.ts` 필수. JSON 경유 후 string 도달 → `Date < string` silent false 함정. `toDate(v, "field")` / `toOptionalDate(v)` / `coerceDates(obj, [...])`. 신규 코드 `new Date(x)` 직접 호출 금지.
 
 **설계 원칙 (UI 금지)**:
-- 자동 안분 fallback 금지(예외: PHD §164⑤). 미입력은 검증 오류로 차단.
+- 자동 안분 fallback 금지(예외: PHD §164⑦). 미입력은 검증 오류로 차단.
 - useEffect → store 미러링 금지. cross-field 동기화는 onChange/useMemo.
 - 법령 정확성 최우선. 납세자 유리/불리·절감 표현 금지.
 

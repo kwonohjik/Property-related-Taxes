@@ -44,7 +44,10 @@ function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
     penaltyTax: 0,
     localIncomeTax: localTax,
     totalTax: t.totalPayable,
-    steps: b.steps as never[],
+    // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과
+    // 형태가 달라 재사용 불가. 명세서 카드는 mixedUseDetail·result 필드로 값을 뽑고
+    // formula는 fallback을 쓰므로 빈 배열로 전달 (findStepByLabel 매칭 자연 실패).
+    steps: [],
     mixedUseDetail: b,
   };
 }

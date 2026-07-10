@@ -125,7 +125,7 @@ export function apportionTransferPrice(
 }
 
 // ──────────────────────────────────────────────────────────────
-// 3. 주택부분 환산취득가액 (STEP 3, §97 또는 §164⑤ PHD)
+// 3. 주택부분 환산취득가액 (STEP 3, §97 또는 §164⑦ PHD)
 //    취득시 기준시가 = 취득시 개별주택공시가격
 //    양도시 기준시가 = 양도시 개별주택공시가격
 //    usePreHousingDisclosure=true 시 PHD 3-시점 알고리즘으로 취득시 주택가격 역산.
@@ -140,7 +140,7 @@ export interface HousingEstimatedAcqResult {
   /** PHD 3-시점 산식 상세 (UI 표시용) */
   phdResult?: PreHousingDisclosureResult;
   /**
-   * PHD §164⑤ 환산 분기 — `partialUsageChange` 결합 시에만 산출.
+   * PHD §164⑦ 환산 분기 — `partialUsageChange` 결합 시에만 산출.
    *
    * - "case_a_whole_building": firstDisclosureDate < usageChangeDate.
    *   최초공시 시점에 아직 용도변경 전(전체 주택). Sum_A·Sum_F 에 전체 토지면적·전체 건물 사용.
@@ -157,7 +157,7 @@ export function calcHousingEstimatedAcq(
   derived: MixedUseDerivedAreas,
   acqDerived?: MixedUseDerivedAreas,
 ): HousingEstimatedAcqResult {
-  // §164⑤ PHD 분기 — 겸용주택의 주택부수토지 면적을 토지면적으로 사용
+  // §164⑦ PHD 분기 — 겸용주택의 주택부수토지 면적을 토지면적으로 사용
   if (asset.usePreHousingDisclosure && asset.preHousingDisclosure) {
     // 사용자가 면적을 직접 지정한 경우(최초 공시 당시 전체 주택 등) 우선 사용
     const effectiveLandArea =

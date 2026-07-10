@@ -6,7 +6,8 @@
  * 환산취득가액 및 토지/건물 분리 안분값을 계산한다.
  *
  * 핵심 법령:
- *   소득세법 시행령 §164 ⑤ — 개별주택가격 미공시 취득시 기준시가 추정
+ *   소득세법 시행령 §164 ⑦ — 개별주택가격·공동주택가격 미공시 취득시 주택 기준시가 추정
+ *     (본문 산식 P_A_est = floor(P_F × Sum_A / Sum_F). 건물분 기준시가가 없는 경우 §164⑤ 준용)
  *   소득세법 시행령 §166 ⑥ — 한 계약으로 일괄 양도 시 기준시가 비율 안분
  *   소득세법 시행령 §163 ⑥ — 개산공제 = 취득시 기준시가(안분 성분) × 3%
  *
@@ -97,7 +98,7 @@ export function calcPreHousingDisclosureGain(
     ? landStdAtTransfer + buildingStdPriceAtTransfer + commercialBuildingStdPriceAtTransfer!
     : landStdAtTransfer + buildingStdPriceAtTransfer;
 
-  // ── Step 2: P_A_est — 취득시 개별주택가격 추정 (§164⑤) ──
+  // ── Step 2: P_A_est — 취득시 개별주택가격 추정 (§164⑦ 본문) ──
   const P_A_est = sumAtFirstDisclosure > 0
     ? Math.floor(firstDisclosureHousingPrice * sumAtAcquisition / sumAtFirstDisclosure)
     : 0;
