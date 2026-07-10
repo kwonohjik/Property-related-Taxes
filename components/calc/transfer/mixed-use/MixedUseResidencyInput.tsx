@@ -2,6 +2,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -17,18 +18,17 @@ export function MixedUseResidencyInput({ asset, onChange, sectionNum }: Props) {
   const hasValue = years > 0;
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        {sectionNum !== undefined && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            {sectionNum}
-          </span>
-        )}
-        <p className="text-xs font-semibold text-violet-700">거주 기간 입력</p>
+    <ToneCard
+      tone="violet"
+      sectionNum={sectionNum}
+      title="거주 기간 입력"
+      titleExtra={
         <span className="ml-auto rounded-full bg-violet-100 px-2 py-0.5 text-micro font-medium text-violet-700">
           1세대1주택 비과세·표2 공제 판정에 사용
         </span>
-      </div>
+      }
+      noDark
+    >
 
       <FieldCard
         label="거주기간 (년)"
@@ -55,6 +55,6 @@ export function MixedUseResidencyInput({ asset, onChange, sectionNum }: Props) {
             : "표1 적용 — 보유연수×2% (최대 30%, 거주 2년 미만)"}
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }
