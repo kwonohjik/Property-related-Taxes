@@ -12,6 +12,7 @@
 
 import { ToggleChip } from "@/components/calc/inputs/ToggleChip";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 export interface MajorShareholderStockToggleProps {
   /** §22② 최대주주 해당 여부 (true=배제) */
@@ -27,15 +28,13 @@ export function MajorShareholderStockToggle({
   sectionNum = 7,
 }: MajorShareholderStockToggleProps) {
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-          {sectionNum}
-        </span>
-        <p className="text-xs font-semibold text-violet-700">
-          §22② 최대주주 보유주식 금융재산공제 배제
-        </p>
-      </div>
+    <ToneCard
+      tone="violet"
+      sectionNum={sectionNum}
+      bodyClassName="space-y-3"
+      title="§22② 최대주주 보유주식 금융재산공제 배제"
+      noDark
+    >
       <p className="text-caption text-violet-700/80">
         ⓘ 상증법 <strong>§22②</strong> — 최대주주가 보유한 주식은 금융재산 상속공제 대상에서{" "}
         <strong>제외</strong>됩니다. (§63③ 할증평가 ×120%는 별도 개념)
@@ -60,6 +59,6 @@ export function MajorShareholderStockToggle({
           <strong>[적용]</strong> 버튼으로 반영하세요.
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }

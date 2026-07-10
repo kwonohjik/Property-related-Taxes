@@ -26,6 +26,7 @@ import type {
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { STOCK_PREMIUM_EXCLUSION_LABELS } from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
 import { Section53_8_2Fields } from "@/components/calc/inheritance/shared/Section53_8_2Fields";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 interface Props {
   item: EstateItem;
@@ -286,7 +287,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate, taxKind }: 
       </FieldCard>
 
       {unlistedMode !== "none" && (
-        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+        <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
           {unlistedMode === "capital_increase" && (
             <FieldCard label="⑦ 증자일자">
               <DateInput
@@ -324,7 +325,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate, taxKind }: 
               onChange={(v) => set({ dividendBaseDate: v || undefined })}
             />
           </FieldCard>
-        </div>
+        </ToneCard>
       )}
     </div>
   );
