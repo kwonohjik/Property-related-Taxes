@@ -13,6 +13,7 @@
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -31,13 +32,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-violet-700">등록·신분</p>
-        </div>
+      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
 
         <RegistrationFields
           registrationDate={value.registrationDate}
@@ -47,16 +42,10 @@ export function Rental972InputForm({ value, onChange }: Props) {
           onIsTaxRegisteredChange={(v) => onChange({ isTaxRegistered: v })}
           onRentalStartDateChange={(v) => onChange({ rentalStartDate: v })}
         />
-      </div>
+      </ToneCard>
 
       {/* ② 임대 유형 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-amber-700">임대 유형 (§97의2①)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="②" title="임대 유형 (§97의2①)" noDark>
 
         <RadioCardGroup
           name="rental972Type"
@@ -92,7 +81,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
           description="전용면적 85㎡ 이하 + 부속토지 연면적 2배 이내 (§85의2①·§97의2①)"
           tone="sky"
         />
-      </div>
+      </ToneCard>
 
       {/* ③④ 공통 필드 */}
       <RentalCommonFields

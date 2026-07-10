@@ -14,6 +14,7 @@
  */
 
 import { useMemo } from "react";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -61,13 +62,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-violet-700">등록·신분</p>
-        </div>
+      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
 
         <RegistrationFields
           registrationDate={value.registrationDate}
@@ -84,16 +79,10 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
             미등기 양도 등 소득세법 §95① 단서 해당 시 적용 배제됩니다.
           </p>
         </div>
-      </div>
+      </ToneCard>
 
       {/* ② 추가공제율 안내 (§95② 보유기간 공제율에 가산) */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-amber-700">임대기간별 추가공제율 (§97의4①)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="②" title="임대기간별 추가공제율 (§97의4①)" noDark>
 
         <p className="text-micro text-amber-800">
           §95② 보유기간별 장기보유특별공제율에 아래 추가율을 <strong>가산</strong>합니다 (대체 아님).
@@ -109,7 +98,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
         <p className="text-micro text-amber-700">
           ※ 적용 추가율은 공실 차감 후 유효임대기간으로 엔진이 산정합니다.
         </p>
-      </div>
+      </ToneCard>
 
       {/* ③④ 공통 필드 (임대료 증액·공실) */}
       <RentalCommonFields value={value} onChange={patchCommon} sectionOffset={3} />
