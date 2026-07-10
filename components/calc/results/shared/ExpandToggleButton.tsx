@@ -13,26 +13,20 @@
  * 정책: feedback_tailwind_static_tone_mapping — tone은 정적 Record 매핑 (JIT purge 회피).
  */
 
-export type ExpandTone =
-  | "sky"
-  | "violet"
-  | "slate"
-  | "rose"
-  | "emerald"
-  | "amber"
-  | "blue";
+import { TONE } from "@/components/calc/shared/tones";
+import type { Tone } from "@/components/calc/shared/tones";
+
+// blue 제외 6톤은 tones.ts canonical에서 파생(회귀 0). blue만 여기 리터럴 유지
+// (blue는 카드 축이 아니라 이 토글 전용 — 계획서 §6·C-F7).
+export type ExpandTone = Tone | "blue";
 
 const EXPAND_TONE_CLASS: Record<ExpandTone, string> = {
-  sky: "border-sky-300 text-sky-700 hover:bg-sky-100 dark:border-sky-600 dark:text-sky-300 dark:hover:bg-sky-900/40",
-  violet:
-    "border-violet-300 text-violet-700 hover:bg-violet-100 dark:border-violet-600 dark:text-violet-300 dark:hover:bg-violet-800/40",
-  slate:
-    "border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700/40",
-  rose: "border-rose-300 text-rose-700 hover:bg-rose-100 dark:border-rose-600 dark:text-rose-300 dark:hover:bg-rose-900/40",
-  emerald:
-    "border-emerald-300 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-600 dark:text-emerald-300 dark:hover:bg-emerald-900/40",
-  amber:
-    "border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40",
+  sky: TONE.sky.toggle,
+  violet: TONE.violet.toggle,
+  slate: TONE.slate.toggle,
+  rose: TONE.rose.toggle,
+  emerald: TONE.emerald.toggle,
+  amber: TONE.amber.toggle,
   blue: "border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-900/40",
 };
 

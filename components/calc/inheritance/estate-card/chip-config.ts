@@ -90,6 +90,16 @@ export const INLINE_PANEL_TONE_CLASSES: Record<ChipTone, string> = {
   rose: "border-l-4 border-rose-400 bg-rose-50/40 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800",
 };
 
+/** 인라인 펼침 패널 제목 텍스트 (정적 — dynamic text-${tone} 금지, feedback_tailwind_static_tone_mapping) */
+export const INLINE_PANEL_TITLE_CLASSES: Record<ChipTone, string> = {
+  gray: "text-gray-800 dark:text-gray-200",
+  violet: "text-violet-800 dark:text-violet-200",
+  amber: "text-amber-800 dark:text-amber-200",
+  emerald: "text-emerald-800 dark:text-emerald-200",
+  sky: "text-sky-800 dark:text-sky-200",
+  rose: "text-rose-800 dark:text-rose-200",
+};
+
 // ============================================================
 // 분류(deemedCategory) 라벨
 // ============================================================

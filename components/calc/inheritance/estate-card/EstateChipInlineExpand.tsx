@@ -19,7 +19,12 @@ import type {
   EstateItem,
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { INLINE_PANEL_TONE_CLASSES, type ChipKey, type ChipTone } from "./chip-config";
+import {
+  INLINE_PANEL_TONE_CLASSES,
+  INLINE_PANEL_TITLE_CLASSES,
+  type ChipKey,
+  type ChipTone,
+} from "./chip-config";
 
 export interface EstateChipInlineExpandProps {
   expandedKey: ChipKey | null;
@@ -96,7 +101,7 @@ export function EstateChipInlineExpand({
       ].join(" ")}
     >
       <div className="flex items-center justify-between">
-        <p className={`text-xs font-semibold text-${tone}-800 dark:text-${tone}-200`}>
+        <p className={`text-xs font-semibold ${INLINE_PANEL_TITLE_CLASSES[tone]}`}>
           {title}
         </p>
         <button
