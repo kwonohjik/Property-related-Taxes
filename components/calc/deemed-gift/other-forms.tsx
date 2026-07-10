@@ -12,6 +12,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
 import type { DeemedFormState } from "./shared";
@@ -553,11 +554,7 @@ export function SpecificCorpFields({ form, set }: Props) {
   return (
     <div className="space-y-3">
       {/* ── 섹션 1: 입력 방식 + 거래이익 ── */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">1</span>
-          <p className="text-xs font-semibold text-sky-700">입력 방식 선택</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="1" title="입력 방식 선택" noDark>
         <RadioCardGroup
           name="sc-mode"
           tone="sky"
@@ -583,14 +580,10 @@ export function SpecificCorpFields({ form, set }: Props) {
           hint="증여재산가액·채무면제이익·시가−대가 차액 (시행령 §34의5④1호)"
           data-testid="sc-transaction-benefit"
         />
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 2: 법인세 상당액 ── */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">2</span>
-          <p className="text-xs font-semibold text-amber-700">법인세 상당액 (시행령 §34의5④2호)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="2" title="법인세 상당액 (시행령 §34의5④2호)" noDark>
         <RadioCardGroup
           name="sc-corp-tax-mode"
           tone="amber"
@@ -643,16 +636,15 @@ export function SpecificCorpFields({ form, set }: Props) {
             )}
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 3: 지분율 or 주주 명단 ── */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">3</span>
-          <p className="text-xs font-semibold text-violet-700">
-            {isRoster ? "발행주식 총수 + 주주 명단" : "지배주주등 주식보유비율"}
-          </p>
-        </div>
+      <ToneCard
+        tone="violet"
+        sectionNum="3"
+        title={isRoster ? "발행주식 총수 + 주주 명단" : "지배주주등 주식보유비율"}
+        noDark
+      >
         {!isRoster && (
           <FieldCard label="지배주주등 주식보유비율" hint="증여의제이익 1억원 이상이면 과세 (§34의5⑤)" unit="%">
             <DecimalInput value={form.scRatioPct} onChange={(v) => set({ scRatioPct: v })} data-testid="sc-shareholder-ratio" />
@@ -673,14 +665,10 @@ export function SpecificCorpFields({ form, set }: Props) {
             />
           </>
         )}
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 4: §45의5② 한도 — 증여재산공제 ── */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">4</span>
-          <p className="text-xs font-semibold text-emerald-700">§45의5② 한도 — 증여재산공제 (선택)</p>
-        </div>
+      <ToneCard tone="emerald" sectionNum="4" title="§45의5② 한도 — 증여재산공제 (선택)" noDark>
         <CurrencyInput
           label="증여재산공제"
           value={form.scGiftDeduction}
@@ -688,7 +676,7 @@ export function SpecificCorpFields({ form, set }: Props) {
           hint="§45의5② 한도 ㉮㉠ 계산 시 적용할 증여재산공제액 (미입력 시 0)"
           data-testid="sc-gift-deduction"
         />
-      </div>
+      </ToneCard>
     </div>
   );
 }
