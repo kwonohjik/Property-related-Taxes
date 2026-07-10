@@ -27,6 +27,7 @@ import { nanoid } from "nanoid";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { ExitTaxHoldingForm } from "@/lib/stores/calc-wizard-stock-store";
 
 // ── 시장 옵션 ──
@@ -120,29 +121,23 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
     <div className="space-y-4">
       {/* 보유 종목 행 목록 */}
       {holdings.map((holding, idx) => (
-        <div
+        <ToneCard
           key={holding.id}
-          className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3"
-        >
-          {/* 행 헤더 */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-                {idx + 1}
-              </span>
-              <p className="text-xs font-semibold text-amber-700">
-                {holding.stockName || `종목 ${idx + 1}`}
-              </p>
-            </div>
+          tone="amber"
+          sectionNum={idx + 1}
+          title={holding.stockName || `종목 ${idx + 1}`}
+          bodyClassName="space-y-3"
+          noDark
+          titleExtra={
             <button
               type="button"
               onClick={() => removeHolding(holding.id)}
-              className="text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors"
+              className="ml-auto text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors"
             >
               삭제
             </button>
-          </div>
-
+          }
+        >
           {/* 종목명 */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-700">종목명 *</label>
@@ -319,7 +314,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
               </div>
             );
           })()}
-        </div>
+        </ToneCard>
       ))}
 
       {/* 종목 추가 버튼 */}

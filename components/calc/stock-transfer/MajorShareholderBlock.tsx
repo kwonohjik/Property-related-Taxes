@@ -28,6 +28,7 @@ import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -388,7 +389,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               />
             </FieldCard>
           ) : (
-            <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+            <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
               <FieldCard label="총 발행주식수" hint="해당 법인의 발행주식 총수 (주). 다른 단계에서도 함께 사용됩니다.">
                 <DecimalInput
                   value={form.totalIssuedShares}
@@ -415,7 +416,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                   총 발행주식수와 본인 보유 주식수를 입력하면 지분율이 자동 산출됩니다.
                 </p>
               )}
-            </div>
+            </ToneCard>
           )}
         </div>
 
@@ -474,7 +475,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 />
               </FieldCard>
             ) : (
-              <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+              <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
                 <FieldCard label="총 발행주식수" hint="해당 법인의 발행주식 총수 (주). 본인 단독 입력과 동일 값.">
                   <DecimalInput
                     value={form.totalIssuedShares}
@@ -501,7 +502,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                     총 발행주식수와 합산 보유 주식수를 입력하면 지분율이 자동 산출됩니다.
                   </p>
                 )}
-              </div>
+              </ToneCard>
             )}
             <CurrencyInput
               label="합산 시가총액"

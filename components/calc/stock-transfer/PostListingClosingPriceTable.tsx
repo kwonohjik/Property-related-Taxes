@@ -13,6 +13,7 @@
 
 import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { calcMonthlyClosingAverage } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
@@ -168,17 +169,18 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
   }
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-          1
-        </span>
-        <p className="text-xs font-semibold text-emerald-700">
+    <ToneCard
+      tone="emerald"
+      sectionNum={1}
+      bodyClassName="space-y-3"
+      noDark
+      title={
+        <>
           상장일 이후 1개월 종가 (소령 §165⑤ — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일,
           휴일·주말은 빈칸으로 두면 자동 제외)
-        </p>
-      </div>
-
+        </>
+      }
+    >
       {/* 2-col grid — 좌(앞 절반) / 우(뒤 절반) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs" onKeyDown={handleGridKeyDown} data-enter-nav="off">
         {[0, 1].map((col) => {
@@ -225,6 +227,6 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
           <strong className="text-emerald-900">{preview.avg.toLocaleString()}</strong>
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }

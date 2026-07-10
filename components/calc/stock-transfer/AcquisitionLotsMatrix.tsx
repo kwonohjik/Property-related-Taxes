@@ -20,6 +20,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { Button } from "@/components/ui/button";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Trash2 } from "lucide-react";
 import {
   Select,
@@ -274,7 +275,7 @@ export function AcquisitionLotsMatrix({
       </div>
 
       {/* 합계 미리보기 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-sm text-sky-900">
+      <ToneCard tone="sky" noDark className="text-sm text-sky-900" bodyClassName="">
         <p>
           총 매수 <strong>{summary.totalAcq.toLocaleString()}주</strong>
         </p>
@@ -285,7 +286,7 @@ export function AcquisitionLotsMatrix({
             — 실제 이동평균은 매도 순서·시점에 따라 달라질 수 있습니다 (정확한 값은 계산 결과 참조)
           </p>
         )}
-      </div>
+      </ToneCard>
     </div>
   );
 }

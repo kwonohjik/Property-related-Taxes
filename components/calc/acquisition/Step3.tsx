@@ -6,6 +6,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   infoBannerCls,
   warnBannerCls,
@@ -345,10 +346,13 @@ export function Step3({
 
       {/* 무상취득 단서 (증여) */}
       {isGiftLike && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">★</span>
-            <p className="text-xs font-semibold text-rose-700">무상취득 중과 배제 단서</p>
+        <ToneCard
+          tone="rose"
+          sectionNum="★"
+          title="무상취득 중과 배제 단서"
+          bodyClassName="space-y-3"
+          noDark
+          titleExtra={
             <TaxHelp
               title="무상취득 중과 배제 단서 (시행령 §28의6②)"
               summary="조정지역 3억 이상 증여도 1세대 1주택자가 가족에게 증여 시 중과 배제 — 계부모·의붓자녀도 포함."
@@ -372,7 +376,8 @@ export function Step3({
 §15 세율특례 중 이혼 재산분할은 중과 배제`}
               legalBasis={["지방세법시행령 제28조의6 제2항", "지방세법 제15조 제1항 제6호"]}
             />
-          </div>
+          }
+        >
           <p className="text-xs text-muted-foreground">
             조정지역 시가표준액 3억 이상 증여도 아래 조건 충족 시 중과 배제 (시행령 §28의6②)
           </p>
@@ -406,7 +411,7 @@ export function Step3({
             checked={form.giftorIs1HHHolder}
             onCheckedChange={(v) => set("giftorIs1HHHolder", v)}
           />
-        </div>
+        </ToneCard>
       )}
 
       {/* 부담부증여 관계 */}
