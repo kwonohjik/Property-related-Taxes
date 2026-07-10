@@ -12,6 +12,7 @@
 
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 type SellingExclusion = NonNullable<TransferFormData["sellingHouseExclusion"]>;
@@ -28,8 +29,7 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2.5">
-      <p className="text-xs font-semibold text-amber-700">양도 주택 중과배제 특례 (3주택 이상 시)</p>
+    <ToneCard tone="amber" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (3주택 이상 시)" noDark>
       <p className="text-caption text-muted-foreground/80">
         양도하는 주택 자체가 아래 사유에 해당하면 3주택 이상이어도 중과 배제됩니다 (소령 §167의10).
       </p>
@@ -100,6 +100,6 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
           <p className="text-caption text-muted-foreground/70">5년 이상이어야 배제 적용</p>
         </div>
       </ToggleCard>
-    </div>
+    </ToneCard>
   );
 }

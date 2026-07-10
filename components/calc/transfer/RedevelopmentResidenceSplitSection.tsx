@@ -16,6 +16,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 
 interface Props {
@@ -66,15 +67,7 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
   if (shouldHide) return null;
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-          6
-        </span>
-        <p className="text-xs font-semibold text-emerald-700">
-          거주개월 분리 입력 (1세대1주택 + 12억 초과 시)
-        </p>
-      </div>
+    <ToneCard tone="emerald" sectionNum="6" title="거주개월 분리 입력 (1세대1주택 + 12억 초과 시)" noDark>
       <p className="text-caption text-emerald-800 leading-relaxed">
         <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
         {" "}— 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.
@@ -115,7 +108,7 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
         <p className="font-semibold mb-1">{guidance.title}</p>
         <p>{guidance.body}</p>
       </div>
-    </div>
+    </ToneCard>
   );
 }
 

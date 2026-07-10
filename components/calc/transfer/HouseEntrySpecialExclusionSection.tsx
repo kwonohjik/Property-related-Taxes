@@ -13,6 +13,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -22,13 +23,7 @@ interface Props {
 
 export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2.5">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">
-          ④
-        </span>
-        <p className="text-xs font-semibold text-rose-700">특수 배제 사유 (2주택·인구감소)</p>
-      </div>
+    <ToneCard tone="rose" sectionNum="④" bodyClassName="space-y-2.5" title="특수 배제 사유 (2주택·인구감소)" noDark>
 
       {/* 부득이한 사유 (취학·근무·질병) */}
       <ToggleCard
@@ -140,6 +135,6 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           </div>
         </div>
       </ToggleCard>
-    </div>
+    </ToneCard>
   );
 }

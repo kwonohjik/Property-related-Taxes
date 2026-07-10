@@ -14,6 +14,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { AddressSearch } from "@/components/ui/address-search";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -43,13 +44,17 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
   }
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2.5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-sky-700">분양권·입주권</p>
-        <button type="button" onClick={add} className="text-xs text-primary hover:underline">
+    <ToneCard
+      tone="sky"
+      bodyClassName="space-y-2.5"
+      title="분양권·입주권"
+      titleExtra={
+        <button type="button" onClick={add} className="ml-auto text-xs text-primary hover:underline">
           + 추가
         </button>
-      </div>
+      }
+      noDark
+    >
       <p className="text-caption text-muted-foreground/80">
         2021.1.1 이후 취득한 분양권·조합원입주권은 주택 수 산정에 포함됩니다 (소령 §167의11).
       </p>
@@ -161,6 +166,6 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
           ))}
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }

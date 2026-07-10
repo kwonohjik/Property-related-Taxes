@@ -29,6 +29,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 interface Props {
   asset: AssetForm;
@@ -108,11 +109,7 @@ export function RedevelopmentRightExemptionSection({
       </div>
 
       {/* §⑥ violet: 1세대1입주권 비과세 카드 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">⑥</span>
-          <p className="text-xs font-semibold text-violet-700">1세대1입주권 비과세 요건 (§89①4호 가목)</p>
-        </div>
+      <ToneCard tone="violet" sectionNum="⑥" bodyClassName="space-y-3" title="1세대1입주권 비과세 요건 (§89①4호 가목)" noDark>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호 가목" />
           <LawArticleModal legalBasis="소득세법 §89 ① 3호" label="§89①3호 가목" />
@@ -208,7 +205,7 @@ export function RedevelopmentRightExemptionSection({
             </p>
           </div>
         )}
-      </div>
+      </ToneCard>
     </div>
   );
 }

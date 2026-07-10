@@ -4,6 +4,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 type DeemedReason =
@@ -37,11 +38,12 @@ export function DeemedTransferSection({
 }) {
   const reason = (asset.nblDeemedTransferReason || "none") as DeemedReason;
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <p className="text-xs font-semibold text-rose-700">양도일 의제 (경매·공매·장기매각)</p>
-        <LawArticleModal legalBasis="소득세법 시행령 §168의14②" label="§168의14②" />
-      </div>
+    <ToneCard
+      tone="rose"
+      title="양도일 의제 (경매·공매·장기매각)"
+      titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §168의14②" label="§168의14②" />}
+      noDark
+    >
       <p className="text-caption text-muted-foreground leading-snug">
         경매·공매·장기매각으로 양도가 지연된 경우, 해당 일자를 양도일로 보아 기간기준(§168의6)만 재판정합니다.
         양도차익·세율·도시지역·편입유예는 실제 양도일 기준으로 계산됩니다.
@@ -60,6 +62,6 @@ export function DeemedTransferSection({
           />
         </FieldCard>
       )}
-    </div>
+    </ToneCard>
   );
 }
