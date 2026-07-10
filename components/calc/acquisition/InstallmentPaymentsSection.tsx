@@ -16,6 +16,7 @@ import { useMemo } from "react";
 import { differenceInMonths, parseISO } from "date-fns";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 // ============================================================
 // 타입
@@ -92,29 +93,29 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
   }, [installments, contractDate]);
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-      {/* 섹션 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-            2
-          </span>
-          <p className="text-xs font-semibold text-amber-700">연부 회차 정보</p>
+    <ToneCard
+      tone="amber"
+      sectionNum={2}
+      title="연부 회차 정보"
+      bodyClassName="space-y-3"
+      noDark
+      titleExtra={
+        <>
           {installments.length > 0 && (
             <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-micro font-medium text-amber-800">
               {installments.length}회차
             </span>
           )}
-        </div>
-        <button
-          type="button"
-          onClick={() => onChange(addRow(installments))}
-          className="rounded-md border border-amber-300 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors"
-        >
-          + 회차 추가
-        </button>
-      </div>
-
+          <button
+            type="button"
+            onClick={() => onChange(addRow(installments))}
+            className="ml-auto rounded-md border border-amber-300 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors"
+          >
+            + 회차 추가
+          </button>
+        </>
+      }
+    >
       {/* 2년 미만 경고 배너 */}
       {isUnder2Years && (
         <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-xs text-amber-800">
@@ -208,6 +209,6 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
           )}
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }

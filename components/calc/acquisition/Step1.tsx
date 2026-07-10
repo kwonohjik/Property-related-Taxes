@@ -4,6 +4,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   isDeemedAcquisitionCause,
   type FormState,
@@ -70,12 +71,7 @@ export function Step1({
   return (
     <div className="space-y-4">
       {/* 면적·시가표준액 — sky 카드 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">1</span>
-          <p className="text-xs font-semibold text-sky-700">물건 상세</p>
-        </div>
-
+      <ToneCard tone="sky" sectionNum={1} title="물건 상세" bodyClassName="space-y-3" noDark>
         {isHousing && (
           <div>
             <p className="text-sm font-medium mb-1">전용면적 (㎡)</p>
@@ -116,7 +112,7 @@ export function Step1({
             />
           )}
         </div>
-      </div>
+      </ToneCard>
 
       {/* 특수 조건 — amber 카드 */}
       <ToggleCard

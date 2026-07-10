@@ -3,6 +3,7 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import {
   infoBannerCls,
@@ -68,10 +69,13 @@ export function Step4({
 
       {/* 법인·공장 중과 §13①② */}
       {isCorporation && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">1</span>
-            <p className="text-xs font-semibold text-rose-700">법인·공장 중과 (§13①②)</p>
+        <ToneCard
+          tone="rose"
+          sectionNum={1}
+          title="법인·공장 중과 (§13①②)"
+          bodyClassName="space-y-3"
+          noDark
+          titleExtra={
             <TaxHelp
               title="본점·주사무소 중과 vs 산업단지 (§13①②)"
               summary="과밀억제권역 내 본점·주사무소 신증축은 표준세율+4%p. 산업단지는 제외."
@@ -101,8 +105,8 @@ export function Step4({
 - 주택 외: 기본세율 × 3 + 4%p`}
               legalBasis={["지방세법 제13조 제1항", "지방세법 제13조 제2항"]}
             />
-          </div>
-
+          }
+        >
           {/* 과밀억제권역 */}
           <ToggleCard
             tone="rose"
@@ -243,14 +247,17 @@ export function Step4({
               </div>
             )}
           </ToggleCard>
-        </div>
+        </ToneCard>
       )}
 
       {/* 세율특례 §15 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">2</span>
-          <p className="text-xs font-semibold text-violet-700">세율특례 §15① (7호)</p>
+      <ToneCard
+        tone="violet"
+        sectionNum={2}
+        title="세율특례 §15① (7호)"
+        bodyClassName="space-y-3"
+        noDark
+        titleExtra={
           <TaxHelp
             title="세율특례 §15① (7호)"
             summary="해당 사유는 표준세율에서 중과기준세율(2%)을 뺀 세율 적용. §13②(대도시 법인) 동시 시 (표준세율−2%)×3."
@@ -267,7 +274,8 @@ export function Step4({
 표준세율 − 중과기준세율(2%). §13②(대도시 법인) 동시 적용 시 (표준세율 − 2%) × 3. §13①(본점·공장) 중과 대상이면 §15 배제.`}
             legalBasis="지방세법 제15조"
           />
-        </div>
+        }
+      >
         <p className="text-xs text-muted-foreground">
           해당 시 기본세율에서 중과기준세율(2%) 차감 적용
         </p>
@@ -317,7 +325,7 @@ export function Step4({
             </div>
           )}
         </ToggleCard>
-      </div>
+      </ToneCard>
     </div>
   );
 }

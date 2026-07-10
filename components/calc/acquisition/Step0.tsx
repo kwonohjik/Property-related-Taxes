@@ -7,6 +7,7 @@ import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   PROPERTY_TYPE_LABELS,
   INITIAL_FORM,
@@ -79,10 +80,13 @@ export function Step0({
       </div>
 
       {/* 취득자 유형 — violet 카드 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">1</span>
-          <p className="text-xs font-semibold text-violet-700">취득자 유형</p>
+      <ToneCard
+        tone="violet"
+        sectionNum={1}
+        title="취득자 유형"
+        bodyClassName="space-y-2"
+        noDark
+        titleExtra={
           <TaxHelp
             title="법인 취득자 — 휴면법인 판정"
             summary="법인은 주택 취득 시 12% 중과. 휴면법인 인수 시 설립 시점 기산 5년 이내로 간주."
@@ -103,7 +107,8 @@ export function Step0({
 주택건설사업자·주택조합·민간임대·공공주택건설·도시정비사업자 5종은 §13의2① 1호 적용 제외`}
             legalBasis="지방세법 제13조의2 제1항"
           />
-        </div>
+        }
+      >
         <RadioCardGroup
           tone="violet"
           layout="inline"
@@ -117,17 +122,19 @@ export function Step0({
             { value: "nonprofit", label: "비영리법인" },
           ]}
         />
-      </div>
+      </ToneCard>
 
       {/* 물건 유형 — sky 카드 (간주취득 시 자동 설정, 읽기 전용 표시) */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">2</span>
-          <p className="text-xs font-semibold text-sky-700">물건 유형</p>
-          {isDeemed && (
-            <span className="text-micro rounded-full bg-violet-100 text-violet-700 px-1.5 py-0.5 font-medium">자동 설정</span>
-          )}
-        </div>
+      <ToneCard
+        tone="sky"
+        sectionNum={2}
+        title="물건 유형"
+        bodyClassName="space-y-2"
+        noDark
+        titleExtra={isDeemed ? (
+          <span className="text-micro rounded-full bg-violet-100 text-violet-700 px-1.5 py-0.5 font-medium">자동 설정</span>
+        ) : undefined}
+      >
         <select
           className={selectCls}
           value={form.propertyType}
@@ -143,13 +150,16 @@ export function Step0({
             {form.acquisitionCause === "deemed_land_category" ? "지목변경 간주취득 — 토지로 자동 설정" : "간주취득 — 건물(법인자산)로 자동 설정"}
           </p>
         )}
-      </div>
+      </ToneCard>
 
       {/* 취득 원인 — violet 카드 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">3</span>
-          <p className="text-xs font-semibold text-violet-700">취득 원인</p>
+      <ToneCard
+        tone="violet"
+        sectionNum={3}
+        title="취득 원인"
+        bodyClassName="space-y-2"
+        noDark
+        titleExtra={
           <TaxHelp
             title="신축·증축 취득 (원시취득)"
             summary="원시취득은 공사비 × 2.8%. 부담부증여의 유상분과 다릅니다."
@@ -170,7 +180,8 @@ export function Step0({
 **증가한 면적분**: 원시취득으로 2.8% 별도 과세`}
             legalBasis={["지방세법 제11조 제1항 제3호", "지방세법 제10조의4"]}
           />
-        </div>
+        }
+      >
         <select
           className={selectCls}
           value={form.acquisitionCause}
@@ -209,7 +220,7 @@ export function Step0({
             <p>중과세 없음. 다음 단계에서 유형별 세부 정보를 입력합니다.</p>
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* 소재지 (공시가격 조회용) */}
       <div className="space-y-1.5">
