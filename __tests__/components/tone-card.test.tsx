@@ -50,6 +50,16 @@ describe("ToneCard", () => {
     );
     expect(getByText("1-A")).toBeTruthy();
   });
+
+  it("titleExtra: 제목 옆 헤더에 추가 요소 렌더 (법조문 모달·§ 배지)", () => {
+    const { getByText } = render(
+      <ToneCard tone="amber" title="취득시 기준시가" titleExtra={<span>§163⑥ 개산공제</span>}>
+        x
+      </ToneCard>,
+    );
+    expect(getByText("§163⑥ 개산공제")).toBeTruthy();
+    expect(getByText("취득시 기준시가")).toBeTruthy();
+  });
 });
 
 // P4 파일럿 회귀 anchor: P2에서 ForeignStock/ExitTax의 SectionBox(동적톤)를 <ToneCard>로 전환.

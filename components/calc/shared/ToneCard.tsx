@@ -23,6 +23,7 @@ export function ToneCard({
   className = "",
   bodyClassName = "space-y-2",
   noDark = false,
+  titleExtra,
   children,
 }: {
   tone: Tone;
@@ -35,13 +36,15 @@ export function ToneCard({
   bodyClassName?: string;
   /** dark: 변형 제거 — dark 미대응 레거시 카드를 회귀 0으로 전환할 때(예: 스톡 SectionBox) */
   noDark?: boolean;
+  /** 제목 옆(헤더 flex) 인라인 추가 요소 — 법조문 모달·§ 배지 등 */
+  titleExtra?: ReactNode;
   children?: ReactNode;
 }) {
   const t = TONE[tone];
   const cardCls = noDark ? stripDark(t.card) : t.card;
   const badgeCls = noDark ? stripDark(t.badge) : t.badge;
   const titleCls = noDark ? stripDark(t.title) : t.title;
-  const hasHeader = title !== undefined || sectionNum !== undefined;
+  const hasHeader = title !== undefined || sectionNum !== undefined || titleExtra !== undefined;
   return (
     <div className={cn("rounded-lg border p-3", bodyClassName, cardCls, className)}>
       {hasHeader && (
@@ -56,6 +59,7 @@ export function ToneCard({
           {title !== undefined && (
             <p className={`text-xs font-semibold ${titleCls}`}>{title}</p>
           )}
+          {titleExtra}
         </div>
       )}
       {children}
