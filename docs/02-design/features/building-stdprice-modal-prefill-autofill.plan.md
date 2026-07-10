@@ -53,7 +53,7 @@ Radix Dialog는 닫힐 때 children을 unmount하므로 재오픈 시 `useState`
 | `transfer/mixed-use/MixedUseAssetMajorStdPrice.tsx:213` | `asset.nonResidentialFloorArea` (:43 로컬 `commercial`) | 파생 `commercialLandArea` (:57, `round2` 적용) | `asset.acquisitionDate` (:86 `acqReferenceDate`) | `transferDate` prop (:17) | 단일 버튼 `onApplyBoth` |
 | `transfer/mixed-use/MixedUseLegacyStdPrice.tsx:142`(양도), `:254`(취득) | `asset.nonResidentialFloorArea` (:42 로컬 `commercial`) | 파생 `commercialLandArea` (:47-49, `toFixed(2)` 적용) | `asset.acquisitionDate` (:70 `acqReferenceDate`) | `transferDate` prop (:34) | 2버튼 `onApply` 단일 |
 | `transfer/CommercialBuildingBlock.tsx:230`(취득), `:260`(양도) | 파생 `totalFloorArea` (:69, `cbExclusiveArea`+`cbSharedArea`, **null 가드**, :73 `toFixed(2)` 적용) | `asset.cbLandArea` (:142) | `asset.acquisitionDate` (:284) | `transferDate` prop (:37) | 2버튼 `onApply`+`applyTimePoint` |
-| `transfer/GeneralBuildingBlock.tsx:348`(양도), `:375`(취득) | `asset.gbBuildingArea` (:306) | `asset.gbLandArea` (:301) | `asset.acquisitionDate` (:366) | `transferDate` prop (:67) | 2버튼 `onApply`+`applyTimePoint` |
+| `transfer/GeneralBuildingBlock.tsx:348`(양도), `:375`(취득) | `asset.gbBuildingArea` (:306) | `asset.gbLandArea` (:301) | `asset.gbBuildingAcquisitionDate \|\| asset.acquisitionDate` (건물 취득일 우선) | `transferDate` prop (:67) | 2버튼 `onApply`+`applyTimePoint` |
 
 ### 소스 주의사항 (실측)
 
@@ -61,6 +61,7 @@ Radix Dialog는 닫힐 때 children을 unmount하므로 재오픈 시 `useState`
 - 순수 상가 연면적은 단일 저장 필드 없음. 파생 `totalFloorArea`(`null` 가능, `:73`에서 `toFixed(2)` 적용). `null`이면 해당 키 미주입.
 - `MixedUseLegacyStdPrice`의 "Legacy"는 **종전자산이 아니라 "시점-우선 레이아웃(현행 스타일)"**을 의미(:27 주석). `asset`은 현재 양도자산이며 `MixedUseAssetMajor`(자산-우선)의 대체 레이아웃 — 소스가 올바른 자산을 가리킨다.
 - 취득/양도 **연도**는 별도 필드 없음 → 날짜에서 파생하되 raw slice가 아니라 기존 헬퍼 `deriveYearFromEventDate` 재사용(§4.1).
+- **Do deviation(E2E가 발견)**: 일반건물은 취득일이 **토지(`asset.acquisitionDate`) + 건물(`gbBuildingAcquisitionDate`) 분리** 모델(GeneralBuildingAcquisitionCards 주석 :7-8). 건물 기준시가 모달의 취득 시점은 **건물 취득일 기준**(§164·메모리 PR#526)이므로 prefill은 `gbBuildingAcquisitionDate` 우선(빈값 시 토지 취득일 fallback). 계획 초안이 `asset.acquisitionDate`(=토지 취득일)로 잘못 잡았던 것을 브라우저 검증에서 정정. CB·MixedUse는 `asset.acquisitionDate`가 건물 취득일이라 무관.
 
 ---
 
@@ -234,6 +235,9 @@ prefill={{
 
 ### 레이아웃 anchor
 7. 취득연도·취득일이 같은 `grid grid-cols-2` 컨테이너 내(DOM 구조). 양도도 동일.
+
+### E2E anchor
+`e2e/building-stdprice-modal-prefill.spec.ts` — 일반건물 환산모드에서 상위 폼(건물 연면적·토지면적·건물 취득일·양도일)을 채운 뒤 "건물 기준시가 계산" 모달을 열어 6필드 자동입력 검증(연면적·부속토지면적·취득연도 파생·양도연도 파생). ✅ 통과. 이 스펙이 GeneralBuildingBlock 취득일 소스 결함(위 Do deviation)을 실측으로 발견.
 
 ### 회귀
 8. `npx vitest run __tests__/calc/building-std-price-form.test.ts __tests__/components/building-std-price-locked-prefill.test.tsx` + PHD 배치 관련(`__tests__/calc/phd-building-std-batch*.test.ts`) 통과.
