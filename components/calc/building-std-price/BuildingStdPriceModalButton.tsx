@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { BuildingStdPriceForm } from "./BuildingStdPriceForm";
 import { BuildingStdPriceResultCard } from "./BuildingStdPriceResultCard";
 import type { BuildingStandardPriceResult } from "@/lib/tax-engine/building-standard-price";
+import { deriveYearFromEventDate } from "@/lib/calc/building-std-price-form";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import type { AddressValue } from "@/components/ui/address-search";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
@@ -43,6 +44,17 @@ interface Props {
    * 규약: 상증 `bsp-estate-${item.id}` / 양도 `bsp-${asset.assetId}-{gb|cb}-{acq|transfer}`.
    */
   snapshotKey?: string;
+  /**
+   * 상위 자산 폼 값 자동입력(prefill) — 지정 시 모달 필드 초기값을 채운다.
+   * 상위 폼 값이 있으면 항상 snapshot 복원값보다 우선(빈 값은 미주입 — 사용자 이전 입력 보존).
+   * 연도는 날짜에서 deriveYearFromEventDate로 파생(완성형 YYYY-MM-DD만 반환).
+   */
+  prefill?: {
+    floorArea?: string;
+    landAreaM2?: string;
+    acquisitionDate?: string;
+    transferDate?: string;
+  };
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -55,6 +67,7 @@ export function BuildingStdPriceModalButton({
   lockedTaxType,
   initialAddress,
   snapshotKey,
+  prefill,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
@@ -68,6 +81,25 @@ export function BuildingStdPriceModalButton({
   const restoredForm = useBuildingStdSnapshotStore((s) =>
     snapshotKey ? s.snapshots[snapshotKey] : undefined,
   );
+
+  // 상위 자산 폼 값 자동입력 — 빈 값은 미주입(사용자 이전 입력 보존). 연도는 완성형 날짜에서만 파생.
+  const acqYear = prefill?.acquisitionDate ? deriveYearFromEventDate(prefill.acquisitionDate) : "";
+  const transYear = prefill?.transferDate ? deriveYearFromEventDate(prefill.transferDate) : "";
+  const prefillForm: Partial<BuildingStdPriceFormState> = prefill
+    ? {
+        ...(prefill.floorArea ? { floorArea: prefill.floorArea } : {}),
+        ...(prefill.landAreaM2 ? { landAreaM2: prefill.landAreaM2 } : {}),
+        ...(prefill.acquisitionDate
+          ? {
+              acquisitionEventDate: prefill.acquisitionDate,
+              ...(acqYear ? { acquisitionYear: acqYear } : {}),
+            }
+          : {}),
+        ...(prefill.transferDate
+          ? { eventDate: prefill.transferDate, ...(transYear ? { transferYear: transYear } : {}) }
+          : {}),
+      }
+    : {};
 
   const apply = (v: number, land?: number) => {
     onApply?.(v, land && land > 0 ? land : undefined);
@@ -114,7 +146,7 @@ export function BuildingStdPriceModalButton({
           <BuildingStdPriceForm
             lockedTaxType={lockedTaxType}
             initialAddress={initialAddress}
-            initialForm={restoredForm}
+            initialForm={{ ...restoredForm, ...prefillForm }}
             onResult={(r, fa, err, _report, landTotal, snapshot) => {
               setResult(r);
               setFloorArea(fa);
