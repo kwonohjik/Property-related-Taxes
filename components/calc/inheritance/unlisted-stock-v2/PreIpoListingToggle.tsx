@@ -38,6 +38,7 @@ import {
   applyPreIpoListing,
   type PreIpoListingInput,
 } from "@/lib/tax-engine/property-valuation/pre-ipo-listing-section-63-2";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 /** Date → "YYYY-MM-DD" (DateInput 인터페이스) */
 function toDateStr(d: Date | undefined): string {
@@ -123,15 +124,13 @@ export function PreIpoListingToggle({
 
   return (
     <>
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          {sectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-              {sectionNum}
-            </span>
-          )}
-          <p className="text-xs font-semibold text-emerald-700">기업공개·상장신청 준비 중 평가 (선택)</p>
-        </div>
+      <ToneCard
+        tone="emerald"
+        sectionNum={sectionNum}
+        bodyClassName="space-y-3"
+        title="기업공개·상장신청 준비 중 평가 (선택)"
+        noDark
+      >
         <ToggleCard
           lawLinks="상증법"
           tone="emerald"
@@ -245,7 +244,7 @@ export function PreIpoListingToggle({
             </div>
           )}
         </ToggleCard>
-      </div>
+      </ToneCard>
 
       <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
         <DialogContent data-testid="pre-ipo-discard-dialog">
