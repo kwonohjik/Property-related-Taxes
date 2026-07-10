@@ -13,6 +13,7 @@
  *   §99②만 "다른 주택을 2007.12.31까지 양도"하는 경우 한정.
  */
 
+import { addYears } from "date-fns";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import {
   ineligibleHybrid,
@@ -67,9 +68,10 @@ function withinTrack(d: Date | undefined): boolean {
 
 /** 만 5년 보유 여부 — 취득일 + 5년 당일 포함 (§99의3 isWithin5YearsCheck 경계 해석과 정합) */
 function heldAtLeast5Years(acquisitionDate: Date, transferDate: Date): boolean {
-  const fiveYears = new Date(acquisitionDate);
-  fiveYears.setFullYear(fiveYears.getFullYear() + 5);
-  return transferDate.getTime() >= fiveYears.getTime();
+  // date-fns addYears — 윤년(2/29 취득) 응당일 없으면 말일(2/28)로 만료(민법 §160③).
+  // setFullYear는 2/29+5년을 3/1로 롤오버해 1일 밀림 → 코드베이스 관례(new-99-3 isWithin5YearsCheck)로 통일.
+  const fiveYearMark = addYears(acquisitionDate, 5);
+  return transferDate.getTime() >= fiveYearMark.getTime();
 }
 
 export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {

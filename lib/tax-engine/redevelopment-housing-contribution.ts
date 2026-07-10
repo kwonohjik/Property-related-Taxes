@@ -42,7 +42,7 @@ export interface RedevHousingContribReceiveEstimatedInput {
   housingStdPriceAtAcq: number;
   /** §166③ 분모 — 인가당시 부근 개별주택가격 (원, 총액) */
   housingStdPriceAtApproval: number;
-  /** 인가전 필요경비 (원) — 미입력 시 0 */
+  /** 인가전 필요경비 (원) — 미입력 시 0. ※ 환산모드에서는 개산공제(§163⑥)에 흡수되어 인가전 양도차익에서 차감하지 않음(§97②2호). */
   preApprovalExpenses: number;
   /** 인가후 필요경비 (원) — 미입력 시 0 */
   postApprovalExpenses: number;
@@ -59,7 +59,8 @@ export interface RedevHousingContribReceiveEstimatedResult {
   estimatedDeduction: number;
   /**
    * 인가전 양도차익 (§166①2호 나목).
-   * = floor((권리가액 − 환산취득가 − 개산공제 − 인가전필요경비) × (평가액 − 수령청산금) / 평가액)
+   * = floor((권리가액 − 환산취득가 − 개산공제) × (평가액 − 수령청산금) / 평가액)
+   * 환산모드 필요경비 = 개산공제 단독(§97②2호) — 인가전 실제 필요경비 미차감.
    */
   preApprovalGain: number;
   /**
@@ -145,14 +146,14 @@ export function calcRedevHousingContribReceiveEstimated(
   const salePriceTotal = input.rightsValue - input.settlementReceived;
 
   // ── Step 4: §166①2호 나목 — 인가전 양도차익 ───────────────────────────
-  // = floor((권리가액 − 환산취득가 − 개산공제 − 인가전필요경비) × salePriceTotal / 권리가액)
+  // = floor((권리가액 − 환산취득가 − 개산공제) × salePriceTotal / 권리가액)
+  // 환산취득가 모드 필요경비 = 개산공제(§163⑥) 단독 — 인가전 실제 필요경비는
+  // 별도 차감하지 않음(§97②2호 택일: 환산+개산공제, 실제 필요경비 미가산 —
+  // 조심2016서2576). land 경로와 동일(redevelopment-land-contribution.ts:120).
   // (음수 손실 → 0)
   const preApprovalGainBase = Math.max(
     0,
-    input.rightsValue -
-      convertedAcquisition -
-      estimatedDeduction -
-      input.preApprovalExpenses,
+    input.rightsValue - convertedAcquisition - estimatedDeduction,
   );
   // safeMultiplyThenDivide: 나목 축소 안분 (overflow 방어)
   const preApprovalGain = safeMultiplyThenDivide(

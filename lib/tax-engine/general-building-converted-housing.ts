@@ -9,6 +9,7 @@
  */
 
 import type { GeneralBuildingInput } from "./general-building-valuation";
+import { safeMultiplyThenDivide } from "./tax-utils";
 
 /**
  * §99-164-10 환산주택가격 산식.
@@ -25,7 +26,7 @@ export function calcConvertedHousingPrice(input: GeneralBuildingInput): number {
   const firstDiscTotal = firstDiscLand + firstDiscBuilding;
   if (firstDiscTotal <= 0) return 0;
   const acqTotal = acqLandStd + acqBuildingStd;
-  return Math.floor((input.firstDisclosurePrice ?? 0) * acqTotal / firstDiscTotal);
+  return safeMultiplyThenDivide(input.firstDisclosurePrice ?? 0, acqTotal, firstDiscTotal);
 }
 
 /**
@@ -46,7 +47,7 @@ export function applyConvertedHousingPriceOverride(
   if (acqTotal <= 0) return input;
   const converted = calcConvertedHousingPrice(input);
   if (converted <= 0) return input;
-  const convertedLand = Math.floor(converted * acqLandStd / acqTotal);
+  const convertedLand = safeMultiplyThenDivide(converted, acqLandStd, acqTotal);
   const convertedBuilding = converted - convertedLand;
   return {
     ...input,

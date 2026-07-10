@@ -58,9 +58,9 @@ export interface TransferTaxAcquisitionOptions {
  *   → useEstimatedAcquisition=false 로 재바인딩 (calcTransferGain 환산 경로 우회)
  *   → acquisitionPrice=acquisitionOverride 로 강제
  *
- * 감정가액 정책:
- *   acquisitionOverride 있을 때 acquisitionMethod="appraisal" 이면
- *   → acquisitionMethod="purchase" 로 재바인딩 (appraisalValue 경로 우회)
+ * 감정가액·매매사례가액 정책:
+ *   acquisitionOverride 있을 때 acquisitionMethod="appraisal" 또는 "salesCase" 이면
+ *   → acquisitionMethod="actual" 로 재바인딩 (appraisalValue·similarSalesValue 추계 경로 우회)
  *   → acquisitionPrice=acquisitionOverride 로 강제
  *
  * @param input 현재 처리 중인 TransferTaxInput (STEP 0.45 상속 의제 완료 후)
@@ -84,11 +84,16 @@ export function resolveAcquisitionOverride(
     acquisitionPrice: acquisitionOverride,
     // 환산취득가 모드 우회: override 시 실가 경로로 강제 (의제·환산 동시 적용 차단)
     useEstimatedAcquisition: false,
-    // 감정가액 모드 우회: appraisalValue 경로 차단
-    acquisitionMethod: input.acquisitionMethod === "appraisal" ? "actual" : input.acquisitionMethod,
+    // 감정가액·매매사례가액 모드 우회: appraisalValue·similarSalesValue 추계 경로 차단
+    acquisitionMethod:
+      input.acquisitionMethod === "appraisal" || input.acquisitionMethod === "salesCase"
+        ? "actual"
+        : input.acquisitionMethod,
     // 환산 모드에서 개산공제를 expenses로 적용하던 legacy 경로도 차단
     // (STEP 0.35 commercial building에서 cbStep이 override 적용 후 skip됨)
     appraisalValue: undefined,
+    // 매매사례가액(§176의2③1호) 추계 경로 차단 — override.acquisitionPrice가 우선
+    similarSalesValue: undefined,
     capitalExpenditure: input.capitalExpenditure,
     transferExpense: input.transferExpense,
   };

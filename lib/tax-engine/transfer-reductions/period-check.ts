@@ -70,8 +70,10 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     label: "매매계약·취득 ~2018.12.31",
     check: (c) =>
       // 조특법 §97의5 ① 1호: "2018.12.31까지 ... 매입임대주택 ... 을 취득(2018.12.31까지 매매계약을 체결하고 계약금을 납부한 경우를 포함한다)"
-      before(c.contractDate ?? c.registrationDate ?? c.acquisitionDate, D("2018-12-31")),
-    failReason: "매매계약/등록일이 2018.12.31 이후 — 조특법 §97의5 적용 시한 외",
+      // 시한 기준은 취득/매매계약이며 임대사업자 등록일이 아니다. 등록은 취득일로부터 3개월 이내(evaluateRental975)여야 하므로
+      // registrationDate ≥ acquisitionDate 가 항상 성립 → fallback 에 두면 target 을 뒤로만 밀어 false-rejection 만 유발. registrationDate 제외.
+      before(c.contractDate ?? c.acquisitionDate, D("2018-12-31")),
+    failReason: "매매계약/취득일이 2018.12.31 이후 — 조특법 §97의5 적용 시한 외",
   },
 
   // ── 신축 §99 시리즈 ──

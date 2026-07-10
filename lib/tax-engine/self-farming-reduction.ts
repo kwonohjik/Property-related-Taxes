@@ -20,6 +20,7 @@
 
 import { addYears } from "date-fns";
 import { TRANSFER } from "./legal-codes";
+import { safeMultiplyThenDivide } from "./tax-utils";
 
 export interface SelfFarmingReductionInput {
   /**
@@ -208,8 +209,12 @@ export function calculateSelfFarmingReduction(
   // 기준시가 하락 후 회복 등 예외적 상황에서 비율 > 1이 되는 경우 1로 capping
   const ratio = Math.min(1, Math.max(0, rawRatio));
 
-  // 감면대상 소득 (원 단위 절사)
-  const reducibleIncome = Math.floor(transferIncome * ratio);
+  // 감면대상 소득 (원 단위 절사) — 정수 분수연산으로 float 비율 곱의 1원 과소산정 회피.
+  // numerator>denom(기준시가 하락→회복 등 예외)에서도 Math.min으로 transferIncome 상한 유지.
+  const reducibleIncome = Math.min(
+    transferIncome,
+    safeMultiplyThenDivide(transferIncome, numerator, denom),
+  );
   const nonReducibleIncome = transferIncome - reducibleIncome;
 
   breakdown.push(

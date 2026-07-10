@@ -109,14 +109,15 @@ describe("calculateFilingPenalty — 신고불성실가산세", () => {
     expect(result.filingPenalty).toBe(1_800_000);
   });
 
-  it("T10 세액감면 차감 후 납부세액 기준", () => {
+  it("T10 determinedTax 는 이미 감면 반영 후(net) — reductionAmount 재차감 안 함", () => {
     const result = calculateFilingPenalty({
       ...base,
-      filingType: "none",
-      penaltyReason: "normal",
-      reductionAmount: 2_000_000,
+      determinedTax:  8_000_000, // 이미 감면 반영된 결정세액
+      filingType:     "none",
+      penaltyReason:  "normal",
+      reductionAmount: 2_000_000, // 정보용 — penaltyBase 에서 재차감되지 않음
     });
-    // penaltyBase = 10_000_000 - 2_000_000 = 8_000_000
+    // penaltyBase = determinedTax 8_000_000 (감면 재차감 없음)
     expect(result.penaltyBase).toBe(8_000_000);
     expect(result.filingPenalty).toBe(1_600_000);
   });

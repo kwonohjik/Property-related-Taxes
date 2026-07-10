@@ -144,7 +144,7 @@ function resolveFilingRate(
 /**
  * 신고불성실가산세 계산
  *
- * 납부세액 = 결정세액 − 세액공제·감면 − 기납부세액 − 당초 신고세액
+ * 납부세액 = 결정세액(감면 반영 후) − 기납부세액 − 당초 신고세액
  *           − 이자상당액 가산액 + 초과환급세액
  * 가산세 = 납부세액 × 가산세율
  *
@@ -166,10 +166,10 @@ export function calculateFilingPenalty(
   }
 
   // ① 납부세액 산정 (가산세 기준금액)
+  // determinedTax 는 이미 감면 반영 후(net) — reductionAmount 를 재차감하지 않음
   const penaltyBase = Math.max(
     0,
     input.determinedTax
-      - input.reductionAmount
       - input.priorPaidTax
       - input.originalFiledTax
       - input.interestSurcharge
@@ -180,7 +180,6 @@ export function calculateFilingPenalty(
     label: "납부세액 (가산세 기준)",
     formula: [
       `결정세액 ${input.determinedTax.toLocaleString()}`,
-      input.reductionAmount   > 0 ? `− 감면 ${input.reductionAmount.toLocaleString()}` : null,
       input.priorPaidTax      > 0 ? `− 기납부 ${input.priorPaidTax.toLocaleString()}` : null,
       input.originalFiledTax  > 0 ? `− 당초신고 ${input.originalFiledTax.toLocaleString()}` : null,
       input.interestSurcharge > 0 ? `− 이자상당액 ${input.interestSurcharge.toLocaleString()}` : null,

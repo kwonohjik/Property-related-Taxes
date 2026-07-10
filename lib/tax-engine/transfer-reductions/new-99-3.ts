@@ -29,7 +29,7 @@
 
 import { addYears } from "date-fns";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { applyRate } from "../tax-utils";
+import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 
 // ============================================================================
 // 타입 정의
@@ -299,10 +299,12 @@ export function calcSignedAllocation(
   // 부호 4가지 케이스 (PDF 부호 표)
   if (numerator > 0 && denominator > 0) {
     // (+,+) 정상 안분
-    const ratio = numerator / denominator;
-    // 양도소득금액 × 비율 (정수 차감, 원 미만 절사)
-    // 원 단위 정확성: 분자·분모 정수 → BigInt 우회 불필요 (값이 커도 Number 충분)
-    const reducible = Math.floor(transferIncome * ratio);
+    const ratio = numerator / denominator; // 표시용 (감면액은 정수 분수연산으로 산출)
+    // 양도소득금액 × 분자 ÷ 분모 (정수 분수연산, 원 미만 절사).
+    // 부동소수 비율 곱(Math.floor(transferIncome × ratio))은 곱이 정수인 입력에서
+    // 1원 과소산정(applyFairMarketRatio 도크스트링 참조). safeMultiplyThenDivide는
+    // 곱 우선 + 분자×양도소득금액이 2^53 초과 시 BigInt fallback으로 안전.
+    const reducible = safeMultiplyThenDivide(transferIncome, numerator, denominator);
     return { ratio, signCase: "all_positive", reducibleIncome: reducible };
   }
   if (numerator < 0 && denominator > 0) {
@@ -398,7 +400,9 @@ export function evaluateNew993(input: New993Input): New993Result {
       input.standardPriceAt5Years,
       input.standardPriceAtTransfer,
     );
-    reducibleTransferIncome = allocation.reducibleIncome;
+    // "초과금액 없는 것" 정합 — 차감액은 양도소득금액 한도 (조특법 §99의3① "5년간 발생한
+    // 양도소득금액" 총액 상한; new-99.ts:258·unsold-98-8.ts:302 동형 클램프).
+    reducibleTransferIncome = Math.min(allocation.reducibleIncome, Math.max(0, input.transferIncome));
     fiveYearRatio = allocation.ratio;
     signCase = allocation.signCase;
 

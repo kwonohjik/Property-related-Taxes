@@ -11,6 +11,7 @@ import {
   hasAutoRelatedStockInput,
 } from "./public-interest-stock-limit";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import {
   DISABLED_TRUST_LIMIT,
   findExemptionRuleById,
@@ -55,8 +56,7 @@ function evaluateSingleExemption(
     const limitM2 = rule.limitAreaM2 ?? EXEMPTION.GRAVE_FOREST_LIMIT_M2;
     const claimedM2 = item.claimedAreaM2 ?? item.areaM2 ?? 0;
     if (claimedM2 > limitM2) {
-      const exemptRatio = limitM2 / claimedM2;
-      exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
+      exemptAmount = safeMultiplyThenDivide(item.claimedAmount, limitM2, claimedM2);
       taxableOverflow = item.claimedAmount - exemptAmount;
       warnings.push(`금양임야 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(9,900㎡ 한도)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③1호)`);
     } else {
@@ -72,8 +72,7 @@ function evaluateSingleExemption(
     const limitM2 = rule.limitAreaM2 ?? EXEMPTION.GRAVE_LAND_LIMIT_M2;
     const claimedM2 = item.claimedAreaM2 ?? item.areaM2 ?? 0;
     if (claimedM2 > limitM2) {
-      const exemptRatio = limitM2 / claimedM2;
-      exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
+      exemptAmount = safeMultiplyThenDivide(item.claimedAmount, limitM2, claimedM2);
       taxableOverflow = item.claimedAmount - exemptAmount;
       warnings.push(`묘토 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(1,980㎡ 한도)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③2호)`);
     } else {
@@ -157,7 +156,7 @@ function evaluateSingleExemption(
     breakdown.push({
       label: `장애인 신탁 한도 (5억 - 기사용 ${priorUsed.toLocaleString()} = 잔여 ${remaining.toLocaleString()}`,
       amount: exemptAmount,
-      lawRef: EXEMPTION.PUBLIC_INTEREST,
+      lawRef: EXEMPTION.DISABLED_TRUST_LIMIT_REF,
     });
     if (taxableOverflow > 0) {
       breakdown.push({ label: "5억 초과 — 일반 증여세 과세", amount: taxableOverflow });

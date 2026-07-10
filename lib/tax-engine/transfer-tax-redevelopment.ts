@@ -640,9 +640,19 @@ function emitRedevelopmentSteps(
   }
 
   // 인가전 분 양도차익
+  // 환산 모드 시 §163⑥ 개산공제가 preApproval.gain 에 이미 차감돼 있으나
+  // (branch.expenses = 인가전필요경비 + 개산공제) 표시 산식은 raw preApprovalExpenses 만
+  // 노출해 산식↔amount 가 개산공제만큼 어긋났다. 개산공제 항을 명시해 자기일관성 확보
+  // (feedback_result_view_korean_formula). expenses 미부착 경로는 0 → 항 미표시(기존 동작 보존).
+  const preApprovalEstDeduction =
+    (redev.preApproval.expenses ?? redevInfo.preApprovalExpenses) - redevInfo.preApprovalExpenses;
   steps.push({
     label: "인가전 분 양도차익",
-    formula: `의제 양도가액 ${redev.preApproval.apportionedTransfer.toLocaleString()} - 취득가 ${redev.preApproval.apportionedAcquisition.toLocaleString()} - 필요경비 ${redevInfo.preApprovalExpenses.toLocaleString()}`,
+    formula:
+      `의제 양도가액 ${redev.preApproval.apportionedTransfer.toLocaleString()} - 취득가 ${redev.preApproval.apportionedAcquisition.toLocaleString()} - 필요경비 ${redevInfo.preApprovalExpenses.toLocaleString()}` +
+      (preApprovalEstDeduction > 0
+        ? ` - 개산공제 시행령 §163⑥ ${preApprovalEstDeduction.toLocaleString()}`
+        : ""),
     amount: redev.preApproval.gain,
     legalBasis: redevInfo.subject === "apt" ? REDEVELOPMENT.APT_PAY : REDEVELOPMENT.RIGHT_PAY,
   });

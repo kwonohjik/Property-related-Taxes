@@ -227,8 +227,49 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   const landDirectExp = input.landDirectExpenses ?? Math.floor(totalExpenses * landExpRatio);
   const buildingDirectExp = input.buildingDirectExpenses ?? (totalExpenses - landDirectExp);
 
-  const landGain = phd.landTransferPrice - phd.landAcquisitionPrice - phd.landLumpDeduction - landDirectExp;
-  const buildingGain = phd.buildingTransferPrice - phd.buildingAcquisitionPrice - phd.buildingLumpDeduction - buildingDirectExp;
+  // §97② 2호 자산별 swap — PHD(§164⑤)도 환산취득가 모드이므로 필요경비는
+  // MAX(가목: 환산취득가+개산공제, 나목: 자본적지출)로 택일한다('합'이 아님).
+  // 본문(가목): 개산공제만 차감, 자본적지출 미차감. 단서(나목): 자본적지출 단독 차감(환산취득가·개산공제 미차감).
+  // 비-PHD calcSplitGain의 applyAssetSwap과 동일 규칙. (양도비 미반영은 비-PHD 경로와 동일한 기존 한계.)
+  function phdAssetSwap(
+    acqPrice: number,
+    directExp: number,
+    lumpDed: number,
+    explicitDirect: boolean,
+  ): { effectiveDirect: number; effectiveLumpDed: number; swapApplied: boolean } {
+    if (!explicitDirect) {
+      // 자산별 명시 입력 없음 → 본문(개산공제만), swap 불가
+      return { effectiveDirect: 0, effectiveLumpDed: lumpDed, swapApplied: false };
+    }
+    if (directExp > acqPrice + lumpDed) {
+      // 단서(나목) — 자본적지출로 swap (환산취득가·개산공제 미차감)
+      return { effectiveDirect: directExp, effectiveLumpDed: 0, swapApplied: true };
+    }
+    // 본문(가목) — 개산공제만, 자본적지출 차감 안 함
+    return { effectiveDirect: 0, effectiveLumpDed: lumpDed, swapApplied: false };
+  }
+  const landSwap = phdAssetSwap(
+    phd.landAcquisitionPrice,
+    landDirectExp,
+    phd.landLumpDeduction,
+    input.landDirectExpenses !== undefined,
+  );
+  const buildingSwap = phdAssetSwap(
+    phd.buildingAcquisitionPrice,
+    buildingDirectExp,
+    phd.buildingLumpDeduction,
+    input.buildingDirectExpenses !== undefined,
+  );
+
+  // swap 발동 시 필요경비 = 자본적지출 단독 → 환산취득가 미차감.
+  const landGain = phd.landTransferPrice
+    - (landSwap.swapApplied ? 0 : phd.landAcquisitionPrice)
+    - landSwap.effectiveDirect
+    - landSwap.effectiveLumpDed;
+  const buildingGain = phd.buildingTransferPrice
+    - (buildingSwap.swapApplied ? 0 : phd.buildingAcquisitionPrice)
+    - buildingSwap.effectiveDirect
+    - buildingSwap.effectiveLumpDed;
 
   const { years: landHoldingYears } = calculateHoldingPeriod(
     input.landAcquisitionDate!,
@@ -242,25 +283,27 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   const landPart: SplitPartResult = {
     transferPrice: phd.landTransferPrice,
     acquisitionPrice: phd.landAcquisitionPrice,
-    directExpenses: landDirectExp,
-    appraisalDeduction: phd.landLumpDeduction,
+    directExpenses: landSwap.effectiveDirect,
+    appraisalDeduction: landSwap.effectiveLumpDed,
     stdPriceAtAcq: phd.landHousingAtAcquisition,
     gain: landGain,
     holdingYears: landHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
+    swapApplied: landSwap.swapApplied,
   };
 
   const buildingPart: SplitPartResult = {
     transferPrice: phd.buildingTransferPrice,
     acquisitionPrice: phd.buildingAcquisitionPrice,
-    directExpenses: buildingDirectExp,
-    appraisalDeduction: phd.buildingLumpDeduction,
+    directExpenses: buildingSwap.effectiveDirect,
+    appraisalDeduction: buildingSwap.effectiveLumpDed,
     stdPriceAtAcq: phd.buildingHousingAtAcquisition,
     gain: buildingGain,
     holdingYears: buildingHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
+    swapApplied: buildingSwap.swapApplied,
   };
 
   return {

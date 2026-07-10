@@ -445,7 +445,7 @@ export function calcLongTermHoldingDeduction(
   // L-1b: 부수토지 일체과세 (landNature === "appurtenant_to_housing")
   // — 포괄적 일체과세 원칙: primary 주택의 보유기간·거주기간 기준 표 1/2 적용
   // — 단기보유(1년 미만 → 70%, 1~2년 → 60%) 시에는 LTHD 배제 (세율에서 이미 처리됨)
-  // — 2년 이상 보유 시 주택 기준 LTHD 적용 (primaryContextForCompanionRate에서 holdingMonths 사용)
+  // — 3년 이상 보유 시 주택 기준 LTHD 적용 (§95② 진입요건 = 보유 3년 이상; 2~3년은 누진세율만·LTHD 0)
   if (
     input.propertyType === "land" &&
     input.landNature === "appurtenant_to_housing" &&
@@ -454,12 +454,12 @@ export function calcLongTermHoldingDeduction(
     const ctx = input.primaryContextForCompanionRate;
     // primary 주택 보유기간 기준
     const primaryHoldingYears = Math.floor(ctx.holdingMonths / 12);
-    // 2년 미만이면 단기세율 적용 → LTHD 배제
-    if (ctx.holdingMonths < 24) {
+    // 3년 미만이면 LTHD 배제 — §95② 장기보유공제 진입요건 = 보유 3년 이상 (일반경로 rateForYears와 정합)
+    if (ctx.holdingMonths < 36) {
       const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
       return { deduction: 0, rate: 0, holdingPeriod: { years: holding.years, months: holding.months } };
     }
-    // 2년 이상: primary 주택 기준 LTHD 계산
+    // 3년 이상: primary 주택 기준 LTHD 계산
     // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유
     const isOneHouseSingleForCompanion =
       input.isOneHousehold && input.householdHousingCount === 1;
@@ -533,7 +533,8 @@ export function calcLongTermHoldingDeduction(
     const isProratedSplit = isOneHouseSingle && selfTransferPrice > THRESHOLD;
     const proratePartGain = (g: number): number => {
       if (!isProratedSplit || g <= 0) return g;
-      return Math.floor(g * (selfTransferPrice - THRESHOLD) / selfTransferPrice);
+      // BigInt 가드(비-split calcOneHouseProration 경로와 정합) — 분자 2^53 초과 시 ±1원 오차 방지
+      return calculateProration(g, selfTransferPrice - THRESHOLD, selfTransferPrice);
     };
 
     const landTaxableGain = ownsLand ? proratePartGain(splitDetail.land.gain) : 0;

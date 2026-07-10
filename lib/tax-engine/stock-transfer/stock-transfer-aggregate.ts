@@ -164,43 +164,41 @@ export function calculateStockTransferTaxAggregate(
     const income = r.transferIncome;
 
     if (r.basicDeductionGroup === "stock") {
-      // 이 종목에서 실제 적용할 기본공제
+      // 이 종목에서 실제 적용할 기본공제 — 그룹(§103②2호) 잔여분 한도
       const remaining = Math.max(0, BASIC_DEDUCTION_LIMIT - stockUsed);
       const deductThis = Math.min(Math.max(0, income), remaining);
       stockUsed += deductThis;
 
-      if (stockUsed - deductThis === 0 || deductThis > 0) {
-        // 기본공제 잔여분 있음 → input 그대로 계산 (엔진이 min(income, 250만) 적용)
-        return calculateStockTransferTaxInternal(input);
-      } else {
-        // 기본공제 소진 → rawItems[i]가 이미 realEstateGroupBasicDeductionUsed=LIMIT으로 계산됨
-        // 하지만 주식 그룹은 그 영향 안 받음 → rawItems[i]에는 basicDeduction=min(income,250만) 포함
-        // → 수동 패치: rawItems[i] 결과에서 basicDeduction을 0으로, taxBase를 income으로 재조정
-        // → 세율·산출세액을 다시 applyStockTaxRate로 계산
-        const taxBaseWithoutDeduction = Math.floor(Math.max(0, income));
-        const rateResult = applyStockTaxRate(
-          taxBaseWithoutDeduction,
-          r.taxCategory,
-          input.isSmallMediumEnterprise,
-          r.isShortTermHolding,
-          r.isExempt, // 비과세 분기 산식 echo
-        );
-        const newCalculatedTax = floorTen(rateResult.calculatedTax);
-        const newFinalize = finalizeStockTax(newCalculatedTax, input);
-        return {
-          ...r,
-          basicDeduction: 0,
-          taxBase: taxBaseWithoutDeduction,
-          appliedRate: rateResult.appliedRate,
-          progressiveDeduction: rateResult.progressiveDeduction,
-          calculatedTax: newCalculatedTax,
-          underReportPenalty: newFinalize.underReportPenalty,
-          latePaymentPenalty: newFinalize.latePaymentPenalty,
-          electronicFilingCredit: newFinalize.electronicFilingCredit,
-          finalTax: newFinalize.finalTax,
-          localIncomeTax: newFinalize.localIncomeTax,
-        };
-      }
+      // 잔여분(deductThis)만큼만 공제 후 세율 재산출.
+      // 순수 엔진 calcBasicDeduction은 주식 그룹에 항상 min(income, 250만)을 적용해
+      // 그룹 한도를 무시하므로(realEstateGroupBasicDeductionUsed 제어 불가), 부분-잔여 후속
+      // 종목이 250만 전액을 다시 공제받는 것을 막기 위해 종목별로 잔여분만 수동 패치한다.
+      // 첫 종목은 deductThis=min(income,250만)이라 엔진 전량 재계산과 동일 → 회귀 없음.
+      // rawItems[i](realEstateGroupBasicDeductionUsed=LIMIT)는 주식 그룹에서 basicDeduction만
+      // 영향을 받지 않아 fresh 엔진 결과와 동일 → ...r echo 필드 보존 안전.
+      const taxBaseWithDeduction = Math.floor(Math.max(0, income - deductThis));
+      const rateResult = applyStockTaxRate(
+        taxBaseWithDeduction,
+        r.taxCategory,
+        input.isSmallMediumEnterprise,
+        r.isShortTermHolding,
+        r.isExempt, // 비과세 분기 산식 echo
+      );
+      const newCalculatedTax = floorTen(rateResult.calculatedTax);
+      const newFinalize = finalizeStockTax(newCalculatedTax, input);
+      return {
+        ...r,
+        basicDeduction: deductThis,
+        taxBase: taxBaseWithDeduction,
+        appliedRate: rateResult.appliedRate,
+        progressiveDeduction: rateResult.progressiveDeduction,
+        calculatedTax: newCalculatedTax,
+        underReportPenalty: newFinalize.underReportPenalty,
+        latePaymentPenalty: newFinalize.latePaymentPenalty,
+        electronicFilingCredit: newFinalize.electronicFilingCredit,
+        finalTax: newFinalize.finalTax,
+        localIncomeTax: newFinalize.localIncomeTax,
+      };
     } else {
       // 기타자산 그룹: realEstateGroupBasicDeductionUsed로 직접 제어
       const adjustedInput: StockTransferInput = {

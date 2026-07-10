@@ -57,9 +57,9 @@ export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VA
     return "REGION";
   }
 
-  // 대구: 달성군(27710) VALUE
+  // 대구: 달성군(27710)·군위군(27720, 2023.7.1 편입) VALUE
   if (sidoCode === "27") {
-    if (sggCode === "27710") return "VALUE";
+    if (sggCode === "27710" || sggCode === "27720") return "VALUE";
     return "REGION";
   }
 

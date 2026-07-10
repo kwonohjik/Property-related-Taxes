@@ -1,6 +1,6 @@
 /**
  * 상속세·증여세 비과세·과세가액 불산입 룰 정의
- * (상속: 상증법 §12·§16·§17 / 증여: §46·§46의2)
+ * (상속: 상증법 §12·§16·§17 / 증여: §46·§52·§52의2)
  *
  * 상속세 비과세·과세가액 불산입 8종:
  *   1. 국가·지자체·공공단체 유증 재산 (§12 1호, 상증령 §8①)
@@ -14,15 +14,15 @@
  *
  *   ※ 문화유산은 §12 비과세 대상 아님 (구 §12 2호 삭제) — 상증법 §74 징수유예로 처리
  *
- * 증여세 비과세 8종 (§46·§46의2):
+ * 증여세 비과세·과세가액 불산입 8종 (§46·§52·§52의2):
  *   1. 생활비·교육비·치료비 (§46 5호)
  *   2. 축의금·부의금 (§46 5호)
  *   3. 혼수품 (§46 5호)
  *   4. 장학금 (§46 4호)
- *   5. 이재구호금품 (§46 2호)
- *   6. 국가유공자 보훈급여 (§46 6호)
- *   7. 공익신탁 이익 (§46 1호)
- *   8. 장애인 신탁 (§46의2) — 5억 한도
+ *   5. 이재구호금품 (§46 5호)
+ *   6. 국가유공자 보훈급여 (§46 9호)
+ *   7. 공익신탁 이익 (§52 과세가액 불산입)
+ *   8. 장애인 신탁 (§52의2) — 5억 한도
  */
 
 import { EXEMPTION } from "./legal-codes";
@@ -47,8 +47,8 @@ export type RiskLevel = "none" | "low" | "medium" | "high";
 /**
  * 과세상 취급 구분 — 비과세 vs 과세가액 불산입.
  * 법령상 별개 개념이므로 UI에서 섹션을 분리한다.
- *   - "non_taxable": 비과세 (상속 §11·§12 / 증여 §46·§46의2)
- *   - "not_included": 과세가액 불산입 (상속 §16 공익법인 출연·§17 공익신탁 / 증여 §48 등)
+ *   - "non_taxable": 비과세 (상속 §11·§12 / 증여 §46)
+ *   - "not_included": 과세가액 불산입 (상속 §16 공익법인 출연·§17 공익신탁 / 증여 §48·§52·§52의2 등)
  * 미지정 시 "non_taxable"로 간주.
  */
 export type ExemptionTreatment = "non_taxable" | "not_included";
@@ -158,7 +158,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     id: "inh_public_interest",
     category: "inheritance",
     name: "공익법인 출연 재산",
-    lawRef: EXEMPTION.PUBLIC_INTEREST,
+    lawRef: EXEMPTION.INH_PUBLIC_CONTRIBUTION, // §16①(상속). §48①은 증여세(공익법인 본인)이므로 차용 금지
     description: "공익법인(사회복지·학교·의료법인 등)에 출연한 재산 (§16 과세가액 불산입)",
     taxTreatment: "not_included",
     limitType: "unlimited",
@@ -228,7 +228,7 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
 // 증여세 비과세 룰 8종
 // ============================================================
 
-/** 장애인 신탁 비과세 한도 (§46의2): 5억원 (10년 합산) */
+/** 장애인 신탁 과세가액 불산입 한도 (§52의2③): 5억원 (생존 중 합산) */
 export const DISABLED_TRUST_LIMIT = 500_000_000;
 
 export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
@@ -308,7 +308,7 @@ export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
     category: "gift",
     name: "이재구호금품",
     lawRef: EXEMPTION.GIFT_NONTAXABLE,
-    description: "재해 피해자에게 구호 목적으로 지급된 금품 (§46 2호)",
+    description: "재해 피해자에게 구호 목적으로 지급된 금품 (§46 5호)",
     limitType: "social_norm",
     riskLevel: "low",
     requirements: ["재해 피해 사실 확인", "구호 목적으로 지급"],
@@ -319,7 +319,7 @@ export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
     category: "gift",
     name: "국가유공자 보훈급여",
     lawRef: EXEMPTION.GIFT_NONTAXABLE,
-    description: "국가유공자·보훈대상자에게 지급되는 보훈급여금 (§46 6호)",
+    description: "국가유공자·보훈대상자에게 지급되는 보훈급여금 (§46 9호)",
     limitType: "unlimited",
     riskLevel: "none",
     requirements: [
@@ -332,8 +332,8 @@ export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
     id: "gift_public_trust",
     category: "gift",
     name: "공익신탁 이익",
-    lawRef: EXEMPTION.PUBLIC_INTEREST,
-    description: "공익신탁법에 따른 공익신탁으로 받는 이익 (§46 1호)",
+    lawRef: EXEMPTION.GIFT_PUBLIC_TRUST,
+    description: "공익신탁법에 따른 공익신탁으로 받는 이익 (§52 과세가액 불산입)",
     limitType: "unlimited",
     riskLevel: "medium",
     riskNote: "공익 목적 외 사용 또는 신탁 해지 시 즉시 과세",
@@ -350,12 +350,12 @@ export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
     id: "gift_disabled_trust",
     category: "gift",
     name: "장애인 신탁 비과세",
-    lawRef: EXEMPTION.PUBLIC_INTEREST,
-    description: "장애인에게 신탁된 재산 (§46의2)",
+    lawRef: EXEMPTION.DISABLED_TRUST_EXCLUSION,
+    description: "장애인에게 신탁된 재산 (§52의2 과세가액 불산입)",
     limitType: "fixed",
     limitAmount: DISABLED_TRUST_LIMIT,
     riskLevel: "high",
-    riskNote: "신탁 해지 시 남은 원금 즉시 증여세 과세 (§46의2 ③); 5억 초과분 일반 과세",
+    riskNote: "신탁 해지 시 남은 원금 즉시 증여세 과세 (§52의2④); 5억 초과분 일반 과세",
     requirements: [
       "수증자가 장애인복지법 또는 국가유공자법상 장애인",
       "증여재산을 신탁업자에게 신탁",

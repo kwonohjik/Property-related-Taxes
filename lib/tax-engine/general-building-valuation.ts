@@ -625,24 +625,27 @@ export function buildGeneralBuildingAssetCards(
     const landBusinessTransfer = apportionLandByBusinessArea(allocation.land, allowedLandArea, input.landArea);
     const landBusinessAcq = apportionLandByBusinessArea(acquisition.land, allowedLandArea, input.landArea);
     const landBusinessExp = apportionLandByBusinessArea(estimatedDeduction.land, allowedLandArea, input.landArea);
-    assetCards.push({
-      propertyId: "land_business",
-      propertyLabel: "토지-사업용(1001)",
-      propertyType: "land",
-      transferPrice: landBusinessTransfer,
-      acquisitionPrice: landBusinessAcq,
-      expenses: landBusinessExp,
-      usedEstimatedAcquisition: true,
-      estimatedBase: landBusinessAcq,
-      estimatedDeduction: landBusinessExp,
-      acquisitionDate: input.acquisitionDate,
-      transferDate: input.transferDate,
-      isNonBusinessLand: false,
-      landAcquisitionCause: input.landAcquisitionCause,
-      decedentAcquisitionDate: input.decedentAcquisitionDate,
-      donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: input.landCarryoverTaxation,
-    });
+    // 인정면적 0(무허가 등 전체 비사업용) 시 사업용 카드는 전액 0원 유령 카드 → 미생성. 비사업용 카드가 전액 잔여 흡수.
+    if (allowedLandArea > 0) {
+      assetCards.push({
+        propertyId: "land_business",
+        propertyLabel: "토지-사업용(1001)",
+        propertyType: "land",
+        transferPrice: landBusinessTransfer,
+        acquisitionPrice: landBusinessAcq,
+        expenses: landBusinessExp,
+        usedEstimatedAcquisition: true,
+        estimatedBase: landBusinessAcq,
+        estimatedDeduction: landBusinessExp,
+        acquisitionDate: input.acquisitionDate,
+        transferDate: input.transferDate,
+        isNonBusinessLand: false,
+        landAcquisitionCause: input.landAcquisitionCause,
+        decedentAcquisitionDate: input.decedentAcquisitionDate,
+        donorAcquisitionDate: input.donorAcquisitionDate,
+        carryoverTaxation: input.landCarryoverTaxation,
+      });
+    }
     // 토지 카드 2: 비사업용 초과분 (원단위 잔여 흡수)
     assetCards.push({
       propertyId: "land_nbl",

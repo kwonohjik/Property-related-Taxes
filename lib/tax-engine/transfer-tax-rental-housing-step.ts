@@ -20,7 +20,7 @@ import type {
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax } from "./transfer-tax-rate-calc";
 import type { ParsedRates } from "./transfer-tax-helpers";
-import { emitPenaltySteps } from "./transfer-tax-helpers";
+import { calcBasicDeduction, emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 
 export interface RentalHousingStepArgs {
@@ -91,7 +91,16 @@ export function runRentalHousingExceptionStep(
     amount: rhe.taxableGain,
     legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
   });
-  const rheBasicDeduction = parsedRates.basicDeductionRules.annualLimit;
+  // 기본공제: 일반 경로(transfer-tax.ts STEP 5)와 동일한 calcBasicDeduction 단일 진실 사용.
+  // annualBasicDeductionUsed(동일연도 기사용분) 잔여 한도 반영 — 전액 재공제 방지 (소법 §103①).
+  // rhe.taxableGain은 이미 §161 과세대상 양도소득금액이므로 longTermDed=0 전달.
+  const rheBasicDeduction = calcBasicDeduction(
+    rhe.taxableGain,
+    0,
+    effectiveInput.annualBasicDeductionUsed,
+    effectiveInput.isUnregistered,
+    parsedRates.basicDeductionRules,
+  );
   const rheTaxBase = truncateToWon(Math.max(0, rhe.taxableGain - rheBasicDeduction));
   const rheTaxResult = calcTax(rheTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
 

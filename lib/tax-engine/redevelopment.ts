@@ -28,6 +28,7 @@ import {
 import {
   calcRedevHousingContribReceiveEstimated,
 } from "./redevelopment-housing-contribution";
+import { calculateHoldingPeriod } from "./tax-utils";
 import type {
   RedevelopmentInfo,
   RedevelopmentResult,
@@ -167,26 +168,25 @@ function runLandContribEstimated(
     postApprovalExpenses: redevelopment.postApprovalExpenses ?? 0,
   });
 
+  // 취득일 ~ 인가일 보유기간 (§166⑤1호) — computeRightLthd 와 동일 산식(초일불산입).
+  // landResult.lthdHoldingYears × 12 는 연단위 절사로 잔여월(0~11)이 소실되므로 재산출.
+  const landPreHold = calculateHoldingPeriod(acquisitionDate, redevelopment.approvalDate);
+
   // ─ RedevelopmentBranchDetail 로 변환 ─
   // preApproval: 인가전 분 (LTHD 적용)
   const preApprovalDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: redevelopment.rightsValue,             // 의제 양도가액 = 권리가액
     apportionedAcquisition: landResult.convertedAcquisition,    // §166③ 환산취득가
     gain: landResult.preApprovalGain,
-    holdingMonths: Math.floor(
-      // 취득일 ~ 인가일 보유월수 (§166⑤1호)
-      // computeRightLthd 내부 동일 로직 — lthdResult.preApproval.holdingMonths 재사용 불가(직접 접근)
-      // landResult.lthdHoldingYears × 12 는 연단위 절사 — 월단위 재산출 필요
-      // → redevelopment-lthd.ts computeRightLthd 결과에서 가져오는 것이 일치성 보장
-      // 단, import 순환 방지 위해 landResult.lthdHoldingYears × 12 사용 (표1 공제율 결정에 충분)
-      landResult.lthdHoldingYears * 12,
-    ),
-    holdingDays: undefined,
+    holdingMonths: landPreHold.years * 12 + landPreHold.months,
+    holdingDays: landPreHold.days,
     lthd: landResult.preApprovalLTHD,
     lthdRate: landResult.lthdRate,
     branchAcqDate: acquisitionDate,
     branchTransferDate: redevelopment.approvalDate,             // §166⑤1호 종기 = 인가일
-    expenses: landResult.estimatedDeduction + (redevelopment.preApprovalExpenses ?? 0), // 개산공제 + 인가전필요경비
+    // 환산 모드 — 인가전 필요경비는 §163⑥ 개산공제에 흡수(preApprovalGain 미차감, land-contribution.ts:120).
+    // 신고서 자기일관: expenses = 권리가액 − 환산취득가 − 인가전양도차익 = 개산공제 (preApprovalExpenses 미표시).
+    expenses: landResult.estimatedDeduction,
     residenceStartDate: undefined,
     residenceEndDate: undefined,
     residenceMonths: undefined,
@@ -317,6 +317,10 @@ function runHousingContribReceiveEstimated(
     postApprovalExpenses: redevelopment.postApprovalExpenses ?? 0,
   });
 
+  // 취득일 ~ 인가일 보유기간 (§166⑤1호) — computeRightLthd 와 동일 산식(초일불산입).
+  // housingResult.lthdHoldingYears × 12 는 연단위 절사로 잔여월(0~11)이 소실되므로 재산출.
+  const housingPreHold = calculateHoldingPeriod(acquisitionDate, redevelopment.approvalDate);
+
   // ─ RedevelopmentBranchDetail 로 변환 ─
   // preApproval: 인가전 분 (§166①2호 나목, LTHD 적용)
   const preApprovalDetail: RedevelopmentBranchDetail = {
@@ -325,8 +329,8 @@ function runHousingContribReceiveEstimated(
     // 취득가액 안분 = floor(환산취득가 × salePriceTotal / 권리가액)
     apportionedAcquisition: housingResult.preApprovalApportionedAcquisition,
     gain: housingResult.preApprovalGain,
-    holdingMonths: Math.floor(housingResult.lthdHoldingYears * 12),
-    holdingDays: undefined,
+    holdingMonths: housingPreHold.years * 12 + housingPreHold.months,
+    holdingDays: housingPreHold.days,
     lthd: housingResult.preApprovalLTHD,
     lthdRate: housingResult.lthdRate,
     branchAcqDate: acquisitionDate,

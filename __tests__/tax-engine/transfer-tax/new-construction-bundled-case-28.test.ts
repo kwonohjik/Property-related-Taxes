@@ -624,14 +624,14 @@ describe("resolveCompanionLandRate 단위 테스트", () => {
 // ============================================================
 
 describe("사례 28 Group F — landNature 명시 입력 정책 신규 anchor", () => {
-  it("T-33 부수토지=Yes + 주택 2년 이상 보유 → 토지에 누진세율 + LTHD 주택 기준 표1", () => {
+  it("T-33 부수토지=Yes + 주택 2~3년 보유 → 토지에 누진세율 + LTHD 배제(§95② 3년 미만)", () => {
     // 주택 30개월 보유 → housingRateForHoldingPeriod = "progressive"
-    // LTHD: 표1 기준 30개월 = 2년 → 2 × 2% = 4%
+    // LTHD: §95② 장기보유공제는 보유 3년 이상이 진입요건 → 30개월(2.5년)은 LTHD 0
     const landInput = makeLandInput({
       acquisitionDate: new Date("2021-01-01"),
       primaryContextForCompanionRate: {
         propertyType: "housing",
-        holdingMonths: 30,  // 2년 6개월 → 누진세율
+        holdingMonths: 30,  // 2년 6개월 → 누진세율(세율은 유지), LTHD는 3년 미만이라 0
         buildingFootprintArea: BUILDING_FOOTPRINT,
         isUrbanArea: true,
       },
@@ -639,12 +639,12 @@ describe("사례 28 Group F — landNature 명시 입력 정책 신규 anchor", 
       isOneHousehold: false,
     });
     const result = calculateTransferTax(landInput, makeMockRates());
-    // 누진세율 적용 (0.70 아님)
+    // 누진세율 적용 (0.70 아님) — 세율은 2년 이상이면 그대로 적용
     expect(result.appliedRate).toBeLessThan(0.70);
     expect(result.appliedRate).toBeGreaterThan(0);
-    // LTHD > 0 (주택 보유기간 기준 적용)
-    expect(result.longTermHoldingDeduction).toBeGreaterThan(0);
-    expect(result.longTermHoldingRate).toBeGreaterThan(0);
+    // LTHD = 0 (§95② 보유 3년 미만 → 장기보유공제 배제)
+    expect(result.longTermHoldingDeduction).toBe(0);
+    expect(result.longTermHoldingRate).toBe(0);
   });
 
   it("T-34 부수토지=Yes + 주택 1~2년 보유 → 토지에 60% 단일세율", () => {

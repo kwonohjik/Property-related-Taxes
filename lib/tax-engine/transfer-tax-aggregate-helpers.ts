@@ -84,6 +84,12 @@ export function classifyRateGroup(
     return "multi_house_surcharge";
   }
 
+  // 분양권(§104①1호)은 보유기간과 무관하게 60% 단일세율(2년 이상도 60%) — 누진세율 자산이 아니다.
+  // calcTax(rate-calc §104①1호)이 2년+ 분양권에 0.60을 반환하므로, progressive 그룹에 섞이면
+  // aggregateByGroup 대표세율 분기가 그룹 합산 과세표준 전체에 잘못 적용된다.
+  // 단일세율(short_term) 그룹으로 분류 → 자산별 calcTax 산출세액 합산 처리(§104⑤ 비교과세 포함).
+  if (item.propertyType === "presale_right") return "short_term";
+
   return "progressive";
 }
 

@@ -73,7 +73,8 @@ export function resolveExemptionProviso(
     case "expropriation":
       // 2호 가목: 사업인정 고시일 전 취득 + 양도일·수용일부터 5년 이내
       if (p.businessApprovalDate && input.acquisitionDate >= p.businessApprovalDate) return null;
-      return input.transferDate <= addYears(p.expropriationDate ?? input.transferDate, C.EXPROPRIATION_TRANSFER_YEARS)
+      // 수용일 미입력 시 침묵 비과세 미적용 차단 (fail-closed, 나·다목과 대칭 — feedback_no_silent_apportion_fallback)
+      return p.expropriationDate && input.transferDate <= addYears(p.expropriationDate, C.EXPROPRIATION_TRANSFER_YEARS)
         ? "both"
         : null;
     case "overseas_migration":
@@ -217,6 +218,11 @@ export function checkExemption(
 
     const prevHolding = calculateHoldingPeriod(previousAcquisitionDate, input.transferDate);
     if (prevHolding.years < rule.minHoldingYears) {
+      return { isExempt: false, isPartialExempt: false };
+    }
+
+    // §155① 종전주택은 §154①을 적용 → 취득 당시 조정대상지역이면 거주 2년 요건도 검증 (E-4와 단일 진실)
+    if (!meetsOneHouseResidenceRequirement(input, rule)) {
       return { isExempt: false, isPartialExempt: false };
     }
 

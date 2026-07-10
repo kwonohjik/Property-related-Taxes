@@ -394,6 +394,34 @@ export function calculateTransferTaxAggregate(
     steps.push(settlement.step);
   }
 
+  // [audit-fix aggregate.ts:411] 유형별 감면 배분에 말단 자산 잔액 흡수(raw − Σfloor(others)) 적용.
+  // 같은 감면 유형의 다자산을 각각 독립 floor하면 Σ(reductionAggregated) < cappedAggregateReduction
+  // (최대 (n−1)원 부족)이 되어 신고서 자산별 감면 합이 총감면과 어긋난다(feedback_floor_residual_absorption).
+  // 앞 자산은 floor, 각 유형의 마지막 자산이 잔여(capped − 앞 자산 floor 합)를 흡수해 합계를 일치시킨다.
+  const reductionAggregatedByAsset: number[] = assetRecords.map(() => 0);
+  for (const entry of reductionBreakdown) {
+    if (entry.totalReducibleIncome <= 0) continue;
+    const memberIdxs = assetRecords
+      .map((r, i) => ({ r, i }))
+      .filter(
+        ({ r }) =>
+          !r.result.isExempt &&
+          r.result.reductionTypeApplied === entry.type &&
+          (r.result.reducibleIncome ?? 0) > 0,
+      )
+      .map(({ i }) => i);
+    let distributed = 0;
+    memberIdxs.forEach((i, pos) => {
+      const ri = assetRecords[i].result.reducibleIncome ?? 0;
+      const share =
+        pos === memberIdxs.length - 1
+          ? Math.max(0, entry.cappedAggregateReduction - distributed)
+          : Math.floor(entry.cappedAggregateReduction * (ri / entry.totalReducibleIncome));
+      reductionAggregatedByAsset[i] = share;
+      distributed += share;
+    });
+  }
+
   // properties breakdown 조립 — 합산 재계산 후 건별 배분액 포함
   const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => {
     const reductionType = r.result.reductionTypeApplied;
@@ -407,10 +435,8 @@ export function calculateTransferTaxAggregate(
       const entry = reductionBreakdown.find((b) => b.type === reductionType);
       if (entry && entry.totalReducibleIncome > 0) {
         reductionAllocationRatio = reducibleIncome / entry.totalReducibleIncome;
-        // 최종 capped 감면액을 reducibleIncome 비율로 자산에 배분 (원 미만 절사)
-        reductionAggregated = Math.floor(
-          entry.cappedAggregateReduction * reductionAllocationRatio,
-        );
+        // 최종 capped 감면액을 reducibleIncome 비율로 자산에 배분 (원 미만 절사 + 말단 잔액 흡수).
+        reductionAggregated = reductionAggregatedByAsset[idx];
       }
     }
 

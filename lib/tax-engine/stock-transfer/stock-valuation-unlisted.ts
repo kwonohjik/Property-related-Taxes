@@ -188,21 +188,23 @@ export function calcUnlistedValuation(
     const naPerShare = input.transferYearNetAssetPerShare ?? 0;
     const isNetAssetOnly = !!netAssetOnlyReason;
 
-    // STEP 1: 양도기준시가 §165④1
-    const niW = isHeavyRE ? 2 : 3;
-    const naW = isHeavyRE ? 3 : 2;
+    // STEP 1: 양도기준시가 §165④1 — 양도일 기준 시기별 연혁 가중치(MAIN 경로와 동일).
+    // niW=0(pre-1999 순자산 단독) 케이스는 (na×5)/5=na로 자연 처리. heavyRE 반전은 MAIN 관행 유지.
+    const w = getValuationWeights(transferDate);
+    const niW = isHeavyRE ? 2 : w.niWeight;
+    const naW = isHeavyRE ? 3 : w.naWeight;
     const weighted = isNetAssetOnly
       ? naPerShare
       : Math.floor((niPerShare * niW + naPerShare * naW) / 5);
 
-    // STEP 2: 80% 하한 (가중평균 케이스만) — §165④1 단서.
-    // MAIN 경로(아래 hasFloor80 분기)와 동일하게 `floor80 > weighted`만으로 판정한다.
+    // STEP 2: 80% 하한 (가중평균 케이스만) — §165④1 단서(2007.2.28. 시행).
+    // MAIN 경로와 동일하게 시기별 연혁 게이트(w.hasFloor80) + `floor80 > weighted`로 판정한다.
     // 결손법인(순손익가치 음수 → weighted ≤ 0)에서도 하한(na×0.8)이 발동해야 하므로
     // `weighted > 0` 가드를 두지 않는다(두면 0 반환 → MAIN과 dual-truth).
     // all-zero(ni=0·na=0): floor80=0, `0 > 0`=false → 미발동 → 후속 ≤0 가드가 처리(동작 불변).
     let transferStdPerShare = weighted;
     let floor80Applied = false;
-    if (!isNetAssetOnly) {
+    if (!isNetAssetOnly && w.hasFloor80) {
       const floor80 = Math.floor(naPerShare * 0.8);
       if (floor80 > weighted) {
         transferStdPerShare = floor80;
@@ -366,12 +368,12 @@ export function calcUnlistedValuation(
   // 가중평균 — 현행 or 시기별
   // ──────────────────────────────────────────────────────────
 
-  // 가중치 반전 (부동산과다보유법인 §165⑤)
+  // 가중치 반전 (부동산과다보유법인 §165④1 — 법 §94①4 다목 해당 시 2:3)
   const niWeight = isHeavyRealEstateForValuation ? 2 : weights.niWeight;
   const naWeight = isHeavyRealEstateForValuation ? 3 : weights.naWeight;
 
   if (isHeavyRealEstateForValuation) {
-    appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_5_POST_LISTING + "가중치반전");
+    appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_WEIGHTED_AVG + "가중치반전");
     appliedRules.push("부동산과다보유가중치반전");
   }
 
