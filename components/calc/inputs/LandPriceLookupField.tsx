@@ -46,6 +46,13 @@ export interface LandPriceLookupFieldProps {
   hint?: string;
   /** 입력 placeholder */
   placeholder?: string;
+  /**
+   * 조회 연도 고정 — referenceDate 구동 대신 이 연도로 고정한다(선택 불가, 읽기전용 표시).
+   * 예: PHD 모달 취득시 pre-2001 = 2001.1.1 기준(§164⑤). effectiveYear·canLookup·조회 연도·Select 표시를 모두 이 값으로 우회.
+   */
+  fixedYear?: number;
+  /** 토지기준시가(③열) 미렌더 — ㎡당 공시지가만 필요한 컨텍스트(면적·토지기준시가 무관)에서 2열로 축소. */
+  hideLandStdPrice?: boolean;
 }
 
 export function LandPriceLookupField({
@@ -58,6 +65,8 @@ export function LandPriceLookupField({
   label = "개별공시지가 (원/㎡)",
   hint,
   placeholder = "원/㎡",
+  fixedYear,
+  hideLandStdPrice = false,
 }: LandPriceLookupFieldProps) {
   const [selectedYear, setSelectedYear] = useState("");
   const [isManual, setIsManual] = useState(false);
@@ -68,7 +77,9 @@ export function LandPriceLookupField({
   const recommendedYear = referenceDate
     ? String(recommendLandPriceYear(referenceDate))
     : "";
-  const effectiveYear = selectedYear || recommendedYear;
+  // fixedYear 주입 시 referenceDate 구동을 우회하고 해당 연도로 고정(선택 불가).
+  const effectiveYear =
+    fixedYear != null ? String(fixedYear) : selectedYear || recommendedYear;
 
   function handleYearSelect(value: string | null) {
     if (!value) return;
@@ -124,7 +135,7 @@ export function LandPriceLookupField({
 
   const canLookup = !!jibun && !!effectiveYear;
 
-  const yearBadge = isManual ? (
+  const yearBadge = fixedYear != null ? null : isManual ? (
     <span className="flex items-center gap-1">
       <span className="rounded bg-amber-100 px-1.5 py-0.5 text-micro font-medium text-amber-700">
         수동
@@ -146,7 +157,7 @@ export function LandPriceLookupField({
   return (
     // 컴팩트 3열 — 공시지가 연도(Select+조회 인라인) | 개별공시지가 | 토지기준시가
     // (ThreePointStandardPriceInput PointBlock 레이아웃과 통일)
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <div className={`grid grid-cols-1 gap-2 ${hideLandStdPrice ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
       {/* ① 공시지가 연도 — Select + 조회 버튼 인라인 */}
       <FieldCard label="공시지가 연도" badge={yearBadge} stacked>
         <div className="flex items-center gap-2">
@@ -154,13 +165,15 @@ export function LandPriceLookupField({
             <Select
               value={effectiveYear}
               onValueChange={handleYearSelect}
-              disabled={!referenceDate}
+              disabled={fixedYear != null || !referenceDate}
             >
               <SelectTrigger className="h-9 w-full">
                 <span>
-                  {effectiveYear
-                    ? `${effectiveYear}년${!isManual ? " (자동)" : ""}`
-                    : "기준일 미입력"}
+                  {fixedYear != null
+                    ? `${fixedYear}년 (기준)`
+                    : effectiveYear
+                      ? `${effectiveYear}년${!isManual ? " (자동)" : ""}`
+                      : "기준일 미입력"}
                 </span>
               </SelectTrigger>
               <SelectContent>
@@ -197,19 +210,21 @@ export function LandPriceLookupField({
         />
       </FieldCard>
 
-      {/* ③ 토지기준시가 (자동 계산) */}
-      <FieldCard
-        label="토지기준시가"
-        hint={area ? `${area.toFixed(2)}㎡ × 공시지가` : "면적 입력 후 자동 계산"}
-        unit="원"
-        stacked
-      >
-        <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
-          {landStdPrice !== null
-            ? landStdPrice.toLocaleString()
-            : <span className="text-muted-foreground/40 text-xs">면적 입력 후 자동 계산</span>}
-        </div>
-      </FieldCard>
+      {/* ③ 토지기준시가 (자동 계산) — hideLandStdPrice 시 미렌더(㎡당 공시지가만 필요한 컨텍스트) */}
+      {!hideLandStdPrice && (
+        <FieldCard
+          label="토지기준시가"
+          hint={area ? `${area.toFixed(2)}㎡ × 공시지가` : "면적 입력 후 자동 계산"}
+          unit="원"
+          stacked
+        >
+          <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+            {landStdPrice !== null
+              ? landStdPrice.toLocaleString()
+              : <span className="text-muted-foreground/40 text-xs">면적 입력 후 자동 계산</span>}
+          </div>
+        </FieldCard>
+      )}
     </div>
   );
 }

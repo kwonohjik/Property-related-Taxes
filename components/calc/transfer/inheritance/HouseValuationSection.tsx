@@ -318,6 +318,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             points={batchPoints}
             onApply={applyBatch}
             snapshotPrefix={`bsp-${asset.assetId}-phd`}
+            jibun={asset.addressJibun || undefined}
           />
         </div>
       )}

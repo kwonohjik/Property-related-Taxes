@@ -660,7 +660,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     <div className="space-y-3">
       {props.enableBatchCalc && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} />
+          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} />
         </div>
       )}
       {props.layout === "asset-major" ? (

@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
 import { BuildingUsageSelect } from "./BuildingUsageSelect";
 import {
@@ -73,6 +74,11 @@ interface Props {
    * 미주입 시 스냅샷 저장 생략(종전 동작).
    */
   snapshotPrefix?: string;
+  /**
+   * 지번 주소 — 취득시(≤2000, 2001.1.1 기준) 개별공시지가 Vworld 조회 활성화 조건.
+   * 미주입 시 조회 버튼만 비활성, 수동 입력은 유지.
+   */
+  jibun?: string;
 }
 
 /** 편집 중 부분 행 — 시점별 구조·용도(연도 체계 상이) + 공통 연면적 */
@@ -111,6 +117,7 @@ export function PhdBuildingStdPriceModalButton({
   enableCommercial = false,
   commercialAcqFirstMode = false,
   snapshotPrefix,
+  jibun,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [builtYear, setBuiltYear] = useState("");
@@ -373,32 +380,49 @@ export function PhdBuildingStdPriceModalButton({
           {/* 시점별 공시지가 */}
           <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
             <p className="text-xs font-semibold text-violet-700">시점별 개별공시지가 (위치지수)</p>
-            {points.map((p) => (
-              <FieldCard
-                key={p.key}
-                label={`${POINT_LABEL[p.key]}${
-                  p.key === "acquisition" && p.year != null && p.year <= 2000
-                    ? " (2001년 기준)"
-                    : p.year
-                      ? ` (${p.year}년)`
-                      : " (연도 미상)"
-                } 공시지가`}
-                unit="원/㎡"
-                hint={!p.year ? "해당 시점 날짜 미입력 — 계산 제외" : undefined}
-              >
-                <CurrencyInput
-                  label=""
-                  hideUnit
-                  value={landPrices[p.key] ?? ""}
-                  onChange={(v) => setLandPrices((s) => ({ ...s, [p.key]: v }))}
-                  placeholder={
-                    p.key === "acquisition" && p.year != null && p.year <= 2000
-                      ? "2001.1.1. 현재 공시지가를 입력하세요"
-                      : "원/㎡"
-                  }
-                />
-              </FieldCard>
-            ))}
+            {points.map((p) => {
+              // 취득시 ≤2000 = 2001.1.1 기준(§164⑤ 산정기준율) → Vworld 2001 자동조회 행
+              const isAcqPre2001 =
+                p.key === "acquisition" && p.year != null && p.year <= 2000;
+              if (isAcqPre2001) {
+                return (
+                  <div key={p.key} className="space-y-1">
+                    {/* 시점 식별 라벨 — LandPriceLookupField가 제공하지 않으므로 별도 서브헤딩 */}
+                    <p className="text-caption font-semibold text-violet-700">
+                      취득시 (2001년 기준) 공시지가
+                    </p>
+                    <LandPriceLookupField
+                      fixedYear={2001}
+                      hideLandStdPrice
+                      jibun={jibun}
+                      pricePerSqm={landPrices[p.key] ?? ""}
+                      onPricePerSqmChange={(v) =>
+                        setLandPrices((s) => ({ ...s, [p.key]: v }))
+                      }
+                      placeholder="2001.1.1. 현재 공시지가"
+                    />
+                  </div>
+                );
+              }
+              return (
+                <FieldCard
+                  key={p.key}
+                  label={`${POINT_LABEL[p.key]}${
+                    p.year ? ` (${p.year}년)` : " (연도 미상)"
+                  } 공시지가`}
+                  unit="원/㎡"
+                  hint={!p.year ? "해당 시점 날짜 미입력 — 계산 제외" : undefined}
+                >
+                  <CurrencyInput
+                    label=""
+                    hideUnit
+                    value={landPrices[p.key] ?? ""}
+                    onChange={(v) => setLandPrices((s) => ({ ...s, [p.key]: v }))}
+                    placeholder="원/㎡"
+                  />
+                </FieldCard>
+              );
+            })}
           </div>
 
           <Button type="button" size="sm" onClick={handleCalc}>

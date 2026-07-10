@@ -116,16 +116,16 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await applyBtn.click();
     await expect(modal).toBeHidden();
 
-    // 양도시 건물기준시가 필드 채워짐(값 > 0), 취득시는 빈 값 유지
+    // 양도시 건물기준시가 필드 채워짐(값 > 0), 취득시는 빈 값 유지 — 힌트 삭제(PR#552) 후 라벨 앵커
     const transferBuildingInput = phd
-      .getByText("국세청 건물기준시가 (원) — 양도·취득 당시 기준시가", { exact: true })
+      .getByText("건물기준시가", { exact: true })
       .last()
-      .locator("xpath=preceding::input[1]");
+      .locator("xpath=following::input[1]");
     await expect(transferBuildingInput).not.toHaveValue("");
     const acqBuildingInput = phd
-      .getByText("국세청 건물기준시가 (원) — 양도·취득 당시 기준시가", { exact: true })
+      .getByText("건물기준시가", { exact: true })
       .first()
-      .locator("xpath=preceding::input[1]");
+      .locator("xpath=following::input[1]");
     await expect(acqBuildingInput).toHaveValue("");
   });
 
@@ -199,10 +199,10 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await applyBtn.click();
     await expect(modal).toBeHidden();
 
-    // 3개 건물기준시가 필드 모두 채워짐(빈 값 아님)
+    // 3개 건물기준시가 필드 모두 채워짐(빈 값 아님) — 건물기준시가 힌트 삭제(PR#552) 후 라벨 앵커
     const buildingInputs = phd
-      .getByText("국세청 건물기준시가 (원) — 양도·취득 당시 기준시가", { exact: true })
-      .locator("xpath=preceding::input[1]");
+      .getByText("건물기준시가", { exact: true })
+      .locator("xpath=following::input[1]");
     await expect(buildingInputs.nth(0)).not.toHaveValue("");
     await expect(buildingInputs.nth(1)).not.toHaveValue("");
     await expect(buildingInputs.nth(2)).not.toHaveValue("");
@@ -287,10 +287,10 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await applyBtn.click();
     await expect(modal).toBeHidden();
 
-    // 3개 건물기준시가 필드 모두 채워짐
+    // 3개 건물기준시가 필드 모두 채워짐 — 힌트 삭제(PR#552) 후 라벨 앵커
     const buildingInputs = phd
-      .getByText("국세청 건물기준시가 (원) — 양도·취득 당시 기준시가", { exact: true })
-      .locator("xpath=preceding::input[1]");
+      .getByText("건물기준시가", { exact: true })
+      .locator("xpath=following::input[1]");
     await expect(buildingInputs.nth(0)).not.toHaveValue("");
     await expect(buildingInputs.nth(1)).not.toHaveValue("");
     await expect(buildingInputs.nth(2)).not.toHaveValue("");
@@ -609,9 +609,13 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await fillCombos(page, modal, "용도 선택", /단독/, 3);
     await modal.getByPlaceholder("연면적").fill("115");
 
+    // 취득(≤2000) 행은 LandPriceLookupField(2001 고정 조회) — "2001년 (기준)" 표시 + 조회 버튼 노출
+    await expect(modal.getByText("2001년 (기준)")).toBeVisible();
+    await expect(modal.getByRole("button", { name: "공시지가 조회" })).toBeVisible();
+
     // 시점별 공시지가 취득 930,000 / 최초공시 1,470,000 / 양도 2,548,000
-    // 취득(≤2000) 필드는 placeholder가 "2001.1.1. 현재 공시지가를 입력하세요"로 분리됨.
-    await modal.getByPlaceholder("2001.1.1. 현재 공시지가를 입력하세요").fill("930000");
+    // 취득(≤2000) 필드는 placeholder가 "2001.1.1. 현재 공시지가"로 분리됨(LandPriceLookupField ②열).
+    await modal.getByPlaceholder("2001.1.1. 현재 공시지가").fill("930000");
     const land = modal.getByPlaceholder("원/㎡"); // 최초공시·양도 2개
     await land.nth(0).fill("1470000");
     await land.nth(1).fill("2548000");
