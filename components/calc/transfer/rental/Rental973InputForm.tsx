@@ -20,6 +20,7 @@ import { useMemo } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -69,13 +70,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-violet-700">등록·신분</p>
-        </div>
+      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
 
         <RegistrationFields
           registrationDate={value.registrationDate}
@@ -133,16 +128,10 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           description="전용 85㎡(수도권 외 읍면 100㎡) 이하 — 령 §97의3③2호"
           tone="sky"
         />
-      </div>
+      </ToneCard>
 
       {/* ② 임대 개시 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-violet-700">임대 개시 정보</p>
-        </div>
+      <ToneCard tone="violet" sectionNum="②" title="임대 개시 정보" noDark>
 
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시 당시 기준시가 (원)</label>
@@ -170,7 +159,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
             ]}
           />
         </div>
-      </div>
+      </ToneCard>
 
       {/* ③④ 공통 필드 (임대료 증액·공실) */}
       <RentalCommonFields
