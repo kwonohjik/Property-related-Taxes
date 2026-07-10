@@ -11,6 +11,7 @@ import { useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type {
   StockTransferFormData,
   CapitalAdjustmentForm,
@@ -51,25 +52,22 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
   };
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            CA
-          </span>
-          <p className="text-xs font-semibold text-violet-700">
-            무상증자·무상감자 (자본조정) — 법§17② 단서 + 집행기준 97-163-12
-          </p>
-        </div>
+    <ToneCard
+      tone="violet"
+      sectionNum="CA"
+      title="무상증자·무상감자 (자본조정) — 법§17② 단서 + 집행기준 97-163-12"
+      bodyClassName="space-y-3"
+      noDark
+      titleExtra={
         <button
           type="button"
           onClick={add}
-          className="rounded border border-violet-300 bg-white px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
+          className="ml-auto rounded border border-violet-300 bg-white px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
         >
           + 행 추가
         </button>
-      </div>
-
+      }
+    >
       {/* 도움말 카드 */}
       <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 space-y-1">
         <p>
@@ -176,6 +174,6 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
           })}
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }
