@@ -1,10 +1,10 @@
 /**
- * 재개발 단독주택 출자 — §164⑤ PHD 환산취득가 + §163⑥ 개산공제 + LTHD 산출
+ * 재개발 단독주택 출자 — §166③ PHD 환산취득가 + §163⑥ 개산공제 + LTHD 산출
  *
  * 사례 39: 조합원입주권 양도(right) + 청산금 수령(receive) + 취득실거래가 불명(환산)
  *
  * 법령 근거:
- * - 소득세법 §164⑤  : 환산취득가 = 권리가액 × (취득당시 개별주택가격 ÷ 인가당시 부근 개별주택가격)
+ * - 소득세법 §166③  : 환산취득가 = 권리가액 × (취득당시 개별주택가격 ÷ 인가당시 부근 개별주택가격)
  *     ※ 재개발 맥락에서 "양도 당시" = 의제양도시점(관리처분인가일) 기준
  * - 소득세법 §163⑥  : 개산공제 = floor(취득당시 개별주택가격 × 3%)
  * - 소득세법 §95②   : 별표2 [비고] 1호 — 인가전 분만 LTHD 적용, 인가후·청산금 0
@@ -30,7 +30,7 @@ import { REDEVELOPMENT } from "./legal-codes/transfer";
 export interface RedevHousingContribReceiveEstimatedInput {
   /** 주택 취득일 (§166⑤1호 LTHD 기산일) */
   acquisitionDate: Date;
-  /** 관리처분 인가일 (§166⑤1호 LTHD 종기 + §164⑤ 의제양도시점) */
+  /** 관리처분 인가일 (§166⑤1호 LTHD 종기 + §166③ 의제양도시점) */
   approvalDate: Date;
   /** 권리가액 = 평가액 (관리처분 인가일 기준 시행령 §166④) */
   rightsValue: number;
@@ -38,9 +38,9 @@ export interface RedevHousingContribReceiveEstimatedInput {
   transferPrice: number;
   /** 청산금 수령액 (절댓값 — receive 방향) */
   settlementReceived: number;
-  /** §164⑤ 분자 — 취득당시 개별주택가격 (원, 총액) */
+  /** §166③ 분자 — 취득당시 개별주택가격 (원, 총액) */
   housingStdPriceAtAcq: number;
-  /** §164⑤ 분모 — 인가당시 부근 개별주택가격 (원, 총액) */
+  /** §166③ 분모 — 인가당시 부근 개별주택가격 (원, 총액) */
   housingStdPriceAtApproval: number;
   /** 인가전 필요경비 (원) — 미입력 시 0 */
   preApprovalExpenses: number;
@@ -53,7 +53,7 @@ export interface RedevHousingContribReceiveEstimatedInput {
 // ──────────────────────────────────────────────────────────────────────────────
 
 export interface RedevHousingContribReceiveEstimatedResult {
-  /** §164⑤ 환산취득가 = floor(권리가액 × 취득당시PHD / 인가당시PHD) */
+  /** §166③ 환산취득가 = floor(권리가액 × 취득당시PHD / 인가당시PHD) */
   convertedAcquisition: number;
   /** §163⑥ 개산공제 = floor(취득당시PHD × 3%) */
   estimatedDeduction: number;
@@ -103,8 +103,8 @@ export interface RedevHousingContribReceiveEstimatedResult {
  * 재개발 단독주택 출자 입주권(right) + 청산금 수령(receive) + 환산취득가 세액 산출.
  *
  * 순서:
- *   Step 0. 분모 0 방어 (§164⑤ housingStdPriceAtApproval)
- *   Step 1. §164⑤ 환산취득가 (권리가액 × 취득시PHD / 인가시PHD)
+ *   Step 0. 분모 0 방어 (§166③ housingStdPriceAtApproval)
+ *   Step 1. §166③ 환산취득가 (권리가액 × 취득시PHD / 인가시PHD)
  *   Step 2. §163⑥ 개산공제 (취득시PHD × 3%)
  *   Step 3. salePriceTotal = 권리가액 − 수령청산금
  *   Step 4. §166①2호 나목: 인가전 양도차익
@@ -118,16 +118,16 @@ export function calcRedevHousingContribReceiveEstimated(
   // ── Step 0: 분모 0 방어 ──────────────────────────────────────────────────
   if (input.housingStdPriceAtApproval <= 0) {
     throw new TaxRateNotFoundError(
-      "redev-housing-contrib: housingStdPriceAtApproval must be > 0 (§164⑤ 분모)",
+      "redev-housing-contrib: housingStdPriceAtApproval must be > 0 (§166③ 분모)",
     );
   }
   if (input.housingStdPriceAtAcq <= 0) {
     throw new TaxRateNotFoundError(
-      "redev-housing-contrib: housingStdPriceAtAcq must be > 0 (§164⑤ 분자 — 개산공제 기준)",
+      "redev-housing-contrib: housingStdPriceAtAcq must be > 0 (§166③ 분자 — 개산공제 기준)",
     );
   }
 
-  // ── Step 1: §164⑤ 환산취득가 ───────────────────────────────────────────
+  // ── Step 1: §166③ 환산취득가 ───────────────────────────────────────────
   // 권리가액 × (취득당시PHD / 인가당시PHD)
   // safeMultiplyThenDivide: 곱셈 먼저 후 나눗셈 — BigInt overflow 방어 내장
   const convertedAcquisition = safeMultiplyThenDivide(

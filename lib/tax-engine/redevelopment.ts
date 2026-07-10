@@ -100,7 +100,7 @@ export function runRedevelopment(
     return runSuccessorMember(input);
   }
 
-  // 사례 39 — 주택 출자 입주권 + 청산금 수령 + §164⑤ PHD 2-point 환산취득가 분기.
+  // 사례 39 — 주택 출자 입주권 + 청산금 수령 + §166③ PHD 2-point 환산취득가 분기.
   // 구분 조건: housingStdPriceAtAcq + housingStdPriceAtApproval (PHD 직접 입력)를 사용.
   // ※ 사례 36-A2-ii(managementDisposalHousingPrice+acquisitionHousingPrice 사용 §166③ 경로)와 다름.
   if (
@@ -279,16 +279,16 @@ function runLandContribEstimated(
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * 주택 출자 입주권(right+receive) 환산취득가 분기 — §164⑤ PHD 비율 환산.
+ * 주택 출자 입주권(right+receive) 환산취득가 분기 — §166③ PHD 비율 환산.
  *
  * calcRedevHousingContribReceiveEstimated 결과를 RedevelopmentResult 형태로 변환.
  * 3분할 구조 유지 (preApproval / postApprovalExistingHouse / settlement):
- *   - preApproval  : 인가전 분 (§166①2호 나목 + §164⑤ 환산, LTHD 표1 적용)
+ *   - preApproval  : 인가전 분 (§166①2호 나목 + §166③ 환산, LTHD 표1 적용)
  *   - postApproval : gain=0, lthd=0 (§95② 별표2 [비고] 1호 — 입주권 §94①2호 자산)
  *   - settlement   : 인가후 분 (§166①2호 가목, LTHD 없음)
  *
  * 법령 근거:
- *   §164⑤  : 환산취득가 = floor(권리가액 × 취득당시PHD / 인가당시PHD)
+ *   §166③  : 환산취득가 = floor(권리가액 × 취득당시PHD / 인가당시PHD)
  *   §163⑥  : 개산공제 = floor(취득당시PHD × 3%)
  *   §166①2호 나목: 인가전 = (권리가액 − 환산 − 개산공제) × (권리가액 − 청산금수령) / 권리가액
  *   §166①2호 가목: 인가후 = 양도가액 − (권리가액 − 청산금수령) − 인가후필요경비
@@ -405,7 +405,7 @@ function runHousingContribReceiveEstimated(
       numerator: redevelopment.housingStdPriceAtAcq,
       denominator: redevelopment.housingStdPriceAtApproval,
       rationale:
-        `§164⑤ 주택 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()}` +
+        `§166③ 주택 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()}` +
         ` × 취득시PHD ${(redevelopment.housingStdPriceAtAcq ?? 0).toLocaleString()}` +
         ` / 인가시PHD ${(redevelopment.housingStdPriceAtApproval ?? 0).toLocaleString()}` +
         ` = ${housingResult.convertedAcquisition.toLocaleString()}` +
