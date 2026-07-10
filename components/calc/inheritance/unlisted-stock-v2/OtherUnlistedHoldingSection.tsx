@@ -13,6 +13,7 @@
 
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type {
   OtherUnlistedHolding,
   OtherUnlistedCounterparty,
@@ -79,29 +80,24 @@ export function OtherUnlistedHoldingSection({
   };
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {sectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-              {sectionNum}
-            </span>
-          )}
-          <p className="text-xs font-semibold text-emerald-700">
-            다른 비상장법인 주식 보유 (§54③ · 상호출자 평가준칙 §60②)
-          </p>
-        </div>
-        {enabled && (
+    <ToneCard
+      tone="emerald"
+      sectionNum={sectionNum}
+      title="다른 비상장법인 주식 보유 (§54③ · 상호출자 평가준칙 §60②)"
+      titleExtra={
+        enabled && (
           <button
             type="button"
             onClick={addRow}
             disabled={rows.length >= MAX_ROWS}
-            className="rounded-md bg-emerald-600 px-2 py-1 text-caption font-semibold text-white disabled:opacity-40"
+            className="ml-auto rounded-md bg-emerald-600 px-2 py-1 text-caption font-semibold text-white disabled:opacity-40"
           >
             + 보유 추가
           </button>
-        )}
-      </div>
+        )
+      }
+      noDark
+    >
 
       {!enabled && (
         <button
@@ -211,7 +207,7 @@ export function OtherUnlistedHoldingSection({
           </div>
         );
       })}
-    </div>
+    </ToneCard>
   );
 }
 
