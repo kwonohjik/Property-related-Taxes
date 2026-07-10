@@ -20,25 +20,10 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
-
-// ============================================================
-// 섹션 색상 클래스 (Tailwind 정적 매핑 — feedback_tailwind_static_tone_mapping)
-// ============================================================
-
-const SKY_SECTION = "rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2.5";
-const SKY_HEADER = "text-xs font-semibold text-sky-700";
-const SKY_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none";
-
-const AMBER_SECTION = "rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2.5";
-const AMBER_HEADER = "text-xs font-semibold text-amber-700";
-const AMBER_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none";
-
-const VIOLET_SECTION = "rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2.5";
-const VIOLET_HEADER = "text-xs font-semibold text-violet-700";
-const VIOLET_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none";
 
 // ============================================================
 // Props
@@ -57,11 +42,7 @@ interface Props {
 
 function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
   return (
-    <div className={SKY_SECTION}>
-      <div className="flex items-center gap-2">
-        <span className={SKY_BADGE}>①</span>
-        <p className={SKY_HEADER}>기본 정보</p>
-      </div>
+    <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보" noDark>
 
       {/* 지역 구분 */}
       <div className="space-y-1">
@@ -185,7 +166,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           </p>
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }
 
@@ -195,11 +176,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
 
 function InheritanceSection({ house, onUpdate }: Props) {
   return (
-    <div className={AMBER_SECTION}>
-      <div className="flex items-center gap-2">
-        <span className={AMBER_BADGE}>②</span>
-        <p className={AMBER_HEADER}>상속 정보</p>
-      </div>
+    <ToneCard tone="amber" sectionNum="②" bodyClassName="space-y-2.5" title="상속 정보" noDark>
 
       {/* 상속주택 여부 토글 */}
       <ToggleCard
@@ -225,7 +202,7 @@ function InheritanceSection({ house, onUpdate }: Props) {
           </p>
         </div>
       </ToggleCard>
-    </div>
+    </ToneCard>
   );
 }
 
@@ -235,11 +212,7 @@ function InheritanceSection({ house, onUpdate }: Props) {
 
 function LongTermRentalSection({ house, onUpdate }: Props) {
   return (
-    <div className={VIOLET_SECTION}>
-      <div className="flex items-center gap-2">
-        <span className={VIOLET_BADGE}>③</span>
-        <p className={VIOLET_HEADER}>장기임대 정보</p>
-      </div>
+    <ToneCard tone="violet" sectionNum="③" bodyClassName="space-y-2.5" title="장기임대 정보" noDark>
 
       {/* 장기임대 여부 토글 */}
       <ToggleCard
@@ -325,7 +298,7 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
           <HouseEntryRentalTypeSection house={house} onUpdate={onUpdate} />
         </div>
       </ToggleCard>
-    </div>
+    </ToneCard>
   );
 }
 
