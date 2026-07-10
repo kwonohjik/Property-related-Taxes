@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import { differenceInYears } from "date-fns";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { computeAutoMinor } from "@/lib/calc/gift-donee-minor";
 import { parseResidentNumber } from "@/lib/calc/resident-number";
 
@@ -49,16 +50,7 @@ export function DoneeMinorField({
   }, [autoMinor, parsed, giftDate]);
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-          §57
-        </span>
-        <p className="text-xs font-semibold text-violet-700">
-          수증자 미성년자 (§57① 40% 할증 판정)
-        </p>
-      </div>
-
+    <ToneCard tone="violet" sectionNum="§57" title="수증자 미성년자 (§57① 40% 할증 판정)" noDark>
       <FieldCard
         label="수증자 주민등록번호 (선택)"
         hint="앞 7자리(생년월일·성별)로 생년월일을 도출해 미성년 여부를 자동판정합니다. 검증 없이 생년월일만 사용하며 저장·전송되지 않습니다. 미입력 시 아래에서 직접 선택하세요."
@@ -98,6 +90,6 @@ export function DoneeMinorField({
           onCheckedChange={onMinorToggle}
         />
       )}
-    </div>
+    </ToneCard>
   );
 }
