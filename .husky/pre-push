@@ -1,2 +1,2 @@
-echo "▶ pre-push gate: 폰트 크기 정본 + typecheck + test (lint은 lint-staged에서 처리)"
-scripts/check-font-sizes.sh && npm run typecheck && npm run test
+echo "▶ pre-push gate: 폰트 크기 + 동적 톤 정본 + typecheck + test (lint은 lint-staged에서 처리)"
+scripts/check-font-sizes.sh && scripts/check-tone-classes.sh && npm run typecheck && npm run test

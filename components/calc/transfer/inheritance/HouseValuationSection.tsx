@@ -165,10 +165,7 @@ function yearOf(d?: string): number | undefined {
   return y && y > 1900 ? y : undefined;
 }
 
-const LAW_BADGE_CLASS =
-  "inline-flex items-center rounded px-1.5 py-0.5 text-caption font-medium " +
-  "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
-  "hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors shrink-0 whitespace-nowrap cursor-pointer";
+import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 
 interface Props {
   asset: AssetForm;

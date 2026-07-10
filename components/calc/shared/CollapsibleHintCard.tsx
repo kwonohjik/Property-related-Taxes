@@ -24,18 +24,11 @@ import {
   expandToggleLabel,
   type ExpandTone,
 } from "@/components/calc/results/shared/ExpandToggleButton";
+import { TONE } from "@/components/calc/shared/tones";
+import type { Tone } from "@/components/calc/shared/tones";
 
-export type HintCardTone = "sky" | "emerald" | "rose" | "amber" | "violet" | "slate";
-
-// 카드 외곽 tone 정적 매핑 (JIT purge 회피 — dynamic bg-${tone} 금지)
-const HINT_CARD_TONE: Record<HintCardTone, string> = {
-  sky: "border-sky-200 bg-sky-50/40 dark:border-sky-800 dark:bg-sky-900/15",
-  emerald: "border-emerald-200 bg-emerald-50/40 dark:border-emerald-800 dark:bg-emerald-900/15",
-  rose: "border-rose-200 bg-rose-50/40 dark:border-rose-800 dark:bg-rose-900/15",
-  amber: "border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15",
-  violet: "border-violet-200 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-900/15",
-  slate: "border-slate-200 bg-slate-50/40 dark:border-slate-700 dark:bg-slate-800/20",
-};
+// 톤은 tones.ts canonical 소스에서만 (feedback_tailwind_static_tone_mapping)
+export type HintCardTone = Tone;
 
 export function CollapsibleHintCard({
   tone = "slate",
@@ -51,7 +44,7 @@ export function CollapsibleHintCard({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={`rounded-lg border p-3 text-xs ${HINT_CARD_TONE[tone]}`}>
+    <div className={`rounded-lg border p-3 text-xs ${TONE[tone].card}`}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

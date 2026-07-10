@@ -212,6 +212,25 @@ const transferSummary = useMemo(
 - 카드 간 간격은 `space-y-3`
 - **대표 구현**: `components/calc/transfer/mixed-use/` (면적·기준시가·거주 섹션 ①~⑤)
 
+### 톤 단일 소스 + `<ToneCard>` (2026-07-10 표준화)
+
+위 색상 가이드의 톤은 **canonical 정적 소스** `components/calc/shared/tones.ts`(`Tone` 6톤 × `TONE[t].card/title/badge/chip/toggle`)에서만 가져온다. **동적 `bg-${tone}` 보간 금지**(production JIT purge silent failure — `feedback_tailwind_static_tone_mapping`) → `scripts/check-tone-classes.sh`가 pre-push 하드블록.
+
+신규 안내/섹션 카드는 인라인 `className` 하드코딩 대신 공용 컴포넌트를 쓴다:
+
+| 상황 | 사용 |
+|---|---|
+| 비접힘 안내/섹션 카드 | `<ToneCard tone [title] [sectionNum]>` (`components/calc/shared/ToneCard.tsx`). `sectionNum` 有=번호배지+제목·`title`만=제목형·둘 다 無=순수 톤 박스. `sectionNum`은 `string`("1-A")·`number`. 외곽 `p`/`space-y`는 `className`/`bodyClassName`으로 조정(cn/twMerge) |
+| 서술형 접힘 도움말(왜·어떻게) | `<CollapsibleHintCard tone summary>` (print 유지) |
+| 상태 배지·자동계산 결과박스 톤 | `TONE[tone].badge`(bg-200) / `TONE[tone].chip`(bg-100) |
+| 도메인 enum 신호등(저율/기본/중과 등 3+단계) | **로컬 정적 `Record<Tone,string>` 허용**(이미 정책준수 — 강제통합 안 함) |
+| 공식 서식 replica 표 | gray/neutral/zinc 유지(원본 재현 — 변경 금지) |
+
+- **2축 주의**: 같은 팔레트가 입력 섹션 성격(amber=취득·violet=거주 등)과 메시지 상태(amber=주의·emerald=성공 등)를 겸한다 — 톤 선택 시 문맥으로 판단.
+- **green≈emerald 중복**: `green`은 `emerald`와 동의어(비과세·긍정)이나 `green-100≠emerald-100` 픽셀 상이 → 신규는 `emerald` 사용 권장(기존 green 미변경).
+- **blue**(법령배지)는 카드 톤 축 아님 → `components/calc/shared/lawBadge.ts`의 `LAW_BADGE_CLASS` 별도 상수.
+- 설계·근거: `docs/02-design/features/ui-color-tone-tokenization.plan.md`.
+
 ## 토글 가시성 원칙 — ToggleCard (강제 규칙)
 
 분기·옵션 토글은 반드시 `@/components/calc/inputs/ToggleCard.tsx`(`ToggleCard`) 사용. native `<input type="checkbox">` 신규 작성 금지 (2026-04-29 프로젝트 전체 마이그레이션 완료, native checkbox 0건).

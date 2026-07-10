@@ -18,10 +18,7 @@ export interface UnconditionalExemptionSectionProps {
 }
 
 // 법조문 배지 스타일 (LawArticleModal className override)
-const LAW_BADGE_CLASS =
-  "inline-flex items-center rounded px-1.5 py-0.5 text-caption font-medium " +
-  "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
-  "hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors shrink-0 whitespace-nowrap cursor-pointer";
+import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 
 /** 토글별 요건 충족/미충족 뱃지 — ON 토글에만 status가 존재 */
 function ExemptionStatusBadge({ status }: { status?: ToggleExemptionStatus }) {
