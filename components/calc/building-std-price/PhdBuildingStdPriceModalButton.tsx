@@ -327,10 +327,10 @@ export function PhdBuildingStdPriceModalButton({
                     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 space-y-2">
                       <p className="text-caption font-semibold text-amber-700">취득당시 (구조·용도 — {acqOptionYear}년 체계)</p>
                       <div className="grid grid-cols-2 gap-2">
-                        <FieldCard label="구조" hint="국세청 구조지수표">
+                        <FieldCard label="구조">
                           <BuildingStructureSelect year={acqOptionYear} value={row.acqStructureKey} onChange={(v) => updateRow(idx, { acqStructureKey: v })} />
                         </FieldCard>
-                        <FieldCard label="용도" hint="국세청 용도지수표">
+                        <FieldCard label="용도">
                           <BuildingUsageSelect year={acqOptionYear} value={row.acqUsageNo} onChange={(v) => updateRow(idx, { acqUsageNo: v })} />
                         </FieldCard>
                       </div>
@@ -341,10 +341,10 @@ export function PhdBuildingStdPriceModalButton({
                     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2 space-y-2">
                       <p className="text-caption font-semibold text-violet-700">최초공시 (구조·용도 — {firstOptionYear}년 체계)</p>
                       <div className="grid grid-cols-2 gap-2">
-                        <FieldCard label="구조" hint="국세청 구조지수표">
+                        <FieldCard label="구조">
                           <BuildingStructureSelect year={firstOptionYear} value={row.firstStructureKey} onChange={(v) => updateRow(idx, { firstStructureKey: v })} />
                         </FieldCard>
-                        <FieldCard label="용도" hint="국세청 용도지수표">
+                        <FieldCard label="용도">
                           <BuildingUsageSelect year={firstOptionYear} value={row.firstUsageNo} onChange={(v) => updateRow(idx, { firstUsageNo: v })} />
                         </FieldCard>
                       </div>
@@ -354,10 +354,10 @@ export function PhdBuildingStdPriceModalButton({
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
                     <p className="text-caption font-semibold text-emerald-700">양도당시 (구조·용도 — {transferOptionYear}년 체계)</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <FieldCard label="구조" hint="국세청 구조지수표">
+                      <FieldCard label="구조">
                         <BuildingStructureSelect year={transferOptionYear} value={row.transferStructureKey} onChange={(v) => updateRow(idx, { transferStructureKey: v })} />
                       </FieldCard>
-                      <FieldCard label="용도" hint="국세청 용도지수표">
+                      <FieldCard label="용도">
                         <BuildingUsageSelect year={transferOptionYear} value={row.transferUsageNo} onChange={(v) => updateRow(idx, { transferUsageNo: v })} />
                       </FieldCard>
                     </div>
@@ -368,13 +368,6 @@ export function PhdBuildingStdPriceModalButton({
                 </div>
               </div>
             ))}
-            {enableCommercial && (
-              <p className="text-caption text-amber-700">
-                {commercialAcqFirstMode
-                  ? "취득·최초공시 시점 상가분은 당시 실제 용도(주택)로 자동 산출됩니다 (재일46014-2396)."
-                  : "취득·최초공시 시점 상가분은 자동 산출에서 제외됩니다 — 해당 필드는 홈택스에서 직접 조회·입력하세요."}
-              </p>
-            )}
           </div>
 
           {/* 시점별 공시지가 */}
