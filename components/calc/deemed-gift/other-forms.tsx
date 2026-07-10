@@ -29,29 +29,15 @@ export function ExcessDividendFields({ form, set }: Props) {
   return (
     <div className="space-y-3">
       {/* ── 섹션 1: 주주 입력 (배당지급일=증여일은 상단 공통 증여일 사용 — §41의2①) ── */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-            1
-          </span>
-          <p className="text-xs font-semibold text-sky-700">
-            주주별 배당 내역 — 비례배당·초과배당금액 자동산정 (시행령 §31의2②)
-          </p>
-        </div>
+      <ToneCard tone="sky" sectionNum="1" title="주주별 배당 내역 — 비례배당·초과배당금액 자동산정 (시행령 §31의2②)" noDark>
         <ExcessShareholderTable
           rows={form.edShareholders}
           onChange={(rows) => set({ edShareholders: rows })}
         />
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 3: 소득세 상당액 모드 ── */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-            2
-          </span>
-          <p className="text-xs font-semibold text-amber-700">소득세 상당액 확정 여부 — 시행규칙 §10의3</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="2" title="소득세 상당액 확정 여부 — 시행규칙 §10의3" noDark>
         <RadioCardGroup
           name="ed-income-tax-mode"
           tone="amber"
@@ -136,18 +122,10 @@ export function ExcessDividendFields({ form, set }: Props) {
             </p>
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 4: 증여세 계산 맥락 (giftTaxContext) — 정산·구법 결과 표시용 ── */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            3
-          </span>
-          <p className="text-xs font-semibold text-violet-700">
-            증여자와의 관계 (선택 — 입력 시 정산·구법 세액 추가 표시)
-          </p>
-        </div>
+      <ToneCard tone="violet" sectionNum="3" title="증여자와의 관계 (선택 — 입력 시 정산·구법 세액 추가 표시)" noDark>
         <RadioCardGroup
           name="ed-donor-relationship"
           tone="violet"
@@ -221,7 +199,7 @@ export function ExcessDividendFields({ form, set }: Props) {
             )}
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 5: 정산 (§41의2②③) — 2021.1.1 이후 배당 전용 ── */}
       {/* §0.5 환류: isDiligentFiler 엔진 미사용. isWithinFilingDeadline은 신고세액공제에 사용 */}
