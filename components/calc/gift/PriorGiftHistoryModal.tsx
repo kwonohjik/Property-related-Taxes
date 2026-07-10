@@ -21,6 +21,7 @@ import {
   expandToggleClass,
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   Dialog,
   DialogContent,
@@ -118,7 +119,7 @@ function CandidateCard({
     : "본인";
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-2">
+    <ToneCard tone="violet" className="p-4" noDark>
       {/* 헤더 — 증여 회차 정보 */}
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-semibold">
@@ -195,7 +196,7 @@ function CandidateCard({
           </button>
         )}
       </div>
-    </div>
+    </ToneCard>
   );
 }
 
