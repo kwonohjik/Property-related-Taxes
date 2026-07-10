@@ -12,12 +12,14 @@
  * UI 순서 = 엔진 계산 로직 순서:
  *   사용승인일(필수) → 사용검사필증 교부일(선택) → 임시사용승인일(선택) → 사실상 사용일(선택) → 자동 판정 안내
  *
- * tone: amber (취득 정보 섹션)
+ * tone: amber (취득 정보 섹션). 섹션카드는 공용 <ToneCard>(tones.ts canonical) 사용.
+ *   noDark: 이 폼은 원래 dark 미대응(light 전용)이라 dark 변형 미도입(회귀 0).
  * 규칙: DateInput 사용, placeholder 숫자 예시 금지, tone 배경 유지
  */
 
 import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 interface Props {
   /** 사용승인일 (YYYY-MM-DD) — 필수 */
@@ -64,104 +66,60 @@ export function NewConstructionDateBlock({
   const earliest = computeEarliestDate(occupancyApprovalDate, approvalCertificateDate, temporaryApprovalDate, actualUseDate);
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-      {/* 섹션 헤더 */}
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-          §
-        </span>
-        <p className="text-xs font-semibold text-amber-700">
-          자가건축 주택 취득일 (소득세법 시행령 §162①4호)
-        </p>
-      </div>
-
+    <ToneCard
+      tone="amber"
+      sectionNum="§"
+      title="자가건축 주택 취득일 (소득세법 시행령 §162①4호)"
+      bodyClassName="space-y-3"
+      noDark
+    >
       <p className="text-caption text-amber-600 leading-relaxed">
         자가건축 주택의 취득일은 사용승인일·사용검사필증 교부일·임시사용승인일·사실상 사용일 중
         <strong> 가장 이른 날</strong>을 기준으로 합니다.
       </p>
 
       {/* ① 사용승인일 — 필수 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-amber-700">사용승인일 (필수)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="①" title="사용승인일 (필수)" noDark>
         <FieldCard
           label="사용승인일"
           hint="사용승인서 교부일. 취득일의 기본 기준 (영 §162①4호 본문)."
           required
         >
-          <DateInput
-            value={occupancyApprovalDate}
-            onChange={onOccupancyApprovalDateChange}
-
-          />
+          <DateInput value={occupancyApprovalDate} onChange={onOccupancyApprovalDateChange} />
         </FieldCard>
-      </div>
+      </ToneCard>
 
       {/* ② 사용검사필증 교부일 — 선택 (G-5) */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-amber-700">사용검사필증 교부일 (선택)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="②" title="사용검사필증 교부일 (선택)" noDark>
         <FieldCard
           label="사용검사필증 교부일"
           hint="사용승인일과 동일하면 미입력. 도시계획법·건축법 용어 차이로 별도 시점인 경우만 입력하세요."
         >
-          <DateInput
-            value={approvalCertificateDate}
-            onChange={onApprovalCertificateDateChange}
-
-          />
+          <DateInput value={approvalCertificateDate} onChange={onApprovalCertificateDateChange} />
         </FieldCard>
-      </div>
+      </ToneCard>
 
       {/* ③ 임시사용승인일 — 선택 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-            ③
-          </span>
-          <p className="text-xs font-semibold text-amber-700">임시사용승인일 (선택)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="③" title="임시사용승인일 (선택)" noDark>
         <FieldCard
           label="임시사용승인일"
           hint="임시사용승인일이 사용승인일보다 이른 경우에만 입력하세요. 이 경우 임시사용승인일이 취득일이 됩니다."
         >
-          <DateInput
-            value={temporaryApprovalDate}
-            onChange={onTemporaryApprovalDateChange}
-
-          />
+          <DateInput value={temporaryApprovalDate} onChange={onTemporaryApprovalDateChange} />
         </FieldCard>
-      </div>
+      </ToneCard>
 
       {/* ④ 사실상 사용일 — 선택 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
-            ④
-          </span>
-          <p className="text-xs font-semibold text-amber-700">사실상 사용일 (선택)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="④" title="사실상 사용일 (선택)" noDark>
         <FieldCard
           label="사실상 사용일"
           hint="사용승인일 전 실제로 입주하여 사용한 날입니다. 이 날이 가장 이르면 이 날이 취득일이 됩니다."
         >
-          <DateInput
-            value={actualUseDate}
-            onChange={onActualUseDateChange}
-
-          />
+          <DateInput value={actualUseDate} onChange={onActualUseDateChange} />
         </FieldCard>
-      </div>
+      </ToneCard>
 
-      {/* 자동 판정 안내 박스 */}
+      {/* 자동 판정 안내 박스 (chip-style callout — 섹션카드 아님, 인라인 유지) */}
       <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-caption text-amber-800 space-y-0.5">
         <p className="font-semibold">자동 취득일 판정:</p>
         {earliest ? (
@@ -176,6 +134,6 @@ export function NewConstructionDateBlock({
           ※ 별도의 &quot;취득일&quot; 입력은 필요 없습니다. 위 네 날짜 중 가장 이른 날이 자동으로 취득일로 적용됩니다.
         </p>
       </div>
-    </div>
+    </ToneCard>
   );
 }
