@@ -106,7 +106,7 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 
 ## UI 작성 원칙 (요약 — 상세: [components/calc/CLAUDE.md](components/calc/CLAUDE.md))
 
-계산 로직 순서 = UI 표시 순서(모드 토글은 영향 필드 직전). 사이드바 합계는 계산 가능한 항목만 0원 제외. 결과 산식은 한국어 풀어쓰기(변수 약어·`floor()` 금지). 토글/라디오는 `ToggleCard`/`RadioCardGroup` 필수, native 신규 금지, OFF도 tone 유지. 공시지가는 `LandPriceLookupField` 필수. 면적 반올림(UI 한정) `parseFloat(toFixed(2))` 후 단가 곱셈. placeholder 숫자 예시 금지 — 형식 설명은 FieldCard `hint`.
+계산 로직 순서 = UI 표시 순서(모드 토글은 영향 필드 직전). 사이드바 합계는 계산 가능한 항목만 0원 제외. 결과 산식은 한국어 풀어쓰기(변수 약어·`floor()` 금지). 토글/라디오는 `ToggleCard`/`RadioCardGroup` 필수, native 신규 금지, OFF도 tone 유지. 공시지가는 `LandPriceLookupField` 필수. 면적 반올림(UI 한정) `parseFloat(toFixed(2))` 후 단가 곱셈. placeholder 숫자 예시 금지 — 형식 설명은 FieldCard `hint`. **신규 카드·라벨 표준화(2026-07-10)**: 안내·섹션 카드는 `<ToneCard>`(인라인 톤 하드코딩 금지·`tones.ts` 단일 소스), 라벨 크기는 역할별 정본 클래스(임의 px `text-[Npx]` 금지·pre-push 게이트), 모달 런처 버튼은 `<Button variant="modalLauncher">`(native 런처 금지). 상세·강제력은 components/calc/CLAUDE.md.
 
 **자산 종류 특수 분기 진입점**: `components/calc/transfer/CompanionAcqPurchaseBlock.tsx` — 상단 일반 "취득가액 산정 방식·취득가액" 영역을 `assetKind`(redevelopment_apt·general_building·commercial_building 등)/`transferType`(burdened_gift)별로 조건부 숨김. 특수 분기 추가 시 violet/fuchsia 안내 카드 패턴 차용. 자산-수준 입력은 해당 자산 전용 Block(`RedevelopmentBlock`/`GeneralBuildingBlock`/`CommercialBuildingBlock`)에 격리.
 
