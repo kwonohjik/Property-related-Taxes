@@ -8,6 +8,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
 import { assessMajorShareholder } from "@/lib/tax-engine/acquisition-deemed";
 import type { FormState } from "../shared";
@@ -53,7 +54,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
   const showPreview = msh?.isSubjectToTax === true;
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
+    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold text-amber-700">과점주주 간주취득 상세</p>
         <TaxHelp
@@ -185,6 +186,6 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
           <p className="text-xs text-amber-600">* 농어촌특별세·지방교육세 별도</p>
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }
