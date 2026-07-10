@@ -143,6 +143,12 @@ export function MixedUseLegacyStdPrice({
                 lockedTaxType="transfer"
                 initialAddress={stdPriceAddress}
                 snapshotKey={`${bspPrefix}-transfer-commercial`}
+                prefill={{
+                  floorArea: asset.nonResidentialFloorArea,
+                  landAreaM2: commercialLandArea > 0 ? String(commercialLandArea) : undefined,
+                  acquisitionDate: asset.acquisitionDate,
+                  transferDate,
+                }}
                 onApply={(v) => onChange({ mixedTransferCommercialBuildingPrice: String(v) })}
               />
             </div>
@@ -255,6 +261,12 @@ export function MixedUseLegacyStdPrice({
                 lockedTaxType="transfer"
                 initialAddress={stdPriceAddress}
                 snapshotKey={`${bspPrefix}-acq-commercial`}
+                prefill={{
+                  floorArea: asset.nonResidentialFloorArea,
+                  landAreaM2: commercialLandArea > 0 ? String(commercialLandArea) : undefined,
+                  acquisitionDate: asset.acquisitionDate,
+                  transferDate,
+                }}
                 onApply={(v) => onChange({ mixedAcqCommercialBuildingPrice: String(v) })}
               />
             </div>

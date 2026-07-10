@@ -389,18 +389,20 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       {f.taxType === "transfer" && (
         <>
           <SectionCard num={2} title="취득 시점" tone="amber">
-            <FieldCard label="취득연도">
-              <YearSelect
-                years={acqYearOpts}
-                value={f.acquisitionYear}
-                onChange={(v) =>
-                  changeYearWithGuard("acquisitionYear", "acqStructureKey", "acqUsageNo", v, parseInt(v, 10) <= 2000 ? 2001 : undefined)
-                }
-              />
-            </FieldCard>
-            <FieldCard label="취득일" hint="계산서 일자 표기용(선택)">
-              <DateInput value={f.acquisitionEventDate} onChange={(v) => set("acquisitionEventDate", v)} />
-            </FieldCard>
+            <div className="grid grid-cols-2 gap-2">
+              <FieldCard label="취득연도" stacked>
+                <YearSelect
+                  years={acqYearOpts}
+                  value={f.acquisitionYear}
+                  onChange={(v) =>
+                    changeYearWithGuard("acquisitionYear", "acqStructureKey", "acqUsageNo", v, parseInt(v, 10) <= 2000 ? 2001 : undefined)
+                  }
+                />
+              </FieldCard>
+              <FieldCard label="취득일" hint="계산서 일자 표기용(선택)" stacked>
+                <DateInput value={f.acquisitionEventDate} onChange={(v) => set("acquisitionEventDate", v)} />
+              </FieldCard>
+            </div>
             {acqIndexYear === 2001 && !apartmentConv && (
               <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-xs text-violet-700">
                 2000년 이전 취득 — 2001.1.1 ㎡당 금액 × 산정기준율로 환산됩니다. 구조·용도는 2001년 지수표 기준입니다.
@@ -474,16 +476,18 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
           {!apartmentConv && (
           <>
           <SectionCard num={3} title="양도 시점" tone="emerald">
-            <FieldCard label="양도연도">
-              <YearSelect
-                years={yearOpts}
-                value={f.transferYear}
-                onChange={(v) => changeYearWithGuard("transferYear", "transStructureKey", "transUsageNo", v)}
-              />
-            </FieldCard>
-            <FieldCard label="양도일" hint="계산서 일자 표기용(선택)">
-              <DateInput value={f.eventDate} onChange={(v) => set("eventDate", v)} />
-            </FieldCard>
+            <div className="grid grid-cols-2 gap-2">
+              <FieldCard label="양도연도" stacked>
+                <YearSelect
+                  years={yearOpts}
+                  value={f.transferYear}
+                  onChange={(v) => changeYearWithGuard("transferYear", "transStructureKey", "transUsageNo", v)}
+                />
+              </FieldCard>
+              <FieldCard label="양도일" hint="계산서 일자 표기용(선택)" stacked>
+                <DateInput value={f.eventDate} onChange={(v) => set("eventDate", v)} />
+              </FieldCard>
+            </div>
             {sameYear && !isMech && (
               <p className="rounded-md bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700">
                 취득연도와 같은 해 양도 — 양도당시 기준시가는 아래 §164⑧ 환산으로 산정되므로 양도당시

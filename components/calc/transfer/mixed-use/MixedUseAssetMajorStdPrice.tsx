@@ -214,6 +214,12 @@ export function MixedUseAssetMajorStdPrice({
             lockedTaxType="transfer"
             initialAddress={stdPriceAddress}
             snapshotKey={`${bspPrefix}-commercial`}
+            prefill={{
+              floorArea: asset.nonResidentialFloorArea,
+              landAreaM2: commercialLandArea > 0 ? String(commercialLandArea) : undefined,
+              acquisitionDate: asset.acquisitionDate,
+              transferDate,
+            }}
             onApplyBoth={(acq, transfer) =>
               onChange({
                 mixedAcqCommercialBuildingPrice: String(acq),
