@@ -246,7 +246,7 @@ export function ListingGainFields({ form, set }: Props) {
   }, [form.lgTotalNetIncome, form.lgMonthsBusinessStart, form.lgMonthsAcqToSettlement]);
 
   return (
-    <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+    <ToneCard tone="emerald" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         name="lg-event"
         tone="emerald"
@@ -363,7 +363,7 @@ export function ListingGainFields({ form, set }: Props) {
           </li>
         </ul>
       </CollapsibleHintCard>
-    </div>
+    </ToneCard>
   );
 }
 
@@ -371,7 +371,7 @@ export function ListingGainFields({ form, set }: Props) {
 export function PropertyServiceUseFields({ form, set }: Props) {
   const isFree = form.psuSubType === "free_use";
   return (
-    <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+    <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         name="psu-subtype"
         tone="violet"
@@ -387,7 +387,7 @@ export function PropertyServiceUseFields({ form, set }: Props) {
       {!isFree && (
         <CurrencyInput label="대가" value={form.psuConsideration} onChange={(v) => set({ psuConsideration: v })} placeholder="대가 (원)" />
       )}
-    </div>
+    </ToneCard>
   );
 }
 
@@ -395,7 +395,7 @@ export function PropertyServiceUseFields({ form, set }: Props) {
 export function OrgChangeFields({ form, set }: Props) {
   const isShare = form.ocSubType === "share_change";
   return (
-    <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         name="oc-subtype"
         tone="amber"
@@ -420,7 +420,7 @@ export function OrgChangeFields({ form, set }: Props) {
         </>
       )}
       <CurrencyInput label="변동 전 해당 재산가액 (기준금액 산정)" value={form.ocBaseValue} onChange={(v) => set({ ocBaseValue: v })} hint="기준금액 = min(변동전 재산가액 × 30%, 3억)" placeholder="변동 전 재산가액 (원)" />
-    </div>
+    </ToneCard>
   );
 }
 
@@ -435,7 +435,7 @@ const VI_PRESETS: { label: string; testId: string; v: Partial<DeemedFormState> }
 /** §42의3 재산취득 후 가치증가 */
 export function ValueIncreaseFields({ form, set }: Props) {
   return (
-    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       {/* 계산사례 프리셋 */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-rose-700">계산사례:</span>
@@ -505,7 +505,7 @@ export function ValueIncreaseFields({ form, set }: Props) {
       <FieldCard label="사유발생일">
         <DateInput value={form.viEventDate} onChange={(v) => set({ viEventDate: v })} />
       </FieldCard>
-    </div>
+    </ToneCard>
   );
 }
 
