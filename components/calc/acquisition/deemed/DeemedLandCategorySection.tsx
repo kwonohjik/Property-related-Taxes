@@ -6,6 +6,7 @@
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
 import { selectCls } from "../shared";
 import { LAND_CATEGORY_OPTIONS } from "../shared";
@@ -31,7 +32,7 @@ export function DeemedLandCategorySection({ form, set }: Props) {
   const showPreview = prevSv > 0 || newSv > 0;
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
+    <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold text-sky-700">지목변경 간주취득 상세</p>
         <TaxHelp
@@ -158,6 +159,6 @@ export function DeemedLandCategorySection({ form, set }: Props) {
           취득시기이며 신고기한(60일)의 기산점이 됩니다 (지방세법 §20)
         </p>
       </div>
-    </div>
+    </ToneCard>
   );
 }
