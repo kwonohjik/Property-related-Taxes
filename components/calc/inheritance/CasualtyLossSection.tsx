@@ -13,6 +13,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { FormState, FormSet } from "./shared";
 
 /** §23 재난 종류 enum → 한국어 라벨 (단일 출처 — RadioCardGroup·결과 표시 공용) */
@@ -57,13 +58,7 @@ export function CasualtyLossSection({
       onCheckedChange={(v) => set({ casualtyLossEnabled: v })}
     >
       {/* ① 재난 정보 (sky 카드) */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-            1
-          </span>
-          <p className="text-xs font-semibold text-sky-700">재난 정보</p>
-        </div>
+      <ToneCard tone="sky" sectionNum={1} title="재난 정보" bodyClassName="space-y-3" noDark>
         <div className="space-y-1">
           <p className="text-xs font-medium text-gray-700 dark:text-gray-300">재난 종류</p>
           <RadioCardGroup
@@ -91,16 +86,10 @@ export function CasualtyLossSection({
             />
           </FieldCard>
         </div>
-      </div>
+      </ToneCard>
 
       {/* ② 손실 산정 (rose 카드) */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">
-            2
-          </span>
-          <p className="text-xs font-semibold text-rose-700">손실 산정</p>
-        </div>
+      <ToneCard tone="rose" sectionNum={2} title="손실 산정" bodyClassName="space-y-3" noDark>
         <CurrencyInput
           label="재해손실재산가액"
           value={form.casualtyLossValue}
@@ -122,7 +111,7 @@ export function CasualtyLossSection({
             {autoDeduction.toLocaleString("ko-KR")}
           </p>
         </div>
-      </div>
+      </ToneCard>
     </ToggleCard>
   );
 }

@@ -11,6 +11,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   deriveShortTermReinheritBand,
   getShortTermReinheritRate,
@@ -57,10 +58,12 @@ export function ShortTermReinheritSection({
       : null;
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-      <p className="text-xs font-semibold text-sky-700">
-        단기재상속공제 (§30) <LawArticleModal legalBasis="상증법 §30" label="§30" />
-      </p>
+    <ToneCard
+      tone="sky"
+      bodyClassName="space-y-3"
+      noDark
+      title={<>단기재상속공제 (§30) <LawArticleModal legalBasis="상증법 §30" label="§30" /></>}
+    >
       <p className="text-xs text-gray-500 dark:text-gray-400">
         피상속인이 10년 이내에 상속받은 재산이 다시 상속되는 경우, 1차 상속개시일과 재상속되는 재산을 종류별로
         입력하면 전의 산출세액 중 재상속분 상당액에 공제율(경과 구간별)을 적용해 공제합니다.
@@ -156,6 +159,6 @@ export function ShortTermReinheritSection({
           </div>
         </>
       )}
-    </div>
+    </ToneCard>
   );
 }

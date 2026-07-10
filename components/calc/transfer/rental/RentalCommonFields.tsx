@@ -13,6 +13,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type {
   RentalCommonFormFields,
@@ -81,13 +82,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
   return (
     <>
       {/* ③ 임대료 증액 제한 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            {sec3}
-          </span>
-          <p className="text-xs font-semibold text-violet-700">임대료 증액 제한 (§97의3①2호)</p>
-        </div>
+      <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2" noDark>
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
           <RadioCardGroup
@@ -182,16 +177,10 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
             </button>
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ④ 공실 기간 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-            {sec4}
-          </span>
-          <p className="text-xs font-semibold text-sky-700">공실 기간</p>
-        </div>
+      <ToneCard tone="sky" sectionNum={sec4} title="공실 기간" bodyClassName="space-y-2" noDark>
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">6개월 이상 공실 구간</p>
           <RadioCardGroup
@@ -245,7 +234,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
             </button>
           </div>
         )}
-      </div>
+      </ToneCard>
     </>
   );
 }
