@@ -95,10 +95,10 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
     const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
     await expect(modal).toBeVisible();
 
-    // pre-2001 취득(1983) → 취득시 공시지가 라벨 "(2001년 기준)" + placeholder 안내, 자동주입 없이 빈 값
-    // (취득≤2000 필드는 placeholder가 "2001.1.1. …"로 분리 — 최초·양도만 "원/㎡")
+    // pre-2001 취득(1983) → 취득시 LandPriceLookupField(2001 고정) — 서브헤딩 "(2001년 기준)" + 조회 버튼, 주소 미입력이라 자동주입 없이 빈 값
+    // (취득≤2000 필드 placeholder "2001.1.1. 현재 공시지가"로 분리 — 최초·양도만 "원/㎡")
     await expect(modal.getByText("취득시 (2001년 기준) 공시지가")).toBeVisible();
-    const acqLandInput = modal.getByPlaceholder("2001.1.1. 현재 공시지가를 입력하세요");
+    const acqLandInput = modal.getByPlaceholder("2001.1.1. 현재 공시지가");
     await expect(acqLandInput).toBeVisible();
     await expect(acqLandInput).toHaveValue("");
 
