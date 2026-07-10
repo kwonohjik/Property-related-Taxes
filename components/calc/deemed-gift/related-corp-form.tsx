@@ -7,6 +7,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { DeemedFormState } from "./shared";
 import {
   makeRcShareholderRow,
@@ -45,26 +46,6 @@ const newId = () => crypto.randomUUID();
 const selectClass = "w-full rounded border border-gray-200 px-2 py-1 text-sm bg-white";
 const textClass = "w-full rounded border border-gray-200 px-2 py-1 text-sm";
 
-// 정적 색조 매핑 (feedback_tailwind_static_tone_mapping — dynamic bg-${tone} 금지)
-const TONE_CLASS: Record<string, { badge: string; text: string }> = {
-  sky: { badge: "bg-sky-200 text-sky-800", text: "text-sky-700" },
-  emerald: { badge: "bg-emerald-200 text-emerald-800", text: "text-emerald-700" },
-  amber: { badge: "bg-amber-200 text-amber-800", text: "text-amber-700" },
-  violet: { badge: "bg-violet-200 text-violet-800", text: "text-violet-700" },
-};
-
-function SectionHeader({ num, tone, title }: { num: number; tone: string; title: string }) {
-  const c = TONE_CLASS[tone] ?? TONE_CLASS.sky;
-  return (
-    <div className="flex items-center gap-2">
-      <span className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none ${c.badge}`}>
-        {num}
-      </span>
-      <p className={`text-xs font-semibold ${c.text}`}>{title}</p>
-    </div>
-  );
-}
-
 export function RelatedCorpFields({ form, set }: Props) {
   const corpOptions = form.rcShareholders.filter((s) => s.isCorporate);
 
@@ -86,8 +67,7 @@ export function RelatedCorpFields({ form, set }: Props) {
   return (
     <div className="space-y-3">
       {/* ── 섹션 1: 수혜법인 기본 정보 [sky] ── */}
-      <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
-        <SectionHeader num={1} tone="sky" title="수혜법인 기본 정보" />
+      <ToneCard tone="sky" sectionNum={1} title="수혜법인 기본 정보" noDark>
         <RadioCardGroup
           name="rc-size"
           tone="sky"
@@ -104,19 +84,23 @@ export function RelatedCorpFields({ form, set }: Props) {
         <CurrencyInput label="세무조정 후 영업손익" value={form.rcPreTaxAdjOperatingIncomeStr} onChange={(v) => set({ rcPreTaxAdjOperatingIncomeStr: v })} placeholder="세무조정 후 영업손익 (원)" />
         <CurrencyInput label="각 사업연도 소득금액" value={form.rcTaxableIncomeStr} onChange={(v) => set({ rcTaxableIncomeStr: v })} placeholder="각 사업연도 소득금액 (원)" />
         <CurrencyInput label="법인세 순세액" value={form.rcCorporateTaxNetStr} onChange={(v) => set({ rcCorporateTaxNetStr: v })} placeholder="산출세액 − 공제·감면액 (원)" />
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 2: 주주현황 roster [emerald] ── */}
-      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
-        <div className="flex items-center justify-between">
-          <SectionHeader num={2} tone="emerald" title="주주현황" />
+      <ToneCard
+        tone="emerald"
+        sectionNum={2}
+        title="주주현황"
+        titleExtra={
           <span
-            className={`text-xs font-mono ${Math.abs(summary.totalDirectPct - 100) > 0.01 ? "text-rose-600" : "text-emerald-700"}`}
+            className={`ml-auto text-xs font-mono ${Math.abs(summary.totalDirectPct - 100) > 0.01 ? "text-rose-600" : "text-emerald-700"}`}
             data-testid="rc-shareholder-sum"
           >
             지분합계 {summary.totalDirectPct.toFixed(2)}%
           </span>
-        </div>
+        }
+        noDark
+      >
         {form.rcShareholders.map((row, idx) => (
           <div key={row.id} data-testid={`rc-sh-row-${idx}`} className="space-y-2 rounded-md border border-emerald-200 bg-white p-2">
             <div className="flex items-center justify-between">
@@ -176,12 +160,11 @@ export function RelatedCorpFields({ form, set }: Props) {
         >
           + 주주 추가
         </button>
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 3: 간접출자법인 roster [amber] — 법인주주 있을 때만 ── */}
       {corpOptions.length > 0 && (
-        <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
-          <SectionHeader num={3} tone="amber" title="간접출자법인 (법인주주의 개인소유주)" />
+        <ToneCard tone="amber" sectionNum={3} title="간접출자법인 (법인주주의 개인소유주)" noDark>
           {form.rcIntermediaryCorps.map((row, idx) => (
             <div key={row.id} data-testid={`rc-int-row-${idx}`} className="space-y-2 rounded-md border border-amber-200 bg-white p-2">
               <div className="flex items-center justify-between">
@@ -273,20 +256,24 @@ export function RelatedCorpFields({ form, set }: Props) {
           >
             + 간접출자법인 추가
           </button>
-        </div>
+        </ToneCard>
       )}
 
       {/* ── 섹션 4: 매출처 roster [violet] ── */}
-      <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
-        <div className="flex items-center justify-between">
-          <SectionHeader num={4} tone="violet" title="매출처" />
+      <ToneCard
+        tone="violet"
+        sectionNum={4}
+        title="매출처"
+        titleExtra={
           <span
-            className={`text-xs font-mono ${summary.totalSales > 0 && summary.salesSum !== summary.totalSales ? "text-rose-600" : "text-violet-700"}`}
+            className={`ml-auto text-xs font-mono ${summary.totalSales > 0 && summary.salesSum !== summary.totalSales ? "text-rose-600" : "text-violet-700"}`}
             data-testid="rc-sales-sum"
           >
             매출합계 {summary.salesSum.toLocaleString()}
           </span>
-        </div>
+        }
+        noDark
+      >
         {form.rcSalesPartners.map((row, idx) => (
           <div key={row.id} data-testid={`rc-sales-row-${idx}`} className="space-y-2 rounded-md border border-violet-200 bg-white p-2">
             <div className="flex items-center justify-between">
@@ -400,7 +387,7 @@ export function RelatedCorpFields({ form, set }: Props) {
         >
           + 매출처 추가
         </button>
-      </div>
+      </ToneCard>
 
     </div>
   );
