@@ -166,8 +166,6 @@ export interface GeneralBuildingFormSlice {
    * 빈값=자동 안분(전체 × 주택연면적비율). UI는 상가칸 편집→역산(전체−상가) 저장.
    */
   mixedResidentialLandAreaOverride: string;
-  /** 거주기간 (년) — 장기보유공제 표2 판정 */
-  mixedUseResidencePeriodYears: string;
   /** 양도시 개별주택공시가격 (원) */
   mixedTransferHousingPrice: string;
   /** 양도시 상가건물 기준시가 (원, 토지 제외) */

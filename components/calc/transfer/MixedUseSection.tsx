@@ -12,7 +12,6 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { MixedUseAreaInputs } from "./mixed-use/MixedUseAreaInputs";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
-import { MixedUseResidencyInput } from "./mixed-use/MixedUseResidencyInput";
 import { PartialUsageChangeInputs } from "./mixed-use/PartialUsageChangeInputs";
 
 interface Props {
@@ -131,8 +130,7 @@ export function MixedUseExpandedPanel({
         jibun={jibun}
       />
 
-      {/* ④ 거주 기간 입력 (수도권 배율 지역은 ① 통합 카드로 흡수됨) */}
-      <MixedUseResidencyInput asset={asset} onChange={onChange} sectionNum={4} />
+      {/* 거주기간은 보유상황 단계(1세대1주택)에서 단일 입력 — 자산목록 거주 입력 제거(중복 제거) */}
     </div>
   );
 }
