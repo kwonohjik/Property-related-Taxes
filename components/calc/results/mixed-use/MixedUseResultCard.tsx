@@ -21,7 +21,7 @@ import {
 } from "@/lib/print/mixed-use-print-sections";
 
 /** MixedUseGainBreakdown → TransferTaxResult 어댑터 (FilingFormTable 호환) */
-function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
+export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
   const t = b.total;
   const localTax = t.localTax;
   return {

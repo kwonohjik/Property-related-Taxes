@@ -118,7 +118,7 @@ export interface RowDef {
 
 export type ColumnMode =
   | "fourpart"
-  | "mixed-2col"
+  | "mixed-4col"
   | "split-2col"
   | "single"
   | "aggregate"
@@ -235,12 +235,16 @@ export function deriveColumns(
     };
   }
   if (mu) {
+    // 일반 겸용주택 — 주택분·상가분을 각각 토지/건물로 4분할 (토지-우선).
+    // 컬럼 키는 Case A "fourpart"와 동일 재사용 → fourPartFinancials 채움 로직 공유.
     return {
-      mode: "mixed-2col",
+      mode: "mixed-4col",
       columns: [
         { key: "total", label: "합계" },
-        { key: "housing", label: "주택부분" },
-        { key: "commercial", label: "상가부분" },
+        { key: "housingLand", label: "주택분 토지" },
+        { key: "housingBuilding", label: "주택분 건물" },
+        { key: "commercialLand", label: "상가분 토지" },
+        { key: "commercialBuilding", label: "상가분 건물" },
       ],
     };
   }
@@ -347,7 +351,7 @@ export function splitLtDeduction(
 
 // ── 행 정의 생성 ───────────────────────────────────────────────
 
-import { fourPartFinancials, mixedTwoColFinancials, splitTwoColFinancials } from "./FilingFormTableFinancials";
+import { fourPartFinancials, splitTwoColFinancials } from "./FilingFormTableFinancials";
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
 import { buildRowsFromOrder } from "./FilingFormTableRowDefs";
@@ -454,7 +458,7 @@ export function buildRows(
       fillRedev4SplitBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
     }
     // 합계 열은 아래 공용 매핑에서 result.* 필드로 채워짐
-  } else if (mode === "fourpart" && mu) {
+  } else if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
     setStr("transferDate", "housingLand", fmtDate(transferDate));
@@ -476,18 +480,6 @@ export function buildRows(
     setStr("residencePeriod", "housingLand", fmtPeriod(residenceMonthsTotal));
     setStr("residencePeriod", "housingBuilding", fmtPeriod(residenceMonthsTotal));
     fourPartFinancials(hp, cp, setNum);
-  } else if (mode === "mixed-2col" && mu) {
-    setStr("transferDate", "housing", fmtDate(transferDate));
-    setStr("transferDate", "commercial", fmtDate(transferDate));
-    setStr("acquisitionDate", "housing", fmtDate(acquisitionDate));
-    setStr("acquisitionDate", "commercial", fmtDate(acquisitionDate));
-    const hold = holdingPeriodFromDates(acquisitionDate, transferDate);
-    setStr("holdingPeriod", "housing", hold);
-    setStr("holdingPeriod", "commercial", hold);
-    setStr("moveOut", "housing", lastMoveOut ? fmtDate(lastMoveOut) : "-");
-    setStr("moveIn", "housing", firstMoveIn ? fmtDate(firstMoveIn) : "-");
-    setStr("residencePeriod", "housing", fmtPeriod(residenceMonthsTotal));
-    mixedTwoColFinancials(mu.housingPart, mu.commercialPart, setNum);
   } else if (mode === "split-2col" && sp) {
     setStr("transferDate", "land", fmtDate(transferDate));
     setStr("transferDate", "building", fmtDate(transferDate));
@@ -524,17 +516,12 @@ export function buildRows(
     const inverseAcquisition = (totalTransferPrice || 0) - totalExpensesForInverse - totalGainForInverse;
     setNum("acquisitionPrice", "total", inverseAcquisition);
     // 필요경비 합계는 redev 분기 합으로 이미 설정됨 — 덮어쓰기 금지.
-  } else if (mode === "fourpart" && mu) {
+  } else if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
+    // 취득가액 합계 = 4분할 취득가 합 (= hp/cp.estimatedAcquisitionPrice 합과 동일: land+building=est).
     setNum("acquisitionPrice", "total", hp.landAcqPrice + hp.buildingAcqPrice + cp.landAcqPrice + cp.buildingAcqPrice);
     setNum("expenses", "total", hp.landAppraisalDed + hp.buildingAppraisalDed + cp.landAppraisalDed + cp.buildingAppraisalDed);
-  } else if (mode === "mixed-2col" && mu) {
-    setNum("acquisitionPrice", "total", mu.housingPart.estimatedAcquisitionPrice + mu.commercialPart.estimatedAcquisitionPrice);
-    setNum("expenses", "total",
-      mu.housingPart.landAppraisalDed + mu.housingPart.buildingAppraisalDed +
-      mu.commercialPart.landAppraisalDed + mu.commercialPart.buildingAppraisalDed,
-    );
   } else if (mode === "split-2col" && sp) {
     if (sp.selfOwns === "building_only" || sp.selfOwns === "land_only") {
       // 본인이 소유한 파트만 신고 대상 — 합계도 소유 파트 단독 (자기정합 + line 613 override).
@@ -599,7 +586,7 @@ export function buildRows(
     ? mu.housingPart.longTermDeductionTable === 2
     : (isRHTable1Only ? false : residenceMs >= 24);
 
-  if (mode === "fourpart" && mu) {
+  if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
     const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
     const cpSplit = { holdingAmount: mu.commercialPart.longTermDeductionAmount, residenceAmount: 0 };
     const hpLandRatio = mu.housingPart.transferGain > 0 ? mu.housingPart.landTransferGain / mu.housingPart.transferGain : 0.5;
@@ -616,15 +603,6 @@ export function buildRows(
     setNum("ltResidencePart", "housingBuilding", Math.floor(hpSplit.residenceAmount * hpBuildRatio));
     setNum("ltResidencePart", "commercialLand", 0);
     setNum("ltResidencePart", "commercialBuilding", 0);
-  } else if (mode === "mixed-2col" && mu) {
-    const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
-    const cpSplit = { holdingAmount: mu.commercialPart.longTermDeductionAmount, residenceAmount: 0 };
-    setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount);
-    setNum("ltResidencePart", "total", hpSplit.residenceAmount);
-    setNum("ltHoldingPart", "housing", hpSplit.holdingAmount);
-    setNum("ltResidencePart", "housing", hpSplit.residenceAmount);
-    setNum("ltHoldingPart", "commercial", cpSplit.holdingAmount);
-    setNum("ltResidencePart", "commercial", 0);
   } else if (mode === "split-2col" && sp) {
     const landSplit = splitLtDeduction(sp.land.longTermDeduction, Math.round(sp.land.holdingYears * 12), residenceMs, useTable2);
     const buildSplit = splitLtDeduction(sp.building.longTermDeduction, Math.round(sp.building.holdingYears * 12), residenceMs, useTable2);

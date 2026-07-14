@@ -54,31 +54,6 @@ export function fourPartFinancials(
   setNum("incomeAmountAfter", "commercialBuilding", Math.floor(cp.incomeAmount * cpBuildRatio));
 }
 
-export function mixedTwoColFinancials(
-  hp: MixedUseHousingPart,
-  cp: MixedUseCommercialPart,
-  setNum: (rowKey: string, col: ColumnKey, n: number | null) => void,
-) {
-  setNum("transferPrice", "housing", hp.landTransferPrice + hp.buildingTransferPrice);
-  setNum("transferPrice", "commercial", cp.landTransferPrice + cp.buildingTransferPrice);
-  setNum("acquisitionPrice", "housing", hp.estimatedAcquisitionPrice);
-  setNum("acquisitionPrice", "commercial", cp.estimatedAcquisitionPrice);
-  setNum("expenses", "housing", hp.landAppraisalDed + hp.buildingAppraisalDed);
-  setNum("expenses", "commercial", cp.landAppraisalDed + cp.buildingAppraisalDed);
-  setNum("transferGain", "housing", hp.transferGain);
-  setNum("transferGain", "commercial", cp.transferGain);
-  setNum("exemptGain", "housing", hp.transferGain - hp.proratedTaxableGain);
-  setNum("exemptGain", "commercial", 0);
-  setNum("taxableGain", "housing", hp.proratedTaxableGain);
-  setNum("taxableGain", "commercial", cp.transferGain);
-  setNum("ltDeduction", "housing", hp.longTermDeductionAmount);
-  setNum("ltDeduction", "commercial", cp.longTermDeductionAmount);
-  setNum("incomeAmount", "housing", hp.incomeAmount);
-  setNum("incomeAmount", "commercial", cp.incomeAmount);
-  setNum("incomeAmountAfter", "housing", hp.incomeAmount);
-  setNum("incomeAmountAfter", "commercial", cp.incomeAmount);
-}
-
 export function splitTwoColFinancials(
   land: SplitPartResult,
   building: SplitPartResult,
