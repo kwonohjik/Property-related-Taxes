@@ -99,3 +99,34 @@ PHD 3시점 위젯의 **취득 기준시점**이 토지 취득일로 고정됨:
 - [ ] 토글 OFF·겸용 Case A/B 회귀 0
 - [ ] anchor(취득 point year=건물연도) + E2E green · tsc 0 · vitest 전체 green
 - [ ] 코드 품질 게이트 High/Medium 0
+
+---
+
+## §7 정정 (2026-07-11) — ✅ B안 채택: 취득 부수토지 공시지가 = **토지 취득일**
+
+> 상태: ✅ Do 완료(2026-07-11) · anchor 갱신 + 회귀 1432 green · tsc·lint 0 · 브랜치 `fix/phd-land-stdprice-year-land-acq-date`
+
+### §7.1 §2의 세법 판단 정정 (사용자, 2026-07-11)
+
+2026-07-07 §2는 "§164⑤ 주택 환산·건물 위치지수 → 건물 취득일"이라 판단했으나 **이는 잘못된 근거**였다:
+
+- **취득 부수토지 개별공시지가는 「부수토지 기준시가」(= 공시지가 × 면적, land value)용**이다. 토지를 취득할 때의 공시가격을 구해야 하며, **건물 신축시점 공시가격을 구하면 버그**다. → **토지 취득일** 기준.
+- **이 필드는 건물 위치지수용 공시지가가 아니다.** 건물기준시가 계산의 위치지수용 공시지가는 건물 std 모달(`PhdBuildingStdPriceModalButton`)에서 **별도 입력**(건물 취득일 기준).
+- **§164⑤는 2001.1.1 이전 취득한 「건물」기준시가 환산 규정**으로, 본 건(부수토지 공시지가 시점)과 **무관**. 2026-07-07이 §164⑤/⑦ 건물 위치지수를 근거로 든 것은 착오.
+- 따라서 §166⑥ 토지·건물 취득일 상이 시 부수토지 기준시가는 **토지 취득 당시** 공시지가로 산정한다.
+
+### §7.2 결합 분리 (건물 std는 건물일 유지 → 신축연도 버그 재발 없음)
+
+2026-07-07이 우려한 "취득 건물 std가 신축연도 이전(음수 잔가율)" 버그는 **건물 std/batch/신축연도를 acquisitionDate(건물일)로 유지**하므로 재발하지 않는다. 부수토지 공시지가 **추천 연도만** 토지일로 분리:
+
+- `ThreePointStandardPriceInput`에 `acqLandReferenceDate?` 신설 → 취득 PointBlock 공시지가 추천만 이 값(토지일) 사용. `acquisitionDate`(건물일)는 batch 건물 std valuationYear·신축연도용 유지.
+- `ThreePointAssetMajorRender`도 동일(취득 landOnly PointBlock refDate).
+- 호출부 2곳(`PreHousingDisclosureSection`·`MixedUsePreHousingDisclosureSection`) → `acqLandReferenceDate={asset.landAcquisitionDate || asset.acquisitionDate}`.
+
+### §7.3 anchor 갱신
+
+`__tests__/calc/phd-acquisition-date-building.test.tsx` — 단언 반전: 취득 부수토지 공시지가 연도 = **토지 취득연도(2013)**, 건물(2014) 아님. + 토글 OFF(landAcquisitionDate 미설정) fallback = 건물일.
+
+### §7.4 잔여 (건물 취득연도 > 2000 + 토지·건물 취득일 상이 + batch 사용)
+
+건물 취득연도 > 2000이고 배치 모달을 쓰면, batch가 부수토지 공시지가 필드값을 건물 위치지수 seed/writeback으로 공유하는 기존 결합(`applyBatch`)이 남는다. **본 정정 케이스(건물 ≤2000, 배치=2001.1.1 별도입력)에는 미발생** — batch가 부수토지 필드를 접촉하지 않음(`acqYear ≤ 2000 → seed "" · writeback skip`). >2000 결합 분리는 필요 시 후속.

@@ -38,6 +38,13 @@ import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-p
 export interface ThreePointStandardPriceInputProps {
   // 취득시
   acquisitionDate: string;
+  /**
+   * 취득시 **부수토지 개별공시지가** 추천 연도 전용 기준일(선택). 이 값은 부수토지 기준시가
+   * (= 공시지가 × 면적, land value)용이므로 **토지 취득일** 기준이어야 한다(§166⑥ 토지·건물 취득일 상이).
+   * ※ 건물 위치지수용 공시지가가 아니다 — 건물 기준시가·batch·신축연도는 acquisitionDate(건물 취득일) 유지.
+   * 미주입 시 acquisitionDate fallback(토지·건물 취득일 동일 시 동일값).
+   */
+  acqLandReferenceDate?: string;
   landPriceYearAtAcq: string;
   landPriceYearAtAcqIsManual: boolean;
   onLandPriceYearAtAcqChange: (year: string, isManual: boolean) => void;
@@ -671,7 +678,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         label={acqLabel}
         hideBuildingCalcButton={props.enableBatchCalc}
         tone="amber"
-        referenceDate={props.acquisitionDate}
+        referenceDate={props.acqLandReferenceDate ?? props.acquisitionDate}
         selectedYear={props.landPriceYearAtAcq}
         isManual={props.landPriceYearAtAcqIsManual}
         onYearChange={props.onLandPriceYearAtAcqChange}
