@@ -77,6 +77,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     isRegulatedAreaAtAcq: null,
     isRegulatedAreaAtTransfer: null,
     regionCode: undefined,
+    addressPnu: undefined,
     parcelMode: false,
     parcels: [],
     isOneHousehold: false,

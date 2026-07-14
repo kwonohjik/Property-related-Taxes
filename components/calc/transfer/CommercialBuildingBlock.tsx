@@ -60,6 +60,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
     detail: asset.addressDetail,
     lng: asset.longitude,
     lat: asset.latitude,
+    pnu: asset.addressPnu,
   };
   const isOn = asset.useEstimatedAcquisition && asset.assetKind === "commercial_building";
   const isPreDisclosure = asset.cbEra === "pre_disclosure";

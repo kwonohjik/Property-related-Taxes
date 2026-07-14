@@ -149,6 +149,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * 미제공 시 isRegulatedArea boolean fallback.
    */
   regionCode?: string;
+  /**
+   * 전체 PNU 19자리 (AddressSearch 결과). UI 전용 — 건물 기준시가 모달 prefill 시
+   * 건축물대장 조회(BuildingRegisterLookupField) 활성화용. 엔진/검증 입력 아님.
+   * 미제공(레거시·PNU 없는 주소) 시 모달에서 재조회 필요(종전 동작).
+   */
+  addressPnu?: string;
 
   // ── 취득시기 상이 필지 분리 (assetKind === "land" 전용) ──
   /** 토지 내 취득시기 상이 필지 분리 계산 여부 (소득세법 시행령 §162①6호) */
