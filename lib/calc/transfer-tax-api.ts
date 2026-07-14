@@ -228,14 +228,20 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           }
         : undefined;
     })(),
-    // 거주기간은 소수점 가능 (예: 23.5년) — parseFloat 사용
-    residencePeriodYears: parseFloat(primary.mixedUseResidencePeriodYears) || 0,
+    // 거주기간 단일 소스 — 보유상황(입주일·퇴거일/개월) 거주에서 도출.
+    // 메인 엔진과 동일 whole-year 산식(Math.floor(months/12), transfer-tax-helpers.ts:466·505)로 정합.
+    residencePeriodYears: Math.floor(
+      deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths) / 12,
+    ),
     isMetropolitanArea: primary.mixedIsMetropolitanArea,
     zoneType: "residential" as const,
     // 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 요건 충족 여부 (다주택자 분기)
     // 소득세법 §89①3 — 1세대 + 1주택. 일시적 2주택 특례 적용 시에도 비과세 요건 충족으로 본다.
+    // ⚠️ form.isOneHousehold 사용 — Step4 "1세대 해당" 토글은 form-level에만 쓰고 asset-level로 동기화되지 않음.
+    //    primary.isOneHousehold(기본 false·미동기화)를 읽으면 겸용주택은 토글 ON에도 항상 비과세 미적용.
+    //    일반 엔진(:467)과 동일하게 form.isOneHousehold를 단일 소스로 사용.
     isOneHouseExempt:
-      primary.isOneHousehold &&
+      form.isOneHousehold &&
       (form.householdHousingCount === "1" ||
         (form.householdHousingCount === "2" && form.temporaryTwoHouseSpecial === true)),
     // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
