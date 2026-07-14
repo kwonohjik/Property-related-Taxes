@@ -78,6 +78,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
     detail: asset.addressDetail,
     lng: asset.longitude,
     lat: asset.latitude,
+    pnu: asset.addressPnu,
   };
 
   // 자동 배율 표시 (용도지역 입력 시)

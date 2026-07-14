@@ -92,6 +92,7 @@ export function MixedUseAssetMajorStdPrice({
     detail: asset.addressDetail,
     lng: asset.longitude,
     lat: asset.latitude,
+    pnu: asset.addressPnu,
   };
   // snapshotKey는 대상 필드 기준 — 취득·양도 통합 단일 키
   const bspPrefix = `bsp-${asset.assetId}-phd`;

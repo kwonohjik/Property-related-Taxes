@@ -78,6 +78,11 @@ export interface ThreePointStandardPriceInputProps {
   /** 토지 면적 (㎡) — 토지기준시가 = 공시지가 × 면적 */
   landArea?: string;
   /**
+   * 주택 건물 연면적 (㎡) — 3시점 일괄 계산 모달의 첫 부분(주택) 연면적 자동채움용.
+   * 겸용주택 주택분 등에서 상위 화면 주택 연면적을 전달. 미주입 시 모달 연면적 빈 값(종전).
+   */
+  housingFloorArea?: string;
+  /**
    * 입력값의 대상 명시 — 라벨에 prefix 적용. 겸용주택 PHD 등 주택분과 상가분이
    * 같은 화면에 노출되는 컨텍스트에서 어느 쪽 입력인지 구별 표시용.
    * 예: "주택" → "주택부수토지 공시지가", "주택 건물기준시가".
@@ -667,7 +672,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     <div className="space-y-3">
       {props.enableBatchCalc && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} />
+          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} housingFloorAreaPrefill={props.housingFloorArea} />
         </div>
       )}
       {props.layout === "asset-major" ? (

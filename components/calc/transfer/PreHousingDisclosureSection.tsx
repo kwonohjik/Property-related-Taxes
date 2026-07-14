@@ -71,6 +71,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
     detail: asset.addressDetail,
     lng: asset.longitude,
     lat: asset.latitude,
+    pnu: asset.addressPnu,
   };
 
   return (
