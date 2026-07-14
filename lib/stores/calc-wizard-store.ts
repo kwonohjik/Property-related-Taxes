@@ -290,7 +290,7 @@ export function createDefaultTransferFormData(): TransferFormData {
   };
 }
 
-interface CalcWizardState {
+export interface CalcWizardState {
   currentStep: number;
   formData: TransferFormData;
   result: TransferAPIResult | null;
@@ -338,6 +338,41 @@ export interface TransferSummary {
   };
 }
 
+/**
+ * persist rehydration 병합 — 신 스키마(`assets` 배열 보유)는 사용자 입력을 그대로 보존하고,
+ * 구 스키마(`assets` 없음)만 migrateLegacyForm으로 변환한다.
+ *
+ * ⚠️ 판별은 반드시 `assets` 배열 존재 여부로 한다. 과거 `acquisitionMethod`·`appraisalValue`·
+ * `isSelfBuilt`·`pre1990Enabled` 등 키 존재로 판별하던 방식은 이 키들이 defaultFormData에
+ * 항상 포함되어 정상 formData까지 legacy로 오분류 → migrateLegacyForm이 assets를 폐기해
+ * 새로고침(F5) 시 사용자 자산이 전부 유실되는 버그를 유발했다.
+ * (계획: docs/02-design/features/calc-wizard-persist-merge-dataloss.plan.md)
+ *
+ * export 이유: merge 로직 단위 테스트(신 스키마 assets 보존 / 구 스키마 마이그레이션) 용이.
+ */
+export function mergePersistedWizard(
+  persisted: unknown,
+  current: CalcWizardState,
+): CalcWizardState {
+  const ps = persisted as Partial<CalcWizardState>;
+  const legacyForm = ps.formData as Record<string, unknown> | undefined;
+
+  let formData: TransferFormData;
+  // 신 스키마는 항상 assets 배열을 가진다 — 배열이 없으면(구 스키마) 마이그레이션.
+  if (legacyForm && !Array.isArray(legacyForm.assets)) {
+    formData = migrateLegacyForm(legacyForm, defaultFormData);
+  } else {
+    formData = {
+      ...defaultFormData,
+      ...(ps.formData ?? {}),
+      assets: ((ps.formData as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
+    };
+  }
+
+  // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 currentStep(잔존값)을 무시.
+  return { ...current, ...ps, formData, currentStep: 0 };
+}
+
 export const useCalcWizardStore = create<CalcWizardState>()(
   persist(
     (set) => ({
@@ -372,37 +407,7 @@ export const useCalcWizardStore = create<CalcWizardState>()(
         formData: state.formData,
         pendingMigration: state.pendingMigration,
       }),
-      merge: (persisted, current) => {
-        const ps = persisted as Partial<CalcWizardState>;
-        const legacyForm = ps.formData as Record<string, unknown> | undefined;
-
-        let formData: TransferFormData;
-        if (
-          legacyForm &&
-          (
-            "propertyType" in legacyForm ||
-            "companionAssets" in legacyForm ||
-            "propertyAddressRoad" in legacyForm ||
-            "reductionType" in legacyForm ||
-            "parcelMode" in legacyForm ||
-            "acquisitionMethod" in legacyForm ||
-            "appraisalValue" in legacyForm ||
-            "isSelfBuilt" in legacyForm ||
-            "pre1990Enabled" in legacyForm
-          )
-        ) {
-          formData = migrateLegacyForm(legacyForm, defaultFormData);
-        } else {
-          formData = {
-            ...defaultFormData,
-            ...(ps.formData ?? {}),
-            assets: ((ps.formData as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
-          };
-        }
-
-        // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 currentStep(잔존값)을 무시.
-        return { ...current, ...ps, formData, currentStep: 0 };
-      },
+      merge: mergePersistedWizard,
     },
   ),
 );
