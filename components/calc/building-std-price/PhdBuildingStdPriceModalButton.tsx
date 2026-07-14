@@ -79,6 +79,11 @@ interface Props {
    * 미주입 시 조회 버튼만 비활성, 수동 입력은 유지.
    */
   jibun?: string;
+  /**
+   * 첫 부분(주택) 연면적 자동채움(문자열) — 겸용주택 주택분 등에서 상위 화면의 주택 연면적을
+   * 모달 열 때 첫 행에 시드. 미주입 시 빈 값(종전 동작). 사용자 수정 가능.
+   */
+  housingFloorAreaPrefill?: string;
 }
 
 /** 편집 중 부분 행 — 시점별 구조·용도(연도 체계 상이) + 공통 연면적 */
@@ -118,6 +123,7 @@ export function PhdBuildingStdPriceModalButton({
   commercialAcqFirstMode = false,
   snapshotPrefix,
   jibun,
+  housingFloorAreaPrefill,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [builtYear, setBuiltYear] = useState("");
@@ -247,7 +253,8 @@ export function PhdBuildingStdPriceModalButton({
   // 모달 열 때 현재 위젯 공시지가로 재시드(지연 초기화는 최초 1회뿐 → 신규 입력 stale 방지).
   function handleOpen() {
     setLandPrices(Object.fromEntries(points.map((p) => [p.key, p.landPricePerM2])));
-    setRows([emptyRow()]);
+    // 첫 부분(주택)에 상위 화면 주택 연면적 자동채움(있으면). 사용자 수정 가능.
+    setRows([{ ...emptyRow(), floorArea: housingFloorAreaPrefill ?? "" }]);
     setBuiltYear("");
     setResult(null);
     setComputedInput(null);
