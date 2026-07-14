@@ -157,9 +157,11 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           stdPriceSnapshotPrefix={`bsp-${asset.assetId}-phd`}
           stdPriceAddress={stdPriceAddress}
           enableBatchCalc
-          // 취득시 — PHD 3시점은 건물 취득일 기준 (§164⑤ 주택 환산·건물 위치지수·신축연도 이후).
-          // 토지 취득일 아님(2026-04 회귀 정정). 토지 취득일은 §166⑥·토지등급 환산 등 별개 경로.
+          // 건물 기준시가·batch·신축연도는 건물 취득일 기준(건물 std valuationYear ≥ 신축연도).
+          // 단, 취득 부수토지 개별공시지가는 토지 취득일 기준(§166⑥, 부수토지 기준시가 = 공시지가 × 면적의
+          // land value — 건물 위치지수용 아님) → acqLandReferenceDate로 분리(2026-07-11, B안).
           acquisitionDate={asset.acquisitionDate}
+          acqLandReferenceDate={asset.landAcquisitionDate || asset.acquisitionDate}
           landPriceYearAtAcq={asset.phdLandPriceYearAtAcq}
           landPriceYearAtAcqIsManual={asset.phdLandPriceYearAtAcqIsManual}
           onLandPriceYearAtAcqChange={(year, isManual) =>

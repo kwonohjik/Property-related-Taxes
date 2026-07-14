@@ -38,6 +38,13 @@ import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-p
 export interface ThreePointStandardPriceInputProps {
   // 취득시
   acquisitionDate: string;
+  /**
+   * 취득시 **부수토지 개별공시지가** 추천 연도 전용 기준일(선택). 이 값은 부수토지 기준시가
+   * (= 공시지가 × 면적, land value)용이므로 **토지 취득일** 기준이어야 한다(§166⑥ 토지·건물 취득일 상이).
+   * ※ 건물 위치지수용 공시지가가 아니다 — 건물 기준시가·batch·신축연도는 acquisitionDate(건물 취득일) 유지.
+   * 미주입 시 acquisitionDate fallback(토지·건물 취득일 동일 시 동일값).
+   */
+  acqLandReferenceDate?: string;
   landPriceYearAtAcq: string;
   landPriceYearAtAcqIsManual: boolean;
   onLandPriceYearAtAcqChange: (year: string, isManual: boolean) => void;
@@ -651,10 +658,10 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
       props.onLandPricePerSqmAtAcqChange(v.landPrices.acquisition);
   };
 
-  // 겸용 — 배치가 산출하는 양도 commercial 라우팅 콜백이 있거나(또는 Case A split) 부분별 주택/상가 입력 노출.
-  // enableCommercial 조건은 applyBatch 라우팅(transfer-commercial=onCommercialBuildingStdPriceAtTransferChange)과 일치시킨다(M1).
-  const enableCommercial =
-    splitMode || props.onCommercialBuildingStdPriceAtTransferChange != null;
+  // 겸용 상가(취득·양도)는 전용 ③ 상가 기준시가 섹션(MixedUseAssetMajorStdPrice/Legacy)이 전담한다.
+  // PHD 3시점 버튼은 주택분 전용 — Case A(splitMode·4부분 분리)만 상가 포함(양도 상가 콜백 라우팅은
+  // splitMode에서만 발화하므로 M1 일치). Case B는 상가 UI 미노출, 양도 상가는 ③ 섹션에서 동일 필드로 입력.
+  const enableCommercial = splitMode;
 
   return (
     <div className="space-y-3">
@@ -671,7 +678,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         label={acqLabel}
         hideBuildingCalcButton={props.enableBatchCalc}
         tone="amber"
-        referenceDate={props.acquisitionDate}
+        referenceDate={props.acqLandReferenceDate ?? props.acquisitionDate}
         selectedYear={props.landPriceYearAtAcq}
         isManual={props.landPriceYearAtAcqIsManual}
         onYearChange={props.onLandPriceYearAtAcqChange}

@@ -90,7 +90,8 @@ export function ThreePointAssetMajorRender(props: ThreePointStandardPriceInputPr
       key: "acq",
       label: "취득",
       tone: "amber",
-      refDate: props.acquisitionDate,
+      // 부수토지 공시지가 추천 = 토지 취득일(§166⑥, land value). 건물 std는 acquisitionDate(건물일) 별도.
+      refDate: props.acqLandReferenceDate ?? props.acquisitionDate,
       year: props.landPriceYearAtAcq,
       yearManual: props.landPriceYearAtAcqIsManual,
       onYear: props.onLandPriceYearAtAcqChange,
