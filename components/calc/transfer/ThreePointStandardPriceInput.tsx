@@ -658,10 +658,10 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
       props.onLandPricePerSqmAtAcqChange(v.landPrices.acquisition);
   };
 
-  // 겸용 — 배치가 산출하는 양도 commercial 라우팅 콜백이 있거나(또는 Case A split) 부분별 주택/상가 입력 노출.
-  // enableCommercial 조건은 applyBatch 라우팅(transfer-commercial=onCommercialBuildingStdPriceAtTransferChange)과 일치시킨다(M1).
-  const enableCommercial =
-    splitMode || props.onCommercialBuildingStdPriceAtTransferChange != null;
+  // 겸용 상가(취득·양도)는 전용 ③ 상가 기준시가 섹션(MixedUseAssetMajorStdPrice/Legacy)이 전담한다.
+  // PHD 3시점 버튼은 주택분 전용 — Case A(splitMode·4부분 분리)만 상가 포함(양도 상가 콜백 라우팅은
+  // splitMode에서만 발화하므로 M1 일치). Case B는 상가 UI 미노출, 양도 상가는 ③ 섹션에서 동일 필드로 입력.
+  const enableCommercial = splitMode;
 
   return (
     <div className="space-y-3">
