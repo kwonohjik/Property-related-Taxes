@@ -109,6 +109,20 @@ test.describe("겸용주택 신고서 양식 — 주택분·상가분 토지/건
     const colSum = tp[2] + tp[3] + tp[4] + tp[5];
     expect(colSum).toBe(total);
     expect(total).toBe(1_500_000_000);
+
+    // 결과탭 첫번째 보고서 = 신고서 양식 (분리계산 본문보다 DOM에서 먼저)
+    const filingBox = page.locator('[data-print-id="filing-form"]');
+    const calcBox = page.locator('[data-print-id="calculation"]');
+    await expect(filingBox).toBeVisible();
+    await expect(calcBox).toBeVisible();
+    const order = await page.evaluate(() => {
+      const f = document.querySelector('[data-print-id="filing-form"]');
+      const c = document.querySelector('[data-print-id="calculation"]');
+      if (!f || !c) return 0;
+      // DOCUMENT_POSITION_FOLLOWING(4) → f가 c보다 앞
+      return f.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING ? 1 : -1;
+    });
+    expect(order).toBe(1); // filing-form 이 calculation 보다 먼저
   });
 
   test("토지≠건물 취득일 → 취득일자 행 토지 열/건물 열 상이", async ({ page }) => {
