@@ -465,14 +465,20 @@ export function buildRows(
     setStr("transferDate", "housingBuilding", fmtDate(transferDate));
     setStr("transferDate", "commercialLand", fmtDate(transferDate));
     setStr("transferDate", "commercialBuilding", fmtDate(transferDate));
-    setStr("acquisitionDate", "housingLand", fmtDate(acquisitionDate));
+    // 토지/건물 취득일 분리 표시 — 토지 열=토지 취득일, 건물 열=건물 취득일.
+    // 건물 취득일 = 기존 acquisitionDate 변수(override 반영, total 열과 정합).
+    // 토지 취득일 = primary.landAcquisitionDate || acquisitionDate (API transfer-tax-api.ts:147 미러 — single-source).
+    const landAcqDate = primary?.landAcquisitionDate || acquisitionDate;
+    setStr("acquisitionDate", "housingLand", fmtDate(landAcqDate));
     setStr("acquisitionDate", "housingBuilding", fmtDate(acquisitionDate));
-    setStr("acquisitionDate", "commercialLand", fmtDate(acquisitionDate));
+    setStr("acquisitionDate", "commercialLand", fmtDate(landAcqDate));
     setStr("acquisitionDate", "commercialBuilding", fmtDate(acquisitionDate));
-    const hold = holdingPeriodFromDates(acquisitionDate, transferDate);
-    for (const c of ["housingLand", "housingBuilding", "commercialLand", "commercialBuilding"]) {
-      setStr("holdingPeriod", c, hold);
-    }
+    const landHold = holdingPeriodFromDates(landAcqDate, transferDate);
+    const buildingHold = holdingPeriodFromDates(acquisitionDate, transferDate);
+    setStr("holdingPeriod", "housingLand", landHold);
+    setStr("holdingPeriod", "housingBuilding", buildingHold);
+    setStr("holdingPeriod", "commercialLand", landHold);
+    setStr("holdingPeriod", "commercialBuilding", buildingHold);
     setStr("moveOut", "housingLand", lastMoveOut ? fmtDate(lastMoveOut) : "-");
     setStr("moveOut", "housingBuilding", lastMoveOut ? fmtDate(lastMoveOut) : "-");
     setStr("moveIn", "housingLand", firstMoveIn ? fmtDate(firstMoveIn) : "-");

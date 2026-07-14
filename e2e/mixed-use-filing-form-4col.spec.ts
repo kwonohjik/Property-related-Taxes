@@ -110,4 +110,49 @@ test.describe("겸용주택 신고서 양식 — 주택분·상가분 토지/건
     expect(colSum).toBe(total);
     expect(total).toBe(1_500_000_000);
   });
+
+  test("토지≠건물 취득일 → 취득일자 행 토지 열/건물 열 상이", async ({ page }) => {
+    test.setTimeout(60_000);
+    // 토지 취득 2005 / 건물 취득 2010 (분리 입력)
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.evaluate((seed) => {
+      sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(seed));
+    }, {
+      state: {
+        formData: {
+          assets: [{
+            ...mixedUseAsset(),
+            hasSeperateLandAcquisitionDate: true,
+            landAcquisitionDate: "2005-06-10",
+          }],
+          transferDate: "2026-02-16",
+          filingDate: "2026-04-30",
+          contractTotalPrice: "1500000000",
+          householdHousingCount: "1",
+          isOneHousehold: false,
+          isRegulatedArea: false,
+          wasRegulatedAtAcquisition: false,
+          isUnregistered: false,
+        },
+        pendingMigration: false,
+      },
+      version: 0,
+    });
+    await page.reload();
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    await page.getByText("신고서 양식", { exact: false }).first().waitFor({ timeout: 20000 });
+
+    const filing = page.locator('[data-print-section="form-table"]').first();
+    const row = filing.locator("tr", { hasText: "취득일자" }).first();
+    const cells = row.locator("td");
+    // [라벨, 합계, 주택분토지, 주택분건물, 상가분토지, 상가분건물]
+    const landCell = await cells.nth(2).innerText();     // 주택분 토지
+    const buildingCell = await cells.nth(3).innerText(); // 주택분 건물
+    expect(landCell).toContain("2005");
+    expect(buildingCell).toContain("2010");
+    expect(landCell).not.toBe(buildingCell);
+  });
 });
