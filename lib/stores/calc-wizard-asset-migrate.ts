@@ -134,6 +134,7 @@ export function migrateAsset(raw: unknown): AssetForm {
           contractDate988: "",
           acquisitionPrice988: "",
           exclusiveAreaSqm988: "",
+          rentalContractDate988: "",
           rentalStartDate988: "",
           rentalEndDate988: "",
           inheritedRentalMonths988: "",

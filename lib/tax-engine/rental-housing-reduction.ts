@@ -12,7 +12,7 @@
  */
 
 import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
-import { applyRate, truncateToWon } from "./tax-utils";
+import { applyRate } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
 
@@ -122,11 +122,6 @@ export interface RentalReductionResult {
 const DATE_2018_09_14 = new Date("2018-09-14");
 const DATE_2020_07_11 = new Date("2020-07-11");
 const DATE_2020_08_18 = new Date("2020-08-18");
-
-/** 조특법 §133 연간 기본 감면 한도 (1억원) */
-const ANNUAL_BASE_LIMIT = 100_000_000;
-/** 조특법 §133 초과분 감면율 */
-const EXCESS_RATE = 0.5;
 
 /** 6개월을 일수로 환산 (180일) — 공실 차감 기준 */
 const SIX_MONTHS_DAYS = 180;
@@ -286,38 +281,20 @@ function determineMandatoryPeriod(
       return { mandatoryYears: 0, reductionRate: 1.0, longTermDeductionRate: 0 };
     case "long_term_private":
     case "public_support_private": {
+      // §97의3/4는 소득세법 §95① 장기보유특별공제 특례(공제율)만 규정 —
+      // 산출세액 세액감면이 아니므로 reductionRate=0 (장특공 특례율만 유지, 이중혜택 배제).
       // 2020.7.11 이후 등록분 → 10년 필요
       if (lawVersion === "post_2020_07_11" || lawVersion === "post_2020_08_18") {
-        return { mandatoryYears: 10, reductionRate: 0.7, longTermDeductionRate: 0.7 };
+        return { mandatoryYears: 10, reductionRate: 0, longTermDeductionRate: 0.7 };
       }
       // 2018.9.14 ~ 2020.7.10 등록분 → 8년
       if (lawVersion === "post_2018_09_14") {
-        return { mandatoryYears: 8, reductionRate: 0.5, longTermDeductionRate: 0.5 };
+        return { mandatoryYears: 8, reductionRate: 0, longTermDeductionRate: 0.5 };
       }
       // 2018.9.14 이전 구법 — 장기(8년) 기준 유지
-      return { mandatoryYears: 8, reductionRate: 0.5, longTermDeductionRate: 0.5 };
+      return { mandatoryYears: 8, reductionRate: 0, longTermDeductionRate: 0.5 };
     }
   }
-}
-
-// ============================================================
-// 감면 한도 적용 (조특법 §133)
-// ============================================================
-
-/**
- * 조특법 §133 종합한도 적용
- * 감면액이 한도 초과 시: 1억 + (초과분 × 50%)
- */
-function applyAnnualLimit(reductionAmount: number): {
-  amount: number;
-  isLimitApplied: boolean;
-} {
-  if (reductionAmount <= ANNUAL_BASE_LIMIT) {
-    return { amount: reductionAmount, isLimitApplied: false };
-  }
-  const excess = reductionAmount - ANNUAL_BASE_LIMIT;
-  const limited = truncateToWon(ANNUAL_BASE_LIMIT + applyRate(excess, EXCESS_RATE));
-  return { amount: limited, isLimitApplied: true };
 }
 
 // ============================================================
@@ -494,11 +471,11 @@ export function calculateRentalReduction(
   let isLimitApplied = false;
 
   if (isEligible && reductionRate > 0) {
-    const rawAmount = applyRate(input.calculatedTax, reductionRate);
-    const limited = applyAnnualLimit(rawAmount);
-    reductionAmount = limited.amount;
-    annualLimit = ANNUAL_BASE_LIMIT;
-    isLimitApplied = limited.isLimitApplied;
+    // §97·§97의5는 §133①②(자경·수용 등만 열거) 종합한도 대상이 아니고
+    // §97 본문에도 내부 한도가 없어 감면세액 전액 적용(무한도).
+    reductionAmount = applyRate(input.calculatedTax, reductionRate);
+    annualLimit = Number.POSITIVE_INFINITY;
+    isLimitApplied = false;
   }
 
   // 공공매입임대: 공공기관 매각 조건부 — 경고

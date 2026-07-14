@@ -281,8 +281,11 @@ describe("LR-01: 공공건설임대 100% 감면", () => {
   });
 });
 
-describe("LR-02: 장기일반민간 8년 50% 감면", () => {
-  it("8년 이상 임대 — 50% 감면 (2018.9.14 이후 등록)", () => {
+describe("LR-02: 장기일반민간 8년 — 장특공 특례 50% (세액감면 없음)", () => {
+  it("8년 이상 임대 — §97의3은 장특공 특례만(세액감면 0), 2018.9.14 이후 등록", () => {
+    // §97의3은 소득세법 §95① 장기보유특별공제 특례(공제율)만 규정 —
+    // 산출세액 세액감면 아님 → reductionRate=0, reductionAmount=0.
+    // 혜택은 장특공 특례율(50%)로 발생.
     const result = calculateRentalReduction(
       makeInput({
         rentalHousingType: "long_term_private",
@@ -294,13 +297,14 @@ describe("LR-02: 장기일반민간 8년 50% 감면", () => {
       RULES,
     );
     expect(result.isEligible).toBe(true);
-    expect(result.reductionRate).toBe(0.5);
-    expect(result.reductionAmount).toBe(5_000_000);
+    expect(result.reductionRate).toBe(0);
+    expect(result.reductionAmount).toBe(0);
+    expect(result.specialLongTermDeductionRate).toBe(0.5);
   });
 });
 
-describe("LR-03: 장기일반민간 10년 70% 감면 (2020.7.11 이후 등록)", () => {
-  it("2020.7.11 이후 등록 → 의무 10년 → 70% 감면", () => {
+describe("LR-03: 장기일반민간 10년 — 장특공 특례 70% (2020.7.11 이후 등록)", () => {
+  it("2020.7.11 이후 등록 → 의무 10년 → 장특공 특례 70% (세액감면 0)", () => {
     const result = calculateRentalReduction(
       makeInput({
         rentalHousingType: "long_term_private",
@@ -313,13 +317,14 @@ describe("LR-03: 장기일반민간 10년 70% 감면 (2020.7.11 이후 등록)",
     );
     expect(result.isEligible).toBe(true);
     expect(result.mandatoryPeriodYears).toBe(10);
-    expect(result.reductionRate).toBe(0.7);
-    expect(result.reductionAmount).toBe(7_000_000);
+    expect(result.reductionRate).toBe(0);
+    expect(result.reductionAmount).toBe(0);
+    expect(result.specialLongTermDeductionRate).toBe(0.7);
   });
 });
 
-describe("LR-04: 공공지원민간임대 8년 50% 감면", () => {
-  it("8년 이상 임대 — 50% 감면", () => {
+describe("LR-04: 공공지원민간임대 8년 — 장특공 특례 50% (세액감면 없음)", () => {
+  it("8년 이상 임대 — §97의4은 장특공 특례만(세액감면 0)", () => {
     const result = calculateRentalReduction(
       makeInput({
         rentalHousingType: "public_support_private",
@@ -331,8 +336,9 @@ describe("LR-04: 공공지원민간임대 8년 50% 감면", () => {
       RULES,
     );
     expect(result.isEligible).toBe(true);
-    expect(result.reductionRate).toBe(0.5);
-    expect(result.reductionAmount).toBe(4_000_000);
+    expect(result.reductionRate).toBe(0);
+    expect(result.reductionAmount).toBe(0);
+    expect(result.specialLongTermDeductionRate).toBe(0.5);
   });
 });
 
@@ -491,7 +497,8 @@ describe("LR-13: 등록일 2020.7.10 vs 2020.7.11 — 의무기간 차이", () =
     );
     expect(result.isEligible).toBe(true);
     expect(result.mandatoryPeriodYears).toBe(8);
-    expect(result.reductionRate).toBe(0.5);
+    expect(result.reductionRate).toBe(0);
+    expect(result.specialLongTermDeductionRate).toBe(0.5);
   });
 
   it("2020-07-11 등록 → 10년 의무 → 8년만으론 부족", () => {
@@ -698,25 +705,30 @@ describe("getLongTermDeductionOverride", () => {
 });
 
 // ============================================================
-// LR-18: 감면 한도 (조특법 §133)
+// LR-18: §97 계열 §133 종합한도 미적용 (전액 감면)
 // ============================================================
 
-describe("LR-18: 감면 한도 적용", () => {
-  it("감면액 1억 이하 → 한도 미적용", () => {
+describe("LR-18: §97 계열 종합한도 미적용", () => {
+  it("§97 공공건설임대 100% 감면 — 1억 이하도 전액", () => {
     const result = calculateRentalReduction(
       makeInput({
-        calculatedTax: 100_000_000, // 산출세액 1억
-        rentalStartDate: new Date("2019-01-01"),
-        transferDate: new Date("2027-06-01"),
+        calculatedTax: 80_000_000, // 산출세액 8천만
+        rentalHousingType: "public_construction",
+        region: "capital",
+        officialPriceAtStart: 200_000_000,
+        rentalStartDate: new Date("2015-01-01"),
+        transferDate: new Date("2021-01-01"),
       }),
       RULES,
     );
-    // 50% 감면 = 5000만원 < 1억 → 한도 미적용
-    expect(result.reductionAmount).toBe(50_000_000);
+    // 100% 감면 = 8천만 전액
+    expect(result.reductionAmount).toBe(80_000_000);
     expect(result.isLimitApplied).toBe(false);
   });
 
-  it("감면액 1억 초과 → 한도 적용 (1억 + 초과분×50%)", () => {
+  it("§97 공공건설임대 100% 감면 — 1억 초과 시에도 캡 없이 전액", () => {
+    // §97·§97의5는 §133①②(자경·수용 등만 열거) 종합한도 대상이 아니고
+    // §97 본문에도 내부 한도가 없어 3억 산출세액 100% 감면 = 3억 전액.
     const result = calculateRentalReduction(
       makeInput({
         calculatedTax: 300_000_000, // 산출세액 3억
@@ -728,9 +740,8 @@ describe("LR-18: 감면 한도 적용", () => {
       }),
       RULES,
     );
-    // 100% 감면 = 3억 → 한도: 1억 + (2억 × 50%) = 2억
-    expect(result.isLimitApplied).toBe(true);
-    expect(result.reductionAmount).toBe(200_000_000);
+    expect(result.isLimitApplied).toBe(false);
+    expect(result.reductionAmount).toBe(300_000_000);
   });
 });
 

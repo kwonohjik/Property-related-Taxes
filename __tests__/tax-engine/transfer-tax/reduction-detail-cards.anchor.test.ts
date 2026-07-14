@@ -226,7 +226,7 @@ describe("A-2: newHousingReductionDetail anchor", () => {
 // ── A-3: 장기임대 감면 — rentalReductionDetail ────────────────────────
 
 describe("A-3: rentalReductionDetail anchor", () => {
-  it("A-3a: 8년 임대 요건 충족 → isEligible=true, reductionRate=0.5", () => {
+  it("A-3a: 8년 임대 요건 충족 → isEligible=true, 세액감면 0·장특공 특례 50%", () => {
     const rentalDetails: RentalReductionInput = {
       isRegisteredLandlord: true,
       isTaxRegistered: true,
@@ -257,10 +257,11 @@ describe("A-3: rentalReductionDetail anchor", () => {
     const result = calculateTransferTax(input, rates);
     expect(result.rentalReductionDetail).toBeDefined();
     expect(result.rentalReductionDetail!.isEligible).toBe(true);
-    expect(result.rentalReductionDetail!.reductionRate).toBe(0.5);
-    expect(result.rentalReductionDetail!.reductionAmount).toBe(
-      Math.floor(result.calculatedTax * 0.5),
-    );
+    // §97의3은 장특공 특례(공제율)만 — 산출세액 세액감면 아님 → reductionRate=0, reductionAmount=0
+    expect(result.rentalReductionDetail!.reductionRate).toBe(0);
+    expect(result.rentalReductionDetail!.reductionAmount).toBe(0);
+    // 혜택은 장특공 특례율(50%)로 발생
+    expect(result.rentalReductionDetail!.specialLongTermDeductionRate).toBe(0.5);
     // reductionType anchor
     expect(result.rentalReductionDetail!.reductionType).toBe("long_term_private");
   });

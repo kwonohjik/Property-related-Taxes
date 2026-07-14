@@ -380,9 +380,9 @@ describe("T-44: 12억 경계 안분 정수 연산 (P0-1 회귀)", () => {
 // ============================================================
 
 describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조특법 §127⑦)", () => {
-  it("T-45a: 장기임대 50% vs 신축 80% → 80%(신축) 선택", () => {
-    // 장기임대: long_term_private 8년 → 50%
-    // 신축: §99② 80% (tax_amount 방식)
+  it("T-45a: 장기임대 세액감면 0(장특공 특례만) vs 신축 80% → 80%(신축) 선택", () => {
+    // 장기임대: long_term_private 8년 → §97의3은 장특공 특례(50%)만, 세액감면 0
+    // 신축: §99② 80% (tax_amount 방식) → 세액감면 중복배제에서 신축 선택
     const rentalDetails: RentalReductionInput = {
       isRegisteredLandlord: true,
       isTaxRegistered: true,
@@ -431,10 +431,11 @@ describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조
     expect(result.isExempt).toBe(false);
     expect(result.calculatedTax).toBeGreaterThan(0);
 
-    // 두 감면 모두 자격 충족
+    // 장기임대: 자격 충족이나 세액감면 0(장특공 특례 50%만)
     expect(result.rentalReductionDetail).toBeDefined();
     expect(result.rentalReductionDetail?.isEligible).toBe(true);
-    expect(result.rentalReductionDetail?.reductionRate).toBe(0.5);
+    expect(result.rentalReductionDetail?.reductionRate).toBe(0);
+    expect(result.rentalReductionDetail?.specialLongTermDeductionRate).toBe(0.5);
 
     expect(result.newHousingReductionDetail).toBeDefined();
     expect(result.newHousingReductionDetail?.isEligible).toBe(true);
@@ -507,10 +508,9 @@ describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조
     expect(result.newHousingReductionDetail?.reductionRate).toBe(0.5);
 
     // 조특법 §127⑦ 중복배제: 100%(장기임대) 선택
-    // 주의: 장기임대 100%는 연간한도(§133) 적용 가능 — 한도 적용 후 금액이 산출세액보다 클 수도 있음
-    // 한도 적용 전 금액: calculatedTax × 1.0 = calculatedTax
-    // 한도 적용 후: 1억 초과 시 1억 + (초과분 × 50%)
-    // 어느 쪽이든 신축 50%보다 크므로 장기임대 선택
+    // §97 공공건설임대는 §133①②(자경·수용 등만 열거) 종합한도 대상이 아니고
+    // §97 본문에도 내부 한도가 없어 감면세액 = calculatedTax × 1.0 (전액).
+    // 신축 50%보다 크므로 장기임대 선택
     expect(result.reductionAmount).toBeGreaterThan(Math.floor(result.calculatedTax * 0.5));
     expect(result.reductionType).toBe("장기임대주택");
   });

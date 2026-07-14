@@ -105,7 +105,7 @@ export interface ParcelResult {
    * estimatedDeduction은 0으로 표시(미적용), expenses에 directSide 노출.
    */
   swapApplied?: boolean;
-  /** 양도차익 (원) = allocatedTransferPrice - acquisitionPrice - estimatedDeduction - expenses */
+  /** 양도차익 (원) = allocatedTransferPrice - acquisitionPrice - estimatedDeduction - expenses. 손실 필지는 음수(§102② 통산). */
   transferGain: number;
   /** 보유기간 연수 (장기보유특별공제 계산용) */
   holdingYears: number;
@@ -113,7 +113,7 @@ export interface ParcelResult {
   longTermHoldingRate: number;
   /** 장기보유특별공제액 (원) */
   longTermHoldingDeduction: number;
-  /** 양도소득금액 (원) = transferGain - longTermHoldingDeduction */
+  /** 양도소득금액 (원) = transferGain - longTermHoldingDeduction. 손실 필지는 음수(§102② 통산). */
   transferIncome: number;
   /** 환산 방식에서의 취득기준시가 합계 (standardAtAcq, 표시용) */
   standardAtAcq?: number;
@@ -333,27 +333,29 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       expenses = swapEligible ? (capExp + trExp) : (parcel.expenses ?? 0);
     }
 
-    // P-3: 양도차익
+    // P-3: 양도차익 (§102②·시행령 §167의2 — 필지별 양도차손 통산)
     // §97② 2호 단서 swap 시 필요경비 = 자본+양도비(expenses) 단독 → 환산취득가액 미차감.
+    // 손실 필지는 0으로 절사하지 않고 rawGain(음수 허용) 유지 → 합산 시 이익 필지와 통산.
     const rawGain = swapApplied
       ? allocatedPrice - expenses
       : allocatedPrice - acquisitionPrice - expenses;
-    const transferGain = Math.max(0, rawGain);
+    const transferGain = rawGain;
 
     if (rawGain < 0) {
       warnings.push(
-        `필지 ${parcel.id}: 양도손실 발생 (차익 ${rawGain.toLocaleString()} → 0으로 처리)`,
+        `필지 ${parcel.id}: 양도손실 발생 (차익 ${rawGain.toLocaleString()} — 다른 필지 양도차익과 통산)`,
       );
     }
 
     // P-4: 장기보유특별공제 (보유기간 기산일: effectiveAcquisitionDate 익일)
+    // §95② 장기보유특별공제는 양도차익이 있는(양수) 필지에만 적용 — 손실 필지는 0.
     const holding = calculateHoldingPeriod(effectiveAcquisitionDate, transferDate);
     const holdingYears = holding.years;
     const longTermHoldingRate = calcLandLongTermRate(holdingYears, parcel.isUnregistered ?? false);
-    const longTermHoldingDeduction = applyRate(transferGain, longTermHoldingRate);
+    const longTermHoldingDeduction = rawGain > 0 ? applyRate(rawGain, longTermHoldingRate) : 0;
 
-    // 양도소득금액
-    const transferIncome = Math.max(0, transferGain - longTermHoldingDeduction);
+    // 양도소득금액 (음수 허용 — 손실 필지는 합산 단계에서 통산)
+    const transferIncome = rawGain - longTermHoldingDeduction;
 
     parcelResults.push({
       id: parcel.id,
@@ -386,13 +388,17 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     });
   }
 
-  // P-5: 합산
+  // P-5: 합산 (§102② 통산)
+  // 총 양도차익 = Σ rawGain (손실 필지 음수 반영). 총 양도소득금액 = max(0, Σ(rawGain − LTHD)).
   const totalTransferGain = parcelResults.reduce((sum, r) => sum + r.transferGain, 0);
   const totalLongTermHoldingDeduction = parcelResults.reduce(
     (sum, r) => sum + r.longTermHoldingDeduction,
     0,
   );
-  const totalTransferIncome = parcelResults.reduce((sum, r) => sum + r.transferIncome, 0);
+  const totalTransferIncome = Math.max(
+    0,
+    parcelResults.reduce((sum, r) => sum + r.transferIncome, 0),
+  );
 
   return {
     parcelResults,

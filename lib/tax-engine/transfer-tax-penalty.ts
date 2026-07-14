@@ -83,15 +83,29 @@ export interface FilingPenaltyResult {
   steps: PenaltyStep[];
 }
 
+/** 지연납부가산세 이자율 구간 (개정 시행일 경계 분할) */
+export interface DelayedPaymentSegment {
+  /** 해당 구간 적용 일 이자율 */
+  dailyRate: number;
+  /** 해당 구간 일수 */
+  days: number;
+  /** 해당 구간 가산세액 (원 미만 절사) */
+  amount: number;
+  /** 이자율 시행일 (경계 기준일) */
+  effectiveFrom: string;
+}
+
 /** 지연납부가산세 결과 */
 export interface DelayedPaymentResult {
   /** 미납세액 */
   unpaidTax: number;
   /** 경과일수 (납부기한 다음날 ~ 납부일) */
   elapsedDays: number;
-  /** 적용 일 이자율 */
+  /** 적용 일 이자율 (대표값 — 최신 구간율; 구간별 세부는 breakdown) */
   dailyRate: number;
-  /** 지연납부가산세액 */
+  /** 이자율 개정 시행일 경계로 분할한 구간별 세부 (단일 구간이면 원소 1개) */
+  breakdown: DelayedPaymentSegment[];
+  /** 지연납부가산세액 (= Σ 구간별 가산세) */
   delayedPaymentPenalty: number;
   /** 납부기한 */
   paymentDeadline: Date;
@@ -118,11 +132,15 @@ export interface TransferTaxPenaltyResult {
 // 내부 유틸
 // ============================================================
 
+/** 납부지연 이자율 개정 시행일 경계 (국세기본법 시행령 §27의4 이력) */
+const RATE_BOUNDARY_2019 = new Date("2019-02-12"); // 0.03% → 0.025%
+const RATE_BOUNDARY_2022 = new Date("2022-02-15"); // 0.025% → 0.022%
+
 /** 납부기한 기준 일 이자율 결정 (국세기본법 시행령 §27의4 이력 적용) */
 function resolveDailyRate(referenceDate: Date): number {
   const d = referenceDate;
-  if (d >= new Date("2022-02-15")) return PENALTY_CONST.DAILY_PENALTY_RATE;
-  if (d >= new Date("2019-02-12")) return PENALTY_CONST.DAILY_PENALTY_RATE_2019;
+  if (d >= RATE_BOUNDARY_2022) return PENALTY_CONST.DAILY_PENALTY_RATE;
+  if (d >= RATE_BOUNDARY_2019) return PENALTY_CONST.DAILY_PENALTY_RATE_2019;
   return PENALTY_CONST.DAILY_PENALTY_RATE_2016;
 }
 
@@ -257,6 +275,7 @@ export function calculateDelayedPaymentPenalty(
       unpaidTax: input.unpaidTax,
       elapsedDays: 0,
       dailyRate: PENALTY_CONST.DAILY_PENALTY_RATE,
+      breakdown: [],
       delayedPaymentPenalty: 0,
       paymentDeadline: input.paymentDeadline,
       calculationDate: calcDate,
@@ -264,8 +283,37 @@ export function calculateDelayedPaymentPenalty(
     };
   }
 
+  // 대표 이자율: 납부일(최신 시점) 기준 — breakdown 마지막 구간율과 동일
   const dailyRate = resolveDailyRate(calcDate);
-  const rateLabel = (dailyRate * 100).toFixed(4) + "%";
+
+  // 경과기간 [납부기한 다음날, 납부일]을 이자율 개정 시행일 경계로 분할.
+  // 경과일 n(1..elapsedDays)의 date = 납부기한 + n일. 해당 date 기준 시행 이자율 적용.
+  // (경과조치 가정: 시행일 이후 기간분에 신율 — 국세기본법 시행령 §27의4 개정 부칙 통칙)
+  const daysBefore = (boundary: Date) =>
+    Math.min(
+      elapsedDays,
+      Math.max(0, differenceInCalendarDays(boundary, input.paymentDeadline) - 1),
+    );
+  const cumBefore2019 = daysBefore(RATE_BOUNDARY_2019); // date < 2019-02-12
+  const cumBefore2022 = daysBefore(RATE_BOUNDARY_2022); // date < 2022-02-15
+
+  const segmentDefs = [
+    { dailyRate: PENALTY_CONST.DAILY_PENALTY_RATE_2016, days: cumBefore2019, effectiveFrom: "2016-03-01" },
+    { dailyRate: PENALTY_CONST.DAILY_PENALTY_RATE_2019, days: cumBefore2022 - cumBefore2019, effectiveFrom: "2019-02-12" },
+    { dailyRate: PENALTY_CONST.DAILY_PENALTY_RATE, days: elapsedDays - cumBefore2022, effectiveFrom: "2022-02-15" },
+  ];
+
+  const breakdown: DelayedPaymentSegment[] = segmentDefs
+    .filter((s) => s.days > 0)
+    .map((s) => ({
+      dailyRate: s.dailyRate,
+      days: s.days,
+      // 구간 가산세 = 미납세액 × 구간일수 × 구간율 (원 미만 절사)
+      amount: truncateToWon(input.unpaidTax * s.days * s.dailyRate),
+      effectiveFrom: s.effectiveFrom,
+    }));
+
+  const delayedPaymentPenalty = breakdown.reduce((sum, s) => sum + s.amount, 0);
 
   steps.push({
     label: "경과일수",
@@ -274,13 +322,16 @@ export function calculateDelayedPaymentPenalty(
     legalBasis: PENALTY.DELAYED_PAYMENT,
   });
 
-  // 가산세 = 미납세액 × 경과일수 × 일 이자율 (원 미만 절사)
-  const raw = input.unpaidTax * elapsedDays * dailyRate;
-  const delayedPaymentPenalty = truncateToWon(raw);
+  const penaltyFormula =
+    breakdown.length > 1
+      ? `미납세액 ${input.unpaidTax.toLocaleString()} × [${breakdown
+          .map((s) => `${s.days}일 × ${(s.dailyRate * 100).toFixed(4)}%`)
+          .join(" + ")}]`
+      : `미납세액 ${input.unpaidTax.toLocaleString()} × ${elapsedDays}일 × ${(dailyRate * 100).toFixed(4)}%`;
 
   steps.push({
     label: "지연납부가산세",
-    formula: `미납세액 ${input.unpaidTax.toLocaleString()} × ${elapsedDays}일 × ${rateLabel}`,
+    formula: penaltyFormula,
     amount: delayedPaymentPenalty,
     legalBasis: PENALTY.DAILY_RATE,
   });
@@ -289,6 +340,7 @@ export function calculateDelayedPaymentPenalty(
     unpaidTax: input.unpaidTax,
     elapsedDays,
     dailyRate,
+    breakdown,
     delayedPaymentPenalty,
     paymentDeadline: input.paymentDeadline,
     calculationDate: calcDate,

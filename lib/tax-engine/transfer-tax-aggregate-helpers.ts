@@ -11,7 +11,8 @@ import {
   type TransferTaxInput,
   type TransferTaxResult,
 } from "./transfer-tax";
-import { calculateProgressiveTax } from "./tax-utils";
+import { applyRate, calculateProgressiveTax } from "./tax-utils";
+import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   RateGroup,
@@ -91,6 +92,20 @@ export function classifyRateGroup(
   if (item.propertyType === "presale_right") return "short_term";
 
   return "progressive";
+}
+
+/**
+ * 자산별 다주택 중과 tier(2주택/3주택) 산정 — 모델 A 자산별 가산율 적용용.
+ * 단건 엔진이 산정한 result.surchargeType을 우선하고, 미설정 시 세대 주택수로 도출한다.
+ */
+function resolveEffectiveSurchargeType(
+  record: AssetRecord,
+): "multi_house_2" | "multi_house_3plus" {
+  if (record.result.surchargeType === "multi_house_3plus") return "multi_house_3plus";
+  if (record.result.surchargeType === "multi_house_2") return "multi_house_2";
+  return record.correctedItem.householdHousingCount >= 3
+    ? "multi_house_3plus"
+    : "multi_house_2";
 }
 
 export function monthsBetween(from: Date, to: Date): number {
@@ -375,8 +390,47 @@ export function aggregateByGroup(
       }
       surchargeRate = undefined;
       progressiveDeduction = 0;
+    } else if (group === "multi_house_surcharge") {
+      // §104③ 다주택 중과 — 그룹 내 자산의 중과 tier(2주택 +20%p / 3주택+ +30%p)가 혼재할 수 있다.
+      // 대표자산(records[idxList[0]])의 단일 tier를 합산 과세표준 전체에 적용하면 입력 순서에 따라
+      // 세액이 달라지는 오답이 발생한다.
+      // 모델 A: 합산 과세표준에 기본세율 누진 1회 + 자산별 가산분 Σ(taxBaseShare_i × addon_i).
+      //   taxBaseShare_i = max(0, incomeAfterOffset_i − allocatedBasic_i) (자산별 과세표준 기여분)
+      //   addon_i        = 양도일 기준 자산별 중과 가산율(§104⑦ 시행일별, resolveSurchargeAddonRate)
+      const addonByAsset = idxList.map((i) =>
+        resolveSurchargeAddonRate(
+          records[i].correctedItem.transferDate,
+          resolveEffectiveSurchargeType(records[i]),
+        ) ?? 0,
+      );
+      const uniformAddon = addonByAsset.every((a) => a === addonByAsset[0]);
+      if (uniformAddon) {
+        // 단일 tier — 기존 합산 방식(단일 floor) 유지 (회귀 불변).
+        const rep = records[idxList[0]];
+        const taxResult = calcTax(groupTaxBase, parsedRates, rep.correctedSingleInput);
+        groupCalculatedTax = taxResult.calculatedTax;
+        appliedRate = taxResult.appliedRate;
+        surchargeRate = taxResult.surchargeRate;
+        progressiveDeduction = taxResult.progressiveDeduction;
+      } else {
+        // tier 혼재 — 모델 A로 기본세율 1회 + 자산별 가산분 합산.
+        const { brackets } = parsedRates;
+        const baseProgressive = calculateProgressiveTax(groupTaxBase, brackets);
+        const bracket = brackets.find((b) => groupTaxBase <= (b.max ?? Infinity));
+        const baseRate = bracket?.rate ?? brackets[brackets.length - 1].rate;
+        const deduction = bracket?.deduction ?? 0;
+        let surchargeSum = 0;
+        idxList.forEach((i, pos) => {
+          const share = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
+          surchargeSum += applyRate(share, addonByAsset[pos]);
+        });
+        groupCalculatedTax = baseProgressive + surchargeSum;
+        appliedRate = baseRate;
+        surchargeRate = undefined; // 자산별 상이 — 자산별 breakdown(surchargeRate)에서 개별 표시
+        progressiveDeduction = deduction;
+      }
     } else {
-      // 누진세율 호(progressive·multi_house_surcharge·non_business_land) 및 미등기 단일 70%는
+      // 누진세율 호(progressive·non_business_land) 및 미등기 단일 70%는
       // 동일 호 합산이 정확하므로 그룹 합산 과세표준에 대표 세율을 적용한다.
       const rep = records[idxList[0]];
       const taxResult = calcTax(groupTaxBase, parsedRates, rep.correctedSingleInput);

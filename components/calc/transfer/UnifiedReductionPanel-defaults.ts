@@ -214,6 +214,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       contractDate988: "",
       acquisitionPrice988: "",
       exclusiveAreaSqm988: "",
+      rentalContractDate988: "",
       rentalStartDate988: "",
       rentalEndDate988: "",
       inheritedRentalMonths988: "",

@@ -17,6 +17,7 @@ function baseInput(overrides?: Partial<Unsold988Input>): Unsold988Input {
     contractDate: new Date("2015-06-01"),
     acquisitionPrice: 550_000_000,
     exclusiveAreaSqm: 84.5,
+    rentalContractDate: new Date("2015-12-01"),
     rentalStartDate: new Date("2016-01-01"),
     isUnsoldAfterCompletion: true,
     isFirstContract: true,
@@ -145,6 +146,25 @@ describe("§98의8 evaluator anchor", () => {
     );
     // (+,−) 전액 감면 선례 → base = 200M → × 50% = 100M
     expect(posNeg.reducibleTransferIncome).toBe(100_000_000);
+  });
+
+  it("C24: 임대계약 체결일 2016.6.1 (단서 위반) → RENTAL_CONTRACT_TOO_LATE / 2015.6.1 적격", () => {
+    // 법 §98의8① 단서: 임대사업자등록 후 2015.12.31 이전 임대계약 체결에 한정
+    const tooLate = evaluateUnsold988(baseInput({ rentalContractDate: new Date("2016-06-01") }));
+    expect(tooLate.isEligible).toBe(false);
+    expect(tooLate.ineligibleReasons.map((x) => x.code)).toContain("RENTAL_CONTRACT_TOO_LATE");
+    const eligible = evaluateUnsold988(baseInput({ rentalContractDate: new Date("2015-06-01") }));
+    expect(eligible.isEligible).toBe(true);
+    // 경계 2015.12.31 적격
+    expect(
+      evaluateUnsold988(baseInput({ rentalContractDate: new Date("2015-12-31") })).isEligible,
+    ).toBe(true);
+  });
+
+  it("C24: 임대계약 체결일 미입력 → MISSING_RENTAL_CONTRACT_DATE", () => {
+    const r = evaluateUnsold988(baseInput({ rentalContractDate: undefined }));
+    expect(r.isEligible).toBe(false);
+    expect(r.ineligibleReasons.map((x) => x.code)).toContain("MISSING_RENTAL_CONTRACT_DATE");
   });
 
   it("fullMonthsBetween — 월 경계·일 미달 절사", () => {

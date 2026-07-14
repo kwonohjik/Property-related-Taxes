@@ -30,6 +30,8 @@ import {
 // UTC 자정 파싱 (T suffix 없음) — §98의9 선례. JSON 경유 입력(new Date("YYYY-MM-DD"))과 동일 기준.
 export const UNSOLD_98_8_CONTRACT_FROM = new Date("2015-01-01");
 export const UNSOLD_98_8_CONTRACT_TO = new Date("2015-12-31");
+/** 법 §98의8① 단서 — 임대사업자등록 후 임대계약 체결 시한 (2015.12.31 이전 한정) */
+export const UNSOLD_98_8_RENTAL_CONTRACT_TO = new Date("2015-12-31");
 /** 법 §98의8① — 취득가액 한도 (6억) */
 export const UNSOLD_98_8_PRICE_LIMIT = 600_000_000;
 /** 법 §98의8① — 연면적(공동주택 전용면적) 한도 (㎡) */
@@ -45,6 +47,8 @@ export interface Unsold988Input {
   acquisitionDate: Date;
   /** 최초 매매계약일 — 시한 판정 (2015.1.1~12.31) */
   contractDate?: Date;
+  /** 임대계약 체결일 — 2015.12.31 이전 체결에 한정 (법 §98의8① 단서) */
+  rentalContractDate?: Date;
   /** 취득가액 (원) — 6억 한도, 취득세·부대비용 제외 (령 ②1호 후단) */
   acquisitionPrice?: number;
   /** 연면적(공동주택은 전용면적, ㎡) — 135 한도 */
@@ -83,6 +87,8 @@ export type Unsold988IneligibleCode =
   | "NOT_UNSOLD_AFTER_COMPLETION"
   | "NOT_FIRST_CONTRACT"
   | "RECONTRACT_EXCLUDED"
+  | "MISSING_RENTAL_CONTRACT_DATE"
+  | "RENTAL_CONTRACT_TOO_LATE"
   | "MISSING_RENTAL_START"
   | "RENTAL_PERIOD_SHORT"
   | "MISSING_STD_PRICE"
@@ -234,7 +240,22 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     });
   }
 
-  // 6) 임대 5년 — 등록 후 임대개시일 기산 + 상속 합산 (령 §98의5⑤ 준용)
+  // 6) 임대 — 2015.12.31 이전 임대계약 체결 (법 §98의8① 단서) + 등록 후 개시일 5년 기산
+  if (!input.rentalContractDate) {
+    reasons.push({
+      code: "MISSING_RENTAL_CONTRACT_DATE",
+      message: "임대계약 체결일이 입력되지 않았습니다 (임대사업자등록을 하고 2015.12.31 이전에 임대계약을 체결한 경우에 한정 — 법 §98의8① 단서).",
+      legalBasis,
+    });
+  } else if (input.rentalContractDate.getTime() > UNSOLD_98_8_RENTAL_CONTRACT_TO.getTime()) {
+    reasons.push({
+      code: "RENTAL_CONTRACT_TOO_LATE",
+      message: "임대계약 체결일이 2015.12.31 이후입니다 (법 §98의8① 단서 — 2015.12.31 이전 체결에 한정).",
+      legalBasis,
+    });
+  }
+
+  // 등록 후 임대개시일 기산 + 상속 합산 (령 §98의5⑤ 준용)
   let rentalMonths = 0;
   if (!input.rentalStartDate) {
     reasons.push({

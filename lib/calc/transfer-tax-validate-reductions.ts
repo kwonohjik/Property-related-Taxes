@@ -190,6 +190,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§98의8 적용: 취득가액을 입력하세요.");
           if (!(parseDecimal(r.exclusiveAreaSqm988 || "") > 0))
             return fail("§98의8 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요.");
+          if (!r.rentalContractDate988)
+            return fail("§98의8 적용: 임대계약 체결일을 입력하세요 (2015.12.31 이전 한정).");
           if (!r.rentalStartDate988)
             return fail("§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
         }

@@ -262,6 +262,7 @@ function evalUnsold988(
       contractDate: coerceOptionalDate(r988.contractDate988 as Date | string | undefined),
       acquisitionPrice: r988.acquisitionPrice988 as number | undefined,
       exclusiveAreaSqm: r988.exclusiveAreaSqm988 as number | undefined,
+      rentalContractDate: coerceOptionalDate(r988.rentalContractDate988 as Date | string | undefined),
       rentalStartDate: coerceOptionalDate(r988.rentalStartDate988 as Date | string | undefined),
       rentalEndDate: coerceOptionalDate(r988.rentalEndDate988 as Date | string | undefined),
       inheritedRentalMonths: r988.inheritedRentalMonths988 as number | undefined,

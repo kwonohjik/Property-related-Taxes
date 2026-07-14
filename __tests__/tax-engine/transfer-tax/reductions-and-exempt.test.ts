@@ -16,7 +16,10 @@ import { makeMockRates, baseTransferInput as baseInput, LONG_TERM_RENTAL_RULES_M
 const mockRates = makeMockRates();
 
 describe("T-27: 장기임대 감면 정밀 엔진 연동", () => {
-  it("T-27a: rentalReductionDetails 제공 → 8년 임대 50% 감면 적용", () => {
+  it("T-27a: rentalReductionDetails 제공 → 8년 임대 §97의3 장특공 특례(세액감면 없음)", () => {
+    // §97의3은 소득세법 §95① 장기보유특별공제 특례(공제율)만 규정 —
+    // 산출세액 세액감면이 아니므로 rental 세액감면은 0.
+    // 혜택은 장특공 특례율(50%)이 과세표준을 낮춰 총세액을 감소시키는 방식.
     const rentalDetails: RentalReductionInput = {
       isRegisteredLandlord: true,
       isTaxRegistered: true,
@@ -34,7 +37,7 @@ describe("T-27: 장기임대 감면 정밀 엔진 연동", () => {
 
     const rates = makeMockRates(LONG_TERM_RENTAL_RULES_MOCK as Partial<Record<TaxRateKey, object>>);
 
-    const input = baseInput({
+    const commonInput = {
       transferPrice: 600_000_000,
       acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2014-06-01"),
@@ -42,17 +45,25 @@ describe("T-27: 장기임대 감면 정밀 엔진 연동", () => {
       isOneHousehold: false,        // 임대주택 다가구 시나리오 → 비과세 제외
       householdHousingCount: 3,
       reductions: [],
-      rentalReductionDetails: rentalDetails,
-    });
+    };
 
-    const result = calculateTransferTax(input, rates);
+    const result = calculateTransferTax(
+      baseInput({ ...commonInput, rentalReductionDetails: rentalDetails }),
+      rates,
+    );
+    // 장특공 특례 미적용 기준선 (동일 입력, rentalReductionDetails 없음)
+    const baseline = calculateTransferTax(baseInput({ ...commonInput }), rates);
+
     expect(result.isExempt).toBe(false);
-    expect(result.reductionAmount).toBeGreaterThan(0);
-    // 50% 감면 = 산출세액 × 0.5
-    expect(result.reductionAmount).toBe(Math.floor(result.calculatedTax * 0.5));
+    // 세액감면(reductionAmount)은 발생하지 않음 — §97의3은 공제율 특례만
+    expect(result.reductionAmount).toBe(0);
     expect(result.rentalReductionDetail).toBeDefined();
     expect(result.rentalReductionDetail?.isEligible).toBe(true);
-    expect(result.rentalReductionDetail?.reductionRate).toBe(0.5);
+    expect(result.rentalReductionDetail?.reductionRate).toBe(0);
+    expect(result.rentalReductionDetail?.reductionAmount).toBe(0);
+    expect(result.rentalReductionDetail?.specialLongTermDeductionRate).toBe(0.5);
+    // 장특공 특례(50%)가 과세표준을 낮춰 총세액이 기준선보다 감소
+    expect(result.calculatedTax).toBeLessThan(baseline.calculatedTax);
   });
 
   it("T-27b: rentalReductionDetails 의무기간 미충족 → 감면 0", () => {
