@@ -110,6 +110,33 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         onChange={setSelectedPrintIds}
       />
 
+      {/* ── 신고서 양식 표 (결과탭 첫번째 보고서) ── */}
+      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+      {(() => {
+        // 겸용주택(propertyType="mixed-use-house")은 재개발과 배타적이므로
+        // redevelopmentDetail이 항상 undefined → redev props 비활성. 일관성 차원에서 전달.
+        const mixedFilingResult = mixedUseToFilingResult(breakdown);
+        const primaryAsset = formData?.assets?.[0];
+        const hasRedev = !!mixedFilingResult.redevelopmentDetail;
+        return (
+          <FilingFormTable
+            result={mixedFilingResult}
+            formData={formData}
+            redevSubject={
+              hasRedev
+                ? ((primaryAsset?.redevSubject || (primaryAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+                : undefined
+            }
+            redevSettlementDirection={
+              hasRedev
+                ? ((primaryAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
+                : undefined
+            }
+          />
+        );
+      })()}
+      </PrintSection>
+
       {/* ── 분리계산 본문 (안분·주택·상가·비사업용·합산세액·계산경로) ── */}
       <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-4">
       {/* 경고 */}
@@ -416,33 +443,6 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
 
       {/* 계산 경로 메타 (학습·검증용) */}
       <CalculationRouteCard route={breakdown.calculationRoute} />
-      </PrintSection>
-
-      {/* ── 신고서 양식 표 ── */}
-      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
-      {(() => {
-        // 겸용주택(propertyType="mixed-use-house")은 재개발과 배타적이므로
-        // redevelopmentDetail이 항상 undefined → redev props 비활성. 일관성 차원에서 전달.
-        const mixedFilingResult = mixedUseToFilingResult(breakdown);
-        const primaryAsset = formData?.assets?.[0];
-        const hasRedev = !!mixedFilingResult.redevelopmentDetail;
-        return (
-          <FilingFormTable
-            result={mixedFilingResult}
-            formData={formData}
-            redevSubject={
-              hasRedev
-                ? ((primaryAsset?.redevSubject || (primaryAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
-                : undefined
-            }
-            redevSettlementDirection={
-              hasRedev
-                ? ((primaryAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
-                : undefined
-            }
-          />
-        );
-      })()}
       </PrintSection>
 
       {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}
