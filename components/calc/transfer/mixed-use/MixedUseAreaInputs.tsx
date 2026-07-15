@@ -4,6 +4,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { computeDerivedAreas, round2 } from "@/lib/tax-engine/mixed-use-derived-areas";
+import { residualArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -45,7 +46,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
     const exTotal = exR + exC;
     if (exTotal > 0) {
       const r = round2(exR + (common * exR) / exTotal);
-      const c = round2(exTotal + common) - r; // 잔액흡수: 합 = 전용합+공통 보장
+      const c = residualArea(exTotal + common, r); // 잔액흡수: 합 = 전용합+공통 보장
       onChange({ ...patch, residentialFloorArea: String(r), nonResidentialFloorArea: String(c) });
     } else {
       // 전용 둘 다 빈값이면 연면적 write 안 함 (legacy 이력 보존)
