@@ -68,6 +68,8 @@ export function MixedUseLegacyStdPrice({
   // 취득 기준일 — 취득시 개별공시지가(건물 위치지수 산정용): 건물 취득일 기준
   // (§164⑦ 주택 환산·신축연도 이후). 토지 취득일 아님(2026-04 회귀 정정).
   const acqReferenceDate = asset.acquisitionDate;
+  // 상가부수토지 개별공시지가 취득시 추천 연도 전용 기준일 — 토지값이므로 토지 취득일 기준(§166⑥).
+  const acqLandReferenceDate = asset.landAcquisitionDate || asset.acquisitionDate;
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
   const stdPriceAddress = {
@@ -276,7 +278,7 @@ export function MixedUseLegacyStdPrice({
               pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
               onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
               area={commercialLandArea > 0 ? commercialLandArea : undefined}
-              referenceDate={acqReferenceDate}
+              referenceDate={acqLandReferenceDate}
               jibun={jibun}
               label="개별공시지가 (원/㎡)"
               hint={
