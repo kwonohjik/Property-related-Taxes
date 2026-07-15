@@ -130,13 +130,37 @@ outer gate :282-285  (transferLandStd>0 || transferBuilding>0 || acqLandStd>0 ||
 ```
 즉 **"첫 박스가 면적 행을 담고 `commercialLandArea > 0`로 게이팅"** 이 현행 패턴이며, 취득만 입력된 상태에서 emerald 박스가 대시로 렌더되는 것이 **사용자 스크린샷 그대로**다(면적 78.01㎡ + "양도 … —" 2줄). 대시 박스는 신규 문제가 아니라 현행 동작.
 
-**결정 — 역할과 게이트를 함께 스왑** (새 게이트 조건 추가 불필요):
+**결정 — 역할과 게이트를 함께 스왑**:
 ```
 outer gate :282-285  (변경 없음)
-  ├ amber 박스(첫째)   게이트 = commercialLandArea > 0        ← 면적 행 + 취득 행
-  └ emerald 박스(둘째) 게이트 = transferLandStd>0 || transferBuilding>0  ← 양도 행
+  ├ amber 박스(첫째)   게이트 = commercialLandArea > 0 || acqLandStd > 0 || acqBuilding > 0
+  │                    ← 면적 행(내부 게이트 commercialLandArea > 0) + 취득 행
+  └ emerald 박스(둘째) 게이트 = transferLandStd > 0 || transferBuilding > 0   ← 양도 행
 ```
-현행의 "첫 박스 = 면적 + 자기 시점 / 둘째 박스 = 자기 값 게이트" 구조를 **역할만 바꿔 그대로 보존**한다. 각 박스 내부 행 구성·조건(emerald 합계 행은 무조건 `:297`, amber 합계 행은 `acqCommercialBuilding > 0` `:309`)은 **손대지 않는다**(surgical).
+
+> **⚠️ Do 단계 환류 (2026-07-15 — 계획 초안의 설계 누락 정정)**
+>
+> 초안은 "첫 박스 = `commercialLandArea > 0` 단독 게이트"라 적었으나, **회귀를 낳는다**:
+> 상가부수토지가 0이면(주택 부수토지 override = 전체 토지 → `residualArea(200,200) = 0`,
+> `validate:330`이 `ov === totalLandV`를 허용하므로 **도달 가능**) 상가건물 기준시가가
+> 있어도 **취득 합계 박스가 통째로 사라진다**. 종전 amber 게이트(`acqLandStd > 0 || acqBuilding > 0`)가
+> 커버하던 상태다. 코드 품질 게이트가 발견 → probe로 재현 확인 후 정정.
+>
+> → 게이트를 **면적 OR 자기 값**으로 하고, 면적 행만 `commercialLandArea > 0`로 내부 게이팅한다
+> (면적 0일 때 "0.00㎡" 노이즈 방지). Legacy도 동일 방어 적용. anchor로 동결.
+
+각 박스 내부 행 구성·조건(emerald 합계 행은 무조건, amber 합계 행은 `acqCommercialBuilding > 0`)은 **손대지 않는다**(surgical).
+
+**게이트 조합 실측** (probe 전수 — 대시 박스는 좌우가 바뀔 뿐 신규 문제 아님):
+
+| 상태 | 스왑 전 | 스왑 후 |
+|---|---|---|
+| 면적만 | outer gate false → 없음 | 동일 |
+| 면적+취득만 | emerald가 **대시 2줄** ← 사용자 스크린샷 | 취득 박스 면적+값 / 양도 숨김 **(개선)** |
+| 면적+양도만 | emerald 면적+값 / amber 숨김 | 취득 박스 **대시 1줄** / 양도 값 |
+| 면적+둘다 | 둘 다 표시 | 둘 다 표시 |
+
+취득이 첫 입력이 되므로 자연스러운 입력 순서에서는 대시 박스가 덜 뜬다.
 
 > 초안의 "amber 게이트에 `|| commercialLandArea > 0` 추가" 안은 **폐기**. 그 안은 양도측만 입력 시 amber 박스에 면적 + 대시 1줄만 남기고, 게이트 조건을 비대칭하게 만든다.
 
@@ -222,10 +246,17 @@ P2는 로직 변경이라 anchor로 검증되고 사용자 실피해를 즉시 �
 **신규 anchor — PR ①** (`__tests__/lib/calc/mixed-use-transfer-landprice-fallback.anchor.test.ts`)
 - API 변환 C3에서 `transferStandardPrice.landPricePerSqm > 0` · validate C3 통과 / C5 차단
 
-**신규 anchor — PR ②**
-- ③ 상가 섹션에서 "취득시"가 "양도시"보다 DOM상 먼저
-  - **⚠️ 반드시 ③ 상가 섹션 컨테이너로 스코프**할 것. `양도시`/`취득시` 텍스트가 AssetMajor에 각 3곳(`:119`·`:196`·`:255` / `:135`·`:206`·`:268`) 있고 ② 주택 sub-block이 DOM상 먼저 → 스코프 없는 `getAllByText("취득시")[0]`은 ② 주택을 잡는다
-- Legacy 배지 번호: 취득=②, 양도=③
+**신규 anchor — PR ②** (`__tests__/components/mixed-use-stdprice-point-order.anchor.test.tsx`, 9건)
+- ③ 상가 섹션에서 "취득시"가 "양도시"보다 DOM상 먼저 (상가건물·부수토지)
+  - **⚠️ 반드시 섹션 컨테이너로 스코프**할 것. `양도시`/`취득시` 텍스트가 AssetMajor에 각 3곳 있고 ② 주택 sub-block이 DOM상 먼저 → 스코프 없는 `getByText("양도시")`는 **"Found multiple elements"로 실패**한다(Do에서 실제 발생 → 스코프로 정정)
+- ② 주택: PHD 토글(취득)이 양도시 개별주택공시가격보다 먼저
+- 자동합계: 면적 행이 취득 박스 내부 + 취득 박스가 양도보다 먼저
+- **상가부수토지 0에서 취득 합계 미소실** (위 환류 회귀 동결)
+- **Legacy 자동합계**: 면적 행 이관 + 게이트 스왑 (코드 품질 게이트 지적 — 초안 §5-1이 요구하지 않았던 커버리지)
+- Legacy 섹션 순서 + **Legacy 배지 번호: 취득=②, 양도=③**
+  - ⚠️ 배지 **순서**만 보면 스왑 전후 모두 `["2","3"]`이라 구분 불가 → 배지와 섹션 제목의 **연결**을 검증할 것 (Do에서 vacuous pass 발견 → 정정)
+  - ⚠️ `span.rounded-full` 선택자는 ToggleCard의 Switch도 잡는다 → 숫자 텍스트로 필터
+- **AssetMajor 배지 회귀 가드**: ②주택/③상가 유지 (부모 숫자를 바꾸는 오수정 차단)
 
 **기존 회귀 — DOM 순서 비의존 실측 완료** (근거 기록 — 재검증 비용 절감):
 - `e2e/mixed-use-asset-major-commercial-modal.spec.ts:79,85` `.first()/.nth(1)` → `modal`(`:68` `getByRole("dialog")`) 스코프 ✅ / `:99-100` 고유 placeholder ✅

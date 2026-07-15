@@ -99,95 +99,6 @@ export function MixedUseLegacyStdPrice({
 
   return (
     <div className="space-y-3">
-      {/* ── 양도시 기준시가 ───────────────────────────
-          Case A(항상 PHD ON)에서 개별주택공시가격을 숨기면 헤더만 남는 빈 박스가 되므로
-          sub-block 전체를 {!(isCaseA && PHD)} 로 가드. non-Case-A는 상가 필드가 남아 정상. */}
-      {!(isCaseA && asset.usePreHousingDisclosure) && (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          {transferSectionNum !== undefined && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
-              {transferSectionNum}
-            </span>
-          )}
-          <p className="text-xs font-semibold text-emerald-700">
-            {isCaseA ? "양도시 개별주택공시가격" : "양도시 기준시가"}
-          </p>
-        </div>
-
-        {/* PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 */}
-        {!asset.usePreHousingDisclosure && (
-          <StandardPriceInput
-            propertyKind="house_individual"
-            totalPrice={asset.mixedTransferHousingPrice}
-            onTotalPriceChange={(v) => onChange({ mixedTransferHousingPrice: v })}
-            jibun={jibun}
-            referenceDate={transferDate}
-            label="개별주택공시가격"
-            hint="주택건물+주택부수토지 일괄"
-          />
-        )}
-
-        {/* Case A(용도변경 4부분)는 자산-우선 위젯(취득시 섹션 PHD, layout=asset-major)이 양도까지 흡수 — 별도 양도 4부분 미렌더. */}
-        {!isCaseA && (
-          /* 일반(비-Case A) 레이아웃 — 기존 유지 */
-          <>
-            <FieldCard
-              label="상가건물 기준시가"
-              hint="토지 제외 — 국세청 홈택스 > 기준시가 조회 (개별주택가격확인서에 미포함)"
-            >
-              <CurrencyInput
-                label=""
-                value={asset.mixedTransferCommercialBuildingPrice}
-                onChange={(v) => onChange({ mixedTransferCommercialBuildingPrice: v })}
-                placeholder="양도시 상가건물 기준시가"
-              />
-            </FieldCard>
-            <div className="flex justify-end">
-              <BuildingStdPriceModalButton
-                lockedTaxType="transfer"
-                initialAddress={stdPriceAddress}
-                snapshotKey={`${bspPrefix}-transfer-commercial`}
-                prefill={{
-                  floorArea: asset.nonResidentialFloorArea,
-                  landAreaM2: commercialLandArea > 0 ? String(commercialLandArea) : undefined,
-                  acquisitionDate: asset.acquisitionDate,
-                  transferDate,
-                }}
-                onApply={(v) => onChange({ mixedTransferCommercialBuildingPrice: String(v) })}
-              />
-            </div>
-            <LandPriceLookupField
-              pricePerSqm={asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer}
-              onPricePerSqmChange={(v) => onChange({ mixedTransferLandPricePerSqm: v })}
-              area={commercialLandArea > 0 ? commercialLandArea : undefined}
-              referenceDate={transferDate}
-              jibun={jibun}
-              label="개별공시지가 (원/㎡)"
-              hint="상가부수토지 산정용 (필수)"
-              placeholder="양도시 개별공시지가 /㎡"
-            />
-            {commercialLandArea > 0 && (
-              <div className="rounded-lg bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-sm space-y-1">
-                <div className="flex justify-between text-xs text-emerald-700">
-                  <span>상가부수토지 면적</span>
-                  <span>{fmtSqm(commercialLandArea)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-emerald-700">
-                  <span>상가부수토지 기준시가 (자동)</span>
-                  <span>{fmtKrw(transferCommercialLandStd)}</span>
-                </div>
-                <div className="flex justify-between text-sm font-semibold text-emerald-900">
-                  <span>상가부분 기준시가 합계 (자동)</span>
-                  <span>{fmtKrw(transferCommercialTotal)}</span>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-      )}
-
       {/* ── 취득시 기준시가 ─────────────────────────── */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
@@ -311,8 +222,17 @@ export function MixedUseLegacyStdPrice({
               </div>
             )}
 
-            {(acqCommercialLandStd > 0 || acqCommercialBuilding > 0) && (
+            {/* 면적 행은 시점 무관 공통값 → 첫 박스(취득)가 담는다.
+                게이트는 면적 OR 자기 값 — 면적 게이트만 두면 상가부수토지 0일 때
+                상가건물 기준시가가 있어도 취득 합계가 사라진다(AssetMajor와 동일 방어). */}
+            {(commercialLandArea > 0 || acqCommercialLandStd > 0 || acqCommercialBuilding > 0) && (
               <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
+                {commercialLandArea > 0 && (
+                  <div className="flex justify-between text-xs text-amber-700">
+                    <span>상가부수토지 면적</span>
+                    <span>{fmtSqm(commercialLandArea)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-xs text-amber-700">
                   <span>취득시 상가부수토지 기준시가 (자동)</span>
                   <span>{fmtKrw(acqCommercialLandStd)}</span>
@@ -328,6 +248,91 @@ export function MixedUseLegacyStdPrice({
           </>
         )}
       </div>
+
+      {/* ── 양도시 기준시가 ───────────────────────────
+          Case A(항상 PHD ON)에서 개별주택공시가격을 숨기면 헤더만 남는 빈 박스가 되므로
+          sub-block 전체를 {!(isCaseA && PHD)} 로 가드. non-Case-A는 상가 필드가 남아 정상. */}
+      {!(isCaseA && asset.usePreHousingDisclosure) && (
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          {transferSectionNum !== undefined && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
+              {transferSectionNum}
+            </span>
+          )}
+          <p className="text-xs font-semibold text-emerald-700">
+            {isCaseA ? "양도시 개별주택공시가격" : "양도시 기준시가"}
+          </p>
+        </div>
+
+        {/* PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 */}
+        {!asset.usePreHousingDisclosure && (
+          <StandardPriceInput
+            propertyKind="house_individual"
+            totalPrice={asset.mixedTransferHousingPrice}
+            onTotalPriceChange={(v) => onChange({ mixedTransferHousingPrice: v })}
+            jibun={jibun}
+            referenceDate={transferDate}
+            label="개별주택공시가격"
+            hint="주택건물+주택부수토지 일괄"
+          />
+        )}
+
+        {/* Case A(용도변경 4부분)는 자산-우선 위젯(취득시 섹션 PHD, layout=asset-major)이 양도까지 흡수 — 별도 양도 4부분 미렌더. */}
+        {!isCaseA && (
+          /* 일반(비-Case A) 레이아웃 — 기존 유지 */
+          <>
+            <FieldCard
+              label="상가건물 기준시가"
+              hint="토지 제외 — 국세청 홈택스 > 기준시가 조회 (개별주택가격확인서에 미포함)"
+            >
+              <CurrencyInput
+                label=""
+                value={asset.mixedTransferCommercialBuildingPrice}
+                onChange={(v) => onChange({ mixedTransferCommercialBuildingPrice: v })}
+                placeholder="양도시 상가건물 기준시가"
+              />
+            </FieldCard>
+            <div className="flex justify-end">
+              <BuildingStdPriceModalButton
+                lockedTaxType="transfer"
+                initialAddress={stdPriceAddress}
+                snapshotKey={`${bspPrefix}-transfer-commercial`}
+                prefill={{
+                  floorArea: asset.nonResidentialFloorArea,
+                  landAreaM2: commercialLandArea > 0 ? String(commercialLandArea) : undefined,
+                  acquisitionDate: asset.acquisitionDate,
+                  transferDate,
+                }}
+                onApply={(v) => onChange({ mixedTransferCommercialBuildingPrice: String(v) })}
+              />
+            </div>
+            <LandPriceLookupField
+              pricePerSqm={asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer}
+              onPricePerSqmChange={(v) => onChange({ mixedTransferLandPricePerSqm: v })}
+              area={commercialLandArea > 0 ? commercialLandArea : undefined}
+              referenceDate={transferDate}
+              jibun={jibun}
+              label="개별공시지가 (원/㎡)"
+              hint="상가부수토지 산정용 (필수)"
+              placeholder="양도시 개별공시지가 /㎡"
+            />
+            {(transferCommercialLandStd > 0 || transferCommercialBuilding > 0) && (
+              <div className="rounded-lg bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-sm space-y-1">
+                <div className="flex justify-between text-xs text-emerald-700">
+                  <span>상가부수토지 기준시가 (자동)</span>
+                  <span>{fmtKrw(transferCommercialLandStd)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-semibold text-emerald-900">
+                  <span>상가부분 기준시가 합계 (자동)</span>
+                  <span>{fmtKrw(transferCommercialTotal)}</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      )}
     </div>
   );
 }
