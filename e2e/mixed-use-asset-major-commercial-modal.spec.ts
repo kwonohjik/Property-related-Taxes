@@ -5,7 +5,12 @@
  * 상가 섹션의 "건물 기준시가 계산" 모달에서 취득·양도를 한 번에 계산 →
  * "취득·양도 모두 적용" 단일 버튼 → 두 상가건물 필드 동시 입력(오적용 footgun 제거).
  *
+ * ⚠️ 연도(취득/양도)는 자산 날짜에서 파생돼 **자동 입력**된다(#560 prefill) → "연도 선택"
+ *    placeholder는 렌더되지 않는다. 이를 클릭하려던 구버전 스펙은 타임아웃했다(spec rot).
+ *    선택 대신 **prefill 결과를 단언**해 회귀 가드로 쓴다.
+ *
  * 계획: docs/02-design/features/mixed-use-asset-major-stdprice-layout.plan.md
+ *       docs/02-design/features/building-stdprice-e2e-spec-rot.plan.md (rot 수정)
  * 정책: feedback_browser_verify_with_playwright · feedback_e2e_togglecard_setchecked
  */
 import { test, expect, type Page, type Locator } from "@playwright/test";
@@ -68,20 +73,24 @@ test.describe("겸용주택 자산-우선 — 상가건물 통합 모달", () =>
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
     await expect(modal).toBeVisible();
 
-    // 신축연도 + 연면적(상가)
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
-    await modal.getByPlaceholder("건물 연면적").fill("80");
 
-    // 취득 시점 (연도 선택 → 첫 YearSelect)
-    await selectInModal(page, modal, "연도 선택", /2010년/);
+    // ── prefill 회귀 가드 (#560) — 겸용 상가 호출부(MixedUseAssetMajorStdPrice.tsx prefill) ──
+    // 연면적·연도는 자산 값에서 자동 입력되므로 스펙이 다시 채우지 않는다.
+    // ⚠️ exact:true 필수 — 공시지가 연도의 "YYYY년 (자동)"과 구분.
+    await expect(modal.getByPlaceholder("건물 연면적")).toHaveValue("80"); // 상가 연면적(전용 80 + 공통 0)
+    await expect(modal.getByText("2010년", { exact: true })).toBeVisible(); // 취득일 2010-06-15 파생
+    await expect(modal.getByText("2025년", { exact: true })).toBeVisible(); // 양도일 2025-05-01 파생
+
+    // 취득 시점 — 구조·용도는 prefill 대상이 아니라 선택 필요(첫 "구조 선택" = 취득)
     await selectInModal(page, modal, "구조 선택", /철근콘크리트조/);
     await selectInModal(page, modal, "용도 선택", /아파트/);
     await modal.getByPlaceholder("원/㎡").first().fill("3000000");
 
-    // 양도 시점 (취득연도 선택 후 남은 "연도 선택" = 양도)
-    await selectInModal(page, modal, "연도 선택", /2025년/);
+    // 양도 시점 — 취득분 선택 후 트리거에 선택값이 표시되므로 남은 "구조/용도 선택" = 양도
     await selectInModal(page, modal, "구조 선택", /철근콘크리트조/);
     await selectInModal(page, modal, "용도 선택", /아파트/);
+    // 취득연도 2010 > 2000 → 취득·양도 모두 "원/㎡" 2칸(BuildingStdPriceForm.tsx:436 분기)
     await modal.getByPlaceholder("원/㎡").nth(1).fill("6216000");
 
     await modal.getByRole("button", { name: "기준시가 계산하기" }).click();

@@ -19,18 +19,29 @@ async function selectInModal(page: Page, modal: Locator, triggerText: string, op
   await page.getByRole("option", { name: optionName }).first().click();
 }
 
-/** 취득·양도 2시점 모두 입력해 두 시점 결과가 모두 산출되게 함(→ applyTimePoint 게이팅 검증 가능). */
+/**
+ * 취득·양도 2시점 모두 입력해 두 시점 결과가 모두 산출되게 함(→ applyTimePoint 게이팅 검증 가능).
+ *
+ * ⚠️ **양도연도는 선택하지 않는다** — 양도일(2025-05-01)에서 파생돼 이미 채워져 있다(#560 prefill)
+ *    → "연도 선택" placeholder가 렌더되지 않는다. 반면 이 스펙은 취득일을 입력하지 않으므로
+ *    **취득연도만** 미채움 상태라 선택이 필요하다(probe 실측: "연도 선택" 1개 · "2025년" 1개).
+ */
 async function computeBothTimePoints(page: Page, modal: Locator) {
   await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
   await modal.getByPlaceholder("건물 연면적").fill("100");
+
+  // 취득 시점 — 취득일 미입력이라 연도 prefill 없음 → 유일한 "연도 선택" = 취득연도
   await selectInModal(page, modal, "연도 선택", /2010년/);
   await selectInModal(page, modal, "구조 선택", /철근콘크리트조/);
   await selectInModal(page, modal, "용도 선택", /아파트/);
   await modal.getByPlaceholder("원/㎡").first().fill("3000000");
-  await selectInModal(page, modal, "연도 선택", /2025년/);
+
+  // 양도 시점 — 연도는 prefill 완료(회귀 가드), 구조·용도만 선택
+  await expect(modal.getByText("2025년", { exact: true })).toBeVisible();
   await selectInModal(page, modal, "구조 선택", /철근콘크리트조/);
   await selectInModal(page, modal, "용도 선택", /아파트/);
   await modal.getByPlaceholder("원/㎡").nth(1).fill("6216000");
+
   await modal.getByRole("button", { name: "기준시가 계산하기" }).click();
 }
 
