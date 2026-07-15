@@ -10,6 +10,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
@@ -315,21 +316,8 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     // 토지·건물 취득일 다름 토글 ON일 때만 토지 취득일 필수. OFF면 acquisitionDate로 폴백.
     if (asset.hasSeperateLandAcquisitionDate && !asset.landAcquisitionDate)
       return `${label}: 토지 취득일을 입력하세요.`;
-    if (!asset.residentialFloorArea || parseFloat(asset.residentialFloorArea) <= 0)
-      return `${label}: 주택 전용면적(㎡)을 입력하세요. (면적 정보 — 연면적 자동 파생)`;
-    if (!asset.nonResidentialFloorArea || parseFloat(asset.nonResidentialFloorArea) <= 0)
-      return `${label}: 상가 전용면적(㎡)을 입력하세요. (면적 정보 — 연면적 자동 파생)`;
-    if (!asset.mixedUseTotalLandArea || parseFloat(asset.mixedUseTotalLandArea) <= 0)
-      return `${label}: 전체 토지 면적(㎡)을 입력하세요. (면적 정보)`;
-    if (!asset.buildingFootprintArea || parseFloat(asset.buildingFootprintArea) <= 0)
-      return `${label}: 건물 정착면적(㎡)을 입력하세요. (면적 정보)`;
-    // 주택 부수토지 override 가드 (three-state: 빈값=자동, 0 적법, 0≤x≤전체토지)
-    if (asset.mixedResidentialLandAreaOverride && asset.mixedResidentialLandAreaOverride.trim() !== "") {
-      const ov = parseFloat(asset.mixedResidentialLandAreaOverride);
-      const totalLandV = parseFloat(asset.mixedUseTotalLandArea) || 0;
-      if (!Number.isFinite(ov) || ov < 0 || ov > totalLandV)
-        return `${label}: 부수토지 면적은 0 이상 전체 토지면적 이하로 입력하세요. (기준시가란)`;
-    }
+    const areaErr = validateMixedUseAreas(asset, label);
+    if (areaErr) return areaErr;
     if (!asset.mixedTransferHousingPrice || parseAmount(asset.mixedTransferHousingPrice) <= 0)
       return `${label}: 양도시 개별주택공시가격을 입력하세요. (양도시 기준시가)`;
     // ⑧ Validation fallback — UI 표시·API 변환이 mixedTransfer || phdLandPricePerSqmAtTransfer 로
