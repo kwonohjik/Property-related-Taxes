@@ -30,32 +30,47 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
   };
 }
 
-describe("[D2] transfer-pre1990-phd-bridge — three-state 0 보존", () => {
-  it("phdResidentialLandArea 미입력('') → 자동 안분값", () => {
+// 2026-07-15 축 이동 — 주택부수토지의 소스가 PHD 패널 전용 `phdResidentialLandArea`에서
+// **①카드 `mixedResidentialLandAreaOverride`**로 통일됐다. 종전 필드는 ⑫ Zod가 strip해
+// 엔진 부수토지에 도달한 적이 없어(PHD 패널에만 반영) 이중 입력이었다.
+// three-state("" = 자동 / "0" = 적법한 0) 계약 자체는 그대로 — 축만 바뀐다.
+describe("[D2] transfer-pre1990-phd-bridge — ①카드 단일 소스 + three-state 0 보존", () => {
+  it("override 미입력('') → 자동 안분값", () => {
     // 회귀 방어: 정정이 자동 안분을 죽이지 않아야 한다(`??` 오적용 시 0이 반환됨)
-    expect(derivePhdResidentialLandArea(asset({ phdResidentialLandArea: "" }))).toBe(100);
+    expect(derivePhdResidentialLandArea(asset({ mixedResidentialLandAreaOverride: "" }))).toBe(100);
   });
 
-  it("phdResidentialLandArea = '0' (적법한 0) → 0 보존, 자동 안분으로 덮어쓰지 않음", () => {
-    // 현행 `parseArea(...) || autoLandArea` → 0 || 100 → 100 (★버그)
-    expect(derivePhdResidentialLandArea(asset({ phdResidentialLandArea: "0" }))).toBe(0);
+  it("override = '0' (적법한 0) → 0 보존, 자동 안분으로 덮어쓰지 않음", () => {
+    expect(derivePhdResidentialLandArea(asset({ mixedResidentialLandAreaOverride: "0" }))).toBe(0);
   });
 
-  it("phdResidentialLandArea = '90.29' → 그대로", () => {
-    expect(derivePhdResidentialLandArea(asset({ phdResidentialLandArea: "90.29" }))).toBe(90.29);
+  it("override = '90.29' → 그대로", () => {
+    expect(derivePhdResidentialLandArea(asset({ mixedResidentialLandAreaOverride: "90.29" }))).toBe(
+      90.29,
+    );
   });
 
-  // D2를 bridge에서만 고치면 UI(MixedUsePreHousingDisclosureSection)가 자체 `||` 재구현으로
-  // 계속 자동값을 써서 **새 divergence**가 생긴다(품질 게이트 High 2). UI도 같은 헬퍼로 통일했다.
+  it("★상가 override만 지정 → 주택은 잔액 (computeDerivedAreas 정본 위임 확인)", () => {
+    // 자체 재구현이면 상가 override를 못 봐서 자동 안분(100)이 나온다.
+    expect(
+      derivePhdResidentialLandArea(asset({ mixedCommercialLandAreaOverride: "130" })),
+    ).toBe(70);
+  });
+
+  it("★PHD 패널 전용 필드는 더 이상 면적을 바꾸지 않는다 (이중 입력 제거)", () => {
+    // migrate가 ①카드로 이관하므로 이 필드는 소스가 아니다.
+    expect(derivePhdResidentialLandArea(asset({ phdResidentialLandArea: "55" }))).toBe(100);
+  });
+
   it("UI·bridge 단일 소스 — 같은 asset에 같은 값", () => {
     for (const v of ["", "0", "90.29", "150"]) {
-      const a = asset({ phdResidentialLandArea: v });
-      // UI(MixedUsePreHousingDisclosureSection:59)도 이 헬퍼를 직접 호출한다
+      const a = asset({ mixedResidentialLandAreaOverride: v });
+      // UI(MixedUsePreHousingDisclosureSection)도 이 헬퍼를 직접 호출한다
       expect(derivePhdResidentialLandArea(a)).toBe(derivePhdResidentialLandArea(a));
     }
     // 0은 자동값(100)과 달라야 한다 — three-state 보존
-    expect(derivePhdResidentialLandArea(asset({ phdResidentialLandArea: "0" }))).not.toBe(
-      derivePhdResidentialLandArea(asset({ phdResidentialLandArea: "" })),
+    expect(derivePhdResidentialLandArea(asset({ mixedResidentialLandAreaOverride: "0" }))).not.toBe(
+      derivePhdResidentialLandArea(asset({ mixedResidentialLandAreaOverride: "" })),
     );
   });
 });

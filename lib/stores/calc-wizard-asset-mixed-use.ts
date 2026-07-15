@@ -85,6 +85,28 @@ export const MIXED_USE_DEFAULTS: Pick<
 };
 
 /**
+ * PHD 패널 전용이던 `phdResidentialLandArea` → ①카드 `mixedResidentialLandAreaOverride` 이관.
+ *
+ * 2026-07-15 주택부수토지를 ①카드 단일 소스로 통일하면서 PHD 패널 입력칸은 조회 전용이 됐다.
+ * 옛 이력에 남은 사용자 입력을 그냥 버리면 **pre-1990 환산 면적이 조용히 자동 안분으로 바뀌어
+ * 세액이 달라진다** → 단일 소스 필드로 옮겨 의도를 보존한다.
+ *
+ * ⚠️ ①카드 값이 이미 있으면 덮어쓰지 않는다(단일 소스 우선). 이관 후 원본은 비워 재이관을 막는다.
+ * ⚠️ 문자열 수준 분기 — `"0"`(적법한 0)도 이관 대상이다.
+ */
+function migratePhdLandAreaToOverride(a: Record<string, unknown>): void {
+  const legacy = a.phdResidentialLandArea;
+  if (typeof legacy !== "string" || legacy.trim() === "") return;
+  const current = a.mixedResidentialLandAreaOverride;
+  if (typeof current === "string" && current.trim() !== "") {
+    a.phdResidentialLandArea = ""; // ①이 이미 정본 — 옛 값 폐기
+    return;
+  }
+  a.mixedResidentialLandAreaOverride = legacy.trim();
+  a.phdResidentialLandArea = "";
+}
+
+/**
  * 겸용주택 + partialUsageChange 필드를 raw 객체에 backward compat 가드 적용.
  * sessionStorage·DB 이력에서 누락된 신규 필드를 디폴트로 채움.
  */
@@ -103,6 +125,7 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   // override 3종은 현행 writer가 round2/residualArea라 잔재가 생길 수 없다.
   normalizeStoredArea(a, "residentialFloorArea");
   normalizeStoredArea(a, "nonResidentialFloorArea");
+  migratePhdLandAreaToOverride(a);
   if (!a.buildingFootprintArea) a.buildingFootprintArea = "";
   if (!a.mixedUseTotalLandArea) a.mixedUseTotalLandArea = "";
   if (!a.mixedResidentialLandAreaOverride) a.mixedResidentialLandAreaOverride = "";
