@@ -48,20 +48,19 @@ export function MixedUseLegacyStdPrice({
   // ⚠️ override 3필드를 **전부** 전달해야 한다. 하나라도 빠뜨리면 이 화면의 상가부수토지
   //    기준시가 자동계산·모달 prefill이 엔진값과 갈라진다(용도변경 ON 경로 — 섹션 ①은
   //    `MixedUseSection.tsx:115`에서 용도변경 여부와 무관하게 렌더되므로 여기서도 수정된다).
-  // PHD ON이면 phdResidentialLandArea가 담당하므로 부수토지 override 배타(AssetMajor·store·API 동일).
+  // 부수토지 override는 PHD 무관 (2026-07-15 배타 해제 — API·UI·validate·사이드바 동일).
   const landOverrideStr = asset.mixedResidentialLandAreaOverride ?? "";
   const commLandOverrideStr = asset.mixedCommercialLandAreaOverride ?? "";
   const fpOverrideStr = asset.mixedResidentialFootprintOverride ?? "";
-  const landEditable = !asset.usePreHousingDisclosure;
   const derived = computeDerivedAreas({
     residentialFloorArea: residential,
     nonResidentialFloorArea: commercial,
     buildingFootprintArea: parseDecimal(asset.buildingFootprintArea),
     totalLandArea: totalLand,
-    ...(landEditable && landOverrideStr.trim() !== ""
+    ...(landOverrideStr.trim() !== ""
       ? { residentialLandAreaOverride: parseDecimal(landOverrideStr) }
       : {}),
-    ...(landEditable && commLandOverrideStr.trim() !== ""
+    ...(commLandOverrideStr.trim() !== ""
       ? { commercialLandAreaOverride: parseDecimal(commLandOverrideStr) }
       : {}),
     ...(fpOverrideStr.trim() !== ""

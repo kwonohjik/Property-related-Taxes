@@ -44,20 +44,19 @@ export function MixedUseAssetMajorStdPrice({
 
   // 부수토지 안분 — leaf 헬퍼 단일 소스 + override 반영 (three-state: 빈값→자동, "0"→적법한 0).
   // 면적 입력·수정은 섹션 ①(MixedUseAreaInputs) 단일 소스 — 여기서는 **조회만** 한다.
-  // PHD ON이면 phdResidentialLandArea가 담당하므로 override 배타(API 변환과 동일 게이트).
+  // override는 PHD 무관 (2026-07-15 배타 해제 — API·UI·validate·사이드바 동일).
   const landOverrideStr = asset.mixedResidentialLandAreaOverride ?? "";
   const commLandOverrideStr = asset.mixedCommercialLandAreaOverride ?? "";
   const fpOverrideStr = asset.mixedResidentialFootprintOverride ?? "";
-  const landEditable = !asset.usePreHousingDisclosure;
   const derived = computeDerivedAreas({
     residentialFloorArea: residential,
     nonResidentialFloorArea: commercial,
     buildingFootprintArea: parseDecimal(asset.buildingFootprintArea),
     totalLandArea: totalLand,
-    ...(landEditable && landOverrideStr.trim() !== ""
+    ...(landOverrideStr.trim() !== ""
       ? { residentialLandAreaOverride: parseDecimal(landOverrideStr) }
       : {}),
-    ...(landEditable && commLandOverrideStr.trim() !== ""
+    ...(commLandOverrideStr.trim() !== ""
       ? { commercialLandAreaOverride: parseDecimal(commLandOverrideStr) }
       : {}),
     ...(fpOverrideStr.trim() !== ""

@@ -62,12 +62,14 @@ describe("[D1] Legacy 경로 — 부수토지 override 반영", () => {
     expect(transferLandStd(getByText)).toBe("50,000,000");
   });
 
-  it("PHD ON이면 override 배타 — 자동 안분 유지(범위 밖 U2 정책)", () => {
+  it("PHD ON에서도 override 반영 (2026-07-15 배타 해제)", () => {
+    // 종전에는 "PHD ON은 phdResidentialLandArea가 담당"이라며 override를 무시했으나,
+    // 그 필드는 ⑫ Zod가 strip해 엔진에 도달한 적이 없다 → 배타는 지키는 게 없었다.
+    // 표시(이 화면)와 엔진이 같은 override를 쓰도록 통일 — dual-truth 회피.
     const { getByText } = renderLegacy({
       usePreHousingDisclosure: true,
       mixedResidentialLandAreaOverride: "150",
     });
-    // PHD ON은 phdResidentialLandArea가 담당 → override 무시가 정상
-    expect(transferLandStd(getByText)).toBe("100,000,000");
+    expect(transferLandStd(getByText)).toBe("50,000,000");
   });
 });

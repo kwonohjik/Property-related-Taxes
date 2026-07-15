@@ -27,16 +27,22 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     nonResidentialFloorArea: parseFloat(primary.nonResidentialFloorArea) || 0,
     buildingFootprintArea: parseFloat(primary.buildingFootprintArea) || 0,
     totalLandArea: parseFloat(primary.mixedUseTotalLandArea) || 0,
-    // 주택 부수토지 override — three-state(빈값→undefined, 0→0 보존). PHD OFF 전용(ON은 phdResidentialLandArea 담당, 배타).
+    // 주택 부수토지 override — three-state(빈값→undefined, 0→0 보존).
     // ⚠️ `?? ""` 선행 필수 — `x?.trim() !== ""`는 x가 undefined일 때 `undefined !== ""` → true가 되어
     //    override 미설정인데도 분기에 진입, `parseFloat(undefined) || 0` → 0을 전송한다.
-    ...(!primary.usePreHousingDisclosure &&
-    (primary.mixedResidentialLandAreaOverride ?? "").trim() !== ""
+    //
+    // PHD 여부와 무관하게 전송한다(2026-07-15 배타 해제). 종전 PHD OFF 게이트의 명분은
+    // "PHD 쪽 `preHousingDisclosure.landArea`가 담당"이었으나 그 필드는 ⑫ Zod
+    // (`transfer-tax-schema-mixed-use.ts` phdForMixedUseSchema — landArea 미포함)가 strip해
+    // 엔진에 도달한 적이 없다 → PHD ON이면 사용자가 부수토지를 **어디서도 지정할 수 없었다**.
+    // 부수토지 면적은 §164⑦이 정하는 값이 아니라 건축물대장·등기의 사실관계이며,
+    // 엔진(transfer-tax-mixed-use-helpers.ts:167-169)이 derived.residentialLandArea를 쓰므로
+    // 게이트만 걷으면 PHD 계산에 그대로 관철된다.
+    ...((primary.mixedResidentialLandAreaOverride ?? "").trim() !== ""
       ? { residentialLandAreaOverride: parseFloat(primary.mixedResidentialLandAreaOverride) || 0 }
       : {}),
-    // 상가 부수토지 override — 주택과 동일 축(PHD OFF 전용·three-state).
-    ...(!primary.usePreHousingDisclosure &&
-    (primary.mixedCommercialLandAreaOverride ?? "").trim() !== ""
+    // 상가 부수토지 override — 주택과 동일 축(three-state·PHD 무관).
+    ...((primary.mixedCommercialLandAreaOverride ?? "").trim() !== ""
       ? { commercialLandAreaOverride: parseFloat(primary.mixedCommercialLandAreaOverride) || 0 }
       : {}),
     // 주택 정착면적 override — PHD 무관(§168의12 배율초과 NBL 판정용, 부수토지 축과 별개).

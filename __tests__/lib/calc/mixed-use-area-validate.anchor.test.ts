@@ -64,23 +64,35 @@ describe("[V2] 부수토지 합계 차단", () => {
   });
 });
 
-describe("[PHD 배타 게이트] PHD ON → 부수토지 override 무시 (UI·API와 동일)", () => {
-  // PHD ON이면 UI가 두 칸을 disabled로 막고 ↻ 리셋 배지도 숨긴다. 그 상태에서 stale override로
-  // 차단하면 사용자가 오류를 해소할 경로가 없다(UI 통과 ↔ validate 차단 모순).
-  // 엔진도 API 변환(`transfer-tax-api-mixed-use.ts:33·38`)에서 override를 받지 않는다.
-  it("★PHD ON + 합 불일치 override → 통과 (차단하면 해소 불가능한 덫)", () => {
+// 2026-07-15 배타 해제 — PHD ON에서도 부수토지 override가 유효하다(UI 편집 가능·API 전송).
+// 종전 이 describe는 "PHD ON → override 무시"를 고정했다. 근거는 "PHD의
+// preHousingDisclosure.landArea가 담당"이었으나 그 필드는 ⑫ Zod가 strip해 엔진 미도달이었다
+// → PHD ON이면 부수토지를 어디서도 지정할 수 없었다. 게이트를 걷었으므로 anchor도 반전한다.
+// (종전의 "차단하면 해소 불가능한 덫" 우려는 칸이 editable이 되면서 소멸 — 사용자가 고칠 수 있다.)
+describe("[PHD 무관] PHD ON에서도 부수토지 override를 검증한다 (UI·API와 동일)", () => {
+  it("★PHD ON + 합 불일치 override → 차단 (PHD OFF와 동일)", () => {
     expect(
       V(asset({
         usePreHousingDisclosure: true,
         mixedResidentialLandAreaOverride: "90.29",
         mixedCommercialLandAreaOverride: "78.01",
       })),
-    ).toBe("");
+    ).toMatch(/168\.3.*200.*다릅니다/);
   });
 
-  it("PHD ON + 범위 초과 override(250 > 200) → 통과 (동일 사유)", () => {
+  it("PHD ON + 범위 초과 override(250 > 200) → 차단 (동일)", () => {
     expect(
       V(asset({ usePreHousingDisclosure: true, mixedResidentialLandAreaOverride: "250" })),
+    ).toMatch(/주택 부수토지.*전체 토지면적/);
+  });
+
+  it("PHD ON + 합 일치 → 통과", () => {
+    expect(
+      V(asset({
+        usePreHousingDisclosure: true,
+        mixedResidentialLandAreaOverride: "90.29",
+        mixedCommercialLandAreaOverride: "109.71",
+      })),
     ).toBe("");
   });
 
