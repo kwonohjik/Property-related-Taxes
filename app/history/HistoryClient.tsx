@@ -157,12 +157,16 @@ function extractStockValuationTotal(resultData: Record<string, unknown>): string
   return typeof total === "number" ? total.toLocaleString() : "-";
 }
 
-function extractTotalTax(resultData: Record<string, unknown>): string {
+export function extractTotalTax(resultData: Record<string, unknown>): string {
   const inner = resultData?.result as Record<string, unknown> | undefined;
   if (inner) {
     if (inner.isExempt) return "비과세";
     if (typeof inner.totalTax === "number") return inner.totalTax.toLocaleString();
     if (typeof inner.finalTax === "number") return inner.finalTax.toLocaleString();
+    // 겸용주택(mode:"mixed-use") — 납부세액이 result.total 한 단계 깊음
+    const mixedTotal = inner.total as { totalPayable?: number } | undefined;
+    if (typeof mixedTotal?.totalPayable === "number")
+      return mixedTotal.totalPayable.toLocaleString();
   }
   const agg = resultData?.aggregated as Record<string, unknown> | undefined;
   if (typeof agg?.totalTax === "number") return agg.totalTax.toLocaleString();

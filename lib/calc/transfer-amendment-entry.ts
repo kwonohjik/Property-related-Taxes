@@ -21,23 +21,33 @@ type AppRouter = ReturnType<typeof useRouter>;
 
 /**
  * 정정(수정신고·경정청구) 가능한 양도세 record 분류 (계획서 §4.5 · 실측 V1).
- * 일반 다자산만 노출 — 부담부증여·겸용주택·general_building 일괄 제외.
- *   - single   : mode==="single"
- *   - bundled  : mode==="bundled" AND assets.length>1(§166⑥ companionAssets) AND 부담부증여 아님
- *                (general_building은 단일 물건이라 assets.length===1 → 자연 배제)
- *   - multi    : mode 래퍼 없음 + AggregateTransferResult(properties[] top-level)
+ * 부담부증여·general_building은 제외.
+ *   - single    : mode==="single"
+ *   - bundled   : mode==="bundled" AND assets.length>1(§166⑥ companionAssets) AND 부담부증여 아님
+ *                 (general_building은 단일 물건이라 assets.length===1 → 자연 배제)
+ *   - mixed-use : mode==="mixed-use" AND splitMode!=="pre-2022-rejected"
+ *   - multi     : mode 래퍼 없음 + AggregateTransferResult(properties[] top-level)
+ *
+ * ⚠️ 겸용주택에 "single"을 재사용하지 말 것 — classifyLoadableTransfer(transfer-multi-load-entry.ts)가
+ *    이 가드를 재사용하며 "single"을 통과시켜 겸용주택이 다건 불러오기에 편입된다. 다건 경로는 겸용
+ *    미지원이라 §160①단서 분리계산이 소실된다. 전용 값은 그 fallthrough로 자연 배제된다.
  */
 export function classifyAmendableTransfer(
   record: CalculationRecord,
-): "single" | "bundled" | "multi" | null {
+): "single" | "bundled" | "mixed-use" | "multi" | null {
   if (record.taxType !== "transfer") return null;
   const rd = record.resultData as {
     mode?: string;
     transferBurdenedGiftBreakdown?: unknown;
     properties?: unknown;
+    result?: { splitMode?: string; total?: { transferTax?: number } };
   } | null;
   if (!rd) return null;
   if (rd.mode === "single") return "single";
+  if (rd.mode === "mixed-use") {
+    // 2022.1.1 이전 양도분은 엔진이 계산을 거부(전 세액 0) → 정정 진입 자체를 차단
+    return rd.result?.splitMode === "pre-2022-rejected" ? null : "mixed-use";
+  }
   if (rd.mode === "bundled") {
     const assets = (record.inputData as { assets?: unknown[] } | null)?.assets;
     if ((assets?.length ?? 0) > 1 && !rd.transferBurdenedGiftBreakdown) return "bundled";
@@ -49,23 +59,27 @@ export function classifyAmendableTransfer(
     if (Array.isArray(inProps) && inProps.length > 0 && inProps[0]?.form) return "multi";
     return null;
   }
-  return null; // mixed-use·부담부증여·general_building 등
+  return null; // 부담부증여·general_building 등
 }
 
-/** 당초 결정세액 소스 — single=result / bundled=aggregated (계획서 §4.4) */
-function extractOriginalDeterminedTax(record: CalculationRecord): number | undefined {
+/**
+ * 당초 결정세액 소스 — single=result / bundled=aggregated / mixed-use=result.total (계획서 §4.4).
+ * 겸용주택은 본세가 `total.transferTax`(지방소득세 제외) — 단건 determinedTax와 동일 축.
+ */
+export function extractOriginalDeterminedTax(record: CalculationRecord): number | undefined {
   const rd = record.resultData as {
-    result?: { determinedTax?: number };
+    result?: { determinedTax?: number; total?: { transferTax?: number } };
     aggregated?: { determinedTax?: number };
   };
-  return rd.result?.determinedTax ?? rd.aggregated?.determinedTax;
+  return rd.result?.determinedTax ?? rd.result?.total?.transferTax ?? rd.aggregated?.determinedTax;
 }
 
 /** 수정신고(경정) 진입 — 당초 결정세액 차감·추가 납부세액 (국세기본법 §45) */
 export function enterAmendment(record: CalculationRecord, router: AppRouter): void {
   const kind = classifyAmendableTransfer(record);
   if (kind === "multi") return enterMultiAmendment(record, router);
-  if (kind !== "single" && kind !== "bundled") return;
+  // 겸용주택도 동일 store·동일 마법사(/calc/transfer-tax) — 진입 경로 공유
+  if (kind !== "single" && kind !== "bundled" && kind !== "mixed-use") return;
   Promise.all([
     import("@/lib/stores/calc-wizard-store"),
     import("@/lib/calc/transfer-amendment-helpers"),
@@ -94,7 +108,7 @@ export function enterAmendment(record: CalculationRecord, router: AppRouter): vo
 export function enterRefundClaim(record: CalculationRecord, router: AppRouter): void {
   const kind = classifyAmendableTransfer(record);
   if (kind === "multi") return enterMultiRefundClaim(record, router);
-  if (kind !== "single" && kind !== "bundled") return;
+  if (kind !== "single" && kind !== "bundled" && kind !== "mixed-use") return;
   Promise.all([
     import("@/lib/stores/calc-wizard-store"),
     import("@/lib/calc/transfer-amendment-helpers"),

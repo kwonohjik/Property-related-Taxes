@@ -694,6 +694,9 @@ export async function POST(request: NextRequest) {
         new Date(data.transferDate),
         mixedAsset,
         rates,
+        // 신고서 단위 수정신고·경정청구 — engineInput.amendment는 상단(:308~)에서 Date 변환 완료.
+        // ⚠️ raw data.amendment 전달 금지: Zod 출력은 string이라 §48② 감면율 판정(isAfter)이 침묵 오작동.
+        engineInput.amendment,
       );
       return NextResponse.json(
         { data: { mode: "mixed-use" as const, result: mixedResult } },

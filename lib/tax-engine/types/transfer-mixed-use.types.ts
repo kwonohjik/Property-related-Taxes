@@ -1,5 +1,6 @@
 import type { ZoneType } from "../non-business-land/types";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer.types";
+import type { AmendmentDetail } from "./transfer-amendment.types";
 
 /**
  * 겸용주택(1세대 1주택 + 상가) 양도소득세 분리계산 타입
@@ -408,4 +409,14 @@ export interface MixedUseGainBreakdown {
     period2CommercialLongTermDeductionRate: number;
     period2CommercialLongTermDeductionAmount: number;
   };
+
+  /**
+   * 수정신고·경정청구 상세 (국세기본법 §45·§45의2).
+   *
+   * 기준값 = `total.transferTax`(본세 — 지방소득세 제외). 단건 finalize의 determinedTax와 동일 축.
+   * `amendment` 미전달 시 undefined — 캐시된 구 결과(IndexedDB)도 안전 통과.
+   * `splitMode === "pre-2022-rejected"`이면 amendment 전달 여부와 무관하게 항상 undefined
+   * (계산 불가 상태에 부착하면 refundTax = 당초 전액 오표시).
+   */
+  amendmentDetail?: AmendmentDetail;
 }
