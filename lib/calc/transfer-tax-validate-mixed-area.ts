@@ -28,14 +28,11 @@ export function validateMixedUseAreas(asset: AssetForm, label: string): string |
 
   const totalLandV = parseFloat(asset.mixedUseTotalLandArea) || 0;
   const footprintV = parseFloat(asset.buildingFootprintArea) || 0;
-  // ⚠️ 부수토지 override는 **PHD OFF 전용** — UI(`MixedUseAreaInputs.tsx` landEditable)·
-  //    API 변환(`transfer-tax-api-mixed-use.ts:33·38`)·사이드바와 동일 게이트여야 한다.
-  //    게이트가 없으면 PHD ON에서 stale override로 계산이 차단되는데, 그 칸은 disabled이고
-  //    ↻ 리셋 배지도 숨겨져 **사용자가 오류를 해소할 경로가 없다**(UI 통과 ↔ validate 차단 모순).
-  //    정착면적 override는 PHD 무관(§168의12 NBL 판정 축) — API `:43`과 동일하게 게이트 없음.
-  const phdOff = !asset.usePreHousingDisclosure;
-  const landOv = phdOff ? (asset.mixedResidentialLandAreaOverride ?? "").trim() : "";
-  const commLandOv = phdOff ? (asset.mixedCommercialLandAreaOverride ?? "").trim() : "";
+  // 부수토지 override는 PHD 여부와 무관하게 유효하다(2026-07-15 배타 해제).
+  // UI·API·사이드바가 모두 PHD 무게이트이므로 여기도 게이트를 두면 안 된다
+  // (UI 통과 ↔ validate 차단 모순 — 3중 패턴).
+  const landOv = (asset.mixedResidentialLandAreaOverride ?? "").trim();
+  const commLandOv = (asset.mixedCommercialLandAreaOverride ?? "").trim();
   const fpOv = (asset.mixedResidentialFootprintOverride ?? "").trim();
 
   // ── override 범위 가드 (three-state: 빈값=자동, 0 적법) ──

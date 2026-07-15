@@ -52,10 +52,11 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
   const landOv = asset.mixedResidentialLandAreaOverride ?? "";
   const commLandOv = asset.mixedCommercialLandAreaOverride ?? "";
   const fpOv = asset.mixedResidentialFootprintOverride ?? "";
-  // 부수토지 override는 PHD OFF 전용 (API 변환 `transfer-tax-api-mixed-use.ts:33·38`과 동일 게이트).
-  const landEditable = !asset.usePreHousingDisclosure;
-  const hasLandOv = landEditable && landOv.trim() !== "";
-  const hasCommLandOv = landEditable && commLandOv.trim() !== "";
+  // 부수토지 override는 PHD 여부와 무관 (2026-07-15 배타 해제 — API·validate·사이드바 동일).
+  // 종전 게이트의 명분("PHD의 preHousingDisclosure.landArea가 담당")은 그 필드가 ⑫ Zod에서
+  // strip돼 엔진 미도달이라 성립하지 않았고, PHD ON에서 부수토지를 지정할 길을 없앨 뿐이었다.
+  const hasLandOv = landOv.trim() !== "";
+  const hasCommLandOv = commLandOv.trim() !== "";
   // 정착면적 override는 PHD 무관 (§168의12 배율초과 NBL 판정용 — 부수토지 축과 별개).
   const hasFpOv = fpOv.trim() !== "";
 
@@ -277,27 +278,16 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           <FieldCard
             label="주택 부수토지 (㎡)"
             stacked
-            disabled={!landEditable}
             badge={
-              landEditable ? (
-                <AreaBadge
-                  manual={hasLandOv}
-                  onReset={() => onChange({ mixedResidentialLandAreaOverride: "" })}
-                />
-              ) : undefined
+              <AreaBadge
+                manual={hasLandOv}
+                onReset={() => onChange({ mixedResidentialLandAreaOverride: "" })}
+              />
             }
-            hint={landEditable ? undefined : "미공시 주택 환산(§164⑦) 사용 중 — 자동 안분값을 사용합니다."}
           >
             <DecimalInput
-              value={
-                landEditable
-                  ? show(landOv, derived.residentialLandArea, landComputable)
-                  : landComputable
-                    ? String(derived.residentialLandArea)
-                    : ""
-              }
+              value={show(landOv, derived.residentialLandArea, landComputable)}
               onChange={(v) => onChange({ mixedResidentialLandAreaOverride: v })}
-              disabled={!landEditable}
               placeholder="주택 부수토지"
               unit="㎡"
               data-testid="mixed-area-residential-land"
@@ -306,27 +296,16 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           <FieldCard
             label="상가 부수토지 (㎡)"
             stacked
-            disabled={!landEditable}
             badge={
-              landEditable ? (
-                <AreaBadge
-                  manual={hasCommLandOv}
-                  onReset={() => onChange({ mixedCommercialLandAreaOverride: "" })}
-                />
-              ) : undefined
+              <AreaBadge
+                manual={hasCommLandOv}
+                onReset={() => onChange({ mixedCommercialLandAreaOverride: "" })}
+              />
             }
-            hint={landEditable ? undefined : "미공시 주택 환산(§164⑦) 사용 중 — 자동 안분값을 사용합니다."}
           >
             <DecimalInput
-              value={
-                landEditable
-                  ? show(commLandOv, derived.commercialLandArea, landComputable)
-                  : landComputable
-                    ? String(derived.commercialLandArea)
-                    : ""
-              }
+              value={show(commLandOv, derived.commercialLandArea, landComputable)}
               onChange={(v) => onChange({ mixedCommercialLandAreaOverride: v })}
-              disabled={!landEditable}
               placeholder="상가 부수토지"
               unit="㎡"
               data-testid="mixed-area-commercial-land"

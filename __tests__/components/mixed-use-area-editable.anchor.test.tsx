@@ -235,17 +235,39 @@ describe("[UI-V2] 부수토지 합계 불일치 경고", () => {
   });
 });
 
-describe("[PHD 배타] PHD ON → 부수토지 2칸 비활성 (§164⑦ 법정 입력이 담당)", () => {
-  it("입력 불가 + override를 무시한 자동 안분값 표시 (엔진과 동일 — dual truth 방지)", () => {
+// 2026-07-15 배타 해제 — 종전에는 PHD ON 시 이 2칸을 disabled로 막았다.
+// 명분은 "§164⑦ 법정 입력(preHousingDisclosure.landArea)이 담당"이었으나 그 필드는
+// ⑫ Zod(phdForMixedUseSchema)가 strip해 **엔진에 도달한 적이 없다** → PHD ON이면
+// 사용자가 부수토지를 어디서도 지정할 수 없고 자동 안분이 강제됐다.
+// 부수토지 면적은 §164⑦이 정하는 값이 아니라 건축물대장·등기의 사실관계다.
+describe("[PHD 무관] PHD ON에서도 부수토지 2칸 편집 가능", () => {
+  it("★편집 가능 + override 값 표시 (엔진도 derived로 같은 값을 쓴다)", () => {
     const { getByTestId } = setup(
       baseAsset({
         usePreHousingDisclosure: true,
-        mixedResidentialLandAreaOverride: "90.29", // stale — 엔진이 무시한다
+        mixedResidentialLandAreaOverride: "90.29",
       }),
     );
     const cell = getByTestId("mixed-area-residential-land") as HTMLInputElement;
-    expect(cell.disabled).toBe(true);
-    expect(cell.value).toBe("120"); // stale override(90.29)가 아니라 자동 안분값
+    expect(cell.disabled).toBe(false);
+    expect(cell.value).toBe("90.29"); // 자동 안분값(120)이 아니라 사용자 지정값
+  });
+
+  it("PHD ON + 상가 부수토지도 편집 가능 — 주택 override의 잔액 표시", () => {
+    const { getByTestId } = setup(
+      baseAsset({ usePreHousingDisclosure: true, mixedResidentialLandAreaOverride: "90.29" }),
+    );
+    const cell = getByTestId("mixed-area-commercial-land") as HTMLInputElement;
+    expect(cell.disabled).toBe(false);
+    expect(cell.value).toBe("109.71");
+  });
+
+  it("PHD ON에서도 자동/수동 배지·↻ 리셋 노출 (해소 경로 보장)", () => {
+    const { queryAllByText } = setup(
+      baseAsset({ usePreHousingDisclosure: true, mixedResidentialLandAreaOverride: "90.29" }),
+    );
+    expect(queryAllByText("수동").length).toBeGreaterThan(0);
+    expect(queryAllByText("↻ 자동").length).toBeGreaterThan(0);
   });
 
   it("정착면적은 PHD 무관하게 편집 가능 (§168의12 배율 판정 축)", () => {

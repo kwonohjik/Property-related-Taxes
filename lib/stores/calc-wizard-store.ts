@@ -467,16 +467,16 @@ export function computeTransferSummary(
     const overrideStr = primary.mixedResidentialLandAreaOverride ?? "";
     const commOverrideStr = primary.mixedCommercialLandAreaOverride ?? "";
     const fpOverrideStr = primary.mixedResidentialFootprintOverride ?? "";
-    const phdOff = !primary.usePreHousingDisclosure; // 부수토지 override는 PHD OFF 전용(배타)
+    // 부수토지 override는 PHD 무관(2026-07-15 배타 해제 — API·UI·validate 동일)
     const mixedDerived = computeDerivedAreas({
       residentialFloorArea: residentialFloor,
       nonResidentialFloorArea: commercialFloor,
       buildingFootprintArea: parseFloat(primary.buildingFootprintArea || "0") || 0,
       totalLandArea: totalLand,
-      ...(phdOff && overrideStr.trim() !== ""
+      ...(overrideStr.trim() !== ""
         ? { residentialLandAreaOverride: parseFloat(overrideStr) || 0 }
         : {}),
-      ...(phdOff && commOverrideStr.trim() !== ""
+      ...(commOverrideStr.trim() !== ""
         ? { commercialLandAreaOverride: parseFloat(commOverrideStr) || 0 }
         : {}),
       ...(fpOverrideStr.trim() !== ""
