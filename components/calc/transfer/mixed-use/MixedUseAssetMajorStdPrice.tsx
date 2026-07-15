@@ -84,6 +84,9 @@ export function MixedUseAssetMajorStdPrice({
 
   // 취득 기준일 — 건물 취득일 기준(§164⑦ 주택 환산·건물 위치지수). 토지 취득일 아님.
   const acqReferenceDate = asset.acquisitionDate;
+  // 부수토지 개별공시지가 취득시 추천 연도 전용 기준일 — 토지 취득일 기준(§166⑥ 토지·건물 취득일 상이).
+  // 상가부수토지 공시지가는 토지값이므로 건물 취득일이 아닌 토지 취득일로 연도 추천(주택분 PHD 경로와 동일).
+  const acqLandReferenceDate = asset.landAcquisitionDate || asset.acquisitionDate;
 
   const stdPriceAddress = {
     road: asset.addressRoad,
@@ -267,7 +270,7 @@ export function MixedUseAssetMajorStdPrice({
             pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
             onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
             area={commercialLandArea > 0 ? commercialLandArea : undefined}
-            referenceDate={acqReferenceDate}
+            referenceDate={acqLandReferenceDate}
             jibun={jibun}
             label="개별공시지가 (원/㎡)"
             hint="상가부수토지 기준시가 자동 계산용 (필수)"
