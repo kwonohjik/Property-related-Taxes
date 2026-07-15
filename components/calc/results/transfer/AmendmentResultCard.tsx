@@ -50,7 +50,10 @@ export function AmendmentResultCard({
     const refund = detail.refundTax ?? 0;
     const noRefund = refund === 0;
     return (
-      <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50/40 p-5 dark:border-emerald-700 dark:bg-emerald-950/20">
+      <div
+        data-testid="amendment-result"
+        className="rounded-xl border-2 border-emerald-400 bg-emerald-50/40 p-5 dark:border-emerald-700 dark:bg-emerald-950/20"
+      >
         <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300 mb-1">
           환급 청구세액
         </p>
@@ -118,7 +121,10 @@ export function AmendmentResultCard({
   }
 
   return (
-    <div className="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-5 dark:border-amber-700 dark:bg-amber-950/20">
+    <div
+      data-testid="amendment-result"
+      className="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-5 dark:border-amber-700 dark:bg-amber-950/20"
+    >
       <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
         수정신고 추가 납부세액
       </p>

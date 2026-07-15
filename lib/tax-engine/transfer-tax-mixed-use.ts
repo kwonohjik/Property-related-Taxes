@@ -9,6 +9,8 @@
 
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
+import { computeAmendment } from "./transfer-tax-amendment";
+import type { AmendmentInput } from "./types/transfer-amendment.types";
 import { MIXED_USE } from "./legal-codes/transfer";
 import type {
   MixedUseAssetInput,
@@ -52,12 +54,15 @@ const MIXED_USE_EFFECTIVE_DATE = new Date("2022-01-01");
  * @param transferDate  - 양도일
  * @param asset         - 겸용주택 자산 입력
  * @param rates         - Supabase에서 preload된 세율 맵
+ * @param amendment     - 수정신고·경정청구 (국세기본법 §45·§45의2). 신고서 단위(폼-전역) — 자산-수준 아님.
+ *                        미전달 시 기존 경로 불변. 2022.1.1 이전 양도(거부) 경로에는 부착하지 않음.
  */
 export function calcMixedUseTransferTax(
   transferPrice: number,
   transferDate: Date,
   asset: MixedUseAssetInput,
   rates: TaxRatesMap,
+  amendment?: AmendmentInput,
 ): MixedUseGainBreakdown {
   // STEP 1: 2022.1.1 이전 양도일 거부
   if (transferDate < MIXED_USE_EFFECTIVE_DATE) {
@@ -210,6 +215,15 @@ export function calcMixedUseTransferTax(
       }
     : undefined;
 
+  // 수정신고(경정)·경정청구 — 끝단 append (국세기본법 §45·§45의2).
+  // 기준값은 total.transferTax(본세) — 단건 finalize의 determinedTax와 동일 축(지방소득세 제외).
+  // amendment 없으면 undefined → 무영향(additive). finalize STEP 12.5 · redevelopment Step H.5와 동일 패턴.
+  // ⚠️ buildRejectionResult 경로에는 부착하지 않는다 — 계산 불가 상태이지 '세액 0'이라는 유효한 결과가 아니다
+  //    (determinedTax=0으로 부착 시 refundTax = 당초 전액 오표시).
+  const amendmentDetail = amendment
+    ? computeAmendment(amendment, total.transferTax)
+    : undefined;
+
   return {
     splitMode: "post-2022",
     apportionment,
@@ -222,6 +236,7 @@ export function calcMixedUseTransferTax(
     warnings,
     partialUsageChange,
     usagePeriodSplit,
+    amendmentDetail,
   };
 }
 

@@ -11,6 +11,7 @@ import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixe
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
+import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -139,6 +140,14 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
 
       {/* ── 분리계산 본문 (안분·주택·상가·비사업용·합산세액·계산경로) ── */}
       <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-4">
+      {/* 수정신고·경정청구 hero — 단건 TransferTaxResultView(calculation 섹션 선두)와 동형.
+          PrintSection 밖에 두면 인쇄 선택과 무관하게 항상 출력되므로 반드시 내부에 유지. */}
+      {breakdown.amendmentDetail && (
+        <AmendmentResultCard
+          detail={breakdown.amendmentDetail}
+          fullTotalTax={t.totalPayable}
+        />
+      )}
       {/* 경고 */}
       {breakdown.warnings.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
@@ -433,7 +442,15 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         />
         <DivRow />
         <Row
-          label="총 납부세액"
+          // 정정 모드에서는 AmendmentResultCard의 "참고 · 수정/경정 후 전체 세액"과 라벨을 맞춘다
+          // (같은 금액에 다른 라벨이 한 화면에 뜨는 것을 방지).
+          label={
+            breakdown.amendmentDetail
+              ? breakdown.amendmentDetail.correctionKind === "refund_claim"
+                ? "경정 후 전체 세액"
+                : "수정 후 전체 세액"
+              : "총 납부세액"
+          }
           value={fmt(t.totalPayable)}
           highlight
           large
