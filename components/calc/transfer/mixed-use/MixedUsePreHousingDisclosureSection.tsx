@@ -18,6 +18,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ThreePointStandardPriceInput } from "../ThreePointStandardPriceInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { derivePhdResidentialLandArea } from "@/lib/calc/transfer-pre1990-phd-bridge";
+import { round2 } from "@/lib/tax-engine/area-utils";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { derivePre1990PhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -49,12 +51,12 @@ export function MixedUsePreHousingDisclosureSection({
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
   const totalFloor = residential + commercial;
-  // 소수점 2자리 반올림 — 화면 표시와 계산값 일치
-  const autoLandArea = parseFloat(
-    (totalFloor > 0 ? totalLand * (residential / totalFloor) : 0).toFixed(2),
-  );
-  // 사용자 직접 지정값 우선, 없으면 자동 계산값
-  const effectiveLandArea = parseDecimal(asset.phdResidentialLandArea) || autoLandArea;
+  // 자동 안분값 — 아래 표시(:119·:227)에서도 사용
+  const autoLandArea = round2(totalFloor > 0 ? totalLand * (residential / totalFloor) : 0);
+  // 주택부수토지 — bridge 단일 소스(`derivePhdResidentialLandArea`).
+  // 자체 재구현(`parseDecimal(x) || autoLandArea`)은 적법한 0을 자동값으로 덮어써
+  // bridge·API와 어긋났다(three-state 파괴 — D2와 동일 계열).
+  const effectiveLandArea = derivePhdResidentialLandArea(asset);
 
   // 보유 중 일부 용도변경 케이스: 시점별 면적이 자동 분리 적용됨 (엔진에서 처리)
   const hasUsageChange =

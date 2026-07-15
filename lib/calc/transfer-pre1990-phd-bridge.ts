@@ -32,7 +32,11 @@ export function derivePhdResidentialLandArea(asset: AssetForm): number {
   const totalLand = parseArea(asset.mixedUseTotalLandArea);
   const totalFloor = residential + commercial;
   const autoLandArea = round2(totalFloor > 0 ? totalLand * (residential / totalFloor) : 0);
-  return parseArea(asset.phdResidentialLandArea) || autoLandArea;
+  // three-state — 문자열 수준 분기(빈값 = 자동 / "0" = 적법한 0).
+  // ⚠️ `||`·`??` 금지: parseArea는 항상 number를 반환하므로(`:22-23` `parseFloat(...) || 0`)
+  //    `||`는 적법한 0을 자동값으로 덮어쓰고, `??`는 아예 미발동한다.
+  const raw = (asset.phdResidentialLandArea ?? "").trim();
+  return raw !== "" ? parseArea(raw) : autoLandArea;
 }
 
 /**

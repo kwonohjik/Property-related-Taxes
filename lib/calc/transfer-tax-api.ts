@@ -141,7 +141,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     buildingFootprintArea: parseFloat(primary.buildingFootprintArea) || 0,
     totalLandArea: parseFloat(primary.mixedUseTotalLandArea) || 0,
     // 주택 부수토지 override — three-state(빈값→undefined, 0→0 보존). PHD OFF 전용(ON은 phdResidentialLandArea 담당, 배타).
-    ...(!primary.usePreHousingDisclosure && primary.mixedResidentialLandAreaOverride?.trim() !== ""
+    // ⚠️ `?? ""` 선행 필수 — `x?.trim() !== ""`는 x가 undefined일 때 `undefined !== ""` → true가 되어
+    //    override 미설정인데도 분기에 진입, `parseFloat(undefined) || 0` → 0을 전송한다.
+    ...(!primary.usePreHousingDisclosure &&
+    (primary.mixedResidentialLandAreaOverride ?? "").trim() !== ""
       ? { residentialLandAreaOverride: parseFloat(primary.mixedResidentialLandAreaOverride) || 0 }
       : {}),
     landAcquisitionDate: primary.landAcquisitionDate || primary.acquisitionDate,
@@ -213,6 +216,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             buildingStdPriceAtTransfer:
               parseAmount(primary.phdBuildingStdPriceAtTransfer) || 0,
             // 미공시 취득 당시 토지 면적 직접 지정 — 미입력 시 엔진이 양도시 비율로 자동 계산
+            // ⚠️ 죽은 경로: phdForMixedUseSchema(lib/api/transfer-tax-schema-mixed-use.ts:10-26)가
+            //    landArea를 **의도적으로 omit**(`:8` 주석) → Zod가 strip → 엔진 미도달.
+            //    겸용 PHD의 주택부수토지는 항상 엔진이 derived.residentialLandArea로 자동 산출한다.
             ...(parseFloat(primary.phdResidentialLandArea) > 0
               ? { landArea: parseFloat(primary.phdResidentialLandArea) }
               : {}),
