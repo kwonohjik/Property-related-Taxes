@@ -1,9 +1,8 @@
 "use client";
 
-import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import { computeDerivedAreas, round2 } from "@/lib/tax-engine/mixed-use-derived-areas";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -43,28 +42,29 @@ export function MixedUseAssetMajorStdPrice({
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
 
-  // 부수토지 안분 — leaf 헬퍼 단일 소스 + override(주택 부수토지) 반영 (three-state: 빈값→자동).
-  // PHD ON이면 phdResidentialLandArea가 담당하므로 override 배타(입력칸 숨김).
-  const overrideStr = asset.mixedResidentialLandAreaOverride ?? "";
-  const hasOverride = !asset.usePreHousingDisclosure && overrideStr.trim() !== "";
+  // 부수토지 안분 — leaf 헬퍼 단일 소스 + override 반영 (three-state: 빈값→자동, "0"→적법한 0).
+  // 면적 입력·수정은 섹션 ①(MixedUseAreaInputs) 단일 소스 — 여기서는 **조회만** 한다.
+  // PHD ON이면 phdResidentialLandArea가 담당하므로 override 배타(API 변환과 동일 게이트).
+  const landOverrideStr = asset.mixedResidentialLandAreaOverride ?? "";
+  const commLandOverrideStr = asset.mixedCommercialLandAreaOverride ?? "";
+  const fpOverrideStr = asset.mixedResidentialFootprintOverride ?? "";
+  const landEditable = !asset.usePreHousingDisclosure;
   const derived = computeDerivedAreas({
     residentialFloorArea: residential,
     nonResidentialFloorArea: commercial,
     buildingFootprintArea: parseDecimal(asset.buildingFootprintArea),
     totalLandArea: totalLand,
-    ...(hasOverride ? { residentialLandAreaOverride: parseDecimal(overrideStr) } : {}),
+    ...(landEditable && landOverrideStr.trim() !== ""
+      ? { residentialLandAreaOverride: parseDecimal(landOverrideStr) }
+      : {}),
+    ...(landEditable && commLandOverrideStr.trim() !== ""
+      ? { commercialLandAreaOverride: parseDecimal(commLandOverrideStr) }
+      : {}),
+    ...(fpOverrideStr.trim() !== ""
+      ? { residentialFootprintOverride: parseDecimal(fpOverrideStr) }
+      : {}),
   });
   const commercialLandArea = derived.commercialLandArea;
-
-  // 상가 부수토지 칸 편집 → 주택 override 역산 저장 (엔진 축은 주택, mirror onChange 1곳)
-  const onCommercialLandChange = (v: string) => {
-    if (v.trim() === "") {
-      onChange({ mixedResidentialLandAreaOverride: "" });
-      return;
-    }
-    const resid = round2(totalLand - (parseDecimal(v) || 0));
-    onChange({ mixedResidentialLandAreaOverride: String(resid) });
-  };
 
   // 양도시 상가부분 자동 계산 (mixedTransfer 우선, PHD 토지가액 fallback — API 변환과 동일 우선순위)
   const transferLandPerSqm =
@@ -234,22 +234,6 @@ export function MixedUseAssetMajorStdPrice({
             }
           />
         </div>
-
-        {/* 상가부수토지 면적 (자동 안분·수정 가능) — PHD OFF 전용, 편집 시 주택분 자동 조정(양시점 공통) */}
-        {!asset.usePreHousingDisclosure && totalLand > 0 && (
-          <FieldCard
-            label="상가부수토지 면적 (㎡)"
-            hint="전체 토지 × 상가연면적 비율 자동 안분. 수정 시 주택분이 자동 조정되며 취득·양도 양시점에 공통 반영됩니다."
-          >
-            <DecimalInput
-              value={hasOverride ? String(commercialLandArea) : ""}
-              onChange={onCommercialLandChange}
-              placeholder={commercialLandArea > 0 ? commercialLandArea.toFixed(2) : "자동 안분"}
-              unit="㎡"
-              data-testid="mixed-commercial-land-override"
-            />
-          </FieldCard>
-        )}
 
         {/* 상가부수토지 개별공시지가 — 양도/취득 (세로 스택: 기준연도 드롭다운 폭 확보) */}
         <p className="text-xs font-medium text-slate-600">상가부수토지 개별공시지가</p>

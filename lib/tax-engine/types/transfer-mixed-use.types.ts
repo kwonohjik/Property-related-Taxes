@@ -53,6 +53,21 @@ export interface MixedUseAssetInput {
    */
   residentialLandAreaOverride?: number;
 
+  /**
+   * [신규] 상가 부수토지 면적 수동 지정 (㎡) — PHD OFF(일반 §97) 전용.
+   * ⚠️ 취득·양도 양시점 공통 필지 면적. `residentialLandAreaOverride`와 동일 축.
+   * 미제공(undefined) 시 `residualArea(totalLandArea, 주택부수토지)` 잔액. 0은 적법(three-state).
+   * 주택·상가 **둘 다 제공** 시 각 값을 그대로 사용(잔액 미적용) → 합계 불일치 가능 → validate가 차단.
+   */
+  commercialLandAreaOverride?: number;
+
+  /**
+   * [신규] 주택 정착면적 수동 지정 (㎡) — §168의12 배율초과 NBL 판정에 사용.
+   * 미제공(undefined) 시 `buildingFootprintArea × 주택연면적비율`. 0은 적법(three-state).
+   * 상가 정착면적은 항상 잔액이며 별도 필드가 없다(엔진 소비처 0건 — UI 표시 전용).
+   */
+  residentialFootprintOverride?: number;
+
   // ── 분리 취득일 ──
   /** 토지 취득일. 사례14 = 1992-01-01 */
   landAcquisitionDate: Date;

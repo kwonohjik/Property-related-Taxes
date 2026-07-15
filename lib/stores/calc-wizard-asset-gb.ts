@@ -166,6 +166,16 @@ export interface GeneralBuildingFormSlice {
    * 빈값=자동 안분(전체 × 주택연면적비율). UI는 상가칸 편집→역산(전체−상가) 저장.
    */
   mixedResidentialLandAreaOverride: string;
+  /**
+   * 상가 부수토지 면적 수동 지정 (㎡) — PHD OFF 전용, 취득·양도 양시점 공통.
+   * 빈값=자동(잔액). 주택·상가 둘 다 지정 시 잔액 미적용 → 합계 불일치는 validate가 차단.
+   */
+  mixedCommercialLandAreaOverride: string;
+  /**
+   * 주택 정착면적 수동 지정 (㎡) — §168의12 배율초과 NBL 판정에 사용.
+   * 빈값=자동(정착면적 × 주택연면적비율). UI는 상가 정착칸 편집→역산(전체−상가) 저장.
+   */
+  mixedResidentialFootprintOverride: string;
   /** 양도시 개별주택공시가격 (원) */
   mixedTransferHousingPrice: string;
   /** 양도시 상가건물 기준시가 (원, 토지 제외) */

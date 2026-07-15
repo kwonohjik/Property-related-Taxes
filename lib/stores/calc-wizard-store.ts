@@ -463,15 +463,25 @@ export function computeTransferSummary(
     const residentialFloor = parseFloat(primary.residentialFloorArea || "0") || 0;
     const commercialFloor = parseFloat(primary.nonResidentialFloorArea || "0") || 0;
     const totalLand = parseFloat(primary.mixedUseTotalLandArea || "0") || 0;
-    // 부수토지 안분 — leaf 헬퍼 단일 소스 + override 반영 (PHD OFF 전용, three-state)
+    // 부수토지·정착면적 안분 — leaf 헬퍼 단일 소스 + override 반영 (three-state 문자열 분기)
     const overrideStr = primary.mixedResidentialLandAreaOverride ?? "";
-    const hasOverride = !primary.usePreHousingDisclosure && overrideStr.trim() !== "";
+    const commOverrideStr = primary.mixedCommercialLandAreaOverride ?? "";
+    const fpOverrideStr = primary.mixedResidentialFootprintOverride ?? "";
+    const phdOff = !primary.usePreHousingDisclosure; // 부수토지 override는 PHD OFF 전용(배타)
     const mixedDerived = computeDerivedAreas({
       residentialFloorArea: residentialFloor,
       nonResidentialFloorArea: commercialFloor,
       buildingFootprintArea: parseFloat(primary.buildingFootprintArea || "0") || 0,
       totalLandArea: totalLand,
-      ...(hasOverride ? { residentialLandAreaOverride: parseFloat(overrideStr) || 0 } : {}),
+      ...(phdOff && overrideStr.trim() !== ""
+        ? { residentialLandAreaOverride: parseFloat(overrideStr) || 0 }
+        : {}),
+      ...(phdOff && commOverrideStr.trim() !== ""
+        ? { commercialLandAreaOverride: parseFloat(commOverrideStr) || 0 }
+        : {}),
+      ...(fpOverrideStr.trim() !== ""
+        ? { residentialFootprintOverride: parseFloat(fpOverrideStr) || 0 }
+        : {}),
     });
     const housingRatioByArea = mixedDerived.residentialRatio;
     const commercialLandArea = mixedDerived.commercialLandArea;

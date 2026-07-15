@@ -61,7 +61,7 @@
 | 주택 연면적 | 주택 연면적 (㎡) | 주택 연면적 | `residentialFloorArea` | `mixed-area-residential-floor` | 직접 + **전용/공통 클리어** |
 | 상가 연면적 | 상가 연면적 (㎡) | 상가 연면적 | `nonResidentialFloorArea` | `mixed-area-commercial-floor` | 동상 |
 | 주택 정착면적 | 주택 정착면적 (㎡) | 주택 정착면적 | `mixedResidentialFootprintOverride` | `mixed-area-residential-footprint` | 직접 |
-| 상가 정착면적 | 상가 정착면적 (㎡) | 상가 정착면적 | (역산) `mixedResidentialFootprintOverride` | `mixed-area-commercial-footprint` | **`residualArea(F, round2(입력))` 역산** |
+| 상가 정착면적 | 상가 정착면적 (㎡) | 상가 정착면적 | (역산) `mixedResidentialFootprintOverride` | `mixed-area-commercial-footprint` | **`residualArea(F, round2(입력))` 역산** + 원문 버퍼(↓D1) |
 | 주택 부수토지 | 주택 부수토지 (㎡) | 주택 부수토지 | `mixedResidentialLandAreaOverride` | `mixed-area-residential-land` | 직접 |
 | 상가 부수토지 | 상가 부수토지 (㎡) | 상가 부수토지 | `mixedCommercialLandAreaOverride` | `mixed-area-commercial-land` | 직접(**역산 폐지** — §2-B) |
 
@@ -81,6 +81,18 @@
 - 리셋 `↻ 자동` 버튼 → override를 `""`로 write(기존 `onCommercialLandChange:61-64` 빈값→클리어 패턴과 동형)
 - **⚠️ 연면적 2칸은 배지·리셋 대상에서 제외 (W1 Critical)** — 연면적은 **실필드**라 되돌아갈 "자동 상태"가 없다. `↻ 자동`을 눌러도 복원할 파생 소스가 없고(§2-A2 "가"로 전용/공통이 이미 클리어됨), 배지 기준(전용/공통 유무)도 U-3(처음부터 직접 입력)과 U-4(수동 편집 후 클리어)를 **구분하지 못한다**. → **배지는 정착·부수토지 4칸만**. 연면적을 자동 파생으로 되돌리려면 **전용/공통을 다시 입력**하면 된다(안내 문구로 유도)
 
+### 2-2-1. Do 단계 이탈 — D1 역산 칸 원문 버퍼 (2026-07-15 구현 중 발견)
+
+**설계 누락**: §2-2가 상가 정착면적을 "역산 write"로만 규정했으나, **표시까지 역산 결과에서 되돌리면 소수점을 입력할 수 없다**.
+
+- `"46."` 입력 → `parseDecimal("46.")=46` → override `String(residualArea(100,46))="54"` → 표시 `String(residualArea(100,54))="46"` → **사용자가 친 `.`이 소실**. 다시 쳐도 같은 결과 → 소수 입력 영구 불가.
+- 역검증 실측: 버퍼 제거 시 `expected '46' to be '46.'` (`mixed-use-area-editable.anchor.test.tsx` — patch를 asset에 반영하는 **stateful harness** 필요. 기록만 하는 harness는 리렌더 값이 자동 안분값이라 이 결함을 놓친다).
+- **⚠️ 기존 결함이기도 하다** — U1이 제거한 `mixed-commercial-land-override`(`MixedUseAssetMajorStdPrice.tsx:245`)가 동일 역산 패턴이라 **소수 입력 불가 상태로 이미 출시돼 있었다**. U1 제거 + 상가 부수토지 직접 write(§2-B)로 해소.
+
+**해결**: 역산 칸에 한해 편집 중 원문을 로컬 `useState` 버퍼에 보관하고, 원문이 무의미해지는 조작(주택 정착 편집·건물 정착/연면적 변경·리셋)에서 **명시적으로 비운다**.
+
+> `useEffect → store` 미러링 **아님** — store를 state로 복제하지 않고, 편집 세션의 원문만 로컬 보관한다. 무효화가 `useEffect` 동기화가 아니라 해당 `onChange` 내부의 명시 호출이라 루프 위험이 없다.
+
 ### 2-4. 값 표시 규칙
 
 - 미설정 칸: `computeDerivedAreas` 결과를 **display fallback**(`value={store || String(derived.x)}`)
@@ -92,7 +104,9 @@
 | 검증 | 위치 | 톤 |
 |---|---|---|
 | **V2**(부수토지 합 ≠ 전체) | validate 반환 → **상단 에러 배너**(기존 경로) + 6칸 박스 직하 인라인 | **amber** |
-| V3(연면적 합 ≠ 전용합+공통) | 6칸 박스 직하 인라인 | **amber** |
+| ~~V3(연면적 합 ≠ 전용합+공통)~~ | **구현 안 함 (D2 이탈)** | — |
+
+> **D2 이탈 — V3는 도달 불가**(2026-07-15 구현 중 확정): §2-A2 "가"가 연면적 편집 시 전용/공통을 **클리어**하고, `onExclusiveChange`는 전용/공통에서 연면적을 **항상 재파생**한다 ⇒ 두 값이 어긋난 상태가 존재할 수 없다. 도달 불가 분기에 경고를 다는 것은 "불가능한 시나리오 에러 핸들링"(Simplicity First 위반). ⑧ validate도 V3를 두지 않아 **UI↔validate 정합**.
 
 > **🚫 rose 사용 금지** — 이 카드에 이미 rose 소그룹(`:179-191` "부수토지 배율 지역")이 있어 rose가 **경고/섹션성격 2역 충돌**(`components/calc/CLAUDE.md` "2축 주의").
 > **톤은 `components/calc/shared/tones.ts`의 `TONE` 상수 사용** — 인라인 하드코딩 금지(pre-push `check-tone-classes.sh` 하드블록).

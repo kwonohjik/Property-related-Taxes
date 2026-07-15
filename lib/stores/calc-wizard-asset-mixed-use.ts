@@ -19,6 +19,8 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "buildingFootprintArea"
   | "mixedUseTotalLandArea"
   | "mixedResidentialLandAreaOverride"
+  | "mixedCommercialLandAreaOverride"
+  | "mixedResidentialFootprintOverride"
   | "mixedTransferHousingPrice"
   | "mixedTransferCommercialBuildingPrice"
   | "mixedTransferLandPricePerSqm"
@@ -41,6 +43,8 @@ export const MIXED_USE_DEFAULTS: Pick<
   buildingFootprintArea: "",
   mixedUseTotalLandArea: "",
   mixedResidentialLandAreaOverride: "",
+  mixedCommercialLandAreaOverride: "",
+  mixedResidentialFootprintOverride: "",
   mixedTransferHousingPrice: "",
   mixedTransferCommercialBuildingPrice: "",
   mixedTransferLandPricePerSqm: "",
@@ -73,6 +77,8 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   if (!a.buildingFootprintArea) a.buildingFootprintArea = "";
   if (!a.mixedUseTotalLandArea) a.mixedUseTotalLandArea = "";
   if (!a.mixedResidentialLandAreaOverride) a.mixedResidentialLandAreaOverride = "";
+  if (!a.mixedCommercialLandAreaOverride) a.mixedCommercialLandAreaOverride = "";
+  if (!a.mixedResidentialFootprintOverride) a.mixedResidentialFootprintOverride = "";
   if (!a.mixedTransferHousingPrice) a.mixedTransferHousingPrice = "";
   if (!a.mixedTransferCommercialBuildingPrice) a.mixedTransferCommercialBuildingPrice = "";
   if (!a.mixedTransferLandPricePerSqm) a.mixedTransferLandPricePerSqm = "";

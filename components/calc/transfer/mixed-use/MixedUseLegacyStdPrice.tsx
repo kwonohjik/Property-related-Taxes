@@ -44,15 +44,29 @@ export function MixedUseLegacyStdPrice({
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
 
   // 면적 안분 — leaf 헬퍼 단일 소스(dual-truth 제거). 자체 재구현은 override를 반영하지 못했다.
-  // PHD ON이면 phdResidentialLandArea가 담당하므로 override 배타(AssetMajor·store와 동일 조건).
-  const overrideStr = asset.mixedResidentialLandAreaOverride ?? "";
-  const hasOverride = !asset.usePreHousingDisclosure && overrideStr.trim() !== "";
+  // 면적 입력·수정은 섹션 ①(MixedUseAreaInputs) 단일 소스 — 여기서는 **조회만** 한다.
+  // ⚠️ override 3필드를 **전부** 전달해야 한다. 하나라도 빠뜨리면 이 화면의 상가부수토지
+  //    기준시가 자동계산·모달 prefill이 엔진값과 갈라진다(용도변경 ON 경로 — 섹션 ①은
+  //    `MixedUseSection.tsx:115`에서 용도변경 여부와 무관하게 렌더되므로 여기서도 수정된다).
+  // PHD ON이면 phdResidentialLandArea가 담당하므로 부수토지 override 배타(AssetMajor·store·API 동일).
+  const landOverrideStr = asset.mixedResidentialLandAreaOverride ?? "";
+  const commLandOverrideStr = asset.mixedCommercialLandAreaOverride ?? "";
+  const fpOverrideStr = asset.mixedResidentialFootprintOverride ?? "";
+  const landEditable = !asset.usePreHousingDisclosure;
   const derived = computeDerivedAreas({
     residentialFloorArea: residential,
     nonResidentialFloorArea: commercial,
     buildingFootprintArea: parseDecimal(asset.buildingFootprintArea),
     totalLandArea: totalLand,
-    ...(hasOverride ? { residentialLandAreaOverride: parseDecimal(overrideStr) } : {}),
+    ...(landEditable && landOverrideStr.trim() !== ""
+      ? { residentialLandAreaOverride: parseDecimal(landOverrideStr) }
+      : {}),
+    ...(landEditable && commLandOverrideStr.trim() !== ""
+      ? { commercialLandAreaOverride: parseDecimal(commLandOverrideStr) }
+      : {}),
+    ...(fpOverrideStr.trim() !== ""
+      ? { residentialFootprintOverride: parseDecimal(fpOverrideStr) }
+      : {}),
   });
   const commercialLandArea = derived.commercialLandArea;
 
