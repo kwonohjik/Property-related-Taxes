@@ -460,6 +460,9 @@ export function buildAssetPayload(
   totalContractPrice?: number,
   totalTransferExpense?: number,
   primary?: AssetForm,
+  // 1세대1주택 여부는 세대 단위 — asset.isOneHousehold(기본 false·동기화 부재)가 아닌
+  // form.isOneHousehold(Step4 "1세대 해당" 토글)를 세대 단위 단일 소스로 전달받는다.
+  formIsOneHousehold?: boolean,
 ) {
   const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause, asset.expropriationNoticeDate);
 
@@ -561,7 +564,9 @@ export function buildAssetPayload(
     reductions,
     inheritanceValuation,
     fixedAcquisitionPrice,
-    isOneHousehold: asset.isOneHousehold,
+    // 세대 단위 — form.isOneHousehold(토글) 사용. asset.isOneHousehold는 UI 미동기화(기본 false)라
+    // companion 주택이 일괄양도에서 항상 1세대1주택 비과세 미적용되던 버그 정정.
+    isOneHousehold: formIsOneHousehold ?? asset.isOneHousehold,
     fixedSalePrice,
     /** 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정) */
     totalPropertyTransferPrice: fractional ? totalContractPrice : undefined,
