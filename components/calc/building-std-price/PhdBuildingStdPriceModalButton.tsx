@@ -379,16 +379,16 @@ export function PhdBuildingStdPriceModalButton({
 
           {/* 시점별 공시지가 */}
           <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
-            <p className="text-xs font-semibold text-violet-700">시점별 개별공시지가 (위치지수)</p>
+            <p className="text-xs font-semibold text-violet-700">위치지수 산정 공시지가</p>
             {points.map((p) => {
               // 취득시 ≤2000 = 2001.1.1 기준(§164⑤ 산정기준율) → Vworld 2001 자동조회 행
               const isAcqPre2001 =
                 p.key === "acquisition" && p.year != null && p.year <= 2000;
               if (isAcqPre2001) {
                 return (
-                  <div key={p.key} className="space-y-1">
-                    {/* 시점 식별 라벨 — LandPriceLookupField가 제공하지 않으므로 별도 서브헤딩 */}
-                    <p className="text-caption font-semibold text-violet-700">
+                  <div key={p.key} className="space-y-2 rounded-lg border bg-card px-4 py-3">
+                    {/* 시점 식별 라벨 — 박스 내부 상단(최초공시일 FieldCard와 동일 위치·스타일) */}
+                    <p className="text-sm font-medium leading-tight">
                       취득시 (2001년 기준) 공시지가
                     </p>
                     <LandPriceLookupField
