@@ -117,13 +117,10 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
             landPricePerSqmAtTransfer: landSqmAtTransfer,
             buildingStdPriceAtTransfer:
               parseAmount(primary.phdBuildingStdPriceAtTransfer) || 0,
-            // 미공시 취득 당시 토지 면적 직접 지정 — 미입력 시 엔진이 양도시 비율로 자동 계산
-            // ⚠️ 죽은 경로: phdForMixedUseSchema(lib/api/transfer-tax-schema-mixed-use.ts:10-26)가
-            //    landArea를 **의도적으로 omit**(`:8` 주석) → Zod가 strip → 엔진 미도달.
-            //    겸용 PHD의 주택부수토지는 항상 엔진이 derived.residentialLandArea로 자동 산출한다.
-            ...(parseFloat(primary.phdResidentialLandArea) > 0
-              ? { landArea: parseFloat(primary.phdResidentialLandArea) }
-              : {}),
+            // 주택부수토지 면적은 여기서 보내지 않는다 — ①카드 override(residentialLandAreaOverride)가
+            // 단일 소스이며, 엔진은 derived.residentialLandArea로 그 값을 쓴다.
+            // (종전 `landArea` 전송은 phdForMixedUseSchema에 필드가 없어 Zod가 strip하는 죽은 경로였다.
+            //  그 소스이던 phdResidentialLandArea는 migrate가 ①카드로 이관 후 비운다.)
             // Case A 4부분 안분 — 취득시·최초공시 상가건물 기준시가 + 총양도가액 함께 충족 시 활성화.
             // 취득시 상가건물은 메인 mixedAcqCommercialBuildingPrice fallback 인식 (UI 통합 후 단일 필드).
             // 최초공시 상가건물은 PHD-only 필드 (일반 겸용주택 흐름에 없음).

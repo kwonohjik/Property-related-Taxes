@@ -17,9 +17,9 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ThreePointStandardPriceInput } from "../ThreePointStandardPriceInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { derivePhdResidentialLandArea } from "@/lib/calc/transfer-pre1990-phd-bridge";
-import { round2 } from "@/lib/tax-engine/area-utils";
+import { residualArea } from "@/lib/tax-engine/area-utils";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { derivePre1990PhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -46,17 +46,14 @@ export function MixedUsePreHousingDisclosureSection({
   transferDate,
   onChange,
 }: Props) {
-  // 주택부수토지 면적 자동 계산 (겸용주택) — 사용자 미입력 시 기본값
   const residential = parseDecimal(asset.residentialFloorArea);
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
   const totalFloor = residential + commercial;
-  // 자동 안분값 — 아래 표시(:119·:227)에서도 사용
-  const autoLandArea = round2(totalFloor > 0 ? totalLand * (residential / totalFloor) : 0);
-  // 주택부수토지 — bridge 단일 소스(`derivePhdResidentialLandArea`).
-  // 자체 재구현(`parseDecimal(x) || autoLandArea`)은 적법한 0을 자동값으로 덮어써
-  // bridge·API와 어긋났다(three-state 파괴 — D2와 동일 계열).
+  // 주택·상가 부수토지 — **①카드 단일 소스**(2026-07-15). bridge와 같은 헬퍼/정본을 쓴다.
+  // 자체 안분 재구현은 ①카드 override를 놓쳐 dual-truth가 된다(D1/D2와 동일 계열).
   const effectiveLandArea = derivePhdResidentialLandArea(asset);
+  const commercialLandAreaValue = residualArea(totalLand, effectiveLandArea);
 
   // 보유 중 일부 용도변경 케이스: 시점별 면적이 자동 분리 적용됨 (엔진에서 처리)
   const hasUsageChange =
@@ -113,17 +110,21 @@ export function MixedUsePreHousingDisclosureSection({
 
       {/* ①② 주택부수토지 면적 · 최초 고시일 (한 행) */}
       <div className="grid gap-4 sm:grid-cols-2">
+        {/* 조회 전용 — 면적 입력·수정은 ① 면적·부수토지·지역 정보 카드 단일 소스(2026-07-15).
+            종전 이 칸의 입력(phdResidentialLandArea)은 ⑫ Zod가 strip해 **엔진 부수토지에
+            도달한 적이 없었다** → ①카드와 이중 입력. 옛 입력값은 migrate가 ①로 이관한다. */}
         <FieldCard
           label={hasUsageChange ? "주택부수토지 면적 (양도시 기준)" : "주택부수토지 면적"}
           unit="㎡"
           stacked
+          hint="① 면적 정보에서 조회 — 수정은 ① 카드에서 합니다."
         >
-          <DecimalInput
-            value={asset.phdResidentialLandArea}
-            onChange={(v) => onChange({ phdResidentialLandArea: v })}
-            placeholder={autoLandArea > 0 ? autoLandArea.toFixed(2) : "면적 입력"}
-            disabled={hasUsageChange}
-          />
+          <p
+            className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm font-medium tabular-nums"
+            data-testid="phd-residential-land-area"
+          >
+            {effectiveLandArea > 0 ? effectiveLandArea.toFixed(2) : "—"}
+          </p>
         </FieldCard>
 
         <FieldCard label="최초 고시일" required stacked>
@@ -224,12 +225,13 @@ export function MixedUsePreHousingDisclosureSection({
           layout={isCaseA ? "asset-major" : undefined}
           housingLandArea={
             isCaseA && residential > 0 && totalFloor > 0
-              ? autoLandArea.toFixed(2)
+              ? effectiveLandArea.toFixed(2)
               : undefined
           }
+          // ⚠️ `totalLand - effectiveLandArea` 직접 뺄셈 금지 — residualArea 정본(잔액 흡수).
           commercialLandArea={
             isCaseA && commercial > 0 && totalFloor > 0
-              ? (totalLand - autoLandArea).toFixed(2)
+              ? commercialLandAreaValue.toFixed(2)
               : undefined
           }
           // ① 취득시 상가건물 — 메인 취득시 섹션의 mixedAcqCommercialBuildingPrice 양방향 read/write

@@ -16,27 +16,36 @@ import {
   type LandGradeInput,
 } from "@/lib/tax-engine/pre-1990-land-valuation";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { round2 } from "@/lib/tax-engine/mixed-use-derived-areas";
+import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const parseArea = (raw: string | undefined): number =>
   parseFloat((raw ?? "").replace(/,/g, "")) || 0;
 
 /**
- * 겸용주택 주택부수토지 면적(effectiveLandArea) — 사용자 직접 지정값 우선, 없으면 자동 계산.
- * MixedUsePreHousingDisclosureSection와 동일 산식 (소수 2자리 반올림).
+ * 겸용주택 주택부수토지 면적 — **① 면적 카드 단일 소스**(2026-07-15).
+ *
+ * `computeDerivedAreas` 정본에 위임한다: override 있으면 그 값, 없으면 자동 안분.
+ * 종전에는 자체 안분 재구현 + `phdResidentialLandArea`(PHD 패널 전용 입력) 분기였으나,
+ * 그 필드는 ⑫ Zod가 strip해 **엔진 부수토지에 도달한 적이 없다** → PHD 패널에만 반영되는
+ * 이중 입력이었다. ①카드 override가 PHD 무관하게 엔진에 관철되므로(배타 해제) 여기도
+ * 같은 소스를 써야 pre-1990 환산 면적이 엔진과 일치한다.
+ *
+ * ⚠️ 자체 재구현 금지 — override를 놓쳐 dual-truth가 된다(D1/D2와 동일 계열).
  */
 export function derivePhdResidentialLandArea(asset: AssetForm): number {
-  const residential = parseArea(asset.residentialFloorArea);
-  const commercial = parseArea(asset.nonResidentialFloorArea);
-  const totalLand = parseArea(asset.mixedUseTotalLandArea);
-  const totalFloor = residential + commercial;
-  const autoLandArea = round2(totalFloor > 0 ? totalLand * (residential / totalFloor) : 0);
-  // three-state — 문자열 수준 분기(빈값 = 자동 / "0" = 적법한 0).
-  // ⚠️ `||`·`??` 금지: parseArea는 항상 number를 반환하므로(`:22-23` `parseFloat(...) || 0`)
-  //    `||`는 적법한 0을 자동값으로 덮어쓰고, `??`는 아예 미발동한다.
-  const raw = (asset.phdResidentialLandArea ?? "").trim();
-  return raw !== "" ? parseArea(raw) : autoLandArea;
+  const landOv = (asset.mixedResidentialLandAreaOverride ?? "").trim();
+  const commLandOv = (asset.mixedCommercialLandAreaOverride ?? "").trim();
+  return computeDerivedAreas({
+    residentialFloorArea: parseArea(asset.residentialFloorArea),
+    nonResidentialFloorArea: parseArea(asset.nonResidentialFloorArea),
+    buildingFootprintArea: parseArea(asset.buildingFootprintArea),
+    totalLandArea: parseArea(asset.mixedUseTotalLandArea),
+    // three-state — 문자열 수준 분기(빈값 = 자동 / "0" = 적법한 0).
+    // ⚠️ `||`·`??` 금지: parseArea는 항상 number를 반환해 `||`는 적법한 0을 덮어쓰고 `??`는 미발동.
+    ...(landOv !== "" ? { residentialLandAreaOverride: parseArea(landOv) } : {}),
+    ...(commLandOv !== "" ? { commercialLandAreaOverride: parseArea(commLandOv) } : {}),
+  }).residentialLandArea;
 }
 
 /**

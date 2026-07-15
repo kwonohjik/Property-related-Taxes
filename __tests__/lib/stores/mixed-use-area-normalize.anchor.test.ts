@@ -71,6 +71,35 @@ describe("항등 보존 — 정상값·사용자 입력을 변조하지 않는�
  *    파서를 이 저장소 표준인 `parseDecimal`(빈값 → **0**)로 교체하면 두 가드가 동시에
  *    무력해져 "" → "0"이 되고, 그때 이 테스트가 잡는다.
  */
+/**
+ * 2026-07-15 — PHD 패널 전용 입력이 ①카드 단일 소스로 통일되면서, 옛 이력의 입력값을
+ * 그냥 버리면 **pre-1990 환산 면적이 조용히 자동 안분으로 바뀌어 세액이 달라진다**.
+ * migrate가 의도를 ①카드로 옮긴다.
+ */
+describe("phdResidentialLandArea → ①카드 override 이관", () => {
+  it("★옛 PHD 입력이 ①카드로 이관되고 원본은 비워진다", () => {
+    const a = migrate({ phdResidentialLandArea: "90.29" });
+    expect(a.mixedResidentialLandAreaOverride).toBe("90.29");
+    expect(a.phdResidentialLandArea).toBe("");
+  });
+
+  it('적법한 "0"도 이관 (three-state)', () => {
+    const a = migrate({ phdResidentialLandArea: "0" });
+    expect(a.mixedResidentialLandAreaOverride).toBe("0");
+  });
+
+  it("①카드에 이미 값이 있으면 덮어쓰지 않는다 (단일 소스 우선)", () => {
+    const a = migrate({ phdResidentialLandArea: "55", mixedResidentialLandAreaOverride: "90.29" });
+    expect(a.mixedResidentialLandAreaOverride).toBe("90.29");
+    expect(a.phdResidentialLandArea).toBe(""); // 재이관 방지
+  });
+
+  it("옛 입력이 없으면 아무 것도 하지 않는다", () => {
+    const a = migrate({ phdResidentialLandArea: "" });
+    expect(a.mixedResidentialLandAreaOverride).toBe("");
+  });
+});
+
 describe("three-state 보존 — 빈값을 0으로 만들지 않는다", () => {
   it("★미입력('')은 ''로 유지", () => {
     const a = migrate({ residentialFloorArea: "", nonResidentialFloorArea: "" });
