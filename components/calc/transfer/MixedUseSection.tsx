@@ -119,7 +119,8 @@ export function MixedUseExpandedPanel({
         <PartialUsageChangeInputs asset={asset} onChange={onChange} sectionNum="1-A" />
       )}
 
-      {/* ② 양도시 기준시가 / ③ 취득시 기준시가 */}
+      {/* ② 취득시 기준시가 / ③ 양도시 기준시가 (자산-우선 경로는 ② 주택 / ③ 상가).
+          번호 스왑은 MixedUseStandardPriceInputs의 legacy 분기에서 처리 — 여기 숫자는 고정. */}
       <MixedUseStandardPriceInputs
         asset={asset}
         onChange={onChange}
