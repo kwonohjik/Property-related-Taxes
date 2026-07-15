@@ -66,8 +66,9 @@ export function MixedUseAssetMajorStdPrice({
     onChange({ mixedResidentialLandAreaOverride: String(resid) });
   };
 
-  // 양도시 상가부분 자동 계산
-  const transferLandPerSqm = parseAmount(asset.mixedTransferLandPricePerSqm) ?? 0;
+  // 양도시 상가부분 자동 계산 (mixedTransfer 우선, PHD 토지가액 fallback — API 변환과 동일 우선순위)
+  const transferLandPerSqm =
+    parseAmount(asset.mixedTransferLandPricePerSqm) || parseAmount(asset.phdLandPricePerSqmAtTransfer);
   const transferCommercialLandStd = Math.floor(transferLandPerSqm * commercialLandArea);
   const transferCommercialBuilding = parseAmount(asset.mixedTransferCommercialBuildingPrice) ?? 0;
   const transferCommercialTotal = transferCommercialLandStd + transferCommercialBuilding;
@@ -254,13 +255,13 @@ export function MixedUseAssetMajorStdPrice({
         <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1">
           <p className="text-caption font-semibold text-emerald-700">양도시</p>
           <LandPriceLookupField
-            pricePerSqm={asset.mixedTransferLandPricePerSqm}
+            pricePerSqm={asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer}
             onPricePerSqmChange={(v) => onChange({ mixedTransferLandPricePerSqm: v })}
             area={commercialLandArea > 0 ? commercialLandArea : undefined}
             referenceDate={transferDate}
             jibun={jibun}
             label="개별공시지가 (원/㎡)"
-            hint="상가부수토지 산정용"
+            hint="상가부수토지 산정용 (필수)"
             placeholder="양도시 개별공시지가 /㎡"
           />
         </div>

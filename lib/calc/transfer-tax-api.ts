@@ -149,7 +149,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     transferStandardPrice: {
       housingPrice: parseAmount(primary.mixedTransferHousingPrice) || 0,
       commercialBuildingPrice: parseAmount(primary.mixedTransferCommercialBuildingPrice) || 0,
-      landPricePerSqm: parseAmount(primary.mixedTransferLandPricePerSqm) || 0,
+      // PHD ③ 양도시 공시지가 fallback — 주택·상가 부수토지는 동일 필지(단가 공유).
+      // 취득측(아래 acquisitionStandardPrice)과 대칭. UI 표시·사이드바도 동일 우선순위.
+      landPricePerSqm:
+        parseAmount(primary.mixedTransferLandPricePerSqm) ||
+        parseAmount(primary.phdLandPricePerSqmAtTransfer) ||
+        0,
     },
     acquisitionStandardPrice: {
       housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,

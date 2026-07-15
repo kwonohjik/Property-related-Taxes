@@ -332,7 +332,13 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     }
     if (!asset.mixedTransferHousingPrice || parseAmount(asset.mixedTransferHousingPrice) <= 0)
       return `${label}: 양도시 개별주택공시가격을 입력하세요. (양도시 기준시가)`;
-    if (!asset.mixedTransferLandPricePerSqm || parseAmount(asset.mixedTransferLandPricePerSqm) <= 0)
+    // ⑧ Validation fallback — UI 표시·API 변환이 mixedTransfer || phdLandPricePerSqmAtTransfer 로
+    // fallback하므로(주택·상가 부수토지는 동일 필지 = 단가 공유) validate도 PHD 값을 인정한다.
+    // 취득측 fallback 인정(아래 :403-408)과 대칭.
+    if (
+      parseAmount(asset.mixedTransferLandPricePerSqm) <= 0 &&
+      parseAmount(asset.phdLandPricePerSqmAtTransfer) <= 0
+    )
       return `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요. (양도시 기준시가)`;
     // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
     if (asset.usePreHousingDisclosure) {

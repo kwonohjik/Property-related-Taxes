@@ -478,7 +478,9 @@ export function computeTransferSummary(
 
     // 양도가액 안분: 기준시가 합계 비율
     const housingStdPrice = parseRaw(primary.mixedTransferHousingPrice);
-    const transferLandPerSqm = parseRaw(primary.mixedTransferLandPricePerSqm);
+    // PHD ③ 양도시 공시지가 fallback — UI 표시·API 변환과 동일 우선순위(동일 필지 = 단가 공유)
+    const transferLandPerSqm =
+      parseRaw(primary.mixedTransferLandPricePerSqm) || parseRaw(primary.phdLandPricePerSqmAtTransfer);
     const transferCommercialBuilding = parseRaw(primary.mixedTransferCommercialBuildingPrice);
     const commercialStdPrice =
       Math.floor(transferLandPerSqm * commercialLandArea) + transferCommercialBuilding;
