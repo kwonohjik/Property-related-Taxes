@@ -168,7 +168,7 @@ const transferSummary = useMemo(
 - [ ] **사이드바 합계**: 입력된 값으로 계산 가능한 항목만 표시 (0원·null 제외). 환산 모드의 취득가액처럼 API 결과 후에야 알 수 있는 값은 결과 도착 후 노출
 - [ ] **결과 뷰 산식**: 변수 약어(`P_F`, `Sum_A`) 금지·한국어 풀어쓰기, 법정 용어 우선, 중간 산술 결과 미표시, `floor()` 묵시 처리
 - [ ] **금액 칸 정렬 (모든 표·신고서·보고서 공통)**: 금액(원) 셀은 `text-right font-mono tabular-nums whitespace-nowrap` — 천·백만·십억 콤마 세로 정렬. 공용 `BesshiRow`/`BesshiColumn`(`components/calc/results/shared/BesshiRow.tsx`) 재사용 우선. 상세: `amount-column-align` 스킬
-- [ ] **면적 반올림 일관성**: 비율 계산으로 파생한 면적(부수토지 등)은 단가 곱셈 전 `parseFloat(rawArea.toFixed(2))`로 반올림. 표시 자리수와 계산 자리수를 반드시 일치시킴 (미적용 시 표시 76.51 / 계산 76.508 → 오차 발생)
+- [ ] **면적 안분 (강제)**: `lib/tax-engine/area-utils.ts`의 `round2()` / `residualArea()` 사용. 비율로 파생한 면적은 단가 곱셈 전 `round2()`로 소수 3째 자리 반올림(표시 자리수 = 계산 자리수 — 미적용 시 표시 76.51 / 계산 76.508 오차). **마지막 항목은 `residualArea(전체, ...앞항목)`로 잔액 흡수** — 비율 재계산 금지(미적용 시 100㎡ 3등분 → 33.33×3 = 99.99). 인라인 `parseFloat(x.toFixed(2))` 신규 작성 금지
 - [ ] **개별공시지가 필드는 `LandPriceLookupField` 필수**: `components/calc/inputs/LandPriceLookupField.tsx`. 기준연도 드롭다운 + Vworld 조회 버튼 + 토지기준시가 자동 계산 포함. CurrencyInput 단독 사용 금지.
 - [ ] **다-섹션 입력 폼 색상 카드 + 섹션 번호**: 3개 이상 서브섹션이 연속되는 입력 영역은 반드시 색상 카드 + 섹션 번호 패턴 적용 (아래 참고)
 

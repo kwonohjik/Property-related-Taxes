@@ -79,6 +79,8 @@ export function truncateToWon(amount: number): number {
   return Math.floor(amount);
 }
 
+// 면적 안분 유틸(round2 · residualArea)은 `./area-utils` — 무의존 leaf(클라이언트 번들 안전).
+
 // ============================================================
 // 정수 안전 연산
 // ============================================================
