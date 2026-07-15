@@ -9,6 +9,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { round2, residualArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 
@@ -43,10 +44,10 @@ export function MixedUseLegacyStdPrice({
   const totalFloor = residential + commercial;
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
 
-  // 소수점 2자리 반올림 — 화면 표시(toFixed(2))와 계산값 일치 (불일치 시 76.51표시/76.508계산 버그)
-  const commercialLandArea = parseFloat(
-    (totalFloor > 0 ? totalLand * (commercial / totalFloor) : 0).toFixed(2),
-  );
+  // 면적 안분 — 주택분을 round2로 확정하고 상가분은 잔액 흡수(전체 − 주택분).
+  // 표시(toFixed(2))와 계산값 일치 + 주택+상가 = 전체 토지 불변식 보장.
+  const residentialLandArea = round2(totalFloor > 0 ? totalLand * (residential / totalFloor) : 0);
+  const commercialLandArea = totalFloor > 0 ? residualArea(totalLand, residentialLandArea) : 0;
 
   // 양도시 상가부분 자동 계산
   const transferLandPerSqm = parseAmount(asset.mixedTransferLandPricePerSqm) ?? 0;

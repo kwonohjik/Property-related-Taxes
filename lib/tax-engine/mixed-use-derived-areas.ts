@@ -9,11 +9,11 @@
  */
 
 import type { MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
+import { round2, residualArea } from "./area-utils";
 
-/** 소수점 2자리 반올림 — UI 표시값(toFixed(2))과 엔진 계산값을 일치시킨다. */
-export function round2(n: number): number {
-  return Math.round(n * 100) / 100;
-}
+// round2 는 `./area-utils` 로 승격됨(전 세목 공통 면적 안분 유틸).
+// 기존 import 경로(UI·bridge) 호환을 위해 재수출 유지.
+export { round2 };
 
 /**
  * 면적 파생 — 주택 부수토지 override 우선, 상가는 항상 `전체 − 주택` (방식 B, 합=전체토지 불변식).
@@ -41,7 +41,8 @@ export function computeDerivedAreas(input: {
   const autoResidentialLand = round2(input.totalLandArea * residentialRatio);
   // ?? 로 override=0 보존 (|| 금지 — three-state: 빈값 undefined vs 적법 0)
   const residentialLandArea = input.residentialLandAreaOverride ?? autoResidentialLand;
-  const commercialLandArea = round2(input.totalLandArea - residentialLandArea);
+  // 마지막 항목(상가) 잔액 흡수 — 비율 재계산 금지. 합 = 전체토지 불변식.
+  const commercialLandArea = residualArea(input.totalLandArea, residentialLandArea);
   return {
     residentialRatio,
     residentialLandArea,

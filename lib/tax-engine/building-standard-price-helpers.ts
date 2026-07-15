@@ -7,6 +7,7 @@
  * 정수곱 후 /1,000,000, 잔가율·조정율 곱, 1,000원 절사(truncateToThousand), 면적 곱 후 원 절사 순서.
  */
 import { safeMultiply, safeMultiplyThenDivide, truncateToThousand } from "./tax-utils";
+import { round2 } from "./area-utils";
 import type {
   BuildingPointInput,
   BuildingStdPriceBreakdown,
@@ -330,6 +331,19 @@ export function calcCompositeForYear(
   const breakdowns: BuildingStdPriceBreakdown[] = [];
   const apportionRows: AncillaryApportionRow[] = [];
 
+  // 부속 수령 부분 사전 판별 — 마지막 수령 부분이 안분 잔액을 흡수한다(면적 안분 잔액 흡수 정책).
+  // 수령 여부는 부분 속성만으로 결정되므로 루프 전 계산 가능.
+  const receivesAt = (p: BuildingCompositePart) =>
+    opts.adjustmentEnabled
+      ? p.sharedAdjustmentRate != null || (p.sharedAdjustmentNos?.length ?? 0) > 0
+      : true;
+  const receivingIdx = parts.map((p, i) => (receivesAt(p) ? i : -1)).filter((i) => i >= 0);
+  const lastReceivingIdx = receivingIdx[receivingIdx.length - 1];
+  // 수령 부분들의 면적 합 — 일부만 수령하는 경로(상증)에서는 안분 대상이 전체가 아니므로
+  // 잔액 흡수 기준도 "수령분 raw 합"이어야 한다(게이팅 의미 보존, 반올림 드리프트만 제거).
+  const receivingMainArea = receivingIdx.reduce((s, i) => s + parts[i].floorArea, 0);
+  const roundedSoFarByKind: Partial<Record<AncillaryFacilityKind, number>> = {};
+
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
     const label = p.label ?? `${prefix} ${i + 1}`;
@@ -347,16 +361,23 @@ export function calcCompositeForYear(
     breakdowns.push({ ...main, label: p.label, floorArea: p.floorArea, adjustmentItems: mainAdj.items });
 
     // 부속 — 수령 여부(상증 = 공용 조정률 지정 부분만 / 양도 = 전 부분)
-    const receives = opts.adjustmentEnabled
-      ? p.sharedAdjustmentRate != null || (p.sharedAdjustmentNos?.length ?? 0) > 0
-      : true;
+    const receives = receivesAt(p);
     if (hasAncillary && receives) {
       const sharedAdj = opts.adjustmentEnabled
         ? adjustmentFromNos(p.sharedAdjustmentNos, p.sharedAdjustmentRate, `${label} 공용`)
         : { adjRate: 1.0, items: undefined };
       const byKind: Partial<Record<AncillaryFacilityKind, number>> = {};
       for (const kind of activeKinds) {
-        const area = parseFloat(((totalByKind[kind]! * p.floorArea) / totalMainArea).toFixed(2));
+        // 마지막 수령 부분은 잔액 흡수 — 앞 부분들의 반올림 드리프트를 흡수해
+        // Σ안분면적 = round2(수령분 raw 합) 불변식을 보장(전 부분 수령 시 = 부속 총면적).
+        const area =
+          i === lastReceivingIdx
+            ? round2(
+                round2((totalByKind[kind]! * receivingMainArea) / totalMainArea) -
+                  (roundedSoFarByKind[kind] ?? 0),
+              )
+            : round2((totalByKind[kind]! * p.floorArea) / totalMainArea);
+        roundedSoFarByKind[kind] = round2((roundedSoFarByKind[kind] ?? 0) + area);
         byKind[kind] = area;
         const kLabel = `${label} ${ANCILLARY_KIND_LABEL[kind]}`;
         const bd = calcPointBreakdown(year, point, area, builtYear, sharedAdj.adjRate, kLabel, opts.remodel);
