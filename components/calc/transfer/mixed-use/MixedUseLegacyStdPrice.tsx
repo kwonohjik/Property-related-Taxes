@@ -9,7 +9,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
-import { round2, residualArea } from "@/lib/tax-engine/area-utils";
+import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 
@@ -41,13 +41,20 @@ export function MixedUseLegacyStdPrice({
 }: Props) {
   const residential = parseDecimal(asset.residentialFloorArea);
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
-  const totalFloor = residential + commercial;
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
 
-  // 면적 안분 — 주택분을 round2로 확정하고 상가분은 잔액 흡수(전체 − 주택분).
-  // 표시(toFixed(2))와 계산값 일치 + 주택+상가 = 전체 토지 불변식 보장.
-  const residentialLandArea = round2(totalFloor > 0 ? totalLand * (residential / totalFloor) : 0);
-  const commercialLandArea = totalFloor > 0 ? residualArea(totalLand, residentialLandArea) : 0;
+  // 면적 안분 — leaf 헬퍼 단일 소스(dual-truth 제거). 자체 재구현은 override를 반영하지 못했다.
+  // PHD ON이면 phdResidentialLandArea가 담당하므로 override 배타(AssetMajor·store와 동일 조건).
+  const overrideStr = asset.mixedResidentialLandAreaOverride ?? "";
+  const hasOverride = !asset.usePreHousingDisclosure && overrideStr.trim() !== "";
+  const derived = computeDerivedAreas({
+    residentialFloorArea: residential,
+    nonResidentialFloorArea: commercial,
+    buildingFootprintArea: parseDecimal(asset.buildingFootprintArea),
+    totalLandArea: totalLand,
+    ...(hasOverride ? { residentialLandAreaOverride: parseDecimal(overrideStr) } : {}),
+  });
+  const commercialLandArea = derived.commercialLandArea;
 
   // 양도시 상가부분 자동 계산 (mixedTransfer 우선, PHD 토지가액 fallback — API 변환과 동일 우선순위)
   const transferLandPerSqm =

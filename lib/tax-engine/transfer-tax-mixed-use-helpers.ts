@@ -25,6 +25,7 @@ import type {
 import type { TaxBracket } from "./types";
 import { calculateProgressiveTax } from "./tax-utils";
 import { computeDerivedAreas, round2 } from "./mixed-use-derived-areas";
+import { residualArea } from "./area-utils";
 
 // ──────────────────────────────────────────────────────────────
 // 1. 면적 파생값 계산
@@ -76,7 +77,9 @@ export function computeAcqDerivedAreas(
   return {
     residentialRatio: acqResRatio,
     residentialLandArea: acqResLand,
-    commercialLandArea: round2(asset.totalLandArea - acqResLand),
+    // 잔액 흡수 정본 — round2(T − x)는 T가 2자리 초과일 때 ±0.01㎡ 어긋난다
+    // (예: T=1.005, x=0.08 → 현행 0.93 / 정본 0.92). feedback_area_apportion_residual_absorption
+    commercialLandArea: residualArea(asset.totalLandArea, acqResLand),
     residentialFootprintArea: round2(asset.buildingFootprintArea * acqResRatio),
   };
 }
