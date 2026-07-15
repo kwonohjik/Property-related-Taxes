@@ -6,6 +6,30 @@
  */
 
 import type { AssetForm } from "./calc-wizard-asset";
+import { round2 } from "@/lib/tax-engine/area-utils";
+
+/**
+ * 저장된 **파생 면적**의 부동소수점 잔재 세척 (③ normalize).
+ *
+ * 2026-07-15 이전 이력에는 구 산식(`round2(전용합+공통) − 주택`)이 만든 잔재가 남아 있다
+ * (예: 상가 연면적 `"283.04999999999995"`). 잔재는 **표시만의 문제가 아니다** — API 변환
+ * (`transfer-tax-api-mixed-use.ts:27` `parseFloat`)이 그대로 엔진에 넘겨 `floor(단가 × 면적)`을
+ * 1원 깎는다(단가 6,216,000 기준 1,759,438,799 vs 1,759,438,800).
+ *
+ * ⚠️ **정상값에는 항등** — `round2` 후 표기가 같으면 원문을 그대로 둔다(사용자 입력 무변경).
+ */
+function normalizeStoredArea(a: Record<string, unknown>, key: string): void {
+  const raw = a[key];
+  // 빈값 조기 반환 — three-state("" = 미입력) 보존.
+  // 오늘은 아래 `Number.isFinite`와 중복이다(`parseFloat("")` = NaN). 그럼에도 남기는 이유:
+  // 이 저장소의 표준 파서는 `parseDecimal`이고 그것은 **빈값에 0을 돌려준다** → 무심코
+  // 교체하면 "" → "0"이 되어 계약이 깨진다. 파서 교체에 대한 방어선으로 명시 유지.
+  if (typeof raw !== "string" || raw.trim() === "") return;
+  const n = parseFloat(raw);
+  if (!Number.isFinite(n)) return;
+  const cleaned = String(round2(n));
+  if (cleaned !== raw) a[key] = cleaned;
+}
 
 /** 겸용주택 + 보유 중 일부 용도변경 관련 디폴트 (18필드) */
 export const MIXED_USE_DEFAULTS: Pick<
@@ -74,6 +98,11 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   // 전용/공통이 없어도 기존 연면적을 보존한다 (덮어쓰기 금지).
   if (!a.residentialFloorArea) a.residentialFloorArea = "";
   if (!a.nonResidentialFloorArea) a.nonResidentialFloorArea = "";
+  // 파생 연면적만 세척 — 구 산식 잔재의 유일한 발생원이다(PR #602 이전 `round2(T) − r`).
+  // 전용/공통·정착·전체토지는 사용자 직접입력이라 건드리지 않는다(반올림은 입력 변조).
+  // override 3종은 현행 writer가 round2/residualArea라 잔재가 생길 수 없다.
+  normalizeStoredArea(a, "residentialFloorArea");
+  normalizeStoredArea(a, "nonResidentialFloorArea");
   if (!a.buildingFootprintArea) a.buildingFootprintArea = "";
   if (!a.mixedUseTotalLandArea) a.mixedUseTotalLandArea = "";
   if (!a.mixedResidentialLandAreaOverride) a.mixedResidentialLandAreaOverride = "";
