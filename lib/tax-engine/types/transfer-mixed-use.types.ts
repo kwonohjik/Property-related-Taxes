@@ -1,6 +1,15 @@
 import type { ZoneType } from "../non-business-land/types";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer.types";
 import type { AmendmentDetail } from "./transfer-amendment.types";
+import type { ExprTotalValuationDetail } from "../transfer-tax-expropriation-valuation";
+
+/** §164⑨1호 겸용주택 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분 각 목별. */
+export interface MixedUseExpropriationDetail {
+  /** 주택분(라목 개별주택가격 총액) */
+  housing?: ExprTotalValuationDetail;
+  /** 상가분(가목 토지 기준시가) */
+  commercialLand?: ExprTotalValuationDetail;
+}
 
 /**
  * 겸용주택(1세대 1주택 + 상가) 양도소득세 분리계산 타입
@@ -107,6 +116,20 @@ export interface MixedUseAssetInput {
    * 미주입 시 true (기존 겸용주택 사례14 등 backward compat).
    */
   isOneHouseExempt?: boolean;
+
+  // ── §164⑨1호 공익수용 특례 (계획 P7/D8, 일반 §97 전용) ──
+  // 목별 독립 적용: 주택분(라목 개별주택가격 총액) + 상가분(가목 토지 기준시가). 상가 건물분·모든
+  // 안분은 원값(§80⑧·§166⑥·D16-GB). 차감은 각 부분 환산 분모에만. PHD·4부분은 미적용(후속).
+  /** 양도원인 — "public_expropriation" 시 §164⑨1호 게이트 */
+  transferCause?: "general" | "public_expropriation";
+  /** 주택분 보상액 총액 (원) — min(개별주택가격, 보상액, 보상기초) 후보 */
+  housingCompensationTotal?: number;
+  /** 주택분 보상액 산정 기초 기준시가 총액 (원) */
+  housingCompensationBasisTotal?: number;
+  /** 상가분 토지 보상액 총액 (원) — min(상가 토지 기준시가, 보상액, 보상기초) 후보 */
+  commercialLandCompensationTotal?: number;
+  /** 상가분 토지 보상액 산정 기초 개별공시지가 총액 (원) */
+  commercialLandCompensationBasisTotal?: number;
 
   /**
    * 보유 중 일부 용도변경 옵션 — 양도시 겸용이지만 취득시 단일 용도였던 경우.
@@ -419,4 +442,6 @@ export interface MixedUseGainBreakdown {
    * (계산 불가 상태에 부착하면 refundTax = 당초 전액 오표시).
    */
   amendmentDetail?: AmendmentDetail;
+  /** §164⑨1호 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분. 적용 시만. */
+  expropriationDetail?: MixedUseExpropriationDetail;
 }

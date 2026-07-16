@@ -326,6 +326,54 @@ export function applySplitLandExpropriationValuation(
 }
 
 // ============================================================
+// §164⑨ 1호 — 총액 3후보 범용 진입점 (겸용주택 주택분·상가분 — 계획 P7/D8).
+// propertyType 게이트 없음 — 호출부(mixed-use 엔진 내부)가 적격 컨텍스트를 이미 보장한다.
+// ============================================================
+
+/** 총액 3후보 산출근거 — Record(Map 금지). 겸용 주택분(라목 개별주택가격)·상가분(가목 토지)에 공용. */
+export interface ExprTotalValuationDetail {
+  /** 양도당시 기준시가 총액 (주택분=개별주택가격 / 상가분=토지 기준시가) */
+  standardTotal: number;
+  /** 보상액 총액 */
+  compensationTotal: number;
+  /** 보상액 산정 기초 기준시가 총액 */
+  compensationBasisTotal: number;
+  /** 적용값 = min(3) */
+  chosen: number;
+  /** 환산 분모(총액) = chosen */
+  denominator: number;
+}
+
+/**
+ * §164⑨1호 총액 트랙 범용 — 양도당시 기준시가 총액을 min(기준시가, 보상액, 보상기초)로 낮춘다.
+ *
+ * 겸용주택의 주택분(라목 개별주택가격 총액)·상가분(가목 토지 기준시가)에 각각 적용한다. 자산종류
+ * 게이트가 없으므로 **호출부가 적격성(수용·환산·부분 귀속)을 보장**해야 한다 — 겸용 엔진 내부 전용.
+ * 게이트 = 수용 + 2009.02.04 + 3후보>0. 미충족 시 null(현행 분모 유지).
+ */
+export function applyExprTotalDenominator(p: {
+  standardTotal: number;
+  compensationTotal?: number;
+  compensationBasisTotal?: number;
+  isExpropriation: boolean;
+  transferDate: Date;
+}): { denominator: number; detail: ExprTotalValuationDetail } | null {
+  const std = p.standardTotal;
+  const comp = p.compensationTotal ?? 0;
+  const basis = p.compensationBasisTotal ?? 0;
+
+  if (!p.isExpropriation || p.transferDate < MIN_TRANSFER_DATE || std <= 0 || comp <= 0 || basis <= 0) {
+    return null;
+  }
+
+  const chosen = Math.min(std, comp, basis);
+  return {
+    denominator: chosen,
+    detail: { standardTotal: std, compensationTotal: comp, compensationBasisTotal: basis, chosen, denominator: chosen },
+  };
+}
+
+// ============================================================
 // 통합 진입점 — 환산 분모(양도시 기준시가) 확정 (1호·2호 배타)
 // ============================================================
 

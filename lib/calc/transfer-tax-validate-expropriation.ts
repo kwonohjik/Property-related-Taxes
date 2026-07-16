@@ -119,6 +119,8 @@ export function validateHousingExprAsset(
   formTransferDate: string | undefined,
 ): string | null {
   if (!isHousingExprEligibleAssetKind(asset.assetKind)) return null;
+  // 겸용주택은 `validateMixedUseExprAsset` 전담 — 여기서 처리 금지(방어적 제외).
+  if (asset.isMixedUseHouse) return null;
   if (asset.parcelMode) return null;
   // 주택 **regular** split(토지·건물 취득일 분리, 비-PHD)만 총액 트랙에서 제외 → §164⑨ 미지원(Q6),
   // C-06b(`validateSplitLandExprAsset`)가 차단 메시지 담당. UI도 `showHousingTotal`에서 숨긴다.
@@ -147,6 +149,10 @@ export function validateSplitLandExprAsset(
   label: string,
   formTransferDate: string | undefined,
 ): string | null {
+  // 겸용주택은 `validateMixedUseExprAsset` 전담 — 여기서 처리하면 안 된다. 겸용은 항상
+  // hasSeperateLandAcquisitionDate=true(MixedUseSection 강제)라 아래 C-06b 분기가 오발동해
+  // 겸용 수용을 "미지원"으로 잘못 차단한다(코드리뷰 2026-07-17). 겸용 제외 가드.
+  if (asset.assetKind === "housing" && asset.isMixedUseHouse) return null;
   // split(토지·건물 취득일 분리) + 수용 + 환산 + 2009.02.04 조합에서만 판정
   if (!asset.hasSeperateLandAcquisitionDate) return null;
   if (asset.parcelMode) return null;
@@ -164,5 +170,30 @@ export function validateSplitLandExprAsset(
     return `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상액 총액을 입력하세요.`;
   if (!parseAmount(asset.splitLandCompensationBasisTotal))
     return `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상산정 기초 기준시가 총액을 입력하세요.`;
+  return null;
+}
+
+/**
+ * §164⑨1호 겸용주택(나·라 복합) 공익수용 특례 검증 (P7/D8, 일반 §97).
+ * 겸용 + 수용 + 2009.02.04 시 주택분·상가분 토지 보상 총액 4필드 필수(UI 노출 조건과 동일).
+ * 겸용은 환산 기반이라 useEstimatedAcquisition 게이트는 두지 않는다(엔진이 환산 분모에만 적용).
+ */
+export function validateMixedUseExprAsset(
+  asset: AssetForm,
+  label: string,
+  formTransferDate: string | undefined,
+): string | null {
+  if (!(asset.assetKind === "housing" && asset.isMixedUseHouse)) return null;
+  if (asset.transferCause !== "public_expropriation") return null;
+  if (!formTransferDate || formTransferDate < MIN_TRANSFER_DATE) return null;
+
+  if (!parseAmount(asset.housingCompensationTotal))
+    return `${label}: 겸용주택 수용 — 주택분 보상액 총액을 입력하세요.`;
+  if (!parseAmount(asset.housingCompensationBasisTotal))
+    return `${label}: 겸용주택 수용 — 주택분 보상산정 기초 기준시가 총액을 입력하세요.`;
+  if (!parseAmount(asset.mixedCommercialLandCompensationTotal))
+    return `${label}: 겸용주택 수용 — 상가분 토지 보상액 총액을 입력하세요.`;
+  if (!parseAmount(asset.mixedCommercialLandCompensationBasisTotal))
+    return `${label}: 겸용주택 수용 — 상가분 토지 보상산정 기초 개별공시지가 총액을 입력하세요.`;
   return null;
 }

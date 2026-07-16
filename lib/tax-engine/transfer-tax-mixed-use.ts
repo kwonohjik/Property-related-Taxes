@@ -92,6 +92,7 @@ export function calcMixedUseTransferTax(
     apportionment.housingTransferPrice,
     asset,
     derived,
+    transferDate,
     acqDerived,
   );
 
@@ -237,6 +238,14 @@ export function calcMixedUseTransferTax(
     partialUsageChange,
     usagePeriodSplit,
     amendmentDetail,
+    // §164⑨1호 공익수용 특례 산출근거 (계획 P7/D8) — 주택분(라목 총액)·상가분(가목 토지). 적용 시만.
+    expropriationDetail:
+      housingAcqResult.expropriationDetail || commercialGainSplit.expropriationDetail
+        ? {
+            housing: housingAcqResult.expropriationDetail,
+            commercialLand: commercialGainSplit.expropriationDetail,
+          }
+        : undefined,
   };
 }
 

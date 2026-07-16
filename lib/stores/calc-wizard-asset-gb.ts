@@ -182,6 +182,13 @@ export interface GeneralBuildingFormSlice {
   mixedTransferCommercialBuildingPrice: string;
   /** 양도시 개별공시지가 (원/㎡) */
   mixedTransferLandPricePerSqm: string;
+  /**
+   * §164⑨1호 공익수용 — 상가분 토지 보상액 총액 (원) — 겸용 상가분 min 후보 (P7/D8).
+   * 주택분 보상은 P5 필드(housingCompensationTotal·housingCompensationBasisTotal) 재사용.
+   */
+  mixedCommercialLandCompensationTotal: string;
+  /** §164⑨1호 상가분 토지 보상액 산정 기초 개별공시지가 총액 (원) */
+  mixedCommercialLandCompensationBasisTotal: string;
   /** 취득시 개별주택공시가격 (원, PHD 토글 ON 시 비활성) */
   mixedAcqHousingPrice: string;
   /** 취득시 상가건물 기준시가 (원, 신축 시점) */

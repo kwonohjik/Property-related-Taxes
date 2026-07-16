@@ -9,6 +9,10 @@ import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate }
 import { getHousingMultiplier } from "./non-business-land/urban-area";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
+  applyExprTotalDenominator,
+  type ExprTotalValuationDetail,
+} from "./transfer-tax-expropriation-valuation";
+import {
   buildHousingGainSplitFromFourPart,
   buildCommercialGainSplitFromFourPart,
 } from "./transfer-tax-mixed-use-fourpart";
@@ -152,12 +156,15 @@ export interface HousingEstimatedAcqResult {
    * - undefined: 일반 PHD (partialUsageChange 미사용).
    */
   phdScopeBranch?: "case_a_whole_building" | "case_b_housing_only";
+  /** §164⑨1호 주택분 총액 특례 산출근거 (계획 P7/D8, 일반 §97 전용) — 적용 시만 */
+  expropriationDetail?: ExprTotalValuationDetail;
 }
 
 export function calcHousingEstimatedAcq(
   housingTransferPrice: number,
   asset: MixedUseAssetInput,
   derived: MixedUseDerivedAreas,
+  transferDate: Date,
   acqDerived?: MixedUseDerivedAreas,
 ): HousingEstimatedAcqResult {
   // §164⑦ PHD 분기 — 겸용주택의 주택부수토지 면적을 토지면적으로 사용
@@ -260,16 +267,27 @@ export function calcHousingEstimatedAcq(
     }
   }
 
-  const stdAtTransfer = asset.transferStandardPrice.housingPrice;
-  if (stdAtTransfer <= 0) {
+  const rawStdAtTransfer = asset.transferStandardPrice.housingPrice;
+  if (rawStdAtTransfer <= 0) {
     return { estimatedAcq: 0 };
   }
+  // §164⑨1호 공익수용 특례 — 주택분(라목 개별주택가격 총액) 환산 분모만 낮춘다(안분 원값).
+  // PHD 분기는 위에서 조기 반환하므로 여기(일반 §97)만 적용. 미충족 시 null → 현행 분모 유지.
+  const exprVal = applyExprTotalDenominator({
+    standardTotal: rawStdAtTransfer,
+    compensationTotal: asset.housingCompensationTotal,
+    compensationBasisTotal: asset.housingCompensationBasisTotal,
+    isExpropriation: asset.transferCause === "public_expropriation",
+    transferDate,
+  });
+  const stdAtTransfer = exprVal?.denominator ?? rawStdAtTransfer;
   return {
     estimatedAcq: calculateEstimatedAcquisitionPrice(
       housingTransferPrice,
       stdAtAcq,
       stdAtTransfer,
     ),
+    expropriationDetail: exprVal?.detail,
   };
 }
 
@@ -458,6 +476,8 @@ export interface CommercialGainSplit {
   acqStandardSource: "user_input";
   acqStandardLand: number;
   acqStandardBuilding: number;
+  /** §164⑨1호 상가분 토지 총액 특례 산출근거 (계획 P7/D8) — 적용 시만 */
+  expropriationDetail?: ExprTotalValuationDetail;
 }
 
 export function calcCommercialGainSplit(
@@ -513,17 +533,24 @@ export function calcCommercialGainSplit(
 
   const acqTotalStd = acqLandStd + acqBuildingStd;
 
-  // §97 환산취득가액
+  // §164⑨1호 공익수용 — 상가분 **토지 기준시가만** 낮춘 환산 분모(§80⑧ 건물분 미적용·안분 원값, D16-GB).
+  const commercialExprVal = applyExprTotalDenominator({
+    standardTotal: transferLandStd,
+    compensationTotal: asset.commercialLandCompensationTotal,
+    compensationBasisTotal: asset.commercialLandCompensationBasisTotal,
+    isExpropriation: asset.transferCause === "public_expropriation",
+    transferDate,
+  });
+  const transferTotalStdConv =
+    (commercialExprVal?.denominator ?? transferLandStd) + asset.transferStandardPrice.commercialBuildingPrice;
+
+  // §97 환산취득가액 (분모 = 특례 적용 후 총액. 미적용 시 원 transferTotalStd와 동일)
   const estimatedAcqPrice =
-    transferTotalStd > 0
-      ? calculateEstimatedAcquisitionPrice(
-          commercialTransferPrice,
-          acqTotalStd,
-          transferTotalStd,
-        )
+    transferTotalStdConv > 0
+      ? calculateEstimatedAcquisitionPrice(commercialTransferPrice, acqTotalStd, transferTotalStdConv)
       : 0;
 
-  // 시행령 §166⑥: 양도가액은 양도시 비율, 취득가액은 취득시 비율로 안분
+  // 시행령 §166⑥: 양도가액은 양도시 비율, 취득가액은 취득시 비율로 안분 — **원값**(특례 미적용).
   const acqLandRatio = acqTotalStd > 0 ? acqLandStd / acqTotalStd : 0.5;
   const transferLandRatio = transferTotalStd > 0 ? transferLandStd / transferTotalStd : acqLandRatio;
 
@@ -570,6 +597,7 @@ export function calcCommercialGainSplit(
     acqStandardSource,
     acqStandardLand: acqLandStd,
     acqStandardBuilding: acqBuildingStd,
+    expropriationDetail: commercialExprVal?.detail,
   };
 }
 

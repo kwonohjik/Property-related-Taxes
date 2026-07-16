@@ -12,6 +12,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
+import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -147,6 +148,10 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           detail={breakdown.amendmentDetail}
           fullTotalTax={t.totalPayable}
         />
+      )}
+      {/* §164⑨1호 공익수용 특례 산출근거 (P7/D8) — 주택분·상가분 */}
+      {breakdown.expropriationDetail && (
+        <MixedUseExpropriationValuationCard detail={breakdown.expropriationDetail} />
       )}
       {/* 경고 */}
       {breakdown.warnings.length > 0 && (
