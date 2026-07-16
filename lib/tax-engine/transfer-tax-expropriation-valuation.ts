@@ -103,6 +103,10 @@ export function applyExpropriationValuation(
   //    목록을 재구현하면 3층 드리프트가 재발한다(계획 Q4·Q7).
   if (
     !isExprValuationEligiblePropertyType(p.propertyType) ||
+    // 주택(라목)은 개별주택가격이 **총액**이라 per-sqm 트랙 대상이 아니다 → 총액 트랙
+    // (`applyHousingExpropriationValuation`) 전용. land→housing 전환 시 stale per-sqm 값이
+    // 주택 총액 트랙을 침묵 shadowing하는 것을 원천 차단(코드리뷰 2026-07-16).
+    p.propertyType === "housing" ||
     !p.useEstimatedAcquisition ||
     p.transferCause !== "public_expropriation" ||
     p.transferDate < MIN_TRANSFER_DATE ||
@@ -197,6 +201,75 @@ export function applyAuctionValuation(
 }
 
 // ============================================================
+// §164⑨ 1호 — 주택(라목) 총액 트랙. 개별주택가격은 총액이라 원/㎡ 분해가 없다.
+// ============================================================
+
+/**
+ * 주택 §164⑨ 1호 산출근거 (총액 3후보) — Record(Map 금지).
+ * per-sqm 1호(`ExpropriationValuationDetail`)와 **다른 타입**: 주택은 원/㎡·면적 개념이 없다.
+ */
+export interface HousingExpropriationValuationDetail {
+  /** 개별주택가격·공동주택가격 총액 (법 §99①1호 라목 가액) */
+  standardTotal: number;
+  /** 보상액 총액 */
+  compensationTotal: number;
+  /** 보상액 산정의 기초가 되는 기준시가 총액 */
+  compensationBasisTotal: number;
+  /** 적용값 = min(3) */
+  chosen: number;
+  /** 환산 분모(총액) = chosen */
+  denominator: number;
+}
+
+export interface HousingExpropriationValuationParams {
+  /** 자산 종류 — 주택(라목, propertyType==="housing")만 이 총액 트랙 진입. 필수. */
+  propertyType: TransferTaxInput["propertyType"];
+  useEstimatedAcquisition?: boolean;
+  /** 양도원인 — 수용(1호). 2호(공매·경락)와 배타. */
+  transferCause?: "general" | "public_expropriation";
+  transferDate: Date;
+  /** 개별주택가격·공동주택가격 총액 (원) */
+  standardTotalAtTransfer?: number;
+  /** 보상액 총액 (원) */
+  compensationTotal?: number;
+  /** 보상액 산정 기초 기준시가 총액 (원) */
+  compensationBasisTotal?: number;
+}
+
+/**
+ * 주택 §164⑨ 1호 특례(총액 3후보) — 양도당시 기준시가 총액을
+ * min(개별주택가격, 보상액, 보상기초 기준시가)으로 낮춘다.
+ *
+ * per-sqm 1호는 주택에서 `perSqm<=0`/`area<=0` 게이트로 자연히 막히므로(주택은 총액) 배타는 자동.
+ * 순수 함수 — 게이트 미충족 시 null(현행 총액 유지).
+ */
+export function applyHousingExpropriationValuation(
+  p: HousingExpropriationValuationParams,
+): { denominator: number; detail: HousingExpropriationValuationDetail } | null {
+  const standardTotal = p.standardTotalAtTransfer ?? 0;
+  const comp = p.compensationTotal ?? 0;
+  const basis = p.compensationBasisTotal ?? 0;
+
+  if (
+    p.propertyType !== "housing" ||
+    !p.useEstimatedAcquisition ||
+    p.transferCause !== "public_expropriation" ||
+    p.transferDate < MIN_TRANSFER_DATE ||
+    standardTotal <= 0 ||
+    comp <= 0 ||
+    basis <= 0
+  ) {
+    return null;
+  }
+
+  const chosen = Math.min(standardTotal, comp, basis);
+  return {
+    denominator: chosen,
+    detail: { standardTotal, compensationTotal: comp, compensationBasisTotal: basis, chosen, denominator: chosen },
+  };
+}
+
+// ============================================================
 // 통합 진입점 — 환산 분모(양도시 기준시가) 확정 (1호·2호 배타)
 // ============================================================
 
@@ -209,8 +282,10 @@ export function applyAuctionValuation(
 export function resolveConversionDenominatorAtTransfer(input: TransferTaxInput): {
   denominator: number;
   expropriationValuationDetail?: ExpropriationValuationDetail;
+  housingExpropriationValuationDetail?: HousingExpropriationValuationDetail;
   auctionValuationDetail?: AuctionValuationDetail;
 } {
+  // 1호 per-sqm (토지·건물) — 주택은 perSqm/area 게이트로 자연 배제
   const exprVal = applyExpropriationValuation({
     propertyType: input.propertyType,
     useEstimatedAcquisition: input.useEstimatedAcquisition,
@@ -221,7 +296,20 @@ export function resolveConversionDenominatorAtTransfer(input: TransferTaxInput):
     compensationPerSqm: input.compensationPerSqm,
     compensationBasisStdPrice: input.compensationBasisStdPrice,
   });
-  const auctionVal = exprVal
+  // 1호 주택 총액(라목) — per-sqm 1호가 발동하지 않은 경우에만(자산종류 배타)
+  const housingExpr = exprVal
+    ? null
+    : applyHousingExpropriationValuation({
+        propertyType: input.propertyType,
+        useEstimatedAcquisition: input.useEstimatedAcquisition,
+        transferCause: input.transferCause,
+        transferDate: input.transferDate,
+        standardTotalAtTransfer: input.standardPriceAtTransfer,
+        compensationTotal: input.housingCompensationTotal,
+        compensationBasisTotal: input.housingCompensationBasisTotal,
+      });
+  // 2호 공매·경락 — 1호(per-sqm·주택 총액)가 모두 미발동한 경우에만(N3 배타)
+  const auctionVal = exprVal || housingExpr
     ? null
     : applyAuctionValuation({
         propertyType: input.propertyType,
@@ -232,8 +320,13 @@ export function resolveConversionDenominatorAtTransfer(input: TransferTaxInput):
         auctionPrice: input.auctionPrice,
       });
   return {
-    denominator: exprVal?.denominator ?? auctionVal?.denominator ?? (input.standardPriceAtTransfer ?? 0),
+    denominator:
+      exprVal?.denominator ??
+      housingExpr?.denominator ??
+      auctionVal?.denominator ??
+      (input.standardPriceAtTransfer ?? 0),
     expropriationValuationDetail: exprVal?.detail,
+    housingExpropriationValuationDetail: housingExpr?.detail,
     auctionValuationDetail: auctionVal?.detail,
   };
 }

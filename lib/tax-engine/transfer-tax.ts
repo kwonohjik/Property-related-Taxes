@@ -310,7 +310,7 @@ export function calculateTransferTax(
   );
   if (mpBranchResult) return mpBranchResult;
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison, expropriationValuationDetail: gainExprDetail, auctionValuationDetail } = calcTransferGain(effectiveInput);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
   // 상가(CB) 경로는 STEP 0.35에서 useEstimatedAcquisition=false로 교체돼 calcTransferGain이
   // 특례 detail을 내지 않는다 → cbStep의 산출근거를 result로 승격(§164⑨ CB 배선, D16).
   const expropriationValuationDetail = gainExprDetail ?? cbStep?.expropriationValuationDetail;
@@ -731,6 +731,7 @@ export function calculateTransferTax(
     swapComparison,
     expropriationValuationDetail,
     auctionValuationDetail,
+    housingExpropriationValuationDetail,
     capitalExpenditureForDisplay: rawInput.capitalExpenditure ?? 0,
     longTermHoldingDeduction,
     longTermHoldingRate,

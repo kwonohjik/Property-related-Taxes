@@ -10,6 +10,7 @@ import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import {
   isExprValuationEligibleAssetKind,
   isAuctionEligibleAssetKind,
+  isHousingExprEligibleAssetKind,
 } from "@/lib/tax-engine/expropriation-scope";
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";
@@ -559,11 +560,18 @@ export function buildAssetPayload(
           compensationBasisStdPrice: parseAmount(asset.compensationBasisStdPrice) || undefined,
         }
       : {}),
-    // §164⑨2호 공매·경락 (P4) — 컴패니언도 지원(1호와 대칭). 적격 자산(land·building)만 전송.
+    // §164⑨2호 공매·경락 (P4) — 컴패니언도 지원(1호와 대칭). 적격 자산(land·building·housing)만 전송.
     ...(isAuctionEligibleAssetKind(asset.assetKind)
       ? {
           isAuctionTransfer: asset.isAuctionTransfer || undefined,
           auctionPrice: parseAmount(asset.auctionPrice) || undefined,
+        }
+      : {}),
+    // §164⑨1호 주택 총액 트랙 (P5) — 컴패니언 주택도 지원. 주택일 때만 전송.
+    ...(isHousingExprEligibleAssetKind(asset.assetKind)
+      ? {
+          housingCompensationTotal: parseAmount(asset.housingCompensationTotal) || undefined,
+          housingCompensationBasisTotal: parseAmount(asset.housingCompensationBasisTotal) || undefined,
         }
       : {}),
     standardPriceAtTransfer:
@@ -670,10 +678,17 @@ export { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
 export function buildExpropriationInput(primary: AssetForm) {
   return {
     transferCause: primary.transferCause,
-    standardPricePerSqmAtTransfer: parseAmount(primary.standardPricePerSqmAtTransfer) || undefined,
-    transferArea: parseFloat(primary.transferArea) || undefined,
-    compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
-    compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+    // §164⑨1호 per-sqm(가~다목) — **per-sqm 적격 자산일 때만** 전송(`buildAssetPayload` 컴패니언과 대칭).
+    // ⚠️ 무게이트면 land→housing 전환 시 stale per-sqm 값이 주택 총액 트랙을 침묵 shadowing한다
+    //    (엔진도 housing 배제로 방어하나 여기서도 원천 차단 — 코드리뷰 2026-07-16).
+    ...(isExprValuationEligibleAssetKind(primary.assetKind)
+      ? {
+          standardPricePerSqmAtTransfer: parseAmount(primary.standardPricePerSqmAtTransfer) || undefined,
+          transferArea: parseFloat(primary.transferArea) || undefined,
+          compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
+          compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+        }
+      : {}),
     // §164⑨2호 공매·경락 (P4) — **적격 자산(land·building)일 때만** 전송(UI 노출 조건과 동일).
     // ⚠️ 무게이트면 assetKind를 land→housing으로 바꿔도 stale isAuctionTransfer가 남아
     //    housing(2호는 면적 게이트가 없음)에 침묵 발동한다. 여기서 원천 차단(코드리뷰 2026-07-16).
@@ -681,6 +696,13 @@ export function buildExpropriationInput(primary: AssetForm) {
       ? {
           isAuctionTransfer: primary.isAuctionTransfer || undefined,
           auctionPrice: parseAmount(primary.auctionPrice) || undefined,
+        }
+      : {}),
+    // §164⑨1호 주택 총액 트랙 (P5) — 주택일 때만 전송(엔진이 게이트).
+    ...(isHousingExprEligibleAssetKind(primary.assetKind)
+      ? {
+          housingCompensationTotal: parseAmount(primary.housingCompensationTotal) || undefined,
+          housingCompensationBasisTotal: parseAmount(primary.housingCompensationBasisTotal) || undefined,
         }
       : {}),
   };

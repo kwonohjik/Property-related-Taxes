@@ -4,6 +4,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   isExprValuationEligibleAssetKind,
+  isHousingExprEligibleAssetKind,
   EXPR_VALUATION_MIN_TRANSFER_DATE,
 } from "@/lib/tax-engine/expropriation-scope";
 
@@ -56,6 +57,14 @@ export function ExpropriationBlock({
     asset.useEstimatedAcquisition &&
     !!transferDate &&
     transferDate >= EXPR_VALUATION_MIN_DATE;
+  // §164⑨ 1호 주택(라목) 총액 트랙 게이트 (P5) — 개별주택가격은 총액이라 원/㎡가 아닌 총액 3후보.
+  const showHousingTotal =
+    isHousingExprEligibleAssetKind(asset.assetKind) &&
+    !asset.parcelMode &&
+    asset.useEstimatedAcquisition &&
+    !!transferDate &&
+    transferDate >= EXPR_VALUATION_MIN_DATE;
+
   const expr = asset.reductions?.find(
     (r): r is ExprReduction => r.type === "public_expropriation",
   );
@@ -212,6 +221,35 @@ export function ExpropriationBlock({
               <span className="font-mono tabular-nums">{minPerSqm.toLocaleString()}</span> 원/㎡ (셋 중 최소)
             </p>
           )}
+        </div>
+      )}
+
+      {showHousingTotal && (
+        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+            환산 양도당시 기준시가 특례 — 주택 총액 (소득령 §164⑨ 1호)
+          </p>
+          <p className="text-caption leading-relaxed text-amber-700 dark:text-amber-400">
+            수용(2009.02.04 이후) 주택을 환산취득가액으로 계산 시, 양도당시 기준시가(개별주택가격)는
+            <b> 개별주택가격·보상액·보상기초 기준시가 중 가장 작은 총액</b>이 적용됩니다. 주택은 총액이라
+            원/㎡ 분해가 없습니다. (① 개별주택가격은 위 취득 정보의 양도시 기준시가를 그대로 씁니다.)
+          </p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
+            <CurrencyInput
+              label="② 보상액 총액"
+              value={asset.housingCompensationTotal}
+              onChange={(v) => onChange({ housingCompensationTotal: v })}
+              hideUnit
+              hint="수용 보상액 총액 (원)"
+            />
+            <CurrencyInput
+              label="③ 보상산정 기초 기준시가 총액"
+              value={asset.housingCompensationBasisTotal}
+              onChange={(v) => onChange({ housingCompensationBasisTotal: v })}
+              hideUnit
+              hint="보상 산정 기초 기준시가 총액 (원)"
+            />
+          </div>
         </div>
       )}
     </div>

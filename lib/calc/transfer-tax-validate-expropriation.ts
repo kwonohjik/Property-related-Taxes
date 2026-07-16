@@ -20,6 +20,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
   isExprValuationEligibleAssetKind,
   isAuctionEligibleAssetKind,
+  isHousingExprEligibleAssetKind,
   EXPR_VALUATION_MIN_TRANSFER_DATE as MIN_TRANSFER_DATE,
 } from "@/lib/tax-engine/expropriation-scope";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-asset";
@@ -100,5 +101,26 @@ export function validateAuctionAsset(
 
   if (!parseAmount(asset.auctionPrice))
     return `${label}: 공매·경락 특례 — 공매·경락가액을 입력하세요.`;
+  return null;
+}
+
+/**
+ * §164⑨1호 주택(라목) 총액 트랙 검증 (P5).
+ * 주택 수용 + 환산 + 2009.02.04 시 보상 총액 2필드 필수.
+ */
+export function validateHousingExprAsset(
+  asset: AssetForm,
+  label: string,
+  formTransferDate: string | undefined,
+): string | null {
+  if (!isHousingExprEligibleAssetKind(asset.assetKind)) return null;
+  if (asset.parcelMode) return null;
+  if (!asset.useEstimatedAcquisition) return null;
+  if (!isExprValuationDateAndCauseOk(asset, formTransferDate)) return null;
+
+  if (!parseAmount(asset.housingCompensationTotal))
+    return `${label}: 주택 수용 환산 특례 — 보상액 총액을 입력하세요.`;
+  if (!parseAmount(asset.housingCompensationBasisTotal))
+    return `${label}: 주택 수용 환산 특례 — 보상산정 기초 기준시가 총액을 입력하세요.`;
   return null;
 }

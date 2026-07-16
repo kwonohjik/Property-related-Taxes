@@ -225,6 +225,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   isAuctionTransfer: boolean;
   /** 그 공매 또는 경락가액 (총액, 원) — §164⑨2호 min의 후보 */
   auctionPrice: string;
+  /**
+   * 주택 수용 보상액 총액 (원) — §164⑨1호 주택 총액 트랙(P5). 개별주택가격은 총액이라
+   * 원/㎡ 후보(compensationPerSqm)가 아닌 총액을 쓴다. housing 자산 전용.
+   */
+  housingCompensationTotal: string;
+  /** 주택 수용 보상액 산정 기초 기준시가 총액 (원) — §164⑨1호 주택 총액 min 후보 */
+  housingCompensationBasisTotal: string;
 
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
   /**

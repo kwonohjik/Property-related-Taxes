@@ -116,6 +116,11 @@ export interface TransferTaxInput {
   isAuctionTransfer?: boolean;
   /** 그 공매 또는 경락가액 (총액, 원) — min(양도당시 기준시가 총액, 공매·경락가액) 후보 */
   auctionPrice?: number;
+  // ── §164⑨ 1호 주택(라목) 총액 트랙 (계획 P5) — 개별주택가격은 총액이라 원/㎡ 분해 없음 ──
+  /** 보상액 총액 (원) — 주택 수용 min(개별주택가격, 보상액, 보상기초) 후보 */
+  housingCompensationTotal?: number;
+  /** 보상액 산정 기초 기준시가 총액 (원) — 주택 수용 min 후보 */
+  housingCompensationBasisTotal?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
   /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */

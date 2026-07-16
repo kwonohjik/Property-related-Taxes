@@ -35,6 +35,7 @@ import type { SplitGainResult } from "./transfer-split-gain.types";
 import type {
   ExpropriationValuationDetail,
   AuctionValuationDetail,
+  HousingExpropriationValuationDetail,
 } from "../transfer-tax-expropriation-valuation";
 
 export interface TransferTaxResult {
@@ -94,6 +95,8 @@ export interface TransferTaxResult {
   expropriationValuationDetail?: ExpropriationValuationDetail;
   /** §164⑨2호 공매·경락 특례 산출근거 (총액 2후보) — 게이트 충족 시만. 1호와 배타(P4) */
   auctionValuationDetail?: AuctionValuationDetail;
+  /** §164⑨1호 주택(라목) 총액 트랙 특례 산출근거 (총액 3후보) — 게이트 충족 시만 (P5) */
+  housingExpropriationValuationDetail?: HousingExpropriationValuationDetail;
   /** 장기보유특별공제액 */
   longTermHoldingDeduction: number;
   /** 장기보유특별공제율 */
