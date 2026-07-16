@@ -79,4 +79,21 @@ describe("A-8: §21② 배우자단독 판정 — 비상속인 '기타'(isHeir=f
     );
     expect(r.lumpSumComparisonDetail?.spouseSoleHeirExclusion).toBe(false);
   });
+
+  it("C-1: 배우자 + 대습상속인 며느리(substituteGroupId + isHeir:false) → 배우자단독 아님 → 일괄공제 유지", () => {
+    const r = calcInheritanceDeductions(
+      {
+        heirs: [
+          { id: "s", relation: "spouse" },
+          { id: "o", relation: "other", isHeir: false, substituteGroupId: "g1" },
+        ],
+        deathDate: "2024-06-10",
+      },
+      TAXABLE,
+      0,
+    );
+    // 대습상속인은 상속인 → 배우자 단독 아님 → §21② 배제 미적용 (일괄공제 후보 유지)
+    // 수정 전: isHeir:false 잔재로 realHeirs 탈락 → 배우자 단독 오판 → spouseSoleHeirExclusion=true
+    expect(r.lumpSumComparisonDetail?.spouseSoleHeirExclusion).toBe(false);
+  });
 });

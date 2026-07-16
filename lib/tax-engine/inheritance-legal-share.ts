@@ -27,6 +27,22 @@ export interface LegalShareResult {
 }
 
 /**
+ * 상속인 판정 (대습 포함) — legatee(수유자)·corporate(영리법인) 제외, isHeir===false 제외.
+ * 단 대습상속인(substituteGroupId 보유)은 isHeir 값과 무관하게 상속인으로 취급한다.
+ *   며느리·사위를 "기타"로 추가하면 isHeir:false가 자동으로 붙는데(HeirComposition),
+ *   이후 대습 전환(substituteGroupId 세팅) 시 HeirEditor 토글이 숨겨져 false가 잔존한다.
+ *   이 false 잔재로 대습상속인이 상속인 판정에서 탈락하면 §21② '배우자 단독상속' 오판 →
+ *   일괄공제 5억이 부당 배제된다 (C-1). substituteGroupId 조건으로 방어.
+ */
+export function isRealHeir(h: Heir): boolean {
+  return (
+    h.relation !== "legatee" &&
+    h.relation !== "corporate" &&
+    (h.isHeir !== false || h.substituteGroupId != null)
+  );
+}
+
+/**
  * 법정상속분 산정. legatee(수유자)·corporate(영리법인)·isHeir===false 제외.
  * 반환 비율은 Σnumerator === denominator (자가검증 대상).
  */

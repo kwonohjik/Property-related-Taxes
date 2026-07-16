@@ -12,6 +12,7 @@
 
 import { INH } from "../legal-codes";
 import { applyRate } from "../tax-utils";
+import { isRealHeir } from "../inheritance-legal-share";
 import type {
   CalculationStep,
   EstateItem,
@@ -453,13 +454,9 @@ export function calcInheritanceDeductions(
   // §21② 배우자가 단독으로 상속받는 경우 → 일괄공제 배제, 기초+인적공제만 적용.
   //    상속인이 배우자 1인(다른 순위 상속인·공동상속인 부존재 또는 전원 상속포기)인 경우.
   //    수유자(legatee)·영리법인 수증자(corporate)·명시 비상속인(isHeir===false, 예: 며느리 "기타")은
-  //    상속인이 아니므로 제외하고 판정 (법정상속분 게이트 inheritance-legal-share.ts:38과 통일).
-  const realHeirs = input.heirs.filter(
-    (h) =>
-      h.relation !== "legatee" &&
-      h.relation !== "corporate" &&
-      h.isHeir !== false,
-  );
+  //    상속인이 아니므로 제외하고 판정. 단 대습상속인(substituteGroupId 보유)은 isHeir 잔재와 무관하게
+  //    상속인으로 취급 (isRealHeir 단일 진실 — C-1: 대습 며느리 탈락 → §21② 오판 → 일괄공제 부당 배제 방어).
+  const realHeirs = input.heirs.filter(isRealHeir);
   const isSpouseSoleHeir =
     realHeirs.length > 0 && realHeirs.every((h) => h.relation === "spouse");
   // §21① 단서: 정기신고(§67)·기한후신고(국기법 §45의3) 모두 없는 완전 무신고 시 일괄공제 5억 고정.
