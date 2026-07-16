@@ -87,6 +87,12 @@ export function MixedUseAssetMajorStdPrice({
   // 부수토지 개별공시지가 취득시 추천 연도 전용 기준일 — 토지 취득일 기준(§166⑥ 토지·건물 취득일 상이).
   // 상가부수토지 공시지가는 토지값이므로 건물 취득일이 아닌 토지 취득일로 연도 추천(주택분 PHD 경로와 동일).
   const acqLandReferenceDate = asset.landAcquisitionDate || asset.acquisitionDate;
+  // 모달 취득 위치지수 공시지가 prefill 가능 여부 — **토지일 = 건물일일 때만**.
+  // 화면 부수토지 공시지가는 토지 취득일 기준(위 acqLandReferenceDate·§166⑥)이고, 모달 취득 위치지수 칸은
+  // 건물 취득일 기준(BuildingStdPriceForm landRefFromEvent)이라, 두 날짜가 다르면 **다른 연도의 값**이다.
+  // 주입하면 위치지수 오산 → 상가건물 기준시가 오류(세액 영향). 미주입 시 종전대로 빈 값(모달에서 직접 조회).
+  // ⚠️ 2001.1.1 값(phdLandPricePerSqmAtAcq2001)은 고정 기준일이라 이 축과 무관 → 게이트 대상 아님.
+  const canPrefillAcqLandPrice = acqLandReferenceDate === asset.acquisitionDate;
 
   const stdPriceAddress = {
     road: asset.addressRoad,
@@ -97,8 +103,12 @@ export function MixedUseAssetMajorStdPrice({
     lat: asset.latitude,
     pnu: asset.addressPnu,
   };
-  // snapshotKey는 대상 필드 기준 — 취득·양도 통합 단일 키
-  const bspPrefix = `bsp-${asset.assetId}-phd`;
+  // snapshotKey는 대상 필드 기준 — 취득·양도 통합 단일 키.
+  // ⚠️ `bsp-{id}-phd-…`를 쓰면 안 된다: 주택분 배치 모달(PhdBuildingStdPriceModalButton)이
+  // replaceSnapshotsByPrefix(`bsp-{id}-phd`)로 그 접두 키를 전부 교체하므로, 용도변경 없음(Case B)에선
+  // 배치가 상가 스냅샷을 재생성하지도 않아 통째로 소실됐다. `mx`(mixed) 축으로 분리한다.
+  // 시점 세그먼트가 없는 것은 이 모달이 취득·양도 2시점을 한 폼에서 계산하기 때문(gb/cb와 동류).
+  const commercialSnapshotKey = `bsp-${asset.assetId}-mx-commercial`;
 
   return (
     <div className="space-y-3">
@@ -218,12 +228,20 @@ export function MixedUseAssetMajorStdPrice({
           <BuildingStdPriceModalButton
             lockedTaxType="transfer"
             initialAddress={stdPriceAddress}
-            snapshotKey={`${bspPrefix}-commercial`}
+            snapshotKey={commercialSnapshotKey}
             prefill={{
               floorArea: asset.nonResidentialFloorArea,
               landAreaM2: commercialLandArea > 0 ? String(commercialLandArea) : undefined,
               acquisitionDate: asset.acquisitionDate,
               transferDate,
+              // 공시지가 자동입력 — 화면 표시 fallback과 동일 우선순위(3중 패턴).
+              // 취득은 트랙 2종을 모두 넘기고 ≤2000 선택은 모달이 단일 게이트로 판정(§164⑤).
+              acqLandPricePerSqm: canPrefillAcqLandPrice
+                ? asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq
+                : undefined,
+              acqLandPricePerSqm2001: asset.phdLandPricePerSqmAtAcq2001,
+              transferLandPricePerSqm:
+                asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer,
             }}
             onApplyBoth={(acq, transfer) =>
               onChange({

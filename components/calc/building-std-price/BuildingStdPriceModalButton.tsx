@@ -15,6 +15,7 @@ import { deriveYearFromEventDate } from "@/lib/calc/building-std-price-form";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import type { AddressValue } from "@/components/ui/address-search";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
+import { pickAcqLocationIndexLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 
 interface Props {
   /**
@@ -54,6 +55,15 @@ interface Props {
     landAreaM2?: string;
     acquisitionDate?: string;
     transferDate?: string;
+    /**
+     * 취득당시 연도 기준 ㎡당 개별공시지가 — **취득 ≥2001에서만** 주입.
+     * 취득 ≤2000의 모달 칸은 2001.1.1 기준이라 이 값(토지값 트랙)을 넣으면 위치지수 오산이다(§164⑤).
+     */
+    acqLandPricePerSqm?: string;
+    /** 2001.1.1 현재 ㎡당 개별공시지가(위치지수 트랙) — **취득 ≤2000에서만** 주입. */
+    acqLandPricePerSqm2001?: string;
+    /** 양도당시 ㎡당 개별공시지가 — 트랙 구분 없음(같은 필지·같은 시점). */
+    transferLandPricePerSqm?: string;
   };
 }
 
@@ -85,10 +95,20 @@ export function BuildingStdPriceModalButton({
   // 상위 자산 폼 값 자동입력 — 빈 값은 미주입(사용자 이전 입력 보존). 연도는 완성형 날짜에서만 파생.
   const acqYear = prefill?.acquisitionDate ? deriveYearFromEventDate(prefill.acquisitionDate) : "";
   const transYear = prefill?.transferDate ? deriveYearFromEventDate(prefill.transferDate) : "";
+  // 취득 공시지가는 트랙이 갈린다(§164⑤) — 게이트를 여기 단일 관리해 호출부 복제(dual-truth)를 막는다.
+  // 취득일 미입력(acqYear="")이면 취득당시 트랙으로 주입되지만, 사용자가 모달에서 ≤2000 연도를 고르는 순간
+  // BuildingStdPriceForm의 경계 가드(changeYearWithGuard)가 acqLandPrice를 초기화한다.
+  const acqLandPrice = pickAcqLocationIndexLandPrice(
+    acqYear ? parseInt(acqYear, 10) : undefined,
+    prefill?.acqLandPricePerSqm,
+    prefill?.acqLandPricePerSqm2001,
+  );
   const prefillForm: Partial<BuildingStdPriceFormState> = prefill
     ? {
         ...(prefill.floorArea ? { floorArea: prefill.floorArea } : {}),
         ...(prefill.landAreaM2 ? { landAreaM2: prefill.landAreaM2 } : {}),
+        ...(acqLandPrice ? { acqLandPrice } : {}),
+        ...(prefill.transferLandPricePerSqm ? { transLandPrice: prefill.transferLandPricePerSqm } : {}),
         ...(prefill.acquisitionDate
           ? {
               acquisitionEventDate: prefill.acquisitionDate,

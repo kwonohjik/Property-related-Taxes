@@ -362,8 +362,15 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   phdLandPriceYearAtAcq: string;
   /** true = 수동 변경됨, false = 자동추천 */
   phdLandPriceYearAtAcqIsManual: boolean;
-  /** 취득당시 토지 단위 공시지가 (원/㎡) */
+  /** 취득당시 토지 단위 공시지가 (원/㎡) — **토지값 트랙**(부수토지 기준시가 = 공시지가 × 면적). 엔진 입력 */
   phdLandPricePerSqmAtAcq: string;
+  /**
+   * 취득 ≤2000 — 2001.1.1 현재 단위 공시지가 (원/㎡). **위치지수 트랙**(건물 기준시가 산정, 소령 §164⑤).
+   * `phdLandPricePerSqmAtAcq`(취득당시 연도 토지값)와 의미가 달라 혼용 금지 — 트랙 판정은
+   * `lib/calc/phd-acq-land-price-track.ts` 단일 소스.
+   * **엔진 미전달(UI 전용)**: 배치 모달 입력 보존 + 상가건물 모달 prefill 소스.
+   */
+  phdLandPricePerSqmAtAcq2001: string;
   /** 취득당시 건물 기준시가 (원) */
   phdBuildingStdPriceAtAcq: string;
   /** 최초공시일 선택 연도 */

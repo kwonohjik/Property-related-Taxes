@@ -307,6 +307,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.phdLandPriceYearAtAcq) a.phdLandPriceYearAtAcq = "";
   if (a.phdLandPriceYearAtAcqIsManual === undefined) a.phdLandPriceYearAtAcqIsManual = false;
   if (!a.phdLandPricePerSqmAtAcq) a.phdLandPricePerSqmAtAcq = "";
+  if (!a.phdLandPricePerSqmAtAcq2001) a.phdLandPricePerSqmAtAcq2001 = "";
   if (!a.phdBuildingStdPriceAtAcq) a.phdBuildingStdPriceAtAcq = "";
   if (!a.phdLandPriceYearAtFirst) a.phdLandPriceYearAtFirst = "";
   if (a.phdLandPriceYearAtFirstIsManual === undefined) a.phdLandPriceYearAtFirstIsManual = false;

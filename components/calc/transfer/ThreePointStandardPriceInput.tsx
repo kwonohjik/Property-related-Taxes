@@ -32,6 +32,8 @@ import {
 } from "@/components/calc/building-std-price/PhdBuildingStdPriceModalButton";
 import type { AddressValue } from "@/components/ui/address-search";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
+import { isAcq2001LocationIndexTrack } from "@/lib/calc/phd-acq-land-price-track";
+import { pickAcqLocationIndexLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 
 // ─── Props ────────────────────────────────────────────────────────
 
@@ -50,6 +52,13 @@ export interface ThreePointStandardPriceInputProps {
   onLandPriceYearAtAcqChange: (year: string, isManual: boolean) => void;
   landPricePerSqmAtAcq: string;
   onLandPricePerSqmAtAcqChange: (v: string) => void;
+  /**
+   * 취득 ≤2000 — 2001.1.1 현재 공시지가(원/㎡). **위치지수 트랙**(§164⑤·`phd-acq-land-price-track.ts`).
+   * 배치 모달이 입력받은 2001값의 저장처 + 재오픈 시 복원 시드.
+   * 미주입 시 종전 동작(≤2000 취득은 빈 값 시드 + applyBatch 드롭) 유지 — 단독주택 경로 회귀 방어.
+   */
+  landPricePerSqmAtAcq2001?: string;
+  onLandPricePerSqmAtAcq2001Change?: (v: string) => void;
   buildingStdPriceAtAcq: string;
   onBuildingStdPriceAtAcqChange: (v: string) => void;
 
@@ -632,10 +641,16 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     const y = d && /^\d{4}/.test(d) ? Number(d.slice(0, 4)) : NaN;
     return Number.isFinite(y) && y > 1900 ? y : undefined;
   };
-  // 취득연도 ≤ 2000이면 건물기준시가는 2001.1.1. 체계로 산정하므로 위치지수 공시지가도 2001.1.1. 현재 값을
-  // 모달에서 직접 입력(§164⑤). props.landPricePerSqmAtAcq(취득연도 공시지가·토지 트랙)를 전용하지 않고 빈 값 시드.
+  // 취득연도 ≤ 2000이면 건물기준시가는 2001.1.1. 체계로 산정하므로 위치지수 공시지가도 2001.1.1. 현재 값이다
+  // (§164⑤). props.landPricePerSqmAtAcq(취득연도 공시지가·**토지 트랙**)를 전용하면 오입력 →
+  // 전용 위치지수 트랙(landPricePerSqmAtAcq2001)에서 시드해 재오픈 시 이전 입력을 복원한다.
+  // 트랙 판정은 phd-acq-land-price-track.ts 단일 소스(모달 prefill 게이트와 동일 규칙).
   const acqYear = yearOf(props.acquisitionDate);
-  const acqLandPerM2 = acqYear != null && acqYear <= 2000 ? "" : props.landPricePerSqmAtAcq;
+  const acqLandPerM2 = pickAcqLocationIndexLandPrice(
+    acqYear,
+    props.landPricePerSqmAtAcq,
+    props.landPricePerSqmAtAcq2001,
+  );
   const batchPoints = [
     { key: "acquisition" as const, label: "취득시", year: acqYear, landPricePerM2: acqLandPerM2 },
     { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(props.firstDisclosureDate), landPricePerM2: props.landPricePerSqmAtFirst },
@@ -653,14 +668,19 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     if (v.transfer?.commercial != null)
       props.onCommercialBuildingStdPriceAtTransferChange?.(String(v.transfer.commercial));
     // 공시지가 되돌려쓰기 — 모달에서 입력한 시점 공시지가를 외부 3시점 섹션에 반영.
-    // 최초공시·양도는 동일 연도값이라 그대로 반영. 취득은 ≤2000이면 2001값(위치지수 전용)이
-    // 외부 취득 공시지가(취득연도·토지 트랙)와 달라 미반영(이중계상 방지).
+    // 최초공시·양도는 동일 연도값이라 그대로 반영.
     if (v.landPrices?.firstDisclosure != null)
       props.onLandPricePerSqmAtFirstChange(v.landPrices.firstDisclosure);
     if (v.landPrices?.transfer != null)
       props.onLandPricePerSqmAtTransferChange(v.landPrices.transfer);
-    if (v.landPrices?.acquisition != null && !(acqYear != null && acqYear <= 2000))
-      props.onLandPricePerSqmAtAcqChange(v.landPrices.acquisition);
+    // 취득은 **트랙이 갈린다**(§164⑤): ≤2000이면 모달 입력값은 2001.1.1 기준(위치지수 전용)이라
+    // 취득당시 연도 토지값 필드에 넣으면 오염 → 전용 필드로 라우팅. ≥2001은 두 트랙이 같은 값 → 종전대로.
+    // 종전에는 ≤2000을 **드롭**해 사용자 입력이 소실됐다(받을 그릇 부재). 핸들러 미주입 시 종전 동작 유지.
+    if (v.landPrices?.acquisition != null) {
+      if (isAcq2001LocationIndexTrack(acqYear))
+        props.onLandPricePerSqmAtAcq2001Change?.(v.landPrices.acquisition);
+      else props.onLandPricePerSqmAtAcqChange(v.landPrices.acquisition);
+    }
   };
 
   // 겸용 상가(취득·양도)는 전용 ③ 상가 기준시가 섹션(MixedUseAssetMajorStdPrice/Legacy)이 전담한다.
