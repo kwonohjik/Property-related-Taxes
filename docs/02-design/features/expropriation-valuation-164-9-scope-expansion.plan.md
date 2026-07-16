@@ -1,4 +1,4 @@
-# 공익수용·공매 양도당시 기준시가 특례 — §164⑨ 전면 정합 (rev.13)
+# 공익수용·공매 양도당시 기준시가 특례 — §164⑨ 전면 정합 (rev.14)
 
 > **상태**: Plan — 조사 4건 + 사용자 결정 Q1~Q6 + **STEP 1 자가검토 4-way**(57건) + **STEP 3 blast-radius**(7건) 완료.
 > **P1·P2·P9 = Do 완료·머지**(PR #619 `f60f47db` · E2E #620 `2b3b3d84`).
@@ -548,7 +548,7 @@ override(`applyExpropriationValuation` 재사용). 안분(`allocateBundledTransf
 | **완료** | **P4** | ✅ **D5 공매·경락 배선(land·building, 단건+컴패니언)** — `applyAuctionValuation`(총액 2후보) + `resolveConversionDenominatorAtTransfer`(1호·2호 배타 통합) + 신규 `AuctionBlock.tsx`(형제) + `isAuctionTransfer`·`auctionPrice` 2필드 + N3 배타(엔진·validate·UI 3층) + `AuctionValuationCard` + 컴패니언 배선(`buildAssetPayload`·`bundled-split-helpers`·컴패니언 Zod, primary assetKind 게이트). 환산취득가 +166,666,666원 실증. 주택·상가·GB·다필지 2호는 후속(`AUCTION_TRACK_ASSET_KINDS`) | 해소 | ✅ |
 | **완료** | **P5** | ✅ **라목(주택) 총액 트랙** — `applyHousingExpropriationValuation`(총액 3후보 min[개별주택가격,보상액,보상기초]) + `resolveConversionDenominatorAtTransfer` 배타 편입(per-sqm 1호→주택 1호→2호) + 신규 총액 2필드(`housingCompensationTotal`·`housingCompensationBasisTotal`) + ExpropriationBlock 주택 총액 블록 + `HousingExpropriationValuationCard` + 단건·컴패니언. **주택 2호(C-10b)도 완결**(housing을 `AUCTION_TRACK`에 추가). 환산취득가 +166,666,666원 실증 | 해소 | ✅ |
 | **완료** | **P6a** | ✅ **D6 건물 split 토지분 §164⑨1호** — `applySplitLandExpropriationValuation`(총액 3후보 min[토지 기준시가, 토지분 보상액, 토지분 보상기초]) + `calcSplitAcquisitionPrice` 환산 분기 hook(토지분 분모만·건물 무변경, §80⑧) + 신규 2필드(`splitLandCompensationTotal`·`splitLandCompensationBasisTotal`) + `SplitLandExpropriationValuationCard` + validate(건물 split 필수 + **주택 regular split 차단 C-06b**) + ExpropriationBlock split 총액 블록(per-sqm 제외). anchor 15(engine 6 + validate 9). **primary 단건 전용**(companion split 미지원). land-only 실증: 토지 취득가 200M→333,333,333 | 과다 해소 | ✅ |
-| PR#3+ | **P6b(D15)** | **주택 PHD split 배선** — `calcSplitGainPreDisclosure`의 P_T(양도시 개별주택가격) 환산 step에만 §164⑨ 총액 트랙(안분 step 원값). **차단 요인**: PHD hook 지점 법령검증 선행. D6와 독립(주택 regular split=Q6 차단이라 "PHD 먼저 분기" 우회 무관) | 과다 해소 | P6a |
+| **완료** | **P6b(D15)** | ✅ **주택 PHD split 배선** — `calcSplitGainPreDisclosure`가 `applyHousingExpropriationValuation`(P5 총액 트랙 재사용)로 P_T(양도시 개별주택가격)를 낮춰 `calcPreHousingDisclosureGain(conversionDenominatorOverride)`의 **환산 step(Step 6)에만** 주입(안분 Step 3~4 원 P_T 유지·4부분 겸용 미적용) + SplitGainResult.housingExpropriationValuationDetail + validate/UI 재활성(regular split만 제외·PHD split 필드 요구). **신규 필드 0**(P5 재사용). anchor 7(engine 5 + validate 2). 실증: 환산 552,874,340→693,304,423(P_T 627M→500M), 안분 landTransferPrice 532,721,324 **불변** | 과다 해소 | ✅ P6a |
 | **완료** | **D16-CB** | ✅ **상가 배선 — `runCommercialBuildingStep` 내부에 `applyExpropriationValuation`(양도시 호별총액 min[]) + `PER_SQM_TRACK` 재추가 + ① 참조행 CB 분기. 86,784,934원 실증** | 해소 | — |
 | **완료** | **D16-GB** | ✅ **일반건물 배선 — 토지 환산 분모만 §164⑨.** `calculateConvertedAcquisition`에 토지 분모 override(`applyExpropriationValuation` 재사용) + `PER_SQM_TRACK` 재추가 + route ⑭ 전달 + ① 참조행 GB 분기. **안분(§166⑥)·건물분 무변경**. +82,745,181원 실증(사례31 베이스) | 해소 | ✅ 법령조사 완료 |
 | PR#3+ | **P7** | **D8·D12** 겸용·재개발 배선 (각 전용 경로 내부) | 과다 해소 | P3 |
@@ -727,6 +727,12 @@ override(`applyExpropriationValuation` 재사용). 안분(`allocateBundledTransf
 
 ## 12. 개정 이력
 
+- **rev.14** (2026-07-17): **P6b(D15 주택 PHD split) Do 완료.** KoreanLaw 원문 검증(MST 286211·286379):
+  §164⑦(취득당시 산정)이 §164⑨(양도당시 재정의)을 배제하지 않고, hook은 §176의2②2호 **환산 분모(양도시
+  개별주택가격 P_T)에만**·**안분(§166⑥) 원값**으로 D16-GB와 **동형 확정**. `calcPreHousingDisclosureGain`에
+  `conversionDenominatorOverride`(4부분 겸용 제외) + `calcSplitGainPreDisclosure`가 P5 `applyHousingExpropriationValuation`
+  재사용 + P6a의 "주택 split 전반 숨김"을 **regular split만 제외**로 되돌려 PHD split 재활성. 신규 필드 0(P5 재사용).
+  **유의(§80⑧)**: 주택 보상기초 총액은 토지-only 명문 부재 → 자동 합성 금지·사용자 명시 입력만(P5가 이미 충족).
 - **rev.13** (2026-07-16): **P6a(D6 건물 split 토지분) Do 완료·머지.** §4-6을 **land-only로 정정**(rev.6의
   "토지·건물 양쪽 min[]"은 시행규칙 §80⑧과 상충 — 건물엔 보상기초 개념 부재, D16-GB와 동형). 전용
   `applySplitLandExpropriationValuation`(총액 3후보) + `calcSplitAcquisitionPrice` 토지분 분모만 hook +

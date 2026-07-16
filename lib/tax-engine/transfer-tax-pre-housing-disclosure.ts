@@ -31,11 +31,15 @@ import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./ty
  *
  * @param totalTransferPrice 총 양도가액
  * @param input 3-시점 기준시가 입력
+ * @param conversionDenominatorOverride §164⑨1호 공익수용 특례 — 양도당시 개별주택가격(P_T)을 낮춘 값.
+ *   제공 시 **환산취득가 산정의 분모(P_T)에만** 적용하고 양도가액 토지·건물 안분은 원 P_T를 유지한다
+ *   (D16-GB 원리: 환산 분모만·안분 원값. 법령 검증 §176의2②2호·§166⑥·§164⑨). 4부분(겸용) 모드 미적용.
  * @returns 중간값·결과값 상세 (UI 표시 및 calcSplitGain 연결용)
  */
 export function calcPreHousingDisclosureGain(
   totalTransferPrice: number,
   input: PreHousingDisclosureInput,
+  conversionDenominatorOverride?: number,
 ): PreHousingDisclosureResult {
   const {
     landArea,
@@ -124,8 +128,14 @@ export function calcPreHousingDisclosureGain(
   const buildingHousingAtAcquisition = P_A_est - landHousingAtAcquisition;
 
   // ── Step 6: 총 환산취득가 · 취득가액 분리 ──
-  const totalEstimatedAcquisitionPrice = P_T > 0
-    ? Math.floor(totalTransferPrice * P_A_est / P_T)
+  // §164⑨1호 공익수용 특례 — 환산 분모(양도당시 개별주택가격)만 낮춘다. 안분(Step 3~4)은 원 P_T 유지
+  // (D16-GB 원리). 4부분(겸용) 모드는 자체 분모(sumAtTransferShare)를 쓰므로 미적용(P7).
+  const P_T_conv =
+    !fourPartActive && conversionDenominatorOverride !== undefined && conversionDenominatorOverride > 0
+      ? conversionDenominatorOverride
+      : P_T;
+  const totalEstimatedAcquisitionPrice = P_T_conv > 0
+    ? Math.floor(totalTransferPrice * P_A_est / P_T_conv)
     : 0;
 
   const landAcquisitionPrice = P_A_est > 0

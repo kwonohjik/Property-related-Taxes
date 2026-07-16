@@ -56,21 +56,22 @@ export function ExpropriationBlock({
   // 이 경우 per-sqm 칸을 노출하면 입력해도 엔진이 안 읽는 **침묵 무시** → 토지분 총액 블록으로 전환(P6/D6).
   const isSplitBuilding =
     isSplitLandExprEligibleAssetKind(asset.assetKind) && asset.hasSeperateLandAcquisitionDate;
-  // 주택 split(토지·건물 취득일 분리) — 총액 트랙에서 제외(총액 칸 노출 시 침묵 무시).
-  //  · regular split → Q6 미지원(validate 차단). · PHD split → §164⑤·⑦ 우회로 엔진 미소비(D15, 후속).
-  // 두 경우 모두 노출하면 입력해도 효과 없는 false-required가 되므로 숨긴다.
-  const isHousingSplit =
-    isHousingExprEligibleAssetKind(asset.assetKind) && asset.hasSeperateLandAcquisitionDate;
+  // 주택 **regular** split(비-PHD)만 총액 트랙에서 제외 — Q6 미지원(validate 차단). 노출 시 침묵 무시.
+  // 주택 **PHD** split(§164⑦ 3시점 환산)은 총액 트랙을 정상 소비하므로(P6b/D15) 노출·요구한다.
+  const isHousingRegularSplit =
+    isHousingExprEligibleAssetKind(asset.assetKind) &&
+    asset.hasSeperateLandAcquisitionDate &&
+    !asset.usePreHousingDisclosure;
   // §164⑨ 1호 환산 min[] 게이트: 적격 자산(가~다목) + 환산모드 + 양도 ≥ 2009.02.04.
   // ⚠️ 적격 판정은 `expropriation-scope.ts` **단일 소스** 위임 — 여기서 자산종류를 나열하면
   //    validate·엔진과 갈라진다(3층 드리프트). UI 노출 조건 = validate와 동일해야 한다.
   // split 건물은 per-sqm 경로가 우회되므로 제외(아래 split 총액 블록으로).
   const showValuationMin =
     isExprValuationEligibleAssetKind(asset.assetKind) && exprDateOk && !isSplitBuilding;
-  // §164⑨ 1호 주택(라목) 총액 트랙 게이트 (P5) — 개별주택가격은 총액이라 원/㎡가 아닌 총액 3후보.
-  // 주택 split(regular·PHD 공통)은 총액 트랙 우회라 제외.
+  // §164⑨ 1호 주택(라목) 총액 트랙 게이트 (P5·P6b) — 개별주택가격은 총액이라 원/㎡가 아닌 총액 3후보.
+  // 단건 주택 + PHD split 주택은 노출. regular split만 제외(미지원).
   const showHousingTotal =
-    isHousingExprEligibleAssetKind(asset.assetKind) && exprDateOk && !isHousingSplit;
+    isHousingExprEligibleAssetKind(asset.assetKind) && exprDateOk && !isHousingRegularSplit;
   // §164⑨ 1호 건물 split 토지분 총액 트랙 게이트 (P6/D6).
   const showSplitLandExpr = isSplitBuilding && exprDateOk;
 
