@@ -105,6 +105,7 @@ const INELIGIBLE_REASON_LABELS: Record<string, string> = {
   heir_ceo_not_scheduled: "2년 내 대표이사 미취임 (상증령 §15③2호 라)",
   medium_other_estate_exceeds_200pct: "가업외 상속재산 200% 초과 (§18의2② + 상증령 §15⑥⑦)",
   tax_fraud_conviction: "조세포탈·회계부정 형 확정 (§18의2⑧1호)",
+  decedent_non_resident: "피상속인 비거주자 (§18의2① — 거주자 사망만 적용)",
 };
 
 /** 신고서 표시 정보 — 짧은 텍스트 입력 (계산 미사용) */

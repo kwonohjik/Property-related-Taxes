@@ -174,6 +174,11 @@ export function getMediumRevenueThresholdByDate(deathDate?: string): number {
 export function evaluateFamilyBusinessEligibility(
   input: FamilyBusinessInheritanceInput,
 ): { eligible: boolean; reasons: FamilyBusinessIneligibleReason[] } {
+  // §18의2① "거주자의 사망으로 상속이 개시되는 경우로서" — 비거주자 부적격 (C-13, short-circuit)
+  if (input.decedentType === "non_resident") {
+    return { eligible: false, reasons: ["decedent_non_resident"] };
+  }
+
   // §18의2⑧1호 short-circuit
   if (input.hasTaxFraudConviction) {
     return { eligible: false, reasons: ["tax_fraud_conviction"] };
