@@ -26,7 +26,30 @@ function calcApportionRatio(input: TransferTaxInput): { land: number; building: 
   return { land: landRatio, building: 1 - landRatio };
 }
 
-/** 취득가액 분리 (실가/환산/감정 분기) */
+/**
+ * 토지/건물 쌍 분리 — 입력 우선 → 한쪽만 있으면 반대쪽은 잔액 → 둘 다 없으면 기준시가 비율 안분.
+ *
+ * 소득령 §166⑥: 실지거래가액 확인 시 그 가액, **구분할 수 없는 때**에만 기준시가 비율로 안분.
+ * 한쪽만 아는 경우 반대쪽은 `총액 − 입력값`으로 **유일하게 확정**되므로 안분이 아니라 도출이다
+ * (총액은 필수 입력). 종전에는 반대쪽을 비율로 채워 합계가 총액과 어긋났다(건물만 입력 시).
+ *
+ * ⚠️ overflow(입력 > 총액)는 여기서 clamp하지 않는다 — validate가 차단한다.
+ *    엔진이 조용히 0으로 깎으면 오답이 눈에 안 띈다.
+ */
+function splitPair(
+  total: number,
+  landIn: number | undefined,
+  buildingIn: number | undefined,
+  landRatio: number,
+): { land: number; building: number } {
+  if (landIn != null && buildingIn != null) return { land: landIn, building: buildingIn };
+  if (landIn != null) return { land: landIn, building: total - landIn };
+  if (buildingIn != null) return { land: total - buildingIn, building: buildingIn };
+  const land = Math.floor(total * landRatio);
+  return { land, building: total - land };
+}
+
+/** 취득가액 분리 (실가/환산/감정/매매사례 분기) */
 function calcSplitAcquisitionPrice(
   input: TransferTaxInput,
   landTransferPrice: number,
@@ -52,16 +75,26 @@ function calcSplitAcquisitionPrice(
     return { land: landAcq, building: buildingAcq };
   }
 
-  if (input.acquisitionMethod === "appraisal") {
-    const base = input.appraisalValue ?? input.acquisitionPrice ?? 0;
-    const land = input.landAcquisitionPrice ?? Math.floor(base * landRatio);
+  if (input.acquisitionMethod === "salesCase") {
+    // 매매사례가액(소령 §176의2③1호) — 비-split(transfer-tax-helpers.ts:343)과 동일 base.
+    // 종전에는 분기가 없어 아래 실거래가로 fallthrough했고, API가 salesCase 시 acquisitionPrice: 0을
+    // 보내므로(transfer-tax-api.ts:199-201) base = 0 → **취득가액이 통째로 소실**됐다.
+    // 추계액이라 토지/건물 개별 실지가액이 존재하지 않는다 → landAcquisitionPrice를 읽지 않고 항상 안분
+    // (§166⑥ "구분할 수 없는 때"). 감정가액 분기가 직접 입력을 허용하는 것과 다른 점.
+    const base = input.similarSalesValue ?? input.acquisitionPrice ?? 0;
+    const land = Math.floor(base * landRatio);
     return { land, building: base - land };
+  }
+
+  if (input.acquisitionMethod === "appraisal") {
+    // 감정가액 — 감정평가서가 토지·건물을 각각 평가하는 경우가 많아 직접 입력을 허용(실거래가와 동일 구조).
+    const base = input.appraisalValue ?? input.acquisitionPrice ?? 0;
+    return splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
   }
 
   // 실거래가
   const base = input.acquisitionPrice ?? 0;
-  const land = input.landAcquisitionPrice ?? Math.floor(base * landRatio);
-  return { land, building: base - land };
+  return splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
 }
 
 /**
@@ -97,10 +130,12 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
 
   // ① 양도가액 분리
   const totalTransfer = input.transferPrice;
-  const landTransferPrice = input.landTransferPrice
-    ?? Math.floor(totalTransfer * landRatio);
-  const buildingTransferPrice = input.buildingTransferPrice
-    ?? (totalTransfer - landTransferPrice);
+  const { land: landTransferPrice, building: buildingTransferPrice } = splitPair(
+    totalTransfer,
+    input.landTransferPrice,
+    input.buildingTransferPrice,
+    landRatio,
+  );
 
   // ② 취득가액 분리
   const { land: landAcqPrice, building: buildingAcqPrice } = calcSplitAcquisitionPrice(
@@ -114,14 +149,26 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
 
   // ③ 필요경비(자본적지출) 분리
   const totalExpenses = input.expenses ?? 0;
-  const landDirectExp = input.landDirectExpenses
-    ?? Math.floor(totalExpenses * landRatio);
-  const buildingDirectExp = input.buildingDirectExpenses
-    ?? (totalExpenses - landDirectExp);
+  // ⚠️ 계산값만 splitPair로 산출한다. swap 자격(explicitDirect)은 아래 호출부가 **입력 원본**
+  //    (input.*DirectExpenses !== undefined)을 직접 보므로 여기 결과에서 파생시키면 안 된다
+  //    — 잔액으로 채운 값이 "사용자 입력 있음"으로 뒤바뀌어 §97② swap 발화 조건이 변한다.
+  const { land: landDirectExp, building: buildingDirectExp } = splitPair(
+    totalExpenses,
+    input.landDirectExpenses,
+    input.buildingDirectExpenses,
+    landRatio,
+  );
 
   // ④ 개산공제 — 환산취득가·감정가액 모드 시 (소득령 §163⑥)
+  // salesCase 추가(2026-07-16): 비-split(transfer-tax-helpers.ts:339-348)은 매매사례가액에도
+  // 개산공제를 적용하고 directExp를 차감하지 않는데, split만 실가 early-return으로 빠져 정반대로
+  // 동작했다(개산공제 0 + directExp 전액 차감) → 드리프트 해소.
+  // ⚠️ §97② swap은 이 플래그가 아니라 input.useEstimatedAcquisition 단독 게이트(아래 applyAssetSwap)라
+  //    salesCase 추가에도 무영향 — "환산모드 전용" 정책 유지.
   const usesEstOrAppraisal =
-    input.useEstimatedAcquisition || input.acquisitionMethod === "appraisal";
+    input.useEstimatedAcquisition ||
+    input.acquisitionMethod === "appraisal" ||
+    input.acquisitionMethod === "salesCase";
   const landAppraisalDed = usesEstOrAppraisal ? applyRate(landStdAtAcq, 0.03) : 0;
   const buildingAppraisalDed = usesEstOrAppraisal ? applyRate(buildingStdAtAcq, 0.03) : 0;
 
