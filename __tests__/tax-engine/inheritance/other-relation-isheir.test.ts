@@ -14,6 +14,7 @@ import {
 } from "@/lib/calc/prior-gift-donee-derive";
 import { changeHeirRelation } from "@/components/calc/HeirEditor";
 import { calcInheritanceDeductions } from "@/lib/tax-engine/deductions/inheritance-deductions";
+import { computeLegalShares } from "@/lib/tax-engine/inheritance-legal-share";
 import type { Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 describe("Pre-Do A-1: derive 데이터 모델 (green 증거)", () => {
@@ -95,5 +96,33 @@ describe("A-8: §21② 배우자단독 판정 — 비상속인 '기타'(isHeir=f
     // 대습상속인은 상속인 → 배우자 단독 아님 → §21② 배제 미적용 (일괄공제 후보 유지)
     // 수정 전: isHeir:false 잔재로 realHeirs 탈락 → 배우자 단독 오판 → spouseSoleHeirExclusion=true
     expect(r.lumpSumComparisonDetail?.spouseSoleHeirExclusion).toBe(false);
+  });
+});
+
+// C-1 완전: legal-share(§19 배우자 법정지분)까지 대습상속인 편입 — §21²만 고치면 배우자공제 한도 과대
+describe("C-1: 대습상속인 법정상속분 편입 (computeLegalShares — isHeir:false 잔재 무관)", () => {
+  const subDil: Heir = {
+    id: "dil",
+    relation: "other",
+    isHeir: false,
+    substituteGroupId: "g1",
+    substituteForRelation: "child",
+    substituteRole: "spouse",
+  };
+  const spouse: Heir = { id: "s", relation: "spouse" };
+
+  it("대습 며느리(isHeir:false)가 배우자와 공동 법정상속 (§1009② 배우자 3 : 대습슬롯 2)", () => {
+    const r = computeLegalShares([spouse, subDil]);
+    // 수정 전: 며느리가 eligible·subHeirs에서 탈락 → 배우자 단독 {s:1}/1 → 배우자 법정지분 100%
+    expect(r.denominator).toBe(5);
+    expect(r.shares.find((x) => x.heirId === "s")?.numerator).toBe(3); // 배우자 3/5
+    expect(r.shares.find((x) => x.heirId === "dil")?.numerator).toBe(2); // 며느리 편입
+  });
+
+  it("isHeir:false 잔재가 isHeir undefined(정상 대습)와 동일 지분 — §19 배우자공제 한도 일관", () => {
+    const stale = computeLegalShares([spouse, subDil]);
+    const consistent = computeLegalShares([spouse, { ...subDil, isHeir: undefined }]);
+    // 수정 전: stale={s:1}/1(단독) ≠ consistent={s:3,dil:2}/5 → 배우자공제 한도 과대·세액 과소
+    expect(stale).toEqual(consistent);
   });
 });

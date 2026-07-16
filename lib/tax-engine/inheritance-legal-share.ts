@@ -47,12 +47,10 @@ export function isRealHeir(h: Heir): boolean {
  * 반환 비율은 Σnumerator === denominator (자가검증 대상).
  */
 export function computeLegalShares(heirs: Heir[]): LegalShareResult {
-  const eligible = heirs.filter(
-    (h) =>
-      h.relation !== "legatee" &&
-      h.relation !== "corporate" &&
-      h.isHeir !== false,
-  );
+  // isRealHeir: 대습상속인(substituteGroupId 보유)은 isHeir:false 잔재와 무관하게 상속인으로 편입.
+  //   §21²(realHeirs)과 동일 단일 진실 — 미통일 시 대습 며느리가 §19 배우자 법정지분에서 탈락해
+  //   배우자 지분 과대(60%→100%)·배우자공제 한도 과대·세액 과소가 발생 (C-1 dual-truth).
+  const eligible = heirs.filter(isRealHeir);
 
   // 대습상속(민법 §1001) 입력이 있으면 확장 경로. 없으면 기존 단순 경로(회귀 0).
   if (heirs.some((h) => h.substituteGroupId != null)) {
@@ -148,10 +146,9 @@ function computeLegalSharesWithSubstitute(
   const survSiblings = eligibleNormal.filter((h) => h.relation === "sibling");
   const survOthers = eligibleNormal.filter((h) => h.relation === "other");
 
-  // 대습상속인 그룹 (substituteForRelation별, isHeir!==false)
-  const subHeirs = heirs.filter(
-    (h) => h.substituteGroupId != null && h.isHeir !== false,
-  );
+  // 대습상속인 그룹 (substituteForRelation별). 대습상속인은 isHeir:false 잔재와 무관하게 편입
+  //   (며느리·사위를 "기타"로 추가 시 isHeir:false가 붙는데 대습 전환 후에도 잔존 — C-1).
+  const subHeirs = heirs.filter((h) => h.substituteGroupId != null);
   const groupsByRel = (rel: "child" | "sibling"): Map<string, Heir[]> => {
     const m = new Map<string, Heir[]>();
     for (const h of subHeirs) {
