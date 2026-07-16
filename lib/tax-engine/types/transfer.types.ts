@@ -100,8 +100,8 @@ export interface TransferTaxInput {
   standardPriceAtAcquisition?: number;
   /** 양도시 기준시가 (환산취득가 사용 시 필수) */
   standardPriceAtTransfer?: number;
-  // ── #3 공익수용 환산 양도시 기준시가 min[] 특례 (집행기준 99-164-12) — 모두 optional, 미제공 시 현행 ──
-  /** 양도원인 — "public_expropriation" 시 #3 게이트 후보 */
+  // ── 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — 모두 optional, 미제공 시 현행 ──
+  /** 양도원인 — "public_expropriation" 시 특례 게이트 후보. (§164⑨2호 공매·경락은 미구현 — 계획 P4) */
   transferCause?: "general" | "public_expropriation";
   /** 양도시 기준시가 (원/㎡) — min[] 첫 후보 */
   standardPricePerSqmAtTransfer?: number;

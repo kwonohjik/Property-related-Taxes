@@ -9,18 +9,26 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
  *
  * 자산종류 무관 노출: §77(조특법)은 "토지등"(공익사업법 §2 = 토지·건물·물건·권리) 대상이므로
  * 건물·주택·상가 수용도 §77 감면 대상(asset-kind-gate standalone = 전 자산 허용).
- * 단 #3 환산 min[] 특례는 공시지가(원/㎡)·면적 기반이라 토지 전용(showValuationMin 게이트).
+ *
+ * ⚠️ 환산 min[] 특례(**소득세법 시행령 §164⑨ 1호**)는 현재 `showValuationMin`이 토지로 게이트한다.
+ *    이는 **법령 범위보다 좁다** — §164⑨은 법 §99①1호 "가목부터 라목까지"(토지·건물·오피스텔/
+ *    상업용 건물·주택 전부)를 대상으로 한다. 게이트 확대는 계획 P3의 범위.
+ *    (종전 "집행기준 99-164-12" 인용은 국세청 행정규칙 — 법령 근거는 시행령 §164⑨)
  *
  * 보상액 → 자동 파생 (현금/채권 onChange 시 canonical 필드에 직접 write, useEffect 미사용):
  *  - 양도가액(actualSalePrice) = 현금 + 채권 보상 (수용 양도가액 = 보상총액). 수정 가능.
- *  - ㎡당 보상가액(compensationPerSqm) = (현금+채권) ÷ 양도면적 (집행기준 99-164-12 #3 후보②). 수정 가능.
+ *  - ㎡당 보상가액(compensationPerSqm) = (현금+채권) ÷ 양도면적 (소득령 §164⑨ 1호 후보②). 수정 가능.
  *  직전 자동값과 현재 필드값이 같을 때만 갱신 → 사용자 수정값은 보존(clobber 방지, dual-truth 없음).
  *
  * 설계: docs/02-design/features/transfer-public-expropriation-unified.ui.design.md
  */
 type ExprReduction = Extract<AssetReductionForm, { type: "public_expropriation" }>;
 
-/** #3 환산 min[] 특례 시행 기준일 (수용=양도 시점) — 집행기준 99-164-12 */
+/**
+ * 환산 min[] 특례 노출 기준일 (수용=양도 시점) — **현행 문언(대통령령 제21301호) 적용 시작일**.
+ * 엔진 `transfer-tax-expropriation-valuation.ts`의 `MIN_TRANSFER_DATE`와 동일해야 한다
+ * (UI 노출 ↔ 엔진 게이트 일치). 근거 상세·1996~2009 구 문언 미지원은 그 파일 주석 참조.
+ */
 const EXPR_VALUATION_MIN_DATE = "2009-02-04";
 
 export function ExpropriationBlock({
@@ -145,7 +153,7 @@ export function ExpropriationBlock({
       {showValuationMin && (
         <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
           <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-            환산 양도시 기준시가 특례 (집행기준 99-164-12)
+            환산 양도당시 기준시가 특례 (소득령 §164⑨ 1호)
           </p>
           <p className="text-caption leading-relaxed text-amber-700 dark:text-amber-400">
             수용(2009.02.04 이후) 토지를 환산취득가액으로 계산 시, 양도시 기준시가는

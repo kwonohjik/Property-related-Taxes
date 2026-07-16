@@ -218,6 +218,8 @@ export function AssetSectionAcquisition({
               entitlementArea: "",
               allocatedArea: "",
               priorLandArea: "",
+              compensationPerSqm: "",
+              compensationBasisStdPrice: "",
               areaScenario: "same",
             };
             onChange({
@@ -232,6 +234,14 @@ export function AssetSectionAcquisition({
             parcels={asset.parcels ?? []}
             totalTransferPrice={parseAmount(asset.actualSalePrice || "0")}
             onChange={(parcels) => onChange({ parcels })}
+            // 공익수용 §164⑨ 1호 필지별 min[] 특례 노출 조건 — 수용 + 양도 ≥ 2009.02.04.
+            // (필지별 환산 여부는 ParcelListInput이 p.acquisitionMethod로 판정.
+            //  다필지는 assetKind === "land" 전용이라 자산종류 축은 자명 — §164⑨ 가목)
+            showExpropriationMin={
+              asset.transferCause === "public_expropriation" &&
+              !!transferDate &&
+              transferDate >= "2009-02-04"
+            }
           />
         </ToggleCard>
       )}

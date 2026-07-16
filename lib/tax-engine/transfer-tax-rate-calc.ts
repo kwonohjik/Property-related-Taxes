@@ -487,6 +487,8 @@ export function handleMultiParcelBranch(
   const mpResult = calculateMultiParcelTransfer({
     totalTransferPrice: effectiveInput.transferPrice,
     transferDate: effectiveInput.transferDate,
+    // 공익수용 §164⑨ 1호 특례 게이트 — 필지별 판정에 필요(자산-수준 값).
+    transferCause: effectiveInput.transferCause,
     parcels: parcelsWithOverride,
   });
   for (let pi = 0; pi < mpResult.parcelResults.length; pi++) {

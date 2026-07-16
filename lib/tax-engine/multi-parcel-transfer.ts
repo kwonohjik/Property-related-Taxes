@@ -20,6 +20,8 @@ import {
   calculateHoldingPeriod,
   safeMultiplyThenDivide,
 } from "./tax-utils";
+import { applyExpropriationValuation } from "./transfer-tax-expropriation-valuation";
+import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
 
 // ============================================================
 // 타입 정의
@@ -56,6 +58,7 @@ export interface ParcelInput {
   /**
    * 양도 당시 단가 (원/㎡, estimated 방식 시 사용).
    * standardAtTransfer = transferArea × standardPricePerSqmAtTransfer
+   * ※ 공익수용 §164⑨ 1호 특례 발동 시에는 이 단가 대신 **min[이 값, 보상액, 보상기초]**가 쓰인다.
    */
   standardPricePerSqmAtTransfer?: number;
   /**
@@ -69,6 +72,16 @@ export interface ParcelInput {
   transferExpense?: number;
   /** 미등기 여부 (true이면 장기보유특별공제 0%) */
   isUnregistered?: boolean;
+
+  // ─── 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) ─────────
+  // **필지별**이다 — 필지마다 개별공시지가(standardPricePerSqmAtTransfer)가 다르므로
+  // min[] 선택도 필지별로 독립 판정된다. 수용 보상도 실무상 필지별로 산정·명시된다.
+  // 게이트: acquisitionMethod === "estimated" + MultiParcelInput.transferCause === "public_expropriation"
+  //         + 양도일 ≥ 2009.02.04 + 두 필드 모두 > 0. 미충족 시 현행 분모 유지.
+  /** 보상가액 (원/㎡) */
+  compensationPerSqm?: number;
+  /** 보상액 산정의 기초가 되는 기준시가 (원/㎡) */
+  compensationBasisStdPrice?: number;
 
   // ─── 환지 감환지/증환지 (소득세법 시행령 §162의2) ─────────────
   // 3필드가 모두 제공되고 entitlementArea > allocatedArea 이면 감환지로 판정하여
@@ -105,6 +118,11 @@ export interface ParcelResult {
    * estimatedDeduction은 0으로 표시(미적용), expenses에 directSide 노출.
    */
   swapApplied?: boolean;
+  /**
+   * 공익수용 §164⑨ 1호 특례 산출근거 — 발동 시에만 존재.
+   * 양도당시 기준시가(환산 분모)를 min[기준시가, 보상액, 보상기초]로 낮춘 근거.
+   */
+  expropriationValuationDetail?: ExpropriationValuationDetail;
   /** 양도차익 (원) = allocatedTransferPrice - acquisitionPrice - estimatedDeduction - expenses */
   transferGain: number;
   /** 보유기간 연수 (장기보유특별공제 계산용) */
@@ -117,7 +135,10 @@ export interface ParcelResult {
   transferIncome: number;
   /** 환산 방식에서의 취득기준시가 합계 (standardAtAcq, 표시용) */
   standardAtAcq?: number;
-  /** 환산 방식에서의 양도기준시가 합계 (standardAtTransfer, 표시용) */
+  /**
+   * 환산 방식에서의 양도기준시가 합계 (환산 분모, 표시용).
+   * 공익수용 §164⑨ 1호 특례 발동 시에는 **min[] 적용 후 값**이다(= expropriationValuationDetail.denominator).
+   */
   standardAtTransfer?: number;
   /**
    * 환산 방식에서 실제 사용된 취득 면적 (㎡).
@@ -140,6 +161,11 @@ export interface MultiParcelInput {
   totalTransferPrice: number;
   /** 양도일 */
   transferDate: Date;
+  /**
+   * 양도원인 — "public_expropriation" 시 필지별 §164⑨ 1호 특례 게이트 후보.
+   * 자산-수준 값이며 필지별로 다를 수 없다(수용은 사업 단위).
+   */
+  transferCause?: "general" | "public_expropriation";
   /** 필지 목록 (2개 이상 권장, 1개도 허용) */
   parcels: ParcelInput[];
 }
@@ -255,6 +281,8 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     let expenses = 0;
     let standardAtAcq: number | undefined;
     let standardAtTransfer: number | undefined;
+    /** §164⑨ 1호 특례 산출근거 — 발동 시에만 채워진다 */
+    let expropriationValuationDetail: ExpropriationValuationDetail | undefined;
     let effectiveAcquisitionArea: number | undefined;
     let exchangeLandReductionApplied = false;
     let swapApplied = false;
@@ -300,6 +328,25 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       // 면적 × 단가는 소수 곱셈 가능 → Math.floor로 정수화
       standardAtAcq = Math.floor(acqArea * sqmAtAcq);
       standardAtTransfer = Math.floor(parcel.transferArea * sqmAtTransfer);
+
+      // 공익수용 §164⑨ 1호 — 양도당시 기준시가 차감 특례 (필지별 독립 판정).
+      // 판정식은 단건 경로와 **동일 함수**를 재사용한다(dual-truth 회피 — 여기서 min[]을
+      // 재구현하면 단건↔다필지 드리프트가 재발한다).
+      // 게이트의 useEstimatedAcquisition은 **필지별 환산 여부**를 넘긴다 — 다필지는 자산-수준
+      // 플래그가 API에서 false로 강제되므로(transfer-tax-api.ts:256) 그것을 쓰면 항상 미발동한다.
+      const exprVal = applyExpropriationValuation({
+        useEstimatedAcquisition: true, // 이 분기 자체가 parcel.acquisitionMethod === "estimated"
+        transferCause: input.transferCause,
+        transferDate: input.transferDate,
+        standardPricePerSqmAtTransfer: sqmAtTransfer,
+        transferArea: parcel.transferArea,
+        compensationPerSqm: parcel.compensationPerSqm,
+        compensationBasisStdPrice: parcel.compensationBasisStdPrice,
+      });
+      if (exprVal) {
+        standardAtTransfer = exprVal.denominator;
+        expropriationValuationDetail = exprVal.detail;
+      }
 
       // 환산취득가액 = allocatedPrice × (standardAtAcq / standardAtTransfer)
       acquisitionPrice = safeMultiplyThenDivide(allocatedPrice, standardAtAcq, standardAtTransfer);
@@ -367,6 +414,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
           ? (swapApplied ? expenses : 0)
           : expenses,
       swapApplied: swapApplied || undefined,
+      expropriationValuationDetail,
       transferGain,
       holdingYears,
       longTermHoldingRate,

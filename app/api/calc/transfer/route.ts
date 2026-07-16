@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     useEstimatedAcquisition: data.useEstimatedAcquisition,
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
     standardPriceAtTransfer: data.standardPriceAtTransfer,
-    // ⑭ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) — TypeScript 미감지 영역(침묵 strip 주의)
+    // ⑭ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — TypeScript 미감지 영역(침묵 strip 주의)
     transferCause: data.transferCause,
     standardPricePerSqmAtTransfer: data.standardPricePerSqmAtTransfer,
     transferArea: data.transferArea,

@@ -122,7 +122,7 @@ const propertyBaseShape = {
   useEstimatedAcquisition: z.boolean(),
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   standardPriceAtTransfer: z.number().int().positive().optional(),
-  // ⑫ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) — 엔진이 게이트, strip 방지
+  // ⑫ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — 엔진이 게이트, strip 방지
   transferCause: z.enum(["general", "public_expropriation"]).optional(),
   standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
   transferArea: z.number().positive().optional(),

@@ -276,7 +276,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           : isEstimated
             ? parseAmount(primary.standardPriceAtTransfer) || undefined
             : undefined,
-    // ⑬ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12)
+    // ⑬ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호)
     ...buildExpropriationInput(primary),
     acquisitionMethod: hasPre1990 || isMixed
       ? ("actual" as const)
@@ -492,6 +492,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               standardPricePerSqmAtTransfer:
                 p.acquisitionMethod === "estimated"
                   ? parseFloat(p.standardPricePerSqmAtTransfer) || 0
+                  : undefined,
+              // 공익수용 §164⑨ 1호 — 필지별 min[] 특례. 환산 방식일 때만 의미(엔진이 최종 게이트).
+              compensationPerSqm:
+                p.acquisitionMethod === "estimated"
+                  ? parseAmount(p.compensationPerSqm) || undefined
+                  : undefined,
+              compensationBasisStdPrice:
+                p.acquisitionMethod === "estimated"
+                  ? parseAmount(p.compensationBasisStdPrice) || undefined
                   : undefined,
               expenses:
                 p.acquisitionMethod === "actual" ? parseAmount(p.expenses) : undefined,
