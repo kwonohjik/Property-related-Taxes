@@ -25,6 +25,13 @@ export interface ParcelFormItem {
   entitlementArea: string;
   allocatedArea: string;
   priorLandArea: string;
+  // ── 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) ──
+  // **필지별**이다 — 필지마다 개별공시지가가 달라 min[] 선택이 독립 판정된다.
+  // 노출 조건: 양도원인 수용 + 필지 환산 방식 + 양도일 ≥ 2009.02.04
+  /** 보상가액 (원/㎡) */
+  compensationPerSqm: string;
+  /** 보상액 산정의 기초가 되는 기준시가 (원/㎡) */
+  compensationBasisStdPrice: string;
   /**
    * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
    * - "same"      : 취득면적 = 양도면적 (일반)
@@ -39,6 +46,9 @@ export function migrateParcel(p: unknown): ParcelFormItem {
   const parcel = p as Record<string, unknown>;
   if (parcel.capitalExpenditure === undefined) parcel.capitalExpenditure = "0";
   if (parcel.transferExpense === undefined) parcel.transferExpense = "0";
+  // §164⑨ 1호 보상 2필드 (2026-07-16) — 구 세션 복원 방어
+  if (parcel.compensationPerSqm === undefined) parcel.compensationPerSqm = "";
+  if (parcel.compensationBasisStdPrice === undefined) parcel.compensationBasisStdPrice = "";
   if (parcel.areaScenario) return parcel as unknown as ParcelFormItem;
   let areaScenario: ParcelFormItem["areaScenario"];
   if (parcel.useExchangeLandReduction) {

@@ -90,6 +90,15 @@ function ParcelDisclosure({
             <Row label="양도소득금액" value={formatKRW(pr.transferIncome)} highlight />
           </tbody>
         </table>
+        {/*
+          공익수용 양도당시 기준시가 차감 특례 (소득령 §164⑨ 1호) 산출근거 — **필지별**.
+          필지마다 개별공시지가가 달라 min[] 선택이 독립이므로 자산-수준으로 승격하지 않는다.
+        */}
+        {pr.expropriationValuationDetail && (
+          <div className="mt-3">
+            <ExpropriationValuationCard detail={pr.expropriationValuationDetail} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -380,7 +389,7 @@ export function TransferTaxResultView({
           </div>
         )}
 
-        {/* 1990.8.30. 이전 취득 토지 기준시가 환산 상세 */}
+        {/* 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) 산출근거 */}
         {result.expropriationValuationDetail && (
           <ExpropriationValuationCard detail={result.expropriationValuationDetail} />
         )}

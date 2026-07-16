@@ -560,6 +560,9 @@ export const parcelSchema = z.object({
   entitlementArea: z.number().positive().optional(),
   allocatedArea: z.number().positive().optional(),
   priorLandArea: z.number().positive().optional(),
+  // 공익수용 §164⑨ 1호 — 필지별 min[] 특례. 엔진이 게이트(수용·환산·2009.02.04) 판정.
+  compensationPerSqm: z.number().int().nonnegative().optional(),
+  compensationBasisStdPrice: z.number().int().nonnegative().optional(),
 }).superRefine((p, ctx) => {
   if (p.acquisitionMethod === "estimated") {
     if (!p.standardPricePerSqmAtAcq || p.standardPricePerSqmAtAcq <= 0) {

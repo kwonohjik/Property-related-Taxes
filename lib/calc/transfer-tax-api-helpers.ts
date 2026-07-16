@@ -632,9 +632,12 @@ export function buildAssetPayload(
 export { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
 
 /**
- * ⑬ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) 엔진 input 필드.
- * 엔진이 게이트(환산·수용·2009.02.04) 판정 — 여기선 원값만 전달.
+ * ⑬ 공익수용 양도당시 기준시가 차감 특례 (**소득세법 시행령 §164⑨ 1호**) 엔진 input 필드.
+ * 엔진이 게이트(환산·수용·2009.02.04) 판정 — 여기선 원값만 전달(변환 계층 — 게이트 아님).
  * 원/㎡=parseAmount(정수), 면적=parseFloat(소수 ㎡).
+ *
+ * ⚠️ **자산종류 게이트는 현재 UI·validate 2층에만 있다** — 엔진에는 없다(위 "엔진이 게이트"는
+ *    환산·수용·날짜 3축 한정). 자산종류 축을 엔진에 추가하는 것은 계획 P3(Q4 — 3층 명시).
  */
 export function buildExpropriationInput(primary: AssetForm) {
   return {

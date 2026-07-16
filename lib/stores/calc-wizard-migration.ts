@@ -23,7 +23,13 @@ function migrateParcel(p: unknown): ParcelFormItem {
   } else {
     areaScenario = "partial";
   }
-  return { ...(parcel as unknown as ParcelFormItem), areaScenario };
+  return {
+    ...(parcel as unknown as ParcelFormItem),
+    areaScenario,
+    // §164⑨ 1호 특례 보상필드 (2026-07-16 신설) — legacy 폼엔 없으므로 기본값 주입
+    compensationPerSqm: parcel.compensationPerSqm ?? "",
+    compensationBasisStdPrice: parcel.compensationBasisStdPrice ?? "",
+  };
 }
 
 /** 세션스토리지에 저장된 구 포맷(propertyType + companionAssets / 루트 감면 필드)을 신규 assets[] 포맷으로 변환 */

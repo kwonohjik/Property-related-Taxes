@@ -122,7 +122,7 @@ function validateRentalHousingException(
 }
 
 /** 다필지 자산 검증 — primary 자산이 다필지 모드일 때 */
-function validateParcelMode(primary: AssetForm): string | null {
+function validateParcelMode(primary: AssetForm, formTransferDate?: string): string | null {
   const parcels = primary.parcels ?? [];
   if (parcels.length === 0) return "필지를 최소 1개 추가하세요.";
   for (let i = 0; i < parcels.length; i++) {
@@ -160,6 +160,19 @@ function validateParcelMode(primary: AssetForm): string | null {
         return `${label}: 취득시 ㎡당 기준시가를 입력하세요.`;
       if (!p.standardPricePerSqmAtTransfer || parseFloat(p.standardPricePerSqmAtTransfer) <= 0)
         return `${label}: 양도시 ㎡당 기준시가를 입력하세요.`;
+      // 공익수용 §164⑨ 1호 필지별 min[] 특례 — 보상 2필드 필수.
+      // UI 노출 조건(AssetSectionAcquisition의 showExpropriationMin + p.acquisitionMethod)과 **동일**해야
+      // "UI 통과 ↔ validate 차단" 모순이 없다(⑧ 규칙).
+      if (
+        primary.transferCause === "public_expropriation" &&
+        formTransferDate &&
+        formTransferDate >= "2009-02-04"
+      ) {
+        if (!parseAmount(p.compensationPerSqm))
+          return `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`;
+        if (!parseAmount(p.compensationBasisStdPrice))
+          return `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`;
+      }
     } else {
       if (!p.acquisitionPrice || parseAmount(p.acquisitionPrice) <= 0)
         return `${label}: 취득가액을 입력하세요.`;
@@ -474,7 +487,7 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   }
 
   // 1) 다필지 모드는 별도 검증
-  if (isParcelMode) return validateParcelMode(asset);
+  if (isParcelMode) return validateParcelMode(asset, formTransferDate);
 
   // 2) 환지처분 시나리오
   if (asset.assetKind === "land") {

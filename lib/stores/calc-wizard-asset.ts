@@ -198,16 +198,25 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   transferType: "" | "regular" | "burdened_gift";
 
   // ── 공익수용·협의매수 (양도원인) — #1 NBL 의제·#2 §77 감면·#3 환산 min[] 공용 사실 ──
-  /** 양도원인 — 공익수용·협의매수 여부 (assetKind==="land" 전용). 기본 "general" */
+  /**
+   * 양도원인 — 공익수용·협의매수 여부. 기본 "general".
+   * (종전 주석의 "assetKind==='land' 전용"은 **사실이 아니다** — `TransferModeBlock`의
+   *  `SUPPORTED_ASSET_KINDS` 5종(housing·land·building·general_building·commercial_building)에 노출된다.)
+   */
   transferCause: "general" | "public_expropriation";
   /**
    * 사업인정고시일 (YYYY-MM-DD) — NBL(§168의14③3호)·§77 고시일 단일 소스.
    * NBL publicNoticeDate·§77 businessApprovalDate에 fallback(`섹션필드 || 이 값`)으로 공급.
    */
   expropriationNoticeDate: string;
-  /** #3 보상가액 (원/㎡) — 환산 양도시 기준시가 min[] 특례(집행기준 99-164-12). 환산+토지+양도≥2009.02.04 시만 */
+  /**
+   * 보상가액 (원/㎡) — 양도당시 기준시가 차감 특례(**소득세법 시행령 §164⑨ 1호**)의 후보②.
+   * 현행 노출 조건: 환산 + 토지 + 양도 ≥ 2009.02.04 (게이트가 법령 범위보다 좁음 — 계획 P3).
+   * ※ 다필지는 필지별 값을 쓴다(`ParcelFormItem.compensationPerSqm`) — 필지마다 공시지가가 달라
+   *   min[] 선택이 독립이기 때문. 이 자산-수준 필드는 단건 경로 전용.
+   */
   compensationPerSqm: string;
-  /** #3 보상산정 기초 기준시가 (원/㎡) — 위 min[]의 3번째 후보 */
+  /** 보상액 산정의 기초가 되는 기준시가 (원/㎡) — 위 min[]의 후보③ */
   compensationBasisStdPrice: string;
 
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
