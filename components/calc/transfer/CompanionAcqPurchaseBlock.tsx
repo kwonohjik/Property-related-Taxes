@@ -193,10 +193,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           onChange={handleAcquisitionDateChange}
           onBlur={handleAcquisitionDateBlur}
         />
-        {/* 8-B-4: 취득일 안내 hint */}
-        <p className="text-caption text-muted-foreground leading-relaxed">
-          ※ 1985.1.1 이전 취득은 모두 1985.1.1로 입력 (의제취득, 소득세법 §98).
-        </p>
+        {/* 안내 hint 제거(2026-07-16) — onBlur 자동 클램프 + dateClampMsg + 「의제취득(§98)」 배지가
+            이미 §98을 알려주므로 상시 노출 문구는 중복이었다. */}
         {dateClampMsg && (
           <p className="text-xs text-amber-700 dark:text-amber-400">
             1985.1.1. 의제 취득일로 취득일 변경했습니다.
@@ -261,7 +259,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             <div className="space-y-2 pl-1">
               <FieldCard
                 label="토지 취득일"
-                hint="※ 1985.1.1 이전 취득은 모두 1985.1.1로 입력 (의제취득, 소득세법 §98)."
                 trailing={
                   isLandDeemedAcquisitionDate ? (
                     <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-micro font-semibold text-amber-900">
@@ -282,7 +279,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 )}
               </FieldCard>
 
-              <FieldCard label="취득·양도가액 분리 방식" hint="토지/건물 각각의 취득가액·양도가액 구분 방법 (소득령 §166⑥)">
+              <FieldCard label="취득·양도가액 분리 방식">
                 <div className="flex gap-2">
                   <button
                     type="button"
