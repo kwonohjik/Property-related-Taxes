@@ -113,6 +113,10 @@ function FamilyBusinessPostMgmtPageInner() {
   const [appliedDeduction, setAppliedDeduction] = useState(
     sanitizeAmountParam(searchParams.get("originalDeduction"), FB_CAP_30Y),
   );
+  // 추징 재계산 base — 상속개시 당시 상속세 과세표준(가업공제 적용 후). 메인 진입 시 baseTaxable prefill.
+  const [baseTaxableAmount, setBaseTaxableAmount] = useState(
+    sanitizeAmountParam(searchParams.get("baseTaxable"), 100_000_000_000_000),
+  );
   const [deathDate, setDeathDate] = useState(searchParams.get("deathDate") ?? "");
   const [amendOpen, setAmendOpen] = useState(false);
   const [filingDeadline, setFilingDeadline] = useState(searchParams.get("filingDeadline") ?? "");
@@ -144,6 +148,9 @@ function FamilyBusinessPostMgmtPageInner() {
   const canCalculate = useMemo(() => {
     return (
       parseAmount(appliedDeduction) > 0 &&
+      // 재계산 base는 명시 입력 필수(빈칸=silent 0 방지) — 0도 유효값이므로 문자열 비어있지 않음으로 판정
+      baseTaxableAmount.trim().length > 0 &&
+      parseAmount(baseTaxableAmount) >= 0 &&
       deathDate.length === 10 &&
       effectiveFilingDeadline.length === 10 &&
       Number(interestRate) >= 0 &&
@@ -151,7 +158,7 @@ function FamilyBusinessPostMgmtPageInner() {
       violations.length > 0 &&
       violations.every((v) => v.date.length === 10)
     );
-  }, [appliedDeduction, deathDate, effectiveFilingDeadline, interestRate, violations]);
+  }, [appliedDeduction, baseTaxableAmount, deathDate, effectiveFilingDeadline, interestRate, violations]);
 
   const handleCalculate = () => {
     const events: ViolationEvent[] = violations.map((v) => ({
@@ -171,6 +178,7 @@ function FamilyBusinessPostMgmtPageInner() {
 
     const input: FamilyBusinessPostMgmtInput = {
       appliedDeduction: parseAmount(appliedDeduction),
+      baseTaxableAmount: parseAmount(baseTaxableAmount),
       deathDate,
       filingDeadline: effectiveFilingDeadline,
       ofzExemptionActive,
@@ -218,6 +226,12 @@ function FamilyBusinessPostMgmtPageInner() {
             value={appliedDeduction}
             onChange={setAppliedDeduction}
             hint="원 상속 시 적용된 §18의2 공제액"
+          />
+          <CurrencyInput
+            label="상속개시 당시 상속세 과세표준 (공제 적용 후)"
+            value={baseTaxableAmount}
+            onChange={setBaseTaxableAmount}
+            hint="추징세액 재계산 base — 신고서상 과세표준(§18의2⑤). 산입액을 더해 상속세를 재계산"
           />
           <CurrencyInput
             label="양도소득세 환원 공제 (§18의2⑩, 선택)"
@@ -384,8 +398,9 @@ function FamilyBusinessPostMgmtPageInner() {
             <p className="text-3xl font-bold tracking-tight" data-testid="fb-postmgmt-net">{formatKRW(result.netRecapture)}</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm pt-1">
               <div>
-                <p className="text-xs text-muted-foreground">추징세액 합계</p>
+                <p className="text-xs text-muted-foreground">추징세액 합계 (재계산 증가분)</p>
                 <p className="font-semibold font-mono tabular-nums">{formatKRW(result.totalRecapture)}</p>
+                <p className="text-micro text-muted-foreground">과세가액 산입액 {formatKRW(result.totalAddback)} 재계산 (§18의2⑤)</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">이자상당액 (§15⑯)</p>

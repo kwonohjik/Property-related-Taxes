@@ -12,6 +12,10 @@
 import { addMonths, addYears, differenceInDays, endOfMonth, format, parseISO } from "date-fns";
 
 import { INH } from "../legal-codes";
+import {
+  calcInheritanceGiftTax,
+  DEFAULT_INHERITANCE_GIFT_BRACKETS,
+} from "../inheritance-gift-common";
 import { resolveEstateItemValue } from "../valuation/resolve-estate-item-value";
 import type { AssetCategory } from "../types/inheritance-gift.types";
 import type { EstateItem, FamilyBusinessDeductionDetail } from "../types/inheritance-gift.types";
@@ -80,16 +84,28 @@ export function calcFamilyBusinessPostMgmt(
     .filter((v) => v.type === "asset_disposal")
     .reduce((s, v) => s + (v.priorDisposedExcluded ?? 0), 0);
 
-  const perViolationDetail: PostMgmtViolationDetail[] = input.violations.map((v, i) => {
+  // §18의2⑤ 추징세액 = 과세가액 산입 후 상속세 재계산 증가분 (공제액 자체가 세액이 아님 — C-2).
+  //   base(상속개시 당시 과세표준, 공제 적용 후)에 산입액을 누적해 marginal-in-order로 증가분을 산정.
+  //   율은 DB 미접근(standalone)이라 DEFAULT 상속세율 — 요약 경로(calcInheritanceGiftTax(taxBase))와 동일.
+  const brackets = DEFAULT_INHERITANCE_GIFT_BRACKETS;
+  let runningBase = input.baseTaxableAmount;
+  let cumulativeAddback = 0;
+
+  const perViolationDetail: PostMgmtViolationDetail[] = [];
+  for (let i = 0; i < input.violations.length; i++) {
+    const v = input.violations[i];
+
     // (0) 5년 초과 자동 면제 (§18의2⑤ "상속개시일부터 5년 이내")
     if (input.deathDate && !isWithinFiveYears(v.date, input.deathDate)) {
-      return { event: v, exempted: true, exemptionReason: "outside_five_year_period", recapture: 0, interest: 0 };
+      perViolationDetail.push({ event: v, exempted: true, exemptionReason: "outside_five_year_period", recapture: 0, interest: 0 });
+      continue;
     }
 
     // (1) 사용자 명시 정당사유 (§15⑧)
     const reason = input.justifiableReasons?.find((j) => j.violationRef === i);
     if (reason) {
-      return { event: v, exempted: true, exemptionReason: reason.reasonCode, recapture: 0, interest: 0 };
+      perViolationDetail.push({ event: v, exempted: true, exemptionReason: reason.reasonCode, recapture: 0, interest: 0 });
+      continue;
     }
 
     // (2) OFZ 자동 면제 (§15㉕ → §15⑪1호·2호 한정, 3호 휴/폐업 제외)
@@ -98,10 +114,11 @@ export function calcFamilyBusinessPostMgmt(
       v.type === "business_cessation" &&
       (v.cessationSubType === "ceo_not_serving" || v.cessationSubType === "industry_change")
     ) {
-      return { event: v, exempted: true, exemptionReason: "ofz_exemption", recapture: 0, interest: 0 };
+      perViolationDetail.push({ event: v, exempted: true, exemptionReason: "ofz_exemption", recapture: 0, interest: 0 });
+      continue;
     }
 
-    // 추징세액 (§15⑮ 100% × 자산처분비율)
+    // 과세가액 산입액 (§15⑮ 100% × 자산처분비율)
     const assetDisposalRatio =
       v.type === "asset_disposal"
         ? calcAssetDisposalRatio(
@@ -113,25 +130,37 @@ export function calcFamilyBusinessPostMgmt(
       { appliedDeduction: input.appliedDeduction, violationType: v.type, assetDisposalRatio },
       INH.FAMILY_BUSINESS_DEDUCTION,
     );
+    // 다중 위반 이중산입 방지 — 누적 산입액이 공제액(추징 원금)을 넘지 않도록 cap.
+    const addback = Math.max(
+      0,
+      Math.min(recapture.taxableAmountAddback, input.appliedDeduction - cumulativeAddback),
+    );
 
-    // 이자상당액 (§15⑯) — 신고기한 다음날 ~ 위반일
+    // 추징세액 = 재계산 증가분 (base 누적 marginal). Σ증가분 = tax(base+Σ산입액) − tax(base).
+    const marginalTax =
+      calcInheritanceGiftTax(runningBase + addback, brackets) -
+      calcInheritanceGiftTax(runningBase, brackets);
+    runningBase += addback;
+    cumulativeAddback += addback;
+
+    // 이자상당액 (§15⑯) — 기준세액 = 재계산 증가분(marginalTax, CGT 차감 전). 신고기한 다음날 ~ 위반일.
     const days = daysFromFilingToViolation(input.filingDeadline, v.date);
     const interest = calcFamilyBusinessInterest(
       {
-        determinedTax: recapture.recaptureAmount,
+        determinedTax: marginalTax,
         daysFromFilingDeadlineToViolation: days,
         annualInterestRate: input.annualInterestRate,
       },
       INH.FAMILY_BUSINESS_DEDUCTION,
     );
 
-    return {
+    perViolationDetail.push({
       event: v,
       exempted: false,
-      recapture: recapture.recaptureAmount,
+      recapture: marginalTax,
       interest: interest.interestAmount,
-    };
-  });
+    });
+  }
 
   // 정규직·총급여 §⑤4호 AND
   let employmentResult: FamilyBusinessPostMgmtResult["employmentResult"];
@@ -151,13 +180,14 @@ export function calcFamilyBusinessPostMgmt(
     };
   }
 
-  // 합계 + 양도세 환원 공제 (§18의2⑩)
+  // 합계 + 양도세 환원 공제 (§18의2⑩ — 산출세액=totalRecapture에서 차감, 음수 0 가드)
   const totalRecapture = perViolationDetail.reduce((s, v) => s + v.recapture, 0);
+  const totalAddback = cumulativeAddback;
   const totalInterest = perViolationDetail.reduce((s, v) => s + v.interest, 0);
   const cgtCreditApplied = Math.min(totalRecapture, Math.max(0, input.cgtCreditAmount ?? 0));
   const netRecapture = Math.max(0, totalRecapture - cgtCreditApplied);
 
-  return { totalRecapture, totalInterest, cgtCreditApplied, netRecapture, perViolationDetail, employmentResult };
+  return { totalRecapture, totalAddback, totalInterest, cgtCreditApplied, netRecapture, perViolationDetail, employmentResult };
 }
 
 /**
@@ -187,12 +217,15 @@ export function buildFamilyBusinessPostMgmtMeta(args: {
   familyBusinessDetail: FamilyBusinessDeductionDetail | undefined;
   estateItems: EstateItem[] | undefined;
   deathDate: string | undefined;
+  /** 상속개시 당시 상속세 과세표준 (가업상속공제 적용 후) — 추징 재계산 base prefill */
+  baseTaxableAmount: number;
 }): FamilyBusinessPostMgmtMeta | undefined {
-  const { familyBusinessDeduction, familyBusinessDetail, estateItems, deathDate } = args;
+  const { familyBusinessDeduction, familyBusinessDetail, estateItems, deathDate, baseTaxableAmount } = args;
   if (familyBusinessDeduction <= 0 || !familyBusinessDetail || !deathDate) return undefined;
 
   return {
     appliedDeduction: familyBusinessDetail.deduction,
+    baseTaxableAmount,
     deathDate,
     filingDeadline: calcInheritanceFilingDeadline(deathDate),
     ofzExemptionActive: familyBusinessDetail.ofzExemptionActive ?? false,

@@ -743,6 +743,7 @@ export function calcInheritanceTax(
     familyBusinessDetail: deductionResult.familyBusinessDetail,
     estateItems: input.estateItems,
     deathDate: input.deathDate,
+    baseTaxableAmount: taxBase, // §18의2⑤ 추징 재계산 base (가업공제 적용 후 과세표준)
   });
 
   // STEP 12.5: §74 지정문화유산 등 징수유예 (상증령 §76① 비례 방식) — appended.

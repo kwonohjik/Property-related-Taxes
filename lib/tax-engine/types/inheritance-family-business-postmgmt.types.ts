@@ -20,6 +20,8 @@ export type PostMgmtAssetType = "land" | "building" | "stock" | "other";
 export interface FamilyBusinessPostMgmtMeta {
   /** 가업상속공제 적용액 (추징 원금) */
   appliedDeduction: number;
+  /** 상속개시 당시 상속세 과세표준 (가업상속공제 적용 후) — 추징 재계산 base prefill, §18의2⑤ */
+  baseTaxableAmount: number;
   /** 상속개시일(사망일) — 사후관리 5년 가드 prefill, YYYY-MM-DD */
   deathDate: string;
   /** 상속세 신고기한 — 상증법 §67 (사망일이 속하는 달 말일 + 6개월), YYYY-MM-DD */
@@ -110,8 +112,13 @@ export interface EmploymentTracking {
 
 /** 사후관리 추징 시뮬레이터 입력 (계획 §2-2) */
 export interface FamilyBusinessPostMgmtInput {
-  /** 가업상속공제 적용액 (추징 원금) */
+  /** 가업상속공제 적용액 (추징 원금 = 과세가액 산입액의 상한) */
   appliedDeduction: number;
+  /**
+   * 상속개시 당시 상속세 과세표준 (가업상속공제 적용 후, §18의2⑤ 재계산 base).
+   * 추징세액 = calcInheritanceGiftTax(base+산입액) − calcInheritanceGiftTax(base). C-2.
+   */
+  baseTaxableAmount: number;
   /** 상속개시일(사망일) — §⑤ "상속개시일부터 5년 이내" 가드 기준 (ISO date) */
   deathDate: string;
   /** 상속세 신고기한 (§67, ISO date) — 이자상당액 기산 */
@@ -161,8 +168,10 @@ export interface PostMgmtEmploymentResult {
 
 /** 사후관리 추징 시뮬레이터 결과 */
 export interface FamilyBusinessPostMgmtResult {
-  /** 추징세액 합계 */
+  /** 추징세액 합계 = calcInheritanceGiftTax(base+Σ산입액) − calcInheritanceGiftTax(base) (§18의2⑤ 재계산 증가분) */
   totalRecapture: number;
+  /** 과세가액 산입액 합계 (echo, 공제액 상한 cap 적용) */
+  totalAddback: number;
   /** 이자상당액 합계 */
   totalInterest: number;
   /** 양도세 환원 공제 적용액 (§18의2⑩) */
