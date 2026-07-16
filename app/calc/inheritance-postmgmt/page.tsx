@@ -66,6 +66,16 @@ function sanitizeDateParam(raw: string | null): string {
   return raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
 }
 
+/**
+ * 원래 상속세 과세표준 prefill — 양수 정수만 수용(비수치·음수·0은 "" → canCalculate 차단).
+ * 과세표준은 30억(공제 한도)을 초과할 수 있으므로 cap 없음(cap은 공제액 전용).
+ */
+function sanitizeBaseTaxableParam(raw: string | null): string {
+  if (!raw) return "";
+  const num = parseAmount(raw);
+  return Number.isFinite(num) && num > 0 ? String(num) : "";
+}
+
 export default function FarmingPostMgmtPage() {
   return (
     <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">로딩 중…</div>}>
@@ -87,7 +97,11 @@ function FarmingPostMgmtPageInner() {
   const [violationDate, setViolationDate] = useState("");
   const [filingDeadline, setFilingDeadline] = useState(initialFilingDeadline);
   const [originalDeduction, setOriginalDeduction] = useState(initialOriginalDeduction);
-  const [determinedTax, setDeterminedTax] = useState("");
+  // 원래 상속세 과세표준 (영농공제 반영 후) — §18의3④ 전단 marginal 추징 재계산 기준.
+  //   prefill은 양수 정수만 수용(비수치→"" → canCalculate 차단). cap은 없음(과세표준 > 30억 가능).
+  const [baseTaxableAmount, setBaseTaxableAmount] = useState(
+    sanitizeBaseTaxableParam(searchParams.get("baseTaxable")),
+  );
   const [interestRate, setInterestRate] = useState("0.029");  // 기본 연 2.9%
   const [justifiedReason, setJustifiedReason] = useState<FarmingPostMgmtJustifiedReason | "">("");
   const [maintainsMajorShareholder, setMaintainsMajorShareholder] = useState(false);
@@ -102,18 +116,20 @@ function FarmingPostMgmtPageInner() {
       violationDate.length === 10 &&
       filingDeadline.length === 10 &&
       parseAmount(originalDeduction) > 0 &&
-      parseAmount(determinedTax) >= 0 &&
+      // 재계산 base 명시 입력 필수(빈칸=silent 0 방지) — 0도 유효값이라 비어있지 않음으로 판정
+      baseTaxableAmount.trim().length > 0 &&
+      parseAmount(baseTaxableAmount) >= 0 &&
       Number(interestRate) >= 0 &&
       Number(interestRate) <= 1
     );
-  }, [violationDate, filingDeadline, originalDeduction, determinedTax, interestRate]);
+  }, [violationDate, filingDeadline, originalDeduction, baseTaxableAmount, interestRate]);
 
   const handleCalculate = () => {
     const input: FarmingPostMgmtInput = {
       violation,
       violationDate,
       filingDeadline,
-      determinedTax: parseAmount(determinedTax),
+      baseTaxableAmount: parseAmount(baseTaxableAmount),
       interestRate: Number(interestRate),
       justifiedReason: justifiedReason || undefined,
       maintainsMajorShareholder: showCorporateMajorToggle
@@ -189,10 +205,10 @@ function FarmingPostMgmtPageInner() {
           hint="원 상속 시 적용된 §18의3 공제액 (최대 30억)"
         />
         <CurrencyInput
-          label="사유 발생 시점 결정세액"
-          value={determinedTax}
-          onChange={setDeterminedTax}
-          hint="이자상당액 산정 기준액"
+          label="원래 상속세 과세표준 (영농공제 반영 후)"
+          value={baseTaxableAmount}
+          onChange={setBaseTaxableAmount}
+          hint="추징세액은 이 과세표준에 산입액을 더해 재계산한 상속세 증가분(§18의3④ 전단·§26 누진)"
         />
         <div className="space-y-1 md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -280,7 +296,7 @@ function FarmingPostMgmtPageInner() {
               </p>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-xs text-muted-foreground">추징세액 (§16⑦ 100%)</p>
+                  <p className="text-xs text-muted-foreground">추징세액 (재계산 증가분)</p>
                   <p className="font-semibold">{formatKRW(result.recaptureAmount)}</p>
                 </div>
                 <div>
