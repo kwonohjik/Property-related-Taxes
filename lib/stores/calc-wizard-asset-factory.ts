@@ -60,6 +60,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     compensationBasisStdPrice: "",
     isAuctionTransfer: false,
     auctionPrice: "",
+    housingCompensationTotal: "",
+    housingCompensationBasisTotal: "",
     inheritanceValuationMode: "auto",
     inheritanceDate: "",
     inheritanceAssetKind: "land",

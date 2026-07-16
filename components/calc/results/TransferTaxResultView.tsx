@@ -30,6 +30,7 @@ import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/Burde
 import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/RedevelopmentDetailCard";
 import { ExpropriationValuationCard } from "@/components/calc/results/transfer/ExpropriationValuationCard";
 import { AuctionValuationCard } from "@/components/calc/results/transfer/AuctionValuationCard";
+import { HousingExpropriationValuationCard } from "@/components/calc/results/transfer/HousingExpropriationValuationCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -398,6 +399,11 @@ export function TransferTaxResultView({
         {/* §164⑨ 2호 공매·경락 특례 산출근거 (P4) */}
         {result.auctionValuationDetail && (
           <AuctionValuationCard detail={result.auctionValuationDetail} />
+        )}
+
+        {/* §164⑨ 1호 주택 총액 트랙 특례 산출근거 (P5) */}
+        {result.housingExpropriationValuationDetail && (
+          <HousingExpropriationValuationCard detail={result.housingExpropriationValuationDetail} />
         )}
 
         {result.pre1990LandValuationDetail && (

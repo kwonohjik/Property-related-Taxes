@@ -145,11 +145,27 @@ export function isExprValuationLegallyEligibleAssetKind(assetKind: string | unde
  *   - **상가·일반건물**: 전용 환산 경로가 `calcTransferGain`을 우회 → 2호 총액 배선은 각 경로 후속.
  *   - **다필지**: 필지별 총액 배선 후속.
  */
-const AUCTION_TRACK_ASSET_KINDS = ["land", "building"] as const;
+const AUCTION_TRACK_ASSET_KINDS = ["land", "building", "housing"] as const;
 
 /**
  * §164⑨2호 UI 노출 판정(`AssetForm.assetKind` 축). 공매·경락 필드·`AuctionBlock` 노출 조건.
+ * 주택(housing)도 2호는 총액 비교라 대응(C-10b, P5). 상가·GB·다필지 2호는 후속.
  */
 export function isAuctionEligibleAssetKind(assetKind: string | undefined): boolean {
   return (AUCTION_TRACK_ASSET_KINDS as readonly string[]).includes(assetKind ?? "");
+}
+
+/**
+ * **§164⑨ 1호 주택(라목) 총액 트랙 UI 노출 자산** — 계획 P5.
+ *
+ * 개별주택가격·공동주택가격은 **총액**이라 원/㎡ 3후보(land·building)가 아닌 **총액 3후보**
+ * min(개별주택가격, 보상액, 보상기초 기준시가)를 쓴다. `applyHousingExpropriationValuation` 배선.
+ */
+const HOUSING_TOTAL_TRACK_ASSET_KINDS = ["housing"] as const;
+
+/**
+ * §164⑨1호 주택 총액 트랙 UI 노출 판정 — 주택 수용 보상총액 2필드·블록 노출 조건.
+ */
+export function isHousingExprEligibleAssetKind(assetKind: string | undefined): boolean {
+  return (HOUSING_TOTAL_TRACK_ASSET_KINDS as readonly string[]).includes(assetKind ?? "");
 }

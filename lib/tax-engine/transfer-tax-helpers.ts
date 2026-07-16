@@ -26,6 +26,7 @@ import {
   resolveConversionDenominatorAtTransfer,
   type ExpropriationValuationDetail,
   type AuctionValuationDetail,
+  type HousingExpropriationValuationDetail,
 } from "./transfer-tax-expropriation-valuation";
 import {
   parseDeductionRules,
@@ -211,8 +212,9 @@ interface TransferGainResult {
   };
   /** #3 공익수용 환산 양도시 기준시가 min[] 특례 산출근거 (Record) */
   expropriationValuationDetail?: ExpropriationValuationDetail;
-  /** §164⑨2호 공매·경락 특례 산출근거 (총액 2후보) — 1호와 배타 */
+  /** §164⑨ 2호 공매·경락(총액 2후보) / 1호 주택 총액(총액 3후보) 산출근거 */
   auctionValuationDetail?: AuctionValuationDetail;
+  housingExpropriationValuationDetail?: HousingExpropriationValuationDetail;
 }
 
 /**
@@ -305,17 +307,17 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   let acquisitionCostBase: number;
   let usedEstimated = false;
   let expropriationValuationDetail: ExpropriationValuationDetail | undefined;
-  let auctionValuationDetail: AuctionValuationDetail | undefined;
+  let auctionValuationDetail: AuctionValuationDetail | undefined, housingExpropriationValuationDetail: HousingExpropriationValuationDetail | undefined;
 
   // 개산공제율 (소득세법 시행령 §163⑥1호·2호가목): 토지·건물·주택 = 3/100.
   // 단, §104③ 미등기양도자산은 3/1000(0.3%).
   const estimatedDeductionRate = input.isUnregistered ? 0.003 : 0.03;
 
   if (input.useEstimatedAcquisition) {
-    // #3 §164⑨ 특례 — 양도시 기준시가(환산 분모)를 1호(수용)·2호(공매경락) 배타로 확정.
+    // #3 §164⑨ 특례 — 양도시 기준시가(환산 분모)를 1호(per-sqm·주택총액)·2호(공매경락) 배타로 확정.
     const conv = resolveConversionDenominatorAtTransfer(input);
     expropriationValuationDetail = conv.expropriationValuationDetail;
-    auctionValuationDetail = conv.auctionValuationDetail;
+    auctionValuationDetail = conv.auctionValuationDetail; housingExpropriationValuationDetail = conv.housingExpropriationValuationDetail;
     const estimated = calculateEstimatedAcquisitionPrice(
       input.transferPrice,
       input.standardPriceAtAcquisition ?? 0,
@@ -365,6 +367,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     swapComparison: necessary.swap,
     expropriationValuationDetail,
     auctionValuationDetail,
+    housingExpropriationValuationDetail,
   };
 }
 
