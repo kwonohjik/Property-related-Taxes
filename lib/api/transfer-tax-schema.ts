@@ -134,6 +134,9 @@ const propertyBaseShape = {
   // ⑫ §164⑨1호 주택 총액 트랙 (P5) — 엔진이 게이트, strip 방지
   housingCompensationTotal: z.number().int().nonnegative().optional(),
   housingCompensationBasisTotal: z.number().int().nonnegative().optional(),
+  // ⑫ §164⑨1호 건물 split 토지분 트랙 (P6/D6) — 엔진이 게이트, strip 방지
+  splitLandCompensationTotal: z.number().int().nonnegative().optional(),
+  splitLandCompensationBasisTotal: z.number().int().nonnegative().optional(),
   householdHousingCount: z.number().int().min(0),
   // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 세대 조합원입주권 보유 수 (양도일 현재).
   // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback householdRightCount ?? 0.

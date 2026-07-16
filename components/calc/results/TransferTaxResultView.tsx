@@ -31,6 +31,7 @@ import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/Rede
 import { ExpropriationValuationCard } from "@/components/calc/results/transfer/ExpropriationValuationCard";
 import { AuctionValuationCard } from "@/components/calc/results/transfer/AuctionValuationCard";
 import { HousingExpropriationValuationCard } from "@/components/calc/results/transfer/HousingExpropriationValuationCard";
+import { SplitLandExpropriationValuationCard } from "@/components/calc/results/transfer/SplitLandExpropriationValuationCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -404,6 +405,11 @@ export function TransferTaxResultView({
         {/* §164⑨ 1호 주택 총액 트랙 특례 산출근거 (P5) */}
         {result.housingExpropriationValuationDetail && (
           <HousingExpropriationValuationCard detail={result.housingExpropriationValuationDetail} />
+        )}
+
+        {/* §164⑨ 1호 건물 split 토지분 특례 산출근거 (P6/D6) */}
+        {result.splitDetail?.splitLandExpropriationValuationDetail && (
+          <SplitLandExpropriationValuationCard detail={result.splitDetail.splitLandExpropriationValuationDetail} />
         )}
 
         {result.pre1990LandValuationDetail && (

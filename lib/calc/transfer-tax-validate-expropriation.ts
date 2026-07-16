@@ -21,6 +21,7 @@ import {
   isExprValuationEligibleAssetKind,
   isAuctionEligibleAssetKind,
   isHousingExprEligibleAssetKind,
+  isSplitLandExprEligibleAssetKind,
   EXPR_VALUATION_MIN_TRANSFER_DATE as MIN_TRANSFER_DATE,
 } from "@/lib/tax-engine/expropriation-scope";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-asset";
@@ -47,6 +48,10 @@ export function validateExprValuationAsset(
   formTransferDate: string | undefined,
 ): string | null {
   if (!isExprValuationEligibleAssetKind(asset.assetKind)) return null;
+  // 건물 split(토지·건물 취득일 분리)은 per-sqm 경로가 우회되고 UI도 per-sqm 블록을 숨긴다
+  // (`ExpropriationBlock.tsx` `showValuationMin = ... && !isSplitBuilding`) → per-sqm 필드를
+  // 요구하면 "UI 통과 ↔ validate 차단" 모순(숨겨진 필드 요구)이 된다. split 토지분 검증에 위임.
+  if (isSplitLandExprEligibleAssetKind(asset.assetKind) && asset.hasSeperateLandAcquisitionDate) return null;
   if (asset.parcelMode) return null; // 다필지 → 필지별 검증
   if (!asset.useEstimatedAcquisition) return null;
   if (!isExprValuationDateAndCauseOk(asset, formTransferDate)) return null;
@@ -115,6 +120,12 @@ export function validateHousingExprAsset(
 ): string | null {
   if (!isHousingExprEligibleAssetKind(asset.assetKind)) return null;
   if (asset.parcelMode) return null;
+  // 주택 split(토지·건물 취득일 분리)은 총액 트랙에서 제외 — UI도 `showHousingTotal`에서 숨긴다.
+  //  · regular split → §164⑨ 미지원(Q6) → C-06b(`validateSplitLandExprAsset`)가 차단 메시지 담당.
+  //  · PHD split → §164⑤·⑦ 3시점 환산이 `resolveConversionDenominatorAtTransfer`를 우회(D15, 후속) →
+  //    총액 필드를 요구하면 엔진이 소비하지 않는 값을 강제하는 false-required가 된다.
+  // 두 경우 모두 여기서 총액 필드를 요구하면 "UI 숨김 ↔ validate 차단" 모순이므로 위임/스킵.
+  if (asset.hasSeperateLandAcquisitionDate) return null;
   if (!asset.useEstimatedAcquisition) return null;
   if (!isExprValuationDateAndCauseOk(asset, formTransferDate)) return null;
 
@@ -122,5 +133,38 @@ export function validateHousingExprAsset(
     return `${label}: 주택 수용 환산 특례 — 보상액 총액을 입력하세요.`;
   if (!parseAmount(asset.housingCompensationBasisTotal))
     return `${label}: 주택 수용 환산 특례 — 보상산정 기초 기준시가 총액을 입력하세요.`;
+  return null;
+}
+
+/**
+ * §164⑨1호 건물 split 토지분 트랙 검증 (P6/D6) + 주택 regular split 차단 (C-06b·Q6).
+ *
+ * - **건물(나목) split** + 수용 + 환산 + 2009.02.04: 토지분 보상 총액 2필드 필수.
+ * - **주택(라목) regular split**(비-PHD) + 수용 + 환산: **차단** — 개별주택가격은 총액이라
+ *   토지·건물로 분해되지 않아 각목별 차감(§164⑨)을 적용할 수 없다(계획 Q6). PHD(§164⑦
+ *   3시점 환산)는 분해를 수행하므로 제외(D15, 후속).
+ */
+export function validateSplitLandExprAsset(
+  asset: AssetForm,
+  label: string,
+  formTransferDate: string | undefined,
+): string | null {
+  // split(토지·건물 취득일 분리) + 수용 + 환산 + 2009.02.04 조합에서만 판정
+  if (!asset.hasSeperateLandAcquisitionDate) return null;
+  if (asset.parcelMode) return null;
+  if (!asset.useEstimatedAcquisition) return null;
+  if (!isExprValuationDateAndCauseOk(asset, formTransferDate)) return null;
+
+  // C-06b — 주택 regular split(비-PHD)은 미지원. 총액 미분해로 §164⑨ 각목별 차감 불가.
+  if (asset.assetKind === "housing" && !asset.usePreHousingDisclosure) {
+    return `${label}: 주택은 토지·건물 취득일 분리(분리 양도) + 공익수용 환산 시 개별주택가격이 총액이라 §164⑨ 특례를 적용할 수 없습니다(미지원). 취득일을 분리하지 않거나 실지취득가액으로 계산하세요.`;
+  }
+
+  // 건물(나목) split — 토지분 보상 총액 2필드 필수
+  if (!isSplitLandExprEligibleAssetKind(asset.assetKind)) return null;
+  if (!parseAmount(asset.splitLandCompensationTotal))
+    return `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상액 총액을 입력하세요.`;
+  if (!parseAmount(asset.splitLandCompensationBasisTotal))
+    return `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상산정 기초 기준시가 총액을 입력하세요.`;
   return null;
 }

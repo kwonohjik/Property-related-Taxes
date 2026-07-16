@@ -23,6 +23,7 @@
  */
 
 import type { TransferTaxInput } from "./types/transfer.types";
+import type { SplitLandExpropriationValuationDetail } from "./types/transfer-split-gain.types";
 import {
   isExprValuationEligiblePropertyType,
   EXPR_VALUATION_MIN_TRANSFER_DATE,
@@ -266,6 +267,61 @@ export function applyHousingExpropriationValuation(
   return {
     denominator: chosen,
     detail: { standardTotal, compensationTotal: comp, compensationBasisTotal: basis, chosen, denominator: chosen },
+  };
+}
+
+// ============================================================
+// §164⑨ 1호 — 건물 split 토지분 총액 트랙 (계획 P6/D6).
+// 토지·건물 취득일 분리 양도의 **토지분 환산 분모만** min[]로 낮춘다.
+// ============================================================
+
+export interface SplitLandExpropriationValuationParams {
+  /** 자산 종류 — 건물(나목) split만 대상. 주택 split은 Q6 미지원(총액 미분해). */
+  propertyType: TransferTaxInput["propertyType"];
+  useEstimatedAcquisition?: boolean;
+  /** 양도원인 — 수용(1호). */
+  transferCause?: "general" | "public_expropriation";
+  transferDate: Date;
+  /** 양도시 토지 기준시가 총액 (split의 landStdAtTransfer — 환산 분모) */
+  landStdTotalAtTransfer?: number;
+  /** 토지분 보상액 총액 (원) */
+  compensationTotal?: number;
+  /** 토지분 보상액 산정 기초 기준시가 총액 (원) */
+  compensationBasisTotal?: number;
+}
+
+/**
+ * 건물 split 토지분 §164⑨1호 특례(총액 3후보) — 토지 환산 분모를
+ * min(양도시 토지 기준시가 총액, 토지분 보상액, 토지분 보상기초 기준시가)으로 낮춘다.
+ *
+ * **건물분은 호출하지 않는다**(시행규칙 §80⑧ — 건물엔 "보상기초 기준시가" 개념 부재, 계획 D16-GB).
+ * 게이트는 건물 자산·환산·수용·2009.02.04·3후보>0. 미충족 시 null(현행 분모 유지, 회귀 0).
+ */
+export function applySplitLandExpropriationValuation(
+  p: SplitLandExpropriationValuationParams,
+): { denominator: number; detail: SplitLandExpropriationValuationDetail } | null {
+  const landStdTotal = p.landStdTotalAtTransfer ?? 0;
+  const comp = p.compensationTotal ?? 0;
+  const basis = p.compensationBasisTotal ?? 0;
+
+  if (
+    // 건물(나목) split 전용 — 주택(라목) regular split은 Q6 미지원(validate 차단),
+    // PHD(§164⑦ 3시점 환산)는 별도 트랙(D15). 토지 단독은 split 자체가 없다.
+    p.propertyType !== "building" ||
+    !p.useEstimatedAcquisition ||
+    p.transferCause !== "public_expropriation" ||
+    p.transferDate < MIN_TRANSFER_DATE ||
+    landStdTotal <= 0 ||
+    comp <= 0 ||
+    basis <= 0
+  ) {
+    return null;
+  }
+
+  const chosen = Math.min(landStdTotal, comp, basis);
+  return {
+    denominator: chosen,
+    detail: { landStdTotal, compensationTotal: comp, compensationBasisTotal: basis, chosen, denominator: chosen },
   };
 }
 

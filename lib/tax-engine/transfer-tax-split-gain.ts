@@ -9,9 +9,15 @@
  * - 실제 가액 확인 시 그 가액 사용, 미확인 시 기준시가 비율로 안분
  */
 
-import type { TransferTaxInput, SplitGainResult, SplitPartResult } from "./types/transfer.types";
+import type {
+  TransferTaxInput,
+  SplitGainResult,
+  SplitPartResult,
+  SplitLandExpropriationValuationDetail,
+} from "./types/transfer.types";
 import { applyRate, calculateHoldingPeriod } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
+import { applySplitLandExpropriationValuation } from "./transfer-tax-expropriation-valuation";
 
 /** 안분 비율 산출 — 토지 기준시가 / 전체 기준시가 */
 function calcApportionRatio(input: TransferTaxInput): { land: number; building: number } | null {
@@ -79,7 +85,11 @@ function calcSplitAcquisitionPrice(
   landStdAtAcq: number,
   buildingStdAtAcq: number,
   landRatio: number,
-): { land: number; building: number } {
+): {
+  land: number;
+  building: number;
+  splitLandExpropriationValuationDetail?: SplitLandExpropriationValuationDetail;
+} {
   if (input.useEstimatedAcquisition) {
     // 환산취득가: 각각의 양도가액 × (취득시 기준시가 / 양도시 기준시가)
     const totalStdAtTransfer = input.standardPriceAtTransfer ?? 0;
@@ -88,13 +98,26 @@ function calcSplitAcquisitionPrice(
     const buildingStdAtTransfer = input.buildingStandardPriceAtTransfer
       ?? Math.max(totalStdAtTransfer - landStdAtTransfer, 0);
 
-    const landAcq = landStdAtTransfer > 0
-      ? Math.floor(landTransferPrice * (landStdAtAcq / landStdAtTransfer))
+    // §164⑨1호 공익수용 특례 — **토지분 환산 분모만** min[]로 낮춘다(건물분 무변경 — 시행규칙 §80⑧,
+    // 계획 D16-GB). 미충족 시 null → 현행 landStdAtTransfer 유지(회귀 0).
+    const landExprVal = applySplitLandExpropriationValuation({
+      propertyType: input.propertyType,
+      useEstimatedAcquisition: input.useEstimatedAcquisition,
+      transferCause: input.transferCause,
+      transferDate: input.transferDate,
+      landStdTotalAtTransfer: landStdAtTransfer,
+      compensationTotal: input.splitLandCompensationTotal,
+      compensationBasisTotal: input.splitLandCompensationBasisTotal,
+    });
+    const effLandStdAtTransfer = landExprVal?.denominator ?? landStdAtTransfer;
+
+    const landAcq = effLandStdAtTransfer > 0
+      ? Math.floor(landTransferPrice * (landStdAtAcq / effLandStdAtTransfer))
       : 0;
     const buildingAcq = buildingStdAtTransfer > 0
       ? Math.floor(buildingTransferPrice * (buildingStdAtAcq / buildingStdAtTransfer))
       : 0;
-    return { land: landAcq, building: buildingAcq };
+    return { land: landAcq, building: buildingAcq, splitLandExpropriationValuationDetail: landExprVal?.detail };
   }
 
   if (input.acquisitionMethod === "salesCase") {
@@ -159,15 +182,16 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     landRatio,
   );
 
-  // ② 취득가액 분리
-  const { land: landAcqPrice, building: buildingAcqPrice } = calcSplitAcquisitionPrice(
-    input,
-    landTransferPrice,
-    buildingTransferPrice,
-    landStdAtAcq,
-    buildingStdAtAcq,
-    landRatio,
-  );
+  // ② 취득가액 분리 (환산 모드 시 토지분 §164⑨1호 특례 산출근거 동반)
+  const { land: landAcqPrice, building: buildingAcqPrice, splitLandExpropriationValuationDetail } =
+    calcSplitAcquisitionPrice(
+      input,
+      landTransferPrice,
+      buildingTransferPrice,
+      landStdAtAcq,
+      buildingStdAtAcq,
+      landRatio,
+    );
 
   // ③ 필요경비(자본적지출) 분리
   const totalExpenses = input.expenses ?? 0;
@@ -283,6 +307,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     apportionRatio: { land: landRatio, building: buildingRatio },
     note: `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (안분비 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`,
     selfOwns: input.selfOwns ?? "both",
+    splitLandExpropriationValuationDetail,
   };
 }
 

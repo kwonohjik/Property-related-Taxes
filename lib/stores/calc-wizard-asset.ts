@@ -232,6 +232,14 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   housingCompensationTotal: string;
   /** 주택 수용 보상액 산정 기초 기준시가 총액 (원) — §164⑨1호 주택 총액 min 후보 */
   housingCompensationBasisTotal: string;
+  /**
+   * 토지분 보상액 총액 (원) — §164⑨1호 건물 split 토지분 트랙(P6/D6). 토지·건물 취득일 분리
+   * 양도 시, **토지분** 환산 분모만 min(양도시 토지 기준시가 총액, 보상액, 보상기초)로 낮춘다.
+   * 건물(나목) split 전용. 주택 split은 총액 미분해라 미지원(Q6 — validate 차단).
+   */
+  splitLandCompensationTotal: string;
+  /** 토지분 보상액 산정 기초 기준시가 총액 (원) — §164⑨1호 건물 split min 후보 */
+  splitLandCompensationBasisTotal: string;
 
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
   /**
