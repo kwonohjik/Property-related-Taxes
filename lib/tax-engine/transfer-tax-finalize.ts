@@ -332,8 +332,17 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     estimatedBase ||
     (input.usedEstimatedAcquisition ? (input.estimatedBase ?? 0) : 0) ||
     (effectiveInput.usedEstimatedAcquisition ? (effectiveInput.estimatedBase ?? 0) : 0);
-  let penaltyBase = input.acquisitionMethod === "appraisal"
-    ? (input.appraisalValue ?? 0)
+  // ⚠️ acquisitionMethod 판정은 **effectiveInput**을 본다(원본 input 아님).
+  // 부담부증여는 §159 스텝이 acquisitionMethod를 정규화하는데(burdened-gift-step: "actual",
+  // K-5는 "estimated"), 원본 input에는 UI가 숨긴 채 보존한 stale 산정방식(감정·매매사례)이 남아 있다.
+  // input을 보면 K-5 + stale 감정가액에서 penalty base가 K-5 건물 환산취득가 대신
+  // stale appraisalValue로 뒤바뀐다(실측: 2,500,000 → 45,000,000, 18배 과다).
+  // 회귀 0 근거: 비-부담부에도 override가 1곳 있으나(transfer-tax-carryover.ts:261 — 환산+증여세 차감
+  // 시나리오 A의 실가 전환에서 undefined), 발동 게이트인 calculateBuildingPenalty가 **이미**
+  // effectiveInput.acquisitionMethod를 읽으므로(rate-calc.ts:58·63-66) 그 경로는 penaltyTax=0으로 수렴한다.
+  // 즉 종전에는 "게이트는 effectiveInput / base는 raw input"으로 층위가 어긋나 있었고 이 변경이 그 불일치를 없앤다.
+  let penaltyBase = effectiveInput.acquisitionMethod === "appraisal"
+    ? (effectiveInput.appraisalValue ?? 0)
     : (isEstimatedMode ? effectiveEstimatedBase : 0);
   // §114조의2① 통상(비-부담부) 증축: penalty base를 증축부분 환산취득가로 교체 (부담부는 step override가 effectiveInput.estimatedBase에 반영).
   // 손실 조기반환(transfer-tax.ts)과 동일 헬퍼 — single-source, dual-truth 방지.

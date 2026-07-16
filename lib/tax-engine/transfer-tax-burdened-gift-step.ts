@@ -77,6 +77,15 @@ export function runBurdenedGiftStep(
       capitalExpenditure: undefined,
       transferExpense: undefined,
       useEstimatedAcquisition: false,
+      // §159 안분 취득가액을 **그대로** 쓴다는 신호. 부담부증여 UI는 일반 산정방식(환산·감정·매매사례)을
+      // 숨기되 폼 상태는 보존하므로(CompanionAcqPurchaseBlock.tsx:338-341 — 재토글 복원) stale 값이 흘러든다.
+      // 위 useEstimatedAcquisition:false는 **환산 분기만** 막고 acquisitionMethod 분기(helpers.ts:331·339)는
+      // 무방비였다 → appraisalValue/similarSalesValue가 §159 안분값을 덮어써 과소납부.
+      // 안분값은 buildBurdenedGiftBreakdown이 burdenedGiftInfo.acquisitionMethod(실지/환산)를 반영한 최종값이라
+      // "actual"이 정확하다. 개산공제는 expenses로 별도 전달되어 이중 적용 없음.
+      // ⚠️ 아래 isK5SelfBuilt spread가 "estimated"로 덮어쓴다(§114조의2 penalty 신호) — 의도된 순서, 재정렬 금지.
+      // 계획서: docs/02-design/features/burdened-gift-stale-acquisition-method.plan.md
+      acquisitionMethod: "actual" as const,
       burdenedGiftDenominator: transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
       ...(isK5SelfBuilt
         ? {
