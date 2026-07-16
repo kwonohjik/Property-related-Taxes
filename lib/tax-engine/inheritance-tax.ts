@@ -671,6 +671,7 @@ export function calcInheritanceTax(
       corporateGiftTaxBase,
       grossEstateWithGifts: taxableEstateValue,
       isFiledOnTime: input.creditInput.isFiledOnTime,
+      filingCreditRate: creditResult.filingCreditRate!, // §69 연도율 — 요약 단일진실(항상 설정·3% 고정 회귀 방지)
       // 작업4: 비과세 협의분할 — 인정 비과세액(itemResults[].exemptAmount)을 ruleId 키로 주입
       exemptionItems: input.exemptions ?? [],
       recognizedExemptByRuleId: new Map(
