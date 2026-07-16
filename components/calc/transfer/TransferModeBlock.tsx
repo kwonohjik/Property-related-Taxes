@@ -33,28 +33,16 @@ interface Props {
   transferDate: string;
 }
 
+// 설명은 상단 안내 문단이 이미 3지선다 전체를 서술하므로 옵션별 description을 두지 않는다
+// (중복 서술 제거 + inline 레이아웃으로 3항목 1행 배치, 2026-07-16).
 const TRANSFER_TYPE_OPTIONS: {
   value: string;
   label: string;
-  description: string;
   testId?: string;
 }[] = [
-  {
-    value: "regular",
-    label: "일반 양도",
-    description: "매매·교환 등 통상의 양도 (양도가액·취득가액 직접 입력)",
-  },
-  {
-    value: "burdened_gift",
-    label: "부담부증여 (소령 §159)",
-    description: "증여 시 수증자가 채무를 인수 — 채무 인수분을 유상 양도로 의제. 양도자 = 증여자.",
-  },
-  {
-    value: "public_expropriation",
-    label: "공익수용·협의매수",
-    description: "공익사업법 등에 따른 협의매수·수용 — §77 감면·비사업용 토지 사업용 의제 공용.",
-    testId: "expr-cause-radio",
-  },
+  { value: "regular", label: "일반 양도" },
+  { value: "burdened_gift", label: "부담부증여 (소령 §159)" },
+  { value: "public_expropriation", label: "공익수용·협의매수", testId: "expr-cause-radio" },
 ];
 
 // F-3 (2026-05-12): commercial_building 확장 — 부담부증여 지원 자산 종류
@@ -122,7 +110,7 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
 
       <RadioCardGroup
         name={`transferType-${asset.assetId ?? "primary"}`}
-        layout="stack"
+        layout="inline"
         value={currentMode}
         onChange={selectMode}
         options={TRANSFER_TYPE_OPTIONS}
