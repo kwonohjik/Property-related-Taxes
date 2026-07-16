@@ -1,4 +1,4 @@
-# 공익수용·공매 양도당시 기준시가 특례 — §164⑨ 전면 정합 (rev.14)
+# 공익수용·공매 양도당시 기준시가 특례 — §164⑨ 전면 정합 (rev.15)
 
 > **상태**: Plan — 조사 4건 + 사용자 결정 Q1~Q6 + **STEP 1 자가검토 4-way**(57건) + **STEP 3 blast-radius**(7건) 완료.
 > **P1·P2·P9 = Do 완료·머지**(PR #619 `f60f47db` · E2E #620 `2b3b3d84`).
@@ -265,7 +265,7 @@ m ≥ A 이면: 차감 없음 → A 유지
 | `commercial_building` | `commercial_building` | **다** | ✅ | 원/㎡ | **P3** |
 | `housing` | `housing` | **라** | ✅ | **총액** | P5 |
 | `mixed-use-house` (겸용) | — (`isMixed` 파생) | **나+라** | ✅ | 주택분·상가분 분리 | P7(D8) |
-| `redevelopment_apt` | `redevelopment_apt` | 라? | ⚠️ U3 | — | P7(D12) |
+| `redevelopment_apt` | `redevelopment_apt` | **2호가목(권리)** | ❌ **미대상**(U3 확정) | — | **불요(B)** |
 | `right_to_move_in` | `right_to_move_in` | — | ❌ 2호(권리) | — | — |
 | `presale_right` | `presale_right` | — | ❌ 2호(권리) | — | — |
 | `general_building_unit` | **없음** | 나 | (자산-수준 미도달) | — | — |
@@ -504,7 +504,7 @@ override(`applyExpropriationValuation` 재사용). 안분(`allocateBundledTransf
 | C-07c | 토지 다필지 | 가 | multi-parcel | 1호 | **API `:256` 무력화 해소 확인**(⑬⑭ 경유) | `[R]` §3-1 차단막(1) |
 | **C-08** | **주택(PHD)** | 라 | **PHD** | 1호 | 특례 적용 — **split보다 먼저 분기** | `[R]` **D15** |
 | C-08b | 겸용주택 | 나·라 | mixed-use | 1호 | 특례 적용(주택분·상가분) | `[R]` D8 |
-| C-08c | 재개발 | — | redevelopment | 1호 | 특례 적용 | `[R]` D12 |
+| C-08c | 재개발 | — | redevelopment | 1호 | **미적용**(입주권=§99①2호가목 권리 → §164⑨ 미대상, U3 확정) — 회귀 방어만 | **`[G]` 현행 정답(B)** — `expropriation-redevelopment-not-applicable.anchor` |
 | C-09 | 토지 | 가 | 단건 | **2호 공매** | `min[A, 공매가액]` **총액 2후보** | `[R]` D5 |
 | C-10 | 토지 | 가 | 단건 | **2호 경락** | 동상 | `[R]` D5 |
 | C-10b | 주택 | 라 | 단건 | 2호 | 특례 적용(총액 2후보) | `[R]` D5 |
@@ -551,7 +551,8 @@ override(`applyExpropriationValuation` 재사용). 안분(`allocateBundledTransf
 | **완료** | **P6b(D15)** | ✅ **주택 PHD split 배선** — `calcSplitGainPreDisclosure`가 `applyHousingExpropriationValuation`(P5 총액 트랙 재사용)로 P_T(양도시 개별주택가격)를 낮춰 `calcPreHousingDisclosureGain(conversionDenominatorOverride)`의 **환산 step(Step 6)에만** 주입(안분 Step 3~4 원 P_T 유지·4부분 겸용 미적용) + SplitGainResult.housingExpropriationValuationDetail + validate/UI 재활성(regular split만 제외·PHD split 필드 요구). **신규 필드 0**(P5 재사용). anchor 7(engine 5 + validate 2). 실증: 환산 552,874,340→693,304,423(P_T 627M→500M), 안분 landTransferPrice 532,721,324 **불변** | 과다 해소 | ✅ P6a |
 | **완료** | **D16-CB** | ✅ **상가 배선 — `runCommercialBuildingStep` 내부에 `applyExpropriationValuation`(양도시 호별총액 min[]) + `PER_SQM_TRACK` 재추가 + ① 참조행 CB 분기. 86,784,934원 실증** | 해소 | — |
 | **완료** | **D16-GB** | ✅ **일반건물 배선 — 토지 환산 분모만 §164⑨.** `calculateConvertedAcquisition`에 토지 분모 override(`applyExpropriationValuation` 재사용) + `PER_SQM_TRACK` 재추가 + route ⑭ 전달 + ① 참조행 GB 분기. **안분(§166⑥)·건물분 무변경**. +82,745,181원 실증(사례31 베이스) | 해소 | ✅ 법령조사 완료 |
-| PR#3+ | **P7** | **D8·D12** 겸용·재개발 배선 (각 전용 경로 내부) | 과다 해소 | P3 |
+| PR#3+ | **P7-D8** | **겸용(mixed-use) 배선** (주택분·상가분, 각 전용 경로 내부) — 미착수 | 과다 해소 | P3 |
+| **완료** | **P7-D12** | ✅ **재개발 미대상 확정(B)** — 조합원입주권=§99①2호가목 권리라 §164⑨(1호가목~라목 전용) 대상 아님(U3 확정, KoreanLaw). 종전자산 수용은 P5·P6 처리. **배선 0** — 회귀 방어 anchor(`expropriation-redevelopment-not-applicable.anchor`) + scope 주석 + `SUPPORTED_ASSET_KINDS` 추가 금지 명시 | 없음(현행 정답) | ✅ |
 | PR#3+ | **P8** | **D9** result 타입(§4-5) + 결과 카드 재작성 + **`<ToneCard>` 전환** + **`ALL_LEAVES` 등록** + CalculationStep | 없음(표시) | P3·P4·P5 |
 
 > **PR 분리 근거**: P2는 **세액 실증 유일** · land 전용 · P3와 **독립**(다필지 게이트가 이미 land라
@@ -652,7 +653,7 @@ override(`applyExpropriationValuation` 재사용). 안분(`allocateBundledTransf
 |---|---|---|
 | U1 | 제14860호·제21301호 **부칙 적용례** 원문 | **확인 불가** — `get_historical_law` 내용 없음 · `jo="부칙"`·`efYd=20090204` NOT_FOUND · 결정례 인용 미발견. 양도일 기준이 자연스러운 해석이나 **단정 않음** → 주석에 "확인 필요" 명시 |
 | U2 | "보상기초" **2후보 추가 시점** | 2005.2.19.~2009.2.4. 사이. 2007·2008판 §164 조회 **API 파싱 결함**으로 실패 → X3 착수 시 재조사 |
-| **U3** | **`redevelopment_apt`가 §99①1호라목(주택)인가 2호가목(권리)인가** | **관리처분계획 인가 전후로 성질이 바뀐다** → 법령 확인 필요. **확정 전까지 P7의 D12(재개발 배선) 착수 불가**(§4-1b) |
+| ~~U3~~ | ~~`redevelopment_apt`가 §99①1호라목(주택)인가 2호가목(권리)인가~~ | ✅ **확정(2026-07-17, KoreanLaw MST 280405·286211)**: 조합원입주권 = **§94①2호가목/§99①2호가목 권리**(§88 9호·관리처분인가 성질전환). §164⑨은 §99①1호가목~라목 전용이라 **입주권 미대상**. 재개발 종전자산 수용은 관리처분 전 일반 주택/토지 수용(P5·P6). ⇒ **D12 배선 불요·현행 정답(B)**. `SUPPORTED_ASSET_KINDS` 추가 금지 |
 
 > **⚠️ 후속 조사자용 함정**: `applicable_law`/`get_law_text`의 **NOT_FOUND는 "미신설"이 아니라 조회 실패**다.
 > 2007.3.1.(제19890호)에서 §154·§165는 전문이 나오는데 **§164만 NOT_FOUND**(④~⑦ 산식 이미지 파싱 추정).
@@ -727,6 +728,12 @@ override(`applyExpropriationValuation` 재사용). 안분(`allocateBundledTransf
 
 ## 12. 개정 이력
 
+- **rev.15** (2026-07-17): **U3 확정 — 재개발 §164⑨ 미대상(B), P7-D12 배선 불요.** KoreanLaw 원문(소득세법
+  MST 280405·시행령 286211): 조합원입주권 = §94①2호가목/§99①2호가목 "부동산을 취득할 수 있는 권리"
+  (§88 9호 관리처분인가 성질전환·§165① 위임체인), §164⑨은 §99①1호가목~라목 전용이라 **2호 권리 미대상**.
+  재개발 종전자산 실제 수용은 관리처분 인가 전 일반 주택/토지 수용(§99①1호, P5·P6 기배선). ⇒ 배선 0 —
+  회귀 방어 anchor 3건(재개발 입력에 §164⑨ 전 트랙 필드 주입해도 산출 불변·detail 미부착) + `expropriation-scope.ts`
+  주석 확정 + `SUPPORTED_ASSET_KINDS` 추가 금지 명시. P7은 **D8(겸용)만 잔여**. C-08c → `[G]` 현행 정답.
 - **rev.14** (2026-07-17): **P6b(D15 주택 PHD split) Do 완료.** KoreanLaw 원문 검증(MST 286211·286379):
   §164⑦(취득당시 산정)이 §164⑨(양도당시 재정의)을 배제하지 않고, hook은 §176의2②2호 **환산 분모(양도시
   개별주택가격 P_T)에만**·**안분(§166⑥) 원값**으로 D16-GB와 **동형 확정**. `calcPreHousingDisclosureGain`에
