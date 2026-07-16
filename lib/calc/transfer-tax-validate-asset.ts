@@ -12,6 +12,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
@@ -614,6 +615,11 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     if (asset.buildingType === "extension" && (!asset.extensionStdPriceAtAcquisition || parseAmount(asset.extensionStdPriceAtAcquisition) <= 0))
       return `${label}: 증축부분 취득(완공)당시 기준시가 총액을 입력해 주세요.`;
   }
+
+  // 토지/건물 분리 직접 입력(§166⑥) — 입력 합이 총액을 초과하면 잔액이 음수가 된다.
+  // 판정식은 엔진 splitPair와 단일 소스(isSplitPairOverflow) — ⑧ 규칙(UI 통과 ↔ validate 차단 모순) 방지.
+  const splitErr = validateSplitDirectInputs(asset, label);
+  if (splitErr) return splitErr;
 
   return null;
 }

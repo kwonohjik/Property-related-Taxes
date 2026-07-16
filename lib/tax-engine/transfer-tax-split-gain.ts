@@ -49,6 +49,24 @@ function splitPair(
   return { land, building: total - land };
 }
 
+/**
+ * `splitPair`가 음수 잔액(또는 총액 초과 합)을 만드는 입력인가 — **validate 전용 판정식**.
+ *
+ * splitPair의 분기와 1:1로 대응한다(dual-truth 회피). validate가 이 함수를 import해
+ * 엔진과 같은 규칙으로 차단하므로 "UI 통과 ↔ validate 차단" 모순이 생기지 않는다.
+ * 엔진 자신은 clamp하지 않는다 — 조용히 0으로 깎으면 오답이 눈에 띄지 않기 때문.
+ */
+export function isSplitPairOverflow(
+  total: number,
+  landIn: number | undefined,
+  buildingIn: number | undefined,
+): boolean {
+  if (landIn != null && buildingIn != null) return landIn + buildingIn > total;
+  if (landIn != null) return landIn > total;
+  if (buildingIn != null) return buildingIn > total;
+  return false; // 둘 다 미입력 → 비율 안분 → 초과 불가
+}
+
 /** 취득가액 분리 (실가/환산/감정/매매사례 분기) */
 function calcSplitAcquisitionPrice(
   input: TransferTaxInput,
