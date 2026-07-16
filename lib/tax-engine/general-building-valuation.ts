@@ -24,6 +24,8 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
 import { applyConvertedHousingPriceOverride } from "./general-building-converted-housing";
+import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
+import { calculateConvertedAcquisition } from "./general-building-converted-acquisition";
 
 // ============================================================
 // 개산공제율 상수 (시행령 §163 ⑥)
@@ -75,6 +77,20 @@ export type GeneralBuildingInput = {
   transferLandPricePerSqm: number;
   /** 양도시 건물기준시가 총액 (원) */
   transferBuildingStdPrice: number;
+
+  // ── §164⑨ 1호 공익수용 특례 (토지 전용 — 계획 D16-GB) ──
+  // 법령 조사 결론(2026-07-16): GB에서 §164⑨은 **토지분(가목)에만** 적용한다.
+  //   - 시행규칙 §80⑧: "보상액 산정 기초 기준시가 = 보상금 산정 당시 해당 **토지**의 개별공시지가" →
+  //     건물분(나목)은 "보상 기초 기준시가" 정의 자체가 없어 대상에서 제외(보수적).
+  //   - 국세청 해석 2건(서면-2016-부동산-4026·사전-2018-법령해석재산-0057)도 전부 토지 사안.
+  //   - 효과: **토지 환산 분모(§176의2②)만** min[]로 낮춘다. **안분(§166⑥)은 원 개별공시지가 유지** —
+  //     안분에 낮춘 값을 넣으면 토지 상대가치 인위적 하락 → 양도가가 건물로 과다 배분(입법의도 밖).
+  /** 양도원인 — "public_expropriation" 시에만 §164⑨ 게이트 진입. */
+  transferCause?: "general" | "public_expropriation";
+  /** 토지 보상가액 (원/㎡) — §164⑨ 1호 후보. */
+  compensationPerSqm?: number;
+  /** 토지 보상산정 기초 개별공시지가 (원/㎡) — §164⑨ 1호 후보(시행규칙 §80⑧). */
+  compensationBasisStdPrice?: number;
 
   // 취득시점 기준시가 (환산 분자)
   /** 취득시 개별공시지가 (원/㎡) */
@@ -413,6 +429,12 @@ export type GeneralBuildingOutput = {
   bundledActualAcquisitionPrice?: number;
   /** 일괄 실가 양도비(자본적지출+양도비) (원) — 실가 모드에서만 채움. */
   bundledActualExpenses?: number;
+
+  /**
+   * §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 계획 D16-GB).
+   * 게이트(수용·환산·2009.02.04·보상 후보) 미충족 시 undefined. 결과 카드·anchor 표시용.
+   */
+  expropriationValuationDetail?: ExpropriationValuationDetail;
 };
 
 // ============================================================
@@ -449,48 +471,6 @@ function allocateBundledTransferPrice(
   const buildingTransferPrice = input.totalTransferPrice - landTransferPrice;
 
   return { land: landTransferPrice, building: buildingTransferPrice };
-}
-
-/**
- * Step 2: 환산취득가 (소득세법 시행령 §176조의2 ②)
- *
- * 자산별로 취득시/양도시 기준시가 비율을 이용해 환산취득가를 산정한다.
- *
- * 토지 산식:
- *   acqLandStdTotal = INT(취득시 공시지가(원/㎡) × 면적)
- *   landAcq = INT(토지양도가 × acqLandStdTotal / landStdTotal)
- *
- * 건물 산식:
- *   buildingAcq = INT(건물양도가 × 취득시 건물기준시가 / 양도시 건물기준시가)
- *
- * ⚠️ BigInt 필수: 토지 분자 ≈ 904,725,192 × 238,000,000 ≈ 2.15×10¹⁷ > MAX_SAFE_INTEGER
- */
-function calculateConvertedAcquisition(
-  input: GeneralBuildingInput,
-  allocation: GeneralBuildingAllocation,
-): GeneralBuildingAcquisition {
-  const landStdTotal = Math.floor(
-    input.transferLandPricePerSqm * input.landArea,
-  );
-  const acqLandStdTotal = Math.floor(
-    input.acquisitionLandPricePerSqm * input.landArea,
-  );
-
-  // 토지 환산취득가 — BigInt fallback 자동 적용 (분자 ≈ 2.15×10¹⁷)
-  const landAcq = Math.floor(
-    safeMultiplyThenDivide(allocation.land, acqLandStdTotal, landStdTotal),
-  );
-
-  // 건물 환산취득가 — 분자 ≈ 2.0×10¹⁴ (MAX_SAFE_INTEGER 이내지만 safeMultiplyThenDivide로 통일)
-  const buildingAcq = Math.floor(
-    safeMultiplyThenDivide(
-      allocation.building,
-      input.acquisitionBuildingStdPrice,
-      input.transferBuildingStdPrice,
-    ),
-  );
-
-  return { land: landAcq, building: buildingAcq };
 }
 
 /**
@@ -563,9 +543,12 @@ export function buildGeneralBuildingAssetCards(
   // 법령 참조: TRANSFER.GENERAL_BUILDING_APPORTIONMENT
   const allocation = allocateBundledTransferPrice(input);
 
-  // Step 2: 환산취득가 (§176의2②)
+  // Step 2: 환산취득가 (§176의2②) — 토지 분모만 §164⑨ 공익수용 특례 override(토지 전용, D16-GB).
   // 법령 참조: TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ
-  const acquisition = calculateConvertedAcquisition(input, allocation);
+  const { acquisition, expropriationValuationDetail } = calculateConvertedAcquisition(
+    input,
+    allocation,
+  );
 
   // Step 3: 개산공제 (§163⑥)
   // 법령 참조: TRANSFER.GENERAL_BUILDING_LUMP_DEDUCTION
@@ -761,6 +744,8 @@ export function buildGeneralBuildingAssetCards(
     buildingStdTotal: input.transferBuildingStdPrice,
     acqLandStdTotal: acqLandStdTotalForFormula,
     acqBuilding1StdTotal: input.acquisitionBuildingStdPrice,
+    // §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 게이트 미충족 시 undefined)
+    expropriationValuationDetail,
   };
 }
 

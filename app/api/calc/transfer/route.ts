@@ -732,6 +732,12 @@ export async function POST(request: NextRequest) {
         transferDate.getFullYear(), data.annualBasicDeductionUsed,
         data.priorReductionUsage ?? [], rates,
         burdenedGiftInfoForGb,
+        // ⑭ §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 전달.
+        {
+          transferCause: data.transferCause,
+          compensationPerSqm: data.compensationPerSqm,
+          compensationBasisStdPrice: data.compensationBasisStdPrice,
+        },
       );
       return NextResponse.json(
         {
