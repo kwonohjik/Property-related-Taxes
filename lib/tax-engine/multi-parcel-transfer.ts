@@ -21,6 +21,7 @@ import {
   safeMultiplyThenDivide,
 } from "./tax-utils";
 import { applyExpropriationValuation } from "./transfer-tax-expropriation-valuation";
+import type { TransferTaxInput } from "./types/transfer.types";
 import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
 
 // ============================================================
@@ -166,6 +167,14 @@ export interface MultiParcelInput {
    * 자산-수준 값이며 필지별로 다를 수 없다(수용은 사업 단위).
    */
   transferCause?: "general" | "public_expropriation";
+  /**
+   * 자산 종류 — §164⑨ 적격 판정(가목~라목). 다필지는 정의상 토지(가목)이나
+   * (`transfer-tax-api.ts:96` `parcelModeActive = parcelMode && assetKind === "land"`),
+   * **암묵 가정 대신 명시 전달**한다 — 엔진이 자체 판정하도록 두면 3층 게이트가 갈라진다.
+   *
+   * ⚠️ **필수** — optional이면 호출부 누락 시 특례가 조용히 죽는다(`ExpropriationValuationParams`와 동일 이유).
+   */
+  propertyType: TransferTaxInput["propertyType"];
   /** 필지 목록 (2개 이상 권장, 1개도 허용) */
   parcels: ParcelInput[];
 }
@@ -335,6 +344,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       // 게이트의 useEstimatedAcquisition은 **필지별 환산 여부**를 넘긴다 — 다필지는 자산-수준
       // 플래그가 API에서 false로 강제되므로(transfer-tax-api.ts:256) 그것을 쓰면 항상 미발동한다.
       const exprVal = applyExpropriationValuation({
+        propertyType: input.propertyType,
         useEstimatedAcquisition: true, // 이 분기 자체가 parcel.acquisitionMethod === "estimated"
         transferCause: input.transferCause,
         transferDate: input.transferDate,

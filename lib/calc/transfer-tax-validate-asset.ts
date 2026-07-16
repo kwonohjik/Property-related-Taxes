@@ -13,6 +13,8 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
+import { validateExprValuationAsset } from "./transfer-tax-validate-expropriation";
+import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
@@ -160,19 +162,9 @@ function validateParcelMode(primary: AssetForm, formTransferDate?: string): stri
         return `${label}: 취득시 ㎡당 기준시가를 입력하세요.`;
       if (!p.standardPricePerSqmAtTransfer || parseFloat(p.standardPricePerSqmAtTransfer) <= 0)
         return `${label}: 양도시 ㎡당 기준시가를 입력하세요.`;
-      // 공익수용 §164⑨ 1호 필지별 min[] 특례 — 보상 2필드 필수.
-      // UI 노출 조건(AssetSectionAcquisition의 showExpropriationMin + p.acquisitionMethod)과 **동일**해야
-      // "UI 통과 ↔ validate 차단" 모순이 없다(⑧ 규칙).
-      if (
-        primary.transferCause === "public_expropriation" &&
-        formTransferDate &&
-        formTransferDate >= "2009-02-04"
-      ) {
-        if (!parseAmount(p.compensationPerSqm))
-          return `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`;
-        if (!parseAmount(p.compensationBasisStdPrice))
-          return `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`;
-      }
+      // 공익수용 §164⑨ 1호 필지별 min[] 특례 — 보상 2필드 필수 (별도 모듈)
+      const parcelExprError = validateExprValuationParcel(primary, p, label, formTransferDate);
+      if (parcelExprError) return parcelExprError;
     } else {
       if (!p.acquisitionPrice || parseAmount(p.acquisitionPrice) <= 0)
         return `${label}: 취득가액을 입력하세요.`;
@@ -702,19 +694,13 @@ export function validateAssetEntry(
     return `${label}: 토지 취득일(${a.landAcquisitionDate})이 오늘 이후입니다.`;
   }
 
+  // ⑧ §164⑨ 1호 공익수용 환산 min[] 특례 — 보상 2필드 필수 (별도 모듈, 800줄 정책)
+  const exprError = validateExprValuationAsset(a, label, form.transferDate);
+  if (exprError) return exprError;
+
   // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
   // 자동 안분 fallback 금지 원칙 준수 (부수토지/독립 나대지에 따라 세율 분기가 달라짐)
   if (a.assetKind === "land") {
-    // #3 공익수용 환산 min[] 특례 게이트 — 수용+환산+양도≥2009.02.04 시 보상 2필드 필수
-    // (UI 노출 조건 showValuationMin과 동일 — UI↔validate 모순 방지)
-    if (
-      a.transferCause === "public_expropriation" &&
-      a.useEstimatedAcquisition &&
-      form.transferDate && form.transferDate >= "2009-02-04"
-    ) {
-      if (!parseAmount(a.compensationPerSqm)) return `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`;
-      if (!parseAmount(a.compensationBasisStdPrice)) return `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`;
-    }
     const hasHousingInBundle = form.assets.some(
       (other) =>
         other.assetId !== a.assetId &&

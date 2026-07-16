@@ -44,6 +44,7 @@ const PARCEL_2: ParcelInput = {
 describe("MP-1: 단필지 parcels=[1건]", () => {
   it("단건 양도차익을 올바르게 계산한다", () => {
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 100_000_000,
       transferDate: new Date("2023-01-01"),
       parcels: [
@@ -72,6 +73,7 @@ describe("MP-1: 단필지 parcels=[1건]", () => {
 describe("MP-2: 면적 안분 합계", () => {
   it("Σ allocatedTransferPrice = totalTransferPrice", () => {
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 525_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [PARCEL_1, PARCEL_2],
@@ -83,6 +85,7 @@ describe("MP-2: 면적 안분 합계", () => {
 
   it("PDF 사례: 토지1 안분 485,594,405 / 토지2 안분 39,405,595", () => {
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 525_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [PARCEL_1, PARCEL_2],
@@ -100,6 +103,7 @@ describe("MP-3: 환산취득가액 계산", () => {
     // standardAtTransfer = 396.8 × 709,500 = floor(281,487,600) → 실제 281,529,600
     // 단 BigInt 연산: safeMultiplyThenDivide(485594405, 39298000, 281529600) = 67,782,886
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 525_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [PARCEL_1, PARCEL_2],
@@ -115,6 +119,7 @@ describe("MP-4: 개산공제 (취득기준시가 × 3%)", () => {
     // standardAtAcq = floor(490 × 80,200) = 39,298,000
     // 개산공제 = floor(39,298,000 × 0.03) = 1,178,940
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 525_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [PARCEL_1, PARCEL_2],
@@ -130,6 +135,7 @@ describe("MP-4b: 미등기 개산공제 (취득기준시가 × 3/1000)", () => {
     // standardAtAcq = floor(490 × 80,200) = 39,298,000
     // 미등기 개산공제 = floor(39,298,000 × 0.003) = 117,894
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 525_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [{ ...PARCEL_1, isUnregistered: true }, PARCEL_2],
@@ -143,6 +149,7 @@ describe("MP-4b: 미등기 개산공제 (취득기준시가 × 3/1000)", () => {
 describe("MP-5: 환지확정일 익일 취득일 의제", () => {
   it("replottingConfirmDate + 1일이 effectiveAcquisitionDate가 된다", () => {
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 50_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [
@@ -167,6 +174,7 @@ describe("MP-5: 환지확정일 익일 취득일 의제", () => {
 
   it("useDayAfterReplotting=false이면 originalAcquisitionDate 그대로", () => {
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 50_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [
@@ -192,6 +200,7 @@ describe("MP-5: 환지확정일 익일 취득일 의제", () => {
 describe("MP-6: 장기보유특별공제 필지별 독립 계산", () => {
   it("각 필지의 보유기간으로 장특공제율이 독립 적용된다 (30% 한도)", () => {
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 525_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [PARCEL_1, PARCEL_2],
@@ -205,6 +214,7 @@ describe("MP-6: 장기보유특별공제 필지별 독립 계산", () => {
 
   it("미등기 필지는 장특공제율 0%", () => {
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 100_000_000,
       transferDate: new Date("2023-01-01"),
       parcels: [
@@ -229,6 +239,7 @@ describe("MP-6: 장기보유특별공제 필지별 독립 계산", () => {
 describe("MP-7: 기본공제 분리 원칙", () => {
   it("MultiParcelResult에는 기본공제 관련 필드가 없다", () => {
     const input: MultiParcelInput = {
+      propertyType: "land",
       totalTransferPrice: 525_000_000,
       transferDate: TRANSFER_DATE,
       parcels: [PARCEL_1, PARCEL_2],
@@ -244,6 +255,7 @@ describe("MP-7: 기본공제 분리 원칙", () => {
 // ── MP-8 (EX-1): PDF 파주시 교하동 581번지 전체 원단위 앵커 ──
 describe("MP-8 (EX-1): PDF 파주시 교하동 581번지 전체 앵커", () => {
   const input: MultiParcelInput = {
+    propertyType: "land",
     totalTransferPrice: 525_000_000,
     transferDate: TRANSFER_DATE,
     parcels: [PARCEL_1, PARCEL_2],
@@ -329,6 +341,7 @@ describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행
 
   it("권리면적 > 교부면적 → 취득면적 자동 산정, exchangeLandReductionApplied=true", () => {
     const result = calculateMultiParcelTransfer({
+      propertyType: "land",
       totalTransferPrice: 325_000_000,
       transferDate: new Date("2023-03-25"),
       parcels: [
@@ -355,6 +368,7 @@ describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행
 
   it("감환지 없을 때는 parcel.acquisitionArea 그대로 사용, exchangeLandReductionApplied=false", () => {
     const result = calculateMultiParcelTransfer({
+      propertyType: "land",
       totalTransferPrice: 325_000_000,
       transferDate: new Date("2023-03-25"),
       parcels: [
@@ -376,6 +390,7 @@ describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행
 
   it("증환지(권리 < 교부) 시 경고 발생 + acquisitionArea 그대로 사용", () => {
     const result = calculateMultiParcelTransfer({
+      propertyType: "land",
       totalTransferPrice: 325_000_000,
       transferDate: new Date("2023-03-25"),
       parcels: [
@@ -409,6 +424,7 @@ describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행
 describe("MP-SWAP: estimated swap 표시 reconcile", () => {
   it("환산취득가+개산공제 < 자본+양도비 → swap 발동, 표시필드 정합", () => {
     const result = calculateMultiParcelTransfer({
+      propertyType: "land",
       totalTransferPrice: 1_000_000_000,
       transferDate: new Date("2024-06-01"),
       parcels: [
@@ -439,6 +455,7 @@ describe("MP-SWAP: estimated swap 표시 reconcile", () => {
 
   it("swap 미발동(개산공제 ≥ 자본+양도비) → 기존 동작 불변 (회귀)", () => {
     const result = calculateMultiParcelTransfer({
+      propertyType: "land",
       totalTransferPrice: 1_000_000_000,
       transferDate: new Date("2024-06-01"),
       parcels: [
