@@ -105,8 +105,35 @@ describe("split — 취득가액 잔액 대칭화 + buildingAcquisitionPrice 소
   });
 });
 
-describe("split — 자본적지출 잔액 대칭화 (A-6)", () => {
+describe("🔴 split — 자본적지출: 총액 0(정상 경로)에서는 독립 입력", () => {
+  // `input.expenses`는 deprecated `directExpenses`에서 온다(transfer-tax-api.ts:224-229).
+  // 신규 입력은 capitalExpenditure로 가므로 **정상 경로에선 expenses = 0**이다.
+  // 그때 토지/건물 자본적지출 칸은 "총액의 안분"이 아니라 **독립 입력**이며,
+  // 잔액 규칙(0 − 입력값)을 적용하면 음수가 되어 반대편 공제를 상쇄한다(= 공제 소멸, 세액 과대).
+  it("expenses=0 + 건물만 3천만 → 토지는 0 (음수 금지)", () => {
+    const r = run({ expenses: 0, buildingDirectExpenses: 30_000_000 });
+    expect(r.land.directExpenses, "잔액 규칙을 적용하면 -3천만이 되어 공제가 소멸한다").toBe(0);
+    expect(r.building.directExpenses).toBe(30_000_000);
+  });
+
+  it("expenses=0 + 건물만 3천만 → 총 양도차익이 3천만 공제된다", () => {
+    const withExp = run({ expenses: 0, buildingDirectExpenses: 30_000_000 });
+    const noExp = run({ expenses: 0 });
+    const deducted =
+      noExp.land.gain + noExp.building.gain - (withExp.land.gain + withExp.building.gain);
+    expect(deducted, "자본적지출 3천만이 실제로 차감되어야 함").toBe(30_000_000);
+  });
+
+  it("expenses=0 + 둘 다 미입력 → 0/0", () => {
+    const r = run({ expenses: 0 });
+    expect(r.land.directExpenses).toBe(0);
+    expect(r.building.directExpenses).toBe(0);
+  });
+});
+
+describe("split — 자본적지출 잔액 대칭화 (A-6, legacy expenses > 0 한정)", () => {
   // 총 expenses 1억 · landRatio 0.6 → 미입력 시 6천만 / 4천만
+  // ⚠️ expenses > 0은 legacy `directExpenses` 마이그레이션 데이터에서만 발생한다.
   const EXPENSES = { expenses: 100_000_000 };
 
   it("케이스 12-a: 둘 다 미입력 → 비율 안분 6천만 / 4천만 (회귀 방어)", () => {

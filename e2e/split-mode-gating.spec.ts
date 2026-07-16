@@ -72,7 +72,9 @@ test.describe("분리 방식 — 산정 방식별 게이팅", () => {
     await expect(landTransfer(page), "양도가액 칸은 항상 노출").toBeVisible();
   });
 
-  test("부담부증여 → 취득가액 칸 숨김 (§159 자동 산정 · transferType 축)", async ({ page }) => {
+  test("부담부증여 → 양도가액·취득가액 칸 모두 숨김 (§159 안분액 기준 · transferType 축)", async ({
+    page,
+  }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
     // ② 양도정보에서 부담부증여 선택 — 3지선다는 inline RadioCardGroup(라벨 "부담부증여 (소령 §159)")
@@ -80,8 +82,9 @@ test.describe("분리 방식 — 산정 방식별 게이팅", () => {
     await page.getByRole("radio", { name: /부담부증여/ }).check();
     await expandAssetSection(page, 3);
     await expect(landAcq(page)).toHaveCount(0);
+    // 양도가액도 숨긴다 — 엔진 총액은 §159 채무 안분액인데 사용자는 계약 총액만 보므로,
+    // 계약 총액 기준으로 입력하면 잔액이 음수가 된다(계약 10억·채무 4억 → 토지 6억 → 건물 −2억).
+    await expect(landTransfer(page), "부담부증여 양도가액 직접 입력은 성립하지 않는다").toHaveCount(0);
     await expect(page.getByTestId("split-burdened-note")).toBeVisible();
-    // 분리 방식 자체는 살아 있어야 한다(기능 제거 금지)
-    await expect(landTransfer(page), "부담부증여도 양도가액 분리는 유효").toBeVisible();
   });
 });

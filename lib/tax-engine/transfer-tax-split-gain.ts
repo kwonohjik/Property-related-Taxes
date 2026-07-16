@@ -61,10 +61,14 @@ export function isSplitPairOverflow(
   landIn: number | undefined,
   buildingIn: number | undefined,
 ): boolean {
-  if (landIn != null && buildingIn != null) return landIn + buildingIn > total;
+  // 둘 다 입력 시 splitPair는 총액과 무관하게 입력값을 그대로 쓴다 → **합 ≠ 총액이면 차단**.
+  // `>`만 막으면 **과소 합이 침묵 통과**한다: 양도가액 축에서 합 < 총액 = 양도차익 과소 = 세액 과소.
+  // (예: 총 10억인데 토지 3억 + 건물 3억 → 양도차익 4억 과소). 초과·미달 모두 모순 입력이다.
+  if (landIn != null && buildingIn != null) return landIn + buildingIn !== total;
+  // 한쪽만 입력 → 반대쪽은 잔액이므로 합은 항상 총액. 입력값이 총액을 넘을 때만 음수 발생.
   if (landIn != null) return landIn > total;
   if (buildingIn != null) return buildingIn > total;
-  return false; // 둘 다 미입력 → 비율 안분 → 초과 불가
+  return false; // 둘 다 미입력 → 비율 안분 → 모순 불가
 }
 
 /** 취득가액 분리 (실가/환산/감정/매매사례 분기) */
@@ -167,15 +171,18 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
 
   // ③ 필요경비(자본적지출) 분리
   const totalExpenses = input.expenses ?? 0;
-  // ⚠️ 계산값만 splitPair로 산출한다. swap 자격(explicitDirect)은 아래 호출부가 **입력 원본**
-  //    (input.*DirectExpenses !== undefined)을 직접 보므로 여기 결과에서 파생시키면 안 된다
-  //    — 잔액으로 채운 값이 "사용자 입력 있음"으로 뒤바뀌어 §97② swap 발화 조건이 변한다.
-  const { land: landDirectExp, building: buildingDirectExp } = splitPair(
-    totalExpenses,
-    input.landDirectExpenses,
-    input.buildingDirectExpenses,
-    landRatio,
-  );
+  // ⚠️ 이 쌍은 **총액 > 0일 때만** 안분/잔액 대상이다.
+  //    `input.expenses`는 deprecated `directExpenses`에서 오므로(transfer-tax-api.ts:224-229)
+  //    신규 입력 경로(capitalExpenditure)에선 **항상 0**이다. 그때 토지/건물 자본적지출 칸은
+  //    "총액의 안분"이 아니라 **독립 입력**이며, 잔액 규칙을 적용하면 `0 − 입력값`이 음수가 되어
+  //    반대편 공제를 상쇄해버린다(건물만 3천만 → 토지 −3천만 → 공제 전액 소멸 = 세액 과대).
+  //    총액 > 0(legacy directExpenses)일 때만 잔액/안분으로 합계 불변식을 지킨다.
+  // ⚠️ 계산값만 산출한다. swap 자격(explicitDirect)은 아래 호출부가 **입력 원본**
+  //    (input.*DirectExpenses !== undefined)을 직접 보므로 여기 결과에서 파생시키면 안 된다.
+  const { land: landDirectExp, building: buildingDirectExp } =
+    totalExpenses > 0
+      ? splitPair(totalExpenses, input.landDirectExpenses, input.buildingDirectExpenses, landRatio)
+      : { land: input.landDirectExpenses ?? 0, building: input.buildingDirectExpenses ?? 0 };
 
   // ④ 개산공제 — 환산취득가·감정가액 모드 시 (소득령 §163⑥)
   // salesCase 추가(2026-07-16): 비-split(transfer-tax-helpers.ts:339-348)은 매매사례가액에도

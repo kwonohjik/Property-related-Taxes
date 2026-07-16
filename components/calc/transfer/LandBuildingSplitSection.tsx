@@ -69,15 +69,17 @@ export function LandBuildingSplitSection(props: Props) {
         <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
       </div>
 
-      {/* 양도가액 — 산정 방식 무관 항상 노출(총양도가액은 늘 입력된다) */}
-      <div className="grid grid-cols-2 gap-2">
-        <FieldCard label="토지 양도가액" hint="소득령 §166⑥">
-          <CurrencyInput label="" value={props.landTransferPrice} onChange={props.onLandTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-land-transfer-price" />
-        </FieldCard>
-        <FieldCard label="건물 양도가액">
-          <CurrencyInput label="" value={props.buildingTransferPrice} onChange={props.onBuildingTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-building-transfer-price" />
-        </FieldCard>
-      </div>
+      {/* 양도가액 — 산정 방식 무관 노출(총양도가액은 늘 입력된다). 단 부담부증여는 제외(아래 안내). */}
+      {!props.isBurdenedGift && (
+        <div className="grid grid-cols-2 gap-2">
+          <FieldCard label="토지 양도가액" hint="소득령 §166⑥">
+            <CurrencyInput label="" value={props.landTransferPrice} onChange={props.onLandTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-land-transfer-price" />
+          </FieldCard>
+          <FieldCard label="건물 양도가액">
+            <CurrencyInput label="" value={props.buildingTransferPrice} onChange={props.onBuildingTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-building-transfer-price" />
+          </FieldCard>
+        </div>
+      )}
 
       {showAcqInputs && (
         <div className="grid grid-cols-2 gap-2">
@@ -98,10 +100,14 @@ export function LandBuildingSplitSection(props: Props) {
         </p>
       )}
 
-      {/* 부담부증여 — §159가 취득가액을 자동 산정(acqPriceMode 무관·transferType 축) */}
+      {/* 부담부증여 — 양도가액·취득가액 **모두** §159 안분액 기준이라 직접 입력 자체가 성립하지 않는다.
+          사용자가 화면에서 보는 건 계약 총액인데 엔진 총액은 §159 채무 안분액이라, 계약 총액 기준으로
+          토지 양도가액을 입력하면 잔액이 음수가 된다(계약 10억·채무 4억에서 토지 6억 → 건물 −2억).
+          acqPriceMode가 아니라 transferType 축이므로 산정 방식과 무관하게 숨긴다. */}
       {props.isBurdenedGift && (
         <p className="rounded-md bg-fuchsia-50/60 px-2.5 py-1.5 text-xs text-fuchsia-800" data-testid="split-burdened-note">
-          부담부증여는 취득가액을 <strong>§159로 자동 산정</strong>하므로 토지·건물 취득가액을 직접 입력하지 않습니다.
+          부담부증여는 양도가액·취득가액을 <strong>§159 인수 채무액 기준으로 자동 산정</strong>하므로,
+          토지·건물 각 가액은 직접 입력하지 않고 <strong>기준시가 비율로 안분</strong>됩니다.
         </p>
       )}
 

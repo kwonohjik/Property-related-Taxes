@@ -74,13 +74,17 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     }
   }
 
-  // ③ 자본적지출 — 총액 = capitalExpenditure (엔진 expenses)
-  const totalExp = parseAmount(asset.capitalExpenditure ?? "");
+  // ③ 자본적지출 — 총액은 **`directExpenses`**(엔진 `input.expenses`의 실제 소스,
+  //    transfer-tax-api.ts:224-229)다. `capitalExpenditure`가 아니다 — 그걸 총액으로 보면
+  //    판정식만 공유하고 **피연산자가 달라져** 단일 소스가 무효화된다(validate 통과 ↔ 엔진 음수).
+  //    `directExpenses`는 deprecated(legacy 마이그레이션 전용)라 신규 입력에선 0 → 엔진도
+  //    총액 0일 때 잔액 규칙을 쓰지 않고 독립 입력으로 처리하므로 모순 자체가 발생하지 않는다.
+  const totalExp = parseAmount(asset.directExpenses ?? "");
   if (totalExp > 0) {
     const land = opt(asset.landDirectExpenses);
     const building = opt(asset.buildingDirectExpenses);
     if (isSplitPairOverflow(totalExp, land, building)) {
-      return `${label}: 토지·건물 자본적지출이 총 자본적지출(${totalExp.toLocaleString()}원)을 초과합니다.`;
+      return `${label}: 토지·건물 자본적지출이 총 자본적지출(${totalExp.toLocaleString()}원)과 맞지 않습니다.`;
     }
   }
 

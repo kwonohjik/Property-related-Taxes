@@ -33,11 +33,15 @@ describe("isSplitPairOverflow — 엔진 판정식 (splitPair 분기와 1:1)", (
     expect(isSplitPairOverflow(1000, 1200, undefined)).toBe(true);
     expect(isSplitPairOverflow(1000, undefined, 1200)).toBe(true);
   });
-  it("둘 다 입력 → 합이 총액 초과 시 true", () => {
+  it("둘 다 입력 → 합 ≠ 총액이면 true (초과·미달 **모두**)", () => {
     expect(isSplitPairOverflow(1000, 700, 300)).toBe(false);
-    expect(isSplitPairOverflow(1000, 700, 400)).toBe(true);
+    expect(isSplitPairOverflow(1000, 700, 400)).toBe(true); // 초과
+    expect(
+      isSplitPairOverflow(1000, 300, 300),
+      "🔴 합 < 총액도 차단해야 한다 — 양도가액 축에서 양도차익 과소 = 세액 과소가 침묵 통과",
+    ).toBe(true);
   });
-  it("경계: 정확히 총액 → 초과 아님", () => {
+  it("경계: 정확히 총액 → 모순 아님", () => {
     expect(isSplitPairOverflow(1000, 1000, undefined)).toBe(false);
     expect(isSplitPairOverflow(1000, 600, 400)).toBe(false);
   });
@@ -115,20 +119,31 @@ describe("validateSplitDirectInputs — 취득가액 (케이스 6-c)", () => {
   });
 });
 
-describe("validateSplitDirectInputs — 자본적지출", () => {
-  it("건물만 3천만 (총 1억) → 통과", () => {
+describe("validateSplitDirectInputs — 자본적지출 (총액 = directExpenses, 엔진 input.expenses 소스)", () => {
+  it("🔴 capitalExpenditure는 총액이 아니다 — 엔진은 directExpenses(=input.expenses)를 쓴다", () => {
+    // capitalExpenditure를 총액으로 보면 판정식만 공유하고 피연산자가 달라져 단일 소스가 무효화된다.
+    // 엔진은 expenses=0 → 독립 입력으로 처리하므로 모순 자체가 없다 → validate도 통과여야 한다.
     expect(
       validateSplitDirectInputs(
-        splitAsset({ capitalExpenditure: "100,000,000", buildingDirectExpenses: "30,000,000" }),
+        splitAsset({ capitalExpenditure: "100,000,000", buildingDirectExpenses: "999,999,999" }),
         "자산 1",
       ),
     ).toBeNull();
   });
 
-  it("토지 7천만 + 건물 5천만 = 1.2억 (총 1억) → 차단", () => {
+  it("legacy directExpenses 1억 + 건물만 3천만 → 통과(잔액 7천만)", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({ directExpenses: "100,000,000", buildingDirectExpenses: "30,000,000" }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("legacy directExpenses 1억 + 토지 7천만 + 건물 5천만 = 1.2억 → 차단", () => {
     const err = validateSplitDirectInputs(
       splitAsset({
-        capitalExpenditure: "100,000,000",
+        directExpenses: "100,000,000",
         landDirectExpenses: "70,000,000",
         buildingDirectExpenses: "50,000,000",
       }),
