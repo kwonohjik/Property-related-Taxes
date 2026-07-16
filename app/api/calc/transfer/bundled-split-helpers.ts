@@ -97,6 +97,13 @@ interface CompanionRawAsset {
   useEstimatedAcquisition?: boolean;
   standardPriceAtAcquisition?: number;
   standardPriceAtTransfer?: number;
+  // 공익수용 §164⑨ 1호 환산 min[] 특례 (계획 Q5 — 컴패니언 지원).
+  // ⑫ `transfer-tax-schema-sub.ts` 컴패니언 스키마와 1:1이어야 한다(누락 시 침묵 strip).
+  transferCause?: "general" | "public_expropriation";
+  standardPricePerSqmAtTransfer?: number;
+  transferArea?: number;
+  compensationPerSqm?: number;
+  compensationBasisStdPrice?: number;
   residencePeriodMonths?: number;
   isUnregistered?: boolean;
   isNonBusinessLand?: boolean;
@@ -198,6 +205,14 @@ export function buildCompanionEngineInputs(
       c.acquisitionCause === "purchase" && (c.useEstimatedAcquisition ?? false),
     standardPriceAtAcquisition: c.standardPriceAtAcquisition,
     standardPriceAtTransfer: c.standardPriceAtTransfer,
+    // 공익수용 §164⑨ 1호 환산 min[] 특례 — 컴패니언 자산 지원(계획 Q5).
+    // 엔진이 게이트 판정(적격 자산·환산·수용·2009.02.04·후보>0) — 여기선 원값만 전달.
+    // ⚠️ 이 매핑이 없으면 ⑫ Zod를 통과한 값이 엔진에 **도달하지 못한다**(명시 매핑 = 침묵 strip 지점).
+    transferCause: c.transferCause,
+    standardPricePerSqmAtTransfer: c.standardPricePerSqmAtTransfer,
+    transferArea: c.transferArea,
+    compensationPerSqm: c.compensationPerSqm,
+    compensationBasisStdPrice: c.compensationBasisStdPrice,
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
     residencePeriodMonths: c.residencePeriodMonths ?? 0,
     isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,

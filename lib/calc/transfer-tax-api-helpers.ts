@@ -7,6 +7,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 export { toEngineReductions } from "./transfer-tax-api-reductions";
@@ -538,6 +539,23 @@ export function buildAssetPayload(
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
     assetKind: toEngineAssetKind(asset.assetKind),
+    // ④ 공익수용 §164⑨ 1호 특례 — **컴패니언 자산도 지원**(계획 Q5).
+    // `transferCause`는 §77 감면용으로 이미 위 스키마에 있으나, min[] 3후보 값은 여기서 실어야
+    // `buildCompanionEngineInputs`가 엔진 input에 매핑할 수 있다(⑫ 컴패니언 스키마 동반 필수).
+    //
+    // ⚠️ **적격 자산일 때만 전송**(UI 노출 조건과 동일 — `isExprValuationEligibleAssetKind`).
+    //    무게이트로 두면 안 되는 이유: `bundled-split-helpers.ts:190`이 컴패니언 propertyType을
+    //    `housing|building` 외 **전부 "land"로 뭉갠다**. 상가 컴패니언에 stale 보상값이 남아 있으면
+    //    **토지 의미로 특례가 잘못 발동**한다. 여기서 막으면 원천 차단된다.
+    ...(isExprValuationEligibleAssetKind(asset.assetKind)
+      ? {
+          standardPricePerSqmAtTransfer:
+            parseAmount(asset.standardPricePerSqmAtTransfer) || undefined,
+          transferArea: parseFloat(asset.transferArea) || undefined,
+          compensationPerSqm: parseAmount(asset.compensationPerSqm) || undefined,
+          compensationBasisStdPrice: parseAmount(asset.compensationBasisStdPrice) || undefined,
+        }
+      : {}),
     standardPriceAtTransfer:
       parseAmount(asset.standardPriceAtTransfer) > 0
         ? parseAmount(asset.standardPriceAtTransfer)
