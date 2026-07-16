@@ -15,7 +15,7 @@
  *   13-9: 세대생략 수유자 할증 가산 (분리 가산 — distributableTax는 할증 미포함)
  *   13-10: 사전증여세액공제 (§28 안분 한도)
  *   13-11: 차가감세액
- *   13-12: 신고세액공제 (§69 3%)
+ *   13-12: 신고세액공제 (§69 상속개시일 연도율 — 2016이전 10·2017 7·2018 5·2019~ 3%)
  *   13-13: 자진납부세액
  *
  * Pure Engine.
@@ -154,6 +154,12 @@ export interface HeirAllocationParams {
   grossEstateWithGifts: number;
   /** §69 신고세액공제 적용 여부 (기한 내 신고) */
   isFiledOnTime: boolean;
+  /**
+   * §69 신고세액공제율 (상속개시일 연도별 — 2016이전 0.1·2017 0.07·2018 0.05·2019~ 0.03).
+   * resolveFilingCreditRate(deathDate) 결과. 미전달 시 배부표가 3% 고정되어 요약(연도율)을
+   * reconcile로 덮어써 2019년 이전 상속 과다과세.
+   */
+  filingCreditRate: number;
   /** 비과세 항목 (협의분할 분배 소스). 작업4 — 미입력 시 빈 배열로 무영향 */
   exemptionItems?: ExemptionCheckedItem[];
   /** ruleId → 인정 비과세액(itemResults[].exemptAmount). per-heir 차감 target. 작업4 */
@@ -271,9 +277,21 @@ export function calcHeirAllocation(
     corporateGiftTaxBase,
     grossEstateWithGifts,
     isFiledOnTime,
+    filingCreditRate,
     exemptionItems = [],
     recognizedExemptByRuleId = new Map(),
   } = params;
+
+  // §69 율 → 정수 퍼센트 (이산값 0.1·0.07·0.05·0.03 — 부동소수 반올림·절사 회피 위해 임계 비교).
+  //   per-heir 안분 신고세액공제는 bigIntRoundDiv(정수 round-half-up)로 산정.
+  const filingRatePct =
+    filingCreditRate >= 0.1
+      ? 10
+      : filingCreditRate >= 0.07
+        ? 7
+        : filingCreditRate >= 0.05
+          ? 5
+          : 3;
 
   // 법정상속분 (협의분할 미입력 자산 자동 배분 기준 — 민법 §1009·§1003·§1000)
   const legalShares = computeLegalShares(heirs);
@@ -581,9 +599,10 @@ export function calcHeirAllocation(
     // 13-11: 차가감세액 = (산출세액상당액 + 할증) − 사전증여세액공제
     const preFilingCreditTax = computedTaxShare + surchargeForHeir - priorGiftCredit;
 
-    // 13-12: 신고세액공제 = round(차가감 × 3%) — PDF 책 1867 안분 round 적용
+    // 13-12: 신고세액공제 = round(차가감 × §69 연도율) — PDF 책 1867 안분 round 적용.
+    //   율은 상속개시일 연도별(filingRatePct). 3% 고정 시 2019년 이전 상속 과다과세.
     const filingCredit = isFiledOnTime
-      ? Math.round(preFilingCreditTax * 0.03)
+      ? bigIntRoundDiv(BigInt(preFilingCreditTax) * BigInt(filingRatePct), 100n)
       : 0;
 
     // 13-13: 자진납부세액
@@ -667,7 +686,9 @@ export function calcHeirAllocation(
         ab.priorGiftCredit = giftTaxPaidAb > 0 ? Math.min(giftTaxPaidAb, newLimit) : 0;
       }
       ab.preFilingCreditTax = ab.computedTaxShare + ab.generationSkipSurcharge - ab.priorGiftCredit;
-      ab.filingCredit = isFiledOnTime ? Math.round(ab.preFilingCreditTax * 0.03) : 0;
+      ab.filingCredit = isFiledOnTime
+        ? bigIntRoundDiv(BigInt(ab.preFilingCreditTax) * BigInt(filingRatePct), 100n)
+        : 0;
       ab.finalTax = ab.preFilingCreditTax - ab.filingCredit;
       ab.burdenRatio =
         Math.floor((ab.taxBaseShare / computedTaxShareDenominator) * 10000) / 10000;

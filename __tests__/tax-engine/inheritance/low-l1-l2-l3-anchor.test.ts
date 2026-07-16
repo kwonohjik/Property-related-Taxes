@@ -159,6 +159,7 @@ describe("L-2: 협의분할 추정상속재산 floor 잔액 흡수 (added ≠ to
       corporateGiftTaxBase: 0,
       grossEstateWithGifts: 0,
       isFiledOnTime: true,
+      filingCreditRate: 0.03,
     };
   }
 

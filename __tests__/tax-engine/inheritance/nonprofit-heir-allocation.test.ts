@@ -74,6 +74,7 @@ function run(corp: Heir) {
     corporateGiftTaxBase: 0,
     grossEstateWithGifts: 2_000_000_000,
     isFiledOnTime: true,
+    filingCreditRate: 0.03,
   });
 }
 
