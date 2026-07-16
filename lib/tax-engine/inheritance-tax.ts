@@ -742,7 +742,7 @@ export function calcInheritanceTax(
     familyBusinessDeduction: deductionResult.familyBusinessDeduction,
     familyBusinessDetail: deductionResult.familyBusinessDetail,
     estateItems: input.estateItems,
-    deathDate: input.deathDate,
+    deathDate: input.deathDate, taxBase,
   });
 
   // STEP 12.5: §74 지정문화유산 등 징수유예 (상증령 §76① 비례 방식) — appended.

@@ -3,18 +3,23 @@
  *
  * 법령: 상증법 §18의2⑤⑨ + 상증령 §15⑩⑮⑯⑰⑱
  *
- * KoreanLaw MCP 검증 2026-05-21:
+ * KoreanLaw MCP 검증 2026-05-21 / 재검증 2026-07-17:
  *   - §18의2⑤ 4호 위반 (5년 내):
  *     1호 가업용 자산 100분의 40 이상 처분 (자산처분비율 추가 곱)
  *     2호 가업 미종사 (상증령 §15⑪ — 대표이사 미종사·업종 변경·1년 휴/폐업)
  *     3호 지분 감소 (상증령 §15⑫)
  *     4호 5년 평균 정규직&총급여 모두 직전 2개 평균의 100분의 90 미달 (AND)
- *   - §15⑮ 추징율 — "대통령령으로 정하는 율" = 100분의 100 일률
- *   - §15⑩ 자산처분비율 = 처분자산 가액 / 전체 가업용자산 가액
+ *   - §15⑮ "대통령령으로 정하는 율" = 100분의 100 — **과세가액 산입율**(공제액 전액을 되돌림),
+ *     추징세액률이 아니다. §18의2⑤ 전단: 산입액을 "상속세 과세가액에 산입하여 상속세를 부과".
+ *   - §15⑩ 자산처분비율 = 처분자산 가액 / 전체 가업용자산 가액 (산입액에 추가 곱)
  *   - §15⑯ 이자상당액 = 결정상속세액 × 일수 × (국세기본법 §43의3② 이자율 / 365)
  *
+ * ⚠️ 추징세액 = 상속세(원래 과세표준 + 산입액) − 상속세(원래 과세표준) = marginal 재계산(§26 누진).
+ *    산입액을 곧 세액으로 보는 것은 오류(과세가액↔세액 차원 혼동, 최고 50%인데 100% 징수).
  * scope: 산식 헬퍼만 — 실 사용자 시뮬레이터 UI/시간경과 추적은 별도 PR.
  */
+
+import { calcInheritanceGiftTax } from "../inheritance-gift-common";
 
 /** 사후관리 위반 유형 (상증법 §18의2⑤ 1~4호) */
 export type FamilyBusinessViolationType =
@@ -30,6 +35,11 @@ export interface FamilyBusinessRecaptureInput {
   violationType: FamilyBusinessViolationType;
   /** [1호 한정] 자산처분비율 (0~1, §15⑩) — disposed_asset_value / total_business_asset_value */
   assetDisposalRatio?: number;
+  /**
+   * 원래 상속세 과세표준 (가업상속공제 반영 후). §18의2⑤ 전단 marginal 재계산 기준.
+   * 추징세액 = 상속세(과세표준 + 산입액) − 상속세(과세표준).
+   */
+  originalTaxBase: number;
 }
 
 export interface FamilyBusinessInterestInput {
@@ -42,9 +52,11 @@ export interface FamilyBusinessInterestInput {
 }
 
 export interface FamilyBusinessRecaptureResult {
-  /** 추징세액 (적용공제 × 100% × 자산처분비율) */
+  /** 추징세액 = 상속세(과세표준 + 산입액) − 상속세(과세표준) (§18의2⑤ 전단 marginal) */
   recaptureAmount: number;
-  /** 적용 추징율 (100분의 100 일률) */
+  /** 상속세 과세가액 산입액 = 적용공제 × 100%(§15⑮) × 자산처분비율 */
+  addBackAmount: number;
+  /** 적용 산입율 (100분의 100 일률 — 과세가액 산입 비율) */
   recaptureRate: number;
   /** 자산처분비율 (1호 한정, 그 외 1.0) */
   effectiveRatio: number;
@@ -62,26 +74,37 @@ export interface FamilyBusinessInterestResult {
 }
 
 /**
- * 사후관리 추징세액 (상증령 §15⑮ + §15⑩).
+ * 사후관리 추징세액 (상증법 §18의2⑤ 전단 + 상증령 §15⑮ + §15⑩).
  *
- * 산식:
- *   추징세액 = appliedDeduction × 100% × (자산처분 시 assetDisposalRatio, 그 외 1.0)
+ * 산식 (2단계):
+ *   1) 산입액 = appliedDeduction × 100%(§15⑮) × (자산처분 시 assetDisposalRatio, 그 외 1.0)
+ *   2) 추징세액 = 상속세(originalTaxBase + 산입액) − 상속세(originalTaxBase)  ← §26 누진 marginal
  *
- * 추징율은 100분의 100 일률 (영농 §16⑦과 동일 구조 — 기간경과별 차등 아님).
+ * §15⑮의 "100분의 100"은 **과세가액 산입율**(공제액 전액을 과세가액에 되돌림)이지 추징세액률이
+ * 아니다. §18의2⑤ 전단이 "상속세 과세가액에 산입하여 상속세를 부과"하므로, 실제 추징세액은
+ * 산입 후 재계산한 상속세의 증가분(한계세액)이다.
  */
 export function calcFamilyBusinessRecapture(
   input: FamilyBusinessRecaptureInput,
   lawRef: string,
 ): FamilyBusinessRecaptureResult {
-  const { appliedDeduction, violationType, assetDisposalRatio } = input;
-  const recaptureRate = 1.0; // 상증령 §15⑮ "100분의 100"
+  const { appliedDeduction, violationType, assetDisposalRatio, originalTaxBase } = input;
+  const recaptureRate = 1.0; // 상증령 §15⑮ "100분의 100" — 과세가액 산입율
 
   // 1호 자산처분 한정 — assetDisposalRatio 추가 곱
   const effectiveRatio = violationType === "asset_disposal" && assetDisposalRatio !== undefined
     ? Math.max(0, Math.min(1, assetDisposalRatio))
     : 1.0;
 
-  const recaptureAmount = Math.floor(appliedDeduction * recaptureRate * effectiveRatio);
+  // ① 과세가액 산입액 (§18의2⑤ 전단 + §15⑮·§15⑩)
+  const addBackAmount = Math.floor(appliedDeduction * recaptureRate * effectiveRatio);
+
+  // ② 산입 후 상속세 재계산의 증가분 = 추징세액 (§26 누진 marginal)
+  const safeBase = Math.max(0, originalTaxBase);
+  const recaptureAmount = Math.max(
+    0,
+    calcInheritanceGiftTax(safeBase + addBackAmount) - calcInheritanceGiftTax(safeBase),
+  );
 
   const violationLabel: Record<FamilyBusinessViolationType, string> = {
     asset_disposal: "1호 가업용 자산 40% 이상 처분",
@@ -93,7 +116,6 @@ export function calcFamilyBusinessRecapture(
   const breakdown: Array<{ label: string; amount: number; lawRef?: string }> = [
     { label: "가업상속공제 적용액 (추징 원금)", amount: appliedDeduction },
     { label: `위반 유형 — ${violationLabel[violationType]}`, amount: 0 },
-    { label: "추징율 100분의 100 일률 (상증령 §15⑮)", amount: Math.floor(recaptureRate * 1_000_000) },
   ];
 
   if (violationType === "asset_disposal") {
@@ -103,10 +125,15 @@ export function calcFamilyBusinessRecapture(
     });
   }
 
-  breakdown.push({ label: "추징세액", amount: recaptureAmount, lawRef });
+  breakdown.push(
+    { label: "상속세 과세가액 산입액 (§18의2⑤ 전단·§15⑮ 100%)", amount: addBackAmount },
+    { label: "원래 상속세 과세표준", amount: safeBase },
+    { label: "추징세액 = 상속세(과세표준+산입액) − 상속세(과세표준)", amount: recaptureAmount, lawRef },
+  );
 
   return {
     recaptureAmount,
+    addBackAmount,
     recaptureRate,
     effectiveRatio,
     breakdown,

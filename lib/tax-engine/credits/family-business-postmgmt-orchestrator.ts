@@ -69,8 +69,15 @@ function daysFromFilingToViolation(filingDeadline: string, violationDate: string
  * 가업상속공제 사후관리 추징 시뮬레이션 (계획 §3-2).
  *
  * 위반별 면제 우선순위: (0) 5년 초과 자동 면제 → (1) 명시 정당사유 → (2) OFZ 자동 면제(§15⑪1·2호).
- * 미면제 시 추징(§15⑮ 100%, 자산처분은 §15⑩ 비율 추가곱·재차부과 단서) + 이자상당액(§15⑯).
+ * 미면제 시 추징 + 이자상당액(§15⑯). 추징세액은 산입액(공제×100%(§15⑮), 자산처분은 §15⑩ 비율
+ * 추가곱·재차부과 단서)을 원래 과세표준에 산입해 재계산한 상속세 증가분(§18의2⑤ 전단 marginal).
  * 양도세 환원 공제(§18의2⑩, cgtCreditAmount)는 합계 추징에서 차감(음수 0 가드).
+ *
+ * ⚠️ 한계(단일 위반 모델): 다건 위반은 각각 **동일 originalTaxBase에서 독립** marginal로 산정한다.
+ *    전액-산입 유형(가업미종사·지분감소)을 2건 이상 입력하면 같은 공제액이 중복 추징되고(과대),
+ *    순차 부분처분의 누진 스태킹(runningBase 누적)은 반영되지 않는다(과소). 실사용은 단일 위반이
+ *    표준이며, 누적 산입 cap·runningBase는 "어느 위반이 공제를 소진하는가"의 법령 판단이 필요한
+ *    별도 확장(후속). 자산처분 재차부과 배제분은 priorDisposedExcluded로만 처리한다.
  */
 export function calcFamilyBusinessPostMgmt(
   input: FamilyBusinessPostMgmtInput,
@@ -110,7 +117,12 @@ export function calcFamilyBusinessPostMgmt(
           )
         : undefined;
     const recapture = calcFamilyBusinessRecapture(
-      { appliedDeduction: input.appliedDeduction, violationType: v.type, assetDisposalRatio },
+      {
+        appliedDeduction: input.appliedDeduction,
+        violationType: v.type,
+        assetDisposalRatio,
+        originalTaxBase: input.originalTaxBase,
+      },
       INH.FAMILY_BUSINESS_DEDUCTION,
     );
 
@@ -187,8 +199,9 @@ export function buildFamilyBusinessPostMgmtMeta(args: {
   familyBusinessDetail: FamilyBusinessDeductionDetail | undefined;
   estateItems: EstateItem[] | undefined;
   deathDate: string | undefined;
+  taxBase: number;
 }): FamilyBusinessPostMgmtMeta | undefined {
-  const { familyBusinessDeduction, familyBusinessDetail, estateItems, deathDate } = args;
+  const { familyBusinessDeduction, familyBusinessDetail, estateItems, deathDate, taxBase } = args;
   if (familyBusinessDeduction <= 0 || !familyBusinessDetail || !deathDate) return undefined;
 
   return {
@@ -197,6 +210,7 @@ export function buildFamilyBusinessPostMgmtMeta(args: {
     filingDeadline: calcInheritanceFilingDeadline(deathDate),
     ofzExemptionActive: familyBusinessDetail.ofzExemptionActive ?? false,
     usedDirectInput: familyBusinessDetail.usedDirectInput,
+    originalTaxBase: Math.max(0, taxBase),
     inheritedAssets: (estateItems ?? [])
       .filter((i) => i.familyBusinessCategory !== undefined)
       .map((i) => ({

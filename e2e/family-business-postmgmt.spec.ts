@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("가업상속공제 사후관리 시뮬레이터", () => {
   const PREFILL =
-    "/calc/family-business-postmgmt?originalDeduction=10000000000&deathDate=2025-01-01&filingDeadline=2025-07-31";
+    "/calc/family-business-postmgmt?originalDeduction=10000000000&taxBase=10000000000&deathDate=2025-01-01&filingDeadline=2025-07-31";
 
   async function setViolationDate(card: ReturnType<import("@playwright/test").Page["getByTestId"]>, y: string, m: string, d: string) {
     await card.getByLabel("연도").fill(y);

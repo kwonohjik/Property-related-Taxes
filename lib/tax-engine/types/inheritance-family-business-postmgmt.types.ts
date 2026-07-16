@@ -28,6 +28,8 @@ export interface FamilyBusinessPostMgmtMeta {
   ofzExemptionActive: boolean;
   /** 직접입력 모드(usedDirectInput) — 요건 우회 사례도 사후관리 대상 */
   usedDirectInput: boolean;
+  /** 원래 상속세 과세표준 (가업공제 반영 후) — §18의2⑤ 전단 marginal 추징 재계산 prefill */
+  originalTaxBase: number;
   /** 가업상속재산 자산 이력 (자산처분 비율 산정 기준) */
   inheritedAssets: Array<{ id: string; value: number; type: PostMgmtAssetType }>;
 }
@@ -112,6 +114,11 @@ export interface EmploymentTracking {
 export interface FamilyBusinessPostMgmtInput {
   /** 가업상속공제 적용액 (추징 원금) */
   appliedDeduction: number;
+  /**
+   * 원래 상속세 과세표준 (가업상속공제 반영 후). §18의2⑤ 전단 추징세액 marginal 재계산 기준
+   * — 추징세액 = 상속세(과세표준 + 산입액) − 상속세(과세표준).
+   */
+  originalTaxBase: number;
   /** 상속개시일(사망일) — §⑤ "상속개시일부터 5년 이내" 가드 기준 (ISO date) */
   deathDate: string;
   /** 상속세 신고기한 (§67, ISO date) — 이자상당액 기산 */

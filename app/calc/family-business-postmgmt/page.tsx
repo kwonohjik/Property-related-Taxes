@@ -113,6 +113,8 @@ function FamilyBusinessPostMgmtPageInner() {
   const [appliedDeduction, setAppliedDeduction] = useState(
     sanitizeAmountParam(searchParams.get("originalDeduction"), FB_CAP_30Y),
   );
+  // 원래 상속세 과세표준 (가업공제 반영 후) — §18의2⑤ 전단 marginal 추징 재계산 기준
+  const [originalTaxBase, setOriginalTaxBase] = useState(searchParams.get("taxBase") ?? "");
   const [deathDate, setDeathDate] = useState(searchParams.get("deathDate") ?? "");
   const [amendOpen, setAmendOpen] = useState(false);
   const [filingDeadline, setFilingDeadline] = useState(searchParams.get("filingDeadline") ?? "");
@@ -144,6 +146,7 @@ function FamilyBusinessPostMgmtPageInner() {
   const canCalculate = useMemo(() => {
     return (
       parseAmount(appliedDeduction) > 0 &&
+      parseAmount(originalTaxBase) > 0 &&
       deathDate.length === 10 &&
       effectiveFilingDeadline.length === 10 &&
       Number(interestRate) >= 0 &&
@@ -151,7 +154,7 @@ function FamilyBusinessPostMgmtPageInner() {
       violations.length > 0 &&
       violations.every((v) => v.date.length === 10)
     );
-  }, [appliedDeduction, deathDate, effectiveFilingDeadline, interestRate, violations]);
+  }, [appliedDeduction, originalTaxBase, deathDate, effectiveFilingDeadline, interestRate, violations]);
 
   const handleCalculate = () => {
     const events: ViolationEvent[] = violations.map((v) => ({
@@ -171,6 +174,7 @@ function FamilyBusinessPostMgmtPageInner() {
 
     const input: FamilyBusinessPostMgmtInput = {
       appliedDeduction: parseAmount(appliedDeduction),
+      originalTaxBase: parseAmount(originalTaxBase),
       deathDate,
       filingDeadline: effectiveFilingDeadline,
       ofzExemptionActive,
@@ -218,6 +222,12 @@ function FamilyBusinessPostMgmtPageInner() {
             value={appliedDeduction}
             onChange={setAppliedDeduction}
             hint="원 상속 시 적용된 §18의2 공제액"
+          />
+          <CurrencyInput
+            label="원래 상속세 과세표준 (가업공제 반영 후)"
+            value={originalTaxBase}
+            onChange={setOriginalTaxBase}
+            hint="추징세액은 이 과세표준에 산입액을 더해 재계산한 상속세 증가분(§18의2⑤ 전단·§26 누진)"
           />
           <CurrencyInput
             label="양도소득세 환원 공제 (§18의2⑩, 선택)"
