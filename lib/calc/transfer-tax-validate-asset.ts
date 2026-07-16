@@ -18,6 +18,7 @@ import { validateExprValuationParcel } from "./transfer-tax-validate-expropriati
 import { validateAuctionAsset } from "./transfer-tax-validate-expropriation";
 import { validateHousingExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriation";
+import { validateMixedUseExprAsset } from "./transfer-tax-validate-expropriation";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
@@ -337,6 +338,9 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       parseAmount(asset.phdLandPricePerSqmAtTransfer) <= 0
     )
       return `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요. (양도시 기준시가)`;
+    // ⑧ §164⑨1호 겸용 공익수용 특례 — 수용 시 주택분·상가분 토지 보상 4필드 필수 (P7/D8).
+    const mixedExprErr = validateMixedUseExprAsset(asset, label, formTransferDate);
+    if (mixedExprErr) return mixedExprErr;
     // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
     if (asset.usePreHousingDisclosure) {
       if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;

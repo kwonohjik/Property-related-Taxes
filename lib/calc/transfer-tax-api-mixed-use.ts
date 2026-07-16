@@ -154,6 +154,13 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       form.isOneHousehold &&
       (form.householdHousingCount === "1" ||
         (form.householdHousingCount === "2" && form.temporaryTwoHouseSpecial === true)),
+    // ④ §164⑨1호 공익수용 특례 (계획 P7/D8) — 목별 독립: 주택분(P5 필드 재사용)·상가분(신규 2필드).
+    // 엔진이 수용·환산·2009.02.04·후보>0 게이트 판정 — 여기선 원값 전달(침묵 strip 방지).
+    transferCause: primary.transferCause,
+    housingCompensationTotal: parseAmount(primary.housingCompensationTotal) || undefined,
+    housingCompensationBasisTotal: parseAmount(primary.housingCompensationBasisTotal) || undefined,
+    commercialLandCompensationTotal: parseAmount(primary.mixedCommercialLandCompensationTotal) || undefined,
+    commercialLandCompensationBasisTotal: parseAmount(primary.mixedCommercialLandCompensationBasisTotal) || undefined,
     // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
     partialUsageChange:
       primary.hasPartialUsageChange && primary.partialChangeDirection

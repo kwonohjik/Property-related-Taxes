@@ -48,6 +48,8 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "mixedTransferHousingPrice"
   | "mixedTransferCommercialBuildingPrice"
   | "mixedTransferLandPricePerSqm"
+  | "mixedCommercialLandCompensationTotal"
+  | "mixedCommercialLandCompensationBasisTotal"
   | "mixedAcqHousingPrice"
   | "mixedAcqCommercialBuildingPrice"
   | "mixedAcqLandPricePerSqm"
@@ -72,6 +74,8 @@ export const MIXED_USE_DEFAULTS: Pick<
   mixedTransferHousingPrice: "",
   mixedTransferCommercialBuildingPrice: "",
   mixedTransferLandPricePerSqm: "",
+  mixedCommercialLandCompensationTotal: "",
+  mixedCommercialLandCompensationBasisTotal: "",
   mixedAcqHousingPrice: "",
   mixedAcqCommercialBuildingPrice: "",
   mixedAcqLandPricePerSqm: "",
@@ -133,6 +137,8 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   if (!a.mixedResidentialFootprintOverride) a.mixedResidentialFootprintOverride = "";
   if (!a.mixedTransferHousingPrice) a.mixedTransferHousingPrice = "";
   if (!a.mixedTransferCommercialBuildingPrice) a.mixedTransferCommercialBuildingPrice = "";
+  if (!a.mixedCommercialLandCompensationTotal) a.mixedCommercialLandCompensationTotal = "";
+  if (!a.mixedCommercialLandCompensationBasisTotal) a.mixedCommercialLandCompensationBasisTotal = "";
   if (!a.mixedTransferLandPricePerSqm) a.mixedTransferLandPricePerSqm = "";
   if (!a.mixedAcqHousingPrice) a.mixedAcqHousingPrice = "";
   if (!a.mixedAcqCommercialBuildingPrice) a.mixedAcqCommercialBuildingPrice = "";

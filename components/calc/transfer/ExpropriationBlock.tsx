@@ -68,10 +68,15 @@ export function ExpropriationBlock({
   // split 건물은 per-sqm 경로가 우회되므로 제외(아래 split 총액 블록으로).
   const showValuationMin =
     isExprValuationEligibleAssetKind(asset.assetKind) && exprDateOk && !isSplitBuilding;
+  // 겸용주택(나·라 복합) — 주택분(라목 총액)+상가분(가목 토지) 두 트랙(P7/D8). 별도 겸용 블록으로 처리하고
+  // 아래 단건 주택 총액 블록은 제외한다. 겸용은 환산 기반이라 useEstimatedAcquisition 게이트 불요.
+  const isMixedUse = asset.assetKind === "housing" && !!asset.isMixedUseHouse;
+  const showMixedUseExpr =
+    isMixedUse && !!transferDate && transferDate >= EXPR_VALUATION_MIN_DATE;
   // §164⑨ 1호 주택(라목) 총액 트랙 게이트 (P5·P6b) — 개별주택가격은 총액이라 원/㎡가 아닌 총액 3후보.
-  // 단건 주택 + PHD split 주택은 노출. regular split만 제외(미지원).
+  // 단건 주택 + PHD split 주택은 노출. regular split·겸용은 제외(겸용은 겸용 블록으로).
   const showHousingTotal =
-    isHousingExprEligibleAssetKind(asset.assetKind) && exprDateOk && !isHousingRegularSplit;
+    isHousingExprEligibleAssetKind(asset.assetKind) && exprDateOk && !isHousingRegularSplit && !isMixedUse;
   // §164⑨ 1호 건물 split 토지분 총액 트랙 게이트 (P6/D6).
   const showSplitLandExpr = isSplitBuilding && exprDateOk;
 
@@ -289,6 +294,58 @@ export function ExpropriationBlock({
               hideUnit
               hint="토지분 보상 산정 기초 개별공시지가 총액 (원)"
             />
+          </div>
+        </div>
+      )}
+
+      {showMixedUseExpr && (
+        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+            환산 양도당시 기준시가 특례 — 겸용주택 주택분·상가분 (소득령 §164⑨ 1호)
+          </p>
+          <p className="text-caption leading-relaxed text-amber-700 dark:text-amber-400">
+            수용(2009.02.04 이후) 겸용주택을 환산취득가액으로 계산 시 <b>주택분</b>(개별주택가격 총액)과
+            <b> 상가분 토지</b>(개별공시지가 총액)의 양도당시 기준시가를 각각 <b>보상액·보상기초 중 작은 값</b>
+            으로 낮춥니다. 상가 <b>건물분</b>은 보상 기초 기준시가 개념이 없어(시행규칙 §80⑧) 적용하지 않으며,
+            양도가액 안분은 원값을 유지합니다. 보상액은 주택분·상가토지분으로 나누어 입력하세요.
+          </p>
+          <div className="rounded-md border border-amber-200 bg-amber-100/40 p-2.5 space-y-2 dark:border-amber-900/50 dark:bg-amber-950/30">
+            <p className="text-caption font-semibold text-amber-800 dark:text-amber-300">주택분 (개별주택가격)</p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
+              <CurrencyInput
+                label="② 주택분 보상액 총액"
+                value={asset.housingCompensationTotal}
+                onChange={(v) => onChange({ housingCompensationTotal: v })}
+                hideUnit
+                hint="주택분 수용 보상액 총액 (원)"
+              />
+              <CurrencyInput
+                label="③ 주택분 보상산정 기초 기준시가 총액"
+                value={asset.housingCompensationBasisTotal}
+                onChange={(v) => onChange({ housingCompensationBasisTotal: v })}
+                hideUnit
+                hint="주택분 보상 산정 기초 기준시가 총액 (원)"
+              />
+            </div>
+          </div>
+          <div className="rounded-md border border-amber-200 bg-amber-100/40 p-2.5 space-y-2 dark:border-amber-900/50 dark:bg-amber-950/30">
+            <p className="text-caption font-semibold text-amber-800 dark:text-amber-300">상가분 토지 (개별공시지가)</p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
+              <CurrencyInput
+                label="② 상가분 토지 보상액 총액"
+                value={asset.mixedCommercialLandCompensationTotal}
+                onChange={(v) => onChange({ mixedCommercialLandCompensationTotal: v })}
+                hideUnit
+                hint="상가분 토지 수용 보상액 총액 (원)"
+              />
+              <CurrencyInput
+                label="③ 상가분 토지 보상산정 기초 개별공시지가 총액"
+                value={asset.mixedCommercialLandCompensationBasisTotal}
+                onChange={(v) => onChange({ mixedCommercialLandCompensationBasisTotal: v })}
+                hideUnit
+                hint="상가분 토지 보상 산정 기초 개별공시지가 총액 (원)"
+              />
+            </div>
           </div>
         </div>
       )}
