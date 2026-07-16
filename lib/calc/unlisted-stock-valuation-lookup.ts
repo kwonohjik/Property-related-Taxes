@@ -191,30 +191,43 @@ function restoreUnlistedStockInput(raw: UnlistedStockV2Lite): UnlistedStockValua
 
   const fiscalYearsRaw = raw.fiscalYears;
   if (!Array.isArray(fiscalYearsRaw) || fiscalYearsRaw.length !== 3) return null;
-  const fiscalYears = fiscalYearsRaw.map((fy) => {
+  // H-27: toLite가 src.fiscalYears를 엔진 필드명 그대로 저장(:463)하므로 복원도 엔진 필드명으로 읽어야 한다.
+  //   이전 구현은 addDividendInclude·subCorpTax 등 존재하지 않는 필드명으로 읽어 §56④ 가감 22항목과
+  //   fiscalYearStartDate(§17의3② 연환산)가 전부 소실됐고, as unknown as 이중 캐스팅이 tsc 검출을 막았다.
+  //   num 인자를 keyof FYA로 두어 필드명 오타를 컴파일 타임에 차단한다.
+  type FYA = UnlistedStockValuationInput["fiscalYears"][number];
+  const fiscalYears = fiscalYearsRaw.map((fy): FYA | null => {
     const fyObj = fy as Record<string, unknown>;
-    const d = restoreDate(fyObj.fiscalYearEndDate);
-    if (!d) return null;
+    const fiscalYearEndDate = restoreDate(fyObj.fiscalYearEndDate);
+    if (!fiscalYearEndDate) return null;
+    const num = (k: keyof FYA): number | undefined =>
+      typeof fyObj[k] === "number" ? (fyObj[k] as number) : undefined;
     return {
       fiscalYearLabel: String(fyObj.fiscalYearLabel ?? ""),
-      fiscalYearEndDate: d,
-      taxableIncome: typeof fyObj.taxableIncome === "number" ? fyObj.taxableIncome : 0,
-      addRefundInterest: typeof fyObj.addRefundInterest === "number" ? fyObj.addRefundInterest : undefined,
-      addDividendInclude: typeof fyObj.addDividendInclude === "number" ? fyObj.addDividendInclude : undefined,
-      addCarryoverDonation: typeof fyObj.addCarryoverDonation === "number" ? fyObj.addCarryoverDonation : undefined,
-      addCarryoverEntertainment: typeof fyObj.addCarryoverEntertainment === "number" ? fyObj.addCarryoverEntertainment : undefined,
-      addForeignExchangeIncomeUnrealized: typeof fyObj.addForeignExchangeIncomeUnrealized === "number" ? fyObj.addForeignExchangeIncomeUnrealized : undefined,
-      subCorpTax: typeof fyObj.subCorpTax === "number" ? fyObj.subCorpTax : undefined,
-      subFarmingSurtax: typeof fyObj.subFarmingSurtax === "number" ? fyObj.subFarmingSurtax : undefined,
-      subLocalIncomeTax: typeof fyObj.subLocalIncomeTax === "number" ? fyObj.subLocalIncomeTax : undefined,
-      subPenaltyTax: typeof fyObj.subPenaltyTax === "number" ? fyObj.subPenaltyTax : undefined,
-      subWithholdingPenalty: typeof fyObj.subWithholdingPenalty === "number" ? fyObj.subWithholdingPenalty : undefined,
-      subEntertainmentExcess: typeof fyObj.subEntertainmentExcess === "number" ? fyObj.subEntertainmentExcess : undefined,
-      subDonationExcess: typeof fyObj.subDonationExcess === "number" ? fyObj.subDonationExcess : undefined,
-      subUnrelatedExpense: typeof fyObj.subUnrelatedExpense === "number" ? fyObj.subUnrelatedExpense : undefined,
-      subUnrelatedInterest: typeof fyObj.subUnrelatedInterest === "number" ? fyObj.subUnrelatedInterest : undefined,
-      subDepreciationShortfall: typeof fyObj.subDepreciationShortfall === "number" ? fyObj.subDepreciationShortfall : undefined,
-      subForeignExchangeLossUnrealized: typeof fyObj.subForeignExchangeLossUnrealized === "number" ? fyObj.subForeignExchangeLossUnrealized : undefined,
+      fiscalYearEndDate,
+      fiscalYearStartDate: restoreDate(fyObj.fiscalYearStartDate) ?? undefined,
+      taxableIncome: num("taxableIncome") ?? 0,
+      addRefundInterest: num("addRefundInterest"),
+      addLossFromDividend: num("addLossFromDividend"),
+      addCarriedDonation: num("addCarriedDonation"),
+      addCarriedCarPayment: num("addCarriedCarPayment"),
+      addForexValuationGain: num("addForexValuationGain"),
+      addOtherByOrdinance: num("addOtherByOrdinance"),
+      subCorporateTax: num("subCorporateTax"),
+      subAdditionalTaxes: num("subAdditionalTaxes"),
+      subFines: num("subFines"),
+      subCompulsoryPublicCharges: num("subCompulsoryPublicCharges"),
+      subPunitiveDamages: num("subPunitiveDamages"),
+      subWithholdingPenalty: num("subWithholdingPenalty"),
+      subExcessiveExpenses: num("subExcessiveExpenses"),
+      subDonationExcess: num("subDonationExcess"),
+      subEntertainmentExcess: num("subEntertainmentExcess"),
+      subNonBusinessExpenses: num("subNonBusinessExpenses"),
+      subNonBusinessCarExpenses: num("subNonBusinessCarExpenses"),
+      subInterestPayment: num("subInterestPayment"),
+      subDepreciationShortage: num("subDepreciationShortage"),
+      subForexValuationLoss: num("subForexValuationLoss"),
+      subOtherByOrdinance: num("subOtherByOrdinance"),
     };
   });
   if (fiscalYears.some((fy) => fy === null)) return null;
@@ -254,8 +267,8 @@ function restoreUnlistedStockInput(raw: UnlistedStockV2Lite): UnlistedStockValua
             ? false
             : undefined,
     netAssetOnlyReason: raw.netAssetOnlyReason as UnlistedStockValuationInput["netAssetOnlyReason"],
-    fiscalYears: fiscalYears as unknown as UnlistedStockValuationInput["fiscalYears"],
-    capitalChanges: capitalChanges as unknown as UnlistedStockValuationInput["capitalChanges"],
+    fiscalYears: fiscalYears as UnlistedStockValuationInput["fiscalYears"],
+    capitalChanges: capitalChanges as UnlistedStockValuationInput["capitalChanges"],
     netAssetValueRaw: (raw.netAssetValueRaw as UnlistedStockValuationInput["netAssetValueRaw"]) ?? {
       bsTotalAssets: 0, assetValuationDelta: 0, corpTaxReservedAmount: 0, paidInCapitalIncrease: 0,
       otherEarnedRights: 0, prepaidExpenses: 0, preGiftRetainedEarnings: 0,
