@@ -30,6 +30,8 @@ import type {
 function baseInput(over: Partial<FamilyBusinessPostMgmtInput> = {}): FamilyBusinessPostMgmtInput {
   return {
     appliedDeduction: 10_000_000_000, // 100억
+    // 재계산 base 50억 (>30억 → 최고구간 50%). 공제액 전액 추징 시 marginal = 공제액 × 0.5. C-2.
+    baseTaxableAmount: 5_000_000_000,
     deathDate: "2025-07-01",
     filingDeadline: "2026-01-31",
     ofzExemptionActive: false,
@@ -66,7 +68,8 @@ describe("PHF-PERIOD — 5년 가드", () => {
       violations: [{ date: "2027-06-01", type: "business_cessation", cessationSubType: "business_pause" }],
     }));
     expect(r.perViolationDetail[0].exempted).toBe(false);
-    expect(r.totalRecapture).toBe(10_000_000_000); // 100% 추징
+    // 재계산 증가분: 산입액 100억 × 최고구간(base 50억>30억 → 50%) = 50억 (C-2)
+    expect(r.totalRecapture).toBe(5_000_000_000);
   });
 });
 
@@ -98,7 +101,7 @@ describe("PHF-OFZ — OFZ 사후관리 면제", () => {
       violations: [{ date: "2026-06-01", type: "business_cessation", cessationSubType: "business_pause" }],
     }));
     expect(r.perViolationDetail[0].exempted).toBe(false);
-    expect(r.totalRecapture).toBe(10_000_000_000);
+    expect(r.totalRecapture).toBe(5_000_000_000); // 산입액 100억 × 50% (C-2)
   });
 
   it("PHF-OFZ-4: ofz + asset_disposal → 면제 불성립", () => {
@@ -139,7 +142,7 @@ describe("PHF-JUSTIFY — 정당사유", () => {
 // ============================================================
 describe("PHF-MULTI — 재차 부과 §15⑩ 단서", () => {
   it("PHF-MULTI-1: priorDisposedExcluded가 분자·분모에서 차감되어 추징 감소", () => {
-    // priorDisposedExcluded 20억: ratio=(60억-20억)/(100억-20억)=40/80=0.5 → 추징 50억
+    // priorDisposedExcluded 20억: ratio=(60억-20억)/(100억-20억)=40/80=0.5 → 산입액 50억 → 증가분 50억×50%=25억
     const withPrior = calcFamilyBusinessPostMgmt(baseInput({
       violations: [{
         date: "2026-06-01", type: "asset_disposal",
@@ -147,16 +150,16 @@ describe("PHF-MULTI — 재차 부과 §15⑩ 단서", () => {
         priorDisposedExcluded: 2_000_000_000,
       }],
     }));
-    expect(withPrior.totalRecapture).toBe(5_000_000_000);
+    expect(withPrior.totalRecapture).toBe(2_500_000_000);
 
-    // 단서 미적용: ratio=60/100=0.6 → 추징 60억
+    // 단서 미적용: ratio=60/100=0.6 → 산입액 60억 → 증가분 60억×50%=30억
     const noPrior = calcFamilyBusinessPostMgmt(baseInput({
       violations: [{
         date: "2026-06-01", type: "asset_disposal",
         disposedAssetValue: 6_000_000_000, totalBusinessAssetValue: 10_000_000_000,
       }],
     }));
-    expect(noPrior.totalRecapture).toBe(6_000_000_000);
+    expect(noPrior.totalRecapture).toBe(3_000_000_000);
   });
 });
 
@@ -164,14 +167,15 @@ describe("PHF-MULTI — 재차 부과 §15⑩ 단서", () => {
 // PHF-CGT-NET — 양도세 환원 공제 (§18의2⑩)
 // ============================================================
 describe("PHF-CGT-NET — 양도세 환원 공제", () => {
-  it("PHF-CGT-NET-1: 추징 100억 + 환원 50억 → netRecapture 50억", () => {
+  it("PHF-CGT-NET-1: 추징(증가분) 50억 + 환원 20억 → netRecapture 30억", () => {
     const r = calcFamilyBusinessPostMgmt(baseInput({
       violations: [{ date: "2026-06-01", type: "share_decrease" }],
-      cgtCreditAmount: 5_000_000_000,
+      cgtCreditAmount: 2_000_000_000,
     }));
-    expect(r.totalRecapture).toBe(10_000_000_000);
-    expect(r.cgtCreditApplied).toBe(5_000_000_000);
-    expect(r.netRecapture).toBe(5_000_000_000);
+    // totalRecapture = 산입액 100억 × 50% = 50억. CGT는 산출세액(증가분)에서 차감(§18의2⑩).
+    expect(r.totalRecapture).toBe(5_000_000_000);
+    expect(r.cgtCreditApplied).toBe(2_000_000_000);
+    expect(r.netRecapture).toBe(3_000_000_000);
   });
 
   it("PHF-CGT-NET-2: 환원 > 추징 → netRecapture 0(음수 가드), 적용액=추징 min", () => {
@@ -180,8 +184,9 @@ describe("PHF-CGT-NET — 양도세 환원 공제", () => {
       violations: [{ date: "2026-06-01", type: "share_decrease" }],
       cgtCreditAmount: 10_000_000_000,
     }));
-    expect(r.totalRecapture).toBe(500_000_000);
-    expect(r.cgtCreditApplied).toBe(500_000_000);
+    // 산입액 5억 × 50% = 2.5억. CGT 100억 > 추징 → 적용액=추징 min, netRecapture 0.
+    expect(r.totalRecapture).toBe(250_000_000);
+    expect(r.cgtCreditApplied).toBe(250_000_000);
     expect(r.netRecapture).toBe(0);
   });
 });
@@ -198,9 +203,48 @@ describe("PHF-INTEREST — 이자상당액", () => {
       violations: [{ date: "2026-01-31", type: "business_cessation", cessationSubType: "business_pause" }],
       annualInterestRate: 0.022,
     }));
-    // 추징 10억(100%), 이자 = floor(10억 × 30 × 0.022/365) = 1,808,219
-    expect(r.perViolationDetail[0].recapture).toBe(1_000_000_000);
-    expect(r.totalInterest).toBe(1_808_219);
+    // 산입액 10억 × 최고구간 50% = 증가분(추징) 5억. 이자 = floor(5억 × 30 × 0.022/365) = 904,109 (기준세액=증가분·CGT 차감 전)
+    expect(r.perViolationDetail[0].recapture).toBe(500_000_000);
+    expect(r.totalInterest).toBe(904_109);
+  });
+});
+
+// ============================================================
+// FB-C2 — 과세가액 산입 재계산 (§18의2⑤ 추징≠공제액, C-2 회귀)
+// ============================================================
+describe("FB-C2 — 과세가액 산입 재계산 (§18의2⑤)", () => {
+  it("FB-C2-REPRO: 공제 300억·base 300억 + 지분감소 → 추징 150억(재계산 증가분) (버그 300억 아님)", () => {
+    const r = calcFamilyBusinessPostMgmt({
+      appliedDeduction: 30_000_000_000,
+      baseTaxableAmount: 30_000_000_000,
+      deathDate: "2025-01-01",
+      filingDeadline: "2025-07-31",
+      ofzExemptionActive: false,
+      violations: [{ date: "2028-05-25", type: "share_decrease" }],
+      annualInterestRate: 0.022,
+    });
+    // 추징 = tax(600억) − tax(300억) = 29,540,000,000 − 14,540,000,000 = 15,000,000,000 (공제액 300억이 아님)
+    expect(r.totalAddback).toBe(30_000_000_000);
+    expect(r.totalRecapture).toBe(15_000_000_000);
+    expect(r.totalInterest).toBe(930_328_767); // floor(15,000,000,000 × 1029일 × 0.022/365)
+    expect(r.netRecapture).toBe(15_000_000_000);
+    const amend = buildAmendmentReturnData(r, "2028-05-25");
+    expect(amend.netPayable).toBe(15_930_328_767); // netRecapture + 이자 (버그값 31,860,657,534 대비)
+  });
+
+  it("FB-C2-MARGINAL-LOW: base 0 + 공제 5억 → 추징 9천만(≠산입액 5억, 누진 마진 의존)", () => {
+    const r = calcFamilyBusinessPostMgmt({
+      appliedDeduction: 500_000_000,
+      baseTaxableAmount: 0,
+      deathDate: "2025-01-01",
+      filingDeadline: "2025-07-31",
+      ofzExemptionActive: false,
+      violations: [{ date: "2027-01-01", type: "share_decrease" }],
+      annualInterestRate: 0.022,
+    });
+    // tax(5억) = 5억×20% − 1천만 = 90,000,000. 추징 ≠ 산입액(5억) — base 의존 증명.
+    expect(r.totalAddback).toBe(500_000_000);
+    expect(r.totalRecapture).toBe(90_000_000);
   });
 });
 
@@ -302,9 +346,11 @@ describe("PHF-META — 사후관리 메타 빌더", () => {
       familyBusinessDetail: detail,
       estateItems,
       deathDate: "2026-01-15",
+      baseTaxableAmount: 8_000_000_000,
     });
     expect(meta).toBeDefined();
     expect(meta?.appliedDeduction).toBe(20_000_000_000);
+    expect(meta?.baseTaxableAmount).toBe(8_000_000_000);
     expect(meta?.deathDate).toBe("2026-01-15");
     expect(meta?.ofzExemptionActive).toBe(true);
     expect(meta?.usedDirectInput).toBe(false);
@@ -329,6 +375,7 @@ describe("PHF-META — 사후관리 메타 빌더", () => {
       familyBusinessDetail: detail,
       estateItems: itemsNoMarket,
       deathDate: "2026-01-15",
+      baseTaxableAmount: 8_000_000_000,
     });
     // 현재(버그): [{value:0},{value:0}]. 수정 후: 감정가·기준시가 평가액.
     expect(meta?.inheritedAssets[0].value).toBe(5_000_000_000);
@@ -341,6 +388,7 @@ describe("PHF-META — 사후관리 메타 빌더", () => {
       familyBusinessDetail: detail,
       estateItems,
       deathDate: "2026-01-15",
+      baseTaxableAmount: 8_000_000_000,
     })).toBeUndefined();
   });
 
@@ -350,6 +398,7 @@ describe("PHF-META — 사후관리 메타 빌더", () => {
       familyBusinessDetail: { ...detail, usedDirectInput: true },
       estateItems: [],
       deathDate: "2026-01-15",
+      baseTaxableAmount: 8_000_000_000,
     });
     expect(meta?.usedDirectInput).toBe(true);
   });

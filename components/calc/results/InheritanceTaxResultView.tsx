@@ -443,7 +443,7 @@ export function InheritanceTaxResultView({
             공제받은 금액이 추징되고 이자상당액이 가산됩니다. 위반일 말일부터 6개월 이내 신고·납부 의무.
           </p>
           <a
-            href={`/calc/family-business-postmgmt?originalDeduction=${result.familyBusinessPostMgmtMeta.appliedDeduction}&deathDate=${result.familyBusinessPostMgmtMeta.deathDate}&filingDeadline=${result.familyBusinessPostMgmtMeta.filingDeadline}${result.familyBusinessPostMgmtMeta.ofzExemptionActive ? "&ofz=1" : ""}${result.familyBusinessPostMgmtMeta.usedDirectInput ? "&direct=1" : ""}`}
+            href={`/calc/family-business-postmgmt?originalDeduction=${result.familyBusinessPostMgmtMeta.appliedDeduction}&baseTaxable=${result.familyBusinessPostMgmtMeta.baseTaxableAmount}&deathDate=${result.familyBusinessPostMgmtMeta.deathDate}&filingDeadline=${result.familyBusinessPostMgmtMeta.filingDeadline}${result.familyBusinessPostMgmtMeta.ofzExemptionActive ? "&ofz=1" : ""}${result.familyBusinessPostMgmtMeta.usedDirectInput ? "&direct=1" : ""}`}
             className="inline-block text-xs font-medium text-blue-700 dark:text-blue-300 underline hover:text-blue-900 dark:hover:text-blue-100"
           >
             → 가업 사후관리 추징 시뮬레이터 진입
