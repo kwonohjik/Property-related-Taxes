@@ -104,6 +104,13 @@ export const nonBusinessLandRawSchema = z.object({
   // 공익수용 단일 소스 (서버 isExpr·고시일 fallback) — z.object strip 방지
   transferCause: z.enum(["general", "public_expropriation"]).optional(),
   expropriationNoticeDate: z.string().optional(),
+  // ⑫ §164⑨ 1호 환산 min[] 특례 3후보 — **컴패니언 자산 지원**(계획 Q5).
+  // 누락 시 z.object가 조용히 strip → `buildCompanionEngineInputs`가 undefined를 실어 특례 미발동.
+  // 게이트는 엔진이 판정(적격 자산·환산·수용·2009.02.04·후보>0).
+  standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
+  transferArea: z.number().nonnegative().optional(),
+  compensationPerSqm: z.number().int().nonnegative().optional(),
+  compensationBasisStdPrice: z.number().int().nonnegative().optional(),
   // §168의14③3호나목 취득일 소급 — 상속=피상속인 취득일 / 이월과세=증여자 취득일 (strip 방지)
   acquisitionCause: z.string().optional(),
   decedentAcquisitionDate: z.string().optional(),
