@@ -104,6 +104,9 @@ interface CompanionRawAsset {
   transferArea?: number;
   compensationPerSqm?: number;
   compensationBasisStdPrice?: number;
+  // §164⑨2호 공매·경락 특례 (P4 — 컴패니언 지원, 1호와 대칭)
+  isAuctionTransfer?: boolean;
+  auctionPrice?: number;
   residencePeriodMonths?: number;
   isUnregistered?: boolean;
   isNonBusinessLand?: boolean;
@@ -213,6 +216,9 @@ export function buildCompanionEngineInputs(
     transferArea: c.transferArea,
     compensationPerSqm: c.compensationPerSqm,
     compensationBasisStdPrice: c.compensationBasisStdPrice,
+    // §164⑨2호 공매·경락 (P4 — 컴패니언). 엔진이 게이트 판정 — 여기선 원값 전달(침묵 strip 방지).
+    isAuctionTransfer: c.isAuctionTransfer,
+    auctionPrice: c.auctionPrice,
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
     residencePeriodMonths: c.residencePeriodMonths ?? 0,
     isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,

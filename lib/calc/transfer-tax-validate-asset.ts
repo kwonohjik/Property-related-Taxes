@@ -15,6 +15,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateExprValuationAsset } from "./transfer-tax-validate-expropriation";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
+import { validateAuctionAsset } from "./transfer-tax-validate-expropriation";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
@@ -697,6 +698,10 @@ export function validateAssetEntry(
   // ⑧ §164⑨ 1호 공익수용 환산 min[] 특례 — 보상 2필드 필수 (별도 모듈, 800줄 정책)
   const exprError = validateExprValuationAsset(a, label, form.transferDate);
   if (exprError) return exprError;
+
+  // ⑧ §164⑨ 2호 공매·경락 특례 — 공매·경락가액 필수 + N3 배타 (P4)
+  const auctionError = validateAuctionAsset(a, label, form.transferDate);
+  if (auctionError) return auctionError;
 
   // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
   // 자동 안분 fallback 금지 원칙 준수 (부수토지/독립 나대지에 따라 세율 분기가 달라짐)

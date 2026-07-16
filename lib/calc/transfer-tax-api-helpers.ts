@@ -7,7 +7,10 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
-import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
+import {
+  isExprValuationEligibleAssetKind,
+  isAuctionEligibleAssetKind,
+} from "@/lib/tax-engine/expropriation-scope";
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 export { toEngineReductions } from "./transfer-tax-api-reductions";
@@ -556,6 +559,13 @@ export function buildAssetPayload(
           compensationBasisStdPrice: parseAmount(asset.compensationBasisStdPrice) || undefined,
         }
       : {}),
+    // §164⑨2호 공매·경락 (P4) — 컴패니언도 지원(1호와 대칭). 적격 자산(land·building)만 전송.
+    ...(isAuctionEligibleAssetKind(asset.assetKind)
+      ? {
+          isAuctionTransfer: asset.isAuctionTransfer || undefined,
+          auctionPrice: parseAmount(asset.auctionPrice) || undefined,
+        }
+      : {}),
     standardPriceAtTransfer:
       parseAmount(asset.standardPriceAtTransfer) > 0
         ? parseAmount(asset.standardPriceAtTransfer)
@@ -664,6 +674,15 @@ export function buildExpropriationInput(primary: AssetForm) {
     transferArea: parseFloat(primary.transferArea) || undefined,
     compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
     compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+    // §164⑨2호 공매·경락 (P4) — **적격 자산(land·building)일 때만** 전송(UI 노출 조건과 동일).
+    // ⚠️ 무게이트면 assetKind를 land→housing으로 바꿔도 stale isAuctionTransfer가 남아
+    //    housing(2호는 면적 게이트가 없음)에 침묵 발동한다. 여기서 원천 차단(코드리뷰 2026-07-16).
+    ...(isAuctionEligibleAssetKind(primary.assetKind)
+      ? {
+          isAuctionTransfer: primary.isAuctionTransfer || undefined,
+          auctionPrice: parseAmount(primary.auctionPrice) || undefined,
+        }
+      : {}),
   };
 }
 

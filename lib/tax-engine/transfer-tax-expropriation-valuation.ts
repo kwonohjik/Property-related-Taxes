@@ -129,3 +129,111 @@ export function applyExpropriationValuation(
     },
   };
 }
+
+// ============================================================
+// §164⑨ 2호 — 공매·경락 (총액 2후보). 1호와 배타(N3).
+// ============================================================
+
+/**
+ * §164⑨ 2호 산출근거 — Record로 노출(Map 금지, JSON 소실).
+ *
+ * 1호(`ExpropriationValuationDetail`)와 **다른 타입**: 2호는 총액 2후보라 원/㎡·면적 개념이 없다.
+ */
+export interface AuctionValuationDetail {
+  /** 양도당시 기준시가 총액 (법 §99①1호 가~라목 가액) */
+  standardTotal: number;
+  /** 그 공매 또는 경락가액 (낙찰 총액) */
+  auctionPrice: number;
+  /** 적용값 = min(기준시가 총액, 공매·경락가액) */
+  chosen: number;
+  /** 환산 분모(총액) = chosen */
+  denominator: number;
+}
+
+export interface AuctionValuationParams {
+  /** 자산 종류 — §164⑨은 법 §99①1호 가~라목만 대상(§99①2호 권리 제외). 필수(1호와 동일 이유). */
+  propertyType: TransferTaxInput["propertyType"];
+  useEstimatedAcquisition?: boolean;
+  /** §164⑨2호 대상(공매·경락). 1호(transferCause)와 배타. */
+  isAuctionTransfer?: boolean;
+  transferDate: Date;
+  /** 양도당시 기준시가 총액 (원) */
+  standardTotalAtTransfer?: number;
+  /** 공매·경락가액 (총액, 원) */
+  auctionPrice?: number;
+}
+
+/**
+ * §164⑨ 2호 공매·경락 특례 — 양도당시 기준시가 총액을 min(기준시가, 공매·경락가액)으로 낮춘다.
+ *
+ * 2호 유도: 후보가 "그 공매 또는 경락가액" **하나**뿐("중 적은 금액" 문언 없음) →
+ *   차액 = A − min(A, 공매경락)  ⇒  양도당시 기준시가 = min(A, 공매경락)  (2후보).
+ *
+ * 순수 함수 — 게이트 미충족 시 null(현행 총액 유지). 게이트는 1호와 동일(적격 자산·환산·2009.02.04)
+ * 하되 **`isAuctionTransfer`**로 진입(수용 아님). 1호와 배타는 호출부가 보장(exprVal 우선).
+ */
+export function applyAuctionValuation(
+  p: AuctionValuationParams,
+): { denominator: number; detail: AuctionValuationDetail } | null {
+  const standardTotal = p.standardTotalAtTransfer ?? 0;
+  const auction = p.auctionPrice ?? 0;
+
+  if (
+    !isExprValuationEligiblePropertyType(p.propertyType) ||
+    !p.useEstimatedAcquisition ||
+    !p.isAuctionTransfer ||
+    p.transferDate < MIN_TRANSFER_DATE ||
+    standardTotal <= 0 ||
+    auction <= 0
+  ) {
+    return null;
+  }
+
+  const chosen = Math.min(standardTotal, auction);
+  return {
+    denominator: chosen,
+    detail: { standardTotal, auctionPrice: auction, chosen, denominator: chosen },
+  };
+}
+
+// ============================================================
+// 통합 진입점 — 환산 분모(양도시 기준시가) 확정 (1호·2호 배타)
+// ============================================================
+
+/**
+ * 환산취득가 분모(양도당시 기준시가)를 §164⑨ 특례로 확정한다 — 단건 경로 공용.
+ *
+ * **1호(수용) 우선, 없으면 2호(공매·경락), 없으면 현행 총액**(N3 배타를 여기서 보장).
+ * 미충족 시 `input.standardPriceAtTransfer`(현행) 반환 → 회귀 0.
+ */
+export function resolveConversionDenominatorAtTransfer(input: TransferTaxInput): {
+  denominator: number;
+  expropriationValuationDetail?: ExpropriationValuationDetail;
+  auctionValuationDetail?: AuctionValuationDetail;
+} {
+  const exprVal = applyExpropriationValuation({
+    propertyType: input.propertyType,
+    useEstimatedAcquisition: input.useEstimatedAcquisition,
+    transferCause: input.transferCause,
+    transferDate: input.transferDate,
+    standardPricePerSqmAtTransfer: input.standardPricePerSqmAtTransfer,
+    transferArea: input.transferArea,
+    compensationPerSqm: input.compensationPerSqm,
+    compensationBasisStdPrice: input.compensationBasisStdPrice,
+  });
+  const auctionVal = exprVal
+    ? null
+    : applyAuctionValuation({
+        propertyType: input.propertyType,
+        useEstimatedAcquisition: input.useEstimatedAcquisition,
+        isAuctionTransfer: input.isAuctionTransfer,
+        transferDate: input.transferDate,
+        standardTotalAtTransfer: input.standardPriceAtTransfer,
+        auctionPrice: input.auctionPrice,
+      });
+  return {
+    denominator: exprVal?.denominator ?? auctionVal?.denominator ?? (input.standardPriceAtTransfer ?? 0),
+    expropriationValuationDetail: exprVal?.detail,
+    auctionValuationDetail: auctionVal?.detail,
+  };
+}
