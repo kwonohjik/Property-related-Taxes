@@ -246,11 +246,9 @@ export function CompanionSaleModeBlock(props: BlockProps) {
         value={props.actualSalePrice}
         onChange={props.onActualSalePriceChange}
         required
-        hint={
-          props.singleMode
-            ? "실제 매매계약서상 거래금액"
-            : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"
-        }
+        // 단건 모드는 힌트 없음 — "양도가액" 라벨만으로 자명(2026-07-16).
+        // 다건 모드는 자산별 가액이라는 구분이 필요해 §166⑥ 근거 힌트를 유지한다.
+        hint={props.singleMode ? undefined : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"}
         data-testid="companion-actual-sale-price"
       />
     );

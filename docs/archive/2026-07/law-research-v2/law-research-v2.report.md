@@ -29,11 +29,11 @@
 │  Completion Rate: 100% (Critical), 97% 전체 │
 ├─────────────────────────────────────────────┤
 │  ✅ Complete:     14 / 15 FR 항목 (FR-13만 Low) │
-│  ✅ SC Met:       9 / 10 기준 (90%)            │
+│  ✅ SC Met:       10 / 10 기준 (100%) *        │
 │  ✅ Tests:        1222 / 1222 통과 (100%)      │
 │  ✅ Build:        성공 (29 static pages)       │
 │  ✅ Lint:         0 errors                      │
-│  🟡 Pending:      CLAUDE.md 문서 갱신 (Low)     │
+│  ✅ Pending 없음  (* SC-10은 후속 세션 완료)    │
 └─────────────────────────────────────────────┘
 ```
 
@@ -61,9 +61,9 @@
 | SC-7 | 기존 `.legal-cache` 유지 + v2 병행 | ✅ Met | cacheKey suffix에 sort/ancYd 포함 (`client.ts:200-204`). 기존 파일 무변경 — 실측 18개 캐시 파일 정상 |
 | SC-8 | 신규 모듈 단위 테스트 통과 | ✅ Met | `__tests__/korean-law/ref-parser.test.ts` 14개 + `query-router.test.ts` 26개 = **40개 신규 테스트**. 모두 통과 |
 | SC-9 | `npm run lint/build/test` 통과 | ✅ Met | lint: 0 errors · build: success · test: 1222/1222 (46 파일) |
-| SC-10 | CLAUDE.md 법령 리서치 섹션 갱신 | ⚠ Partial | 기존 `## 법령 리서치 (/law)` 섹션 존재. v2 신규 기능(Query Router, 구조화 배열, 시나리오 8종) 추가 설명은 다음 세션에서 반영 예정 |
+| SC-10 | CLAUDE.md 법령 리서치 섹션 갱신 | ✅ Met | `## 법령 리서치 (/law)` 섹션에 v2 신규 기능 3종 모두 기재 — Query Router(`router/query-router.ts` 라우팅 우선순위 포함)·구조화 참조조문(`parsers/ref-parser.ts` `LawRef[]`)·시나리오 8종(`scenarios/`). 후속 세션에서 반영 완료(2026-07-16 archive 시 확인) |
 
-**Success Rate**: **9/10 (90%)** — Critical/Important 모두 충족, SC-10만 Low 우선순위로 보류
+**Success Rate**: **10/10 (100%)** — 전 기준 충족. SC-10은 report 작성 시점(2026-04-19)에 ⚠ Partial이었으나 후속 세션에서 CLAUDE.md 갱신이 완료되어 archive 시점에 Met으로 정정
 
 ---
 
