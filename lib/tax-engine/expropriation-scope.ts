@@ -41,8 +41,12 @@ export const EXPR_VALUATION_MIN_TRANSFER_DATE = "2009-02-04";
  * 폼에 대응이 없는 파생 값은 다음과 같이 취급한다:
  *   - `mixed-use-house`(겸용) — 나+라목 복합. **미포함** — 겸용 경로는 자체 환산 산식을 쓰며
  *     특례 배선 자체가 안 돼 있다(계획 D8/P7). 적격으로 표시하면 "게이트는 열렸는데 세액은 그대로"가 된다.
- *   - `redevelopment_apt` — 라목(주택)인지 2호가목(권리)인지 **미확정**(계획 U3). 확정 전 **미포함**
- *     (법 근거 없이 적용하지 않는 보수적 선택. 단 현재 수용 UI에 미노출이라 도달 불가 — 계획 BR-3).
+ *   - `redevelopment_apt`(조합원입주권) — **§164⑨ 미대상 확정**(계획 U3, KoreanLaw MST 280405·286211).
+ *     조합원입주권은 §94①2호가목/§99①2호가목 "부동산을 취득할 수 있는 권리"이고(§88 9호·관리처분인가
+ *     성질전환), §164⑨은 원문상 §99①1호 "가목부터 라목까지"(물건) 전용이라 2호(권리)에 준용 없음.
+ *     재개발 종전자산의 실제 수용은 관리처분 인가 **전** 일반 주택/토지 수용(§99①1호, P5·P6 기배선)으로
+ *     처리된다. ⇒ **여기·`SUPPORTED_ASSET_KINDS`에 추가하면 §164⑨ 오적용 — 절대 금지**.
+ *     회귀 방어: `__tests__/tax-engine/transfer/expropriation-redevelopment-not-applicable.anchor.test.ts`.
  *   - `general_building_unit` — `general-building-valuation.ts`가 만드는 **엔진 내부 서브카드**
  *     propertyType이라 자산-수준 게이트에 도달하지 않는다. **미포함**.
  */
