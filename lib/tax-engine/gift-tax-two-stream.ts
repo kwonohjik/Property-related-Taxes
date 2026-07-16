@@ -368,6 +368,9 @@ export function calcGiftTaxTwoStream(
     finalTax: ordinaryFinalTax,
     hasPriorGifts: priorAggregation.matchedPriorGifts.length > 0,
     filingCreditBase: creditResult.filingCreditBase,
+    // §69 신고세액공제율 — 미전달 시 별지 서식 라벨이 3% 고정(gift-filing-form-rows `?? 0.03`)이 되어
+    //   계산이 적용한 증여연도별 율(2017 7%·2018 5%)과 어긋난다 (메인 경로 gift-tax.ts:403과 동일 전달).
+    filingCreditRate: creditResult.filingCreditRate,
     foreignTaxCredit: creditResult.foreignTaxCredit,
     exemptTotal: exemptAmount,
     appraisalFeeTotal: appraisalFee.total,

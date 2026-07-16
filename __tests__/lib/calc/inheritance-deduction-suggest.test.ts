@@ -21,6 +21,7 @@ import type {
   Heir,
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { isStatutoryHeir } from "@/lib/calc/heir-allocation-summary";
 
 // ============================================================
 // 헬퍼
@@ -369,6 +370,60 @@ describe("suggestLegateeAmountNonHeir", () => {
     ];
     const r = suggestLegateeAmountNonHeir(items, heirs);
     expect(r.isApplicable).toBe(false);
+  });
+
+  it("C-1: 대습상속인 며느리(isHeir:false + substituteGroupId) 분배액은 상속외자 유증에서 제외", () => {
+    const heirs = [
+      heir({ id: "s", relation: "spouse" }),
+      heir({
+        id: "dil",
+        relation: "other",
+        isHeir: false,
+        substituteGroupId: "g1",
+        substituteForRelation: "child",
+        substituteRole: "spouse",
+      }),
+    ];
+    const items = [
+      asset({
+        id: "a1",
+        marketValue: 500_000_000,
+        heirAllocations: [
+          { heirId: "s", amount: 300_000_000 },
+          { heirId: "dil", amount: 200_000_000 },
+        ],
+      }),
+    ];
+    const r = suggestLegateeAmountNonHeir(items, heirs);
+    // 수정 전: 며느리 isHeir:false 잔재 → 비상속인 분류 → 200,000,000이 상속외자 유증으로 오집계
+    //   → §19 배우자 법정지분 numerator 축소 → 법 근거 없이 불리(과세) 프리필.
+    // 수정 후: 대습상속인 → 상속인 → 상속외자 0.
+    expect(r.value).toBe(0);
+    expect(r.isApplicable).toBe(false);
+  });
+});
+
+describe("isStatutoryHeir — 대습상속인 편입 단일진실 (C-1, isRealHeir 위임)", () => {
+  it("대습 며느리(isHeir:false + substituteGroupId) → true (isHeir:false 잔재 무시)", () => {
+    expect(
+      isStatutoryHeir(
+        heir({ id: "dil", relation: "other", isHeir: false, substituteGroupId: "g1" }),
+      ),
+    ).toBe(true);
+  });
+  it("일반 기타(isHeir:false, 대습 아님) → false (회귀: 비상속인 유지)", () => {
+    expect(isStatutoryHeir(heir({ id: "o", relation: "other", isHeir: false }))).toBe(
+      false,
+    );
+  });
+  it("수유자(legatee) → false", () => {
+    expect(isStatutoryHeir(heir({ id: "l", relation: "legatee" }))).toBe(false);
+  });
+  it("영리법인(corporate) → false", () => {
+    expect(isStatutoryHeir(heir({ id: "c", relation: "corporate" }))).toBe(false);
+  });
+  it("자녀(isHeir 미설정) → true (회귀)", () => {
+    expect(isStatutoryHeir(heir({ id: "ch", relation: "child" }))).toBe(true);
   });
 });
 

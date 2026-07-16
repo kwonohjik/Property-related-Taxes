@@ -16,6 +16,7 @@ import {
   HEIR_RELATION_LABELS,
   HEIR_RELATIONS,
 } from "@/components/calc/inheritance/heir-relation-meta";
+import { isRealHeir } from "@/lib/tax-engine/inheritance-legal-share";
 
 const SHAREHOLDER_RELATION_LABEL: Record<ShareholderInfo["relation"], string> = {
   heir: "상속인",
@@ -41,13 +42,13 @@ function generateShareholderId() {
 /**
  * 자연인 상속인 필터 — §3의2② 그룹1 대상.
  * HEIR_RELATIONS(5종) = corporate·legatee 이미 제외.
- * isHeir !== false 조건: false로 명시된 경우 제외(기본 undefined = 상속인).
+ * isRealHeir 위임 — 대습상속인(substituteGroupId)은 isHeir:false 잔재와 무관하게 편입(C-1).
  */
 function filterNaturalHeirs(heirs: Heir[]): Heir[] {
   return heirs.filter(
     (h) =>
       HEIR_RELATIONS.includes(h.relation as Parameters<typeof HEIR_RELATIONS.includes>[0]) &&
-      h.isHeir !== false,
+      isRealHeir(h),
   );
 }
 
