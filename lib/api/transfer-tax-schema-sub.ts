@@ -111,6 +111,9 @@ export const nonBusinessLandRawSchema = z.object({
   transferArea: z.number().nonnegative().optional(),
   compensationPerSqm: z.number().int().nonnegative().optional(),
   compensationBasisStdPrice: z.number().int().nonnegative().optional(),
+  // ⑫ §164⑨2호 공매·경락 특례 — 컴패니언 지원(P4, 1호와 대칭). 누락 시 침묵 strip.
+  isAuctionTransfer: z.boolean().optional(),
+  auctionPrice: z.number().int().nonnegative().optional(),
   // §168의14③3호나목 취득일 소급 — 상속=피상속인 취득일 / 이월과세=증여자 취득일 (strip 방지)
   acquisitionCause: z.string().optional(),
   decedentAcquisitionDate: z.string().optional(),

@@ -406,7 +406,16 @@ auctionPrice?: string;         // 그 공매 또는 경락가액 (총액, 원)
 **2호의 시점 게이트**: 2호 후보 구조는 **1996.1.1.부터 불변**(§9-2). 2009.02.04 게이트가 제한하는 것은
 **대상 범위**다. 토지 공매는 1996년부터 법령상 대상이나, **P4도 2009.02.04 게이트를 적용**한다(X3 경계 유지).
 
-### 4-5. result 타입 재설계 (rev.6 신규 — D9 선행)
+### 4-5. result 타입 재설계 — ⚠️ **rev.12 폐기(obsolete)**: 별도 트랙 채택
+
+> **Do 환류(2026-07-16)**: 아래 discriminated-union 재설계(`ExprValuationBasis`·`ExprValuationCandidate`·
+> `ExpropriationValuationUnit`)는 **구현하지 않았다**. 1호(수용)가 P2·P3·D16-CB·D16-GB에서 이미 단순한
+> `{perSqmCandidates, chosenPerSqm, area, denominator}` 형태로 **배포 완료**됐기 때문 — 지금 재설계하면
+> 배포된 1호 코드(land·CB·GB·다필지)를 전부 깨뜨린다. ⇒ **P4는 2호 전용 별도 타입 `AuctionValuationDetail`
+> `{standardTotal, auctionPrice, chosen, denominator}`**를 추가하고 1호는 무손상으로 둔다(Simplicity First).
+> 1호·2호 배타는 `resolveConversionDenominatorAtTransfer`(엔진)가 보장(1호 우선). 아래는 참고용 이력.
+
+#### (참고 이력) 4-5. result 타입 재설계 (rev.6 신규 — D9 선행)
 
 현행 `perSqmCandidates`/`chosenPerSqm`/`area` 3필드는 (a)총액 트랙 (b)후보 수 가변(1호 3/2호 2)
 (c)필지별 (d)토지·건물 분리를 **동시에 담지 못한다**.
@@ -557,7 +566,7 @@ override(`applyExpropriationValuation` 재사용). 안분(`allocateBundledTransf
 > 빠지고 있었다. 그 조건만 적격 판정으로 바꾸면 **중복 필드 없이** store에 저장된다.
 > 계획의 "신규 위젯 불요"는 맞았으나 **자리가 틀렸다**.
 | PR#3+ | **P3b** | ⏭️ **별건 분리**(다자산 `transfer-tax-aggregate` 경로 검증 필요 — `buildAssetPayload`에 특례 필드 0건 실측) — **Q5 컴패니언 지원** — ⑫ `schema-sub.ts:105` 필드 추가 + `buildExpropriationInput` 호출부를 컴패니언까지 확장(UI는 이미 렌더됨) | 과다 해소 | P3 |
-| PR#3+ | **P4** | **D5** 공매·경락 — **신규 `AuctionBlock.tsx`**(3지선다 형제) + 2필드 + 배타(N3) + `selectMode` 3분기 보존 | 과다 해소 | P3 |
+| **완료** | **P4** | ✅ **D5 공매·경락 배선(land·building, 단건+컴패니언)** — `applyAuctionValuation`(총액 2후보) + `resolveConversionDenominatorAtTransfer`(1호·2호 배타 통합) + 신규 `AuctionBlock.tsx`(형제) + `isAuctionTransfer`·`auctionPrice` 2필드 + N3 배타(엔진·validate·UI 3층) + `AuctionValuationCard` + 컴패니언 배선(`buildAssetPayload`·`bundled-split-helpers`·컴패니언 Zod, primary assetKind 게이트). 환산취득가 +166,666,666원 실증. 주택·상가·GB·다필지 2호는 후속(`AUCTION_TRACK_ASSET_KINDS`) | 해소 | ✅ |
 | PR#3+ | **P5** | **라목(주택) 총액 트랙** + D13 보상총액 plumbing(총액 트랙 전용 — §4-3) | 과다 해소 | P3 |
 | PR#3+ | **P6** | **D6·D15** split(B-2) + **PHD 배선** — PHD가 split보다 먼저 분기하므로 **동시 처리** | 과다 해소 | P3·P5 |
 | **완료** | **D16-CB** | ✅ **상가 배선 — `runCommercialBuildingStep` 내부에 `applyExpropriationValuation`(양도시 호별총액 min[]) + `PER_SQM_TRACK` 재추가 + ① 참조행 CB 분기. 86,784,934원 실증** | 해소 | — |

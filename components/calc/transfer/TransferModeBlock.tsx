@@ -24,6 +24,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { BurdenedGiftBlock } from "./BurdenedGiftBlock";
 import { ExpropriationBlock } from "./ExpropriationBlock";
+import { AuctionBlock } from "./AuctionBlock";
 import { getStandaloneDefault } from "./UnifiedReductionPanel-defaults";
 
 interface Props {
@@ -64,6 +65,8 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
       onChange({
         transferType: "regular",
         transferCause: "public_expropriation",
+        // §164⑨ N3 배타 — 수용(1호) 전환 시 공매·경락(2호) 정리
+        isAuctionTransfer: false,
         // #1 NBL 프리필 — 토지만 (NBL = 비사업용 '토지'; 자동 판정 활성 + 수용 의제, Step4서 override 가능)
         ...(asset.assetKind === "land"
           ? { nblUseDetailedJudgment: true, nblExemptPublicExpropriation: true }
@@ -135,6 +138,11 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
       {/* 공익수용·협의매수 상세 펼침 */}
       {isExpropriation && (
         <ExpropriationBlock asset={asset} onChange={onChange} transferDate={transferDate} />
+      )}
+
+      {/* §164⑨2호 공매·경락 (P4) — 수용(1호)과 배타(N3)라 수용 미선택 시에만 노출 */}
+      {!isExpropriation && (
+        <AuctionBlock asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
     </div>
   );

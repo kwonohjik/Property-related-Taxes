@@ -19,6 +19,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
   isExprValuationEligibleAssetKind,
+  isAuctionEligibleAssetKind,
   EXPR_VALUATION_MIN_TRANSFER_DATE as MIN_TRANSFER_DATE,
 } from "@/lib/tax-engine/expropriation-scope";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-asset";
@@ -77,5 +78,27 @@ export function validateExprValuationParcel(
     return `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`;
   if (!parseAmount(parcel.compensationBasisStdPrice))
     return `${label}: 공익수용 환산 특례 — 보상산정 기초 기준시가(원/㎡)를 입력하세요.`;
+  return null;
+}
+
+/**
+ * §164⑨2호 공매·경락 특례 검증 (P4).
+ * N3 배타(1호와 동시 불가) + 게이트 충족 시 공매·경락가액 필수.
+ */
+export function validateAuctionAsset(
+  asset: AssetForm,
+  label: string,
+  formTransferDate: string | undefined,
+): string | null {
+  if (!asset.isAuctionTransfer) return null;
+  // N3 배타 — 1호(수용)와 동시 불가(§164⑨ "어느 하나"). 상태 무관 우선 차단.
+  if (asset.transferCause === "public_expropriation")
+    return `${label}: 공익수용(1호)과 공매·경락(2호) 특례는 동시에 적용할 수 없습니다(§164⑨ "어느 하나").`;
+  if (!isAuctionEligibleAssetKind(asset.assetKind)) return null;
+  if (!asset.useEstimatedAcquisition) return null;
+  if (!formTransferDate || formTransferDate < MIN_TRANSFER_DATE) return null;
+
+  if (!parseAmount(asset.auctionPrice))
+    return `${label}: 공매·경락 특례 — 공매·경락가액을 입력하세요.`;
   return null;
 }

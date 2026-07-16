@@ -101,7 +101,7 @@ export interface TransferTaxInput {
   /** 양도시 기준시가 (환산취득가 사용 시 필수) */
   standardPriceAtTransfer?: number;
   // ── 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — 모두 optional, 미제공 시 현행 ──
-  /** 양도원인 — "public_expropriation" 시 특례 게이트 후보. (§164⑨2호 공매·경락은 미구현 — 계획 P4) */
+  /** 양도원인 — "public_expropriation" 시 §164⑨1호 특례 게이트 후보. 2호(공매·경락)는 아래 isAuctionTransfer. */
   transferCause?: "general" | "public_expropriation";
   /** 양도시 기준시가 (원/㎡) — min[] 첫 후보 */
   standardPricePerSqmAtTransfer?: number;
@@ -111,6 +111,11 @@ export interface TransferTaxInput {
   compensationPerSqm?: number;
   /** 보상산정 기초 기준시가 (원/㎡) — min[] 후보 */
   compensationBasisStdPrice?: number;
+  // ── §164⑨ 2호 공매·경락 특례 (계획 P4) — 1호와 배타(N3). 총액 2후보 ──
+  /** §164⑨2호 대상(국세징수법 공매·민사집행법 강제경매·저당권실행 경매). transferCause와 배타. */
+  isAuctionTransfer?: boolean;
+  /** 그 공매 또는 경락가액 (총액, 원) — min(양도당시 기준시가 총액, 공매·경락가액) 후보 */
+  auctionPrice?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
   /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */

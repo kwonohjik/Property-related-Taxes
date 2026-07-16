@@ -135,3 +135,21 @@ export function isExprValuationEligiblePropertyType(
 export function isExprValuationLegallyEligibleAssetKind(assetKind: string | undefined): boolean {
   return (ELIGIBLE_PROPERTY_TYPES as readonly string[]).includes(assetKind ?? "");
 }
+
+/**
+ * **§164⑨ 2호(공매·경락) UI 노출 자산** — 계획 P4.
+ *
+ * 2호는 **총액 2후보**라 자산종류 무관 엔진은 대응하나(가~라목), **단건 경로(`calcTransferGain`)로
+ * 도달하는 자산만** UI에 노출한다. `land`·`building`이 확실히 도달(계획 C-09/C-10).
+ *   - **주택(라목)**: 엔진은 대응(총액)하나 UI/validate는 P5(주택 총액 트랙)와 함께 노출 — 현재 제외.
+ *   - **상가·일반건물**: 전용 환산 경로가 `calcTransferGain`을 우회 → 2호 총액 배선은 각 경로 후속.
+ *   - **다필지**: 필지별 총액 배선 후속.
+ */
+const AUCTION_TRACK_ASSET_KINDS = ["land", "building"] as const;
+
+/**
+ * §164⑨2호 UI 노출 판정(`AssetForm.assetKind` 축). 공매·경락 필드·`AuctionBlock` 노출 조건.
+ */
+export function isAuctionEligibleAssetKind(assetKind: string | undefined): boolean {
+  return (AUCTION_TRACK_ASSET_KINDS as readonly string[]).includes(assetKind ?? "");
+}

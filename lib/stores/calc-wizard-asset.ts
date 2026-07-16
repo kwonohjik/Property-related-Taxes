@@ -218,6 +218,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   compensationPerSqm: string;
   /** 보상액 산정의 기초가 되는 기준시가 (원/㎡) — 위 min[]의 후보③ */
   compensationBasisStdPrice: string;
+  /**
+   * §164⑨2호 공매·경락 대상 여부 (계획 P4). transferCause(1호 수용)와 **배타(N3)**.
+   * ON 시 auctionPrice로 min(양도당시 기준시가 총액, 공매·경락가액). land·building UI 노출.
+   */
+  isAuctionTransfer: boolean;
+  /** 그 공매 또는 경락가액 (총액, 원) — §164⑨2호 min의 후보 */
+  auctionPrice: string;
 
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
   /**

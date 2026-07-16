@@ -29,6 +29,7 @@ import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/Ge
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/RedevelopmentDetailCard";
 import { ExpropriationValuationCard } from "@/components/calc/results/transfer/ExpropriationValuationCard";
+import { AuctionValuationCard } from "@/components/calc/results/transfer/AuctionValuationCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -392,6 +393,11 @@ export function TransferTaxResultView({
         {/* 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) 산출근거 */}
         {result.expropriationValuationDetail && (
           <ExpropriationValuationCard detail={result.expropriationValuationDetail} />
+        )}
+
+        {/* §164⑨ 2호 공매·경락 특례 산출근거 (P4) */}
+        {result.auctionValuationDetail && (
+          <AuctionValuationCard detail={result.auctionValuationDetail} />
         )}
 
         {result.pre1990LandValuationDetail && (

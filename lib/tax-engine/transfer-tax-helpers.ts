@@ -23,7 +23,9 @@ import { TRANSFER } from "./legal-codes";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import {
   applyExpropriationValuation,
+  resolveConversionDenominatorAtTransfer,
   type ExpropriationValuationDetail,
+  type AuctionValuationDetail,
 } from "./transfer-tax-expropriation-valuation";
 import {
   parseDeductionRules,
@@ -209,6 +211,8 @@ interface TransferGainResult {
   };
   /** #3 공익수용 환산 양도시 기준시가 min[] 특례 산출근거 (Record) */
   expropriationValuationDetail?: ExpropriationValuationDetail;
+  /** §164⑨2호 공매·경락 특례 산출근거 (총액 2후보) — 1호와 배타 */
+  auctionValuationDetail?: AuctionValuationDetail;
 }
 
 /**
@@ -301,28 +305,21 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   let acquisitionCostBase: number;
   let usedEstimated = false;
   let expropriationValuationDetail: ExpropriationValuationDetail | undefined;
+  let auctionValuationDetail: AuctionValuationDetail | undefined;
 
   // 개산공제율 (소득세법 시행령 §163⑥1호·2호가목): 토지·건물·주택 = 3/100.
   // 단, §104③ 미등기양도자산은 3/1000(0.3%).
   const estimatedDeductionRate = input.isUnregistered ? 0.003 : 0.03;
 
   if (input.useEstimatedAcquisition) {
-    // #3 공익수용 환산 양도시 기준시가 min[] 특례 — 게이트 충족 시 분모(양도시 기준시가) override
-    const exprVal = applyExpropriationValuation({
-      propertyType: input.propertyType,
-      useEstimatedAcquisition: input.useEstimatedAcquisition,
-      transferCause: input.transferCause,
-      transferDate: input.transferDate,
-      standardPricePerSqmAtTransfer: input.standardPricePerSqmAtTransfer,
-      transferArea: input.transferArea,
-      compensationPerSqm: input.compensationPerSqm,
-      compensationBasisStdPrice: input.compensationBasisStdPrice,
-    });
-    if (exprVal) expropriationValuationDetail = exprVal.detail;
+    // #3 §164⑨ 특례 — 양도시 기준시가(환산 분모)를 1호(수용)·2호(공매경락) 배타로 확정.
+    const conv = resolveConversionDenominatorAtTransfer(input);
+    expropriationValuationDetail = conv.expropriationValuationDetail;
+    auctionValuationDetail = conv.auctionValuationDetail;
     const estimated = calculateEstimatedAcquisitionPrice(
       input.transferPrice,
       input.standardPriceAtAcquisition ?? 0,
-      exprVal ? exprVal.denominator : (input.standardPriceAtTransfer ?? 0),
+      conv.denominator,
     );
     const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
     acquisitionCostBase = estimated;
@@ -367,6 +364,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     swapApplied: necessary.mode === "swap_to_direct",
     swapComparison: necessary.swap,
     expropriationValuationDetail,
+    auctionValuationDetail,
   };
 }
 

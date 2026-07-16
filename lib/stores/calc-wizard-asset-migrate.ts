@@ -43,6 +43,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   // §164⑨ 1호 특례 보상필드 — 자산-수준(단건 경로)
   if (a.compensationPerSqm === undefined) a.compensationPerSqm = "";
   if (a.compensationBasisStdPrice === undefined) a.compensationBasisStdPrice = "";
+  // §164⑨ 2호 공매·경락 특례 (P4)
+  if (a.isAuctionTransfer === undefined) a.isAuctionTransfer = false;
+  if (a.auctionPrice === undefined) a.auctionPrice = "";
   // §164⑨ 1호 특례 보상필드 — **필지별**(다필지 경로, 2026-07-16 신설).
   // 구 세션의 parcels[]에는 이 2필드가 없어 undefined → React controlled→uncontrolled 경고.
   // (세액은 parseAmount(undefined)=0이라 무영향)

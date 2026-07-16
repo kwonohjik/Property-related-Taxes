@@ -32,7 +32,10 @@ import type { RedevelopmentResult } from "./transfer-redevelopment.types";
 import type { FamilyBusinessCgtDetail } from "../transfer-tax-family-business";
 import type { PreHousingDisclosureResult } from "./transfer-phd.types";
 import type { SplitGainResult } from "./transfer-split-gain.types";
-import type { ExpropriationValuationDetail } from "../transfer-tax-expropriation-valuation";
+import type {
+  ExpropriationValuationDetail,
+  AuctionValuationDetail,
+} from "../transfer-tax-expropriation-valuation";
 
 export interface TransferTaxResult {
   /** 전액 비과세 여부 */
@@ -89,6 +92,8 @@ export interface TransferTaxResult {
   };
   /** #3 공익수용 환산 양도시 기준시가 min[] 특례 산출근거 (Record) — 게이트 충족 시만 */
   expropriationValuationDetail?: ExpropriationValuationDetail;
+  /** §164⑨2호 공매·경락 특례 산출근거 (총액 2후보) — 게이트 충족 시만. 1호와 배타(P4) */
+  auctionValuationDetail?: AuctionValuationDetail;
   /** 장기보유특별공제액 */
   longTermHoldingDeduction: number;
   /** 장기보유특별공제율 */

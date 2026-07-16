@@ -128,6 +128,9 @@ const propertyBaseShape = {
   transferArea: z.number().positive().optional(),
   compensationPerSqm: z.number().int().nonnegative().optional(),
   compensationBasisStdPrice: z.number().int().nonnegative().optional(),
+  // ⑫ §164⑨2호 공매·경락 특례 (P4) — 엔진이 게이트, strip 방지
+  isAuctionTransfer: z.boolean().optional(),
+  auctionPrice: z.number().int().nonnegative().optional(),
   householdHousingCount: z.number().int().min(0),
   // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 세대 조합원입주권 보유 수 (양도일 현재).
   // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback householdRightCount ?? 0.
