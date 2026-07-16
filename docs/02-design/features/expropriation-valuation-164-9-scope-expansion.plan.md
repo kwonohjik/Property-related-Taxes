@@ -1,4 +1,4 @@
-# 공익수용·공매 양도당시 기준시가 특례 — §164⑨ 전면 정합 (rev.10)
+# 공익수용·공매 양도당시 기준시가 특례 — §164⑨ 전면 정합 (rev.11)
 
 > **상태**: Plan — 조사 4건 + 사용자 결정 Q1~Q6 + **STEP 1 자가검토 4-way**(57건) + **STEP 3 blast-radius**(7건) 완료.
 > **P1·P2·P9 = Do 완료·머지**(PR #619 `f60f47db` · E2E #620 `2b3b3d84`).
@@ -120,7 +120,7 @@ m ≥ A 이면: 차감 없음 → A 유지
 | **D15** | **PHD(§164⑤·⑦) 경로 특례 미적용** — `calcSplitGainPreDisclosure`가 **split보다 먼저** 분기 | `transfer-tax-split-gain.ts:139-141` · `transfer-tax-pre-housing-disclosure.ts`(자체 산식) | 과다(추정) | 선형 |
 | **D8** | 겸용(mixed-use) 경로 특례 미적용 | `transfer-tax-mixed-use-helpers.ts:268,519` | 과다(추정) | 선형 |
 | **D12** | 재개발 경로 특례 미적용 — STEP 2 skip | `transfer-tax-redevelopment.ts:8` | 과다(추정) | 선형 |
-| **D16** | **상업용건물·일반건물 전용 환산 경로가 특례 우회** (P3 Do 중 probe 실증 — §3-0 표 누락분) | **상가**: `transfer-tax.ts:303-312` `runCommercialBuildingStep` 성공 시 `useEstimatedAcquisition: false`로 교체 → `calcTransferGain` 게이트 미진입 · **일반건물**: `route.ts:708` → `dispatchGeneralBuilding` → `:736` **early return**(`calculateTransferTax` 미호출) | 과다(추정) | 선형 |
+| **D16** | 상업용건물·일반건물 전용 환산 경로가 특례 우회 | **상가**: ✅ **해소(D16-CB)** — `runCommercialBuildingStep` 내부 배선. 세액 **86,784,934원 과다 실증**. · **일반건물**: ❌ 미배선(D16-GB — route early-return + 안분/환산 분모 분리 법령논점) | 상가 해소·GB 과다 | 선형 |
 | **D3** | 엔진·API에 자산종류 게이트 없음 (게이트가 UI·validate 2층에만) | `expropriation-valuation.ts:49-57` · `api-helpers.ts:639-647` | (D1 하 미도달) | stale |
 | **D11** | **`transferArea` 쓰기가 토지 전용** — `building`·`commercial_building`·`general_building` **4종 전부** store 미저장 | `AssetSectionBasic.tsx:298` · `StandardPriceInput.tsx:105-106` | 게이트만 열면 **특례가 조용히 죽음** | — |
 | **D13** | 보상총액이 특례 함수에 미도달 — `reductions[]`의 `cash+bond`가 flat 5필드 전달에서 누락 | `transfer-tax-helpers.ts:311-319` | (총액 트랙 전제) | — |
@@ -537,7 +537,9 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 | PR#3+ | **P4** | **D5** 공매·경락 — **신규 `AuctionBlock.tsx`**(3지선다 형제) + 2필드 + 배타(N3) + `selectMode` 3분기 보존 | 과다 해소 | P3 |
 | PR#3+ | **P5** | **라목(주택) 총액 트랙** + D13 보상총액 plumbing(총액 트랙 전용 — §4-3) | 과다 해소 | P3 |
 | PR#3+ | **P6** | **D6·D15** split(B-2) + **PHD 배선** — PHD가 split보다 먼저 분기하므로 **동시 처리** | 과다 해소 | P3·P5 |
-| PR#3+ | **P7** | **D8·D12·D16** 겸용·재개발 **+ 상가·일반건물** 배선 — 각 전용 경로(`runCommercialBuildingStep` 내부 · `dispatchGeneralBuilding` 내부)에 특례를 배선해야 UI 노출이 실효를 갖는다 | 과다 해소 | P3 |
+| **완료** | **D16-CB** | ✅ **상가 배선 — `runCommercialBuildingStep` 내부에 `applyExpropriationValuation`(양도시 호별총액 min[]) + `PER_SQM_TRACK` 재추가 + ① 참조행 CB 분기. 86,784,934원 실증** | 해소 | — |
+| PR#3+ | **D16-GB** | 일반건물 배선 — route early-return + **안분(§100)/환산 분모(§164⑨) 분리** 법령 해석 선행(신규필드 2·UI 신규). 별건 | 과다 해소 | 법령논점 |
+| PR#3+ | **P7** | **D8·D12** 겸용·재개발 배선 (각 전용 경로 내부) | 과다 해소 | P3 |
 | PR#3+ | **P8** | **D9** result 타입(§4-5) + 결과 카드 재작성 + **`<ToneCard>` 전환** + **`ALL_LEAVES` 등록** + CalculationStep | 없음(표시) | P3·P4·P5 |
 
 > **PR 분리 근거**: P2는 **세액 실증 유일** · land 전용 · P3와 **독립**(다필지 게이트가 이미 land라
@@ -713,6 +715,12 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 
 ## 12. 개정 이력
 
+- **rev.11** (2026-07-16): **D16-CB(상가) 배선 완료.** `runCommercialBuildingStep` 내부에서
+  `applyExpropriationValuation` 재사용(양도시 호별총액 = `unitPriceAtTransfer × 연면적`을 min[]으로) —
+  **신규 필드 0**(full `TransferTaxInput` 접근). 세액 **86,784,934원 과다 실증**(probe). `PER_SQM_TRACK`에
+  `commercial_building` 재추가·① 참조행 CB 분기(`cbUnitPriceAtTransfer`)·detail 승격(cbStep→result).
+  STEP 0.35를 `applyCommercialBuildingStep` helper로 추출(800줄). anchor 4 + E2E 2. **D16-GB(일반건물)는
+  별건** — route early-return + 안분/환산 분모 분리 법령해석 + 신규필드 2 + UI 신규.
 - **rev.10** (2026-07-16): **P3 Do 완료 + 코드리뷰 반영.** **D16 신규** — 코드리뷰 probe가 §3-0 표의
   **누락 2경로**(상업용건물·일반건물 전용 환산)를 검출. 상가는 `transfer-tax.ts:305` STEP 0.35가
   `useEstimatedAcquisition: false`로 교체해 게이트 미진입, 일반건물은 `route.ts:736` **early return**으로

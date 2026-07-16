@@ -60,8 +60,13 @@ export function ExpropriationBlock({
     (r): r is ExprReduction => r.type === "public_expropriation",
   );
 
-  // #3 min[] 3후보 (원/㎡): ① 공시지가=양도가액 섹션의 양도시 기준시가(읽기전용 참조) ② 보상 ③ 보상기초
-  const stdPerSqm = parseAmount(asset.standardPricePerSqmAtTransfer || "");
+  // §164⑨ min[] 3후보 (원/㎡): ① 양도시 기준시가(읽기전용 참조) ② 보상 ③ 보상기초.
+  // ⚠️ 상가(commercial_building)는 `standardPricePerSqmAtTransfer`가 아니라 호별고시가
+  //    `cbUnitPriceAtTransfer`를 양도시 기준시가로 쓴다(§99①1호다목) → 참조행 소스 분기(표시 전용).
+  const stdPerSqm =
+    asset.assetKind === "commercial_building"
+      ? parseAmount(asset.cbUnitPriceAtTransfer || "")
+      : parseAmount(asset.standardPricePerSqmAtTransfer || "");
   const compPerSqm = parseAmount(asset.compensationPerSqm || "");
   const basisPerSqm = parseAmount(asset.compensationBasisStdPrice || "");
   const allThreePresent = stdPerSqm > 0 && compPerSqm > 0 && basisPerSqm > 0;
