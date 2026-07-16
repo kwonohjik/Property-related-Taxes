@@ -75,29 +75,24 @@ const ELIGIBLE_PROPERTY_TYPES = [
 const PER_SQM_TRACK_ASSET_KINDS = [
   "land", // 가목 — 개별공시지가 × 면적. `calcTransferGain` 경유 → 특례 도달 ✅
   "building", // 나목 — 국세청 고시 ㎡당 × 면적. `calcTransferGain` 경유 → 특례 도달 ✅
-  // ⚠️ `commercial_building`(다목)·`general_building`(나목) **제외** — 아래 참조.
+  "commercial_building", // 다목 — 호별고시가 × 연면적. `runCommercialBuildingStep` 내부 배선(D16-CB) → 도달 ✅
+  // ⚠️ `general_building`(나목) **제외** — 아래 참조(route early-return 우회, D16-GB 미배선).
 ] as const;
 
 /**
- * ## ⚠️ 상업용건물·일반건물은 왜 빠졌나 — **전용 환산 경로가 특례를 우회한다**
+ * ## ⚠️ 일반건물은 왜 빠졌나 — **전용 경로가 특례를 우회한다** (상가는 D16-CB로 배선 완료)
  *
- * 둘 다 **법령상 적격**(다목·나목)이나, 엔진에서 `calcTransferGain`에 **도달하지 못한다**:
+ * - **상업용건물**: ✅ **배선 완료(D16-CB)** — `runCommercialBuildingStep`(`transfer-tax-helpers.ts`)
+ *   내부에서 `applyExpropriationValuation`으로 양도시 호별총액(환산 분모)을 낮춘다.
+ *   `commercial_building`은 위 `PER_SQM_TRACK`에 **재추가**됐다.
+ * - **일반건물**: ❌ **미배선(D16-GB)** — `route.ts:708` → `dispatchGeneralBuilding` → `:736`
+ *   **early return**으로 `calculateTransferTax`를 **아예 호출하지 않는다**. 게다가 안분(§100)과
+ *   환산 분모(§164⑨)에 같은 양도시 기준시가가 쓰여, 분모만 낮추고 안분은 원값 유지하는
+ *   **분리 배선 + 법령 해석**이 필요하다. 배선 후 `PER_SQM_TRACK`에 추가하면 된다.
+ *   ⇒ UI에 노출하면 사용자 입력이 **아무 일도 안 하는** 침묵 무시가 되므로 현재 **제외**.
  *
- * - **상업용건물**: `transfer-tax.ts:303-312`가 `runCommercialBuildingStep`으로 §164⑧·§176의2②2호
- *   전용 환산을 **먼저** 수행한 뒤 `effectiveInput`을 **실가 경로로 교체**한다
- *   (`useEstimatedAcquisition: false`). 그 결과 `calcTransferGain`의 특례 게이트
- *   `!useEstimatedAcquisition`에 걸려 **항상 null**이다.
- *   (probe 실증: cbValuation 有 → `expropriationValuationDetail: undefined`)
- * - **일반건물**: `generalBuildingValuation` 전용 구조 — 특례 호출 **0건**
- *   (`general-building-valuation.ts`에 `applyExpropriationValuation` grep 0). 경로 미확인.
- *
- * ⇒ UI에 노출하면 사용자가 보상액을 입력해도 **아무 일도 일어나지 않는다**(침묵 무시).
- *   `commercial-building-valuation.ts`·`general-building-valuation.ts`에 특례를 배선하는 것은
- *   **별건 과제**다(계획 D16 — 겸용 D8·재개발 D12와 같은 계열).
- *   배선 후 이 목록에 추가하면 된다.
- *
- * ※ 엔진 목록(`ELIGIBLE_PROPERTY_TYPES`)에는 **그대로 둔다** — 법령 적격은 사실이고,
- *   CB/GB 경로가 배선되면 엔진 게이트는 이미 통과 상태여야 하기 때문이다.
+ * ※ 엔진 목록(`ELIGIBLE_PROPERTY_TYPES`)에는 `general_building`도 **그대로 둔다** —
+ *   법령 적격은 사실이고, GB 경로가 배선되면 엔진 게이트는 이미 통과 상태여야 하기 때문이다.
  */
 
 /**

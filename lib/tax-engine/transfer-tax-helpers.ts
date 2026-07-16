@@ -649,6 +649,11 @@ export interface CommercialBuildingStepResult {
   lumpSumDeduction: number;
   /** 상세 결과 (결과 카드 산식 표시용) */
   detail: CommercialBuildingValuationResult;
+  /**
+   * 공익수용 §164⑨ 1호 특례 산출근거 — 발동 시에만 존재.
+   * 양도시 호별총액(환산 분모)을 min[호별고시가, 보상액, 보상기초] × 연면적으로 낮춘 근거.
+   */
+  expropriationValuationDetail?: ExpropriationValuationDetail;
 }
 
 /**
@@ -714,8 +719,38 @@ export function runCommercialBuildingStep(
     return undefined;
   }
 
+  const cbInput = input.commercialBuildingValuation;
+
+  // 공익수용 §164⑨ 1호 — 양도시 호별총액(환산 분모)을 낮춘다. CB의 양도시 기준시가는
+  // `unitPriceAtTransfer(원/㎡) × 연면적`이므로(§99①1호다목) 단건과 **동일 함수 재사용**
+  // (원/㎡ ← unitPriceAtTransfer, 면적 ← 연면적). min[] 재구현 금지(dual-truth). 미발동 시 null.
+  const floorAreaTotal = cbInput.exclusiveArea + cbInput.commonArea;
+  const exprVal = applyExpropriationValuation({
+    propertyType: input.propertyType,
+    useEstimatedAcquisition: input.useEstimatedAcquisition,
+    transferCause: input.transferCause,
+    transferDate: input.transferDate,
+    standardPricePerSqmAtTransfer: cbInput.unitPriceAtTransfer,
+    transferArea: floorAreaTotal,
+    compensationPerSqm: input.compensationPerSqm,
+    compensationBasisStdPrice: input.compensationBasisStdPrice,
+  });
+
+  // 특례 발동 시 낮아진 ㎡당가액으로 재계산 — `:151`이 이 값 × 연면적으로 호별총액을 만든다.
+  const effectiveCbInput = exprVal
+    ? { ...cbInput, unitPriceAtTransfer: exprVal.detail.chosenPerSqm }
+    : cbInput;
+
+  // ⚠️ 표시-엔진 단일 진실: `applyExpropriationValuation`의 detail.denominator는 표시용으로 면적을
+  //    round2(소수 2자리)해 산출한다. 그러나 CB 실제 분모(`commercial-building-valuation.ts:151`)는
+  //    **raw 연면적**을 쓴다 → 연면적이 소수 3자리 이상이면 표시값이 실제와 어긋난다(dual-truth).
+  //    CB에서는 detail.denominator를 **실제 분모(raw)**로 덮어써 결과 카드가 실제 계산과 일치하게 한다.
+  const exprDetail = exprVal
+    ? { ...exprVal.detail, denominator: Math.floor(exprVal.detail.chosenPerSqm * floorAreaTotal) }
+    : undefined;
+
   const detail = calculateCommercialBuildingValuation(
-    input.commercialBuildingValuation,
+    effectiveCbInput,
     input.transferPrice,
   );
 
@@ -723,6 +758,36 @@ export function runCommercialBuildingStep(
     acquisitionPrice: detail.estimatedAcquisitionTotal,
     lumpSumDeduction: detail.estimatedDeductionTotal,
     detail,
+    expropriationValuationDetail: exprDetail,
+  };
+}
+
+/**
+ * STEP 0.35 오케스트레이션 — 상가 환산 성공 시 `effectiveInput`을 실가 경로로 교체.
+ *
+ * `runCommercialBuildingStep`이 §164⑧·§176의2②2호·§164⑨ 환산을 수행하면, 그 결과
+ * (환산취득가·개산공제)를 실가처럼 주입하고 `useEstimatedAcquisition: false`로 내린다.
+ * (transfer-tax.ts 800줄 정책에 따라 추출)
+ */
+export function applyCommercialBuildingStep(input: TransferTaxInput): {
+  effectiveInput: TransferTaxInput;
+  cbStep: CommercialBuildingStepResult | undefined;
+} {
+  if (input.propertyType !== "commercial_building" || !input.useEstimatedAcquisition) {
+    return { effectiveInput: input, cbStep: undefined };
+  }
+  const cbStep = runCommercialBuildingStep(input);
+  if (!cbStep) return { effectiveInput: input, cbStep: undefined };
+  return {
+    effectiveInput: {
+      ...input,
+      useEstimatedAcquisition: false,
+      acquisitionPrice: cbStep.acquisitionPrice,
+      expenses: cbStep.lumpSumDeduction,
+      capitalExpenditure: undefined,
+      transferExpense: undefined,
+    },
+    cbStep,
   };
 }
 

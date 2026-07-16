@@ -58,8 +58,7 @@ import {
   calcOneHouseProration,
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
-  runCommercialBuildingStep,
-  type CommercialBuildingStepResult,
+  applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, buildExemptEarlyResult } from "./transfer-tax-finalize";
@@ -298,22 +297,11 @@ export function calculateTransferTax(
     });
   }
 
-  // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑧ + §176조의2②2호)
-  // 성공 시 effectiveInput을 실가 경로로 교체 (useEstimatedAcquisition=false, acquisitionPrice=환산가, expenses=개산공제)
-  let cbStep: CommercialBuildingStepResult | undefined;
-  if (effectiveInput.propertyType === "commercial_building" && effectiveInput.useEstimatedAcquisition) {
-    cbStep = runCommercialBuildingStep(effectiveInput);
-    if (cbStep) {
-      effectiveInput = {
-        ...effectiveInput,
-        useEstimatedAcquisition: false,
-        acquisitionPrice: cbStep.acquisitionPrice,
-        expenses: cbStep.lumpSumDeduction,
-        capitalExpenditure: undefined,
-        transferExpense: undefined,
-      };
-    }
-  }
+  // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑧ + §176조의2②2호 + §164⑨ 수용 특례).
+  // 성공 시 effectiveInput을 실가 경로로 교체 (helpers로 추출 — 800줄 정책).
+  const cbApplied = applyCommercialBuildingStep(effectiveInput);
+  effectiveInput = cbApplied.effectiveInput;
+  const cbStep = cbApplied.cbStep;
 
   // STEP 1.5: 다필지 분리 계산 (환지·합병 등)
   const mpBranchResult = handleMultiParcelBranch(
@@ -322,7 +310,10 @@ export function calculateTransferTax(
   );
   if (mpBranchResult) return mpBranchResult;
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison, expropriationValuationDetail } = calcTransferGain(effectiveInput);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison, expropriationValuationDetail: gainExprDetail } = calcTransferGain(effectiveInput);
+  // 상가(CB) 경로는 STEP 0.35에서 useEstimatedAcquisition=false로 교체돼 calcTransferGain이
+  // 특례 detail을 내지 않는다 → cbStep의 산출근거를 result로 승격(§164⑨ CB 배선, D16).
+  const expropriationValuationDetail = gainExprDetail ?? cbStep?.expropriationValuationDetail;
   // 소유자 분리: 본인 신고분 양도차익만 추출 (소령 §166⑥, §168②)
   // splitDetail이 있고 selfOwns !== "both" 이면 본인 소유 파트의 gain만 사용
   const selfOwns = effectiveInput.selfOwns ?? "both";
