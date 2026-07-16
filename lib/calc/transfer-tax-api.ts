@@ -138,6 +138,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 공유 지분 — primary 자산의 지분 모드 처리 (다자산 일괄양도는 buildAssetPayload에서 별도 처리)
   const primaryRatio = getOwnershipRatio(primary);
   const primaryFractional = primaryRatio < 1.0;
+  // 토지/건물 분리 직접 입력 전송 게이트 — UI가 분리 칸을 노출하는 조건과 동일.
+  // 엔진은 landSplitMode를 읽지 않으므로("죽은 모드") 여기서 막지 않으면 "기준시가 비율 안분"으로
+  // 되돌려도 이전 직접 입력값이 계속 엔진에 도달한다(유령 값).
+  const splitDirectActive =
+    primary.hasSeperateLandAcquisitionDate === true && primary.landSplitMode === "actual";
   const totalContractPrice = parseAmount(form.contractTotalPrice);
   // 폼-수준 총 양도비 (B3) — 지분 모드 자동 안분의 분자 sourcing.
   // primary.transferExpense가 직접 입력되면 그것이 우선, 미입력시 form.totalTransferExpense × ratio 사용.
@@ -298,14 +303,23 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both"
         ? primary.landSplitMode
         : undefined,
-    landTransferPrice: parseAmount(primary.landTransferPrice) || undefined,
-    buildingTransferPrice: parseAmount(primary.buildingTransferPrice) || undefined,
-    landAcquisitionPrice: parseAmount(primary.landAcquisitionPrice) || undefined,
-    buildingAcquisitionPrice: parseAmount(primary.buildingAcquisitionPrice) || undefined,
-    landDirectExpenses: parseAmount(primary.landDirectExpenses) || undefined,
-    buildingDirectExpenses: parseAmount(primary.buildingDirectExpenses) || undefined,
-    landStandardPriceAtTransfer: parseAmount(primary.landStandardPriceAtTransfer) || undefined,
-    buildingStandardPriceAtTransfer: parseAmount(primary.buildingStandardPriceAtTransfer) || undefined,
+    // ⚠️ 분리 직접 입력 6필드는 `landSplitMode === "actual"`일 때만 전송한다(게이트 선언은 위 splitDirectActive).
+    // 엔진은 landSplitMode를 읽지 않고 필드별 `?? fallback`으로만 동작하므로, 사용자가 "직접 입력"으로
+    // 값을 채운 뒤 "기준시가 비율 안분"으로 되돌려도 그 값이 계속 엔진에 도달해 유령 값이 됐다.
+    // UI에서 필드를 클리어하는 대신 **전송 게이트**로 막는다 — 폼값이 보존돼 재토글 시 복원된다
+    // (bg* 필드 보존 패턴과 동형).
+    ...(splitDirectActive
+      ? {
+          landTransferPrice: parseAmount(primary.landTransferPrice) || undefined,
+          buildingTransferPrice: parseAmount(primary.buildingTransferPrice) || undefined,
+          landAcquisitionPrice: parseAmount(primary.landAcquisitionPrice) || undefined,
+          buildingAcquisitionPrice: parseAmount(primary.buildingAcquisitionPrice) || undefined,
+          landDirectExpenses: parseAmount(primary.landDirectExpenses) || undefined,
+          buildingDirectExpenses: parseAmount(primary.buildingDirectExpenses) || undefined,
+          landStandardPriceAtTransfer: parseAmount(primary.landStandardPriceAtTransfer) || undefined,
+          buildingStandardPriceAtTransfer: parseAmount(primary.buildingStandardPriceAtTransfer) || undefined,
+        }
+      : {}),
     standardPricePerSqmAtAcquisition:
       primary.standardPricePerSqmAtAcq
         ? parseFloat(primary.standardPricePerSqmAtAcq) || undefined
