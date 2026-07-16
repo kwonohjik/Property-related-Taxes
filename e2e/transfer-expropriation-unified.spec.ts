@@ -51,7 +51,7 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await expect(page.getByTestId("expr-77-notice-date").getByLabel("연도")).toHaveValue("2005");
   });
 
-  test("환산모드 + 수용 + 양도≥2009.02.04 → #3 보상 2필드 노출 (집행기준 99-164-12)", async ({ page }) => {
+  test("환산모드 + 수용 + 양도≥2009.02.04 → 보상 2필드 노출 (소득령 §164⑨ 1호)", async ({ page }) => {
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
@@ -103,7 +103,11 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await expect(page.getByText("현금보상액").first()).toBeVisible();
     await expect(page.getByText("채권보상액").first()).toBeVisible();
 
-    // #3 환산 min[] 특례는 공시지가(원/㎡) 기반이라 토지 전용 → 주택은 미노출
+    // 환산 min[] 특례(소득령 §164⑨ 1호)는 **현재 UI 게이트가 토지 전용**이라 주택은 미노출.
+    // ⚠️ 이는 법령상 옳아서가 아니다 — §164⑨은 법 §99①1호 "가목부터 라목까지"(토지·건물·
+    //    오피스텔/상업용 건물·**주택** 전부)가 대상이므로 **게이트가 법령보다 좁다**(알려진 갭).
+    //    게이트 확대는 후속 과제 — `docs/02-design/features/expropriation-valuation-164-9-scope-expansion.plan.md` P3.
+    //    확대 시 이 단언은 "노출"로 뒤집혀야 한다.
     await expect(page.getByText("보상산정 기초 기준시가")).toHaveCount(0);
 
     // 감면·공제 단계 → §77 감면 자동 활성(ON)
