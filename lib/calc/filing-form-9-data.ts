@@ -131,8 +131,11 @@ export function buildFilingForm9Data(
   // ㉙ §28 = ⑩c(영리법인 사전증여분) + ⑫c(상속인분) — V-2: corporate 면제가 ⑩c로 포함
   const b29 = rowTotal("row-10c-corpCredit") + rowTotal("row-12c-credit");
   const b28 = b29; // ㉘ 소계 = ㉙ + ㉚(0)
+  // ㉛ §29 외국납부·㉜ §30 단기재상속은 상속인별 배부표에 행이 없어(전체 1건) creditDetail 직접 참조 (M-49)
+  const b31 = result.creditDetail.foreignTaxCredit;
+  const b32 = result.creditDetail.shortTermReinheritCredit;
   const b33 = rowTotal("row-14-filingCredit"); // ㉝ §69 = ⑭
-  const b27 = b28 + b33; // ㉗ 계 = ㉘ + ㉛(0)+㉜(0) + ㉝ + ㉞(0)
+  const b27 = b28 + b31 + b32 + b33; // ㉗ 계 = ㉘ + ㉛ + ㉜ + ㉝ + ㉞(0)
 
   // ── 우측 (V-2: ㉟ 면제세액 = 0, corporate 면제는 ㉙에 표시) ──
   const b35 = 0; // 면제세액 — 이중계상 방지
@@ -144,7 +147,7 @@ export function buildFilingForm9Data(
   const values: Record<string, number> = {
     "⑰": b17, "⑱": b18, "⑲": b19, "⑳": b20, "㉑": b21Rate,
     "㉒": b22, "㉓": b23, "㉔": b24, "㉕": 0, "㉖": b26,
-    "㉗": b27, "㉘": b28, "㉙": b29, "㉚": 0, "㉛": 0, "㉜": 0, "㉝": b33, "㉞": 0,
+    "㉗": b27, "㉘": b28, "㉙": b29, "㉚": 0, "㉛": b31, "㉜": b32, "㉝": b33, "㉞": 0,
     "㉟": b35, "㊱": 0, "㊲": 0, "㊳": b43,
   };
 
@@ -172,8 +175,8 @@ export function buildFilingForm9Data(
     amtRow("㉘", b28, "left"),
     amtRow("㉙", b29, "left"),
     amtRow("㉚", 0, "left"),
-    amtRow("㉛", 0, "left"),
-    amtRow("㉜", 0, "left"),
+    amtRow("㉛", b31, "left"),
+    amtRow("㉜", b32, "left"),
     amtRow("㉝", b33, "left"),
     amtRow("㉞", 0, "left"),
   ];

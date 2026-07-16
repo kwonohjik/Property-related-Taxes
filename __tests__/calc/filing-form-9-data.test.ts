@@ -224,3 +224,24 @@ describe("buildDecedentAddressText — 별지9호 ⑩ 주소 표시", () => {
     ).toBe("");
   });
 });
+
+describe("[H-49] ㉛ 외국납부·㉜ 단기세액공제 서식 노출 (creditDetail 단일진실)", () => {
+  it("㉛ = creditDetail.foreignTaxCredit (하드코딩 0 아님) + ㉗ 계에 반영", () => {
+    const input = {
+      ...EXAMPLE_INPUT,
+      creditInput: {
+        ...EXAMPLE_INPUT.creditInput,
+        foreignTaxPaid: 400_000_000,
+        foreignInheritanceTaxBase: 1_000_000_000,
+      },
+    };
+    const r = calcInheritanceTax(input);
+    const d = buildFilingForm9Data(r, EXAMPLE_HEIRS, DEATH_DATE);
+    expect(r.creditDetail.foreignTaxCredit).toBeGreaterThan(0);
+    // 수정 전: ㉛ = 0 (하드코딩) → 엔진 계산 외국납부세액공제 서식 소실
+    expect(d.values["㉛"]).toBe(r.creditDetail.foreignTaxCredit);
+    expect(d.values["㉜"]).toBe(r.creditDetail.shortTermReinheritCredit);
+    // ㉗ 계 = ㉘ + ㉛ + ㉜ + ㉝ 에 외국납부분이 포함
+    expect(d.values["㉗"]).toBeGreaterThanOrEqual(r.creditDetail.foreignTaxCredit);
+  });
+});
