@@ -138,11 +138,10 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await expect(page.getByText("보상산정 기초 기준시가")).toBeVisible();
   });
 
-  test("주택 + 수용 + 환산 → 보상 2필드 **미노출** (라목 총액 트랙 미구현 = P5)", async ({ page }) => {
-    // 주택(라목)은 **법령상 적격**이나 개별주택가격이 총액이라 원/㎡ 모델이 맞지 않는다.
-    // 노출하면 transferArea가 없어(isAreaMode===false) 엔진 `area > 0`에 걸려
-    // **입력해도 아무 일도 안 하는** 침묵 무시가 된다 → P5(총액 트랙)까지 의도적 미노출.
-    // ⚠️ P5 완료 시 이 단언은 "노출"로 뒤집혀야 한다.
+  test("주택 + 수용 + 환산 → 보상 총액 2필드 **노출** (라목 총액 트랙 P5 완료)", async ({ page }) => {
+    // 주택(라목)은 개별주택가격이 총액이라 원/㎡가 아닌 **총액 3후보** min[]를 쓴다(P5 총액 트랙, 머지 완료).
+    // 주택 + 수용 + 환산 시 "주택 총액" 블록(보상액 총액·보상기초 총액)이 노출된다.
+    // (구 스펙은 P5 미구현 전제로 "미노출"을 단언했으나 P5 완료로 뒤집힘 — unstale 2026-07-16.)
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 
@@ -160,7 +159,7 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await expandAssetSection(page, 2);
     await page.getByTestId("expr-cause-radio").click();
 
-    await expect(page.getByText("보상산정 기초 기준시가")).toHaveCount(0);
+    await expect(page.getByText("보상산정 기초 기준시가 총액")).toBeVisible();
   });
 
   test("현금+채권 보상 → 양도가액 자동 반영 (수용 양도가액 = 보상총액)", async ({ page }) => {

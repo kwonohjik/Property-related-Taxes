@@ -5,6 +5,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   isExprValuationEligibleAssetKind,
   isHousingExprEligibleAssetKind,
+  isSplitLandExprEligibleAssetKind,
   EXPR_VALUATION_MIN_TRANSFER_DATE,
 } from "@/lib/tax-engine/expropriation-scope";
 
@@ -45,25 +46,33 @@ export function ExpropriationBlock({
   /** form-global 양도일 (YYYY-MM-DD) — #3 게이트 판정 */
   transferDate: string;
 }) {
-  // §164⑨ 1호 환산 min[] 게이트: 적격 자산(가~라목) + 환산모드 + 양도 ≥ 2009.02.04.
+  // 공통 게이트: 환산모드 + 양도 ≥ 2009.02.04 (단건 — 다필지는 필지 카드 전용).
+  const exprDateOk =
+    !asset.parcelMode &&
+    asset.useEstimatedAcquisition &&
+    !!transferDate &&
+    transferDate >= EXPR_VALUATION_MIN_DATE;
+  // 건물 split(토지·건물 취득일 분리) — `calcSplitGain` 경로라 단건 per-sqm 특례가 우회된다.
+  // 이 경우 per-sqm 칸을 노출하면 입력해도 엔진이 안 읽는 **침묵 무시** → 토지분 총액 블록으로 전환(P6/D6).
+  const isSplitBuilding =
+    isSplitLandExprEligibleAssetKind(asset.assetKind) && asset.hasSeperateLandAcquisitionDate;
+  // 주택 split(토지·건물 취득일 분리) — 총액 트랙에서 제외(총액 칸 노출 시 침묵 무시).
+  //  · regular split → Q6 미지원(validate 차단). · PHD split → §164⑤·⑦ 우회로 엔진 미소비(D15, 후속).
+  // 두 경우 모두 노출하면 입력해도 효과 없는 false-required가 되므로 숨긴다.
+  const isHousingSplit =
+    isHousingExprEligibleAssetKind(asset.assetKind) && asset.hasSeperateLandAcquisitionDate;
+  // §164⑨ 1호 환산 min[] 게이트: 적격 자산(가~다목) + 환산모드 + 양도 ≥ 2009.02.04.
   // ⚠️ 적격 판정은 `expropriation-scope.ts` **단일 소스** 위임 — 여기서 자산종류를 나열하면
   //    validate·엔진과 갈라진다(3층 드리프트). UI 노출 조건 = validate와 동일해야 한다.
+  // split 건물은 per-sqm 경로가 우회되므로 제외(아래 split 총액 블록으로).
   const showValuationMin =
-    isExprValuationEligibleAssetKind(asset.assetKind) &&
-    // 다필지는 **필지별** 보상값을 쓴다(필지마다 공시지가가 달라 min[] 선택이 독립).
-    // 자산-수준 칸을 함께 노출하면 입력해도 엔진이 안 읽는 **침묵 무시**가 된다.
-    // → 다필지 입력은 ParcelListInput의 필지 카드에만 둔다(validate도 동일 — `!asset.parcelMode`).
-    !asset.parcelMode &&
-    asset.useEstimatedAcquisition &&
-    !!transferDate &&
-    transferDate >= EXPR_VALUATION_MIN_DATE;
+    isExprValuationEligibleAssetKind(asset.assetKind) && exprDateOk && !isSplitBuilding;
   // §164⑨ 1호 주택(라목) 총액 트랙 게이트 (P5) — 개별주택가격은 총액이라 원/㎡가 아닌 총액 3후보.
+  // 주택 split(regular·PHD 공통)은 총액 트랙 우회라 제외.
   const showHousingTotal =
-    isHousingExprEligibleAssetKind(asset.assetKind) &&
-    !asset.parcelMode &&
-    asset.useEstimatedAcquisition &&
-    !!transferDate &&
-    transferDate >= EXPR_VALUATION_MIN_DATE;
+    isHousingExprEligibleAssetKind(asset.assetKind) && exprDateOk && !isHousingSplit;
+  // §164⑨ 1호 건물 split 토지분 총액 트랙 게이트 (P6/D6).
+  const showSplitLandExpr = isSplitBuilding && exprDateOk;
 
   const expr = asset.reductions?.find(
     (r): r is ExprReduction => r.type === "public_expropriation",
@@ -248,6 +257,36 @@ export function ExpropriationBlock({
               onChange={(v) => onChange({ housingCompensationBasisTotal: v })}
               hideUnit
               hint="보상 산정 기초 기준시가 총액 (원)"
+            />
+          </div>
+        </div>
+      )}
+
+      {showSplitLandExpr && (
+        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+            환산 양도당시 기준시가 특례 — 토지·건물 분리 양도 (소득령 §164⑨ 1호)
+          </p>
+          <p className="text-caption leading-relaxed text-amber-700 dark:text-amber-400">
+            토지·건물 취득일이 달라 분리(안분) 계산되는 수용(2009.02.04 이후) 건물을 환산취득가액으로
+            계산 시, <b>토지분</b> 양도당시 기준시가는 <b>토지분 기준시가·보상액·보상기초 기준시가 중
+            가장 작은 총액</b>이 적용됩니다. 건물분은 <b>보상 기초 기준시가</b> 개념이 없어(시행규칙 §80⑧)
+            특례를 적용하지 않습니다. (① 토지분 양도시 기준시가 총액은 안분비로 자동 산정됩니다.)
+          </p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
+            <CurrencyInput
+              label="② 토지분 보상액 총액"
+              value={asset.splitLandCompensationTotal}
+              onChange={(v) => onChange({ splitLandCompensationTotal: v })}
+              hideUnit
+              hint="토지분 수용 보상액 총액 (원)"
+            />
+            <CurrencyInput
+              label="③ 토지분 보상산정 기초 기준시가 총액"
+              value={asset.splitLandCompensationBasisTotal}
+              onChange={(v) => onChange({ splitLandCompensationBasisTotal: v })}
+              hideUnit
+              hint="토지분 보상 산정 기초 개별공시지가 총액 (원)"
             />
           </div>
         </div>

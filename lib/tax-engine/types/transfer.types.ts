@@ -121,6 +121,13 @@ export interface TransferTaxInput {
   housingCompensationTotal?: number;
   /** 보상액 산정 기초 기준시가 총액 (원) — 주택 수용 min 후보 */
   housingCompensationBasisTotal?: number;
+  // ── §164⑨ 1호 건물 split 토지분 트랙 (계획 P6/D6) — 토지·건물 취득일 분리 양도의 토지분만 ──
+  // 시행규칙 §80⑧: 보상기초=토지 개별공시지가만 → §164⑨1호는 split 토지분에만 적용(건물 무변경).
+  // 값은 **총액**(split의 landStdAtTransfer가 총액이라 min[]도 총액 3후보). 건물 자산·수용·환산 전용.
+  /** 토지분 보상액 총액 (원) — split min(양도시 토지 기준시가 총액, 보상액, 보상기초) 후보 */
+  splitLandCompensationTotal?: number;
+  /** 토지분 보상액 산정 기초 기준시가 총액 (원) — split min 후보 */
+  splitLandCompensationBasisTotal?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
   /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */
@@ -586,4 +593,8 @@ export type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./tr
 import type { PreHousingDisclosureInput } from "./transfer-phd.types";
 
 // SplitGain 재수출 (./transfer-split-gain.types.ts 분리)
-export type { SplitPartResult, SplitGainResult } from "./transfer-split-gain.types";
+export type {
+  SplitPartResult,
+  SplitGainResult,
+  SplitLandExpropriationValuationDetail,
+} from "./transfer-split-gain.types";

@@ -11,6 +11,7 @@ import {
   isExprValuationEligibleAssetKind,
   isAuctionEligibleAssetKind,
   isHousingExprEligibleAssetKind,
+  isSplitLandExprEligibleAssetKind,
 } from "@/lib/tax-engine/expropriation-scope";
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";
@@ -703,6 +704,14 @@ export function buildExpropriationInput(primary: AssetForm) {
       ? {
           housingCompensationTotal: parseAmount(primary.housingCompensationTotal) || undefined,
           housingCompensationBasisTotal: parseAmount(primary.housingCompensationBasisTotal) || undefined,
+        }
+      : {}),
+    // §164⑨1호 건물 split 토지분 트랙 (P6/D6) — 건물 자산일 때만 전송(엔진이 split·수용·환산 게이트).
+    // 토지·건물 취득일 분리 양도 시 토지분 환산 분모만 낮춘다. 주택 split은 Q6 미지원(validate 차단).
+    ...(isSplitLandExprEligibleAssetKind(primary.assetKind)
+      ? {
+          splitLandCompensationTotal: parseAmount(primary.splitLandCompensationTotal) || undefined,
+          splitLandCompensationBasisTotal: parseAmount(primary.splitLandCompensationBasisTotal) || undefined,
         }
       : {}),
   };

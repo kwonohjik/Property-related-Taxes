@@ -17,6 +17,7 @@ import { validateExprValuationAsset } from "./transfer-tax-validate-expropriatio
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import { validateAuctionAsset } from "./transfer-tax-validate-expropriation";
 import { validateHousingExprAsset } from "./transfer-tax-validate-expropriation";
+import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriation";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
@@ -707,6 +708,10 @@ export function validateAssetEntry(
   // ⑧ §164⑨ 1호 주택 총액 트랙 — 보상 총액 2필드 필수 (P5)
   const housingExprError = validateHousingExprAsset(a, label, form.transferDate);
   if (housingExprError) return housingExprError;
+
+  // ⑧ §164⑨ 1호 건물 split 토지분 트랙 — 토지분 보상 2필드 필수 + 주택 regular split 차단 (P6/D6)
+  const splitLandExprError = validateSplitLandExprAsset(a, label, form.transferDate);
+  if (splitLandExprError) return splitLandExprError;
 
   // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
   // 자동 안분 fallback 금지 원칙 준수 (부수토지/독립 나대지에 따라 세율 분기가 달라짐)

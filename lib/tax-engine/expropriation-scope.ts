@@ -169,3 +169,22 @@ const HOUSING_TOTAL_TRACK_ASSET_KINDS = ["housing"] as const;
 export function isHousingExprEligibleAssetKind(assetKind: string | undefined): boolean {
   return (HOUSING_TOTAL_TRACK_ASSET_KINDS as readonly string[]).includes(assetKind ?? "");
 }
+
+/**
+ * **§164⑨ 1호 건물 split 토지분 트랙 자산** — 계획 P6/D6.
+ *
+ * 토지·건물 취득일 분리 양도(`calcSplitGain`)에서 **토지분 환산 분모만** min[]로 낮춘다.
+ * 시행규칙 §80⑧(보상기초=토지 개별공시지가)에 따라 건물분은 미적용 → 건물 자산(나목)만 대상.
+ *
+ * ⚠️ **주택(라목) split은 제외**: 개별주택가격은 총액이라 토지·건물 미분해(계획 Q6 — regular split
+ * validate 차단). 주택 개별주택가격 미공시 3시점 환산(PHD, §164⑦)은 별도 트랙(D15, 후속).
+ */
+const SPLIT_LAND_EXPR_TRACK_ASSET_KINDS = ["building"] as const;
+
+/**
+ * §164⑨1호 건물 split 토지분 UI 노출·validate 판정(`AssetForm.assetKind` 축).
+ * split(hasSeperateLandAcquisitionDate)·수용·환산과 함께 게이트한다(호출부).
+ */
+export function isSplitLandExprEligibleAssetKind(assetKind: string | undefined): boolean {
+  return (SPLIT_LAND_EXPR_TRACK_ASSET_KINDS as readonly string[]).includes(assetKind ?? "");
+}
