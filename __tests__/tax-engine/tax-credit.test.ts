@@ -510,6 +510,7 @@ describe("세액공제 통합 — 적용 순서", () => {
       },
       computedTax: 50_000_000,
       generationSkipSurcharge: 0,
+      giftDate: "2020-01-01", // 3% (2019~) — giftDate required 승격(G-2)
     });
     // 외국납부 0, 특례 0 → 신고세액공제: 50M × 3% = 1.5M
     expect(result.filingCredit).toBe(1_500_000);

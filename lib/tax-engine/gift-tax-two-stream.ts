@@ -294,6 +294,7 @@ export function calcGiftTaxTwoStream(
     creditInput: ordinaryCreditInput,
     computedTax: ordinaryComputedTax,
     generationSkipSurcharge: surchargeResult.additionalSurcharge,
+    giftDate: input.giftDate, // §69 신고세액공제율 증여연도 기준 (H-21 — 미전달 시 3% 고정 버그)
     foreignPropertyRatio: options.foreignPropertyRatio,
     giftAmount: ordinaryNetValue,
     priorGiftComputedTax: priorAggregation.totalComputedTax,

@@ -23,6 +23,8 @@ import { calcGiftTaxCredits } from "@/lib/tax-engine/inheritance-gift-tax-credit
 // D1. §30의5 세율 — 단일 10%
 // ============================================================
 
+const GIFT_DATE = "2024-06-01"; // §69 현행 — giftDate required 승격(G-2)
+
 describe("D1 — §30의5 창업자금 세율 단일 10%", () => {
   const NORMAL_TAX = 3_000_000_000;
 
@@ -224,6 +226,7 @@ describe("D5 — §30의5⑪ 신고세액공제 배제", () => {
       },
       computedTax: 140_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       giftAmount: 1_000_000_000, // 10억
     });
     // 특례 적격: specialTreatmentCredit > 0 → §30의5⑪ 발동 → filingCredit = 0
@@ -240,6 +243,7 @@ describe("D5 — §30의5⑪ 신고세액공제 배제", () => {
       },
       computedTax: 140_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       giftAmount: 1_000_000_000,
     });
     expect(result.filingCredit).toBe(0);
@@ -254,6 +258,7 @@ describe("D5 — §30의5⑪ 신고세액공제 배제", () => {
       },
       computedTax: 140_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       giftAmount: 1_000_000_000,
     });
     // 미적격 → specialTreatmentCredit=0 → §30의5⑪ 미발동 → §69 정상
@@ -271,6 +276,7 @@ describe("D5 — §30의5⑪ 신고세액공제 배제", () => {
       },
       computedTax: 340_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       giftAmount: 2_000_000_000, // 20억
     });
     expect(result.specialTreatmentCredit).toBeGreaterThan(0);
@@ -285,6 +291,7 @@ describe("D5 — §30의5⑪ 신고세액공제 배제", () => {
       },
       computedTax: 100_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       // businessYears 미전달 → calcSpecialTaxTreatment에서 fallback 10년
       // 실제 불적격 테스트: giftAmount 미설정으로 특례 0 경로 확인
       giftAmount: 0, // giftAmount=0이면 특례 미계산
@@ -302,6 +309,7 @@ describe("D5 — §30의5⑪ 신고세액공제 배제", () => {
       },
       computedTax: 100_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
     });
     expect(result.specialTreatmentCredit).toBe(0);
     expect(result.filingCredit).toBe(3_000_000); // §69 정상
