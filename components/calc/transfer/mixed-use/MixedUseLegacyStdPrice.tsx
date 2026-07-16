@@ -92,6 +92,10 @@ export function MixedUseLegacyStdPrice({
   const acqReferenceDate = asset.acquisitionDate;
   // 상가부수토지 개별공시지가 취득시 추천 연도 전용 기준일 — 토지값이므로 토지 취득일 기준(§166⑥).
   const acqLandReferenceDate = asset.landAcquisitionDate || asset.acquisitionDate;
+  // 모달 취득 위치지수 공시지가 prefill 가능 여부 — **토지일 = 건물일일 때만**.
+  // 화면 부수토지 공시지가는 토지 취득일 기준(§166⑥), 모달 취득 위치지수 칸은 건물 취득일 기준이라
+  // 두 날짜가 다르면 다른 연도 값 → 주입 시 위치지수 오산(세액 영향). 상세: MixedUseAssetMajorStdPrice 동일 주석.
+  const canPrefillAcqLandPrice = acqLandReferenceDate === asset.acquisitionDate;
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
   const stdPriceAddress = {
@@ -202,6 +206,14 @@ export function MixedUseLegacyStdPrice({
                   landAreaM2: commercialLandArea > 0 ? String(commercialLandArea) : undefined,
                   acquisitionDate: asset.acquisitionDate,
                   transferDate,
+                  // 시점별 모달이지만 폼은 취득·양도 2시점을 함께 계산하므로 양쪽 공시지가를 모두 넘긴다
+                  // (applyTimePoint는 적용 버튼 노출만 제어). 취득 트랙 판정은 모달 단일 게이트(§164⑤).
+                  acqLandPricePerSqm: canPrefillAcqLandPrice
+                    ? asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq
+                    : undefined,
+                  acqLandPricePerSqm2001: asset.phdLandPricePerSqmAtAcq2001,
+                  transferLandPricePerSqm:
+                    asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer,
                 }}
                 onApply={(v) => onChange({ mixedAcqCommercialBuildingPrice: String(v) })}
               />
@@ -323,6 +335,13 @@ export function MixedUseLegacyStdPrice({
                   landAreaM2: commercialLandArea > 0 ? String(commercialLandArea) : undefined,
                   acquisitionDate: asset.acquisitionDate,
                   transferDate,
+                  // 취득 모달과 동일 — 폼이 2시점을 함께 계산하므로 양쪽 공시지가 전달.
+                  acqLandPricePerSqm: canPrefillAcqLandPrice
+                    ? asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq
+                    : undefined,
+                  acqLandPricePerSqm2001: asset.phdLandPricePerSqmAtAcq2001,
+                  transferLandPricePerSqm:
+                    asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer,
                 }}
                 onApply={(v) => onChange({ mixedTransferCommercialBuildingPrice: String(v) })}
               />

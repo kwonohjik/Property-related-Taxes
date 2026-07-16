@@ -262,6 +262,10 @@ export function MixedUsePreHousingDisclosureSection({
           }
           landPricePerSqmAtAcq={asset.phdLandPricePerSqmAtAcq || asset.mixedAcqLandPricePerSqm || pre1990AutoPricePerSqmStr}
           onLandPricePerSqmAtAcqChange={(v) => onChange({ phdLandPricePerSqmAtAcq: v })}
+          // 취득 ≤2000 위치지수 트랙(2001.1.1 기준) — 토지값 트랙과 분리 저장(§164⑤).
+          // 배치 모달이 입력받은 2001값의 저장처이자 상가건물 모달 prefill 소스.
+          landPricePerSqmAtAcq2001={asset.phdLandPricePerSqmAtAcq2001}
+          onLandPricePerSqmAtAcq2001Change={(v) => onChange({ phdLandPricePerSqmAtAcq2001: v })}
           buildingStdPriceAtAcq={asset.phdBuildingStdPriceAtAcq}
           onBuildingStdPriceAtAcqChange={(v) => onChange({ phdBuildingStdPriceAtAcq: v })}
           // 최초공시일
