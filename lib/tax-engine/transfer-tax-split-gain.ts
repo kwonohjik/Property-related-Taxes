@@ -17,7 +17,10 @@ import type {
 } from "./types/transfer.types";
 import { applyRate, calculateHoldingPeriod } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
-import { applySplitLandExpropriationValuation } from "./transfer-tax-expropriation-valuation";
+import {
+  applySplitLandExpropriationValuation,
+  applyHousingExpropriationValuation,
+} from "./transfer-tax-expropriation-valuation";
 
 /** 안분 비율 산출 — 토지 기준시가 / 전체 기준시가 */
 function calcApportionRatio(input: TransferTaxInput): { land: number; building: number } | null {
@@ -316,7 +319,22 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
  * calcPreHousingDisclosureGain() 결과로 SplitGainResult 구성.
  */
 function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
-  const phd = calcPreHousingDisclosureGain(input.transferPrice, input.preHousingDisclosure!);
+  // §164⑨1호 공익수용 특례 — 양도시 개별주택가격(P_T)을 min(개별주택가격, 보상액, 보상기초)로 낮춰
+  // **환산 분모에만** 주입한다(안분은 원 P_T 유지 — D16-GB 동형, 법령 검증 완료). 주택 총액 트랙 재사용.
+  const housingExprVal = applyHousingExpropriationValuation({
+    propertyType: input.propertyType,
+    useEstimatedAcquisition: input.useEstimatedAcquisition,
+    transferCause: input.transferCause,
+    transferDate: input.transferDate,
+    standardTotalAtTransfer: input.preHousingDisclosure!.transferHousingPrice,
+    compensationTotal: input.housingCompensationTotal,
+    compensationBasisTotal: input.housingCompensationBasisTotal,
+  });
+  const phd = calcPreHousingDisclosureGain(
+    input.transferPrice,
+    input.preHousingDisclosure!,
+    housingExprVal?.denominator,
+  );
 
   // 추가 필요경비(자본적지출) 안분 — preHousingDisclosure 경로에서도 적용
   const totalExpenses = input.expenses ?? 0;
@@ -367,5 +385,6 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     note: `개별주택가격 미공시(§164⑤) — 토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리`,
     selfOwns: input.selfOwns ?? "both",
     preHousingDisclosureDetail: phd,
+    housingExpropriationValuationDetail: housingExprVal?.detail,
   };
 }

@@ -130,8 +130,21 @@ describe("validateAssetEntry 파이프라인 순서 (P6/D6 · 코드리뷰 Criti
     expect(e ?? "").not.toMatch(/주택 수용 환산 특례 — 보상액 총액/);
   });
 
-  it("주택 PHD split 수용 환산 — false-require 없음(주택총액 필드 미강제, D15 후속)", () => {
+  it("주택 PHD split 수용 환산 — 주택총액 필드 요구(P6b/D15 — C-06b 차단 아님)", () => {
     const { form, a } = splitForm({ assetKind: "housing", usePreHousingDisclosure: true });
+    const e = validateAssetEntry(a, 0, form);
+    // PHD split은 총액 트랙을 소비하므로 보상액 총액을 요구한다(미지원 차단이 아님).
+    expect(e).toMatch(/주택 수용 환산 특례 — 보상액 총액/);
+    expect(e ?? "").not.toMatch(/미지원/);
+  });
+
+  it("주택 PHD split 수용 환산 — 총액 2필드 입력 완료 → 수용 특례 검증 통과", () => {
+    const { form, a } = splitForm({
+      assetKind: "housing",
+      usePreHousingDisclosure: true,
+      housingCompensationTotal: "500,000,000",
+      housingCompensationBasisTotal: "550,000,000",
+    });
     const e = validateAssetEntry(a, 0, form);
     expect(e ?? "").not.toMatch(/보상액 총액|미지원/);
   });

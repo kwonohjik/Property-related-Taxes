@@ -412,6 +412,11 @@ export function TransferTaxResultView({
           <SplitLandExpropriationValuationCard detail={result.splitDetail.splitLandExpropriationValuationDetail} />
         )}
 
+        {/* §164⑨ 1호 주택 PHD split 총액 특례 산출근거 (P6b/D15) */}
+        {result.splitDetail?.housingExpropriationValuationDetail && (
+          <HousingExpropriationValuationCard detail={result.splitDetail.housingExpropriationValuationDetail} />
+        )}
+
         {result.pre1990LandValuationDetail && (
           <div className="rounded-lg border border-amber-500/50 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-2">
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">

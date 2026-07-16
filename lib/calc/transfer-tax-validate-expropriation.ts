@@ -120,12 +120,10 @@ export function validateHousingExprAsset(
 ): string | null {
   if (!isHousingExprEligibleAssetKind(asset.assetKind)) return null;
   if (asset.parcelMode) return null;
-  // 주택 split(토지·건물 취득일 분리)은 총액 트랙에서 제외 — UI도 `showHousingTotal`에서 숨긴다.
-  //  · regular split → §164⑨ 미지원(Q6) → C-06b(`validateSplitLandExprAsset`)가 차단 메시지 담당.
-  //  · PHD split → §164⑤·⑦ 3시점 환산이 `resolveConversionDenominatorAtTransfer`를 우회(D15, 후속) →
-  //    총액 필드를 요구하면 엔진이 소비하지 않는 값을 강제하는 false-required가 된다.
-  // 두 경우 모두 여기서 총액 필드를 요구하면 "UI 숨김 ↔ validate 차단" 모순이므로 위임/스킵.
-  if (asset.hasSeperateLandAcquisitionDate) return null;
+  // 주택 **regular** split(토지·건물 취득일 분리, 비-PHD)만 총액 트랙에서 제외 → §164⑨ 미지원(Q6),
+  // C-06b(`validateSplitLandExprAsset`)가 차단 메시지 담당. UI도 `showHousingTotal`에서 숨긴다.
+  // 주택 **PHD** split(§164⑦ 3시점 환산)은 총액 트랙을 정상 소비하므로(P6b/D15) 여기서 필드를 요구한다.
+  if (asset.hasSeperateLandAcquisitionDate && !asset.usePreHousingDisclosure) return null;
   if (!asset.useEstimatedAcquisition) return null;
   if (!isExprValuationDateAndCauseOk(asset, formTransferDate)) return null;
 

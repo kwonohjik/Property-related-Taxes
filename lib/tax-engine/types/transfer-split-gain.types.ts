@@ -3,6 +3,7 @@
  * 800줄 정책 준수를 위해 transfer.types.ts 에서 분리. 하위 호환을 위해 transfer.types.ts 가 재수출.
  */
 import type { PreHousingDisclosureResult } from "./transfer-phd.types";
+import type { HousingExpropriationValuationDetail } from "../transfer-tax-expropriation-valuation";
 
 /**
  * §164⑨ 1호 건물 split 토지분 산출근거 (총액 3후보) — Record(Map 금지, JSON 소실).
@@ -55,4 +56,6 @@ export interface SplitGainResult {
   preHousingDisclosureDetail?: PreHousingDisclosureResult;
   /** §164⑨1호 건물 split 토지분 특례 산출근거 (계획 P6/D6) — 적용 시만 포함 */
   splitLandExpropriationValuationDetail?: SplitLandExpropriationValuationDetail;
+  /** §164⑨1호 주택 PHD split 총액 특례 산출근거 (계획 P6b/D15) — 적용 시만 포함 */
+  housingExpropriationValuationDetail?: HousingExpropriationValuationDetail;
 }
