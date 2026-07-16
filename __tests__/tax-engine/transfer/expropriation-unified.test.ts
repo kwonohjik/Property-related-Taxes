@@ -82,8 +82,10 @@ describe("공익수용 통합 Phase 1 — 판정 분기(취득-시점 조건 독
   });
 });
 
-describe("공익수용 통합 Phase 2 — #3 환산 양도시 기준시가 min[] (집행기준 99-164-12)", () => {
+describe("공익수용 — 환산 양도당시 기준시가 min[] (소득세법 시행령 §164⑨ 1호)", () => {
   const base = {
+    // §164⑨은 법 §99①1호 가목~라목만 대상 → 적격 자산 명시 필수(2026-07-16 게이트 확대).
+    propertyType: "land" as const,
     useEstimatedAcquisition: true,
     transferCause: "public_expropriation" as const,
     transferDate: new Date("2020-01-01"),
@@ -124,6 +126,7 @@ describe("공익수용 통합 Phase 2 — #3 환산 양도시 기준시가 min[]
 
 describe("공익수용 통합 Phase 2 — calcTransferGain 통합(#3 환산취득가 override)", () => {
   const gainInput = {
+    propertyType: "land" as const,
     transferPrice: 1_000_000_000,
     acquisitionPrice: 0,
     useEstimatedAcquisition: true,

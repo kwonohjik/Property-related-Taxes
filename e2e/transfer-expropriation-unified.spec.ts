@@ -103,11 +103,8 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await expect(page.getByText("현금보상액").first()).toBeVisible();
     await expect(page.getByText("채권보상액").first()).toBeVisible();
 
-    // 환산 min[] 특례(소득령 §164⑨ 1호)는 **현재 UI 게이트가 토지 전용**이라 주택은 미노출.
-    // ⚠️ 이는 법령상 옳아서가 아니다 — §164⑨은 법 §99①1호 "가목부터 라목까지"(토지·건물·
-    //    오피스텔/상업용 건물·**주택** 전부)가 대상이므로 **게이트가 법령보다 좁다**(알려진 갭).
-    //    게이트 확대는 후속 과제 — `docs/02-design/features/expropriation-valuation-164-9-scope-expansion.plan.md` P3.
-    //    확대 시 이 단언은 "노출"로 뒤집혀야 한다.
+    // 이 케이스는 **환산 모드가 아니므로**(위에서 미선택) 특례 게이트가 OFF다.
+    // 주택 + 환산 조합의 노출 여부는 아래 "주택 + 수용 + 환산" 테스트가 별도로 고정한다.
     await expect(page.getByText("보상산정 기초 기준시가")).toHaveCount(0);
 
     // 감면·공제 단계 → §77 감면 자동 활성(ON)
@@ -115,6 +112,55 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await expect(
       page.getByRole("switch", { name: /공익사업 수용 감면/ }),
     ).toBeChecked();
+  });
+
+  test("건물 + 수용 + 환산 → 보상 2필드 노출 (P3 게이트 확대 — 나목)", async ({ page }) => {
+    // §164⑨은 §99①1호 가목~라목 대상 → 건물(나목)도 특례 대상.
+    // 종전엔 UI가 `assetKind === "land"`로만 게이트해 **법령보다 좁았다**(계획 D1).
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    const td = page.getByTestId("transfer-date");
+    await td.getByLabel("연도").fill("2023");
+    await td.getByLabel("월").fill("05");
+    await td.getByLabel("일").fill("01");
+
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "건물(토지 제외)" }).click(); // 나목
+
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+
+    await expandAssetSection(page, 2);
+    await page.getByTestId("expr-cause-radio").click();
+
+    await expect(page.getByText("보상산정 기초 기준시가")).toBeVisible();
+  });
+
+  test("주택 + 수용 + 환산 → 보상 2필드 **미노출** (라목 총액 트랙 미구현 = P5)", async ({ page }) => {
+    // 주택(라목)은 **법령상 적격**이나 개별주택가격이 총액이라 원/㎡ 모델이 맞지 않는다.
+    // 노출하면 transferArea가 없어(isAreaMode===false) 엔진 `area > 0`에 걸려
+    // **입력해도 아무 일도 안 하는** 침묵 무시가 된다 → P5(총액 트랙)까지 의도적 미노출.
+    // ⚠️ P5 완료 시 이 단언은 "노출"로 뒤집혀야 한다.
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    const td = page.getByTestId("transfer-date");
+    await td.getByLabel("연도").fill("2023");
+    await td.getByLabel("월").fill("05");
+    await td.getByLabel("일").fill("01");
+
+    await expandAssetSection(page, 1);
+    await expandAssetSection(page, 3);
+    // 기본 자산종류 = 주택(housing)
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("button", { name: "환산취득가" }).click();
+
+    await expandAssetSection(page, 2);
+    await page.getByTestId("expr-cause-radio").click();
+
+    await expect(page.getByText("보상산정 기초 기준시가")).toHaveCount(0);
   });
 
   test("현금+채권 보상 → 양도가액 자동 반영 (수용 양도가액 = 보상총액)", async ({ page }) => {

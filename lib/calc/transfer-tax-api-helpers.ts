@@ -636,8 +636,8 @@ export { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
  * 엔진이 게이트(환산·수용·2009.02.04) 판정 — 여기선 원값만 전달(변환 계층 — 게이트 아님).
  * 원/㎡=parseAmount(정수), 면적=parseFloat(소수 ㎡).
  *
- * ⚠️ **자산종류 게이트는 현재 UI·validate 2층에만 있다** — 엔진에는 없다(위 "엔진이 게이트"는
- *    환산·수용·날짜 3축 한정). 자산종류 축을 엔진에 추가하는 것은 계획 P3(Q4 — 3층 명시).
+ * 자산종류 게이트는 **UI·validate·엔진 3층 모두**에 있다(계획 Q4 — 3층 명시).
+ * 판정은 `lib/tax-engine/expropriation-scope.ts` **단일 소스** 위임 — 세 층이 같은 목록을 조회한다.
  */
 export function buildExpropriationInput(primary: AssetForm) {
   return {

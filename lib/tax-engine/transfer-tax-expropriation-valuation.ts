@@ -13,8 +13,8 @@
  *    - 집행기준은 국세청 **행정규칙**이고, 법령 근거는 **시행령 §164⑨**이다(MST 286211 원문 확인).
  *    - §164⑨은 법 §99①1호 **"가목부터 라목까지"** — 토지(가)·건물(나)·오피스텔/상업용 건물(다)·
  *      주택(라) **전부**가 대상이다. 하위 행정규칙이 시행령의 범위를 축소할 수 없다.
- *    ⇒ 다만 **현재 호출부(UI·validate)가 토지로만 게이트**하고 있어 건물·주택은 미도달이다.
- *      게이트 확대는 계획 P3의 범위. 이 함수 자체는 자산 종류를 판정하지 않는다.
+ *    ⇒ 이 함수는 **자산 종류를 판정한다**(게이트 5조건 중 1) — `expropriation-scope.ts` 단일 소스 위임.
+ *      UI·validate도 같은 파일의 진입점을 쓴다(3층 명시, 계획 Q4·Q7).
  *
  * ⚠️ **§164⑨ 2호(공매·강제경매·저당권실행 경매 → min[기준시가, 공매·경락가액]) 미구현** — 계획 P4.
  *
@@ -22,7 +22,13 @@
  * 계획: docs/02-design/features/expropriation-valuation-164-9-scope-expansion.plan.md
  */
 
-/** #3 산출근거 — Map 금지(JSON 소실), Record로 노출 */
+import type { TransferTaxInput } from "./types/transfer.types";
+import {
+  isExprValuationEligiblePropertyType,
+  EXPR_VALUATION_MIN_TRANSFER_DATE,
+} from "./expropriation-scope";
+
+/** 산출근거 — Map 금지(JSON 소실), Record로 노출 */
 export interface ExpropriationValuationDetail {
   /** 원/㎡ 3후보 */
   perSqmCandidates: { standard: number; compensation: number; basis: number };
@@ -35,6 +41,15 @@ export interface ExpropriationValuationDetail {
 }
 
 export interface ExpropriationValuationParams {
+  /**
+   * 자산 종류 — §164⑨은 법 §99①1호 **가목~라목**만 대상(§99①2호 권리는 제외).
+   * 판정은 `expropriation-scope.ts` 단일 소스 위임.
+   *
+   * ⚠️ **필수(optional 아님)** — optional로 두면 신규 호출부가 빠뜨려도 tsc가 못 잡고
+   *    게이트가 조용히 부적격 처리해 **특례가 소리 없이 죽는다**. 이 특례는 이미
+   *    "호출부가 1곳뿐이라 5개 경로가 우회"한 전례가 있다(계획 §3-0) — 같은 실수를 타입으로 막는다.
+   */
+  propertyType: TransferTaxInput["propertyType"];
   useEstimatedAcquisition?: boolean;
   transferCause?: "general" | "public_expropriation";
   transferDate: Date;
@@ -73,7 +88,7 @@ export interface ExpropriationValuationParams {
  * ✅ **원문 확인됨**: 현행 §164⑨(법제처 MST 286211) — 대상은 법 §99①1호 **"가목부터 라목까지"**
  *    (토지·건물·오피스텔/상업용 건물·주택 **전부**), 1호 수용(3후보 min[]), 2호 공매·경락(미구현 — 계획 P4).
  */
-const MIN_TRANSFER_DATE = new Date("2009-02-04");
+const MIN_TRANSFER_DATE = new Date(EXPR_VALUATION_MIN_TRANSFER_DATE);
 
 export function applyExpropriationValuation(
   p: ExpropriationValuationParams,
@@ -83,8 +98,11 @@ export function applyExpropriationValuation(
   const basis = p.compensationBasisStdPrice ?? 0;
   const area = p.transferArea ?? 0;
 
-  // 게이트 (4조건 AND) — 미충족 시 null(현행 총액 유지)
+  // 게이트 (5조건 AND) — 미충족 시 null(현행 총액 유지)
+  // ⚠️ 자산종류 축은 UI·validate와 **동일 소스**(expropriation-scope.ts)를 쓴다 — 여기서
+  //    목록을 재구현하면 3층 드리프트가 재발한다(계획 Q4·Q7).
   if (
+    !isExprValuationEligiblePropertyType(p.propertyType) ||
     !p.useEstimatedAcquisition ||
     p.transferCause !== "public_expropriation" ||
     p.transferDate < MIN_TRANSFER_DATE ||

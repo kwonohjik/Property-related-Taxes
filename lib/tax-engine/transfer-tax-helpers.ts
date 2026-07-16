@@ -309,6 +309,7 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   if (input.useEstimatedAcquisition) {
     // #3 공익수용 환산 양도시 기준시가 min[] 특례 — 게이트 충족 시 분모(양도시 기준시가) override
     const exprVal = applyExpropriationValuation({
+      propertyType: input.propertyType,
       useEstimatedAcquisition: input.useEstimatedAcquisition,
       transferCause: input.transferCause,
       transferDate: input.transferDate,

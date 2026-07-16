@@ -1,9 +1,9 @@
-# 공익수용·공매 양도당시 기준시가 특례 — §164⑨ 전면 정합 (rev.7)
+# 공익수용·공매 양도당시 기준시가 특례 — §164⑨ 전면 정합 (rev.10)
 
-> **상태**: Plan — 조사 4건 + **사용자 결정 Q1~Q6 전부 확정** + **STEP 1 자가검토 4-way 병렬 완료**
-> (57건 병합, Critical 10·High 16 반영).
-> **다음**: STEP 3 blast-radius 재검토 → STEP 5 엔진 설계 문서 → STEP 12 UI 설계 문서.
-> **Do 차단 잔여**: U3(`redevelopment_apt` 목 판정 — P7 한정).
+> **상태**: Plan — 조사 4건 + 사용자 결정 Q1~Q6 + **STEP 1 자가검토 4-way**(57건) + **STEP 3 blast-radius**(7건) 완료.
+> **P1·P2·P9 = Do 완료·머지**(PR #619 `f60f47db` · E2E #620 `2b3b3d84`).
+> **다음**: **Q7 결정 → P0-b anchor → P3**. (P3는 신규 엔진 필드 0 = **중 규모** → 설계 문서 STEP 5·12 **불요**)
+> **P3 차단**: Q7(§10-3). **P7 차단**: U3 — 단 BR-4로 **재평가 필요**(재개발은 수용 미도달).
 > **출발점**: `land-building-split-mode-gating-and-salescase-drift.plan.md` §7 **S2**(전제 오류로 범위 재정의 — §1-2).
 > **규모**: 대 (엔진 input/result 변경 → 14 동기화 지점 + 엔진·UI 설계 문서 필수)
 > **승인 범위**(사용자): 가~라목 전부 + 법령 상수화 + §164⑨2호 공매·경락 + multi-parcel 배선. 부칙 검증 **완료**(§9).
@@ -14,7 +14,7 @@
 
 | 순위 | 결함 | 세액 영향 | 근거 |
 |---|---|---|---|
-| **1** | **다필지 토지 수용 + 필지별 환산 → 특례 소실** (D7) | **86,784,934원 과다** | **probe 실증 (API 형태 재측정)** |
+| ~~1~~ | ~~다필지 토지 수용 + 필지별 환산 → 특례 소실 (D7)~~ | ~~86,784,934원 과다~~ | ✅ **해소 — PR #619 머지**(`f60f47db`) + E2E PR #620(`2b3b3d84`) |
 | 2 | UI/validate 게이트가 법령보다 좁음 — 건물·오피스텔/상가·주택 배제 (D1·D2) | 과다 **(방향 추정 — 미실증)** | §2-2 법령 |
 | 3 | §164⑨2호 공매·경락 전부 미구현 (D5) | 과다 **(미실증)** | §2-1 법령 |
 | 4 | PHD·겸용·재개발·split 경로 특례 우회 (D6·D8·D12·**D15**) | 과다 **(D6만 engine-level 실증)** | §3-0 |
@@ -120,6 +120,7 @@ m ≥ A 이면: 차감 없음 → A 유지
 | **D15** | **PHD(§164⑤·⑦) 경로 특례 미적용** — `calcSplitGainPreDisclosure`가 **split보다 먼저** 분기 | `transfer-tax-split-gain.ts:139-141` · `transfer-tax-pre-housing-disclosure.ts`(자체 산식) | 과다(추정) | 선형 |
 | **D8** | 겸용(mixed-use) 경로 특례 미적용 | `transfer-tax-mixed-use-helpers.ts:268,519` | 과다(추정) | 선형 |
 | **D12** | 재개발 경로 특례 미적용 — STEP 2 skip | `transfer-tax-redevelopment.ts:8` | 과다(추정) | 선형 |
+| **D16** | **상업용건물·일반건물 전용 환산 경로가 특례 우회** (P3 Do 중 probe 실증 — §3-0 표 누락분) | **상가**: `transfer-tax.ts:303-312` `runCommercialBuildingStep` 성공 시 `useEstimatedAcquisition: false`로 교체 → `calcTransferGain` 게이트 미진입 · **일반건물**: `route.ts:708` → `dispatchGeneralBuilding` → `:736` **early return**(`calculateTransferTax` 미호출) | 과다(추정) | 선형 |
 | **D3** | 엔진·API에 자산종류 게이트 없음 (게이트가 UI·validate 2층에만) | `expropriation-valuation.ts:49-57` · `api-helpers.ts:639-647` | (D1 하 미도달) | stale |
 | **D11** | **`transferArea` 쓰기가 토지 전용** — `building`·`commercial_building`·`general_building` **4종 전부** store 미저장 | `AssetSectionBasic.tsx:298` · `StandardPriceInput.tsx:105-106` | 게이트만 열면 **특례가 조용히 죽음** | — |
 | **D13** | 보상총액이 특례 함수에 미도달 — `reductions[]`의 `cash+bond`가 flat 5필드 전달에서 누락 | `transfer-tax-helpers.ts:311-319` | (총액 트랙 전제) | — |
@@ -142,6 +143,13 @@ m ≥ A 이면: 차감 없음 → A 유지
 | 겸용 주택분 | `mixed-use-helpers.ts:268` | ❌ | 직접 호출 |
 | 겸용 상가분 | 동 `:519` | ❌ | 직접 호출 |
 | 재개발 | `redevelopment.ts` (STEP 2 skip) | ❌ | — |
+| **상업용건물** | `commercial-building-valuation.ts` (§164⑧·§176의2②2호 전용) | ❌ | `transfer-tax.ts:305` STEP 0.35가 **`useEstimatedAcquisition: false`로 교체** → 게이트 미진입 (**D16** — rev.10 추가) |
+| **일반건물** | `general-building-valuation.ts` | ❌ | `route.ts:708→736` **early return** — `calculateTransferTax` **미호출** (**D16**) |
+
+> **⚠️ rev.10 정정 — 이 표는 rev.2~9에서 전수가 아니었다.** P3 Do 중 코드리뷰 probe가 **상가·일반건물
+> 2경로**를 추가 검출했다(총 **8경로 우회**). rev.8까지 "6경로"라 단정한 것은 과소 집계였다.
+> ⇒ **P3의 게이트 확대 실효는 `building`(나목) 1종뿐**이다 — 상가·일반건물은 게이트를 열어도
+> 세액이 그대로라 UI 노출을 **의도적으로 보류**했다(§4-1c 트랙 목록).
 
 ⇒ **게이트 확대만으로는 6개 경로가 여전히 미적용**. 게이트 확대와 경로 배선은 **별개 작업**이다.
 ⇒ **D15 주의**: PHD가 split보다 먼저 분기하므로, P6가 split을 배선해도 **PHD 조합은 여전히 우회**한다.
@@ -249,25 +257,87 @@ m ≥ A 이면: 차감 없음 → A 유지
 엔진 `TransferTaxInput.propertyType`은 **10종**이다(`transfer.types.ts:67`). 폼 `assetKind`는 8종
 (`calc-wizard-asset.ts:62`). Q4(3층 명시)를 구현하려면 이 축을 **가~라목에 명시적으로 매핑**해야 한다:
 
-| propertyType | 목 | §164⑨ 대상 | 트랙(1호) |
-|---|---|---|---|
-| `land` | **가** | ✅ | 원/㎡ |
-| `building` | **나** | ✅ | 원/㎡ |
-| `general_building` · `general_building_unit` | **나** | ✅ | 원/㎡ |
-| `commercial_building` | **다** | ✅ | 원/㎡ |
-| `housing` | **라** | ✅ | 총액 |
-| `mixed-use-house` (겸용) | **나+라** | ✅ | 주택분·상가분 분리(D8) |
-| `redevelopment_apt` | **라?** | ⚠️ **확인 필요** | — |
-| **`right_to_move_in`** (조합원입주권) | — | ❌ **대상 아님** | — |
-| **`presale_right`** (분양권) | — | ❌ **대상 아님** | — |
+| propertyType | assetKind | 목 | §164⑨ 대상 | 트랙(1호) | Phase |
+|---|---|---|---|---|---|
+| `land` | `land` | **가** | ✅ | 원/㎡ | 완료(P2 다필지·단건) |
+| `building` | `building` | **나** | ✅ | 원/㎡ | **P3** |
+| `general_building` | `general_building` | **나** | ✅ | 원/㎡ | **P3** |
+| `commercial_building` | `commercial_building` | **다** | ✅ | 원/㎡ | **P3** |
+| `housing` | `housing` | **라** | ✅ | **총액** | P5 |
+| `mixed-use-house` (겸용) | — (`isMixed` 파생) | **나+라** | ✅ | 주택분·상가분 분리 | P7(D8) |
+| `redevelopment_apt` | `redevelopment_apt` | 라? | ⚠️ U3 | — | P7(D12) |
+| `right_to_move_in` | `right_to_move_in` | — | ❌ 2호(권리) | — | — |
+| `presale_right` | `presale_right` | — | ❌ 2호(권리) | — | — |
+| `general_building_unit` | **없음** | 나 | (자산-수준 미도달) | — | — |
 
-> **⚠️ 입주권·분양권은 §164⑨ 대상이 아니다** (rev.7 신규 발견). §99①**2호**(부동산에 관한 권리)이고
-> §164⑨은 **1호 가목~라목만** 지칭한다(§2-1 원문). 3층 게이트는 이 둘을 **명시적으로 제외**해야 한다.
-> 현행은 UI가 `assetKind === "land"`로 막아 우연히 배제 중이나, 게이트 확대 시 **의도적 제외**로 전환.
+> **⚠️ 축이 3층에서 서로 다르다 (rev.8 — blast-radius BR-1·Critical)**
+> - **UI·validate 층 = `assetKind`**(8값) / **엔진 층 = `propertyType`**(10값). **같은 enum이 아니다.**
+> - 매핑은 **`transfer-tax-api.ts:196-200`에만** 있고, `isMixed`→`mixed-use-house`,
+>   `isRedevelopmentRightTransfer`→`right_to_move_in` 파생을 포함한다(순수 assetKind 함수가 아님).
+> - **rev.7 §10-2의 "기존 `toPropertyKind` 계열 재사용"은 사실 오류다** — `toPropertyKind`
+>   (`CompanionSaleModeBlock.tsx:109-115`)는 `"land" | "building_non_residential" |
+>   "house_individual" | "house_apart"` **4값 `propertyKind`**를 반환한다. `StandardPriceInput`
+>   전용이며 `propertyType`과 **무관**하다. ⇒ Q4 구현 방식 재설계 필요(§4-1c).
 >
-> **⚠️ `redevelopment_apt` 확인 필요(U3)**: 재개발 아파트가 §99①1호라목(주택)인지 2호가목(부동산을
-> 취득할 수 있는 권리)인지 — **관리처분계획 인가 전후로 성질이 바뀐다**. 법령 확인 후 확정.
-> 확정 전까지 D12(재개발 배선, P7)는 **착수 불가**.
+> **⚠️ `general_building_unit`은 자산-수준 값이 아니다** (BR-2): `general-building-valuation.ts:698`·
+> `general-building-extension.ts:309,347`이 만드는 **엔진 내부 서브카드** propertyType이다.
+> 폼에서 오지 않으므로 자산-수준 게이트가 볼 일이 없다.
+>
+> **✅ 입주권·분양권·재개발은 이미 배제돼 있다** (BR-3 — rev.7의 "명시적 제외" 요구는 **과잉**):
+> 수용 3지선다는 `TransferModeBlock.tsx:49` `SUPPORTED_ASSET_KINDS =
+> ["housing","land","building","general_building","commercial_building"]` 안에서만 뜬다
+> (`:59` `isSupported`). 입주권·분양권·재개발은 **`transferCause`를 설정할 방법 자체가 없어**
+> 특례에 도달하지 못한다. → **C-06c는 UI 변경 없이 현행이 이미 정답**(회귀 방어 anchor로만 유지).
+>
+> **✅ `SUPPORTED_ASSET_KINDS` 5종 = §164⑨ 가~라목과 정확히 일치**한다. 즉 **자산종류 게이트는
+> 사실상 이미 존재**하나 **우연한 정합**이다(그 상수의 주석은 "부담부증여 지원 자산 종류" — 다른 목적).
+> Q4의 3층 명시는 이 우연을 **의도로 전환**하는 작업이다.
+>
+> **⚠️ U3 재평가 필요** (BR-4): rev.7은 U3(`redevelopment_apt` 목 판정)가 **P7을 차단**한다고 했으나,
+> `redevelopment_apt`는 `SUPPORTED_ASSET_KINDS`에 **없어** 수용 자체가 도달 불가다.
+> ⇒ U3는 P7의 차단 요인이 **아닐 수 있다**. P7 착수 시 재판단.
+
+### 4-1c. Q4 구현 재설계 (rev.8 — BR-1 대응)
+
+3층이 축을 공유하지 않으므로 rev.7의 "단일 함수 `isExprValuationEligible(propertyType)`를 3층이 import"는
+**그대로는 성립하지 않는다**. 후보:
+
+| 안 | 내용 | 평가 |
+|---|---|---|
+| **A** | `isExprValuationEligible(propertyType)` 단일 + UI·validate가 **`assetKindToPropertyType()` 신규 공용 매핑**을 거쳐 호출 | 축 통일. 단 API 매핑(`:196-200`)이 `isMixed`·`isRedevelopmentRightTransfer` 파생을 포함해 **순수 함수로 추출 시 그 컨텍스트도 필요** |
+| **B** | `isExprValuationEligible(assetKind)`(UI·validate) + `isExprValuationEligibleByPropertyType()`(엔진) **2함수, 1소스 목록** | 축별 진입점 2개지만 **대상 목록은 상수 1개** 공유 → dual-truth 없음. 파생 컨텍스트 불요 |
+| **C** | 엔진 단일 게이트만(rev.7 Q4 ①안) | 사용자가 기각 |
+
+> **B안 채택(Q7)** — A안은 `mixed-use-house`·`right_to_move_in` 파생이 UI 시점엔 확정되지 않아
+> 순수 매핑이 불가능하다.
+
+> ### ✅ Do 환류 (2026-07-16 — P3 구현 결과, 설계 정정 2건)
+>
+> **① 목록이 1개가 아니라 2개다 — "법령 적격" ≠ "구현 지원"** (E2E가 검출)
+>
+> rev.8은 `EXPR_VALUATION_ELIGIBLE` **단일 목록**을 전제했으나, 구현 중 **주택(라목)에서 모순**이 났다:
+> 주택은 **법령상 적격**이지만 개별주택가격이 총액이라 원/㎡ 모델이 맞지 않는다(총액 트랙 = P5 미구현).
+> 주택을 UI 노출 목록에 넣으면 `transferArea`가 없어(`isAreaMode === false`) 엔진 `area > 0`에 걸려
+> **사용자가 보상액을 입력해도 아무 일도 일어나지 않는다** — **방금 P2에서 고친 D7의 침묵 무시와 같은 병**.
+>
+> ⇒ `expropriation-scope.ts`에 **목록 2개**를 둔다(둘 다 이 파일 단일 소스):
+>
+> | 목록 | 범위 | 소비 층 | 답하는 질문 |
+> |---|---|---|---|
+> | `ELIGIBLE_PROPERTY_TYPES` | **가~라목**(주택 포함) | **엔진** | "§164⑨ 대상인가" (법령) |
+> | `PER_SQM_TRACK_ASSET_KINDS` | **가~다목**(주택 제외) | **UI·validate** | "지금 실제로 계산되는가" (구현) |
+>
+> 법령 범위를 구현 한계로 좁히지 않으면서(엔진), 작동하지 않는 입력을 노출하지도 않는다(UI).
+> **P5에서 총액 트랙이 붙으면 `PER_SQM_TRACK`에 주택을 추가**하면 된다(적격 목록은 불변).
+> 진단용 `isExprValuationLegallyEligibleAssetKind()`도 함께 노출.
+>
+> **② `propertyType`을 optional이 아니라 필수로 했다**
+>
+> `ExpropriationValuationParams.propertyType`·`MultiParcelInput.propertyType` 모두 **required**.
+> optional이면 신규 호출부가 빠뜨려도 tsc가 못 잡고 게이트가 **조용히 부적격 처리**해 특례가 죽는다
+> — 이 특례는 이미 "호출부 1곳뿐이라 5개 경로가 우회"한 전례가 있다(§3-0). **타입으로 막는다.**
+> 실제로 필수화 직후 tsc가 낡은 테스트 fixture 3곳 + 다필지 fixture 17곳을 **즉시 검출**했다
+> (optional이었다면 전부 침묵 통과 → 특례 무력화).
 
 ### 4-2. 모델 — **B안(2-트랙) 채택** ✅
 
@@ -416,7 +486,8 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 | C-05 | 주택 | 라 | 단건 | 1호 | 특례 적용(**총액 3후보**) | `[R]` D1·§4-1 |
 | C-06 | 건물 | 가+나 | **split** | 1호 | **토지·건물 독립 min[]**(총액 3후보) | `[R]` D6·Q2 |
 | **C-06b** | 주택 | 라 | split | 1호 | **validate 차단**(미지원 — 라목 총액 미분해) | `[R]` **Q6 확정** |
-| C-06c | 입주권·분양권 | — | 단건 | 1호 | **특례 미적용**(§99①2호 — 대상 아님) | `[R]` **§4-1b** |
+| C-06c | 입주권·분양권 | — | 단건 | 1호 | **특례 미적용**(§99①2호) — `SUPPORTED_ASSET_KINDS` 밖이라 `transferCause` 설정 불가 | **`[G]` 현행 정답** — 회귀 방어만(BR-3) |
+| **C-24** | — | — | — | — | **`isExprValuationEligible` 단위 anchor** — 가~라목 ✅ / 입주권·분양권·`general_building_unit` ❌ | `[R]` BR-6 |
 | **C-07** | **토지 다필지** | 가 | **multi-parcel** | 1호 | **필지별 특례** | **`[R]` D7 — 86,784,934원 실증** |
 | C-07b | 토지 다필지 | 가 | multi-parcel | 1호 | 필지별 공시지가 상이 → min 독립 선택 | `[R]` §3-1 |
 | C-07c | 토지 다필지 | 가 | multi-parcel | 1호 | **API `:256` 무력화 해소 확인**(⑬⑭ 경유) | `[R]` §3-1 차단막(1) |
@@ -453,12 +524,20 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 | **PR#2** | **P0-a** | ✅ **완료** — anchor 8건(C-07·C-07b·C-07c·C-19·C-19b·C-02·C-20·C-12) RED→GREEN | — | PR#1 |
 | **PR#2** | **P2** | ✅ **완료** — **D7 다필지**: `multi-parcel-transfer.ts` 내부 배선(차단막 3지점 **무변경** — 환류 §3-1) + `ParcelInput` 필지별 2필드 + `MultiParcelInput.transferCause` + `ParcelResult.expropriationValuationDetail` + **`parcelSchema`(⑫)** + UI/validate | **86,784,934원 해소** | P0-a |
 | PR#3+ | P0-b | 잔여 anchor RED (§5 `[R]`) | — | PR#2 |
-| PR#3+ | **P3** | **D1·D2·D3·D11** 게이트 확대(가~다목) + `transferArea` **4종 배선**(`AssetSectionBasic.tsx:298` 게이트 확대 — **신규 위젯 불요**) + **`expropriation-scope.ts` 신설 → 3층 공유**(Q4) + **입주권·분양권 명시 제외**(§4-1b) | 과다 해소 | P0-b |
-| PR#3+ | **P3b** | **Q5 컴패니언 지원** — ⑫ `schema-sub.ts:105` 필드 추가 + `buildExpropriationInput` 호출부를 컴패니언까지 확장(UI는 이미 렌더됨) | 과다 해소 | P3 |
+| PR#3+ | **P3** | ✅ **완료** — **D1·D2·D3·D11** 게이트 확대 — `showValuationMin`·validate의 `assetKind === "land"` → **`building`·`general_building`·`commercial_building` 추가**(나·다목) + D11 `transferArea` 배선(**`AssetSectionTransfer.tsx:92-93`** — 환류 아래) + `expropriation-scope.ts` 신설(Q7 B안) + 엔진 게이트 5조건. **입주권·분양권 UI 제외 불요**(BR-3) | 과다 해소 | P0-b · Q7 |
+
+> **✅ D11 환류 — 수정 지점이 계획과 다르다.** rev.8은 `AssetSectionBasic.tsx:298`(면적 정보 섹션)
+> 게이트 확대를 지목했으나, 그 섹션엔 **`areaScenario` 4종 중 3종이 토지 전용**이다
+> (일부 양도·**감환지·증환지** — 환지는 소득령 §162의2 토지 개념). 건물에 그대로 노출하면 오답이다.
+> ⇒ 대신 **`AssetSectionTransfer.tsx:92-93`**을 고쳤다 — 건물은 `StandardPriceInput`에서 **이미 면적을
+> 입력**하는데(`isAreaMode === true`) `assetKind === "land"`일 때만 controlled라 값이 내부 state로
+> 빠지고 있었다. 그 조건만 적격 판정으로 바꾸면 **중복 필드 없이** store에 저장된다.
+> 계획의 "신규 위젯 불요"는 맞았으나 **자리가 틀렸다**.
+| PR#3+ | **P3b** | ⏭️ **별건 분리**(다자산 `transfer-tax-aggregate` 경로 검증 필요 — `buildAssetPayload`에 특례 필드 0건 실측) — **Q5 컴패니언 지원** — ⑫ `schema-sub.ts:105` 필드 추가 + `buildExpropriationInput` 호출부를 컴패니언까지 확장(UI는 이미 렌더됨) | 과다 해소 | P3 |
 | PR#3+ | **P4** | **D5** 공매·경락 — **신규 `AuctionBlock.tsx`**(3지선다 형제) + 2필드 + 배타(N3) + `selectMode` 3분기 보존 | 과다 해소 | P3 |
 | PR#3+ | **P5** | **라목(주택) 총액 트랙** + D13 보상총액 plumbing(총액 트랙 전용 — §4-3) | 과다 해소 | P3 |
 | PR#3+ | **P6** | **D6·D15** split(B-2) + **PHD 배선** — PHD가 split보다 먼저 분기하므로 **동시 처리** | 과다 해소 | P3·P5 |
-| PR#3+ | **P7** | **D8·D12** 겸용·재개발 배선 | 과다 해소 | P3 |
+| PR#3+ | **P7** | **D8·D12·D16** 겸용·재개발 **+ 상가·일반건물** 배선 — 각 전용 경로(`runCommercialBuildingStep` 내부 · `dispatchGeneralBuilding` 내부)에 특례를 배선해야 UI 노출이 실효를 갖는다 | 과다 해소 | P3 |
 | PR#3+ | **P8** | **D9** result 타입(§4-5) + 결과 카드 재작성 + **`<ToneCard>` 전환** + **`ALL_LEAVES` 등록** + CalculationStep | 없음(표시) | P3·P4·P5 |
 
 > **PR 분리 근거**: P2는 **세액 실증 유일** · land 전용 · P3와 **독립**(다필지 게이트가 이미 land라
@@ -489,6 +568,12 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 | ⑬ | body spread | `transfer-tax-api.ts:279-280` | 필지 전달 | 2필드 | 신규 필드 | 2필드 |
 | ⑭ | Route 매핑 | `route.ts:128,131-132` | 필지 매핑 | 2필드 | 신규 필드 | 2필드 |
 | 엔진 | | `transfer.types.ts:105,341` · `expropriation-valuation.ts:12-21,25,51` · `transfer-result.types.ts:91` · `helpers.ts:313` · `multi-parcel-transfer.ts:298-305` · `split-gain.ts:85-89,139-141` · `pre-housing-disclosure.ts` | | | | |
+| **P3 신규** | **`lib/tax-engine/expropriation-scope.ts`** (신규 — 자산종류 적격 단일 소스) | — | — | — | — |
+
+> **⚠️ `expropriation-scope.ts`는 14지점 축이 아니라 "3층 공유 소스"다** (rev.8 — BR-5).
+> 신규 필드가 아니므로 ①~⑭ 어디에도 안 들어가지만, **UI(`ExpropriationBlock`)·validate
+> (`transfer-tax-validate-asset`)·엔진(`applyExpropriationValuation`) 3곳이 import**하므로
+> 셋 중 하나라도 자체 조건을 재구현하면 **드리프트**다. P3 구현 시 **3곳 전부 이 파일 경유**를 grep 확인.
 
 > **⚠️ ⑫가 3곳이다** (rev.6 정정 — rev.5는 2곳이라 했다). `parcelSchema`(`schema-sub.ts:547`,
 > `schema.ts:192`에서 `parcels: z.array(parcelSchema)`)가 **최우선 Phase P2의 스키마 지점**인데 표에서 빠져 있었다.
@@ -574,6 +659,12 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 | **Q5** | 컴패니언 자산 | **지원 확대** — ⑫ 컴패니언 스키마 + API 변환 | §4-4 · §7 ⑫ |
 | **Q6** | housing split | **미지원 확정** + validate 차단 | §4-6 |
 
+### 10-3. STEP 3 blast-radius 파생 — 확정
+
+| Q | 사안 | 결정 |
+|---|---|---|
+| **Q7** | Q4 3층 공유 구현 방식(§4-1c) | **B안** — 진입점 2개 + **`EXPR_VALUATION_ELIGIBLE` 상수 목록 1개** 공유. A안은 `mixed-use-house`·`right_to_move_in` 파생이 UI 시점에 미확정이라 순수 매핑 불가 |
+
 ### 10-2. Q4·Q5·Q6 파생 사항
 
 **Q4 (3층 명시)**
@@ -622,6 +713,26 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 
 ## 12. 개정 이력
 
+- **rev.10** (2026-07-16): **P3 Do 완료 + 코드리뷰 반영.** **D16 신규** — 코드리뷰 probe가 §3-0 표의
+  **누락 2경로**(상업용건물·일반건물 전용 환산)를 검출. 상가는 `transfer-tax.ts:305` STEP 0.35가
+  `useEstimatedAcquisition: false`로 교체해 게이트 미진입, 일반건물은 `route.ts:736` **early return**으로
+  `calculateTransferTax` **미호출** ⇒ 게이트를 열어도 **세액 불변**. ⇒ **P3 실효는 `building`(나목) 1종**으로
+  좁혀졌고, 상가·일반건물은 UI 노출을 **보류**(노출 시 침묵 무시 + 차단 validation만 추가되는 순손실).
+  §4-1c 목록 3개 → **2개**(dual-truth 제거 — `ELIGIBLE_ASSET_KINDS`가 `ELIGIBLE_PROPERTY_TYPES`와
+  바이트 동일·소비자 0이었음). `MIN_TRANSFER_DATE` **4중 복제 → 단일 소스**. `showValuationMin`에
+  `!parcelMode` 추가(다필지 자산-수준 칸 침묵 무시 차단). C-04 anchor **삭제**(cbValuation을 뺀
+  도달 불가 구성을 GREEN으로 고정해 **거짓 확신**을 주고 있었음).
+- **rev.8** (2026-07-16): **STEP 3 blast-radius 7건 반영**(Critical 1·High 2).
+  **BR-1(Critical)**: rev.7 §10-2의 *"`toPropertyKind` 계열 재사용"*은 **사실 오류** — 그 함수는 4값
+  `propertyKind`(StandardPriceInput 전용)를 반환하며 10값 `propertyType`과 무관. **3층 축 불일치**
+  (UI·validate=`assetKind` / 엔진=`propertyType`, 매핑은 `transfer-tax-api.ts:196-200`에만) → §4-1c
+  구현 재설계 + **Q7 신설**(P3 차단). **BR-2**: `general_building_unit`은 엔진 내부 서브카드라 자산-수준
+  미도달 — 매핑표 정정. **BR-3(High)**: 입주권·분양권·재개발은 `SUPPORTED_ASSET_KINDS`
+  (`TransferModeBlock.tsx:49`) 밖이라 **`transferCause` 설정 자체가 불가** → rev.7의 "명시적 제외"는
+  **과잉**, C-06c는 `[G]` 현행 정답으로 강등. 그 5종이 **§164⑨ 가~라목과 정확히 일치** — 자산종류
+  게이트가 **우연히 이미 존재**함을 명시. **BR-4**: U3가 P7을 차단한다는 rev.7 판단 재평가 필요
+  (재개발도 수용 미도달). **BR-5**: §7에 `expropriation-scope.ts` 행 추가(14지점 축 아닌 3층 공유 소스).
+  **BR-6**: C-24(`isExprValuationEligible` 단위 anchor) 추가. **BR-7**: §0 D7 해소 표기.
 - **rev.7** (2026-07-16): **Q4·Q5·Q6 확정 반영**. Q4=**3층 명시** + **`expropriation-scope.ts` 단일 함수
   공유**(재구현 드리프트 차단, API는 원값 전달 유지). Q5=**컴패니언 지원 확대**(UI는 이미 렌더 중 —
   ⑫ 스키마 + ④ 호출부만 확장 · C-11b 의미 변경). Q6=**housing split 미지원 확정**(validate 차단 + 사유 명시,

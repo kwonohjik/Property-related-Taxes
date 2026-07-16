@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ParcelListInput } from "@/components/calc/inputs/ParcelListInput";
+import { EXPR_VALUATION_MIN_TRANSFER_DATE } from "@/lib/tax-engine/expropriation-scope";
 import { MixedUseExpandedPanel } from "../MixedUseSection";
 import {
   CompanionLandRateOverrideToggle,
@@ -240,7 +241,7 @@ export function AssetSectionAcquisition({
             showExpropriationMin={
               asset.transferCause === "public_expropriation" &&
               !!transferDate &&
-              transferDate >= "2009-02-04"
+              transferDate >= EXPR_VALUATION_MIN_TRANSFER_DATE
             }
           />
         </ToggleCard>

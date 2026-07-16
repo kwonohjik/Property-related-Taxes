@@ -2,6 +2,10 @@ import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-sto
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import {
+  isExprValuationEligibleAssetKind,
+  EXPR_VALUATION_MIN_TRANSFER_DATE,
+} from "@/lib/tax-engine/expropriation-scope";
 
 /**
  * 공익수용·협의매수 상세 입력 — "양도원인" 라디오는 TransferModeBlock(양도 정보 카드)의
@@ -25,11 +29,10 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 type ExprReduction = Extract<AssetReductionForm, { type: "public_expropriation" }>;
 
 /**
- * 환산 min[] 특례 노출 기준일 (수용=양도 시점) — **현행 문언(대통령령 제21301호) 적용 시작일**.
- * 엔진 `transfer-tax-expropriation-valuation.ts`의 `MIN_TRANSFER_DATE`와 동일해야 한다
- * (UI 노출 ↔ 엔진 게이트 일치). 근거 상세·1996~2009 구 문언 미지원은 그 파일 주석 참조.
+ * 환산 min[] 특례 노출 기준일 — **단일 소스**(`expropriation-scope.ts`)에서 가져온다.
+ * 근거 상세·1996~2009 구 문언 미지원은 `transfer-tax-expropriation-valuation.ts` 주석 참조.
  */
-const EXPR_VALUATION_MIN_DATE = "2009-02-04";
+const EXPR_VALUATION_MIN_DATE = EXPR_VALUATION_MIN_TRANSFER_DATE;
 
 export function ExpropriationBlock({
   asset,
@@ -41,10 +44,15 @@ export function ExpropriationBlock({
   /** form-global 양도일 (YYYY-MM-DD) — #3 게이트 판정 */
   transferDate: string;
 }) {
-  // #3 환산 min[] 게이트: 토지 + 환산모드 + 양도 ≥ 2009.02.04
-  // (건물은 원/㎡·면적 개념 미적용 → 토지로 한정. UI 노출 조건 = validate와 동일)
+  // §164⑨ 1호 환산 min[] 게이트: 적격 자산(가~라목) + 환산모드 + 양도 ≥ 2009.02.04.
+  // ⚠️ 적격 판정은 `expropriation-scope.ts` **단일 소스** 위임 — 여기서 자산종류를 나열하면
+  //    validate·엔진과 갈라진다(3층 드리프트). UI 노출 조건 = validate와 동일해야 한다.
   const showValuationMin =
-    asset.assetKind === "land" &&
+    isExprValuationEligibleAssetKind(asset.assetKind) &&
+    // 다필지는 **필지별** 보상값을 쓴다(필지마다 공시지가가 달라 min[] 선택이 독립).
+    // 자산-수준 칸을 함께 노출하면 입력해도 엔진이 안 읽는 **침묵 무시**가 된다.
+    // → 다필지 입력은 ParcelListInput의 필지 카드에만 둔다(validate도 동일 — `!asset.parcelMode`).
+    !asset.parcelMode &&
     asset.useEstimatedAcquisition &&
     !!transferDate &&
     transferDate >= EXPR_VALUATION_MIN_DATE;

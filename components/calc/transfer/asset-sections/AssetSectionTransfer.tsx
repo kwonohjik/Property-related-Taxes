@@ -6,6 +6,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { TransferModeBlock } from "../TransferModeBlock";
+import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
 import { CompanionSaleModeBlock, type BundledSaleMode } from "../CompanionSaleModeBlock";
 
 interface Props {
@@ -89,8 +90,18 @@ export function AssetSectionTransfer({
           dong={asset.addressDong || undefined}
           ho={asset.addressHo || undefined}
           transferDate={transferDate}
-          transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
-          onTransferAreaChange={asset.assetKind === "land" ? (v) => onChange({ transferArea: v }) : undefined}
+          // D11 — §164⑨ 적격 자산은 면적을 **store에 저장**해야 특례 분모(min[] × 면적)가 산출된다.
+          // 종전엔 land만 controlled라 건물·상가는 값이 StandardPriceInput 내부 state로 빠져
+          // 엔진 게이트 `area > 0`에 걸려 **특례가 조용히 죽었다**(게이트만 넓히면 무효인 이유).
+          // ※ 주택은 isAreaMode === false라 면적 칸 자체가 없다(총액 직접입력) — P5 총액 트랙 대상.
+          transferArea={
+            isExprValuationEligibleAssetKind(asset.assetKind) ? asset.transferArea : undefined
+          }
+          onTransferAreaChange={
+            isExprValuationEligibleAssetKind(asset.assetKind)
+              ? (v) => onChange({ transferArea: v })
+              : undefined
+          }
           ownershipNumerator={asset.ownershipNumerator}
           ownershipDenominator={asset.ownershipDenominator}
           contractTotalPrice={contractTotalPrice}
