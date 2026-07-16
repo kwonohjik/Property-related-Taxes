@@ -92,6 +92,9 @@ export function useInheritanceResultDerived({
     if (isInstallmentSplitEligible(result.finalTax) && !installmentEnabled)
       s.add("split-payment");
     if (paymentInKindEnabled) s.add("payment-in-kind");
+    // §74 문화유산 징수유예 카드(PrintSection id="cultural-heritage-deferral")는 결과뷰에 렌더되나
+    // availablePrintIds 미등록으로 인쇄 선택이 불가했다 — 렌더 가드와 동일 조건으로 등록 (M-14)
+    if ((result.culturalHeritageDeferredTax ?? 0) > 0) s.add("cultural-heritage-deferral");
     // 주의 사항(warnings) 섹션 삭제 — 인쇄 선택 집합에서도 제외
     return s;
   }, [result, heirs, estateItems, priorGifts, deathDate, installmentEnabled, paymentInKindEnabled, hasDebtOrCollateral]);

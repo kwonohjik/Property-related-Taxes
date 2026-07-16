@@ -14,7 +14,18 @@
  */
 
 import { useMemo, useState } from "react";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+
+/**
+ * 음수(△유보·평가차손·이연법인세대)가 정상값인 순자산 필드 — 상증령 §55①·상증칙 §17의2.
+ * Zod가 z.number()(signed)로 선언한 3필드와 1:1(unlisted-stock-valuation-v2.schema.ts:107·108·122).
+ * 나머지 자산·부채 행은 .nonnegative()이므로 부호 입력 불가.
+ */
+const SIGNED_NET_ASSET_KEYS = new Set<string>([
+  "assetValuationDelta", // ② 평가차액(§60·§66 평가가액 − 장부)
+  "corpTaxReservedAmount", // ③ 법인세법상 유보금액(△유보)
+  "deferredTaxAdjustment", // ⑱ 이연법인세대 등
+]);
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -197,8 +208,9 @@ export function NetAssetCalculationTable({
               <CurrencyInput
                 label={row.label}
                 hideLabel
+                allowNegative={SIGNED_NET_ASSET_KEYS.has(row.key)}
                 value={String(displayValue || "")}
-                onChange={(v) => update(row.key, Number(v.replace(/,/g, "")) || 0)}
+                onChange={(v) => update(row.key, parseAmount(v))}
                 placeholder="0"
                 hideUnit
                 disabled={isDeltaRowLocked}
@@ -229,8 +241,9 @@ export function NetAssetCalculationTable({
             <CurrencyInput
               label={row.label}
               hideLabel
+              allowNegative={SIGNED_NET_ASSET_KEYS.has(row.key)}
               value={String(netAssetValueRaw[row.key] || "")}
-              onChange={(v) => update(row.key, Number(v.replace(/,/g, "")) || 0)}
+              onChange={(v) => update(row.key, parseAmount(v))}
               placeholder="0"
               hideUnit
             />

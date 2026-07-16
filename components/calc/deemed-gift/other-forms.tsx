@@ -318,10 +318,10 @@ export function ListingGainFields({ form, set }: Props) {
           ]}
         />
         {form.lgCorpGrowthMode === "direct" ? (
-          <CurrencyInput label="1주당 기업가치 실질증가이익" value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤" placeholder="1주당 기업가치 실질증가이익 (원)" />
+          <CurrencyInput label="1주당 기업가치 실질증가이익" allowNegative value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (기업가치 감소 시 음수 입력)" placeholder="1주당 기업가치 실질증가이익 (원)" />
         ) : (
           <>
-            <CurrencyInput label="사업연도별 1주당 순손익액 합계" value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1)" placeholder="1주당 순손익액 합계 (원)" />
+            <CurrencyInput label="사업연도별 1주당 순손익액 합계" allowNegative value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1, 결손 시 음수)" placeholder="1주당 순손익액 합계 (원)" />
             <CurrencyInput label="사업연도개시일~상장전일 월수" value={form.lgMonthsBusinessStart} onChange={(v) => set({ lgMonthsBusinessStart: v })} hint="분모 월수 (1월미만은 1월)" placeholder="월수" />
             <CurrencyInput label="증여·취득일~정산기준일 월수" value={form.lgMonthsAcqToSettlement} onChange={(v) => set({ lgMonthsAcqToSettlement: v })} hint="곱수 월수 (령§31의3⑤2, 1월미만은 1월)" placeholder="월수" />
             <p className="text-xs font-medium text-emerald-800" data-testid="lg-corp-growth-echo">

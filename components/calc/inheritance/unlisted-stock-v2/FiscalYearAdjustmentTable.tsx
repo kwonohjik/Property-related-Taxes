@@ -18,7 +18,7 @@
 
 import { Fragment } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -48,10 +48,12 @@ interface RowDef {
   group: "income" | "add" | "sub";
   cellNum: string;
   description?: string;
+  /** 음수(결손) 입력 허용 — §56④ 각 사업연도 소득금액(①)은 결손이 정상값(Zod z.number()). 가산·차감 항목은 nonnegative. */
+  signed?: boolean;
 }
 
 const ROWS: RowDef[] = [
-  { key: "taxableIncome", label: "각 사업연도 소득금액", group: "income", cellNum: "①", description: "법인세법 §14 각 사업연도 소득금액" },
+  { key: "taxableIncome", label: "각 사업연도 소득금액", group: "income", cellNum: "①", description: "법인세법 §14 각 사업연도 소득금액", signed: true },
   { key: "addRefundInterest", label: "국세·지방세 환급금 이자", group: "add", cellNum: "②", description: "§18 4호" },
   { key: "addLossFromDividend", label: "수입배당금 익금불산입액", group: "add", cellNum: "③", description: "§18의2·§18의4" },
   { key: "addCarriedDonation", label: "이월 기부금 손금산입액", group: "add", cellNum: "④", description: "§24⑤" },
@@ -291,9 +293,10 @@ export function FiscalYearAdjustmentTable({
                       <CurrencyInput
                         label={row.label}
                         hideLabel
+                        allowNegative={row.signed}
                         value={String(fy[row.key] ?? "")}
                         onChange={(v) => {
-                          const n = Number(v.replace(/,/g, "")) || 0;
+                          const n = parseAmount(v);
                           updateField(idx as 0 | 1 | 2, row.key, n as FiscalYearAdjustment[typeof row.key]);
                         }}
                         placeholder="0"

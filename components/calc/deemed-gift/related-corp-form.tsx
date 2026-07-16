@@ -81,7 +81,7 @@ export function RelatedCorpFields({ form, set }: Props) {
           ]}
         />
         <CurrencyInput label="총 매출액" value={form.rcTotalSalesStr} onChange={(v) => set({ rcTotalSalesStr: v })} placeholder="총 매출액 (원)" />
-        <CurrencyInput label="세무조정 후 영업손익" value={form.rcPreTaxAdjOperatingIncomeStr} onChange={(v) => set({ rcPreTaxAdjOperatingIncomeStr: v })} placeholder="세무조정 후 영업손익 (원)" />
+        <CurrencyInput label="세무조정 후 영업손익" allowNegative value={form.rcPreTaxAdjOperatingIncomeStr} onChange={(v) => set({ rcPreTaxAdjOperatingIncomeStr: v })} placeholder="세무조정 후 영업손익 (영업손실 시 음수)" />
         <CurrencyInput label="각 사업연도 소득금액" value={form.rcTaxableIncomeStr} onChange={(v) => set({ rcTaxableIncomeStr: v })} placeholder="각 사업연도 소득금액 (원)" />
         <CurrencyInput label="법인세 순세액" value={form.rcCorporateTaxNetStr} onChange={(v) => set({ rcCorporateTaxNetStr: v })} placeholder="산출세액 − 공제·감면액 (원)" />
       </ToneCard>
