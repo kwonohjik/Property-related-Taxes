@@ -61,12 +61,17 @@ export function ExpropriationBlock({
   );
 
   // §164⑨ min[] 3후보 (원/㎡): ① 양도시 기준시가(읽기전용 참조) ② 보상 ③ 보상기초.
-  // ⚠️ 상가(commercial_building)는 `standardPricePerSqmAtTransfer`가 아니라 호별고시가
-  //    `cbUnitPriceAtTransfer`를 양도시 기준시가로 쓴다(§99①1호다목) → 참조행 소스 분기(표시 전용).
+  // ⚠️ 양도시 기준시가 소스는 자산종류별로 다르다(표시 전용 분기):
+  //    - 상가(commercial_building): 호별고시가 `cbUnitPriceAtTransfer` (§99①1호다목)
+  //    - 일반건물(general_building): 양도시 토지 개별공시지가 `gbTransferLandPricePerSqm`
+  //      (§164⑨은 GB에서 **토지분만** 적용 — 시행규칙 §80⑧, 계획 D16-GB)
+  //    - 그 외(토지·건물): `standardPricePerSqmAtTransfer`
   const stdPerSqm =
     asset.assetKind === "commercial_building"
       ? parseAmount(asset.cbUnitPriceAtTransfer || "")
-      : parseAmount(asset.standardPricePerSqmAtTransfer || "");
+      : asset.assetKind === "general_building"
+        ? parseAmount(asset.gbTransferLandPricePerSqm || "")
+        : parseAmount(asset.standardPricePerSqmAtTransfer || "");
   const compPerSqm = parseAmount(asset.compensationPerSqm || "");
   const basisPerSqm = parseAmount(asset.compensationBasisStdPrice || "");
   const allThreePresent = stdPerSqm > 0 && compPerSqm > 0 && basisPerSqm > 0;

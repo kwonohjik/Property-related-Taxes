@@ -113,6 +113,8 @@ export function GeneralBuildingValuationDetailCard({
   totalIncome,
 }: Props) {
   const { allocation, acquisition, estimatedDeduction } = detail;
+  // §164⑨ 1호 공익수용 특례 (토지 전용 — 게이트 미충족 시 undefined)
+  const exprVal = detail.expropriationValuationDetail;
 
   // 양도시 기준시가 합계 (안분 분모)
   // transferLandStd는 엔진이 safeMultiplyThenDivide로 계산 — UI에서는 표시용만
@@ -210,7 +212,18 @@ export function GeneralBuildingValuationDetailCard({
         </div>
         <div className="rounded bg-amber-50/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
           <p className="font-medium">산식</p>
-          <p>토지 환산취득가 = INT(토지 양도가액 {formatKRW(allocation.land)} × 취득시 토지 기준시가 / 양도시 토지 기준시가)</p>
+          {exprVal ? (
+            <>
+              <p>토지 환산취득가 = INT(토지 양도가액 {formatKRW(allocation.land)} × 취득시 토지 기준시가 / <span className="font-semibold">양도시 토지 기준시가(§164⑨ 적용 후 {formatKRW(exprVal.denominator)})</span>)</p>
+              <p className="pl-2 text-amber-700">
+                └ 공익수용 특례(소득세법 시행령 §164⑨ 1호) — 양도시 토지 기준시가를
+                min[기준시가 {formatKRW(exprVal.perSqmCandidates.standard)}, 보상가액 {formatKRW(exprVal.perSqmCandidates.compensation)}, 보상기초 {formatKRW(exprVal.perSqmCandidates.basis)}]
+                = {formatKRW(exprVal.chosenPerSqm)} 원/㎡ × {exprVal.area}㎡ 로 낮춤(토지분만)
+              </p>
+            </>
+          ) : (
+            <p>토지 환산취득가 = INT(토지 양도가액 {formatKRW(allocation.land)} × 취득시 토지 기준시가 / 양도시 토지 기준시가)</p>
+          )}
           <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.land)}</span></p>
           <p>건물 환산취득가 = INT(건물 양도가액 {formatKRW(allocation.building)} × 취득시 건물기준시가 / 양도시 건물기준시가)</p>
           <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.building)}</span></p>

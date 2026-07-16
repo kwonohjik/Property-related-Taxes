@@ -230,6 +230,15 @@ export function dispatchGeneralBuilding(
   rates: TaxRatesMap,
   /** 부담부증여 §159 정보 (옵션) — actualPriceMode 분기에서만 사용. */
   burdenedGiftInfo?: BurdenedGiftInfo,
+  /**
+   * §164⑨ 1호 공익수용 특례 — top-level 특례 필드 (토지 전용, 계획 D16-GB).
+   * 환산 경로(calculateGeneralBuildingTransfer)에서만 적용. gbRaw가 아닌 data 최상위에서 옴.
+   */
+  expropriation?: {
+    transferCause?: "general" | "public_expropriation";
+    compensationPerSqm?: number;
+    compensationBasisStdPrice?: number;
+  },
 ): GeneralBuildingRouteResult {
   // buildingAcquisitionDate: Zod는 z.string().date()로만 검증 — Date 객체로 변환 안 됨.
   // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
@@ -337,6 +346,15 @@ export function dispatchGeneralBuilding(
     totalTransferPrice,
     transferDate,
     acquisitionDate,
+    // §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 주입.
+    // 환산 경로 엔진이 게이트(수용·환산·2009.02.04·보상 후보) 판정. undefined이면 무영향(회귀 0).
+    ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
+    ...(expropriation?.compensationPerSqm !== undefined
+      ? { compensationPerSqm: expropriation.compensationPerSqm }
+      : {}),
+    ...(expropriation?.compensationBasisStdPrice !== undefined
+      ? { compensationBasisStdPrice: expropriation.compensationBasisStdPrice }
+      : {}),
     ...(coercedExtInfo ? {
       extensionInfo: {
         ...(coercedExtInfo as unknown as NonNullable<GeneralBuildingInput["extensionInfo"]>),

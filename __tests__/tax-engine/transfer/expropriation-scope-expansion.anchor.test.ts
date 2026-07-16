@@ -67,16 +67,18 @@ describe("C-24 §164⑨ 적격 자산 — EXPR_VALUATION_ELIGIBLE 단일 소스"
     expect(isExprValuationEligibleAssetKind("land")).toBe(true); // 가목
     expect(isExprValuationEligibleAssetKind("building")).toBe(true); // 나목
     expect(isExprValuationEligibleAssetKind("commercial_building")).toBe(true); // 다목 — D16-CB 배선 완료
+    expect(isExprValuationEligibleAssetKind("general_building")).toBe(true); // 가+나목 — D16-GB 배선 완료(토지분만)
     expect(isExprValuationEligibleAssetKind("right_to_move_in")).toBe(false);
     expect(isExprValuationEligibleAssetKind("presale_right")).toBe(false);
   });
 
-  it("⚠️ 일반건물 — **법령 적격이나 UI 미노출** (route early-return 우회 = D16-GB 미배선)", () => {
-    // 법령 축: 나목 → §164⑨ 대상 O
+  it("일반건물 — **배선 완료(D16-GB)** — 토지 환산 분모만 §164⑨(안분·건물 무변경)", () => {
+    // 법령 축: 가+나목 → §164⑨ 대상 O
     expect(isExprValuationLegallyEligibleAssetKind("general_building")).toBe(true);
     expect(isExprValuationEligiblePropertyType("general_building")).toBe(true);
-    // 구현 축: route.ts:736 early-return으로 calculateTransferTax 미호출. 노출하면 침묵 무시.
-    expect(isExprValuationEligibleAssetKind("general_building")).toBe(false);
+    // 구현 축: `calculateConvertedAcquisition`이 토지 환산 분모만 낮춘다 → UI 노출 O.
+    // 세액 실증·토지분만 근거는 expropriation-general-building.anchor.test.ts 참조.
+    expect(isExprValuationEligibleAssetKind("general_building")).toBe(true);
   });
 
   it("⚠️ 주택(라목) — **법령 적격이나 UI 미노출** (총액 트랙 미구현 = P5)", () => {

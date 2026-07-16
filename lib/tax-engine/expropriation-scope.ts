@@ -76,23 +76,31 @@ const PER_SQM_TRACK_ASSET_KINDS = [
   "land", // 가목 — 개별공시지가 × 면적. `calcTransferGain` 경유 → 특례 도달 ✅
   "building", // 나목 — 국세청 고시 ㎡당 × 면적. `calcTransferGain` 경유 → 특례 도달 ✅
   "commercial_building", // 다목 — 호별고시가 × 연면적. `runCommercialBuildingStep` 내부 배선(D16-CB) → 도달 ✅
-  // ⚠️ `general_building`(나목) **제외** — 아래 참조(route early-return 우회, D16-GB 미배선).
+  "general_building", // 가+나목 — 토지 환산 분모만 §164⑨(토지 전용). `calculateConvertedAcquisition` 배선(D16-GB) → 도달 ✅
 ] as const;
 
 /**
- * ## ⚠️ 일반건물은 왜 빠졌나 — **전용 경로가 특례를 우회한다** (상가는 D16-CB로 배선 완료)
+ * ## 전용 환산 경로 배선 현황 — 상가·일반건물 모두 배선 완료
  *
  * - **상업용건물**: ✅ **배선 완료(D16-CB)** — `runCommercialBuildingStep`(`transfer-tax-helpers.ts`)
  *   내부에서 `applyExpropriationValuation`으로 양도시 호별총액(환산 분모)을 낮춘다.
- *   `commercial_building`은 위 `PER_SQM_TRACK`에 **재추가**됐다.
- * - **일반건물**: ❌ **미배선(D16-GB)** — `route.ts:708` → `dispatchGeneralBuilding` → `:736`
- *   **early return**으로 `calculateTransferTax`를 **아예 호출하지 않는다**. 게다가 안분(§100)과
- *   환산 분모(§164⑨)에 같은 양도시 기준시가가 쓰여, 분모만 낮추고 안분은 원값 유지하는
- *   **분리 배선 + 법령 해석**이 필요하다. 배선 후 `PER_SQM_TRACK`에 추가하면 된다.
- *   ⇒ UI에 노출하면 사용자 입력이 **아무 일도 안 하는** 침묵 무시가 되므로 현재 **제외**.
+ * - **일반건물**: ✅ **배선 완료(D16-GB)** — `calculateConvertedAcquisition`(`general-building-valuation.ts`)
+ *   에서 **토지 환산 분모만** min[]로 낮춘다. route는 top-level 특례 3필드를
+ *   `dispatchGeneralBuilding`으로 전달(⑭).
  *
- * ※ 엔진 목록(`ELIGIBLE_PROPERTY_TYPES`)에는 `general_building`도 **그대로 둔다** —
- *   법령 적격은 사실이고, GB 경로가 배선되면 엔진 게이트는 이미 통과 상태여야 하기 때문이다.
+ * ### ⚠️ 일반건물은 왜 "토지분만"인가 — 법령 조사 결론(2026-07-16)
+ *
+ * GB는 토지(가목)+건물(나목) 2목이라 안분(§166⑥)과 환산(§176의2②)이 얽힌다. 조사 결과:
+ *   1. **환산 분모(§176의2②)만** §164⑨로 낮춘다 — 토지 환산취득가↑·차익↓(relief 본질).
+ *   2. **안분(§166⑥)은 원 개별공시지가 유지** — 안분에 낮춘 값을 넣으면 토지 상대가치가
+ *      인위적으로 하락해 양도가가 건물로 과다 배분됨(입법의도 밖 왜곡). 명문 근거도 없다.
+ *   3. **건물분(나목)은 미적용** — 시행규칙 §80⑧이 "보상액 산정 기초 기준시가 = 보상금 산정 당시
+ *      해당 **토지**의 개별공시지가"로 한정 정의. 건물엔 "보상 기초 기준시가" 개념 자체가 없다.
+ *      국세청 해석 2건(서면-2016-부동산-4026·사전-2018-법령해석재산-0057)도 전부 토지 사안.
+ *   ⇒ `general-building-valuation.ts`가 토지 환산 분모 1점만 override(안분·건물 무변경).
+ *
+ * ※ **증축(3-way, 사례 33)** 경로는 이번 배선에서 제외 — `general-building-extension.ts`가 자체
+ *   환산을 하며 §164⑨+증축+수용 3중 조합은 극희소. 알려진 갭(향후 필요 시 동일 패턴).
  */
 
 /**

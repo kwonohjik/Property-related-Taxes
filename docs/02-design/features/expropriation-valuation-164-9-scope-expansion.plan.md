@@ -120,7 +120,7 @@ m ≥ A 이면: 차감 없음 → A 유지
 | **D15** | **PHD(§164⑤·⑦) 경로 특례 미적용** — `calcSplitGainPreDisclosure`가 **split보다 먼저** 분기 | `transfer-tax-split-gain.ts:139-141` · `transfer-tax-pre-housing-disclosure.ts`(자체 산식) | 과다(추정) | 선형 |
 | **D8** | 겸용(mixed-use) 경로 특례 미적용 | `transfer-tax-mixed-use-helpers.ts:268,519` | 과다(추정) | 선형 |
 | **D12** | 재개발 경로 특례 미적용 — STEP 2 skip | `transfer-tax-redevelopment.ts:8` | 과다(추정) | 선형 |
-| **D16** | 상업용건물·일반건물 전용 환산 경로가 특례 우회 | **상가**: ✅ **해소(D16-CB)** — `runCommercialBuildingStep` 내부 배선. 세액 **86,784,934원 과다 실증**. · **일반건물**: ❌ 미배선(D16-GB — route early-return + 안분/환산 분모 분리 법령논점) | 상가 해소·GB 과다 | 선형 |
+| **D16** | 상업용건물·일반건물 전용 환산 경로가 특례 우회 | **상가**: ✅ **해소(D16-CB)** — 세액 **86,784,934원 과다 실증**. · **일반건물**: ✅ **해소(D16-GB)** — 토지 환산 분모만 §164⑨(안분·건물 무변경). **+82,745,181원 실증** | 모두 해소 | 완료 |
 | **D3** | 엔진·API에 자산종류 게이트 없음 (게이트가 UI·validate 2층에만) | `expropriation-valuation.ts:49-57` · `api-helpers.ts:639-647` | (D1 하 미도달) | stale |
 | **D11** | **`transferArea` 쓰기가 토지 전용** — `building`·`commercial_building`·`general_building` **4종 전부** store 미저장 | `AssetSectionBasic.tsx:298` · `StandardPriceInput.tsx:105-106` | 게이트만 열면 **특례가 조용히 죽음** | — |
 | **D13** | 보상총액이 특례 함수에 미도달 — `reductions[]`의 `cash+bond`가 flat 5필드 전달에서 누락 | `transfer-tax-helpers.ts:311-319` | (총액 트랙 전제) | — |
@@ -144,7 +144,7 @@ m ≥ A 이면: 차감 없음 → A 유지
 | 겸용 상가분 | 동 `:519` | ❌ | 직접 호출 |
 | 재개발 | `redevelopment.ts` (STEP 2 skip) | ❌ | — |
 | **상업용건물** | `commercial-building-valuation.ts` (§164⑧·§176의2②2호 전용) | ❌ | `transfer-tax.ts:305` STEP 0.35가 **`useEstimatedAcquisition: false`로 교체** → 게이트 미진입 (**D16** — rev.10 추가) |
-| **일반건물** | `general-building-valuation.ts` | ❌ | `route.ts:708→736` **early return** — `calculateTransferTax` **미호출** (**D16**) |
+| **일반건물** | `general-building-valuation.ts` | ✅ **토지분만 적용(D16-GB)** | `calculateConvertedAcquisition`이 토지 환산 분모만 min[] override. 안분·건물 무변경 |
 
 > **⚠️ rev.10 정정 — 이 표는 rev.2~9에서 전수가 아니었다.** P3 Do 중 코드리뷰 probe가 **상가·일반건물
 > 2경로**를 추가 검출했다(총 **8경로 우회**). rev.8까지 "6경로"라 단정한 것은 과소 집계였다.
@@ -471,6 +471,29 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 > `landStdAtAcq = sqmAtAcq × acquisitionArea`(토지)뿐이고 `buildingStdAtAcq = total − landStdAtAcq`
 > **잔액**이다 — 건물 면적 필드가 **없다**. §4-6이 `basis: "total"`을 택했으므로 **신설 불요**(정합).
 
+### 4-7. 일반건물(GB) §164⑨ — **토지분만 적용** ✅ (D16-GB, 법령 조사 2026-07-16)
+
+GB는 토지(가목)+건물(나목) 2목이라 안분(§166⑥)과 환산(§176의2②)이 얽힌다. rev.11까지 "안분/환산 분모 분리
+법령 해석 선행"으로 **미검증** 표기했던 논점을 KoreanLaw MCP 원문 조사로 해소했다.
+
+**결론 3가지 (검증 완료):**
+
+1. **환산 분모(§176의2②)만** §164⑨로 낮춘다 — 토지 환산취득가↑·차익↓(relief 본질). §164⑨ 문언
+   "…차감하여 **양도 당시 기준시가를 계산한다**"는 정의 규정이라 §176의2② 분모에 그대로 적용된다
+   (§176의2②이 §164⑧만 괄호 인용하고 §164⑨은 미인용이나, 정의 규정이라 인용 불요).
+2. **안분(§166⑥)은 원 개별공시지가 유지** — §166⑥은 §100② 실지거래가 구분 불분명 시 부가세법 §64①
+   안분이고, 여기 "기준시가"에 §164⑨-낮춘 값을 넣으라는 **명문이 없다**. 넣으면 토지 상대가치가
+   인위적으로 하락해 양도가가 건물로 과다 배분됨(입법의도 밖 왜곡). ⇒ 안분은 원값.
+3. **건물분(나목)은 미적용** — **시행규칙 §80⑧**: "영 §164⑨1호에서 보상액 산정 기초 기준시가는 보상금
+   산정 당시 해당 **토지**의 개별공시지가를 말한다." 건물엔 "보상 기초 기준시가" 개념 자체가 없다.
+   국세청 해석 2건(서면-2016-부동산-4026·사전-2018-법령해석재산-0057)도 전부 토지 사안.
+
+**구현**: `calculateConvertedAcquisition(input, allocation, landStdTotalForValuation?)` — 토지 환산 분모만
+override(`applyExpropriationValuation` 재사용). 안분(`allocateBundledTransferPrice`)·건물 환산 무변경.
+**증축(3-way, 사례 33)** 경로는 자체 환산이라 제외(§164⑨+증축+수용 3중조합 극희소 — 알려진 갭).
+
+> **근거(법제처 MST 286211 시행령·286379 시행규칙, 조회 2026-07-16)**: §164⑨·§166⑥·§176의2②·규칙 §80⑧.
+
 ---
 
 ## 5. 케이스 매트릭스 (anchor 대상)
@@ -538,7 +561,7 @@ buildingStdAtTransfer → min[buildingStdAtTransfer, 건물분 보상액, 건물
 | PR#3+ | **P5** | **라목(주택) 총액 트랙** + D13 보상총액 plumbing(총액 트랙 전용 — §4-3) | 과다 해소 | P3 |
 | PR#3+ | **P6** | **D6·D15** split(B-2) + **PHD 배선** — PHD가 split보다 먼저 분기하므로 **동시 처리** | 과다 해소 | P3·P5 |
 | **완료** | **D16-CB** | ✅ **상가 배선 — `runCommercialBuildingStep` 내부에 `applyExpropriationValuation`(양도시 호별총액 min[]) + `PER_SQM_TRACK` 재추가 + ① 참조행 CB 분기. 86,784,934원 실증** | 해소 | — |
-| PR#3+ | **D16-GB** | 일반건물 배선 — route early-return + **안분(§100)/환산 분모(§164⑨) 분리** 법령 해석 선행(신규필드 2·UI 신규). 별건 | 과다 해소 | 법령논점 |
+| **완료** | **D16-GB** | ✅ **일반건물 배선 — 토지 환산 분모만 §164⑨.** `calculateConvertedAcquisition`에 토지 분모 override(`applyExpropriationValuation` 재사용) + `PER_SQM_TRACK` 재추가 + route ⑭ 전달 + ① 참조행 GB 분기. **안분(§166⑥)·건물분 무변경**. +82,745,181원 실증(사례31 베이스) | 해소 | ✅ 법령조사 완료 |
 | PR#3+ | **P7** | **D8·D12** 겸용·재개발 배선 (각 전용 경로 내부) | 과다 해소 | P3 |
 | PR#3+ | **P8** | **D9** result 타입(§4-5) + 결과 카드 재작성 + **`<ToneCard>` 전환** + **`ALL_LEAVES` 등록** + CalculationStep | 없음(표시) | P3·P4·P5 |
 
