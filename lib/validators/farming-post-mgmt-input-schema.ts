@@ -15,7 +15,7 @@ export const farmingPostMgmtInputSchema = z.object({
   ]),
   violationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
   filingDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
-  determinedTax: z.number().nonnegative(),
+  baseTaxableAmount: z.number().nonnegative(),
   interestRate: z.number().min(0).max(1, "이자율은 소수(0~1) 형식 — 예: 0.029"),
   /** §16⑥ 정당사유 — violation ∈ {asset_disposed, farming_ceased}에만 적용 */
   justifiedReason: z
