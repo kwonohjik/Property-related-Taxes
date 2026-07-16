@@ -150,6 +150,11 @@ export function calcInheritanceTax(
   let funeralDeduction = 0;
   let nonFuneralDebts = 0;
 
+  // H-33: 비거주자는 §14②에 따라 (1)해당재산 공과금·(2)국내재산 담보채무·(3)국내사업장 장부채무만 차감.
+  //   장례비(§14①2호)·무담보 일반채무(financial·personal)는 §14②에 미열거 → 차감 불가.
+  //   공과금(tax 카테고리 §14②1호)·담보채무(collateral §14②2호)는 유지.
+  const isNonResident = input.decedentType === "non_resident";
+
   // 담보채무 §14 자동공제 (collateral-debt-auto-deduction) — opt-in ON 자산의 담보채권액을 derive
   const collateralDebts = deriveCollateralDebts(input.estateItems);
   const collateralTotal = sumCollateralDebt(collateralDebts);
@@ -162,20 +167,28 @@ export function calcInheritanceTax(
       if (di.category === "funeral") {
         if (di.isBongan) funeralBongan += di.amount;
         else funeralMeal += di.amount;
+      } else if (isNonResident && di.category !== "tax") {
+        // 비거주자 — 무담보 일반채무(financial·personal) §14② 배제. 공과금(tax)만 유지.
+        continue;
       } else {
         nonFuneralDebts += di.amount;
       }
     }
     // 상증령 §9②: 식대 clamp[500만,1천만] + 봉안 min(실제,500만). 단일진실 헬퍼로 통일.
-    funeralDeduction = calcFuneralExpenseDeduction(funeralMeal, funeralBongan).deduction;
+    //   비거주자는 §14②에 장례비 호 부재 → 차감 배제(0).
+    funeralDeduction = isNonResident
+      ? 0
+      : calcFuneralExpenseDeduction(funeralMeal, funeralBongan).deduction;
     allBreakdown.push({
-      label: "장례비 (식대 한도 500만~1천만 + 봉안 한도 5백만)",
+      label: isNonResident ? "장례비 — 비거주자 §14② 배제" : "장례비 (식대 한도 500만~1천만 + 봉안 한도 5백만)",
       amount: -funeralDeduction,
       lawRef: INH.DEBT_DEDUCTION,
-      note: `식대 ${funeralMeal.toLocaleString()} → ${Math.min(Math.max(funeralMeal, 5_000_000), 10_000_000).toLocaleString()}, 봉안 ${funeralBongan.toLocaleString()} → ${Math.min(funeralBongan, 5_000_000).toLocaleString()}`,
+      note: isNonResident
+        ? "비거주자는 §14②에 장례비 호 부재 → 차감 불가"
+        : `식대 ${funeralMeal.toLocaleString()} → ${Math.min(Math.max(funeralMeal, 5_000_000), 10_000_000).toLocaleString()}, 봉안 ${funeralBongan.toLocaleString()} → ${Math.min(funeralBongan, 5_000_000).toLocaleString()}`,
     });
     allBreakdown.push({
-      label: "공과금·채무 차감",
+      label: isNonResident ? "공과금 차감 (비거주자 §14②1호 — 무담보 일반채무 배제)" : "공과금·채무 차감",
       amount: -nonFuneralDebts,
       lawRef: INH.DEBT_DEDUCTION,
     });
@@ -186,12 +199,13 @@ export function calcInheritanceTax(
       input.funeralBonganExpense !== undefined
         ? calcFuneralExpenseDeduction(input.funeralExpense, input.funeralBonganExpense)
         : calcFuneralExpenseDeduction(input.funeralExpense, input.funeralIncludesBongan);
-    funeralDeduction = fd.deduction;
-    allBreakdown.push(...fd.breakdown);
-    nonFuneralDebts = input.debts;
+    // 비거주자 — 장례비·무담보 일반채무(legacy debts는 미분류 → §14② 배제) 차감 불가
+    funeralDeduction = isNonResident ? 0 : fd.deduction;
+    if (!isNonResident) allBreakdown.push(...fd.breakdown);
+    nonFuneralDebts = isNonResident ? 0 : input.debts;
     allBreakdown.push({
-      label: "공과금·채무 차감",
-      amount: -input.debts,
+      label: isNonResident ? "공과금·채무 — 비거주자 §14② 배제 (미분류 legacy 채무)" : "공과금·채무 차감",
+      amount: -nonFuneralDebts,
       lawRef: INH.DEBT_DEDUCTION,
     });
   }
@@ -486,6 +500,7 @@ export function calcInheritanceTax(
     {
       ...input.deductionInput,
       deathDate: input.deathDate,
+      decedentType: input.decedentType, // C-12/C-13: 비거주자 공제 게이트 (§18만)
       spouseLegalShareOverride: resolvedSpouseLegalShareOverride,
     },
     taxableEstateValue,

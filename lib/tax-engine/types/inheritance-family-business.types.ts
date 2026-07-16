@@ -41,6 +41,8 @@ export interface FamilyBusinessInheritanceInput {
 
   /** 피상속인 사망일 (ISO date) — 신고기한 산정용. 미입력 시 InheritanceDeductionInput.deathDate fallback. */
   deathDate?: string;
+  /** 피상속인 거주자/비거주자 — §18의2① "거주자의 사망으로" 요건. 비거주자면 부적격 (C-13). 미입력=거주자. */
+  decedentType?: "resident" | "non_resident";
 
   /** 기업 규모 — sme(중소) / medium(중견). medium은 §18의2② 200% 가드 활성화. */
   enterpriseSize: "sme" | "medium";
@@ -200,7 +202,8 @@ export type FamilyBusinessIneligibleReason =
   | "heir_officer_not_appointed"         // 상증령 §15③2호 다
   | "heir_ceo_not_scheduled"             // 상증령 §15③2호 라
   | "medium_other_estate_exceeds_200pct" // §18의2② + 상증령 §15⑥⑦
-  | "tax_fraud_conviction";              // §18의2⑧1호 (short-circuit)
+  | "tax_fraud_conviction"               // §18의2⑧1호 (short-circuit)
+  | "decedent_non_resident";             // §18의2① "거주자의 사망으로" — 비거주자 배제 (C-13)
 
 /**
  * 가업상속공제 한도 (상증법 §18의2① 각 호 + 개정연혁).

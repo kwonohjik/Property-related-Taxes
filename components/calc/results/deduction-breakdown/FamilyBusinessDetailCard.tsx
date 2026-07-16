@@ -51,6 +51,7 @@ const FamilyBusinessIneligibleReasonLabels: Record<FamilyBusinessIneligibleReaso
   heir_ceo_not_scheduled: "신고기한 후 2년 내 대표이사 미취임 예정 (상증령 §15③2호 라)",
   medium_other_estate_exceeds_200pct: "중견기업 — 가업외 상속재산이 미공제 산출세액의 200% 초과 (§18의2②)",
   tax_fraud_conviction: "조세포탈·회계부정 형 확정 (§18의2⑧1호)",
+  decedent_non_resident: "피상속인 비거주자 (§18의2① — 거주자 사망만 적용)",
 };
 
 // 한도표 — 영위 연수별 (§18의2 ①)

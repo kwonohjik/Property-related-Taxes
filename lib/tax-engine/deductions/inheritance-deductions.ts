@@ -426,8 +426,12 @@ export function calcInheritanceDeductions(
   // deathDate가 제공된 경우 해당 날짜를, 없으면 오늘로 fallback.
   const baseDate = input.deathDate ?? new Date().toISOString().slice(0, 10);
 
-  // ① 기초공제
+  // ① 기초공제 (§18) — 거주자·비거주자 모두 2억 (§18 "거주자나 비거주자의 사망으로")
   const basicDeduction = calcBasicDeduction();
+
+  // 비거주자 게이트 (C-12) — §18 기초공제만 적용, 나머지 공제는 전부 "거주자의 사망으로" 한정이라 배제.
+  //   §19 배우자·§20 인적·§21 일괄(5억)·§22 금융·§23 재해·§23의2 동거주택·§18의2 가업·§18의3 영농.
+  const isNonResident = input.decedentType === "non_resident";
 
   // ② 배우자공제 (Phase D: spouseLegalShareOverride 우선)
   const spouseResult = calcSpouseDeduction(
@@ -436,7 +440,7 @@ export function calcInheritanceDeductions(
     input.heirs,
     input.spouseLegalShareOverride,
   );
-  const spouseDeduction = spouseResult.deduction;
+  const spouseDeduction = isNonResident ? 0 : spouseResult.deduction; // §19 거주자 전용
 
   // ③ 인적공제 (4종 합산)
   const personalResult = calcPersonalDeductions(
@@ -444,7 +448,7 @@ export function calcInheritanceDeductions(
     baseDate,
     input.cohabitantDependents,
   );
-  const personalDeductionTotal = personalResult.total;
+  const personalDeductionTotal = isNonResident ? 0 : personalResult.total; // §20 거주자 전용
 
   // ④ 일괄공제 vs 기초+인적 — §21① "큰 금액으로 공제받을 수 있다" 자동 적용.
   //    일괄공제(§21) = max(기초공제§18 + 그 밖의 인적공제§20①, 5억). 배우자공제(§19)는 비교 대상 아님.
@@ -463,7 +467,9 @@ export function calcInheritanceDeductions(
   //   (기초+인적이 5억을 초과해도 5억만. 기한후신고는 단서 미해당 → 본문 max 유지.)
   //   우선순위 §21②(배우자단독) > §21①단서(무신고) > 본문 max. KoreanLaw mst 276123 §21①.
   const isUnfiled = input.isUnfiled === true;
-  const chosenMethod: "lump_sum" | "itemized" = isSpouseSoleHeir
+  const chosenMethod: "lump_sum" | "itemized" = isNonResident
+    ? "itemized" // C-12: 비거주자는 §21 일괄공제(5억) 배제 → 기초공제(§18)만 (personalTotal=0이라 itemized=2억)
+    : isSpouseSoleHeir
     ? "itemized" // §21② 최우선 — 일괄공제(단서 5억 포함) 배제
     : isUnfiled
       ? "lump_sum" // §21① 단서 — 무신고 5억 고정
@@ -488,7 +494,7 @@ export function calcInheritanceDeductions(
 
   // ⑤ 금융재산공제
   const financialResult = calcFinancialDeduction(input.netFinancialAssets ?? 0);
-  const financialDeduction = financialResult.deduction;
+  const financialDeduction = isNonResident ? 0 : financialResult.deduction; // §22 거주자 전용
 
   // ⑥ 동거주택공제 (Phase E: 직접 입력 모드)
 
@@ -604,7 +610,7 @@ export function calcInheritanceDeductions(
     cohabitResult = { deduction: cohabitFull.deduction, breakdown: cohabitFull.breakdown };
     cohabitDeductionDetail = cohabitFull.detail;
   }
-  const cohabitationDeduction = cohabitResult.deduction;
+  const cohabitationDeduction = isNonResident ? 0 : cohabitResult.deduction; // §23의2 거주자 전용
 
   // ⑦ 영농공제 (§18의3 + 시행령 §16, 2026-05-21 정밀화 + v4.1.1 D8 residence echo)
   const farmingResult = _calcFarmingDeduction(
@@ -613,7 +619,7 @@ export function calcInheritanceDeductions(
     familyBusinessAux?.estateItems,
     input.deathDate,
   );
-  const farmingDeduction = farmingResult.deduction;
+  const farmingDeduction = isNonResident ? 0 : farmingResult.deduction; // §18의3 거주자 전용
   const farmingDetail = farmingResult.detail;
 
   // ⑧ 가업상속공제 (§18의2 + 상증령 §15, 2026-05-21 정밀화)
@@ -638,7 +644,8 @@ export function calcInheritanceDeductions(
         input.heirs.find((h) => h.id === resolvedHeirId)?.birthDate ??
         input.familyBusiness.heirBirthDate;
       const resolved = resolveFamilyBusinessRequirements(
-        input.familyBusiness,
+        // C-13: 비거주자 요건(§18의2①)을 eligibility에 전달 (resolvedInput이 ...input spread)
+        { ...input.familyBusiness, decedentType: input.decedentType },
         heirBirthDate,
         baseDate,
       );
@@ -658,13 +665,13 @@ export function calcInheritanceDeductions(
       input.deathDate, // 개정연혁 한도 (계획서 §5-6) — 미입력 시 현행본
     );
   })();
-  const familyBusinessDeduction = bizPhaseResult.deduction;
+  const familyBusinessDeduction = isNonResident ? 0 : bizPhaseResult.deduction; // §18의2 거주자 전용 (C-13)
   const familyBusinessDetail = bizPhaseResult.detail;
   const bizResult = { deduction: familyBusinessDeduction, breakdown: bizPhaseResult.detail.breakdown };
 
   // §23 재해손실공제 (상속공제 7종 중 하나 — §23의2 동거주택 앞, 조문 순서)
   const casualtyResult = calcCasualtyLossDeduction(input.casualtyLoss, baseDate);
-  const casualtyLossDeduction = casualtyResult.deduction;
+  const casualtyLossDeduction = isNonResident ? 0 : casualtyResult.deduction; // §23 거주자 전용
 
   // 배우자 + 기초/일괄 + 나머지 합계
   const rawTotal =
@@ -685,22 +692,29 @@ export function calcInheritanceDeductions(
   );
   const { limitedDeduction, ceiling, wasCapped, ceilingDetail } = limitResult;
 
-  // breakdown 구성
+  // breakdown 구성 — 비거주자는 §18 기초공제만 (거주자 전용 공제 전부 배제)
   const breakdown: CalculationStep[] = [
-    ...(chosenMethod === "lump_sum"
-      ? [{ label: lumpSumForcedByUnfiled ? `일괄공제 — 무신고 5억 고정 (${INH.LUMP_SUM} 단서)` : `일괄공제 (${INH.LUMP_SUM})`, amount: LUMP_SUM_DEDUCTION, lawRef: INH.LUMP_SUM }]
-      : [
+    ...(isNonResident
+      ? [
           { label: `기초공제 (${INH.BASIC_DEDUCTION})`, amount: basicDeduction, lawRef: INH.BASIC_DEDUCTION },
-          ...personalResult.breakdown.slice(0, -1), // 합계 행 제외
+          { label: "비거주자 — 배우자·인적·일괄·금융재산·재해·동거주택·가업·영농 공제 배제 (전부 §18 외 거주자 전용)", amount: 0, lawRef: INH.BASIC_DEDUCTION },
+        ]
+      : [
+          ...(chosenMethod === "lump_sum"
+            ? [{ label: lumpSumForcedByUnfiled ? `일괄공제 — 무신고 5억 고정 (${INH.LUMP_SUM} 단서)` : `일괄공제 (${INH.LUMP_SUM})`, amount: LUMP_SUM_DEDUCTION, lawRef: INH.LUMP_SUM }]
+            : [
+                { label: `기초공제 (${INH.BASIC_DEDUCTION})`, amount: basicDeduction, lawRef: INH.BASIC_DEDUCTION },
+                ...personalResult.breakdown.slice(0, -1), // 합계 행 제외
+              ]),
+          ...spouseResult.breakdown,
+          ...financialResult.breakdown,
+          ...(casualtyLossDeduction > 0
+            ? [{ label: `재해손실공제 (${INH.DISASTER_DEDUCTION})`, amount: casualtyLossDeduction, lawRef: INH.DISASTER_DEDUCTION }]
+            : []),
+          ...cohabitResult.breakdown,
+          ...farmingResult.breakdown,
+          ...bizResult.breakdown,
         ]),
-    ...spouseResult.breakdown,
-    ...financialResult.breakdown,
-    ...(casualtyLossDeduction > 0
-      ? [{ label: `재해손실공제 (${INH.DISASTER_DEDUCTION})`, amount: casualtyLossDeduction, lawRef: INH.DISASTER_DEDUCTION }]
-      : []),
-    ...cohabitResult.breakdown,
-    ...farmingResult.breakdown,
-    ...bizResult.breakdown,
     { label: "공제 소계", amount: rawTotal },
     {
       label: `§24 종합한도 (과세가액 ${taxableEstateValue.toLocaleString()} - 사전증여 ${priorGiftToHeirTotal.toLocaleString()})`,
