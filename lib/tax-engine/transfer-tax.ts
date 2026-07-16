@@ -375,8 +375,10 @@ export function calculateTransferTax(
   // 양도 손실(또는 0): 가산세는 §114조의2 ②에 따라 산출세액 없어도 부과
   // aggregate 엔진에서 skipLossFloor=true로 호출 시 음수 차익도 이 분기로 흡수되어야 함
   if (transferGain <= 0) {
-    let pb0 = input.acquisitionMethod === "appraisal"
-      ? (input.appraisalValue ?? 0)
+    // ⚠️ acquisitionMethod 판정은 effectiveInput 기준 — finalize.ts penaltyBase와 동일 이유·동일 근거
+    // (부담부증여는 §159 스텝이 정규화하나 원본 input에는 UI가 보존한 stale 산정방식이 남는다).
+    let pb0 = effectiveInput.acquisitionMethod === "appraisal"
+      ? (effectiveInput.appraisalValue ?? 0)
       : ((input.useEstimatedAcquisition || effectiveInput.usedEstimatedAcquisition)
           ? (estimatedBase || effectiveInput.estimatedBase || 0)
           : 0);
