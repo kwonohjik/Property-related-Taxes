@@ -54,3 +54,14 @@ describe("2-스트림 별지 차가감자진납부세액 정합 (리뷰 #3)", ()
     expect(r.finalTax).toBe(327_600_000);
   });
 });
+
+describe("2-스트림 별지 §69 신고세액공제율 연도 반영 (H-21 회귀)", () => {
+  it("[TS-FILING-RATE] 2018 증여 → 신고세액공제 formula '× 5%' (buildFilingFormRows filingCreditRate 미전달 시 3% 고정 드리프트)", () => {
+    const r = calcGiftTax({ ...inputA, giftDate: "2018-06-01" });
+    const row = r.filingFormRows.find((x) => x.label === "신고세액공제");
+    expect(row).toBeDefined();
+    // 계산은 §69 증여연도율(2018=5%)을 적용하는데 서식 라벨이 3%로 고정되면 표시 드리프트.
+    expect(row!.formula).toContain("5%");
+    expect(row!.formula).not.toContain("3%");
+  });
+});

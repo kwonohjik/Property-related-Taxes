@@ -372,8 +372,9 @@ export interface GiftTaxCreditParams {
   computedTax: number;
   /** 세대생략 할증액 */
   generationSkipSurcharge: number;
-  /** 증여일 — §69 연도별 신고세액공제율 결정. 미전달 시 현행 3%. */
-  giftDate?: string;
+  /** 증여일 — §69 연도별 신고세액공제율 결정. required(GiftTaxInput.giftDate도 required) —
+   *  optional일 때 2-스트림·합산배제 스트림 호출부가 침묵 누락해 3% 고정되던 버그 방지 (H-21·H-22). */
+  giftDate: string;
   /** @deprecated 도달 불가 — 미사용 (gift §59 한도 미적용). */
   foreignPropertyRatio?: number;
   /** 증여재산가액 (특례 절감액 계산용) */

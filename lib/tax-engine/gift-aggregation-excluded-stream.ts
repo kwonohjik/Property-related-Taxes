@@ -134,6 +134,7 @@ export function calcAggregationExcludedStream(
     creditInput: input.creditInput,
     computedTax,
     generationSkipSurcharge: surchargeResult.additionalSurcharge,
+    giftDate: input.giftDate, // §69 신고세액공제율 증여연도 기준 (H-22 — 미전달 시 3% 고정 버그)
     foreignPropertyRatio: undefined,
     giftAmount: grossValue,
     priorGiftComputedTax: 0,
