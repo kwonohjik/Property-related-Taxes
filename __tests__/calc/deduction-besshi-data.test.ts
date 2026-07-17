@@ -101,14 +101,62 @@ describe("buildBuppyo3Data — 부표3 (가·나·다·라)", () => {
     expect(d.deduction.total).toBe(500_000_000);
   });
 
-  it("E-3 항목별 채택 → ⑱ = basicDeduction, ㉓ null, 인적공제 4칸 null (R-1)", () => {
+  it("E-3 항목별 채택 → ⑱ = basicDeduction, ㉓ null, 인적공제 미제공 시 0 (R-1·H-50)", () => {
     const d = buildBuppyo3Data(
       mkResult({ ...baseDeduction, basicDeduction: 200_000_000, lumpSumDeduction: 0, totalDeduction: 200_000_000, chosenMethod: "itemized", lumpSumComparisonDetail: { selectedMethod: "itemized" } }),
       [],
     );
     expect(d.deduction.basic).toBe(200_000_000);
     expect(d.deduction.lumpSum).toBeNull();
+    // personalDeductionDetail 미제공 → itemized fallback 0 (종전 null 하드코딩)
+    expect(d.deduction.child).toBe(0);
+    expect(d.deduction.disabled).toBe(0);
+  });
+
+  it("H-50 항목별 채택 + personalDeductionDetail → ⑲⑳㉑㉒ 개별 표시", () => {
+    const d = buildBuppyo3Data(
+      mkResult({
+        ...baseDeduction,
+        basicDeduction: 200_000_000,
+        lumpSumDeduction: 0,
+        totalDeduction: 320_000_000,
+        chosenMethod: "itemized",
+        lumpSumComparisonDetail: { selectedMethod: "itemized" },
+        personalDeductionDetail: {
+          childDeduction: 50_000_000, // ⑲
+          minorDeduction: 10_000_000, // ⑳
+          elderDeduction: 50_000_000, // ㉑
+          disabledDeduction: 30_000_000, // ㉒
+        },
+      }),
+      [],
+    );
+    expect(d.deduction.child).toBe(50_000_000);
+    expect(d.deduction.minor).toBe(10_000_000);
+    expect(d.deduction.elderly).toBe(50_000_000);
+    expect(d.deduction.disabled).toBe(30_000_000);
+  });
+
+  it("H-50 일괄공제 채택 → 인적공제 4칸 null (일괄공제로 갈음·개별 미표시)", () => {
+    const d = buildBuppyo3Data(
+      mkResult({
+        ...baseDeduction,
+        lumpSumDeduction: 500_000_000,
+        totalDeduction: 500_000_000,
+        chosenMethod: "lump_sum",
+        lumpSumComparisonDetail: { selectedMethod: "lump_sum" },
+        personalDeductionDetail: {
+          childDeduction: 50_000_000,
+          minorDeduction: 10_000_000,
+          elderDeduction: 50_000_000,
+          disabledDeduction: 30_000_000,
+        },
+      }),
+      [],
+    );
     expect(d.deduction.child).toBeNull();
+    expect(d.deduction.minor).toBeNull();
+    expect(d.deduction.elderly).toBeNull();
     expect(d.deduction.disabled).toBeNull();
   });
 

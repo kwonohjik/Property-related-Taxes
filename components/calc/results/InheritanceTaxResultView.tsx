@@ -11,6 +11,7 @@ import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
 import { formatIsoStamp } from "@/lib/utils/file-download";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
 import { calcInheritanceFilingDeadline } from "@/lib/tax-engine/deductions/family-business-autoderive";
+import { netTaxAfterCulturalDeferral } from "@/lib/tax-engine/inheritance-cultural-heritage-deferral";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { SummaryRow } from "./SummaryRow";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -240,7 +241,13 @@ export function InheritanceTaxResultView({
               />
               <SummaryRow
                 label="납부할세액 (징수유예 차감)"
-                value={formatKRW(result.finalTax - (result.culturalHeritageDeferredTax ?? 0))}
+                // H-51: 징수유예(산출세액 기준)가 결정세액 초과 시 음수 방지 — 별지9호 ㊳(b43)와 정합, 납부세액 0 하한
+                value={formatKRW(
+                  netTaxAfterCulturalDeferral(
+                    result.finalTax,
+                    result.culturalHeritageDeferredTax,
+                  ),
+                )}
                 highlight
               />
             </>

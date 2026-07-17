@@ -98,10 +98,10 @@ export interface Buppyo3FuneralRow {
 }
 export interface Buppyo3DeductionValues {
   basic: number | null; // ⑱
-  child: null; // ⑲ 개별 미노출
-  minor: null; // ⑳
-  elderly: null; // ㉑
-  disabled: null; // ㉒
+  child: number | null; // ⑲ 자녀공제 (§20①1호) — itemized 모드만 (lump_sum은 갈음)
+  minor: number | null; // ⑳ 미성년자공제 (§20①2호)
+  elderly: number | null; // ㉑ 연로자공제 (§20①3호)
+  disabled: number | null; // ㉒ 장애인공제 (§20①4호)
   lumpSum: number | null; // ㉓
   familyBusiness: number; // ㉔
   farming: number; // ㉕
@@ -179,12 +179,15 @@ export function buildBuppyo3Data(
     d.lumpSumComparisonDetail?.selectedMethod ?? d.chosenMethod;
   const lim = d.deductionLimitDetail;
 
+  // ⑲~㉒ 기타 인적공제 — itemized 모드에서만 개별 표시(lump_sum은 일괄공제 5억으로 갈음).
+  // 엔진 result.personalDeductionDetail 단일진실(재계산 0). H-50: 종전 null 하드코딩으로 소실.
+  const pd = d.personalDeductionDetail;
   const deduction: Buppyo3DeductionValues = {
     basic: method === "itemized" ? d.basicDeduction : null,
-    child: null,
-    minor: null,
-    elderly: null,
-    disabled: null,
+    child: method === "itemized" ? (pd?.childDeduction ?? 0) : null,
+    minor: method === "itemized" ? (pd?.minorDeduction ?? 0) : null,
+    elderly: method === "itemized" ? (pd?.elderDeduction ?? 0) : null,
+    disabled: method === "itemized" ? (pd?.disabledDeduction ?? 0) : null,
     lumpSum: method === "lump_sum" ? d.lumpSumDeduction : null,
     familyBusiness: d.familyBusinessDeduction,
     farming: d.farmingDeduction,
