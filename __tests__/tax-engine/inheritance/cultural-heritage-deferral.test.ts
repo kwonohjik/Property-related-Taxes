@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { calcCulturalHeritageDeferral } from "@/lib/tax-engine/inheritance-cultural-heritage-deferral";
+import {
+  calcCulturalHeritageDeferral,
+  netTaxAfterCulturalDeferral,
+} from "@/lib/tax-engine/inheritance-cultural-heritage-deferral";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 // 상속세 §74 지정문화유산 등 징수유예 — 비례 방식(상증령 §76①, 조심 940708)
@@ -137,5 +140,21 @@ describe("§74 지정문화유산 등 징수유예 — calcCulturalHeritageDefer
     expect(r.deferredTax).toBe(110_000_000);
     expect(r.detail?.items[0].heritageType).toBe("museum");
     expect(r.detail?.items[0].collateralExemptible).toBe(false);
+  });
+
+  // H-51: 납부할세액 = max(0, 결정세액 − 징수유예). 징수유예(산출세액 기준)가 결정세액 초과 시 0 하한.
+  //   결과뷰 "납부할세액(징수유예 차감)"이 음수 표시하던 결함(별지9호 ㊳ b43과 모순) 교정.
+  describe("H-51 netTaxAfterCulturalDeferral — 납부세액 0 하한", () => {
+    it("징수유예 > 결정세액 → 0 (음수 방지)", () => {
+      // 산출세액 기준 징수유예 90M > 결정세액 30M(세액공제 반영) → 0
+      expect(netTaxAfterCulturalDeferral(30_000_000, 90_000_000)).toBe(0);
+    });
+    it("징수유예 < 결정세액 → 차감액", () => {
+      expect(netTaxAfterCulturalDeferral(100_000_000, 40_000_000)).toBe(60_000_000);
+    });
+    it("징수유예 undefined/null → 결정세액 그대로", () => {
+      expect(netTaxAfterCulturalDeferral(100_000_000, undefined)).toBe(100_000_000);
+      expect(netTaxAfterCulturalDeferral(100_000_000, null)).toBe(100_000_000);
+    });
   });
 });

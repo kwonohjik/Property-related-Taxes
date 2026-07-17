@@ -27,6 +27,18 @@ const COLLATERAL_EXEMPTIBLE: ReadonlySet<HeritageType> = new Set<HeritageType>([
   "natural_monument",
 ]);
 
+/**
+ * 징수유예 차감 후 납부할세액 — 0 하한 (별지9호 ㊳ b43 정합).
+ * 징수유예(§76① 산출세액 기준)가 결정세액(finalTax, 세액공제 반영) 초과 시 음수 방지.
+ * finalTax·deferredTax는 서로 다른 기준(결정세액 vs 산출세액)이라 deferred > finalTax 가능.
+ */
+export function netTaxAfterCulturalDeferral(
+  finalTax: number,
+  deferredTax: number | undefined | null,
+): number {
+  return Math.max(0, finalTax - (deferredTax ?? 0));
+}
+
 export interface CulturalHeritageDeferralParams {
   estateItems: EstateItem[];
   /** 자산 평가액 Map (키 = estateItemId = EstateItem.id) */
