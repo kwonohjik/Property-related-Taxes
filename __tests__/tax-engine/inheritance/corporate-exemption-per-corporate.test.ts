@@ -124,6 +124,45 @@ describe("PR 2 — 부표 5 영리법인 면제 분배 (perCorporateBreakdown)",
     expect(result.perCorporateBreakdown).toBeUndefined();
   });
 
+  it("ANCHOR-F5-6 (P-5): 저세율 법인 ⑤ 캡 — 자기 증여세 초과 배분 금지", () => {
+    // corp_a base 10억·증여세 2억, corp_b base 1억·증여세 500만 (저세율).
+    // TC(상속세 산출) 20억, TTB 100억.
+    //  · 폐기 모델: amount=Min(2.05억, 집계한도 2.2억)=2.05억을 taxBase 비율 배분 →
+    //    corp_b = 2.05억 − floor(2.05억×10억/11억)=1,863만 (자기 증여세 500만 초과 — 버그).
+    //  · 정본 모델: 법인별 한도 corp_b = floor(20억×1억/100억)=2천만, ⑤_b=Min(500만,2천만)=500만.
+    const perCorporateInputs: PerCorporateInput[] = [
+      {
+        corporateId: "corp_a",
+        inheritedAmount: 1_000_000_000,
+        taxBase: 1_000_000_000,
+        computedTax: 200_000_000,
+        shareholders: [],
+      },
+      {
+        corporateId: "corp_b",
+        inheritedAmount: 100_000_000,
+        taxBase: 100_000_000,
+        computedTax: 5_000_000, // 저세율 — 자기 증여세 500만
+        shareholders: [],
+      },
+    ];
+    const result = calcCorporateExemption(
+      {
+        corporateGiftComputedTax: 205_000_000,
+        corporateGiftTaxBase: 1_100_000_000,
+        totalComputedTax: 2_000_000_000,
+        totalTaxBase: 10_000_000_000,
+      },
+      { perCorporateInputs },
+    );
+    const bd = result.perCorporateBreakdown!;
+    // corp_a 한도 = floor(20억×10억/100억)=2억, ⑤=Min(2억,2억)=2억
+    expect(bd[0].exemptionAmount).toBe(200_000_000);
+    // corp_b ⑤ = 자기 증여세 500만으로 캡 (폐기 모델의 1,863만 아님)
+    expect(bd[1].exemptionAmount).toBe(5_000_000);
+    expect(result.amount).toBe(205_000_000); // Σ = 2억 + 500만
+  });
+
   it("ANCHOR-F5-5: 음수 가드 — (⑤ − ⑥) < 0 시 주주 환원 0", () => {
     // 면제세액 < 10% 기준 → 잔여 음수 → 주주 환원 0
     const perCorporateInputs: PerCorporateInput[] = [

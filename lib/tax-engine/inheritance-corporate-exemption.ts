@@ -98,11 +98,31 @@ export function calcCorporateExemption(
     };
   }
 
-  // 한도 = floor(산출세액 × 영리법인 과세표준 / 상속세 과세표준)
+  // 한도(집계) = floor(산출세액 × 영리법인 과세표준 / 상속세 과세표준)
   const limit = Math.floor(
     (totalComputedTax * corporateGiftTaxBase) / totalTaxBase,
   );
-  const amount = Math.min(corporateGiftComputedTax, limit);
+
+  // 영리법인 별 명세가 있으면 법인별 독립 면제(⑤_i = Min(법인 증여세, 법인별 한도))의
+  //   합계를 집계 면제세액으로 사용한다 (P-5). 법인별 한도는 §3의2② 지분상당액의
+  //   "상속세 상당액"과 동일하게 상속세 산출세액을 법인별 과세표준으로 안분한 값이다.
+  //   ⚠ 이전 모델(집계 amount = Min(Σ증여세, 집계한도)을 taxBase 비율로 배분 + 잔액흡수)은
+  //   한 법인의 면제를 다른 법인의 증여세 여력으로 정당화하여 저세율 법인에 ⑤를 과다배분
+  //   → 주주 ⑪ 과세 불리·집계 과다면제(상속세 과소)를 유발했다. 집행기준 28-0-1의
+  //   Min(한도, 산출세액) 캡을 단일법인 경로와 동일하게 법인별로 적용한다.
+  let perCorporateBreakdown: PerCorporateExemptionDetail[] | undefined;
+  let amount: number;
+  if (opts.perCorporateInputs && opts.perCorporateInputs.length > 0) {
+    perCorporateBreakdown = distributePerCorporate(
+      opts.perCorporateInputs,
+      totalComputedTax,
+      totalTaxBase,
+    );
+    amount = perCorporateBreakdown.reduce((s, d) => s + d.exemptionAmount, 0);
+  } else {
+    // 법인별 명세 없음(doneeId 미매핑 등) — 집계 한도 캡만 적용 (best-effort).
+    amount = Math.min(corporateGiftComputedTax, limit);
+  }
 
   const breakdown: CalculationStep[] = [
     {
@@ -123,16 +143,6 @@ export function calcCorporateExemption(
     },
   ];
 
-  // PR 2 (2026-05-22) — 영리법인 별 분배 명세 (부표 5)
-  let perCorporateBreakdown: PerCorporateExemptionDetail[] | undefined;
-  if (opts.perCorporateInputs && opts.perCorporateInputs.length > 0) {
-    perCorporateBreakdown = distributePerCorporate(
-      opts.perCorporateInputs,
-      amount,
-      corporateGiftTaxBase,
-    );
-  }
-
   return { amount, limit, breakdown, perCorporateBreakdown };
 }
 
@@ -141,10 +151,12 @@ export function calcCorporateExemption(
 // ────────────────────────────────────────────────────
 
 /**
- * 영리법인별 ⑤ 면제세액 안분 + 주주별 ⑪ 면제분 납부세액 계산.
+ * 영리법인별 ⑤ 면제세액 + 주주별 ⑪ 면제분 납부세액 계산.
  *
- * 안분 산식 (시행령 §3의2 본문 인용 후 v3 확정 — 가정 산식):
- *   각 영리법인 ⑤ = totalExemption × (해당 영리법인 과세표준 / 영리법인 합계 과세표준)
+ * ⑤ 법인별 면제세액 (§3의2② + 집행기준 28-0-1, 법인별 독립 적용):
+ *   ⑤_i = Min(법인 증여세 산출세액, 법인별 한도)
+ *   법인별 한도 = floor(상속세 산출세액 × 법인별 과세표준 / 상속세 과세표준)
+ *   ⇒ 각 법인의 면제는 그 법인 자기 증여세 산출세액을 초과할 수 없다(단일법인 경로와 동일).
  *
  * 주주별 ⑪ (작성방법 6, KoreanLaw MCP 검증):
  *   ⑪ = (⑤ − ⑥) × 지분율  where ⑥ = ④ × 10%
@@ -152,23 +164,17 @@ export function calcCorporateExemption(
  */
 function distributePerCorporate(
   inputs: PerCorporateInput[],
-  totalExemption: number,
+  totalComputedTax: number,
   totalTaxBase: number,
 ): PerCorporateExemptionDetail[] {
   if (totalTaxBase <= 0) return [];
 
-  // floor 안분 잔액 흡수 ([[feedback_floor_residual_absorption]]): 앞 법인은 floor,
-  //   마지막 법인이 (totalExemption − 앞 법인 합)을 흡수 → Σ exemptionAmount == totalExemption.
-  let allocated = 0;
-  return inputs.map((inp, idx) => {
-    const isLast = idx === inputs.length - 1;
-    const exemptionAmount =
-      inputs.length === 1
-        ? totalExemption
-        : isLast
-          ? totalExemption - allocated // 마지막 법인 잔액 흡수
-          : Math.floor((totalExemption * inp.taxBase) / totalTaxBase);
-    allocated += exemptionAmount;
+  return inputs.map((inp) => {
+    // 법인별 한도 = 상속세 산출세액을 법인 과세표준으로 안분(§3의2② "상속세 상당액").
+    const perCorporateLimit = Math.floor(
+      (totalComputedTax * inp.taxBase) / totalTaxBase,
+    );
+    const exemptionAmount = Math.min(inp.computedTax, perCorporateLimit);
     const tenPercentBaseline = Math.floor(inp.inheritedAmount * 0.1);
     const residualForShareholders = Math.max(
       0,
