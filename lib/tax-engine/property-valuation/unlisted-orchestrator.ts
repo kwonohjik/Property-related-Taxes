@@ -95,10 +95,18 @@ export function evaluateUnlistedStockV2(
     ...c,
     changeDate: toOptionalDate(c.changeDate) ?? c.changeDate,
   }));
+  // H-26: 사업연도 개시일 명시 입력(§17의3② 1년미만 사업연도) — §56⑤ 월할·범위판정에 실제 개시일 사용.
+  //   미입력 항목은 undefined → 하위 모듈이 "종료일−1년+1일" 역산 fallback.
+  const fiscalYearStartDates: [Date | undefined, Date | undefined, Date | undefined] = [
+    toOptionalDate(input.fiscalYears[0].fiscalYearStartDate),
+    toOptionalDate(input.fiscalYears[1].fiscalYearStartDate),
+    toOptionalDate(input.fiscalYears[2].fiscalYearStartDate),
+  ];
   const capitalAdjustments = calcCapitalIncreaseAdjustment(
     normalizedCapitalChanges,
     fiscalYearEndDates,
     capRate,
+    fiscalYearStartDates,
   );
 
   // STEP 3: 마.최종 순손익액 = 다 + 라
