@@ -84,6 +84,8 @@ export interface FormState extends AppraisalFeeFormFields {
   simultaneousGifts?: Array<{ donorRelation: DonorRelation; taxableValue: string }>;
   isFiledOnTime: boolean;
   foreignTaxPaid: string;
+  /** 국외 증여재산 과세표준 (§59 §21① 점유비 한도 분자, H-32). foreignTaxPaid>0 시 필수. */
+  foreignGiftTaxBase: string;
   specialTreatment: "" | "startup" | "family_business";
   /** 창업자금 §30의5④ — 투자 완료 여부 (startup 선택 시 노출) */
   startupInvestmentCompleted: boolean;
@@ -149,6 +151,7 @@ export const INITIAL_FORM: FormState = {
   priorUsedMarriageBirthDeduction: "",
   isFiledOnTime: true,
   foreignTaxPaid: "",
+  foreignGiftTaxBase: "",
   specialTreatment: "",
   startupInvestmentCompleted: false,
   startupNewHiresAtLeast10: false,

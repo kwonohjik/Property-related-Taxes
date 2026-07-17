@@ -19,7 +19,7 @@ import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { INITIAL_FORM } from "@/components/calc/gift-tax-form-shared";
 import type { GiftSubFormState } from "@/components/calc/gift-tax-form-shared";
 import { SimultaneousGiftCard } from "@/components/calc/gift/SimultaneousGiftCard";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -331,13 +331,21 @@ export function GiftCreditChecklist({
 
       {/* 외국납부세액 (§59) */}
       {active("foreignTax") && (
-        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4">
+        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3">
           <CurrencyInput
             label="외국납부세액 (§59)"
             value={form.foreignTaxPaid}
             onChange={(v) => set({ foreignTaxPaid: v })}
             hint="해외 소재 증여재산에 대해 납부한 외국 세액"
           />
+          {parseAmount(form.foreignTaxPaid) > 0 && (
+            <CurrencyInput
+              label="국외 증여재산 과세표준"
+              value={form.foreignGiftTaxBase}
+              onChange={(v) => set({ foreignGiftTaxBase: v })}
+              hint="§21① 점유비 한도 = 산출세액 × (국외 증여재산 과세표준 ÷ 전체 과세표준)"
+            />
+          )}
         </div>
       )}
 

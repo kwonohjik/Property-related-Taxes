@@ -297,6 +297,15 @@ export function validateStep(step: number, form: FormState): string | null {
     }
     // 1억 초과 입력은 엔진 가드(min 처리)로 안전 처리됨 — UI 차단 없음 (모순 방지)
 
+    // §59 외국납부세액공제 §21① 점유비 한도 (H-32): foreignTaxPaid>0이면 국외 증여재산 과세표준 필수.
+    // 미입력 시 엔진이 한도 미적용(전액 공제)하므로, 침묵 과다공제 방지 위해 입력 요구.
+    if (
+      parseAmount(form.foreignTaxPaid) > 0 &&
+      parseAmount(form.foreignGiftTaxBase) <= 0
+    ) {
+      return "국외 증여재산 과세표준을 입력하세요. (§59 외국납부세액공제 §21① 점유비 한도 산정에 필요)";
+    }
+
     // 엔진 superRefine 동기화 (⑧): 혼합 자산(N≥2)에서 특례 선택 시 귀속 미설정 차단.
     // 자산 1개는 엔진이 자동 귀속으로 처리하므로 차단 없음.
     // Zod superRefine(property-valuation-input.ts)과 동일 조건 — 미귀속(undefined) 1개라도

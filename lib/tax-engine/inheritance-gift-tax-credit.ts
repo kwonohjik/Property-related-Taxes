@@ -475,10 +475,15 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     appliedLaws.add(GIFT_LAW.PRIOR_TAX_CREDIT);
   }
 
-  // 1. 외국납부세액공제 (§59)
+  // 1. 외국납부세액공제 (§59) — 상증령 §48→§21① 점유비 한도 (H-32).
+  //    foreignGiftTaxBase(국외 증여재산 과세표준) 입력 시 한도 = 산출세액 × (국외분 ÷ 전체 과세표준),
+  //    미입력 시 overallTaxBase undefined → 산출세액 전액 한도(하위호환·validate가 입력 요구).
   const foreignResult = calcForeignTaxCredit({
     foreignTaxPaid: creditInput.foreignTaxPaid ?? 0,
     computedTax: totalComputedTax,
+    foreignInheritanceTaxBase: creditInput.foreignGiftTaxBase,
+    overallTaxBase:
+      creditInput.foreignGiftTaxBase !== undefined ? aggregatedTaxBase : undefined,
     mode: "gift",
   });
   const foreignTaxCredit = foreignResult.creditAmount;
