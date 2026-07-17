@@ -28,6 +28,8 @@ export interface HeirAssessmentCardProps {
   heir: Heir;
   assessment: FarmingHeirAssessment;
   onUpdate: (next: FarmingHeirAssessment) => void;
+  /** 상속개시일 — §16⑭2호(2026.2.27 신설) 미리보기 게이팅용 (엔진과 단일 진실) */
+  deathDate?: string;
 }
 
 export function HeirAssessmentCard({
@@ -35,10 +37,11 @@ export function HeirAssessmentCard({
   heir,
   assessment,
   onUpdate,
+  deathDate,
 }: HeirAssessmentCardProps) {
   const evalResult = useMemo(
-    () => evaluateFarmingEligibilityForHeir(farming, assessment),
-    [farming, assessment],
+    () => evaluateFarmingEligibilityForHeir(farming, assessment, deathDate),
+    [farming, assessment, deathDate],
   );
 
   const update = (patch: Partial<FarmingHeirAssessment>) => {

@@ -146,6 +146,8 @@ export interface FarmingEligibilitySectionProps {
   /** 상속인 목록 — F-11 자격자 분배분 토글 UI용 */
   heirs?: Heir[];
   onChange: (farming: FarmingInheritanceInput | undefined) => void;
+  /** 상속개시일 — §16⑭2호(2026.2.27 신설) 미리보기 게이팅용 (엔진과 단일 진실) */
+  deathDate?: string;
 }
 
 export function FarmingEligibilitySection({
@@ -153,13 +155,14 @@ export function FarmingEligibilitySection({
   estateItems,
   heirs,
   onChange,
+  deathDate,
 }: FarmingEligibilitySectionProps) {
   const isActive = farming !== undefined;
   const [discardOpen, setDiscardOpen] = useState(false);
 
   const evalResult = useMemo(
-    () => (farming ? evaluateFarmingEligibility(farming) : null),
-    [farming],
+    () => (farming ? evaluateFarmingEligibility(farming, deathDate) : null),
+    [farming, deathDate],
   );
 
   // F-10 거주지 자동 검증 미리보기 (옵션 A 정책 — autoMet 안내용)
@@ -483,6 +486,7 @@ export function FarmingEligibilitySection({
                         farming={farming}
                         heir={h}
                         assessment={assessment}
+                        deathDate={deathDate}
                         onUpdate={(next) => {
                           const list = farming.heirAssessments!.filter(
                             (a) => a.heirId !== h.id,
@@ -494,7 +498,7 @@ export function FarmingEligibilitySection({
                   })}
                   {/* 자동 도출된 qualifiedHeirIds 안내 */}
                   {(() => {
-                    const auto = deriveQualifiedHeirIds(farming);
+                    const auto = deriveQualifiedHeirIds(farming, deathDate);
                     if (auto === undefined) return null;
                     return (
                       <div className="rounded-md border border-violet-300 bg-violet-100/60 dark:bg-violet-900/30 dark:border-violet-700 p-2">
@@ -579,7 +583,7 @@ export function FarmingEligibilitySection({
                   farming.qualifiedHeirIds === undefined
                 )
                   return null;
-                const auto = deriveQualifiedHeirIds(farming) ?? [];
+                const auto = deriveQualifiedHeirIds(farming, deathDate) ?? [];
                 const manual = farming.qualifiedHeirIds;
                 const differs =
                   [...manual].sort().join(",") !== [...auto].sort().join(",");

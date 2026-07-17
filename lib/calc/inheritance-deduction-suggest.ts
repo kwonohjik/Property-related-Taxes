@@ -427,7 +427,9 @@ export function suggestFarmingAssetValue(
   }
   // C-14: 엔진 단일진실. heirAssessments(부록A) 자동도출·명시 override 모두 반영 →
   // 자동도출 모드에서 미자격 상속인 분배분이 그대로 합산되던 갭 해소 (§16⑤ 본문).
-  const qualifiedIds = farming ? resolveEffectiveQualifiedHeirIds(farming) : undefined;
+  const qualifiedIds = farming
+    ? resolveEffectiveQualifiedHeirIds(farming, deathDate)
+    : undefined;
   const useAllocation = qualifiedIds !== undefined;
 
   let totalValue = 0;
