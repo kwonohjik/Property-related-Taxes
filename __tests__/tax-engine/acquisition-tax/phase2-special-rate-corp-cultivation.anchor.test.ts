@@ -469,6 +469,7 @@ describe("[P2-Anchor #P2-통합] calcAcquisitionTax P2 모듈 통합", () => {
       standardValue: 500_000_000,
       acquiredBy: "individual",
       specialRateType: "inheritance_one_house",
+      isOneHouseHousehold: true, // [C-2] §15①2호 가목 요건 — 충족 시에만 특례 발동
       balancePaymentDate: "2026-04-01",
     });
     // 기본세율 2.8% → §15 특례 → 0.8%
