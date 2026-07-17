@@ -304,15 +304,24 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
   const nonParentLinealTotal =
     priorAggregation.nonParentLinealAmount + currentGiftValue;
   const totalGiftAmount = priorAggregation.totalAmount + currentGiftValue;
-  const ratio = totalGiftAmount === 0 ? 0 : nonParentLinealTotal / totalGiftAmount;
+  const ratio = totalGiftAmount === 0 ? 0 : nonParentLinealTotal / totalGiftAmount; // 표시(⑧ 라벨·detail)용
+  const surchargeRateTenths = Math.round(surchargeRate * 10); // 0.3 → 3, 0.4 → 4
 
-  // ⑧ 단일 floor — 이중 floor 회피 (PDF anchor 일치)
-  const surchargeBase = Math.floor(computedTax * ratio * surchargeRate);
+  // ⑧ 단일 floor — ⑩과 동일하게 할증율 정수(×10) + safeMultiplyThenDivide BigInt 경로.
+  //   종전 float 곱(computedTax × ratio × rate)은 큰 값에서 1원 미달 가능·⑩과 방식 불일치 (P-12).
+  //   floor(computedTax × 비부모직계 / 전체 × rate) = safeMultiplyThenDivide(computedTax×tenths, 비부모직계, 전체×10).
+  const surchargeBase =
+    totalGiftAmount === 0
+      ? 0
+      : safeMultiplyThenDivide(
+          computedTax * surchargeRateTenths,
+          nonParentLinealTotal,
+          totalGiftAmount * 10,
+        );
 
   // ⑩ 한도 = ⑦ × ⑤_prior / ⑤ × 할증율 (단일 floor)
   // 곱셈이 MAX_SAFE_INTEGER 초과 가능 → 할증율을 정수 분자(×10)로 올려
   // safeMultiplyThenDivide BigInt 경로에서 단일 floor 의미 보존
-  const surchargeRateTenths = Math.round(surchargeRate * 10); // 0.3 → 3, 0.4 → 4
   const surchargeCreditLimit =
     aggregatedTaxBase === 0
       ? 0
