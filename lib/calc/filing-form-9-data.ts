@@ -14,7 +14,8 @@
  * Design: docs/02-design/features/inheritance-filing-form-9-replica.ui.design.md §3
  */
 
-import { addMonths, endOfMonth, format, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { getInheritanceFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import type {
   FilingFormRow,
   Heir,
@@ -182,7 +183,7 @@ export function buildFilingForm9Data(
   ];
 
   // ── 우측 행 ──
-  const dueDates = deriveDueDates(deathDateInput);
+  const dueDates = deriveDueDates(deathDateInput, result.decedentType);
   const rightRows: FilingFormRow[] = [
     headerRow(FF9_CALC_LABELS.corporateExemptionTitle, "right"),
     { number: "", label: FF9_CALC_LABELS.bequestValue, amount: 0, display: "dash", column: "right" },
@@ -246,26 +247,22 @@ export function buildFilingForm9Data(
  * §67①: "상속개시일이 속하는 달의 말일부터 6개월 이내"
  * 국세기본법 §4 → 민법 준용.
  *
- * 산식: endOfMonth(사망일) → addMonths(+6) → 해당 월 말일 없으면 date-fns 자동 보정.
+ * 산식: endOfMonth(사망일) → addMonths(+6, 비거주자 +9) → 해당 월 말일 없으면 date-fns 자동 보정.
  * 세무행정 실무 표준 (예: 3/15 사망 → 3/31 기산 → 9/30 신고기한).
  *
  * 민법 §160②·③ 엄격 해석("기산일에 해당한 날의 전일")과는 edge에서 하루 차이가 있을 수 있으나,
  * 국세청 실무 및 기존 anchor(FB-07~09)와 일치하므로 현행 유지.
- * 외국 거주 시 9개월(§67④): 별도 처리 필요(현재 미구현).
+ * §67④ 피상속인·상속인 외국주소 시 9개월 — 공용 헬퍼가 decedentType으로 분기 (M-17).
  */
-function deriveDueDates(deathDate?: string): {
+function deriveDueDates(
+  deathDate?: string,
+  decedentType?: "resident" | "non_resident",
+): {
   filingDueDate: string;
   installmentDueDate: string;
 } {
-  if (!deathDate) return { filingDueDate: "", installmentDueDate: "" };
-  const base = parseISO(deathDate);
-  if (isNaN(base.getTime())) return { filingDueDate: "", installmentDueDate: "" };
-  const filing = addMonths(endOfMonth(base), 6); // 말일 + 6개월
-  const installment = addMonths(filing, 2); // 신고기한 + 2개월
-  return {
-    filingDueDate: format(filing, "yyyy-MM-dd"),
-    installmentDueDate: format(installment, "yyyy-MM-dd"),
-  };
+  const d = getInheritanceFilingDueDates(deathDate, decedentType);
+  return { filingDueDate: d.filing, installmentDueDate: d.installment };
 }
 
 function toIsoDate(d: string): string {

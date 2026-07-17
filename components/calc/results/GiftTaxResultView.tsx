@@ -37,7 +37,7 @@ import {
 import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
 import { SplitPaymentCard } from "@/components/calc/results/installment/SplitPaymentCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { addMonths, format } from "date-fns";
+import { getGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
@@ -247,18 +247,8 @@ export function GiftTaxResultView({
     return s;
   }, [result, estateItems, priorGifts, transferTaxResults, transferTaxError, stockTransferTaxResults, simpleGiftResult, simultaneousResults]);
 
-  // 분납기한 (§70② — 증여 신고기한 §68① 증여일+3개월 + 2개월). giftDate 없으면 undefined.
-  const giftDueDates = useMemo(() => {
-    if (!giftDate) return undefined;
-    const base = new Date(giftDate);
-    if (isNaN(base.getTime())) return undefined;
-    const filing = addMonths(base, 3);
-    const installment = addMonths(filing, 2);
-    return {
-      filing: format(filing, "yyyy-MM-dd"),
-      installment: format(installment, "yyyy-MM-dd"),
-    };
-  }, [giftDate]);
+  // 신고기한 §68①(증여일 속하는 달의 말일 + 3개월) · 분납기한 §70②(+2개월). giftDate 없으면 undefined.
+  const giftDueDates = useMemo(() => getGiftFilingDueDates(giftDate), [giftDate]);
 
   return (
     <div className="space-y-5">
