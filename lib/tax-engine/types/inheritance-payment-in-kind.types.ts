@@ -10,14 +10,23 @@
 export interface PaymentInKindAssets {
   /** §74①1호 국내소재 부동산 (상속인 거주주택 heirResidenceValue 포함 — 요건1 분자) */
   realEstateValue: number;
-  /** §74①2호 충당가능 유가증권 = 국채·공채·내국법인채권 + 처분제한 상장 (분류 자동화는 후속 — §73①3호 금융재산 정의 검증 필요) */
+  /** §74①2호 충당가능 유가증권 = 국채·공채·내국법인채권 + 처분제한 상장 (국채·공채 세분류 마커는 후속) */
   eligibleSecuritiesValue: number;
-  /** §74②5호 비상장주식 (§73④ 캡·최후순위) */
+  /**
+   * §74①2호나목 비상장주식 (§73④ 캡·§74②5호 최후순위).
+   * 요건1/한도1 분자(충당가능 유가증권)에는 §74①2호나목 단서에 따라 부동산+충당유가증권으로
+   * 납부세액 충당이 부족할 때만 조건부 산입 (엔진 computeEligibleRealSec에서 판정).
+   */
   unlistedStockValue: number;
-  /** §73①2호 차감 — 처분제한 없는 거래소 상장 유가증권 */
+  /** §73①2호 차감 — 처분제한 없는 거래소 상장 유가증권 (§74①2호가목 충당 제외) */
   tradableListedValue: number;
-  /** §73⑤ 금융재산 순액 (금융회사 채무 차감) */
-  netFinancialValue: number;
+  /** §73⑤ 금융재산 (금전·예금·특정금전신탁·보험금·어음 등) — 요건3 기준, 금융회사 채무 차감 前 gross */
+  grossFinancialValue: number;
+  /**
+   * §10①1호 입증 금융회사등에 대한 채무 — 한도2(§73①2호)에서 금융재산 차감분.
+   * §22 순금융재산공제의 금융채무(DerivedCollateralDebt.financialDebtAmount)와 동일 근거.
+   */
+  financialInstitutionDebt: number;
   /** §73④ 차감 — 상속개시일 현재 상속인 거주 주택·부수토지 (담보채무 차감) */
   heirResidenceValue: number;
   /** §73③·§71 관리처분 부적당으로 청구액에서 제외할 부동산·유가증권 가액 (보정 입력) */
@@ -51,7 +60,7 @@ export interface PaymentInKindRequirement {
   taxThreshold: number;
   /** 요건2 — §73①2호 */
   meetsTaxOver20M: boolean;
-  /** 금융재산 순액 */
+  /** 금융재산 gross (§73⑤, 요건3 기준 — 금융회사 채무 차감 前) */
   financialValue: number;
   /** 요건3 — §73①3호 */
   meetsTaxOverFinancial: boolean;

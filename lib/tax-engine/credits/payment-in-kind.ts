@@ -44,11 +44,22 @@ function computeEstateBase(input: PaymentInKindInput): number {
 
 /** 1호 분자 — 충당가능 부동산·유가증권(관리처분 부적당 §73③ 제외) */
 function computeEligibleRealSec(input: PaymentInKindInput): number {
-  const { realEstateValue, eligibleSecuritiesValue, ineligibleManagementValue } =
-    input.assets;
+  const {
+    realEstateValue,
+    eligibleSecuritiesValue,
+    unlistedStockValue,
+    ineligibleManagementValue,
+  } = input.assets;
+  // §74①1호·2호가목 — 부동산 + 충당가능 유가증권(국채·공채·내국법인 증권·처분제한 상장).
+  //   거래소 상장(처분제한 X, tradableListedValue)은 §74①2호가목 본문 제외.
+  const baseEligible = realEstateValue + eligibleSecuritiesValue;
+  // §74①2호나목 단서 — 비상장주식은 상속에서 위 재산으로 납부세액 충당이 부족한 경우에만
+  //   충당가능 유가증권. 부동산·상장으로 finalTax를 충당하면(≥) 비상장 미산입 (H-41).
+  const unlistedEligible =
+    baseEligible < input.finalTax ? unlistedStockValue : 0;
   return Math.max(
     0,
-    realEstateValue + eligibleSecuritiesValue - ineligibleManagementValue,
+    baseEligible + unlistedEligible - ineligibleManagementValue,
   );
 }
 
@@ -59,7 +70,7 @@ export function isPaymentInKindEligible(input: PaymentInKindInput): boolean {
   return (
     eligibleRealSec > Math.floor(estateBase / 2) &&
     input.finalTax > PAYMENT_IN_KIND_MIN_TAX &&
-    input.finalTax > input.assets.netFinancialValue
+    input.finalTax > input.assets.grossFinancialValue
   );
 }
 
@@ -72,7 +83,8 @@ export function calcPaymentInKindAssessment(
     eligibleSecuritiesValue,
     unlistedStockValue,
     tradableListedValue,
-    netFinancialValue,
+    grossFinancialValue,
+    financialInstitutionDebt,
     heirResidenceValue,
     ineligibleManagementValue,
   } = assets;
@@ -80,11 +92,12 @@ export function calcPaymentInKindAssessment(
   const estateBase = computeEstateBase(input);
   const eligibleRealSec = computeEligibleRealSec(input);
 
-  // 요건 (§73①1~3호) — 1호 분모 estateBase, "1/2 초과"
+  // 요건 (§73①1~3호) — 1호 분모 estateBase, "1/2 초과".
+  //   3호 금융재산은 §73⑤ gross(금융회사 채무 차감 前, 사전증여 제외) 기준.
   const halfThreshold = Math.floor(estateBase / 2);
   const meetsOverHalf = eligibleRealSec > halfThreshold;
   const meetsTaxOver20M = finalTax > PAYMENT_IN_KIND_MIN_TAX;
-  const meetsTaxOverFinancial = finalTax > netFinancialValue;
+  const meetsTaxOverFinancial = finalTax > grossFinancialValue;
   const eligible = meetsOverHalf && meetsTaxOver20M && meetsTaxOverFinancial;
 
   // 허용한도 (상증령 §73① — 적은 금액). 안분은 BigInt(safeMul) 정밀
@@ -92,7 +105,16 @@ export function calcPaymentInKindAssessment(
     estateBase > 0
       ? safeMultiplyThenDivide(finalTax, eligibleRealSec, estateBase)
       : 0;
-  const limit2 = Math.max(0, finalTax - netFinancialValue - tradableListedValue);
+  // 한도2(§73①2호): finalTax − (금융재산 − §10①1호 금융회사 채무) − 처분제한 없는 상장.
+  //   금융재산은 순액(net) 사용 — 요건3의 gross와 구분 (금융회사 채무 차감으로 한도 확대).
+  const netFinancialForLimit = Math.max(
+    0,
+    grossFinancialValue - financialInstitutionDebt,
+  );
+  const limit2 = Math.max(
+    0,
+    finalTax - netFinancialForLimit - tradableListedValue,
+  );
   const allowedLimit = Math.max(0, Math.min(limit1, limit2));
 
   // 비상장 캡 (§73④, 기준=상속세 과세가액 taxableEstateValue)
@@ -151,7 +173,7 @@ export function calcPaymentInKindAssessment(
       meetsOverHalf,
       taxThreshold: PAYMENT_IN_KIND_MIN_TAX,
       meetsTaxOver20M,
-      financialValue: netFinancialValue,
+      financialValue: grossFinancialValue,
       meetsTaxOverFinancial,
     },
     estateBase,
@@ -220,11 +242,12 @@ function classifyForPaymentInKind(item: EstateItem): PikLegalCategory {
 /**
  * estate 자동도출 — estateItems + result 평가액에서 PaymentInKindAssets 구성.
  * 분류는 `classifyForPaymentInKind`(§73⑤·§74① 법정분류). buildSummaryCategory(PDF표8) 아님.
- * eligibleSecuritiesValue(국채·공채·처분제한 상장)·금융회사 채무 차감은 estate 마커 부재로 미도출(후속).
+ * 금융회사 채무(§10①1호)는 §14 담보채무 자동도출분(collateralDebtDetail.financialDebtAmount,
+ * §22 순금융재산공제와 동일 근거)에서 합산. 국채·공채·처분제한 상장 세분류 마커는 후속.
  */
 export function derivePaymentInKindAssets(
   estateItems: EstateItem[],
-  result: Pick<InheritanceTaxResult, "valuationResults">,
+  result: Pick<InheritanceTaxResult, "valuationResults" | "collateralDebtDetail">,
   ineligibleManagementValue: number,
 ): PaymentInKindAssets {
   const valById = new Map(
@@ -235,7 +258,7 @@ export function derivePaymentInKindAssets(
   let unlistedStockValue = 0;
   let tradableListedValue = 0;
   let eligibleSecuritiesValue = 0;
-  let netFinancialValue = 0;
+  let grossFinancialValue = 0;
   for (const item of estateItems) {
     const v = valById.get(item.id) ?? 0;
     switch (classifyForPaymentInKind(item)) {
@@ -246,8 +269,8 @@ export function derivePaymentInKindAssets(
         if (item.isHeirResidenceProperty) heirResidenceValue += v;
         break;
       case "financial":
-        // §73⑤ 금융재산(금전·예금·보험금·특정금전신탁 등). 금융회사 채무 차감은 후속(§22 순금융과 범위 차이)
-        netFinancialValue += v;
+        // §73⑤ 금융재산(금전·예금·보험금·특정금전신탁 등) gross — 금융회사 채무는 아래 별도 합산
+        grossFinancialValue += v;
         break;
       case "eligibleSecurities":
         eligibleSecuritiesValue += v; // §74①2호 — 요건1 분자·충당순위 4호
@@ -262,12 +285,18 @@ export function derivePaymentInKindAssets(
         break; // 충당 불가 — 분자·금융재산 어디에도 미산입(분모 estateBase에는 grossEstateValue로 반영)
     }
   }
+  // §10①1호 입증 금융회사 채무 — §14 담보채무 자동도출분(§22 순금융과 동일 근거) 합산.
+  const financialInstitutionDebt = (result.collateralDebtDetail ?? []).reduce(
+    (s, d) => s + (d.financialDebtAmount ?? 0),
+    0,
+  );
   return {
     realEstateValue,
     eligibleSecuritiesValue,
     unlistedStockValue,
     tradableListedValue,
-    netFinancialValue,
+    grossFinancialValue,
+    financialInstitutionDebt,
     heirResidenceValue, // 갭4: isHeirResidenceProperty flag로 자동도출 (subset)
     ineligibleManagementValue,
   };
