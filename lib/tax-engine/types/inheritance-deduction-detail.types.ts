@@ -293,12 +293,13 @@ export interface CohabitDeductionDetail {
    */
   isExcluded?: boolean;
   /**
-   * 미적용 사유 (확정 2종만).
+   * 미적용 사유.
    * - "one_plus_one_right": 1+1 조합원입주권 (조심 2021중6665)
    * - "sale_right":         분양권 (§23의2① "주택" 문언)
+   * - "under_ten_years":    §23의2①1호 동거기간 10년(미성년 제외) 미충족 (H-18 — cohabitStartDate 입력 시 판정)
    * single_redev_right은 적용이므로 여기 포함 안 됨.
    */
-  exclusionReason?: "one_plus_one_right" | "sale_right";
+  exclusionReason?: "one_plus_one_right" | "sale_right" | "under_ten_years";
 }
 
 // ============================================================
