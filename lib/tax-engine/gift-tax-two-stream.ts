@@ -468,7 +468,14 @@ export function calcGiftTaxTwoStream(
     // 특례 자산 §47① 인수 채무 (한도 차감분) — 2-스트림 카드 표시용
     specialStreamDebt: Math.min(specialItemsDebt, specialItemsValue) || undefined,
   };
-  const besshi10Rows = buildBesshi10Rows(input, partialResult, brackets);
+  // H-47: 별지10호 ㊺ 자진납부는 서식 산식(㉞ 산출세액계 − 세액공제)상 일반 스트림 결정세액이어야 한다.
+  //   partialResult.finalTax는 특례+일반(+합산배제) combined이므로 그대로 쓰면 ㊺가 filingFormRows ⑫와 어긋난다.
+  //   → 일반 스트림 결정세액(ordinaryFinalTax)으로 교체. 특례·합산배제는 별도 카드(specialStreamTax·aggregationExcludedDetail).
+  const besshi10Rows = buildBesshi10Rows(
+    input,
+    { ...partialResult, finalTax: ordinaryFinalTax },
+    brackets,
+  );
 
   return {
     ...partialResult,
