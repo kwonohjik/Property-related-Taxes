@@ -830,17 +830,20 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
         TaxErrorCode.INVALID_INPUT,
         "주식 평가는 property-valuation-stock.ts를 사용하세요.",
       );
-    default:
-      // other — 시가 그대로 사용
+    default: {
+      // other — §60 시가 우선순위(market→appraised→similar→standard) 적용.
+      //   marketValue만 읽으면 감정가액·유사매매·기준시가만 입력된 기타재산이 0원 평가됨(§60②·상증령 §49①2호 위배).
+      const { amount, method } = resolveValuationAmount(item);
       return {
         estateItemId: item.id,
-        method: "market_value",
-        valuatedAmount: item.marketValue ?? 0,
+        method,
+        valuatedAmount: amount,
         breakdown: [
-          { label: "기타재산 평가액", amount: item.marketValue ?? 0, lawRef: VALUATION.INTANGIBLE },
+          { label: "기타재산 평가액", amount, lawRef: VALUATION.INTANGIBLE },
         ],
         warnings: ["기타재산 — 유형에 맞는 평가 방법 세무사 확인 권장"],
       };
+    }
   }
 }
 
