@@ -199,6 +199,22 @@ export function aggregatePriorGiftsForGift(
   // giftDate 내림차순: 첫 번째가 가장 최근
   matched.sort((a, b) => b.giftDate.localeCompare(a.giftDate));
 
+  // §47② 임계: 동일인 10년 이내 증여재산가액 합계가 1천만원 미만이면 가산하지 않음.
+  // 임계 미달 시 matched를 비워 totalAmount·§58 기납부세액공제(totalComputedTax·priorAddedTaxBase)·
+  // §57 세대생략 한도 연계값을 일괄 무력화 (부분 잔존 시 §58에서 미가산분 세액이 공제되는 모순 방지).
+  const rawAggregatedTotal = matched.reduce(
+    (s, p) => s + priorAggregatedValue(p),
+    0,
+  );
+  if (rawAggregatedTotal < GIFT.AGGREGATION_THRESHOLD) {
+    if (matched.length > 0) {
+      warnings.push(
+        `동일인 10년 이내 사전증여 합계 ${rawAggregatedTotal.toLocaleString()}원 < 1천만원 → §47② 미달로 합산 제외 (기납부세액공제·세대생략 한도 연계값 무력화)`,
+      );
+      matched.length = 0;
+    }
+  }
+
   const totalAmount = matched.reduce((s, p) => s + priorAggregatedValue(p), 0);
   const totalTaxPaid = matched.reduce((s, p) => s + p.giftTaxPaid, 0);
   const totalComputedTax = matched[0]?.computedTax ?? 0;
