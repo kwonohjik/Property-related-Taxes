@@ -35,7 +35,8 @@ export type { PrintChannel, GroupCheckState };
 export type MixedUsePrintSectionId =
   | "calculation"
   | "filing-form"
-  | "detailed-statement";
+  | "detailed-statement"
+  | "building-std-report";
 
 /** 겸용주택 양도세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type MixedUsePrintSectionNode = GenericNode<MixedUsePrintSectionId>;
@@ -58,6 +59,7 @@ export const MIXED_USE_PRINT_SECTIONS: MixedUsePrintSectionGroup[] = [
     children: [
       { id: "filing-form", label: "신고서 양식 표 (32행)", channel: SCREEN },
       { id: "detailed-statement", label: "계산결과 상세명세서", channel: SCREEN },
+      { id: "building-std-report", label: "건물 기준시가 계산서", channel: SCREEN },
     ],
   },
 ];

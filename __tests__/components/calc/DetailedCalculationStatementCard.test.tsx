@@ -218,6 +218,33 @@ describe("DetailedCalculationStatementCard — 단건 모드", () => {
     // ▶/▼ 토글 버튼이 하나도 없어야 함
     expect(screen.queryByLabelText(/자산별 펼치기|자산별 닫기/)).not.toBeInTheDocument();
   });
+
+  it("T-10: 각 단계 그룹에 접기/펼치기 토글 — 기본 펼침, 클릭 시 접힘 라벨 전환", () => {
+    const result = makeMinimalResult();
+    const asset = makeMinimalAsset();
+    const formData = makeMinimalFormData(asset);
+
+    render(
+      <DetailedCalculationStatementCard
+        result={result}
+        formData={formData}
+        asset={asset}
+        transferPriceOverride={330_000_000}
+      />,
+    );
+
+    // 기본 펼침 → 그룹마다 "▲ 접기" 버튼 존재 + 본문 항목(양도가액) 표시
+    const collapseButtons = screen.getAllByText("▲ 접기");
+    expect(collapseButtons.length).toBeGreaterThan(0);
+    expect(screen.getAllByText("양도가액").length).toBeGreaterThan(0);
+
+    // 첫 그룹 접기 → "▲ 접기" 1개 감소 + "▼ 펼치기" 1개 증가.
+    // ("전체 엔진 계산 과정" 서브토글이 초기부터 "▼ 펼치기"를 노출하므로 절대수 대신 증분으로 검증)
+    const expandBefore = screen.queryAllByText("▼ 펼치기").length;
+    fireEvent.click(collapseButtons[0]);
+    expect(screen.getAllByText("▼ 펼치기").length).toBe(expandBefore + 1);
+    expect(screen.getAllByText("▲ 접기").length).toBe(collapseButtons.length - 1);
+  });
 });
 
 describe("DetailedCalculationStatementCard — 다건 모드 (사례 33 일괄+증축)", () => {
