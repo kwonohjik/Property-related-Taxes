@@ -26,6 +26,7 @@ import {
   calcGenerationSkipSurcharge,
 } from "./inheritance-gift-common";
 import { INH } from "./legal-codes";
+import { safeMultiplyThenDivide } from "./tax-utils";
 
 export interface GenerationSkipParams {
   input: InheritanceTaxInput;
@@ -130,13 +131,15 @@ export function computeGenerationSkipSurcharge(
       }
 
       // §27②: 미성년 + 개인재산 20억 초과 → 40%, 그 외 30%
-      const rate =
-        isMinor && numerator > MINOR_SURCHARGE_THRESHOLD ? 0.4 : 0.3;
+      // 할증율을 정수(×10)로 올려 safeMultiplyThenDivide(BigInt 단일 floor)로 계산 —
+      // 정본 calcGenerationSkipSurcharge(안분 경로)와 동일 패턴. 부동소수 rate 곱 제거 (L-1).
+      const rateTenths =
+        isMinor && numerator > MINOR_SURCHARGE_THRESHOLD ? 4 : 3;
+      const rate = rateTenths / 10; // 표시용 echo (0.3 / 0.4)
 
-      // 개별 단일 floor (곱셈 먼저)
       const surcharge =
         adjustedDenominator > 0
-          ? Math.floor((computedTax * numerator * rate) / adjustedDenominator)
+          ? safeMultiplyThenDivide(computedTax * rateTenths, numerator, adjustedDenominator * 10)
           : 0;
 
       rows.push({ heirId: heir.id, heirName: heir.name, numerator, rate, isMinor, surcharge });
