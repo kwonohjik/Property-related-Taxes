@@ -633,6 +633,13 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
   isFarmlandGiftReduction?: boolean;
   /** §47① 합산배제증여재산(§41의3·§41의5 등). true→§47② 10년합산 격리 + §55①3호 과세표준(증여이익−3천만, §53·§54 미적용) + §56 일반세율. false/undef→일반(현행 보존). */
   isAggregationExcludedGift?: boolean;
+  /**
+   * §55① 합산배제증여재산 과세표준 호분기 — isAggregationExcludedGift===true일 때만 유효.
+   *   "nominee_trust"  → §55①1호 명의신탁(§45의2): 명의신탁재산금액 − 감정평가수수료 (3천만 공제 없음)
+   *   "deemed_profit"  → §55①2호 일감몰아주기·사업기회(§45의3·§45의4): 증여의제이익 − 감정평가수수료 (3천만 공제 없음)
+   *   "general"/undef  → §55①3호 그 밖의 합산배제(§41의3·§41의5·§40①2·3호·§42의3·§45): 증여재산가액 − 3천만 (현행 보존)
+   */
+  aggregationExcludedClass?: "nominee_trust" | "deemed_profit" | "general";
 
   // ===== §47① 부담부증여 채무인수 (gift-burdened-debt-47-1) =====
   /**

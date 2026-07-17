@@ -767,8 +767,14 @@ export function buildGiftWizardPrefill(
         category: "other",
         name: `${label} 증여이익`,
         marketValue: result.deemedGiftValue,
-        // §47① 합산배제증여재산(§41의3·§41의5 등) → 본세 §55①3호 스트림. 비합산배제 deemed는 undefined.
-        ...(result.aggregationExcluded ? { isAggregationExcludedGift: true } : {}),
+        // §47① 합산배제증여재산(§41의3·§41의5 등) → 본세 §55① 호별 스트림. 비합산배제 deemed는 undefined.
+        //   aggExclClass: 명의신탁(1호)·일감몰아주기(2호)는 3천만 공제 없음, 그 외(3호)는 3천만 공제. (H-40·G-4)
+        ...(result.aggregationExcluded
+          ? {
+              isAggregationExcludedGift: true,
+              ...(result.aggExclClass ? { aggregationExcludedClass: result.aggExclClass } : {}),
+            }
+          : {}),
       },
     ],
   };

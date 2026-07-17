@@ -348,7 +348,8 @@ export function calcGiftTax(
   // ─────────────────────────────────────────────
   const aggExcl =
     aggExclItems.length > 0
-      ? calcAggregationExcludedStream(aggExclItems, input, brackets)
+      ? // M-2: 일반 스트림이 이미 폼전역 감정평가수수료를 차감(appraisalFee.total>0)했으면 재차감 방지
+        calcAggregationExcludedStream(aggExclItems, input, brackets, hasAppraisalValuation)
       : null;
   if (aggExcl) {
     allBreakdown.push(...aggExcl.breakdown);

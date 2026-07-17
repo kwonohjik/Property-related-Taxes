@@ -107,6 +107,9 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
       ],
       exclusionReason: "특수관계법인거래비율이 정상거래비율 이하 — 과세요건 미충족 (§45의3①1호)",
       legalBasis: GIFT.RELATED_CORP,
+      // §47① 합산배제증여재산(§45의3). §55①2호 — 증여의제이익 그대로 과세표준(3천만 공제 없음). (H-40·G-4)
+      aggregationExcluded: true,
+      aggExclClass: "deemed_profit",
       recipientBreakdown: [],
       baseAfterTaxProfit: 0,
       ...echo,
@@ -212,6 +215,9 @@ export function calcRelatedCorpGift(input: RelatedCorpInput): DeemedGiftResult {
     deemedGiftValue,
     breakdown,
     legalBasis: GIFT.RELATED_CORP,
+    // §47① 합산배제증여재산(§45의3). §55①2호 — 증여의제이익 그대로 과세표준(3천만 공제 없음). (H-40·G-4)
+    aggregationExcluded: true,
+    aggExclClass: "deemed_profit",
     recipientBreakdown: rows,
     baseAfterTaxProfit: baseAfterTax,
     ...echo,
