@@ -130,8 +130,10 @@ export function calcAggregationExcludedStream(
   breakdown.push(...surchargeResult.breakdown);
 
   // §69 신고세액공제 (prior 격리 → §58 기납부 0)
+  // C-15: §59 외국납부세액공제(foreignTaxPaid)는 메인 스트림에 일원화 — 합산배제 스트림에서 제거해
+  //   메인+합산배제 각각 전액 공제되던 2배 공제 방지 (실제 부과받은 외국세액 1회분만 공제, §59).
   const creditResult = calcGiftTaxCredits({
-    creditInput: input.creditInput,
+    creditInput: { ...input.creditInput, foreignTaxPaid: undefined },
     computedTax,
     generationSkipSurcharge: surchargeResult.additionalSurcharge,
     giftDate: input.giftDate, // §69 신고세액공제율 증여연도 기준 (H-22 — 미전달 시 3% 고정 버그)
