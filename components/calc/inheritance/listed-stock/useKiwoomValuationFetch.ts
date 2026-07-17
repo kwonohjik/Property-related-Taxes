@@ -40,6 +40,7 @@ export interface UseKiwoomValuationFetchArgs {
   onFill?: (patch: { listedStockAvgPrice: number; stockName?: string }) => void;
   onResponse?: (response: KiwoomValuation2MonthResponse) => void;
   startOverrideDate?: string;
+  endOverrideDate?: string;
   syncName?: boolean;
 }
 
@@ -60,6 +61,7 @@ export function useKiwoomValuationFetch({
   onFill,
   onResponse,
   startOverrideDate,
+  endOverrideDate,
   syncName = false,
 }: UseKiwoomValuationFetchArgs): UseKiwoomValuationFetchResult {
   const [loading, setLoading] = useState(false);
@@ -89,6 +91,7 @@ export function useKiwoomValuationFetch({
           stockCode,
           valuationDate,
           ...(startOverrideDate ? { startOverrideDate } : {}),
+          ...(endOverrideDate ? { endOverrideDate } : {}),
         }),
       });
       if (!res.ok) {
@@ -168,7 +171,7 @@ export function useKiwoomValuationFetch({
     } finally {
       setLoading(false);
     }
-  }, [canFetch, stockCode, valuationDate, startOverrideDate, syncName, onResponse, onFill]);
+  }, [canFetch, stockCode, valuationDate, startOverrideDate, endOverrideDate, syncName, onResponse, onFill]);
 
   return {
     loading,

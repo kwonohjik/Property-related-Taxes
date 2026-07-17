@@ -149,4 +149,30 @@ describe("§52의2② startOverrideDate — partial 구간", () => {
     });
     expect(g.afterM1.every((r) => r.label !== "기간외")).toBe(true);
   });
+
+  // H-39: §52의2②2·3호 — 이후 사유 전일까지 (endOverrideDate)
+  it("endOverrideDate 이후 afterM1·afterM2 행은 '기간외' 라벨", () => {
+    const slots = buildTwoMonthSurroundingSlots(VALUATION);
+    const closings = slots.map(() => 1000 as number | null);
+    const labels = slots.map(() => "");
+    const g = splitTwoMonthSurroundingByMonthGroup(slots, closings, labels, VALUATION, {
+      endOverrideDate: "2022-07-25",
+    });
+    // 2022-07-25 이후 after 행은 기간외 (전일까지 산입)
+    const afterOutOfRange = [...g.afterM1, ...g.afterM2].filter((r) => r.date > "2022-07-25");
+    expect(afterOutOfRange.length).toBeGreaterThan(0);
+    expect(afterOutOfRange.every((r) => r.label === "기간외")).toBe(true);
+    expect(afterOutOfRange.every((r) => r.closing === null)).toBe(true);
+  });
+
+  it("beforeM1·beforeM2 는 endOverrideDate 영향 없음", () => {
+    const slots = buildTwoMonthSurroundingSlots(VALUATION);
+    const closings = slots.map(() => 1000 as number | null);
+    const labels = slots.map(() => "");
+    const g = splitTwoMonthSurroundingByMonthGroup(slots, closings, labels, VALUATION, {
+      endOverrideDate: "2022-07-25",
+    });
+    expect(g.beforeM1.every((r) => r.label !== "기간외")).toBe(true);
+    expect(g.beforeM2.every((r) => r.label !== "기간외")).toBe(true);
+  });
 });

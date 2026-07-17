@@ -48,14 +48,15 @@ function formatMonthDay(iso: string): string {
  * @param closingPrices   slot 같은 인덱스의 종가 또는 null (영업일 아님·미수신)
  * @param weekendLabels   slot 같은 인덱스의 비영업일 라벨 또는 "" (영업일)
  * @param valuationDateIso D
- * @param options.startOverrideDate §52의2② partial 구간 — 이 일자 이전은 "기간외" 라벨
+ * @param options.startOverrideDate §52의2②1·3호 — 이전 사유 다음날. 이 일자 이전 before 행은 "기간외"
+ * @param options.endOverrideDate   §52의2②2·3호 — 이후 사유 전일. 이 일자 이후 after 행은 "기간외"
  */
 export function splitTwoMonthSurroundingByMonthGroup(
   slotDates: string[],
   closingPrices: ReadonlyArray<number | null>,
   weekendLabels: ReadonlyArray<string>,
   valuationDateIso: string,
-  options?: { startOverrideDate?: string },
+  options?: { startOverrideDate?: string; endOverrideDate?: string },
 ): ListedStockMonthGroups {
   // slot 인덱싱 맵
   const slotMap = new Map<string, { closing: number | null; label: string }>();
@@ -67,14 +68,14 @@ export function splitTwoMonthSurroundingByMonthGroup(
   }
 
   const overrideStart = options?.startOverrideDate;
-  const isWithinOverride = (iso: string): boolean => {
-    if (!overrideStart) return true;
-    return iso >= overrideStart;
-  };
+  const overrideEnd = options?.endOverrideDate;
+  // §52의2②: 이전 사유 override는 before 행(초기 구간), 이후 사유 override는 after 행(말기 구간)에 적용.
+  const isWithinStart = (iso: string): boolean => !overrideStart || iso >= overrideStart;
+  const isWithinEnd = (iso: string): boolean => !overrideEnd || iso <= overrideEnd;
 
   const buildRow = (no: number, iso: string, isBefore: boolean): ListedStockDailyRow => {
     const slot = slotMap.get(iso);
-    const withinOverride = !isBefore || isWithinOverride(iso);
+    const withinOverride = isBefore ? isWithinStart(iso) : isWithinEnd(iso);
     if (!withinOverride) {
       return { no, date: iso, monthDay: formatMonthDay(iso), closing: null, label: "기간외" };
     }

@@ -50,6 +50,14 @@ const RequestSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "단축구간 시작일은 YYYY-MM-DD 형식입니다.")
     .optional(),
+  /**
+   * §52의2②2·3호 평가구간 말기 단축 (선택) — 평가기준일 이후 증자·합병 사유 전일까지.
+   * 클라이언트가 재계산하는 을지 산식(SSOT)이 최종 평균이며, 서버는 groups.average·기간 메타 정합용.
+   */
+  endOverrideDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "단축구간 종료일은 YYYY-MM-DD 형식입니다.")
+    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -68,7 +76,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { stockCode, valuationDate, startOverrideDate } = parsed.data;
+  const { stockCode, valuationDate, startOverrideDate, endOverrideDate } = parsed.data;
 
   try {
     let meta = getCachedStockMeta(stockCode);
@@ -157,7 +165,9 @@ export async function POST(req: Request) {
       result.closingPrices,
       result.weekendLabels,
       resolvedAnchor,
-      startOverrideDate ? { startOverrideDate } : undefined,
+      startOverrideDate || endOverrideDate
+        ? { startOverrideDate, endOverrideDate }
+        : undefined,
     );
 
     return NextResponse.json({
@@ -170,7 +180,11 @@ export async function POST(req: Request) {
       anchorShifted,
       anchorShiftReason,
       valuationPeriodStart: slotDates[0],
-      valuationPeriodEnd: slotDates[slotDates.length - 1],
+      // §52의2②2·3호 — 이후 사유 전일까지로 말기 단축 반영(메타 표시)
+      valuationPeriodEnd:
+        endOverrideDate && endOverrideDate < slotDates[slotDates.length - 1]
+          ? endOverrideDate
+          : slotDates[slotDates.length - 1],
       ...result,
       // ⚠️ 정답 산식으로 덮어쓰기 (en-route override) — result 의 average/sum/tradingDays 무효화.
       average: groups.closingAverage,
