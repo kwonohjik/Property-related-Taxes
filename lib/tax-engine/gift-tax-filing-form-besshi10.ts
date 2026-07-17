@@ -71,16 +71,32 @@ function deriveRelationDeductionSplit(
  * §36 대납분(donorPaidTaxGrossUp.donorPaidTax)은 사전증여가 아니라 재차증여 fold-back.
  * 별지10호 ㉓에 산입하면 과세표준 이중계산 → 명시 차감 필수.
  */
+/**
+ * 사전증여 가산액(㉓·부표1 ⑭) 단일 산식 — 별지10호·부표1 공유 SSOT(dual-truth 방지, H-48).
+ *   netCurrent = max(0, grossGiftValue − exemptAmount − debtAssumed)  (§47① 채무인수 차감)
+ *   ㉓/⑭ = max(0, aggregatedGiftValue − netCurrent − donorPaidTax)   (§36 대납가산 제거)
+ */
+export function computePriorGiftAddition(
+  aggregatedGiftValue: number,
+  grossGiftValue: number,
+  exemptAmount: number,
+  debtAssumed: number,
+  donorPaidTax: number,
+): number {
+  const netCurrent = Math.max(0, grossGiftValue - exemptAmount - debtAssumed);
+  return Math.max(0, aggregatedGiftValue - netCurrent - donorPaidTax);
+}
+
 function derivePriorGiftAddition(
   r: Omit<GiftTaxResult, "besshi10Rows">,
 ): number {
-  // §47① 채무인수 차감 후 netCurrentGiftValue 역산 (debtAssumed echo 활용)
-  // netCurrent = grossGiftValue − exemptAmount − debtAssumed (§47① 차감분)
-  const debtAssumed = r.debtAssumed ?? 0;
-  const netCurrent = Math.max(0, r.grossGiftValue - r.exemptAmount - debtAssumed);
-  // §36 대납가산분 — aggregatedGiftValue에만 가산됐으므로 역산 시 제거
-  const donorPaidTax = r.donorPaidTaxGrossUp?.donorPaidTax ?? 0;
-  return Math.max(0, r.aggregatedGiftValue - netCurrent - donorPaidTax);
+  return computePriorGiftAddition(
+    r.aggregatedGiftValue,
+    r.grossGiftValue,
+    r.exemptAmount,
+    r.debtAssumed ?? 0, // §47① 채무인수 echo
+    r.donorPaidTaxGrossUp?.donorPaidTax ?? 0, // §36 대납가산분
+  );
 }
 
 /**

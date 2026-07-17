@@ -575,6 +575,8 @@ export function GiftTaxResultView({
               grossGiftValue={result.grossGiftValue}
               exemptAmount={result.exemptAmount}
               aggregatedGiftValue={result.aggregatedGiftValue}
+              debtAssumed={result.debtAssumed}
+              donorPaidTax={result.donorPaidTaxGrossUp?.donorPaidTax}
               publicInterestExclusion={result.publicInterestExclusion}
               publicTrustExclusion={result.publicTrustExclusion}
               disabledTrustExclusion={result.disabledTrustExclusion}
@@ -597,6 +599,8 @@ export function GiftTaxResultView({
               grossGiftValue={result.grossGiftValue}
               exemptAmount={result.exemptAmount}
               aggregatedGiftValue={result.aggregatedGiftValue}
+              debtAssumed={result.debtAssumed}
+              donorPaidTax={result.donorPaidTaxGrossUp?.donorPaidTax}
               publicInterestExclusion={result.publicInterestExclusion}
               publicTrustExclusion={result.publicTrustExclusion}
               disabledTrustExclusion={result.disabledTrustExclusion}
