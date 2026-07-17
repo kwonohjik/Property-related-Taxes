@@ -52,6 +52,7 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     priorUsedMarriageBirthDeduction: "",
     isFiledOnTime: true,
     foreignTaxPaid: "",
+    foreignGiftTaxBase: "",
     specialTreatment: "",
     startupInvestmentCompleted: false,
     startupNewHiresAtLeast10: false,
