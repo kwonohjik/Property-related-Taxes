@@ -598,7 +598,7 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
         ],
       }),
     ];
-    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    const r = suggestFarmingAssetValue(items, { type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true, heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true, qualifiedHeirIds: ["h1"] });
     expect(r.value).toBe(600_000_000);
   });
 
@@ -612,7 +612,7 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
         heirAllocations: [{ heirId: "h1", amount: 1_000_000_000 }],
       }),
     ];
-    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: [] });
+    const r = suggestFarmingAssetValue(items, { type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true, heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true, qualifiedHeirIds: [] });
     expect(r.value).toBe(0);
     expect(r.notes?.some((n) => n.includes("자격 충족 상속인 0명"))).toBe(true);
   });
@@ -627,7 +627,7 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
         // heirAllocations 미입력
       }),
     ];
-    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    const r = suggestFarmingAssetValue(items, { type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true, heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true, qualifiedHeirIds: ["h1"] });
     expect(r.value).toBe(1_000_000_000);
   });
 
@@ -656,6 +656,8 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
       }),
     ];
     const r = suggestFarmingAssetValue(items, {
+      type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true,
+      heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true,
       qualifiedHeirIds: ["h1", "h2"],
     });
     // a1: h1(5억) + h2(3억) = 8억, a2: h1(2억) + (h2 분배 없음) = 2억 → 10억
@@ -676,7 +678,7 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
         ],
       }),
     ];
-    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    const r = suggestFarmingAssetValue(items, { type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true, heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true, qualifiedHeirIds: ["h1"] });
     // h1 분배 = 6억. 담보 비례 = 1억 × 6/10 = 6천만. → 6억 − 6천만 = 5.4억
     expect(r.value).toBe(540_000_000);
   });

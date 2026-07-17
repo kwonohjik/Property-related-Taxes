@@ -20,11 +20,13 @@ import { calcRelationDeduction } from "@/lib/tax-engine/deductions/gift-deductio
 import { calcCorporateStockAdjustedValue } from "@/lib/tax-engine/property-valuation-corporate";
 import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 import { resolveFamilyBusinessAssetValue } from "@/lib/tax-engine/deductions/family-business";
+import { resolveEffectiveQualifiedHeirIds } from "@/lib/tax-engine/deductions/inheritance-farming-deduction";
 import { isStatutoryHeir } from "@/lib/calc/heir-allocation-summary";
 import type {
   DebtItem,
   DonorRelation,
   EstateItem,
+  FarmingInheritanceInput,
   Heir,
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -357,11 +359,12 @@ export function twoYearsBefore(deathDate: string): string {
  * - estateItems 중 farmingCategory 지정된 자산 합
  * - §16⑤ 단서 — 담보채무(mortgageAmount) 차감
  * - 30억 cap은 엔진에서 적용 (본 헬퍼는 한도 적용 전 값 반환)
- * - farming.qualifiedHeirIds 지정 시 자격자 분배분만 합산 (F-11, §16⑤ 본문)
+ * - 자격자 분배분만 합산 (§16⑤ 본문) — resolveEffectiveQualifiedHeirIds 단일진실로 자격자 도출:
+ *   heirAssessments(부록A 자동도출)·명시 qualifiedHeirIds 모두 반영 (C-14 — 자동도출 모드 미필터 정정).
  */
 export function suggestFarmingAssetValue(
   estateItems: EstateItem[],
-  farming?: { qualifiedHeirIds?: string[] },
+  farming?: FarmingInheritanceInput,
   deathDate?: string,
 ): DeductionSuggestion {
   // D4: §16⑤1호 2년 영농사용 판정 헬퍼 — 자동판정(farmingUseStartDate) 우선, 수동 boolean fallback
@@ -422,7 +425,9 @@ export function suggestFarmingAssetValue(
       notes: earlyNotes.length > 0 ? earlyNotes : undefined,
     };
   }
-  const qualifiedIds = farming?.qualifiedHeirIds;
+  // C-14: 엔진 단일진실. heirAssessments(부록A) 자동도출·명시 override 모두 반영 →
+  // 자동도출 모드에서 미자격 상속인 분배분이 그대로 합산되던 갭 해소 (§16⑤ 본문).
+  const qualifiedIds = farming ? resolveEffectiveQualifiedHeirIds(farming) : undefined;
   const useAllocation = qualifiedIds !== undefined;
 
   let totalValue = 0;
