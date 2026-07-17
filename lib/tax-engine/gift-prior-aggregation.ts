@@ -57,8 +57,9 @@ export function isSameDonorGroup(
 }
 
 /**
- * §71⑥ — §47② 합산 가액. 감면농지 회차(farmlandReductionApplied)이고 과세부분(㉯)이 설정되면
- * giftAmount(전액) 대신 ㉯(farmlandTaxablePortion)로 합산 (감면부분 ㉮ 제외, 조특법 §71⑥).
+ * §71⑦ — §47② 합산 가액. 감면농지 회차(farmlandReductionApplied)이고 과세부분(㉯)이 설정되면
+ * giftAmount(전액) 대신 ㉯(farmlandTaxablePortion)로 합산 (감면부분 ㉮ 제외, 조특법 §71⑦).
+ *   (§71⑥은 상속세 §13① 가산 제외 규정 — 증여 §47② 합산 제외는 §71⑦.)
  * 미설정/비감면이면 giftAmount 전액 (2차 = 재재산-1454 불변). 예규 재산세과-2450·법규재산-2314.
  */
 function priorAggregatedValue(p: PriorGift): number {
@@ -303,7 +304,7 @@ export function aggregatePriorGiftsForGift(
   const breakdown: CalculationStep[] = matched.map((p) => ({
     label:
       p.farmlandReductionApplied && p.farmlandTaxablePortion != null
-        ? `§47 합산 (${p.giftDate}, 증여자=${p.donor}, §71⑥ 농지 과세부분 ㉯)`
+        ? `§47 합산 (${p.giftDate}, 증여자=${p.donor}, §71⑦ 농지 과세부분 ㉯)`
         : `§47 합산 (${p.giftDate}, 증여자=${p.donor})`,
     amount: priorAggregatedValue(p),
     lawRef: GIFT.AGGREGATION_SAME_PERSON,

@@ -30,6 +30,7 @@ export type PrintSectionId =
   | "heir-allocation-summary"
   | "deduction-breakdown"
   | "allocation-breakdown"
+  | "tax-credit"
   | "source-data"
   | "prior-gift-filing"
   | "corporate-exemption"
@@ -68,6 +69,7 @@ export const INHERITANCE_PRINT_SECTIONS: PrintSectionGroup[] = [
       { id: "heir-allocation-summary", label: "상속인별 상속세부담액 집계", channel: SCREEN_PDF },
       { id: "deduction-breakdown", label: "상속공제 상세 내역", channel: SCREEN },
       { id: "allocation-breakdown", label: "산출세액·증여세액공제 근거", channel: SCREEN },
+      { id: "tax-credit", label: "세액공제 상세 (§29 외국납부·§30 단기재상속·§69 신고)", channel: SCREEN },
     ],
   },
   {
