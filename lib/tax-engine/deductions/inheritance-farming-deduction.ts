@@ -33,13 +33,14 @@ import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjac
  *
  * 평가 순서:
  *   1. §18의3⑥ 조세포탈 → early return (다른 사유 평가 차단)
- *   2. §16⑭ 영농 부정 (피상속인·상속인·후계자 모두 적용)
+ *   2. §16⑭ 영농 부정 (소득세법 영농=personal 트랙 전용 — §16④/⑭은 §16②1호·§16③1호에만 적용)
  *   3. 피상속인 요건 (personal §16②1호 / corporate §16②2호)
  *   4. 후계자 트랙(isDesignatedSuccessor=true) → 18세·2년·거주 면제 후 return
  *   5. 상속인 요건 §16③ (개인/법인 분기)
  */
 export function evaluateFarmingEligibility(
   input: FarmingInheritanceInput,
+  deathDate?: string,
 ): FarmingEligibilityResult {
   const reasons: string[] = [];
 
@@ -63,27 +64,36 @@ export function evaluateFarmingEligibility(
     return { eligible: false, reasons };
   }
 
-  // 2. §16⑭ 영농 부정 — 피상속인·상속인·후계자 모두 적용 (1호·2호 OR 결합)
+  // 2. §16⑭ 영농 부정 — 소득세법 영농(personal 트랙)에만 적용 (P-2)
+  // KoreanLaw 검증 2026-07-17: §16⑭은 §16④("직접 영농에 종사")를 수정하며, §16④/⑭은
+  //   §16②1호가목·§16③1호가목(소득세법 영농)에만 적용된다. 법인세법 영농(corporate,
+  //   §16②2호·§16③2호)은 "경영/기업 종사" 요건이라 결격소득(직접 종사 부정) 대상이 아니다.
   // KoreanLaw 검증 2026-06-04: §16⑭1호 = 사업소득금액+총급여 3,700만 이상
   //                             §16⑭2호 = 사업소득 총수입금액 소령§208⑤2호 기준 이상 (2026.2.27 신설)
-  const disq1 = input.hasDisqualifyingIncome === true;
-  const disq2 = input.hasDisqualifyingGrossReceipt === true;
-  if (disq1 || disq2) {
-    if (disq1 && disq2) {
-      reasons.push(
-        "§16⑭1호 — 사업소득금액+총급여 3,700만원 이상 과세기간 (직접 종사 부정)",
-      );
-      reasons.push(
-        "§16⑭2호 — 사업소득 총수입금액 소령§208⑤2호 기준 이상 과세기간 (직접 종사 부정, 2026.2.27 신설)",
-      );
-    } else if (disq1) {
-      reasons.push(
-        "§16⑭1호 — 사업소득금액+총급여 3,700만원 이상 과세기간 (직접 종사 부정)",
-      );
-    } else {
-      reasons.push(
-        "§16⑭2호 — 사업소득 총수입금액 소령§208⑤2호 기준 이상 과세기간 (직접 종사 부정, 2026.2.27 신설)",
-      );
+  if (input.type === "personal") {
+    const disq1 = input.hasDisqualifyingIncome === true;
+    // §16⑭2호는 2026.2.27 신설 — 부칙: 영 시행일 이후 상속개시분부터 적용 (P-4).
+    //   구(舊) 상속에 소급 결격 금지. undefined=적용(legacy·엔진은 항상 deathDate 보유).
+    //   suggest G3(§16⑤ 담보채무 2026-02-27) 게이팅과 동일 컨벤션.
+    const disq2Effective = deathDate === undefined || deathDate >= "2026-02-27";
+    const disq2 = disq2Effective && input.hasDisqualifyingGrossReceipt === true;
+    if (disq1 || disq2) {
+      if (disq1 && disq2) {
+        reasons.push(
+          "§16⑭1호 — 사업소득금액+총급여 3,700만원 이상 과세기간 (직접 종사 부정)",
+        );
+        reasons.push(
+          "§16⑭2호 — 사업소득 총수입금액 소령§208⑤2호 기준 이상 과세기간 (직접 종사 부정, 2026.2.27 신설)",
+        );
+      } else if (disq1) {
+        reasons.push(
+          "§16⑭1호 — 사업소득금액+총급여 3,700만원 이상 과세기간 (직접 종사 부정)",
+        );
+      } else {
+        reasons.push(
+          "§16⑭2호 — 사업소득 총수입금액 소령§208⑤2호 기준 이상 과세기간 (직접 종사 부정, 2026.2.27 신설)",
+        );
+      }
     }
   }
 
@@ -148,6 +158,7 @@ export function evaluateFarmingEligibility(
 export function evaluateFarmingEligibilityForHeir(
   input: FarmingInheritanceInput,
   assessment: FarmingHeirAssessment,
+  deathDate?: string,
 ): FarmingEligibilityResult {
   // 폼-수준 사유 (피상속인 + §18의3⑥ + §16② 단서)를 동일 적용
   // — heir.hasDisqualifyingIncome로 §16⑭ 평가 분리 (input.hasDisqualifyingIncome은 무시)
@@ -164,7 +175,7 @@ export function evaluateFarmingEligibilityForHeir(
     heirCorporateOfficer: assessment.heirCorporateOfficer,
     isDesignatedSuccessor: assessment.isDesignatedSuccessor,
   };
-  return evaluateFarmingEligibility(heirInput);
+  return evaluateFarmingEligibility(heirInput, deathDate);
 }
 
 /**
@@ -177,11 +188,12 @@ export function evaluateFarmingEligibilityForHeir(
  */
 export function deriveQualifiedHeirIds(
   input: FarmingInheritanceInput,
+  deathDate?: string,
 ): string[] | undefined {
   const assessments = input.heirAssessments;
   if (assessments === undefined) return undefined;
   return assessments
-    .filter((a) => evaluateFarmingEligibilityForHeir(input, a).eligible)
+    .filter((a) => evaluateFarmingEligibilityForHeir(input, a, deathDate).eligible)
     .map((a) => a.heirId);
 }
 
@@ -196,10 +208,11 @@ export function deriveQualifiedHeirIds(
  */
 export function resolveEffectiveQualifiedHeirIds(
   input: FarmingInheritanceInput,
+  deathDate?: string,
 ): string[] | undefined {
   if (input.heirAssessments === undefined) return input.qualifiedHeirIds;
   if (input.qualifiedHeirIds !== undefined) return input.qualifiedHeirIds;
-  return deriveQualifiedHeirIds(input);
+  return deriveQualifiedHeirIds(input, deathDate);
 }
 
 // ============================================================
@@ -223,7 +236,7 @@ export function calcFarmingDeduction(
   detail: FarmingDeductionDetail;
 } {
   const evalResult: FarmingEligibilityResult = farming
-    ? evaluateFarmingEligibility(farming)
+    ? evaluateFarmingEligibility(farming, deathDate)
     : { eligible: true, reasons: [] };
   const evaluated = farming !== undefined;
   const safeAssetValue = Math.max(0, farmingAssetValue);
@@ -234,7 +247,7 @@ export function calcFarmingDeduction(
   const totalHeirCount = farming?.heirAssessments?.length;
   const qualifiedHeirCount =
     farming?.heirAssessments !== undefined
-      ? (deriveQualifiedHeirIds(farming) ?? []).length
+      ? (deriveQualifiedHeirIds(farming, deathDate) ?? []).length
       : undefined;
 
   // v4.1.1 D8/14지점 ⑦ — type="personal"일 때만 거주지 OR echo 생성 (corporate 트랙은 §16②2호 거주지 요건 없음)
