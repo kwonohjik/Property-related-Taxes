@@ -659,7 +659,17 @@ export function calcInheritanceTax(
     preGifts.some((g) => g.doneeId) ||
     input.heirs.some((h) => h.isGenerationSkipBeneficiary);
 
-  if (hasHeirAllocations) {
+  // H-16: 레거시 전역 isGenerationSkip 경로(perHeirSurcharge 미산출)는 §27 할증을 특정 상속인·수유자에
+  //   귀속할 수 없다. 이 경우 배부표를 만들면 §27 할증이 어느 상속인에게도 가산되지 않아 Σ perHeir.finalTax가
+  //   결정세액보다 할증액만큼 적어진다(배부표 붕괴). 자동 안분(전 상속인 균등 가산)은 §27 법리에 반하므로
+  //   금지 → 배부표를 생략(undefined)하고 경고. 세대생략 상속인·수유자를 개별 지정하면 per-heir 경로로 정확 배부.
+  const genSkipUnallocatable = perHeirSurcharge == null && generationSkipSurcharge > 0;
+
+  if (hasHeirAllocations && genSkipUnallocatable) {
+    allWarnings.push(
+      "세대생략 할증(§27)이 전역 입력으로 지정되어 상속인별 배부표를 산출하지 않습니다. 할증은 특정 세대생략 상속인·수유자에게만 가산되므로, 정확한 배부표를 위해 해당 상속인을 세대생략 수유자로 개별 지정(isGenerationSkipBeneficiary)하세요. (결정세액에는 할증이 정상 반영됨)",
+    );
+  } else if (hasHeirAllocations) {
     // 추정상속재산 id→addedAmount Map 작성
     const presumedAddedById = new Map<string, number>();
     if (presumedDetail) {
