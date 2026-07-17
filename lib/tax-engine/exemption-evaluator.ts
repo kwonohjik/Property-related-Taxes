@@ -1,5 +1,5 @@
 /**
- * 비과세 항목 평가기 (상증법 §11·§12·§46·§46의2)
+ * 비과세 항목 평가기 (상증법 §11·§12·§46·§52의2)
  *
  * 체크리스트 항목 → 차감액 계산
  * 한도 초과분은 일반 과세분으로 분리
@@ -147,7 +147,7 @@ function evaluateSingleExemption(
     return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
   }
 
-  // === 장애인 신탁: 5억 한도 (10년 합산) ===
+  // === 장애인 신탁: 5억 한도 (§52의2③ 생존 중 평생 합산) ===
   if (rule.id === "gift_disabled_trust") {
     const priorUsed = item.priorDisabledTrustUsed ?? 0;
     const remaining = Math.max(0, DISABLED_TRUST_LIMIT - priorUsed);
@@ -155,9 +155,9 @@ function evaluateSingleExemption(
     taxableOverflow = item.claimedAmount - exemptAmount;
 
     breakdown.push({
-      label: `장애인 신탁 한도 (5억 - 기사용 ${priorUsed.toLocaleString()} = 잔여 ${remaining.toLocaleString()}`,
+      label: `장애인 신탁 한도 (5억 − 기사용 ${priorUsed.toLocaleString()} = 잔여 ${remaining.toLocaleString()})`,
       amount: exemptAmount,
-      lawRef: EXEMPTION.PUBLIC_INTEREST,
+      lawRef: EXEMPTION.DISABLED_TRUST,
     });
     if (taxableOverflow > 0) {
       breakdown.push({ label: "5억 초과 — 일반 증여세 과세", amount: taxableOverflow });

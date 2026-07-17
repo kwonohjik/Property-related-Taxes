@@ -94,7 +94,7 @@ import type { AssetCategory } from "@/lib/tax-engine/types/inheritance-gift.type
 import { getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 
 // ============================================================
-// 비과세 항목 스키마 — ExemptionCheckedItem[] 기반 (§11·§12·§46·§46의2)
+// 비과세 항목 스키마 — ExemptionCheckedItem[] 기반 (§11·§12·§46·§52의2)
 // ============================================================
 
 export const exemptionCheckedItemSchema = z.object({
