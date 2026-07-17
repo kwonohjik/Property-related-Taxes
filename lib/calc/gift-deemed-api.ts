@@ -245,6 +245,7 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
             sharePrice: parseAmount(form.cdSharePrice),
             redemptionPrice: parseAmount(form.cdRedemptionPrice),
             ownRedeemedShares: parseAmount(form.cdOwnRedeemedShares),
+            faceValue: parseAmount(form.cdFaceValue) || undefined, // §29의2①2호 액면 게이트
           }
         : {
             type: "capital_decrease",

@@ -427,7 +427,10 @@ export function CapitalDecreaseFields({ form, set }: Props) {
           <CurrencyInput label="감자주식 1주당 평가액" value={form.cdSharePrice} onChange={(v) => set({ cdSharePrice: v })} placeholder="감자주식 1주당 평가액 (원)" />
           <CurrencyInput label="소각 시 지급한 1주당 금액" value={form.cdRedemptionPrice} onChange={(v) => set({ cdRedemptionPrice: v })} placeholder="소각 지급 1주당 금액 (원)" />
           {isHigh ? (
-            <CurrencyInput label="해당 주주등 감자 주식수" value={form.cdOwnRedeemedShares} onChange={(v) => set({ cdOwnRedeemedShares: v })} placeholder="해당 주주등 감자 주식수" />
+            <>
+              <CurrencyInput label="액면가액" value={form.cdFaceValue} onChange={(v) => set({ cdFaceValue: v })} placeholder="고가게이트 §29의2①2호 (평가액 < 액면가 한정)" />
+              <CurrencyInput label="해당 주주등 감자 주식수" value={form.cdOwnRedeemedShares} onChange={(v) => set({ cdOwnRedeemedShares: v })} placeholder="해당 주주등 감자 주식수" />
+            </>
           ) : (
             <>
               <CurrencyInput label="총감자 주식수" value={form.cdTotalShares} onChange={(v) => set({ cdTotalShares: v })} placeholder="총감자 주식수" />

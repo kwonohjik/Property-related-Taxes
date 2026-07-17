@@ -161,6 +161,8 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         if (parseAmount(form.cdSharePrice) <= 0) return "감자주식 1주당 평가액을 입력하세요";
         if (form.cdCaseType === "high") {
           if (parseAmount(form.cdOwnRedeemedShares) <= 0) return "해당 주주등 감자 주식수를 입력하세요";
+          // §29의2①2호 액면 게이트 — 미입력 시 엔진이 과세 제외(0원)하므로 필수 입력 요구
+          if (parseAmount(form.cdFaceValue) <= 0) return "액면가액을 입력하세요 (고가소각 §29의2①2호 액면 게이트)";
         } else {
           if (parseAmount(form.cdTotalShares) <= 0) return "총감자 주식수를 입력하세요";
         }
