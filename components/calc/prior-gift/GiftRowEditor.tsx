@@ -583,6 +583,18 @@ export function GiftRowEditor({
         );
       })()}
 
+      {/* §28① 단서 전단 — 증여세 부과제척기간 만료(국기법 §26의2④⑤) 시 증여세액공제 제외.
+       *  상속세 모드·비영리법인 전용(영리법인은 증여세 비과세라 §28 대상 아님). */}
+      {!showGiftPhaseA && !isCorporate && (
+        <ToggleCard
+          tone="amber"
+          title="증여세 부과제척기간 만료 (증여세액공제 제외)"
+          description="이 사전증여의 증여세 부과제척기간(국기법 §26의2④⑤ — 10년, 무신고·부정·거짓누락 15년)이 만료되어 증여세를 부과할 수 없는 경우 선택. 상증법 §28① 단서 전단에 따라 상속세 증여세액공제에서 제외됩니다(§13 상속재산 가산은 유지)."
+          checked={gift.giftTaxTimeBarred === true}
+          onCheckedChange={(v) => set({ giftTaxTimeBarred: v ? true : undefined })}
+        />
+      )}
+
       {/* 과세특례 구분 — §30의5·§30의6 해당 여부.
        * 증여세 모드(showGiftPhaseA): 기존 §47 합산 제외, 특례 스트림 분리 안내.
        * 상속세 모드(showSpecialType): §30의5⑨·§30의6⑤ — 기간 무관 가산 안내.
