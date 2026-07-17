@@ -58,6 +58,10 @@ export function deriveCollateralDebts(
   const result: DerivedCollateralDebt[] = [];
   for (const item of items) {
     if (item.deductSecuredClaimAsDebt !== true) continue; // opt-in 가드
+    // §14①3호: 차감 채무는 "피상속인이 진 채무"에 한정. deposit(전세보증금 반환채권)은
+    // 피상속인=임차인이 반환받을 채권(자산)이므로 담보채무로 파생 금지.
+    // 동일 leaseDeposit이 자산+채무 이중계상되어 과세표준이 소멸하는 유령채무 방어(stale store).
+    if (item.category === "deposit") continue;
     const mortgage = item.mortgageAmount ?? 0;
     const lease = item.leaseDeposit ?? 0;
     const amount = mortgage + lease;
