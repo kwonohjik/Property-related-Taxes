@@ -84,6 +84,12 @@ export interface SurchargeCheckInput {
   // ── [P1-4] 시가표준액 저가 배제 ──
   /** 전체 주택 시가표준액 (지분/부속토지 취득 시 전체 주택 기준) */
   wholeHouseStandardValue?: number;
+  /**
+   * 해당 주택 시가표준액 — §13의2② 3억 임계 판정의 fallback.
+   * R3-03: 단일주택 증여 등 wholeHouseStandardValue 미입력 시 이 값으로 3억 임계를
+   * 판정한다. 미전달 시 assessGiftSurcharge의 stdValue가 0이 되어 12% 중과가 영구 미발동.
+   */
+  standardValue?: number;
   /** 수도권 여부 (1억/2억 한도 결정) */
   isMetropolitanRegion?: boolean;
   /** 정비구역(재개발·재건축·소규모정비) 소재 여부 */
@@ -295,7 +301,7 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
   // 증여 원인: gift 또는 부담부증여가 gift로 재정의된 경우
   if (isHousing && (effectiveCause === "gift" || effectiveCause === "donation")) {
     const stdValue = input.wholeHouseStandardValue
-      ?? (input as { standardValue?: number }).standardValue
+      ?? input.standardValue
       ?? 0;
 
     const giftResult = assessGiftSurcharge({

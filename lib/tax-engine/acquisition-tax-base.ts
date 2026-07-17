@@ -104,8 +104,13 @@ export function determineTaxBase(input: AcquisitionTaxInput): TaxBaseResult {
   const standardValue = standardPriceResult.standardValue;
   warnings.push(...standardPriceResult.warnings);
 
-  // ── 특수관계인 거래 (§10의2) ──
-  if (input.isRelatedParty) {
+  // ── 특수관계인 거래 (§10의3② 부당행위계산 — 유상승계취득 전용) ──
+  // R3-04: §10의3② 부당행위계산은 "유상승계취득"에만 적용된다. 상속·증여 등
+  // 무상취득은 이 분기 대상이 아니므로, isRelatedParty를 유상취득으로 한정하지
+  // 않으면 상속+특수관계인 조합이 시가인정액 과세로 오라우팅되어 §10의2②1호
+  // (상속 = 시가표준액 강제)를 우회한다(과대과세). 무상취득은 아래 isGratuitous
+  // 분기(calcGratuitousTaxBase)로 fall-through시켜 시가표준액/시가인정액 규칙을 유지.
+  if (input.isRelatedParty && isOnerousCause(input.acquisitionCause)) {
     return calcRelatedPartyTaxBase(input, standardValue, warnings);
   }
 

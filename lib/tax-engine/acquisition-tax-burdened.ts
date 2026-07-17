@@ -50,7 +50,9 @@ export function computeBurdenedGiftResult(
     const gift = assessGiftSurcharge({
       isHousing: true,
       isRegulatedArea: input.isRegulatedArea ?? false,
-      wholeStdValue: input.wholeHouseStandardValue ?? 0,
+      // R3-03: 단일주택 부담부증여 무상분도 wholeHouseStandardValue 미입력 시
+      // 해당 주택 시가표준액으로 §13의2② 3억 임계 판정.
+      wholeStdValue: input.wholeHouseStandardValue ?? input.standardValue ?? 0,
       giftorIs1HHHolder: input.giftorIs1HHHolder,
       giftorRelation: input.giftorRelation,
       specialRateType: input.specialRateType,
