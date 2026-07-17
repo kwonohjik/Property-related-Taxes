@@ -35,7 +35,8 @@ const base: PaymentInKindInput = {
     eligibleSecuritiesValue: 100_000_000, // 처분제한 상장(충당가능)
     unlistedStockValue: 200_000_000,
     tradableListedValue: 50_000_000, // 처분제한 없는 상장(§73①2호 차감)
-    netFinancialValue: 200_000_000,
+    grossFinancialValue: 200_000_000,
+    financialInstitutionDebt: 0,
     heirResidenceValue: 100_000_000,
     ineligibleManagementValue: 0,
   },
@@ -99,7 +100,7 @@ describe("물납 — 허용한도 min 산식 (상증령 §73①)", () => {
       assets: {
         ...base.assets,
         realEstateValue: 1_000_000_000,
-        netFinancialValue: 100_000_000,
+        grossFinancialValue: 100_000_000,
         tradableListedValue: 0,
       },
     });
@@ -256,7 +257,8 @@ describe("물납 — 상속인 거주주택 자동분류 (§74②6호, 갭4)", (
           eligibleSecuritiesValue: 0,
           unlistedStockValue: 300_000_000,
           tradableListedValue: 0,
-          netFinancialValue: 0,
+          grossFinancialValue: 0,
+          financialInstitutionDebt: 0,
           heirResidenceValue,
           ineligibleManagementValue: 0,
         },
@@ -264,5 +266,100 @@ describe("물납 — 상속인 거주주택 자동분류 (§74②6호, 갭4)", (
     // cap = max(0, 400M − (600M − 300M − heirResidence))
     expect(cap(0)).toBe(100_000_000);
     expect(cap(500_000_000)).toBe(600_000_000);
+  });
+});
+
+// ============================================================
+// H-41 — §74①2호나목 단서: 비상장주식 조건부 충당가능 유가증권(요건1/한도1 분자)
+//   부동산+충당유가증권으로 finalTax 충당이 부족한 경우에만 비상장 산입.
+// ============================================================
+describe("물납 — 비상장 조건부 충당가능 (§74①2호나목 단서, H-41)", () => {
+  const unlistedHeavy = (over: Partial<PaymentInKindInput["assets"]> = {}) => ({
+    finalTax: 400_000_000,
+    grossEstateValue: 2_000_000_000,
+    exemptAmount: 0,
+    priorGiftToHeirTotal: 0,
+    taxableEstateValue: 2_000_000_000,
+    assets: {
+      realEstateValue: 100_000_000, // 부동산 1억 (부족)
+      eligibleSecuritiesValue: 0,
+      unlistedStockValue: 1_200_000_000, // 비상장 12억 (위주)
+      tradableListedValue: 0,
+      grossFinancialValue: 0,
+      financialInstitutionDebt: 0,
+      heirResidenceValue: 0,
+      ineligibleManagementValue: 0,
+      ...over,
+    },
+  });
+
+  it("H-41a: 비상장-위주 상속 — 부동산<finalTax → 비상장 산입 → 요건1 충족·물납 자격", () => {
+    const r = calcPaymentInKindAssessment(unlistedHeavy());
+    // baseEligible 1억 < finalTax 4억 → 비상장 12억 산입 → 분자 13억
+    expect(r.requirement.realEstateSecuritiesValue).toBe(1_300_000_000);
+    expect(r.requirement.halfThreshold).toBe(1_000_000_000);
+    expect(r.requirement.meetsOverHalf).toBe(true); // 종전(비상장 미산입) 1억 → 거부였음
+    expect(r.eligible).toBe(true);
+    expect(r.limit1).toBe(260_000_000); // 4억 × 13억 / 20억
+  });
+
+  it("H-41b: 부동산이 finalTax 충당 충분 → 비상장 미산입(조건부 제외)", () => {
+    // 부동산 5억 ≥ finalTax 4억 → 비상장 12억 분자 제외 → 분자 5억
+    const r = calcPaymentInKindAssessment(
+      unlistedHeavy({ realEstateValue: 500_000_000 }),
+    );
+    expect(r.requirement.realEstateSecuritiesValue).toBe(500_000_000);
+  });
+});
+
+// ============================================================
+// H-43 — §73①2호 한도2 금융회사 채무(§10①1호) 차감 + 요건3 gross/한도2 net 분리
+// ============================================================
+describe("물납 — 금융회사 채무 차감·gross/net 분리 (§73①2호, H-43)", () => {
+  it("H-43a: 한도2 = finalTax − (금융재산 − 금융회사채무) − 상장 (채무 차감으로 한도 확대)", () => {
+    const r = calcPaymentInKindAssessment({
+      ...base,
+      assets: {
+        ...base.assets,
+        grossFinancialValue: 200_000_000,
+        financialInstitutionDebt: 100_000_000, // §10①1호 금융회사 채무
+      },
+    });
+    // 한도2 = 4억 − (2억 − 1억) − 0.5억(상장) = 2.5억 (종전 채무 미차감 시 1.5억)
+    expect(r.limit2).toBe(250_000_000);
+    // limit1 = 4억 × 15억 / 20억 = 3억 → allowed = min(3억, 2.5억) = 2.5억
+    expect(r.allowedLimit).toBe(250_000_000);
+  });
+
+  it("H-43b: 요건3은 gross 금융재산 기준 (금융회사 채무 차감 前)", () => {
+    // finalTax 1.5억, gross 2억, 채무 1억(net 1억). 요건3 gross 기준 → 1.5억 > 2억 거짓
+    const r = calcPaymentInKindAssessment({
+      ...base,
+      finalTax: 150_000_000,
+      assets: {
+        ...base.assets,
+        grossFinancialValue: 200_000_000,
+        financialInstitutionDebt: 100_000_000,
+      },
+    });
+    expect(r.requirement.financialValue).toBe(200_000_000); // gross echo
+    expect(r.requirement.meetsTaxOverFinancial).toBe(false); // net(1억) 오적용이면 true였음
+    expect(r.eligible).toBe(false);
+  });
+
+  it("H-43c (자동도출): collateralDebtDetail.financialDebtAmount → financialInstitutionDebt 합산", () => {
+    const items = [
+      { id: "d1", category: "deposit", name: "예금" },
+    ] as unknown as EstateItem[];
+    const valResult = {
+      valuationResults: [{ estateItemId: "d1", valuatedAmount: 300_000_000 }],
+      collateralDebtDetail: [
+        { estateItemId: "x", creditorName: "은행", amount: 200_000_000, financialDebtAmount: 120_000_000 },
+        { estateItemId: "y", creditorName: "임대", amount: 100_000_000, financialDebtAmount: 0 },
+      ],
+    } as unknown as Pick<InheritanceTaxResult, "valuationResults" | "collateralDebtDetail">;
+    const a = derivePaymentInKindAssets(items, valResult, 0);
+    expect(a.grossFinancialValue).toBe(300_000_000);
+    expect(a.financialInstitutionDebt).toBe(120_000_000); // 저당 금융채무만(임대보증금 0 제외)
   });
 });

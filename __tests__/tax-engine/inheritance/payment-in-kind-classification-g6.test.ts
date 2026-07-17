@@ -49,13 +49,13 @@ describe("G-6 물납 법정분류 (§73⑤·§74①)", () => {
 
   it("H-36 보험금·특정금전신탁 → §73⑤ 금융재산 포함", () => {
     // 금융재산 = 현금1 + 예금2 + 보험금3 + 특정금전신탁4 = 10억 (부동산신탁·대부금채권·전환사채 제외)
-    expect(a.netFinancialValue).toBe(1_000_000_000);
+    expect(a.grossFinancialValue).toBe(1_000_000_000);
   });
 
   it("H-42 대부금채권·전환사채 → 금융재산 제외", () => {
     // 대부금채권6·전환사채7 미포함 → 금융재산에 6억·7억 없음
-    expect(a.netFinancialValue).not.toBe(1_600_000_000); // + 대부금채권6
-    expect(a.netFinancialValue).not.toBe(1_700_000_000); // + 전환사채7
+    expect(a.grossFinancialValue).not.toBe(1_600_000_000); // + 대부금채권6
+    expect(a.grossFinancialValue).not.toBe(1_700_000_000); // + 전환사채7
   });
 
   it("H-41(부분) 전환사채 → §74①2호 충당가능 유가증권 산입 (종전 0 하드코딩)", () => {
