@@ -16,6 +16,7 @@ import type { FarmingPostMgmtInput } from "@/lib/tax-engine/types/inheritance-fa
 const BASE: FarmingPostMgmtInput = {
   violation: "asset_disposed",
   violationDate: "2027-03-15",
+  inheritanceStartDate: "2025-03-31",  // 5년 만료 2030-03-31 — violationDate 2027-03-15은 기간 내
   filingDeadline: "2025-09-30",  // 상속개시 2025-03-31 + 6개월
   baseTaxableAmount: 5_000_000_000,  // 50억 — §26 최고구간(50%)
   interestRate: 0.029,  // 연 2.9%
@@ -190,5 +191,54 @@ describe("calcFarmingPostMgmt — 경계 케이스", () => {
     const labels = r.breakdown.map((s) => s.label);
     expect(labels.some((l) => l.includes("면제 적용"))).toBe(true);
     expect(labels.some((l) => l.includes("§16⑥1호"))).toBe(true);
+  });
+
+  // ============================================================
+  // H-44 — §18의3④ 5년 사후관리기간 (상속개시일부터 5년 이내)
+  //   상속개시 2025-03-31 → 5년 만료 addYears(,5)=2030-03-31 (민법 §157·§160②).
+  // ============================================================
+  describe("H-44 §18의3④ 5년 사후관리기간 게이트", () => {
+    it("FP-H44a: 5년 경과 후(2030-04-01) 자산 처분 → 무추징 (종전 전액 추징 버그)", () => {
+      const r = calcFarmingPostMgmt(2_000_000_000, {
+        ...BASE,
+        violationDate: "2030-04-01", // 2030-03-31 + 1일 = 기간 외
+      });
+      expect(r.recaptureRequired).toBe(false);
+      expect(r.outsideManagementPeriod).toBe(true);
+      expect(r.recaptureAmount).toBe(0);
+      expect(r.interestAmount).toBe(0);
+      expect(r.totalRecapture).toBe(0);
+    });
+
+    it("FP-H44b: 5년 경과 후 영농 중단 → 무추징", () => {
+      const r = calcFarmingPostMgmt(1_500_000_000, {
+        ...BASE,
+        violation: "farming_ceased",
+        violationDate: "2031-01-10",
+      });
+      expect(r.recaptureRequired).toBe(false);
+      expect(r.outsideManagementPeriod).toBe(true);
+    });
+
+    it("FP-H44c: 경계 — 5년 만료일(2030-03-31) 당일 처분 → 기간 내(추징)", () => {
+      const r = calcFarmingPostMgmt(2_000_000_000, {
+        ...BASE,
+        violationDate: "2030-03-31", // = addYears(start,5) → 이내
+      });
+      expect(r.recaptureRequired).toBe(true);
+      expect(r.outsideManagementPeriod).toBeUndefined();
+      expect(r.recaptureAmount).toBe(1_000_000_000);
+    });
+
+    it("FP-H44d: §18의3⑥ 조세포탈 형 확정은 5년 제한 없음 → 5년 경과 후에도 추징", () => {
+      const r = calcFarmingPostMgmt(2_000_000_000, {
+        ...BASE,
+        violation: "tax_fraud_conviction",
+        violationDate: "2032-06-01", // 5년 경과했으나 ⑥ 트랙 → 게이트 미적용
+      });
+      expect(r.recaptureRequired).toBe(true);
+      expect(r.outsideManagementPeriod).toBeUndefined();
+      expect(r.recaptureAmount).toBe(1_000_000_000);
+    });
   });
 });
