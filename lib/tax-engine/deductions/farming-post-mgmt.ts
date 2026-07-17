@@ -16,7 +16,6 @@
  */
 
 import {
-  addDays,
   addMonths,
   addYears,
   differenceInDays,
@@ -128,10 +127,14 @@ export function calcFarmingPostMgmt(
   const safeOriginal = Math.max(0, originalDeduction);
   const reportDeadline = calcReportDeadline(input.violationDate);
 
-  // 일수 계산 — filingDeadline 다음날부터 violationDate까지 (inclusive of violation)
-  const startDate = addDays(parseISO(input.filingDeadline), 1);
-  const endDate = parseISO(input.violationDate);
-  const interestDays = Math.max(0, differenceInDays(endDate, startDate));
+  // 일수 — 신고기한 다음날부터 위반일까지 (위반일 포함).
+  //   differenceInDays(위반일, 신고기한)이 곧 그 일수 (신고기한 자체는 제외, 다음날=1일차).
+  //   가업 §18의2 daysFromFilingToViolation과 동일 관행. 종전 addDays(+1) 후 differenceInDays는
+  //   첫날을 이중 배제해 1일 과소였음 (M-9).
+  const interestDays = Math.max(
+    0,
+    differenceInDays(parseISO(input.violationDate), parseISO(input.filingDeadline)),
+  );
 
   // §18의3④ 5년 사후관리기간 — ④ 트랙(처분·종사중단)만. 5년 경과 후 위반 → 무추징.
   //   민법 §157·§160② 계산: 상속개시일 기산 5년 만료일 = addYears(start, 5). 그 후 위반은 기간 외.

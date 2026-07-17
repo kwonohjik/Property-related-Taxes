@@ -104,9 +104,9 @@ export interface EmploymentTracking {
   fiveYearData: MonthlyEmploymentData[];
   /** 직전 2개 과세기간 월별 데이터 (기준) */
   priorTwoYearData: MonthlyEmploymentData[];
-  /** 5년 총급여액 */
+  /** 5년간 총급여액의 전체 평균 (연평균, §18의2⑤4호나목) — 합계 아님 */
   fiveYearTotalSalary: number;
-  /** 직전 2년 총급여액 (기준) */
+  /** 직전 2개 과세기간 총급여액의 평균 (연평균, 기준) */
   priorTwoYearTotalSalary: number;
 }
 
