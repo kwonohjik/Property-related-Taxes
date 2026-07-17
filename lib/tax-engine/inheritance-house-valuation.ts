@@ -17,7 +17,7 @@
  */
 
 import { calculatePre1990LandValuation, INDIVIDUAL_LAND_PRICE_FIRST_NOTICE_DATE } from "./pre-1990-land-valuation";
-import { safeMultiply } from "./tax-utils";
+import { safeMultiply, safeMultiplyThenDivide } from "./tax-utils";
 import { INHERITED_HOUSE } from "./legal-codes";
 import {
   HOUSE_FIRST_DISCLOSURE_DATE,
@@ -208,8 +208,10 @@ function resolveHousePriceAtInheritance(
   const buildingStdF = input.buildingStdPriceAtFirstDisclosure ?? 0;
   const sumAtFirstDisclosure = landStdAtFirstDisclosure + buildingStdF;
 
+  // 정수 단일 floor: safeMultiply 후 부동소수 나눗셈은 곱이 2^53 초과 시 나눗셈 전
+  // 반올림으로 1원 오차가 날 수 있어 safeMultiplyThenDivide(BigInt 단일 floor)로 대체 (M-7).
   const estimated = sumAtFirstDisclosure > 0
-    ? Math.floor(safeMultiply(input.housePriceAtFirstDisclosure, sumAtInheritance) / sumAtFirstDisclosure)
+    ? safeMultiplyThenDivide(input.housePriceAtFirstDisclosure, sumAtInheritance, sumAtFirstDisclosure)
     : 0;
 
   return { housePriceAtInheritanceUsed: estimated, estimationMethod: "estimated_phd" };
