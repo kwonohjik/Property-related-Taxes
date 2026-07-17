@@ -609,6 +609,12 @@ export interface GiftTaxResult extends TaxResultMeta {
   specialStreamTax?: number;
 
   /**
+   * 적용 특례 유형 echo — "startup"(§30의5 창업자금) / "family_business"(§30의6 가업승계).
+   * 연부연납 안내 §71②2호가 15년 구분(family_business)용 (M-3). 특례 미선택 시 undefined.
+   */
+  specialTreatmentType?: "startup" | "family_business";
+
+  /**
    * 일반 스트림 세액 (§47·§53·§56·§57·§58·§69 일반 과세).
    *
    * specialTreatment 미선택 시 computedTax와 동일(단일 스트림).

@@ -634,7 +634,10 @@ export function GiftTaxResultView({
 
       {/* 연부연납 안내 */}
       <PrintSection id="installment" selectedIds={selectedPrintIds}>
-        <InstallmentGuide finalTax={result.finalTax} />
+        <InstallmentGuide
+          finalTax={result.finalTax}
+          specialTreatmentSuccession={result.specialTreatmentType === "family_business"}
+        />
       </PrintSection>
 
       {/* 분납 일정 (§70②) — 증여는 연부연납 입력 없음 (applyLongTermInstallment 생략) */}
