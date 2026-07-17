@@ -42,9 +42,10 @@ describe("[AT-ZOD] Zod 스키마 ↔ 엔진 입력 동기화", () => {
     // strip 회귀 방어: route 경로 = 직접 호출 (수정 전에는 8% 중과 64,000,000)
     expect(viaRoute.appliedRate).toBe(direct.appliedRate);
     expect(viaRoute.acquisitionTax).toBe(direct.acquisitionTax);
-    // 원 단위 anchor — (8억×2/3억−3)/100 = 2.333% (소수점 5자리)
-    expect(viaRoute.appliedRate).toBe(0.02333);
-    expect(viaRoute.acquisitionTax).toBe(18_666_666);
+    // [R3-10] §11①8나 4자리 확정세율: (8억×2−9억)/300억 = 0.023333 → 0.0233.
+    //   취득세 = floor(8억 × 0.0233) = 18,640,000.
+    expect(viaRoute.appliedRate).toBe(0.0233);
+    expect(viaRoute.acquisitionTax).toBe(18_640_000);
     expect(viaRoute.isSurcharged).toBe(false);
   });
 
@@ -67,11 +68,11 @@ describe("[AT-ZOD] Zod 스키마 ↔ 엔진 입력 동기화", () => {
     expect(viaRoute.reductionAmount).toBe(direct.reductionAmount);
     // 농지 매매 3% = 15,000,000 본세 × 50% 감면 (수정 전에는 strip으로 감면 0)
     expect(viaRoute.reductionAmount).toBe(7_500_000);
-    // 감면후본세 7,500,000 + 농특세 1,000,000 + 교육세 1,000,000 = 9,500,000
-    // [R3-02] 농특세 = 비중과 0.2% = 5억×0.2% = 1,000,000 (표준세율 2% 치환).
-    //   교육세 = §151①1 본문 (3%−2%)×20% = 0.2% = 1,000,000.
-    //   ※ 자경농지 §6① 감면 시 농특세 비과세(농특세법 §4 10호)는 별도 후속(R3-09) — 현재 미반영.
-    expect(viaRoute.totalTaxAfterReduction).toBe(9_500_000);
+    // [R3-09] 자경농지 §6① 감면 시 농특세 비과세(농특세법 §4 10호) → 농특세 0.
+    //   감면후본세 7,500,000 + 농특세 0 + 교육세 1,000,000 = 8,500,000.
+    //   교육세 = §151①1 본문 (3%−2%)×20% = 0.2% = 1,000,000 (비과세 대상 아님).
+    expect(viaRoute.ruralSpecialTax).toBe(0);
+    expect(viaRoute.totalTaxAfterReduction).toBe(8_500_000);
   });
 
   it("[AT-ZOD-03] 읍·면 95㎡ 주택 — 농특세 100㎡ 한도 면제 유지", () => {

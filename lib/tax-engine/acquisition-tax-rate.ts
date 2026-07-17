@@ -39,19 +39,19 @@ export function linearInterpolationRate(acquisitionValue: number): number {
   const numerator = BigInt(acquisitionValue) * BigInt(2) - BigInt(900_000_000);
   const denominator = BigInt(30_000_000_000);
 
-  // 소수점 5자리 반올림: numerator × 100000 / denominator (반올림)
-  const scaled = (numerator * BigInt(100_000) + denominator / BigInt(2)) / denominator;
-  return Number(scaled) / 100_000;
+  // [R3-10] §11①8나: "소수점이하 다섯째자리에서 반올림하여 소수점 넷째자리까지 계산".
+  //   → 4자리 확정세율. numerator × 10000 / denominator (반올림).
+  const scaled = (numerator * BigInt(10_000) + denominator / BigInt(2)) / denominator;
+  return Number(scaled) / 10_000;
 }
 
 /**
  * 선형보간 세율 구간에서의 취득세액
  *
- * rate를 부동소수점으로 반올림한 뒤 곱하면 최대 ~3,000원 오차 발생.
- * BigInt로 세액을 직접 계산해 정확한 원 미만 절사를 보장한다.
- *
- * 공식: floor(value × (value×2 − 900,000,000) / 30,000,000,000)
- *   = floor(value × (value×2/300,000,000 − 3) / 100)
+ * [R3-10] §11①8나는 세율을 4자리로 확정(다섯째자리 반올림)한 뒤 과세표준에 곱한다.
+ *   취득세 = floor(과세표준 × round4(세율)). 무한정밀 세율로 곱하면 4자리 확정세율과
+ *   최대 ~45,000원 어긋난다(반올림 방향에 따라 과대·과소). rateScaled(=round4×10000)로
+ *   정수 계산해 부동소수 오차 없이 원 미만 절사.
  */
 export function calcLinearInterpolationTax(acquisitionValue: number): number {
   if (acquisitionValue <= ACQUISITION_CONST.HOUSING_BRACKET_LOW) {
@@ -61,7 +61,10 @@ export function calcLinearInterpolationTax(acquisitionValue: number): number {
     return Math.floor(acquisitionValue * 0.03);
   }
   const v = BigInt(acquisitionValue);
-  const tax = (v * (v * 2n - 900_000_000n)) / 30_000_000_000n;
+  // round4 세율 × 10000 (다섯째자리 반올림)
+  const rateScaled = (v * 2n - 900_000_000n) * 10_000n + 30_000_000_000n / 2n;
+  const rate4 = rateScaled / 30_000_000_000n;
+  const tax = (v * rate4) / 10_000n; // floor(과세표준 × round4세율)
   return Number(tax);
 }
 
@@ -225,7 +228,8 @@ export interface AdditionalTaxInput {
   acquisitionCause?: string;
   isSurcharged?: boolean;
   // [P4-2] 중과세 교육세 매트릭스
-  surchargeType?: "multi_house_8" | "multi_house_12" | "luxury_solo" | "luxury_multi" | "corp_metro" | "gift_12";
+  // [R3-05] section13_gamok = §13②③⑥⑦ 비주택 중과 → §151①1가 본문액×300%
+  surchargeType?: "multi_house_8" | "multi_house_12" | "luxury_solo" | "luxury_multi" | "corp_metro" | "gift_12" | "section13_gamok";
   // [P4-4] 농특세 읍·면 지역 100㎡ 분기
   isRuralRegion?: boolean;
   /**
@@ -339,6 +343,19 @@ export function calcLocalEducationTax(input: AdditionalTaxInput): number {
     acquisitionCause === "deemed_major_shareholder";
   if (isDeemedAcquisition) {
     return 0;
+  }
+
+  // [R3-05] 가목 §13②③⑥⑦(대도시 법인 5년내·본점+대도시 중복·사치성+대도시법인) 비주택:
+  //   본문 계산방법(표준세율−2%)×20%로 산출한 지방교육세액 × 300% (§151①1가).
+  //   ★ 법인 §11①8 주택은 §151①1가 단서로 나목(0.4%) — 라우터가 비주택만 이 값을 전달.
+  if (surchargeType === "section13_gamok") {
+    const RATE_SCALE = 100_000;
+    const ratePoints = Math.round(basicRate * RATE_SCALE);
+    const standardRatePoints = Math.round(ACQUISITION_CONST.RURAL_STANDARD_RATE * RATE_SCALE);
+    const excessRatePoints = Math.max(0, ratePoints - standardRatePoints);
+    const eduBase = Math.floor((taxBase * excessRatePoints) / RATE_SCALE); // (표준−2%)×과세표준
+    const bonmun = Math.floor(eduBase * ACQUISITION_CONST.EDU_RATE); // 본문 × 20%
+    return bonmun * 3; // 가목 × 300%
   }
 
   // [R3-01] 나목 §13의2(①②③): (§11①7나 4% − 2%) × 20% = 0.4% 고정.
@@ -465,10 +482,12 @@ export function calcBurdenedGiftTax(
     const basic = getBasicRate(propertyType, "purchase", acquisitionValue);
     onerousRate = basic.rate;
     if (basic.isLinearInterpolation) {
-      // 6~9억 선형보간 구간: 유상분 × 전체기준 보간세율을 BigInt로 정밀 계산.
+      // [R3-10] 6~9억 선형보간: §11①8나 4자리 확정세율(다섯째자리 반올림) × 유상분.
       // isLinearInterpolation=true ⇒ 6억<acquisitionValue<9억 ⇒ (전체×2−9억)>3억>0 (음수 없음).
-      const numerator = BigInt(onerousTaxBase) * (BigInt(acquisitionValue) * 2n - 900_000_000n);
-      onerousTax = Number(numerator / 30_000_000_000n);
+      const rateScaled =
+        ((BigInt(acquisitionValue) * 2n - 900_000_000n) * 10_000n + 30_000_000_000n / 2n) /
+        30_000_000_000n; // round4 세율 × 10000
+      onerousTax = Number((BigInt(onerousTaxBase) * rateScaled) / 10_000n);
     } else {
       onerousTax = Math.floor(onerousTaxBase * onerousRate);
     }

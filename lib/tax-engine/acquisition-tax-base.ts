@@ -349,9 +349,25 @@ function calcRelatedPartyTaxBase(
     };
   }
 
-  // 비정상 거래 → 시가인정액 사용
+  // [R3-07] 130% 초과 과다신고: §10의3②(부당행위계산)의 시가 상향은 조세부담을 부당히 감소시키는
+  //   저가취득에만 적용되는 재량이다. 과다신고는 조세감소가 아니므로 §10의3① 사실상취득가격이
+  //   그대로 과세표준. 상단 초과분을 시가로 하향시켜 실제 지급액보다 낮게 과세하던 결함 정정.
+  if (input.reportedPrice > upperBound) {
+    warnings.push(
+      `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()})가 시가의 130%를 초과(과다신고)하나, §10의3① 사실상취득가격을 과세표준으로 사용합니다.`
+    );
+    return {
+      method: "actual_price",
+      taxBase: input.reportedPrice,
+      rawTaxBase: input.reportedPrice,
+      warnings,
+      legalBasis: ACQUISITION.RELATED_PARTY,
+    };
+  }
+
+  // 저가취득(시가 70% 미만) → 시가인정액 사용 (§10의3② 부당행위계산)
   warnings.push(
-    `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()}가 시가의 70% 미만이거나 130% 초과. 시가인정액(${marketBase.toLocaleString()}을 과세표준으로 사용합니다.`
+    `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()})가 시가의 70% 미만(저가취득). 시가인정액(${marketBase.toLocaleString()})을 과세표준으로 사용합니다.`
   );
   return {
     method: "recognized_market",

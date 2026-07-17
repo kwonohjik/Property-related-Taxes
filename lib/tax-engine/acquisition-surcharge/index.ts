@@ -268,6 +268,27 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
       }
     }
 
+    // [R3-06] 사치성 + 증여 중과 중복(§13의2③): 무상취득(증여) 고급주택이 §13의2②(조정 3억↑
+    //   12%)에 해당하면 그 세율을 multiHouseRate로 전달 → calcLuxurySurchargeRate 분기2에서
+    //   12% + 중과기준세율×400%(8%p) = 20%. 미전달 시 luxury_solo 11.5%로 과소산정되던 결함.
+    if (
+      multiHouseRateForLuxury === undefined &&
+      isHousing &&
+      (effectiveCause === "gift" || effectiveCause === "donation")
+    ) {
+      const giftResult = assessGiftSurcharge({
+        isHousing,
+        isRegulatedArea: effectiveIsRegulatedArea,
+        wholeStdValue: input.wholeHouseStandardValue ?? input.standardValue ?? 0,
+        giftorIs1HHHolder: input.giftorIs1HHHolder,
+        giftorRelation: input.giftorRelation,
+        specialRateType: input.specialRateType,
+      });
+      if (giftResult.isSurcharged && giftResult.surchargeRate !== undefined) {
+        multiHouseRateForLuxury = giftResult.surchargeRate;
+      }
+    }
+
     const luxuryResult = calcLuxurySurchargeRate({
       basicRate: input.basicRate ?? ACQUISITION_CONST.LUXURY_BASE_RATE,
       multiHouseRate: multiHouseRateForLuxury,
