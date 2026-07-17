@@ -309,17 +309,16 @@ export interface CohabitDeductionDetail {
  * §24 종합한도 계산 근거 detail.
  *
  * 한도(ceiling) = 상속세 과세가액
- *              − ①호 상속인 외 유증액
- *              − max(0, ③호 모든 사전증여 − (증여공제 + 재해손실공제))
- *
- * ②호(상속포기 후순위) 는 현재 0 — 추후 확장.
+ *              − ①1호 상속인 외 유증액
+ *              − ②2호 선순위 상속포기로 후순위가 받은 재산 (H-19)
+ *              − max(0, ③3호 모든 사전증여 − (증여공제 + 재해손실공제))
  */
 export interface DeductionLimitCeilingDetail {
   /** 상속세 과세가액 */
   taxableEstateValue: number;
   /** ① 상속인 외 수유자(유증·사인증여)에게 귀속된 금액 */
   legateeAmountNonHeir: number;
-  /** ② 상속포기자의 후순위 상속인 상속액 (현재 미구현 — 항상 0) */
+  /** ②2호 선순위 상속인의 상속포기로 다음 순위가 받은 재산 가액 (§24 분자 차감). 대습상속 제외. (H-19) */
   heirWaiverAmount: number;
   /** ③ 합산된 모든 사전증여 가산가액 (§13 대상 — 상속인 + 영리법인 + legatee 포함) */
   totalPriorGiftAmount: number;

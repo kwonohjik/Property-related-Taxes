@@ -70,6 +70,7 @@ export interface FormState extends AppraisalFeeFormFields {
   familyBusinessDirectAmount: string;
   cohabitDirectAmount: string;
   legateeAmountNonHeir: string;
+  heirWaiverAmount: string;
   priorGiftDeductionTotal: string;
   /** 재해손실공제 (§24 종합한도 분자 보정) — §54 재해로 멸실·훼손된 상속재산 손실액 */
   disasterLossDeduction: string;
@@ -222,6 +223,7 @@ export const INITIAL_FORM: FormState = {
   familyBusinessDirectAmount: "",
   cohabitDirectAmount: "",
   legateeAmountNonHeir: "",
+  heirWaiverAmount: "",
   priorGiftDeductionTotal: "",
   disasterLossDeduction: "",
   deductionChecklistOverrides: {},

@@ -78,6 +78,15 @@ function DeductionLimitContent({
       )}
       {detail.heirWaiverAmount > 0 && (
         <DetailRow
+          label="(−) 선순위 상속포기 후순위 상속액 (§24 ②2호)"
+          value={`− ${formatKRW(detail.heirWaiverAmount)}`}
+          indent
+          muted
+          deduction
+        />
+      )}
+      {detail.heirWaiverAmount > 0 && (
+        <DetailRow
           label="(−) 상속포기 후순위 상속인액 (§24 ①2호)"
           value={`− ${formatKRW(detail.heirWaiverAmount)}`}
           indent

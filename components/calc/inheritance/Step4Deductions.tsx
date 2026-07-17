@@ -99,6 +99,7 @@ export function Step4({
     () => ({
       familyBusiness: isManualItemActive(form, "familyBusiness"),
       legatee: isManualItemActive(form, "legatee"),
+      heirWaiver: isManualItemActive(form, "heirWaiver"),
       priorGiftDeduction: isManualItemActive(form, "priorGiftDeduction"),
       disasterAdjust: isManualItemActive(form, "disasterAdjust"),
       casualtyLoss: isManualItemActive(form, "casualtyLoss"),
@@ -214,6 +215,7 @@ export function Step4({
           > = {
             familyBusiness: "deduction",
             legatee: "adjust",
+            heirWaiver: "adjust",
             priorGiftDeduction: "adjust",
             disasterAdjust: "adjust",
             casualtyLoss: "adjust",
@@ -413,6 +415,16 @@ export function Step4({
                 value={form.legateeAmountNonHeir}
                 onChange={(v) => set({ legateeAmountNonHeir: v })}
                 hint="상속인이 아닌 자(수유자 손자녀·기타)에게 유증한 재산가액"
+              />
+            )}
+
+            {/* §24 ②2호 선순위 상속포기 → 후순위 수령 (대습상속 제외) */}
+            {manualActive.heirWaiver && (
+              <CurrencyInput
+                label="상속포기 후순위 상속 금액 (§24② 분자 차감)"
+                value={form.heirWaiverAmount}
+                onChange={(v) => set({ heirWaiverAmount: v })}
+                hint="선순위 상속인의 상속포기로 다음 순위 상속인이 상속받은 재산가액. 대습상속(선순위 사망·결격)은 제외 — 상속포기 시에만 입력"
               />
             )}
 

@@ -470,6 +470,10 @@ export function InheritanceTaxForm() {
       legateeAmountNonHeir: isManualItemActive(form, "legatee")
         ? autoOrManual(form.legateeAmountNonHeir, legateeAuto)
         : undefined,
+      // §24 ②2호 선순위 상속포기→후순위 수령 (대습 제외 — 명시 입력만, 자동도출 없음) (H-19)
+      heirWaiverAmount: isManualItemActive(form, "heirWaiver")
+        ? parseAmount(form.heirWaiverAmount) || undefined
+        : undefined,
       priorGiftDeductionTotal: isManualItemActive(form, "priorGiftDeduction")
         ? parseAmount(form.priorGiftDeductionTotal) || undefined
         : undefined,
