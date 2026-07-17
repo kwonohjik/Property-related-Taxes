@@ -43,7 +43,6 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         prevShareRatio: prevR / 100,
         newShareRatio: newR / 100,
         isListed,
-        isMergerOrSplitShare: false, // UI 미노출 (엔진 분기 잔존)
         isFoundingShare: isFounding,
       })
     : undefined;

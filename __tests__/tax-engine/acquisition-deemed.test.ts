@@ -60,35 +60,31 @@ describe("assessMajorShareholder — 과점주주 간주취득", () => {
     expect(result.deemedTaxBase).toBe(600_000_000);
   });
 
-  // ── 합병·분할로 인한 주식 취득 — 과세 제외 처리 (형식적 취득) ──
-  it("합병으로 인한 주식 취득 — 과세 제외 처리 (anchor)", () => {
-    // 법인 합병 절차에서 주식 취득 → 과점주주 요건 충족해도 과세 제외 처리
+  // ── [R3-08] 합병·분할로 인한 주식 취득 — 포괄면제 제거 → 원칙적 과점주주 간주취득 과세 ──
+  //   §7⑤에 합병·분할 주식취득 포괄면제 명문 없음. §57의2⑤ 한정면제는 별도 개별판정.
+  it("합병으로 최초 과점주주 도달 → 과세 (R3-08 포괄면제 제거)", () => {
     const result = assessMajorShareholder({
       corporateAssetValue: 5_000_000_000,   // 50억 법인 자산
       prevShareRatio: 0.0,
-      newShareRatio: 0.7,                   // 70% 취득 (과점주주 요건 충족)
+      newShareRatio: 0.7,                   // 70% 취득 (최초 과점 → 전체 지분 과세)
       isListed: false,
-      isMergerOrSplitShare: true,           // 합병으로 취득
     });
-    expect(result.isSubjectToTax).toBe(false);
-    expect(result.deemedTaxBase).toBe(0);
-    expect(result.taxableRatio).toBe(0);
-    expect(result.legalBasis).toContain("§7");
-    expect(result.warnings[0]).toContain("합병·분할");
+    expect(result.isSubjectToTax).toBe(true);
+    expect(result.deemedTaxBase).toBe(3_500_000_000); // 50억 × 70%
+    expect(result.taxableRatio).toBe(0.7);
   });
 
-  it("분할로 인한 주식 취득 — 과세 제외 처리", () => {
-    // 이미 과점주주(60%)인데 추가 취득해도 분할 취득이면 비과세
+  it("분할로 기존 과점주주 지분 증가 → 증가분 과세 (R3-08)", () => {
+    // 이미 과점주주(60%)에서 80%로 증가 → 증가분(20%p)만 과세
     const result = assessMajorShareholder({
       corporateAssetValue: 2_000_000_000,
       prevShareRatio: 0.6,
       newShareRatio: 0.8,
       isListed: false,
-      isMergerOrSplitShare: true,
     });
-    expect(result.isSubjectToTax).toBe(false);
-    expect(result.deemedTaxBase).toBe(0);
-    expect(result.warnings[0]).toContain("합병·분할");
+    expect(result.isSubjectToTax).toBe(true);
+    expect(result.deemedTaxBase).toBe(400_000_000); // 20억 × 20%p
+    expect(result.taxableRatio).toBe(0.2);
   });
 
   // ── 법인 설립 시 주식 취득 — 취득으로 보지 아니함 (지방세법 §7⑤ 괄호) ──
@@ -109,14 +105,12 @@ describe("assessMajorShareholder — 과점주주 간주취득", () => {
   });
 
   // ── 비과세 우선순위 확인 ──
-  it("상장 + 합병 동시: 상장법인 비과세 우선 적용", () => {
-    // 상장이 최우선, 합병도 함께 true여도 상장 메시지로 처리
+  it("상장법인 주식 취득: 과점주주 정의 제외 → 비과세", () => {
     const result = assessMajorShareholder({
       corporateAssetValue: 1_000_000_000,
       prevShareRatio: 0.0,
       newShareRatio: 0.7,
       isListed: true,
-      isMergerOrSplitShare: true,
     });
     expect(result.isSubjectToTax).toBe(false);
     expect(result.warnings[0]).toContain("상장법인");
@@ -476,20 +470,18 @@ describe("assessDeemedAcquisition — 통합 판정", () => {
     expect(result.deemedTaxBase).toBe(0);
   });
 
-  it("합병 주식 취득 → 비과세 결과 (§9② anchor)", () => {
+  it("합병 주식 취득 → 과점주주 간주취득 과세 (R3-08)", () => {
     const result = assessDeemedAcquisition({
       majorShareholder: {
         corporateAssetValue: 10_000_000_000,
         prevShareRatio: 0.0,
         newShareRatio: 0.8,
         isListed: false,
-        isMergerOrSplitShare: true,
       },
     });
     expect(result.type).toBe("major_shareholder");
-    expect(result.isSubjectToTax).toBe(false);
-    expect(result.deemedTaxBase).toBe(0);
-    expect(result.warnings[0]).toContain("합병·분할");
+    expect(result.isSubjectToTax).toBe(true);
+    expect(result.deemedTaxBase).toBe(8_000_000_000); // 100억 × 80%
   });
 
   it("법인 설립 주식 취득 → 비과세 결과 (§9③ anchor)", () => {
@@ -561,7 +553,7 @@ describe("calcAcquisitionTax — deemedInput 미제공 시 경고 반환", () =>
 // ============================================================
 
 describe("calcAcquisitionTax — deemedDetail 필드 구성", () => {
-  it("과점주주 비과세(합병) 시 deemedDetail 포함", () => {
+  it("과점주주 과세(합병) 시 deemedDetail 포함 (R3-08)", () => {
     const result = calcAcquisitionTax({
       propertyType: "land" as const,
       acquisitionCause: "deemed_major_shareholder" as const,
@@ -574,16 +566,15 @@ describe("calcAcquisitionTax — deemedDetail 필드 구성", () => {
           prevShareRatio: 0.0,
           newShareRatio: 0.7,
           isListed: false,
-          isMergerOrSplitShare: true,
         },
       },
     });
-    expect(result.acquisitionTax).toBe(0);
-    expect(result.isExempt).toBe(false); // 비과세사유(exemptionType)와 구분
+    // [R3-08] 합병 포괄면제 제거 → 과점주주 간주취득 과세. 20억 × 70% × 2% = 28,000,000
+    expect(result.acquisitionTax).toBe(28_000_000);
     expect(result.deemedDetail).toBeDefined();
     expect(result.deemedDetail!.type).toBe("major_shareholder");
-    expect(result.deemedDetail!.isSubjectToTax).toBe(false);
-    expect(result.deemedDetail!.deemedTaxBase).toBe(0);
+    expect(result.deemedDetail!.isSubjectToTax).toBe(true);
+    expect(result.deemedDetail!.deemedTaxBase).toBe(1_400_000_000);
     expect(result.deemedDetail!.prevShareRatio).toBe(0.0);
     expect(result.deemedDetail!.newShareRatio).toBe(0.7);
   });

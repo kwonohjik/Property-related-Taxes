@@ -54,7 +54,7 @@ export function assessMajorShareholder(
   input: NonNullable<DeemedAcquisitionInput["majorShareholder"]>
 ): DeemedMajorShareholderResult {
   const warnings: string[] = [];
-  const { corporateAssetValue, prevShareRatio, newShareRatio, isListed, isMergerOrSplitShare, isFoundingShare } = input;
+  const { corporateAssetValue, prevShareRatio, newShareRatio, isListed, isFoundingShare } = input;
 
   // ① 증권시장 상장법인은 과점주주 정의에서 제외 → 간주취득 비과세
   //    근거: 지방세기본법 §46(시행령 §24①) — "대통령령으로 정하는 증권시장"은
@@ -76,23 +76,10 @@ export function assessMajorShareholder(
     };
   }
 
-  // ② 합병·분할로 인한 주식 취득 — 과세 제외 처리 (형식적 취득)
-  // ※ 포괄 비과세 명문 규정 없음 — 지특법 §57의2⑤(부실금융기관 인수·출자전환·
-  //   지주회사·주식의 포괄적 교환 등) 한정 면제. UI 입력 경로 미노출.
-  if (isMergerOrSplitShare) {
-    return {
-      isSubjectToTax: false,
-      deemedTaxBase: 0,
-      prevShareRatio,
-      newShareRatio,
-      taxableRatio: 0,
-      legalBasis: ACQUISITION.DEEMED_ACQUISITION,
-      warnings: [
-        "법인 합병·분할로 인한 주식 취득은 과점주주 간주취득 과세 대상에서 제외 처리됩니다. " +
-        "다만 포괄 면제 명문 규정은 없으므로 지방세특례제한법 §57의2⑤ 등 개별 면제 요건 해당 여부를 확인하세요.",
-      ],
-    };
-  }
+  // [R3-08] 합병·분할로 인한 주식 취득 포괄면제 분기 제거.
+  //   §7⑤에 합병·분할 주식취득 포괄면제 명문 없음 → 원칙적으로 과점주주 간주취득 과세.
+  //   지특법 §57의2⑤(부실금융기관 인수·출자전환·지주회사·주식의 포괄적 교환 등) 한정 면제는
+  //   7개 호별 요건·추징조건·일몰(≤2027.12.31)을 개별 판정해야 하므로 별도 특례로 처리한다.
 
   // ③ 법인 설립 시 주식 취득 — 취득으로 보지 아니함 (지방세법 §7⑤ 괄호)
   if (isFoundingShare) {

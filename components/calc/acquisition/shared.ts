@@ -263,6 +263,8 @@ export interface FormState {
   farmlandArea: string;
   /** 농지 소재지에서 거주지까지 거리 (km) */
   farmlandLocationDistance: string;
+  /** [R3-12] 농지 소재 시·군·구 또는 인접 시·군·구 거주 (§3①2호 OR 거리요건) */
+  residesInSameOrAdjacentJurisdiction: boolean;
 
   // ─── [P3] 주택 수 정교화 ───
   /** 보유 주택 카드 배열 (입주권·분양권·오피스텔은 카드의 propertyType으로 입력) */
@@ -436,6 +438,7 @@ export const INITIAL_FORM: FormState = {
   farmingYears: "",
   farmlandArea: "",
   farmlandLocationDistance: "",
+  residesInSameOrAdjacentJurisdiction: false,
 
   // P3 주택 수
   ownedHouses: [],
