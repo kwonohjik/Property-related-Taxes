@@ -63,6 +63,10 @@ export interface GiftTaxValuationFormTableProps {
   exemptAmount: number;
   /** ⑮ 합계 = max(0, ⑨−⑩−⑪−⑫−⑬) + ⑭ */
   aggregatedGiftValue: number;
+  /** §47① 채무인수액 — ⑭ 사전증여가산 역산 시 차감 (별지10호 ㉓ 정합, H-48) */
+  debtAssumed?: number;
+  /** §36 대납가산분 — ⑭ 역산 시 제거 (별지10호 ㉓ 정합, H-48) */
+  donorPaidTax?: number;
 
   /** ⑪ §48 공익법인 출연재산가액 */
   publicInterestExclusion?: number;
@@ -127,6 +131,8 @@ export function GiftTaxValuationFormTable({
   grossGiftValue,
   exemptAmount,
   aggregatedGiftValue,
+  debtAssumed = 0,
+  donorPaidTax = 0,
   publicInterestExclusion = 0,
   publicTrustExclusion = 0,
   disabledTrustExclusion = 0,
@@ -143,7 +149,7 @@ export function GiftTaxValuationFormTable({
     publicTrustExclusion,
     disabledTrustExclusion,
   );
-  const row14 = computeRow14(aggregatedGiftValue, grossGiftValue, exemptAmount);
+  const row14 = computeRow14(aggregatedGiftValue, grossGiftValue, exemptAmount, debtAssumed, donorPaidTax);
 
   return (
     <div

@@ -9,6 +9,8 @@
  * KoreanLaw MCP 검증 (2026-05-20): ② 재산종류코드 14종 (시행규칙 별지 제10호서식 부표 1 뒷면 §2).
  */
 
+import { computePriorGiftAddition } from "@/lib/tax-engine/gift-tax-filing-form-besshi10";
+
 /**
  * ② 재산종류코드 14종 라벨.
  * 결과 화면/PDF 표시는 가독성을 위해 약식 (예: "공동주택 (부수토지 포함)" → "공동주택").
@@ -44,14 +46,16 @@ export function computeRow10(
 }
 
 /**
- * ⑭ 증여재산가산액 표시값 (사전증여 가산분 역산).
- * 엔진 산식: aggregatedGiftValue = max(0, grossGiftValue − exemptAmount) + priorAggregation
- * 역산:      ⑭ = max(0, aggregatedGiftValue − max(0, grossGiftValue − exemptAmount))
+ * ⑭ 증여재산가산액 표시값 (사전증여 가산분) — 별지10호 ㉓와 단일 산식 공유(H-48 dual-truth 제거).
+ * §47① 채무인수(debtAssumed)·§36 대납가산(donorPaidTax)을 차감해야 별지10호 ㉓와 정합.
+ * (종전: 이 둘을 미차감해 부담부증여·대납 병존 시 부표1 ⑭ ≠ 별지10호 ㉓.)
  */
 export function computeRow14(
   aggregated: number,
   gross: number,
   exempt: number,
+  debtAssumed: number = 0,
+  donorPaidTax: number = 0,
 ): number {
-  return Math.max(0, aggregated - Math.max(0, gross - exempt));
+  return computePriorGiftAddition(aggregated, gross, exempt, debtAssumed, donorPaidTax);
 }
