@@ -341,6 +341,9 @@ export function validateHeirReferences(
  */
 export function validateCollateralDebtOptIn(item: EstateItem): string | null {
   if (item.deductSecuredClaimAsDebt !== true) return null;
+  // deposit(전세보증금 반환채권=자산)은 §14 담보채무 대상 아님 — 엔진이 파생을 무시하므로
+  // stale store로 토글이 ON이라도 validate가 차단하지 않도록 정합(deriveCollateralDebts와 동일 가드).
+  if (item.category === "deposit") return null;
   const total = (item.mortgageAmount ?? 0) + (item.leaseDeposit ?? 0);
   if (total <= 0) {
     return `자산 "${item.name}" — §14 자동공제 토글이 ON이지만 담보채권액(저당 + 임대보증금)이 0입니다. 담보채권액을 입력하거나 토글을 OFF 해주세요.`;

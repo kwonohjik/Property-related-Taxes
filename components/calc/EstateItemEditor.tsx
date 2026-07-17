@@ -125,16 +125,18 @@ export function EstateItemEditor({
 
   /**
    * 담보채무 §14 자동공제 토글 노출 조건:
-   *   real_estate_land·apartment·building·deposit 카테고리
+   *   real_estate_land·apartment·building 카테고리 (임대인이 반환할 임대보증금·저당 = 피상속인 채무)
    *   AND (mortgageAmount > 0 OR leaseDeposit > 0)
+   *
+   * deposit(전세보증금 반환채권)은 제외 — 피상속인=임차인이 반환받을 채권(자산)이므로
+   * §14 담보채무 대상 아님(§14①3호). 노출 시 동일 보증금이 자산+채무 이중계상됨.
    */
   const securedClaimTotal = (item.mortgageAmount ?? 0) + (item.leaseDeposit ?? 0);
   const showCollateralDeductToggle =
     mode === "inheritance" &&
     (cat === "real_estate_land" ||
       cat === "real_estate_apartment" ||
-      cat === "real_estate_building" ||
-      cat === "deposit") &&
+      cat === "real_estate_building") &&
     securedClaimTotal > 0;
 
   // §23의2 동거주택 체크 활성 조건 — 동거 자녀 존재 여부
