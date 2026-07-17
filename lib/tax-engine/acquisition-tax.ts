@@ -498,8 +498,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     {
       label: "과세표준",
       formula: taxBaseResult.method === "actual_price" || taxBaseResult.method === "recognized_market"
-        ? "신고가액 (천원 미만 절사)"
-        : "시가표준액 (천원 미만 절사)",
+        ? "신고가액 (원 단위 — 취득세 과세표준 절사 규정 없음)"
+        : "시가표준액 (원 단위 — 취득세 과세표준 절사 규정 없음)",
       amount: taxBase,
       legalBasis: ACQUISITION.TAX_BASE,
     },

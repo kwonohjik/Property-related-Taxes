@@ -479,7 +479,7 @@ export interface AcquisitionTaxInput {
  */
 export interface TaxBaseResult {
   method: TaxBaseMethod;
-  taxBase: number;               // 최종 과세표준 (천원 미만 절사)
+  taxBase: number;               // 최종 과세표준 (원 단위 — 취득세 과세표준 절사 규정 없음)
   rawTaxBase: number;            // 절사 전 과세표준
   breakdown?: {
     onerousTaxBase?: number;     // 부담부증여 유상 과세표준
@@ -564,7 +564,7 @@ export interface AcquisitionTaxResult {
   acquisitionValue: number;      // 실제 적용 취득가액
 
   // ─── 과세표준 ───
-  taxBase: number;               // 최종 과세표준 (천원 미만 절사)
+  taxBase: number;               // 최종 과세표준 (원 단위 — 취득세 과세표준 절사 규정 없음)
   taxBaseMethod: TaxBaseMethod;
 
   // ─── 세율 ───
