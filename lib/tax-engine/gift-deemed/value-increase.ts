@@ -79,6 +79,8 @@ export function calcValueIncreaseGift(input: ValueIncreaseInput): DeemedGiftResu
     applied,
     deemedGiftValue: value,
     breakdown,
+    // §47① 합산배제증여재산(§42의3). §55①3호 — 증여재산가액 − 3천만. (H-40·G-4)
+    aggregationExcluded: true,
     exclusionReason: applied ? undefined : "이익이 기준금액(차감합계 30%·3억 중 적은 금액) 미만",
     legalBasis: GIFT.VALUE_INCREASE,
     thresholdEcho: { gain: value0, threshold },

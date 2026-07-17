@@ -36,6 +36,8 @@ export function calcAcquisitionFundPresumption(input: AcquisitionFundPresumption
     applied,
     deemedGiftValue: value,
     breakdown,
+    // §47① 합산배제증여재산(§45). §55①3호 — 증여재산가액 − 3천만. (H-40·G-4)
+    aggregationExcluded: true,
     exclusionReason: applied ? undefined : "미입증액이 기준금액(취득가액 20%·2억 중 적은 금액) 미만 — 증여추정 제외",
     legalBasis: GIFT.ACQUISITION_FUND_PRESUMPTION,
     thresholdEcho: { unproven, threshold },

@@ -258,6 +258,13 @@ export interface DeemedGiftResult {
   refundBase?: number;
   /** 증여세 합산배제 대상 여부 (§47① — §40①2·3호=true / §40①1호=false). 증여세 연계 echo */
   aggregationExcluded?: boolean;
+  /**
+   * §55① 합산배제 과세표준 호분기 (aggregationExcluded===true만 유효, undefined→3호 일반).
+   *   "nominee_trust" → §55①1호 명의신탁(§45의2, 3천만 공제 없음)
+   *   "deemed_profit" → §55①2호 일감몰아주기·사업기회(§45의3·§45의4, 3천만 공제 없음)
+   *   undefined       → §55①3호(§41의3·§41의5·§40①2·3호·§42의3·§45, 3천만 공제)
+   */
+  aggExclClass?: "nominee_trust" | "deemed_profit";
   /** 증여자 연대납부의무 면제 여부 (§4의2⑥ — §40 등 명시 유형 true). 증여세 연계 echo */
   donorJointLiabilityExempt?: boolean;
   /**
