@@ -1,5 +1,5 @@
 /**
- * 상속세·증여세 비과세 타입 (상증법 §11·§12·§46·§46의2)
+ * 상속세·증여세 비과세 타입 (상증법 §11·§12·§46·§52의2)
  *
  * 800줄 정책으로 inheritance-gift.types.ts에서 분리 (2026-05-21).
  * barrel: inheritance-gift.types.ts에서 re-export.
@@ -15,7 +15,7 @@ export interface ExemptionCheckedItem {
   ruleId: string;
   /** 해당 항목의 자산 가액 또는 금액 */
   claimedAmount: number;
-  /** 장애인 신탁: 10년 합산 기사용 공제액 */
+  /** 장애인 신탁(§52의2③): 생존 중 평생 합산 기사용 불산입액 (5억 한도에서 차감) */
   priorDisabledTrustUsed?: number;
   /**
    * 공익법인 특수관계법인 주식 초과분 금액 (§16 ②) — **수동 입력 fallback**.
@@ -60,7 +60,7 @@ export interface ExemptionCheckedItem {
 }
 
 /**
- * 비과세 입력 (상증법 §11·§12·§46·§46의2)
+ * 비과세 입력 (상증법 §11·§12·§46·§52의2)
  * @deprecated ExemptionCheckedItem[] 방식으로 대체됨.
  */
 export interface ExemptionInput {

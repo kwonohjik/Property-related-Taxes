@@ -55,6 +55,19 @@ describe("비과세 룰 데이터 무결성", () => {
     const rule = findExemptionRuleById("gift_disabled_trust");
     expect(rule?.limitAmount).toBe(500_000_000);
   });
+
+  it("[N7b·H-35] 장애인 신탁 조문 정합 — §52의2(§46의2·10년 오기 정정)", () => {
+    const rule = findExemptionRuleById("gift_disabled_trust");
+    // lawRef = §52의2 (종전 EXEMPTION.PUBLIC_INTEREST §48① 오사용)
+    expect(rule?.lawRef).toBe("상증법 §52의2");
+    // §46의2(부재 조문) 잔존 없음
+    expect(rule?.description).toContain("§52의2");
+    expect(rule?.description).not.toContain("§46의2");
+    // 한도는 생존 중 평생 합산 — "10년" 오기 없음
+    const reqText = (rule?.requirements ?? []).join(" ");
+    expect(reqText).not.toContain("10년");
+    expect(reqText).toMatch(/평생|생존/);
+  });
 });
 
 // ============================================================
