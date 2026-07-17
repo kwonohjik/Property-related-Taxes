@@ -401,6 +401,33 @@ export function calcLocalEducationTaxSimple(taxBase: number): number {
 }
 
 /**
+ * [C-3] 지방교육세 결과 표시 산식 문자열 — calcLocalEducationTax의 실제 분기(§151①1)에 대응.
+ * (amount는 calcLocalEducationTax가 산출·정확, 이 함수는 표시 산식만 일치시킨다.)
+ */
+export function buildLocalEducationTaxFormula(
+  surchargeType: AdditionalTaxInput["surchargeType"],
+  propertyType: string,
+  acquisitionCause: string
+): string {
+  if (surchargeType === "section13_gamok")
+    return "본문 지방교육세액 × 300% (§151①1가: 법인 §13②③⑥⑦ 비주택)";
+  if (
+    surchargeType === "multi_house_8" ||
+    surchargeType === "multi_house_12" ||
+    surchargeType === "gift_12" ||
+    surchargeType === "luxury_multi" ||
+    surchargeType === "corp_metro"
+  )
+    return "과세표준 × (4% − 2%) × 20% = 과세표준 × 0.4% (§151①1나: §13의2)";
+  const isHousingOnerous =
+    propertyType === "housing" &&
+    ["purchase", "exchange", "auction", "in_kind_investment"].includes(acquisitionCause);
+  if (isHousingOnerous)
+    return "취득세 본세(표준세율) × 50% × 20% (§151①1 본문: §11①8 주택)";
+  return "과세표준 × (표준세율 − 2%) × 20% (§151①1 본문)";
+}
+
+/**
  * 취득세 본세 + 부가세 통합 계산
  * [P4-1] acquisitionCause / isSurcharged 추가 — 주택 유상거래 교육세 분기
  * [P4-2] surchargeType 추가 — 사치성 교육세 매트릭스

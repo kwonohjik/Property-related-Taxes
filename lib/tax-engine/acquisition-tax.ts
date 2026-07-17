@@ -26,6 +26,7 @@ import {
   decideTaxRate,
   calcLinearInterpolationTax,
   calcTaxWithAdditional,
+  buildLocalEducationTaxFormula,
   type AdditionalTaxResult,
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
@@ -33,6 +34,7 @@ import { computeBurdenedGiftResult } from "./acquisition-tax-burdened";
 import {
   applySpecialRate,
   isValidSpecialRateType,
+  resolveInheritanceSpecialRateGate,
 } from "./acquisition-tax-rate-special";
 import {
   assessCorpSurcharge,
@@ -245,9 +247,14 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // ── Step 5b: [P2-1] §15 세율특례 적용 ──
   // §13①(본점·공장) 중과 대상이면 §15 배제.
   // §13②(대도시 법인) + §15 동시 적용 시 (basicRate - 2%) × 3.
-  const specialRateType = isValidSpecialRateType(input.specialRateType)
+  const rawSpecialRateType = isValidSpecialRateType(input.specialRateType)
     ? input.specialRateType
     : undefined;
+
+  // [C-2] §15①2호 상속특례 요건 게이트(가목 1가구1주택 / 나목 §6① 감면농지) — 헬퍼 위임.
+  const inheritanceGate = resolveInheritanceSpecialRateGate(rawSpecialRateType, input);
+  const specialRateType = inheritanceGate.eligible ? rawSpecialRateType : undefined;
+  if (inheritanceGate.warning) warnings.push(inheritanceGate.warning);
 
   // §11①8 유상거래 주택 여부 — 세율특례 시 (표준−2%)가 아니라 해당세율 × 50% (§15① 단서).
   // §15① 특례 중 유상거래 주택(§11①8)은 환매(§15①1호)뿐 — 재산분할·공유물분할·상속특례·
@@ -527,27 +534,9 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   }
   if (additional.localEducationTax > 0) {
     // [C-3] 지방교육세 표시 산식을 실제 분기(§151①1)에 맞춰 동적 생성 (하드코딩 0.4% 제거).
-    const eduFormula = (() => {
-      if (surchargeTypeForEdu === "section13_gamok")
-        return "본문 지방교육세액 × 300% (§151①1가: 법인 §13②③⑥⑦ 비주택)";
-      if (
-        surchargeTypeForEdu === "multi_house_8" ||
-        surchargeTypeForEdu === "multi_house_12" ||
-        surchargeTypeForEdu === "gift_12" ||
-        surchargeTypeForEdu === "luxury_multi" ||
-        surchargeTypeForEdu === "corp_metro"
-      )
-        return "과세표준 × (4% − 2%) × 20% = 과세표준 × 0.4% (§151①1나: §13의2)";
-      const isHousingOnerous =
-        input.propertyType === "housing" &&
-        ["purchase", "exchange", "auction", "in_kind_investment"].includes(effectiveInput.acquisitionCause);
-      if (isHousingOnerous)
-        return "취득세 본세(표준세율) × 50% × 20% (§151①1 본문: §11①8 주택)";
-      return "과세표준 × (표준세율 − 2%) × 20% (§151①1 본문)";
-    })();
     steps.push({
       label: "지방교육세",
-      formula: eduFormula,
+      formula: buildLocalEducationTaxFormula(surchargeTypeForEdu, input.propertyType, effectiveInput.acquisitionCause),
       amount: additional.localEducationTax,
       legalBasis: ACQUISITION.LOCAL_EDUCATION_TAX,
     });

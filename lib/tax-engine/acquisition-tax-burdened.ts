@@ -8,7 +8,13 @@
 
 import type { AcquisitionTaxInput, BurdenedGiftBreakdown } from "./types/acquisition.types";
 import { calcBurdenedGiftTax, calcTaxWithAdditional, SURCHARGE_BASE_STANDARD_RATE, type AdditionalTaxResult } from "./acquisition-tax-rate";
-import { assessMultiHouseSurcharge, assessGiftSurcharge } from "./acquisition-tax-surcharge";
+import {
+  assessMultiHouseSurcharge,
+  assessGiftSurcharge,
+  resolveRegulatedAreaStatus,
+  assessTemporaryTwoHouse,
+  isExemptFromSurcharge_LowValueV2,
+} from "./acquisition-tax-surcharge";
 
 export interface BurdenedGiftComputation {
   acquisitionTax: number;
@@ -37,15 +43,40 @@ export function computeBurdenedGiftResult(
   let onerousSurchargeRate: number | undefined;
   let gratuitousSurchargeRate: number | undefined;
   if (input.propertyType === "housing") {
-    const multi = assessMultiHouseSurcharge({
-      acquiredBy: input.acquiredBy,
-      isHousing: true,
-      isRegulatedArea: input.isRegulatedArea ?? false,
-      houseCount: resolvedHouseCount,
-      isOnerousAcquisition: true, // 유상분(채무인수)은 유상거래로 판정
+    // [C-1] 유상분 §13의2① 다주택 중과에도 메인 assessSurcharge와 동일한 중과배제를 적용:
+    //   §13의2④ 지정 전 계약(조정지역 재정의) · §28의2 1호 저가주택 · §28의5 일시적 2주택.
+    //   (기존에는 assessMultiHouseSurcharge 직접 호출로 배제로직을 우회해 배제 대상도 8/12% 부과.)
+    const effectiveIsRegulatedArea = resolveRegulatedAreaStatus(input.isRegulatedArea, {
+      contractDateBeforeRegulation: input.contractDateBeforeRegulation,
+      hasContractDepositProof: input.hasContractDepositProof,
     });
-    if (multi.isSurcharged && multi.surchargeRate !== undefined) {
-      onerousSurchargeRate = multi.surchargeRate;
+    const stdValue = input.wholeHouseStandardValue ?? 0;
+    const lowValueExcluded =
+      stdValue > 0 &&
+      isExemptFromSurcharge_LowValueV2(
+        stdValue,
+        input.isMetropolitanRegion ?? false,
+        input.isUrbanRegenerationArea ?? false
+      );
+    const tempTwoHouseExcluded = assessTemporaryTwoHouse({
+      houseCount: resolvedHouseCount,
+      isTemporaryTwoHouse: input.isTemporaryTwoHouse,
+      balanceDate: input.balancePaymentDate,
+      previousHouseRegion: input.previousHouseRegion,
+      newHouseRegion: input.newHouseRegion,
+    }).isExcluded;
+
+    if (!lowValueExcluded && !tempTwoHouseExcluded) {
+      const multi = assessMultiHouseSurcharge({
+        acquiredBy: input.acquiredBy,
+        isHousing: true,
+        isRegulatedArea: effectiveIsRegulatedArea,
+        houseCount: resolvedHouseCount,
+        isOnerousAcquisition: true, // 유상분(채무인수)은 유상거래로 판정
+      });
+      if (multi.isSurcharged && multi.surchargeRate !== undefined) {
+        onerousSurchargeRate = multi.surchargeRate;
+      }
     }
     const gift = assessGiftSurcharge({
       isHousing: true,
