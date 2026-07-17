@@ -304,6 +304,9 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     giftorIs1HHHolder: input.giftorIs1HHHolder,
     // [P1-4] 시가표준액 1억/2억 이중 기준 + 정비구역
     wholeHouseStandardValue: input.wholeHouseStandardValue,
+    // R3-03: §13의2② 3억 임계 fallback — wholeHouseStandardValue 미입력(단일주택 증여 등)
+    // 시 해당 주택 시가표준액으로 12% 중과 발동 판정 (미전달 시 fallback이 죽어 항상 0).
+    standardValue: input.standardValue,
     isMetropolitanRegion: input.isMetropolitanRegion,
     isUrbanRegenerationArea: input.isUrbanRegenerationArea,
     // [P1-5] 일시적 2주택
