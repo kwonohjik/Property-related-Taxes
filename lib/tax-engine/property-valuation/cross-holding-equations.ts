@@ -129,6 +129,10 @@ function reduce(r: Rat): Rat {
   const g = gcd(n, d);
   return { n: n / g, d: d / g };
 }
+/** a < b (양 분모 > 0 전제) — 교차곱 비교 */
+function rLt(a: Rat, b: Rat): boolean {
+  return a.n * b.d < b.n * a.d;
+}
 /** 원 단위 절사 (floor) — 음수도 수학적 floor */
 function floorDiv(r: Rat): number {
   const q = r.n / r.d;
@@ -236,6 +240,24 @@ export function solveCrossHolding(nodes: CrossHoldingNode[]): CrossHoldingSoluti
 
   const alphaRat = solveLinear(A, k);
 
+  // 순환(상호출자) 노드 판정: heldShares 간선(holder→issuer)을 따라 자기 자신에 도달하면 순환.
+  // 순환 노드는 α(선형해)가 자기 보충적값에 의존 → 출력시점 하한이 선형해와 불일치 →
+  // §54① 단서(80% 하한)는 비순환 노드에만 적용(순환은 현행 유지 — 반복 solver 필요, 별도 범위).
+  const reachesSelf = (startIdx: number): boolean => {
+    const start = nodes[startIdx].corpId;
+    const visited = new Set<string>();
+    const stack = Object.keys(nodes[startIdx].heldShares);
+    while (stack.length) {
+      const cur = stack.pop()!;
+      if (cur === start) return true;
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+      const j = idx[cur];
+      if (j !== undefined) stack.push(...Object.keys(nodes[j].heldShares));
+    }
+    return false;
+  };
+
   const perShareNetAsset: Record<string, number> = {};
   const perShareSupplementary: Record<string, number> = {};
   const alphaById: Record<string, Rat> = {};
@@ -246,12 +268,21 @@ export function solveCrossHolding(nodes: CrossHoldingNode[]): CrossHoldingSoluti
     // 최종 1주당 평가액
     let supp: Rat;
     if (node.valuationBasis === "net_asset_only") {
+      // §54④ 순자산단독 — §54① 단서(80% 하한) 대상 아님
       supp = alphaRat[i];
     } else {
       const rho = node.netIncomePerShare;
-      supp = node.isRealEstateHeavy
+      const weighted = node.isRealEstateHeavy
         ? rDiv(rAdd(rMul(rat(3), alphaRat[i]), rat(2 * rho)), rat(5))
         : rDiv(rAdd(rMul(rat(2), alphaRat[i]), rat(3 * rho)), rat(5));
+      // §54① 단서: 가중평균 < 순자산가치×80%이면 순자산가치×80%(=α×4/5)를 가액으로.
+      // 비순환 노드에만 적용 — 순환 노드는 선형해 정합 위해 현행(하한 미적용) 유지.
+      if (reachesSelf(i)) {
+        supp = weighted;
+      } else {
+        const floor80 = rDiv(rMul(rat(4), alphaRat[i]), rat(5));
+        supp = rLt(weighted, floor80) ? floor80 : weighted;
+      }
     }
     perShareSupplementary[node.corpId] = floorDiv(supp);
   }
