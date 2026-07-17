@@ -392,11 +392,12 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     input.areaSqm,
     {
       acquisitionCause: effectiveInput.acquisitionCause,
-      // 법인 §13①② 중과도 isSurcharged로 취급 → 교육세 비중과 (표준세율−2%)×20% 분기
-      // 대신 종전 0.4% 분기 유지 (법인 교육세 정확성은 별건 — 본 수정 범위 밖).
       isSurcharged: surchargeDecision.isSurcharged || corpSurchargeResult.isSurcharged,
       surchargeType: surchargeTypeForEdu,
       isRuralRegion: input.isRuralRegion,
+      // [R3-01/R3-02] 부가세 산정 기준 표준세율(중과 전). 사치성=물건 표준율 기준·
+      // §13의2=4% 기준 판정에 사용. 법인 §13② 비주택은 default(basicRate) — R3-05 별도.
+      basicRate: effectiveBasicRate,
     }
   );
 

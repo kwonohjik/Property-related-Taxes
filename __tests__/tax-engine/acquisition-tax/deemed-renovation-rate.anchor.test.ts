@@ -47,15 +47,16 @@ describe("[AT-DEEMED-R] 건물 개수 간주취득 세율 2% — §15②1호", (
     expect(acquisitionTax).toBe(1_000_000);
   });
 
-  it("[AT-DEEMED-R04] 농어촌특별세 — 세율 2% = 표준세율 → 0원 (초과분 없음)", () => {
-    // 세율 2% ≤ 표준세율 2% → 농특세 없음
+  it("[AT-DEEMED-R04] 농어촌특별세 — §15② 간주취득도 0.2% 부과 (농특세법 §5⑤)", () => {
+    // [R3-02] §5⑤: §15②(개수·지목변경·과점주주) 취득세액(과세표준×2%)을 §5①6호 과세표준으로.
+    //   농특세 = 과세표준 × 2% × 10% = 0.2%. 5,000만 × 0.2% = 100,000. (구값 0은 오산식)
     const ruralTax = calcRuralSpecialTax({
       taxBase: TAX_BASE,
       appliedRate: APPLIED_RATE,
       acquisitionTax: Math.floor(TAX_BASE * APPLIED_RATE),
       propertyType: "building",
     });
-    expect(ruralTax).toBe(0);
+    expect(ruralTax).toBe(100_000);
   });
 
   it("[AT-DEEMED-R05] 지방교육세 — §15② 간주취득은 과세대상 제외 → 0원 (§151①1)", () => {
@@ -70,7 +71,7 @@ describe("[AT-DEEMED-R] 건물 개수 간주취득 세율 2% — §15②1호", (
     expect(eduTax).toBe(0);
   });
 
-  it("[AT-DEEMED-R06] 총 납부세액 — 1,000,000 + 0 + 0 = 1,000,000원", () => {
+  it("[AT-DEEMED-R06] 총 납부세액 — 본세 1,000,000 + 농특세 100,000 + 교육세 0 = 1,100,000원", () => {
     const acquisitionTax = Math.floor(TAX_BASE * APPLIED_RATE); // 1,000,000
     const ruralTax = calcRuralSpecialTax({
       taxBase: TAX_BASE,
@@ -87,10 +88,11 @@ describe("[AT-DEEMED-R] 건물 개수 간주취득 세율 2% — §15②1호", (
       isSurcharged: false,
     });
     const total = acquisitionTax + ruralTax + eduTax;
+    // [R3-02] 농특세는 §5⑤로 0.2% 부과(100,000), 교육세는 §151①1 본문 괄호로 §15② 제외(0).
     expect(acquisitionTax).toBe(1_000_000);
-    expect(ruralTax).toBe(0);
+    expect(ruralTax).toBe(100_000);
     expect(eduTax).toBe(0);
-    expect(total).toBe(1_000_000);
+    expect(total).toBe(1_100_000);
   });
 });
 
@@ -111,15 +113,15 @@ describe("[AT-DEEMED] 지목변경·과점주주 세율 2% 유지 확인 (§15�
     expect(result.isLinearInterpolation).toBe(false);
   });
 
-  it("[AT-DEEMED-C03] 지목변경 농특세 — 2% 세율이므로 0원 (표준세율 미초과)", () => {
-    // 세율 2% = 표준세율 → 농특세 없음
+  it("[AT-DEEMED-C03] 지목변경 농특세 — §15② 간주취득 0.2% 부과 (농특세법 §5⑤)", () => {
+    // [R3-02] §5⑤: 1억 × 2% × 10% = 200,000. (구값 0은 (적용세율−2%) 오산식)
     const ruralTax = calcRuralSpecialTax({
       taxBase: 100_000_000,
       appliedRate: 0.02,
       acquisitionTax: 2_000_000,
       propertyType: "land",
     });
-    expect(ruralTax).toBe(0);
+    expect(ruralTax).toBe(200_000);
   });
 
   it("[AT-DEEMED-C04] 과점주주 지방교육세 — §15② 제외 → 0원 (§151①1)", () => {
@@ -152,7 +154,7 @@ describe("[AT-DEEMED-R] 농특세 85㎡ 이하 면제 — 원시취득 주택(2.
     expect(ruralTax).toBe(0);
   });
 
-  it("[AT-DEEMED-R08] 원시취득 주택 86㎡ — 농특세 발생: (2.8%-2%) × 5,000만 × 10% = 40,000원", () => {
+  it("[AT-DEEMED-R08] 원시취득 주택 86㎡(비중과 2.8%) — 농특세 0.2% = 100,000원", () => {
     const ruralTax = calcRuralSpecialTax({
       taxBase: 50_000_000,
       appliedRate: 0.028,
@@ -160,6 +162,7 @@ describe("[AT-DEEMED-R] 농특세 85㎡ 이하 면제 — 원시취득 주택(2.
       propertyType: "housing",
       areaSqm: 86,
     });
-    expect(ruralTax).toBe(40_000);
+    // [R3-02] 비중과: 표준세율(2.8%) 2% 치환 → 5,000만 × 0.2% = 100,000 (구값 40,000은 오산식)
+    expect(ruralTax).toBe(100_000);
   });
 });

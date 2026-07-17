@@ -7,7 +7,7 @@
  */
 
 import type { AcquisitionTaxInput, BurdenedGiftBreakdown } from "./types/acquisition.types";
-import { calcBurdenedGiftTax, calcTaxWithAdditional, type AdditionalTaxResult } from "./acquisition-tax-rate";
+import { calcBurdenedGiftTax, calcTaxWithAdditional, SURCHARGE_BASE_STANDARD_RATE, type AdditionalTaxResult } from "./acquisition-tax-rate";
 import { assessMultiHouseSurcharge, assessGiftSurcharge } from "./acquisition-tax-surcharge";
 
 export interface BurdenedGiftComputation {
@@ -68,13 +68,25 @@ export function computeBurdenedGiftResult(
   });
 
   // [M5] 농특세·지방교육세도 유상분(매매세율)·무상분(증여세율)에 각각 산출 후 합산.
+  // [R3-01/R3-02] 표준세율 기준 부가세: §13의2 중과분(유상 §13의2①·무상 §13의2②)은
+  // §11①7나 4% 기준, 비중과분은 실제 적용세율(=표준세율) 기준.
   const onerousAdd = calcTaxWithAdditional(
     onerousTaxBase, bg.onerousRate, bg.onerousTax, input.propertyType, input.areaSqm,
-    { acquisitionCause: "purchase", isSurcharged: onerousSurchargeRate !== undefined, isRuralRegion: input.isRuralRegion }
+    {
+      acquisitionCause: "purchase",
+      isSurcharged: onerousSurchargeRate !== undefined,
+      isRuralRegion: input.isRuralRegion,
+      basicRate: onerousSurchargeRate !== undefined ? SURCHARGE_BASE_STANDARD_RATE : bg.onerousRate,
+    }
   );
   const gratuitousAdd = calcTaxWithAdditional(
     gratuitousTaxBase, bg.gratuitousRate, bg.gratuitousTax, input.propertyType, input.areaSqm,
-    { acquisitionCause: "gift", isSurcharged: gratuitousSurchargeRate !== undefined, isRuralRegion: input.isRuralRegion }
+    {
+      acquisitionCause: "gift",
+      isSurcharged: gratuitousSurchargeRate !== undefined,
+      isRuralRegion: input.isRuralRegion,
+      basicRate: gratuitousSurchargeRate !== undefined ? SURCHARGE_BASE_STANDARD_RATE : bg.gratuitousRate,
+    }
   );
 
   return {

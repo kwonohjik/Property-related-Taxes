@@ -265,7 +265,7 @@ describe("calcRuralSpecialTax", () => {
     expect(result).toBe(0);
   });
 
-  it("주택 86㎡, 세율 3%: (3%-2%) × 5억 × 10% = 500,000원", () => {
+  it("비중과 주택 86㎡, 세율 3%: 표준세율 2% 치환 → 0.2% = 1,000,000원", () => {
     const result = calcRuralSpecialTax({
       taxBase: 500_000_000,
       appliedRate: 0.03,
@@ -273,10 +273,11 @@ describe("calcRuralSpecialTax", () => {
       propertyType: "housing",
       areaSqm: 86,
     });
-    expect(result).toBe(500_000);
+    // [R3-02] 5억 × 0.2% = 1,000,000 (구값 500,000은 (적용세율−2%) 오산식)
+    expect(result).toBe(1_000_000);
   });
 
-  it("세율 2% 이하: 0원", () => {
+  it("비중과 세율 2%(>85㎡): 표준세율 2% 치환 → 0.2% = 600,000원", () => {
     const result = calcRuralSpecialTax({
       taxBase: 300_000_000,
       appliedRate: 0.02,
@@ -284,7 +285,8 @@ describe("calcRuralSpecialTax", () => {
       propertyType: "housing",
       areaSqm: 100,
     });
-    expect(result).toBe(0);
+    // [R3-02] 3억 × 0.2% = 600,000 (구값 0은 세율≤2% 조기반환 오산식)
+    expect(result).toBe(600_000);
   });
 
   it("토지(면적 무관), 세율 4%: (4%-2%) × 2억 × 10% = 400,000원", () => {
@@ -297,26 +299,29 @@ describe("calcRuralSpecialTax", () => {
     expect(result).toBe(400_000);
   });
 
-  it("중과세율 12% 적용 시: (12%-2%) × 1억 × 10% = 1,000,000원", () => {
+  it("다주택 중과 12%(§13의2): (2% + 중과분 8%) × 1억 × 10% = 1.0% = 1,000,000원", () => {
     const result = calcRuralSpecialTax({
       taxBase: 100_000_000,
       appliedRate: 0.12,
       acquisitionTax: 12_000_000,
       propertyType: "housing",
       areaSqm: 120,
+      isSurcharged: true,
+      surchargeType: "multi_house_12", // §13의2 기준 4%
     });
+    // [R3-02] (2% + (12%−4%)) × 1억 × 10% = 1.0% = 1,000,000
     expect(result).toBe(1_000_000);
   });
 
-  it("부동소수점 오차 방지: (0.03-0.02) 계산 — bps 정수 연산으로 정확한 결과", () => {
-    // 10억 × (3%-2%) × 10% = 1,000,000
+  it("비중과 3% 정수 연산 — 표준세율 2% 치환 0.2% flat", () => {
     const result = calcRuralSpecialTax({
       taxBase: 1_000_000_000,
       appliedRate: 0.03,
       acquisitionTax: 30_000_000,
       propertyType: "land",
     });
-    expect(result).toBe(1_000_000);
+    // [R3-02] 10억 × 0.2% = 2,000,000 (비중과 flat, bps 초과분 개념 소멸)
+    expect(result).toBe(2_000_000);
   });
 });
 
