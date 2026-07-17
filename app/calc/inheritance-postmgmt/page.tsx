@@ -89,12 +89,18 @@ function FarmingPostMgmtPageInner() {
   const initialOriginalDeduction = sanitizeOriginalDeductionParam(
     searchParams.get("originalDeduction"),
   );
-  // 메인 마법사 진입 시 신고기한(§67) prefill — 가업 시뮬레이터와 동형(영농 prefill 강화)
+  // 메인 마법사 진입 시 신고기한(§67)·상속개시일 prefill — 가업 시뮬레이터와 동형(영농 prefill 강화)
   const initialFilingDeadline = sanitizeDateParam(searchParams.get("filingDeadline"));
+  const initialInheritanceStartDate = sanitizeDateParam(
+    searchParams.get("inheritanceStartDate"),
+  );
 
   const [violation, setViolation] = useState<FarmingPostMgmtViolation>("asset_disposed");
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [violationDate, setViolationDate] = useState("");
+  const [inheritanceStartDate, setInheritanceStartDate] = useState(
+    initialInheritanceStartDate,
+  );
   const [filingDeadline, setFilingDeadline] = useState(initialFilingDeadline);
   const [originalDeduction, setOriginalDeduction] = useState(initialOriginalDeduction);
   // 원래 상속세 과세표준 (영농공제 반영 후) — §18의3④ 전단 marginal 추징 재계산 기준.
@@ -114,6 +120,7 @@ function FarmingPostMgmtPageInner() {
   const canCalculate = useMemo(() => {
     return (
       violationDate.length === 10 &&
+      inheritanceStartDate.length === 10 &&
       filingDeadline.length === 10 &&
       parseAmount(originalDeduction) > 0 &&
       // 재계산 base 명시 입력 필수(빈칸=silent 0 방지) — 0도 유효값이라 비어있지 않음으로 판정
@@ -122,12 +129,13 @@ function FarmingPostMgmtPageInner() {
       Number(interestRate) >= 0 &&
       Number(interestRate) <= 1
     );
-  }, [violationDate, filingDeadline, originalDeduction, baseTaxableAmount, interestRate]);
+  }, [violationDate, inheritanceStartDate, filingDeadline, originalDeduction, baseTaxableAmount, interestRate]);
 
   const handleCalculate = () => {
     const input: FarmingPostMgmtInput = {
       violation,
       violationDate,
+      inheritanceStartDate,
       filingDeadline,
       baseTaxableAmount: parseAmount(baseTaxableAmount),
       interestRate: Number(interestRate),
@@ -184,6 +192,15 @@ function FarmingPostMgmtPageInner() {
 
       {/* 일자·금액·이자율 */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+            상속개시일
+          </label>
+          <DateInput value={inheritanceStartDate} onChange={setInheritanceStartDate} />
+          <p className="text-micro text-muted-foreground">
+            §18의3④ 5년 사후관리기간 기산 (경과 후 처분·종사중단은 무추징)
+          </p>
+        </div>
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             상속세 신고기한 (§67 — 상속개시일 + 6개월)
@@ -283,10 +300,14 @@ function FarmingPostMgmtPageInner() {
           {!result.recaptureRequired ? (
             <div className="space-y-1.5">
               <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
-                ✓ 추징 면제 (정당사유 인정)
+                {result.outsideManagementPeriod
+                  ? "✓ 추징 대상 아님 (5년 사후관리기간 경과)"
+                  : "✓ 추징 면제 (정당사유 인정)"}
               </p>
               <p className="text-xs text-muted-foreground">
-                §16⑥ 정당사유 적용 — 추징세액·이자상당액 모두 0원
+                {result.outsideManagementPeriod
+                  ? "상속개시일부터 5년 경과 후 처분·종사중단 — §18의3④ 추징 대상 아님 (세액·이자 0원)"
+                  : "§16⑥ 정당사유 적용 — 추징세액·이자상당액 모두 0원"}
               </p>
             </div>
           ) : (

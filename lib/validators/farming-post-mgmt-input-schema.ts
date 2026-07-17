@@ -14,6 +14,8 @@ export const farmingPostMgmtInputSchema = z.object({
     "accounting_fraud",
   ]),
   violationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
+  /** §18의3④ 5년 사후관리기간 기산 (상속개시일) */
+  inheritanceStartDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
   filingDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
   baseTaxableAmount: z.number().nonnegative(),
   interestRate: z.number().min(0).max(1, "이자율은 소수(0~1) 형식 — 예: 0.029"),

@@ -15,7 +15,15 @@
  * 정수 연산: 이자상당액 BigInt 단일 floor (applyRate 다중 호출 정밀도 손실 회피)
  */
 
-import { addDays, addMonths, differenceInDays, endOfMonth, parseISO } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  addYears,
+  differenceInDays,
+  endOfMonth,
+  isAfter,
+  parseISO,
+} from "date-fns";
 
 import { calcInheritanceGiftTax } from "../inheritance-gift-common";
 import type {
@@ -124,6 +132,41 @@ export function calcFarmingPostMgmt(
   const startDate = addDays(parseISO(input.filingDeadline), 1);
   const endDate = parseISO(input.violationDate);
   const interestDays = Math.max(0, differenceInDays(endDate, startDate));
+
+  // §18의3④ 5년 사후관리기간 — ④ 트랙(처분·종사중단)만. 5년 경과 후 위반 → 무추징.
+  //   민법 §157·§160② 계산: 상속개시일 기산 5년 만료일 = addYears(start, 5). 그 후 위반은 기간 외.
+  //   §18의3⑥ 트랙(조세포탈·회계부정 형 확정)은 5년 제한 없음 → 게이트 미적용.
+  if (
+    isJustifiedReasonApplicable(input.violation) &&
+    isAfter(
+      parseISO(input.violationDate),
+      addYears(parseISO(input.inheritanceStartDate), 5),
+    )
+  ) {
+    return {
+      recaptureRequired: false,
+      outsideManagementPeriod: true,
+      taxableAmountAddback: 0,
+      recaptureAmount: 0,
+      interestAmount: 0,
+      totalRecapture: 0,
+      reportDeadline,
+      interestDays,
+      breakdown: [
+        {
+          label: `위반 사유: ${VIOLATION_LABEL[input.violation]}`,
+          amount: 0,
+        },
+        {
+          label: "사후관리기간(5년) 경과 — 추징 대상 아님",
+          amount: 0,
+          note: `상속개시일 ${input.inheritanceStartDate} + 5년 < 위반일 ${input.violationDate} (상증법 §18의3④)`,
+        },
+        { label: "추징세액", amount: 0 },
+        { label: "이자상당액", amount: 0 },
+      ],
+    };
+  }
 
   // 정당사유 매칭 — §18의3④ 트랙만
   const exemptedBy = evaluateJustifiedReason(input);
