@@ -37,6 +37,7 @@ function emptyForm(): ChecklistFormSlice {
     familyBusinessValue: "",
     familyBusinessYears: "",
     familyBusinessDirectAmount: "",
+    heirWaiverAmount: "",
     familyBusiness: undefined,
     legateeAmountNonHeir: "",
     priorGiftDeductionTotal: "",

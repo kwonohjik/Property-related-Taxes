@@ -413,6 +413,7 @@ export function calcInheritanceDeductions(
     totalPriorGiftAmount?: number;
     priorGiftDeductionTotal?: number;
     legateeAmountNonHeir?: number;
+    heirWaiverAmount?: number;
     disasterLossDeduction?: number;
   },
   familyBusinessAux?: {

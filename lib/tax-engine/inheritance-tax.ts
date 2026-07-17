@@ -463,6 +463,7 @@ export function calcInheritanceTax(
       input.deductionInput.priorGiftDeductionTotal ??
       computePriorGiftDeductionForLimit(preGifts, input.deathDate),
     legateeAmountNonHeir: input.deductionInput.legateeAmountNonHeir ?? 0,
+    heirWaiverAmount: input.deductionInput.heirWaiverAmount ?? 0, // §24 ②2호 선순위 상속포기 (H-19)
     disasterLossDeduction: input.deductionInput.disasterLossDeduction ?? 0,
   };
 

@@ -127,8 +127,14 @@ export interface InheritanceDeductionInput {
    */
   spouseLegalShareOverride?: number;
   // ===== Phase D §24 분자 보정 (orchestrator → calcInheritanceDeductions 전달) =====
-  /** 상속인 외 자에게 유증한 금액 (§24 분자 차감) */
+  /** 상속인 외 자에게 유증한 금액 (§24 분자 차감 — ①1호) */
   legateeAmountNonHeir?: number;
+  /**
+   * §24 ②2호 — 선순위 상속인의 상속포기로 다음 순위 상속인이 상속받은 재산 가액 (§24 분자 차감).
+   * 대습상속(§27 단서 — 선순위 사망·결격으로 그 직계비속이 대신 상속)은 상속포기가 아니므로 대상 아님 →
+   * 자동도출 금지, 명시 입력. 미입력=0(현행 보존). (H-19)
+   */
+  heirWaiverAmount?: number;
   /** 증여재산공제 합계 (§24 분자 보정용) */
   priorGiftDeductionTotal?: number;
   /** 신고기한 내 재해손실공제 (§24 분자 보정용) */

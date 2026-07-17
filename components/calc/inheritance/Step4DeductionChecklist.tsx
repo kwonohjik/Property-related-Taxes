@@ -46,6 +46,7 @@ const AUTO_META: Record<AutoChecklistKey, { label: string; law: string; group: "
 const MANUAL_META: Record<ManualChecklistKey, { label: string; group: "emerald" | "amber" | "violet" }> = {
   familyBusiness: { label: "가업상속공제 §18의2", group: "emerald" },
   legatee: { label: "상속외자 유증 §19·§24", group: "amber" },
+  heirWaiver: { label: "상속포기 후순위 상속 §24②", group: "amber" },
   priorGiftDeduction: { label: "사전증여 공제합계 §24", group: "amber" },
   disasterAdjust: { label: "§24 분자 보정·재해손실", group: "amber" },
   casualtyLoss: { label: "재해손실공제 §23", group: "amber" },
