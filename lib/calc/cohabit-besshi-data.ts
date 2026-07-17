@@ -12,7 +12,7 @@
  *      상속인별: ⑤동거주택지분 / ⑥10년이상동거 / ⑦무주택자 / ⑧요건충족지분
  *      ⑨ 계(요건충족지분 합계)
  *   3. 동거주택 상속공제:
- *      ⑩공제대상액(②×⑨) / ⑪한도(6억) / ⑫공제액(min(⑩,⑪))
+ *      ⑩공제대상액(②×⑨×시기별공제율) / ⑪한도(6억) / ⑫공제액(min(⑩,⑪))
  *
  * 미수집 칸(주소·취득일·⑥⑦무주택·④예외유형) = 공란 — D-1 정책.
  * 인쇄 후 수기 작성 안내 포함.
@@ -130,12 +130,13 @@ export function buildBesshi6_2Data(
     0,
   );
 
-  // ⑩ 공제대상액 = ② base × ⑨
+  // ⑩ 공제대상액 = ② base × §23의2 시기별 공제율(rawDeduction, 2020+ 100%·2016~ 80%·2009~ 40%).
+  // 엔진 단일진실: rawDeduction = floor(base × rate), cappedDeduction = min(rawDeduction, cap).
+  // ⑨ 지분은 동거 단일상속인=1(복수는 undefined→⑩ 공란)이라 rawDeduction이 곧 ②×⑨×율.
+  // 종전 base×지분(율 미반영)은 rate<1(2009~2019 상속)에서 ⑫=min(⑩,⑪)과 자체모순 (M-12·M-13).
   const evaluatedValue = detail.base;
   const deductionBase =
-    totalQualifiedShare > 0
-      ? Math.floor(evaluatedValue * totalQualifiedShare)
-      : undefined;
+    totalQualifiedShare > 0 ? detail.rawDeduction : undefined;
 
   // ① 동거기간 표시 (cohabitYears.effectiveYears)
   const cohabitPeriod = detail.cohabitYears
