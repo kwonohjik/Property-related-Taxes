@@ -528,11 +528,12 @@ export function calcInheritanceTax(
   allBreakdown.push(...deductionResult.breakdown);
   for (const law of deductionResult.appliedLaws) allLaws.add(law);
 
-  // G3 경고: §23의2①1호 동거연수 10년 요건 미달 (비차단 — feedback_no_silent_apportion_fallback)
+  // H-18: §23의2①1호 동거연수 10년 미달 시 공제 차단(deductions에서 exclusionReason="under_ten_years").
+  //   cohabitStartDate 입력 시에만 판정 → 경고도 차단 사실을 명시.
   const cohabitYearsResult = deductionResult.cohabitDeductionDetail?.cohabitYears;
   if (cohabitYearsResult && !cohabitYearsResult.meetsRequirement) {
     allWarnings.push(
-      `동거연수 ${cohabitYearsResult.effectiveYears}년 — §23의2①1호 10년 요건 미달 가능성. 실제 동거기간을 확인하세요.`,
+      `동거연수 ${cohabitYearsResult.effectiveYears}년 — §23의2①1호 10년 요건(미성년 기간 제외) 미충족으로 동거주택 상속공제를 적용하지 않았습니다. 실제 동거기간을 확인하세요.`,
     );
   }
 

@@ -53,9 +53,13 @@ interface Props {
 // isExcluded 배지 라벨
 // ============================================================
 
-const EXCLUSION_REASON_LABEL: Record<"one_plus_one_right" | "sale_right", string> = {
+const EXCLUSION_REASON_LABEL: Record<
+  "one_plus_one_right" | "sale_right" | "under_ten_years",
+  string
+> = {
   one_plus_one_right: "1+1 입주권 미적용",
   sale_right: "분양권 미적용",
+  under_ten_years: "동거 10년 미충족 미적용",
 };
 
 export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue }: Props) {
