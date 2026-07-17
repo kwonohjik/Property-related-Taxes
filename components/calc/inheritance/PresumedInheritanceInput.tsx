@@ -55,16 +55,16 @@ const CATEGORY_META: Record<
       "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   },
   deposit: {
-    label: "예금 인출액",
-    hint: "예금·적금 등의 인출금액 (사용처 미입증 부분)",
+    label: "현금·예금·유가증권 인출·처분액",
+    hint: "현금·예금·적금의 인출액 + 주식·채권 등 유가증권 처분액 (§11⑤1호 단일 종류, 사용처 미입증 부분)",
     buttonClass:
       "border-sky-300 bg-sky-50/60 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/30 dark:text-sky-300 dark:hover:bg-sky-900/40",
     chipClass:
       "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
   },
   other_asset: {
-    label: "기타재산 처분",
-    hint: "영업권·유가증권·회원권 등 기타재산의 처분금액",
+    label: "그 밖의 기타재산 처분",
+    hint: "영업권·회원권 등 그 밖의 기타재산 처분금액 (유가증권은 위 '현금·예금·유가증권'에 입력 — §11⑤1호)",
     buttonClass:
       "border-violet-300 bg-violet-50/60 text-violet-700 hover:bg-violet-100 dark:bg-violet-950/30 dark:text-violet-300 dark:hover:bg-violet-900/40",
     chipClass:

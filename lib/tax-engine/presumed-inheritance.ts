@@ -15,11 +15,14 @@
  *   기준차감액   = Min(소명대상 × 20%, 2억)
  *   추정상속재산 = max(0, 미소명 - 기준차감액)
  *
- * 적용 카테고리 (4종):
- *   1. real_estate    — 부동산·부동산권리
- *   2. deposit        — 예금 인출
- *   3. other_asset    — 기타재산 (영업권·유가증권 등)
- *   4. financial_debt — 금융기관 채무 부담
+ * 적용 카테고리 (시행령 §11⑤ 재산종류별 — 종류별로 임계·20% 차감 독립):
+ *   real_estate    — §11⑤2호 부동산 및 부동산에 관한 권리
+ *   deposit        — §11⑤1호 현금·예금·유가증권 (유가증권 포함 — 예금과 단일 종류)
+ *   other_asset    — §11⑤4호 그 밖의 기타재산 (영업권·회원권 등, 유가증권 제외)
+ *   financial_debt — §15② 금융기관 채무 부담 (별도 항)
+ *
+ * H-15: 유가증권은 §11⑤1호(현금·예금·유가증권)이므로 deposit 종류. 종전 other_asset(4호)로
+ *   분류 시 예금과 임계·20% 차감이 이중 적용되어 과소과세.
  *
  * Pure Engine — DB 호출 없음, 순수 함수.
  */
@@ -50,8 +53,8 @@ const BASE_DEDUCTION_MAX = 200_000_000;
 
 const CATEGORY_LABEL: Record<string, string> = {
   real_estate: "부동산 및 부동산 권리 처분",
-  deposit: "예금 인출",
-  other_asset: "기타재산 처분",
+  deposit: "현금·예금·유가증권 인출·처분", // §11⑤1호 (유가증권 포함)
+  other_asset: "그 밖의 기타재산 처분", // §11⑤4호 (유가증권 제외)
   financial_debt: "금융기관 채무",
 };
 
