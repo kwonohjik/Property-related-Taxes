@@ -26,12 +26,13 @@ describe("[AT-NUM-1] 농특세 bps 정밀도 — 선형보간 2% 초과분", () 
     const r = calcAcquisitionTax(input);
     // 보간세율 (750,750,000×2−9억)/300억 = 0.02005
     expect(r.appliedRate).toBe(0.02005);
-    // 농특세 = floor((본세 − floor(과세표준×2%)) × 10%)
-    //        = floor((15,052,537 − 15,015,000) × 0.1) = floor(3,753.7) = 3,753
-    expect(r.ruralSpecialTax).toBe(3_753);
+    // [R3-02] 비중과 농특세 = 표준세율을 2%로 치환 → 과세표준 × 0.2% flat (농특세법 §5①6호).
+    //   6~9억 주택(선형보간)도 표준세율 성분을 2%로 보므로 초과분 bps와 무관하게 0.2%.
+    //   750,750,000 × 0.2% = 1,501,500. (구값 3,753은 (적용세율−2%) 오산식 산물)
+    expect(r.ruralSpecialTax).toBe(1_501_500);
   });
 
-  it("[AT-NUM-1b] 대조군 — 농지 매매 3% 5억: 농특세 500,000원 (회귀 0)", () => {
+  it("[AT-NUM-1b] 비중과 농지 매매 3% 5억: 농특세 0.2% = 1,000,000원", () => {
     const tax = calcRuralSpecialTax({
       taxBase: 500_000_000,
       appliedRate: 0.03,
@@ -39,11 +40,11 @@ describe("[AT-NUM-1] 농특세 bps 정밀도 — 선형보간 2% 초과분", () 
       propertyType: "land_farmland",
       acquisitionCause: "purchase",
     });
-    // (3%−2%) × 5억 × 10% = 500,000
-    expect(tax).toBe(500_000);
+    // [R3-02] 비중과: 표준세율 2% 치환 → 5억 × 0.2% = 1,000,000 (표준율 3% 무관 flat)
+    expect(tax).toBe(1_000_000);
   });
 
-  it("[AT-NUM-1c] 대조군 — 다주택 중과 8%: 동일 비율 유지 (회귀 0)", () => {
+  it("[AT-NUM-1c] 다주택 중과 8%(§13의2): 농특세 (8%−4%+2%)×10% = 0.6% = 4,800,000원", () => {
     const tax = calcRuralSpecialTax({
       taxBase: 800_000_000,
       appliedRate: 0.08,
@@ -51,12 +52,13 @@ describe("[AT-NUM-1] 농특세 bps 정밀도 — 선형보간 2% 초과분", () 
       propertyType: "housing",
       acquisitionCause: "purchase",
       isSurcharged: true,
+      surchargeType: "multi_house_8", // §13의2 표준세율 = §11①7나 4%
     });
-    // (8%−2%) × 8억 × 10% = 4,800,000
+    // [R3-02] §13의2 기준율 4% → (2% + 중과분 4%) × 8억 × 10% = 0.6% = 4,800,000
     expect(tax).toBe(4_800_000);
   });
 
-  it("[AT-NUM-1d] 경계 — 정확히 2% (6억 1%·9억 3% 아닌 농지 등): 농특세 0원", () => {
+  it("[AT-NUM-1d] 비중과 2% 취득: 농특세 표준 2% 치환 → 0.2% = 1,000,000원", () => {
     const tax = calcRuralSpecialTax({
       taxBase: 500_000_000,
       appliedRate: 0.02,
@@ -64,7 +66,8 @@ describe("[AT-NUM-1] 농특세 bps 정밀도 — 선형보간 2% 초과분", () 
       propertyType: "building",
       acquisitionCause: "purchase",
     });
-    expect(tax).toBe(0);
+    // [R3-02] 표준세율 2% → 농특세 과세표준 = 5억×2%, ×10% = 1,000,000 (구값 0은 오산식)
+    expect(tax).toBe(1_000_000);
   });
 });
 

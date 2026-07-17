@@ -59,7 +59,7 @@ describe("P4-1 calcLocalEducationTax 주택 유상거래 분기", () => {
     expect(result).toBe(1_500_000);
   });
 
-  it("#E4 주택 유상거래 중과세(8%): 기본 0.4% = 5억×2%×20%=2,000,000", () => {
+  it("#E4 주택 유상 다주택 중과(8%): §151①1나 → (4%−2%)×20% = 0.4% = 2,000,000", () => {
     const result = calcLocalEducationTax({
       taxBase: 500_000_000,
       appliedRate: 0.08,
@@ -67,8 +67,8 @@ describe("P4-1 calcLocalEducationTax 주택 유상거래 분기", () => {
       propertyType: "housing",
       acquisitionCause: "purchase",
       isSurcharged: true,
+      surchargeType: "multi_house_8", // §13의2 → 나목 0.4% 고정
     });
-    // 중과세 시 기본 교육세 규칙 적용
     expect(result).toBe(2_000_000);
   });
 
@@ -90,30 +90,37 @@ describe("P4-1 calcLocalEducationTax 주택 유상거래 분기", () => {
 // ============================================================
 
 describe("P4-2 사치성 중과세 교육세 매트릭스", () => {
-  it("#E6 사치성 단독(luxury_solo): 5억×1.4%=7,000,000", () => {
+  it("#E6 사치성 단독(luxury_solo) 고급주택 유상 9억↑: 본문 표준율(3%) 본세×50%×20% = 0.3% = 1,500,000", () => {
     const result = calcLocalEducationTax({
       taxBase: 500_000_000,
-      appliedRate: 0.11,  // 3%+8%p
+      appliedRate: 0.11, // 3%+8%p (사치성 중과 최종 세율)
       acquisitionTax: 55_000_000,
       propertyType: "housing",
       acquisitionCause: "purchase",
       isSurcharged: true,
       surchargeType: "luxury_solo",
+      basicRate: 0.03, // §11①8 주택 표준세율 (9억 초과 3%)
     });
-    expect(result).toBe(7_000_000);  // 500만 × 1.4%
+    // [R3-01] 사치성(§13⑤)은 §151①1 가목·나목 부재 → 본문. 중과분 미반영, 표준율 본세 기준.
+    //   §11①8 주택 유상 본문 = 표준율 본세(5억×3%=15,000,000) × 50% × 20% = 1,500,000.
+    //   (구 1.4% 하드코딩 7,000,000은 중과분 반영으로 법 근거 없는 과다과세였음)
+    expect(result).toBe(1_500_000);
   });
 
-  it("#E7 사치성+다주택 중복(luxury_multi): 5억×1.8%=9,000,000", () => {
+  it("#E7 사치성+다주택 중복(luxury_multi, §13의2③): §151①1나 → 0.4% = 2,000,000", () => {
     const result = calcLocalEducationTax({
       taxBase: 500_000_000,
-      appliedRate: 0.20,  // 12%+8%p
+      appliedRate: 0.20, // 12%+8%p
       acquisitionTax: 100_000_000,
       propertyType: "housing",
       acquisitionCause: "purchase",
       isSurcharged: true,
       surchargeType: "luxury_multi",
+      basicRate: 0.04,
     });
-    expect(result).toBe(9_000_000);  // 500만 × 1.8%
+    // [R3-01] §13의2③(사치성+다주택)은 §13의2에 해당 → 나목 (4%−2%)×20% = 0.4% = 2,000,000.
+    //   (구 1.8% 하드코딩 9,000,000은 법 근거 없음)
+    expect(result).toBe(2_000_000);
   });
 });
 
@@ -193,8 +200,8 @@ describe("P4-4 농특세 읍·면 지역 100㎡ 기준 비과세", () => {
       isRuralRegion: false,  // 도시 지역 → 85㎡ 기준
     };
     const result = calcAcquisitionTax(input);
-    // (3%-2%) × 10억 × 10% = 1,000,000
-    expect(result.ruralSpecialTax).toBe(1_000_000);
+    // [R3-02] 비중과 주택(9억↑ 3%): 표준세율 2% 치환 → 10억 × 0.2% = 2,000,000 (구값 1,000,000은 오산식)
+    expect(result.ruralSpecialTax).toBe(2_000_000);
   });
 
   it("#E12 읍·면 지역 95㎡ 주택(9억 초과): 농특세 비과세 (100㎡ 이하, P4-4)", () => {
@@ -226,7 +233,8 @@ describe("P4-4 농특세 읍·면 지역 100㎡ 기준 비과세", () => {
       isRuralRegion: true,
     };
     const result = calcAcquisitionTax(input);
-    expect(result.ruralSpecialTax).toBe(1_000_000);  // (3%-2%)×10억×10%
+    // [R3-02] 비중과 주택 9억↑(3%), 105㎡(>100㎡ 과세): 10억 × 0.2% = 2,000,000
+    expect(result.ruralSpecialTax).toBe(2_000_000);
   });
 
   it("#E14 법인 주택 5억 매매 — 부가세 anchor (설계 P4-T)", () => {

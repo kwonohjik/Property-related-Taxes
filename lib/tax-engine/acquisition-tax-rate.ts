@@ -217,8 +217,8 @@ export function decideTaxRate(input: RateDecisionInput): TaxRateDecision {
 
 export interface AdditionalTaxInput {
   taxBase: number;         // 과세표준
-  appliedRate: number;     // 취득세 세율 (예: 0.03)
-  acquisitionTax: number;  // 취득세 본세
+  appliedRate: number;     // 취득세 세율 (예: 0.03) — 중과 반영된 최종 세율
+  acquisitionTax: number;  // 취득세 본세 (최종 세율 기준)
   areaSqm?: number;        // 전용면적 ㎡ (농특세 85㎡ 이하 면제 판단)
   propertyType: PropertyObjectType;
   // [P4-1] 주택 유상거래 분기
@@ -228,6 +228,13 @@ export interface AdditionalTaxInput {
   surchargeType?: "multi_house_8" | "multi_house_12" | "luxury_solo" | "luxury_multi" | "corp_metro" | "gift_12";
   // [P4-4] 농특세 읍·면 지역 100㎡ 분기
   isRuralRegion?: boolean;
+  /**
+   * [R3-01/R3-02] 표준세율(중과 전 §11·§12 세율). 부가세 산정의 기준.
+   * - 농특세(§5①6호): "표준세율을 2%로 적용한 취득세액×10%" → 표준세율 성분만 2%로 치환.
+   * - 지방교육세(§151①1 본문): (표준세율−2%)×20% [§11①8 주택 유상은 표준율 본세×50%×20%].
+   * 미전달 시 appliedRate로 폴백(비중과에서는 동일).
+   */
+  basicRate?: number;
 }
 
 export interface AdditionalTaxResult {
@@ -237,15 +244,47 @@ export interface AdditionalTaxResult {
   eduTaxBasis: string;       // 지방교육세 계산 근거
 }
 
+/** §11①7호나목(부동산 유상승계) 표준세율 4% — §13의2 중과의 표준세율 기준 */
+export const SURCHARGE_BASE_STANDARD_RATE = 0.04;
+
 /**
- * 농어촌특별세 계산 (농특세법 §4)
+ * 농특세 산정 기준율(표준세율)을 중과 유형별로 결정 (농특세법 §5①6호).
  *
- * 농특세 = (취득세율 - 기준세율 2%) × 과세표준 × 10%
+ * §5①6호: "「지방세법」 §11·§12의 표준세율을 100분의2로 적용하여 산출한 취득세액 × 10%".
+ * → 표준세율 성분만 2%로 치환하고 중과분은 보존한다. 부가세 기준율 = 2% + 중과분,
+ *   중과분 = 적용세율 − (해당 중과가 사용한 표준세율).
+ */
+function resolveRuralStandardRate(input: AdditionalTaxInput, basicRate: number): number {
+  if (!input.isSurcharged) return input.appliedRate; // 비중과: 중과분 0 → 기준율 2% → 0.2%
+  switch (input.surchargeType) {
+    // §13⑤ 사치성 단독: 물건 자체의 표준세율을 기준으로 함 (표준 + 중과기준세율×400%)
+    case "luxury_solo":
+      return basicRate;
+    // §13의2(①②③): 표준세율 = §11①7호나목 4% (다주택·증여·법인주택·사치성중복 전부)
+    case "multi_house_8":
+    case "multi_house_12":
+    case "gift_12":
+    case "luxury_multi":
+    case "corp_metro":
+      return SURCHARGE_BASE_STANDARD_RATE;
+    // 기타 중과(법인 §13② 비주택 등): 물건 표준세율 기준 (현행 동작 유지 — 법인 정밀화는 R3-05 별도)
+    default:
+      return basicRate;
+  }
+}
+
+/**
+ * 농어촌특별세 계산 (농특세법 §5①6호·§5⑤)
  *
- * 면제:
+ * 농특세 = (표준세율을 2%로 적용하여 산출한 취득세액) × 10%
+ *        = (2% + 중과분) × 과세표준 × 10%   [중과분 = 적용세율 − 기준표준세율]
+ *   · 비중과: 과세표준 × 0.2% (표준율 1%·2.8%·3%·3.5% 무관하게 flat)
+ *   · §13의2 8/12%(기준 4%): 0.6% / 1.0%
+ *   · 사치성 단독(기준 = 물건 표준율): 항상 1.0%
+ *
+ * 면제(농특세법 §4):
  * - 전용면적 85㎡ 이하 주택 (전면 면제)
- * - [P4-4] 수도권 외 도시지역 외 읍·면 지역 100㎡ 이하 주택 (농특세법 §4②, 지방세법 시행령 §92②)
- * - 취득세율 ≤ 2% (기준세율 미초과)
+ * - [P4-4] 수도권 외 도시지역 외 읍·면 지역 100㎡ 이하 주택 (§4②, 지방세법 시행령 §92②)
  */
 export function calcRuralSpecialTax(input: AdditionalTaxInput): number {
   // [P4-4] 읍·면 지역: 100㎡ 이하 면제 (isRuralRegion = true)
@@ -262,38 +301,38 @@ export function calcRuralSpecialTax(input: AdditionalTaxInput): number {
     return 0;
   }
 
-  // 세율 2% 이하 → 0원 (정수 비교 — 부동소수점 오차 방지)
-  // 10만분율(5자리) 사용: 선형보간 세율(소수점 5자리)의 2% 초과분이 0.5bps처럼
-  // 1bps 미만일 수 있어, 만분율(4자리)로 반올림하면 초과분이 통째로 누락된다
-  // (예: 0.02005 → 만분율 200 = 2% 판정 오류 → 농특세 0원). 10만분율은 2005로 보존.
+  // [R3-02] 표준세율 2% 치환 + 중과분 보존. 10만분율(5자리) 정수 연산(선형보간 세율의
+  // 0.5bps 초과분 보존 + 부동소수 오차 방지).
   const RATE_SCALE = 100_000;
-  const ratePoints = Math.round(input.appliedRate * RATE_SCALE); // 10만분율 정수
-  const standardRatePoints = Math.round(ACQUISITION_CONST.RURAL_STANDARD_RATE * RATE_SCALE); // 2% = 2,000
+  const basicRate = input.basicRate ?? input.appliedRate;
+  const stdRate = resolveRuralStandardRate(input, basicRate); // 중과가 사용한 표준세율
+  const appliedPts = Math.round(input.appliedRate * RATE_SCALE);
+  const stdPts = Math.round(stdRate * RATE_SCALE);
+  const surchargePts = Math.max(0, appliedPts - stdPts); // 중과분 (10만분율)
+  const baseRatePts = Math.round(ACQUISITION_CONST.RURAL_STANDARD_RATE * RATE_SCALE); // 2% = 2,000
+  const ruralRatePts = baseRatePts + surchargePts; // 농특세 기준율 = 2% + 중과분
 
-  if (ratePoints <= standardRatePoints) {
-    return 0;
-  }
-
-  // 농특세 = (적용세율 - 2%) × 과세표준 × 10%
-  // 10만분율 정수 연산으로 부동소수점 오차 방지
-  const excessRatePoints = ratePoints - standardRatePoints; // 초과분 (10만분율)
-  const excessTax = Math.floor(input.taxBase * excessRatePoints / RATE_SCALE);
-  const ruralTax = Math.floor(excessTax * ACQUISITION_CONST.RURAL_SURCHARGE_RATE);
-  return ruralTax;
+  const ruralBase = Math.floor((input.taxBase * ruralRatePts) / RATE_SCALE); // 표준2% 치환 취득세액
+  return Math.floor(ruralBase * ACQUISITION_CONST.RURAL_SURCHARGE_RATE); // × 10%
 }
 
 /**
- * 지방교육세 계산 (지방세법 §151)
+ * 지방교육세 계산 (지방세법 §151①1)
  *
- * [P4-1] 주택 유상거래(§151①1나): 취득세 본세 × 50% × 20% (표준세율 1~3% 적용분의 10%)
- * [P4-2] 중과세 사치성: 과세표준 × 1.4%(단독) / 1.8%(다주택중복) 별도 매트릭스
- * 그 외: 과세표준 × 2% × 20% = 과세표준 × 0.4%
+ * 본문: (표준세율 − 중과기준세율 2%) × 20% [§11①8 주택 유상은 표준율 본세 × 50% × 20%]
+ * 가목: §13②③⑥⑦ → 본문액 × 300% (법인 §11①8 주택은 나목)
+ * 나목: §13의2(①②③) → (§11①7나 4% − 2%) × 20% = 0.4% 고정
+ *
+ * [R3-01] 사치성재산(§13⑤)은 가목(§13②③⑥⑦)·나목(§13의2)에 없어 **본문**이 적용된다.
+ *   → 중과분(8%p)을 교육세에 반영하지 않고 물건 표준세율 기준으로 산출. 종전 1.4%/1.8%
+ *     하드코딩(중과분 반영)은 법 근거 없는 과다과세였다.
  */
 export function calcLocalEducationTax(input: AdditionalTaxInput): number {
-  const { taxBase, acquisitionTax, appliedRate, propertyType, acquisitionCause, isSurcharged, surchargeType } = input;
+  const { taxBase, acquisitionTax, propertyType, acquisitionCause, isSurcharged, surchargeType } = input;
+  const basicRate = input.basicRate ?? input.appliedRate; // 표준세율(중과 전)
 
-  // [M3] §151①1 본문 괄호: 취득물건이 §15②에 해당하는 경우(개수·§7④ 지목변경 등 가액증가·
-  // §7⑤ 과점주주 간주취득)는 지방교육세 과세대상에서 제외한다 → 0원.
+  // [M3] §151①1 본문 괄호: §15②에 해당(개수·§7④ 지목변경·§7⑤ 과점주주 간주취득)은
+  // 지방교육세 과세대상 제외 → 0원.
   const isDeemedAcquisition =
     acquisitionCause === "deemed_renovation" ||
     acquisitionCause === "deemed_land_category" ||
@@ -302,37 +341,37 @@ export function calcLocalEducationTax(input: AdditionalTaxInput): number {
     return 0;
   }
 
-  // [P4-2] 사치성 중과세 매트릭스 (지방세법 §151①1가 — 본문의 300% 가산분 반영)
-  if (surchargeType === "luxury_solo") {
-    // 사치성 단독: 과세표준 × 1.4% (표준 0.4% + 사치성 1.0%)
-    return Math.floor(taxBase * 0.014);
-  }
-  if (surchargeType === "luxury_multi") {
-    // 사치성 + 다주택 중복: 과세표준 × 1.8%
-    return Math.floor(taxBase * 0.018);
+  // [R3-01] 나목 §13의2(①②③): (§11①7나 4% − 2%) × 20% = 0.4% 고정.
+  //   다주택 8/12%·증여 12%·법인주택 12%(§13의2①1호, §151①1가 단서로 나목)·
+  //   사치성+다주택 중복 §13의2③(luxury_multi) 전부 해당.
+  const isSection13of2 =
+    surchargeType === "multi_house_8" ||
+    surchargeType === "multi_house_12" ||
+    surchargeType === "gift_12" ||
+    surchargeType === "luxury_multi" ||
+    surchargeType === "corp_metro";
+  if (isSection13of2) {
+    return Math.floor(taxBase * ACQUISITION_CONST.RURAL_STANDARD_RATE * ACQUISITION_CONST.EDU_RATE); // 0.4%
   }
 
-  // [P4-1] 주택 유상거래 + 비중과: 본세 × 50% × 20% = 본세 × 10%
-  // 지방세법 §151①1 본문 괄호: §11①8 세율(1~3%) 적용 취득세액의 50%의 20%
+  // [R3-01] 본문(표준세율 기준) — 사치성 단독(§13⑤)·비중과·법인 §13② 비주택 등.
+  //   ★ 사치성은 중과분을 교육세에 반영하지 않는다. 표준세율(basicRate)로 산출.
   const isHousingOnerous =
     propertyType === "housing" &&
     ["purchase", "exchange", "auction", "in_kind_investment"].includes(acquisitionCause ?? "");
 
-  if (isHousingOnerous && !isSurcharged) {
-    return Math.floor(acquisitionTax * 0.5 * 0.2);
+  if (isHousingOnerous) {
+    // §151①1 본문 괄호: §11①8 표준세율(1~3%) 적용 취득세액 × 50% × 20%.
+    // 사치성이면 표준본세 = taxBase×basicRate. 비중과면 acquisitionTax가 곧 표준본세
+    // (6~9억 선형보간 BigInt 정밀도 보존).
+    const standardTax = isSurcharged ? Math.floor(taxBase * basicRate) : acquisitionTax;
+    return Math.floor(standardTax * 0.5 * ACQUISITION_CONST.EDU_RATE);
   }
 
-  // [H2] §13의2 다주택 중과(§151①1나): §11①7나(4%)에서 중과기준세율(2%)을 뺀 2% 적용액의
-  // 20% = 과세표준 × 0.4% 고정. (중과 세율이 아니라 표준 기준의 나목 산식)
-  if (isSurcharged) {
-    return Math.floor(taxBase * ACQUISITION_CONST.RURAL_STANDARD_RATE * ACQUISITION_CONST.EDU_RATE);
-  }
-
-  // [H2] §151①1 본문: 그 외(상속·무상·원시·비주택 유상 등 비중과) =
-  // 과세표준 × (표준세율 − 중과기준세율 2%) × 20%. 고정 0.4%가 아니라 실제 세율 기준.
-  // 부동소수 오차(0.03−0.02=0.00999…로 1원 과소) 방지: 농특세와 동일한 10만분율 정수 연산.
+  // 본문 그 외(상속·증여·원시·비주택 유상·사치성 비주택): (표준세율 − 2%) × 20%.
+  // 부동소수 오차 방지: 10만분율 정수 연산.
   const RATE_SCALE = 100_000;
-  const ratePoints = Math.round(appliedRate * RATE_SCALE);
+  const ratePoints = Math.round(basicRate * RATE_SCALE);
   const standardRatePoints = Math.round(ACQUISITION_CONST.RURAL_STANDARD_RATE * RATE_SCALE);
   const excessRatePoints = Math.max(0, ratePoints - standardRatePoints);
   const eduBaseAmount = Math.floor((taxBase * excessRatePoints) / RATE_SCALE); // (표준−2%)×과세표준
@@ -361,6 +400,7 @@ export function calcTaxWithAdditional(
     isSurcharged?: boolean;
     surchargeType?: AdditionalTaxInput["surchargeType"];
     isRuralRegion?: boolean;
+    basicRate?: number;
   }
 ): AdditionalTaxResult {
   const input: AdditionalTaxInput = {
@@ -373,6 +413,7 @@ export function calcTaxWithAdditional(
     isSurcharged: options?.isSurcharged,
     surchargeType: options?.surchargeType,
     isRuralRegion: options?.isRuralRegion,
+    basicRate: options?.basicRate,
   };
 
   const ruralSpecialTax = calcRuralSpecialTax(input);
