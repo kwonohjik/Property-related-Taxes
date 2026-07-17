@@ -790,6 +790,7 @@ export function calcInheritanceTax(
   }
 
   return {
+    decedentType: input.decedentType, // M-17: 신고기한 §67④ 비거주자 9개월 표시용 echo
     grossEstateValue,
     exemptAmount,
     exemptionDetail,

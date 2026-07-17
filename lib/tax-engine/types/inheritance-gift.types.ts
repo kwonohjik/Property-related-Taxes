@@ -288,6 +288,8 @@ export interface InheritanceTaxInput {
 
 /** 상속세 계산 결과 전체 */
 export interface InheritanceTaxResult extends TaxResultMeta {
+  /** 피상속인 거주자/비거주자 echo — 신고기한 §67④ 비거주자 9개월 표시용 (M-17). */
+  decedentType?: "resident" | "non_resident";
   /** 상속재산가액 (평가 후) */
   grossEstateValue: number;
   /** 비과세 차감액 */
