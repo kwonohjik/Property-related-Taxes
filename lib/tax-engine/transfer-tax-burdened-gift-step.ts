@@ -40,6 +40,8 @@ export function runBurdenedGiftStep(
       // (workingInput.capitalExpenditure는 중복 방지 위해 undefined 유지).
       capitalExpenditure: rawInput.capitalExpenditure,
       transferExpense: rawInput.transferExpense,
+      // §104③ 미등기양도자산 — 개산공제율 0.3% (소령 §163⑥1호 단서). transfer 미등기 토글 재사용. (H-25)
+      isUnregistered: rawInput.isUnregistered,
     });
     const land = transferBurdenedGiftBreakdown.perAsset.land;
     const building = transferBurdenedGiftBreakdown.perAsset.building;

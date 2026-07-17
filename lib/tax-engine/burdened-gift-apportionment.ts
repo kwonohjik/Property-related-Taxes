@@ -22,6 +22,7 @@
 import {
   ANNUAL_RENT_CAPITALIZATION_RATE_AFTER_2009_04_23,
   REGISTERED_ESTIMATED_DEDUCTION_RATE,
+  UNREGISTERED_ESTIMATED_DEDUCTION_RATE,
 } from "./legal-codes/burdened-gift";
 import {
   safeMultiplyThenDivide,
@@ -157,12 +158,17 @@ export function apportionAcquisitionPrice(
 // ============================================================
 
 /**
- * 안분된 자산별 취득가액 × 3% (등기 토지·건물).
- *
- * 미등기·비등기 자산률(0.3% 등)은 Phase 1 범위 밖.
+ * 안분된 자산별 취득가액 × 개산공제율 (소령 §163⑥1호).
+ *   등기: 3% · 미등기양도자산(§104③): 0.3% (단서 "미등기 3/1000"). (H-25)
  */
-export function computeEstimatedDeduction(assetAcquisitionPrice: number): number {
-  return applyRate(assetAcquisitionPrice, REGISTERED_ESTIMATED_DEDUCTION_RATE);
+export function computeEstimatedDeduction(
+  assetAcquisitionPrice: number,
+  isUnregistered = false,
+): number {
+  const rate = isUnregistered
+    ? UNREGISTERED_ESTIMATED_DEDUCTION_RATE
+    : REGISTERED_ESTIMATED_DEDUCTION_RATE;
+  return applyRate(assetAcquisitionPrice, rate);
 }
 
 // ============================================================
@@ -192,6 +198,8 @@ export function buildBurdenedGiftBreakdown(params: {
   capitalExpenditure?: number;
   /** K-4 실지취득가 경로 필요경비 — 양도비(§163⑤). */
   transferExpense?: number;
+  /** §104③ 미등기양도자산 — 개산공제율 0.3% 적용(소령 §163⑥1호 단서). 기본 false=등기(3%). (H-25) */
+  isUnregistered?: boolean;
 }): TransferBurdenedGiftBreakdown {
   const {
     landStdPriceAtTransfer,
@@ -199,6 +207,7 @@ export function buildBurdenedGiftBreakdown(params: {
     landStdPriceAtAcquisition,
     buildingStdPriceAtAcquisition,
     info,
+    isUnregistered = false,
   } = params;
 
   // STEP 1a: 양도세 보충적평가 (양도시 §99 기준시가) — 자산별 양도가액 안분 분모용
@@ -346,8 +355,8 @@ export function buildBurdenedGiftBreakdown(params: {
       totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(necessaryExpenseDebt, landStdPriceAtAcquisition, totalAcqStd);
     buildingEstimatedDeduction = necessaryExpenseDebt - landEstimatedDeduction;
   } else {
-    landEstimatedDeduction = computeEstimatedDeduction(landAcquisitionPrice);
-    buildingEstimatedDeduction = computeEstimatedDeduction(buildingAcquisitionPrice);
+    landEstimatedDeduction = computeEstimatedDeduction(landAcquisitionPrice, isUnregistered);
+    buildingEstimatedDeduction = computeEstimatedDeduction(buildingAcquisitionPrice, isUnregistered);
   }
 
   // STEP 6: 무상이전분 — 증여재산 평가액(giftValuation.max) − 채무액 (상증법 §47③)
