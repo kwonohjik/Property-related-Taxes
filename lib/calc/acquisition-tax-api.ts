@@ -322,6 +322,7 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     if (fa) body.farmlandArea = fa;
     const fld = parseFloatOrUndef(form.farmlandLocationDistance);
     if (fld) body.farmlandLocationDistance = fld;
+    if (form.residesInSameOrAdjacentJurisdiction) body.residesInSameOrAdjacentJurisdiction = true;
   }
 
   // ─── 무상취득 관계 ───

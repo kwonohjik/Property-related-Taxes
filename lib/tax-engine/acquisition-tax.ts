@@ -411,6 +411,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     farmingYears: input.farmingYears,
     farmlandArea: input.farmlandArea,
     farmlandLocationDistance: input.farmlandLocationDistance,
+    residesInSameOrAdjacentJurisdiction: input.residesInSameOrAdjacentJurisdiction,
     acquisitionTax,
     propertyType: effectiveInput.propertyType,
     acquisitionCause: effectiveInput.acquisitionCause,

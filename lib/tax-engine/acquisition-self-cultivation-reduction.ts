@@ -31,6 +31,12 @@ export interface SelfCultivationInput {
   farmlandArea?: number;
   /** 농지 소재지에서 거주지까지 거리 (km) */
   farmlandLocationDistance?: number;
+  /**
+   * [R3-12] 농지 소재 시·군·구 또는 잇닿은(인접) 시·군·구 거주 여부.
+   * 지특령 §3①2호·§3②2호 거주요건은 '동일·인접 시·군·구 거주' OR '30km 이내' 선택.
+   * true이면 거리(km)와 무관하게 거주요건 충족.
+   */
+  residesInSameOrAdjacentJurisdiction?: boolean;
   /** 취득세 본세 (감면 계산 기준) */
   acquisitionTax: number;
   /** 물건 유형 (농지 여부 확인) */
@@ -121,11 +127,18 @@ export function assessSelfCultivationReduction(
     );
   }
 
-  // 요건 2: 거리 요건 — 농지 소재지에서 거주지까지 30km 이내 (지특법 시행령 §3①2호·§3②2호)
+  // 요건 2: [R3-12] 거주 요건 OR (지특령 §3①2호·§3②2호) —
+  //   (가) 농지 소재 시·군·구 또는 잇닿은 시·군·구 거주 OR (나) 직선 30km 이내 거주.
+  //   동일·인접 시군구 거주면 거리(km)와 무관하게 충족. 거리요건만으로 전부 거부하지 않는다.
   const distanceKm = input.farmlandLocationDistance;
-  if (distanceKm !== undefined && distanceKm > ACQUISITION_CONST.SELF_CULTIVATION_MAX_DISTANCE_KM) {
+  const residesInJurisdiction = input.residesInSameOrAdjacentJurisdiction === true;
+  if (
+    !residesInJurisdiction &&
+    distanceKm !== undefined &&
+    distanceKm > ACQUISITION_CONST.SELF_CULTIVATION_MAX_DISTANCE_KM
+  ) {
     ineligibleReasons.push(
-      `거주지-농지 거리 초과 (현재 ${distanceKm}km, 요건 ${ACQUISITION_CONST.SELF_CULTIVATION_MAX_DISTANCE_KM}km 이내)`
+      `거주 요건 미충족 — 동일·인접 시·군·구 미거주 + 거리 초과 (현재 ${distanceKm}km, 요건 ${ACQUISITION_CONST.SELF_CULTIVATION_MAX_DISTANCE_KM}km 이내)`
     );
   }
 

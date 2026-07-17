@@ -153,13 +153,6 @@ export interface DeemedAcquisitionInput {
     newShareRatio: number;          // 취득 후 지분율 (0~1)
     isListed: boolean;              // 유가증권·코스닥 상장법인 여부 (과점주주 정의 제외 → 비과세, 지방세기본법 §46·시행령 §24①. 코넥스 제외 대상 아님 → false)
     /**
-     * 합병·분할로 인한 주식 취득 여부 — 과세 제외 처리 (형식적 취득)
-     * ※ 일반 비과세 명문 규정은 없음 — 지특법 §57의2⑤은 부실금융기관 인수·
-     *   출자전환·지주회사·주식의 포괄적 교환(조특법 §38) 등 한정 사례 면제.
-     *   포괄 면제 근거 불명확으로 UI 입력 경로 미노출 (API 직접 입력만 가능).
-     */
-    isMergerOrSplitShare?: boolean;
-    /**
      * 법인 설립 시 주식 취득 여부 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함)
      * 법인설립 시에 발행하는 주식·지분을 취득함으로써 과점주주가 된 경우 비과세
      */
@@ -380,6 +373,8 @@ export interface AcquisitionTaxInput {
   farmlandArea?: number;
   /** [P2-5] 농지 소재지에서 거주지까지 거리 (km) */
   farmlandLocationDistance?: number;
+  /** [R3-12] 농지 소재 시·군·구 또는 인접 시·군·구 거주 여부 (§3①2호 OR 거리요건) */
+  residesInSameOrAdjacentJurisdiction?: boolean;
 
   // ─── [P3] 주택 수 자동 산정 입력 (6차원 매트릭스) ───
   /**
