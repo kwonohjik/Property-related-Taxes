@@ -115,14 +115,13 @@ describe("calcFarmingPostMgmt — 영농상속공제 사후관리 §18의3④⑥
   });
 
   it("FP-10: 이자상당액 정확성 — 추징세액(marginal 10억) × 365일 × 2.9% / 365 = 29,000,000", () => {
-    // filingDeadline+1=2025-10-01부터 366일 (윤년 포함) 후 = 2026-10-01
-    // 정확히 365일 검증을 위해 filingDeadline=2025-10-01, violationDate=2026-10-01
+    // 일수 = 신고기한 다음날(2025-10-01)부터 위반일까지 포함 (M-9 정정 후 가업 §18의2와 동일 관행).
+    // 정확히 365일: differenceInDays(위반일, 신고기한) = 365 → 위반일 = 2026-09-30.
     const r = calcFarmingPostMgmt(2_000_000_000, {
       ...BASE,
       filingDeadline: "2025-09-30",
-      violationDate: "2026-10-01",  // 신고기한+1=10/1부터 다음해 10/1 = 365일
+      violationDate: "2026-09-30",  // differenceInDays(2026-09-30, 2025-09-30) = 365
     });
-    // 일수 계산: differenceInDays(2026-10-01, 2025-10-01) = 365
     expect(r.interestDays).toBe(365);
     // 추징세액 = f(70억)−f(50억) = 10억. 이자 = 1,000,000,000 × 365 × 0.029 / 365 = 29,000,000
     expect(r.recaptureAmount).toBe(1_000_000_000);

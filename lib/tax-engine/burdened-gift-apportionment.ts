@@ -355,8 +355,13 @@ export function buildBurdenedGiftBreakdown(params: {
       totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(necessaryExpenseDebt, landStdPriceAtAcquisition, totalAcqStd);
     buildingEstimatedDeduction = necessaryExpenseDebt - landEstimatedDeduction;
   } else {
-    landEstimatedDeduction = computeEstimatedDeduction(landAcquisitionPrice, isUnregistered);
-    buildingEstimatedDeduction = computeEstimatedDeduction(buildingAcquisitionPrice, isUnregistered);
+    // 개산공제 base = 취득당시 기준시가 × 채무비율 (소령 §163⑥1호·2호가) — 환산취득가·market 가액이 아님.
+    //   K-1~K-3(standard)는 landAcquisitionPrice가 이미 취득기준시가×채무비율이라 결과 불변.
+    //   K-5(환산)·legacy(market)만 정정: 종전 환산/market 가액 × 3%였음 (M-4).
+    const landStdApportioned = apportionAcquisitionPrice(landStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
+    const buildingStdApportioned = apportionAcquisitionPrice(buildingStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
+    landEstimatedDeduction = computeEstimatedDeduction(landStdApportioned, isUnregistered);
+    buildingEstimatedDeduction = computeEstimatedDeduction(buildingStdApportioned, isUnregistered);
   }
 
   // STEP 6: 무상이전분 — 증여재산 평가액(giftValuation.max) − 채무액 (상증법 §47③)

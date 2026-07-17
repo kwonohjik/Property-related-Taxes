@@ -379,8 +379,8 @@ function FamilyBusinessPostMgmtPageInner() {
               <input type="text" inputMode="decimal" value={priorTwoYearAvg} onChange={(e) => setPriorTwoYearAvg(e.target.value)} onFocus={(e) => e.target.select()}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
             </div>
-            <CurrencyInput label="5년 총급여액" value={fiveYearSalary} onChange={setFiveYearSalary} />
-            <CurrencyInput label="직전 2년 총급여액 (기준)" value={priorTwoYearSalary} onChange={setPriorTwoYearSalary} />
+            <CurrencyInput label="5년 평균 총급여액 (연평균)" value={fiveYearSalary} onChange={setFiveYearSalary} />
+            <CurrencyInput label="직전 2년 평균 총급여액 (연평균, 기준)" value={priorTwoYearSalary} onChange={setPriorTwoYearSalary} />
           </div>
         </ToggleCard>
       </section>

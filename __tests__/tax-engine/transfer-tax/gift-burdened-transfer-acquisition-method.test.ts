@@ -165,7 +165,7 @@ describe("A-K5: 시가 평가 + 환산취득가액 (Pre-Do 실패 기대)", () =
 
 // ─────────────────────────────────────────────────────────────────────────────
 // A-ENGINE: 엔진 통합 anchor — K-5 환산취득가 계산 정확성
-// 설계 §Anchor 기대값: 환산취득가 50M, 개산공제 1.5M, 양도차익 148.5M
+// 설계 §Anchor 기대값: 환산취득가 50M, 개산공제 1.2M(§163⑥ 취득기준시가 base), 양도차익 148.8M
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("A-ENGINE: K-5 환산취득가 엔진 통합 anchor", () => {
@@ -175,8 +175,8 @@ describe("A-ENGINE: K-5 환산취득가 엔진 통합 anchor", () => {
   //   - 취득시 기준시가(buildingStdPriceAtAcquisition) = 100M
   //   - 환산취득가(전체) = 시가C × (100M/400M) = 125M
   //   - 환산취득가(안분) = 125M × 0.4 = 50M
-  //   - 개산공제(안분후×3%) = 50M × 3% = 1.5M
-  //   - 양도차익 = 200M - 50M - 1.5M = 148.5M
+  //   - 개산공제(§163⑥) = 취득기준시가 100M × 채무비율 0.4 × 3% = 1.2M (환산취득가 base 아님, M-4)
+  //   - 양도차익 = 200M - 50M - 1.2M = 148.8M
   const breakdown = buildBurdenedGiftBreakdown({
     landStdPriceAtTransfer: 0,
     buildingStdPriceAtTransfer: 400_000_000, // 양도시 기준시가
@@ -207,16 +207,17 @@ describe("A-ENGINE: K-5 환산취득가 엔진 통합 anchor", () => {
     expect(breakdown.perAsset.building.acquisitionPrice).toBe(50_000_000);
   });
 
-  it("건물 개산공제(§163⑥ 3%) = 1.5M", () => {
-    expect(breakdown.perAsset.building.estimatedDeduction).toBe(1_500_000);
+  it("건물 개산공제(§163⑥ 취득기준시가 base 3%) = 1.2M", () => {
+    // 취득건물기준시가 100M × 채무비율 0.4 × 3% = 1,200,000 (환산취득가 50M × 3% 아님)
+    expect(breakdown.perAsset.building.estimatedDeduction).toBe(1_200_000);
   });
 
-  it("양도차익 = 148.5M", () => {
+  it("양도차익 = 148.8M", () => {
     // 양도차익 = 양도가액 − 취득가액 − 개산공제
     const gain =
       breakdown.perAsset.building.transferPrice -
       breakdown.perAsset.building.acquisitionPrice -
       breakdown.perAsset.building.estimatedDeduction;
-    expect(gain).toBe(148_500_000);
+    expect(gain).toBe(148_800_000);
   });
 });
