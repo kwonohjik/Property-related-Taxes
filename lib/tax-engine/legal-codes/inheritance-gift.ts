@@ -426,8 +426,8 @@ export const TAX_CREDIT = {
    *
    * ※ §24 제3호 단서(SECTION24_GIFT_DEDUCTION_THRESHOLD, inheritance-deductions.ts)와
    *    동일 임계값(5억)이지만 적용 조문·목적이 다르므로 별개 상수로 관리.
-   * ※ 같은 단서 전단(국기법 §26의2④⑤ 기간만료 배제)은 별도 후속 과제.
-   *   TODO: 국기법 §26의2④⑤ 기간만료로 증여세 부과 불가한 경우 배제 (후속 구현)
+   * ※ 같은 단서 전단(국기법 §26의2④⑤ 기간만료 배제)은 PriorGift.giftTaxTimeBarred 플래그로
+   *   구현(inheritance-gift-tax-credit.ts calcGiftTaxCredit — 제척만료분 공제·한도 분자 제외).
    */
   GIFT_TAX_CREDIT_EXCLUSION_THRESHOLD: 500_000_000,
   /** 상증법 §29 — 외국납부세액공제 (상속) */

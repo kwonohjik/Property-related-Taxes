@@ -50,7 +50,10 @@ import {
  * §28 ① 단서 — 과세가액 5억 이하 전면 배제:
  * "다만, … 상속세 과세가액이 5억원 이하인 경우에는 그러하지 아니하다"
  * → taxableEstateValue ≤ TAX_CREDIT.GIFT_TAX_CREDIT_EXCLUSION_THRESHOLD(5억)이면 공제 0.
- * (국기법 §26의2④⑤ 기간만료 배제 조항은 별도 후속 — TODO 주석 참조)
+ *
+ * §28 ① 단서 전단 — 증여세 부과제척기간 만료(국기법 §26의2④⑤) 배제:
+ * PriorGift.giftTaxTimeBarred=true인 사전증여는 증여세 부과 불가 → 공제 합계·§28② 한도
+ * 분자에서 제외(§13 상속재산 가산은 유지). giftTaxTimeBarred 미설정=현행(무회귀).
  *
  * @param priorGifts §13 기간 필터 적용 후 사전증여 내역
  * @param computedTax 상속세 산출세액 (세대생략 할증 포함)
@@ -84,15 +87,34 @@ export function calcGiftTaxCredit(
     };
   }
 
-  const totalGiftTaxPaid = priorGifts.reduce(
+  // §28① 단서 전단 — 증여세 부과제척기간 만료(국기법 §26의2④⑤)로 증여세를 부과할 수 없는
+  //   사전증여는 증여세액공제에서 제외한다(공제 합계·§28② 한도 분자 양쪽). §13 상속재산 가산은
+  //   별도(상속 제척기간)이므로 유지. giftTaxTimeBarred 미설정=현행(무회귀).
+  const creditableGifts = priorGifts.filter((g) => g.giftTaxTimeBarred !== true);
+  const timeBarredCount = priorGifts.length - creditableGifts.length;
+
+  const totalGiftTaxPaid = creditableGifts.reduce(
     (sum, g) => sum + g.giftTaxPaid,
     0,
   );
+
+  const timeBarredBreakdown: CalculationStep[] =
+    timeBarredCount > 0
+      ? [
+          {
+            label: `증여세액공제 제외 — 증여세 부과제척기간 만료 사전증여 ${timeBarredCount}건 (${TAX_CREDIT.GIFT_TAX_CREDIT} ① 단서 전단)`,
+            amount: 0,
+            lawRef: TAX_CREDIT.GIFT_TAX_CREDIT,
+            note: "국기법 §26의2④⑤ 기간 만료로 증여세 부과 불가 → 공제·한도 분자에서 제외 (§13 상속재산 가산은 유지)",
+          },
+        ]
+      : [];
 
   if (totalGiftTaxPaid <= 0) {
     return {
       creditAmount: 0,
       breakdown: [
+        ...timeBarredBreakdown,
         {
           label: "증여세액공제 — 사전 납부 증여세 없음",
           amount: 0,
@@ -103,9 +125,9 @@ export function calcGiftTaxCredit(
   }
 
   // §28 ① 안분 한도: (가산된 증여재산에 대한 과세표준 / 상속세 과세표준) × 산출세액
-  // 분자: giftTaxBase(증여세 과세표준) 우선, 미제공 시 giftAmount(gross가액) fallback
+  // 분자: giftTaxBase(증여세 과세표준) 우선, 미제공 시 giftAmount(gross가액) fallback. 제척만료분 제외.
   // 분모: 과세표준(taxBase) 우선, 미제공 시 과세가액(taxableEstateValue) fallback
-  const totalGiftTaxBase = priorGifts.reduce(
+  const totalGiftTaxBase = creditableGifts.reduce(
     (sum, g) => sum + (g.giftTaxBase ?? g.giftAmount),
     0,
   );
@@ -117,6 +139,7 @@ export function calcGiftTaxCredit(
   const creditAmount = Math.min(totalGiftTaxPaid, ratioLimit);
 
   const breakdown: CalculationStep[] = [
+    ...timeBarredBreakdown,
     {
       label: "10년 이내 사전 납부 증여세 합계",
       amount: totalGiftTaxPaid,
