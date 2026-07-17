@@ -480,5 +480,6 @@ export function calcGiftTaxTwoStream(
   return {
     ...partialResult,
     besshi10Rows,
+    specialTreatmentType: input.creditInput?.specialTreatment, // M-3: §71② 연부연납 15년 구분 echo
   };
 }

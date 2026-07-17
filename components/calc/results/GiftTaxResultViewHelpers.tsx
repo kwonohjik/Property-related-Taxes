@@ -45,9 +45,20 @@ export function LawBadge({ law }: { law: string }) {
   );
 }
 
-export function InstallmentGuide({ finalTax }: { finalTax: number }) {
-  const result = calcInstallmentPayment({ finalTax, isFamilyBusiness: false });
+export function InstallmentGuide({
+  finalTax,
+  specialTreatmentSuccession = false,
+}: {
+  finalTax: number;
+  /** 조특법 §30의6 가업승계 특례 증여 — §71②2호가 최대 15년 (M-3) */
+  specialTreatmentSuccession?: boolean;
+}) {
+  const result = calcInstallmentPayment({
+    finalTax,
+    giftSpecialTreatment: specialTreatmentSuccession,
+  });
   if (!result.eligible) return null;
+  const maxYearsLabel = specialTreatmentSuccession ? 15 : 5;
 
   return (
     <div className="border border-amber-200 dark:border-amber-700 rounded-xl overflow-hidden">
@@ -60,7 +71,8 @@ export function InstallmentGuide({ finalTax }: { finalTax: number }) {
           <LawArticleModal legalBasis="상증법 §70" label="§70 분납" />
         </div>
         <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-          결정세액 2천만원 초과 시 최대 5년 분할납부 가능
+          결정세액 2천만원 초과 시 최대 {maxYearsLabel}년 분할납부 가능
+          {specialTreatmentSuccession && " (가업승계 특례 §30의6·§71②2호가)"}
         </p>
       </div>
       <div className="p-3 text-xs space-y-1.5 text-gray-600 dark:text-gray-300">
