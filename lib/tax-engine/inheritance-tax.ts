@@ -675,6 +675,8 @@ export function calcInheritanceTax(
       presumedItems: input.presumedItems ?? [],
       // 담보채무 §14 자동공제분을 협의분할 채무에 합산 (heirAllocations 비율 환산 완료)
       debtItems: [...(input.debtItems ?? []), ...toCollateralDebtItems(collateralDebts)],
+      // H-34/M-8: 장례비 인별 안분 단일진실 — 엔진 총액(§9② floor·한도·비거주자 반영) 주입
+      funeralDeduction,
       priorGifts: cutoffFilteredGifts,
       presumedAddedById,
       valuatedAmountById,

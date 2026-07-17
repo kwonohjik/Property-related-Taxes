@@ -130,6 +130,8 @@ export interface HeirAllocationParams {
   estateItems: EstateItem[];
   presumedItems: PresumedInheritanceItem[];
   debtItems: DebtItem[];
+  /** 엔진 총 장례비 공제(§9② floor·한도·비거주자 §14② 반영). 장례비 인별 안분 단일진실(Σ==이 값). */
+  funeralDeduction: number;
   priorGifts: PriorGift[];
   /** 추정상속재산 항목별 가산액 — items가 PresumedInheritanceItemResult 매핑된 결과 (id→addedAmount) */
   presumedAddedById: Map<string, number>;
@@ -266,6 +268,7 @@ export function calcHeirAllocation(
     estateItems,
     presumedItems,
     debtItems,
+    funeralDeduction,
     priorGifts,
     presumedAddedById,
     valuatedAmountById,
@@ -351,7 +354,7 @@ export function calcHeirAllocation(
   // ㉡ 분리: 채무(financial+personal) / 공과금(tax) / 장례비(funeral, capped) 3맵.
   //   debtShare(합)는 heir 분기에서 재구성 → 기존 산식 불변.
   const { debtPrincipalByHeir, publicChargeByHeir, funeralByHeir } =
-    computeDebtByHeirWithFuneralCap(debtItems, legalShares);
+    computeDebtByHeirWithFuneralCap(debtItems, legalShares, funeralDeduction);
 
   // 추정상속재산 분배 — heirAllocations 입력 항목은 개별 비율 안분, 미입력 항목은 법정상속분.
   // ★ 미입력 항목이 여럿이면 added를 합산한 뒤 **1회만** distributeByLegalShares 적용.

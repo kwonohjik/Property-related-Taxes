@@ -35,6 +35,7 @@ function params(
     estateItems: [],
     presumedItems,
     debtItems: [],
+    funeralDeduction: 0,
     priorGifts: [],
     presumedAddedById: added,
     valuatedAmountById: new Map(),

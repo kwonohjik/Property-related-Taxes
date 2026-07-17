@@ -149,6 +149,7 @@ describe("L-2: 협의분할 추정상속재산 floor 잔액 흡수 (added ≠ to
       estateItems: [],
       presumedItems,
       debtItems: [],
+      funeralDeduction: 0,
       priorGifts: [],
       presumedAddedById: addedMap,
       valuatedAmountById: new Map(),

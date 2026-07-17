@@ -61,6 +61,7 @@ function run(corp: Heir) {
     ],
     presumedItems: [],
     debtItems: [],
+    funeralDeduction: 0,
     priorGifts: [],
     presumedAddedById: new Map(),
     valuatedAmountById: new Map([

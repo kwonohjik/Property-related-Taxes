@@ -100,6 +100,38 @@ describe("과세제외·채무 행 분리 (집계표 ㉠ 2행·㉡ 3행)", () =>
     expect(sum("funeralShare")).toBe(15_000_000);
   });
 
+  // ── H-34/M-8: 장례비 인별 안분 = 엔진 총 funeralDeduction 단일진실 (Σ == 총액) ──
+  it("H-34: 레거시 funeralExpense 경로(debtItems 미입력) → 장례비 perHeir 반영 (종전 0)", () => {
+    // funeralExpense 8백만(500만~1천만 내) → 공제 8백만. debtItems 없어 종전 funeralByHeir 공백 버그.
+    const r = calcInheritanceTax(base({ funeralExpense: 8_000_000 }));
+    const perHeir = r.heirAllocationResult!.perHeir;
+    const sumFuneral = Object.values(perHeir).reduce((s, p) => s + (p.funeralShare ?? 0), 0);
+    expect(sumFuneral).toBe(8_000_000); // Σ perHeir == 엔진 공제 총액
+    // 각 상속인 배분 > 0 (법정상속분 3:2)
+    expect(perHeir["h-spouse"].funeralShare).toBeGreaterThan(0);
+    expect(perHeir["h-child"].funeralShare).toBeGreaterThan(0);
+  });
+
+  it("M-8: 식대 500만 미만(300만) → §9②1호 최소 500만 보장 안분 (종전 300만)", () => {
+    const r = calcInheritanceTax(
+      base({
+        debtItems: [
+          { id: "d-meal", name: "장례식대", category: "funeral", amount: 3_000_000, isBongan: false },
+        ],
+      }),
+    );
+    const perHeir = r.heirAllocationResult!.perHeir;
+    const sumFuneral = Object.values(perHeir).reduce((s, p) => s + (p.funeralShare ?? 0), 0);
+    expect(sumFuneral).toBe(5_000_000); // 최소 500만 (종전 Math.min만 → 300만)
+  });
+
+  it("H-34/M-8 불변식: Σ funeralShare == 엔진 funeralDeduction (봉안 포함·한도)", () => {
+    const r = calcInheritanceTax(base({ debtItems: DEBTS })); // 식대 1,200만→1천만 + 봉안 600만→500만 = 1,500만
+    const perHeir = r.heirAllocationResult!.perHeir;
+    const sumFuneral = Object.values(perHeir).reduce((s, p) => s + (p.funeralShare ?? 0), 0);
+    expect(sumFuneral).toBe(15_000_000);
+  });
+
   it("RS-3: 분리 echo 추가가 taxableValueShare 불변 (세액 영향 0)", () => {
     const input = base({ exemptions: EXEMPTIONS, debtItems: DEBTS });
     const r = calcInheritanceTax(input);

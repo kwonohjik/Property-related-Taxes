@@ -307,9 +307,13 @@ describe("자산 협의분할 — 케이스 매트릭스", () => {
     const r = calcInheritanceTax(input);
     const h1 = r.heirAllocationResult!.perHeir["h1"]!;
     const h2 = r.heirAllocationResult!.perHeir["h2"]!;
-    // 채무 7억 법정상속분 분담: 배우자 3/5(4.2억), 자녀 2/5(2.8억)
-    expect(h1.debtShare).toBe(420_000_000);
-    expect(h2.debtShare).toBe(280_000_000);
+    // 채무(financial) 7억 법정상속분 분담: 배우자 3/5(4.2억), 자녀 2/5(2.8억)
+    expect(h1.debtPrincipalShare).toBe(420_000_000);
+    expect(h2.debtPrincipalShare).toBe(280_000_000);
+    // H-34/M-8: funeral 미입력이어도 §9②1호 최소 500만 공제가 per-heir 안분(배우자 3M·자녀 2M).
+    //   debtShare = 순채무 + 공과금 + 장례비 → 배우자 4.2억+3백만, 자녀 2.8억+2백만.
+    expect(h1.debtShare).toBe(423_000_000);
+    expect(h2.debtShare).toBe(282_000_000);
     // usedLegalShareFallback echo true
     expect(r.heirAllocationResult!.usedLegalShareFallback).toBe(true);
   });
