@@ -17,6 +17,11 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
+import {
+  BuildingStdPriceReportSection,
+  hasBuildingStdReport,
+} from "@/components/calc/results/BuildingStdPriceReportSection";
 import {
   MIXED_USE_PRINT_SECTIONS,
   type MixedUsePrintSectionId,
@@ -82,11 +87,13 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   // ⚠️ pdf 채널 0(ResultPdfDocument에 mixed-use 섹션 부재) → onPrintPdf 미전달.
   //    "선택 항목 인쇄"(window.print → 브라우저 PDF 저장)만 노출. 설계 §2.8.
   const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(() => new Set());
-  // 현재 결과뷰에 실제 렌더되는 leaf id (3종 항상 — 본문·신고서·명세서 항상 렌더)
-  const availablePrintIds = useMemo<Set<MixedUsePrintSectionId>>(
-    () => new Set<MixedUsePrintSectionId>(["calculation", "filing-form", "detailed-statement"]),
-    [],
-  );
+  // 현재 결과뷰에 실제 렌더되는 leaf id (본문·신고서·명세서 항상 + 건물 기준시가 계산서는
+  // 소속 스냅샷이 있을 때만 — 단건 TransferTaxResultView와 동일 판정).
+  const availablePrintIds = useMemo<Set<MixedUsePrintSectionId>>(() => {
+    const ids = new Set<MixedUsePrintSectionId>(["calculation", "filing-form", "detailed-statement"]);
+    if (hasBuildingStdReport({ assets: formData?.assets })) ids.add("building-std-report");
+    return ids;
+  }, [formData?.assets]);
 
   if (breakdown.splitMode === "pre-2022-rejected") {
     return (
@@ -476,6 +483,15 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         asset={formData?.assets[0]}
       />
       </PrintSection>
+
+      {/* ── 건물 기준시가 계산서 (PHD 3시점 일괄 스냅샷 소속 시) ── */}
+      {/* 겸용 입력폼 PHD 배치가 bsp-{assetId}-phd-* 스냅샷을 저장 → 여기서 소속 재유도·출력.
+          엔진·스냅샷 생성 무변경, 단건 TransferTaxResultView와 동일 배선(inputData=assets). */}
+      {hasBuildingStdReport({ assets: formData?.assets }) && (
+        <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
+          <BuildingStdPriceReportSection inputData={{ assets: formData?.assets }} />
+        </PrintSection>
+      )}
     </div>
   );
 }
@@ -503,17 +519,24 @@ function CalculationRouteCard({
 }: {
   route: import("@/lib/tax-engine/types/transfer-mixed-use.types").MixedUseCalculationRoute;
 }) {
+  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시.
+  const [open, setOpen] = useState(true);
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-2">
-      <div className="flex items-start justify-between mb-1">
+      <div className="flex items-start justify-between mb-1 gap-2">
         <h4 className="font-semibold text-sm text-blue-900">계산 경로 (학습·검증용)</h4>
-        <span className="text-micro text-blue-700">&quot;왜 이 세액인지&quot; 설명</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-micro text-blue-700">&quot;왜 이 세액인지&quot; 설명</span>
+          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="blue" />
+        </div>
       </div>
-      <MetaRow label="취득시 주택공시가격" value={ACQ_SOURCE_LABEL[route.housingAcqPriceSource]} />
-      <MetaRow label="환산취득가액 경로" value={CONVERSION_ROUTE_LABEL[route.acquisitionConversionRoute]} />
-      <MetaRow label="12억 비과세 적용" value={HIGH_VALUE_LABEL[route.highValueRule]} />
-      <MetaRow label="주택 장기보유공제" value={route.housingDeductionTableReason} />
-      <MetaRow label="부수토지 배율" value={route.landMultiplierReason} />
+      <div className={open ? "block space-y-2" : "hidden print:block print:space-y-2"}>
+        <MetaRow label="취득시 주택공시가격" value={ACQ_SOURCE_LABEL[route.housingAcqPriceSource]} />
+        <MetaRow label="환산취득가액 경로" value={CONVERSION_ROUTE_LABEL[route.acquisitionConversionRoute]} />
+        <MetaRow label="12억 비과세 적용" value={HIGH_VALUE_LABEL[route.highValueRule]} />
+        <MetaRow label="주택 장기보유공제" value={route.housingDeductionTableReason} />
+        <MetaRow label="부수토지 배율" value={route.landMultiplierReason} />
+      </div>
     </div>
   );
 }
@@ -538,13 +561,18 @@ function ResultSection({
   basis: string;
   children: React.ReactNode;
 }) {
+  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시.
+  const [open, setOpen] = useState(true);
   return (
     <div className="rounded-xl border bg-card p-4 space-y-2">
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-2 gap-2">
         <h4 className="font-semibold text-sm">{title}</h4>
-        <span className="text-micro text-muted-foreground text-right max-w-[140px]">{basis}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-micro text-muted-foreground text-right max-w-[140px]">{basis}</span>
+          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="slate" />
+        </div>
       </div>
-      {children}
+      <div className={open ? "block space-y-2" : "hidden print:block print:space-y-2"}>{children}</div>
     </div>
   );
 }
@@ -599,6 +627,8 @@ function PartialUsageChangeCard({
   const isCommToHouse = puc.direction === "commercial_to_house";
   const isPhdCaseA = puc.phdScopeBranch === "case_a_whole_building";
   const isPhdCaseB = puc.phdScopeBranch === "case_b_housing_only";
+  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시. 경고 배지는 헤더에 유지(접힘에도 노출).
+  const [open, setOpen] = useState(true);
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -621,8 +651,10 @@ function PartialUsageChangeCard({
               ⚠ 법령 적용에 보수 검토 필요
             </span>
           )}
+          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="amber" />
         </div>
       </div>
+      <div className={open ? "block space-y-2" : "hidden print:block print:space-y-2"}>
       <p className="text-xs text-amber-800">
         취득시 자산 구성:{" "}
         <span className="font-semibold">
@@ -662,6 +694,7 @@ function PartialUsageChangeCard({
           💡 {reason}
         </p>
       )}
+      </div>
     </div>
   );
 }
@@ -682,6 +715,8 @@ function UsagePeriodSplitCard({
   const fmtDays = (d: number) => `${d.toFixed(0)}일 (${(d / 365.25).toFixed(2)}년)`;
   const period1Label = isHtoC ? "Period 1 (전체 주택)" : "Period 1 (전체 상가)";
   const period1Cat = isHtoC ? "주택분" : "상가분";
+  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시.
+  const [open, setOpen] = useState(true);
 
   return (
     <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
@@ -689,10 +724,14 @@ function UsagePeriodSplitCard({
         <p className="text-sm font-semibold text-violet-900">
           용도변경일 기반 LTHD 분리 계산
         </p>
-        <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-caption font-semibold text-violet-900">
-          집행기준 89-154-24
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-caption font-semibold text-violet-900">
+            집행기준 89-154-24
+          </span>
+          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="violet" />
+        </div>
       </div>
+      <div className={open ? "block space-y-3" : "hidden print:block print:space-y-3"}>
       <p className="text-caption text-violet-800 leading-relaxed">
         용도변경일 입력 시 양도차익을 시간 비례로 분할하여, 각 기간의 보유연수로 장기보유특별공제를 적용합니다.
         주택으로 사용한 기간을 통산하는 집행기준 취지를 반영.
@@ -744,6 +783,7 @@ function UsagePeriodSplitCard({
             </span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

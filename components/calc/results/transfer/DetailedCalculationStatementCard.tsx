@@ -19,7 +19,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
+import { ExpandToggleButton, expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import {
   STATEMENT_GROUPS,
@@ -222,6 +222,8 @@ function EngineStepsSubToggle({ steps }: { steps: import("@/lib/tax-engine/trans
 
 function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[] }) {
   const tone = TONE_CLASSES[group.tone];
+  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시.
+  const [open, setOpen] = useState(true);
   return (
     <section
       className={cn(
@@ -242,8 +244,17 @@ function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[
           §
         </span>
         <h4 className={cn("text-sm font-semibold", tone.text)}>{group.title}</h4>
+        <span className="ml-auto">
+          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone={group.tone} />
+        </span>
       </div>
-      <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+      <div
+        className={cn(
+          "rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800",
+          // 화면: open일 때만. 인쇄: 항상 표시.
+          open ? "block" : "hidden print:block",
+        )}
+      >
         {items.map((item, i) => (
           <ItemRow key={i} item={item} />
         ))}

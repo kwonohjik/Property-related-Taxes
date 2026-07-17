@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import type { MixedUseExpropriationDetail } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { ExprTotalValuationDetail } from "@/lib/tax-engine/transfer-tax-expropriation-valuation";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 
 /**
  * 겸용주택 §164⑨ 1호 공익수용 특례 산출근거 (계획 P7/D8).
@@ -41,21 +45,28 @@ function Part({ title, standardLabel, detail }: { title: string; standardLabel: 
 }
 
 export function MixedUseExpropriationValuationCard({ detail }: { detail: MixedUseExpropriationDetail }) {
+  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시.
+  const [open, setOpen] = useState(true);
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-3 dark:border-amber-900/50 dark:bg-amber-950/20">
-      <div>
-        <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-          겸용주택 수용 양도당시 기준시가 특례 (소득령 §164⑨ 1호)
-        </p>
-        <p className="mt-1 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
-          주택분(개별주택가격)·상가분 토지(개별공시지가)의 양도당시 기준시가를 각각 아래 셋 중 가장 작은
-          총액으로 낮춥니다. 상가 건물분은 적용하지 않으며(시행규칙 §80⑧) 양도가액 안분은 원값을 유지합니다.
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+            겸용주택 수용 양도당시 기준시가 특례 (소득령 §164⑨ 1호)
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+            주택분(개별주택가격)·상가분 토지(개별공시지가)의 양도당시 기준시가를 각각 아래 셋 중 가장 작은
+            총액으로 낮춥니다. 상가 건물분은 적용하지 않으며(시행규칙 §80⑧) 양도가액 안분은 원값을 유지합니다.
+          </p>
+        </div>
+        <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="amber" />
       </div>
-      {detail.housing && <Part title="주택분 (개별주택가격)" standardLabel="개별주택가격 총액" detail={detail.housing} />}
-      {detail.commercialLand && (
-        <Part title="상가분 토지 (개별공시지가)" standardLabel="상가분 토지 기준시가 총액" detail={detail.commercialLand} />
-      )}
+      <div className={open ? "block space-y-3" : "hidden print:block print:space-y-3"}>
+        {detail.housing && <Part title="주택분 (개별주택가격)" standardLabel="개별주택가격 총액" detail={detail.housing} />}
+        {detail.commercialLand && (
+          <Part title="상가분 토지 (개별공시지가)" standardLabel="상가분 토지 기준시가 총액" detail={detail.commercialLand} />
+        )}
+      </div>
     </div>
   );
 }
