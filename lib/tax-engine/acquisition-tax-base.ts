@@ -1,12 +1,13 @@
 /**
  * 취득세 과세표준 결정 모듈
  *
- * 지방세법 §10 ~ §10의5
- * - §10   기본 원칙: 사실상취득가격
- * - §10의2 특수관계인 간 거래
- * - §10의3 시가표준액 적용 특례
- * - §10의4 부담부증여 과세표준
- * - §10의5 연부취득 과세표준
+ * 지방세법 §10 ~ §10의6 (2023 과세표준 개편)
+ * - §10    취득 당시가액 총칙 (사실상취득가격 원칙)
+ * - §10의2 무상취득의 경우 과세표준 (상속=시가표준액·증여=시가인정액, ⑥ 부담부증여 채무부담액→§10의3)
+ * - §10의3 유상승계취득의 경우 과세표준 (사실상취득가격, ② 특수관계인 부당행위계산)
+ * - §10의4 원시취득의 경우 과세표준
+ * - §10의5 무상·유상승계·원시취득 과세표준 특례 (차량·기계장비 등)
+ * - §10의6 취득으로 보는 경우의 과세표준 (간주취득: 지목변경·개수·과점주주)
  *
  * 주의: 지방세법상 취득세 과세표준 절사 규정 없음 — 원 단위로 계산
  */
@@ -32,7 +33,7 @@ function isOnerousCause(cause: string): cause is OnerousCause {
 // ============================================================
 
 /**
- * 취득세 과세표준 결정 (지방세법 §10~§10의5)
+ * 취득세 과세표준 결정 (지방세법 §10~§10의6)
  *
  * 결정 우선순위:
  * 1. 부담부증여 → 유상/무상 분리 계산 (연부취득보다 우선)
@@ -46,12 +47,12 @@ function isOnerousCause(cause: string): cause is OnerousCause {
 export function determineTaxBase(input: AcquisitionTaxInput): TaxBaseResult {
   const warnings: string[] = [];
 
-  // ── 부담부증여 (§10의4) — 연부취득보다 우선 처리 ──
+  // ── 부담부증여 (§10의2⑥ 채무부담액→§10의3 유상승계 / 잔액→§10의2 무상) — 연부취득보다 우선 처리 ──
   if (input.acquisitionCause === "burdened_gift" && input.encumbrance && input.encumbrance > 0) {
     return calcBurdenedGiftTaxBase(input, warnings);
   }
 
-  // ── 연부취득 (§10의5) ──
+  // ── 연부취득 (§10의3 유상승계 준용, 회차별 사실상취득가격) ──
   if (input.installments && input.installments.length > 0) {
     // 비유상취득에 installments 입력된 경우 → 무시하고 일반 흐름으로 진행
     if (!isOnerousCause(input.acquisitionCause)) {
@@ -73,13 +74,15 @@ export function determineTaxBase(input: AcquisitionTaxInput): TaxBaseResult {
   ].includes(input.acquisitionCause);
 
   if (isDeemedAcquisition) {
-    // 간주취득 과세표준은 acquisition-deemed.ts에서 계산된 값을 reportedPrice로 전달
+    // 간주취득 과세표준은 acquisition-deemed.ts에서 계산된 값을 reportedPrice로 전달.
+    // [R3-17] 과세표준 근거는 §10의6(취득으로 보는 경우의 과세표준)이다.
+    //   §7④⑤는 '취득으로 본다'는 납세의무 근거일 뿐 과세표준 근거가 아니다.
     return {
       method: "deemed_difference",
       taxBase: input.reportedPrice,
       rawTaxBase: input.reportedPrice,
       warnings: ["간주취득: 전후 시가표준액 차액을 과세표준으로 사용합니다."],
-      legalBasis: ACQUISITION.DEEMED_ACQUISITION,
+      legalBasis: ACQUISITION.DEEMED_TAX_BASE,
     };
   }
 
@@ -131,7 +134,7 @@ export function determineTaxBase(input: AcquisitionTaxInput): TaxBaseResult {
 }
 
 // ============================================================
-// 연부취득 과세표준 (§10의5)
+// 연부취득 과세표준 (§10의3 유상승계, 회차별)
 // ============================================================
 
 function calcInstallmentTaxBase(
