@@ -53,16 +53,21 @@ function decreaseHigh(input: CapitalDecreaseInput): DeemedGiftResult {
   const { sharePrice } = input;
   const redemptionPrice = input.redemptionPrice ?? 0;
   const ownRedeemedShares = input.ownRedeemedShares ?? 0;
+  const faceValue = input.faceValue;
 
   const diff = redemptionPrice - sharePrice; // 고가: 소각가 > 평가
   const gain = diff > 0 ? safeMultiply(diff, ownRedeemedShares) : 0;
   const threshold = diff >= applyRate(sharePrice, 0.3) ? 0 : ABSOLUTE_THRESHOLD;
-  const applied = gain > 0 && gain >= threshold;
+  // §29의2①2호 한정: 1주당 평가액이 액면가액에 미달하는 경우만 과세.
+  // (고가소각=대가>평가이므로 "대가<액면 시 대가 기준" 단서는 이 구간에서 무영향 — 멀티 경로와 동일 게이트.)
+  const faceGateFail = faceValue == null || sharePrice >= faceValue;
+  const applied = !faceGateFail && gain > 0 && gain >= threshold;
   const value = applied ? gain : 0;
 
   const breakdown: CalculationStep[] = [
     { label: "소각 시 지급한 1주당 금액", amount: redemptionPrice, lawRef: GIFT.CAPITAL_DECREASE },
     { label: "감자주식 1주당 평가액", amount: sharePrice },
+    { label: "1주당 액면가액", amount: faceValue ?? 0, note: "§29의2①2호 — 평가액 < 액면가액 한정" },
     { label: "1주당 차액", amount: diff },
     { label: "해당 주주등 감자 주식수", amount: ownRedeemedShares },
     { label: "증여재산가액 (차액 × 해당 감자주식수)", amount: value, lawRef: GIFT.CAPITAL_DECREASE, note: "§39의2①2호 고가소각" },
@@ -72,7 +77,11 @@ function decreaseHigh(input: CapitalDecreaseInput): DeemedGiftResult {
     applied,
     deemedGiftValue: value,
     breakdown,
-    exclusionReason: applied ? undefined : "이익이 기준금액(3억, 차액 30%↑ 시 0) 미만",
+    exclusionReason: applied
+      ? undefined
+      : faceGateFail
+        ? "고가소각: 평가액이 액면가 이상(§29의2①2호 미충족)"
+        : "이익이 기준금액(3억, 차액 30%↑ 시 0) 미만",
     legalBasis: GIFT.CAPITAL_DECREASE,
     thresholdEcho: { gain, threshold },
   };

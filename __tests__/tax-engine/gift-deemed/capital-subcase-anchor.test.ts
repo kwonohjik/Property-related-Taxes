@@ -19,15 +19,40 @@ describe("§38 합병 — 주식 외 재산 교부 (§28③2)", () => {
 });
 
 describe("§39의2 감자 — 고가소각 (§29의2①2)", () => {
-  it("[CD-H] 소각가 8000 − 평가 3000 = 5000 × 해당 10만주 = 5억 (차액 30%↑ → 기준 0)", () => {
+  it("[CD-H] 소각가 8000 − 평가 3000 = 5000 × 해당 10만주 = 5억 (평가 3000 < 액면 5000, 차액 30%↑ → 기준 0)", () => {
+    const r = calcCapitalDecreaseGift({
+      caseType: "high",
+      sharePrice: 3_000,
+      redemptionPrice: 8_000,
+      ownRedeemedShares: 100_000,
+      faceValue: 5_000, // §29의2①2호 — 평가액 < 액면가 (과세 요건 충족)
+    });
+    expect(r.applied).toBe(true);
+    expect(r.deemedGiftValue).toBe(500_000_000);
+  });
+
+  it("[CD-H-gate] 평가 6000 ≥ 액면 5000 → §29의2①2호 미충족 → 과세 0원 (C-9)", () => {
+    const r = calcCapitalDecreaseGift({
+      caseType: "high",
+      sharePrice: 6_000,
+      redemptionPrice: 11_000, // 고가(소각가 > 평가)이나 평가 6000 ≥ 액면 5000
+      ownRedeemedShares: 100_000,
+      faceValue: 5_000,
+    });
+    expect(r.applied).toBe(false);
+    expect(r.deemedGiftValue).toBe(0);
+    expect(r.exclusionReason).toContain("§29의2①2호");
+  });
+
+  it("[CD-H-noface] 액면가 미입력 → 게이트 실패 → 0원 (배선 누락 방어)", () => {
     const r = calcCapitalDecreaseGift({
       caseType: "high",
       sharePrice: 3_000,
       redemptionPrice: 8_000,
       ownRedeemedShares: 100_000,
     });
-    expect(r.applied).toBe(true);
-    expect(r.deemedGiftValue).toBe(500_000_000);
+    expect(r.applied).toBe(false);
+    expect(r.deemedGiftValue).toBe(0);
   });
 });
 
