@@ -38,6 +38,7 @@ export { evaluateTrustBenefit, evaluatePeriodicPayment };
 // resolve-estate-item-value.ts는 property-valuation.ts를 import하지 않으므로 순환 없음(단방향).
 import {
   computeStockValuation,
+  computeSecuredClaim,
   resolveEstateItemValue,
   resolveUnlistedDisplayMode,
 } from "./valuation/resolve-estate-item-value";
@@ -377,9 +378,8 @@ function applyCollateralFloor(
       }
     }
   }
-  // ㉲ 신용보증 차감 — 저당분(§66 1호)만, 음수 가드 (§63②)
-  const mortgageNet = Math.max(0, (item.mortgageAmount ?? 0) - (item.creditGuaranteeAmount ?? 0));
-  const securedClaim = mortgageNet + (item.leaseDeposit ?? 0);
+  // ㉲ 신용보증 차감 — 저당분(§66 1호)만, 음수 가드 (§63②). computeSecuredClaim 단일 진실.
+  const securedClaim = computeSecuredClaim(item);
   const valuatedAmount = Math.max(baseAmount, securedClaim);
   return { valuatedAmount, securedClaim, raised: valuatedAmount > baseAmount, rentalRaised };
 }

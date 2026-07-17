@@ -31,7 +31,10 @@ import {
   FAMILY_BUSINESS_SCALE_THRESHOLD,
 } from "../types/inheritance-gift.types";
 import { calcCorporateStockAdjustedValue } from "../property-valuation-corporate";
-import { resolveEstateItemValue } from "../valuation/resolve-estate-item-value";
+import {
+  resolveEstateItemValue,
+  computeSecuredClaim,
+} from "../valuation/resolve-estate-item-value";
 
 // 요건 자동판정(Phase 1) — re-export로 import 사이트 단일화 (eligibility-autoderive)
 export {
@@ -248,22 +251,37 @@ export function deriveFamilyBusinessValue(
   if (!estateItems) return 0;
   return estateItems
     .filter((item) => item.familyBusinessCategory !== undefined)
-    .reduce((sum, item) => {
-      const raw = resolveEstateItemValue(item);
-      // §15⑤2호 — 법인주식 + 총자산 입력 시 사업무관자산 차감 (과다현금 자동산정·제외 단서는 deathDate 시기별)
-      if (item.familyBusinessCategory === "corporate_stock" && item.corporateTotalAssets) {
-        return (
-          sum +
-          calcCorporateStockAdjustedValue(
-            raw,
-            item.corporateTotalAssets,
-            item.corporateNonBusinessAssets,
-            deathDate,
-          ).adjustedValue
-        );
-      }
-      return sum + raw;
-    }, 0);
+    .reduce((sum, item) => sum + resolveFamilyBusinessAssetValue(item, deathDate), 0);
+}
+
+/**
+ * 가업상속재산가액 자산별 산정 (상증령 §15⑤) — 엔진·suggest 단일 진실.
+ *
+ * - §15⑤2호 법인가업(corporate_stock + 총자산): 주식가액 × (총자산 − 사업무관자산)/총자산.
+ *   corporateTotalAssets 미입력 = 직접입력 모드(차감 후 가액) → raw.
+ * - §15⑤1호 개인가업(그 외 사업용 자산): 자산가액 − 해당 자산 담보채무(computeSecuredClaim), 음수 0.
+ *   담보채무는 §14로 별도 차감되므로 가업공제 base에서도 차감하지 않으면 이중공제(C-11).
+ * - familyBusinessCategory 미지정: raw (분류 없는 자산은 차감 미적용).
+ */
+export function resolveFamilyBusinessAssetValue(
+  item: EstateItem,
+  deathDate?: string,
+): number {
+  const raw = resolveEstateItemValue(item);
+  if (item.familyBusinessCategory === "corporate_stock") {
+    return item.corporateTotalAssets
+      ? calcCorporateStockAdjustedValue(
+          raw,
+          item.corporateTotalAssets,
+          item.corporateNonBusinessAssets,
+          deathDate,
+        ).adjustedValue
+      : raw;
+  }
+  if (item.familyBusinessCategory !== undefined) {
+    return Math.max(0, raw - computeSecuredClaim(item));
+  }
+  return raw;
 }
 
 /**
