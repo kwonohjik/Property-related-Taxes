@@ -373,16 +373,41 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // ── 부가세 계산 ──
   // [P4-2] 사치성 교육세 매트릭스 분기 — surchargeDecision의 appliedBranch 사용
   const surchargeTypeForEdu = ((): import("./acquisition-tax-rate").AdditionalTaxInput["surchargeType"] => {
+    // [R3-05] 법인 §13②(대도시 5년내)·§13⑥(본점+대도시 중복) 비주택 중과 → §151①1가 본문×300%.
+    //   §13①(본점·공장: headquarters_new_build/factory_*)는 §151①1가 열거 제외 → 본문(0.4%).
+    //   §13② 중과는 corpSurchargeResult에서만 isSurcharged=true가 되므로 여기서 매핑.
+    if (
+      corpSurchargeResult.isSurcharged &&
+      input.propertyType !== "housing" &&
+      (corpSurchargeResult.surchargeType === "metro_corp_5yr" ||
+        corpSurchargeResult.surchargeType === "headquarters_metro_combined")
+    ) {
+      return "section13_gamok";
+    }
     if (!surchargeDecision.isSurcharged) return undefined;
     const branch = (surchargeDecision as { appliedBranch?: string }).appliedBranch;
     if (branch === "luxury_solo") return "luxury_solo";
     if (branch === "luxury_multi") return "luxury_multi";
+    // [R3-05] §13⑦(사치성+대도시법인) 비주택 → 가목 ×300%. 주택 §13⑦은 §11①8 주택이면
+    //   나목이나 본 엔진 luxury_corp 주택은 저빈도·별건 → 현행(본문) 유지.
+    if (branch === "luxury_corp") return input.propertyType !== "housing" ? "section13_gamok" : undefined;
     if (branch === "corp_housing") return "corp_metro";
     if (branch === "multi_house_8") return "multi_house_8";
     if (branch === "multi_house_12") return "multi_house_12";
     if (branch === "gift_12") return "gift_12";
     return undefined;
   })();
+
+  // [P2-5] 자경농지 50% 감면 판정 (지특법 §6①) — R3-09 농특세 §4 10호 비과세 선행 판단.
+  const selfCultivResult = assessSelfCultivationReduction({
+    isSelfCultivatedFarmer: input.isSelfCultivatedFarmer,
+    farmingYears: input.farmingYears,
+    farmlandArea: input.farmlandArea,
+    farmlandLocationDistance: input.farmlandLocationDistance,
+    acquisitionTax,
+    propertyType: effectiveInput.propertyType,
+    acquisitionCause: effectiveInput.acquisitionCause,
+  });
 
   const additional = burdenedAdditional ?? calcTaxWithAdditional(
     taxBase,
@@ -401,7 +426,11 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     }
   );
 
-  const totalTax = acquisitionTax + additional.ruralSpecialTax + additional.localEducationTax;
+  // [R3-09] 농특세법 §4 10호: 지특법 §6① 적용대상 농지·임야 취득세는 농특세 비과세.
+  //   자경농지 감면 요건 충족 시 농특세를 0으로 처리(감면이 아니라 비과세 — totalTax에서 제외).
+  const ruralSpecialTax = selfCultivResult.isEligible ? 0 : additional.ruralSpecialTax;
+
+  const totalTax = acquisitionTax + ruralSpecialTax + additional.localEducationTax;
 
   // ── Step 8: 감면 적용 — 중복배제 패턴 (지방세특례제한법 §180) ──
   // 동일 과세대상·동일 세목(취득세)에 둘 이상 지방세 특례 적용 시 감면되는 세액이 큰 것 1건만.
@@ -432,17 +461,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     });
   }
 
-  // 후보 2: [P2-5] 자경농지 50% 감면 (지특법 §6)
-  const selfCultivResult = assessSelfCultivationReduction({
-    isSelfCultivatedFarmer: input.isSelfCultivatedFarmer,
-    farmingYears: input.farmingYears,
-    farmlandArea: input.farmlandArea,
-    farmlandLocationDistance: input.farmlandLocationDistance,
-    acquisitionTax,
-    propertyType: effectiveInput.propertyType,
-    acquisitionCause: effectiveInput.acquisitionCause,
-  });
-
+  // 후보 2: [P2-5] 자경농지 50% 감면 (지특법 §6) — selfCultivResult는 위에서 선-계산됨.
   if (selfCultivResult.isEligible) {
     reductionCandidates.push({
       amount: selfCultivResult.reductionAmount,
@@ -498,18 +517,37 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
             : ACQUISITION.BASIC_RATE,
     },
   );
-  if (additional.ruralSpecialTax > 0) {
+  if (ruralSpecialTax > 0) {
     steps.push({
       label: "농어촌특별세",
-      formula: `(적용세율 - 표준세율 2%) × 과세표준 × 10% (${ACQUISITION.RURAL_SPECIAL_TAX})`,
-      amount: additional.ruralSpecialTax,
+      formula: `(표준세율 2% + 중과분) × 과세표준 × 10% (${ACQUISITION.RURAL_SPECIAL_TAX})`,
+      amount: ruralSpecialTax,
       legalBasis: ACQUISITION.RURAL_SPECIAL_TAX_RATE_BASIS,
     });
   }
   if (additional.localEducationTax > 0) {
+    // [C-3] 지방교육세 표시 산식을 실제 분기(§151①1)에 맞춰 동적 생성 (하드코딩 0.4% 제거).
+    const eduFormula = (() => {
+      if (surchargeTypeForEdu === "section13_gamok")
+        return "본문 지방교육세액 × 300% (§151①1가: 법인 §13②③⑥⑦ 비주택)";
+      if (
+        surchargeTypeForEdu === "multi_house_8" ||
+        surchargeTypeForEdu === "multi_house_12" ||
+        surchargeTypeForEdu === "gift_12" ||
+        surchargeTypeForEdu === "luxury_multi" ||
+        surchargeTypeForEdu === "corp_metro"
+      )
+        return "과세표준 × (4% − 2%) × 20% = 과세표준 × 0.4% (§151①1나: §13의2)";
+      const isHousingOnerous =
+        input.propertyType === "housing" &&
+        ["purchase", "exchange", "auction", "in_kind_investment"].includes(effectiveInput.acquisitionCause);
+      if (isHousingOnerous)
+        return "취득세 본세(표준세율) × 50% × 20% (§151①1 본문: §11①8 주택)";
+      return "과세표준 × (표준세율 − 2%) × 20% (§151①1 본문)";
+    })();
     steps.push({
       label: "지방교육세",
-      formula: "과세표준 × 표준세율 2% × 20% = 과세표준 × 0.4%",
+      formula: eduFormula,
       amount: additional.localEducationTax,
       legalBasis: ACQUISITION.LOCAL_EDUCATION_TAX,
     });
@@ -524,7 +562,9 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       label: bestReduction.label,
       formula: reductionType === "self_cultivation"
         ? `취득세 본세 × 50% (${ACQUISITION.SELF_CULTIVATION_REDUCTION})`
-        : `취득세 본세 × 100% (한도 ${ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION.toLocaleString()}`,
+        : `취득세 본세 전액 감면 (한도 ${(input.isSmallHouseFirstHome
+            ? ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION_SMALL
+            : ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION).toLocaleString()}원)`,
       amount: -reductionAmount,
       legalBasis: bestReduction.legalBasis,
     });
@@ -589,7 +629,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       : surchargeDecision.surchargeReason,
 
     acquisitionTax,
-    ruralSpecialTax: additional.ruralSpecialTax,
+    ruralSpecialTax,
     localEducationTax: additional.localEducationTax,
     totalTax,
 

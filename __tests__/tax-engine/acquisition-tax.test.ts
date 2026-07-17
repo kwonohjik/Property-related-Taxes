@@ -160,8 +160,8 @@ describe("calcAcquisitionTax — 주택 유상취득", () => {
     const result = calcAcquisitionTax(input);
 
     expect(result.rateType).toBe("linear_interpolation");
-    // BigInt 직접 계산: floor(700M × (700M×2 - 900M) / 30B) = floor(700M × 500M / 30B) = 11,666,666
-    expect(result.acquisitionTax).toBe(11_666_666);
+    // [R3-10] §11①8나 4자리 확정세율: (7억×2−9억)/300억 = 0.016666 → 0.0167. floor(7억×0.0167)=11,690,000
+    expect(result.acquisitionTax).toBe(11_690_000);
     expect(result.isSurcharged).toBe(false);
   });
 
