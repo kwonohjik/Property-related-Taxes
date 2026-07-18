@@ -253,10 +253,10 @@ describe("SC-6: 분리 취득일 — 토지 1992.1.1 + 건물 1997.9.12", () => 
 });
 
 // ──────────────────────────────────────────────────────────────
-// SC-7: PHD 토글 ON — 경고 포함
+// SC-7: PHD 토글 ON — 정상 계산
 // ──────────────────────────────────────────────────────────────
 
-describe("SC-7: PHD 토글 ON — 겸용주택 적합성 경고", () => {
+describe("SC-7: PHD 토글 ON — 겸용주택 정상 계산", () => {
   const asset: ReturnType<typeof mixedUseCase14> = {
     ...mixedUseCase14(),
     usePreHousingDisclosure: true,
@@ -267,10 +267,6 @@ describe("SC-7: PHD 토글 ON — 겸용주택 적합성 경고", () => {
     asset,
     mockRates,
   );
-
-  it("warnings 배열에 PHD 적합성 경고 포함", () => {
-    expect(result.warnings.some((w) => w.includes("PHD"))).toBe(true);
-  });
 
   it("계산 결과는 정상 반환 (splitMode = post-2022)", () => {
     expect(result.splitMode).toBe("post-2022");

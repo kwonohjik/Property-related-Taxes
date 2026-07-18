@@ -77,6 +77,28 @@ export function DetailedCalculationStatementCard({
     acquisitionDateOverride,
   );
 
+  // 렌더 대상 그룹만 추출 (빈 그룹 제외).
+  const visibleGroups = STATEMENT_GROUPS.map((group) => ({
+    group,
+    groupItems: group.itemKeys
+      .map((key) => items.get(key))
+      .filter((it): it is StatementItem => !!it),
+  })).filter(({ groupItems }) => groupItems.length > 0);
+
+  // 그룹별 펼침 상태 — 기본 전체 펼침(기존 동작 유지). 헤더의 전체 토글로 일괄 제어.
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(STATEMENT_GROUPS.map((g) => [g.id, true])),
+  );
+  const allOpen = visibleGroups.every(({ group }) => openMap[group.id]);
+  const setAllGroups = (value: boolean) =>
+    setOpenMap((prev) => {
+      const next = { ...prev };
+      for (const { group } of visibleGroups) next[group.id] = value;
+      return next;
+    });
+  const toggleGroup = (id: string) =>
+    setOpenMap((prev) => ({ ...prev, [id]: !prev[id] }));
+
   return (
     <div
       data-print-section="detailed-statement"
@@ -93,15 +115,27 @@ export function DetailedCalculationStatementCard({
               신고서 양식 32 항목별 산식·변수값·법령 근거. 다건 모드는 자산별 펼침으로 검증.
             </p>
           </div>
-          {onPrint && (
-            <button
-              type="button"
-              onClick={onPrint}
-              className="print:hidden shrink-0 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium hover:bg-slate-200 transition-colors text-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-            >
-              🖨️ PDF
-            </button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {visibleGroups.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setAllGroups(!allOpen)}
+                aria-expanded={allOpen}
+                className={expandToggleClass("slate")}
+              >
+                {allOpen ? "▲ 전체 접기" : "▼ 전체 펼치기"}
+              </button>
+            )}
+            {onPrint && (
+              <button
+                type="button"
+                onClick={onPrint}
+                className="print:hidden rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium hover:bg-slate-200 transition-colors text-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                🖨️ PDF
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -129,13 +163,15 @@ export function DetailedCalculationStatementCard({
 
       {/* 그룹 섹션 — 빈 그룹은 자동 미렌더 (단건 모드 다건 합산 그룹 등) */}
       <div className="p-4 space-y-3">
-        {STATEMENT_GROUPS.map((group) => {
-          const groupItems = group.itemKeys
-            .map((key) => items.get(key))
-            .filter((it): it is StatementItem => !!it);
-          if (groupItems.length === 0) return null;
-          return <GroupSection key={group.id} group={group} items={groupItems} />;
-        })}
+        {visibleGroups.map(({ group, groupItems }) => (
+          <GroupSection
+            key={group.id}
+            group={group}
+            items={groupItems}
+            open={openMap[group.id]}
+            onToggle={() => toggleGroup(group.id)}
+          />
+        ))}
 
         {/* 전체 엔진 계산 과정 — 서브 토글 (이전 'TransferTaxResultView 계산 과정 상세 보기' 통합) */}
         <EngineStepsSubToggle steps={result.steps} />
@@ -220,10 +256,19 @@ function EngineStepsSubToggle({ steps }: { steps: import("@/lib/tax-engine/trans
 
 // ── 그룹 섹션 ──────────────────────────────────────────────────────
 
-function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[] }) {
+function GroupSection({
+  group,
+  items,
+  open,
+  onToggle,
+}: {
+  group: GroupDef;
+  items: StatementItem[];
+  open: boolean;
+  onToggle: () => void;
+}) {
   const tone = TONE_CLASSES[group.tone];
-  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시.
-  const [open, setOpen] = useState(true);
+  // 펼침 상태는 부모가 관리 (헤더의 전체 토글로 일괄 제어) — 인쇄 시 print-only-css-toggle로 항상 표시.
   return (
     <section
       className={cn(
@@ -245,7 +290,7 @@ function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[
         </span>
         <h4 className={cn("text-sm font-semibold", tone.text)}>{group.title}</h4>
         <span className="ml-auto">
-          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone={group.tone} />
+          <ExpandToggleButton open={open} onClick={onToggle} tone={group.tone} />
         </span>
       </div>
       <div
