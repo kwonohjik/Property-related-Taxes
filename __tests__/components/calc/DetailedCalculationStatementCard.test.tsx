@@ -5,8 +5,11 @@
  * 엔진 결과는 minimal fixture로 모킹 (실제 엔진 회귀는 양도세 anchor 테스트 담당).
  */
 
-import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+
+// 이 프로젝트 setup.ts에는 RTL 자동 cleanup이 없다 → 테스트 간 DOM 누적 방지를 위해 수동 등록.
+afterEach(cleanup);
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -244,6 +247,36 @@ describe("DetailedCalculationStatementCard — 단건 모드", () => {
     fireEvent.click(collapseButtons[0]);
     expect(screen.getAllByText("▼ 펼치기").length).toBe(expandBefore + 1);
     expect(screen.getAllByText("▲ 접기").length).toBe(collapseButtons.length - 1);
+  });
+
+  it("T-11: 헤더 전체 토글 — 한 번에 모든 단계 접기/펼치기", () => {
+    const result = makeMinimalResult();
+    const asset = makeMinimalAsset();
+    const formData = makeMinimalFormData(asset);
+
+    render(
+      <DetailedCalculationStatementCard
+        result={result}
+        formData={formData}
+        asset={asset}
+        transferPriceOverride={330_000_000}
+      />,
+    );
+
+    // 기본 전체 펼침 → 헤더는 "▲ 전체 접기", 개별 그룹은 "▲ 접기" 다수.
+    const groupCount = screen.getAllByText("▲ 접기").length;
+    expect(groupCount).toBeGreaterThan(0);
+    const collapseAll = screen.getByText("▲ 전체 접기");
+
+    // 전체 접기 클릭 → 개별 그룹 "▲ 접기" 0개 + 헤더는 "▼ 전체 펼치기"로 전환.
+    fireEvent.click(collapseAll);
+    expect(screen.queryAllByText("▲ 접기").length).toBe(0);
+    const expandAll = screen.getByText("▼ 전체 펼치기");
+
+    // 전체 펼치기 클릭 → 모든 그룹 "▲ 접기" 복귀 + 헤더는 "▲ 전체 접기"로 전환.
+    fireEvent.click(expandAll);
+    expect(screen.getAllByText("▲ 접기").length).toBe(groupCount);
+    expect(screen.getByText("▲ 전체 접기")).toBeInTheDocument();
   });
 });
 

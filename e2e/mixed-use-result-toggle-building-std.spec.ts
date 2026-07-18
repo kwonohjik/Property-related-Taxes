@@ -111,7 +111,7 @@ test.describe("겸용주택 결과뷰 — 세션 토글 + 건물 기준시가 �
     const calc = page.locator('[data-print-id="calculation"]');
     await expect(calc).toBeVisible();
 
-    // 기본 펼침 → "▲ 접기" 버튼 다수(①②③·합산·계산경로), 첫 카드(① 양도가액 안분) 본문 표시
+    // 기본 펼침 → "▲ 접기" 버튼 다수(①②③·합산), 첫 카드(① 양도가액 안분) 본문 표시
     const collapseButtons = calc.getByRole("button", { name: "▲ 접기" });
     expect(await collapseButtons.count()).toBeGreaterThan(0);
     await expect(calc.getByText("양도시 개별주택공시가격").first()).toBeVisible();
@@ -120,6 +120,28 @@ test.describe("겸용주택 결과뷰 — 세션 토글 + 건물 기준시가 �
     await collapseButtons.first().click();
     await expect(calc.getByText("양도시 개별주택공시가격").first()).toBeHidden();
     await expect(calc.getByRole("button", { name: "▼ 펼치기" }).first()).toBeVisible();
+  });
+
+  test("A4: 계산 카드 상단 전체 토글 — 모든 세션 일괄 접기/펼치기", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndCalc(page);
+
+    const calc = page.locator('[data-print-id="calculation"]');
+    await expect(calc).toBeVisible();
+
+    // 기본 전체 펼침 → "▲ 전체 접기" 버튼 + 첫 세션 본문 표시
+    const collapseAll = calc.getByRole("button", { name: "▲ 전체 접기" });
+    await expect(collapseAll).toBeVisible();
+    await expect(calc.getByText("양도시 개별주택공시가격").first()).toBeVisible();
+
+    // 전체 접기 → 모든 세션 본문 숨김 + 개별 "▲ 접기" 0개
+    await collapseAll.click();
+    await expect(calc.getByText("양도시 개별주택공시가격").first()).toBeHidden();
+    await expect(calc.getByRole("button", { name: "▲ 접기" })).toHaveCount(0);
+
+    // 전체 펼치기 → 본문 복원
+    await calc.getByRole("button", { name: "▼ 전체 펼치기" }).click();
+    await expect(calc.getByText("양도시 개별주택공시가격").first()).toBeVisible();
   });
 
   test("A2: 신고서 양식 세션은 토글이 없다(항상 펼침)", async ({ page }) => {

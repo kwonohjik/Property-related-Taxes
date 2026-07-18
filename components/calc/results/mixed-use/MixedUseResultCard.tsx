@@ -17,7 +17,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
-import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
+import { ExpandToggleButton, expandToggleClass } from "@/components/calc/results/shared/ExpandToggleButton";
 import {
   BuildingStdPriceReportSection,
   hasBuildingStdReport,
@@ -77,6 +77,9 @@ function deriveBasicRateBracket(taxBase: number): { rate: number; deduction: num
   return { rate: 0.45, deduction: 65_940_000 };
 }
 
+/** 계산 섹션 id — ④ 비사업용토지는 조건부 렌더 */
+const MIXED_SECTION_IDS = ["apportion", "housing", "commercial", "nbl", "total"] as const;
+
 interface Props {
   breakdown: MixedUseGainBreakdown;
   formData?: TransferFormData;
@@ -87,6 +90,10 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   // ⚠️ pdf 채널 0(ResultPdfDocument에 mixed-use 섹션 부재) → onPrintPdf 미전달.
   //    "선택 항목 인쇄"(window.print → 브라우저 PDF 저장)만 노출. 설계 §2.8.
   const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(() => new Set());
+  // 계산 섹션(①~④·합산)의 펼침 상태 — 상단 전체 토글로 일괄 제어. 기본 전체 펼침.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(MIXED_SECTION_IDS.map((id) => [id, true])),
+  );
   // 현재 결과뷰에 실제 렌더되는 leaf id (본문·신고서·명세서 항상 + 건물 기준시가 계산서는
   // 소속 스냅샷이 있을 때만 — 단건 TransferTaxResultView와 동일 판정).
   const availablePrintIds = useMemo<Set<MixedUsePrintSectionId>>(() => {
@@ -108,6 +115,18 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
 
   const { apportionment: a, housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t } = breakdown;
   const totalTransfer = a.housingTransferPrice + a.commercialTransferPrice;
+
+  // 실제 렌더되는 섹션만 전체 토글 대상 (nbl은 nb 있을 때만).
+  const renderedSectionIds = MIXED_SECTION_IDS.filter((id) => id !== "nbl" || !!nb);
+  const allSectionsOpen = renderedSectionIds.every((id) => openSections[id]);
+  const setAllSections = (value: boolean) =>
+    setOpenSections((prev) => {
+      const next = { ...prev };
+      for (const id of renderedSectionIds) next[id] = value;
+      return next;
+    });
+  const toggleSection = (id: string) =>
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <div className="space-y-4">
@@ -201,8 +220,25 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         </span>
       </div>
 
+      {/* 계산 섹션 전체 접기/펼치기 */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setAllSections(!allSectionsOpen)}
+          aria-expanded={allSectionsOpen}
+          className={expandToggleClass("slate")}
+        >
+          {allSectionsOpen ? "▲ 전체 접기" : "▼ 전체 펼치기"}
+        </button>
+      </div>
+
       {/* 1. 양도가액 안분 */}
-      <ResultSection title="① 양도가액 안분" basis="소득세법 §99 + 시행령 §164">
+      <ResultSection
+        title="① 양도가액 안분"
+        basis="소득세법 §99 + 시행령 §164"
+        open={openSections.apportion}
+        onToggle={() => toggleSection("apportion")}
+      >
         <Row
           label="양도시 개별주택공시가격"
           value={fmt(a.housingStandardPrice)}
@@ -234,7 +270,12 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       </ResultSection>
 
       {/* 2. 주택부분 */}
-      <ResultSection title="② 주택부분" basis="소득세법 §89 ① 3호 단서 + §95 ②">
+      <ResultSection
+        title="② 주택부분"
+        basis="소득세법 §89 ① 3호 단서 + §95 ②"
+        open={openSections.housing}
+        onToggle={() => toggleSection("housing")}
+      >
         <Row
           label="주택 환산취득가액"
           value={fmt(h.estimatedAcquisitionPrice)}
@@ -328,7 +369,12 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       </ResultSection>
 
       {/* 3. 상가부분 */}
-      <ResultSection title="③ 상가부분" basis="소득세법 §95 ② 표1">
+      <ResultSection
+        title="③ 상가부분"
+        basis="소득세법 §95 ② 표1"
+        open={openSections.commercial}
+        onToggle={() => toggleSection("commercial")}
+      >
         <Row
           label="취득시 상가부분 기준시가 합계"
           value={fmt(c.acqStandardTotal)}
@@ -374,7 +420,12 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
 
       {/* 4. 비사업용토지 (조건부) */}
       {nb && (
-        <ResultSection title="④ 비사업용토지 (주택부수토지 배율초과)" basis="시행령 §168의12 + §104의3">
+        <ResultSection
+          title="④ 비사업용토지 (주택부수토지 배율초과)"
+          basis="시행령 §168의12 + §104의3"
+          open={openSections.nbl}
+          onToggle={() => toggleSection("nbl")}
+        >
           <Row
             label={`적용 배율`}
             value={`${nb.appliedMultiplier}배`}
@@ -406,7 +457,12 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       )}
 
       {/* 합산 세액 */}
-      <ResultSection title="합산 세액" basis="소득세법 §92~§107">
+      <ResultSection
+        title="합산 세액"
+        basis="소득세법 §92~§107"
+        open={openSections.total}
+        onToggle={() => toggleSection("total")}
+      >
         <Row
           label="합산 양도소득금액"
           value={fmt(t.aggregateIncome)}
@@ -469,9 +525,6 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula="양도소득세 + 지방소득세"
         />
       </ResultSection>
-
-      {/* 계산 경로 메타 (학습·검증용) */}
-      <CalculationRouteCard route={breakdown.calculationRoute} />
       </PrintSection>
 
       {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}
@@ -496,80 +549,29 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   );
 }
 
-// ── 계산 경로 메타 카드 (학습·검증용 — "왜 이 세액인지" 설명) ──
-
-const ACQ_SOURCE_LABEL: Record<string, string> = {
-  direct_input: "직접 입력",
-  phd_auto: "최초공시 기준 역산 (시행령 §164⑤)",
-  missing: "미입력 (환산 불가)",
-};
-
-const CONVERSION_ROUTE_LABEL: Record<string, string> = {
-  section97_direct: "§97 직접 환산 (양도가액 × 취득시 기준시가 / 양도시 기준시가)",
-  phd_corrected: "최초공시 기준 역산 후 §97 환산 (취득 당시 개별주택가격 미공시)",
-};
-
-const HIGH_VALUE_LABEL: Record<string, string> = {
-  below_threshold_exempt: "주택 양도가액 ≤ 12억 → 전액 비과세",
-  above_threshold_prorated: "주택 양도가액 > 12억 → 안분 과세 (§89 ① 3호 단서)",
-};
-
-function CalculationRouteCard({
-  route,
-}: {
-  route: import("@/lib/tax-engine/types/transfer-mixed-use.types").MixedUseCalculationRoute;
-}) {
-  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시.
-  const [open, setOpen] = useState(true);
-  return (
-    <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-2">
-      <div className="flex items-start justify-between mb-1 gap-2">
-        <h4 className="font-semibold text-sm text-blue-900">계산 경로 (학습·검증용)</h4>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-micro text-blue-700">&quot;왜 이 세액인지&quot; 설명</span>
-          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="blue" />
-        </div>
-      </div>
-      <div className={open ? "block space-y-2" : "hidden print:block print:space-y-2"}>
-        <MetaRow label="취득시 주택공시가격" value={ACQ_SOURCE_LABEL[route.housingAcqPriceSource]} />
-        <MetaRow label="환산취득가액 경로" value={CONVERSION_ROUTE_LABEL[route.acquisitionConversionRoute]} />
-        <MetaRow label="12억 비과세 적용" value={HIGH_VALUE_LABEL[route.highValueRule]} />
-        <MetaRow label="주택 장기보유공제" value={route.housingDeductionTableReason} />
-        <MetaRow label="부수토지 배율" value={route.landMultiplierReason} />
-      </div>
-    </div>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between items-start gap-2 text-xs">
-      <span className="text-blue-800 font-medium whitespace-nowrap">{label}</span>
-      <span className="text-blue-900 text-right">{value}</span>
-    </div>
-  );
-}
-
 // ── 공용 서브 컴포넌트 ──
 
 function ResultSection({
   title,
   basis,
   children,
+  open,
+  onToggle,
 }: {
   title: string;
   basis: string;
   children: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
 }) {
-  // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시.
-  const [open, setOpen] = useState(true);
+  // 펼침 상태는 부모가 관리 (상단 전체 토글로 일괄 제어) — 인쇄 시 print-only-css-toggle로 항상 표시.
   return (
     <div className="rounded-xl border bg-card p-4 space-y-2">
       <div className="flex items-start justify-between mb-2 gap-2">
         <h4 className="font-semibold text-sm">{title}</h4>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-micro text-muted-foreground text-right max-w-[140px]">{basis}</span>
-          <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="slate" />
+          <ExpandToggleButton open={open} onClick={onToggle} tone="slate" />
         </div>
       </div>
       <div className={open ? "block space-y-2" : "hidden print:block print:space-y-2"}>{children}</div>

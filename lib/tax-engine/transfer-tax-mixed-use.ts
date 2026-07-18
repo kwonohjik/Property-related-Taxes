@@ -336,11 +336,6 @@ function buildPartialUsageChangeReason(
 
 function collectWarnings(asset: MixedUseAssetInput): string[] {
   const warnings: string[] = [];
-  if (asset.usePreHousingDisclosure) {
-    warnings.push(
-      "겸용주택의 PHD 3-시점 환산 적합성은 사례별 검토가 필요합니다. 이미지5 사례는 단순 §97 환산 사용.",
-    );
-  }
   if (asset.isMetropolitanArea === undefined) {
     warnings.push(
       "수도권 여부 미입력 — 수도권(3배 배율)으로 보수 처리됩니다. 정확한 계산을 위해 수도권 여부를 입력하세요.",
