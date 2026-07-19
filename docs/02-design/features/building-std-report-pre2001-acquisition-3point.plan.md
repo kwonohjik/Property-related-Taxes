@@ -85,8 +85,21 @@ BuildingStdPriceFormState {
 ### 3-6. 상가·복합 (Phase 2) — ✅ 완료 (2026-07-19)
 - **상가 단일 (Case A)**: `phd-batch-snapshots.ts` `add()`에서 `category==="housing"` 조건 제거 → 상가 Case A(취득 구조·용도 지정) 취득<2001도 `buildTransferAcqSnapshot`로 스냅샷 생성. 엔진 단일 경로(Phase 1 G1)가 이미 acqBaseConversion 노출.
 - **복합 (다부분)**: `phd-building-std-batch.ts` `acqBaseStdPrice` 복합 확장(단일부분=`acquisition.standardPrice` / 다부분=`compositeParts` 위임 후 **`acqBaseConversion.convertedTotal`** — 복합 `acquisitionComposite.total`은 산정기준율 적용 前이므로 부적합) + `phd-batch-snapshots.ts` `buildTransferAcqCompositeSnapshot`(각 part `acqUsageNo=usageNo` 필수) + `add()` 단일/복합 분기.
-- **제약(명시)**: 부분별 산정기준율 **그룹 상이** 복합은 엔진(`building-standard-price.ts:200-202`) throw → `computeCategory` unsupported·재유도 try/catch 침묵(단일 그룹만 유효). 최초공시/양도<2001은 여전히 생략(취득 시점만 acqBase).
+- 최초공시/양도<2001은 여전히 생략(취득 시점만 acqBase).
 - anchor: 상가 Case A 스냅샷 + 복합 라운드트립 등가(배치 산출=재유도 convertedTotal) + A3 갱신(복합 취득<2001 산출).
+
+### 3-7. 부분별 산정기준율 그룹 상이 복합 (Phase 3) — ✅ 완료 (2026-07-19)
+`building-standard-price.ts` `calcTransferComposite` 취득≤2000 분기 확장:
+- **단일 그룹**: 기존 `floor(base2001.total × rate)` 유지(회귀 0).
+- **다그룹**(예: rc=I·brick=II): 각 부분 `base2001.breakdowns[i].standardPrice × 부분 그룹 rate`를 floor 후 합산. `acqBaseConversion.acqBaseRate=undefined` → 계산서 ※표 "부분별" 표기(`ReportSection6Total`의 `acq.rate ?? "부분별"` fallback 활용).
+- **제약**: 부속시설 혼재(breakdowns 인터리브 → 부분 1:1 귀속 불가) + 다그룹은 미지원(명시적 throw). 배치 스냅샷은 부속 없어 항상 1:1 → 배치 경로는 완전 지원.
+- anchor: 엔진 다그룹(rc 45,120,000×1.019 + brick 26,480,000×1.032 = 73,304,639, rate undefined) + 배치 라운드트립 등가. 회귀 271/271.
+- 근거: 산정기준율은 (구조군, 신축, 취득연도)별 데이터(`acq-base-rate.ts`) — 부분 구조 상이 시 각 그룹 rate 적용은 그 체계의 자연 확장. 기존 "동일 구조 입력" 제약은 구현 편의였음.
+
+### 3-8. gb/cb 2시점 스냅샷 중복 제거 (부수 발견) — ✅ 완료 (2026-07-19)
+G1으로 일반 양도(2시점, 비-PHD) gb/cb 자산도 취득<2001이면 acq2000 ※표가 출력됨(부수효과, 이미 master). 그러나 gb/cb는 `-gb-acq`(취득분)·`-gb-transfer`(양도분) **2스냅샷**을 저장하고 각 스냅샷이 transfer 2시점 모드라 재유도 시 양도+취득 2인스턴스 → **취득·양도 계산서 각 2벌 중복**(취득 연도 무관 기존 구조 문제).
+- 수정: `BuildingStdPriceReportSection.tsx` 필터를 시점 전용 키로 확장 — 취득 전용(`phd-acq`·`gb-acq`·`cb-acq`)은 취득 인스턴스만, 양도 전용(`gb-transfer`·`cb-transfer`)은 양도 인스턴스만. 취득1+양도1로 정리.
+- anchor: gb 2스냅샷 → report 2벌·acq2000 ○ 1개·transfer ○ 1개·※표 1개(중복 0).
 
 ## 4. 케이스 매트릭스 (Phase 1 = 주택분)
 
