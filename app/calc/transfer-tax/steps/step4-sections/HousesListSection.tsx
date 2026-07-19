@@ -284,6 +284,7 @@ export function HousesListSection({
       isUnsoldNewHouse: false,
       completionDate: "",
       isSpouseOwned: false,
+      isCoInherited: false,
     };
     onChange({ houses: [...houses, newHouse] });
     // 추가 즉시 편집 모달 오픈

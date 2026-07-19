@@ -94,6 +94,10 @@ export interface HouseEntry {
   isSpouseOwned?: boolean;
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
+  /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */
+  isCoInherited?: boolean;
+  /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=산입, false·미제공=소수지분 제외후보) */
+  isLargestCoInheritedShareholder?: boolean;
   /**
    * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
    * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.
