@@ -139,8 +139,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">보유 기간과 과세 상황을 입력하세요.</p>
-
       {/* 조정대상지역 자동 판별 안내 */}
       {isHousingLike(primaryKind) && primaryAddress && (
         <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 text-xs space-y-1">
