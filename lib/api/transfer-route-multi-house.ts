@@ -41,6 +41,9 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     completionDate: toOptionalDate(h.completionDate),
     isSpouseOwned: h.isSpouseOwned,
     inheritedDate: toOptionalDate(h.inheritedDate),
+    // §155③ 공동상속 (2-A2) — boolean pass-through
+    isCoInherited: h.isCoInherited,
+    isLargestCoInheritedShareholder: h.isLargestCoInheritedShareholder,
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),
     businessRegistrationDate: toOptionalDate(h.businessRegistrationDate),

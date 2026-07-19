@@ -325,6 +325,9 @@ export const houseSchema = z.object({
   isSpouseOwned: z.boolean().optional(),
   // 상속 5년 배제 기산 (소령 §167의3①7호)
   inheritedDate: z.string().date().optional(),
+  // §155③ 공동상속 (2-A2)
+  isCoInherited: z.boolean().optional(),
+  isLargestCoInheritedShareholder: z.boolean().optional(),
   // 장기임대 legacy 등록 경로 (등록사업자 + 등록일 2종 + 임대기간 5년↑)
   isRegisteredRental: z.boolean().optional(),
   rentalRegistrationDate: z.string().date().optional(),

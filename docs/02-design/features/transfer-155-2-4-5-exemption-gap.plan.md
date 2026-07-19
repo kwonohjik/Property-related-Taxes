@@ -128,5 +128,6 @@
 - **Tier 2 별도 `.ui.design.md` 필수**: 양도 대상(상속주택/일반주택) 선택 위젯 + 순위 입력(피상속인 2주택↑ 선택 시 조건부 노출·점진 공개)은 다주택 폼 수준 복잡도 → UI 설계 문서 분리.
 - **취득세 house-count 모듈 재사용 불가**(지방세 §28의4 vs 소령 §155②③ 조문 상이) — 양도세 전용 상속주택 판정 신설.
 - **[Tier 2-A1 완료·code-review] 2채+ 상속주택 보류**: 상속주택 2채+(피상속인 2주택)는 `inheritedCount<=1` 캡으로 자동 경감 보류(과세) — 무근거 과다 비과세 방지. 2-A2에서 순위(§155②1~4호) 선순위 1채 확정.
+- **[Tier 2-A2 완료·LEAN] §155③ 공동상속만 구현**: 엔진 분석상 §155②1~4호 순위는 2-A2(일반주택 양도) **세액 무영향**(제외수 항상 0~1, 순위는 식별·2-B용) → 순위 3필드·알고리즘·동거봉양 단서는 **Tier 2-B로 이월**. 구현분: `isCoInherited`·`isLargestCoInheritedShareholder` 2필드 + 헬퍼 `transfer-inheritance-exclusion.ts`(단독 §155²·공동소수지분 §155³ 풀 분리, 각 최대 1채·2채↑는 보수적 0=세액동일). 세액 효과: **공동상속 최대지분자 과다비과세 수정(비과세→과세, §155③ 단서) + 단독1+공동소수1 복수풀 제외(과세→비과세)**. 설계: `transfer-155-2a2-inheritance-ranking.{engine,ui}.design.md`(§구현 스코프 결정).
 - **[선존재 결함·별도 과제] 중과 한시배제기간 중 비과세 입력 차단**: 배제기간(2022-05-10~2026-05-09)+보유2년 시 Step4 ④(houses 목록·§155② 토글)가 `!surchargeSuspended`로 숨겨져 §155②·감면주택 비과세 입력 불가(전액 비과세가 더 유리한데 미발동). 기존 `SpecialHouseExclusionSection`과 공유하는 구조 결함(신규 아님)·배제기간 종료로 과거 신고분만 영향.
 - **[Low] 다건 §155② 게이트 미플럼**: `multi-transfer-tax-api.ts`가 `generalHouseGiftedFromDecedentWithin2yr` 미조립 — 다건 상속주택 시 게이트 항상 false. 후속.

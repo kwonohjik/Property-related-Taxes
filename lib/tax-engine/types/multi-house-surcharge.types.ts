@@ -61,6 +61,17 @@ export interface HouseInfo {
   isInherited: boolean;
   /** 상속개시일 (isInherited === true 시 필수) */
   inheritedDate?: Date;
+  /**
+   * 공동상속주택(여럿이 지분으로 공동소유하는 1주택) 여부 — 소득세법 시행령 §155③ (2-A2).
+   * isInherited === true 인 주택에서만 의미(UI가 isInherited ON 시에만 노출).
+   */
+  isCoInherited?: boolean;
+  /**
+   * 공동상속주택 중 상속지분이 최대인 상속인인지 — §155③ 단서.
+   * true = 산입(주택수 포함, 제외 대상 아님) / false·미제공 = 소수지분(제외 후보).
+   * ⚠️ 자기선언 boolean — 엔진은 다른 공동상속인의 지분을 알 수 없음.
+   */
+  isLargestCoInheritedShareholder?: boolean;
   // ── 장기임대 관련 ──
   /** 장기임대사업자 등록주택 여부 (true + rentalType 없으면 legacy 판정) */
   isLongTermRental: boolean;

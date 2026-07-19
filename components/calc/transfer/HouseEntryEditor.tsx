@@ -184,8 +184,13 @@ function InheritanceSection({ house, onUpdate }: Props) {
         tone="amber"
         checked={house.isInherited}
         onCheckedChange={(v) => {
-          // 상속 OFF 시 상속개시일 초기화 (onChange 직접 set — useEffect 미러링 금지)
-          onUpdate({ isInherited: v, inheritedDate: v ? house.inheritedDate : undefined });
+          // 상속 OFF 시 하위 필드 초기화 (onChange 직접 set — useEffect 미러링 금지)
+          onUpdate({
+            isInherited: v,
+            inheritedDate: v ? house.inheritedDate : undefined,
+            isCoInherited: v ? house.isCoInherited : undefined,
+            isLargestCoInheritedShareholder: v ? house.isLargestCoInheritedShareholder : undefined,
+          });
         }}
         title="상속주택"
         description="피상속인으로부터 상속받은 주택 (소령 §167의3①7호 — 상속개시일로부터 5년 이내 주택 수 배제)"
@@ -200,6 +205,40 @@ function InheritanceSection({ house, onUpdate }: Props) {
           <p className="text-caption text-muted-foreground/70">
             상속 후 5년 이내이면 주택 수 산정에서 자동 배제됩니다.
           </p>
+        </div>
+
+        {/* §155③ 공동상속주택 (2-A2) — 일반주택 양도 시 소수지분은 주택 수 제외 */}
+        <div className="pt-2">
+          <ToggleCard
+            variant="card"
+            tone="amber"
+            checked={house.isCoInherited ?? false}
+            onCheckedChange={(v) =>
+              onUpdate({
+                isCoInherited: v,
+                isLargestCoInheritedShareholder: v
+                  ? house.isLargestCoInheritedShareholder
+                  : undefined,
+              })
+            }
+            title="공동상속주택"
+            description="상속인이 2인 이상 공동으로 상속받은 주택인 경우 (소령 §155③)"
+          >
+            <div className="space-y-1 pt-1">
+              <ToggleCard
+                variant="chip"
+                tone="amber"
+                checked={house.isLargestCoInheritedShareholder ?? false}
+                onCheckedChange={(v) => onUpdate({ isLargestCoInheritedShareholder: v })}
+                title="본인이 최대지분 상속인"
+                description="지분이 가장 큰 상속인만 해당 주택 소유로 봅니다. 지분이 같으면 그 주택 거주자, 그다음 최연장자. (§155③ 단서)"
+              />
+              <p className="text-caption text-muted-foreground/70">
+                최대지분 상속인이면 주택 수에 산입되고, 소수지분이면 일반주택 양도 시 주택 수에서
+                제외됩니다.
+              </p>
+            </div>
+          </ToggleCard>
         </div>
       </ToggleCard>
     </ToneCard>

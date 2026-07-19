@@ -72,6 +72,10 @@ export function buildHousesPayload(
       isSpouseOwned: h.isSpouseOwned,
       // 상속 5년 배제 — isInherited=true 일 때만 기산일 전달
       inheritedDate: h.isInherited ? h.inheritedDate || undefined : undefined,
+      // §155③ 공동상속 (2-A2) — isInherited=true 일 때만 전달
+      isCoInherited: h.isInherited ? h.isCoInherited : undefined,
+      isLargestCoInheritedShareholder:
+        h.isInherited && h.isCoInherited ? h.isLargestCoInheritedShareholder : undefined,
       // 장기임대 legacy 등록 경로 — isLongTermRental=true 일 때만 등록정보 전달
       isRegisteredRental: h.isLongTermRental ? h.isRegisteredRental : undefined,
       rentalRegistrationDate: h.isLongTermRental ? h.rentalRegistrationDate || undefined : undefined,
