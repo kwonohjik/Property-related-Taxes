@@ -104,6 +104,8 @@ export interface TransferFormData {
   replResidenceMonths: string;        // 대체주택 거주개월수 (숫자 문자열)
   replWillResideNewHouse: boolean;    // 신축주택 1년 이상 거주 자기선언
   marriageDate: string;
+  /** §155④⑤ 합가·혼인 세대 내 먼저 양도 주택 여부 (비과세 판정 — 먼저 양도 요건) */
+  isFirstTransferredInMerge: boolean;
   parentalCareMergeDate: string;
   // §154① 단서 — 비과세 보유·거주 요건 면제 사유 (FLAT; API에서 oneHouseExemptionProviso로 조립)
   provisoReason:
@@ -243,6 +245,7 @@ const defaultFormData: TransferFormData = {
   replResidenceMonths: "",
   replWillResideNewHouse: false,
   marriageDate: "",
+  isFirstTransferredInMerge: false,
   parentalCareMergeDate: "",
   provisoReason: "",
   provisoDepartureDate: "",

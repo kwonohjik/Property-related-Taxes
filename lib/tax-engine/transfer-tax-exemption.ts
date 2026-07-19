@@ -22,6 +22,8 @@ import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 const REPLACEMENT_HOUSE_3YR_TRANSFER_START = new Date("2023-01-12");
 const REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW = 3;
 const REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD = 2;
+// §155④⑤ 합가·혼인 1세대1주택 비과세 처분기한 — 합가·혼인일부터 10년.
+const MERGE_EXEMPTION_YEARS = 10;
 
 /**
  * 거주요건 판정 입력 — TransferTaxInput의 부분집합. UI(Step4 안내 메시지)와 엔진이 공용.
@@ -247,6 +249,30 @@ export function checkExemption(
         ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason!]})`
         : "";
       return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}` };
+    }
+  }
+
+  // E-3.5: 합가 비과세 (§155④⑤ 혼인·동거봉양) — 합가일부터 10년 내 "먼저 양도" 주택 1세대1주택 의제.
+  // 요건: 2주택 + (marriageMerge | parentalCareMerge) + 선양도 + 양도주택 합가 전 취득 + §154① 보유·거주.
+  if (
+    input.householdHousingCount === 2 &&
+    (input.marriageMerge || input.parentalCareMerge) &&
+    input.isFirstTransferredInMerge === true
+  ) {
+    const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
+    if (
+      mergeDate &&
+      input.acquisitionDate < mergeDate && // 합가·혼인 전 취득
+      input.transferDate <= addYears(mergeDate, MERGE_EXEMPTION_YEARS) && // 합가일부터 10년 내
+      meetsOneHouseHoldingResidence(input, rule) // §154① 보유·거주 요건
+    ) {
+      const mergeLabel = input.marriageMerge ? "혼인 합가 (§155⑤)" : "동거봉양 합가 (§155④)";
+      const priceCheck =
+        input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+      if (priceCheck <= rule.maxExemptPrice) {
+        return { isExempt: true, isPartialExempt: false, exemptReason: `${mergeLabel} 1세대1주택 비과세` };
+      }
+      return { isExempt: false, isPartialExempt: true, exemptReason: `${mergeLabel} 고가주택` };
     }
   }
 
