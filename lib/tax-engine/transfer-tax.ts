@@ -253,7 +253,16 @@ export function calculateTransferTax(
     effectiveInput.specialHouseExclusions,
     effectiveInput.transferDate,
   );
-  const totalExcluded = (hceApplied ? 1 : 0) + specialHouseExclusionDetail.excludedCount;
+  // §155② 상속주택 비과세 주택수 제외 (2-A1 피상속인 1주택) — houses[] isInherited(중과용과 단일 소스, sellingId 제외) 카운트.
+  // 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 미적용(일반주택 제외) → 경감 안 함. 중과 주택수는 불변(R-D).
+  const inheritedSellingId = effectiveInput.sellingHouseId ?? effectiveInput.houses?.[0]?.id;
+  const inheritedCount = effectiveInput.generalHouseGiftedFromDecedentWithin2yr
+    ? 0
+    : (effectiveInput.houses ?? []).filter((h) => h.isInherited && h.id !== inheritedSellingId).length;
+  // 2-A1: 피상속인 1주택(상속주택 1채)만 자동 제외. 2채+ 는 §155② 순위 판정(2-A2 후속) 전까지 보류(무근거 과다 비과세 방지).
+  const inheritedExcludedCount = inheritedCount <= 1 ? inheritedCount : 0;
+  const totalExcluded =
+    (hceApplied ? 1 : 0) + specialHouseExclusionDetail.excludedCount + inheritedExcludedCount;
   const exemptionJudgeInput = totalExcluded > 0
     ? { ...effectiveInput, householdHousingCount: Math.max(effectiveInput.householdHousingCount - totalExcluded, 0) }
     : effectiveInput;
@@ -266,6 +275,14 @@ export function calculateTransferTax(
       formula: `${specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.articleLabel).join(" · ")} — 주택수 ${effectiveInput.householdHousingCount} → ${exemptionJudgeInput.householdHousingCount} (비과세 판정 한정 — 중과 주택수 불변)`,
       amount: 0,
       legalBasis: specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.legalBasis).join(" · "),
+    });
+  }
+  if (inheritedExcludedCount > 0) {
+    steps.push({
+      label: "상속주택 주택수 제외 (§155② 일반주택 양도)",
+      formula: `상속주택 ${inheritedExcludedCount}채 — 주택수 ${effectiveInput.householdHousingCount} → ${exemptionJudgeInput.householdHousingCount} (비과세 판정 한정 — 중과 주택수 불변)`,
+      amount: 0,
+      legalBasis: "소득세법 시행령 §155②",
     });
   }
 

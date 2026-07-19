@@ -160,6 +160,7 @@ const propertyBaseShape = {
   sellingHouseId: z.string().optional(),
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
   isFirstTransferredInMerge: z.boolean().optional(),
+  generalHouseGiftedFromDecedentWithin2yr: z.boolean().optional(),
   parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
   // ⑨⑩⑫ §154① 단서 — 비과세 보유·거주 요건 면제 사유 (propertyBaseShape 공유 → 단건·다건 동시)
   oneHouseExemptionProviso: z
