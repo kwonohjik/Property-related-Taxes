@@ -4,6 +4,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
+import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { DateInput } from "@/components/ui/date-input";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -85,6 +86,31 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
       }),
     [form.isOneHousehold, primaryKind, form.householdHousingCount, form.temporaryTwoHouseSpecial],
+  );
+
+  // §155① 일시적 2주택 요건 자동판정 — 엔진 헬퍼 단일소스 재사용(store 미러링 금지, useMemo 파생)
+  const tempTwoHouseVerdict = useMemo(
+    () =>
+      judgeTempTwoHouseFromForm({
+        previousAcquisitionDate: primaryAcquisitionDate,
+        newHouseAcquisitionDate: form.newHouseAcquisitionDate,
+        transferDate: form.transferDate,
+        provisoReason: form.provisoReason,
+        provisoDepartureDate: form.provisoDepartureDate,
+        provisoExpropriationDate: form.provisoExpropriationDate,
+        provisoBusinessApprovalDate: form.provisoBusinessApprovalDate,
+        residencePeriodMonths: form.residencePeriodMonths,
+      }),
+    [
+      primaryAcquisitionDate,
+      form.newHouseAcquisitionDate,
+      form.transferDate,
+      form.provisoReason,
+      form.provisoDepartureDate,
+      form.provisoExpropriationDate,
+      form.provisoBusinessApprovalDate,
+      form.residencePeriodMonths,
+    ],
   );
 
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
@@ -366,7 +392,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               onCheckedChange={(v) =>
                 onChange({
                   temporaryTwoHouseSpecial: v,
-                  previousHouseAcquisitionDate: v ? form.previousHouseAcquisitionDate : "",
                   newHouseAcquisitionDate: v ? form.newHouseAcquisitionDate : "",
                 })
               }
@@ -376,14 +401,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">
-                    종전 주택 취득일 <span className="text-destructive">*</span>
-                  </label>
-                  <DateInput
-                    value={form.previousHouseAcquisitionDate}
-                    onChange={(v) => onChange({ previousHouseAcquisitionDate: v })}
-                  />
-                  <p className="text-xs text-muted-foreground">지금 양도하는 주택의 취득일</p>
+                  <label className="text-sm font-medium">종전 주택 취득일</label>
+                  <DateInput value={primaryAcquisitionDate} disabled onChange={() => {}} />
+                  <p className="text-xs text-muted-foreground">
+                    지금 양도하는 주택의 취득일에서 자동 반영 (1단계에서 입력)
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">
@@ -409,6 +431,48 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 mode={proviso.mode}
                 onChange={onChange}
               />
+            )}
+
+            {/* §155① 요건 자동판정 카드 — 엔진 헬퍼 단일소스(judgeTempTwoHouseFromForm) */}
+            {form.temporaryTwoHouseSpecial && (
+              <ToneCard
+                tone={
+                  tempTwoHouseVerdict.status === "eligible"
+                    ? "emerald"
+                    : tempTwoHouseVerdict.status === "ineligible"
+                      ? "amber"
+                      : "rose"
+                }
+                title={
+                  tempTwoHouseVerdict.status === "eligible"
+                    ? "일시적 2주택 특례 요건 충족"
+                    : tempTwoHouseVerdict.status === "ineligible"
+                      ? "일시적 2주택 특례 요건 미충족"
+                      : "요건 자동 판정 대기"
+                }
+              >
+                <div data-testid="temp-two-house-verdict" className="space-y-1 text-xs">
+                  {tempTwoHouseVerdict.status === "pending" ? (
+                    <p>양도 자산 취득일·신규 주택 취득일·양도일을 입력하면 요건을 자동 판정합니다.</p>
+                  ) : (
+                    <>
+                      <p>
+                        {tempTwoHouseVerdict.oneYearMet ? "충족" : "미충족"} · 요건 A — 종전주택 취득 후 1년 경과 후 신규주택 취득
+                        {tempTwoHouseVerdict.oneYearWaived
+                          ? " (§154① 단서 사유로 1년 요건 면제)"
+                          : ` (1년 경과일 ${tempTwoHouseVerdict.oneYearThreshold.toISOString().slice(0, 10)})`}
+                      </p>
+                      <p>
+                        {tempTwoHouseVerdict.threeYearMet ? "충족" : "미충족"} · 요건 B — 신규주택 취득일부터 3년 내 종전주택 양도
+                        {` (처분기한 ${tempTwoHouseVerdict.deadline.toISOString().slice(0, 10)})`}
+                      </p>
+                      <p className="text-caption">
+                        최종 비과세 여부는 계산 결과에서 확정됩니다(조정지역 종전 처분기한 등 반영).
+                      </p>
+                    </>
+                  )}
+                </div>
+              </ToneCard>
             )}
 
             {/* §156의2⑤ 대체주택 비과세 특례 */}

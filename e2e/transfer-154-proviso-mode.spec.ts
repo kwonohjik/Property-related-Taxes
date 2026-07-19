@@ -67,7 +67,6 @@ test.describe("§154① 단서 카드 mode별 노출·옵션 필터", () => {
     await gotoHolding(page, {
       householdHousingCount: "2",
       temporaryTwoHouseSpecial: true,
-      previousHouseAcquisitionDate: "2023-01-01",
       newHouseAcquisitionDate: "2024-03-01",
     });
     // 카드 노출 + 화이트리스트(1·2가·3호) 옵션 존재
