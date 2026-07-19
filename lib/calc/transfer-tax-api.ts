@@ -13,7 +13,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload } from "./transfer-tax-api-helpers";
+import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -398,16 +398,26 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
-    ...(form.provisoReason
-      ? {
-          oneHouseExemptionProviso: {
-            reason: form.provisoReason,
-            ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
-            ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
-            ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
-          },
-        }
-      : {}),
+    ...(() => {
+      // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목·5호)은 미전송 (Part D 게이트, mirror)
+      const provisoMode = provisoGate({
+        isOneHousehold: form.isOneHousehold,
+        isHousing: primary.assetKind === "housing",
+        householdHousingCount: form.householdHousingCount,
+        temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+      }).mode;
+      const reason = effectiveProvisoReason(provisoMode, form.provisoReason);
+      return reason
+        ? {
+            oneHouseExemptionProviso: {
+              reason,
+              ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
+              ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
+              ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
+            },
+          }
+        : {};
+    })(),
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
     ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     // 수정신고 모드에서는 무신고/과소신고 가산세 블록을 전송하지 않음 (상호배타)

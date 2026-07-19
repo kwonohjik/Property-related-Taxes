@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
-import { isMultiHouseSurchargeSuppressed } from "@/lib/calc/transfer-tax-api-helpers";
+import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { DateInput } from "@/components/ui/date-input";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -73,6 +73,18 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const surchargeSuspended = useMemo(
     () => isMultiHouseSurchargeSuppressed(form.transferDate, primaryAcquisitionDate),
     [form.transferDate, primaryAcquisitionDate],
+  );
+
+  // §154① 단서 카드 노출·맥락 — one_house(1주택)/temporary_two_house(2주택+일시적특례)/미노출 (Part B 단일 파생, store 미러링 금지)
+  const proviso = useMemo(
+    () =>
+      provisoGate({
+        isOneHousehold: form.isOneHousehold,
+        isHousing: primaryKind === "housing",
+        householdHousingCount: form.householdHousingCount,
+        temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+      }),
+    [form.isOneHousehold, primaryKind, form.householdHousingCount, form.temporaryTwoHouseSpecial],
   );
 
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
@@ -324,14 +336,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               </div>
             )}
 
-            {/* §154① 단서 — 보유·거주 요건 면제 사유 (1세대1주택 + 주택 자산) */}
-            {form.isOneHousehold && primaryKind === "housing" && (
+            {/* §154① 단서 — 1주택 맥락(one_house)일 때만 섹션② (일시적 2주택은 §155 특례 섹션③ 아래로 배치) */}
+            {proviso.visible && proviso.mode === "one_house" && (
               <ExemptionProvisoSection
                 provisoReason={form.provisoReason}
                 provisoDepartureDate={form.provisoDepartureDate}
                 provisoExpropriationDate={form.provisoExpropriationDate}
                 provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
                 provisoPreContractNoHouse={form.provisoPreContractNoHouse}
+                mode={proviso.mode}
                 onChange={onChange}
               />
             )}
@@ -384,6 +397,19 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 </div>
               </div>
             </ToggleCard>
+
+            {/* §154① 단서 — 일시적 2주택(temporary_two_house) 맥락: 종전주택 §155①→§154①1·2가·3호 준용 (제어 토글 아래 배치) */}
+            {proviso.visible && proviso.mode === "temporary_two_house" && (
+              <ExemptionProvisoSection
+                provisoReason={form.provisoReason}
+                provisoDepartureDate={form.provisoDepartureDate}
+                provisoExpropriationDate={form.provisoExpropriationDate}
+                provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
+                provisoPreContractNoHouse={form.provisoPreContractNoHouse}
+                mode={proviso.mode}
+                onChange={onChange}
+              />
+            )}
 
             {/* §156의2⑤ 대체주택 비과세 특례 */}
             <p className="text-sm font-medium mt-1">재개발·재건축 대체주택 특례</p>

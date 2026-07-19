@@ -445,6 +445,9 @@ export const EXEMPTION_PROVISO_CONST = {
   UNAVOIDABLE_RESIDENCE_YEARS: 1,
 } as const;
 
+/** 일시적 2주택 종전주택 §154① 단서 보유면제 사유 — §155① 2문 §154①1호(rental)·2호가(expropriation)·3호(unavoidable) 명시 인용(나·다목=출국일 1주택·5호=무주택 양립불가 제외). 엔진·api-helpers 공유 단일소스. */
+export const TEMP_TWO_HOUSE_PROVISO_REASONS: ReadonlySet<string> = new Set(["rental_5yr_residence", "expropriation", "unavoidable"]);
+
 /**
  * §154① 본문 — 취득 당시 조정대상지역 1세대1주택 비과세 거주요건 (단일 소스).
  * 2017.8.3(8·2 대책, 대통령령 제28293호) 이후 취득 + 취득 당시 조정대상지역이면 거주 2년.
