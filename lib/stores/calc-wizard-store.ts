@@ -106,6 +106,8 @@ export interface TransferFormData {
   marriageDate: string;
   /** §155④⑤ 합가·혼인 세대 내 먼저 양도 주택 여부 (비과세 판정 — 먼저 양도 요건) */
   isFirstTransferredInMerge: boolean;
+  /** §155② 양도(일반)주택이 상속개시 2년내 피상속인 증여분 여부 (상속주택 특례 배제 게이트) */
+  generalHouseGiftedFromDecedentWithin2yr: boolean;
   parentalCareMergeDate: string;
   // §154① 단서 — 비과세 보유·거주 요건 면제 사유 (FLAT; API에서 oneHouseExemptionProviso로 조립)
   provisoReason:
@@ -246,6 +248,7 @@ const defaultFormData: TransferFormData = {
   replWillResideNewHouse: false,
   marriageDate: "",
   isFirstTransferredInMerge: false,
+  generalHouseGiftedFromDecedentWithin2yr: false,
   parentalCareMergeDate: "",
   provisoReason: "",
   provisoDepartureDate: "",

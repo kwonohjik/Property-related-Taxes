@@ -399,6 +399,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
     ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+    ...(form.generalHouseGiftedFromDecedentWithin2yr ? { generalHouseGiftedFromDecedentWithin2yr: true } : {}),
     ...(() => {
       // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목·5호)은 미전송 (Part D 게이트, mirror)
       const provisoMode = provisoGate({

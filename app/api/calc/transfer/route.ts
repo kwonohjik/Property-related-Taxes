@@ -200,6 +200,7 @@ export async function POST(request: NextRequest) {
       ? { mergeDate: new Date(data.parentalCareMerge.mergeDate) }
       : undefined,
     isFirstTransferredInMerge: data.isFirstTransferredInMerge,
+    generalHouseGiftedFromDecedentWithin2yr: data.generalHouseGiftedFromDecedentWithin2yr,
     // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
     oneHouseExemptionProviso: data.oneHouseExemptionProviso
       ? {
