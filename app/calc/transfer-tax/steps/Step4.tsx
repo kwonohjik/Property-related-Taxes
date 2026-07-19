@@ -357,7 +357,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <SectionHeader title="③ 일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />
           <p className="-mt-2 mb-3 text-xs text-emerald-800 dark:text-emerald-300">
-            왜 필요한가요? — 시행령 §155 일시적 2주택·혼인합가·동거봉양합가 특례에 해당하면 2주택 상태에서도 1세대 1주택 비과세가 그대로 적용됩니다. 해당 시 반드시 체크하고 날짜를 입력하세요.
+            왜 필요한가요? — 시행령 §155 <strong>일시적 2주택</strong> 특례는 2주택 상태에서도 1세대1주택 비과세가 적용됩니다. <strong>혼인·동거봉양 합가</strong>는 다주택 중과 배제에 반영됩니다(1세대1주택 비과세 판정은 세대 보유 주택 수 입력으로 정해집니다). 해당 시 반드시 체크하고 날짜를 입력하세요.
           </p>
           <div className="space-y-3">
             <p className="text-sm font-medium">일시적 2주택 특례</p>
