@@ -37,6 +37,11 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (감면 시한 판정)
   if (a.assetContractDate === undefined) a.assetContractDate = "";
+  // §154⑧3호 상속주택 자체 양도 통산 (구 세션 복원 방어)
+  if (a.decedentSameHouseholdBeforeInheritance === undefined)
+    a.decedentSameHouseholdBeforeInheritance = false;
+  if (a.decedentCohabitationHoldingStartDate === undefined)
+    a.decedentCohabitationHoldingStartDate = "";
   // 공익수용·협의매수 (2026-07-02): 양도원인·사업인정고시일 (구 세션 복원 방어)
   if (a.transferCause === undefined) a.transferCause = "general";
   if (a.expropriationNoticeDate === undefined) a.expropriationNoticeDate = "";

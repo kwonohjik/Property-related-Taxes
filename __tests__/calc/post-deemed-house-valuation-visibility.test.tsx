@@ -104,6 +104,11 @@ function blockProps(overrides = {}) {
     onPublishedValueAtInheritanceChange: noop,
     fixedAcquisitionPrice: "",
     onFixedAcquisitionPriceChange: noop,
+    assetKind: "housing",
+    decedentSameHouseholdBeforeInheritance: false,
+    onDecedentSameHouseholdBeforeInheritanceChange: noop,
+    decedentCohabitationHoldingStartDate: "",
+    onDecedentCohabitationHoldingStartDateChange: noop,
     ...overrides,
   };
 }

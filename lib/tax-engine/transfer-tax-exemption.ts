@@ -157,7 +157,10 @@ export function meetsOneHouseResidenceRequirement(
  * §154⑧3호 — 상속주택 자체 양도 시 비과세 보유기간 기산일.
  * 상속개시 당시 상속인·피상속인 동일세대이고 통산 기산일(동일세대 보유 개시)이 상속개시일보다 이르면
  * 그 날부터 통산 → backdate. 그 외에는 acquisitionDate(상속개시일 등) 그대로.
- * ⚠️ §154① 비과세 전용 — LTHD·단기세율(decedentAcquisitionDate)에는 적용하지 않는다.
+ * ⚠️ §154① 요건 판정 전용 — meetsOneHouseHoldingResidence 경유 소비처 전반에 적용:
+ *    (1) 1세대1주택 비과세(checkExemption E-4), (2) §155⑤ 혼인·합가 1세대1주택 의제 중과배제 게이트.
+ *    둘 다 §154① 보유·거주 요건 판정이라 §154⑧ 통산이 정합(먼저양도 상속주택도 §154① 적용).
+ *    단 LTHD(resolveLTHDStartDate)·단기세율(decedentAcquisitionDate)에는 적용하지 않는다.
  */
 export function resolveExemptionHoldingStartDate(input: TransferTaxInput): Date {
   if (

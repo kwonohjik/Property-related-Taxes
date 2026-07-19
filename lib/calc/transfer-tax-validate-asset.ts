@@ -604,7 +604,11 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     } else if (asset.acquisitionCause === "inheritance") {
       if (!asset.decedentAcquisitionDate)
         return `${label}: 피상속인 취득일을 입력하세요.`;
-      if (asset.decedentSameHouseholdBeforeInheritance && !asset.decedentCohabitationHoldingStartDate)
+      if (
+        asset.assetKind === "housing" &&
+        asset.decedentSameHouseholdBeforeInheritance &&
+        !asset.decedentCohabitationHoldingStartDate
+      )
         return `${label}: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)`;
       const hasAuto = asset.inheritanceValuationMode === "auto";
       const hasManual =
