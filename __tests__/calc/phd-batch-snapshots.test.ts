@@ -84,11 +84,35 @@ describe("phdBatchToSnapshots — 라운드트립 등가", () => {
     expect(batch.acquisition?.commercial).not.toBe(batch.transfer?.commercial);
   });
 
-  it("≤2000 취득(C조건) — 취득 스냅샷 생략, 최초·양도 생성", () => {
+  it("≤2000 취득 주택분 단독 — transfer 모드 acqBase 스냅샷 생성(최초·양도는 valuation)", () => {
     const input = { building: { builtYear: 1998, parts: [H(100)] }, acquisition: { year: 1998, landPricePerM2: 500_000 }, firstDisclosure: FIRST, transfer: TRANSFER };
     const snaps = phdBatchToSnapshots(input, PREFIX);
-    expect(snaps[`${PREFIX}-acq`]).toBeUndefined();
+    const acqSnap = snaps[`${PREFIX}-acq`];
+    expect(acqSnap).toBeDefined();
+    expect(acqSnap?.taxType).toBe("transfer");
+    expect(acqSnap?.acquisitionYear).toBe("1998");
+    expect(acqSnap?.transferYear).toBe("2001"); // dummy
     expect(snaps[`${PREFIX}-first`]).toBeDefined();
     expect(snaps[`${PREFIX}-transfer`]).toBeDefined();
+  });
+
+  it("≤2000 취득 주택분 — acqBase 스냅샷이 acqBaseConversion(산정기준율 환산) 노출", () => {
+    const input = { building: { builtYear: 1998, parts: [H(100)] }, acquisition: { year: 1998, landPricePerM2: 500_000 }, firstDisclosure: FIRST, transfer: TRANSFER };
+    const acqSnap = phdBatchToSnapshots(input, PREFIX)[`${PREFIX}-acq`]!;
+    const r = calcBuildingStandardPrice(toEngineInput(acqSnap));
+    // ※표 소스(자기일관): convertedTotal = 취득당시 standardPrice(산정기준율 적용값)
+    expect(r.acqBaseConversion).toBeDefined();
+    expect(r.acqBaseConversion?.convertedTotal).toBe(r.acquisition?.standardPrice);
+    expect(r.acqBaseConversion?.acqBaseRate).toBe(r.acquisition?.acqBaseRate);
+    // convertedTotal = floor(total2001 기준 × 산정기준율) — 산정기준율은 1보다 클 수도(예 1.019) 작을 수도 있음.
+    expect(r.acqBaseConversion!.total2001).toBeGreaterThan(0);
+    expect(r.acqBaseConversion!.convertedTotal).toBeGreaterThan(0);
+  });
+
+  it("≤2000 취득 복합·상가 — 여전히 생략(Phase 1 단독 주택분만)", () => {
+    const comp = { building: { builtYear: 1998, parts: [H(120), H(80)] }, acquisition: { year: 1998, landPricePerM2: 500_000 }, firstDisclosure: FIRST, transfer: TRANSFER };
+    expect(phdBatchToSnapshots(comp, PREFIX)[`${PREFIX}-acq`]).toBeUndefined(); // 복합(2부분) 생략
+    const commB = { building: { builtYear: 1998, parts: [H(120), C(80)] }, acquisition: { year: 1998, landPricePerM2: 500_000 }, firstDisclosure: FIRST, transfer: TRANSFER };
+    expect(phdBatchToSnapshots(commB, PREFIX)[`${PREFIX}-acq-commercial`]).toBeUndefined(); // 상가 생략
   });
 });
