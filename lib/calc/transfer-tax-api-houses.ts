@@ -76,6 +76,17 @@ export function buildHousesPayload(
       isCoInherited: h.isInherited ? h.isCoInherited : undefined,
       isLargestCoInheritedShareholder:
         h.isInherited && h.isCoInherited ? h.isLargestCoInheritedShareholder : undefined,
+      // §155② 단서·순위 게이트 — isInherited=true 일 때만 전달. 동거봉양 예외는 동일세대일 때만.
+      decedentSameHouseholdAtInheritance: h.isInherited
+        ? h.decedentSameHouseholdAtInheritance
+        : undefined,
+      parentalCareMergeInheritedHouse:
+        h.isInherited && h.decedentSameHouseholdAtInheritance
+          ? h.parentalCareMergeInheritedHouse
+          : undefined,
+      isRankingDisqualifiedInheritedHouse: h.isInherited
+        ? h.isRankingDisqualifiedInheritedHouse
+        : undefined,
       // 장기임대 legacy 등록 경로 — isLongTermRental=true 일 때만 등록정보 전달
       isRegisteredRental: h.isLongTermRental ? h.isRegisteredRental : undefined,
       rentalRegistrationDate: h.isLongTermRental ? h.rentalRegistrationDate || undefined : undefined,

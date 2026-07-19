@@ -285,6 +285,8 @@ export function HousesListSection({
       completionDate: "",
       isSpouseOwned: false,
       isCoInherited: false,
+      decedentSameHouseholdAtInheritance: false,
+      isRankingDisqualifiedInheritedHouse: false,
     };
     onChange({ houses: [...houses, newHouse] });
     // 추가 즉시 편집 모달 오픈

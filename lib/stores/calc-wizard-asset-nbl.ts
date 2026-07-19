@@ -98,6 +98,12 @@ export interface HouseEntry {
   isCoInherited?: boolean;
   /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=산입, false·미제공=소수지분 제외후보) */
   isLargestCoInheritedShareholder?: boolean;
+  /** 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제). isInherited=true 시 의미 */
+  decedentSameHouseholdAtInheritance?: boolean;
+  /** 동거봉양 합가+합가 전 피상속인 보유분 여부 (§155② 단서 예외). 동일세대=true 시에만 의미 */
+  parentalCareMergeInheritedHouse?: boolean;
+  /** 피상속인 2주택↑ 중 순위상 상속주택 아님 (§155②1~4호 순위 부적격 — true=제외 안 함) */
+  isRankingDisqualifiedInheritedHouse?: boolean;
   /**
    * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
    * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.

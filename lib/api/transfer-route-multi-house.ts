@@ -44,6 +44,10 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     // §155③ 공동상속 (2-A2) — boolean pass-through
     isCoInherited: h.isCoInherited,
     isLargestCoInheritedShareholder: h.isLargestCoInheritedShareholder,
+    // §155② 단서·1~4호 순위 게이트 — boolean pass-through
+    decedentSameHouseholdAtInheritance: h.decedentSameHouseholdAtInheritance,
+    parentalCareMergeInheritedHouse: h.parentalCareMergeInheritedHouse,
+    isRankingDisqualifiedInheritedHouse: h.isRankingDisqualifiedInheritedHouse,
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),
     businessRegistrationDate: toOptionalDate(h.businessRegistrationDate),

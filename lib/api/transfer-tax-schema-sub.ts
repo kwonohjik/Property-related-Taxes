@@ -328,6 +328,10 @@ export const houseSchema = z.object({
   // §155③ 공동상속 (2-A2)
   isCoInherited: z.boolean().optional(),
   isLargestCoInheritedShareholder: z.boolean().optional(),
+  // §155② 단서(동거봉양·동일세대)·1~4호 순위 게이트
+  decedentSameHouseholdAtInheritance: z.boolean().optional(),
+  parentalCareMergeInheritedHouse: z.boolean().optional(),
+  isRankingDisqualifiedInheritedHouse: z.boolean().optional(),
   // 장기임대 legacy 등록 경로 (등록사업자 + 등록일 2종 + 임대기간 5년↑)
   isRegisteredRental: z.boolean().optional(),
   rentalRegistrationDate: z.string().date().optional(),

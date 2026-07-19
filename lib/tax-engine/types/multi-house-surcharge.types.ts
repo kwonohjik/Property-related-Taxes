@@ -72,6 +72,23 @@ export interface HouseInfo {
    * ⚠️ 자기선언 boolean — 엔진은 다른 공동상속인의 지분을 알 수 없음.
    */
   isLargestCoInheritedShareholder?: boolean;
+  /**
+   * 상속개시 당시 피상속인과 동일세대였는지 — 소득세법 시행령 §155② 단서.
+   * true = 동일세대 → 상속주택 특례(주택수 제외) 원칙 배제(parentalCareMergeInheritedHouse로만 예외 허용).
+   * false·미제공 = 별도세대 → 특례 적용(제외). §155③ 공동상속에도 준용.
+   */
+  decedentSameHouseholdAtInheritance?: boolean;
+  /**
+   * 동거봉양 합가로 2주택이 되었고 "합치기 이전부터 피상속인이 보유"하던 주택인지 — §155② 단서 예외.
+   * decedentSameHouseholdAtInheritance === true(동일세대)일 때만 의미. true면 동일세대라도 특례 적용(제외).
+   */
+  parentalCareMergeInheritedHouse?: boolean;
+  /**
+   * 피상속인이 상속개시 당시 2 이상 주택을 소유했고, 이 주택이 §155②1~4호 순위상 상속주택(1주택)이
+   * 아닌지 — 순위 부적격. true = 특례 부적격(제외 안 함) / false·미제공 = 적격(또는 피상속인 단일주택).
+   * ⚠️ 자기선언 boolean — 엔진은 피상속인 전체 포트폴리오(다른 상속인 상속분 포함)를 알 수 없음.
+   */
+  isRankingDisqualifiedInheritedHouse?: boolean;
   // ── 장기임대 관련 ──
   /** 장기임대사업자 등록주택 여부 (true + rentalType 없으면 legacy 판정) */
   isLongTermRental: boolean;

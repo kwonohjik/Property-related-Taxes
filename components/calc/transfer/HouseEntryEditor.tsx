@@ -190,6 +190,13 @@ function InheritanceSection({ house, onUpdate }: Props) {
             inheritedDate: v ? house.inheritedDate : undefined,
             isCoInherited: v ? house.isCoInherited : undefined,
             isLargestCoInheritedShareholder: v ? house.isLargestCoInheritedShareholder : undefined,
+            decedentSameHouseholdAtInheritance: v
+              ? house.decedentSameHouseholdAtInheritance
+              : undefined,
+            parentalCareMergeInheritedHouse: v ? house.parentalCareMergeInheritedHouse : undefined,
+            isRankingDisqualifiedInheritedHouse: v
+              ? house.isRankingDisqualifiedInheritedHouse
+              : undefined,
           });
         }}
         title="상속주택"
@@ -238,6 +245,56 @@ function InheritanceSection({ house, onUpdate }: Props) {
                 제외됩니다.
               </p>
             </div>
+          </ToggleCard>
+        </div>
+
+        {/* §155② 단서 — 상속개시 당시 동일세대(동거봉양 예외) */}
+        <div className="pt-2">
+          <ToggleCard
+            variant="card"
+            tone="amber"
+            checked={house.decedentSameHouseholdAtInheritance ?? false}
+            onCheckedChange={(v) =>
+              onUpdate({
+                decedentSameHouseholdAtInheritance: v,
+                parentalCareMergeInheritedHouse: v
+                  ? house.parentalCareMergeInheritedHouse
+                  : undefined,
+              })
+            }
+            title="상속개시 당시 피상속인과 동일세대"
+            description="동일세대에서 상속받으면 상속주택 특례(주택 수 제외)가 원칙적으로 배제됩니다. (소령 §155② 단서)"
+          >
+            <div className="space-y-1 pt-1">
+              <ToggleCard
+                variant="chip"
+                tone="amber"
+                checked={house.parentalCareMergeInheritedHouse ?? false}
+                onCheckedChange={(v) => onUpdate({ parentalCareMergeInheritedHouse: v })}
+                title="동거봉양 합가 + 합가 전 피상속인 보유 주택"
+                description="60세 이상 직계존속 동거봉양을 위해 세대를 합쳐 2주택이 된 경우로서, 합치기 이전부터 피상속인이 보유하던 주택이면 특례가 적용됩니다. (§155② 단서 예외)"
+              />
+              <p className="text-caption text-muted-foreground/70">
+                동거봉양 합가 전 보유분이면 주택 수에서 제외되고, 그 외 동일세대 상속은 제외되지
+                않습니다.
+              </p>
+            </div>
+          </ToggleCard>
+        </div>
+
+        {/* §155②1~4호 순위 — 피상속인 2주택↑ 중 순위 부적격 */}
+        <div className="pt-2">
+          <ToggleCard
+            variant="card"
+            tone="amber"
+            checked={house.isRankingDisqualifiedInheritedHouse ?? false}
+            onCheckedChange={(v) => onUpdate({ isRankingDisqualifiedInheritedHouse: v })}
+            title="피상속인 2주택 이상 — 순위상 상속주택 아님"
+            description="피상속인이 상속개시 당시 2채 이상 보유했고, 이 주택이 순위(소유기간→거주기간→상속개시 당시 거주→기준시가)상 상속주택(1주택)이 아니면 특례에서 제외됩니다. (소령 §155②1~4호)"
+          >
+            <p className="text-caption text-muted-foreground/70 pt-1">
+              순위상 상속주택이 아니면 일반주택 양도 시 주택 수에서 제외되지 않습니다.
+            </p>
           </ToggleCard>
         </div>
       </ToggleCard>
