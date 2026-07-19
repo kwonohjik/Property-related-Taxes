@@ -153,12 +153,30 @@ export function meetsOneHouseResidenceRequirement(
  * 단서: resolveExemptionProviso "both"=보유+거주 면제 / "residence_only"=거주만 면제 (소령 §154① 단서).
  * §155⑤(혼인 합가) 1세대1주택 의제 중과배제(§167의10①15호) 게이트에 재사용 — checkExemption과 단일 진실.
  */
+/**
+ * §154⑧3호 — 상속주택 자체 양도 시 비과세 보유기간 기산일.
+ * 상속개시 당시 상속인·피상속인 동일세대이고 통산 기산일(동일세대 보유 개시)이 상속개시일보다 이르면
+ * 그 날부터 통산 → backdate. 그 외에는 acquisitionDate(상속개시일 등) 그대로.
+ * ⚠️ §154① 비과세 전용 — LTHD·단기세율(decedentAcquisitionDate)에는 적용하지 않는다.
+ */
+export function resolveExemptionHoldingStartDate(input: TransferTaxInput): Date {
+  if (
+    input.acquisitionCause === "inheritance" &&
+    input.decedentSameHouseholdBeforeInheritance === true &&
+    input.decedentCohabitationHoldingStartDate &&
+    input.decedentCohabitationHoldingStartDate < input.acquisitionDate
+  ) {
+    return input.decedentCohabitationHoldingStartDate;
+  }
+  return input.acquisitionDate;
+}
+
 export function meetsOneHouseHoldingResidence(
   input: TransferTaxInput,
   rule: OneHouseSpecialRulesData["one_house_exemption"],
 ): boolean {
   const proviso = resolveExemptionProviso(input);
-  const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+  const holding = calculateHoldingPeriod(resolveExemptionHoldingStartDate(input), input.transferDate);
   const meetsHolding = proviso === "both" || holding.years >= rule.minHoldingYears;
   return meetsHolding && meetsOneHouseResidenceRequirement(input, rule);
 }

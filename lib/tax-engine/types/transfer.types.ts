@@ -225,6 +225,15 @@ export interface TransferTaxInput {
    */
   decedentAcquisitionDate?: Date;
   /**
+   * §154⑧3호 — 상속주택 자체 양도 시 상속개시 당시 상속인·피상속인 동일세대 여부.
+   * true + decedentCohabitationHoldingStartDate 제공 시, 1세대1주택 비과세 보유기간을 상속개시 전
+   * 동일세대 보유기간까지 통산(기산일 backdate). 거주기간 통산분은 residencePeriodMonths에 포함(사용자 입력).
+   * ⚠️ §154① 비과세 보유기간 전용 — LTHD·단기세율(decedentAcquisitionDate)과 무관.
+   */
+  decedentSameHouseholdBeforeInheritance?: boolean;
+  /** §154⑧3호 — 상속개시 전 상속인·피상속인이 동일세대로서 거주·보유를 시작한 날 (비과세 보유기간 기산). */
+  decedentCohabitationHoldingStartDate?: Date;
+  /**
    * 증여 시 증여자 취득일 — 단기보유 단일세율 판정 보유기간 통산용 (이월과세 패턴).
    * 장기보유특별공제 보유기간에는 적용하지 않음.
    */

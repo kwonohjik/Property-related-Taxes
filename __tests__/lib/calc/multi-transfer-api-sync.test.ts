@@ -137,6 +137,41 @@ describe("[H-2] 지원 스칼라 필드 전송", () => {
 });
 
 // ─────────────────────────────────────────────────────────
+// 일시적 2주택 §155① — 종전취득일 = 양도 자산 취득일 단일소스 (다건 경로)
+// 단건(transfer-tax-api.ts)과 대칭 변경의 다건 커버리지(계획 TT-7).
+// ─────────────────────────────────────────────────────────
+
+describe("[§155①] 다건 일시적 2주택 종전취득일 단일소스", () => {
+  it("TT-7: temporaryTwoHouse.previousAcquisitionDate = 양도 자산 취득일", () => {
+    const form = baseForm(); // assets[0].acquisitionDate = "2020-01-01"
+    form.temporaryTwoHouseSpecial = true;
+    form.newHouseAcquisitionDate = "2021-06-01";
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.temporaryTwoHouse).toEqual({
+      previousAcquisitionDate: "2020-01-01",
+      newAcquisitionDate: "2021-06-01",
+    });
+  });
+
+  it("TT-7b: 신규취득일 미입력 → temporaryTwoHouse 미조립(침묵 누락 방지는 validation 담당)", () => {
+    const form = baseForm();
+    form.temporaryTwoHouseSpecial = true;
+    form.newHouseAcquisitionDate = "";
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.temporaryTwoHouse).toBeUndefined();
+  });
+
+  it("TT-7c: 자산 취득일 미입력 → temporaryTwoHouse 미조립", () => {
+    const form = baseForm();
+    form.assets[0] = { ...form.assets[0], acquisitionDate: "" };
+    form.temporaryTwoHouseSpecial = true;
+    form.newHouseAcquisitionDate = "2021-06-01";
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.temporaryTwoHouse).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────
 // H-2(차단): 고급 sub-object 모드 명시 차단
 // ─────────────────────────────────────────────────────────
 

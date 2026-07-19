@@ -674,6 +674,15 @@ export function buildAssetPayload(
       asset.acquisitionCause === "inheritance" && asset.decedentAcquisitionDate
         ? asset.decedentAcquisitionDate
         : undefined,
+    // §154⑧3호 상속주택 자체 양도 보유기간 통산
+    decedentSameHouseholdBeforeInheritance:
+      asset.acquisitionCause === "inheritance"
+        ? asset.decedentSameHouseholdBeforeInheritance
+        : undefined,
+    decedentCohabitationHoldingStartDate:
+      asset.acquisitionCause === "inheritance" && asset.decedentCohabitationHoldingStartDate
+        ? asset.decedentCohabitationHoldingStartDate
+        : undefined,
     donorAcquisitionDate:
       asset.acquisitionCause === "gift" && asset.donorAcquisitionDate
         ? asset.donorAcquisitionDate
