@@ -163,6 +163,34 @@ export function meetsOneHouseHoldingResidence(
   return meetsHolding && meetsOneHouseResidenceRequirement(input, rule);
 }
 
+/**
+ * §155① 일시적 2주택 타이밍 요건 판정 (순수 — rule·waiver는 caller 주입).
+ *
+ * - 요건 A(1년): 신규취득일 ≥ 종전취득일 + 1년. 단 oneYearWaived(§154①1·2가·3호) 시 면제.
+ * - 요건 B(3년): 양도일 ≤ 신규취득일 + deadlineYears(조정지역 부칙은 caller가 반영해 주입).
+ *
+ * 엔진 E-3·UI 판정 카드 공용(single-source). UI는 waiver를 resolveExemptionProviso로 별도 산출해 주입.
+ */
+export function judgeTemporaryTwoHouseTiming(p: {
+  previousAcquisitionDate: Date;
+  newAcquisitionDate: Date;
+  transferDate: Date;
+  deadlineYears: number;
+  oneYearWaived: boolean;
+}): {
+  oneYearThreshold: Date;
+  oneYearMet: boolean;
+  deadline: Date;
+  threeYearMet: boolean;
+  overall: boolean;
+} {
+  const oneYearThreshold = addYears(p.previousAcquisitionDate, 1);
+  const oneYearMet = p.oneYearWaived || p.newAcquisitionDate >= oneYearThreshold;
+  const deadline = addYears(p.newAcquisitionDate, p.deadlineYears);
+  const threeYearMet = p.transferDate <= deadline;
+  return { oneYearThreshold, oneYearMet, deadline, threeYearMet, overall: oneYearMet && threeYearMet };
+}
+
 export function checkExemption(
   input: TransferTaxInput,
   oneHouseRules: OneHouseSpecialRulesData,
@@ -243,8 +271,15 @@ export function checkExemption(
         deadlineYears = twoHouseRule.regulatedAreaDeadlineYears;
       }
     }
-    const deadline = addYears(newAcquisitionDate, deadlineYears);
-    if (input.transferDate <= deadline) {
+    // §155① 요건 A(1년 경과)·B(3년 내) 판정 — 1년 요건은 보유면제 화이트리스트(§154①1·2가·3호) 시 면제.
+    const timing = judgeTemporaryTwoHouseTiming({
+      previousAcquisitionDate,
+      newAcquisitionDate,
+      transferDate: input.transferDate,
+      deadlineYears,
+      oneYearWaived: provisoRelaxesHolding,
+    });
+    if (timing.overall) {
       const provisoLabel = provisoRelaxesHolding
         ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason!]})`
         : "";

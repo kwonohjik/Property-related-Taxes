@@ -134,11 +134,12 @@ export function buildPropertyPayload(form: TransferFormData) {
     isOneHousehold: form.isOneHousehold,
     reductions,
     ...(form.temporaryTwoHouseSpecial &&
-    form.previousHouseAcquisitionDate &&
+    primary?.acquisitionDate &&
     form.newHouseAcquisitionDate
       ? {
           temporaryTwoHouse: {
-            previousAcquisitionDate: form.previousHouseAcquisitionDate,
+            // 종전주택 취득일 = 양도 자산 취득일(단일소스)
+            previousAcquisitionDate: primary.acquisitionDate,
             newAcquisitionDate: form.newHouseAcquisitionDate,
           },
         }

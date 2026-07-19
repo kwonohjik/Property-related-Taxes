@@ -95,7 +95,7 @@ export interface TransferFormData {
   regionCode?: string;
   isUnregistered: boolean;
   temporaryTwoHouseSpecial: boolean;
-  previousHouseAcquisitionDate: string;
+  // 종전주택 취득일은 별도 필드를 두지 않고 양도 자산(assets[0])의 acquisitionDate를 단일소스로 사용(§155① 종전주택 = 양도주택).
   newHouseAcquisitionDate: string;
   // §156의2⑤ 대체주택 비과세 특례 FLAT 필드 (API에서 replacementHouse nested로 조립)
   replacementHouseSpecial: boolean;
@@ -239,7 +239,6 @@ const defaultFormData: TransferFormData = {
   wasRegulatedAtAcquisition: false,
   isUnregistered: false,
   temporaryTwoHouseSpecial: false,
-  previousHouseAcquisitionDate: "",
   newHouseAcquisitionDate: "",
   replacementHouseSpecial: false,
   replBusinessApprovalDate: "",

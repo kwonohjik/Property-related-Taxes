@@ -204,6 +204,14 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       householdHousingCount: form.householdHousingCount,
       temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
     }).mode;
+    // ⑧ 일시적 2주택 특례 — 입력존재만 차단. 요건 미달(1년 미경과·3년 초과)은 정상 통과(특례만 미적용).
+    if (provisoMode === "temporary_two_house") {
+      if (!form.assets?.[0]?.acquisitionDate)
+        issues.push({ step, message: "일시적 2주택: 양도 자산의 취득일을 1단계에서 입력하세요." });
+      if (!form.newHouseAcquisitionDate)
+        issues.push({ step, message: "일시적 2주택: 신규 주택 취득일을 입력하세요." });
+    }
+
     const provisoReasonEff = effectiveProvisoReason(provisoMode, form.provisoReason);
     if (
       (provisoReasonEff === "overseas_migration" || provisoReasonEff === "overseas_residence") &&
