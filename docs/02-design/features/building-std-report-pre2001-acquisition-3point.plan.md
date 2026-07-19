@@ -82,8 +82,11 @@ BuildingStdPriceFormState {
 ### 3-5. 취득당시 공시지가·위치지수 (anchor로 확정 — F4)
 `acqLandPrice`(위치지수 산정 입력)는 **취득당시 공시지가**(이미지7: 1,200,000)로 넣는다(`PhdBatchPoint.landPricePerM2`가 취득 시점 값). 위치지수 1.05가 이 값에서 산출되는지 A1 anchor로 assert(추정 금지).
 
-### 3-6. 겸용 상가분 (Phase 2 이월)
-상가 취득·최초공시는 현행 Case A(당시 주택 용도)만 산출(`phd-batch-snapshots.ts:104-105`). 상가분 취득<2001은 **본 계획 범위 외**. Phase 1 = **주택분(housing) 취득<2001 단독**.
+### 3-6. 상가·복합 (Phase 2) — ✅ 완료 (2026-07-19)
+- **상가 단일 (Case A)**: `phd-batch-snapshots.ts` `add()`에서 `category==="housing"` 조건 제거 → 상가 Case A(취득 구조·용도 지정) 취득<2001도 `buildTransferAcqSnapshot`로 스냅샷 생성. 엔진 단일 경로(Phase 1 G1)가 이미 acqBaseConversion 노출.
+- **복합 (다부분)**: `phd-building-std-batch.ts` `acqBaseStdPrice` 복합 확장(단일부분=`acquisition.standardPrice` / 다부분=`compositeParts` 위임 후 **`acqBaseConversion.convertedTotal`** — 복합 `acquisitionComposite.total`은 산정기준율 적용 前이므로 부적합) + `phd-batch-snapshots.ts` `buildTransferAcqCompositeSnapshot`(각 part `acqUsageNo=usageNo` 필수) + `add()` 단일/복합 분기.
+- **제약(명시)**: 부분별 산정기준율 **그룹 상이** 복합은 엔진(`building-standard-price.ts:200-202`) throw → `computeCategory` unsupported·재유도 try/catch 침묵(단일 그룹만 유효). 최초공시/양도<2001은 여전히 생략(취득 시점만 acqBase).
+- anchor: 상가 Case A 스냅샷 + 복합 라운드트립 등가(배치 산출=재유도 convertedTotal) + A3 갱신(복합 취득<2001 산출).
 
 ## 4. 케이스 매트릭스 (Phase 1 = 주택분)
 

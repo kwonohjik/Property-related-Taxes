@@ -134,30 +134,44 @@ function valuationStdPrice(
   return r.compositeTotal;
 }
 
-/** 취득 ≤2000 acqBase(2001×산정기준율). 단일 부분만 지원 — 다부분은 throw(C1). */
+/**
+ * 취득 ≤2000 acqBase(2001×산정기준율). 단일 부분=acquisition, 다부분=acquisitionComposite로 위임.
+ * 복합은 calcTransferComposite가 단일 산정기준율 그룹만 지원(부분별 그룹 상이 시 throw → 상위 unsupported 기록).
+ */
 function acqBaseStdPrice(
   parts: ResolvedPart[],
   builtYear: number,
   point: PhdBatchPoint,
 ): number | undefined {
-  if (parts.length !== 1) {
-    throw new Error(
-      `취득(${point.year}, 2000 이전) 다부분 산정기준율은 미지원 — 해당 상가/주택 부분을 직접 입력하세요.`,
-    );
-  }
   const head = parts[0];
   const pt = { structureKey: head.structureKey, usageNo: head.usageNo, landPricePerM2: point.landPricePerM2 };
-  const r = calcBuildingStandardPrice({
-    taxType: "transfer",
-    floorArea: head.floorArea,
+  const base = {
+    taxType: "transfer" as const,
     builtYear,
     acquisitionYear: point.year,
     // transferYear는 sameYear(§164⑧) 회피 위해 ≥2001 고정
     transferYear: BUILDING_STD_FIRST_YEAR,
     acquisition: pt,
     transfer: pt,
+  };
+  if (parts.length === 1) {
+    const r = calcBuildingStandardPrice({ ...base, floorArea: head.floorArea });
+    return r.acquisition?.standardPrice;
+  }
+  // 복합: compositeParts로 transfer 복합 산정(acqUsageNo=usageNo — 시점 해석 완료된 용도).
+  // ⚠️ 복합 acquisitionComposite.total은 산정기준율 적용 前(base2001)이고, 취득당시 기준시가(적용 後)는
+  //    acqBaseConversion.convertedTotal — 단일 경로 acquisition.standardPrice와 대응.
+  const r = calcBuildingStandardPrice({
+    ...base,
+    floorArea: sumArea(parts),
+    compositeParts: parts.map((p) => ({
+      structureKey: p.structureKey,
+      usageNo: p.usageNo,
+      acqUsageNo: p.usageNo,
+      floorArea: p.floorArea,
+    })),
   });
-  return r.acquisition?.standardPrice;
+  return r.acqBaseConversion?.convertedTotal;
 }
 
 /**
