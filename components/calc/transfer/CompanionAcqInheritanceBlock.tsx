@@ -18,6 +18,7 @@
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,12 @@ interface BlockProps {
   onAcquisitionDateChange: (v: string) => void;
   decedentAcquisitionDate: string;
   onDecedentAcquisitionDateChange: (v: string) => void;
+  /** 자산 종류 — §154⑧3호 동일세대 통산 토글은 housing에서만 노출 */
+  assetKind: string;
+  decedentSameHouseholdBeforeInheritance: boolean;
+  onDecedentSameHouseholdBeforeInheritanceChange: (v: boolean) => void;
+  decedentCohabitationHoldingStartDate: string;
+  onDecedentCohabitationHoldingStartDateChange: (v: string) => void;
   valuationMode: "auto" | "manual";
   onValuationModeChange: (mode: "auto" | "manual") => void;
   // auto 모드용
@@ -126,6 +133,35 @@ export function CompanionAcqInheritanceBlock(props: BlockProps) {
           <p className="text-caption text-muted-foreground">단기보유 통산용 (소득세법 §104②1호)</p>
         </div>
       </div>
+
+      {/* §154⑧3호 상속주택 자체 양도 — 동일세대 보유기간 통산 (주택 전용) */}
+      {props.assetKind === "housing" && (
+        <ToggleCard
+          variant="card"
+          tone="violet"
+          checked={props.decedentSameHouseholdBeforeInheritance}
+          onCheckedChange={(v) => {
+            props.onDecedentSameHouseholdBeforeInheritanceChange(v);
+            if (!v) props.onDecedentCohabitationHoldingStartDateChange("");
+          }}
+          title="상속개시 당시 피상속인과 동일세대"
+          description="동일세대로 함께 거주·보유하던 상속주택을 양도하는 경우, 상속개시 전 동일세대 보유기간을 1세대1주택 비과세 보유기간에 통산합니다 (소령 §154⑧3호)"
+        >
+          <div className="space-y-1 pt-1">
+            <label className="block text-caption text-muted-foreground font-medium">
+              동일세대 거주·보유 개시일
+            </label>
+            <DateInput
+              value={props.decedentCohabitationHoldingStartDate}
+              onChange={props.onDecedentCohabitationHoldingStartDateChange}
+            />
+            <p className="text-caption text-muted-foreground/70">
+              상속개시 전 피상속인과 동일세대로서 이 주택에 거주·보유하기 시작한 날. 거주기간
+              통산분은 &lsquo;거주기간&rsquo;에 포함해 입력하세요.
+            </p>
+          </div>
+        </ToggleCard>
+      )}
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">상속 취득가액 산정</label>

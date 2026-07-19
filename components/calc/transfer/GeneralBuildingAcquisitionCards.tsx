@@ -202,6 +202,15 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
               onDecedentAcquisitionDateChange={(v) =>
                 onChange({ decedentAcquisitionDate: v })
               }
+              assetKind={asset.assetKind}
+              decedentSameHouseholdBeforeInheritance={asset.decedentSameHouseholdBeforeInheritance}
+              onDecedentSameHouseholdBeforeInheritanceChange={(v) =>
+                onChange({ decedentSameHouseholdBeforeInheritance: v })
+              }
+              decedentCohabitationHoldingStartDate={asset.decedentCohabitationHoldingStartDate}
+              onDecedentCohabitationHoldingStartDateChange={(v) =>
+                onChange({ decedentCohabitationHoldingStartDate: v })
+              }
               valuationMode={asset.inheritanceValuationMode}
               onValuationModeChange={(mode) =>
                 onChange({ inheritanceValuationMode: mode })
