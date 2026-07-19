@@ -184,27 +184,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           왜 필요한가요? — 1세대 1주택 비과세(§89①3)·고가주택 12억 안분·다주택 중과 판정·장기보유특별공제 표2 적용은 모두 이 단계의 입력값으로 결정됩니다.
         </p>
         <div className="space-y-3">
-          {/* 비과세 특례 입력 안내 */}
-          <div className="rounded-lg border border-sky-200 bg-sky-50/50 px-4 py-3 text-xs leading-relaxed text-sky-900 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-200">
-            <p className="font-semibold text-sky-800 dark:text-sky-300">📘 1세대 1주택 / 일시적 2주택 비과세 입력 방법</p>
-            <ul className="mt-1.5 list-disc space-y-1 pl-4">
-              <li>
-                <span className="font-medium">1세대 1주택 비과세</span> (소득세법 §89①3·시행령 §154①):{" "}
-                <b>① 1세대 해당 체크</b> + <b>② 보유 주택 수 1채 선택</b> + 보유 2년 이상(취득일 기준 조정대상지역이면 거주 2년 이상).
-                양도가액 12억 원 이하 전액 비과세, 12억 초과 고가주택 부분만 과세.
-              </li>
-              <li>
-                <span className="font-medium">일시적 2주택 비과세</span> (시행령 §155①):{" "}
-                <b>① 1세대 해당 체크</b> + <b>② 보유 주택 수 2채 선택</b> + 아래{" "}
-                <b>「일시적 2주택 특례 해당」 체크</b> + 종전·신규 주택 취득일 입력.
-                종전 주택을 일정 기한(보통 신규 취득일로부터 3년) 내 양도 시 종전 주택 양도분 비과세.
-              </li>
-              <li className="text-sky-700 dark:text-sky-300">
-                ※ 위 두 특례 모두 미해당 시 다주택자로 판정되어 12억 비과세가 적용되지 않습니다.
-              </li>
-            </ul>
-          </div>
-
           {/* 1세대 여부 */}
           <ToggleCard
             checked={form.isOneHousehold}
