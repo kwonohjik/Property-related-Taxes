@@ -179,9 +179,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       {/* 주택·입주권·분양권: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
       {isHousingLike(primaryKind) && (
         <section className="rounded-xl border border-sky-200 bg-sky-50/30 p-4 dark:border-sky-900/50 dark:bg-sky-950/20">
-        <SectionHeader title="① 세대·주택 현황" description="1세대 여부, 보유 주택 수, 거주기간을 입력하세요" />
+        <SectionHeader title="① 세대·주택 현황" description="1세대 여부와 보유 주택 수를 입력하세요" />
         <p className="-mt-2 mb-3 text-xs text-sky-800 dark:text-sky-300">
-          왜 필요한가요? — 1세대 1주택 비과세(§89①3)·고가주택 12억 안분·다주택 중과 판정·장기보유특별공제 표2 적용은 모두 이 섹션의 입력값으로 결정됩니다.
+          왜 필요한가요? — 1세대 1주택 비과세(§89①3)·고가주택 12억 안분·다주택 중과 판정·장기보유특별공제 표2 적용은 모두 이 단계의 입력값으로 결정됩니다.
         </p>
         <div className="space-y-3">
           {/* 비과세 특례 입력 안내 */}
@@ -238,14 +238,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             </div>
           </div>
 
-          {/* P5 모드 2 — 보유 감면주택 주택수 제외 (2채 이상 보유 시 의미) */}
-          {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
-            <SpecialHouseExclusionSection
-              items={form.specialHouseExclusions ?? []}
-              onChange={(items) => onChange({ specialHouseExclusions: items })}
-            />
-          )}
-
           {/* 세대 보유 입주권 수 — right_to_move_in 자산 유형에서만 노출 (§89①4호 가목 판정) */}
           {primaryKind === "right_to_move_in" && (
             <div className="space-y-1.5">
@@ -286,95 +278,83 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             </div>
           )}
 
-          {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
-          {form.isOneHousehold && form.householdHousingCount === "1" && (
-            <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900">
-              <p className="font-medium">1세대 1주택자 적용 효과</p>
-              <p className="mt-1 text-xs leading-relaxed text-violet-800">
-                보유 2년 이상 시 양도가액 12억 원까지 비과세이며, 12억 초과 고가주택 부분에 한해 과세됩니다.
-                거주 2년 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다.
-                {primaryKind === "housing"
-                  ? " 아래 거주기간 입력이 표2 판정에 사용됩니다. (겸용주택 포함)"
-                  : ""}
-              </p>
-            </div>
-          )}
-
-          {/* 거주기간 — 1세대1주택 + 주택 자산일 때만 노출 */}
-          {form.isOneHousehold && primaryKind === "housing" && primary && (
-            <ResidencePeriodSection
-              residenceInputMode={primary.residenceInputMode}
-              residencePeriods={primary.residencePeriods}
-              residencePeriodMonthsAsset={primary.residencePeriodMonthsAsset}
-              transferDate={form.transferDate}
-              onChange={(patch) =>
-                onChange({
-                  assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),
-                })
-              }
-            />
-          )}
-
-          {/* 메시지 ② 거주요건 불충족 — 엔진 §154① 판정과 일치 (단서면제·2017.8.3 이전 취득 자동 제외) */}
-          {residenceShortfall && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50/40 px-3 py-2 text-xs text-rose-900">
-              <p className="font-medium">⚠️ 조정대상지역 거주요건(2년) 불충족</p>
-              <p className="mt-0.5 text-caption leading-relaxed text-rose-800">
-                취득 당시 조정대상지역 주택은 2년 이상 거주해야 1세대1주택 비과세가 적용됩니다.
-                현재 거주기간으로는 비과세가 배제될 수 있습니다.
-              </p>
-            </div>
-          )}
-
-          {/* §154① 단서 — 보유·거주 요건 면제 사유 (1세대1주택 + 주택 자산) */}
-          {form.isOneHousehold && primaryKind === "housing" && (
-            <ExemptionProvisoSection
-              provisoReason={form.provisoReason}
-              provisoDepartureDate={form.provisoDepartureDate}
-              provisoExpropriationDate={form.provisoExpropriationDate}
-              provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
-              provisoPreContractNoHouse={form.provisoPreContractNoHouse}
-              onChange={onChange}
-            />
-          )}
-
-          {/* 조정대상지역 — 주택만 표시 */}
-          {primaryKind === "housing" && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <ToggleCard
-                checked={form.isRegulatedArea}
-                onCheckedChange={(v) => onChange({ isRegulatedArea: v })}
-                title="양도일 기준 조정대상지역"
-                description="중과세 판단 기준"
-                tone="rose"
-              />
-              <ToggleCard
-                checked={form.wasRegulatedAtAcquisition}
-                onCheckedChange={(v) => onChange({ wasRegulatedAtAcquisition: v })}
-                title="취득일 기준 조정대상지역"
-                description="비과세 거주요건 판단"
-                tone="rose"
-              />
-            </div>
-          )}
-
-          {/* 메시지 ① 중과 검토 안내 — 주택 + 양도시 조정대상이면 항상(1주택 포함, 단순 주의환기) */}
-          {primaryKind === "housing" && form.isRegulatedArea && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
-              <p className="font-medium">⚠️ 양도일 현재 조정대상지역</p>
-              <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
-                조정대상지역 주택 양도는 중과세 적용 여부를 검토하세요.
-              </p>
-            </div>
-          )}
         </div>
         </section>
       )}
 
-      {/* ② 일시적 2주택·합가 특례 — 보유 주택수 ≥ 2 일 때만 의미 있음 (시행령 §155 일시적 2주택은 정의상 종전+신규 2채 보유 중) */}
+      {/* ② 1세대1주택 비과세 판정 — 취득일 조정지역·거주기간·§154① 면제사유 (비과세 트랙) */}
+      {primaryKind === "housing" && (
+        <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+          <SectionHeader title="② 1세대1주택 비과세 판정" description="취득일 조정대상지역·거주기간·보유거주 요건 면제 사유를 입력하세요" />
+          <div className="space-y-3">
+            {/* 취득일 기준 조정대상지역 — 비과세 거주요건 판단(거주기간 입력의 전제, 원인→결과 순서) */}
+            <ToggleCard
+              checked={form.wasRegulatedAtAcquisition}
+              onCheckedChange={(v) => onChange({ wasRegulatedAtAcquisition: v })}
+              title="취득일 기준 조정대상지역"
+              description="비과세 거주요건 판단 — 해당 시 거주 2년 이상 필요"
+              tone="rose"
+            />
+
+            {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
+            {form.isOneHousehold && form.householdHousingCount === "1" && (
+              <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900">
+                <p className="font-medium">1세대 1주택자 적용 효과</p>
+                <p className="mt-1 text-xs leading-relaxed text-violet-800">
+                  보유 2년 이상 시 양도가액 12억 원까지 비과세이며, 12억 초과 고가주택 부분에 한해 과세됩니다.
+                  거주 2년 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다.
+                  {primaryKind === "housing"
+                    ? " 아래 거주기간 입력이 표2 판정에 사용됩니다. (겸용주택 포함)"
+                    : ""}
+                </p>
+              </div>
+            )}
+
+            {/* 거주기간 — 1세대1주택 + 주택 자산일 때만 노출 */}
+            {form.isOneHousehold && primaryKind === "housing" && primary && (
+              <ResidencePeriodSection
+                residenceInputMode={primary.residenceInputMode}
+                residencePeriods={primary.residencePeriods}
+                residencePeriodMonthsAsset={primary.residencePeriodMonthsAsset}
+                transferDate={form.transferDate}
+                onChange={(patch) =>
+                  onChange({
+                    assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),
+                  })
+                }
+              />
+            )}
+
+            {/* 메시지 ② 거주요건 불충족 — 엔진 §154① 판정과 일치 (단서면제·2017.8.3 이전 취득 자동 제외) */}
+            {residenceShortfall && (
+              <div className="rounded-lg border border-rose-200 bg-rose-50/40 px-3 py-2 text-xs text-rose-900">
+                <p className="font-medium">⚠️ 조정대상지역 거주요건(2년) 불충족</p>
+                <p className="mt-0.5 text-caption leading-relaxed text-rose-800">
+                  취득 당시 조정대상지역 주택은 2년 이상 거주해야 1세대1주택 비과세가 적용됩니다.
+                  현재 거주기간으로는 비과세가 배제될 수 있습니다.
+                </p>
+              </div>
+            )}
+
+            {/* §154① 단서 — 보유·거주 요건 면제 사유 (1세대1주택 + 주택 자산) */}
+            {form.isOneHousehold && primaryKind === "housing" && (
+              <ExemptionProvisoSection
+                provisoReason={form.provisoReason}
+                provisoDepartureDate={form.provisoDepartureDate}
+                provisoExpropriationDate={form.provisoExpropriationDate}
+                provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
+                provisoPreContractNoHouse={form.provisoPreContractNoHouse}
+                onChange={onChange}
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ③ 일시적 2주택·합가 특례 — 보유 주택수 ≥ 2 일 때만 의미 있음 (시행령 §155 일시적 2주택은 정의상 종전+신규 2채 보유 중) */}
       {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
         <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-          <SectionHeader title="② 일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />
+          <SectionHeader title="③ 일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />
           <p className="-mt-2 mb-3 text-xs text-emerald-800 dark:text-emerald-300">
             왜 필요한가요? — 시행령 §155 일시적 2주택·혼인합가·동거봉양합가 특례에 해당하면 2주택 상태에서도 1세대 1주택 비과세가 그대로 적용됩니다. 해당 시 반드시 체크하고 날짜를 입력하세요.
           </p>
@@ -494,20 +474,54 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         </section>
       )}
 
-      {/* ③ 다른 보유 주택 목록 — 1세대 + 2채 이상 시 */}
-      {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
+      {/* ④ 주택수·중과 판정 — 세대 주택 목록·감면주택 제외·양도일 조정대상지역 (중과 트랙) */}
+      {(primaryKind === "housing" ||
+        (isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2)) && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
-          <SectionHeader title="③ 다른 보유 주택 목록" description="세대 전체의 보유 주택을 입력하세요 (다주택 중과세 판단)" />
-          <p className="-mt-2 mb-3 text-xs text-violet-800 dark:text-violet-300">
-            왜 필요한가요? — 조정대상지역 다주택 중과(§104⑦), 주택 수 산정(시행령 §167의3), 일시적 2주택 판정의 기초가 됩니다. 세대 구성원 명의 모든 주택을 기재하세요.
-          </p>
-          <HousesListSection form={form} onChange={onChange} />
+          <SectionHeader title="④ 주택수·중과 판정" description="세대 전체 보유 주택·양도일 조정대상지역으로 다주택 중과를 판정합니다" />
+          <div className="space-y-3">
+            {/* 세대 보유 주택 목록 + 분양권 + 감면주택 주택수 제외 (시행령 §167의3 주택 수 산정) */}
+            {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
+              <>
+                <p className="text-xs text-violet-800 dark:text-violet-300">
+                  왜 필요한가요? — 조정대상지역 다주택 중과(§104⑦), 주택 수 산정(시행령 §167의3)의 기초가 됩니다. 세대 구성원 명의 모든 주택을 기재하세요. (일시적 2주택 비과세는 위 ③ 특례에서 별도 입력)
+                </p>
+                <HousesListSection form={form} onChange={onChange} />
+                {/* 조특법 감면주택 주택수 제외 (§89③3호 의제) */}
+                <SpecialHouseExclusionSection
+                  items={form.specialHouseExclusions ?? []}
+                  onChange={(items) => onChange({ specialHouseExclusions: items })}
+                />
+              </>
+            )}
+
+            {/* 양도일 기준 조정대상지역 — 중과세 판단 기준 (주택 전용) */}
+            {primaryKind === "housing" && (
+              <ToggleCard
+                checked={form.isRegulatedArea}
+                onCheckedChange={(v) => onChange({ isRegulatedArea: v })}
+                title="양도일 기준 조정대상지역"
+                description="중과세 판단 기준"
+                tone="rose"
+              />
+            )}
+
+            {/* 메시지 ① 중과 검토 안내 — 주택 + 양도시 조정대상이면 항상(1주택 포함, 단순 주의환기) */}
+            {primaryKind === "housing" && form.isRegulatedArea && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
+                <p className="font-medium">⚠️ 양도일 현재 조정대상지역</p>
+                <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
+                  조정대상지역 주택 양도는 중과세 적용 여부를 검토하세요.
+                </p>
+              </div>
+            )}
+          </div>
         </section>
       )}
 
-      {/* ④ 특수 상황 — 중과·배제 트리거 (비과세 특례 이후 위치) */}
+      {/* ⑤ 특수 상황 — 중과·배제 트리거 (비과세 특례 이후 위치) */}
       <section className="rounded-xl border border-rose-200 bg-rose-50/30 p-4 dark:border-rose-900/50 dark:bg-rose-950/20">
-      <SectionHeader title="④ 특수 상황" description="미등기·비사업용 토지·다주택 중과 해당 여부를 확인하세요" />
+      <SectionHeader title="⑤ 특수 상황" description="미등기·비사업용 토지·다주택 중과 해당 여부를 확인하세요" />
       <div className="space-y-2">
         {/* 미등기 양도 — 주택·토지·건물만 표시 (입주권·분양권은 등기 개념 없음) */}
         {(primaryKind === "housing" ||
