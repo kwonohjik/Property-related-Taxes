@@ -6,6 +6,13 @@
 > ## ⚠️ 구현 스코프 결정 (2026-07-19, 사용자)
 > **§1.1 판정 결과 반영**: §155②1~4호 순위는 2-A2(일반주택 양도) **세액에 무영향**(제외수 항상 0~1, 순위는 식별·2-B용) → **순위 3필드(`decedentAcquisitionDate`·`decedentResidenceYears`·`decedentResidedAtInheritance`)·순위 알고리즘(`rankPool`)·echo 결과필드는 미구현, Tier 2-B(상속주택 자체 양도, 순위가 세액 직결)로 이월.** 동거봉양 단서(§1.4)도 2-B 이월.
 > **실제 구현(LEAN)**: §155③ 공동상속만 — 신규 필드 2개(`isCoInherited`·`isLargestCoInheritedShareholder`), 헬퍼 `transfer-inheritance-exclusion.ts`(`resolveInheritedHouseExclusion`: 단독 풀 §155② + 공동소수지분 풀 §155③ 각 최대 1채, 각 풀 2채↑는 순위 미구현이라 보수적 0=세액동일). 세액 효과: **C11 최대지분자 과다비과세 수정 + C12 복수풀 제외**. 아래 §2~§7의 순위 관련 서술은 2-B 참조용으로 보존.
+>
+> ## ✅ 순위·동거봉양 단서 완성 (2026-07-19 후속, 사용자 확정 — 양쪽 "법령대로 게이트")
+> **§1.4 재판정(중요)**: 동거봉양 단서(§155② 단서)는 **세액-무영향이 아니라 세액-관여**임을 §155② 법문 실측으로 확인 — 현행 엔진은 별도세대/동일세대를 무판정해 **동일세대 상속주택도 무조건 제외(과다 비과세)**하는 결함이 있었다. §155② 단서 명문 근거로 정확화(과세 방향, 무근거 불리 아님).
+> **Do-deviation(설계→구현)**: 아래 §2~§7의 순위 3필드(`decedentAcquisitionDate`·`decedentResidenceYears`·`decedentResidedAtInheritance`)+`rankPool` 알고리즘 모델은 **채택하지 않음** — 엔진은 피상속인 전체 포트폴리오(타 상속인 상속분 포함)를 알 수 없어 순위를 계산할 수 없다. 대신 `isLargestCoInheritedShareholder`와 동일한 **자기선언 boolean 게이트**로 단순화(Simplicity First). 신규 HouseInfo 필드 3개:
+> - `decedentSameHouseholdAtInheritance`(동일세대 → 특례 배제) · `parentalCareMergeInheritedHouse`(동거봉양 합가+합가 전 보유 → 예외 인정) · `isRankingDisqualifiedInheritedHouse`(피상속인 2주택↑ 중 순위 부적격 → 배제).
+> - 게이트: `passesHouseholdGate`(`decedentSameHousehold !== true || parentalCare === true`) + `passesRankingGate`(`isRankingDisqualified !== true`) — 둘 다 통과해야 제외 후보. §155③ 공동풀도 동일 게이트(단서 준용). 미제공=별도세대/적격=현행 동작 보존(마이그레이션 안전).
+> - 표시: `resolveInheritedHouseExclusion`에 `sameHouseholdDisqualifiedCount`·`rankingDisqualifiedCount` 추가 → `buildInheritedExclusionSteps`가 amount 0 안내 step(§155② 단서·1~4호). 앵커 10(D1 동일세대→과세 RED·D3 순위→과세 RED·D6 공동+동일세대 RED·D2 동거봉양예외→비과세·U1~U5 count)+RTL 6. 배선 8지점(2-A2 클론). 코드리뷰 High/Medium 0.
 
 ## 0. 배경 요약 (재탐색 없이 인용 — 실측 완료분)
 
