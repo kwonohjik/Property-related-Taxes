@@ -129,6 +129,20 @@ describe("phdBatchToSnapshots — 라운드트립 등가", () => {
     expect(r.acqBaseConversion!.total2001).toBe(r.acquisitionComposite?.total);
   });
 
+  it("≤2000 취득 다그룹 복합(rc I + brick II) — 부분별 산정기준율 라운드트립 등가", () => {
+    const parts = [
+      { floorArea: 120, category: "housing" as const, acquisition: { structureKey: "rc", usageNo: 1 }, firstDisclosure: tp(2), transfer: tp(2) },
+      { floorArea: 80, category: "housing" as const, acquisition: { structureKey: "brick", usageNo: 1 }, firstDisclosure: { structureKey: "brick", usageNo: 2 }, transfer: { structureKey: "brick", usageNo: 2 } },
+    ];
+    const input = { building: { builtYear: 1998, parts }, acquisition: { year: 1998, landPricePerM2: 500_000 }, firstDisclosure: FIRST, transfer: TRANSFER };
+    const batch = computePhdThreePointStdPrice(input);
+    expect(batch.acquisition?.housing).toBeGreaterThan(0); // 다그룹도 산출(부분별)
+    const snap = phdBatchToSnapshots(input, PREFIX)[`${PREFIX}-acq`];
+    const r = calcBuildingStandardPrice(toEngineInput(snap!));
+    expect(r.acqBaseConversion?.convertedTotal).toBe(batch.acquisition?.housing); // 재유도=배치(자기일관)
+    expect(r.acqBaseConversion?.acqBaseRate).toBeUndefined(); // 다그룹 → ※표 "부분별"
+  });
+
   it("≤2000 취득 상가 Case A(당시 주택용도) 단일 — transfer acqBase 스냅샷 생성", () => {
     const commA = { floorArea: 80, category: "commercial" as const, transfer: tp(14), acquisition: tp(1), firstDisclosure: tp(2) };
     const input = { building: { builtYear: 1998, parts: [commA] }, acquisition: { year: 1998, landPricePerM2: 500_000 }, firstDisclosure: FIRST, transfer: TRANSFER };

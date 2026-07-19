@@ -58,12 +58,17 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
       try {
         const result = calcBuildingStandardPrice(toEngineInput(snap));
         let model = buildNtsReportModel(buildNtsReportContext(snap), result);
-        // 취득 ≤2000 주택분 transfer 스냅샷(bsp-…-phd-acq): 엔진 2시점 강제로 생긴 양도 dummy 인스턴스를
-        // 제거하고 취득(acq2000/acq2001) 인스턴스만 노출. taxType 단독 판정 금지(기존 gb/cb 자산 스냅샷 회귀) —
-        // -phd-acq 키에 한정.
+        // phd override(markCell acq2000·연도 라벨)는 phd-acq 전용.
         const isTransferAcq = snap.taxType === "transfer" && /-phd-acq(-commercial)?$/.test(key);
-        if (isTransferAcq) {
-          model = { ...model, instances: model.instances.filter((i) => i.markCell !== "transfer") };
+        // 시점 전용 스냅샷의 반대 시점 인스턴스 제거 — 엔진 transfer 모드가 항상 양도+취득 2벌을 내므로,
+        // 취득 전용 키(phd-acq·gb-acq·cb-acq)는 취득 인스턴스만, 양도 전용 키(gb-transfer·cb-transfer)는
+        // 양도 인스턴스만 노출한다. (gb/cb는 -acq·-transfer 2스냅샷 → 필터 없으면 취득·양도 각 2벌 중복)
+        if (snap.taxType === "transfer") {
+          if (/-(phd|gb|cb)-acq(-commercial)?$/.test(key)) {
+            model = { ...model, instances: model.instances.filter((i) => i.markCell !== "transfer") };
+          } else if (/-(gb|cb)-transfer$/.test(key)) {
+            model = { ...model, instances: model.instances.filter((i) => i.markCell === "transfer") };
+          }
         }
         if (model.instances.length === 0) continue;
         // PHD 3시점(일괄) 스냅샷은 시점·주택/상가 라벨을 헤딩으로 명시(양도·상속 공용) — C1.

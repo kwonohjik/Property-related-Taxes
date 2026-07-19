@@ -43,4 +43,25 @@ describe("A1 이미지7 취득당시(2001 이전) acqBase 재현", () => {
     expect(full.acqBaseConversion?.acqBaseRate).toBe(0.971);
     expect(full.acqBaseConversion?.convertedTotal).toBe(122_786_445);
   });
+
+  // Phase 3 — 부분별 산정기준율 그룹 상이 복합(rc=I·brick=II) 취득<2001.
+  it("[Phase 3] 다그룹 복합 — 부분별 산정기준율 합산(rate=undefined '부분별')", () => {
+    const r = calcBuildingStandardPrice({
+      taxType: "transfer",
+      floorArea: 200,
+      builtYear: 1998,
+      acquisitionYear: 1998,
+      transferYear: 2001,
+      acquisition: { structureKey: "rc", usageNo: 1, landPricePerM2: 500_000 },
+      transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: 500_000 },
+      compositeParts: [
+        { structureKey: "rc", usageNo: 2, acqUsageNo: 1, floorArea: 120 }, // I그룹
+        { structureKey: "brick", usageNo: 2, acqUsageNo: 1, floorArea: 80 }, // II그룹
+      ],
+    });
+    // 부분별: floor(45,120,000×1.019 rc) + floor(26,480,000×1.032 brick) = 73,304,639
+    expect(r.acqBaseConversion?.convertedTotal).toBe(73_304_639);
+    expect(r.acqBaseConversion?.acqBaseRate).toBeUndefined(); // 다그룹 → ※표 "부분별"
+    expect(r.acqBaseConversion?.total2001).toBe(71_600_000); // 2001 합계(rate 前)
+  });
 });

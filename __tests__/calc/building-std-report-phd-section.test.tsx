@@ -85,6 +85,29 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(screen.queryByText(/양도시 · 주택분 \(2001년\)/)).toBeNull();
   });
 
+  it("gb 2시점 스냅샷(-gb-acq·-gb-transfer) — 시점 전용 필터로 취득·양도 각 1벌(중복 제거)", async () => {
+    const { initialBuildingStdPriceForm } = await import("../../lib/calc/building-std-price-form");
+    const gbForm = {
+      ...initialBuildingStdPriceForm,
+      taxType: "transfer" as const,
+      builtYear: "1997", floorArea: "327.6",
+      acquisitionYear: "1997", transferYear: "2026",
+      acqStructureKey: "rc", acqUsageNo: "1", acqLandPrice: "1200000",
+      transStructureKey: "rc", transUsageNo: "2", transLandPrice: "6216000",
+    };
+    useBuildingStdSnapshotStore.setState({
+      snapshots: { "bsp-asset-x-gb-transfer": gbForm, "bsp-asset-x-gb-acq": gbForm },
+    });
+    render(<BuildingStdPriceReportSection inputData={{ assets: [{ assetId: "asset-x" }] }} />);
+    // 2 스냅샷 → 2 계산서(-gb-acq=취득당시 1벌, -gb-transfer=양도당시 1벌). 중복 없음.
+    expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
+    // 취득당시(acq2000, 취득<2001) 1벌 + 양도당시 1벌 — 각 markCell ○ 1개씩
+    expect(screen.getAllByTestId("nts-bsp-1-acq2000").filter((el) => (el.textContent ?? "").includes("○")).length).toBe(1);
+    expect(screen.getAllByTestId("nts-bsp-1-transfer").filter((el) => (el.textContent ?? "").includes("○")).length).toBe(1);
+    // 취득 계산서에 ※산정기준율 표(nts-bsp-x-2) 1개
+    expect(screen.getAllByTestId("nts-bsp-x-2").length).toBe(1);
+  });
+
   it("소속되지 않는 스냅샷(다른 assetId)은 렌더 안 함", () => {
     useBuildingStdSnapshotStore.setState({ snapshots: phdBatchToSnapshots(INPUT, PREFIX) });
     expect(hasBuildingStdReport({ assets: [{ assetId: "other" }] })).toBe(false);
