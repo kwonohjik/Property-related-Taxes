@@ -18,6 +18,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
+import { isMultiHouseSurchargeSuppressed } from "./transfer-tax-api-helpers";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -105,8 +106,14 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     if (!form.householdHousingCount)
       issues.push({ step, message: "세대 보유 주택 수를 선택하세요." });
 
+    // 다주택 중과 한시배제(양도일 윈도우+보유2년) → ④ 섹션 숨김 ↔ 검증도 skip(보이지 않는 필드 차단 방지, mirror)
+    const surchargeSuppressed = isMultiHouseSurchargeSuppressed(
+      form.transferDate,
+      form.assets?.[0]?.acquisitionDate,
+    );
+
     // P5 모드 2 (⑧): 보유 감면주택 행 — 조문·취득일 필수 (확인 토글은 낙관 — 엔진 불적용 사유)
-    const she = form.specialHouseExclusions ?? [];
+    const she = surchargeSuppressed ? [] : (form.specialHouseExclusions ?? []);
     for (let i = 0; i < she.length; i++) {
       if (!she[i].article) {
         issues.push({ step, message: `보유 감면주택 ${i + 1}: 적용 조문을 선택하세요.` });
@@ -117,7 +124,7 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     }
 
     // ⑧ 세대 보유 주택 목록 — 행별 첫 오류 1건씩 (자동 안분 fallback 금지: 미입력=차단)
-    const houses = form.houses ?? [];
+    const houses = surchargeSuppressed ? [] : (form.houses ?? []);
     for (let i = 0; i < houses.length; i++) {
       const h = houses[i];
       const label = `보유 주택 ${i + 1}`;
@@ -166,7 +173,7 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       issues.push({ step, message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
 
     // ⑧ 세대 보유 분양권·입주권 — 각 행 취득일 필수 (자동 안분 fallback 금지)
-    const presaleRights = form.presaleRights ?? [];
+    const presaleRights = surchargeSuppressed ? [] : (form.presaleRights ?? []);
     for (let i = 0; i < presaleRights.length; i++) {
       if (!presaleRights[i].acquisitionDate)
         issues.push({ step, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });
