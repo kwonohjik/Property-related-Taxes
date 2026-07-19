@@ -6,6 +6,7 @@
  *
  * 순수 데이터 (side effect 없음 — route 번들 import 안전).
  */
+import { SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "../legal-codes/transfer";
 
 // ============================================================
 // 누진세율 구간별 역사 데이터 (소득세법 §104①1호)
@@ -158,7 +159,7 @@ export const historicalSeeds = [
   // ── surcharge:_default ───────────────────────────────────────
 
   // 4-A. 중과세율 fallback (effective 1990-01-01, 한시 유예 없음)
-  //   2024.1.10 이전 양도에는 다주택 중과 한시 유예 없음.
+  //   2022.5.10 이전 양도에는 다주택 중과 한시 유예 없음.
   {
     tax_type: "transfer",
     category: "surcharge",
@@ -170,7 +171,27 @@ export const historicalSeeds = [
     is_active: true,
   },
 
-  // 4-B. 중과세율 2024.1.10 시행 (다주택 한시 유예 2026.5.9까지)
+  // 4-A2. 중과세율 한시 유예 시작 (다주택 배제 2022.5.10 ~ 2026.5.9)
+  //   근거: 소득세법 시행령 §167의3①12의2·§167의10①12의2 (KoreanLaw 실측 2026-07-19).
+  //   effective_date=윈도우 하한 → 2022-05-10~2026-05-09 양도가 이 row에 매칭(most recent ≤).
+  //   보유 2년 요건은 엔진(determineMultiHouseSurcharge)에서 별도 게이트(세율 row는 양도일 축만).
+  {
+    tax_type: "transfer",
+    category: "surcharge",
+    sub_category: "_default",
+    effective_date: SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.start,
+    rate_table: surchargeRateTable,
+    deduction_rules: null,
+    special_rules: {
+      surcharge_suspended: true,
+      suspended_types: ["multi_house_2", "multi_house_3plus"],
+      suspended_until: SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end,
+      legal_basis: "소득세법 시행령 §167의3①12의2·§167의10①12의2",
+    },
+    is_active: true,
+  },
+
+  // 4-B. 중과세율 2024.1.10 시행 (다주택 한시 유예 2026.5.9까지 — 4-A2와 동일 종료일, 무해한 중복)
   //   소득세법 부칙 2024.1.1 시행 — 양도일 기준이 아니라 시행일 이후 적용.
   //   effective_date를 2024-01-10으로 설정 → 2024.1.10+ 양도 케이스에 매칭.
   {

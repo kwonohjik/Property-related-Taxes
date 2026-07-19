@@ -11,7 +11,11 @@
 
 import { addYears, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
-import { MULTI_HOUSE, SURCHARGE_EXCLUSION_WINDOW } from "./legal-codes";
+import {
+  MULTI_HOUSE,
+  SURCHARGE_EXCLUSION_WINDOW,
+  SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
+} from "./legal-codes";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import type {
   HouseInfo,
@@ -77,7 +81,8 @@ export function getGroupExcludeReason(house: HouseInfo, transferDate: Date): str
 // 한시 유예 조건부 판정 (2022.5.10 ~ 2026.5.9)
 // ============================================================
 
-const GRACE_PERIOD_END = new Date("2026-05-09");
+// 단일 출처: SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end (드리프트 방지)
+const GRACE_PERIOD_END = new Date(SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end);
 const GRACE_NEW_DESIGNATION_DATE = new Date("2025-10-16");
 
 function checkGracePeriodExemption(
@@ -318,19 +323,28 @@ export function determineSurchargeExclusion(
     }
   }
 
-  // 한시 유예 판단 (2022.5.10 ~ 2026.5.9)
+  // 한시 유예 판단 (§167의3①12의2·§167의10①12의2: 보유 2년 이상 + 2026.5.9까지 양도)
   const surchargeKey = effectiveHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2";
   let suspended = false;
 
-  if (input.gracePeriod && suspensionRules?.surcharge_suspended) {
-    const typeMatches =
-      !suspensionRules.suspended_types ||
-      suspensionRules.suspended_types.includes(surchargeKey);
-    if (typeMatches) {
-      suspended = checkGracePeriodExemption(input.transferDate, input.gracePeriod);
+  // 12의2 본문: 양도 주택 보유기간 2년 이상 요건(§95④ 기산). 미충족 시 배제(suspension) 부적용
+  // → 기존 §104 경로(단기 단일세율 vs 기본+중과 비교과세)로 처리. (재개발 조합원 기존건물 기산은
+  //   sellingHouse.acquisitionDate가 그 기산일을 담는다는 전제 — 기존 §167의3 3년 판정 L213과 동일 관례.)
+  const suspensionHoldingYears = sellingHouse
+    ? differenceInYears(input.transferDate, sellingHouse.acquisitionDate)
+    : 0;
+
+  if (suspensionHoldingYears >= MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS) {
+    if (input.gracePeriod && suspensionRules?.surcharge_suspended) {
+      const typeMatches =
+        !suspensionRules.suspended_types ||
+        suspensionRules.suspended_types.includes(surchargeKey);
+      if (typeMatches) {
+        suspended = checkGracePeriodExemption(input.transferDate, input.gracePeriod);
+      }
+    } else if (suspensionRules) {
+      suspended = isSurchargeSuspended(suspensionRules, input.transferDate, surchargeKey);
     }
-  } else if (suspensionRules) {
-    suspended = isSurchargeSuspended(suspensionRules, input.transferDate, surchargeKey);
   }
 
   return { isExcluded: false, exclusionReasons, isSuspended: suspended };

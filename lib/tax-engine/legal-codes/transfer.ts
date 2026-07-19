@@ -457,15 +457,40 @@ export const ONE_HOUSE_RESIDENCE = {
 } as const;
 
 /**
- * 다주택자 양도소득세 중과 한시적 배제 윈도우.
- * 근거: 조세특례제한법 시행령 §167조의3 (대통령령 제32672호, 2022-05-31 개정)
- *      → 2022-05-10 ~ 2024-05-09 사이 양도 시 일반 누진세율 적용.
- * 본 상수는 코드 내 하드코딩된 동일 날짜를 일괄 치환하는 single source of truth.
+ * 다주택 중과 한시배제 관련 윈도우 — **매매계약일 기준**(gracePeriod 하한).
+ * 근거: 소득세법 시행령 §167의3 (대통령령 제32672호, 2022-05-31 개정, 2022-05-10 소급).
+ * ⚠️ 이 상수는 `.start`(2022-05-10)만 사용된다(gracePeriod 하한 + 취득세 중과 유예 시작).
+ *    `.end`는 미사용 — 양도일 기준 전면배제 종료일은 아래 `SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end`.
  */
 export const SURCHARGE_EXCLUSION_WINDOW = {
   start: "2022-05-10",
-  end: "2024-05-09",
+  end: "2026-05-09",
 } as const;
+
+/**
+ * 다주택 중과 한시배제 — **양도일 기준 전면배제 윈도우**(단일 출처).
+ * 근거(KoreanLaw 실측 2026-07-19): 소득세법 시행령 §167의3①12의2·§167의10①12의2 —
+ *   "법 §95④ 보유기간 2년 이상인 주택으로서 2026년 5월 9일까지 양도하는 주택"은 중과 제외.
+ * 하한(2022-05-10)은 12의2 조항 최초 신설 부칙 시행일(행위시법). 상한(2026-05-09)은 가목.
+ * 엔진 세율시드 `suspended_until` · `GRACE_PERIOD_END` · UI 술어가 모두 이 상수를 참조(3중 드리프트 방지).
+ */
+export const SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW = {
+  start: "2022-05-10",
+  end: "2026-05-09",
+} as const;
+
+/**
+ * 양도일(YYYY-MM-DD 문자열)이 다주택 중과 전면배제 윈도우 내인지. ISO 날짜 문자열 사전식 비교.
+ * 보유 2년 요건은 별도(호출부에서 AND) — 이 술어는 양도일 축만 판정. 미입력/경계 밖 → false.
+ * 엔진 `isSurchargeSuspended`(세율 suspended_until 기반)와 이름 구분 — 클라이언트 표시 게이트 전용.
+ */
+export function isWithinSurchargeSuspensionWindow(transferDate: string | undefined | null): boolean {
+  if (!transferDate) return false;
+  return (
+    transferDate >= SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.start &&
+    transferDate <= SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end
+  );
+}
 
 // ============================================================
 // 다주택 중과세 — 소득세법 §104 ② + 시행령 §152·§167의3·§167의10
@@ -476,6 +501,8 @@ export const MULTI_HOUSE = {
   // ── 중과세율 근거 ──
   /** 소득세법 §104 ⑦ — 다주택 중과세율 (+20%p / +30%p) */
   SURCHARGE_RATE:                 "소득세법 §104 ⑦",
+  /** 한시배제(§167의3·167의10 12의2) 양도 주택 보유기간 최소 요건(년) — 2년 이상만 배제 */
+  SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS: 2,
   /** 소득세법 시행령 §152 — 1세대의 범위 */
   ONE_HOUSEHOLD_DEF:              "소득세법 시행령 §152",
 

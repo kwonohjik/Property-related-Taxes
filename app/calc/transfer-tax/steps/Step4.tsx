@@ -3,8 +3,11 @@ import { cn } from "@/lib/utils";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
+import { isMultiHouseSurchargeSuppressed } from "@/lib/calc/transfer-tax-api-helpers";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { DateInput } from "@/components/ui/date-input";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -63,6 +66,14 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       return false;
     }
   }, [form]);
+
+  // 다주택 중과 한시배제(§167의3·167의10 12의2): 양도일 ∈ [2022-05-10, 2026-05-09] AND 보유 2년 이상
+  // → 중과 전면배제(일반세율)이므로 ④ 주택수·중과 판정 섹션을 숨기고 안내 카드로 대체.
+  // 엔진 배제 결과(determineMultiHouseSurcharge)와 동일 조건(양도일 윈도우 + 보유기간 differenceInYears)이어야 함.
+  const surchargeSuspended = useMemo(
+    () => isMultiHouseSurchargeSuppressed(form.transferDate, primaryAcquisitionDate),
+    [form.transferDate, primaryAcquisitionDate],
+  );
 
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
   useEffect(() => {
@@ -451,9 +462,30 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         </section>
       )}
 
+      {/* ④ 중과 한시배제 기간 → 중과 판정 섹션 대신 안내 카드 (침묵 숨김 금지) */}
+      {surchargeSuspended && isHousingLike(primaryKind) && (
+        <ToneCard
+          tone="sky"
+          title="다주택 중과 한시 배제기간 (일반세율 적용)"
+          titleExtra={
+            <LawArticleModal legalBasis="소득세법 시행령 §167의3" label="§167의3·167의10 12의2" />
+          }
+        >
+          <p
+            data-testid="surcharge-suspended-notice"
+            className="text-xs leading-relaxed text-sky-800 dark:text-sky-300"
+          >
+            양도일이 다주택 중과 한시 배제기간(2022-05-10~2026-05-09)에 해당하고 보유기간이 2년 이상이어서
+            조정대상지역 다주택이라도 <b>일반세율</b>이 적용됩니다. 다주택 중과 관련 입력(세대 보유 주택 목록·
+            양도일 조정대상지역 등)은 계산에 영향이 없어 생략됩니다.
+          </p>
+        </ToneCard>
+      )}
+
       {/* ④ 주택수·중과 판정 — 세대 주택 목록·감면주택 제외·양도일 조정대상지역 (중과 트랙) */}
-      {(primaryKind === "housing" ||
-        (isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2)) && (
+      {!surchargeSuspended &&
+        (primaryKind === "housing" ||
+          (isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2)) && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader title="④ 주택수·중과 판정" description="세대 전체 보유 주택·양도일 조정대상지역으로 다주택 중과를 판정합니다" />
           <div className="space-y-3">
