@@ -317,6 +317,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   assetContractDate?: string;
   /** 피상속인 취득일 (상속 시 단기보유 통산용, YYYY-MM-DD) */
   decedentAcquisitionDate: string;
+  /** §154⑧3호 — 상속개시 당시 상속인·피상속인 동일세대 여부 (상속주택 자체 양도 보유기간 통산) */
+  decedentSameHouseholdBeforeInheritance: boolean;
+  /** §154⑧3호 — 상속개시 전 동일세대 거주·보유 개시일 (YYYY-MM-DD, 비과세 보유기간 기산) */
+  decedentCohabitationHoldingStartDate: string;
   /** 증여자 취득일 (YYYY-MM-DD) */
   donorAcquisitionDate: string;
   /** 매매 환산취득가 사용 여부 */

@@ -127,6 +127,15 @@ export function buildPropertyPayload(form: TransferFormData) {
       acquisitionCause === "inheritance" && primary?.decedentAcquisitionDate
         ? primary.decedentAcquisitionDate
         : undefined,
+    // §154⑧3호 상속주택 자체 양도 보유기간 통산
+    decedentSameHouseholdBeforeInheritance:
+      acquisitionCause === "inheritance"
+        ? primary?.decedentSameHouseholdBeforeInheritance
+        : undefined,
+    decedentCohabitationHoldingStartDate:
+      acquisitionCause === "inheritance" && primary?.decedentCohabitationHoldingStartDate
+        ? primary.decedentCohabitationHoldingStartDate
+        : undefined,
     donorAcquisitionDate:
       acquisitionCause === "gift" && primary?.donorAcquisitionDate
         ? primary.donorAcquisitionDate

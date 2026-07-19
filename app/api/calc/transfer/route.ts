@@ -146,6 +146,8 @@ export async function POST(request: NextRequest) {
     isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,
     acquisitionCause: data.acquisitionCause,
     decedentAcquisitionDate: toOptionalDate(data.decedentAcquisitionDate),
+    decedentSameHouseholdBeforeInheritance: data.decedentSameHouseholdBeforeInheritance,
+    decedentCohabitationHoldingStartDate: toOptionalDate(data.decedentCohabitationHoldingStartDate),
     donorAcquisitionDate: toOptionalDate(data.donorAcquisitionDate),
     carryoverTaxation: data.carryoverTaxation
       ? {

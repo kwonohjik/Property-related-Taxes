@@ -108,6 +108,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 토지 자산 성격 — 부수토지 vs 독립 나대지 (사례 28 landNature 명시 입력 정책)
     landNature: undefined,
     decedentAcquisitionDate: "",
+    decedentSameHouseholdBeforeInheritance: false,
+    decedentCohabitationHoldingStartDate: "",
     donorAcquisitionDate: "",
     useEstimatedAcquisition: false,
     isAppraisalAcquisition: false,
