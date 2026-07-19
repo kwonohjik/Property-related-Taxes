@@ -12,7 +12,7 @@
 
 import { addYears, format } from "date-fns";
 import { calculateHoldingPeriod } from "./tax-utils";
-import { EXEMPTION_PROVISO_CONST } from "./legal-codes";
+import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
@@ -215,8 +215,17 @@ export function checkExemption(
   if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
     const { previousAcquisitionDate, newAcquisitionDate } = input.temporaryTwoHouse;
 
+    // §155①→§154①1·2가·3호 준용: 종전주택이 §154① 단서(both, 화이트리스트) 해당 시 보유 2년 요건 면제.
+    // 나·다목(출국일 1주택)·5호(무주택·residence_only)는 일시적 2주택과 양립 불가라 화이트리스트로 제외.
+    // resolveExemptionProviso는 input.acquisitionDate(=종전주택 취득일, previousAcquisitionDate와 동일 의도) 기준.
+    const provisoReason = input.oneHouseExemptionProviso?.reason;
+    const provisoRelaxesHolding =
+      resolveExemptionProviso(input) === "both" &&
+      provisoReason !== undefined &&
+      TEMP_TWO_HOUSE_PROVISO_REASONS.has(provisoReason);
+
     const prevHolding = calculateHoldingPeriod(previousAcquisitionDate, input.transferDate);
-    if (prevHolding.years < rule.minHoldingYears) {
+    if (!provisoRelaxesHolding && prevHolding.years < rule.minHoldingYears) {
       return { isExempt: false, isPartialExempt: false };
     }
 
@@ -234,7 +243,10 @@ export function checkExemption(
     }
     const deadline = addYears(newAcquisitionDate, deadlineYears);
     if (input.transferDate <= deadline) {
-      return { isExempt: true, isPartialExempt: false, exemptReason: "일시적 2주택 비과세" };
+      const provisoLabel = provisoRelaxesHolding
+        ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason!]})`
+        : "";
+      return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}` };
     }
   }
 

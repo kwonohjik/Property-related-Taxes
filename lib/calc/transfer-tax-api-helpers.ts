@@ -17,6 +17,7 @@ import { differenceInYears } from "date-fns";
 import {
   isWithinSurchargeSuspensionWindow,
   MULTI_HOUSE,
+  TEMP_TWO_HOUSE_PROVISO_REASONS,
 } from "@/lib/tax-engine/legal-codes/transfer";
 
 /**
@@ -35,6 +36,39 @@ export function isMultiHouseSurchargeSuppressed(
     differenceInYears(new Date(transferDate), new Date(acquisitionDate)) >=
     MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS
   );
+}
+
+/** §154① 단서 카드 노출 맥락 — 1주택 / 일시적 2주택 / 미노출. */
+export type ProvisoMode = "one_house" | "temporary_two_house" | null;
+
+/**
+ * §154① 단서 카드 노출 여부 + 맥락(mode) 단일 파생.
+ * 1주택 → one_house. 2주택+일시적특례 → temporary_two_house(§155① 준용). 그 외(순수 2주택·대체주택·3주택+) → 숨김.
+ * UI(Step4 렌더·배치)·API 조립·validation이 이 단일 함수를 공유(mirror-pattern).
+ */
+export function provisoGate(args: {
+  isOneHousehold: boolean;
+  isHousing: boolean;
+  householdHousingCount: string;
+  temporaryTwoHouseSpecial: boolean;
+}): { visible: boolean; mode: ProvisoMode } {
+  if (!args.isOneHousehold || !args.isHousing) return { visible: false, mode: null };
+  const n = parseInt(args.householdHousingCount, 10);
+  if (n === 1) return { visible: true, mode: "one_house" };
+  if (n === 2 && args.temporaryTwoHouseSpecial) return { visible: true, mode: "temporary_two_house" };
+  return { visible: false, mode: null };
+}
+
+/**
+ * §154① 단서 reason 정규화 — temporary_two_house 모드에서 화이트리스트(1·2가·3호) 밖 reason은 "" 로 취급.
+ * UI 선택표시·API 조립·validation 3곳이 단일 소비 → 옵션 필터로 숨긴 stale 무효 reason이 엔진/검증에 도달하지 않음.
+ * (1주택 모드서 나·다목·5호 선택 후 일시적 2주택 전환 시 데드락 방지 — 파생이라 clear-onChange 불필요.)
+ */
+export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undefined | null): string {
+  if (!reason) return "";
+  if (mode === null) return ""; // 카드 숨김(순수 다주택·3주택+·비주택·비1세대) — stale reason 미전송·검증 skip(데드락 방지)
+  if (mode === "temporary_two_house" && !TEMP_TWO_HOUSE_PROVISO_REASONS.has(reason)) return "";
+  return reason;
 }
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";

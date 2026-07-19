@@ -18,7 +18,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
-import { isMultiHouseSurchargeSuppressed } from "./transfer-tax-api-helpers";
+import { isMultiHouseSurchargeSuppressed, provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -196,16 +196,24 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: "대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다." });
     }
 
-    // ⑧ §154① 단서 — 사유별 필수 입력 (미입력 시 침묵 비과세 미적용 차단 — feedback_no_silent_apportion_fallback)
+    // ⑧ §154① 단서 — 사유별 필수 입력. effectiveProvisoReason로 정규화
+    // (카드 숨김·temp-two-house 무효 reason(나·다목·5호)은 검증 skip — Part B/D mirror·데드락 차단)
+    const provisoMode = provisoGate({
+      isOneHousehold: form.isOneHousehold,
+      isHousing: form.assets?.[0]?.assetKind === "housing",
+      householdHousingCount: form.householdHousingCount,
+      temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+    }).mode;
+    const provisoReasonEff = effectiveProvisoReason(provisoMode, form.provisoReason);
     if (
-      (form.provisoReason === "overseas_migration" || form.provisoReason === "overseas_residence") &&
+      (provisoReasonEff === "overseas_migration" || provisoReasonEff === "overseas_residence") &&
       !form.provisoDepartureDate
     )
       issues.push({
         step,
         message: "§154① 단서(해외이주·국외거주): 출국일을 입력하세요. (출국일부터 2년 내 양도 판정)",
       });
-    if (form.provisoReason === "pre_designation_contract" && !form.provisoPreContractNoHouse)
+    if (provisoReasonEff === "pre_designation_contract" && !form.provisoPreContractNoHouse)
       issues.push({
         step,
         message: "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요.",
