@@ -89,15 +89,16 @@ describe("computePhdThreePointStdPrice — 겸용 Option B", () => {
     expect(r.transfer?.housing).toBeGreaterThan(0);
   });
 
-  it("A3: ≤2000 취득 + housing 다부분 → 취득 미산출(C1), 최초공시/양도 정상", () => {
+  it("A3: ≤2000 취득 + housing 다부분(단일 산정기준율 그룹) → 복합 acqBase 산출(Phase 2B 배치 확장)", () => {
     const r = computePhdThreePointStdPrice({
       building: { builtYear: 1998, parts: [H(120), H(80)] },
       acquisition: { year: 1998, landPricePerM2: 500_000 },
       firstDisclosure: FIRST,
       transfer: TRANSFER,
     });
-    expect(r.acquisition?.housing).toBeUndefined();
-    expect(r.unsupported.some((u) => u.point === "acquisition" && u.category === "housing")).toBe(true);
+    // 배치 엔진 확장(acqBaseStdPrice 복합 위임) — 단일 구조그룹(rc) 다부분도 산정기준율 산출.
+    expect(r.acquisition?.housing).toBeGreaterThan(0);
+    expect(r.unsupported.some((u) => u.point === "acquisition" && u.category === "housing")).toBe(false);
     expect(r.firstDisclosure?.housing).toBeGreaterThan(0);
     expect(r.transfer?.housing).toBeGreaterThan(0);
   });

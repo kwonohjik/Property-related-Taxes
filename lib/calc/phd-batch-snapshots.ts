@@ -88,6 +88,42 @@ function buildTransferAcqSnapshot(
 }
 
 /**
+ * 복합(다부분) 취득 ≤2000 → transfer 모드 acqBase 스냅샷. buildTransferAcqSnapshot의 복합판.
+ * 각 부분은 transfer 복합 경로가 요구하는 `usageNo`(양도)·`acqUsageNo`(취득) 둘 다 채운다
+ * (시점 해석 완료된 용도 → 동일값). 단일 산정기준율 그룹만 유효(엔진 제약, 다그룹은 재유도 throw→미표시).
+ */
+function buildTransferAcqCompositeSnapshot(
+  parts: ResolvedPart[],
+  builtYear: number,
+  point: PhdBatchPoint,
+): BuildingStdPriceFormState {
+  const head = parts[0];
+  const sumArea = parts.reduce((s, p) => s + p.floorArea, 0);
+  return {
+    ...initialBuildingStdPriceForm,
+    taxType: "transfer",
+    builtYear: String(builtYear),
+    floorArea: String(sumArea),
+    acquisitionYear: String(point.year),
+    transferYear: String(BUILDING_STD_FIRST_YEAR), // 2001 dummy
+    acqStructureKey: head.structureKey,
+    acqUsageNo: String(head.usageNo),
+    acqLandPrice: String(point.landPricePerM2),
+    transStructureKey: head.structureKey,
+    transUsageNo: String(head.usageNo),
+    transLandPrice: String(point.landPricePerM2),
+    compositeMode: true,
+    compositeParts: parts.map((p) => ({
+      ...emptyCompositePart(),
+      structureKey: p.structureKey,
+      usageNo: String(p.usageNo),
+      acqUsageNo: String(p.usageNo), // transfer 복합 필수(미세팅 시 엔진 throw)
+      floorArea: String(p.floorArea),
+    })),
+  };
+}
+
+/**
  * 배치 입력 → 스냅샷 맵. 키: `${prefix}-{acq|first|transfer}[-commercial]`.
  * computePhdThreePointStdPrice와 동일한 시점×카테고리 산정 로직을 미러(산출되는 슬롯만 스냅샷 생성).
  */
@@ -120,9 +156,14 @@ export function phdBatchToSnapshots(
     if (resolved.length !== catParts.length) return; // 시점 미입력(Case B 상가 등) → 스냅샷 생략
     const snapKey = `${prefix}-${KEYWORD[key]}${category === "commercial" ? "-commercial" : ""}`;
     if (point.year < BUILDING_STD_FIRST_YEAR) {
-      // 취득 ≤2000: 주택분 단독(1부분)만 transfer 모드 acqBase 스냅샷. 상가·복합·최초공시/양도는 미지원(생략).
-      if (key === "acquisition" && category === "housing" && resolved.length === 1) {
-        out[snapKey] = buildTransferAcqSnapshot(resolved[0], builtYear, point);
+      // 취득 ≤2000 acqBase transfer 스냅샷 — 취득 시점만(최초공시/양도<2001은 생략).
+      //  - 단일부분: 주택 단독·상가 Case A(취득 구조·용도 지정 시 resolved 채워짐, Case B는 상단에서 걸러짐).
+      //  - 복합 다부분: buildTransferAcqCompositeSnapshot(단일 산정기준율 그룹만 유효 — 다그룹은 재유도 throw→미표시).
+      if (key === "acquisition") {
+        out[snapKey] =
+          resolved.length === 1
+            ? buildTransferAcqSnapshot(resolved[0], builtYear, point)
+            : buildTransferAcqCompositeSnapshot(resolved, builtYear, point);
       }
       return;
     }
