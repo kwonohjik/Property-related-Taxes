@@ -127,6 +127,10 @@ export function computeTransferPerAssetSummary(
   const isSingle = formData.assets.length === 1;
   const bundledResult = result?.mode === "bundled" ? result : null;
   const singleResult = result?.mode === "single" ? result.result : null;
+  // 겸용주택(§160①단서)은 별도 mode "mixed-use"(MixedUseGainBreakdown) — single/bundled 어디에도
+  // 안 걸려, 처리 없으면 취득가액·필요경비가 계산 후에도 «-»로 누락된다. 겸용은 단일 자산 전제
+  // (transfer-tax-api.ts:129 primary만 판정)라 primary 행(i===0)에만 적용.
+  const mixedResult = result?.mode === "mixed-use" ? result.result : null;
 
   // 계산 전 안분 프리뷰 맵 (bundled 결과가 없을 때만 사용)
   const apportionedMap =
@@ -179,7 +183,12 @@ export function computeTransferPerAssetSummary(
     const acqBase = directAcqRaw(a);
     let acqPrice = fractional ? Math.floor(acqBase * ratio) : acqBase;
     let acqPending = false;
-    if (bundledMatch) {
+    if (mixedResult && i === 0) {
+      // 겸용주택: 주택+상가 환산취득가액 합(전용 필드, 라벨 파싱 아님).
+      acqPrice =
+        mixedResult.housingPart.estimatedAcquisitionPrice +
+        mixedResult.commercialPart.estimatedAcquisitionPrice;
+    } else if (bundledMatch) {
       acqPrice = bundledMatch.allocatedAcquisitionPrice;
     } else if (acqPrice === 0 && isSingle) {
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)
@@ -215,7 +224,13 @@ export function computeTransferPerAssetSummary(
     const expBase = directExpenseRaw(a);
     let expense = fractional ? Math.floor(expBase * ratio) : expBase;
     let expensePending = false;
-    if (bundledMatch) {
+    if (mixedResult && i === 0) {
+      // 겸용주택 필요경비 = 주택·상가 각 토지·건물분 개산공제(§163⑥) 합.
+      // (swap §97② 발동 시 실제 필요경비와 달라질 수 있음 — 계획서 §6 리스크 참조)
+      const { housingPart: h, commercialPart: c } = mixedResult;
+      expense =
+        h.landAppraisalDed + h.buildingAppraisalDed + c.landAppraisalDed + c.buildingAppraisalDed;
+    } else if (bundledMatch) {
       expense = bundledMatch.allocatedExpenses;
     } else if (expense === 0 && isSingle) {
       if (singleResult) {
