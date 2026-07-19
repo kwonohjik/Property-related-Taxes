@@ -338,6 +338,17 @@ export function calcBuildingStandardPrice(
       ? calcPointBreakdown(acquisitionYear, acqPoint, input.floorArea, input.builtYear, 1.0, "취득시")
       : calcAcqBaseBreakdown(acquisitionYear, acqPoint, input.floorArea, input.builtYear);
 
+  // 취득 ≤2000 단독: 산정기준율 환산 echo(계산서 ※표 소스 — 복합 경로 :213과 대칭).
+  // total2001 = 2001 지수표 ㎡당 × 면적(rate 적용 전, stdPriceFromPerM2로 정수화) / convertedTotal = 적용 후.
+  const acqBaseConversion =
+    acquisition.acqBaseRate !== undefined
+      ? {
+          total2001: stdPriceFromPerM2(acquisition.pricePerM2 ?? 0, input.floorArea).standardPrice,
+          acqBaseRate: acquisition.acqBaseRate,
+          convertedTotal: acquisition.standardPrice,
+        }
+      : undefined;
+
   // 동일연도(§164⑧) 환산 분기
   if (transferYear === acquisitionYear) {
     if (input.holdingMonths === undefined || !(input.holdingMonths > 0)) {
@@ -385,6 +396,7 @@ export function calcBuildingStandardPrice(
     return {
       acquisition,
       transfer,
+      ...(acqBaseConversion && { acqBaseConversion }),
       sameYearAdjusted: true,
       warnings,
       legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
@@ -402,5 +414,11 @@ export function calcBuildingStandardPrice(
     1.0,
     "양도시",
   );
-  return { acquisition, transfer, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
+  return {
+    acquisition,
+    transfer,
+    ...(acqBaseConversion && { acqBaseConversion }),
+    warnings,
+    legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
+  };
 }

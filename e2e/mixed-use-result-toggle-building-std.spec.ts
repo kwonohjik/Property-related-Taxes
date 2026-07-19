@@ -78,14 +78,27 @@ const PHD_INPUT = {
   transfer: { year: 2025, landPricePerM2: 3_486_000 },
 };
 
-function seedStdSnapshots() {
+// 취득<2001 주택분(이미지7 유형) — 취득 1997·transfer 모드 acqBase 스냅샷 생성 경로.
+const PHD_INPUT_PRE2001 = {
+  building: {
+    builtYear: 1997,
+    parts: [
+      { floorArea: 100, category: "housing" as const, acquisition: tp(1), firstDisclosure: tp(2), transfer: tp(2) },
+    ],
+  },
+  acquisition: { year: 1997, landPricePerM2: 1_200_000 },
+  firstDisclosure: { year: 2005, landPricePerM2: 3_000_000 },
+  transfer: { year: 2025, landPricePerM2: 3_486_000 },
+};
+
+function seedStdSnapshots(pre2001?: boolean) {
   return {
-    state: { snapshots: phdBatchToSnapshots(PHD_INPUT, `bsp-${ASSET_ID}-phd`) },
+    state: { snapshots: phdBatchToSnapshots(pre2001 ? PHD_INPUT_PRE2001 : PHD_INPUT, `bsp-${ASSET_ID}-phd`) },
     version: 0,
   };
 }
 
-async function seedAndCalc(page: Page, opts?: { withStdSnapshot?: boolean }) {
+async function seedAndCalc(page: Page, opts?: { withStdSnapshot?: boolean; pre2001?: boolean }) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
@@ -93,7 +106,7 @@ async function seedAndCalc(page: Page, opts?: { withStdSnapshot?: boolean }) {
       sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(form));
       if (std) sessionStorage.setItem("building-std-snapshots", JSON.stringify(std));
     },
-    { form: seedForm(), std: opts?.withStdSnapshot ? seedStdSnapshots() : null },
+    { form: seedForm(), std: opts?.withStdSnapshot ? seedStdSnapshots(opts?.pre2001) : null },
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -183,5 +196,25 @@ test.describe("겸용주택 결과뷰 — 세션 토글 + 건물 기준시가 �
     test.setTimeout(60_000);
     await seedAndCalc(page);
     await expect(page.locator('[data-print-id="building-std-report"]')).toHaveCount(0);
+  });
+
+  test("B3: 취득<2001 주택분 — acq2000 취득 계산서 + ※산정기준율 표 + '(1997년)' 연도", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndCalc(page, { withStdSnapshot: true, pre2001: true });
+
+    const report = page.locator('[data-print-id="building-std-report"]');
+    await expect(report).toBeVisible();
+    // 취득시 라벨의 연도 = acquisitionYear(1997) — transfer 스냅샷 valuationYear 부재 fallback
+    await expect(report.getByText(/취득시 · 주택분 \(1997년\)/).first()).toBeVisible();
+    // 계산서 본문은 기본 접힘(hidden print:block) → 취득 계산서 헤더(펼치기 토글=헤더 button)를 클릭.
+    await report.getByRole("button", { name: /취득시 · 주택분 \(1997년\)/ }).first().click();
+    // ※ 산정기준율(2001.1.1 기준시가 × 산정기준율) 표 노출 — acqBase 소스
+    await expect(report.getByTestId("nts-bsp-x-2").first()).toBeVisible();
+    // Ⅰ.구분 취득당시 2000.12.31 이전(acq2000) 칸 ○ 마킹
+    await expect(
+      report.getByTestId("nts-bsp-1-acq2000").filter({ hasText: "○" }).first(),
+    ).toBeVisible();
+    // 양도 dummy(2001년) 취득 계산서 미노출
+    await expect(report.getByText(/취득시 · 주택분 \(2001년\)/)).toHaveCount(0);
   });
 });

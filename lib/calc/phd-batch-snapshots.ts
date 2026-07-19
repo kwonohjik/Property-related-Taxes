@@ -60,6 +60,34 @@ function buildValuationSnapshot(
 }
 
 /**
+ * 취득 ≤2000 단독 주택분 → transfer 모드 acqBase 스냅샷.
+ * valuation 서식으로 재현 불가한 산정기준율 환산(소령 §164⑤)을 국세청 계산서 ※표로 출력하기 위해
+ * transfer 모드(취득<2001 → 엔진 acqBase 경로)로 스냅샷을 만든다. transfer point는 2001 dummy
+ * (§164⑧ 동일연도 회피 — 취득년≠2001)로 취득 point를 복사하며, 결과탭 렌더 단계에서 양도 dummy
+ * 인스턴스는 필터로 제거하고 취득(acq2000) 인스턴스만 노출한다.
+ */
+function buildTransferAcqSnapshot(
+  part: ResolvedPart,
+  builtYear: number,
+  point: PhdBatchPoint,
+): BuildingStdPriceFormState {
+  return {
+    ...initialBuildingStdPriceForm,
+    taxType: "transfer",
+    builtYear: String(builtYear),
+    floorArea: String(part.floorArea),
+    acquisitionYear: String(point.year),
+    transferYear: String(BUILDING_STD_FIRST_YEAR), // 2001 dummy
+    acqStructureKey: part.structureKey,
+    acqUsageNo: String(part.usageNo),
+    acqLandPrice: String(point.landPricePerM2),
+    transStructureKey: part.structureKey, // dummy 복사
+    transUsageNo: String(part.usageNo),
+    transLandPrice: String(point.landPricePerM2),
+  };
+}
+
+/**
  * 배치 입력 → 스냅샷 맵. 키: `${prefix}-{acq|first|transfer}[-commercial]`.
  * computePhdThreePointStdPrice와 동일한 시점×카테고리 산정 로직을 미러(산출되는 슬롯만 스냅샷 생성).
  */
@@ -87,10 +115,17 @@ export function phdBatchToSnapshots(
     catParts: PhdBatchPart[],
     point: PhdBatchPoint | undefined,
   ) => {
-    if (!point || catParts.length === 0 || point.year < BUILDING_STD_FIRST_YEAR) return;
+    if (!point || catParts.length === 0) return;
     const resolved = catParts.map((p) => partAtPoint(p, key)).filter((r): r is ResolvedPart => r != null);
     if (resolved.length !== catParts.length) return; // 시점 미입력(Case B 상가 등) → 스냅샷 생략
     const snapKey = `${prefix}-${KEYWORD[key]}${category === "commercial" ? "-commercial" : ""}`;
+    if (point.year < BUILDING_STD_FIRST_YEAR) {
+      // 취득 ≤2000: 주택분 단독(1부분)만 transfer 모드 acqBase 스냅샷. 상가·복합·최초공시/양도는 미지원(생략).
+      if (key === "acquisition" && category === "housing" && resolved.length === 1) {
+        out[snapKey] = buildTransferAcqSnapshot(resolved[0], builtYear, point);
+      }
+      return;
+    }
     out[snapKey] = buildValuationSnapshot(resolved, builtYear, point);
   };
 

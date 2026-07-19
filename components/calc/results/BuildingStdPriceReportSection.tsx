@@ -14,6 +14,7 @@ import { useMemo } from "react";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import { toEngineInput, buildNtsReportContext } from "@/lib/calc/building-std-price-form";
 import { idOfSnapshotKey, phdTimepointLabel } from "@/lib/calc/building-std-snapshot-keys";
+import { BUILDING_STD_FIRST_YEAR } from "@/lib/calc/phd-building-std-batch";
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
 import { buildNtsReportModel, type NtsReportModel, type NtsReportInstance } from "@/lib/calc/nts-report-adapter";
 import { NtsBuildingStdPriceReport } from "@/components/calc/building-std-price/nts-report/NtsBuildingStdPriceReport";
@@ -56,19 +57,31 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
       if (id === "" || !inputStr.includes(id)) continue;
       try {
         const result = calcBuildingStandardPrice(toEngineInput(snap));
-        const model = buildNtsReportModel(buildNtsReportContext(snap), result);
+        let model = buildNtsReportModel(buildNtsReportContext(snap), result);
+        // 취득 ≤2000 주택분 transfer 스냅샷(bsp-…-phd-acq): 엔진 2시점 강제로 생긴 양도 dummy 인스턴스를
+        // 제거하고 취득(acq2000/acq2001) 인스턴스만 노출. taxType 단독 판정 금지(기존 gb/cb 자산 스냅샷 회귀) —
+        // -phd-acq 키에 한정.
+        const isTransferAcq = snap.taxType === "transfer" && /-phd-acq(-commercial)?$/.test(key);
+        if (isTransferAcq) {
+          model = { ...model, instances: model.instances.filter((i) => i.markCell !== "transfer") };
+        }
         if (model.instances.length === 0) continue;
         // PHD 3시점(일괄) 스냅샷은 시점·주택/상가 라벨을 헤딩으로 명시(양도·상속 공용) — C1.
         // "양도" 접두는 제거: 상속취득 경로에서도 동일 서식을 쓰므로 시점명만 표기.
         const tp = phdTimepointLabel(key);
+        // 연도 라벨: valuation 스냅샷은 valuationYear, transfer 취득 스냅샷은 acquisitionYear(valuationYear 부재).
+        const yearLabel = snap.valuationYear || (isTransferAcq ? snap.acquisitionYear : "");
         const titleOverride = tp
-          ? `${tp.timepoint} · ${tp.category === "commercial" ? "상가분" : "주택분"}${snap.valuationYear ? ` (${snap.valuationYear}년)` : ""}`
+          ? `${tp.timepoint} · ${tp.category === "commercial" ? "상가분" : "주택분"}${yearLabel ? ` (${yearLabel}년)` : ""}`
           : undefined;
         // Ⅰ.구분 마킹 — 상속(재구성 taxType) 대신 양도 맥락으로: 취득시·최초공시일=취득당시(2001↑), 양도시=양도당시.
+        // 취득 ≤2000 transfer 스냅샷은 acq2000(2000.12.31 이전) 칸에 마킹.
         const markCellOverride: NtsReportInstance["markCell"] | undefined = tp
           ? tp.timepoint === "양도시"
             ? "transfer"
-            : "acq2001"
+            : isTransferAcq && Number(snap.acquisitionYear) < BUILDING_STD_FIRST_YEAR
+              ? "acq2000"
+              : "acq2001"
           : undefined;
         // PHD는 취득→최초공시→양도, 주택→상가 순으로 정렬. 비-PHD는 삽입 순서 유지.
         const rank = tp
