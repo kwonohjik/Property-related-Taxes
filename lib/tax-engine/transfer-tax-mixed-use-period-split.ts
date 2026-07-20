@@ -109,6 +109,8 @@ export function applyUsagePeriodSplit(
   apportionment: MixedUseApportionment,
   excessResult: ExcessLandResult,
   residenceYears: number,
+  // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (게이트 전용). 거주분 공제율은 residenceYears(실거주) 유지.
+  table2ResidenceYears: number,
   isOneHouseExempt: boolean,
   periodInfo: UsagePeriodInfo,
   direction: "house_to_commercial" | "commercial_to_house",
@@ -191,7 +193,8 @@ export function applyUsagePeriodSplit(
   const proratedTaxableGain = p1HousingProrated + p2HousingProrated;
 
   // ── ③ LTHD (Period × 직책 별) ──
-  const useTable2 = isOneHouseExempt && residenceYears >= 2;
+  // 표2 게이트는 통산(table2ResidenceYears), 거주분 공제율은 실거주(residenceYears) — §154⑧3호 / 2021-202.
+  const useTable2 = isOneHouseExempt && table2ResidenceYears >= 2;
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 
   // P1 housing LTHD: t1 보유기간 (h_to_c일 때만 housing P1 존재)

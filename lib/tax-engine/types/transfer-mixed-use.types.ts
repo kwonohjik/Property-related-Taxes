@@ -99,8 +99,19 @@ export interface MixedUseAssetInput {
    * 최초 공시 당시 전체가 주택이었던 경우 등 사용자가 직접 지정 가능.
    */
   preHousingDisclosure?: Omit<PreHousingDisclosureInput, "landArea"> & { landArea?: number };
-  /** 거주 연수 — 2년 이상이면 표2(보유 40%+거주 40%), 미만이면 표1(최대 30%) */
+  /**
+   * 실거주 연수. 표2 활성 시 **거주분 공제율**(거주연수×4%, 최대 40%)에 사용.
+   * 표2 게이트(대상 판정)는 `table2ResidencePeriodYears`(통산) 우선 — 미제공 시 이 값으로 fallback.
+   */
   residencePeriodYears: number;
+
+  /**
+   * §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (상속개시 후 실거주 + 상속개시 전 동일세대 통산 거주).
+   * 표2 게이트(`useTable2`)만 이 값을 사용하고, 표2 거주분 공제율은 `residencePeriodYears`(실거주)를 별도 사용
+   * (사전법령해석재산 2021-202: 대상 판정=통산, 공제율=상속개시일 기산). 두 기간은 disjoint.
+   * 미제공 시 `residencePeriodYears`로 fallback(비상속·별도세대 = 실거주) → 기존 회귀 0.
+   */
+  table2ResidencePeriodYears?: number;
 
   /** 수도권 여부 — 배율 판정용 (미제공 시 true로 보수 처리) */
   isMetropolitanArea?: boolean;

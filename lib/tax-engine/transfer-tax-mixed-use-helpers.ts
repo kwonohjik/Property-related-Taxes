@@ -672,6 +672,8 @@ export function buildHousingPart(
   gainSplit: HousingGainSplit,
   excessResult: ExcessLandResult,
   residenceYears: number,
+  // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (게이트 전용). 거주분 공제율은 residenceYears(실거주) 유지.
+  table2ResidenceYears: number,
   isOneHouseExempt: boolean = true,  // 미주입 시 true (기존 겸용주택 사례14 등 backward compat)
 ): MixedUseHousingPart {
   const housingAcq = housingAcqResult.estimatedAcq;
@@ -708,7 +710,8 @@ export function buildHousingPart(
 
   // ── ③ 장기보유특별공제 (안분 후 과세대상 양도차익에 표율 적용) ──
   // 🚨 Critical: 다주택자는 거주 2년+ 이어도 표1 적용 (1세대1주택 거주공제 미적용)
-  const useTable2 = isOneHouseExempt && residenceYears >= 2;
+  // 표2 게이트는 통산(table2ResidenceYears), 거주분 공제율은 실거주(residenceYears) — §154⑧3호 / 2021-202.
+  const useTable2 = isOneHouseExempt && table2ResidenceYears >= 2;
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 
   const landDedRate = calcLongTermRate(

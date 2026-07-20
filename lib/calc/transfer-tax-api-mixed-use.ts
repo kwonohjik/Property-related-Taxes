@@ -13,12 +13,20 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
+import { consolidateResidenceMonths } from "@/lib/tax-engine/transfer-tax-exemption";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 
 /** 겸용주택 mixedUse 페이로드. 비-겸용이면 undefined. */
 export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData) {
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
   if (!isMixed) return undefined;
+
+  // 거주 개월 단일 소스 — 실거주(공제율)와 §154⑧3호 통산(표2 대상 판정) 둘 다 여기서 도출.
+  const resMonths = deriveResidencePeriodMonths(
+    primary,
+    form.transferDate,
+    form.residencePeriodMonths,
+  );
 
   return {
     isMixedUseHouse: true as const,
@@ -140,8 +148,16 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     })(),
     // 거주기간 단일 소스 — 보유상황(입주일·퇴거일/개월) 거주에서 도출.
     // 메인 엔진과 동일 whole-year 산식(Math.floor(months/12), transfer-tax-helpers.ts:466·505)로 정합.
-    residencePeriodYears: Math.floor(
-      deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths) / 12,
+    residencePeriodYears: Math.floor(resMonths / 12),  // 실거주 (표2 거주분 공제율)
+    // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 동일세대 상속이면 실거주 + 상속개시 전 통산 거주.
+    // 규칙은 엔진 `consolidateResidenceMonths` 재사용(단일 소스). 비상속·별도세대면 실거주로 identity.
+    table2ResidencePeriodYears: Math.floor(
+      consolidateResidenceMonths(resMonths, {
+        acquisitionCause: primary.acquisitionCause,
+        decedentSameHouseholdBeforeInheritance: primary.decedentSameHouseholdBeforeInheritance,
+        decedentCohabitationResidenceMonths:
+          parseInt(primary.decedentCohabitationResidenceMonths) || 0,
+      }) / 12,
     ),
     isMetropolitanArea: primary.mixedIsMetropolitanArea,
     zoneType: "residential" as const,
