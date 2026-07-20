@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeLinkButton } from "@/components/ui/home-link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -606,7 +606,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
 
       {/* 하단 네비게이션 버튼 */}
       <div className="flex gap-3 print:hidden">
-        <HomeLinkButton className="flex-1" />
+        <HomeButton variant="block" className="flex-1" />
         {onBack && (
           <button
             type="button"

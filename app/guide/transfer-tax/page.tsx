@@ -4,7 +4,7 @@
  */
 
 import Link from "next/link";
-import { HomeLink } from "@/components/ui/home-link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { GuideTableOfContents, type TocItem } from "@/components/guide/GuideTableOfContents";
 
 export const metadata = {
@@ -54,7 +54,7 @@ export default function TransferTaxGuidePage() {
 
         {/* 페이지 헤더 */}
         <header className="space-y-2 pb-4 border-b">
-          <HomeLink />
+          <HomeButton />
           <p className="text-xs text-muted-foreground">세금 가이드</p>
           <h1 className="text-2xl font-bold">양도소득세 계산 방법 완전 가이드</h1>
           <p className={pCls}>
@@ -459,7 +459,7 @@ export default function TransferTaxGuidePage() {
           정확한 세금 계산은 세무사 상담을 권장합니다. (기준: 소득세법 2024.1.1. 개정 반영)
         </p>
         <div className="pt-2">
-          <HomeLink />
+          <HomeButton />
         </div>
       </article>
     </div>

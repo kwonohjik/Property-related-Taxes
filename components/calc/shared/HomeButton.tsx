@@ -23,6 +23,11 @@ interface HomeButtonProps {
    * 재진입 시 stale 화면을 막으려면 여기서 step/result를 정리한다.
    */
   onBeforeNavigate?: () => void;
+  /**
+   * pill(기본) — 이미지7 표준 pill(rounded-full). 헤더·breadcrumb용.
+   * block — 전체폭 rounded-lg 버튼. flex-1 레이아웃(결과·에러 화면)에서 className으로 flex-1 전달.
+   */
+  variant?: "pill" | "block";
 }
 
 export function HomeButton({
@@ -30,12 +35,17 @@ export function HomeButton({
   label = "홈으로",
   className = "",
   onBeforeNavigate,
+  variant = "pill",
 }: HomeButtonProps) {
   const router = useRouter();
 
   const baseClass =
-    "inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring " +
+    (variant === "block"
+      ? "inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring "
+      : "inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ") +
     className;
+
+  const iconClass = variant === "block" ? "h-4 w-4" : "h-3.5 w-3.5";
 
   if (confirmMessage) {
     function handleClick() {
@@ -46,7 +56,7 @@ export function HomeButton({
     }
     return (
       <button type="button" onClick={handleClick} className={baseClass} aria-label="홈으로 이동">
-        <Home className="h-3.5 w-3.5" />
+        <Home className={iconClass} />
         {label}
       </button>
     );
@@ -59,7 +69,7 @@ export function HomeButton({
       className={baseClass}
       aria-label="홈으로 이동"
     >
-      <Home className="h-3.5 w-3.5" />
+      <Home className={iconClass} />
       {label}
     </Link>
   );

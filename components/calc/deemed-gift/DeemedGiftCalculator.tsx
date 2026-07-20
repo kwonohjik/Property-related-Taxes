@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { Button } from "@/components/ui/button";
 import {
@@ -151,9 +151,7 @@ export function DeemedGiftCalculator() {
       )}
 
       <div className="pt-2">
-        <Link href="/" className="text-sm text-muted-foreground hover:underline">
-          ← 홈으로
-        </Link>
+        <HomeButton />
       </div>
     </div>
   );

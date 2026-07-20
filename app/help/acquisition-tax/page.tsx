@@ -18,7 +18,7 @@
  */
 
 import Link from "next/link";
-import { HomeLink } from "@/components/ui/home-link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { StandardRateSection } from "./sections/StandardRateSection";
 import { MultiHouseSurchargeSection } from "./sections/MultiHouseSurchargeSection";
 import { LuxuryDefinitionSection } from "./sections/LuxuryDefinitionSection";
@@ -56,7 +56,7 @@ export default function AcquisitionTaxHelpPage() {
     <main className="max-w-3xl mx-auto px-4 py-8 space-y-8">
       {/* 헤더 */}
       <div className="space-y-2">
-        <HomeLink />
+        <HomeButton />
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/calc/acquisition-tax" className="hover:underline">
             취득세 계산기
@@ -161,7 +161,7 @@ export default function AcquisitionTaxHelpPage() {
 
       {/* 홈으로 */}
       <div className="pt-2 border-t border-border">
-        <HomeLink />
+        <HomeButton />
       </div>
     </main>
   );

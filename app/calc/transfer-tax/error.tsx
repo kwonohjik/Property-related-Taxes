@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { HomeLinkButton } from "@/components/ui/home-link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -36,7 +36,7 @@ export default function TransferTaxError({ error, reset }: ErrorPageProps) {
           >
             다시 시도
           </button>
-          <HomeLinkButton />
+          <HomeButton variant="block" />
         </div>
       </div>
     </div>
