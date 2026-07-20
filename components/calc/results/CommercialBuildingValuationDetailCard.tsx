@@ -50,6 +50,8 @@ interface Props {
   landGain?: number;
   /** 건물 양도차익 */
   buildingGain?: number;
+  /** §97②2호 단서 swap 발동 — true면 개산공제(가목) 대신 자본적지출+양도비(나목)가 필요경비로 적용됨. */
+  swapApplied?: boolean;
 }
 
 function Row({ label, value, sub = false, highlight = false }: {
@@ -68,7 +70,7 @@ function Row({ label, value, sub = false, highlight = false }: {
   );
 }
 
-export function CommercialBuildingValuationDetailCard({ detail, transferPrice, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain }: Props) {
+export function CommercialBuildingValuationDetailCard({ detail, transferPrice, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied }: Props) {
   const isPreDisclosure = detail.estimatedBasisAtAcq !== undefined;
 
   // 보유기간 텍스트
@@ -151,6 +153,11 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label="개산공제 건물분" value={detail.estimatedDeductionBuilding} sub />
           </tbody>
         </table>
+        {swapApplied && (
+          <p className="text-caption text-rose-700 mt-1">
+            ※ §97②2호 단서 swap 발동 — 위 개산공제(가목) 대신 자본적지출+양도비(나목)가 필요경비로 적용되었습니다(환산취득가 미차감).
+          </p>
+        )}
       </div>
 
       {/* 토지/건물 분리 양도차익 */}
