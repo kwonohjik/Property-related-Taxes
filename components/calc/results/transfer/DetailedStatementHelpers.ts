@@ -340,17 +340,31 @@ export function buildStatementItems(
         0,
       )
     : result.taxableGain;
+  // 순환 참조 제거: 과세대상 양도차익을 독립 산식(엔진 §95③ 12억 초과 안분 STEP 재사용)으로,
+  // 비과세 양도차익을 차감(전체 − 과세대상)으로 방향 고정. 전액 과세(비과세 0) 케이스는 별도 문구.
+  const proratedStep = isAggregate
+    ? undefined
+    : findStepByLabel(result.steps, "과세 양도차익 (12억 초과분)");
+  const taxableFormula = isAggregate
+    ? "각 자산 과세대상 양도차익 합계"
+    : (proratedStep?.formula ??
+        (exemptVal <= 0
+          ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (전액 과세)`
+          : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 비과세 양도차익 ${exemptVal.toLocaleString()}`));
+  const exemptFormula = isAggregate
+    ? "각 자산 비과세 양도차익 합계 (§89 비과세 또는 §95 12억 초과 안분)"
+    : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 과세대상 양도차익 ${taxableGainVal.toLocaleString()} (§89 비과세 또는 §95 12억 초과 안분)`;
   items.set("exemptGain", {
     label: "비과세 양도차익",
     value: exemptVal,
-    formula: `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 과세대상 양도차익 ${taxableGainVal.toLocaleString()} (§89 비과세 또는 §95 12억 초과 안분)`,
+    formula: exemptFormula,
     legalBasis: "소득세법 §89·§95",
   });
 
   items.set("taxableGain", {
     label: "과세대상 양도차익",
     value: taxableGainVal,
-    formula: `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 비과세 양도차익 ${exemptVal.toLocaleString()}`,
+    formula: taxableFormula,
     legalBasis: "소득세법 §92",
     perAsset: isAggregate
       ? properties.map((p) => ({
