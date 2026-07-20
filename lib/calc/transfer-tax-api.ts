@@ -22,6 +22,7 @@ import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import {
   buildInheritedAcquisitionPayload,
   buildInheritedHouseValuationPayload,
+  buildCommercialInheritanceValuationPayload,
 } from "./transfer-tax-api-inheritance";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
@@ -648,6 +649,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional),
     // ── 상속 주택 환산취득가 보조 입력 (3-시점, < 2005-04-30) — sibling 격리 ──
     ...buildInheritedHouseValuationPayload(primary, form.transferDate),
+    // ── 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (< 2005-01-01, §163⑨2호 max) — sibling 격리 ──
+    ...buildCommercialInheritanceValuationPayload(primary),
     // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용, 단건·다건 공용 헬퍼) ──
     ...(hasPre1990 ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     // 겸용주택 분리계산 입력

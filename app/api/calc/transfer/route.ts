@@ -301,6 +301,8 @@ export async function POST(request: NextRequest) {
             : undefined,
         }
       : undefined,
+    // ⑭ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (§163⑨2호 max) — 숫자 payload(Date 변환 불요)
+    ...(data.commercialInheritanceValuation ? { commercialInheritanceValuation: data.commercialInheritanceValuation } : {}),
     // 다필지 분리 계산 (환지·합병 등) — 문자열 날짜 → Date 변환
     parcels: data.parcels?.map((p) => ({
       ...p,

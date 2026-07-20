@@ -280,3 +280,27 @@ export const commercialBuildingValuationSchema = z.object({
   /** 최초고시시(2005) 개별공시지가 (원/㎡) — pre_disclosure 시 필수 */
   landPriceAtFirstDisclosure: z.number().int().positive().optional(),
 });
+
+/**
+ * ⑫ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 Zod 스키마 (소령 §163⑨2호, §164⑥).
+ * 상속개시일 < 2005-01-01 상가의 취득당시 기준시가(P_A) 산정용. opt-in — API가 8필드 all-or-nothing 빌드.
+ * 미정의 시 침묵 stripping 방지. (환산 payload와 별개 — P_A max 전용, 양도시 값 불요.)
+ */
+export const commercialInheritanceValuationSchema = z.object({
+  /** 전용면적 (㎡) */
+  exclusiveArea: z.number().positive(),
+  /** 공유면적 (㎡) */
+  commonArea: z.number().positive(),
+  /** 대지면적 (㎡) */
+  landArea: z.number().positive(),
+  /** 최초고시(2005) ㎡당 호별고시가 (원/㎡) */
+  unitPriceAtFirstDisclosure: z.number().int().positive(),
+  /** 취득시(상속개시일) 개별공시지가 (원/㎡) */
+  landPriceAtAcquisition: z.number().int().positive(),
+  /** 최초고시시(2005) 개별공시지가 (원/㎡) */
+  landPriceAtFirstDisclosure: z.number().int().positive(),
+  /** 취득시(상속개시일) 건물 기준시가 (원, 총액) */
+  buildingStdPriceAtAcquisition: z.number().int().positive(),
+  /** 최초고시시(2005) 건물 기준시가 (원, 총액) */
+  buildingStdPriceAtFirstDisclosure: z.number().int().positive(),
+});

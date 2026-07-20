@@ -108,6 +108,24 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     // 달리 대체 취득원 부재). API buildInheritedAcquisitionPayload(post-deemed)도 reportedRaw>0 요구 → 정합.
     if (!parseAmount(asset.publishedValueAtInheritance) || parseAmount(asset.publishedValueAtInheritance) <= 0)
       return `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`;
+    // §164⑥ 취득당시 기준시가 (2005.1.1 전 상속) — all-or-nothing opt-in (소령 §163⑨2호).
+    // 8필드 중 일부만 입력 시 API가 payload를 침묵 드롭(§164⑥ 미적용) → 부분입력 차단.
+    const inhDate164 = asset.inheritanceStartDate || asset.acquisitionDate || "";
+    if (inhDate164 && inhDate164 < "2005-01-01") {
+      const areas164 = [asset.cbExclusiveArea, asset.cbSharedArea, asset.cbLandArea];
+      const amounts164 = [
+        asset.cbUnitPriceAtFirstOrAcq,
+        asset.cbLandPricePerSqmAtAcq,
+        asset.cbLandPricePerSqmAtFirst,
+        asset.cbBuildingStdPriceAtAcq,
+        asset.cbBuildingStdPriceAtFirst,
+      ];
+      const filled =
+        areas164.filter((f) => parseDecimal(f) > 0).length +
+        amounts164.filter((f) => parseAmount(f) > 0).length;
+      if (filled > 0 && filled < 8)
+        return `${label}: §164⑥ 취득당시 기준시가는 8개 항목(면적 3·최초고시 호별고시가·취득시·최초고시 개별공시지가·건물기준시가)을 모두 입력하거나 모두 비워두세요.`;
+    }
     return null;
   }
 

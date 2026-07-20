@@ -26,6 +26,7 @@ import {
 } from "../CompanionAssetCardNewConstruction";
 import { CompanionAcquisitionCauseSection } from "../CompanionAcquisitionCauseSection";
 import { CommercialBuildingBlock } from "../CommercialBuildingBlock";
+import { CommercialInheritanceStdPriceSection } from "../CommercialInheritanceStdPriceSection";
 import { GeneralBuildingBlock } from "../GeneralBuildingBlock";
 import { RedevelopmentBlock } from "../RedevelopmentBlock";
 
@@ -268,6 +269,9 @@ export function AssetSectionAcquisition({
           transferDate={transferDate}
         />
       )}
+
+      {/* 상속 상가 §164⑥ 취득당시 기준시가 (2005.1.1 전 상속) — max(상증법 평가액, §164⑥). 소령 §163⑨2호. */}
+      <CommercialInheritanceStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
 
       {/* 일반건물(토지+건물 일괄) — 취득방법 무관 항상 마운트 (2026-05-10 실거래가 모드 지원) */}
       {asset.assetKind === "general_building" && (

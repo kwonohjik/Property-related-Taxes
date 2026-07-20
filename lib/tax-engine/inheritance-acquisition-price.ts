@@ -139,24 +139,34 @@ function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number):
 // ─── Case B: 의제취득일(1985.1.1.) 이후 상속 ─────────────────────────────
 
 function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisitionResult {
-  // 개별주택가격 미공시 상속주택(§163⑨2호): 취득가액 = max(① 상증법 평가액[reportedValue], ② §164⑦ 취득당시 기준시가).
-  // ③(환산취득가/양도가 스케일) 적용 불가. ①·② 실지거래가액 의제 → 개산공제 없음(추가 처리 없이 acquisitionPrice만 반환).
-  if (input.houseValuationStdPrice !== undefined && input.houseValuationStdPrice > 0) {
+  // 기준시가 미공시 상속 건물(§163⑨2호): 취득가액 = max(① 상증법 평가액[reportedValue], ② §164 취득당시 기준시가).
+  //   주택(개별주택가격 미공시, <2005.4.30) = §164⑦ houseValuationStdPrice
+  //   상가(기준시가 미공시, <2005.1.1) = §164⑥ commercialValuationStdPrice
+  // 자산은 주택 or 상가(둘 중 하나만 주입). ③(환산취득가/양도가 스케일) 적용 불가.
+  // ①·② 실지거래가액 의제 → 개산공제 없음(추가 처리 없이 acquisitionPrice만 반환).
+  const sec164Std = input.houseValuationStdPrice ?? input.commercialValuationStdPrice;
+  if (sec164Std !== undefined && sec164Std > 0) {
+    const isCommercial164 =
+      input.houseValuationStdPrice === undefined && input.commercialValuationStdPrice !== undefined;
     const reported =
       input.reportedValue !== undefined && input.reportedValue >= 0
         ? Math.floor(input.reportedValue)
         : 0;
-    const houseStd = Math.floor(input.houseValuationStdPrice);
-    const sec164Wins = houseStd >= reported;
-    const acquisitionPrice = sec164Wins ? houseStd : reported;
+    const std = Math.floor(sec164Std);
+    const sec164Wins = std >= reported;
+    const acquisitionPrice = sec164Wins ? std : reported;
+    const clause = isCommercial164 ? "§164⑥" : "§164⑦";
+    const disclosureLabel = isCommercial164 ? "상가 기준시가 미공시" : "개별주택가격 미공시";
     return {
       acquisitionPrice,
       method: "supplementary",
-      legalBasis: TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX,
+      legalBasis: isCommercial164
+        ? TRANSFER.INHERITED_AFTER_DEEMED_COMMERCIAL_MAX
+        : TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX,
       formula:
         `max(상증법 평가액 ${reported.toLocaleString()}, ` +
-        `§164⑦ 취득당시 기준시가 ${houseStd.toLocaleString()}) = ${acquisitionPrice.toLocaleString()} ` +
-        `(개별주택가격 미공시 · ${sec164Wins ? "§164⑦ 채택" : "상증법 평가액 채택"})`,
+        `${clause} 취득당시 기준시가 ${std.toLocaleString()}) = ${acquisitionPrice.toLocaleString()} ` +
+        `(${disclosureLabel} · ${sec164Wins ? `${clause} 채택` : "상증법 평가액 채택"})`,
     };
   }
 

@@ -30,7 +30,7 @@ import type {
   Pre1990LandValuationInput,
 } from "../pre-1990-land-valuation";
 import type { ParcelInput } from "../multi-parcel-transfer";
-import type { InheritanceAcquisitionInput } from "./inheritance-acquisition.types";
+import type { InheritanceAcquisitionInput, CommercialInheritanceValuationInput } from "./inheritance-acquisition.types";
 export type { TransferReductionStub } from "./transfer-reductions-stub.types";
 export type { Rental97Result } from "../transfer-reductions/types";
 export type { New994Result } from "../transfer-reductions/types";
@@ -403,6 +403,13 @@ export interface TransferTaxInput {
    * 결과는 inheritedAcquisition.standardPriceAtDeemedDate/standardPriceAtTransfer에 자동 주입.
    */
   inheritedHouseValuation?: InheritanceHouseValuationInput;
+
+  /**
+   * 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (자산 종류 = 상업용건물 + 상속개시일 < 2005-01-01 시 사용).
+   * 최초고시(2005) 역환산으로 취득당시 기준시가(P_A)를 산정 → §163⑨2호 max(상증법 평가액, P_A).
+   * 결과는 inheritedAcquisition.commercialValuationStdPrice에 자동 주입(STEP 0.45). opt-in.
+   */
+  commercialInheritanceValuation?: CommercialInheritanceValuationInput;
 
   /**
    * 겸용주택(1세대 1주택 + 상가) 분리계산 입력.

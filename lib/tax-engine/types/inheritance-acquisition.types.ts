@@ -23,6 +23,32 @@
 export type InheritanceAssetKind = "land" | "house_individual" | "house_apart";
 
 /**
+ * 상가 §163⑨2호 §164⑥ 취득당시 기준시가(P_A) 산정 입력 (소령 §164⑥ 최초고시 역환산).
+ *
+ * 오피스텔·상업용건물 기준시가 최초고시(2005-01-01) 전 상속 상가의 취득당시 기준시가를
+ * 최초고시 역환산으로 추정한다. 취득당시 실지거래가액 의제 = max(상증법 평가액, 이 P_A).
+ * 양도시 값은 P_A 산정에 불요(취득시·최초고시 시점만).
+ */
+export interface CommercialInheritanceValuationInput {
+  /** 전용면적 (㎡) */
+  exclusiveArea: number;
+  /** 공유면적 (㎡) — 연면적 = exclusiveArea + commonArea */
+  commonArea: number;
+  /** 대지면적 (㎡) */
+  landArea: number;
+  /** 최초고시(2005) ㎡당 호별고시가 (원/㎡) */
+  unitPriceAtFirstDisclosure: number;
+  /** 취득시(상속개시일) 개별공시지가 (원/㎡) */
+  landPriceAtAcquisition: number;
+  /** 최초고시시(2005) 개별공시지가 (원/㎡) */
+  landPriceAtFirstDisclosure: number;
+  /** 취득시(상속개시일) 건물 기준시가 (원, 총액) */
+  buildingStdPriceAtAcquisition: number;
+  /** 최초고시시(2005) 건물 기준시가 (원, 총액) */
+  buildingStdPriceAtFirstDisclosure: number;
+}
+
+/**
  * 의제취득일(1985.1.1.) — 소득세법 부칙(1985.1.1. 개정)
  * 1984.12.31. 이전에 취득한 자산은 이 날짜에 취득한 것으로 간주한다.
  */
@@ -100,6 +126,15 @@ export interface InheritanceAcquisitionInput {
    * helpers가 houseValuationResult.housePriceAtInheritanceUsed로 주입. 양도가 스케일 없음.
    */
   houseValuationStdPrice?: number;
+
+  /**
+   * 상업용건물·오피스텔 기준시가 미공시 상속 상가의 §164⑥ 취득당시 기준시가 (원, 미스케일).
+   * post-deemed(의제취득일 이후) 상가 & 상속개시일 < 2005-01-01(최초고시 전) 시,
+   * 취득가액 = max(reportedValue[① 상증법 평가액], 이 값[② §164⑥]). 소령 §163⑨2호.
+   * helpers가 commercialInheritanceValuation로부터 P_A(최초고시 역환산)를 산정해 주입. 양도가 스케일 없음.
+   * (houseValuationStdPrice와 배타 — 자산은 주택 or 상가.)
+   */
+  commercialValuationStdPrice?: number;
 
   // ── 의제취득일 전 상속·증여 (case A): max(①,②,③) ──
 
