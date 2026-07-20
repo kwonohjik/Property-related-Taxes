@@ -21,6 +21,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -38,6 +39,10 @@ interface Props {
 }
 
 export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: Props) {
+  // 겸용주택 모드: 취득가액은 §163⑨ 상속개시일 평가액을 ② 주택·③ 상가 기준시가 섹션에서
+  // 직접 산정(MixedUseAssetMajorStdPrice) — 여기의 자산 구분·취득가액 의제 특례는 겸용 엔진이
+  // 소비하지 않는 dead 입력이라 숨긴다(CompanionAcqPurchaseBlock.tsx의 기존 isMixedUse 파생 패턴 재사용).
+  const isMixedUse = !!asset.isMixedUseHouse;
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="grid grid-cols-2 gap-3">
@@ -107,37 +112,57 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
         </ToggleCard>
       )}
 
-      {/* 자산 구분 (상속개시일 기준) — 하단 의제분기 섹션이 이 값으로 토지/주택 UI 분기 */}
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <label className="block text-sm font-medium">자산 구분 (상속개시일 기준)</label>
-          <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />
-          <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
+      {/* 자산 구분 (상속개시일 기준) — 하단 의제분기 섹션이 이 값으로 토지/주택 UI 분기 (비-겸용 전용) */}
+      {!isMixedUse && (
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <label className="block text-sm font-medium">자산 구분 (상속개시일 기준)</label>
+            <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />
+            <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
+          </div>
+          <RadioCardGroup
+            name={`inh-kind-${asset.assetId}`}
+            tone="amber"
+            layout="stack"
+            options={INHERITANCE_ASSET_KIND_OPTIONS.map((opt) => ({
+              value: opt.value,
+              label: opt.label,
+            }))}
+            value={asset.inheritanceAssetKind ?? ""}
+            onChange={(v) =>
+              onChange({
+                inheritanceAssetKind: v as AssetForm["inheritanceAssetKind"],
+                // 자산구분 변경 시 보충적평가 보조계산 입력 초기화 (토지↔주택 stale 방지)
+                useSupplementaryHelper: false,
+                supplementaryLandUnitPrice: "",
+                supplementaryLandArea: "",
+                supplementaryBuildingValue: "",
+              })
+            }
+          />
         </div>
-        <RadioCardGroup
-          name={`inh-kind-${asset.assetId}`}
-          tone="amber"
-          layout="stack"
-          options={INHERITANCE_ASSET_KIND_OPTIONS.map((opt) => ({
-            value: opt.value,
-            label: opt.label,
-          }))}
-          value={asset.inheritanceAssetKind ?? ""}
-          onChange={(v) =>
-            onChange({
-              inheritanceAssetKind: v as AssetForm["inheritanceAssetKind"],
-              // 자산구분 변경 시 보충적평가 보조계산 입력 초기화 (토지↔주택 stale 방지)
-              useSupplementaryHelper: false,
-              supplementaryLandUnitPrice: "",
-              supplementaryLandArea: "",
-              supplementaryBuildingValue: "",
-            })
-          }
-        />
-      </div>
+      )}
 
-      {/* 취득가액 산정 — 의제취득일(1985.1.1.) 전후 자동 분기 (pre/post) */}
-      <InheritedAcquisitionDeemedSection asset={asset} onChange={onChange} transferDate={transferDate} />
+      {/* 취득가액 산정 — 의제취득일(1985.1.1.) 전후 자동 분기 (pre/post, 비-겸용 전용) */}
+      {!isMixedUse && (
+        <InheritedAcquisitionDeemedSection asset={asset} onChange={onChange} transferDate={transferDate} />
+      )}
+
+      {/* 겸용주택 안내 — 자산 구분·취득가액 의제 특례 대신 §163⑨ 직접 산정 경로로 유도 */}
+      {isMixedUse && (
+        <ToneCard
+          tone="violet"
+          title="취득가액 — 겸용주택 상속개시일 평가액 자동 적용"
+          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
+        >
+          <p className="text-xs text-violet-800">
+            겸용주택(주택+상가)은 상속개시일 현재 상증법 §60~66 평가액을 취득가액으로 직접
+            사용합니다. 아래 &ldquo;주택 기준시가&rdquo;·&ldquo;상가 기준시가&rdquo; 섹션의
+            &ldquo;상속개시일&rdquo; 입력에서 산정하므로, 이 화면의 자산 구분·취득가액 의제
+            특례 입력은 표시하지 않습니다.
+          </p>
+        </ToneCard>
+      )}
     </div>
   );
 }

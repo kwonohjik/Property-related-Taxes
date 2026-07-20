@@ -54,6 +54,10 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "mixedAcqCommercialBuildingPrice"
   | "mixedAcqLandPricePerSqm"
   | "mixedIsMetropolitanArea"
+  | "mixedHousingInheritedValueOverride"
+  | "mixedCommercialInheritedValueOverride"
+  | "mixedHousingInheritedExpense"
+  | "mixedCommercialInheritedExpense"
   | "hasPartialUsageChange"
   | "partialChangeDirection"
   | "partialChangeAcqResidentialArea"
@@ -80,6 +84,11 @@ export const MIXED_USE_DEFAULTS: Pick<
   mixedAcqCommercialBuildingPrice: "",
   mixedAcqLandPricePerSqm: "",
   mixedIsMetropolitanArea: true,
+  // ── 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (엔진 정합) ──
+  mixedHousingInheritedValueOverride: "",
+  mixedCommercialInheritedValueOverride: "",
+  mixedHousingInheritedExpense: "",
+  mixedCommercialInheritedExpense: "",
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
   hasPartialUsageChange: false,
   partialChangeDirection: "",
@@ -144,6 +153,12 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   if (!a.mixedAcqCommercialBuildingPrice) a.mixedAcqCommercialBuildingPrice = "";
   if (!a.mixedAcqLandPricePerSqm) a.mixedAcqLandPricePerSqm = "";
   if (a.mixedIsMetropolitanArea === undefined) a.mixedIsMetropolitanArea = true;
+
+  // 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (신규 — 엔진 정합)
+  if (!a.mixedHousingInheritedValueOverride) a.mixedHousingInheritedValueOverride = "";
+  if (!a.mixedCommercialInheritedValueOverride) a.mixedCommercialInheritedValueOverride = "";
+  if (!a.mixedHousingInheritedExpense) a.mixedHousingInheritedExpense = "";
+  if (!a.mixedCommercialInheritedExpense) a.mixedCommercialInheritedExpense = "";
 
   // 보유 중 일부 용도변경 필드 (신규 — 2026-04-30)
   if (a.hasPartialUsageChange === undefined) a.hasPartialUsageChange = false;

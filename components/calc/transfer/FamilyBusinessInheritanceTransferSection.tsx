@@ -130,11 +130,17 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
     fb.fbDeductionAppliedRate >= 0;
   const previewValue = canPreview ? calcImputedPreview(fb!) : null;
 
+  // 겸용주택은 §163⑨ 상속개시일 평가액 직접 산정 경로(CompanionAcqInheritanceBlock 안내 참조)를 쓰고
+  // 가업상속공제 의제취득가액(§97의2④)은 겸용 엔진(buildMixedUsePayload)이 미소비 — dead 입력 예방.
+  const isMixedUse = !!asset.isMixedUseHouse;
+
   return (
     <ToggleCard
       tone="emerald"
       checked={isOn}
       onCheckedChange={handleToggle}
+      disabled={isMixedUse}
+      disabledReason={isMixedUse ? "겸용주택은 가업상속공제 의제취득가액 미지원(범위 밖)" : undefined}
       title="가업상속공제 적용 자산 (소법 §97의2④)"
       description={
         isOn
