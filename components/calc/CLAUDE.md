@@ -79,6 +79,7 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 | 1990 환산 | `@/components/calc/inputs/Pre1990LandValuationInput.tsx` | 토지 자산 + acquisitionDate < 1990-08-30 시 자동 활성화. 자산-수준 props (`form` = `Pre1990FormSlice`). |
 | 주소 검색 | `@/components/ui/address-search.tsx` | Vworld 주소 검색 API. 조정대상지역·공시가격 조회에 필수 (지번 주소). |
 | 리셋 버튼 | `@/components/calc/shared/ResetButton.tsx` | 1단계에만 배치. 확인 다이얼로그 포함. |
+| 홈으로 버튼 | `@/components/calc/shared/HomeButton.tsx` (`HomeButton`) | 집 아이콘(`Home`) + `rounded-full` 테두리 pill 표준. **native `<Link href="/">`·`<button>` 홈링크·`ChevronLeft` 홈버튼 신규 작성 금지.** `variant`: `pill`(기본, 헤더·breadcrumb) / `block`(전체폭, `flex-1` 결과·에러 화면). `confirmMessage`(입력 이탈 확인)·`onBeforeNavigate`(stale 정리)·`label` prop. |
 
 **포커스 시 전체 선택**: `SelectOnFocusProvider` (`components/providers/SelectOnFocusProvider.tsx`) 가 layout에 전역 등록되어 모든 `<input>`/`<textarea>` 에 자동 적용. 개별 `onFocus={(e) => e.target.select()}` 추가 불필요.
 
@@ -332,3 +333,13 @@ ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수
 - **제외**(이 variant 아님): 항목 추가/편집(+add) 에디터, 드롭다운(autocomplete·시군구·주소검색), 도움말 ⓘ(`TaxHelp`), 법조문/판례 인용 링크(`LawArticleModal` 등), 확인/폐기 다이얼로그.
 - 인라인 "다시 계산" 재오픈 링크는 chip 대신 녹색 텍스트 링크(`text-green-700 underline`) 유지 가능.
 - 설계: `docs/02-design/features/modal-launcher-button-style.plan.md`.
+
+## 홈으로 버튼 규칙 (전역 공통 — 2026-07-20 통일)
+
+"홈으로" 이동 버튼은 **반드시 `@/components/calc/shared/HomeButton.tsx`(`HomeButton`)** 사용. 집 아이콘(`Home`) + `rounded-full` 테두리 pill 단일 표준. `components/ui/home-link.tsx`는 폐지·삭제됨(PR #708).
+
+- **신규 작성 금지**: native `<Link href="/">`, `<button onClick={()=>router.push("/")}>`, `ChevronLeft`/`←` 홈링크. 전부 `<HomeButton>`으로.
+- **variant**: `pill`(기본 — 헤더·breadcrumb·페이지 상단) / `block`(전체폭 `rounded-lg` — `flex-1` 결과·에러 화면. `className="flex-1"` 병용).
+- **props**: `confirmMessage`(입력 이탈 확인 다이얼로그 — 미제공 시 즉시 이동), `onBeforeNavigate`(zustand step/result stale 정리), `label`(기본 "홈으로").
+- **예외(이 컴포넌트 아님)**: 마법사 StepWizard 하단의 "이전/홈으로" **겸용 네비 버튼**(step 0에서만 "홈으로", 그 외 "이전"). 뒤로가기 네비와 겸용이라 홈 전용 pill로 대체하지 않음(현행 유지). 마법사는 이미 헤더에 `HomeButton`이 있음.
+- 설계: `docs/02-design/features/home-button-unification.plan.md`.
