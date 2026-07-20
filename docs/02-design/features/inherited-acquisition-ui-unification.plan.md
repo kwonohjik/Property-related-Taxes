@@ -197,7 +197,8 @@ Do 진입 전 아래 anchor를 먼저 작성·GREEN 확인하여, 통합 리팩�
 ## 9. 리스크 · 미결정 사항
 
 - **R0 (Critical) — 다건 경로 (C1)**: 다건은 상속 auto를 명시 차단하고 `fixedAcquisitionPrice`에만 의존(`multi-transfer-tax-api.ts:9`·`multi-transfer-tax-validate.ts:69`). B1이 이 필드를 폐기하면 다건 상속이 붕괴 → **§5.2에서 (a)/(b) 확정 필수**. A-multi anchor로 강제.
-- **R0′ (Critical) — 면적곱 세액 지뢰 (C2)**: post-deemed 토지 + 빈 `reportedMethod` → `legacyFallback` 면적곱(`inheritance-acquisition-price.ts:164,248-250`). method 필수화 + A-land anchor로 차단.
+- **R0′ (Critical) — 면적곱 세액 지뢰 (C2)**: post-deemed 토지 + 빈 `reportedMethod` → `legacyFallback` 면적곱(`inheritance-acquisition-price.ts:164,248-250`). method 필수화 + A-land anchor로 차단. ✅ P1에서 API 가드 완료.
+- **R0″ (Critical) — 토지 publishedValueAtInheritance 단가/총액 이중 경로 (P2b 착수 실측)**: 단건은 inheritedAcquisition 경로(**총액**, `route.ts` calcPostDeemed 그대로)·다자산 일괄양도는 inheritanceValuation 경로(**단가**, `route.ts:459-490` `computeSupplementary(land)` = 단가×면적). 통합 셸이 토지 입력 의미를 통일하면 통일 안 된 경로가 면적배 오류. → **P2b는 route 두 경로 통일(⑭)을 포함**해야 함: 통합 셸 토지 입력을 총액으로 통일하고, `route.ts:459-490` inheritanceValuation 경로도 총액 직수용(computeSupplementary ×면적 제거)으로 정합. 경로별 baseline anchor 선행.
 - **R1 (高)**: B1 세션 마이그레이션 — manual `fixedAcquisitionPrice` → 평가방법+신고가액 무손실 변환(method 공란 방지). 실패 시 이력 재현 불가. → P3 마이그 테스트 필수.
 - **R2 (高)**: `fixedAcquisitionPrice` 상속 분기만 제거 시 타 취득원인 회귀(H2 광범위 사이트). → A6 anchor로 강제.
 - **R3 (中)**: 재개발 승계조합원 + 상속(`transfer-tax-api.ts:216-219`) 교차 케이스. → 별도 anchor 확인.
