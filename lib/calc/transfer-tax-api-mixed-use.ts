@@ -177,6 +177,16 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     housingCompensationBasisTotal: parseAmount(primary.housingCompensationBasisTotal) || undefined,
     commercialLandCompensationTotal: parseAmount(primary.mixedCommercialLandCompensationTotal) || undefined,
     commercialLandCompensationBasisTotal: parseAmount(primary.mixedCommercialLandCompensationBasisTotal) || undefined,
+    // 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (엔진 정합, 정본 계약 plan §4.5).
+    // E1 날짜 게이트 필수: 게이트 없으면 pre-1985 상속에 post-deemed 로직 오적용
+    // (§176조의2④ pre-deemed 미반영). pre-1985는 게이트 false → 기존 환산 fallback(회귀-safe).
+    acquisitionByInheritance:
+      primary.acquisitionCause === "inheritance" &&
+      (primary.acquisitionDate ?? "") >= "1985-01-01",
+    housingInheritedValue: parseAmount(primary.mixedHousingInheritedValueOverride) || undefined,
+    commercialInheritedValue: parseAmount(primary.mixedCommercialInheritedValueOverride) || undefined,
+    housingInheritedExpense: parseAmount(primary.mixedHousingInheritedExpense) || undefined,
+    commercialInheritedExpense: parseAmount(primary.mixedCommercialInheritedExpense) || undefined,
     // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
     partialUsageChange:
       primary.hasPartialUsageChange && primary.partialChangeDirection

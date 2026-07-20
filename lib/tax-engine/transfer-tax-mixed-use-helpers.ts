@@ -12,11 +12,14 @@ import {
   applyExprTotalDenominator,
   type ExprTotalValuationDetail,
 } from "./transfer-tax-expropriation-valuation";
+import { buildHousingGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
 import {
-  buildHousingGainSplitFromFourPart,
-  buildCommercialGainSplitFromFourPart,
-} from "./transfer-tax-mixed-use-fourpart";
+  resolveHousingInheritedAcqDirect,
+  resolveHousingInheritedAcqPhd,
+  type InheritedAcquisitionDetail,
+} from "./transfer-tax-mixed-use-inheritance";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
+import type { CommercialGainSplit } from "./transfer-tax-mixed-use-commercial";
 import type {
   MixedUseAssetInput,
   MixedUseDerivedAreas,
@@ -158,6 +161,12 @@ export interface HousingEstimatedAcqResult {
   phdScopeBranch?: "case_a_whole_building" | "case_b_housing_only";
   /** §164⑨1호 주택분 총액 특례 산출근거 (계획 P7/D8, 일반 §97 전용) — 적용 시만 */
   expropriationDetail?: ExprTotalValuationDetail;
+  /** 상속 취득가액 산정 상세(소령 §163⑨) — acquisitionByInheritance=true일 때만 */
+  inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
+  /** PHD 상속(§163⑨2호 max) 취득시 토지분 취득가액 — PHD+상속 분기 전용 */
+  inheritedLandAcqPrice?: number;
+  /** PHD 상속(§163⑨2호 max) 취득시 건물분 취득가액 — PHD+상속 분기 전용 */
+  inheritedBuildingAcqPrice?: number;
 }
 
 export function calcHousingEstimatedAcq(
@@ -233,6 +242,25 @@ export function calcHousingEstimatedAcq(
       landAreaAtTransfer: asset.preHousingDisclosure.landAreaAtTransfer ?? landAreaAtTransfer,
       ...fourPartFields,
     });
+    // 상속 취득(소령 §163⑨2호) — 미공시 주택분 = max(신고가액, §164⑦ 환산). 4부분 조합은 Phase 2 범위 밖.
+    if (asset.acquisitionByInheritance) {
+      if (phdResult.fourPartApportionment) {
+        throw new Error(
+          "상속 취득 + PHD 4부분 안분(용도변경 결합) 조합은 아직 지원하지 않습니다 (Phase 2 예정).",
+        );
+      }
+      const inherited = resolveHousingInheritedAcqPhd(asset, phdResult);
+      return {
+        estimatedAcq: inherited.estimatedAcq,
+        phdAcqHousingPrice: phdResult.estimatedHousingPriceAtAcquisition,
+        phdResult,
+        phdScopeBranch,
+        inheritedAcquisitionDetail: inherited.detail,
+        inheritedLandAcqPrice: inherited.landAcqPrice,
+        inheritedBuildingAcqPrice: inherited.buildingAcqPrice,
+      };
+    }
+
     // Case A 4부분 모드 — 주택부분 환산취득가는 D11+E11 합계 (housingAcqPriceSum)
     // 비4부분 모드 — 기존 totalEstimatedAcquisitionPrice (housingTransferPrice 기반 환산)
     const fp = phdResult.fourPartApportionment;
@@ -245,6 +273,19 @@ export function calcHousingEstimatedAcq(
       phdResult,
       phdScopeBranch,
     };
+  }
+
+  // 상속 취득(소령 §163⑨ 본문) — 공시(비-PHD) 주택분은 fallback(reportedValue ?? stdCandidate).
+  // 보유 중 용도변경(§166⑥ 안분) 조합은 Phase 2 범위 밖(가드) — §164⑨1호 공익수용 특례(exprVal)
+  // 분모 계산에도 도달하지 않으므로 상속+공익수용 조합은 이 지점에서 자연 차단.
+  if (asset.acquisitionByInheritance) {
+    if (asset.partialUsageChange) {
+      throw new Error(
+        "상속 취득 + 보유 중 용도변경 조합은 아직 지원하지 않습니다 (Phase 2 예정).",
+      );
+    }
+    const inherited = resolveHousingInheritedAcqDirect(asset);
+    return { estimatedAcq: inherited.estimatedAcq, inheritedAcquisitionDetail: inherited.detail };
   }
 
   // 기존 §97 직접 환산
@@ -331,6 +372,41 @@ export function calcHousingGainSplit(
       // 동적 import 대신 require 회피 — 상위 helpers는 4부분 어댑터를 직접 호출
       return buildHousingGainSplitFromFourPart(phd.fourPartApportionment, asset, transferDate);
     }
+
+    // 상속 취득(소령 §163⑨2호 max) — 실지거래가액 의제, 개산공제 미적용(0)·필요경비만 건물분 슬롯 반영.
+    if (asset.acquisitionByInheritance && housingAcqResult.inheritedLandAcqPrice !== undefined) {
+      const landAcqPrice = housingAcqResult.inheritedLandAcqPrice;
+      const buildingAcqPrice = housingAcqResult.inheritedBuildingAcqPrice ?? 0;
+      const landAppraisalDed = 0;
+      const buildingAppraisalDed = asset.housingInheritedExpense ?? 0;
+      const landGain = phd.landTransferPrice - landAcqPrice - landAppraisalDed;
+      const buildingGain = phd.buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;
+      const totalGain = landGain + buildingGain;
+      const { years: landHoldingYears } = calculateHoldingPeriod(
+        asset.landAcquisitionDate,
+        transferDate,
+      );
+      const { years: buildingHoldingYears } = calculateHoldingPeriod(
+        asset.buildingAcquisitionDate,
+        transferDate,
+      );
+      return {
+        totalGain,
+        landGain,
+        buildingGain,
+        landTransferPrice: phd.landTransferPrice,
+        buildingTransferPrice: phd.buildingTransferPrice,
+        landAcqPrice,
+        buildingAcqPrice,
+        landAppraisalDed,
+        buildingAppraisalDed,
+        landStdPriceAtAcq: phd.landHousingAtAcquisition,
+        buildingStdPriceAtAcq: phd.buildingHousingAtAcquisition,
+        landHoldingYears,
+        buildingHoldingYears,
+      };
+    }
+
     const landGain = phd.landTransferPrice - phd.landAcquisitionPrice - phd.landLumpDeduction;
     const buildingGain =
       phd.buildingTransferPrice - phd.buildingAcquisitionPrice - phd.buildingLumpDeduction;
@@ -419,9 +495,12 @@ export function calcHousingGainSplit(
   const landAcqPrice = Math.floor(housingEstimatedAcq * acqLandRatio);
   const buildingAcqPrice = housingEstimatedAcq - landAcqPrice;
 
-  // 개산공제 (환산취득가 사용 시, §163⑥) — 취득시 토지/건물 기준시가 × 3%
-  const landAppraisalDed = applyRate(acqLandStd, 0.03);
-  const buildingAppraisalDed = applyRate(acqBuildingStd, 0.03);
+  // 개산공제 (환산취득가 사용 시, §163⑥) — 취득시 토지/건물 기준시가 × 3%.
+  // 상속(실지거래가액 의제, 소령 §163⑨)은 개산공제 미적용 — 실제 필요경비만 건물분 슬롯에 반영.
+  const landAppraisalDed = asset.acquisitionByInheritance ? 0 : applyRate(acqLandStd, 0.03);
+  const buildingAppraisalDed = asset.acquisitionByInheritance
+    ? (asset.housingInheritedExpense ?? 0)
+    : applyRate(acqBuildingStd, 0.03);
 
   const landGain = landTransferPrice - landAcqPrice - landAppraisalDed;
   const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;
@@ -453,153 +532,10 @@ export function calcHousingGainSplit(
   };
 }
 
-// ──────────────────────────────────────────────────────────────
-// 5. 상가부분 환산취득가액 + 양도차익 분리 (STEP 7)
-// ──────────────────────────────────────────────────────────────
-
-export interface CommercialGainSplit {
-  estimatedAcqPrice: number;
-  totalGain: number;
-  landGain: number;
-  buildingGain: number;
-  landTransferPrice: number;
-  buildingTransferPrice: number;
-  landAcqPrice: number;
-  buildingAcqPrice: number;
-  landAppraisalDed: number;
-  buildingAppraisalDed: number;
-  /** 취득시 토지/건물 기준시가 — 개산공제 산식 표시용 */
-  landStdPriceAtAcq?: number;
-  buildingStdPriceAtAcq?: number;
-  landHoldingYears: number;
-  buildingHoldingYears: number;
-  acqStandardSource: "user_input";
-  acqStandardLand: number;
-  acqStandardBuilding: number;
-  /** §164⑨1호 상가분 토지 총액 특례 산출근거 (계획 P7/D8) — 적용 시만 */
-  expropriationDetail?: ExprTotalValuationDetail;
-}
-
-export function calcCommercialGainSplit(
-  commercialTransferPrice: number,
-  asset: MixedUseAssetInput,
-  derived: MixedUseDerivedAreas,
-  transferDate: Date,
-  acqDerived?: MixedUseDerivedAreas,
-  housingAcqResult?: HousingEstimatedAcqResult,
-): CommercialGainSplit {
-  // Case A 4부분 안분 — 별도 어댑터 호출
-  const fp = housingAcqResult?.phdResult?.fourPartApportionment;
-  if (fp) {
-    return buildCommercialGainSplitFromFourPart(fp, asset, transferDate);
-  }
-
-  // acqDerived 미주입 시 derived 그대로 사용 (backward compat)
-  const effectiveAcqDerived = acqDerived ?? derived;
-
-  // 양도시 상가부분 기준시가
-  const transferLandStd =
-    asset.transferStandardPrice.landPricePerSqm * derived.commercialLandArea;
-  const transferTotalStd =
-    transferLandStd + asset.transferStandardPrice.commercialBuildingPrice;
-
-  // 취득시 상가부분 기준시가 — 사용자 직접 입력만 허용 (모든 direction 동일)
-  // 과거 house_to_commercial 미입력 시 개별주택공시가격을 면적비율로 자동 안분하던 fallback은
-  // 세법상 부정확하여 2026-05-01 제거. 미입력 시 명확한 오류로 차단.
-  const userBuildingStd = asset.acquisitionStandardPrice.commercialBuildingPrice;
-  const userLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
-
-  if (userBuildingStd <= 0 || userLandPerSqm <= 0) {
-    if (asset.partialUsageChange?.direction === "house_to_commercial") {
-      throw new Error(
-        "보유 중 일부 용도변경(주택→상가): 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요. " +
-          "취득 당시 동일 건물의 국세청 고시 기준시가를 직접 조회·입력해야 합니다.",
-      );
-    }
-    throw new Error(
-      "겸용주택: 취득시 상가건물 기준시가와 개별공시지가를 모두 입력하세요.",
-    );
-  }
-
-  // 토지분 = 단가 × 면적, 건물분 = 입력값.
-  // house_to_commercial은 acqDerived.commercialLandArea = 0이므로 양도시 면적 사용.
-  const landAreaForUserInput =
-    asset.partialUsageChange?.direction === "house_to_commercial"
-      ? derived.commercialLandArea
-      : effectiveAcqDerived.commercialLandArea;
-  const acqLandStd = userLandPerSqm * landAreaForUserInput;
-  const acqBuildingStd = userBuildingStd;
-  const acqStandardSource = "user_input" as const;
-
-  const acqTotalStd = acqLandStd + acqBuildingStd;
-
-  // §164⑨1호 공익수용 — 상가분 **토지 기준시가만** 낮춘 환산 분모(§80⑧ 건물분 미적용·안분 원값, D16-GB).
-  const commercialExprVal = applyExprTotalDenominator({
-    standardTotal: transferLandStd,
-    compensationTotal: asset.commercialLandCompensationTotal,
-    compensationBasisTotal: asset.commercialLandCompensationBasisTotal,
-    isExpropriation: asset.transferCause === "public_expropriation",
-    transferDate,
-  });
-  const transferTotalStdConv =
-    (commercialExprVal?.denominator ?? transferLandStd) + asset.transferStandardPrice.commercialBuildingPrice;
-
-  // §97 환산취득가액 (분모 = 특례 적용 후 총액. 미적용 시 원 transferTotalStd와 동일)
-  const estimatedAcqPrice =
-    transferTotalStdConv > 0
-      ? calculateEstimatedAcquisitionPrice(commercialTransferPrice, acqTotalStd, transferTotalStdConv)
-      : 0;
-
-  // 시행령 §166⑥: 양도가액은 양도시 비율, 취득가액은 취득시 비율로 안분 — **원값**(특례 미적용).
-  const acqLandRatio = acqTotalStd > 0 ? acqLandStd / acqTotalStd : 0.5;
-  const transferLandRatio = transferTotalStd > 0 ? transferLandStd / transferTotalStd : acqLandRatio;
-
-  // 양도가액 안분 — 양도시 비율
-  const landTransferPrice = Math.floor(commercialTransferPrice * transferLandRatio);
-  const buildingTransferPrice = commercialTransferPrice - landTransferPrice;
-
-  // 취득가액 안분 — 취득시 비율
-  const landAcqPrice = Math.floor(estimatedAcqPrice * acqLandRatio);
-  const buildingAcqPrice = estimatedAcqPrice - landAcqPrice;
-
-  // 개산공제 (§163⑥)
-  const landAppraisalDed = applyRate(acqLandStd, 0.03);
-  const buildingAppraisalDed = applyRate(acqBuildingStd, 0.03);
-
-  const landGain = landTransferPrice - landAcqPrice - landAppraisalDed;
-  const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;
-  const totalGain = landGain + buildingGain;
-
-  const { years: landHoldingYears } = calculateHoldingPeriod(
-    asset.landAcquisitionDate,
-    transferDate,
-  );
-  const { years: buildingHoldingYears } = calculateHoldingPeriod(
-    asset.buildingAcquisitionDate,
-    transferDate,
-  );
-
-  return {
-    estimatedAcqPrice,
-    totalGain,
-    landGain,
-    buildingGain,
-    landTransferPrice,
-    buildingTransferPrice,
-    landAcqPrice,
-    buildingAcqPrice,
-    landAppraisalDed,
-    buildingAppraisalDed,
-    landStdPriceAtAcq: acqLandStd,
-    buildingStdPriceAtAcq: acqBuildingStd,
-    landHoldingYears,
-    buildingHoldingYears,
-    acqStandardSource,
-    acqStandardLand: acqLandStd,
-    acqStandardBuilding: acqBuildingStd,
-    expropriationDetail: commercialExprVal?.detail,
-  };
-}
+// STEP 5(상가부분 환산취득가액 + 양도차익 분리, STEP 7)는 800줄 정책에 따라
+// transfer-tax-mixed-use-commercial.ts 로 분리(2026-07-20). 아래에서 재export 하여
+// 기존 호출부(transfer-tax-mixed-use.ts 등)의 import 경로를 그대로 유지한다.
+export { calcCommercialGainSplit, type CommercialGainSplit } from "./transfer-tax-mixed-use-commercial";
 
 // ──────────────────────────────────────────────────────────────
 // 6. 장기보유공제율 계산
@@ -739,6 +675,7 @@ export function buildHousingPart(
     estimatedAcquisitionPrice: housingAcq,
     phdEstimatedAcqHousingPrice: housingAcqResult.phdAcqHousingPrice,
     phdResult: housingAcqResult.phdResult,
+    inheritedAcquisitionDetail: housingAcqResult.inheritedAcquisitionDetail,
     transferGain: gainSplit.totalGain,
     landTransferGain: gainSplit.landGain,
     buildingTransferGain: gainSplit.buildingGain,
@@ -777,6 +714,7 @@ export function buildCommercialPart(
 
   return {
     estimatedAcquisitionPrice: gainSplit.estimatedAcqPrice,
+    inheritedAcquisitionDetail: gainSplit.inheritedAcquisitionDetail,
     transferGain: gainSplit.totalGain,
     landTransferGain: gainSplit.landGain,
     buildingTransferGain: gainSplit.buildingGain,

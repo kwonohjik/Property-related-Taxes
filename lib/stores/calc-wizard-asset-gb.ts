@@ -198,6 +198,26 @@ export interface GeneralBuildingFormSlice {
   /** 수도권 여부 */
   mixedIsMetropolitanArea: boolean;
 
+  // ── 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (엔진 정합, acquisitionByInheritance 파생) ──
+  /**
+   * 상속개시일 주택분 신고가액 override (원, 문자열). 선택 입력.
+   * 시가·감정·매매사례로 상속세 신고한 경우에만 입력. 미입력 시 mixedAcqHousingPrice(보충적평가)로 fallback.
+   * acquisitionCause === "inheritance" 일 때만 UI 노출.
+   */
+  mixedHousingInheritedValueOverride: string;
+  /**
+   * 상속개시일 상가분 신고가액 override (원, 문자열). 선택 입력.
+   * 미입력 시 (mixedAcqCommercialBuildingPrice + mixedAcqLandPricePerSqm×상가부수토지면적)로 fallback.
+   */
+  mixedCommercialInheritedValueOverride: string;
+  /**
+   * 상속(실가) 모드 주택분 실제 필요경비 — 자본적지출·양도비 (원, 문자열). 선택 입력.
+   * 개산공제(§163⑥, 취득시 기준시가×3%) 대체 — 상속은 실지거래가액 의제라 개산공제 미적용.
+   */
+  mixedHousingInheritedExpense: string;
+  /** 상속(실가) 모드 상가분 실제 필요경비 (원, 문자열). 선택 입력. 위와 동일 축. */
+  mixedCommercialInheritedExpense: string;
+
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
   /** 보유 중 일부 용도변경 토글 — 양도시 겸용이지만 취득시 단일 용도였던 경우 */
   hasPartialUsageChange: boolean;

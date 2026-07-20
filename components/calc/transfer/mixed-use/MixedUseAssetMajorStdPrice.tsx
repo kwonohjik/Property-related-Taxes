@@ -6,6 +6,8 @@ import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
@@ -41,6 +43,13 @@ export function MixedUseAssetMajorStdPrice({
   const residential = parseDecimal(asset.residentialFloorArea);
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
+
+  // 상속 취득 겸용주택 — 취득시점 = 상속개시일이므로 "취득시" 문구를 상속개시일로 치환.
+  // §163⑨ 취득가액 직접 산정(엔진 정합) — override 입력은 이 값이 true일 때만 노출.
+  const isInheritance = asset.acquisitionCause === "inheritance";
+  const acqLabel = isInheritance ? "상속개시일" : "취득시";
+  // 자동합계 박스 라벨 전용 — 원문이 "취득"(시 없음)이라 별도 변수로 분리 (E2E 문구 회귀 방지).
+  const acqSummaryLabel = isInheritance ? "상속개시일" : "취득";
 
   // 부수토지 안분 — leaf 헬퍼 단일 소스 + override 반영 (three-state: 빈값→자동, "0"→적법한 0).
   // 면적 입력·수정은 섹션 ①(MixedUseAreaInputs) 단일 소스 — 여기서는 **조회만** 한다.
@@ -127,11 +136,33 @@ export function MixedUseAssetMajorStdPrice({
             §11-6: PHD ON 시 위젯 자체 tone(amber/violet/emerald PointBlock)에 위임 — 별도 amber 컨테이너 미추가.
             시점 순서: 취득 → 양도 (PHD 3-시점 §164⑦ 법정 시계열과 정렬 — 계획 §2) */}
         <div className="space-y-2">
-          <p className="text-caption font-semibold text-amber-700">취득시</p>
+          {isInheritance && (
+            <ToneCard
+              tone="violet"
+              title="상속개시일 신고가액 override (선택)"
+              titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
+            >
+              <CurrencyInput
+                label=""
+                value={asset.mixedHousingInheritedValueOverride}
+                onChange={(v) => onChange({ mixedHousingInheritedValueOverride: v })}
+                hint="시가·감정·매매사례로 상속세 신고한 경우만 입력. 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"
+              />
+              <div className="pt-2">
+                <CurrencyInput
+                  label="실제 필요경비 — 자본적지출·양도비 (선택)"
+                  value={asset.mixedHousingInheritedExpense}
+                  onChange={(v) => onChange({ mixedHousingInheritedExpense: v })}
+                  hint="상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
+                />
+              </div>
+            </ToneCard>
+          )}
+          <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
           <ToggleCard
             tone="amber"
             size="sm"
-            title="취득 당시 개별주택가격 미공시 (§164⑦ 3-시점 환산)"
+            title={`${isInheritance ? "상속개시일" : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
             description={
               useEstimatedAcquisition
                 ? "개별주택가격 최초 공시 이전 취득 시 활성화"
@@ -195,6 +226,29 @@ export function MixedUseAssetMajorStdPrice({
           <p className="text-xs font-semibold text-slate-700">상가 기준시가</p>
         </div>
 
+        {isInheritance && (
+          <ToneCard
+            tone="violet"
+            title="상속개시일 신고가액 override (선택, 상가 전체)"
+            titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
+          >
+            <CurrencyInput
+              label=""
+              value={asset.mixedCommercialInheritedValueOverride}
+              onChange={(v) => onChange({ mixedCommercialInheritedValueOverride: v })}
+              hint="미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"
+            />
+            <div className="pt-2">
+              <CurrencyInput
+                label="실제 필요경비 — 자본적지출·양도비 (선택)"
+                value={asset.mixedCommercialInheritedExpense}
+                onChange={(v) => onChange({ mixedCommercialInheritedExpense: v })}
+                hint="상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
+              />
+            </div>
+          </ToneCard>
+        )}
+
         {/* 상가건물 기준시가 — 양도/취득 나란히 + 통합 계산 모달 */}
         <p className="text-xs font-medium text-slate-600">
           상가건물 기준시가{" "}
@@ -204,12 +258,12 @@ export function MixedUseAssetMajorStdPrice({
         </p>
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1">
-            <p className="text-caption font-semibold text-amber-700">취득시</p>
+            <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
             <CurrencyInput
               label=""
               value={asset.mixedAcqCommercialBuildingPrice}
               onChange={(v) => onChange({ mixedAcqCommercialBuildingPrice: v })}
-              placeholder="취득시 상가건물 기준시가 (필수)"
+              placeholder={`${acqLabel} 상가건물 기준시가 (필수)`}
               hideUnit
             />
           </div>
@@ -255,7 +309,7 @@ export function MixedUseAssetMajorStdPrice({
         {/* 상가부수토지 개별공시지가 — 양도/취득 (세로 스택: 기준연도 드롭다운 폭 확보) */}
         <p className="text-xs font-medium text-slate-600">상가부수토지 개별공시지가</p>
         <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1">
-          <p className="text-caption font-semibold text-amber-700">취득시</p>
+          <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
           <LandPriceLookupField
             pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
             onPricePerSqmChange={(v) => onChange({ mixedAcqLandPricePerSqm: v })}
@@ -264,7 +318,7 @@ export function MixedUseAssetMajorStdPrice({
             jibun={jibun}
             label="개별공시지가 (원/㎡)"
             hint="상가부수토지 기준시가 자동 계산용 (필수)"
-            placeholder="취득시 개별공시지가 /㎡"
+            placeholder={`${acqLabel} 개별공시지가 /㎡`}
           />
         </div>
         <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1">
@@ -299,12 +353,12 @@ export function MixedUseAssetMajorStdPrice({
                   </div>
                 )}
                 <div className="flex justify-between text-xs text-amber-700">
-                  <span>취득 상가부수토지 기준시가 (자동)</span>
+                  <span>{acqSummaryLabel} 상가부수토지 기준시가 (자동)</span>
                   <span>{fmtKrw(acqCommercialLandStd)}</span>
                 </div>
                 {acqCommercialBuilding > 0 && (
                   <div className="flex justify-between text-sm font-semibold text-amber-900">
-                    <span>취득 상가부분 기준시가 합계 (자동)</span>
+                    <span>{acqSummaryLabel} 상가부분 기준시가 합계 (자동)</span>
                     <span>{fmtKrw(acqCommercialTotal)}</span>
                   </div>
                 )}

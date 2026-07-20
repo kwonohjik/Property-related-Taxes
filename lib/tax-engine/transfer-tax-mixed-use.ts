@@ -250,6 +250,8 @@ export function calcMixedUseTransferTax(
     partialUsageChange,
     usagePeriodSplit,
     amendmentDetail,
+    // 상속 취득 게이트 echo (소령 §163⑨) — UI 재판정 방지용 단일 소스.
+    acquisitionByInheritance: asset.acquisitionByInheritance,
     // §164⑨1호 공익수용 특례 산출근거 (계획 P7/D8) — 주택분(라목 총액)·상가분(가목 토지). 적용 시만.
     expropriationDetail:
       housingAcqResult.expropriationDetail || commercialGainSplit.expropriationDetail
@@ -281,9 +283,14 @@ function buildCalculationRoute(
         ? ("direct_input" as const)
         : ("missing" as const);
 
-  const acquisitionConversionRoute = asset.usePreHousingDisclosure
-    ? ("phd_corrected" as const)
-    : ("section97_direct" as const);
+  // 상속 취득(소령 §163⑨) — 공시 여부(PHD)에 따라 본문/2호 경로로 세분.
+  const acquisitionConversionRoute = asset.acquisitionByInheritance
+    ? asset.usePreHousingDisclosure
+      ? ("inheritance_phd_max" as const)
+      : ("inheritance_direct" as const)
+    : asset.usePreHousingDisclosure
+      ? ("phd_corrected" as const)
+      : ("section97_direct" as const);
 
   // 표2 게이트는 통산 거주(§154⑧3호) — 사유 서술도 게이트 값으로(통산 케이스에서 "실거주 0년 ≥2년" 모순 방지).
   const housingDeductionTableReason =

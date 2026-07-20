@@ -2,6 +2,7 @@ import type { ZoneType } from "../non-business-land/types";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer.types";
 import type { AmendmentDetail } from "./transfer-amendment.types";
 import type { ExprTotalValuationDetail } from "../transfer-tax-expropriation-valuation";
+import type { InheritedAcquisitionDetail } from "../transfer-tax-mixed-use-inheritance";
 
 /** §164⑨1호 겸용주택 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분 각 목별. */
 export interface MixedUseExpropriationDetail {
@@ -163,6 +164,44 @@ export interface MixedUseAssetInput {
      */
     usageChangeDate?: Date;
   };
+
+  // ── 상속 취득가액 엔진 정합 (소령 §163⑨) ──
+
+  /**
+   * 상속 취득 게이트 — true면 취득가액을 환산이 아닌 상속개시일 평가액(직접)으로 산정.
+   * 소령 §163⑨. API 변환에서 `asset.acquisitionCause === "inheritance"`로 단일 소스 파생
+   * (display fallback·API fallback·validate 3중 미러 — mirror-pattern 스킬).
+   * undefined/false → 기존 환산 경로 완전 불변(A-regression).
+   */
+  acquisitionByInheritance?: boolean;
+
+  /**
+   * 주택분 상속개시일 평가액(원) — 상속세 신고 시 시가·감정가로 신고한 경우 그 금액.
+   * 미제공 시 `acquisitionStandardPrice.housingPrice`(보충적평가, 상증법 §61)를
+   * **그대로**(fallback, ??) 사용 — §163⑨ 본문은 단일 값이지 두 후보의 max가 아님.
+   * `usePreHousingDisclosure` 활성 시엔 §164⑦ 환산값과 **max** 비교(§163⑨2호).
+   * acquisitionByInheritance=false면 무시.
+   */
+  housingInheritedValue?: number;
+
+  /**
+   * 상가분(토지+건물 합계) 상속개시일 평가액(원) — 신고가액.
+   * 미제공 시 `acquisitionStandardPrice.landPricePerSqm × 상가부수토지면적 + commercialBuildingPrice`
+   * (보충적평가 합계)를 그대로 사용.
+   * acquisitionByInheritance=false면 무시.
+   */
+  commercialInheritedValue?: number;
+
+  /**
+   * 주택분 실제 필요경비(자본적지출+양도비, 원) — 개산공제 대체.
+   * 상속(실지거래가액 의제) 모드는 개산공제(§163⑥) 적용 대상이 아니므로, 실제 지출이 있으면
+   * 이 필드로 입력. **건물분 슬롯에 전액 적용**. 미제공 시 0(공제 없음, 개산공제도 없음 → 순수 실가만).
+   * acquisitionByInheritance=false면 무시.
+   */
+  housingInheritedExpense?: number;
+
+  /** 상가분 실제 필요경비(원) — 위와 동일 원리, 상가부분 전용(건물분 슬롯 적용). */
+  commercialInheritedExpense?: number;
 }
 
 // ──────────────────────────────────────────
@@ -245,6 +284,12 @@ export interface MixedUseHousingPart {
   nonBusinessTransferRatio: number;
   /** 비사업용으로 이전된 양도차익 */
   nonBusinessTransferredGain: number;
+
+  /**
+   * 상속 취득가액 산정 상세 — `calculationRoute.acquisitionConversionRoute`가
+   * "inheritance_direct" | "inheritance_phd_max"일 때만 존재. 비상속 시 undefined.
+   */
+  inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
 }
 
 /** 상가부분 계산 결과 */
@@ -295,6 +340,12 @@ export interface MixedUseCommercialPart {
   acqStandardLand: number;
   /** 취득시 상가건물 기준시가 — 산식 표시용 */
   acqStandardBuilding: number;
+
+  /**
+   * 상속 취득가액 산정 상세 — `calculationRoute.acquisitionConversionRoute`가
+   * "inheritance_direct" | "inheritance_phd_max"일 때만 존재. 비상속 시 undefined.
+   */
+  inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
 }
 
 /** 비사업용토지 부분 계산 결과 (배율초과 면적이 있을 때만 생성) */
@@ -354,8 +405,12 @@ export interface MixedUseStep {
 export interface MixedUseCalculationRoute {
   /** 취득시 주택 기준시가 산정 방식 */
   housingAcqPriceSource: "direct_input" | "phd_auto" | "missing";
-  /** 환산취득가액 산정 경로 */
-  acquisitionConversionRoute: "section97_direct" | "phd_corrected";
+  /** 환산취득가액 산정 경로 — 상속 2개 값 추가(소령 §163⑨) */
+  acquisitionConversionRoute:
+    | "section97_direct"        // 비상속 §97 직접환산
+    | "phd_corrected"           // 비상속 PHD §164⑤
+    | "inheritance_direct"      // 상속·공시(§163⑨ 본문)
+    | "inheritance_phd_max";    // 상속·미공시(§163⑨2호 max)
   /** 주택 장기보유공제 표 분기 사유 */
   housingDeductionTableReason: string;
   /** 부수토지 배율 적용 근거 (지역 + 배율값) */
@@ -455,4 +510,7 @@ export interface MixedUseGainBreakdown {
   amendmentDetail?: AmendmentDetail;
   /** §164⑨1호 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분. 적용 시만. */
   expropriationDetail?: MixedUseExpropriationDetail;
+
+  /** 상속 취득 게이트 echo (asset.acquisitionByInheritance 그대로) — UI 재판정 방지용 단일 소스. */
+  acquisitionByInheritance?: boolean;
 }
