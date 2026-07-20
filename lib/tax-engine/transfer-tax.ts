@@ -300,7 +300,11 @@ export function calculateTransferTax(
   );
   if (mpBranchResult) return mpBranchResult;
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied: gainSwapApplied, swapComparison: gainSwapComparison, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
+  // 상가(CB) swap은 STEP 0.35 재구성 지점(단건 엔진 밖)에서 판정 → cbStep에서 result로 승격.
+  // (calcTransferGain은 CB를 실가 모드로 보므로 swapApplied를 내지 않는다.)
+  const swapApplied = gainSwapApplied || cbStep?.swapApplied;
+  const swapComparison = gainSwapComparison ?? cbStep?.swapComparison;
   // 상가(CB) 경로는 STEP 0.35에서 useEstimatedAcquisition=false로 교체돼 calcTransferGain이
   // 특례 detail을 내지 않는다 → cbStep의 산출근거를 result로 승격(§164⑨ CB 배선, D16).
   const expropriationValuationDetail = gainExprDetail ?? cbStep?.expropriationValuationDetail;
@@ -316,20 +320,19 @@ export function calculateTransferTax(
   // 양도차익 산출근거 — 파생 입력(effectiveInput) 기준 통일. 경비는 실제 적용 필요경비(appliedExpenses).
   // (원본 input 기준 시 CB 환산은 취득가·개산공제가 0, §97② swap은 개산공제가 실제 경비와 어긋나 산식 불일치.)
   let gainFormula: string;
-  if (effectiveInput.useEstimatedAcquisition) {
-    if (swapApplied) {
-      // §97② 2호 단서: 필요경비 = 자본적지출+양도비 단독 → 환산취득가액은 차감·표시에서 제외.
-      gainFormula = [
-        `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
-        `필요경비(자본적지출+양도비 ${appliedExpenses.toLocaleString()}`,
-      ].join(" - ");
-    } else {
-      gainFormula = [
-        `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
-        `취득가(환산 ${estimatedBase.toLocaleString()}`,
-        `경비(개산공제 ${appliedExpenses.toLocaleString()}`,
-      ].join(" - ");
-    }
+  if (swapApplied) {
+    // §97② 2호 단서: 필요경비 = 자본적지출+양도비 단독 → 환산취득가액은 차감·표시에서 제외.
+    // 상가(CB) swap은 effectiveInput.useEstimatedAcquisition=false라 최상위에서 분기(환산·상가 공통).
+    gainFormula = [
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+      `필요경비(자본적지출+양도비 ${appliedExpenses.toLocaleString()}`,
+    ].join(" - ");
+  } else if (effectiveInput.useEstimatedAcquisition) {
+    gainFormula = [
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+      `취득가(환산 ${estimatedBase.toLocaleString()}`,
+      `경비(개산공제 ${appliedExpenses.toLocaleString()}`,
+    ].join(" - ");
   } else {
     gainFormula = [
       `양도가(${effectiveInput.transferPrice.toLocaleString()}`,

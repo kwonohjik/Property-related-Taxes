@@ -564,6 +564,7 @@ export function TransferTaxResultView({
           taxAmount={result.calculatedTax ?? undefined}
           localTax={result.localIncomeTax ?? undefined}
           totalTax={result.totalTax ?? undefined}
+          swapApplied={result.swapApplied ?? undefined}
         />
       )}
 

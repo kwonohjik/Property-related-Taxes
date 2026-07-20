@@ -61,7 +61,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense }: P
           );
         })()}
         <p className="text-caption text-muted-foreground">
-          환산취득가/감정가액 모드에서 (자본+양도비) &gt; (환산+개산공제) 시 §97② 단서에 따라 자본+양도비를 필요경비로 적용합니다.
+          환산취득가 모드에서 (자본+양도비) &gt; (환산+개산공제) 시 §97②2호 단서에 따라 자본+양도비를 필요경비로 적용합니다(감정가액·매매사례가액 모드는 제외).
         </p>
       </div>
 

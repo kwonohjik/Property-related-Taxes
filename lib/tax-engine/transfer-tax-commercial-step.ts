@@ -28,6 +28,13 @@ export interface CommercialBuildingStepResult {
    * 양도시 호별총액(환산 분모)을 min[호별고시가, 보상액, 보상기초] × 연면적으로 낮춘 근거.
    */
   expropriationValuationDetail?: ExpropriationValuationDetail;
+  /**
+   * §97②2호 단서 swap 발동 여부. 가목(환산취득가+개산공제) < 나목(자본적지출+양도비)이면 true.
+   * swap은 이 STEP(단건 엔진 밖 재구성)에서 판정 → transfer-tax.ts가 result.swapApplied로 승격.
+   */
+  swapApplied?: boolean;
+  /** §97②2호 단서 swap 비교 (capitalExpenditure·transferExpense 중 하나라도 입력 시). */
+  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
 }
 
 /**
@@ -119,15 +126,30 @@ export function applyCommercialBuildingStep(input: TransferTaxInput): {
   }
   const cbStep = runCommercialBuildingStep(input);
   if (!cbStep) return { effectiveInput: input, cbStep: undefined };
+  // §97②2호 단서 swap: 가목(환산취득가+개산공제) < 나목(자본적지출+양도비)이면 나목을 필요경비 '전체'로.
+  // 이 STEP은 useEstimatedAcquisition=true 확정(진입 게이트 :108) → 환산 전용 단서 대상.
+  // 재구성 후 useEstimatedAcquisition=false로 내려 calcTransferGain 실가 경로를 타므로 엔진 내장 swap이
+  // 발동하지 못한다 → 여기서 직접 판정하고 acquisitionPrice=0(환산취득가 미차감)·expenses=나목으로 재구성.
+  const directSide = (input.capitalExpenditure ?? 0) + (input.transferExpense ?? 0);
+  const swapEligible = input.capitalExpenditure !== undefined || input.transferExpense !== undefined;
+  const estimatedSide = cbStep.acquisitionPrice + cbStep.lumpSumDeduction;
+  const swapToDirect = swapEligible && directSide > estimatedSide; // 동률은 본문(단서 "적은 경우")
   return {
     effectiveInput: {
       ...input,
       useEstimatedAcquisition: false,
-      acquisitionPrice: cbStep.acquisitionPrice,
-      expenses: cbStep.lumpSumDeduction,
+      // §97②2호: 나목 채택 시 환산취득가 미차감(=0)·필요경비=나목. 본문은 환산취득가+개산공제.
+      acquisitionPrice: swapToDirect ? 0 : cbStep.acquisitionPrice,
+      expenses: swapToDirect ? directSide : cbStep.lumpSumDeduction,
       capitalExpenditure: undefined,
       transferExpense: undefined,
     },
-    cbStep,
+    cbStep: {
+      ...cbStep,
+      swapApplied: swapToDirect,
+      swapComparison: swapEligible
+        ? { estimatedSide, directSide, chosen: swapToDirect ? "direct" : "estimated" }
+        : undefined,
+    },
   };
 }
