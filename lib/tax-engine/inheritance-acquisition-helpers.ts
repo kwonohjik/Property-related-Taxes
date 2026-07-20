@@ -62,6 +62,30 @@ export function runInheritedAcquisitionStep(
   return { updatedInput, result, step, houseValuationResult };
 }
 
+/**
+ * 재개발 상속 종전자산의 "확인된 취득가액"(§163⑨) 추출 — transfer-tax.ts 재개발 분기에서 사용.
+ *
+ * §166③ 환산은 "취득가액을 확인할 수 없는 경우"에만 적용된다. 상속 종전자산은 §163⑨이
+ * 상속개시일 상증법 평가액을 취득당시 실지거래가액으로 의제하므로, 그 평가액이 확인되면
+ * 취득가액이 "확인 가능" → §166③ 환산·§163⑥ 개산공제 배제. 이 확인된 평가액을 반환한다.
+ *
+ * - post-deemed: result.acquisitionPrice(§163⑨ 본문/2호 평가액, 항상 확인됨).
+ * - pre-deemed: preDeemedBreakdown.reportedAmount(상증법 평가액)만 "확인된 취득가액"으로 본다.
+ *   §176조의2④ 환산(converted)은 추정치라 §166③ "확인 불가" 영역 → 제외.
+ * - 확인된 값이 없으면(신고가액 미입력 등) null → 호출측이 현행 §166③ 환산 경로를 유지한다.
+ */
+export function resolveInheritedRedevelopmentAcqPrice(
+  step: InheritedAcquisitionStepResult | undefined,
+): number | null {
+  if (!step) return null;
+  const r = step.result;
+  if (r.preDeemedBreakdown) {
+    const reported = r.preDeemedBreakdown.reportedAmount;
+    return reported && reported > 0 ? reported : null;
+  }
+  return r.acquisitionPrice > 0 ? r.acquisitionPrice : null;
+}
+
 // ─── 내부 헬퍼 ────────────────────────────────────────────────────────────
 
 /**

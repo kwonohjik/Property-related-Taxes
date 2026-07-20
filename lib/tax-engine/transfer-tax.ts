@@ -31,6 +31,7 @@ import {
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import {
   runInheritedAcquisitionStep,
+  resolveInheritedRedevelopmentAcqPrice,
   type InheritedAcquisitionStepResult,
 } from "./inheritance-acquisition-helpers";
 // 공개 타입 — ./types/transfer.types 참조
@@ -244,7 +245,19 @@ export function calculateTransferTax(
   }
 
   // STEP 0.65: 재개발/재건축 분기 — 시행령 §166. STEP 1: 비과세 판단
-  if (isRedevelopmentActive(effectiveInput.propertyType, effectiveInput.redevelopment)) return calculateRedevelopmentTax(effectiveInput, parsedRates, steps);
+  if (isRedevelopmentActive(effectiveInput.propertyType, effectiveInput.redevelopment)) {
+    // 상속 종전자산: §163⑨ 상속개시일 평가액이 확인되면 취득가액이 "확인 가능"하므로 §166③ 환산·
+    // §163⑥ 개산공제를 배제하고 실가(상속평가액)를 종전자산 취득가액으로 사용한다(§166③은 취득가액
+    // 확인 불가 시에만 적용). 미확인 시 override 미발동 → 현행 §166③ 유지.
+    let redevInput = effectiveInput;
+    if (effectiveInput.acquisitionCause === "inheritance") {
+      const inhAcqPrice = resolveInheritedRedevelopmentAcqPrice(inheritedAcquisitionStep);
+      if (inhAcqPrice !== null) {
+        redevInput = { ...effectiveInput, acquisitionPrice: inhAcqPrice, useEstimatedAcquisition: false };
+      }
+    }
+    return calculateRedevelopmentTax(redevInput, parsedRates, steps);
+  }
 
   // STEP 0.9: §99의4·§98의9 주택수 제외 (소법 §89①3호 의제) — §99의4 우선 1건(F-4) 적용,
   // 비과세·12억 안분·LTHD 표2에 유효 주택수(count−1) 반영. 중과는 §167의3 별개 — 원본(R-D).
