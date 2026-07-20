@@ -83,6 +83,59 @@ export function buildInheritedAcquisitionPayload(
 }
 
 /**
+ * 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 페이로드 빌드 (상업용건물 + 상속개시일 < 2005-01-01).
+ *
+ * §163⑨2호: 상가 기준시가 최초고시(2005-01-01) 전 상속 상가는 max(상증법 평가액, §164⑥ 취득당시 기준시가).
+ * opt-in — 8필드(면적 3 + 취득시·최초고시 개공지·건물기준시가·최초고시 호별고시가) 모두 입력 시에만 전송
+ * (주택 buildInheritedHouseValuationPayload all-or-nothing 미러). cb* 스토어 필드 재사용(환산 섹션과 동일 물리량).
+ */
+export function buildCommercialInheritanceValuationPayload(
+  primary: AssetForm,
+): { commercialInheritanceValuation?: unknown } {
+  if (primary.assetKind !== "commercial_building" || primary.acquisitionCause !== "inheritance") {
+    return {};
+  }
+  const inheritanceDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
+  if (!inheritanceDate || inheritanceDate >= "2005-01-01") return {};
+
+  const exclusiveArea = parseFloat(primary.cbExclusiveArea) || 0;
+  const commonArea = parseFloat(primary.cbSharedArea) || 0;
+  const landArea = parseFloat(primary.cbLandArea) || 0;
+  const unitPriceAtFirstDisclosure = parseAmount(primary.cbUnitPriceAtFirstOrAcq);
+  const landPriceAtAcquisition = parseAmount(primary.cbLandPricePerSqmAtAcq);
+  const landPriceAtFirstDisclosure = parseAmount(primary.cbLandPricePerSqmAtFirst);
+  const buildingStdPriceAtAcquisition = parseAmount(primary.cbBuildingStdPriceAtAcq);
+  const buildingStdPriceAtFirstDisclosure = parseAmount(primary.cbBuildingStdPriceAtFirst);
+
+  // all-or-nothing opt-in — 하나라도 결측이면 §164⑥ 미적용(Phase 1 상증법 평가액만).
+  if (
+    exclusiveArea <= 0 ||
+    commonArea <= 0 ||
+    landArea <= 0 ||
+    unitPriceAtFirstDisclosure <= 0 ||
+    landPriceAtAcquisition <= 0 ||
+    landPriceAtFirstDisclosure <= 0 ||
+    buildingStdPriceAtAcquisition <= 0 ||
+    buildingStdPriceAtFirstDisclosure <= 0
+  ) {
+    return {};
+  }
+
+  return {
+    commercialInheritanceValuation: {
+      exclusiveArea,
+      commonArea,
+      landArea,
+      unitPriceAtFirstDisclosure,
+      landPriceAtAcquisition,
+      landPriceAtFirstDisclosure,
+      buildingStdPriceAtAcquisition,
+      buildingStdPriceAtFirstDisclosure,
+    },
+  };
+}
+
+/**
  * 상속 주택 환산취득가 보조 입력 페이로드 빌드 (주택 + 상속개시일 < 2005-04-30).
  *
  * 필수 4필드(landArea·transferLandPricePerSqm·firstLandPricePerSqm·firstHousePrice)가

@@ -34,6 +34,7 @@ import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import {
   generalBuildingValuationSchema,
   commercialBuildingValuationSchema,
+  commercialInheritanceValuationSchema,
 } from "./transfer-tax-building-schemas";
 export {
   generalBuildingValuationSchema,
@@ -323,6 +324,8 @@ const propertyBaseShape = {
   inheritedAcquisition: inheritedAcquisitionSchema.optional(),
   /** 상속 주택 환산취득가 보조 입력 — 주택 + 상속개시일 < 2005-04-30 시 3-시점 합계 기준시가 자동 산출 */
   inheritedHouseValuation: inheritanceHouseValuationSchema.optional(),
+  /** ⑫ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 — 상가 + 상속개시일 < 2005-01-01 시 §163⑨2호 max */
+  commercialInheritanceValuation: commercialInheritanceValuationSchema.optional(),
   /** 겸용주택(1세대 1주택 + 상가) 분리계산 입력 — propertyType === "mixed-use-house" 시 필수 */
   mixedUse: mixedUseAssetSchema.optional(),
   /**
