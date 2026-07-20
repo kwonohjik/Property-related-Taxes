@@ -72,7 +72,8 @@ export function ResidencePeriodSection({
   return (
     <div className="space-y-3">
       <p className="text-xs text-violet-700">
-        거주기간은 1세대1주택 비과세·표2 장특공제 판정에 사용됩니다.
+        거주기간(상속개시일부터 상속인 본인 실거주)은 표2 장특공제 거주분 공제율 계산에 사용됩니다.
+        동일세대 상속의 통산 거주분은 취득 원인 카드의 &lsquo;동일세대 통산 거주기간&rsquo;에 별도 입력하세요.
       </p>
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 §89①3호" label="§89①3호 비과세" />
@@ -168,7 +169,7 @@ export function ResidencePeriodSection({
           </div>
         )}
         {!isInterval && (
-          <FieldCard label="거주기간 (개월)" hint="1세대1주택 표2 장특공제(거주 2년 이상)에 사용">
+          <FieldCard label="거주기간 (개월)" hint="상속개시일부터 상속인 본인 실거주 개월 (표2 거주분 공제율)">
             <div className="flex items-center gap-2">
               <div className="w-32">
                 <DecimalInput

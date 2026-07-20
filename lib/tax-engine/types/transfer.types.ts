@@ -226,13 +226,20 @@ export interface TransferTaxInput {
   decedentAcquisitionDate?: Date;
   /**
    * §154⑧3호 — 상속주택 자체 양도 시 상속개시 당시 상속인·피상속인 동일세대 여부.
-   * true + decedentCohabitationHoldingStartDate 제공 시, 1세대1주택 비과세 보유기간을 상속개시 전
-   * 동일세대 보유기간까지 통산(기산일 backdate). 거주기간 통산분은 residencePeriodMonths에 포함(사용자 입력).
-   * ⚠️ §154① 비과세 보유기간 전용 — LTHD·단기세율(decedentAcquisitionDate)과 무관.
+   * true 시 상속개시 전 동일세대 기간을 §154① 비과세·§95② 표2 "대상 판정"에 통산:
+   *  - 보유: decedentCohabitationHoldingStartDate로 기산일 backdate (resolveExemptionHoldingStartDate).
+   *  - 거주: decedentCohabitationResidenceMonths를 통산 (resolveExemptionResidenceMonths).
+   * ⚠️ LTHD 보유분·단기세율(decedentAcquisitionDate) 및 표2 "거주분 공제율"에는 통산 미적용
+   *    (모두 상속개시일 기산 유지 — 사전법령해석재산 2021-202: 통산은 표2 대상 판정 한정).
    */
   decedentSameHouseholdBeforeInheritance?: boolean;
-  /** §154⑧3호 — 상속개시 전 상속인·피상속인이 동일세대로서 거주·보유를 시작한 날 (비과세 보유기간 기산). */
+  /** §154⑧3호 — 상속개시 전 상속인·피상속인이 동일세대로서 거주·보유를 시작한 날 (비과세 보유기간 기산 backdate). */
   decedentCohabitationHoldingStartDate?: Date;
+  /**
+   * §154⑧3호 — 상속개시 전 동일세대 통산 거주 개월. 비과세 거주요건·§95② 표2 "대상 판정"에만 통산.
+   * 표2 거주분 공제율은 residencePeriodMonths(상속개시일부터 실거주)를 별도 사용 — 대상판정/공제율 분리.
+   */
+  decedentCohabitationResidenceMonths?: number;
   /**
    * 증여 시 증여자 취득일 — 단기보유 단일세율 판정 보유기간 통산용 (이월과세 패턴).
    * 장기보유특별공제 보유기간에는 적용하지 않음.

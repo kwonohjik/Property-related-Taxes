@@ -115,6 +115,7 @@ const propertyBaseShape = {
   decedentAcquisitionDate: z.string().date().optional(),
   decedentSameHouseholdBeforeInheritance: z.boolean().optional(),
   decedentCohabitationHoldingStartDate: z.string().date().optional(),
+  decedentCohabitationResidenceMonths: z.number().int().nonnegative().optional(),
   donorAcquisitionDate: z.string().date().optional(),
   expenses: z.number().int().nonnegative(),
   /** §97① 가목 자본적 지출 — §97② 단서 swap 분리 입력용 (선택). 미명시 시 swap 비활성, expenses fallback */

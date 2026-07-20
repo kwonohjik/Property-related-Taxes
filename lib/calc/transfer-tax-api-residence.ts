@@ -19,6 +19,17 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
       : 0,
     regionCode: primary?.regionCode || form.regionCode || undefined,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // §154⑧3호 동일세대 상속 거주 통산 — meetsOneHouseResidenceRequirement가 소비하므로
+    // Step4 거주요건 안내(이 빌더 소비)도 엔진과 동일 필드 전달 필수 (UI↔엔진 dual-truth 방지).
+    acquisitionCause: primary?.acquisitionCause,
+    decedentSameHouseholdBeforeInheritance:
+      primary?.acquisitionCause === "inheritance"
+        ? primary.decedentSameHouseholdBeforeInheritance
+        : undefined,
+    decedentCohabitationResidenceMonths:
+      primary?.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance
+        ? parseInt(primary.decedentCohabitationResidenceMonths) || 0
+        : undefined,
     oneHouseExemptionProviso: form.provisoReason
       ? {
           reason: form.provisoReason,

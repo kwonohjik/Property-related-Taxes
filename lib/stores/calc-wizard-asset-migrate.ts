@@ -42,6 +42,8 @@ export function migrateAsset(raw: unknown): AssetForm {
     a.decedentSameHouseholdBeforeInheritance = false;
   if (a.decedentCohabitationHoldingStartDate === undefined)
     a.decedentCohabitationHoldingStartDate = "";
+  if (a.decedentCohabitationResidenceMonths === undefined)
+    a.decedentCohabitationResidenceMonths = "";
   // 공익수용·협의매수 (2026-07-02): 양도원인·사업인정고시일 (구 세션 복원 방어)
   if (a.transferCause === undefined) a.transferCause = "general";
   if (a.expropriationNoticeDate === undefined) a.expropriationNoticeDate = "";

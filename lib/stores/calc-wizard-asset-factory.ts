@@ -109,6 +109,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     decedentAcquisitionDate: "",
     decedentSameHouseholdBeforeInheritance: false,
     decedentCohabitationHoldingStartDate: "",
+    decedentCohabitationResidenceMonths: "",
     donorAcquisitionDate: "",
     useEstimatedAcquisition: false,
     isAppraisalAcquisition: false,

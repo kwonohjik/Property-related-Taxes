@@ -134,6 +134,7 @@ export async function POST(request: NextRequest) {
       decedentAcquisitionDate: toOptionalDate(p.decedentAcquisitionDate),
       decedentSameHouseholdBeforeInheritance: p.decedentSameHouseholdBeforeInheritance,
       decedentCohabitationHoldingStartDate: toOptionalDate(p.decedentCohabitationHoldingStartDate),
+      decedentCohabitationResidenceMonths: p.decedentCohabitationResidenceMonths,
       donorAcquisitionDate: toOptionalDate(p.donorAcquisitionDate),
       isOneHousehold: p.isOneHousehold,
       temporaryTwoHouse: p.temporaryTwoHouse
