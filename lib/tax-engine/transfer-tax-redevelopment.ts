@@ -189,7 +189,7 @@ export function calculateRedevelopmentTax(
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",
-    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}`,
+    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.progressiveDeduction ? ` - 누진공제 ${taxResult.progressiveDeduction.toLocaleString()}` : ""}`,
     amount: taxResult.calculatedTax,
     legalBasis: TRANSFER.TAX_RATE,
   });

@@ -518,7 +518,7 @@ export function handleMultiParcelBranch(
   steps.push({ label: "과세표준", formula: `${mpTransferIncome.toLocaleString()} - ${mpBasicDeduction.toLocaleString()}`, amount: mpTaxBase, legalBasis: TRANSFER.TAX_BASE_CALC });
 
   const mpTaxResult = calcTax(mpTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
-  steps.push({ label: "산출세액", formula: `${mpTaxBase.toLocaleString()} × ${Math.round(mpTaxResult.appliedRate * 100)}%`, amount: mpTaxResult.calculatedTax, legalBasis: TRANSFER.TAX_RATE });
+  steps.push({ label: "산출세액", formula: `${mpTaxBase.toLocaleString()} × ${Math.round(mpTaxResult.appliedRate * 100)}%${mpTaxResult.progressiveDeduction ? ` - 누진공제 ${mpTaxResult.progressiveDeduction.toLocaleString()}` : ""}`, amount: mpTaxResult.calculatedTax, legalBasis: TRANSFER.TAX_RATE });
 
   const {
     reductionAmount: mpReduction,

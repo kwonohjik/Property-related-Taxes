@@ -491,7 +491,7 @@ export function calculateTransferTax(
     const denomLabel = isBurdened ? "증여가액 C" : isFractional ? "총양도가" : "양도가";
     steps.push({
       label: "과세 양도차익 (12억 초과분)",
-      formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / ${denomLabel}`,
+      formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / ${denomLabel} ${denom.toLocaleString()}`,
       amount: taxableGain,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
@@ -680,7 +680,7 @@ export function calculateTransferTax(
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",
-    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}${taxResult.shortTermNote ? ` (${taxResult.shortTermNote})` : ""}`,
+    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}${taxResult.progressiveDeduction ? ` - 누진공제 ${taxResult.progressiveDeduction.toLocaleString()}` : ""}${taxResult.shortTermNote ? ` (${taxResult.shortTermNote})` : ""}`,
     amount: taxResult.calculatedTax,
     legalBasis: taxResult.surchargeRate ? TRANSFER.SURCHARGE : TRANSFER.TAX_RATE,
   });
