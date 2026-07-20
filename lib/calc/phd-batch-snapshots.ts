@@ -8,7 +8,7 @@
  * 재유도할 수 있도록 각 (시점, 카테고리)를 `BuildingStdPriceFormState`(valuation 모드) 스냅샷으로
  * 재구성한다. 재유도 총액 = 배치 적용 금액(자기일관성) — 규율:
  *  - (A) 단일부분 floorArea = 카테고리 부분 소계.  - (B) 시점당 1스냅샷.
- *  - (C) ≤2000 취득(acqBase, transfer 모드 산식)은 valuation 재현 불가 → 생략.
+ *  - (C) ≤2000 취득(acqBase, §164⑤ 산정기준율 환산)은 valuation 재현 불가 → transfer 모드 스냅샷(-phd-acq)으로 생성(44f8e211).
  *  - (D) Case A 상가 취득·최초공시는 당시 주택 용도(acqFirstUsageNo)로 매핑.
  */
 import {

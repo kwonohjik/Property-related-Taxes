@@ -83,7 +83,7 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
     await expect(section.getByRole("button", { name: BATCH_BTN })).toHaveCount(0);
   });
 
-  test("T3: 모달 계산·적용 → 계산서 스냅샷 저장 (최초·양도 키 존재, 취득 1983 부재)", async ({ page }) => {
+  test("T3: 모달 계산·적용 → 계산서 스냅샷 저장 (최초·양도 + 취득 acqBase 키 존재, §164⑤)", async ({ page }) => {
     test.setTimeout(150_000);
     await gotoInheritanceHouse(page);
     await page.getByRole("radio", { name: /개별·다세대주택/ }).click();
@@ -119,7 +119,9 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
     await applyBtn.click();
     await expect(modal).toBeHidden();
 
-    // 스냅샷 저장 — 최초·양도(≥2001) 키 존재, 취득(1983 ≤2000) 키 부재
+    // 스냅샷 저장 — 최초·양도(≥2001) 키 + 취득(1983 ≤2000) acqBase 키 모두 존재.
+    // 2026-07-19 44f8e211 §164⑤ acqBase 확장: pre-2001 취득도 산정기준율 환산 계산서(※표) 출력을
+    // 위해 transfer 모드 acqBase 스냅샷(-phd-acq)을 생성한다. (엔진 단위: phd-batch-snapshots.test.ts:87~)
     const keys = await page.evaluate(() => {
       const raw = sessionStorage.getItem("building-std-snapshots");
       if (!raw) return [] as string[];
@@ -128,6 +130,6 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
     console.log("[T3] 스냅샷 키:", keys.join(", "));
     expect(keys.some((k) => /-phd-first$/.test(k))).toBe(true);
     expect(keys.some((k) => /-phd-transfer$/.test(k))).toBe(true);
-    expect(keys.some((k) => /-phd-acq$/.test(k))).toBe(false);
+    expect(keys.some((k) => /-phd-acq$/.test(k))).toBe(true);
   });
 });
