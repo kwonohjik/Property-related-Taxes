@@ -511,6 +511,7 @@ export const companionAssetSchema = z.object({
   /** §154⑧3호 상속주택 자체 양도 보유기간 통산 (동일세대 게이트 + 거주·보유 개시일) */
   decedentSameHouseholdBeforeInheritance: z.boolean().optional(),
   decedentCohabitationHoldingStartDate: z.string().date().optional(),
+  decedentCohabitationResidenceMonths: z.number().int().nonnegative().optional(),
   /** 증여 시 증여자 취득일 */
   donorAcquisitionDate: z.string().date().optional(),
   /**

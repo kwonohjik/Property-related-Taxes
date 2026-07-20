@@ -142,6 +142,10 @@ export function buildPropertyPayload(form: TransferFormData) {
       acquisitionCause === "inheritance" && primary?.decedentCohabitationHoldingStartDate
         ? primary.decedentCohabitationHoldingStartDate
         : undefined,
+    decedentCohabitationResidenceMonths:
+      acquisitionCause === "inheritance" && primary?.decedentSameHouseholdBeforeInheritance
+        ? parseInt(primary.decedentCohabitationResidenceMonths) || 0
+        : undefined,
     donorAcquisitionDate:
       acquisitionCause === "gift" && primary?.donorAcquisitionDate
         ? primary.donorAcquisitionDate

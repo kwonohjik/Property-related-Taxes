@@ -18,6 +18,7 @@
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
@@ -68,24 +69,40 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
           onCheckedChange={(v) => {
             onChange({
               decedentSameHouseholdBeforeInheritance: v,
-              ...(v ? {} : { decedentCohabitationHoldingStartDate: "" }),
+              ...(v ? {} : { decedentCohabitationHoldingStartDate: "", decedentCohabitationResidenceMonths: "" }),
             });
           }}
           title="상속개시 당시 피상속인과 동일세대"
-          description="동일세대로 함께 거주·보유하던 상속주택을 양도하는 경우, 상속개시 전 동일세대 보유기간을 1세대1주택 비과세 보유기간에 통산합니다 (소령 §154⑧3호)"
+          description="동일세대로 함께 거주·보유하던 상속주택을 양도하는 경우, 상속개시 전 동일세대 보유·거주기간을 1세대1주택 비과세·표2 장특공제 판정에 통산합니다 (소령 §154⑧3호)"
         >
-          <div className="space-y-1 pt-1">
-            <label className="block text-caption text-muted-foreground font-medium">
-              동일세대 거주·보유 개시일
-            </label>
-            <DateInput
-              value={asset.decedentCohabitationHoldingStartDate}
-              onChange={(v) => onChange({ decedentCohabitationHoldingStartDate: v })}
-            />
-            <p className="text-caption text-muted-foreground/70">
-              상속개시 전 피상속인과 동일세대로서 이 주택에 거주·보유하기 시작한 날. 거주기간
-              통산분은 &lsquo;거주기간&rsquo;에 포함해 입력하세요.
-            </p>
+          <div className="space-y-2 pt-1">
+            <div className="space-y-1">
+              <label className="block text-caption text-muted-foreground font-medium">
+                동일세대 거주·보유 개시일
+              </label>
+              <DateInput
+                value={asset.decedentCohabitationHoldingStartDate}
+                onChange={(v) => onChange({ decedentCohabitationHoldingStartDate: v })}
+              />
+              <p className="text-caption text-muted-foreground/70">
+                상속개시 전 피상속인과 동일세대로서 이 주택에 거주·보유하기 시작한 날 (비과세 보유기간 기산).
+              </p>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-caption text-muted-foreground font-medium">
+                동일세대 통산 거주기간 (개월)
+              </label>
+              <div className="w-32">
+                <DecimalInput
+                  value={asset.decedentCohabitationResidenceMonths}
+                  onChange={(v) => onChange({ decedentCohabitationResidenceMonths: v })}
+                />
+              </div>
+              <p className="text-caption text-muted-foreground/70">
+                상속개시 전 피상속인과 동일세대로서 이 주택에 실제 거주한 기간(개월). 비과세 거주요건·표2
+                장특공제 대상 판정에 통산됩니다. 상속개시일 이후 상속인 본인 실거주는 &lsquo;거주기간&rsquo;에 별도 입력.
+              </p>
+            </div>
           </div>
         </ToggleCard>
       )}

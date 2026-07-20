@@ -682,6 +682,10 @@ export function buildAssetPayload(
       asset.acquisitionCause === "inheritance" && asset.decedentCohabitationHoldingStartDate
         ? asset.decedentCohabitationHoldingStartDate
         : undefined,
+    decedentCohabitationResidenceMonths:
+      asset.acquisitionCause === "inheritance" && asset.decedentSameHouseholdBeforeInheritance
+        ? parseInt(asset.decedentCohabitationResidenceMonths) || 0
+        : undefined,
     donorAcquisitionDate:
       asset.acquisitionCause === "gift" && asset.donorAcquisitionDate
         ? asset.donorAcquisitionDate

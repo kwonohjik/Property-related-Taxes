@@ -22,12 +22,14 @@ function blockAsset(overrides: Partial<AssetForm> = {}): AssetForm {
     inheritanceAssetKind: "house_individual",
     decedentSameHouseholdBeforeInheritance: false,
     decedentCohabitationHoldingStartDate: "",
+    decedentCohabitationResidenceMonths: "",
     ...overrides,
   };
 }
 
 const TOGGLE = /상속개시 당시 피상속인과 동일세대/;
 const DATE_LABEL = /동일세대 거주·보유 개시일/;
+const MONTHS_LABEL = /동일세대 통산 거주기간/;
 
 describe("§154⑧3호 동일세대 통산 토글 (통합 셸)", () => {
   it("주택(housing) → 동일세대 토글 노출", () => {
@@ -60,18 +62,39 @@ describe("§154⑧3호 동일세대 통산 토글 (통합 셸)", () => {
     expect(screen.queryByText(DATE_LABEL)).toBeNull();
   });
 
-  it("토글 OFF 전환 시 개시일 초기화 패치", () => {
-    const onChange = vi.fn();
+  it("주택 + 토글 ON → 동일세대 통산 거주기간(개월) 입력 노출", () => {
     render(
       <CompanionAcqInheritanceBlock
         asset={blockAsset({ decedentSameHouseholdBeforeInheritance: true })}
+        onChange={noop}
+      />,
+    );
+    expect(screen.queryAllByText(MONTHS_LABEL).length).toBeGreaterThan(0);
+  });
+
+  it("주택 + 토글 OFF → 통산 거주기간 입력 미노출", () => {
+    render(<CompanionAcqInheritanceBlock asset={blockAsset()} onChange={noop} />);
+    expect(screen.queryByText(MONTHS_LABEL)).toBeNull();
+  });
+
+  it("토글 OFF 전환 시 개시일·통산 거주기간 모두 초기화 패치", () => {
+    const onChange = vi.fn();
+    render(
+      <CompanionAcqInheritanceBlock
+        asset={blockAsset({
+          decedentSameHouseholdBeforeInheritance: true,
+          decedentCohabitationResidenceMonths: "24",
+        })}
         onChange={onChange}
       />,
     );
     const sw = screen.getByRole("switch", { name: TOGGLE });
     fireEvent.click(sw);
     expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ decedentCohabitationHoldingStartDate: "" }),
+      expect.objectContaining({
+        decedentCohabitationHoldingStartDate: "",
+        decedentCohabitationResidenceMonths: "",
+      }),
     );
   });
 });

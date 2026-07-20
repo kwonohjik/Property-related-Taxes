@@ -58,6 +58,7 @@ import {
   parseRatesFromMap,
   checkExemption,
   meetsOneHouseHoldingResidence,
+  resolveExemptionResidenceMonths,
   calcTransferGain,
   calcOneHouseProration,
   calcLongTermHoldingDeduction,
@@ -526,6 +527,9 @@ export function calculateTransferTax(
   // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
   let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail } =
     calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
+  // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
+  // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
+  const table2ResidenceYearsForStep = Math.floor(resolveExemptionResidenceMonths(exemptionJudgeInput) / 12);
   // STEP 4.05: §98의2 특칙 — 장특 = 양도차익 × §95② 표2 보유기간별 공제율 강제 (법 ①1호, P4).
   // 적격 선판정은 STEP 0.45 (중과 배제 5호 열거 — 동일 신호). 1세대1주택 표2(보유+거주)는
   // ①의 "각 표 외의 부분 본문 불구" 범위 밖 — 특례 적용 시 유지 (항상 ≥ 표2 보유 단독).
@@ -534,7 +538,7 @@ export function calculateTransferTax(
     const isOneHouseSpecial982 =
       exemptionJudgeInput.isOneHousehold &&
       exemptionJudgeInput.householdHousingCount === 1 &&
-      Math.floor(effectiveInput.residencePeriodMonths / 12) >= 2 &&
+      table2ResidenceYearsForStep >= 2 &&
       longTermHoldingDeduction > 0;
     if (!isOneHouseSpecial982) {
       const rate982 = holdingPeriod.years >= 3 ? Math.min(holdingPeriod.years * 0.04, 0.4) : 0;
@@ -551,7 +555,7 @@ export function calculateTransferTax(
   const isOneHouseSpecial =
     exemptionJudgeInput.isOneHousehold &&
     exemptionJudgeInput.householdHousingCount === 1 &&
-    residenceYearsForStep >= 2 &&
+    table2ResidenceYearsForStep >= 2 &&
     longTermHoldingDeduction > 0;
   const lthdFormulaRate = lthd982Applied
     ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${Math.round(longTermHoldingRate * 100)}% (40% 한도, 법 §98의2①1호)`

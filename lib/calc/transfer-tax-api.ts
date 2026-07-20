@@ -370,6 +370,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.acquisitionCause === "inheritance" && primary.decedentCohabitationHoldingStartDate
         ? primary.decedentCohabitationHoldingStartDate
         : undefined,
+    decedentCohabitationResidenceMonths:
+      primary.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance
+        ? parseInt(primary.decedentCohabitationResidenceMonths) || 0
+        : undefined,
     donorAcquisitionDate:
       primary.acquisitionCause === "gift" && primary.donorAcquisitionDate
         ? primary.donorAcquisitionDate

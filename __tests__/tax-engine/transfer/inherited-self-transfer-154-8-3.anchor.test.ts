@@ -5,8 +5,10 @@
  *   상속개시 전에 상속인과 피상속인이 동일세대로서 거주·보유한 기간을 (§154① 비과세) 보유·거주기간에 통산.
  * 갭: 현행 meetsOneHouseHoldingResidence(exemption.ts:161)는 input.acquisitionDate(=상속개시일) 직접 기산 →
  *   상속개시 후 보유가 2년 미만이면 통산 없이 과세.
- * 설계: decedentSameHouseholdBeforeInheritance(게이트) + decedentCohabitationHoldingStartDate(기산 backdate).
- *   §154 비과세 보유기간 전용(LTHD·단기세율 무관). 거주 통산분은 residencePeriodMonths(사용자 입력).
+ * 설계: decedentSameHouseholdBeforeInheritance(게이트) + decedentCohabitationHoldingStartDate(보유 기산 backdate).
+ *   §154 비과세 보유기간 전용(LTHD·단기세율 무관).
+ *   거주 통산분은 decedentCohabitationResidenceMonths(별도 필드) — 표2·비과세 거주요건 통산은
+ *   inherited-cohabitation-residence-table2.anchor.test.ts 참조 (residencePeriodMonths는 상속개시일부터 실거주).
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";

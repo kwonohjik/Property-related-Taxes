@@ -320,6 +320,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   decedentSameHouseholdBeforeInheritance: boolean;
   /** §154⑧3호 — 상속개시 전 동일세대 거주·보유 개시일 (YYYY-MM-DD, 비과세 보유기간 기산) */
   decedentCohabitationHoldingStartDate: string;
+  /** §154⑧3호 — 상속개시 전 동일세대 통산 거주 개월 (비과세 거주요건·표2 대상 판정용, 공제율은 실거주 별도) */
+  decedentCohabitationResidenceMonths: string;
   /** 증여자 취득일 (YYYY-MM-DD) */
   donorAcquisitionDate: string;
   /** 매매 환산취득가 사용 여부 */

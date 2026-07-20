@@ -21,6 +21,7 @@ import {
 import { TaxRateNotFoundError } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
+import { resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import {
   applyExpropriationValuation,
   resolveConversionDenominatorAtTransfer,
@@ -185,6 +186,7 @@ export {
   meetsOneHouseHoldingResidence,
   resolveExemptionProviso,
   resolveWasRegulatedAtAcquisition,
+  resolveExemptionResidenceMonths,
 } from "./transfer-tax-exemption";
 
 // ============================================================
@@ -465,10 +467,11 @@ export function calcLongTermHoldingDeduction(
     // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유
     const isOneHouseSingleForCompanion =
       input.isOneHousehold && input.householdHousingCount === 1;
-    const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+    const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(거주분 공제율)
+    const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12); // 통산(대상 판정)
     let companionRate: number;
-    if (isOneHouseSingleForCompanion && residenceYears >= 2) {
-      // 표 2 (1세대1주택, §95② 별표): 보유분 4% + 거주분 4%, 각 40% 캡
+    if (isOneHouseSingleForCompanion && table2ResidenceYears >= 2) {
+      // 표 2 (1세대1주택, §95② 별표): 보유분 4% + 거주분 4%(실거주), 각 40% 캡
       const holdingPart = Math.min(primaryHoldingYears * 0.04, 0.40);
       const residencePart = Math.min(residenceYears * 0.04, 0.40);
       companionRate = holdingPart + residencePart;
@@ -504,13 +507,16 @@ export function calcLongTermHoldingDeduction(
 
   const isOneHouseSingle =
     input.isOneHousehold && input.householdHousingCount === 1;
-  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+  const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(표2 거주분 공제율)
+  // §154⑧3호: 표2 "대상 판정"은 동일세대 상속 통산 거주 (공제율은 실거주 residenceYears 유지).
+  const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
 
   // 공제율 산식 (L-3/L-4 통합 헬퍼)
   const rateForYears = (years: number): number => {
     if (years < 3) return 0;
-    if (isOneHouseSingle && residenceYears >= 2) {
-      // L-3: 1세대1주택 — 보유기간분·거주기간분 각각 40% 캡 후 합산 (소득세법 §95② 별표)
+    if (isOneHouseSingle && table2ResidenceYears >= 2) {
+      // L-3: 1세대1주택 표2 (소득세법 §95② 별표) — 보유분·거주분 각 40% 캡 후 합산.
+      // 대상은 통산(table2ResidenceYears), 공제율 거주분은 상속개시일부터 실거주(residenceYears).
       const holdingPart = Math.min(years * 0.04, 0.40);
       const residencePart = Math.min(residenceYears * 0.04, 0.40);
       return holdingPart + residencePart;

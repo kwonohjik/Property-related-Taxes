@@ -38,6 +38,9 @@ export type ResidenceReqInput = Pick<
   | "regionCode"
   | "wasRegulatedAtAcquisition"
   | "residenceTransitionAcquisitionDate"
+  | "acquisitionCause"
+  | "decedentSameHouseholdBeforeInheritance"
+  | "decedentCohabitationResidenceMonths"
 >;
 
 interface ExemptionResult {
@@ -70,7 +73,9 @@ export function resolveExemptionProviso(
   const p = input.oneHouseExemptionProviso;
   if (!p) return null;
   const C = EXEMPTION_PROVISO_CONST;
-  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+  // §154⑧3호: 단서 각호 거주요건(3호 부득이 1년·1호 임대 5년)도 "제1항에 따른 거주기간"이므로
+  // 동일세대 상속 통산을 반영 (favorable-only — 통산은 거주연수를 늘려 비과세 요건 충족 방향, 불리 없음).
+  const residenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
   switch (p.reason) {
     case "expropriation":
       // 2호 가목: 사업인정 고시일 전 취득 + 양도일·수용일부터 5년 이내
@@ -116,9 +121,27 @@ export function resolveWasRegulatedAtAcquisition(input: ResidenceReqInput): bool
 }
 
 /**
+ * §154⑧3호 — 상속주택 자체 양도 시 (비과세 거주요건·§95② 표2 대상 판정용) 통산 거주 개월.
+ * 동일세대 상속이면 상속개시일 이후 실거주(residencePeriodMonths) + 상속개시 전 동일세대 통산 거주
+ * (decedentCohabitationResidenceMonths). 그 외에는 실거주만.
+ * ⚠️ 대상 판정 전용 — 표2 "거주분 공제율"은 residencePeriodMonths(상속개시일부터 실거주)를 별도 사용
+ *    (사전법령해석재산 2021-202: 통산은 표2 대상 판정 한정, 공제율은 상속개시일 기산).
+ * 두 기간은 disjoint(상속개시 이전/이후)라 단순 합산이 정확.
+ */
+export function resolveExemptionResidenceMonths(input: ResidenceReqInput): number {
+  if (
+    input.acquisitionCause === "inheritance" &&
+    input.decedentSameHouseholdBeforeInheritance === true
+  ) {
+    return input.residencePeriodMonths + (input.decedentCohabitationResidenceMonths ?? 0);
+  }
+  return input.residencePeriodMonths;
+}
+
+/**
  * §154① 본문 거주요건 단독 판정 (보유요건 제외) — Step4 거주요건 안내 메시지와 엔진 공용(단일 진실).
  * true = 거주요건 충족 또는 면제. 단서면제(both·residence_only)·취득시 비조정·
- * 2017.8.3 이전 취득(경과규정)·거주 2년 이상 중 하나라도 해당하면 충족.
+ * 2017.8.3 이전 취득(경과규정)·거주 2년 이상(§154⑧3호 동일세대 상속 통산 포함) 중 하나라도 해당하면 충족.
  */
 export function meetsOneHouseResidenceRequirement(
   input: ResidenceReqInput,
@@ -134,7 +157,8 @@ export function meetsOneHouseResidenceRequirement(
   const residenceTransitionDate =
     input.residenceTransitionAcquisitionDate ?? input.acquisitionDate;
   const isPrePolicy = residenceTransitionDate < new Date(rule.prePolicyDate);
-  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+  // §154⑧3호: 동일세대 상속이면 상속개시 전 동일세대 통산 거주분을 거주요건 판정에 합산.
+  const residenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
   // 취득 당시 조정대상지역 — regionCode 있으면 취득일 기준 정밀 판정, 없으면 boolean fallback
   const wasRegulated = resolveWasRegulatedAtAcquisition(input);
   return (
