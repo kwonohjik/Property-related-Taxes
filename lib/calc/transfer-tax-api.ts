@@ -100,7 +100,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
 
   // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
   const isCommercialBuilding = primary.assetKind === "commercial_building";
-  const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition
+  // §163⑨: 상속 취득 상가는 상속개시일 평가액 직접(환산 아님) → 환산 payload 미빌드.
+  const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition && primary.acquisitionCause !== "inheritance"
     ? buildCommercialBuildingValuation(primary)
     : undefined;
 
@@ -254,7 +255,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 상업용건물·일반건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
     // 매매사례가액 추계(salesCase)는 useEstimatedAcquisition과 별개 경로 — false 송신
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed || isSalesCase ? false
-      : isCommercialBuilding ? primary.useEstimatedAcquisition
+      // §163⑨: 상속 상가는 환산 미적용 → false 송신(STEP 0.35 게이트 무력화·엔진 가드와 이중).
+      : isCommercialBuilding ? (primary.acquisitionCause === "inheritance" ? false : primary.useEstimatedAcquisition)
       : isGeneralBuilding ? primary.useEstimatedAcquisition
       : isCarryoverGeneral ? true
       : isEstimated,

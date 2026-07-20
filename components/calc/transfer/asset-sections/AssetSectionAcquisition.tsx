@@ -258,8 +258,10 @@ export function AssetSectionAcquisition({
         />
       )}
 
-      {/* 상업용건물·오피스텔 환산취득가 입력 (assetKind === "commercial_building" 시만 표시) */}
-      {asset.assetKind === "commercial_building" && (
+      {/* 상업용건물·오피스텔 환산취득가 입력 (assetKind === "commercial_building" 시만 표시)
+          §163⑨: 상속 취득 상가는 상속개시일 평가액 직접(환산 아님) → 환산 토글 미노출.
+          상속 평가액은 상단 상속 블록(CompanionAcqInheritanceBlock)의 "상속세 신고가액"으로 입력. */}
+      {asset.assetKind === "commercial_building" && asset.acquisitionCause !== "inheritance" && (
         <CommercialBuildingBlock
           asset={asset}
           onChange={onChange}
