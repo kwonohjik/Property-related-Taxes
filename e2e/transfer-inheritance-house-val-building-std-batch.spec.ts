@@ -30,8 +30,7 @@ async function gotoInheritanceHouse(page: Page) {
   await expandAssetSection(page, 3);
   await page.getByRole("button", { name: "상속", exact: true }).click();
 
-  // 상속 취득가액 산정 = 자동(보충적평가액) → 자산 구분 RadioCardGroup 노출
-  await page.getByRole("button", { name: "자동 (보충적평가액)" }).click();
+  // 통합 셸(P2b): auto/manual 토글 폐지 → 상속 선택 시 자산 구분 RadioCardGroup이 바로 노출된다.
 
   // 상속개시일 1983-07-26 (< 1985.1.1 → pre-deemed PreDeemedInputs → 보충적평가 게이트 없이 섹션 활성).
   // (post-deemed(≥1985)은 inheritanceValuationMethod=supplementary 추가 필요.)

@@ -460,9 +460,9 @@ export async function POST(request: NextRequest) {
           inheritanceDate: new Date(v.inheritanceDate),
           assetKind: v.assetKind,
           landAreaM2: v.landAreaM2,
-          publishedValueAtInheritance: v.publishedValueAtInheritance,
-          marketValue: v.marketValue,
-          appraisalAverage: v.appraisalAverage,
+          // R0″ 통일: publishedValueAtInheritance(총액) → reportedValue 직수용 (단건과 동일, computeSupplementary ×면적 폐기).
+          reportedValue: v.publishedValueAtInheritance,
+          reportedMethod: "supplementary",
         });
         primaryFixedAcq = r.acquisitionPrice;
       }
@@ -477,13 +477,13 @@ export async function POST(request: NextRequest) {
         }
         if (c.acquisitionCause === "inheritance" && c.inheritanceValuation) {
           const v = c.inheritanceValuation;
+          // R0″ 경로 통일: publishedValueAtInheritance는 총액 → reportedValue로 직수용 (단건과 동일 총액 경로).
           return calculateInheritanceAcquisitionPrice({
             inheritanceDate: new Date(v.inheritanceDate),
             assetKind: v.assetKind,
             landAreaM2: v.landAreaM2,
-            publishedValueAtInheritance: v.publishedValueAtInheritance,
-            marketValue: v.marketValue,
-            appraisalAverage: v.appraisalAverage,
+            reportedValue: v.publishedValueAtInheritance,
+            reportedMethod: "supplementary",
           }).acquisitionPrice;
         }
         return c.fixedAcquisitionPrice;

@@ -22,7 +22,6 @@ export function buildInheritedAcquisitionPayload(
 ): { inheritedAcquisition?: unknown } {
   const triggerable =
     primary.acquisitionCause === "inheritance" &&
-    primary.inheritanceValuationMode === "auto" &&
     (primary.inheritanceAssetKind === "land" ||
       primary.inheritanceAssetKind === "house_individual" ||
       primary.inheritanceAssetKind === "house_apart");
@@ -70,7 +69,10 @@ export function buildInheritedAcquisitionPayload(
       inheritanceStartDate,
       assetKind: primary.inheritanceAssetKind,
       reportedValue,
-      reportedMethod: "supplementary" as const,
+      // 사용자가 고른 평가방법을 엔진에 전달(결과 legalBasis·formula 반영). 공란("")이면 "supplementary" 강제 —
+      // reportedMethod가 비면 calcPostDeemed가 신고가액 경로(inheritance-acquisition-price.ts:164)를 못 넘고
+      // legacyFallback→computeSupplementary(land)로 빠져 post-deemed 총액을 단가로 오인, × 면적 폭증(C2 면적곱 지뢰).
+      reportedMethod: primary.inheritanceValuationMethod || ("supplementary" as const),
       useSupplementaryHelper: true,
       ...(primary.acquisitionArea && parseFloat(primary.acquisitionArea) > 0 && {
         landAreaM2: parseFloat(primary.acquisitionArea),

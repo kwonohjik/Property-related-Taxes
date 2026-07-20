@@ -548,7 +548,7 @@ export function buildAssetPayload(
   const fractional = ratio < 1.0;
 
   const inheritanceValuation =
-    asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "auto"
+    asset.acquisitionCause === "inheritance"
       ? {
           inheritanceDate: asset.inheritanceDate || asset.acquisitionDate,
           assetKind: asset.inheritanceAssetKind,
@@ -563,7 +563,6 @@ export function buildAssetPayload(
   const fixedAcqRaw =
     (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
     (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
-    (asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "manual" && asset.fixedAcquisitionPrice) ||
     // 사례 28 — 신축(자가건축): fixedAcquisitionPrice = 신축비용(취득가액)
     (asset.acquisitionCause === "newConstruction" && asset.fixedAcquisitionPrice)
       ? parseAmount(asset.fixedAcquisitionPrice)

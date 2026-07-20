@@ -45,8 +45,6 @@ export function migrateLegacyForm(
   primaryAsset.standardPriceAtTransfer = String(legacy.standardPriceAtTransfer ?? "");
   primaryAsset.standardPriceAtTransferLabel = String(legacy.standardPriceAtTransferLabel ?? "");
   primaryAsset.directExpenses = String(legacy.expenses ?? "0");
-  primaryAsset.inheritanceValuationMode =
-    (legacy.inheritanceValuationMode as "auto" | "manual") ?? "auto";
   primaryAsset.inheritanceDate = String(legacy.acquisitionDate ?? "");
   primaryAsset.publishedValueAtInheritance = String(
     legacy.inheritanceLandPricePerM2 || legacy.inheritanceHousePrice || ""
@@ -112,7 +110,6 @@ export function migrateLegacyForm(
   if (!primaryAsset.inheritanceStartDate) primaryAsset.inheritanceStartDate = "";
   if (primaryAsset.hasDecedentActualPrice === undefined) primaryAsset.hasDecedentActualPrice = false;
   if (!primaryAsset.decedentAcquisitionPrice) primaryAsset.decedentAcquisitionPrice = "";
-  if (!primaryAsset.inheritanceReportedValue) primaryAsset.inheritanceReportedValue = "";
   if (!primaryAsset.inheritanceValuationMethod) primaryAsset.inheritanceValuationMethod = "";
   if (primaryAsset.useSupplementaryHelper === undefined) primaryAsset.useSupplementaryHelper = false;
   if (!primaryAsset.supplementaryLandArea) primaryAsset.supplementaryLandArea = "";
@@ -241,7 +238,6 @@ export function migrateLegacyForm(
     standardPriceAtTransfer: _spt,
     standardPriceAtAcquisitionLabel: _spaal,
     standardPriceAtTransferLabel: _spttl,
-    inheritanceValuationMode: _ivm,
     inheritanceLandPricePerM2: _ilpp,
     inheritanceHousePrice: _ihp,
     companionAssets: _ca,
@@ -280,7 +276,7 @@ export function migrateLegacyForm(
 
   // 사용하지 않는 변수 경고 회피
   void _pt; void _isr; void _ac; void _ad; void _dad; void _doad; void _ap; void _exp;
-  void _uea; void _spa; void _spt; void _spaal; void _spttl; void _ivm; void _ilpp;
+  void _uea; void _spa; void _spt; void _spaal; void _spttl; void _ilpp;
   void _ihp; void _ca; void _pasp; void _par; void _paj; void _pbn; void _pad;
   void _plon; void _plat; void _pm; void _parcels; void _rt; void _fy; void _usfi;
   void _sfid; void _sfiz; void _sfspa; void _dfy; void _ry; void _rir; void _rr;

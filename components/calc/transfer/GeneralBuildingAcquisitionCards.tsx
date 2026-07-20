@@ -25,7 +25,6 @@ import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 // BurdenedGiftBlock import 제거 — Phase 2 (2026-05-12): TransferModeBlock에서 사용
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
-import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 
 // ── 토지 취득원인 옵션 (이월과세 포함 4종) ──
@@ -185,68 +184,11 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
 
         {/* 상속: 취득일 + 피상속인 취득일 + 보충적평가 */}
         {asset.acquisitionCause === "inheritance" && (
-          <>
-            <CompanionAcqInheritanceBlock
-              assetId={asset.assetId}
-              acquisitionDate={asset.acquisitionDate}
-              onAcquisitionDateChange={(v) =>
-                onChange({
-                  acquisitionDate: v,
-                  inheritanceStartDate: v,
-                  ...(asset.inheritanceValuationMode === "auto"
-                    ? { inheritanceDate: v }
-                    : {}),
-                })
-              }
-              decedentAcquisitionDate={asset.decedentAcquisitionDate}
-              onDecedentAcquisitionDateChange={(v) =>
-                onChange({ decedentAcquisitionDate: v })
-              }
-              assetKind={asset.assetKind}
-              decedentSameHouseholdBeforeInheritance={asset.decedentSameHouseholdBeforeInheritance}
-              onDecedentSameHouseholdBeforeInheritanceChange={(v) =>
-                onChange({ decedentSameHouseholdBeforeInheritance: v })
-              }
-              decedentCohabitationHoldingStartDate={asset.decedentCohabitationHoldingStartDate}
-              onDecedentCohabitationHoldingStartDateChange={(v) =>
-                onChange({ decedentCohabitationHoldingStartDate: v })
-              }
-              valuationMode={asset.inheritanceValuationMode}
-              onValuationModeChange={(mode) =>
-                onChange({ inheritanceValuationMode: mode })
-              }
-              inheritanceAssetKind={asset.inheritanceAssetKind}
-              onInheritanceAssetKindChange={(v) =>
-                onChange({
-                  inheritanceAssetKind: v,
-                  // 자산구분 변경 시 보충적평가 보조계산 입력 초기화(토지↔주택 stale 방지)
-                  useSupplementaryHelper: false,
-                  supplementaryLandUnitPrice: "",
-                  supplementaryLandArea: "",
-                  supplementaryBuildingValue: "",
-                })
-              }
-              inheritanceDate={asset.inheritanceDate}
-              onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
-              landAreaM2={asset.acquisitionArea}
-              publishedValueAtInheritance={asset.publishedValueAtInheritance}
-              onPublishedValueAtInheritanceChange={(v) =>
-                onChange({ publishedValueAtInheritance: v })
-              }
-              fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
-              onFixedAcquisitionPriceChange={(v) =>
-                onChange({ fixedAcquisitionPrice: v })
-              }
-              jibun={asset.addressJibun || undefined}
-              dong={asset.addressDong || undefined}
-              ho={asset.addressHo || undefined}
-            />
-            <InheritedAcquisitionDeemedSection
-              asset={asset}
-              onChange={onChange}
-              transferDate={transferDate}
-            />
-          </>
+          <CompanionAcqInheritanceBlock
+            asset={asset}
+            onChange={onChange}
+            transferDate={transferDate}
+          />
         )}
 
         {/* 증여: 취득일 + 증여자 취득일 + 취득가액 */}

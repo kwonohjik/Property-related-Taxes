@@ -608,8 +608,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               ? parseAmount(primary.standardPriceAtTransfer)
               : undefined,
           primaryInheritanceValuation:
-            primary.acquisitionCause === "inheritance" &&
-            primary.inheritanceValuationMode === "auto"
+            primary.acquisitionCause === "inheritance"
               ? {
                   inheritanceDate: primary.acquisitionDate,
                   // 보충적평가 자산 구분 — inheritanceAssetKind ("land" | "house_individual" | "house_apart")

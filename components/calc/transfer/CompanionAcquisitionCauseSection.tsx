@@ -13,7 +13,6 @@ import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
-import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
 import { FamilyBusinessInheritanceTransferSection } from "./FamilyBusinessInheritanceTransferSection";
@@ -215,55 +214,6 @@ export function CompanionAcquisitionCauseSection({
 
       {asset.acquisitionCause === "inheritance" && (
         <CompanionAcqInheritanceBlock
-          assetId={asset.assetId}
-          acquisitionDate={asset.acquisitionDate}
-          onAcquisitionDateChange={(v) => onChange({
-            acquisitionDate: v,
-            inheritanceStartDate: v,
-            ...(asset.inheritanceValuationMode === "auto" ? { inheritanceDate: v } : {}),
-          })}
-          decedentAcquisitionDate={asset.decedentAcquisitionDate}
-          onDecedentAcquisitionDateChange={(v) => onChange({ decedentAcquisitionDate: v })}
-          assetKind={asset.assetKind}
-          decedentSameHouseholdBeforeInheritance={asset.decedentSameHouseholdBeforeInheritance}
-          onDecedentSameHouseholdBeforeInheritanceChange={(v) =>
-            onChange({ decedentSameHouseholdBeforeInheritance: v })
-          }
-          decedentCohabitationHoldingStartDate={asset.decedentCohabitationHoldingStartDate}
-          onDecedentCohabitationHoldingStartDateChange={(v) =>
-            onChange({ decedentCohabitationHoldingStartDate: v })
-          }
-          valuationMode={asset.inheritanceValuationMode}
-          onValuationModeChange={(mode) => onChange({ inheritanceValuationMode: mode })}
-          inheritanceAssetKind={asset.inheritanceAssetKind}
-          onInheritanceAssetKindChange={(v) =>
-            onChange({
-              inheritanceAssetKind: v,
-              // 자산구분 변경 시 보충적평가 보조계산 입력 초기화(토지↔주택 stale 방지)
-              useSupplementaryHelper: false,
-              supplementaryLandUnitPrice: "",
-              supplementaryLandArea: "",
-              supplementaryBuildingValue: "",
-            })
-          }
-          inheritanceDate={asset.inheritanceDate}
-          onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
-          landAreaM2={asset.acquisitionArea}
-          publishedValueAtInheritance={asset.publishedValueAtInheritance}
-          onPublishedValueAtInheritanceChange={(v) =>
-            onChange({ publishedValueAtInheritance: v })
-          }
-          fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
-          onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
-          jibun={asset.addressJibun || undefined}
-          dong={asset.addressDong || undefined}
-          ho={asset.addressHo || undefined}
-        />
-      )}
-
-      {/* 상속 취득가액 의제 특례 */}
-      {asset.acquisitionCause === "inheritance" && (
-        <InheritedAcquisitionDeemedSection
           asset={asset}
           onChange={onChange}
           transferDate={transferDate}

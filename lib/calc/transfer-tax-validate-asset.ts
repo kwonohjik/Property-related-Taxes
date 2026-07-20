@@ -610,13 +610,8 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         !asset.decedentCohabitationHoldingStartDate
       )
         return `${label}: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)`;
-      const hasAuto = asset.inheritanceValuationMode === "auto";
-      const hasManual =
-        asset.inheritanceValuationMode === "manual" &&
-        asset.fixedAcquisitionPrice &&
-        parseAmount(asset.fixedAcquisitionPrice) > 0;
-      if (!hasAuto && !hasManual)
-        return `${label}: 상속 취득가액(보충평가 또는 직접입력)을 입력하세요.`;
+      // P2c: 상속 취득가액은 신고가액(publishedValueAtInheritance) 단일 경로로 항상 전송 →
+      // 별도 취득가액 필수 검증 불요(엔진이 미입력 시 0 처리, UI/API 통과 ↔ validate 차단 모순 방지).
     }
   }
 

@@ -85,7 +85,13 @@ export function buildPropertyPayload(form: TransferFormData) {
     propertyType: primaryKind,
     transferPrice: parseAmount(form.contractTotalPrice),
     transferDate: form.transferDate,
-    acquisitionPrice: (isEstimated || isAppraisal || isSalesCase) ? 0 : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
+    // 상속: (b) 취득가액 소스 단일화 — fixedAcquisitionPrice(현행 직접입력) 우선, 없으면 publishedValueAtInheritance(신고가액).
+    // 통합 UI(P2b)가 상속 fixedAcq 입력을 제거하면 publishedValue로 자동 전환(과도기 fallback, mirror-pattern 3중).
+    acquisitionPrice: (isEstimated || isAppraisal || isSalesCase)
+      ? 0
+      : acquisitionCause === "inheritance"
+        ? parseAmount(primary?.fixedAcquisitionPrice ?? "0") || parseAmount(primary?.publishedValueAtInheritance ?? "0")
+        : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
     acquisitionDate: primary?.acquisitionDate ?? "",
     // 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary?.assetContractDate || undefined,
