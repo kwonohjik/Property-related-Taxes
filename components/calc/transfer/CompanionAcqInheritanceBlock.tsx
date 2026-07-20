@@ -112,8 +112,23 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
         </ToggleCard>
       )}
 
-      {/* 자산 구분 (상속개시일 기준) — 하단 의제분기 섹션이 이 값으로 토지/주택 UI 분기 (비-겸용 전용) */}
-      {!isMixedUse && (
+      {/* 상가건물·오피스텔 상속 — 자산구분(토지/주택) 무의미(상증법 §60~66 평가액 직접). 안내만. */}
+      {!isMixedUse && asset.assetKind === "commercial_building" && (
+        <ToneCard
+          tone="amber"
+          title="취득가액 — 상속개시일 상증법 평가액"
+          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
+        >
+          <p className="text-xs text-amber-800">
+            상업용건물·오피스텔은 상속개시일 현재 상증법 §60~66 평가액(상속세 신고가액)을 취득가액으로 봅니다.
+            아래에 신고가액을 직접 입력하세요. (2005.1.1 전 상속은 §164⑥ 취득당시 기준시가와 비교하여 큰 금액 적용 —
+            아래 취득 정보의 §164⑥ 섹션 참조.)
+          </p>
+        </ToneCard>
+      )}
+
+      {/* 자산 구분 (상속개시일 기준) — 하단 의제분기 섹션이 이 값으로 토지/주택 UI 분기 (비-겸용·비-상가 전용) */}
+      {!isMixedUse && asset.assetKind !== "commercial_building" && (
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <label className="block text-sm font-medium">자산 구분 (상속개시일 기준)</label>

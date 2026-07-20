@@ -60,7 +60,10 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   // 취득가액으로 하므로, ②(§164⑦)는 ①의 평가방법과 독립적으로 항상 산정 대상.
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
   const kind = asset.inheritanceAssetKind;
-  const isLand = kind === "land";
+  // 상가건물·오피스텔: 토지/주택 보충적평가 보조계산(개별공시지가×면적 / 주택가격)은 부적합 →
+  // 신고가액 직접 입력(상증법 §60~66 평가액). §164⑥ 취득당시 기준시가는 별도 섹션(취득 정보)에서 처리.
+  const isCommercial = asset.assetKind === "commercial_building";
+  const isLand = kind === "land" && !isCommercial;
   const isHouse = kind === "house_individual" || kind === "house_apart";
   const showHouseValuation = isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
 
@@ -190,8 +193,9 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
       )}
 
       {/* ③ 보충적평가 보조계산 (supplementary 선택 + 공시 시점 자산만).
-          토지=개별공시지가×면적 / 주택=고시주택가격 단일(부수토지 일체). 상증법 §61①. */}
-      {isSupplementary && !isPreDisclosure && (
+          토지=개별공시지가×면적 / 주택=고시주택가격 단일(부수토지 일체). 상증법 §61①.
+          상가건물은 토지/주택 보조계산 부적합 → 신고가액 직접 입력(위 ②). */}
+      {isSupplementary && !isPreDisclosure && !isCommercial && (
         <ToggleCard
           tone="amber"
           title="보충적평가 보조계산 사용"
