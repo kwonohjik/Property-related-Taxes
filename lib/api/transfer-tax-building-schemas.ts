@@ -184,6 +184,15 @@ export const generalBuildingValuationSchema = z.object({
    * ⑫ 사례 33 증축: 토지+건물1 일괄 필요경비 (원).
    */
   bundledExpenses: z.number().int().nonnegative().optional(),
+  // ── ⑫ §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1). 침묵 stripping 방지 명시 선언. ──
+  /** 토지 상속 취득 게이트 (acquisitionCause==="inheritance" && 취득일>=1985-01-01). */
+  acquisitionByInheritance: z.boolean().optional(),
+  /** 건물 상속 취득 게이트. */
+  buildingAcquisitionByInheritance: z.boolean().optional(),
+  /** 상속개시일 토지 평가액 (원) — §163⑨ 취득당시 실지거래가액 의제. */
+  inheritedLandValue: z.number().int().positive().optional(),
+  /** 상속개시일 건물 평가액 (원). */
+  inheritedBuildingValue: z.number().int().positive().optional(),
   /**
    * ⑫ 사례 35: 주택→상가 용도변경 토글.
    * true 시 conversionDate·wasMultiHouseAtConversion 의미 있음. superRefine에서 필수 강제.

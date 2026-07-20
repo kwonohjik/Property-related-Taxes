@@ -81,6 +81,28 @@ export function validateGeneralBuildingAsset(
   if (transferLandStd + transferBuildingStd <= 0)
     return `${label}: 양도시 기준시가 합계가 0이면 안분이 불가합니다.`;
 
+  // ── §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1 토지·건물 모두 상속, 설계 §0) ──
+  // mode 분기 이전에 배치 — C2(부분 상속)를 취득시 기준시가 요구 전에 조기 차단(UX).
+  const isLandInherited = asset.acquisitionCause === "inheritance";
+  const isBuildingInherited = asset.gbBuildingAcquisitionCause === "inheritance";
+  if (isLandInherited || isBuildingInherited) {
+    // V1: Phase 1 = C1 단독. 부분 상속(한쪽만)은 혼합 배선 미설계 → Phase 2 차단.
+    if (isLandInherited !== isBuildingInherited) {
+      return `${label}: 일반건물의 토지·건물 중 한쪽만 상속으로 취득한 조합은 아직 지원하지 않습니다. (토지·건물 모두 상속이거나, 모두 상속이 아니어야 합니다)`;
+    }
+    // V2: 상속은 실거래가 모드 전용 — 환산·증축 조합 차단.
+    if (asset.useEstimatedAcquisition || asset.gbHasExtension) {
+      return `${label}: 상속 취득 일반건물은 환산취득가·증축 조합을 지원하지 않습니다. 실거래가 모드(환산취득가 토글 OFF·증축 토글 OFF)로 입력하세요.`;
+    }
+    // V3·V4: 상속개시일 평가액 필수 — 자동 안분 fallback 금지(mirror-pattern·API 변환과 동일 소스).
+    if (!parseAmount(asset.publishedValueAtInheritance)) {
+      return `${label}: 상속개시일 토지 평가액을 입력하세요. (자산 구분 "토지" 선택 후 상속세 신고가액 또는 보충적평가)`;
+    }
+    if (!parseAmount(asset.gbBuildingInheritedValue)) {
+      return `${label}: 상속개시일 건물 신고가액을 입력하세요.`;
+    }
+  }
+
   // ⑧ 정합성 가드(삭제): 4가지 조합 모두 허용 — useEstimatedAcquisition 강제 조건 제거.
   // 기존 코드: gbHasExtension && !useEstimatedAcquisition 차단 → 사례 33 실가+증축 조합 불가 버그.
   // 4번째 라디오 onClick이 useEst=false 설정하므로 이 가드가 있으면 실가+증축 차단됨.

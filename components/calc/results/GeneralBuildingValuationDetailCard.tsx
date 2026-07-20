@@ -113,6 +113,9 @@ export function GeneralBuildingValuationDetailCard({
   totalIncome,
 }: Props) {
   const { allocation, acquisition, estimatedDeduction } = detail;
+  // §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1 토지·건물 모두 상속) — 라벨·산식 분기.
+  const isInherited =
+    !!detail.acquisitionByInheritance && !!detail.buildingAcquisitionByInheritance;
   // §164⑨ 1호 공익수용 특례 (토지 전용 — 게이트 미충족 시 undefined)
   const exprVal = detail.expropriationValuationDetail;
 
@@ -186,9 +189,17 @@ export function GeneralBuildingValuationDetailCard({
         </div>
       </div>
 
-      {/* ② 환산취득가 */}
+      {/* ② 취득가액 (환산 or 상속개시일 평가액) */}
       <div className="space-y-2">
-        <SectionTitle number="②" text="환산취득가 (시행령 §176의2②)" tone="amber" />
+        <SectionTitle
+          number="②"
+          text={
+            isInherited
+              ? "취득가액 (상속개시일 평가액 — 소득세법 시행령 §163⑨)"
+              : "환산취득가 (시행령 §176의2②)"
+          }
+          tone="amber"
+        />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -201,7 +212,7 @@ export function GeneralBuildingValuationDetailCard({
             </thead>
             <tbody>
               <TableRow
-                label="환산취득가"
+                label={isInherited ? "취득가액" : "환산취득가"}
                 land={acquisition.land}
                 building={acquisition.building}
                 total={acquisition.land + acquisition.building}
@@ -212,27 +223,47 @@ export function GeneralBuildingValuationDetailCard({
         </div>
         <div className="rounded bg-amber-50/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
           <p className="font-medium">산식</p>
-          {exprVal ? (
+          {isInherited ? (
             <>
-              <p>토지 환산취득가 = INT(토지 양도가액 {formatKRW(allocation.land)} × 취득시 토지 기준시가 / <span className="font-semibold">양도시 토지 기준시가(§164⑨ 적용 후 {formatKRW(exprVal.denominator)})</span>)</p>
-              <p className="pl-2 text-amber-700">
-                └ 공익수용 특례(소득세법 시행령 §164⑨ 1호) — 양도시 토지 기준시가를
-                min[기준시가 {formatKRW(exprVal.perSqmCandidates.standard)}, 보상가액 {formatKRW(exprVal.perSqmCandidates.compensation)}, 보상기초 {formatKRW(exprVal.perSqmCandidates.basis)}]
-                = {formatKRW(exprVal.chosenPerSqm)} 원/㎡ × {exprVal.area}㎡ 로 낮춤(토지분만)
-              </p>
+              <p>토지 취득가액 = 상속개시일 토지 평가액(상증법 §60~66, 신고가액 또는 보충적평가)</p>
+              <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.land)}</span></p>
+              <p>건물 취득가액 = 상속개시일 건물 신고가액(상증법 §60~66)</p>
+              <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.building)}</span></p>
+              <p className="text-amber-600">취득당시 실지거래가액으로 의제(소득세법 시행령 §163⑨) — 환산·개산공제 미적용</p>
             </>
           ) : (
-            <p>토지 환산취득가 = INT(토지 양도가액 {formatKRW(allocation.land)} × 취득시 토지 기준시가 / 양도시 토지 기준시가)</p>
+            <>
+              {exprVal ? (
+                <>
+                  <p>토지 환산취득가 = INT(토지 양도가액 {formatKRW(allocation.land)} × 취득시 토지 기준시가 / <span className="font-semibold">양도시 토지 기준시가(§164⑨ 적용 후 {formatKRW(exprVal.denominator)})</span>)</p>
+                  <p className="pl-2 text-amber-700">
+                    └ 공익수용 특례(소득세법 시행령 §164⑨ 1호) — 양도시 토지 기준시가를
+                    min[기준시가 {formatKRW(exprVal.perSqmCandidates.standard)}, 보상가액 {formatKRW(exprVal.perSqmCandidates.compensation)}, 보상기초 {formatKRW(exprVal.perSqmCandidates.basis)}]
+                    = {formatKRW(exprVal.chosenPerSqm)} 원/㎡ × {exprVal.area}㎡ 로 낮춤(토지분만)
+                  </p>
+                </>
+              ) : (
+                <p>토지 환산취득가 = INT(토지 양도가액 {formatKRW(allocation.land)} × 취득시 토지 기준시가 / 양도시 토지 기준시가)</p>
+              )}
+              <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.land)}</span></p>
+              <p>건물 환산취득가 = INT(건물 양도가액 {formatKRW(allocation.building)} × 취득시 건물기준시가 / 양도시 건물기준시가)</p>
+              <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.building)}</span></p>
+            </>
           )}
-          <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.land)}</span></p>
-          <p>건물 환산취득가 = INT(건물 양도가액 {formatKRW(allocation.building)} × 취득시 건물기준시가 / 양도시 건물기준시가)</p>
-          <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.building)}</span></p>
         </div>
       </div>
 
       {/* ③ 개산공제 */}
       <div className="space-y-2">
-        <SectionTitle number="③" text="기타필요경비 — 개산공제 (시행령 §163⑥, 등기 자산 3%)" tone="sky" />
+        <SectionTitle
+          number="③"
+          text={
+            isInherited
+              ? "기타필요경비 — 개산공제 미적용 (소령 §163⑨ 실지거래가액 의제)"
+              : "기타필요경비 — 개산공제 (시행령 §163⑥, 등기 자산 3%)"
+          }
+          tone="sky"
+        />
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -255,9 +286,15 @@ export function GeneralBuildingValuationDetailCard({
           </table>
         </div>
         <div className="rounded bg-sky-50/60 border border-sky-200 px-3 py-2 text-xs text-sky-800 space-y-1">
-          <p className="font-medium">산식 (취득시 기준시가 × 3%)</p>
-          <p>토지 개산공제 = INT(취득시 토지 기준시가 × 3%) = <span className="font-semibold tabular-nums">{formatKRW(estimatedDeduction.land)}</span></p>
-          <p>건물 개산공제 = INT(취득시 건물기준시가 × 3%) = <span className="font-semibold tabular-nums">{formatKRW(estimatedDeduction.building)}</span></p>
+          {isInherited ? (
+            <p>상속개시일 평가액을 취득당시 실지거래가액으로 보므로(소령 §163⑨), 환산취득가 전용 개산공제(§163⑥)는 적용하지 않습니다.</p>
+          ) : (
+            <>
+              <p className="font-medium">산식 (취득시 기준시가 × 3%)</p>
+              <p>토지 개산공제 = INT(취득시 토지 기준시가 × 3%) = <span className="font-semibold tabular-nums">{formatKRW(estimatedDeduction.land)}</span></p>
+              <p>건물 개산공제 = INT(취득시 건물기준시가 × 3%) = <span className="font-semibold tabular-nums">{formatKRW(estimatedDeduction.building)}</span></p>
+            </>
+          )}
         </div>
       </div>
 

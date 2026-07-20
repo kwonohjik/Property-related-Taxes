@@ -64,6 +64,8 @@ export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
   if (a.gbFirstDisclosurePrice === undefined) a.gbFirstDisclosurePrice = "";
   if (a.gbFirstDisclosureLandStdPrice === undefined) a.gbFirstDisclosureLandStdPrice = "";
   if (a.gbFirstDisclosureBuildingStdPrice === undefined) a.gbFirstDisclosureBuildingStdPrice = "";
+  // §163⑨ 상속 취득가액 직접 산정 (Phase 1) — 구 세션 복원 방어
+  if (a.gbBuildingInheritedValue === undefined) a.gbBuildingInheritedValue = "";
   // gbHasExtension=false 인 legacy 데이터에 나머지 필드가 잘못 저장된 경우 정리
   // (신규 데이터에서는 발생하지 않으나 구형 마이그레이션 방어)
   if (a.gbHasExtension === false) {

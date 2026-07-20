@@ -435,6 +435,11 @@ export type GeneralBuildingOutput = {
    * 게이트(수용·환산·2009.02.04·보상 후보) 미충족 시 undefined. 결과 카드·anchor 표시용.
    */
   expropriationValuationDetail?: ExpropriationValuationDetail;
+
+  /** §163⑨ 상속 취득가액 직접 산정 여부 — 토지분(결과 카드 라벨 분기용, Phase 1 = C1). */
+  acquisitionByInheritance?: boolean;
+  /** §163⑨ 상속 취득가액 직접 산정 여부 — 건물분. */
+  buildingAcquisitionByInheritance?: boolean;
 };
 
 // ============================================================
