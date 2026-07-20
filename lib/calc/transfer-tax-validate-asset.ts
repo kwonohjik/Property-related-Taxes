@@ -97,6 +97,20 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   const bgError = validateBurdenedGiftAsset(asset, label);
   if (bgError) return bgError;
 
+  // ── 상업용건물·오피스텔 + 상속 (소령 §163⑨) — 환산 검증 전 우선 인터셉트 ──
+  // §163⑨: 상속 상가는 상속개시일 상증법 평가액을 취득당시 실지거래가액으로 의제(환산 아님).
+  // 아래 환산 블록(useEstimatedAcquisition 게이트)·generic 취득 검증(if(!isEstimated))은 stale
+  // useEstimatedAcquisition=true 시 상속을 못 잡으므로, 여기서 isEstimated 무관하게 먼저 처리한다.
+  if (asset.assetKind === "commercial_building" && asset.acquisitionCause === "inheritance") {
+    if (!asset.acquisitionDate) return `${label}: 취득일(상속개시일)을 입력하세요.`;
+    if (!asset.decedentAcquisitionDate) return `${label}: 피상속인 취득일을 입력하세요.`;
+    // 환산 제거 후 상속 상가의 유일 취득원 → 필수(generic housing/land의 line 530 "미필수(엔진 0)"와
+    // 달리 대체 취득원 부재). API buildInheritedAcquisitionPayload(post-deemed)도 reportedRaw>0 요구 → 정합.
+    if (!parseAmount(asset.publishedValueAtInheritance) || parseAmount(asset.publishedValueAtInheritance) <= 0)
+      return `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`;
+    return null;
+  }
+
   // ── 상업용건물·오피스텔 환산취득가 전용 검증 (⑧, 소령 §164⑧, §176조의2②2호) ──
   // ⑧ 동기화 원칙: API buildCommercialBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
   if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition) {
