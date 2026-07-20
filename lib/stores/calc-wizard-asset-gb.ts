@@ -143,6 +143,12 @@ export interface GeneralBuildingFormSlice {
   gbFirstDisclosureLandStdPrice: string;
   /** 최초공시 당시 건물 기준시가 총액 (원). */
   gbFirstDisclosureBuildingStdPrice: string;
+  /**
+   * §163⑨ 상속개시일 건물 신고가액 (원, 문자열). gbBuildingAcquisitionCause === "inheritance" 시 필수.
+   * 상속세 신고서·결정통지서상 건물 평가액(상증법 §60~66). 취득당시 실지거래가액 의제 —
+   * 환산·개산공제(§163⑥) 미적용. Phase 1은 공시된 정상 케이스만(미공시 §163⑨2호 max는 Phase 2).
+   */
+  gbBuildingInheritedValue: string;
 
   // ── 겸용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 겸용주택 여부 토글 */

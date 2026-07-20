@@ -19,6 +19,7 @@ import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
@@ -276,7 +277,17 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
           </div>
         )}
 
-        {/* 건물 상속·증여 보조 입력은 후속 PR에서 구현 (본 PR 스코프 미포함) */}
+        {/* §163⑨ 상속개시일 건물 신고가액 (Phase 1 = 토지·건물 모두 상속) */}
+        {asset.gbBuildingAcquisitionCause === "inheritance" && (
+          <ToneCard tone="violet" title="상속개시일 건물 신고가액 (소득세법 시행령 §163⑨)">
+            <CurrencyInput
+              label="건물 평가액"
+              value={asset.gbBuildingInheritedValue}
+              onChange={(v) => onChange({ gbBuildingInheritedValue: v })}
+              hint="상속세 신고서·결정통지서상 건물 평가액(상증법 §60~66). 상속개시일 평가액을 취득가액으로 직접 사용 — 환산·개산공제 미적용"
+            />
+          </ToneCard>
+        )}
       </ToneCard>
 
     </div>
