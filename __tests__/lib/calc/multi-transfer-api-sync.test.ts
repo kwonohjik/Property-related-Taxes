@@ -105,6 +105,28 @@ describe("[M-2] buildPropertyPayload 자산-수준 취득방식 도출", () => {
     expect(payload.useEstimatedAcquisition).toBe(false);
     expect(payload.acquisitionPrice).toBe(300_000_000);
   });
+
+  it("M-2-4 [A-multi]: 상속 취득가액 — fixedAcq 우선, 공란 시 publishedValue ((b) 단일화)", () => {
+    // 현행 직접입력(fixedAcq) 우선 → 동작 불변
+    const withFixed = baseForm();
+    withFixed.assets[0] = {
+      ...withFixed.assets[0],
+      acquisitionCause: "inheritance",
+      fixedAcquisitionPrice: "500,000,000",
+      publishedValueAtInheritance: "300,000,000",
+    };
+    expect((buildPropertyPayload(withFixed) as Record<string, unknown>).acquisitionPrice).toBe(500_000_000);
+
+    // 통합 UI(P2b) 후 fixedAcq 제거 → publishedValue(신고가액)로 자동 전환
+    const withPublished = baseForm();
+    withPublished.assets[0] = {
+      ...withPublished.assets[0],
+      acquisitionCause: "inheritance",
+      fixedAcquisitionPrice: "",
+      publishedValueAtInheritance: "300,000,000",
+    };
+    expect((buildPropertyPayload(withPublished) as Record<string, unknown>).acquisitionPrice).toBe(300_000_000);
+  });
 });
 
 // ─────────────────────────────────────────────────────────
@@ -226,7 +248,9 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     expect(validateMultiSettings(multi)).toBeNull();
   });
 
-  it("[R2-H1] 상속 보충평가(자동) 모드 차단 — 취득가 0 과대 과세 방지", () => {
+  it("[R2-H1] 상속 auto + 신고가액 확정 → 통과 ((b) 취득가액 단일화)", () => {
+    // P2a: 다건은 신고가액(publishedValueAtInheritance)을 취득가액으로 직접 사용 →
+    // auto여도 신고가액이 있으면 통과(과거 '무조건 차단'에서 정밀화, plan §5.2 (b)).
     const form = baseForm();
     form.assets[0] = {
       ...form.assets[0],
@@ -237,9 +261,23 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
       publishedValueAtInheritance: "300,000,000",
       fixedAcquisitionPrice: "",
     };
+    expect(validateMultiSupportedMode(form)).toBeNull();
+  });
+
+  it("[R2-H1] 상속 auto + 신고가액 공란 → 차단 (단건 전용 산정 필요)", () => {
+    const form = baseForm();
+    form.assets[0] = {
+      ...form.assets[0],
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: "2000-01-01",
+      inheritanceValuationMode: "auto",
+      inheritanceAssetKind: "house_apart",
+      publishedValueAtInheritance: "",
+      fixedAcquisitionPrice: "",
+    };
     const msg = validateMultiSupportedMode(form);
     expect(msg).not.toBeNull();
-    expect(msg).toContain("보충적평가");
+    expect(msg).toContain("신고가액");
   });
 
   it("[R2-H1 대조군] 상속 + 직접입력(manual) 모드는 통과", () => {

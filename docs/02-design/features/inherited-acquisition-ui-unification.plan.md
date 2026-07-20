@@ -132,7 +132,9 @@ auto 모드에서 하단 값이 취득가액이 되는 메커니즘:
 **B1로 `inheritanceValuationMode`·상속 `fixedAcquisitionPrice`를 폐기하면 다건 상속의 유일 경로가 사라진다.** 두 대응안 중 택1을 리뷰에서 확정:
 - **(a) 다건에 `inheritedAcquisition` 경로 신규 지원** — 다건 route·API·validate에 단건 payload 경로 이식. 근본적이나 작업량 大.
 - **(b) 다건 상속을 "신고가액 직접입력"으로 축소 유지** — `publishedValueAtInheritance`를 다건 취득가액 소스로 전환(현행 fixedAcquisitionPrice 대체), auto 보충적평가·환산은 단건 전용 유지(차단 문구만 필드명 갱신). 최소 변경.
-> **확정 = (b) (2026-07-20)**. 다건은 원래 auto 미지원 — 제약(auto 차단)을 유지하되 취득가액 소스만 `fixedAcquisitionPrice` → `publishedValueAtInheritance`로 단일화. (a) 다건 inheritedAcquisition 지원은 별도 후속 과제로 분리(범위 밖).
+> **확정 = (b) (2026-07-20, P2a 구현 중 정밀화)**. 다건 상속은 신고가액(`publishedValueAtInheritance`) 확정 시 **허용**하고 그 값을 취득가액으로 직접 사용. 보충적평가 자동조회·환산 등 **단건 전용 산정 경로만**(신고가액 공란 시) 차단. 기존 "auto 무조건 차단"(테스트 `[R2-H1]`)은 다건이 `publishedValue`를 안 읽어 취득가 0 과대과세되던 것을 막는 용도였으나, P2a가 다건 api를 `publishedValue`를 읽도록 전환하면 그 근거가 해소 → `[R2-H1]` '차단'→'통과' 갱신. (a) 다건 inheritedAcquisition 지원은 범위 밖.
+>
+> **⚠️ P2 순서 함정 (Do 착수 실측)**: 통합 UI가 `inheritanceValuationMode`를 항상 `"auto"`로 세팅하면 다건 validate(`multi-transfer-tax-validate.ts:69` = 상속 auto **차단**)와 충돌 → 다건 상속이 막힌다. 따라서 **다건 경로 전환(multi-api:9를 `publishedValueAtInheritance`로 + validate:69 차단 조정)을 통합 UI보다 먼저** 수행한다(§8 P2a 선행).
 
 ### 5.3 ⚠️ 세액 불변 지뢰 — post-deemed 토지 + 빈 method (C2 Critical, 실측)
 `calcPostDeemed`(`inheritance-acquisition-price.ts:164`)는 `reportedValue && reportedMethod`가 **둘 다** 있어야 신고가액 경로로 간다. `reportedMethod`가 비면 `legacyFallback`(`:202`) → `computeSupplementary(land)`(`:248-250`) = **`publishedValue × landAreaM2`(면적 곱셈)**로 취득가액이 폭증한다. 현재는 `reportedMethod`가 "supplementary" 하드코딩이라 우연히 안전하지만, H7 매핑 도입·마이그레이션에서 method가 비면 노출된다.
@@ -182,11 +184,11 @@ Do 진입 전 아래 anchor를 먼저 작성·GREEN 확인하여, 통합 리팩�
 
 1. **P0 — Anchor(§7)** 작성·RED/GREEN 확인 → 설계 환류. **A2·A-land·A-multi·A6 우선**. (✅ pre-do로 A2·A-land 확증 완료)
 2. **P1 — 안전·독립 조치 (세액무관·필드유지, tsc GREEN)**: `transfer-tax-api-inheritance.ts:73` `reportedMethod` 하드코딩 "supplementary" → **`inheritanceValuationMethod || "supplementary"` 매핑**(H7 정본화 + **C2 공란 가드 내장**). 사용자 선택 평가방법이 결과 legalBasis/formula에 반영(세액 불변). A-land anchor 정식화. 필드 폐기·UI 변경 0.
-3. **P2 — big bang: UI 셸 통합 + 필드 폐기 + 경로 단일화** (①②③⑤⑧⑨⑩⑫⑬⑭): 결합도상 불가피하게 한 Phase.
-   - UI: **`CompanionAcqInheritanceBlock` 셸만 `InheritedAcquisitionDeemedSection`으로 흡수**, `PreDeemedInputs`·`PostDeemedInputs`·`HouseValuationSection`(571줄) **하위 컴포넌트 존치**(§9 R4, 셸 ≤300줄). 렌더 사이트 2곳 교체. onChange 직접 patch(mirror-pattern).
-   - 필드 폐기: `inheritanceValuationMode`·상속 `fixedAcquisitionPrice`·orphan `inheritanceReportedValue`.
-   - API: 단건 게이트 제거·manual 분기 삭제·**다건(§5.2 (b))**·companion refine(`transfer-tax-schema.ts:665-671`) 재작성.
-   - store·migration·validation(단건+다건) 동시. **P2 착수 시 추가 세분화 가능성 재검토**.
+3. **P2 — UI 통합 + 경로 단일화 (3 서브페이즈, 다건 충돌 회피 순서 — 실측 세분화)**:
+   - **P2a (다건 소스 전환, 선행)**: `multi-transfer-tax-api.ts:9` 다건 상속 취득가액 `fixedAcquisitionPrice` → `publishedValueAtInheritance`. `multi-transfer-tax-validate.ts:69` auto 차단 조정(직접입력 소스 기준). 다건 (b) 구현. tsc·회귀 GREEN. **통합 UI의 auto 세팅이 다건을 막지 않도록 선행 필수.**
+   - **P2b (단건 UI 셸 통합 + 항상 auto 세팅)**: **`CompanionAcqInheritanceBlock` 셸이 `InheritedAcquisitionDeemedSection` 흡수**, `PreDeemedInputs`·`PostDeemedInputs`·`HouseValuationSection`(571줄) **하위 존치**(§9 R4, 셸 ≤300줄). 자동/직접입력 토글 제거 → 평가방법 축(post) / 신고가액(pre). `inheritanceValuationMode` **항상 "auto" 세팅**(manual 경로 무력화), 상속 `fixedAcquisitionPrice` 입력 UI 제거. 렌더 사이트 2곳 교체. onChange 직접 patch(mirror-pattern). migration: 기존 manual(`fixedAcquisitionPrice`+mode=manual) → `publishedValueAtInheritance`+평가방법(method 공란 방지). **A2 anchor로 manual→auto 동일세액 강제.**
+   - **P2c (dead 코드·필드 폐기)**: manual 분기 삭제(`api-helpers.ts:566`·`validate-asset.ts:615`·`api.ts` manual), `inheritanceValuationMode` 필드 제거(store·factory·migration·Zod), 상속 `fixedAcquisitionPrice` prop 제거, companion refine(`transfer-tax-schema.ts:665-671`) 재작성, orphan `inheritanceReportedValue` 제거. 모든 참조가 auto 가정이라 안전 제거.
+   > 각 서브페이즈 끝 tsc·회귀 GREEN 유지. P2a→P2b→P2c 순서 강제(다건 충돌 회피).
 4. **P3 — 검증·ship** (⑥⑦): 사이드바·결과 확인 + 통합 anchor + RTL 3파일 + 전체 회귀 + tsc + 브라우저 수동(직접입력/보충적평가/pre/post/주택미공시/토지/다건) + ship.
    > **순서 근거(L1)**: P1 안전조치가 API/엔진층 baseline을 먼저 고정 → P2 UI·필드 교체 중에도 A2·A-land anchor 안정.
 
