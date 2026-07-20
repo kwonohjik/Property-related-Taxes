@@ -295,11 +295,12 @@ export function buildStatementItems(
   });
 
   const gainStep = findStepByLabel(result.steps, "양도차익");
+  const totalTransferGainVal = isAggregate
+    ? properties.reduce((s, p) => s + p.transferGain, 0)
+    : result.transferGain;
   items.set("transferGain", {
     label: "전체 양도차익",
-    value: isAggregate
-      ? properties.reduce((s, p) => s + p.transferGain, 0)
-      : result.transferGain,
+    value: totalTransferGainVal,
     formula: gainStep?.formula ?? "양도가액 − 취득가액 − 필요경비",
     legalBasis: gainStep?.legalBasis ?? "소득세법 §95①",
     perAsset: isAggregate
@@ -325,29 +326,31 @@ export function buildStatementItems(
         0,
       )
     : 0;
+  const exemptVal = isAggregate ? exemptGainAgg : exemptGainSingle;
+  const taxableGainVal = isAggregate
+    ? properties.reduce(
+        (s, p) =>
+          s +
+          (p.transferGain > 0
+            ? Math.min(
+                p.transferGain,
+                Math.max(0, p.income) + p.longTermHoldingDeduction,
+              )
+            : p.transferGain),
+        0,
+      )
+    : result.taxableGain;
   items.set("exemptGain", {
     label: "비과세 양도차익",
-    value: isAggregate ? exemptGainAgg : exemptGainSingle,
-    formula: "전체 양도차익 − 과세대상 양도차익 (§89 비과세 또는 §95 12억 초과 안분)",
+    value: exemptVal,
+    formula: `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 과세대상 양도차익 ${taxableGainVal.toLocaleString()} (§89 비과세 또는 §95 12억 초과 안분)`,
     legalBasis: "소득세법 §89·§95",
   });
 
   items.set("taxableGain", {
     label: "과세대상 양도차익",
-    value: isAggregate
-      ? properties.reduce(
-          (s, p) =>
-            s +
-            (p.transferGain > 0
-              ? Math.min(
-                  p.transferGain,
-                  Math.max(0, p.income) + p.longTermHoldingDeduction,
-                )
-              : p.transferGain),
-          0,
-        )
-      : result.taxableGain,
-    formula: "전체 양도차익 − 비과세 양도차익",
+    value: taxableGainVal,
+    formula: `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 비과세 양도차익 ${exemptVal.toLocaleString()}`,
     legalBasis: "소득세법 §92",
     perAsset: isAggregate
       ? properties.map((p) => ({
