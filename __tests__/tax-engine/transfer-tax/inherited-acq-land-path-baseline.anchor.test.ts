@@ -27,18 +27,20 @@ describe("P2b baseline — 토지 상속 취득가액 경로별 현행 고정 (R
     expect(r.acquisitionPrice).toBe(TOTAL);
   });
 
-  it("다자산 일괄양도 경로 (inheritanceValuation) — publishedValue=단가 × 면적 = 총액", () => {
-    // route.ts:459-490은 reportedValue/reportedMethod 없이 호출 → legacyFallback computeSupplementary(land)
+  it("다자산 일괄양도 경로 (통일 후) — reportedValue=총액 + method → 총액 그대로", () => {
+    // R0″ 통일: route.ts:459-490이 publishedValueAtInheritance(총액)를 reportedValue+method로 직수용
+    // (기존 단가×면적 computeSupplementary 경로 폐기 — 단건과 동일 총액 경로).
     const r = calculateInheritanceAcquisitionPrice({
       inheritanceDate: POST_DEEMED,
       assetKind: "land",
-      publishedValueAtInheritance: UNIT_PRICE, // 단가(원/㎡)
+      reportedValue: TOTAL,
+      reportedMethod: "supplementary",
       landAreaM2: AREA,
     });
     expect(r.acquisitionPrice).toBe(TOTAL);
   });
 
-  it("두 경로 최종 취득가액 동일 — route 통일 후에도 불변 baseline", () => {
+  it("두 경로 최종 취득가액 동일 (통일 후 — 둘 다 총액 직수용)", () => {
     const single = calculateInheritanceAcquisitionPrice({
       inheritanceDate: POST_DEEMED, assetKind: "land",
       reportedValue: TOTAL, reportedMethod: "supplementary",
@@ -46,7 +48,7 @@ describe("P2b baseline — 토지 상속 취득가액 경로별 현행 고정 (R
     });
     const bundled = calculateInheritanceAcquisitionPrice({
       inheritanceDate: POST_DEEMED, assetKind: "land",
-      publishedValueAtInheritance: UNIT_PRICE, landAreaM2: AREA,
+      reportedValue: TOTAL, reportedMethod: "supplementary", landAreaM2: AREA,
     });
     expect(single.acquisitionPrice).toBe(bundled.acquisitionPrice);
     expect(single.acquisitionPrice).toBe(TOTAL);
