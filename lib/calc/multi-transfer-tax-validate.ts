@@ -68,7 +68,6 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   }
   if (
     a.acquisitionCause === "inheritance" &&
-    a.inheritanceValuationMode === "auto" &&
     parseAmount(a.publishedValueAtInheritance ?? "0") <= 0
   ) {
     // (b) 다건은 상속세 신고가액(publishedValueAtInheritance)을 취득가액으로 직접 사용.

@@ -83,7 +83,6 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   reductions: AssetReductionForm[];
 
   /** 상속 취득가액 산정 모드: auto=보충적평가, manual=직접입력 */
-  inheritanceValuationMode: "auto" | "manual";
   /** 상속개시일 (YYYY-MM-DD) */
   inheritanceDate: string;
   /** 자산 종류 (토지/단독주택/공동주택 — 보충적평가용) */

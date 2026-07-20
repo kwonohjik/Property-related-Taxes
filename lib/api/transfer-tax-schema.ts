@@ -662,16 +662,7 @@ export const propertySchema = z
             });
           }
         } else if (c.acquisitionCause === "inheritance") {
-          // 상속: inheritanceValuation(auto) 또는 fixedAcquisitionPrice(manual) 중 하나 필요
-          const hasAuto = c.inheritanceValuation !== undefined;
-          const hasManual = c.fixedAcquisitionPrice !== undefined && c.fixedAcquisitionPrice > 0;
-          if (!hasAuto && !hasManual) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["companionAssets", i, "fixedAcquisitionPrice"],
-              message: "상속 자산은 보충적평가 또는 직접입력 취득가액 필수",
-            });
-          }
+          // P2c: 상속 취득가액은 inheritanceValuation(신고가액) 경로로 항상 전송 (manual/fixedAcquisitionPrice 폐기).
           if (!c.decedentAcquisitionDate) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,

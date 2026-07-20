@@ -348,21 +348,18 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.inheritanceStartDate) a.inheritanceStartDate = "";
   if (a.hasDecedentActualPrice === undefined) a.hasDecedentActualPrice = false;
   if (!a.decedentAcquisitionPrice) a.decedentAcquisitionPrice = "";
-  if (!a.inheritanceReportedValue) a.inheritanceReportedValue = "";
   if (!a.inheritanceValuationMethod) a.inheritanceValuationMethod = "";
   // P2b 통합: 상속 취득가액 manual 모드 폐지 → auto 강제 (기존 세션 호환).
   // manual 취득가액(fixedAcquisitionPrice)을 신고가액(publishedValueAtInheritance)으로 이전.
-  if (a.inheritanceValuationMode === "manual") {
-    if (a.acquisitionCause === "inheritance") {
-      // 신고가액(publishedValueAtInheritance) 공란일 때만 manual 취득가액 이전, 그 외엔 기존 신고가액 보존.
-      if (!a.publishedValueAtInheritance && a.fixedAcquisitionPrice) {
-        a.publishedValueAtInheritance = a.fixedAcquisitionPrice;
-      }
-      a.fixedAcquisitionPrice = ""; // 상속 manual이면 fixedAcq는 폐기(신고가액으로 일원화)
+  // P2c: 상속 manual 세션(저장값·loose 접근) 감지 → fixedAcq를 신고가액(publishedValueAtInheritance)으로
+  // 이전, mode 필드 폐기. inheritanceValuationMode는 AssetForm 타입에서 제거됨(항상 신고가액 경로).
+  if ((a.inheritanceValuationMode as string | undefined) === "manual" && a.acquisitionCause === "inheritance") {
+    if (!a.publishedValueAtInheritance && a.fixedAcquisitionPrice) {
+      a.publishedValueAtInheritance = a.fixedAcquisitionPrice;
     }
-    a.inheritanceValuationMode = "auto";
+    a.fixedAcquisitionPrice = "";
   }
-  if (a.inheritanceValuationMode === undefined) a.inheritanceValuationMode = "auto";
+  delete a.inheritanceValuationMode;
   if (a.useSupplementaryHelper === undefined) a.useSupplementaryHelper = false;
   if (!a.supplementaryLandArea) a.supplementaryLandArea = "";
   if (!a.supplementaryLandUnitPrice) a.supplementaryLandUnitPrice = "";

@@ -19,8 +19,6 @@ export interface InheritanceAcquisitionFormSlice {
   hasDecedentActualPrice: boolean;
   /** 피상속인 실지취득가액 (원 단위 문자열, hasDecedentActualPrice=true 시) */
   decedentAcquisitionPrice: string;
-  /** 상속세 신고가액 (원 단위 문자열, case B) */
-  inheritanceReportedValue: string;
   /** 상속세 신고 시 적용한 평가방법 (case B) */
   inheritanceValuationMethod:
     | "market_value"

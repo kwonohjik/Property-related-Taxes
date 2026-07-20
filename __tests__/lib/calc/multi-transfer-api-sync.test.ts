@@ -256,7 +256,6 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
       ...form.assets[0],
       acquisitionCause: "inheritance",
       decedentAcquisitionDate: "2000-01-01",
-      inheritanceValuationMode: "auto",
       inheritanceAssetKind: "house_apart",
       publishedValueAtInheritance: "300,000,000",
       fixedAcquisitionPrice: "",
@@ -270,7 +269,6 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
       ...form.assets[0],
       acquisitionCause: "inheritance",
       decedentAcquisitionDate: "2000-01-01",
-      inheritanceValuationMode: "auto",
       inheritanceAssetKind: "house_apart",
       publishedValueAtInheritance: "",
       fixedAcquisitionPrice: "",
@@ -280,16 +278,17 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     expect(msg).toContain("신고가액");
   });
 
-  it("[R2-H1 대조군] 상속 + 직접입력(manual) 모드는 통과", () => {
+  it("[R2-H1] 상속 fixedAcquisitionPrice 폐기 — 신고가액 없으면 차단 (P2c 통합)", () => {
     const form = baseForm();
     form.assets[0] = {
       ...form.assets[0],
       acquisitionCause: "inheritance",
       decedentAcquisitionDate: "2000-01-01",
-      inheritanceValuationMode: "manual",
-      fixedAcquisitionPrice: "300,000,000",
+      fixedAcquisitionPrice: "300,000,000", // P2c: 상속 fixedAcq 미사용 → 신고가액 없어 차단
+      publishedValueAtInheritance: "",
     };
-    expect(validateMultiSupportedMode(form)).toBeNull();
+    const msg = validateMultiSupportedMode(form);
+    expect(msg).not.toBeNull();
   });
 
   it("[리뷰 H-1] 모드 2 — 보유 감면주택 주택수 제외(specialHouseExclusions) 차단", () => {

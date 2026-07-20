@@ -22,7 +22,6 @@ export function buildInheritedAcquisitionPayload(
 ): { inheritedAcquisition?: unknown } {
   const triggerable =
     primary.acquisitionCause === "inheritance" &&
-    primary.inheritanceValuationMode === "auto" &&
     (primary.inheritanceAssetKind === "land" ||
       primary.inheritanceAssetKind === "house_individual" ||
       primary.inheritanceAssetKind === "house_apart");

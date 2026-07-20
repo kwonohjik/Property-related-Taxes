@@ -16,9 +16,9 @@ describe("[A2] P2b 통합 migration — 상속 manual → auto", () => {
       publishedValueAtInheritance: "",
     };
     const m = migrateAsset(stale) as unknown as Record<string, unknown>;
-    expect(m.inheritanceValuationMode).toBe("auto");
     expect(m.publishedValueAtInheritance).toBe("400000000");
     expect(m.fixedAcquisitionPrice).toBe("");
+    expect(m.inheritanceValuationMode).toBeUndefined(); // P2c: mode 필드 폐기
   });
 
   it("manual 상속 + publishedValue 이미 있음 → 기존 신고가액 보존, fixedAcq만 클리어", () => {
@@ -43,6 +43,6 @@ describe("[A2] P2b 통합 migration — 상속 manual → auto", () => {
     };
     const m = migrateAsset(stale) as unknown as Record<string, unknown>;
     expect(m.fixedAcquisitionPrice).toBe("300000000"); // 비상속 취득가액 보존
-    expect(m.inheritanceValuationMode).toBe("auto");
+    expect(m.inheritanceValuationMode).toBeUndefined(); // P2c: mode 필드 폐기
   });
 });
