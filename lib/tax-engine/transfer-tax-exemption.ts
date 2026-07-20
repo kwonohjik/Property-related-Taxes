@@ -121,6 +121,29 @@ export function resolveWasRegulatedAtAcquisition(input: ResidenceReqInput): bool
 }
 
 /**
+ * §154⑧3호 통산 거주 개월 규칙 코어 — 최소입력 pure 헬퍼 (client·engine 공용 단일 소스).
+ * 동일세대 상속이면 상속개시일 이후 실거주 + 상속개시 전 동일세대 통산 거주, 그 외에는 실거주만.
+ * 겸용주택 API 어댑터(`transfer-tax-api-mixed-use.ts`)도 이 함수를 재사용해 규칙 중복을 없앤다
+ * (`resolveExemptionResidenceMonths`가 10-필드 Pick 인자라 어댑터에서 직접 호출 불가한 것을 우회).
+ */
+export function consolidateResidenceMonths(
+  residencePeriodMonths: number,
+  opts: {
+    acquisitionCause?: TransferTaxInput["acquisitionCause"];
+    decedentSameHouseholdBeforeInheritance?: boolean;
+    decedentCohabitationResidenceMonths?: number;
+  },
+): number {
+  if (
+    opts.acquisitionCause === "inheritance" &&
+    opts.decedentSameHouseholdBeforeInheritance === true
+  ) {
+    return residencePeriodMonths + (opts.decedentCohabitationResidenceMonths ?? 0);
+  }
+  return residencePeriodMonths;
+}
+
+/**
  * §154⑧3호 — 상속주택 자체 양도 시 (비과세 거주요건·§95② 표2 대상 판정용) 통산 거주 개월.
  * 동일세대 상속이면 상속개시일 이후 실거주(residencePeriodMonths) + 상속개시 전 동일세대 통산 거주
  * (decedentCohabitationResidenceMonths). 그 외에는 실거주만.
@@ -129,13 +152,7 @@ export function resolveWasRegulatedAtAcquisition(input: ResidenceReqInput): bool
  * 두 기간은 disjoint(상속개시 이전/이후)라 단순 합산이 정확.
  */
 export function resolveExemptionResidenceMonths(input: ResidenceReqInput): number {
-  if (
-    input.acquisitionCause === "inheritance" &&
-    input.decedentSameHouseholdBeforeInheritance === true
-  ) {
-    return input.residencePeriodMonths + (input.decedentCohabitationResidenceMonths ?? 0);
-  }
-  return input.residencePeriodMonths;
+  return consolidateResidenceMonths(input.residencePeriodMonths, input);
 }
 
 /**

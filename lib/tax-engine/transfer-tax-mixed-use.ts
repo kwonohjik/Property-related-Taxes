@@ -139,6 +139,9 @@ export function calcMixedUseTransferTax(
     | ReturnType<typeof applyUsagePeriodSplit>["usagePeriodSplit"]
     | undefined;
 
+  // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 미제공 시 실거주로 fallback(비상속·별도세대 = 실거주).
+  const table2ResidenceYears = asset.table2ResidencePeriodYears ?? asset.residencePeriodYears;
+
   // Case A 4부분 안분 활성화 시 period-split 건너뛰기 — 엑셀 기준 전체 보유기간 단일 LTHD 적용.
   const skipPeriodSplitForFourPart = !!housingAcqResult.phdResult?.fourPartApportionment;
   if (periodInfo && asset.partialUsageChange && !skipPeriodSplitForFourPart) {
@@ -148,6 +151,7 @@ export function calcMixedUseTransferTax(
       apportionment,
       excessResult,
       asset.residencePeriodYears,
+      table2ResidenceYears,
       asset.isOneHouseExempt ?? true,
       periodInfo,
       asset.partialUsageChange.direction,
@@ -163,6 +167,7 @@ export function calcMixedUseTransferTax(
       housingGainSplit,
       excessResult,
       asset.residencePeriodYears,
+      table2ResidenceYears,
       asset.isOneHouseExempt ?? true,  // 미주입 시 true (기존 backward compat)
     );
     commercialPart = buildCommercialPart(commercialGainSplit);
@@ -191,8 +196,15 @@ export function calcMixedUseTransferTax(
   );
   steps.push(buildTotalStep(total));
 
-  // 계산 경로 메타 (학습·검증용)
-  const calculationRoute = buildCalculationRoute(asset, housingPart, excessResult, commercialPart);
+  // 계산 경로 메타 (학습·검증용) — 표2 사유 표시는 게이트에 쓴 통산 값(table2ResidenceYears)을 그대로 주입
+  // (재계산 시 게이트와 drift 위험 — feedback_engine_result_display_drift).
+  const calculationRoute = buildCalculationRoute(
+    asset,
+    housingPart,
+    excessResult,
+    commercialPart,
+    table2ResidenceYears,
+  );
 
   // 보유 중 일부 용도변경 메타 (결과 카드 표시용)
   const partialUsageChange = asset.partialUsageChange
@@ -258,6 +270,8 @@ function buildCalculationRoute(
   housingPart: ReturnType<typeof buildHousingPart>,
   excessResult: ReturnType<typeof calcExcessLandRatio>,
   commercialPart: ReturnType<typeof buildCommercialPart>,
+  // 표2 게이트에 실제로 쓴 통산 거주 연수 — 재계산 없이 주입받아 표시-계산 drift 차단.
+  table2ResidenceYears: number,
 ): MixedUseCalculationRoute {
   const acqHousing = asset.acquisitionStandardPrice.housingPrice;
   const housingAcqPriceSource =
@@ -271,10 +285,11 @@ function buildCalculationRoute(
     ? ("phd_corrected" as const)
     : ("section97_direct" as const);
 
+  // 표2 게이트는 통산 거주(§154⑧3호) — 사유 서술도 게이트 값으로(통산 케이스에서 "실거주 0년 ≥2년" 모순 방지).
   const housingDeductionTableReason =
     housingPart.longTermDeductionTable === 2
-      ? `거주 ${asset.residencePeriodYears}년 ≥ 2년 → 표2 (보유×4% + 거주×4%, 최대 80%)`
-      : `거주 ${asset.residencePeriodYears}년 < 2년 → 표1 (보유×2%, 최대 30%)`;
+      ? `거주(통산) ${table2ResidenceYears}년 ≥ 2년 → 표2 (보유×4% + 거주×4%, 최대 80%)`
+      : `거주(통산) ${table2ResidenceYears}년 < 2년 → 표1 (보유×2%, 최대 30%)`;
 
   const zoneLabel = asset.zoneType ?? "residential";
   const metroLabel = asset.isMetropolitanArea === false ? "수도권 외" : "수도권";
