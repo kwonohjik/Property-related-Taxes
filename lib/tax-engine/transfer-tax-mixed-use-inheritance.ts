@@ -34,9 +34,11 @@ export function resolveHousingInheritedAcqDirect(
   const reported = asset.housingInheritedValue ?? null;
   const stdCandidate = asset.acquisitionStandardPrice.housingPrice ?? 0;
   if (reported === null && stdCandidate <= 0) {
+    const kind = asset.acquisitionByGift ? "증여" : "상속";
+    const at = asset.acquisitionByGift ? "증여일" : "상속개시일";
     throw new Error(
-      "상속 취득: 주택분 상속개시일 평가액 정보가 없습니다. " +
-        "상속세 신고가액 또는 취득시(상속개시일) 개별주택가격을 입력하세요.",
+      `${kind} 취득: 주택분 ${at} 평가액 정보가 없습니다. ` +
+        `${kind}세 신고가액 또는 취득시(${at}) 개별주택가격을 입력하세요.`,
     );
   }
   return {
@@ -86,9 +88,11 @@ export function resolveCommercialInheritedAcq(
 ): { estimatedAcqPrice: number; detail: InheritedAcquisitionDetail } {
   const reported = asset.commercialInheritedValue ?? null;
   if (reported === null && acqTotalStd <= 0) {
+    const kind = asset.acquisitionByGift ? "증여" : "상속";
+    const at = asset.acquisitionByGift ? "증여일" : "상속개시일";
     throw new Error(
-      "상속 취득: 상가분 상속개시일 평가액 정보가 없습니다. " +
-        "상속세 신고가액 또는 취득시(상속개시일) 상가건물 기준시가+개별공시지가를 입력하세요.",
+      `${kind} 취득: 상가분 ${at} 평가액 정보가 없습니다. ` +
+        `${kind}세 신고가액 또는 취득시(${at}) 상가건물 기준시가+개별공시지가를 입력하세요.`,
     );
   }
   return {

@@ -58,6 +58,10 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "mixedCommercialInheritedValueOverride"
   | "mixedHousingInheritedExpense"
   | "mixedCommercialInheritedExpense"
+  | "mixedHousingGiftValueOverride"
+  | "mixedCommercialGiftValueOverride"
+  | "mixedHousingGiftExpense"
+  | "mixedCommercialGiftExpense"
   | "hasPartialUsageChange"
   | "partialChangeDirection"
   | "partialChangeAcqResidentialArea"
@@ -89,6 +93,11 @@ export const MIXED_USE_DEFAULTS: Pick<
   mixedCommercialInheritedValueOverride: "",
   mixedHousingInheritedExpense: "",
   mixedCommercialInheritedExpense: "",
+  // ── 증여 취득 겸용주택 — §163⑨ (D1=옵션B) ──
+  mixedHousingGiftValueOverride: "",
+  mixedCommercialGiftValueOverride: "",
+  mixedHousingGiftExpense: "",
+  mixedCommercialGiftExpense: "",
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
   hasPartialUsageChange: false,
   partialChangeDirection: "",

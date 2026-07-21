@@ -242,8 +242,8 @@ export function calcHousingEstimatedAcq(
       landAreaAtTransfer: asset.preHousingDisclosure.landAreaAtTransfer ?? landAreaAtTransfer,
       ...fourPartFields,
     });
-    // 상속 취득(소령 §163⑨2호) — 미공시 주택분 = max(신고가액, §164⑦ 환산). 4부분 조합은 Phase 2 범위 밖.
-    if (asset.acquisitionByInheritance) {
+    // 상속·증여 취득(소령 §163⑨2호) — 미공시 주택분 = max(신고가액, §164⑦ 환산). 4부분 조합은 Phase 2 범위 밖.
+    if (asset.acquisitionByInheritance || asset.acquisitionByGift) {
       if (phdResult.fourPartApportionment) {
         throw new Error(
           "상속 취득 + PHD 4부분 안분(용도변경 결합) 조합은 아직 지원하지 않습니다 (Phase 2 예정).",
@@ -278,10 +278,10 @@ export function calcHousingEstimatedAcq(
   // 상속 취득(소령 §163⑨ 본문) — 공시(비-PHD) 주택분은 fallback(reportedValue ?? stdCandidate).
   // 보유 중 용도변경(§166⑥ 안분) 조합은 Phase 2 범위 밖(가드) — §164⑨1호 공익수용 특례(exprVal)
   // 분모 계산에도 도달하지 않으므로 상속+공익수용 조합은 이 지점에서 자연 차단.
-  if (asset.acquisitionByInheritance) {
+  if (asset.acquisitionByInheritance || asset.acquisitionByGift) {
     if (asset.partialUsageChange) {
       throw new Error(
-        "상속 취득 + 보유 중 용도변경 조합은 아직 지원하지 않습니다 (Phase 2 예정).",
+        "상속·증여 취득 + 보유 중 용도변경 조합은 아직 지원하지 않습니다 (Phase 2 예정).",
       );
     }
     const inherited = resolveHousingInheritedAcqDirect(asset);
@@ -374,7 +374,10 @@ export function calcHousingGainSplit(
     }
 
     // 상속 취득(소령 §163⑨2호 max) — 실지거래가액 의제, 개산공제 미적용(0)·필요경비만 건물분 슬롯 반영.
-    if (asset.acquisitionByInheritance && housingAcqResult.inheritedLandAcqPrice !== undefined) {
+    if (
+      (asset.acquisitionByInheritance || asset.acquisitionByGift) &&
+      housingAcqResult.inheritedLandAcqPrice !== undefined
+    ) {
       const landAcqPrice = housingAcqResult.inheritedLandAcqPrice;
       const buildingAcqPrice = housingAcqResult.inheritedBuildingAcqPrice ?? 0;
       const landAppraisalDed = 0;
@@ -496,9 +499,10 @@ export function calcHousingGainSplit(
   const buildingAcqPrice = housingEstimatedAcq - landAcqPrice;
 
   // 개산공제 (환산취득가 사용 시, §163⑥) — 취득시 토지/건물 기준시가 × 3%.
-  // 상속(실지거래가액 의제, 소령 §163⑨)은 개산공제 미적용 — 실제 필요경비만 건물분 슬롯에 반영.
-  const landAppraisalDed = asset.acquisitionByInheritance ? 0 : applyRate(acqLandStd, 0.03);
-  const buildingAppraisalDed = asset.acquisitionByInheritance
+  // 상속·증여(실지거래가액 의제, 소령 §163⑨)은 개산공제 미적용 — 실제 필요경비만 건물분 슬롯에 반영.
+  const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift;
+  const landAppraisalDed = usesDeemedAcq ? 0 : applyRate(acqLandStd, 0.03);
+  const buildingAppraisalDed = usesDeemedAcq
     ? (asset.housingInheritedExpense ?? 0)
     : applyRate(acqBuildingStd, 0.03);
 

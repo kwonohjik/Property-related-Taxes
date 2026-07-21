@@ -224,6 +224,16 @@ export interface GeneralBuildingFormSlice {
   /** 상속(실가) 모드 상가분 실제 필요경비 (원, 문자열). 선택 입력. 위와 동일 축. */
   mixedCommercialInheritedExpense: string;
 
+  // ── 증여 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (D1=옵션B, 상속 필드와 병렬·acquisitionCause==="gift"일 때만 UI 노출) ──
+  /** 증여일 주택분 신고가액 override (원, 문자열). 미입력 시 mixedAcqHousingPrice(보충적평가)로 fallback. */
+  mixedHousingGiftValueOverride: string;
+  /** 증여일 상가분 신고가액 override (원, 문자열). 미입력 시 상가 보충적평가 합계로 fallback. */
+  mixedCommercialGiftValueOverride: string;
+  /** 증여(실가) 모드 주택분 실제 필요경비 (원, 문자열). 개산공제 대체 — 증여도 실지거래가액 의제라 개산공제 미적용. */
+  mixedHousingGiftExpense: string;
+  /** 증여(실가) 모드 상가분 실제 필요경비 (원, 문자열). */
+  mixedCommercialGiftExpense: string;
+
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
   /** 보유 중 일부 용도변경 토글 — 양도시 겸용이지만 취득시 단일 용도였던 경우 */
   hasPartialUsageChange: boolean;

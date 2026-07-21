@@ -78,8 +78,9 @@ export const mixedUseAssetSchema = z.object({
     acqCommercialArea: z.number().nonnegative().optional(),
     usageChangeDate: z.string().optional(),
   }).optional(),
-  // 상속 취득가액 엔진 정합 (소령 §163⑨) — 겸용주택 정본 계약(plan §4.5).
+  // 상속·증여 취득가액 엔진 정합 (소령 §163⑨) — 겸용주택. reported 필드(housingInheritedValue 등)는 상속·증여 공용.
   acquisitionByInheritance: z.boolean().optional(),
+  acquisitionByGift: z.boolean().optional(),
   housingInheritedValue: z.number().int().positive().optional(),
   commercialInheritedValue: z.number().int().positive().optional(),
   housingInheritedExpense: z.number().int().nonnegative().optional(),

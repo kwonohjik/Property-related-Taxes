@@ -124,6 +124,9 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   // (part-level acqPriceSource는 dual-truth 회피로 미채택 — plan §4.5 정본 결정)
   const acqRoute = breakdown.calculationRoute.acquisitionConversionRoute;
   const isInheritedAcq = acqRoute === "inheritance_direct" || acqRoute === "inheritance_phd_max";
+  const isGiftAcq = acqRoute === "gift_direct" || acqRoute === "gift_phd_max";
+  // §163⑨ 직접평가(상속·증여) — 산식 분기(개산공제 미표시·실비)는 공통, 라벨만 취득원인별 구분.
+  const isDeemedAcq = isInheritedAcq || isGiftAcq;
 
   // 실제 렌더되는 섹션만 전체 토글 대상 (nbl은 nb 있을 때만).
   const renderedSectionIds = MIXED_SECTION_IDS.filter((id) => id !== "nbl" || !!nb);
@@ -286,10 +289,10 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         onToggle={() => toggleSection("housing")}
       >
         <Row
-          label={isInheritedAcq ? "상속개시일 평가액(취득가액)" : "주택 환산취득가액"}
+          label={isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : "주택 환산취득가액"}
           value={fmt(h.estimatedAcquisitionPrice)}
           formula={(() => {
-            if (isInheritedAcq && h.inheritedAcquisitionDetail) {
+            if (isDeemedAcq && h.inheritedAcquisitionDetail) {
               const d = h.inheritedAcquisitionDetail;
               const base =
                 d.selected === "reported"
@@ -339,7 +342,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           label="주택 양도차익"
           value={fmt(h.transferGain)}
           formula={
-            isInheritedAcq
+            isDeemedAcq
               ? "(양도가액 - 취득가액 - 실제 필요경비) — 토지/건물 분리 후 합산"
               : "(양도가액 - 환산취득가액 - 개산공제) — 토지/건물 분리 후 합산"
           }
@@ -349,7 +352,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           value={fmt(h.landTransferGain)}
           small
           formula={
-            isInheritedAcq
+            isDeemedAcq
               ? `양도가액 ${fmtPlain(h.landTransferPrice)} - 취득가액 ${fmtPlain(h.landAcqPrice)}`
               : `양도가액 ${fmtPlain(h.landTransferPrice)} - 환산취득가액 ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 ${h.landStdPriceAtAcq != null ? fmtPlain(h.landStdPriceAtAcq) + " " : ""}× 3%)`
           }
@@ -359,7 +362,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           value={fmt(h.buildingTransferGain)}
           small
           formula={
-            isInheritedAcq
+            isDeemedAcq
               ? h.buildingAppraisalDed > 0
                 ? `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 취득가액 ${fmtPlain(h.buildingAcqPrice)} - 실제 필요경비 ${fmtPlain(h.buildingAppraisalDed)}`
                 : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 취득가액 ${fmtPlain(h.buildingAcqPrice)}`
@@ -416,10 +419,10 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={`상가건물 기준시가 ${fmtPlain(c.acqStandardBuilding)} + 상가부수토지 기준시가 ${fmtPlain(c.acqStandardLand)} (= 개별공시지가 × 상가부수토지 면적, 자동)`}
         />
         <Row
-          label={isInheritedAcq ? "상속개시일 평가액(취득가액)" : "상가 환산취득가액"}
+          label={isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : "상가 환산취득가액"}
           value={fmt(c.estimatedAcquisitionPrice)}
           formula={(() => {
-            if (isInheritedAcq && c.inheritedAcquisitionDetail) {
+            if (isDeemedAcq && c.inheritedAcquisitionDetail) {
               const d = c.inheritedAcquisitionDetail;
               const base =
                 d.selected === "reported"
@@ -434,7 +437,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           label="상가 양도차익"
           value={fmt(c.transferGain)}
           formula={
-            isInheritedAcq
+            isDeemedAcq
               ? "(양도가액 - 취득가액 - 실제 필요경비) — 토지/건물 분리 후 합산"
               : "(양도가액 - 환산취득가액 - 개산공제) — 토지/건물 분리 후 합산"
           }
@@ -444,7 +447,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           value={fmt(c.landTransferGain)}
           small
           formula={
-            isInheritedAcq
+            isDeemedAcq
               ? `양도가액 ${fmtPlain(c.landTransferPrice)} - 취득가액 ${fmtPlain(c.landAcqPrice)}`
               : `양도가액 ${fmtPlain(c.landTransferPrice)} - 환산취득가액 ${fmtPlain(c.landAcqPrice)} - 개산공제 ${fmtPlain(c.landAppraisalDed)} (취득시 토지 기준시가 ${c.landStdPriceAtAcq != null ? fmtPlain(c.landStdPriceAtAcq) + " " : ""}× 3%)`
           }
@@ -454,7 +457,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           value={fmt(c.buildingTransferGain)}
           small
           formula={
-            isInheritedAcq
+            isDeemedAcq
               ? c.buildingAppraisalDed > 0
                 ? `양도가액 ${fmtPlain(c.buildingTransferPrice)} - 취득가액 ${fmtPlain(c.buildingAcqPrice)} - 실제 필요경비 ${fmtPlain(c.buildingAppraisalDed)}`
                 : `양도가액 ${fmtPlain(c.buildingTransferPrice)} - 취득가액 ${fmtPlain(c.buildingAcqPrice)}`
