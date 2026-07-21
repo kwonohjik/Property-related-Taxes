@@ -184,6 +184,11 @@ export const generalBuildingValuationSchema = z.object({
    * ⑫ 사례 33 증축: 토지+건물1 일괄 필요경비 (원).
    */
   bundledExpenses: z.number().int().nonnegative().optional(),
+  // ── ⑫ §97②2호 단서 swap (자산총액) — 비-증축 전체환산(G2). 침묵 strip 방지 명시. ──
+  /** 자본적지출 (원, 자산총액 — §97① 가목). */
+  capitalExpenditure: z.number().int().nonnegative().optional(),
+  /** 양도비 (원, 자산총액 — §97① 나목). */
+  transferExpense: z.number().int().nonnegative().optional(),
   // ── ⑫ §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1). 침묵 stripping 방지 명시 선언. ──
   /** 토지 상속 취득 게이트 (acquisitionCause==="inheritance" && 취득일>=1985-01-01). */
   acquisitionByInheritance: z.boolean().optional(),

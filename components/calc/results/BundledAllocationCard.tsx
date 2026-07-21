@@ -530,6 +530,22 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         </table>
       </div>
 
+      {/* §97② 2호 단서 swap 발동 표시 (일반건물 환산 자산총액 판정 — F10) */}
+      {aggregated.swapApplied && aggregated.swapComparison && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1">
+          <p className="font-semibold text-amber-900">
+            필요경비 swap 적용 — 소득세법 §97② 2호 단서
+          </p>
+          <p className="text-xs text-amber-800">
+            환산취득가 + 개산공제 합 {formatKRW(aggregated.swapComparison.estimatedSide)}
+            {" < "}자본적지출 + 양도비 {formatKRW(aggregated.swapComparison.directSide)}
+          </p>
+          <p className="text-xs text-amber-800">
+            → 자본적지출 + 양도비 {formatKRW(aggregated.swapComparison.directSide)}을 필요경비로 적용(환산취득가 미차감, 자산별 비율 배분)
+          </p>
+        </div>
+      )}
+
       {/* 합산 신고서 양식 — 단건과 동일한 32행, 합계 + 자산별 컬럼 */}
       {(() => {
         // landNatureMap: propertyId → "appurtenant" | "standalone" (토지 자산 성격 라벨 suffix용)

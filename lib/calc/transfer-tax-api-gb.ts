@@ -195,6 +195,19 @@ export function buildGeneralBuildingValuation(
               parseAmount(asset.directExpenses),
           }
         : {}),
+      // §97②2호 단서 swap(자산총액) — 비-증축 전체환산(G2)만 배선.
+      // ⚠️ 증축(gbHasExtension)은 transferExpense가 위 bundledExpenses legacy fallback으로
+      //    소비될 수 있어(F1 이중계상) 이번 세션 제외 — G3는 후속.
+      ...(!asset.gbHasExtension
+        ? {
+            ...(parseAmount(asset.capitalExpenditure)
+              ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
+              : {}),
+            ...(parseAmount(asset.transferExpense)
+              ? { transferExpense: parseAmount(asset.transferExpense) }
+              : {}),
+          }
+        : {}),
       ...nblFields,
       // 사례 35: 주택→상가 용도변경 (자산 공통 — 환산 모드도 동일 LTHD 분기)
       ...(asset.gbHouseToCommercialConversion
