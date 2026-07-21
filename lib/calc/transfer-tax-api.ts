@@ -83,7 +83,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isSalesCase = primary.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && primary.isAppraisalAcquisition === true;
   const isEstimated = !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
-  const hasPre1990 = (primary.pre1990Enabled ?? false) && primary.assetKind === "land";
+  // pre1990 토지등급 환산은 §176의2④ 의제취득(pre-1985) 영역. post-1985 증여는 §163⑨ 신고가액이
+  // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
+  // uncleaable 래치(CompanionAcqPurchaseBlock:92)라 gift 실거래가 전환 후 stale true로 남을 수 있으므로
+  // 정의 자체에서 게이트(validate-asset.ts:462 동일 소스식). pre-1985 gift·비-gift는 기존 동작 유지.
+  const hasPre1990 =
+    (primary.pre1990Enabled ?? false) &&
+    primary.assetKind === "land" &&
+    !(primary.acquisitionCause === "gift" && (primary.acquisitionDate ?? "") >= "1985-01-01");
   // §164⑤ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)해도 PHD 경로는 표준시가 직접 입력 불요.
   const usesPhd = primary.usePreHousingDisclosure === true;
