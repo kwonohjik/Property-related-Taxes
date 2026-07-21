@@ -65,9 +65,8 @@ describe("#3 GB §97②2호 swap 사이드바 배분 표시 정합", () => {
 // ─────────────────────────────────────────────────────────
 // #1(B) — 재개발 land+right+gift+환산 friendly block
 // ─────────────────────────────────────────────────────────
-// #1(A)로 land+right+실가+pay 개방 → gift 스티어링 세분화: pay=§163⑨ 실가전환·receive=미지원.
-const GIFT_163_9 = "증여 취득 종전자산은 환산취득가를 지원하지 않습니다"; // §163⑨ 실가 전환 유도(pay)
-const BLOCK_RECEIVE = "토지 출자 + 입주권 양도 + 증여취득"; // receive 미지원 안내
+// #1(A)로 land+right+실가 pay·receive 모두 개방 → gift+환산은 pay·receive 무관 §163⑨ 실가전환.
+const GIFT_163_9 = "증여 취득 종전자산은 환산취득가를 지원하지 않습니다"; // §163⑨ 실가 전환 유도
 const REMOVED_108 = "입주권 양도 + 실가 모드는 후속 PR"; // (A)로 제거된 land+right 실가 차단
 function redev(over: Partial<AssetForm> = {}): AssetForm {
   return {
@@ -95,10 +94,12 @@ describe("#1(A) 재개발 land+right 실가(pay) + gift 스티어링", () => {
     expect(m).toContain(GIFT_163_9);
     expect(m).not.toContain("현재 지원하지 않습니다");
   });
-  it("C3 land+right+gift+환산+receive → 미지원 안내(실가 receive 미구현)", () => {
+  it("C3 land+right+gift+환산+receive → §163⑨ 실가 전환 (#1(A) receive 개방으로 갱신)", () => {
+    // #1(A) 잔여: land+right+실가+receive가 computeRightReceive(§166①2호)로 신고가액 산출 →
+    //   gift+환산+receive도 "실가로 전환"이 유효(구 #1(B) '미지원 안내' 대체).
     const m = V(redev({ redevSettlementDirection: "receive", redevSettlementAmount: "50000000" }));
-    expect(m).toContain(BLOCK_RECEIVE);
-    expect(m).toContain("현재 지원하지 않습니다");
+    expect(m).toContain(GIFT_163_9);
+    expect(m).not.toContain("현재 지원하지 않습니다");
   });
   it("C4 land+right+purchase+실가+pay → 실가 개방(비-gift 회귀)", () => {
     expect(V(redev({ acquisitionCause: "purchase", useEstimatedAcquisition: false }))).not.toContain(REMOVED_108);
