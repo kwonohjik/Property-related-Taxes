@@ -195,18 +195,17 @@ export function buildGeneralBuildingValuation(
               parseAmount(asset.directExpenses),
           }
         : {}),
-      // §97②2호 단서 swap(자산총액) — 비-증축 전체환산(G2)만 배선.
-      // ⚠️ 증축(gbHasExtension)은 transferExpense가 위 bundledExpenses legacy fallback으로
-      //    소비될 수 있어(F1 이중계상) 이번 세션 제외 — G3는 후속.
-      ...(!asset.gbHasExtension
-        ? {
-            ...(parseAmount(asset.capitalExpenditure)
-              ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
-              : {}),
-            ...(parseAmount(asset.transferExpense)
-              ? { transferExpense: parseAmount(asset.transferExpense) }
-              : {}),
-          }
+      // §97②2호 단서 swap(자산총액) — G2(전체환산)·G4(NBL)·G3(증축) 공통.
+      // capitalExpenditure는 항상 전달 — bundledExpenses fallback(transferExpense·directExpenses)에
+      //   포함되지 않아 증축에서도 이중소비 없음.
+      ...(parseAmount(asset.capitalExpenditure)
+        ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
+        : {}),
+      // ⚠️ transferExpense는 **비-증축만**. 증축(gbHasExtension)에서는 위 bundledExpenses legacy
+      //   fallback으로 소비될 수 있어(F1) swap 나목에 재사용 시 이중차감 → 제외(decision b).
+      //   증축 원건물 실가 모드에서는 양도비가 이미 실가 필요경비로 차감되므로 법령상으로도 정합.
+      ...(!asset.gbHasExtension && parseAmount(asset.transferExpense)
+        ? { transferExpense: parseAmount(asset.transferExpense) }
         : {}),
       ...nblFields,
       // 사례 35: 주택→상가 용도변경 (자산 공통 — 환산 모드도 동일 LTHD 분기)

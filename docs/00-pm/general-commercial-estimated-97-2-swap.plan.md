@@ -123,7 +123,7 @@ if (isEstimatedConversion && swapEligible && directSide > estimatedSide) {
 
 **G4(NBL 분할 3카드) ✅ 완료(2026-07-21, anchor만·엔진 코드 무변경)**: landArea>인정면적 시 토지 사업용/비사업용 2장+건물=3 환산 카드. `resolveGeneralBuildingSwap`이 3카드 전체 대상 → estimatedSideTotal 516,233,347<나목 1,026,233,347 → gain 1.2B−1,026,233,347=173,766,653·Σ필요경비=directSide. API 비-증축 capex + NBL은 valuation 내부 분기라 자동 동작. anchor A4 2케이스 green.
 
-**G3(증축) 후속만 잔여**: transferExpense가 bundledExpenses(F1)와 충돌 → API 배선 시 (a)legacy fallback 제거 or (b)swap directSide 제외 택일 필요. 현재 API는 비-증축(G2·G4)만 capex 전달.
+**G3(증축) ✅ 완료(2026-07-21, decision b)**: 증축 3카드(토지·건물1·건물2, 원건물·증축 환산)도 `resolveGeneralBuildingSwap`이 처리 — 엔진 무변경. API `transfer-tax-api-gb.ts`: **capitalExpenditure는 항상 전달**(bundledExpenses fallback 미포함·안전), **transferExpense는 비-증축만**(증축은 bundledExpenses legacy fallback으로 소비 가능·F1 이중차감 방지·원건물 실가 시 양도비 이미 차감돼 법령 정합). anchor A3 2케이스(gain 925M−673,376,413=251,623,587) + API 배선 가드 2케이스 green. **swap 3경로(상가·일반건물 G2/G3/G4) 전건 완료.**
 
 ## 5-원. Phase 2 원설계 — 일반건물 (난이도: 상, 다중 카드 + capex 배분 난제)
 
