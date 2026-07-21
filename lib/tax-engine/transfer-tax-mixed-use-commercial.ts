@@ -62,10 +62,10 @@ export function calcCommercialGainSplit(
     return buildCommercialGainSplitFromFourPart(fp, asset, transferDate);
   }
 
-  // 상속 취득 + §164⑨1호 공익수용 특례 조합 — Phase 2 범위 밖(가드).
-  if (asset.acquisitionByInheritance && asset.transferCause === "public_expropriation") {
+  // 상속·증여 취득 + §164⑨1호 공익수용 특례 조합 — Phase 2 범위 밖(가드).
+  if ((asset.acquisitionByInheritance || asset.acquisitionByGift) && asset.transferCause === "public_expropriation") {
     throw new Error(
-      "상속 취득 + 공익수용 특례 조합은 아직 지원하지 않습니다 (Phase 2 예정).",
+      "상속·증여 취득 + 공익수용 특례 조합은 아직 지원하지 않습니다 (Phase 2 예정).",
     );
   }
 
@@ -110,7 +110,7 @@ export function calcCommercialGainSplit(
 
   // §164⑨1호 공익수용 — 상가분 **토지 기준시가만** 낮춘 환산 분모(§80⑧ 건물분 미적용·안분 원값, D16-GB).
   // 상속 취득(실지거래가액 의제)은 환산 자체를 쓰지 않으므로 분모 계산을 생략(위 가드로 조합은 이미 차단).
-  const commercialExprVal = asset.acquisitionByInheritance
+  const commercialExprVal = (asset.acquisitionByInheritance || asset.acquisitionByGift)
     ? undefined
     : applyExprTotalDenominator({
         standardTotal: transferLandStd,
@@ -122,11 +122,11 @@ export function calcCommercialGainSplit(
   const transferTotalStdConv =
     (commercialExprVal?.denominator ?? transferLandStd) + asset.transferStandardPrice.commercialBuildingPrice;
 
-  // 상속 취득(소령 §163⑨ 본문) — 상가분(토지+건물 합계) fallback(reportedValue ?? acqTotalStd).
-  // 그 외(비상속)는 기존 §97 환산취득가액 (분모 = 특례 적용 후 총액. 미적용 시 원 transferTotalStd와 동일)
+  // 상속·증여 취득(소령 §163⑨ 본문) — 상가분(토지+건물 합계) fallback(reportedValue ?? acqTotalStd).
+  // 그 외(비상속·비증여)는 기존 §97 환산취득가액 (분모 = 특례 적용 후 총액. 미적용 시 원 transferTotalStd와 동일)
   let estimatedAcqPrice: number;
   let inheritedAcquisitionDetail: InheritedAcquisitionDetail | undefined;
-  if (asset.acquisitionByInheritance) {
+  if (asset.acquisitionByInheritance || asset.acquisitionByGift) {
     const inherited = resolveCommercialInheritedAcq(asset, acqTotalStd);
     estimatedAcqPrice = inherited.estimatedAcqPrice;
     inheritedAcquisitionDetail = inherited.detail;
@@ -149,9 +149,10 @@ export function calcCommercialGainSplit(
   const landAcqPrice = Math.floor(estimatedAcqPrice * acqLandRatio);
   const buildingAcqPrice = estimatedAcqPrice - landAcqPrice;
 
-  // 개산공제 (§163⑥) — 상속(실지거래가액 의제, 소령 §163⑨)은 미적용·실제 필요경비만 건물분 슬롯 반영.
-  const landAppraisalDed = asset.acquisitionByInheritance ? 0 : applyRate(acqLandStd, 0.03);
-  const buildingAppraisalDed = asset.acquisitionByInheritance
+  // 개산공제 (§163⑥) — 상속·증여(실지거래가액 의제, 소령 §163⑨)은 미적용·실제 필요경비만 건물분 슬롯 반영.
+  const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift;
+  const landAppraisalDed = usesDeemedAcq ? 0 : applyRate(acqLandStd, 0.03);
+  const buildingAppraisalDed = usesDeemedAcq
     ? (asset.commercialInheritedExpense ?? 0)
     : applyRate(acqBuildingStd, 0.03);
 

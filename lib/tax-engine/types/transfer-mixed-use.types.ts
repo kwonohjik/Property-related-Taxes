@@ -202,6 +202,15 @@ export interface MixedUseAssetInput {
 
   /** 상가분 실제 필요경비(원) — 위와 동일 원리, 상가부분 전용(건물분 슬롯 적용). */
   commercialInheritedExpense?: number;
+
+  /**
+   * 증여 취득가액 직접 산정 게이트(소령 §163⑨) — 순수 증여(§34~§42의3 증여의제 제외).
+   * true면 상속과 **동일하게** reported 필드(housingInheritedValue 등)를 소비 —
+   * 증여일 상증법 §60~66 평가액을 취득당시 실지거래가액으로 직접 사용(환산·개산공제 배제).
+   * API에서 `acquisitionCause === "gift" && 취득일 ≥ 1985-01-01`로 파생. acquisitionByInheritance와 상호배타.
+   * undefined/false → 기존 환산 경로 완전 불변(A-regression).
+   */
+  acquisitionByGift?: boolean;
 }
 
 // ──────────────────────────────────────────
@@ -410,7 +419,9 @@ export interface MixedUseCalculationRoute {
     | "section97_direct"        // 비상속 §97 직접환산
     | "phd_corrected"           // 비상속 PHD §164⑤
     | "inheritance_direct"      // 상속·공시(§163⑨ 본문)
-    | "inheritance_phd_max";    // 상속·미공시(§163⑨2호 max)
+    | "inheritance_phd_max"     // 상속·미공시(§163⑨2호 max)
+    | "gift_direct"             // 증여·공시(§163⑨ 본문, 상속과 동일)
+    | "gift_phd_max";           // 증여·미공시(§163⑨2호/§176의2②2호 max)
   /** 주택 장기보유공제 표 분기 사유 */
   housingDeductionTableReason: string;
   /** 부수토지 배율 적용 근거 (지역 + 배율값) */

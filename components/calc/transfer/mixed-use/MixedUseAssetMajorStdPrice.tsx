@@ -44,12 +44,14 @@ export function MixedUseAssetMajorStdPrice({
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
   const totalLand = parseDecimal(asset.mixedUseTotalLandArea);
 
-  // 상속 취득 겸용주택 — 취득시점 = 상속개시일이므로 "취득시" 문구를 상속개시일로 치환.
-  // §163⑨ 취득가액 직접 산정(엔진 정합) — override 입력은 이 값이 true일 때만 노출.
+  // 상속·증여 취득 겸용주택 — 취득시점 = 상속개시일/증여일이므로 "취득시" 문구를 치환.
+  // §163⑨ 취득가액 직접 산정(엔진 정합) — override 입력은 상속/증여일 때만 노출.
   const isInheritance = asset.acquisitionCause === "inheritance";
-  const acqLabel = isInheritance ? "상속개시일" : "취득시";
+  const isGift = asset.acquisitionCause === "gift";
+  const isDeemed163_9 = isInheritance || isGift; // 상속·증여 공통 §163⑨ 라벨 게이트
+  const acqLabel = isInheritance ? "상속개시일" : isGift ? "증여일" : "취득시";
   // 자동합계 박스 라벨 전용 — 원문이 "취득"(시 없음)이라 별도 변수로 분리 (E2E 문구 회귀 방지).
-  const acqSummaryLabel = isInheritance ? "상속개시일" : "취득";
+  const acqSummaryLabel = isInheritance ? "상속개시일" : isGift ? "증여일" : "취득";
 
   // 부수토지 안분 — leaf 헬퍼 단일 소스 + override 반영 (three-state: 빈값→자동, "0"→적법한 0).
   // 면적 입력·수정은 섹션 ①(MixedUseAreaInputs) 단일 소스 — 여기서는 **조회만** 한다.
@@ -158,11 +160,33 @@ export function MixedUseAssetMajorStdPrice({
               </div>
             </ToneCard>
           )}
+          {isGift && (
+            <ToneCard
+              tone="violet"
+              title="증여일 신고가액 override (선택)"
+              titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
+            >
+              <CurrencyInput
+                label=""
+                value={asset.mixedHousingGiftValueOverride}
+                onChange={(v) => onChange({ mixedHousingGiftValueOverride: v })}
+                hint="증여세 신고서·결정통지서상 주택 평가액(상증법 §60~66). 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"
+              />
+              <div className="pt-2">
+                <CurrencyInput
+                  label="실제 필요경비 — 자본적지출·양도비 (선택)"
+                  value={asset.mixedHousingGiftExpense}
+                  onChange={(v) => onChange({ mixedHousingGiftExpense: v })}
+                  hint="증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
+                />
+              </div>
+            </ToneCard>
+          )}
           <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
           <ToggleCard
             tone="amber"
             size="sm"
-            title={`${isInheritance ? "상속개시일" : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
+            title={`${isDeemed163_9 ? acqLabel : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
             description={
               useEstimatedAcquisition
                 ? "개별주택가격 최초 공시 이전 취득 시 활성화"
@@ -244,6 +268,29 @@ export function MixedUseAssetMajorStdPrice({
                 value={asset.mixedCommercialInheritedExpense}
                 onChange={(v) => onChange({ mixedCommercialInheritedExpense: v })}
                 hint="상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
+              />
+            </div>
+          </ToneCard>
+        )}
+
+        {isGift && (
+          <ToneCard
+            tone="violet"
+            title="증여일 신고가액 override (선택, 상가 전체)"
+            titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
+          >
+            <CurrencyInput
+              label=""
+              value={asset.mixedCommercialGiftValueOverride}
+              onChange={(v) => onChange({ mixedCommercialGiftValueOverride: v })}
+              hint="증여세 신고서·결정통지서상 상가 평가액(상증법 §60~66). 미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"
+            />
+            <div className="pt-2">
+              <CurrencyInput
+                label="실제 필요경비 — 자본적지출·양도비 (선택)"
+                value={asset.mixedCommercialGiftExpense}
+                onChange={(v) => onChange({ mixedCommercialGiftExpense: v })}
+                hint="증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
               />
             </div>
           </ToneCard>

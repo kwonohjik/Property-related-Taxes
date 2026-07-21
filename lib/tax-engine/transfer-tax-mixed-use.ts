@@ -283,14 +283,18 @@ function buildCalculationRoute(
         ? ("direct_input" as const)
         : ("missing" as const);
 
-  // 상속 취득(소령 §163⑨) — 공시 여부(PHD)에 따라 본문/2호 경로로 세분.
+  // 상속·증여 취득(소령 §163⑨) — 공시 여부(PHD)에 따라 본문/2호 경로로 세분.
   const acquisitionConversionRoute = asset.acquisitionByInheritance
     ? asset.usePreHousingDisclosure
       ? ("inheritance_phd_max" as const)
       : ("inheritance_direct" as const)
-    : asset.usePreHousingDisclosure
-      ? ("phd_corrected" as const)
-      : ("section97_direct" as const);
+    : asset.acquisitionByGift
+      ? asset.usePreHousingDisclosure
+        ? ("gift_phd_max" as const)
+        : ("gift_direct" as const)
+      : asset.usePreHousingDisclosure
+        ? ("phd_corrected" as const)
+        : ("section97_direct" as const);
 
   // 표2 게이트는 통산 거주(§154⑧3호) — 사유 서술도 게이트 값으로(통산 케이스에서 "실거주 0년 ≥2년" 모순 방지).
   const housingDeductionTableReason =

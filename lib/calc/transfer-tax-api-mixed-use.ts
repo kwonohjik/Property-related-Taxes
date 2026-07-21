@@ -183,10 +183,29 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     acquisitionByInheritance:
       primary.acquisitionCause === "inheritance" &&
       (primary.acquisitionDate ?? "") >= "1985-01-01",
-    housingInheritedValue: parseAmount(primary.mixedHousingInheritedValueOverride) || undefined,
-    commercialInheritedValue: parseAmount(primary.mixedCommercialInheritedValueOverride) || undefined,
-    housingInheritedExpense: parseAmount(primary.mixedHousingInheritedExpense) || undefined,
-    commercialInheritedExpense: parseAmount(primary.mixedCommercialInheritedExpense) || undefined,
+    // 증여 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (D1=옵션B, 상속과 상호배타).
+    // pre-1985 게이트: false면 기존 환산 fallback(회귀-safe, §176조의2④).
+    acquisitionByGift:
+      primary.acquisitionCause === "gift" &&
+      (primary.acquisitionDate ?? "") >= "1985-01-01",
+    // reported 값(B1) — 엔진은 동일 필드 소비. ⚠️ blind || 금지: 취득원인 전환 시 반대편 override 폼필드가
+    // 클리어되지 않으므로(stale), **현재 acquisitionCause에 종속**해 선택(상속→상속필드·증여→증여필드).
+    housingInheritedValue:
+      (primary.acquisitionCause === "gift"
+        ? parseAmount(primary.mixedHousingGiftValueOverride)
+        : parseAmount(primary.mixedHousingInheritedValueOverride)) || undefined,
+    commercialInheritedValue:
+      (primary.acquisitionCause === "gift"
+        ? parseAmount(primary.mixedCommercialGiftValueOverride)
+        : parseAmount(primary.mixedCommercialInheritedValueOverride)) || undefined,
+    housingInheritedExpense:
+      (primary.acquisitionCause === "gift"
+        ? parseAmount(primary.mixedHousingGiftExpense)
+        : parseAmount(primary.mixedHousingInheritedExpense)) || undefined,
+    commercialInheritedExpense:
+      (primary.acquisitionCause === "gift"
+        ? parseAmount(primary.mixedCommercialGiftExpense)
+        : parseAmount(primary.mixedCommercialInheritedExpense)) || undefined,
     // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
     partialUsageChange:
       primary.hasPartialUsageChange && primary.partialChangeDirection
