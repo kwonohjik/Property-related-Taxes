@@ -277,13 +277,17 @@ export function deriveYearFromEventDate(eventDate: string): string {
 }
 
 /**
- * AddressSearch onChange 값 → 폼 patch (소재지·동/호·전유면적).
- * 집합건물(공동주택) 동/호 선택 시 이미 조회된 전유면적(exclusiveArea)을 건물 연면적(floorArea)에
- * 자동 반영한다 — 상속·증여 카드(EstateBodyHelpers: exclusiveArea→areaSqm)와 동일 패턴.
- * 전유면적이 없으면(일반건축물) floorArea는 건드리지 않는다(건축물대장 조회·수동 입력이 채움).
+ * AddressSearch onChange 값 → 폼 patch (소재지·동/호).
+ *
+ * 동/호(unitDong·unitHo)를 저장해 집합건물 판정에 쓴다.
+ * ⚠️ 전유면적(exclusiveArea=NED prvuseAr=전용면적)은 floorArea에 넣지 않는다 —
+ *   국세청 「건물 기준시가 계산방법 고시」상 건물면적은 "전유+공용 연면적"(types.ts:63-64)이라
+ *   전유면적만 넣으면 공용면적 누락으로 과소산정. 정본 전유+공용은 건축HUB
+ *   getBrExposPubuseAreaInfo(전유공용면적)로 확보(접근 B, 후속). 그 전까지 집합건물 floorArea는 수동.
+ *   설계: docs/02-design/features/building-std-collective-unit-exclusive-area-fix.plan.md §4~§5.
  */
 export function buildAddressPatch(v: AddressValue): Partial<BuildingStdPriceFormState> {
-  const patch: Partial<BuildingStdPriceFormState> = {
+  return {
     addressRoad: v.road,
     addressJibun: v.jibun,
     buildingName: v.building,
@@ -294,10 +298,6 @@ export function buildAddressPatch(v: AddressValue): Partial<BuildingStdPriceForm
     unitDong: v.dong ?? "",
     unitHo: v.ho ?? "",
   };
-  if (typeof v.exclusiveArea === "number" && v.exclusiveArea > 0) {
-    patch.floorArea = String(v.exclusiveArea);
-  }
-  return patch;
 }
 
 const intOrUndef = (s: string): number | undefined => {

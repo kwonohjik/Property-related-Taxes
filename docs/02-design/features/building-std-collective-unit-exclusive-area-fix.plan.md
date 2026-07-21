@@ -4,7 +4,7 @@
 - **브랜치/워크트리**: `worktree-fix+building-std-price-lookup-btn` (`.claude/worktrees/fix+building-std-price-lookup-btn`)
 - **유형**: 버그 수정 (집합건물 면적 데이터 흐름)
 - **연관 계획**: [`building-register-lookup-year-gate-fix.plan.md`](./building-register-lookup-year-gate-fix.plan.md) — 같은 화면·같은 조회 버튼. 두 버그는 상호 연관(§7).
-- **상태**: Plan (Do 미착수) — 아래 **D1·D2 결정 대기**
+- **상태**: L3 세법 확인 완료(§11) → **접근 B 채택**. 부정확한 전유면적 자동입력 **제거 완료**. `getBrExposPubuseAreaInfo` 실구현은 **env 실측 대기(BLOCKER)**.
 
 ---
 
@@ -167,3 +167,35 @@ onChange 핸들러에 dong/ho/exclusiveArea 저장 추가(EstateBodyHelpers 패�
 - **D3**: 본 계획과 연도 게이트 계획을 한 브랜치에서 순차 구현할지(권장) — §7.
 
 승인 시 §8 anchor부터 Do 진입.
+
+---
+
+## 11. L3 세법 확인 결과 → 접근 B 채택 (2026-07-21 추가)
+
+계획 §9 L3("전유면적이 건물기준시가 floorArea로 타당한지")를 KoreanLaw로 확정한 결과 **부정확**으로 판명.
+
+### 근거 (2개 독립 소스 일치)
+1. **국세청 「건물 기준시가 계산방법 고시」 §3①** (행정규칙ID 36679, 상증법 §61①2호·소득세법 §99①1호나목 위임):
+   > 토지와 건물의 가액을 일괄하여 산정·공시한 **개별주택·공동주택·오피스텔 및 상업용 건물의 경우에는 이를 적용하지 아니한다.**
+   → 공동주택(아파트)은 이 산식 미적용(통합 공동주택가격 직접 고시).
+2. **엔진 정의**: `types.ts:63-64` `floorArea` = "공동주택=전유+공용" 연면적. `engine.design.md:187`·validate `building-std-price-form.ts:573`("전유+공용") 일치.
+
+→ NED `prvuseAr`(전용면적=전유만)을 floorArea에 넣으면 **공용면적 누락 → 건물 기준시가 과소산정.** 접근 A는 채택 불가.
+
+### 즉시 조치 (완료 — 실측 불필요)
+- `buildAddressPatch`에서 전유면적 floorArea 주입 **제거**. 동/호(`unitDong`/`unitHo`)만 저장(집합건물 판정용).
+- 집합건물이면 건축물대장 조회의 동 전체 `totArea`도 floorArea에 미반영(`isCollectiveUnit` 가드 유지).
+- 집합건물 안내 문구 추가: "공동주택 세대는 건물 연면적(전유+공용)을 직접 입력하세요(고시 §3①)".
+- anchor 반전: `buildAddressPatch`는 floorArea 자동채움 안 함.
+
+### 후속 실구현 (BLOCKER: env 실측 필요)
+정본 전유+공용 연면적은 건축HUB **`getBrExposPubuseAreaInfo`**(전유공용면적, §4 참조)로 확보:
+- **오퍼레이션**: `https://apis.data.go.kr/1613000/BldRgstHubService/getBrExposPubuseAreaInfo`
+- **파라미터**: `serviceKey·sigunguCd·bjdongCd·platGbCd·bun·ji·_type=json·numOfRows`(호 다건) + 특정 호 `dongNm`·`hoNm`(폼 `unitDong`/`unitHo`에서 공급)
+- **응답 처리(문서 기준·실측 미검증)**: items에서 `dongNm`/`hoNm` 매칭 행의 `area`를 `exposPubuseGbCdNm`("전유"/"공용")별로 합산 → **전유 area + 공용 area 합 = 해당 세대 전유+공용 연면적** → `floorArea`.
+- **⚠️ env 실측 필요 항목** (추정 금지): (a) `exposPubuseGbCd` 실제 코드값·`exposPubuseGbCdNm` 문자열, (b) 공용면적이 호별 안분값인지(층별 다행 합산 방식), (c) `dongNm`/`hoNm` 실제 형식과 `unitDong`("201동")/`unitHo`("3204") 매칭 규칙.
+- 로컬 `.env.local`에 `MOLIT_RTMS_API_KEY` 부재 → 실 API 스키마 실측 불가. env 있는 환경에서 실 응답 확인 후 route·파싱 구현 + anchor 작성.
+
+### 결정 반영
+- **D1** = 접근 B(건축HUB `getBrExposPubuseAreaInfo`). 접근 A(NED 전유면적)는 과소산정으로 폐기.
+- **D2** = 실구현 전까지 집합건물 floorArea는 **수동 입력**(자동 totArea·전유면적 모두 미반영).

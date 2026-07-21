@@ -349,6 +349,12 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             isCollectiveUnit={!!f.unitDong || !!f.unitHo}
             onAutoFill={(patch) => setF((prev) => ({ ...prev, ...patch }))}
           />
+          {(!!f.unitDong || !!f.unitHo) && (
+            <p className="text-caption text-rose-600/90">
+              공동주택 세대는 건물 연면적(전유+공용)을 직접 입력하세요. 국세청 「건물 기준시가 계산방법 고시」 §3①상
+              공동주택은 통합가격이 별도 고시되며, 건물면적은 전유+공용 연면적 기준입니다.
+            </p>
+          )}
         </div>
       )}
 

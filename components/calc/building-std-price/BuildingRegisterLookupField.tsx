@@ -185,9 +185,9 @@ function buildSummary(
       parts.push("용도 직접 선택");
     }
   }
-  // 연면적 — 집합건물은 동 전체(totArea)라 미반영(세대 전유면적 유지 안내)
+  // 연면적 — 집합건물은 동 전체(totArea)라 미반영. 세대 전유+공용 연면적은 직접 입력(고시 §3①·전유+공용)
   if (isCollectiveUnit) {
-    parts.push("연면적은 세대 전유면적 유지");
+    parts.push("연면적은 전유+공용 직접 입력");
   } else if (d.floorArea !== null) {
     parts.push(`연면적 ${d.floorArea}㎡`);
   }
