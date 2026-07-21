@@ -13,7 +13,7 @@
 |---|---|---|---|---|---|
 | #3 | GB §97②2호 swap 사이드바 pre-swap 표시 | Medium | 표시 불일치(세액 정확) | 없음(표시만) | 소 |
 | #2 | 겸용 nonBiz 중과 10%p 기본공제 前 income 적용 | Medium | 산식 비대칭(단건 대비) | 최대 ~25만원 과다 | 소~중 |
-| #1 | 재개발 land+right + gift + 환산 §163⑨ deadlock | High(도달성 낮음) | (B)안전판 block + (A)실가 기능 | 큼(신고가액 무시) | (B)소 / (A)중~대 |
+| #1 | 재개발 land+right + gift + 환산 §163⑨ deadlock | High(도달성 낮음) | (B)안전판 block ✅#733 + (A)실가 기능 ✅#734(spike 성공·:108 과보수) | 큼(신고가액 무시) | (B)소 / (A)소(엔진 기구현) |
 
 ---
 
@@ -69,7 +69,7 @@
 silent 오세액 즉시 제거가 최우선 → **(B)를 먼저, (A)는 후속**으로 분리(spike 성공 여부와 무관하게 (B)는 즉시 안전 확보).
 
 - **(B) 즉시 안전판 (소·먼저)**: land+right+gift+환산을 **friendly block**("토지 출자 + 입주권 + 증여취득 실가는 미지원 — 취득가액 확인 시 별도 신고" 안내)으로 차단 → **silent 오세액 → 명시적 안내** 전환. validate-redev.ts에 land+right+gift 전용 블록 추가(현행 :52 `!isLandRightCombo` 예외를 gift+환산일 때 block으로 대체). GB #727 block 철학과 정합. **잘못된 세액을 산출하지 않는 것이 1차 목표.**
-- **(A) 실가 경로 개방 (중~대·후속·feasibility 조건부)**: land+right+gift에 실가(§163⑨ 신고가액) 라우팅. **Do 전 feasibility spike 필수**: `redevelopment.ts`·`transfer-tax-redevelopment.ts`의 `computeRedevelopmentSplit`/`runOriginalMember`가 `originalAssetType="land" && subject="right"` 실가 입력에서 정확한 종전자산 취득가액(=신고가액)·양도차익을 내는지 probe. ⚠️ `:85` 주석의 "originalAssetType 무관" 근거는 land+**apt**(사례 42) 맥락이라 land+right 직접 보증 아님 → probe로 확정. 성공 시 `:95` 차단 완화 + `redevActualAcquisitionPrice` 필수 검증. 실패 시 (B) 유지.
+- **(A) 실가 경로 개방 (✅완료 PR#734)**: **feasibility spike 성공** — `runRedevelopment`(redevelopment.ts:94-127)이 land+right+실가+pay를 branch1(housing)·branch2(useEstimated)에 미매치 → `runOriginalMember`→`computeRightPay`(§166①1호, redevelopment-split.ts:204)로 이미 라우팅, `oldAcquisitionPrice = actualAcquisitionPrice`(신고가액, :148) 사용. probe 실측: `valuationMethod=actual`·preApprovalGain=300M(권리가액 500M−신고가액 200M)·total=350M. **validation :108 차단만 과보수**였음. **범위=pay만**(receive는 :91 별도 후속). 구현: (1)`:108`(land+right+실가 후속PR) 제거 (2)gift §163⑨ 가드(:53)를 `(!isLandRightCombo || settlementDirection==="pay")`로 확장 → gift+land+right+pay+환산은 "실가로 전환"(§163⑨) (3)#1(B) block을 `settlementDirection!=="pay"`(receive) 한정으로 축소. `redevActualAcquisitionPrice` 필수검증(:123)이 신고가액 입력 보장. anchor: validation 6(실가개방·pay §163⑨·receive 미지원·비-gift 회귀·:91 receive 차단·pre-1985) + engine 3(actual·300M·350M) + M-1 갱신.
 
 ### 정합 정책
 - [[feedback_no_unfavorable_application_without_legal_basis]] — §163⑨ 신고가액 우선(환산이 신고가액 대체 = 근거 없는 세액변동).

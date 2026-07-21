@@ -65,33 +65,51 @@ describe("#3 GB §97②2호 swap 사이드바 배분 표시 정합", () => {
 // ─────────────────────────────────────────────────────────
 // #1(B) — 재개발 land+right+gift+환산 friendly block
 // ─────────────────────────────────────────────────────────
-const BLOCK_B = "토지 출자 + 입주권 양도 + 증여취득 조합은 현재 지원하지";
+// #1(A)로 land+right+실가+pay 개방 → gift 스티어링 세분화: pay=§163⑨ 실가전환·receive=미지원.
+const GIFT_163_9 = "증여 취득 종전자산은 환산취득가를 지원하지 않습니다"; // §163⑨ 실가 전환 유도(pay)
+const BLOCK_RECEIVE = "토지 출자 + 입주권 양도 + 증여취득"; // receive 미지원 안내
+const REMOVED_108 = "입주권 양도 + 실가 모드는 후속 PR"; // (A)로 제거된 land+right 실가 차단
 function redev(over: Partial<AssetForm> = {}): AssetForm {
   return {
     ...makeDefaultAsset(1),
     assetKind: "redevelopment_apt",
     redevSubject: "right",
     redevOriginalAssetType: "land",
+    redevSettlementDirection: "pay",
     acquisitionCause: "gift",
     acquisitionDate: "2015-06-01",
     useEstimatedAcquisition: true,
     redevIsSuccessorMember: "no",
+    redevActualAcquisitionPrice: "200000000",
     ...over,
   } as AssetForm;
 }
 const V = (a: AssetForm) => validateRedevelopmentAsset(a, "자산 1") ?? "";
 
-describe("#1(B) 재개발 land+right+gift+환산 안전판", () => {
-  it("C1 land+right+gift(2015)+환산 → block(안내)", () => {
-    expect(V(redev())).toContain(BLOCK_B);
+describe("#1(A) 재개발 land+right 실가(pay) + gift 스티어링", () => {
+  it("C1 land+right+gift+실가+pay → :108 차단 제거(실가 개방)", () => {
+    expect(V(redev({ useEstimatedAcquisition: false }))).not.toContain(REMOVED_108);
   });
-  it("C2 land+right+purchase+환산 → B블록 미발동(비-gift·§166③ 진행)", () => {
-    expect(V(redev({ acquisitionCause: "purchase" }))).not.toContain(BLOCK_B);
+  it("C2 land+right+gift+환산+pay → §163⑨ 실가 전환(미지원 아님)", () => {
+    const m = V(redev());
+    expect(m).toContain(GIFT_163_9);
+    expect(m).not.toContain("현재 지원하지 않습니다");
   });
-  it("C3 land+right+gift+실가(환산 OFF) → B블록 미발동(:95 후속PR로 위임)", () => {
-    expect(V(redev({ useEstimatedAcquisition: false }))).not.toContain(BLOCK_B);
+  it("C3 land+right+gift+환산+receive → 미지원 안내(실가 receive 미구현)", () => {
+    const m = V(redev({ redevSettlementDirection: "receive", redevSettlementAmount: "50000000" }));
+    expect(m).toContain(BLOCK_RECEIVE);
+    expect(m).toContain("현재 지원하지 않습니다");
   });
-  it("C4 land+right+gift(1983, pre-1985)+환산 → B블록 미발동(§176의2④ 의제취득)", () => {
-    expect(V(redev({ acquisitionDate: "1983-06-01" }))).not.toContain(BLOCK_B);
+  it("C4 land+right+purchase+실가+pay → 실가 개방(비-gift 회귀)", () => {
+    expect(V(redev({ acquisitionCause: "purchase", useEstimatedAcquisition: false }))).not.toContain(REMOVED_108);
+  });
+  it("C5 land+right+환산+receive(비-gift) → :91 후속 차단(회귀)", () => {
+    expect(
+      V(redev({ acquisitionCause: "purchase", redevSettlementDirection: "receive", redevSettlementAmount: "50000000" })),
+    ).toContain("후속 PR");
+  });
+  it("C6 land+right+gift(1983, pre-1985)+환산+pay → §163⑨ 미발동(의제취득)", () => {
+    const m = V(redev({ acquisitionDate: "1983-06-01" }));
+    expect(m).not.toContain(GIFT_163_9);
   });
 });
