@@ -119,6 +119,45 @@ const NBL: GeneralBuildingInput = {
   buildingAcquisitionDate: new Date("1999-05-24"),
 };
 
+// ── G3: 증축(토지·건물1·건물2 = 3카드, 원건물·증축 모두 환산) + swap(capitalExpenditure만) ──
+// 증축 케이스는 transferExpense가 bundledExpenses(F1)로 소비될 수 있어 swap 나목=capitalExpenditure 단독.
+const EXT: GeneralBuildingInput = {
+  ...BASE,
+  extensionInfo: {
+    extensionDate: new Date("2015-06-01"),
+    transferExtensionBuildingStdPrice: 8_000_000,
+    acquisitionExtensionBuildingStdPrice: 6_000_000,
+    extensionAcquisitionCause: "newConstruction",
+    acquisitionMode: "estimated",
+  },
+};
+
+describe("anchor A3 — 일반건물 증축(3카드) + §97②2호 swap (G3, capitalExpenditure만)", () => {
+  it("증축 3 환산 카드(land·building1·building2) swap: gain = 925,000,000 − 673,376,413", () => {
+    // estimatedSideTotal 273,376,413 < 나목(자본 673,376,413) → swap. 양도비 제외(F1).
+    const r = calculateGeneralBuildingTransfer(
+      { ...EXT, capitalExpenditure: 673_376_413 },
+      2023, 0, [], rates,
+    );
+    expect(r.aggregated.totalTransferGain).toBe(251_623_587);
+    expect(r.aggregated.swapApplied).toBe(true);
+    expect(r.aggregated.swapComparison).toEqual({
+      estimatedSide: 273_376_413,
+      directSide: 673_376_413,
+      chosen: "direct",
+    });
+    expect(r.aggregated.properties).toHaveLength(3);
+  });
+
+  it("증축 음성 경계 — 자본(2억) < 가목(2.73억) → 본문 유지", () => {
+    const r = calculateGeneralBuildingTransfer(
+      { ...EXT, capitalExpenditure: 200_000_000 },
+      2023, 0, [], rates,
+    );
+    expect(r.aggregated.swapApplied ?? false).toBe(false);
+  });
+});
+
 describe("anchor A4 — 일반건물 NBL 분할(3카드) + §97②2호 swap (G4)", () => {
   it("3 환산 카드(land_business·land_nbl·building) 전체 swap: gain = 1,200,000,000 − 1,026,233,347", () => {
     // estimatedSideTotal 516,233,347 < 나목 1,026,233,347 → swap, 나목 3카드 estimatedSide 비율 배분.
