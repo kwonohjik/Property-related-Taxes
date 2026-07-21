@@ -122,7 +122,7 @@ describe("재개발 증여 §163⑨ validation 가드 (원조합원)", () => {
 
   it("M-1: land+right+gift+환산+**pay** → §163⑨ 실가 전환 (#1(A)로 실가 pay 지원)", () => {
     // #1(A): land+right+실가+pay가 computeRightPay(§166①1호)로 신고가액 정확 산출 → 실가 pay 지원.
-    // 따라서 gift+환산+pay는 "실가로 전환, 신고가액 입력"(§163⑨)이 유효(deadlock 없음). (receive는 미지원 → 별도 안내)
+    // 따라서 gift+환산+pay는 "실가로 전환, 신고가액 입력"(§163⑨)이 유효(deadlock 없음).
     const msg = RD(
       redevAsset({
         redevOriginalAssetType: "land",
@@ -133,6 +133,49 @@ describe("재개발 증여 §163⑨ validation 가드 (원조합원)", () => {
     );
     expect(msg).toContain("§163⑨");
     expect(msg).toContain("증여 신고가액을 입력"); // 실가 전환 유도(실가 pay 지원)
+  });
+
+  // ── #1(A) 잔여 — land+right+receive 실가 개방 ──
+  // receive fixture: right + receive + settlementAmount>0 + 실가 취득가액.
+  function landRightReceive(over: Partial<AssetForm> = {}): AssetForm {
+    return redevAsset({
+      redevOriginalAssetType: "land",
+      redevSubject: "right",
+      redevSettlementDirection: "receive",
+      redevSettlementAmount: "50000000",
+      redevRightsValue: "500000000",
+      redevActualAcquisitionPrice: "200000000",
+      ...over,
+    });
+  }
+
+  it("#1A: land+right+실가+receive(gift) → 통과(개방·§163⑨ 신고가액=취득가액)", () => {
+    // computeRightReceive(§166①2호)가 신고가액 사용 — 실가 receive 정합.
+    expect(RD(landRightReceive())).toBe("");
+  });
+
+  it("#1A: land+right+실가+receive(매매) → 통과(개방·회귀-safe)", () => {
+    expect(RD(landRightReceive({ acquisitionCause: "purchase" }))).toBe("");
+  });
+
+  it("#1A: land+right+gift+환산+receive → §163⑨ 실가 전환 (#1(B) '미지원' → '실가로 전환'으로 갱신)", () => {
+    // 실가 receive 개방으로 gift+환산+receive도 "실가로 전환"이 유효(deadlock 해소).
+    const msg = RD(landRightReceive({ useEstimatedAcquisition: true }));
+    expect(msg).toContain("§163⑨");
+    expect(msg).toContain("증여 신고가액을 입력");
+  });
+
+  it("#1A: land+right+매매+환산+receive → 차단 유지(환산 후속 PR)", () => {
+    // 환산 receive는 runLandContribEstimated가 settlementPaid로 pay만 가정 → 미지원 유지.
+    const msg = RD(landRightReceive({ acquisitionCause: "purchase", useEstimatedAcquisition: true }));
+    expect(msg).toContain("환산취득가");
+    expect(msg).not.toContain("§163⑨");
+  });
+
+  it("R(회귀): land+right+실가+pay → 통과 불변(#734 보존)", () => {
+    expect(
+      RD(landRightReceive({ redevSettlementDirection: "pay", redevSettlementAmount: "0" })),
+    ).toBe("");
   });
 
   it("R(회귀): 승계조합원 gift+환산 → 승계 전용 차단 불변(§163⑨ 아님)", () => {
