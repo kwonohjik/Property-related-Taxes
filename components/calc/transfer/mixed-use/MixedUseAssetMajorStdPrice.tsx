@@ -49,6 +49,12 @@ export function MixedUseAssetMajorStdPrice({
   const isInheritance = asset.acquisitionCause === "inheritance";
   const isGift = asset.acquisitionCause === "gift";
   const isDeemed163_9 = isInheritance || isGift; // 상속·증여 공통 §163⑨ 라벨 게이트
+  // 매매 실가 모드(법 §100² 안분) — 실비(자본적지출·양도비) 입력 노출 게이트. 환산/감정/매매사례는 제외.
+  const isPurchaseActual =
+    asset.acquisitionCause === "purchase" &&
+    !useEstimatedAcquisition &&
+    !asset.isAppraisalAcquisition &&
+    !asset.isSalesCaseAcquisition;
   const acqLabel = isInheritance ? "상속개시일" : isGift ? "증여일" : "취득시";
   // 자동합계 박스 라벨 전용 — 원문이 "취득"(시 없음)이라 별도 변수로 분리 (E2E 문구 회귀 방지).
   const acqSummaryLabel = isInheritance ? "상속개시일" : isGift ? "증여일" : "취득";
@@ -182,6 +188,20 @@ export function MixedUseAssetMajorStdPrice({
               </div>
             </ToneCard>
           )}
+          {isPurchaseActual && (
+            <ToneCard
+              tone="violet"
+              title="주택분 실제 필요경비 (선택)"
+              titleExtra={<LawArticleModal legalBasis="소득세법 §97 ① 2호·3호" label="법 §97①" />}
+            >
+              <CurrencyInput
+                label="자본적지출·양도비 (주택분)"
+                value={asset.mixedHousingActualExpense}
+                onChange={(v) => onChange({ mixedHousingActualExpense: v })}
+                hint="매매 실거래가 취득은 개산공제(§163⑥, 3%)를 적용하지 않습니다. 주택분 자본적지출·양도비(법 §97①2·3호)가 있으면 입력하세요. 없으면 비워두세요"
+              />
+            </ToneCard>
+          )}
           <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
           <ToggleCard
             tone="amber"
@@ -293,6 +313,20 @@ export function MixedUseAssetMajorStdPrice({
                 hint="증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
               />
             </div>
+          </ToneCard>
+        )}
+        {isPurchaseActual && (
+          <ToneCard
+            tone="violet"
+            title="상가분 실제 필요경비 (선택)"
+            titleExtra={<LawArticleModal legalBasis="소득세법 §97 ① 2호·3호" label="법 §97①" />}
+          >
+            <CurrencyInput
+              label="자본적지출·양도비 (상가분)"
+              value={asset.mixedCommercialActualExpense}
+              onChange={(v) => onChange({ mixedCommercialActualExpense: v })}
+              hint="매매 실거래가 취득은 개산공제(§163⑥, 3%)를 적용하지 않습니다. 상가분 자본적지출·양도비(법 §97①2·3호)가 있으면 입력하세요. 없으면 비워두세요"
+            />
           </ToneCard>
         )}
 

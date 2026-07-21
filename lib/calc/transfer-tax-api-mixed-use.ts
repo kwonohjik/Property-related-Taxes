@@ -205,14 +205,20 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       (primary.acquisitionCause === "gift"
         ? parseAmount(primary.mixedCommercialGiftValueOverride)
         : parseAmount(primary.mixedCommercialInheritedValueOverride)) || undefined,
+    // 실비(자본적지출·양도비) — 상속/증여/매매실가 공용 엔진 슬롯(usesDeemedAcq 경로 건물분 차감).
+    // ⚠️ 취득원인 종속 선택(stale 방지): 매매→Actual·증여→Gift·그 외(상속)→Inherited.
     housingInheritedExpense:
-      (primary.acquisitionCause === "gift"
-        ? parseAmount(primary.mixedHousingGiftExpense)
-        : parseAmount(primary.mixedHousingInheritedExpense)) || undefined,
+      (isMixedActualAcquisition
+        ? parseAmount(primary.mixedHousingActualExpense)
+        : primary.acquisitionCause === "gift"
+          ? parseAmount(primary.mixedHousingGiftExpense)
+          : parseAmount(primary.mixedHousingInheritedExpense)) || undefined,
     commercialInheritedExpense:
-      (primary.acquisitionCause === "gift"
-        ? parseAmount(primary.mixedCommercialGiftExpense)
-        : parseAmount(primary.mixedCommercialInheritedExpense)) || undefined,
+      (isMixedActualAcquisition
+        ? parseAmount(primary.mixedCommercialActualExpense)
+        : primary.acquisitionCause === "gift"
+          ? parseAmount(primary.mixedCommercialGiftExpense)
+          : parseAmount(primary.mixedCommercialInheritedExpense)) || undefined,
     // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매 + 실거래가 모드.
     // 상속·증여(byInheritance/byGift)와 상호배타(취득원인 purchase라 자동 배타). 환산/감정/매매사례 모드는 제외.
     useActualAcquisition: isMixedActualAcquisition,

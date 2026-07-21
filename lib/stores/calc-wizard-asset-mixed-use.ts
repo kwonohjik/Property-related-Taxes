@@ -62,6 +62,8 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "mixedCommercialGiftValueOverride"
   | "mixedHousingGiftExpense"
   | "mixedCommercialGiftExpense"
+  | "mixedHousingActualExpense"
+  | "mixedCommercialActualExpense"
   | "hasPartialUsageChange"
   | "partialChangeDirection"
   | "partialChangeAcqResidentialArea"
@@ -98,6 +100,9 @@ export const MIXED_USE_DEFAULTS: Pick<
   mixedCommercialGiftValueOverride: "",
   mixedHousingGiftExpense: "",
   mixedCommercialGiftExpense: "",
+  // ── 매매 취득 실거래가 겸용주택 — 법 §100² 안분 (R1 후속) ──
+  mixedHousingActualExpense: "",
+  mixedCommercialActualExpense: "",
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
   hasPartialUsageChange: false,
   partialChangeDirection: "",
@@ -168,6 +173,10 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   if (!a.mixedCommercialInheritedValueOverride) a.mixedCommercialInheritedValueOverride = "";
   if (!a.mixedHousingInheritedExpense) a.mixedHousingInheritedExpense = "";
   if (!a.mixedCommercialInheritedExpense) a.mixedCommercialInheritedExpense = "";
+
+  // 매매 취득 실거래가 겸용주택 — 법 §100² 안분 실비 (신규 — R1 후속)
+  if (!a.mixedHousingActualExpense) a.mixedHousingActualExpense = "";
+  if (!a.mixedCommercialActualExpense) a.mixedCommercialActualExpense = "";
 
   // 보유 중 일부 용도변경 필드 (신규 — 2026-04-30)
   if (a.hasPartialUsageChange === undefined) a.hasPartialUsageChange = false;
