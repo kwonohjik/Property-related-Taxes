@@ -74,9 +74,11 @@ export async function GET(
     });
   }
 
-  // ③ year 검증(4자리 — 용도 연도 게이트)
-  const yearNum = parseInt(year, 10);
-  if (!/^\d{4}$/.test(year) || Number.isNaN(yearNum)) {
+  // ③ year 검증(4자리 — 용도 매핑 전용, optional).
+  //   표제부(구조·연면적·신축연도·층수)는 시점 무관 → year 없어도 조회. 잘못된 값(비-4자리·비공백)만 차단.
+  const hasYear = /^\d{4}$/.test(year);
+  const yearNum = hasYear ? parseInt(year, 10) : undefined;
+  if (year !== "" && !hasYear) {
     return NextResponse.json({
       success: false,
       error: "year는 4자리 연도이어야 합니다.",
@@ -159,12 +161,16 @@ export async function GET(
   const useAprDay = String(item.useAprDay ?? "").trim(); // YYYYMMDD
 
   const structResult = mapStructure(strctCd, etcStrct);
-  const usageResult = mapUsage(mainPurpsCd, grndFlrCnt, totArea, yearNum);
+  // 용도 매핑은 연도별 지수 체계 종속 → year 없으면 스킵(구조·연면적·신축연도·층수만 반환)
+  const usageResult =
+    yearNum !== undefined
+      ? mapUsage(mainPurpsCd, grndFlrCnt, totArea, yearNum)
+      : null;
 
   const warnings: string[] = [];
   if (!structResult)
     warnings.push("건물 구조를 대장에서 매핑할 수 없습니다(직접 선택).");
-  if (!usageResult)
+  if (yearNum !== undefined && !usageResult)
     warnings.push("건물 용도를 대장에서 매핑할 수 없습니다(직접 선택).");
 
   // 구조·용도 모두 채우면 둘 중 낮은 등급(medium 우선). 하나만이면 그 등급. 둘 다 null이면 null.
