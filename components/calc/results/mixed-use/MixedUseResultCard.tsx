@@ -127,8 +127,13 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   const isGiftAcq = acqRoute === "gift_direct" || acqRoute === "gift_phd_max";
   // 매매 취득 실거래가 직접 안분(법 §100²·§97①1호가목) — 실가 산식(개산공제 미표시), 라벨 구분.
   const isActualAcq = acqRoute === "section97_actual";
+  // 감정가액·매매사례가액 추계 안분(§176의2②③·법 §100²) — 개산공제 표시(환산 산식 분기 재사용), 라벨만 구분.
+  const isAppraisalSalesAcq = acqRoute === "section176_2_appraisal_sales";
   // 실지거래가액 기반(상속·증여 §163⑨ 의제 / 매매 §100² 실가) — 산식 분기(개산공제 미표시·실비)는 공통, 라벨만 구분.
+  // ⚠️ 감정·매매사례(isAppraisalSalesAcq)는 개산공제 유지라 isDeemedAcq에 포함하지 않음(환산 산식 분기 사용).
   const isDeemedAcq = isInheritedAcq || isGiftAcq || isActualAcq;
+  // 비-의제(환산·감정·매매사례) 취득가액 용어 — 감정/매매사례는 직접 안분이라 "환산취득가액" 아닌 "취득가액".
+  const nonDeemedAcqTerm = isAppraisalSalesAcq ? "취득가액" : "환산취득가액";
 
   // 실제 렌더되는 섹션만 전체 토글 대상 (nbl은 nb 있을 때만).
   const renderedSectionIds = MIXED_SECTION_IDS.filter((id) => id !== "nbl" || !!nb);
@@ -291,7 +296,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         onToggle={() => toggleSection("housing")}
       >
         <Row
-          label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : "주택 환산취득가액"}
+          label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : isAppraisalSalesAcq ? "주택 감정·매매사례 취득가액" : "주택 환산취득가액"}
           value={fmt(h.estimatedAcquisitionPrice)}
           formula={(() => {
             if (isDeemedAcq && h.inheritedAcquisitionDetail) {
@@ -304,6 +309,9 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
                       ? ` (신고가액 ${fmtPlain(d.reportedValue)}과 §164⑦ 환산가액 중 큰 값 — 소령 §163⑨2호)`
                       : "");
               return `${base} — 취득당시 실지거래가액으로 의제 (소령 §163⑨)`;
+            }
+            if (isAppraisalSalesAcq) {
+              return `감정가액·매매사례가액 총액을 법 §100²에 따라 취득시 기준시가 비율로 주택분에 안분 (§176의2②③ 추계)`;
             }
             if (!h.phdEstimatedAcqHousingPrice) {
               return `§97: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (취득시 개별주택공시가격 ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
@@ -346,7 +354,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={
             isDeemedAcq
               ? "(양도가액 - 취득가액 - 실제 필요경비) — 토지/건물 분리 후 합산"
-              : "(양도가액 - 환산취득가액 - 개산공제) — 토지/건물 분리 후 합산"
+              : `(양도가액 - ${nonDeemedAcqTerm} - 개산공제) — 토지/건물 분리 후 합산`
           }
         />
         <Row
@@ -356,7 +364,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={
             isDeemedAcq
               ? `양도가액 ${fmtPlain(h.landTransferPrice)} - 취득가액 ${fmtPlain(h.landAcqPrice)}`
-              : `양도가액 ${fmtPlain(h.landTransferPrice)} - 환산취득가액 ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 ${h.landStdPriceAtAcq != null ? fmtPlain(h.landStdPriceAtAcq) + " " : ""}× 3%)`
+              : `양도가액 ${fmtPlain(h.landTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 ${h.landStdPriceAtAcq != null ? fmtPlain(h.landStdPriceAtAcq) + " " : ""}× 3%)`
           }
         />
         <Row
@@ -368,7 +376,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
               ? h.buildingAppraisalDed > 0
                 ? `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 취득가액 ${fmtPlain(h.buildingAcqPrice)} - 실제 필요경비 ${fmtPlain(h.buildingAppraisalDed)}`
                 : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 취득가액 ${fmtPlain(h.buildingAcqPrice)}`
-              : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물 기준시가 ${h.buildingStdPriceAtAcq != null ? fmtPlain(h.buildingStdPriceAtAcq) + " " : ""}× 3%)`
+              : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물 기준시가 ${h.buildingStdPriceAtAcq != null ? fmtPlain(h.buildingStdPriceAtAcq) + " " : ""}× 3%)`
           }
         />
         <DivRow />
@@ -421,7 +429,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={`상가건물 기준시가 ${fmtPlain(c.acqStandardBuilding)} + 상가부수토지 기준시가 ${fmtPlain(c.acqStandardLand)} (= 개별공시지가 × 상가부수토지 면적, 자동)`}
         />
         <Row
-          label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : "상가 환산취득가액"}
+          label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : isAppraisalSalesAcq ? "상가 감정·매매사례 취득가액" : "상가 환산취득가액"}
           value={fmt(c.estimatedAcquisitionPrice)}
           formula={(() => {
             if (isDeemedAcq && c.inheritedAcquisitionDetail) {
@@ -441,7 +449,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={
             isDeemedAcq
               ? "(양도가액 - 취득가액 - 실제 필요경비) — 토지/건물 분리 후 합산"
-              : "(양도가액 - 환산취득가액 - 개산공제) — 토지/건물 분리 후 합산"
+              : `(양도가액 - ${nonDeemedAcqTerm} - 개산공제) — 토지/건물 분리 후 합산`
           }
         />
         <Row
@@ -451,7 +459,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={
             isDeemedAcq
               ? `양도가액 ${fmtPlain(c.landTransferPrice)} - 취득가액 ${fmtPlain(c.landAcqPrice)}`
-              : `양도가액 ${fmtPlain(c.landTransferPrice)} - 환산취득가액 ${fmtPlain(c.landAcqPrice)} - 개산공제 ${fmtPlain(c.landAppraisalDed)} (취득시 토지 기준시가 ${c.landStdPriceAtAcq != null ? fmtPlain(c.landStdPriceAtAcq) + " " : ""}× 3%)`
+              : `양도가액 ${fmtPlain(c.landTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(c.landAcqPrice)} - 개산공제 ${fmtPlain(c.landAppraisalDed)} (취득시 토지 기준시가 ${c.landStdPriceAtAcq != null ? fmtPlain(c.landStdPriceAtAcq) + " " : ""}× 3%)`
           }
         />
         <Row
@@ -463,7 +471,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
               ? c.buildingAppraisalDed > 0
                 ? `양도가액 ${fmtPlain(c.buildingTransferPrice)} - 취득가액 ${fmtPlain(c.buildingAcqPrice)} - 실제 필요경비 ${fmtPlain(c.buildingAppraisalDed)}`
                 : `양도가액 ${fmtPlain(c.buildingTransferPrice)} - 취득가액 ${fmtPlain(c.buildingAcqPrice)}`
-              : `양도가액 ${fmtPlain(c.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(c.buildingAcqPrice)} - 개산공제 ${fmtPlain(c.buildingAppraisalDed)} (취득시 건물 기준시가 ${c.buildingStdPriceAtAcq != null ? fmtPlain(c.buildingStdPriceAtAcq) + " " : ""}× 3%)`
+              : `양도가액 ${fmtPlain(c.buildingTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(c.buildingAcqPrice)} - 개산공제 ${fmtPlain(c.buildingAppraisalDed)} (취득시 건물 기준시가 ${c.buildingStdPriceAtAcq != null ? fmtPlain(c.buildingStdPriceAtAcq) + " " : ""}× 3%)`
           }
         />
         <DivRow />

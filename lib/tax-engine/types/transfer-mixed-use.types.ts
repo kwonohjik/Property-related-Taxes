@@ -227,6 +227,15 @@ export interface MixedUseAssetInput {
    * 법 §100② 취득시 기준시가 비율로 주택분/상가분 안분 후 각 토지/건물 안분.
    */
   acquisitionActualTotalPrice?: number;
+
+  /**
+   * 겸용 감정가액·매매사례가액 취득가액 게이트(법 §97①1호나목·§176의2②③ 추계).
+   * true면 acquisitionActualTotalPrice(감정가액 또는 매매사례가액 총액)를 법 §100² 비율로 안분해
+   * 취득가액으로 사용하되, 개산공제(§163⑥, 취득시 기준시가×3%)는 적용(실거래가와 달리 추계라 개산공제 유지).
+   * API에서 acquisitionCause==="purchase" && (isAppraisal || isSalesCase)로 파생.
+   * useActualAcquisition·byInheritance·byGift와 상호배타. PHD·용도변경·공익수용 조합 미지원(throw).
+   */
+  useAppraisalSalesAcquisition?: boolean;
 }
 
 // ──────────────────────────────────────────
@@ -438,7 +447,8 @@ export interface MixedUseCalculationRoute {
     | "inheritance_phd_max"     // 상속·미공시(§163⑨2호 max)
     | "gift_direct"             // 증여·공시(§163⑨ 본문, 상속과 동일)
     | "gift_phd_max"            // 증여·미공시(§163⑨2호/§176의2②2호 max)
-    | "section97_actual";       // 매매 취득 실거래가 직접 안분(법 §100²·§97①1호가목)
+    | "section97_actual"        // 매매 취득 실거래가 직접 안분(법 §100²·§97①1호가목)
+    | "section176_2_appraisal_sales"; // 감정가액·매매사례가액 추계 안분(§176의2②③·§100²·개산공제 유지)
   /** 주택 장기보유공제 표 분기 사유 */
   housingDeductionTableReason: string;
   /** 부수토지 배율 적용 근거 (지역 + 배율값) */

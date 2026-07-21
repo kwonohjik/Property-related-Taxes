@@ -67,11 +67,11 @@ export function calcCommercialGainSplit(
   // 상속·증여·매매실가 취득 + §164⑨1호 공익수용 특례 조합 — 미지원(가드).
   // 상속·증여는 §163⑨ 실지거래가액 의제, 매매실가는 §100② 안분 — 둘 다 환산 분모 개념이 없다.
   if (
-    (asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition) &&
+    (asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition || asset.useAppraisalSalesAcquisition) &&
     asset.transferCause === "public_expropriation"
   ) {
     throw new Error(
-      "상속·증여·매매 실거래가 취득 + 공익수용 특례 조합은 아직 지원하지 않습니다.",
+      "상속·증여·매매 실거래가·감정/매매사례 취득 + 공익수용 특례 조합은 아직 지원하지 않습니다.",
     );
   }
 
@@ -116,7 +116,7 @@ export function calcCommercialGainSplit(
 
   // §164⑨1호 공익수용 — 상가분 **토지 기준시가만** 낮춘 환산 분모(§80⑧ 건물분 미적용·안분 원값, D16-GB).
   // 상속 취득(실지거래가액 의제)은 환산 자체를 쓰지 않으므로 분모 계산을 생략(위 가드로 조합은 이미 차단).
-  const commercialExprVal = (asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition)
+  const commercialExprVal = (asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition || asset.useAppraisalSalesAcquisition)
     ? undefined
     : applyExprTotalDenominator({
         standardTotal: transferLandStd,
@@ -132,8 +132,9 @@ export function calcCommercialGainSplit(
   // 그 외(비상속·비증여)는 기존 §97 환산취득가액 (분모 = 특례 적용 후 총액. 미적용 시 원 transferTotalStd와 동일)
   let estimatedAcqPrice: number;
   let inheritedAcquisitionDetail: InheritedAcquisitionDetail | undefined;
-  if (asset.useActualAcquisition) {
-    // 매매 취득 실거래가(법 §100²) — 취득시 기준시가 비율로 안분된 상가분을 직접 사용(환산 아님).
+  if (asset.useActualAcquisition || asset.useAppraisalSalesAcquisition) {
+    // 취득가액 총액 안분(법 §100²) — 실거래가(§97①1호가목) 또는 감정/매매사례(§176의2②③)의 상가분을 직접 사용(환산 아님).
+    // 개산공제 차이(실거래가=배제·감정/매매사례=적용)는 아래 usesDeemedAcq에서 처리.
     estimatedAcqPrice = actualCommercialAcqPrice ?? 0;
   } else if (asset.acquisitionByInheritance || asset.acquisitionByGift) {
     const inherited = resolveCommercialInheritedAcq(asset, acqTotalStd);

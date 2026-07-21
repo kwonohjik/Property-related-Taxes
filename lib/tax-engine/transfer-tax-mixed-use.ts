@@ -87,11 +87,12 @@ export function calcMixedUseTransferTax(
   const apportionment = apportionTransferPrice(transferPrice, asset, derived);
   steps.push(buildApportionmentStep(apportionment));
 
-  // STEP 2.5: 매매 취득 실거래가 안분 (법 §100², R1) — useActualAcquisition일 때만.
-  // 총 취득 실거래가를 취득시 기준시가 비율로 주택분/상가분에 안분(양도가액 안분의 취득시 미러).
-  const acqApportionment = asset.useActualAcquisition
-    ? apportionAcquisitionPrice(asset.acquisitionActualTotalPrice ?? 0, asset, acqDerived)
-    : undefined;
+  // STEP 2.5: 취득가액 총액 안분 (법 §100²) — 실거래가(R1) 또는 감정/매매사례(R-B) 총액을
+  // 취득시 기준시가 비율로 주택분/상가분에 안분(양도가액 안분의 취득시 미러). 개산공제 차이는 각 part에서.
+  const acqApportionment =
+    asset.useActualAcquisition || asset.useAppraisalSalesAcquisition
+      ? apportionAcquisitionPrice(asset.acquisitionActualTotalPrice ?? 0, asset, acqDerived)
+      : undefined;
 
   // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑤ PHD, 또는 실가 안분분)
   // PHD + 보유 중 용도변경 케이스에서 시점별 면적 분리를 위해 acqDerived도 전달
@@ -296,6 +297,8 @@ function buildCalculationRoute(
   // 매매실가(useActualAcquisition)는 PHD 미적용(실가 모드는 위 엔진에서 PHD 조합 throw)이라 단일 값.
   const acquisitionConversionRoute = asset.useActualAcquisition
     ? ("section97_actual" as const)
+    : asset.useAppraisalSalesAcquisition
+    ? ("section176_2_appraisal_sales" as const)
     : asset.acquisitionByInheritance
       ? asset.usePreHousingDisclosure
         ? ("inheritance_phd_max" as const)

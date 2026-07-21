@@ -88,6 +88,8 @@ export const mixedUseAssetSchema = z.object({
   // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매. 침묵 strip 방지(⑫).
   useActualAcquisition: z.boolean().optional(),
   acquisitionActualTotalPrice: z.number().int().positive().optional(),
+  // 감정가액·매매사례가액 추계 안분 (§176의2②③·법 §100², R-B) — acquisitionActualTotalPrice 총액 재사용.
+  useAppraisalSalesAcquisition: z.boolean().optional(),
 }).superRefine((v, ctx) => {
   const total = v.residentialFloorArea + v.nonResidentialFloorArea;
   if (total <= 0) {
