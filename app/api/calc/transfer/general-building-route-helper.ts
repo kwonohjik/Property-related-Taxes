@@ -201,6 +201,9 @@ function buildApportionment(
   buildingStdAtAcq: number | null,
   usedEstimated: boolean,
   legalBasis: string,
+  /** §97②2호 단서 swap(안 A) — 발동 자산은 사이드바 표시도 취득가액0·필요경비=배분나목으로 반영
+   *  (엔진 buildProperties와 동일). 미전달 시 swap 미반영(실가 경로 등). */
+  swap?: GeneralBuildingSwapDecision,
 ): BundledLikeApportionmentResult {
   return {
     apportioned: cards.map((card) => {
@@ -212,13 +215,16 @@ function buildApportionment(
       const stdAtAcq = isLandCard
         ? (landStdAtAcq !== null ? landStdAtAcq * landRatio : 0)
         : (buildingStdAtAcq !== null ? buildingStdAtAcq : 0);
+      // swap 발동 카드: 환산취득가 미차감(0)·필요경비=배분나목 (엔진 buildProperties:118-126 정합).
+      const swapNabok = swap?.allocation.get(card.propertyId);
+      const isSwapCard = swapNabok !== undefined;
       return {
         assetId: card.propertyId,
         assetLabel: card.propertyLabel,
         assetKind: isLandCard ? "land" : "building",
         allocatedSalePrice: card.transferPrice,
-        allocatedAcquisitionPrice: card.acquisitionPrice,
-        allocatedExpenses: card.expenses,
+        allocatedAcquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice,
+        allocatedExpenses: isSwapCard ? swapNabok : card.expenses,
         displayRatio: stdAtTransfer / totalStandAtTransfer,
         standardPriceAtTransfer: stdAtTransfer,
         standardPriceAtAcquisition: stdAtAcq,
@@ -462,6 +468,7 @@ export function calculateGeneralBuildingTransfer(
     gbv.transferBuildingStdPrice, gbv.acquisitionBuildingStdPrice,
     true,
     "소득세법 시행령 §166⑥ · §176의2② · §163⑥",
+    swap, // §97②2호 swap 발동 시 사이드바 표시 정합 (환산 경로 전용)
   );
 
   return { apportionment, aggregated };
