@@ -11,6 +11,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";
+import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateExprValuationAsset } from "./transfer-tax-validate-expropriation";
@@ -128,6 +129,11 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     }
     return null;
   }
+
+  // §163⑨ 상가 증여 추계모드 차단 — 아래 상가 환산 검증(:134~)보다 먼저(실거래가는 generic으로 fall-through).
+  const cbGiftEstErr =
+    asset.assetKind === "commercial_building" ? giftEstimatedModeError(asset, label) : null;
+  if (cbGiftEstErr) return cbGiftEstErr;
 
   // ── 상업용건물·오피스텔 환산취득가 전용 검증 (⑧, 소령 §164⑧, §176조의2②2호) ──
   // ⑧ 동기화 원칙: API buildCommercialBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
@@ -459,8 +465,16 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   const isSalesCase = asset.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;
   const isEstimated = !isSalesCase && !isAppraisal && asset.useEstimatedAcquisition === true;
-  const hasPre1990 = (asset.pre1990Enabled ?? false) && asset.assetKind === "land";
+  // hasPre1990: post-1985 증여는 §163⑨ 신고가액 확인 가능 → pre1990 토지등급 배제(api:86 동일 게이트·3중 패턴).
+  const hasPre1990 =
+    (asset.pre1990Enabled ?? false) &&
+    asset.assetKind === "land" &&
+    !(asset.acquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01");
   const isParcelMode = asset.parcelMode === true && asset.assetKind === "land";
+
+  // §163⑨ 표준(generic) 증여 추계모드 차단 — salesCase(:아래)·isAppraisal generic보다 먼저 배치.
+  const genericGiftEstErr = giftEstimatedModeError(asset, label);
+  if (genericGiftEstErr) return genericGiftEstErr;
 
   // 0) 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 similarSalesValue 필수
   if (isSalesCase) {
