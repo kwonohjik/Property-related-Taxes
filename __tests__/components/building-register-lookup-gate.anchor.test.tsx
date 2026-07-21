@@ -64,9 +64,23 @@ describe("d1 — 연도 게이트 완화", () => {
   });
 });
 
-describe("d2 — 집합건물이면 동 전체 연면적으로 floorArea 덮어쓰기 제외", () => {
-  it("isCollectiveUnit=true → onAutoFill patch에 floorArea 없음", async () => {
-    mockFetchSuccess();
+describe("d2(접근 B) — 집합건물이면 dong/ho로 전유공용 조회, route가 준 floorArea 반영", () => {
+  it("isCollectiveUnit=true → dong/ho가 fetch URL에 포함 + route floorArea(전유+공용) 채움", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({
+        success: true,
+        data: {
+          structureKey: null,
+          usageNo: null,
+          confidence: null,
+          floorArea: 118.49, // route가 전유+공용 합산해 반환한 세대 연면적
+          builtYear: 2010,
+          floorsAbove: 20,
+          floorsBelow: 2,
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
     const onAutoFill = vi.fn();
     render(
       <BuildingRegisterLookupField
@@ -75,18 +89,57 @@ describe("d2 — 집합건물이면 동 전체 연면적으로 floorArea 덮어�
         taxType="transfer"
         disabled={false}
         isCollectiveUnit
+        dong="201동"
+        ho="3204"
         onAutoFill={onAutoFill}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "건축물대장 조회" }));
     await waitFor(() => expect(onAutoFill).toHaveBeenCalled());
-    const patch = onAutoFill.mock.calls[0][0];
-    expect(patch.floorArea).toBeUndefined();
-    // 나머지 유용 필드는 채워짐
-    expect(patch.builtYear).toBe("2010");
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("ho=3204");
+    expect(url).toMatch(/dong=/); // 동은 URL 인코딩됨
+    expect(onAutoFill.mock.calls[0][0].floorArea).toBe("118.49");
   });
 
-  it("isCollectiveUnit=false(일반건축물) → floorArea 포함", async () => {
+  it("집합건물이나 route floorArea=null(조회 실패) → floorArea 미채움(수동)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        json: async () => ({
+          success: true,
+          data: {
+            structureKey: null,
+            usageNo: null,
+            confidence: null,
+            floorArea: null,
+            builtYear: 2010,
+            floorsAbove: 20,
+            floorsBelow: 2,
+          },
+        }),
+      }),
+    );
+    const onAutoFill = vi.fn();
+    render(
+      <BuildingRegisterLookupField
+        pnu={PNU}
+        year="2025"
+        taxType="transfer"
+        disabled={false}
+        isCollectiveUnit
+        dong="201동"
+        ho="3204"
+        onAutoFill={onAutoFill}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "건축물대장 조회" }));
+    await waitFor(() => expect(onAutoFill).toHaveBeenCalled());
+    expect(onAutoFill.mock.calls[0][0].floorArea).toBeUndefined();
+    expect(onAutoFill.mock.calls[0][0].builtYear).toBe("2010");
+  });
+
+  it("isCollectiveUnit=false(일반건축물) → 표제부 totArea floorArea 포함", async () => {
     mockFetchSuccess();
     const onAutoFill = vi.fn();
     render(

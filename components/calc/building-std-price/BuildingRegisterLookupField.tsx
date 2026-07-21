@@ -28,8 +28,11 @@ interface Props {
   taxType: BuildingStdPriceTaxType;
   /** 3모드 가드(복합구조·기계식주차·공동주택환산) — 부모가 계산해 주입 */
   disabled: boolean;
-  /** 집합건물(공동주택) 여부 — true면 동 전체 연면적(totArea)으로 floorArea 덮어쓰기 제외(전유면적 유지) */
+  /** 집합건물(공동주택) 여부 — true면 floorArea=세대 전유+공용 연면적(전유공용면적 조회) */
   isCollectiveUnit?: boolean;
+  /** 집합건물 세대 동/호 — 전유공용면적 조회 파라미터(전유+공용 연면적 산출) */
+  dong?: string;
+  ho?: string;
   /** 다필드 patch — setF 직접 주입 */
   onAutoFill: (patch: Partial<BuildingStdPriceFormState>) => void;
 }
@@ -40,6 +43,8 @@ export function BuildingRegisterLookupField({
   taxType,
   disabled,
   isCollectiveUnit,
+  dong,
+  ho,
   onAutoFill,
 }: Props) {
   const [isLookingUp, setIsLookingUp] = useState(false);
@@ -61,7 +66,7 @@ export function BuildingRegisterLookupField({
     setConfidence(null);
     try {
       const res = await fetch(
-        `/api/address/building-register?pnu=${encodeURIComponent(pnu)}&year=${encodeURIComponent(year)}`,
+        `/api/address/building-register?pnu=${encodeURIComponent(pnu)}&year=${encodeURIComponent(year)}&dong=${encodeURIComponent(dong ?? "")}&ho=${encodeURIComponent(ho ?? "")}`,
       );
       const json: BuildingRegisterLookupResponse = await res.json();
       if (json.configMissing) {
@@ -77,8 +82,8 @@ export function BuildingRegisterLookupField({
 
       const patch: Partial<BuildingStdPriceFormState> = {};
       const hasYear = !Number.isNaN(yearNum);
-      // 연면적(시점 무관) — 단, 집합건물은 동 전체 totArea이므로 세대 전유면적을 덮어쓰지 않음
-      if (!isCollectiveUnit && d.floorArea !== null) patch.floorArea = String(d.floorArea);
+      // 연면적 — 일반: 표제부 totArea / 집합건물: route가 세대 전유+공용 연면적으로 반환(null이면 미채움·수동)
+      if (d.floorArea !== null) patch.floorArea = String(d.floorArea);
       if (d.builtYear !== null) patch.builtYear = String(d.builtYear);
       if (d.floorsAbove !== null) patch.floorsAbove = String(d.floorsAbove);
       if (d.floorsBelow !== null) patch.floorsBelow = String(d.floorsBelow);
@@ -185,9 +190,13 @@ function buildSummary(
       parts.push("용도 직접 선택");
     }
   }
-  // 연면적 — 집합건물은 동 전체(totArea)라 미반영. 세대 전유+공용 연면적은 직접 입력(고시 §3①·전유+공용)
+  // 연면적 — 집합건물은 세대 전유+공용 연면적(조회 성공 시), 실패 시 직접 입력 안내
   if (isCollectiveUnit) {
-    parts.push("연면적은 전유+공용 직접 입력");
+    parts.push(
+      d.floorArea !== null
+        ? `전유+공용 연면적 ${d.floorArea}㎡`
+        : "전유+공용 연면적 직접 입력",
+    );
   } else if (d.floorArea !== null) {
     parts.push(`연면적 ${d.floorArea}㎡`);
   }

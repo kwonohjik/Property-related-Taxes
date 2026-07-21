@@ -11,9 +11,14 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   mapStructure,
   mapUsage,
+  sumExclusiveCommonArea,
   type RegisterMapConfidence,
+  type ExposPubuseAreaItem,
 } from "@/lib/tax-engine/data/building-standard-price/building-register-map";
-import { decomposePnuForBuildingRegister } from "@/lib/geo/pnu-building-register";
+import {
+  decomposePnuForBuildingRegister,
+  type BuildingRegisterPnuParts,
+} from "@/lib/geo/pnu-building-register";
 
 export interface BuildingRegisterLookupResponse {
   success: boolean;
@@ -37,6 +42,9 @@ export interface BuildingRegisterLookupResponse {
 
 const BASE =
   "https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo";
+/** 전유공용면적(집합건물 세대별 전유+공용) — 접근 B */
+const EXPOS_BASE =
+  "https://apis.data.go.kr/1613000/BldRgstHubService/getBrExposPubuseAreaInfo";
 
 /** HUB는 숫자도 문자열로 반환 — NaN·빈문자 → undefined. */
 function toIntOrUndef(v: unknown): number | undefined {
@@ -48,12 +56,62 @@ function toFloatOrUndef(v: unknown): number | undefined {
   return Number.isNaN(n) ? undefined : n;
 }
 
+/**
+ * 집합건물 세대 전유+공용 연면적 조회 (getBrExposPubuseAreaInfo, 접근 B).
+ * dong/ho로 서버측 필터 시도 + 클라이언트 재필터(sumExclusiveCommonArea). 실패·미매칭이면 null(수동 fallback).
+ * ⚠️ dongNm/hoNm 실 형식·numOfRows 충분성은 배포환경 실측 미검증(계획서 §11). 비차단(throw 금지).
+ */
+async function fetchExposPubuseArea(
+  parts: BuildingRegisterPnuParts,
+  dong: string,
+  ho: string,
+  apiKey: string,
+): Promise<number | null> {
+  const qs = new URLSearchParams({
+    serviceKey: apiKey,
+    sigunguCd: parts.sigunguCd,
+    bjdongCd: parts.bjdongCd,
+    platGbCd: parts.platGbCd,
+    bun: parts.bun,
+    ji: parts.ji,
+    _type: "json",
+    numOfRows: "1000", // 세대×전유공용 다건. 서버 dongNm/hoNm 필터 되면 소수. 극단값(차단 유발) 회피
+  });
+  if (dong) qs.set("dongNm", dong);
+  if (ho) qs.set("hoNm", ho);
+  try {
+    const res = await fetch(`${EXPOS_BASE}?${qs.toString()}`, {
+      cache: "no-store",
+      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { response?: unknown };
+    const response = json?.response as
+      | { header?: { resultCode?: string }; body?: { items?: { item?: unknown } } }
+      | undefined;
+    const resultCode = String(response?.header?.resultCode ?? "").trim();
+    if (resultCode && resultCode !== "00" && resultCode !== "000") return null;
+    const rawItem = response?.body?.items?.item;
+    const items: ExposPubuseAreaItem[] = Array.isArray(rawItem)
+      ? (rawItem as ExposPubuseAreaItem[])
+      : rawItem
+        ? [rawItem as ExposPubuseAreaItem]
+        : [];
+    return sumExclusiveCommonArea(items, dong, ho);
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(
   request: NextRequest,
 ): Promise<NextResponse<BuildingRegisterLookupResponse>> {
   const { searchParams } = new URL(request.url);
   const pnu = searchParams.get("pnu")?.trim() ?? "";
   const year = searchParams.get("year")?.trim() ?? "";
+  // 집합건물(공동주택) 세대 식별 — 있으면 전유+공용 연면적을 floorArea로(접근 B)
+  const dong = searchParams.get("dong")?.trim() ?? "";
+  const ho = searchParams.get("ho")?.trim() ?? "";
 
   // ① env 미설정 — HTTP 200 + configMissing(500 금지)
   const apiKey = process.env.MOLIT_RTMS_API_KEY;
@@ -182,13 +240,24 @@ export async function GET(
         : "high"
       : (structResult?.confidence ?? usageResult?.confidence ?? null);
 
+  // 집합건물(공동주택 세대): floorArea = 전유+공용 연면적(§146④·건물기준시가 고시상 건물면적).
+  //   표제부 totArea(동 전체)를 세대 전유+공용으로 대체. 조회 실패·미매칭이면 null(수동 입력).
+  let floorAreaValue: number | null = totArea ?? null;
+  if (dong || ho) {
+    floorAreaValue = await fetchExposPubuseArea(parts, dong, ho, apiKey);
+    if (floorAreaValue === null)
+      warnings.push(
+        "집합건물 세대의 전유+공용 연면적을 조회하지 못했습니다(직접 입력).",
+      );
+  }
+
   return NextResponse.json({
     success: true,
     data: {
       structureKey: structResult?.structureKey ?? null,
       usageNo: usageResult?.usageNo ?? null,
       confidence,
-      floorArea: totArea ?? null,
+      floorArea: floorAreaValue,
       builtYear:
         useAprDay.length >= 4 ? parseInt(useAprDay.slice(0, 4), 10) : null,
       floorsAbove: grndFlrCnt ?? null,

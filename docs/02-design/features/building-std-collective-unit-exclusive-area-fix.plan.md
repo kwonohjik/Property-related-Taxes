@@ -188,7 +188,18 @@ onChange 핸들러에 dong/ho/exclusiveArea 저장 추가(EstateBodyHelpers 패�
 - 집합건물 안내 문구 추가: "공동주택 세대는 건물 연면적(전유+공용)을 직접 입력하세요(고시 §3①)".
 - anchor 반전: `buildAddressPatch`는 floorArea 자동채움 안 함.
 
-### 후속 실구현 (BLOCKER: env 실측 필요)
+### 실구현 (2026-07-22 — 문서 기반 구현 완료, 실 API 검증 대기)
+정본 전유+공용 연면적을 건축HUB **`getBrExposPubuseAreaInfo`**로 확보하도록 구현:
+- `sumExclusiveCommonArea(items, dong, ho)` 순수 함수 (`building-register-map.ts`) — 세대 `exposPubuseGbCd` "1"(전유)+"2"(공용) `area` 합(round2). dong/ho 정규화 매칭.
+- `fetchExposPubuseArea` (`route.ts`) — 집합건물이면 전유공용면적 API 병행 호출, 서버 `dongNm`/`hoNm` 필터 + 클라 재필터. 실패·미매칭 → null(수동).
+- `route.ts`: `dong`/`ho` 파라미터. 집합건물이면 `floorArea` = 전유+공용(일반 = `totArea`).
+- `BuildingRegisterLookupField`: `dong`/`ho` prop + fetch 파라미터. floorArea 가드 제거(route가 올바른 값·null 반환). summary "전유+공용 연면적 N㎡".
+- `BuildingStdPriceForm`: `dong={f.unitDong}`/`ho={f.unitHo}` 전달, 안내 문구 자동조회 반영.
+- anchor: `building-register-expos-area.anchor.test.ts`(6) + gate anchor d2(3, dong/ho fetch·floorArea 반영·null 수동).
+
+**⚠️ 실 API 검증 대기 (배포환경)**: 로컬 `MOLIT_RTMS_API_KEY`로 실측 시도했으나 국토부 API가 트래픽 차단(Unauthorized, 하루 지속)으로 실 응답 미확보. **PNU `4146310200106620000`(구갈동 662, VWorld 확보) → sigunguCd=41463·bjdongCd=10200·bun=0662 확정.** 배포환경/차단 해제 후 실 응답으로 검증 필요 항목: (a) `dongNm`/`hoNm` 실 형식과 폼 `unitDong`("201동")/`unitHo`("3204") 매칭(현재 접미 "동"/"호" 제거 정규화로 방어), (b) 전유+공용 `area` 행 구조·합산 정확성, (c) `numOfRows=1000` 충분성(대형단지 페이지네이션 필요 여부). 검증 전 머지 시 집합건물 floorArea가 부정확할 수 있음.
+
+### 참고: 원 정본 경로 명세
 정본 전유+공용 연면적은 건축HUB **`getBrExposPubuseAreaInfo`**(전유공용면적, §4 참조)로 확보:
 - **오퍼레이션**: `https://apis.data.go.kr/1613000/BldRgstHubService/getBrExposPubuseAreaInfo`
 - **파라미터**: `serviceKey·sigunguCd·bjdongCd·platGbCd·bun·ji·_type=json·numOfRows`(호 다건) + 특정 호 `dongNm`·`hoNm`(폼 `unitDong`/`unitHo`에서 공급)
