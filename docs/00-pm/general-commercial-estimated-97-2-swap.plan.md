@@ -110,7 +110,22 @@ if (isEstimatedConversion && swapEligible && directSide > estimatedSide) {
 
 ---
 
-## 5. Phase 2 — 일반건물 (난이도: 상, 다중 카드 + capex 배분 난제)
+## 5. Phase 2 — 일반건물 ✅ G2 배선 완료 (2026-07-21, 미커밋) · G3/G4 후속
+
+**G2(전체환산) 구현 결과**:
+- 신규 `lib/tax-engine/general-building-swap.ts` — `resolveGeneralBuildingSwap`: 환산 카드(F8) estimatedSide 합 vs 나목 자산총액 판정 + estimatedSide 비율 배분(applyRate)·마지막 카드 잔액 흡수(Σ=directSide).
+- `GeneralBuildingInput`에 capitalExpenditure?/transferExpense?(자산총액) 추가.
+- `buildProperties`(route-helper) swap 파라미터 — swap 카드 acquisitionPrice=0·expenses=배분나목. `calculateGeneralBuildingTransfer`에서 판정·`aggregated.swapApplied/swapComparison` 노출(F10).
+- `AggregateTransferResult`에 swapApplied?/swapComparison?. `BundledAllocationCard`에 swap 설명 블록(F10 GB 표시 — bundled는 TransferTaxResultView 아닌 BundledAllocationCard 렌더).
+- ④ `transfer-tax-api-gb.ts` capex 매핑(**비-증축만** — 증축은 F1 transferExpense 충돌로 제외) + ⑫ Zod(`transfer-tax-building-schemas.ts`) capex optional.
+- anchor `general-building-97-2-swap.anchor.test.ts` 5케이스(baseline·swap gain 115M·Σ불변식·**F9 배분 basis 724,342,809/85,657,191 보유기간 무관**·음성경계) + E2E 2케이스 green. tsc0·lint0·transfer 2204 pass.
+- 실측: 사례31 estimatedSideTotal=269,553,853, 나목 810M → gain 925M−810M=**115,000,000**.
+
+**G4(NBL 분할 3카드) ✅ 완료(2026-07-21, anchor만·엔진 코드 무변경)**: landArea>인정면적 시 토지 사업용/비사업용 2장+건물=3 환산 카드. `resolveGeneralBuildingSwap`이 3카드 전체 대상 → estimatedSideTotal 516,233,347<나목 1,026,233,347 → gain 1.2B−1,026,233,347=173,766,653·Σ필요경비=directSide. API 비-증축 capex + NBL은 valuation 내부 분기라 자동 동작. anchor A4 2케이스 green.
+
+**G3(증축) 후속만 잔여**: transferExpense가 bundledExpenses(F1)와 충돌 → API 배선 시 (a)legacy fallback 제거 or (b)swap directSide 제외 택일 필요. 현재 API는 비-증축(G2·G4)만 capex 전달.
+
+## 5-원. Phase 2 원설계 — 일반건물 (난이도: 상, 다중 카드 + capex 배분 난제)
 
 ### 5.1 배선 체인 (capex를 카드까지)
 1. `GeneralBuildingInput`(types)에 `capitalExpenditure?`/`transferExpense?` 추가 — **자산-총액** 단위.

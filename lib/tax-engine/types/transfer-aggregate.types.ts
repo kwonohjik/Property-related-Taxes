@@ -326,4 +326,11 @@ export interface AggregateTransferResult {
    * `landStdTotal`·`buildingStdTotal`·`extensionStdTotal`·`acqLandStdTotal` 등 §166⑥·§176의2② 안분 변수 포함.
    */
   generalBuildingValuationDetail?: import("../general-building-valuation").GeneralBuildingOutput;
+  /**
+   * §97②2호 단서 swap 발동 여부 (일반건물 환산 자산총액 판정 — 안 A).
+   * 나목(자본적지출+양도비) > 가목(환산취득가+개산공제 합) 시 true. 결과뷰 표시용.
+   */
+  swapApplied?: boolean;
+  /** §97②2호 단서 swap 비교 (자산총액). */
+  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
 }

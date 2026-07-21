@@ -253,6 +253,14 @@ export type GeneralBuildingInput = {
   firstDisclosureLandStdPrice?: number;
   /** 최초공시 당시 건물 기준시가 총액 (원). hasFirstDisclosure=true 시 필수. */
   firstDisclosureBuildingStdPrice?: number;
+  // ── §97②2호 단서 swap (환산 전용, 자산-총액 단위) ──
+  /**
+   * 자본적지출 (원, 자산 총액 — §97① 가목). §97②2호 단서 swap 판정용.
+   * 나목(자본적지출+양도비) > 가목(환산취득가+개산공제 합) 시 나목을 필요경비로 적용.
+   */
+  capitalExpenditure?: number;
+  /** 양도비 (원, 자산 총액 — §97① 나목). swap 판정용. */
+  transferExpense?: number;
 };
 
 /** 양도가 안분 결과 */

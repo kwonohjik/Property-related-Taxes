@@ -24,6 +24,7 @@ import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { AssetCardForAggregate, GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
+import { resolveGeneralBuildingSwap, type GeneralBuildingSwapDecision } from "@/lib/tax-engine/general-building-swap";
 import { buildBurdenedGiftBreakdown } from "@/lib/tax-engine/burdened-gift-apportionment";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
@@ -108,16 +109,21 @@ export interface GeneralBuildingRouteResult {
 function buildProperties(
   cards: AssetCardForAggregate[],
   nonBusinessRatio: number,
+  swap?: GeneralBuildingSwapDecision,
 ): TransferTaxItemInput[] {
   return cards.map((card) => {
     const isBuilding = card.propertyType === "general_building_unit";
+    // §97②2호 단서 swap(안 A): 배분된 카드는 환산취득가 미차감(0)·필요경비=배분나목.
+    // (단건 엔진 actual 모드에서 acqCost=0, expensesApplied=expenses → gain=양도가−배분나목.)
+    const swapNabok = swap?.allocation.get(card.propertyId);
+    const isSwapCard = swapNabok !== undefined;
     return {
       propertyId: card.propertyId,
       propertyLabel: card.propertyLabel,
       propertyType: card.propertyType,
       transferPrice: card.transferPrice,
-      acquisitionPrice: card.acquisitionPrice,
-      expenses: card.expenses,
+      acquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice,
+      expenses: isSwapCard ? swapNabok : card.expenses,
       transferDate: card.transferDate,
       acquisitionDate: card.acquisitionDate,
       // useEstimatedAcquisition=false: aggregate 경로에서는 이미 취득가 계산 완료.
@@ -419,7 +425,9 @@ export function calculateGeneralBuildingTransfer(
     isSelfBuilt: gbv.buildingAcquisitionCause === "newConstruction",
   };
   const gbOut = buildGeneralBuildingAssetCards(normalizedGbv);
-  const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio);
+  // §97②2호 단서 swap 자산총액 판정(안 A) — 환산 카드 estimatedSide 합 vs 나목(자본+양도비).
+  const swap = resolveGeneralBuildingSwap(gbOut.assetCards, gbv.capitalExpenditure, gbv.transferExpense);
+  const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio, swap);
 
   const aggregated = calculateTransferTaxAggregate(
     {
@@ -434,6 +442,15 @@ export function calculateGeneralBuildingTransfer(
   // UI 자산별 산식 인라인 표시용 — gbOut의 분모/분자 변수를 결과에 노출.
   // 사례 31(2-way)·33(3-way) 모두 generalBuildingValuationDetail 통해 UI 가공.
   aggregated.generalBuildingValuationDetail = gbOut;
+  // §97②2호 단서 swap 발동 시 결과뷰 표시용(F10) — 자산총액 판정이라 top-level 1개로 충분.
+  if (swap.swapApplied) {
+    aggregated.swapApplied = true;
+    aggregated.swapComparison = {
+      estimatedSide: swap.estimatedSideTotal,
+      directSide: swap.directSide,
+      chosen: "direct",
+    };
+  }
 
   const landStdAtTransfer = gbv.transferLandPricePerSqm * gbv.landArea;
   const landStdAtAcq = gbv.acquisitionLandPricePerSqm * gbv.landArea;
