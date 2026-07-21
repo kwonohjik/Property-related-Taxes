@@ -210,18 +210,20 @@ export function calcHousingEstimatedAcq(
   /** 매매 실가 모드(useActualAcquisition) 취득가액 주택분 — 오케스트레이터 apportionAcquisitionPrice 산출값. */
   actualHousingAcqPrice?: number,
 ): HousingEstimatedAcqResult {
-  // ─── 매매 취득 실거래가 직접 사용 (법 §100²·§97①1호가목, R1) ───
-  // 환산·PHD 미적용. 취득 실거래가를 취득시 기준시가 비율로 안분한 주택분을 직접 사용(개산공제 배제).
+  // ─── 취득가액 총액 직접 안분 (법 §100²) — 실거래가(R1·§97①1호가목) 또는 감정/매매사례(R-B·§176의2②③) ───
+  // 환산·PHD 미적용. 취득가액 총액을 취득시 기준시가 비율로 안분한 주택분을 직접 사용.
+  // 개산공제 차이(실거래가=배제·감정/매매사례=적용)는 calcHousingGainSplit의 usesDeemedAcq에서 처리.
   // ⚠️ 미공시(PHD)·보유중용도변경·공익수용 조합은 미지원 — 안분 비율/시점 구조가 달라 별도 설계 필요.
-  if (asset.useActualAcquisition) {
+  if (asset.useActualAcquisition || asset.useAppraisalSalesAcquisition) {
+    const kind = asset.useActualAcquisition ? "취득 실거래가" : "감정가액·매매사례가액";
     if (asset.usePreHousingDisclosure || asset.partialUsageChange) {
       throw new Error(
-        "겸용 취득 실거래가 + 미공시(PHD)·보유 중 용도변경 조합은 아직 지원하지 않습니다. 환산취득가 모드로 입력하세요.",
+        `겸용 ${kind} + 미공시(PHD)·보유 중 용도변경 조합은 아직 지원하지 않습니다. 환산취득가 모드로 입력하세요.`,
       );
     }
     if (asset.transferCause === "public_expropriation") {
       throw new Error(
-        "겸용 취득 실거래가 + 공익수용 특례 조합은 아직 지원하지 않습니다.",
+        `겸용 ${kind} + 공익수용 특례 조합은 아직 지원하지 않습니다.`,
       );
     }
     return { estimatedAcq: actualHousingAcqPrice ?? 0 };

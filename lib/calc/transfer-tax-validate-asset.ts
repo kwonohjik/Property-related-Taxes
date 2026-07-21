@@ -290,37 +290,41 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     // ⑧ 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (엔진 정합). 분리 파일 참조(800줄 정책).
     const mixedInheritanceErr = validateMixedUseInheritanceAsset(asset, label);
     if (mixedInheritanceErr) return mixedInheritanceErr;
-    // ⑧ 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매 + 실거래가 모드.
-    if (asset.acquisitionCause === "purchase") {
-      // 겸용은 감정가액·매매사례가액 모드 미지원(현재 환산으로 침묵 처리 방지) — 실거래가/환산만 허용.
-      if (asset.isAppraisalAcquisition || asset.isSalesCaseAcquisition) {
-        return `${label}: 겸용주택은 감정가액·매매사례가액 모드를 지원하지 않습니다. 실거래가 또는 환산취득가 모드로 입력하세요.`;
+    // ⑧ 겸용 취득가액 총액 안분 (법 §100²) — 매매 + (실거래가 §97①1호가목 / 감정·매매사례 §176의2②③).
+    // 셋 다 취득시 기준시가 비율 안분(감정·매매사례는 개산공제 유지). 환산 모드는 아래 별도.
+    if (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition) {
+      const isAppraisal = asset.isAppraisalAcquisition === true;
+      const isSalesCase = asset.isSalesCaseAcquisition === true;
+      const basisLabel = isSalesCase ? "매매사례가액" : isAppraisal ? "감정가액" : "취득 실거래가";
+      // 엔진 throw 3종 사전 차단(계산기 500 대신 친절 메시지) — 실거래가·감정·매매사례 공통.
+      // 실가/추계 안분은 취득시 단일 기준시가 비율이라 PHD(미공시 3-시점)·보유중용도변경(시점별 면적)·공익수용(환산 분모) 조합 미지원.
+      if (asset.usePreHousingDisclosure) {
+        return `${label}: 겸용주택 ${basisLabel} + 개별주택가격 미공시(환산) 조합은 아직 지원하지 않습니다. 환산취득가 모드로 입력하세요.`;
       }
-      // 실거래가 모드(환산 OFF) — 총 취득 실거래가 필수 + 취득시 기준시가(안분 비율용) 필수.
-      if (!asset.useEstimatedAcquisition) {
-        // 엔진 throw 3종 사전 차단(계산기 500 대신 친절 메시지) — 상속 검증기(validate-mixed-use-inheritance.ts) 패턴 미러.
-        // 실가는 취득시 단일 기준시가 비율 안분이라 PHD(미공시 3-시점)·보유중용도변경(시점별 면적)·공익수용(환산 분모) 조합 미지원.
-        if (asset.usePreHousingDisclosure) {
-          return `${label}: 겸용주택 취득 실거래가 + 개별주택가격 미공시(환산) 조합은 아직 지원하지 않습니다. 환산취득가 모드로 입력하세요.`;
-        }
-        if (asset.hasPartialUsageChange) {
-          return `${label}: 겸용주택 취득 실거래가 + 보유 중 일부 용도변경 조합은 아직 지원하지 않습니다. 환산취득가 모드로 입력하세요.`;
-        }
-        if (asset.transferCause === "public_expropriation") {
-          return `${label}: 겸용주택 취득 실거래가 + 공익수용 특례 조합은 아직 지원하지 않습니다.`;
-        }
-        if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0) {
-          return `${label}: 겸용주택 취득 실거래가(계약서상)를 입력하세요. 법 §100²에 따라 취득시 기준시가 비율로 주택분·상가분에 안분합니다.`;
-        }
-        if (!asset.mixedAcqHousingPrice || parseAmount(asset.mixedAcqHousingPrice) <= 0) {
-          return `${label}: 취득시 개별주택공시가격을 입력하세요. (실거래가 주택분/상가분 안분 비율)`;
-        }
-        if (
-          (!asset.mixedAcqCommercialBuildingPrice || parseAmount(asset.mixedAcqCommercialBuildingPrice) <= 0) ||
-          (!asset.mixedAcqLandPricePerSqm || parseAmount(asset.mixedAcqLandPricePerSqm) <= 0)
-        ) {
-          return `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (실거래가 주택분/상가분 안분 비율)`;
-        }
+      if (asset.hasPartialUsageChange) {
+        return `${label}: 겸용주택 ${basisLabel} + 보유 중 일부 용도변경 조합은 아직 지원하지 않습니다. 환산취득가 모드로 입력하세요.`;
+      }
+      if (asset.transferCause === "public_expropriation") {
+        return `${label}: 겸용주택 ${basisLabel} + 공익수용 특례 조합은 아직 지원하지 않습니다.`;
+      }
+      // 총액 필수 — 매매사례=similarSalesValue, 감정·실거래가=fixedAcquisitionPrice.
+      const totalValue = isSalesCase
+        ? parseAmount(asset.similarSalesValue)
+        : parseAmount(asset.fixedAcquisitionPrice);
+      if (totalValue <= 0) {
+        return isSalesCase
+          ? `${label}: 겸용주택 매매사례가액을 입력하세요. 법 §100²에 따라 취득시 기준시가 비율로 주택분·상가분에 안분합니다.`
+          : `${label}: 겸용주택 ${basisLabel}을 입력하세요. 법 §100²에 따라 취득시 기준시가 비율로 주택분·상가분에 안분합니다.`;
+      }
+      // 취득시 기준시가(안분 비율) 필수 — 감정·매매사례는 개산공제(§163⑥) base로도 사용.
+      if (!asset.mixedAcqHousingPrice || parseAmount(asset.mixedAcqHousingPrice) <= 0) {
+        return `${label}: 취득시 개별주택공시가격을 입력하세요. (주택분/상가분 안분 비율)`;
+      }
+      if (
+        (!asset.mixedAcqCommercialBuildingPrice || parseAmount(asset.mixedAcqCommercialBuildingPrice) <= 0) ||
+        (!asset.mixedAcqLandPricePerSqm || parseAmount(asset.mixedAcqLandPricePerSqm) <= 0)
+      ) {
+        return `${label}: 취득시 상가건물 기준시가와 개별공시지가를 입력하세요. (주택분/상가분 안분 비율)`;
       }
     }
     // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
