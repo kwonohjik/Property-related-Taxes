@@ -103,6 +103,26 @@ export function validateGeneralBuildingAsset(
     }
   }
 
+  // ── §163⑨ 증여 취득가액 직접 산정 (Phase 2 — block 방식) ──
+  // 증여받은 자산은 증여일 현재 상증법 §60~66 평가액(증여 신고가액)을 취득당시 실지거래가액으로
+  // 본다(§163⑨) → 취득가액 "확인 가능" → §166③ 환산·§163⑥ 개산공제 배제. 증여 신고가액은
+  // 항상 확인 가능하므로 환산 자체가 법적 불필요 → 환산·증축 조합을 차단하고 실가(신고가액=취득가액)를 강제.
+  // 상속과 달리 별도 신고가액 필드 없이 fixedAcquisitionPrice→actual 경로로 §166⑥ 안분되므로
+  // 자산별 reported 분리(gbBuildingInheritedValue 등) 불요. pre-1985 증여는 §176의2④ 의제취득
+  // 영역이므로 게이트 false → 기존 환산 fallback(회귀-safe).
+  const isLandGift =
+    asset.acquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+  const isBuildingGift =
+    asset.gbBuildingAcquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+  if (isLandGift || isBuildingGift) {
+    if (asset.useEstimatedAcquisition || asset.gbHasExtension) {
+      return `${label}: 증여 취득 일반건물은 환산취득가·증축 조합을 지원하지 않습니다. 실거래가 모드(환산취득가 토글 OFF·증축 토글 OFF)로 증여일 평가액을 취득가액으로 입력하세요. (소득세법 시행령 §163⑨)`;
+    }
+    if (!parseAmount(asset.fixedAcquisitionPrice)) {
+      return `${label}: 증여 신고가액(취득가액)을 입력하세요. 증여일 평가액을 취득당시 실지거래가액으로 사용합니다. (소득세법 시행령 §163⑨)`;
+    }
+  }
+
   // ⑧ 정합성 가드(삭제): 4가지 조합 모두 허용 — useEstimatedAcquisition 강제 조건 제거.
   // 기존 코드: gbHasExtension && !useEstimatedAcquisition 차단 → 사례 33 실가+증축 조합 불가 버그.
   // 4번째 라디오 onClick이 useEst=false 설정하므로 이 가드가 있으면 실가+증축 차단됨.

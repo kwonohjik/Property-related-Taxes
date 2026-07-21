@@ -34,6 +34,31 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     return `${label}: 양도 대상이 올바르지 않습니다. (지원: 완공 APT 양도 / 조합원입주권 양도)`;
   }
 
+  // ── §163⑨ 증여 취득 종전자산 (Phase 3 — block 방식) ──
+  // 증여받은 종전자산은 증여일 현재 상증법 §60~66 평가액(증여 신고가액)을 취득당시 실지거래가액으로
+  // 본다(§163⑨) → 취득가액 "확인 가능" → §166③ 환산·§163⑥ 개산공제 배제. 증여 신고가액은 항상
+  // 확인 가능하므로 환산 자체가 법적 불필요 → 원조합원 증여 + 환산 조합을 차단하고 실가 모드(종전자산
+  // 취득가액=증여 신고가액)를 강제한다. 실가 모드의 redevActualAcquisitionPrice 필수 검증(land 분기·
+  // housing 분기 각각)이 증여 신고가액 입력을 보장한다. 승계조합원 증여+환산은 아래(승계 분기)에서 이미 차단.
+  // 상속 재개발은 inheritedAcquisition payload(별도 값 채널)로 환산 모드에서도 graceful override가
+  // 가능했으나(transfer-tax.ts:248), 증여는 그 채널이 없고 신고가액이 항상 확인 가능하므로 block이 정합.
+  // pre-1985 증여는 §176의2④ 의제취득 영역 → 게이트 false(기존 경로 유지).
+  //
+  // ⚠️ land + right(입주권) 조합 제외: 이 조합은 실가 모드 자체가 미지원(아래 land 분기에서 "후속 PR" 차단)
+  //    이라 "실가로 전환" 안내가 모순 지시(deadlock)를 만든다 → §163⑨ 가드를 skip하고 기존 land 분기
+  //    "후속 PR" 안내에 위임(land+right+증여는 §163⑨ 실가 유도 대상 밖 — 후속 PR 한계).
+  const isGift163_9 =
+    asset.acquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+  const isLandRightCombo = originalAssetType === "land" && subject === "right";
+  if (
+    isGift163_9 &&
+    asset.redevIsSuccessorMember !== "yes" &&
+    asset.useEstimatedAcquisition &&
+    !isLandRightCombo
+  ) {
+    return `${label}: 증여 취득 종전자산은 환산취득가를 지원하지 않습니다. 증여일 평가액(증여세 신고가액)이 취득가액이므로 "환산취득가 사용" 토글을 OFF로 전환하고 종전자산 취득가액에 증여 신고가액을 입력하세요. (소득세법 시행령 §163⑨)`;
+  }
+
   // ── subject="right" 전용 검증 (사례 36) ──
   // 형식 가드 A: 객관적·입력 유효성 — 미충족 시 다음 단계 진입 차단.
   if (subject === "right") {

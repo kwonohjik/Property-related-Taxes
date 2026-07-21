@@ -71,6 +71,8 @@
 **Validation** (`lib/calc/transfer-tax-validate-mixed-use-inheritance.ts` → gift 대응 신설 또는 게이트 일반화):
 - 현재 `:21` `if (acquisitionCause !== "inheritance") return null`. 증여 케이스 추가 — 증여 신고가액 또는 취득시 기준시가 필수(silent fallback 금지 정책 `feedback_no_silent_apportion_fallback`).
 
+> **⚠️ Do 환류(2026-07-21) — Phase 2·3 방식 확정 = block(graceful 미채택)**: 아래 Phase 2/3 설계는 상속의 graceful-safety-net 미러를 상정했으나, Do 단계에서 **validation block 방식으로 확정**했다. 근거: (1) §163⑨ 증여 신고가액은 항상 확인 가능 → 환산 자체가 법적 불필요(상속처럼 "확인 불가 시 환산" 예외 경로가 gift엔 없음). (2) 상속 재개발 graceful override는 `inheritedAcquisition` payload라는 **별도 값 채널**(환산 토글과 무관하게 항상 전달)이 있어 가능했으나, gift는 값이 `redevActualAcquisitionPrice`(실가 모드 전용 필드)에만 있어 환산 모드에서 값 채널이 없다 → graceful을 구현하려면 API·엔진·UI 필드가시성 3중 수정 필요(과복잡). (3) block은 GB·재개발 양쪽에 동일 적용돼 일관되고, 실가 모드가 이미 §163⑨ 정합이라 "환산 차단→실가 유도"만으로 충족. → **API `acquisitionPrice=0` 계층 수정(I2)·엔진 세이프넷 불요**. 구현: validation 차단 + UI 안내 카드.
+
 ### Phase 2 — 일반건물(GB) (낮은 도달성 · stale flag)
 
 - **엔진/경로**: GB actual 경로(`general-building-route-helper.ts:558-565` else)는 이미 gift=`actualAcquisitionPrice` 정상. 문제는 **환산 경로 진입 차단 부재**.

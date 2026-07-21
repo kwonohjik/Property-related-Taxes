@@ -107,6 +107,8 @@ commercialInheritedExpense:
 
 ## 6. Phase 2 (GB) · Phase 3 (재개발) · Phase 0 엔진측
 
+> **⚠️ Do 환류(2026-07-21) — 확정 방식 = block(엔진/API 무변경)**: 아래 (a)/(b) graceful-safety-net 설계는 미채택. GB·재개발 모두 **validation block**으로 확정 — 증여 신고가액은 항상 확인 가능(§163⑨) → 환산 불필요 → 환산·증축 조합을 validation에서 차단하고 실가 모드(신고가액=취득가액) 강제. 실가 경로(GB `fixedAcquisitionPrice`→actual·재개발 `redevActualAcquisitionPrice`)가 이미 §163⑨ 정합이므로 **엔진·API 무변경**. 상속 재개발 graceful override는 `inheritedAcquisition` 별도 값 채널이 있어 가능했으나 gift엔 그 채널이 없어 block이 정합(plan §Phase 2·3 환류 참조). 실제 구현: `transfer-tax-validate-gb.ts` gift 가드(환산·증축 차단+신고가액 필수)·`transfer-tax-validate-redev.ts` 원조합원 gift+환산 차단·`RedevelopmentDeemedAcquisitionNotice.tsx` 안내 카드. 아래 원안은 이력 보존용.
+
 - **Phase 2 GB**: 신규 엔진 필드 **없음**. `lib/calc/transfer-tax-validate-gb.ts:88` 가드 조건에 gift 포함:
   ```ts
   const usesDeemed = isLandInherited || isBuildingInherited
