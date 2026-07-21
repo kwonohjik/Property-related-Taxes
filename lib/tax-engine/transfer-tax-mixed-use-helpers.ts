@@ -134,6 +134,38 @@ export function apportionTransferPrice(
   };
 }
 
+/**
+ * 취득 실거래가 안분 (법 §100² — 매매 실가 모드 전용, R1).
+ *
+ * `apportionTransferPrice`(양도가액·양도시 기준시가)의 **취득시 미러** — 총 취득 실거래가를
+ * 취득시 기준시가 비율로 주택분/상가분에 안분. 법 §100²("취득 또는 양도 당시의 기준시가 등을
+ * 고려하여 안분")에 직접 근거. 오케스트레이터에서 useActualAcquisition=true일 때 1회 호출.
+ *
+ * ⚠️ 취득시 상가부수토지 면적은 `acqDerived.commercialLandArea`. house_to_commercial 등
+ *    용도변경 조합은 실가 모드 미지원(엔진 throw)이라 여기 도달하지 않음.
+ */
+export function apportionAcquisitionPrice(
+  totalAcqPrice: number,
+  asset: MixedUseAssetInput,
+  acqDerived: MixedUseDerivedAreas,
+): { housingRatio: number; housingAcqPrice: number; commercialAcqPrice: number } {
+  const housingStd = asset.acquisitionStandardPrice.housingPrice ?? 0;
+  const commercialLandStd = Math.floor(
+    asset.acquisitionStandardPrice.landPricePerSqm * acqDerived.commercialLandArea,
+  );
+  const commercialStd = commercialLandStd + asset.acquisitionStandardPrice.commercialBuildingPrice;
+  const totalStd = housingStd + commercialStd;
+  // totalStd<=0은 validation(취득시 기준시가 3필드 필수)에서 선차단되어 실경로 도달 불가 — 방어적 균등 0.5.
+  // (양도가액 apportionTransferPrice는 미러이나 이 극단 fallback만 0 반환으로 다름 — 도달 불가라 영향 없음.)
+  const housingRatio = totalStd > 0 ? housingStd / totalStd : 0.5;
+  const housingAcqPrice = Math.floor(totalAcqPrice * housingRatio);
+  return {
+    housingRatio,
+    housingAcqPrice,
+    commercialAcqPrice: totalAcqPrice - housingAcqPrice, // 잔액 흡수
+  };
+}
+
 // ──────────────────────────────────────────────────────────────
 // 3. 주택부분 환산취득가액 (STEP 3, §97 또는 §164⑦ PHD)
 //    취득시 기준시가 = 취득시 개별주택공시가격
@@ -175,7 +207,26 @@ export function calcHousingEstimatedAcq(
   derived: MixedUseDerivedAreas,
   transferDate: Date,
   acqDerived?: MixedUseDerivedAreas,
+  /** 매매 실가 모드(useActualAcquisition) 취득가액 주택분 — 오케스트레이터 apportionAcquisitionPrice 산출값. */
+  actualHousingAcqPrice?: number,
 ): HousingEstimatedAcqResult {
+  // ─── 매매 취득 실거래가 직접 사용 (법 §100²·§97①1호가목, R1) ───
+  // 환산·PHD 미적용. 취득 실거래가를 취득시 기준시가 비율로 안분한 주택분을 직접 사용(개산공제 배제).
+  // ⚠️ 미공시(PHD)·보유중용도변경·공익수용 조합은 미지원 — 안분 비율/시점 구조가 달라 별도 설계 필요.
+  if (asset.useActualAcquisition) {
+    if (asset.usePreHousingDisclosure || asset.partialUsageChange) {
+      throw new Error(
+        "겸용 취득 실거래가 + 미공시(PHD)·보유 중 용도변경 조합은 아직 지원하지 않습니다. 환산취득가 모드로 입력하세요.",
+      );
+    }
+    if (asset.transferCause === "public_expropriation") {
+      throw new Error(
+        "겸용 취득 실거래가 + 공익수용 특례 조합은 아직 지원하지 않습니다.",
+      );
+    }
+    return { estimatedAcq: actualHousingAcqPrice ?? 0 };
+  }
+
   // §164⑦ PHD 분기 — 겸용주택의 주택부수토지 면적을 토지면적으로 사용
   if (asset.usePreHousingDisclosure && asset.preHousingDisclosure) {
     // 사용자가 면적을 직접 지정한 경우(최초 공시 당시 전체 주택 등) 우선 사용
@@ -499,8 +550,8 @@ export function calcHousingGainSplit(
   const buildingAcqPrice = housingEstimatedAcq - landAcqPrice;
 
   // 개산공제 (환산취득가 사용 시, §163⑥) — 취득시 토지/건물 기준시가 × 3%.
-  // 상속·증여(실지거래가액 의제, 소령 §163⑨)은 개산공제 미적용 — 실제 필요경비만 건물분 슬롯에 반영.
-  const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift;
+  // 상속·증여(실지거래가액 의제, 소령 §163⑨)·매매실가(법 §100² 안분)는 개산공제 미적용 — 실제 필요경비만 건물분 슬롯에 반영.
+  const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition;
   const landAppraisalDed = usesDeemedAcq ? 0 : applyRate(acqLandStd, 0.03);
   const buildingAppraisalDed = usesDeemedAcq
     ? (asset.housingInheritedExpense ?? 0)

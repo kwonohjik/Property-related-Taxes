@@ -211,6 +211,22 @@ export interface MixedUseAssetInput {
    * undefined/false → 기존 환산 경로 완전 불변(A-regression).
    */
   acquisitionByGift?: boolean;
+
+  /**
+   * 겸용 매매 취득 실거래가 직접 사용 게이트(법 §97①1호가목·§100²).
+   * true면 `acquisitionActualTotalPrice`(총 취득 실거래가)를 법 §100② 취득시 기준시가 비율로
+   * 주택분/상가분·토지/건물에 안분해 취득가액으로 직접 사용(환산·§163⑥ 개산공제 배제).
+   * API에서 `acquisitionCause === "purchase" && !환산 && !감정 && !매매사례`로 파생.
+   * acquisitionByInheritance·acquisitionByGift와 **상호배타**(취득원인 단일).
+   * undefined/false → 기존 환산 경로 완전 불변(A-regression).
+   * ⚠️ 미공시(PHD)·보유중용도변경·공익수용 조합은 미지원(엔진 throw).
+   */
+  useActualAcquisition?: boolean;
+  /**
+   * 겸용 총 취득 실거래가(원) — useActualAcquisition=true일 때만 소비.
+   * 법 §100② 취득시 기준시가 비율로 주택분/상가분 안분 후 각 토지/건물 안분.
+   */
+  acquisitionActualTotalPrice?: number;
 }
 
 // ──────────────────────────────────────────
@@ -421,7 +437,8 @@ export interface MixedUseCalculationRoute {
     | "inheritance_direct"      // 상속·공시(§163⑨ 본문)
     | "inheritance_phd_max"     // 상속·미공시(§163⑨2호 max)
     | "gift_direct"             // 증여·공시(§163⑨ 본문, 상속과 동일)
-    | "gift_phd_max";           // 증여·미공시(§163⑨2호/§176의2②2호 max)
+    | "gift_phd_max"            // 증여·미공시(§163⑨2호/§176의2②2호 max)
+    | "section97_actual";       // 매매 취득 실거래가 직접 안분(법 §100²·§97①1호가목)
   /** 주택 장기보유공제 표 분기 사유 */
   housingDeductionTableReason: string;
   /** 부수토지 배율 적용 근거 (지역 + 배율값) */

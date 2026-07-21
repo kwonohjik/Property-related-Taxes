@@ -487,9 +487,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 hint={
                   isMixedExtension
                     ? "엔진이 양도시 기준시가 비율로 토지·건물1에 자동 안분합니다. 일괄 금액 그대로 입력하세요."
-                    : props.isAppraisalAcquisition
-                      ? "공인감정기관의 감정가액. 소득세법 시행령 §163⑥에 따라 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
-                      : undefined
+                    : isMixedUse && !props.isAppraisalAcquisition
+                      ? "겸용주택 취득 실거래가(계약서상): 법 §100②에 따라 취득시 기준시가 비율로 주택분·상가분, 각 토지·건물에 자동 안분합니다. (위 “겸용주택 분리계산”의 취득시 기준시가가 안분 비율로 사용됩니다.)"
+                      : props.isAppraisalAcquisition
+                        ? "공인감정기관의 감정가액. 소득세법 시행령 §163⑥에 따라 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
+                        : undefined
                 }
               />
               {/* 사례 33 일괄 모드: 토지+건물1 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 §97① 가목)
