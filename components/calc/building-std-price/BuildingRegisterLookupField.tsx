@@ -28,6 +28,8 @@ interface Props {
   taxType: BuildingStdPriceTaxType;
   /** 3모드 가드(복합구조·기계식주차·공동주택환산) — 부모가 계산해 주입 */
   disabled: boolean;
+  /** 집합건물(공동주택) 여부 — true면 동 전체 연면적(totArea)으로 floorArea 덮어쓰기 제외(전유면적 유지) */
+  isCollectiveUnit?: boolean;
   /** 다필드 patch — setF 직접 주입 */
   onAutoFill: (patch: Partial<BuildingStdPriceFormState>) => void;
 }
@@ -37,6 +39,7 @@ export function BuildingRegisterLookupField({
   year,
   taxType,
   disabled,
+  isCollectiveUnit,
   onAutoFill,
 }: Props) {
   const [isLookingUp, setIsLookingUp] = useState(false);
@@ -46,7 +49,9 @@ export function BuildingRegisterLookupField({
     null,
   );
 
-  const canLookup = !!pnu && !!year && !disabled;
+  // 표제부(구조·연면적·신축연도·층수)는 시점 무관 → pnu만으로 조회 가능.
+  //   year는 구조·용도의 연도별 지수표 매핑에만 필요(있으면 함께 채움, 없으면 나머지만).
+  const canLookup = !!pnu && !disabled;
 
   async function handleLookup() {
     if (!canLookup) return;
@@ -71,17 +76,20 @@ export function BuildingRegisterLookupField({
       const yearNum = parseInt(year, 10);
 
       const patch: Partial<BuildingStdPriceFormState> = {};
-      // 공통(시점 무관) — 항상 채움
-      if (d.floorArea !== null) patch.floorArea = String(d.floorArea);
+      const hasYear = !Number.isNaN(yearNum);
+      // 연면적(시점 무관) — 단, 집합건물은 동 전체 totArea이므로 세대 전유면적을 덮어쓰지 않음
+      if (!isCollectiveUnit && d.floorArea !== null) patch.floorArea = String(d.floorArea);
       if (d.builtYear !== null) patch.builtYear = String(d.builtYear);
       if (d.floorsAbove !== null) patch.floorsAbove = String(d.floorsAbove);
       if (d.floorsBelow !== null) patch.floorsBelow = String(d.floorsBelow);
 
-      // 시점 옵션셋 검증 후 set(미존재 = 미채움)
+      // 구조·용도는 연도별 지수표 매핑 — year 있을 때만 옵션셋 검증 후 set(미존재·연도없음 = 미채움)
       const structOk =
+        hasYear &&
         !!d.structureKey &&
         listStructureOptions(yearNum).some((o) => o.key === d.structureKey);
       const usageOk =
+        hasYear &&
         d.usageNo !== null &&
         listUsageOptions(yearNum).some((o) => o.no === d.usageNo);
 
@@ -95,7 +103,7 @@ export function BuildingRegisterLookupField({
 
       onAutoFill(patch); // 무확인 덮어쓰기(명시 버튼 클릭 = 동의)
       setConfidence(d.confidence);
-      setSummary(buildSummary(d, yearNum, structOk, usageOk));
+      setSummary(buildSummary(d, yearNum, structOk, usageOk, !!isCollectiveUnit));
     } catch {
       setLookupError("네트워크 오류로 조회하지 못했습니다.");
     } finally {
@@ -120,7 +128,7 @@ export function BuildingRegisterLookupField({
       )}
       {pnu && !year && (
         <p className="mt-1 text-caption text-muted-foreground">
-          평가/양도 연도 입력 후 조회 가능합니다
+          평가/양도 연도 입력 시 구조·용도까지 자동 매핑됩니다
         </p>
       )}
       {pnu && year && disabled && (
@@ -150,28 +158,39 @@ function buildSummary(
   year: number,
   structOk: boolean,
   usageOk: boolean,
+  isCollectiveUnit: boolean,
 ): string {
   const parts: string[] = [];
-  // 구조
-  if (structOk && d.structureKey) {
-    const label = listStructureOptions(year).find(
-      (o) => o.key === d.structureKey,
-    )?.label;
-    parts.push(label ? `${label}` : "구조");
+  const hasYear = Number.isFinite(year) && year > 0;
+  if (!hasYear) {
+    // 연도 미입력 — 구조·용도 매핑 보류(시점 무관 필드만 채움)
+    parts.push("구조·용도는 연도 입력 후 자동 매핑");
   } else {
-    parts.push("구조 직접 선택");
+    // 구조
+    if (structOk && d.structureKey) {
+      const label = listStructureOptions(year).find(
+        (o) => o.key === d.structureKey,
+      )?.label;
+      parts.push(label ? `${label}` : "구조");
+    } else {
+      parts.push("구조 직접 선택");
+    }
+    // 용도
+    if (usageOk && d.usageNo !== null) {
+      const label = listUsageOptions(year).find((o) => o.no === d.usageNo)?.label;
+      parts.push(label ? `${label}` : "용도");
+    } else if (year < 2018) {
+      parts.push("용도는 2018년 이후 평가만 자동 — 직접 선택");
+    } else {
+      parts.push("용도 직접 선택");
+    }
   }
-  // 용도
-  if (usageOk && d.usageNo !== null) {
-    const label = listUsageOptions(year).find((o) => o.no === d.usageNo)?.label;
-    parts.push(label ? `${label}` : "용도");
-  } else if (year < 2018) {
-    parts.push("용도는 2018년 이후 평가만 자동 — 직접 선택");
-  } else {
-    parts.push("용도 직접 선택");
+  // 연면적 — 집합건물은 동 전체(totArea)라 미반영(세대 전유면적 유지 안내)
+  if (isCollectiveUnit) {
+    parts.push("연면적은 세대 전유면적 유지");
+  } else if (d.floorArea !== null) {
+    parts.push(`연면적 ${d.floorArea}㎡`);
   }
-  // 연면적·신축
-  if (d.floorArea !== null) parts.push(`연면적 ${d.floorArea}㎡`);
   if (d.builtYear !== null) parts.push(`${d.builtYear}년 신축`);
   return parts.join(" · ") + " 자동 입력됨";
 }

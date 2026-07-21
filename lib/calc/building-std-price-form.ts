@@ -24,6 +24,7 @@ import {
   PART_FEATURE_KEYS,
 } from "@/lib/tax-engine/data/building-standard-price";
 import type { NtsReportContext, NtsPointContext } from "@/lib/calc/nts-report-adapter";
+import type { AddressValue } from "@/components/ui/address-search";
 
 /** 다필지 부속토지 1필지(위치지수 가중평균용) — 폼 문자열 */
 export interface LandParcelForm {
@@ -129,6 +130,9 @@ export interface BuildingStdPriceFormState {
   latitude: string;
   /** PNU(19자리) — 건축물대장 자동조회 파라미터 소스(엔진 미전달, longitude/latitude 성격 동일) */
   pnu: string;
+  /** 집합건물(공동주택) 선택 동/호 — 세대 식별·집합건물 판정(엔진 미전달). 미선택 시 "" */
+  unitDong: string;
+  unitHo: string;
   // 양도
   acquisitionYear: string;
   transferYear: string;
@@ -207,6 +211,8 @@ export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   longitude: "",
   latitude: "",
   pnu: "",
+  unitDong: "",
+  unitHo: "",
   acquisitionYear: "",
   transferYear: "",
   acqStructureKey: "",
@@ -268,6 +274,30 @@ export function availableYears(isMechanical: boolean): number[] {
  */
 export function deriveYearFromEventDate(eventDate: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(eventDate) ? eventDate.slice(0, 4) : "";
+}
+
+/**
+ * AddressSearch onChange 값 → 폼 patch (소재지·동/호·전유면적).
+ * 집합건물(공동주택) 동/호 선택 시 이미 조회된 전유면적(exclusiveArea)을 건물 연면적(floorArea)에
+ * 자동 반영한다 — 상속·증여 카드(EstateBodyHelpers: exclusiveArea→areaSqm)와 동일 패턴.
+ * 전유면적이 없으면(일반건축물) floorArea는 건드리지 않는다(건축물대장 조회·수동 입력이 채움).
+ */
+export function buildAddressPatch(v: AddressValue): Partial<BuildingStdPriceFormState> {
+  const patch: Partial<BuildingStdPriceFormState> = {
+    addressRoad: v.road,
+    addressJibun: v.jibun,
+    buildingName: v.building,
+    addressDetail: v.detail,
+    longitude: v.lng,
+    latitude: v.lat,
+    pnu: v.pnu ?? "",
+    unitDong: v.dong ?? "",
+    unitHo: v.ho ?? "",
+  };
+  if (typeof v.exclusiveArea === "number" && v.exclusiveArea > 0) {
+    patch.floorArea = String(v.exclusiveArea);
+  }
+  return patch;
 }
 
 const intOrUndef = (s: string): number | undefined => {

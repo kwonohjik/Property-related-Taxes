@@ -33,6 +33,7 @@ import {
   validateBuildingStdPriceForm,
   buildNtsReportContext,
   computeValuationLandTotal,
+  buildAddressPatch,
 } from "@/lib/calc/building-std-price-form";
 import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
 import {
@@ -338,24 +339,14 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 pnu: f.pnu,
               } satisfies AddressValue
             }
-            onChange={(v) =>
-              setF((prev) => ({
-                ...prev,
-                addressRoad: v.road,
-                addressJibun: v.jibun,
-                buildingName: v.building,
-                addressDetail: v.detail,
-                longitude: v.lng,
-                latitude: v.lat,
-                pnu: v.pnu ?? "",
-              }))
-            }
+            onChange={(v) => setF((prev) => ({ ...prev, ...buildAddressPatch(v) }))}
           />
           <BuildingRegisterLookupField
             pnu={f.pnu}
             year={f.taxType === "transfer" ? f.transferYear : f.valuationYear}
             taxType={f.taxType}
             disabled={composite || isMech || apartmentConv}
+            isCollectiveUnit={!!f.unitDong || !!f.unitHo}
             onAutoFill={(patch) => setF((prev) => ({ ...prev, ...patch }))}
           />
         </div>
