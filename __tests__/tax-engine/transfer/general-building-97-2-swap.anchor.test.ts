@@ -158,6 +158,38 @@ describe("anchor A3 — 일반건물 증축(3카드) + §97②2호 swap (G3, cap
   });
 });
 
+// ── F4: §114의2 환산취득가액 가산세 × swap 상호작용 (법제처 원문 검증 2026-07-21) ──
+// §97②2호 단서(swap)는 "취득가액을 환산취득가액으로 하는 경우로서 ... 나목을 필요경비로 할 수 있다" →
+// 나목 채택이어도 "취득가액을 환산취득가액으로 하는 경우"에 해당. §114의2①의 발동 조건
+// ("제97조제1항제1호나목에 따른 환산취득가액을 그 취득가액으로 하는 경우")과 동일 →
+// **swap 발동 시에도 §114의2 가산세는 환산취득가액 base로 적용된다(현행 정합).**
+const NEW_BUILDING: GeneralBuildingInput = {
+  ...BASE,
+  buildingAcquisitionCause: "newConstruction", // 신축 → isSelfBuilt → §114의2 게이트
+  buildingAcquisitionDate: new Date("2020-06-01"), // 양도 2023 → 5년 이내
+};
+
+describe("anchor F4 — §114의2 환산취득가액 가산세는 swap(나목)에도 적용 (법령 정합)", () => {
+  it("신축 건물 + swap 발동해도 건물분 §114의2 가산세 = 환산취득가액 27,660,876 × 5% = 1,383,043", () => {
+    const r = calculateGeneralBuildingTransfer(
+      { ...NEW_BUILDING, capitalExpenditure: 800_000_000, transferExpense: 10_000_000 },
+      2023, 0, [], rates,
+    );
+    expect(r.aggregated.swapApplied).toBe(true);
+    const building = r.aggregated.properties.find((p) => p.propertyId === "building");
+    // ★ swap으로 acquisitionPrice=0이어도 penaltyBase는 환산취득가액(estimatedBase) 보존 → 가산세 유지.
+    expect(building?.penaltyBase).toBe(27_660_876);
+    expect(building?.penaltyTax).toBe(1_383_043);
+  });
+
+  it("비교 — 신축 건물 non-swap(capex 없음)도 동일 가산세 1,383,043 (swap 무관)", () => {
+    const r = calculateGeneralBuildingTransfer(NEW_BUILDING, 2023, 0, [], rates);
+    const building = r.aggregated.properties.find((p) => p.propertyId === "building");
+    expect(building?.penaltyTax).toBe(1_383_043);
+    expect(r.aggregated.swapApplied ?? false).toBe(false);
+  });
+});
+
 describe("anchor A4 — 일반건물 NBL 분할(3카드) + §97②2호 swap (G4)", () => {
   it("3 환산 카드(land_business·land_nbl·building) 전체 swap: gain = 1,200,000,000 − 1,026,233,347", () => {
     // estimatedSideTotal 516,233,347 < 나목 1,026,233,347 → swap, 나목 3카드 estimatedSide 비율 배분.

@@ -215,7 +215,7 @@ G2(전체환산)와 함께 Phase 2에서 일괄 구현. 안 A 자산총액 판�
 | capex 배분 왜곡(일반건물) | 안 A(자산총액 판정) 채택. 안 B 지양. |
 | 표시 드리프트 | swapApplied 시 결과뷰 취득가 항 제외 reconcile(`feedback_engine_result_display_drift`). UI 안내 문구(F2)도 환산 전용으로 정정. |
 | **transferExpense 이중 소비(F1)** | `bundledExpenses` legacy fallback(`api-gb.ts:191-194`)과 swap 나목 라우팅 충돌 — 소유 경계 확정 전 Phase 2 착수 금지. |
-| **penalty base 소실(F4)** | swap `acquisitionPrice=0`이 §114의2 가산세 base(estimatedBase)를 훼손하지 않도록 penalty 필드 불변 유지. |
+| **penalty base(F4) — ✅법제처 검증 완료(2026-07-21)** | swap `acquisitionPrice=0`이어도 estimatedBase 보존 → §114의2 가산세 유지가 **정답**. §97②2호 단서=「취득가액을 환산취득가액으로 하는 경우로서…나목을 필요경비로 할 수 있다」→ swap도 §114의2① 발동조건("환산취득가액을 그 취득가액으로 하는 경우") 충족. anchor F4 2케이스(신축+swap 시 건물분 1,383,043 유지) 고정. 코드 변경 불필요. |
 | **transferExpense 안분 불일치(F3)** | swap directSide가 raw 아닌 폼-안분 후 유효값 참조. |
 | **800줄 정책(F12, Fork3#3)** | `general-building-valuation.ts` **현재 787줄(실측)** — capex 필드 + 카드 배분 로직 추가 시 800 초과 확실. 카드 배분·자산총액 판정 헬퍼를 **별도 파일(`general-building-swap.ts` 등)로 선분리** 계획. `buildProperties` 증가분도 route-helper 크기 확인. |
 
