@@ -21,6 +21,13 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
   if (!isMixed) return undefined;
 
+  // 겸용 매매 실거래가 직접 안분 게이트 (법 §100², R1) — 필드·값 파생에 공용(중복 제거).
+  const isMixedActualAcquisition =
+    primary.acquisitionCause === "purchase" &&
+    !primary.useEstimatedAcquisition &&
+    !primary.isAppraisalAcquisition &&
+    !primary.isSalesCaseAcquisition;
+
   // 거주 개월 단일 소스 — 실거주(공제율)와 §154⑧3호 통산(표2 대상 판정) 둘 다 여기서 도출.
   const resMonths = deriveResidencePeriodMonths(
     primary,
@@ -206,6 +213,12 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       (primary.acquisitionCause === "gift"
         ? parseAmount(primary.mixedCommercialGiftExpense)
         : parseAmount(primary.mixedCommercialInheritedExpense)) || undefined,
+    // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매 + 실거래가 모드.
+    // 상속·증여(byInheritance/byGift)와 상호배타(취득원인 purchase라 자동 배타). 환산/감정/매매사례 모드는 제외.
+    useActualAcquisition: isMixedActualAcquisition,
+    acquisitionActualTotalPrice: isMixedActualAcquisition
+      ? parseAmount(primary.fixedAcquisitionPrice) || undefined
+      : undefined,
     // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
     partialUsageChange:
       primary.hasPartialUsageChange && primary.partialChangeDirection

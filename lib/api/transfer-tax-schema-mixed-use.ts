@@ -85,6 +85,9 @@ export const mixedUseAssetSchema = z.object({
   commercialInheritedValue: z.number().int().positive().optional(),
   housingInheritedExpense: z.number().int().nonnegative().optional(),
   commercialInheritedExpense: z.number().int().nonnegative().optional(),
+  // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매. 침묵 strip 방지(⑫).
+  useActualAcquisition: z.boolean().optional(),
+  acquisitionActualTotalPrice: z.number().int().positive().optional(),
 }).superRefine((v, ctx) => {
   const total = v.residentialFloorArea + v.nonResidentialFloorArea;
   if (total <= 0) {

@@ -125,8 +125,10 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   const acqRoute = breakdown.calculationRoute.acquisitionConversionRoute;
   const isInheritedAcq = acqRoute === "inheritance_direct" || acqRoute === "inheritance_phd_max";
   const isGiftAcq = acqRoute === "gift_direct" || acqRoute === "gift_phd_max";
-  // §163⑨ 직접평가(상속·증여) — 산식 분기(개산공제 미표시·실비)는 공통, 라벨만 취득원인별 구분.
-  const isDeemedAcq = isInheritedAcq || isGiftAcq;
+  // 매매 취득 실거래가 직접 안분(법 §100²·§97①1호가목) — 실가 산식(개산공제 미표시), 라벨 구분.
+  const isActualAcq = acqRoute === "section97_actual";
+  // 실지거래가액 기반(상속·증여 §163⑨ 의제 / 매매 §100² 실가) — 산식 분기(개산공제 미표시·실비)는 공통, 라벨만 구분.
+  const isDeemedAcq = isInheritedAcq || isGiftAcq || isActualAcq;
 
   // 실제 렌더되는 섹션만 전체 토글 대상 (nbl은 nb 있을 때만).
   const renderedSectionIds = MIXED_SECTION_IDS.filter((id) => id !== "nbl" || !!nb);
@@ -289,7 +291,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         onToggle={() => toggleSection("housing")}
       >
         <Row
-          label={isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : "주택 환산취득가액"}
+          label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : "주택 환산취득가액"}
           value={fmt(h.estimatedAcquisitionPrice)}
           formula={(() => {
             if (isDeemedAcq && h.inheritedAcquisitionDetail) {
@@ -419,7 +421,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={`상가건물 기준시가 ${fmtPlain(c.acqStandardBuilding)} + 상가부수토지 기준시가 ${fmtPlain(c.acqStandardLand)} (= 개별공시지가 × 상가부수토지 면적, 자동)`}
         />
         <Row
-          label={isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : "상가 환산취득가액"}
+          label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : "상가 환산취득가액"}
           value={fmt(c.estimatedAcquisitionPrice)}
           formula={(() => {
             if (isDeemedAcq && c.inheritedAcquisitionDetail) {

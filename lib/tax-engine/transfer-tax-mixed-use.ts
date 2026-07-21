@@ -23,6 +23,7 @@ import {
   computeDerivedAreas,
   computeAcqDerivedAreas,
   apportionTransferPrice,
+  apportionAcquisitionPrice,
   calcHousingEstimatedAcq,
   calcHousingGainSplit,
   calcCommercialGainSplit,
@@ -86,7 +87,13 @@ export function calcMixedUseTransferTax(
   const apportionment = apportionTransferPrice(transferPrice, asset, derived);
   steps.push(buildApportionmentStep(apportionment));
 
-  // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑤ PHD)
+  // STEP 2.5: 매매 취득 실거래가 안분 (법 §100², R1) — useActualAcquisition일 때만.
+  // 총 취득 실거래가를 취득시 기준시가 비율로 주택분/상가분에 안분(양도가액 안분의 취득시 미러).
+  const acqApportionment = asset.useActualAcquisition
+    ? apportionAcquisitionPrice(asset.acquisitionActualTotalPrice ?? 0, asset, acqDerived)
+    : undefined;
+
+  // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑤ PHD, 또는 실가 안분분)
   // PHD + 보유 중 용도변경 케이스에서 시점별 면적 분리를 위해 acqDerived도 전달
   const housingAcqResult = calcHousingEstimatedAcq(
     apportionment.housingTransferPrice,
@@ -94,6 +101,7 @@ export function calcMixedUseTransferTax(
     derived,
     transferDate,
     acqDerived,
+    acqApportionment?.housingAcqPrice,
   );
 
   // STEP 4: 주택 양도차익 (토지/건물 분리)
@@ -118,6 +126,7 @@ export function calcMixedUseTransferTax(
     transferDate,
     acqDerived,
     housingAcqResult,
+    acqApportionment?.commercialAcqPrice,
   );
 
   // ─── 용도변경일 기반 LTHD 시간 비례 분할 (집행기준 89-154-24 취지) ───
@@ -283,18 +292,21 @@ function buildCalculationRoute(
         ? ("direct_input" as const)
         : ("missing" as const);
 
-  // 상속·증여 취득(소령 §163⑨) — 공시 여부(PHD)에 따라 본문/2호 경로로 세분.
-  const acquisitionConversionRoute = asset.acquisitionByInheritance
-    ? asset.usePreHousingDisclosure
-      ? ("inheritance_phd_max" as const)
-      : ("inheritance_direct" as const)
-    : asset.acquisitionByGift
+  // 취득가액 산정 경로 — 상속·증여(§163⑨)·매매실가(§100²)·환산(§176의2) 분기.
+  // 매매실가(useActualAcquisition)는 PHD 미적용(실가 모드는 위 엔진에서 PHD 조합 throw)이라 단일 값.
+  const acquisitionConversionRoute = asset.useActualAcquisition
+    ? ("section97_actual" as const)
+    : asset.acquisitionByInheritance
       ? asset.usePreHousingDisclosure
-        ? ("gift_phd_max" as const)
-        : ("gift_direct" as const)
-      : asset.usePreHousingDisclosure
-        ? ("phd_corrected" as const)
-        : ("section97_direct" as const);
+        ? ("inheritance_phd_max" as const)
+        : ("inheritance_direct" as const)
+      : asset.acquisitionByGift
+        ? asset.usePreHousingDisclosure
+          ? ("gift_phd_max" as const)
+          : ("gift_direct" as const)
+        : asset.usePreHousingDisclosure
+          ? ("phd_corrected" as const)
+          : ("section97_direct" as const);
 
   // 표2 게이트는 통산 거주(§154⑧3호) — 사유 서술도 게이트 값으로(통산 케이스에서 "실거주 0년 ≥2년" 모순 방지).
   const housingDeductionTableReason =
