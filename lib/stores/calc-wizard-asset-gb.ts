@@ -234,6 +234,12 @@ export interface GeneralBuildingFormSlice {
   /** 증여(실가) 모드 상가분 실제 필요경비 (원, 문자열). */
   mixedCommercialGiftExpense: string;
 
+  // ── 매매 취득 실거래가 겸용주택 — 법 §100² 안분 (R1 후속·상속/증여 실비 필드와 병렬·purchase 실가 모드만 UI 노출) ──
+  /** 매매(실가) 모드 주택분 실제 필요경비 — 자본적지출·양도비 (원, 문자열). 선택 입력(개산공제 대체). */
+  mixedHousingActualExpense: string;
+  /** 매매(실가) 모드 상가분 실제 필요경비 (원, 문자열). 선택 입력. */
+  mixedCommercialActualExpense: string;
+
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
   /** 보유 중 일부 용도변경 토글 — 양도시 겸용이지만 취득시 단일 용도였던 경우 */
   hasPartialUsageChange: boolean;
