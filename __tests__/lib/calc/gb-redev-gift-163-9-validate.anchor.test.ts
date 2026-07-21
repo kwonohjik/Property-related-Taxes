@@ -120,10 +120,9 @@ describe("재개발 증여 §163⑨ validation 가드 (원조합원)", () => {
     expect(RD(redevAsset({ acquisitionCause: "purchase" }))).toBe("");
   });
 
-  it("M-1: land+right+gift+환산 → friendly block 안전판(계획 #1(B) — 구 '가드 skip'을 정정)", () => {
-    // land 출자 + 입주권 양도 + 증여 + 환산: §163⑨상 신고가액이 취득가액이나 실가 경로 미구현(:95 후속PR)이라
-    // 환산(§166③)으로 진행하면 신고가액 무시 silent 오세액. 구 동작은 §163⑨ 가드를 skip(환산 강제)했으나,
-    // #1(B)가 "미지원·별도 확인" friendly block으로 정정(잘못된 세액 미산출). "실가 전환" 지시는 하지 않아 deadlock 없음.
+  it("M-1: land+right+gift+환산+**pay** → §163⑨ 실가 전환 (#1(A)로 실가 pay 지원)", () => {
+    // #1(A): land+right+실가+pay가 computeRightPay(§166①1호)로 신고가액 정확 산출 → 실가 pay 지원.
+    // 따라서 gift+환산+pay는 "실가로 전환, 신고가액 입력"(§163⑨)이 유효(deadlock 없음). (receive는 미지원 → 별도 안내)
     const msg = RD(
       redevAsset({
         redevOriginalAssetType: "land",
@@ -132,8 +131,8 @@ describe("재개발 증여 §163⑨ validation 가드 (원조합원)", () => {
         useEstimatedAcquisition: true,
       }),
     );
-    expect(msg).toContain("토지 출자 + 입주권 양도 + 증여취득 조합은 현재 지원하지");
-    expect(msg).not.toContain("환산취득가 토글을 ON"); // 실가 전환 지시 없음(deadlock 방지)
+    expect(msg).toContain("§163⑨");
+    expect(msg).toContain("증여 신고가액을 입력"); // 실가 전환 유도(실가 pay 지원)
   });
 
   it("R(회귀): 승계조합원 gift+환산 → 승계 전용 차단 불변(§163⑨ 아님)", () => {
