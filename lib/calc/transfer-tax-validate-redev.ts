@@ -59,6 +59,19 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     return `${label}: 증여 취득 종전자산은 환산취득가를 지원하지 않습니다. 증여일 평가액(증여세 신고가액)이 취득가액이므로 "환산취득가 사용" 토글을 OFF로 전환하고 종전자산 취득가액에 증여 신고가액을 입력하세요. (소득세법 시행령 §163⑨)`;
   }
 
+  // land + right(입주권) + 증여 + 환산 안전판(계획 #1(B)): §163⑨상 신고가액이 취득가액이나
+  // 이 조합의 실가 경로가 미구현(아래 :95 "후속 PR")이라, 환산(§166③)으로 진행하면 신고가액이 무시된
+  // silent 오세액이 된다. 실가 전환 안내는 실가도 미지원이라 deadlock → "미지원·별도 확인" 안내로 차단.
+  // 잘못된 세액을 산출하지 않는 것이 목표(실가 기능은 계획 #1(A) 후속). pre-1985·승계조합원 제외(상단 게이트 동일).
+  if (
+    isGift163_9 &&
+    asset.redevIsSuccessorMember !== "yes" &&
+    asset.useEstimatedAcquisition &&
+    isLandRightCombo
+  ) {
+    return `${label}: 토지 출자 + 입주권 양도 + 증여취득 조합은 현재 지원하지 않습니다. 증여일 평가액(증여세 신고가액)이 취득가액이나 이 조합의 실가 산정은 후속 지원 예정이라 정확한 세액은 별도 확인이 필요합니다. (소득세법 시행령 §163⑨ · §166③)`;
+  }
+
   // ── subject="right" 전용 검증 (사례 36) ──
   // 형식 가드 A: 객관적·입력 유효성 — 미충족 시 다음 단계 진입 차단.
   if (subject === "right") {
