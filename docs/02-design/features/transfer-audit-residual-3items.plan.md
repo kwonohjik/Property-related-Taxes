@@ -35,7 +35,9 @@
 
 ---
 
-## #2 — 겸용 nonBiz 중과 10%p 기본공제 前 income 적용 (Medium·과다 위험)
+## #2 — 겸용 nonBiz 중과 10%p 기본공제 前 income 적용 (①✅완료 PR예정 · ②잔여)
+
+> **① 기본공제 배분 = ✅완료**: 정본 미확보 대신 **사용자 지시로 방법 확정** — "양도소득기본공제를 세율이 가장 높은 부분(비사업용 +10%p)에 전액 귀속"(납세자 유리 원칙). 중과 base = `max(0, nonBizIncome − 적용공제)`, 적용공제 = `aggregateIncome − taxBase`. buildTotalTax 수정·anchor 4·기존 PDF 갑氏 스냅샷 anchor −25만 갱신(회귀 방어용·PDF 정본 아님). **② §104후단 단기세율 비교는 미구현(잔여·도달성 낮음)**.
 
 ### 현황 (실측)
 - **겸용(mixed)**: `transfer-tax-mixed-use-totals.ts:56` `nonBusinessSurcharge = applyRate(nonBizIncome, 0.10)` — `nonBizIncome`은 **기본공제 차감 前 양도소득금액**(`aggregateIncome = housing+commercial+nonBiz`, `taxBase = max(0, aggregate − 250만)`은 별도).
