@@ -114,7 +114,7 @@ export function DetailRow({
   muted = false,
   deduction = false,
 }: {
-  label: string;
+  label: React.ReactNode;
   value: string;
   indent?: boolean;
   muted?: boolean;

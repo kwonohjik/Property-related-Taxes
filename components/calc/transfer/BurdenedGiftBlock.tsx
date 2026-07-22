@@ -309,7 +309,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
         </div>
         <FieldCard
           label="건물기준시가(상속 증여시)"
-          hint="국세청 홈택스 → 건물기준시가(상속 증여시). 미입력 시 양도세용 양도시 건물기준시가 값을 그대로 사용."
+          hint="미입력 시 양도세용 양도시 건물기준시가 값을 그대로 사용."
         >
           <CurrencyInput
             label=""

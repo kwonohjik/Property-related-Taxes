@@ -11,6 +11,7 @@
  */
 
 import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   acquisitionValue: number;
@@ -127,10 +128,20 @@ export function LinearInterpolationGraph({ acquisitionValue, appliedRate }: Prop
 
       {/* 산식 풀이 */}
       <div className="text-caption text-muted-foreground space-y-0.5 font-mono bg-muted/30 rounded p-2">
-        <p>세율 = (취득가액 × 2 ÷ 3억 − 3) ÷ 100</p>
         <p>
-          = ({numeratorStr} − 3) ÷ 100
-          {" "}= {bracketStr} ÷ 100
+          세율 ={" "}
+          <Frac
+            top={
+              <>
+                <Frac top="취득가액 × 2" bottom="3억" /> − 3
+              </>
+            }
+            bottom="100"
+          />
+        </p>
+        <p>
+          = <Frac top={`${numeratorStr} − 3`} bottom="100" /> ={" "}
+          <Frac top={bracketStr} bottom="100" />
         </p>
         <p className="font-semibold text-foreground">
           = {ratePercent}% (소수점 5자리)

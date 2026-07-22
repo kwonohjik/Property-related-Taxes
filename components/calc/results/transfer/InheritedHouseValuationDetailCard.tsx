@@ -7,6 +7,7 @@
  */
 
 import type { InheritanceHouseValuationResult } from "@/lib/tax-engine/types/inheritance-house-valuation.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: InheritanceHouseValuationResult;
@@ -110,7 +111,7 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
           <p className="text-caption text-muted-foreground">
             취득당시 개별주택가격 = 최초공시 개별주택가격{" "}
             <span className="font-mono text-foreground">{formatN(housePriceAtFirstDisclosure)}</span>
-            {" "}× ({formatN(sumAtInheritance)} ÷ {formatN(sumAtFirstDisclosure)}) ={" "}
+            {" "}× <Frac top={formatN(sumAtInheritance)} bottom={formatN(sumAtFirstDisclosure)} /> ={" "}
             <span className="font-mono text-foreground font-semibold">{formatN(housePriceAtInheritanceUsed)}</span>
           </p>
         </div>
@@ -119,11 +120,21 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
       {/* (B) 환산취득가 산식 요약 — 개별주택가격 비율(취득 ÷ 양도, 부수토지 포함) */}
       <div className="rounded bg-white/70 dark:bg-white/5 border border-sky-100 dark:border-sky-800/30 p-2.5 text-xs space-y-1">
         <p className="text-muted-foreground">
-          환산취득가액 = 양도가액 × (취득당시 개별주택가격{" "}
-          <span className="font-mono text-foreground">{formatN(housePriceAtInheritanceUsed)}</span>
-          {" "}÷ 양도당시 개별주택가격{" "}
-          <span className="font-mono text-foreground">{formatN(housePriceAtTransfer)}</span>
-          )
+          환산취득가액 = 양도가액 ×{" "}
+          <Frac
+            top={
+              <>
+                취득당시 개별주택가격{" "}
+                <span className="font-mono text-foreground">{formatN(housePriceAtInheritanceUsed)}</span>
+              </>
+            }
+            bottom={
+              <>
+                양도당시 개별주택가격{" "}
+                <span className="font-mono text-foreground">{formatN(housePriceAtTransfer)}</span>
+              </>
+            }
+          />
         </p>
       </div>
 

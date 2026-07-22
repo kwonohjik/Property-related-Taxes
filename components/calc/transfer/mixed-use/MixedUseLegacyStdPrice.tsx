@@ -186,7 +186,7 @@ export function MixedUseLegacyStdPrice({
               hint={
                 asset.partialChangeDirection === "house_to_commercial"
                   ? "취득 당시 동일 건물의 국세청 고시 기준시가 — 직접 조회·입력 (필수)"
-                  : "토지 제외 — 국세청 홈택스 > 기준시가 조회 (필수)"
+                  : "토지 제외 (필수)"
               }
             >
               <CurrencyInput
@@ -316,7 +316,7 @@ export function MixedUseLegacyStdPrice({
           <>
             <FieldCard
               label="상가건물 기준시가"
-              hint="토지 제외 — 국세청 홈택스 > 기준시가 조회 (개별주택가격확인서에 미포함)"
+              hint="토지 제외 (개별주택가격확인서에 미포함)"
             >
               <CurrencyInput
                 label=""

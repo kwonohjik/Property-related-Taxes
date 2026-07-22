@@ -14,6 +14,7 @@
  */
 
 import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: RentalHousingExceptionResult;
@@ -132,8 +133,11 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs space-y-1.5">
             <p className="text-muted-foreground">
-              안분 비율 = (직전 거주주택 양도 당시 기준시가 − 취득 당시 기준시가)
-              ÷ (현 양도 당시 기준시가 − 취득 당시 기준시가)
+              안분 비율 ={" "}
+              <Frac
+                top="직전 거주주택 양도 당시 기준시가 − 취득 당시 기준시가"
+                bottom="현 양도 당시 기준시가 − 취득 당시 기준시가"
+              />
             </p>
             <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
               = {(formulaTrace.ratio161_1 * 100).toFixed(4)}%
@@ -190,7 +194,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs text-muted-foreground">
             <p>
-              과세 비율 = (양도가액 − 12억원) ÷ 양도가액
+              과세 비율 = <Frac top="양도가액 − 12억원" bottom="양도가액" />
               {" "}= <span className="font-mono text-foreground font-semibold">
                 {(formulaTrace.ratioHighValue * 100).toFixed(4)}%
               </span>

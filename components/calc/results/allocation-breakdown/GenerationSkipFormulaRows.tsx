@@ -12,6 +12,7 @@ import { Fragment } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { InheritanceGenerationSkipDetail } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { DetailRow } from "../deduction-breakdown/shared";
+import { Frac } from "../shared/FormulaParts";
 
 // 관계 라벨 fallback — 내부 id 노출 금지 (feedback_no_internal_id_in_result)
 const LEGATEE_LABEL = "수유자";
@@ -28,9 +29,14 @@ export function GenerationSkipFormulaRows({
       {/* §27 공통 산식 설명 — prorationActive 분기 */}
       <div className="px-3 py-2 text-caption text-rose-700/80 dark:text-rose-300/80 bg-rose-50/60 dark:bg-rose-950/20 border-b border-border">
         <span className="font-semibold">§27 산식 </span>
-        {detail.prorationActive
-          ? "할증 = 산출세액 × (유증·상속분 + §13 내 사전증여) ÷ 과세가액 × 할증율(30% / 미성년+20억초과 40%)"
-          : "할증 = 산출세액 × 할증율(30% / 미성년+20억초과 40%) — 전부 할증 경로"}
+        {detail.prorationActive ? (
+          <>
+            할증 = 산출세액 × <Frac top="유증·상속분 + §13 내 사전증여" bottom="과세가액" /> ×
+            할증율(30% / 미성년+20억초과 40%)
+          </>
+        ) : (
+          "할증 = 산출세액 × 할증율(30% / 미성년+20억초과 40%) — 전부 할증 경로"
+        )}
       </div>
 
       <div className="divide-y divide-border">
@@ -70,7 +76,12 @@ export function GenerationSkipFormulaRows({
               {detail.prorationActive ? (
                 /* 안분 경로: numerator ÷ denominator 적용 */
                 <DetailRow
-                  label={`= 산출세액 ${formatKRW(detail.computedTax)} × (${formatKRW(row.numerator)} ÷ ${formatKRW(detail.denominator)}) × ${ratePct}%`}
+                  label={
+                    <>
+                      = 산출세액 {formatKRW(detail.computedTax)} ×{" "}
+                      <Frac top={formatKRW(row.numerator)} bottom={formatKRW(detail.denominator)} /> × {ratePct}%
+                    </>
+                  }
                   value=""
                   indent
                   muted

@@ -18,6 +18,7 @@ import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { getHousingStandardRateBracket } from "@/lib/tax-engine/property-tax";
 import { won, eok, pct, StepLine, Bullet, GaNaDaLine } from "./payable-calc-helpers";
 import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
+import { Frac } from "../shared/FormulaParts";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 
 export function HousingPayableTaxCalcCard({
@@ -411,7 +412,8 @@ function Step3({
       </Bullet>
       {ap && (
         <Bullet>
-          1세대1주택자 안분 (§9⑦⑨) : {won(ap.mainHouseAssessedValue)} ÷ {won(ap.totalAssessedValue)}
+          1세대1주택자 안분 (§9⑦⑨) :{" "}
+          <Frac top={won(ap.mainHouseAssessedValue)} bottom={won(ap.totalAssessedValue)} />
         </Bullet>
       )}
     </div>

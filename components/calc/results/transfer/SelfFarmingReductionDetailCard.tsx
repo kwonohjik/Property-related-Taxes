@@ -7,6 +7,7 @@
  */
 
 import type { SelfFarmingReductionResult } from "@/lib/tax-engine/self-farming-reduction";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: SelfFarmingReductionResult;
@@ -93,7 +94,11 @@ export function SelfFarmingReductionDetailCard({ detail }: Props) {
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs space-y-1">
             <p className="text-muted-foreground">
-              감면비율 = (편입일 당시 기준시가 − 취득 당시 기준시가) ÷ (양도 당시 기준시가 − 취득 당시 기준시가)
+              감면비율 ={" "}
+              <Frac
+                top="편입일 당시 기준시가 − 취득 당시 기준시가"
+                bottom="양도 당시 기준시가 − 취득 당시 기준시가"
+              />
             </p>
             <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
               = {(reducibleRatio * 100).toFixed(4)}%

@@ -334,7 +334,7 @@ export function MixedUseAssetMajorStdPrice({
         <p className="text-xs font-medium text-slate-600">
           상가건물 기준시가{" "}
           <span className="text-micro font-normal text-slate-500">
-            (토지 제외 — 국세청 홈택스 &gt; 기준시가 조회)
+            (토지 제외)
           </span>
         </p>
         <div className="grid grid-cols-2 gap-2">

@@ -34,6 +34,8 @@ import {
   ResultSection,
   Row,
   DivRow,
+  Frac,
+  FLine,
   PartialUsageChangeCard,
   UsagePeriodSplitCard,
 } from "@/components/calc/results/mixed-use/MixedUseResultCardParts";
@@ -300,7 +302,12 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         <Row
           label={`주택비율`}
           value={fmtPct(a.housingRatio)}
-          formula={`${fmtPlain(a.housingStandardPrice)} ÷ (${fmtPlain(a.housingStandardPrice)} + ${fmtPlain(a.commercialStandardPrice)})`}
+          formula={
+            <Frac
+              top={`주택부분 기준시가 ${fmtPlain(a.housingStandardPrice)}`}
+              bottom={`주택부분 ${fmtPlain(a.housingStandardPrice)} + 상가부분 ${fmtPlain(a.commercialStandardPrice)}`}
+            />
+          }
         />
         <Row
           label="주택 양도가액"
@@ -342,21 +349,59 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
               return `감정가액·매매사례가액 총액을 법 §100²에 따라 취득시 기준시가 비율로 주택분에 안분 (§176의2②③ 추계)`;
             }
             if (!h.phdEstimatedAcqHousingPrice) {
-              return `§97: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (취득시 개별주택공시가격 ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
+              return (
+                <FLine>
+                  §97: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
+                  <Frac
+                    top="취득시 개별주택공시가격"
+                    bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}
+                  />
+                </FLine>
+              );
             }
             const ph = h.phdResult?.inputs;
             const fp = h.phdResult?.fourPartApportionment;
-            // Case A 4부분 모드 — 주택부분 환산취득가 = 토지분(D11) + 건물분(E11)
+            // Case A 4부분 모드 — 주택부분 환산취득가 = 주택토지분 + 주택건물분 (엔진 내부 D11+E11)
             if (fp) {
-              return `Case A 4부분 안분 — 주택부분 = 토지분(D11) ${fmtPlain(Math.floor(fp.housingLandAcqPrice))} + 건물분(E11) ${fmtPlain(Math.floor(fp.housingBuildingAcqPrice))} | 전체 환산취득가 ${fmtPlain(fp.totalEstAcq)} × (취득시 4부분 주택분 비율 ${fmtPlain(fp.housingLandAcqShare + fp.housingBuildingAcqShare)} ÷ 역산 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)})`;
+              return (
+                <>
+                  <FLine>
+                    Case A 4부분 안분 — 주택부분 = 주택토지분 {fmtPlain(Math.floor(fp.housingLandAcqPrice))} +
+                    주택건물분 {fmtPlain(Math.floor(fp.housingBuildingAcqPrice))}
+                  </FLine>
+                  <FLine>
+                    산출근거: 전체 환산취득가 {fmtPlain(fp.totalEstAcq)} ×{" "}
+                    <Frac
+                      top={`취득시 주택분 기준시가 ${fmtPlain(fp.housingLandAcqShare + fp.housingBuildingAcqShare)}`}
+                      bottom={`역산 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)}`}
+                    />
+                  </FLine>
+                </>
+              );
             }
             const isAreaSplit =
               !!ph &&
               (ph.landAreaAtAcquisition !== ph.landAreaAtTransfer ||
                 ph.landAreaAtFirstDisclosure !== ph.landAreaAtTransfer);
-            const base = `시행령 §164⑤ 역산 환산: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (역산한 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)} ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
+            const base = (
+              <FLine>
+                시행령 §164⑤ 역산 환산: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
+                <Frac
+                  top={`역산한 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)}`}
+                  bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}
+                />
+              </FLine>
+            );
             if (!isAreaSplit || !ph) return base;
-            return `${base} | 시점별 토지면적: 취득시 ${ph.landAreaAtAcquisition.toFixed(2)}㎡ · 최초공시 ${ph.landAreaAtFirstDisclosure.toFixed(2)}㎡ · 양도시 ${ph.landAreaAtTransfer.toFixed(2)}㎡`;
+            return (
+              <>
+                {base}
+                <FLine>
+                  시점별 토지면적: 취득시 {ph.landAreaAtAcquisition.toFixed(2)}㎡ · 최초공시{" "}
+                  {ph.landAreaAtFirstDisclosure.toFixed(2)}㎡ · 양도시 {ph.landAreaAtTransfer.toFixed(2)}㎡
+                </FLine>
+              </>
+            );
           })()}
         />
         {h.phdResult && h.phdEstimatedAcqHousingPrice && (() => {
@@ -364,9 +409,42 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           const ph = r.inputs;
           const fp = r.fourPartApportionment;
           // Case A 4부분 안분 활성 시 — 4부분(주택분토지·주택건물·상가분토지·상가건물) 합산 표시
-          const formula = fp
-            ? `최초공시 개별주택가격 ${fmtPlain(ph.firstDisclosureHousingPrice)} × 취득시 합산기준시가(4부분) ${fmtPlain(r.sumAtAcquisition)} ÷ 최초공시 합산기준시가(4부분) ${fmtPlain(r.sumAtFirstDisclosure)} | 취득시: 주택분토지 ${fmtPlain(fp.housingLandStdAtAcq)} + 주택건물 ${fmtPlain(fp.housingBuildingStdAtAcq)} + 상가분토지 ${fmtPlain(fp.commercialLandStdAtAcq)} + 상가건물 ${fmtPlain(fp.commercialBuildingStdAtAcq)} | 최초공시: 주택분토지 ${fmtPlain(fp.housingLandStdAtFirst)} + 주택건물 ${fmtPlain(fp.housingBuildingStdAtFirst)} + 상가분토지 ${fmtPlain(fp.commercialLandStdAtFirst)} + 상가건물 ${fmtPlain(fp.commercialBuildingStdAtFirst)}`
-            : `최초공시 개별주택가격 ${fmtPlain(ph.firstDisclosureHousingPrice)} × 취득시 합산기준시가 ${fmtPlain(r.sumAtAcquisition)} ÷ 최초공시 합산기준시가 ${fmtPlain(r.sumAtFirstDisclosure)} | 취득시: 토지기준시가 ${fmtPlain(r.landStdAtAcquisition)} + 건물기준시가 ${fmtPlain(r.buildingStdAtAcquisition)} | 최초공시: 토지기준시가 ${fmtPlain(r.landStdAtFirstDisclosure)} + 건물기준시가 ${fmtPlain(r.buildingStdAtFirstDisclosure)}`;
+          const formula = fp ? (
+            <>
+              <FLine>
+                최초공시 개별주택가격 {fmtPlain(ph.firstDisclosureHousingPrice)} ×{" "}
+                <Frac
+                  top={`취득시 합산기준시가(4부분) ${fmtPlain(r.sumAtAcquisition)}`}
+                  bottom={`최초공시 합산기준시가(4부분) ${fmtPlain(r.sumAtFirstDisclosure)}`}
+                />
+              </FLine>
+              <FLine>
+                취득시: 주택분토지 {fmtPlain(fp.housingLandStdAtAcq)} + 주택건물 {fmtPlain(fp.housingBuildingStdAtAcq)} +
+                상가분토지 {fmtPlain(fp.commercialLandStdAtAcq)} + 상가건물 {fmtPlain(fp.commercialBuildingStdAtAcq)}
+              </FLine>
+              <FLine>
+                최초공시: 주택분토지 {fmtPlain(fp.housingLandStdAtFirst)} + 주택건물 {fmtPlain(fp.housingBuildingStdAtFirst)} +
+                상가분토지 {fmtPlain(fp.commercialLandStdAtFirst)} + 상가건물 {fmtPlain(fp.commercialBuildingStdAtFirst)}
+              </FLine>
+            </>
+          ) : (
+            <>
+              <FLine>
+                최초공시 개별주택가격 {fmtPlain(ph.firstDisclosureHousingPrice)} ×{" "}
+                <Frac
+                  top={`취득시 합산기준시가 ${fmtPlain(r.sumAtAcquisition)}`}
+                  bottom={`최초공시 합산기준시가 ${fmtPlain(r.sumAtFirstDisclosure)}`}
+                />
+              </FLine>
+              <FLine>
+                취득시: 토지기준시가 {fmtPlain(r.landStdAtAcquisition)} + 건물기준시가 {fmtPlain(r.buildingStdAtAcquisition)}
+              </FLine>
+              <FLine>
+                최초공시: 토지기준시가 {fmtPlain(r.landStdAtFirstDisclosure)} + 건물기준시가{" "}
+                {fmtPlain(r.buildingStdAtFirstDisclosure)}
+              </FLine>
+            </>
+          );
           return (
             <Row
               label={fp ? "  ▸ 역산한 취득시 개별주택가격 (Case A 4부분 안분)" : "  ▸ 역산한 취득시 개별주택가격"}
@@ -414,11 +492,19 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           <Row
             label="12억 초과 안분 후 과세대상 양도차익"
             value={fmt(h.proratedTaxableGain)}
-            formula={`(주택 양도차익 ${fmtPlain(h.transferGain)}${
-              h.nonBusinessTransferredGain > 0
-                ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
-                : ""
-            }) × ((주택 양도가액 ${fmtPlain(a.housingTransferPrice)} - 12억) ÷ 주택 양도가액 ${fmtPlain(a.housingTransferPrice)})`}
+            formula={
+              <FLine>
+                (주택 양도차익 {fmtPlain(h.transferGain)}
+                {h.nonBusinessTransferredGain > 0
+                  ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
+                  : ""}
+                ) ×{" "}
+                <Frac
+                  top={`주택 양도가액 ${fmtPlain(a.housingTransferPrice)} - 12억`}
+                  bottom={`주택 양도가액 ${fmtPlain(a.housingTransferPrice)}`}
+                />
+              </FLine>
+            }
           />
         )}
         <Row
@@ -472,7 +558,15 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
                   : `상속개시일 보충적평가액(상증법 §60~66) ${fmtPlain(d.standardPriceCandidate)}`;
               return `${base} — 취득당시 실지거래가액으로 의제 (소령 §163⑨)`;
             }
-            return `§97: 상가 양도가액 ${fmtPlain(a.commercialTransferPrice)} × (취득시 상가부분 기준시가 ${fmtPlain(c.acqStandardTotal)} ÷ 양도시 상가부분 기준시가 ${fmtPlain(a.commercialStandardPrice)})`;
+            return (
+              <FLine>
+                §97: 상가 양도가액 {fmtPlain(a.commercialTransferPrice)} ×{" "}
+                <Frac
+                  top={`취득시 상가부분 기준시가 ${fmtPlain(c.acqStandardTotal)}`}
+                  bottom={`양도시 상가부분 기준시가 ${fmtPlain(a.commercialStandardPrice)}`}
+                />
+              </FLine>
+            );
           })()}
         />
         <Row
