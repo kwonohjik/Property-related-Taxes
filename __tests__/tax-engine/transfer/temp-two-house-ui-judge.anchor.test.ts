@@ -24,6 +24,16 @@ describe("judgeTempTwoHouseFromForm (UI 판정 앵커)", () => {
     expect(v.status).toBe("pending");
   });
 
+  it("부분 입력 Invalid Date → pending (RangeError 회귀)", () => {
+    const v = judgeTempTwoHouseFromForm({
+      previousAcquisitionDate: "2018-01-01",
+      newHouseAcquisitionDate: "2023-13-",
+      transferDate: "2021-06-01",
+      ...EMPTY,
+    });
+    expect(v.status).toBe("pending");
+  });
+
   it("TT-1 정상: 1년 경과 + 3년내 → eligible", () => {
     const v = judgeTempTwoHouseFromForm({
       previousAcquisitionDate: "2018-01-01",

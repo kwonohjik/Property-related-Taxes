@@ -91,6 +91,9 @@ export interface TransferFormData {
   residencePeriodMonths: string;
   isRegulatedArea: boolean;
   wasRegulatedAtAcquisition: boolean;
+  /** 조정대상지역 토글 수동 조작 여부 (UI 전용 — API 미전송). true면 자동판별 결과를 재반영하지 않음 */
+  isRegulatedAreaTouched: boolean;
+  wasRegulatedAtAcquisitionTouched: boolean;
   /** 양도 자산 법정동코드(10자리 — AddressSearch PNU 앞10). 제공 시 정밀 판정, 미제공 시 boolean fallback */
   regionCode?: string;
   isUnregistered: boolean;
@@ -237,6 +240,8 @@ const defaultFormData: TransferFormData = {
   residencePeriodMonths: "0",
   isRegulatedArea: false,
   wasRegulatedAtAcquisition: false,
+  isRegulatedAreaTouched: false,
+  wasRegulatedAtAcquisitionTouched: false,
   isUnregistered: false,
   temporaryTwoHouseSpecial: false,
   newHouseAcquisitionDate: "",

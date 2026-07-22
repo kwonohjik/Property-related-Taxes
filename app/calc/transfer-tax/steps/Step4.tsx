@@ -41,7 +41,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   } | null>(null);
   const [regulatedLoading, setRegulatedLoading] = useState(false);
   const [regulatedError, setRegulatedError] = useState<string | null>(null);
-  const appliedRef = useRef(false);
+  // 수동 조작 플래그 최신값 미러 — fetch 완료 시점(비동기)에 stale closure 없이 참조
+  const touchedRef = useRef({ transfer: false, acquisition: false });
+  touchedRef.current = {
+    transfer: form.isRegulatedAreaTouched,
+    acquisition: form.wasRegulatedAtAcquisitionTouched,
+  };
   const primaryKind = form.assets?.[0]?.assetKind ?? "";
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
   const primary = form.assets?.[0];
@@ -117,7 +122,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   useEffect(() => {
     if ((!primaryAddress && !primaryRegionCode) || !form.transferDate || !isHousingLike(primaryKind)) {
       setRegulatedAuto(null);
-      appliedRef.current = false;
       return;
     }
     let cancelled = false;
@@ -142,13 +146,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           return;
         }
         setRegulatedAuto(data);
-        if (!appliedRef.current) {
-          onChange({
-            isRegulatedArea: data.isRegulatedAtTransfer,
-            wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,
-          });
-          appliedRef.current = true;
+        // 조회 결과가 바뀔 때마다 재반영 — 단, 사용자가 직접 만진 토글은 덮어쓰지 않음
+        const patch: Partial<TransferFormData> = {};
+        if (!touchedRef.current.transfer) patch.isRegulatedArea = data.isRegulatedAtTransfer;
+        if (!touchedRef.current.acquisition) {
+          patch.wasRegulatedAtAcquisition = data.wasRegulatedAtAcquisition;
         }
+        if (Object.keys(patch).length > 0) onChange(patch);
       })
       .catch(() => {
         if (!cancelled) {
@@ -173,6 +177,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     if (primaryKind !== "housing") {
       if (form.isRegulatedArea) patch.isRegulatedArea = false;
       if (form.wasRegulatedAtAcquisition) patch.wasRegulatedAtAcquisition = false;
+      // 토글 자체가 리셋되므로 수동 조작 이력도 함께 초기화 — 재진입 시 자동판별 재개
+      if (form.isRegulatedAreaTouched) patch.isRegulatedAreaTouched = false;
+      if (form.wasRegulatedAtAcquisitionTouched) patch.wasRegulatedAtAcquisitionTouched = false;
     }
     const allowsUnregistered =
       primaryKind === "housing" ||
@@ -186,50 +193,50 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [primaryKind]);
 
+  // 조정대상지역 자동 판별 안내 — 주택은 섹션② 취득일 조정 토글 아래, 입주권·분양권은 최상단에 렌더
+  const regulatedAutoTip = isHousingLike(primaryKind) && primaryAddress && (
+    <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 text-xs space-y-1">
+      <p className="font-medium text-blue-800 dark:text-blue-300">
+        📍 조정대상지역 자동 판별 {regulatedLoading && "(조회중...)"}
+      </p>
+      {regulatedError && <p className="text-destructive">{regulatedError}</p>}
+      {regulatedAuto && (
+        <>
+          <p className="text-muted-foreground">
+            양도일({form.transferDate}):{" "}
+            <span className={regulatedAuto.isRegulatedAtTransfer ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
+              {regulatedAuto.isRegulatedAtTransfer ? "조정대상지역 ✓" : "미지정"}
+            </span>{" "}
+            — {regulatedAuto.transferBasis}
+          </p>
+          {regulatedAuto.acquisitionBasis && (
+            <p className="text-muted-foreground">
+              취득일({primaryAcquisitionDate}):{" "}
+              <span className={regulatedAuto.wasRegulatedAtAcquisition ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
+                {regulatedAuto.wasRegulatedAtAcquisition ? "조정대상지역 ✓" : "미지정"}
+              </span>{" "}
+              — {regulatedAuto.acquisitionBasis}
+            </p>
+          )}
+          {regulatedAuto.confidence !== "high" && (
+            <p className="text-caption text-amber-700 dark:text-amber-400">
+              ⚠️ 신뢰도: {regulatedAuto.confidence} — 시군구 일부만 지정된 경우 아래 체크박스를 수동 확인하세요.
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-5">
-      {/* 조정대상지역 자동 판별 안내 */}
-      {isHousingLike(primaryKind) && primaryAddress && (
-        <div className="rounded-md border border-blue-300 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 text-xs space-y-1">
-          <p className="font-medium text-blue-800 dark:text-blue-300">
-            📍 조정대상지역 자동 판별 {regulatedLoading && "(조회중...)"}
-          </p>
-          {regulatedError && <p className="text-destructive">{regulatedError}</p>}
-          {regulatedAuto && (
-            <>
-              <p className="text-muted-foreground">
-                양도일({form.transferDate}):{" "}
-                <span className={regulatedAuto.isRegulatedAtTransfer ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
-                  {regulatedAuto.isRegulatedAtTransfer ? "조정대상지역 ✓" : "미지정"}
-                </span>{" "}
-                — {regulatedAuto.transferBasis}
-              </p>
-              {regulatedAuto.acquisitionBasis && (
-                <p className="text-muted-foreground">
-                  취득일({primaryAcquisitionDate}):{" "}
-                  <span className={regulatedAuto.wasRegulatedAtAcquisition ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
-                    {regulatedAuto.wasRegulatedAtAcquisition ? "조정대상지역 ✓" : "미지정"}
-                  </span>{" "}
-                  — {regulatedAuto.acquisitionBasis}
-                </p>
-              )}
-              {regulatedAuto.confidence !== "high" && (
-                <p className="text-caption text-amber-700 dark:text-amber-400">
-                  ⚠️ 신뢰도: {regulatedAuto.confidence} — 시군구 일부만 지정된 경우 아래 체크박스를 수동 확인하세요.
-                </p>
-              )}
-            </>
-          )}
-        </div>
-      )}
+      {/* 조정대상지역 자동 판별 안내 — 입주권·분양권(섹션② 미노출 자산)만 최상단 */}
+      {primaryKind !== "housing" && regulatedAutoTip}
 
       {/* 주택·입주권·분양권: 1세대 여부 + 주택 수 + 거주기간 + 조정대상지역 */}
       {isHousingLike(primaryKind) && (
         <section className="rounded-xl border border-sky-200 bg-sky-50/30 p-4 dark:border-sky-900/50 dark:bg-sky-950/20">
-        <SectionHeader title="① 세대·주택 현황" description="1세대 여부와 보유 주택 수를 입력하세요" />
-        <p className="-mt-2 mb-3 text-xs text-sky-800 dark:text-sky-300">
-          왜 필요한가요? — 1세대 1주택 비과세(§89①3)·고가주택 12억 안분·다주택 중과 판정·장기보유특별공제 표2 적용은 모두 이 단계의 입력값으로 결정됩니다.
-        </p>
+        <SectionHeader title="① 세대·주택 현황" />
         <div className="space-y-3">
           {/* 1세대 여부 */}
           <ToggleCard
@@ -316,11 +323,16 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             {/* 취득일 기준 조정대상지역 — 비과세 거주요건 판단(거주기간 입력의 전제, 원인→결과 순서) */}
             <ToggleCard
               checked={form.wasRegulatedAtAcquisition}
-              onCheckedChange={(v) => onChange({ wasRegulatedAtAcquisition: v })}
+              onCheckedChange={(v) =>
+                onChange({ wasRegulatedAtAcquisition: v, wasRegulatedAtAcquisitionTouched: true })
+              }
               title="취득일 기준 조정대상지역"
               description="비과세 거주요건 판단 — 해당 시 거주 2년 이상 필요"
               tone="rose"
             />
+
+            {/* 조정대상지역 자동 판별 안내 — 취득일 조정 토글의 판정 근거 (토글 직하 배치) */}
+            {regulatedAutoTip}
 
             {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
             {form.isOneHousehold && form.householdHousingCount === "1" && (
@@ -382,9 +394,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
         <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <SectionHeader title="③ 일시적 2주택·합가 특례" description="종전 주택 보유 중 신규 주택 취득 후 일정 기간 내 양도 시 비과세 특례" />
-          <p className="-mt-2 mb-3 text-xs text-emerald-800 dark:text-emerald-300">
-            왜 필요한가요? — 시행령 §155 <strong>일시적 2주택·혼인·동거봉양 합가</strong> 특례에 해당하면 2주택 상태에서도 1세대1주택 비과세가 적용됩니다(합가는 합가일부터 10년 내·세대 내 먼저 양도 요건). 해당 시 반드시 체크하고 날짜를 입력하세요.
-          </p>
           <div className="space-y-3">
             <p className="text-sm font-medium">일시적 2주택 특례</p>
             <ToggleCard
@@ -420,20 +429,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               </div>
             </ToggleCard>
 
-            {/* §154① 단서 — 일시적 2주택(temporary_two_house) 맥락: 종전주택 §155①→§154①1·2가·3호 준용 (제어 토글 아래 배치) */}
-            {proviso.visible && proviso.mode === "temporary_two_house" && (
-              <ExemptionProvisoSection
-                provisoReason={form.provisoReason}
-                provisoDepartureDate={form.provisoDepartureDate}
-                provisoExpropriationDate={form.provisoExpropriationDate}
-                provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
-                provisoPreContractNoHouse={form.provisoPreContractNoHouse}
-                mode={proviso.mode}
-                onChange={onChange}
-              />
-            )}
-
-            {/* §155① 요건 자동판정 카드 — 엔진 헬퍼 단일소스(judgeTempTwoHouseFromForm) */}
+            {/* §155① 요건 자동판정 카드 — 엔진 헬퍼 단일소스(judgeTempTwoHouseFromForm), 특례 토글 직하 배치 */}
             {form.temporaryTwoHouseSpecial && (
               <ToneCard
                 tone={
@@ -473,6 +469,19 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   )}
                 </div>
               </ToneCard>
+            )}
+
+            {/* §154① 단서 — 일시적 2주택(temporary_two_house) 맥락: 종전주택 §155①→§154①1·2가·3호 준용 (판정 카드 아래 배치) */}
+            {proviso.visible && proviso.mode === "temporary_two_house" && (
+              <ExemptionProvisoSection
+                provisoReason={form.provisoReason}
+                provisoDepartureDate={form.provisoDepartureDate}
+                provisoExpropriationDate={form.provisoExpropriationDate}
+                provisoBusinessApprovalDate={form.provisoBusinessApprovalDate}
+                provisoPreContractNoHouse={form.provisoPreContractNoHouse}
+                mode={proviso.mode}
+                onChange={onChange}
+              />
             )}
 
             {/* §156의2⑤ 대체주택 비과세 특례 */}
@@ -609,7 +618,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             {primaryKind === "housing" && (
               <ToggleCard
                 checked={form.isRegulatedArea}
-                onCheckedChange={(v) => onChange({ isRegulatedArea: v })}
+                onCheckedChange={(v) => onChange({ isRegulatedArea: v, isRegulatedAreaTouched: true })}
                 title="양도일 기준 조정대상지역"
                 description="중과세 판단 기준"
                 tone="rose"

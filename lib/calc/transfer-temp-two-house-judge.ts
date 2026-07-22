@@ -49,6 +49,10 @@ export function judgeTempTwoHouseFromForm(p: {
   const prev = new Date(p.previousAcquisitionDate);
   const nw = new Date(p.newHouseAcquisitionDate);
   const transfer = new Date(p.transferDate);
+  // 부분 입력("2023-13-" 등) → Invalid Date → toISOString RangeError 방지: 유효하지 않으면 입력 부족 취급
+  if ([prev, nw, transfer].some((d) => Number.isNaN(d.getTime()))) {
+    return { status: "pending" };
+  }
 
   // waiver — 엔진 resolveExemptionProviso 단일소스 재사용 (whitelist 사유 + proviso 조건충족)
   let oneYearWaived = false;

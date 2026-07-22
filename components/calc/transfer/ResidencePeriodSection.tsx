@@ -71,10 +71,6 @@ export function ResidencePeriodSection({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-violet-700">
-        거주기간(상속개시일부터 상속인 본인 실거주)은 표2 장특공제 거주분 공제율 계산에 사용됩니다.
-        동일세대 상속의 통산 거주분은 취득 원인 카드의 &lsquo;동일세대 통산 거주기간&rsquo;에 별도 입력하세요.
-      </p>
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 §89①3호" label="§89①3호 비과세" />
         <LawArticleModal legalBasis="소득세법 §95②" label="§95② 표2 장특공제" />
@@ -83,7 +79,6 @@ export function ResidencePeriodSection({
         variant="card"
         tone="violet"
         title="거주 기간 입력"
-        description="입주일·퇴거일 페어를 입력해 거주기간을 합산합니다. 비연속 거주 시 구간을 추가할 수 있습니다. OFF 시 개월수만 직접 입력."
         checked={isInterval}
         onCheckedChange={(v) => {
           // interval 모드 진입 시 구간이 비어 있으면 1개를 즉시 표시 — 사용자가 추가 버튼 클릭 없이 입력 가능.
@@ -184,6 +179,10 @@ export function ResidencePeriodSection({
           </FieldCard>
         )}
       </ToggleCard>
+      <p className="text-xs text-violet-700">
+        거주기간(상속개시일부터 상속인 본인 실거주)은 표2 장특공제 거주분 공제율 계산에 사용됩니다.
+        동일세대 상속의 통산 거주분은 취득 원인 카드의 &lsquo;동일세대 통산 거주기간&rsquo;에 별도 입력하세요.
+      </p>
     </div>
   );
 }
