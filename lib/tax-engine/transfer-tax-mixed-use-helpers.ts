@@ -16,6 +16,7 @@ import { buildHousingGainSplitFromFourPart } from "./transfer-tax-mixed-use-four
 import {
   resolveHousingInheritedAcqDirect,
   resolveHousingInheritedAcqPhd,
+  splitDeemedExpense,
   type InheritedAcquisitionDetail,
 } from "./transfer-tax-mixed-use-inheritance";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
@@ -426,15 +427,18 @@ export function calcHousingGainSplit(
       return buildHousingGainSplitFromFourPart(phd.fourPartApportionment, asset, transferDate);
     }
 
-    // 상속 취득(소령 §163⑨2호 max) — 실지거래가액 의제, 개산공제 미적용(0)·필요경비만 건물분 슬롯 반영.
+    // 상속(§163⑨2호 max) — 개산공제 미적용, 필요경비는 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
     if (
       (asset.acquisitionByInheritance || asset.acquisitionByGift) &&
       housingAcqResult.inheritedLandAcqPrice !== undefined
     ) {
       const landAcqPrice = housingAcqResult.inheritedLandAcqPrice;
       const buildingAcqPrice = housingAcqResult.inheritedBuildingAcqPrice ?? 0;
-      const landAppraisalDed = 0;
-      const buildingAppraisalDed = asset.housingInheritedExpense ?? 0;
+      const { landAppraisalDed, buildingAppraisalDed } = splitDeemedExpense(
+        asset.housingInheritedExpense ?? 0,
+        phd.landHousingAtAcquisition,
+        phd.buildingHousingAtAcquisition,
+      );
       const landGain = phd.landTransferPrice - landAcqPrice - landAppraisalDed;
       const buildingGain = phd.buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;
       const totalGain = landGain + buildingGain;
@@ -551,13 +555,12 @@ export function calcHousingGainSplit(
   const landAcqPrice = Math.floor(housingEstimatedAcq * acqLandRatio);
   const buildingAcqPrice = housingEstimatedAcq - landAcqPrice;
 
-  // 개산공제 (환산취득가 사용 시, §163⑥) — 취득시 토지/건물 기준시가 × 3%.
-  // 상속·증여(실지거래가액 의제, 소령 §163⑨)·매매실가(법 §100² 안분)는 개산공제 미적용 — 실제 필요경비만 건물분 슬롯에 반영.
+  // 개산공제(§163⑥, 취득시 기준시가 × 3%). 상속·증여(§163⑨)·매매실가는 미적용 —
+  // 실제 필요경비(자본적지출·양도비)를 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
   const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition;
-  const landAppraisalDed = usesDeemedAcq ? 0 : applyRate(acqLandStd, 0.03);
-  const buildingAppraisalDed = usesDeemedAcq
-    ? (asset.housingInheritedExpense ?? 0)
-    : applyRate(acqBuildingStd, 0.03);
+  const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
+    ? splitDeemedExpense(asset.housingInheritedExpense ?? 0, acqLandStd, acqBuildingStd)
+    : { landAppraisalDed: applyRate(acqLandStd, 0.03), buildingAppraisalDed: applyRate(acqBuildingStd, 0.03) };
 
   const landGain = landTransferPrice - landAcqPrice - landAppraisalDed;
   const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;

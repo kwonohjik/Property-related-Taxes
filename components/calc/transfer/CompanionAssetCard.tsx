@@ -323,23 +323,26 @@ export function CompanionAssetCard({
         />
       </AssetSection>
 
-      {/* ④ 필요경비 */}
-      <AssetSection
-        num={4}
-        title="자본적 지출, 필요경비"
-        tone="slate"
-        summary={summary.expense.label}
-        status={status(summary.expense.filled)}
-        open={!!open[4]}
-        onToggle={() => toggleSection(4)}
-        forceOpen={forceOpenAll}
-      >
-        <AssetSectionExpense
-          asset={asset}
-          onChange={onChange}
-          totalTransferExpense={totalTransferExpense}
-        />
-      </AssetSection>
+      {/* ④ 필요경비 — 겸용주택은 주택/상가 섹션별 실제 필요경비(취득정보 ③)를 사용하므로
+          공통 자본적지출·양도비 입력은 숨김(겸용 엔진이 capex/transferExpense를 소비하지 않음). */}
+      {!(asset.assetKind === "housing" && asset.isMixedUseHouse) && (
+        <AssetSection
+          num={4}
+          title="자본적 지출, 필요경비"
+          tone="slate"
+          summary={summary.expense.label}
+          status={status(summary.expense.filled)}
+          open={!!open[4]}
+          onToggle={() => toggleSection(4)}
+          forceOpen={forceOpenAll}
+        >
+          <AssetSectionExpense
+            asset={asset}
+            onChange={onChange}
+            totalTransferExpense={totalTransferExpense}
+          />
+        </AssetSection>
+      )}
 
       {/* ⑤ 기타 특례 — 적용 자산일 때만 노출 */}
       {summary.extras && (

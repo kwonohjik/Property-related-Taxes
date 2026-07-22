@@ -98,12 +98,13 @@ describe("겸용주택 증여 취득가액 엔진 정합 (소령 §163⑨, 상�
     expect(r.commercialPart.buildingAppraisalDed).toBe(0);
   });
 
-  // G-1 상가 override + 실비
-  it("G-1b(상가·override+실비): commercialInheritedValue·Expense 반영", () => {
+  // G-1 상가 override + 실비 (정정 2026-07-22: 필요경비 취득시 토지/건물 기준시가 40:60 안분)
+  it("G-1b(상가·override+실비): commercialInheritedValue·Expense 반영(토지/건물 안분)", () => {
     const r = run(giftBase({ commercialInheritedValue: 700_000_000, commercialInheritedExpense: 5_000_000 }));
     expect(r.commercialPart.estimatedAcquisitionPrice).toBe(700_000_000);
-    expect(r.commercialPart.buildingAppraisalDed).toBe(5_000_000);
-    expect(r.commercialPart.landAppraisalDed).toBe(0);
+    expect(r.commercialPart.landAppraisalDed).toBe(2_000_000);
+    expect(r.commercialPart.buildingAppraisalDed).toBe(3_000_000);
+    expect(r.commercialPart.landAppraisalDed + r.commercialPart.buildingAppraisalDed).toBe(5_000_000);
   });
 
   // G-5 정보 없음 방어

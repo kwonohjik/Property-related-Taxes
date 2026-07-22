@@ -92,6 +92,19 @@ describe("겸용주택 매매 취득 실거래가 안분 (법 §100², R1)", () 
     expect(r.commercialPart.estimatedAcquisitionPrice).toBe(400_000_000);
   });
 
+  it("A1-실비(매매실가 필요경비 안분): housing/commercialInheritedExpense → 취득시 토지/건물 40:60 안분(Σ=입력값)", () => {
+    // 매매실가도 usesDeemedAcq 경로 — 개산공제 배제·필요경비는 취득시 기준시가 비율 안분.
+    const r = run(
+      purchaseBase({ housingInheritedExpense: 10_000_000, commercialInheritedExpense: 5_000_000 }),
+    );
+    expect(r.housingPart.landAppraisalDed).toBe(4_000_000);
+    expect(r.housingPart.buildingAppraisalDed).toBe(6_000_000);
+    expect(r.commercialPart.landAppraisalDed).toBe(2_000_000);
+    expect(r.commercialPart.buildingAppraisalDed).toBe(3_000_000);
+    expect(r.housingPart.landAppraisalDed + r.housingPart.buildingAppraisalDed).toBe(10_000_000);
+    expect(r.commercialPart.landAppraisalDed + r.commercialPart.buildingAppraisalDed).toBe(5_000_000);
+  });
+
   it("A2(회귀): 실가 미선택(환산 모드) → 현행 환산값 불변(주택분 1,031,250,000)", () => {
     const r = run(purchaseBase({ useActualAcquisition: false, acquisitionActualTotalPrice: undefined }));
     expect(r.calculationRoute.acquisitionConversionRoute).toBe("section97_direct");
