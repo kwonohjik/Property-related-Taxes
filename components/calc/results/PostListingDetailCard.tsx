@@ -16,6 +16,7 @@
 
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface PostListingDetailCardProps {
   result: StockTransferResult;
@@ -41,10 +42,12 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
       <div className="space-y-1 text-xs text-violet-800">
         {post.detail?.closing && (
           <p>
-            상장일 이후 1개월 종가평균 = 합계{" "}
-            {post.detail.closing.sum.toLocaleString()} ÷ 거래일{" "}
-            {post.detail.closing.tradingDays}일 ={" "}
-            <strong>{post.detail.closing.avg.toLocaleString()}</strong>
+            상장일 이후 1개월 종가평균 ={" "}
+            <Frac
+              top={`합계 ${post.detail.closing.sum.toLocaleString()}`}
+              bottom={`거래일 ${post.detail.closing.tradingDays}일`}
+            />{" "}
+            = <strong>{post.detail.closing.avg.toLocaleString()}</strong>
           </p>
         )}
         {post.capitalEventTruncation && (
@@ -78,16 +81,23 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             </p>
             <p>
               보정 상장일 평가액 = 직전 {post.acquisitionYearPerShareValue.toLocaleString()}
-              {" "}+ (직전 − 전전) × 보유월수 ÷ 직전사업연도 월수(
-              {post.monthlyAccrualDetail.priorBizYearMonths}) ={" "}
-              <strong>{post.monthlyAccrualDetail.adjustedListingYearPerShareValue.toLocaleString()}</strong>
+              {" "}+ (직전 − 전전) ×{" "}
+              <Frac
+                top="보유월수"
+                bottom={`직전사업연도 월수 ${post.monthlyAccrualDetail.priorBizYearMonths}`}
+              />{" "}
+              = <strong>{post.monthlyAccrualDetail.adjustedListingYearPerShareValue.toLocaleString()}</strong>
             </p>
           </div>
         )}
         <p>
           환산비율 ={" "}
-          {post.monthlyAccrualDetail ? "취득연도 ÷ 보정 상장일 평가액" : "취득연도 ÷ 상장연도"} ={" "}
-          <strong>{post.conversionRatio.toFixed(5)}</strong>
+          {post.monthlyAccrualDetail ? (
+            <Frac top="취득연도" bottom="보정 상장일 평가액" />
+          ) : (
+            <Frac top="취득연도" bottom="상장연도" />
+          )}{" "}
+          = <strong>{post.conversionRatio.toFixed(5)}</strong>
         </p>
         <p className="font-medium">
           1주당 취득기준시가 = 종가평균 × 환산비율 (절사) ={" "}
@@ -95,12 +105,18 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           <span className="text-violet-600">(§163⑨ 분자)</span>
         </p>
         <p className="font-medium text-violet-900">
-          §163⑨ 환산취득가 = 양도가 × (1주당 취득기준 ÷ 1주당 양도기준)
+          §163⑨ 환산취득가 = 양도가 × <Frac top="1주당 취득기준" bottom="1주당 양도기준" />
           <br />
-          = <strong>{result.transferPrice.toLocaleString()}</strong> × (
-          <strong>{(result.valuationDetail?.conversionAcqStdPerShare ?? post.finalPerShareValue).toLocaleString()}</strong> ÷{" "}
-          <strong>{(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()}</strong>) ={" "}
-          <strong>{result.acquisitionPrice.toLocaleString()}</strong>
+          = <strong>{result.transferPrice.toLocaleString()}</strong> ×{" "}
+          <Frac
+            top={
+              <strong>
+                {(result.valuationDetail?.conversionAcqStdPerShare ?? post.finalPerShareValue).toLocaleString()}
+              </strong>
+            }
+            bottom={<strong>{(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()}</strong>}
+          />{" "}
+          = <strong>{result.acquisitionPrice.toLocaleString()}</strong>
         </p>
         {result.valuationDetail?.transferDailyModeUsed && (
           <p className="text-caption text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">

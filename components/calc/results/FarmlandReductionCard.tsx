@@ -13,6 +13,7 @@
 
 import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: NonNullable<GiftTaxResult["farmlandReductionDetail"]>;
@@ -86,9 +87,10 @@ export function FarmlandReductionCard({ detail, computedTax, priorTaxCredit }: P
         <div className="flex items-center gap-1.5 flex-wrap px-3 text-xs text-emerald-700 dark:text-emerald-300">
           <span>= 농지가액 {formatKRW(detail.farmlandValue)}</span>
           <span className="text-emerald-400">×</span>
-          <span>감면세액 {formatKRW(detail.reductionAmount)}</span>
-          <span className="text-emerald-400">÷</span>
-          <span>농지분 산출세액 {formatKRW(detail.farmlandComputedTax)}</span>
+          <Frac
+            top={`감면세액 ${formatKRW(detail.reductionAmount)}`}
+            bottom={`농지분 산출세액 ${formatKRW(detail.farmlandComputedTax)}`}
+          />
         </div>
         <div className="flex items-center justify-between px-3 py-2">
           <span>감면한도 초과분 농지가액 ㉯ (일반 증여세 합산과세) · §133②</span>

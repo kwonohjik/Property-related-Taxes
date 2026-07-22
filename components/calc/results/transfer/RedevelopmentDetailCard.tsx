@@ -19,6 +19,7 @@
 
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: RedevelopmentResult;
@@ -136,7 +137,10 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <Row label="과세대상 양도차익 합 (안분 후)" value={highValueAllocation.taxableGain} highlight />
           </div>
           <p className="text-micro text-amber-700 mt-1">
-            산식: 각 분기 양도차익 × (양도가액 − 12억) ÷ 양도가액. 근거: §89①4호 가목 단서 + §95③ + 시행령 §160 준용.
+            <FLine>
+              산식: 각 분기 양도차익 × <Frac top="양도가액 − 12억" bottom="양도가액" />
+            </FLine>
+            <FLine>근거: §89①4호 가목 단서 + §95③ + 시행령 §160 준용.</FLine>
           </p>
         </div>
       )}

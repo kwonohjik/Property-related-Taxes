@@ -59,7 +59,7 @@ export function Row({
   highlight?: boolean;
   large?: boolean;
   small?: boolean;
-  formula?: string;
+  formula?: React.ReactNode;
 }) {
   return (
     <div className="space-y-0.5">
@@ -70,13 +70,17 @@ export function Row({
         </span>
       </div>
       {formula && (
-        <p className="text-caption text-muted-foreground/80 leading-snug pl-2 border-l-2 border-muted">
+        <div className="text-caption text-muted-foreground/80 leading-snug pl-2 border-l-2 border-muted space-y-0.5">
           {formula}
-        </p>
+        </div>
       )}
     </div>
   );
 }
+
+// 산식 분수(Frac)·줄(FLine)은 전 세목 공용으로 승격 — shared/FormulaParts.tsx에서 재export.
+import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
+export { Frac, FLine };
 
 export function DivRow() {
   return <div className="border-t my-1" />;
@@ -151,7 +155,11 @@ export function PartialUsageChangeCard({
         <div className="rounded-md bg-rose-50 border border-rose-200 px-3 py-2 text-caption text-rose-900 space-y-1 leading-relaxed">
           <p className="font-semibold">취득시 개별주택가격 역산 산식 — 건물 전체 기준 (시행령 §164⑤)</p>
           <p>
-            역산한 취득시 개별주택가격 = 최초공시 개별주택가격 × (취득시 토지기준시가 + 취득시 건물기준시가) ÷ (최초공시 토지기준시가 + 최초공시 건물기준시가)
+            역산한 취득시 개별주택가격 = 최초공시 개별주택가격 ×{" "}
+            <Frac
+              top="취득시 토지기준시가 + 취득시 건물기준시가"
+              bottom="최초공시 토지기준시가 + 최초공시 건물기준시가"
+            />
           </p>
           <p>
             · 최초공시 시점에 건물 전체가 주택이었으므로 최초공시 개별주택가격에는 이후 상가로 변한 부분도 포함됩니다. 취득시·최초공시 시점 모두 전체 토지면적·전체 건물 기준시가를 사용하여 비율을 맞춥니다.

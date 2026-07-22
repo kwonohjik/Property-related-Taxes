@@ -31,6 +31,7 @@ import { useState } from "react";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ─── 행 컴포넌트 ─────────────────────────────────────────────────────────────
 
@@ -147,7 +148,8 @@ function SingleStockTransferResultCard({
           </p>
           <p>
             채무인수분은 소득세법 §88에 따라 증여자의 유상양도로 봅니다.
-            양도가액 = 채무인수액, 취득가액 = 당초취득가 × (채무액 ÷ 주식평가액)으로 안분합니다.
+            양도가액 = 채무인수액, 취득가액 = 당초취득가 × <Frac top="채무액" bottom="주식평가액" /> 으로
+            안분합니다.
           </p>
           <p>
             과세 구분: 상장주식 §94①3가목2 (장외양도, 소액주주도 과세)

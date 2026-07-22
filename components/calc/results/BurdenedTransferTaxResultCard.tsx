@@ -18,6 +18,7 @@ import { useState } from "react";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ─── 행 컴포넌트 ─────────────────────────────────────────────────────────────
 
@@ -204,8 +205,10 @@ function SingleTransferResultCard({
           <p>
             채무인수분은 소득세법 §88에 따라 유상양도로 봅니다.
             취득가액·양도가액은 소령 §159①1호에 따라{" "}
-            <span className="font-medium">채무액 ÷ 증여재산가액</span>
-            으로 안분합니다.
+            <span className="font-medium">
+              <Frac top="채무액" bottom="증여재산가액" />
+            </span>{" "}
+            비율로 안분합니다.
           </p>
           {/* 취득가액 산정 경로 — 3경로 표시 */}
           {(() => {
@@ -219,7 +222,7 @@ function SingleTransferResultCard({
             if (method === "actual") {
               return (
                 <p className="mt-1 text-amber-700 dark:text-amber-300">
-                  ※ 취득가액 산정: 실지취득가액 × 채무 ÷ 시가 (소령 §159①1호 A괄호 — K-4)
+                  ※ 취득가액 산정: 실지취득가액 × <Frac top="채무" bottom="시가" /> (소령 §159①1호 A괄호 — K-4)
                   {deductionTotal > 0
                     ? ` / 자본적 지출·양도비 ${formatKRW(deductionTotal)}`
                     : ""}
@@ -229,7 +232,8 @@ function SingleTransferResultCard({
             if (method === "converted") {
               return (
                 <p className="mt-1 text-sky-700 dark:text-sky-300">
-                  ※ 취득가액 산정: 취득시 기준시가 ÷ 양도시 기준시가 × 시가 (소령 §176의2②2호 — K-5)
+                  ※ 취득가액 산정: <Frac top="취득시 기준시가" bottom="양도시 기준시가" /> × 시가 (소령
+                  §176의2②2호 — K-5)
                   {deductionTotal > 0
                     ? ` + 개산공제 ${formatKRW(deductionTotal)} (소법 §163⑥)`
                     : " + 소법 §163⑥ 개산공제 적용"}
@@ -239,7 +243,8 @@ function SingleTransferResultCard({
             // standard_price 또는 미확인(구버전 결과)
             return (
               <p className="mt-1">
-                취득가액 산정: 취득시 기준시가 × 채무 ÷ 증여재산 기준시가 (소령 §159①1호 — K-1~K-3)
+                취득가액 산정: 취득시 기준시가 × <Frac top="채무" bottom="증여재산 기준시가" /> (소령 §159①1호 —
+                K-1~K-3)
               </p>
             );
           })()}

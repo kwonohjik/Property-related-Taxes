@@ -151,15 +151,12 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {/* ② 호별 ㎡당 고시가 (emerald/amber) — cbEra 선택 후 표시 */}
         {hasEra && (
           <ToneCard tone="emerald" sectionNum="2" title="호별 ㎡당 고시가 (원/㎡)" noDark>
-            <div className="text-xs text-emerald-700 mb-1">
-              국세청 홈택스 → 기준시가 조회 → 오피스텔 및 상업용건물 기준시가 → 호별로 고시된 ㎡당 가액 확인
-            </div>
             {/* 양도시 — emerald */}
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
               <FieldCard
                 label="양도시 ㎡당 호별고시가"
                 unit="원/㎡"
-                hint="국세청 홈택스 → 기준시가 조회 → 오피스텔 및 상업용건물 기준시가 → 호별로 고시된 ㎡당 가액 입력"
+                hint="호별로 고시된 ㎡당 가액 입력"
               >
                 <CurrencyInput
                   label=""
@@ -195,7 +192,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {isPreDisclosure && (
           <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 3시점 (원, 총액)" noDark>
             <div className="text-xs text-amber-700 mb-1">
-              국세청 홈택스 &gt; 세금신고 &gt; 양도소득세 &gt; 기준시가 조회 → 건물분 ㎡당 가액 × 연면적(전유+공용 보정계수 반영) = <b>건물 기준시가 총액</b>으로 환산해 입력
+              건물분 ㎡당 가액 × 연면적(전유+공용 보정계수 반영) = <b>건물 기준시가 총액</b>으로 환산해 입력
             </div>
             {/* 취득시 — amber */}
             <FieldCard

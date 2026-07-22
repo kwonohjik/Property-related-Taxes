@@ -13,6 +13,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { Heir, InheritanceTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { sortHeirs, labelOf } from "@/lib/calc/heir-allocation-summary";
 import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "../deduction-breakdown/shared";
+import { Frac } from "../shared/FormulaParts";
 
 export function TaxBaseShareDetailCard({
   result,
@@ -67,7 +68,11 @@ export function TaxBaseShareDetailCard({
                 />
                 {p.indirectTaxBaseShare > 0 && (
                   <DetailRow
-                    label={`= ${formatKRW(numerator)} × (${formatKRW(star1)} ÷ ${formatKRW(denomBase)})`}
+                    label={
+                      <>
+                        = {formatKRW(numerator)} × <Frac top={formatKRW(star1)} bottom={formatKRW(denomBase)} />
+                      </>
+                    }
                     value=""
                     indent
                     muted

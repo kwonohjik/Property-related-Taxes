@@ -70,6 +70,10 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
     ...(hasFpOv ? { residentialFootprintOverride: parseDecimal(fpOv) } : {}),
   });
 
+  // 연면적 2칸이 전용/공통 소스에서 파생 중인가 — 직접 편집 시 전용/공통이 클리어돼 false로 전환.
+  const floorDerived =
+    parseDecimal(asset.residentialExclusiveArea) + parseDecimal(asset.commercialExclusiveArea) > 0;
+
   const areaComputable = total > 0;
   const fpComputable = areaComputable && footprint > 0;
   const landComputable = areaComputable && totalLand > 0;
@@ -226,7 +230,11 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 rounded-lg bg-sky-100/60 border border-sky-200"
           data-testid="mixed-derived-floor"
         >
-          <FieldCard label="주택 연면적 (㎡)" stacked>
+          <FieldCard
+            label="주택 연면적 (㎡)"
+            stacked
+            badge={floorDerived ? <AreaBadge manual={false} /> : undefined}
+          >
             <DecimalInput
               value={asset.residentialFloorArea}
               onChange={(v) => onFloorAreaChange({ residentialFloorArea: v })}
@@ -235,7 +243,11 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
               data-testid="mixed-area-residential-floor"
             />
           </FieldCard>
-          <FieldCard label="상가 연면적 (㎡)" stacked>
+          <FieldCard
+            label="상가 연면적 (㎡)"
+            stacked
+            badge={floorDerived ? <AreaBadge manual={false} /> : undefined}
+          >
             <DecimalInput
               value={asset.nonResidentialFloorArea}
               onChange={(v) => onFloorAreaChange({ nonResidentialFloorArea: v })}
@@ -352,7 +364,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
  * 자동/수동 배지 + 리셋 — `LandPriceLookupField.tsx:138-155` 정본 패턴.
  * 배지·pill은 `text-micro`(10px) 정본 (components/calc/CLAUDE.md 라벨 타이포그래피).
  */
-function AreaBadge({ manual, onReset }: { manual: boolean; onReset: () => void }) {
+function AreaBadge({ manual, onReset }: { manual: boolean; onReset?: () => void }) {
   if (!manual) {
     return (
       <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700">

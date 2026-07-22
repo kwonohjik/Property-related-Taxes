@@ -335,7 +335,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             hint="양도일 전년도 기준 개별공시지가 (원/㎡). Vworld 또는 토지이음에서 조회."
           />
 
-          <FieldCard label="양도시 건물기준시가" unit="원" hint="국세청 홈택스 → 기준시가 조회 → 건물분 기준시가 총액 (원). 모르면 아래 계산기로 산정.">
+          <FieldCard label="양도시 건물기준시가" unit="원" hint="건물분 기준시가 총액 (원). 모르면 아래 계산기로 산정.">
             <CurrencyInput label="양도시 건물기준시가" hideUnit value={asset.gbTransferBuildingValue} onChange={(v) => onChange({ gbTransferBuildingValue: v })} />
           </FieldCard>
           <div className="flex justify-end">
@@ -452,7 +452,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                 <FieldCard
                   label="양도시 건물2 기준시가 총액"
                   unit="원"
-                  hint="국세청 홈택스 → 기준시가 조회 → 증축 건물분 기준시가 총액 (원). ㎡당 단가가 아닌 총액(원)."
+                  hint="증축 건물분 기준시가 총액 (원). ㎡당 단가가 아닌 총액(원)."
                 >
                   <CurrencyInput
                     label="양도시 건물2 기준시가 총액"
@@ -485,7 +485,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                 <FieldCard
                   label="양도시 건물2 기준시가 총액"
                   unit="원"
-                  hint="§166⑥ 양도가액 안분 분모 계산에 필요합니다. 국세청 홈택스 → 기준시가 조회 → 증축 건물분 기준시가 총액 (원)."
+                  hint="§166⑥ 양도가액 안분 분모 계산에 필요합니다. 증축 건물분 기준시가 총액 (원)."
                 >
                   <CurrencyInput
                     label="양도시 건물2 기준시가 총액"

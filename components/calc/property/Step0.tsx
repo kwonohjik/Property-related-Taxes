@@ -131,17 +131,12 @@ export function Step0({
             onLookupSuccess={({ year }) => fillPriorYearPrice(year)}
           />
         ) : (
-          <>
-            <CurrencyInput
-              label=""
-              value={publishedPrice}
-              onChange={onPublishedPriceChange}
-              placeholder="금액 입력 (원)"
-            />
-            <p className="text-xs text-amber-700">
-              ※ 건축물 기준시가는 국세청 홈택스에서 직접 확인 후 입력하세요.
-            </p>
-          </>
+          <CurrencyInput
+            label=""
+            value={publishedPrice}
+            onChange={onPublishedPriceChange}
+            placeholder="금액 입력 (원)"
+          />
         )}
       </div>
 

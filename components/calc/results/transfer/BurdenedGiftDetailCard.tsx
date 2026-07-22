@@ -11,6 +11,7 @@
  */
 
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const SELECTED_LABEL: Record<string, string> = {
   supplementary: "보충적평가 (상증법 §61)",
@@ -137,9 +138,11 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
               {bg.perAsset.land.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    토지 환산취득가 = 양도가액 {fmt(bg.perAsset.land.transferPrice)} × 취득기준시가{" "}
-                    {fmt(bg.perAsset.land.stdPriceAtAcquisition)} ÷ 양도기준시가{" "}
-                    {fmt(bg.perAsset.land.stdPriceAtTransfer)}
+                    토지 환산취득가 = 양도가액 {fmt(bg.perAsset.land.transferPrice)} ×{" "}
+                    <Frac
+                      top={`취득기준시가 ${fmt(bg.perAsset.land.stdPriceAtAcquisition)}`}
+                      bottom={`양도기준시가 ${fmt(bg.perAsset.land.stdPriceAtTransfer)}`}
+                    />
                   </td>
                   <td className="text-right font-mono">{fmt(bg.perAsset.land.acquisitionPrice)}원</td>
                 </tr>
@@ -147,9 +150,11 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
               {bg.perAsset.building.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    건물 환산취득가 = 양도가액 {fmt(bg.perAsset.building.transferPrice)} × 취득기준시가{" "}
-                    {fmt(bg.perAsset.building.stdPriceAtAcquisition)} ÷ 양도기준시가{" "}
-                    {fmt(bg.perAsset.building.stdPriceAtTransfer)}
+                    건물 환산취득가 = 양도가액 {fmt(bg.perAsset.building.transferPrice)} ×{" "}
+                    <Frac
+                      top={`취득기준시가 ${fmt(bg.perAsset.building.stdPriceAtAcquisition)}`}
+                      bottom={`양도기준시가 ${fmt(bg.perAsset.building.stdPriceAtTransfer)}`}
+                    />
                   </td>
                   <td className="text-right font-mono">{fmt(bg.perAsset.building.acquisitionPrice)}원</td>
                 </tr>

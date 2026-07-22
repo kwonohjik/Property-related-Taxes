@@ -5,6 +5,7 @@
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { CapitalDecreaseMultiResult } from "@/lib/tax-engine/gift-deemed/types";
+import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 
 export function CapitalDecreaseMultiResultView({
   multi,
@@ -66,8 +67,10 @@ export function CapitalDecreaseMultiResultView({
           {formatKRW(multi.postPerShareDisplay)}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          (감자 전 발행주식총수 × 1주당 평가액 − 총 소각대가) ÷ 감자 후 잔여 주식수. 원 미만 반올림 표시값이며, 증여이익·검증표
-          계산은 반올림 전 정확값으로 합니다.
+          <FLine>
+            <Frac top="감자 전 발행주식총수 × 1주당 평가액 − 총 소각대가" bottom="감자 후 잔여 주식수" />
+          </FLine>
+          <FLine>원 미만 반올림 표시값이며, 증여이익·검증표 계산은 반올림 전 정확값으로 합니다.</FLine>
         </p>
       </div>
 

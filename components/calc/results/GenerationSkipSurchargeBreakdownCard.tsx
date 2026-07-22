@@ -18,6 +18,7 @@
 import { useState } from "react";
 import type { GenerationSkipSurchargeDetail } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { ExpandToggleButton } from "./shared/ExpandToggleButton";
+import { Frac } from "./shared/FormulaParts";
 
 function Amt({ val }: { val: number }) {
   return <span className="font-mono">{val.toLocaleString()}</span>;
@@ -90,12 +91,14 @@ export function GenerationSkipSurchargeBreakdownCard({
             formula={
               <>
                 <div>
-                  ⑧ 할증과세 = 산출세액 × (부모 제외 직계존속 재산가액 ÷ 총증여재산가액) × {ratePct}%
+                  ⑧ 할증과세 = 산출세액 ×{" "}
+                  <Frac top="부모 제외 직계존속 재산가액" bottom="총증여재산가액" /> × {ratePct}%
                 </div>
                 {nonParentLinealAmount !== undefined && totalGiftAmount !== undefined ? (
                   <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
-                    = <Amt val={computedTax} /> × (<Amt val={nonParentLinealAmount} /> ÷{" "}
-                    <Amt val={totalGiftAmount} />) × {ratePct}% ={" "}
+                    = <Amt val={computedTax} /> ×{" "}
+                    <Frac top={<Amt val={nonParentLinealAmount} />} bottom={<Amt val={totalGiftAmount} />} /> ×{" "}
+                    {ratePct}% ={" "}
                     <span className="font-semibold">
                       <Amt val={detail.surchargeBase} />
                     </span>
@@ -134,12 +137,14 @@ export function GenerationSkipSurchargeBreakdownCard({
             formula={
               <>
                 <div>
-                  ⑩ 한도액 = 산출세액 × (가산 증여재산 과세표준 ÷ 합산 후 과세표준) × {ratePct}%
+                  ⑩ 한도액 = 산출세액 ×{" "}
+                  <Frac top="가산 증여재산 과세표준" bottom="합산 후 과세표준" /> × {ratePct}%
                 </div>
                 {priorAddedTaxBase !== undefined && aggregatedTaxBase !== undefined && aggregatedTaxBase > 0 ? (
                   <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
-                    = <Amt val={computedTax} /> × (<Amt val={priorAddedTaxBase} /> ÷{" "}
-                    <Amt val={aggregatedTaxBase} />) × {ratePct}% ={" "}
+                    = <Amt val={computedTax} /> ×{" "}
+                    <Frac top={<Amt val={priorAddedTaxBase} />} bottom={<Amt val={aggregatedTaxBase} />} /> ×{" "}
+                    {ratePct}% ={" "}
                     <span className="font-semibold">
                       <Amt val={detail.surchargeCreditLimit} />
                     </span>
@@ -203,7 +208,9 @@ export function GenerationSkipSurchargeBreakdownCard({
           <div className="mt-3 pt-3 border-t border-rose-200/60 dark:border-rose-800/40 text-caption text-rose-700/80 dark:text-rose-300/80">
             <div className="font-semibold mb-1">참고 — 상증법 §57 산식</div>
             <div>
-              할증과세액 = 증여세 산출세액 × (수증자 부모 제외 직계존속으로부터 증여받은 재산가액 ÷ 총증여재산가액) × {ratePct}% − 기할증과세액
+              할증과세액 = 증여세 산출세액 ×{" "}
+              <Frac top="수증자 부모 제외 직계존속으로부터 증여받은 재산가액" bottom="총증여재산가액" /> × {ratePct}% −
+              기할증과세액
             </div>
           </div>
       </div>

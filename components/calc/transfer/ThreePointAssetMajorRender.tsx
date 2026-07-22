@@ -75,7 +75,7 @@ function AssetSection({
         return (
           <div key={p.key} className={`rounded-md border p-2 space-y-1 ${tone.box}`}>
             <p className={`text-caption font-semibold ${tone.text}`}>{p.label}</p>
-            <FieldCard label={`${label}건물 기준시가`} hint="국세청 홈택스 > 기준시가 조회">
+            <FieldCard label={`${label}건물 기준시가`}>
               <CurrencyInput
                 label=""
                 value={building}

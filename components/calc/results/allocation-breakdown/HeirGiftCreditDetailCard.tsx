@@ -12,6 +12,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { Heir, InheritanceTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { sortHeirs, labelOf } from "@/lib/calc/heir-allocation-summary";
 import { DetailTable, DetailRow, ExpandButton } from "../deduction-breakdown/shared";
+import { Frac } from "../shared/FormulaParts";
 
 /** R2: 영리법인 제외 상속인의 사전증여 증여세 산출세액 합 (⑫ 표시 조건) */
 export function hasHeirGiftCredit(result: InheritanceTaxResult, heirs: Heir[]): boolean {
@@ -55,7 +56,15 @@ export function HeirGiftCreditDetailCard({
                 <DetailRow label={`${labelOf(h.id, heirs)} ⓐ 증여세 산출세액`} value={formatKRW(p.priorGiftComputedTax ?? 0)} />
                 <DetailRow label={`${labelOf(h.id, heirs)} ⓑ 공제 한도`} value={formatKRW(p.priorGiftCreditLimit ?? 0)} />
                 <DetailRow
-                  label={`= 산출세액 배부 ${formatKRW(p.computedTaxShare)} × (직접배부 ${formatKRW(p.directTaxBaseShare)} ÷ 과세표준상당액 ${formatKRW(p.taxBaseShare)})`}
+                  label={
+                    <>
+                      = 산출세액 배부 {formatKRW(p.computedTaxShare)} ×{" "}
+                      <Frac
+                        top={`직접배부 ${formatKRW(p.directTaxBaseShare)}`}
+                        bottom={`과세표준상당액 ${formatKRW(p.taxBaseShare)}`}
+                      />
+                    </>
+                  }
                   value=""
                   indent
                   muted

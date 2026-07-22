@@ -13,6 +13,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { Heir, InheritanceTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { sortHeirs, labelOf } from "@/lib/calc/heir-allocation-summary";
 import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "../deduction-breakdown/shared";
+import { Frac } from "../shared/FormulaParts";
 
 export function CorporateGiftCreditDetailCard({
   result,
@@ -50,7 +51,15 @@ export function CorporateGiftCreditDetailCard({
                 <DetailRow label={`${labelOf(h.id, heirs)} ⓐ 증여세 산출세액`} value={formatKRW(p.priorGiftComputedTax ?? 0)} />
                 <DetailRow label={`${labelOf(h.id, heirs)} ⓑ 공제 한도`} value={formatKRW(p.priorGiftCreditLimit ?? 0)} />
                 <DetailRow
-                  label={`= 산출세액 ${formatKRW(result.computedTax)} × (영리법인 과세표준 ${formatKRW(corpGiftTaxBase)} ÷ 과세표준 ${formatKRW(result.taxBase)})`}
+                  label={
+                    <>
+                      = 산출세액 {formatKRW(result.computedTax)} ×{" "}
+                      <Frac
+                        top={`영리법인 과세표준 ${formatKRW(corpGiftTaxBase)}`}
+                        bottom={`과세표준 ${formatKRW(result.taxBase)}`}
+                      />
+                    </>
+                  }
                   value=""
                   indent
                   muted
