@@ -17,6 +17,8 @@ import {
   resolveHousingInheritedAcqDirect,
   resolveHousingInheritedAcqPhd,
   splitDeemedExpense,
+  calcLongTermRate,
+  buildHousingLthdEcho,
   type InheritedAcquisitionDetail,
 } from "./transfer-tax-mixed-use-inheritance";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
@@ -597,28 +599,9 @@ export function calcHousingGainSplit(
 // 기존 호출부(transfer-tax-mixed-use.ts 등)의 import 경로를 그대로 유지한다.
 export { calcCommercialGainSplit, type CommercialGainSplit } from "./transfer-tax-mixed-use-commercial";
 
-// ──────────────────────────────────────────────────────────────
-// 6. 장기보유공제율 계산
-//    표2: 1세대1주택 거주 2년+ → min(holdYears×4%,40%) + min(resYears×4%,40%) (합계 최대 80%)
-//    표1: 그 외 → Math.min(holdYears×2%, 30%)
-// ──────────────────────────────────────────────────────────────
-
-export function calcLongTermRate(
-  holdingYears: number,
-  residenceYears: number,
-  useTable2: boolean,
-): number {
-  if (holdingYears < 3) return 0;
-  if (useTable2) {
-    // §95② 별표: 보유분·거주분 '각각' 연 4%·최대 40% 상한을 적용한 뒤 합산(합계 최대 80%).
-    // 합산 후 80% 상한만 적용하면 (예: 보유 18년·거주 2년) 보유분이 40%를 넘어 과대 공제된다.
-    // 메인 엔진(transfer-tax-helpers.ts)의 표2 산식과 동일하게 각 상한 후 합산.
-    const holdingPart = Math.min(holdingYears * 0.04, 0.40);
-    const residencePart = Math.min(residenceYears * 0.04, 0.40);
-    return holdingPart + residencePart;
-  }
-  return Math.min(holdingYears * 0.02, 0.30);
-}
+// 장기보유공제율(§95② 별표)은 buildHousingLthdEcho와 함께 transfer-tax-mixed-use-inheritance.ts 로
+// 이관(800줄 정책). 기존 호출부(totals·period-split·test)의 import 경로 유지를 위해 재export.
+export { calcLongTermRate } from "./transfer-tax-mixed-use-inheritance";
 
 // ──────────────────────────────────────────────────────────────
 // 7. 주택부수토지 배율초과 → 비사업용 이전 (STEP 6)
@@ -728,6 +711,19 @@ export function buildHousingPart(
   // 단일 공제율은 "혼합" — 대표값을 건물 기준으로 표시 (UI용)
   const longTermDeductionRate = buildingDedRate;
 
+  // echo — 보유/거주 기간분 분리(표시 전용·세액 불변). 계산은 inheritance leaf에 위임(800줄 정책).
+  const lthdEcho = buildHousingLthdEcho({
+    proratedLandGain,
+    proratedBuildingGain,
+    landDedRate,
+    buildingDedRate,
+    landHoldingRate: calcLongTermRate(gainSplit.landHoldingYears, 0, useTable2),
+    buildingHoldingRate: calcLongTermRate(gainSplit.buildingHoldingYears, 0, useTable2),
+    longTermDeductionAmount,
+    buildingHoldingYears: gainSplit.buildingHoldingYears,
+    residenceYears,
+  });
+
   // ── ④ 양도소득금액 ──
   const incomeAmount = Math.max(0, proratedTaxableGain - longTermDeductionAmount);
 
@@ -752,6 +748,7 @@ export function buildHousingPart(
     longTermDeductionTable,
     longTermDeductionRate,
     longTermDeductionAmount,
+    ...lthdEcho,
     incomeAmount,
     nonBusinessTransferRatio: nonBizRatio,
     nonBusinessTransferredGain,
@@ -788,6 +785,7 @@ export function buildCommercialPart(
     buildingStdPriceAtAcq: gainSplit.buildingStdPriceAtAcq,
     longTermDeductionRate,
     longTermDeductionAmount,
+    holdingYears,
     incomeAmount: Math.max(0, gainSplit.totalGain - longTermDeductionAmount),
     acqStandardSource: gainSplit.acqStandardSource,
     acqStandardTotal: gainSplit.acqStandardLand + gainSplit.acqStandardBuilding,

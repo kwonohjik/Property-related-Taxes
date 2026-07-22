@@ -14,6 +14,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
+import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-helpers";
 import {
   fmtDate,
   fmtPeriod,
@@ -382,7 +383,11 @@ export function buildStatementItems(
   });
 
   // ── 3단계: 장기보유특별공제 ──────────────────────────────────
+  // 겸용주택은 주택분(표2 가능·보유+거주)과 비주택분(상가, 표1·보유만)이 공제율 체계가 달라
+  // 단일 blended 율로 뭉뚱그리면 부정확·난해 → mixedUseDetail이 있으면 부분별로 분리 표시.
+  const mu = result.mixedUseDetail;
   const lthStep = findStepByLabel(result.steps, "장기보유");
+  const pct = (r: number | undefined) => `${((r ?? 0) * 100).toFixed(0)}%`;
   items.set("ltDeduction", {
     label: "장기보유특별공제",
     value: isAggregate
@@ -390,7 +395,9 @@ export function buildStatementItems(
       : result.longTermHoldingDeduction,
     formula:
       lthStep?.formula ??
-      `과세대상 양도차익 × ${(result.longTermHoldingRate * 100).toFixed(0)}% (보유 + 거주)`,
+      (mu
+        ? `주택분 ${mu.housingPart.longTermDeductionAmount.toLocaleString()}원 + 비주택분(상가) ${mu.commercialPart.longTermDeductionAmount.toLocaleString()}원 = ${(mu.housingPart.longTermDeductionAmount + mu.commercialPart.longTermDeductionAmount).toLocaleString()}원 (부분별 공제율 상이 — 아래 주택분/상가분 분리)`
+        : `과세대상 양도차익 × ${(result.longTermHoldingRate * 100).toFixed(0)}% (보유 + 거주)`),
     legalBasis: lthStep?.legalBasis ?? "소득세법 §95②·별표 표1·표2",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
@@ -430,31 +437,88 @@ export function buildStatementItems(
     : undefined;
 
   // 보유분/거주분 — 엔진이 정식 emit한 sub-step의 산식 우선 (정확한 안분율·금액 노출).
-  // sub-step 미발생 케이스(표1·차손 자산 등)는 splitLtDeduction 가공값 fallback.
+  // sub-step 미발생 케이스(표1·차손 자산·겸용 합산 등)는 splitLtDeduction 가공값 fallback.
+  // fallback 산식도 실제 값(연수·공제율·금액)을 인라인하고, 표1/표2 분기를 정확히 반영한다
+  //   (splitLtDeduction: 표2는 거주분 직접 산정 후 보유분에 잔액 귀속, 표1은 보유분 전액·거주분 0).
   const lthHoldingStep = findStepByLabel(result.steps, "보유 기간분 장특");
   const lthResidenceStep = findStepByLabel(result.steps, "거주 기간분 장특");
+  const lthHoldingYears = Math.floor(totalHoldingMs / 12);
+  const lthResidenceYears = Math.floor(residenceMs / 12);
+  const lthHoldingPct = Math.min(lthHoldingYears * 4, 40);
+  const lthResidencePct = Math.min(lthResidenceYears * 4, 40);
+  const lthHoldingFallbackFormula = useTable2
+    ? `총 장특공제 ${totalLth.toLocaleString()}원 − 거주 기간분 ${lthSplit.residenceAmount.toLocaleString()}원 = ${lthSplit.holdingAmount.toLocaleString()}원 (§95② 표2 — 거주분 직접 산정 후 잔액을 보유분에 귀속, 보유 ${lthHoldingYears}년 공제율 ${lthHoldingPct}%)`
+    : `총 장특공제 ${totalLth.toLocaleString()}원 = 보유 기간분 전액 ${lthSplit.holdingAmount.toLocaleString()}원 (§95② 표1 — 보유기간별 공제만, 거주기간분 없음)`;
+  const lthResidenceFallbackFormula = useTable2
+    ? `총 장특공제 ${totalLth.toLocaleString()}원 × 거주율 ${lthResidencePct}% ÷ (보유율 ${lthHoldingPct}% + 거주율 ${lthResidencePct}%) = ${lthSplit.residenceAmount.toLocaleString()}원 (§95② 표2 — 거주 ${lthResidenceYears}년 직접 산정)`
+    : `0원 (§95② 표1 적용 — 거주기간 공제 대상 아님)`;
 
-  items.set("ltHoldingPart", {
-    label: " 보유 기간분 장특",
-    value: lthHoldingStep?.amount ?? lthSplit.holdingAmount,
-    formula:
-      lthHoldingStep?.formula ??
-      "총 장특공제 × (보유연수 × 4% ÷ (보유연수 × 4% + 거주연수 × 4%)) — §95② 별표 표2 비율 안분",
-    legalBasis: lthHoldingStep?.legalBasis ?? "소득세법 §95② 별표 표2",
-    note: useTable2
-      ? "1세대1주택 고가주택 표2 적용 (거주 ≥ 24개월)"
-      : "표1 적용 — 거주분 0 (거주 미충족 또는 일반 자산)",
-    perAsset: ltHoldingPerAsset,
-  });
-  items.set("ltResidencePart", {
-    label: " 거주 기간분 장특",
-    value: lthResidenceStep?.amount ?? lthSplit.residenceAmount,
-    formula:
-      lthResidenceStep?.formula ??
-      "총 장특공제 × (거주연수 × 4% ÷ (보유연수 × 4% + 거주연수 × 4%)) — §95② 별표 표2 비율 안분",
-    legalBasis: lthResidenceStep?.legalBasis ?? "소득세법 §95② 별표 표2",
-    perAsset: ltResidencePerAsset,
-  });
+  if (mu) {
+    // 겸용 — 주택분(표1/표2 보유·거주) + 비주택분(상가, 표1 보유) 분리.
+    // 신규 계산은 엔진 echo(정확값)를 쓰고, echo가 없는 과거/이력 결과는 자산 기준으로 재구성
+    //   (연수=취득일→양도일, 율=calcLongTermRate, 보유/거주 금액=splitLtDeduction — 신고서 양식과 동일).
+    const h = mu.housingPart;
+    const c = mu.commercialPart;
+    const hT2 = h.longTermDeductionTable === 2;
+    const hBasis = hT2 ? "소득세법 §95② 별표 표2" : "소득세법 §95② 별표 표1";
+    const hHoldYears = h.holdingYears ?? Math.floor(totalHoldingMs / 12);
+    const hResYears = h.residenceYears ?? (hT2 ? Math.floor(residenceMs / 12) : 0);
+    const hHoldRate = h.holdingDeductionRate ?? calcLongTermRate(hHoldYears, 0, hT2);
+    const hResRate =
+      h.residenceDeductionRate ??
+      calcLongTermRate(hHoldYears, hResYears, hT2) - calcLongTermRate(hHoldYears, 0, hT2);
+    const hSplit =
+      h.holdingDeductionAmount !== undefined && h.residenceDeductionAmount !== undefined
+        ? { holdingAmount: h.holdingDeductionAmount, residenceAmount: h.residenceDeductionAmount }
+        : splitLtDeduction(h.longTermDeductionAmount, totalHoldingMs, residenceMs, hT2);
+    const cYears = c.holdingYears ?? Math.floor(totalHoldingMs / 12);
+    items.set("ltHousingPart", {
+      label: " 주택분 장특",
+      value: h.longTermDeductionAmount,
+      formula: hT2
+        ? `주택분 과세대상 양도차익 × 표2 [보유 ${hHoldYears}년 ${pct(hHoldRate)} + 거주 ${hResYears}년 ${pct(hResRate)}] = ${h.longTermDeductionAmount.toLocaleString()}원`
+        : `주택분 과세대상 양도차익 × 표1 [보유 ${hHoldYears}년 ${pct(hHoldRate)}] = ${h.longTermDeductionAmount.toLocaleString()}원`,
+      legalBasis: hBasis,
+    });
+    items.set("ltHousingHolding", {
+      label: " · 주택 보유 기간분",
+      value: hSplit.holdingAmount,
+      formula: `주택분 과세대상 양도차익 × 보유 ${pct(hHoldRate)}(보유 ${hHoldYears}년) = ${hSplit.holdingAmount.toLocaleString()}원`,
+      legalBasis: hBasis,
+    });
+    items.set("ltHousingResidence", {
+      label: " · 주택 거주 기간분",
+      value: hSplit.residenceAmount,
+      formula: hT2
+        ? `주택분 과세대상 양도차익 × 거주 ${pct(hResRate)}(거주 ${hResYears}년) = ${hSplit.residenceAmount.toLocaleString()}원`
+        : "0원 (표1 — 거주기간 공제 대상 아님)",
+      legalBasis: hBasis,
+    });
+    items.set("ltCommercialPart", {
+      label: " 비주택분(상가) 장특",
+      value: c.longTermDeductionAmount,
+      formula: `상가분 과세대상 양도차익 × 표1 [보유 ${cYears}년 ${pct(c.longTermDeductionRate)}] = ${c.longTermDeductionAmount.toLocaleString()}원 (거주기간 공제 없음)`,
+      legalBasis: "소득세법 §95② 별표 표1",
+    });
+  } else {
+    items.set("ltHoldingPart", {
+      label: " 보유 기간분 장특",
+      value: lthHoldingStep?.amount ?? lthSplit.holdingAmount,
+      formula: lthHoldingStep?.formula ?? lthHoldingFallbackFormula,
+      legalBasis: lthHoldingStep?.legalBasis ?? (useTable2 ? "소득세법 §95② 별표 표2" : "소득세법 §95② 별표 표1"),
+      note: useTable2
+        ? "1세대1주택 고가주택 표2 적용 (거주 ≥ 24개월)"
+        : "표1 적용 — 거주분 0 (거주 미충족 또는 일반 자산)",
+      perAsset: ltHoldingPerAsset,
+    });
+    items.set("ltResidencePart", {
+      label: " 거주 기간분 장특",
+      value: lthResidenceStep?.amount ?? lthSplit.residenceAmount,
+      formula: lthResidenceStep?.formula ?? lthResidenceFallbackFormula,
+      legalBasis: lthResidenceStep?.legalBasis ?? (useTable2 ? "소득세법 §95② 별표 표2" : "소득세법 §95② 별표 표1"),
+      perAsset: ltResidencePerAsset,
+    });
+  }
 
   // ── 4단계: 양도소득금액·기본공제 ────────────────────────────
   const incomeStep = findStepByLabel(result.steps, "양도소득금액");

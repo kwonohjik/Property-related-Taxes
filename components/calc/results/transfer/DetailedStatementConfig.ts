@@ -65,7 +65,17 @@ export const STATEMENT_GROUPS: GroupDef[] = [
     id: "ltDeduction",
     title: "2단계 — 장기보유특별공제 (§95②)",
     tone: "amber",
-    itemKeys: ["ltDeduction", "ltHoldingPart", "ltResidencePart"],
+    // 겸용은 주택분/상가분 키(ltHousing*·ltCommercialPart)만, 그 외는 ltHoldingPart/ltResidencePart만
+    // Map에 set됨 — 미설정 키는 렌더러가 자동 skip(부분별 vs 합산 자동 분기).
+    itemKeys: [
+      "ltDeduction",
+      "ltHousingPart",
+      "ltHousingHolding",
+      "ltHousingResidence",
+      "ltCommercialPart",
+      "ltHoldingPart",
+      "ltResidencePart",
+    ],
   },
   {
     id: "income",
