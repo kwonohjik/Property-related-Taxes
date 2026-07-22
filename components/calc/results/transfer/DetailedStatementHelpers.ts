@@ -9,6 +9,7 @@
  *  - 800줄 정책 — Helpers / Groups / Card 3파일 분할
  */
 
+import type { ReactNode } from "react";
 import type { TransferTaxResult, CalculationStep } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -37,6 +38,7 @@ import {
   buildDeterminedTaxFormula,
   buildPenaltyFormula,
   setAggregateProcedureItems,
+  prorationFormulaAsFrac,
 } from "./DetailedStatementFormulaBuilders";
 import { applyRedevelopmentOverrides } from "./DetailedStatementRedevelopmentBuilders";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
@@ -346,12 +348,13 @@ export function buildStatementItems(
   const proratedStep = isAggregate
     ? undefined
     : findStepByLabel(result.steps, "과세 양도차익 (12억 초과분)");
-  const taxableFormula = isAggregate
+  const taxableFormula: ReactNode = isAggregate
     ? "각 자산 과세대상 양도차익 합계"
-    : (proratedStep?.formula ??
-        (exemptVal <= 0
-          ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (전액 과세)`
-          : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 비과세 양도차익 ${exemptVal.toLocaleString()}`));
+    : proratedStep
+      ? prorationFormulaAsFrac(proratedStep.formula)
+      : exemptVal <= 0
+        ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (전액 과세)`
+        : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 비과세 양도차익 ${exemptVal.toLocaleString()}`;
   const exemptFormula = isAggregate
     ? "각 자산 비과세 양도차익 합계 (§89 비과세 또는 §95 12억 초과 안분)"
     : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 과세대상 양도차익 ${taxableGainVal.toLocaleString()} (§89 비과세 또는 §95 12억 초과 안분)`;

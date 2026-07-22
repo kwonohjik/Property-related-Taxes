@@ -15,10 +15,28 @@
  *  - acqLandStdTotal·acqBuilding1StdTotal·acqExtensionStdTotal (취득시 분모)
  */
 
+import { createElement, Fragment, type ReactNode } from "react";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+
+/**
+ * 엔진 §95③ 12억 초과 안분 STEP formula(문자열)를 Frac 분수 표기로 변환 (PR #746 표준).
+ * 형식: "<차익> × (<라벨 분자> - 12억) / <라벨 분모>" — 미일치 시 원문 문자열 fallback.
+ * .ts 파일이라 JSX 대신 createElement 사용.
+ */
+export function prorationFormulaAsFrac(formula: string): ReactNode {
+  const m = formula.match(/^(.+?) × \((.+?)\) \/ (.+)$/);
+  if (!m) return formula;
+  return createElement(
+    Fragment,
+    null,
+    `${m[1]} × `,
+    createElement(Frac, { top: m[2], bottom: m[3] }),
+  );
+}
 
 /** propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산 */
 function isLandProp(propertyId: string): boolean {

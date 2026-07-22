@@ -3,6 +3,7 @@
  * 순수 상수·인터페이스만. buildStatementItems 등 로직은 DetailedStatementHelpers.ts.
  * 하위 호환: DetailedStatementHelpers.ts가 이 파일을 re-export하므로 기존 import 경로 유지.
  */
+import type { ReactNode } from "react";
 
 // ── 자산별 분해 ──────────────────────────────────────────────────
 
@@ -20,8 +21,8 @@ export interface PerAssetValue {
 export interface StatementItem {
   /** 신고서 양식 표의 항목 라벨과 일치 */
   label: string;
-  /** 산식·계산 과정 설명 (예: "양도가액 - 취득가액 - 필요경비") */
-  formula?: string;
+  /** 산식·계산 과정 설명 (예: "양도가액 - 취득가액 - 필요경비"). ReactNode 허용 — Frac 분수 표기(PR #746 표준) */
+  formula?: ReactNode;
   /** 실제 계산 결과 값 — 숫자=금액(formatKRW), 문자열=날짜/기간 */
   value: number | string | null;
   /** 법령 근거 (LawArticleModal에 전달) */
