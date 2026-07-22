@@ -511,16 +511,16 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     //      연면적 아래 상가분 자동산출 안내 블록을 제거했다(도움말 정리). 산출·적용 검증은 아래 존치.
 
     await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
+    // 겸용 자동 시드 — 주택 행(주택 연면적 120) + 상가 행(상가 연면적 80)이 함께 열린다
+    // (상가 행 주택 면적 잔존 버그 수정 anchor). "+ 부분 추가" 불필요.
+    await expect(modal.getByPlaceholder("연면적").first()).toHaveValue("120");
+    await expect(modal.getByPlaceholder("연면적").last()).toHaveValue("80");
     // 부분1 주택
     await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 3);
     await fillCombos(page, modal, "용도 선택", /단독|다가구|주택/, 3);
-    await modal.getByPlaceholder("연면적").first().fill("120");
-    // 부분2 상가
-    await modal.getByRole("button", { name: "+ 부분 추가" }).click();
-    await modal.getByRole("button", { name: "상가", exact: true }).nth(1).click();
+    // 부분2 상가 (자동 시드된 행)
     await fillCombos(page, modal, "구조 선택", /철근콘크리트조/, 1);
     await fillCombos(page, modal, "용도 선택", /근린생활/, 1);
-    await modal.getByPlaceholder("연면적").last().fill("80");
 
     const land = modal.getByPlaceholder("원/㎡");
     await land.nth(0).fill("2000000");

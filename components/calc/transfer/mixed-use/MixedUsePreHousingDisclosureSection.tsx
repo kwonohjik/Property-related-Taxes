@@ -216,6 +216,8 @@ export function MixedUsePreHousingDisclosureSection({
           // 3시점 일괄 계산 모달 첫 부분(주택) 연면적 자동채움 — 상위 화면의 **계산된 주택 연면적**
           // (residentialFloorArea = 전용+안분 공통, MixedUseAreaInputs 파생값·"주택 연면적" 표시값). 전용면적 아님.
           housingFloorArea={asset.residentialFloorArea || undefined}
+          // 겸용 배치 모달 상가 행 자동채움 — 상가 연면적(nonResidentialFloorArea, 동일 파생 소스)
+          commercialFloorArea={asset.nonResidentialFloorArea || undefined}
           // Case A: ③ 양도시 컬럼은 MixedUseStandardPriceInputs 양도시 섹션으로 통합
           hideTransferColumn={isCaseA}
           // Case A 4부분 분리 모드 — ①·② 시점에서 토지·건물을 주택분/상가분 2 컬럼으로 분리

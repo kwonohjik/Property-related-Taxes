@@ -84,6 +84,11 @@ interface Props {
    * 모달 열 때 첫 행에 시드. 미주입 시 빈 값(종전 동작). 사용자 수정 가능.
    */
   housingFloorAreaPrefill?: string;
+  /**
+   * 상가 연면적 자동채움(문자열) — 겸용(enableCommercial)에서 모달 열 때 상가 행을
+   * 이 값으로 함께 시드. 미주입·비겸용 시 주택 행만 시드(종전 동작). 사용자 수정 가능.
+   */
+  commercialFloorAreaPrefill?: string;
   /** 런처 버튼 `data-testid`(E2E 셀렉터). 미주입 시 미부여. */
   dataTestId?: string;
 }
@@ -126,6 +131,7 @@ export function PhdBuildingStdPriceModalButton({
   snapshotPrefix,
   jibun,
   housingFloorAreaPrefill,
+  commercialFloorAreaPrefill,
   dataTestId,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -162,6 +168,16 @@ export function PhdBuildingStdPriceModalButton({
     setError(null);
     setResult(null);
     setComputedInput(null);
+    // Case A(commercialAcqFirstMode)는 취득·최초공시 상가를 주택 행에서 주입(재일46014-2396)
+    // — 주택 행 부재 시 양도 상가만 silent 산출되므로 구성 단계에서 차단.
+    if (commercialAcqFirstMode && !rows.some((r) => r.category === "housing")) {
+      setError(
+        "취득·최초공시 상가분은 당시 실제 용도(주택)의 구조·용도로 산출합니다. " +
+          "주택 부분 행이 필요합니다 — \"+ 부분 추가\" 후 주택을 선택하세요. " +
+          "주택 행 없이 계산하면 양도시 상가만 산출되어 3시점 환산이 불완전합니다.",
+      );
+      return;
+    }
     const built = Math.floor(parseDecimal(builtYear));
     if (built <= 0) {
       setError("신축연도를 입력하세요.");
@@ -257,7 +273,12 @@ export function PhdBuildingStdPriceModalButton({
   function handleOpen() {
     setLandPrices(Object.fromEntries(points.map((p) => [p.key, p.landPricePerM2])));
     // 첫 부분(주택)에 상위 화면 주택 연면적 자동채움(있으면). 사용자 수정 가능.
-    setRows([{ ...emptyRow(), floorArea: housingFloorAreaPrefill ?? "" }]);
+    // 겸용은 상가 행도 상가 연면적으로 함께 시드 — 상가 런처 진입 후 chip 전환 시
+    // 주택 면적이 상가에 남는 혼란 방지(각 행이 자기 자산 면적을 갖고 시작).
+    const seed: PartRow[] = [{ ...emptyRow(), floorArea: housingFloorAreaPrefill ?? "" }];
+    if (enableCommercial && commercialFloorAreaPrefill)
+      seed.push({ ...emptyRow("commercial"), floorArea: commercialFloorAreaPrefill });
+    setRows(seed);
     setBuiltYear("");
     setResult(null);
     setComputedInput(null);

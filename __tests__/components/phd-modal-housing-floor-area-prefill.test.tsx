@@ -29,6 +29,37 @@ describe("PhdBuildingStdPriceModalButton — 주택 연면적 자동채움", () 
     expect(screen.getByDisplayValue("80.5")).toBeTruthy();
   });
 
+  it("겸용(enableCommercial): 상가 행도 상가 연면적으로 함께 시드 — 주택 면적 잔존 버그 방지", () => {
+    render(
+      <PhdBuildingStdPriceModalButton
+        points={points}
+        onApply={() => {}}
+        enableCommercial
+        commercialAcqFirstMode
+        housingFloorAreaPrefill="37.79"
+        commercialFloorAreaPrefill="80.23"
+      />,
+    );
+    fireEvent.click(screen.getByText("3시점 주택·상가 건물기준시가 일괄 계산"));
+    // 주택 행 37.79 + 상가 행 80.23 — 각 행이 자기 자산 면적으로 시작
+    expect(screen.getByDisplayValue("37.79")).toBeTruthy();
+    expect(screen.getByDisplayValue("80.23")).toBeTruthy();
+  });
+
+  it("비겸용: commercialFloorAreaPrefill 주입해도 상가 행 미시드 (주택 단독 종전 동작)", () => {
+    render(
+      <PhdBuildingStdPriceModalButton
+        points={points}
+        onApply={() => {}}
+        housingFloorAreaPrefill="37.79"
+        commercialFloorAreaPrefill="80.23"
+      />,
+    );
+    fireEvent.click(screen.getByText("3시점 건물기준시가 일괄 계산"));
+    expect(screen.getByDisplayValue("37.79")).toBeTruthy();
+    expect(screen.queryByDisplayValue("80.23")).toBeNull();
+  });
+
   it("housingFloorAreaPrefill 미주입 시 연면적 빈 값 (종전 동작)", () => {
     render(<PhdBuildingStdPriceModalButton points={points} onApply={() => {}} />);
     fireEvent.click(screen.getByText("3시점 건물기준시가 일괄 계산"));
