@@ -91,6 +91,8 @@ export interface ThreePointStandardPriceInputProps {
    * 겸용주택 주택분 등에서 상위 화면 주택 연면적을 전달. 미주입 시 모달 연면적 빈 값(종전).
    */
   housingFloorArea?: string;
+  /** 상가 연면적(문자열) — 겸용 배치 모달 상가 행 자동채움용. 미주입 시 주택 행만 시드. */
+  commercialFloorArea?: string;
   /**
    * 입력값의 대상 명시 — 라벨에 prefix 적용. 겸용주택 PHD 등 주택분과 상가분이
    * 같은 화면에 노출되는 컨텍스트에서 어느 쪽 입력인지 구별 표시용.
@@ -698,7 +700,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     <div className="space-y-3">
       {props.enableBatchCalc && !assetMajor && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} housingFloorAreaPrefill={props.housingFloorArea} />
+          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} housingFloorAreaPrefill={props.housingFloorArea} commercialFloorAreaPrefill={props.commercialFloorArea} />
         </div>
       )}
       {assetMajor ? (

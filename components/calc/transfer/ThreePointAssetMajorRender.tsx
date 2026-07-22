@@ -121,6 +121,7 @@ export function ThreePointAssetMajorRender(
         snapshotPrefix={props.stdPriceSnapshotPrefix}
         jibun={props.jibun}
         housingFloorAreaPrefill={props.housingFloorArea}
+        commercialFloorAreaPrefill={props.commercialFloorArea}
         buttonLabel={label}
         dataTestId={testid}
       />

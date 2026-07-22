@@ -146,9 +146,17 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         <p className="text-xs font-semibold text-slate-700">면적·부수토지·지역 정보</p>
       </div>
 
-      {/* 면적 소그룹 (sky) */}
+      {/* 면적 소그룹 (sky) — 용도변경 ON이면 1-A(취득시)와 시점 구분을 위해 "양도시" 명시 */}
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <p className="text-xs font-semibold text-sky-700">면적 (건축물대장 기준)</p>
+        <p className="text-xs font-semibold text-sky-700">
+          {asset.hasPartialUsageChange ? "양도시 면적 (건축물대장 기준)" : "면적 (건축물대장 기준)"}
+        </p>
+        {asset.hasPartialUsageChange && (
+          <p className="text-caption text-sky-700/80 leading-relaxed">
+            ※ 이 카드의 면적·부수토지는 <span className="font-semibold">양도시</span> 기준입니다.
+            취득시 면적은 아래 1-A 「취득시점 자산 구성」에서 자동 도출·수정합니다.
+          </p>
+        )}
 
         {/* 전용/공통 3열 한 행 — 연면적 자동 산출용 보조 입력 */}
         <div className="grid grid-cols-3 gap-2">
