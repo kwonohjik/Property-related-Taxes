@@ -313,6 +313,17 @@ export interface MixedUseHousingPart {
   longTermDeductionRate: number;
   /** 장기보유공제액 */
   longTermDeductionAmount: number;
+  /**
+   * echo — 장특공제 보유/거주 기간분 분리 표시용(산식·세액 불변).
+   * 표2: 거주분 = 각 부분 거주율 직접 산정, 보유분 = 총액 − 거주분(잔액 흡수·합 불변식).
+   * 표1: 거주분 0, 보유분 = 총액. 대표 연수·율은 건물 기준(longTermDeductionRate와 동일 관례).
+   */
+  holdingDeductionAmount?: number;
+  residenceDeductionAmount?: number;
+  holdingYears?: number;
+  residenceYears?: number;
+  holdingDeductionRate?: number;
+  residenceDeductionRate?: number;
   /** 양도소득금액 */
   incomeAmount: number;
   /** 주택 토지분 양도차익 중 비사업용으로 이전된 비율 */
@@ -357,6 +368,8 @@ export interface MixedUseCommercialPart {
   longTermDeductionRate: number;
   /** 장기보유공제액 */
   longTermDeductionAmount: number;
+  /** echo — 보유연수(표1 대표값·거주 개념 없음). 장특공제 분리 표시용(세액 불변). */
+  holdingYears?: number;
   /** 양도소득금액 */
   incomeAmount: number;
   /**

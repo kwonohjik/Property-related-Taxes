@@ -13,8 +13,66 @@
  * 설계 문서: docs/02-design/features/transfer-mixed-use-inheritance-acquisition.engine.design.md
  */
 
+import { applyRate } from "./tax-utils";
 import type { MixedUseAssetInput } from "./types/transfer-mixed-use.types";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
+
+/**
+ * 장기보유공제율 (§95② 별표, mixed-use 공용 — helpers.ts에서 re-export).
+ *   표2: 1세대1주택 거주 2년+ → min(holdYears×4%,40%) + min(resYears×4%,40%) (합계 최대 80%).
+ *   표1: 그 외 → min(holdYears×2%, 30%). 보유 3년 미만은 0.
+ * 보유분·거주분 각각 40% 상한 후 합산(합산 후 80% 상한만 적용하면 과대 공제 — H-7 회귀).
+ */
+export function calcLongTermRate(
+  holdingYears: number,
+  residenceYears: number,
+  useTable2: boolean,
+): number {
+  if (holdingYears < 3) return 0;
+  if (useTable2) {
+    const holdingPart = Math.min(holdingYears * 0.04, 0.40);
+    const residencePart = Math.min(residenceYears * 0.04, 0.40);
+    return holdingPart + residencePart;
+  }
+  return Math.min(holdingYears * 0.02, 0.30);
+}
+
+/**
+ * 주택분 장특공제 보유/거주 기간분 분리 echo (표시 전용·세액 불변).
+ * 거주분 = 각 부분 거주율(총 부분율 − 보유 부분율)로 직접 산정(applyRate),
+ * 보유분 = 총 장특공제 − 거주분(잔액 흡수 → 합 = longTermDeductionAmount 불변식).
+ * 표1/보유<3이면 거주율 0 → 거주분 0·보유분 전액. 대표 연수·율은 건물 기준.
+ */
+export function buildHousingLthdEcho(a: {
+  proratedLandGain: number;
+  proratedBuildingGain: number;
+  landDedRate: number;
+  buildingDedRate: number;
+  landHoldingRate: number;
+  buildingHoldingRate: number;
+  longTermDeductionAmount: number;
+  buildingHoldingYears: number;
+  residenceYears: number;
+}): {
+  holdingDeductionAmount: number;
+  residenceDeductionAmount: number;
+  holdingYears: number;
+  residenceYears: number;
+  holdingDeductionRate: number;
+  residenceDeductionRate: number;
+} {
+  const residenceDeductionAmount =
+    applyRate(Math.max(a.proratedLandGain, 0), a.landDedRate - a.landHoldingRate) +
+    applyRate(Math.max(a.proratedBuildingGain, 0), a.buildingDedRate - a.buildingHoldingRate);
+  return {
+    holdingDeductionAmount: a.longTermDeductionAmount - residenceDeductionAmount,
+    residenceDeductionAmount,
+    holdingYears: a.buildingHoldingYears,
+    residenceYears: a.residenceYears,
+    holdingDeductionRate: a.buildingHoldingRate,
+    residenceDeductionRate: a.buildingDedRate - a.buildingHoldingRate,
+  };
+}
 
 /** 상속 취득가액 산정 상세 — 산식 표시용 echo (housing·commercial 공용). */
 export interface InheritedAcquisitionDetail {

@@ -70,7 +70,13 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     estimatedDeduction: isDeemedOrActual ? undefined : acqDeduction,
     expenses: acqDeduction,
     longTermHoldingDeduction: b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount,
-    longTermHoldingRate: 0,
+    // 겸용은 주택분(표2 가능)·상가분(표1)이 서로 다른 공제율이라 단일 rate가 없음 —
+    // 상단 요약 산식용 실효 blended rate = 장특공제 합계 ÷ 과세대상 양도차익 합계.
+    longTermHoldingRate:
+      b.housingPart.proratedTaxableGain + b.commercialPart.transferGain > 0
+        ? (b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount) /
+          (b.housingPart.proratedTaxableGain + b.commercialPart.transferGain)
+        : 0,
     lthdStartDate: new Date(0), // mixed-use 합산 mock: 표시용
     basicDeduction: t.basicDeduction,
     taxBase: t.taxBase,
