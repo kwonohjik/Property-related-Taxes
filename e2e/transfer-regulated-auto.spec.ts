@@ -94,6 +94,44 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
     // 미수록 → low 신뢰도 경고 노출
     await expect(page.getByText(/신뢰도: low/)).toBeVisible({ timeout: 15000 });
   });
+
+  test("수동 조작한 토글은 스텝 재진입(재조회) 시 자동판별이 덮어쓰지 않음", async ({ page }) => {
+    // 강남 2017-05-02 취득(지정 고시 2017-08-03 이전 → 취득일 기준 미지정) + 2021-06-01 양도(지정)
+    const ok = await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900",
+        acquisitionDate: "2017-05-02",
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2021-06-01",
+    );
+    expect(ok).toBe(true);
+
+    // 자동판별: 양도일 ON · 취득일 OFF
+    const acqSwitch = page.getByRole("switch", { name: /취득일 기준 조정대상지역/ });
+    await expect(page.getByRole("switch", { name: /양도일 기준 조정대상지역/ })).toBeChecked({
+      timeout: 15000,
+    });
+    await expect(acqSwitch).not.toBeChecked();
+
+    // 사용자가 취득일 토글을 수동 ON
+    await acqSwitch.click();
+    await expect(acqSwitch).toBeChecked();
+
+    // 다른 스텝으로 이탈 → 재진입(재마운트·재조회 발생)
+    // 완료 스텝은 "✓ 자산 목록"으로 name 합쳐짐 → 부분 매칭 (e2e/CLAUDE.md §2)
+    await page.getByRole("button", { name: "자산 목록" }).click();
+    await page.getByRole("button", { name: "보유 상황", exact: true }).click();
+    await page.getByText("보유 상황 입력").waitFor({ timeout: 15000 });
+    await expect(page.getByText("조정대상지역 자동 판별")).toBeVisible({ timeout: 15000 });
+
+    // 수동 ON이 자동판별(미지정=OFF)에 덮여쓰이지 않고 유지
+    await expect(page.getByRole("switch", { name: /취득일 기준 조정대상지역/ })).toBeChecked({
+      timeout: 15000,
+    });
+  });
 });
 
 /**
