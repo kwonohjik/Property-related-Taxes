@@ -345,7 +345,14 @@ export function checkExemption(
       const provisoLabel = provisoRelaxesHolding
         ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason!]})`
         : "";
-      return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}` };
+      // §155①은 "1세대1주택으로 보아 §154①을 적용" — 고가주택 배제(§89①3괄호)·12억 초과분
+      // 안분(§95③·§160)도 동일 적용. E-1/E-3.5/E-5와 같은 priceCheck 패턴.
+      const priceCheck =
+        input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+      if (priceCheck <= rule.maxExemptPrice) {
+        return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}` };
+      }
+      return { isExempt: false, isPartialExempt: true, exemptReason: `일시적 2주택 고가주택${provisoLabel}` };
     }
   }
 
