@@ -465,8 +465,12 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     // splitMode 신호: 상가건물 기준시가 필드 노출
     await expect(mixedPhd.getByText("상가건물 기준시가").first()).toBeVisible();
 
-    // Phase 2.1: 일괄 버튼 1개 + 배치가 취득·최초공시 상가도 산출 → 필드별 버튼(주택·상가) 전부 숨김 count 0
-    await expect(mixedPhd.getByRole("button", { name: /주택·상가 건물기준시가 일괄 계산/ })).toHaveCount(1);
+    // Phase 2.1 + D1(섹션별 런처): 상단 단일 배치 버튼 → 주택/상가 섹션 헤더 런처 2개로 이동.
+    // 배치가 취득·최초공시 상가도 산출 → 필드별 버튼(주택·상가) 전부 숨김 count 0.
+    // 계획: docs/02-design/features/mixed-use-case-a-per-section-stdprice-calculator.plan.md
+    await expect(mixedPhd.getByRole("button", { name: /주택·상가 건물기준시가 일괄 계산/ })).toHaveCount(0);
+    await expect(mixedPhd.getByTestId("phd-housing-stdprice-calc")).toHaveCount(1);
+    await expect(mixedPhd.getByTestId("phd-commercial-stdprice-calc")).toHaveCount(1);
     await expect(mixedPhd.getByRole("button", { name: "건물 기준시가 계산" })).toHaveCount(0);
   });
 
@@ -499,7 +503,8 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await expect(mixedPhd).toBeVisible();
     await fillDateExact(mixedPhd, { year: "2015", month: "04", day: "30" });
 
-    await mixedPhd.getByRole("button", { name: "3시점 주택·상가 건물기준시가 일괄 계산" }).click();
+    // D1: 상단 단일 버튼 → 주택 섹션 헤더 런처(동일 결합 모달)로 진입
+    await mixedPhd.getByTestId("phd-housing-stdprice-calc").click();
     const modal = page.getByRole("dialog").filter({ hasText: "3시점 건물 기준시가 일괄 계산" });
     await expect(modal).toBeVisible();
     // (구) "당시 실제 용도(주택)로 자동 산출" 안내 단언 삭제 — f03f9ad0(2026-07-10)이
