@@ -555,8 +555,10 @@ export function calculateTransferTax(
     const rPart = Math.min(residenceYearsForStep * 4, 40);
     const totalRate = hPart + rPart;
     if (totalRate > 0) {
-      const holdingAmt = Math.floor((longTermHoldingDeduction * hPart) / totalRate);
-      const residenceAmt = longTermHoldingDeduction - holdingAmt;
+      // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 별표 표2). floor 잔액(≤1원)은
+      // 보유분(기저 공제)에 흡수 — 합 = 총 장특공제 불변식 유지. 세액은 총액만 사용(무관).
+      const residenceAmt = Math.floor((longTermHoldingDeduction * rPart) / totalRate);
+      const holdingAmt = longTermHoldingDeduction - residenceAmt;
       steps.push({
         label: "보유 기간분 장특",
         formula: `${longTermHoldingDeduction.toLocaleString()} × ${hPart}% / ${totalRate}% = ${holdingAmt.toLocaleString()} (보유 ${holdingPeriod.years}년 × 4%, 40% 한도)`,
@@ -566,7 +568,7 @@ export function calculateTransferTax(
       });
       steps.push({
         label: "거주 기간분 장특",
-        formula: `${longTermHoldingDeduction.toLocaleString()} × ${rPart}% / ${totalRate}% = ${residenceAmt.toLocaleString()} (거주 ${residenceYearsForStep}년 × 4%, 40% 한도, 잔액 보정)`,
+        formula: `${longTermHoldingDeduction.toLocaleString()} × ${rPart}% / ${totalRate}% = ${residenceAmt.toLocaleString()} (거주 ${residenceYearsForStep}년 × 4%, 40% 한도)`,
         amount: residenceAmt,
         legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
         sub: true,
