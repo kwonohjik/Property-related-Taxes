@@ -73,8 +73,15 @@ test.describe("겸용주택 Case A — 자산-우선 전치", () => {
     await expect(mixedPhd.getByText("상가분 토지기준시가 (자동)").first()).toBeVisible();
     // 개별 시점 건물 계산기 버튼은 없음(배치가 6값 산출)
     await expect(mixedPhd.getByRole("button", { name: "건물 기준시가 계산" })).toHaveCount(0);
+    // D1: 상단 단일 배치 버튼 대신 주택/상가 섹션 헤더 런처 2개(둘 다 결합 모달)
+    // 계획: docs/02-design/features/mixed-use-case-a-per-section-stdprice-calculator.plan.md
     await expect(
       mixedPhd.getByRole("button", { name: /주택·상가 건물기준시가 일괄 계산/ }),
-    ).toHaveCount(1);
+    ).toHaveCount(0);
+    await expect(mixedPhd.getByTestId("phd-housing-stdprice-calc")).toHaveCount(1);
+    await expect(mixedPhd.getByTestId("phd-commercial-stdprice-calc")).toHaveCount(1);
+    // 주택 런처 클릭 → 결합 모달 열림
+    await mixedPhd.getByTestId("phd-housing-stdprice-calc").click();
+    await expect(page.getByRole("heading", { name: "3시점 건물 기준시가 일괄 계산" })).toBeVisible();
   });
 });

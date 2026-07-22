@@ -688,15 +688,21 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
   // splitMode에서만 발화하므로 M1 일치). Case B는 상가 UI 미노출, 양도 상가는 ③ 섹션에서 동일 필드로 입력.
   const enableCommercial = splitMode;
 
+  // asset-major(Case A)는 상단 단일 버튼 대신 주택/상가 섹션 헤더에 런처 2개를 배치한다(D1) —
+  // 버튼 조립은 자식(ThreePointAssetMajorRender)이 담당, 여기선 배치 데이터만 전달(800줄 정책).
+  // 두 런처 모두 동일한 결합 모달(6값·commercialAcqFirstMode)을 열어 일관성·스냅샷을 보존한다.
+  // (계획: mixed-use-case-a-per-section-stdprice-calculator.plan.md §4)
+  const assetMajor = props.layout === "asset-major";
+
   return (
     <div className="space-y-3">
-      {props.enableBatchCalc && (
+      {props.enableBatchCalc && !assetMajor && (
         <div className="flex justify-end">
           <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} housingFloorAreaPrefill={props.housingFloorArea} />
         </div>
       )}
-      {props.layout === "asset-major" ? (
-        <ThreePointAssetMajorRender {...props} />
+      {assetMajor ? (
+        <ThreePointAssetMajorRender {...props} batchPoints={batchPoints} onBatchApply={applyBatch} />
       ) : (
       <>
       <PointBlock

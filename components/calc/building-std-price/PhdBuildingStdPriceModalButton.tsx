@@ -47,7 +47,7 @@ export interface PhdThreePointApply {
   landPrices?: { acquisition?: string; firstDisclosure?: string; transfer?: string };
 }
 
-interface PointMeta {
+export interface PointMeta {
   key: "acquisition" | "firstDisclosure" | "transfer";
   label: string;
   year: number | undefined;
@@ -84,6 +84,8 @@ interface Props {
    * 모달 열 때 첫 행에 시드. 미주입 시 빈 값(종전 동작). 사용자 수정 가능.
    */
   housingFloorAreaPrefill?: string;
+  /** 런처 버튼 `data-testid`(E2E 셀렉터). 미주입 시 미부여. */
+  dataTestId?: string;
 }
 
 /** 편집 중 부분 행 — 시점별 구조·용도(연도 체계 상이) + 공통 연면적 */
@@ -124,6 +126,7 @@ export function PhdBuildingStdPriceModalButton({
   snapshotPrefix,
   jibun,
   housingFloorAreaPrefill,
+  dataTestId,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [builtYear, setBuiltYear] = useState("");
@@ -264,7 +267,7 @@ export function PhdBuildingStdPriceModalButton({
 
   return (
     <>
-      <Button type="button" variant="modalLauncher" size="xs" onClick={handleOpen}>
+      <Button type="button" variant="modalLauncher" size="xs" onClick={handleOpen} data-testid={dataTestId}>
         {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
