@@ -445,10 +445,23 @@ export function computeTransferSummary(
   }, 0);
   // 필요경비 합계: 지분 모드 자산은 capex/transferExpense × ratio
   const totalNecessaryExpense = formData.assets.reduce((acc, a) => {
-    const capExp = parseRaw(a.capitalExpenditure);
-    const trExp = parseRaw(a.transferExpense);
-    const splitTotal = capExp + trExp;
-    const baseExp = splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses);
+    let baseExp: number;
+    if (a.assetKind === "housing" && a.isMixedUseHouse) {
+      // 겸용주택은 공통 capex/transferExpense를 엔진이 소비하지 않음 —
+      // 주택/상가 섹션별 실제 필요경비(상속·증여·매매실가 중 활성 1세트만 채워짐)를 합산.
+      baseExp =
+        parseRaw(a.mixedHousingInheritedExpense) +
+        parseRaw(a.mixedCommercialInheritedExpense) +
+        parseRaw(a.mixedHousingGiftExpense) +
+        parseRaw(a.mixedCommercialGiftExpense) +
+        parseRaw(a.mixedHousingActualExpense) +
+        parseRaw(a.mixedCommercialActualExpense);
+    } else {
+      const capExp = parseRaw(a.capitalExpenditure);
+      const trExp = parseRaw(a.transferExpense);
+      const splitTotal = capExp + trExp;
+      baseExp = splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses);
+    }
     const n = parseFloat(a.ownershipNumerator || "100");
     const d = parseFloat(a.ownershipDenominator || "100");
     const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;

@@ -14,6 +14,7 @@ import {
 import { buildCommercialGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
 import {
   resolveCommercialInheritedAcq,
+  splitDeemedExpense,
   type InheritedAcquisitionDetail,
 } from "./transfer-tax-mixed-use-inheritance";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
@@ -159,12 +160,15 @@ export function calcCommercialGainSplit(
   const landAcqPrice = Math.floor(estimatedAcqPrice * acqLandRatio);
   const buildingAcqPrice = estimatedAcqPrice - landAcqPrice;
 
-  // 개산공제 (§163⑥) — 상속·증여(실지거래가액 의제, 소령 §163⑨)은 미적용·실제 필요경비만 건물분 슬롯 반영.
+  // 개산공제 (§163⑥) — 상속·증여(실지거래가액 의제, 소령 §163⑨)·매매실가는 미적용.
+  // 실제 필요경비(자본적지출·양도비)는 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
   const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition;
-  const landAppraisalDed = usesDeemedAcq ? 0 : applyRate(acqLandStd, 0.03);
-  const buildingAppraisalDed = usesDeemedAcq
-    ? (asset.commercialInheritedExpense ?? 0)
-    : applyRate(acqBuildingStd, 0.03);
+  const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
+    ? splitDeemedExpense(asset.commercialInheritedExpense ?? 0, acqLandStd, acqBuildingStd)
+    : {
+        landAppraisalDed: applyRate(acqLandStd, 0.03),
+        buildingAppraisalDed: applyRate(acqBuildingStd, 0.03),
+      };
 
   const landGain = landTransferPrice - landAcqPrice - landAppraisalDed;
   const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;

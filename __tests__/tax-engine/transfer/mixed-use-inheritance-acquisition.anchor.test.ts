@@ -127,15 +127,46 @@ describe("겸용주택 상속 취득가액 엔진 정합 (소득세법 시행령
     expect(r.commercialPart.buildingAppraisalDed).toBe(0);
   });
 
-  // ─── 케이스#10 — 주택분·상가분 실제 필요경비 override(건물분 슬롯 대체) ───
-  it("케이스#10: housingInheritedExpense/commercialInheritedExpense → buildingAppraisalDed 슬롯에 그대로 반영(토지분은 0 유지)", () => {
+  // ─── 케이스#10 — 주택분·상가분 실제 필요경비 취득시 토지/건물 기준시가 안분 ───
+  // (정정 2026-07-22: 기존 "건물분 전액" → splitDeemedExpense로 토지/건물 안분.
+  //  주택·상가 각 취득시 토지:건물 기준시가 = 40:60 → 필요경비도 40:60 안분.
+  //  같은 부분 내 토지↔건물 재배분은 장특율·세율 동일 → 총세액 불변(tax-neutral) 실측.)
+  it("케이스#10: housingInheritedExpense/commercialInheritedExpense → 취득시 토지/건물 기준시가 비율 안분(Σ=입력값·총세액 불변)", () => {
     const r = run(
       inheritedBase({ housingInheritedExpense: 10_000_000, commercialInheritedExpense: 5_000_000 }),
     );
-    expect(r.housingPart.buildingAppraisalDed).toBe(10_000_000);
-    expect(r.housingPart.landAppraisalDed).toBe(0);
-    expect(r.commercialPart.buildingAppraisalDed).toBe(5_000_000);
-    expect(r.commercialPart.landAppraisalDed).toBe(0);
+    // 주택분 10,000,000 → 토지 4,000,000 / 건물 6,000,000 (40:60)
+    expect(r.housingPart.landAppraisalDed).toBe(4_000_000);
+    expect(r.housingPart.buildingAppraisalDed).toBe(6_000_000);
+    expect(r.housingPart.landAppraisalDed + r.housingPart.buildingAppraisalDed).toBe(10_000_000);
+    // 상가분 5,000,000 → 토지 2,000,000 / 건물 3,000,000 (40:60)
+    expect(r.commercialPart.landAppraisalDed).toBe(2_000_000);
+    expect(r.commercialPart.buildingAppraisalDed).toBe(3_000_000);
+    expect(r.commercialPart.landAppraisalDed + r.commercialPart.buildingAppraisalDed).toBe(5_000_000);
+    // 총세액 불변 — 토지/건물 재배분은 같은 부분 내 세율·장특율 동일이라 tax-neutral
+    expect(r.total.totalPayable).toBe(522_510_000);
+  });
+
+  // ─── 케이스#10-비사업용 — 배율초과 부수토지 존재 시 필요경비 안분은 세액 변동(non-neutral) ───
+  // 정정 2026-07-22: 같은 부분 내 토지↔건물 재배분은 보통 tax-neutral이나, 주택 부수토지 배율초과분(§104①8호
+  // +10%p 중과)이 있으면 토지분 필요경비가 중과대상 gain을 직접 줄여 세액이 실제로 변동한다(수정 전 "건물 전액
+  // 배부"는 중과 gain에서 공제를 원천 배제했던 버그). footprint 30·부수토지 800 → 배율초과 유도, 취득시
+  // 토지 기준시가가 건물을 압도해 10,000,000 전액 토지분 배부.
+  it("케이스#10-비사업용: 배율초과 존재 시 주택 필요경비가 비사업용(토지) 중과 gain을 줄여 세액 변동", () => {
+    const excessBase = (o?: Partial<MixedUseAssetInput>) =>
+      inheritedBase({ buildingFootprintArea: 30, totalLandArea: 800, ...o });
+    const noExp = run(excessBase());
+    const withExp = run(excessBase({ housingInheritedExpense: 10_000_000 }));
+    // 배율초과 부수토지 존재 확인
+    expect(noExp.nonBusinessLandPart).not.toBeNull();
+    // 필요경비 전액 토지분 배부(취득시 토지 기준시가 압도)
+    expect(withExp.housingPart.landAppraisalDed).toBe(10_000_000);
+    expect(withExp.housingPart.buildingAppraisalDed).toBe(0);
+    // 토지분 공제 → 비사업용 중과세·총세액 감소(non-neutral, 정정 방향)
+    expect(noExp.total.nonBusinessSurcharge).toBe(44_160_500);
+    expect(withExp.total.nonBusinessSurcharge).toBe(43_361_750);
+    expect(noExp.total.totalPayable).toBe(704_289_025);
+    expect(withExp.total.totalPayable).toBe(699_456_587);
   });
 
   // ─── 케이스#9 — 비상속(purchase) 겸용주택 회귀 ───
@@ -225,6 +256,15 @@ describe("겸용주택 상속 취득가액 엔진 정합 (소득세법 시행령
         standardPriceCandidate: 99_609_375,
         selected: "reported",
       });
+    });
+
+    // 케이스#10-PHD (정정 2026-07-22): PHD 주택분 필요경비도 취득시 토지/건물 기준시가 비율로 안분.
+    // 취득시점(2000) 토지 기준시가가 건물 대비 우세 → land 94% : building 6% 안분(Σ=입력값).
+    it("케이스#10-PHD: housingInheritedExpense → 취득시 토지/건물 기준시가 비율 안분(Σ=입력값)", () => {
+      const r = run(phdInheritedBase({ housingInheritedExpense: 10_000_000 }));
+      expect(r.housingPart.landAppraisalDed).toBe(9_411_764);
+      expect(r.housingPart.buildingAppraisalDed).toBe(588_236);
+      expect(r.housingPart.landAppraisalDed + r.housingPart.buildingAppraisalDed).toBe(10_000_000);
     });
   });
 

@@ -27,6 +27,29 @@ export interface InheritedAcquisitionDetail {
   selected: "reported" | "standard_price";
 }
 
+/**
+ * 상속·증여·매매실가(실지거래가액 의제) 모드의 실제 필요경비(자본적지출·양도비)를
+ * 취득시 토지/건물 기준시가 비율로 안분한다. 개산공제 슬롯(취득시 기준시가 × 3%)이
+ * 토지/건물로 나뉘던 것과 동일 기준. floor 잔액은 건물분이 흡수(Σ = expense 불변).
+ * 취득시 기준시가 합이 0(미상)이면 안분 불가 → 전액 건물분(현행 유지).
+ *
+ * expense × landStd 가 2^53(Number.MAX_SAFE_INTEGER)을 초과할 수 있어 BigInt로 계산.
+ */
+export function splitDeemedExpense(
+  expense: number,
+  acqLandStd: number,
+  acqBuildingStd: number,
+): { landAppraisalDed: number; buildingAppraisalDed: number } {
+  const landStdInt = Math.max(0, Math.floor(acqLandStd));
+  const buildingStdInt = Math.max(0, Math.floor(acqBuildingStd));
+  const denom = landStdInt + buildingStdInt;
+  if (expense <= 0 || denom <= 0) {
+    return { landAppraisalDed: 0, buildingAppraisalDed: Math.max(0, expense) };
+  }
+  const landAppraisalDed = Number((BigInt(expense) * BigInt(landStdInt)) / BigInt(denom));
+  return { landAppraisalDed, buildingAppraisalDed: expense - landAppraisalDed };
+}
+
 /** §163⑨ 본문 — 공시(비-PHD) 주택분. fallback(??), max 아님. */
 export function resolveHousingInheritedAcqDirect(
   asset: MixedUseAssetInput,
