@@ -451,7 +451,7 @@ export function buildStatementItems(
     value: lthResidenceStep?.amount ?? lthSplit.residenceAmount,
     formula:
       lthResidenceStep?.formula ??
-      "총 장특공제 − 보유 기간분 = 거주 기간분 (잔액 보정, §95② 별표 표2)",
+      "총 장특공제 × (거주연수 × 4% ÷ (보유연수 × 4% + 거주연수 × 4%)) — §95② 별표 표2 비율 안분",
     legalBasis: lthResidenceStep?.legalBasis ?? "소득세법 §95② 별표 표2",
     perAsset: ltResidencePerAsset,
   });
