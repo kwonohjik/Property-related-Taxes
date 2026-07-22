@@ -42,11 +42,33 @@ import {
 export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
   const t = b.total;
   const localTax = t.localTax;
+  // 취득 모드 판별 — 본문 계산 섹션(isDeemedAcq)과 동일 기준. 실가(§100²·§97①1호가목)·상속/증여
+  // 의제(§163⑨)는 실제 취득가액을 표시(개산공제 미표시), 환산·감정/매매사례(§176의2 추계)는 추계 분기.
+  const acqRoute = b.calculationRoute.acquisitionConversionRoute;
+  const isDeemedOrActual =
+    acqRoute === "section97_actual" ||
+    acqRoute === "inheritance_direct" ||
+    acqRoute === "inheritance_phd_max" ||
+    acqRoute === "gift_direct" ||
+    acqRoute === "gift_phd_max";
+  // 취득가액 = 주택분 + 상가분 (해당 모드 값이 estimatedAcquisitionPrice에 담김).
+  const acqPrice = b.housingPart.estimatedAcquisitionPrice + b.commercialPart.estimatedAcquisitionPrice;
+  // 필요경비 = 개산공제 합계(환산·감정/매매사례) 또는 실제 필요경비(의제) — appraisalDed 필드가 담음. 실가는 0.
+  // 상세명세서 실가 분기(취득가액 = 양도가액 − 양도차익 − expenses)가 acqPrice를 정확히 역산하도록 전달.
+  const acqDeduction =
+    b.housingPart.landAppraisalDed +
+    b.housingPart.buildingAppraisalDed +
+    b.commercialPart.landAppraisalDed +
+    b.commercialPart.buildingAppraisalDed;
   return {
     isExempt: false,
     transferGain: b.housingPart.transferGain + b.commercialPart.transferGain,
     taxableGain: b.housingPart.proratedTaxableGain + b.commercialPart.transferGain,
-    usedEstimatedAcquisition: true,
+    usedEstimatedAcquisition: !isDeemedOrActual,
+    // 환산·추계 분기: 취득가액(추계)·개산공제를 실제 값으로 표시. 실가/의제는 undefined(실가 역산 분기 사용).
+    estimatedBase: isDeemedOrActual ? undefined : acqPrice,
+    estimatedDeduction: isDeemedOrActual ? undefined : acqDeduction,
+    expenses: acqDeduction,
     longTermHoldingDeduction: b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount,
     longTermHoldingRate: 0,
     lthdStartDate: new Date(0), // mixed-use 합산 mock: 표시용
@@ -386,7 +408,11 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           <Row
             label="12억 초과 안분 후 과세대상 양도차익"
             value={fmt(h.proratedTaxableGain)}
-            formula={`주택 양도차익 × ((주택 양도가액 - 12억) ÷ 주택 양도가액) — 비사업용 이전분 제외`}
+            formula={`(주택 양도차익 ${fmtPlain(h.transferGain)}${
+              h.nonBusinessTransferredGain > 0
+                ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
+                : ""
+            }) × ((주택 양도가액 ${fmtPlain(a.housingTransferPrice)} - 12억) ÷ 주택 양도가액 ${fmtPlain(a.housingTransferPrice)})`}
           />
         )}
         <Row
@@ -403,7 +429,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           label="주택부분 양도소득금액"
           value={fmt(h.incomeAmount)}
           highlight
-          formula="과세대상 양도차익 - 장기보유공제"
+          formula={`과세대상 양도차익 ${fmtPlain(h.proratedTaxableGain)} - 장기보유공제 ${fmtPlain(h.longTermDeductionAmount)}`}
         />
         {h.nonBusinessTransferRatio > 0 && (
           <Row
@@ -485,7 +511,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           label="상가부분 양도소득금액"
           value={fmt(c.incomeAmount)}
           highlight
-          formula="양도차익 - 장기보유공제"
+          formula={`양도차익 ${fmtPlain(c.transferGain)} - 장기보유공제 ${fmtPlain(c.longTermDeductionAmount)}`}
         />
       </ResultSection>
 
@@ -510,7 +536,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           <Row
             label="비사업용 양도차익"
             value={fmt(nb.transferGain)}
-            formula="주택 토지분 양도차익 × (배율초과 면적 ÷ 주택부수토지 면적)"
+            formula={`주택 토지분 양도차익 ${fmtPlain(h.landTransferGain)} × 배율초과 비율 ${fmtPct(h.nonBusinessTransferRatio)}`}
           />
           <Row
             label={`장기보유공제 (표1, ${fmtPct(nb.longTermDeductionRate)})`}
@@ -522,7 +548,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
             label="비사업용토지 양도소득금액 (+10%p 가산)"
             value={fmt(nb.incomeAmount)}
             highlight
-            formula="양도차익 - 장기보유공제 (세율 가산은 합산세액에서 처리)"
+            formula={`양도차익 ${fmtPlain(nb.transferGain)} - 장기보유공제 ${fmtPlain(nb.longTermDeductionAmount)} (세율 가산은 합산세액에서 처리)`}
           />
         </ResultSection>
       )}
@@ -537,7 +563,9 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         <Row
           label="합산 양도소득금액"
           value={fmt(t.aggregateIncome)}
-          formula="주택부분 + 상가부분 + 비사업용토지 양도소득금액"
+          formula={`주택부분 ${fmtPlain(h.incomeAmount)} + 상가부분 ${fmtPlain(c.incomeAmount)}${
+            nb ? ` + 비사업용토지 ${fmtPlain(nb.incomeAmount)}` : ""
+          }`}
         />
         <Row
           label="기본공제"
@@ -547,7 +575,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         <Row
           label="과세표준"
           value={fmt(t.taxBase)}
-          formula="합산 양도소득금액 - 기본공제"
+          formula={`합산 양도소득금액 ${fmtPlain(t.aggregateIncome)} - 기본공제 ${fmtPlain(t.basicDeduction)}`}
         />
         <DivRow />
         <Row
@@ -566,18 +594,29 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           <Row
             label="비사업용토지 +10%p 가산세"
             value={fmt(t.nonBusinessSurcharge)}
-            formula="비사업용토지 양도소득금액 × 10%"
+            formula={(() => {
+              // 중과 base = 비사업용 양도소득금액 − 기본공제 귀속분(최고세율 부분에 전액 귀속).
+              // 적용공제 = 합산 양도소득금액 − 과세표준 (§104①8호, 납세자 유리 원칙).
+              const surchargeBase = nb
+                ? Math.max(0, nb.incomeAmount - (t.aggregateIncome - t.taxBase))
+                : 0;
+              return `비사업용토지 과세표준 귀속분 ${fmtPlain(surchargeBase)} × 10%`;
+            })()}
           />
         )}
         <Row
           label="양도소득세"
           value={fmt(t.transferTax)}
-          formula="산출세액 + 비사업용토지 가산세"
+          formula={`산출세액 ${fmtPlain(t.taxByBasicRate)}${
+            t.nonBusinessSurcharge > 0
+              ? ` + 비사업용토지 가산세 ${fmtPlain(t.nonBusinessSurcharge)}`
+              : ""
+          }`}
         />
         <Row
           label="지방소득세 (10%)"
           value={fmt(t.localTax)}
-          formula="양도소득세 × 10% (지방세법 §103의3)"
+          formula={`양도소득세 ${fmtPlain(t.transferTax)} × 10% (지방세법 §103의3)`}
         />
         <DivRow />
         <Row
@@ -593,7 +632,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           value={fmt(t.totalPayable)}
           highlight
           large
-          formula="양도소득세 + 지방소득세"
+          formula={`양도소득세 ${fmtPlain(t.transferTax)} + 지방소득세 ${fmtPlain(t.localTax)}`}
         />
       </ResultSection>
       </PrintSection>
