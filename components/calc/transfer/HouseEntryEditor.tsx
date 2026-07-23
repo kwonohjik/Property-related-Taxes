@@ -92,9 +92,9 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
         )}
       </div>
 
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {/* 취득일 */}
-        <div className="space-y-1">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-6">
+        {/* 취득일 (행1: 취득일·준공일·전용면적 3열) */}
+        <div className="space-y-1 sm:col-span-2">
           <label className="block text-caption text-muted-foreground font-medium">취득일</label>
           <DateInput
             value={house.acquisitionDate}
@@ -102,8 +102,8 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
 
-        {/* 준공일 (가목 소형신축 3호) — 취득일 옆(둘 다 DateInput, 세로 정렬) */}
-        <div className="space-y-1">
+        {/* 준공일 (가목 소형신축 3호) */}
+        <div className="space-y-1 sm:col-span-2">
           <label className="block text-caption text-muted-foreground font-medium">준공일</label>
           <DateInput
             value={house.completionDate ?? ""}
@@ -112,8 +112,8 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
         </div>
 
-        {/* 전용면적 (둘 다 hint 없음, 세로 정렬) */}
-        <div className="space-y-1">
+        {/* 전용면적 */}
+        <div className="space-y-1 sm:col-span-2">
           <div className="flex items-center gap-2">
             <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
             {house.addressLookupFilled && (
@@ -129,8 +129,8 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
 
-        {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) — 라벨 text-caption 통일(공시가격과 정렬) */}
-        <div className="space-y-1">
+        {/* 취득가액 (행2: 취득가액·공시가격 2열) — 라벨 text-caption 통일(공시가격과 정렬) */}
+        <div className="space-y-1 sm:col-span-3">
           <label className="block text-caption text-muted-foreground font-medium">취득가액</label>
           <CurrencyInput
             label="취득가액"
@@ -142,8 +142,8 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
 
-        {/* 공시가격 (취득가액과 같은 행 — 둘 다 hint 있음, 세로 정렬) */}
-        <div className="space-y-1">
+        {/* 공시가격 (취득가액과 같은 행) */}
+        <div className="space-y-1 sm:col-span-3">
           <div className="flex items-center gap-2">
             <label className="text-caption text-muted-foreground font-medium">공시가격</label>
             {house.addressLookupFilled && (
