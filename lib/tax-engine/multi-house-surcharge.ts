@@ -74,6 +74,7 @@ export {
   getGroupExcludeReason,
   determineSurchargeExclusion,
   transitionExemptionMonths,
+  civilMonthsDeadline,
 } from "./multi-house-surcharge-helpers";
 
 export {
