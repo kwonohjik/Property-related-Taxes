@@ -530,7 +530,7 @@ export function HousesListSection({
 
       {/* ── 편집 모달 ── */}
       <Dialog open={editingHouse !== null} onOpenChange={(open) => { if (!open) setEditingId(null); }} modal={true}>
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               주택 {editingHouse ? houses.findIndex((h) => h.id === editingHouse.id) + 1 : ""} 정보 입력

@@ -22,6 +22,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { HousePriceYearLookup } from "@/components/calc/transfer/HousePriceYearLookup";
 import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
@@ -92,9 +93,9 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
         )}
       </div>
 
-      <div className="grid gap-2.5 sm:grid-cols-2">
-        {/* 취득일 */}
-        <div className="space-y-1">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-6">
+        {/* 취득일 (행1: 취득일·준공일·전용면적 3열) */}
+        <div className="space-y-1 sm:col-span-2">
           <label className="block text-caption text-muted-foreground font-medium">취득일</label>
           <DateInput
             value={house.acquisitionDate}
@@ -102,36 +103,18 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
 
-        {/* 공시가격 */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <label className="text-caption text-muted-foreground font-medium">공시가격</label>
-            {house.addressLookupFilled && (
-              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                조회값
-              </span>
-            )}
-          </div>
-          <CurrencyInput
-            label="공시가격"
-            hideLabel
-            value={house.officialPrice}
-            onChange={(v) => onUpdate({ officialPrice: v, addressLookupFilled: false })}
-            hint="공동·개별주택가격 (원)"
+        {/* 준공일 (가목 소형신축 3호) */}
+        <div className="space-y-1 sm:col-span-2">
+          <label className="block text-caption text-muted-foreground font-medium">준공일</label>
+          <DateInput
+            value={house.completionDate ?? ""}
+            onChange={(v) => onUpdate({ completionDate: v })}
           />
+          <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
         </div>
 
-        {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) */}
-        <CurrencyInput
-          label="취득가액"
-          placeholder="취득가액 입력"
-          value={house.acquisitionPrice ?? ""}
-          onChange={(v) => onUpdate({ acquisitionPrice: v })}
-          hint="소형신축·준공후미분양 특례 가액 기준 (원)"
-        />
-
         {/* 전용면적 */}
-        <div className="space-y-1">
+        <div className="space-y-1 sm:col-span-2">
           <div className="flex items-center gap-2">
             <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
             {house.addressLookupFilled && (
@@ -147,15 +130,21 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
 
-        {/* 준공일 (가목 소형신축 3호) */}
-        <div className="space-y-1">
-          <label className="block text-caption text-muted-foreground font-medium">준공일</label>
-          <DateInput
-            value={house.completionDate ?? ""}
-            onChange={(v) => onUpdate({ completionDate: v })}
+        {/* 취득가액 (행2: 취득가액·공시가격 2열) — 라벨 text-caption 통일(공시가격과 정렬) */}
+        <div className="space-y-1 sm:col-span-3">
+          <label className="block text-caption text-muted-foreground font-medium">취득가액</label>
+          <CurrencyInput
+            label="취득가액"
+            hideLabel
+            placeholder="취득가액 입력"
+            value={house.acquisitionPrice ?? ""}
+            onChange={(v) => onUpdate({ acquisitionPrice: v })}
+            hint="소형신축·준공후미분양 특례 가액 기준 (원)"
           />
-          <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
         </div>
+
+        {/* 공시가격 (취득가액과 같은 행) — 기준연도 선택 + Vworld 재조회 */}
+        <HousePriceYearLookup house={house} onUpdate={onUpdate} />
       </div>
 
       {/* 특례 chip */}

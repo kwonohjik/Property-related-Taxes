@@ -70,9 +70,14 @@ async function openEditor(page: Page, houseRegionCode?: string) {
 test.describe("주택 편집 모달 — 소재지 주소검색 + 지역 자동판정", () => {
   test("regionCode 있는 주택 → 소재지 필드 + 지역 자동판정 읽기전용(라디오 없음)", async ({ page }) => {
     const dialog = await openEditor(page, "1168010100"); // 강남 REGION → capital
+    // 폭 2배 회귀 가드 — sm:max-w-5xl(1024px)가 DialogContent 기본 sm:max-w-sm(384px)를 override
+    const box = await dialog.boundingBox();
+    expect(box!.width).toBeGreaterThan(700);
     await expect(dialog.getByText("소재지", { exact: true })).toBeVisible();
     await expect(dialog.getByText("소재지 주소에서 자동 판정")).toBeVisible();
     await expect(dialog.getByText("수도권·광역시 등")).toBeVisible();
+    // 공시가격 기준연도 선택 조회 위젯 렌더
+    await expect(dialog.getByRole("button", { name: "조회" })).toBeVisible();
   });
 
   test("regionCode 없는 주택 → 수동 지역 라디오(자동판정 문구 없음)", async ({ page }) => {

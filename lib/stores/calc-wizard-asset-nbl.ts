@@ -196,6 +196,8 @@ export interface HouseEntry {
   addressPnu?: string;
   /** 공시가격·전유면적을 주소조회로 자동채움한 표식 — 사용자 수정 시 제거(조회값 배지) */
   addressLookupFilled?: boolean;
+  /** 공시가격 조회 기준연도 (사용자 선택) — UI 전용, 엔진 미전송 */
+  officialPriceYear?: string;
 }
 
 /**
