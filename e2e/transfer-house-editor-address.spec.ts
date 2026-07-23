@@ -76,6 +76,8 @@ test.describe("주택 편집 모달 — 소재지 주소검색 + 지역 자동�
     await expect(dialog.getByText("소재지", { exact: true })).toBeVisible();
     await expect(dialog.getByText("소재지 주소에서 자동 판정")).toBeVisible();
     await expect(dialog.getByText("수도권·광역시 등")).toBeVisible();
+    // 공시가격 기준연도 선택 조회 위젯 렌더
+    await expect(dialog.getByRole("button", { name: "조회" })).toBeVisible();
   });
 
   test("regionCode 없는 주택 → 수동 지역 라디오(자동판정 문구 없음)", async ({ page }) => {

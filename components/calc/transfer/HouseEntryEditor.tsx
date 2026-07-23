@@ -22,6 +22,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { HousePriceYearLookup } from "@/components/calc/transfer/HousePriceYearLookup";
 import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
@@ -142,24 +143,8 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
 
-        {/* 공시가격 (취득가액과 같은 행) */}
-        <div className="space-y-1 sm:col-span-3">
-          <div className="flex items-center gap-2">
-            <label className="text-caption text-muted-foreground font-medium">공시가격</label>
-            {house.addressLookupFilled && (
-              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                조회값
-              </span>
-            )}
-          </div>
-          <CurrencyInput
-            label="공시가격"
-            hideLabel
-            value={house.officialPrice}
-            onChange={(v) => onUpdate({ officialPrice: v, addressLookupFilled: false })}
-            hint="공동·개별주택가격 (원)"
-          />
-        </div>
+        {/* 공시가격 (취득가액과 같은 행) — 기준연도 선택 + Vworld 재조회 */}
+        <HousePriceYearLookup house={house} onUpdate={onUpdate} />
       </div>
 
       {/* 특례 chip */}
