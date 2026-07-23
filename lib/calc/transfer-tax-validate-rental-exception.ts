@@ -1,11 +1,13 @@
 /**
  * 장기임대주택 거주주택 비과세 특례 검증 (⑧, 소령 §155⑳)
  *
- * `transfer-tax-validate-asset.ts`에서 분리 (800줄 정책). API/UI fallback 없음 →
- * validate에서 동일하게 명시 차단. 자동 안분 fallback 금지 원칙 준수.
+ * `transfer-tax-validate-asset.ts`에서 분리 (800줄 정책). 자동 안분 fallback 금지 원칙 준수.
+ * B 시나리오 취득/현양도 기준시가는 환산 모드 연동 시(isPhrpStdPriceLinked) 자산-수준
+ * standardPriceAtAcq/Transfer가 단일 소스 — UI(⑤)·API 변환(④)과 동일 ternary (3중 패턴).
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
@@ -38,13 +40,27 @@ export function validateRentalHousingException(
     if (!rh.priorResidenceTransferDate) {
       return `${label}: PHRP 시나리오 — 직전거주주택 양도일을 입력하세요.`;
     }
-    const pAcq = parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "");
+    // 환산취득가 모드 연동 시 자산-수준 기준시가가 단일 소스 — API 변환(④)·UI(⑤)와 동일 ternary (3중 패턴)
+    const linked = isPhrpStdPriceLinked(asset);
+    const pAcq = linked
+      ? parseAmount(asset.standardPriceAtAcq)
+      : parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "");
     const pPrior = parseAmount(rh.standardPriceAtPriorTransfer ?? "");
-    const pTransfer = parseAmount(rh.standardPriceAtTransferForPhrp ?? "");
+    const pTransfer = linked
+      ? parseAmount(asset.standardPriceAtTransfer)
+      : parseAmount(rh.standardPriceAtTransferForPhrp ?? "");
 
-    if (pAcq <= 0) return `${label}: 임대→거주 전환 주택 시나리오 — 취득 당시 기준시가를 입력하세요.`;
+    if (pAcq <= 0) {
+      return linked
+        ? `${label}: 임대→거주 전환 주택 시나리오 — 취득 정보의 환산 취득시 기준시가를 입력하세요 (§161① 안분에 연동됩니다).`
+        : `${label}: 임대→거주 전환 주택 시나리오 — 취득 당시 기준시가를 입력하세요.`;
+    }
     if (pPrior <= 0) return `${label}: 임대→거주 전환 주택 시나리오 — 직전거주주택 양도 당시 기준시가를 입력하세요.`;
-    if (pTransfer <= 0) return `${label}: 임대→거주 전환 주택 시나리오 — 현 양도 당시 기준시가를 입력하세요.`;
+    if (pTransfer <= 0) {
+      return linked
+        ? `${label}: 임대→거주 전환 주택 시나리오 — 취득 정보의 환산 양도시 기준시가를 입력하세요 (§161① 안분에 연동됩니다).`
+        : `${label}: 임대→거주 전환 주택 시나리오 — 현 양도 당시 기준시가를 입력하세요.`;
+    }
 
     // 시점 일관성 확인 (경고 수준 — 실무 이례 케이스 차단하지 않고 경고만)
     if (pPrior < pAcq) {
