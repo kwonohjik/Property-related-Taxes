@@ -132,6 +132,69 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
       timeout: 15000,
     });
   });
+
+  // ── 중과 한시배제 팁 3분기 (plan: step4-regulated-tip-surcharge-suspension) ──
+
+  test("B1(회귀): 양도일 ≤ 2026-05-09 + 보유 2년↑ → ④ 섹션이 한시배제 sky 카드로 대체 + 중과검토 경고 부재", async ({ page }) => {
+    const ok = await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900", // 강남 — 지정 유지
+        acquisitionDate: "2018-06-01",
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2026-05-01",
+    );
+    expect(ok).toBe(true);
+
+    // 기존 동작: surchargeSuspended → ④ 주택수·중과 판정 섹션(조정지역 토글·팁 포함) 대신 sky 안내 카드
+    await expect(page.getByTestId("surcharge-suspended-notice")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("switch", { name: /양도일 기준 조정대상지역/ })).toHaveCount(0);
+    await expect(page.getByText("중과세 적용 여부를 검토하세요")).toHaveCount(0);
+  });
+
+  test("B2: 윈도우 내 양도 + 보유 2년 미만 → amber 검토 유지 + 보유 2년 미만 안내", async ({ page }) => {
+    const ok = await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900",
+        acquisitionDate: "2024-06-01", // 양도 2025-01-01 기준 보유 7개월
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2025-01-01",
+    );
+    expect(ok).toBe(true);
+
+    await expect(
+      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
+    ).toBeChecked({ timeout: 15000 });
+    await expect(page.getByText("중과세 적용 여부를 검토하세요")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/보유 2년 미만은 다주택 중과 한시배제/)).toBeVisible();
+    await expect(page.getByText("다주택 중과 한시배제 기간")).toHaveCount(0);
+  });
+
+  test("B3: 양도일 > 2026-05-09 → amber 검토 유지 + 나·다목 경과조치 안내", async ({ page }) => {
+    const ok = await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900",
+        acquisitionDate: "2018-06-01",
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2026-06-01",
+    );
+    expect(ok).toBe(true);
+
+    await expect(
+      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
+    ).toBeChecked({ timeout: 15000 });
+    await expect(page.getByText("중과세 적용 여부를 검토하세요")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/경과조치로 중과가 배제될 수 있습니다/)).toBeVisible();
+    await expect(page.getByText("다주택 중과 한시배제 기간")).toHaveCount(0);
+  });
 });
 
 /**

@@ -5,7 +5,11 @@ import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
-import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
+import {
+  ONE_HOUSE_RESIDENCE,
+  SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
+  isWithinSurchargeSuspensionWindow,
+} from "@/lib/tax-engine/legal-codes/transfer";
 import { DateInput } from "@/components/ui/date-input";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -22,6 +26,12 @@ import { SpecialHouseExclusionSection } from "@/components/calc/transfer/Special
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
+// 한시배제 종료일 표시 문자열 — 상수 단일 출처에서 파생(재연장 개정 시 문구 자동 추종, 하드코딩 금지)
+const SUSPENSION_END_KO = (() => {
+  const [y, m, d] = SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end.split("-");
+  return `${y}.${Number(m)}.${Number(d)}.`;
+})();
+
 const isHousingLike = (pt: string) =>
   pt === "housing" ||
   pt === "right_to_move_in" ||
@@ -625,13 +635,32 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               />
             )}
 
-            {/* 메시지 ① 중과 검토 안내 — 주택 + 양도시 조정대상이면 항상(1주택 포함, 단순 주의환기) */}
+            {/* 메시지 ① 중과 검토 안내 — 주택 + 양도시 조정대상이면 항상(1주택 포함, 단순 주의환기).
+                한시배제 충족(B1: surchargeSuspended)이면 ④ 섹션 자체가 sky 안내 카드로 대체되어 이 팁은
+                미도달 — 여기서는 B2(윈도우 내·보유 2년 미만)·B3(종료일 이후)의 혼선만 보강.
+                (plan: step4-regulated-tip-surcharge-suspension) */}
             {primaryKind === "housing" && form.isRegulatedArea && (
               <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
                 <p className="font-medium">⚠️ 양도일 현재 조정대상지역</p>
                 <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
                   조정대상지역 주택 양도는 중과세 적용 여부를 검토하세요.
                 </p>
+                {/* B2: 양도일은 한시배제 윈도우 내이나 보유 2년 미만 (충족 시 섹션 대체로 미도달) */}
+                {isWithinSurchargeSuspensionWindow(form.transferDate) && !!primaryAcquisitionDate && (
+                  <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
+                    보유 2년 미만은 다주택 중과 한시배제(§167의3①12의2) 대상이 아닙니다(단기양도세율과
+                    비교 적용).
+                  </p>
+                )}
+                {/* B3: 양도일이 한시배제 종료일 이후 — 계약·허가 기반 경과조치 가능성 안내(자동판정 미지원) */}
+                {!!form.transferDate &&
+                  form.transferDate > SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end && (
+                    <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
+                      {SUSPENSION_END_KO}까지 매매계약 체결(계약금 수령)·토지거래허가 신청분은
+                      경과조치로 중과가 배제될 수 있습니다(§167의3①12의2 나·다, §167의10①12의2 나·다
+                      — 본 계산기 자동판정 미지원).
+                    </p>
+                  )}
               </div>
             )}
           </div>
