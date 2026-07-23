@@ -102,7 +102,37 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
 
-        {/* 공시가격 */}
+        {/* 전용면적 (취득일과 같은 행 — 둘 다 hint 없음, 세로 정렬) */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
+            {house.addressLookupFilled && (
+              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                조회값
+              </span>
+            )}
+          </div>
+          <DecimalInput
+            value={house.exclusiveArea ?? ""}
+            onChange={(v) => onUpdate({ exclusiveArea: v, addressLookupFilled: false })}
+            placeholder="전용면적 ㎡"
+          />
+        </div>
+
+        {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) — 라벨 text-caption 통일(공시가격과 정렬) */}
+        <div className="space-y-1">
+          <label className="block text-caption text-muted-foreground font-medium">취득가액</label>
+          <CurrencyInput
+            label="취득가액"
+            hideLabel
+            placeholder="취득가액 입력"
+            value={house.acquisitionPrice ?? ""}
+            onChange={(v) => onUpdate({ acquisitionPrice: v })}
+            hint="소형신축·준공후미분양 특례 가액 기준 (원)"
+          />
+        </div>
+
+        {/* 공시가격 (취득가액과 같은 행 — 둘 다 hint 있음, 세로 정렬) */}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <label className="text-caption text-muted-foreground font-medium">공시가격</label>
@@ -118,32 +148,6 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
             value={house.officialPrice}
             onChange={(v) => onUpdate({ officialPrice: v, addressLookupFilled: false })}
             hint="공동·개별주택가격 (원)"
-          />
-        </div>
-
-        {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) */}
-        <CurrencyInput
-          label="취득가액"
-          placeholder="취득가액 입력"
-          value={house.acquisitionPrice ?? ""}
-          onChange={(v) => onUpdate({ acquisitionPrice: v })}
-          hint="소형신축·준공후미분양 특례 가액 기준 (원)"
-        />
-
-        {/* 전용면적 */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
-            {house.addressLookupFilled && (
-              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
-                조회값
-              </span>
-            )}
-          </div>
-          <DecimalInput
-            value={house.exclusiveArea ?? ""}
-            onChange={(v) => onUpdate({ exclusiveArea: v, addressLookupFilled: false })}
-            placeholder="전용면적 ㎡"
           />
         </div>
 
