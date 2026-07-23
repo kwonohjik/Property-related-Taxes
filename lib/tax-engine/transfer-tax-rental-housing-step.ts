@@ -23,6 +23,18 @@ import type { ParsedRates } from "./transfer-tax-helpers";
 import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 
+/**
+ * §155⑳ 시나리오 B(임대→거주 전환 PHRP) 여부 — STEP 1a 전액 비과세 조기 반환 억제 게이트.
+ * B는 §161①(직전거주주택 양도일 이후 기간분만 비과세) 안분이 필요하므로 일반 1세대1주택
+ * 요건 충족이어도 조기 반환하면 안분 미도달 오답. A(거주주택 양도)는 전액 비과세가 정답 — 게이트 비대상.
+ */
+export function isPrhpScenarioB(effectiveInput: TransferTaxInput): boolean {
+  return (
+    effectiveInput.rentalHousingException?.applyException === true &&
+    effectiveInput.rentalHousingException.scenario === "B"
+  );
+}
+
 export interface RentalHousingStepArgs {
   /** carryover 등 보정 완료된 유효 입력 */
   effectiveInput: TransferTaxInput;

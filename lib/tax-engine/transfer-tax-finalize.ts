@@ -492,6 +492,9 @@ export function buildExemptEarlyResult(p: {
   carryoverDetail?: CarryoverTaxationDetail;
   inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
 }): TransferTaxResult {
+  // [echo] 표시 전용 gross 양도차익 + 환산 내역 — 세액 로직·transferGain(0) 불변. 순수함수 calcTransferGain 1회 호출.
+  // 환산 echo 미노출 시 신고서가 실가 역산 분기로 추락해 취득가액에 개산공제가 합산 표시됨(분리표시 정책 위반).
+  const grossForEcho = calcTransferGain(p.effectiveInput);
   return {
     isExempt: true,
     // [F1] 경정 결과 비과세 → refund면 전액환급 산출(determinedTax=0)
@@ -502,10 +505,12 @@ export function buildExemptEarlyResult(p: {
     specialHouseExclusionDetail: p.specialHouseExclusionDetail,
     warnings: p.warnings,
     transferGain: 0,
-    // [echo] 표시 전용 gross 양도차익 — 세액 로직·transferGain(0) 불변. 순수함수 calcTransferGain 재사용.
-    exemptGrossGain: Math.max(0, calcTransferGain(p.effectiveInput).gain),
+    exemptGrossGain: Math.max(0, grossForEcho.gain),
     taxableGain: 0,
     usedEstimatedAcquisition: p.effectiveInput.useEstimatedAcquisition,
+    ...(grossForEcho.usedEstimated
+      ? { estimatedBase: grossForEcho.estimatedBase, estimatedDeduction: grossForEcho.estimatedDeduction }
+      : {}),
     longTermHoldingDeduction: 0,
     longTermHoldingRate: 0,
     lthdStartDate: resolveLTHDStartDate(p.effectiveInput),
