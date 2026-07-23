@@ -12,6 +12,21 @@ import {
 } from "./calc-wizard-store";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 
+/**
+ * gracePeriod(다주택 중과 한시 유예) 구 필드 마이그레이션 — §167의3①12의2 나·다목 확장(2026-07-24).
+ * 구 `isLandPermitArea`(토지거래허가구역 소재) 값을 신규 `isLandPermitTarget`(허가 대상 여부, 나/다목 분기)
+ * 으로 의미 승계 이전. 이미 신규 필드가 있으면(신규 세션) 손대지 않는다. deprecated 필드는 유지(하위호환).
+ */
+export function migrateGracePeriod(
+  gp: TransferFormData["gracePeriod"],
+): TransferFormData["gracePeriod"] {
+  if (!gp) return gp;
+  if (gp.isLandPermitTarget === undefined && gp.isLandPermitArea !== undefined) {
+    return { ...gp, isLandPermitTarget: gp.isLandPermitArea };
+  }
+  return gp;
+}
+
 /** ParcelListInput 마이그레이션 — store에서 분리된 헬퍼 */
 function migrateParcel(p: unknown): ParcelFormItem {
   const parcel = (p as Partial<ParcelFormItem>) ?? {};

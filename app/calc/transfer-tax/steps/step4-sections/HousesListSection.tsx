@@ -17,11 +17,12 @@
  *  - Tailwind 정적 색조 매핑 (동적 bg-${tone} 금지)
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Settings } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,11 @@ import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
+import {
+  checkGracePeriodExemption,
+  transitionExemptionMonths,
+} from "@/lib/tax-engine/multi-house-surcharge-exclusion";
+import { SURCHARGE_TRANSITION } from "@/lib/tax-engine/legal-codes";
 
 // ============================================================
 // 특례 배지 (읽기 전용 요약)
@@ -151,22 +157,31 @@ interface GracePeriodSectionProps {
   onChange: (d: Partial<TransferFormData>) => void;
 }
 
+/** YYYY-MM-DD 표시 헬퍼 (Date → 문자열) */
+function fmtYmd(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
   const gp = form.gracePeriod;
   const isOn = gp !== undefined;
+  // 양도 주택(대표 자산) 소재지 법정동코드 — 나목4) 표 4/6개월 판정 기준 (④⑬ 기존 primary.regionCode 단일소스)
+  const sellingRegionCode = form.assets?.[0]?.regionCode || undefined;
+  const months = transitionExemptionMonths(sellingRegionCode);
 
   function handleToggle(v: boolean) {
     if (!v) {
       // OFF: gracePeriod = undefined (직접 set — useEffect 미러링 금지)
       onChange({ gracePeriod: undefined });
     } else {
-      // ON: 기본 객체 초기화
+      // ON: 기본 객체 초기화 — 신규 4필드(나·다목 §167의3①12의2)
       onChange({
         gracePeriod: {
           contractDate: "",
-          isLandPermitArea: false,
-          hasTenantInResidence: false,
-          areaDesignatedDate: undefined,
+          isLandPermitTarget: undefined,
+          permitApplicationDate: undefined,
+          permitGranted: false,
+          depositReceiptConfirmed: false,
         },
       });
     }
@@ -177,6 +192,31 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
     onChange({ gracePeriod: { ...gp, ...patch } });
   }
 
+  // 기한 미리보기 — 엔진 판정 함수 재사용(단일 진실 소스, 드리프트 방지)
+  const preview = useMemo(() => {
+    if (!gp || !gp.contractDate || gp.isLandPermitTarget === undefined) return null;
+    const contractDate = new Date(gp.contractDate);
+    if (Number.isNaN(contractDate.getTime())) return null;
+    const transferDate = form.transferDate ? new Date(form.transferDate) : contractDate;
+    return checkGracePeriodExemption(
+      transferDate,
+      {
+        contractDate,
+        isLandPermitTarget: gp.isLandPermitTarget,
+        permitApplicationDate: gp.permitApplicationDate
+          ? new Date(gp.permitApplicationDate)
+          : undefined,
+        permitGranted: gp.permitGranted,
+        depositReceiptConfirmed: gp.depositReceiptConfirmed,
+      },
+      sellingRegionCode,
+    );
+  }, [
+    gp,
+    form.transferDate,
+    sellingRegionCode,
+  ]);
+
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2.5">
       <ToggleCard
@@ -184,66 +224,134 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
         tone="violet"
         checked={isOn}
         onCheckedChange={handleToggle}
-        title="중과세 한시 유예 조건 입력"
-        description="2022.5.10~2026.5.9 매매계약 시 정밀 조건 판정 (소령 §167의3 중과 한시 배제). 미입력 시 유예 기간 내 계약이면 전면 배제 적용."
+        title="중과 경과조치 조건 입력 (§167의3①12의2 나·다목)"
+        description="2026.5.9까지 양도(가목)는 자동 전면배제 적용됩니다. 이 입력은 2026.5.10 이후 양도분(나·다목 — 계약·허가 기반 경과조치)에 사용하세요."
+        trailing={<LawArticleModal legalBasis="소득세법 시행령 §167의3" label="§167의3①12의2" />}
       >
         {/* ON 시 세부 조건 노출 */}
         {isOn && gp && (
           <div className="space-y-3 pt-1">
-            {/* 매매계약일 */}
-            <div className="space-y-1">
-              <label className="block text-caption text-muted-foreground font-medium">
-                매매계약일 <span className="text-rose-500">*</span>
-              </label>
-              <DateInput
-                value={gp.contractDate}
-                onChange={(v) => patchGp({ contractDate: v })}
-              />
-              <p className="text-caption text-muted-foreground/70">
-                2022.5.10 ~ 2026.5.9 사이 계약 여부를 정밀 판정합니다.
-              </p>
-            </div>
-
-            {/* 토지거래허가구역 여부 */}
-            <ToggleCard
-              variant="chip"
+            <RadioCardGroup
+              name="grace-period-basis"
               tone="rose"
-              checked={gp.isLandPermitArea}
-              onCheckedChange={(v) => {
-                patchGp({
-                  isLandPermitArea: v,
-                  // 토지허가 OFF 시 임차인 거주 초기화
-                  hasTenantInResidence: v ? gp.hasTenantInResidence : false,
-                });
+              value={
+                gp.isLandPermitTarget === true
+                  ? "na"
+                  : gp.isLandPermitTarget === false
+                    ? "da"
+                    : ""
+              }
+              onChange={(v) => {
+                if (v === "na") {
+                  patchGp({ isLandPermitTarget: true });
+                } else {
+                  // 다목 전환 — 나목 전용 입력값 초기화(silent 잔존 방지)
+                  patchGp({
+                    isLandPermitTarget: false,
+                    permitApplicationDate: undefined,
+                    permitGranted: false,
+                  });
+                }
               }}
-              title="토지거래허가구역"
+              options={[
+                {
+                  value: "na",
+                  label: "토지거래허가 대상",
+                  description: "주택부수토지가 부동산거래신고법 §11 허가 대상 — 나목(허가신청·허가·계약금 4요건)",
+                  testId: "grace-period-basis-na",
+                },
+                {
+                  value: "da",
+                  label: "허가 대상 아님",
+                  description: "허가 대상이 아닌 주택부수토지 — 다목(계약·계약금 2요건)",
+                  testId: "grace-period-basis-da",
+                },
+              ]}
             />
 
-            {/* 임차인 거주 (토지허가구역일 때만) */}
-            {gp.isLandPermitArea && (
+            {gp.isLandPermitTarget === true && (
+              <div className="space-y-1">
+                <label className="block text-caption text-muted-foreground font-medium">
+                  토지거래허가 신청일 <span className="text-rose-500">*</span>
+                </label>
+                <DateInput
+                  value={gp.permitApplicationDate ?? ""}
+                  onChange={(v) => patchGp({ permitApplicationDate: v || undefined })}
+                />
+                <p className="text-caption text-muted-foreground/70">
+                  나목1) — {SURCHARGE_TRANSITION.DEADLINE}까지 신청해야 합니다.
+                </p>
+              </div>
+            )}
+
+            {gp.isLandPermitTarget === true && (
               <ToggleCard
                 variant="chip"
                 tone="rose"
-                checked={gp.hasTenantInResidence}
-                onCheckedChange={(v) => patchGp({ hasTenantInResidence: v })}
-                title="임차인 거주 중"
+                checked={gp.permitGranted ?? false}
+                onCheckedChange={(v) => patchGp({ permitGranted: v })}
+                title="토지거래허가 수령"
               />
             )}
 
-            {/* 조정대상지역 최초 지정일 (optional) */}
-            <div className="space-y-1">
-              <label className="block text-caption text-muted-foreground font-medium">
-                조정대상지역 최초 지정일{" "}
-                <span className="text-muted-foreground/60 font-normal">(선택)</span>
-              </label>
-              <DateInput
-                value={gp.areaDesignatedDate ?? ""}
-                onChange={(v) => patchGp({ areaDesignatedDate: v || undefined })}
+            {gp.isLandPermitTarget !== undefined && (
+              <div className="space-y-1">
+                <label className="block text-caption text-muted-foreground font-medium">
+                  매매계약일 <span className="text-rose-500">*</span>
+                </label>
+                <DateInput
+                  value={gp.contractDate}
+                  onChange={(v) => patchGp({ contractDate: v })}
+                />
+                <p className="text-caption text-muted-foreground/70">
+                  {gp.isLandPermitTarget
+                    ? "나목4) — 계약일부터 4/6개월(2026.5.10 이후 계약 시 절대기한 한정) 이내 양도해야 합니다."
+                    : `다목1) — ${SURCHARGE_TRANSITION.DEADLINE}까지 체결해야 합니다.`}
+                </p>
+              </div>
+            )}
+
+            {gp.isLandPermitTarget !== undefined && (
+              <ToggleCard
+                variant="chip"
+                tone="rose"
+                checked={gp.depositReceiptConfirmed ?? false}
+                onCheckedChange={(v) => patchGp({ depositReceiptConfirmed: v })}
+                title="계약금 수령 증빙 확인"
               />
-              <p className="text-caption text-muted-foreground/70">
-                2025.10.16 이후 신규 지정 지역인 경우 입력 (공고일 이전 계약 특례 판정)
-              </p>
-            </div>
+            )}
+
+            {/* 4/6개월 소재지 자동 판정 + 기한 미리보기 */}
+            {gp.isLandPermitTarget !== undefined && (
+              <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 space-y-1">
+                <p className="text-caption font-medium text-violet-800">
+                  소재지 강남·서초·송파·용산 → 4개월 / 그 외 조정대상지역(2025.10.16 지정) → 6개월
+                </p>
+                {!sellingRegionCode && (
+                  <p className="text-caption text-amber-700">
+                    양도 주택 소재지(법정동코드) 미확보 — 보수적으로 4개월로 근사합니다. 실제 소재지가
+                    6개월 지역이면 기한이 더 늦을 수 있으니 ① 자산 정보에서 주소를 확인하세요.
+                  </p>
+                )}
+                <p className="text-caption text-violet-700">
+                  적용 개월수: {months}개월
+                </p>
+                {preview?.deadline && (
+                  <p className="text-caption text-violet-700">
+                    계산된 양도 기한: {fmtYmd(preview.deadline)}까지
+                  </p>
+                )}
+                {preview && (
+                  <p
+                    className={`text-caption font-medium ${preview.suspended ? "text-emerald-700" : "text-rose-700"}`}
+                  >
+                    {preview.suspended
+                      ? "충족 — 중과 경과조치 배제 대상"
+                      : "미충족 — 현재 입력 기준 경과조치 배제 미해당"}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </ToggleCard>

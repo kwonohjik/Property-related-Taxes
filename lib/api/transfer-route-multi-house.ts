@@ -14,8 +14,13 @@ type HouseInput = z.infer<typeof houseSchema>;
 type PresaleRightInput = z.infer<typeof presaleRightSchema>;
 type GracePeriodInput = {
   contractDate: string;
-  isLandPermitArea: boolean;
-  hasTenantInResidence: boolean;
+  isLandPermitTarget?: boolean;
+  permitApplicationDate?: string;
+  permitGranted?: boolean;
+  depositReceiptConfirmed?: boolean;
+  // @deprecated — G3(조건C 근거 없음)·G6(regionCode 명단 대체). 하위호환만.
+  isLandPermitArea?: boolean;
+  hasTenantInResidence?: boolean;
   areaDesignatedDate?: string;
 };
 
@@ -118,6 +123,11 @@ export function mapGracePeriodToEngine(
   if (!gp) return undefined;
   return {
     contractDate: toDate(gp.contractDate, "gracePeriod.contractDate"),
+    isLandPermitTarget: gp.isLandPermitTarget,
+    permitApplicationDate: toOptionalDate(gp.permitApplicationDate),
+    permitGranted: gp.permitGranted,
+    depositReceiptConfirmed: gp.depositReceiptConfirmed,
+    // @deprecated pass-through — 엔진 판정 미사용(G3·G6)
     isLandPermitArea: gp.isLandPermitArea,
     hasTenantInResidence: gp.hasTenantInResidence,
     areaDesignatedDate: toOptionalDate(gp.areaDesignatedDate),

@@ -136,6 +136,13 @@ export interface TransferTaxResult {
   surchargeRate?: number;
   /** 중과세 유예 여부 */
   isSurchargeSuspended: boolean;
+  /**
+   * 중과 유예 근거 목 — §167의3①12의2 가목(a)/나목(na)/다목(da).
+   * isSurchargeSuspended === true일 때만 유의미 (echo, MultiHouseSurchargeResult에서 전파).
+   */
+  surchargeSuspensionBasis?: "a" | "na" | "da";
+  /** 나·다목 유예 시 계산된 양도 기한(절대기한 반영 후). basis가 na/da일 때만 유의미. */
+  surchargeSuspensionDeadline?: Date;
   /** 총 감면세액 */
   reductionAmount: number;
   /** 감면 유형 (표시용 한글 라벨 — "자경농지", "장기임대주택" 등) */

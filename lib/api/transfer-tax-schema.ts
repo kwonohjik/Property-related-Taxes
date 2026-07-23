@@ -182,12 +182,18 @@ const propertyBaseShape = {
       businessApprovalDate: z.string().date().optional(),
     })
     .optional(),
-  // 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9)
+  // 다주택 중과 한시 유예 조건부 판정 — §167의3①12의2 가·나·다목(§167의10①12의2 미러).
+  // 나목(isLandPermitTarget=true): 허가신청·허가·계약금 4요건. 다목(false): 계약·계약금 2요건.
   gracePeriod: z
     .object({
       contractDate: z.string().date(),
-      isLandPermitArea: z.boolean(),
-      hasTenantInResidence: z.boolean(),
+      isLandPermitTarget: z.boolean().optional(),
+      permitApplicationDate: z.string().date().optional(),
+      permitGranted: z.boolean().optional(),
+      depositReceiptConfirmed: z.boolean().optional(),
+      // @deprecated — 확정 시행령 나·다목 원문에 근거 없음(G3)·regionCode 명단 판정 대체(G6). 판정 미사용, 하위호환만.
+      isLandPermitArea: z.boolean().optional(),
+      hasTenantInResidence: z.boolean().optional(),
       areaDesignatedDate: z.string().date().optional(),
     })
     .optional(),

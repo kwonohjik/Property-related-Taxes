@@ -273,19 +273,36 @@ export interface PresaleRight {
 
 /** 다주택 중과세 판정 입력 */
 /**
- * 다주택 중과 한시 유예 조건부 판정 입력 (2022.5.10 ~ 2026.5.9).
- * 미제공 시 suspended_until 날짜 기준 blanket 판정. 제공 시 정밀 조건 판정.
+ * 다주택 중과 한시 유예 조건부 판정 입력 — §167의3①12의2 가·나·다목 (2026.5.9 양도분까지 가목,
+ * 이후 양도분은 나·다목 계약·허가 요건). 미제공 시 suspended_until 날짜 기준 blanket 판정.
+ * 제공 시 checkGracePeriodExemption()이 가목 우선 게이트 후 나·다목 정밀 조건 판정.
  * (엔진 입력·TransferTaxInput·폼 변환에서 공유 — 폼 계층은 Date 대신 string 사용.)
  */
 export interface MultiHouseGracePeriodInput {
-  /** 매매계약 체결일 — 조건A: ≤ 2026.5.9 이어야 유예 가능 */
+  /** 매매계약 체결일 — 나목4)·다목1) 기산일(계약일부터 4/6개월 판정) */
   contractDate: Date;
-  /** 토지거래허가구역 여부 — 조건C 판정용 */
-  isLandPermitArea: boolean;
-  /** 임차인 거주 여부 — 조건C 판정용 (토지허가+임차인 → 무기한 연장) */
-  hasTenantInResidence: boolean;
-  /** 해당 조정대상지역 최초 지정일 — 2025.10.16 이후 신규 지정 → 잔금 기한 6개월(기본 4개월) */
+  /**
+   * 주택부수토지가 부동산거래신고법 §11 토지거래허가 "대상"인지 — 나목(true)/다목(false) 분기.
+   * true = 나목(허가신청·허가·계약금 4요건), false = 다목(계약·계약금 2요건).
+   */
+  isLandPermitTarget?: boolean;
+  /** 나목1) 토지거래허가 신청일 — ≤ 2026-05-09 필요 */
+  permitApplicationDate?: Date;
+  /** 나목2) 허가 수령 여부 */
+  permitGranted?: boolean;
+  /** 나목3)·다목1) 공통 — 계약금 수령 증빙 확인 (자기확인) */
+  depositReceiptConfirmed?: boolean;
+  /**
+   * @deprecated regionCode 명단 판정(transitionExemptionMonths)으로 대체 — G6 해소.
+   * 판정 미사용, 하위호환만 유지.
+   */
   areaDesignatedDate?: Date;
+  /**
+   * @deprecated 확정 시행령 나·다목 원문에 근거 없음(G3 — 임차인 조항 전무). 판정 미사용.
+   */
+  isLandPermitArea?: boolean;
+  /** @deprecated G3 — 판정 미사용 */
+  hasTenantInResidence?: boolean;
 }
 
 export interface MultiHouseSurchargeInput {
@@ -378,6 +395,12 @@ export interface MultiHouseSurchargeResult {
   surchargeType: "multi_house_2" | "multi_house_3plus" | "none";
   /** 중과세 한시 유예 중 여부 */
   isSurchargeSuspended: boolean;
+  /**
+   * 한시 유예 근거 목 — §167의3①12의2 가목(a)/나목(na)/다목(da). isSurchargeSuspended === true일 때만 유의미.
+   */
+  surchargeSuspensionBasis?: "a" | "na" | "da";
+  /** 나·다목 유예 시 계산된 양도 기한(절대기한 반영). isSurchargeSuspended === true + basis가 na/da일 때만 유의미. */
+  surchargeSuspensionDeadline?: Date;
   /** 중과 배제 사유 목록 */
   exclusionReasons: ExclusionReason[];
   /** 경고 메시지 */

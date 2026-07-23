@@ -179,10 +179,16 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });
     }
 
-    // ⑧ 다주택 중과 한시 유예 — 입력(ON) 시 매매계약일 필수 (조건B 기산).
+    // ⑧ 다주택 중과 한시 유예(§167의3①12의2 나·다목) — 입력(ON) 시 목별 필수 입력.
     // houses 0건이면 엔진이 gracePeriod를 소비하지 않고 위젯도 숨김 → 검증도 houses>0 게이트(보이지 않는 필드 차단 방지).
-    if (houses.length > 0 && form.gracePeriod && !form.gracePeriod.contractDate)
-      issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
+    // 허가·계약금 증빙 미확인은 silent 차단이 아닌 "경과조치 부적용으로 계산 진행"(원문 "모두 갖춘" 요건 —
+    // 엔진 checkGracePeriodExemption이 미충족 시 자동으로 suspended:false 처리·차단 대상 아님).
+    if (houses.length > 0 && form.gracePeriod) {
+      if (!form.gracePeriod.contractDate)
+        issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
+      if (form.gracePeriod.isLandPermitTarget === true && !form.gracePeriod.permitApplicationDate)
+        issues.push({ step, message: "중과 한시 유예(나목): 토지거래허가 신청일을 입력하세요." });
+    }
 
     // ⑧ §156의2⑤ 대체주택 특례 — 토글 ON 시 4필드 필수 (자동 안분 fallback 금지)
     if (form.replacementHouseSpecial) {

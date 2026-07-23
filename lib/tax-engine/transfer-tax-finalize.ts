@@ -456,11 +456,16 @@ export function buildTransferResultDetails(ctx: {
   | "commercialBuildingValuationDetail"
   | "splitDetail"
   | "preHousingDisclosureDetail"
+  | "surchargeSuspensionBasis"
+  | "surchargeSuspensionDeadline"
 > {
   return {
     multiHouseSurchargeDetail: ctx.multiHouseSurchargeResult
       ? buildMultiHouseSurchargeDetail(ctx.multiHouseSurchargeResult)
       : undefined,
+    // ⑦ echo — 중과 유예 근거 목(가/나/다)·양도기한 (§167의3①12의2 나·다목 UI 표시용)
+    surchargeSuspensionBasis: ctx.multiHouseSurchargeResult?.surchargeSuspensionBasis,
+    surchargeSuspensionDeadline: ctx.multiHouseSurchargeResult?.surchargeSuspensionDeadline,
     nonBusinessLandJudgmentDetail: ctx.nonBusinessLandJudgment,
     pre1990LandValuationDetail: ctx.pre1990LandResult,
     carryoverTaxationDetail: ctx.carryoverDetail,
