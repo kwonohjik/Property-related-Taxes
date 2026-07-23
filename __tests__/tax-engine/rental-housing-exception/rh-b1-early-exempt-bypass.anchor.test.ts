@@ -107,6 +107,25 @@ describe("P1~P3: 시나리오 B — STEP 1a 조기 반환 억제 (§161① 안�
     expect(r.steps.some((s) => s.label.includes("장기임대주택 거주주택 비과세 특례"))).toBe(true);
     expect(r.warnings?.some((w) => w.includes("주택수"))).toBe(true);
   });
+
+  it("P7(F3): 시나리오 A + 임대 요건 미충족 + count=1 → 과세 (STEP 1a 조기반환 억제, over-exemption 차단)", () => {
+    const r = calculateTransferTax(
+      scenarioBInput({
+        rentalHousingException: {
+          applyException: true,
+          scenario: "A",
+          rentalUnits: [{ ...rentalUnitOk, rentalMonths: 12 }], // 의무임대기간 미충족 → eligibility 실패
+        },
+      }),
+      rates,
+    );
+    // 수정 전 RED: STEP 1a가 eligibility 우회 조기반환 → isExempt=true, totalTax=0 (over-exemption)
+    expect(r.isExempt).toBe(false);
+    expect(r.rentalHousingExceptionDetail).toBeUndefined();
+    expect(r.determinedTax).toBeGreaterThan(0);
+    // STEP 2.5가 "적용 불가" 사유를 steps에 기록 (침묵 실패 차단)
+    expect(r.steps.some((s) => s.label.includes("적용 불가"))).toBe(true);
+  });
 });
 
 describe("P4~P6: 전액 비과세 + 환산취득가 — 개산공제 분리 표시 (버그 2)", () => {

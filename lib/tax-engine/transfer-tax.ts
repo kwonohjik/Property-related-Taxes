@@ -40,7 +40,7 @@ import type {
 } from "./types/transfer.types";
 import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
-import { runRentalHousingExceptionStep, isPrhpScenarioB } from "./transfer-tax-rental-housing-step";
+import { runRentalHousingExceptionStep, isPrhpScenarioB, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
   resolveIncomeDeduction,
@@ -262,8 +262,8 @@ export function calculateTransferTax(
 
   const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
 
-  // STEP 1a: 전액 비과세 시 조기 반환 (§155⑳ 시나리오 B는 STEP 2.5 §161 안분으로 진행 — isPrhpScenarioB 주석)
-  if (exemptionResult.isExempt && !isPrhpScenarioB(effectiveInput)) {
+  // STEP 1a: 전액 비과세 조기 반환. §155⑳ B(→STEP 2.5 §161 안분)·A eligibility 미충족(→STEP 2.5 정상과세)은 억제.
+  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput)) {
     steps.push({
       label: "1세대1주택 비과세",
       formula: exemptionResult.exemptReason ?? "비과세",
