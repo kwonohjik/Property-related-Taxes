@@ -20,6 +20,7 @@ import {
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
+import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import {
@@ -411,6 +412,8 @@ interface LongTermHoldingResult {
   holdingPeriod: { years: number; months: number };
   /** §97의3·§97의4 평가 결과 echo (Phase 2 — 2026-06-11). 평가 항목이 없으면 undefined. */
   rental97LthdDetail?: Rental97Result;
+  /** 배제 사유 echo — 배제 경로(L-0·L-0a·L-1)에서만. 미배제(공제율 미달 포함)는 undefined. */
+  exclusionReason?: LthdExclusionReason;
 }
 
 export function calcLongTermHoldingDeduction(
@@ -424,20 +427,20 @@ export function calcLongTermHoldingDeduction(
 ): LongTermHoldingResult {
   // L-0: 미등기 — 배제
   if (input.isUnregistered) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "unregistered" };
   }
 
   // L-0a: 분양권·승계입주권 — 배제
   if (input.propertyType === "presale_right") {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "presale_right" };
   }
   if (input.propertyType === "right_to_move_in" && input.isSuccessorRightToMoveIn === true) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "successor_right_to_move_in" };
   }
 
   // L-1: 중과세 적용 중(유예 해제)이면 배제
   if (isSurcharge && !isSuspended) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "multi_house_surcharge" };
   }
 
   // L-1b: 부수토지 일체과세 (landNature === "appurtenant_to_housing")

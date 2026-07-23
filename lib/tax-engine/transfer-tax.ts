@@ -7,6 +7,7 @@
  * P0-2 원칙: 세율 × 금액 곱셈은 반드시 applyRate() 사용.
  */
 import { TRANSFER, NBL } from "./legal-codes";
+import { LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import {
   applyRate,
   isSurchargeSuspended,
@@ -495,7 +496,7 @@ export function calculateTransferTax(
   // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인
   // (소령 §159의4 "그 밖의 규정에 따라 1세대 1주택으로 보는 주택 포함"). 중과 isSurchargeCase는 원본(R-D).
   // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
-  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail } =
+  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, exclusionReason: lthdExclusionReason } =
     calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
   // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
   // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
@@ -536,13 +537,16 @@ export function calculateTransferTax(
         return `보유 ${holdingPeriod.years}년×4%=${hPart}% + 거주 ${residenceYearsForStep}년×4%=${rPart}% = ${Math.round(longTermHoldingRate * 100)}%`;
       })()
     : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
+  const lthdExcluded = lthdExclusionReason !== undefined && !lthd982Applied;
   steps.push({
     label: "장기보유특별공제",
-    formula: [
-      `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
-      lthdFormulaRate,
-      holdingPeriodStr,
-    ].filter(Boolean).join(" | "),
+    formula: lthdExcluded
+      ? `0원 — ${LTHD_EXCLUSION_LABEL[lthdExclusionReason!]}`
+      : [
+          `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
+          lthdFormulaRate,
+          holdingPeriodStr,
+        ].filter(Boolean).join(" | "),
     amount: longTermHoldingDeduction,
     legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
@@ -767,6 +771,7 @@ export function calculateTransferTax(
     publicExpropriationDetail,
     selfFarmingReductionDetail,
     rental97LthdDetail,
+    lthdExclusionReason,
     rental97TaxDetail,
     new994Detail,
     unsold989Detail,

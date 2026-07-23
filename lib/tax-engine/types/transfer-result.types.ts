@@ -102,6 +102,11 @@ export interface TransferTaxResult {
   /** 장기보유특별공제율 */
   longTermHoldingRate: number;
   /**
+   * 장특공제 배제 사유 echo (§95② 본문 괄호 — 미등기·분양권·승계입주권·§104⑦ 다주택 중과).
+   * 배제 경로에서만 채워짐 — 공제율 미달(보유 3년 미만 등) 0원은 undefined. UI 표시 전용.
+   */
+  lthdExclusionReason?: import("../legal-codes/transfer").LthdExclusionReason;
+  /**
    * 장기보유특별공제 보유기간 실제 기산일 (사례 35).
    * - 기본값: acquisitionDate (용도변경 미적용 시)
    * - 다주택 용도변경 적용 시: conversionDate (사전법규재산 2022-684·881)

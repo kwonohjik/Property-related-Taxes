@@ -789,3 +789,22 @@ export const REDEVELOPMENT = {
    */
   REDEV_EXEMPTION_TIMING_RULING: "서면2016-법령해석재산-2705 (2017.02.13)",
 } as const;
+
+/** 장특공제 배제 사유 (§95② 본문 괄호 — 미등기·§104⑦ 중과 자산 등). UI 표시 전용 echo. */
+export type LthdExclusionReason =
+  | "unregistered"
+  | "presale_right"
+  | "successor_right_to_move_in"
+  | "multi_house_surcharge";
+
+/**
+ * 배제 사유별 산식 문구 — "보유 0년×2%" 오도 표시 방지. 엔진 step 산식·클라이언트 UI 공용 단일 소스.
+ * ⚠️ 클라이언트 컴포넌트가 직접 import — 이 파일(legal-codes)은 서버 전용 모듈(supabase 등) 무의존 유지.
+ */
+export const LTHD_EXCLUSION_LABEL: Record<LthdExclusionReason, string> = {
+  unregistered: "미등기 양도자산 — 장기보유특별공제 배제 (§95② 본문 괄호)",
+  presale_right: "분양권 — 장기보유특별공제 배제 (§95②)",
+  successor_right_to_move_in: "승계취득 조합원입주권 — 장기보유특별공제 배제 (§95②)",
+  multi_house_surcharge:
+    "조정대상지역 다주택 중과 대상 — 장기보유특별공제 배제 (§95② 본문 괄호·§104⑦)",
+};

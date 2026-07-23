@@ -16,6 +16,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-helpers";
+import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
 import {
   fmtDate,
   fmtPeriod,
@@ -449,12 +450,21 @@ export function buildStatementItems(
   const lthResidenceYears = Math.floor(residenceMs / 12);
   const lthHoldingPct = Math.min(lthHoldingYears * 4, 40);
   const lthResidencePct = Math.min(lthResidenceYears * 4, 40);
-  const lthHoldingFallbackFormula = useTable2
-    ? `총 장특공제 ${totalLth.toLocaleString()}원 − 거주 기간분 ${lthSplit.residenceAmount.toLocaleString()}원 = ${lthSplit.holdingAmount.toLocaleString()}원 (§95② 표2 — 거주분 직접 산정 후 잔액을 보유분에 귀속, 보유 ${lthHoldingYears}년 공제율 ${lthHoldingPct}%)`
-    : `총 장특공제 ${totalLth.toLocaleString()}원 = 보유 기간분 전액 ${lthSplit.holdingAmount.toLocaleString()}원 (§95② 표1 — 보유기간별 공제만, 거주기간분 없음)`;
-  const lthResidenceFallbackFormula = useTable2
-    ? `총 장특공제 ${totalLth.toLocaleString()}원 × 거주율 ${lthResidencePct}% ÷ (보유율 ${lthHoldingPct}% + 거주율 ${lthResidencePct}%) = ${lthSplit.residenceAmount.toLocaleString()}원 (§95② 표2 — 거주 ${lthResidenceYears}년 직접 산정)`
-    : `0원 (§95② 표1 적용 — 거주기간 공제 대상 아님)`;
+  // 배제 케이스(§95② 본문 괄호 — 미등기·분양권·승계입주권·§104⑦ 중과): 표1/표2·연수 산식 대신 사유 표시
+  const lthdExclusionLabel =
+    !isAggregate && result.lthdExclusionReason
+      ? LTHD_EXCLUSION_LABEL[result.lthdExclusionReason]
+      : undefined;
+  const lthHoldingFallbackFormula = lthdExclusionLabel
+    ? `0원 — ${lthdExclusionLabel}`
+    : useTable2
+      ? `총 장특공제 ${totalLth.toLocaleString()}원 − 거주 기간분 ${lthSplit.residenceAmount.toLocaleString()}원 = ${lthSplit.holdingAmount.toLocaleString()}원 (§95② 표2 — 거주분 직접 산정 후 잔액을 보유분에 귀속, 보유 ${lthHoldingYears}년 공제율 ${lthHoldingPct}%)`
+      : `총 장특공제 ${totalLth.toLocaleString()}원 = 보유 기간분 전액 ${lthSplit.holdingAmount.toLocaleString()}원 (§95② 표1 — 보유기간별 공제만, 거주기간분 없음)`;
+  const lthResidenceFallbackFormula = lthdExclusionLabel
+    ? `0원 — ${lthdExclusionLabel}`
+    : useTable2
+      ? `총 장특공제 ${totalLth.toLocaleString()}원 × 거주율 ${lthResidencePct}% ÷ (보유율 ${lthHoldingPct}% + 거주율 ${lthResidencePct}%) = ${lthSplit.residenceAmount.toLocaleString()}원 (§95② 표2 — 거주 ${lthResidenceYears}년 직접 산정)`
+      : `0원 (§95② 표1 적용 — 거주기간 공제 대상 아님)`;
 
   if (mu) {
     // 겸용 — 주택분(표1/표2 보유·거주) + 비주택분(상가, 표1 보유) 분리.
@@ -509,9 +519,11 @@ export function buildStatementItems(
       value: lthHoldingStep?.amount ?? lthSplit.holdingAmount,
       formula: lthHoldingStep?.formula ?? lthHoldingFallbackFormula,
       legalBasis: lthHoldingStep?.legalBasis ?? (useTable2 ? "소득세법 §95② 별표 표2" : "소득세법 §95② 별표 표1"),
-      note: useTable2
-        ? "1세대1주택 고가주택 표2 적용 (거주 ≥ 24개월)"
-        : "표1 적용 — 거주분 0 (거주 미충족 또는 일반 자산)",
+      note: lthdExclusionLabel
+        ? lthdExclusionLabel
+        : useTable2
+          ? "1세대1주택 고가주택 표2 적용 (거주 ≥ 24개월)"
+          : "표1 적용 — 거주분 0 (거주 미충족 또는 일반 자산)",
       perAsset: ltHoldingPerAsset,
     });
     items.set("ltResidencePart", {
