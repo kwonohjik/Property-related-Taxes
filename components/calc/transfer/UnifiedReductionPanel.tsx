@@ -140,6 +140,26 @@ function buildPeriodContext(asset: AssetForm, transferDate: string): PeriodCheck
 // 컴포넌트
 // ============================================================================
 
+/**
+ * §99의3 감면 PHD 위젯 ↔ 자산-수준 PHD(§164⑤) dual-truth 완화 스냅샷.
+ * 자산 PHD 활성(usePreHousingDisclosure) 시 동일 자산의 같은 최초공시·토지단가·건물기준시가를
+ * New993InputForm "자산 카드 PHD 가져오기" 버튼 소스로 노출 → §99의3 감면 PHD 7필드 재입력 footgun 제거.
+ * OFF이거나 값이 하나도 없으면 undefined(버튼 비활성).
+ */
+export function buildAssetPhdSnapshot(asset: AssetForm): ReductionPhdValue | undefined {
+  if (!asset.usePreHousingDisclosure) return undefined;
+  const snap: ReductionPhdValue = {
+    firstDisclosureDate: asset.phdFirstDisclosureDate || undefined,
+    firstDisclosurePrice: asset.phdFirstDisclosureHousingPrice || undefined,
+    landAreaSqm: asset.phdResidentialLandArea || asset.acquisitionArea || undefined,
+    landPricePerSqmAtAcq: asset.phdLandPricePerSqmAtAcq || undefined,
+    landPricePerSqmAtFirst: asset.phdLandPricePerSqmAtFirst || undefined,
+    buildingStdAtAcq: asset.phdBuildingStdPriceAtAcq || undefined,
+    buildingStdAtFirst: asset.phdBuildingStdPriceAtFirst || undefined,
+  };
+  return Object.values(snap).some((v) => v) ? snap : undefined;
+}
+
 export function UnifiedReductionPanel({ asset, transferDate, onChange }: UnifiedReductionPanelProps) {
   const reductions = asset.reductions ?? [];
   const [openCategories, setOpenCategories] = useState<Record<ReductionCategory, boolean>>({
@@ -152,6 +172,9 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
   const periodCtx = useMemo(() => buildPeriodContext(asset, transferDate), [asset, transferDate]);
   const counters = useMemo(() => countActiveReductionsByCategory(periodCtx), [periodCtx]);
   const periodResults = useMemo(() => evaluateAllPeriods(periodCtx), [periodCtx]);
+
+  // §99의3 감면 PHD 위젯 ↔ 자산-수준 PHD dual-truth 완화 (아래 buildAssetPhdSnapshot).
+  const assetPhdSnapshot = useMemo(() => buildAssetPhdSnapshot(asset), [asset]);
 
   // ── standalone 토글(자경·공익) ──
   function toggleStandalone(type: "self_farming" | "public_expropriation" | "gb_designated_land" | "replacement_land_comp") {
@@ -333,7 +356,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           acquisitionDate={asset.acquisitionDate}
           transferDate={transferDate}
-          assetPhdSnapshot={undefined /* 자산-수준 PHD 데이터는 향후 통합 시 매핑 (현재 자산 카드 PHD UI와 별개) */}
+          assetPhdSnapshot={assetPhdSnapshot}
         />
       ))}
 
