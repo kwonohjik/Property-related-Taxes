@@ -40,7 +40,7 @@ import type {
 } from "./types/transfer.types";
 import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
-import { runRentalHousingExceptionStep } from "./transfer-tax-rental-housing-step";
+import { runRentalHousingExceptionStep, isPrhpScenarioB } from "./transfer-tax-rental-housing-step";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
   resolveIncomeDeduction,
@@ -262,8 +262,8 @@ export function calculateTransferTax(
 
   const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
 
-  // STEP 1a: 전액 비과세 시 조기 반환
-  if (exemptionResult.isExempt) {
+  // STEP 1a: 전액 비과세 시 조기 반환 (§155⑳ 시나리오 B는 STEP 2.5 §161 안분으로 진행 — isPrhpScenarioB 주석)
+  if (exemptionResult.isExempt && !isPrhpScenarioB(effectiveInput)) {
     steps.push({
       label: "1세대1주택 비과세",
       formula: exemptionResult.exemptReason ?? "비과세",
@@ -437,6 +437,10 @@ export function calculateTransferTax(
       steps,
     });
     if (rheResult) return rheResult;
+    // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.
+    if (isPrhpScenarioB(effectiveInput) && exemptionResult.isExempt) {
+      warnings.push("장기임대주택 거주주택 특례(§155⑳) 요건 미충족 — 임대주택이 주택수에 산입될 수 있어 1세대1주택 전제(주택수 입력)를 재확인하세요. 일반 과세 경로로 계산되었습니다.");
+    }
   }
 
   // STEP 3: 과세 양도차익 (12억 초과분 안분 — 부분과세인 경우)
