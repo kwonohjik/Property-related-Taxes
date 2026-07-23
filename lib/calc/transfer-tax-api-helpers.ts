@@ -7,6 +7,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import {
   isExprValuationEligibleAssetKind,
   isAuctionEligibleAssetKind,
@@ -178,9 +179,15 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
         ? rh.priorResidenceTransferDate
         : `${rh.priorResidenceTransferDate}T00:00:00.000Z`)
       : undefined,
-    standardPriceAtAcquisitionForPhrp: parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "") || undefined,
+    // 환산취득가 모드 연동 시 자산-수준 기준시가가 단일 소스 (§161① = 환산 분자·분모와 동일 값).
+    // fallback이 아닌 소스 ternary — stale rhe override가 침묵으로 이기는 경로 차단.
+    standardPriceAtAcquisitionForPhrp: isPhrpStdPriceLinked(asset)
+      ? parseAmount(asset.standardPriceAtAcq) || undefined
+      : parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "") || undefined,
     standardPriceAtPriorTransfer: parseAmount(rh.standardPriceAtPriorTransfer ?? "") || undefined,
-    standardPriceAtTransferForPhrp: parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
+    standardPriceAtTransferForPhrp: isPhrpStdPriceLinked(asset)
+      ? parseAmount(asset.standardPriceAtTransfer) || undefined
+      : parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
   };
 }
 

@@ -18,6 +18,9 @@ import { CurrencyInputWithLookup } from "@/components/calc/shared/CurrencyInputW
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
+import { isPhrpStdPriceLinked } from "@/lib/calc/transfer-phrp-stdprice-link";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
 
 // ── 유틸 ──────────────────────────────────────────────────────────
@@ -198,6 +201,8 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
 
 interface RentalHousingExceptionSectionProps {
   rh: AssetForm["rentalHousingException"];
+  /** 자산 전체 — B 시나리오 환산 기준시가 연동 판정(isPhrpStdPriceLinked) + 값 echo용 */
+  asset: AssetForm;
   /** 자산 취득일 (B 시나리오 lookupYear 계산용 + 보유기간 검증) */
   acquisitionDate: string;
   /** 양도일 (B 시나리오 lookupYear 계산용 + 보유기간 검증) */
@@ -211,6 +216,7 @@ interface RentalHousingExceptionSectionProps {
 
 export function RentalHousingExceptionSection({
   rh,
+  asset,
   acquisitionDate,
   transferDate,
   residencePeriodMonthsAsset,
@@ -348,17 +354,48 @@ export function RentalHousingExceptionSection({
               />
             </FieldCard>
 
-            {/* 취득 당시 기준시가 */}
-            <CurrencyInputWithLookup
-              label="취득 당시 기준시가"
-              value={rh.standardPriceAtAcquisitionForPhrp ?? ""}
-              onChange={(v) => set("standardPriceAtAcquisitionForPhrp", v || undefined)}
-              lookupYear={getYear(acquisitionDate)}
-              hint="임대주택을 처음 취득한 시점의 공동주택가격(또는 개별주택가격)"
-              required
-            />
+            {/* 취득·현양도 기준시가 — 환산취득가 모드 연동 시 자산-수준 값이 단일 소스 (입력 숨김 + echo) */}
+            {isPhrpStdPriceLinked(asset) ? (
+              (() => {
+                const linkedAcq = parseAmount(asset.standardPriceAtAcq);
+                const linkedTransfer = parseAmount(asset.standardPriceAtTransfer);
+                return (
+                  <div
+                    className={cn("rounded border border-amber-200 p-2 text-xs", TONE.amber.chip)}
+                    data-testid="phrp-stdprice-linked-echo"
+                  >
+                    <p className="font-semibold mb-1">취득·양도시 기준시가 — 취득 정보의 환산 입력과 자동 연동</p>
+                    {linkedAcq > 0 || linkedTransfer > 0 ? (
+                      <p>
+                        취득시 {linkedAcq > 0 ? linkedAcq.toLocaleString() : "미입력"} · 양도시{" "}
+                        {linkedTransfer > 0 ? linkedTransfer.toLocaleString() : "미입력"}
+                      </p>
+                    ) : null}
+                    <p className="mt-1">
+                      §161① 안분의 취득/양도 당시 기준시가는 환산취득가의 분자·분모와 동일한 값이므로 다시 입력하지
+                      않습니다. 수정은 위 취득가액 산정(환산) 영역에서 하세요.
+                      {linkedAcq <= 0 || linkedTransfer <= 0
+                        ? " 아직 미입력 항목이 있습니다 — 취득 정보에서 먼저 입력하세요."
+                        : ""}
+                    </p>
+                  </div>
+                );
+              })()
+            ) : (
+              <>
+                {/* 취득 당시 기준시가 */}
+                <CurrencyInputWithLookup
+                  label="취득 당시 기준시가"
+                  value={rh.standardPriceAtAcquisitionForPhrp ?? ""}
+                  onChange={(v) => set("standardPriceAtAcquisitionForPhrp", v || undefined)}
+                  lookupYear={getYear(acquisitionDate)}
+                  hint="임대주택을 처음 취득한 시점의 공동주택가격(또는 개별주택가격)"
+                  required
+                />
+              </>
+            )}
 
-            {/* 직전거주주택 양도 당시 기준시가 */}
+            {/* 직전거주주택 양도 당시 기준시가 — 자산-수준 대응 필드 없음, 항상 직접 입력 */}
             <CurrencyInputWithLookup
               label="직전거주주택 양도 당시 기준시가"
               value={rh.standardPriceAtPriorTransfer ?? ""}
@@ -368,21 +405,28 @@ export function RentalHousingExceptionSection({
               required
             />
 
-            {/* 현 양도 당시 기준시가 */}
-            <CurrencyInputWithLookup
-              label="현 양도 당시 기준시가"
-              value={rh.standardPriceAtTransferForPhrp ?? ""}
-              onChange={(v) => set("standardPriceAtTransferForPhrp", v || undefined)}
-              lookupYear={getYear(transferDate)}
-              hint="이번에 양도하는 시점의 공동주택가격(또는 개별주택가격)"
-              required
-            />
+            {/* 현 양도 당시 기준시가 — 연동 시 위 echo 카드로 대체 */}
+            {!isPhrpStdPriceLinked(asset) && (
+              <CurrencyInputWithLookup
+                label="현 양도 당시 기준시가"
+                value={rh.standardPriceAtTransferForPhrp ?? ""}
+                onChange={(v) => set("standardPriceAtTransferForPhrp", v || undefined)}
+                lookupYear={getYear(transferDate)}
+                hint="이번에 양도하는 시점의 공동주택가격(또는 개별주택가격)"
+                required
+              />
+            )}
 
-            {/* 안분 비율 미리보기 (§161①) */}
+            {/* 안분 비율 미리보기 (§161①) — 소스는 API 변환(④)·validate(⑧)와 동일 ternary */}
             {(() => {
-              const pAcq = parseInt((rh.standardPriceAtAcquisitionForPhrp ?? "").replace(/,/g, "") || "0", 10);
+              const linked = isPhrpStdPriceLinked(asset);
+              const pAcq = linked
+                ? parseAmount(asset.standardPriceAtAcq)
+                : parseInt((rh.standardPriceAtAcquisitionForPhrp ?? "").replace(/,/g, "") || "0", 10);
               const pPrior = parseInt((rh.standardPriceAtPriorTransfer ?? "").replace(/,/g, "") || "0", 10);
-              const pTransfer = parseInt((rh.standardPriceAtTransferForPhrp ?? "").replace(/,/g, "") || "0", 10);
+              const pTransfer = linked
+                ? parseAmount(asset.standardPriceAtTransfer)
+                : parseInt((rh.standardPriceAtTransferForPhrp ?? "").replace(/,/g, "") || "0", 10);
               if (pAcq > 0 && pPrior > 0 && pTransfer > 0 && pTransfer > pAcq) {
                 const ratio161 = ((pPrior - pAcq) / (pTransfer - pAcq) * 100).toFixed(2);
                 return (
