@@ -4,6 +4,7 @@
  * validateAssetAcquisition 내 isMixedUseHouse 분기의 본체를 그대로 이관.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { isPhdEligible } from "./phd-eligibility";
 import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";
 import { validateMixedUseExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateMixedUseInheritanceAsset } from "./transfer-tax-validate-mixed-use-inheritance";
@@ -85,6 +86,9 @@ export function validateMixedUseAsset(
   // PHD 전용 검증 (취득시 면적 자동 계산 — acquisitionArea 불필요)
   if (asset.usePreHousingDisclosure) {
     if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;
+    // §164⑦ 게이트 — 취득일(의제취득일 1985-01-01 반영) ≥ 최초고시일이면 취득당시 고시분 존재 → 3-시점 환산 대상 아님
+    if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate))
+      return `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`;
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
       return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
     // ⑧ Validation fallback — API는 phdTransferHousingPrice || mixedTransferHousingPrice 로 fallback.
