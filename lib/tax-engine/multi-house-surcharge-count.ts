@@ -434,25 +434,19 @@ export function countEffectiveHouses(
           : "VALUE");
 
     if (criteria === "VALUE") {
-      if (rules.lowPriceThreshold.local !== undefined) {
-        const priceToCheck = house.transferOfficialPrice ?? house.officialPrice;
-        if (priceToCheck <= rules.lowPriceThreshold.local) {
-          excluded.push({
-            houseId: house.id,
-            reason: "low_price_local_300",
-            detail: `지방(VALUE) 양도 공시가격 ${priceToCheck.toLocaleString()} (${rules.lowPriceThreshold.local.toLocaleString()} 이하)`,
-          });
-          continue;
-        }
-      } else if (!house.regionCriteria && !house.regionCode) {
-        if (house.officialPrice <= rules.lowPriceThreshold.non_capital) {
-          excluded.push({
-            houseId: house.id,
-            reason: "low_price_non_capital",
-            detail: `비수도권 공시가격 ${house.officialPrice.toLocaleString()} (${rules.lowPriceThreshold.non_capital.toLocaleString()} 이하)`,
-          });
-          continue;
-        }
+      // §167의3①1호: 수도권·광역시·특별자치시(소속 군·읍·면 제외) 외 지방 주택으로서
+      // 기준시가(양도 당시) 3억 이하 → 주택 수 제외. regionCode/regionCriteria 유무와 무관하게
+      // 단일 3억 기준 적용(local 우선, 미제공 시 non_capital). 종전 local 미배선(dead code)로
+      // regionCode 주택 미배제 + non_capital 1억 오적용(법령 3억) 정정.
+      const threshold = rules.lowPriceThreshold.local ?? rules.lowPriceThreshold.non_capital;
+      const priceToCheck = house.transferOfficialPrice ?? house.officialPrice;
+      if (priceToCheck <= threshold) {
+        excluded.push({
+          houseId: house.id,
+          reason: house.regionCriteria || house.regionCode ? "low_price_local_300" : "low_price_non_capital",
+          detail: `지방(VALUE) 기준시가 ${priceToCheck.toLocaleString()} (${threshold.toLocaleString()} 이하)`,
+        });
+        continue;
       }
     }
 

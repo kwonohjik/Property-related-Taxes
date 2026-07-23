@@ -165,7 +165,7 @@ export const transferTaxSeeds = [
       rentalHousingExempt: true,
       lowPriceThreshold: {
         capital: null,        // 수도권은 저가 배제 없음
-        non_capital: 100000000, // 비수도권 1억 이하 배제
+        non_capital: 300000000, // 지방(광역시 군·수도권 군 포함) 기준시가 3억 이하 배제 (§167의3①1호)
       },
       presaleRightStartDate: "2021-01-01",
       officetelStartDate: "2022-01-01",

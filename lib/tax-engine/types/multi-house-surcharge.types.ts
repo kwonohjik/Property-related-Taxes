@@ -431,8 +431,8 @@ export interface HouseCountExclusionRules {
   /** 저가주택 공시가격 한도 */
   lowPriceThreshold: {
     capital: number | null;    // null = 수도권(REGION) 저가 배제 없음
-    non_capital: number;       // legacy (regionCriteria 미제공 시 사용, 기본값 100_000_000)
-    local?: number;            // VALUE 지역(지방) 기준 (3억 = 300_000_000)
+    non_capital: number;       // 지방(VALUE) 기준시가 배제 한도 (§167의3①1호 = 300_000_000)
+    local?: number;            // 선택적 override (미제공 시 non_capital 사용)
   };
   /** 분양권 주택 수 산정 시작일 */
   presaleRightStartDate: string; // "2021-01-01"
