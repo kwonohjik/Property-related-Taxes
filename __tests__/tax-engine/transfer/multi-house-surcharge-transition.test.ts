@@ -316,13 +316,14 @@ describe("transitionExemptionMonths — 나목4) 표 지역 판정", () => {
     expect(transitionExemptionMonths("41290")).toBe(6);
   });
 
-  it("2026-07-01 신규지정(용인기흥 41463·구리 41310, 이미지45 표 명단 외) → 보수적 4개월", () => {
-    expect(transitionExemptionMonths("41463")).toBe(4);
-    expect(transitionExemptionMonths("41310")).toBe(4);
+  it("2026-07-01 신규지정(용인기흥 41463·구리 41310) → null(경과조치 대상 아님 — 2026-05-09 기준 조정대상 아님)", () => {
+    // 나·다목은 2026-05-09까지 허가신청/계약 요건 → 그 시점 조정대상 아니었던 지역은 처음부터 대상 제외.
+    expect(transitionExemptionMonths("41463")).toBeNull();
+    expect(transitionExemptionMonths("41310")).toBeNull();
   });
 
-  it("regionCode 미제공 → 보수적 4개월", () => {
-    expect(transitionExemptionMonths(undefined)).toBe(4);
+  it("regionCode 미제공 → null(소재지 판정 불가 — 근거 없이 배제 안 함)", () => {
+    expect(transitionExemptionMonths(undefined)).toBeNull();
   });
 
   it("REGULATED_REGIONS 실측 — 이미지45 6개월 명단 13개 엔트리(서울전역+경기12) 2025-10-16 지정 확인", () => {

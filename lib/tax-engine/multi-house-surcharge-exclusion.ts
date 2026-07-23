@@ -100,8 +100,9 @@ const GRACE_PERIOD_A_DEADLINE = new Date(SURCHARGE_SUSPENSION_TRANSFER_DATE_WIND
 export function transitionExemptionMonths(
   regionCode: string | undefined,
   regions: RegulatedRegion[] = REGULATED_REGIONS,
-): number {
-  if (!regionCode) return SURCHARGE_TRANSITION.MONTHS_DEFAULT;
+): number | null {
+  // 소재지 미확보 — 나·다목 대상 지역 판정 불가(근거 없이 배제하지 않음). UI가 소재지 입력 유도.
+  if (!regionCode) return null;
   const sgg = regionCode.slice(0, 5);
   if (SURCHARGE_TRANSITION_FOUR_MONTH_SGG.has(sgg)) return SURCHARGE_TRANSITION.MONTHS_DEFAULT;
 
@@ -116,7 +117,10 @@ export function transitionExemptionMonths(
   if (hasDesignation20251016(sgg)) return SURCHARGE_TRANSITION.MONTHS_TABLE_REGION;
   if (sgg.startsWith("11") && hasDesignation20251016("11")) return SURCHARGE_TRANSITION.MONTHS_TABLE_REGION;
 
-  return SURCHARGE_TRANSITION.MONTHS_DEFAULT;
+  // 강남4구·2025-10-16 지정 지역이 아니면 나·다목 경과조치 대상 아님.
+  // 나·다목은 "2026-05-09까지 허가신청/계약"이 요건이므로, 그 시점에 조정대상지역이 아니었던
+  // 지역(예: 용인 기흥·구리 등 2026-07-01 지정)은 처음부터 대상이 될 수 없다 → null(부적용).
+  return null;
 }
 
 /**
@@ -149,6 +153,9 @@ export function checkGracePeriodExemption(
 
   const deadlineOfMonths = SURCHARGE_TRANSITION.DEADLINE;
   const months = transitionExemptionMonths(sellingRegionCode);
+  // 소재지가 나·다목 경과조치 대상 지역(강남4구 또는 2025-10-16 지정)이 아니면 부적용.
+  // 미확보·2026-07-01 지정(용인기흥·구리 등)은 2026-05-09 기준 조정대상이 아니므로 나·다목 성립 불가.
+  if (months === null) return { suspended: false };
   const contractAfter0510 = contractDate > new Date(deadlineOfMonths);
 
   if (isLandPermitTarget === true) {

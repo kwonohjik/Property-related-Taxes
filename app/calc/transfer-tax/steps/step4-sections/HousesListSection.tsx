@@ -327,15 +327,23 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
                 <p className="text-caption font-medium text-violet-800">
                   소재지 강남·서초·송파·용산 → 4개월 / 그 외 조정대상지역(2025.10.16 지정) → 6개월
                 </p>
-                {!sellingRegionCode && (
+                {months === null && !sellingRegionCode && (
                   <p className="text-caption text-amber-700">
-                    양도 주택 소재지(법정동코드) 미확보 — 보수적으로 4개월로 근사합니다. 실제 소재지가
-                    6개월 지역이면 기한이 더 늦을 수 있으니 ① 자산 정보에서 주소를 확인하세요.
+                    양도 주택 소재지(법정동코드) 미확보 — 나·다목 경과조치는 소재지가 강남·서초·송파·용산
+                    또는 2025.10.16 지정 조정대상지역일 때만 적용됩니다. ① 자산 정보에서 주소를 확인하세요.
                   </p>
                 )}
-                <p className="text-caption text-violet-700">
-                  적용 개월수: {months}개월
-                </p>
+                {months === null && sellingRegionCode && (
+                  <p className="text-caption text-rose-700">
+                    이 소재지는 나·다목 경과조치 대상 지역이 아닙니다(2026.5.9까지 허가신청·계약 요건이므로
+                    그 시점에 조정대상지역이 아니었던 지역은 대상 제외). 중과가 적용됩니다.
+                  </p>
+                )}
+                {months !== null && (
+                  <p className="text-caption text-violet-700">
+                    적용 개월수: {months}개월
+                  </p>
+                )}
                 {preview?.deadline && (
                   <p className="text-caption text-violet-700">
                     계산된 양도 기한: {fmtYmd(preview.deadline)}까지

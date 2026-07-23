@@ -23,6 +23,7 @@ function seedForm(transferDate: string) {
             assetKind: "housing",
             acquisitionCause: "purchase",
             acquisitionDate: "2020-01-01", // 보유 2년 이상
+            regionCode: "11680", // 강남구 — 나·다목 4개월 지역(소재지 판정 소스)
           },
         ],
         transferDate,
