@@ -4,7 +4,7 @@
  * HousesListSection — 다른 보유 주택 목록 + 중과 유예 조건 (Step 4 섹션)
  *
  * ## 구조
- *  - 상단: 양도 주택 소재지 RadioCardGroup
+ *  - 상단: 양도 주택 소재지 (양도 물건 주소에서 자동 판정 — 읽기 전용)
  *  - 중단: 주택 테이블 (행: 번호·지역·취득일·공시가격·특례배지·편집버튼)
  *         행 편집 버튼 → 모달(Dialog) 오픈 → HouseEntryEditor
  *  - 하단: gracePeriod 섹션 (ToggleCard, 노출 조건: 1세대 + 보유주택 2채↑)
@@ -32,6 +32,8 @@ import {
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { deriveSellingHouseRegion } from "@/lib/calc/selling-house-region";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import {
   checkGracePeriodExemption,
@@ -106,7 +108,7 @@ function HouseTableRow({ house, idx, onEdit, onRemove }: RowProps) {
     <tr className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
       <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums">{idx + 1}</td>
       <td className="px-3 py-2 text-xs">
-        {house.region === "capital" ? "수도권" : "지방"}
+        {house.region === "capital" ? "수도권·광역시 등" : "지방"}
       </td>
       <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">
         {shortDate(house.acquisitionDate)}
@@ -381,6 +383,11 @@ export function HousesListSection({
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // 양도 주택 소재지 — 양도 물건(assets[0]) 주소에서 자동 판정 (사용자 수동 선택 폐지)
+  const sellingRegionCode = form.assets?.[0]?.regionCode;
+  const sellingRegionLabel =
+    deriveSellingHouseRegion(sellingRegionCode) === "capital" ? "수도권·광역시 등" : "지방";
+
   // 편집 중인 주택 (모달 오픈용)
   const editingHouse = editingId ? houses.find((h) => h.id === editingId) ?? null : null;
 
@@ -429,39 +436,43 @@ export function HousesListSection({
     <div className="space-y-3">
       {/* ── 양도 주택 소재지 ── */}
       <div className="rounded-lg border border-border/80 bg-muted/20 px-4 py-4 space-y-3">
-        <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">
+          다른 보유 주택 목록{" "}
+          <span className="text-xs text-muted-foreground font-normal">(정밀 중과세 판정용, 선택)</span>
+        </p>
+
+        {/* 양도 주택 소재지 — 양도 물건 주소에서 자동 판정 (읽기 전용) */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">양도 주택 소재지</span>
+          {sellingRegionCode ? (
+            <ToneCard tone="rose" bodyClassName="" className="flex-1 px-3 py-2">
+              <span className="text-sm font-medium">{sellingRegionLabel}</span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                양도 물건 주소에서 자동 판정
+              </span>
+            </ToneCard>
+          ) : (
+            <ToneCard tone="amber" bodyClassName="" className="flex-1 px-3 py-2">
+              <p className="text-xs">
+                양도 물건의 소재지 주소가 없어 <b>수도권·광역시 등</b> 기본값이 적용됩니다. 정확한
+                판정을 위해 1단계에서 양도 물건 주소를 입력하세요.
+              </p>
+            </ToneCard>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium">
-            다른 보유 주택 목록{" "}
-            <span className="text-xs text-muted-foreground font-normal">(정밀 중과세 판정용, 선택)</span>
+            현재 양도하는 주택 외 세대 구성원이 보유한 주택을 입력하세요.
           </p>
           <button
             type="button"
             onClick={addHouse}
-            className="text-xs text-primary hover:underline"
+            className="shrink-0 text-sm font-medium text-primary hover:underline"
           >
             + 주택 추가
           </button>
         </div>
-
-        {/* 양도 주택 권역 선택 */}
-        <div className="space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">양도 주택 소재지</span>
-          <RadioCardGroup
-            name="sellingHouseRegion"
-            layout="inline"
-            tone="rose"
-            value={form.sellingHouseRegion}
-            onChange={(v) => onChange({ sellingHouseRegion: v as "capital" | "non_capital" })}
-            options={[
-              { value: "capital", label: "수도권" },
-              { value: "non_capital", label: "지방" },
-            ]}
-          />
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          현재 양도하는 주택 외 세대 구성원이 보유한 주택을 입력하세요.
-        </p>
 
         {houses.length === 0 ? (
           <p className="text-xs text-muted-foreground/70">

@@ -128,7 +128,6 @@ export interface TransferFormData {
   houses: HouseEntry[];
   /** 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11) */
   presaleRights: PresaleRightEntry[];
-  sellingHouseRegion: "capital" | "non_capital";
   /**
    * 다주택 중과세 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9).
    * 폼-전역 단수 객체 — undefined면 유예 윈도우 blanket 판정, 객체면 정밀 조건 판정.
@@ -272,7 +271,6 @@ const defaultFormData: TransferFormData = {
   provisoPreContractNoHouse: false,
   houses: [],
   presaleRights: [],
-  sellingHouseRegion: "capital",
   annualBasicDeductionUsed: "0",
   priorReductionUsage: [],
   specialHouseExclusions: [],

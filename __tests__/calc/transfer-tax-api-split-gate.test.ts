@@ -66,7 +66,6 @@ function makeForm(over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) {
     assets: [asset],
     houses: [],
     presaleRights: [],
-    sellingHouseRegion: "non_regulated",
     contractTotalPrice: "1,000,000,000",
     totalTransferExpense: "0",
   } as unknown as TransferFormData;

@@ -10,6 +10,7 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isHousingLike } from "./transfer-tax-api-helpers";
+import { deriveSellingHouseRegion } from "./selling-house-region";
 
 /**
  * 양도주택(selling) + 보유주택 목록 → Zod houseSchema 배열 페이로드 빌드.
@@ -18,7 +19,6 @@ import { isHousingLike } from "./transfer-tax-api-helpers";
  */
 export function buildHousesPayload(
   primary: AssetForm,
-  sellingHouseRegion: "capital" | "non_capital",
   houses: HouseEntry[],
   presaleRightsCount: number,
   sellingExclusion?: TransferFormData["sellingHouseExclusion"],
@@ -29,7 +29,8 @@ export function buildHousesPayload(
   const se = sellingExclusion;
   const sellingHouse = {
     id: "selling",
-    region: sellingHouseRegion,
+    // 양도 물건 regionCode에서 자동 파생 (수동 선택 폐지) — regionCode 우선·미입력 시 REGION 기본
+    region: deriveSellingHouseRegion(primary.regionCode),
     // ④⑬ 법정동코드 — 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 boolean fallback
     regionCode: primary.regionCode || undefined,
     acquisitionDate: primary.acquisitionDate,

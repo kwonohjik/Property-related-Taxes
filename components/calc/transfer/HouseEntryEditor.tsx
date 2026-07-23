@@ -54,7 +54,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           value={house.region}
           onChange={(v) => onUpdate({ region: v as "capital" | "non_capital" })}
           options={[
-            { value: "capital", label: "수도권" },
+            { value: "capital", label: "수도권·광역시 등" },
             { value: "non_capital", label: "지방" },
           ]}
         />

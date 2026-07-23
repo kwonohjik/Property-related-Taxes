@@ -601,9 +601,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             {/* 세대 보유 주택 목록 + 분양권 + 감면주택 주택수 제외 (시행령 §167의3 주택 수 산정) */}
             {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
               <>
-                <p className="text-xs text-violet-800 dark:text-violet-300">
-                  왜 필요한가요? — 조정대상지역 다주택 중과(§104⑦), 주택 수 산정(시행령 §167의3)의 기초가 됩니다. 세대 구성원 명의 모든 주택을 기재하세요. (일시적 2주택 비과세는 위 ③ 특례에서 별도 입력)
-                </p>
                 <HousesListSection form={form} onChange={onChange} />
                 {/* 조특법 감면주택 주택수 제외 (§89③3호 의제) */}
                 <SpecialHouseExclusionSection

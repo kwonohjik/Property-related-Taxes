@@ -125,7 +125,6 @@ function landForm(over: Partial<AssetForm> = {}): TransferFormData {
     assets: [a],
     houses: [],
     presaleRights: [],
-    sellingHouseRegion: "non_regulated",
     contractTotalPrice: "1,000,000,000",
   } as unknown as TransferFormData;
 }
