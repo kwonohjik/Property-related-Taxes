@@ -11,6 +11,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
+import { isPhdEligible } from "./phd-eligibility";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateExprValuationAsset } from "./transfer-tax-validate-expropriation";
@@ -243,6 +244,9 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       } else if (c.estimationMode === "phd") {
         // PHD §164⑤ — asset 수준 phdFirstDisclosureDate 등 필수
         if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일을 입력하세요.`;
+        // §164⑦ 게이트 — 이월과세는 증여자 취득가액 기준: 비교일 = 증여자 취득일
+        if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
+          return `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`;
         if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
           return `${label}: 최초 고시 개별주택가격을 입력하세요.`;
         const transferPrice =
@@ -251,6 +255,9 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       } else if (c.estimationMode === "apd") {
         // APD — PHD와 동일 경로(preHousingDisclosure)를 사용하므로 같은 필드 검증
         if (!asset.phdFirstDisclosureDate) return `${label}: 최초 고시일(공동주택 최초공시일)을 입력하세요.`;
+        // §164⑦ 게이트 — 비교일 = 증여자 취득일 (phd 모드와 동일)
+        if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
+          return `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`;
         if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
           return `${label}: 최초공시 공동주택가격을 입력하세요.`;
         const transferPrice =
@@ -412,6 +419,12 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
           d.getUTCDate() !== Number(m[3])) {
         return `${label}: 최초 고시일이 유효하지 않습니다. (예: 공동주택 최초고시 1993-02-01)`;
       }
+    }
+    // §164⑦ 적용가능 게이트 — 취득일(의제취득일 1985-01-01 반영) ≥ 최초고시일이면
+    // 취득당시 고시분 존재 → 3-시점 환산 대상 아님 (isPhdEligible 단일 소스).
+    // 이월과세(carryover_gift)는 위 전용 블록(:202~)에서 증여자 취득일 기준으로 별도 게이트.
+    if (!isPhdEligible(asset.acquisitionDate, asset.phdFirstDisclosureDate)) {
+      return `${label}: 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 3-시점 환산을 끄고 취득시 기준시가를 직접 입력하세요.`;
     }
     if (!asset.phdFirstDisclosureHousingPrice || parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
       return `${label}: 최초 고시 개별주택가격을 입력하세요.`;

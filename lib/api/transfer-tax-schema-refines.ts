@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 
 /**
  * propertySchema.superRefine 에 주입되는 공통 검증 로직.
@@ -28,10 +29,12 @@ export function addPropertyRefines(
     buildingType?: "new" | "extension";
     extensionFloorArea?: number;
     constructionDate?: string;
-    /** §164⑤ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 */
-    preHousingDisclosure?: unknown;
-    /** 겸용주택 PHD — mixedUse.preHousingDisclosure 위치 */
-    mixedUse?: { preHousingDisclosure?: unknown };
+    /** §164⑤ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 + §164⑦ 취득일 게이트 */
+    preHousingDisclosure?: { firstDisclosureDate?: string } | null;
+    /** 이월과세(§97의2) — PHD 게이트 비교일 = 증여자 취득일 */
+    carryoverTaxation?: { donorAcquisitionDate?: string } | null;
+    /** 겸용주택 PHD — mixedUse.preHousingDisclosure 위치 (동일 §164⑦ 게이트 적용) */
+    mixedUse?: { preHousingDisclosure?: { firstDisclosureDate?: string } | null };
     /** ⑩ 상업용건물·오피스텔 환산취득가 서브객체 — era별 필수 필드 검증 */
     commercialBuildingValuation?: Record<string, unknown> | null;
     /** ⑩ 일반건물(토지+건물 일괄) 환산취득가 서브객체 — base 스키마 positive() 제약으로 충분 */
@@ -65,6 +68,25 @@ export function addPropertyRefines(
       path: ["standardPriceAtTransfer"],
       message: "환산취득가 사용 시 양도시 기준시가 필수",
     });
+  }
+  // §164⑦ 적용가능 게이트 — 취득일(의제 1985-01-01 반영·이월과세는 증여자 취득일) ≥ 최초고시일이면
+  // 취득당시 고시분 존재 → 3-시점 환산 대상 아님 (isPhdEligible 단일 소스 — validate ⑧과 동일 게이트)
+  const phdFirstDate =
+    data.preHousingDisclosure?.firstDisclosureDate ??
+    data.mixedUse?.preHousingDisclosure?.firstDisclosureDate;
+  if (phdFirstDate) {
+    const phdCompareDate =
+      data.acquisitionCause === "carryover_gift"
+        ? (data.carryoverTaxation?.donorAcquisitionDate ?? "")
+        : data.acquisitionDate;
+    if (!isPhdEligible(phdCompareDate, phdFirstDate)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["preHousingDisclosure", "firstDisclosureDate"],
+        message:
+          "취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후 — 취득당시 주택공시가격이 고시되어 있어 3-시점 환산(§164⑦) 대상이 아닙니다",
+      });
+    }
   }
   if (data.acquisitionDate >= data.transferDate) {
     ctx.addIssue({

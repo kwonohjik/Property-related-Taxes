@@ -17,6 +17,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
 import { cn } from "@/lib/utils";
+import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
@@ -110,7 +111,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       props.asset &&
       props.onAssetChange &&
       !props.asset.usePreHousingDisclosure &&
-      (props.asset.assetKind === "housing" || isMixedUse)
+      (props.asset.assetKind === "housing" || isMixedUse) &&
+      // §164⑦ 게이트 — 최초고시일이 이미 입력돼 있고 취득일 ≥ 최초고시일이면 자동 ON 억제
+      isPhdEligible(props.acquisitionDate ?? "", props.asset.phdFirstDisclosureDate)
     ) {
       props.onAssetChange({ usePreHousingDisclosure: true });
     }

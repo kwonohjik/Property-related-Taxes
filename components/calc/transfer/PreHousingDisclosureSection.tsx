@@ -17,6 +17,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 
 // ─── Props ────────────────────────────────────────────────────────
 
@@ -60,6 +61,11 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
   const [housingType, setHousingType] = useState<HousingType>("individual");
 
   const priceLabel = PRICE_LABEL[housingType];
+  // §164⑦ 게이트 비교일 — 이월과세(§97의2)는 증여자 취득가액 기준이므로 증여자 취득일
+  const phdCompareDate =
+    asset.acquisitionCause === "carryover_gift"
+      ? (asset.carryover?.donorAcquisitionDate ?? "")
+      : asset.acquisitionDate;
   // 개별/공동주택 공시가격 자동조회 — StandardPriceInput 재사용 (propertyKind로 분기)
   const housePropertyKind = housingType === "apartment" ? "house_apart" : "house_individual";
 
@@ -120,6 +126,18 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           )}
         </FieldCard>
       </div>
+
+      {/* §164⑦ 적용가능 게이트 경고 — 취득일(이월과세는 증여자 취득일·의제 1985-01-01 반영) ≥ 최초고시일 (validate ⑧과 동일 게이트) */}
+      {!isPhdEligible(phdCompareDate, asset.phdFirstDisclosureDate) && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs text-rose-900">
+          <p className="font-medium">⚠️ 3-시점 환산(§164⑦) 대상이 아닙니다</p>
+          <p className="mt-0.5 text-caption leading-relaxed text-rose-800">
+            취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로
+            취득 당시 주택공시가격이 이미 고시되어 있습니다. 3-시점 환산을 끄고 취득일 현재 고시된
+            주택공시가격(취득시 기준시가)을 직접 입력하세요. 이 상태로는 계산이 진행되지 않습니다.
+          </p>
+        </div>
+      )}
 
       {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행, StandardPriceInput 자동조회) */}
       <div className="grid gap-4 sm:grid-cols-2">
