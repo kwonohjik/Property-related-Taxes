@@ -102,7 +102,17 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           />
         </div>
 
-        {/* 전용면적 (취득일과 같은 행 — 둘 다 hint 없음, 세로 정렬) */}
+        {/* 준공일 (가목 소형신축 3호) — 취득일 옆(둘 다 DateInput, 세로 정렬) */}
+        <div className="space-y-1">
+          <label className="block text-caption text-muted-foreground font-medium">준공일</label>
+          <DateInput
+            value={house.completionDate ?? ""}
+            onChange={(v) => onUpdate({ completionDate: v })}
+          />
+          <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
+        </div>
+
+        {/* 전용면적 (둘 다 hint 없음, 세로 정렬) */}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
@@ -149,16 +159,6 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
             onChange={(v) => onUpdate({ officialPrice: v, addressLookupFilled: false })}
             hint="공동·개별주택가격 (원)"
           />
-        </div>
-
-        {/* 준공일 (가목 소형신축 3호) */}
-        <div className="space-y-1">
-          <label className="block text-caption text-muted-foreground font-medium">준공일</label>
-          <DateInput
-            value={house.completionDate ?? ""}
-            onChange={(v) => onUpdate({ completionDate: v })}
-          />
-          <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
         </div>
       </div>
 
