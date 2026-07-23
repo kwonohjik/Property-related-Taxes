@@ -84,6 +84,28 @@ describe("phdBatchToSnapshots — 라운드트립 등가", () => {
     expect(batch.acquisition?.commercial).not.toBe(batch.transfer?.commercial);
   });
 
+  it("F5: 최초공시 ≤2000 — transfer 모드 acqBase 스냅샷 생성 + 재유도 총액 = 배치값(2001 공시지가)", () => {
+    const LP2001 = 820_000;
+    const H2001 = { floorArea: 263.45, category: "housing" as const, acquisition: tp(1), firstDisclosure: tp(1), transfer: tp(2) };
+    const input = {
+      building: { builtYear: 1992, parts: [H2001] },
+      acquisition: { year: 1992, landPricePerM2: LP2001 },
+      firstDisclosure: { year: 1993, landPricePerM2: 600_000 },
+      transfer: TRANSFER,
+      landPrice2001PerM2: LP2001,
+    };
+    const batch = computePhdThreePointStdPrice(input);
+    const snaps = phdBatchToSnapshots(input, PREFIX);
+    const firstSnap = snaps[`${PREFIX}-first`];
+    expect(firstSnap).toBeDefined();
+    expect(firstSnap?.taxType).toBe("transfer");
+    expect(firstSnap?.acquisitionYear).toBe("1993");
+    expect(firstSnap?.acqLandPrice).toBe(String(LP2001)); // 1993 공시지가(600,000) 아님 — 2001 기준
+    const r = calcBuildingStandardPrice(toEngineInput(firstSnap!));
+    expect(r.acquisition?.standardPrice).toBe(batch.firstDisclosure?.housing);
+    expect(batch.firstDisclosure?.housing).toBe(80_103_553);
+  });
+
   it("≤2000 취득 주택분 단독 — transfer 모드 acqBase 스냅샷 생성(최초·양도는 valuation)", () => {
     const input = { building: { builtYear: 1998, parts: [H(100)] }, acquisition: { year: 1998, landPricePerM2: 500_000 }, firstDisclosure: FIRST, transfer: TRANSFER };
     const snaps = phdBatchToSnapshots(input, PREFIX);

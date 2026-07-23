@@ -167,3 +167,78 @@ describe("computePhdThreePointStdPrice — 겸용 Option B", () => {
     expect(r.transfer?.commercial).toBeGreaterThan(0); // 양도만
   });
 });
+
+// ─── 최초공시 ≤2000 산정기준율 환산 (plan: phd-3point-first-disclosure-pre2001) ───
+// 2001년 체계 usageNo=1(단독주택·아파트) — 산정기준율 경로는 2001 지수표 사용.
+describe("computePhdThreePointStdPrice — 최초공시 ≤2000 acqBase 환산", () => {
+  const H2001 = (floorArea: number) => ({
+    floorArea,
+    category: "housing" as const,
+    acquisition: tp(1),
+    firstDisclosure: tp(1),
+    transfer: tp(2), // 양도 2025 체계 주택
+  });
+  const LP2001 = 820_000; // 2001.1.1 기준 공시지가
+
+  it("F1: 최초공시 1993(≤2000) → base2001 × 산정기준율(0.927) 산출 — 홈택스 취득경로 실측 교차값", () => {
+    const r = computePhdThreePointStdPrice({
+      building: { builtYear: 1992, parts: [H2001(263.45)] },
+      acquisition: { year: 1992, landPricePerM2: LP2001 },
+      firstDisclosure: { year: 1993, landPricePerM2: 600_000 }, // 1993 공시지가는 건물 산출에 미사용
+      transfer: TRANSFER,
+      landPrice2001PerM2: LP2001,
+    });
+    // probe 실측 2026-07-23: perM2 328,000 × 263.45 × 0.927 floor
+    expect(r.firstDisclosure?.housing).toBe(80_103_553);
+    expect(r.unsupported.some((u) => u.point === "firstDisclosure")).toBe(false);
+  });
+
+  it("F2: 최초공시 ≤2000 + landPrice2001PerM2 부재 → unsupported(2001 공시지가 필요 사유)", () => {
+    const r = computePhdThreePointStdPrice({
+      building: { builtYear: 1992, parts: [H2001(263.45)] },
+      firstDisclosure: { year: 1993, landPricePerM2: 600_000 },
+      transfer: TRANSFER,
+    });
+    expect(r.firstDisclosure?.housing).toBeUndefined();
+    const u = r.unsupported.find((x) => x.point === "firstDisclosure" && x.category === "housing");
+    expect(u?.reason).toContain("2001년 기준 공시지가");
+  });
+
+  it("F3(회귀): 취득 1992 acqBase — 홈택스 실측 일치값 81,399,727 (landPrice2001PerM2 존재해도 무영향)", () => {
+    const r = computePhdThreePointStdPrice({
+      building: { builtYear: 1992, parts: [H2001(263.45)] },
+      acquisition: { year: 1992, landPricePerM2: LP2001 },
+      transfer: TRANSFER,
+      landPrice2001PerM2: LP2001,
+    });
+    expect(r.acquisition?.housing).toBe(81_399_727);
+  });
+
+  it("F4: Case A 상가 — firstDisclosure ≤2000 주입 주택 용도로 acqBase 산출(엔진 직접호출 등가)", () => {
+    const commercialCaseA = {
+      floorArea: 80,
+      category: "commercial" as const,
+      transfer: tp(41),
+      acquisition: tp(1), // 당시 주택 용도(2001 체계)
+      firstDisclosure: tp(1),
+    };
+    const r = computePhdThreePointStdPrice({
+      building: { builtYear: 1992, parts: [H2001(120), commercialCaseA] },
+      firstDisclosure: { year: 1993, landPricePerM2: 600_000 },
+      transfer: TRANSFER,
+      landPrice2001PerM2: LP2001,
+    });
+    expect(r.firstDisclosure?.commercial).toBeGreaterThan(0);
+    // 등가: 상가면적 80을 주택 용도(#1)로 acqBase(acquisitionYear=1993, 2001 공시지가)
+    const direct = calcBuildingStandardPrice({
+      taxType: "transfer",
+      floorArea: 80,
+      builtYear: 1992,
+      acquisitionYear: 1993,
+      transferYear: 2001,
+      acquisition: { structureKey: "rc", usageNo: 1, landPricePerM2: LP2001 },
+      transfer: { structureKey: "rc", usageNo: 1, landPricePerM2: LP2001 },
+    }).acquisition?.standardPrice;
+    expect(r.firstDisclosure?.commercial).toBe(direct);
+  });
+});

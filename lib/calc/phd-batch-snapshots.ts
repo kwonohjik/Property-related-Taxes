@@ -8,7 +8,8 @@
  * 재유도할 수 있도록 각 (시점, 카테고리)를 `BuildingStdPriceFormState`(valuation 모드) 스냅샷으로
  * 재구성한다. 재유도 총액 = 배치 적용 금액(자기일관성) — 규율:
  *  - (A) 단일부분 floorArea = 카테고리 부분 소계.  - (B) 시점당 1스냅샷.
- *  - (C) ≤2000 취득(acqBase, §164⑤ 산정기준율 환산)은 valuation 재현 불가 → transfer 모드 스냅샷(-phd-acq)으로 생성(44f8e211).
+ *  - (C) ≤2000 취득·최초공시(acqBase, §164⑤ 산정기준율 환산)는 valuation 재현 불가 → transfer 모드
+ *        스냅샷으로 생성(44f8e211 취득 → 최초공시 확장: 2001 기준 공시지가=landPrice2001PerM2).
  *  - (D) Case A 상가 취득·최초공시는 당시 주택 용도(acqFirstUsageNo)로 매핑.
  */
 import {
@@ -131,7 +132,7 @@ export function phdBatchToSnapshots(
   input: PhdBatchInput,
   prefix: string,
 ): Record<string, BuildingStdPriceFormState> {
-  const { building, acquisition, firstDisclosure, transfer } = input;
+  const { building, acquisition, firstDisclosure, transfer, landPrice2001PerM2 } = input;
   const { builtYear, parts } = building;
   const housing = parts.filter((p) => p.category === "housing");
   const commercial = parts.filter((p) => p.category === "commercial");
@@ -156,14 +157,22 @@ export function phdBatchToSnapshots(
     if (resolved.length !== catParts.length) return; // 시점 미입력(Case B 상가 등) → 스냅샷 생략
     const snapKey = `${prefix}-${KEYWORD[key]}${category === "commercial" ? "-commercial" : ""}`;
     if (point.year < BUILDING_STD_FIRST_YEAR) {
-      // 취득 ≤2000 acqBase transfer 스냅샷 — 취득 시점만(최초공시/양도<2001은 생략).
-      //  - 단일부분: 주택 단독·상가 Case A(취득 구조·용도 지정 시 resolved 채워짐, Case B는 상단에서 걸러짐).
+      // 취득·최초공시 ≤2000 acqBase transfer 스냅샷(양도<2001은 생략 — 배치 unsupported와 미러).
+      //  - 취득: point.landPricePerM2(UI가 2001 기준으로 고정) 그대로.
+      //  - 최초공시: landPrice2001PerM2(2001 기준) 필수 — 부재 시 배치도 unsupported이므로 스냅샷 생략(미러).
+      //  - 단일부분: 주택 단독·상가 Case A(시점 구조·용도 지정 시 resolved 채워짐, Case B는 상단에서 걸러짐).
       //  - 복합 다부분: buildTransferAcqCompositeSnapshot(단일 산정기준율 그룹만 유효 — 다그룹은 재유도 throw→미표시).
-      if (key === "acquisition") {
+      const effPoint =
+        key === "acquisition"
+          ? point
+          : key === "firstDisclosure" && landPrice2001PerM2 != null && landPrice2001PerM2 > 0
+            ? { year: point.year, landPricePerM2: landPrice2001PerM2 }
+            : undefined;
+      if (effPoint) {
         out[snapKey] =
           resolved.length === 1
-            ? buildTransferAcqSnapshot(resolved[0], builtYear, point)
-            : buildTransferAcqCompositeSnapshot(resolved, builtYear, point);
+            ? buildTransferAcqSnapshot(resolved[0], builtYear, effPoint)
+            : buildTransferAcqCompositeSnapshot(resolved, builtYear, effPoint);
       }
       return;
     }
