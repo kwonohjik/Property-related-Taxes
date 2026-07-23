@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { determineMultiHouseSurcharge, transitionExemptionMonths } from "@/lib/tax-engine/multi-house-surcharge";
+import { determineMultiHouseSurcharge, transitionExemptionMonths, civilMonthsDeadline } from "@/lib/tax-engine/multi-house-surcharge";
 import type { MultiHouseSurchargeInput } from "@/lib/tax-engine/multi-house-surcharge";
 import { REGULATED_REGIONS } from "@/lib/tax-engine/data/regulated-areas";
 import {
@@ -338,5 +338,64 @@ describe("transitionExemptionMonths — 나목4) 표 지역 판정", () => {
     }
     const seoul = REGULATED_REGIONS.find((r) => r.code === "11");
     expect(seoul!.designations.some((d) => d.designatedDate === "2025-10-16")).toBe(true);
+  });
+});
+
+// ============================================================
+// civilMonthsDeadline — 국세기본법 §4 → 민법 §157(초일불산입)·§160(역월) 만료일
+// ============================================================
+
+describe("civilMonthsDeadline — 계약일부터 N개월 만료(민법 준용)", () => {
+  const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+  it("월 중간 계약(4-20 +4M) → 8-20 (addMonths와 동일)", () => {
+    expect(ymd(civilMonthsDeadline(new Date("2026-04-20"), 4))).toBe("2026-08-20");
+  });
+
+  it("월말 계약(4-30 +4M) → 8-31 (§160② — addMonths 8-30보다 하루 늦음)", () => {
+    expect(ymd(civilMonthsDeadline(new Date("2026-04-30"), 4))).toBe("2026-08-31");
+  });
+
+  it("2월말 계약(2-28 +4M) → 6-30 (§160② — addMonths 6-28보다 이틀 늦음)", () => {
+    expect(ymd(civilMonthsDeadline(new Date("2026-02-28"), 4))).toBe("2026-06-30");
+  });
+
+  it("§160③ 최종월 해당일 없음(10-30 +4M → 2월) → 말일 만료(전일 안 뺌)", () => {
+    // 기산 10-31, +4M = 2월(2027) 31일 없음 → date-fns clamp 2-28 → §160③ 말일 유지
+    expect(ymd(civilMonthsDeadline(new Date("2026-10-30"), 4))).toBe("2027-02-28");
+  });
+
+  it("6개월 지역(6-01 +6M) → 12-01", () => {
+    expect(ymd(civilMonthsDeadline(new Date("2026-06-01"), 6))).toBe("2026-12-01");
+  });
+});
+
+// M16: 월말 계약 통합 — 다목, 계약 2026-01-30(≤5-09), 4M 지역, 양도 5-30.
+// addMonths였으면 만료 5-30, 민법이면 만료 5-30(1-30은 §160③ 아님: 기산 1-31 → +4M 5-31 clamp 아님 → 5-30).
+// 월말 차이가 드러나는 케이스: 계약 2026-01-31 → 민법 만료 5-31(addMonths도 5-31, 동일). 진짜 차이는 2월말·4월말·6월말 등.
+// 다목 계약 4-30 +4M: 민법 8-31 배제 / addMonths였으면 8-30. 양도 8-31로 경계 검증.
+describe("M16: 다목 월말 계약(4-30) 민법 만료 8-31 → 양도 8-31 배제 (addMonths였으면 과세)", () => {
+  it("민법 초일불산입 만료일 경계 배제", () => {
+    const r = run(
+      make3PlusInput(new Date("2026-08-31"), {
+        contractDate: new Date("2026-04-30"),
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
+      }),
+    );
+    expect(r.isSurchargeSuspended).toBe(true);
+    expect(r.surchargeSuspensionBasis).toBe("da");
+    expect(r.surchargeSuspensionDeadline?.toISOString().slice(0, 10)).toBe("2026-08-31");
+  });
+
+  it("동일 계약 + 양도 9-01(민법 만료 다음날) → 과세", () => {
+    const r = run(
+      make3PlusInput(new Date("2026-09-01"), {
+        contractDate: new Date("2026-04-30"),
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
+      }),
+    );
+    expect(r.isSurchargeSuspended).toBe(false);
   });
 });

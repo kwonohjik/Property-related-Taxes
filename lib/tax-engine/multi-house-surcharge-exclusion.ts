@@ -9,7 +9,7 @@
  * 의존: 산정 헬퍼를 -count에서 import (단방향, 순환 0).
  */
 
-import { addMonths, addYears, differenceInYears } from "date-fns";
+import { addMonths, addYears, addDays, subDays, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
 import {
   MULTI_HOUSE,
@@ -97,6 +97,21 @@ const GRACE_PERIOD_A_DEADLINE = new Date(SURCHARGE_SUSPENSION_TRANSFER_DATE_WIND
  *
  * 단일 진실: REGULATED_REGIONS(data/regulated-areas.ts) 데이터에서 직접 파생 — 명단 하드코딩 금지.
  */
+/**
+ * "기산일부터 N개월 이내"의 만료일 — 국세기본법 §4 → 민법 §157(초일불산입)·§160(역월) 준용.
+ * §157: 초일불산입 → 기산일은 시작일 익일. §160②: 만료 = 최후 월의 기산일 해당날의 전일.
+ * §160③: 최종월에 해당일이 없으면 그 월의 말일로 만료(전일 빼지 않음).
+ * date-fns `addMonths`는 초일산입 응당일이라 월말 계약에서 1~2일 이른 기한(납세자 불리)을 준다 → 교정.
+ * 예: 계약 2026-04-30 +4개월 → addMonths 08-30 vs 민법 08-31 / 계약 02-28 +4개월 → 06-28 vs 06-30.
+ */
+export function civilMonthsDeadline(startDate: Date, months: number): Date {
+  const 기산 = addDays(startDate, 1); // §157 초일불산입
+  const 응당 = addMonths(기산, months);
+  // date-fns가 말일로 clamp했으면(기산일≠응당일 day) §160③ 말일 만료 — 전일 빼지 않음.
+  if (기산.getUTCDate() !== 응당.getUTCDate()) return 응당;
+  return subDays(응당, 1); // §160② 전일
+}
+
 export function transitionExemptionMonths(
   regionCode: string | undefined,
   regions: RegulatedRegion[] = REGULATED_REGIONS,
@@ -165,7 +180,7 @@ export function checkGracePeriodExemption(
     }
     if (!permitGranted || !depositReceiptConfirmed) return { suspended: false };
 
-    let deadline = addMonths(contractDate, months);
+    let deadline = civilMonthsDeadline(contractDate, months);
     if (contractAfter0510) {
       const absolute = new Date(
         months === SURCHARGE_TRANSITION.MONTHS_TABLE_REGION
@@ -182,7 +197,7 @@ export function checkGracePeriodExemption(
   if (isLandPermitTarget === false) {
     // 다목
     if (contractAfter0510 || !depositReceiptConfirmed) return { suspended: false };
-    const deadline = addMonths(contractDate, months);
+    const deadline = civilMonthsDeadline(contractDate, months);
     return transferDate <= deadline
       ? { suspended: true, basis: "da", deadline }
       : { suspended: false, basis: "da", deadline };
