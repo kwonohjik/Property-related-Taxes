@@ -380,7 +380,6 @@ describe("F1 — 다건 gracePeriod per-property 전송", () => {
     form.assets[0] = { ...form.assets[0], assetKind: "housing", regionCode: "11680" }; // 강남 4개월
     form.householdHousingCount = "2";
     form.isOneHousehold = true;
-    form.sellingHouseRegion = "capital";
     form.houses = [
       {
         id: "other1",

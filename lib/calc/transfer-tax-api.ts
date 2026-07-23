@@ -55,7 +55,6 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 분양권/입주권만 있고 다른 주택은 없는 경우(양도주택 + 분양권)도 정밀 판정되도록 게이트 확장.
   const housesPayload = buildHousesPayload(
     primary,
-    form.sellingHouseRegion,
     form.houses,
     form.presaleRights.length,
     form.sellingHouseExclusion,

@@ -11,6 +11,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import { toEngineReductions, toRentalHousingExceptionApi, buildPre1990LandPayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
+import { deriveSellingHouseRegion } from "@/lib/calc/selling-house-region";
 
 const isHousingLike = (pt: string) =>
   pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
@@ -34,7 +35,9 @@ export function buildPropertyPayload(form: TransferFormData) {
       ? [
           {
             id: "selling",
-            region: form.sellingHouseRegion,
+            // 양도 물건 regionCode에서 자동 파생 (수동 선택 폐지)
+            region: deriveSellingHouseRegion(primary?.regionCode),
+            regionCode: primary?.regionCode || undefined,
             acquisitionDate: primary?.acquisitionDate ?? "",
             officialPrice: primary?.standardPriceAtTransfer
               ? parseAmount(primary.standardPriceAtTransfer)

@@ -49,7 +49,7 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
       bodyClassName="space-y-2.5"
       title="분양권·입주권"
       titleExtra={
-        <button type="button" onClick={add} className="ml-auto text-xs text-primary hover:underline">
+        <button type="button" onClick={add} className="ml-auto text-sm font-medium text-primary hover:underline">
           + 추가
         </button>
       }
