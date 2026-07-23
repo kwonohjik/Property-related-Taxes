@@ -457,6 +457,18 @@ export default function TransferTaxCalculator({
           <div className="flex items-center gap-2">
             {/* onBeforeNavigate: 결과서 홈 이동 시 setStep(0)→isResult=false로 stale 결과 숨김(결과 step은 indicator 너머·입력 보존) */}
             <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" onBeforeNavigate={() => { if (isResult) setStep(0); }} />
+            {/* 결과 화면 한정 — 마지막 입력 단계(가산세)로 복귀 (결과뷰 하단 "이전"과 동일 동작) */}
+            {isResult && (
+              <button
+                type="button"
+                onClick={() => { setStep(totalSteps - 1); clearError(); }}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="이전 입력 단계로 이동"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                이전
+              </button>
+            )}
             <SaveButton onSave={handleManualSave} />
             <ResetButton onReset={handleReset} />
           </div>
