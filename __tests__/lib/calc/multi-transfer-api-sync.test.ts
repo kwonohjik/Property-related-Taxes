@@ -372,3 +372,80 @@ describe("[R2-H2] 다건 priorReductionUsage 합성·전송", () => {
     expect(captured!.priorReductionUsage).toEqual([]);
   });
 });
+
+// ⑬ F1 — 다건 gracePeriod 배관 (중과 한시 유예/경과조치 §167의3①12의2). 단건 API와 동일 게이트.
+describe("F1 — 다건 gracePeriod per-property 전송", () => {
+  function housingFormWithGrace(gp?: PropertyItem["form"]["gracePeriod"]): PropertyItem["form"] {
+    const form = baseForm();
+    form.assets[0] = { ...form.assets[0], assetKind: "housing", regionCode: "11680" }; // 강남 4개월
+    form.householdHousingCount = "2";
+    form.isOneHousehold = true;
+    form.sellingHouseRegion = "capital";
+    form.houses = [
+      {
+        id: "other1",
+        region: "capital",
+        acquisitionDate: "2019-01-01",
+        officialPrice: "800000000",
+        isInherited: false,
+        isLongTermRental: false,
+        isApartment: true,
+        isOfficetel: false,
+        isUnsoldHousing: false,
+        acquisitionPrice: "700000000",
+        exclusiveArea: "84",
+        isUnsoldNewHouse: false,
+        completionDate: "",
+        isSpouseOwned: false,
+        isCoInherited: false,
+        decedentSameHouseholdAtInheritance: false,
+        isRankingDisqualifiedInheritedHouse: false,
+      },
+    ];
+    form.gracePeriod = gp;
+    return form;
+  }
+
+  const NA_GRACE = {
+    contractDate: "2026-06-01",
+    isLandPermitTarget: true,
+    permitApplicationDate: "2026-05-01",
+    permitGranted: true,
+    depositReceiptConfirmed: true,
+  };
+
+  it("housing + houses[] + gracePeriod ON → property payload에 gracePeriod 포함", () => {
+    const payload = buildPropertyPayload(housingFormWithGrace(NA_GRACE)) as Record<string, unknown>;
+    expect(payload.houses).toBeDefined();
+    expect(payload.gracePeriod).toEqual(NA_GRACE);
+  });
+
+  it("gracePeriod 미입력 → payload에서 제외 (게이트)", () => {
+    const payload = buildPropertyPayload(housingFormWithGrace(undefined)) as Record<string, unknown>;
+    expect(payload.gracePeriod).toBeUndefined();
+  });
+
+  it("houses 없음(housesPayload undefined) → gracePeriod 있어도 미전송 (엔진 미소비 정합)", () => {
+    const form = baseForm();
+    form.gracePeriod = NA_GRACE; // houses 미설정 → housesPayload undefined
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.houses).toBeUndefined();
+    expect(payload.gracePeriod).toBeUndefined();
+  });
+
+  it("2자산 독립 — 자산별 form.gracePeriod가 각 property payload로 (native per-property)", async () => {
+    const p1 = makeProperty(housingFormWithGrace(NA_GRACE), "강남");
+    const p2 = makeProperty(housingFormWithGrace(undefined), "미입력");
+    p2.propertyId = "p2";
+    const multi = makeMultiForm([p1, p2]);
+    let captured: Record<string, unknown> | null = null;
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, init: RequestInit) => {
+      captured = JSON.parse(String(init.body));
+      return { ok: true, json: async () => ({ data: {} }) } as Response;
+    }));
+    await callMultiTransferTaxAPI(multi, [p1, p2]);
+    const props = captured!.properties as Record<string, unknown>[];
+    expect(props[0].gracePeriod).toEqual(NA_GRACE);
+    expect(props[1].gracePeriod).toBeUndefined();
+  });
+});

@@ -22,7 +22,7 @@ import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
-import { mapHousesToEngine } from "@/lib/api/transfer-route-multi-house";
+import { mapHousesToEngine, mapGracePeriodToEngine } from "@/lib/api/transfer-route-multi-house";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
@@ -159,6 +159,8 @@ export async function POST(request: NextRequest) {
       // ⑭ 다건도 단건과 동일 공용 헬퍼 — P2 특례(인구감소·부득이사유·장기임대 등) + ⑬ 소형신축/미분양 전 필드 도달 (선재 strip 갭 해소)
       houses: mapHousesToEngine(p.houses),
       sellingHouseId: p.sellingHouseId,
+      // ⑭ 다주택 중과 한시 유예/경과조치 — 단건 route와 동일 공용 헬퍼(Date 변환). 자산별 gracePeriod.
+      gracePeriod: mapGracePeriodToEngine(p.gracePeriod),
       marriageMerge: p.marriageMerge ? { marriageDate: toDate(p.marriageMerge.marriageDate, "marriageMerge.marriageDate") } : undefined,
       // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
       oneHouseExemptionProviso: p.oneHouseExemptionProviso
