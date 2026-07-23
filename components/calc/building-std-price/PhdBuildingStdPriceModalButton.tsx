@@ -223,12 +223,19 @@ export function PhdBuildingStdPriceModalButton({
       if (land <= 0) return undefined;
       return { year: p.year, landPricePerM2: land };
     };
+    // 최초공시 ≤2000 산정기준율 환산용 2001 기준 공시지가 — 취득 ≤2000이면 취득시 공시지가 필드가
+    // 2001.1.1 기준(LandPriceLookupField fixedYear=2001)이므로 그 값을 전달. 취득 ≥2001이면 미전달
+    // (배치가 unsupported 사유로 안내 — 자동 fallback 금지).
+    const acqYear = yearOf("acquisition");
+    const lp2001 =
+      acqYear != null && acqYear <= 2000 ? (parseAmount(landPrices.acquisition ?? "") ?? 0) : 0;
     try {
       const input: PhdBatchInput = {
         building: { builtYear: built, parts },
         acquisition: pt("acquisition"),
         firstDisclosure: pt("firstDisclosure"),
         transfer: pt("transfer"),
+        ...(lp2001 > 0 ? { landPrice2001PerM2: lp2001 } : {}),
       };
       setComputedInput(input);
       setResult(computePhdThreePointStdPrice(input));
@@ -428,6 +435,10 @@ export function PhdBuildingStdPriceModalButton({
                   </div>
                 );
               }
+              // 최초공시 ≤2000: 건물분은 2001 기준시가 × 산정기준율 환산(§164⑤ 준용) —
+              // 이 연도 공시지가는 토지분·외부 3시점 섹션용(건물 산출 미사용) 안내.
+              const isFirstPre2001 =
+                p.key === "firstDisclosure" && p.year != null && p.year <= 2000;
               return (
                 <FieldCard
                   key={p.key}
@@ -435,7 +446,13 @@ export function PhdBuildingStdPriceModalButton({
                     p.year ? ` (${p.year}년)` : " (연도 미상)"
                   } 공시지가`}
                   unit="원/㎡"
-                  hint={!p.year ? "해당 시점 날짜 미입력 — 계산 제외" : undefined}
+                  hint={
+                    !p.year
+                      ? "해당 시점 날짜 미입력 — 계산 제외"
+                      : isFirstPre2001
+                        ? "고시(2001년~) 전 최초공시일의 건물분은 2001년 기준시가 × 산정기준율로 환산 — 이 공시지가는 토지분 계산에 사용"
+                        : undefined
+                  }
                 >
                   <CurrencyInput
                     label=""
