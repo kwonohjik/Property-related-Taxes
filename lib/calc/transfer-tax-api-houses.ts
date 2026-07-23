@@ -10,7 +10,7 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isHousingLike } from "./transfer-tax-api-helpers";
-import { deriveSellingHouseRegion } from "./selling-house-region";
+import { deriveHouseRegionFromCode } from "./house-region";
 
 /**
  * 양도주택(selling) + 보유주택 목록 → Zod houseSchema 배열 페이로드 빌드.
@@ -30,7 +30,7 @@ export function buildHousesPayload(
   const sellingHouse = {
     id: "selling",
     // 양도 물건 regionCode에서 자동 파생 (수동 선택 폐지) — regionCode 우선·미입력 시 REGION 기본
-    region: deriveSellingHouseRegion(primary.regionCode),
+    region: deriveHouseRegionFromCode(primary.regionCode),
     // ④⑬ 법정동코드 — 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 boolean fallback
     regionCode: primary.regionCode || undefined,
     acquisitionDate: primary.acquisitionDate,
@@ -57,6 +57,9 @@ export function buildHousesPayload(
     .map((h) => ({
       id: h.id,
       region: h.region,
+      // ④ 법정동 10자리 — 엔진 §167의3 지역기준(REGION/VALUE) 정밀 판정. houseSchema는
+      // regionCode를 정확히 10자리(.length(10))만 수용 → ≠10자리는 undefined(Zod 400 회피).
+      regionCode: h.regionCode?.length === 10 ? h.regionCode : undefined,
       acquisitionDate: h.acquisitionDate,
       officialPrice: parseInt(h.officialPrice) || 0,
       isInherited: h.isInherited,
