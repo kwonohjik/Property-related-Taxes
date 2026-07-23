@@ -8,9 +8,14 @@
  * 검증 대상:
  *   A1 — isInherited=true 이지만 inheritedDate 없으면 상속5년 배제 미발동 (UI가 날짜를 줘야 함)
  *   A2 — inheritedDate 5년 이내면 inherited_5years 배제 발동
- *   A3a — gracePeriod 조건 미충족 + 유예활성 → suspended=false (중과 적용)
- *   A3b — gracePeriod 조건 충족(토지허가+임차인) → suspended=true (중과 유예)
+ *   A3a — 양도일 > 2026-05-09 + 다목 조건 미충족(계약일 위반) → suspended=false (중과 적용)
+ *   A3b — 양도일 > 2026-05-09 + 다목 조건 충족(계약·계약금증빙) → suspended=true (중과 유예)
  *   A3c — gracePeriod 미제공 + 유예활성 + 윈도우 내 → blanket suspended=true (현행 동작)
+ *   A3d — 양도일 ≤ 2026-05-09(가목 우선 게이트) → gracePeriod 조건 무관 suspended=true
+ *
+ * ⚠️ 2026-07-24 법령정합 재작성: §167의3①12의2 가·나·다목 확정 시행령 반영.
+ *   구 A3d(계약일 하한 미충족→false)는 가목 우선 게이트로 대체됨(anchor 갱신 사유 —
+ *   docs/02-design/features/transfer-surcharge-transition-na-da.plan.md §7 G3′).
  */
 
 import { describe, it, expect } from "vitest";
@@ -88,14 +93,14 @@ describe("Pre-Do A3: gracePeriod 정밀 유예 판정 (P0 gracePeriod wiring 입
     makeHouse("h2"),
   ];
 
-  it("A3a: gracePeriod 조건 미충족(계약일 2026-06-01 만료 후·토지허가X) → suspended=false, 중과 적용", () => {
+  it("A3a: 양도일 2026-08-02(가목 이후) + 다목 계약+4개월 초과 → suspended=false, 중과 적용", () => {
     const input = makeInput(twoHouses(), {
       sellingHouseId: "h1",
-      transferDate: new Date("2024-06-01"),
+      transferDate: new Date("2026-08-02"),
       gracePeriod: {
-        contractDate: new Date("2026-06-01"), // 2026-05-09 이후 → 조건B 불가
-        isLandPermitArea: false,
-        hasTenantInResidence: false,
+        contractDate: new Date("2026-04-01"), // +4개월(강남 4개월 지역) = 2026-08-01 < 양도일
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
       },
     });
 
@@ -105,14 +110,14 @@ describe("Pre-Do A3: gracePeriod 정밀 유예 판정 (P0 gracePeriod wiring 입
     expect(r.isSurchargeSuspended).toBe(false);
   });
 
-  it("A3b: gracePeriod 조건 충족(토지거래허가구역+임차인 거주) → suspended=true", () => {
+  it("A3b: 양도일 2026-08-01(가목 이후) + 다목 조건 충족(계약·계약금증빙) → suspended=true", () => {
     const input = makeInput(twoHouses(), {
       sellingHouseId: "h1",
-      transferDate: new Date("2024-06-01"),
+      transferDate: new Date("2026-08-01"),
       gracePeriod: {
-        contractDate: new Date("2024-01-01"),
-        isLandPermitArea: true,
-        hasTenantInResidence: true,
+        contractDate: new Date("2026-04-01"),
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
       },
     });
 
@@ -121,13 +126,14 @@ describe("Pre-Do A3: gracePeriod 정밀 유예 판정 (P0 gracePeriod wiring 입
     expect(r.isSurchargeSuspended).toBe(true);
   });
 
-  it("A3d: gracePeriod 계약일이 2022.5.10 이전 → 조건C(토지허가+임차인) 충족이어도 미배제(false)", () => {
-    // 한시 유예 시행 전(2020) 계약은 유예 대상 아님 — 하한 검증 (적대적 리뷰 적발 회귀)
+  it("A3d: 양도일 ≤ 2026-05-09 → 가목 우선 게이트로 suspended=true (계약·허가 조건 무관, G3′ 정정)", () => {
+    // 구 테스트: 계약일 하한(2022-05-10) 미충족 조건C → false. 확정 시행령 나·다목 원문에는
+    // 임차인 조항·계약일 하한 근거가 없고, 가목은 양도일 단일조건이므로 우선 배제된다.
     const input = makeInput(twoHouses(), {
       sellingHouseId: "h1",
-      transferDate: new Date("2024-06-01"),
+      transferDate: new Date("2026-05-09"),
       gracePeriod: {
-        contractDate: new Date("2020-01-01"), // 2022-05-10 이전
+        contractDate: new Date("2020-01-01"),
         isLandPermitArea: true,
         hasTenantInResidence: true,
       },
@@ -135,8 +141,8 @@ describe("Pre-Do A3: gracePeriod 정밀 유예 판정 (P0 gracePeriod wiring 입
 
     const r = determineMultiHouseSurcharge(input, defaultRules, mockRegulatedHistory, suspensionActive, true);
 
-    expect(r.isSurchargeSuspended).toBe(false);
-    expect(r.surchargeApplicable).toBe(true);
+    expect(r.isSurchargeSuspended).toBe(true);
+    expect(r.surchargeApplicable).toBe(false);
   });
 
   it("A3c: gracePeriod 미제공 + 유예 윈도우 내 → blanket suspended=true (현행)", () => {

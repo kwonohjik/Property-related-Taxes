@@ -48,6 +48,13 @@ import {
   type TransferPrintSectionId,
 } from "@/lib/print/transfer-print-sections";
 
+// ── 중과 유예 근거(basis) 표시용 기한 포맷 — API JSON 왕복 후 string 도달 가능(Date 직렬화) ──
+function fmtDeadline(d: Date | string | undefined): string {
+  if (!d) return "";
+  const s = typeof d === "string" ? d : d.toISOString();
+  return s.slice(0, 10);
+}
+
 // ── 필지별 계산 내역 (펼치기/접기 — 자산 카드와 동일 표준 칩) ──────────
 function ParcelDisclosure({
   pr,
@@ -376,6 +383,17 @@ export function TransferTaxResultView({
             <p className="font-medium text-blue-800 dark:text-blue-400">
               ℹ️ 다주택 중과세 유예 기간 적용 — 일반세율로 계산됩니다.
             </p>
+            {/* ⑦ echo — 중과 유예 근거 목(가/나/다) + 나·다목 양도기한 */}
+            {result.surchargeSuspensionBasis && (
+              <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
+                {result.surchargeSuspensionBasis === "a" &&
+                  "근거: 2026-05-09까지 양도 (소득세법 시행령 §167의3①12의2 가목)"}
+                {result.surchargeSuspensionBasis === "na" &&
+                  `근거: 토지거래허가 경과조치 (나목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족`}
+                {result.surchargeSuspensionBasis === "da" &&
+                  `근거: 매매계약 경과조치 (다목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족`}
+              </p>
+            )}
           </div>
         )}
 

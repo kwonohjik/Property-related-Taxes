@@ -657,8 +657,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   form.transferDate > SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end && (
                     <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
                       {SUSPENSION_END_KO}까지 매매계약 체결(계약금 수령)·토지거래허가 신청분은
-                      경과조치로 중과가 배제될 수 있습니다(§167의3①12의2 나·다, §167의10①12의2 나·다
-                      — 본 계산기 자동판정 미지원).
+                      경과조치로 중과가 배제될 수 있습니다(§167의3①12의2 나·다, §167의10①12의2 나·다).
+                      아래 ④ 중과 판정 &gt; 중과 경과조치 조건 입력에서 나·다목을 판정합니다.
                     </p>
                   )}
               </div>

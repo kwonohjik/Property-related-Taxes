@@ -17,6 +17,7 @@
  */
 
 export * from "./legal-codes/transfer";
+export * from "./legal-codes/surcharge-transition";
 export * from "./legal-codes/acquisition";
 export * from "./legal-codes/property";
 export * from "./legal-codes/comprehensive";

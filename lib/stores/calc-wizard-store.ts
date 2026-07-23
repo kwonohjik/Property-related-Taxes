@@ -6,7 +6,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
-import { migrateLegacyForm } from "./calc-wizard-migration";
+import { migrateLegacyForm, migrateGracePeriod } from "./calc-wizard-migration";
 import {
   makeDefaultAsset,
   migrateAsset,
@@ -136,8 +136,19 @@ export interface TransferFormData {
    */
   gracePeriod?: {
     contractDate: string;
-    isLandPermitArea: boolean;
-    hasTenantInResidence: boolean;
+    /** 토지거래허가 대상 여부 — true=나목(허가신청·허가·계약금), false=다목(계약·계약금) */
+    isLandPermitTarget?: boolean;
+    /** 나목1) 토지거래허가 신청일 */
+    permitApplicationDate?: string;
+    /** 나목2) 허가 수령 여부 */
+    permitGranted?: boolean;
+    /** 나목3)·다목1) 계약금 수령 증빙 확인 */
+    depositReceiptConfirmed?: boolean;
+    /** @deprecated G3(조건C 근거 없음) — 판정 미사용, 하위호환만 */
+    isLandPermitArea?: boolean;
+    /** @deprecated G3 — 판정 미사용 */
+    hasTenantInResidence?: boolean;
+    /** @deprecated G6(regionCode 명단 판정 대체) — 판정 미사용 */
     areaDesignatedDate?: string;
   };
   /**
@@ -409,6 +420,9 @@ export const useCalcWizardStore = create<CalcWizardState>()(
             assets: ((ps.formData as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
           };
         }
+
+        // ③ gracePeriod 구 필드(isLandPermitArea) → 신규 isLandPermitTarget 의미 승계 이전
+        formData = { ...formData, gracePeriod: migrateGracePeriod(formData.gracePeriod) };
 
         // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 currentStep(잔존값)을 무시.
         return { ...current, ...ps, formData, currentStep: 0 };

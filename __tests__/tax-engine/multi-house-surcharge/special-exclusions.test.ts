@@ -512,28 +512,33 @@ describe("MH-20: ④⑤⑥⑨ 특수용도 주택 → 3주택+ 중과배제", ()
 });
 
 // ============================================================
-// MH-21: 유예 조건 세분화 — 계약일·잔금일·토지허가 기준
+// MH-21: 유예 경과조치 판정 — §167의3①12의2 가·나·다목 (2026-07-24 법령정합 재작성)
+//
+// ⚠️ 이 describe는 확정 시행령 나·다목 원문(계약·허가 4/2요건)에 맞춰 전면 재작성됐다.
+// 구 조건A/B/C 모델(조건C=토지허가+임차인 무기한 배제)은 원문에 근거가 없어 제거(G3).
+// 아래 뒤집힌 기대값(조건C 무기한 배제 → 과세)은 anchor 갱신 사유 — plan §7 참조:
+// docs/02-design/features/transfer-surcharge-transition-na-da.plan.md
 // ============================================================
 
-describe("MH-21: 유예 조건 세분화 (A/B/C 조건 판정)", () => {
-  // 기본 셋업: 2주택, 조정대상지역, 유예 활성
+describe("MH-21: 유예 경과조치 판정 (가·나·다목)", () => {
+  // 기본 셋업: 2주택, h1=강남구(4개월 지역), h2=성남분당(6개월 지역, 2025-10-16 신규지정)
   function make2HouseInput(
     transferDate: Date,
     gracePeriod?: MultiHouseSurchargeInput["gracePeriod"],
+    sellingHouseId: "h1" | "h2" = "h1",
   ): MultiHouseSurchargeInput {
-    const h1 = makeHouse("h1", { regionCode: "11680" }); // 강남구 (조정지역)
-    const h2 = makeHouse("h2");
+    const h1 = makeHouse("h1", { regionCode: "11680" }); // 강남구 (4개월 지역)
+    const h2 = makeHouse("h2", { regionCode: "41135" }); // 성남 분당구 (6개월 지역)
     return makeInput([h1, h2], {
-      sellingHouseId: "h1",
+      sellingHouseId,
       transferDate,
       gracePeriod,
     });
   }
 
-  it("gracePeriod 미제공 + 유예 활성(날짜 기준) → 유예 적용", () => {
-    // 기존 동작: suspended_until 이전이면 유예
+  it("가목: 양도일 ≤ 2026-05-09 → 가목 우선 게이트로 배제(계약·허가 조건 무관)", () => {
     const result = determineMultiHouseSurcharge(
-      make2HouseInput(new Date("2025-12-01")), // 2026.5.9 이전
+      make2HouseInput(new Date("2026-05-09")),
       defaultRules,
       mockRegulatedHistory,
       suspensionActive,
@@ -543,7 +548,7 @@ describe("MH-21: 유예 조건 세분화 (A/B/C 조건 판정)", () => {
     expect(result.surchargeApplicable).toBe(false);
   });
 
-  it("gracePeriod 미제공 + 유예 종료 이후 양도 → 중과 적용", () => {
+  it("gracePeriod 미제공 + 유예 종료 이후 양도 → 중과 적용 (기존 회귀)", () => {
     const result = determineMultiHouseSurcharge(
       make2HouseInput(new Date("2026-05-10")), // 2026.5.9 초과
       defaultRules,
@@ -555,47 +560,45 @@ describe("MH-21: 유예 조건 세분화 (A/B/C 조건 판정)", () => {
     expect(result.surchargeApplicable).toBe(true);
   });
 
-  it("gracePeriod 제공: 계약일 2026.4.1, 양도일 2026.7.20 (3.6개월) → 4개월 이내 → 유예", () => {
+  it("다목: 계약 2026-04-01(≤5-09)+계약금증빙, 4개월 지역, 양도 2026-08-01 → 배제", () => {
     const result = determineMultiHouseSurcharge(
-      make2HouseInput(new Date("2026-07-20"), {
+      make2HouseInput(new Date("2026-08-01"), {
         contractDate: new Date("2026-04-01"),
-        isLandPermitArea: false,
-        hasTenantInResidence: false,
-      }),
-      defaultRules,
-      mockRegulatedHistory,
-      suspensionActive, // surcharge_suspended: true
-      true,
-    );
-    // 조건A: 계약일 2026-04-01 ≤ 2026-05-09 ✓
-    // 조건B: 2026-04-01 + 4개월 = 2026-08-01 ≥ 2026-07-20 ✓
-    expect(result.isSurchargeSuspended).toBe(true);
-    expect(result.surchargeApplicable).toBe(false);
-  });
-
-  it("gracePeriod 제공: 계약일 2026.4.1, 양도일 2026.9.10 (5.3개월) → 4개월 초과 → 유예 해제", () => {
-    const result = determineMultiHouseSurcharge(
-      make2HouseInput(new Date("2026-09-10"), {
-        contractDate: new Date("2026-04-01"),
-        isLandPermitArea: false,
-        hasTenantInResidence: false,
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
       }),
       defaultRules,
       mockRegulatedHistory,
       suspensionActive,
       true,
     );
-    // 조건A: ✓, 조건B: 4개월 초과 ✗, 조건C: false ✗ → 유예 해제
+    // 계약+4개월 = 2026-08-01 ≥ 양도일 → 배제
+    expect(result.isSurchargeSuspended).toBe(true);
+    expect(result.surchargeApplicable).toBe(false);
+  });
+
+  it("다목: 계약 2026-04-01, 4개월 지역, 양도 2026-08-02 → 계약+4개월 초과 → 과세", () => {
+    const result = determineMultiHouseSurcharge(
+      make2HouseInput(new Date("2026-08-02"), {
+        contractDate: new Date("2026-04-01"),
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
+      }),
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionActive,
+      true,
+    );
     expect(result.isSurchargeSuspended).toBe(false);
     expect(result.surchargeApplicable).toBe(true);
   });
 
-  it("gracePeriod: 계약일이 유예 종료일(2026.5.9) 이후 → 조건A 실패 → 유예 해제", () => {
+  it("다목: 계약일이 2026-05-09 이후(다목1 위반) → 과세", () => {
     const result = determineMultiHouseSurcharge(
       make2HouseInput(new Date("2026-07-01"), {
         contractDate: new Date("2026-05-15"), // 2026.5.9 이후 계약
-        isLandPermitArea: false,
-        hasTenantInResidence: false,
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
       }),
       defaultRules,
       mockRegulatedHistory,
@@ -606,39 +609,115 @@ describe("MH-21: 유예 조건 세분화 (A/B/C 조건 판정)", () => {
     expect(result.surchargeApplicable).toBe(true);
   });
 
-  it("gracePeriod: 조건C (토지거래허가+임차인) → 양도일 무관 유예 (무기한)", () => {
+  it("G3 회귀: 조건C 잔존 세션(허가구역+임차인, isLandPermitTarget 미제공) → 과세로 전환", () => {
+    // 구법: isLandPermitArea+hasTenantInResidence → 무기한 배제. 확정 시행령 나·다목 원문에
+    // 임차인 조항 없음(G3) → 조건C 삭제, isLandPermitTarget 미제공 시 나/다 어느쪽도 판정 불가 → 과세.
     const result = determineMultiHouseSurcharge(
-      make2HouseInput(new Date("2028-01-01"), { // 아주 늦은 양도일
-        contractDate: new Date("2026-03-01"),
+      make2HouseInput(new Date("2026-08-01"), {
+        contractDate: new Date("2026-01-01"),
         isLandPermitArea: true,
-        hasTenantInResidence: true, // 조건C
+        hasTenantInResidence: true,
       }),
       defaultRules,
       mockRegulatedHistory,
       suspensionActive,
       true,
     );
-    // 조건A: ✓, 조건B: 4개월 초과 ✗, 조건C: ✓ → 유예 적용
+    expect(result.isSurchargeSuspended).toBe(false);
+    expect(result.surchargeApplicable).toBe(true);
+  });
+
+  it("다목: 6개월 지역(성남분당) — 계약 2026-04-01, 양도 2026-10-01 → 배제", () => {
+    const result = determineMultiHouseSurcharge(
+      make2HouseInput(
+        new Date("2026-10-01"),
+        {
+          contractDate: new Date("2026-04-01"),
+          isLandPermitTarget: false,
+          depositReceiptConfirmed: true,
+        },
+        "h2",
+      ),
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionActive,
+      true,
+    );
+    // 계약+6개월 = 2026-10-01 ≥ 양도일 → 배제
     expect(result.isSurchargeSuspended).toBe(true);
     expect(result.surchargeApplicable).toBe(false);
   });
 
-  it("gracePeriod: 신규 지정지역(2025.10.16 이후) → 6개월 기한 적용", () => {
+  it("나목: 신청 2026-05-01(≤5-09)·허가·증빙 O, 계약 2026-06-01(5-10 이후), 양도 2026-09-09 → 절대기한 배제", () => {
     const result = determineMultiHouseSurcharge(
-      make2HouseInput(new Date("2026-09-15"), { // 5.5개월 후 잔금
-        contractDate: new Date("2026-04-01"),
-        isLandPermitArea: false,
-        hasTenantInResidence: false,
-        areaDesignatedDate: new Date("2025-10-16"), // 신규 지정 → 6개월 기한
+      make2HouseInput(new Date("2026-09-09"), {
+        contractDate: new Date("2026-06-01"),
+        isLandPermitTarget: true,
+        permitApplicationDate: new Date("2026-05-01"),
+        permitGranted: true,
+        depositReceiptConfirmed: true,
       }),
       defaultRules,
       mockRegulatedHistory,
       suspensionActive,
       true,
     );
-    // 조건A: ✓, 6개월 기한: 2026-04-01 + 6개월 = 2026-10-01 ≥ 2026-09-15 → 조건B: ✓
     expect(result.isSurchargeSuspended).toBe(true);
     expect(result.surchargeApplicable).toBe(false);
+  });
+
+  it("나목: 위와 동일하나 양도 2026-09-10 → 절대기한(9-09) 초과 → 과세", () => {
+    const result = determineMultiHouseSurcharge(
+      make2HouseInput(new Date("2026-09-10"), {
+        contractDate: new Date("2026-06-01"),
+        isLandPermitTarget: true,
+        permitApplicationDate: new Date("2026-05-01"),
+        permitGranted: true,
+        depositReceiptConfirmed: true,
+      }),
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionActive,
+      true,
+    );
+    expect(result.isSurchargeSuspended).toBe(false);
+    expect(result.surchargeApplicable).toBe(true);
+  });
+
+  it("나목: 허가 신청일이 2026-05-10 이후(나목1 위반) → 과세", () => {
+    const result = determineMultiHouseSurcharge(
+      make2HouseInput(new Date("2026-08-01"), {
+        contractDate: new Date("2026-06-01"),
+        isLandPermitTarget: true,
+        permitApplicationDate: new Date("2026-05-10"),
+        permitGranted: true,
+        depositReceiptConfirmed: true,
+      }),
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionActive,
+      true,
+    );
+    expect(result.isSurchargeSuspended).toBe(false);
+    expect(result.surchargeApplicable).toBe(true);
+  });
+
+  it("나목: 허가 미수령(나목2 위반) → 과세", () => {
+    const result = determineMultiHouseSurcharge(
+      make2HouseInput(new Date("2026-08-01"), {
+        contractDate: new Date("2026-06-01"),
+        isLandPermitTarget: true,
+        permitApplicationDate: new Date("2026-05-01"),
+        permitGranted: false,
+        depositReceiptConfirmed: true,
+      }),
+      defaultRules,
+      mockRegulatedHistory,
+      suspensionActive,
+      true,
+    );
+    expect(result.isSurchargeSuspended).toBe(false);
+    expect(result.surchargeApplicable).toBe(true);
   });
 });
 

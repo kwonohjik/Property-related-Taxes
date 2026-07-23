@@ -73,6 +73,7 @@ export {
   isGroupExcludable,
   getGroupExcludeReason,
   determineSurchargeExclusion,
+  transitionExemptionMonths,
 } from "./multi-house-surcharge-helpers";
 
 export {
@@ -285,7 +286,7 @@ export function determineMultiHouseSurcharge(
   }
 
   // Step 6: 중과 배제 사유 및 유예 판단
-  const { isExcluded, exclusionReasons, isSuspended } = determineSurchargeExclusion(
+  const { isExcluded, exclusionReasons, isSuspended, suspensionBasis, suspensionDeadline } = determineSurchargeExclusion(
     input,
     effectiveHouseCount,
     isRegulatedAtTransfer,
@@ -323,6 +324,8 @@ export function determineMultiHouseSurcharge(
     surchargeApplicable: !isSuspended,
     surchargeType,
     isSurchargeSuspended: isSuspended,
+    ...(isSuspended && suspensionBasis ? { surchargeSuspensionBasis: suspensionBasis } : {}),
+    ...(isSuspended && suspensionDeadline ? { surchargeSuspensionDeadline: suspensionDeadline } : {}),
     exclusionReasons,
     warnings,
   };
