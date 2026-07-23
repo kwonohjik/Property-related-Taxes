@@ -115,7 +115,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           />
           {housingType === "apartment" && (
             <p className="mt-1 text-caption text-amber-700">
-              공동주택(아파트)의 경우 최초고시 이전 취득 시 1993.2.1 또는 1990.4.30이 최초고시일에 해당합니다.
+              공동주택은 단지별 최초고시일이 다릅니다. 홈택스 기준시가 조회에서 해당 단지의 최초 고시일을 확인하세요.
             </p>
           )}
         </FieldCard>
