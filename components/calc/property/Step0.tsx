@@ -6,6 +6,7 @@ import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { BuildingStdPriceEtaxLookupField } from "./BuildingStdPriceEtaxLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { UrbanAreaLookup } from "./UrbanAreaLookup";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -104,8 +105,8 @@ export function Step0({
           물건 소재지 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
         </label>
         <AddressSearch
-          value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "" } satisfies AddressValue}
-          onChange={(v) => onChange({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "" })}
+          value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "", pnu: form.pnu } satisfies AddressValue}
+          onChange={(v) => onChange({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "", pnu: v.pnu ?? "" })}
         />
       </div>
 
@@ -131,11 +132,10 @@ export function Step0({
             onLookupSuccess={({ year }) => fillPriorYearPrice(year)}
           />
         ) : (
-          <CurrencyInput
-            label=""
-            value={publishedPrice}
-            onChange={onPublishedPriceChange}
-            placeholder="금액 입력 (원)"
+          <BuildingStdPriceEtaxLookupField
+            pnu={form.pnu}
+            publishedPrice={publishedPrice}
+            onPublishedPriceChange={onPublishedPriceChange}
           />
         )}
       </div>

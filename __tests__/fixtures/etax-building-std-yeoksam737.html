@@ -1,0 +1,4709 @@
+
+
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html lang="ko">
+<head>
+<title> 조회/발급 &lt; ETAX이용안내 | 서울시ETAX </title>
+<meta name="keywords" content="서울시ETAX" />
+<meta name="description" content="서울시ETAX" />
+<link rel="stylesheet" type="text/css" href="/static/open_common/css/default.css?dummy=202607161803" />
+<link rel="stylesheet" type="text/css" href="/static/open_common/css/layout.css?dummy=202607161803" />
+<link rel="stylesheet" type="text/css" href="/static/open_common/css/sub_style.css?dummy=202607161803" />
+<link rel="stylesheet" type="text/css" href="/static/open_common/css/help_etax.css?dummy=202607161803" />
+<link rel="stylesheet" type="text/css" href="/static/open_common/css/info_tax.css?dummy=202607161803" />
+<script src="/static/open_common/js/jquery-1.8.2.min.js?dummy=202607161803"></script>
+<script src="/static/open_common/js/common.js?dummy=202607161803"></script>
+<script src="/static/open_common/js/help_etax.js?dummy=202607161803"></script>
+<script src="/static/common/js/init_common.js?dummy=202607161803"></script>
+<script src="/static/js/cmn/util/commHeader.js?dummy=202607161803"></script>
+<script>
+	var includePage = "BldnStnd";
+//<![CDATA[
+function selSiguCD() {
+
+    var form = document.actForm;
+    var sel_cd = form.SIGU_CD.options[form.SIGU_CD.selectedIndex].value;
+    var pre_cd = form.PRE_SIGU_CD.value;
+
+    if( form.INPUT ) {
+         document.getElementById('HDIV_'+pre_cd).style.display='none';
+
+        if( sel_cd == "0" ) {
+            document.getElementById('HDIV_000').style.display='';
+            form.PRE_SIGU_CD.value = "000";
+            form.SIGU_CD.focus();
+            return( true );
+        }
+        document.getElementById('HDIV_'+sel_cd).style.display = '';
+        initHDongCD();
+    }
+
+    form.PRE_SIGU_CD.value  = sel_cd;
+    form.HDONG_CD.value     = "";
+}
+
+function initHDongCD() {
+    var form = document.actForm;
+    form.HDONG680.selectedIndex = "0";
+    form.HDONG740.selectedIndex = "0";
+    form.HDONG305.selectedIndex = "0";
+    form.HDONG500.selectedIndex = "0";
+    form.HDONG620.selectedIndex = "0";
+    form.HDONG215.selectedIndex = "0";
+    form.HDONG530.selectedIndex = "0";
+    form.HDONG545.selectedIndex = "0";
+    form.HDONG350.selectedIndex = "0";
+    form.HDONG320.selectedIndex = "0";
+    form.HDONG230.selectedIndex = "0";
+    form.HDONG590.selectedIndex = "0";
+    form.HDONG440.selectedIndex = "0";
+    form.HDONG410.selectedIndex = "0";
+    form.HDONG650.selectedIndex = "0";
+    form.HDONG200.selectedIndex = "0";
+    form.HDONG290.selectedIndex = "0";
+    form.HDONG710.selectedIndex = "0";
+    form.HDONG470.selectedIndex = "0";
+    form.HDONG560.selectedIndex = "0";
+    form.HDONG380.selectedIndex = "0";
+    form.HDONG110.selectedIndex = "0";
+    form.HDONG140.selectedIndex = "0";
+    form.HDONG260.selectedIndex = "0";
+}
+
+function searchB() {
+
+	var frm = document.actForm;
+	var elHcd = document.getElementsByTagName('select');
+	var cnt = 0;
+
+	for(var i=0;i<elHcd.length;i++){
+
+		if(elHcd[i].name.indexOf("HDONG") == -1){continue;}
+		if(elHcd[i].value != '000'){
+			//alert(elHcd[i].name+","+elHcd[i].value);
+			cnt++;
+		}
+	}
+	
+	if(frm.SIGU_CD.value == "000"){
+        
+		alert( "관할구청을 선택하세요." );
+        frm.SIGU_CD.focus();
+        
+        return false;
+	}
+    if(cnt == 0) {
+
+        alert( "법정동을 선택하세요.");
+        
+        return false;
+
+    }else{
+
+        if( frm.bonbun.value == "" ) {
+
+            alert( "특수지를 확인하시고 번지를 입력하세요." );
+            frm.bonbun.focus();
+            
+            return false;
+
+        }else{    
+
+        	frm.action = "BldnStndAmtLstAction.tran";             
+        	frm.downExcel.value = "N";
+        	frm.submit();            
+        }
+    }   
+}
+
+function openSearchGwapo(r_bonbun,r_bubun,r_dong,r_hosu,r_gwapo,r_area_total,r_gwapo_year) {
+
+	var frm = document.detform;
+    frm.r_bonbun.value = r_bonbun;
+    frm.r_bubun.value = r_bubun;
+    frm.r_dong.value   = r_dong;
+    frm.r_hosu.value   = r_hosu;
+    frm.r_gwapo.value = r_gwapo;
+    frm.r_area_total.value = r_area_total;
+    frm.r_gwapo_year.value = r_gwapo_year;
+
+    var detWin = window.open("","det","width=644, height=427, left=50, top=50, statusbar=0, scrollbars=1");
+    
+    frm.action = '/jsp/user/BldnStndAmtLstPop.jsp';
+    frm.target = "det";
+
+    detWin.focus();
+    frm.submit();
+}
+
+function regExp(obj){
+	var pattern = /[\{\}\[\]\/?.,;:|\)*~`!^\-_+<>@#$%&\\\=\(\'\")]/gi;
+	var str = obj.value;
+	if (pattern.test(str)) {
+		obj.value = str.replace(pattern,"");
+	}
+}
+function lndAlert(){
+	alert("지방세 세목별 과세납세증명서는 정부24에서\n발급가능합니다.\n확인을 누르시면 정부24(https://www.gov.kr)사이트로 이동합니다.");
+}
+
+//엑셀 다운로드
+function downExcel() {
+	let frm 			= document.actForm;
+	frm.downExcel.value = "Y";             
+	frm.action 			= "BldnStndAmtLstAction.tran";             
+	frm.submit();
+}
+
+//출력
+function listPrint(){
+	var newWindow;
+    var comment;
+    comment = "/jsp/comm/printPop.jsp" ;
+    if( newWindow ) newWindow.close();
+    newWindow = window.open(comment,"newWin", "width=700, height=750, resizable=no,scrollbars=yes");
+    newWindow.focus();
+}
+
+$(document).ready(function() {
+	
+	document.actForm.SIGU_CD.value =  "680";
+	selSiguCD();
+	document.actForm.HDONG680.value = '10100';
+	document.actForm.HDONG_CD.value = '10100';
+	
+});
+
+
+//]]>
+</script>
+</head>
+
+<body>
+	<form name ="detform" method="post" action="#">
+		<input type="hidden" name="r_bonbun" />
+		<input type="hidden" name="r_bubun" />
+		<input type="hidden" name="r_dong" />
+		<input type="hidden" name="r_hosu" />
+		<input type="hidden" name="r_gwapo" />
+		<input type="hidden" name="r_area_total" />
+		<input type="hidden" name="r_gwapo_year" />
+	</form>
+	
+    <ul id="skip_navi">
+        <li id="Navi_contents" style="display:none;"><a href="#contents" title="본문 바로가기">본문 바로가기</a></li>
+        <li id="Navi_gnb" style="display:none;"><a href="#gnb" title="주 메뉴 바로가기">주 메뉴 바로가기</a></li>
+        <li id="Navi_lnb" style="display:none;"><a href="#lnb" title="서브 메뉴 바로가기">서브 메뉴 바로가기</a></li>
+        <li id="Navi_quick" style="display:none;"><a href="#contents_main" title="퀵 메뉴 바로가기">퀵 메뉴 바로가기</a></li>
+    </ul>
+
+<hr />
+	<!-- header -->
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+	
+
+	function blockMobile() {
+		
+	}
+
+	blockMobile();
+</script>
+
+
+
+<!-- 서울시 요청 gnb 영역 시작 -->
+<script src="https://www.seoul.go.kr/seoulgnb/gnb.js" async charset="utf-8"></script>
+
+<div id="seoul-common-gnb" style="min-height: 48px;"></div>
+
+<script>
+	$(document).ready(function () {
+		if (typeof Yjs != "undefined") {
+			Yjs.Gnb.init('G029', 'seoul-common-gnb');
+		}
+	});
+</script>
+<!-- 서울시 요청 gnb 영역 종료 -->
+
+<!--  AS IS Style Sheet include Start -->
+<link rel="stylesheet" type="text/css" href="/static/open_common/css/default.css?dummy=202607161803" />
+<link rel="stylesheet" type="text/css" href="/static/open_common/css/layout.css?dummy=202607161803" />
+<!--  AS IS Style Sheet include End -->
+
+<!-- 잉카키보드 보안 START -->
+<link rel="stylesheet" href="/static/open_common/css/shinhan/nav.css?dummy=202607161803" />
+<link rel="stylesheet" href="/static/open_common/css/shinhan/main.css?dummy=202607161803" />
+<script src="/static/open_common/js/shinhan/common.js?dummy=202607161803"></script>
+
+
+	<script src="/static/open_common/js/jquery-1.11.1.min.js"></script>
+
+
+<script src="/static/js/cmn/util/commMessage.js?dummy=202607161803"></script>
+
+
+
+
+<script>
+	//<![CDATA[
+		
+	window.addEventListener('pagehide', function() {
+    	if( typeof etaxLoading == "function") etaxLoading(false);
+	});
+
+	function goEnglish(){
+		document.engform.submit();
+	}
+
+	function gnbMenuPage(gnb,url){ //이동할 nPage 가 들어옴
+
+		var dest_url;
+
+		if (url.indexOf("?") > 0) {
+			dest_url = url+'&gnb_id='+gnb+'&lnb_id='+gnb+'&gl_gubun='+'g';
+		} else {
+			dest_url = url+'?gnb_id='+gnb+'&lnb_id='+gnb+'&gl_gubun='+'g';
+		}
+
+		location.href = dest_url;
+		return false;
+	}
+
+	var gnbMenuPage2_navigated= false;
+	function gnbMenuPage2(gnb,url,target){ //이동할 nPage 가 들어옴
+		
+		if( gnb == "050603"&& typeof etaxLoading == "function") {
+    		etaxLoading();
+    	}
+		
+		if ( target == "_self"){
+			var dest_url;
+
+			if (url.indexOf("?") > 0) {
+				dest_url = url+'&gnb_id='+gnb+'&lnb_id='+gnb+'&gl_gubun='+'g';
+			} else {
+				dest_url = url+'?gnb_id='+gnb+'&lnb_id='+gnb+'&gl_gubun='+'g';
+			}
+
+			gnbMenuPage2_navigated = true;
+			location.href = dest_url;
+			return false;
+		}else {
+			var frm = document.targetLinkFrm;
+			frm.target = target;
+			frm.action = url;
+			gnbMenuPage2_navigated = true;
+			frm.submit();
+		}
+	}
+	// 현재 페이지에서 명시적으로 상단의 로그인 버튼을 누른경우 로그인 성공후에
+	// 현재의 페이지로 포워딩하기 위해 별도의 form을 이용한다.
+	function explicitLoginFromGNB(){
+		document.loginParamForm.submit();
+	}
+
+	//풍선도움말 위해 한페이지에 정의되는 풍선도움말 총갯수를 선언해준다.
+	var tot_count = 0;
+	//]]>
+</script>
+
+
+
+<form name="targetLinkFrm" method="post" action="#"></form>
+<form name ="engform" method="post" action="/english/" target="_top"></form>
+
+
+<script>
+	//<![CDATA[
+
+	var jsp_chk = "";
+
+	function goMenuByMenuID( menuID ){
+
+		jsp_chk = "Y";
+
+		gnbMenuPage2_navigated = false;
+
+		if(nonMemberChk(menuID, jsp_chk)){
+			return;
+		}
+
+		
+        
+		if(menuID == "020501" ){
+			gnbMenuPage2( '020501', 'AtmblRegiTaxYrInptAction.tran','_self');
+			return;
+		}
+
+		if ( menuID == '01' ) gnbMenuPage2( '01', 'GetListMyTaxAction.tran','_self');
+		if ( menuID == '0101' ) gnbMenuPage2( '0101', 'GetListMyTaxAction.tran','_self');
+		if ( menuID == '0103' ) { gnbMenuPage2( '0103', 'GetListLumpPayAction.tran','_self'); return; }
+		if ( menuID == '0105' ) gnbMenuPage2( '0105', 'GetListTaxNoAction.view?menu_gubun=TaxNo','_self');
+		if ( menuID == '0106' ) gnbMenuPage2( '0106', 'RetriveEpayNoPayListAction.view?menu_gubun=EpayNo','_self');
+		if ( menuID == '0107' ) gnbMenuPage2( '0107', 'GetListMyWtrAction.tran?menu_gubun=Wtrsply','_self');
+		if ( menuID == '0108' ) gnbMenuPage2( '0108', 'RetriveEasyNoPayListAction.view?menu_gubun=EasyNo','_self');
+		if ( menuID == '0109' ) gnbMenuPage2( '0109', 'GetListPartpayAction.view?menu_gubun=Partpay','_self');
+		if ( menuID == '0110' ) gnbMenuPage2( '0110', 'GetListReservAction.view?menu_gubun=Reserv','_self');
+		if ( menuID == '011001' ) gnbMenuPage2( '011001', 'GetListReservAction.view?menu_gubun=Reserv','_self');
+		if ( menuID == '011002' ) gnbMenuPage2( '011002', 'GetRcptRsvTsLstAction.view','_self');
+		if ( menuID == '011003' ) gnbMenuPage2( '011003', 'RsvTsStatAction.tran','_self');
+		if ( menuID == '0111' ) gnbMenuPage2( '0111', 'GetWetaxSeqnoAction.tran','_blank');
+		if ( menuID == '0112' ) gnbMenuPage2( '0112', 'TaxCartAction.tran?command=03','_self');
+		if ( menuID == '011201' ) gnbMenuPage2( '011201', 'TaxCartAction.tran?command=03','_self');
+		if ( menuID == '011202' ) gnbMenuPage2( '011202', 'WrcpCartAction.view','_self');
+		if ( menuID == '02' ) gnbMenuPage2( '02', 'RegnIncmtxSpeclSingoAction.view','_self');
+		if ( menuID == '0201' ) gnbMenuPage2( '0201', 'AcquRegiTaxAction.view','_self');
+		if ( menuID == '020101' ) gnbMenuPage2( '020101', 'AcquRegiTaxAction.view','_self');
+		if ( menuID == '020102' ) gnbMenuPage2( '020102', 'acquRegiTaxProxRegiAction.view','_self');
+		if ( menuID == '0202' ) gnbMenuPage2( '0202', 'EtcRegiTaxInptAction.tran','_self');
+		if ( menuID == '020201' ) gnbMenuPage2( '020201', 'EtcRegiTaxInptAction.tran','_self');
+		if ( menuID == '020202' ) gnbMenuPage2( '020202', 'LcnsTaxMnAction.tran','_self');
+		if ( menuID == '020204' ) gnbMenuPage2( '020204', 'CarTaxInptAction.tran','_self');
+		if ( menuID == '0203' ) gnbMenuPage2( '0203', 'RegnIncmtxSpeclSingoAction.view','_self');
+		if ( menuID == '020301' ) gnbMenuPage2( '020301', 'RegnIncmtxSpeclSingoAction.view','_self');
+		if ( menuID == '020302' ) gnbMenuPage2( '020302', 'RegnIncmtxSpeclLumpAction.view','_self');
+		if ( menuID == '020303' ) gnbMenuPage2( '020303', 'RegnIncmtxCitSingoAction.view','_self');
+		if ( menuID == '020304' ) gnbMenuPage2( '020304', 'RegnIncmtxTransSinGoAction.view','_self');
+		if ( menuID == '020305' ) gnbMenuPage2( '020305', 'RegnIncmtxCrtxSingoAction.view','_self');
+		if ( menuID == '0209' ) gnbMenuPage2( '0209', 'RegnIncmtxEmpSingoAction.view','_self');
+		if ( menuID == '020901' ) gnbMenuPage2( '020901', 'RegnIncmtxEmpSingoAction.view','_self');
+		if ( menuID == '0204' ) gnbMenuPage2( '0204', 'RsitaxPrptySingoAction.view','_self');
+		if ( menuID == '0205' ) gnbMenuPage2( '0205', 'AtmblRegiTaxYrInptAction.tran','_self');
+		if ( menuID == '020501' ) gnbMenuPage2( '020501', 'AtmblRegiTaxYrInptAction.tran','_self');
+		if ( menuID == '0207' ) gnbMenuPage2( '0207', 'LeisureTaxSingoAction.view','_self');
+		if ( menuID == '021003' ) gnbMenuPage2( '021003', 'TabacoBanInptAction.tran','_self');
+		if ( menuID == '021002' ) gnbMenuPage2( '021002', 'NapseDamboReqAction.tran?ahead_rpt_yn=1','_self');
+		if ( menuID == '0210' ) gnbMenuPage2( '0210', 'NapseDamboReqAction.tran','_self');
+		if ( menuID == '021001' ) gnbMenuPage2( '021001', 'NapseDamboReqAction.tran?menu_gubun=01','_self');
+		if ( menuID == '021008' ) gnbMenuPage2( '021008', 'NapseDamboReqAction.tran?menu_gubun=03','_self');
+
+		if ( menuID == '0208' )   gnbMenuPage2( '0208', 'JeungjiChongpoInptAction.tran?COMMAND_ID=02','_self');
+		if ( menuID == '020801' ) gnbMenuPage2( '020801', 'JeungjiChongpoInptAction.tran?COMMAND_ID=02','_self');
+		if ( menuID == '020802' ) gnbMenuPage2( '020802', 'JeungjiChongpoInptAction.tran','_self');
+		if ( menuID == '020803' ) gnbMenuPage2( '020803', 'JeungjiChongpoInptAction.tran?COMMAND_ID=04','_self');
+		if ( menuID == '020804' ) gnbMenuPage2( '020804', 'JeungjiChongpoInptAction.tran?COMMAND_ID=06','_self');
+		if ( menuID == '020805' ) gnbMenuPage2( '020805', 'JeungjiChongpoInptAction.tran?COMMAND_ID=08','_self');
+
+		if ( menuID == '0211' ) gnbMenuPage2( '0211', 'EnvrmtIprvTaxYrInptAction.view','_self');
+		if ( menuID == '021005' ) gnbMenuPage2( '021005', 'TabacoSobiAction.tran','_self');
+		if ( menuID == '03' ) gnbMenuPage2( '03', 'GetRcptLstJuminAction.tran','_self');
+		if ( menuID == '021004' ) gnbMenuPage2( '021004', 'TabacoBanMyunseAction.tran','_self');
+		if ( menuID == '021007' ) gnbMenuPage2( '021007', 'GongjeHwanReqAction.tran?COMMAND_ID=09','_self');
+		if ( menuID == '0301' ) gnbMenuPage2( '0301', 'GetRcptLstJuminAction.tran','_self');
+		if ( menuID == '021006' ) gnbMenuPage2( '021006', 'GongjeHwanReqAction.tran','_self');
+		if ( menuID == '0302' ) gnbMenuPage2( '0302', 'GetRcptLstGstAction.view','_self');
+		if ( menuID == '0303' ) gnbMenuPage2( '0303', 'GetRcptLstEtcAction.view','_self');
+		if ( menuID == '0304' ) gnbMenuPage2( '0304', 'GetRcptLstTaxNoAction.view','_self');
+		if ( menuID == '0305' ) gnbMenuPage2( '0305', 'RetriveEpayNoRcptListAction.view','_self');
+		if ( menuID == '0306' ) gnbMenuPage2( '0306', 'GetRcptLstWtrAction.view','_self');
+		if ( menuID == '0307' ) gnbMenuPage2( '0307', 'GetRcptLstRptAction.view','_self');
+		if ( menuID == '0308' ) gnbMenuPage2( '0308', 'RcptLstCarAction.view','_self');
+		if ( menuID == '0309' ) gnbMenuPage2( '0309', 'GetRcptCaseAction.view','_self');
+		if ( menuID == '04' ) gnbMenuPage2( '0401', 'FlrcNoitmAction.tran','_self');
+		if ( menuID == '0401' ) gnbMenuPage2( '0401', 'FlrcNoitmAction.tran','_self');
+		if ( menuID == '0404' ) gnbMenuPage2( '0404', 'mnyrtnAplcnResultAction.tran','_self');
+		if ( menuID == '0406' ) gnbMenuPage2( '0406', 'HwanAccountRegiAction.view','_self');
+		if ( menuID == '0408' ) gnbMenuPage2( '0408', 'HwanAtmblTaxYrAppAction.tran','_self');
+		if ( menuID == '05' ) gnbMenuPage2( '05', 'MyEtaxAction.tran','_self');
+		if ( menuID == '0501' ) gnbMenuPage2( '0501', 'MyEtaxAction.tran','_self');
+		if ( menuID == '0502' ) gnbMenuPage2( '0502', 'EtMlgAction.tran','_self');
+		if ( menuID == '0503' ) gnbMenuPage2( '0503', 'qustPrpslLstAction.tran','_self');
+		if ( menuID == '0504' ) gnbMenuPage2( '0504', 'AppGojiLstAction.tran?COMMAND=08','_self');
+		if ( menuID == '050601' ) gnbMenuPage2( '050601', 'AppGojiLstAction.tran?COMMAND=08','_self');
+		if ( menuID == '050401' ) gnbMenuPage2( '050401', 'ElctrAplAction.tran','_self');
+		if ( menuID == '050402' ) gnbMenuPage2( '050402', 'ElctrAplHisAction.tran','_self');
+		if ( menuID == '050403' ) gnbMenuPage2( '050403', 'ElctrAplListAction.tran','_self');
+		if ( menuID == '050602' ) gnbMenuPage2( '050602', 'AppGojiSendAction.tran','_self');
+		if ( menuID == '050603' ) gnbMenuPage2( '050603', 'ElctrBoxAction.tran','_self');
+		if ( menuID == '050604' ) gnbMenuPage2( '050604', 'ElctrAplAction.tran?COMMAND=12','_self');
+		if ( menuID == '0505' ) gnbMenuPage2( '0505', 'AutoTsTaxAction.view','_self');
+		if ( menuID == '050504' ) gnbMenuPage2( '050504', 'AutoCardTaxAction.view','_self');
+		if ( menuID == '050501' ) gnbMenuPage2( '050501', 'AutoTsTaxAction.view','_self');
+		if ( menuID == '050502' ) gnbMenuPage2( '050502', 'AutoTsTaxLstAction.tran','_self');
+		if ( menuID == '050503' ) gnbMenuPage2( '050503', 'AutoTsStatAction.tran','_self');
+		if ( menuID == '0507' ) gnbMenuPage2( '0507', 'LoginAction2.tran?status=TaxPrxyRegi','_self');
+		if ( menuID == '0508' ) gnbMenuPage2( '0508', 'LoginAction2.tran?status=TaxWater','_self');
+		if ( menuID == '0509' ) gnbMenuPage2( '0509', 'MberJnCfrmResAction.view','_self');
+		if ( menuID == '050901' ) gnbMenuPage2( '050901', 'MberJnCfrmResAction.view','_self');
+		if ( menuID == '050902' ) gnbMenuPage2( '050902', 'MberJnExAction.view','_self');
+		if ( menuID == '050903' ) gnbMenuPage2( '050903', 'MberJnBrCopyAction.view','_self');
+		if ( menuID == '050904' ) gnbMenuPage2( '050904', 'MberJnCfrmResAction.view','_self');
+		if ( menuID == '0511' ) gnbMenuPage2( '0511', 'MberJnUptAction.tran','_self');
+		if ( menuID == '0512' ) gnbMenuPage2( '0512', 'ElctrAplEventAction.tran','_self');
+		if ( menuID == '0520' ) gnbMenuPage2( '0520', 'PublicAplAction.tran','_self');
+		if ( menuID == '052001' ) gnbMenuPage2( '052001', 'PublicAplAction.tran','_self');
+		if ( menuID == '06' ) gnbMenuPage2( '06', '/jsp/CtView.jsp?ctPage=/info/CON03_02_01.html','_self');
+		if ( menuID == '0601' ) gnbMenuPage2( '0601', '/jsp/CtView.jsp?ctPage=/info/CON03_02_01.html','_self');
+		if ( menuID == '0602' ) gnbMenuPage2( '0602', '/jsp/CtView.jsp?ctPage=/info/CON03_02_03_01.html','_self');
+		if ( menuID == '0603' ) gnbMenuPage2( '0603', '/jsp/CtView.jsp?ctPage=/info/CON03_07_02.html','_self');
+		if ( menuID == '0604' ) gnbMenuPage2( '0604', 'taxTermDicLstAction.tran','_self');
+		if ( menuID == '0605' ) gnbMenuPage2( '0605', '/jsp/CtView.jsp?ctPage=/info/CON03_02_04.html','_self');
+		if ( menuID == '0615' ) gnbMenuPage2( '0615', '/jsp/CtView.jsp?ctPage=/info/napseja_bohogwan.html','_self');
+		if ( menuID == '0606' ) gnbMenuPage2( '0606', '/jsp/CtView.jsp?ctPage=/info/TaxSystem01.html','_self');
+		if ( menuID == '0607' ) gnbMenuPage2( '0607', '/jsp/CtView.jsp?ctPage=/info/CON03_07_07.html','_self');
+		if ( menuID == '0608' ) gnbMenuPage2( '0608', '/jsp/CtView.jsp?ctPage=/info/PersonTaxExe.html','_self');
+		if ( menuID == '060801' ) gnbMenuPage2( '060801', '/jsp/CtView.jsp?ctPage=/info/PersonTaxExe.html','_self');
+		if ( menuID == '060802' ) gnbMenuPage2( '060802', '/jsp/CtView.jsp?ctPage=/info/CorpTaxExe.html','_self');
+		if ( menuID == '0609' ) gnbMenuPage2( '0609', '/jsp/CtView.jsp?ctPage=/info/TaxinLife01.html','_self');
+		if ( menuID == '060901' ) gnbMenuPage2( '060901', '/jsp/CtView.jsp?ctPage=/info/TaxinLife01.html','_self');
+		if ( menuID == '060902' ) gnbMenuPage2( '060902', '/jsp/CtView.jsp?ctPage=/info/TaxinLife05.html','_self');
+		if ( menuID == '060903' ) gnbMenuPage2( '060903', '/jsp/CtView.jsp?ctPage=/info/TaxinLife02.html','_self');
+		if ( menuID == '060904' ) gnbMenuPage2( '060904', '/jsp/CtView.jsp?ctPage=/info/TaxinLife03.html','_self');
+		if ( menuID == '0610' ) gnbMenuPage2( '0610', 'AcqutaxCalcAction.view','_self');
+		if ( menuID == '0611' ) gnbMenuPage2( '0611', 'RptFrmLstAction.tran','_self');
+		if ( menuID == '0612' ) gnbMenuPage2( '0612', 'TaxMonScheAction.tran','_self');
+		if ( menuID == '0613' ) gnbMenuPage2( '0613', 'TaxKnowledgeEasyLstAction.tran','_self');
+		if ( menuID == '0614' ) gnbMenuPage2( '0614', 'http://www.law.go.kr/','_new');
+		if ( menuID == '061401' ) gnbMenuPage2( '061401', 'http://www.law.go.kr/','_new');
+		if ( menuID == '061402' ) gnbMenuPage2( '061402', 'http://legal.seoul.go.kr/legal/front/main.html','_new');
+		if ( menuID == '061403' ) gnbMenuPage2( '061403', '/jsp/CtView.jsp?ctPage=/info/CON03_06_03.html','_self');
+		if ( menuID == '07' ) gnbMenuPage2( '07', 'NotiLstAction.tran','_self');
+		if ( menuID == '0701' ) gnbMenuPage2( '0701', 'NotiLstAction.tran','_self');
+		if ( menuID == '0702' ) gnbMenuPage2( '0702', '/jsp/CtView.jsp?ctPage=/cmpl/guideSite.html','_self');
+		if ( menuID == '0703' ) gnbMenuPage2( '0703', '/jsp/CtView.jsp?ctPage=/cmpl/guide_Security_module.html','_self');
+		if ( menuID == '0704' ) gnbMenuPage2( '0704', 'faq2Action.tran','_self');
+		if ( menuID == '0705' ) gnbMenuPage2( '0705', '/jsp/CtView.jsp?ctPage=/help/taxListTab01.html','_self');
+		if ( menuID == '0706' ) gnbMenuPage2( '0706', '/jsp/CtView.jsp?ctPage=/cmpl/StatTelGuide.html','_self');
+		if ( menuID == '070701' ) gnbMenuPage2( '070701', 'qustPrpslRegAction.view','_self');
+		if ( menuID == '070702' ) gnbMenuPage2( '070702', 'qustPrpslLstAction.tran','_self');
+		if ( menuID == '0708' ) gnbMenuPage2( '0708', '/jsp/CtView.jsp?ctPage=/cmpl/CON02_01_01.html','_self');
+		if ( menuID == '0709' ) gnbMenuPage2( '0709', 'LndBldDlpyLstAction.view','_self');
+		if ( menuID == '0710' ) gnbMenuPage2( '0710', '/jsp/CtView.jsp?ctPage=/cmpl/CON02_06.html','_self');
+		if ( menuID == '020401' ) gnbMenuPage2( '020401', 'RsitaxPrptySingoAction.view','_self');
+		if ( menuID == '020402' ) gnbMenuPage2( '020402', 'BuildingForUseSingoAction.tran','_self');
+		if ( menuID == '020403' ) gnbMenuPage2( '020403', 'RsitaxSaupSobunSingoAction.view','_self');
+		if ( menuID == '020404' ) gnbMenuPage2( '020404', 'RsitaxSaupSobunSingoAction.view?singo_gubun=reSingo','_self');
+		if ( menuID == '020601' ) gnbMenuPage2( '020601', 'HousingCntSumExptAction.view','_self');
+		if ( menuID == '020602' ) gnbMenuPage2( '020602', 'PartTaxAplyAction.view','_self');
+		if ( menuID == '020306' ) gnbMenuPage2( '020306', 'ScCr002Action.view','_self');
+		if ( menuID == '0310' ) gnbMenuPage2( '0310', 'Rcp2ndPayrAction.view','_self');
+		if ( menuID == '020307' ) gnbMenuPage2( '020307', 'ScCr002Action.view','_self');
+		if ( menuID == '020308' ) gnbMenuPage2( '020308', 'ScCr801Action.view','_self');
+		if ( menuID == '0711' ) gnbMenuPage2( '0711', 'HiddenAssetsRAction.view','_self');
+		if ( menuID == '071101' ) gnbMenuPage2( '071101', 'HiddenAssetsRAction.view','_self');
+		if ( menuID == '071102' ) gnbMenuPage2( '071102', 'HiddenAssetsSAction.view','_self');
+		if ( menuID == '0712' ) gnbMenuPage2( '0712', 'VillageSemuListAction.view','_self');
+		if ( menuID == '071201' ) gnbMenuPage2( '071201', 'VillageSemuListAction.view','_self');
+		if ( menuID == '071202' ) gnbMenuPage2( '071202', 'VillageSemuEnrollAction.view','_self');
+		if ( menuID == '020309' ) gnbMenuPage2( '020309', 'ScCr805Action.view','_self');
+		if ( menuID == '051101' ) gnbMenuPage2( '051101', 'MberJnUptAction.tran','_self');
+		if ( menuID == '020310' ) gnbMenuPage2( '020310', 'RegnIncmtxCitLumpAction.view','_self');
+		if ( menuID == '070902' ) gnbMenuPage2( '070902', 'BldCurtPriBaseAction.view', '_self');
+		if ( menuID == '0713'   ) gnbMenuPage2( '0713', '/jsp/CtView.jsp?ctPage=/help/privacy_policy.html','_self');
+		if ( menuID == '0714'   ) gnbMenuPage2( '0714', '/jsp/tutorial/tutorial_main.jsp','_self');		
+		if ( menuID == '0513'   ) gnbMenuPage2( '0513', 'DonationHisListAction.tran','_self');
+
+		if ( gnbMenuPage2_navigated == false ){
+			alert ( "로그인이 필요하거나 현재의 로그인 권한으로 사용할 수 없는 메뉴입니다.");
+		}
+	}
+
+
+	//비회원로그인후 회원정보수정시 확인
+	function nonMemberChk(menuID, jsp_chk){
+
+		
+	}
+
+	//]]>
+</script>
+
+
+
+
+
+
+<script>
+
+    $(document).ready(function(){
+        
+    });
+
+    // 2022.05.12 ETAX 챗봇 팝업 적용
+    function chatbot(autoChatbot){
+        var chatbotUrl;
+        var lastCmd = "";
+        if(autoChatbot == "lastCmdOk"){
+            lastCmd = '';
+        }
+
+        var windowChat;
+
+         // 운영
+          chatbotUrl = "https://etax.seoul.go.kr/m/screen/BOT0101M01";
+        
+
+        var chatParam = document.openChatbot;
+        chatParam.action = chatbotUrl;
+        chatParam.target = "openChatbot";
+
+        
+            window.open("","openChatbot",'width=380,height=658,left=10,top=10,toolbar=no,menubar=no,resizable=no,scrollbars=no,status=no,location=no');
+
+            chatParam.isLogin.value = "N";
+            chatParam.lastCmd.value = "";
+            chatParam.submit();
+        
+    }
+</script>
+
+
+<form name="openChatbot" method="post" accept-charset="UTF-8">
+    <input type="hidden" name="sysCode"   value="EAX"/>
+    <input type="hidden" name="transSeq1" value="1"/>
+    <input type="hidden" name="isLogin"   value="" />
+    <input type="hidden" name="transKey"  value="" />
+    <input type="hidden" name="lastCmd"   value=""/>
+</form>
+
+
+<div id="header">
+	<div class="header_inner">
+		<div class="top_header"><a class="logoNew" href="MainAction.tran">서울시ETAX 서울시 인터넷 세금납부 시스템</a>
+		</div>
+		<div class="top_menu_box">
+			<ul class="top_menu">
+				<li><a href="javascript:chatbot();" title="챗봇 새 창 열림">챗봇</a></li>
+				
+				<li><a href="javascript:explicitLoginFromGNB();">로그인</a></li>
+				<li><a href="javascript:gnbMenuPage('0802','MberJnAction.tran?command=');">회원가입</a></li>
+				
+				<li><a href="javascript:gnbMenuPage('050901','MberJnCfrmResAction.view');">인증서관리</a></li>
+				<li><a href="javascript:goEnglish();">ENGLISH</a></li>
+			</ul>
+
+			<!-- 서울시 담당자 요청으로 아래 버튼 삭제  2018.11.07
+            <ul class="menu_box">
+                <li class="menu_box_txt1"><a href="javascript:goMenuByMenuID('0101');">회원납부 조회</a></li>
+                <li class="menu_box_txt2"><a href="javascript:goMenuByMenuID('0302');">비회원납부 조회</a></li>
+            </ul>
+             -->
+
+			<!-- ul class="menu_box">
+                <li><div id="google_translate_element" style="margin-top:2px;"></div></li>
+            </ul-->
+			<button id="btn_all_menu_info_toggle" class="all_menu">전체메뉴</button>
+		</div>
+	</div>
+
+	<div id="div_all_menu_info" class="all_menu_infor">
+		<div class="gnb_box">
+			<div class="close_wrap">
+				<a id="btn_all_menu_info_close" href="#" class="all_menu_close">닫기</a>
+			</div> <!-- //close_wrap -->
+		</div>
+		<div class="menu_infor">
+			<ul class="menu_dep1">
+				<li class="menu_dep1_infor"><a href="#">조회납부</a>
+					<ul class="menu_dep2">
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0101');">회원납부</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0103');">법인일괄납부</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0105');">납세번호납부</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0106');">전자납부번호</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0107');">상하수도요금납부</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0108');">간편납부번호</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0109');">일부납부</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0110');">예약이체납부관리</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('011001');">예약이체납부신청</a></li>
+								<li><a href="javascript:goMenuByMenuID('011002');">예약이체납부확인/취소</a></li>
+								<li><a href="javascript:goMenuByMenuID('011003');" class="last">예약이체납부현황</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0111');">전국지방세납부</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:lnbMenuPage('011201','TaxCartAction.tran?command=03')">납부바구니</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:lnbMenuPage('011201','TaxCartAction.tran?command=03')">납부바구니조회</a></li>
+								<li><a href="javascript:lnbMenuPage('011201','WrcpCartAction.view')" class="last">납부바구니 납부확인</a></li>
+							</ul>
+						</li>
+					</ul>
+				</li>
+				<li class="menu_dep1_infor"><a href="#">신고납부</a>
+					<ul class="menu_dep2" style="padding-right:47px;">
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('020101');" class="dep_02_a">취득세</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('020101');">취득세(부동산)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020102');" class="last">취득세대리인등록</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('020201');" class="dep_02_a">등록면허세</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('020201');">등록면허세(등록분)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020202');">등록면허세(면허분)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020204');" class="last">등록면허세(차량)</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('020301');" class="dep_02_a">지방소득세</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('020301');">특별징수분</a></li>
+								<li><a href="javascript:goMenuByMenuID('020302');">특별징수분일괄납부</a></li>
+								<li><a href="javascript:goMenuByMenuID('020303');">종합소득분</a></li>
+								<li><a href="javascript:goMenuByMenuID('020304');">양도소득분</a></li>
+								<li><a href="javascript:goMenuByMenuID('020305');">법인세분(2013년이전 신고)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020306');">법인소득분(일반법인)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020307');">법인소득분(비영리법인)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020308');">법인소득분(파일신고)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020309');">법인소득분(특별징수명세서제출)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020310');" class="last">종합소득분(파일신고)</a></li>
+							</ul>
+						</li>
+					</ul>
+					<ul class="menu_dep2">
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('020901');" class="dep_02_a">주민세종업원분</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('020901');" class="last">주민세종업원분</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0204');" class="dep_02_a">주민세사업소분</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('020401');">주민세재산분(2020년이전 신고)</a></li>
+								<li><a href="javascript:goMenuByMenuID('020402');">건물사용명세서 신고</a></li>
+								<li><a href="javascript:goMenuByMenuID('020403');">주민세 사업소분</a></li>
+								<li><a href="javascript:goMenuByMenuID('020404');" class="last">주민세 사업소분 수정신고</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('020601');" class="dep_02_a">재산세</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('020601');">주택 수 산정 제외 신청</a></li>
+								<li><a href="javascript:goMenuByMenuID('020602');" class="last">재산세 분할납부 신청</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('020501');" class="dep_02_a">자동차세연납</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0207');" class="dep_02_a">레저세</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0211');" class="dep_02_a">환경개선부담금연납</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0210');" class="dep_02_a">담배소비세</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('021001');">납세담보제공확인 발급신청</a></li>
+								<li><a href="javascript:goMenuByMenuID('021008');">납세담보면제확인 발급신청</a></li>
+								<li><a href="javascript:goMenuByMenuID('021002');">반출전 신고납부</a></li>
+								<li><a href="javascript:goMenuByMenuID('021004');">반출신고(면세)</a></li>
+								<li><a href="javascript:goMenuByMenuID('021006');">공제환급증명 발급신청</a></li>
+								<li><a href="javascript:goMenuByMenuID('021007');">환급신청</a></li>
+								<li><a href="javascript:goMenuByMenuID('021003');">반출신고(과세)</a></li>
+								<li><a href="javascript:goMenuByMenuID('021005');" class="last">신고납부(수입판매업자)</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0208');" class="dep_02_a">수수료(수입증지)</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('020801');">서울특별시 임기제공무원 임용응시 수수료</a></li>
+								<li><a href="javascript:goMenuByMenuID('020802');">총포수수료</a></li>
+								<li><a href="javascript:goMenuByMenuID('020803');">여객자동차운송사업계획 변경수수료</a></li>
+								<li><a href="javascript:goMenuByMenuID('020804');">건설업 등록 수수료</a></li>
+								<li><a href="javascript:goMenuByMenuID('020805');" class="last">수수료(수입증지) 신고내역 조회 및 납부</a></li>
+							</ul>
+						</li>
+					</ul>
+				</li>
+				<li class="menu_dep1_infor menu_dep1_last"><a href="#">납부(영수증)확인</a>
+					<ul class="menu_dep2">
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0301');" class="dep_02_a">회원납부확인</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0302');" class="dep_02_a">비회원납부확인</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0303');" class="dep_02_a">대리인용납부확인</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0304');" class="dep_02_a">납세번호확인</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0305');" class="dep_02_a">전자납부번호확인</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0306');" class="dep_02_a">상하수도요금확인</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0307');" class="dep_02_a">신고납부확인</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0308');" class="dep_02_a">자동차번호납부확인</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0309');" class="dep_02_a">영수증보관함</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0310');" class="dep_02_a">연대납세자납부확인</a></li>
+					</ul>
+				</li>
+			</ul>
+
+			<ul class="menu_dep1">
+				<li class="menu_dep1_infor"><a href="#">환급</a>
+					<ul class="menu_dep2">
+					
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0401');" class="dep_02_a">환급금 신청</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('0401');" class="dep_02_a">환급금 조회 및 신청</a></li>
+								<li><a href="javascript:goMenuByMenuID('0404');" class="dep_02_a">환급/기부신청결과확인</a></li>
+								<li><a href="javascript:goMenuByMenuID('0406');" class="dep_02_a">환급금계좌등록/조회</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0408');" class="dep_02_a">자동차세 연납 환급 신청</a></li>
+				    
+					</ul>
+				</li>
+				<li class="menu_dep1_infor"><a href="#">나의 ETAX</a>
+					<ul class="menu_dep2">
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0501');" class="dep_02_a">나만의 ETAX</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0512');" class="dep_02_a" style="color:#f36100">참여해보세요</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0502');" class="dep_02_a">마일리지관리</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0503');" class="dep_02_a">고객센터에 문의하기</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0511');" class="dep_02_a">회원정보수정</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0504');" class="dep_02_a">전자송달관리</a>
+							<ul class="menu_dep3_infor">
+								
+		                            <li><a href="javascript:goMenuByMenuID('050601');" class="dep_02_a">전자송달 신청/해지</a></li>
+		                        
+								<li><a href="javascript:goMenuByMenuID('050603');" class="dep_02_a">전자사서함</a></li>
+								<li><a href="javascript:goMenuByMenuID('050403');" class="dep_02_a">이메일발송내역</a></li>
+								<li><a href="javascript:goMenuByMenuID('050602');" class="dep_02_a">앱고지발송내역</a></li>								
+								<li><a href="javascript:goMenuByMenuID('050604');" class="dep_02_a">모바일앱 전자송달 신청방법</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('050502');" class="dep_02_a">자동납부관리</a>
+							<ul class="menu_dep3_infor">
+
+
+								<li><a href="javascript:goMenuByMenuID('050502');" class="dep_02_a">자동납부신청내역(해지)</a></li>
+								<li class="last"><a href="javascript:goMenuByMenuID('050503');" class="dep_02_a">자동납부결과</a></li>
+							</ul>
+						</li>
+
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0507');" class="dep_02_a">세무대리인고객정보등록</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0508');" class="dep_02_a">상하수도고객번호등록</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0520');" class="dep_02_a">지방세 공시송달</a>
+							<ul class="menu_dep3_infor">
+								<li class="last"><a href="javascript:goMenuByMenuID('052001');" class="dep_02_a">공시송달 내역 조회</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0509');" class="dep_02_a">인증서 관리</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('050901');" class="dep_02_a">공동인증서(재)등록</a></li>
+								<li><a href="javascript:goMenuByMenuID('050904');" class="dep_02_a">금융인증서(재)등록</a></li>
+								<li><a href="javascript:goMenuByMenuID('050902');" class="dep_02_a">공동인증서스마트폰복사</a></li>
+								<li class="last"><a href="javascript:goMenuByMenuID('050903');" class="dep_02_a">브라우저인증서복사</a></li>
+							</ul>
+						</li>						
+						
+	                    <li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0513');" class="dep_02_a">기부내역조회</a></li>
+	                    
+					</ul>
+				</li>
+				<li class="menu_dep1_infor"><a href="#">지방세 정보</a>
+					<ul class="menu_dep2">
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0601');" class="dep_02_a">지방세란?</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0602');" class="dep_02_a">세목별안내</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0604');" class="dep_02_a">세무용어사전</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0605');" class="dep_02_a">납세자권리헌장</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0615');" class="dep_02_a">서울시 납세자보호관 제도</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0612');" class="dep_02_a">이달의지방세일정</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0606');" class="dep_02_a">유용한지방세제도</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0607');" class="dep_02_a">체납징수절차</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0609');" class="dep_02_a">생활속세금</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('060901');" class="dep_02_a">부동산취득시</a></li>
+								<li><a href="javascript:goMenuByMenuID('060902');" class="dep_02_a">부동산권리설정시</a></li>
+								<li><a href="javascript:goMenuByMenuID('060903');" class="dep_02_a">부동산보유시</a></li>
+								<li class="last"><a href="javascript:goMenuByMenuID('060904');" class="dep_02_a">부동산관련국세</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0610');" class="dep_02_a">지방세모의계산</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0611');" class="dep_02_a">신고서식/기타자료</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0613');" class="dep_02_a">알기쉬운지방세</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('061401');" class="dep_02_a">법령정보</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('061401');" class="dep_02_a">법령안내</a></li>
+								<li><a href="javascript:goMenuByMenuID('061402');" class="dep_02_a">법무행정서비스</a></li>
+								<li class="last"><a href="javascript:goMenuByMenuID('061403');" class="dep_02_a">자치구별조례사이트</a></li>
+							</ul>
+						</li>
+					</ul>
+				</li>
+				<li class="menu_dep1_infor menu_dep1_last"><a href="#">ETAX 이용안내</a>
+					<ul class="menu_dep2">
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0701');" class="dep_02_a">공지사항</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0702');" class="dep_02_a">홈페이지 이용안내</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0703');" class="dep_02_a">보안모듈설치안내</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0704');" class="dep_02_a">자주묻는질문</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0705');" class="dep_02_a">납부방법안내</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0706');" class="dep_02_a">담당 안내</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('070701');" class="dep_02_a">고객센터에 문의하기</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('070701');" class="dep_02_a">문의하기</a></li>
+								<li class="last"><a href="javascript:goMenuByMenuID('070702');" class="dep_02_a">문의내역 및 답변</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0708');" class="dep_02_a">지방세이의신청/조회</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0709');" class="dep_02_a">조회/발급</a>
+
+
+
+
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0710');" class="dep_02_a">관련사이트</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0711');" class="dep_02_a">체납자 은닉재산 신고</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('071101');" class="dep_02_a">은닉재산신고</a></li>
+								<li class="last"><a href="javascript:goMenuByMenuID('071102');" class="dep_02_a">은닉재산신고내역조회</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0712');" class="dep_02_a">마을세무사 실적 관리</a>
+							<ul class="menu_dep3_infor">
+								<li><a href="javascript:goMenuByMenuID('071201');" class="dep_02_a">마을세무사 실적 조회</a></li>
+								<li class="last"><a href="javascript:goMenuByMenuID('071202');" class="dep_02_a">마을세무사 실적 등록</a></li>
+							</ul>
+						</li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0713');" class="dep_02_a">개인정보처리방침</a></li>
+						<li class="menu_dep2_infor"><a href="javascript:goMenuByMenuID('0714');" class="dep_02_a">세금납부 연습하기</a></li>
+					</ul>
+				</li>
+				<li class="menu_dep1_infor"><a href="/jsp/bsj.jsp">법인세무조사</a></li>
+			</ul> <!-- //menu_dep1 -->
+		</div> <!-- //menu_infor -->
+	</div> <!-- //all_menu_infor -->
+
+	<div class="header_gnb" >
+		   <div class="gnb">
+   <div class="gnb_inner">
+   <div class="gnb_top">
+   <a href="javascript:gnbMenuPage2('0101','GetListMyTaxAction.tran','_self');">조회납부</a>
+   <div class="all_gnb">
+   <div class="all_gnb_wrap">
+   <div class="menu_wrap">
+   <ul   class="menu_dep_02">
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0101','GetListMyTaxAction.tran','_self');"  class="dep_02_a">회원납부</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0105','GetListTaxNoAction.view?menu_gubun=TaxNo','_self');"  class="dep_02_a">납세번호납부</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0106','RetriveEpayNoPayListAction.view?menu_gubun=EpayNo','_self');"  class="dep_02_a">전자납부번호납부</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0107','GetListMyWtrAction.tran?menu_gubun=Wtrsply','_self');"  class="dep_02_a">상하수도요금납부</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0108','RetriveEasyNoPayListAction.view?menu_gubun=EasyNo','_self');"  class="dep_02_a">간편납부번호납부</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0109','GetListPartpayAction.view?menu_gubun=Partpay','_self');"  class="dep_02_a">일부납부</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('011001','GetListReservAction.view?menu_gubun=Reserv','_self');"  class="dep_02_a">예약이체납부관리</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('011001','GetListReservAction.view?menu_gubun=Reserv','_self');" >예약이체납부신청</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('011002','GetRcptRsvTsLstAction.view','_self');" >예약이체납부확인/취소</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('011003','RsvTsStatAction.tran','_self');" >예약이체현황</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0111','GetWetaxSeqnoAction.tran','_blank');"  class="dep_02_a">전국지방세납부</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('011201','TaxCartAction.tran?command=03','_self');"  class="dep_02_a">납부바구니</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('011201','TaxCartAction.tran?command=03','_self');" >납부바구니 조회</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('011202','WrcpCartAction.view','_self');" >납부바구니 납부확인</a>
+		</li>
+		</ul>
+		</li>
+   </ul>
+   </div>
+   </div>
+   </div>
+ </div>
+ </div>
+ </div>
+   <div class="gnb">
+   <div class="gnb_inner">
+   <div class="gnb_top">
+   <a href="javascript:gnbMenuPage2('020301','RegnIncmtxSpeclSingoAction.view','_self');">신고납부</a>
+   <div class="all_gnb">
+   <div class="all_gnb_wrap">
+   <div class="menu_wrap">
+   <ul   class="menu_dep_02">
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0213','/jsp/NotiDtlAction.tran?bbs_gbn=10000&ref_no=690&cag_gbn=00000','_self');"  class="dep_02_a">전자신고납부프로그램</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021301','/FILE_ATTACH/down/Seoul.PaymentSheet.exe','_self');" >프로그램 다운로드</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021302','/FILE_ATTACH/down/Seoul.Manual.pdf','_self');" >사용설명서 다운로드</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021303','/jsp/statTelInfoAction.view?gnb_id=0706&lnb_id=0706&gl_gubun=l','_self');" >자치구 담당 연락처</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('020101','AcquRegiTaxAction.view','_self');"  class="dep_02_a">취득세</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020101','AcquRegiTaxAction.view','_self');" >취득세(부동산)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020102','acquRegiTaxProxRegiAction.view','_self');" >취득세대리인등록</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('020201','EtcRegiTaxInptAction.tran','_self');"  class="dep_02_a">등록면허세</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020201','EtcRegiTaxInptAction.tran','_self');" >등록면허세(등록분)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020202','LcnsTaxMnAction.tran','_self');" >등록면허세(면허분)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020204','CarTaxInptAction.tran','_self');" >등록면허세(차량)</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('020301','RegnIncmtxSpeclSingoAction.view','_self');"  class="dep_02_a">지방소득세</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020301','RegnIncmtxSpeclSingoAction.view','_self');" >특별징수분</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020302','RegnIncmtxSpeclLumpAction.view','_self');" >특별징수분일괄납부</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020303','RegnIncmtxCitSingoAction.view','_self');" >종합소득분</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020304','RegnIncmtxTransSinGoAction.view','_self');" >양도소득분</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020305','RegnIncmtxCrtxSingoAction.view','_self');" >법인세분(2013년이전신고)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020306','ScCr002Action.view','_self');" >법인소득분(일반법인)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020307','ScCr002Action.view','_self');" >법인소득분(비영리법인)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020308','ScCr801Action.view','_self');" >법인소득분(파일신고)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020309','ScCr805Action.view','_self');" >법인 특별징수명세서제출</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020310','RegnIncmtxCitLumpAction.view','_self');" >종합소득분(파일신고)</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('020901','RegnIncmtxEmpSingoAction.view','_self');"  class="dep_02_a">주민세종업원분</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020901','RegnIncmtxEmpSingoAction.view','_self');" >주민세종업원분</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0204','RsitaxPrptySingoAction.view','_self');"  class="dep_02_a">주민세사업소분</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020401','RsitaxPrptySingoAction.view','_self');" >주민세재산분(2020년이전신고)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020402','BuildingForUseSingoAction.tran','_self');" >건물사용명세서 신고</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020403','RsitaxSaupSobunSingoAction.view','_self');" >주민세사업소분</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020404','RsitaxSaupSobunSingoAction.view?singo_gubun=reSingo','_self');" >주민세사업소분 수정신고</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('020601','HousingCntSumExptAction.view','_self');"  class="dep_02_a">재산세</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020601','HousingCntSumExptAction.view','_self');" >주택 수 산정 제외 신청</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020602','PartTaxAplyAction.view','_self');" >재산세 분할납부 신청</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('020501','/jsp/rptpay/AtmblRegiTaxYr.jsp','_self');"  class="dep_02_a">자동차세연납</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020501','/jsp/rptpay/AtmblRegiTaxYr.jsp','_self');" >건별납부</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0211','/jsp/rptpay/EnvrmtIprvTaxYr.jsp','_self');"  class="dep_02_a">환경개선부담금연납</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0207','LeisureTaxSingoAction.view','_self');"  class="dep_02_a">레저세</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0210','NapseDamboReqAction.tran?menu_gubun=01','_self');"  class="dep_02_a">담배소비세</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021001','NapseDamboReqAction.tran?menu_gubun=01','_self');" >납세담보제공확인 발급신청</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021008','NapseDamboReqAction.tran?menu_gubun=03','_self');" >납세담보면제확인 발급신청</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021002','NapseDamboReqAction.tran?ahead_rpt_yn=1','_self');" >반출전 신고납부</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021003','TabacoBanInptAction.tran','_self');" >반출신고(과세)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021004','TabacoBanMyunseAction.tran','_self');" >반출신고(면세)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021005','TabacoSobiAction.tran','_self');" >신고납부(수입판매업자)</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021006','GongjeHwanReqAction.tran','_self');" >공제환급증명 발급신청</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('021007','GongjeHwanReqAction.tran?COMMAND_ID=09','_self');" >환급신청</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('020801','JeungjiChongpoInptAction.tran?COMMAND_ID=02','_self');"  class="dep_02_a">수수료(수입증지)</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020801','JeungjiChongpoInptAction.tran?COMMAND_ID=02','_self');" >서울특별시 임기제공무원 임용응시 수수료</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020802','JeungjiChongpoInptAction.tran','_self');" >총포수수료</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020803','JeungjiChongpoInptAction.tran?COMMAND_ID=04','_self');" >여객자동차운송사업계획 변경수수료</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020804','JeungjiChongpoInptAction.tran?COMMAND_ID=06','_self');" >건설업 등록 수수료</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('020805','JeungjiChongpoInptAction.tran?COMMAND_ID=08','_self');" >수수료(수입증지) 신고내역 조회 및 납부</a>
+		</li>
+		</ul>
+		</li>
+   </ul>
+   </div>
+   </div>
+   </div>
+ </div>
+ </div>
+ </div>
+   <div class="gnb">
+   <div class="gnb_inner">
+   <div class="gnb_top">
+   <a href="javascript:gnbMenuPage2('0301','GetRcptLstJuminAction.tran','_self');">납부(영수증)확인</a>
+   <div class="all_gnb">
+   <div class="all_gnb_wrap">
+   <div class="menu_wrap">
+   <ul   class="menu_dep_02">
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0301','GetRcptLstJuminAction.tran','_self');"  class="dep_02_a">회원납부확인</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0302','GetRcptLstGstAction.view','_self');"  class="dep_02_a">비회원납부확인</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0303','GetRcptLstEtcAction.view','_self');"  class="dep_02_a">대리인용납부확인</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0304','GetRcptLstTaxNoAction.view','_self');"  class="dep_02_a">납세번호확인</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0305','RetriveEpayNoRcptListAction.view','_self');"  class="dep_02_a">전자납부번호확인</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0306','GetRcptLstWtrAction.view','_self');"  class="dep_02_a">상하수도요금확인</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0307','GetRcptLstRptAction.view','_self');"  class="dep_02_a">신고납부확인</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0308','RcptLstCarAction.view','_self');"  class="dep_02_a">자동차번호납부확인</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0309','GetRcptCaseAction.view','_self');"  class="dep_02_a">영수증보관함</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0310','Rcp2ndPayrAction.view','_self');"  class="dep_02_a">연대납세자납부확인</a>
+		</li>
+   </ul>
+   </div>
+   </div>
+   </div>
+ </div>
+ </div>
+ </div>
+   <div class="gnb">
+   <div class="gnb_inner">
+   <div class="gnb_top">
+   <a href="javascript:gnbMenuPage2('0401','FlrcNoitmAction.tran','_self');">환급</a>
+   <div class="all_gnb">
+   <div class="all_gnb_wrap">
+   <div class="menu_wrap">
+   <ul   class="menu_dep_02">
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0401','FlrcNoitmAction.tran','_self');"  class="dep_02_a">환급금 신청</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('0401','FlrcNoitmAction.tran','_self');" >환급금 조회 및 신청</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('0404','mnyrtnAplcnResultAction.tran','_self');" >환급/기부신청결과확인</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('0406','HwanAccountRegiAction.view','_self');" >환급금계좌등록/조회</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0408','HwanAtmblTaxYrAppAction.tran','_self');"  class="dep_02_a">자동차세 연납 환급 신청</a>
+		</li>
+   </ul>
+   </div>
+   </div>
+   </div>
+ </div>
+ </div>
+ </div>
+   <div class="gnb">
+   <div class="gnb_inner">
+   <div class="gnb_top">
+   <a href="javascript:gnbMenuPage2('0501','MyEtaxAction.tran','_self');">나의ETAX</a>
+   <div class="all_gnb">
+   <div class="all_gnb_wrap">
+   <div class="menu_wrap">
+   <ul   class="menu_dep_02">
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0501','MyEtaxAction.tran','_self');"  class="dep_02_a">나만의ETAX</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0512','ElctrAplEventAction.tran','_self');"  class="dep_02_a" style="color:#f36100" >참여해보세요</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0502','EtMlgAction.tran','_self');"  class="dep_02_a">마일리지관리</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0503','qustPrpslLstAction.tran','_self');"  class="dep_02_a">고객센터에 문의하기</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('050601','AppGojiLstAction.tran?COMMAND=08','_self');"  class="dep_02_a">전자송달관리</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050601','AppGojiLstAction.tran?COMMAND=08','_self');" >전자송달 신청/해지</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050603','ElctrBoxAction.tran','_self');" >전자사서함</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050403','ElctrAplListAction.tran','_self');" >이메일발송내역</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050602','AppGojiSendAction.tran','_self');" >앱고지발송내역</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050604','ElctrAplAction.tran?COMMAND=12','_self');" >모바일앱 전자송달 신청방법</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('050502','AutoTsTaxLstAction.tran','_self');"  class="dep_02_a">자동납부관리</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050502','AutoTsTaxLstAction.tran','_self');" >자동납부 신청/해지</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050503','AutoTsStatAction.tran','_self');" >자동납부 결과</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0507','LoginAction2.tran?status=TaxPrxyRegi','_self');"  class="dep_02_a">세무대리인고객정보등록</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0508','LoginAction2.tran?status=TaxWater','_self');"  class="dep_02_a">상하수도고객번호등록</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('050901','MberJnCfrmResAction.view','_self');"  class="dep_02_a">인증서 관리</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050901','MberJnCfrmResAction.view','_self');" >공동인증서(재)등록</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050904','MberJnCfrmResAction.view','_self');" >금융인증서(재)등록</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050902','MberJnExAction.view','_self');" >공동인증서스마트폰복사</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('050903','MberJnBrCopyAction.view','_self');" >브라우저인증서복사</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0511','MberJnUptAction.tran','_self');"  class="dep_02_a">회원정보수정</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('051101','MberJnUptAction.tran','_self');" >회원정보수정</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0520','PublicAplAction.tran','_self');"  class="dep_02_a">지방세 공시송달</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('052001','PublicAplAction.tran','_self');" >공시송달 내역 조회</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0513','DonationHisListAction.tran','_self');"  class="dep_02_a">기부내역조회</a>
+		</li>
+   </ul>
+   </div>
+   </div>
+   </div>
+ </div>
+ </div>
+ </div>
+   <div class="gnb">
+   <div class="gnb_inner">
+   <div class="gnb_top">
+   <a href="javascript:gnbMenuPage2('0601','/jsp/CtView.jsp?ctPage=/info/CON03_02_01.html','_self');">지방세정보</a>
+   <div class="all_gnb">
+   <div class="all_gnb_wrap">
+   <div class="menu_wrap">
+   <ul   class="menu_dep_02">
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0601','/jsp/CtView.jsp?ctPage=/info/CON03_02_01.html','_self');"  class="dep_02_a">지방세란?</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0602','/jsp/CtView.jsp?ctPage=/info/CON03_02_03_01.html','_self');"  class="dep_02_a">세목별안내</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0604','taxTermDicLstAction.tran','_self');"  class="dep_02_a">세무용어사전</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0605','/jsp/CtView.jsp?ctPage=/info/CON03_02_04.html','_self');"  class="dep_02_a">납세자권리헌장</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0615','/jsp/CtView.jsp?ctPage=/info/napseja_bohogwan.html','_self');"  class="dep_02_a">서울시 납세자보호관 제도</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0606','/jsp/CtView.jsp?ctPage=/info/TaxSystem01.html','_self');"  class="dep_02_a">유용한지방세제도</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0607','/jsp/CtView.jsp?ctPage=/info/CON03_07_07.html','_self');"  class="dep_02_a">체납분징수절차</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('060901','/jsp/CtView.jsp?ctPage=/info/TaxinLife01.html','_self');"  class="dep_02_a">생활속세금</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('060901','/jsp/CtView.jsp?ctPage=/info/TaxinLife01.html','_self');" >부동산취득시</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('060902','/jsp/CtView.jsp?ctPage=/info/TaxinLife05.html','_self');" >부동산권리설정시</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('060903','/jsp/CtView.jsp?ctPage=/info/TaxinLife02.html','_self');" >부동산보유시</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('060904','/jsp/CtView.jsp?ctPage=/info/TaxinLife03.html','_self');" >부동산관련국세</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0610','AcqutaxCalcAction.view','_self');"  class="dep_02_a">지방세모의계산</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0611','RptFrmLstAction.tran','_self');"  class="dep_02_a">신고서식/기타자료</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0612','TaxMonScheAction.tran','_self');"  class="dep_02_a">이달의지방세일정</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0613','TaxKnowledgeEasyLstAction.tran','_self');"  class="dep_02_a">알기쉬운지방세</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('061401','http://www.law.go.kr/','_new');"  class="dep_02_a">법령정보</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('061401','http://www.law.go.kr/','_new');" >법령안내</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('061402','http://legal.seoul.go.kr/legal/front/main.html','_new');" >법무행정서비스</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('061403','/jsp/CtView.jsp?ctPage=/info/CON03_06_03.html','_self');" >자치구별조례사이트</a>
+		</li>
+		</ul>
+		</li>
+   </ul>
+   </div>
+   </div>
+   </div>
+ </div>
+ </div>
+ </div>
+   <div class="gnb">
+   <div class="gnb_inner">
+   <div class="gnb_top">
+   <a href="javascript:gnbMenuPage2('0701','NotiLstAction.tran','_self');">ETAX이용안내</a>
+   <div class="all_gnb">
+   <div class="all_gnb_wrap">
+   <div class="menu_wrap">
+   <ul   class="menu_dep_02">
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0701','NotiLstAction.tran','_self');"  class="dep_02_a">공지사항</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0702','/jsp/CtView.jsp?ctPage=/cmpl/guideSite.html','_self');"  class="dep_02_a">홈페이지 이용안내</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0703','/jsp/CtView.jsp?ctPage=/cmpl/guide_Security_module.html','_self');"  class="dep_02_a">보안모듈설치안내</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0704','faq2Action.tran','_self');"  class="dep_02_a">자주묻는질문</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0705','/jsp/CtView.jsp?ctPage=/help/taxListTab01.html','_self');"  class="dep_02_a">납부방법안내</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0706','/jsp/CtView.jsp?ctPage=/cmpl/StatTelGuide.html','_self');"  class="dep_02_a">담당안내</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('070701','qustPrpslRegAction.view','_self');"  class="dep_02_a">고객센터에 문의하기</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('070701','qustPrpslRegAction.view','_self');" >문의하기</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('070702','qustPrpslLstAction.tran','_self');" >문의내역 및 답변</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0708','/jsp/CtView.jsp?ctPage=/cmpl/CON02_01_01.html','_self');"  class="dep_02_a">지방세이의신청/조회</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0709','LndBldDlpyLstAction.view','_self');"  class="dep_02_a">조회/발급</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0710','/jsp/CtView.jsp?ctPage=/cmpl/CON02_06.html','_self');"  class="dep_02_a">관련사이트</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0711','HiddenAssetsRAction.view','_self');"  class="dep_02_a">체납자 은닉재산 신고</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('071101','HiddenAssetsRAction.view','_self');" >은닉재산 신고</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('071102','HiddenAssetsSAction.view','_self');" >은닉재산 신고 내역 조회</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0712','VillageSemuListAction.view','_self');"  class="dep_02_a">마을세무사 실적 관리</a>
+		<ul class="dep_03">
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('071201','VillageSemuListAction.view','_self');" >마을세무사 실적 조회</a>
+		</li>
+		<li class="dep_03_li">
+       <a href="javascript:gnbMenuPage2('071202','VillageSemuEnrollAction.view','_self');" >마을세무사 실적 등록</a>
+		</li>
+		</ul>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0713','/jsp/CtView.jsp?ctPage=/help/privacy_policy.html','_self');"  class="dep_02_a">개인정보처리방침</a>
+		</li>
+		<li class="dep_02">
+       <a href="javascript:gnbMenuPage2('0714','/jsp/tutorial/tutorial_main.jsp','_self');"  class="dep_02_a">세금납부 연습하기</a>
+		</li>
+   </ul>
+   </div>
+   </div>
+   </div>
+ </div>
+ </div>
+ </div>
+   <div class="gnb">
+   <div class="gnb_inner">
+   <div class="gnb_top">
+   <a href="javascript:gnbMenuPage2('08','/jsp/bsj.jsp','_self');">법인세무조사</a>
+   <div class="all_gnb">
+   <div class="all_gnb_wrap">
+   <div class="menu_wrap">
+   <ul   class="menu_dep_02">
+   </ul>
+   </div>
+   </div>
+   </div>
+ </div>
+ </div>
+ </div>
+
+	</div><!-- //header_gnb -->
+
+</div>
+
+ 
+	<!-- //header -->
+<hr />
+	<!-- contents -->
+	<div class="contents_wrap">
+		<div class="aside">
+			
+
+
+
+
+
+
+
+
+
+
+
+<!--  Login Common Function Start -->
+<script src="/static/js/cmn/util/checkErr.js"></script>
+<script>
+    //<![CDATA[
+    var xmlHttp;
+    var certIndex = "";
+    function createXMLHttpRequest() {
+        if (window.ActiveXObject) {
+            xmlHttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        else if (window.XMLHttpRequest) {
+            xmlHttp = new XMLHttpRequest();
+        }
+    }
+
+    function CertLogin(sdate) {
+        npPfsCtrl.showLoading();
+        PrintObjectTag(true);
+        AnySign.SetUITarget(document.getElementById('footer_id'));
+        setTimeout(function(){
+            AnySign4PC_installCheck(installCheck_callback);
+        },300);
+    }
+
+    function installCheck_callback(result){
+        npPfsCtrl.isInstall({
+            success : function(){
+                var keyBoardStatus = "success";
+                keyCallback(result,keyBoardStatus);
+            },
+            fail : function(){
+                var keyBoardStatus = "fail";
+                keyCallback(result,keyBoardStatus);
+            }
+        });
+    }
+
+    function keyCallback(result,keyBoardStatus){
+        var message = "";
+        if(result == "ANYSIGN4PC_NEED_UPDATE"){
+            message  ="공동인증서(구 공인인증서) 설치파일 업데이트가 필요합니다.\n[확인]을 선택하시면 설치페이지로 이동합니다.";
+        }else{
+            if(result == "ANYSIGN4PC_NORMAL" && keyBoardStatus == "success"){
+                AnySign.SignDataWithVID (AnySign.mXgateAddress,AnySign.mCAList, 'Eijpyw8aguMo2ZlmGWLZdwL1aTKYzYDS760LsFS3a0ef4nUmTDLaqnx7I26MizZy.c2NzU2VyRWF4RG9tMDEveGF0ZWJ3MnBfc2VyZWF4T25sMDQ='  , 16, "",AnySign.mLimitPassword,"1111111111111" ,srvcert  , anysignSuccessCallback);
+                npPfsStartup(document.form, false, true, false, true, "enc", "on");  // 키보드보안, 가상키패드 활성화
+            } else if(result == "ANYSIGN4PC_NORMAL" && keyBoardStatus == "fail"){
+                message="키보드 보안프로그램이 설치되어야 공동인증서(구 공인인증서) 로그인이 가능합니다.[확인]을 선택하시면 설치페이지로 이동합니다.";
+            } else if(result != "ANYSIGN4PC_NORMAL" && keyBoardStatus == "success"){
+                message="공동인증서(구 공인인증서) 보안프로그램이 설치되어야 공동인증서(구 공인인증서) 로그인이 가능합니다.[확인]을 선택하시면 설치페이지로 이동합니다.";
+            } else if(result != "ANYSIGN4PC_NORMAL" && keyBoardStatus == "fail"){
+                message="공동인증서(구 공인인증서) 및 키보드 보안프로그램이 설치되어야 로그인이 가능합니다.[확인]을 선택하시면 설치페이지로 이동합니다.";
+            }
+        }
+
+        if(message!=""){
+            if(confirm(message)){ location.href ="/jsp/NonActiveInstallCheckNew.jsp";  }
+        }
+        npPfsCtrl.hideLoading();
+    }
+
+    /* nonactive 호출 */
+    function anysignSuccessCallback ( signed_msg ){
+        send_vid_info(function _CB_send_vid_info(vid_msg){
+            var url = "LoginAction.tran?meche_cd=MPK";
+            createXMLHttpRequest();
+            xmlHttp.open("POST", url, true);
+            xmlHttp.onreadystatechange = handleStateChange;
+            xmlHttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded;");
+            xmlHttp.send(createQueryString(signed_msg, vid_msg));
+        });
+    }
+
+    function createQueryString(signed_msg, vid_msg) {
+        var queryString = "signed_msg=" + signed_msg + "&vid_msg=" + vid_msg+ "&loginType=GNB_LNB_MAIN";
+        return queryString;
+    }
+
+    function createQueryString3(certGbn, access_token, api_tran_id, signature) {
+        var queryString = "certGbn=" + certGbn + "&access_token=" + access_token+ "&api_tran_id=" + api_tran_id+ "&signature=" + signature+ "&loginType=GNB_LNB_MAIN";
+        return queryString;
+    }
+
+    var isBubinLogin = false;
+
+    function handleStateChange() {
+        npPfsCtrl.hideLoading();
+        var nonMemberLoginChk = 'null';
+        if(xmlHttp.readyState == 4) {
+            if(xmlHttp.status == 200) {
+                if(xmlHttp.responseText.substr(0,4) == "7777"){
+                    var certMsg = xmlHttp.responseText.split(":");
+                    alert("[오류코드 : "+certMsg[1]+"] " + certMsg[2] +"\n\n선택하신 인증서의 상태를 확인해 주세요.");
+                }else{
+                    //마지막 불러 오는 로직//
+                    if(xmlHttp.responseText=='0' ){
+                        isBubinLogin = false;
+                        FowardToLoginedPage();
+                    }else if(xmlHttp.responseText=='1' ){
+                        isBubinLogin = true;
+                        FowardToLoginedPage();
+                    }else if(xmlHttp.responseText=='9999'){
+                        //시스템 에러 발생시
+                        alert("정상적으로 로그인 되지 않으셨습니다.\n잠시후 이용해 주시면 감사하겠습니다.");
+                    }else if(xmlHttp.responseText=="8888"){
+                        var nonMemberMsg = "";
+                        if(nonMemberLoginChk == "Y"){
+                            if(certIndex=="2"){
+                                nonMemberMsg = "등록된 금융인증서가 아닙니다.\n\n금융인증서 재등록화면으로 이동하시겠습니까?";
+                            }else {
+                                nonMemberMsg = "등록된 공동인증서(구 공인인증서)가 아닙니다.\n\n공동인증서(구 공인인증서) 재등록화면으로 이동하시겠습니까?";
+                            }
+                            if(confirm(nonMemberMsg)){
+                                gnbMenuPage('050901' , 'MberJnCfrmResAction.view');
+                            }else{
+                                return;
+                            }
+                        }else{
+                            if(certIndex=="1"){
+                                alert("ETAX 비회원이거나 미등록된 금융인증서입니다.\n비회원이면 [비회원 로그인]하시고\n회원이면 금융인증서를 재등록하시기 바랍니다.");
+                            }else {
+                                alert("ETAX 비회원이거나 미등록된 공동인증서(구 공인인증서)입니다.\n비회원이면 회원가입하시고\n회원이면 공동인증서를 재등록하시기 바랍니다.");
+                            }
+                            explicitLoginFromGNB();
+                        }
+
+                    }else if(xmlHttp.responseText=="0000"){
+                        alert("회원가입되어있습니다. 로그인 후 사용하세요.");
+                    }else{
+                        //공동인증서(구 공인인증서) 에러 발생시
+                        var MSG = xecureErr(xmlHttp.responseText);
+                        alert(MSG);
+                    }
+                }
+            }
+        }
+    }
+
+    function FowardToLoginedPage() { //이동할 nPage 가 들어옴
+        if(g_member_yn) alert("이미 회원가입 되어있습니다. 회원로그인으로 전환됩니다.");
+        
+        document.fwfrm.submit();
+        return false;
+        
+    }
+
+    // 2019-07-24 QR Code
+    var timer;
+    var altAuthStat = "";
+    var tk_param = "";
+    var $this;
+
+    // QR코드 인증번호 생성
+    function altAuthGen(tab_gbn) {
+        login_gbn = tab_gbn;
+        initQRDiv(true);
+
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "01";
+        frm.auth_gbn.value = "QR";
+        frm.auth_target.value = "ETAX_PC";
+        $("#altAuthDiv").attr("tabindex", 0).show().focus();
+        $this = $(this);
+
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran",
+            data: $("#altAuthForm").serialize(),
+            success: 	function(resData) {
+                if (!resData) {
+                    initQRDiv(true);
+                    alert("처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.");
+                    return;
+                }
+
+                resData = JSON.parse(resData);
+
+                if (resData.errMsg) {
+                    initQRDiv(true);
+                    alert("[" + resData.errCode + "]\n" + resData.errMsg);
+                }
+                else {
+                    altAuthStat = "WA";
+                    var auth_req_code = resData.auth_req_code;
+                    frm.auth_req_code.value = auth_req_code;
+                    var qrdata = {};
+                    qrdata.ETAX_MOBILE_AUTH = auth_req_code;
+
+                    $("#qrDiv").qrcode({width:100, height:100, text:JSON.stringify(qrdata)});
+                    $("#altAuthNum").html(auth_req_code);
+                    $("#altAuthTime").html("3:00");
+                    $("#altAuthDiv").css("display", "");
+
+                    startTimer();
+                    altAuthRes();
+                }
+            },
+            error: function(xhr, status, e) {
+                alert("처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.");
+            }
+        });
+    }
+
+    function startTimer() {
+        clearTimeout(timer);
+
+        var presentTime = $("#altAuthTime").html();
+        var timeArray = presentTime.split(/[:]+/);
+        var m = timeArray[0];
+        var s = timeArray[1] - 1;
+
+        if (0 <= s && s < 10) {
+            s = "0" + s;
+        }
+        else if (s < 0) {
+            s = "59";
+            m -= 1;
+        }
+
+        if (m < 0) {
+            altAuthRes(true);
+            alert("인증시간이 만료되었습니다. 다시 시도해 주십시오.");
+            return false;
+        }
+
+        $("#altAuthTime").html( m + ":" + s);
+        timer = setTimeout(startTimer, 1000);
+    }
+
+
+    //QR 인증 시간 연장
+    function altAuthTimeReset() {
+
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "03";
+        frm.auth_gbn.value = "QR";
+        frm.time_reset_yn.value = "Y";
+
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran",
+            data: $("#altAuthForm").serialize(),
+            success: 	function(resData) {
+                if (!resData) {
+                    alert("처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.");
+                    return;
+                }
+
+                resData = JSON.parse(resData);
+
+                if (resData.errMsg) {
+                    alert("[" + resData.errCode + "]\n" + resData.errMsg);
+                } else {
+                    altAuthStat = "WA";
+
+                    $("#altAuthTime").html("3:00");
+                    $("#altAuthDiv").css("display", "");
+
+                    startTimer();
+                    altAuthRes();
+                }
+            },
+            error: function(xhr, status, e) {
+                alert("처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.");
+            }
+        });
+    }
+
+
+    // QR 인증결과 확인
+    function altAuthRes(expire, auth_gbn) {
+
+        if (!auth_gbn && !timer) return;
+
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "03";
+        frm.auth_gbn.value = auth_gbn ? auth_gbn : "QR";
+
+        var errMsg = "";
+        var respData = {};
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran",
+            data: $("#altAuthForm").serialize(),
+            success: function(resData) {
+                if (!resData) {
+                    errMsg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+                } else {
+                    respData = JSON.parse(resData);
+                    if (respData.errMsg) {
+                        errMsg = "[" + respData.errCode + "]\n" + respData.errMsg;
+                    }
+                }
+            },
+            error: function(xhr, status, e) {
+                errMsg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+            },
+            complete: function() {
+                if (expire || errMsg) {
+                    initQRDiv(true);
+                    if (errMsg) alert(errMsg);
+                    return;
+                }
+
+                altAuthStat = respData.auth_stat;
+
+                if (respData.auth_stat == "WA") setTimeout(altAuthRes, 3000);
+                else if (respData.auth_stat == "NG") {
+                    initQRDiv(true);
+                    alert("인증 실패했습니다. 다시 시도해 주십시오.\n(" + respData.auth_fail_rsn + ")");
+                }
+                else if (respData.auth_stat == "FN") {
+                    initQRDiv(true);
+                    alert("인증 실패했습니다. 다시 시도해 주십시오.\n(" + respData.auth_fail_rsn + ")");
+                }
+                else if (respData.auth_stat == "OK") {
+                    initQRDiv(true);
+
+                    frm.meche_cd.value = getAuthMeche(respData.auth_meche, respData.usr_member_yn);
+                    frm.usr_silno.value = respData.usr_silno;
+                    frm.usr_ci.value = respData.usr_ci;
+
+                    if (login_gbn == 5 || login_gbn == 6 || login_gbn == 8) {
+                        frm.tk_nap_id01.value = document.juminLoginFrm.napid01.value;
+                        frm.tk_nap2_name.value = "napid02";
+                        tk_param = "?" + TK_getE2eParamAjax(document.juminLoginFrm, ["napid02"]).substring(1);
+                    }
+
+                    if (respData.usr_member_yn == "Y" || g_member_yn) {	// 회원
+                        if (login_gbn == 5 || login_gbn == 6 || login_gbn == 8) {
+                            if (respData.auth_meche == "STAX") {
+                                alert("STAX앱 비회원 로그인을 지원하지 않습니다.");
+                                return;
+                            }
+                            else {
+                                userCIVld(function(usr_ci_yn) {	// 회원일때 respData.usr_ci 안내려옴
+                                    if (usr_ci_yn == "Y") {
+                                        fn_tabView_2('tab1');
+                                        goAltAuthLogin("16");
+                                    }
+                                    else {
+                                        alert("인증정보가 일치하지 않습니다.");
+                                        return;
+                                    }
+                                });
+                            }
+                        }
+                        else goAltAuthLogin("16");
+                    }
+                    else {	// 비회원
+                        if (login_gbn == 0 && respData.auth_meche != "STAX") $("#div_nomem_login").css("display", "block");
+                        else if (login_gbn == 5 || login_gbn == 6 || login_gbn == 8) nomem_login();
+                    }
+                }
+            }
+        });
+    }
+
+    // QR코드 인증 취소
+    function closeAltAuth() {
+        initQRDiv(false);
+
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "0202";
+        frm.auth_gbn.value = "QR";
+
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran",
+            data: $("#altAuthForm").serialize(),
+            success: function(resData) {
+            },
+            error: function(xhr, status, e) {
+            },
+            complete: function() {
+                initQRDiv(true);
+            }
+        });
+    }
+
+    // 비회원 간편로그인시 실명번호, CI 검증
+    function userCIVld(callback) {
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "05";
+
+        var errMsg = "";
+        var respData = {};
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran"+tk_param,
+            data: $("#altAuthForm").serialize(),
+            success: function(resData) {
+                if (!resData) {
+                    errMsg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+                } else {
+                    respData = JSON.parse(resData);
+
+                    if ( respData.errCode && (respData.errCode != "0000" && respData.errCode != "U511") ) {
+                        errMsg = "[" + respData.errCode + "]\n" + respData.errMsg;
+                    }
+                }
+            },
+            error: function(xhr, status, e) {
+                errMsg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+            },
+            complete: function() {
+                if (errMsg) {
+                    alert(errMsg);
+                    return;
+                }
+                callback(respData.usr_ci_yn);
+            }
+        });
+    }
+
+    function initQRDiv(delReqCode) {
+        if (delReqCode) {
+            document.altAuthForm.work_cd.value = "";
+            document.altAuthForm.auth_gbn.value = "";
+            document.altAuthForm.auth_target.value = "";
+            document.altAuthForm.usr_silno.value = "";
+            document.altAuthForm.auth_req_code.value = "";
+        }
+
+        clearTimeout(timer);
+        timer = null;
+
+        $("#qrDiv").html("");
+        $("#altAuthNum").html("");
+        $("#altAuthDiv").css("display", "none");
+
+        if(login_gbn == 0){ // 회원로그인시 레이아웃 닫기시 포커스
+            document.getElementById("member_login_box_btn1").focus();
+        }else{  // 비회원로그인 레이아웃 닫기시 포커스
+            document.getElementById("noMember_login_box_btn1").focus();
+        }
+
+    }
+
+    function goAltAuthLogin(work_cd) {
+        var frm = document.altAuthForm;
+        frm.work_cd.value = work_cd;
+
+        var errMsg = "";
+        var respData = {};
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran"+tk_param,
+            data: $("#altAuthForm").serialize(),
+            success: function(resData) {
+                if (!resData) {
+                    errMsg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+                }
+                else {
+                    respData = JSON.parse(resData);
+                    errMsg = respData.errMsg;
+                }
+            },
+            error: function(xhr, status, e) {
+                errMsg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+            },
+            complete: function() {
+                if (errMsg) {
+                    initQRDiv(true);
+                    alert(errMsg);
+                } else if (respData.errCode == "0000") {
+                    npPfsCtrl.showLoading();
+                    FowardToLoginedPage();
+                }
+            }
+        });
+    }
+
+    function confirmAltAuth() {
+        var msg = "";
+        if (altAuthStat == "WA") msg = "앱에서 본인인증 완료 후 확인버튼을 눌러주십시오.";
+
+        if (msg) alert(msg);
+    }
+
+    function toggleDiv(el) {
+        if ( $("#"+el).css("display") == "none" ) $("#"+el).css("display", "");
+        else $("#"+el).css("display", "none");
+    }
+
+    // 2019-09-26 비회원 약관 동의 팝업
+    // 자세히보기 클릭 이벤트
+    function toggle_detail(e) {
+        var el_id = $(e).attr("id");
+        var el_class = $(e).attr("class");
+        var el_num = el_id.substring(el_id.length - 1);
+
+        for (var i = 1; i < 6; i++) {
+            if (el_class == "arrow_on") {
+                $(e).attr("class", "");
+                $("#detailDiv_" + el_num).css("display", "none");
+                break;
+            }
+
+            if (i == el_num) {
+                $("#detailSpan_" + i).attr("class", "arrow_on");
+                $("#detailDiv_" + i).css("display", "block");
+            }
+            else {
+                $("#detailSpan_" + i).attr("class", "");
+                $("#detailDiv_" + i).css("display", "none");
+            }
+        }
+    }
+
+    // 체크박스 클릭 이벤트
+    function check_agree(e) {
+        var el_id = $(e).attr("id");
+        var el_num = el_id.substring(el_id.length - 1);
+
+        // 전체동의 체크시
+        if (el_id == "nomem_agreeChk_all") {
+            for (var i = 1; i < 6; i++) {
+                $("#nomem_agreeChk_" + i).prop("checked", $("#" + el_id).prop("checked"));
+            }
+        } else {
+            for (var i = 1; i < 6; i++) {
+                var isCheckd = $("#nomem_agreeChk_" + i).prop("checked");
+                if (!isCheckd) {
+                    $("#nomem_agreeChk_all").prop("checked", false);
+                    break;
+                }
+
+                if (i == 5 && isCheckd) $("#nomem_agreeChk_all").prop("checked", true);
+            }
+        }
+    }
+
+    // 동의합니다, 동의하지않습니다 버튼 클릭 이벤트
+    function btn_nomem_next(isAgree) {
+        if (!isAgree) {
+            initNomemDiv();
+            return;
+        }
+
+        var napId_1 = document.juminLoginFrm2.napid01_2.value;
+        var napId_2 = document.juminLoginFrm2.napid02_2.value;
+        if (napId_1.length != 6 || napId_2.length != 7) {
+            alert("주민등록번호를 확인해 주십시오.");
+            return;
+        }
+
+        if ( !$("#nomem_agreeChk_all").prop("checked") ) {
+            alert("전체 약관 및 이용 제공에 동의해 주십시오.");
+            return;
+        }
+
+        document.altAuthForm.tk_nap_id01.value = napId_1;
+        document.altAuthForm.tk_nap2_name.value = "napid02_2";
+        tk_param = "?" + TK_getE2eParamAjax(document.juminLoginFrm2, ["napid02_2"]).substring(1);
+        nomem_login();
+    }
+
+    function nomem_login() {
+        document.altAuthForm.saupja_no.value = "N";
+        document.altAuthForm.usr_gbn.value = "1";
+
+        userCIVld(function(usr_ci_yn) {
+            if (usr_ci_yn && usr_ci_yn == "Y") {
+                goAltAuthLogin("04");
+            } else {
+                alert("인증정보가 일치하지 않습니다.");
+                return;
+            }
+        });
+    }
+
+    // 비회원 약관동의 관련 엘리먼트 초기화
+    function initNomemDiv() {
+        tk_param = "";
+        document.altAuthForm.usr_ci.value = "";
+
+        $("#div_nomem_login").css("display", "none");
+        $("#nomem_agreeChk_all").prop("checked", false);
+
+        for (var i = 1; i < 6; i++) {
+            $("#nomem_agreeChk_" + i).prop("checked", false);
+            $("#detailSpan_" + i).attr("class", "");
+            $("#detailDiv_" + i).css("display", "none");
+        }
+    }
+
+
+    var login_gbn = 0;
+    let g_member_yn = false;
+
+    function noMemberCertLogin(tab_gbn) {
+        login_gbn = 0;
+
+        var napId1 = document.juminLoginFrm.napid01.value;
+        var napId2 = document.juminLoginFrm.napid02.value;
+
+        if ( (tab_gbn != 4 || tab_gbn != 7) && (napId1.length != 6 || napId2.length != 7) ) {
+            alert("주민등록번호를 확인해 주십시오.");
+            return;
+        }else if ( !$("#agreeChk").prop("checked") ) {
+            alert("비회원 서비스를 위한 주민등록번호 제공에 동의해 주십시오.");
+            return;
+        }else {
+            login_gbn = tab_gbn;
+            memberChk(tab_gbn, routeMemberLogin);
+        }
+    }
+
+    function routeMemberLogin(tab_gbn, member_yn) {
+        g_member_yn = member_yn; // 비회원로그인시 로그인 대상자 회원여부 - true : 회원, false : 비회원
+        if (tab_gbn == 4)      memberChkLogin(1, g_member_yn); // 비회원 공인인증서
+        else if (tab_gbn == 5) altAuthGen(tab_gbn);	           // 비회원 모바일 간편인증
+        else if (tab_gbn == 6) SMSLogin(tab_gbn);		       // 비회원 통신사 본인인증
+        else if (tab_gbn == 7) memberChkLogin(2, g_member_yn); // 비회원 금융인증서
+        else if (tab_gbn == 8) memberChkLogin(3, g_member_yn); // 비회원 민간인증 본인인증
+    }
+
+    function SMSLogin(tab_gbn) {
+        login_gbn = tab_gbn;
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "01";
+        frm.auth_gbn.value = "SMS";
+        frm.auth_target.value = "ETAX_PC";
+
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran",
+            data: $("#altAuthForm").serialize(),
+            success: function(resData) {
+                if (!resData) {
+                    alert("처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.");
+                    return;
+                }
+
+                resData = JSON.parse(resData);
+                if (resData.errMsg) {
+                    alert("[" + resData.errCode + "]\n" + resData.errMsg);
+                } else {
+//                 	2023.03. KG모빌리언스 → KCB 본인인증 으로 변경
+                    document.altAuthForm.auth_req_code.value 	= resData.auth_req_code;
+					const rtnCd = "01";
+					var loginOpener = window.open("https://etax.seoul.go.kr//phoneCertKcb/phone_popup1.jsp?rtnCd=" + rtnCd, "", "width=430,height=640,scrollbars=yes");
+                }
+            },
+            error: function(xhr, status, e) {
+                alert("처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.");
+            }
+        });
+    }
+
+    // sms 인증상태 저장
+    function saveSmsAuth() {
+        var errCode = "";
+        var memberYn = "";
+        var msg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "0201";
+        frm.auth_gbn.value = "SMS";
+        frm.auth_meche.value = "KCB";
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran",
+            data: $("#altAuthForm").serialize(),
+            success: function(resData) {
+                if (!resData) {
+                    alert(msg);
+                    return;
+                }
+
+                resData = JSON.parse(resData);
+                memberYn = resData.usr_member_yn;
+                errCode = resData.errCode ? resData.errCode : "999";
+            },
+            error: function(xhr, status, e) {
+                alert(msg);
+            },
+            complete: function() {
+                if (errCode == "0000") {
+                    if( memberYn == "Y" || g_member_yn){
+                        npPfsCtrl.showLoading();
+                        FowardToLoginedPage();
+                    }else{
+                        altAuthRes(null, "SMS");
+                    }
+                }
+                else alert("[" + errCode + "]\n" + msg);
+            }
+        });
+    }
+
+    function getAuthMeche(auth_meche, member_yn) {
+        if (!auth_meche) return "";
+
+        if (auth_meche == "KCB") auth_meche = member_yn == "Y" ? "MSM" : "NSM";
+        else if (auth_meche == "STAX") auth_meche = "MST";
+        else if (auth_meche == "SHINHAN-FAN") auth_meche = member_yn == "Y" ? "MFN" : "NFN";
+        else if (auth_meche == "SHINHAN-SOL") auth_meche = member_yn == "Y" ? "MSL" : "NSL";
+
+        return auth_meche;
+    }
+
+    // 금융인증서 인증 결과 로직 (FinCertComm.js 결과)
+    function certResultLogin(certGbn,access_token,api_tran_id,signedVal){
+        npPfsCtrl.showLoading();
+
+        if(certGbn == "MemberLogin"){ //회원 금융인증서 로그인
+            certIndex = "1";
+            var url = "LoginAction.tran?meche_cd=MFC";
+            createXMLHttpRequest();
+            xmlHttp.open("POST", url, true);
+            xmlHttp.onreadystatechange = handleStateChange;
+            xmlHttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded;");
+            xmlHttp.send(createQueryString3("2", access_token, api_tran_id, signedVal));
+
+        }else if(certGbn == "NoMemberLogin"){//비회원 금융인증서 로그인
+            certIndex = "2";
+            if( !nonMemberNapbu_fncValidator() ) {
+            	npPfsCtrl.hideLoading();
+            	return;
+            }
+
+            var frm = document.nonMemberNapbuFrm;
+            var frm2 = document.juminLoginFrm;
+
+            frm.nap_id.value		= $("#napid01").val() + $("#napid02").val();//보안취약성처리 : 주민번호를 복호화해서 평문으로 보내지 않는다. - 2017.11.09 이근형
+            frm.saupja_no.value		= "N";
+            frm.usr_gbn.value		= "1";
+
+            frm.status.value		= "CheckSign";
+
+            frm.access_token.value	= access_token;
+            frm.api_tran_id.value	= api_tran_id;
+            frm.signature.value		= signedVal;
+            frm.certGbn.value		= "2";
+
+            frm.meche_cd.value 		= "NFC" // 금융인증서 비회원 로그인
+
+            //보안취약점 처리 : 키보드보안 복화화관련 필드 복사 추가 - 2017.11.09 이근형
+            makeE2eFormParam(frm2,frm);
+
+            ClassUtil.actionXMLHttpRequest( "/wrcp/GetRcptLstGstAction.tran", ClassUtil.getAjaxRequestParam( cfFormParamSet( document.nonMemberNapbuFrm ) ), "nonMemberNapbu_fncCheckCompleted", true );
+
+        }else if(certGbn == "NoMemberLoginElctr") {//비회원 금융인증서 로그인(전자송달)
+
+            if( !nonMemberNapbu_fncValidator() ) {
+            	npPfsCtrl.hideLoading();
+            	return;
+            }
+
+            var frm  = document.nonMemberNapbuFrm;
+            var frm2 = document.frm;
+
+            frm.nap_id.value		= $("#napid01").val() + $("#napid02").val();//보안취약성처리 : 주민번호를 복호화해서 평문으로 보내지 않는다. - 2017.11.09 이근형
+            frm.saupja_no.value		= "N";
+            frm.usr_gbn.value		= "1";
+
+            frm.status.value		= "CheckSign";
+
+            frm.access_token.value	= access_token;
+            frm.api_tran_id.value	= api_tran_id;
+            frm.signature.value		= signedVal;
+            frm.certGbn.value		= "2";
+
+            frm.meche_cd.value 		= "NFC" // 금융인증서 비회원 로그인
+
+            var paramstr;
+            paramstr = "";
+            paramstr += "&tkDeMenuGb=3";
+
+            //보안취약점 처리 : 키보드보안 복화화관련 필드 복사 추가 - 2017.11.09 이근형
+            // makeE2eFormParam(frm2,frm);
+
+            ClassUtil.actionXMLHttpRequest( "/wrcp/GetRcptLstGstAction.tran", ClassUtil.getAjaxRequestParam( cfFormParamSet( document.nonMemberNapbuFrm ) ) + paramstr, "nonMemberNapbu_fncCheckCompleted", true );
+        }
+
+    }
+
+    // 간편인증 결과 로직 (OacxCertComm.js 결과)
+    function oacxCertResultLogin(result,certGbn){
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "01";
+        frm.auth_gbn.value = "GAUTH";
+        frm.auth_target.value = "ETAX_PC";
+        frm.auth_gigwan.value = "MGA";
+        frm.usr_ci.value = result.data.ci;
+        frm.usr_hp_no.value = result.data.phone;
+        frm.usr_name.value = result.data.name;
+        frm.errCode.value = result.resultCode;
+        frm.errMsg.value = result.oacxCode;
+
+        var v_meche_cd = (certGbn == "MemberLogin") ? "MGA":"NGA";
+
+        var errMsg = "";
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran?meche_cd=" + v_meche_cd,
+            data: $("#altAuthForm").serialize(),
+            success: function(resData) {
+                if (!resData) errMsg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+                resData = JSON.parse(resData);
+                if(resData.errCode === '9999'){
+                    alert("[" + resData.errCode + "]\n" + resData.errMsg);
+                    return false;
+                }
+
+                var auth_req_code = resData.auth_req_code;
+                document.altAuthForm.auth_req_code.value = auth_req_code;
+                saveEsignAuth(v_meche_cd);
+            },
+            error: function(xhr, status, e) {
+                errMsg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+            }
+        });
+
+
+    }
+
+    // 비회원 민간인증 상태 저장 - 민간인증 후 로그인 진행
+    function saveEsignAuth(tab_gbn) {
+        var errCode = "";
+        var memberYn = "";
+        var msg = "처리중 오류가 발생했습니다.\n고객센터로 문의해 주십시오.";
+        var frm = document.altAuthForm;
+        frm.work_cd.value = "0201";
+        frm.auth_gbn.value = "GAUTH";
+        frm.auth_meche.value = "MGA";
+
+        $.ajax({
+            type: "POST",
+            url: "AltAuthLoginAction.tran?meche_cd=" + tab_gbn,
+            data: $("#altAuthForm").serialize(),
+            success: function(resData) {
+                if (!resData) {
+                    alert(msg);
+                    return;
+                }
+                resData = JSON.parse(resData);
+                memberYn = resData.usr_member_yn;
+                errCode = resData.errCode ? resData.errCode : "999";
+            },
+            error: function(xhr, status, e) {
+                alert(msg);
+            },
+            complete: function() {
+                if (errCode == "0000") {
+                    if( memberYn == "Y"){
+                        npPfsCtrl.showLoading();
+                        FowardToLoginedPage();
+                    }else{
+                        altAuthRes(null, "GAUTH");
+                    }
+                }
+                else alert("[" + errCode + "]\n" + msg);
+            }
+        });
+    }
+    //]]>
+</script>
+
+<!-- 가상주민번호 서비스 팝업 페이지에서 사용자가 인증을 받으면 암호화된 사용자 정보는 해당 팝업창으로 받게됩니다.
+따라서 부모 페이지로 이동하기 위해서는 다음과 같은 form이 필요합니다. -->
+<form name="vnoform" method="post">
+    <input type="hidden" name="enc_data">                               <!-- 인증받은 사용자 정보 암호화 데이타입니다. -->
+    <!-- 업체에서 응답받기 원하는 데이타를 설정하기 위해 사용할 수 있으며, 인증결과 응답시 해당 값을 그대로 송신합니다.
+         해당 파라미터는 추가하실 수 없습니다. -->
+    <input type="hidden" name="param_r1" value="">
+    <input type="hidden" name="param_r2" value="">
+    <input type="hidden" name="param_r3" value="">
+</form>
+
+<!--  Login Common Function End -->			
+
+
+<script>
+//<![CDATA[
+	function lnbMenuPage(lnb,url){ 
+		var dest_url;
+
+		if (url.indexOf("?") > 0) {
+			location.href = url+'&gnb_id='+lnb+'&lnb_id='+lnb+'&gl_gubun='+'l';
+		} else {
+			location.href = url+'?gnb_id='+lnb+'&lnb_id='+lnb+'&gl_gubun='+'l';
+		}
+		return false;
+	}
+	
+	function gnbMenuPage(gnb, url){ //이동할 nPage 가 들어옴
+		var dest_url;
+			if (url.indexOf("?") > 0) {
+			dest_url = url+'&gnb_id='+gnb+'&lnb_id='+gnb+'&gl_gubun='+'g';
+		} else {
+			dest_url = url+'?gnb_id='+gnb+'&lnb_id='+gnb+'&gl_gubun='+'g';
+		}
+		location.href = dest_url;
+		return false;
+	}
+	
+	function lnbLogin() {
+		if (typeof AnySign == "undefined") {
+			explicitLoginFromGNB();
+		} else {
+			CertLogin('Eijpyw8aguMo2ZlmGWLZdwL1aTKYzYDS760LsFS3a0ef4nUmTDLaqnx7I26MizZy.c2NzU2VyRWF4RG9tMDEveGF0ZWJ3MnBfc2VyZWF4T25sMDQ=');
+		}
+	}
+	
+	function explicitLoginFromGNB(){
+		document.loginParamForm.submit();
+	}
+//]]>
+</script>
+
+		<!-- //로그인 전 -->
+		<div class="loginbox">
+			
+				<p class="hello_txt"><span>안녕하세요.</span></p>
+				<div class="login_btn_set">
+					<a href="javascript:explicitLoginFromGNB();" class="grey">로그인</a>
+					<a href="javascript:gnbMenuPage('0802','MberJnAction.tran?command=');" class="grey">회원가입</a>
+				</div>
+			
+			
+		</div>
+ 
+			
+
+
+
+
+
+
+
+
+
+<script src='/Xecure/anysign/anySign4PCInterface.js?dummy=202607161803'></script>
+<script>
+//<![CDATA[
+var srvcert = '';
+srvcert += '-----BEGIN CERTIFICATE-----\n';
+srvcert += 'MIIDwTCCAqmgAwIBAgICEVEwDQYJKoZIhvcNAQEFBQAwgZIxCzAJBgNVBAYTAktS\n';
+srvcert += 'MR4wHAYDVQQKExVTb2Z0Zm9ydW0gQ29ycG9yYXRpb24xHjAcBgNVBAsTFVNlY3Vy\n';
+srvcert += 'aXR5IFJORCBEaXZpc2lvbjEcMBoGA1UEAxMTU29mdGZvcnVtIFB1YmxpYyBDQTEl\n';
+srvcert += 'MCMGCSqGSIb3DQEJARYWY2FtYXN0ZXJAc29mdGZvcnVtLmNvbTAeFw0yMzA2MzAw\n';
+srvcert += 'MjA5NDFaFw0yODA2MjgwMjA5NDFaMG0xCzAJBgNVBAYTAktSMRQwEgYDVQQKDAtz\n';
+srvcert += 'aGluaGFuYmFuazEQMA4GA1UECwwHc2hpbmhhbjEQMA4GA1UEAwwHc2hpbmhhbjEk\n';
+srvcert += 'MCIGCSqGSIb3DQEJARYVYWRtaW5Ac2hpbmhhbmJhbmsuY29tMIGfMA0GCSqGSIb3\n';
+srvcert += 'DQEBAQUAA4GNADCBiQKBgQCZDyI7mbD9fducUXF8YgVqBgfP+boXOHAM1P3HE4L3\n';
+srvcert += 'bu41nGf3xD33p6p6s8+GipuhUTJO5ytF2cFesZOc6Gp8FSD70lVlkSGoezllrV9I\n';
+srvcert += 'xnpTzGlXFvUCnUmrB8+LYzz8d+sPx/kzMnjnAtHxNhd4VwhPcxiiXGoI044/RkdY\n';
+srvcert += 'xwIDAQABo4HIMIHFMB8GA1UdIwQYMBaAFC5JqyeK6Mivl3U33ot0uyQODSdfMB0G\n';
+srvcert += 'A1UdDgQWBBRssnJ4+EzHpgkyYPLbz+sOUyrFbjALBgNVHQ8EBAMCBLAwDAYDVR0T\n';
+srvcert += 'AQH/BAIwADBoBgNVHR8EYTBfMF2gW6BZhldsZGFwOi8vbGRhcC5zb2Z0Zm9ydW0u\n';
+srvcert += 'Y28ua3I6Mzg5L2NuPXNlLG89c29mdGZvcnVtLGM9a3I/Y2VydGlmaWNhdGVSZXZv\n';
+srvcert += 'Y2F0aW9ubGlzdDtiaW5hcnkwDQYJKoZIhvcNAQEFBQADggEBACfOQnUExdJzVUC3\n';
+srvcert += '+tf04gWl3Jb/8TtIunZvqGjK+huo2b+GR37ApTH5J5doiWrp5ShY7h9lmfm7L86B\n';
+srvcert += 'LN6l9gQud959KwtB/whWakI9iTl7S+HGyYALlrCB8nigmJvXhWC3sjzg1JQd8jbK\n';
+srvcert += 'ngx3fSTteLyx7rqTaouRa71W/AMOR9Pe8CJj5GMAASgliWg1a0c7SpRdhYVT4iif\n';
+srvcert += '3MNdsgAR4T3jCMzVgbL84TqWtHjim2cDftBPQHRHC9C5qdABK4KxvjlYT8EiDNr4\n';
+srvcert += 'WOvj7o3NCyFiA70gD2SYPgSuZO48AhGk+4eUCp87P65sXJUz92+PB5kHmud5C8Bc\n';
+srvcert += 'jUYuuyU=\n';
+srvcert += '-----END CERTIFICATE-----\n';
+srvcert += '';
+
+
+//]]>
+</script>
+<script>
+//<![CDATA[
+	
+window.addEventListener('pagehide', function() {
+   	if( typeof etaxLoading == "function") etaxLoading(false);
+});
+	
+function lnbMenuPage(lnb,url){
+	lnbMenuPage2 ( lnb , url , "" );
+}
+
+function lnbMenuPage2(lnb,url, _target){
+
+	//  자동납부 신청 일시 중단
+	if( (url.indexOf("AutoTsTaxAction.") > -1) && (typeof isImpossibleAutoTsTax != "undefined" && isImpossibleAutoTsTax) ) {
+		alert( isImpossibleAutoTsTax_RegMsg );
+		return false;
+	}
+	
+	// 전자사서함 페이지 이동시 로딩바
+	if( lnb == "050603"&& typeof etaxLoading == "function") {
+		etaxLoading();
+	}
+	
+	var dest_url;
+	
+	if ( _target == "_self" || _target == undefined || _target == ""){
+		if (url.indexOf("?") > 0) {
+			location.href = url+'&gnb_id='+lnb+'&lnb_id='+lnb+'&gl_gubun='+'l';
+		} else {
+			location.href = url+'?gnb_id='+lnb+'&lnb_id='+lnb+'&gl_gubun='+'l';
+		}
+		return false;
+	}else{
+		var frm = document.targetLinkFrm;
+		frm.target = _target;
+		frm.action = url;
+		frm.submit();
+	}
+}
+//]]>
+</script>
+<div id="lnb" class="lnb menu01">
+	<h2><img src="/static/open_images/sub/h2_menu01.gif" alt="조회납부"/></h2>
+	<ul>
+		<li><a id="lnbA0101" href="javascript:lnbMenuPage2('0101','GetListMyTaxAction.tran','_self');"   >회원납부</a>		</li>
+		<li><a id="lnbA0105" href="javascript:lnbMenuPage2('0105','GetListTaxNoAction.view?menu_gubun=TaxNo','_self');"   >납세번호납부</a>		</li>
+		<li><a id="lnbA0106" href="javascript:lnbMenuPage2('0106','RetriveEpayNoPayListAction.view?menu_gubun=EpayNo','_self');"   >전자납부번호납부</a>		</li>
+		<li><a id="lnbA0107" href="javascript:lnbMenuPage2('0107','GetListMyWtrAction.tran?menu_gubun=Wtrsply','_self');"   >상하수도요금납부</a>		</li>
+		<li><a id="lnbA0108" href="javascript:lnbMenuPage2('0108','RetriveEasyNoPayListAction.view?menu_gubun=EasyNo','_self');"   >간편납부번호납부</a>		</li>
+		<li><a id="lnbA0109" href="javascript:lnbMenuPage2('0109','GetListPartpayAction.view?menu_gubun=Partpay','_self');"   >일부납부</a>		</li>
+		<li><a id="lnbA0110" href="javascript:lnbMenuPage2('011001','GetListReservAction.view?menu_gubun=Reserv','_self');"   >예약이체납부관리</a>
+			<ul id="subMenu0110"  >
+				<li><a id="lnbB011001" href="javascript:lnbMenuPage2('011001','GetListReservAction.view?menu_gubun=Reserv','_self');"   >예약이체납부신청</a></li>
+				<li><a id="lnbB011002" href="javascript:lnbMenuPage2('011002','GetRcptRsvTsLstAction.view','_self');"   >예약이체납부확인/취소</a></li>
+				<li><a id="lnbB011003" href="javascript:lnbMenuPage2('011003','RsvTsStatAction.tran','_self');"   >예약이체현황</a></li>
+			</ul>
+		</li>
+		<li><a id="lnbA0111" href="javascript:lnbMenuPage2('0111','GetWetaxSeqnoAction.tran','_blank');"  title='전국지방세납부 새창으로 이동' >전국지방세납부</a>		</li>
+		<li class="last"><a id="lnbA0112" href="javascript:lnbMenuPage2('011201','TaxCartAction.tran?command=03','_self');"   >납부바구니</a>
+			<ul id="subMenu0112"  >
+				<li><a id="lnbB011201" href="javascript:lnbMenuPage2('011201','TaxCartAction.tran?command=03','_self');"   >납부바구니 조회</a></li>
+				<li><a id="lnbB011202" href="javascript:lnbMenuPage2('011202','WrcpCartAction.view','_self');"   >납부바구니 납부확인</a></li>
+			</ul>
+		</li>
+	</ul>
+</div>
+
+<script>
+//<![CDATA[
+var keyBoardCheck = "";
+/**
+ * 키보드 보안 input 이 있으면 키보드 보안 모듈 실행
+ */
+$(document).ready(() => {
+	let inputElement = $('input').get();
+
+	let encInputCnt = 0;
+	for(let i = 0; i < inputElement.length; i++){
+		if('on' === inputElement[i].getAttribute('enc')){
+			encInputCnt++;
+		}
+	}
+
+	// 키보드 보안 요소 있으면 키보드 보안 모듈 실행
+	if(encInputCnt > 0){
+		npPfsCtrl.showLoading();
+		npPfsCtrl.isInstall({
+			success : function(){
+				keyBoardCheck = "success";
+				npPfsStartup(document.form, false, true, false, true, "enc", "on");
+			},
+			fail : function(){
+				keyBoardCheck = "fail";
+				npPfsStartup(document.form, false, false, false, true, "enc", "on");
+			}
+		});
+	}
+})
+
+var lnbID = '0101';
+ if ( lnbID.length >= 4 ){
+	 //현재 LNB ID 에 따라 왼쪽 메뉴 item Class 변경
+	 var lnbID4 = 'lnbA'+lnbID.substr ( 0 , 4 );
+	 try{
+	 	document.getElementById (lnbID4).className="on";
+	 }catch(e){
+	 }
+	 var lnbID4_2 = 'lnbB'+lnbID.substr ( 0 , 4 );
+	 try{
+	 	document.getElementById (lnbID4_2).className="on";
+	 }catch(e){
+	 }
+ }
+ if ( lnbID.length >= 6 ){
+	//현재 LNB ID 에 따라 왼쪽 메뉴 item Class 변경
+	 var lnbID6 = 'lnbA'+lnbID.substr ( 0 , 6 );
+	 try{
+	 	document.getElementById (lnbID6).className="on";
+	 }catch(e){
+	 }
+	 var lnbID6_2 = 'lnbB'+lnbID.substr ( 0 , 6 );
+	 try{
+	 	document.getElementById (lnbID6_2).className="on";
+	 }catch(e){
+	 }
+ }
+//]]>
+</script>
+
+
+<script>
+	function popClose(){
+		document.querySelector("#layerPopInfo").style.display = "none";
+	}
+</script>
+<!-- layer 팝업 안내 Start -->
+<div class="popup_wrap" id="layerPopInfo" style="position:fixed;display: none;left:calc(50% - 270px);top:calc(50% - 225px);z-index: 10000;">
+	<div class="bg"></div>
+	<div class="layer_popup_1" style="position:relative;width:540px;height:450px;left:calc(50% - 270px);top:calc(50% - 225px);">
+		<div class="layer_close_tit">프로그램설치 안내</div>
+		<div class="layer_close_1"><button type="button" title="닫기" onclick="popClose();"></button></div>
+
+		<div class="con lh18">
+			<div class="pd25 lh18">
+				<div class="keyboard_security">
+					안전한 금융거래이용을 위해 보안프로그램 설치가 필요합니다.
+				</div>
+				<strong>키보드로 직접 입력을 원하는 경우,</strong><br>
+				입력하는 데이터 보호를 위하여 키보드 보안 프로그램 설치가 필요합니다.<br><br>
+				<strong>설치를 원하지 않는 경우,</strong><br>
+				가상 키보드를 이용하여 마우스로 입력이 가능합니다.<br><br>
+				키보드 보안 프로그램 설치 화면으로 이동하시겠습니까?
+				<div class="mt10" style="clear:both; text-align:center; padding:20px 0 0; padding-bottom:10px;">
+					<button type="button" class="btn_pop_bottom_defalut" onclick="location.href ='/jsp/NonActiveInstallCheckNew.jsp'">예</button>
+					<button type="button" class="btn_pop_bottom_defalut gray" onclick="popClose()">아니요</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- layer 팝업 안내 End -->
+
+
+		</div>
+		<div id="contents" class="contents">
+			<h3><img src="/static/open_images/sub/h3_menu06_08.gif" alt="조회/발급" /></h3>
+			
+
+
+
+<p class="location">
+<img src="/static/open_images/sub/ico_home.gif" alt="홈" />
+ &gt; 조회납부 &gt; <span> 회원납부</span></p>
+<!-- <a href="#"><img src="/static/images/common/btn/btn_etax_manual1.gif" alt="ETAX사용설명서" /></a></p>--> 
+			
+
+
+
+
+
+
+
+
+
+
+
+		  
+<script> 
+var balloonHelp_1_title = "고객번호";  
+ var balloonHelp_1 = "고객번호를 테스트합니다.수정수정";  
+ var balloonHelp_1_yn = "N";  
+ var tot_count = 1;  
+ </script> 
+
+		
+
+  <!-- 풍선도움말 -->
+			<div class="real_contents info_contents">
+				<div id="search_print_wrap">
+
+					
+<div class="guide_tab_2">
+    <ul id="tab_title">
+        <li><a href="javascript:;" id="LndBldDlpy" onclick="lnbMenuPage2('0709', 'LndBldDlpyLstAction.view', '_self');" class="tab">토지/건물 체납조회</a></li>
+        <li><a href="javascript:;" id="AtmblTax" onclick="lnbMenuPage2('0709', 'AtmblTaxDlpyAction.tran', '_self');" class="tab">자동차세 체납조회</a></li>
+        <li class="etc"><a href="javascript:;" id="AtmblNum" onclick="lnbMenuPage2('0709', 'AtmblNumLstAction.view?status=carYoungchi', '_self');" class="tab">자동차번호판 영치조회</a></li>
+        <li class="etc"><a href="javascript:;" id="BldnStnd" onclick="lnbMenuPage2('0709', 'BldnStndAmtLstAction.view', '_self');" class="tab">주택외건물시가 표준액조회</a></li>
+        <li><a href="javascript:;" id="docCnfrmReq" onclick="lnbMenuPage2('0709', 'docCnfrmReqAction.view', '_self');" class="tab">발급문서원본 확인조회</a></li>
+        <li><a href="javascript:;" id="MoTxpy" onclick="lnbMenuPage2('0709', 'getExampleTaxpayerAction.view', '_self');" class="tab">모범납세자 조회/발급</a></li>
+        <li class="etc"><a href="https://www.gov.kr/main?a=AA020InfoCappViewApp&amp;HighCtgCD=A03019002&amp;CappBizCD=13100000084" target="_blank" class="tab" title="정부24 사이트의 지방세세목별 과세납세증명서 상세내용 페이지로 새창에서 열림" onclick="lndAlert();">지방세세목별 과세납세증명서</a></li>
+        <li class="etc"><a href="javascript:;" id="Village" onclick="lnbMenuPage2('0709', 'VillageSemuCertListAction.view', '_self');" class="tab">마을세무사 조회/발급</a></li>
+        
+    </ul>
+</div>
+
+<script>
+    $('#'+includePage).addClass('on');
+</script> <!-- 조회/발급 목록 -->
+
+					<!-- 주택외건물시가 표준액조회 -->
+					<div class="etaxtab_cont" id="tabcont04">
+						<form name="actForm" method="post" onsubmit="return false" action="#">
+						<input type="hidden" name="SIGU_NAME" value="null" />
+						<input type="hidden" name="PRE_SIGU_CD" value="680" />
+						<input type="hidden" name="HDONG_CD" value="10100" />
+						<input type="hidden" name="BDONG_CD" value="99999" />
+						<input type="hidden" name="INPUT" value="" />
+						<input type="hidden" name="downExcel" value="" />
+						<h4 class="visual">주택외건물시가 표준액조회</h4>
+						<table>
+							<caption>주택외건물시가 표준액조회 입력</caption>
+							<colgroup>
+								<col style="width:12%" />
+								<col style="width:14%" />
+								<col style="width:14%" />
+								<col style="width:14%" />
+								<col style="width:auto" />
+							</colgroup>
+							<thead>
+								<tr>
+									<th scope="col"><label for="GWAPO_YEAR">년도</label></th>
+									<th scope="col">
+										<label for="SIGU_CD">관할구청</label> 
+										<a href="javascript:" onclick="balloonhelpdisp('9',event);return false;" id="balloonHelp_9_title" style="display:none"><img src="/static/open_images/sub/ico_info.gif" alt="관할구청이란?" id="balloonHelp_9_yn" style="display:none"/></a><div id="balloonHelp_9_Div" style="position:relative;display:none;"></div>
+									</th>
+									<th scope="col">
+										<label for="HDONG">법정동</label> 
+										<a href="javascript:" onclick="balloonhelpdisp('10',event);return false;" id="balloonHelp_10_title" style="display:none"><img src="/static/open_images/sub/ico_info.gif" alt="법정동이란?" id="balloonHelp_10_yn" style="display:none"/></a><div id="balloonHelp_10_Div" style="position:relative;display:none;"></div>
+									</th>
+									<th scope="col">
+										<label for="tsj_gubun">특수지</label> 
+										<a href="javascript:" onclick="balloonhelpdisp('11',event);return false;" id="balloonHelp_11_title" style="display:none"><img src="/static/open_images/sub/ico_info.gif" alt="특수지란?" id="balloonHelp_11_yn" style="display:none"/></a><div id="balloonHelp_11_Div" style="position:relative;display:none;"></div>
+									</th>
+									<th scope="col" class="last">
+										<label for="bonbun">상세주소</label> 
+										<a href="javascript:" onclick="balloonhelpdisp('12',event);return false;" id="balloonHelp_12_title" style="display:none"><img src="/static/open_images/sub/ico_info.gif" alt="상세주소란?" id="balloonHelp_12_yn" style="display:none"/></a><div id="balloonHelp_12_Div" style="position:relative;display:none;"></div>
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td class="center">
+										<select name="GWAPO_YEAR" id="GWAPO_YEAR">
+											<option value="" >년선택</option>
+											<!-- 2024.04.30 김상협 주무관 요청으로 2012년부터 조회되도록 수정함. 2012년까지 데이터 제공한다고함.  -->
+								
+											<option value="2026" >2026년</option>								
+								
+											<option value="2025" selected="selected">2025년</option>								
+								
+											<option value="2024" >2024년</option>								
+								
+											<option value="2023" >2023년</option>								
+								
+											<option value="2022" >2022년</option>								
+								
+											<option value="2021" >2021년</option>								
+								
+											<option value="2020" >2020년</option>								
+								
+											<option value="2019" >2019년</option>								
+								
+											<option value="2018" >2018년</option>								
+								
+											<option value="2017" >2017년</option>								
+								
+											<option value="2016" >2016년</option>								
+								
+											<option value="2015" >2015년</option>								
+								
+											<option value="2014" >2014년</option>								
+								
+											<option value="2013" >2013년</option>								
+								
+											<option value="2012" >2012년</option>								
+								
+										</select>
+									</td>
+									<td class="center">
+										<select name="SIGU_CD" id="SIGU_CD" onchange="selSiguCD();">
+											<option value="000" selected="selected">관할구청</option>
+								
+											<option value="680">강남구</option>
+								
+											<option value="740">강동구</option>
+								
+											<option value="305">강북구</option>
+								
+											<option value="500">강서구</option>
+								
+											<option value="620">관악구</option>
+								
+											<option value="215">광진구</option>
+								
+											<option value="530">구로구</option>
+								
+											<option value="545">금천구</option>
+								
+											<option value="350">노원구</option>
+								
+											<option value="320">도봉구</option>
+								
+											<option value="230">동대문구</option>
+								
+											<option value="590">동작구</option>
+								
+											<option value="440">마포구</option>
+								
+											<option value="410">서대문구</option>
+								
+											<option value="650">서초구</option>
+								
+											<option value="200">성동구</option>
+								
+											<option value="290">성북구</option>
+								
+											<option value="710">송파구</option>
+								
+											<option value="470">양천구</option>
+								
+											<option value="560">영등포구</option>
+								
+											<option value="170">용산구</option>
+								
+											<option value="380">은평구</option>
+								
+											<option value="110">종로구</option>
+								
+											<option value="140">중구</option>
+								
+											<option value="260">중랑구</option>
+								
+										</select>
+									</td>
+									<td class="center">
+										<div id="HDIV_000" style="">
+										<select name="HDONG" id="HDONG">
+											<option value="000" selected="selected">법정동선택</option>											
+										</select>
+										</div>
+								
+										<div id="HDIV_680" style="display:none;">
+										<select name="HDONG680" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG680.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10300">개포동</option>
+								
+											<option value="10800">논현동</option>
+								
+											<option value="10600">대치동</option>
+								
+											<option value="11800">도곡동</option>
+								
+											<option value="10500">삼성동</option>
+								
+											<option value="11100">세곡동</option>
+								
+											<option value="11500">수서동</option>
+								
+											<option value="10700">신사동</option>
+								
+											<option value="11000">압구정동</option>
+								
+											<option value="10100">역삼동</option>
+								
+											<option value="11300">율현동</option>
+								
+											<option value="11400">일원동</option>
+								
+											<option value="11200">자곡동</option>
+								
+											<option value="10400">청담동</option>
+								
+											<option value="10200">포이동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_740" style="display:none;">
+										<select name="HDONG740" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG740.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="11000">강일동</option>
+								
+											<option value="10200">고덕동</option>
+								
+											<option value="10500">길동</option>
+								
+											<option value="10600">둔촌동</option>
+								
+											<option value="10100">명일동</option>
+								
+											<option value="10300">상일동</option>
+								
+											<option value="10800">성내동</option>
+								
+											<option value="10700">암사동</option>
+								
+											<option value="10900">천호동</option>
+								
+											<option value="10400">하일동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_305" style="display:none;">
+										<select name="HDONG305" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG305.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10100">미아동</option>
+								
+											<option value="10200">번동</option>
+								
+											<option value="10300">수유동</option>
+								
+											<option value="10400">우이동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_500" style="display:none;">
+										<select name="HDONG500" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG500.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10400">가양동</option>
+								
+											<option value="11000">개화동</option>
+								
+											<option value="10800">공항동</option>
+								
+											<option value="11100">과해동</option>
+								
+											<option value="10600">내발산동</option>
+								
+											<option value="10200">등촌동</option>
+								
+											<option value="10500">마곡동</option>
+								
+											<option value="10900">방화동</option>
+								
+											<option value="10100">염창동</option>
+								
+											<option value="11200">오곡동</option>
+								
+											<option value="11300">오쇠동</option>
+								
+											<option value="10700">외발산동</option>
+								
+											<option value="10300">화곡동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_620" style="display:none;">
+										<select name="HDONG620" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG620.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10300">남현동</option>
+								
+											<option value="10100">봉천동</option>
+								
+											<option value="10200">신림동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_215" style="display:none;">
+										<select name="HDONG215" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG215.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10400">광장동</option>
+								
+											<option value="10300">구의동</option>
+								
+											<option value="10900">군자동</option>
+								
+											<option value="10600">노유동</option>
+								
+											<option value="10200">능동</option>
+								
+											<option value="10800">모진동</option>
+								
+											<option value="10500">자양동</option>
+								
+											<option value="10100">중곡동</option>
+								
+											<option value="10700">화양동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_530" style="display:none;">
+										<select name="HDONG530" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG530.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10300">가리봉동</option>
+								
+											<option value="10700">개봉동</option>
+								
+											<option value="10600">고척동</option>
+								
+											<option value="10200">구로동</option>
+								
+											<option value="10900">궁동</option>
+								
+											<option value="10100">신도림동</option>
+								
+											<option value="10800">오류동</option>
+								
+											<option value="11000">온수동</option>
+								
+											<option value="11100">천왕동</option>
+								
+											<option value="11200">항동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_545" style="display:none;">
+										<select name="HDONG545" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG545.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10100">가산동</option>
+								
+											<option value="10200">독산동</option>
+								
+											<option value="10300">시흥동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_350" style="display:none;">
+										<select name="HDONG350" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG350.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10300">공릉동</option>
+								
+											<option value="10500">상계동</option>
+								
+											<option value="10200">월계동</option>
+								
+											<option value="10600">중계동</option>
+								
+											<option value="10400">하계동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_320" style="display:none;">
+										<select name="HDONG320" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG320.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10800">도봉동</option>
+								
+											<option value="10600">방학동</option>
+								
+											<option value="10500">쌍문동</option>
+								
+											<option value="10700">창동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_230" style="display:none;">
+										<select name="HDONG230" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG230.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10500">답십리동</option>
+								
+											<option value="10100">신설동</option>
+								
+											<option value="10200">용두동</option>
+								
+											<option value="11000">이문동</option>
+								
+											<option value="10600">장안동</option>
+								
+											<option value="10400">전농동</option>
+								
+											<option value="10300">제기동</option>
+								
+											<option value="10700">청량리동</option>
+								
+											<option value="10800">회기동</option>
+								
+											<option value="10900">휘경동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_590" style="display:none;">
+										<select name="HDONG590" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG590.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10100">노량진동</option>
+								
+											<option value="10800">대방동</option>
+								
+											<option value="10600">동작동</option>
+								
+											<option value="10400">본동</option>
+								
+											<option value="10700">사당동</option>
+								
+											<option value="10300">상도1동</option>
+								
+											<option value="10200">상도동</option>
+								
+											<option value="10900">신대방동</option>
+								
+											<option value="10500">흑석동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_440" style="display:none;">
+										<select name="HDONG440" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG440.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10200">공덕동</option>
+								
+											<option value="11300">구수동</option>
+								
+											<option value="11000">노고산동</option>
+								
+											<option value="11800">당인동</option>
+								
+											<option value="10800">대흥동</option>
+								
+											<option value="10400">도화동</option>
+								
+											<option value="12100">동교동</option>
+								
+											<option value="10700">마포동</option>
+								
+											<option value="12300">망원동</option>
+								
+											<option value="11500">상수동</option>
+								
+											<option value="12700">상암동</option>
+								
+											<option value="12000">서교동</option>
+								
+											<option value="12500">성산동</option>
+								
+											<option value="10300">신공덕동</option>
+								
+											<option value="11100">신수동</option>
+								
+											<option value="11700">신정동</option>
+								
+											<option value="10100">아현동</option>
+								
+											<option value="12400">연남동</option>
+								
+											<option value="10900">염리동</option>
+								
+											<option value="10500">용강동</option>
+								
+											<option value="12600">중동</option>
+								
+											<option value="11400">창전동</option>
+								
+											<option value="10600">토정동</option>
+								
+											<option value="11600">하중동</option>
+								
+											<option value="12200">합정동</option>
+								
+											<option value="11200">현석동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_410" style="display:none;">
+										<select name="HDONG410" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG410.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="12000">남가좌동</option>
+								
+											<option value="10500">냉천동</option>
+								
+											<option value="11300">대신동</option>
+								
+											<option value="11200">대현동</option>
+								
+											<option value="10400">미근동</option>
+								
+											<option value="11500">봉원동</option>
+								
+											<option value="11900">북가좌동</option>
+								
+											<option value="11000">북아현동</option>
+								
+											<option value="11400">신촌동</option>
+								
+											<option value="11700">연희동</option>
+								
+											<option value="10800">영천동</option>
+								
+											<option value="10700">옥천동</option>
+								
+											<option value="11600">창천동</option>
+								
+											<option value="10600">천연동</option>
+								
+											<option value="10100">충정로2가</option>
+								
+											<option value="10200">충정로3가</option>
+								
+											<option value="10300">합동</option>
+								
+											<option value="10900">현저동</option>
+								
+											<option value="11800">홍은동</option>
+								
+											<option value="11100">홍제동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_650" style="display:none;">
+										<select name="HDONG650" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG650.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10900">내곡동</option>
+								
+											<option value="10700">반포동</option>
+								
+											<option value="10100">방배동</option>
+								
+											<option value="10800">서초동</option>
+								
+											<option value="11100">신원동</option>
+								
+											<option value="10200">양재동</option>
+								
+											<option value="11000">염곡동</option>
+								
+											<option value="10300">우면동</option>
+								
+											<option value="10400">원지동</option>
+								
+											<option value="10600">잠원동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_200" style="display:none;">
+										<select name="HDONG200" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG200.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10900">금호동1가</option>
+								
+											<option value="11000">금호동2가</option>
+								
+											<option value="11100">금호동3가</option>
+								
+											<option value="11200">금호동4가</option>
+								
+											<option value="10400">도선동</option>
+								
+											<option value="10500">마장동</option>
+								
+											<option value="10600">사근동</option>
+								
+											<option value="10100">상왕십리동</option>
+								
+											<option value="11400">성수동1가</option>
+								
+											<option value="11500">성수동2가</option>
+								
+											<option value="11800">송정동</option>
+								
+											<option value="11300">옥수동</option>
+								
+											<option value="12200">용답동</option>
+								
+											<option value="10800">응봉동</option>
+								
+											<option value="10200">하왕십리동</option>
+								
+											<option value="10700">행당동</option>
+								
+											<option value="10300">홍익동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_290" style="display:none;">
+										<select name="HDONG290" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG290.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="13400">길음동</option>
+								
+											<option value="10300">돈암동</option>
+								
+											<option value="11600">동선동1가</option>
+								
+											<option value="11700">동선동2가</option>
+								
+											<option value="11800">동선동3가</option>
+								
+											<option value="11900">동선동4가</option>
+								
+											<option value="12000">동선동5가</option>
+								
+											<option value="10400">동소문동1가</option>
+								
+											<option value="10500">동소문동2가</option>
+								
+											<option value="10600">동소문동3가</option>
+								
+											<option value="10700">동소문동4가</option>
+								
+											<option value="10800">동소문동5가</option>
+								
+											<option value="10900">동소문동6가</option>
+								
+											<option value="11000">동소문동7가</option>
+								
+											<option value="13000">보문동1가</option>
+								
+											<option value="13100">보문동2가</option>
+								
+											<option value="13200">보문동3가</option>
+								
+											<option value="12600">보문동4가</option>
+								
+											<option value="12700">보문동5가</option>
+								
+											<option value="12800">보문동6가</option>
+								
+											<option value="12900">보문동7가</option>
+								
+											<option value="11100">삼선동1가</option>
+								
+											<option value="11200">삼선동2가</option>
+								
+											<option value="11300">삼선동3가</option>
+								
+											<option value="11400">삼선동4가</option>
+								
+											<option value="11500">삼선동5가</option>
+								
+											<option value="13700">상월곡동</option>
+								
+											<option value="13900">석관동</option>
+								
+											<option value="10100">성북동</option>
+								
+											<option value="10200">성북동1가</option>
+								
+											<option value="12100">안암동1가</option>
+								
+											<option value="12200">안암동2가</option>
+								
+											<option value="12300">안암동3가</option>
+								
+											<option value="12400">안암동4가</option>
+								
+											<option value="12500">안암동5가</option>
+								
+											<option value="13800">장위동</option>
+								
+											<option value="13300">정릉동</option>
+								
+											<option value="13500">종암동</option>
+								
+											<option value="13600">하월곡동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_710" style="display:none;">
+										<select name="HDONG710" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG710.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10700">가락동</option>
+								
+											<option value="11300">거여동</option>
+								
+											<option value="11400">마천동</option>
+								
+											<option value="10800">문정동</option>
+								
+											<option value="11100">방이동</option>
+								
+											<option value="10600">삼전동</option>
+								
+											<option value="10500">석촌동</option>
+								
+											<option value="10400">송파동</option>
+								
+											<option value="10200">신천동</option>
+								
+											<option value="11200">오금동</option>
+								
+											<option value="10100">잠실동</option>
+								
+											<option value="10900">장지동</option>
+								
+											<option value="10300">풍납동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_470" style="display:none;">
+										<select name="HDONG470" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG470.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10200">목동</option>
+								
+											<option value="10300">신월동</option>
+								
+											<option value="10100">신정동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_560" style="display:none;">
+										<select name="HDONG560" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG560.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="11700">당산동</option>
+								
+											<option value="11100">당산동1가</option>
+								
+											<option value="11200">당산동2가</option>
+								
+											<option value="11300">당산동3가</option>
+								
+											<option value="11400">당산동4가</option>
+								
+											<option value="11500">당산동5가</option>
+								
+											<option value="11600">당산동6가</option>
+								
+											<option value="13300">대림동</option>
+								
+											<option value="11800">도림동</option>
+								
+											<option value="11900">문래동1가</option>
+								
+											<option value="12000">문래동2가</option>
+								
+											<option value="12100">문래동3가</option>
+								
+											<option value="12200">문래동4가</option>
+								
+											<option value="12300">문래동5가</option>
+								
+											<option value="12400">문래동6가</option>
+								
+											<option value="13200">신길동</option>
+								
+											<option value="13400">양평동</option>
+								
+											<option value="12500">양평동1가</option>
+								
+											<option value="12600">양평동2가</option>
+								
+											<option value="12700">양평동3가</option>
+								
+											<option value="12800">양평동4가</option>
+								
+											<option value="12900">양평동5가</option>
+								
+											<option value="13000">양평동6가</option>
+								
+											<option value="13100">양화동</option>
+								
+											<option value="11000">여의도동</option>
+								
+											<option value="10100">영등포동</option>
+								
+											<option value="10200">영등포동1가</option>
+								
+											<option value="10300">영등포동2가</option>
+								
+											<option value="10400">영등포동3가</option>
+								
+											<option value="10500">영등포동4가</option>
+								
+											<option value="10600">영등포동5가</option>
+								
+											<option value="10700">영등포동6가</option>
+								
+											<option value="10800">영등포동7가</option>
+								
+											<option value="10900">영등포동8가</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_170" style="display:none;">
+										<select name="HDONG170" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG170.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10400">갈월동</option>
+								
+											<option value="10500">남영동</option>
+								
+											<option value="12000">도원동</option>
+								
+											<option value="13200">동빙고동</option>
+								
+											<option value="10700">동자동</option>
+								
+											<option value="12200">문배동</option>
+								
+											<option value="13600">보광동</option>
+								
+											<option value="11500">산천동</option>
+								
+											<option value="10800">서계동</option>
+								
+											<option value="13300">서빙고동</option>
+								
+											<option value="12300">신계동</option>
+								
+											<option value="11400">신창동</option>
+								
+											<option value="12100">용문동</option>
+								
+											<option value="10600">용산동1가</option>
+								
+											<option value="10200">용산동2가</option>
+								
+											<option value="12600">용산동3가</option>
+								
+											<option value="10300">용산동4가</option>
+								
+											<option value="12700">용산동5가</option>
+								
+											<option value="13500">용산동6가</option>
+								
+											<option value="11200">원효로1가</option>
+								
+											<option value="11300">원효로2가</option>
+								
+											<option value="11700">원효로3가</option>
+								
+											<option value="11800">원효로4가</option>
+								
+											<option value="12900">이촌동</option>
+								
+											<option value="13000">이태원동</option>
+								
+											<option value="13400">주성동</option>
+								
+											<option value="11600">청암동</option>
+								
+											<option value="10900">청파동1가</option>
+								
+											<option value="11000">청파동2가</option>
+								
+											<option value="11100">청파동3가</option>
+								
+											<option value="12400">한강로1가</option>
+								
+											<option value="12500">한강로2가</option>
+								
+											<option value="12800">한강로3가</option>
+								
+											<option value="13100">한남동</option>
+								
+											<option value="11900">효창동</option>
+								
+											<option value="10100">후암동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_380" style="display:none;">
+										<select name="HDONG380" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG380.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10400">갈현동</option>
+								
+											<option value="10500">구산동</option>
+								
+											<option value="11200">구파발동</option>
+								
+											<option value="10200">녹번동</option>
+								
+											<option value="10600">대조동</option>
+								
+											<option value="10300">불광동</option>
+								
+											<option value="10100">수색동</option>
+								
+											<option value="10900">신사동</option>
+								
+											<option value="10800">역촌동</option>
+								
+											<option value="10700">응암동</option>
+								
+											<option value="11000">증산동</option>
+								
+											<option value="11100">진관내동</option>
+								
+											<option value="11400">진관동</option>
+								
+											<option value="11300">진관외동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_110" style="display:none;">
+										<select name="HDONG110" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG110.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="14600">가회동</option>
+								
+											<option value="12900">견지동</option>
+								
+											<option value="13400">경운동</option>
+								
+											<option value="14800">계동</option>
+								
+											<option value="12700">공평동</option>
+								
+											<option value="15500">관수동</option>
+								
+											<option value="13500">관철동</option>
+								
+											<option value="12800">관훈동</option>
+								
+											<option value="17600">교남동</option>
+								
+											<option value="18000">교북동</option>
+								
+											<option value="18200">구기동</option>
+								
+											<option value="10300">궁정동</option>
+								
+											<option value="13100">권농동</option>
+								
+											<option value="13700">낙원동</option>
+								
+											<option value="11800">내수동</option>
+								
+											<option value="11400">내자동</option>
+								
+											<option value="10900">누상동</option>
+								
+											<option value="11000">누하동</option>
+								
+											<option value="11700">당주동</option>
+								
+											<option value="11600">도렴동</option>
+								
+											<option value="15300">돈의동</option>
+								
+											<option value="16800">동숭동</option>
+								
+											<option value="17000">명륜1가</option>
+								
+											<option value="17100">명륜2가</option>
+								
+											<option value="17300">명륜3가</option>
+								
+											<option value="17200">명륜4가</option>
+								
+											<option value="15100">묘동</option>
+								
+											<option value="18700">무악동</option>
+								
+											<option value="15200">봉익동</option>
+								
+											<option value="18400">부암동</option>
+								
+											<option value="14400">사간동</option>
+								
+											<option value="11500">사직동</option>
+								
+											<option value="14000">삼청동</option>
+								
+											<option value="12300">서린동</option>
+								
+											<option value="11900">세종로</option>
+								
+											<option value="14200">소격동</option>
+								
+											<option value="17800">송월동</option>
+								
+											<option value="14500">송현동</option>
+								
+											<option value="12400">수송동</option>
+								
+											<option value="17500">숭인동</option>
+								
+											<option value="10200">신교동</option>
+								
+											<option value="12000">신문로1가</option>
+								
+											<option value="12100">신문로2가</option>
+								
+											<option value="18600">신영동</option>
+								
+											<option value="14100">안국동</option>
+								
+											<option value="16600">연건동</option>
+								
+											<option value="16000">연지동</option>
+								
+											<option value="15800">예지동</option>
+								
+											<option value="11100">옥인동</option>
+								
+											<option value="13000">와룡동</option>
+								
+											<option value="13200">운니동</option>
+								
+											<option value="15900">원남동</option>
+								
+											<option value="14900">원서동</option>
+								
+											<option value="16500">이화동</option>
+								
+											<option value="13300">익선동</option>
+								
+											<option value="13600">인사동</option>
+								
+											<option value="15700">인의동</option>
+								
+											<option value="15400">장사동</option>
+								
+											<option value="14700">재동</option>
+								
+											<option value="10700">적선동</option>
+								
+											<option value="12600">종로1가</option>
+								
+											<option value="13800">종로2가</option>
+								
+											<option value="15600">종로3가</option>
+								
+											<option value="16100">종로4가</option>
+								
+											<option value="16300">종로5가</option>
+								
+											<option value="16400">종로6가</option>
+								
+											<option value="12500">중학동</option>
+								
+											<option value="10500">창성동</option>
+								
+											<option value="17400">창신동</option>
+								
+											<option value="10100">청운동</option>
+								
+											<option value="12200">청진동</option>
+								
+											<option value="11200">체부동</option>
+								
+											<option value="16700">충신동</option>
+								
+											<option value="10600">통의동</option>
+								
+											<option value="10800">통인동</option>
+								
+											<option value="13900">팔판동</option>
+								
+											<option value="17700">평동</option>
+								
+											<option value="18300">평창동</option>
+								
+											<option value="11300">필운동</option>
+								
+											<option value="18100">행촌동</option>
+								
+											<option value="16900">혜화동</option>
+								
+											<option value="18500">홍지동</option>
+								
+											<option value="17900">홍파동</option>
+								
+											<option value="14300">화동</option>
+								
+											<option value="10400">효자동</option>
+								
+											<option value="16200">효제동</option>
+								
+											<option value="15000">훈정동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_140" style="display:none;">
+										<select name="HDONG140" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG140.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="14500">광희동1가</option>
+								
+											<option value="14600">광희동2가</option>
+								
+											<option value="10600">남대문로1가</option>
+								
+											<option value="11500">남대문로2가</option>
+								
+											<option value="11600">남대문로3가</option>
+								
+											<option value="11700">남대문로4가</option>
+								
+											<option value="11800">남대문로5가</option>
+								
+											<option value="12800">남산동1가</option>
+								
+											<option value="12900">남산동2가</option>
+								
+											<option value="13000">남산동3가</option>
+								
+											<option value="11200">남창동</option>
+								
+											<option value="14000">남학동</option>
+								
+											<option value="10200">다동</option>
+								
+											<option value="17300">만리동1가</option>
+								
+											<option value="17400">만리동2가</option>
+								
+											<option value="12600">명동1가</option>
+								
+											<option value="12700">명동2가</option>
+								
+											<option value="10100">무교동</option>
+								
+											<option value="16400">무학동</option>
+								
+											<option value="13600">묵정동</option>
+								
+											<option value="15300">방산동</option>
+								
+											<option value="11900">봉래동1가</option>
+								
+											<option value="12000">봉래동2가</option>
+								
+											<option value="11300">북창동</option>
+								
+											<option value="15700">산림동</option>
+								
+											<option value="10700">삼각동</option>
+								
+											<option value="16600">서소문동</option>
+								
+											<option value="11100">소공동</option>
+								
+											<option value="11000">수표동</option>
+								
+											<option value="10800">수하동</option>
+								
+											<option value="16800">순화동</option>
+								
+											<option value="16200">신당동</option>
+								
+											<option value="14700">쌍림동</option>
+								
+											<option value="13500">예관동</option>
+								
+											<option value="14200">예장동</option>
+								
+											<option value="15400">오장동</option>
+								
+											<option value="10400">을지로1가</option>
+								
+											<option value="10500">을지로2가</option>
+								
+											<option value="15500">을지로3가</option>
+								
+											<option value="15000">을지로4가</option>
+								
+											<option value="15100">을지로5가</option>
+								
+											<option value="14800">을지로6가</option>
+								
+											<option value="14900">을지로7가</option>
+								
+											<option value="16900">의주로1가</option>
+								
+											<option value="17200">의주로2가</option>
+								
+											<option value="16000">인현동1가</option>
+								
+											<option value="13400">인현동2가</option>
+								
+											<option value="15600">입정동</option>
+								
+											<option value="10900">장교동</option>
+								
+											<option value="14300">장충동1가</option>
+								
+											<option value="14400">장충동2가</option>
+								
+											<option value="13100">저동1가</option>
+								
+											<option value="16100">저동2가</option>
+								
+											<option value="16700">정동</option>
+								
+											<option value="15200">주교동</option>
+								
+											<option value="14100">주자동</option>
+								
+											<option value="17100">중림동</option>
+								
+											<option value="15900">초동</option>
+								
+											<option value="12400">충무로1가</option>
+								
+											<option value="12500">충무로2가</option>
+								
+											<option value="15800">충무로3가</option>
+								
+											<option value="13200">충무로4가</option>
+								
+											<option value="13300">충무로5가</option>
+								
+											<option value="17000">충정로1가</option>
+								
+											<option value="10300">태평로1가</option>
+								
+											<option value="11400">태평로2가</option>
+								
+											<option value="13700">필동1가</option>
+								
+											<option value="13800">필동2가</option>
+								
+											<option value="13900">필동3가</option>
+								
+											<option value="16500">황학동</option>
+								
+											<option value="12100">회현동1가</option>
+								
+											<option value="12200">회현동2가</option>
+								
+											<option value="12300">회현동3가</option>
+								
+											<option value="16300">흥인동</option>
+								
+										</select>
+										</div>
+								
+										<div id="HDIV_260" style="display:none;">
+										<select name="HDONG260" onchange="document.actForm.HDONG_CD.value=document.actForm.HDONG260.value;" title="법정동선택">
+											<option value="000">법정동선택</option>
+								
+											<option value="10500">망우동</option>
+								
+											<option value="10100">면목동</option>
+								
+											<option value="10400">묵동</option>
+								
+											<option value="10200">상봉동</option>
+								
+											<option value="10600">신내동</option>
+								
+											<option value="10300">중화동</option>
+								
+										</select>
+										</div>
+									</td>
+									<td class="center">
+										<select name="tsj_gubun" id="tsj_gubun">
+											<option value="1" selected="selected">일반번지</option>
+									  		<option value="2" >산번지</option>				
+											<option value="3" >가번지</option>				
+											<option value="4" >구번지</option>				
+											<option value="5" >구획정리</option>				
+											<option value="6" >하천번지</option>				
+											<option value="7" >블럭번지</option>				
+											<option value="8" >무번지</option>				
+											<option value="0" >특수지</option>
+										</select>
+									</td>
+									<td class="center last">
+										<input type="text" name="bonbun" id="bonbun" class="txt no_s" maxlength="4" onKeyup="cfNumberOnly(this)" title="주소 번지수 앞자리 입력" value="737" /> -
+										<input type="text" name="bubun" id="bubun" class="txt no_s" maxlength="4" onKeyup="cfNumberOnly(this)" title="주소 번지수 뒷자리 입력" value="" /> <label for="bubun" class="mr10">번지</label>
+										<input type="text" name="dong" id="dong" class="txt no_s" maxlength="5" onKeyup="regExp(this)" value="" /> <label for="dong">동</label>
+										<input type="text" name="hosu" id="hosu" class="txt no_s" maxlength="5" onKeyup="regExp(this)" value="" /> <label for="hosu">호</label>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+						<p class="small_txt oran"><i>※</i> 상세주소 번지까지 필수 항목입니다. 동, 호 입력 후 안될 경우 동, 호를 빼고 조회하시기 바랍니다.</p>
+						<div class="btn_center">
+							<button type="button" class="black" onclick="searchB();">조회</button>
+						</div>
+
+						<!-- 배너 -->
+						<div class="bn_center">
+							<a href="http://www.realtyprice.kr" target="_blank" title="서울 한국토지정보시스템 새창으로 열림"><img src="/static/open_images/sub/bn_helpsearch_01.gif" alt="개별주택 공시가격 개별공시지가 http://www.realtyprice.kr" /></a><a href="http://www.realtyprice.kr" target="_blank" title="공동주택 가격열람 새창으로 열림"><img src="/static/open_images/sub/bn_helpsearch_02.png" alt="공동주택가격 열람(아파트, 연립주택, 다세대주택) http://www.realtyprice.kr" /></a><a href="https://news.seoul.go.kr/gov/statutory_standard_price#list/1" target="_blank" title="서울특별시 사이트 새창으로 열림"><img src="/static/open_images/sub/bn_helpsearch_03.gif?dummy=202607161803" alt="시가표준액 책자 http://www.seoul.go.kr" class="last"/></a>
+						</div>
+						<!-- //배너 -->
+						</form>
+						
+					
+						
+						<div class="select_list_no">
+							<button type="button" class="black" onclick="javascript:downExcel();">엑셀저장</button>
+							<button type="button" class="black" onclick="javascript:listPrint();">출력</button>
+						</div>
+								
+						<!-- 조회결과 START -->
+						<div class="result_wrap" id="printDiv">
+							<table>
+							<caption>주택외건물시가 표준액조회목록 결과</caption>
+							<colgroup>
+								<col style="width:7%" />
+								<col style="width:8%" />
+								<col style="width:12%" />
+								<col style="width:8%" />
+								<col style="width:8%" />
+								<col style="width:30%" />
+								<col style="width:7%"/>
+								<col style="width:20%"/>
+								<col style="width:auto"/>
+							</colgroup>
+							<thead>
+								<tr>
+									<th scope="col">번호</th>
+									<th scope="col">년도</th>
+									<th scope="col">번지</th>
+									<th scope="col">동</th>
+									<th scope="col">호수</th>
+									<th scope="col">물건명</th>
+									<th scope="col" colspan="2">시가표준액</th>
+									<th scope="col" class="last" >연면적</th>
+								</tr>
+							</thead>
+							<tbody>
+							
+					
+								<tr>
+									<td class="center" 	rowspan="3"	scope="row" >1																						</td>
+									<td class="center"	rowspan="3">2025																			</td>
+									<td class="center"	rowspan="3">0737-0000													</td>
+									<td class="center"	rowspan="3">0000																					</td>
+									<td class="center"	rowspan="3">00000<input type="hidden" name="r_hosu" value="00000" />			</td>
+									<td class="center"	rowspan="3">강남구 역삼동 737<input type="hidden" name="r_mul_nm" value="강남구 역삼동 737" />	</td>
+									<td class="center">계																														</td>
+									<td class="right">225,037,140,965 원																		</td>
+									<td class="right last" 	rowspan="3">212,615.29(m&sup2;)										</td>
+								</tr>
+								<tr>
+									<td class="center">건축물																													</td>
+									<td class="right">223,958,545,915 원																	</td>
+								</tr>
+								<tr>
+									<td class="center">시설																													</td>
+									<td class="right">1,078,595,050 원																	</td>
+								</tr>
+										
+							</tbody>
+							</table>
+						</div>
+						<!-- 조회결과 END -->
+					
+
+					</div>
+				</div>
+				
+				<div class="popup noline" 		style="position:relative;padding:0;">
+					<div class="popup_content" 	style="padding:0;">
+						<div class="bldn_sum" 	style="width:96%;">
+							<ul class="style01">
+								<li>위 조회된 결과는 매년 고시된 조정기준에 따라 해당 건축물의 임의시점 현황을 적용하여 산출된 금액이오니 참고하여 사용하시기 바랍니다.</li>
+								<li>또한 1월1일 이후 신축/증축 등 조회되지 않는 건축물의 시가표준액 등 자세한 내용은 해당 구청 세무과로 문의하여 주시기 바랍니다.</li>
+								<li>주상복합의 경우 시가표준액은 연면적에서 주택 부분(면적)을 제외한 건축물의 시가표준액입니다.</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+				<!-- 안내 -->
+				
+<script>
+function fnTelGetPop() {
+	var form = document.actForm;
+	var sel_cd = form.SIGU_CD.options[form.SIGU_CD.selectedIndex].value;
+	var winLftPosition  = (screen.width  - 730) / 2;
+	var winTopPosition  = (screen.height - 600) / 2;	
+	window.open("/jsp/statTelInfoAction.tran?workNm=startTelGetPop&setType=01&sigu_cd="+sel_cd, '자치구 전화번호 안내', 'width=730, height=600, left=' + winLftPosition + ', top=' + winTopPosition + ', statusbar=0, scrollbars=no, location=no');
+}
+</script>
+<div class="help_wrap">
+	<span><img src="/static/open_images/sub/txt_notice_help.gif" alt="※안내를 꼭 확인하세요!" /></span>
+	<dl>
+		<dt>주택외건물 시가표준액 조회 안내</dt>
+		<dd>
+			<ul class="normal">
+				<li>주택외건물시가 표준액 조회에 대한 문의는 관할 구청으로 연락바랍니다.<br/>
+					<a href="javascript:void(0);" onclick="fnTelGetPop();" title="구청별연락처 새창으로 열림" > * 구청별 담당자 연락처 : 클릭후 팝업창에서 조회하세요! </a>
+				</li>
+				<li>시가표준액 자료는 기준일/신축/증축/변경 등으로 인해 검색이 안되거나 취득세 과표산정 금액과 상이할 수 있으니 참고용으로 활용하시기 바랍니다.</li>
+				<li>토지시가표준액은 토지지분면적 x 토지공시지가(㎡)입니다.</li>
+				<li>상업용 건축물, 오피스텔, 주상복합건물 등 대형 건축물은 공용면적 또는 부대시설 등에 따라 시가표준액이 상이할 수 있습니다.</li>
+			</ul>
+		</dd>
+	</dl>
+</div>
+				<!-- 만족도 조사 -->
+				
+
+
+
+			
+ 
+				<!-- //만족도 조사 -->
+			</div>
+			
+
+            <script>
+
+                function goMenuFromQuick (menuID, url, target) {
+                    try {
+                        lnbMenuPage2(menuID, url, target);
+                        return ;
+                    } catch(e) {
+                        gnbMenuPage2(menuID, url, target);
+                        return ;
+                    }
+                }
+
+                // 회원납부
+                function goMemberPay() {
+                    gnbMenuPage2('0101', 'GetListBubinAction.tran', '_self');
+                    return;
+                }
+                // 비회원납부 확인
+                function goGuestReceipt() {
+                    gnbMenuPage2('0302', 'GetRcptLstGstAction.view', '_self');
+                    return;
+                }
+                // 납부바구니
+                function payment() {
+                    goMenuFromQuick('0112', 'TaxCartAction.tran?command=03', '_self');
+                }
+                // 영수증 보관함
+                function receipt() {
+                    goMenuFromQuick('0309', 'GetRcptCaseAction.view', '_self');
+                }
+                // 지방세 미리계산
+                function taxCalc() {
+                    goMenuFromQuick('0610', 'AcqutaxCalcAction.view', '_self');
+                }
+                // 지방세 이의신청
+                function taxException() {
+                	goMenuFromQuick('0708', '/jsp/CtView.jsp?ctPage=/cmpl/CON02_01_01.html', '_self');
+                }
+                // 1:1 원격 상담
+                function oneTooneRemotely() {
+                    location.href = "http://retax.seoul.go.kr";
+                }
+                // 확대보기
+                function popZoom() {
+                    var winLftPosition  = (screen.width  - 726) / 2;
+                    var winTopPosition  = (screen.height - 570) / 2;
+                    window.open("/pop_zoom.html", '확대보기안내', 'width=644, height=670, left=' + winLftPosition + ', top=' + winTopPosition + ', statusbar=0, scrollbars=1');
+                }
+
+            </script>
+            <!-- quick -->
+            <div class="quickmenu" id="quick">
+                <ul class="quick_btn">
+                    <li><a href="#memberpay"    onclick="goMemberPay();"><img src="/static/open_images/common/btn_quick6_1.gif" alt="회원납부" /></a></li>
+                    <li><a href="#guestreceipt" onclick="goGuestReceipt();"><img src="/static/open_images/common/btn_quick7.gif" alt="비회원납부 확인" /></a></li>
+                    <li><a href="#payment"      onclick="payment();"><img src="/static/open_images/common/btn_quick1.gif" alt="납부 바구니" /></a></li>
+                    <li><a href="#receipt"      onclick="receipt();"><img src="/static/open_images/common/btn_quick2.gif" alt="영수증 보관함" /></a></li>
+                    <li><a href="#taxCalc"      onclick="taxCalc();"><img src="/static/open_images/common/btn_quick3.gif?dummy=202607161803" alt="지방세 모의계산" /></a></li>
+                    <li><a href="#taxException" onclick="taxException()"><img src="/static/open_images/common/btn_quick4.gif" alt="지방세 이의신청" /></a></li>
+                    <li><a href="http://retax.seoul.go.kr" target="_blank" title="1대1 원격상담 새창 열림"><img src="/static/open_images/common/btn_quick5.gif" alt="1대1 원격상담 1566-3900" /></a></li>
+                    <li class="secondary"><a href="#e" onclick="window.open('/static/common/cardNews202305.html', 'cardNews202305', 'width=530, height=550, left=50, top=50, statusbar=0, scrollbars=1'); return false;" title="전자송달 자동납부 새창 열림"><img src="/static/open_images/common/btn_quick8.png" alt="전자송달 자동납부" /></a></li>
+                    <li><a href="javascript:chatbot();" title="챗봇 상담 새창 열림"><img src="/static/images/shinhan/icon/ico_chatbot_s.gif" style="margin: 5px;" alt="챗봇 상담" /></a></li>
+                    <li class="zoom"><a href="#popZoom" onclick="popZoom();" title="확대보기 안내 새창 팝업 열림"><img src="/static/open_images/common/quick_zoom.gif" alt="확대보기 안내" /></a></li>
+                </ul>
+            </div>
+ 
+		</div>
+		
+	</div>
+	<!-- //contents -->
+<hr />
+	<!-- footer -->
+	
+
+
+
+	
+
+
+<!--  로그인 페이지에서  로그인이 성공했을때 이전 페이지로 포워딩하기 위한 form  -->
+<form name="fwfrm" method="post" action="/">	
+
+    	<input type="hidden" name="sysCode"  value="" />
+		
+    	<input type="hidden" name="transSeq1"  value="" />
+		
+    	<input type="hidden" name="isLogin"  value="" />
+		
+    	<input type="hidden" name="SIGU_NAME"  value="" />
+		
+    	<input type="hidden" name="PRE_SIGU_CD"  value="" />
+		
+    	<input type="hidden" name="HDONG_CD"  value="" />
+		
+    	<input type="hidden" name="BDONG_CD"  value="" />
+		
+    	<input type="hidden" name="SIGU_CD"  value="" />
+		
+    	<input type="hidden" name="HDONG680"  value="" />
+		
+    	<input type="hidden" name="tsj_gubun"  value="" />
+		
+    	<input type="hidden" name="bonbun"  value="" />
+		
+    	<input type="hidden" name="bubun"  value="" />
+		
+    	<input type="hidden" name="dong"  value="" />
+		
+    	<input type="hidden" name="hosu"  value="" />
+		
+    	<input type="hidden" name="downExcel"  value="" />
+		
+    	<input type="hidden" name="GWAPO_YEAR"  value="" />
+		
+    	<input type="hidden" name="INPUT"  value="" />
+		
+</form>
+<script>
+//<![CDATA[
+	document.fwfrm.action = "/BldnStndAmtLstAction.tran".replace(/\"/g , "\\\\\"");
+
+		document.fwfrm["sysCode"].value = "EAX";
+		
+		document.fwfrm["transSeq1"].value = "1";
+		
+		document.fwfrm["isLogin"].value = "";
+		
+		document.fwfrm["SIGU_NAME"].value = "null";
+		
+		document.fwfrm["PRE_SIGU_CD"].value = "680";
+		
+		document.fwfrm["HDONG_CD"].value = "10100";
+		
+		document.fwfrm["BDONG_CD"].value = "99999";
+		
+		document.fwfrm["SIGU_CD"].value = "680";
+		
+		document.fwfrm["HDONG680"].value = "10100";
+		
+		document.fwfrm["tsj_gubun"].value = "1";
+		
+		document.fwfrm["bonbun"].value = "737";
+		
+		document.fwfrm["bubun"].value = "";
+		
+		document.fwfrm["dong"].value = "";
+		
+		document.fwfrm["hosu"].value = "";
+		
+		document.fwfrm["downExcel"].value = "N";
+		
+		document.fwfrm["GWAPO_YEAR"].value = "2025";
+		
+		document.fwfrm["INPUT"].value = "";
+		
+//]]>
+</script>
+
+
+
+<form name="loginParamForm" method="post" action="/jsp/comm/LoginCheck.jsp">
+<input type="hidden" name="NextLoginUrl" value="" />
+
+	    <input type="hidden" name="sysCode"  value="" />
+		
+	    <input type="hidden" name="transSeq1"  value="" />
+		
+	    <input type="hidden" name="isLogin"  value="" />
+		
+	    <input type="hidden" name="SIGU_NAME"  value="" />
+		
+	    <input type="hidden" name="PRE_SIGU_CD"  value="" />
+		
+	    <input type="hidden" name="HDONG_CD"  value="" />
+		
+	    <input type="hidden" name="BDONG_CD"  value="" />
+		
+	    <input type="hidden" name="SIGU_CD"  value="" />
+		
+	    <input type="hidden" name="HDONG680"  value="" />
+		
+	    <input type="hidden" name="tsj_gubun"  value="" />
+		
+	    <input type="hidden" name="bonbun"  value="" />
+		
+	    <input type="hidden" name="bubun"  value="" />
+		
+	    <input type="hidden" name="dong"  value="" />
+		
+	    <input type="hidden" name="hosu"  value="" />
+		
+	    <input type="hidden" name="downExcel"  value="" />
+		
+	    <input type="hidden" name="GWAPO_YEAR"  value="" />
+		
+	    <input type="hidden" name="INPUT"  value="" />
+		
+</form>
+<script>
+//<![CDATA[
+	document.loginParamForm.NextLoginUrl.value = "/BldnStndAmtLstAction.tran".replace(/\"/g , "&#92;&#34;");
+
+	    document.loginParamForm["sysCode"].value="EAX";
+	    if('EAX' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["transSeq1"].value="1";
+	    if('1' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["isLogin"].value="";
+	    if('' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["SIGU_NAME"].value="null";
+	    if('null' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["PRE_SIGU_CD"].value="680";
+	    if('680' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["HDONG_CD"].value="10100";
+	    if('10100' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["BDONG_CD"].value="99999";
+	    if('99999' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["SIGU_CD"].value="680";
+	    if('680' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["HDONG680"].value="10100";
+	    if('10100' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["tsj_gubun"].value="1";
+	    if('1' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["bonbun"].value="737";
+	    if('737' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["bubun"].value="";
+	    if('' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["dong"].value="";
+	    if('' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["hosu"].value="";
+	    if('' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["downExcel"].value="N";
+	    if('N' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["GWAPO_YEAR"].value="2025";
+	    if('2025' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+		
+	    document.loginParamForm["INPUT"].value="";
+	    if('' === '020303'){ //종합소득세의 경우 공무원 로그인 버튼 활성화 
+	    	document.getElementById('hiddenLogin').style.display ="";
+	    } 
+			
+//]]>
+</script>
+
+
+<script>
+//<![CDATA[
+for(var i = 1 ; i <= tot_count ; i++){
+	var balloon_yn = "balloonHelp_"+String(i)+"_yn";
+	var balloon_title = "balloonHelp_"+String(i)+"_title";
+	var ele = document.getElementById(balloon_yn) ;
+	var ele_title = document.getElementById(balloon_title) ;
+	if(ele != null){
+		if(window[balloon_yn] == "Y"){
+			ele.style.display="inline-block";
+			ele_title.style.display="inline-block";
+			ele.alt = window[balloon_title]+" 풍선도움말";
+			ele_title.title = window[balloon_title]+" 풍선도움말 열기"; 
+		}
+	}
+}           
+//]]>
+</script>
+
+
+<script>
+//<![CDATA[
+	//마우스 우측버튼 팝업메뉴를 불가능하게 처리
+	/* 
+ 	document.oncontextmenu = function(){
+ 		alert ( "마우스 우측 버튼은 사용하실수 없습니다.");
+ 		return false;
+ 	};
+ 	 */
+//]]>           
+</script>
+
+<script>
+//<![CDATA[
+// 가상 키보드 적용           
+    try{
+		if(navigator.appName == 'Microsoft Internet Explorer'){ 
+			useTransKey = false;
+		} else{
+			useTransKey = true;
+		}
+		
+		var allElement = $("input").get(); // Get All elements in document by using JQuery
+		var j = 0;
+		for ( var i= 0; i < allElement.length ; i++ ){
+		  if ( "on" == allElement[i].getAttribute("enc") ){ // enc = on으로되어있는 객체라면
+		         var idElement  = allElement[i].getAttribute("id");  // id 와
+		         var kbdElement = allElement[i].getAttribute("kbd"); // kdb 속성 (  qwerty   or number ) 
+		         var xElement   = allElement[i].getAttribute("kbdx");  // 가상키보드 표시되는 input 항목으로 부터 x 좌표 간격 
+		         var yElement   = allElement[i].getAttribute("kbdy"); //  가상키보드 표시되는 input 항목으로 부터 y 좌표 간격
+		         var transObject = null;
+		         if ( yElement != null && xElement !=null ){
+		        	 transObject = [ {id : idElement,   kbd: kbdElement  ,x:xElement, y:yElement} ];
+		         }else{
+		        	 transObject = [ {id : idElement,   kbd: kbdElement} ];
+		         }
+		         setInputTransKey[j] = transObject[0];
+		         j++;
+		   }
+		}
+    }catch(e){
+    	
+    }
+
+//]]>
+</script>
+
+
+<!-- 2016.09.05 서울시 웹로그 분석위한 스크립터 삽입 -->
+<script src="https://weblog.eseoul.go.kr/wlo/js/install.js"></script>
+
+<!-- 2016.12 법인번호 오류 사용자 알림 -->
+<script>
+//<![CDATA[
+	if('null' != null){
+		if('null' == '1'){
+			alert("법인등록번호는 임의의 숫자(반복,연속숫자)를 입력할 수 없습니다.\n회원탈퇴 후 재가입 바랍니다.\n※입력 참고: 사업자(고유)번호 또는 단체번호에 '0'을 추가하여 13자리 자릿수 일치");
+			
+		}
+	}	
+//]]>
+</script>
+
+<script>
+//<![CDATA[
+    // 바로가기가 나오도록 처리
+    if ( document.getElementById("contents") != null ) {
+    	if ( document.getElementById( "Navi_contents") != null ) {
+	   	 	document.getElementById( "Navi_contents").style.display = "";
+    	}
+    }
+    if ( document.getElementById("lnb") != null ) {
+    	if ( document.getElementById( "Navi_lnb") != null ) {
+   	 		document.getElementById( "Navi_lnb").style.display = "";
+    	}
+    }
+    if ( document.getElementById("gnb") != null ) {
+    	if ( document.getElementById( "Navi_gnb") != null ) {
+   	 		document.getElementById( "Navi_gnb").style.display = "";
+    	}
+    }
+    if ( document.getElementById("contents_main") != null ) {
+    	if ( document.getElementById( "Navi_quick") != null ) {
+   	 		document.getElementById( "Navi_quick").style.display = "";
+    	}
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        var skipLinks = document.querySelectorAll('#skip_navi a');
+        skipLinks.forEach(function(link) {
+        	// 엔터와 스페이스 모두 대응하는 keydown 이벤트
+            link.addEventListener('keydown', function(e) {
+                if (e.keyCode === 32) {                    
+                    if (e.keyCode === 32) e.preventDefault(); // 스페이스바의 기본 동작(페이지 스크롤) 막는다.                    
+                    this.click();
+                }
+            });
+            link.addEventListener('click', function(e) {                
+                var targetId = this.getAttribute('href').substring(1);
+                var targetElement = document.getElementById(targetId);
+                if (targetElement) {                    
+                    if (!targetElement.hasAttribute('tabindex')) {
+                        targetElement.setAttribute('tabindex', '-1');
+                    }
+                    setTimeout(function() {
+                        targetElement.focus();
+                    }, 10);
+                }
+            });
+        });
+    });
+    
+//]]>		         
+</script>
+
+
+<script>
+//<![CDATA[
+
+	if (window.attachEvent)
+		window.attachEvent("onload", function() {
+			 // parent의 제목을 현재 문서의title로 만든다. // 일단 title 정상입력안된 부분이 많이 script 주석처리
+			if ( parent )   parent.document.title = document.title;
+		});
+	else
+		window.addEventListener("load", function() {
+			 // parent의 제목을 현재 문서의title로 만든다. // 일단 title 정상입력안된 부분이 많이 script 주석처리
+			if ( parent )   parent.document.title = document.title;
+		}, false);
+     
+     
+     
+    // 이용약관
+    function agreement() {
+    	var winLftPosition	= (screen.width		- 726	) / 2;
+    	var winTopPosition	= (screen.height	- 500	) / 2;
+    	window.open("/open_html/help/popup_legal.jsp", '이용약관', 'width=726, height=500, left='+winLftPosition+', top='+winTopPosition+', statusbar=0, scrollbars=1');
+    }
+    // 개인정보처리방침
+    function infomation() {
+    	/*
+        var winLftPosition  = (screen.width   - 726 ) / 2;
+        var winTopPosition  = (screen.height  - 570 ) / 2;
+        window.open("/open_html/help/popup_personal.jsp", '개인정보처리방침', 'width=726, height=570,left='+winLftPosition+', top='+winTopPosition+', statusbar=0, scrollbars=1');
+        */
+		lnbMenuPage_footer('0713','/jsp/CtView.jsp?ctPage=/help/privacy_policy.html');
+    }
+
+    // 보안모듈설치
+    function securityModule() {
+    	document.location = "/jsp/NonActiveInstallCheckNew.jsp";
+    }
+    // 해당부서찾기
+    function seachDept() {
+		lnbMenuPage_footer('0706','statTelInfoAction.view?gnb_id=0706&lnb_id=0706&gl_gubun=l');
+    }
+    // ETAX 이용문의
+    function etaxInquiry() {
+		lnbMenuPage_footer('0706','/jsp/CtView.jsp?ctPage=/cmpl/StatTelGuide.html');
+    }
+    
+    function lnbMenuPage_footer(lnb, url) {
+        if (url.indexOf("?") > 0) {
+            location.href = url+'&gnb_id='+lnb+'&lnb_id='+lnb+'&gl_gubun='+'l';
+        } else {
+            location.href = url+'?gnb_id='+lnb+'&lnb_id='+lnb+'&gl_gubun='+'l';
+        }
+        return false;
+    }
+    
+    
+	function escapeHtml(str) {
+		return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g,"&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
+	
+	
+	
+	// ETAX 로딩
+	function etaxLoading(isOpen) {
+		try {
+			if (isOpen === undefined || isOpen === null || isOpen) {
+		        let loader = document.getElementById('__etaxLoading');
+		        if (!loader) {
+		            const tempHtml = `
+		                <div class="popup_wrap" id="__etaxLoading" style="display:none;">
+		                    <div class="bg"></div>
+		                    <div class="popup" style="position:fixed; top:50%; left:50%; transform: translate(-50%, -50%)">
+		                        <p class="logo"><img src="/static/open_images/common/pop_logo.gif" alt="서울시 ETAX" /></p>
+		                        <div class="popup_content">
+		                            <div class="progress_bar">
+		                                <p>잠시만 기다려 주십시오.</p>
+		                                <img src="/static/open_images/common/an_bar.gif" alt="loading" />
+		                            </div>
+		                        </div>
+		                    </div>
+		                </div>`;
+		            document.body.insertAdjacentHTML('beforeend', tempHtml);
+		            loader = document.getElementById('__etaxLoading');
+		        }
+		        if (loader) {
+		            loader.style.display = 'block'; 
+		        }
+		    } 
+		    else {
+		        const loader = document.getElementById('__etaxLoading');
+		        if (loader) {
+		            loader.style.display = 'none';
+		        }
+		    }		
+		} catch(err){
+			console.error("footer etaxLoading 요류:", err);
+		}
+	}
+
+	//]]>
+</script>
+
+<div id="footer">
+	<div class="footer_inner">
+		<div class="foot_info">
+			<ul class="link_list">
+				<li class="first"><a href="#agreeMent"  onclick="agreement();" title="이용약관 팝업 열림">이용약관</a></li>
+				<li class="call"><a href="#infomation" onclick="infomation();" title="개인정보처리방침" style="color:#003C87 !important;">개인정보처리방침</a></li>
+				<li><span class="txt_org"><a href="http://retax.seoul.go.kr" title="1대1 원격상담 새창 열림" target="_blank">1:1원격상담</a></span></li>
+				<li><a href="#securityModule" title="보안모듈통합설치" onclick="securityModule();">보안모듈통합설치</a></li>
+				<li><a href="#seachDept" onclick="seachDept();" title="업무담당찾기">업무담당찾기</a></li>
+				<li><a href="http://juso.go.kr" title="구주소찾기 새창 열림" target="_blank">구주소찾기</a></li>
+				<li><a href="/jsp/link/Singolink_in.jsp" title="대법원연계 등록분신고 새창열림" target="_blank">대법원연계 등록분신고</a></li>
+				<li><a href="#etaxInquiry" onclick="etaxInquiry();">ETAX이용문의</a>&nbsp;&nbsp;<span class="txt_org"><a href="#etaxInquiry" onclick="etaxInquiry();">1566-3900</a></span></li>
+			</ul>
+			<div style="float:right">
+
+					<!-- Dighty : [서울시ETAX] 메인하단 (210*70) 태그 -->
+					<script>
+				//<![CDATA[
+						var m3_b = '';
+						var m3_u = (location.protocol=='https:'?'https://delivery.dighty.com/www/delivery/ajs.php':'http://delivery.dighty.com/www/delivery/ajs.php');
+						
+						// 소스코드취약점점검 조치 - 적절하지 않은 난수 값 사용
+						//var m3_r = Math.floor(Math.random()*99999999999);
+						const arr = new Uint32Array(3);
+						window.crypto.getRandomValues(arr);
+						const bigNum = (BigInt(arr[0]) << 64n) | (BigInt(arr[1]) << 32n) | BigInt(arr[2]);
+						const m3_r = Number(bigNum % 99999999999n);
+						
+						if(document.cookie.indexOf('ACEUACS=')>-1){
+							var m3_b = document.cookie.substr(document.cookie.indexOf('ACEUACS=')+8,19);}
+						if (!document.MAX_used) document.MAX_used = ',';
+						document.write ("<scr"+"ipt type='text/javascript' src='"+m3_u);
+						document.write ("?zoneid=931");
+						document.write ('&amp;cb=' + m3_r);
+						if (m3_b!='')document.write('&amp;bd=' + m3_b);
+						if (document.MAX_used != ',') document.write ("&amp;exclude=" + document.MAX_used);
+						document.write (document.charset ? '&amp;charset='+document.charset : (document.characterSet ? '&amp;charset='+document.characterSet : ''));						
+						document.write ("&amp;loc=" + escapeHtml(window.location.href));						
+						if (document.referrer) document.write ("&amp;referer=" + escapeHtml(document.referrer));
+						if (document.context) document.write ("&context=" + escapeHtml(document.context));
+						if (document.mmm_fo) document.write ("&amp;mmm_fo=1");
+						document.write ("'><\/scr"+"ipt>");
+						//]]>-->
+					</script>
+					<noscript>
+						<a href='https://delivery.dighty.com/www/delivery/ck.php?n=9f53d83e&amp;cb=INSERT_RANDOM_NUMBER_HERE' target='_blank'>
+							<img src='https://delivery.dighty.com/www/delivery/avw.php?zoneid=931&amp;cb=INSERT_RANDOM_NUMBER_HERE&amp;n=9f53d83e' alt='' />
+						</a>
+					</noscript>
+			</div>
+			<div class="info_txt" >
+				(우) 04515  서울시 중구 덕수궁길 15  COPYRIGHTⓒ 2012 SEOUL METROPOLITAN  GOVERNMENT & SHINHAN BANK. ALL RIGHTS RESERVED.
+			</div>
+			<div class="footer_family">
+					<ul>
+					<li class="ff1">
+						<img src="/static/images/shinhan/bg/logo2.png" alt="서울특별시 로고" title="서울특별시" />
+					</li>
+					<li class="ff2">
+						<img src="/static/images/shinhan/bg/logo3.png" alt="신한은행 로고" title="신한은행" />
+					</li>
+					<li class="ff3">
+						<a href="http://www.webwatch.or.kr/Situation/WA_Situation.html?MenuCD=110" target="_blank" title="새창열림">
+     							<img src="/static/images/shinhan/bg/logo4.png" alt="과학기술정보통신부 WEB ACCESSIBILITY 마크" title="국가 공인 인증기관 : 웹와치">
+   						</a>
+   					</li>
+				</ul>
+			</div>
+		</div>
+	</div>	
+</div> 
+	<!-- //footer -->
+</body>
+</html>
+
+
+

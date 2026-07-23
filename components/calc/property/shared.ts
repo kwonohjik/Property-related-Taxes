@@ -122,6 +122,8 @@ export interface FormState {
   dong: string;
   /** 선택한 호(예: "3204") — 공동주택 공시가격 조회 세대 식별용 (UI 전용, 엔진 미전송) */
   ho: string;
+  /** 소재지 PNU(19자리) — 건축물 시가표준액 ETAX 조회용 (UI 전용, 엔진·API·이력 미전송) */
+  pnu: string;
   objectType: string;
   publishedPrice: string;
   /** 직전연도 공시가격 — 주택 과세표준상한제(§110③) 계산용 (주택 전용·선택) */
@@ -199,6 +201,7 @@ export const INITIAL_FORM: FormState = {
   building: "",
   dong: "",
   ho: "",
+  pnu: "",
   objectType: "housing",
   publishedPrice: "",
   priorYearPublishedPrice: "",
