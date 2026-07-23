@@ -180,6 +180,22 @@ export interface HouseEntry {
   isSecondHomeRegistered?: boolean;
   /** 인구감소지역 유형 (다목 decline 9억 / 라목 interest 4억) — 가액한도 구분 */
   populationAreaType?: "decline" | "interest";
+
+  // ── 소재지 주소검색 (AddressSearch 재표시 + regionCode 파생 · 공시가격/전유면적 자동조회) ──
+  addressRoad?: string;
+  addressJibun?: string;
+  buildingName?: string;
+  addressDetail?: string;
+  addressDong?: string;
+  addressHo?: string;
+  longitude?: string;
+  latitude?: string;
+  /** 법정동 10자리 (PNU 앞 10자리) — §167의3 지역기준 판정. 있으면 지역 구분 자동 파생 */
+  regionCode?: string;
+  /** 19자리 PNU — UI 재조회용 */
+  addressPnu?: string;
+  /** 공시가격·전유면적을 주소조회로 자동채움한 표식 — 사용자 수정 시 제거(조회값 배지) */
+  addressLookupFilled?: boolean;
 }
 
 /**

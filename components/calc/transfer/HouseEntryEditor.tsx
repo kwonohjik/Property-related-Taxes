@@ -21,6 +21,8 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
@@ -44,66 +46,116 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
   return (
     <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보" noDark>
 
-      {/* 지역 구분 */}
+      {/* 소재지 — Vworld 주소검색 → regionCode·지역구분 자동파생 + (공동주택 동/호 선택 시) 공시가격·전유면적 자동조회 */}
+      <div className="space-y-1">
+        <label className="block text-caption text-muted-foreground font-medium">소재지</label>
+        <AddressSearch
+          value={
+            {
+              road: house.addressRoad ?? "",
+              jibun: house.addressJibun ?? "",
+              building: house.buildingName ?? "",
+              detail: house.addressDetail ?? "",
+              lng: house.longitude ?? "",
+              lat: house.latitude ?? "",
+            } satisfies AddressValue
+          }
+          onChange={(v) => onUpdate(buildHouseAddressPatch(v))}
+        />
+        <p className="text-micro text-muted-foreground">
+          공동주택은 동/호 선택 시 공시가격·전유면적이 자동 입력됩니다 (개별주택은 수동 입력).
+        </p>
+      </div>
+
+      {/* 지역 구분 — 소재지 주소 입력 시 자동 판정(읽기전용), 미입력 시 수동 */}
       <div className="space-y-1">
         <label className="block text-caption text-muted-foreground font-medium">지역 구분</label>
-        <RadioCardGroup
-          name={`house-region-${house.id}`}
-          layout="inline"
-          tone="rose"
-          value={house.region}
-          onChange={(v) => onUpdate({ region: v as "capital" | "non_capital" })}
-          options={[
-            { value: "capital", label: "수도권·광역시 등" },
-            { value: "non_capital", label: "지방" },
-          ]}
-        />
+        {house.regionCode ? (
+          <ToneCard tone="rose" bodyClassName="" className="px-3 py-2">
+            <span className="text-sm font-medium">
+              {house.region === "capital" ? "수도권·광역시 등" : "지방"}
+            </span>
+            <span className="ml-2 text-xs text-muted-foreground">소재지 주소에서 자동 판정</span>
+          </ToneCard>
+        ) : (
+          <RadioCardGroup
+            name={`house-region-${house.id}`}
+            layout="inline"
+            tone="rose"
+            value={house.region}
+            onChange={(v) => onUpdate({ region: v as "capital" | "non_capital" })}
+            options={[
+              { value: "capital", label: "수도권·광역시 등" },
+              { value: "non_capital", label: "지방" },
+            ]}
+          />
+        )}
       </div>
 
-      {/* 취득일 */}
-      <div className="space-y-1">
-        <label className="block text-caption text-muted-foreground font-medium">취득일</label>
-        <DateInput
-          value={house.acquisitionDate}
-          onChange={(v) => onUpdate({ acquisitionDate: v })}
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {/* 취득일 */}
+        <div className="space-y-1">
+          <label className="block text-caption text-muted-foreground font-medium">취득일</label>
+          <DateInput
+            value={house.acquisitionDate}
+            onChange={(v) => onUpdate({ acquisitionDate: v })}
+          />
+        </div>
+
+        {/* 공시가격 */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <label className="text-caption text-muted-foreground font-medium">공시가격</label>
+            {house.addressLookupFilled && (
+              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                조회값
+              </span>
+            )}
+          </div>
+          <CurrencyInput
+            label="공시가격"
+            hideLabel
+            value={house.officialPrice}
+            onChange={(v) => onUpdate({ officialPrice: v, addressLookupFilled: false })}
+            hint="공동·개별주택가격 (원)"
+          />
+        </div>
+
+        {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) */}
+        <CurrencyInput
+          label="취득가액"
+          placeholder="취득가액 입력"
+          value={house.acquisitionPrice ?? ""}
+          onChange={(v) => onUpdate({ acquisitionPrice: v })}
+          hint="소형신축·준공후미분양 특례 가액 기준 (원)"
         />
-      </div>
 
-      {/* 공시가격 */}
-      <CurrencyInput
-        label="공시가격"
-        value={house.officialPrice}
-        onChange={(v) => onUpdate({ officialPrice: v })}
-        hint="취득 시 공동·개별주택가격 (원)"
-      />
+        {/* 전용면적 */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
+            {house.addressLookupFilled && (
+              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                조회값
+              </span>
+            )}
+          </div>
+          <DecimalInput
+            value={house.exclusiveArea ?? ""}
+            onChange={(v) => onUpdate({ exclusiveArea: v, addressLookupFilled: false })}
+            placeholder="전용면적 ㎡"
+          />
+        </div>
 
-      {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) */}
-      <CurrencyInput
-        label="취득가액"
-        placeholder="취득가액 입력"
-        value={house.acquisitionPrice ?? ""}
-        onChange={(v) => onUpdate({ acquisitionPrice: v })}
-        hint="소형신축·준공후미분양 특례 가액 기준 (원)"
-      />
-
-      {/* 전용면적 */}
-      <div className="space-y-1">
-        <label className="block text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
-        <DecimalInput
-          value={house.exclusiveArea ?? ""}
-          onChange={(v) => onUpdate({ exclusiveArea: v })}
-          placeholder="전용면적 ㎡"
-        />
-      </div>
-
-      {/* 준공일 (가목 소형신축 3호) */}
-      <div className="space-y-1">
-        <label className="block text-caption text-muted-foreground font-medium">준공일</label>
-        <DateInput
-          value={house.completionDate ?? ""}
-          onChange={(v) => onUpdate({ completionDate: v })}
-        />
-        <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
+        {/* 준공일 (가목 소형신축 3호) */}
+        <div className="space-y-1">
+          <label className="block text-caption text-muted-foreground font-medium">준공일</label>
+          <DateInput
+            value={house.completionDate ?? ""}
+            onChange={(v) => onUpdate({ completionDate: v })}
+          />
+          <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
+        </div>
       </div>
 
       {/* 특례 chip */}

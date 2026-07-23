@@ -33,7 +33,7 @@ import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { deriveSellingHouseRegion } from "@/lib/calc/selling-house-region";
+import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import {
   checkGracePeriodExemption,
@@ -386,7 +386,7 @@ export function HousesListSection({
   // 양도 주택 소재지 — 양도 물건(assets[0]) 주소에서 자동 판정 (사용자 수동 선택 폐지)
   const sellingRegionCode = form.assets?.[0]?.regionCode;
   const sellingRegionLabel =
-    deriveSellingHouseRegion(sellingRegionCode) === "capital" ? "수도권·광역시 등" : "지방";
+    deriveHouseRegionFromCode(sellingRegionCode) === "capital" ? "수도권·광역시 등" : "지방";
 
   // 편집 중인 주택 (모달 오픈용)
   const editingHouse = editingId ? houses.find((h) => h.id === editingId) ?? null : null;
@@ -530,7 +530,7 @@ export function HousesListSection({
 
       {/* ── 편집 모달 ── */}
       <Dialog open={editingHouse !== null} onOpenChange={(open) => { if (!open) setEditingId(null); }} modal={true}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               주택 {editingHouse ? houses.findIndex((h) => h.id === editingHouse.id) + 1 : ""} 정보 입력
