@@ -200,7 +200,7 @@ export const houseCountExclusionSchema = z.object({
   rentalHousingExempt: z.boolean(),                     // 장기임대 배제 여부 (true)
   lowPriceThreshold: z.object({
     capital: z.number().int().nullable(),               // 수도권: null (배제 없음)
-    non_capital: z.number().int().nonnegative(),        // 비수도권: 100_000_000
+    non_capital: z.number().int().nonnegative(),        // 지방(VALUE): 300_000_000 (§167의3①1호)
   }),
   presaleRightStartDate: z.string(),                    // "2021-01-01"
   officetelStartDate: z.string(),                       // "2022-01-01"
