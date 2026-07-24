@@ -105,6 +105,15 @@ export interface CarryoverScenarioADetail {
   donorCapexGuardApplied: boolean;
   /** 실제 합산 적용된 capex — 수증자 capitalExpenditure + donorCapexAddedToExpense */
   effectiveCapex: number;
+  /**
+   * 취득가액 산정 방식 echo (표시 전용) — true면 증여자 취득 당시 환산취득가(§163⑨·§164⑦),
+   * false면 증여자 취득 당시 실가 승계. 결과뷰 근거 문구 분기용.
+   */
+  acquisitionWasEstimated?: boolean;
+  /** 환산 모드(기준시가 직접 입력)일 때 취득시 기준시가 echo — 환산 산식 재현용 */
+  estimatedStdPriceAtAcquisition?: number;
+  /** 환산 모드(기준시가 직접 입력)일 때 양도시 기준시가 echo — 환산 산식 재현용 */
+  estimatedStdPriceAtTransfer?: number;
   /** 양도차익 (증여세 상당액 차감 후 최종) */
   transferGain: number;
   /**

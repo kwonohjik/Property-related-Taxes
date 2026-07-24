@@ -75,14 +75,24 @@ describe("C-11: 증여세 상당액 필요경비 가산 (§97조의2 ① 2호 �
     expect(d.giftTaxLimitApplied).toBe(false);
   });
 
-  it("C-11-5: 증여세 가산 시 Scenario A 결정세액이 감소함 (양도차익 감소 → 세액 감소)", () => {
-    // 증여세 상당액은 필요경비 가산 → 양도차익/소득금액 감소 → 결정세액 감소
-    // transferGain은 legacy expenses 처리 방식에 따라 같을 수 있으므로 determinedTax로 검증
+  it("C-11-5: 증여세 가산 시 Scenario A 결정세액이 실제로 감소함 (양도차익 감소 → 세액 감소)", () => {
+    // 증여세 상당액은 필요경비 가산 → 양도차익/소득금액 감소 → 결정세액 감소.
+    // (수치 버그 회귀) 이월과세 실가 else-분기는 inputABase.capitalExpenditure가 항상 정의되어
+    // swap-aware 경로가 legacy `expenses`를 무시하던 문제로 증여세가 드롭됐다. 이제 transferExpense
+    // (나목)에 가산되어 필요경비에 반영되므로 결정세액이 '엄격히' 작아야 한다.
     const resultWith = calculateTransferTax(makeGiftTaxInput(30_000_000), MOCK_RATES);
     const resultWithout = calculateTransferTax(makeGiftTaxInput(0), MOCK_RATES);
     expect(resultWith.carryoverTaxationDetail?.scenarioA.giftTaxAddedToExpense).toBe(30_000_000);
-    // 증여세 가산액이 0원인 케이스보다 결정세액이 같거나 작아야 함
-    expect(resultWith.carryoverTaxationDetail?.scenarioA.determinedTax)
-      .toBeLessThanOrEqual(resultWithout.carryoverTaxationDetail?.scenarioA.determinedTax ?? Infinity);
+    expect(resultWith.carryoverTaxationDetail!.scenarioA.determinedTax)
+      .toBeLessThan(resultWithout.carryoverTaxationDetail!.scenarioA.determinedTax);
+  });
+
+  it("C-11-6: (수치 회귀) 증여세 상당액이 양도차익에서 실제 차감됨 — §163의2", () => {
+    // 양도가액 800M − 취득가액 300M − 증여세 상당액 30M = 470M.
+    // 수정 전에는 증여세가 드롭되어 500M(미차감)이었다 → 이 anchor가 회귀를 고정한다.
+    const resultWith = calculateTransferTax(makeGiftTaxInput(30_000_000), MOCK_RATES);
+    const resultWithout = calculateTransferTax(makeGiftTaxInput(0), MOCK_RATES);
+    expect(resultWithout.carryoverTaxationDetail!.scenarioA.transferGain).toBe(500_000_000);
+    expect(resultWith.carryoverTaxationDetail!.scenarioA.transferGain).toBe(470_000_000);
   });
 });
