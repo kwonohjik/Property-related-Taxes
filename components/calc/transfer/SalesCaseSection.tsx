@@ -13,6 +13,7 @@
 
 import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { RtmsSimilarSalesModal } from "@/components/calc/inheritance/estate-card/variants/RtmsSimilarSalesModal";
 import { Button } from "@/components/ui/button";
 
@@ -28,6 +29,7 @@ export interface SalesCaseSectionProps {
   acquisitionAddress?: string;
   /** 취득 당시 면적 (㎡ 문자열) */
   acquisitionArea?: string;
+  onAcquisitionAreaChange?: (v: string) => void;
   /** 취득일 (RTMS valuationDate) */
   acquisitionDate: string;
   /** 건물명 (RTMS aptName) */
@@ -45,6 +47,7 @@ export function SalesCaseSection({
   acquisitionSigunguCode,
   acquisitionAddress,
   acquisitionArea,
+  onAcquisitionAreaChange,
   acquisitionDate,
   buildingName,
   standardPriceAtAcq,
@@ -83,6 +86,18 @@ export function SalesCaseSection({
           }}
           hint="소득세법 §176의2③1호: 취득일 전후 3개월 내 유사 면적·용도 매매사례 확인 가격. 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
         />
+        <div className="space-y-1">
+          <span className="text-sm font-medium">취득 당시 면적 (㎡)</span>
+          <DecimalInput
+            value={acquisitionArea ?? ""}
+            onChange={(v) => onAcquisitionAreaChange?.(v)}
+            unit="㎡"
+            data-testid="sales-case-acq-area"
+          />
+          <p className="text-caption text-muted-foreground">
+            실거래가 자동조회(RTMS)의 유사재산 면적 ±5% 필터 기준(시행규칙 §15③1호). 집합건물은 전용면적.
+          </p>
+        </div>
         <Button
           type="button"
           variant="modalLauncher"

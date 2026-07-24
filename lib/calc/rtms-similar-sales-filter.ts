@@ -257,6 +257,12 @@ export function filterSimilarSales(
   // ── 필터링 루프 ─────────────────────────────────
   const candidates: SimilarSalesCandidate[] = [];
   const outOfPeriod: SimilarSalesCandidate[] = [];
+  /**
+   * 단지명 불일치로만 탈락했으나 면적·기간 조건은 만족하는 거래의 단지명.
+   * 후보 0건일 때 "단지명 표기 불일치" 원인을 사용자에게 알리는 진단용
+   * (RTMS 단지명은 실거래가 공개시스템 표기 — 사용자 입력 건물명과 다를 수 있음).
+   */
+  const nearbyAptNames = new Set<string>();
 
   for (const trade of records) {
     // Step 1: 해제거래 제외 (P8) — cdealType==="O" → 해제됨
@@ -266,7 +272,19 @@ export function filterSimilarSales(
     if (trade.dealAmountWon <= 0) continue;
 
     // Step 3: 동일 단지 판정 (완전일치 + 부분 포함 — §15③1호가목)
-    if (!isSameAptComplex(criteria.targetAptName, trade.aptName)) continue;
+    if (!isSameAptComplex(criteria.targetAptName, trade.aptName)) {
+      // 진단 수집: 면적·기간은 통과하는데 단지명만 다른 거래 (경고 문구용)
+      const areaOk =
+        !hasTargetArea ||
+        (Math.abs(trade.exclusiveAreaM2 - targetExclusiveAreaM2!) * 100) /
+          targetExclusiveAreaM2! <=
+          5;
+      if (areaOk) {
+        const d = parseYMD(trade.dealDate);
+        if (d >= periodStart && d <= periodEnd) nearbyAptNames.add(trade.aptName);
+      }
+      continue;
+    }
 
     // Step 3b: umdNm 일치 (targetUmdNm 입력 시 추가 필터 — P3)
     if (targetUmdNmTrim) {
@@ -309,6 +327,16 @@ export function filterSimilarSales(
   // ── 후보 0건 ───────────────────────────────────
   if (candidates.length === 0) {
     warnings.push("평가기간 내 유사 매매사례가 없습니다.");
+    if (nearbyAptNames.size > 0) {
+      const names = [...nearbyAptNames];
+      const shown = names.slice(0, 5).join(" · ");
+      const rest = names.length > 5 ? ` 외 ${names.length - 5}곳` : "";
+      warnings.push(
+        `단지명 "${criteria.targetAptName}"과(와) 일치하는 거래가 없습니다. ` +
+          `같은 기간·면적 조건을 만족하는 다른 단지: ${shown}${rest}. ` +
+          `국토교통부 실거래가 공개시스템의 단지명 표기와 맞춰 입력하세요.`,
+      );
+    }
     return {
       candidates: [],
       outOfPeriod,

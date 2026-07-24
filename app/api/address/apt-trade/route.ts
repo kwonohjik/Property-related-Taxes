@@ -421,6 +421,22 @@ export async function GET(request: NextRequest): Promise<NextResponse<RtmsAptTra
     }
   }
 
+  // 전건 실패 감지 — 모든 월이 오류로 끝나 수집 건수가 0이면 success:false.
+  // (success:true + records:[] 로 반환하면 클라이언트가 "유사 매매사례 없음"으로
+  //  오표시하여 인증 실패·네트워크 장애가 은폐된다.)
+  if (deduped.length === 0 && errors.length > 0) {
+    const joined = errors.join("; ");
+    const isAuthFailure = /HTTP (401|403)/.test(joined);
+    return NextResponse.json({
+      success: false,
+      records: [],
+      months,
+      error: isAuthFailure
+        ? `RTMS 인증 실패 — MOLIT_RTMS_API_KEY가 유효하지 않거나 활용신청이 승인되지 않았습니다. (${joined})`
+        : joined,
+    });
+  }
+
   return NextResponse.json({
     success: true,
     records: deduped,
