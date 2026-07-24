@@ -516,6 +516,25 @@ export function buildAcquisitionPriceFormula(
       ? "자산별 환산취득가 합계 — 시행령 §163·§176의2②"
       : "자산별 실제 거래가액 합계 (자본적지출 §97① 가목 합산)";
   }
+  // 배우자등 이월과세 Scenario A 채택 — 증여자 취득 당시 취득가액 승계 (§97의2①).
+  // 환산+증여세 경로에서는 엔진이 실가로 전환하므로 result.usedEstimatedAcquisition만으로는
+  // 환산 여부를 알 수 없어 scenarioA echo를 사용한다.
+  const coA = result.carryoverTaxationDetail;
+  if (coA?.adoptedScenario === "A") {
+    const a = coA.scenarioA;
+    const donorCapexNote =
+      a.donorCapexAddedToExpense > 0
+        ? ` (증여자 자본적지출 ${a.donorCapexAddedToExpense.toLocaleString()} 포함 §97의2①2호 후단)`
+        : "";
+    if (a.acquisitionWasEstimated) {
+      const stdAcq = a.estimatedStdPriceAtAcquisition;
+      const stdTransfer = a.estimatedStdPriceAtTransfer;
+      return stdAcq != null && stdTransfer != null
+        ? `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)} = 양도가액 ${totalTransferPrice.toLocaleString()} × (취득시 기준시가 ${stdAcq.toLocaleString()} ÷ 양도시 기준시가 ${stdTransfer.toLocaleString()})${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·시행령 §163⑨)`
+        : `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·환산)`;
+    }
+    return `증여자 취득 당시 취득가액 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
+  }
   if (result.usedEstimatedAcquisition) {
     const estBase = (result.estimatedBase ?? 0).toLocaleString();
     const stdAcq = result.estimatedStdPriceAtAcquisition;
@@ -540,6 +559,26 @@ export function buildNecessaryExpenseFormula(
     return result.usedEstimatedAcquisition
       ? "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥"
       : "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목";
+  }
+  // 배우자등 이월과세 Scenario A 채택 — 필요경비 = 양도비 등 + 증여세 상당액(§163의2).
+  // singleExp = result.expenses − capEx = (양도비 등) + 증여세 상당액 (실가 전환 후 directSide 반영).
+  const coA = result.carryoverTaxationDetail;
+  if (coA?.adoptedScenario === "A") {
+    const a = coA.scenarioA;
+    const gift = a.giftTaxAddedToExpense;
+    const transferExp = Math.max(0, singleExp - gift);
+    const parts: string[] = [`양도비 등 ${transferExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`];
+    if (gift > 0) {
+      const limitNote = a.giftTaxLimitApplied
+        ? ` (한도 ${a.giftTaxLimitCap.toLocaleString()} = 증여세 가산 전 양도차익 적용)`
+        : "";
+      parts.push(`증여세 상당액 ${gift.toLocaleString()}${limitNote} — 이월과세 §97의2①2호 전단·시행령 §163의2`);
+    }
+    const guardNote = a.donorCapexGuardApplied
+      ? " ※ 양도일 2024-01-01 전 — 증여자 자본적지출 불산입(§97의2①2호 후단 시행일)"
+      : "";
+    const body = parts.length > 1 ? `${parts.join(" + ")} = ${fmt(singleExp)}` : parts[0];
+    return body + guardNote;
   }
   if (result.usedEstimatedAcquisition) {
     if (result.swapApplied) {
