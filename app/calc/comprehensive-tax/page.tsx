@@ -15,7 +15,7 @@ import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate
  */
 
 import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
@@ -56,32 +56,26 @@ function NavButtons({
   onPrev,
   onNext,
   nextLabel = "다음",
+  isLast = false,
   loading = false,
 }: {
   step: number;
   onPrev: () => void;
   onNext: () => void;
   nextLabel?: string;
+  isLast?: boolean;
   loading?: boolean;
 }) {
   return (
-    <div className="flex gap-3 pt-4">
-      <button
-        type="button"
-        onClick={onPrev}
-        className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        {step === 0 ? "홈으로" : "이전"}
-      </button>
-      <button
-        type="button"
-        onClick={onNext}
-        disabled={loading}
-        className="flex-1 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-      >
-        {loading ? "계산 중..." : nextLabel}
-      </button>
+    <div className="flex items-center justify-between gap-2 pt-4">
+      <NavButton direction="prev" label={step === 0 ? "홈으로" : "이전"} onClick={onPrev} />
+      {isLast ? (
+        <CtaButton onClick={onNext} disabled={loading}>
+          {loading ? "계산 중..." : nextLabel}
+        </CtaButton>
+      ) : (
+        <NavButton direction="next" label={nextLabel} onClick={onNext} disabled={loading} />
+      )}
     </div>
   );
 }
@@ -550,37 +544,29 @@ export default function ComprehensiveTaxPage() {
           </div>
           <ComprehensiveTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
           <LoginPromptBanner />
-          <div className="flex gap-3">
-            <HomeButton
-              className="flex-1 justify-center px-4 py-2 text-sm"
-              onBeforeNavigate={() => {
-                // 스토어는 클라이언트 내비게이션에서 유지됨 → 결과 뷰 상태 해제(재진입 시 stale 결과 방지).
-                // 입력 데이터(formData)는 보존 — 재진입 시 1단계부터 검토·재계산 가능.
-                setResult(null);
-                setStep(0);
-              }}
-            />
-            <button
-              type="button"
-              onClick={handlePrev}
-              className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-            >
-              수정하기
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                reset();
-              }}
-              className="flex-1 rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
-            >
-              다시 계산
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <HomeButton
+                onBeforeNavigate={() => {
+                  // 스토어는 클라이언트 내비게이션에서 유지됨 → 결과 뷰 상태 해제(재진입 시 stale 결과 방지).
+                  // 입력 데이터(formData)는 보존 — 재진입 시 1단계부터 검토·재계산 가능.
+                  setResult(null);
+                  setStep(0);
+                }}
+              />
+              <NavButton direction="prev" label="수정하기" onClick={handlePrev} />
+            </div>
+            <CtaButton onClick={() => { reset(); }}>다시 계산</CtaButton>
           </div>
           <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
         </div>
       ) : (
         <div className="space-y-6">
+          {currentStep > 0 && (
+            <div className="flex justify-end">
+              <NavButton direction="prev" label="이전" onClick={handlePrev} aria-label="이전 단계로 이동" />
+            </div>
+          )}
           {/* 단계 표시 */}
           <StepIndicator
             steps={STEPS}
@@ -607,6 +593,7 @@ export default function ComprehensiveTaxPage() {
             onPrev={handlePrev}
             onNext={handleNext}
             nextLabel={currentStep === STEPS.length - 1 ? "계산하기" : "다음"}
+            isLast={currentStep === STEPS.length - 1}
             loading={loading}
           />
 

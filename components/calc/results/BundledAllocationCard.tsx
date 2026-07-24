@@ -1,6 +1,7 @@
 "use client";
 
 import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -620,27 +621,13 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       {/* 합산 과세 내역 (납부세액 요약 대체) */}
       <AggregatedTaxSummary aggregated={aggregated} />
 
-      {/* 하단 네비게이션 버튼 */}
-      <div className="flex gap-3 print:hidden">
-        <HomeButton variant="block" className="flex-1" />
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-          >
-            이전 화면
-          </button>
-        )}
-        {onReset && (
-          <button
-            type="button"
-            onClick={onReset}
-            className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            다시 계산하기
-          </button>
-        )}
+      {/* 하단 네비게이션 버튼 — 입력 단계 네비와 통일 (컴팩트 nav + 글자폭 CTA) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <div className="flex items-center gap-2">
+          <HomeButton />
+          {onBack && <NavButton direction="prev" label="이전 화면" onClick={onBack} />}
+        </div>
+        {onReset && <CtaButton onClick={onReset}>다시 계산하기</CtaButton>}
       </div>
     </div>
   );

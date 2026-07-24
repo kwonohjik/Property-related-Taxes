@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { Button } from "@/components/ui/button";
 import {
@@ -131,15 +132,13 @@ export function DeemedGiftCalculator() {
         </p>
       )}
 
-      <button
-        type="button"
+      <CtaButton
         onClick={handleCalc}
         disabled={loading || !form.type}
         data-testid="deemed-calc-btn"
-        className="w-full rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50"
       >
         {loading ? "계산 중..." : "증여이익 계산"}
-      </button>
+      </CtaButton>
 
       {result && (
         <DeemedGiftResultView

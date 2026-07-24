@@ -509,8 +509,20 @@ export function buildAcquisitionPriceFormula(
   totalTransferPrice: number,
   singleAcq: number,
   capEx: number,
-): string {
+): ReactNode {
   const capExStr = capEx > 0 ? ` + 자본적지출 ${capEx.toLocaleString()}` : "";
+  // 환산취득가 = 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가) — 분수를 Frac로 표기 (PR #746 표준).
+  const estFrac = (prefix: string, stdAcq: number, stdTransfer: number, suffix: string): ReactNode =>
+    createElement(
+      Fragment,
+      null,
+      prefix,
+      createElement(Frac, {
+        top: `취득시 기준시가 ${stdAcq.toLocaleString()}`,
+        bottom: `양도시 기준시가 ${stdTransfer.toLocaleString()}`,
+      }),
+      suffix,
+    );
   if (isAggregate) {
     return result.usedEstimatedAcquisition
       ? "자산별 환산취득가 합계 — 시행령 §163·§176의2②"
@@ -530,7 +542,12 @@ export function buildAcquisitionPriceFormula(
       const stdAcq = a.estimatedStdPriceAtAcquisition;
       const stdTransfer = a.estimatedStdPriceAtTransfer;
       return stdAcq != null && stdTransfer != null
-        ? `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)} = 양도가액 ${totalTransferPrice.toLocaleString()} × (취득시 기준시가 ${stdAcq.toLocaleString()} ÷ 양도시 기준시가 ${stdTransfer.toLocaleString()})${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·시행령 §163⑨)`
+        ? estFrac(
+            `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
+            stdAcq,
+            stdTransfer,
+            `${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·시행령 §163⑨)`,
+          )
         : `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·환산)`;
     }
     return `증여자 취득 당시 취득가액 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
@@ -540,7 +557,12 @@ export function buildAcquisitionPriceFormula(
     const stdAcq = result.estimatedStdPriceAtAcquisition;
     const stdTransfer = result.estimatedStdPriceAtTransfer;
     return stdAcq != null && stdTransfer != null
-      ? `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × (취득시 기준시가 ${stdAcq.toLocaleString()} ÷ 양도시 기준시가 ${stdTransfer.toLocaleString()})${capExStr} — 시행령 §163·§176의2②`
+      ? estFrac(
+          `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
+          stdAcq,
+          stdTransfer,
+          `${capExStr} — 시행령 §163·§176의2②`,
+        )
       : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2`;
   }
   return `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
@@ -566,8 +588,18 @@ export function buildNecessaryExpenseFormula(
   if (coA?.adoptedScenario === "A") {
     const a = coA.scenarioA;
     const gift = a.giftTaxAddedToExpense;
-    const transferExp = Math.max(0, singleExp - gift);
-    const parts: string[] = [`양도비 등 ${transferExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`];
+    const baseExp = Math.max(0, singleExp - gift);
+    // 증여자 취득이 환산(estimated) 모드면 본문 필요경비는 실제 양도비가 아니라
+    // 개산공제(취득시 기준시가 × 3%, 시행령 §163⑥). 금액 자기일치(baseExp === floor(기준시가×3%))로
+    // 개산공제를 확정 — §97② 단서 swap(직접경비 채택) 등 불일치 케이스는 "양도비 등" 유지.
+    const stdAcq = a.estimatedStdPriceAtAcquisition;
+    const lumpDeduction = stdAcq != null ? Math.floor(stdAcq * 0.03) : null;
+    const isLumpDeduction =
+      a.acquisitionWasEstimated === true && lumpDeduction != null && baseExp === lumpDeduction;
+    const baseLabel = isLumpDeduction
+      ? `개산공제 ${baseExp.toLocaleString()} = 취득시 기준시가 ${stdAcq!.toLocaleString()} × 3% — 시행령 §163⑥`
+      : `양도비 등 ${baseExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
+    const parts: string[] = [baseLabel];
     if (gift > 0) {
       const limitNote = a.giftTaxLimitApplied
         ? ` (한도 ${a.giftTaxLimitCap.toLocaleString()} = 증여세 가산 전 양도차익 적용)`

@@ -8,6 +8,7 @@
 import { useState, useMemo } from "react";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { cn } from "@/lib/utils";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 // LawArticleModal은 EngineStepsSubToggle로 이전되었으나, 감면 상세 카드 인용 링크화를 위해 재도입 (2026-06-15)
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -640,40 +641,20 @@ export function TransferTaxResultView({
         </div>
       )}
 
-      {/* 하단 버튼 */}
-      <div className="flex gap-2 print:hidden">
-        {onGoToFirst && (
-          <button
-            type="button"
-            onClick={onGoToFirst}
-            className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-          >
-            ← 자산 목록
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-        >
-          이전
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          다시 계산하기
-        </button>
-        {showMultiTransferButton && onContinueToMulti && (
-          <button
-            type="button"
-            onClick={onContinueToMulti}
-            className="flex-1 rounded-lg bg-black py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 transition-colors"
-          >
-            동일연도 다른 양도건
-          </button>
-        )}
+      {/* 하단 버튼 — 입력 단계 네비와 통일 (컴팩트 nav + 글자폭 CTA) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <div className="flex items-center gap-2">
+          {onGoToFirst && (
+            <NavButton direction="prev" label="자산 목록" onClick={onGoToFirst} />
+          )}
+          <NavButton direction="prev" label="이전" onClick={onBack} />
+        </div>
+        <div className="flex items-center gap-2">
+          <CtaButton onClick={onReset}>다시 계산하기</CtaButton>
+          {showMultiTransferButton && onContinueToMulti && (
+            <CtaButton tone="outline" onClick={onContinueToMulti}>동일연도 다른 양도건</CtaButton>
+          )}
+        </div>
       </div>
     </div>
   );
