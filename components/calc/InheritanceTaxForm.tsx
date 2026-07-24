@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { StepIndicator, type StepStatus } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
@@ -700,6 +700,9 @@ export function InheritanceTaxForm() {
       {/* 홈으로 · 초기화 — 내비게이션 바 위쪽 우측 */}
       <div className="flex items-center justify-end gap-2">
         <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" />
+        {step > 0 && (
+          <NavButton direction="prev" label="이전" onClick={handleBack} aria-label="이전 단계로 이동" />
+        )}
         <SaveButton onSave={handleManualSaveForForm} disabled={isEmpty} disabledReason="한 가지 이상 입력 후 저장해주세요." />
         <ResetButton
           onReset={() => {
@@ -774,24 +777,20 @@ export function InheritanceTaxForm() {
       )}
 
       <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
+        <NavButton
+          direction="prev"
+          label={step === 0 ? "홈으로" : "이전"}
           onClick={handleBack}
-          className="inline-flex items-center gap-1 rounded-md border border-border px-5 py-2 text-sm font-medium hover:bg-muted transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {step === 0 ? "홈으로" : "이전"}
-        </button>
+        />
         <div className="flex items-center gap-2">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} disabled={isEmpty} disabledReason="한 가지 이상 입력 후 저장해주세요." />
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={loading}
-            className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-2 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            {loading ? "계산 중..." : isLastStep ? "계산하기" : "다음 →"}
-          </button>
+          {isLastStep ? (
+            <CtaButton onClick={handleNext} disabled={loading}>
+              {loading ? "계산 중..." : "계산하기"}
+            </CtaButton>
+          ) : (
+            <NavButton direction="next" label="다음" onClick={handleNext} disabled={loading} />
+          )}
         </div>
       </div>
       <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />

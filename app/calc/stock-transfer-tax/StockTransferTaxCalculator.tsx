@@ -29,7 +29,7 @@ import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { extractStockTransferDate } from "@/lib/storage/title-generator";
-import { ChevronLeft } from "lucide-react";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 
 const STEPS = ["자산·시장·대주주", "양도·취득가액", "필요경비·신고", "결과"] as const;
 
@@ -149,6 +149,9 @@ export default function StockTransferTaxCalculator() {
           <div className="flex items-center gap-2">
             {/* onBeforeNavigate: 결과 화면에서 홈 이동 시 stale 결과 방지(스토어 메모리 정리, 입력 보존) */}
             <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" onBeforeNavigate={() => { if (isResult) { setResult(null); setStep(0); } }} />
+            {currentStep > 0 && (
+              <NavButton direction="prev" label="이전" onClick={handleBack} aria-label="이전 단계로 이동" />
+            )}
             <SaveButton onSave={handleManualSave} />
             <ResetButton onReset={handleReset} />
           </div>
@@ -197,28 +200,18 @@ export default function StockTransferTaxCalculator() {
 
             {/* 하단 네비게이션 */}
             <div className="mt-8 flex items-center justify-between border-t pt-6">
-              <button
-                type="button"
+              <NavButton
+                direction="prev"
+                label={currentStep === 0 ? "홈으로" : "이전"}
                 onClick={handleBack}
-                className="flex items-center gap-1 px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors text-sm"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                {currentStep === 0 ? "홈으로" : "이전"}
-              </button>
+              />
 
               {currentStep < 2 && (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="px-6 py-2 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700 transition-colors text-sm"
-                >
-                  다음
-                </button>
+                <NavButton direction="next" label="다음" onClick={handleNext} />
               )}
 
               {currentStep === 2 && (
-                <button
-                  type="button"
+                <CtaButton
                   onClick={() => {
                     const errs = validateStep3(formData).filter((e) => e.severity === "error");
                     if (errs.length > 0) {
@@ -229,10 +222,9 @@ export default function StockTransferTaxCalculator() {
                     setStep(3);
                     // 계산은 Step4에서 사용자가 실행
                   }}
-                  className="ml-2 px-6 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition-colors text-sm"
                 >
                   결과 보기
-                </button>
+                </CtaButton>
               )}
             </div>
           </div>

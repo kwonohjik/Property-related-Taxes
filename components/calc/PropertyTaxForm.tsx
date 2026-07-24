@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { PropertyTaxResultView } from "@/components/calc/results/PropertyTaxResultView";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { runPropertyManualSave, formatPropertySaveMessage } from "@/components/calc/property-tax-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { INITIAL_FORM, validateStep, callPropertyTaxAPI, type FormState } from "./property/shared";
@@ -171,21 +171,10 @@ export function PropertyTaxForm() {
           <SaveButton onSave={handleManualSave} />
         </div>
         <PropertyTaxResultView result={result} savedId={autoSave.savedId ?? undefined} />
-        <div className="mt-6 flex justify-center gap-3">
-          <button
-            onClick={handleBackToInput}
-            className="inline-flex items-center gap-1 px-6 py-2 rounded-md border text-sm font-medium hover:bg-muted transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            뒤로 가기
-          </button>
-          <button
-            onClick={handleReset}
-            className="px-6 py-2 rounded-md border text-sm font-medium hover:bg-muted transition-colors"
-          >
-            다시 계산하기
-          </button>
-          <SaveButton variant="primary" onSave={handleManualSave} className="flex-none px-6" />
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <NavButton direction="prev" label="뒤로 가기" onClick={handleBackToInput} />
+          <CtaButton onClick={handleReset}>다시 계산하기</CtaButton>
+          <SaveButton variant="primary" onSave={handleManualSave} />
         </div>
         <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
       </div>
@@ -194,6 +183,11 @@ export function PropertyTaxForm() {
 
   return (
     <div className="space-y-6">
+      {step > 0 && (
+        <div className="flex justify-end">
+          <NavButton direction="prev" label="이전" onClick={handleBack} aria-label="이전 단계로 이동" />
+        </div>
+      )}
       <StepIndicator
         current={displayStep}
         steps={visibleStepLabels}
@@ -247,27 +241,19 @@ export function PropertyTaxForm() {
         </p>
       )}
 
-      <div className="flex justify-between pt-2">
-        <button
-          type="button"
+      <div className="flex items-center justify-between gap-2 pt-2">
+        <NavButton
+          direction="prev"
+          label={step === 0 ? "홈으로" : "이전"}
           onClick={handleBack}
-          className="px-5 py-2 rounded-md border text-sm font-medium hover:bg-muted transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {step === 0 ? "홈으로" : "이전"}
-        </button>
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={loading}
-          className="px-5 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
-        >
-          {loading
-            ? "계산 중..."
-            : step === 3
-            ? "재산세 계산하기"
-            : "다음"}
-        </button>
+        />
+        {step === 3 ? (
+          <CtaButton onClick={handleNext} disabled={loading}>
+            {loading ? "계산 중..." : "재산세 계산하기"}
+          </CtaButton>
+        ) : (
+          <NavButton direction="next" label="다음" onClick={handleNext} disabled={loading} />
+        )}
       </div>
     </div>
   );

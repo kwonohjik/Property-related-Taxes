@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
-import { ChevronLeft } from "lucide-react";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -696,31 +696,18 @@ export function GiftTaxResultView({
       <DisclaimerBanner />
 
       {/* 버튼 */}
-      <div className="flex flex-wrap gap-3 print:hidden">
-        <button
-          type="button"
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <NavButton
+          direction="prev"
+          label="뒤로 가기"
           onClick={onBack}
-          className="flex items-center justify-center gap-1 rounded-md border border-border py-2.5 px-4 text-sm font-medium hover:bg-muted transition-colors"
           aria-label="바로 앞 단계로 돌아가기"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          뒤로 가기
-        </button>
-        <button
-          type="button"
-          onClick={onGoToFirst ?? onBack}
-          className="flex-1 min-w-[120px] rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
-        >
-          다시 계산
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="flex-1 min-w-[120px] rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          처음으로
-        </button>
-        {onSave && <SaveButton variant="primary" onSave={handleSaveClick} />}
+        />
+        <div className="flex items-center gap-2">
+          <CtaButton tone="outline" onClick={onGoToFirst ?? onBack}>다시 계산</CtaButton>
+          <CtaButton onClick={onReset}>처음으로</CtaButton>
+          {onSave && <SaveButton variant="primary" onSave={handleSaveClick} />}
+        </div>
       </div>
     </div>
   );
