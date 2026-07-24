@@ -469,6 +469,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               acquisitionSigunguCode={props.acquisitionSigunguCode}
               acquisitionAddress={props.asset?.addressJibun || props.asset?.addressRoad}
               acquisitionArea={props.acquisitionArea}
+              onAcquisitionAreaChange={props.onAcquisitionAreaChange}
               acquisitionDate={props.acquisitionDate}
               buildingName={props.asset?.buildingName}
               standardPriceAtAcq={props.standardPriceAtAcq}
