@@ -39,6 +39,30 @@ const CARRYOVER_ACTUAL_INPUT: TransferTaxInput = baseTransferInput({
   },
 });
 
+// 환산(estimated) 모드 이월과세: 본문 필요경비 = 개산공제(취득시 기준시가 404M × 3% = 12,120,000) + 증여세 10M.
+const CARRYOVER_ESTIMATED_INPUT: TransferTaxInput = baseTransferInput({
+  propertyType: "housing",
+  transferPrice: 700_000_000,
+  transferDate: new Date("2026-02-16"),
+  acquisitionPrice: 0,
+  acquisitionDate: new Date("2006-05-21"),
+  transferExpense: 0,
+  expenses: 0,
+  useEstimatedAcquisition: true,
+  isOneHousehold: false,
+  householdHousingCount: 1,
+  acquisitionCause: "carryover_gift",
+  carryoverTaxation: {
+    giftRegistryDate: new Date("2021-06-19"),
+    donorAcquisitionDate: new Date("2006-05-21"),
+    useEstimatedAcquisition: true,
+    giftTaxAmount: 10_000_000,
+    giftDateValuation: 666_000_000,
+  },
+  standardPriceAtAcquisition: 404_000_000,
+  standardPriceAtTransfer: 636_000_000,
+});
+
 const formData = {
   transferDate: "2026-02-16",
   contractTotalPrice: "700000000",
@@ -92,5 +116,19 @@ describe("이월과세 Scenario A — 신고서 취득가액·필요경비 근�
     expect(exp.value).toBe(22_120_000);
     expect(exp.formula).toContain("양도비 등 22,120,000");
     expect(exp.formula).not.toContain("증여세 상당액");
+  });
+
+  it("표시(환산 모드): 본문 필요경비를 개산공제(취득시 기준시가 × 3%)로 표기 — '양도비 등' 오표시 아님", () => {
+    const result = calculateTransferTax(CARRYOVER_ESTIMATED_INPUT, mockRates);
+    expect(result.carryoverTaxationDetail?.adoptedScenario).toBe("A");
+    expect(result.carryoverTaxationDetail?.scenarioA.acquisitionWasEstimated).toBe(true);
+    const items = buildStatementItems(result, formData, undefined, undefined, 700_000_000);
+    const exp = items.get("expenses")!;
+    // 개산공제 12,120,000 = 404,000,000 × 3% + 증여세 상당액 10,000,000 = 22,120,000
+    expect(exp.value).toBe(22_120_000);
+    expect(exp.formula).toContain("개산공제 12,120,000 = 취득시 기준시가 404,000,000 × 3%");
+    expect(exp.formula).toContain("증여세 상당액 10,000,000");
+    // 회귀: 개산공제를 실제 양도비로 오표시하지 않음
+    expect(exp.formula).not.toContain("양도비 등 12,120,000");
   });
 });

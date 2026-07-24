@@ -6,11 +6,15 @@
  * 2) UI(buildStatementItems): 취득가액·필요경비 산식을 실제값으로 풀어씀.
  *    + 필요경비 표시값이 개산공제를 이중 계산하던 버그 수정 (expenses − capEx 만).
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { createElement } from "react";
+import { cleanup, render } from "@testing-library/react";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+
+afterEach(cleanup);
 
 const mockRates = makeMockRates();
 
@@ -62,9 +66,14 @@ describe("환산취득가 모드 — 기준시가 echo + 산식 실제값 표시
 
     const acq = items.get("acquisitionPrice")!;
     expect(acq.value).toBe(200_000_000);
-    expect(acq.formula).toContain(
-      "환산취득가 200,000,000 = 양도가액 1,000,000,000 × (취득시 기준시가 100,000,000 ÷ 양도시 기준시가 500,000,000)",
+    // 환산취득가 산식은 Frac 분수 표기 (PR #746 표준) — 인라인 ÷ 미노출
+    const { container: acqC } = render(createElement("div", null, acq.formula));
+    expect(acqC.textContent).toContain(
+      "환산취득가 200,000,000 = 양도가액 1,000,000,000 ×",
     );
+    expect(acqC.textContent).toContain("취득시 기준시가 100,000,000");
+    expect(acqC.textContent).toContain("양도시 기준시가 500,000,000");
+    expect(acqC.textContent).not.toContain("÷");
 
     const exp = items.get("expenses")!;
     // ★ 이중계산 수정: 6,000,000(2배) 아니라 3,000,000
