@@ -609,3 +609,45 @@ describe("T-14: outOfPeriod 참고 반환", () => {
     expect(result.outOfPeriod).toHaveLength(0);
   });
 });
+
+// ──────────────────────────────────────────────────
+// T-15: 단지명 불일치 진단 경고 (후보 0건 원인 안내)
+// ──────────────────────────────────────────────────
+
+describe("T-15: 단지명 불일치 진단 경고", () => {
+  it("면적·기간은 통과하나 단지명만 다른 거래가 있으면 다른 단지명을 경고에 노출", () => {
+    const result = filterSimilarSales(
+      [
+        makeRecord({ aptName: "엘지빌리지4", dealDate: "2024-04-10" }),
+        makeRecord({ aptName: "삼성래미안2차", dealDate: "2024-05-02" }),
+      ],
+      { ...baseCriteria, targetAptName: "금곡엘지아파트" },
+    );
+    expect(result.candidates).toHaveLength(0);
+    const w = result.warnings.find((x) => x.includes("일치하는 거래가 없습니다"));
+    expect(w).toBeDefined();
+    expect(w).toContain("엘지빌리지4");
+    expect(w).toContain("삼성래미안2차");
+  });
+
+  it("면적 조건 밖 거래는 진단 경고 대상에서 제외", () => {
+    const result = filterSimilarSales(
+      [makeRecord({ aptName: "엘지빌리지4", exclusiveAreaM2: 59.99 })],
+      { ...baseCriteria, targetAptName: "금곡엘지아파트" },
+    );
+    expect(
+      result.warnings.some((x) => x.includes("일치하는 거래가 없습니다")),
+    ).toBe(false);
+  });
+
+  it("후보가 존재하면 단지명 진단 경고는 표시하지 않음", () => {
+    const result = filterSimilarSales(
+      [makeRecord({ dealDate: "2024-04-10" }), makeRecord({ aptName: "다른단지" })],
+      baseCriteria,
+    );
+    expect(result.candidates).toHaveLength(1);
+    expect(
+      result.warnings.some((x) => x.includes("일치하는 거래가 없습니다")),
+    ).toBe(false);
+  });
+});
