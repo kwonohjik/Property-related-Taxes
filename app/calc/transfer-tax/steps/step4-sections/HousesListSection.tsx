@@ -34,6 +34,7 @@ import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSe
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
+import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import {
   checkGracePeriodExemption,
@@ -432,6 +433,19 @@ export function HousesListSection({
   const hasMultiHouseEntries = houses.length > 0 || form.presaleRights.length > 0;
   const showGracePeriod = form.isOneHousehold && householdCount >= 2 && hasMultiHouseEntries;
 
+  // ①(세대 보유 주택 수) ↔ ④(다른 보유 주택 목록) 정합성 안내 (표시 전용 — 계획서 §2·§3).
+  // 배제규칙은 엔진 전용이라 UI 재계산 금지 → 구조적 개수만 대조(useMemo 파생, store 미기록).
+  const divergence = useMemo(
+    () =>
+      computeHouseCountDivergence({
+        primaryKind: form.assets?.[0]?.assetKind ?? "",
+        householdHousingCount: form.householdHousingCount,
+        houses: form.houses,
+        presaleRights: form.presaleRights,
+      }),
+    [form.assets, form.householdHousingCount, form.houses, form.presaleRights],
+  );
+
   return (
     <div className="space-y-3">
       {/* ── 양도 주택 소재지 ── */}
@@ -505,6 +519,25 @@ export function HousesListSection({
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* ── ①↔④ 정합성 안내 (표시 전용) ── */}
+        {divergence.showPrecedence && (
+          <ToneCard tone="sky" bodyClassName="" className="px-3 py-2">
+            <p className="text-xs leading-relaxed">
+              중과 <b>2주택·3주택 판정</b>은 이 <b>다른 보유 주택 목록</b>(배제규칙 반영) 기준으로 산정됩니다.
+              ① <b>세대 보유 주택 수</b>는 목록이 비어 있을 때만 사용됩니다.
+            </p>
+          </ToneCard>
+        )}
+        {divergence.showMismatch && (
+          <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
+            <p className="text-xs leading-relaxed" data-testid="house-count-mismatch">
+              ① 세대 보유 주택 수(<b>{divergence.declared}채</b>)와 목록의 주택 수
+              (<b>{divergence.structuralCount}채</b>, 양도주택 포함)가 다릅니다. 누락된 주택을 추가하거나
+              ①을 실제 세대 보유 주택 수에 맞게 조정하세요. <span className="text-muted-foreground">(분양권·입주권은 별도 집계)</span>
+            </p>
+          </ToneCard>
         )}
       </div>
 

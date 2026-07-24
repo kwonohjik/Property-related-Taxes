@@ -16,6 +16,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { MergeDateSection } from "./step4-sections/MergeDateSection";
@@ -270,7 +271,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   onClick={() => onChange({ householdHousingCount: v === "3+" ? "3" : v })}
                   className={cn(
                     "flex-1 rounded-md border py-2 text-sm font-medium transition-colors",
-                    (v === "3+" ? form.householdHousingCount === "3" : form.householdHousingCount === v)
+                    (v === "3+" ? parseInt(form.householdHousingCount) >= 3 : form.householdHousingCount === v)
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border hover:bg-muted",
                   )}
@@ -279,6 +280,22 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 </button>
               ))}
             </div>
+            {/* 3채 이상: 정확한 세대 보유 주택 수 — 비과세·장특(§89①3호가목 1주택 요건) 판정에 실제 주택 수 사용.
+                토글 캡("3")이 4채+를 3으로 저장하면 감면·특례 배제 겹칠 때 1주택 특례를 오부여하므로 정확값을 입력받는다. */}
+            {parseInt(form.householdHousingCount) >= 3 && (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="shrink-0 text-xs text-muted-foreground">정확한 세대 보유 주택 수</span>
+                <div className="w-20">
+                  <IntegerInput
+                    id="household-house-count-exact"
+                    value={parseInt(form.householdHousingCount) || 3}
+                    onChange={(n) => onChange({ householdHousingCount: String(Math.max(3, n)) })}
+                    ariaLabel="정확한 세대 보유 주택 수"
+                  />
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">채</span>
+              </div>
+            )}
           </div>
 
           {/* 세대 보유 입주권 수 — right_to_move_in 자산 유형에서만 노출 (§89①4호 가목 판정) */}
