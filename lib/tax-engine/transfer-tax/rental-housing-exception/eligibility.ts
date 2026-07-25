@@ -137,6 +137,16 @@ function buildFailMessage(
       return `${n}호: 건설임대 규모요건 초과 (대지 ${unit.landAreaM2}㎡·연면적 ${unit.totalFloorAreaM2}㎡ — 각 298㎡·149㎡ 이하 필요).`;
     case "MIN_UNITS_NOT_MET":
       return `${n}호: 건설임대는 2호 이상 임대 요건을 충족해야 합니다.`;
+    case "REG_DATE_GATE":
+      return `${n}호: 해당 유형(${article}목)의 등록기준일 요건을 충족하지 않습니다(단기 6년 유형은 2025.6.4 이후 등록).`;
+    case "SHORT_TO_LONG_CHANGE":
+      return `${n}호: 단기임대에서 장기일반으로 변경신고한 주택은 §155⑳ 특례 대상이 아닙니다.`;
+    case "NATIONAL_SIZE_REQUIRED":
+      return `${n}호: 국민주택규모(전용 85㎡·수도권 도시지역 60㎡ 이하) 요건을 충족해야 합니다.`;
+    case "REGION_RESTRICTED":
+      return `${n}호: 해당 유형은 비수도권 소재 주택만 대상입니다.`;
+    case "RENTAL_TERMINATION_RESTRICTED":
+      return `${n}호: 자진·자동 말소 후 양도 요건(2020.8.18 이후 말소·의무기간 1/2 이상·1년 내 양도)을 충족하지 않습니다.`;
     case "REQUIREMENTS_NOT_CONFIRMED":
       return `${n}호: 기타 요건(임대료 5% 이내 증액·임대사업자 등록·임대료 지급 등) 확인 필요`;
     default:
@@ -186,15 +196,18 @@ export function checkEligibility(
     const effectiveRegDate = deriveEffectiveRegDate(unit);
     const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effectiveRegDate);
     const normalized: NormalizedRentalUnit = {
-      effectiveRegDate,
+      businessRegistrationDate: unit.businessRegistrationDate,
+      rentalRegistrationDate: unit.rentalRegistrationDate,
       isCapitalArea: unit.region === "seoul-metro",
       isApartment: unit.isApartment,
       rentalStartOfficialPrice: unit.standardPriceAtRentalStart,
+      // §155⑳ 도출 목(가/다/마/바/아/자/구법)은 priceAt="rentalStart" — 취득당시 미사용(나목은 C4).
+      acquisitionOfficialPrice: unit.standardPriceAtRentalStart,
       rentalYears: unit.rentalMonths / 12,
       landAreaM2: unit.landAreaM2,
       totalFloorAreaM2: unit.totalFloorAreaM2,
       hasMinimum2Units: unit.hasMinimum2Units,
-      isRegulatedAreaNewAcq: unit.isRegulatedAreaNewAcq,
+      isRegulatedAreaNewAcq: unit.isRegulatedAreaNewAcq, // §155⑳ 아목 게이트(C3 유지·C4서 rename)
       rentIncreaseUnder5Pct: unit.requirementsConfirmed, // §155⑳ 묶음 확인 → 5%룰 매핑
     };
     const result = checkRentalArticle(article, normalized);

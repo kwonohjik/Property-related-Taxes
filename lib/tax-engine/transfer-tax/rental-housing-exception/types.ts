@@ -7,6 +7,8 @@
  * Design: docs/02-design/features/rental-housing-residence-exception.engine.design.md
  */
 
+import type { ArticleFailCode } from "../../rental-article/check";
+
 // ============================================================
 // 임대주택 단위 입력
 // ============================================================
@@ -102,20 +104,10 @@ export type RentalHousingExceptionInput = {
 // 결과 타입
 // ============================================================
 
-/** 요건 미충족 임대주택 단위 정보 */
+/** 요건 미충족 임대주택 단위 정보 (code는 공용 predicate check.ts의 ArticleFailCode 단일 소스) */
 export type RentalUnitFailReason = {
   unitIndex: number;
-  code:
-    | "RENTAL_PERIOD_SHORT"      // 의무임대기간 미충족
-    | "STANDARD_PRICE_EXCEEDED"  // 기준시가 상한 초과
-    | "APARTMENT_RESTRICTED"     // 아파트 등록 제한 (2020.7.11 이후·단기/건설)
-    | "REQUIREMENTS_NOT_CONFIRMED" // 기타 요건 미확인
-    | "SHORT_TERM_REGULATED"     // 아목 단기임대 + 조정대상지역 신규취득
-    | "SIZE_REQUIRED"            // 건설임대 면적 미입력 (침묵 통과 차단)
-    | "SIZE_EXCEEDED"            // 건설임대 규모(대지298·연면적149) 초과
-    | "MIN_UNITS_NOT_MET"        // 건설임대 2호 이상 미충족
-    | "BOTH_REG_REQUIRED"        // 세무서·지자체 등록 미완비 (사업자등록등)
-    | "RENTAL_TERMINATION_RESTRICTED"; // 자동·자진말소 5년 내 양도 제한 (Phase 2)
+  code: ArticleFailCode;
   message: string;
 };
 
