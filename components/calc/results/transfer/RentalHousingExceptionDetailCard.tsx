@@ -119,11 +119,27 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
         {detail.eligibility.failReasons.length > 0 && (
           <ul className="text-xs text-muted-foreground space-y-0.5 pl-3 list-disc">
             {detail.eligibility.failReasons.map((r, i) => (
-              <li key={i}>{typeof r === "string" ? r : `임대주택 요건 미충족`}</li>
+              <li key={i}>{typeof r === "string" ? r : r.message}</li>
             ))}
           </ul>
         )}
       </div>
+
+      {/* 임대주택 호별 판정기준 (도출 목·의무기간·기준시가 상한 — P5) */}
+      {detail.eligibility.perUnitVerdict && detail.eligibility.perUnitVerdict.length > 0 && (
+        <div className="rounded border border-violet-200 bg-white/60 dark:border-violet-800/30 dark:bg-white/5 p-2.5 space-y-1">
+          <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">임대주택 판정 기준</p>
+          <ul className="text-xs text-muted-foreground space-y-0.5">
+            {detail.eligibility.perUnitVerdict.map((v) => (
+              <li key={v.unitIndex}>
+                {v.unitIndex + 1}호: {v.derivedArticle}목 · 의무임대기간 {v.requiredYears}년 · 기준시가 상한{" "}
+                {(v.stdPriceCap / 100_000_000).toFixed(0)}억
+                {v.effectiveRegDate ? ` · 등록기준일 ${v.effectiveRegDate}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* B 시나리오 안분 산식 (소득세법 시행령 제161조 제1항) */}
       {isScenarioB && formulaTrace.ratio161_1 !== undefined && (

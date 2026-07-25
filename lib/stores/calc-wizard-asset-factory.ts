@@ -25,12 +25,17 @@ export const RENTAL_HOUSING_EXCEPTION_DEFAULTS: AssetForm["rentalHousingExceptio
 /** 빈 임대주택 1호 초기값 (토글 ON 시 자동 추가) */
 export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["rentalUnits"][number] {
   return {
-    registrationDate: "",
-    rentalType: "long-8",
+    businessRegistrationDate: "",
+    rentalRegistrationDate: "",
+    rentalCategory: "long_general",
     rentalAcquisitionType: "purchase",
     isApartment: false,
     region: "seoul-metro",
+    isRegulatedAreaNewAcq: false,
     standardPriceAtRentalStart: "",
+    rentalLandArea: "",
+    rentalTotalFloorArea: "",
+    hasMinimum2Units: false,
     rentalMonths: "",
     rentalAutoTermination: false,
     requirementsConfirmed: false,

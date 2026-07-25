@@ -85,12 +85,15 @@ function makePdf1Input(): RentalHousingExceptionInput {
     scenario: "B",
     rentalUnits: [
       {
-        registrationDate: new Date("2016-01-01"), // 2020.7.10 이전 등록
-        rentalType: "long-8",                      // 장기일반 (8년 이상)
+        businessRegistrationDate: new Date("2016-01-01"),
+        rentalRegistrationDate: new Date("2016-01-01"), // 2020.7.10 이전 등록
+        rentalCategory: "long_general",                      // 장기일반 (8년 이상)
         rentalAcquisitionType: "purchase",
         isApartment: true,
-        region: "non-metro",                       // 비수도권 (파주시 — 수도권이나 사례상 6억 이하)
-        standardPriceAtRentalStart: 300_000_000,   // 임대개시 당시 기준시가 3억 (비수도권 3억 이하)
+        region: "non-metro",
+        isRegulatedAreaNewAcq: false,                       // 비수도권 (파주시 — 수도권이나 사례상 6억 이하)
+        standardPriceAtRentalStart: 300_000_000,
+        hasMinimum2Units: false,   // 임대개시 당시 기준시가 3억 (비수도권 3억 이하)
         rentalMonths: 96,                          // 8년 × 12 = 96개월 (의무기간 충족)
         rentalAutoTermination: false,
         requirementsConfirmed: true,

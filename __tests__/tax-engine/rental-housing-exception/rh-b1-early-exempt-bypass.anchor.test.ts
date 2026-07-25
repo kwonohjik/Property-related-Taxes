@@ -19,12 +19,15 @@ import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 const rates = makeMockRates();
 
 const rentalUnitOk = {
-  registrationDate: new Date("2016-06-01"),
-  rentalType: "long-8" as const,
+  businessRegistrationDate: new Date("2016-06-01"),
+  rentalRegistrationDate: new Date("2016-06-01"),
+  rentalCategory: "long_general" as const,
   rentalAcquisitionType: "purchase" as const,
   isApartment: false,
   region: "seoul-metro" as const,
+  isRegulatedAreaNewAcq: false,
   standardPriceAtRentalStart: 300_000_000,
+  hasMinimum2Units: false,
   rentalMonths: 96,
   rentalAutoTermination: false,
   requirementsConfirmed: true,

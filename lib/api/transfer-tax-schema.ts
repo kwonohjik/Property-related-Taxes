@@ -51,23 +51,28 @@ export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-buildin
 /** 시나리오: A=거주주택 양도, B=임대주택→거주주택 전환 후 양도(PHRP) */
 export const RentalScenarioEnum = z.enum(['A', 'B']);
 
-/** 임대 유형: 단기(4·6년)·장기(8·10년)·2018 이전 등록 */
-export const RentalTypeEnum = z.enum(['short-4', 'short-6', 'long-8', 'long-10', 'pre-2018']);
+/** 임대구분: 장기일반·단기6년·구 임대주택법 (의무기간·cap은 등록기준일·취득방법에서 파생) */
+export const RentalCategoryEnum = z.enum(['long_general', 'short_6y', 'pre_2018']);
 
 /** 취득 방법: 매입·건설 */
 export const RentalAcqTypeEnum = z.enum(['purchase', 'construction']);
 
-/** 소재지역: 수도권·비수도권·조정대상지역 */
-export const RentalRegionEnum = z.enum(['seoul-metro', 'non-metro', 'regulated-area']);
+/** 소재지역: 수도권·비수도권 (조정대상지역은 isRegulatedAreaNewAcq 별도 축) */
+export const RentalRegionEnum = z.enum(['seoul-metro', 'non-metro']);
 
 /** ⑫ 임대주택 1호 Zod 객체 스키마 (미정의 시 침묵 stripping 방지) */
 export const rentalUnitSchema = z.object({
-  registrationDate: z.string().datetime(),
-  rentalType: RentalTypeEnum,
+  businessRegistrationDate: z.string().datetime(),
+  rentalRegistrationDate: z.string().datetime(),
+  rentalCategory: RentalCategoryEnum,
   rentalAcquisitionType: RentalAcqTypeEnum,
   isApartment: z.boolean(),
   region: RentalRegionEnum,
+  isRegulatedAreaNewAcq: z.boolean(),
   standardPriceAtRentalStart: z.number().int().nonnegative(),
+  landAreaM2: z.number().nonnegative().optional(),
+  totalFloorAreaM2: z.number().nonnegative().optional(),
+  hasMinimum2Units: z.boolean(),
   rentalMonths: z.number().nonnegative(),
   rentalAutoTermination: z.boolean(),
   requirementsConfirmed: z.boolean(),

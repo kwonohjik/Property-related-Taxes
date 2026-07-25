@@ -20,12 +20,15 @@ import {
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception";
 
 const baseUnit: RentalUnitInput = {
-  registrationDate: new Date("2014-01-01"),
-  rentalType: "long-8",
+  businessRegistrationDate: new Date("2014-01-01"),
+  rentalRegistrationDate: new Date("2014-01-01"),
+  rentalCategory: "long_general",
   rentalAcquisitionType: "purchase",
   isApartment: false,
   region: "seoul-metro",
+  isRegulatedAreaNewAcq: false,
   standardPriceAtRentalStart: 500_000_000,
+  hasMinimum2Units: false,
   rentalMonths: 96,
   rentalAutoTermination: false,
   requirementsConfirmed: true,
@@ -81,9 +84,10 @@ describe("RH-Eligibility — 요건 미충족 차단", () => {
 
   it("2020.7.11 이후 등록 아파트 → APARTMENT_RESTRICTED", () => {
     const result = run({
-      registrationDate: new Date("2021-01-01"),
+      businessRegistrationDate: new Date("2021-01-01"),
+      rentalRegistrationDate: new Date("2021-01-01"),
       isApartment: true,
-      rentalType: "long-10",
+      rentalCategory: "long_general",
       rentalMonths: 120,
     });
     expect(result.eligibility.passed).toBe(false);
@@ -106,10 +110,12 @@ describe("RH-Eligibility — 요건 미충족 차단", () => {
 
   it("단기임대(short-6) + 조정대상지역 → SHORT_TERM_REGULATED", () => {
     const result = run({
-      registrationDate: new Date("2025-07-01"),
-      rentalType: "short-6",
+      businessRegistrationDate: new Date("2025-07-01"),
+      rentalRegistrationDate: new Date("2025-07-01"),
+      rentalCategory: "short_6y",
       rentalMonths: 72,
-      region: "regulated-area",
+      region: "seoul-metro",
+      isRegulatedAreaNewAcq: true,
     });
     expect(result.eligibility.passed).toBe(false);
     expect(result.eligibility.failReasons.some(r => r.code === "SHORT_TERM_REGULATED")).toBe(true);
