@@ -29,7 +29,7 @@ import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { extractStockTransferDate } from "@/lib/storage/title-generator";
-import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 
 const STEPS = ["자산·시장·대주주", "양도·취득가액", "필요경비·신고", "결과"] as const;
 
@@ -200,11 +200,7 @@ export default function StockTransferTaxCalculator() {
 
             {/* 하단 네비게이션 */}
             <div className="mt-8 flex items-center justify-between border-t pt-6">
-              <NavButton
-                direction="prev"
-                label={currentStep === 0 ? "홈으로" : "이전"}
-                onClick={handleBack}
-              />
+              <WizardBackNav isFirstStep={currentStep === 0} onBack={handleBack} />
 
               {currentStep < 2 && (
                 <NavButton direction="next" label="다음" onClick={handleNext} />

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, ChevronLeft } from "lucide-react";
+import { Plus } from "lucide-react";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { AssetTabBar } from "@/components/calc/transfer/AssetTabBar";
 import { AggregateSettingsPanel } from "@/components/calc/transfer/AggregateSettingsPanel";
@@ -498,11 +498,6 @@ export default function MultiTransferTaxCalculator() {
       {/* 헤더 */}
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <button onClick={() => router.push("/")} className="hover:text-foreground flex items-center gap-1">
-            <ChevronLeft className="h-3.5 w-3.5" />
-            홈으로
-          </button>
-          <span>/</span>
           <button onClick={() => router.push("/calc/transfer-tax")} className="hover:text-foreground">
             양도소득세
           </button>

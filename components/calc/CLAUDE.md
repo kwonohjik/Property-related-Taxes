@@ -341,5 +341,5 @@ ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수
 - **신규 작성 금지**: native `<Link href="/">`, `<button onClick={()=>router.push("/")}>`, `ChevronLeft`/`←` 홈링크. 전부 `<HomeButton>`으로.
 - **variant**: `pill`(기본 — 헤더·breadcrumb·페이지 상단) / `block`(전체폭 `rounded-lg` — `flex-1` 결과·에러 화면. `className="flex-1"` 병용).
 - **props**: `confirmMessage`(입력 이탈 확인 다이얼로그 — 미제공 시 즉시 이동), `onBeforeNavigate`(zustand step/result stale 정리), `label`(기본 "홈으로").
-- **예외(이 컴포넌트 아님)**: 마법사 StepWizard 하단의 "이전/홈으로" **겸용 네비 버튼**(step 0에서만 "홈으로", 그 외 "이전"). 뒤로가기 네비와 겸용이라 홈 전용 pill로 대체하지 않음(현행 유지). 마법사는 이미 헤더에 `HomeButton`이 있음.
-- 설계: `docs/02-design/features/home-button-unification.plan.md`.
+- **마법사 하단 네비 좌측**(2026-07-25 통일): 공용 `WizardBackNav`(`components/calc/shared/WizardNav.tsx`) 사용. **step 0 = `HomeButton` pill**(상단 헤더와 동일 — 이미지10 일치), **step 1+ = `NavButton "이전"`**(ChevronLeft). 하단에서 `NavButton label="홈으로"` 신규 작성 금지. `<WizardBackNav isFirstStep={step === 0} onBack={handleBack} />` — step 0 홈 이동은 항상 HomeButton이 "/"로 처리(즉시 이동, confirm 미적용이 기본). 종전 "겸용 네비 현행 유지" 예외는 폐지.
+- 설계: `docs/02-design/features/home-button-unification.plan.md` · `docs/02-design/features/home-button-bottom-nav-unification.plan.md`.

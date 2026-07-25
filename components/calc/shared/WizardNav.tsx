@@ -13,6 +13,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HomeButton } from "./HomeButton";
 
 const NAV_CLASS =
   "inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
@@ -32,6 +33,29 @@ export function NavButton({ direction, label, type = "button", className, ...pro
       {direction === "next" && <Icon className="h-3.5 w-3.5" />}
     </button>
   );
+}
+
+type WizardBackNavProps = {
+  /** step 0 여부 — true면 HomeButton pill(집 아이콘·rounded-full), false면 "이전" NavButton(ChevronLeft) */
+  isFirstStep: boolean;
+  /** step 1+ '이전' 클릭 (step 0에서는 무시 — HomeButton이 홈("/")으로 이동) */
+  onBack: () => void;
+  /** step 0 홈 이탈 확인 문구. 미제공 시 즉시 이동(하단 네비 기본) */
+  homeConfirmMessage?: string;
+  /** 홈 이동 직전 stale 정리 콜백 */
+  onBeforeHome?: () => void;
+};
+
+/**
+ * 마법사 하단 네비 좌측 겸용 버튼 (전 세목 단일 소스 — 2026-07-25).
+ * step 0 = HomeButton pill(상단 헤더와 동일), step 1+ = NavButton "이전".
+ * 하단에서 `NavButton label="홈으로"` 신규 작성 금지.
+ */
+export function WizardBackNav({ isFirstStep, onBack, homeConfirmMessage, onBeforeHome }: WizardBackNavProps) {
+  if (isFirstStep) {
+    return <HomeButton confirmMessage={homeConfirmMessage} onBeforeNavigate={onBeforeHome} />;
+  }
+  return <NavButton direction="prev" label="이전" onClick={onBack} />;
 }
 
 const CTA_SOLID =
