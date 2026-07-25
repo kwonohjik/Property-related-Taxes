@@ -18,6 +18,7 @@
  */
 
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
+import { rentalStdPriceCap, rentalRequiredYears } from "../../rental-article/rules";
 import type {
   RentalUnitInput,
   RentalCategory,
@@ -33,7 +34,6 @@ import type {
 // ============================================================
 
 const CUT_2020_07_11 = new Date("2020-07-11").getTime();
-const CUT_2020_08_18 = new Date("2020-08-18").getTime();
 
 // ============================================================
 // 파생 함수 (단일 소스 — UI·validate 재사용)
@@ -73,53 +73,25 @@ export function deriveRentalArticle(
 }
 
 /**
- * 도출 목·등록기준일에 따른 의무임대기간(년).
- * 가/다=5, 마/바=(≤2020.8.17 준용 8·이후 10), 아/자=6, 구법=5.
+ * 도출 목·등록기준일에 따른 의무임대기간(년). 공용 `rental-article/rules.ts` 위임(단일 소스).
  */
 export function deriveRequiredYears(
   article: RentalArticle,
   effectiveRegDate: Date | null,
 ): number {
-  switch (article) {
-    case "가":
-    case "다":
-    case "구법":
-      return 5;
-    case "아":
-    case "자":
-      return 6;
-    case "마":
-    case "바": {
-      const regTs = effectiveRegDate?.getTime() ?? 0;
-      // 2020.7.11~8.17 등록: 민특법 준용 8년 / 2020.8.18 이후: 10년
-      return regTs < CUT_2020_08_18 ? 8 : 10;
-    }
-    default:
-      return 10;
-  }
+  return rentalRequiredYears(article, effectiveRegDate?.getTime() ?? 0);
 }
 
 /**
- * 도출 목·지역별 임대개시일 기준시가 상한(원).
- * 가/마/구법: 수도권 6억·비수도권 3억 | 다/자: 6억 | 바: 9억 | 아: 수도권 4억·비수도권 2억.
+ * 도출 목·지역·등록기준일별 기준시가 상한(원). 공용 `rental-article/rules.ts` 위임(단일 소스).
+ * F5: 바목은 등록기준일 2025.2.28 경계로 6억/9억 분기(다주택 정합).
  */
-export function deriveStdPriceCap(article: RentalArticle, region: RegionType): number {
-  const isMetro = region === "seoul-metro";
-  switch (article) {
-    case "가":
-    case "마":
-    case "구법":
-      return isMetro ? 600_000_000 : 300_000_000;
-    case "다":
-    case "자":
-      return 600_000_000;
-    case "바":
-      return 900_000_000;
-    case "아":
-      return isMetro ? 400_000_000 : 200_000_000;
-    default:
-      return 600_000_000;
-  }
+export function deriveStdPriceCap(
+  article: RentalArticle,
+  region: RegionType,
+  effectiveRegDate: Date | null,
+): number {
+  return rentalStdPriceCap(article, region === "seoul-metro", effectiveRegDate?.getTime() ?? 0);
 }
 
 /**
@@ -199,7 +171,7 @@ export function checkEligibility(
 
     const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effectiveRegDate);
     const requiredYears = deriveRequiredYears(article, effectiveRegDate);
-    const priceCap = deriveStdPriceCap(article, unit.region);
+    const priceCap = deriveStdPriceCap(article, unit.region, effectiveRegDate);
     const sizeRequired = isConstructionArticle(article);
 
     perUnitVerdict.push({

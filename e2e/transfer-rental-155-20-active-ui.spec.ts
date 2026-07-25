@@ -89,9 +89,10 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(page.getByText("조정대상지역에 세대원이 신규취득한 단기임대입니다.")).toHaveCount(0);
 
     // 취득방법 → 건설 : 바목, 규모 필드 노출, 소재지역 숨김
+    // (등록기준일 2020-08-18 < 2025.2.28 → 바목 cap 6억, F5)
     await page.locator('input[name="rental-acq-type-0"][value="construction"]').check();
     await expect(badge).toContainText("바목");
-    await expect(badge).toContainText("9억");
+    await expect(badge).toContainText("6억");
     await expect(page.getByText("건설임대 규모요건")).toBeVisible();
     await expect(page.getByText("대지면적", { exact: false })).toBeVisible();
     await expect(page.locator('input[name="rental-region-0"]')).toHaveCount(0);

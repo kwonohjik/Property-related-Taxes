@@ -80,7 +80,7 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
     [unit.rentalCategory, unit.rentalAcquisitionType, effRegDate],
   );
   const reqYears = deriveRequiredYears(article, effRegDate);
-  const cap = deriveStdPriceCap(article, unit.region);
+  const cap = deriveStdPriceCap(article, unit.region, effRegDate);
   const aptRestricted = isApartmentRestricted(article, effRegDate, unit.isApartment);
 
   const isConstruction = article === "다" || article === "바" || article === "자";
