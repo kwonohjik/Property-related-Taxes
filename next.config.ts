@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@react-pdf/renderer"],
   // LAN IP / 다른 호스트에서 dev 서버 접속 시 HMR·webpack 리소스 차단 해제 (Next.js 16)
   allowedDevOrigins: ["192.168.1.134"],
+  // dev 인디케이터를 우측 하단으로 이동 — 좌하단 "홈으로" pill과 겹침 방지 (dev 전용, 프로덕션 무영향)
+  devIndicators: { position: "bottom-right" },
 };
 
 // NEXT_PUBLIC_SENTRY_DSN 설정 시에만 Sentry 래핑 (환경변수 미설정 시 원본 config 반환)
