@@ -37,7 +37,10 @@ A=가(매입5년)·B=나(기존사업자)·C=다(건설5년)·D=라(미분양)·
 
 ## 2. 핵심 발견
 
-### F5 — 바목 cap divergence (Phase 1 잠재 버그)
+### F5 — 바목 cap divergence (Phase 1 잠재 버그) ✅ C1 수정 완료
+> **✅ 정정(C1, 2026-07-26)**: `rental-article/rules.ts` `rentalStdPriceCap`에서 바목 = 등록기준일 2025.2.28 경계로 6억/9억 분기. §155⑳ `deriveStdPriceCap`가 위임(3-arg: article·region·effectiveRegDate). anchor 2건(2025.2.27→6억 배제·2025.2.28→9억). 다주택측 rules 위임은 C3.
+> ⚠️ 2025.2.28 경계일·등록일기준은 MCP amendment_track 미확인(다주택 tested 값 정렬) — Do 후속서 재확인.
+
 - 다주택 `checkRentalType_F`:196 — `latestRegDate ≥ 2025-02-28 ? 9억 : 6억` (역사 개정: 6억→9억).
 - §155⑳ `deriveStdPriceCap("바")` — **9억 고정**(Phase 1). → **2025.2.28 이전 등록 건설 장기임대에서 §155⑳가 6억 대신 9억 적용 = 과대적용(납세자 유리 오적용)**.
 - ⚠️ **Do 전 2건 재확인(korean-law-citation-verify·`feedback_historical_statute_value_via_tribunal`)**: (a) 개정 시행일 `2025-02-28`(다주택 코드 출처 — MCP `amendment_track`로 확인), (b) **cap 6억→9억 상향의 경계 기준일이 "등록일" vs "임대개시일"** 중 무엇인지(다주택 코드는 `latestRegDate`=등록일 사용하나 법문은 "임대개시일 당시 9억" — 개정 부칙의 적용례 확인). 미확인 시 "확인 필요" 유지.
@@ -185,7 +188,7 @@ Phase 1 §155⑳는 마목 배제사유 중 아파트 date-gate만 구현. 다�
 
 ## 9. 단계별 롤아웃 (커밋 분리)
 
-1. **C1 (=T1, T2의 선행 substep)** `rental-article/rules.ts`+`types.ts` 신설(상수·타입) + F5 바목 cap 조건부. §155⑳ `deriveStdPriceCap`·다주택 `checkRentalType_*`의 하드코딩 숫자를 rules 조회로 치환 → F5 해소·회귀 anchor(숫자 무변경 확인).
+1. **C1 (=T1, T2의 선행 substep)** ✅**완료(2026-07-26)** — `rental-article/rules.ts`+`types.ts` 신설(SharedRentalArticle·rentalStdPriceCap·rentalRequiredYears·RA_CUT). §155⑳ `deriveStdPriceCap`(3-arg)·`deriveRequiredYears`가 rules 위임 + F5 바목 조건부 cap 해소. tsc 0·rental 158 green. **다주택 `checkRentalType_*`의 rules 치환은 C3와 함께**(shipped 다주택 회귀 위험 → 전체 predicate 위임 시 일괄).
 2. **C2** `check.ts` canonical predicate + §155⑳ 어댑터 위임(EligibilityResult wrap). §155⑳ 173 green.
 3. **C3** 다주택 `checkRentalType_A~I`→`check.ts` 위임(어댑터·D-1·D-2 반영). 다주택 회귀 재anchor.
 4. **C4** 나목(existing_business) 14-sync + UI 조건부 + anchor.

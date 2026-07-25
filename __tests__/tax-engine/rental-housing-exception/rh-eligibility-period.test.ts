@@ -107,21 +107,23 @@ describe("도출 목·의무기간 tier (등록기준일 경계)", () => {
 // deriveStdPriceCap — 유형·지역별 (F1·F2 핵심)
 // ============================================================
 
-describe("기준시가 상한 — 유형·지역", () => {
+describe("기준시가 상한 — 유형·지역·등록일 (rental-article/rules 위임)", () => {
+  const D = (s: string) => new Date(s);
   it("가/마 수도권 6억·비수도권 3억", () => {
-    expect(deriveStdPriceCap("마", "seoul-metro")).toBe(600_000_000);
-    expect(deriveStdPriceCap("마", "non-metro")).toBe(300_000_000);
+    expect(deriveStdPriceCap("마", "seoul-metro", D("2021-01-01"))).toBe(600_000_000);
+    expect(deriveStdPriceCap("마", "non-metro", D("2021-01-01"))).toBe(300_000_000);
   });
   it("F1 — 아목 수도권 4억·비수도권 2억 (구 6억/3억 아님)", () => {
-    expect(deriveStdPriceCap("아", "seoul-metro")).toBe(400_000_000);
-    expect(deriveStdPriceCap("아", "non-metro")).toBe(200_000_000);
+    expect(deriveStdPriceCap("아", "seoul-metro", D("2025-07-01"))).toBe(400_000_000);
+    expect(deriveStdPriceCap("아", "non-metro", D("2025-07-01"))).toBe(200_000_000);
   });
-  it("F2 — 바목 9억 (구 6억 아님)", () => {
-    expect(deriveStdPriceCap("바", "seoul-metro")).toBe(900_000_000);
+  it("F5 — 바목 2025.2.28 경계: 이전 6억·이후 9억", () => {
+    expect(deriveStdPriceCap("바", "seoul-metro", D("2025-02-27"))).toBe(600_000_000);
+    expect(deriveStdPriceCap("바", "seoul-metro", D("2025-02-28"))).toBe(900_000_000);
   });
   it("다/자 6억 지역무관", () => {
-    expect(deriveStdPriceCap("다", "non-metro")).toBe(600_000_000);
-    expect(deriveStdPriceCap("자", "non-metro")).toBe(600_000_000);
+    expect(deriveStdPriceCap("다", "non-metro", D("2017-01-01"))).toBe(600_000_000);
+    expect(deriveStdPriceCap("자", "non-metro", D("2025-07-01"))).toBe(600_000_000);
   });
 });
 
@@ -161,12 +163,31 @@ describe("checkEligibility — 회귀 anchor", () => {
     expect(checkEligibility([u], 5, 5).passed).toBe(true);
   });
 
-  it("F2: 바목 7억 건설 → 통과 (구 엔진은 6억 cap으로 배제했음)", () => {
+  it("F5: 바목 건설 2021등록 7억 → 6억 cap 초과 배제 (2025.2.28 이전)", () => {
     const u = makeUnit({
       rentalCategory: "long_general",
       rentalAcquisitionType: "construction",
       businessRegistrationDate: new Date("2021-03-01"),
       rentalRegistrationDate: new Date("2021-03-01"),
+      region: "seoul-metro",
+      isRegulatedAreaNewAcq: false,
+      standardPriceAtRentalStart: 700_000_000,
+      landAreaM2: 200,
+      totalFloorAreaM2: 140,
+      hasMinimum2Units: true,
+      rentalMonths: 120,
+    });
+    const r = checkEligibility([u], 5, 5);
+    expect(r.passed).toBe(false);
+    expect(r.failReasons.find((f) => f.code === "STANDARD_PRICE_EXCEEDED")).toBeDefined();
+  });
+
+  it("F5: 바목 건설 2025.3등록 7억 → 9억 cap 통과 (2025.2.28 이후)", () => {
+    const u = makeUnit({
+      rentalCategory: "long_general",
+      rentalAcquisitionType: "construction",
+      businessRegistrationDate: new Date("2025-03-01"),
+      rentalRegistrationDate: new Date("2025-03-01"),
       region: "seoul-metro",
       isRegulatedAreaNewAcq: false,
       standardPriceAtRentalStart: 700_000_000,
@@ -240,7 +261,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       rentalRegistrationDate: new Date("2021-03-01"),
       region: "seoul-metro",
       isApartment: true, // 건설 장기 아파트 — 허용
-      standardPriceAtRentalStart: 700_000_000,
+      standardPriceAtRentalStart: 500_000_000, // 6억 이하(2021등록 바목 cap) — 아파트 검증에 집중
       landAreaM2: 200,
       totalFloorAreaM2: 140,
       hasMinimum2Units: true,
