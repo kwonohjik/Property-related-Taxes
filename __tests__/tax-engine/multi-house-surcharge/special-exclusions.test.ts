@@ -71,6 +71,7 @@ describe("MH-16: 장기임대 마목(E형) 요건 충족 → 산정 제외", () 
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
       rentalType: "E",
+      isApartment: false, // 2021 등록 마목(장기일반 매입임대)은 아파트 등록 불가 — 요건충족 시나리오는 비아파트(makeHouse 기본 아파트 정정)
       isRegisteredRental: true,
       rentalRegistrationDate: new Date("2021-01-01"), // 2021 등록 → 10년 요건
       businessRegistrationDate: new Date("2021-01-01"),

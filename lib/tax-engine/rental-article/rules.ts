@@ -9,11 +9,14 @@ import type { SharedRentalArticle } from "./types";
 
 /** 목별 판정 경계일 (getTime() 캐시) */
 export const RA_CUT = {
-  Y2018_04_02: new Date("2018-04-02").getTime(), // 가·다목 등록 상한
+  Y2003_10_29: new Date("2003-10-29").getTime(), // 나목 기존사업자 등록 상한(사업자등록일 기준)
+  Y2008_06_11: new Date("2008-06-11").getTime(), // 라목 미분양 최초 분양계약일 하한
+  Y2009_06_30: new Date("2009-06-30").getTime(), // 라목 미분양 최초 분양계약일 상한
+  Y2018_04_02: new Date("2018-04-02").getTime(), // 가·다목 등록 상한(다주택 checkRentalType_A/C — §155⑳ derive는 2020.7.11 경계라 공용 predicate 미적용)
   Y2020_07_11: new Date("2020-07-11").getTime(), // 매입 장기 아파트 제한 개시
-  Y2020_08_18: new Date("2020-08-18").getTime(), // 마·바 의무기간 8→10년
+  Y2020_08_18: new Date("2020-08-18").getTime(), // 마·바 의무기간 8→10년 / 사목 말소일 하한
   Y2025_02_28: new Date("2025-02-28").getTime(), // 바목 cap 6억→9억 (다주택 tested·MCP amendment_track 미확인 — 확인 필요)
-  Y2025_06_04: new Date("2025-06-04").getTime(), // 아·자 단기 6년 신설
+  Y2025_06_04: new Date("2025-06-04").getTime(), // 아·자 단기 6년 신설(등록기준일 하한)
 } as const;
 
 /**

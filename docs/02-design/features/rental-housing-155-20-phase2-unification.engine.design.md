@@ -129,6 +129,11 @@ toNormalized_house(house): { isCapitalArea: house.isCapitalArea ?? house.region=
 ```
 > A~I ↔ 가~자 매핑(실측 `getRentalTypeLabel`): A가·B나·C다·D라·E마·F바·G사·H아·I자.
 
+> **✅ C3 구현 노트(2026-07-26) — 설계 §4 대비 실측 편차 3건**:
+> - **가·다목 등록상한 2018.4.2는 §4 알고리즘대로 공용 predicate 미포함**(설계 판단 확정). 다만 다주택 `checkRentalType_A/C`가 이 상한을 검사하므로 **다주택-side 잔여 게이트**(`isLongTermRentalHousingExempt` 내 A/C 분기)로 유지. 근거: §155⑳ derive가 2020.7.11 경계로 가/다목을 도출(기본 makeUnit reg 2019 = 가목) → 공용 적용 시 §155⑳ 앵커 다수 회귀(실측).
+> - **마목 아파트 = date-derived(`isApartmentRestrictedForArticle`) ∥ `isExcludedAfter20200711Apt`(flag) OR결합**. §155⑳는 date, 다주택은 flag이나 양립. `special-exclusions` MH-16(마목 요건충족) 앵커는 `isApartment:false` 재anchor — makeHouse 기본 아파트가 2021등록 마목을 date-derived 제한으로 뒤집으므로(법령상 아파트 장기일반 등록 불가) 요건충족 시나리오의 정본을 비아파트로 정정.
+> - **사목 = 말소 게이트만**(period/price/size/apartment/5%룰 skip). 라목 게이트는 `REG_DATE_GATE`(분양계약 window)·`REGION_RESTRICTED`(비수도권)·size·min5City. failCode에 REG_DATE_GATE·NATIONAL_SIZE_REQUIRED·SHORT_TO_LONG_CHANGE·REGION_RESTRICTED 추가. `NormalizedRentalUnit`=biz/rent raw(내부 effRegDate=max)로 전환(나목 bizRegDateMax·§155⑳ 어댑터 동일값).
+
 ## 6. 14 동기화 지점 (§155⑳ 나목·rename — 계획 §6)
 
 - 신규 필드: `acquisitionOfficialPrice`(string)·`isNationalSizeHousing`(bool)·rentalCategory `existing_business`.
