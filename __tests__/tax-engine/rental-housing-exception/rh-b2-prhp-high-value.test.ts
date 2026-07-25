@@ -69,12 +69,15 @@ function makeB2Input(): RentalHousingExceptionInput {
     scenario: "B",
     rentalUnits: [
       {
-        registrationDate: new Date("2017-01-01"),
-        rentalType: "long-8",
+        businessRegistrationDate: new Date("2017-01-01"),
+        rentalRegistrationDate: new Date("2017-01-01"),
+        rentalCategory: "long_general",
         rentalAcquisitionType: "purchase",
         isApartment: false,
         region: "non-metro",
+        isRegulatedAreaNewAcq: false,
         standardPriceAtRentalStart: 200_000_000,
+        hasMinimum2Units: false,
         rentalMonths: 96, // 8년
         rentalAutoTermination: false,
         requirementsConfirmed: true,

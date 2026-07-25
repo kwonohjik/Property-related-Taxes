@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export {
   RentalScenarioEnum,
-  RentalTypeEnum,
+  RentalCategoryEnum,
   RentalAcqTypeEnum,
   RentalRegionEnum,
   rentalUnitSchema,

@@ -28,11 +28,13 @@ import type {
 
 export type {
   RentalUnitInput,
-  RentalType,
+  RentalCategory,
+  RentalArticle,
   RegionType,
   RentalHousingExceptionInput,
   RentalHousingExceptionResult,
   EligibilityResult,
+  RentalUnitVerdict,
   FormulaTrace,
 } from "./types";
 

@@ -6,8 +6,13 @@
  * standardPriceAtAcq/Transfer가 단일 소스 — UI(⑤)·API 변환(④)과 동일 ternary (3중 패턴).
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
+import {
+  deriveEffectiveRegDate,
+  deriveRentalArticle,
+} from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
@@ -26,9 +31,23 @@ export function validateRentalHousingException(
   for (let i = 0; i < rh.rentalUnits.length; i++) {
     const u = rh.rentalUnits[i];
     const unitLabel = `${label} 임대주택 #${i + 1}`;
-    if (!u.registrationDate) return `${unitLabel}: 등록일을 입력하세요.`;
+    // 사업자등록등 — 세무서·지자체 둘 다 필수
+    if (!u.businessRegistrationDate) return `${unitLabel}: 세무서 사업자등록일을 입력하세요.`;
+    if (!u.rentalRegistrationDate) return `${unitLabel}: 지자체 임대사업자등록신청일을 입력하세요.`;
     if (!u.standardPriceAtRentalStart || parseAmount(u.standardPriceAtRentalStart) <= 0) {
       return `${unitLabel}: 임대개시일 기준시가를 입력하세요.`;
+    }
+    // 건설임대 규모요건 — 도출 목이 건설(다/바/자)이면 면적 필수 (엔진 SIZE_REQUIRED와 동기화·침묵 통과 차단)
+    const eff = deriveEffectiveRegDate({
+      businessRegistrationDate: new Date(u.businessRegistrationDate),
+      rentalRegistrationDate: new Date(u.rentalRegistrationDate),
+    });
+    const article = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, eff);
+    if (article === "다" || article === "바" || article === "자") {
+      if (!u.rentalLandArea || parseDecimal(u.rentalLandArea) <= 0
+          || !u.rentalTotalFloorArea || parseDecimal(u.rentalTotalFloorArea) <= 0) {
+        return `${unitLabel}: 건설임대는 대지면적·연면적(㎡)을 입력하세요 (규모요건 대지 298㎡·연면적 149㎡ 이하).`;
+      }
     }
     if (!u.requirementsConfirmed) {
       return `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한, 등록 유지 등).`;

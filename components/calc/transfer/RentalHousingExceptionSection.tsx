@@ -8,6 +8,7 @@
  * 시나리오 B: 임대주택→거주주택 전환 후 양도 (PHRP, §161① 안분)
  */
 
+import { useMemo } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -16,12 +17,31 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInputWithLookup } from "@/components/calc/shared/CurrencyInputWithLookup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import { isPhrpStdPriceLinked } from "@/lib/calc/transfer-phrp-stdprice-link";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import {
+  deriveEffectiveRegDate,
+  deriveRentalArticle,
+  deriveRequiredYears,
+  deriveStdPriceCap,
+  isApartmentRestricted,
+} from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
+
+/** 도출 목 → 사람이 읽는 라벨 */
+const ARTICLE_LABEL: Record<string, string> = {
+  "가": "가목 · 매입 장기(5년)",
+  "다": "다목 · 건설 장기(5년)",
+  "마": "마목 · 매입 장기일반",
+  "바": "바목 · 건설 장기일반",
+  "아": "아목 · 매입 단기(6년)",
+  "자": "자목 · 건설 단기(6년)",
+  "구법": "구 임대주택법(5년)",
+};
 
 // ── 유틸 ──────────────────────────────────────────────────────────
 
@@ -46,6 +66,31 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
     onChange({ ...unit, [key]: val });
   }
 
+  // ── 파생 (useMemo — store 미러링 금지, 표시 전용) ──
+  const effRegDate = useMemo(() => {
+    if (!unit.businessRegistrationDate || !unit.rentalRegistrationDate) return null;
+    return deriveEffectiveRegDate({
+      businessRegistrationDate: new Date(unit.businessRegistrationDate),
+      rentalRegistrationDate: new Date(unit.rentalRegistrationDate),
+    });
+  }, [unit.businessRegistrationDate, unit.rentalRegistrationDate]);
+
+  const article = useMemo(
+    () => deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effRegDate),
+    [unit.rentalCategory, unit.rentalAcquisitionType, effRegDate],
+  );
+  const reqYears = deriveRequiredYears(article, effRegDate);
+  const cap = deriveStdPriceCap(article, unit.region);
+  const aptRestricted = isApartmentRestricted(article, effRegDate, unit.isApartment);
+
+  const isConstruction = article === "다" || article === "바" || article === "자";
+  const showRegion = article === "가" || article === "마" || article === "아" || article === "구법";
+  const showRegulated = article === "아";
+  const showApartment = article === "가" || article === "마" || article === "구법";
+  const bothRegMissing = !unit.businessRegistrationDate || !unit.rentalRegistrationDate;
+
+  const capLabel = `${(cap / 100_000_000).toFixed(0)}억${showRegion ? (unit.region === "seoul-metro" ? "(수도권)" : "(비수도권)") : ""}`;
+
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
       {/* 헤더 */}
@@ -67,33 +112,25 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
         )}
       </div>
 
-      {/* 등록일 */}
-      <FieldCard
-        label="임대사업자 등록일"
-        required
-        hint="지자체 또는 세무서 등록일"
-      >
+      {/* 세무서 사업자등록일 (§168) */}
+      <FieldCard label="세무서 사업자등록일" required hint="소득세법 §168 사업자등록일">
         <DateInput
-          value={unit.registrationDate}
-          onChange={(v) => set("registrationDate", v)}
+          data-testid={`rental-biz-reg-date-${index}`}
+          value={unit.businessRegistrationDate}
+          onChange={(v) => set("businessRegistrationDate", v)}
         />
       </FieldCard>
 
-      {/* 임대 유형 */}
-      <FieldCard label="임대 유형" required>
-        <RadioCardGroup
-          name={`rental-type-${index}`}
-          tone="emerald"
-          layout="inline"
-          options={[
-            { value: "long-10", label: "장기 10년" },
-            { value: "long-8", label: "장기 8년" },
-            { value: "short-6", label: "단기 6년" },
-            { value: "short-4", label: "단기 4년" },
-            { value: "pre-2018", label: "2018년 전" },
-          ]}
-          value={unit.rentalType}
-          onChange={(v) => set("rentalType", v as typeof unit.rentalType)}
+      {/* 지자체 임대사업자등록신청일 (민특법 §5) */}
+      <FieldCard
+        label="지자체 임대사업자등록신청일"
+        required
+        hint="민간임대주택법 §5 · 둘 중 늦은 날이 의무임대기간·요건 판정 기준"
+      >
+        <DateInput
+          data-testid={`rental-reg-date-${index}`}
+          value={unit.rentalRegistrationDate}
+          onChange={(v) => set("rentalRegistrationDate", v)}
         />
       </FieldCard>
 
@@ -112,45 +149,138 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
         />
       </FieldCard>
 
-      {/* 소재지역 */}
-      <FieldCard label="소재 지역" required hint="임대개시일 기준">
+      {/* 임대 구분 */}
+      <FieldCard label="임대 구분" required>
         <RadioCardGroup
-          name={`rental-region-${index}`}
-          tone="rose"
+          name={`rental-category-${index}`}
+          tone="emerald"
           layout="inline"
           options={[
-            { value: "seoul-metro", label: "수도권" },
-            { value: "non-metro", label: "비수도권" },
-            { value: "regulated-area", label: "조정대상지역" },
+            { value: "long_general", label: "장기일반" },
+            { value: "short_6y", label: "단기 6년" },
+            { value: "pre_2018", label: "구 임대주택법" },
           ]}
-          value={unit.region}
-          onChange={(v) => set("region", v as typeof unit.region)}
+          value={unit.rentalCategory}
+          onChange={(v) => set("rentalCategory", v as typeof unit.rentalCategory)}
         />
       </FieldCard>
 
-      {/* 아파트 여부 */}
-      <FieldCard
-        label="아파트 여부"
-        hint="2020.7.11 이후 등록 아파트는 특례 제외"
-      >
-        <RadioCardGroup
-          name={`rental-apartment-${index}`}
-          tone="violet"
-          layout="inline"
-          options={[
-            { value: "false", label: "아파트 아님" },
-            { value: "true", label: "아파트" },
-          ]}
-          value={String(unit.isApartment)}
-          onChange={(v) => set("isApartment", v === "true")}
+      {/* 판정 기준 배지 (실시간 파생) */}
+      <ToneCard tone={bothRegMissing ? "rose" : "sky"} title="판정 기준">
+        <div data-testid={`rental-verdict-badge-${index}`} className="text-xs space-y-0.5">
+          {bothRegMissing ? (
+            <p className="text-rose-700 font-medium">
+              세무서·지자체 등록일을 모두 입력해야 사업자등록등 요건이 성립합니다.
+            </p>
+          ) : (
+            <>
+              <p className="font-semibold">{ARTICLE_LABEL[article]}</p>
+              <p>
+                의무임대기간 <b>{reqYears}년</b> · 기준시가 상한 <b>{capLabel}</b>
+                {isConstruction ? " · 규모 대지298㎡·연면적149㎡" : " · 규모요건 없음"}
+              </p>
+              <p className="text-muted-foreground">
+                등록기준일 {effRegDate ? effRegDate.toISOString().slice(0, 10) : "-"}
+                {showApartment ? " · 아파트 2020.7.11 이후 등록분 제외" : " · 아파트 제외 유형"}
+              </p>
+            </>
+          )}
+        </div>
+      </ToneCard>
+
+      {/* 소재지역 (매입 장기·단기매입·구법 — cap 지역별) */}
+      {showRegion && (
+        <FieldCard label="소재 지역" required hint="기준시가 상한 산정 (수도권/비수도권)">
+          <RadioCardGroup
+            name={`rental-region-${index}`}
+            tone="rose"
+            layout="inline"
+            options={[
+              { value: "seoul-metro", label: "수도권" },
+              { value: "non-metro", label: "비수도권" },
+            ]}
+            value={unit.region}
+            onChange={(v) => set("region", v as typeof unit.region)}
+          />
+        </FieldCard>
+      )}
+
+      {/* 조정대상지역 신규취득 (아목 전용 게이트) */}
+      {showRegulated && (
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="rose"
+          title="조정대상지역에 세대원이 신규취득한 단기임대입니다."
+          description="해당하면 아목 단기임대는 §155⑳ 특례가 배제됩니다."
+          checked={unit.isRegulatedAreaNewAcq}
+          onCheckedChange={(v) => set("isRegulatedAreaNewAcq", v)}
         />
-      </FieldCard>
+      )}
+
+      {/* 건설임대 규모요건 (대지 298㎡ · 연면적/전용 149㎡) */}
+      {isConstruction && (
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-semibold text-sky-700">건설임대 규모요건</p>
+          </div>
+          <FieldCard label="대지면적" required hint="298㎡ 이하" unit="㎡">
+            <DecimalInput
+              value={unit.rentalLandArea}
+              onChange={(v) => set("rentalLandArea", v)}
+              placeholder="대지면적"
+            />
+          </FieldCard>
+          <FieldCard label="연면적/전용면적" required hint="149㎡ 이하" unit="㎡">
+            <DecimalInput
+              value={unit.rentalTotalFloorArea}
+              onChange={(v) => set("rentalTotalFloorArea", v)}
+              placeholder="연면적 또는 전용면적"
+            />
+          </FieldCard>
+          <ToggleCard
+            variant="card"
+            size="sm"
+            tone="sky"
+            title="2호 이상 임대 요건을 충족합니다."
+            description={unit.hasMinimum2Units ? undefined : "건설임대는 2호 이상 임대해야 합니다."}
+            checked={unit.hasMinimum2Units}
+            onCheckedChange={(v) => set("hasMinimum2Units", v)}
+          />
+        </div>
+      )}
+
+      {/* 아파트 여부 (매입 계열만 선택 — 단기·건설은 고정 제외) */}
+      {showApartment ? (
+        <FieldCard label="아파트 여부" hint="2020.7.11 이후 등록 아파트는 장기일반 특례 제외">
+          <RadioCardGroup
+            name={`rental-apartment-${index}`}
+            tone="violet"
+            layout="inline"
+            options={[
+              { value: "false", label: "아파트 아님" },
+              { value: "true", label: "아파트" },
+            ]}
+            value={String(unit.isApartment)}
+            onChange={(v) => set("isApartment", v === "true")}
+          />
+        </FieldCard>
+      ) : (
+        <p className="text-caption text-muted-foreground px-1">
+          ※ 해당 유형({article}목)은 아파트가 특례 대상이 아닙니다(아파트 제외).
+        </p>
+      )}
+      {aptRestricted && (
+        <div className="rounded border border-rose-200 bg-rose-50/60 p-1.5 text-caption text-rose-800">
+          현재 입력 기준 아파트가 특례 제외 대상입니다 — 요건 미충족.
+        </div>
+      )}
 
       {/* 임대개시일 기준시가 */}
       <FieldCard
         label="임대개시일 기준시가"
         required
-        hint="수도권 매입 6억 이하, 비수도권 3억 이하 요건 (소령 §155⑳)"
+        hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
         unit="원"
       >
         <CurrencyInput
@@ -166,7 +296,7 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
       <FieldCard
         label="실제 임대 기간"
         required
-        hint="의무임대기간 이상이어야 특례 적용 (단기 4·6년, 장기 8·10년)"
+        hint={`의무임대기간 ${reqYears}년(${reqYears * 12}개월) 이상이어야 특례 적용`}
         unit="개월"
       >
         <DecimalInput

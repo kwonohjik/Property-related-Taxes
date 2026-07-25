@@ -162,14 +162,22 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
     applyException: true,
     scenario: rh.scenario,
     rentalUnits: rh.rentalUnits.map((u) => ({
-      registrationDate: u.registrationDate
-        ? (u.registrationDate.includes('T') ? u.registrationDate : `${u.registrationDate}T00:00:00.000Z`)
+      businessRegistrationDate: u.businessRegistrationDate
+        ? (u.businessRegistrationDate.includes('T') ? u.businessRegistrationDate : `${u.businessRegistrationDate}T00:00:00.000Z`)
         : undefined,
-      rentalType: u.rentalType,
+      rentalRegistrationDate: u.rentalRegistrationDate
+        ? (u.rentalRegistrationDate.includes('T') ? u.rentalRegistrationDate : `${u.rentalRegistrationDate}T00:00:00.000Z`)
+        : undefined,
+      rentalCategory: u.rentalCategory,
       rentalAcquisitionType: u.rentalAcquisitionType,
       isApartment: u.isApartment,
       region: u.region,
+      isRegulatedAreaNewAcq: u.isRegulatedAreaNewAcq,
       standardPriceAtRentalStart: parseAmount(u.standardPriceAtRentalStart) || 0,
+      // 건설임대 규모요건 — 미입력(빈값)이면 undefined 전송(엔진이 SIZE_REQUIRED 판정)
+      landAreaM2: parseDecimal(u.rentalLandArea) || undefined,
+      totalFloorAreaM2: parseDecimal(u.rentalTotalFloorArea) || undefined,
+      hasMinimum2Units: u.hasMinimum2Units,
       rentalMonths: parseFloat(u.rentalMonths) || 0,
       rentalAutoTermination: u.rentalAutoTermination,
       requirementsConfirmed: u.requirementsConfirmed,

@@ -590,14 +590,26 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     /** 거주주택 양도(A) / PHRP 양도(B) */
     scenario: 'A' | 'B';
     rentalUnits: Array<{
-      /** 임대사업자 등록일 (YYYY-MM-DD) */
-      registrationDate: string;
-      rentalType: 'short-4' | 'short-6' | 'long-8' | 'long-10' | 'pre-2018';
+      /** 세무서 사업자등록일 §168 (YYYY-MM-DD) */
+      businessRegistrationDate: string;
+      /** 지자체 임대사업자등록신청일 민특법§5 (YYYY-MM-DD) */
+      rentalRegistrationDate: string;
+      /** 임대구분 (의무기간·cap 파생 소스) */
+      rentalCategory: 'long_general' | 'short_6y' | 'pre_2018';
       rentalAcquisitionType: 'purchase' | 'construction';
       isApartment: boolean;
-      region: 'seoul-metro' | 'non-metro' | 'regulated-area';
+      /** 소재지역 수도권/비수도권 (조정대상지역은 isRegulatedAreaNewAcq 별도) */
+      region: 'seoul-metro' | 'non-metro';
+      /** 아목 게이트: 조정대상지역 세대원 신규취득 단기임대 여부 */
+      isRegulatedAreaNewAcq: boolean;
       /** 임대개시일 기준시가 (원, 문자열) */
       standardPriceAtRentalStart: string;
+      /** 대지면적 ㎡ (건설임대 규모요건, 문자열) */
+      rentalLandArea: string;
+      /** 연면적/전용면적 ㎡ (건설임대 규모요건, 문자열) */
+      rentalTotalFloorArea: string;
+      /** 2호 이상 임대 충족 자기확인 (건설임대) */
+      hasMinimum2Units: boolean;
       /** 실제 임대 개월 수 */
       rentalMonths: string;
       /** 자동·자진말소 5년 내 양도 여부 */

@@ -509,6 +509,39 @@ export function migrateAsset(raw: unknown): AssetForm {
     if (rhe.applyException === undefined) rhe.applyException = false;
     if (!rhe.scenario) rhe.scenario = 'A';
     if (!Array.isArray(rhe.rentalUnits)) rhe.rentalUnits = [];
+    // 구 스키마 임대주택 유닛 → 신규 스키마 분해 (능동형 UI 개편, 2026-07-25)
+    else {
+      (rhe.rentalUnits as Record<string, unknown>[]).forEach((u) => {
+        // 등록일 1필드 → 세무서/지자체 2필드 (구 값을 지자체 신청일로 이전, 세무서는 재입력)
+        if (u.registrationDate !== undefined && u.rentalRegistrationDate === undefined) {
+          u.rentalRegistrationDate = u.registrationDate;
+          if (u.businessRegistrationDate === undefined) u.businessRegistrationDate = "";
+          delete u.registrationDate;
+        }
+        if (u.businessRegistrationDate === undefined) u.businessRegistrationDate = "";
+        if (u.rentalRegistrationDate === undefined) u.rentalRegistrationDate = "";
+        // rentalType 5값 → rentalCategory 3값 (short-4는 pre_2018로: 의무기간 4→5년 상향·재입력 유도)
+        if (u.rentalCategory === undefined) {
+          const t = u.rentalType;
+          u.rentalCategory =
+            t === "short-6" ? "short_6y"
+            : t === "pre-2018" ? "pre_2018"
+            : t === "short-4" ? "pre_2018"
+            : "long_general"; // long-8/long-10/기타
+          delete u.rentalType;
+        }
+        // region 3값 → 2값 + isRegulatedAreaNewAcq
+        if (u.region === "regulated-area") {
+          u.region = "seoul-metro";
+          if (u.isRegulatedAreaNewAcq === undefined) u.isRegulatedAreaNewAcq = true;
+        }
+        if (u.region !== "seoul-metro" && u.region !== "non-metro") u.region = "seoul-metro";
+        if (u.isRegulatedAreaNewAcq === undefined) u.isRegulatedAreaNewAcq = false;
+        if (u.rentalLandArea === undefined) u.rentalLandArea = "";
+        if (u.rentalTotalFloorArea === undefined) u.rentalTotalFloorArea = "";
+        if (u.hasMinimum2Units === undefined) u.hasMinimum2Units = false;
+      });
+    }
     if (rhe.priorResidenceTransferDate === undefined) rhe.priorResidenceTransferDate = undefined;
     if (rhe.standardPriceAtAcquisitionForPhrp === undefined) rhe.standardPriceAtAcquisitionForPhrp = undefined;
     if (rhe.standardPriceAtPriorTransfer === undefined) rhe.standardPriceAtPriorTransfer = undefined;

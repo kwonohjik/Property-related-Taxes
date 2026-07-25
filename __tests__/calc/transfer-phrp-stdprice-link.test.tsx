@@ -41,7 +41,8 @@ function makeScenarioBRhe(
   over: Partial<AssetForm["rentalHousingException"]> = {},
 ): AssetForm["rentalHousingException"] {
   const unit = makeDefaultRentalUnit();
-  unit.registrationDate = "2009-10-01";
+  unit.businessRegistrationDate = "2009-10-01";
+  unit.rentalRegistrationDate = "2009-10-01";
   unit.standardPriceAtRentalStart = "300,000,000";
   unit.rentalMonths = "96";
   unit.requirementsConfirmed = true;
