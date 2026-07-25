@@ -26,7 +26,7 @@ const baseUnit: RentalUnitInput = {
   rentalAcquisitionType: "purchase",
   isApartment: false,
   region: "seoul-metro",
-  isRegulatedAreaNewAcq: false,
+  isExcluded918Rule: false,
   standardPriceAtRentalStart: 500_000_000,
   hasMinimum2Units: false,
   rentalMonths: 96,
@@ -115,7 +115,7 @@ describe("RH-Eligibility — 요건 미충족 차단", () => {
       rentalCategory: "short_6y",
       rentalMonths: 72,
       region: "seoul-metro",
-      isRegulatedAreaNewAcq: true,
+      isExcluded918Rule: true,
     });
     expect(result.eligibility.passed).toBe(false);
     expect(result.eligibility.failReasons.some(r => r.code === "SHORT_TERM_REGULATED")).toBe(true);

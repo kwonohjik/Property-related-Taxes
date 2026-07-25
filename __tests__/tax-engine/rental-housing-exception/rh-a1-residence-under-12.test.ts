@@ -23,7 +23,7 @@ function makeA1Input(): RentalHousingExceptionInput {
         rentalAcquisitionType: "purchase",
         isApartment: false,
         region: "non-metro",
-        isRegulatedAreaNewAcq: false,
+        isExcluded918Rule: false,
         standardPriceAtRentalStart: 200_000_000,
         hasMinimum2Units: false, // 2억 (비수도권 3억 이하)
         rentalMonths: 96, // 8년

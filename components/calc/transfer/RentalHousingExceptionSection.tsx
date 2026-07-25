@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 /** 도출 목 → 사람이 읽는 라벨 */
 const ARTICLE_LABEL: Record<string, string> = {
   "가": "가목 · 매입 장기(5년)",
+  "나": "나목 · 기존사업자 매입(5년)",
   "다": "다목 · 건설 장기(5년)",
   "마": "마목 · 매입 장기일반",
   "바": "바목 · 건설 장기일반",
@@ -83,14 +84,25 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
   const cap = deriveStdPriceCap(article, unit.region, effRegDate);
   const aptRestricted = isApartmentRestricted(article, effRegDate, unit.isApartment);
 
+  const isNa = article === "나"; // 기존사업자 매입임대(취득당시 3억·국민주택·2호·지역무관)
   const isConstruction = article === "다" || article === "바" || article === "자";
+  // 나목 cap은 취득당시 3억(지역무관) → 소재지역 숨김. 가·마·아·구법은 지역별 cap.
   const showRegion = article === "가" || article === "마" || article === "아" || article === "구법";
-  const showRegulated = article === "아";
-  // F6: 다·바(건설 장기)도 일반 아파트 허용 → 아파트 여부 노출. 아·자(단기)만 아파트 제외.
-  const showApartment = article === "가" || article === "마" || article === "구법" || article === "다" || article === "바";
+  // 918 조정취득: 마목(hard)·아목(carve-out)
+  const show918 = article === "마" || article === "아";
+  // 아목 carve-out: 918 ON 시 계약금 지급 증빙으로 배제 해제
+  const showDepositProof = article === "아";
+  // 단기→장기 변경신고 배제: 마·바
+  const showShortToLong = article === "마" || article === "바";
+  // 2호 이상 임대 요건: 건설(다·바·자) + 나목
+  const show2Units = isConstruction || isNa;
+  // F6: 다·바(건설 장기)도 일반 아파트 허용. 나목(2003.10.29 이전)도 허용. 아·자(단기)만 아파트 제외.
+  const showApartment = article === "가" || article === "나" || article === "마" || article === "구법" || article === "다" || article === "바";
   const bothRegMissing = !unit.businessRegistrationDate || !unit.rentalRegistrationDate;
 
-  const capLabel = `${(cap / 100_000_000).toFixed(0)}억${showRegion ? (unit.region === "seoul-metro" ? "(수도권)" : "(비수도권)") : ""}`;
+  const capLabel = isNa
+    ? "3억(취득당시·지역무관)"
+    : `${(cap / 100_000_000).toFixed(0)}억${showRegion ? (unit.region === "seoul-metro" ? "(수도권)" : "(비수도권)") : ""}`;
 
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
@@ -135,20 +147,26 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
         />
       </FieldCard>
 
-      {/* 취득 방법 */}
-      <FieldCard label="취득 방법" required>
-        <RadioCardGroup
-          name={`rental-acq-type-${index}`}
-          tone="emerald"
-          layout="inline"
-          options={[
-            { value: "purchase", label: "매입" },
-            { value: "construction", label: "건설(신축)" },
-          ]}
-          value={unit.rentalAcquisitionType}
-          onChange={(v) => set("rentalAcquisitionType", v as typeof unit.rentalAcquisitionType)}
-        />
-      </FieldCard>
+      {/* 취득 방법 (나목은 매입임대 전용 — 숨김) */}
+      {isNa ? (
+        <p className="text-caption text-muted-foreground px-1">
+          ※ 나목(기존사업자)은 매입임대 전용입니다.
+        </p>
+      ) : (
+        <FieldCard label="취득 방법" required>
+          <RadioCardGroup
+            name={`rental-acq-type-${index}`}
+            tone="emerald"
+            layout="inline"
+            options={[
+              { value: "purchase", label: "매입" },
+              { value: "construction", label: "건설(신축)" },
+            ]}
+            value={unit.rentalAcquisitionType}
+            onChange={(v) => set("rentalAcquisitionType", v as typeof unit.rentalAcquisitionType)}
+          />
+        </FieldCard>
+      )}
 
       {/* 임대 구분 */}
       <FieldCard label="임대 구분" required>
@@ -159,10 +177,19 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
           options={[
             { value: "long_general", label: "장기일반" },
             { value: "short_6y", label: "단기 6년" },
+            { value: "existing_business", label: "기존사업자(나목)" },
             { value: "pre_2018", label: "구 임대주택법" },
           ]}
           value={unit.rentalCategory}
-          onChange={(v) => set("rentalCategory", v as typeof unit.rentalCategory)}
+          onChange={(v) => {
+            const cat = v as typeof unit.rentalCategory;
+            // 나목은 매입 전용 — 취득방법 고정(3중 패턴: UI·validate·엔진 일치)
+            if (cat === "existing_business") {
+              onChange({ ...unit, rentalCategory: cat, rentalAcquisitionType: "purchase" });
+            } else {
+              set("rentalCategory", cat);
+            }
+          }}
         />
       </FieldCard>
 
@@ -210,16 +237,59 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
         </FieldCard>
       )}
 
-      {/* 조정대상지역 신규취득 (아목 전용 게이트) */}
-      {showRegulated && (
+      {/* 918 조정취득 배제 (마목 hard·아목 carve-out) */}
+      {show918 && (
         <ToggleCard
           variant="card"
           size="sm"
           tone="rose"
-          title="조정대상지역에 세대원이 신규취득한 단기임대입니다."
-          description="해당하면 아목 단기임대는 §155⑳ 특례가 배제됩니다."
-          checked={unit.isRegulatedAreaNewAcq}
-          onCheckedChange={(v) => set("isRegulatedAreaNewAcq", v)}
+          title="2018.9.14 이후 조정대상지역에 신규취득한 주택입니다."
+          description={
+            article === "마"
+              ? "마목(장기 매입)은 해당하면 §155⑳ 특례가 배제됩니다."
+              : "아목(단기 매입)은 원칙 배제 — 조정대상지역 공고 전 계약 + 계약금 지급 증빙이 있으면 예외(carve-out)."
+          }
+          checked={unit.isExcluded918Rule}
+          onCheckedChange={(v) => set("isExcluded918Rule", v)}
+        />
+      )}
+
+      {/* 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */}
+      {showDepositProof && unit.isExcluded918Rule && (
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="emerald"
+          title="조정대상지역 공고일 이전에 계약하고 계약금을 지급한 증빙이 있습니다."
+          description="증빙이 있으면 아목 918 배제에서 제외되어 특례가 유지됩니다."
+          checked={unit.hasContractDepositProof}
+          onCheckedChange={(v) => set("hasContractDepositProof", v)}
+        />
+      )}
+
+      {/* 단기→장기 변경신고 배제 (마·바) */}
+      {showShortToLong && (
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="rose"
+          title="단기임대에서 장기일반으로 변경신고한 주택입니다."
+          description="해당하면 §155⑳ 특례가 배제됩니다."
+          checked={unit.isExcludedShortToLongChange}
+          onCheckedChange={(v) => set("isExcludedShortToLongChange", v)}
+        />
+      )}
+
+      {/* 나목 — 국민주택규모 요건 */}
+      {isNa && (
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="sky"
+          title="국민주택규모(전용 85㎡·수도권 도시지역 60㎡ 이하)를 충족합니다."
+          description={unit.isNationalSizeHousing ? undefined : "나목은 국민주택규모 요건 충족이 필요합니다."}
+          checked={unit.isNationalSizeHousing}
+          onCheckedChange={(v) => set("isNationalSizeHousing", v)}
         />
       )}
 
@@ -243,16 +313,26 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
               placeholder="연면적 또는 전용면적"
             />
           </FieldCard>
-          <ToggleCard
-            variant="card"
-            size="sm"
-            tone="sky"
-            title="2호 이상 임대 요건을 충족합니다."
-            description={unit.hasMinimum2Units ? undefined : "건설임대는 2호 이상 임대해야 합니다."}
-            checked={unit.hasMinimum2Units}
-            onCheckedChange={(v) => set("hasMinimum2Units", v)}
-          />
         </div>
+      )}
+
+      {/* 2호 이상 임대 요건 (건설 다·바·자 + 나목) */}
+      {show2Units && (
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="sky"
+          title="2호 이상 임대 요건을 충족합니다."
+          description={
+            unit.hasMinimum2Units
+              ? undefined
+              : isNa
+                ? "나목은 2호 이상 임대해야 합니다."
+                : "건설임대는 2호 이상 임대해야 합니다."
+          }
+          checked={unit.hasMinimum2Units}
+          onCheckedChange={(v) => set("hasMinimum2Units", v)}
+        />
       )}
 
       {/* 아파트 여부 (매입 계열만 선택 — 단기·건설은 고정 제외) */}
@@ -281,21 +361,38 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
         </div>
       )}
 
-      {/* 임대개시일 기준시가 */}
-      <FieldCard
-        label="임대개시일 기준시가"
-        required
-        hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
-        unit="원"
-      >
-        <CurrencyInput
-          label=""
-          value={unit.standardPriceAtRentalStart}
-          onChange={(v) => set("standardPriceAtRentalStart", v)}
-          hideUnit
-          placeholder="임대개시일 기준시가 (원)"
-        />
-      </FieldCard>
+      {/* 기준시가 — 나목은 취득당시(3억·지역무관), 그 외는 임대개시일 */}
+      {isNa ? (
+        <FieldCard
+          label="취득 당시 기준시가"
+          required
+          hint="나목 취득당시 3억 이하 (지역무관)"
+          unit="원"
+        >
+          <CurrencyInput
+            label=""
+            value={unit.acquisitionOfficialPrice}
+            onChange={(v) => set("acquisitionOfficialPrice", v)}
+            hideUnit
+            placeholder="취득 당시 기준시가 (원)"
+          />
+        </FieldCard>
+      ) : (
+        <FieldCard
+          label="임대개시일 기준시가"
+          required
+          hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
+          unit="원"
+        >
+          <CurrencyInput
+            label=""
+            value={unit.standardPriceAtRentalStart}
+            onChange={(v) => set("standardPriceAtRentalStart", v)}
+            hideUnit
+            placeholder="임대개시일 기준시가 (원)"
+          />
+        </FieldCard>
+      )}
 
       {/* 실제 임대 개월 수 */}
       <FieldCard
@@ -311,23 +408,25 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
         />
       </FieldCard>
 
-      {/* 기타 요건 자기확인 */}
-      <ToggleCard
-        variant="card"
-        size="sm"
-        tone="violet"
-        title="임대료 5% 상한, 임대사업자 등록 유지, 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다."
-        description={
-          unit.requirementsConfirmed
-            ? undefined
-            : "특례 적용을 위해 위 요건을 확인하고 체크하세요."
-        }
-        trailing={
-          <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
-        }
-        checked={unit.requirementsConfirmed}
-        onCheckedChange={(v) => set("requirementsConfirmed", v)}
-      />
+      {/* 기타 요건 자기확인 (나목은 5%룰 미검사 — 숨김: 엔진·validate 정합) */}
+      {!isNa && (
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="violet"
+          title="임대료 5% 상한, 임대사업자 등록 유지, 임대료 증액 후 1년 이내 재증액 금지 요건을 모두 충족합니다."
+          description={
+            unit.requirementsConfirmed
+              ? undefined
+              : "특례 적용을 위해 위 요건을 확인하고 체크하세요."
+          }
+          trailing={
+            <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
+          }
+          checked={unit.requirementsConfirmed}
+          onCheckedChange={(v) => set("requirementsConfirmed", v)}
+        />
+      )}
     </div>
   );
 }

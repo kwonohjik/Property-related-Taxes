@@ -172,8 +172,12 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       rentalAcquisitionType: u.rentalAcquisitionType,
       isApartment: u.isApartment,
       region: u.region,
-      isRegulatedAreaNewAcq: u.isRegulatedAreaNewAcq,
+      isExcluded918Rule: u.isExcluded918Rule,
+      hasContractDepositProof: u.hasContractDepositProof,
+      isExcludedShortToLongChange: u.isExcludedShortToLongChange,
       standardPriceAtRentalStart: parseAmount(u.standardPriceAtRentalStart) || 0,
+      acquisitionOfficialPrice: parseAmount(u.acquisitionOfficialPrice) || 0,
+      isNationalSizeHousing: u.isNationalSizeHousing,
       // 건설임대 규모요건 — 미입력(빈값)이면 undefined 전송(엔진이 SIZE_REQUIRED 판정)
       landAreaM2: parseDecimal(u.rentalLandArea) || undefined,
       totalFloorAreaM2: parseDecimal(u.rentalTotalFloorArea) || undefined,

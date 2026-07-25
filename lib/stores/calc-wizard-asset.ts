@@ -594,21 +594,29 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
       businessRegistrationDate: string;
       /** 지자체 임대사업자등록신청일 민특법§5 (YYYY-MM-DD) */
       rentalRegistrationDate: string;
-      /** 임대구분 (의무기간·cap 파생 소스) */
-      rentalCategory: 'long_general' | 'short_6y' | 'pre_2018';
+      /** 임대구분 (의무기간·cap 파생 소스). existing_business=나목(기존사업자 매입) */
+      rentalCategory: 'long_general' | 'short_6y' | 'pre_2018' | 'existing_business';
       rentalAcquisitionType: 'purchase' | 'construction';
       isApartment: boolean;
-      /** 소재지역 수도권/비수도권 (조정대상지역은 isRegulatedAreaNewAcq 별도) */
+      /** 소재지역 수도권/비수도권 (918 조정취득은 isExcluded918Rule 별도) */
       region: 'seoul-metro' | 'non-metro';
-      /** 아목 게이트: 조정대상지역 세대원 신규취득 단기임대 여부 */
-      isRegulatedAreaNewAcq: boolean;
-      /** 임대개시일 기준시가 (원, 문자열) */
+      /** 918 조정취득 배제(2018.9.14 이후 조정대상지역 신규취득). 마목 hard·아목 carve-out */
+      isExcluded918Rule: boolean;
+      /** 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */
+      hasContractDepositProof: boolean;
+      /** 마·바목 단기→장기 변경신고 배제 여부 */
+      isExcludedShortToLongChange: boolean;
+      /** 임대개시일 기준시가 (원, 문자열) — 가/다/마/바/아/자/구법 */
       standardPriceAtRentalStart: string;
+      /** 취득당시 기준시가 (원, 문자열) — 나목(취득당시 3억) */
+      acquisitionOfficialPrice: string;
+      /** 국민주택규모 충족 자기확인 — 나목 */
+      isNationalSizeHousing: boolean;
       /** 대지면적 ㎡ (건설임대 규모요건, 문자열) */
       rentalLandArea: string;
       /** 연면적/전용면적 ㎡ (건설임대 규모요건, 문자열) */
       rentalTotalFloorArea: string;
-      /** 2호 이상 임대 충족 자기확인 (건설임대) */
+      /** 2호 이상 임대 충족 자기확인 (건설임대·나목) */
       hasMinimum2Units: boolean;
       /** 실제 임대 개월 수 */
       rentalMonths: string;

@@ -16,18 +16,19 @@ import type { ArticleFailCode } from "../../rental-article/check";
 /**
  * 임대구분 (사용자 선택 축) — 의무임대기간·기준시가 상한은 등록기준일·취득방법에서 파생.
  *
- * long_general: 장기일반민간임대 (가/마/다/바목 — 등록기준일로 5/8/10 파생)
- * short_6y:     단기민간임대 6년 (아/자목, 2025.6.4 신설)
- * pre_2018:     구 임대주택법 (5년)
- * (existing_business 나목·미분양 라목은 Phase 2 — 취득당시 cap 별도 필드 필요)
+ * long_general:      장기일반민간임대 (가/마/다/바목 — 등록기준일로 5/8/10 파생)
+ * short_6y:          단기민간임대 6년 (아/자목, 2025.6.4 신설)
+ * pre_2018:          구 임대주택법 (5년)
+ * existing_business: 기존사업자 매입임대 (나목, 2003.10.29 이전 등록·취득당시 3억·국민주택·2호)
+ * (미분양 라목·말소 사목은 다주택 전용 — §155⑳ 미도출)
  */
-export type RentalCategory = "long_general" | "short_6y" | "pre_2018";
+export type RentalCategory = "long_general" | "short_6y" | "pre_2018" | "existing_business";
 
-/** 수도권/비수도권 구분 (조정대상지역은 isRegulatedAreaNewAcq 별도 축) */
+/** 수도권/비수도권 구분 (조정대상지역은 isExcluded918Rule 별도 축) */
 export type RegionType = "seoul-metro" | "non-metro";
 
 /** 도출 엔진 목 (§167조의3①2호 가~자) */
-export type RentalArticle = "가" | "다" | "마" | "바" | "아" | "자" | "구법";
+export type RentalArticle = "가" | "나" | "다" | "마" | "바" | "아" | "자" | "구법";
 
 /**
  * 임대주택 1호 입력 데이터
@@ -48,15 +49,30 @@ export type RentalUnitInput = {
   isApartment: boolean;
   /** 소재지 구분 (수도권/비수도권 — cap 산정축) */
   region: RegionType;
-  /** 아목 게이트: 1주택 이상 보유 세대원이 조정대상지역에 신규취득한 단기임대 여부 */
-  isRegulatedAreaNewAcq: boolean;
-  /** 임대개시일 당시 기준시가 (원) — §155⑳ 가액요건 검증용 */
+  /**
+   * 918 조정취득 배제 (2018.9.14 이후 조정대상지역 신규취득):
+   * - 마목(장기 매입): hard 배제.
+   * - 아목(단기 매입): 계약금 지급 증빙(hasContractDepositProof) 있으면 carve-out.
+   * (구 isRegulatedAreaNewAcq rename — D-2 아목 게이트 다주택 정합)
+   * ※ 생산 경로는 Zod(rentalUnitSchema)가 required 강제 — 엔진 타입은 미해당 목(가/다/구법 등)
+   *    구성 편의를 위해 optional. 미제공 시 false/0 default(check.ts falsy·adapter).
+   */
+  isExcluded918Rule?: boolean;
+  /** 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */
+  hasContractDepositProof?: boolean;
+  /** 마·바목 단기→장기 변경신고 배제 여부 */
+  isExcludedShortToLongChange?: boolean;
+  /** 임대개시일 당시 기준시가 (원) — 가/다/마/바/아/자/구법 가액요건 */
   standardPriceAtRentalStart: number;
+  /** 취득당시 기준시가 (원) — 나목 가액요건(취득당시 3억, 지역무관). 미제공 시 adapter 0 */
+  acquisitionOfficialPrice?: number;
+  /** 국민주택규모(전용 85㎡·수도권 도시지역 60㎡ 이하) 충족 — 나목 요건 */
+  isNationalSizeHousing?: boolean;
   /** 대지면적 (㎡) — 건설임대 규모요건(≤298) 판정용 */
   landAreaM2?: number;
   /** 주택 연면적/전용면적 (㎡) — 건설임대 규모요건(≤149) 판정용 */
   totalFloorAreaM2?: number;
-  /** 2호 이상 임대 충족 자기확인 — 건설임대(다/바/자) 호수요건 */
+  /** 2호 이상 임대 충족 자기확인 — 건설임대(다/바/자)·나목 호수요건 */
   hasMinimum2Units: boolean;
   /** 실제 임대 개월수 (공실 차감 후) */
   rentalMonths: number;

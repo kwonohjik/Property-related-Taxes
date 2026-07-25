@@ -75,7 +75,7 @@ function makeB2Input(): RentalHousingExceptionInput {
         rentalAcquisitionType: "purchase",
         isApartment: false,
         region: "non-metro",
-        isRegulatedAreaNewAcq: false,
+        isExcluded918Rule: false,
         standardPriceAtRentalStart: 200_000_000,
         hasMinimum2Units: false,
         rentalMonths: 96, // 8년

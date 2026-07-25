@@ -25,7 +25,7 @@ const rentalUnitOk = {
   rentalAcquisitionType: "purchase" as const,
   isApartment: false,
   region: "seoul-metro" as const,
-  isRegulatedAreaNewAcq: false,
+  isExcluded918Rule: false,
   standardPriceAtRentalStart: 300_000_000,
   hasMinimum2Units: false,
   rentalMonths: 96,
