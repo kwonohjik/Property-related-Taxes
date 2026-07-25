@@ -19,6 +19,13 @@
 
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
 import { rentalStdPriceCap, rentalRequiredYears } from "../../rental-article/rules";
+import {
+  checkRentalArticle,
+  isConstructionArticle,
+  isApartmentRestrictedForArticle,
+  type NormalizedRentalUnit,
+  type ArticleFailCode,
+} from "../../rental-article/check";
 import type {
   RentalUnitInput,
   RentalCategory,
@@ -95,29 +102,46 @@ export function deriveStdPriceCap(
 }
 
 /**
- * 아파트 등록 제한 (§167조의3①2호 목별 — 다주택 checkRentalType_* 정합).
- * - 단기(아/자): 아파트 항상 제외 대상(아목·자목 "아파트 제외" 명문).
- * - 매입 장기(가/마): 등록기준일 ≥ 2020.7.11 & 아파트 → 제한(2020.7.11 이후 아파트 장기일반 등록 불가).
- * - 건설 장기(다/바)·구법: 일반 아파트 **허용**(다주택 checkRentalType_C/F에 isApartment 검사 없음).
- *   ※ 바목 "단기→장기 변경 신고 아파트" 제외는 별도 입력(isExcludedShortToLongChange) 필요 — Phase 2.
+ * 아파트 등록 제한 — 공용 `rental-article/check.ts` 위임 재수출(UI·validate 하위호환).
+ * 로직 단일 소스는 `isApartmentRestrictedForArticle`(check.ts).
  */
-export function isApartmentRestricted(
-  article: RentalArticle,
-  effectiveRegDate: Date | null,
-  isApartment: boolean,
-): boolean {
-  if (!isApartment) return false;
-  if (article === "아" || article === "자") return true; // 단기(아·자)만 blanket 제외
-  if (article === "가" || article === "마") {
-    const regTs = effectiveRegDate?.getTime() ?? 0;
-    return regTs >= CUT_2020_07_11;
-  }
-  return false; // 다·바(건설 장기)·구법: 일반 아파트 허용 (F6 정정 — 법 근거 없는 불리 적용 제거)
-}
+export const isApartmentRestricted = isApartmentRestrictedForArticle;
 
-/** 건설임대 여부 (규모·호수 요건 적용 대상) */
-function isConstructionArticle(article: RentalArticle): boolean {
-  return article === "다" || article === "바" || article === "자";
+// ============================================================
+// 호별 미충족 메시지 빌더 (checkRentalArticle failCode → §155⑳ 한국어 메시지)
+// ============================================================
+
+function buildFailMessage(
+  code: ArticleFailCode,
+  i: number,
+  article: RentalArticle,
+  requiredYears: number,
+  stdPriceCap: number,
+  unit: RentalUnitInput,
+): string {
+  const n = i + 1;
+  switch (code) {
+    case "BOTH_REG_REQUIRED":
+      return `${n}호: 세무서 사업자등록일과 지자체 임대사업자등록신청일을 모두 입력해야 합니다(사업자등록등).`;
+    case "RENTAL_PERIOD_SHORT":
+      return `${n}호 의무임대기간 ${requiredYears}년 미충족 (현재: ${Math.floor(unit.rentalMonths / 12)}년 ${unit.rentalMonths % 12}개월)`;
+    case "STANDARD_PRICE_EXCEEDED":
+      return `${n}호 임대개시일 기준시가 ${(stdPriceCap / 100_000_000).toFixed(0)}억원 초과 (입력값: ${(unit.standardPriceAtRentalStart / 100_000_000).toFixed(2)}억원)`;
+    case "APARTMENT_RESTRICTED":
+      return `${n}호: 해당 유형(${article}목)에서 아파트는 §155⑳ 특례 대상이 아닙니다.`;
+    case "SHORT_TERM_REGULATED":
+      return `${n}호: 조정대상지역에 신규취득한 단기임대(아목)는 §155⑳ 특례 불가.`;
+    case "SIZE_REQUIRED":
+      return `${n}호: 건설임대는 대지면적·연면적을 입력해야 규모요건(대지 298㎡·연면적 149㎡ 이하)을 판정할 수 있습니다.`;
+    case "SIZE_EXCEEDED":
+      return `${n}호: 건설임대 규모요건 초과 (대지 ${unit.landAreaM2}㎡·연면적 ${unit.totalFloorAreaM2}㎡ — 각 298㎡·149㎡ 이하 필요).`;
+    case "MIN_UNITS_NOT_MET":
+      return `${n}호: 건설임대는 2호 이상 임대 요건을 충족해야 합니다.`;
+    case "REQUIREMENTS_NOT_CONFIRMED":
+      return `${n}호: 기타 요건(임대료 5% 이내 증액·임대사업자 등록·임대료 지급 등) 확인 필요`;
+    default:
+      return `${n}호: 임대주택 요건 미충족`;
+  }
 }
 
 // ============================================================
@@ -157,109 +181,43 @@ export function checkEligibility(
 
   for (let i = 0; i < rentalUnits.length; i++) {
     const unit = rentalUnits[i];
-    const unitFails: RentalUnitFailReason[] = [];
 
-    // (a) 사업자등록등 완비 (세무서 + 지자체 둘 다)
+    // 목 도출 + 공용 canonical predicate(check.ts)에 위임 — 판정 로직 단일 소스.
     const effectiveRegDate = deriveEffectiveRegDate(unit);
-    if (effectiveRegDate === null) {
-      unitFails.push({
-        unitIndex: i,
-        code: "BOTH_REG_REQUIRED",
-        message: `${i + 1}호: 세무서 사업자등록일과 지자체 임대사업자등록신청일을 모두 입력해야 합니다(사업자등록등).`,
-      });
-    }
-
     const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effectiveRegDate);
-    const requiredYears = deriveRequiredYears(article, effectiveRegDate);
-    const priceCap = deriveStdPriceCap(article, unit.region, effectiveRegDate);
-    const sizeRequired = isConstructionArticle(article);
+    const normalized: NormalizedRentalUnit = {
+      effectiveRegDate,
+      isCapitalArea: unit.region === "seoul-metro",
+      isApartment: unit.isApartment,
+      rentalStartOfficialPrice: unit.standardPriceAtRentalStart,
+      rentalYears: unit.rentalMonths / 12,
+      landAreaM2: unit.landAreaM2,
+      totalFloorAreaM2: unit.totalFloorAreaM2,
+      hasMinimum2Units: unit.hasMinimum2Units,
+      isRegulatedAreaNewAcq: unit.isRegulatedAreaNewAcq,
+      rentIncreaseUnder5Pct: unit.requirementsConfirmed, // §155⑳ 묶음 확인 → 5%룰 매핑
+    };
+    const result = checkRentalArticle(article, normalized);
 
     perUnitVerdict.push({
       unitIndex: i,
       derivedArticle: article,
-      requiredYears,
-      stdPriceCap: priceCap,
+      requiredYears: result.requiredYears,
+      stdPriceCap: result.stdPriceCap,
       effectiveRegDate: effectiveRegDate ? effectiveRegDate.toISOString().slice(0, 10) : "",
-      sizeRequired,
+      sizeRequired: isConstructionArticle(article),
     });
 
-    // (b) 의무임대기간
-    const actualYears = unit.rentalMonths / 12;
-    if (actualYears < requiredYears) {
-      unitFails.push({
-        unitIndex: i,
-        code: "RENTAL_PERIOD_SHORT",
-        message: `${i + 1}호 의무임대기간 ${requiredYears}년 미충족 (현재: ${Math.floor(unit.rentalMonths / 12)}년 ${unit.rentalMonths % 12}개월)`,
-      });
-    }
-
-    // (c) 기준시가 상한
-    if (unit.standardPriceAtRentalStart > priceCap) {
-      unitFails.push({
-        unitIndex: i,
-        code: "STANDARD_PRICE_EXCEEDED",
-        message: `${i + 1}호 임대개시일 기준시가 ${(priceCap / 100_000_000).toFixed(0)}억원 초과 (입력값: ${(unit.standardPriceAtRentalStart / 100_000_000).toFixed(2)}억원)`,
-      });
-    }
-
-    // (d) 아파트 등록 제한
-    if (isApartmentRestricted(article, effectiveRegDate, unit.isApartment)) {
-      unitFails.push({
-        unitIndex: i,
-        code: "APARTMENT_RESTRICTED",
-        message: `${i + 1}호: 해당 유형(${article}목)에서 아파트는 §155⑳ 특례 대상이 아닙니다.`,
-      });
-    }
-
-    // (e) 아목 단기 + 조정대상지역 신규취득
-    if (article === "아" && unit.isRegulatedAreaNewAcq) {
-      unitFails.push({
-        unitIndex: i,
-        code: "SHORT_TERM_REGULATED",
-        message: `${i + 1}호: 조정대상지역에 신규취득한 단기임대(아목)는 §155⑳ 특례 불가.`,
-      });
-    }
-
-    // (f) 건설임대 규모요건 (대지 298㎡ · 연면적/전용 149㎡)
-    if (sizeRequired) {
-      if (unit.landAreaM2 == null || unit.totalFloorAreaM2 == null) {
-        // 침묵 통과 차단: 건설인데 면적 미입력 → 배제
-        unitFails.push({
-          unitIndex: i,
-          code: "SIZE_REQUIRED",
-          message: `${i + 1}호: 건설임대는 대지면적·연면적을 입력해야 규모요건(대지 298㎡·연면적 149㎡ 이하)을 판정할 수 있습니다.`,
-        });
-      } else if (unit.landAreaM2 > 298 || unit.totalFloorAreaM2 > 149) {
-        unitFails.push({
-          unitIndex: i,
-          code: "SIZE_EXCEEDED",
-          message: `${i + 1}호: 건설임대 규모요건 초과 (대지 ${unit.landAreaM2}㎡·연면적 ${unit.totalFloorAreaM2}㎡ — 각 298㎡·149㎡ 이하 필요).`,
-        });
-      }
-
-      // (g) 건설임대 2호 이상
-      if (!unit.hasMinimum2Units) {
-        unitFails.push({
-          unitIndex: i,
-          code: "MIN_UNITS_NOT_MET",
-          message: `${i + 1}호: 건설임대는 2호 이상 임대 요건을 충족해야 합니다.`,
-        });
-      }
-    }
-
-    // (h) 기타 요건 자기확인
-    if (!unit.requirementsConfirmed) {
-      unitFails.push({
-        unitIndex: i,
-        code: "REQUIREMENTS_NOT_CONFIRMED",
-        message: `${i + 1}호: 기타 요건(임대료 5% 이내 증액·임대사업자 등록·임대료 지급 등) 확인 필요`,
-      });
-    }
-
-    if (unitFails.length === 0) {
+    if (result.passed) {
       anyUnitPassed = true;
     } else {
-      unitFailReasons.push(...unitFails);
+      for (const code of result.failCodes) {
+        unitFailReasons.push({
+          unitIndex: i,
+          code,
+          message: buildFailMessage(code, i, article, result.requiredYears, result.stdPriceCap, unit),
+        });
+      }
     }
   }
 
