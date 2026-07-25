@@ -353,6 +353,7 @@ export const houseSchema = z.object({
   hasHalfDutyPeriodMet: z.boolean().optional(),
   isSoldWithin1YearOfCancellation: z.boolean().optional(),
   rentalCancellationDate: z.string().date().optional(),
+  saMokBaseArticle: z.enum(["가", "다", "라", "마"]).optional(),
   isExcluded918Rule: z.boolean().optional(),
   isExcludedAfter20200711Apt: z.boolean().optional(),
   isExcludedShortToLongChange: z.boolean().optional(),

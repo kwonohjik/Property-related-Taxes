@@ -150,9 +150,10 @@ describe("checkRentalArticle — C3 확장 (나·라·사·아·자 게이트)",
     expect(r.failCodes).toContain("REG_DATE_GATE");
   });
 
-  it("사목: 2020.8.18 이후 말소·의무 1/2·1년 내 양도 → passed (기간/기준시가 skip)", () => {
+  it("사목: 말소 게이트 + base=마 기준시가 6억 이하·기간 짧아도 → passed (임대기간요건만 면제, Phase4)", () => {
     const r = checkRentalArticle("사", base({
-      rentalYears: 0, rentalStartOfficialPrice: 999_000_000, // skip 대상
+      rentalYears: 0, // 임대기간요건 면제
+      saMokBaseArticle: "마", rentalStartOfficialPrice: 500_000_000, // base 마목 기준시가는 검사
       rentalCancellationDate: new Date("2021-01-01"),
       hasHalfDutyPeriodMet: true, isSoldWithin1YearOfCancellation: true,
     }));
@@ -219,5 +220,47 @@ describe("checkRentalArticle — C3 확장 (나·라·사·아·자 게이트)",
       isApartment: true, rentalYears: 10,
     }));
     expect(r.failCodes).toContain("APARTMENT_RESTRICTED");
+  });
+});
+
+describe("checkRentalArticle — 사목 base 목 '해당 목의 다른 요건' (Phase4)", () => {
+  const saMok = (o: Partial<NormalizedRentalUnit> = {}): NormalizedRentalUnit => base({
+    businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+    rentalCancellationDate: new Date("2021-06-01"),
+    hasHalfDutyPeriodMet: true,
+    isSoldWithin1YearOfCancellation: true,
+    saMokBaseArticle: "마",
+    rentalStartOfficialPrice: 500_000_000, // 마목 6억 이하
+    rentalYears: 2, // 짧음 — 사목은 임대기간요건 면제
+    rentIncreaseUnder5Pct: true,
+    ...o,
+  });
+
+  it("base=마 요건 충족 + 말소 게이트 + period 면제 → passed", () => {
+    expect(checkRentalArticle("사", saMok()).passed).toBe(true);
+  });
+
+  it("base=마 임대개시일 기준시가 7억(>6억) → STANDARD_PRICE_EXCEEDED (period 면제여도 base 요건 미달)", () => {
+    const r = checkRentalArticle("사", saMok({ rentalStartOfficialPrice: 700_000_000 }));
+    expect(r.passed).toBe(false);
+    expect(r.failCodes).toContain("STANDARD_PRICE_EXCEEDED");
+  });
+
+  it("base 목 미선택 → SAMOK_BASE_REQUIRED", () => {
+    expect(checkRentalArticle("사", saMok({ saMokBaseArticle: undefined })).failCodes)
+      .toContain("SAMOK_BASE_REQUIRED");
+  });
+
+  it("base=다 면적 초과(300㎡) → SIZE_EXCEEDED", () => {
+    const r = checkRentalArticle("사", saMok({
+      saMokBaseArticle: "다", rentalStartOfficialPrice: 500_000_000,
+      landAreaM2: 300, totalFloorAreaM2: 140, hasMinimum2Units: true,
+    }));
+    expect(r.failCodes).toContain("SIZE_EXCEEDED");
+  });
+
+  it("말소 게이트 미충족(말소 2019) → RENTAL_TERMINATION_RESTRICTED", () => {
+    expect(checkRentalArticle("사", saMok({ rentalCancellationDate: new Date("2019-01-01") })).failCodes)
+      .toContain("RENTAL_TERMINATION_RESTRICTED");
   });
 });

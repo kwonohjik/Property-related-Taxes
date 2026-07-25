@@ -154,8 +154,21 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
             return `${label}: 대지면적·연면적(㎡)을 입력하세요.`;
           if (t === "D" && !h.firstSaleContractDate)
             return `${label}: 최초 분양계약일을 입력하세요.`;
-          if (t === "G" && !h.rentalCancellationDate)
-            return `${label}: 자진·자동 말소일을 입력하세요.`;
+          if (t === "G") {
+            if (!h.rentalCancellationDate)
+              return `${label}: 자진·자동 말소일을 입력하세요.`;
+            // 사목 base 목(가·다·라·마) + 그 목의 "해당 목의 다른 요건"(임대기간요건 외) — 엔진 SAMOK_BASE_REQUIRED·base 게이트와 동기화
+            const base = h.saMokBaseArticle;
+            if (!base) return `${label}: 사목 — 말소 전 base 목(가·다·라·마)을 선택하세요.`;
+            if ((base === "가" || base === "다" || base === "마") && !h.rentalStartOfficialPrice)
+              return `${label}: 사목 base 목의 임대개시 당시 공시가격을 입력하세요.`;
+            if (base === "라" && !h.acquisitionOfficialPrice)
+              return `${label}: 사목 base 라목의 취득 당시 공시가격을 입력하세요.`;
+            if ((base === "다" || base === "라") && (!h.rentalLandArea || !h.rentalTotalFloorArea))
+              return `${label}: 사목 base 목의 대지면적·연면적(㎡)을 입력하세요.`;
+            if (base === "라" && !h.firstSaleContractDate)
+              return `${label}: 사목 base 라목의 최초 분양계약일을 입력하세요.`;
+          }
         }
         // P2 부득이한 사유: 거주기간(년) 필수 (엔진 ≥1년 판정 — 미입력 시 0 간주로 배제 미발동)
         if (h.isUnavoidableReason && (!h.unavoidableResidenceYears || parseFloat(h.unavoidableResidenceYears) <= 0))

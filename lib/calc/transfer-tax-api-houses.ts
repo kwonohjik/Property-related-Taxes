@@ -136,6 +136,7 @@ export function buildHousesPayload(
             hasHalfDutyPeriodMet: h.hasHalfDutyPeriodMet,
             isSoldWithin1YearOfCancellation: h.isSoldWithin1YearOfCancellation,
             rentalCancellationDate: h.rentalCancellationDate || undefined,
+            saMokBaseArticle: h.saMokBaseArticle,
             isExcluded918Rule: h.isExcluded918Rule,
             isExcludedAfter20200711Apt: h.isExcludedAfter20200711Apt,
             isExcludedShortToLongChange: h.isExcludedShortToLongChange,

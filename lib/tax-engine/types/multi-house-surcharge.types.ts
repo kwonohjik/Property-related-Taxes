@@ -141,6 +141,11 @@ export interface HouseInfo {
   hasHalfDutyPeriodMet?: boolean;
   /** 말소일 이후 1년 이내 양도 여부 (사목 G형) */
   isSoldWithin1YearOfCancellation?: boolean;
+  /**
+   * 사목(G형) base 목 (가·다·라·마) — §167조의3①2호 사목 "해당 목의 다른 요건" 검증 대상.
+   * 사목은 base 목의 기준시가·면적·호수·5%룰 등을 모두 갖춰야 하며 임대기간요건만 면제된다.
+   */
+  saMokBaseArticle?: "가" | "다" | "라" | "마";
   /** 2018.9.14 이후 조정지역 취득·다주택 제외 해당 여부 (마목·아목) */
   isExcluded918Rule?: boolean;
   /** 2020.7.11 이후 등록 아파트 제외 해당 여부 (마목·라목) */

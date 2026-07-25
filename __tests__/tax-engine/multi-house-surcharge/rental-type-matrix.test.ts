@@ -53,7 +53,7 @@ describe("RT-E 마목: 장기일반 매입임대 10년(2020.8.18 이전 등록 8
   });
 });
 
-describe("RT-G 사목: 자진·자동 말소 후 양도", () => {
+describe("RT-G 사목: 말소 게이트 + base 목 '해당 목의 다른 요건'", () => {
   const qualifying = {
     rentalType: "G" as const,
     isRegisteredRental: true,
@@ -62,9 +62,15 @@ describe("RT-G 사목: 자진·자동 말소 후 양도", () => {
     rentalCancellationDate: new Date("2021-01-01"), // ≥2020.8.18
     hasHalfDutyPeriodMet: true,
     isSoldWithin1YearOfCancellation: true,
+    // base 목(마) 다른 요건 — 임대기간요건만 면제
+    saMokBaseArticle: "마" as const,
+    isApartment: false,
+    rentalStartOfficialPrice: 500_000_000, // 마목 6억 이하(수도권)
+    isCapitalArea: true,
+    rentIncreaseUnder5Pct: true,
   };
 
-  it("요건 충족 → 배제", () => {
+  it("말소 게이트 + base 마목 요건 충족 → 배제", () => {
     const r = run(inputWith(qualifying));
     expect(r.excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
   });
@@ -72,6 +78,32 @@ describe("RT-G 사목: 자진·자동 말소 후 양도", () => {
   it("의무기간 1/2 미충족 → 미배제", () => {
     const r = run(inputWith({ ...qualifying, hasHalfDutyPeriodMet: false }));
     expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+  });
+
+  it("base 마목 기준시가 초과(7억) → 미배제 (해당 목의 다른 요건 미충족)", () => {
+    const r = run(inputWith({ ...qualifying, rentalStartOfficialPrice: 700_000_000 }));
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+  });
+
+  it("base 목 미선택 → 미배제 (SAMOK_BASE_REQUIRED)", () => {
+    const r = run(inputWith({ ...qualifying, saMokBaseArticle: undefined }));
+    expect(r.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
+  });
+
+  it("F-S6: base=가 reg 2017 요건충족 → 배제 / reg 2019(2018.4.2 등록상한 초과) → 미배제", () => {
+    const baseGa = {
+      ...qualifying,
+      saMokBaseArticle: "가" as const,
+      businessRegistrationDate: new Date("2017-01-01"),
+      rentalRegistrationDate: new Date("2017-01-01"),
+    };
+    expect(run(inputWith(baseGa)).excludedHouses.find((e) => e.houseId === "h2")?.reason).toBe("long_term_rental");
+    const late = run(inputWith({
+      ...baseGa,
+      businessRegistrationDate: new Date("2019-01-01"),
+      rentalRegistrationDate: new Date("2019-01-01"),
+    }));
+    expect(late.excludedHouses.find((e) => e.houseId === "h2")).toBeUndefined();
   });
 });
 
