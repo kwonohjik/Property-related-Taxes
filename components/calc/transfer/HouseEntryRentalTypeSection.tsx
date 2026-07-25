@@ -32,12 +32,16 @@ const TYPE_FIELDS: Record<RentalHousingType, Array<keyof HouseEntry>> = {
   D: ["acquisitionOfficialPrice", "firstSaleContractDate", "rentalLandArea", "rentalTotalFloorArea", "hasMinimum5UnitsInCity", "isExcludedAfter20200711Apt"],
   E: ["rentalStartOfficialPrice", "rentIncreaseUnder5Pct", "isExcluded918Rule", "isExcludedAfter20200711Apt", "isExcludedShortToLongChange"],
   F: ["rentalStartOfficialPrice", "hasMinimum2Units", "rentalLandArea", "rentalTotalFloorArea", "rentIncreaseUnder5Pct", "isConvertedToSale", "isExcludedShortToLongChange"],
-  G: ["rentalCancellationDate", "hasHalfDutyPeriodMet", "isSoldWithin1YearOfCancellation"],
+  // 사목(G): 말소 게이트 + base 목 selector. base 목의 "해당 목의 다른 요건" 필드는 saMokBaseArticle 선택 시 동적 추가.
+  G: ["saMokBaseArticle", "rentalCancellationDate", "hasHalfDutyPeriodMet", "isSoldWithin1YearOfCancellation"],
   H: ["rentalStartOfficialPrice", "rentIncreaseUnder5Pct", "isExcluded918Rule", "hasContractDepositProof"],
   I: ["rentalStartOfficialPrice", "hasMinimum2Units", "rentalLandArea", "rentalTotalFloorArea", "rentIncreaseUnder5Pct"],
 };
 
-type FieldKind = "price" | "area" | "date" | "bool";
+/** 사목 base 목(가·다·라·마) → base 목 요건 필드를 빌려오는 유형(A·C·D·E) */
+const SAMOK_BASE_TO_TYPE: Record<string, RentalHousingType> = { "가": "A", "다": "C", "라": "D", "마": "E" };
+
+type FieldKind = "price" | "area" | "date" | "bool" | "select";
 const FIELD_META: Record<string, { kind: FieldKind; label: string; hint?: string }> = {
   rentalStartOfficialPrice: { kind: "price", label: "임대개시 당시 공시가격", hint: "수도권 6억·비수도권 3억 등 유형별 한도 판정" },
   acquisitionOfficialPrice: { kind: "price", label: "취득 당시 공시가격" },
@@ -52,6 +56,7 @@ const FIELD_META: Record<string, { kind: FieldKind; label: string; hint?: string
   isConvertedToSale: { kind: "bool", label: "분양전환 해당" },
   hasHalfDutyPeriodMet: { kind: "bool", label: "임대의무기간 1/2 이상 충족" },
   isSoldWithin1YearOfCancellation: { kind: "bool", label: "말소일 이후 1년 이내 양도" },
+  saMokBaseArticle: { kind: "select", label: "말소 전 base 목", hint: "사목은 base 목의 기준시가·면적 등 다른 요건도 충족해야 합니다(임대기간요건만 면제)" },
   // 결격(제외) 사유 — 체크 시 중과배제가 적용되지 않음
   isExcluded918Rule: { kind: "bool", label: "2018.9.14 이후 조정지역 취득 (결격)" },
   isExcludedAfter20200711Apt: { kind: "bool", label: "2020.7.11 이후 등록 아파트 (결격)" },
@@ -61,7 +66,12 @@ const FIELD_META: Record<string, { kind: FieldKind; label: string; hint?: string
 
 export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
   const rentalType = house.rentalType;
-  const fields = rentalType ? TYPE_FIELDS[rentalType] : [];
+  let fields: Array<keyof HouseEntry> = rentalType ? [...TYPE_FIELDS[rentalType]] : [];
+  // 사목(G) — base 목 선택 시 그 목의 "해당 목의 다른 요건" 필드 동적 추가(중복 제거)
+  if (rentalType === "G" && house.saMokBaseArticle && SAMOK_BASE_TO_TYPE[house.saMokBaseArticle]) {
+    const baseFields = TYPE_FIELDS[SAMOK_BASE_TO_TYPE[house.saMokBaseArticle]];
+    fields = [...fields, ...baseFields.filter((f) => !fields.includes(f))];
+  }
 
   function setStr(key: keyof HouseEntry, v: string) {
     onUpdate({ [key]: v || undefined } as Partial<HouseEntry>);
@@ -130,6 +140,27 @@ export function HouseEntryRentalTypeSection({ house, onUpdate }: Props) {
                 <div key={key as string} className="space-y-1">
                   <label className="block text-caption text-muted-foreground font-medium">{meta.label}</label>
                   <DateInput value={(house[key] as string) ?? ""} onChange={(v) => setStr(key, v)} />
+                </div>
+              );
+            }
+            if (meta.kind === "select") {
+              return (
+                <div key={key as string} className="space-y-1">
+                  <label className="block text-caption text-muted-foreground font-medium">{meta.label}</label>
+                  <RadioCardGroup
+                    name={`samok-base-${house.id}`}
+                    layout="inline"
+                    tone="violet"
+                    value={(house[key] as string) ?? ""}
+                    onChange={(v) => setStr(key, v)}
+                    options={[
+                      { value: "가", label: "가목(매입5년)" },
+                      { value: "다", label: "다목(건설5년)" },
+                      { value: "라", label: "라목(미분양)" },
+                      { value: "마", label: "마목(장기일반)" },
+                    ]}
+                  />
+                  {meta.hint && <p className="text-caption text-muted-foreground/70">{meta.hint}</p>}
                 </div>
               );
             }

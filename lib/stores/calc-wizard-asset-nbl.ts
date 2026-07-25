@@ -152,6 +152,8 @@ export interface HouseEntry {
   isSoldWithin1YearOfCancellation?: boolean;
   /** 자진·자동 말소일 (YYYY-MM-DD) — G (rentalCancelledDate와 별개) */
   rentalCancellationDate?: string;
+  /** 사목(G) base 목 (가·다·라·마) — §167조의3①2호 사목 "해당 목의 다른 요건" 검증 대상 */
+  saMokBaseArticle?: "가" | "다" | "라" | "마";
   /** 2018.9.14 이후 조정지역 취득 제외 해당 여부 — E·H */
   isExcluded918Rule?: boolean;
   /** 2020.7.11 이후 등록 아파트 제외 해당 여부 — D·E */

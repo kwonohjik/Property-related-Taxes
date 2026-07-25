@@ -132,6 +132,7 @@ function toNormalizedFromHouse(house: HouseInfo): NormalizedRentalUnit {
     isSoldWithin1YearOfCancellation: house.isSoldWithin1YearOfCancellation,
     isExcludedAfter20200711Apt: house.isExcludedAfter20200711Apt,
     isExcludedShortToLongChange: house.isExcludedShortToLongChange,
+    saMokBaseArticle: house.saMokBaseArticle, // 사목 base 목 "해당 목의 다른 요건"
     // 아목 918 게이트는 양 feature 공용 isExcluded918Rule + hasContractDepositProof(carve-out)로 통일(C4).
   };
 }
@@ -161,7 +162,9 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
 
   // 가·다목 등록상한 2018.4.2 — 다주택 전용 잔여 게이트.
   // (§155⑳ derive는 2020.7.11 경계로 가/다목을 도출하므로 공용 predicate에 넣으면 §155⑳ 회귀.)
-  if (article === "가" || article === "다") {
+  // 사목(base 가/다)도 "해당 목의 다른 요건"에 이 등록상한이 포함되므로 동일 검사(F-S1).
+  const regBoundArticle = article === "사" ? house.saMokBaseArticle : article;
+  if (regBoundArticle === "가" || regBoundArticle === "다") {
     const bizTs = house.businessRegistrationDate!.getTime();
     const rentTs = house.rentalRegistrationDate!.getTime();
     if (bizTs > RA_CUT.Y2018_04_02 || rentTs > RA_CUT.Y2018_04_02) return false;

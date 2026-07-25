@@ -32,7 +32,11 @@ export type ArticleFailCode =
   | "NATIONAL_SIZE_REQUIRED"
   | "REGION_RESTRICTED"
   | "RENTAL_TERMINATION_RESTRICTED"
+  | "SAMOK_BASE_REQUIRED"
   | "REQUIREMENTS_NOT_CONFIRMED";
+
+/** 사목 base 목 (§167조의3①2호 "가목 및 다목부터 마목까지") */
+export type SaMokBaseArticle = "가" | "다" | "라" | "마";
 
 /** 두 feature 어댑터가 채우는 정규화 입력 (필드명 차이 흡수). */
 export type NormalizedRentalUnit = {
@@ -72,6 +76,8 @@ export type NormalizedRentalUnit = {
   hasHalfDutyPeriodMet?: boolean;
   /** 사목 말소 후 1년 내 양도 */
   isSoldWithin1YearOfCancellation?: boolean;
+  /** 사목 base 목(가·다·라·마) — "해당 목의 다른 요건" 검증 대상 */
+  saMokBaseArticle?: SaMokBaseArticle;
   /** 마·라목 2020.7.11 이후 등록 아파트 배제(다주택 자기선언 flag) */
   isExcludedAfter20200711Apt?: boolean;
   /** 마·바목 단기→장기 변경신고 배제 */
@@ -157,32 +163,24 @@ export function isApartmentRestrictedForArticle(
   return false;
 }
 
+/** 사목 base 목 (가·다·라·마) — "해당 목의 다른 요건" 검증 대상. */
+const SA_MOK_BASE: readonly SharedRentalArticle[] = ["가", "다", "라", "마"];
+
 /**
- * 목별 요건 검사. 미충족 사유를 모두 failCodes로 수집(§155⑳ 다중 사유 표시 보존).
- * 사목(cancellationOnly)은 말소 게이트만; 그 외는 등록·기간·기준시가·규모·아파트·특수배제·5%룰.
+ * 목별 요건 게이트 (사목 제외 — 등록기준일 경계·기간·기준시가·규모·호수·국민주택·아파트·918·단→장·5%룰).
+ * opts.skipPeriod: 사목의 base 목 검사에서 임대기간요건만 면제(법령 "임대기간요건 외에 해당 목의 다른 요건").
  */
-export function checkRentalArticle(
+function checkArticleGates(
   article: SharedRentalArticle,
   u: NormalizedRentalUnit,
-): ArticleCheckResult {
+  opts: { skipPeriod?: boolean } = {},
+): ArticleFailCode[] {
   const gate = GATES[article];
   const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
   const effTs = effRegDate?.getTime() ?? 0;
   const requiredYears = rentalRequiredYears(article, effTs);
   const stdPriceCap = rentalStdPriceCap(article, u.isCapitalArea, effTs);
   const fails: ArticleFailCode[] = [];
-
-  // (a) 등록 완비
-  if (effRegDate === null) fails.push("BOTH_REG_REQUIRED");
-
-  // 사목 — 말소 게이트만 (period/price/size/apartment/5%룰 skip)
-  if (gate.cancellationOnly) {
-    const cancelTs = u.rentalCancellationDate?.getTime();
-    if (cancelTs == null || cancelTs < RA_CUT.Y2020_08_18) fails.push("RENTAL_TERMINATION_RESTRICTED");
-    if (!u.hasHalfDutyPeriodMet) fails.push("RENTAL_TERMINATION_RESTRICTED");
-    if (!u.isSoldWithin1YearOfCancellation) fails.push("RENTAL_TERMINATION_RESTRICTED");
-    return { passed: fails.length === 0, failCodes: fails, requiredYears, stdPriceCap };
-  }
 
   // (b) 등록기준일 경계 게이트
   if (gate.regDateMin != null && effTs < gate.regDateMin) fails.push("REG_DATE_GATE"); // 아·자
@@ -195,8 +193,8 @@ export function checkRentalArticle(
     if (scTs == null || scTs < gate.saleWindow[0] || scTs > gate.saleWindow[1]) fails.push("REG_DATE_GATE"); // 라
   }
 
-  // (c) 의무임대기간 (건설임대 분양전환 시 bypass)
-  if (u.rentalYears < requiredYears && !(gate.size && u.isConvertedToSale)) {
+  // (c) 의무임대기간 (건설임대 분양전환 시 bypass · 사목 base 검사 시 면제)
+  if (!opts.skipPeriod && u.rentalYears < requiredYears && !(gate.size && u.isConvertedToSale)) {
     fails.push("RENTAL_PERIOD_SHORT");
   }
 
@@ -236,5 +234,42 @@ export function checkRentalArticle(
   // (l) 5%룰·기타 요건 (나·라·사 제외)
   if (gate.fivePct && !u.rentIncreaseUnder5Pct) fails.push("REQUIREMENTS_NOT_CONFIRMED");
 
+  return fails;
+}
+
+/**
+ * 목별 요건 검사. 미충족 사유를 모두 failCodes로 수집(§155⑳ 다중 사유 표시 보존).
+ * 사목: 말소 게이트 + base 목(가·다·라·마) "해당 목의 다른 요건"(임대기간요건만 면제, §167조의3①2호 사목 단서).
+ * 그 외: checkArticleGates.
+ */
+export function checkRentalArticle(
+  article: SharedRentalArticle,
+  u: NormalizedRentalUnit,
+): ArticleCheckResult {
+  const effRegDate = deriveEffectiveRegDate(u.businessRegistrationDate, u.rentalRegistrationDate);
+  const effTs = effRegDate?.getTime() ?? 0;
+  const requiredYears = rentalRequiredYears(article, effTs);
+  const stdPriceCap = rentalStdPriceCap(article, u.isCapitalArea, effTs);
+  const fails: ArticleFailCode[] = [];
+
+  // (a) 등록 완비
+  if (effRegDate === null) fails.push("BOTH_REG_REQUIRED");
+
+  if (GATES[article].cancellationOnly) {
+    // 사목 — 말소 게이트 + base 목 다른 요건(임대기간요건 면제)
+    const cancelTs = u.rentalCancellationDate?.getTime();
+    if (cancelTs == null || cancelTs < RA_CUT.Y2020_08_18) fails.push("RENTAL_TERMINATION_RESTRICTED");
+    if (!u.hasHalfDutyPeriodMet) fails.push("RENTAL_TERMINATION_RESTRICTED");
+    if (!u.isSoldWithin1YearOfCancellation) fails.push("RENTAL_TERMINATION_RESTRICTED");
+    const base = u.saMokBaseArticle;
+    if (base == null || !SA_MOK_BASE.includes(base)) {
+      fails.push("SAMOK_BASE_REQUIRED");
+    } else {
+      fails.push(...checkArticleGates(base, u, { skipPeriod: true }));
+    }
+    return { passed: fails.length === 0, failCodes: fails, requiredYears, stdPriceCap };
+  }
+
+  fails.push(...checkArticleGates(article, u));
   return { passed: fails.length === 0, failCodes: fails, requiredYears, stdPriceCap };
 }

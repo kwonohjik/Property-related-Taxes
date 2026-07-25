@@ -74,6 +74,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     hasHalfDutyPeriodMet: h.hasHalfDutyPeriodMet,
     isSoldWithin1YearOfCancellation: h.isSoldWithin1YearOfCancellation,
     rentalCancellationDate: toOptionalDate(h.rentalCancellationDate),
+    saMokBaseArticle: h.saMokBaseArticle,
     isExcluded918Rule: h.isExcluded918Rule,
     isExcludedAfter20200711Apt: h.isExcludedAfter20200711Apt,
     isExcludedShortToLongChange: h.isExcludedShortToLongChange,
