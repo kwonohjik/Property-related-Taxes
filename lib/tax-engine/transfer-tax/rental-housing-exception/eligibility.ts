@@ -123,9 +123,11 @@ export function deriveStdPriceCap(article: RentalArticle, region: RegionType): n
 }
 
 /**
- * 아파트 등록 제한.
- * - 매입 장기(가/마): 등록기준일 ≥ 2020.7.11 & 아파트 → 제한.
- * - 단기(아/자)·건설: 아파트는 항상 제외 대상.
+ * 아파트 등록 제한 (§167조의3①2호 목별 — 다주택 checkRentalType_* 정합).
+ * - 단기(아/자): 아파트 항상 제외 대상(아목·자목 "아파트 제외" 명문).
+ * - 매입 장기(가/마): 등록기준일 ≥ 2020.7.11 & 아파트 → 제한(2020.7.11 이후 아파트 장기일반 등록 불가).
+ * - 건설 장기(다/바)·구법: 일반 아파트 **허용**(다주택 checkRentalType_C/F에 isApartment 검사 없음).
+ *   ※ 바목 "단기→장기 변경 신고 아파트" 제외는 별도 입력(isExcludedShortToLongChange) 필요 — Phase 2.
  */
 export function isApartmentRestricted(
   article: RentalArticle,
@@ -133,12 +135,12 @@ export function isApartmentRestricted(
   isApartment: boolean,
 ): boolean {
   if (!isApartment) return false;
-  if (article === "아" || article === "자" || article === "다" || article === "바") return true;
+  if (article === "아" || article === "자") return true; // 단기(아·자)만 blanket 제외
   if (article === "가" || article === "마") {
     const regTs = effectiveRegDate?.getTime() ?? 0;
     return regTs >= CUT_2020_07_11;
   }
-  return false; // 구법(pre_2018): 아파트 허용
+  return false; // 다·바(건설 장기)·구법: 일반 아파트 허용 (F6 정정 — 법 근거 없는 불리 적용 제거)
 }
 
 /** 건설임대 여부 (규모·호수 요건 적용 대상) */
