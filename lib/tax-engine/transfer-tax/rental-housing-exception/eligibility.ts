@@ -70,6 +70,7 @@ export function deriveRentalArticle(
   effectiveRegDate: Date | null,
 ): RentalArticle {
   if (rentalCategory === "pre_2018") return "구법";
+  if (rentalCategory === "existing_business") return "나"; // 기존사업자 매입임대(취득방법 매입 고정)
   if (rentalCategory === "short_6y") return acqType === "construction" ? "자" : "아";
   // long_general
   const regTs = effectiveRegDate?.getTime() ?? 0;
@@ -201,13 +202,15 @@ export function checkEligibility(
       isCapitalArea: unit.region === "seoul-metro",
       isApartment: unit.isApartment,
       rentalStartOfficialPrice: unit.standardPriceAtRentalStart,
-      // §155⑳ 도출 목(가/다/마/바/아/자/구법)은 priceAt="rentalStart" — 취득당시 미사용(나목은 C4).
-      acquisitionOfficialPrice: unit.standardPriceAtRentalStart,
+      acquisitionOfficialPrice: unit.acquisitionOfficialPrice ?? 0, // 나목 cap 측정시점(취득당시)
       rentalYears: unit.rentalMonths / 12,
       landAreaM2: unit.landAreaM2,
       totalFloorAreaM2: unit.totalFloorAreaM2,
       hasMinimum2Units: unit.hasMinimum2Units,
-      isRegulatedAreaNewAcq: unit.isRegulatedAreaNewAcq, // §155⑳ 아목 게이트(C3 유지·C4서 rename)
+      isNationalSizeHousing: unit.isNationalSizeHousing, // 나목
+      isExcluded918Rule: unit.isExcluded918Rule, // 마 hard·아 carve-out
+      hasContractDepositProof: unit.hasContractDepositProof, // 아 carve-out
+      isExcludedShortToLongChange: unit.isExcludedShortToLongChange, // 마·바
       rentIncreaseUnder5Pct: unit.requirementsConfirmed, // §155⑳ 묶음 확인 → 5%룰 매핑
     };
     const result = checkRentalArticle(article, normalized);

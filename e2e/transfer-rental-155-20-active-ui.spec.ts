@@ -17,7 +17,7 @@ function rentalUnit(over: Record<string, unknown> = {}) {
     rentalAcquisitionType: "purchase",
     isApartment: false,
     region: "seoul-metro",
-    isRegulatedAreaNewAcq: false,
+    isExcluded918Rule: false,
     standardPriceAtRentalStart: "",
     rentalLandArea: "",
     rentalTotalFloorArea: "",
@@ -83,10 +83,10 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(badge).toContainText("10년");
     await expect(badge).toContainText("6억");
 
-    // 매입 장기 → 소재지역 노출, 규모/조정 숨김
+    // 매입 장기(마목) → 소재지역 노출, 규모 숨김, 918 토글 노출(마목 hard)
     await expect(page.locator('input[name="rental-region-0"]').first()).toBeVisible();
     await expect(page.getByText("건설임대 규모요건")).toHaveCount(0);
-    await expect(page.getByText("조정대상지역에 세대원이 신규취득한 단기임대입니다.")).toHaveCount(0);
+    await expect(page.getByText("2018.9.14 이후 조정대상지역에 신규취득한 주택입니다.")).toBeVisible();
 
     // 취득방법 → 건설 : 바목, 규모 필드 노출, 소재지역 숨김
     // (등록기준일 2020-08-18 < 2025.2.28 → 바목 cap 6억, F5)
@@ -103,8 +103,27 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(badge).toContainText("아목");
     await expect(badge).toContainText("6년");
     await expect(badge).toContainText("4억");
-    await expect(page.getByText("조정대상지역에 세대원이 신규취득한 단기임대입니다.")).toBeVisible();
+    await expect(page.getByText("2018.9.14 이후 조정대상지역에 신규취득한 주택입니다.")).toBeVisible();
     await expect(page.getByText("건설임대 규모요건")).toHaveCount(0);
+  });
+
+  test("나목(기존사업자) 선택 → 취득당시 기준시가 스왑 + 국민주택 토글 + 소재지역 숨김", async ({ page }) => {
+    await gotoRentalSection(page);
+
+    // 임대구분 → 기존사업자(나목)
+    await page.locator('input[name="rental-category-0"][value="existing_business"]').check();
+
+    const badge = page.getByTestId("rental-verdict-badge-0");
+    await expect(badge).toContainText("나목");
+
+    // 나목: 취득당시 기준시가 노출 · 임대개시일 기준시가 숨김
+    await expect(page.getByText("취득 당시 기준시가", { exact: false })).toBeVisible();
+    await expect(page.getByText("임대개시일 기준시가")).toHaveCount(0);
+
+    // 국민주택규모 토글 노출 + 소재지역/취득방법 숨김(매입 전용)
+    await expect(page.getByText("국민주택규모", { exact: false }).first()).toBeVisible();
+    await expect(page.locator('input[name="rental-region-0"]')).toHaveCount(0);
+    await expect(page.getByText("나목(기존사업자)은 매입임대 전용입니다.")).toBeVisible();
   });
 
   test("두 등록일 중 하나 미입력 → 사업자등록등 미완비 경고", async ({ page }) => {

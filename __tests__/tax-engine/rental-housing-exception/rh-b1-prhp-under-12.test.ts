@@ -91,7 +91,7 @@ function makePdf1Input(): RentalHousingExceptionInput {
         rentalAcquisitionType: "purchase",
         isApartment: true,
         region: "non-metro",
-        isRegulatedAreaNewAcq: false,                       // 비수도권 (파주시 — 수도권이나 사례상 6억 이하)
+        isExcluded918Rule: false,                       // 비수도권 (파주시 — 수도권이나 사례상 6억 이하)
         standardPriceAtRentalStart: 300_000_000,
         hasMinimum2Units: false,   // 임대개시 당시 기준시가 3억 (비수도권 3억 이하)
         rentalMonths: 96,                          // 8년 × 12 = 96개월 (의무기간 충족)

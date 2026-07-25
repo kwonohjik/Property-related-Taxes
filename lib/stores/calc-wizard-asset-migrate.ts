@@ -530,13 +530,22 @@ export function migrateAsset(raw: unknown): AssetForm {
             : "long_general"; // long-8/long-10/기타
           delete u.rentalType;
         }
-        // region 3값 → 2값 + isRegulatedAreaNewAcq
+        // region 3값 → 2값 + 918 게이트
         if (u.region === "regulated-area") {
           u.region = "seoul-metro";
-          if (u.isRegulatedAreaNewAcq === undefined) u.isRegulatedAreaNewAcq = true;
+          if (u.isRegulatedAreaNewAcq === undefined && u.isExcluded918Rule === undefined) u.isRegulatedAreaNewAcq = true;
         }
         if (u.region !== "seoul-metro" && u.region !== "non-metro") u.region = "seoul-metro";
-        if (u.isRegulatedAreaNewAcq === undefined) u.isRegulatedAreaNewAcq = false;
+        // isRegulatedAreaNewAcq → isExcluded918Rule rename (Phase 1 데이터 값 보존, C4 D-2)
+        if (u.isRegulatedAreaNewAcq !== undefined) {
+          if (u.isExcluded918Rule === undefined) u.isExcluded918Rule = u.isRegulatedAreaNewAcq;
+          delete u.isRegulatedAreaNewAcq;
+        }
+        if (u.isExcluded918Rule === undefined) u.isExcluded918Rule = false;
+        if (u.hasContractDepositProof === undefined) u.hasContractDepositProof = false;
+        if (u.isExcludedShortToLongChange === undefined) u.isExcludedShortToLongChange = false;
+        if (u.acquisitionOfficialPrice === undefined) u.acquisitionOfficialPrice = "";
+        if (u.isNationalSizeHousing === undefined) u.isNationalSizeHousing = false;
         if (u.rentalLandArea === undefined) u.rentalLandArea = "";
         if (u.rentalTotalFloorArea === undefined) u.rentalTotalFloorArea = "";
         if (u.hasMinimum2Units === undefined) u.hasMinimum2Units = false;

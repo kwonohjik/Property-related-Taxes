@@ -28,7 +28,7 @@ const makeUnit = (overrides: Partial<RentalUnitInput>): RentalUnitInput => ({
   rentalAcquisitionType: "purchase",
   isApartment: false,
   region: "non-metro",
-  isRegulatedAreaNewAcq: false,
+  isExcluded918Rule: false,
   standardPriceAtRentalStart: 200_000_000,
   landAreaM2: undefined,
   totalFloorAreaM2: undefined,
@@ -139,7 +139,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       businessRegistrationDate: new Date("2025-07-01"),
       rentalRegistrationDate: new Date("2025-07-01"),
       region: "seoul-metro",
-      isRegulatedAreaNewAcq: false,
+      isExcluded918Rule: false,
       standardPriceAtRentalStart: 410_000_000,
       hasMinimum2Units: false,
       rentalMonths: 72,
@@ -155,7 +155,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       businessRegistrationDate: new Date("2025-07-01"),
       rentalRegistrationDate: new Date("2025-07-01"),
       region: "seoul-metro",
-      isRegulatedAreaNewAcq: false,
+      isExcluded918Rule: false,
       standardPriceAtRentalStart: 400_000_000,
       hasMinimum2Units: false,
       rentalMonths: 72,
@@ -170,7 +170,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       businessRegistrationDate: new Date("2021-03-01"),
       rentalRegistrationDate: new Date("2021-03-01"),
       region: "seoul-metro",
-      isRegulatedAreaNewAcq: false,
+      isExcluded918Rule: false,
       standardPriceAtRentalStart: 700_000_000,
       landAreaM2: 200,
       totalFloorAreaM2: 140,
@@ -189,7 +189,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       businessRegistrationDate: new Date("2025-03-01"),
       rentalRegistrationDate: new Date("2025-03-01"),
       region: "seoul-metro",
-      isRegulatedAreaNewAcq: false,
+      isExcluded918Rule: false,
       standardPriceAtRentalStart: 700_000_000,
       landAreaM2: 200,
       totalFloorAreaM2: 140,
@@ -206,7 +206,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       businessRegistrationDate: new Date("2021-03-01"),
       rentalRegistrationDate: new Date("2021-03-01"),
       region: "seoul-metro",
-      isRegulatedAreaNewAcq: false,
+      isExcluded918Rule: false,
       standardPriceAtRentalStart: 500_000_000,
       hasMinimum2Units: true,
       rentalMonths: 120,
@@ -223,7 +223,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       businessRegistrationDate: new Date("2021-03-01"),
       rentalRegistrationDate: new Date("2021-03-01"),
       region: "seoul-metro",
-      isRegulatedAreaNewAcq: false,
+      isExcluded918Rule: false,
       standardPriceAtRentalStart: 500_000_000,
       landAreaM2: 300,
       totalFloorAreaM2: 140,
@@ -247,7 +247,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       rentalRegistrationDate: new Date("2025-07-01"),
       region: "seoul-metro",
       standardPriceAtRentalStart: 300_000_000,
-      isRegulatedAreaNewAcq: true,
+      isExcluded918Rule: true,
       rentalMonths: 72,
     });
     expect(checkEligibility([u], 5, 5).failReasons.find((f) => f.code === "SHORT_TERM_REGULATED")).toBeDefined();
@@ -309,7 +309,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       rentalRegistrationDate: new Date("2020-08-18"),
       isApartment: true,
       region: "non-metro",
-      isRegulatedAreaNewAcq: false,
+      isExcluded918Rule: false,
       rentalMonths: 120,
     });
     expect(checkEligibility([u], 5, 5).failReasons.find((f) => f.code === "APARTMENT_RESTRICTED")).toBeDefined();
@@ -320,7 +320,7 @@ describe("checkEligibility — 회귀 anchor", () => {
       businessRegistrationDate: new Date("2020-08-18"),
       rentalRegistrationDate: new Date("2020-08-18"),
       region: "seoul-metro",
-      isRegulatedAreaNewAcq: false,
+      isExcluded918Rule: false,
       rentalMonths: 120,
     });
     const v = checkEligibility([u], 5, 5).perUnitVerdict?.[0];
@@ -334,6 +334,71 @@ describe("checkEligibility — 회귀 anchor", () => {
     const failUnit = makeUnit({ rentalMonths: 12 });
     const passUnit = makeUnit({ rentalMonths: 120 });
     expect(checkEligibility([failUnit, passUnit], 5, 5).passed).toBe(true);
+  });
+});
+
+// ============================================================
+// C4 — 나목(existing_business) + 918/단→장변경 (§155⑳)
+// ============================================================
+
+describe("checkEligibility — C4 나목·918·단→장변경", () => {
+  it("나목: 기존사업자·취득당시 3억·국민주택·2호·5년 → passed(도출 나·cap 3억)", () => {
+    const u = makeUnit({
+      rentalCategory: "existing_business",
+      rentalAcquisitionType: "purchase",
+      businessRegistrationDate: new Date("2003-01-01"),
+      rentalRegistrationDate: new Date("2003-01-01"),
+      acquisitionOfficialPrice: 300_000_000,
+      isNationalSizeHousing: true,
+      hasMinimum2Units: true,
+      rentalMonths: 60,
+    });
+    const r = checkEligibility([u], 5, 5);
+    expect(r.passed).toBe(true);
+    expect(r.perUnitVerdict?.[0].derivedArticle).toBe("나");
+    expect(r.perUnitVerdict?.[0].stdPriceCap).toBe(300_000_000);
+  });
+
+  it("나목: 취득당시 3.1억→PRICE / 등록 2004→REG_DATE_GATE / 국민주택 미충족→NATIONAL_SIZE_REQUIRED", () => {
+    const na = {
+      rentalCategory: "existing_business" as const,
+      businessRegistrationDate: new Date("2003-01-01"),
+      rentalRegistrationDate: new Date("2003-01-01"),
+      acquisitionOfficialPrice: 300_000_000,
+      isNationalSizeHousing: true,
+      hasMinimum2Units: true,
+      rentalMonths: 60,
+    };
+    expect(checkEligibility([makeUnit({ ...na, acquisitionOfficialPrice: 310_000_000 })], 5, 5)
+      .failReasons.find((f) => f.code === "STANDARD_PRICE_EXCEEDED")).toBeDefined();
+    expect(checkEligibility([makeUnit({ ...na, businessRegistrationDate: new Date("2004-01-01"), rentalRegistrationDate: new Date("2004-01-01") })], 5, 5)
+      .failReasons.find((f) => f.code === "REG_DATE_GATE")).toBeDefined();
+    expect(checkEligibility([makeUnit({ ...na, isNationalSizeHousing: false })], 5, 5)
+      .failReasons.find((f) => f.code === "NATIONAL_SIZE_REQUIRED")).toBeDefined();
+  });
+
+  it("마목 918 hard → SHORT_TERM_REGULATED / 단기→장기 변경 → SHORT_TO_LONG_CHANGE", () => {
+    const maBase = {
+      rentalCategory: "long_general" as const, rentalAcquisitionType: "purchase" as const,
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      region: "seoul-metro" as const, standardPriceAtRentalStart: 500_000_000, rentalMonths: 120,
+    };
+    expect(checkEligibility([makeUnit({ ...maBase, isExcluded918Rule: true })], 5, 5)
+      .failReasons.find((f) => f.code === "SHORT_TERM_REGULATED")).toBeDefined();
+    expect(checkEligibility([makeUnit({ ...maBase, isExcludedShortToLongChange: true })], 5, 5)
+      .failReasons.find((f) => f.code === "SHORT_TO_LONG_CHANGE")).toBeDefined();
+  });
+
+  it("아목 918 carve-out — 계약금 증빙 있으면 통과 / 없으면 SHORT_TERM_REGULATED", () => {
+    const ah = {
+      rentalCategory: "short_6y" as const, rentalAcquisitionType: "purchase" as const,
+      businessRegistrationDate: new Date("2025-07-01"), rentalRegistrationDate: new Date("2025-07-01"),
+      region: "seoul-metro" as const, standardPriceAtRentalStart: 300_000_000, rentalMonths: 72,
+      isExcluded918Rule: true,
+    };
+    expect(checkEligibility([makeUnit({ ...ah, hasContractDepositProof: true })], 5, 5).passed).toBe(true);
+    expect(checkEligibility([makeUnit({ ...ah })], 5, 5)
+      .failReasons.find((f) => f.code === "SHORT_TERM_REGULATED")).toBeDefined();
   });
 });
 

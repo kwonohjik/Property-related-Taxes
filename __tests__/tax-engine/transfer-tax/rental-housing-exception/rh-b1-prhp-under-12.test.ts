@@ -50,7 +50,7 @@ describe("RH-B1 — 사례문제 PDF#1 (예제 2023, 사례 25)", () => {
         rentalAcquisitionType: "purchase",
         isApartment: true, // 사례에 명시 안됨 — false로 해도 무방하나 사례 문맥상 거주주택이 아닌 별도 임대 아파트
         region: "seoul-metro",
-        isRegulatedAreaNewAcq: false, // 파주시는 경기도 = 수도권 (6억 이하 적용)
+        isExcluded918Rule: false, // 파주시는 경기도 = 수도권 (6억 이하 적용)
         standardPriceAtRentalStart: 500_000_000,
         hasMinimum2Units: false, // 사례: "임대개시 당시 기준시가 6억 이하"
         rentalMonths: 96, // 8년

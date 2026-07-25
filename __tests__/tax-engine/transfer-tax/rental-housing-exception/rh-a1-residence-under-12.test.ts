@@ -23,7 +23,7 @@ describe("RH-A1 — 거주주택 양도 (12억 이하)", () => {
         rentalAcquisitionType: "purchase",
         isApartment: false,
         region: "seoul-metro",
-        isRegulatedAreaNewAcq: false,
+        isExcluded918Rule: false,
         standardPriceAtRentalStart: 500_000_000,
         hasMinimum2Units: false,
         rentalMonths: 96,

@@ -132,7 +132,7 @@ function toNormalizedFromHouse(house: HouseInfo): NormalizedRentalUnit {
     isSoldWithin1YearOfCancellation: house.isSoldWithin1YearOfCancellation,
     isExcludedAfter20200711Apt: house.isExcludedAfter20200711Apt,
     isExcludedShortToLongChange: house.isExcludedShortToLongChange,
-    // isRegulatedAreaNewAcq는 §155⑳ 전용 게이트 — 다주택은 아목 918 carve-out(isExcluded918Rule)만 사용.
+    // 아목 918 게이트는 양 feature 공용 isExcluded918Rule + hasContractDepositProof(carve-out)로 통일(C4).
   };
 }
 

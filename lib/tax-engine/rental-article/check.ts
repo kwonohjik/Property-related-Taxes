@@ -58,12 +58,10 @@ export type NormalizedRentalUnit = {
   isNationalSizeHousing?: boolean;
   /** 5%룰 (§155⑳는 requirementsConfirmed 묶음에서 매핑) */
   rentIncreaseUnder5Pct: boolean;
-  /** 918 조정취득 배제 (마목 hard·아목 carve-out) */
+  /** 918 조정취득 배제 (마목 hard·아목 carve-out — 양 feature 공용, C4서 §155⑳도 이 필드로 통일) */
   isExcluded918Rule?: boolean;
   /** 아목 918 carve-out — 계약금 지급 증빙 */
   hasContractDepositProof?: boolean;
-  /** §155⑳ 아목 게이트(C3 유지·C4서 isExcluded918Rule로 rename) */
-  isRegulatedAreaNewAcq?: boolean;
   /** 라목 최초 분양계약일 */
   firstSaleContractDate?: Date;
   /** 다·바목 분양전환 (의무기간 bypass) */
@@ -228,10 +226,9 @@ export function checkRentalArticle(
     (!!u.isExcludedAfter20200711Apt && (article === "마" || article === "라"));
   if (aptRestricted) fails.push("APARTMENT_RESTRICTED");
 
-  // (j) 918 조정취득 배제 — 마목 hard / 아목 carve-out / §155⑳ 아목 isRegulatedAreaNewAcq(C3)
+  // (j) 918 조정취득 배제 — 마목 hard(무조건) / 아목 carve-out(계약금 증빙 없으면 배제)
   if (gate.hard918 && u.isExcluded918Rule) fails.push("SHORT_TERM_REGULATED");
   if (gate.carveout918 && u.isExcluded918Rule && !u.hasContractDepositProof) fails.push("SHORT_TERM_REGULATED");
-  if (article === "아" && u.isRegulatedAreaNewAcq) fails.push("SHORT_TERM_REGULATED");
 
   // (k) 단기→장기 변경 배제 (마·바)
   if (gate.shortToLong && u.isExcludedShortToLongChange) fails.push("SHORT_TO_LONG_CHANGE");

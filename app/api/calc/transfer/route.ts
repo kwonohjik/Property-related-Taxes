@@ -36,6 +36,7 @@ import {
   propertySchema as inputSchema,
 } from "@/lib/api/transfer-tax-schema";
 import { buildInheritedAcquisition } from "./route-inherited-acquisition";
+import { toRentalHousingExceptionEngineInput } from "./_rental-engine-input";
 
 // ============================================================
 // POST handler (⑫-2, ⑫-3)
@@ -342,34 +343,7 @@ export async function POST(request: NextRequest) {
       : undefined,
     // ⑭ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — Date 변환 필수
     // 주의: toDate()/toOptionalDate() 헬퍼 사용 (lib/api/date-coerce.ts 정책)
-    rentalHousingException: data.rentalHousingException
-      ? {
-          applyException: data.rentalHousingException.applyException,
-          scenario: data.rentalHousingException.scenario,
-          rentalUnits: data.rentalHousingException.rentalUnits.map((u) => ({
-            businessRegistrationDate: new Date(u.businessRegistrationDate),
-            rentalRegistrationDate: new Date(u.rentalRegistrationDate),
-            rentalCategory: u.rentalCategory,
-            rentalAcquisitionType: u.rentalAcquisitionType,
-            isApartment: u.isApartment,
-            region: u.region,
-            isRegulatedAreaNewAcq: u.isRegulatedAreaNewAcq,
-            standardPriceAtRentalStart: u.standardPriceAtRentalStart,
-            landAreaM2: u.landAreaM2,
-            totalFloorAreaM2: u.totalFloorAreaM2,
-            hasMinimum2Units: u.hasMinimum2Units,
-            rentalMonths: u.rentalMonths,
-            rentalAutoTermination: u.rentalAutoTermination,
-            requirementsConfirmed: u.requirementsConfirmed,
-          })),
-          priorResidenceTransferDate: data.rentalHousingException.priorResidenceTransferDate
-            ? new Date(data.rentalHousingException.priorResidenceTransferDate)
-            : undefined,
-          standardPriceAtAcquisition: data.rentalHousingException.standardPriceAtAcquisitionForPhrp,
-          standardPriceAtPriorTransfer: data.rentalHousingException.standardPriceAtPriorTransfer,
-          standardPriceAtTransfer: data.rentalHousingException.standardPriceAtTransferForPhrp,
-        }
-      : undefined,
+    rentalHousingException: toRentalHousingExceptionEngineInput(data.rentalHousingException),
     // ⑭ 사례 28 — 부수토지 한도 산정 (영 §154⑦). occupancyApprovalDate 등은 UI에서 acquisitionDate로 변환됨.
     buildingFootprintArea: data.buildingFootprintArea,
     isUrbanArea: data.isUrbanArea,

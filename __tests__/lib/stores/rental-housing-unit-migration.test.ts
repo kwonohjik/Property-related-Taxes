@@ -43,14 +43,14 @@ describe("임대주택 유닛 마이그레이션 — 구→신 스키마 분해"
     expect(u.rentalType).toBeUndefined();
   });
 
-  it("region regulated-area → seoul-metro + isRegulatedAreaNewAcq=true 분해", () => {
+  it("region regulated-area → seoul-metro + isExcluded918Rule=true 분해", () => {
     const u = migrateUnit({ region: "regulated-area" });
     expect(u.region).toBe("seoul-metro");
-    expect(u.isRegulatedAreaNewAcq).toBe(true);
+    expect(u.isExcluded918Rule).toBe(true);
   });
 
-  it("region seoul-metro/non-metro → 유지 + isRegulatedAreaNewAcq=false", () => {
-    expect(migrateUnit({ region: "non-metro" }).isRegulatedAreaNewAcq).toBe(false);
+  it("region seoul-metro/non-metro → 유지 + isExcluded918Rule=false", () => {
+    expect(migrateUnit({ region: "non-metro" }).isExcluded918Rule).toBe(false);
     expect(migrateUnit({ region: "non-metro" }).region).toBe("non-metro");
   });
 
@@ -59,5 +59,19 @@ describe("임대주택 유닛 마이그레이션 — 구→신 스키마 분해"
     expect(u.rentalLandArea).toBe("");
     expect(u.rentalTotalFloorArea).toBe("");
     expect(u.hasMinimum2Units).toBe(false);
+  });
+
+  it("C4 rename: Phase 1 isRegulatedAreaNewAcq(구 필드명) → isExcluded918Rule 값 보존·구 필드 삭제", () => {
+    const u = migrateUnit({ isRegulatedAreaNewAcq: true, region: "seoul-metro" });
+    expect(u.isExcluded918Rule).toBe(true);
+    expect(u.isRegulatedAreaNewAcq).toBeUndefined();
+  });
+
+  it("C4 신규 필드 backfill (취득당시 기준시가·국민주택·계약금증빙·단→장변경)", () => {
+    const u = migrateUnit({ region: "seoul-metro" });
+    expect(u.acquisitionOfficialPrice).toBe("");
+    expect(u.isNationalSizeHousing).toBe(false);
+    expect(u.hasContractDepositProof).toBe(false);
+    expect(u.isExcludedShortToLongChange).toBe(false);
   });
 });

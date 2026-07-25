@@ -59,10 +59,10 @@ describe("checkRentalArticle — 목별 판정 (C2 유지)", () => {
     expect(post.passed).toBe(true);
   });
 
-  it("아목 4억 초과·조정신규취득(§155⑳ isRegulatedAreaNewAcq) → 다중 failCodes 수집", () => {
+  it("아목 4억 초과·918 조정취득(계약금증빙 없음) → 다중 failCodes 수집", () => {
     const r = checkRentalArticle("아", base({
       businessRegistrationDate: new Date("2025-07-01"), rentalRegistrationDate: new Date("2025-07-01"),
-      rentalStartOfficialPrice: 500_000_000, rentalYears: 6, isRegulatedAreaNewAcq: true,
+      rentalStartOfficialPrice: 500_000_000, rentalYears: 6, isExcluded918Rule: true,
     }));
     expect(r.passed).toBe(false);
     expect(r.failCodes).toEqual(expect.arrayContaining(["STANDARD_PRICE_EXCEEDED", "SHORT_TERM_REGULATED"]));
