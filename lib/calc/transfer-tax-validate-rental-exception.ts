@@ -53,6 +53,21 @@ export function validateRentalHousingException(
       if (!u.hasMinimum2Units) {
         return `${unitLabel}: 나목은 2호 이상 임대 요건 충족 확인이 필요합니다.`;
       }
+    } else if (article === "라") {
+      // 라목(미분양 매입) — 취득당시 기준시가 3억·최초분양계약일·5호·면적 (비수도권·임대개시일 기준시가·5%룰 미사용)
+      if (!u.acquisitionOfficialPrice || parseAmount(u.acquisitionOfficialPrice) <= 0) {
+        return `${unitLabel}: 취득 당시 기준시가를 입력하세요 (라목 3억 이하 요건).`;
+      }
+      if (!u.firstSaleContractDate) {
+        return `${unitLabel}: 라목은 최초 분양계약일(2008.6.11~2009.6.30)을 입력하세요.`;
+      }
+      if (!u.hasMinimum5UnitsInCity) {
+        return `${unitLabel}: 라목은 같은 시·군 5호 이상 임대 요건 충족 확인이 필요합니다.`;
+      }
+      if (!u.rentalLandArea || parseDecimal(u.rentalLandArea) <= 0
+          || !u.rentalTotalFloorArea || parseDecimal(u.rentalTotalFloorArea) <= 0) {
+        return `${unitLabel}: 라목은 대지면적·연면적(㎡)을 입력하세요 (대지 298㎡·연면적 149㎡ 이하).`;
+      }
     } else {
       // 그 외 목 — 임대개시일 기준시가 필수
       if (!u.standardPriceAtRentalStart || parseAmount(u.standardPriceAtRentalStart) <= 0) {

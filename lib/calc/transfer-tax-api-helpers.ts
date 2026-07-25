@@ -182,6 +182,10 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       landAreaM2: parseDecimal(u.rentalLandArea) || undefined,
       totalFloorAreaM2: parseDecimal(u.rentalTotalFloorArea) || undefined,
       hasMinimum2Units: u.hasMinimum2Units,
+      hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity,
+      firstSaleContractDate: u.firstSaleContractDate
+        ? (u.firstSaleContractDate.includes('T') ? u.firstSaleContractDate : `${u.firstSaleContractDate}T00:00:00.000Z`)
+        : undefined,
       rentalMonths: parseFloat(u.rentalMonths) || 0,
       rentalAutoTermination: u.rentalAutoTermination,
       requirementsConfirmed: u.requirementsConfirmed,

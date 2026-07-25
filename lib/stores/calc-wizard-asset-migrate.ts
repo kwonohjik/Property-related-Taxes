@@ -549,6 +549,9 @@ export function migrateAsset(raw: unknown): AssetForm {
         if (u.rentalLandArea === undefined) u.rentalLandArea = "";
         if (u.rentalTotalFloorArea === undefined) u.rentalTotalFloorArea = "";
         if (u.hasMinimum2Units === undefined) u.hasMinimum2Units = false;
+        if (u.hasMinimum5UnitsInCity === undefined) u.hasMinimum5UnitsInCity = false;
+        if (u.firstSaleContractDate === undefined) u.firstSaleContractDate = "";
+        if (u.rentalAutoTermination === undefined) u.rentalAutoTermination = false;
       });
     }
     if (rhe.priorResidenceTransferDate === undefined) rhe.priorResidenceTransferDate = undefined;

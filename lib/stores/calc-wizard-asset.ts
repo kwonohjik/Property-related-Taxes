@@ -594,8 +594,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
       businessRegistrationDate: string;
       /** 지자체 임대사업자등록신청일 민특법§5 (YYYY-MM-DD) */
       rentalRegistrationDate: string;
-      /** 임대구분 (의무기간·cap 파생 소스). existing_business=나목(기존사업자 매입) */
-      rentalCategory: 'long_general' | 'short_6y' | 'pre_2018' | 'existing_business';
+      /** 임대구분 (의무기간·cap 파생 소스). existing_business=나목·unsold_08_09=라목(미분양) */
+      rentalCategory: 'long_general' | 'short_6y' | 'pre_2018' | 'existing_business' | 'unsold_08_09';
       rentalAcquisitionType: 'purchase' | 'construction';
       isApartment: boolean;
       /** 소재지역 수도권/비수도권 (918 조정취득은 isExcluded918Rule 별도) */
@@ -618,9 +618,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
       rentalTotalFloorArea: string;
       /** 2호 이상 임대 충족 자기확인 (건설임대·나목) */
       hasMinimum2Units: boolean;
+      /** 같은 시·군 5호 이상 임대 충족 (라목 미분양) */
+      hasMinimum5UnitsInCity: boolean;
+      /** 최초 분양계약일 (라목 미분양 2008.6.11~2009.6.30, YYYY-MM-DD) */
+      firstSaleContractDate: string;
       /** 실제 임대 개월 수 */
       rentalMonths: string;
-      /** 자동·자진말소 5년 내 양도 여부 */
+      /** §155⑳㉓ 말소 특례 — 자진(의무기간 1/2↑)·자동말소 후 5년 내 거주주택 양도 여부 (가·다·라·마목) */
       rentalAutoTermination: boolean;
       /** 기타 요건 충족 자기확인 (5%증액 등) */
       requirementsConfirmed: boolean;

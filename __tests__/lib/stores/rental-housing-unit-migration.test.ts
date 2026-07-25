@@ -74,4 +74,11 @@ describe("임대주택 유닛 마이그레이션 — 구→신 스키마 분해"
     expect(u.hasContractDepositProof).toBe(false);
     expect(u.isExcludedShortToLongChange).toBe(false);
   });
+
+  it("Phase3 라목·말소 필드 backfill (5호·최초분양계약일·말소특례)", () => {
+    const u = migrateUnit({ region: "seoul-metro" });
+    expect(u.hasMinimum5UnitsInCity).toBe(false);
+    expect(u.firstSaleContractDate).toBe("");
+    expect(u.rentalAutoTermination).toBe(false);
+  });
 });
