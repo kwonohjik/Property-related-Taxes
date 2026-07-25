@@ -51,8 +51,8 @@ export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-buildin
 /** 시나리오: A=거주주택 양도, B=임대주택→거주주택 전환 후 양도(PHRP) */
 export const RentalScenarioEnum = z.enum(['A', 'B']);
 
-/** 임대구분: 장기일반·단기6년·구 임대주택법·기존사업자(나목) (의무기간·cap은 등록기준일·취득방법에서 파생) */
-export const RentalCategoryEnum = z.enum(['long_general', 'short_6y', 'pre_2018', 'existing_business']);
+/** 임대구분: 장기일반·단기6년·구 임대주택법·기존사업자(나목)·미분양(라목) (의무기간·cap은 등록기준일·취득방법에서 파생) */
+export const RentalCategoryEnum = z.enum(['long_general', 'short_6y', 'pre_2018', 'existing_business', 'unsold_08_09']);
 
 /** 취득 방법: 매입·건설 */
 export const RentalAcqTypeEnum = z.enum(['purchase', 'construction']);
@@ -77,6 +77,8 @@ export const rentalUnitSchema = z.object({
   landAreaM2: z.number().nonnegative().optional(),
   totalFloorAreaM2: z.number().nonnegative().optional(),
   hasMinimum2Units: z.boolean(),
+  hasMinimum5UnitsInCity: z.boolean(),
+  firstSaleContractDate: z.string().datetime().optional(),
   rentalMonths: z.number().nonnegative(),
   rentalAutoTermination: z.boolean(),
   requirementsConfirmed: z.boolean(),

@@ -126,6 +126,26 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(page.getByText("나목(기존사업자)은 매입임대 전용입니다.")).toBeVisible();
   });
 
+  test("라목(미분양) 선택 → 계약일·5호·취득당시 기준시가·소재지역 노출 + 말소 특례 토글", async ({ page }) => {
+    await gotoRentalSection(page);
+
+    await page.locator('input[name="rental-category-0"][value="unsold_08_09"]').check();
+
+    const badge = page.getByTestId("rental-verdict-badge-0");
+    await expect(badge).toContainText("라목");
+
+    // 라목: 최초 분양계약일 + 5호 + 취득당시 기준시가 + 소재지역(비수도권 요건) 노출
+    await expect(page.getByTestId("rental-first-sale-date-0")).toBeVisible();
+    await expect(page.getByText("5호 이상 임대", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText("취득 당시 기준시가", { exact: false })).toBeVisible();
+    await expect(page.getByText("임대개시일 기준시가")).toHaveCount(0);
+    await expect(page.locator('input[name="rental-region-0"]').first()).toBeVisible();
+    await expect(page.getByText("라목(미분양)은 매입임대 전용입니다.")).toBeVisible();
+
+    // §155⑳㉓ 말소 특례 토글(가·다·라·마목) 노출
+    await expect(page.getByText("자진·자동 말소된 임대주택", { exact: false })).toBeVisible();
+  });
+
   test("두 등록일 중 하나 미입력 → 사업자등록등 미완비 경고", async ({ page }) => {
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();

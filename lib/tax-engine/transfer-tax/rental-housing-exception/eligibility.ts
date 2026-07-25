@@ -71,6 +71,7 @@ export function deriveRentalArticle(
 ): RentalArticle {
   if (rentalCategory === "pre_2018") return "구법";
   if (rentalCategory === "existing_business") return "나"; // 기존사업자 매입임대(취득방법 매입 고정)
+  if (rentalCategory === "unsold_08_09") return "라"; // 미분양 매입임대(취득방법 매입 고정)
   if (rentalCategory === "short_6y") return acqType === "construction" ? "자" : "아";
   // long_general
   const regTs = effectiveRegDate?.getTime() ?? 0;
@@ -207,6 +208,8 @@ export function checkEligibility(
       landAreaM2: unit.landAreaM2,
       totalFloorAreaM2: unit.totalFloorAreaM2,
       hasMinimum2Units: unit.hasMinimum2Units,
+      hasMinimum5UnitsInCity: unit.hasMinimum5UnitsInCity, // 라목
+      firstSaleContractDate: unit.firstSaleContractDate, // 라목
       isNationalSizeHousing: unit.isNationalSizeHousing, // 나목
       isExcluded918Rule: unit.isExcluded918Rule, // 마 hard·아 carve-out
       hasContractDepositProof: unit.hasContractDepositProof, // 아 carve-out
@@ -214,6 +217,18 @@ export function checkEligibility(
       rentIncreaseUnder5Pct: unit.requirementsConfirmed, // §155⑳ 묶음 확인 → 5%룰 매핑
     };
     const result = checkRentalArticle(article, normalized);
+
+    // §155⑳㉓ 말소 특례 — 가·다·라·마목 임대주택이 자진말소(의무기간 1/2 이상)·자동말소되고
+    // 말소 이후 5년 이내 거주주택 양도 시 의무임대기간요건 간주 충족(RENTAL_PERIOD_SHORT 억제).
+    // (자진말소 1/2 = 의무기간×6개월. 자동말소는 의무기간 종료라 항상 충족.)
+    const terminationRelief =
+      unit.rentalAutoTermination &&
+      (article === "가" || article === "다" || article === "라" || article === "마") &&
+      unit.rentalMonths >= result.requiredYears * 6;
+    if (terminationRelief && result.failCodes.includes("RENTAL_PERIOD_SHORT")) {
+      result.failCodes = result.failCodes.filter((c) => c !== "RENTAL_PERIOD_SHORT");
+      result.passed = result.failCodes.length === 0;
+    }
 
     perUnitVerdict.push({
       unitIndex: i,

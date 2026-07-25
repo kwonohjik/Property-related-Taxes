@@ -403,6 +403,75 @@ describe("checkEligibility — C4 나목·918·단→장변경", () => {
 });
 
 // ============================================================
+// Phase 3 — 라목(미분양) + §155⑳㉓ 말소 특례
+// ============================================================
+
+describe("checkEligibility — Phase3 라목·말소 특례", () => {
+  const laMok = {
+    rentalCategory: "unsold_08_09" as const,
+    businessRegistrationDate: new Date("2008-01-01"),
+    rentalRegistrationDate: new Date("2008-01-01"),
+    firstSaleContractDate: new Date("2009-01-01"),
+    region: "non-metro" as const,
+    acquisitionOfficialPrice: 300_000_000,
+    landAreaM2: 200,
+    totalFloorAreaM2: 140,
+    hasMinimum5UnitsInCity: true,
+    rentalMonths: 60,
+  };
+
+  it("라목: 미분양 2009계약·비수도권·취득당시 3억·5호·298/149·5년 → passed(도출 라)", () => {
+    const r = checkEligibility([makeUnit(laMok)], 5, 5);
+    expect(r.passed).toBe(true);
+    expect(r.perUnitVerdict?.[0].derivedArticle).toBe("라");
+    expect(r.perUnitVerdict?.[0].stdPriceCap).toBe(300_000_000);
+  });
+
+  it("라목: 수도권→REGION_RESTRICTED / 분양계약 2010→REG_DATE_GATE / 5호 미충족→MIN_UNITS_NOT_MET", () => {
+    expect(checkEligibility([makeUnit({ ...laMok, region: "seoul-metro" })], 5, 5)
+      .failReasons.find((f) => f.code === "REGION_RESTRICTED")).toBeDefined();
+    expect(checkEligibility([makeUnit({ ...laMok, firstSaleContractDate: new Date("2010-01-01") })], 5, 5)
+      .failReasons.find((f) => f.code === "REG_DATE_GATE")).toBeDefined();
+    expect(checkEligibility([makeUnit({ ...laMok, hasMinimum5UnitsInCity: false })], 5, 5)
+      .failReasons.find((f) => f.code === "MIN_UNITS_NOT_MET")).toBeDefined();
+  });
+
+  it("㉓ 말소 특례: 마목 자진말소 1/2(60개월=의무10년×1/2) + 5년내 양도 → 의무기간 간주 충족 passed", () => {
+    const maTerminated = makeUnit({
+      rentalCategory: "long_general", rentalAcquisitionType: "purchase",
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      region: "seoul-metro", standardPriceAtRentalStart: 500_000_000,
+      rentalMonths: 60, // 5년 < 의무 10년이나 1/2 이상 + 말소
+      rentalAutoTermination: true,
+    });
+    const r = checkEligibility([maTerminated], 5, 5);
+    expect(r.passed).toBe(true);
+    expect(r.failReasons.find((f) => f.code === "RENTAL_PERIOD_SHORT")).toBeUndefined();
+  });
+
+  it("㉓ 말소 특례: 자진말소 1/2 미달(48개월) → 특례 미적용·RENTAL_PERIOD_SHORT 유지", () => {
+    const r = checkEligibility([makeUnit({
+      rentalCategory: "long_general", rentalAcquisitionType: "purchase",
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      region: "seoul-metro", standardPriceAtRentalStart: 500_000_000,
+      rentalMonths: 48, rentalAutoTermination: true,
+    })], 5, 5);
+    expect(r.failReasons.find((f) => f.code === "RENTAL_PERIOD_SHORT")).toBeDefined();
+  });
+
+  it("㉓ 말소 특례: 바목(대상 목 아님)은 말소여도 RENTAL_PERIOD_SHORT 유지", () => {
+    const r = checkEligibility([makeUnit({
+      rentalCategory: "long_general", rentalAcquisitionType: "construction",
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      region: "seoul-metro", standardPriceAtRentalStart: 500_000_000,
+      landAreaM2: 200, totalFloorAreaM2: 140, hasMinimum2Units: true,
+      rentalMonths: 60, rentalAutoTermination: true,
+    })], 5, 5);
+    expect(r.failReasons.find((f) => f.code === "RENTAL_PERIOD_SHORT")).toBeDefined();
+  });
+});
+
+// ============================================================
 // calculateRentalHousingException — 미충족 시 applied=false
 // ============================================================
 

@@ -251,6 +251,8 @@ export async function POST(request: NextRequest) {
               landAreaM2: u.landAreaM2,
               totalFloorAreaM2: u.totalFloorAreaM2,
               hasMinimum2Units: u.hasMinimum2Units,
+              hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity,
+              firstSaleContractDate: toOptionalDate(u.firstSaleContractDate),
               rentalMonths: u.rentalMonths,
               rentalAutoTermination: u.rentalAutoTermination,
               requirementsConfirmed: u.requirementsConfirmed,

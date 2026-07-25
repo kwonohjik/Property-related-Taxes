@@ -20,15 +20,17 @@ import type { ArticleFailCode } from "../../rental-article/check";
  * short_6y:          단기민간임대 6년 (아/자목, 2025.6.4 신설)
  * pre_2018:          구 임대주택법 (5년)
  * existing_business: 기존사업자 매입임대 (나목, 2003.10.29 이전 등록·취득당시 3억·국민주택·2호)
- * (미분양 라목·말소 사목은 다주택 전용 — §155⑳ 미도출)
+ * unsold_08_09:      미분양 매입임대 (라목, 2008.6.11~2009.6.30 최초분양·비수도권·취득당시 3억·5호·298/149)
+ * (말소 사목은 다주택 전용 — §155⑳는 §155⑳㉓ 말소 후 5년 특례로 처리)
  */
-export type RentalCategory = "long_general" | "short_6y" | "pre_2018" | "existing_business";
+export type RentalCategory =
+  | "long_general" | "short_6y" | "pre_2018" | "existing_business" | "unsold_08_09";
 
 /** 수도권/비수도권 구분 (조정대상지역은 isExcluded918Rule 별도 축) */
 export type RegionType = "seoul-metro" | "non-metro";
 
-/** 도출 엔진 목 (§167조의3①2호 가~자) */
-export type RentalArticle = "가" | "나" | "다" | "마" | "바" | "아" | "자" | "구법";
+/** 도출 엔진 목 (§167조의3①2호 가~자 — 사목은 다주택 전용이라 §155⑳ 미도출) */
+export type RentalArticle = "가" | "나" | "다" | "라" | "마" | "바" | "아" | "자" | "구법";
 
 /**
  * 임대주택 1호 입력 데이터
@@ -74,9 +76,16 @@ export type RentalUnitInput = {
   totalFloorAreaM2?: number;
   /** 2호 이상 임대 충족 자기확인 — 건설임대(다/바/자)·나목 호수요건 */
   hasMinimum2Units: boolean;
+  /** 같은 시·군 5호 이상 임대 충족 — 라목(미분양) 호수요건 */
+  hasMinimum5UnitsInCity?: boolean;
+  /** 최초 분양계약일 — 라목(미분양) 2008.6.11~2009.6.30 판정용 */
+  firstSaleContractDate?: Date;
   /** 실제 임대 개월수 (공실 차감 후) */
   rentalMonths: number;
-  /** 자동말소·자진말소 5년 내 양도 여부 (Phase 2 전용, 현재 무조건 false) */
+  /**
+   * §155⑳㉓ 말소 특례 — 가·다·라·마목 임대주택이 자진말소(의무기간 1/2 이상)·자동말소된 후
+   * 말소 이후 5년 이내 거주주택을 양도하는 경우. true면 의무임대기간요건을 간주 충족(RENTAL_PERIOD_SHORT 억제).
+   */
   rentalAutoTermination: boolean;
   /**
    * 기타 요건 자기확인 체크
