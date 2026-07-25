@@ -232,6 +232,56 @@ describe("checkEligibility — 회귀 anchor", () => {
     expect(checkEligibility([u], 5, 5).failReasons.find((f) => f.code === "SHORT_TERM_REGULATED")).toBeDefined();
   });
 
+  it("F6 회귀: 바목(건설 장기) 아파트 → 제한 아님(통과) — 구 blanket 제한 정정", () => {
+    const u = makeUnit({
+      rentalCategory: "long_general",
+      rentalAcquisitionType: "construction",
+      businessRegistrationDate: new Date("2021-03-01"),
+      rentalRegistrationDate: new Date("2021-03-01"),
+      region: "seoul-metro",
+      isApartment: true, // 건설 장기 아파트 — 허용
+      standardPriceAtRentalStart: 700_000_000,
+      landAreaM2: 200,
+      totalFloorAreaM2: 140,
+      hasMinimum2Units: true,
+      rentalMonths: 120,
+    });
+    const r = checkEligibility([u], 5, 5);
+    expect(r.passed).toBe(true);
+    expect(r.failReasons.find((f) => f.code === "APARTMENT_RESTRICTED")).toBeUndefined();
+  });
+
+  it("F6 회귀: 다목(건설 5년) 아파트 → 제한 아님", () => {
+    const u = makeUnit({
+      rentalCategory: "long_general",
+      rentalAcquisitionType: "construction",
+      businessRegistrationDate: new Date("2017-01-01"),
+      rentalRegistrationDate: new Date("2017-01-01"),
+      region: "seoul-metro",
+      isApartment: true,
+      standardPriceAtRentalStart: 500_000_000,
+      landAreaM2: 200,
+      totalFloorAreaM2: 140,
+      hasMinimum2Units: true,
+      rentalMonths: 72,
+    });
+    expect(checkEligibility([u], 5, 5).failReasons.find((f) => f.code === "APARTMENT_RESTRICTED")).toBeUndefined();
+  });
+
+  it("아·자(단기) 아파트 → APARTMENT_RESTRICTED 유지", () => {
+    const u = makeUnit({
+      rentalCategory: "short_6y",
+      rentalAcquisitionType: "purchase",
+      businessRegistrationDate: new Date("2025-07-01"),
+      rentalRegistrationDate: new Date("2025-07-01"),
+      region: "seoul-metro",
+      isApartment: true,
+      standardPriceAtRentalStart: 300_000_000,
+      rentalMonths: 72,
+    });
+    expect(checkEligibility([u], 5, 5).failReasons.find((f) => f.code === "APARTMENT_RESTRICTED")).toBeDefined();
+  });
+
   it("2020.7.11 이후 등록 아파트(매입 장기) → APARTMENT_RESTRICTED", () => {
     const u = makeUnit({
       businessRegistrationDate: new Date("2020-08-18"),

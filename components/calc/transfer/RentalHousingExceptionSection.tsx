@@ -86,7 +86,8 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
   const isConstruction = article === "다" || article === "바" || article === "자";
   const showRegion = article === "가" || article === "마" || article === "아" || article === "구법";
   const showRegulated = article === "아";
-  const showApartment = article === "가" || article === "마" || article === "구법";
+  // F6: 다·바(건설 장기)도 일반 아파트 허용 → 아파트 여부 노출. 아·자(단기)만 아파트 제외.
+  const showApartment = article === "가" || article === "마" || article === "구법" || article === "다" || article === "바";
   const bothRegMissing = !unit.businessRegistrationDate || !unit.rentalRegistrationDate;
 
   const capLabel = `${(cap / 100_000_000).toFixed(0)}억${showRegion ? (unit.region === "seoul-metro" ? "(수도권)" : "(비수도권)") : ""}`;
@@ -181,7 +182,11 @@ function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: RentalUn
               </p>
               <p className="text-muted-foreground">
                 등록기준일 {effRegDate ? effRegDate.toISOString().slice(0, 10) : "-"}
-                {showApartment ? " · 아파트 2020.7.11 이후 등록분 제외" : " · 아파트 제외 유형"}
+                {article === "가" || article === "마"
+                  ? " · 아파트 2020.7.11 이후 등록분 제외"
+                  : article === "아" || article === "자"
+                    ? " · 아파트 제외 유형"
+                    : " · 아파트 허용"}
               </p>
             </>
           )}
