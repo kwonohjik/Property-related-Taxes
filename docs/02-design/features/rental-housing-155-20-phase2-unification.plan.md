@@ -189,7 +189,7 @@ Phase 1 §155⑳는 마목 배제사유 중 아파트 date-gate만 구현. 다�
 ## 9. 단계별 롤아웃 (커밋 분리)
 
 1. **C1 (=T1, T2의 선행 substep)** ✅**완료(2026-07-26)** — `rental-article/rules.ts`+`types.ts` 신설(SharedRentalArticle·rentalStdPriceCap·rentalRequiredYears·RA_CUT). §155⑳ `deriveStdPriceCap`(3-arg)·`deriveRequiredYears`가 rules 위임 + F5 바목 조건부 cap 해소. tsc 0·rental 158 green. **다주택 `checkRentalType_*`의 rules 치환은 C3와 함께**(shipped 다주택 회귀 위험 → 전체 predicate 위임 시 일괄).
-2. **C2** `check.ts` canonical predicate + §155⑳ 어댑터 위임(EligibilityResult wrap). §155⑳ 173 green.
+2. **C2** ✅**완료(2026-07-26)** — `rental-article/check.ts`(`checkRentalArticle`·`NormalizedRentalUnit`·`ArticleFailCode`·`isApartmentRestrictedForArticle`·`isConstructionArticle`) 신설. §155⑳ `checkEligibility`가 목 도출→어댑터→`checkRentalArticle` 위임 + `buildFailMessage`로 한국어 메시지 매핑(동작 동일). `isApartmentRestricted`는 check.ts 재수출(UI 하위호환). **편차**: `ArticleCheckResult.failCodes: []`(배열 — §155⑳ 다중 사유 표시 보존). C2는 §155⑳ 현행 목(가/다/마/바/아/자/구법)·게이트만 — 나·라·사·마목918·단→장변경은 C3/C4. tsc 0·rental 158+check 8·transfer-tax 2020 green.
 3. **C3** 다주택 `checkRentalType_A~I`→`check.ts` 위임(어댑터·D-1·D-2 반영). 다주택 회귀 재anchor.
 4. **C4** 나목(existing_business) 14-sync + UI 조건부 + anchor.
 5. **C5** E2E + 전체 회귀 + ship.

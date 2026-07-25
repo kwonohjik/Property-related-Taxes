@@ -45,10 +45,13 @@ export type NormalizedRentalUnit = {
   isExcludedAfter20200711Apt?: boolean; isExcludedShortToLongChange?: boolean;
 };
 
+// C2 구현(deviation): failCode 단수 → failCodes[] 배열 (§155⑳ 다중 사유 표시 보존).
+// C2 구현 코드 집합(§155⑳ 현행): BOTH_REG_REQUIRED·RENTAL_PERIOD_SHORT·STANDARD_PRICE_EXCEEDED·
+//   APARTMENT_RESTRICTED·SHORT_TERM_REGULATED·SIZE_REQUIRED·SIZE_EXCEEDED·MIN_UNITS_NOT_MET·REQUIREMENTS_NOT_CONFIRMED.
+//   (SHORT_TO_LONG_CHANGE·NATIONAL_SIZE_REQUIRED·REG_DATE_GATE는 C4 확장.)
 export type ArticleCheckResult = {
   passed: boolean;
-  failCode?: "PERIOD_SHORT"|"PRICE_EXCEEDED"|"APARTMENT_RESTRICTED"|"SIZE_REQUIRED"|"SIZE_EXCEEDED"
-    |"MIN_UNITS_NOT_MET"|"BOTH_REG_REQUIRED"|"SHORT_TERM_REGULATED"|"SHORT_TO_LONG_CHANGE"|"NATIONAL_SIZE_REQUIRED"|"REG_DATE_GATE";
+  failCodes: ArticleFailCode[];
   requiredYears: number; stdPriceCap: number;
 };
 ```
