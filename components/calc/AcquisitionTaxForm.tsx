@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
 import { callAcquisitionTaxAPI } from "@/lib/calc/acquisition-tax-api";
@@ -358,11 +358,7 @@ export function AcquisitionTaxForm() {
       {/* 네비게이션 — 결과 표시 중에는 숨김 */}
       {!result && (
         <div className="flex items-center justify-between gap-2">
-          <NavButton
-            direction="prev"
-            label={step === 0 ? "홈으로" : "이전"}
-            onClick={handleBack}
-          />
+          <WizardBackNav isFirstStep={step === 0} onBack={handleBack} />
           {(isDeemed && step === 1) || isLastStep ? (
             <CtaButton onClick={handleNext} disabled={loading}>
               {loading ? "계산 중..." : "취득세 계산"}

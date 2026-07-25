@@ -30,7 +30,7 @@ import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
-import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { Step1 } from "./steps/Step1";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
@@ -701,15 +701,7 @@ export default function TransferTaxCalculator({
               </div>
             )}
             <div className="flex items-center justify-between gap-2">
-              <NavButton
-                direction="prev"
-                label={currentStep === 0 ? "홈으로" : "이전"}
-                onClick={
-                  isEmbeddedInMulti && currentStep === 0
-                    ? () => router.push("/")
-                    : handleBack
-                }
-              />
+              <WizardBackNav isFirstStep={currentStep === 0} onBack={handleBack} />
               {isLastStep ? (
                 isEmbeddedInMulti ? (
                   <div className="flex gap-2">

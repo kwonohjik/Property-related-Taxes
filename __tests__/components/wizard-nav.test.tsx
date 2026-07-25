@@ -4,7 +4,17 @@
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { cleanup, render, screen, fireEvent } from "@testing-library/react";
-import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
+
+// HomeButton(WizardBackNav step 0)이 사용하는 next 라우터·링크 mock
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
 
 afterEach(cleanup);
 
@@ -29,6 +39,28 @@ describe("NavButton", () => {
     const btn = screen.getByTestId("nav-next");
     expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute("aria-label", "다음 단계로 이동");
+  });
+});
+
+describe("WizardBackNav", () => {
+  it("step 0(isFirstStep)에서 HomeButton pill(홈으로 이동) 렌더 — onBack 미발화", () => {
+    const onBack = vi.fn();
+    render(<WizardBackNav isFirstStep onBack={onBack} />);
+    // HomeButton: aria-label="홈으로 이동" + 라벨 "홈으로" + rounded-full pill
+    const home = screen.getByLabelText("홈으로 이동");
+    expect(home.className).toContain("rounded-full");
+    expect(screen.getByText("홈으로")).toBeTruthy();
+    // step 0에서는 뒤로가기 콜백을 호출하지 않는다(홈으로 이동만)
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it("step 1+에서 '이전' NavButton 렌더 + onBack 발화", () => {
+    const onBack = vi.fn();
+    render(<WizardBackNav isFirstStep={false} onBack={onBack} />);
+    const btn = screen.getByRole("button", { name: "이전" });
+    expect(btn.className).toContain("rounded-md");
+    fireEvent.click(btn);
+    expect(onBack).toHaveBeenCalledOnce();
   });
 });
 

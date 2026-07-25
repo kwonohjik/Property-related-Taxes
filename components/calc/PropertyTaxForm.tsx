@@ -8,7 +8,7 @@ import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation"
 import { runPropertyManualSave, formatPropertySaveMessage } from "@/components/calc/property-tax-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
-import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { INITIAL_FORM, validateStep, callPropertyTaxAPI, type FormState } from "./property/shared";
@@ -242,11 +242,7 @@ export function PropertyTaxForm() {
       )}
 
       <div className="flex items-center justify-between gap-2 pt-2">
-        <NavButton
-          direction="prev"
-          label={step === 0 ? "홈으로" : "이전"}
-          onClick={handleBack}
-        />
+        <WizardBackNav isFirstStep={step === 0} onBack={handleBack} />
         {step === 3 ? (
           <CtaButton onClick={handleNext} disabled={loading}>
             {loading ? "계산 중..." : "재산세 계산하기"}

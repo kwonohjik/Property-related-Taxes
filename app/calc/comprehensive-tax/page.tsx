@@ -15,7 +15,7 @@ import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate
  */
 
 import { useState } from "react";
-import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
@@ -68,7 +68,7 @@ function NavButtons({
 }) {
   return (
     <div className="flex items-center justify-between gap-2 pt-4">
-      <NavButton direction="prev" label={step === 0 ? "홈으로" : "이전"} onClick={onPrev} />
+      <WizardBackNav isFirstStep={step === 0} onBack={onPrev} />
       {isLast ? (
         <CtaButton onClick={onNext} disabled={loading}>
           {loading ? "계산 중..." : nextLabel}

@@ -12,7 +12,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { StepIndicator, type StepStatus } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
@@ -777,11 +777,7 @@ export function InheritanceTaxForm() {
       )}
 
       <div className="flex items-center justify-between gap-2">
-        <NavButton
-          direction="prev"
-          label={step === 0 ? "홈으로" : "이전"}
-          onClick={handleBack}
-        />
+        <WizardBackNav isFirstStep={step === 0} onBack={handleBack} />
         <div className="flex items-center gap-2">
           <SaveButton variant="primary" onSave={handleManualSaveForForm} disabled={isEmpty} disabledReason="한 가지 이상 입력 후 저장해주세요." />
           {isLastStep ? (
