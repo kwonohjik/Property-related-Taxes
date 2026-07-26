@@ -41,6 +41,8 @@ export interface HousingStdPriceLookupFieldProps {
   referenceDate?: string;
   required?: boolean;
   hint?: string;
+  /** 조회 성공 시 해당 세대 전용면적(㎡) 전달 — 면적 자동채움용(공동주택 응답에만 존재). */
+  onExclusiveArea?: (areaSqm: number) => void;
   /** E2E 셀렉터 prefix */
   testidPrefix: string;
 }
@@ -55,6 +57,7 @@ export function HousingStdPriceLookupField({
   referenceDate,
   required = false,
   hint,
+  onExclusiveArea,
   testidPrefix,
 }: HousingStdPriceLookupFieldProps) {
   const [selectedYear, setSelectedYear] = useState("");
@@ -97,6 +100,10 @@ export function HousingStdPriceLookupField({
         onChange(String(json.price));
         setPriceType(json.priceType ?? null);
         setLookupError(null);
+        // 공동주택 응답의 전용면적(㎡) 전달 — 면적 자동채움(있을 때만).
+        if (typeof json.exclusiveArea === "number" && json.exclusiveArea > 0) {
+          onExclusiveArea?.(json.exclusiveArea);
+        }
       } else {
         setLookupError("해당 연도 공시가격 없음");
       }
