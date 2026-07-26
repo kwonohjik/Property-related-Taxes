@@ -180,11 +180,17 @@ export default function TransferTaxCalculator({
     setErrorAssetIndex(null);
   }
 
+  // 스텝 이동 시 새 단계의 맨 위(①번 카드)가 기본으로 보이도록 최상단 스크롤.
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function handleNext() {
     const list = collectStepIssues(currentStep, formData);
     if (list.length > 0) { failWithIssues(list); return; }
     clearError();
     setStep(currentStep + 1);
+    scrollToTop();
   }
 
   function handleBack() {
@@ -193,6 +199,7 @@ export default function TransferTaxCalculator({
       if (!isEmbeddedInMulti) router.push("/");
     } else {
       setStep(currentStep - 1);
+      scrollToTop();
     }
   }
 
@@ -368,7 +375,7 @@ export default function TransferTaxCalculator({
           : stepStatuses[i] === "complete"
             ? "done"
             : "todo",
-    onClick: () => { clearError(); setStep(i); },
+    onClick: () => { clearError(); setStep(i); scrollToTop(); },
   }));
 
   // 사이드바 요약 — 자산별 카드(자산 1·2·…). 안분 모드 양도가액은 §166⑥ 기준시가 비율로
