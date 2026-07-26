@@ -9,6 +9,7 @@
 import { classifyRegionCriteriaByCode } from "@/lib/tax-engine/multi-house-surcharge-count";
 import type { AddressValue } from "@/components/ui/address-search";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
+import type { RegionType } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 
 /**
  * regionCode → "capital"(REGION: 수도권·광역시(군 제외)·세종) | "non_capital"(VALUE: 지방·군 지역).
@@ -17,6 +18,22 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 export function deriveHouseRegionFromCode(regionCode?: string): "capital" | "non_capital" {
   if (!regionCode) return "capital";
   return classifyRegionCriteriaByCode(regionCode) === "REGION" ? "capital" : "non_capital";
+}
+
+/**
+ * 임대주택 소재지역(수도권/비수도권) — 수도권정비계획법 §2 기준.
+ * 법정동코드 앞 2자리(시도코드) 11(서울)·28(인천)·41(경기) 전역 = 수도권(seoul-metro, 군 포함).
+ * 그 외(광역시·세종·지방 도) = 비수도권(non-metro).
+ * regionCode 미입력 시 seoul-metro 기본값(factory·migrate 기본값과 일치).
+ *
+ * ⚠️ §167의3① classifyRegionCriteriaByCode(REGION에 광역시·세종 포함, 강화·옹진·가평·연천·양평
+ * 군을 carve-out)와 **의도적으로 다름** — 임대 cap의 수도권은 군 carve-out 없는 순수 시도 기준.
+ * (부산·세종 = 임대 비수도권 / 인천 강화군·경기 양평군 = 임대 수도권)
+ */
+export function deriveRentalRegionFromCode(regionCode?: string): RegionType {
+  if (!regionCode) return "seoul-metro";
+  const sido = regionCode.slice(0, 2);
+  return sido === "11" || sido === "28" || sido === "41" ? "seoul-metro" : "non-metro";
 }
 
 /**

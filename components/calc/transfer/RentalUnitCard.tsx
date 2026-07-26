@@ -19,6 +19,9 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { PeriodRangeEditor } from "./PeriodRangeEditor";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { deriveRentalRegionFromCode } from "@/lib/calc/house-region";
+import { TONE } from "@/components/calc/shared/tones";
+import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
   deriveCategoryAvailability,
@@ -123,6 +126,10 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
   // F6: 다·바(건설 장기)도 일반 아파트 허용. 나·라목도 허용. 아·자(단기)만 아파트 제외.
   const showApartment = article === "가" || article === "나" || isLa || article === "마" || article === "구법" || article === "다" || article === "바";
   const bothRegMissing = !unit.businessRegistrationDate || !unit.rentalRegistrationDate;
+  // 임대주택 소재지(지번): region 자동판별(showRegion) 또는 임대개시일 기준시가 조회(비-나·라 = !showAcqPrice)에 필요 → 나목만 제외.
+  const showAddress = showRegion || !showAcqPrice;
+  // 주소로 법정동코드가 채워지면 소재 지역을 자동판별 배지로 표시(regionCode 비면 수동 라디오 fallback).
+  const regionAuto = unit.regionCode.length >= 10;
 
   const capLabel = showAcqPrice
     ? "3억(취득당시)"
@@ -259,20 +266,76 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
         </div>
       </ToneCard>
 
+      {/* 임대주택 소재지 (지번) — 소재 지역 자동판별 + 임대개시일 기준시가 조회 소스 (나목만 제외) */}
+      {showAddress && (
+        <FieldCard
+          label="임대주택 소재지 (지번)"
+          hint="소재 지역 자동판별 + 공시가격 자동조회용 (수동입력 시 생략 가능)"
+        >
+          <div data-testid={`rental-address-${index}`}>
+          <AddressSearch
+            value={
+              {
+                road: "",
+                jibun: unit.rentalAddressJibun,
+                building: "",
+                detail: "",
+                lng: "",
+                lat: "",
+              } satisfies AddressValue
+            }
+            onChange={(v) => {
+              const patch: Partial<typeof unit> = { rentalAddressJibun: v.jibun };
+              if (v.pnu && v.pnu.length >= 10) {
+                patch.regionCode = v.pnu.slice(0, 10);
+                patch.region = deriveRentalRegionFromCode(patch.regionCode);
+              } else if (!v.jibun) {
+                // 주소 clear → 자동판별 해제(수동 라디오 fallback 복귀)
+                patch.regionCode = "";
+              }
+              onChange({ ...unit, ...patch });
+            }}
+          />
+          </div>
+        </FieldCard>
+      )}
+
       {/* 소재지역 (매입 장기·단기매입·구법·라목 — cap 지역별 또는 비수도권 요건) */}
       {showRegion && (
         <FieldCard label="소재 지역" required hint="기준시가 상한 산정 (수도권/비수도권)">
-          <RadioCardGroup
-            name={`rental-region-${index}`}
-            tone="rose"
-            layout="inline"
-            options={[
-              { value: "seoul-metro", label: "수도권" },
-              { value: "non-metro", label: "비수도권" },
-            ]}
-            value={unit.region}
-            onChange={(v) => set("region", v as typeof unit.region)}
-          />
+          {regionAuto ? (
+            <div className="flex items-center gap-2">
+              <span
+                data-testid={`rental-region-badge-${index}`}
+                className={cn(
+                  "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium",
+                  TONE.rose.badge,
+                )}
+              >
+                {unit.region === "seoul-metro" ? "수도권" : "비수도권"} · 주소 자동판별
+              </span>
+              <button
+                type="button"
+                data-testid={`rental-region-manual-${index}`}
+                className="text-caption text-rose-700 underline dark:text-rose-300"
+                onClick={() => set("regionCode", "")}
+              >
+                직접 지정
+              </button>
+            </div>
+          ) : (
+            <RadioCardGroup
+              name={`rental-region-${index}`}
+              tone="rose"
+              layout="inline"
+              options={[
+                { value: "seoul-metro", label: "수도권" },
+                { value: "non-metro", label: "비수도권" },
+              ]}
+              value={unit.region}
+              onChange={(v) => set("region", v as typeof unit.region)}
+            />
+          )}
         </FieldCard>
       )}
 
@@ -479,34 +542,17 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
           />
         </FieldCard>
       ) : (
-        <div className="space-y-2">
-          {/* 임대주택 소재지 — 공시가격 자동조회용 지번 (조회 안 하면 생략 가능) */}
-          <FieldCard label="임대주택 소재지 (지번)" hint="공시가격 자동조회용 — 수동입력 시 생략 가능">
-            <AddressSearch
-              value={
-                {
-                  road: "",
-                  jibun: unit.rentalAddressJibun,
-                  building: "",
-                  detail: "",
-                  lng: "",
-                  lat: "",
-                } satisfies AddressValue
-              }
-              onChange={(v) => set("rentalAddressJibun", v.jibun)}
-            />
-          </FieldCard>
-          <HousingStdPriceLookupField
-            label="임대개시일 기준시가"
-            required
-            hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
-            value={unit.standardPriceAtRentalStart}
-            onChange={(v) => set("standardPriceAtRentalStart", v)}
-            jibun={unit.rentalAddressJibun || undefined}
-            referenceDate={rentalStartDate}
-            testidPrefix={`rental-stdprice-${index}`}
-          />
-        </div>
+        // 지번 주소는 상단(showAddress)으로 이동 — jibun은 state 공유라 조회 정상
+        <HousingStdPriceLookupField
+          label="임대개시일 기준시가"
+          required
+          hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
+          value={unit.standardPriceAtRentalStart}
+          onChange={(v) => set("standardPriceAtRentalStart", v)}
+          jibun={unit.rentalAddressJibun || undefined}
+          referenceDate={rentalStartDate}
+          testidPrefix={`rental-stdprice-${index}`}
+        />
       )}
 
       {/* 기타 요건 자기확인 (나·라목은 5%룰 미검사 — 숨김: 엔진·validate 정합) */}

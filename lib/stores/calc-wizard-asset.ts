@@ -600,6 +600,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
       isApartment: boolean;
       /** 소재지역 수도권/비수도권 (918 조정취득은 isExcluded918Rule 별도) */
       region: 'seoul-metro' | 'non-metro';
+      /** 소재지 법정동코드 10자리 (주소 검색 시 자동 채움 — region 자동판별 소스·자동배지 신호). 미검색 시 "" */
+      regionCode: string;
       /** 918 조정취득 배제(2018.9.14 이후 조정대상지역 신규취득). 마목 hard·아목 carve-out */
       isExcluded918Rule: boolean;
       /** 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */
