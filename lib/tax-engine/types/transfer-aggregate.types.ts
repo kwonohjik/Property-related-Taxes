@@ -114,8 +114,10 @@ export interface PerPropertyBreakdown {
   lossOffsetFromSameGroup: number;
   /** 타군에서 안분 받은 차손 공제 (양수) */
   lossOffsetFromOtherGroup: number;
-  /** 통산 후 소득금액 (≥ 0) */
+  /** 통산 후 소득금액 (≥ 0) — income-deduction 감면 前(양도소득금액 표시 기준) */
   incomeAfterOffset: number;
+  /** §99의3 등 소득금액차감 감면대상 양도소득금액(§90②) — incomeAfterOffset에서 차감되어 과세 */
+  incomeDeductionReducible?: number;
   /** 배분된 기본공제액 */
   allocatedBasicDeduction: number;
   /** 그룹 과세표준 중 본 자산 기여분 */
@@ -315,6 +317,8 @@ export interface AggregateTransferResult {
 
   /** 지방소득세 = (결정+가산) × 10%, 천원 절사 */
   localIncomeTax: number;
+  /** 농어촌특별세 = §99의3 등 소득금액차감 감면세액 × 20% (농특세법 §3·§5). 감면 없으면 0. */
+  ruralSurtax: number;
   totalTax: number;
 
   steps: CalculationStep[];
