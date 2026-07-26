@@ -94,10 +94,13 @@ function BreakdownCard({ title, tone, bd, floorArea, sameYearBadge }: CardProps)
 interface Props {
   result: BuildingStandardPriceResult;
   floorArea: number;
+  /** 둘째 시점 카드 제목 override(기본 "양도"). PHD 감면처럼 "최초고시 시점"일 때 "최초고시당시 건물 기준시가". */
+  transferSectionLabel?: string;
 }
 
-export function BuildingStdPriceResultCard({ result, floorArea }: Props) {
+export function BuildingStdPriceResultCard({ result, floorArea, transferSectionLabel }: Props) {
   const { valuation, acquisition, transfer, sameYearAdjusted } = result;
+  const t2 = transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도";
   return (
     <div className="space-y-4">
       {valuation && (
@@ -108,7 +111,7 @@ export function BuildingStdPriceResultCard({ result, floorArea }: Props) {
       )}
       {transfer && (
         <BreakdownCard
-          title="양도당시 건물 기준시가"
+          title={`${t2}당시 건물 기준시가`}
           tone="emerald"
           bd={transfer}
           floorArea={floorArea}
