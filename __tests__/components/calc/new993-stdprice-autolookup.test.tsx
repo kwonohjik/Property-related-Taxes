@@ -99,5 +99,52 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
       <New993InputForm value={makeValue()} onUpdate={vi.fn()} acquisitionDate="2003-11-28" />,
     );
     expect(screen.getByTestId("new993-stdprice-acq-lookup-btn")).toBeDisabled();
+    expect(screen.getByTestId("new993-area-lookup-btn")).toBeDisabled();
+  });
+
+  it("전용면적 전용 조회 → prvuseAr 채움 + 동/호 쿼리 포함", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ price: 300_000_000, priceType: "apart_housing_price", exclusiveArea: 84.96 }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const onUpdate = vi.fn();
+
+    render(
+      <New993InputForm
+        value={makeValue()}
+        onUpdate={onUpdate}
+        acquisitionDate="2003-11-28"
+        transferDate="2026-02-16"
+        jibun="경기도 수원시 영통구 영통동 957-6"
+        dong="324"
+        ho="1004"
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("new993-area-lookup-btn"));
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith("exclusiveAreaSqm993", "84.96"));
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("dong=324");
+    expect(url).toContain("ho=1004");
+  });
+
+  it("전용면적 조회 실패(면적 없음) → 안내 + onUpdate 미호출", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ price: 200_000_000, priceType: "indvd_housing_price" }), // exclusiveArea 없음
+    }) as unknown as typeof fetch;
+    const onUpdate = vi.fn();
+    render(
+      <New993InputForm
+        value={makeValue()}
+        onUpdate={onUpdate}
+        acquisitionDate="2003-11-28"
+        jibun="경기도 어딘가 100"
+      />,
+    );
+    fireEvent.click(screen.getByTestId("new993-area-lookup-btn"));
+    await waitFor(() => expect(screen.getByTestId("new993-area-status")).toBeTruthy());
+    expect(onUpdate).not.toHaveBeenCalledWith("exclusiveAreaSqm993", expect.anything());
   });
 });

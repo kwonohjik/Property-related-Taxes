@@ -6,6 +6,7 @@
  * 외부 계약 무변경 — 패널에서 import 1줄.
  */
 
+import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -55,6 +56,38 @@ export function New993InputForm({
   /** 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 데이터 가져오기" 버튼용 */
   assetPhdSnapshot?: ReductionPhdValue;
 }) {
+  const [areaLoading, setAreaLoading] = useState(false);
+  const [areaMsg, setAreaMsg] = useState<string | null>(null);
+
+  // 전용면적 전용 조회 — 기준시가 조회와 별개로 양도물건 주소·동/호로 Vworld 전용면적(prvuseAr)만 채움.
+  // 전용면적은 연도 무관(고정) → 최근 연도부터 데이터 있는 해까지 순차 시도(AddressSearch 패턴).
+  async function lookupExclusiveArea() {
+    if (!jibun) return;
+    setAreaLoading(true);
+    setAreaMsg(null);
+    try {
+      const currentYear = new Date().getFullYear();
+      for (let y = currentYear; y >= currentYear - 4; y--) {
+        const params = new URLSearchParams({ jibun, propertyType: "housing", year: String(y) });
+        if (dong) params.set("dong", dong);
+        if (ho) params.set("ho", ho);
+        const res = await fetch(`/api/address/standard-price?${params}`);
+        if (!res.ok) continue;
+        const json = await res.json();
+        if (typeof json.exclusiveArea === "number" && json.exclusiveArea > 0) {
+          onUpdate("exclusiveAreaSqm993", String(json.exclusiveArea));
+          setAreaMsg(null);
+          return;
+        }
+      }
+      setAreaMsg("전용면적 조회 실패 — 직접 입력하세요.");
+    } catch {
+      setAreaMsg("네트워크 오류 — 직접 입력하세요.");
+    } finally {
+      setAreaLoading(false);
+    }
+  }
+
   return (
     <div className="mt-2 ml-7 rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
       <p className="text-xs font-semibold text-primary">조특법 §99의3 신축주택 과세특례 입력</p>
@@ -169,7 +202,25 @@ export function New993InputForm({
 
         <div>
           <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
-          <DecimalInput value={value.exclusiveAreaSqm993} onChange={(v) => onUpdate("exclusiveAreaSqm993", v)} />
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <DecimalInput value={value.exclusiveAreaSqm993} onChange={(v) => onUpdate("exclusiveAreaSqm993", v)} />
+            </div>
+            <button
+              type="button"
+              onClick={lookupExclusiveArea}
+              disabled={!jibun || areaLoading}
+              data-testid="new993-area-lookup-btn"
+              className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
+            >
+              {areaLoading ? "조회 중…" : "전용면적 조회"}
+            </button>
+          </div>
+          {areaMsg ? (
+            <p className="mt-1 text-micro text-destructive" data-testid="new993-area-status">{areaMsg}</p>
+          ) : !jibun ? (
+            <p className="mt-1 text-micro text-muted-foreground">소재지 지번 입력 시 조회 가능</p>
+          ) : null}
           <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
