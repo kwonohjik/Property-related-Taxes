@@ -499,6 +499,47 @@ export function setAggregateProcedureItems(
 }
 
 /**
+ * 7단계 부가세·지방세 4개 항목(농특세·지방소득세 산출/감면/결정)을 Map에 추가.
+ * 자기완결 — items·result·totalPenalty만 사용(단건·다건 공통).
+ */
+export function buildSurtaxAndLocalTaxItems(
+  items: Map<string, StatementItem>,
+  result: TransferTaxResult,
+  totalPenalty: number,
+): void {
+  items.set("ruralSurtax", {
+    label: "농어촌특별세",
+    value: result.new993Detail?.ruralSurtax ?? 0,
+    formula: "(감면 전 산출세액 − 감면 후 산출세액) × 20% — §99의3 등 감면 적용 시만",
+    legalBasis: "농어촌특별세법 §3·§5",
+    summaryOnly: true,
+  });
+
+  const localCalc = Math.floor((result.determinedTax + totalPenalty) * 0.1);
+  items.set("localCalculatedTax", {
+    label: "지방소득세 산출세액",
+    value: localCalc,
+    formula: `(결정세액 ${result.determinedTax.toLocaleString()} + 가산세 ${totalPenalty.toLocaleString()}) × 10%`,
+    legalBasis: "지방세법 §103의3",
+    summaryOnly: true,
+  });
+  items.set("localReduction", {
+    label: "지방세 감면세액",
+    value: 0,
+    formula: "현재 미구현 (지방세 감면 정책 미반영)",
+    legalBasis: "지방세법 §92~§103",
+    summaryOnly: true,
+  });
+  items.set("localDeterminedTax", {
+    label: "지방세 결정세액",
+    value: result.localIncomeTax,
+    formula: "지방소득세 산출세액 − 지방세 감면세액 (원 미만 절사)",
+    legalBasis: "지방세법 §103",
+    summaryOnly: true,
+  });
+}
+
+/**
  * 취득가액 산식 — 단건은 실제 변수값(양도차익 항목과 동일 표기), 다건은 자산별 합계 요약.
  * 환산취득가 모드는 기준시가 비율식까지 풀어쓰되, 기준시가 echo가 없는
  * 감정가액·매매사례가액 모드는 추계 취득가액만 표시(비율식 부적용).

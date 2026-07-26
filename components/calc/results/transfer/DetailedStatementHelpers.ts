@@ -39,6 +39,7 @@ import {
   buildDeterminedTaxFormula,
   buildPenaltyFormula,
   setAggregateProcedureItems,
+  buildSurtaxAndLocalTaxItems,
   prorationFormulaAsFrac,
 } from "./DetailedStatementFormulaBuilders";
 import { applyRedevelopmentOverrides } from "./DetailedStatementRedevelopmentBuilders";
@@ -601,17 +602,31 @@ export function buildStatementItems(
       : undefined,
   });
 
+  // §99의3 등 5년 안분 감면대상 양도소득금액 (소득금액차감방식 §90②). result.new993Detail.
+  // 집계(다건)는 PerPropertyBreakdown에 new993Detail이 없어 0 유지 (FilingFormTable 집계와 동일 거동).
+  items.set("reductionTargetIncome2", {
+    label: "소득금액 감면대상",
+    value: isAggregate ? 0 : (result.new993Detail?.reducibleTransferIncome ?? 0),
+    formula:
+      "§99의3 5년 안분 감면대상 양도소득금액 (§90② 소득금액차감방식) = 양도소득금액 × (5년시점 − 취득시 공시가격) / (양도시 − 취득시 공시가격)",
+    legalBasis: "조세특례제한법 §99의3 · 소득세법 §90②",
+    note: "신축주택 감면 — 소득금액에서 직접 차감(세액감면방식 아님)",
+  });
+
+  // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(§90② 소득금액차감). FilingFormTableHelpers:657-661과 동일.
+  // §161(장기임대 거주주택 비과세, isRH)은 taxableGain이 이미 안분 후 값이므로 별도 분기.
+  const isRH = result.rentalHousingExceptionDetail?.applied === true;
+  const new993Reducible = result.new993Detail?.reducibleTransferIncome ?? 0;
   items.set("incomeAmountAfter", {
     label: "감면후 소득금액",
     value: isAggregate
       ? properties.reduce((s, p) => s + p.incomeAfterOffset, 0)
-      : Math.max(
-          0,
-          singleIncome - (result.reductionAmount > 0 ? 0 : 0),
-        ),
-    formula: "양도소득금액 − 감면 적용 금액 (감면세액 차감 전 소득금액 그대로)",
-    legalBasis: "소득세법 §95",
-    note: "감면은 산출세액 단계에서 차감 — 본 행은 §102② 통산 후 소득금액과 동일",
+      : isRH
+        ? result.taxableGain
+        : Math.max(0, singleIncome - new993Reducible),
+    formula: "양도소득금액 − 소득금액 감면대상 (§99의3 §90② 소득금액차감)",
+    legalBasis: "소득세법 §95·§90②",
+    note: "§99의3 등 소득금액차감 감면 반영 후 소득금액 (세액감면방식은 소득금액 미차감)",
   });
 
   items.set("priorIncomeAmount", {
@@ -739,37 +754,7 @@ export function buildStatementItems(
   });
 
   // ── 7단계: 부가세·지방세 ───────────────────────────────────
-  items.set("ruralSurtax", {
-    label: "농어촌특별세",
-    value: result.new993Detail?.ruralSurtax ?? 0,
-    formula:
-      "(감면 전 산출세액 − 감면 후 산출세액) × 20% — §99의3 등 감면 적용 시만",
-    legalBasis: "농어촌특별세법 §3·§5",
-    summaryOnly: true,
-  });
-
-  const localCalc = Math.floor((result.determinedTax + totalPenalty) * 0.1);
-  items.set("localCalculatedTax", {
-    label: "지방소득세 산출세액",
-    value: localCalc,
-    formula: `(결정세액 ${result.determinedTax.toLocaleString()} + 가산세 ${totalPenalty.toLocaleString()}) × 10%`,
-    legalBasis: "지방세법 §103의3",
-    summaryOnly: true,
-  });
-  items.set("localReduction", {
-    label: "지방세 감면세액",
-    value: 0,
-    formula: "현재 미구현 (지방세 감면 정책 미반영)",
-    legalBasis: "지방세법 §92~§103",
-    summaryOnly: true,
-  });
-  items.set("localDeterminedTax", {
-    label: "지방세 결정세액",
-    value: result.localIncomeTax,
-    formula: "지방소득세 산출세액 − 지방세 감면세액 (원 미만 절사)",
-    legalBasis: "지방세법 §103",
-    summaryOnly: true,
-  });
+  buildSurtaxAndLocalTaxItems(items, result, totalPenalty);
 
   // ── 재개발 3분할 overrides (단건·환산 모드, isAggregate와 mutually exclusive) ──
   // result.redevelopmentDetail 존재 시 1단계 양도차익 산정 그룹 항목에 perAsset[] 3분할 부착.
