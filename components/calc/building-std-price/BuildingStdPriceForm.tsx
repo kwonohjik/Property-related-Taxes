@@ -251,6 +251,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
     }));
 
   const phd = !!transferSectionLabel; // PHD 2시점(취득·최초고시) — 복합·공동주택 환산 토글 숨김
+  // 둘째 시점 라벨 접두어 — 섹션 라벨에서 " 시점" 제거("최초고시 시점"→"최초고시"). 기본 "양도".
+  const t2 = transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도";
   const sameYear = f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
   const valYear = f.valuationYear ? parseInt(f.valuationYear, 10) : undefined;
   // 조정률 모달용 구조지수 — 평가시점 구조 선택값에서 도출(I 지붕재료는 구조지수 100 미만만 활성). 미선택 = 0
@@ -517,14 +519,14 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
           <>
           <SectionCard num={3} title={transferSectionLabel ?? "양도 시점"} tone="emerald" testId="bsp-section-transfer">
             <div className="grid grid-cols-2 gap-2">
-              <FieldCard label="양도연도" stacked>
+              <FieldCard label={`${t2}연도`} stacked>
                 <YearSelect
                   years={yearOpts}
                   value={f.transferYear}
                   onChange={(v) => changeYearWithGuard("transferYear", "transStructureKey", "transUsageNo", v)}
                 />
               </FieldCard>
-              <FieldCard label="양도일" hint="계산서 일자 표기용(선택)" stacked>
+              <FieldCard label={`${t2}일`} hint="계산서 일자 표기용(선택)" stacked>
                 <DateInput value={f.eventDate} onChange={(v) => set("eventDate", v)} />
               </FieldCard>
             </div>
@@ -536,14 +538,14 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             )}
             {!isMech && !sameYear && !composite && (
               <div className="grid grid-cols-2 gap-2">
-                <FieldCard label="양도당시 구조" stacked>
+                <FieldCard label={`${t2}당시 구조`} stacked>
                   <BuildingStructureSelect
                     year={f.transferYear ? parseInt(f.transferYear, 10) : undefined}
                     value={f.transStructureKey}
                     onChange={(v) => set("transStructureKey", v)}
                   />
                 </FieldCard>
-                <FieldCard label="양도당시 용도" stacked>
+                <FieldCard label={`${t2}당시 용도`} stacked>
                   <BuildingUsageSelect
                     year={f.transferYear ? parseInt(f.transferYear, 10) : undefined}
                     value={f.transUsageNo}
@@ -559,7 +561,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 area={landArea}
                 jibun={jibun}
                 referenceDate={landRefFromEvent(f.eventDate, f.transferYear)}
-                label="양도당시 ㎡당 개별공시지가"
+                label={`${t2}당시 ㎡당 개별공시지가`}
               />
             )}
           </SectionCard>
