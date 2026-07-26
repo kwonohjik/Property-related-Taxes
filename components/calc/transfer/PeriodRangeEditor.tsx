@@ -63,12 +63,13 @@ export function PeriodRangeEditor({
   totalLabel,
   directLabel,
   directHint,
-  inputMode,
-  periods,
-  directValue,
+  inputMode = "direct",
+  periods = [],
+  directValue = "",
   testidPrefix,
   onChange,
 }: PeriodRangeEditorProps) {
+  // 마이그레이션 이전 데이터·hot-reload stale 상태 방어 (undefined → 안전 기본값)
   const isInterval = inputMode === "interval";
   const totalMonths = isInterval
     ? periods.reduce((s, p) => s + diffMonthsClamped(p.start, p.end), 0)

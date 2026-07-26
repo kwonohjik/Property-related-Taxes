@@ -478,9 +478,9 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
           directLabel="실제 임대 기간 (개월)"
           directHint="합산 개월을 직접 입력"
           testidPrefix={`rental-period-${index}`}
-          inputMode={unit.rentalInputMode}
-          periods={unit.rentalPeriods}
-          directValue={unit.rentalMonths}
+          inputMode={unit.rentalInputMode ?? "direct"}
+          periods={unit.rentalPeriods ?? []}
+          directValue={unit.rentalMonths ?? ""}
           onChange={(patch) =>
             onChange({
               ...unit,
