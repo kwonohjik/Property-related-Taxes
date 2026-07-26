@@ -605,9 +605,12 @@ export function buildStatementItems(
 
   // §99의3 등 5년 안분 감면대상 양도소득금액 (소득금액차감방식 §90②). result.new993Detail.
   // 집계(다건)는 PerPropertyBreakdown에 new993Detail이 없어 0 유지 (FilingFormTable 집계와 동일 거동).
+  const aggIncomeDeductionReducible = isAggregate
+    ? properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0)
+    : 0;
   items.set("reductionTargetIncome2", {
     label: "소득금액 감면대상",
-    value: isAggregate ? 0 : (result.new993Detail?.reducibleTransferIncome ?? 0),
+    value: isAggregate ? aggIncomeDeductionReducible : (result.new993Detail?.reducibleTransferIncome ?? 0),
     formula:
       !isAggregate && result.new993Detail
         ? buildNew993ReducibleFormula(result.new993Detail, singleIncome)
@@ -623,7 +626,7 @@ export function buildStatementItems(
   items.set("incomeAmountAfter", {
     label: "감면후 소득금액",
     value: isAggregate
-      ? properties.reduce((s, p) => s + p.incomeAfterOffset, 0)
+      ? properties.reduce((s, p) => s + Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)), 0)
       : isRH
         ? result.taxableGain
         : Math.max(0, singleIncome - new993Reducible),
