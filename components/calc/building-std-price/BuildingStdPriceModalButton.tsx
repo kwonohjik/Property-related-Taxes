@@ -65,6 +65,11 @@ interface Props {
     /** 양도당시 ㎡당 개별공시지가 — 트랙 구분 없음(같은 필지·같은 시점). */
     transferLandPricePerSqm?: string;
   };
+  /**
+   * 단일시점 모드 — 취득 시점 하나만 계산(양도 시점·복합·공동주택 환산 숨김).
+   * PHD 감면 건물 기준시가 전용. `label`로 시점 섹션 제목 override("취득 시점"/"최초고시 시점").
+   */
+  singleTimePoint?: { label: string };
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -78,6 +83,7 @@ export function BuildingStdPriceModalButton({
   initialAddress,
   snapshotKey,
   prefill,
+  singleTimePoint,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
@@ -165,6 +171,7 @@ export function BuildingStdPriceModalButton({
 
           <BuildingStdPriceForm
             lockedTaxType={lockedTaxType}
+            singleTimePoint={singleTimePoint}
             initialAddress={initialAddress}
             initialForm={{ ...restoredForm, ...prefillForm }}
             onResult={(r, fa, err, _report, landTotal, snapshot) => {

@@ -76,6 +76,12 @@ export interface BuildingStandardPriceInput {
   acquisitionYear?: number;
   transfer?: BuildingPointInput;
   acquisition?: BuildingPointInput;
+  /**
+   * 단일시점 모드 — 취득 시점(acquisition·acquisitionYear)만으로 건물기준시가 1개 산출.
+   * transferYear 불요. ≥2001 일반 / ≤2000 §164⑤ acqBase 모두 취득 블록 로직 재사용.
+   * 결과는 valuation 필드로 반환(모달 단일 적용 UX). PHD 감면 건물 기준시가 계산 전용.
+   */
+  acquisitionOnly?: boolean;
   /** §164⑧ 동일연도 양도 환산용 보유월수(1월 미만=1월). 동일연도 시 필수 */
   holdingMonths?: number;
   /** §164⑧ 기준시가조정월수(전기 결정일~취득 결정일 전일). 미입력 시 12 */

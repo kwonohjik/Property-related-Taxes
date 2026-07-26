@@ -63,6 +63,11 @@ interface Props {
   initialAddress?: AddressValue;
   /** 직전 계산 입력 스냅샷 복원(정정) — 지정 시 initialAddress보다 우선. 미지정 시 빈 폼. */
   initialForm?: Partial<BuildingStdPriceFormState>;
+  /**
+   * 단일시점 모드 — 취득 시점 하나만으로 건물기준시가 산출(양도 시점·복합·공동주택 환산 숨김).
+   * PHD 감면 건물 기준시가 계산 전용. `label`로 시점 섹션 제목 override("취득 시점"/"최초고시 시점").
+   */
+  singleTimePoint?: { label: string };
 }
 
 /** 연도 Select — 명시 라벨(SelectValue 단독 금지) */
@@ -132,10 +137,12 @@ function SectionCard({
   );
 }
 
-export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm }: Props) {
+export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm, singleTimePoint }: Props) {
   const [f, setF] = useState<BuildingStdPriceFormState>(() => {
     const base: BuildingStdPriceFormState = {
       ...initialBuildingStdPriceForm,
+      // 단일시점 모드 — 취득 블록만 사용(taxType transfer 고정 + acquisitionOnly 산출).
+      ...(singleTimePoint ? { taxType: "transfer" as const, singleTimePoint: true } : {}),
       ...(lockedTaxType ? { taxType: lockedTaxType } : {}),
       ...(initialAddress
         ? {
@@ -245,7 +252,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       valUsageNo: "",
     }));
 
-  const sameYear = f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
+  const single = f.singleTimePoint; // 단일시점(PHD) — 양도 시점·복합·공동주택 환산 숨김
+  const sameYear = !single && f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
   const valYear = f.valuationYear ? parseInt(f.valuationYear, 10) : undefined;
   // 조정률 모달용 구조지수 — 평가시점 구조 선택값에서 도출(I 지붕재료는 구조지수 100 미만만 활성). 미선택 = 0
   const valStructureIndex = useMemo(() => {
@@ -286,8 +294,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
 
   return (
     <div className="space-y-3">
-      {/* 세목 — 호출 세목이 고정된 경우(lockedTaxType) 라디오 숨김(오선택 방지) */}
-      {!lockedTaxType && (
+      {/* 세목 — 고정(lockedTaxType) 또는 단일시점(PHD) 시 라디오 숨김(오선택 방지) */}
+      {!lockedTaxType && !single && (
         <RadioCardGroup
           name="taxType"
           tone="sky"
@@ -407,7 +415,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       {/* 양도 분기 */}
       {f.taxType === "transfer" && (
         <>
-          <SectionCard num={2} title="취득 시점" tone="amber" testId="bsp-section-acq">
+          <SectionCard num={2} title={single ? singleTimePoint!.label : "취득 시점"} tone="amber" testId="bsp-section-acq">
             <div className="grid grid-cols-2 gap-2">
               <FieldCard label="취득연도" stacked>
                 <YearSelect
@@ -465,8 +473,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               ))}
           </SectionCard>
 
-          {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별) */}
-          {!isMech && !apartmentConv && (
+          {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별). 단일시점 미지원 → 숨김 */}
+          {!isMech && !apartmentConv && !single && (
             <ToggleCard
               checked={f.compositeMode}
               onCheckedChange={(v) => set("compositeMode", v)}
@@ -488,8 +496,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             </ToggleCard>
           )}
 
-          {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체 */}
-          {!isMech && !composite && (
+          {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체. 단일시점 미지원 → 숨김 */}
+          {!isMech && !composite && !single && (
             <ToggleCard
               checked={f.apartmentConversionMode}
               onCheckedChange={(v) => set("apartmentConversionMode", v)}
@@ -507,7 +515,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             </ToggleCard>
           )}
 
-          {!apartmentConv && (
+          {!apartmentConv && !single && (
           <>
           <SectionCard num={3} title="양도 시점" tone="emerald" testId="bsp-section-transfer">
             <div className="grid grid-cols-2 gap-2">

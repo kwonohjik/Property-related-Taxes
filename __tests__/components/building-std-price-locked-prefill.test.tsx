@@ -43,6 +43,23 @@ describe("BuildingStdPriceForm — 세목 고정 + 소재지 prefill", () => {
     expect(screen.getByText("양도(취득·양도 2시점)")).toBeTruthy();
     expect(screen.getByText("상속·증여(1시점)")).toBeTruthy();
   });
+
+  it("singleTimePoint(PHD) 시 양도 시점 숨김 + 시점 섹션 라벨 override", () => {
+    render(
+      <BuildingStdPriceForm
+        singleTimePoint={{ label: "최초고시 시점" }}
+        onResult={() => {}}
+      />,
+    );
+    // 양도 시점 섹션 미렌더
+    expect(screen.queryByTestId("bsp-section-transfer")).toBeNull();
+    expect(screen.queryByText("양도 시점")).toBeNull();
+    // 세목 라디오 숨김 + 시점 섹션 라벨 = "최초고시 시점"
+    expect(screen.queryByText("양도(취득·양도 2시점)")).toBeNull();
+    expect(screen.getByText("최초고시 시점")).toBeTruthy();
+    // 공동주택 환산 토글도 숨김
+    expect(screen.queryByText("공동주택 고시 전 취득 (취득당시 기준시가 환산)")).toBeNull();
+  });
 });
 
 describe("BuildingStdPriceForm — 자산 폼 값 자동입력(prefill)", () => {

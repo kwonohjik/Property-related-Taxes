@@ -172,6 +172,11 @@ export interface BuildingStdPriceFormState {
   ancillaryAreas: AncillaryAreaForm;
   /** 부속시설 종류별 위치 층 라벨(계산서 Ⅳ "층별") */
   ancillaryFloors: AncillaryFloorForm;
+  /**
+   * 단일시점 모드 — 취득 시점(연도·구조·용도·공시지가)만으로 건물기준시가 1개 산출.
+   * PHD 감면 건물 기준시가 계산 전용(양도 시점·복합·공동주택 환산 숨김). prop→state 초기화.
+   */
+  singleTimePoint: boolean;
 }
 
 /** 빈 복합 부분 1개 */
@@ -244,6 +249,7 @@ export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   sharedFacilityArea: "",
   ancillaryAreas: { ...emptyAncillaryAreas },
   ancillaryFloors: { ...emptyAncillaryFloors },
+  singleTimePoint: false,
 };
 
 /** 공동주택 환산 구조·용도 옵션 기준 연도(2001년 건물기준시가 산정) */
@@ -404,6 +410,18 @@ export function toEngineInput(f: BuildingStdPriceFormState): BuildingStandardPri
   base.acquisitionYear = intOrUndef(f.acquisitionYear);
   base.transferYear = intOrUndef(f.transferYear);
 
+  // 단일시점 모드 — 취득 시점만으로 산출(양도 불요·복합/공동주택 미사용). 엔진 acquisitionOnly 분기.
+  if (f.singleTimePoint) {
+    base.acquisitionOnly = true;
+    base.transferYear = undefined;
+    base.acquisition = {
+      structureKey: f.acqStructureKey,
+      usageNo: intOrUndef(f.acqUsageNo) ?? 0,
+      landPricePerM2: parseAmount(f.acqLandPrice),
+    };
+    return base;
+  }
+
   // 양도 복합건물(층·구역별 구조·용도 상이) — 시점별 공시지가만(구조·용도는 부분별·acqUsageNo)
   if (f.compositeMode && !f.isMechanicalParking && !f.apartmentConversionMode) {
     base.compositeParts = f.compositeParts.map((p) => toCompositePart(p, true));
@@ -525,6 +543,17 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
     if (cnt === undefined || cnt <= 0) return "기계식주차 주차대수를 입력하세요.";
   } else if (!skipFloorArea) {
     if (!(parseDecimal(f.floorArea) > 0)) return "건물 연면적(㎡)을 입력하세요.";
+  }
+
+  // 단일시점 모드 — 취득 시점 필드만 검증(양도 불요). ≤2000은 acqBase(2001 지수)라 해당연도 지수 미요구.
+  if (f.singleTimePoint) {
+    const ay = intOrUndef(f.acquisitionYear);
+    if (ay === undefined) return "연도를 선택하세요.";
+    if (ay >= 2001 && (!hasUsageIndexYear(ay) || !hasLocationIndexYear(ay))) return `${ay}년 지수 자료가 없습니다.`;
+    if (!f.acqStructureKey) return "건물 구조를 선택하세요.";
+    if (!(intOrUndef(f.acqUsageNo) !== undefined)) return "건물 용도를 선택하세요.";
+    if (!(parseAmount(f.acqLandPrice) > 0)) return "㎡당 개별공시지가를 입력하세요.";
+    return null;
   }
 
   if (f.taxType === "inheritance_gift") {

@@ -206,7 +206,7 @@ export function ReductionPhdInput({
               <div className="mt-1">
                 <BuildingStdPriceModalButton
                   buttonLabel="건물 기준시가 계산"
-                  lockedTaxType="transfer"
+                  singleTimePoint={{ label: "취득 시점" }}
                   initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
                   snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp-acq` : undefined}
                   prefill={{
@@ -230,12 +230,12 @@ export function ReductionPhdInput({
               <div className="mt-1">
                 <BuildingStdPriceModalButton
                   buttonLabel="건물 기준시가 계산"
-                  lockedTaxType="transfer"
+                  singleTimePoint={{ label: "최초고시 시점" }}
                   initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
                   snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp-first` : undefined}
                   prefill={{
                     landAreaM2: value.landAreaSqm || undefined,
-                    // 최초공시시 시점 = 계산 이벤트 날짜(모달 취득시 칸 재사용 — 단일 시점 valuation).
+                    // 최초고시 시점 연도로 단일시점 계산(모달 취득 칸을 최초고시 시점으로 재사용).
                     acquisitionDate: value.firstDisclosureDate,
                     acqLandPricePerSqm: prefillAcqLandPrice(value.firstDisclosureDate, value.landPricePerSqmAtFirst),
                   }}
