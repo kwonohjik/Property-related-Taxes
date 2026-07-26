@@ -187,7 +187,11 @@ export function BuildingStdPriceModalButton({
 
           {result && (
             <div className="space-y-3 border-t pt-3">
-              <BuildingStdPriceResultCard result={result} floorArea={floorArea} />
+              <BuildingStdPriceResultCard
+                result={result}
+                floorArea={floorArea}
+                transferSectionLabel={transferSectionLabel}
+              />
               <div className="flex flex-wrap gap-2">
                 {result.valuation && (
                   <Button
