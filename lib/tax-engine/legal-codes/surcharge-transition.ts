@@ -37,3 +37,25 @@ export const SURCHARGE_TRANSITION_FOUR_MONTH_SGG: ReadonlySet<string> = new Set(
 
 /** 6개월 지역 판별 기준일 — 이 날짜에 조정대상지역으로 지정된 지역이 표 지역(6개월) */
 export const SURCHARGE_TRANSITION_DESIGNATION_DATE = "2025-10-16" as const;
+
+/**
+ * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 자산 양도세 중과세율 배제(→§104①1호 기본세율,
+ * 보유 2년 미만이면 §104①2·3호 단기). **취득일 기준 영구배제**(양도일 기준 한시유예와 별개).
+ * - 세율: 기획재정부 재산세제과-1422(2023.12.26.)로 현행 §104⑦(조정지역 다주택 중과)에도 적용.
+ * - 장특: 서울행정법원 2024구단72950(국승)로 §95② 장기보유특별공제 배제는 존속(세율만 배제).
+ */
+export const CRISIS_ACQ_EXCLUSION_WINDOW = {
+  start: "2009-03-16",
+  end: "2012-12-31",
+} as const;
+
+/**
+ * 취득일(Date)이 부칙 §14① 배제 윈도우 내인지. 엔진 acquisitionDate가 Date이므로 new Date 비교
+ * (`multi-house-surcharge-exclusion.ts`의 `new Date(SURCHARGE_EXCLUSION_WINDOW.start)` 선례와 동일).
+ */
+export function isCrisisAcqExempt(acquisitionDate: Date): boolean {
+  return (
+    acquisitionDate >= new Date(CRISIS_ACQ_EXCLUSION_WINDOW.start) &&
+    acquisitionDate <= new Date(CRISIS_ACQ_EXCLUSION_WINDOW.end)
+  );
+}

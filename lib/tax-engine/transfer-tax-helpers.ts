@@ -691,6 +691,7 @@ export function buildMultiHouseSurchargeDetail(
     isRegulatedAtTransfer: result.isRegulatedAtTransfer,
     warnings: result.warnings,
     excludedPresaleRights: result.excludedPresaleRights,
+    rateSurchargeStatutoryExcluded: result.rateSurchargeStatutoryExcluded,
   };
 }
 

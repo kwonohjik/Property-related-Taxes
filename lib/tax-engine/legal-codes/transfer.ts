@@ -498,6 +498,7 @@ export function isWithinSurchargeSuspensionWindow(transferDate: string | undefin
 }
 
 // 중과 한시배제 경과조치(§167의3①12의2 나·다목) 상수 → `./surcharge-transition.ts`로 분리(800줄 정책).
+// 부칙 §9270호 §14① 취득기간 중과배제 상수(CRISIS_ACQ_EXCLUSION_WINDOW·isCrisisAcqExempt)도 동 파일.
 
 // ============================================================
 // 다주택 중과세 — 소득세법 §104 ② + 시행령 §152·§167의3·§167의10

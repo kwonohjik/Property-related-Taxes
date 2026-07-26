@@ -34,6 +34,7 @@ export {
 } from "./appurtenant-land-rate";
 import type { TransferTaxInput, CalculationStep, TransferTaxResult } from "./types/transfer.types";
 import { TRANSFER } from "./legal-codes";
+import { isCrisisAcqExempt } from "./legal-codes";
 import {
   calculateMultiParcelTransfer,
 } from "./multi-parcel-transfer";
@@ -129,6 +130,8 @@ interface CalcTaxResult {
   progressiveDeduction: number;
   surchargeSuspended: boolean;
   shortTermNote?: string;
+  /** 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 비사업용 토지 +10%p 중과배제(기본세율). 장특은 표1 유지. */
+  nblSurchargeExcluded?: boolean;
 }
 
 /**
@@ -302,7 +305,9 @@ export function calcTax(
 
   // T-2: 비사업용 토지 누진 + 10%p (§104①8호)
   if (input.isNonBusinessLand && surchargeRates.non_business_land) {
-    const additionalRate = surchargeRates.non_business_land.additionalRate;
+    // 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 토지는 +10%p 중과 배제(→§104①1호 기본누진). 장특은 표1 유지.
+    const nblCrisisExcluded = isCrisisAcqExempt(input.landAcquisitionDate ?? input.acquisitionDate);
+    const additionalRate = nblCrisisExcluded ? 0 : surchargeRates.non_business_land.additionalRate;
     // 단일 필지 기준면적 초과분 부분 면적안분(목장 §168의10③·기타토지 §168의11①) — 중과분(+10%p)만 비사업용 면적비율로 안분(누진 기본세액은 전체 taxBase). 연접 다필지(§168의11⑤)·복합용도(§168의11⑥) 미구현
     const ratio = input.nonBusinessLandAreaRatio ?? 1;
     const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
@@ -326,16 +331,18 @@ export function calcTax(
           progressiveDeduction: 0,
           surchargeSuspended: false,
           shortTermNote: `보유기간 ${holdingMonthsTotal < 12 ? "1년" : "2년"} 미만 단기세율 적용 (§104①후단: 비사업용 누진세액과 비교한 큰 세액)`,
+          ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
         };
       }
     }
     return {
       calculatedTax: nblTax,
-      surchargeType: "non_business_land",
-      surchargeRate: roundRate(additionalRate),
-      appliedRate: roundRate(baseRate + additionalRate * ratio), // 실효 가산율(면적비율 반영)
+      surchargeType: nblCrisisExcluded ? undefined : "non_business_land",
+      surchargeRate: nblCrisisExcluded ? undefined : roundRate(additionalRate),
+      appliedRate: roundRate(baseRate + additionalRate * ratio), // 실효 가산율(면적비율 반영); 부칙배제 시 additionalRate=0 → baseRate
       progressiveDeduction: deduction,
       surchargeSuspended: false,
+      ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
     };
   }
 

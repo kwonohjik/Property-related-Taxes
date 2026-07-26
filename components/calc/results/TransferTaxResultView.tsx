@@ -407,7 +407,7 @@ export function TransferTaxResultView({
         {result.nonBusinessLandJudgmentDetail && (
           <div>
             <p className="text-sm font-medium mb-2">비사업용토지 판정 결과</p>
-            <NonBusinessLandResultCard judgment={result.nonBusinessLandJudgmentDetail} />
+            <NonBusinessLandResultCard judgment={result.nonBusinessLandJudgmentDetail} nblSurchargeExcluded={result.nblSurchargeExcluded} />
           </div>
         )}
 
