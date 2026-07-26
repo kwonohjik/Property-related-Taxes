@@ -107,6 +107,11 @@ export interface New993Result {
   reducibleTransferIncome: number;
   /** 5년 안분 비율 (5년 후 양도 시) — UI 표시용 */
   fiveYearRatio: number;
+  /** [echo] 감면대상 산식 구성값 — 결과뷰 Frac 산식 표시용(값 인라인). 5년 후 안분 케이스에서 세팅. */
+  transferIncomeApplied?: number;
+  standardPriceAtAcquisition?: number;
+  standardPriceAt5Years?: number;
+  standardPriceAtTransfer?: number;
   /** 부호 케이스 분류 */
   signCase: New993SignCase;
   /** 산식 단계 (UI 표시용) */
@@ -479,6 +484,11 @@ export function evaluateNew993(input: New993Input): New993Result {
     isWithin5Years,
     reducibleTransferIncome,
     fiveYearRatio,
+    // 결과뷰 Frac 산식 표시용 echo (계산 미사용 — 표시 전용)
+    transferIncomeApplied: input.transferIncome,
+    standardPriceAtAcquisition: input.standardPriceAtAcquisition,
+    standardPriceAt5Years: input.standardPriceAt5Years,
+    standardPriceAtTransfer: input.standardPriceAtTransfer,
     signCase,
     formulaSteps,
     taxReductionForRuralSurtax,
