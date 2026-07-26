@@ -129,6 +129,41 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
     expect(url).toContain("ho=1004");
   });
 
+  it("PHD 환산 ON → 상단 취득시 기준시가 조회 위젯 숨김 + echo 노출", () => {
+    render(
+      <New993InputForm
+        value={makeValue({
+          phdMode993: true,
+          phdFirstDisclosurePrice993: "500000000",
+          phdLandAreaSqm993: "100",
+          phdLandPricePerSqmAtAcq993: "1000000",
+          phdLandPricePerSqmAtFirst993: "1200000",
+        })}
+        onUpdate={vi.fn()}
+        acquisitionDate="2003-11-28"
+        jibun="경기도 수원시 영통구 영통동 957-6"
+      />,
+    );
+    // 취득시 기준시가 수동 조회 위젯 미렌더
+    expect(screen.queryByTestId("new993-stdprice-acq-lookup-btn")).toBeNull();
+    // echo 노출 + 환산값(416,666,666)
+    const echo = screen.getByTestId("new993-stdprice-acq-echo");
+    expect(echo.textContent).toContain("416,666,666");
+  });
+
+  it("PHD 환산 OFF → 상단 취득시 기준시가 조회 위젯 렌더", () => {
+    render(
+      <New993InputForm
+        value={makeValue({ phdMode993: false })}
+        onUpdate={vi.fn()}
+        acquisitionDate="2003-11-28"
+        jibun="경기도 수원시 영통구 영통동 957-6"
+      />,
+    );
+    expect(screen.getByTestId("new993-stdprice-acq-lookup-btn")).toBeTruthy();
+    expect(screen.queryByTestId("new993-stdprice-acq-echo")).toBeNull();
+  });
+
   it("전용면적 조회 실패(면적 없음) → 안내 + onUpdate 미호출", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,

@@ -6,6 +6,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
@@ -104,12 +105,26 @@ export function toEngineReductions(
     }
     // ── Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본격 변환 ──
     if (r.type === "new_99_3") {
+      // 취득시 기준시가 — PHD 환산 ON이고 환산 입력 충분하면 §164⑤ 자동 산출(source ternary,
+      // UI 숨김/echo·validate와 동일 소스). 아니면 수동값. useEffect store 미러 없이 단일 소스.
+      const phdInput993 = {
+        firstDisclosurePrice: r.phdFirstDisclosurePrice993 ? parseAmount(r.phdFirstDisclosurePrice993) : 0,
+        landAreaSqm: r.phdLandAreaSqm993 ? parseFloat(r.phdLandAreaSqm993) : 0,
+        landPricePerSqmAtAcquisition: r.phdLandPricePerSqmAtAcq993 ? parseAmount(r.phdLandPricePerSqmAtAcq993) : 0,
+        landPricePerSqmAtFirstDisclosure: r.phdLandPricePerSqmAtFirst993 ? parseAmount(r.phdLandPricePerSqmAtFirst993) : 0,
+        buildingStdPriceAtAcquisition: r.phdBuildingStdAtAcq993 ? parseAmount(r.phdBuildingStdAtAcq993) : 0,
+        buildingStdPriceAtFirstDisclosure: r.phdBuildingStdAtFirst993 ? parseAmount(r.phdBuildingStdAtFirst993) : 0,
+      };
+      const acqStdPrice993 =
+        r.phdMode993 && canCalcReductionPhd(phdInput993)
+          ? calcReductionAcquisitionStdPrice(phdInput993).estimatedAcquisitionStdPrice
+          : parseAmount(r.standardPriceAtAcquisition993 || "0");
       return {
         type: "new_99_3" as const,
         contractDate993: r.contractDate993 || undefined,
         usageApprovalDate993: r.usageApprovalDate993 || undefined,
         standardPriceAt5Years: parseAmount(r.standardPriceAt5Years || "0"),
-        standardPriceAtAcquisition993: parseAmount(r.standardPriceAtAcquisition993 || "0"),
+        standardPriceAtAcquisition993: acqStdPrice993,
         standardPriceAtTransfer993: r.standardPriceAtTransfer993
           ? parseAmount(r.standardPriceAtTransfer993)
           : undefined,
