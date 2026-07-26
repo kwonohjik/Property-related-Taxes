@@ -469,25 +469,15 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
         </p>
         <PeriodRangeEditor
           tone="emerald"
-          toggleTitle="임대 기간을 시작·종료일로 입력 (비연속 다중 구간)"
           startLabel="임대 시작일"
           endLabel="임대 종료일"
           endHint="계속 임대 중이면 양도일을 종료일로 입력"
           rowLabel="임대 구간"
           totalLabel="합계 임대기간"
-          directLabel="실제 임대 기간 (개월)"
-          directHint="합산 개월을 직접 입력"
           testidPrefix={`rental-period-${index}`}
-          inputMode={unit.rentalInputMode ?? "direct"}
           periods={unit.rentalPeriods ?? []}
-          directValue={unit.rentalMonths ?? ""}
           onChange={(patch) =>
-            onChange({
-              ...unit,
-              ...(patch.inputMode !== undefined ? { rentalInputMode: patch.inputMode } : {}),
-              ...(patch.periods !== undefined ? { rentalPeriods: patch.periods } : {}),
-              ...(patch.directValue !== undefined ? { rentalMonths: patch.directValue } : {}),
-            })
+            onChange({ ...unit, rentalInputMode: "interval", rentalPeriods: patch.periods })
           }
         />
         <p className="text-xs text-muted-foreground px-1">

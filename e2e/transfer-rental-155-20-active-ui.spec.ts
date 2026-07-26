@@ -286,13 +286,11 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(page.getByTestId("rental-verdict-badge-0")).not.toContainText("아목");
   });
 
-  test("실제 임대기간 interval 모드 — 시작·종료일 입력 → 총 개월 자동계산(96개월)", async ({ page }) => {
+  test("실제 임대기간 — 토글 없이 상시 표시, 시작·종료일 입력 → 총 개월 자동계산(96개월)", async ({ page }) => {
     await gotoRentalSection(page);
 
-    // 임대 기간 토글을 interval로 전환
-    await page.getByRole("switch", { name: /임대 기간을 시작·종료일로 입력/ }).click();
-
-    // 첫 구간: 2019-01-01 ~ 2027-01-01 = 96개월
+    // 토글 없음 — 에디터가 항상 표시(가상 1행). 바로 첫 구간 입력: 2019-01-01 ~ 2027-01-01 = 96개월
+    await expect(page.getByTestId("rental-period-0-editor")).toBeVisible();
     await fillDateAndVerify(page, { year: "2019", month: "01", day: "01" }, {
       scope: page.getByTestId("rental-period-0-start-0"),
     });
@@ -304,13 +302,11 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(page.getByTestId("rental-period-0-total")).toContainText("8년");
   });
 
-  test("거주기간 §155⑳ interval 노출 — 입주·퇴거일 입력 → 총 개월 자동계산(36개월)", async ({ page }) => {
+  test("거주기간 §155⑳ — 토글 없이 상시 표시, 입주·퇴거일 입력 → 총 개월 자동계산(36개월)", async ({ page }) => {
     await gotoRentalSection(page);
 
-    // 거주 기간 토글을 interval로 전환(§155⑳ 위치에 노출)
-    await page.getByRole("switch", { name: /거주 기간을 입주·퇴거일로 입력/ }).click();
-
-    // 첫 거주 구간: 2019-01-01 ~ 2022-01-01 = 36개월
+    // 토글 없음 — 에디터 상시 표시. 첫 거주 구간: 2019-01-01 ~ 2022-01-01 = 36개월
+    await expect(page.getByTestId("residence-period-editor")).toBeVisible();
     await fillDateAndVerify(page, { year: "2019", month: "01", day: "01" }, {
       scope: page.getByTestId("residence-period-start-0"),
     });

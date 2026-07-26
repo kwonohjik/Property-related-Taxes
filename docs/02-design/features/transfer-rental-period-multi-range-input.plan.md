@@ -107,3 +107,12 @@ rental 복제·residence 전체렌더 비대칭을 피하고 §155⑳에 부적�
 - rental·residence 겹침은 **차단**(residence 기존 방식 일관). 자동 병합은 안 함.
 - `diffMonthsClamped`(whole-month) 유지 — 일수정밀 소수 미도입(Q1).
 - **이전 §161① 팁 3행 삭제 + 안분식 분수(검증완료·미커밋)**를 **동일 브랜치 번들**(커밋 분리).
+
+## 7. Do 환류 — 토글 제거(사용자 피드백, PR#784 후속)
+
+`PeriodRangeEditor`의 direct↔interval **활성화 토글 제거**. 사유: 임대·거주 기간은 **최소 1건 반드시 입력** →
+"활성화" 단계가 불필요·혼란. **에디터를 항상 표시**(가상 1행 기본 노출), direct 개월 직접입력 UI는 §155⑳ 2곳에서 제거.
+- 데이터: 사용자가 구간 입력 시 caller가 `rentalInputMode`/`residenceInputMode`를 `"interval"`로 세팅 → 기존
+  `deriveRentalMonths`/`deriveResidencePeriodMonths`(mode 기반)가 sum 사용. legacy direct 데이터는 mode 미변경 시 fallback 유지.
+- Step4 `ResidencePeriodSection`은 자체 토글 유지(미개조·Surgical). residence 필드 공유로 §155⑳ 입력 시 Step4도 interval 표시(일관).
+- 🐛 부수 수정: `periods` undefined(마이그 이전·hot-reload stale) 토글 크래시 → destructuring 기본값 방어.

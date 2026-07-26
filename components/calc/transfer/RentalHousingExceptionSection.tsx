@@ -331,33 +331,25 @@ export function RentalHousingExceptionSection({
                 </p>
                 <PeriodRangeEditor
                   tone="violet"
-                  toggleTitle="거주 기간을 입주·퇴거일로 입력 (비연속 다중 구간)"
                   startLabel="입주일"
                   endLabel="퇴거일"
                   endHint="양도일까지 거주한 경우 양도일을 퇴거일로 입력"
                   rowLabel="거주 구간"
                   totalLabel="합계 거주기간"
-                  directLabel="거주주택 거주기간 (개월)"
-                  directHint="실제 거주한 기간을 개월 수로 입력 (2년·24개월 이상 필요)"
                   testidPrefix="residence-period"
-                  inputMode={asset.residenceInputMode}
                   periods={(asset.residencePeriods ?? []).map((p) => ({
                     start: p.moveInDate,
                     end: p.moveOutDate,
                   }))}
-                  directValue={asset.residencePeriodMonthsAsset ?? ""}
-                  onChange={(patch) => {
-                    const next: Partial<AssetForm> = {};
-                    if (patch.inputMode !== undefined) next.residenceInputMode = patch.inputMode;
-                    if (patch.periods !== undefined) {
-                      next.residencePeriods = patch.periods.map((p) => ({
+                  onChange={(patch) =>
+                    onChangeResidence({
+                      residenceInputMode: "interval",
+                      residencePeriods: patch.periods.map((p) => ({
                         moveInDate: p.start,
                         moveOutDate: p.end,
-                      }));
-                    }
-                    if (patch.directValue !== undefined) next.residencePeriodMonthsAsset = patch.directValue;
-                    onChangeResidence(next);
-                  }}
+                      })),
+                    })
+                  }
                 />
                 <p className="text-caption text-muted-foreground px-1">
                   ※ 보유 상황 단계의 거주기간과 동일한 값입니다. 어디서 입력해도 자동 동기화됩니다.

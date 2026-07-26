@@ -1,8 +1,7 @@
 /**
- * PeriodRangeEditor — periods undefined 방어 회귀
+ * PeriodRangeEditor — 토글 없는 상시 에디터 + periods undefined 방어
  *
- * 마이그레이션 이전 데이터·hot-reload stale 상태에서 periods가 undefined일 때
- * 토글(interval 진입) 클릭 시 `periods.length` 크래시(Runtime TypeError)가 없어야 한다.
+ * 토글 제거(항상 표시·최소 1행). undefined periods에서도 크래시 없이 가상 1행 렌더.
  */
 
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
@@ -11,33 +10,39 @@ import { PeriodRangeEditor } from "@/components/calc/transfer/PeriodRangeEditor"
 
 afterEach(cleanup);
 
-describe("PeriodRangeEditor undefined 방어", () => {
-  it("periods undefined + 토글 클릭 → 크래시 없이 interval 진입(1구간 즉시 추가)", () => {
-    const onChange = vi.fn();
-    render(
-      <PeriodRangeEditor
-        tone="emerald"
-        toggleTitle="임대 기간을 시작·종료일로 입력"
-        startLabel="시작일"
-        endLabel="종료일"
-        rowLabel="구간"
-        totalLabel="합계"
-        directLabel="개월"
-        testidPrefix="rp"
-        inputMode={undefined as never}
-        periods={undefined as never}
-        directValue={undefined as never}
-        onChange={onChange}
-      />,
-    );
+function renderEditor(periods: unknown, onChange = vi.fn()) {
+  render(
+    <PeriodRangeEditor
+      tone="emerald"
+      startLabel="시작일"
+      endLabel="종료일"
+      rowLabel="임대 구간"
+      totalLabel="합계"
+      testidPrefix="rp"
+      periods={periods as never}
+      onChange={onChange}
+    />,
+  );
+  return onChange;
+}
 
-    // 초기(direct) 렌더 크래시 없음
-    expect(screen.getByRole("switch")).toBeTruthy();
-    // 토글 클릭 → interval 진입, 빈 구간 1개 추가(크래시 없음)
-    fireEvent.click(screen.getByRole("switch"));
-    expect(onChange).toHaveBeenCalledWith({
-      inputMode: "interval",
-      periods: [{ start: "", end: "" }],
+describe("PeriodRangeEditor 상시 에디터", () => {
+  it("periods undefined → 크래시 없이 가상 1행·총 0개월 표시(토글 없음)", () => {
+    renderEditor(undefined);
+    expect(screen.getByTestId("rp-editor")).toBeTruthy();
+    expect(screen.getByTestId("rp-start-0")).toBeTruthy();
+    expect(screen.getByTestId("rp-total")).toHaveTextContent("0개월");
+  });
+
+  it("빈 배열 → 가상 1행에 입력 시 onChange로 구간 생성", () => {
+    const onChange = renderEditor([]);
+    // 가상 첫 행 시작일 입력 → periods 생성
+    fireEvent.change(screen.getByTestId("rp-start-0").querySelector("input")!, {
+      target: { value: "2019" },
     });
+    expect(onChange).toHaveBeenCalled();
+    const arg = onChange.mock.calls[0][0];
+    expect(Array.isArray(arg.periods)).toBe(true);
+    expect(arg.periods.length).toBe(1);
   });
 });
