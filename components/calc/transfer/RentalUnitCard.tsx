@@ -129,7 +129,8 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
   // 임대주택 소재지(지번): region 자동판별(showRegion) 또는 임대개시일 기준시가 조회(비-나·라 = !showAcqPrice)에 필요 → 나목만 제외.
   const showAddress = showRegion || !showAcqPrice;
   // 주소로 법정동코드가 채워지면 소재 지역을 자동판별 배지로 표시(regionCode 비면 수동 라디오 fallback).
-  const regionAuto = unit.regionCode.length >= 10;
+  // ?? "" : 타입은 non-optional이나 migrate 미경유 stale sessionStorage 유닛은 undefined일 수 있어 방어.
+  const regionAuto = (unit.regionCode ?? "").length >= 10;
 
   const capLabel = showAcqPrice
     ? "3억(취득당시)"

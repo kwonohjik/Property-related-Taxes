@@ -112,4 +112,16 @@ describe("RentalUnitCard 소재 지역 주소 자동판별", () => {
     expect(screen.queryByTestId("rental-region-badge-0")).toBeNull();
     expect(document.querySelector('input[name="rental-region-0"]')).not.toBeNull();
   });
+
+  it("R-6: stale 유닛(regionCode undefined) → 크래시 없이 수동 라디오 노출", () => {
+    // migrate 미경유 구 sessionStorage 유닛 재현 — 타입은 non-optional이나 런타임 undefined
+    const stale = { ...makeGaUnit(), regionCode: undefined as unknown as string };
+    expect(() =>
+      render(
+        <RentalUnitCard unit={stale} index={0} onChange={() => {}} onRemove={() => {}} canRemove={false} />,
+      ),
+    ).not.toThrow();
+    expect(screen.queryByTestId("rental-region-badge-0")).toBeNull();
+    expect(document.querySelector('input[name="rental-region-0"]')).not.toBeNull();
+  });
 });
