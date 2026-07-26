@@ -228,7 +228,18 @@ export function calculateTransferTaxAggregate(
 
   // income-deduction 감면(§99의3·§99·§98의8·하이브리드 5년후) — 세액 계산용 "감면후 income" 분리.
   // incomeAfterOffset(pre-감면)는 양도소득금액 표시·차손통산·농특세 감면前 기준으로 보존.
-  const incomeDeductionReducible = assetRecords.map((r) => incomeDeductionReducibleOf(r.result));
+  //
+  // 시행령 §167의2② — 자산이 통산받은 양도차손은 순양도소득금액:감면소득금액 비율로 안분하고,
+  // 감면소득금액을 감면분 차손만큼 축소한 값을 법 §90 감면소득금액으로 본다. (차손 미수령이면 축소 0.)
+  const incomeDeductionReducible = assetRecords.map((r, i) => {
+    const reducible = incomeDeductionReducibleOf(r.result);
+    if (reducible <= 0) return 0;
+    const income = r.income; // 통산 前 양도소득금액(감면소득금액 포함) — 안분 분모
+    if (income <= 0) return reducible;
+    const lossReceived = lossOffsetFromSame[i] + lossOffsetFromOther[i];
+    const lossToExempt = Math.floor((lossReceived * reducible) / income); // 감면분 흡수 차손(절사·순분 잔여흡수)
+    return Math.max(0, reducible - lossToExempt);
+  });
   const taxableAfterReduction = incomeAfterOffset.map((v, i) =>
     Math.max(0, v - incomeDeductionReducible[i]),
   );
@@ -289,8 +300,11 @@ export function calculateTransferTaxAggregate(
   // 감면 前 산출세액 = 비과세분(§98의3·§98의5 ruralSurtaxExempt)만 그대로 둔 income으로 재산출.
   let ruralSurtax = 0;
   if (hasIncomeDeduction) {
-    const reducibleExempt = assetRecords.map((r) => ruralSurtaxExemptReducibleOf(r.result));
-    const surtaxBaseline = incomeAfterOffset.map((v, i) => Math.max(0, v - reducibleExempt[i]));
+    // 비과세(§98의3·§98의5) 감면분은 baseline에 그대로 둔다(농특세 미발생). §167의2② 축소 후 값(=조정 감면소득금액) 사용.
+    const surtaxBaseline = incomeAfterOffset.map((v, i) => {
+      const isExemptAsset = ruralSurtaxExemptReducibleOf(assetRecords[i].result) > 0;
+      return Math.max(0, v - (isExemptAsset ? incomeDeductionReducible[i] : 0));
+    });
     const beforeTax = computeGroupsAndComparison(assetRecords, surtaxBaseline, allocatedBasic, rates).calculatedTax;
     ruralSurtax = applyRate(Math.max(0, beforeTax - calculatedTax), 0.2);
     if (ruralSurtax > 0) {
