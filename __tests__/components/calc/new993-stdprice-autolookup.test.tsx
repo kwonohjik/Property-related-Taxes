@@ -45,6 +45,7 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
       <New993InputForm
         value={makeValue()}
         onUpdate={onUpdate}
+        onUpdateMany={vi.fn()}
         acquisitionDate="2003-11-28"
         transferDate="2026-02-16"
         jibun="경기도 수원시 영통구 영통동 957-6"
@@ -77,6 +78,7 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
       <New993InputForm
         value={makeValue()}
         onUpdate={onUpdate}
+        onUpdateMany={vi.fn()}
         acquisitionDate="2003-11-28"
         transferDate="2026-02-16"
         jibun="경기도 수원시 영통구 영통동 957-6"
@@ -96,7 +98,7 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
 
   it("지번 미입력 시 조회 버튼 비활성 — 수동 입력 fallback", () => {
     render(
-      <New993InputForm value={makeValue()} onUpdate={vi.fn()} acquisitionDate="2003-11-28" />,
+      <New993InputForm value={makeValue()} onUpdate={vi.fn()} onUpdateMany={vi.fn()} acquisitionDate="2003-11-28" />,
     );
     expect(screen.getByTestId("new993-stdprice-acq-lookup-btn")).toBeDisabled();
     expect(screen.getByTestId("new993-area-lookup-btn")).toBeDisabled();
@@ -114,6 +116,7 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
       <New993InputForm
         value={makeValue()}
         onUpdate={onUpdate}
+        onUpdateMany={vi.fn()}
         acquisitionDate="2003-11-28"
         transferDate="2026-02-16"
         jibun="경기도 수원시 영통구 영통동 957-6"
@@ -140,6 +143,7 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
           phdLandPricePerSqmAtFirst993: "1200000",
         })}
         onUpdate={vi.fn()}
+        onUpdateMany={vi.fn()}
         acquisitionDate="2003-11-28"
         jibun="경기도 수원시 영통구 영통동 957-6"
       />,
@@ -156,12 +160,40 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
       <New993InputForm
         value={makeValue({ phdMode993: false })}
         onUpdate={vi.fn()}
+        onUpdateMany={vi.fn()}
         acquisitionDate="2003-11-28"
         jibun="경기도 수원시 영통구 영통동 957-6"
       />,
     );
     expect(screen.getByTestId("new993-stdprice-acq-lookup-btn")).toBeTruthy();
     expect(screen.queryByTestId("new993-stdprice-acq-echo")).toBeNull();
+  });
+
+  it("다중 필드 patch는 단일 onUpdateMany로 배치 — 취득/최초고시 서로 덮어쓰기 방지", () => {
+    // 자산 카드 PHD 스냅샷(취득·최초고시 건물 기준시가 등 다필드)을 한 번에 가져오면
+    // 개별 onUpdate 연속 호출이 아니라 단일 onUpdateMany로 모든 키가 함께 반영되어야 한다.
+    const onUpdateMany = vi.fn();
+    render(
+      <New993InputForm
+        value={makeValue({ phdMode993: true })}
+        onUpdate={vi.fn()}
+        onUpdateMany={onUpdateMany}
+        acquisitionDate="2003-11-28"
+        jibun="경기도 수원시 영통구 영통동 957-6"
+        assetPhdSnapshot={{
+          buildingStdAtAcq: "119246400",
+          buildingStdAtFirst: "117374400",
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByText("📋 자산 카드의 PHD 데이터 가져오기"));
+    expect(onUpdateMany).toHaveBeenCalledTimes(1);
+    expect(onUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phdBuildingStdAtAcq993: "119246400",
+        phdBuildingStdAtFirst993: "117374400",
+      }),
+    );
   });
 
   it("전용면적 조회 실패(면적 없음) → 안내 + onUpdate 미호출", async () => {
@@ -174,6 +206,7 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
       <New993InputForm
         value={makeValue()}
         onUpdate={onUpdate}
+        onUpdateMany={vi.fn()}
         acquisitionDate="2003-11-28"
         jibun="경기도 어딘가 100"
       />,
