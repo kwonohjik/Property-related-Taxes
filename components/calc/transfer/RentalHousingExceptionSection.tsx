@@ -211,6 +211,8 @@ export function RentalHousingExceptionSection({
                 value={rh.standardPriceAtAcquisitionForPhrp ?? ""}
                 onChange={(v) => set("standardPriceAtAcquisitionForPhrp", v || undefined)}
                 jibun={asset.addressJibun || undefined}
+                dong={asset.addressDong || undefined}
+                ho={asset.addressHo || undefined}
                 referenceDate={acquisitionDate}
                 testidPrefix="phrp-stdprice-acq"
               />
@@ -224,6 +226,8 @@ export function RentalHousingExceptionSection({
               value={rh.standardPriceAtPriorTransfer ?? ""}
               onChange={(v) => set("standardPriceAtPriorTransfer", v || undefined)}
               jibun={asset.addressJibun || undefined}
+              dong={asset.addressDong || undefined}
+              ho={asset.addressHo || undefined}
               referenceDate={rh.priorResidenceTransferDate ?? ""}
               testidPrefix="phrp-stdprice-prior"
             />
@@ -237,6 +241,8 @@ export function RentalHousingExceptionSection({
                 value={rh.standardPriceAtTransferForPhrp ?? ""}
                 onChange={(v) => set("standardPriceAtTransferForPhrp", v || undefined)}
                 jibun={asset.addressJibun || undefined}
+                dong={asset.addressDong || undefined}
+                ho={asset.addressHo || undefined}
                 referenceDate={transferDate}
                 testidPrefix="phrp-stdprice-transfer"
               />

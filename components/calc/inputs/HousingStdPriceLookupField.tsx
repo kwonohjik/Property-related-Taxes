@@ -33,6 +33,10 @@ export interface HousingStdPriceLookupFieldProps {
   onChange: (v: string) => void;
   /** 지번 주소 — 조회 활성화 조건(외부 주입, 컴포넌트 미내장) */
   jibun?: string;
+  /** 공동주택 동(예: "324") — 지정 시 해당 세대 공시가격만 조회(임의 세대 반환 방지) */
+  dong?: string;
+  /** 공동주택 호(예: "1004") — 지정 시 해당 세대 공시가격만 조회 */
+  ho?: string;
   /** 기준일 — 추천 연도 자동 계산 (임대 시작일·D_prior·취득일·양도일 등) */
   referenceDate?: string;
   required?: boolean;
@@ -46,6 +50,8 @@ export function HousingStdPriceLookupField({
   value,
   onChange,
   jibun,
+  dong,
+  ho,
   referenceDate,
   required = false,
   hint,
@@ -78,6 +84,8 @@ export function HousingStdPriceLookupField({
     setLookupError(null);
     try {
       const params = new URLSearchParams({ jibun, propertyType: "housing", year: effectiveYear });
+      if (dong) params.set("dong", dong);
+      if (ho) params.set("ho", ho);
       const res = await fetch(`/api/address/standard-price?${params}`);
       const json = await res.json();
       if (!res.ok || json.error) {
@@ -118,8 +126,18 @@ export function HousingStdPriceLookupField({
   ) : null;
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      {/* ① 공시가격 연도 — Select + 조회 버튼 인라인 */}
+    <div className="space-y-1.5">
+      {/* 묶음 라벨 — 두 필드(공시가격 연도 + 기준시가) 공통 헤더 */}
+      <div className="flex items-start gap-1 text-sm font-medium">
+        {required && (
+          <span className="text-destructive" aria-hidden>
+            *
+          </span>
+        )}
+        <span className="leading-tight">{label}</span>
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {/* ① 공시가격 연도 — Select + 조회 버튼 인라인 */}
       <FieldCard label="공시가격 연도" badge={yearBadge} stacked>
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0">
@@ -159,8 +177,7 @@ export function HousingStdPriceLookupField({
 
       {/* ② 기준시가 (총액, 원) — 조회 결과 직접 세팅·수동수정 가능 */}
       <FieldCard
-        label={label}
-        required={required}
+        label="기준시가"
         hint={hint}
         unit="원"
         badge={
@@ -179,6 +196,7 @@ export function HousingStdPriceLookupField({
           <CurrencyInput label="" value={value} onChange={onChange} hideUnit placeholder="기준시가 (원)" />
         </div>
       </FieldCard>
+      </div>
     </div>
   );
 }

@@ -78,6 +78,31 @@ describe("HousingStdPriceLookupField — Vworld 주택 조회", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("동·호 지정 시 조회 쿼리에 dong·ho 포함 (세대 식별 → 임의 세대 반환 방지)", async () => {
+    const onChange = vi.fn();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ price: 248_000_000, priceType: "apart_housing_price" }) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    render(
+      <HousingStdPriceLookupField
+        label="임대개시일 기준시가"
+        value=""
+        onChange={onChange}
+        jibun="경기도 수원시 영통구 영통동 957-6"
+        dong="324"
+        ho="1004"
+        referenceDate="2009-08-12"
+        testidPrefix="t"
+      />,
+    );
+    fireEvent.click(screen.getByTestId("t-lookup-btn"));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith("248000000"));
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("dong=324");
+    expect(url).toContain("ho=1004");
+  });
+
   it("지번 미입력 → 조회 버튼 비활성 + 안내", () => {
     const onChange = vi.fn();
     render(

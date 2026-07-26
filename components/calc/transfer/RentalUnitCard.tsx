@@ -286,7 +286,12 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
               } satisfies AddressValue
             }
             onChange={(v) => {
-              const patch: Partial<typeof unit> = { rentalAddressJibun: v.jibun };
+              const patch: Partial<typeof unit> = {
+                rentalAddressJibun: v.jibun,
+                // 공동주택 세대(동/호) — 임대개시일 기준시가 세대 식별용. 미선택 시 "".
+                rentalDong: v.dong ?? "",
+                rentalHo: v.ho ?? "",
+              };
               if (v.pnu && v.pnu.length >= 10) {
                 patch.regionCode = v.pnu.slice(0, 10);
                 patch.region = deriveRentalRegionFromCode(patch.regionCode);
@@ -529,9 +534,8 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
       {/* 기준시가 — 나·라목은 취득당시(3억), 그 외는 임대개시일(Vworld 자동조회) */}
       {showAcqPrice ? (
         <FieldCard
-          label="취득 당시 기준시가"
+          label="임대개시일 기준시가"
           required
-          hint={isNa ? "나목 취득당시 3억 이하 (지역무관)" : "라목 취득당시 3억 이하 (비수도권)"}
           unit="원"
         >
           <CurrencyInput
@@ -539,7 +543,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
             value={unit.acquisitionOfficialPrice}
             onChange={(v) => set("acquisitionOfficialPrice", v)}
             hideUnit
-            placeholder="취득 당시 기준시가 (원)"
+            placeholder="임대개시일 기준시가 (원)"
           />
         </FieldCard>
       ) : (
@@ -551,6 +555,8 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
           value={unit.standardPriceAtRentalStart}
           onChange={(v) => set("standardPriceAtRentalStart", v)}
           jibun={unit.rentalAddressJibun || undefined}
+          dong={unit.rentalDong || undefined}
+          ho={unit.rentalHo || undefined}
           referenceDate={rentalStartDate}
           testidPrefix={`rental-stdprice-${index}`}
         />
