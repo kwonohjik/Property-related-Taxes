@@ -101,3 +101,45 @@ describe("다건 §99의3 소득금액차감 — 계산·표시·농특세", () 
     expect(agg.properties.every((p) => (p.incomeDeductionReducible ?? 0) === 0)).toBe(true);
   });
 });
+
+/** 차손 자산: 양도가 400M, 취득가 400M+loss → 양도차손 = loss (progressive 군, §99의3와 같은 세율군). */
+const lossAsset = (id: string, loss: number) =>
+  ({
+    ...baseTransferInput({
+      transferPrice: 400_000_000,
+      acquisitionPrice: 400_000_000 + loss,
+      acquisitionDate: new Date("2016-01-01"),
+      transferDate: new Date("2022-06-01"),
+      householdHousingCount: 2,
+    }),
+    propertyId: id,
+    propertyLabel: id,
+  });
+
+describe("시행령 §167의2② — §99의3 자산이 양도차손 통산받을 때 감면소득금액 안분", () => {
+  it("차손 50M(같은군) → 감면소득금액 축소 103.2M→83.2M, 과세표준 122,300,000 (안분 前 102.3M 과소과세 정정)", () => {
+    const rates = makeMockRates();
+    const agg = calculateTransferTaxAggregate(
+      { taxYear: 2022, annualBasicDeductionUsed: 0, properties: [house993("a") as never, lossAsset("b", 50_000_000) as never] },
+      rates,
+    );
+    const p = agg.properties[0];
+    // §167의2②: 차손 50M × (감면 103.2M / 양도소득금액 258M) = 20M을 감면분이 흡수 → 조정 감면 83.2M
+    expect(p.incomeDeductionReducible).toBe(83_200_000);
+    expect(p.incomeAfterOffset).toBe(208_000_000); // 258 − 50 (양도소득금액 표시 기준, 감면前)
+    expect(agg.taxBase).toBe(122_300_000); // (208 − 83.2) − 2.5(기본공제)
+    expect(agg.ruralSurtax).toBeGreaterThan(0);
+  });
+
+  it("차손 200M(같은군) → 조정 감면 23.2M, 과세표준 32,300,000 (안분 前 0 과소과세 정정)", () => {
+    const rates = makeMockRates();
+    const agg = calculateTransferTaxAggregate(
+      { taxYear: 2022, annualBasicDeductionUsed: 0, properties: [house993("a") as never, lossAsset("b", 200_000_000) as never] },
+      rates,
+    );
+    const p = agg.properties[0];
+    // 차손 200M × (103.2/258) = 80M 감면분 흡수 → 조정 감면 103.2 − 80 = 23.2M
+    expect(p.incomeDeductionReducible).toBe(23_200_000);
+    expect(agg.taxBase).toBe(32_300_000); // (58 − 23.2) − 2.5
+  });
+});
