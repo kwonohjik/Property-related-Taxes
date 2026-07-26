@@ -318,4 +318,54 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     // 거주주택 요건 충족 상태(2년 이상)도 도출값으로 충족 표시
     await expect(page.getByText("현재 36개월", { exact: false })).toBeVisible();
   });
+
+  test("임대개시일 기준시가 Vworld 조회 → 총액 세팅 + 공동주택 배지 (주소 seed)", async ({ page }) => {
+    // Vworld 공시가격 route mock — 공동주택 5.5억
+    await page.route("**/api/address/standard-price**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          pnu: "1168010100101230000",
+          priceType: "apart_housing_price",
+          year: "2020",
+          price: 550_000_000,
+        }),
+      }),
+    );
+
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
+      ...seedForm(),
+      state: {
+        ...seedForm().state,
+        formData: {
+          ...seedForm().state.formData,
+          assets: [
+            {
+              ...seedForm().state.formData.assets[0],
+              rentalHousingException: {
+                applyException: true,
+                scenario: "A",
+                // 지번 seed → 조회 버튼 활성. long_general(임대개시일 분기) + 등록일 2020 → referenceDate
+                rentalUnits: [rentalUnit({ rentalAddressJibun: "서울특별시 강남구 역삼동 123" })],
+              },
+            },
+          ],
+        },
+      },
+    });
+    await page.reload();
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 5, 0);
+
+    // 임대개시일 기준시가 조회
+    await page.getByTestId("rental-stdprice-0-lookup-btn").click();
+    // 총액 직접 세팅 + 공동주택 배지
+    await expect(page.getByTestId("rental-stdprice-0-pricetype-badge")).toHaveText("공동주택");
+    await expect(page.getByTestId("rental-stdprice-0-price-input").locator("input")).toHaveValue(
+      "550,000,000",
+    );
+  });
 });
