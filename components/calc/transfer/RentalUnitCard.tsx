@@ -17,6 +17,8 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { PeriodRangeEditor } from "./PeriodRangeEditor";
+import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
   deriveCategoryAvailability,
@@ -66,6 +68,12 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
     () => deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effRegDate),
     [unit.rentalCategory, unit.rentalAcquisitionType, effRegDate],
   );
+
+  // 임대개시일 = 최초 임대 시작일(min 유효 rentalPeriods[].start) → 없으면 등록기준일. 조회연도 추천용.
+  const rentalStartDate = useMemo(() => {
+    const starts = (unit.rentalPeriods ?? []).map((p) => p.start).filter(Boolean).sort();
+    return starts[0] || (effRegDate ? effRegDate.toISOString().slice(0, 10) : "");
+  }, [unit.rentalPeriods, effRegDate]);
 
   // 임대 구분 등록시기별 활성 판정 (표시 전용 — store 미러링 금지)
   const categoryAvail = useMemo(
@@ -429,40 +437,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
         </div>
       )}
 
-      {/* 기준시가 — 나·라목은 취득당시(3억), 그 외는 임대개시일 */}
-      {showAcqPrice ? (
-        <FieldCard
-          label="취득 당시 기준시가"
-          required
-          hint={isNa ? "나목 취득당시 3억 이하 (지역무관)" : "라목 취득당시 3억 이하 (비수도권)"}
-          unit="원"
-        >
-          <CurrencyInput
-            label=""
-            value={unit.acquisitionOfficialPrice}
-            onChange={(v) => set("acquisitionOfficialPrice", v)}
-            hideUnit
-            placeholder="취득 당시 기준시가 (원)"
-          />
-        </FieldCard>
-      ) : (
-        <FieldCard
-          label="임대개시일 기준시가"
-          required
-          hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
-          unit="원"
-        >
-          <CurrencyInput
-            label=""
-            value={unit.standardPriceAtRentalStart}
-            onChange={(v) => set("standardPriceAtRentalStart", v)}
-            hideUnit
-            placeholder="임대개시일 기준시가 (원)"
-          />
-        </FieldCard>
-      )}
-
-      {/* 실제 임대 기간 — direct(개월 직접) 또는 interval(시작~종료일 다중 구간, 비연속 허용) */}
+      {/* 실제 임대 기간 (시작~종료일 다중 구간) — 임대개시일 기준시가 조회연도의 소스라 먼저 배치 */}
       <div className="space-y-1">
         <p className="text-sm font-medium">
           실제 임대 기간 <span className="text-rose-500">*</span>
@@ -484,6 +459,53 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
           의무임대기간 {reqYears}년({reqYears * 12}개월) 이상이어야 특례 적용
         </p>
       </div>
+
+      {/* 기준시가 — 나·라목은 취득당시(3억), 그 외는 임대개시일(Vworld 자동조회) */}
+      {showAcqPrice ? (
+        <FieldCard
+          label="취득 당시 기준시가"
+          required
+          hint={isNa ? "나목 취득당시 3억 이하 (지역무관)" : "라목 취득당시 3억 이하 (비수도권)"}
+          unit="원"
+        >
+          <CurrencyInput
+            label=""
+            value={unit.acquisitionOfficialPrice}
+            onChange={(v) => set("acquisitionOfficialPrice", v)}
+            hideUnit
+            placeholder="취득 당시 기준시가 (원)"
+          />
+        </FieldCard>
+      ) : (
+        <div className="space-y-2">
+          {/* 임대주택 소재지 — 공시가격 자동조회용 지번 (조회 안 하면 생략 가능) */}
+          <FieldCard label="임대주택 소재지 (지번)" hint="공시가격 자동조회용 — 수동입력 시 생략 가능">
+            <AddressSearch
+              value={
+                {
+                  road: "",
+                  jibun: unit.rentalAddressJibun,
+                  building: "",
+                  detail: "",
+                  lng: "",
+                  lat: "",
+                } satisfies AddressValue
+              }
+              onChange={(v) => set("rentalAddressJibun", v.jibun)}
+            />
+          </FieldCard>
+          <HousingStdPriceLookupField
+            label="임대개시일 기준시가"
+            required
+            hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
+            value={unit.standardPriceAtRentalStart}
+            onChange={(v) => set("standardPriceAtRentalStart", v)}
+            jibun={unit.rentalAddressJibun || undefined}
+            referenceDate={rentalStartDate}
+            testidPrefix={`rental-stdprice-${index}`}
+          />
+        </div>
+      )}
 
       {/* 기타 요건 자기확인 (나·라목은 5%룰 미검사 — 숨김: 엔진·validate 정합) */}
       {!isNa && !isLa && (

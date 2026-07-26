@@ -14,7 +14,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { PeriodRangeEditor } from "./PeriodRangeEditor";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
-import { CurrencyInputWithLookup } from "@/components/calc/shared/CurrencyInputWithLookup";
+import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
@@ -24,14 +24,6 @@ import { RentalUnitCard } from "./RentalUnitCard";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
-
-// ── 유틸 ──────────────────────────────────────────────────────────
-
-function getYear(dateStr: string | undefined): number | undefined {
-  if (!dateStr) return undefined;
-  const y = parseInt(dateStr.substring(0, 4), 10);
-  return Number.isNaN(y) ? undefined : y;
-}
 
 // ── 메인 섹션 ─────────────────────────────────────────────────────
 
@@ -211,38 +203,42 @@ export function RentalHousingExceptionSection({
                 );
               })()
             ) : (
-              <>
-                {/* 취득 당시 기준시가 */}
-                <CurrencyInputWithLookup
-                  label="취득 당시 기준시가"
-                  value={rh.standardPriceAtAcquisitionForPhrp ?? ""}
-                  onChange={(v) => set("standardPriceAtAcquisitionForPhrp", v || undefined)}
-                  lookupYear={getYear(acquisitionDate)}
-                  hint="임대주택을 처음 취득한 시점의 공동주택가격(또는 개별주택가격)"
-                  required
-                />
-              </>
+              /* 취득 당시 기준시가 — 양도 물건(asset) 취득시점 공시가격 Vworld 조회 */
+              <HousingStdPriceLookupField
+                label="취득 당시 기준시가"
+                required
+                hint="임대주택(양도 물건)을 처음 취득한 시점의 공동주택가격(또는 개별주택가격)"
+                value={rh.standardPriceAtAcquisitionForPhrp ?? ""}
+                onChange={(v) => set("standardPriceAtAcquisitionForPhrp", v || undefined)}
+                jibun={asset.addressJibun || undefined}
+                referenceDate={acquisitionDate}
+                testidPrefix="phrp-stdprice-acq"
+              />
             )}
 
-            {/* 직전거주주택 양도 당시 기준시가 — 자산-수준 대응 필드 없음, 항상 직접 입력 */}
-            <CurrencyInputWithLookup
+            {/* 직전거주주택 양도 당시 기준시가 — 양도 물건(asset) 자신의 D_prior 시점 공시가격(§161①). 항상 독립 입력 */}
+            <HousingStdPriceLookupField
               label="직전거주주택 양도 당시 기준시가"
+              required
+              hint="직전 거주주택을 양도한 해의 임대주택(양도 물건) 공동주택가격(또는 개별주택가격)"
               value={rh.standardPriceAtPriorTransfer ?? ""}
               onChange={(v) => set("standardPriceAtPriorTransfer", v || undefined)}
-              lookupYear={getYear(rh.priorResidenceTransferDate)}
-              hint="직전 거주주택을 양도한 해의 임대주택 공동주택가격(또는 개별주택가격)"
-              required
+              jibun={asset.addressJibun || undefined}
+              referenceDate={rh.priorResidenceTransferDate ?? ""}
+              testidPrefix="phrp-stdprice-prior"
             />
 
             {/* 현 양도 당시 기준시가 — 연동 시 위 echo 카드로 대체 */}
             {!isPhrpStdPriceLinked(asset) && (
-              <CurrencyInputWithLookup
+              <HousingStdPriceLookupField
                 label="현 양도 당시 기준시가"
+                required
+                hint="이번에 양도하는 시점의 공동주택가격(또는 개별주택가격)"
                 value={rh.standardPriceAtTransferForPhrp ?? ""}
                 onChange={(v) => set("standardPriceAtTransferForPhrp", v || undefined)}
-                lookupYear={getYear(transferDate)}
-                hint="이번에 양도하는 시점의 공동주택가격(또는 개별주택가격)"
-                required
+                jibun={asset.addressJibun || undefined}
+                referenceDate={transferDate}
+                testidPrefix="phrp-stdprice-transfer"
               />
             )}
 
