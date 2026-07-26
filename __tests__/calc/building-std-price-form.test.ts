@@ -25,6 +25,42 @@ const form = (o: Partial<BuildingStdPriceFormState>): BuildingStdPriceFormState 
 /** 복합 부분 fixture — 신규 필드(acqUsageNo·조정률 번호) 기본값 채움 */
 const cp = (o: Partial<CompositePartForm>): CompositePartForm => ({ ...emptyCompositePart(), ...o });
 
+describe("단일시점(PHD) 폼 변환·검증 — acquisitionOnly", () => {
+  const singleForm = (o: Partial<BuildingStdPriceFormState> = {}) =>
+    form({
+      taxType: "transfer",
+      singleTimePoint: true,
+      floorArea: "200",
+      builtYear: "1998",
+      acquisitionYear: "2003",
+      acqStructureKey: "rc",
+      acqUsageNo: "34",
+      acqLandPrice: "3,500,000",
+      ...o,
+    });
+
+  it("toEngineInput → acquisitionOnly=true·transferYear undefined·acquisition 세팅", () => {
+    const inp = toEngineInput(singleForm());
+    expect(inp.acquisitionOnly).toBe(true);
+    expect(inp.transferYear).toBeUndefined();
+    expect(inp.acquisition).toEqual({ structureKey: "rc", usageNo: 34, landPricePerM2: 3_500_000 });
+  });
+
+  it("validate 통과(취득 필드만) + 엔진 valuation 산출", () => {
+    const f = singleForm();
+    expect(validateBuildingStdPriceForm(f)).toBeNull();
+    const r = calcBuildingStandardPrice(toEngineInput(f));
+    expect(r.valuation?.standardPrice).toBeGreaterThan(0);
+    expect(r.transfer).toBeUndefined();
+  });
+
+  it("validate — 연도·구조·용도·공시지가 누락 시 차단", () => {
+    expect(validateBuildingStdPriceForm(singleForm({ acquisitionYear: "" }))).toContain("연도");
+    expect(validateBuildingStdPriceForm(singleForm({ acqStructureKey: "" }))).toContain("구조");
+    expect(validateBuildingStdPriceForm(singleForm({ acqLandPrice: "" }))).toContain("공시지가");
+  });
+});
+
 describe("building-std-price 폼 변환 (④) — 엔진 anchor 연동", () => {
   it("BSP-01 상증 폼 → 224,600,000 (엔진 anchor 일치)", () => {
     const f = form({

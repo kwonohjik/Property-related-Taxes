@@ -323,6 +323,31 @@ export function calcBuildingStandardPrice(
     return { apartmentConversion: conv, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
   }
 
+  // 단일시점 모드 — 취득 시점만으로 건물기준시가 1개 산출(PHD 감면 건물 기준시가 계산 전용).
+  // 취득 블록 로직 재사용: ≥2001 일반 / ≤2000 §164⑤ acqBase. 결과는 valuation으로 반환(모달 단일 적용).
+  if (input.acquisitionOnly) {
+    if (input.acquisitionYear === undefined) {
+      throw new BuildingStdPriceError("단일시점: 연도 필수");
+    }
+    if (input.isMechanicalParking || hasComposite(input)) {
+      throw new BuildingStdPriceError("단일시점 모드는 복합구조·기계식주차를 지원하지 않습니다.");
+    }
+    const p = validatePoint(input.acquisition, "시점");
+    const valuation =
+      input.acquisitionYear >= 2001
+        ? calcPointBreakdown(input.acquisitionYear, p, input.floorArea, input.builtYear, 1.0, "시점")
+        : calcAcqBaseBreakdown(input.acquisitionYear, p, input.floorArea, input.builtYear);
+    const acqBaseConversion =
+      valuation.acqBaseRate !== undefined
+        ? {
+            total2001: stdPriceFromPerM2(valuation.pricePerM2 ?? 0, input.floorArea).standardPrice,
+            acqBaseRate: valuation.acqBaseRate,
+            convertedTotal: valuation.standardPrice,
+          }
+        : undefined;
+    return { valuation, acqBaseConversion, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
+  }
+
   // 양도 모드 (취득시·양도시 2시점)
   if (input.transferYear === undefined || input.acquisitionYear === undefined) {
     throw new BuildingStdPriceError("양도: 취득연도·양도연도 필수");
