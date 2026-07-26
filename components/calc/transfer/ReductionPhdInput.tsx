@@ -22,10 +22,26 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { deriveYearFromEventDate } from "@/lib/calc/building-std-price-form";
 import {
   calcReductionAcquisitionStdPrice,
   canCalcReductionPhd,
 } from "@/lib/tax-engine/transfer-reductions";
+
+/** 국세청 신축가격기준액 고시 최초 연도 — 이전 연도는 위치지수 트랙(2001 공시지가)이 별도 필요. */
+const BUILDING_STD_FIRST_YEAR = 2001;
+
+/**
+ * 모달 land price prefill — §164⑤ 위치지수 트랙 게이팅.
+ * 이벤트연도 ≥2001에서만 해당 연도 ㎡당 공시지가를 주입(위치지수 오산 방지).
+ * ≤2000이면 undefined(모달에서 2001.1.1 공시지가 직접 입력).
+ */
+export function prefillAcqLandPrice(eventDate: string | undefined, landPricePerSqm: string | undefined): string | undefined {
+  if (!eventDate || !landPricePerSqm) return undefined;
+  const year = parseInt(deriveYearFromEventDate(eventDate) || "0", 10);
+  return year >= BUILDING_STD_FIRST_YEAR ? landPricePerSqm : undefined;
+}
 
 // ============================================================================
 // Props
@@ -55,6 +71,10 @@ export interface ReductionPhdInputProps {
   onCopyFromAsset?: () => void;
   /** 자산 카드에 PHD 데이터가 있는지 (버튼 활성 조건) */
   assetHasPhdData?: boolean;
+  /** 양도물건 지번 주소 — 건물 기준시가 계산 모달 소재지 prefill(Vworld 공시지가 조회) */
+  jibun?: string;
+  /** 건물 기준시가 모달 입력 스냅샷 복원 키 prefix(정정 지원) */
+  snapshotKeyPrefix?: string;
 }
 
 // ============================================================================
@@ -68,6 +88,8 @@ export function ReductionPhdInput({
   onApplyResult,
   onCopyFromAsset,
   assetHasPhdData,
+  jibun,
+  snapshotKeyPrefix,
 }: ReductionPhdInputProps) {
   // 자동 활성화 권장 — 취득일 < 최초공시일
   const autoRecommended = useMemo(() => {
@@ -176,6 +198,20 @@ export function ReductionPhdInput({
                 value={value.buildingStdAtAcq ?? ""}
                 onChange={(v) => onChange({ buildingStdAtAcq: v })}
               />
+              <div className="mt-1">
+                <BuildingStdPriceModalButton
+                  buttonLabel="건물 기준시가 계산"
+                  lockedTaxType="transfer"
+                  initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
+                  snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp-acq` : undefined}
+                  prefill={{
+                    landAreaM2: value.landAreaSqm || undefined,
+                    acquisitionDate,
+                    acqLandPricePerSqm: prefillAcqLandPrice(acquisitionDate, value.landPricePerSqmAtAcq),
+                  }}
+                  onApply={(sp) => onChange({ buildingStdAtAcq: String(sp) })}
+                />
+              </div>
               <p className="mt-1 text-micro text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
             </div>
 
@@ -186,6 +222,21 @@ export function ReductionPhdInput({
                 value={value.buildingStdAtFirst ?? ""}
                 onChange={(v) => onChange({ buildingStdAtFirst: v })}
               />
+              <div className="mt-1">
+                <BuildingStdPriceModalButton
+                  buttonLabel="건물 기준시가 계산"
+                  lockedTaxType="transfer"
+                  initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
+                  snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp-first` : undefined}
+                  prefill={{
+                    landAreaM2: value.landAreaSqm || undefined,
+                    // 최초공시시 시점 = 계산 이벤트 날짜(모달 취득시 칸 재사용 — 단일 시점 valuation).
+                    acquisitionDate: value.firstDisclosureDate,
+                    acqLandPricePerSqm: prefillAcqLandPrice(value.firstDisclosureDate, value.landPricePerSqmAtFirst),
+                  }}
+                  onApply={(sp) => onChange({ buildingStdAtFirst: String(sp) })}
+                />
+              </div>
               <p className="mt-1 text-micro text-muted-foreground">미입력 시 취득시와 동일 가정</p>
             </div>
           </div>
