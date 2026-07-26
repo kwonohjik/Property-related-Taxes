@@ -12,7 +12,8 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { PeriodRangeEditor } from "./PeriodRangeEditor";
+import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { CurrencyInputWithLookup } from "@/components/calc/shared/CurrencyInputWithLookup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -20,6 +21,7 @@ import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import { isPhrpStdPriceLinked } from "@/lib/calc/transfer-phrp-stdprice-link";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RentalUnitCard } from "./RentalUnitCard";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
 
@@ -41,10 +43,8 @@ interface RentalHousingExceptionSectionProps {
   acquisitionDate: string;
   /** 양도일 (B 시나리오 lookupYear 계산용 + 보유기간 검증) */
   transferDate: string;
-  /** 거주주택 거주기간(개월) — 자산-수준 residencePeriodMonthsAsset과 양방향 동기화 */
-  residencePeriodMonthsAsset?: string;
-  /** 거주기간(개월) 변경 콜백 — 자산 onChange로 residencePeriodMonthsAsset 업데이트 */
-  onChangeResidencePeriodMonths?: (val: string) => void;
+  /** 거주 정보(입력모드·구간·개월) patch 콜백 — 자산-수준 residence 필드 갱신(보유 상황과 자동 동기화) */
+  onChangeResidence?: (patch: Partial<AssetForm>) => void;
   onChange: (rh: AssetForm["rentalHousingException"]) => void;
 }
 
@@ -53,8 +53,7 @@ export function RentalHousingExceptionSection({
   asset,
   acquisitionDate,
   transferDate,
-  residencePeriodMonthsAsset,
-  onChangeResidencePeriodMonths,
+  onChangeResidence,
   onChange,
 }: RentalHousingExceptionSectionProps) {
   function set<K extends keyof AssetForm["rentalHousingException"]>(
@@ -205,13 +204,9 @@ export function RentalHousingExceptionSection({
                         {linkedTransfer > 0 ? linkedTransfer.toLocaleString() : "미입력"}
                       </p>
                     ) : null}
-                    <p className="mt-1">
-                      §161① 안분의 취득/양도 당시 기준시가는 환산취득가의 분자·분모와 동일한 값이므로 다시 입력하지
-                      않습니다. 수정은 위 취득가액 산정(환산) 영역에서 하세요.
-                      {linkedAcq <= 0 || linkedTransfer <= 0
-                        ? " 아직 미입력 항목이 있습니다 — 취득 정보에서 먼저 입력하세요."
-                        : ""}
-                    </p>
+                    {linkedAcq <= 0 || linkedTransfer <= 0 ? (
+                      <p className="mt-1">아직 미입력 항목이 있습니다 — 취득 정보에서 먼저 입력하세요.</p>
+                    ) : null}
                   </div>
                 );
               })()
@@ -266,11 +261,25 @@ export function RentalHousingExceptionSection({
                 return (
                   <div className="rounded bg-amber-100/60 border border-amber-200 p-2 text-xs text-amber-800">
                     <p className="font-semibold mb-1">과세 안분 비율 미리보기 (소득세법 시행령 제161조 제1항)</p>
-                    <p>
-                      (직전 양도 당시 기준시가 {pPrior.toLocaleString()} − 취득 당시 기준시가 {pAcq.toLocaleString()})
-                      {" "}÷{" "}
-                      (현 양도 당시 기준시가 {pTransfer.toLocaleString()} − 취득 당시 기준시가 {pAcq.toLocaleString()})
-                      {" "}={" "}<strong>{ratio161}%</strong>
+                    <p className="flex flex-wrap items-center gap-1">
+                      <Frac
+                        top={
+                          <>
+                            직전 양도 당시 기준시가 {pPrior.toLocaleString()} − 취득 당시 기준시가{" "}
+                            {pAcq.toLocaleString()}
+                          </>
+                        }
+                        bottom={
+                          <>
+                            현 양도 당시 기준시가 {pTransfer.toLocaleString()} − 취득 당시 기준시가{" "}
+                            {pAcq.toLocaleString()}
+                          </>
+                        }
+                      />
+                      <span>
+                        ={" "}
+                        <strong>{ratio161}%</strong>
+                      </span>
                     </p>
                     <p className="mt-1 text-amber-700">
                       이 비율만큼이 과세 대상이며, 나머지는 비과세입니다.
@@ -286,11 +295,8 @@ export function RentalHousingExceptionSection({
 
       {/* ③ 거주주택 요건 충족 상태 (실시간) + 적용 요건 안내 */}
       {(() => {
-        // 거주기간(개월) 파싱
-        const liveMonths = parseInt(
-          String(residencePeriodMonthsAsset ?? "").replace(/,/g, "") || "0",
-          10,
-        );
+        // 거주기간(개월) — interval/direct 도출값(엔진·validation과 동일 소스)
+        const liveMonths = deriveResidencePeriodMonths(asset, transferDate, "");
         // 보유기간(일) 계산 — 취득일 ~ 양도일
         let holdDays = 0;
         let holdYearsLabel = "-";
@@ -317,24 +323,38 @@ export function RentalHousingExceptionSection({
               <p className="text-xs font-semibold text-violet-700">거주주택 요건 충족 상태</p>
             </div>
 
-            {/* 거주기간 직접 입력 (자산-수준 residencePeriodMonthsAsset 양방향 동기화) */}
-            {onChangeResidencePeriodMonths && (
-              <FieldCard
-                label="거주주택 거주기간 (개월)"
-                hint="실제 거주한 기간을 개월 수로 입력하세요. 본 특례는 2년(24개월) 이상이 필요합니다."
-              >
-                <DecimalInput
-                  className="w-32"
-                  value={residencePeriodMonthsAsset ?? ""}
-                  onChange={(v) => onChangeResidencePeriodMonths(v)}
-                />
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {liveMonths > 0 && `(${Math.floor(liveMonths / 12)}년 ${liveMonths % 12}개월)`}
-                </span>
-                <p className="mt-1 text-caption text-muted-foreground">
-                  ※ 보유 상황 단계의 &quot;거주기간(개월)&quot; 필드와 동일한 값입니다. 어디서 입력해도 자동 동기화됩니다.
+            {/* 거주기간 입력 — 개월 직접 또는 입주·퇴거일 다중 구간 (자산-수준 residence 필드 양방향 동기화) */}
+            {onChangeResidence && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-violet-800">
+                  거주주택 거주기간 <span className="text-rose-500">*</span>
                 </p>
-              </FieldCard>
+                <PeriodRangeEditor
+                  tone="violet"
+                  startLabel="입주일"
+                  endLabel="퇴거일"
+                  endHint="양도일까지 거주한 경우 양도일을 퇴거일로 입력"
+                  rowLabel="거주 구간"
+                  totalLabel="합계 거주기간"
+                  testidPrefix="residence-period"
+                  periods={(asset.residencePeriods ?? []).map((p) => ({
+                    start: p.moveInDate,
+                    end: p.moveOutDate,
+                  }))}
+                  onChange={(patch) =>
+                    onChangeResidence({
+                      residenceInputMode: "interval",
+                      residencePeriods: patch.periods.map((p) => ({
+                        moveInDate: p.start,
+                        moveOutDate: p.end,
+                      })),
+                    })
+                  }
+                />
+                <p className="text-caption text-muted-foreground px-1">
+                  ※ 보유 상황 단계의 거주기간과 동일한 값입니다. 어디서 입력해도 자동 동기화됩니다.
+                </p>
+              </div>
             )}
 
             {/* 실시간 충족 표시 (소령 §155⑳ 거주주택 요건) */}

@@ -285,4 +285,37 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(page.getByTestId("rental-category-long_general-0")).toBeChecked();
     await expect(page.getByTestId("rental-verdict-badge-0")).not.toContainText("아목");
   });
+
+  test("실제 임대기간 — 토글 없이 상시 표시, 시작·종료일 입력 → 총 개월 자동계산(96개월)", async ({ page }) => {
+    await gotoRentalSection(page);
+
+    // 토글 없음 — 에디터가 항상 표시(가상 1행). 바로 첫 구간 입력: 2019-01-01 ~ 2027-01-01 = 96개월
+    await expect(page.getByTestId("rental-period-0-editor")).toBeVisible();
+    await fillDateAndVerify(page, { year: "2019", month: "01", day: "01" }, {
+      scope: page.getByTestId("rental-period-0-start-0"),
+    });
+    await fillDateAndVerify(page, { year: "2027", month: "01", day: "01" }, {
+      scope: page.getByTestId("rental-period-0-end-0"),
+    });
+
+    await expect(page.getByTestId("rental-period-0-total")).toContainText("96개월");
+    await expect(page.getByTestId("rental-period-0-total")).toContainText("8년");
+  });
+
+  test("거주기간 §155⑳ — 토글 없이 상시 표시, 입주·퇴거일 입력 → 총 개월 자동계산(36개월)", async ({ page }) => {
+    await gotoRentalSection(page);
+
+    // 토글 없음 — 에디터 상시 표시. 첫 거주 구간: 2019-01-01 ~ 2022-01-01 = 36개월
+    await expect(page.getByTestId("residence-period-editor")).toBeVisible();
+    await fillDateAndVerify(page, { year: "2019", month: "01", day: "01" }, {
+      scope: page.getByTestId("residence-period-start-0"),
+    });
+    await fillDateAndVerify(page, { year: "2022", month: "01", day: "01" }, {
+      scope: page.getByTestId("residence-period-end-0"),
+    });
+
+    await expect(page.getByTestId("residence-period-total")).toContainText("36개월");
+    // 거주주택 요건 충족 상태(2년 이상)도 도출값으로 충족 표시
+    await expect(page.getByText("현재 36개월", { exact: false })).toBeVisible();
+  });
 });

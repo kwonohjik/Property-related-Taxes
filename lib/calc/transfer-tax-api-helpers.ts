@@ -8,6 +8,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
+import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import {
   isExprValuationEligibleAssetKind,
   isAuctionEligibleAssetKind,
@@ -186,7 +187,7 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       firstSaleContractDate: u.firstSaleContractDate
         ? (u.firstSaleContractDate.includes('T') ? u.firstSaleContractDate : `${u.firstSaleContractDate}T00:00:00.000Z`)
         : undefined,
-      rentalMonths: parseFloat(u.rentalMonths) || 0,
+      rentalMonths: deriveRentalMonths(u),
       rentalAutoTermination: u.rentalAutoTermination,
       requirementsConfirmed: u.requirementsConfirmed,
     })),

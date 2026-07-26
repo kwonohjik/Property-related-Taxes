@@ -16,6 +16,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { PeriodRangeEditor } from "./PeriodRangeEditor";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
   deriveCategoryAvailability,
@@ -461,19 +462,28 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
         </FieldCard>
       )}
 
-      {/* 실제 임대 개월 수 */}
-      <FieldCard
-        label="실제 임대 기간"
-        required
-        hint={`의무임대기간 ${reqYears}년(${reqYears * 12}개월) 이상이어야 특례 적용`}
-        unit="개월"
-      >
-        <DecimalInput
-          value={unit.rentalMonths}
-          onChange={(v) => set("rentalMonths", v)}
-          placeholder="임대 개월 수"
+      {/* 실제 임대 기간 — direct(개월 직접) 또는 interval(시작~종료일 다중 구간, 비연속 허용) */}
+      <div className="space-y-1">
+        <p className="text-sm font-medium">
+          실제 임대 기간 <span className="text-rose-500">*</span>
+        </p>
+        <PeriodRangeEditor
+          tone="emerald"
+          startLabel="임대 시작일"
+          endLabel="임대 종료일"
+          endHint="계속 임대 중이면 양도일을 종료일로 입력"
+          rowLabel="임대 구간"
+          totalLabel="합계 임대기간"
+          testidPrefix={`rental-period-${index}`}
+          periods={unit.rentalPeriods ?? []}
+          onChange={(patch) =>
+            onChange({ ...unit, rentalInputMode: "interval", rentalPeriods: patch.periods })
+          }
         />
-      </FieldCard>
+        <p className="text-xs text-muted-foreground px-1">
+          의무임대기간 {reqYears}년({reqYears * 12}개월) 이상이어야 특례 적용
+        </p>
+      </div>
 
       {/* 기타 요건 자기확인 (나·라목은 5%룰 미검사 — 숨김: 엔진·validate 정합) */}
       {!isNa && !isLa && (
