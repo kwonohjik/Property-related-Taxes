@@ -147,6 +147,48 @@ describe("useTransferSummary (store 로직 검증)", () => {
       expect(computeSummary().totalNecessaryExpense).toBe(710_000_000);
     });
 
+    it("환산 모드: 취득가액도 환산취득가(양도가×취득기준시가/양도기준시가) 즉시 표시", () => {
+      useCalcWizardStore.setState((st) => ({
+        formData: {
+          ...st.formData,
+          assets: [
+            {
+              ...makeDefaultAsset(1),
+              useEstimatedAcquisition: true,
+              actualSalePrice: "800000000",
+              standardPriceAtAcq: "400000000",
+              standardPriceAtTransfer: "600000000",
+            },
+          ],
+        },
+      }));
+      // 800,000,000 × 400,000,000 / 600,000,000 = 533,333,333 (floor, safeMulThenDiv)
+      expect(computeSummary().totalAcqPrice).toBe(533_333_333);
+    });
+
+    it("환산 모드 result 도착 시 취득가액을 엔진 acquisitionPrice로 override", () => {
+      useCalcWizardStore.setState((st) => ({
+        formData: {
+          ...st.formData,
+          assets: [
+            {
+              ...makeDefaultAsset(1),
+              useEstimatedAcquisition: true,
+              actualSalePrice: "800000000",
+              standardPriceAtAcq: "400000000",
+              standardPriceAtTransfer: "600000000",
+            },
+          ],
+        },
+        // 환산 모드: estimatedBase = 환산취득가(개산공제 제외). expenses = 개산공제.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result: { mode: "single", result: { totalTax: 0, estimatedBase: 533_333_333, expenses: 12_000_000 } } as any,
+      }));
+      const s = computeSummary();
+      expect(s.totalAcqPrice).toBe(533_333_333);
+      expect(s.totalNecessaryExpense).toBe(12_000_000);
+    });
+
     it("실지취득 모드는 개산공제 미적용 — 기존 capex/양도비 회귀 불변", () => {
       useCalcWizardStore.setState((st) => ({
         formData: {

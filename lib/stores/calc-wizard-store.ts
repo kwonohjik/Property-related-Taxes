@@ -6,6 +6,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
+import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
 import { migrateLegacyForm, migrateGracePeriod } from "./calc-wizard-migration";
 import {
   makeDefaultAsset,
@@ -454,7 +455,15 @@ export function computeTransferSummary(
   const totalAcqPrice = formData.assets.reduce((acc, a) => {
     const raw = a.isSalesCaseAcquisition
       ? parseRaw(a.similarSalesValue)
-      : parseRaw(a.fixedAcquisitionPrice);
+      : a.useEstimatedAcquisition
+        ? // 환산취득가 = 양도가액 × (취득기준시가 ÷ 양도기준시가) — 엔진 단일소스(BigInt 가드).
+          // std 2값 + 양도가 입력되면 result 이전에도 즉시 산출.
+          calculateEstimatedAcquisitionPrice(
+            parseRaw(a.actualSalePrice),
+            parseRaw(a.standardPriceAtAcq),
+            parseRaw(a.standardPriceAtTransfer),
+          )
+        : parseRaw(a.fixedAcquisitionPrice);
     const n = parseFloat(a.ownershipNumerator || "100");
     const d = parseFloat(a.ownershipDenominator || "100");
     const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
@@ -604,11 +613,18 @@ export function computeTransferSummary(
     result?.mode === "single" ? (result.result.expenses ?? 0) : null;
   const finalNecessaryExpense = resultNecessaryExpense ?? totalNecessaryExpense;
 
+  // 취득가액도 단건 result 도착 시 엔진 확정값으로 override. estimatedBase = 환산취득가 base(개산공제 제외,
+  // 환산/감정/매매사례 모드에서만 설정) — 실지취득 모드는 undefined라 입력 기반 totalAcqPrice 유지.
+  const finalAcqPrice =
+    result?.mode === "single" && result.result.estimatedBase != null
+      ? result.result.estimatedBase
+      : totalAcqPrice;
+
   return {
     totalSalePrice,
-    totalAcqPrice,
+    totalAcqPrice: finalAcqPrice,
     totalNecessaryExpense: finalNecessaryExpense,
-    netTransferIncome: totalSalePrice - totalAcqPrice - finalNecessaryExpense,
+    netTransferIncome: totalSalePrice - finalAcqPrice - finalNecessaryExpense,
     estimatedTax,
     mixedUse,
     burdenedGift,
