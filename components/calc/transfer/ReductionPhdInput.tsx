@@ -206,15 +206,19 @@ export function ReductionPhdInput({
               <div className="mt-1">
                 <BuildingStdPriceModalButton
                   buttonLabel="건물 기준시가 계산"
-                  singleTimePoint={{ label: "취득 시점" }}
+                  transferSectionLabel="최초고시 시점"
                   initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
-                  snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp-acq` : undefined}
+                  snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp` : undefined}
                   prefill={{
                     landAreaM2: value.landAreaSqm || undefined,
                     acquisitionDate,
+                    transferDate: value.firstDisclosureDate,
                     acqLandPricePerSqm: prefillAcqLandPrice(acquisitionDate, value.landPricePerSqmAtAcq),
+                    transferLandPricePerSqm: value.landPricePerSqmAtFirst || undefined,
                   }}
-                  onApply={(sp) => onChange({ buildingStdAtAcq: String(sp) })}
+                  onApplyBoth={(acq, first) =>
+                    onChange({ buildingStdAtAcq: String(acq), buildingStdAtFirst: String(first) })
+                  }
                 />
               </div>
               <p className="mt-1 text-micro text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
@@ -230,16 +234,20 @@ export function ReductionPhdInput({
               <div className="mt-1">
                 <BuildingStdPriceModalButton
                   buttonLabel="건물 기준시가 계산"
-                  singleTimePoint={{ label: "최초고시 시점" }}
+                  transferSectionLabel="최초고시 시점"
                   initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
-                  snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp-first` : undefined}
+                  snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp` : undefined}
                   prefill={{
                     landAreaM2: value.landAreaSqm || undefined,
-                    // 최초고시 시점 연도로 단일시점 계산(모달 취득 칸을 최초고시 시점으로 재사용).
-                    acquisitionDate: value.firstDisclosureDate,
-                    acqLandPricePerSqm: prefillAcqLandPrice(value.firstDisclosureDate, value.landPricePerSqmAtFirst),
+                    // 두 버튼 동일 — 취득시 + 최초고시시 2시점을 함께 계산·적용.
+                    acquisitionDate,
+                    transferDate: value.firstDisclosureDate,
+                    acqLandPricePerSqm: prefillAcqLandPrice(acquisitionDate, value.landPricePerSqmAtAcq),
+                    transferLandPricePerSqm: value.landPricePerSqmAtFirst || undefined,
                   }}
-                  onApply={(sp) => onChange({ buildingStdAtFirst: String(sp) })}
+                  onApplyBoth={(acq, first) =>
+                    onChange({ buildingStdAtAcq: String(acq), buildingStdAtFirst: String(first) })
+                  }
                 />
               </div>
               <p className="mt-1 text-micro text-muted-foreground">미입력 시 취득시와 동일 가정</p>

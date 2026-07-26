@@ -2,7 +2,9 @@
 
 **작성일**: 2026-07-26
 **세목**: 양도소득세 (§99의3 PHD §164⑤ — 건물 기준시가 계산기 재사용 맥락)
-> ✅ **구현 완료 (2026-07-26)**: 엔진 `acquisitionOnly` 분기(취득 블록 재사용·≥2001·≤2000 acqBase 대칭) + 폼 `singleTimePoint` 모드(양도 시점·복합·공동주택 환산·taxType 라디오 숨김 + 라벨 override) + ReductionPhdInput 두 버튼 배선("취득 시점"/"최초고시 시점"). anchor 8건(엔진 3 + 폼 3 + UI 2) + 건물기준시가 회귀 259건 통과, tsc 0.
+> ✅ **구현 완료 (2026-07-26)** → **⚠️ 후속 전환(사용자 재요청)**: 단일시점(`singleTimePoint`/`acquisitionOnly`) 대신 **취득시 + 최초고시시 2시점 동시 계산·적용**으로 변경. 두 버튼 중 아무거나 눌러도 기존 transfer 2시점 엔진 재사용(취득+양도) + "양도 시점"→**"최초고시 시점"** 라벨(`transferSectionLabel`) + `onApplyBoth`로 두 필드 동시 채움. `singleTimePoint`/`acquisitionOnly` 인프라는 불용이 되어 제거. 상세: `phd-building-std-modal-dual-timepoint`(본 문서 후속 섹션).
+
+> 🔁 **후속 전환 내역**: 엔진 acquisitionOnly 제거(2시점 재사용) · 폼 `singleTimePoint`→`transferSectionLabel`(둘째 시점 라벨 override + 복합/공동주택 토글 숨김, 2시점 유지) · 모달 `onApplyBoth` "취득·최초고시 모두 적용" · ReductionPhdInput 두 버튼 동일 dual-point 설정(prefill 취득/최초고시 dates·land price). anchor: 폼 2시점 회귀 + UI 라벨 override. 건물기준시가 회귀 257건 통과, tsc 0.
 
 **증상**: §99의3 PHD 섹션의 "건물 기준시가 계산" 버튼으로 계산기를 열면 **취득 시점 + 양도 시점 2시점 폼**이 뜬다. PHD 맥락에선 각 버튼이 **단일 시점**(취득시 / 최초고시시)을 계산하므로 **양도 시점 섹션은 불필요·혼란**. 최초공시시 버튼은 "취득 시점" 칸이 실제로는 최초고시 시점이라 라벨도 어긋난다.
 

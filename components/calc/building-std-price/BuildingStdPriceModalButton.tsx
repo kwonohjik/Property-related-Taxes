@@ -66,10 +66,10 @@ interface Props {
     transferLandPricePerSqm?: string;
   };
   /**
-   * 단일시점 모드 — 취득 시점 하나만 계산(양도 시점·복합·공동주택 환산 숨김).
-   * PHD 감면 건물 기준시가 전용. `label`로 시점 섹션 제목 override("취득 시점"/"최초고시 시점").
+   * 둘째 시점 라벨 override(기본 "양도 시점"). PHD 감면처럼 "취득시 + 최초고시시" 2시점을
+   * 한 번에 계산할 때 "최초고시 시점"으로 표시(복합·공동주택 환산 토글 숨김). onApplyBoth와 함께 사용.
    */
-  singleTimePoint?: { label: string };
+  transferSectionLabel?: string;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -83,7 +83,7 @@ export function BuildingStdPriceModalButton({
   initialAddress,
   snapshotKey,
   prefill,
-  singleTimePoint,
+  transferSectionLabel,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
@@ -171,7 +171,7 @@ export function BuildingStdPriceModalButton({
 
           <BuildingStdPriceForm
             lockedTaxType={lockedTaxType}
-            singleTimePoint={singleTimePoint}
+            transferSectionLabel={transferSectionLabel}
             initialAddress={initialAddress}
             initialForm={{ ...restoredForm, ...prefillForm }}
             onResult={(r, fa, err, _report, landTotal, snapshot) => {
@@ -204,7 +204,7 @@ export function BuildingStdPriceModalButton({
                     size="sm"
                     onClick={() => applyBoth(result.acquisition!.standardPrice, result.transfer!.standardPrice)}
                   >
-                    취득·양도 모두 적용 (취득 {fmt(result.acquisition!.standardPrice)} / 양도 {fmt(result.transfer!.standardPrice)})
+                    취득·{transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도"} 모두 적용 (취득 {fmt(result.acquisition!.standardPrice)} / {transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도"} {fmt(result.transfer!.standardPrice)})
                   </Button>
                 )}
                 {result.acquisition && !bothMode && applyTimePoint !== "transfer" && (

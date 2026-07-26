@@ -44,20 +44,19 @@ describe("BuildingStdPriceForm — 세목 고정 + 소재지 prefill", () => {
     expect(screen.getByText("상속·증여(1시점)")).toBeTruthy();
   });
 
-  it("singleTimePoint(PHD) 시 양도 시점 숨김 + 시점 섹션 라벨 override", () => {
+  it("transferSectionLabel(PHD) 시 둘째 시점 섹션 라벨 override + 취득 시점 유지", () => {
     render(
       <BuildingStdPriceForm
-        singleTimePoint={{ label: "최초고시 시점" }}
+        lockedTaxType="transfer"
+        transferSectionLabel="최초고시 시점"
         onResult={() => {}}
       />,
     );
-    // 양도 시점 섹션 미렌더
-    expect(screen.queryByTestId("bsp-section-transfer")).toBeNull();
-    expect(screen.queryByText("양도 시점")).toBeNull();
-    // 세목 라디오 숨김 + 시점 섹션 라벨 = "최초고시 시점"
-    expect(screen.queryByText("양도(취득·양도 2시점)")).toBeNull();
+    // 취득 시점 + 둘째 시점(최초고시 시점) 2시점 모두 렌더 — "양도 시점" 라벨은 대체
+    expect(screen.getByText("취득 시점")).toBeTruthy();
     expect(screen.getByText("최초고시 시점")).toBeTruthy();
-    // 공동주택 환산 토글도 숨김
+    expect(screen.queryByText("양도 시점")).toBeNull();
+    // 공동주택 환산 토글은 PHD 맥락에서 숨김
     expect(screen.queryByText("공동주택 고시 전 취득 (취득당시 기준시가 환산)")).toBeNull();
   });
 });
