@@ -22,6 +22,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { deriveYearFromEventDate } from "@/lib/calc/building-std-price-form";
 import {
@@ -171,24 +172,28 @@ export function ReductionPhdInput({
 
             <div></div> {/* 그리드 정렬용 빈 칸 */}
 
-            <div>
-              <label className="mb-1 block text-xs font-medium">취득시 토지 공시지가 (원/㎡)</label>
-              <CurrencyInput
-                label=""
-                value={value.landPricePerSqmAtAcq ?? ""}
-                onChange={(v) => onChange({ landPricePerSqmAtAcq: v })}
+            <div className="sm:col-span-2">
+              <LandPriceLookupField
+                label="취득시 토지 공시지가 (원/㎡)"
+                hint="취득연도 개별공시지가"
+                hideLandStdPrice
+                pricePerSqm={value.landPricePerSqmAtAcq ?? ""}
+                onPricePerSqmChange={(v) => onChange({ landPricePerSqmAtAcq: v })}
+                jibun={jibun}
+                referenceDate={acquisitionDate}
               />
-              <p className="mt-1 text-micro text-muted-foreground">취득연도 개별공시지가</p>
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium">최초공시시 토지 공시지가 (원/㎡)</label>
-              <CurrencyInput
-                label=""
-                value={value.landPricePerSqmAtFirst ?? ""}
-                onChange={(v) => onChange({ landPricePerSqmAtFirst: v })}
+            <div className="sm:col-span-2">
+              <LandPriceLookupField
+                label="최초공시시 토지 공시지가 (원/㎡)"
+                hint="최초공시연도 개별공시지가"
+                hideLandStdPrice
+                pricePerSqm={value.landPricePerSqmAtFirst ?? ""}
+                onPricePerSqmChange={(v) => onChange({ landPricePerSqmAtFirst: v })}
+                jibun={jibun}
+                referenceDate={value.firstDisclosureDate}
               />
-              <p className="mt-1 text-micro text-muted-foreground">최초공시연도 개별공시지가</p>
             </div>
 
             <div>
