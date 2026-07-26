@@ -42,6 +42,36 @@ import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start"; // 로컬 사용(buildExemptEarlyResult) — 421행 re-export와 별개
 import type { AmendmentDetail } from "./types/transfer-amendment.types";
 
+/**
+ * §99의3 2-pass 후 formulaSteps의 농특세 관련 두 step(preliminary 세액 0)을 확정값으로 교체.
+ * computeNew993는 preliminary 호출 시 calculatedTaxBefore/After=0으로 push → finalize에서 실값 반영.
+ */
+function patchNew993SurtaxSteps(
+  steps: New993Result["formulaSteps"],
+  taxBefore: number,
+  taxAfter: number,
+  reduction: number,
+  ruralSurtax: number,
+): New993Result["formulaSteps"] {
+  return steps.map((s) => {
+    if (s.label === "양도세 감면세액 (농특세 기준)") {
+      return {
+        ...s,
+        value: reduction,
+        formula: `감면 전 산출세액 ${taxBefore.toLocaleString()} − 감면 후 산출세액 ${taxAfter.toLocaleString()} = ${reduction.toLocaleString()}`,
+      };
+    }
+    if (s.label === "농어촌특별세 (20%)") {
+      return {
+        ...s,
+        value: ruralSurtax,
+        formula: `감면세액 ${reduction.toLocaleString()} × 20% = ${ruralSurtax.toLocaleString()}`,
+      };
+    }
+    return s;
+  });
+}
+
 export interface FinalizeArgs {
   input: TransferTaxInput;
   effectiveInput: TransferTaxInput;
@@ -173,7 +203,19 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
     ruralSurtax993 = isExempt ? 0 : applyRate(taxReduction993, 0.2);
     const surtaxFields = { taxReductionForRuralSurtax: taxReduction993, ruralSurtax: ruralSurtax993 };
-    if (activePrelim === new993PreliminaryResult) new993FinalResult = { ...new993PreliminaryResult!, ...surtaxFields };
+    if (activePrelim === new993PreliminaryResult)
+      new993FinalResult = {
+        ...new993PreliminaryResult!,
+        ...surtaxFields,
+        // preliminary formulaSteps의 농특세 관련 두 step은 세액 0(2-pass 前) → 확정값으로 교체.
+        formulaSteps: patchNew993SurtaxSteps(
+          new993PreliminaryResult!.formulaSteps,
+          taxResultBefore993.calculatedTax,
+          taxResult.calculatedTax,
+          taxReduction993,
+          ruralSurtax993,
+        ),
+      };
     else if (activePrelim === new99PreliminaryResult) new99FinalResult = { ...new99PreliminaryResult!, ...surtaxFields };
     else if (activePrelim === unsold987PreliminaryResult) unsold987FinalResult = { ...unsold987PreliminaryResult!, ...surtaxFields };
     else if (activePrelim === unsold992PreliminaryResult) unsold992FinalResult = { ...unsold992PreliminaryResult!, ...surtaxFields };
