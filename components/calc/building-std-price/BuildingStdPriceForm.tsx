@@ -64,10 +64,10 @@ interface Props {
   /** 직전 계산 입력 스냅샷 복원(정정) — 지정 시 initialAddress보다 우선. 미지정 시 빈 폼. */
   initialForm?: Partial<BuildingStdPriceFormState>;
   /**
-   * 단일시점 모드 — 취득 시점 하나만으로 건물기준시가 산출(양도 시점·복합·공동주택 환산 숨김).
-   * PHD 감면 건물 기준시가 계산 전용. `label`로 시점 섹션 제목 override("취득 시점"/"최초고시 시점").
+   * 둘째 시점 섹션 라벨 override(기본 "양도 시점"). PHD 감면 건물 기준시가처럼 "취득시 + 최초고시시"
+   * 2시점을 한 번에 계산할 때 "최초고시 시점"으로 표시. 지정 시 복합·공동주택 환산 토글 숨김.
    */
-  singleTimePoint?: { label: string };
+  transferSectionLabel?: string;
 }
 
 /** 연도 Select — 명시 라벨(SelectValue 단독 금지) */
@@ -137,12 +137,10 @@ function SectionCard({
   );
 }
 
-export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm, singleTimePoint }: Props) {
+export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm, transferSectionLabel }: Props) {
   const [f, setF] = useState<BuildingStdPriceFormState>(() => {
     const base: BuildingStdPriceFormState = {
       ...initialBuildingStdPriceForm,
-      // 단일시점 모드 — 취득 블록만 사용(taxType transfer 고정 + acquisitionOnly 산출).
-      ...(singleTimePoint ? { taxType: "transfer" as const, singleTimePoint: true } : {}),
       ...(lockedTaxType ? { taxType: lockedTaxType } : {}),
       ...(initialAddress
         ? {
@@ -252,8 +250,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       valUsageNo: "",
     }));
 
-  const single = f.singleTimePoint; // 단일시점(PHD) — 양도 시점·복합·공동주택 환산 숨김
-  const sameYear = !single && f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
+  const phd = !!transferSectionLabel; // PHD 2시점(취득·최초고시) — 복합·공동주택 환산 토글 숨김
+  const sameYear = f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
   const valYear = f.valuationYear ? parseInt(f.valuationYear, 10) : undefined;
   // 조정률 모달용 구조지수 — 평가시점 구조 선택값에서 도출(I 지붕재료는 구조지수 100 미만만 활성). 미선택 = 0
   const valStructureIndex = useMemo(() => {
@@ -294,8 +292,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
 
   return (
     <div className="space-y-3">
-      {/* 세목 — 고정(lockedTaxType) 또는 단일시점(PHD) 시 라디오 숨김(오선택 방지) */}
-      {!lockedTaxType && !single && (
+      {/* 세목 — 호출 세목이 고정된 경우(lockedTaxType) 라디오 숨김(오선택 방지) */}
+      {!lockedTaxType && (
         <RadioCardGroup
           name="taxType"
           tone="sky"
@@ -415,7 +413,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       {/* 양도 분기 */}
       {f.taxType === "transfer" && (
         <>
-          <SectionCard num={2} title={single ? singleTimePoint!.label : "취득 시점"} tone="amber" testId="bsp-section-acq">
+          <SectionCard num={2} title="취득 시점" tone="amber" testId="bsp-section-acq">
             <div className="grid grid-cols-2 gap-2">
               <FieldCard label="취득연도" stacked>
                 <YearSelect
@@ -473,8 +471,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               ))}
           </SectionCard>
 
-          {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별). 단일시점 미지원 → 숨김 */}
-          {!isMech && !apartmentConv && !single && (
+          {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별). PHD 2시점 미지원 → 숨김 */}
+          {!isMech && !apartmentConv && !phd && (
             <ToggleCard
               checked={f.compositeMode}
               onCheckedChange={(v) => set("compositeMode", v)}
@@ -496,8 +494,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             </ToggleCard>
           )}
 
-          {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체. 단일시점 미지원 → 숨김 */}
-          {!isMech && !composite && !single && (
+          {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체. PHD 2시점 맥락 미사용 → 숨김 */}
+          {!isMech && !composite && !phd && (
             <ToggleCard
               checked={f.apartmentConversionMode}
               onCheckedChange={(v) => set("apartmentConversionMode", v)}
@@ -515,9 +513,9 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             </ToggleCard>
           )}
 
-          {!apartmentConv && !single && (
+          {!apartmentConv && (
           <>
-          <SectionCard num={3} title="양도 시점" tone="emerald" testId="bsp-section-transfer">
+          <SectionCard num={3} title={transferSectionLabel ?? "양도 시점"} tone="emerald" testId="bsp-section-transfer">
             <div className="grid grid-cols-2 gap-2">
               <FieldCard label="양도연도" stacked>
                 <YearSelect
