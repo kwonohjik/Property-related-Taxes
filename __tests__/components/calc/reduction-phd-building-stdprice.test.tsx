@@ -5,11 +5,14 @@
  * - PHD ON 시 취득시·최초공시시 건물 기준시가에 "건물 기준시가 계산" 버튼 노출.
  * - prefillAcqLandPrice: §164⑤ 위치지수 트랙 게이팅(≤2000 미주입).
  */
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { ReductionPhdInput, prefillAcqLandPrice } from "@/components/calc/transfer/ReductionPhdInput";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("prefillAcqLandPrice — §164⑤ 위치지수 트랙 게이팅", () => {
   it("이벤트연도 ≥2001 → 해당 연도 ㎡당 공시지가 주입", () => {
@@ -50,5 +53,42 @@ describe("ReductionPhdInput — 건물 기준시가 계산 버튼", () => {
       />,
     );
     expect(screen.queryByRole("button", { name: /건물 기준시가 계산/ })).toBeNull();
+  });
+});
+
+describe("ReductionPhdInput — 토지 공시지가 Vworld 자동조회", () => {
+  it("취득시 토지 공시지가 조회 → landPricePerSqmAtAcq(원/㎡) 채움", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ price: 1_500_000, priceType: "land_price" }),
+    }) as unknown as typeof fetch;
+    const onChange = vi.fn();
+
+    render(
+      <ReductionPhdInput
+        acquisitionDate="2005-06-01"
+        jibun="경기도 수원시 영통구 영통동 957-6"
+        value={{ phdMode: true, firstDisclosureDate: "2007-01-01" }}
+        onChange={onChange}
+      />,
+    );
+
+    // 취득시·최초공시시 두 토지 필드 각 "공시지가 조회" 버튼
+    const lookupBtns = screen.getAllByRole("button", { name: /공시지가 조회/ });
+    expect(lookupBtns.length).toBe(2);
+    fireEvent.click(lookupBtns[0]); // 취득시
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith({ landPricePerSqmAtAcq: "1500000" }));
+  });
+
+  it("지번 미입력 시 토지 공시지가 조회 버튼 비활성", () => {
+    render(
+      <ReductionPhdInput
+        acquisitionDate="2005-06-01"
+        value={{ phdMode: true, firstDisclosureDate: "2007-01-01" }}
+        onChange={vi.fn()}
+      />,
+    );
+    const lookupBtns = screen.getAllByRole("button", { name: /공시지가 조회/ });
+    lookupBtns.forEach((b) => expect(b).toBeDisabled());
   });
 });
