@@ -18,6 +18,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
+  deriveCategoryAvailability,
   deriveEffectiveRegDate,
   deriveRentalArticle,
   deriveRequiredYears,
@@ -64,6 +65,27 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
     () => deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, effRegDate),
     [unit.rentalCategory, unit.rentalAcquisitionType, effRegDate],
   );
+
+  // 임대 구분 등록시기별 활성 판정 (표시 전용 — store 미러링 금지)
+  const categoryAvail = useMemo(
+    () =>
+      deriveCategoryAvailability(
+        unit.businessRegistrationDate ? new Date(unit.businessRegistrationDate) : null,
+        unit.rentalRegistrationDate ? new Date(unit.rentalRegistrationDate) : null,
+      ),
+    [unit.businessRegistrationDate, unit.rentalRegistrationDate],
+  );
+
+  // 등록일 변경 시 무효화된 현재 선택만 유효 유형(long_general)으로 auto-reset (onChange 이벤트 구동 — useEffect 아님)
+  function setRegDate(key: "businessRegistrationDate" | "rentalRegistrationDate", v: string) {
+    const next = { ...unit, [key]: v };
+    const avail = deriveCategoryAvailability(
+      next.businessRegistrationDate ? new Date(next.businessRegistrationDate) : null,
+      next.rentalRegistrationDate ? new Date(next.rentalRegistrationDate) : null,
+    );
+    if (!avail[next.rentalCategory].available) next.rentalCategory = "long_general";
+    onChange(next);
+  }
   const reqYears = deriveRequiredYears(article, effRegDate);
   const cap = deriveStdPriceCap(article, unit.region, effRegDate);
   const aptRestricted = isApartmentRestricted(article, effRegDate, unit.isApartment);
@@ -116,27 +138,24 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
         )}
       </div>
 
-      {/* 세무서 사업자등록일 (§168) */}
-      <FieldCard label="세무서 사업자등록일" required hint="소득세법 §168 사업자등록일">
-        <DateInput
-          data-testid={`rental-biz-reg-date-${index}`}
-          value={unit.businessRegistrationDate}
-          onChange={(v) => set("businessRegistrationDate", v)}
-        />
-      </FieldCard>
+      {/* 세무서 사업자등록일 (§168) · 지자체 임대사업자등록신청일 (민특법 §5) — 같은 행 */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <FieldCard label="세무서 사업자등록일" required>
+          <DateInput
+            data-testid={`rental-biz-reg-date-${index}`}
+            value={unit.businessRegistrationDate}
+            onChange={(v) => setRegDate("businessRegistrationDate", v)}
+          />
+        </FieldCard>
 
-      {/* 지자체 임대사업자등록신청일 (민특법 §5) */}
-      <FieldCard
-        label="지자체 임대사업자등록신청일"
-        required
-        hint="민간임대주택법 §5 · 둘 중 늦은 날이 의무임대기간·요건 판정 기준"
-      >
-        <DateInput
-          data-testid={`rental-reg-date-${index}`}
-          value={unit.rentalRegistrationDate}
-          onChange={(v) => set("rentalRegistrationDate", v)}
-        />
-      </FieldCard>
+        <FieldCard label="지자체 임대사업자등록신청일" required>
+          <DateInput
+            data-testid={`rental-reg-date-${index}`}
+            value={unit.rentalRegistrationDate}
+            onChange={(v) => setRegDate("rentalRegistrationDate", v)}
+          />
+        </FieldCard>
+      </div>
 
       {/* 취득 방법 (나·라목은 매입임대 전용 — 숨김) */}
       {isLockedPurchase ? (
@@ -159,7 +178,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
         </FieldCard>
       )}
 
-      {/* 임대 구분 */}
+      {/* 임대 구분 — 등록시기로 배제되는 유형은 disabled(단, 현재 선택은 제외: mount-limbo 방지) */}
       <FieldCard label="임대 구분" required>
         <RadioCardGroup
           name={`rental-category-${index}`}
@@ -171,7 +190,13 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
             { value: "existing_business", label: "기존사업자(나목)" },
             { value: "unsold_08_09", label: "미분양(라목)" },
             { value: "pre_2018", label: "구 임대주택법" },
-          ]}
+          ].map((o) => ({
+            ...o,
+            testId: `rental-category-${o.value}-${index}`,
+            disabled:
+              !categoryAvail[o.value as typeof unit.rentalCategory].available &&
+              o.value !== unit.rentalCategory,
+          }))}
           value={unit.rentalCategory}
           onChange={(v) => {
             const cat = v as typeof unit.rentalCategory;
@@ -183,6 +208,17 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
             }
           }}
         />
+        {Object.values(categoryAvail).some((a) => !a.available) && (
+          <div className="px-1 pt-1 space-y-0.5">
+            {Object.values(categoryAvail)
+              .filter((a) => !a.available)
+              .map((a, k) => (
+                <p key={k} className="text-caption text-muted-foreground">
+                  ※ {a.reason}
+                </p>
+              ))}
+          </div>
+        )}
       </FieldCard>
 
       {/* 판정 기준 배지 (실시간 파생) */}
