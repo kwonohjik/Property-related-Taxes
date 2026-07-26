@@ -40,6 +40,7 @@ import {
   buildPenaltyFormula,
   setAggregateProcedureItems,
   buildSurtaxAndLocalTaxItems,
+  buildNew993ReducibleFormula,
   prorationFormulaAsFrac,
 } from "./DetailedStatementFormulaBuilders";
 import { applyRedevelopmentOverrides } from "./DetailedStatementRedevelopmentBuilders";
@@ -608,7 +609,9 @@ export function buildStatementItems(
     label: "소득금액 감면대상",
     value: isAggregate ? 0 : (result.new993Detail?.reducibleTransferIncome ?? 0),
     formula:
-      "§99의3 5년 안분 감면대상 양도소득금액 (§90② 소득금액차감방식) = 양도소득금액 × (5년시점 − 취득시 공시가격) / (양도시 − 취득시 공시가격)",
+      !isAggregate && result.new993Detail
+        ? buildNew993ReducibleFormula(result.new993Detail, singleIncome)
+        : "§99의3 5년 안분 감면대상 양도소득금액 (§90② 소득금액차감방식) = 양도소득금액 × (5년시점 − 취득시 공시가격) ÷ (양도시 − 취득시 공시가격)",
     legalBasis: "조세특례제한법 §99의3 · 소득세법 §90②",
     note: "신축주택 감면 — 소득금액에서 직접 차감(세액감면방식 아님)",
   });

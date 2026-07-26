@@ -10,7 +10,9 @@
  * 이미지 실측값(§99의3 케이스): 양도소득금액 415,118,683 / 소득금액 감면대상 179,917,278
  *   → 감면후 소득금액 235,201,405, 세액감면대상금액 0(§90② ≠ §90①).
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { createElement, Fragment } from "react";
+import { render, cleanup } from "@testing-library/react";
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -64,11 +66,27 @@ function makeForm(asset: AssetForm): TransferFormData {
 const build = (r: TransferTaxResult) =>
   buildStatementItems(r, makeForm(makeAsset()), makeAsset(), undefined, undefined);
 
+afterEach(cleanup);
+
+const ACQ = 200_000_000;
+const Y5 = 400_000_000;
+const TR = 660_000_000;
+
+function make993Detail(over: Record<string, unknown> = {}): TransferTaxResult["new993Detail"] {
+  return {
+    reducibleTransferIncome: REDUCIBLE,
+    isWithin5Years: false,
+    transferIncomeApplied: SINGLE_INCOME,
+    standardPriceAtAcquisition: ACQ,
+    standardPriceAt5Years: Y5,
+    standardPriceAtTransfer: TR,
+    ...over,
+  } as TransferTaxResult["new993Detail"];
+}
+
 describe("상세 명세서 — §99의3 소득금액차감 반영", () => {
   it("§99의3 적용: 소득금액 감면대상 = reducible, 감면후 소득금액 = 양도소득금액 − reducible, 세액감면대상금액 = 0", () => {
-    const r = makeResult({
-      new993Detail: { reducibleTransferIncome: REDUCIBLE } as TransferTaxResult["new993Detail"],
-    });
+    const r = makeResult({ new993Detail: make993Detail() });
     const items = build(r);
 
     // 소득금액 감면대상 = §99의3 감면대상 양도소득금액 (신설 행)
@@ -79,6 +97,22 @@ describe("상세 명세서 — §99의3 소득금액차감 반영", () => {
     expect(items.get("reductionTargetIncome")!.value).toBe(0);
     // 과세표준 정합: 감면후 소득금액 − 기본공제 = result.taxBase
     expect((items.get("incomeAmountAfter")!.value as number) - r.basicDeduction).toBe(r.taxBase);
+  });
+
+  it("소득금액 감면대상 산식: 실제 변수값 인라인 + 분수(Frac) 표기 (라벨만 아님)", () => {
+    const items = build(makeResult({ new993Detail: make993Detail() }));
+    const formula = items.get("reductionTargetIncome2")!.formula;
+    const { container } = render(createElement(Fragment, null, formula));
+    const text = container.textContent ?? "";
+    // 실제 변수값 노출
+    expect(text).toContain("415,118,683"); // 양도소득금액
+    expect(text).toContain("200,000,000"); // 취득시 기준시가
+    expect(text).toContain("400,000,000"); // 5년시점 기준시가
+    expect(text).toContain("660,000,000"); // 양도시 기준시가
+    expect(text).toContain("179,917,278"); // 감면대상 결과
+    // 분수(Frac) 렌더 — 분자/분모 실계산값
+    expect(text).toContain("200,000,000"); // 분자 (400,000,000 − 200,000,000 = 200,000,000)
+    expect(text).toContain("460,000,000"); // 분모 (660,000,000 − 200,000,000 = 460,000,000)
   });
 
   it("§99의3 미적용(new993Detail undefined): 소득금액 감면대상 0, 감면후 소득금액 = 양도소득금액(무영향)", () => {
