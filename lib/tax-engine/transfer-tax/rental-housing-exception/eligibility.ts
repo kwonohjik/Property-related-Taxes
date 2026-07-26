@@ -18,7 +18,7 @@
  */
 
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
-import { rentalStdPriceCap, rentalRequiredYears } from "../../rental-article/rules";
+import { rentalStdPriceCap, rentalRequiredYears, RA_CUT } from "../../rental-article/rules";
 import {
   checkRentalArticle,
   isConstructionArticle,
@@ -58,6 +58,50 @@ export function deriveEffectiveRegDate(
   const rTs = unit.rentalRegistrationDate?.getTime?.();
   if (bTs == null || rTs == null || Number.isNaN(bTs) || Number.isNaN(rTs)) return null;
   return new Date(Math.max(bTs, rTs));
+}
+
+/** 임대 구분(rentalCategory)별 등록시기 활성 판정 결과 (UI disabled·사유 표시용). */
+export type CategoryAvailability = { available: boolean; reason?: string };
+
+/**
+ * 등록일 2필드로 **결정적으로 배제**되는 임대 구분 유형을 disabled 처리하기 위한 판정.
+ * 배제 기준은 `rental-article/check.ts` checkArticleGates의 REG_DATE_GATE와 1:1(단일 소스, RA_CUT 재사용).
+ *   - existing_business(나): 세무서 등록일 > 2003.10.29 이면 배제 (bizRegDateMax, check.ts:189)
+ *   - short_6y(아·자): 등록기준일 max < 2025.6.4 이면 배제 (regDateMin, check.ts:186)
+ * long_general·unsold_08_09(라)·pre_2018(구법)은 등록일 단독 배제 게이트가 없어 항상 활성.
+ * 판정 불가(날짜 미입력)면 available=true — 조기 차단 금지(엔진 `?? 0` fail보다 관대·불리 미적용).
+ */
+export function deriveCategoryAvailability(
+  businessRegistrationDate: Date | null,
+  rentalRegistrationDate: Date | null,
+): Record<RentalCategory, CategoryAvailability> {
+  const bizTs = businessRegistrationDate?.getTime();
+  const bizValid = bizTs != null && !Number.isNaN(bizTs);
+  // 가드-내로잉: deriveEffectiveRegDate는 non-null Date 2개(types.ts:43,45)를 받으므로
+  // Date|null을 직접 넘기면 TS2322. ternary 내부에서 두 값이 Date로 좁혀진다.
+  const effRegDate =
+    businessRegistrationDate && rentalRegistrationDate
+      ? deriveEffectiveRegDate({ businessRegistrationDate, rentalRegistrationDate })
+      : null;
+  const effTs = effRegDate?.getTime() ?? null;
+
+  const existingBusiness: CategoryAvailability =
+    bizValid && bizTs > RA_CUT.Y2003_10_29
+      ? { available: false, reason: "기존사업자(나목)는 세무서 사업자등록 2003.10.29 이전 등록분만 해당합니다." }
+      : { available: true };
+
+  const short6y: CategoryAvailability =
+    effTs != null && effTs < RA_CUT.Y2025_06_04
+      ? { available: false, reason: "단기 6년(아·자목)은 2025.6.4 이후 등록분만 해당합니다." }
+      : { available: true };
+
+  return {
+    long_general: { available: true },
+    short_6y: short6y,
+    existing_business: existingBusiness,
+    unsold_08_09: { available: true },
+    pre_2018: { available: true },
+  };
 }
 
 /**
