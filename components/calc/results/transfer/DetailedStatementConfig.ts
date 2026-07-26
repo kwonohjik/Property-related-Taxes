@@ -86,6 +86,7 @@ export const STATEMENT_GROUPS: GroupDef[] = [
       "incomeAmount",
       "nontaxableIncome",
       "reductionTargetIncome",
+      "reductionTargetIncome2",
       "incomeAmountAfter",
       "priorIncomeAmount",
       "basicDeduction",
