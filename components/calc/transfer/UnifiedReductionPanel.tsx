@@ -204,6 +204,16 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     });
   }
 
+  // 여러 필드 동시 갱신(단일 onChange) — 건물 기준시가 "취득·최초고시 모두 적용"처럼 한 이벤트에서
+  // 2개 이상 필드를 바꿀 때 개별 update993 연속 호출은 stale reductions spread로 서로를 덮어씀. 배치 필수.
+  function update993Many(patch: Partial<Extract<AssetReductionForm, { type: "new_99_3" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "new_99_3" ? ({ ...r, ...patch } as AssetReductionForm) : r,
+      ),
+    });
+  }
+
   // ── §97 시리즈 폼 필드 업데이트 ──
   function updateRentalVariant(
     id: RentalReductionFormVariant["type"],
@@ -339,6 +349,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onSelectId={(id) => toggleGroup(cat, id)}
           new993={new993 && new993.type === "new_99_3" ? new993 : undefined}
           onUpdate993={update993}
+          onUpdate993Many={update993Many}
           onUpdateRentalVariant={updateRentalVariant}
           onUpdate994={update994}
           onUpdate989={update989}
@@ -429,6 +440,7 @@ function GroupCategorySection({
   onSelectId,
   new993,
   onUpdate993,
+  onUpdate993Many,
   onUpdateRentalVariant,
   onUpdate994,
   onUpdate989,
@@ -467,6 +479,7 @@ function GroupCategorySection({
     key: K,
     value: Extract<AssetReductionForm, { type: "new_99_3" }>[K],
   ) => void;
+  onUpdate993Many: (patch: Partial<Extract<AssetReductionForm, { type: "new_99_3" }>>) => void;
   onUpdateRentalVariant: (
     id: RentalReductionFormVariant["type"],
     patch: Partial<RentalReductionFormVariant>,
@@ -599,6 +612,7 @@ function GroupCategorySection({
                     <New993InputForm
                       value={new993}
                       onUpdate={onUpdate993}
+                      onUpdateMany={onUpdate993Many}
                       acquisitionDate={acquisitionDate}
                       transferDate={transferDate}
                       jibun={assetJibun}

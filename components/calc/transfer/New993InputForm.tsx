@@ -33,6 +33,7 @@ function addYearsStr(dateStr: string | undefined, n: number): string | undefined
 export function New993InputForm({
   value,
   onUpdate,
+  onUpdateMany,
   acquisitionDate,
   transferDate,
   jibun,
@@ -45,6 +46,8 @@ export function New993InputForm({
     key: K,
     v: Extract<AssetReductionForm, { type: "new_99_3" }>[K],
   ) => void;
+  /** 여러 필드 동시 갱신(단일 update) — 건물 기준시가 "모두 적용"처럼 한 이벤트에서 2필드 이상 변경 시 필수. */
+  onUpdateMany: (patch: Partial<Extract<AssetReductionForm, { type: "new_99_3" }>>) => void;
   /** 자산의 취득일 — PHD 자동 활성화 권장 판정용 + 취득시/5년 기준시가 조회 referenceDate */
   acquisitionDate?: string;
   /** 자산의 양도일 — 양도시 기준시가 조회 referenceDate */
@@ -131,26 +134,34 @@ export function New993InputForm({
         buildingStdAtFirst: value.phdBuildingStdAtFirst993,
       }}
       onChange={(patch) => {
-        if (patch.phdMode !== undefined) onUpdate("phdMode993", patch.phdMode);
-        if (patch.firstDisclosureDate !== undefined) onUpdate("phdFirstDisclosureDate993", patch.firstDisclosureDate);
-        if (patch.firstDisclosurePrice !== undefined) onUpdate("phdFirstDisclosurePrice993", patch.firstDisclosurePrice);
-        if (patch.landAreaSqm !== undefined) onUpdate("phdLandAreaSqm993", patch.landAreaSqm);
-        if (patch.landPricePerSqmAtAcq !== undefined) onUpdate("phdLandPricePerSqmAtAcq993", patch.landPricePerSqmAtAcq);
-        if (patch.landPricePerSqmAtFirst !== undefined) onUpdate("phdLandPricePerSqmAtFirst993", patch.landPricePerSqmAtFirst);
-        if (patch.buildingStdAtAcq !== undefined) onUpdate("phdBuildingStdAtAcq993", patch.buildingStdAtAcq);
-        if (patch.buildingStdAtFirst !== undefined) onUpdate("phdBuildingStdAtFirst993", patch.buildingStdAtFirst);
+        // 한 patch의 모든 키를 단일 update로 반영 — 개별 onUpdate 연속 호출은 stale reductions
+        // spread로 서로를 덮어씀("취득·최초고시 모두 적용" 시 취득값이 옛 값으로 되돌아가는 버그).
+        const mapped: Partial<Extract<AssetReductionForm, { type: "new_99_3" }>> = {};
+        if (patch.phdMode !== undefined) mapped.phdMode993 = patch.phdMode;
+        if (patch.firstDisclosureDate !== undefined) mapped.phdFirstDisclosureDate993 = patch.firstDisclosureDate;
+        if (patch.firstDisclosurePrice !== undefined) mapped.phdFirstDisclosurePrice993 = patch.firstDisclosurePrice;
+        if (patch.landAreaSqm !== undefined) mapped.phdLandAreaSqm993 = patch.landAreaSqm;
+        if (patch.landPricePerSqmAtAcq !== undefined) mapped.phdLandPricePerSqmAtAcq993 = patch.landPricePerSqmAtAcq;
+        if (patch.landPricePerSqmAtFirst !== undefined) mapped.phdLandPricePerSqmAtFirst993 = patch.landPricePerSqmAtFirst;
+        if (patch.buildingStdAtAcq !== undefined) mapped.phdBuildingStdAtAcq993 = patch.buildingStdAtAcq;
+        if (patch.buildingStdAtFirst !== undefined) mapped.phdBuildingStdAtFirst993 = patch.buildingStdAtFirst;
+        onUpdateMany(mapped);
       }}
       assetHasPhdData={!!assetPhdSnapshot}
       onCopyFromAsset={
         assetPhdSnapshot
           ? () => {
-              if (assetPhdSnapshot.firstDisclosureDate !== undefined) onUpdate("phdFirstDisclosureDate993", assetPhdSnapshot.firstDisclosureDate);
-              if (assetPhdSnapshot.firstDisclosurePrice !== undefined) onUpdate("phdFirstDisclosurePrice993", assetPhdSnapshot.firstDisclosurePrice);
-              if (assetPhdSnapshot.landAreaSqm !== undefined) onUpdate("phdLandAreaSqm993", assetPhdSnapshot.landAreaSqm);
-              if (assetPhdSnapshot.landPricePerSqmAtAcq !== undefined) onUpdate("phdLandPricePerSqmAtAcq993", assetPhdSnapshot.landPricePerSqmAtAcq);
-              if (assetPhdSnapshot.landPricePerSqmAtFirst !== undefined) onUpdate("phdLandPricePerSqmAtFirst993", assetPhdSnapshot.landPricePerSqmAtFirst);
-              if (assetPhdSnapshot.buildingStdAtAcq !== undefined) onUpdate("phdBuildingStdAtAcq993", assetPhdSnapshot.buildingStdAtAcq);
-              if (assetPhdSnapshot.buildingStdAtFirst !== undefined) onUpdate("phdBuildingStdAtFirst993", assetPhdSnapshot.buildingStdAtFirst);
+              // 스냅샷 7필드 동시 반영 — 단일 update. 개별 onUpdate 연속 호출은 stale spread로 덮어씀.
+              const s = assetPhdSnapshot;
+              const mapped: Partial<Extract<AssetReductionForm, { type: "new_99_3" }>> = {};
+              if (s.firstDisclosureDate !== undefined) mapped.phdFirstDisclosureDate993 = s.firstDisclosureDate;
+              if (s.firstDisclosurePrice !== undefined) mapped.phdFirstDisclosurePrice993 = s.firstDisclosurePrice;
+              if (s.landAreaSqm !== undefined) mapped.phdLandAreaSqm993 = s.landAreaSqm;
+              if (s.landPricePerSqmAtAcq !== undefined) mapped.phdLandPricePerSqmAtAcq993 = s.landPricePerSqmAtAcq;
+              if (s.landPricePerSqmAtFirst !== undefined) mapped.phdLandPricePerSqmAtFirst993 = s.landPricePerSqmAtFirst;
+              if (s.buildingStdAtAcq !== undefined) mapped.phdBuildingStdAtAcq993 = s.buildingStdAtAcq;
+              if (s.buildingStdAtFirst !== undefined) mapped.phdBuildingStdAtFirst993 = s.buildingStdAtFirst;
+              onUpdateMany(mapped);
             }
           : undefined
       }
