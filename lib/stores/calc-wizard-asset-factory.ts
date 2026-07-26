@@ -31,6 +31,7 @@ export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["re
     rentalAcquisitionType: "purchase",
     isApartment: false,
     region: "seoul-metro",
+    regionCode: "",
     isExcluded918Rule: false,
     hasContractDepositProof: false,
     isExcludedShortToLongChange: false,

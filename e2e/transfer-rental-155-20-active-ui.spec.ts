@@ -368,4 +368,58 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
       "550,000,000",
     );
   });
+
+  test("소재 지역 자동판별 — 임대 소재지 검색(강남 수도권) → 배지 + 직접지정 override", async ({ page }) => {
+    const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력 (예: 테헤란로 123)";
+    // 강남 PNU(앞2=11 서울 → 수도권). 부수 호출 차단(std-price·reverse-geocode).
+    await page.route("**/api/address/search**", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          results: [
+            {
+              pnu: "1168010100107360000",
+              title: "역삼동 736",
+              road: "서울 강남구 테헤란로 152",
+              jibun: "서울 강남구 역삼동 736",
+              building: "",
+              zipcode: "",
+              lng: "",
+              lat: "",
+            },
+          ],
+        }),
+      }),
+    );
+    await page.route("**/api/address/standard-price**", (route) =>
+      route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
+    );
+    await page.route("**/api/address/reverse-geocode**", (route) =>
+      route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
+    );
+
+    await gotoRentalSection(page); // 마목 seed — showRegion=true, regionCode="" → 초기 수동 라디오
+
+    // 초기: 수동 라디오 노출(자동판별 배지 없음)
+    await expect(page.locator('input[name="rental-region-0"]').first()).toBeVisible();
+    await expect(page.getByTestId("rental-region-badge-0")).toHaveCount(0);
+
+    // 임대 소재지 검색 → 강남 선택 → PNU 앞10 = regionCode 추출 → 수도권 자동판별
+    await page
+      .getByTestId("rental-address-0")
+      .getByPlaceholder(ADDR_PLACEHOLDER)
+      .fill("역삼동 736");
+    await page.getByRole("button", { name: /역삼동 736/ }).click();
+
+    const badge = page.getByTestId("rental-region-badge-0");
+    await expect(badge).toContainText("수도권", { timeout: 15000 });
+    await expect(badge).toContainText("자동판별");
+    await expect(page.locator('input[name="rental-region-0"]')).toHaveCount(0);
+
+    // 직접 지정 → 수동 라디오 복귀
+    await page.getByTestId("rental-region-manual-0").click();
+    await expect(page.getByTestId("rental-region-badge-0")).toHaveCount(0);
+    await expect(page.locator('input[name="rental-region-0"]').first()).toBeVisible();
+  });
 });
