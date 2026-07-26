@@ -177,6 +177,8 @@ export function New993InputForm({
       {/* Round 10 (2026-05-06): PHD 환산 위젯 — 신축주택 취득 당시 공시가격 미공시 케이스 */}
       <ReductionPhdInput
         acquisitionDate={acquisitionDate}
+        jibun={jibun}
+        snapshotKeyPrefix="red993"
         value={{
           phdMode: value.phdMode993,
           firstDisclosureDate: value.phdFirstDisclosureDate993,
