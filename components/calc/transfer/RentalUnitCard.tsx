@@ -92,7 +92,9 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
       next.businessRegistrationDate ? new Date(next.businessRegistrationDate) : null,
       next.rentalRegistrationDate ? new Date(next.rentalRegistrationDate) : null,
     );
-    if (!avail[next.rentalCategory].available) next.rentalCategory = "long_general";
+    // avail[...]가 undefined일 수 있음(stale/legacy rentalCategory) — 옵셔널 체이닝으로
+    // 크래시 방지 + 유효 기본값(long_general)으로 self-heal
+    if (!avail[next.rentalCategory]?.available) next.rentalCategory = "long_general";
     onChange(next);
   }
   const reqYears = deriveRequiredYears(article, effRegDate);

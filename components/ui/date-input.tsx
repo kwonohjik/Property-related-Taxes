@@ -129,16 +129,18 @@ export function DateInput({ value, onChange, onBlur, className, disabled, "data-
     const num = parseInt(v, 10);
     const corrected =
       v.length === 2 ? (num > 12 ? "12" : num < 1 ? "01" : v) : v;
-    // 월 변경 시 기존 일(day) 재클램핑 — 예: 1월 31 입력 후 월을 2로 변경.
+    // 완성 판정: 2자리이거나, 1자리라도 2~9면 두 자리 월(10·11·12)의 첫 자리가
+    // 될 수 없으므로 즉시 완성으로 간주 (0·1은 둘째 자리 대기).
+    // 값은 패딩하지 않고 그대로 표시("5" 유지) — buildDateStr가 emit 시 "05"로 패딩.
+    const isComplete = corrected.length === 2 || num >= 2;
+    // 월 완성 시 기존 일(day) 재클램핑 — 예: 1월 31 입력 후 월을 2로 변경.
     // 1자리 day는 입력 진행 중이므로 보존.
     const newDay =
-      corrected.length === 2 && day.length === 2
-        ? clampDay(day, year, corrected)
-        : day;
+      isComplete && day.length === 2 ? clampDay(day, year, corrected) : day;
     setMonth(corrected);
     if (newDay !== day) setDay(newDay);
     emitChange(buildDateStr(year, corrected, newDay));
-    if (corrected.length === 2) dayRef.current?.focus();
+    if (isComplete) dayRef.current?.focus();
   }
 
   function handleDayChange(e: React.ChangeEvent<HTMLInputElement>) {
