@@ -42,6 +42,12 @@ export function migrateRentalPeriodFields(u: Record<string, unknown>): void {
   if (typeof u.rentalAddressJibun !== "string") {
     u.rentalAddressJibun = "";
   }
+  if (typeof u.rentalDong !== "string") {
+    u.rentalDong = "";
+  }
+  if (typeof u.rentalHo !== "string") {
+    u.rentalHo = "";
+  }
 }
 
 /**
