@@ -56,6 +56,12 @@ describe("BuildingStdPriceForm — 세목 고정 + 소재지 prefill", () => {
     expect(screen.getByText("취득 시점")).toBeTruthy();
     expect(screen.getByText("최초고시 시점")).toBeTruthy();
     expect(screen.queryByText("양도 시점")).toBeNull();
+    // 내부 필드 라벨도 "최초고시"로 override — "양도연도/양도일/양도당시…" 잔존 없음
+    expect(screen.getByText("최초고시연도")).toBeTruthy();
+    expect(screen.getByText("최초고시일")).toBeTruthy();
+    expect(screen.getByText("최초고시당시 구조")).toBeTruthy();
+    expect(screen.queryByText("양도연도")).toBeNull();
+    expect(screen.queryByText("양도당시 구조")).toBeNull();
     // 공동주택 환산 토글은 PHD 맥락에서 숨김
     expect(screen.queryByText("공동주택 고시 전 취득 (취득당시 기준시가 환산)")).toBeNull();
   });
