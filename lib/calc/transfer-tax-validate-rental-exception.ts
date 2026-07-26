@@ -9,6 +9,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
+import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import {
   deriveEffectiveRegDate,
   deriveRentalArticle,
@@ -34,6 +35,26 @@ export function validateRentalHousingException(
     // 사업자등록등 — 세무서·지자체 둘 다 필수
     if (!u.businessRegistrationDate) return `${unitLabel}: 세무서 사업자등록일을 입력하세요.`;
     if (!u.rentalRegistrationDate) return `${unitLabel}: 지자체 임대사업자등록신청일을 입력하세요.`;
+
+    // 임대기간 interval 모드 — malformed(종료<시작)·구간 겹침만 차단(월수 부족은 엔진 RENTAL_PERIOD_SHORT 위임, direct 대칭)
+    if (u.rentalInputMode === "interval") {
+      const ps = u.rentalPeriods ?? [];
+      for (let k = 0; k < ps.length; k++) {
+        if (ps[k].start && ps[k].end && ps[k].end < ps[k].start) {
+          return `${unitLabel}: 임대 구간 #${k + 1} 종료일은 시작일보다 이후여야 합니다.`;
+        }
+      }
+      // 겹침 차단 — sumRentalMonths 단순합산 이중계산 방지 (residence 정책 동일)
+      const complete = ps
+        .map((p, idx) => ({ ...p, idx }))
+        .filter((p) => p.start && p.end)
+        .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+      for (let k = 1; k < complete.length; k++) {
+        if (complete[k - 1].end > complete[k].start) {
+          return `${unitLabel}: 임대 구간 #${complete[k - 1].idx + 1}과 #${complete[k].idx + 1}이 겹칩니다. 겹치면 임대기간이 이중 계산되므로 분리·병합하세요.`;
+        }
+      }
+    }
 
     // 도출 목 재사용(deriveRentalArticle) — UI 조건부 노출·엔진 판정과 3중 동기화
     const eff = deriveEffectiveRegDate({
@@ -133,11 +154,12 @@ export function validateRentalHousingException(
   }
 
   // §155⑳ 거주주택 거주 2년 + 보유 2년 요건 — 침묵 실패 차단
-  const liveMonthsRaw = asset.residencePeriodMonthsAsset ?? "";
-  const liveMonthsVal = parseInt(String(liveMonthsRaw).replace(/,/g, "") || "0", 10);
+  // interval 모드는 residencePeriodMonthsAsset(raw)를 sync하지 않으므로 도출값 사용 —
+  // 엔진 deriveResidencePeriodMonths와 동일 소스(interval 모드 거주기간 오차단 방지).
+  const liveMonthsVal = deriveResidencePeriodMonths(asset, formTransferDate ?? "", "");
 
   if (!liveMonthsVal || liveMonthsVal < 24) {
-    return `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. 보유 상황 단계에서 "거주기간(개월)"을 24 이상으로 입력하세요. (현재: ${liveMonthsVal || 0}개월)`;
+    return `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. (현재: ${liveMonthsVal || 0}개월)`;
   }
 
   // 보유기간 24개월 검증 (취득일 ~ 양도일)

@@ -185,7 +185,6 @@ describe("A5 — ⑤ UI: linked 시 입력 숨김 + echo 카드", () => {
         asset={asset}
         acquisitionDate={asset.acquisitionDate}
         transferDate="2025-06-01"
-        residencePeriodMonthsAsset={asset.residencePeriodMonthsAsset}
         onChange={() => {}}
       />,
     );

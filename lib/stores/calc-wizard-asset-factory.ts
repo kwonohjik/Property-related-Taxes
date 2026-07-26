@@ -43,6 +43,8 @@ export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["re
     hasMinimum5UnitsInCity: false,
     firstSaleContractDate: "",
     rentalMonths: "",
+    rentalInputMode: "direct",
+    rentalPeriods: [],
     rentalAutoTermination: false,
     requirementsConfirmed: false,
   };

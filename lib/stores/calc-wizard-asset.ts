@@ -622,8 +622,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
       hasMinimum5UnitsInCity: boolean;
       /** 최초 분양계약일 (라목 미분양 2008.6.11~2009.6.30, YYYY-MM-DD) */
       firstSaleContractDate: string;
-      /** 실제 임대 개월 수 */
+      /** 실제 임대 개월 수 (direct 모드 값·legacy fallback) */
       rentalMonths: string;
+      /** 임대기간 입력 모드 — direct(개월 직접)·interval(시작~종료일 다중 기간) */
+      rentalInputMode: "interval" | "direct";
+      /** 임대 구간 (interval 모드, 비연속 허용). 개월은 API 변환 시 deriveRentalMonths로 합산 */
+      rentalPeriods: Array<{ start: string; end: string }>;
       /** §155⑳㉓ 말소 특례 — 자진(의무기간 1/2↑)·자동말소 후 5년 내 거주주택 양도 여부 (가·다·라·마목) */
       rentalAutoTermination: boolean;
       /** 기타 요건 충족 자기확인 (5%증액 등) */
