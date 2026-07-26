@@ -171,25 +171,27 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
         : undefined,
       rentalCategory: u.rentalCategory,
       rentalAcquisitionType: u.rentalAcquisitionType,
-      isApartment: u.isApartment,
+      // boolean 요건 필드는 stale sessionStorage·이력 로드(migrateAsset 우회) 유닛에서 undefined일 수 있어
+      // ?? false로 방어 — Zod required boolean 400 차단(false = 요건 미해당, validate의 !u.X와 동일 관용).
+      isApartment: u.isApartment ?? false,
       region: u.region,
-      isExcluded918Rule: u.isExcluded918Rule,
-      hasContractDepositProof: u.hasContractDepositProof,
-      isExcludedShortToLongChange: u.isExcludedShortToLongChange,
+      isExcluded918Rule: u.isExcluded918Rule ?? false,
+      hasContractDepositProof: u.hasContractDepositProof ?? false,
+      isExcludedShortToLongChange: u.isExcludedShortToLongChange ?? false,
       standardPriceAtRentalStart: parseAmount(u.standardPriceAtRentalStart) || 0,
       acquisitionOfficialPrice: parseAmount(u.acquisitionOfficialPrice) || 0,
-      isNationalSizeHousing: u.isNationalSizeHousing,
+      isNationalSizeHousing: u.isNationalSizeHousing ?? false,
       // 건설임대 규모요건 — 미입력(빈값)이면 undefined 전송(엔진이 SIZE_REQUIRED 판정)
       landAreaM2: parseDecimal(u.rentalLandArea) || undefined,
       totalFloorAreaM2: parseDecimal(u.rentalTotalFloorArea) || undefined,
-      hasMinimum2Units: u.hasMinimum2Units,
-      hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity,
+      hasMinimum2Units: u.hasMinimum2Units ?? false,
+      hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity ?? false,
       firstSaleContractDate: u.firstSaleContractDate
         ? (u.firstSaleContractDate.includes('T') ? u.firstSaleContractDate : `${u.firstSaleContractDate}T00:00:00.000Z`)
         : undefined,
       rentalMonths: deriveRentalMonths(u),
-      rentalAutoTermination: u.rentalAutoTermination,
-      requirementsConfirmed: u.requirementsConfirmed,
+      rentalAutoTermination: u.rentalAutoTermination ?? false,
+      requirementsConfirmed: u.requirementsConfirmed ?? false,
     })),
     priorResidenceTransferDate: rh.priorResidenceTransferDate
       ? (rh.priorResidenceTransferDate.includes('T')
