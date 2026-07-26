@@ -6,14 +6,16 @@
  * 외부 계약 무변경 — 패널에서 import 1줄.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 
 /** YYYY-MM-DD 문자열의 연도에 n년 가산 (new Date 금지 정책 회피 — 5년 시점 referenceDate 파생). */
@@ -88,6 +90,106 @@ export function New993InputForm({
     }
   }
 
+  // PHD 환산 ON — 취득시 기준시가는 PHD 환산으로 자동 산출(상단 수동 조회 숨김 + echo).
+  const phdActive = value.phdMode993 === true;
+  const phdEchoAcqStdPrice = useMemo(() => {
+    if (!phdActive) return null;
+    const phdInput = {
+      firstDisclosurePrice: parseAmount(value.phdFirstDisclosurePrice993 ?? "0"),
+      landAreaSqm: parseDecimal(value.phdLandAreaSqm993 ?? "0"),
+      landPricePerSqmAtAcquisition: parseAmount(value.phdLandPricePerSqmAtAcq993 ?? "0"),
+      landPricePerSqmAtFirstDisclosure: parseAmount(value.phdLandPricePerSqmAtFirst993 ?? "0"),
+      buildingStdPriceAtAcquisition: parseAmount(value.phdBuildingStdAtAcq993 ?? "0"),
+      buildingStdPriceAtFirstDisclosure: parseAmount(value.phdBuildingStdAtFirst993 ?? "0"),
+    };
+    if (!canCalcReductionPhd(phdInput)) return null;
+    return calcReductionAcquisitionStdPrice(phdInput).estimatedAcquisitionStdPrice;
+  }, [
+    phdActive,
+    value.phdFirstDisclosurePrice993,
+    value.phdLandAreaSqm993,
+    value.phdLandPricePerSqmAtAcq993,
+    value.phdLandPricePerSqmAtFirst993,
+    value.phdBuildingStdAtAcq993,
+    value.phdBuildingStdAtFirst993,
+  ]);
+
+  // PHD 환산 위젯 (재사용) — 재배치 시 취득시 기준시가 직전, 미배치 시 하단.
+  const phdSection = (
+    <ReductionPhdInput
+      acquisitionDate={acquisitionDate}
+      jibun={jibun}
+      snapshotKeyPrefix="red993"
+      value={{
+        phdMode: value.phdMode993,
+        firstDisclosureDate: value.phdFirstDisclosureDate993,
+        firstDisclosurePrice: value.phdFirstDisclosurePrice993,
+        landAreaSqm: value.phdLandAreaSqm993,
+        landPricePerSqmAtAcq: value.phdLandPricePerSqmAtAcq993,
+        landPricePerSqmAtFirst: value.phdLandPricePerSqmAtFirst993,
+        buildingStdAtAcq: value.phdBuildingStdAtAcq993,
+        buildingStdAtFirst: value.phdBuildingStdAtFirst993,
+      }}
+      onChange={(patch) => {
+        if (patch.phdMode !== undefined) onUpdate("phdMode993", patch.phdMode);
+        if (patch.firstDisclosureDate !== undefined) onUpdate("phdFirstDisclosureDate993", patch.firstDisclosureDate);
+        if (patch.firstDisclosurePrice !== undefined) onUpdate("phdFirstDisclosurePrice993", patch.firstDisclosurePrice);
+        if (patch.landAreaSqm !== undefined) onUpdate("phdLandAreaSqm993", patch.landAreaSqm);
+        if (patch.landPricePerSqmAtAcq !== undefined) onUpdate("phdLandPricePerSqmAtAcq993", patch.landPricePerSqmAtAcq);
+        if (patch.landPricePerSqmAtFirst !== undefined) onUpdate("phdLandPricePerSqmAtFirst993", patch.landPricePerSqmAtFirst);
+        if (patch.buildingStdAtAcq !== undefined) onUpdate("phdBuildingStdAtAcq993", patch.buildingStdAtAcq);
+        if (patch.buildingStdAtFirst !== undefined) onUpdate("phdBuildingStdAtFirst993", patch.buildingStdAtFirst);
+      }}
+      assetHasPhdData={!!assetPhdSnapshot}
+      onCopyFromAsset={
+        assetPhdSnapshot
+          ? () => {
+              if (assetPhdSnapshot.firstDisclosureDate !== undefined) onUpdate("phdFirstDisclosureDate993", assetPhdSnapshot.firstDisclosureDate);
+              if (assetPhdSnapshot.firstDisclosurePrice !== undefined) onUpdate("phdFirstDisclosurePrice993", assetPhdSnapshot.firstDisclosurePrice);
+              if (assetPhdSnapshot.landAreaSqm !== undefined) onUpdate("phdLandAreaSqm993", assetPhdSnapshot.landAreaSqm);
+              if (assetPhdSnapshot.landPricePerSqmAtAcq !== undefined) onUpdate("phdLandPricePerSqmAtAcq993", assetPhdSnapshot.landPricePerSqmAtAcq);
+              if (assetPhdSnapshot.landPricePerSqmAtFirst !== undefined) onUpdate("phdLandPricePerSqmAtFirst993", assetPhdSnapshot.landPricePerSqmAtFirst);
+              if (assetPhdSnapshot.buildingStdAtAcq !== undefined) onUpdate("phdBuildingStdAtAcq993", assetPhdSnapshot.buildingStdAtAcq);
+              if (assetPhdSnapshot.buildingStdAtFirst !== undefined) onUpdate("phdBuildingStdAtFirst993", assetPhdSnapshot.buildingStdAtFirst);
+            }
+          : undefined
+      }
+    />
+  );
+
+  // 취득시 기준시가 — PHD ON이면 echo(자동 산출), OFF면 수동 조회 위젯.
+  const acqStdPriceBlock = phdActive ? (
+    <div className="sm:col-span-2" data-testid="new993-stdprice-acq-echo">
+      <label className="mb-1 block text-xs font-medium">취득시 기준시가</label>
+      <div className="rounded-md border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
+        <p className="text-xs text-amber-900 dark:text-amber-200">
+          PHD 환산 자동 계산(§164⑤):{" "}
+          <span className="font-semibold font-mono">
+            {phdEchoAcqStdPrice != null ? `${phdEchoAcqStdPrice.toLocaleString()} 원` : "위 PHD 입력을 완료하세요"}
+          </span>
+        </p>
+        <p className="mt-0.5 text-micro text-amber-800 dark:text-amber-300">
+          최초공시 전 취득 — 취득시 기준시가는 위 PHD 환산으로 자동 산출됩니다.
+        </p>
+      </div>
+    </div>
+  ) : (
+    <div className="sm:col-span-2">
+      <HousingStdPriceLookupField
+        label="취득시 기준시가"
+        value={value.standardPriceAtAcquisition993}
+        onChange={(v) => onUpdate("standardPriceAtAcquisition993", v)}
+        jibun={jibun}
+        dong={dong}
+        ho={ho}
+        referenceDate={acquisitionDate}
+        hint="최초고시 전 취득이면 위 PHD 환산 토글을 켜세요"
+        onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
+        testidPrefix="new993-stdprice-acq"
+      />
+    </div>
+  );
+
   return (
     <div className="mt-2 ml-7 rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
       <p className="text-xs font-semibold text-primary">조특법 §99의3 신축주택 과세특례 입력</p>
@@ -154,21 +256,13 @@ export function New993InputForm({
             <p className="mt-1 text-micro text-muted-foreground">2001.5.23~2003.6.30 시한</p>
           </div>
         )}
+      </div>
 
-        <div className="sm:col-span-2">
-          <HousingStdPriceLookupField
-            label="취득시 기준시가"
-            value={value.standardPriceAtAcquisition993}
-            onChange={(v) => onUpdate("standardPriceAtAcquisition993", v)}
-            jibun={jibun}
-            dong={dong}
-            ho={ho}
-            referenceDate={acquisitionDate}
-            hint="최초고시 전 취득 시 아래 PHD 환산 자동 적용 가능"
-            onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
-            testidPrefix="new993-stdprice-acq"
-          />
-        </div>
+      {/* PHD 환산 — 취득시 기준시가 직전 배치(입력→출력 순서). ON 시 취득시 기준시가는 아래 echo로 자동 산출. */}
+      {phdSection}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {acqStdPriceBlock}
 
         <div className="sm:col-span-2">
           <HousingStdPriceLookupField
@@ -224,48 +318,6 @@ export function New993InputForm({
           <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
-
-      {/* Round 10 (2026-05-06): PHD 환산 위젯 — 신축주택 취득 당시 공시가격 미공시 케이스 */}
-      <ReductionPhdInput
-        acquisitionDate={acquisitionDate}
-        jibun={jibun}
-        snapshotKeyPrefix="red993"
-        value={{
-          phdMode: value.phdMode993,
-          firstDisclosureDate: value.phdFirstDisclosureDate993,
-          firstDisclosurePrice: value.phdFirstDisclosurePrice993,
-          landAreaSqm: value.phdLandAreaSqm993,
-          landPricePerSqmAtAcq: value.phdLandPricePerSqmAtAcq993,
-          landPricePerSqmAtFirst: value.phdLandPricePerSqmAtFirst993,
-          buildingStdAtAcq: value.phdBuildingStdAtAcq993,
-          buildingStdAtFirst: value.phdBuildingStdAtFirst993,
-        }}
-        onChange={(patch) => {
-          if (patch.phdMode !== undefined) onUpdate("phdMode993", patch.phdMode);
-          if (patch.firstDisclosureDate !== undefined) onUpdate("phdFirstDisclosureDate993", patch.firstDisclosureDate);
-          if (patch.firstDisclosurePrice !== undefined) onUpdate("phdFirstDisclosurePrice993", patch.firstDisclosurePrice);
-          if (patch.landAreaSqm !== undefined) onUpdate("phdLandAreaSqm993", patch.landAreaSqm);
-          if (patch.landPricePerSqmAtAcq !== undefined) onUpdate("phdLandPricePerSqmAtAcq993", patch.landPricePerSqmAtAcq);
-          if (patch.landPricePerSqmAtFirst !== undefined) onUpdate("phdLandPricePerSqmAtFirst993", patch.landPricePerSqmAtFirst);
-          if (patch.buildingStdAtAcq !== undefined) onUpdate("phdBuildingStdAtAcq993", patch.buildingStdAtAcq);
-          if (patch.buildingStdAtFirst !== undefined) onUpdate("phdBuildingStdAtFirst993", patch.buildingStdAtFirst);
-        }}
-        onApplyResult={(estimated) => onUpdate("standardPriceAtAcquisition993", String(estimated))}
-        assetHasPhdData={!!assetPhdSnapshot}
-        onCopyFromAsset={
-          assetPhdSnapshot
-            ? () => {
-                if (assetPhdSnapshot.firstDisclosureDate !== undefined) onUpdate("phdFirstDisclosureDate993", assetPhdSnapshot.firstDisclosureDate);
-                if (assetPhdSnapshot.firstDisclosurePrice !== undefined) onUpdate("phdFirstDisclosurePrice993", assetPhdSnapshot.firstDisclosurePrice);
-                if (assetPhdSnapshot.landAreaSqm !== undefined) onUpdate("phdLandAreaSqm993", assetPhdSnapshot.landAreaSqm);
-                if (assetPhdSnapshot.landPricePerSqmAtAcq !== undefined) onUpdate("phdLandPricePerSqmAtAcq993", assetPhdSnapshot.landPricePerSqmAtAcq);
-                if (assetPhdSnapshot.landPricePerSqmAtFirst !== undefined) onUpdate("phdLandPricePerSqmAtFirst993", assetPhdSnapshot.landPricePerSqmAtFirst);
-                if (assetPhdSnapshot.buildingStdAtAcq !== undefined) onUpdate("phdBuildingStdAtAcq993", assetPhdSnapshot.buildingStdAtAcq);
-                if (assetPhdSnapshot.buildingStdAtFirst !== undefined) onUpdate("phdBuildingStdAtFirst993", assetPhdSnapshot.buildingStdAtFirst);
-              }
-            : undefined
-        }
-      />
 
       {value.acquisitionType993 === "from_builder" && (
         <ToggleCard
