@@ -16,6 +16,7 @@
 import { addYears, format } from "date-fns";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
+import { isCrisisAcqExempt } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 
 // ============================================================
@@ -316,17 +317,26 @@ export function determineMultiHouseSurcharge(
   const surchargeType: "multi_house_2" | "multi_house_3plus" =
     effectiveHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2";
 
+  // 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택은 조정대상지역 다주택이어도 §104⑦ 세율 중과 배제(기본세율).
+  //   세율만 배제: surchargeType은 유지 → isSurchargeCase=true → §95② 장기보유특별공제 배제 판정 보존
+  //   (서울행정법원 2024구단72950 국승). isSurchargeSuspended(한시 유예)도 미변경.
+  //   근거: 기재부 재산세제과-1422(2023.12.26.) — 조정지역 소재 시 §104①1호 세율.
+  //   sellingHouse는 L202에서 이미 산정(input.sellingHouseId).
+  const statutoryRateExcluded =
+    !!sellingHouse && isRegulatedAtTransfer && isCrisisAcqExempt(sellingHouse.acquisitionDate);
+
   return {
     effectiveHouseCount,
     rawHouseCount,
     excludedHouses,
     excludedPresaleRights,
     isRegulatedAtTransfer,
-    surchargeApplicable: !isSuspended,
+    surchargeApplicable: statutoryRateExcluded ? false : !isSuspended,
     surchargeType,
     isSurchargeSuspended: isSuspended,
     ...(isSuspended && suspensionBasis ? { surchargeSuspensionBasis: suspensionBasis } : {}),
     ...(isSuspended && suspensionDeadline ? { surchargeSuspensionDeadline: suspensionDeadline } : {}),
+    ...(statutoryRateExcluded ? { rateSurchargeStatutoryExcluded: true } : {}),
     exclusionReasons,
     warnings,
   };

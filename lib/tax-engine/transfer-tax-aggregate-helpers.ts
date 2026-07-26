@@ -80,7 +80,9 @@ export function classifyRateGroup(
     isHousingLike &&
     item.isRegulatedArea &&
     item.householdHousingCount >= 2;
-  if ((multiHouseByResult || multiHouseByInput) && !result.isSurchargeSuspended) {
+  // 부칙 §9270호 §14①(rateSurchargeStatutoryExcluded): surchargeType은 유지하나 세율 중과 미적용 →
+  // §104⑤ 그룹은 progressive로 분류(기존 배제/유예 분류는 불변 — 이 케이스만 좁게 제외).
+  if ((multiHouseByResult || multiHouseByInput) && !result.isSurchargeSuspended && !result.rateSurchargeStatutoryExcluded) {
     return "multi_house_surcharge";
   }
 

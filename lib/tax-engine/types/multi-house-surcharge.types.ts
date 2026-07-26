@@ -406,6 +406,12 @@ export interface MultiHouseSurchargeResult {
   surchargeSuspensionBasis?: "a" | "na" | "da";
   /** 나·다목 유예 시 계산된 양도 기한(절대기한 반영). isSurchargeSuspended === true + basis가 na/da일 때만 유의미. */
   surchargeSuspensionDeadline?: Date;
+  /**
+   * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(조정지역 다주택이어도 기본세율).
+   * true여도 surchargeType·isSurchargeSuspended는 유지 → §95² 장기보유특별공제 배제는 존속(세율만 배제).
+   * 근거: 기재부 재산세제과-1422(2023.12.26.) · 서울행정법원 2024구단72950(국승).
+   */
+  rateSurchargeStatutoryExcluded?: boolean;
   /** 중과 배제 사유 목록 */
   exclusionReasons: ExclusionReason[];
   /** 경고 메시지 */

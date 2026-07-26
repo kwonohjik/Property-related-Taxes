@@ -143,6 +143,15 @@ export interface TransferTaxResult {
   surchargeSuspensionBasis?: "a" | "na" | "da";
   /** 나·다목 유예 시 계산된 양도 기한(절대기한 반영 후). basis가 na/da일 때만 유의미. */
   surchargeSuspensionDeadline?: Date;
+  /**
+   * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(조정지역 다주택이어도 기본세율).
+   * 세율만 배제·§95² 장기보유특별공제 배제는 유지(서울행정법원 2024구단72950). echo(MultiHouseSurchargeResult 전파).
+   */
+  rateSurchargeStatutoryExcluded?: boolean;
+  /**
+   * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 비사업용 토지 +10%p 중과배제(기본세율). 장특 표1 유지. echo.
+   */
+  nblSurchargeExcluded?: boolean;
   /** 총 감면세액 */
   reductionAmount: number;
   /** 감면 유형 (표시용 한글 라벨 — "자경농지", "장기임대주택" 등) */
@@ -186,6 +195,8 @@ export interface TransferTaxResult {
     isRegulatedAtTransfer: boolean;
     warnings: string[];
     excludedPresaleRights?: Array<{ id: string; reason: string }>; // #2b §167의4⑤ 배우자 분양권/입주권 차감
+    /** 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(기본세율). 장특 배제는 유지. */
+    rateSurchargeStatutoryExcluded?: boolean;
   };
   /**
    * 비사업용 토지 판정 상세 결과 (nonBusinessLandDetails 제공 시만 포함)

@@ -19,6 +19,8 @@ interface MultiHouseSurchargeDetail {
   isRegulatedAtTransfer: boolean;
   warnings: string[];
   excludedPresaleRights?: Array<{ id: string; reason: string }>;
+  /** 부칙 §9270호 §14① — 취득기간(2009.3.16~2012.12.31) 세율 중과배제(장특 배제는 유지) */
+  rateSurchargeStatutoryExcluded?: boolean;
 }
 
 interface Props {
@@ -81,6 +83,13 @@ export function MultiHouseSurchargeDetailCard({ detail }: Props) {
           {surchargeTypeLabel}
         </span>
       </div>
+
+      {/* 부칙 §9270호 §14① — 취득기간 세율 중과배제 */}
+      {detail.rateSurchargeStatutoryExcluded && (
+        <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-border text-xs text-blue-800 dark:text-blue-300 leading-snug">
+          양도주택 취득일이 2009.3.16~2012.12.31 — 다주택 <strong>중과세율 배제(기본세율)</strong> 적용(부칙 §9270호 §14①·기재부 재산세제과-1422). 단, 장기보유특별공제는 조정대상지역 다주택 기준으로 <strong>별도 배제</strong>됩니다(서울행정법원 2024구단72950).
+        </div>
+      )}
 
       {/* 주택 수 요약 */}
       <div className="grid grid-cols-2 divide-x divide-border border-b border-border">
