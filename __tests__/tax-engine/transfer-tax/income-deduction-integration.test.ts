@@ -163,4 +163,40 @@ describe("차감형 라우터 통합 anchor", () => {
     expect(r.new993Detail).toBeDefined();
     expect(r.unsold988Detail).toBeUndefined();
   });
+
+  it("§99의3 formulaSteps 농특세 step이 2-pass 확정값 반영 (preliminary 0 stale 방지)", () => {
+    const rates = makeMockRates();
+    const r = calculateTransferTax(
+      baseTransferInput({
+        transferPrice: 800_000_000,
+        acquisitionPrice: 500_000_000,
+        acquisitionDate: new Date("2015-07-01"),
+        transferDate: new Date("2022-08-01"), // 5년 후
+        householdHousingCount: 2, // 비과세 회피 — §99의3 평가되도록
+        reductions: [
+          {
+            type: "new_99_3" as const,
+            contractDate993: "2002-01-01",
+            standardPriceAtAcquisition993: 100_000_000,
+            standardPriceAt5Years: 160_000_000,
+            standardPriceAtTransfer993: 250_000_000,
+            region993: "outside_speculation" as const,
+            acquisitionType993: "from_builder" as const,
+          },
+        ],
+      }),
+      rates,
+    );
+    const steps = r.new993Detail!.formulaSteps;
+    const surtaxBase = steps.find((s) => s.label === "양도세 감면세액 (농특세 기준)")!;
+    const surtax = steps.find((s) => s.label === "농어촌특별세 (20%)")!;
+    // scalar 확정값과 일치 + 0 아님 (버그: preliminary 0 그대로 노출)
+    expect(surtaxBase.value).toBe(r.new993Detail!.taxReductionForRuralSurtax);
+    expect(surtaxBase.value).toBeGreaterThan(0);
+    expect(surtax.value).toBe(r.new993Detail!.ruralSurtax);
+    expect(surtax.value).toBeGreaterThan(0);
+    // 산식 문구도 "산출세액 0 −" stale 아님
+    expect(surtaxBase.formula).not.toContain("산출세액 0 −");
+    expect(surtax.formula).not.toContain("감면세액 0 ×");
+  });
 });
