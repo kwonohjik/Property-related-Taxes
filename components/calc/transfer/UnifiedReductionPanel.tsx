@@ -356,6 +356,9 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
           acquisitionDate={asset.acquisitionDate}
           transferDate={transferDate}
+          assetJibun={asset.addressJibun || undefined}
+          assetDong={asset.addressDong || undefined}
+          assetHo={asset.addressHo || undefined}
           assetPhdSnapshot={assetPhdSnapshot}
         />
       ))}
@@ -443,6 +446,9 @@ function GroupCategorySection({
   onAssetContractDateChange,
   acquisitionDate,
   transferDate,
+  assetJibun,
+  assetDong,
+  assetHo,
   assetPhdSnapshot,
 }: {
   category: ReductionCategory;
@@ -485,8 +491,14 @@ function GroupCategorySection({
   onAssetContractDateChange: (v: string) => void;
   /** Round 10 (2026-05-06): 자산 취득일 — PHD 자동 활성화 권장 판정 */
   acquisitionDate?: string;
-  /** 양도일 — 임대 기간 미리보기용 */
+  /** 양도일 — 임대 기간 미리보기용 + §99의3 양도시 기준시가 조회 referenceDate */
   transferDate?: string;
+  /** 양도물건(asset) 지번 주소 — §99의3 기준시가 Vworld 자동조회 소스 */
+  assetJibun?: string;
+  /** 양도물건 공동주택 동 — 세대 식별 */
+  assetDong?: string;
+  /** 양도물건 공동주택 호 — 세대 식별 */
+  assetHo?: string;
   /** Round 10 (2026-05-06): 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 가져오기" 버튼 */
   assetPhdSnapshot?: ReductionPhdValue;
 }) {
@@ -588,6 +600,10 @@ function GroupCategorySection({
                       value={new993}
                       onUpdate={onUpdate993}
                       acquisitionDate={acquisitionDate}
+                      transferDate={transferDate}
+                      jibun={assetJibun}
+                      dong={assetDong}
+                      ho={assetHo}
                       assetPhdSnapshot={assetPhdSnapshot}
                     />
                   )}

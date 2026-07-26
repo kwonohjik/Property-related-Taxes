@@ -7,13 +7,21 @@
  */
 
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
+import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+
+/** YYYY-MM-DD 문자열의 연도에 n년 가산 (new Date 금지 정책 회피 — 5년 시점 referenceDate 파생). */
+function addYearsStr(dateStr: string | undefined, n: number): string | undefined {
+  if (!dateStr || dateStr.length < 10) return undefined;
+  const year = parseInt(dateStr.slice(0, 4), 10);
+  if (!Number.isFinite(year)) return undefined;
+  return `${year + n}${dateStr.slice(4)}`;
+}
 
 // ============================================================================
 // 서브 컴포넌트: §99의3 본격 입력 폼
@@ -23,6 +31,10 @@ export function New993InputForm({
   value,
   onUpdate,
   acquisitionDate,
+  transferDate,
+  jibun,
+  dong,
+  ho,
   assetPhdSnapshot,
 }: {
   value: Extract<AssetReductionForm, { type: "new_99_3" }>;
@@ -30,8 +42,16 @@ export function New993InputForm({
     key: K,
     v: Extract<AssetReductionForm, { type: "new_99_3" }>[K],
   ) => void;
-  /** 자산의 취득일 — PHD 자동 활성화 권장 판정용 */
+  /** 자산의 취득일 — PHD 자동 활성화 권장 판정용 + 취득시/5년 기준시가 조회 referenceDate */
   acquisitionDate?: string;
+  /** 자산의 양도일 — 양도시 기준시가 조회 referenceDate */
+  transferDate?: string;
+  /** 양도물건(asset) 지번 주소 — Vworld 기준시가 자동조회 소스 */
+  jibun?: string;
+  /** 양도물건 공동주택 동 — 세대 식별 */
+  dong?: string;
+  /** 양도물건 공동주택 호 — 세대 식별 */
+  ho?: string;
   /** 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 데이터 가져오기" 버튼용 */
   assetPhdSnapshot?: ReductionPhdValue;
 }) {
@@ -102,28 +122,55 @@ export function New993InputForm({
           </div>
         )}
 
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득시 기준시가 (원)</label>
-          <CurrencyInput label="" value={value.standardPriceAtAcquisition993} onChange={(v) => onUpdate("standardPriceAtAcquisition993", v)} />
-          <p className="mt-1 text-micro text-muted-foreground">최초고시 전 취득 시 아래 PHD 환산 자동 적용 가능</p>
+        <div className="sm:col-span-2">
+          <HousingStdPriceLookupField
+            label="취득시 기준시가"
+            value={value.standardPriceAtAcquisition993}
+            onChange={(v) => onUpdate("standardPriceAtAcquisition993", v)}
+            jibun={jibun}
+            dong={dong}
+            ho={ho}
+            referenceDate={acquisitionDate}
+            hint="최초고시 전 취득 시 아래 PHD 환산 자동 적용 가능"
+            onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
+            testidPrefix="new993-stdprice-acq"
+          />
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium">5년 시점 기준시가 (원)</label>
-          <CurrencyInput label="" value={value.standardPriceAt5Years} onChange={(v) => onUpdate("standardPriceAt5Years", v)} />
-          <p className="mt-1 text-micro text-muted-foreground">취득일 + 5년 시점 인접 고시일 가격</p>
+        <div className="sm:col-span-2">
+          <HousingStdPriceLookupField
+            label="5년 시점 기준시가"
+            value={value.standardPriceAt5Years}
+            onChange={(v) => onUpdate("standardPriceAt5Years", v)}
+            jibun={jibun}
+            dong={dong}
+            ho={ho}
+            referenceDate={addYearsStr(acquisitionDate, 5)}
+            hint="취득일 + 5년 시점 인접 고시일 가격"
+            onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
+            testidPrefix="new993-stdprice-5y"
+          />
         </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium">양도시 기준시가 (원, 선택)</label>
-          <CurrencyInput label="" value={value.standardPriceAtTransfer993 ?? ""} onChange={(v) => onUpdate("standardPriceAtTransfer993", v)} />
-          <p className="mt-1 text-micro text-muted-foreground">미입력 시 자산의 양도시 기준시가 사용</p>
+        <div className="sm:col-span-2">
+          <HousingStdPriceLookupField
+            label="양도시 기준시가 (선택)"
+            value={value.standardPriceAtTransfer993 ?? ""}
+            onChange={(v) => onUpdate("standardPriceAtTransfer993", v)}
+            jibun={jibun}
+            dong={dong}
+            ho={ho}
+            referenceDate={transferDate}
+            hint="미입력 시 자산의 양도시 기준시가 사용"
+            onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
+            testidPrefix="new993-stdprice-transfer"
+          />
         </div>
 
         <div>
           <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
           <DecimalInput value={value.exclusiveAreaSqm993} onChange={(v) => onUpdate("exclusiveAreaSqm993", v)} />
-          <p className="mt-1 text-micro text-muted-foreground">2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
+          <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
 
