@@ -70,4 +70,98 @@ describe("useTransferSummary (store 로직 검증)", () => {
     });
     expect(computeSummary().estimatedTax).toBe(5_000_000);
   });
+
+  // ── 필요경비 = 개산공제(§163⑥) 즉시 표시 (계획서: sidebar-necessary-expense-estimated-deduction-timing-fix) ──
+  describe("환산·감정 모드 개산공제 필요경비", () => {
+    it("환산 모드 + 취득기준시가 → result 없이도 개산공제(3%) 즉시 표시", () => {
+      useCalcWizardStore.setState((st) => ({
+        formData: {
+          ...st.formData,
+          assets: [
+            {
+              ...makeDefaultAsset(1),
+              useEstimatedAcquisition: true,
+              standardPriceAtAcq: "400000000",
+              actualSalePrice: "800000000",
+            },
+          ],
+        },
+      }));
+      // 400,000,000 × 3% = 12,000,000 (엔진 applyRate floor 미러)
+      expect(computeSummary().totalNecessaryExpense).toBe(12_000_000);
+    });
+
+    it("감정가액 모드도 개산공제 3% 적용", () => {
+      useCalcWizardStore.setState((st) => ({
+        formData: {
+          ...st.formData,
+          assets: [
+            { ...makeDefaultAsset(1), isAppraisalAcquisition: true, standardPriceAtAcq: "400000000" },
+          ],
+        },
+      }));
+      expect(computeSummary().totalNecessaryExpense).toBe(12_000_000);
+    });
+
+    it("미등기 자산은 개산공제 0.3%", () => {
+      useCalcWizardStore.setState((st) => ({
+        formData: {
+          ...st.formData,
+          isUnregistered: true,
+          assets: [
+            { ...makeDefaultAsset(1), useEstimatedAcquisition: true, standardPriceAtAcq: "400000000" },
+          ],
+        },
+      }));
+      // 400,000,000 × 0.3% = 1,200,000
+      expect(computeSummary().totalNecessaryExpense).toBe(1_200_000);
+    });
+
+    it("result(single) 도착 시 expenses(실차감 필요경비) 권위값으로 override", () => {
+      useCalcWizardStore.setState((st) => ({
+        formData: {
+          ...st.formData,
+          assets: [
+            { ...makeDefaultAsset(1), useEstimatedAcquisition: true, standardPriceAtAcq: "400000000" },
+          ],
+        },
+        // 본문 모드: expenses=개산공제(=estimatedDeduction). 합산 아닌 expenses 단독 사용(이중계산 방지).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result: { mode: "single", result: { totalTax: 0, estimatedDeduction: 12_000_000, expenses: 12_000_000 } } as any,
+      }));
+      expect(computeSummary().totalNecessaryExpense).toBe(12_000_000);
+    });
+
+    it("swap 모드 result: expenses(자본·양도비)만 반영, 개산공제 echo 이중계산 안 함", () => {
+      useCalcWizardStore.setState((st) => ({
+        formData: {
+          ...st.formData,
+          assets: [
+            { ...makeDefaultAsset(1), useEstimatedAcquisition: true, standardPriceAtAcq: "400000000" },
+          ],
+        },
+        // swap: estimatedDeduction=12M(echo·미차감), expenses=710M(directSide) → 710M만
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result: { mode: "single", result: { totalTax: 0, estimatedDeduction: 12_000_000, expenses: 710_000_000, swapApplied: true } } as any,
+      }));
+      expect(computeSummary().totalNecessaryExpense).toBe(710_000_000);
+    });
+
+    it("실지취득 모드는 개산공제 미적용 — 기존 capex/양도비 회귀 불변", () => {
+      useCalcWizardStore.setState((st) => ({
+        formData: {
+          ...st.formData,
+          assets: [
+            {
+              ...makeDefaultAsset(1),
+              fixedAcquisitionPrice: "50000000",
+              directExpenses: "1000000",
+              standardPriceAtAcq: "400000000", // 실지모드면 무시돼야 함
+            },
+          ],
+        },
+      }));
+      expect(computeSummary().totalNecessaryExpense).toBe(1_000_000);
+    });
+  });
 });

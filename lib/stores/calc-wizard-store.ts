@@ -463,7 +463,12 @@ export function computeTransferSummary(
   // 필요경비 합계: 지분 모드 자산은 capex/transferExpense × ratio
   const totalNecessaryExpense = formData.assets.reduce((acc, a) => {
     let baseExp: number;
-    if (a.assetKind === "housing" && a.isMixedUseHouse) {
+    if (a.useEstimatedAcquisition || a.isAppraisalAcquisition) {
+      // 환산·감정 모드: 실경비(capex/양도비) 대신 개산공제(§163⑥ = 취득 당시 기준시가 × 3%,
+      // 미등기 0.3%)를 즉시 산출 — result 도착 전에도 표시 가능. floor는 엔진 applyRate 미러.
+      const rate = formData.isUnregistered ? 0.003 : 0.03;
+      baseExp = Math.floor(parseRaw(a.standardPriceAtAcq) * rate);
+    } else if (a.assetKind === "housing" && a.isMixedUseHouse) {
       // 겸용주택은 공통 capex/transferExpense를 엔진이 소비하지 않음 —
       // 주택/상가 섹션별 실제 필요경비(상속·증여·매매실가 중 활성 1세트만 채워짐)를 합산.
       baseExp =
@@ -592,11 +597,18 @@ export function computeTransferSummary(
     };
   }
 
+  // result 도착 후 권위값 override — 단건 모드는 엔진이 실제 차감한 필요경비(result.expenses =
+  // expensesApplied)로 확정. 환산 본문은 expenses=개산공제, swap은 expenses=자본·양도비(개산공제는 미차감
+  // echo), 실지는 expenses=실경비. estimatedDeduction과 합산 금지(본문 모드 이중계산 — 실측 확인).
+  const resultNecessaryExpense =
+    result?.mode === "single" ? (result.result.expenses ?? 0) : null;
+  const finalNecessaryExpense = resultNecessaryExpense ?? totalNecessaryExpense;
+
   return {
     totalSalePrice,
     totalAcqPrice,
-    totalNecessaryExpense,
-    netTransferIncome: totalSalePrice - totalAcqPrice - totalNecessaryExpense,
+    totalNecessaryExpense: finalNecessaryExpense,
+    netTransferIncome: totalSalePrice - totalAcqPrice - finalNecessaryExpense,
     estimatedTax,
     mixedUse,
     burdenedGift,
