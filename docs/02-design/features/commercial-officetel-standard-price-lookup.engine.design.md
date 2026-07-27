@@ -79,8 +79,9 @@ data/stdprice/commercial/manifest.json                  (gitignore — 빌드 �
 
 ### S1 — 열거·해제
 
+- ⚠️ **확장자를 신뢰하지 않는다 (필수).** `…(2020년1월1일기준).zip`은 실체가 **CSV 텍스트**였다. 확장자로 분기하면 `File is not a zip file`이 나고, 이를 "손상"으로 오판하면 **멀쩡한 자료(2020년 2-2 파트 721,852행)를 결손 처리**한다 — 실제 발생한 오진이다. 각 원본은 **선두 매직바이트로 실체를 판별**한다: `PK\x03\x04` → zip, 그 외 → 텍스트(CSV)로 취급.
 - **zip 엔트리명이 cp949**다. 표준 unzip은 `Illegal byte sequence`로 실패한다(실측). **인덱스 기반 추출** 또는 cp949 디코딩으로 처리한다.
-- **손상 zip이 존재**한다(2020년 `File is not a zip file`, 실측). 개별 파일 실패는 **skip + 기록 후 계속** — 전체 중단 금지.
+- 진짜 해제 실패는 **skip + 기록 후 계속**(전체 중단 금지). 단 skip 전에 위 매직바이트 판별을 반드시 거친다.
 
 ### S2a — CSV 파싱 · 형식 세대 판별
 
@@ -139,8 +140,9 @@ xl/worksheets/sheetN.xml (시트당 ≈294MB)  → <row> 단위 스트리밍 파
       "coverage": "full", "adopted": "…_01.csv,…_02.csv" },
     { "date": "2022-01-01", "rows": 1871970, "sigunguCount": 116,
       "coverage": "full", "adopted": "…2월28일 기준…", "superseded": ["…1월1일 기준…"], "diffRows": 110 },
-    { "date": "2020-01-01", "rows": 721849, "sigunguCount": 74,
-      "coverage": "partial", "note": "2-2 배포본 결손(zip 손상)" }
+    { "date": "2020-01-01", "rows": 1443701, "sigunguCount": 116,
+      "coverage": "full", "adopted": "…_2-1(재추출).csv,…(2020년1월1일기준).zip",
+      "note": "후자는 확장자만 .zip이고 실체는 CSV(2-2 파트) — S1 매직바이트 판별 필수" }
   ],
   "repairs": { "hoDateRestored": 12359 },
   "unjoinableParcelRows": 31410
