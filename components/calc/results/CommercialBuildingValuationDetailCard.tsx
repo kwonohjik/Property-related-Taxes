@@ -33,6 +33,8 @@ export interface CommercialBuildingValuationResult {
   estimatedDeductionBuilding: number;
   /** §164⑥ 단서 — 취득당시 건물 기준시가가 §164⑤ 준용 산정값이어야 하는 구간 */
   sec164_5ProvisoApplicable?: boolean;
+  /** §164⑥ 산식 괄호 단서 — 취득당시 합계액 == 최초고시당시 합계액 (§164⑧ 준용 대상) */
+  sec164_8ProvisoApplicable?: boolean;
 }
 
 interface Props {
@@ -142,6 +144,13 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label="환산취득가 건물분 = 합계 − 토지분" value={detail.estimatedAcquisitionBuilding} sub />
           </tbody>
         </table>
+        {detail.sec164_8ProvisoApplicable && (
+          <p className="text-caption text-rose-700 mt-1">
+            ※ 취득당시 기준시가합과 최초고시당시 기준시가합이 <b>같습니다</b>. 시행령 §164⑥ 산식
+            괄호 단서에 따라 <b>§164⑧(기준시가 상승률 참작)을 준용</b>해야 하는 사안이며, 위 취득시
+            환산기준시가는 그 준용을 반영하지 않은 값입니다 — 별도 검토가 필요합니다.
+          </p>
+        )}
         {detail.sec164_5ProvisoApplicable && (
           <p className="text-caption text-amber-700 mt-1">
             ※ 취득당시 건물 기준시가는 국세청 고시 전(취득연도 2000년 이전)이므로 시행령 §164⑥ 단서에

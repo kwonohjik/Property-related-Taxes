@@ -108,3 +108,59 @@ describe("§164⑥ 단서 판정 echo", () => {
     expect(r.sec164_5ProvisoApplicable).toBeUndefined();
   });
 });
+
+/**
+ * S-01~S-04 — §164⑥ 산식 괄호 단서(취득당시 합계액 == 최초고시당시 합계액 → §164⑧ 준용) 탐지.
+ * 계획서: docs/01-plan/features/commercial-164-6-same-value-164-8-proviso.plan.md
+ */
+describe("§164⑥ 괄호 단서 — §164⑧ 준용 대상 탐지", () => {
+  /** 두 시점 기준시가합을 동일하게 맞춘 입력 (토지·건물 모두 동일) */
+  const sameSums = {
+    isPreDisclosure: true as const,
+    exclusiveArea: 150,
+    commonArea: 50,
+    landArea: 100,
+    unitPriceAtTransfer: 2_500_000,
+    unitPriceAtFirstDisclosure: 1_200_000,
+    buildingStdPriceAtAcquisition: 120_000_000,
+    buildingStdPriceAtFirstDisclosure: 120_000_000,
+    landPriceAtAcquisition: 1_000_000,
+    landPriceAtFirstDisclosure: 1_000_000,
+  };
+
+  it("S-01: 두 합계액이 같으면 플래그가 선다", () => {
+    const r = calculateCommercialBuildingValuation(sameSums, 1_000_000_000);
+    expect(r.combinedStdAtAcq).toBe(r.combinedStdAtFirst);
+    expect(r.sec164_8ProvisoApplicable).toBe(true);
+  });
+
+  it("S-02: 합계액이 다르면 플래그가 없다", () => {
+    const r = calculateCommercialBuildingValuation(
+      { ...sameSums, buildingStdPriceAtFirstDisclosure: 150_000_000 },
+      1_000_000_000,
+    );
+    expect(r.sec164_8ProvisoApplicable).toBeUndefined();
+  });
+
+  it("S-03: C-02(post_disclosure)는 대상이 아니다", () => {
+    const r = calculateCommercialBuildingValuation(
+      {
+        isPreDisclosure: false,
+        exclusiveArea: 150,
+        commonArea: 50,
+        landArea: 100,
+        unitPriceAtTransfer: 2_500_000,
+        unitPriceAtAcquisition: 2_500_000,
+      },
+      1_000_000_000,
+    );
+    expect(r.sec164_8ProvisoApplicable).toBeUndefined();
+  });
+
+  it("S-04: ★ 탐지는 계산을 바꾸지 않는다 — 비율 1 그대로 산출된다", () => {
+    const r = calculateCommercialBuildingValuation(sameSums, 1_000_000_000);
+    // 합계액이 같으므로 비율 = 1 → P_A = 최초고시 호별총액
+    expect(r.estimatedBasisAtAcq).toBe(r.unitPriceTotalAtFirst);
+    expect(r.estimatedAcquisitionTotal).toBeGreaterThan(0);
+  });
+});

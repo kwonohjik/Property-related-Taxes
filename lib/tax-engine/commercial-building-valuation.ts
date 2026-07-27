@@ -276,6 +276,8 @@ function _calcPreDisclosure(
     ...(input.acquisitionYear !== undefined && {
       sec164_5ProvisoApplicable: input.acquisitionYear <= ACQ_BASE_RATE_MAX_ACQ_YEAR,
     }),
+    // §164⑥ 산식 괄호 단서 — 두 합계액이 같으면 §164⑧ 준용 대상이다(산정 미구현 — 탐지만).
+    ...(combinedStdAtAcq === combinedStdAtFirst && { sec164_8ProvisoApplicable: true }),
   };
 }
 

@@ -156,4 +156,17 @@ export interface CommercialBuildingValuationResult {
    * `acquisitionYear` 미지정 시 undefined(판정 생략).
    */
   sec164_5ProvisoApplicable?: boolean;
+
+  /**
+   * §164⑥ 산식 **괄호 단서** 해당 — 취득당시 합계액 == 최초고시당시 합계액.
+   *
+   * > (취득당시의 가액과 최초로 고시한 기준시가 고시당시의 가액이 동일한 경우에는
+   * >  제8항의 규정을 준용한다)
+   *
+   * ⚠️ **산정 미구현** — 준용의 대상·방향·준용 산식(시행규칙 §80①1호 가목/나목)이 확정되지 않았고,
+   *    산정에 전기 개별공시지가·전기 건물 기준시가·기준시가 조정월수가 필요한데 폼에 없다.
+   *    본 플래그는 **탐지 전용**이며 계산을 바꾸지 않는다(비율 = 1 그대로).
+   *    계획서: docs/01-plan/features/commercial-164-6-same-value-164-8-proviso.plan.md
+   */
+  sec164_8ProvisoApplicable?: boolean;
 }

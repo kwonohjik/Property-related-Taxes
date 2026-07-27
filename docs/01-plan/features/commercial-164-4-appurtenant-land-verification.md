@@ -200,8 +200,8 @@ __tests__/calc/commercial-164-4-pre1990-land.test.ts       14 케이스
 `legal-codes/building-standard-price.ts:20` `SAME_YEAR_TRANSFER`. 구체 산식은 시행규칙 §80①.
 → §164⑤·§164④ 때와 같이 **재구현이 아니라 준용 배선** 문제일 가능성이 높다.
 
-**미확정**: §164⑧을 여기 준용할 때 **무엇을 조정하는지**(§164⑧은 "양도당시" 기준시가를 정하는
-규정이다) 해석이 필요하다. 별건 계획으로 분리한다 — 본 문서 범위 밖.
+**→ 별건 계획으로 분리됨**: [`commercial-164-6-same-value-164-8-proviso.plan.md`](commercial-164-6-same-value-164-8-proviso.plan.md)
+(2026-07-28 — **탐지까지 구현**, 산정은 준용 대상·방향·산식 미확정으로 보류).
 
 ## 7. 미해소
 
