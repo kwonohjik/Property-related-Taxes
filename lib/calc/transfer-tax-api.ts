@@ -638,16 +638,16 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             .slice(1)
             .map((a) => buildAssetPayload(a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold)),
           bundledSaleMode: form.bundledSaleMode,
-          // primary 양도가액 (actual 모드 전용).
-          // 지분 모드는 contractTotalPrice × ratio 자동 입력 (companion buildAssetPayload와 일관)
-          // — 사용자 입력란이 비어 있어도 시스템이 자동 결정하므로 zod 검증 통과.
-          primaryActualSalePrice:
-            form.bundledSaleMode === "actual"
-              ? primary.actualSalePrice
-                ? parseAmount(primary.actualSalePrice)
-                : primaryFractional
-                  ? applyRatio(totalContractPrice, primaryRatio)
-                  : undefined
+          // primary 확정 양도가액.
+          //  - 지분 모드: 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —
+          //    companion buildAssetPayload:428 정책과 일관). route가 fixedSalePrice로 주입해
+          //    기준시가 안분 없이 지분율 안분 성립.
+          //  - actual 모드(비지분): 계약서상 양도가액.
+          //  - apportioned 비지분: undefined (양도시 기준시가 비율 안분).
+          primaryActualSalePrice: primaryFractional
+            ? applyRatio(totalContractPrice, primaryRatio)
+            : form.bundledSaleMode === "actual" && primary.actualSalePrice
+              ? parseAmount(primary.actualSalePrice)
               : undefined,
         }
       : {}),
