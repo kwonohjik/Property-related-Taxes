@@ -36,6 +36,8 @@ function seedForm() {
           cbLandPricePerSqmAtFirst: "11060632",
           cbBuildingStdPriceAtAcq: "69602660",
           cbBuildingStdPriceAtFirst: "69527856",
+          // 상속개시 2000년 → §164⑥ 단서(나목 가액 부재) 구간. 준용 산정 확인 필수.
+          cbAcqBuildingStdBy164_5: true,
         }],
         transferDate: "2025-06-01",
         filingDate: "2025-08-31",

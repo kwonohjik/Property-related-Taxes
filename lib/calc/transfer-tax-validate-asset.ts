@@ -9,6 +9,8 @@
  * 자산 간 일괄 수집은 transfer-tax-validate.ts의 collectStepIssues가 담당.
  */
 
+import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
+import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
 import { isPhdEligible } from "./phd-eligibility";
@@ -124,6 +126,10 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         amounts164.filter((f) => parseAmount(f) > 0).length;
       if (filled > 0 && filled < 8)
         return `${label}: §164⑥ 취득당시 기준시가는 8개 항목(면적 3·최초고시 호별고시가·취득시·최초고시 개별공시지가·건물기준시가)을 모두 입력하거나 모두 비워두세요.`;
+      // §164⑥ 단서 — 상속개시 연도 ≤2000이면 나목(건물 기준시가) 가액이 없어 §164⑤ 준용이 필요하다.
+      // 8필드를 채워 §164⑥을 적용하는 경우에만 요구한다(전부 비우면 상증법 평가액만 사용 → 무관).
+      if (filled === 8 && isBeforeBuildingStdPriceNotice(inhDate164) && !asset.cbAcqBuildingStdBy164_5)
+        return `${label}: 취득당시(상속개시일) 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`;
     }
     return null;
   }
@@ -169,6 +175,14 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         return `${label}: 취득시 개별공시지가(원/㎡)를 입력하세요.`;
       if (!parseAmount(asset.cbLandPricePerSqmAtFirst))
         return `${label}: 최초고시시(2005) 개별공시지가(원/㎡)를 입력하세요.`;
+      // §164⑥ 단서 — 취득연도 ≤2000은 나목(건물 기준시가) 가액이 없어 §164⑤ 준용이 필요하다.
+      // 준용 산정에는 신축연도·구조·용도가 필요해 엔진이 자동 산정할 수 없으므로(AssetForm 미보유)
+      // 사용자의 명시적 확인을 요구한다. 확인 없이 임의 금액이 들어가면 P_A가 조용히 틀린다.
+      if (
+        isSec164_5ProvisoApplicable(asset.cbEra, asset.acquisitionDate) &&
+        !asset.cbAcqBuildingStdBy164_5
+      )
+        return `${label}: 취득당시 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`;
     }
 
     if (asset.cbEra === "post_disclosure") {

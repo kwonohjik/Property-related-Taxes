@@ -175,12 +175,19 @@ const DURABLE_BY_GROUP: Readonly<Record<AcqBaseRateGroup, number>> = { I: 40, II
  * - §8③: 신축연도 그룹 최저행(I=1945/II=1955/III=1965) 클램프. (1985 클램프 금지.)
  * 취득연도 > 2000(2001 이후)이거나 해당 셀 미수록(취득<신축 등) 시 undefined.
  */
+/**
+ * 산정기준율표 취득연도 축의 상한 = **법 §99①1호나목(건물 기준시가)이 없는 마지막 연도**.
+ * 이 연도 이하 취득이 소령 §164⑤(그리고 §164⑥·⑦ 단서의 준용) 적용 구간이다.
+ * 표의 취득연도 열이 1985~2000이라는 사실 자체가 근거 — 추론이 아니다.
+ */
+export const ACQ_BASE_RATE_MAX_ACQ_YEAR = 2000;
+
 export function resolveAcqBaseRate(
   group: AcqBaseRateGroup,
   builtYear: number,
   acqYear: number,
 ): number | undefined {
-  if (acqYear > 2000) return undefined;
+  if (acqYear > ACQ_BASE_RATE_MAX_ACQ_YEAR) return undefined;
   const aKey = acqYear <= 1985 ? 1985 : acqYear; // §8① 취득연도 의제
   const builtEff = Math.max(builtYear, aKey - DURABLE_BY_GROUP[group]); // §8⑤ 내용연수 종료연도 치환
   const bKey = builtEff <= GROUP_MIN_BUILT[group] ? GROUP_MIN_BUILT[group] : builtEff; // §8③ 그룹 최저행

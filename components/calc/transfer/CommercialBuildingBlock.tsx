@@ -29,6 +29,8 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
+import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
+import { Sec164_5ProvisoNotice } from "@/components/calc/transfer/Sec164_5ProvisoNotice";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 
@@ -67,6 +69,8 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
   const isPreDisclosure = asset.cbEra === "pre_disclosure";
   const isPostDisclosure = asset.cbEra === "post_disclosure";
   const hasEra = isPreDisclosure || isPostDisclosure;
+  // §164⑥ 단서 — 취득연도 ≤2000은 나목(건물 기준시가) 가액이 없어 §164⑤ 준용 산정이 필요하다.
+  const needs164_5 = isSec164_5ProvisoApplicable(asset.cbEra, asset.acquisitionDate);
 
   // 연면적 자동 계산 표시 (사용자 친화적 피드백)
   const totalFloorArea = useMemo(() => {
@@ -204,6 +208,13 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             <div className="text-xs text-amber-700 mb-1">
               건물분 ㎡당 가액 × 연면적(전유+공용 보정계수 반영) = <b>건물 기준시가 총액</b>으로 환산해 입력
             </div>
+            {needs164_5 && (
+              <Sec164_5ProvisoNotice
+                acquisitionDate={asset.acquisitionDate}
+                checked={asset.cbAcqBuildingStdBy164_5}
+                onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
+              />
+            )}
             {/* 취득시 — amber */}
             <FieldCard
               label="취득시 건물 기준시가"

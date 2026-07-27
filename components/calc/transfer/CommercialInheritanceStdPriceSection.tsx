@@ -18,6 +18,8 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
+import { Sec164_5ProvisoNotice } from "@/components/calc/transfer/Sec164_5ProvisoNotice";
+import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -94,6 +96,14 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
 
       {/* ③ 건물 기준시가 (취득시·최초고시) */}
       <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 취득시·최초고시 (원, 총액)" noDark>
+        {isBeforeBuildingStdPriceNotice(inheritanceDate) && (
+          <Sec164_5ProvisoNotice
+            acquisitionDate={inheritanceDate}
+            checked={asset.cbAcqBuildingStdBy164_5}
+            onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
+            timePointLabel="취득당시(상속개시일)"
+          />
+        )}
         <FieldCard label="취득시(상속개시일) 건물 기준시가" unit="원" hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액">
           <CurrencyInput label="" value={asset.cbBuildingStdPriceAtAcq} onChange={(v) => onChange({ cbBuildingStdPriceAtAcq: v })} hideUnit />
         </FieldCard>

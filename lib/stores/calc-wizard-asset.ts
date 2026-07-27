@@ -700,6 +700,17 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   cbBuildingStdPriceAtAcq: string;
   /**
+   * §164⑥ 단서 — 취득당시 건물 기준시가를 §164⑤ 준용으로 산정했음을 사용자가 확인.
+   *
+   * 취득연도 ≤ 2000이면 법 §99①1호나목(건물 기준시가)이 고시되기 전이라 그 가액이 없다.
+   * 국세청 「취득당시 건물기준시가 산정기준율표」의 취득연도 축이 1985~2000이고
+   * `resolveAcqBaseRate()`가 `acqYear > 2000`을 잘라내는 것이 그 경계다.
+   * 이때 §164⑥ 단서에 따라 §164⑤을 준용해야 하는데, 준용 산정에는 신축연도·구조·용도가 필요해
+   * 엔진이 자동 산정할 수 없다(AssetForm 미보유 — 건물 기준시가 모달에서만 입력).
+   * → 사용자의 명시적 확인을 남긴다. cbEra === "pre_disclosure" + 취득연도 ≤2000일 때만 의미 있음.
+   */
+  cbAcqBuildingStdBy164_5: boolean;
+  /**
    * 건물 기준시가 — 최초고시시(2005) (원, 총액). cbEra === "pre_disclosure" 시만 필수.
    */
   cbBuildingStdPriceAtFirst: string;
