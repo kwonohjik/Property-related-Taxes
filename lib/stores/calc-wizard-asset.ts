@@ -695,7 +695,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   cbUnitPriceAtFirstOrAcq: string;
   /**
    * 건물 기준시가 — 취득시 (원, 총액). cbEra === "pre_disclosure" 시만 필수.
-   * 소득세법 시행령 §164①: 국세청 고시 건물기준시가.
+   * 법 §99①1호 나목의 가액: 국세청 고시 건물기준시가.
    * 사용자(외부)에서 ㎡당 단가 × 연면적(전유+공용 보정계수 반영)을 미리 곱한 총액 입력.
    */
   cbBuildingStdPriceAtAcq: string;

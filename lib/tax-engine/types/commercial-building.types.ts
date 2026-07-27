@@ -4,7 +4,7 @@
  * 800줄 정책 준수를 위해 transfer.types.ts에서 분리.
  * transfer.types.ts에서 재수출되어 외부 소비자 경로는 변경 없음.
  *
- * 법령 근거: 소득세법 §97②2호; 시행령 §163⑥·§164①·⑧·§176조의2②2호
+ * 법령 근거: 소득세법 §97②2호·§99①1호 가목·나목; 시행령 §163⑥·§164④⑤⑥·§176조의2②2호
  */
 
 /**
@@ -42,7 +42,7 @@ export interface CommercialBuildingValuationInput {
    */
   unitPriceAtAcquisition?: number;
 
-  // ── 건물 기준시가 총액 (소령 §164①) — C-01 전용 ──
+  // ── 건물 기준시가 총액 = 법 §99①1호 나목의 가액 — C-01 전용 ──
   // 사용자(외부)에서 ㎡당 단가 × 연면적(전유+공용 보정계수 반영)을 미리 곱해 입력하는 총액 (원).
   // 3시점 환산 입력 일관성: 호별고시는 ㎡당 단가, 토지는 개별공시지가×면적, 건물은 총액.
   /**
@@ -61,7 +61,7 @@ export interface CommercialBuildingValuationInput {
    */
   buildingStdPriceAtTransfer?: number;
 
-  // ── 개별공시지가 (소령 §164①) ──
+  // ── 개별공시지가 = 법 §99①1호 가목의 가액(× 대지면적) ──
   /** 취득시 개별공시지가 (원/㎡). C-01/C-02 모두 필수. */
   landPriceAtAcquisition?: number;
   /** 최초고시시(2005) 개별공시지가 (원/㎡). isPreDisclosure === true 일 때 필수. */
@@ -95,7 +95,7 @@ export interface CommercialBuildingValuationResult {
    */
   unitPriceTotalAtFirst?: number;
 
-  // ── 3시점 기준시가합 (소령 §164①) ──
+  // ── 3시점 기준시가합 (가목의 가액 + 나목의 가액 — §164⑥ 산식) ──
   /** 취득시 기준시가합 = 개공지 × 대지면적 + 건물 기준시가(총액) */
   combinedStdAtAcq?: number;
   /** 최초고시시 기준시가합 */

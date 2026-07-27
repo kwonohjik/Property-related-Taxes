@@ -93,8 +93,8 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       {/* 기준시가합 3시점 표 (pre_disclosure 시) */}
       {isPreDisclosure && (
         <div>
-          <p className="text-xs font-medium text-amber-800 mb-1">기준시가합 (소득세법 시행령 §164①)</p>
-          <p className="text-caption text-muted-foreground mb-2">= 개별공시지가(원/㎡) × 대지면적(㎡) + 건물 기준시가 총액(원)</p>
+          <p className="text-xs font-medium text-amber-800 mb-1">기준시가합 (소득세법 §99①1호 가목·나목)</p>
+          <p className="text-caption text-muted-foreground mb-2">= 가목의 가액(개별공시지가 × 대지면적) + 나목의 가액(건물 기준시가 총액)</p>
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-amber-200">
