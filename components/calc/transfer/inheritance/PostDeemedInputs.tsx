@@ -19,6 +19,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { HouseValuationSection } from "./HouseValuationSection";
+import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import {
   Select,
   SelectContent,
@@ -59,12 +60,21 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   // 평가방법(isSupplementary) 무관 — §163⑨2호는 상증법 평가액과 §164⑦을 비교하여 큰 금액을
   // 취득가액으로 하므로, ②(§164⑦)는 ①의 평가방법과 독립적으로 항상 산정 대상.
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
-  const kind = asset.inheritanceAssetKind;
   // 상가건물·오피스텔: 토지/주택 보충적평가 보조계산(개별공시지가×면적 / 주택가격)은 부적합 →
   // 신고가액 직접 입력(상증법 §60~66 평가액). §164⑥ 취득당시 기준시가는 별도 섹션(취득 정보)에서 처리.
   const isCommercial = asset.assetKind === "commercial_building";
-  const isLand = kind === "land" && !isCommercial;
-  const isHouse = kind === "house_individual" || kind === "house_apart";
+  // 토지/주택 판정은 상단 assetKind로 파생(상속 자산구분 라디오 폐지 대응).
+  const isLand = asset.assetKind === "land";
+  const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
+  // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용).
+  const kind: "house_individual" | "house_apart" =
+    asset.inheritanceAssetKind === "house_individual"
+      ? "house_individual"
+      : asset.inheritanceAssetKind === "house_apart"
+        ? "house_apart"
+        : asset.addressDong && asset.addressHo
+          ? "house_apart"
+          : "house_individual";
   const showHouseValuation = isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
 
   // 보충적평가 보조계산은 상속개시 시점에 공시가격이 존재해야 조회·재구성 가능.
@@ -195,7 +205,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
       {/* ③ 보충적평가 보조계산 (supplementary 선택 + 공시 시점 자산만).
           토지=개별공시지가×면적 / 주택=고시주택가격 단일(부수토지 일체). 상증법 §61①.
           상가건물은 토지/주택 보조계산 부적합 → 신고가액 직접 입력(위 ②). */}
-      {isSupplementary && !isPreDisclosure && !isCommercial && (
+      {isSupplementary && !isPreDisclosure && !isCommercial && (isLand || isHouse) && (
         <ToggleCard
           tone="amber"
           title="보충적평가 보조계산 사용"
@@ -230,6 +240,13 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
         >
           {asset.useSupplementaryHelper && (
             <div className="space-y-3">
+              {isHouse && (
+                <InheritanceHouseKindPicker
+                  value={kind}
+                  assetId={asset.assetId}
+                  onChange={onChange}
+                />
+              )}
               {isLand ? (
                 /* 토지 — 개별공시지가(Vworld 조회) + 면적. 토지기준시가 = 단가×면적(LandPriceLookupField 자동표시). */
                 <div className="space-y-2 rounded-md border border-border bg-background p-2.5">
@@ -316,6 +333,11 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
             취득가액은 위 상속세 신고가액(상증법 평가액)과 §164⑦ 환산액 중 <strong>큰 금액</strong>으로 자동
             적용됩니다 (소득세법 시행령 §163⑨2호).
           </p>
+          <InheritanceHouseKindPicker
+            value={kind}
+            assetId={asset.assetId}
+            onChange={onChange}
+          />
           <HouseValuationSection
             asset={asset}
             onChange={onChange}

@@ -23,6 +23,26 @@ import {
 } from "@/lib/tax-engine/legal-codes/transfer";
 
 /**
+ * 상속 취득가액 엔진 payload용 assetKind 파생 — 상단 `asset.assetKind` 기준.
+ *
+ * 엔진(inheritance-acquisition)은 land(단가×면적/legacyFallback) vs house(총액)만 구분하므로
+ * land vs 非land 이분으로 매핑한다. housing/redevelopment는 개별/공동 refinement를 유지하되
+ * (조회 DB·라벨용, 세액 무관), 미선택 시 동·호 유무로 도출. 그 외(건물·권리 등)는 총액-safe house_apart.
+ * 상단 자산 구분 라디오 폐지 후에도 §164⑦(helpers.ts:142)·다건 land 안분이 항상 정확하도록 보장.
+ */
+export function deriveEngineInheritanceAssetKind(
+  asset: AssetForm,
+): "land" | "house_individual" | "house_apart" {
+  if (asset.assetKind === "land") return "land";
+  if (asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt") {
+    if (asset.inheritanceAssetKind === "house_individual") return "house_individual";
+    if (asset.inheritanceAssetKind === "house_apart") return "house_apart";
+    return asset.addressDong && asset.addressHo ? "house_apart" : "house_individual";
+  }
+  return "house_apart";
+}
+
+/**
  * 다주택 중과 한시배제(소득세법 시행령 §167의3①12의2·§167의10①12의2) 여부 —
  * 양도일 ∈ [2022-05-10, 2026-05-09] AND 양도 주택 보유기간 2년 이상(§95④).
  * true면 중과 전면배제(일반세율) → UI ④ 섹션 숨김 + 해당 검증 skip(양쪽 단일 술어).
@@ -370,7 +390,7 @@ export function buildAssetPayload(
     asset.acquisitionCause === "inheritance"
       ? {
           inheritanceDate: asset.inheritanceDate || asset.acquisitionDate,
-          assetKind: asset.inheritanceAssetKind,
+          assetKind: deriveEngineInheritanceAssetKind(asset),
           landAreaM2: effectiveLandArea,
           // 지분 모드: 100% 기준 입력값(공동주택가격 등)에 × ratio 적용
           publishedValueAtInheritance: fractional
