@@ -581,18 +581,20 @@ export function buildStatementItems(
       p.reducibleIncome ?? 0,
       p.replacementLandDetail?.eligibleTransferIncome,
     );
+  const eligibleValue = isAggregate
+    ? properties.reduce((s, p) => s + eligibleIncomeOf(p), 0)
+    : reductionEligibleIncome(
+        result.reductionTypeApplied,
+        singleIncome,
+        result.reducibleIncome ?? 0,
+        result.replacementLandDetail?.eligibleTransferIncome,
+      );
   items.set("reductionTargetIncome", {
     label: "세액감면대상금액",
-    value: isAggregate
-      ? properties.reduce((s, p) => s + eligibleIncomeOf(p), 0)
-      : reductionEligibleIncome(
-          result.reductionTypeApplied,
-          singleIncome,
-          result.reducibleIncome ?? 0,
-          result.replacementLandDetail?.eligibleTransferIncome,
-        ),
-    formula:
-      "감면 적용 대상 양도소득금액 (§90① 세액감면방식 — 감면율·기본공제 前, 조세특례제한법 §69·§77 등)",
+    value: eligibleValue,
+    formula: isAggregate
+      ? `자산별 감면 적용 대상 양도소득금액 합계 = ${eligibleValue.toLocaleString()} (§90① 세액감면방식 — 감면율·기본공제 前)`
+      : `감면 적용 대상 양도소득금액 = ${eligibleValue.toLocaleString()} (§90① 세액감면방식 — 감면율·기본공제 前, 조세특례제한법 §69·§77 등)`,
     legalBasis: "소득세법 §90① · 조세특례제한법 §127",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
@@ -625,14 +627,19 @@ export function buildStatementItems(
   // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(§90② 소득금액차감). FilingFormTableHelpers와 동일.
   // §161(장기임대 거주주택 비과세, isRH)은 taxableGain이 이미 안분 후 값이므로 별도 분기.
   const isRH = result.rentalHousingExceptionDetail?.applied === true;
+  const incomeAfterValue = isAggregate
+    ? properties.reduce((s, p) => s + Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)), 0)
+    : isRH
+      ? result.taxableGain
+      : Math.max(0, singleIncome - singleIncomeDeduction);
   items.set("incomeAmountAfter", {
     label: "감면후 소득금액",
-    value: isAggregate
-      ? properties.reduce((s, p) => s + Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)), 0)
+    value: incomeAfterValue,
+    formula: isAggregate
+      ? `자산별 (양도소득금액 − 소득금액 감면대상) 합계 = ${incomeAfterValue.toLocaleString()}`
       : isRH
-        ? result.taxableGain
-        : Math.max(0, singleIncome - singleIncomeDeduction),
-    formula: "양도소득금액 − 소득금액 감면대상 (§90② 소득금액차감)",
+        ? `과세대상 양도소득금액 ${result.taxableGain.toLocaleString()} (§161 안분 후 — 세액감면방식 소득금액 미차감)`
+        : `양도소득금액 ${singleIncome.toLocaleString()} − 소득금액 감면대상 ${singleIncomeDeduction.toLocaleString()} = ${incomeAfterValue.toLocaleString()}`,
     legalBasis: "소득세법 §95·§90②",
     note: "소득금액차감 감면 반영 후 소득금액 (세액감면방식은 소득금액 미차감)",
   });
@@ -757,7 +764,7 @@ export function buildStatementItems(
   items.set("totalDeterminedTax", {
     label: "총결정세액",
     value: result.determinedTax + totalPenalty,
-    formula: "결정세액 + 가산세액",
+    formula: `결정세액 ${result.determinedTax.toLocaleString()} + 가산세액 ${totalPenalty.toLocaleString()} = ${(result.determinedTax + totalPenalty).toLocaleString()}`,
     legalBasis: "소득세법 §116",
   });
 

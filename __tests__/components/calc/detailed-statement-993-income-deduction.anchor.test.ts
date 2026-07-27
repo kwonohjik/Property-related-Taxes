@@ -122,3 +122,58 @@ describe("상세 명세서 — §99의3 소득금액차감 반영", () => {
     expect(items.get("reductionTargetIncome")!.value).toBe(0);
   });
 });
+
+/**
+ * 산식 값 인라인화 (A1~A5) — 라벨만 표시되던 산식에 실제 변수값 인라인.
+ * 계획서: docs/02-design/features/detailed-statement-formula-inline-values.plan.md
+ */
+describe("상세 명세서 — 산식 값 인라인 (A1~A5)", () => {
+  const renderText = (node: unknown) =>
+    render(createElement(Fragment, null, node as never)).container.textContent ?? "";
+
+  it("A1 감면후 소득금액: 양도소득금액 − 소득금액 감면대상 = 결과 값 인라인", () => {
+    const items = build(makeResult({ new993Detail: make993Detail() }));
+    const text = renderText(items.get("incomeAmountAfter")!.formula);
+    expect(text).toContain("415,118,683"); // 양도소득금액
+    expect(text).toContain("179,917,278"); // 소득금액 감면대상
+    expect(text).toContain("235,201,405"); // 감면후 소득금액
+  });
+
+  it("A2 세액감면대상금액(단건): 감면 대상 양도소득금액 값 인라인", () => {
+    const items = build(
+      makeResult({ reductionTypeApplied: "self_farming", reducibleIncome: 50_000_000 }),
+    );
+    const text = renderText(items.get("reductionTargetIncome")!.formula);
+    expect(text).toContain("50,000,000");
+  });
+
+  it("A3 총결정세액: 결정세액 + 가산세액 = 값 인라인", () => {
+    const items = build(makeResult({ determinedTax: 68_486_533, penaltyTax: 0 }));
+    const text = renderText(items.get("totalDeterminedTax")!.formula);
+    expect(text).toContain("68,486,533");
+  });
+
+  it("A4 농어촌특별세: 값 인라인 + 소득금액차감 감면 일반화(§99의3 외 조문)", () => {
+    const items = build(makeResult({ new993Detail: make993Detail({ ruralSurtax: 14_124_188 }) }));
+    expect(items.get("ruralSurtax")!.value).toBe(14_124_188);
+    expect(renderText(items.get("ruralSurtax")!.formula)).toContain("14,124,188");
+    // §4 일반화: new99Detail(비-§99의3)의 농특세도 집계 (종전 new993Detail만 읽어 0 누락)
+    const items2 = build(
+      makeResult({
+        new99Detail: {
+          reducibleTransferIncome: 0,
+          ruralSurtax: 3_500_000,
+        } as unknown as TransferTaxResult["new99Detail"],
+      }),
+    );
+    expect(items2.get("ruralSurtax")!.value).toBe(3_500_000);
+  });
+
+  it("A5 지방세 결정세액: 지방소득세 산출세액 − 감면 = 값 인라인", () => {
+    const items = build(
+      makeResult({ determinedTax: 68_486_533, penaltyTax: 0, localIncomeTax: 6_848_653 }),
+    );
+    const text = renderText(items.get("localDeterminedTax")!.formula);
+    expect(text).toContain("6,848,653");
+  });
+});

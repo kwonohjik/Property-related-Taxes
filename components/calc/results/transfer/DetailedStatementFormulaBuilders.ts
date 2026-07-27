@@ -439,6 +439,7 @@ export function buildPenaltyFormula(p: PerPropertyBreakdown): string {
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { StatementItem } from "./DetailedStatementHelpers";
 import { findStepByLabel } from "./DetailedStatementHelpers";
+import { incomeDeductionRuralSurtax } from "./reduction-eligible-income";
 
 /**
  * 다건 합산 절차 3개 항목(차손통산·기본공제 배분·비교과세)을 Map에 추가.
@@ -507,10 +508,11 @@ export function buildSurtaxAndLocalTaxItems(
   result: TransferTaxResult,
   totalPenalty: number,
 ): void {
+  const ruralSurtaxValue = incomeDeductionRuralSurtax(result);
   items.set("ruralSurtax", {
     label: "농어촌특별세",
-    value: result.new993Detail?.ruralSurtax ?? 0,
-    formula: "(감면 전 산출세액 − 감면 후 산출세액) × 20% — §99의3 등 감면 적용 시만",
+    value: ruralSurtaxValue,
+    formula: `(감면 전 산출세액 − 감면 후 산출세액) × 20% = ${ruralSurtaxValue.toLocaleString()} (§99의3·§99·§98의8 등 소득금액차감 감면 적용 시)`,
     legalBasis: "농어촌특별세법 §3·§5",
     summaryOnly: true,
   });
@@ -533,7 +535,7 @@ export function buildSurtaxAndLocalTaxItems(
   items.set("localDeterminedTax", {
     label: "지방세 결정세액",
     value: result.localIncomeTax,
-    formula: "지방소득세 산출세액 − 지방세 감면세액 (원 미만 절사)",
+    formula: `지방소득세 산출세액 ${localCalc.toLocaleString()} − 지방세 감면세액 0 = ${result.localIncomeTax.toLocaleString()} (원 미만 절사)`,
     legalBasis: "지방세법 §103",
     summaryOnly: true,
   });
