@@ -78,6 +78,7 @@ lib/calc/commercial-164-6-proviso.ts              폼 조건 판정(엔진과 �
 | D 기본값 12 | ✅ (S-10) |
 | 폼 조건 판정 | ✅ 엔진과 동일 floor 위치 · post_disclosure 제외 |
 | ⑧ validate | ✅ 조건 성립 + B 미입력 → 차단 / B 입력 시 통과 / 조건 미성립 시 회귀 0 |
+| ⑤ UI (RTL) | ✅ 조건 성립 시에만 카드 노출 · 합계액 상이·post_disclosure·**미입력(0==0)** 미노출 · 합계액 표시값 일치 · B·D가 각각 단일 필드만 갱신 |
 | 스위트 | ✅ tax-engine·calc·api **8,923건** · tsc 0 · eslint 0 · 톤/폰트 0 |
 
 **차단으로 전환한 이유**: 산정 경로가 생겼으므로(B 입력) 더 이상 "막으면 계산 불가"가 아니다.

@@ -167,6 +167,7 @@ __tests__/calc/commercial-164-4-pre1990-land.test.ts       14 케이스
 | 우선순위 | ✅ 직접 입력이 환산값보다 우선 |
 | **3중 패턴** | ✅ API `landPriceAtAcquisition` = 파생값 · validate 통과 · 환산 불가 시 **양쪽 동시 차단** |
 | 회귀 | ✅ 1990 이후 취득은 종전 메시지 그대로 |
+| ⑤ UI (RTL) | ✅ 취득 1988 안내+환산 위젯 노출 · 경계 1990-08-29/30 · 2003 미노출 · 토글 ON 시 등급 3종 펼침 |
 | 스위트 | ✅ calc·components·lib 2,906건 · E2E 3건 · tsc 0 · eslint 0 · 폰트/톤 0 |
 
 ### (원안) Phase A — 배선 (§164⑦ 브리지 패턴 차용)

@@ -60,6 +60,7 @@ export function Sec164_8ProvisoInput({ asset, onChange }: Props) {
           label=""
           value={asset.cbPrevStdPriceSum}
           onChange={(v) => onChange({ cbPrevStdPriceSum: v })}
+          placeholder="전기 기준시가 합계액 입력"
           hideUnit
         />
       </FieldCard>
