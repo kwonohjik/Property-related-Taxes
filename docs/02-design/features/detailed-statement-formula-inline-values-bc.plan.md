@@ -92,4 +92,13 @@ A군(상시 표시 산술 5종)은 완료. 본 계획은 잔여 **B(날짜·기�
 
 - **권장 우선순위**: B1·B2(상시 노출·확정 개선) > C(도달 확정분만). dead fallback은 개선 대상 제외(서술 유지).
 - 타 세목 상세명세서 동종 감사는 별도(요청 시).
-- **미결(Do 진입 시 결정)**: probe 결과에 따라 C 개선 범위 확정. dead fallback 다수면 C는 소폭 축소될 수 있음.
+
+## C probe 실측 결과 (2026-07-27 · 확정)
+
+**dynamic probe**(`__tests__/components/calc/detailed-statement-fallback-dead.anchor.test.ts`, 9/9 pass) — 실엔진 `calculateTransferTax`(과세 시나리오) 결과 검증:
+
+- **C1·C3·C4·C5·C6·C10·C11 (단건)**: 엔진이 양도소득금액·기본공제·과세표준·산출세액·감면세액·결정세액·장기보유특별공제 step을 **모두 값-인라인 formula와 함께 emit**. `findStepByLabel`은 substring 매칭 → Helpers fallback(`?? "라벨만"`)은 **절대 도달하지 않음(dead)**.
+- **C2 (비과세 양도소득금액)**: 엔진 step은 임대주택 특례(§161①, nontaxableGainAmount>0) 시에만 emit되나 라벨 `"비과세 양도소득금액 (소령 §161①)"` + 값-인라인 formula(`transfer-tax-rental-housing-step.ts:144`). substring 매칭됨. 비-RH는 step 부재+행 "특례 시만 표시"라 무영향.
+- **C7·C8·C9 (집계)**: 엔진 집계 step(`transfer-tax-aggregate.ts:250·275·294`)이 값-인라인 formula 보유(정적 확인) → fallback dead.
+
+**결론: C군 fallback은 dead code** — 실제 사용자 화면엔 이미 엔진 값-인라인 산식이 표시됨(A·B와 달리 버그 아님). **production 코드 변경 없음.** fallback은 방어적으로 유지하고, 위 anchor로 "엔진이 값-인라인 formula를 항상 제공" 불변식을 고정(엔진 regress 시 회귀 검출).
