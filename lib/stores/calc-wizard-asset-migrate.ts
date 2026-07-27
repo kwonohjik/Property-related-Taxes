@@ -111,6 +111,7 @@ export function migrateAsset(raw: unknown): AssetForm {
       if (r && (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown")) {
         return {
           ruralHouseAcquisitionDate: "",
+          ruralHouseJibun: "",
           ruralHouseStdPrice: "",
           isRegisteredHanok: false,
           isAdjacentArea: false,

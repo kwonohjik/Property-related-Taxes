@@ -204,6 +204,8 @@ export type RentalReductionFormVariant =
       type: "new_99_4_rural";
       /** 농어촌주택 취득일 (YYYY-MM-DD) — 시한·3년 보유·취득순서 판정 */
       ruralHouseAcquisitionDate: string;
+      /** 농어촌주택 지번 주소 — 기준시가 조회 소스(별개 물건, 양도물건 아님). 엔진 미전달·폼 지속 전용 */
+      ruralHouseJibun?: string;
       /** 취득 당시 주택+부속토지 기준시가 합계 (원) — 3억(한옥 4억) 한도 */
       ruralHouseStdPrice: string;
       /** 령⑭ 지자체 등록 한옥 — 한도 4억 */
@@ -216,6 +218,8 @@ export type RentalReductionFormVariant =
   | {
       type: "new_99_4_hometown";
       ruralHouseAcquisitionDate: string;
+      /** 고향주택 지번 주소 — 기준시가 조회 소스(별개 물건). 엔진 미전달·폼 지속 전용 */
+      ruralHouseJibun?: string;
       ruralHouseStdPrice: string;
       isRegisteredHanok: boolean;
       /** ③ 일반주택과 같은/연접 시 — ON이면 배제 */
