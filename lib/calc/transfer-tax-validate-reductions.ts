@@ -182,8 +182,21 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         if (r.type === "new_99") {
           if (r.acquisitionType99 === "self_built" && !r.usageApprovalDate99)
             return fail("§99 적용: 자기건설 주택의 사용승인일을 입력하세요.");
-          if (parseAmount(r.standardPriceAtAcquisition99 || "0") <= 0)
-            return fail("§99 적용: 취득시 기준시가를 입력하세요.");
+          // 취득시 기준시가 필수 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary·UI echo와 동일 소스, ⑧ 3중 미러).
+          if (r.phdMode99) {
+            const phdInput = {
+              firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice99 || "0"),
+              landAreaSqm: parseDecimal(r.phdLandAreaSqm99 || "0"),
+              landPricePerSqmAtAcquisition: parseAmount(r.phdLandPricePerSqmAtAcq99 || "0"),
+              landPricePerSqmAtFirstDisclosure: parseAmount(r.phdLandPricePerSqmAtFirst99 || "0"),
+              buildingStdPriceAtAcquisition: parseAmount(r.phdBuildingStdAtAcq99 || "0"),
+              buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst99 || "0"),
+            };
+            if (!canCalcReductionPhd(phdInput))
+              return fail("§99 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+          } else if (parseAmount(r.standardPriceAtAcquisition99 || "0") <= 0) {
+            return fail("§99 적용: 취득시 기준시가를 입력하세요. (공동주택 최초고시 전 취득 시 PHD 환산 모드 ON 권장)");
+          }
           if (!(parseDecimal(r.exclusiveAreaSqm99 || "") > 0))
             return fail("§99 적용: 전용면적(㎡)을 입력하세요 (고가주택 판정).");
           // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (B-11 — 자동 안분 fallback 금지)
