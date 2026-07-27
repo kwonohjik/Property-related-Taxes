@@ -70,6 +70,20 @@ function companion0(body: Record<string, unknown>) {
   return arr?.[0];
 }
 
+/** 환산(estimated) 모드 companion: 취득시·양도시 기준시가는 ③ 취득정보에서 입력(② 아님). */
+function fractionalEstimatedForm() {
+  const form = fractionalLandForm(true);
+  form.assets[1] = {
+    ...form.assets[1],
+    acquisitionCause: "purchase",
+    useEstimatedAcquisition: true, // 환산
+    fixedAcquisitionPrice: "",
+    standardPriceAtAcq: "500000000", // 취득시 기준시가 (100% 기준, ③ 입력)
+    standardPriceAtTransfer: "900000000", // 양도시 기준시가 (100% 기준, ③ 환산 입력)
+  };
+  return form;
+}
+
 describe("[FRACTIONAL-BASIC-MERGE] 지분 모드 companion basic ← primary 병합", () => {
   it("A1: companion(basic 공란·기본 housing)의 payload assetKind가 primary 'land'로 병합", async () => {
     const { run, get } = captureBody(fractionalLandForm(true));
@@ -116,5 +130,25 @@ describe("[FRACTIONAL-BASIC-MERGE] 지분 모드 companion basic ← primary 병
     const issues = collectStepIssues(0, form);
     const sumBlock = issues.find((i) => /지분율.*합계|합계.*100%/.test(i.message));
     expect(sumBlock).toBeUndefined();
+  });
+
+  it("A4-estimated: 환산 companion의 양도시 기준시가(③ 입력)가 payload에 도달 (F2 non-issue)", async () => {
+    const { run, get } = captureBody(fractionalEstimatedForm());
+    await run();
+    const arr = get()!.companionAssets as Array<{
+      standardPriceAtTransfer?: number;
+      standardPriceAtAcquisition?: number;
+      useEstimatedAcquisition?: boolean;
+    }>;
+    // ② 안분 입력을 숨겨도 환산(③) 양도시 기준시가가 정상 전달 → 환산 지분 분할 작동
+    expect(arr[0].standardPriceAtTransfer).toBe(900000000);
+    expect(arr[0].standardPriceAtAcquisition).toBe(500000000);
+    expect(arr[0].useEstimatedAcquisition).toBe(true);
+  });
+
+  it("A4-estimated-pass: 환산 companion가 validate 미차단", () => {
+    const issues = collectStepIssues(0, fractionalEstimatedForm());
+    const companionBlock = issues.find((i) => i.assetIndex === 1);
+    expect(companionBlock).toBeUndefined();
   });
 });
