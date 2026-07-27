@@ -74,7 +74,10 @@ export function AssetSectionAcquisition({
               asset.assetKind === "general_building" ||
               asset.assetKind === "redevelopment_apt"
             ? "이 자산 종류는 지분 분할 취득을 지원하지 않습니다."
-            : undefined;
+            : asset.transferType === "burdened_gift" ||
+                asset.transferCause === "public_expropriation"
+              ? "부담부증여·공익수용은 지분 분할 취득과 함께 사용할 수 없습니다."
+              : undefined;
 
   // 지분율 위젯 + 지분 모드 안내카드 — 단일 프래그먼트로 묶어 2위치 중 1곳만 렌더.
   // 지분 모드(splitMode==="fractional")면 토글 B 직후(최상단), 그 외엔 취득원인 뒤(현행 위치).
