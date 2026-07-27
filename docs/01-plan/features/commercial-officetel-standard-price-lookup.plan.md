@@ -355,7 +355,7 @@ export const runtime = "nodejs";   // fs·zlib 사용 — 형제 라우트 build
 - **동일 고시일자 중복 배포본 → 후행본 채택**(§3-2). 판별은 **파일명 기준일 → zip 내부 타임스탬프** 순. **mtime 사용 금지**(다운로드 시각이라 재다운로드 시 역전 — 오채택하면 지번 정정 104건이 누락돼 PNU 조인이 깨진다)
 - manifest에 고시일자별 **coverage 플래그**(완전/부분) — 2020년 부분 결손 구분용
 - xlsx 스트리밍 파서(2026 5시트 구조 확인 완료)
-- `.gitignore`에 `/data/stdprice/` 추가 — **누락 시 255MB repo 오염**
+- ~~`.gitignore`에 `/data/stdprice/` 추가~~ — **완료** (커밋됨)
 - `package.json` 스크립트 `build:stdprice` (기존 `build:admin-data` 규약)
 - **verify**: 산출 총 행수 = 원본 합계(중복 배포본 제외) / 무작위 20건 원본 대조 100% 일치 / 2022 지번 정정 104건이 후행본 값으로 반영됐는지 확인
 
@@ -435,6 +435,6 @@ KoreanLaw MCP 원문 대조:
 ## 9. 착수 전 확인 사항
 
 - [x] Phase 0 anchor 6건 전건 GREEN — Phase 1 진입 가능
-- [ ] `.gitignore` `/data/stdprice/` — Phase 1 첫 커밋 전
+- [x] `.gitignore` `/data/stdprice/` — 적용 완료(`git check-ignore` 검증, `/data/raw/` 규칙 무회귀 확인)
 - [ ] 결손 자료 3건 재다운로드 (병행 가능, Phase 1 차단 아님)
 - [ ] 공공데이터포털 이용허락범위 확인 (배포 시점까지)
