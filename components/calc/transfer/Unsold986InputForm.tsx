@@ -28,6 +28,7 @@ interface Props {
   jibun?: string;
   dong?: string;
   ho?: string;
+  assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
 }
 
@@ -62,6 +63,7 @@ export function Unsold986InputForm({
   jibun,
   dong,
   ho,
+  assetId,
   assetPhdSnapshot,
 }: Props) {
   const isBuyerRented = value.hoType986 === "buyer_rented";
@@ -226,6 +228,7 @@ export function Unsold986InputForm({
           jibun={jibun}
           dong={dong}
           ho={ho}
+          assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold986"
           snapshotKeyPrefix="red986"

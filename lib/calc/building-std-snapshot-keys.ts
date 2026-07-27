@@ -11,14 +11,16 @@
  * (결과탭 렌더 소속판정) 두 소비처가 공유한다(드리프트 방지).
  */
 
-/** 스냅샷 키에서 자산/재산 id 추출 (소속 판정용). gb/cb/phd + first + -commercial + mx 전부 환원. */
+/** 스냅샷 키에서 자산/재산 id 추출 (소속 판정용). gb/cb/phd + first + -commercial + mx + red-phd 전부 환원. */
 export function idOfSnapshotKey(key: string): string {
   return key.startsWith("bsp-estate-")
     ? key.slice("bsp-estate-".length)
     : key
         .replace(/^bsp-/, "")
         .replace(/-(?:gb|cb|phd)-(?:acq|first|transfer)(?:-commercial)?$/, "")
-        .replace(/-mx-commercial$/, "");
+        .replace(/-mx-commercial$/, "")
+        // 감면 조문 PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷) — 규약 편입.
+        .replace(/-red-phd$/, "");
 }
 
 /** PHD 시점 라벨(계산서 헤딩용). phd 키가 아니면 null. */

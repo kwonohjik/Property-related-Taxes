@@ -357,7 +357,11 @@ import { fourPartFinancials, splitTwoColFinancials } from "./FilingFormTableFina
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
 import { buildRowsFromOrder } from "./FilingFormTableRowDefs";
-import { reductionEligibleIncome } from "./reduction-eligible-income";
+import {
+  reductionEligibleIncome,
+  incomeDeductionReducible,
+  incomeDeductionRuralSurtax,
+} from "./reduction-eligible-income";
 export { fmtCell } from "./FilingFormTableRowDefs";
 
 export function buildRows(
@@ -648,16 +652,16 @@ export function buildRows(
       result.replacementLandDetail?.eligibleTransferIncome,
     ),
   );
-  // §99의3 5년 안분 차감액 (소득금액 단계) — Phase 2 result.new993Detail
+  // 소득금액차감방식(§90②) 5년 안분 차감액 — §99의3·§99·§98의8·하이브리드 공용.
   // 산식: 양도소득금액 × (5년시점 공시가격 - 취득시 공시가격) / (양도시 공시가격 - 취득시 공시가격)
-  setNum("reductionTargetIncome2", "total", result.new993Detail?.reducibleTransferIncome ?? 0);
+  const incomeDeductionAmount = incomeDeductionReducible(result);
+  setNum("reductionTargetIncome2", "total", incomeDeductionAmount);
   // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(⑳ §90② 소득금액차감방식)
   // §90①(세액감면방식·§77 등)은 소득금액 미차감 → ⑲(세액감면대상)은 빼지 않는다 (다건·상세명세서와 일치).
   // §161 (장기임대 거주주택 비과세) 케이스는 result.taxableGain이 이미 안분 후 값이므로 별도 처리.
-  const new993Reducible = result.new993Detail?.reducibleTransferIncome ?? 0;
   const incomeAmountAfter = isRH
     ? result.taxableGain
-    : Math.max(0, incomeAmount - new993Reducible);
+    : Math.max(0, incomeAmount - incomeDeductionAmount);
   setNum("incomeAmountAfter", "total", incomeAmountAfter);
   setNum("priorIncomeAmount", "total", 0);
   setNum("basicDeduction", "total", result.basicDeduction);
@@ -668,7 +672,7 @@ export function buildRows(
   setNum("penaltyTax", "total", result.penaltyTax);
   setNum("totalDeterminedTax", "total", result.determinedTax + result.penaltyTax);
   // Round 11 (2026-05-06): §99의3 등 감면 적용 시 농어촌특별세 (감면세액 × 20%, 농특세법 §3·§5)
-  setNum("ruralSurtax", "total", result.new993Detail?.ruralSurtax ?? 0);
+  setNum("ruralSurtax", "total", incomeDeductionRuralSurtax(result));
   const localCalc = Math.floor((result.determinedTax + result.penaltyTax) * 0.1);
   setNum("localCalculatedTax", "total", localCalc);
   setNum("localReduction", "total", 0);

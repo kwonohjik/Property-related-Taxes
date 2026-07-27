@@ -108,6 +108,36 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(screen.getAllByTestId("nts-bsp-x-2").length).toBe(1);
   });
 
+  it("감면 PHD 환산 통합 스냅샷(-red-phd) — 취득시·최초공시일 2벌 렌더(계산서 미출력 결함 정정)", async () => {
+    const { initialBuildingStdPriceForm } = await import("../../lib/calc/building-std-price-form");
+    // 취득시+최초공시시 2시점을 한 모달에서 계산하는 단일 스냅샷(transfer 모드, 최초공시=transYear).
+    const redForm = {
+      ...initialBuildingStdPriceForm,
+      taxType: "transfer" as const,
+      builtYear: "2001", floorArea: "84.9",
+      acquisitionYear: "2003", transferYear: "2006",
+      acqStructureKey: "rc", acqUsageNo: "2", acqLandPrice: "2000000",
+      transStructureKey: "rc", transUsageNo: "2", transLandPrice: "2100000",
+    };
+    useBuildingStdSnapshotStore.setState({ snapshots: { "bsp-asset-x-red-phd": redForm } });
+    const inputData = { assets: [{ assetId: "asset-x" }] };
+
+    expect(hasBuildingStdReport(inputData)).toBe(true); // 규약 편입 → 소속 판정 통과
+    render(<BuildingStdPriceReportSection inputData={inputData} />);
+
+    // 단일 스냅샷 2 인스턴스 → 시점별 계산서 2벌
+    expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
+    expect(screen.getAllByText(/취득시 \(감면 PHD 환산/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/최초공시일 \(감면 PHD 환산/).length).toBeGreaterThan(0);
+    // §164⑤ 환산은 두 시점 모두 "취득 시점 측" — 취득당시(acq2001) 칸 마킹, 양도당시(transfer) 아님
+    expect(
+      screen.getAllByTestId("nts-bsp-1-acq2001").filter((el) => (el.textContent ?? "").includes("○")).length,
+    ).toBe(2);
+    expect(
+      screen.getAllByTestId("nts-bsp-1-transfer").filter((el) => (el.textContent ?? "").includes("○")).length,
+    ).toBe(0);
+  });
+
   it("소속되지 않는 스냅샷(다른 assetId)은 렌더 안 함", () => {
     useBuildingStdSnapshotStore.setState({ snapshots: phdBatchToSnapshots(INPUT, PREFIX) });
     expect(hasBuildingStdReport({ assets: [{ assetId: "other" }] })).toBe(false);

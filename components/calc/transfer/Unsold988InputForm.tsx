@@ -29,6 +29,7 @@ interface Props {
   jibun?: string;
   dong?: string;
   ho?: string;
+  assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
 }
 
@@ -62,6 +63,7 @@ export function Unsold988InputForm({
   jibun,
   dong,
   ho,
+  assetId,
   assetPhdSnapshot,
 }: Props) {
   return (
@@ -195,6 +197,7 @@ export function Unsold988InputForm({
           jibun={jibun}
           dong={dong}
           ho={ho}
+          assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold988"
           snapshotKeyPrefix="red988"

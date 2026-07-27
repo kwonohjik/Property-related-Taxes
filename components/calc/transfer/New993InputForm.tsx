@@ -39,6 +39,7 @@ export function New993InputForm({
   jibun,
   dong,
   ho,
+  assetId,
   assetPhdSnapshot,
 }: {
   value: Extract<AssetReductionForm, { type: "new_99_3" }>;
@@ -59,6 +60,7 @@ export function New993InputForm({
   /** 양도물건 공동주택 호 — 세대 식별 */
   ho?: string;
   /** 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 데이터 가져오기" 버튼용 */
+  assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
 }) {
   const [areaLoading, setAreaLoading] = useState(false);
@@ -123,6 +125,7 @@ export function New993InputForm({
       acquisitionDate={acquisitionDate}
       jibun={jibun}
       snapshotKeyPrefix="red993"
+      assetId={assetId}
       value={{
         phdMode: value.phdMode993,
         firstDisclosureDate: value.phdFirstDisclosureDate993,

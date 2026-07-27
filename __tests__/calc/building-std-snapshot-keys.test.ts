@@ -36,6 +36,14 @@ describe("idOfSnapshotKey — 소속 자산/재산 id 환원", () => {
     expect(idOfSnapshotKey(`bsp-${id}-mx-commercial`)).toBe(id);
     expect(idOfSnapshotKey(`bsp-${id}-phd-acq`)).toBe(id);
   });
+
+  it("감면 PHD 환산 통합 모달 키(-red-phd) → assetId 환원 (결과탭 계산서 노출 조건)", () => {
+    // 감면 조문(§99·§99의2·§98의3/5/6/7/8·§99의3) PHD 환산 시 취득시+최초공시시 2시점을
+    // 한 모달에서 계산하는 단일 스냅샷. 규약 편입 전 `red993-bsp`는 소속 판정 탈락 → 계산서 미출력.
+    expect(idOfSnapshotKey("bsp-a1-red-phd")).toBe("a1");
+    const id = "3f9a1c2e-7b40-4d55-9f11-8ac2e6d0b7aa";
+    expect(idOfSnapshotKey(`bsp-${id}-red-phd`)).toBe(id);
+  });
 });
 
 describe("phdTimepointLabel — PHD 시점 라벨", () => {
@@ -73,5 +81,10 @@ describe("B1 — 배치 모달 replaceSnapshotsByPrefix 삭제 범위", () => {
   it("다른 자산·다른 모달 스냅샷은 영향 없음 — 회귀 방어", () => {
     expect(survivesBatchReapply("bsp-a1-cb-acq")).toBe(true);
     expect(survivesBatchReapply("bsp-a2-phd-acq")).toBe(true);
+  });
+
+  it("감면 PHD 통합 모달 키(-red-phd)는 자산-PHD 배치 삭제 대상이 아니다 — 충돌 방지", () => {
+    // `bsp-a1-red-phd`는 `bsp-a1-phd-` 접두 불일치 → 배치 재적용 시 생존(자산-수준 PHD와 독립).
+    expect(survivesBatchReapply("bsp-a1-red-phd")).toBe(true);
   });
 });

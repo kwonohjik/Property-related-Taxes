@@ -71,6 +71,34 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
           }
         }
         if (model.instances.length === 0) continue;
+        // 감면 PHD 환산 통합 스냅샷(-red-phd) — 취득시·최초공시시 2 인스턴스를 시점별 계산서로 분리.
+        // §164⑤ 환산은 두 시점 모두 "취득 시점 측" 기준시가이므로 양도당시(transfer) 마킹이 아닌
+        // 취득당시 칸에 마킹(취득시=연도별 acq2000/acq2001, 최초공시일=acq2001).
+        if (/-red-phd$/.test(key)) {
+          const acqInst = model.instances.find((i) => i.markCell !== "transfer");
+          const firstInst = model.instances.find((i) => i.markCell === "transfer");
+          const acqIsPre2001 = Number(snap.acquisitionYear) < BUILDING_STD_FIRST_YEAR;
+          if (acqInst) {
+            out.push({
+              key: `${key}-acq`,
+              model: { ...model, instances: [acqInst] },
+              titleOverride: "취득시 (감면 PHD 환산 §164⑤)",
+              markCellOverride: acqIsPre2001 ? "acq2000" : "acq2001",
+              rank: 200 + seq,
+            });
+          }
+          if (firstInst) {
+            out.push({
+              key: `${key}-first`,
+              model: { ...model, instances: [firstInst] },
+              titleOverride: "최초공시일 (감면 PHD 환산 §164⑤)",
+              markCellOverride: "acq2001",
+              rank: 201 + seq,
+            });
+          }
+          seq += 2;
+          continue;
+        }
         // PHD 3시점(일괄) 스냅샷은 시점·주택/상가 라벨을 헤딩으로 명시(양도·상속 공용) — C1.
         // "양도" 접두는 제거: 상속취득 경로에서도 동일 서식을 쓰므로 시점명만 표기.
         const tp = phdTimepointLabel(key);
