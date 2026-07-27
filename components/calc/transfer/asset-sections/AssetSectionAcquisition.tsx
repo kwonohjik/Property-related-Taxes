@@ -61,74 +61,31 @@ export function AssetSectionAcquisition({
 }: Props) {
   const [pendingFractionalOff, setPendingFractionalOff] = useState(false);
 
-  return (
+  // 토글 B(지분 분할) 진입 차단 사유 — 이미 ON이면 차단 안 함(끄기 허용).
+  // 겸용주택·특수 자산종류(상가·일반건물·재개발)는 지분별 안분 UI 부재로 미지원(validate도 차단).
+  const fractionalEntryBlockedReason =
+    splitMode === "fractional"
+      ? undefined
+      : splitMode === "companion"
+        ? "‘함께 양도’ 모드와 동시에 사용할 수 없습니다."
+        : asset.assetKind === "housing" && asset.isMixedUseHouse
+          ? "겸용주택은 지분 분할 취득과 함께 사용할 수 없습니다."
+          : asset.assetKind === "commercial_building" ||
+              asset.assetKind === "general_building" ||
+              asset.assetKind === "redevelopment_apt"
+            ? "이 자산 종류는 지분 분할 취득을 지원하지 않습니다."
+            : undefined;
+
+  // 지분율 위젯 + 지분 모드 안내카드 — 단일 프래그먼트로 묶어 2위치 중 1곳만 렌더.
+  // 지분 모드(splitMode==="fractional")면 토글 B 직후(최상단), 그 외엔 취득원인 뒤(현행 위치).
+  const ratioBlock = (
     <>
-      {/* 토글 B — 같은 물건 지분 분할 취득 (첫 자산 idx===0만 진입점).
-          취득시기·취득원인이 지분마다 다른 최상위 분기이므로 취득원인·취득일보다 앞에 배치. */}
-      {isFirst && (
-        <>
-          <ToggleCard
-            tone="amber"
-            title="같은 물건을 지분(%)별로 나눠 취득했나요?"
-            description="한 물건의 소유 지분(%)을 나눠 여러 번 취득해 취득시기·취득원인이 다른 경우 (예: 60% 상속 + 40% 매매). 켜면 각 지분을 별도 자산으로 추가합니다. (※ 필지가 여러 개인 경우는 아래 ‘여러 필지’ 토글)"
-            checked={splitMode === "fractional"}
-            disabled={splitMode === "companion"}
-            disabledReason={
-              splitMode === "companion"
-                ? "‘함께 양도’ 모드와 동시에 사용할 수 없습니다."
-                : undefined
-            }
-            onCheckedChange={(yes) => {
-              if (yes) onFractionalToggle(true);
-              else if (hasSiblings) setPendingFractionalOff(true);
-              else onFractionalToggle(false);
-            }}
-          />
-          <Dialog open={pendingFractionalOff} onOpenChange={setPendingFractionalOff}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>지분 분할 모드를 끄시겠습니까?</DialogTitle>
-                <DialogDescription>
-                  추가한 지분 취득분 자산이 모두 삭제됩니다. 되돌릴 수 없습니다.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <button
-                  type="button"
-                  onClick={() => setPendingFractionalOff(false)}
-                  className="rounded-md border border-border px-4 py-2 text-sm"
-                >
-                  취소
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onFractionalToggle(false);
-                    setPendingFractionalOff(false);
-                  }}
-                  className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white"
-                >
-                  삭제하고 끄기
-                </button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </>
-      )}
-
-      {/* 취득 원인 + 원인별 세부 입력 (별도 파일로 분리 — 800줄 정책) */}
-      <CompanionAcquisitionCauseSection
-        asset={asset}
-        onChange={onChange}
-        transferDate={transferDate}
-        isNewConstruction={isNewConstruction}
-      />
-
-      {/* 공유 지분율 — 항상 노출 (단독 부분소유·함께양도·지분분할 전부. 구버전 ① 동작 보존).
-          토글 B는 "여러 번 나눠 취득(형제 추가)" 진입점, 지분율 입력 자체는 모드 무관. */}
+      {/* 지분율 — 항상 노출 (단독 부분소유·함께양도·지분분할 전부. 구버전 ① 동작 보존).
+          라벨은 문맥별: 지분 분할="취득 지분율" / 그 외="공유 지분율". */}
       <OwnershipRatioInput
         numerator={asset.ownershipNumerator}
         denominator={asset.ownershipDenominator}
+        label={splitMode === "fractional" ? "취득 지분율" : "공유 지분율"}
         onChange={(patch) =>
           onChange({
             ...(patch.numerator !== undefined
@@ -177,6 +134,74 @@ export function AssetSectionAcquisition({
           </div>
         </div>
       )}
+    </>
+  );
+
+  return (
+    <>
+      {/* 토글 B — 같은 물건 지분 분할 취득 (첫 자산 idx===0만 진입점).
+          취득시기·취득원인이 지분마다 다른 최상위 분기이므로 취득원인·취득일보다 앞에 배치. */}
+      {isFirst && (
+        <>
+          <ToggleCard
+            tone="amber"
+            title="같은 물건을 지분(%)별로 나눠 취득했나요?"
+            description="한 물건의 소유 지분(%)을 나눠 여러 번 취득해 취득시기·취득원인이 다른 경우 (예: 60% 상속 + 40% 매매). 켜면 각 지분을 별도 자산으로 추가합니다. (※ 필지가 여러 개인 경우는 아래 ‘여러 필지’ 토글)"
+            checked={splitMode === "fractional"}
+            disabled={!!fractionalEntryBlockedReason}
+            disabledReason={fractionalEntryBlockedReason}
+            onCheckedChange={(yes) => {
+              if (yes) onFractionalToggle(true);
+              else if (hasSiblings) setPendingFractionalOff(true);
+              else onFractionalToggle(false);
+            }}
+          />
+          <Dialog open={pendingFractionalOff} onOpenChange={setPendingFractionalOff}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>지분 분할 모드를 끄시겠습니까?</DialogTitle>
+                <DialogDescription>
+                  추가한 지분 취득분 자산이 모두 삭제됩니다. 되돌릴 수 없습니다.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <button
+                  type="button"
+                  onClick={() => setPendingFractionalOff(false)}
+                  className="rounded-md border border-border px-4 py-2 text-sm"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onFractionalToggle(false);
+                    setPendingFractionalOff(false);
+                  }}
+                  className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  삭제하고 끄기
+                </button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+
+      {/* 지분 모드: 지분율을 최상단(토글 B 직후·취득원인 앞)에 배치 — 취득시기·원인이
+          지분마다 다른 최상위 분기이므로 지분율이 그 자산을 규정하는 첫 입력값. */}
+      {splitMode === "fractional" && ratioBlock}
+
+      {/* 취득 원인 + 원인별 세부 입력 (별도 파일로 분리 — 800줄 정책) */}
+      <CompanionAcquisitionCauseSection
+        asset={asset}
+        onChange={onChange}
+        transferDate={transferDate}
+        isNewConstruction={isNewConstruction}
+      />
+
+      {/* 비-지분 모드: 지분율은 취득원인 뒤(현행 위치) 유지. */}
+      {splitMode !== "fractional" && ratioBlock}
 
       {/* 신축주택 — 부수토지 한도 산정 섹션 (영 §154⑦) */}
       {isNewConstruction && asset.assetKind === "housing" && (

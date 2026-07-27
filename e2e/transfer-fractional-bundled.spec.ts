@@ -115,4 +115,23 @@ test.describe("지분 모드 분할취득 일괄양도 계산 (PR #826)", () => 
       timeout: 15_000,
     });
   });
+
+  test("지분 모드 UI: 취득 지분율 라벨·배지 최상단 + 자산2 ① 기본정보 숨김", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndOpen(page);
+
+    const asset1 = page.locator('[data-asset-card-index="0"]');
+    const asset2 = page.locator('[data-asset-card-index="1"]');
+
+    // 자산2: ① 기본정보 섹션 숨김 → 안내배너 노출 (기본정보 아코디언 헤더 부재)
+    await expect(asset2.getByTestId("fractional-basic-inherited-notice")).toBeVisible();
+    await expect(asset2.getByText("자산종류·소재지·면적은 자산 1과 동일하게 적용됩니다.")).toBeVisible();
+
+    // 자산1 ③ 취득정보 펼치기(칩 점프) → 지분율 라벨 "취득 지분율" + 배지 "100% 기준 입력"
+    await asset1.getByRole("button", { name: /취득/ }).first().click();
+    await expect(asset1.getByText("취득 지분율").first()).toBeVisible();
+    await expect(asset1.getByText("100% 기준 입력").first()).toBeVisible();
+    // "공유 지분율"(비-지분 라벨)은 노출되지 않아야 함
+    await expect(asset1.getByText("공유 지분율")).toHaveCount(0);
+  });
 });

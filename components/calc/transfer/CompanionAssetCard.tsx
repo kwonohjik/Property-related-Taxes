@@ -24,6 +24,7 @@ import type { BundledSaleMode } from "./CompanionSaleModeBlock";
 import { ASSET_KIND_LABELS } from "./asset-labels";
 import { summarizeAssetSections } from "./asset-section-summary";
 import { AssetSection } from "./AssetSection";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AssetSectionBasic } from "./asset-sections/AssetSectionBasic";
 import { AssetSectionTransfer } from "./asset-sections/AssetSectionTransfer";
 import { AssetSectionAcquisition } from "./asset-sections/AssetSectionAcquisition";
@@ -112,6 +113,9 @@ export function CompanionAssetCard({
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   const isPrimary = asset.isPrimaryForHouseholdFlags;
+  // 지분 모드 companion(자산2+): ① 기본정보는 자산1과 동일하므로 숨김(자산종류·소재지·면적은
+  // 자산1에서 상속·엔진 병합). 자산1(index 0)은 항상 노출.
+  const hideBasicSection = splitMode === "fractional" && index > 0;
   const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
   const isNewConstruction = asset.acquisitionCause === "newConstruction";
 
@@ -233,6 +237,8 @@ export function CompanionAssetCard({
         {SECTION_CHIPS.map((chip) => {
           const sec = summaryByNum[chip.num];
           if (chip.num === 5 && !sec) return null;
+          // 지분 모드 companion: ① 기본정보 섹션 미렌더 → 칩도 제외(죽은 칩·no-op jump 방지).
+          if (chip.num === 1 && hideBasicSection) return null;
           const filled = !!sec?.filled;
           return (
             <button
@@ -251,30 +257,42 @@ export function CompanionAssetCard({
         })}
       </div>
 
-      {/* ① 기본정보 */}
-      <AssetSection
-        num={1}
-        title="기본정보"
-        tone="sky"
-        summary={summary.basic.label}
-        status={status(summary.basic.filled)}
-        open={!!open[1]}
-        onToggle={() => toggleSection(1)}
-        forceOpen={forceOpenAll}
-      >
-        <AssetSectionBasic
-          asset={asset}
-          onChange={handleBasicChange}
-          isMultiBundled={isMultiBundled}
-          onAddAsset={onAddAsset}
-          showFormDates={showFormDates}
-          transferDate={transferDate}
-          filingDate={filingDate}
-          filingOverdue={filingOverdue}
-          filingDeadline={filingDeadline}
-          onFormChange={onFormChange}
-        />
-      </AssetSection>
+      {/* ① 기본정보 — 지분 모드 companion(자산2+)은 자산1과 동일하므로 숨기고 안내배너로 대체.
+          자산1(index 0)은 showFormDates=false가 아니어서 자동펼침·양도일 위젯 정상. */}
+      {hideBasicSection ? (
+        <ToneCard tone="sky">
+          <p
+            data-testid="fractional-basic-inherited-notice"
+            className="text-xs text-sky-800 dark:text-sky-200"
+          >
+            자산종류·소재지·면적은 자산 1과 동일하게 적용됩니다.
+          </p>
+        </ToneCard>
+      ) : (
+        <AssetSection
+          num={1}
+          title="기본정보"
+          tone="sky"
+          summary={summary.basic.label}
+          status={status(summary.basic.filled)}
+          open={!!open[1]}
+          onToggle={() => toggleSection(1)}
+          forceOpen={forceOpenAll}
+        >
+          <AssetSectionBasic
+            asset={asset}
+            onChange={handleBasicChange}
+            isMultiBundled={isMultiBundled}
+            onAddAsset={onAddAsset}
+            showFormDates={showFormDates}
+            transferDate={transferDate}
+            filingDate={filingDate}
+            filingOverdue={filingOverdue}
+            filingDeadline={filingDeadline}
+            onFormChange={onFormChange}
+          />
+        </AssetSection>
+      )}
 
       {/* ② 양도정보 */}
       <AssetSection

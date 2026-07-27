@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * 공유 지분율 입력 위젯 (양도세 자산 카드 — 분자/분모).
+ * 지분율 입력 위젯 (양도세 자산 카드 — 분자/분모).
  *
- * 동일 물건을 다회 분할 취득(지분 단계취득)하거나 공유 소유한 자산에서
- * 본 자산이 보유한 지분 비율을 입력. 단독 소유는 100/100 기본값.
+ * 라벨은 문맥별(호출부 결정): 지분 분할 취득 = "취득 지분율" / 공유 소유·부분소유 = "공유 지분율".
+ * 배지("100% 기준 입력")는 개별 ratio(분자<분모)로 게이트 — 계산 방식 신호(라벨 축과 별개).
  *
  * 사용자 입력은 100% 기준 모든 금액(양도가·취득가·필요경비). API 변환 시 × ratio 자동 적용.
  *
@@ -26,6 +26,8 @@ export interface OwnershipRatioInputProps {
   denominator: string;
   /** onChange — 부분 업데이트 patch 전달 */
   onChange: (patch: { numerator?: string; denominator?: string }) => void;
+  /** 라벨 — 문맥별 결정(호출부). 기본 "공유 지분율", 지분 분할 모드는 "취득 지분율". */
+  label?: string;
 }
 
 /**
@@ -38,16 +40,17 @@ export function OwnershipRatioInput({
   numerator,
   denominator,
   onChange,
+  label = "공유 지분율",
 }: OwnershipRatioInputProps) {
   const fractional = isFractionalRatioStr(numerator, denominator);
 
   return (
     <FieldCard
-      label="공유 지분율"
+      label={label}
       trailing={
         fractional ? (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-800">
-            지분 모드
+            100% 기준 입력
           </span>
         ) : null
       }
