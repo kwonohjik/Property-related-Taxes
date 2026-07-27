@@ -495,6 +495,16 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   }
 
   // ── 계산 과정 정리 (결과 UI 상세 표시용) ──
+  // 취득세 본세 세율 표현부(선두 "과세표준 × " 제외) — 과세표준값·결과값 인라인 조립용.
+  const bonseRateExpr = corpSurchargeResult.isSurcharged
+    ? `${corpSurchargeResult.surchargeType} 중과세율 ${(finalRate * 100).toFixed(1)}%`
+    : surchargeDecision.isSurcharged
+      ? `중과세율 ${(finalRate * 100).toFixed(1)}%`
+      : specialRateResult.isApplied
+        ? `§15 세율특례 ${(finalRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`
+        : basicRateDecision.rateType === "linear_interpolation"
+          ? `선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간, 지방세법 §11①8)`
+          : `${(finalRate * 100).toFixed(1)}%`;
   steps.push(
     {
       label: "과세표준",
@@ -506,15 +516,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     },
     {
       label: "취득세 본세",
-      formula: corpSurchargeResult.isSurcharged
-        ? `과세표준 × ${corpSurchargeResult.surchargeType} 중과세율 ${(finalRate * 100).toFixed(1)}%`
-        : surchargeDecision.isSurcharged
-          ? `과세표준 × 중과세율 ${(finalRate * 100).toFixed(1)}%`
-          : specialRateResult.isApplied
-            ? `과세표준 × §15 세율특례 ${(finalRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`
-            : basicRateDecision.rateType === "linear_interpolation"
-              ? `과세표준 × 선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간, 지방세법 §11①8)`
-              : `과세표준 × ${(finalRate * 100).toFixed(1)}%`,
+      formula: `과세표준 ${taxBase.toLocaleString()} × ${bonseRateExpr} = ${acquisitionTax.toLocaleString()}`,
       amount: acquisitionTax,
       legalBasis: corpSurchargeResult.isSurcharged
         ? corpSurchargeResult.legalBasis[0]
@@ -528,7 +530,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   if (ruralSpecialTax > 0) {
     steps.push({
       label: "농어촌특별세",
-      formula: `(표준세율 2% + 중과분) × 과세표준 × 10% (${ACQUISITION.RURAL_SPECIAL_TAX})`,
+      formula: `(표준세율 2% + 중과분) × 과세표준 ${taxBase.toLocaleString()} × 10% = ${ruralSpecialTax.toLocaleString()} (${ACQUISITION.RURAL_SPECIAL_TAX})`,
       amount: ruralSpecialTax,
       legalBasis: ACQUISITION.RURAL_SPECIAL_TAX_RATE_BASIS,
     });
@@ -537,30 +539,30 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     // [C-3] 지방교육세 표시 산식을 실제 분기(§151①1)에 맞춰 동적 생성 (하드코딩 0.4% 제거).
     steps.push({
       label: "지방교육세",
-      formula: buildLocalEducationTaxFormula(surchargeTypeForEdu, input.propertyType, effectiveInput.acquisitionCause),
+      formula: `${buildLocalEducationTaxFormula(surchargeTypeForEdu, input.propertyType, effectiveInput.acquisitionCause)} = ${additional.localEducationTax.toLocaleString()}`,
       amount: additional.localEducationTax,
       legalBasis: ACQUISITION.LOCAL_EDUCATION_TAX,
     });
   }
   steps.push({
     label: "합계 납부세액 (감면 전)",
-    formula: "취득세 + 농특세 + 지방교육세",
+    formula: `취득세 ${acquisitionTax.toLocaleString()} + 농특세 ${ruralSpecialTax.toLocaleString()} + 지방교육세 ${additional.localEducationTax.toLocaleString()} = ${totalTax.toLocaleString()}`,
     amount: totalTax,
   });
   if (reductionAmount > 0) {
     steps.push({
       label: bestReduction.label,
       formula: reductionType === "self_cultivation"
-        ? `취득세 본세 × 50% (${ACQUISITION.SELF_CULTIVATION_REDUCTION})`
+        ? `취득세 본세 ${acquisitionTax.toLocaleString()} × 50% = ${reductionAmount.toLocaleString()} (${ACQUISITION.SELF_CULTIVATION_REDUCTION})`
         : `취득세 본세 전액 감면 (한도 ${(input.isSmallHouseFirstHome
             ? ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION_SMALL
-            : ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION).toLocaleString()}원)`,
+            : ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION).toLocaleString()}원) = ${reductionAmount.toLocaleString()}`,
       amount: -reductionAmount,
       legalBasis: bestReduction.legalBasis,
     });
     steps.push({
       label: "감면 후 최종 납부세액",
-      formula: `합계 − ${bestReduction.label}`,
+      formula: `합계 ${totalTax.toLocaleString()} − ${bestReduction.label} ${reductionAmount.toLocaleString()} = ${totalTaxAfterReduction.toLocaleString()}`,
       amount: totalTaxAfterReduction,
     });
   }
