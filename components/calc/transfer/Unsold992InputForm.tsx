@@ -17,6 +17,8 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
+import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold992Form = Extract<AssetReductionForm, { type: "unsold_99_2" }>;
@@ -24,6 +26,16 @@ type Unsold992Form = Extract<AssetReductionForm, { type: "unsold_99_2" }>;
 interface Props {
   value: Unsold992Form;
   onChange: (patch: Partial<Unsold992Form>) => void;
+  /** 자산 취득일 — PHD 자동 활성화 + 취득/5년 기준시가 referenceDate */
+  acquisitionDate?: string;
+  /** 자산 양도일 — 양도시 기준시가 referenceDate */
+  transferDate?: string;
+  /** 양도물건 지번 — 기준시가 자동조회 */
+  jibun?: string;
+  dong?: string;
+  ho?: string;
+  /** 자산-수준 PHD 스냅샷 — "자산 카드 PHD 가져오기" 소스 */
+  assetPhdSnapshot?: ReductionPhdValue;
 }
 
 function SectionShell({
@@ -49,7 +61,16 @@ function SectionShell({
   );
 }
 
-export function Unsold992InputForm({ value, onChange }: Props) {
+export function Unsold992InputForm({
+  value,
+  onChange,
+  acquisitionDate,
+  transferDate,
+  jibun,
+  dong,
+  ho,
+  assetPhdSnapshot,
+}: Props) {
   const houseType = value.houseType992;
   return (
     <div className="mt-2 ml-4 space-y-3">
@@ -200,33 +221,51 @@ export function Unsold992InputForm({ value, onChange }: Props) {
       </SectionShell>
 
       <SectionShell num="⑥" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)" tone="amber">
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득 당시 기준시가</label>
-          <CurrencyInput
-            value={value.standardPriceAtAcquisition992}
-            onChange={(v) => onChange({ standardPriceAtAcquisition992: v })}
-            label=""
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득일부터 5년이 되는 날의 기준시가</label>
-          <CurrencyInput
-            value={value.standardPriceAt5Years992}
-            onChange={(v) => onChange({ standardPriceAt5Years992: v })}
-            label=""
-          />
-          <p className="mt-1 text-micro text-muted-foreground">
-            새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §40①)
-          </p>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">양도 당시 기준시가 (비우면 자산 입력값 사용)</label>
-          <CurrencyInput
-            value={value.standardPriceAtTransfer992}
-            onChange={(v) => onChange({ standardPriceAtTransfer992: v })}
-            label=""
-          />
-        </div>
+        <ReductionStdPriceSection
+          phd={{
+            phdMode: value.phdMode992,
+            firstDisclosureDate: value.phdFirstDisclosureDate992,
+            firstDisclosurePrice: value.phdFirstDisclosurePrice992,
+            landAreaSqm: value.phdLandAreaSqm992,
+            landPricePerSqmAtAcq: value.phdLandPricePerSqmAtAcq992,
+            landPricePerSqmAtFirst: value.phdLandPricePerSqmAtFirst992,
+            buildingStdAtAcq: value.phdBuildingStdAtAcq992,
+            buildingStdAtFirst: value.phdBuildingStdAtFirst992,
+          }}
+          onPhdChange={(patch) => {
+            // generic ReductionPhdValue patch → unsold_99_2 접미사 필드 매핑. onChange가 patch 병합(배치 안전).
+            const mapped: Partial<Unsold992Form> = {};
+            if (patch.phdMode !== undefined) mapped.phdMode992 = patch.phdMode;
+            if (patch.firstDisclosureDate !== undefined) mapped.phdFirstDisclosureDate992 = patch.firstDisclosureDate;
+            if (patch.firstDisclosurePrice !== undefined) mapped.phdFirstDisclosurePrice992 = patch.firstDisclosurePrice;
+            if (patch.landAreaSqm !== undefined) mapped.phdLandAreaSqm992 = patch.landAreaSqm;
+            if (patch.landPricePerSqmAtAcq !== undefined) mapped.phdLandPricePerSqmAtAcq992 = patch.landPricePerSqmAtAcq;
+            if (patch.landPricePerSqmAtFirst !== undefined) mapped.phdLandPricePerSqmAtFirst992 = patch.landPricePerSqmAtFirst;
+            if (patch.buildingStdAtAcq !== undefined) mapped.phdBuildingStdAtAcq992 = patch.buildingStdAtAcq;
+            if (patch.buildingStdAtFirst !== undefined) mapped.phdBuildingStdAtFirst992 = patch.buildingStdAtFirst;
+            onChange(mapped);
+          }}
+          stdPriceAtAcquisition={value.standardPriceAtAcquisition992}
+          onStdPriceAtAcquisitionChange={(v) => onChange({ standardPriceAtAcquisition992: v })}
+          stdPriceAt5Years={value.standardPriceAt5Years992}
+          onStdPriceAt5YearsChange={(v) => onChange({ standardPriceAt5Years992: v })}
+          stdPriceAtTransfer={value.standardPriceAtTransfer992}
+          onStdPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer992: v })}
+          exclusiveArea={value.exclusiveAreaSqm992}
+          onExclusiveAreaChange={(v) => onChange({ exclusiveAreaSqm992: v })}
+          showExclusiveArea={false}
+          acquisitionDate={acquisitionDate}
+          transferDate={transferDate}
+          jibun={jibun}
+          dong={dong}
+          ho={ho}
+          assetPhdSnapshot={assetPhdSnapshot}
+          testidPrefix="unsold992"
+          snapshotKeyPrefix="red992"
+        />
+        <p className="mt-1 text-micro text-muted-foreground">
+          새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §40①)
+        </p>
       </SectionShell>
 
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">

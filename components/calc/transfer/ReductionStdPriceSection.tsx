@@ -62,6 +62,12 @@ export interface ReductionStdPriceSectionProps {
   snapshotKeyPrefix: string;
   /** 전용면적 안내 문구 (조문별 고가주택 기준 상이) */
   areaHint?: string;
+  /**
+   * 전용면적 입력 블록 표시 여부 (기본 true).
+   * 조문 폼에 면적 필드가 별도 섹션에 이미 있으면 false — 면적 단일출처(§4-A).
+   * false여도 3시점 조회의 onExclusiveArea 콜백은 유지되어 조회 시 기존 면적 필드가 자동 채워진다.
+   */
+  showExclusiveArea?: boolean;
 }
 
 export function ReductionStdPriceSection({
@@ -84,6 +90,7 @@ export function ReductionStdPriceSection({
   testidPrefix,
   snapshotKeyPrefix,
   areaHint,
+  showExclusiveArea = true,
 }: ReductionStdPriceSectionProps) {
   const [areaLoading, setAreaLoading] = useState(false);
   const [areaMsg, setAreaMsg] = useState<string | null>(null);
@@ -236,6 +243,7 @@ export function ReductionStdPriceSection({
           />
         </div>
 
+        {showExclusiveArea && (
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
           <div className="flex items-center gap-2">
@@ -261,6 +269,7 @@ export function ReductionStdPriceSection({
           ) : null}
           {areaHint && <p className="mt-1 text-micro text-muted-foreground">{areaHint}</p>}
         </div>
+        )}
       </div>
     </div>
   );

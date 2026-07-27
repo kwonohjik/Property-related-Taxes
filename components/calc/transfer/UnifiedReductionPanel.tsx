@@ -725,7 +725,16 @@ function GroupCategorySection({
                     (() => {
                       const form992 = reductions.find((r) => r.type === "unsold_99_2");
                       return form992 && form992.type === "unsold_99_2" ? (
-                        <Unsold992InputForm value={form992} onChange={onUpdate992} />
+                        <Unsold992InputForm
+                          value={form992}
+                          onChange={onUpdate992}
+                          acquisitionDate={acquisitionDate}
+                          transferDate={transferDate}
+                          jibun={assetJibun}
+                          dong={assetDong}
+                          ho={assetHo}
+                          assetPhdSnapshot={assetPhdSnapshot}
+                        />
                       ) : null;
                     })()}
                   {/* P3 (2026-06-12): §98의3 / §98의5 / §98의6 입력 폼 */}

@@ -407,6 +407,20 @@ export function toEngineReductions(
     // ── P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): 하이브리드 본 변환 (④) ──
     // houseType별 비활성 분기 일자만 strip (UI 검토 #4 — 라디오 전환 잔존값 미전달)
     if (r.type === "unsold_99_2") {
+      // 취득시 기준시가 — PHD 환산 ON이고 입력 충분하면 §164⑤ 자동 산출(source ternary, UI echo·validate 동일 소스).
+      // 아니면 수동값. 엔진(hybrid)은 환산값(취득기준시가)만 수용(phd echo 필드 없음, A설계).
+      const phdInput992 = {
+        firstDisclosurePrice: r.phdFirstDisclosurePrice992 ? parseAmount(r.phdFirstDisclosurePrice992) : 0,
+        landAreaSqm: r.phdLandAreaSqm992 ? parseFloat(r.phdLandAreaSqm992) : 0,
+        landPricePerSqmAtAcquisition: r.phdLandPricePerSqmAtAcq992 ? parseAmount(r.phdLandPricePerSqmAtAcq992) : 0,
+        landPricePerSqmAtFirstDisclosure: r.phdLandPricePerSqmAtFirst992 ? parseAmount(r.phdLandPricePerSqmAtFirst992) : 0,
+        buildingStdPriceAtAcquisition: r.phdBuildingStdAtAcq992 ? parseAmount(r.phdBuildingStdAtAcq992) : 0,
+        buildingStdPriceAtFirstDisclosure: r.phdBuildingStdAtFirst992 ? parseAmount(r.phdBuildingStdAtFirst992) : 0,
+      };
+      const acqStdPrice992 =
+        r.phdMode992 && canCalcReductionPhd(phdInput992)
+          ? calcReductionAcquisitionStdPrice(phdInput992).estimatedAcquisitionStdPrice
+          : parseAmount(r.standardPriceAtAcquisition992 || "0");
       return {
         type: "unsold_99_2" as const,
         houseType992: r.houseType992,
@@ -423,7 +437,7 @@ export function toEngineReductions(
         meetsOfficetelRequirement992: r.meetsOfficetelRequirement992,
         isNotRecontract992: r.isNotRecontract992,
         hasConfirmationSeal992: r.hasConfirmationSeal992,
-        standardPriceAtAcquisition992: parseAmount(r.standardPriceAtAcquisition992 || "0") || undefined,
+        standardPriceAtAcquisition992: acqStdPrice992 || undefined,
         standardPriceAt5Years992: parseAmount(r.standardPriceAt5Years992 || "0") || undefined,
         standardPriceAtTransfer992: parseAmount(r.standardPriceAtTransfer992 || "0") || undefined,
       };
