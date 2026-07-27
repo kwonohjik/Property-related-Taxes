@@ -34,6 +34,7 @@ interface Props {
   dong?: string;
   ho?: string;
   /** 자산-수준 PHD 스냅샷 — "자산 카드 PHD 가져오기" 소스 */
+  assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
 }
 
@@ -67,6 +68,7 @@ export function New99InputForm({
   jibun,
   dong,
   ho,
+  assetId,
   assetPhdSnapshot,
 }: Props) {
   const isFromBuilder = value.acquisitionType99 === "from_builder";
@@ -149,6 +151,7 @@ export function New99InputForm({
           jibun={jibun}
           dong={dong}
           ho={ho}
+          assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="new99"
           snapshotKeyPrefix="red99"

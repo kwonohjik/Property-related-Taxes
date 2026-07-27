@@ -44,7 +44,7 @@ import {
   prorationFormulaAsFrac,
 } from "./DetailedStatementFormulaBuilders";
 import { applyRedevelopmentOverrides } from "./DetailedStatementRedevelopmentBuilders";
-import { reductionEligibleIncome } from "./reduction-eligible-income";
+import { reductionEligibleIncome, incomeDeductionReducible } from "./reduction-eligible-income";
 
 // 타입·그룹 정의는 DetailedStatementConfig.ts로 분리 (800줄 정책). 하위 호환 re-export.
 export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatementConfig";
@@ -603,36 +603,38 @@ export function buildStatementItems(
       : undefined,
   });
 
-  // §99의3 등 5년 안분 감면대상 양도소득금액 (소득금액차감방식 §90②). result.new993Detail.
-  // 집계(다건)는 PerPropertyBreakdown에 new993Detail이 없어 0 유지 (FilingFormTable 집계와 동일 거동).
+  // 소득금액차감방식(§90②) 5년 안분 감면대상 양도소득금액 — §99의3·§99·§98의8·하이브리드 공용.
+  // 집계(다건)는 PerPropertyBreakdown의 incomeDeductionReducible 합산, 단건은 result detail 합산 헬퍼.
   const aggIncomeDeductionReducible = isAggregate
     ? properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0)
     : 0;
+  const singleIncomeDeduction = incomeDeductionReducible(result);
   items.set("reductionTargetIncome2", {
     label: "소득금액 감면대상",
-    value: isAggregate ? aggIncomeDeductionReducible : (result.new993Detail?.reducibleTransferIncome ?? 0),
+    value: isAggregate ? aggIncomeDeductionReducible : singleIncomeDeduction,
     formula:
+      // §99의3은 3시점 공시가격 echo가 있어 분수 산식까지 풀어씀. 그 외 소득금액차감 조문은
+      // 조문별 산출근거를 ⑦ 상세 카드(IncomeDeductionDetailCard)가 노출하므로 신고서 행은 일반 문구.
       !isAggregate && result.new993Detail
         ? buildNew993ReducibleFormula(result.new993Detail, singleIncome)
-        : "§99의3 5년 안분 감면대상 양도소득금액 (§90② 소득금액차감방식) = 양도소득금액 × (5년시점 − 취득시 공시가격) ÷ (양도시 − 취득시 공시가격)",
-    legalBasis: "조세특례제한법 §99의3 · 소득세법 §90②",
-    note: "신축주택 감면 — 소득금액에서 직접 차감(세액감면방식 아님)",
+        : "소득금액차감방식(§90②) 5년 안분 감면대상 양도소득금액 = 양도소득금액 × (5년시점 − 취득시 공시가격) ÷ (양도시 − 취득시 공시가격)",
+    legalBasis: "조세특례제한법 §99의3·§99·§98의8 등 · 소득세법 §90②",
+    note: "신축·미분양 등 소득금액차감 감면 — 소득금액에서 직접 차감(세액감면방식 아님)",
   });
 
-  // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(§90② 소득금액차감). FilingFormTableHelpers:657-661과 동일.
+  // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(§90② 소득금액차감). FilingFormTableHelpers와 동일.
   // §161(장기임대 거주주택 비과세, isRH)은 taxableGain이 이미 안분 후 값이므로 별도 분기.
   const isRH = result.rentalHousingExceptionDetail?.applied === true;
-  const new993Reducible = result.new993Detail?.reducibleTransferIncome ?? 0;
   items.set("incomeAmountAfter", {
     label: "감면후 소득금액",
     value: isAggregate
       ? properties.reduce((s, p) => s + Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)), 0)
       : isRH
         ? result.taxableGain
-        : Math.max(0, singleIncome - new993Reducible),
-    formula: "양도소득금액 − 소득금액 감면대상 (§99의3 §90② 소득금액차감)",
+        : Math.max(0, singleIncome - singleIncomeDeduction),
+    formula: "양도소득금액 − 소득금액 감면대상 (§90② 소득금액차감)",
     legalBasis: "소득세법 §95·§90②",
-    note: "§99의3 등 소득금액차감 감면 반영 후 소득금액 (세액감면방식은 소득금액 미차감)",
+    note: "소득금액차감 감면 반영 후 소득금액 (세액감면방식은 소득금액 미차감)",
   });
 
   items.set("priorIncomeAmount", {

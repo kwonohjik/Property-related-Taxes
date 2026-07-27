@@ -58,8 +58,10 @@ export interface ReductionStdPriceSectionProps {
 
   /** testid 접두사 (예: "new99") — 조회형 필드/버튼 셀렉터 안정 */
   testidPrefix: string;
-  /** 건물 기준시가 모달 스냅샷 복원 키 prefix (예: "red99") */
+  /** 건물 기준시가 모달 스냅샷 복원 키 prefix (예: "red99") — legacy fallback */
   snapshotKeyPrefix: string;
+  /** 자산 식별자 — 건물 기준시가 계산서 스냅샷 키(bsp-${assetId}-red-phd) 소속 판정용(결과탭 노출) */
+  assetId?: string;
   /** 전용면적 안내 문구 (조문별 고가주택 기준 상이) */
   areaHint?: string;
   /**
@@ -89,6 +91,7 @@ export function ReductionStdPriceSection({
   assetPhdSnapshot,
   testidPrefix,
   snapshotKeyPrefix,
+  assetId,
   areaHint,
   showExclusiveArea = true,
 }: ReductionStdPriceSectionProps) {
@@ -155,6 +158,7 @@ export function ReductionStdPriceSection({
         acquisitionDate={acquisitionDate}
         jibun={jibun}
         snapshotKeyPrefix={snapshotKeyPrefix}
+        assetId={assetId}
         value={phd}
         onChange={onPhdChange}
         assetHasPhdData={!!assetPhdSnapshot}

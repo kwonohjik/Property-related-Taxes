@@ -365,6 +365,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onUpdate98={update98}
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
+          assetId={asset.assetId}
           acquisitionDate={asset.acquisitionDate}
           transferDate={transferDate}
           assetJibun={asset.addressJibun || undefined}
@@ -456,6 +457,7 @@ function GroupCategorySection({
   onUpdate98,
   assetContractDate,
   onAssetContractDateChange,
+  assetId,
   acquisitionDate,
   transferDate,
   assetJibun,
@@ -502,6 +504,8 @@ function GroupCategorySection({
   /** Round 9 (2026-05-06): 매매계약일 (자산-수준, 펼침 시 활성화) */
   assetContractDate: string;
   onAssetContractDateChange: (v: string) => void;
+  /** 자산 식별자 — 감면 PHD 건물 기준시가 계산서 스냅샷 키(bsp-${assetId}-red-phd) 소속 판정용 */
+  assetId?: string;
   /** Round 10 (2026-05-06): 자산 취득일 — PHD 자동 활성화 권장 판정 */
   acquisitionDate?: string;
   /** 양도일 — 임대 기간 미리보기용 + §99의3 양도시 기준시가 조회 referenceDate */
@@ -519,6 +523,7 @@ function GroupCategorySection({
   const items = ALL_REDUCTION_IDS.filter((id) => REDUCTION_METADATA[id].category === category);
   // 감면 조문 입력 폼 공통 자산 props — 기준시가 조회형 위젯 + PHD 환산용(§99·§99의2·§98의3/5/6/7/8·§99의3).
   const reductionAssetProps = {
+    assetId,
     acquisitionDate,
     transferDate,
     jibun: assetJibun,

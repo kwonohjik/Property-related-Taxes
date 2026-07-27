@@ -74,8 +74,14 @@ export interface ReductionPhdInputProps {
   assetHasPhdData?: boolean;
   /** 양도물건 지번 주소 — 건물 기준시가 계산 모달 소재지 prefill(Vworld 공시지가 조회) */
   jibun?: string;
-  /** 건물 기준시가 모달 입력 스냅샷 복원 키 prefix(정정 지원) */
+  /** 건물 기준시가 모달 입력 스냅샷 복원 키 prefix(정정 지원) — legacy fallback */
   snapshotKeyPrefix?: string;
+  /**
+   * 자산 식별자 — 건물 기준시가 계산서 스냅샷 키를 `bsp-${assetId}-red-phd` 규약으로 생성.
+   * 규약 편입 시 idOfSnapshotKey가 assetId를 환원 → 결과탭 「건물 기준시가 계산서」에 노출된다
+   * (미전달 시 legacy `${snapshotKeyPrefix}-bsp` fallback — 결과탭 소속 판정 탈락 상태 유지).
+   */
+  assetId?: string;
 }
 
 // ============================================================================
@@ -91,7 +97,15 @@ export function ReductionPhdInput({
   assetHasPhdData,
   jibun,
   snapshotKeyPrefix,
+  assetId,
 }: ReductionPhdInputProps) {
+  // 건물 기준시가 계산서 스냅샷 키 — 취득시·최초공시시 두 모달 버튼이 공유(단일 스냅샷 idempotent 갱신).
+  // assetId 있으면 `bsp-${assetId}-red-phd` 규약(결과탭 노출) — 없으면 legacy prefix fallback.
+  const buildingStdSnapshotKey = assetId
+    ? `bsp-${assetId}-red-phd`
+    : snapshotKeyPrefix
+      ? `${snapshotKeyPrefix}-bsp`
+      : undefined;
   // 자동 활성화 권장 — 취득일 < 최초공시일
   const autoRecommended = useMemo(() => {
     if (!acquisitionDate || !value.firstDisclosureDate) return false;
@@ -208,7 +222,7 @@ export function ReductionPhdInput({
                   buttonLabel="건물 기준시가 계산"
                   transferSectionLabel="최초고시 시점"
                   initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
-                  snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp` : undefined}
+                  snapshotKey={buildingStdSnapshotKey}
                   prefill={{
                     landAreaM2: value.landAreaSqm || undefined,
                     acquisitionDate,
@@ -236,7 +250,7 @@ export function ReductionPhdInput({
                   buttonLabel="건물 기준시가 계산"
                   transferSectionLabel="최초고시 시점"
                   initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
-                  snapshotKey={snapshotKeyPrefix ? `${snapshotKeyPrefix}-bsp` : undefined}
+                  snapshotKey={buildingStdSnapshotKey}
                   prefill={{
                     landAreaM2: value.landAreaSqm || undefined,
                     // 두 버튼 동일 — 취득시 + 최초고시시 2시점을 함께 계산·적용.

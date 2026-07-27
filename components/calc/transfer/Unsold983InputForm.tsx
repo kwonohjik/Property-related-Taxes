@@ -26,6 +26,7 @@ interface Props {
   jibun?: string;
   dong?: string;
   ho?: string;
+  assetId?: string;
   assetPhdSnapshot?: ReductionPhdValue;
 }
 
@@ -59,6 +60,7 @@ export function Unsold983InputForm({
   jibun,
   dong,
   ho,
+  assetId,
   assetPhdSnapshot,
 }: Props) {
   const isSelfBuilt = value.houseType983 === "self_built";
@@ -224,6 +226,7 @@ export function Unsold983InputForm({
           jibun={jibun}
           dong={dong}
           ho={ho}
+          assetId={assetId}
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="unsold983"
           snapshotKeyPrefix="red983"

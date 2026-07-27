@@ -35,6 +35,7 @@ import { HousingExpropriationValuationCard } from "@/components/calc/results/tra
 import { SplitLandExpropriationValuationCard } from "@/components/calc/results/transfer/SplitLandExpropriationValuationCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { incomeDeductionRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -308,7 +309,7 @@ export function TransferTaxResultView({
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               {(() => {
                 const totalAllPenalty = result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
-                const ruralSurtax = result.new993Detail?.ruralSurtax ?? 0;
+                const ruralSurtax = incomeDeductionRuralSurtax(result);
                 return (
                   <>
                     <span>결정세액 {formatKRW(result.determinedTax)}</span>
