@@ -41,9 +41,9 @@ export interface ReductionStdPriceSectionProps {
   stdPriceAtTransfer: string;
   onStdPriceAtTransferChange: (v: string) => void;
 
-  /** 전용면적 (㎡) */
-  exclusiveArea: string;
-  onExclusiveAreaChange: (v: string) => void;
+  /** 전용면적 (㎡) — 조문에 전용면적 필드가 없으면 생략(§98의5/7). 3시점 조회 시 자동채움 대상도 없어짐 */
+  exclusiveArea?: string;
+  onExclusiveAreaChange?: (v: string) => void;
 
   /** 자산 취득일 — PHD 자동 활성화 + 취득/5년 기준시가 referenceDate */
   acquisitionDate?: string;
@@ -111,7 +111,7 @@ export function ReductionStdPriceSection({
         if (!res.ok) continue;
         const json = await res.json();
         if (typeof json.exclusiveArea === "number" && json.exclusiveArea > 0) {
-          onExclusiveAreaChange(String(json.exclusiveArea));
+          onExclusiveAreaChange?.(String(json.exclusiveArea));
           setAreaMsg(null);
           return;
         }
@@ -207,7 +207,7 @@ export function ReductionStdPriceSection({
               ho={ho}
               referenceDate={acquisitionDate}
               hint="최초고시 전 취득이면 위 PHD 환산 토글을 켜세요"
-              onExclusiveArea={(area) => onExclusiveAreaChange(String(area))}
+              onExclusiveArea={onExclusiveAreaChange ? (area) => onExclusiveAreaChange(String(area)) : undefined}
               testidPrefix={`${testidPrefix}-stdprice-acq`}
             />
           </div>
@@ -223,7 +223,7 @@ export function ReductionStdPriceSection({
             ho={ho}
             referenceDate={addYearsStr(acquisitionDate, 5)}
             hint="취득일 + 5년 시점 인접 고시일 가격 (5년 후 양도 시 필수)"
-            onExclusiveArea={(area) => onExclusiveAreaChange(String(area))}
+            onExclusiveArea={onExclusiveAreaChange ? (area) => onExclusiveAreaChange(String(area)) : undefined}
             testidPrefix={`${testidPrefix}-stdprice-5y`}
           />
         </div>
@@ -238,17 +238,17 @@ export function ReductionStdPriceSection({
             ho={ho}
             referenceDate={transferDate}
             hint="미입력 시 자산의 양도시 기준시가 사용"
-            onExclusiveArea={(area) => onExclusiveAreaChange(String(area))}
+            onExclusiveArea={onExclusiveAreaChange ? (area) => onExclusiveAreaChange(String(area)) : undefined}
             testidPrefix={`${testidPrefix}-stdprice-transfer`}
           />
         </div>
 
-        {showExclusiveArea && (
+        {showExclusiveArea && onExclusiveAreaChange && (
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
-              <DecimalInput value={exclusiveArea} onChange={onExclusiveAreaChange} />
+              <DecimalInput value={exclusiveArea ?? ""} onChange={onExclusiveAreaChange} />
             </div>
             <button
               type="button"

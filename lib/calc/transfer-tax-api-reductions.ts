@@ -280,6 +280,19 @@ export function toEngineReductions(
     }
     // ── P1 §98의8 준공후미분양 50% (2026-06-11): 차감형 본 변환 (④) ──
     if (r.type === "unsold_98_8") {
+      // 취득시 기준시가 — PHD 환산 ON이고 충분하면 §164⑤ 자동 산출(A설계, 환산값만 엔진 전달).
+      const phdInput988 = {
+        firstDisclosurePrice: r.phdFirstDisclosurePrice988 ? parseAmount(r.phdFirstDisclosurePrice988) : 0,
+        landAreaSqm: r.phdLandAreaSqm988 ? parseFloat(r.phdLandAreaSqm988) : 0,
+        landPricePerSqmAtAcquisition: r.phdLandPricePerSqmAtAcq988 ? parseAmount(r.phdLandPricePerSqmAtAcq988) : 0,
+        landPricePerSqmAtFirstDisclosure: r.phdLandPricePerSqmAtFirst988 ? parseAmount(r.phdLandPricePerSqmAtFirst988) : 0,
+        buildingStdPriceAtAcquisition: r.phdBuildingStdAtAcq988 ? parseAmount(r.phdBuildingStdAtAcq988) : 0,
+        buildingStdPriceAtFirstDisclosure: r.phdBuildingStdAtFirst988 ? parseAmount(r.phdBuildingStdAtFirst988) : 0,
+      };
+      const acqStdPrice988 =
+        r.phdMode988 && canCalcReductionPhd(phdInput988)
+          ? calcReductionAcquisitionStdPrice(phdInput988).estimatedAcquisitionStdPrice
+          : parseAmount(r.standardPriceAtAcquisition988 || "0");
       return {
         type: "unsold_98_8" as const,
         contractDate988: r.contractDate988 || undefined,
@@ -291,7 +304,7 @@ export function toEngineReductions(
         isUnsoldAfterCompletion988: r.isUnsoldAfterCompletion988,
         isFirstContract988: r.isFirstContract988,
         isNotRecontract988: r.isNotRecontract988,
-        standardPriceAtAcquisition988: parseAmount(r.standardPriceAtAcquisition988 || "0") || undefined,
+        standardPriceAtAcquisition988: acqStdPrice988 || undefined,
         standardPriceAt5Years988: parseAmount(r.standardPriceAt5Years988 || "0") || undefined,
         standardPriceAtTransfer988: parseAmount(r.standardPriceAtTransfer988 || "0") || undefined,
       };
@@ -327,6 +340,18 @@ export function toEngineReductions(
     }
     // ── P3 §98의3 (2026-06-12): 하이브리드 본 변환 (④) — houseType별 일자 strip ──
     if (r.type === "unsold_98_3") {
+      const phdInput983 = {
+        firstDisclosurePrice: r.phdFirstDisclosurePrice983 ? parseAmount(r.phdFirstDisclosurePrice983) : 0,
+        landAreaSqm: r.phdLandAreaSqm983 ? parseFloat(r.phdLandAreaSqm983) : 0,
+        landPricePerSqmAtAcquisition: r.phdLandPricePerSqmAtAcq983 ? parseAmount(r.phdLandPricePerSqmAtAcq983) : 0,
+        landPricePerSqmAtFirstDisclosure: r.phdLandPricePerSqmAtFirst983 ? parseAmount(r.phdLandPricePerSqmAtFirst983) : 0,
+        buildingStdPriceAtAcquisition: r.phdBuildingStdAtAcq983 ? parseAmount(r.phdBuildingStdAtAcq983) : 0,
+        buildingStdPriceAtFirstDisclosure: r.phdBuildingStdAtFirst983 ? parseAmount(r.phdBuildingStdAtFirst983) : 0,
+      };
+      const acqStdPrice983 =
+        r.phdMode983 && canCalcReductionPhd(phdInput983)
+          ? calcReductionAcquisitionStdPrice(phdInput983).estimatedAcquisitionStdPrice
+          : parseAmount(r.standardPriceAtAcquisition983 || "0");
       return {
         type: "unsold_98_3" as const,
         residencyType983: r.residencyType983,
@@ -346,13 +371,25 @@ export function toEngineReductions(
         isNotOccupiedAtContract983: r.isNotOccupiedAtContract983,
         isNotRecontract983: r.isNotRecontract983,
         isNotExcludedSelfBuilt983: r.isNotExcludedSelfBuilt983,
-        standardPriceAtAcquisition983: parseAmount(r.standardPriceAtAcquisition983 || "0") || undefined,
+        standardPriceAtAcquisition983: acqStdPrice983 || undefined,
         standardPriceAt5Years983: parseAmount(r.standardPriceAt5Years983 || "0") || undefined,
         standardPriceAtTransfer983: parseAmount(r.standardPriceAtTransfer983 || "0") || undefined,
       };
     }
     // ── P3 §98의5 (2026-06-12): 하이브리드 본 변환 (④) ──
     if (r.type === "unsold_98_5") {
+      const phdInput985 = {
+        firstDisclosurePrice: r.phdFirstDisclosurePrice985 ? parseAmount(r.phdFirstDisclosurePrice985) : 0,
+        landAreaSqm: r.phdLandAreaSqm985 ? parseFloat(r.phdLandAreaSqm985) : 0,
+        landPricePerSqmAtAcquisition: r.phdLandPricePerSqmAtAcq985 ? parseAmount(r.phdLandPricePerSqmAtAcq985) : 0,
+        landPricePerSqmAtFirstDisclosure: r.phdLandPricePerSqmAtFirst985 ? parseAmount(r.phdLandPricePerSqmAtFirst985) : 0,
+        buildingStdPriceAtAcquisition: r.phdBuildingStdAtAcq985 ? parseAmount(r.phdBuildingStdAtAcq985) : 0,
+        buildingStdPriceAtFirstDisclosure: r.phdBuildingStdAtFirst985 ? parseAmount(r.phdBuildingStdAtFirst985) : 0,
+      };
+      const acqStdPrice985 =
+        r.phdMode985 && canCalcReductionPhd(phdInput985)
+          ? calcReductionAcquisitionStdPrice(phdInput985).estimatedAcquisitionStdPrice
+          : parseAmount(r.standardPriceAtAcquisition985 || "0");
       return {
         type: "unsold_98_5" as const,
         contractDate985: r.contractDate985 || undefined,
@@ -361,7 +398,7 @@ export function toEngineReductions(
         isFirstContract985: r.isFirstContract985,
         isNotOccupiedAtContract985: r.isNotOccupiedAtContract985,
         isNotRecontract985: r.isNotRecontract985,
-        standardPriceAtAcquisition985: parseAmount(r.standardPriceAtAcquisition985 || "0") || undefined,
+        standardPriceAtAcquisition985: acqStdPrice985 || undefined,
         standardPriceAt5Years985: parseAmount(r.standardPriceAt5Years985 || "0") || undefined,
         standardPriceAtTransfer985: parseAmount(r.standardPriceAtTransfer985 || "0") || undefined,
       };
@@ -369,6 +406,18 @@ export function toEngineReductions(
     // ── P3 §98의6 (2026-06-12): 하이브리드 본 변환 (④) — hoType별 임대 필드 strip ──
     if (r.type === "unsold_98_6") {
       const isBuyerRented = r.hoType986 === "buyer_rented";
+      const phdInput986 = {
+        firstDisclosurePrice: r.phdFirstDisclosurePrice986 ? parseAmount(r.phdFirstDisclosurePrice986) : 0,
+        landAreaSqm: r.phdLandAreaSqm986 ? parseFloat(r.phdLandAreaSqm986) : 0,
+        landPricePerSqmAtAcquisition: r.phdLandPricePerSqmAtAcq986 ? parseAmount(r.phdLandPricePerSqmAtAcq986) : 0,
+        landPricePerSqmAtFirstDisclosure: r.phdLandPricePerSqmAtFirst986 ? parseAmount(r.phdLandPricePerSqmAtFirst986) : 0,
+        buildingStdPriceAtAcquisition: r.phdBuildingStdAtAcq986 ? parseAmount(r.phdBuildingStdAtAcq986) : 0,
+        buildingStdPriceAtFirstDisclosure: r.phdBuildingStdAtFirst986 ? parseAmount(r.phdBuildingStdAtFirst986) : 0,
+      };
+      const acqStdPrice986 =
+        r.phdMode986 && canCalcReductionPhd(phdInput986)
+          ? calcReductionAcquisitionStdPrice(phdInput986).estimatedAcquisitionStdPrice
+          : parseAmount(r.standardPriceAtAcquisition986 || "0");
       return {
         type: "unsold_98_6" as const,
         hoType986: r.hoType986,
@@ -384,13 +433,25 @@ export function toEngineReductions(
         rentalStartDate986: isBuyerRented ? r.rentalStartDate986 || undefined : undefined,
         rentalEndDate986: isBuyerRented ? r.rentalEndDate986 || undefined : undefined,
         inheritedRentalMonths986: isBuyerRented ? parseInt(r.inheritedRentalMonths986 || "") || undefined : undefined,
-        standardPriceAtAcquisition986: parseAmount(r.standardPriceAtAcquisition986 || "0") || undefined,
+        standardPriceAtAcquisition986: acqStdPrice986 || undefined,
         standardPriceAt5Years986: parseAmount(r.standardPriceAt5Years986 || "0") || undefined,
         standardPriceAtTransfer986: parseAmount(r.standardPriceAtTransfer986 || "0") || undefined,
       };
     }
     // ── P2 §98의7 9억↓ 미분양 (2026-06-11): 하이브리드 본 변환 (④) ──
     if (r.type === "unsold_98_7") {
+      const phdInput987 = {
+        firstDisclosurePrice: r.phdFirstDisclosurePrice987 ? parseAmount(r.phdFirstDisclosurePrice987) : 0,
+        landAreaSqm: r.phdLandAreaSqm987 ? parseFloat(r.phdLandAreaSqm987) : 0,
+        landPricePerSqmAtAcquisition: r.phdLandPricePerSqmAtAcq987 ? parseAmount(r.phdLandPricePerSqmAtAcq987) : 0,
+        landPricePerSqmAtFirstDisclosure: r.phdLandPricePerSqmAtFirst987 ? parseAmount(r.phdLandPricePerSqmAtFirst987) : 0,
+        buildingStdPriceAtAcquisition: r.phdBuildingStdAtAcq987 ? parseAmount(r.phdBuildingStdAtAcq987) : 0,
+        buildingStdPriceAtFirstDisclosure: r.phdBuildingStdAtFirst987 ? parseAmount(r.phdBuildingStdAtFirst987) : 0,
+      };
+      const acqStdPrice987 =
+        r.phdMode987 && canCalcReductionPhd(phdInput987)
+          ? calcReductionAcquisitionStdPrice(phdInput987).estimatedAcquisitionStdPrice
+          : parseAmount(r.standardPriceAtAcquisition987 || "0");
       return {
         type: "unsold_98_7" as const,
         contractDate987: r.contractDate987 || undefined,
@@ -399,7 +460,7 @@ export function toEngineReductions(
         isFirstContract987: r.isFirstContract987,
         isNotOccupiedAtContract987: r.isNotOccupiedAtContract987,
         isNotRecontract987: r.isNotRecontract987,
-        standardPriceAtAcquisition987: parseAmount(r.standardPriceAtAcquisition987 || "0") || undefined,
+        standardPriceAtAcquisition987: acqStdPrice987 || undefined,
         standardPriceAt5Years987: parseAmount(r.standardPriceAt5Years987 || "0") || undefined,
         standardPriceAtTransfer987: parseAmount(r.standardPriceAtTransfer987 || "0") || undefined,
       };

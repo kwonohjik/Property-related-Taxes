@@ -290,6 +290,15 @@ export type RentalReductionFormVariant =
       standardPriceAt5Years988: string;
       /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
       standardPriceAtTransfer988: string;
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      phdMode988?: boolean;
+      phdFirstDisclosureDate988?: string;
+      phdFirstDisclosurePrice988?: string;
+      phdLandAreaSqm988?: string;
+      phdLandPricePerSqmAtAcq988?: string;
+      phdLandPricePerSqmAtFirst988?: string;
+      phdBuildingStdAtAcq988?: string;
+      phdBuildingStdAtFirst988?: string;
     }
   // ── P5 (2026-06-12): §98 미분양 국민주택 — 세율 20% 선택 ──
   | {
@@ -351,6 +360,15 @@ export type RentalReductionFormVariant =
       standardPriceAtAcquisition983: string;
       standardPriceAt5Years983: string;
       standardPriceAtTransfer983: string;
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      phdMode983?: boolean;
+      phdFirstDisclosureDate983?: string;
+      phdFirstDisclosurePrice983?: string;
+      phdLandAreaSqm983?: string;
+      phdLandPricePerSqmAtAcq983?: string;
+      phdLandPricePerSqmAtFirst983?: string;
+      phdBuildingStdAtAcq983?: string;
+      phdBuildingStdAtFirst983?: string;
     }
   // ── P3 (2026-06-12): §98의5 수도권 밖 미분양 — 인하율별 60/80/100% ──
   | {
@@ -367,6 +385,15 @@ export type RentalReductionFormVariant =
       standardPriceAtAcquisition985: string;
       standardPriceAt5Years985: string;
       standardPriceAtTransfer985: string;
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      phdMode985?: boolean;
+      phdFirstDisclosureDate985?: string;
+      phdFirstDisclosurePrice985?: string;
+      phdLandAreaSqm985?: string;
+      phdLandPricePerSqmAtAcq985?: string;
+      phdLandPricePerSqmAtFirst985?: string;
+      phdBuildingStdAtAcq985?: string;
+      phdBuildingStdAtFirst985?: string;
     }
   // ── P3 (2026-06-12): §98의6 준공후미분양 50% — 1호/2호 ──
   | {
@@ -396,6 +423,15 @@ export type RentalReductionFormVariant =
       standardPriceAtAcquisition986: string;
       standardPriceAt5Years986: string;
       standardPriceAtTransfer986: string;
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      phdMode986?: boolean;
+      phdFirstDisclosureDate986?: string;
+      phdFirstDisclosurePrice986?: string;
+      phdLandAreaSqm986?: string;
+      phdLandPricePerSqmAtAcq986?: string;
+      phdLandPricePerSqmAtFirst986?: string;
+      phdBuildingStdAtAcq986?: string;
+      phdBuildingStdAtFirst986?: string;
     }
   // ── P2 (2026-06-11): §98의7 9억↓ 미분양 — 하이브리드 (5년 내 100% 세액감면 / 5년 후 공제) ──
   | {
@@ -418,6 +454,15 @@ export type RentalReductionFormVariant =
       standardPriceAt5Years987: string;
       /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
       standardPriceAtTransfer987: string;
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      phdMode987?: boolean;
+      phdFirstDisclosureDate987?: string;
+      phdFirstDisclosurePrice987?: string;
+      phdLandAreaSqm987?: string;
+      phdLandPricePerSqmAtAcq987?: string;
+      phdLandPricePerSqmAtFirst987?: string;
+      phdBuildingStdAtAcq987?: string;
+      phdBuildingStdAtFirst987?: string;
     }
   // ── P2 (2026-06-11): §99의2 신축·미분양·1세대1주택 — 하이브리드 (6억 OR 85㎡) ──
   | {
