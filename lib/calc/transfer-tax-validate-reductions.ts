@@ -231,8 +231,23 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (!(parseDecimal(r.floorAreaSqm983 || "") > 0))
               return fail("§98의3 적용: 수도권과밀억제권역 주택은 연면적(전용면적, ㎡)을 입력하세요 (149㎡ 이내 한정).");
           }
-          // 5년 경과 양도 시 안분용 기준시가 필수 (F-1).
-          const i983 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition983, r.standardPriceAt5Years983, "§98의3");
+          // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API·UI echo와 동일 소스, ⑧ 3중 미러).
+          let phdOk983 = false;
+          if (r.phdMode983) {
+            const phdInput = {
+              firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice983 || "0"),
+              landAreaSqm: parseDecimal(r.phdLandAreaSqm983 || "0"),
+              landPricePerSqmAtAcquisition: parseAmount(r.phdLandPricePerSqmAtAcq983 || "0"),
+              landPricePerSqmAtFirstDisclosure: parseAmount(r.phdLandPricePerSqmAtFirst983 || "0"),
+              buildingStdPriceAtAcquisition: parseAmount(r.phdBuildingStdAtAcq983 || "0"),
+              buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst983 || "0"),
+            };
+            if (!canCalcReductionPhd(phdInput))
+              return fail("§98의3 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+            phdOk983 = true;
+          }
+          // 5년 경과 양도 시 안분용 기준시가 필수 (F-1). PHD ON이면 취득시 검증 skip.
+          const i983 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition983, r.standardPriceAt5Years983, "§98의3", phdOk983);
           if (i983) return i983;
         }
         // P3 §98의5 (2026-06-12): 계약일·인하율 필수 (⑧).
@@ -241,8 +256,23 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§98의5 적용: 최초 매매계약일을 입력하세요 (~2011.4.30).");
           if (!(parseDecimal(r.priceReductionRatePct985 || "") > 0))
             return fail("§98의5 적용: 분양가격 인하율(%)을 입력하세요 — (최초 공시 분양가 − 매매가) ÷ 최초 분양가 × 100.");
-          // 5년 경과 양도 시 안분용 기준시가 필수 (F-1).
-          const i985 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition985, r.standardPriceAt5Years985, "§98의5");
+          // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
+          let phdOk985 = false;
+          if (r.phdMode985) {
+            const phdInput = {
+              firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice985 || "0"),
+              landAreaSqm: parseDecimal(r.phdLandAreaSqm985 || "0"),
+              landPricePerSqmAtAcquisition: parseAmount(r.phdLandPricePerSqmAtAcq985 || "0"),
+              landPricePerSqmAtFirstDisclosure: parseAmount(r.phdLandPricePerSqmAtFirst985 || "0"),
+              buildingStdPriceAtAcquisition: parseAmount(r.phdBuildingStdAtAcq985 || "0"),
+              buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst985 || "0"),
+            };
+            if (!canCalcReductionPhd(phdInput))
+              return fail("§98의5 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+            phdOk985 = true;
+          }
+          // 5년 경과 양도 시 안분용 기준시가 필수 (F-1). PHD ON이면 취득시 검증 skip.
+          const i985 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition985, r.standardPriceAt5Years985, "§98의5", phdOk985);
           if (i985) return i985;
         }
         // P3 §98의6 (2026-06-12): 계약일·기준시가 합계·면적 + 2호 임대 일자 필수 (⑧).
@@ -259,8 +289,23 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (!r.rentalStartDate986)
               return fail("§98의6 2호 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
           }
-          // 5년 경과 양도 시 안분용 기준시가 필수 (안분용 — stdPriceSumAtBase986과 별개 — F-1).
-          const i986 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition986, r.standardPriceAt5Years986, "§98의6");
+          // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
+          let phdOk986 = false;
+          if (r.phdMode986) {
+            const phdInput = {
+              firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice986 || "0"),
+              landAreaSqm: parseDecimal(r.phdLandAreaSqm986 || "0"),
+              landPricePerSqmAtAcquisition: parseAmount(r.phdLandPricePerSqmAtAcq986 || "0"),
+              landPricePerSqmAtFirstDisclosure: parseAmount(r.phdLandPricePerSqmAtFirst986 || "0"),
+              buildingStdPriceAtAcquisition: parseAmount(r.phdBuildingStdAtAcq986 || "0"),
+              buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst986 || "0"),
+            };
+            if (!canCalcReductionPhd(phdInput))
+              return fail("§98의6 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+            phdOk986 = true;
+          }
+          // 5년 경과 양도 시 안분용 기준시가 필수 (안분용 — stdPriceSumAtBase986과 별개 — F-1). PHD ON이면 취득시 검증 skip.
+          const i986 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition986, r.standardPriceAt5Years986, "§98의6", phdOk986);
           if (i986) return i986;
         }
         // P2 §98의7 9억↓ 미분양 (2026-06-11): 계약일·취득가 필수 (⑧).
@@ -270,8 +315,23 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§98의7 적용: 최초 매매계약일을 입력하세요 (2012.9.24~2012.12.31).");
           if (parseAmount(r.acquisitionPrice987 || "0") <= 0)
             return fail("§98의7 적용: 취득가액을 입력하세요 (9억원 이하 — 취득세·부대비용 제외).");
-          // 취득 후 5년 경과 양도 시 안분용 기준시가 필수 (M-4 → F-1 헬퍼 단일화).
-          const i987 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition987, r.standardPriceAt5Years987, "§98의7");
+          // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
+          let phdOk987 = false;
+          if (r.phdMode987) {
+            const phdInput = {
+              firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice987 || "0"),
+              landAreaSqm: parseDecimal(r.phdLandAreaSqm987 || "0"),
+              landPricePerSqmAtAcquisition: parseAmount(r.phdLandPricePerSqmAtAcq987 || "0"),
+              landPricePerSqmAtFirstDisclosure: parseAmount(r.phdLandPricePerSqmAtFirst987 || "0"),
+              buildingStdPriceAtAcquisition: parseAmount(r.phdBuildingStdAtAcq987 || "0"),
+              buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst987 || "0"),
+            };
+            if (!canCalcReductionPhd(phdInput))
+              return fail("§98의7 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+            phdOk987 = true;
+          }
+          // 취득 후 5년 경과 양도 시 안분용 기준시가 필수 (M-4 → F-1 헬퍼 단일화). PHD ON이면 취득시 검증 skip.
+          const i987 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition987, r.standardPriceAt5Years987, "§98의7", phdOk987);
           if (i987) return i987;
         }
         // P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): 유형별 일자 + 취득가·면적 필수 (⑧).

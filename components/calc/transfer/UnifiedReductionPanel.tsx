@@ -517,6 +517,15 @@ function GroupCategorySection({
 }) {
   const schema = CATEGORY_UI_SCHEMA[category];
   const items = ALL_REDUCTION_IDS.filter((id) => REDUCTION_METADATA[id].category === category);
+  // 감면 조문 입력 폼 공통 자산 props — 기준시가 조회형 위젯 + PHD 환산용(§99·§99의2·§98의3/5/6/7/8·§99의3).
+  const reductionAssetProps = {
+    acquisitionDate,
+    transferDate,
+    jibun: assetJibun,
+    dong: assetDong,
+    ho: assetHo,
+    assetPhdSnapshot,
+  };
 
   return (
     <div className="rounded-lg border border-border bg-muted/5">
@@ -613,12 +622,7 @@ function GroupCategorySection({
                       value={new993}
                       onUpdate={onUpdate993}
                       onUpdateMany={onUpdate993Many}
-                      acquisitionDate={acquisitionDate}
-                      transferDate={transferDate}
-                      jibun={assetJibun}
-                      dong={assetDong}
-                      ho={assetHo}
-                      assetPhdSnapshot={assetPhdSnapshot}
+                      {...reductionAssetProps}
                     />
                   )}
                   {/* §97의3 입력 폼 */}
@@ -692,16 +696,7 @@ function GroupCategorySection({
                     (() => {
                       const form99 = reductions.find((r) => r.type === "new_99");
                       return form99 && form99.type === "new_99" ? (
-                        <New99InputForm
-                          value={form99}
-                          onChange={onUpdate99}
-                          acquisitionDate={acquisitionDate}
-                          transferDate={transferDate}
-                          jibun={assetJibun}
-                          dong={assetDong}
-                          ho={assetHo}
-                          assetPhdSnapshot={assetPhdSnapshot}
-                        />
+                        <New99InputForm value={form99} onChange={onUpdate99} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P1 (2026-06-11): §98의8 준공후미분양 50% 입력 폼 */}
@@ -709,7 +704,7 @@ function GroupCategorySection({
                     (() => {
                       const form988 = reductions.find((r) => r.type === "unsold_98_8");
                       return form988 && form988.type === "unsold_98_8" ? (
-                        <Unsold988InputForm value={form988} onChange={onUpdate988} />
+                        <Unsold988InputForm value={form988} onChange={onUpdate988} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P2 (2026-06-11): §98의7 9억↓ 미분양 입력 폼 */}
@@ -717,7 +712,7 @@ function GroupCategorySection({
                     (() => {
                       const form987 = reductions.find((r) => r.type === "unsold_98_7");
                       return form987 && form987.type === "unsold_98_7" ? (
-                        <Unsold987InputForm value={form987} onChange={onUpdate987} />
+                        <Unsold987InputForm value={form987} onChange={onUpdate987} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P2 (2026-06-11): §99의2 신축·미분양·1세대1주택 입력 폼 */}
@@ -725,16 +720,7 @@ function GroupCategorySection({
                     (() => {
                       const form992 = reductions.find((r) => r.type === "unsold_99_2");
                       return form992 && form992.type === "unsold_99_2" ? (
-                        <Unsold992InputForm
-                          value={form992}
-                          onChange={onUpdate992}
-                          acquisitionDate={acquisitionDate}
-                          transferDate={transferDate}
-                          jibun={assetJibun}
-                          dong={assetDong}
-                          ho={assetHo}
-                          assetPhdSnapshot={assetPhdSnapshot}
-                        />
+                        <Unsold992InputForm value={form992} onChange={onUpdate992} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P3 (2026-06-12): §98의3 / §98의5 / §98의6 입력 폼 */}
@@ -742,21 +728,21 @@ function GroupCategorySection({
                     (() => {
                       const form983 = reductions.find((r) => r.type === "unsold_98_3");
                       return form983 && form983.type === "unsold_98_3" ? (
-                        <Unsold983InputForm value={form983} onChange={onUpdate983} />
+                        <Unsold983InputForm value={form983} onChange={onUpdate983} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {id === "unsold_98_5" &&
                     (() => {
                       const form985 = reductions.find((r) => r.type === "unsold_98_5");
                       return form985 && form985.type === "unsold_98_5" ? (
-                        <Unsold985InputForm value={form985} onChange={onUpdate985} />
+                        <Unsold985InputForm value={form985} onChange={onUpdate985} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {id === "unsold_98_6" &&
                     (() => {
                       const form986 = reductions.find((r) => r.type === "unsold_98_6");
                       return form986 && form986.type === "unsold_98_6" ? (
-                        <Unsold986InputForm value={form986} onChange={onUpdate986} />
+                        <Unsold986InputForm value={form986} onChange={onUpdate986} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P5 (2026-06-12): §98 입력 폼 */}
