@@ -255,18 +255,22 @@ Phase 1(안 (a) 채택 시) 신규 `AssetForm` 필드 **1개**(`cbAcqBuildingStd
 | ① | `AssetForm` 타입 | **○** | `lib/stores/calc-wizard-asset.ts` |
 | ② | initial | **○** | `calc-wizard-asset-factory.ts` — `false` |
 | ③ | normalize | **○** | `migrateAsset` — 구 세션 `undefined` → `false` |
-| ④ | API 변환 | **○** | `lib/calc/transfer-tax-api.ts` — Phase 2에서 `acquisitionYear` 파생 전달 |
+| ④ | API 변환 | **✕** | **불필요** — 취득연도를 엔진이 `TransferTaxInput.acquisitionDate`에서 파생(아래 ⚠️) |
 | ⑤ | UI 위젯 | **○** | 2배치 안내 카드 + 확인 토글(`ToggleCard`) |
 | ⑥ | 사이드바 합계 | ✕ | 대상 아님 |
 | ⑦ | 결과 카드 | **○** | Phase 2 — `sec164_5ProvisoApplicable` echo |
 | ⑧ | validation | **○** | `transfer-tax-validate-asset.ts` |
 | ⑨⑩ | Zod enum | ✕ | enum 아님 |
 | ⑪ | 자산-수준 `acquisitionDate` fallback | ✕ | 기존 필드 재사용 |
-| ⑫ | **Zod 입력객체** | **○** | `api/transfer-tax-building-schemas.ts` — Phase 2 `acquisitionYear` |
-| ⑬ | **body spread** | **○** | `callTransferTaxAPI` — 침묵 strip 주의 |
-| ⑭ | **Route 엔진 매핑** | **○** | `app/api/calc/transfer/route.ts` |
+| ⑫⑬⑭ | Zod·body·Route | **✕** | **불필요** (아래 ⚠️) |
 
-⚠️ ⑫⑬⑭는 TypeScript가 잡지 못한다 — Phase 2 착수 시 grep 자가점검 필수.
+⚠️ **Phase 2 실측 정정 — ④⑫⑬⑭가 필요 없어졌다.** 당초 `acquisitionYear`를 API로 새로 태울
+계획이었으나, `TransferTaxInput.acquisitionDate: Date`(`types/transfer.types.ts:79`)가 **이미 존재**한다.
+`runCommercialBuildingStep`이 그 값에서 연도를 파생해 주입하면 필드가 **API 경계를 넘지 않으므로**
+Zod·body spread·Route 매핑이 모두 불필요하다 — TypeScript가 못 잡는 침묵 strip 위험(⑫⑬⑭)이
+설계 단계에서 제거된다. 신규 API 필드를 만들기 전에 **기존 input에 파생 가능한 값이 있는지 먼저 볼 것.**
+
+결과적으로 본 작업의 실제 동기화 지점은 **①②③⑤⑦⑧ 6개**다.
 
 ## 7. Phase
 
@@ -309,12 +313,27 @@ __tests__/components/commercial-164-6-proviso-notice.test.tsx   4 케이스
 **`filled === 8`일 때만** 확인을 요구한다 — 8필드를 모두 비우면 §164⑥ 자체가 미적용(상증법 평가액만
 사용)이라 준용 확인이 무의미하기 때문이다. 계획서 §4 P-07은 이 조건을 명시하지 않았다.
 
-### Phase 2 — 엔진 echo (G2)
+### Phase 2 — 엔진 echo (G2) ✅ 완료 (2026-07-28)
 
-- `CommercialBuildingValuationInput.acquisitionYear?` + `Result.sec164_5ProvisoApplicable?`
-- 14지점 ④⑦⑫⑬⑭
-- 결과뷰 `CommercialBuildingValuationDetailCard` 근거 1줄
-- **verify**: 기존 상가 anchor 전건 회귀 0(계산값 무변경) + 신규 판정 anchor 3건
+- `CommercialBuildingValuationInput.acquisitionYear?`(엔진 내부 파생) + `Result.sec164_5ProvisoApplicable?`
+- `runCommercialBuildingStep`이 `input.acquisitionDate.getFullYear()`로 주입 — **API 미경유**
+- 결과뷰 `CommercialBuildingValuationDetailCard` 근거 1줄(§164⑥ 단서 → §164⑤ 준용 산정 명시)
+- 동기화 지점 **⑦만** 해당(④⑫⑬⑭ 불필요 — §6 ⚠️)
+
+**verify — 전건 통과**
+
+| 항목 | 결과 |
+|---|---|
+| 판정 경계 | ✅ 1998·2000-12-31 `true` / 2001-01-01·2003 `false` |
+| `acquisitionYear` 미지정 | ✅ `undefined`(판정 생략) |
+| C-02(post_disclosure) | ✅ `undefined` — §164⑥ 경로 아님 |
+| **계산 불변** | ✅ 취득연도만 다른 두 입력의 `estimatedBasisAtAcq`·`estimatedAcquisitionTotal`·`estimatedDeductionTotal` 동일 |
+| 상가 엔진 회귀 | ✅ `__tests__/tax-engine/transfer/` 392건 통과 |
+| 게이트 | ✅ tsc 0 · eslint 0 |
+
+**한계 (설계대로)**: 플래그는 "§164⑤ 준용이 **필요한 구간**"을 뜻할 뿐, 입력값이 실제로 준용
+산정값인지는 판정하지 않는다 — 준용에 필요한 신축연도·구조·용도가 엔진 input에 없다.
+실제 확인은 Phase 1의 UI 게이트(`cbAcqBuildingStdBy164_5`)가 담당한다.
 
 ### Phase 3 — 별건 이관 (본 계획 범위 밖)
 

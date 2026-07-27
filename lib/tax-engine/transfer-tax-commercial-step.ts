@@ -89,8 +89,10 @@ export function runCommercialBuildingStep(
     ? { ...exprVal.detail, denominator: Math.floor(exprVal.detail.chosenPerSqm * floorAreaTotal) }
     : undefined;
 
+  // §164⑥ 단서 판정용 취득연도 — 이미 있는 acquisitionDate에서 파생한다.
+  // API에 새 필드를 만들지 않으므로 ⑫⑬⑭(Zod·body·Route) 동기화가 불필요하다.
   const detail = calculateCommercialBuildingValuation(
-    effectiveCbInput,
+    { ...effectiveCbInput, acquisitionYear: input.acquisitionDate.getFullYear() },
     input.transferPrice,
   );
 

@@ -31,6 +31,8 @@ export interface CommercialBuildingValuationResult {
   estimatedDeductionTotal: number;
   estimatedDeductionLand: number;
   estimatedDeductionBuilding: number;
+  /** §164⑥ 단서 — 취득당시 건물 기준시가가 §164⑤ 준용 산정값이어야 하는 구간 */
+  sec164_5ProvisoApplicable?: boolean;
 }
 
 interface Props {
@@ -140,6 +142,12 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label="환산취득가 건물분 = 합계 − 토지분" value={detail.estimatedAcquisitionBuilding} sub />
           </tbody>
         </table>
+        {detail.sec164_5ProvisoApplicable && (
+          <p className="text-caption text-amber-700 mt-1">
+            ※ 취득당시 건물 기준시가는 국세청 고시 전(취득연도 2000년 이전)이므로 시행령 §164⑥ 단서에
+            따라 §164⑤을 준용해 산정한 금액입니다 — 2001년 지수표 금액 × 취득당시 건물기준시가 산정기준율.
+          </p>
+        )}
       </div>
 
       {/* 개산공제 */}

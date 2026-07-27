@@ -68,6 +68,15 @@ export interface CommercialBuildingValuationInput {
   landPriceAtFirstDisclosure?: number;
   /** 양도시 개별공시지가 (원/㎡). C-01 시 필요. */
   landPriceAtTransfer?: number;
+
+  /**
+   * 취득연도 — **§164⑥ 단서 해당 여부 판정 전용**(계산에 쓰지 않는다).
+   *
+   * API를 새로 태우지 않는다 — `runCommercialBuildingStep`이 이미 있는
+   * `TransferTaxInput.acquisitionDate`에서 파생해 주입한다(14 동기화 지점 ⑫⑬⑭ 불필요).
+   * 미지정 시 판정을 생략한다(`sec164_5ProvisoApplicable` undefined).
+   */
+  acquisitionYear?: number;
 }
 
 /**
@@ -134,4 +143,17 @@ export interface CommercialBuildingValuationResult {
   estimatedDeductionLand: number;
   /** 개산공제 건물분 (내부 표시용: 건물기준시가 비율로 안분) */
   estimatedDeductionBuilding: number;
+
+  /**
+   * §164⑥ 단서 해당 — 취득당시 건물 기준시가(법 §99①1호나목)가 고시 전이라 존재하지 않아
+   * **§164⑤을 준용해 산정해야 하는 경우**임을 뜻한다.
+   *
+   * ⚠️ 입력값이 실제로 §164⑤로 산정됐는지는 **엔진이 알 수 없다** — 준용에 필요한
+   *    신축연도·구조·용도가 엔진 input에 없기 때문이다. 이 플래그는 **산출 근거 표시용**이며
+   *    계산을 바꾸지 않는다. 실제 준용 여부 확인은 UI 게이트가 담당한다
+   *    (`lib/calc/commercial-164-6-proviso.ts`).
+   *
+   * `acquisitionYear` 미지정 시 undefined(판정 생략).
+   */
+  sec164_5ProvisoApplicable?: boolean;
 }

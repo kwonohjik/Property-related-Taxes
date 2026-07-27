@@ -17,6 +17,7 @@
 
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
+import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "./data/building-standard-price";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
   CommercialBuildingValuationInput,
@@ -268,6 +269,11 @@ function _calcPreDisclosure(
     estimatedDeductionTotal,
     estimatedDeductionLand,
     estimatedDeductionBuilding,
+    // §164⑥ 단서 — 취득연도가 나목(건물 기준시가) 고시 전 구간이면 §164⑤ 준용 대상이다.
+    // 경계는 국세청 「취득당시 건물기준시가 산정기준율표」의 취득연도 축 상한(2000).
+    ...(input.acquisitionYear !== undefined && {
+      sec164_5ProvisoApplicable: input.acquisitionYear <= ACQ_BASE_RATE_MAX_ACQ_YEAR,
+    }),
   };
 }
 
