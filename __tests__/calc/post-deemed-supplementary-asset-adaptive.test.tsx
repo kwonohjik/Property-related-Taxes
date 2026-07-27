@@ -32,7 +32,7 @@ describe("A1: 보충적평가 보조계산 자산구분별 필드", () => {
   it("토지(공시 ≥1990.8.30) → 개별공시지가+면적, 주택가격 필드 없음", () => {
     render(
       <PostDeemedInputs
-        asset={asset({ inheritanceAssetKind: "land", inheritanceStartDate: "2000-01-01" })}
+        asset={asset({ assetKind: "land", inheritanceAssetKind: "land", inheritanceStartDate: "2000-01-01" })}
         onChange={() => {}}
       />,
     );
@@ -70,6 +70,7 @@ describe("A2: reportedPatch 자산구분 인지 (합산 site)", () => {
     render(
       <PostDeemedInputs
         asset={asset({
+          assetKind: "land",
           inheritanceAssetKind: "land",
           inheritanceStartDate: "2000-01-01",
           useSupplementaryHelper: false, // 토글 OFF에서 클릭 → onCheckedChange(true)
@@ -122,7 +123,7 @@ describe("A3: 미공시 대칭 hide + 안내", () => {
   it("미공시 토지(1988) → 보조계산 토글 숨김", () => {
     render(
       <PostDeemedInputs
-        asset={asset({ inheritanceAssetKind: "land", inheritanceStartDate: "1988-07-01" })}
+        asset={asset({ assetKind: "land", inheritanceAssetKind: "land", inheritanceStartDate: "1988-07-01" })}
         onChange={() => {}}
       />,
     );
@@ -132,7 +133,7 @@ describe("A3: 미공시 대칭 hide + 안내", () => {
   it("공시 토지(2000) → 보조계산 토글 노출", () => {
     render(
       <PostDeemedInputs
-        asset={asset({ inheritanceAssetKind: "land", inheritanceStartDate: "2000-01-01" })}
+        asset={asset({ assetKind: "land", inheritanceAssetKind: "land", inheritanceStartDate: "2000-01-01" })}
         onChange={() => {}}
       />,
     );

@@ -13,7 +13,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
+import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -624,9 +624,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             primary.acquisitionCause === "inheritance"
               ? {
                   inheritanceDate: primary.acquisitionDate,
-                  // 보충적평가 자산 구분 — inheritanceAssetKind ("land" | "house_individual" | "house_apart")
-                  // assetKind("housing")가 아닌 자산-수준 inheritanceAssetKind를 사용해야 schema enum 일치
-                  assetKind: primary.inheritanceAssetKind,
+                  // 보충적평가 자산 구분 — 상단 assetKind 기준 파생(land vs 非land; housing은 개별/공동).
+                  // 상속 자산구분 라디오 폐지 대응(deriveEngineInheritanceAssetKind). 결과는 schema enum 값.
+                  assetKind: deriveEngineInheritanceAssetKind(primary),
                   landAreaM2: primary.acquisitionArea ? parseFloat(primary.acquisitionArea) : undefined,
                   // 지분 모드: 100% 기준 입력값(공동주택가격 등)에 × ratio 적용
                   publishedValueAtInheritance: primaryFractional

@@ -16,7 +16,6 @@
  * inheritanceValuationMode는 항상 "auto"(factory 기본·migration 전환) — UI에 토글 없음.
  */
 
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -24,12 +23,6 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-
-const INHERITANCE_ASSET_KIND_OPTIONS = [
-  { value: "land", label: "토지 (공시지가 × 면적)" },
-  { value: "house_individual", label: "개별·다세대주택 (개별주택가격)" },
-  { value: "house_apart", label: "공동주택 (공동주택가격)" },
-] as const;
 
 interface Props {
   asset: AssetForm;
@@ -127,36 +120,10 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
         </ToneCard>
       )}
 
-      {/* 자산 구분 (상속개시일 기준) — 하단 의제분기 섹션이 이 값으로 토지/주택 UI 분기 (비-겸용·비-상가 전용) */}
-      {!isMixedUse && asset.assetKind !== "commercial_building" && (
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <label className="block text-sm font-medium">자산 구분 (상속개시일 기준)</label>
-            <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />
-            <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
-          </div>
-          <RadioCardGroup
-            name={`inh-kind-${asset.assetId}`}
-            tone="amber"
-            layout="stack"
-            options={INHERITANCE_ASSET_KIND_OPTIONS.map((opt) => ({
-              value: opt.value,
-              label: opt.label,
-            }))}
-            value={asset.inheritanceAssetKind ?? ""}
-            onChange={(v) =>
-              onChange({
-                inheritanceAssetKind: v as AssetForm["inheritanceAssetKind"],
-                // 자산구분 변경 시 보충적평가 보조계산 입력 초기화 (토지↔주택 stale 방지)
-                useSupplementaryHelper: false,
-                supplementaryLandUnitPrice: "",
-                supplementaryLandArea: "",
-                supplementaryBuildingValue: "",
-              })
-            }
-          />
-        </div>
-      )}
+      {/* 자산 구분(토지/개별주택/공동주택)은 상단 라디오를 폐지하고, 취득가액이 실제 필요로 하는
+          맥락에서만 노출한다: 토지/주택 판정은 상단 assetKind로 파생하고, 주택 개별/공동 선택은
+          보충적평가 보조계산·§164⑦ 환산 섹션 내부(InheritanceHouseKindPicker)에서만 물어본다.
+          핵심 입력은 아래 "평가방법 + 신고가액". */}
 
       {/* 취득가액 산정 — 의제취득일(1985.1.1.) 전후 자동 분기 (pre/post, 비-겸용 전용) */}
       {!isMixedUse && (

@@ -17,6 +17,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { HouseValuationSection } from "./HouseValuationSection";
+import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -36,7 +37,17 @@ interface Props {
 
 export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isLand = asset.assetKind === "land";
-  const isHouse = asset.inheritanceAssetKind === "house_individual" || asset.inheritanceAssetKind === "house_apart";
+  // 토지/주택 판정은 상단 assetKind로 파생(상속 자산구분 라디오 폐지 대응).
+  const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
+  // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용).
+  const houseKind: "house_individual" | "house_apart" =
+    asset.inheritanceAssetKind === "house_individual"
+      ? "house_individual"
+      : asset.inheritanceAssetKind === "house_apart"
+        ? "house_apart"
+        : asset.addressDong && asset.addressHo
+          ? "house_apart"
+          : "house_individual";
 
   // 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 → 3-시점 보조 입력
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
@@ -201,11 +212,18 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
 
       {/* 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 3-시점 보조 입력 */}
       {showHouseValuation && (
-        <HouseValuationSection
-          asset={asset}
-          onChange={onChange}
-          transferDate={transferDate}
-        />
+        <>
+          <InheritanceHouseKindPicker
+            value={houseKind}
+            assetId={asset.assetId}
+            onChange={onChange}
+          />
+          <HouseValuationSection
+            asset={asset}
+            onChange={onChange}
+            transferDate={transferDate}
+          />
+        </>
       )}
 
       {/* ① 의제취득일(1985.1.1.) 시점 기준시가 */}

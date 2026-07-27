@@ -54,7 +54,7 @@ describe("post-deemed 상속주택 §164⑦ 환산 진입(P2) + 신고가액 단
   it("P2 neg: 토지 자산 → 환산 안내 미노출", () => {
     render(
       <PostDeemedInputs
-        asset={postDeemedHouse({ inheritanceAssetKind: "land" })}
+        asset={postDeemedHouse({ assetKind: "land", inheritanceAssetKind: "land" })}
         onChange={() => {}}
         transferDate="2024-01-01"
       />,
@@ -107,13 +107,14 @@ describe("통합 셸 — 취득가액 의제 특례(deemed) 섹션 + 자산구�
     expect(screen.queryAllByText(REDIRECT).length).toBeGreaterThan(0);
   });
 
-  it("자산 구분 라디오 노출 (통합 셸 상단)", () => {
+  it("자산 구분 라디오 상단 미노출 (보조계산 강등)", () => {
+    // 상단 coarse 자산구분 라디오는 폐지 — 토지/주택 판정은 assetKind 파생, 개별/공동은 보조계산·§164⑦ 맥락 내부.
     render(<CompanionAcqInheritanceBlock asset={blockAsset()} onChange={() => {}} />);
-    expect(screen.queryAllByText(ASSET_KIND).length).toBeGreaterThan(0);
+    expect(screen.queryByText(ASSET_KIND)).toBeNull();
   });
 
   it("토지 → '취득가액 의제 특례' 노출 (자산구분 무관, 의제분기 렌더)", () => {
-    render(<CompanionAcqInheritanceBlock asset={blockAsset({ inheritanceAssetKind: "land" })} onChange={() => {}} />);
+    render(<CompanionAcqInheritanceBlock asset={blockAsset({ assetKind: "land", inheritanceAssetKind: "land" })} onChange={() => {}} />);
     expect(screen.queryAllByText(REDIRECT).length).toBeGreaterThan(0);
   });
 });

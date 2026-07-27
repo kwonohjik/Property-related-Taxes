@@ -30,7 +30,8 @@ async function gotoInheritanceHouse(page: Page) {
   await expandAssetSection(page, 3);
   await page.getByRole("button", { name: "상속", exact: true }).click();
 
-  // 통합 셸(P2b): auto/manual 토글 폐지 → 상속 선택 시 자산 구분 RadioCardGroup이 바로 노출된다.
+  // 상속 자산구분 라디오는 보조계산·§164⑦ 맥락으로 강등됨: 토지/주택은 assetKind 파생,
+  // 주택 개별/공동 픽커는 §164⑦ 환산 섹션(주택+미공시) 내부에 노출된다(라벨 동일).
 
   // 상속개시일 1983-07-26 (< 1985.1.1 → pre-deemed PreDeemedInputs → 보충적평가 게이트 없이 섹션 활성).
   // (post-deemed(≥1985)은 inheritanceValuationMethod=supplementary 추가 필요.)

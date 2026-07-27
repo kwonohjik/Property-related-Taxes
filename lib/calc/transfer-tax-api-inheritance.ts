@@ -7,7 +7,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { applyRatio } from "./transfer-tax-api-helpers";
+import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
 
 /**
  * 상속 취득가액 의제 페이로드 빌드.
@@ -47,7 +47,7 @@ export function buildInheritedAcquisitionPayload(
       inheritedAcquisition: {
         mode: "pre-deemed" as const,
         inheritanceStartDate,
-        assetKind: primary.inheritanceAssetKind,
+        assetKind: deriveEngineInheritanceAssetKind(primary),
         ...(reportedValue && { reportedValue }),
         ...(stdAtDeemed > 0 && { standardPriceAtDeemedDate: stdAtDeemed }),
         ...(stdAtTransfer > 0 && { standardPriceAtTransfer: stdAtTransfer }),
@@ -67,7 +67,7 @@ export function buildInheritedAcquisitionPayload(
     inheritedAcquisition: {
       mode: "post-deemed" as const,
       inheritanceStartDate,
-      assetKind: primary.inheritanceAssetKind,
+      assetKind: deriveEngineInheritanceAssetKind(primary),
       reportedValue,
       // 사용자가 고른 평가방법을 엔진에 전달(결과 legalBasis·formula 반영). 공란("")이면 "supplementary" 강제 —
       // reportedMethod가 비면 calcPostDeemed가 신고가액 경로(inheritance-acquisition-price.ts:164)를 못 넘고
@@ -145,9 +145,11 @@ export function buildInheritedHouseValuationPayload(
   primary: AssetForm,
   transferDate: string,
 ): { inheritedHouseValuation?: unknown } {
+  // §164⑦ 주택 환산은 실제 주택 자산(상단 assetKind)에만 적용 — 상속 자산구분 라디오 폐지 대응.
+  const isHouse =
+    primary.assetKind === "housing" || primary.assetKind === "redevelopment_apt";
   const triggerable =
-    (primary.inheritanceAssetKind === "house_individual" ||
-      primary.inheritanceAssetKind === "house_apart") &&
+    isHouse &&
     primary.acquisitionCause === "inheritance" &&
     parseFloat(primary.inhHouseValLandArea) > 0 &&
     parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer) > 0 &&
