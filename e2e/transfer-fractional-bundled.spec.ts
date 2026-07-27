@@ -137,5 +137,11 @@ test.describe("지분 모드 분할취득 일괄양도 계산 (PR #826)", () => 
     await expect(asset1.getByText("100% 기준 입력").first()).toBeVisible();
     // "공유 지분율"(비-지분 라벨)은 노출되지 않아야 함
     await expect(asset1.getByText("공유 지분율")).toHaveCount(0);
+
+    // 단일 백분율(%) 입력 — 60/100 시드가 "60"으로 표시, 분자/분모 2칸은 없음
+    await expect(asset1.getByPlaceholder("지분율")).toBeVisible();
+    await expect(asset1.getByPlaceholder("지분율")).toHaveValue("60");
+    await expect(asset1.getByPlaceholder("분자")).toHaveCount(0);
+    await expect(asset1.getByPlaceholder("분모")).toHaveCount(0);
   });
 });
