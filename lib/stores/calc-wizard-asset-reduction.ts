@@ -250,8 +250,18 @@ export type RentalReductionFormVariant =
       isRecontractExcluded99: boolean;
       /** 재개발·재건축 신축주택 (령 §99①1호 단서 — 5년 내도 안분) */
       isRedevelopedNewHouse99: boolean;
-      /** 종전주택 취득 당시 기준시가 (원) — 변형 ON 시 필수 */
+      /** 종전주택 취득 당시 기준시가 (원) — 변형 ON 시 필수. 별개 물건 → 조회형/PHD 대상 아님 */
       previousHouseStdPrice99: string;
+      // ── PHD 환산 (Phase 2, 2026-07-27): 최초공시 전 취득 시 취득시 기준시가 §164⑤ 자동 산출 ──
+      /** PHD 모드 ON 시 standardPriceAtAcquisition99를 자동 산출 */
+      phdMode99?: boolean;
+      phdFirstDisclosureDate99?: string;
+      phdFirstDisclosurePrice99?: string;
+      phdLandAreaSqm99?: string;
+      phdLandPricePerSqmAtAcq99?: string;
+      phdLandPricePerSqmAtFirst99?: string;
+      phdBuildingStdAtAcq99?: string;
+      phdBuildingStdAtFirst99?: string;
     }
   // ── P1 (2026-06-11): §98의8 준공후미분양 50% 공제 — 차감형 ──
   | {

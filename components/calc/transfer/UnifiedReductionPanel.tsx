@@ -692,7 +692,16 @@ function GroupCategorySection({
                     (() => {
                       const form99 = reductions.find((r) => r.type === "new_99");
                       return form99 && form99.type === "new_99" ? (
-                        <New99InputForm value={form99} onChange={onUpdate99} />
+                        <New99InputForm
+                          value={form99}
+                          onChange={onUpdate99}
+                          acquisitionDate={acquisitionDate}
+                          transferDate={transferDate}
+                          jibun={assetJibun}
+                          dong={assetDong}
+                          ho={assetHo}
+                          assetPhdSnapshot={assetPhdSnapshot}
+                        />
                       ) : null;
                     })()}
                   {/* P1 (2026-06-11): §98의8 준공후미분양 50% 입력 폼 */}

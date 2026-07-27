@@ -248,13 +248,27 @@ export function toEngineReductions(
     // ── P1 §99 신축주택 IMF 1차 (2026-06-11): 차감형 본 변환 (④) ──
     // 날짜는 string 그대로 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
     if (r.type === "new_99") {
+      // 취득시 기준시가 — PHD 환산 ON이고 입력 충분하면 §164⑤ 자동 산출(source ternary,
+      // UI echo·validate와 동일 소스). 아니면 수동값. 엔진은 환산값(취득기준시가)만 수용(phd echo 필드 없음).
+      const phdInput99 = {
+        firstDisclosurePrice: r.phdFirstDisclosurePrice99 ? parseAmount(r.phdFirstDisclosurePrice99) : 0,
+        landAreaSqm: r.phdLandAreaSqm99 ? parseFloat(r.phdLandAreaSqm99) : 0,
+        landPricePerSqmAtAcquisition: r.phdLandPricePerSqmAtAcq99 ? parseAmount(r.phdLandPricePerSqmAtAcq99) : 0,
+        landPricePerSqmAtFirstDisclosure: r.phdLandPricePerSqmAtFirst99 ? parseAmount(r.phdLandPricePerSqmAtFirst99) : 0,
+        buildingStdPriceAtAcquisition: r.phdBuildingStdAtAcq99 ? parseAmount(r.phdBuildingStdAtAcq99) : 0,
+        buildingStdPriceAtFirstDisclosure: r.phdBuildingStdAtFirst99 ? parseAmount(r.phdBuildingStdAtFirst99) : 0,
+      };
+      const acqStdPrice99 =
+        r.phdMode99 && canCalcReductionPhd(phdInput99)
+          ? calcReductionAcquisitionStdPrice(phdInput99).estimatedAcquisitionStdPrice
+          : parseAmount(r.standardPriceAtAcquisition99 || "0");
       return {
         type: "new_99" as const,
         contractDate99: r.contractDate99 || undefined,
         usageApprovalDate99: r.usageApprovalDate99 || undefined,
         acquisitionType99: r.acquisitionType99,
         isNationalHousing99: r.isNationalHousing99,
-        standardPriceAtAcquisition99: parseAmount(r.standardPriceAtAcquisition99 || "0") || undefined,
+        standardPriceAtAcquisition99: acqStdPrice99 || undefined,
         standardPriceAt5Years99: parseAmount(r.standardPriceAt5Years99 || "0") || undefined,
         standardPriceAtTransfer99: parseAmount(r.standardPriceAtTransfer99 || "0") || undefined,
         exclusiveAreaSqm99: parseDecimal(r.exclusiveAreaSqm99 || "") || undefined,
