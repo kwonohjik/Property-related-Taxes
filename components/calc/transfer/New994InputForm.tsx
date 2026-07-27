@@ -12,10 +12,11 @@
 
 import { useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type New994Rural = Extract<AssetReductionForm, { type: "new_99_4_rural" }>;
@@ -72,17 +73,36 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
 
       {/* ② 가액 요건 */}
       <ToneCard tone="sky" sectionNum="②" title="가액 요건" noDark>
+        {/* 농어촌주택 주소 — 기준시가 조회 소스(양도물건이 아닌 별개 물건) */}
         <div>
-          <label className="mb-1 block text-xs font-medium">취득 당시 기준시가 합계</label>
-          <CurrencyInput
-            label=""
-            value={value.ruralHouseStdPrice}
-            onChange={(v) => onChange({ ruralHouseStdPrice: v })}
+          <label className="mb-1 block text-xs font-medium">{houseLabel} 주소 (기준시가 조회용)</label>
+          <AddressSearch
+            value={
+              {
+                road: "",
+                jibun: value.ruralHouseJibun ?? "",
+                building: "",
+                detail: "",
+                lng: "",
+                lat: "",
+              } satisfies AddressValue
+            }
+            onChange={(v) => onChange({ ruralHouseJibun: v.jibun })}
+            disableUnits
           />
           <p className="mt-1 text-micro text-muted-foreground">
-            주택과 부속토지 합계 — 3억 이하 (등록 한옥 4억) 요건 (§99의4①)
+            양도주택이 아닌 {houseLabel}의 주소 — 취득 당시 기준시가 조회에 사용합니다
           </p>
         </div>
+        <HousingStdPriceLookupField
+          label="취득 당시 기준시가 합계"
+          value={value.ruralHouseStdPrice}
+          onChange={(v) => onChange({ ruralHouseStdPrice: v })}
+          jibun={value.ruralHouseJibun}
+          referenceDate={value.ruralHouseAcquisitionDate}
+          hint="주택+부속토지 합계 — 3억 이하 (등록 한옥 4억) 요건 (§99의4①)"
+          testidPrefix="new994-stdprice"
+        />
         <ToggleCard
           variant="chip"
           checked={value.isRegisteredHanok}
