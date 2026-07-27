@@ -14,7 +14,7 @@ Layer 1의 프런트엔드 측. 마법사(StepWizard) 기반 폼 + 결과 화면
 
 ### Step 파일 분리 규칙 (2026-04 리팩터링 후)
 
-Calculator가 800줄 초과 + Step이 3개 이상이면 각 Step을 별도 파일로 분리. 예시:
+Calculator가 800줄 초과 + Step이 3개 이상이면 각 Step을 별도 파일로 분리(착지 목표 ≤700줄 — 루트 File Size Policy). 예시:
 
 ```
 app/calc/transfer-tax/                  # 양도세: Step1↔Step3 통합 후 4단계 (2026-04-25)
