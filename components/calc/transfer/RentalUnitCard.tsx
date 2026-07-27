@@ -534,16 +534,17 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
       {/* 기준시가 — 나·라목은 취득당시(3억), 그 외는 임대개시일(Vworld 자동조회) */}
       {showAcqPrice ? (
         <FieldCard
-          label="임대개시일 기준시가"
+          label="취득 당시 기준시가"
           required
           unit="원"
+          hint={`상한 ${capLabel} 이하 요건 (소령 §155⑳)`}
         >
           <CurrencyInput
             label=""
             value={unit.acquisitionOfficialPrice}
             onChange={(v) => set("acquisitionOfficialPrice", v)}
             hideUnit
-            placeholder="임대개시일 기준시가 (원)"
+            placeholder="취득 당시 기준시가 (원)"
           />
         </FieldCard>
       ) : (
