@@ -16,17 +16,13 @@ import {
   calculateTransferTaxAggregate,
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
-import {
-  apportionBundledSale,
-  type BundledAssetInput,
-} from "@/lib/tax-engine/bundled-sale-apportionment";
-import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
-import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
 import {
   resolveHousingContextFromCompanion,
   buildCompanionEngineInputs,
+  prepareBundledApportionment,
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
@@ -421,6 +417,10 @@ export async function POST(request: NextRequest) {
     const allCompanionsFractional =
       companions.length > 0 && companions.every((c) => c.totalPropertyTransferPrice !== undefined);
     const isFractionalBundle = primaryIsFractional || allCompanionsFractional;
+    // 완전 지분 모드: primary·전 companion 모두 fractional (같은 물건 지분 분할).
+    // 이때만 각 자산의 확정 양도가액(총계약가×ratio)을 fixedSalePrice로 주입한다.
+    // 혼합(primary만 지분 등)은 비지분 자산의 fixedSalePrice가 미계산이므로 기존 경로 유지.
+    const isFullFractionalBundle = primaryIsFractional && allCompanionsFractional;
     const bundledOk =
       companions.length > 0 &&
       data.totalSalePrice !== undefined &&
@@ -434,119 +434,20 @@ export async function POST(request: NextRequest) {
       );
 
     if (bundledOk) {
-      // (1) 주 자산 상속 보충적평가액 산정 (선택)
-      let primaryFixedAcq: number | undefined;
-      if (data.primaryInheritanceValuation) {
-        const v = data.primaryInheritanceValuation;
-        const r = calculateInheritanceAcquisitionPrice({
-          inheritanceDate: new Date(v.inheritanceDate),
-          assetKind: v.assetKind,
-          landAreaM2: v.landAreaM2,
-          // R0″ 통일: publishedValueAtInheritance(총액) → reportedValue 직수용 (단건과 동일, computeSupplementary ×면적 폐기).
-          reportedValue: v.publishedValueAtInheritance,
-          reportedMethod: "supplementary",
-        });
-        primaryFixedAcq = r.acquisitionPrice;
-      }
-
-      // (2) 컴패니언 자산별 취득가액 (acquisitionCause 분기)
-      //   - inheritance + inheritanceValuation → 보충적평가
-      //   - inheritance manual / gift / purchase(actual) → fixedAcquisitionPrice 그대로
-      //   - purchase(estimated) → undefined (안분 후 사후 환산, 5단계에서 처리)
-      const companionFixedAcq: (number | undefined)[] = companions.map((c) => {
-        if (c.acquisitionCause === "purchase" && c.useEstimatedAcquisition) {
-          return undefined;
-        }
-        if (c.acquisitionCause === "inheritance" && c.inheritanceValuation) {
-          const v = c.inheritanceValuation;
-          // R0″ 경로 통일: publishedValueAtInheritance는 총액 → reportedValue로 직수용 (단건과 동일 총액 경로).
-          return calculateInheritanceAcquisitionPrice({
-            inheritanceDate: new Date(v.inheritanceDate),
-            assetKind: v.assetKind,
-            landAreaM2: v.landAreaM2,
-            reportedValue: v.publishedValueAtInheritance,
-            reportedMethod: "supplementary",
-          }).acquisitionPrice;
-        }
-        return c.fixedAcquisitionPrice;
-      });
-
-      // (3) BundledAssetInput 배열 구성
-      const primaryAssetKind: BundledAssetInput["assetKind"] =
-        data.propertyType === "housing"
-          ? "housing"
-          : data.propertyType === "building"
-            ? "building"
-            : "land";
-      const primaryLabel =
-        data.propertyType === "housing"
-          ? "주 자산(주택)"
-          : data.propertyType === "land"
-            ? "주 자산(토지)"
-            : "주 자산";
-
-      const bundleAssets: BundledAssetInput[] = [
+      // (1)~(4.5) 안분 준비·실행 — bundled-split-helpers.ts로 추출 (800줄 정책)
+      const { apportionment, adjustedAcq } = prepareBundledApportionment(
         {
-          assetId: "primary",
-          assetLabel: primaryLabel,
-          assetKind: primaryAssetKind,
-          standardPriceAtTransfer: data.standardPriceAtTransferForApportion ?? 0,
-          directExpenses: data.expenses,
-          fixedAcquisitionPrice:
-            primaryFixedAcq ??
-            (data.acquisitionPrice > 0 ? data.acquisitionPrice : undefined),
-          // actual 모드: 주 자산의 계약서상 양도가액 주입
-          fixedSalePrice: isActualMode ? data.primaryActualSalePrice : undefined,
+          propertyType: data.propertyType,
+          totalSalePrice: data.totalSalePrice,
+          standardPriceAtTransferForApportion: data.standardPriceAtTransferForApportion,
+          expenses: data.expenses,
+          acquisitionPrice: data.acquisitionPrice,
+          primaryActualSalePrice: data.primaryActualSalePrice,
+          primaryInheritanceValuation: data.primaryInheritanceValuation,
         },
-        ...companions.map(
-          (c, i): BundledAssetInput => ({
-            assetId: c.assetId,
-            assetLabel: c.assetLabel,
-            assetKind: c.assetKind,
-            standardPriceAtTransfer: c.standardPriceAtTransfer ?? 0,
-            standardPriceAtAcquisition: c.standardPriceAtAcquisition,
-            directExpenses: c.directExpenses,
-            fixedAcquisitionPrice: companionFixedAcq[i],
-            // actual 모드: 컴패니언의 계약서상 양도가액 주입
-            fixedSalePrice: isActualMode ? c.fixedSalePrice : undefined,
-          }),
-        ),
-      ];
-
-      // (4) 안분 실행
-      const apportionment = apportionBundledSale({
-        totalSalePrice: data.totalSalePrice!,
-        assets: bundleAssets,
-      });
-
-      // (4.5) 매매 estimated 컴패니언: 안분된 양도가액으로 환산취득가 사후 산정
-      // 환산공식: 양도가 × (취득시 기준시가 ÷ 양도시 기준시가)
-      const adjustedAcq = new Map<string, { price: number; used: boolean }>();
-      companions.forEach((c) => {
-        if (
-          c.acquisitionCause === "purchase" &&
-          c.useEstimatedAcquisition &&
-          c.standardPriceAtAcquisition &&
-          c.standardPriceAtTransfer
-        ) {
-          const alloc = apportionment.apportioned.find((a) => a.assetId === c.assetId);
-          if (!alloc) return;
-          const price = calculateEstimatedAcquisitionPrice(
-            alloc.allocatedSalePrice,
-            c.standardPriceAtAcquisition,
-            c.standardPriceAtTransfer,
-          );
-          adjustedAcq.set(c.assetId, { price, used: true });
-        }
-      });
-
-      // apportionment 결과에 usedEstimatedAcquisition 플래그 전파 (결과 표시용)
-      apportionment.apportioned.forEach((a) => {
-        const adj = adjustedAcq.get(a.assetId);
-        if (adj?.used) {
-          a.usedEstimatedAcquisition = true;
-        }
-      });
+        companions,
+        { isActualMode, isFullFractionalBundle },
+      );
 
       // (5) TransferTaxItemInput[] 조립 — 주 자산은 engineInput 파생, 컴패니언은 기본값 + override
       // G-2: companion이 한도 초과 split 대상이면 flatMap으로 두 자산([appurtenant, excess])을 생성.
