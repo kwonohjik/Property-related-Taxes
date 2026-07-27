@@ -177,3 +177,35 @@ describe("상세 명세서 — 산식 값 인라인 (A1~A5)", () => {
     expect(text).toContain("6,848,653");
   });
 });
+
+/**
+ * B군 — 날짜·기간 행 값 인라인.
+ * 계획서: docs/02-design/features/detailed-statement-formula-inline-values-bc.plan.md
+ */
+describe("상세 명세서 — 날짜·기간 값 인라인 (B1·B2)", () => {
+  const renderText = (node: unknown) =>
+    render(createElement(Fragment, null, node as never)).container.textContent ?? "";
+
+  it("B1 보유기간: 양도일 − 취득일 날짜 인라인", () => {
+    const text = renderText(build(makeResult()).get("holdingPeriod")!.formula);
+    expect(text).toContain("2026-02-16"); // 양도일
+    expect(text).toContain("2003-11-28"); // 취득일
+  });
+
+  it("B2 거주기간(months 모드): 직접 입력 서술 + 기간값", () => {
+    const text = renderText(build(makeResult()).get("residencePeriod")!.formula);
+    expect(text).toContain("직접 입력");
+  });
+
+  it("B2 거주기간(interval 모드): 구간 날짜 인라인 + 합산", () => {
+    const asset = {
+      ...makeAsset(),
+      residenceInputMode: "interval",
+      residencePeriods: [{ moveInDate: "2010-01-01", moveOutDate: "2013-01-01" }],
+    } as unknown as AssetForm;
+    const items = buildStatementItems(makeResult(), makeForm(asset), asset, undefined, undefined);
+    const text = renderText(items.get("residencePeriod")!.formula);
+    expect(text).toContain("2010-01-01~2013-01-01"); // 거주 구간
+    expect(text).toContain("3년 0월"); // 합산 기간
+  });
+});
