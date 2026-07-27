@@ -711,6 +711,18 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   cbAcqBuildingStdBy164_5: boolean;
   /**
+   * §164⑥ 산식 괄호 단서(§164⑧ 준용) — **B: 전기의 토지 및 건물의 기준시가 합계액** (원, 총액).
+   *
+   * 취득당시 기준시가합 == 최초고시당시 기준시가합인 경우에만 쓰인다. 미입력 시 준용 산정을
+   * 하지 않고(종전 계산 유지) 결과에 경고만 남긴다.
+   * 산식: 취득당시 기준시가 = 최초고시 기준시가 × A / [A + (A−B) × C/D]
+   */
+  cbPrevStdPriceSum: string;
+  /**
+   * §164⑧ 준용 — **D: 토지 및 건물 기준시가 조정월수**. 빈 값이면 12(시행규칙 §80②1호 통상값).
+   */
+  cbStdPriceAdjustMonths: string;
+  /**
    * 건물 기준시가 — 최초고시시(2005) (원, 총액). cbEra === "pre_disclosure" 시만 필수.
    */
   cbBuildingStdPriceAtFirst: string;

@@ -12,6 +12,7 @@
 import { effectiveCommercialLandPriceAtAcq } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
+import { isSec164_8ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
 import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
@@ -189,6 +190,10 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         !asset.cbAcqBuildingStdBy164_5
       )
         return `${label}: 취득당시 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`;
+      // §164⑥ 산식 괄호 단서 — 두 시점 기준시가합이 같으면 §164⑧ 준용이 강제된다.
+      // B(전기의 기준시가합)가 없으면 준용 산정이 불가하고, 그대로 두면 비율 1로 법령과 다른 값이 나온다.
+      if (isSec164_8ProvisoApplicable(asset) && !parseAmount(asset.cbPrevStdPriceSum))
+        return `${label}: 취득당시 기준시가합과 최초고시당시 기준시가합이 같습니다 — §164⑥ 산식 괄호 단서에 따라 §164⑧을 준용해야 합니다. 전기(취득 직전 고시분)의 토지·건물 기준시가 합계액을 입력하세요.`;
     }
 
     if (asset.cbEra === "post_disclosure") {

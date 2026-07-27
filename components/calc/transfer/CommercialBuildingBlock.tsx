@@ -31,6 +31,7 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
 import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
 import { Sec164_5ProvisoNotice } from "@/components/calc/transfer/Sec164_5ProvisoNotice";
+import { Sec164_8ProvisoInput } from "@/components/calc/transfer/Sec164_8ProvisoInput";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { CommercialPre1990LandNotice } from "@/components/calc/transfer/CommercialPre1990LandNotice";
 import { derivePre1990CommercialLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-commercial-bridge";
@@ -338,6 +339,9 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             </div>
           </ToneCard>
         )}
+
+        {/* §164⑥ 산식 괄호 단서 — 두 시점 기준시가합이 같을 때만 노출(③·④ 입력 후 확정) */}
+        {isPreDisclosure && <Sec164_8ProvisoInput asset={asset} onChange={onChange} />}
       </div>
     </ToggleCard>
   );

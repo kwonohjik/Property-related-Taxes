@@ -24,6 +24,9 @@ import type {
   CommercialBuildingValuationResult,
 } from "./types/commercial-building.types";
 
+/** D 기본값 — 기준시가 조정월수 통상값(시행규칙 §80②1호: 전기 결정일 ~ 취득당시 결정일 전일). */
+export const SEC_164_8_DEFAULT_ADJUST_MONTHS = 12;
+
 // ── 재수출 (외부 소비자 편의) ──
 export type {
   CommercialBuildingValuationInput,
@@ -82,6 +85,48 @@ export function calcEstimatedStdPriceAtAcq(
   if (stdPriceSumAtFirst === 0) return 0;
   // 중간 곱셈 overflow 방지: safeMultiplyThenDivide 사용
   return safeMultiplyThenDivide(unitTotalAtFirstDisclosure, stdPriceSumAtAcq, stdPriceSumAtFirst);
+}
+
+/**
+ * §164⑥ 산식 괄호 단서 — 취득당시 합계액 == 최초고시당시 합계액일 때의 **분모 대체값**.
+ *
+ * > (취득당시의 가액과 최초로 고시한 기준시가 고시당시의 가액이 동일한 경우에는 제8항의 규정을 준용한다)
+ *
+ * 산정 산식:
+ * ```
+ *   취득당시 기준시가 = 최초고시 기준시가 × A / [ A + (A − B) × C / D ]
+ *     A: 취득시 토지 및 건물의 기준시가   B: 전기의 토지 및 건물의 기준시가
+ *     C: 취득일 ~ 최초고시일 보유월수      D: 토지 및 건물 기준시가 조정월수
+ * ```
+ * 시행규칙 §80①1호**가목**(§164⑧의 구체 산식)의 `취득당시 + (취득당시 − 전기) × 보유월수/조정월수`
+ * 구조와 동일하다 — 여기서는 "양도당시" 자리에 "최초고시당시"가 온다.
+ *
+ * **캡 처리 (2026-07-28 결정 — 계획서 §0-1 미해소 1·2)**
+ * - ✅ `C/D`에 **100% 한도 적용** — §80①1호가목 원문이 `(100분의 100을 한도로 한다)`로 규정한다.
+ *      없으면 취득이 최초고시보다 훨씬 이를 때 분모가 발산한다.
+ * - ❌ **분모 하한(≥ A) 미적용** — §80①1호 본문 단서(계산값 < 취득당시 기준시가면 취득당시 기준시가
+ *      사용)는 제공 산식에 표기가 없고, 적용하면 A < B(기준시가 하락) 구간에서 **납세자에게 불리**하다.
+ *      명문 근거가 확인되기 전까지 적용하지 않는다(`feedback_no_unfavorable_application_without_legal_basis`).
+ *
+ * @returns 대체 분모 (원, 정수) | null — B·C 미입력 등 산정 불가 시(호출부는 탐지만 하고 계산 미변경)
+ */
+export function calcSec164_8AdjustedDenominator(
+  stdPriceSumAtAcq: number,
+  prevStdPriceSum: number | undefined,
+  holdingMonthsToFirstDisclosure: number | undefined,
+  adjustMonths: number | undefined,
+): number | null {
+  const A = stdPriceSumAtAcq;
+  const B = prevStdPriceSum;
+  const C = holdingMonthsToFirstDisclosure;
+  const D = adjustMonths ?? SEC_164_8_DEFAULT_ADJUST_MONTHS;
+  if (B === undefined || B <= 0 || C === undefined || C <= 0 || D <= 0) return null;
+
+  // 100분의 100 한도 (시행규칙 §80①1호가목)
+  const ratio = Math.min(C / D, 1);
+  const denominator = A + (A - B) * ratio;
+  // 분모가 0 이하면 나눗셈이 성립하지 않는다 — 산정 불가로 처리(탐지만).
+  return denominator > 0 ? Math.floor(denominator) : null;
 }
 
 /**
@@ -217,10 +262,22 @@ function _calcPreDisclosure(
 
   // ── Step 3: 취득시 환산기준시가(P_A) — 소령 §164⑥ ──
   // P_A = INT( 최초고시 호별총액 × 취득시 기준시가합 / 최초고시시 기준시가합 )
+  //
+  // 괄호 단서: 두 합계액이 **같으면** 분모를 §164⑧ 준용값으로 대체한다.
+  // B(전기 기준시가합)·C(취득~최초고시 월수)가 없으면 산정 불가 → 탐지만 하고 종전 계산을 유지한다.
+  const sec164_8Applicable = combinedStdAtAcq === combinedStdAtFirst;
+  const adjustedDenominator = sec164_8Applicable
+    ? calcSec164_8AdjustedDenominator(
+        combinedStdAtAcq,
+        input.prevStdPriceSum,
+        input.holdingMonthsToFirstDisclosure,
+        input.stdPriceAdjustMonths,
+      )
+    : null;
   const estimatedBasisAtAcq = calcEstimatedStdPriceAtAcq(
     unitPriceTotalAtFirst,
     combinedStdAtAcq,
-    combinedStdAtFirst,
+    adjustedDenominator ?? combinedStdAtFirst,
   );
 
   // ── Step 4: 환산취득가 합계 — 소령 §176조의2②2호 ──
@@ -276,8 +333,9 @@ function _calcPreDisclosure(
     ...(input.acquisitionYear !== undefined && {
       sec164_5ProvisoApplicable: input.acquisitionYear <= ACQ_BASE_RATE_MAX_ACQ_YEAR,
     }),
-    // §164⑥ 산식 괄호 단서 — 두 합계액이 같으면 §164⑧ 준용 대상이다(산정 미구현 — 탐지만).
-    ...(combinedStdAtAcq === combinedStdAtFirst && { sec164_8ProvisoApplicable: true }),
+    // §164⑥ 산식 괄호 단서 — 두 합계액이 같으면 §164⑧ 준용 대상이다.
+    ...(sec164_8Applicable && { sec164_8ProvisoApplicable: true }),
+    ...(adjustedDenominator !== null && { sec164_8AdjustedDenominator: adjustedDenominator }),
   };
 }
 

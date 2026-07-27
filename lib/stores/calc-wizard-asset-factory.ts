@@ -319,6 +319,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     cbUnitPriceAtFirstOrAcq: "",
     cbBuildingStdPriceAtAcq: "",
     cbAcqBuildingStdBy164_5: false,
+    cbPrevStdPriceSum: "",
+    cbStdPriceAdjustMonths: "",
     cbBuildingStdPriceAtFirst: "",
     cbBuildingStdPriceAtTransfer: "",
     cbLandPricePerSqmAtAcq: "",

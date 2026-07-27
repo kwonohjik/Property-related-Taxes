@@ -154,6 +154,9 @@ export function buildCommercialBuildingValuation(
         || !landAtAcq || !landAtFirst) {
       return undefined;
     }
+    // §164⑧ 준용(괄호 단서) 보조 입력 — 값이 있을 때만 전달. 미전달 시 엔진은 탐지만 한다.
+    const prevSum = parseAmount(asset.cbPrevStdPriceSum);
+    const adjustMonths = parseInt((asset.cbStdPriceAdjustMonths || "").replace(/,/g, ""), 10);
     return {
       ...base,
       buildingStdPriceAtAcquisition: buildingAtAcq,
@@ -161,6 +164,8 @@ export function buildCommercialBuildingValuation(
       buildingStdPriceAtTransfer: buildingAtTransfer,
       landPriceAtAcquisition: landAtAcq,
       landPriceAtFirstDisclosure: landAtFirst,
+      ...(prevSum > 0 && { prevStdPriceSum: prevSum }),
+      ...(Number.isFinite(adjustMonths) && adjustMonths > 0 && { stdPriceAdjustMonths: adjustMonths }),
     };
   }
 

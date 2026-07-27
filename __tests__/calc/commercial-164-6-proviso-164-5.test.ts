@@ -10,6 +10,8 @@ import { describe, it, expect } from "vitest";
 import {
   isBeforeBuildingStdPriceNotice,
   isSec164_5ProvisoApplicable,
+  isSec164_8ProvisoApplicable,
+  stdPriceSumAt,
 } from "@/lib/calc/commercial-164-6-proviso";
 import {
   ACQ_BASE_RATE_MAX_ACQ_YEAR,
@@ -168,5 +170,52 @@ describe("A-P07: 상속 배치 — 8필드 opt-in 시에만 확인을 요구한�
 describe("③ normalize — 구 세션 호환", () => {
   it("신규 필드 기본값은 false(미확인)다", () => {
     expect(makeDefaultAsset().cbAcqBuildingStdBy164_5).toBe(false);
+  });
+});
+
+describe("§164⑥ 괄호 단서 — 폼 조건 판정 + validate 차단 (⑧)", () => {
+  /** 두 시점 기준시가합을 같게 맞춘 폼 (개공지·건물기준시가 동일) */
+  function sameSumAsset(over: Partial<AssetForm> = {}): AssetForm {
+    return estimatedAsset({
+      acquisitionDate: "2003-05-10", // §164⑤ 구간 밖 — 이 테스트의 관심사 분리
+      cbLandPricePerSqmAtAcq: "1000000",
+      cbLandPricePerSqmAtFirst: "1000000",
+      cbBuildingStdPriceAtAcq: "120000000",
+      cbBuildingStdPriceAtFirst: "120000000",
+      cbLandArea: "100",
+      ...over,
+    });
+  }
+
+  it("두 합계액이 같으면 조건이 성립한다 (엔진과 동일한 floor 위치)", () => {
+    expect(isSec164_8ProvisoApplicable(sameSumAsset())).toBe(true);
+    expect(stdPriceSumAt(sameSumAsset(), "acq")).toBe(220_000_000);
+  });
+
+  it("합계액이 다르면 성립하지 않는다", () => {
+    expect(
+      isSec164_8ProvisoApplicable(sameSumAsset({ cbBuildingStdPriceAtFirst: "150000000" })),
+    ).toBe(false);
+  });
+
+  it("post_disclosure는 대상이 아니다", () => {
+    expect(isSec164_8ProvisoApplicable(sameSumAsset({ cbEra: "post_disclosure" }))).toBe(false);
+  });
+
+  it("조건 성립 + B 미입력 → validate 차단", () => {
+    const err = validateAssetAcquisition(sameSumAsset({ cbPrevStdPriceSum: "" }), "자산1");
+    expect(err).toContain("§164⑧");
+    expect(err).toContain("전기");
+  });
+
+  it("B를 입력하면 통과한다", () => {
+    expect(
+      validateAssetAcquisition(sameSumAsset({ cbPrevStdPriceSum: "200000000" }), "자산1"),
+    ).toBeNull();
+  });
+
+  it("조건 미성립이면 B 없이도 통과한다 (회귀)", () => {
+    const asset = sameSumAsset({ cbBuildingStdPriceAtFirst: "150000000", cbPrevStdPriceSum: "" });
+    expect(validateAssetAcquisition(asset, "자산1")).toBeNull();
   });
 });

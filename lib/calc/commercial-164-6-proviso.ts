@@ -9,6 +9,9 @@
  * 계획서: docs/01-plan/features/commercial-164-6-proviso-164-5-application.plan.md
  */
 import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "@/lib/tax-engine/data/building-standard-price";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /**
  * §164⑥ 단서 발동 여부 — 취득당시 건물 기준시가(나목)가 없는 구간인가.
@@ -36,4 +39,33 @@ export function isBeforeBuildingStdPriceNotice(acquisitionDate: string | undefin
   if (!acquisitionDate || acquisitionDate.length < 4) return false;
   const year = Number.parseInt(acquisitionDate.slice(0, 4), 10);
   return Number.isFinite(year) && year <= ACQ_BASE_RATE_MAX_ACQ_YEAR;
+}
+
+/**
+ * §164⑥ 산식 **괄호 단서** 해당 여부 — 취득당시 기준시가합 == 최초고시당시 기준시가합.
+ *
+ * > (취득당시의 가액과 최초로 고시한 기준시가 고시당시의 가액이 동일한 경우에는 제8항의 규정을 준용한다)
+ *
+ * 합계액 산식과 **floor 위치를 엔진과 동일하게** 맞춘다
+ * (`commercial-building-valuation.ts` `calcStdPriceSum`: 토지·건물 각각 정수화 후 합산).
+ * 어긋나면 UI·validate가 보는 조건과 엔진 판정이 갈린다.
+ */
+export function isSec164_8ProvisoApplicable(asset: AssetForm): boolean {
+  if (asset.cbEra !== "pre_disclosure") return false;
+  const acq = stdPriceSumAt(asset, "acq");
+  const first = stdPriceSumAt(asset, "first");
+  return acq > 0 && acq === first;
+}
+
+/** 시점별 기준시가합 = INT(개별공시지가 × 대지면적) + INT(건물 기준시가 총액). */
+export function stdPriceSumAt(asset: AssetForm, point: "acq" | "first"): number {
+  const landArea = parseDecimal(asset.cbLandArea);
+  const landPrice = parseAmount(
+    point === "acq" ? asset.cbLandPricePerSqmAtAcq : asset.cbLandPricePerSqmAtFirst,
+  );
+  const building = parseAmount(
+    point === "acq" ? asset.cbBuildingStdPriceAtAcq : asset.cbBuildingStdPriceAtFirst,
+  );
+  if (!landArea || !landPrice || !building) return 0;
+  return Math.floor(landPrice * landArea) + Math.floor(building);
 }

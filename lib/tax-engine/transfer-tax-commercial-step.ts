@@ -91,8 +91,16 @@ export function runCommercialBuildingStep(
 
   // §164⑥ 단서 판정용 취득연도 — 이미 있는 acquisitionDate에서 파생한다.
   // API에 새 필드를 만들지 않으므로 ⑫⑬⑭(Zod·body·Route) 동기화가 불필요하다.
+  //
+  // C(취득일 ~ 최초고시일 보유월수)도 같은 이유로 여기서 파생한다 — 상가·오피스텔 최초고시일은
+  // 2005-01-01 고정이므로 별도 입력이 필요 없다. §164⑥ 산식 괄호 단서(§164⑧ 준용)에서만 쓰인다.
+  const monthsToFirst = monthsBetween(input.acquisitionDate, COMMERCIAL_FIRST_DISCLOSURE_DATE);
   const detail = calculateCommercialBuildingValuation(
-    { ...effectiveCbInput, acquisitionYear: input.acquisitionDate.getFullYear() },
+    {
+      ...effectiveCbInput,
+      acquisitionYear: input.acquisitionDate.getFullYear(),
+      ...(monthsToFirst > 0 && { holdingMonthsToFirstDisclosure: monthsToFirst }),
+    },
     input.transferPrice,
   );
 
@@ -154,4 +162,22 @@ export function applyCommercialBuildingStep(input: TransferTaxInput): {
         : undefined,
     },
   };
+}
+
+/** 상가·오피스텔 호별 기준시가 최초고시일 (국세청 최초 고시 = 2005-01-01). */
+const COMMERCIAL_FIRST_DISCLOSURE_DATE = new Date("2005-01-01");
+
+/**
+ * 두 날짜 사이 개월 수 — §164⑧ 준용의 C(보유기간 월수).
+ *
+ * 시행규칙 §80⑤ "1월미만의 일수는 1월로 한다" → 끝수는 올린다.
+ * 달력 월 차이(`raw`)가 이미 그 규칙과 일치한다:
+ *   · 일자가 도달했으면(`to.date >= from.date`) 정확히 `raw`개월 경과
+ *   · 도달 전이면 `raw-1`개월 경과 + 끝수 → §80⑤로 올려 `raw`
+ */
+function monthsBetween(from: Date, to: Date): number {
+  if (!(from instanceof Date) || Number.isNaN(from.getTime())) return 0;
+  if (to.getTime() <= from.getTime()) return 0;
+  const raw = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+  return Math.max(raw, 1);
 }

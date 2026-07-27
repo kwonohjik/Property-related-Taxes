@@ -12,6 +12,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { calculateCommercialBuildingValuation } from "@/lib/tax-engine/commercial-building-valuation";
+import { calcSec164_8AdjustedDenominator } from "@/lib/tax-engine/commercial-building-valuation";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 
@@ -162,5 +163,74 @@ describe("§164⑥ 괄호 단서 — §164⑧ 준용 대상 탐지", () => {
     // 합계액이 같으므로 비율 = 1 → P_A = 최초고시 호별총액
     expect(r.estimatedBasisAtAcq).toBe(r.unitPriceTotalAtFirst);
     expect(r.estimatedAcquisitionTotal).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * S-05~S-10 — §164⑧ 준용 **산정**.
+ *   취득당시 기준시가 = 최초고시 기준시가 × A / [A + (A − B) × C/D]
+ * 캡 결정(계획서 §0-1): C/D 100% 한도 **적용** / 분모 하한(≥A) **미적용**.
+ */
+describe("§164⑧ 준용 산정", () => {
+  // A = floor(1,000,000 × 100) + 120,000,000 = 220,000,000 (취득·최초고시 동일)
+  const base = {
+    isPreDisclosure: true as const,
+    exclusiveArea: 150,
+    commonArea: 50,
+    landArea: 100,
+    unitPriceAtTransfer: 2_500_000,
+    unitPriceAtFirstDisclosure: 1_200_000,
+    buildingStdPriceAtAcquisition: 120_000_000,
+    buildingStdPriceAtFirstDisclosure: 120_000_000,
+    landPriceAtAcquisition: 1_000_000,
+    landPriceAtFirstDisclosure: 1_000_000,
+  };
+  const A = 220_000_000;
+  /** 최초고시 호별총액 = floor(1,200,000 × 200) */
+  const F = 240_000_000;
+
+  it("S-05: 분모 산식 — A + (A−B) × C/D", () => {
+    // B=200,000,000 · C=6 · D=12 → 분모 = 220,000,000 + 20,000,000 × 0.5 = 230,000,000
+    expect(calcSec164_8AdjustedDenominator(A, 200_000_000, 6, 12)).toBe(230_000_000);
+  });
+
+  it("S-06: C/D에 100% 한도를 적용한다 (시행규칙 §80①1호가목)", () => {
+    // C=120·D=12 → 비율 10이지만 1로 제한 → 분모 = 220,000,000 + 20,000,000 = 240,000,000
+    expect(calcSec164_8AdjustedDenominator(A, 200_000_000, 120, 12)).toBe(240_000_000);
+  });
+
+  it("S-07: 분모 하한(≥A)은 적용하지 않는다 — A<B(기준시가 하락) 구간", () => {
+    // B=240,000,000 > A → 분모 = 220,000,000 − 20,000,000 × 0.5 = 210,000,000 (< A)
+    expect(calcSec164_8AdjustedDenominator(A, 240_000_000, 6, 12)).toBe(210_000_000);
+  });
+
+  it("S-08: B·C가 없으면 null — 준용 산정 불가(탐지만)", () => {
+    expect(calcSec164_8AdjustedDenominator(A, undefined, 6, 12)).toBeNull();
+    expect(calcSec164_8AdjustedDenominator(A, 200_000_000, undefined, 12)).toBeNull();
+  });
+
+  it("S-09: 준용이 적용되면 P_A가 낮아진다 (분모 > A)", () => {
+    const withProviso = calculateCommercialBuildingValuation(
+      { ...base, prevStdPriceSum: 200_000_000, holdingMonthsToFirstDisclosure: 6, stdPriceAdjustMonths: 12 },
+      1_000_000_000,
+    );
+    const without = calculateCommercialBuildingValuation(base, 1_000_000_000);
+
+    // 준용 미적용: 비율 1 → P_A = F
+    expect(without.estimatedBasisAtAcq).toBe(F);
+    expect(without.sec164_8AdjustedDenominator).toBeUndefined();
+
+    // 준용 적용: P_A = floor(F × A / 230,000,000) < F
+    expect(withProviso.sec164_8AdjustedDenominator).toBe(230_000_000);
+    expect(withProviso.estimatedBasisAtAcq).toBe(Math.floor((F * A) / 230_000_000));
+    expect(withProviso.estimatedBasisAtAcq!).toBeLessThan(without.estimatedBasisAtAcq!);
+  });
+
+  it("S-10: D 미지정 시 12개월을 적용한다", () => {
+    const r = calculateCommercialBuildingValuation(
+      { ...base, prevStdPriceSum: 200_000_000, holdingMonthsToFirstDisclosure: 6 },
+      1_000_000_000,
+    );
+    expect(r.sec164_8AdjustedDenominator).toBe(230_000_000); // C/D = 6/12 = 0.5
   });
 });

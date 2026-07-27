@@ -77,6 +77,15 @@ export interface CommercialBuildingValuationInput {
    * 미지정 시 판정을 생략한다(`sec164_5ProvisoApplicable` undefined).
    */
   acquisitionYear?: number;
+
+  // ── §164⑥ 산식 괄호 단서(§164⑧ 준용) 전용 ──
+  // 취득당시 합계액 == 최초고시당시 합계액일 때만 사용된다.
+  /** B — 전기의 토지 및 건물의 기준시가 합계액 (원). 미지정 시 준용 산정 불가(탐지만). */
+  prevStdPriceSum?: number;
+  /** D — 토지 및 건물 기준시가 조정월수. 미지정 시 12(시행규칙 §80②1호 통상값). */
+  stdPriceAdjustMonths?: number;
+  /** C — 취득일부터 최초고시일까지 보유기간 월수. 호출부가 취득일·최초고시일에서 파생해 주입. */
+  holdingMonthsToFirstDisclosure?: number;
 }
 
 /**
@@ -169,4 +178,10 @@ export interface CommercialBuildingValuationResult {
    *    계획서: docs/01-plan/features/commercial-164-6-same-value-164-8-proviso.plan.md
    */
   sec164_8ProvisoApplicable?: boolean;
+
+  /**
+   * §164⑧ 준용으로 대체된 **분모** = `A + (A − B) × min(C/D, 1)`.
+   * 준용이 실제로 적용된 경우에만 존재한다(B·C 미입력 시 undefined — 탐지만 하고 계산 미변경).
+   */
+  sec164_8AdjustedDenominator?: number;
 }

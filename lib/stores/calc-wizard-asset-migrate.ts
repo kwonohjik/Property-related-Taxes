@@ -478,6 +478,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.cbEra === undefined) a.cbEra = "";
   // §164⑥ 단서 확인 토글 — 구 세션 미보유 시 false(미확인). 기존 값 보존.
   if (a.cbAcqBuildingStdBy164_5 === undefined) a.cbAcqBuildingStdBy164_5 = false;
+  if (a.cbPrevStdPriceSum === undefined) a.cbPrevStdPriceSum = "";
+  if (a.cbStdPriceAdjustMonths === undefined) a.cbStdPriceAdjustMonths = "";
   if (a.cbExclusiveArea === undefined) a.cbExclusiveArea = "";
   if (a.cbSharedArea === undefined) a.cbSharedArea = "";
   if (a.cbLandArea === undefined) a.cbLandArea = "";

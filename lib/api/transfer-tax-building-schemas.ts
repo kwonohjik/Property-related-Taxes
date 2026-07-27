@@ -284,6 +284,11 @@ export const commercialBuildingValuationSchema = z.object({
   buildingStdPriceAtTransfer: z.number().int().positive().optional(),
   /** 최초고시시(2005) 개별공시지가 (원/㎡) — pre_disclosure 시 필수 */
   landPriceAtFirstDisclosure: z.number().int().positive().optional(),
+  // ── §164⑥ 산식 괄호 단서(§164⑧ 준용) — 취득당시 합계액 == 최초고시당시 합계액일 때만 사용 ──
+  /** B — 전기의 토지 및 건물의 기준시가 합계액 (원) */
+  prevStdPriceSum: z.number().int().positive().optional(),
+  /** D — 토지 및 건물 기준시가 조정월수 (미지정 시 엔진이 12 적용) */
+  stdPriceAdjustMonths: z.number().int().positive().optional(),
 });
 
 /**
