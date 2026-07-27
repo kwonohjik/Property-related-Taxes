@@ -389,17 +389,15 @@ package.json  →  npm run build:stdprice
 - `app/api/address/commercial-standard-price/route.ts` — **`export const runtime = "nodejs"` 필수**
 - **verify**: 라우트 단위 테스트 7케이스 (설계 §3-2 판정 순서 전 분기) — 정상 / `unit_not_found` / `no_notice` / `partial_data` / `partition_missing` / `unjoinable_parcel` / `invalid_pnu`. 전 경로 HTTP 200 확인
 
-### Phase 3 — UI
+### Phase 3 — UI ✅ 완료 (2026-07-28)
 
-- `CommercialStdPriceLookupModal` + 런처 (라벨 `"호별 고시가 조회"`)
-- `CommercialBuildingBlock` · `CommercialInheritanceStdPriceSection` 배선 (배치별 충전 필드 상이 — §4-6)
-- 선택 호 스냅샷 스토어 (`building-std-snapshot-store.ts` 패턴)
-- 파일 크기: `lib/stores/calc-wizard-asset.ts` 738줄이나 **신규 필드 0개이므로 무변경**. 신규 모달은 ≤700 착지 준수
-- **verify**:
-  - RTL — 모달 렌더·호 선택·단일 배치 적용·3상태 표시
-  - 무회귀 3케이스 — PNU 없음 / 미고시 / 파티션 부재 시 수기 입력 경로 정상
-  - E2E — 기존 `e2e/cb-building-stdprice-modal-apply.spec.ts` 패턴 차용, `e2e/commercial-inheritance-164-6-max.spec.ts` 회귀 확인. mock fixture 사용(memory `feedback_gov_site_lookup_weak_tls_pnu_params` 선례)
-  - testid: `cb-stdprice-unit-{층구분}{층}-{호}` · `cb-stdprice-apply` (기존 스펙은 `getByRole` 위주이나 CurrencyInput은 `getByLabel` 불가 — `cb-building-stdprice-modal-apply.spec.ts:95` 주석)
+`CommercialStdPriceLookupModal`(런처+모달 506줄) + 선택 호 스냅샷 스토어(`cbsp-` 접두) +
+`CommercialBuildingBlock`·`CommercialInheritanceStdPriceSection` 배선.
+
+- **verify 전건 통과**: RTL 11 · E2E 2 · 회귀 E2E 2(`cb-building-stdprice-modal-apply`·`commercial-inheritance-164-6-max`) · tsc 0 · eslint 0 · 임의 폰트 0 · 동적 톤 0
+- 신규 `AssetForm` 필드 0개 — 14 동기화 지점 중 ⑤만 해당(설계 §10 그대로)
+- 적용은 **단일 배치 onChange 1회**(호출 횟수 assert) · `prices[date]===null` 시점은 미충전 · 면적은 기존 값 보호 + 명시적 덮어쓰기
+- 상세·편차는 UI 설계 §13 참조
 
 ### Phase 4 — 보완 (별건)
 

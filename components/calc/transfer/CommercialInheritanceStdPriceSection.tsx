@@ -17,6 +17,7 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -83,6 +84,9 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
 
       {/* ② 최초고시(2005) ㎡당 호별고시가 */}
       <ToneCard tone="emerald" sectionNum="2" title="최초고시(2005) 호별 ㎡당 고시가 (원/㎡)" noDark>
+        <div className="flex flex-col items-end gap-1">
+          <CommercialStdPriceLookupModal asset={asset} onChange={onChange} transferDate={transferDate} variant="inheritance" />
+        </div>
         <FieldCard label="최초고시(2005) ㎡당 호별고시가" unit="원/㎡" hint="2005.1.1 최초 고시 시점 ㎡당 가액. 국세청 고시 이력에서 확인.">
           <CurrencyInput label="" value={asset.cbUnitPriceAtFirstOrAcq} onChange={(v) => onChange({ cbUnitPriceAtFirstOrAcq: v })} hideUnit />
         </FieldCard>

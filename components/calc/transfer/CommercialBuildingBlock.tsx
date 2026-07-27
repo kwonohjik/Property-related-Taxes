@@ -28,6 +28,7 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 
@@ -151,6 +152,15 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {/* ② 호별 ㎡당 고시가 (emerald/amber) — cbEra 선택 후 표시 */}
         {hasEra && (
           <ToneCard tone="emerald" sectionNum="2" title="호별 ㎡당 고시가 (원/㎡)" noDark>
+            {/* 국세청 고시분 자동조회 — 호 선택 시 단가·전용·공유면적을 단일 배치로 채운다 */}
+            <div className="flex flex-col items-end gap-1">
+              <CommercialStdPriceLookupModal
+                asset={asset}
+                onChange={onChange}
+                transferDate={transferDate}
+                variant="estimated"
+              />
+            </div>
             {/* 양도시 — emerald */}
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
               <FieldCard

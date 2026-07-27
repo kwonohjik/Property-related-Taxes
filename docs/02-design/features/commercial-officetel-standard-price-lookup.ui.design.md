@@ -218,3 +218,34 @@ validate 로직은 **변경하지 않는다**.
 - **키보드 선택** — ↑↓ 이동 + Enter/Space 선택, `aria-selected` 반영
 - 렌더 상한 200행 + `[더 보기]` 동작
 - 무회귀 3케이스 — PNU 없음 / 미고시 / 파티션 부재 시 수기 입력 경로 정상
+
+## 13. Phase 3 구현 결과 (2026-07-28)
+
+**산출물**
+
+```
+components/calc/transfer/CommercialStdPriceLookupModal.tsx   런처 + 모달 (506줄)
+lib/stores/commercial-stdprice-snapshot-store.ts             선택 호 스냅샷 (cbsp- 접두)
+lib/stdprice/pick-notice-date.ts                             고시일자 선택 (클라이언트·서버 공용)
+__tests__/components/commercial-stdprice-lookup-modal.test.tsx   RTL 11 케이스
+e2e/commercial-stdprice-lookup-apply.spec.ts                     E2E 2 케이스
+```
+
+배선: `CommercialBuildingBlock` ② 섹션 상단(배치 A) · `CommercialInheritanceStdPriceSection` ② 섹션 상단(배치 B).
+
+**검증**
+
+| 항목 | 결과 |
+|---|---|
+| RTL 11 케이스 | ✅ 런처 비활성 사유 2종 · 층구분 분리 · **단일 배치 onChange 1회 + 4필드** · 부분 매칭 미충전 · 배치 B 양도시 미충전 · 면적 덮어쓰기 · 상태 2종 · linkedBy 노출 |
+| E2E 2 케이스 | ✅ 조회→선택→적용 후 폼 4필드 충전 / 미고시 시 적용 버튼 비활성 |
+| 회귀 E2E | ✅ `cb-building-stdprice-modal-apply` · `commercial-inheritance-164-6-max` |
+| 게이트 | ✅ tsc 0 · eslint 0 · 임의 폰트 0 · 동적 톤 0 |
+
+**설계 대비 편차 (Do 단계 환류)**
+
+1. **고시일자 확정은 2단 요청**이다. 설계는 `pickNoticeDate(availableDates, refDate)`를 전제했으나 `availableDates`는 응답에 들어 있어 첫 요청 전에는 알 수 없다. → 1차로 **기준일 연도의 1/1**(전 고시가 1/1 시행이므로 그 해 고시분이 있으면 항상 정확)로 요청하고, 응답의 `availableDates`에 그 날짜가 없을 때만 직전 고시분으로 **1회 재요청**한다(§164③).
+2. `pickNoticeDate`를 `lib/stdprice/pick-notice-date.ts`로 분리했다 — `load-partition.ts`는 `fs`를 import해 클라이언트에서 쓸 수 없다. `load-partition`이 재수출하므로 호출부 단일성은 유지된다.
+3. **`linkedBy:"position"` 표시가 추가**됐다(Phase 2 산물). 목록에 `표기 상이` 배지, 상세에 시점별 원문 건물명과 "동·층·호가 일치해 같은 물건으로 연결했습니다 — 확인해 주세요" 문구. 키 충돌 물건은 `중복` 배지.
+4. RTL은 `fireEvent` + `act`를 쓴다 — `@testing-library/user-event`가 프로젝트에 설치돼 있지 않다.
+5. 키보드는 ↑↓ 이동만 직접 구현했다. 행이 `<button role="radio">`라 Enter/Space 선택·포커스 링은 브라우저 기본 동작이 처리한다.
