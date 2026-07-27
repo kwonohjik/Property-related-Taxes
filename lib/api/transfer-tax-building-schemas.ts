@@ -3,7 +3,7 @@
  * transfer-tax-schema.ts 800줄 정책 준수를 위해 분리 (2026-05-12).
  *
  * - generalBuildingValuationSchema: 토지+건물 일괄 환산 (소령 §176조의2②, §163⑥)
- * - commercialBuildingValuationSchema: 상업용건물·오피스텔 환산 (소령 §164⑧, §176조의2②2호)
+ * - commercialBuildingValuationSchema: 상업용건물·오피스텔 환산 (소령 §164⑥, §176조의2②2호)
  *
  * 14개 동기화 지점 ⑫ — 침묵 stripping 방지.
  */
@@ -250,7 +250,7 @@ export const generalBuildingValuationSchema = z.object({
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;
 
 /**
- * ⑫ 상업용건물·오피스텔 환산취득가 서브객체 Zod 스키마 (소령 §164⑧, §176조의2②2호).
+ * ⑫ 상업용건물·오피스텔 환산취득가 서브객체 Zod 스키마 (소령 §164⑥, §176조의2②2호).
  * 미정의 시 침묵 stripping 방지. era 무관 필수 필드는 addPropertyRefines(⑩)에서 검증.
  */
 export const commercialBuildingValuationSchema = z.object({

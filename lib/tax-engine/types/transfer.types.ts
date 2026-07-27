@@ -603,7 +603,7 @@ export interface TransferTaxInput {
   /**
    * 상업용건물·오피스텔 환산취득가 계산 입력 (선택).
    * propertyType === "commercial_building" + useEstimatedAcquisition === true 일 때 필수.
-   * 소득세법 시행령 §164⑧·§176조의2②2호.
+   * 소득세법 시행령 §164⑥·§176조의2②2호.
    */
   commercialBuildingValuation?: CommercialBuildingValuationInput;
 

@@ -96,7 +96,7 @@ export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undef
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 export { toEngineReductions } from "./transfer-tax-api-reductions";
 
-// ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑧, §176조의2②2호) ───
+// ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑥, §176조의2②2호) ───
 
 /**
  * AssetForm cb* 필드 → commercialBuildingValuation 서브객체 변환.

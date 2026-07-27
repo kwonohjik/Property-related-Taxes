@@ -84,7 +84,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       <div className="font-semibold text-amber-900 text-sm">
         상업용건물·오피스텔 환산취득가 산정 근거
         <span className="ml-1 text-xs font-normal text-amber-700">
-          (소득세법 시행령 §164⑧, §176조의2②2호)
+          (소득세법 시행령 §164⑥, §176조의2②2호)
         </span>
       </div>
 
@@ -126,7 +126,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label={`양도시 호별총액 = 양도시 ㎡당 호별고시가 × 연면적 ${detail.floorAreaTotal.toFixed(2)} ㎡`} value={detail.unitPriceTotalAtTransfer} />
             {isPreDisclosure && detail.estimatedBasisAtAcq !== undefined && (
               <Row
-                label="취득시 환산기준시가 = INT(최초고시 호별총액 × 취득시 기준시가합 ÷ 최초고시시 기준시가합) — 시행령 §164⑧"
+                label="취득시 환산기준시가 = INT(최초고시 호별총액 × 취득시 기준시가합 ÷ 최초고시시 기준시가합) — 시행령 §164⑥"
                 value={detail.estimatedBasisAtAcq}
                 sub
               />

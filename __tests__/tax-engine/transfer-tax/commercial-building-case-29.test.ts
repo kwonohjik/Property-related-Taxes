@@ -93,7 +93,7 @@ describe("유닛: calcStdPriceSum (소령 §164①)", () => {
   });
 });
 
-describe("유닛: calcEstimatedStdPriceAtAcq (소령 §164⑧)", () => {
+describe("유닛: calcEstimatedStdPriceAtAcq (소령 §164⑥)", () => {
   it("C-01-유닛2: P_A = INT(hobelF × Sum_A / Sum_F) = 119,607,326", () => {
     const pa = calcEstimatedStdPriceAtAcq(
       UNIT_TOTAL_AT_FIRST,    // 208,560,000

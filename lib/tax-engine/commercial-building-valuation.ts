@@ -8,7 +8,7 @@
  *   소득세법 §97②2호 — 개산공제
  *   소득세법 시행령 §163⑥ — 개산공제율 3% (토지·건물)
  *   소득세법 시행령 §164① — ㎡당 기준시가합 산출
- *   소득세법 시행령 §164⑧ — 호별고시 전 취득 시 환산기준시가 추정
+ *   소득세법 시행령 §164⑥ — 호별고시 전 취득 시 환산기준시가 추정
  *   소득세법 시행령 §176조의2②2호 — 환산취득가액 산식
  *
  * P0-2 원칙: 세율 × 금액 곱셈은 applyRate() 사용.
@@ -60,7 +60,7 @@ export function calcStdPriceSum(
 }
 
 /**
- * 최초고시 역환산으로 취득시 환산기준시가(P_A) 추정 (소득세법 시행령 §164⑧)
+ * 최초고시 역환산으로 취득시 환산기준시가(P_A) 추정 (소득세법 시행령 §164⑥)
  *
  * 산식: INT( 최초고시 호별총액 × 취득시 기준시가합 / 최초고시시 기준시가합 )
  *
@@ -130,7 +130,7 @@ export function splitEstimatedAcquisitionByLandBuilding(
 // ============================================================
 
 /**
- * 상업용건물·오피스텔 환산취득가 계산 (소령 §164⑧ + §176조의2②2호)
+ * 상업용건물·오피스텔 환산취득가 계산 (소령 §164⑥ + §176조의2②2호)
  *
  * C-01 경로 (isPreDisclosure=true): 최초고시 역환산 → 취득시 환산기준시가 → 환산취득가
  * C-02 경로 (isPreDisclosure=false): 취득시 호별고시가 → 호별총액 비율 → 환산취득가
@@ -162,7 +162,7 @@ export function calculateCommercialBuildingValuation(
 // ============================================================
 
 /**
- * C-01 경로: 호별고시 전 취득 (소령 §164⑧)
+ * C-01 경로: 호별고시 전 취득 (소령 §164⑥)
  * 최초고시 역환산으로 취득시 환산기준시가(P_A)를 추정한 후 환산취득가 계산.
  */
 function _calcPreDisclosure(
@@ -212,7 +212,7 @@ function _calcPreDisclosure(
     combinedStdAtTransfer = landStdAtTransfer + buildingStdAtTransfer;
   }
 
-  // ── Step 3: 취득시 환산기준시가(P_A) — 소령 §164⑧ ──
+  // ── Step 3: 취득시 환산기준시가(P_A) — 소령 §164⑥ ──
   // P_A = INT( 최초고시 호별총액 × 취득시 기준시가합 / 최초고시시 기준시가합 )
   const estimatedBasisAtAcq = calcEstimatedStdPriceAtAcq(
     unitPriceTotalAtFirst,

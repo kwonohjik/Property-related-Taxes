@@ -1,5 +1,5 @@
 /**
- * STEP 0.35: 상업용건물·오피스텔 환산취득가 사전 처리 (소령 §164⑧ + §176조의2②2호 + §164⑨ 수용)
+ * STEP 0.35: 상업용건물·오피스텔 환산취득가 사전 처리 (소령 §164⑥ + §176조의2②2호 + §164⑨ 수용)
  *
  * transfer-tax-helpers.ts 800줄 정책 준수를 위해 분리 (2026-07-20, 상가 상속 §163⑨ 가드 추가 시).
  * 단방향 의존: transfer-tax.ts → applyCommercialBuildingStep → commercial-building-valuation.ts
@@ -38,7 +38,7 @@ export interface CommercialBuildingStepResult {
 }
 
 /**
- * STEP 0.35: 상업용건물·오피스텔 환산취득가 처리 (소령 §164⑧ + §176조의2②2호)
+ * STEP 0.35: 상업용건물·오피스텔 환산취득가 처리 (소령 §164⑥ + §176조의2②2호)
  *
  * propertyType === "commercial_building" + useEstimatedAcquisition === true +
  * commercialBuildingValuation 제공 시 환산취득가·개산공제를 계산하여
@@ -105,7 +105,7 @@ export function runCommercialBuildingStep(
 /**
  * STEP 0.35 오케스트레이션 — 상가 환산 성공 시 `effectiveInput`을 실가 경로로 교체.
  *
- * `runCommercialBuildingStep`이 §164⑧·§176의2②2호·§164⑨ 환산을 수행하면, 그 결과
+ * `runCommercialBuildingStep`이 §164⑥·§176의2②2호·§164⑨ 환산을 수행하면, 그 결과
  * (환산취득가·개산공제)를 실가처럼 주입하고 `useEstimatedAcquisition: false`로 내린다.
  */
 export function applyCommercialBuildingStep(input: TransferTaxInput): {

@@ -4,7 +4,7 @@
  * CommercialBuildingBlock — 상업용건물·오피스텔 환산취득가 입력 섹션
  *
  * assetKind === "commercial_building" + useEstimatedAcquisition 진입 시 렌더.
- * 소득세법 시행령 §164⑧ (호별고시 전 취득 역환산) + §176조의2②2호 (환산취득가).
+ * 소득세법 시행령 §164⑥ (호별고시 전 취득 역환산) + §176조의2②2호 (환산취득가).
  *
  * 구조:
  *  ① 면적 섹션 (sky)
@@ -42,7 +42,7 @@ const CB_ERA_OPTIONS = [
   {
     value: "pre_disclosure" as const,
     label: "호별 고시 전 취득 (~2004.12)",
-    description: "2004년 12월 31일 이전 취득 — 토지(개공지×면적)·건물(기준시가 총액) 비율로 역환산 (소득세법 시행령 §164⑧)",
+    description: "2004년 12월 31일 이전 취득 — 토지(개공지×면적)·건물(기준시가 총액) 비율로 역환산 (소득세법 시행령 §164⑥)",
   },
   {
     value: "post_disclosure" as const,
@@ -86,7 +86,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
       description="취득일 당시 실거래가 확인 불가 시 기준시가 비율로 환산 (소득세법 §114⑦, 시행령 §176조의2②2호)"
     >
       <div className="space-y-4">
-        {/* 환산취득가 근거 조문 (§164⑧ 환산 관련은 관례 검토중 — 텍스트만 유지) */}
+        {/* 환산취득가 근거 조문 (§164⑥ 환산 관련은 관례 검토중 — 텍스트만 유지) */}
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §114 ⑦" label="§114⑦" />
           <LawArticleModal legalBasis="소득세법 시행령 §176조의2 ② 2호" label="§176의2②2호" />

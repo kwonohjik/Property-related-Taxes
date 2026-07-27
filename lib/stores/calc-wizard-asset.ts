@@ -667,7 +667,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     standardPriceAtTransferForPhrp?: string;
   };
 
-  // ── 상업용건물·오피스텔 환산취득가 (사례 29, 소득세법 시행령 §164⑧, §176조의2②2호) ──
+  // ── 상업용건물·오피스텔 환산취득가 (사례 29, 소득세법 시행령 §164⑥, §176조의2②2호) ──
   /**
    * 상업용건물·오피스텔 호별고시 시점 분기.
    * - "pre_disclosure": 호별고시 전 취득(~2004.12) → 건물기준시가 3시점 + 역환산 필요

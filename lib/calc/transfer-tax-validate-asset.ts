@@ -133,7 +133,7 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     asset.assetKind === "commercial_building" ? giftEstimatedModeError(asset, label) : null;
   if (cbGiftEstErr) return cbGiftEstErr;
 
-  // ── 상업용건물·오피스텔 환산취득가 전용 검증 (⑧, 소령 §164⑧, §176조의2②2호) ──
+  // ── 상업용건물·오피스텔 환산취득가 전용 검증 (⑧, 소령 §164⑥, §176조의2②2호) ──
   // ⑧ 동기화 원칙: API buildCommercialBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
   if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition) {
     // cbEra 선택 필수

@@ -84,7 +84,7 @@ const FIELD_LABEL: Record<string, string> = {
   "generalBuildingValuation.acquisitionLandPricePerSqm": "취득시 토지 ㎡당 공시지가",
   "generalBuildingValuation.acquisitionBuildingStdPrice": "취득시 건물기준시가 총액",
 
-  // 상업용건물·오피스텔 환산취득가 §164⑧
+  // 상업용건물·오피스텔 환산취득가 §164⑥
   "commercialBuildingValuation.preDisclosure": "호별고시 전 취득 여부",
   "commercialBuildingValuation.firstDisclosureDate": "호별고시 시작일",
   "commercialBuildingValuation.unitArea": "전용면적",

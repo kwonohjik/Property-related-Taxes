@@ -310,7 +310,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     supplementaryBuildingValue: "",
     ...MIXED_USE_DEFAULTS,
     rentalHousingException: { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS },
-    // ── 상업용건물·오피스텔 환산취득가 cb* 필드 (사례 29, 소득세법 시행령 §164⑧) ──
+    // ── 상업용건물·오피스텔 환산취득가 cb* 필드 (사례 29, 소득세법 시행령 §164⑥) ──
     cbEra: "",
     cbExclusiveArea: "",
     cbSharedArea: "",

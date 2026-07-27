@@ -10,12 +10,12 @@
 /**
  * 상업용건물·오피스텔 환산취득가 계산 입력
  *
- * 소득세법 시행령 §164⑧ (호별고시 전 취득) + §176조의2②2호 (환산취득가 산식)
+ * 소득세법 시행령 §164⑥ (호별고시 전 취득) + §176조의2②2호 (환산취득가 산식)
  */
 export interface CommercialBuildingValuationInput {
   /**
    * 호별고시 전 취득 여부.
-   * true  = 취득일 < 2005-01-01 → 소령 §164⑧ 최초고시 역환산 경로 (C-01)
+   * true  = 취득일 < 2005-01-01 → 소령 §164⑥ 최초고시 역환산 경로 (C-01)
    * false = 취득일 ≥ 2005-01-01 → 단순 호별고시가 비율 경로 (C-02)
    */
   isPreDisclosure: boolean;
@@ -108,7 +108,7 @@ export interface CommercialBuildingValuationResult {
   buildingStdAtTransfer?: number;
 
   /**
-   * 취득시 환산기준시가 (소령 §164⑧).
+   * 취득시 환산기준시가 (소령 §164⑥).
    * = INT( 최초고시 호별총액 × 취득시 기준시가합 / 최초고시시 기준시가합 )
    * isPreDisclosure === true 일 때만 존재.
    * 이 값이 §163⑥의 '취득당시의 기준시가' — 개산공제 기준으로 사용.

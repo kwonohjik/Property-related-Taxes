@@ -570,7 +570,7 @@ export function TransferTaxResultView({
       {/* 면책 고지 */}
       <DisclaimerBanner />
 
-      {/* ⑦ 상업용건물·오피스텔 환산취득가 산정 근거 상세 (소령 §164⑧, §176조의2②2호) */}
+      {/* ⑦ 상업용건물·오피스텔 환산취득가 산정 근거 상세 (소령 §164⑥, §176조의2②2호) */}
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {(result as any).commercialBuildingValuationDetail && (
         <CommercialBuildingValuationDetailCard
