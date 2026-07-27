@@ -30,7 +30,9 @@ elif [ "$CUR" != "$BRANCH" ]; then
 fi
 
 # 2) 변경분 커밋 (pre-commit: lint-staged의 eslint --fix가 변경 파일 lint)
-if git diff --quiet && git diff --cached --quiet; then
+# git diff는 tracked 변경만 봐서 신규(untracked) 파일을 놓친다 → git status --porcelain
+# (untracked·staged·modified 모두 감지, .gitignore 파일은 제외).
+if [ -z "$(git status --porcelain)" ]; then
   echo "✗ 커밋할 변경이 없습니다." >&2
   exit 1
 fi
