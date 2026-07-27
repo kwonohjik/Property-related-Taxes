@@ -452,6 +452,15 @@ export type RentalReductionFormVariant =
       standardPriceAt5Years992: string;
       /** 양도시 기준시가 (원) — 미입력 시 자산 fallback */
       standardPriceAtTransfer992: string;
+      // ── PHD 환산 (Phase 3, 2026-07-27): 최초공시 전 취득 시 취득시 기준시가 §164⑤ 자동 산출 ──
+      phdMode992?: boolean;
+      phdFirstDisclosureDate992?: string;
+      phdFirstDisclosurePrice992?: string;
+      phdLandAreaSqm992?: string;
+      phdLandPricePerSqmAtAcq992?: string;
+      phdLandPricePerSqmAtFirst992?: string;
+      phdBuildingStdAtAcq992?: string;
+      phdBuildingStdAtFirst992?: string;
     }
   // ── §98의9 수도권 밖 준공후미분양 — 주택수 제외 (2026-06-11) ──
   | {

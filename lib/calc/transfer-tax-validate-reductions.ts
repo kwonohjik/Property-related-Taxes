@@ -30,10 +30,12 @@ function failIfStdPriceMissingOver5Y(
   stdAcq: string | undefined,
   std5Y: string | undefined,
   articleLabel: string,
+  /** PHD 환산 ON — 취득시 기준시가는 §164⑤ 환산으로 충족되므로 취득시 검증 skip(5년 시점만 검증) */
+  phdSatisfiesAcq?: boolean,
 ): ValidationIssue | null {
   if (!asset.acquisitionDate || !form.transferDate) return null;
   if (isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate))) return null;
-  if (parseAmount(stdAcq || "0") <= 0)
+  if (!phdSatisfiesAcq && parseAmount(stdAcq || "0") <= 0)
     return fail(`${articleLabel} 적용: 취득 후 5년 경과 양도는 취득시 기준시가를 입력하세요 (5년 발생분 안분 — 미입력 시 감면이 적용되지 않습니다).`);
   if (parseAmount(std5Y || "0") <= 0)
     return fail(`${articleLabel} 적용: 취득 후 5년 경과 양도는 취득 5년 시점 기준시가를 입력하세요.`);
@@ -285,8 +287,23 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§99의2 적용: 실거래 취득가액을 입력하세요 (6억 이하 OR 85㎡ 이하 판정에 필요).");
           if (!(parseDecimal(r.exclusiveAreaSqm992 || "") > 0))
             return fail("§99의2 적용: 연면적(공동주택·오피스텔은 전용면적, ㎡)을 입력하세요.");
-          // 5년 경과 양도 시 안분용 기준시가 필수 (5년 분기는 houseType 무관 공통 — F-1).
-          const i992 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition992, r.standardPriceAt5Years992, "§99의2");
+          // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(API source ternary·UI echo와 동일 소스, ⑧ 3중 미러).
+          let phdOk992 = false;
+          if (r.phdMode992) {
+            const phdInput = {
+              firstDisclosurePrice: parseAmount(r.phdFirstDisclosurePrice992 || "0"),
+              landAreaSqm: parseDecimal(r.phdLandAreaSqm992 || "0"),
+              landPricePerSqmAtAcquisition: parseAmount(r.phdLandPricePerSqmAtAcq992 || "0"),
+              landPricePerSqmAtFirstDisclosure: parseAmount(r.phdLandPricePerSqmAtFirst992 || "0"),
+              buildingStdPriceAtAcquisition: parseAmount(r.phdBuildingStdAtAcq992 || "0"),
+              buildingStdPriceAtFirstDisclosure: parseAmount(r.phdBuildingStdAtFirst992 || "0"),
+            };
+            if (!canCalcReductionPhd(phdInput))
+              return fail("§99의2 PHD 환산 모드: 최초공시일·최초공시가격·토지면적·취득시/최초공시시 토지 공시지가를 모두 입력하세요.");
+            phdOk992 = true;
+          }
+          // 5년 경과 양도 시 안분용 기준시가 필수 (5년 분기는 houseType 무관 공통 — F-1). PHD ON이면 취득시 검증 skip.
+          const i992 = failIfStdPriceMissingOver5Y(fail, asset, form, r.standardPriceAtAcquisition992, r.standardPriceAt5Years992, "§99의2", phdOk992);
           if (i992) return i992;
         }
         // §98의9 수도권 밖 준공후미분양 (2026-06-11): 취득일·취득가·전용면적 필수 (⑧).
