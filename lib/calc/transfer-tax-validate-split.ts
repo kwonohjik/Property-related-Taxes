@@ -18,6 +18,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
+import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
@@ -29,12 +30,31 @@ function opt(v: string | undefined): number | undefined {
 /**
  * 분리 직접 입력 초과 검증. 오류 메시지 또는 null.
  *
- * 검증 대상 게이트 — UI가 분리 칸을 노출하는 조건과 동일:
- *   `hasSeperateLandAcquisitionDate && landSplitMode === "actual"`
+ * 검증 대상 게이트 — UI가 양도가액 직접입력 칸을 노출하는 조건과 동일:
+ *   `hasSeperateLandAcquisitionDate && saleSplitMode === "actual"`
  */
 export function validateSplitDirectInputs(asset: AssetForm, label: string): string | null {
   if (!asset.hasSeperateLandAcquisitionDate) return null;
-  if (asset.landSplitMode !== "actual") return null;
+
+  // §7.2 양도시 기준시가 필수 검증 (2026-07-28 사용자 확정 — feedback_no_silent_apportion_fallback):
+  // apportioned(일괄양도) 안분 또는 estimated(환산) 파트는 **양도시 토지·건물 기준시가**로 안분/환산한다
+  // (§166⑥→부가세령§64①1호 "양도 당시 기준시가"). 미입력 시 엔진이 취득시 비율(landRatio)로 조용히
+  // 대체하나(split-gain.ts:147-150,256), 이는 사용자가 일괄양도/환산을 선택했는데 법령과 다른 결과를
+  // 내는 자동 안분 fallback이므로 **여기서 차단**한다(사용자 입력 강제 — 조용한 대체 대신 명시 오류).
+  // 조건부 차단이라 엔진 fallback 경로는 이 게이트로 도달이 막히고, actual/legacy 경로는 불변(⑧ 모순 없음).
+  const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
+  const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  const needsTransferStd =
+    asset.saleSplitMode === "apportioned" || landMode === "estimated" || buildingMode === "estimated";
+  if (needsTransferStd) {
+    const landStd = opt(asset.landStandardPriceAtTransfer);
+    const buildingStd = opt(asset.buildingStandardPriceAtTransfer);
+    if (landStd == null || buildingStd == null) {
+      return `${label}: 일괄양도 안분·환산취득가 계산에는 토지·건물 양도시 기준시가가 필요합니다(§166⑥ 양도 당시 기준시가). 국세청 홈택스 기준시가 조회 후 입력하세요.`;
+    }
+  }
+
+  if (asset.saleSplitMode !== "actual") return null;
 
   // ── 총액이 자산 필드와 1:1이 아닌 경로는 미검증(위 ⚠️ 참조) ──
   // 지분 판정은 API 정본(`transfer-tax-api.ts:140` primaryFractional = getOwnershipRatio(primary) < 1.0)과

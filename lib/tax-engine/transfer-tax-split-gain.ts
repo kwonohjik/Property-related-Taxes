@@ -80,7 +80,51 @@ export function isSplitPairOverflow(
   return false; // 둘 다 미입력 → 비율 안분 → 모순 불가
 }
 
-/** 취득가액 분리 (실가/환산/감정/매매사례 분기) */
+/** 파트별 취득 방식 (Phase A — 토지·건물 독립 4-way) */
+type PartAcqMode = "actual" | "estimated" | "appraisal" | "salesCase";
+
+/**
+ * 파트 모드 미제공 시 자산 전체 플래그에서 파생 — 기존 단일-모드 판정과 100% 동일.
+ * landAcqMode/buildingAcqMode 둘 다 미제공이면 land/building 모두 이 값으로 귀결되므로
+ * 레거시 경로(calcSplitAcquisitionPrice의 예전 단일 분기)와 산출값이 완전히 일치한다.
+ */
+function deriveLegacyAcqMode(input: TransferTaxInput): PartAcqMode {
+  if (input.useEstimatedAcquisition) return "estimated";
+  if (input.acquisitionMethod === "appraisal") return "appraisal";
+  if (input.acquisitionMethod === "salesCase") return "salesCase";
+  return "actual";
+}
+
+/**
+ * 양도가액 안분 비율 — **양도시** 기준시가 비율 (부가가치세법 시행령 §64①1호 "공급계약일(=양도)
+ * 현재 기준시가" 준용, 소득령 §166⑥). 토지·건물 양도시 기준시가가 **모두** 명시 입력된 경우에만
+ * 산출한다 — 부분 입력을 임의로 보완(자동 안분)하지 않는다.
+ */
+export function calcSaleApportionRatio(
+  input: TransferTaxInput,
+): { land: number; building: number } | null {
+  const landStd = input.landStandardPriceAtTransfer;
+  const buildingStd = input.buildingStandardPriceAtTransfer;
+  if (landStd == null || buildingStd == null) return null;
+  const total = landStd + buildingStd;
+  if (total <= 0) return null;
+  const landRatio = Math.min(landStd / total, 1);
+  return { land: landRatio, building: 1 - landRatio };
+}
+
+/**
+ * §6.1 SoT — 파트별 취득 모드에서 자산 전체 `useEstimatedAcquisition` 단방향 파생.
+ * 어느 한 파트든 환산(estimated)이면 true. Phase C(UI/API 배관) 소비자용 헬퍼 —
+ * 본 Phase A0/A/B에서는 아직 호출부 없음(엔진 코어만 우선 정리).
+ */
+export function deriveUseEstimatedAcquisitionFromParts(
+  landAcqMode: PartAcqMode | undefined,
+  buildingAcqMode: PartAcqMode | undefined,
+): boolean {
+  return landAcqMode === "estimated" || buildingAcqMode === "estimated";
+}
+
+/** 취득가액 분리 — 파트별 독립 4-way(실가/환산/감정/매매사례). 모드 미제공 파트는 자산 전체 플래그 파생. */
 function calcSplitAcquisitionPrice(
   input: TransferTaxInput,
   landTransferPrice: number,
@@ -91,58 +135,80 @@ function calcSplitAcquisitionPrice(
 ): {
   land: number;
   building: number;
+  landMode: PartAcqMode;
+  buildingMode: PartAcqMode;
   splitLandExpropriationValuationDetail?: SplitLandExpropriationValuationDetail;
 } {
-  if (input.useEstimatedAcquisition) {
-    // 환산취득가: 각각의 양도가액 × (취득시 기준시가 / 양도시 기준시가)
-    const totalStdAtTransfer = input.standardPriceAtTransfer ?? 0;
-    const landStdAtTransfer = input.landStandardPriceAtTransfer
-      ?? Math.floor(totalStdAtTransfer * landRatio);
-    const buildingStdAtTransfer = input.buildingStandardPriceAtTransfer
-      ?? Math.max(totalStdAtTransfer - landStdAtTransfer, 0);
+  const landMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
+  const buildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
 
-    // §164⑨1호 공익수용 특례 — **토지분 환산 분모만** min[]로 낮춘다(건물분 무변경 — 시행규칙 §80⑧,
-    // 계획 D16-GB). 미충족 시 null → 현행 landStdAtTransfer 유지(회귀 0).
+  // 환산(estimated) 분모 — 양도시 기준시가 파트별 (기존 로직 승계, 모드 무관 공통 산출).
+  const totalStdAtTransfer = input.standardPriceAtTransfer ?? 0;
+  const landStdAtTransferBase = input.landStandardPriceAtTransfer
+    ?? Math.floor(totalStdAtTransfer * landRatio);
+  const buildingStdAtTransfer = input.buildingStandardPriceAtTransfer
+    ?? Math.max(totalStdAtTransfer - landStdAtTransferBase, 0);
+
+  // §164⑨1호 공익수용 특례 — **토지분이 환산(estimated) 모드일 때만** 분모를 min[]로 낮춘다
+  // (건물분 무변경 — 시행규칙 §80⑧, 계획 D16-GB). 미충족 시 null → landStdAtTransferBase 유지(회귀 0).
+  let landStdAtTransfer = landStdAtTransferBase;
+  let splitLandExpropriationValuationDetail: SplitLandExpropriationValuationDetail | undefined;
+  if (landMode === "estimated") {
     const landExprVal = applySplitLandExpropriationValuation({
       propertyType: input.propertyType,
-      useEstimatedAcquisition: input.useEstimatedAcquisition,
+      useEstimatedAcquisition: true,
       transferCause: input.transferCause,
       transferDate: input.transferDate,
-      landStdTotalAtTransfer: landStdAtTransfer,
+      landStdTotalAtTransfer: landStdAtTransferBase,
       compensationTotal: input.splitLandCompensationTotal,
       compensationBasisTotal: input.splitLandCompensationBasisTotal,
     });
-    const effLandStdAtTransfer = landExprVal?.denominator ?? landStdAtTransfer;
-
-    const landAcq = effLandStdAtTransfer > 0
-      ? Math.floor(landTransferPrice * (landStdAtAcq / effLandStdAtTransfer))
-      : 0;
-    const buildingAcq = buildingStdAtTransfer > 0
-      ? Math.floor(buildingTransferPrice * (buildingStdAtAcq / buildingStdAtTransfer))
-      : 0;
-    return { land: landAcq, building: buildingAcq, splitLandExpropriationValuationDetail: landExprVal?.detail };
+    landStdAtTransfer = landExprVal?.denominator ?? landStdAtTransferBase;
+    splitLandExpropriationValuationDetail = landExprVal?.detail;
   }
 
-  if (input.acquisitionMethod === "salesCase") {
-    // 매매사례가액(소령 §176의2③1호) — 비-split(transfer-tax-helpers.ts:343)과 동일 base.
-    // 종전에는 분기가 없어 아래 실거래가로 fallthrough했고, API가 salesCase 시 acquisitionPrice: 0을
-    // 보내므로(transfer-tax-api.ts:199-201) base = 0 → **취득가액이 통째로 소실**됐다.
-    // 추계액이라 토지/건물 개별 실지가액이 존재하지 않는다 → landAcquisitionPrice를 읽지 않고 항상 안분
-    // (§166⑥ "구분할 수 없는 때"). 감정가액 분기가 직접 입력을 허용하는 것과 다른 점.
-    const base = input.similarSalesValue ?? input.acquisitionPrice ?? 0;
-    const land = Math.floor(base * landRatio);
-    return { land, building: base - land };
+  function calcOnePart(
+    mode: PartAcqMode,
+    isLand: boolean,
+    partTransferPrice: number,
+    partStdAtAcq: number,
+    partStdAtTransfer: number,
+  ): number {
+    switch (mode) {
+      case "estimated":
+        // 환산취득가: 파트 양도가 × (파트 취득시 기준시가 / 파트 양도시 기준시가)
+        return partStdAtTransfer > 0
+          ? Math.floor(partTransferPrice * (partStdAtAcq / partStdAtTransfer))
+          : 0;
+      case "salesCase": {
+        // 매매사례가액(소령 §176의2③1호) — 파트별 명시 입력(land/buildingSalesCaseValue) 우선.
+        // 추계액은 토지/건물 개별 실지가액이 존재하지 않는 경우가 일반적이므로, 미입력 시
+        // §166⑥ "구분할 수 없는 때" 예외로 자산 전체 base를 안분한다(임의 fallback 아님).
+        const own = isLand ? input.landSalesCaseValue : input.buildingSalesCaseValue;
+        if (own != null) return own;
+        const base = input.similarSalesValue ?? input.acquisitionPrice ?? 0;
+        const land = Math.floor(base * landRatio);
+        return isLand ? land : base - land;
+      }
+      case "appraisal": {
+        // 감정가액 — 감정평가서가 토지·건물을 각각 평가하는 경우가 많아 직접 입력 허용(실거래가와 동일 구조).
+        const base = input.appraisalValue ?? input.acquisitionPrice ?? 0;
+        const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
+        return isLand ? pair.land : pair.building;
+      }
+      case "actual":
+      default: {
+        const base = input.acquisitionPrice ?? 0;
+        const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
+        return isLand ? pair.land : pair.building;
+      }
+    }
   }
 
-  if (input.acquisitionMethod === "appraisal") {
-    // 감정가액 — 감정평가서가 토지·건물을 각각 평가하는 경우가 많아 직접 입력을 허용(실거래가와 동일 구조).
-    const base = input.appraisalValue ?? input.acquisitionPrice ?? 0;
-    return splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
-  }
+  const land = calcOnePart(landMode, true, landTransferPrice, landStdAtAcq, landStdAtTransfer);
+  const building = calcOnePart(buildingMode, false, buildingTransferPrice, buildingStdAtAcq, buildingStdAtTransfer);
 
-  // 실거래가
-  const base = input.acquisitionPrice ?? 0;
-  return splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
+  return { land, building, landMode, buildingMode, splitLandExpropriationValuationDetail };
 }
 
 /**
@@ -161,8 +227,14 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   if (!input.landAcquisitionDate) return null;
   if (input.propertyType !== "housing" && input.propertyType !== "building") return null;
 
+  // 파트별 모드 조기 파생 — PHD 게이트 판정용(혼합 모드 시 오발동 방지).
+  const earlyLandMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
+  const earlyBuildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
+
   // ── 개별주택가격 미공시 취득 경로 (§164⑤) ──
-  if (input.preHousingDisclosure && input.useEstimatedAcquisition) {
+  // 토지·건물 **모두** 환산(estimated)일 때만 진입 — 혼합 모드(예: 토지 실가+건물 환산)는
+  // PHD 3-시점 알고리즘이 아니라 아래 파트별 경로로 처리한다(2026-07-28 게이트 강화).
+  if (input.preHousingDisclosure && earlyLandMode === "estimated" && earlyBuildingMode === "estimated") {
     return calcSplitGainPreDisclosure(input);
   }
 
@@ -176,25 +248,34 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const landStdAtAcq = Math.floor((input.standardPricePerSqmAtAcquisition ?? 0) * (input.acquisitionArea ?? 0));
   const buildingStdAtAcq = Math.max(totalStdAtAcq - landStdAtAcq, 0);
 
-  // ① 양도가액 분리
+  // ① 양도가액 분리 — saleSplitMode 명시 분기 (Phase B: 부가세령 §64①1호 "양도시" 기준시가 안분으로 정정).
+  // 토지·건물 양도시 기준시가가 모두 명시 입력된 경우에만 양도시 비율을 쓰고, 미입력 시 종전
+  // 취득시 비율(landRatio)로 후퇴한다(회귀 0 — 기존 입력만 있는 케이스는 동작 불변).
   const totalTransfer = input.transferPrice;
+  const saleRatio = calcSaleApportionRatio(input);
+  const effectiveSaleLandRatio = saleRatio?.land ?? landRatio;
   const { land: landTransferPrice, building: buildingTransferPrice } = splitPair(
     totalTransfer,
     input.landTransferPrice,
     input.buildingTransferPrice,
-    landRatio,
+    effectiveSaleLandRatio,
   );
 
-  // ② 취득가액 분리 (환산 모드 시 토지분 §164⑨1호 특례 산출근거 동반)
-  const { land: landAcqPrice, building: buildingAcqPrice, splitLandExpropriationValuationDetail } =
-    calcSplitAcquisitionPrice(
-      input,
-      landTransferPrice,
-      buildingTransferPrice,
-      landStdAtAcq,
-      buildingStdAtAcq,
-      landRatio,
-    );
+  // ② 취득가액 분리 (파트별 독립 4-way — 환산 모드 시 토지분 §164⑨1호 특례 산출근거 동반)
+  const {
+    land: landAcqPrice,
+    building: buildingAcqPrice,
+    landMode,
+    buildingMode,
+    splitLandExpropriationValuationDetail,
+  } = calcSplitAcquisitionPrice(
+    input,
+    landTransferPrice,
+    buildingTransferPrice,
+    landStdAtAcq,
+    buildingStdAtAcq,
+    landRatio,
+  );
 
   // ③ 필요경비(자본적지출) 분리
   const totalExpenses = input.expenses ?? 0;
@@ -211,30 +292,30 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
       ? splitPair(totalExpenses, input.landDirectExpenses, input.buildingDirectExpenses, landRatio)
       : { land: input.landDirectExpenses ?? 0, building: input.buildingDirectExpenses ?? 0 };
 
-  // ④ 개산공제 — 환산취득가·감정가액 모드 시 (소득령 §163⑥)
+  // ④ 개산공제 — 파트별 모드가 환산·감정·매매사례일 때만 (소득령 §163⑥). 실가(actual) 파트는 0.
   // salesCase 추가(2026-07-16): 비-split(transfer-tax-helpers.ts:339-348)은 매매사례가액에도
   // 개산공제를 적용하고 directExp를 차감하지 않는데, split만 실가 early-return으로 빠져 정반대로
   // 동작했다(개산공제 0 + directExp 전액 차감) → 드리프트 해소.
-  // ⚠️ §97② swap은 이 플래그가 아니라 input.useEstimatedAcquisition 단독 게이트(아래 applyAssetSwap)라
-  //    salesCase 추가에도 무영향 — "환산모드 전용" 정책 유지.
-  const usesEstOrAppraisal =
-    input.useEstimatedAcquisition ||
-    input.acquisitionMethod === "appraisal" ||
-    input.acquisitionMethod === "salesCase";
-  const landAppraisalDed = usesEstOrAppraisal ? applyRate(landStdAtAcq, 0.03) : 0;
-  const buildingAppraisalDed = usesEstOrAppraisal ? applyRate(buildingStdAtAcq, 0.03) : 0;
+  // ⚠️ §97② swap은 이 플래그가 아니라 파트 모드==="estimated" 단독 게이트(아래 applyAssetSwap)라
+  //    salesCase 추가에도 무영향 — "환산모드 전용" 정책 유지. 파트별 독립(2026-07-28 mixed-mode).
+  const landNonActual = landMode !== "actual";
+  const buildingNonActual = buildingMode !== "actual";
+  const landAppraisalDed = landNonActual ? applyRate(landStdAtAcq, 0.03) : 0;
+  const buildingAppraisalDed = buildingNonActual ? applyRate(buildingStdAtAcq, 0.03) : 0;
 
   // ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
   // 본문: acqPrice(환산) + appraisalDed(개산공제). directExp는 차감 안 함.
   // 단서: directExp > (acqPrice + appraisalDed) → directExp로 swap.
-  // 자산 단위 독립 적용 — 토지/건물 각각 비교.
+  // 자산 단위(파트별) 독립 적용 — 토지/건물 각각 비교.
   function applyAssetSwap(
     acqPrice: number,
     directExp: number,
     appraisalDed: number,
     explicitDirect: boolean,
+    nonActualMode: boolean,
+    isEstimatedMode: boolean,
   ): { effectiveDirect: number; effectiveAppraisalDed: number; swapApplied: boolean } {
-    if (!usesEstOrAppraisal) {
+    if (!nonActualMode) {
       // 실가 모드 — directExp 그대로 차감, 개산공제 없음
       return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: false };
     }
@@ -243,8 +324,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
       return { effectiveDirect: 0, effectiveAppraisalDed: appraisalDed, swapApplied: false };
     }
     const estimatedSide = acqPrice + appraisalDed;
-    // §97② 2호 단서는 취득가액을 '환산취득가액'으로 하는 경우 전용 — 감정가액 모드는 swap 없이 본문(개산공제)만.
-    if (input.useEstimatedAcquisition && directExp > estimatedSide) {
+    // §97② 2호 단서는 취득가액을 '환산취득가액'으로 하는 경우 전용 — 감정·매매사례가액 모드는 swap 없이 본문(개산공제)만.
+    if (isEstimatedMode && directExp > estimatedSide) {
       // 단서 — directExp로 swap (개산공제 미적용). 필요경비 = directExp 단독이므로 취득가액도 미차감(gain 산식에서 처리).
       return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: true };
     }
@@ -256,12 +337,16 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     landDirectExp,
     landAppraisalDed,
     input.landDirectExpenses !== undefined,
+    landNonActual,
+    landMode === "estimated",
   );
   const buildingSwap = applyAssetSwap(
     buildingAcqPrice,
     buildingDirectExp,
     buildingAppraisalDed,
     input.buildingDirectExpenses !== undefined,
+    buildingNonActual,
+    buildingMode === "estimated",
   );
 
   // §97② 2호 단서 swap 시 필요경비 = directExp 단독 → 환산취득가액(acqPrice) 미차감.
@@ -283,12 +368,13 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     acquisitionPrice: landAcqPrice,
     directExpenses: landSwap.effectiveDirect,
     appraisalDeduction: landSwap.effectiveAppraisalDed,
-    stdPriceAtAcq: usesEstOrAppraisal ? landStdAtAcq : undefined,
+    stdPriceAtAcq: landNonActual ? landStdAtAcq : undefined,
     gain: landGain,
     holdingYears: landHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
     swapApplied: landSwap.swapApplied,
+    acqMode: landMode,
   };
 
   const buildingPart: SplitPartResult = {
@@ -296,12 +382,13 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     acquisitionPrice: buildingAcqPrice,
     directExpenses: buildingSwap.effectiveDirect,
     appraisalDeduction: buildingSwap.effectiveAppraisalDed,
-    stdPriceAtAcq: usesEstOrAppraisal ? buildingStdAtAcq : undefined,
+    stdPriceAtAcq: buildingNonActual ? buildingStdAtAcq : undefined,
     gain: buildingGain,
     holdingYears: buildingHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
     swapApplied: buildingSwap.swapApplied,
+    acqMode: buildingMode,
   };
 
   return {
@@ -364,6 +451,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     holdingYears: landHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
+    acqMode: "estimated",
   };
 
   const buildingPart: SplitPartResult = {
@@ -376,6 +464,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     holdingYears: buildingHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
+    acqMode: "estimated",
   };
 
   return {

@@ -40,7 +40,12 @@ const FIELD_LABEL: Record<string, string> = {
   // 토지/건물 분리
   landAcquisitionDate: "토지 취득일",
   selfOwns: "본인 소유 부분",
-  landSplitMode: "토지/건물 분리 방식",
+  landSplitMode: "토지/건물 분리 방식", // @deprecated — saleSplitMode로 대체, 하위호환 라벨만 유지
+  landAcqMode: "토지 취득가액 방식",
+  buildingAcqMode: "건물 취득가액 방식",
+  saleSplitMode: "토지·건물 양도가액 방식",
+  landSalesCaseValue: "토지 매매사례가액",
+  buildingSalesCaseValue: "건물 매매사례가액",
 
   // PHD §164⑤
   "preHousingDisclosure.firstDisclosureDate": "최초 고시일",

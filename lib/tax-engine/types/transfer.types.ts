@@ -467,6 +467,26 @@ export interface TransferTaxInput {
    * "actual": 사용자가 각 가액을 직접 입력.
    */
   landSplitMode?: "apportioned" | "actual";
+  /**
+   * 토지 파트 취득 방식 (파트별 독립 4-way, 신설).
+   * 미제공 시 자산 전체 `useEstimatedAcquisition`/`acquisitionMethod`에서 단방향 파생(§6.1 SoT,
+   * 기존 동작 100% 보존). 제공 시 `buildingAcqMode`와 독립적으로 조합 가능
+   * (예: 토지 실가 + 건물 환산) — 소득령 §166⑥·§163⑥.
+   */
+  landAcqMode?: "actual" | "estimated" | "appraisal" | "salesCase";
+  /** 건물 파트 취득 방식 — landAcqMode와 동일 규칙, 파트 독립 */
+  buildingAcqMode?: "actual" | "estimated" | "appraisal" | "salesCase";
+  /**
+   * 양도 방식 (구분양도|일괄양도) — 엔진 명시 입력.
+   * "actual": 계약서 등 토지·건물 실지 양도가액 구분 기재(land/buildingTransferPrice 직접).
+   * "apportioned": 구분 불분명 → 양도시 기준시가 비율 안분(부가세령 §64①1호, 소득령 §166⑥).
+   * 미제공 시 land/buildingTransferPrice 존재 여부로 기존 방식대로 자동 판단(회귀 0).
+   */
+  saleSplitMode?: "actual" | "apportioned";
+  /** 토지 파트 매매사례가액 (landAcqMode === "salesCase" 시 직접 입력, §176의2③1호) */
+  landSalesCaseValue?: number;
+  /** 건물 파트 매매사례가액 (buildingAcqMode === "salesCase" 시 직접 입력) */
+  buildingSalesCaseValue?: number;
   /** 토지 양도가액 (실제 모드 or 안분 override 시) */
   landTransferPrice?: number;
   /** 건물 양도가액 (실제 모드 or 안분 override 시) */

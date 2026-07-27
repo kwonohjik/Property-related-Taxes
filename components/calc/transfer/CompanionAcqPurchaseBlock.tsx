@@ -21,7 +21,7 @@ import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
-import type { AcqPriceMode } from "./LandBuildingSplitSection";
+import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -131,16 +131,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isSplitable =
     props.assetKind === "housing" || props.assetKind === "building";
   const isSplit = isSplitable && !!props.hasSeperateLandAcquisitionDate;
-  // 취득가액 산정 방식 — boolean 3개를 단일 유니온으로 파생(무효 조합 차단).
-  // ⚠️ 우선순위는 API 변환(transfer-tax-api.ts:82-84)과 **동일**하게 유지한다:
-  //    isSalesCase > isAppraisal > isEstimated. 어긋나면 UI 게이팅과 엔진 분기가 갈린다.
-  const acqPriceMode: AcqPriceMode = props.isSalesCaseAcquisition
-    ? "salesCase"
-    : props.isAppraisalAcquisition
-      ? "appraisal"
-      : props.useEstimatedAcquisition
-        ? "estimated"
-        : "actual";
+  // 토지·건물 파트별 취득 방식 — 사용자가 아직 파트별 라디오를 선택하지 않았으면("") 자산 전체
+  // 레거시 플래그(취득가액 산정 방식 라디오)에서 파생(단일 소스, dual-truth 방지).
+  const effLandAcqMode = effectivePartAcqMode(props.asset?.landAcqMode, props);
+  const effBuildingAcqMode = effectivePartAcqMode(props.asset?.buildingAcqMode, props);
   const acqDateLabel = isSplit ? "건물 취득일 (사용승인일·매매 등기접수일)" : "취득일";
 
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
@@ -648,40 +642,16 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 )}
               </FieldCard>
 
-              <FieldCard label="취득·양도가액 분리 방식">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => props.onLandSplitModeChange?.("apportioned")}
-                    className={cn(
-                      "flex-1 rounded-md border-2 px-3 py-1.5 text-sm transition-all",
-                      (props.landSplitMode ?? "apportioned") === "apportioned"
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:border-muted-foreground/50",
-                    )}
-                  >
-                    기준시가 비율 안분
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => props.onLandSplitModeChange?.("actual")}
-                    className={cn(
-                      "flex-1 rounded-md border-2 px-3 py-1.5 text-sm transition-all",
-                      props.landSplitMode === "actual"
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border hover:border-muted-foreground/50",
-                    )}
-                  >
-                    직접 입력
-                  </button>
-                </div>
-              </FieldCard>
-
-
-              {props.landSplitMode === "actual" && (
+              {props.asset && props.onAssetChange && (
                 <LandBuildingSplitSection
-                  acqPriceMode={acqPriceMode}
-                  isBurdenedGift={props.asset?.transferType === "burdened_gift"}
+                  selfOwns={props.selfOwns ?? "both"}
+                  isBurdenedGift={props.asset.transferType === "burdened_gift"}
+                  landAcqMode={effLandAcqMode}
+                  onLandAcqModeChange={(v) => props.onAssetChange!({ landAcqMode: v })}
+                  buildingAcqMode={effBuildingAcqMode}
+                  onBuildingAcqModeChange={(v) => props.onAssetChange!({ buildingAcqMode: v })}
+                  saleSplitMode={props.asset.saleSplitMode ?? "apportioned"}
+                  onSaleSplitModeChange={(v) => props.onAssetChange!({ saleSplitMode: v })}
                   landTransferPrice={props.landTransferPrice ?? ""}
                   onLandTransferPriceChange={props.onLandTransferPriceChange ?? (() => {})}
                   buildingTransferPrice={props.buildingTransferPrice ?? ""}
@@ -690,6 +660,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   onLandAcquisitionPriceChange={props.onLandAcquisitionPriceChange ?? (() => {})}
                   buildingAcquisitionPrice={props.buildingAcquisitionPrice ?? ""}
                   onBuildingAcquisitionPriceChange={props.onBuildingAcquisitionPriceChange ?? (() => {})}
+                  landSalesCaseValue={props.asset.landSalesCaseValue ?? ""}
+                  onLandSalesCaseValueChange={(v) => props.onAssetChange!({ landSalesCaseValue: v })}
+                  buildingSalesCaseValue={props.asset.buildingSalesCaseValue ?? ""}
+                  onBuildingSalesCaseValueChange={(v) => props.onAssetChange!({ buildingSalesCaseValue: v })}
                   landStandardPriceAtTransfer={props.landStandardPriceAtTransfer ?? ""}
                   onLandStandardPriceAtTransferChange={props.onLandStandardPriceAtTransferChange ?? (() => {})}
                   buildingStandardPriceAtTransfer={props.buildingStandardPriceAtTransfer ?? ""}

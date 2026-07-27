@@ -314,7 +314,21 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.selfOwns) a.selfOwns = "both";
   if (a.hasSeperateLandAcquisitionDate === undefined) a.hasSeperateLandAcquisitionDate = false;
   if (!a.landAcquisitionDate) a.landAcquisitionDate = "";
-  if (!a.landSplitMode) a.landSplitMode = "apportioned";
+  // saleSplitMode 마이그레이션 — legacy landSplitMode(취득·양도 겸용 토글) 값을 이전 후 폐기(계획 §13 Q4).
+  if (a.saleSplitMode === undefined) {
+    a.saleSplitMode =
+      a.landSplitMode === "actual" || a.landSplitMode === "apportioned"
+        ? a.landSplitMode
+        : "apportioned";
+  }
+  delete a.landSplitMode;
+  // landAcqMode/buildingAcqMode — 미선택("") 기본값. 실제 유효값은 API/validate/UI가
+  // `effectivePartAcqMode()`(lib/calc/transfer-tax-split-acq-mode.ts)로 레거시 플래그에서
+  // 매 사용 시점에 파생한다(단일 소스 — migrate 시점 1회 고정 스냅샷 금지, dual-truth 방지).
+  if (a.landAcqMode === undefined) a.landAcqMode = "";
+  if (a.buildingAcqMode === undefined) a.buildingAcqMode = "";
+  if (a.landSalesCaseValue === undefined) a.landSalesCaseValue = "";
+  if (a.buildingSalesCaseValue === undefined) a.buildingSalesCaseValue = "";
   if (!a.landTransferPrice) a.landTransferPrice = "";
   if (!a.buildingTransferPrice) a.buildingTransferPrice = "";
   if (!a.landAcquisitionPrice) a.landAcquisitionPrice = "";

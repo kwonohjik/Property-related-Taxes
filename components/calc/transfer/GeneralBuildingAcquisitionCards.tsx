@@ -156,8 +156,6 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onHasSeperateLandAcquisitionDateChange={() => {}}
             landAcquisitionDate={asset.landAcquisitionDate}
             onLandAcquisitionDateChange={(v) => onChange({ landAcquisitionDate: v })}
-            landSplitMode={asset.landSplitMode}
-            onLandSplitModeChange={(v) => onChange({ landSplitMode: v })}
             landTransferPrice={asset.landTransferPrice}
             onLandTransferPriceChange={(v) => onChange({ landTransferPrice: v })}
             buildingTransferPrice={asset.buildingTransferPrice}

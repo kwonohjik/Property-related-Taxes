@@ -89,8 +89,6 @@ export interface BlockProps {
   onHasSeperateLandAcquisitionDateChange?: (v: boolean) => void;
   landAcquisitionDate?: string;
   onLandAcquisitionDateChange?: (v: string) => void;
-  landSplitMode?: "apportioned" | "actual";
-  onLandSplitModeChange?: (v: "apportioned" | "actual") => void;
   landTransferPrice?: string;
   onLandTransferPriceChange?: (v: string) => void;
   buildingTransferPrice?: string;

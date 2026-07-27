@@ -496,6 +496,8 @@ export function TransferTaxResultView({
           owned ? "font-mono text-right" : "font-mono text-right text-muted-foreground/50 line-through";
         const headerCls = (owned: boolean) =>
           owned ? "font-medium text-center" : "font-medium text-center text-muted-foreground/50";
+        const acqModeLabel = (m?: "actual" | "estimated" | "appraisal" | "salesCase") =>
+          m === "estimated" ? "환산취득가" : m === "appraisal" ? "감정가액" : m === "salesCase" ? "매매사례가액" : "실지취득가액";
         return (
           <PrintSection id="split-detail" selectedIds={selectedPrintIds}>
           <div className="rounded-lg border border-border p-4 space-y-2">
@@ -513,10 +515,13 @@ export function TransferTaxResultView({
               <span />
               <span className={headerCls(landIsOwned)}>토지{!landIsOwned && " (타인 소유)"}</span>
               <span className={headerCls(buildingIsOwned)}>건물{!buildingIsOwned && " (타인 소유)"}</span>
+              <span className="text-muted-foreground">취득 방식</span>
+              <span className={cn(headerCls(landIsOwned), "font-normal")}>{acqModeLabel(result.splitDetail.land.acqMode)}</span>
+              <span className={cn(headerCls(buildingIsOwned), "font-normal")}>{acqModeLabel(result.splitDetail.building.acqMode)}</span>
               <span className="text-muted-foreground">양도가액</span>
               <span className={colCls(landIsOwned)}>{result.splitDetail.land.transferPrice.toLocaleString()}</span>
               <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.transferPrice.toLocaleString()}</span>
-              <span className="text-muted-foreground">환산취득가</span>
+              <span className="text-muted-foreground">취득가액</span>
               <span className={colCls(landIsOwned)}>{result.splitDetail.land.acquisitionPrice.toLocaleString()}</span>
               <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.acquisitionPrice.toLocaleString()}</span>
               <span className="text-muted-foreground">필요경비 (개산공제)</span>

@@ -368,8 +368,24 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   hasSeperateLandAcquisitionDate: boolean;
   /** 토지 취득일 (YYYY-MM-DD) — hasSeperateLandAcquisitionDate === true 시 필수 */
   landAcquisitionDate: string;
-  /** 가액 분리 방식: "apportioned"(기준시가 비율 자동 안분) | "actual"(직접 입력) */
-  landSplitMode: "apportioned" | "actual";
+  /**
+   * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥, 토지·건물 취득일 분리 모드 전용).
+   * `landSplitMode`(구, 취득·양도 겸용 토글)를 대체 — 취득은 이 필드가 단일 소스.
+   * ""(미선택) 시 자산 전체 레거시 플래그에서 파생 — `lib/calc/transfer-tax-split-acq-mode.ts` 참조.
+   */
+  landAcqMode: "" | "actual" | "estimated" | "appraisal" | "salesCase";
+  /** 건물 파트 취득 방식 — landAcqMode와 완전 독립(파트별 4-way) */
+  buildingAcqMode: "" | "actual" | "estimated" | "appraisal" | "salesCase";
+  /**
+   * 양도가액 결정 방식 — 이 자산 **내** 토지·건물 분리 축.
+   * 자산 **간** 일괄양도 안분 축인 `bundledSaleMode`(폼-전역)와 레벨이 달라 공존한다.
+   * "apportioned": 양도시 기준시가 비율 안분 (기본) | "actual": 구분양도 직접 입력.
+   */
+  saleSplitMode: "apportioned" | "actual";
+  /** 토지 파트 매매사례가액 (원) — landAcqMode === "salesCase" 시 직접입력, 미입력 시 §166⑥ 안분 */
+  landSalesCaseValue: string;
+  /** 건물 파트 매매사례가액 (원) — buildingAcqMode === "salesCase" 시 직접입력 */
+  buildingSalesCaseValue: string;
   /** 토지 양도가액 (실제 모드 또는 안분 override) */
   landTransferPrice: string;
   /** 건물 양도가액 (실제 모드 또는 안분 override) */
