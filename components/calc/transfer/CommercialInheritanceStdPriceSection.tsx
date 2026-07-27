@@ -20,6 +20,10 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
 import { Sec164_5ProvisoNotice } from "@/components/calc/transfer/Sec164_5ProvisoNotice";
 import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { CommercialPre1990LandNotice } from "@/components/calc/transfer/CommercialPre1990LandNotice";
+import { derivePre1990CommercialLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-commercial-bridge";
+import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -119,9 +123,25 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       <ToneCard tone="amber" sectionNum="4" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3" noDark>
         <div>
           <p className="mb-1 text-caption font-medium text-amber-700">취득시(상속개시일)</p>
+          {isCommercialPre1990Acquisition(asset) && (
+            <>
+              <CommercialPre1990LandNotice acquisitionDate={inheritanceDate} />
+              <Pre1990LandValuationInput
+                form={asset}
+                onChange={onChange}
+                acquisitionArea={asset.cbLandArea}
+                jibun={asset.addressJibun || undefined}
+                acquisitionDate={inheritanceDate}
+                transferDate={transferDate}
+              />
+            </>
+          )}
           <LandPriceLookupField
             label="취득시 개별공시지가"
-            pricePerSqm={asset.cbLandPricePerSqmAtAcq}
+            pricePerSqm={
+              asset.cbLandPricePerSqmAtAcq ||
+              derivePre1990CommercialLandPricePerSqmAtAcqString(asset, transferDate ?? "")
+            }
             onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtAcq: v })}
             area={parseFloat(asset.cbLandArea || "0") || undefined}
             referenceDate={asset.acquisitionDate || undefined}

@@ -113,7 +113,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isCommercialBuilding = primary.assetKind === "commercial_building";
   // §163⑨: 상속 취득 상가는 상속개시일 평가액 직접(환산 아님) → 환산 payload 미빌드.
   const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition && primary.acquisitionCause !== "inheritance"
-    ? buildCommercialBuildingValuation(primary)
+    ? buildCommercialBuildingValuation(primary, form.transferDate)
     : undefined;
 
   // ⑬ 일반건물(토지+건물 일괄) 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)

@@ -3,6 +3,7 @@
  * transfer-tax-api.ts 800줄 정책에 따라 분리.
  */
 
+import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial-bridge";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -105,6 +106,7 @@ export { toEngineReductions } from "./transfer-tax-api-reductions";
  */
 export function buildCommercialBuildingValuation(
   asset: AssetForm,
+  transferDate = "",
 ): object | undefined {
   if (asset.assetKind !== "commercial_building" || !asset.useEstimatedAcquisition) {
     return undefined;
@@ -145,7 +147,8 @@ export function buildCommercialBuildingValuation(
     const buildingAtAcq = parseAmount(asset.cbBuildingStdPriceAtAcq);
     const buildingAtFirst = parseAmount(asset.cbBuildingStdPriceAtFirst);
     const buildingAtTransfer = parseAmount(asset.cbBuildingStdPriceAtTransfer);
-    const landAtAcq = parseAmount(asset.cbLandPricePerSqmAtAcq);
+    // §164④ — 취득 1990-08-30 이전이면 가목의 가액이 없어 토지등급 환산값을 쓴다(⑧ 동일 fallback).
+    const landAtAcq = effectiveCommercialLandPriceAtAcq(asset, transferDate);
     const landAtFirst = parseAmount(asset.cbLandPricePerSqmAtFirst);
     if (!buildingAtAcq || !buildingAtFirst || !buildingAtTransfer
         || !landAtAcq || !landAtFirst) {
@@ -161,8 +164,8 @@ export function buildCommercialBuildingValuation(
     };
   }
 
-  // post_disclosure: 취득시 개별공시지가 필수
-  const landAtAcq = parseAmount(asset.cbLandPricePerSqmAtAcq);
+  // post_disclosure: 취득시 개별공시지가 필수 (취득 ≥2005이므로 §164④ 구간은 아니나 fallback 동일)
+  const landAtAcq = effectiveCommercialLandPriceAtAcq(asset, transferDate);
   if (!landAtAcq) return undefined;
   return { ...base, landPriceAtAcquisition: landAtAcq };
 }

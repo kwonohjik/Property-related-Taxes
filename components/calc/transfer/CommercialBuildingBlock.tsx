@@ -31,6 +31,10 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
 import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
 import { Sec164_5ProvisoNotice } from "@/components/calc/transfer/Sec164_5ProvisoNotice";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { CommercialPre1990LandNotice } from "@/components/calc/transfer/CommercialPre1990LandNotice";
+import { derivePre1990CommercialLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-commercial-bridge";
+import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 
@@ -71,6 +75,10 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
   const hasEra = isPreDisclosure || isPostDisclosure;
   // §164⑥ 단서 — 취득연도 ≤2000은 나목(건물 기준시가) 가액이 없어 §164⑤ 준용 산정이 필요하다.
   const needs164_5 = isSec164_5ProvisoApplicable(asset.cbEra, asset.acquisitionDate);
+  // §164④ — 취득이 개별공시지가 고시(1990.8.30.) 전이면 가목의 가액이 없어 토지등급 환산이 필요하다.
+  const needs164_4 = isCommercialPre1990Acquisition(asset);
+  // 파생값(store 미저장) — 표시 fallback. API·validate도 같은 함수로 동일 fallback을 쓴다.
+  const pre1990LandAtAcq = derivePre1990CommercialLandPricePerSqmAtAcqString(asset, transferDate ?? "");
 
   // 연면적 자동 계산 표시 (사용자 친화적 피드백)
   const totalFloorArea = useMemo(() => {
@@ -278,9 +286,22 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             {/* 취득시 — amber (공통 필수) */}
             <div>
               <p className="mb-1 text-caption font-medium text-amber-700">취득시</p>
+              {needs164_4 && (
+                <>
+                  <CommercialPre1990LandNotice acquisitionDate={asset.acquisitionDate} />
+                  <Pre1990LandValuationInput
+                    form={asset}
+                    onChange={onChange}
+                    acquisitionArea={asset.cbLandArea}
+                    jibun={asset.addressJibun || undefined}
+                    acquisitionDate={asset.acquisitionDate}
+                    transferDate={transferDate}
+                  />
+                </>
+              )}
               <LandPriceLookupField
                 label="취득시 개별공시지가"
-                pricePerSqm={asset.cbLandPricePerSqmAtAcq}
+                pricePerSqm={asset.cbLandPricePerSqmAtAcq || pre1990LandAtAcq}
                 onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtAcq: v })}
                 area={parseFloat(asset.cbLandArea || "0") || undefined}
                 referenceDate={asset.acquisitionDate || undefined}

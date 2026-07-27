@@ -104,9 +104,41 @@
 **§164④ 산식 자체는 이미 구현돼 있다** — `lib/tax-engine/pre-1990-land-valuation.ts`
 (시행규칙 §80⑥·⑦의 분모 상한·비율 100% 캡 포함). §164⑤ 때와 마찬가지로 **재구현이 아니라 배선 문제**다.
 
-## 6. 권고
+## 6. 배선 ✅ 완료 (2026-07-28)
 
-**Phase A — 배선 (§164⑦ 브리지 패턴 차용)**
+**산출물**
+
+```
+lib/calc/transfer-pre1990-commercial-bridge.ts        파생 단일 소스(표시·API·validate 공용)
+components/calc/transfer/CommercialPre1990LandNotice.tsx   안내 카드
+__tests__/calc/commercial-164-4-pre1990-land.test.ts       14 케이스
+```
+
+배선: `CommercialBuildingBlock` ④ 취득시 + `CommercialInheritanceStdPriceSection` ④ 취득시에
+안내 + `Pre1990LandValuationInput` + display fallback / `buildCommercialBuildingValuation`(④) /
+`validateAssetAcquisition`(⑧) — **세 곳이 `effectiveCommercialLandPriceAtAcq` 한 함수**를 쓴다.
+
+**⚠️ `showPre1990` 게이트는 건드리지 않았다 (§7-C 점검 결과)**
+
+`transfer-tax-api.ts:89`의 `hasPre1990`은 `assetKind === "land"` 게이트인데, 발동하면
+**`acquisitionPrice=0` · `useEstimatedAcquisition=false` · `standardPriceAtAcquisition=undefined`**로
+자산을 통째로 pre1990Land 서브엔진 경로에 태운다(`:220`·`:264`·`:270`). 상가에 이를 열면
+**§164⑥ 경로 자체가 무력화**된다. → 게이트는 그대로 두고 **취득시 토지 ㎡당 가액만 파생**해
+`cbLandPricePerSqmAtAcq`로 잇는다(겸용주택 PHD 브리지와 동일 패턴).
+입력 위젯도 일반 취득 블록이 아니라 **값이 쓰이는 ④ 개별공시지가 섹션 안**에 둔다.
+
+**verify — 전건 통과**
+
+| 항목 | 결과 |
+|---|---|
+| 구간 판정 | ✅ 1990-08-29 해당 / 1990-08-30 미해당 / 상속은 상속개시일 기준 |
+| 파생 | ✅ 등급 3종+1990 공시지가 완비 시 산출 · 하나라도 없으면 `null`(임의 추정 없음) |
+| 우선순위 | ✅ 직접 입력이 환산값보다 우선 |
+| **3중 패턴** | ✅ API `landPriceAtAcquisition` = 파생값 · validate 통과 · 환산 불가 시 **양쪽 동시 차단** |
+| 회귀 | ✅ 1990 이후 취득은 종전 메시지 그대로 |
+| 스위트 | ✅ calc·components·lib 2,906건 · E2E 3건 · tsc 0 · eslint 0 · 폰트/톤 0 |
+
+### (원안) Phase A — 배선 (§164⑦ 브리지 패턴 차용)
 - `derivePre1990CommercialLandPricePerSqmAtAcq(asset, transferDate)` 신설 —
   `transfer-pre1990-phd-bridge.ts`와 동일하게 **파생만 하고 store에 저장하지 않는다**
   (useEffect → store 미러링 금지). 면적은 `cbLandArea`.
@@ -129,5 +161,5 @@
 |---|---|---|
 | A | 직접 판단한 유권해석·심판례 | ❌ **미발견**(§4). 조문 구조 해석에 의존 |
 | B | §164④·§164⑥의 **산식 원문** | 법제처 API에서 이미지로 제공돼 텍스트 미취득. 프로젝트 구현은 국세청 고시 PDF·집행기준 97-176의2 전사분에 근거 |
-| C | `showPre1990` 게이트 확장의 부작용 | 미점검 — Phase A 착수 전 필요 |
+| C | `showPre1990` 게이트 확장의 부작용 | ✅ **점검 완료 — 확장하지 않기로 결정**(§6 ⚠️). `hasPre1990` 발동 시 §164⑥ 경로가 무력화된다 |
 | D | 상가 §164⑥ 경로에서 1990 이전 취득의 **실제 빈도** | 미측정. 우선순위 판단 자료 |
