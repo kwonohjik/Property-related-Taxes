@@ -160,7 +160,7 @@ export function buildStatementItems(
   items.set("holdingPeriod", {
     label: "보유기간",
     value: holdingPeriodFromDates(displayAcqDate, transferDate),
-    formula: "양도일 − 취득일 (월 단위 절사)",
+    formula: `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (월 단위 절사)`,
     legalBasis: "소득세법 §95②",
     perAsset: isAggregate
       ? properties.map((p) => ({
@@ -210,7 +210,7 @@ export function buildStatementItems(
   items.set("residencePeriod", {
     label: "거주기간",
     value: fmtPeriod(residenceMs),
-    formula: "거주 기간 합산 (월 단위)",
+    formula: periods.length > 0 ? `${periods.map((pp) => `${fmtDate(pp.moveInDate)}~${fmtDate(pp.moveOutDate || transferDate)}`).join(" + ")} = ${fmtPeriod(residenceMs)}` : `${fmtPeriod(residenceMs)} (직접 입력 · 월 단위)`,
     legalBasis: "소득세법 §95②·시행령 §161",
   });
 
