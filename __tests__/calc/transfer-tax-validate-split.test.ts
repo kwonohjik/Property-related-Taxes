@@ -17,7 +17,7 @@ function splitAsset(over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) {
     ...makeDefaultAsset(1),
     assetKind: "housing" as const,
     hasSeperateLandAcquisitionDate: true,
-    landSplitMode: "actual" as const,
+    saleSplitMode: "actual" as const,
     actualSalePrice: "1,000,000,000",
     fixedAcquisitionPrice: "400,000,000",
     ...over,
@@ -57,13 +57,50 @@ describe("validateSplitDirectInputs — 게이트", () => {
     ).toBeNull();
   });
 
-  it('분리 방식 "기준시가 비율 안분" → 미검증 (칸 미노출)', () => {
+  it('분리 방식 "기준시가 비율 안분" → 양도가액 overflow 미검증 (칸 미노출, 양도시 기준시가는 입력됨)', () => {
     expect(
       validateSplitDirectInputs(
-        splitAsset({ landSplitMode: "apportioned", buildingTransferPrice: "9,999,999,999" }),
+        splitAsset({
+          saleSplitMode: "apportioned",
+          landStandardPriceAtTransfer: "500,000,000",
+          buildingStandardPriceAtTransfer: "500,000,000",
+          buildingTransferPrice: "9,999,999,999",
+        }),
         "자산 1",
       ),
     ).toBeNull();
+  });
+});
+
+describe("validateSplitDirectInputs — 양도시 기준시가 필수 (§7.2, 2026-07-28 사용자 확정)", () => {
+  it("apportioned 일괄양도 + 양도시 기준시가 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(splitAsset({ saleSplitMode: "apportioned" }), "자산 1");
+    expect(err).toContain("양도시 기준시가");
+  });
+
+  it("estimated 파트(환산) + 양도시 기준시가 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(
+      splitAsset({ saleSplitMode: "actual", useEstimatedAcquisition: true }),
+      "자산 1",
+    );
+    expect(err).toContain("양도시 기준시가");
+  });
+
+  it("apportioned + 양도시 토지·건물 기준시가 모두 입력 → 통과", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({
+          saleSplitMode: "apportioned",
+          landStandardPriceAtTransfer: "500,000,000",
+          buildingStandardPriceAtTransfer: "500,000,000",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("actual 구분양도 + 실가 파트 → 양도시 기준시가 불필요(미입력 통과)", () => {
+    expect(validateSplitDirectInputs(splitAsset({ saleSplitMode: "actual" }), "자산 1")).toBeNull();
   });
 });
 
@@ -100,10 +137,15 @@ describe("validateSplitDirectInputs — 취득가액 (케이스 6-c)", () => {
     expect(err).toContain("합이 취득가액");
   });
 
-  it("환산취득가 모드 → 취득가액 미검증 (총액을 사용자가 입력하지 않음)", () => {
+  it("환산취득가 모드 → 취득가액 미검증 (총액 미입력, 양도시 기준시가는 입력됨)", () => {
     expect(
       validateSplitDirectInputs(
-        splitAsset({ useEstimatedAcquisition: true, buildingAcquisitionPrice: "9,999,999,999" }),
+        splitAsset({
+          useEstimatedAcquisition: true,
+          landStandardPriceAtTransfer: "500,000,000",
+          buildingStandardPriceAtTransfer: "500,000,000",
+          buildingAcquisitionPrice: "9,999,999,999",
+        }),
         "자산 1",
       ),
     ).toBeNull();

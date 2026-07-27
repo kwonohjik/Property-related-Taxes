@@ -43,6 +43,8 @@ export interface SplitPartResult {
   longTermDeduction: number;
   /** §97② 단서 swap 발동 여부 (자산 단위) */
   swapApplied?: boolean;
+  /** 파트별 취득 방식 echo (결과뷰 라벨 전용, 계산 로직 무영향) */
+  acqMode?: "actual" | "estimated" | "appraisal" | "salesCase";
 }
 
 export interface SplitGainResult {

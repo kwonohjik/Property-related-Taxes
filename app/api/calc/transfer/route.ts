@@ -251,6 +251,12 @@ export async function POST(request: NextRequest) {
     // 토지/건물 취득일 분리 (선택)
     landAcquisitionDate: toOptionalDate(data.landAcquisitionDate),
     landSplitMode: data.landSplitMode,
+    // ⑭ 파트별 취득 모드 + 양도 분리 모드 — TypeScript 미감지 영역(엔진 명시 입력, §9 M2)
+    landAcqMode: data.landAcqMode,
+    buildingAcqMode: data.buildingAcqMode,
+    saleSplitMode: data.saleSplitMode,
+    landSalesCaseValue: data.landSalesCaseValue,
+    buildingSalesCaseValue: data.buildingSalesCaseValue,
     landTransferPrice: data.landTransferPrice,
     buildingTransferPrice: data.buildingTransferPrice,
     landAcquisitionPrice: data.landAcquisitionPrice,

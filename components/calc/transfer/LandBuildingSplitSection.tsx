@@ -1,37 +1,56 @@
 "use client";
 
 /**
- * 토지/건물 가액 분리 입력 섹션 (직접 입력 모드 전용)
+ * 토지/건물 취득·양도가액 독립 산정 섹션 (소득세법 시행령 §166⑥·§168②)
  *
- * `hasSeperateLandAcquisitionDate === true` 이고 `landSplitMode === "actual"` 시 렌더.
+ * `hasSeperateLandAcquisitionDate === true` 시 항상 렌더(토지·건물 취득일이 다른 자산).
  *
- * 취득가액 칸 노출은 **취득가액 산정 방식**이 결정한다(2026-07-16):
- *   실거래가·감정가액 → 노출(총액이 입력되므로 잔액 도출 성립)
- *   환산취득가        → 숨김 + 양도시 기준시가 칸(부분별 환산)
- *   매매사례가액      → 숨김 (추계액 — 토지/건물 개별 실지가액이 존재하지 않음, §166⑥)
- *   부담부증여        → 숨김 (§159 자동 산정) — `acqPriceMode`가 아니라 **transferType 축**이라 우선 판정
+ * 취득 축: 토지·건물 각각 4방식(실거래가·환산취득가·감정가액·매매사례가액) **독립** 선택.
+ * 양도 축: 취득과 **독립** — 구분양도(직접입력) | 일괄양도(양도시 기준시가 안분).
  *
- * 양도가액 칸은 산정 방식과 무관하게 항상 노출 — 총양도가액은 늘 입력된다.
+ * 계획서: docs/02-design/features/transfer-land-building-independent-valuation-mode.plan.md (§8)
+ * · UI 설계: transfer-land-building-independent-valuation-mode.ui.design.md (§2)
  *
- * 미입력 시 엔진 동작(`transfer-tax-split-gain.ts` splitPair):
- *   한쪽만 입력 → 반대쪽 = 총액 − 입력값(**잔액**, 안분 아님) / 둘 다 미입력 → 기준시가 비율 안분(§166⑥).
+ * 미입력 시 엔진 동작(`transfer-tax-split-gain.ts`):
+ *   실가·감정: 한쪽만 입력 → 반대쪽 = 총액 − 입력값(잔액) / 둘 다 미입력 → 취득시 기준시가 비율 안분.
+ *   매매사례: 파트별 입력 우선, 미입력 시 §166⑥ "구분 불분명" → 취득시 기준시가 비율 안분.
+ *   환산: 파트 양도가 × (파트 취득시/양도시 기준시가).
  */
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
-/**
- * 취득가액 산정 방식 — 단일 유니온.
- * boolean 3개(useEstimated·isAppraisal·isSalesCase) 조합은 무효 상태(appraisal && salesCase 등)를
- * 표현할 수 있어 dual-truth가 된다 → 호출부에서 파생해 하나로 넘긴다.
- */
-export type AcqPriceMode = "actual" | "appraisal" | "estimated" | "salesCase";
+export type { PartAcqMode };
+
+const ACQ_MODE_OPTIONS: RadioCardOption<PartAcqMode>[] = [
+  { value: "actual", label: "실거래가" },
+  { value: "estimated", label: "환산취득가" },
+  { value: "appraisal", label: "감정가액" },
+  { value: "salesCase", label: "매매사례가액" },
+];
+
+const SALE_MODE_OPTIONS: RadioCardOption<"actual" | "apportioned">[] = [
+  { value: "actual", label: "구분양도 (직접입력)" },
+  { value: "apportioned", label: "일괄양도 (양도시 기준시가 안분)" },
+];
 
 interface Props {
-  acqPriceMode: AcqPriceMode;
-  /** 부담부증여(§159 자동 산정) — acqPriceMode보다 우선해 취득가액 칸을 숨긴다 */
+  /** 토지·건물 소유자 분리 — 본인 소유하지 않는 파트는 모드 선택 비노출 */
+  selfOwns: "both" | "building_only" | "land_only";
+  /** 부담부증여(§159 자동 산정) — 파트별 모드·양도 분리 선택 자체를 숨긴다(안내만 표시) */
   isBurdenedGift?: boolean;
+
+  landAcqMode: PartAcqMode;
+  onLandAcqModeChange: (v: PartAcqMode) => void;
+  buildingAcqMode: PartAcqMode;
+  onBuildingAcqModeChange: (v: PartAcqMode) => void;
+
+  saleSplitMode: "actual" | "apportioned";
+  onSaleSplitModeChange: (v: "actual" | "apportioned") => void;
+
   landTransferPrice: string;
   onLandTransferPriceChange: (v: string) => void;
   buildingTransferPrice: string;
@@ -40,6 +59,10 @@ interface Props {
   onLandAcquisitionPriceChange: (v: string) => void;
   buildingAcquisitionPrice: string;
   onBuildingAcquisitionPriceChange: (v: string) => void;
+  landSalesCaseValue: string;
+  onLandSalesCaseValueChange: (v: string) => void;
+  buildingSalesCaseValue: string;
+  onBuildingSalesCaseValueChange: (v: string) => void;
   landStandardPriceAtTransfer: string;
   onLandStandardPriceAtTransferChange: (v: string) => void;
   buildingStandardPriceAtTransfer: string;
@@ -50,78 +73,183 @@ interface Props {
   onBuildingDirectExpensesChange: (v: string) => void;
 }
 
-export function LandBuildingSplitSection(props: Props) {
-  const isEstimated = props.acqPriceMode === "estimated";
-  // 취득가액 직접 입력이 성립하려면 총액이 사용자 입력이어야 한다(잔액 = 총액 − 입력값).
-  // 환산·매매사례는 총액을 엔진이 산출하고, 부담부증여는 §159가 산정한다 → 칸 숨김.
-  const showAcqInputs =
-    !props.isBurdenedGift && (props.acqPriceMode === "actual" || props.acqPriceMode === "appraisal");
+/** 파트 취득 방식별 조건부 입력 (actual/appraisal은 총액 직접입력, salesCase는 매매사례가, estimated는 안내만) */
+function PartAcqInputs(props: {
+  part: "land" | "building";
+  mode: PartAcqMode;
+  acquisitionPrice: string;
+  onAcquisitionPriceChange: (v: string) => void;
+  salesCaseValue: string;
+  onSalesCaseValueChange: (v: string) => void;
+}) {
+  const label = props.part === "land" ? "토지" : "건물";
+  if (props.mode === "actual" || props.mode === "appraisal") {
+    return (
+      <FieldCard label={`${label} ${props.mode === "appraisal" ? "감정가액" : "취득가액"}`}>
+        <CurrencyInput
+          label=""
+          value={props.acquisitionPrice}
+          onChange={props.onAcquisitionPriceChange}
+          placeholder="미입력 시 나머지에서 자동 계산"
+          data-testid={`split-${props.part}-acq-price`}
+        />
+      </FieldCard>
+    );
+  }
+  if (props.mode === "salesCase") {
+    return (
+      <FieldCard label={`${label} 매매사례가액`} hint="미입력 시 취득시 기준시가 비율로 안분(소득령 §166⑥)">
+        <CurrencyInput
+          label=""
+          value={props.salesCaseValue}
+          onChange={props.onSalesCaseValueChange}
+          placeholder="없으면 비워두세요"
+          data-testid={`split-${props.part}-salescase-value`}
+        />
+      </FieldCard>
+    );
+  }
+  // estimated — 취득시 기준시가는 위 "취득가액 산정 방식" 섹션의 공용 입력에서 파생(안분),
+  // 양도시 기준시가는 아래 공용 칸에서 입력(환산 분모 겸 안분 분모).
   return (
-    <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
-      <p className="text-xs font-semibold text-muted-foreground">
-        토지 / 건물 각 가액 직접 입력 — 필드별 독립 입력 가능
-      </p>
-      <p className="text-xs text-muted-foreground -mt-1">
-        한쪽만 알면 그 칸만 입력하세요 — 나머지는 <strong>총액에서 뺀 잔액</strong>으로 자동 계산됩니다.
-        둘 다 비우면 기준시가 비율로 나눕니다(소득령 §166⑥).
-      </p>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
-      </div>
+    <p className="text-xs text-muted-foreground italic">
+      {label} 환산취득가 = {label} 양도가액 × (취득시/양도시 기준시가) — 아래 양도시 기준시가 입력 필요.
+    </p>
+  );
+}
 
-      {/* 양도가액 — 산정 방식 무관 노출(총양도가액은 늘 입력된다). 단 부담부증여는 제외(아래 안내). */}
-      {!props.isBurdenedGift && (
-        <div className="grid grid-cols-2 gap-2">
-          <FieldCard label="토지 양도가액" hint="소득령 §166⑥">
-            <CurrencyInput label="" value={props.landTransferPrice} onChange={props.onLandTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-land-transfer-price" />
-          </FieldCard>
-          <FieldCard label="건물 양도가액">
-            <CurrencyInput label="" value={props.buildingTransferPrice} onChange={props.onBuildingTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-building-transfer-price" />
-          </FieldCard>
-        </div>
-      )}
+export function LandBuildingSplitSection(props: Props) {
+  const landOwned = props.selfOwns !== "building_only";
+  const buildingOwned = props.selfOwns !== "land_only";
+  const needsSaleStdPrice =
+    props.saleSplitMode === "apportioned" ||
+    props.landAcqMode === "estimated" ||
+    props.buildingAcqMode === "estimated";
 
-      {showAcqInputs && (
-        <div className="grid grid-cols-2 gap-2">
-          <FieldCard label="토지 취득가액">
-            <CurrencyInput label="" value={props.landAcquisitionPrice} onChange={props.onLandAcquisitionPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-land-acq-price" />
-          </FieldCard>
-          <FieldCard label="건물 취득가액">
-            <CurrencyInput label="" value={props.buildingAcquisitionPrice} onChange={props.onBuildingAcquisitionPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-building-acq-price" />
-          </FieldCard>
-        </div>
-      )}
-
-      {/* 매매사례가액 — 추계액이라 토지/건물 개별 실지가액이 없다(§166⑥ "구분할 수 없는 때") → 기준시가 안분 */}
-      {!props.isBurdenedGift && props.acqPriceMode === "salesCase" && (
-        <p className="rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-muted-foreground" data-testid="split-salescase-note">
-          매매사례가액(추계)은 토지·건물 각각의 실지 취득가액이 존재하지 않아 <strong>기준시가 비율로 안분</strong>됩니다
-          (소득령 §166⑥·§176의2③1호).
-        </p>
-      )}
-
-      {/* 부담부증여 — 양도가액·취득가액 **모두** §159 안분액 기준이라 직접 입력 자체가 성립하지 않는다.
-          사용자가 화면에서 보는 건 계약 총액인데 엔진 총액은 §159 채무 안분액이라, 계약 총액 기준으로
-          토지 양도가액을 입력하면 잔액이 음수가 된다(계약 10억·채무 4억에서 토지 6억 → 건물 −2억).
-          acqPriceMode가 아니라 transferType 축이므로 산정 방식과 무관하게 숨긴다. */}
-      {props.isBurdenedGift && (
+  if (props.isBurdenedGift) {
+    return (
+      <div className="space-y-2 rounded-md border border-dashed border-border bg-muted/20 p-3">
         <p className="rounded-md bg-fuchsia-50/60 px-2.5 py-1.5 text-xs text-fuchsia-800" data-testid="split-burdened-note">
           부담부증여는 양도가액·취득가액을 <strong>§159 인수 채무액 기준으로 자동 산정</strong>하므로,
           토지·건물 각 가액은 직접 입력하지 않고 <strong>기준시가 비율로 안분</strong>됩니다.
         </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <p className="text-xs font-semibold text-muted-foreground">
+          취득가액 산정 방식 — 토지·건물 독립 선택
+        </p>
+        <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
+      </div>
+
+      {/* ① 토지 취득가액 방식 */}
+      {landOwned && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
+              1
+            </span>
+            <p className="text-xs font-semibold text-amber-800">토지 취득가액 방식</p>
+          </div>
+          <div data-testid="part-acq-mode-land">
+            <RadioCardGroup
+              name="landAcqMode"
+              tone="amber"
+              layout="inline"
+              options={ACQ_MODE_OPTIONS}
+              value={props.landAcqMode}
+              onChange={props.onLandAcqModeChange}
+            />
+          </div>
+          <PartAcqInputs
+            part="land"
+            mode={props.landAcqMode}
+            acquisitionPrice={props.landAcquisitionPrice}
+            onAcquisitionPriceChange={props.onLandAcquisitionPriceChange}
+            salesCaseValue={props.landSalesCaseValue}
+            onSalesCaseValueChange={props.onLandSalesCaseValueChange}
+          />
+        </div>
       )}
 
-      {isEstimated && (
+      {/* ② 건물 취득가액 방식 */}
+      {buildingOwned && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
+              2
+            </span>
+            <p className="text-xs font-semibold text-amber-800">건물 취득가액 방식</p>
+          </div>
+          <div data-testid="part-acq-mode-building">
+            <RadioCardGroup
+              name="buildingAcqMode"
+              tone="amber"
+              layout="inline"
+              options={ACQ_MODE_OPTIONS}
+              value={props.buildingAcqMode}
+              onChange={props.onBuildingAcqModeChange}
+            />
+          </div>
+          <PartAcqInputs
+            part="building"
+            mode={props.buildingAcqMode}
+            acquisitionPrice={props.buildingAcquisitionPrice}
+            onAcquisitionPriceChange={props.onBuildingAcquisitionPriceChange}
+            salesCaseValue={props.buildingSalesCaseValue}
+            onSalesCaseValueChange={props.onBuildingSalesCaseValueChange}
+          />
+        </div>
+      )}
+
+      {/* 양도가액 결정 방식 — 취득과 독립(이 자산의 토지·건물 양도가액. 다건 자산 간 bundledSaleMode와 별개) */}
+      <div className="space-y-1.5 border-t border-border pt-2">
+        <p className="text-xs font-semibold text-muted-foreground">
+          이 자산의 토지·건물 양도가액 결정 방식
+        </p>
+        <div data-testid="sale-split-mode">
+          <RadioCardGroup
+            name="saleSplitMode"
+            tone="amber"
+            layout="inline"
+            options={SALE_MODE_OPTIONS}
+            value={props.saleSplitMode}
+            onChange={props.onSaleSplitModeChange}
+          />
+        </div>
+        {props.saleSplitMode === "actual" ? (
+          <div className="grid grid-cols-2 gap-2">
+            <FieldCard label="토지 양도가액" hint="소득령 §166⑥">
+              <CurrencyInput label="" value={props.landTransferPrice} onChange={props.onLandTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-land-transfer-price" />
+            </FieldCard>
+            <FieldCard label="건물 양도가액">
+              <CurrencyInput label="" value={props.buildingTransferPrice} onChange={props.onBuildingTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-building-transfer-price" />
+            </FieldCard>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            양도시 기준시가 비율로 자동 안분됩니다(부가가치세법 시행령 §64①1호 준용).
+          </p>
+        )}
+      </div>
+
+      {/* 양도시 기준시가 — apportioned 양도(안분 분모) 또는 파트 환산(분모) 시 필요. 두 용도 겸용(단일 입력). */}
+      {needsSaleStdPrice && (
         <div className="grid grid-cols-2 gap-2">
-          <FieldCard label="토지 양도시 기준시가" hint="환산취득가 분리 계산용">
-            <CurrencyInput label="" value={props.landStandardPriceAtTransfer} onChange={props.onLandStandardPriceAtTransferChange} placeholder="미입력 시 안분 추정" />
+          <FieldCard label="토지 양도시 기준시가" hint="안분 분모 겸 환산취득가 분모">
+            <CurrencyInput label="" value={props.landStandardPriceAtTransfer} onChange={props.onLandStandardPriceAtTransferChange} placeholder="양도시 토지 기준시가" />
           </FieldCard>
           <FieldCard label="건물 양도시 기준시가">
-            <CurrencyInput label="" value={props.buildingStandardPriceAtTransfer} onChange={props.onBuildingStandardPriceAtTransferChange} placeholder="미입력 시 안분 추정" />
+            <CurrencyInput label="" value={props.buildingStandardPriceAtTransfer} onChange={props.onBuildingStandardPriceAtTransferChange} placeholder="양도시 건물 기준시가" />
           </FieldCard>
         </div>
       )}
 
+      {/* 자본적지출 — 모드·양도 방식과 무관하게 항상 입력 가능 */}
       <div className="grid grid-cols-2 gap-2">
         <FieldCard label="토지 자본적지출" hint="토지에 귀속되는 자본적지출만 입력, 없으면 비워두세요">
           <CurrencyInput label="" value={props.landDirectExpenses} onChange={props.onLandDirectExpensesChange} placeholder="없으면 비워두세요" />

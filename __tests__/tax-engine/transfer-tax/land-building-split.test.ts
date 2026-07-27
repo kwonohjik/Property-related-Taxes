@@ -33,6 +33,11 @@ describe("S1: housing 2주택 + 환산취득가 + 안분 모드 (이미지 케�
     standardPricePerSqmAtAcquisition: 2_369_000,   // 2014.1.1. 개별공시지가 /㎡
     acquisitionArea: 212,                          // 토지면적
     expenses: 34_000_000,                          // 자본적지출
+    // Phase B (부가세령 §64①1호 "양도시" 기준시가 안분 — 2026-07-28 정정): 양도가액 일괄 안분은
+    // 취득시가 아니라 양도시 기준시가 비율을 써야 한다. 토지:건물 = 501,600,000:125,400,000 = 0.8:0.2
+    // (합계 627,000,000 = standardPriceAtTransfer와 일치, 취득시 비율 1.0:0(클램핑)과 의도적으로 상이).
+    landStandardPriceAtTransfer: 501_600_000,
+    buildingStandardPriceAtTransfer: 125_400_000,
     isOneHousehold: true,
     householdHousingCount: 2,
     residencePeriodMonths: 101,
@@ -168,6 +173,11 @@ describe("S3: building 일반건물 + 환산취득가", () => {
     standardPricePerSqmAtAcquisition: 2_000_000,
     acquisitionArea: 300,                          // 토지면적 300㎡
     expenses: 50_000_000,
+    // Phase B (부가세령 §64①1호 "양도시" 기준시가 안분 — 2026-07-28 정정): 양도가액 일괄 안분은
+    // 양도시 기준시가 비율(720:480 = 0.6:0.4, 합계 1,200,000,000 = standardPriceAtTransfer)로 하며,
+    // 취득시 비율(0.75:0.25)과 의도적으로 다르게 설정해 시점 정정이 실제로 반영됨을 검증한다.
+    landStandardPriceAtTransfer: 720_000_000,
+    buildingStandardPriceAtTransfer: 480_000_000,
     isOneHousehold: false,
     householdHousingCount: 0,
     residencePeriodMonths: 0,

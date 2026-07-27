@@ -14,6 +14,7 @@ import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-a
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -149,18 +150,34 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 공유 지분 — primary 자산의 지분 모드 처리 (다자산 일괄양도는 buildAssetPayload에서 별도 처리)
   const primaryRatio = getOwnershipRatio(primary);
   const primaryFractional = primaryRatio < 1.0;
-  // 토지/건물 분리 직접 입력 전송 게이트 — UI가 분리 칸을 노출하는 조건과 동일.
-  // 엔진은 landSplitMode를 읽지 않으므로("죽은 모드") 여기서 막지 않으면 "기준시가 비율 안분"으로
-  // 되돌려도 이전 직접 입력값이 계속 엔진에 도달한다(유령 값).
+  // 토지/건물 분리 활성 여부 (§6.1 SoT) — calcSplitGain 진입 게이트(transfer-tax-split-gain.ts:227)와 동일.
   // ⚠️ 부담부증여 제외 — 엔진이 transferPrice·acquisitionPrice를 §159 안분액으로 override하므로
   //    (transfer-tax-burdened-gift-step.ts) 사용자가 화면에서 보는 계약 총액과 **다른 총액**이 기준이 된다.
   //    그 상태로 토지 양도가액을 직접 입력하면 잔액이 계약총액 기준으로 계산돼 음수가 된다
   //    (계약 10억·§159 채무 4억에서 토지 6억 입력 → 건물 = 4억 − 6억 = −2억).
   //    부담부증여는 기준시가 비율 안분만 사용한다.
-  const splitDirectActive =
-    primary.hasSeperateLandAcquisitionDate === true &&
-    primary.landSplitMode === "actual" &&
+  const isSplitActive =
+    (primary.hasSeperateLandAcquisitionDate === true || primary.selfOwns !== "both") &&
     !isBurdenedGift;
+  // 파트 모드 미선택("") 시 자산 전체 레거시 플래그(위 isSalesCase·isAppraisal·isEstimated와 동일 소스)에서
+  // 파생 — UI 표시·validate와 단일 소스(effectivePartAcqMode, dual-truth 방지).
+  const landAcqMode = effectivePartAcqMode(primary.landAcqMode, primary);
+  const buildingAcqMode = effectivePartAcqMode(primary.buildingAcqMode, primary);
+  const saleSplitMode = primary.saleSplitMode ?? "apportioned";
+  // 파트별 취득가액 직접입력 전송 게이트 — actual·appraisal 모드만(환산·매매사례는 총액을 사용자가 입력하지 않음).
+  // UI가 분리 칸을 노출하는 조건과 동일(LandBuildingSplitSection showAcqInputs 파트별 판정).
+  const landAcqDirectActive = isSplitActive && (landAcqMode === "actual" || landAcqMode === "appraisal");
+  const buildingAcqDirectActive = isSplitActive && (buildingAcqMode === "actual" || buildingAcqMode === "appraisal");
+  // 양도가액 직접입력 전송 게이트 — saleSplitMode==="actual"(구분양도) 시만.
+  // 엔진은 saleSplitMode를 명시 입력으로 소비하므로("죽은 모드" 재발 방지, §9 M2) 이 게이트를
+  // 벗어나도 유령 값이 도달하지 않지만, "기준시가 비율 안분"으로 되돌린 뒤 잔존한 직접 입력값을
+  // 사용자 의도와 다르게 전송하지 않기 위해 여전히 게이트로 막는다.
+  const saleDirectActive = isSplitActive && saleSplitMode === "actual";
+  // 양도시 기준시가 전송 게이트 — apportioned 양도(안분 분모) 이거나 어느 파트든 환산(분모)이 필요한 경우(§7.2).
+  // 현행 `landSplitMode==="actual"` 단일 게이트를 확장(미확장 시 apportioned·estimated에서 침묵 strip → §4-B 재발).
+  const saleStdPriceActive =
+    isSplitActive &&
+    (saleSplitMode === "apportioned" || landAcqMode === "estimated" || buildingAcqMode === "estimated");
   const totalContractPrice = parseAmount(form.contractTotalPrice);
   // 폼-수준 총 양도비 (B3) — 지분 모드 자동 안분의 분자 sourcing.
   // primary.transferExpense가 직접 입력되면 그것이 우선, 미입력시 form.totalTransferExpense × ratio 사용.
@@ -318,23 +335,45 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : usesPhd
           ? primary.acquisitionDate
           : undefined,
-    landSplitMode:
-      primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both"
-        ? primary.landSplitMode
-        : undefined,
-    // ⚠️ 분리 직접 입력 6필드는 `landSplitMode === "actual"`일 때만 전송한다(게이트 선언은 위 splitDirectActive).
-    // 엔진은 landSplitMode를 읽지 않고 필드별 `?? fallback`으로만 동작하므로, 사용자가 "직접 입력"으로
-    // 값을 채운 뒤 "기준시가 비율 안분"으로 되돌려도 그 값이 계속 엔진에 도달해 유령 값이 됐다.
-    // UI에서 필드를 클리어하는 대신 **전송 게이트**로 막는다 — 폼값이 보존돼 재토글 시 복원된다
-    // (bg* 필드 보존 패턴과 동형).
-    ...(splitDirectActive
+    // 파트별 취득 모드 + 양도 분리 모드 — 엔진 명시 입력(§9 M2, "죽은 모드" 재발 방지).
+    ...(isSplitActive
+      ? {
+          landAcqMode,
+          buildingAcqMode,
+          saleSplitMode,
+        }
+      : {}),
+    // 양도가액 2필드 — saleSplitMode==="actual"(구분양도) 게이트.
+    ...(saleDirectActive
       ? {
           landTransferPrice: parseAmount(primary.landTransferPrice) || undefined,
           buildingTransferPrice: parseAmount(primary.buildingTransferPrice) || undefined,
-          landAcquisitionPrice: parseAmount(primary.landAcquisitionPrice) || undefined,
-          buildingAcquisitionPrice: parseAmount(primary.buildingAcquisitionPrice) || undefined,
+        }
+      : {}),
+    // 취득가액 2필드 — 파트별 actual·appraisal 게이트(환산·매매사례는 총액 미입력).
+    ...(landAcqDirectActive
+      ? { landAcquisitionPrice: parseAmount(primary.landAcquisitionPrice) || undefined }
+      : {}),
+    ...(buildingAcqDirectActive
+      ? { buildingAcquisitionPrice: parseAmount(primary.buildingAcquisitionPrice) || undefined }
+      : {}),
+    // 파트별 매매사례가액 — salesCase 모드 시만(미입력 시 엔진이 §166⑥ 안분 fallback).
+    ...(isSplitActive && landAcqMode === "salesCase"
+      ? { landSalesCaseValue: parseAmount(primary.landSalesCaseValue) || undefined }
+      : {}),
+    ...(isSplitActive && buildingAcqMode === "salesCase"
+      ? { buildingSalesCaseValue: parseAmount(primary.buildingSalesCaseValue) || undefined }
+      : {}),
+    // 자본적지출 2필드 — 모드 무관 항상 입력 가능(UI 상시 노출).
+    ...(isSplitActive
+      ? {
           landDirectExpenses: parseAmount(primary.landDirectExpenses) || undefined,
           buildingDirectExpenses: parseAmount(primary.buildingDirectExpenses) || undefined,
+        }
+      : {}),
+    // 양도시 기준시가 2필드 — apportioned 양도(안분 분모) 또는 파트 환산(분모) 시 전송(§7.2 확장).
+    ...(saleStdPriceActive
+      ? {
           landStandardPriceAtTransfer: parseAmount(primary.landStandardPriceAtTransfer) || undefined,
           buildingStandardPriceAtTransfer: parseAmount(primary.buildingStandardPriceAtTransfer) || undefined,
         }
