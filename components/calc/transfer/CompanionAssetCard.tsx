@@ -313,6 +313,7 @@ export function CompanionAssetCard({
           transferDate={transferDate}
           contractTotalPrice={contractTotalPrice}
           primaryAsset={primaryAsset}
+          isFractionalSplit={splitMode === "fractional"}
         />
       </AssetSection>
 

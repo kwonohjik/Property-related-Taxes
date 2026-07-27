@@ -127,6 +127,10 @@ test.describe("지분 모드 분할취득 일괄양도 계산 (PR #826)", () => 
     await expect(asset2.getByTestId("fractional-basic-inherited-notice")).toBeVisible();
     await expect(asset2.getByText("자산종류·소재지·면적은 자산 1과 동일하게 적용됩니다.")).toBeVisible();
 
+    // 자산1 ② 양도정보: 지분 모드는 양도가액 자동계산 → "양도시 기준시가"(§166⑥ 안분) 입력 미노출
+    await expect(asset1.getByText("양도시 기준시가 (원)")).toHaveCount(0);
+    await expect(asset1.getByText("안분 비율 분모 (§166⑥ 단서)")).toHaveCount(0);
+
     // 자산1 ③ 취득정보 펼치기(칩 점프) → 지분율 라벨 "취득 지분율" + 배지 "100% 기준 입력"
     await asset1.getByRole("button", { name: /취득/ }).first().click();
     await expect(asset1.getByText("취득 지분율").first()).toBeVisible();
