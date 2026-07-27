@@ -249,11 +249,14 @@ GET ?pnu={19자리}&dates={ISO,ISO,...}       dates 최대 3개
   dateStatus: Record<string /*noticeDate*/,
     "ok" | "unit_not_found" | "partial_data" | "partition_missing" | "no_notice">;
   units: Array<{
-    key: string;      // `${nm}|${dg}|${fc}|${fl}|${ho}`  ★ 건물명·층구분 포함 (불변식 2)
+    key: string;      // 위치 연결 시 `${dg}|${fc}|${fl}|${ho}`, 아니면 `${nm}|${dg}|${fc}|${fl}|${ho}`
     buildingName: string; dong: string;
     floorClass: "지하" | "지상" | "옥탑"; floor: string; ho: string;
     kind: "상가" | "오피스텔" | "복합건물";
     prices: Record<string /*noticeDate*/, { price: number; ea: number; sa: number } | null>;
+    ambiguous?: boolean;                        // 한 시점 안에서 물건 키 중복 → 시점 간 연결 안 함
+    linkedBy?: "position";                      // 건물명이 시점마다 달라 위치로 연결 — UI 노출 필수
+    buildingNameByDate?: Record<string, string>; // linkedBy 시 시점별 원문 건물명
   }>;
   availableDates: string[];      // manifest coverage:"full" 인 고시일자
   error?: string;
@@ -267,6 +270,21 @@ GET ?pnu={19자리}&dates={ISO,ISO,...}       dates 최대 3개
 2. **물건 키 = 건물명 + 동 + 층구분 + 층 + 호.** 실측 충돌 —
    - 층구분 제외 시 5,772건(0.370%). 적선현대빌딩 1층 1호가 지상 639.47㎡/5,898,000원 · 지하 7.18㎡/2,485,000원 (**단가 2.4배**)
    - 건물명 제외 시 3,517건(0.225%). 스마트빌A동 3,065,000원/61.15㎡ · B동 3,063,000원/62.08㎡ — **동이 둘 다 `1(단일)`이라 동으로 구분 불가**
+
+   **2-1. 시점 간 연결은 위치 유일성을 검증한 뒤 위치로도 한다 (Phase 2 확장).**
+   원본이 최근 연도로 갈수록 건물명 자리에 지번 표기를 넣어(적선현대빌딩 → `(80)`) 건물명 키로는
+   시점이 이어지지 않는다. 실측(종로·강남·강서 910필지 106,764물건, 2021↔2026):
+
+   | 연결 경로 | 비율 |
+   |---|---|
+   | 건물명 포함 키로 연결 | 79.1% |
+   | **건물명만 다르고 위치(동·층구분·층·호)가 양쪽에서 유일** | **18.5%** |
+   | 연결 불가 | 2.4% |
+
+   → 위치 키가 **관련 시점 전부에서 유일할 때만** 위치로 연결한다. 유일성을 *검증*하므로
+   스마트빌A동/B동처럼 위치가 겹치는 필지는 이 조건에서 자동 탈락해 건물명 키를 유지한다 —
+   충돌 위험이 가정이 아니라 구조적으로 배제된다. 연결에 쓴 근거가 위치이고 이름이 다르면
+   `linkedBy:"position"` + `buildingNameByDate`로 **반드시 노출**한다(조용한 병합 금지).
 3. **`platGbCd` 사용 금지** — `decomposePnuForBuildingRegister`의 `platGbCd`는 건축HUB 규약 전용이며 CSV 특수지코드와 **우연히 값이 일치**해 더 위험하다. raw `pnu[10]`를 직접 읽는다 (memory `feedback_gov_site_lookup_weak_tls_pnu_params` 항목2).
    ```
    PNU[10] "1"(일반) ↔ CSV 특수지 "0"(일반지번)
@@ -330,7 +348,7 @@ export function pickNoticeDate(availableDates: string[], refDate: string): strin
 | 갭 | 영향 | 대응 |
 |---|---|---|
 | **3시점 부분 매칭이 다수** | 매칭률 — 2년 93.9% / 8년 66.1% / 16년 53.6% (계획서 §4-2 실측표) | 시점별 독립 처리. `prices[date]=null`이면 **필드 미충전 + "해당 고시분 없음" 표시**. 인접 호 자동 대체 **금지**(`feedback_no_silent_apportion_fallback`) |
-| **건물명 결손이 최근 연도일수록 심하다** | 건물명 자리에 지번 표기가 들어온 행 비율 — 2021 **0.879%**(`27-0` 꼴) / 2024 **9.7%** / 2025 **14.6%**(`(80)`·`(466-9)` 꼴). 표기 형식도 연도 간 다르다(실측, 2024·2025는 sheet1 표본 15~17만행 기준) | 건물명은 **물건 키 구성요소이자 화면 표시값**이라 결손 자체를 보정할 수 없다(원본에 이름이 없다). 해당 필지는 3시점 매칭이 실패해 시점별 수기 선택으로 떨어진다 — §4 첫 행과 동일 경로다. **지번 표기를 건물명으로 "복원"하지 않는다**(법 근거 없는 추정) |
+| **건물명 결손이 최근 연도일수록 심하다** | 건물명 자리에 지번 표기가 들어온 행 비율 — 2021 **0.879%**(`27-0` 꼴) / 2024 **9.7%** / 2025 **14.6%**(`(80)`·`(466-9)` 꼴). 표기 형식도 연도 간 다르다(실측, 2024·2025는 sheet1 표본 15~17만행 기준) | **매칭**: §3-2 불변식 2-1의 위치 유일성 연결로 대부분 회복(2021↔2026 79.1% → 97.6%). 회복 불가분은 시점별 수기 선택. **표시**: 대표 이름은 실제 이름이 있는 표기를 우선하되 시점별 원문을 함께 노출한다. **지번 표기를 건물명으로 "복원"하지 않는다**(법 근거 없는 추정) |
 | `cbLandArea`(대지면적) CSV에 없음 | 조회 후에도 validate 차단(`transfer-tax-validate-asset.ts:148-149`) | 모달에 "대지면적은 등기부에서 직접 입력" 안내 |
 | 상속 §164⑥ 8필드 all-or-nothing | 모달이 3필드만 채워 `filled=3` → 차단(`:110-127`) | 모달에 잔여 5필드 안내. **validate 무변경** — 현행 코드가 그렇게 동작한다는 사실만 확정이며, 법령상 all-or-nothing이 요구되는지는 **KoreanLaw 미검증(확인 필요)** |
 | 특수지 2~9·A 필지 0.222% (58,641행 — Phase 1 전량 실측) | PNU 조인 불가 | `parcelReason="unjoinable_parcel"` 반환, 수기 입력 |
@@ -359,7 +377,28 @@ export function pickNoticeDate(availableDates: string[], refDate: string): strin
 | 2022 지번 정정 | 104건이 후행본 값 | 104건 `611-0` | ✅ |
 | 파싱 실패(skip) | xlsx 시트 반복 헤더 4건 외 0 | 2024·2025·2026 각 4, 나머지 0 | ✅ |
 
-**Phase 2·3 구현 시 작성** — A-01·A-02·A-03(3시점 조회 정합) · A-06(부분 매칭) · A-07~A-13(응답 사유 분기·UI). §1에서 ID만 예약한다.
+**Phase 2 완료 — 라우트 anchor 22 케이스 GREEN (2026-07-28)**
+
+`__tests__/api/commercial-standard-price.route.test.ts` — 픽스처는 실제 산출물과 같은 형식(gzip JSON + manifest).
+
+| ID | 검증 | 결과 |
+|---|---|---|
+| A-01 | 3시점 병합 — 동일 물건이 시점별 가격 보유 | ✅ |
+| A-04 | 지하/지상 별개 행 + 지하 우선 정렬 | ✅ |
+| A-05 | **부정 케이스** — 스마트빌A동/B동은 위치로 연결되지 않는다 | ✅ |
+| A-06 | 없는 시점은 `null` — 인접 호 자동 대체 없음 | ✅ |
+| A-07 | 필지 없음 → `unit_not_found` + `units:[]` | ✅ |
+| A-08·A-09 | `partial_data` / `partition_missing` / `no_notice` 3분기 + **지역 미고시** | ✅ |
+| A-11 | 특수지 2~9·A → `unjoinable_parcel` | ✅ |
+| A-13 | 형식 오류도 HTTP 200 | ✅ |
+| — | 키 충돌 시 `ambiguous` — 시점 간 연결 안 함 | ✅ |
+| — | 건물명 드리프트 → `linkedBy:"position"` + 시점별 원문 | ✅ |
+| — | `pickNoticeDate` §164③ 직전 고시분 | ✅ |
+
+**실데이터 스모크**(적선동 80, 2013·2021·2026 동시 조회): `dateStatus` 3시점 `ok`,
+물건 170건(위치 연결 전 340건), **3시점 전부 충전 60건**, `availableDates` 22종.
+
+**Phase 3 구현 시 작성** — A-02·A-03(배치별 충전 필드) · A-10(런처 disabled) · A-12(면적 상이 경고).
 
 **Phase 0에서 이미 GREEN**: PNU 조인(Vworld 실측 2건) · 층구분 충돌(0.370%) · 건물명 충돌(0.225%) · 키 안정성(2년 93.9% / 8년 66.1% / 16년 53.6%) · §164③ 고시일자 규칙.
 

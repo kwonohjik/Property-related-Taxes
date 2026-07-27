@@ -15,28 +15,12 @@
  * 계획: docs/01-plan/features/commercial-officetel-standard-price-lookup.plan.md §6 Phase 1
  */
 
+import { stdPriceUnitKey, type StdPriceUnit } from "@/lib/stdprice/types";
+
+export type { StdPriceUnit };
+
 /** 원본 형식 세대. 판별은 **값 sniffing** — 헤더명으로 판별하면 2019에서 오판한다. */
 export type Generation = "quoted-code" | "plain-code" | "plain-label" | "padded-label";
-
-/**
- * 파티션에 저장되는 물건(호) 1건.
- * 필드명을 1~2자로 줄인 것은 26,458,783행 × 13필드의 JSON 키 반복 비용 때문이다.
- */
-export interface StdPriceUnit {
-  b: string; // 법정동코드 10자리
-  s: string; // 특수지코드 — "0"=일반 "1"=산 "2"~"9" "A" ★ number 금지 ("A" 실재)
-  bn: number; // 번지(본번)
-  jn: number; // 호(부번)
-  nm: string; // 건물명(상가건물블록주소) ★ 물건 키 구성요소
-  dg: string; // 동(상가건물동주소)
-  fc: 1 | 4 | 5; // 층구분 1=지하 4=지상 5=옥탑 ★ 물건 키 구성요소
-  fl: string; // 층
-  ho: string; // 호수
-  p: number; // 고시가격 원/㎡
-  ea: number; // 전용면적 ㎡
-  sa: number; // 공유면적 ㎡
-  k: 1 | 2 | 3; // 건물구분 1=상가 2=오피스텔 3=복합건물
-}
 
 /** 원본 1행을 컬럼 정규화명으로 접근하기 위한 인덱스 맵. */
 export type ColumnIndex = Record<string, number>;
@@ -297,14 +281,8 @@ export function sigunguOf(bjdCode: string): string {
   return bjdCode.slice(0, 5);
 }
 
-/**
- * 물건 키 — 건물명·층구분 **필수 포함**.
- * 층구분 제외 시 0.370%, 건물명 제외 시 0.225%가 충돌한다(2021 전수 실측).
- * 적선현대빌딩 1층 1호는 지상 5,898,000원 / 지하 2,485,000원으로 단가가 2.4배 다르다.
- */
-export function unitKey(u: StdPriceUnit): string {
-  return `${u.nm}|${u.dg}|${u.fc}|${u.fl}|${u.ho}`;
-}
+/** 물건 키 — 조회 계층과 동일 정의를 써야 하므로 `lib/stdprice/types.ts`를 재수출한다. */
+export const unitKey = stdPriceUnitKey;
 
 /** 필지 키 — PNU 조인 4요소. */
 export function parcelKey(u: StdPriceUnit): string {
