@@ -101,4 +101,20 @@ describe("[FRACTIONAL-BASIC-MERGE] 지분 모드 companion basic ← primary 병
     const ownershipBlock = issues.find((i) => i.assetIndex === 1 && /지분/.test(i.message));
     expect(ownershipBlock).toBeDefined();
   });
+
+  it("A3-sum: 지분율 합계≠100% 차단 (60%+30%=90% → 과소과세 방지)", () => {
+    const form = fractionalLandForm(true);
+    form.assets[0] = { ...form.assets[0], ownershipNumerator: "60", ownershipDenominator: "100" };
+    form.assets[1] = { ...form.assets[1], ownershipNumerator: "30", ownershipDenominator: "100" };
+    const issues = collectStepIssues(0, form);
+    const sumBlock = issues.find((i) => /합계|100%/.test(i.message));
+    expect(sumBlock).toBeDefined();
+  });
+
+  it("A3-sum-pass: 지분율 합계=100% 통과 (60%+40%)", () => {
+    const form = fractionalLandForm(true); // 60 + 40 = 100
+    const issues = collectStepIssues(0, form);
+    const sumBlock = issues.find((i) => /지분율.*합계|합계.*100%/.test(i.message));
+    expect(sumBlock).toBeUndefined();
+  });
 });
