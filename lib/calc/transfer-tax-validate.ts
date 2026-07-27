@@ -113,6 +113,22 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         });
     }
 
+    // 지분 분할 취득 — 전 지분율 합계 = 100% 검증. 미달/초과 시 양도가액(총양도가×지분율) 합이
+    // 총액과 달라져 과소/과대과세. (0.005 = 0.5%p 허용 — 33.33×3=99.99 등 2자리 반올림 흡수.)
+    if (fullFractional) {
+      const sumRatio = form.assets.reduce((s, a) => {
+        const n = parseFloat(a.ownershipNumerator);
+        const d = parseFloat(a.ownershipDenominator);
+        return s + (isFinite(n) && isFinite(d) && d > 0 ? n / d : 0);
+      }, 0);
+      if (Math.abs(sumRatio - 1) > 0.005) {
+        issues.push({
+          step,
+          message: `지분 분할 취득: 전체 지분율 합계가 100%가 되어야 합니다 (현재 ${(sumRatio * 100).toFixed(2)}%).`,
+        });
+      }
+    }
+
     // actual 모드 합계 검증 — 지분 모드 자산이 하나라도 있으면 ratio 자동 적용으로 합계 검증 생략.
     // 동일 물건 지분 단계취득은 ratio 합 = 100% 가정으로 시스템이 자동 분배.
     const anyFractional = form.assets.some((a) => {
