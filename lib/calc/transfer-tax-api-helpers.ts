@@ -300,9 +300,11 @@ export function isFullFractionalBundle(assets: AssetForm[]): boolean {
  * 같은 물건을 지분(%)별로 나눈 것이므로 자산종류·면적·토지성격은 primary와 동일.
  * UI에서 companion ① 기본정보를 숨기므로, API 변환·validate가 이 병합값을 사용한다.
  *
- * 병합 필드는 buildAssetPayload가 companion에서 emit하는 것(assetKind·landNature·
- * acquisitionArea) + validate가 basic으로 검사하는 것(면적·환지 시나리오)의 합집합으로 한정.
- * 소재지·좌표는 companion payload 미emit·validate 미검사이므로 병합 제외(dead injection 방지).
+ * 병합 필드 = 같은 물건·같은 양도 사건이라 전 지분 공통인 값:
+ *  - 기본정보(①): assetKind·acquisitionArea·transferArea·areaScenario·landNature
+ *    (buildAssetPayload emit + validate basic 검사의 합집합. 소재지·좌표는 미emit·미검사 → 제외)
+ *  - 양도정보(②): transferType·transferCause (양도 형태 드라이버 — companion ② UI 숨김 대응.
+ *    지분 분할은 일반 양도만 지원하므로 부담부/수용 하위필드는 불요 — 비양립 조합은 validate 차단)
  * 취득측(취득원인·취득일·취득가액·지분율·필요경비)은 지분별 상이 → 병합 안 함.
  */
 export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
@@ -313,6 +315,8 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
     transferArea: primary.transferArea,
     areaScenario: primary.areaScenario,
     landNature: primary.landNature,
+    transferType: primary.transferType,
+    transferCause: primary.transferCause,
   };
 }
 

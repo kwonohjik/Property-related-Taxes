@@ -68,7 +68,7 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     const fullFractional = isFullFractionalBundle(form.assets);
     const primaryAsset = form.assets[0];
 
-    // 지분 모드 미지원 조합 차단 — 겸용주택·특수 자산종류는 지분별 안분 UI 부재.
+    // 지분 모드 미지원 조합 차단 — 지분별 안분 UI 부재 또는 양도가액 모델 비양립.
     if (fullFractional && primaryAsset) {
       if (primaryAsset.assetKind === "housing" && primaryAsset.isMixedUseHouse) {
         issues.push({ step, assetIndex: 0, message: "겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
@@ -78,6 +78,12 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         primaryAsset.assetKind === "redevelopment_apt"
       ) {
         issues.push({ step, assetIndex: 0, message: "해당 자산 종류는 지분 분할 취득 계산을 지원하지 않습니다. 지분 분할 토글을 끄고 계산하세요." });
+      } else if (
+        primaryAsset.transferType === "burdened_gift" ||
+        primaryAsset.transferCause === "public_expropriation"
+      ) {
+        // 지분 분할 양도가액 = 총양도가 × 지분율. 부담부증여(§159 채무액 기반)·공익수용(보상가액)과 비양립.
+        issues.push({ step, assetIndex: 0, message: "부담부증여·공익수용은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
       }
     }
 

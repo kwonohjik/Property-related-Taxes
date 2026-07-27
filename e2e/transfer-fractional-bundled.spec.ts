@@ -123,9 +123,13 @@ test.describe("지분 모드 분할취득 일괄양도 계산 (PR #826)", () => 
     const asset1 = page.locator('[data-asset-card-index="0"]');
     const asset2 = page.locator('[data-asset-card-index="1"]');
 
-    // 자산2: ① 기본정보 섹션 숨김 → 안내배너 노출 (기본정보 아코디언 헤더 부재)
+    // 자산2: ① 기본정보·② 양도정보 섹션 숨김 → 안내배너 노출
     await expect(asset2.getByTestId("fractional-basic-inherited-notice")).toBeVisible();
-    await expect(asset2.getByText("자산종류·소재지·면적은 자산 1과 동일하게 적용됩니다.")).toBeVisible();
+    await expect(asset2.getByText(/자산종류·소재지·면적·양도정보는 자산 1과 동일/)).toBeVisible();
+    // ② 양도정보 섹션(양도 형태 라디오)이 자산2에는 없어야 함 — 라디오 라벨로 판정
+    // ("양도정보"는 배너 문구에 포함돼 substring 충돌 → 라디오 고유 라벨로 확인)
+    await expect(asset2.getByText("일반 양도")).toHaveCount(0);
+    await expect(asset2.getByText("부담부증여 (소령 §159)")).toHaveCount(0);
 
     // 자산1 ② 양도정보: 지분 모드는 양도가액 자동계산 → "양도시 기준시가"(§166⑥ 안분) 입력 미노출
     await expect(asset1.getByText("양도시 기준시가 (원)")).toHaveCount(0);
