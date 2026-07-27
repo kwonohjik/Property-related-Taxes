@@ -281,6 +281,42 @@ export function isFractionalOwnership(asset: AssetForm): boolean {
 }
 
 /**
+ * "진짜 지분 모드(같은 물건 분할 취득)" 판정 — 전 자산이 fractional(분자<분모)인 경우만 true.
+ * route.ts:423 `isFullFractionalBundle`(primary + 전 companion fractional)와 동일 기준.
+ * companion 모드(다른 물건 함께양도)에 우연히 부분소유(1/2) 자산이 섞인 경우(primary=100/100)는
+ * every=false로 배제 — 그 경우 각 자산 basic이 상이하므로 primary 병합을 하면 안 됨.
+ */
+export function isFullFractionalBundle(assets: AssetForm[]): boolean {
+  return (
+    assets.length > 1 &&
+    assets.every((a) =>
+      isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator),
+    )
+  );
+}
+
+/**
+ * 지분 모드 companion 자산에 primary의 기본정보(basic)를 병합한 새 자산 반환(순수 함수).
+ * 같은 물건을 지분(%)별로 나눈 것이므로 자산종류·면적·토지성격은 primary와 동일.
+ * UI에서 companion ① 기본정보를 숨기므로, API 변환·validate가 이 병합값을 사용한다.
+ *
+ * 병합 필드는 buildAssetPayload가 companion에서 emit하는 것(assetKind·landNature·
+ * acquisitionArea) + validate가 basic으로 검사하는 것(면적·환지 시나리오)의 합집합으로 한정.
+ * 소재지·좌표는 companion payload 미emit·validate 미검사이므로 병합 제외(dead injection 방지).
+ * 취득측(취득원인·취득일·취득가액·지분율·필요경비)은 지분별 상이 → 병합 안 함.
+ */
+export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
+  return {
+    ...a,
+    assetKind: primary.assetKind,
+    acquisitionArea: primary.acquisitionArea,
+    transferArea: primary.transferArea,
+    areaScenario: primary.areaScenario,
+    landNature: primary.landNature,
+  };
+}
+
+/**
  * ⑬ 1990.8.30. 이전 취득 토지 기준시가 환산 sub-object 빌드 (단건·다건 공용 단일 진실).
  *
  * 엔진 STEP 0.4(`transfer-tax.ts`)가 pre1990Land 존재 시 취득기준시가를 grade에서 재산출하고

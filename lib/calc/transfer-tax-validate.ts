@@ -18,7 +18,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
-import { isMultiHouseSurchargeSuppressed, provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
+import { isMultiHouseSurchargeSuppressed, provisoGate, effectiveProvisoReason, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -64,9 +64,32 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: "총 양도가액을 입력하세요." });
     }
 
-    // 자산별 검증 — 자산당 첫 오류 1건씩 일괄 수집
+    // 지분 모드(같은 물건 분할취득) 여부 — companion ① 기본정보 UI 숨김 대응.
+    const fullFractional = isFullFractionalBundle(form.assets);
+    const primaryAsset = form.assets[0];
+
+    // 지분 모드 미지원 조합 차단 — 겸용주택·특수 자산종류는 지분별 안분 UI 부재.
+    if (fullFractional && primaryAsset) {
+      if (primaryAsset.assetKind === "housing" && primaryAsset.isMixedUseHouse) {
+        issues.push({ step, assetIndex: 0, message: "겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
+      } else if (
+        primaryAsset.assetKind === "commercial_building" ||
+        primaryAsset.assetKind === "general_building" ||
+        primaryAsset.assetKind === "redevelopment_apt"
+      ) {
+        issues.push({ step, assetIndex: 0, message: "해당 자산 종류는 지분 분할 취득 계산을 지원하지 않습니다. 지분 분할 토글을 끄고 계산하세요." });
+      }
+    }
+
+    // 자산별 검증 — 자산당 첫 오류 1건씩 일괄 수집.
+    // 지분 모드 companion(i>0)은 ① 기본정보를 숨기므로 primary basic을 병합해 검사
+    // (자산종류·면적이 primary값 → basic 미입력 spurious 차단 방지, 취득측은 companion 고유값 유지).
     for (let i = 0; i < form.assets.length; i++) {
-      const message = validateAssetEntry(form.assets[i], i, form);
+      const entry =
+        fullFractional && i > 0 && primaryAsset
+          ? mergePrimaryBasic(form.assets[i], primaryAsset)
+          : form.assets[i];
+      const message = validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });
     }
 

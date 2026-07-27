@@ -13,7 +13,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
+import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -44,6 +44,9 @@ export type TransferAPIResult = SingleTransferResult | BundledTransferResult | M
 export async function callTransferTaxAPI(form: TransferFormData): Promise<TransferAPIResult> {
   const primary = form.assets[0];
   if (!primary) throw new Error("자산이 없습니다.");
+
+  // 지분 모드(같은 물건 분할취득) 여부 — companion basic을 primary에서 병합할지 게이트.
+  const fractionalBundleMerge = isFullFractionalBundle(form.assets);
 
   // ── 대표 자산 감면 (자산별 reductions 배열에서 빌드) ──
   const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause, primary.expropriationNoticeDate);
@@ -636,7 +639,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               : undefined,
           companionAssets: form.assets
             .slice(1)
-            .map((a) => buildAssetPayload(a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold)),
+            // 지분 모드(같은 물건 분할취득): companion ① 기본정보를 UI에서 숨기므로
+            // primary basic(자산종류·면적·토지성격)을 병합해 엔진에 전달 (mergePrimaryBasic).
+            .map((a) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold)),
           bundledSaleMode: form.bundledSaleMode,
           // primary 확정 양도가액.
           //  - 지분 모드: 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —
