@@ -18,6 +18,8 @@ interface Props {
   contractTotalPrice?: string;
   /** 주 자산(assets[0]) — 증환지 증가분의 양도시 기준시가 live fallback 소스 */
   primaryAsset?: AssetForm;
+  /** 지분 분할 모드(splitMode==="fractional") — 양도가액 자동계산·기준시가 안분 입력 숨김 게이트 */
+  isFractionalSplit?: boolean;
 }
 
 export function AssetSectionTransfer({
@@ -28,6 +30,7 @@ export function AssetSectionTransfer({
   transferDate,
   contractTotalPrice,
   primaryAsset,
+  isFractionalSplit,
 }: Props) {
   // 증환지 증가분: 당초분(assets[0]) 양도시 기준시가에서 live fallback (증가분 추가 순서와 무관하게 자동).
   // 사용자가 증가분 카드에서 직접 입력하면 자기 값이 우선(override). API·validate도 동일 fallback.
@@ -105,6 +108,9 @@ export function AssetSectionTransfer({
           ownershipNumerator={asset.ownershipNumerator}
           ownershipDenominator={asset.ownershipDenominator}
           contractTotalPrice={contractTotalPrice}
+          // 지분 분할 모드는 양도가액 자동계산 — 기준시가 안분 입력 숨김.
+          // 부담부증여(§159)는 standardPriceAtTransfer가 분모(C) 산정에 필요하므로 제외.
+          isFractionalSplit={isFractionalSplit && asset.transferType !== "burdened_gift"}
           standardPricePerSqmAtTransfer={effPerSqm}
           onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
         />
