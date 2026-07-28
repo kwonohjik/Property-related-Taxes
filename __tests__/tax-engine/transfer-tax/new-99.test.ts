@@ -16,7 +16,7 @@ function baseInput(overrides?: Partial<New99Input>): New99Input {
     standardPriceAtAcquisition: 100_000_000,
     standardPriceAt5Years: 160_000_000,
     standardPriceAtTransfer: 250_000_000,
-    transferPrice: 500_000_000,
+    wholePropertyTransferPrice: 500_000_000,
     exclusiveAreaSqm: 84,
     acquisitionType: "from_builder",
     ...overrides,
@@ -76,11 +76,11 @@ describe("§99 evaluator anchor", () => {
   });
 
   it("B-7: 고가주택 단서 — 계약 1998.9 기준 165㎡ 이상 AND 6억 초과 → HIGH_VALUE_HOUSE", () => {
-    const hv = evaluateNew99(baseInput({ transferPrice: 700_000_000, exclusiveAreaSqm: 170 }));
+    const hv = evaluateNew99(baseInput({ wholePropertyTransferPrice: 700_000_000, exclusiveAreaSqm: 170 }));
     expect(hv.isEligible).toBe(false);
     expect(hv.ineligibleReasons.map((x) => x.code)).toContain("HIGH_VALUE_HOUSE");
     // 84㎡면 1998~2002.9 정의(면적 AND 가액)상 고가 아님
-    const ok = evaluateNew99(baseInput({ transferPrice: 700_000_000, exclusiveAreaSqm: 84 }));
+    const ok = evaluateNew99(baseInput({ wholePropertyTransferPrice: 700_000_000, exclusiveAreaSqm: 84 }));
     expect(ok.isEligible).toBe(true);
   });
 

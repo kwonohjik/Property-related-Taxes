@@ -50,7 +50,7 @@ function makeBaseInput(overrides: Partial<New993Input> = {}): New993Input {
     standardPriceAtAcquisition: 540_000_000,
     standardPriceAt5Years: 700_000_000,
     standardPriceAtTransfer: 900_000_000,
-    transferPrice: 1_200_000_000,
+    wholePropertyTransferPrice: 1_200_000_000,
     exclusiveAreaSqm: 138.2,
     region: "outside_speculation",
     isResident: true,
@@ -199,7 +199,7 @@ describe("§99의3 — 적용 배제 (우선순위 7단계)", () => {
     // 분양계약일이 2003.5.1 → 적용기준일 2003.1.1~2008.10.5 → 6억 초과 시 고가
     const input = makeBaseInput({
       contractDate: new Date("2003-05-01"),
-      transferPrice: 700_000_000, // 6억 초과
+      wholePropertyTransferPrice: 700_000_000, // 6억 초과
     });
     const r = evaluateNew993(input);
     expect(r.isEligible).toBe(false);
@@ -213,7 +213,7 @@ describe("§99의3 — 적용 배제 (우선순위 7단계)", () => {
     const input = makeBaseInput({
       contractDate: new Date("2001-05-24"),
       exclusiveAreaSqm: 138.2,
-      transferPrice: 1_200_000_000,
+      wholePropertyTransferPrice: 1_200_000_000,
     });
     const r = evaluateNew993(input);
     expect(r.isEligible).toBe(true);
@@ -265,7 +265,7 @@ describe("§99의3 — Case 13: 자기건설 (2호) 본격 분기 (P2-2)", () =>
       acquisitionType: "self_built",
       contractDate: undefined,
       usageApprovalDate: new Date("2003-05-01"), // ~2008.10.5 → 6억 초과 시 고가
-      transferPrice: 700_000_000, // 6억 초과
+      wholePropertyTransferPrice: 700_000_000, // 6억 초과
     });
     const r = evaluateNew993(input);
     expect(r.isEligible).toBe(false);
