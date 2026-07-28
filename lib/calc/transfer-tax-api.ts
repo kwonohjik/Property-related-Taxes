@@ -476,6 +476,22 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             const scenario = p.areaScenario ?? "partial";
             const isReduction = scenario === "reduction";
 
+            /**
+             * 지분 스케일 — **금액 필드 전용**. 자산-수준 `transferPrice`가 이미
+             * `applyRatio(totalContractPrice, primaryRatio)`로 지분분인데(:212) 필지 금액이
+             * 물건 전체(100%)로 남으면 **양도가액 지분분 − 취득가액 100%** 혼합 스케일이 된다
+             * (실측: 지분 50%에서 양도차익 8,000만 vs 정본 2억 8,000만 — **2억 과소**).
+             * §97② 단서 swap 비교(자본적지출+양도비 vs 환산+개산공제)도 같은 이유로 뒤집힌다.
+             *
+             * ⚠️ **면적·기준시가·보상단가는 스케일하지 않는다** — 면적은 필지 간 안분 비율의
+             *    분자·분모로 함께 나타나 상쇄되고, 기준시가·보상단가는 물건의 단가라
+             *    환산 산식에서 분자·분모로 상쇄된다. `ratioed`(makeRatioed)와 달리 **0을
+             *    undefined로 바꾸지 않아** 기존 필드별 undefined 규약을 보존한다.
+             * (P3 PR #843이 split 파트 필드에서 고친 것과 동형 — 계획서 §10 별건 A3)
+             */
+            const scaleAmt = (n: number) =>
+              primaryFractional ? applyRatio(n, primaryRatio) : n;
+
             // 감환지: 의제 취득면적을 직접 계산해 API에 전달 (스키마 positive() 충족)
             const finalAcqArea = isReduction
               ? (parseFloat(p.priorLandArea) * parseFloat(p.allocatedArea)) /
@@ -495,7 +511,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
                   : p.acquisitionDate,
               acquisitionMethod: p.acquisitionMethod,
               acquisitionPrice:
-                p.acquisitionMethod === "actual" ? parseAmount(p.acquisitionPrice) : undefined,
+                p.acquisitionMethod === "actual" ? scaleAmt(parseAmount(p.acquisitionPrice)) : undefined,
               acquisitionArea: finalAcqArea,
               transferArea: finalTransferArea,
               standardPricePerSqmAtAcq:
@@ -516,15 +532,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
                   ? parseAmount(p.compensationBasisStdPrice) || undefined
                   : undefined,
               expenses:
-                p.acquisitionMethod === "actual" ? parseAmount(p.expenses) : undefined,
+                p.acquisitionMethod === "actual" ? scaleAmt(parseAmount(p.expenses)) : undefined,
               // §97② 단서 swap — 두 필드 합 > 0이면 분리 전송, 아니면 undefined (swap 비활성)
               capitalExpenditure:
                 (parseAmount(p.capitalExpenditure) || parseAmount(p.transferExpense))
-                  ? parseAmount(p.capitalExpenditure)
+                  ? scaleAmt(parseAmount(p.capitalExpenditure))
                   : undefined,
               transferExpense:
                 (parseAmount(p.capitalExpenditure) || parseAmount(p.transferExpense))
-                  ? parseAmount(p.transferExpense)
+                  ? scaleAmt(parseAmount(p.transferExpense))
                   : undefined,
               useDayAfterReplotting: p.useDayAfterReplotting || undefined,
               replottingConfirmDate:
