@@ -87,6 +87,25 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       }
     }
 
+    // 부담부증여 × 함께양도(일괄) 차단 — **침묵 오산 방지**.
+    //
+    // 일괄(bundled) 경로는 §159 안분 단계(STEP 0.48)를 태우지 않는다. 그런데 부담부증여를
+    // 단건에서 선택한 뒤 "같은 날 다른 부동산도 함께" 토글을 켜면 `transferType`이
+    // `burdened_gift`로 남고 **채무 입력 UI도 화면에 그대로 보이는데** 계산에서만 조용히
+    // 빠진다(양도 형태 라디오는 다자산에서 숨겨져 되돌릴 수도 없다).
+    // E2E 실측: mode=bundled 응답에 debtRatio·burdenedGift 흔적 0건.
+    //
+    // 다물건 계산기는 이미 같은 이유로 차단한다(`multi-transfer-tax-validate.ts:54`
+    // — "침묵 오산보다 명시 차단이 안전하다"). 함께양도 경로에도 같은 가드를 둔다.
+    if (form.assets.length > 1 && form.assets.some((a) => a.transferType === "burdened_gift")) {
+      issues.push({
+        step,
+        assetIndex: 0,
+        message:
+          "부담부증여(소령 §159)는 함께 양도와 같이 계산할 수 없습니다. 함께 양도 토글을 끄고 부담부증여를 단건으로 계산하세요.",
+      });
+    }
+
     // 자산별 검증 — 자산당 첫 오류 1건씩 일괄 수집.
     // 지분 모드 companion(i>0)은 ① 기본정보를 숨기므로 primary basic을 병합해 검사
     // (자산종류·면적이 primary값 → basic 미입력 spurious 차단 방지, 취득측은 companion 고유값 유지).
