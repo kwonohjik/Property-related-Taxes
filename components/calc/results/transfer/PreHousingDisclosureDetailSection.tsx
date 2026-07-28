@@ -7,6 +7,8 @@
  */
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+// 단건 결과·일괄 자산별 breakdown 양쪽에서 쓰이므로 **필요한 필드만** 요구한다.
+type PhdSource = Pick<TransferTaxResult, "preHousingDisclosureDetail">;
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface PhdRowProps {
@@ -38,7 +40,7 @@ function PhdRow({ label, value, formula, highlight }: PhdRowProps) {
 }
 
 interface Props {
-  result: TransferTaxResult;
+  result: PhdSource;
   /** PR-F1: printScoped 제거(PrintSelectionPanel 통일) → optional. 미전달 시 자체 인쇄 버튼 숨김. */
   onPrint?: () => void;
 }

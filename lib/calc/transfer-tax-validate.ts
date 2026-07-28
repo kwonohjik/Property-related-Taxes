@@ -15,7 +15,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
 import { isMultiHouseSurchargeSuppressed, provisoGate, effectiveProvisoReason, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
@@ -84,6 +84,49 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       ) {
         // 지분 분할 양도가액 = 총양도가 × 지분율. 부담부증여(§159 채무액 기반)·공익수용(보상가액)과 비양립.
         issues.push({ step, assetIndex: 0, message: "부담부증여·공익수용은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
+      }
+    }
+
+    // 특수 계산 경로 × 함께양도(일괄) 차단 — **침묵 오산 방지**.
+    //
+    // `app/api/calc/transfer/route.ts`는 **순서 있는 if-체인**이고 일괄 분기가 맨 앞이다:
+    //   5-a 일괄(:446, return :555) → 5-a-2 겸용(:568) → 5-a-3 일반건물(:611) → 5-b 단건(:660)
+    // 따라서 companion이 하나라도 있으면 **뒤쪽 특수 분기는 실행조차 되지 않는다**.
+    //
+    // 라우트 하네스 실측(단건 ↔ 함께양도 대조, 2026-07-28) — **메커니즘이 둘로 갈린다**:
+    //   겸용   : mode=mixed-use·housingPart 有 → 일괄에서 **분기 미실행**(primary가 assetKind=land로 강등)
+    //   재개발 : redevelopment 산출물 有 → **분기 미실행**
+    //   일반건물: 토지·건물 분리 안분 有 → **분기 미실행**. 단건이면 500으로 막히는 필수 검증
+    //            (zoneType)조차 일괄에서는 타지 않고 200이 나온다 — 미실행의 결정적 증거
+    //   부담부증여: STEP 0.48은 엔진 내부라 **실행되지만**, route가 transferPrice를 안분값으로
+    //            덮어써 §159 기준 gain과 **스케일 충돌** → 표시 필요경비가 **음수(-91,000,000)**
+    //
+    // 화면에는 특수 입력이 그대로 보이는데 계산이 어긋나므로 사용자가 알 수 없다.
+    // 다물건 계산기는 이미 같은 이유로 전부 차단한다(`multi-transfer-tax-validate.ts:54~65`
+    // — "침묵 오산보다 명시 차단이 안전하다"). 함께양도 경로에도 같은 가드를 둔다.
+    //
+    // `some()`인 이유: 라우트는 primary만 보지만 companion의 특수 입력도 `buildAssetPayload`가
+    // 담지 않아 함께 소실된다. 토글·자산추가 순서에 따라 어느 쪽에든 남을 수 있다.
+    //
+    // ⚠️ `commercial_building`은 **차단하지 않는다** — 전용 분기가 없어 엔진 내부에서 처리되며,
+    //    실측 결과 **양도차익이 단건과 동일**하고 필요경비도 음수가 아니다(계산 정상).
+    //    일괄 집계 결과에 자산별 상세 카드가 안 실리는 **표시 갭**일 뿐이라 막을 근거가 없다.
+    //    회귀 방어: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`
+    if (form.assets.length > 1) {
+      const SINGLE_ONLY: Array<[(a: AssetForm) => boolean, string]> = [
+        [(a) => a.transferType === "burdened_gift", "부담부증여(소령 §159)"],
+        [(a) => a.assetKind === "housing" && !!a.isMixedUseHouse, "겸용주택 분리계산"],
+        [(a) => a.assetKind === "redevelopment_apt", "재개발·재건축(시행령 §166)"],
+        [(a) => a.assetKind === "general_building", "일반건물(토지·건물 일괄)"],
+      ];
+      for (const [match, label] of SINGLE_ONLY) {
+        if (form.assets.some(match)) {
+          issues.push({
+            step,
+            assetIndex: 0,
+            message: `${label}은(는) 함께 양도와 같이 계산할 수 없습니다. 함께 양도 토글을 끄고 단건으로 계산하세요.`,
+          });
+        }
       }
     }
 

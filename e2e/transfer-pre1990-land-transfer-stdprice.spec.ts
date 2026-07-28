@@ -86,5 +86,15 @@ test.describe("1990.8.30 이전 취득 토지 환산 — 양도시 기준시가"
       .locator("xpath=following-sibling::p[1]")
       .textContent();
     expect((totalTax ?? "").trim()).not.toBe("");
+
+    // 핵심 단언 3 (R1-b 추출 회귀 가드): 1990 환산 산출근거 카드가 **여전히** 렌더된다.
+    //   이 블록은 `TransferTaxResultView` 인라인에서 `Pre1990LandValuationDetailCard`로
+    //   추출됐다(일괄 자산별 카드 재사용 목적). 추출로 단건 화면이 비면 곧바로 잡힌다.
+    // 인쇄용 숨김 사본이 함께 있으므로 **가시성으로 한정**한다 (e2e/CLAUDE.md §3 —
+    // .first()/.last()는 DOM 순서 가정이라 취약; 실제로 첫 매치가 hidden이었다).
+    const visible = (re: string | RegExp) => page.getByText(re).filter({ visible: true });
+    await expect(visible("1990.8.30. 이전 취득 토지 기준시가 환산")).toBeVisible();
+    await expect(visible("취득시 등급가액")).toBeVisible();
+    await expect(visible(/분모 \(min\(평균, 현재\)\)/)).toBeVisible();
   });
 });

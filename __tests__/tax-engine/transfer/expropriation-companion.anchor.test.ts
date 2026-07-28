@@ -92,12 +92,13 @@ describe("컴패니언(다자산) 공익수용 §164⑨ 1호 특례 (Q5)", () =>
     expect(companion.transferGain).toBe(327_333_334); // 특례 적용
   });
 
-  it("⚠️ 다자산 결과에 특례 **산출근거가 노출되지 않는다** (표시 갭 — 세액은 정확)", () => {
-    // `PerPropertyBreakdown`(transfer-aggregate.types.ts:82~)에 `expropriationValuationDetail`이
-    // **없다**(grep 0건). 단건 경로는 `TransferTaxResult.expropriationValuationDetail`로 노출해
-    // `ExpropriationValuationCard`가 min[] 3후보를 보여주지만, 다자산은 그 필드를 echo하지 않는다.
-    // ⇒ 세액은 맞으나 사용자가 **왜 취득가액이 커졌는지 확인할 수 없다**.
-    //   result 타입 확장 + 다자산 결과뷰 카드는 별건(계획 P8 — 결과 카드 재설계와 동반).
+  it("🟢 다자산 결과에 특례 **산출근거가 노출된다** (표시 갭 해소 — R1-a)", () => {
+    // 종전에는 `PerPropertyBreakdown`에 `expropriationValuationDetail`이 없어
+    // "세액은 맞는데 왜 취득가액이 커졌는지 확인할 수 없는" 상태였다(이 테스트가 그 갭을 고정했다).
+    //
+    // 정정: `TransferValuationDetailSource` 계약 + `pickValuationDetails()`(transfer-tax-aggregate.ts)가
+    // 평가·판정 상세 11종을 자산별 breakdown으로 옮기고, `ValuationDetailCards`가 렌더한다.
+    // 계산은 처음부터 정상이었으므로 **세액 anchor는 그대로 유지**된다.
     const r = calculateTransferTaxAggregate(
       {
         taxYear: 2020,
@@ -108,7 +109,7 @@ describe("컴패니언(다자산) 공익수용 §164⑨ 1호 특례 (Q5)", () =>
       rates,
     );
     const p = r.properties[0] as unknown as Record<string, unknown>;
-    expect(p.transferGain).toBe(327_333_334); // 세액 반영은 됨
-    expect(p.expropriationValuationDetail).toBeUndefined(); // 근거는 미노출 — 현행 고정
+    expect(p.transferGain).toBe(327_333_334); // 세액 — 무변경
+    expect(p.expropriationValuationDetail, "§164⑨ min[] 산출근거가 자산별로 실린다").toBeDefined();
   });
 });

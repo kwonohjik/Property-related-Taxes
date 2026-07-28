@@ -23,6 +23,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
+import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 
 interface Props {
   asset: AssetForm;
@@ -95,6 +96,12 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
   const mortgageDebt = parseAmount(asset.bgMortgageDebtAmount) || 0;
   const assumedDebtAmount = lendingDeposit + mortgageDebt;
 
+  // 공유지분 부담부증여 — 채무는 **해당 지분 인수분**을 입력받는다.
+  // 엔진은 평가액(§159의 A·C)만 지분분으로 축소하고 채무는 입력값 그대로 쓴다
+  // (물건 전체 채무를 ×지분율로 쪼개면 자동 안분 fallback 정책 위반).
+  const isFractional = getOwnershipRatio(asset) < 1;
+  const shareLabel = `${asset.ownershipNumerator}/${asset.ownershipDenominator}`;
+
   // 상증법 §60~§66 평가 미리보기 (useMemo — store 미러링 금지)
   const valuationPreview = useMemo(() => {
     const annualRent = parseAmount(asset.bgAnnualRentTotal) || 0;
@@ -151,8 +158,15 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
       {/* ② 인수 채무 입력 (3분리: 보증금·차입금·임대료) */}
       <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3 space-y-2">
         <p className="text-xs font-semibold text-rose-800">인수 채무 + 임대 평가 보조</p>
+        {isFractional && (
+          <p className="text-caption text-rose-700">
+            공유지분({shareLabel}) 부담부증여 — 아래 채무·보증금·임대료는 <b>이 지분에 대응하는
+            인수분</b>을 입력하세요. 기준시가·시가 등 <b>평가액은 물건 전체로 입력</b>하면
+            엔진이 지분분으로 환산합니다(소령 §159 — 평가액 A·C만 지분분, 채무 B는 실제 인수액).
+          </p>
+        )}
         <FieldCard
-          label="임대보증금 총액"
+          label={isFractional ? "임대보증금 (지분 인수분)" : "임대보증금 총액"}
           hint="채무로 인수 + 임대평가 환산에도 사용 (상증령 §50⑦)"
           trailing={<LawArticleModal legalBasis="상속세및증여세법 시행령 §50 ⑦" label="상증령 §50⑦" />}
         >
@@ -163,7 +177,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
           />
         </FieldCard>
         <FieldCard
-          label="담보차입금 (실제 채무잔액)"
+          label={isFractional ? "담보차입금 (지분 인수분)" : "담보차입금 (실제 채무잔액)"}
           hint="채무로 인수 — 담보평가 산정에도 사용"
         >
           <CurrencyInput label=""

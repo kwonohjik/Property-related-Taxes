@@ -38,10 +38,84 @@ import {
   type AssetRecord,
 } from "./transfer-tax-aggregate-helpers";
 
+
+
+/**
+ * 단건 결과 → 자산별 breakdown으로 옮길 **평가·판정 상세 13종** (R1-a·R1-b).
+ *
+ * `pickReductionDetails()`(감면 24종)와 같은 목적·같은 유지 규칙이다.
+ * 목록은 `TransferValuationDetailSource`(transfer-result.types.ts)와 **1:1로 맞춘다** —
+ * 타입만 넓히고 여기를 빠뜨리면 일괄 경로에서 값이 조용히 비어 화면에 안 뜬다.
+ * 회귀 가드: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`
+ */
+function pickValuationDetails(r: SingleResult): TransferValuationDetailSource {
+  return {
+    commercialBuildingValuationDetail: r.commercialBuildingValuationDetail,
+    nonBusinessLandJudgmentDetail: r.nonBusinessLandJudgmentDetail,
+    nblSurchargeExcluded: r.nblSurchargeExcluded,
+    multiHouseSurchargeDetail: r.multiHouseSurchargeDetail,
+    expropriationValuationDetail: r.expropriationValuationDetail,
+    housingExpropriationValuationDetail: r.housingExpropriationValuationDetail,
+    auctionValuationDetail: r.auctionValuationDetail,
+    preHousingDisclosureDetail: r.preHousingDisclosureDetail,
+    rentalHousingExceptionDetail: r.rentalHousingExceptionDetail,
+    familyBusinessDetail: r.familyBusinessDetail,
+    carryoverTaxationDetail: r.carryoverTaxationDetail,
+    splitDetail: r.splitDetail,
+    pre1990LandValuationDetail: r.pre1990LandValuationDetail,
+  };
+}
+
 export { classifyRateGroup };
 
 /** 단건 엔진 결과 타입 (import 순환 회피용 별칭) */
 type SingleResult = ReturnType<typeof calculateTransferTax>;
+
+/**
+ * 단건 결과 → 자산별 breakdown으로 옮길 **감면·취득가액 상세 24종**을 추린다.
+ *
+ * ## 왜 필요한가
+ *
+ * 일괄(bundled) 모드는 자산별로 `calculateTransferTax`를 완전히 호출하므로 **계산은 정상**인데,
+ * `PerPropertyBreakdown` 조립 시 결과의 Detail을 버려서 **산출근거 카드가 화면에 안 나왔다**.
+ * 감면은 금액이 크고 근거 제시 요구가 강해 우선 복구한다.
+ *
+ * ## 유지 규칙
+ *
+ * 필드 목록은 `TransferReductionDetailSource`(transfer-result.types.ts)와 **1:1로 맞춘다**.
+ * 타입만 넓히고 여기를 빠뜨리면 일괄 경로에서 값이 조용히 비어 화면에 안 뜬다(침묵 누락).
+ * 회귀 가드: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`가 두 목록의
+ * 동기화를 소스 수준에서 검증한다.
+ */
+function pickReductionDetails(r: SingleResult): TransferReductionDetailSource {
+  return {
+    selfFarmingReductionDetail: r.selfFarmingReductionDetail,
+    inheritedAcquisitionDetail: r.inheritedAcquisitionDetail,
+    inheritedHouseValuationDetail: r.inheritedHouseValuationDetail,
+    newHousingReductionDetail: r.newHousingReductionDetail,
+    rentalReductionDetail: r.rentalReductionDetail,
+    rental97LthdDetail: r.rental97LthdDetail,
+    rental97TaxDetail: r.rental97TaxDetail,
+    new994Detail: r.new994Detail,
+    unsold989Detail: r.unsold989Detail,
+    new99Detail: r.new99Detail,
+    unsold988Detail: r.unsold988Detail,
+    unsold987Detail: r.unsold987Detail,
+    unsold992Detail: r.unsold992Detail,
+    unsold983Detail: r.unsold983Detail,
+    unsold985Detail: r.unsold985Detail,
+    unsold986Detail: r.unsold986Detail,
+    unsold982Detail: r.unsold982Detail,
+    unsold984Detail: r.unsold984Detail,
+    unsold98Detail: r.unsold98Detail,
+    new993Detail: r.new993Detail,
+    publicExpropriationDetail: r.publicExpropriationDetail,
+    replacementLandDetail: r.replacementLandDetail,
+    gbDesignatedLandDetail: r.gbDesignatedLandDetail,
+    specialHouseExclusionDetail: r.specialHouseExclusionDetail,
+  };
+}
+
 
 /** effectCategory === "income_deduction"인 하이브리드 detail 탐색(§98의3·§98의5·§98의6·§98의7 등 5년후). */
 function activeIncomeDeductionHybrid(r: SingleResult) {
@@ -141,6 +215,10 @@ import type {
   LossOffsetRow,
   AggregateTransferResult,
 } from "./types/transfer-aggregate.types";
+import type {
+  TransferReductionDetailSource,
+  TransferValuationDetailSource,
+} from "./types/transfer-result.types";
 
 export type {
   RateGroup,
@@ -554,9 +632,8 @@ export function calculateTransferTaxAggregate(
       reducibleIncome,
       reductionAggregated,
       reductionAllocationRatio,
-      publicExpropriationDetail: r.result.publicExpropriationDetail,
-      replacementLandDetail: r.result.replacementLandDetail,
-      gbDesignatedLandDetail: r.result.gbDesignatedLandDetail,
+      ...pickReductionDetails(r.result),
+      ...pickValuationDetails(r.result),
       penaltyTax: r.result.isExempt ? 0 : r.result.penaltyTax ?? 0,
       penaltyBase: r.result.isExempt ? 0 : r.result.penaltyBase ?? 0,
       filingDelayedPenaltyTax: r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0,
