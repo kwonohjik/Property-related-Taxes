@@ -583,11 +583,12 @@ export function TransferTaxResultView({
       <DisclaimerBanner />
 
       {/* ⑦ 상업용건물·오피스텔 환산취득가 산정 근거 상세 (소령 §164⑥, §176조의2②2호) */}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {(result as any).commercialBuildingValuationDetail && (
+      {/* `as any` 제거(2026-07-28) — `TransferTaxResult.commercialBuildingValuationDetail`이
+          실재하므로 캐스트가 불필요하다. 이 캐스트가 경계의 타입 검사를 꺼두고 있었던 탓에,
+          카드가 엔진 타입을 로컬 재선언해 7개 필드가 누락된 상태가 컴파일 에러로 드러나지 않았다. */}
+      {result.commercialBuildingValuationDetail && (
         <CommercialBuildingValuationDetailCard
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          detail={(result as any).commercialBuildingValuationDetail}
+          detail={result.commercialBuildingValuationDetail}
           transferPrice={formData ? (parseAmount(formData.contractTotalPrice) || 0) : 0}
           acquisitionGain={result.transferGain ?? undefined}
           longTermDeduction={result.longTermHoldingDeduction ?? undefined}
