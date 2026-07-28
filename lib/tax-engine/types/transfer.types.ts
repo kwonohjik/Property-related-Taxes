@@ -477,6 +477,14 @@ export interface TransferTaxInput {
   /** 건물 파트 취득 방식 — landAcqMode와 동일 규칙, 파트 독립 */
   buildingAcqMode?: "actual" | "estimated" | "appraisal" | "salesCase";
   /**
+   * **별개 취득** — 토지·건물을 서로 다른 시점에 각각 취득해 취득가액이 파트별로 실재하는가.
+   *
+   * true면 취득가액 축이 파트별로 완결된다(총액 잔액 도출·비율 안분 폐지, 소득세법 §97①1호·§114⑦).
+   * 판정은 API 변환의 `isSeparateAcquisition()`(lib/calc/transfer-tax-split-acq-mode.ts)이 담당한다 —
+   * 폼 전용 플래그(`hasSeperateLandAcquisitionDate`·`isMixedUseHouse`)가 필요해 엔진은 재판정할 수 없다.
+   */
+  isSeparateAcquisition?: boolean;
+  /**
    * 양도 방식 (구분양도|일괄양도) — 엔진 명시 입력.
    * "actual": 계약서 등 토지·건물 실지 양도가액 구분 기재(land/buildingTransferPrice 직접).
    * "apportioned": 구분 불분명 → 양도시 기준시가 비율 안분(부가세령 §64①1호, 소득령 §166⑥).

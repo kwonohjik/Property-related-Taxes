@@ -154,7 +154,15 @@ if (land == null || building == null) return null;   // 상위에서 "분리 계
 ```
 
 - 소유 파트만 계산하는 `selfOwns` 경로는 비소유 파트를 null 검사 대상에서 제외한다.
-- `calcSplitGain`이 null이면 호출부는 **비분리 단일 경로로 강등하지 않고 오류를 표면화**해야 한다 — 이것이 §3.1 결함의 재발 방지선이다. (호출부 처리 방식은 Do 단계에서 `transfer-tax.ts` 실측 후 확정 — **확인 필요**)
+- `calcSplitGain`이 null이면 호출부는 **비분리 단일 경로로 강등하지 않고 오류를 표면화**해야 한다 — 이것이 §3.1 결함의 재발 방지선이다.
+
+> **[P2a Do 확정 — 종전 "확인 필요" 해소]** 실측 결과 `calcTransferGain`(`transfer-tax-helpers.ts:278-300`)은
+> `if (splitResult) { … }` 구조라 **null이면 그대로 비분리 단일 경로로 흘러간다**. 즉 null 반환으로는
+> 오류를 표면화할 수 없고, §3.1과 동형의 조용한 강등이 재발한다.
+> → `calcSplitAcquisitionPrice`가 **`TaxCalculationError(INVALID_INPUT)`를 throw**한다
+> (`tax-errors.ts` 기존 인프라 재사용, Route handler `app/api/calc/transfer/route.ts:673`이
+> `err instanceof TaxCalculationError`로 구조화 응답 처리). 비소유 파트는 검사 대상에서 제외한다.
+> null 반환은 `calcOnePart` 내부 신호로만 쓰고 함수 경계를 넘지 않는다.
 
 ### E5. 지분 모드 — 파트 필드 `applyRatio` (Q5)
 
@@ -185,6 +193,13 @@ land/buildingSalesCaseValue: 동일
 
 - 기존 §7.2(양도시 기준시가 필수) 검증은 **유지**.
 - V0은 P1(PR #837)에서 입력 경로가 열린 뒤에야 의미가 있다 → **P4에서 착지**.
+
+> **[P2a Do 확정 — V1·V2·V4를 P4에서 P2a로 앞당김]** 엔진 차단(E2·E3)만 먼저 내보내면
+> 파트 미입력이 **필드 오류가 아니라 계산 실패**로만 보인다 — ⑧ 규칙("UI 통과 ↔ 차단 모순 금지")
+> 위반 상태로 한 PR이 존재하게 된다. 같은 변경 표면이므로 함께 착지시켰다.
+> V4는 "제거"가 아니라 **별개 취득 한정 제외**로 구현했다 — 동시 취득(겸용·`selfOwns` 강제 분리)은
+> 잔액 규칙이 살아 있어 총액 초과 검증이 여전히 필요하다.
+> 게이트는 엔진 전송값과 동일한 `isSeparateAcquisition()` 단일 소스를 재사용한다.
 - `transfer-validate-date-cross-rules.test.ts:192,201`의 split 픽스처에 파트 금액·기준시가가 없다 → V0~V2 도입 시 영향 여부 **확인 필요**(해당 테스트는 `.some(msg 포함)` 단언이라 추가 이슈로는 깨지지 않을 가능성이 높으나, `validateSplitDirectInputs`가 **첫 오류만 반환**하는 구조라 순서에 따라 기존 메시지가 가려질 수 있다 — Do 단계 실측 필수).
 
 ---

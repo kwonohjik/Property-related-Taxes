@@ -19,12 +19,58 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
   const n = parseAmount(v ?? "");
   return n > 0 ? n : undefined;
+}
+
+/**
+ * V1·V2 — 별개 취득 자산의 파트별 취득가액 필수 검증.
+ *
+ * 토지·건물을 서로 다른 시점에 취득했다면 취득가액은 파트별로 실재하며, 총액에서 잔액을
+ * 도출하거나 기준시가 비율로 안분할 법적 근거가 없다(소득세법 §97①1호·§114⑦, 소득령 §176의2③).
+ * 엔진이 미입력을 차단하므로(파트별 완결) 여기서 같은 조건을 필드 오류로 먼저 알린다.
+ *
+ * 환산(estimated)은 총액 미참조 구조(양도가 × 기준시가 비율)라 대상이 아니다.
+ * 비소유 파트(`selfOwns≠both`)도 대상이 아니다 — 그 파트의 양도차익은 버려진다.
+ */
+function validateSeparateAcqParts(asset: AssetForm, label: string): string | null {
+  const selfOwns = asset.selfOwns ?? "both";
+  const parts = [
+    {
+      owned: selfOwns !== "building_only",
+      name: "토지",
+      mode: effectivePartAcqMode(asset.landAcqMode, asset),
+      price: asset.landAcquisitionPrice,
+      salesCase: asset.landSalesCaseValue,
+    },
+    {
+      owned: selfOwns !== "land_only",
+      name: "건물",
+      mode: effectivePartAcqMode(asset.buildingAcqMode, asset),
+      price: asset.buildingAcquisitionPrice,
+      salesCase: asset.buildingSalesCaseValue,
+    },
+  ];
+
+  for (const p of parts) {
+    if (!p.owned) continue;
+    if (p.mode === "actual" || p.mode === "appraisal") {
+      if (opt(p.price) == null) {
+        const what = p.mode === "appraisal" ? "감정가액" : "취득가액";
+        return `${label}: ${p.name} ${what}을 입력하세요 — 토지·건물 취득시기가 다르면 나머지 금액에서 자동 계산되지 않습니다(소득세법 §97①1호·§114⑦).`;
+      }
+    } else if (p.mode === "salesCase") {
+      if (opt(p.salesCase) == null) {
+        return `${label}: ${p.name} 매매사례가액을 입력하세요 — 매매사례 탐색 기간이 파트별 취득일 전후 3개월로 서로 달라 총액을 안분할 수 없습니다(소득령 §176의2③1호).`;
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -35,6 +81,18 @@ function opt(v: string | undefined): number | undefined {
  */
 export function validateSplitDirectInputs(asset: AssetForm, label: string): string | null {
   if (!asset.hasSeperateLandAcquisitionDate) return null;
+
+  // ── V1·V2. 별개 취득 — 취득가액 파트별 필수 (함수 최상단 필수) ──────────────
+  // 아래 §7.2 검증과 `saleSplitMode !== "actual"` early-return(:57 상당)·`skipTotals`(지분·
+  // 부담부증여·재개발 제외)보다 **앞**에 둔다. 뒤에 놓으면 그 경로들이 미검증이 되어,
+  // 엔진의 파트별 필수 차단(transfer-tax-split-gain.ts calcOnePart → TaxCalculationError)이
+  // 필드 오류가 아니라 계산 실패로만 보인다(⑧ 규칙 — UI 통과 ↔ 엔진 차단 모순).
+  //
+  // 엔진 게이트와 **같은 헬퍼**로 판정한다 — 재구현하면 dual-truth가 된다.
+  if (isSeparateAcquisition(asset)) {
+    const partErr = validateSeparateAcqParts(asset, label);
+    if (partErr) return partErr;
+  }
 
   // §7.2 양도시 기준시가 필수 검증 (2026-07-28 사용자 확정 — feedback_no_silent_apportion_fallback):
   // apportioned(일괄양도) 안분 또는 estimated(환산) 파트는 **양도시 토지·건물 기준시가**로 안분/환산한다
@@ -79,9 +137,12 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   }
 
   // ② 취득가액 — 실거래가·감정가액 모드만(환산·매매사례는 총액을 사용자가 입력하지 않는다)
+  // ⚠️ **별개 취득은 제외**(V4): 취득가액 축에서 잔액 규칙 자체가 폐지돼 "합 = 총액" 불변식이
+  //    성립하지 않는다. 파트 합이 상단 총액과 달라도 정상이며(총액은 사후 집계일 뿐),
+  //    잔존한 `fixedAcquisitionPrice`로 차단하면 정당한 입력이 막힌다.
   const isEstimated = asset.useEstimatedAcquisition === true;
   const isSalesCase = asset.isSalesCaseAcquisition === true;
-  if (!skipTotals && !isEstimated && !isSalesCase) {
+  if (!skipTotals && !isEstimated && !isSalesCase && !isSeparateAcquisition(asset)) {
     const totalAcq = parseAmount(asset.fixedAcquisitionPrice ?? "");
     if (totalAcq > 0) {
       const land = opt(asset.landAcquisitionPrice);

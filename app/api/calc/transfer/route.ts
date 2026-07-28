@@ -254,6 +254,7 @@ export async function POST(request: NextRequest) {
     // ⑭ 파트별 취득 모드 + 양도 분리 모드 — TypeScript 미감지 영역(엔진 명시 입력, §9 M2)
     landAcqMode: data.landAcqMode,
     buildingAcqMode: data.buildingAcqMode,
+    isSeparateAcquisition: data.isSeparateAcquisition,
     saleSplitMode: data.saleSplitMode,
     landSalesCaseValue: data.landSalesCaseValue,
     buildingSalesCaseValue: data.buildingSalesCaseValue,
