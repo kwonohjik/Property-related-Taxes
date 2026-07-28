@@ -451,7 +451,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         </ToggleCard>
       )}
 
-      {!props.useEstimatedAcquisition ? (
+      {!props.useEstimatedAcquisition && (
         <>
           {/* 매매사례가액 추계(§176의2③1호) 모드 */}
           {props.isSalesCaseAcquisition ? (
@@ -515,7 +515,16 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             </>
           )}
         </>
-      ) : isMixedUse ? (
+      )}
+
+      {/* 취득시/양도시 기준시가 — 환산 모드 **또는** 토지·건물 분리 모드에서 노출.
+          분리 모드는 §166⑥ 안분 비율(취득시 기준시가 비율) 산정에 3요소(총액·㎡당 공시지가·면적)가
+          필수이므로, 취득가액 산정 방식이 실거래가·감정·매매사례여도 입력받아야 한다.
+          종전에는 `useEstimatedAcquisition`일 때만 렌더되어, 실거래가 분리 모드에서
+          calcApportionRatio(split-gain.ts:26-36)가 null → calcSplitGain 전체가 null이 되어
+          토지·건물 분리 계산이 **오류 없이 조용히 비활성화**됐다(계획서 §3.1, probe 실측). */}
+      {(props.useEstimatedAcquisition || isSplit) && (
+        isMixedUse ? (
         // 겸용주택 모드: 양도시·취득시 기준시가는 위 "겸용주택 분리계산" 영역에서 입력.
         <p className="text-xs text-muted-foreground italic">
           취득시/양도시 기준시가는 위 겸용주택 분리계산 영역에서 입력합니다 (개별주택가격·상가건물·공시지가).
@@ -563,7 +572,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               dong={props.dong}
               ho={props.ho}
               referenceDate={props.acquisitionDate}
-              hint="환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
+              hint={
+                props.useEstimatedAcquisition
+                  ? "환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
+                  : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
+              }
               forceYear={pre1990ForceYear}
               enableLookup={!(isLand && acqDatePre1990)}
               pricePerSqmDisabled={isLand && acqDatePre1990}
@@ -583,7 +596,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             />
           )}
 
-          {/* 양도시 기준시가 */}
+          {/* 양도시 기준시가 — 환산 분모 전용. 분리 모드 비환산 진입에서는 불필요하므로 숨긴다
+              (파트별 양도시 기준시가는 LandBuildingSplitSection에서 별도 입력받는다). */}
+          {props.useEstimatedAcquisition && (
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
               양도시 기준시가 (원) <span className="text-destructive">*</span>
@@ -604,7 +619,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               hint="환산 분모 — 취득시/양도시 기준시가 비율의 분모"
             />
           </div>
+          )}
         </>
+        )
       )}
       </>
       )}
