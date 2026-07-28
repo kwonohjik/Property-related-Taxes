@@ -293,7 +293,8 @@ A2′의 근본 원인이 부담부증여 고유 문제가 아니라 **라우트
 **감면·취득가액 상세 24종**을 일괄 자산별 결과로 복구했다. 아래 갭 중 감면 부분이 해소된다.
 
 - `TransferReductionDetailSource`(transfer-result.types.ts) — 단건·일괄이 함께 만족하는 **단일 계약**
-- `PerPropertyBreakdown extends TransferReductionDetailSource` — 4 → **28개** Detail
+- `PerPropertyBreakdown extends TransferReductionDetailSource` — 4 → **25개** Detail
+  (계약 24종 + `penaltyDetail`. 종전 4종 중 3종은 계약에 포함되므로 순증 21)
 - `pickReductionDetails()`(transfer-tax-aggregate.ts) — 값 주입 **단일 지점**
 - `ReductionDetailCards` Props를 좁혀 **단건·일괄이 같은 컴포넌트를 재사용**(dual-truth 회피)
 - `BundledAllocationCard`의 `PropertyCard`가 자산별로 렌더
@@ -323,7 +324,7 @@ E2E `bundled-reduction-detail-cards.spec.ts`(화면 노출까지).
 |---|---|
 | 단건 `TransferTaxResult` | **40** |
 | 집계 `PerPropertyBreakdown` (수정 전) | **4** (`penaltyDetail`·`publicExpropriationDetail`·`replacementLandDetail`·`gbDesignatedLandDetail`) |
-| 집계 (수정 후) | **28** — 감면·취득가액 24종 복구 |
+| 집계 (수정 후) | **25** — 감면·취득가액 24종 + `penaltyDetail` |
 
 **일괄에 실제로 올 수 있는 자산**(겸용·재개발·일반건물·부담부증여는 차단됨 →
 housing·land·building·commercial_building·입주권·분양권)에서 손실되는 주요 상세:
