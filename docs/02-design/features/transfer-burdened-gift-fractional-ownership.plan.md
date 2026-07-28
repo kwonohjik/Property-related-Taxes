@@ -245,3 +245,25 @@ C를 그대로 지분분으로 내리면 **A4(#849)와 동형의 결함**이 생
   건드리면 기회주의적 분리(CLAUDE.md File Size Policy). 안 건드리면 별건.
 - 취득세 부담부증여(`acquisition-tax-burdened.ts`)·상증 경로(`gift-burdened-transfer-api.ts`)는
   **본 계획 범위 밖** — 별개 세목.
+
+### 🟠 OPEN — 형제 기능의 동일 결함 여부 (미검증)
+
+A2′(부담부증여 × 함께양도 침묵 미적용)의 근본 원인은 **엔진 진입 시 `transferPrice`를
+덮어쓰는 기능**과 bundled 안분(`route.ts:512-519`이 `transferPrice`를 안분값으로 덮어씀)의
+충돌이다. 같은 형태를 가진 기능이 더 있는지 확인이 필요하다:
+
+| 기능 | transferPrice 덮어씀? | bundled 차단? | 검증 |
+|---|---|---|---|
+| 부담부증여 §159 | ✅ STEP 0.48 | ✅ **본 작업에서 추가** | 완료 |
+| 재개발 receiveOnly | ✅ `transferPrice = settlementAmount` | fullFractional만 | **미검증** |
+| 겸용주택 분리 | ✅ 주택/상가 분해 | fullFractional만 | **미검증** |
+| 공익수용 | ❌ (감면·장특공 계열) | fullFractional만 | 판별 실패 |
+
+**probe 시도 결과(2026-07-28)**: 겸용·재개발은 fixture 미비로 단건 대조군도 계산에 도달하지
+못해 **판별 불가**. 공익수용은 단건·bundled 모두 marker 미검출 — **marker 선정 오류로 비판별**.
+→ 결론 없음. 제대로 하려면 세 기능의 **완전한 단건 fixture**를 먼저 만들고, 각 기능의 실제
+result 필드명을 확인해 marker로 삼아야 한다.
+
+`fullFractional` 차단 목록(`transfer-tax-validate.ts:72-88`)에 재개발·겸용이 이미 있다는 것은
+**같은 비양립성이 인지돼 있었다는 신호**다. 그 차단이 fullFractional에만 걸려 있고 일반
+bundled에는 없다는 점이 A2′와 정확히 같은 구조다 — 우선순위를 두고 볼 만하다.
