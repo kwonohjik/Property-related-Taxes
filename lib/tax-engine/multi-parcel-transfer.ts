@@ -410,22 +410,31 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     const rawGain = swapApplied
       ? allocatedPrice - expenses
       : allocatedPrice - acquisitionPrice - expenses;
-    const transferGain = Math.max(0, rawGain);
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 손실 필지를 `Math.max(0, rawGain)`으로
+    //   **절사**해 이익 필지와 통산되지 않았다(총차익이 손실분만큼 과대 → 세액 과대).
+    //   소득세법 §102②·시행령 §167의2는 양도소득금액을 **소득별로 통산**하도록 한다 —
+    //   같은 과세기간·같은 소득의 필지 간 차손은 차익에서 공제된다.
+    //   다건 집계 경로(`transfer-tax-aggregate`의 손익통산)는 이미 통산하고 있어
+    //   다필지 경로만 어긋난 내부 불일치였다.
+    //   ⇒ 필지별 차익은 **부호를 보존**하고, 합산 단계에서 통산한다.
+    const transferGain = rawGain;
 
     if (rawGain < 0) {
       warnings.push(
-        `필지 ${parcel.id}: 양도손실 발생 (차익 ${rawGain.toLocaleString()} → 0으로 처리)`,
+        `필지 ${parcel.id}: 양도손실 발생 (차익 ${rawGain.toLocaleString()}) — 이익 필지와 통산 (§102②)`,
       );
     }
 
     // P-4: 장기보유특별공제 (보유기간 기산일: effectiveAcquisitionDate 익일)
+    // 장기보유특별공제는 §95②상 **양도차익에 공제율을 곱한 금액**이므로 차손 필지에는 없다.
+    // (차손에 공제율을 곱하면 손실이 줄어 통산액이 왜곡된다.)
     const holding = calculateHoldingPeriod(effectiveAcquisitionDate, transferDate);
     const holdingYears = holding.years;
     const longTermHoldingRate = calcLandLongTermRate(holdingYears, parcel.isUnregistered ?? false);
-    const longTermHoldingDeduction = applyRate(transferGain, longTermHoldingRate);
+    const longTermHoldingDeduction = rawGain > 0 ? applyRate(rawGain, longTermHoldingRate) : 0;
 
-    // 양도소득금액
-    const transferIncome = Math.max(0, transferGain - longTermHoldingDeduction);
+    // 양도소득금액 — 차손 필지는 음수 그대로 넘겨 합산 단계에서 통산된다.
+    const transferIncome = rawGain > 0 ? Math.max(0, rawGain - longTermHoldingDeduction) : rawGain;
 
     parcelResults.push({
       id: parcel.id,
@@ -465,7 +474,11 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     (sum, r) => sum + r.longTermHoldingDeduction,
     0,
   );
-  const totalTransferIncome = parcelResults.reduce((sum, r) => sum + r.transferIncome, 0);
+  // 통산 후 합계가 음수면 과세 소득은 0이다(결손금 이월은 양도소득에 없다 — §102②).
+  const totalTransferIncome = Math.max(
+    0,
+    parcelResults.reduce((sum, r) => sum + r.transferIncome, 0),
+  );
 
   return {
     parcelResults,
