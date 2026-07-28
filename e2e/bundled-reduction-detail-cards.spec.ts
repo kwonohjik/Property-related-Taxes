@@ -90,5 +90,11 @@ test.describe("함께양도 — 감면 산출근거 카드", () => {
       page.getByText(/자경농지/).first(),
       "감면 산출근거 카드가 화면에 나와야 한다",
     ).toBeVisible({ timeout: 15_000 });
+
+    // R1-a(`ValuationDetailCards`)는 같은 `PropertyCard` 안에서 같은 방식으로 렌더되므로
+    // 배선은 이 테스트가 함께 증명한다. 상세 전달 자체는 라우트 하네스 anchor가 검증한다
+    // (`transfer.route.bundled-swallows-special.test.ts` — 상가 환산 §164⑥ `inBundled: true`).
+    // 평가·판정 상세를 E2E로 직접 띄우려면 상가 필수입력 8종·중과 유예 등 fixture 비용이
+    // 크고, 그 비용이 얻는 신뢰도보다 크다고 판단했다.
   });
 });

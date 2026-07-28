@@ -387,3 +387,33 @@ export type TransferReductionDetailSource = Pick<
   | "gbDesignatedLandDetail"
   | "specialHouseExclusionDetail"
 >;
+
+/**
+ * 평가·판정 상세 카드가 읽는 필드 묶음 — `ValuationDetailCards`의 **단일 계약** (R1-a).
+ *
+ * `TransferReductionDetailSource`(감면 24종)와 같은 목적이다. 일괄(bundled) 모드가
+ * 자산별로 `calculateTransferTax`를 완전히 호출하고도 결과의 Detail을 버려
+ * **산출근거가 화면에 안 나오던** 표시 갭을 좁힌다. 계산에는 영향이 없다.
+ *
+ * 필드를 추가할 때는 `pickValuationDetails()`(transfer-tax-aggregate.ts)에도 함께 넣는다 —
+ * 타입만 넓히면 일괄 경로에서 값이 조용히 빈다(침묵 누락).
+ *
+ * ⚠️ **제외**: `splitDetail`·`pre1990LandValuationDetail`은 단건 결과뷰에 인라인 렌더가
+ *    각각 28·13곳이라 컴포넌트 추출이 선행돼야 한다(계획서 R1-b).
+ *    `mixedUseDetail`·`redevelopmentDetail`·`generalBuildingValuationDetail`은 해당 자산이
+ *    일괄에서 차단되어(PR #854) 도달 불가. `amendmentDetail`은 집계 최상위에 이미 있다.
+ */
+export type TransferValuationDetailSource = Pick<
+  TransferTaxResult,
+  | "commercialBuildingValuationDetail"
+  | "nonBusinessLandJudgmentDetail"
+  | "nblSurchargeExcluded"
+  | "multiHouseSurchargeDetail"
+  | "expropriationValuationDetail"
+  | "housingExpropriationValuationDetail"
+  | "auctionValuationDetail"
+  | "preHousingDisclosureDetail"
+  | "rentalHousingExceptionDetail"
+  | "familyBusinessDetail"
+  | "carryoverTaxationDetail"
+>;
