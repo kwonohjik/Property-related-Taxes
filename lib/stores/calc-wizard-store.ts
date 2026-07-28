@@ -6,7 +6,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
-import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
+import { calculateEstimatedAcquisitionPrice, computeEstimatedDeduction, applyRatio } from "@/lib/tax-engine/tax-utils";
 import { migrateLegacyForm, migrateGracePeriod } from "./calc-wizard-migration";
 import {
   makeDefaultAsset,
@@ -478,12 +478,23 @@ export function computeTransferSummary(
   }, 0);
   // 필요경비 합계: 지분 모드 자산은 capex/transferExpense × ratio
   const totalNecessaryExpense = formData.assets.reduce((acc, a) => {
+    const n = parseFloat(a.ownershipNumerator || "100");
+    const d = parseFloat(a.ownershipDenominator || "100");
+    const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
+    const ratio = fractional ? n / d : 1;
+
     let baseExp: number;
     if (a.useEstimatedAcquisition || a.isAppraisalAcquisition) {
       // 환산·감정 모드: 실경비(capex/양도비) 대신 개산공제(§163⑥ = 취득 당시 기준시가 × 3%,
-      // 미등기 0.3%)를 즉시 산출 — result 도착 전에도 표시 가능. floor는 엔진 applyRate 미러.
+      // 미등기 0.3%)를 즉시 산출 — result 도착 전에도 표시 가능.
+      //
+      // ⚠️ 산출을 **엔진 헬퍼에 위임**한다. 지분 모드에서 절사 순서가 갈리면
+      //    사이드바 미리보기와 엔진 결과가 1원 어긋난다(실측 0.96%). 종전 이 자리는
+      //    `floor(std × rate)` 후 아래에서 `floor(× 지분)`으로 **율을 먼저** 적용했으나,
+      //    엔진 정본은 순서 A(`floor(floor(std × 지분) × rate)`)다.
+      //    → 여기서 지분까지 적용하고 하단 공통 지분 적용은 건너뛴다.
       const rate = formData.isUnregistered ? 0.003 : 0.03;
-      baseExp = Math.floor(parseRaw(a.standardPriceAtAcq) * rate);
+      return acc + computeEstimatedDeduction(parseRaw(a.standardPriceAtAcq), rate, ratio);
     } else if (a.assetKind === "housing" && a.isMixedUseHouse) {
       // 겸용주택은 공통 capex/transferExpense를 엔진이 소비하지 않음 —
       // 주택/상가 섹션별 실제 필요경비(상속·증여·매매실가 중 활성 1세트만 채워짐)를 합산.
@@ -500,10 +511,8 @@ export function computeTransferSummary(
       const splitTotal = capExp + trExp;
       baseExp = splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses);
     }
-    const n = parseFloat(a.ownershipNumerator || "100");
-    const d = parseFloat(a.ownershipDenominator || "100");
-    const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
-    return acc + (fractional ? Math.floor(baseExp * (n / d)) : baseExp);
+    // 실경비(자본적지출·양도비)는 금액 자체가 지분분이므로 단순 스케일 — 순서 문제 없음.
+    return acc + (fractional ? applyRatio(baseExp, ratio) : baseExp);
   }, 0);
   const estimatedTax =
     result?.mode === "single"

@@ -6,7 +6,7 @@
  * 동일한 명명 관례. helpers.ts는 이 파일의 함수를 재export하여 기존 import 경로를 그대로 유지한다.
  */
 
-import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate } from "./tax-utils";
+import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate, computeEstimatedDeduction } from "./tax-utils";
 import {
   applyExprTotalDenominator,
   type ExprTotalValuationDetail,
@@ -166,8 +166,10 @@ export function calcCommercialGainSplit(
   const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
     ? splitDeemedExpense(asset.commercialInheritedExpense ?? 0, acqLandStd, acqBuildingStd)
     : {
-        landAppraisalDed: applyRate(acqLandStd, 0.03),
-        buildingAppraisalDed: applyRate(acqBuildingStd, 0.03),
+        // 상가분은 **가목(개별공시지가) + 나목(건물 기준시가)** 별도 공시라 결합 총액이 없다 →
+        // 잔액 흡수 대상이 아니며 성분별 독립 산출이 정본이다(주택분과 다른 이유는 설계 §3 E2).
+        landAppraisalDed: computeEstimatedDeduction(acqLandStd, 0.03, asset.ownershipRatio),
+        buildingAppraisalDed: computeEstimatedDeduction(acqBuildingStd, 0.03, asset.ownershipRatio),
       };
 
   const landGain = landTransferPrice - landAcqPrice - landAppraisalDed;

@@ -353,11 +353,12 @@ export function buildGbExpenseFormula(
 
   if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
     if (!gb.acqLandStdTotal) return undefined;
-    return `취득시 토지기준시가 ${fmt(gb.acqLandStdTotal)} × 3% = ${fmt(displayExp)}`;
+    // base는 엔진 echo(지분 기준시가) 우선 — 100% 값을 쓰면 지분 자산에서 산식이 값을 못 만든다.
+    return `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × 3% = ${fmt(displayExp)}`;
   }
   if (p.propertyId === "building" || p.propertyId === "building1") {
     if (!gb.acqBuilding1StdTotal) return undefined;
-    return `취득시 건물기준시가 ${fmt(gb.acqBuilding1StdTotal)} × 3% = ${fmt(displayExp)}`;
+    return `취득시 건물기준시가 ${fmt(gb.estimatedDeduction?.buildingBase ?? gb.acqBuilding1StdTotal)} × 3% = ${fmt(displayExp)}`;
   }
   if (p.propertyId === "building2") {
     if (!gb.acqExtensionStdTotal) {
@@ -675,14 +676,18 @@ export function buildNecessaryExpenseFormula(
     const gift = a.giftTaxAddedToExpense;
     const baseExp = Math.max(0, singleExp - gift);
     // 증여자 취득이 환산(estimated) 모드면 본문 필요경비는 실제 양도비가 아니라
-    // 개산공제(취득시 기준시가 × 3%, 시행령 §163⑥). 금액 자기일치(baseExp === floor(기준시가×3%))로
-    // 개산공제를 확정 — §97② 단서 swap(직접경비 채택) 등 불일치 케이스는 "양도비 등" 유지.
+    // 개산공제(취득시 기준시가 × 3%, 시행령 §163⑥)다.
+    //
+    // ⚠️ 종전에는 **금액 자기일치**(`baseExp === floor(기준시가 × 3%)`)로 이를 역추론했다.
+    //    UI가 §163⑥ 산식을 재구현하는 dual-truth였고, 공유지분 축소처럼 등식이 깨지는 변경이
+    //    들어오면 개산공제를 "양도비 등"으로 **성격 자체를 오표시**한다.
+    //    → 엔진 echo(`necessaryExpenseIsLumpDeduction`)로 판정하고, 산식 base도
+    //      엔진이 실제로 쓴 값(`lumpDeductionBase` = 지분 기준시가)을 노출한다.
     const stdAcq = a.estimatedStdPriceAtAcquisition;
-    const lumpDeduction = stdAcq != null ? Math.floor(stdAcq * 0.03) : null;
-    const isLumpDeduction =
-      a.acquisitionWasEstimated === true && lumpDeduction != null && baseExp === lumpDeduction;
+    const lumpBase = a.lumpDeductionBase ?? stdAcq;
+    const isLumpDeduction = a.necessaryExpenseIsLumpDeduction === true && lumpBase != null;
     const baseLabel = isLumpDeduction
-      ? `개산공제 ${baseExp.toLocaleString()} = 취득시 기준시가 ${stdAcq!.toLocaleString()} × 3% — 시행령 §163⑥`
+      ? `개산공제 ${baseExp.toLocaleString()} = 취득시 기준시가 ${lumpBase!.toLocaleString()} × 3% — 시행령 §163⑥`
       : `양도비 등 ${baseExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
     const parts: string[] = [baseLabel];
     if (gift > 0) {

@@ -122,6 +122,8 @@ export async function POST(request: NextRequest) {
       householdRightCount: p.householdRightCount,
       useEstimatedAcquisition: p.useEstimatedAcquisition,
       standardPriceAtAcquisition: p.standardPriceAtAcquisition,
+      // 개산공제(§163⑥) base 축소 — 기준시가는 raw, 엔진이 개산공제에서만 적용
+      ownershipRatio: p.ownershipRatio,
       standardPriceAtTransfer: p.standardPriceAtTransfer,
       householdHousingCount: p.householdHousingCount,
       residencePeriodMonths: p.residencePeriodMonths,

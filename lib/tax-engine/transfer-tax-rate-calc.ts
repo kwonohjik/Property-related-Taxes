@@ -498,6 +498,7 @@ export function handleMultiParcelBranch(
     transferCause: effectiveInput.transferCause,
     propertyType: effectiveInput.propertyType,
     parcels: parcelsWithOverride,
+    ownershipRatio: effectiveInput.ownershipRatio,
   });
   for (let pi = 0; pi < mpResult.parcelResults.length; pi++) {
     const pr = mpResult.parcelResults[pi];

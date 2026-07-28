@@ -23,7 +23,7 @@
  *   ext.actualBundledAcquisitionPrice === undefined → 환산 모드 (§176의2②)
  */
 
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
@@ -156,8 +156,8 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     );
 
     // 개산공제: 취득시 기준시가 × 3% (§163⑥ — 환산 모드에서는 필요경비 = 개산공제만)
-    landExp = Math.floor(acqLandStdTotal * rate);
-    building1Exp = Math.floor(acqBuilding1StdTotal * rate);
+    landExp = computeEstimatedDeduction(acqLandStdTotal, rate, input.ownershipRatio);
+    building1Exp = computeEstimatedDeduction(acqBuilding1StdTotal, rate, input.ownershipRatio);
 
     originUsedEstimated = true;
   }
@@ -186,7 +186,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     );
     // 개산공제: 취득시 건물2 기준시가 × 3% (§163⑥ — 취득시 기준시가 기준)
     // ★ 환산취득가(building2Acq) × 3% 아님 (설계 §5 확정)
-    building2EstDeduction = Math.floor(acqExtStd * rate);
+    building2EstDeduction = computeEstimatedDeduction(acqExtStd, rate, input.ownershipRatio);
     extensionUsedEstimated = true;
   } else {
     // 실가 직접 입력 — 개산공제 없음 (실가 취득비용은 별도 필요경비로 처리)

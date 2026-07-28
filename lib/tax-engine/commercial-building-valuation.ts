@@ -15,7 +15,7 @@
  * 정수 연산: INT() = Math.floor(). 중간 오버플로우는 safeMultiplyThenDivide() 방어.
  */
 
-import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
+import { applyRate, computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "./data/building-standard-price";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -299,7 +299,11 @@ function _calcPreDisclosure(
   // ── Step 6: 개산공제 — §97②2호 + §163⑥ ──
   // 취득당시의 기준시가(P_A) × 3%
   // 개산공제 총액 = INT(P_A × 0.03)
-  const estimatedDeductionTotal = applyRate(estimatedBasisAtAcq, ESTIMATED_DEDUCTION_RATE.LAND_BUILDING);
+  const estimatedDeductionTotal = computeEstimatedDeduction(
+    estimatedBasisAtAcq,
+    ESTIMATED_DEDUCTION_RATE.LAND_BUILDING,
+    input.ownershipRatio,
+  );
 
   // 토지/건물 분리 (내부 표시용 — 합계와 1원 차이 허용)
   const landDeductionRaw = combinedStdAtAcq > 0
@@ -326,6 +330,7 @@ function _calcPreDisclosure(
     estimatedAcquisitionLand,
     estimatedAcquisitionBuilding,
     estimatedDeductionTotal,
+    lumpDeductionBase: computeLumpSumDeductionBase(estimatedBasisAtAcq, input.ownershipRatio),
     estimatedDeductionLand,
     estimatedDeductionBuilding,
     // §164⑥ 단서 — 취득연도가 나목(건물 기준시가) 고시 전 구간이면 §164⑤ 준용 대상이다.
@@ -393,7 +398,11 @@ function _calcPostDisclosure(
   }
 
   // ── 개산공제: 취득시 호별총액 × 3% ──
-  const estimatedDeductionTotal = applyRate(unitTotalAtAcq, ESTIMATED_DEDUCTION_RATE.LAND_BUILDING);
+  const estimatedDeductionTotal = computeEstimatedDeduction(
+    unitTotalAtAcq,
+    ESTIMATED_DEDUCTION_RATE.LAND_BUILDING,
+    input.ownershipRatio,
+  );
 
   // 토지/건물 분리 (기준시가합 있을 때만)
   let estimatedDeductionLand = 0;
@@ -433,6 +442,7 @@ function _calcPostDisclosure(
     estimatedAcquisitionLand,
     estimatedAcquisitionBuilding,
     estimatedDeductionTotal,
+    lumpDeductionBase: computeLumpSumDeductionBase(unitTotalAtAcq, input.ownershipRatio),
     estimatedDeductionLand,
     estimatedDeductionBuilding,
   };

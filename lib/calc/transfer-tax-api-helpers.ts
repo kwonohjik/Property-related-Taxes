@@ -5,6 +5,7 @@
 
 import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial-bridge";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
@@ -365,10 +366,12 @@ export function buildPre1990LandPayload(
   };
 }
 
-/** 100% 기준 금액에 지분 비율을 적용 (정수 floor). */
-export function applyRatio(amount: number, ratio: number): number {
-  return Math.floor(amount * ratio);
-}
+/**
+ * 100% 기준 금액에 지분 비율을 적용 (정수 floor).
+ * 본체는 엔진 `tax-utils.ts` 단일 소스 — 엔진(개산공제 base)과 API 변환이 **같은 절사 규약**을
+ * 써야 사이드바 미리보기와 엔진 결과가 어긋나지 않는다(실측 0.49% 1원 차).
+ */
+export { applyRatio };
 
 /**
  * 자산별 effective transferExpense 계산 (B3 폼-수준 안분 로직).
@@ -526,6 +529,8 @@ export function buildAssetPayload(
       asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition && asset.standardPriceAtAcq
         ? parseAmount(asset.standardPriceAtAcq)
         : undefined,
+    // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.
+    ownershipRatio: fractional ? ratio : undefined,
     directExpenses: fractional
       ? applyRatio(parseAmount(asset.directExpenses), ratio)
       : parseAmount(asset.directExpenses),

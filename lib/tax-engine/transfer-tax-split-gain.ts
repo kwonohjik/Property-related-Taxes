@@ -15,7 +15,7 @@ import type {
   SplitPartResult,
   SplitLandExpropriationValuationDetail,
 } from "./types/transfer.types";
-import { applyRate, calculateHoldingPeriod } from "./tax-utils";
+import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
@@ -395,8 +395,21 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   //    salesCase 추가에도 무영향 — "환산모드 전용" 정책 유지. 파트별 독립(2026-07-28 mixed-mode).
   const landNonActual = landMode !== "actual";
   const buildingNonActual = buildingMode !== "actual";
-  const landAppraisalDed = landNonActual ? applyRate(landStdAtAcq, 0.03) : 0;
-  const buildingAppraisalDed = buildingNonActual ? applyRate(buildingStdAtAcq, 0.03) : 0;
+  // 공유지분 축소(§163⑥ base) — 기준시가는 물건 전체(100%)로 유지하고 여기서만 지분을 적용한다.
+  const ownRatio = input.ownershipRatio;
+  const landAppraisalDed = landNonActual
+    ? computeEstimatedDeduction(landStdAtAcq, 0.03, ownRatio)
+    : 0;
+  // ⚠️ **성분별 독립 floor가 정본이다. 잔액 흡수(「총액분 − 토지분」)를 넣지 말 것.**
+  //    **소득세법 §100②**이 토지·건물 등을 함께 양도한 경우 "이를 **각각 구분하여 기장**"하도록
+  //    규정하고, **소득령 §163⑥**은 1호(토지)·2호가목(건물·주택)을 **별개 호**로 열거해 각각
+  //    자기 base × 3/100으로 정한다 — 「라목 총액 × 3% 하나가 법정액」을 강제하는 문언이 없다.
+  //    (§166⑥은 "가액의 구분이 **불분명한 때**"의 안분방법만 규정 — 근거 조문이 아니다.)
+  //    2026-07-28 흡수를 시도했다가 PHD Excel 정본 anchor(`pre-housing-disclosure.test.ts` D-7-2)와
+  //    1원 어긋나 14건이 깨졌다. 같은 §166⑥ 구조이므로 여기도 독립 floor로 통일한다. 재시도 방지 기록.
+  const buildingAppraisalDed = buildingNonActual
+    ? computeEstimatedDeduction(buildingStdAtAcq, 0.03, ownRatio)
+    : 0;
 
   // ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
   // 본문: acqPrice(환산) + appraisalDed(개산공제). directExp는 차감 안 함.
@@ -464,6 +477,9 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     directExpenses: landSwap.effectiveDirect,
     appraisalDeduction: landSwap.effectiveAppraisalDed,
     stdPriceAtAcq: landNonActual ? landStdAtAcq : undefined,
+    lumpDeductionBase: landNonActual
+      ? computeLumpSumDeductionBase(landStdAtAcq, ownRatio)
+      : undefined,
     gain: landGain,
     holdingYears: landHoldingYears,
     longTermRate: 0,
@@ -480,6 +496,9 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     directExpenses: buildingSwap.effectiveDirect,
     appraisalDeduction: buildingSwap.effectiveAppraisalDed,
     stdPriceAtAcq: buildingNonActual ? buildingStdAtAcq : undefined,
+    lumpDeductionBase: buildingNonActual
+      ? computeLumpSumDeductionBase(buildingStdAtAcq, ownRatio)
+      : undefined,
     gain: buildingGain,
     holdingYears: buildingHoldingYears,
     longTermRate: 0,
@@ -517,7 +536,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   });
   const phd = calcPreHousingDisclosureGain(
     input.transferPrice,
-    input.preHousingDisclosure!,
+    { ...input.preHousingDisclosure!, ownershipRatio: input.ownershipRatio },
     housingExprVal?.denominator,
   );
 

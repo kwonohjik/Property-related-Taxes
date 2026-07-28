@@ -15,7 +15,7 @@
  * BigInt 원칙: 분자 ≈ 2.15×10¹⁷ 초과 시 safeMultiplyThenDivide() 자동 fallback.
  */
 
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
@@ -261,6 +261,16 @@ export type GeneralBuildingInput = {
   capitalExpenditure?: number;
   /** 양도비 (원, 자산 총액 — §97① 나목). swap 판정용. */
   transferExpense?: number;
+  /**
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
+   * 그대로 내려준다(서브엔진 재판정 금지).
+   *
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
+   */
+  ownershipRatio?: number;
 };
 
 /** 양도가 안분 결과 */
@@ -285,6 +295,20 @@ export type GeneralBuildingEstimatedDeduction = {
   land: number;
   /** 건물 개산공제 (원) */
   building: number;
+  /**
+   * 개산공제 base로 **실제 사용된 값** = `floor(취득시 기준시가 × 지분율)`.
+   * 표시 산식 「… × 3%」가 표시된 개산공제를 그대로 만들어내게 하는 echo다 — 100% 기준시가를
+   * 노출하면 지분 자산에서 산식이 자기 값을 못 만든다(`feedback_engine_result_display_drift`).
+   * 단독소유면 기준시가와 같다.
+   */
+  landBase?: number;
+  /**
+   * 개산공제 base로 **실제 사용된 값** = `floor(취득시 기준시가 × 지분율)`.
+   * 표시 산식 「… × 3%」가 표시된 개산공제를 그대로 만들어내게 하는 echo다 — 100% 기준시가를
+   * 노출하면 지분 자산에서 산식이 자기 값을 못 만든다(`feedback_engine_result_display_drift`).
+   * 단독소유면 기준시가와 같다.
+   */
+  buildingBase?: number;
 };
 
 /**
@@ -504,10 +528,24 @@ function calculateEstimatedDeduction(
     input.acquisitionLandPricePerSqm * input.landArea,
   );
 
-  const landDed = Math.floor(acqLandStdTotal * rate);
-  const buildingDed = Math.floor(input.acquisitionBuildingStdPrice * rate);
+  // 공유지분 축소(§163⑥ base) — 성분별 독립 적용. 토지는 §99①1호 가목(개별공시지가),
+  // 건물은 나목(국세청장 산정)으로 **별도 공시**라 결합 총액 개념이 없다.
+  const landDed = computeEstimatedDeduction(acqLandStdTotal, rate, input.ownershipRatio);
+  const buildingDed = computeEstimatedDeduction(
+    input.acquisitionBuildingStdPrice,
+    rate,
+    input.ownershipRatio,
+  );
 
-  return { land: landDed, building: buildingDed };
+  return {
+    land: landDed,
+    building: buildingDed,
+    landBase: computeLumpSumDeductionBase(acqLandStdTotal, input.ownershipRatio),
+    buildingBase: computeLumpSumDeductionBase(
+      input.acquisitionBuildingStdPrice,
+      input.ownershipRatio,
+    ),
+  };
 }
 
 // ============================================================

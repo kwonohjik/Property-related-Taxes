@@ -485,6 +485,18 @@ export interface TransferTaxInput {
    */
   isSeparateAcquisition?: boolean;
   /**
+   * 공유지분율 (0 < r ≤ 1, 기본 1) — **필요경비 개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다: 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율(`landStd / total`)과 감면 차분 비율도 100% 스케일을 전제하기 때문이다.
+   * 개산공제만 「지분 기준시가 × 3%」가 되어야 §97②2호 가목의 **합계액**(환산취득가 + 개산공제)이
+   * 같은 스케일로 맞는다.
+   *
+   * API 변환이 `getOwnershipRatio(asset)`로 파생해 전달한다(엔진 재판정 없음).
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.{plan,engine.design}.md
+   */
+  ownershipRatio?: number;
+  /**
    * **건물분 취득 당시 기준시가** (소득세법 §99①1호 나목 — 국세청장 산정·고시).
    * 기준일은 `acquisitionDate`(건물 취득일)의 직전 고시분(소득령 §164③).
    *

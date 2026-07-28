@@ -527,14 +527,16 @@ export function TransferTaxResultView({
               <span className="text-muted-foreground">필요경비 (개산공제)</span>
               <span className={colCls(landIsOwned)}>
                 {result.splitDetail.land.appraisalDeduction.toLocaleString()}
+                {/* base는 엔진이 실제로 쓴 값(지분 기준시가)을 노출한다 — 100% 값을 쓰면
+                    지분 자산에서 산식이 표시된 개산공제를 못 만든다. */}
                 {result.splitDetail.land.stdPriceAtAcq != null && (
-                  <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {result.splitDetail.land.stdPriceAtAcq.toLocaleString()} × 3%</span>
+                  <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {(result.splitDetail.land.lumpDeductionBase ?? result.splitDetail.land.stdPriceAtAcq).toLocaleString()} × 3%</span>
                 )}
               </span>
               <span className={colCls(buildingIsOwned)}>
                 {result.splitDetail.building.appraisalDeduction.toLocaleString()}
                 {result.splitDetail.building.stdPriceAtAcq != null && (
-                  <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {result.splitDetail.building.stdPriceAtAcq.toLocaleString()} × 3%</span>
+                  <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {(result.splitDetail.building.lumpDeductionBase ?? result.splitDetail.building.stdPriceAtAcq).toLocaleString()} × 3%</span>
                 )}
               </span>
               {result.splitDetail.building.stdPriceDerivedFromTotal && (

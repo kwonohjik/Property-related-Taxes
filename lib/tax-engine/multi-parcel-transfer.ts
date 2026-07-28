@@ -19,6 +19,7 @@ import {
   applyRate,
   calculateHoldingPeriod,
   safeMultiplyThenDivide,
+  computeEstimatedDeduction,
 } from "./tax-utils";
 import { applyExpropriationValuation } from "./transfer-tax-expropriation-valuation";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -177,6 +178,16 @@ export interface MultiParcelInput {
   propertyType: TransferTaxInput["propertyType"];
   /** 필지 목록 (2개 이상 권장, 1개도 허용) */
   parcels: ParcelInput[];
+  /**
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
+   * 그대로 내려준다(서브엔진 재판정 금지).
+   *
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
+   */
+  ownershipRatio?: number;
 }
 
 export interface MultiParcelResult {
@@ -362,7 +373,11 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       acquisitionPrice = safeMultiplyThenDivide(allocatedPrice, standardAtAcq, standardAtTransfer);
       // 개산공제 = 취득기준시가 × 3/100 (소득세법 시행령 §163⑥1호·2호가목).
       // 단, §104③ 미등기양도자산은 3/1000(0.3%).
-      estimatedDeduction = applyRate(standardAtAcq, parcel.isUnregistered ? 0.003 : 0.03);
+      estimatedDeduction = computeEstimatedDeduction(
+        standardAtAcq,
+        parcel.isUnregistered ? 0.003 : 0.03,
+        input.ownershipRatio,
+      );
 
       // §97② 단서 swap — 환산 + 개산공제 < 자본 + 양도비 시 자본+양도비 적용
       const capExp = parcel.capitalExpenditure ?? 0;

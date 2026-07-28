@@ -176,3 +176,34 @@ describe("기준시가는 지분 스케일 대상이 아니다", () => {
     expect(cap.body?.acquisitionArea).toBe(200);
   });
 });
+
+/**
+ * P2 ⑬ 배관 — `ownershipRatio`(개산공제 base 축소 전용).
+ *
+ * 금액 필드와 성격이 다르다: **기준시가는 raw 100%로 유지**하고 지분율만 별도 전송해
+ * 엔진이 개산공제 계산 지점에서만 적용한다. 기준시가를 스케일하면 환산 상쇄·§166⑥ 안분
+ * 비율이 깨지기 때문이다(설계 transfer-fractional-lump-sum-deduction.plan.md §3).
+ */
+describe("P2 — 개산공제 지분율(ownershipRatio) 전송", () => {
+  it("지분 50% → ownershipRatio 0.5 전송, 기준시가는 raw 유지", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(makeForm({ useEstimatedAcquisition: true }));
+    expect(cap.body?.ownershipRatio).toBe(0.5);
+    expect(
+      cap.body?.standardPriceAtAcquisition,
+      "기준시가까지 스케일하면 §166⑥ 안분 비율(landStd/total)이 깨진다",
+    ).toBe(500_000_000);
+  });
+
+  it("🔴 단독소유(100%) → 미전송 (기본값 1로 종전 동작)", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm({
+        ownershipNumerator: "100",
+        ownershipDenominator: "100",
+        useEstimatedAcquisition: true,
+      }),
+    );
+    expect(cap.body?.ownershipRatio).toBeUndefined();
+  });
+});

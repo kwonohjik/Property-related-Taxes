@@ -241,6 +241,11 @@ const propertyBaseShape = {
    */
   isSeparateAcquisition: z.boolean().optional(),
   /**
+   * 공유지분율 (0<r≤1) — 필요경비 개산공제(§163⑥) base 축소 전용. ⑫ 침묵 stripping 방지.
+   * 기준시가는 물건 전체 값을 유지하고 개산공제만 「지분 기준시가 × 3%」가 된다.
+   */
+  ownershipRatio: z.number().positive().max(1).optional(),
+  /**
    * 건물분 취득시 기준시가(§99①1호 나목) — `building` + 별개 취득 전용. ⑫ 침묵 stripping 방지.
    */
   buildingStandardPriceAtAcquisition: z.number().int().positive().optional(),
