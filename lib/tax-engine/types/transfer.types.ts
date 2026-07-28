@@ -485,6 +485,15 @@ export interface TransferTaxInput {
    */
   isSeparateAcquisition?: boolean;
   /**
+   * **건물분 취득 당시 기준시가** (소득세법 §99①1호 나목 — 국세청장 산정·고시).
+   * 기준일은 `acquisitionDate`(건물 취득일)의 직전 고시분(소득령 §164③).
+   *
+   * `propertyType === "building"` + `isSeparateAcquisition` 전용. 주택(라목)은 개별·공동주택가격이
+   * 부수토지를 포함한 결합 공시라 파트 독립 입력이 성립하지 않는다(§163⑥2호가목 개산공제 법정액 이탈).
+   * 미입력 시 결합 총액 역산으로 후퇴한다(한시).
+   */
+  buildingStandardPriceAtAcquisition?: number;
+  /**
    * 양도 방식 (구분양도|일괄양도) — 엔진 명시 입력.
    * "actual": 계약서 등 토지·건물 실지 양도가액 구분 기재(land/buildingTransferPrice 직접).
    * "apportioned": 구분 불분명 → 양도시 기준시가 비율 안분(부가세령 §64①1호, 소득령 §166⑥).

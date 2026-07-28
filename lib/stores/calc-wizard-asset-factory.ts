@@ -179,6 +179,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     standardPriceAtAcqLabel: "",
     useStandardPriceAtAcqOverride: false,
     useStandardPriceAtTransferOverride: false,
+    buildingStandardPriceAtAcq: "",
     standardPricePerSqmAtAcq: "",
     standardPricePerSqmAtTransfer: "",
     inhHouseValEnabled: false,

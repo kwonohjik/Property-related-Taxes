@@ -470,6 +470,15 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 양도시 기준시가 직접 입력 override 사용 여부 (PreDeemedInputs 전용) */
   useStandardPriceAtTransferOverride: boolean;
 
+  /**
+   * 건물분 취득시 기준시가 (원) — `assetKind==="building"` + 토지·건물 취득시기 상이 전용.
+   *
+   * 소득세법 §99①1호 나목(국세청장 산정·고시). 기준일은 **건물 취득일**의 직전 고시분(소득령 §164③) —
+   * 토지분(㎡당 공시지가 × 면적)은 토지 취득일 기준이라 시점이 다르다.
+   * 미입력 시 `standardPriceAtAcq` 총액에서 역산으로 후퇴한다(한시).
+   */
+  buildingStandardPriceAtAcq: string;
+
   /** 취득 시점 ㎡당 공시지가 (원/㎡, 토지·비주거건물 전용) */
   standardPricePerSqmAtAcq: string;
   /** 양도 시점 ㎡당 공시지가 (원/㎡, 토지·비주거건물 전용) */

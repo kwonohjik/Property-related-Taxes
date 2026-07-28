@@ -41,6 +41,8 @@ export function addPropertyRefines(
     generalBuildingValuation?: Record<string, unknown> | null;
     /** ⑩ 재개발/재건축 환산취득가 서브객체 (시행령 §166③) — base 스키마 nonnegative()로 충분 */
     redevelopment?: Record<string, unknown> | null;
+    /** 축 B 파트별 독립(§99①1호 나목) — 제공 시 결합 총액 검증 우회 */
+    buildingStandardPriceAtAcquisition?: number;
   },
   ctx: z.RefinementCtx,
 ) {
@@ -55,7 +57,10 @@ export function addPropertyRefines(
   const isGeneralBuildingEstimated = !!data.generalBuildingValuation;
   const isRedevelopmentEstimated = !!data.redevelopment;
   const isSubObjectEstimated = isCommercialBuildingEstimated || isGeneralBuildingEstimated || isRedevelopmentEstimated;
-  if (!isMixedUseHouse && !isSubObjectEstimated && data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd) {
+  // 축 B 파트별 독립(building + 별개 취득): 토지분은 ㎡당 공시지가 × 면적(§99①1호 가목),
+  // 건물분은 나목 명시 입력으로 산출한다 → **결합 총액이 애초에 공시되지 않으므로** 필수가 아니다.
+  const hasIndependentAcqStd = !!data.buildingStandardPriceAtAcquisition;
+  if (!isMixedUseHouse && !isSubObjectEstimated && data.useEstimatedAcquisition && !data.standardPriceAtAcquisition && !hasPhd && !hasIndependentAcqStd) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["standardPriceAtAcquisition"],

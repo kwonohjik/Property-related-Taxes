@@ -45,6 +45,15 @@ export interface SplitPartResult {
   swapApplied?: boolean;
   /** 파트별 취득 방식 echo (결과뷰 라벨 전용, 계산 로직 무영향) */
   acqMode?: "actual" | "estimated" | "appraisal" | "salesCase";
+  /**
+   * 이 파트의 **취득시 기준시가**가 결합 총액에서 역산된 값인가 (결과뷰 fine-print 전용).
+   *
+   * ⚠️ 결함 표식이 아니다 — 의미가 propertyType별로 정반대다:
+   *  · 주택(라목): 개별·공동주택가격이 부수토지 포함 결합 공시라 역산이 **법정 정상 경로**다.
+   *  · 일반 건물: 가목·나목이 각각 공시되므로 역산은 건물 취득시점이 섞인 **한시 후퇴**다.
+   * UI 문구는 propertyType으로 갈라 쓸 것.
+   */
+  stdPriceDerivedFromTotal?: boolean;
 }
 
 export interface SplitGainResult {

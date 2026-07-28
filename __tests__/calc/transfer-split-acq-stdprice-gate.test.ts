@@ -147,3 +147,45 @@ describe("P2a — 별개 취득 게이트(isSeparateAcquisition) 전송", () => 
     expect(cap.body?.isSeparateAcquisition).toBeUndefined();
   });
 });
+
+/**
+ * P2b ⑬ 배관 — `buildingStandardPriceAtAcquisition`(§99①1호 나목).
+ * `building` + 별개 취득 전용. 주택(라목)에 전송되면 개산공제 법정액 항등성이 깨진다.
+ */
+describe("P2b — 건물분 취득시 기준시가 전송 게이트", () => {
+  it("building + 취득일 상이 → 전송", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm({
+        assetKind: "building",
+        useEstimatedAcquisition: false,
+        buildingStandardPriceAtAcq: "350000000",
+      }),
+    );
+    expect(cap.body?.buildingStandardPriceAtAcquisition).toBe(350_000_000);
+  });
+
+  it("🔴 주택 → 미전송 (라목 결합 공시 — 파트 독립이 성립하지 않는다)", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm({ useEstimatedAcquisition: false, buildingStandardPriceAtAcq: "350000000" }),
+    );
+    expect(
+      cap.body?.buildingStandardPriceAtAcquisition,
+      "주택에 전송되면 개산공제 합계가 §163⑥2호가목 법정액을 이탈한다",
+    ).toBeUndefined();
+  });
+
+  it("🔴 building + 취득일 동일 → 미전송", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm({
+        assetKind: "building",
+        useEstimatedAcquisition: false,
+        landAcquisitionDate: "2025-08-29",
+        buildingStandardPriceAtAcq: "350000000",
+      }),
+    );
+    expect(cap.body?.buildingStandardPriceAtAcquisition).toBeUndefined();
+  });
+});
