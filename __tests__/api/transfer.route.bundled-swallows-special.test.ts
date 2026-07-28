@@ -13,9 +13,18 @@
  * ```
  *
  * companion이 하나라도 있으면 `bundledOk`가 참이 되어 **뒤쪽 특수 분기는 실행조차 되지 않는다**.
- * 부담부증여(§159 STEP 0.48)도 일괄 집계 경로에서 안분 결과에 덮여 결과에 나타나지 않는다.
  *
- * 화면에는 특수 입력이 그대로 보이는데 계산에서만 빠지므로 **사용자가 알 수 없다**.
+ * ## 두 가지 메커니즘을 구분할 것 (실측으로 확정)
+ *
+ * | 기능 | 메커니즘 | 결과 |
+ * |---|---|---|
+ * | 겸용·재개발·일반건물 | route 분기 **미실행** | 다른 계산이 나옴 |
+ * | 부담부증여 | STEP 0.48은 **실행**되나 안분 transferPrice와 **스케일 충돌** | 필요경비 **음수** |
+ * | 상가 | 전용 분기 없음 — 엔진 내부 처리 | **계산 정상**, 표시 상세만 누락 |
+ *
+ * → marker 부재만으로 결함이라 판정하면 **상가에서 오진**한다. 반드시 산출값까지 본다.
+ *
+ * 화면에는 특수 입력이 그대로 보이는데 계산이 어긋나므로 **사용자가 알 수 없다**.
  *
  * ## 이 테스트가 지키는 것
  *
@@ -26,7 +35,7 @@
  * 본 테스트는 **차단이 풀렸을 때 무슨 일이 일어나는지**를 문서화하는 회귀 방어선이다
  * (차단만 테스트하면 왜 막는지가 코드에서 사라진다).
  *
- * 실측: 2026-07-28. 상가(commercial_building)는 전용 분기가 없어 **미확인** — 별도 판단.
+ * 실측: 2026-07-28.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -180,6 +189,28 @@ const GB = {
   },
 };
 
+/**
+ * 상가·오피스텔 — **전용 route 분기가 없다**. `route.ts:363`에서 `engineInput`에 실려
+ * `calculateTransferTax` 내부(환산취득가 §164⑥)에서 처리된다.
+ * → if-체인 순서 결함의 대상이 아닐 수 있다. 실측으로 판정한다.
+ */
+const CB = {
+  ...COMMON,
+  propertyType: "commercial_building" as const,
+  useEstimatedAcquisition: true,
+  acquisitionPrice: 0,
+  commercialBuildingValuation: {
+    isPreDisclosure: false,
+    exclusiveArea: 60,
+    commonArea: 20,
+    landArea: 30,
+    unitPriceAtTransfer: 3_000_000,
+    unitPriceAtAcquisition: 1_500_000,
+    landPriceAtTransfer: 2_000_000,
+    landPriceAtAcquisition: 1_000_000,
+  },
+};
+
 describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인 순서)", () => {
   beforeEach(() => {
     vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -220,10 +251,40 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     expect(bundled.status).toBe(200);
   });
 
-  it("🔴 부담부증여 — §159 채무비율이 함께양도에서 소실 (대조군)", async () => {
+  it("상가·오피스텔 — 계산은 정상, **표시용 상세만** 누락된다 (차단 대상 아님)", async () => {
+    // 상가는 전용 route 분기가 없고 `engineInput`에 실려 엔진 내부에서 처리된다(route.ts:363).
+    // → if-체인 순서 결함의 대상이 **아니다**. marker 부재만 보고 결함이라 판정하면 오진이다.
+    const r = await compare(CB, "commercialBuildingValuationDetail");
+    expect(r.singleStatus).toBe(200);
+    expect(r.inSingle, "단건 대조군이 녹색이어야 판정이 성립한다").toBe(true);
+    expect(r.inBundled, "일괄 집계 결과는 자산별 상세 카드를 담지 않는다").toBe(false);
+
+    // 그러나 **양도차익은 동일**하다 — 계산이 죽은 게 아니라 상세가 안 실린 것뿐.
+    const sb = await (await POST(req(CB))).json();
+    const bb = await (await POST(req({ ...CB, ...COMPANION }))).json();
+    const bp = bb.data.aggregated.properties.find(
+      (x: { propertyId: string }) => x.propertyId === "primary",
+    );
+    expect(bp.transferGain).toBe(sb.data.result.transferGain);
+    expect(bp.necessaryExpense, "필요경비가 음수가 아니다 — 내부 모순 없음").toBeGreaterThanOrEqual(0);
+  });
+
+  it("🔴 부담부증여 — §159 gain과 안분 양도가액이 충돌해 **필요경비가 음수**가 된다", async () => {
+    // ⚠️ 부담부증여만 메커니즘이 다르다. 겸용·재개발·일반건물은 route 분기가 **미실행**이지만,
+    //    부담부증여의 STEP 0.48은 엔진 내부라 **실행된다**. 문제는 route가 transferPrice를
+    //    안분값(5억)으로 덮어쓰는데 gain은 §159 기준(채무 6억)으로 산출된다는 **스케일 충돌**이다.
+    //    → 표시 필요경비 = 양도가 − 취득가 − 양도차익 = 500,000,000 − 300,000,000 − 291,000,000
+    //      = **−91,000,000** (음수). 명백한 내부 모순이며 사용자에게 그대로 노출된다.
     const r = await compare(BURDENED, "debtRatio");
     expect(r.singleMode).toBe("single");
     expect(r.inSingle).toBe(true);
-    expect(r.inBundled).toBe(false);
+    expect(r.inBundled, "§159 breakdown이 일괄 결과에 실리지 않는다").toBe(false);
+
+    const bb = await (await POST(req({ ...BURDENED, ...COMPANION }))).json();
+    const bp = bb.data.aggregated.properties.find(
+      (x: { propertyId: string }) => x.propertyId === "primary",
+    );
+    expect(bp.transferPrice, "안분 양도가액").toBe(500_000_000);
+    expect(bp.necessaryExpense, "🔴 필요경비 음수 — 스케일 충돌의 직접 증거").toBeLessThan(0);
   });
 });
