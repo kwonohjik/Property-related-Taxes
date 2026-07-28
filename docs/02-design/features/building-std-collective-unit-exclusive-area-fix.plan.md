@@ -4,7 +4,7 @@
 - **브랜치/워크트리**: `worktree-fix+building-std-price-lookup-btn` (`.claude/worktrees/fix+building-std-price-lookup-btn`)
 - **유형**: 버그 수정 (집합건물 면적 데이터 흐름)
 - **연관 계획**: [`building-register-lookup-year-gate-fix.plan.md`](./building-register-lookup-year-gate-fix.plan.md) — 같은 화면·같은 조회 버튼. 두 버그는 상호 연관(§7).
-- **상태**: L3 세법 확인 완료(§11) → **접근 B 채택**. 부정확한 전유면적 자동입력 **제거 완료**. `getBrExposPubuseAreaInfo` 실구현은 **env 실측 대기(BLOCKER)**.
+- **상태**: L3 세법 확인 완료(§11) → **접근 B 채택**. 부정확한 전유면적 자동입력 **제거 완료**. **2026-07-28 실 API 실측 완료 — BLOCKER 해소**(§11 참조). 실측으로 필터 형식·numOfRows 캡 결함 3건이 드러나 수정함.
 
 ---
 
@@ -188,12 +188,36 @@ onChange 핸들러에 dong/ho/exclusiveArea 저장 추가(EstateBodyHelpers 패�
 - 집합건물 안내 문구 추가: "공동주택 세대는 건물 연면적(전유+공용)을 직접 입력하세요(고시 §3①)".
 - anchor 반전: `buildAddressPatch`는 floorArea 자동채움 안 함.
 
-### 후속 실구현 (BLOCKER: env 실측 필요)
+### 실구현 (2026-07-22 — 문서 기반 구현 완료, 실 API 검증 대기)
+정본 전유+공용 연면적을 건축HUB **`getBrExposPubuseAreaInfo`**로 확보하도록 구현:
+- `sumExclusiveCommonArea(items, dong, ho)` 순수 함수 (`building-register-map.ts`) — 세대 `exposPubuseGbCd` "1"(전유)+"2"(공용) `area` 합(round2). dong/ho 정규화 매칭.
+- `fetchExposPubuseArea` (`route.ts`) — 집합건물이면 전유공용면적 API 병행 호출, 서버 `dongNm`/`hoNm` 필터 + 클라 재필터. 실패·미매칭 → null(수동).
+- `route.ts`: `dong`/`ho` 파라미터. 집합건물이면 `floorArea` = 전유+공용(일반 = `totArea`).
+- `BuildingRegisterLookupField`: `dong`/`ho` prop + fetch 파라미터. floorArea 가드 제거(route가 올바른 값·null 반환). summary "전유+공용 연면적 N㎡".
+- `BuildingStdPriceForm`: `dong={f.unitDong}`/`ho={f.unitHo}` 전달, 안내 문구 자동조회 반영.
+- anchor: `building-register-expos-area.anchor.test.ts`(6) + gate anchor d2(3, dong/ho fetch·floorArea 반영·null 수동).
+
+**✅ 실 API 실측 완료 (2026-07-28, 로컬 `MOLIT_RTMS_API_KEY`)** — 종전의 트래픽 차단이 풀려 실 응답을 확보했다. 대상 PNU는 세대수가 많아 절단 조건까지 검증되는 **은마아파트**(`sigunguCd=11680·bjdongCd=10600·bun=0316·ji=0000`)로 잡았다.
+
+| 검증 항목 | 실측 결과 |
+|---|---|
+| (a) `dongNm`/`hoNm` 실 형식 | **`dongNm="1"`(접미 "동" 없음) · `hoNm="1410호"`(접미 "호" 포함)**. 서버 필터는 **정확 문자열 일치** — `hoNm=1410`→0건, `dongNm=1동`→0건, `제`접두→0건. 폼이 주는 `unitDong="201동"`·`unitHo="3204"`는 **양쪽 다 어긋나** 배포 시 항상 0건이었다. |
+| (b) 전유+공용 `area` 행 구조 | 세대당 **전유 1행 + 공용 4행 = 5행**. 은마 1동 1410호 = 전유 95.18 + 공용 7.32 = **102.5㎡**. 13동 103호 = 104.71 + 7.87 = 112.58㎡. `exposPubuseGbCdNm`은 "전유"/"공용" 문자열 그대로. |
+| (c) `numOfRows=1000` 충분성 | **불충분 — 서버가 100에서 캡**한다. `numOfRows=500`·`1000`을 보내도 응답의 `numOfRows`가 100으로 되돌아오고 100건만 온다(무필터 totalCount 24,066). |
+
+**실측이 드러낸 결함 3건 (수정 완료)**:
+1. 서버 필터값을 폼 원문 그대로 전송 → 영구 0건. `toExposQueryDong`/`toExposQueryHo` 변환 신설.
+2. `numOfRows=1000` 무효 → 실측 캡 `EXPOS_MAX_ROWS=100`으로 정정.
+3. 필터가 듣지 않을 때 24,066건 중 100건만으로 합산 → **과소 연면적을 무경고로 채울** 위험. `totalCount > items.length` **절단 가드**로 차단(수동 입력 유도).
+
+추가로 동 명칭 드리프트("가"·"A" 등) 대비 **호 단독 1회 재시도**를 넣었다 — 클라이언트 재필터가 동을 다시 대조하므로 안전하다.
+
+### 참고: 원 정본 경로 명세
 정본 전유+공용 연면적은 건축HUB **`getBrExposPubuseAreaInfo`**(전유공용면적, §4 참조)로 확보:
 - **오퍼레이션**: `https://apis.data.go.kr/1613000/BldRgstHubService/getBrExposPubuseAreaInfo`
 - **파라미터**: `serviceKey·sigunguCd·bjdongCd·platGbCd·bun·ji·_type=json·numOfRows`(호 다건) + 특정 호 `dongNm`·`hoNm`(폼 `unitDong`/`unitHo`에서 공급)
-- **응답 처리(문서 기준·실측 미검증)**: items에서 `dongNm`/`hoNm` 매칭 행의 `area`를 `exposPubuseGbCdNm`("전유"/"공용")별로 합산 → **전유 area + 공용 area 합 = 해당 세대 전유+공용 연면적** → `floorArea`.
-- **⚠️ env 실측 필요 항목** (추정 금지): (a) `exposPubuseGbCd` 실제 코드값·`exposPubuseGbCdNm` 문자열, (b) 공용면적이 호별 안분값인지(층별 다행 합산 방식), (c) `dongNm`/`hoNm` 실제 형식과 `unitDong`("201동")/`unitHo`("3204") 매칭 규칙.
+- **응답 처리(2026-07-28 실측 확인)**: items에서 `dongNm`/`hoNm` 매칭 행의 `area`를 `exposPubuseGbCdNm`("전유"/"공용")별로 합산 → **전유 area + 공용 area 합 = 해당 세대 전유+공용 연면적** → `floorArea`.
+- **✅ env 실측 완료**: (a) `exposPubuseGbCd`="1"(전유)/"2"(공용)·`exposPubuseGbCdNm`="전유"/"공용" 확인, (b) 공용은 **층별 다행**으로 오며 합산이 맞다(1410호 = 공용 4행 합 7.32㎡), (c) `dongNm`은 접미사 없음·`hoNm`은 접미 "호" 포함 — 변환 규칙은 anchor `building-register-expos-query-format.anchor.test.ts`에 고정.
 - 로컬 `.env.local`에 `MOLIT_RTMS_API_KEY` 부재 → 실 API 스키마 실측 불가. env 있는 환경에서 실 응답 확인 후 route·파싱 구현 + anchor 작성.
 
 ### 결정 반영
