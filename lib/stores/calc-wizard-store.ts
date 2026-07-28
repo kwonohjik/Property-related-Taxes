@@ -311,7 +311,7 @@ export function createDefaultTransferFormData(): TransferFormData {
   };
 }
 
-interface CalcWizardState {
+export interface CalcWizardState {
   currentStep: number;
   formData: TransferFormData;
   result: TransferAPIResult | null;
@@ -359,6 +359,56 @@ export interface TransferSummary {
   };
 }
 
+/**
+ * persist rehydration 병합 — **구 스키마 판별은 `assets` 배열 유무로만** 한다.
+ *
+ * ## 왜 키 화이트리스트를 쓰면 안 되는가 (2026-07-28 정정, 원 보고 2026-07-14)
+ *
+ * 종전에는 `"acquisitionMethod" in form || "appraisalValue" in form || …` 9개 키 중 하나라도
+ * 있으면 구 스키마로 보고 `migrateLegacyForm`을 돌렸다. 그런데 그 키들 중 **4개
+ * (`acquisitionMethod`·`appraisalValue`·`isSelfBuilt`·`pre1990Enabled`)가 현행
+ * `defaultFormData`에 그대로 남아 있다** — 자산-수준 통합(2026-04-25) 후 deprecated로만 표시되고
+ * 필드 자체는 유지됐기 때문이다.
+ *
+ * 결과: **모든 신 스키마 폼이 구 스키마로 오분류**돼 새로고침(F5)마다 마이그레이션이 돌고
+ * 입력한 자산이 전부 소실됐다. 실측(현행 master):
+ *
+ *     자산 2개(상가 3억 + 토지 2억) → **1개(빈 주택)** · contractTotalPrice 10억 → ""
+ *
+ * sessionStorage raw JSON은 정상 보존돼 있었다 — 순수 rehydration 결함이다.
+ * 완료된 계산은 IndexedDB 이력에 별도 저장되므로 영향 범위는 **진행 중 마법사 폼**이다.
+ *
+ * → 판별을 **구조 기반**(`!Array.isArray(assets)`)으로 바꾼다. 신 스키마는 정의상 항상 `assets`
+ *   배열을 갖고 구 스키마는 갖지 않으므로, deprecated 필드가 남아 있든 말든 영향받지 않는다.
+ *   키 목록을 늘리는 방식으로 되돌리지 말 것 — 스키마가 바뀔 때마다 같은 결함이 재발한다.
+ *
+ * export하는 이유는 **테스트 가능성**이다(인라인 클로저는 단위 검증이 불가능했다).
+ */
+export function mergePersistedWizard(
+  persisted: unknown,
+  current: CalcWizardState,
+): CalcWizardState {
+  const ps = persisted as Partial<CalcWizardState>;
+  const legacyForm = ps.formData as Record<string, unknown> | undefined;
+
+  let formData: TransferFormData;
+  if (legacyForm && !Array.isArray(legacyForm.assets)) {
+    formData = migrateLegacyForm(legacyForm, defaultFormData);
+  } else {
+    formData = {
+      ...defaultFormData,
+      ...(ps.formData ?? {}),
+      assets: ((ps.formData as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
+    };
+  }
+
+  // gracePeriod 구 필드(isLandPermitArea) → 신규 isLandPermitTarget 의미 승계 이전
+  formData = { ...formData, gracePeriod: migrateGracePeriod(formData.gracePeriod) };
+
+  // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 잔존값을 무시.
+  return { ...current, ...ps, formData, currentStep: 0 };
+}
+
 export const useCalcWizardStore = create<CalcWizardState>()(
   persist(
     (set) => ({
@@ -393,40 +443,7 @@ export const useCalcWizardStore = create<CalcWizardState>()(
         formData: state.formData,
         pendingMigration: state.pendingMigration,
       }),
-      merge: (persisted, current) => {
-        const ps = persisted as Partial<CalcWizardState>;
-        const legacyForm = ps.formData as Record<string, unknown> | undefined;
-
-        let formData: TransferFormData;
-        if (
-          legacyForm &&
-          (
-            "propertyType" in legacyForm ||
-            "companionAssets" in legacyForm ||
-            "propertyAddressRoad" in legacyForm ||
-            "reductionType" in legacyForm ||
-            "parcelMode" in legacyForm ||
-            "acquisitionMethod" in legacyForm ||
-            "appraisalValue" in legacyForm ||
-            "isSelfBuilt" in legacyForm ||
-            "pre1990Enabled" in legacyForm
-          )
-        ) {
-          formData = migrateLegacyForm(legacyForm, defaultFormData);
-        } else {
-          formData = {
-            ...defaultFormData,
-            ...(ps.formData ?? {}),
-            assets: ((ps.formData as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
-          };
-        }
-
-        // ③ gracePeriod 구 필드(isLandPermitArea) → 신규 isLandPermitTarget 의미 승계 이전
-        formData = { ...formData, gracePeriod: migrateGracePeriod(formData.gracePeriod) };
-
-        // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 currentStep(잔존값)을 무시.
-        return { ...current, ...ps, formData, currentStep: 0 };
-      },
+      merge: mergePersistedWizard,
     },
   ),
 );
