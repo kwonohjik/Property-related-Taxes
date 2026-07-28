@@ -139,4 +139,48 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
     // 토글·자산추가 순서에 따라 primary가 아닌 자산에 남을 수 있다 — some() 판정 근거.
     expect(hasBlock([{ ...bg, transferType: "regular" }, { ...other, transferType: "burdened_gift" }])).toBe(true);
   });
+
+  /**
+   * 라우트 if-체인 순서(일괄 :446 → 겸용 :568 → 일반건물 :611 → 단건 :660) 때문에
+   * companion이 있으면 뒤쪽 특수 분기가 **실행조차 되지 않는다**.
+   * 라우트 하네스 실측으로 4종 전부 소실 확인 → 동일 가드 적용.
+   */
+  describe("같은 원인의 형제 기능 (라우트 분기 순서)", () => {
+    const blockMsg = (assets: unknown[]) =>
+      collectStepIssues(0, form(assets))
+        .map((i) => i.message)
+        .filter((m) => /함께 양도와 같이 계산할 수 없습니다/.test(m));
+
+    it("🔴 겸용주택 분리계산 + 함께양도 → 차단", () => {
+      const mixed = { ...bg, transferType: "regular", isMixedUseHouse: true };
+      expect(blockMsg([mixed, other]).join()).toMatch(/겸용주택/);
+    });
+
+    it("🔴 재개발 + 함께양도 → 차단", () => {
+      const redev = { ...bg, transferType: "regular", assetKind: "redevelopment_apt" };
+      expect(blockMsg([redev, other]).join()).toMatch(/재개발/);
+    });
+
+    it("🔴 일반건물 + 함께양도 → 차단", () => {
+      const gb = { ...bg, transferType: "regular", assetKind: "general_building" };
+      expect(blockMsg([gb, other]).join()).toMatch(/일반건물/);
+    });
+
+    it("각 기능의 단건은 차단되지 않는다 (회귀 가드)", () => {
+      for (const over of [
+        { isMixedUseHouse: true },
+        { assetKind: "redevelopment_apt" },
+        { assetKind: "general_building" },
+      ]) {
+        expect(blockMsg([{ ...bg, transferType: "regular", ...over }])).toEqual([]);
+      }
+    });
+
+    it("상가(commercial_building)는 차단하지 않는다 — 동일 결함 미확인", () => {
+      // 5-a-3(일반건물) 분기를 타지 않아 같은 결함인지 검증되지 않았다.
+      // 근거 없이 막으면 잘못된 차단이 된다 — 검증 후 판단(계획서 §7 OPEN).
+      const cb = { ...bg, transferType: "regular", assetKind: "commercial_building" };
+      expect(blockMsg([cb, other])).toEqual([]);
+    });
+  });
 });
