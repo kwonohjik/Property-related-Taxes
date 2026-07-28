@@ -556,6 +556,50 @@ export function calculateTransferTaxAggregate(
     steps.push(settlement.step);
   }
 
+  // ── 감면 배분 선계산 — floor 잔액 말단 흡수 ────────────────────────────
+  //
+  // 2026-07-29 정정(#591 감사 R7 — 표시 자기일관성, 세액 불변): 같은 감면 유형의 자산들이
+  // 각각 독립 floor되어 **Σ배분액이 cappedAggregateReduction과 최대 (n−1)원 어긋났다**.
+  // 화면에는 "감면 합계"와 "자산별 감면"이 나란히 나오므로 1원 차이도 자기모순으로 보인다.
+  //
+  // 정책: 안분은 마지막 항목이 잔액을 흡수해 `Σ = 전체` 불변식을 지킨다
+  // (memory `feedback_floor_residual_absorption`). 총 감면액(capped) 자체는 불변이므로
+  // 세액에는 영향이 없다.
+  const reductionAllocations = new Map<number, number>();
+  {
+    /** 감면유형 → 그 유형에 속하는 자산 인덱스(입력 순서 유지) */
+    const groupIdx = new Map<string, number[]>();
+    assetRecords.forEach((r, idx) => {
+      const type = r.result.reductionTypeApplied;
+      const reducible = r.result.isExempt ? 0 : r.result.reducibleIncome ?? 0;
+      if (!type || reducible <= 0) return;
+      const entry = reductionBreakdown.find((b) => b.type === type);
+      if (!entry || entry.totalReducibleIncome <= 0) return;
+      const list = groupIdx.get(type);
+      if (list) list.push(idx);
+      else groupIdx.set(type, [idx]);
+    });
+
+    for (const [type, idxList] of groupIdx) {
+      const entry = reductionBreakdown.find((b) => b.type === type)!;
+      let allocated = 0;
+      idxList.forEach((idx, i) => {
+        const isLast = i === idxList.length - 1;
+        if (isLast) {
+          // 말단 흡수 — 나머지 전액. floor 누적 오차가 여기로 모인다.
+          reductionAllocations.set(idx, entry.cappedAggregateReduction - allocated);
+          return;
+        }
+        const reducible = assetRecords[idx].result.reducibleIncome ?? 0;
+        const share = Math.floor(
+          entry.cappedAggregateReduction * (reducible / entry.totalReducibleIncome),
+        );
+        reductionAllocations.set(idx, share);
+        allocated += share;
+      });
+    }
+  }
+
   // properties breakdown 조립 — 합산 재계산 후 건별 배분액 포함
   const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => {
     const reductionType = r.result.reductionTypeApplied;
@@ -569,10 +613,8 @@ export function calculateTransferTaxAggregate(
       const entry = reductionBreakdown.find((b) => b.type === reductionType);
       if (entry && entry.totalReducibleIncome > 0) {
         reductionAllocationRatio = reducibleIncome / entry.totalReducibleIncome;
-        // 최종 capped 감면액을 reducibleIncome 비율로 자산에 배분 (원 미만 절사)
-        reductionAggregated = Math.floor(
-          entry.cappedAggregateReduction * reductionAllocationRatio,
-        );
+        // 배분액은 위 선계산(말단 잔액 흡수)에서 가져온다 — 여기서 재-floor하면 드리프트가 되살아난다.
+        reductionAggregated = reductionAllocations.get(idx) ?? reductionAggregated;
       }
     }
 

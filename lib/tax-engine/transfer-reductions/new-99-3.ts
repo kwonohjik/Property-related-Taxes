@@ -29,7 +29,7 @@
 
 import { addYears } from "date-fns";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { applyRate } from "../tax-utils";
+import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 
 // ============================================================================
 // 타입 정의
@@ -313,11 +313,22 @@ export function calcSignedAllocation(
 ): FiveYearAllocation {
   // 부호 4가지 케이스 (PDF 부호 표)
   if (numerator > 0 && denominator > 0) {
-    // (+,+) 정상 안분
+    // (+,+) 정상 안분 — 감면대상 = 양도소득금액 × (5년시점 − 취득시) ÷ (양도시 − 취득시)
     const ratio = numerator / denominator;
-    // 양도소득금액 × 비율 (정수 차감, 원 미만 절사)
-    // 원 단위 정확성: 분자·분모 정수 → BigInt 우회 불필요 (값이 커도 Number 충분)
-    const reducible = Math.floor(transferIncome * ratio);
+
+    // ① 정수 분수연산 (2026-07-29 정정, #591 감사 R7 — **1원 과소산정**)
+    //    종전 주석은 "분자·분모 정수 → BigInt 우회 불필요"라고 단정했으나, 문제는 크기가 아니라
+    //    **중간 비율이 부동소수**라는 점이었다: 70,000,000 ÷ 100,000,000 = 0.7 은 2진수로
+    //    정확히 표현되지 않아 700,000,000 × 0.7 = 489,999,999.99999994 → floor 489,999,999.
+    //    곱셈을 먼저 하고 나누는 safeMultiplyThenDivide로 정확값 490,000,000을 얻는다
+    //    (memory `feedback_safemul_decimal_apportion_precision` · `feedback_applyrate_fractional_rate_one_won_error`).
+    const raw = safeMultiplyThenDivide(transferIncome, numerator, denominator);
+
+    // ② 양도소득금액 상한 클램프 (조특법 §99의3① — "5년간 발생한 양도소득금액")
+    //    5년시점 기준시가 > 양도시 기준시가면 numerator > denominator 라 ratio > 1이 되어
+    //    감면 대상 소득금액이 실제 양도소득금액을 넘어섰다. 형제 조문은 이미 같은 상한을 둔다:
+    //    `new-99.ts:267` · `unsold-98-8.ts:302` (둘 다 Math.min(…, max(0, transferIncome))).
+    const reducible = Math.min(raw, Math.max(0, transferIncome));
     return { ratio, signCase: "all_positive", reducibleIncome: reducible };
   }
   if (numerator < 0 && denominator > 0) {
