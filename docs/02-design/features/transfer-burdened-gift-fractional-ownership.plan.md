@@ -288,11 +288,38 @@ A2′의 근본 원인이 부담부증여 고유 문제가 아니라 **라우트
 회귀 방어선 `__tests__/api/transfer.route.bundled-swallows-special.test.ts`(6건)가
 세 메커니즘을 각각 대조 구조로 고정한다.
 
-### 🟡 잔여 (경미) — 일괄 결과에 자산별 상세 카드 미노출
+### 🟡 잔여 (경미·확인 완료) — 일괄 결과에 자산별 상세 카드 미노출
 
-상가처럼 **계산은 맞는데 상세 카드만 안 나오는** 표시 갭이 일괄 모드 전반에 있을 수 있다
-(`aggregated.properties[]`가 `commercialBuildingValuationDetail` 등을 담지 않음).
-세액에 영향이 없어 차단 대상은 아니나, 결과 화면 완성도 관점의 후속 항목.
+**계산 손실이 아니다.** `transfer-tax-aggregate.ts:181`이 자산별로 `calculateTransferTax`를
+**완전히 호출**하므로 세액·양도차익은 단건과 동일하다(anchor로 고정).
+문제는 `PerPropertyBreakdown` 조립부(`transfer-tax-aggregate.ts:526~`)가 그 결과에서
+**Detail을 4개만 골라 담고** 나머지를 버린다는 점이다.
+
+| | Detail 필드 수 |
+|---|---|
+| 단건 `TransferTaxResult` | **40** |
+| 집계 `PerPropertyBreakdown` | **4** (`penaltyDetail`·`publicExpropriationDetail`·`replacementLandDetail`·`gbDesignatedLandDetail`) |
+
+**일괄에 실제로 올 수 있는 자산**(겸용·재개발·일반건물·부담부증여는 차단됨 →
+housing·land·building·commercial_building·입주권·분양권)에서 손실되는 주요 상세:
+
+- 상가 환산 §164⑥(`commercialBuildingValuationDetail`) — 실측 확인
+- 비사업용토지 판정 · 다주택 중과 · PHD §164⑤ · 1990 토지등급 환산
+- 상속 취득가액 · 공익수용/경매 평가 · 토지·건물 분리(`splitDetail`)
+- **감면 조문 상세 20여 개**(§99·§98의*·장기임대·자경농지 등) — 감면 **금액은 반영**되나
+  산출근거 카드가 안 나온다(기존 `transfer.route.bundled.test.ts`가 자경농지 100% 감면으로
+  결정세액 0을 검증하고 있어 계산 적용은 입증돼 있다)
+
+**영향**: 세액 정확성 무관. 사용자가 **산출근거를 볼 수 없다**(신고서 첨부·검산 관점의 완성도 문제).
+
+**수정하려면 2단**: ① 엔진 — `PerPropertyBreakdown`에 Detail 전달,
+② UI — `BundledAllocationCard`가 자산별 상세 카드 렌더. 신규 UI 렌더 지점이 필요해 **"대" 규모**다.
+
+**기준선 고정**: `transfer.route.bundled-swallows-special.test.ts`의 소스 스캔 가드가
+현재 4개임을 고정하고, 별도 anchor가 "계산은 영향 없음"을 지킨다. 갭을 좁히면 기준선을 갱신한다.
+
+> 참고: `transferBurdenedGiftBreakdown`은 **일반건물 분기(route:653)에서만** 응답에 실린다.
+> 일괄 분기(route:555)는 넣지 않는다 — dead prop이 아니라 의도된 경로 차이다.
 
 ### 🟠 OPEN — (해소됨, 이력 보존)
 

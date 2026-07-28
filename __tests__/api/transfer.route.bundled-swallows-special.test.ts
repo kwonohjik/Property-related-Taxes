@@ -269,6 +269,53 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     expect(bp.necessaryExpense, "필요경비가 음수가 아니다 — 내부 모순 없음").toBeGreaterThanOrEqual(0);
   });
 
+  /**
+   * 일괄 결과의 **상세 카드 표시 갭** — 계산 손실이 아니다.
+   *
+   * `transfer-tax-aggregate.ts:181`이 자산별로 `calculateTransferTax`를 **완전히 호출**하므로
+   * 계산은 전부 수행된다. 그런데 `PerPropertyBreakdown` 조립부(:526~)가 그 결과에서
+   * **Detail 4개만 골라 담고** 나머지는 버린다 → 결과 화면에 산출근거가 안 나온다.
+   *
+   * 단건 `TransferTaxResult`의 Detail은 **40개**, 집계는 **4개**.
+   * 세액에는 영향이 없으므로 차단 대상이 아니며, 결과 화면 완성도 관점의 후속 항목이다.
+   */
+  it("일괄 per-property 타입은 Detail을 4개만 담는다 (표시 갭 기준선)", async () => {
+    // 런타임 키는 값이 있을 때만 실리므로(undefined는 JSON에서 탈락) **소스 수준**으로 고정한다.
+    const { readFileSync } = await import("node:fs");
+    const detailsOf = (src: string, from: RegExp) => {
+      const body = src.slice(src.search(from));
+      return [...new Set([...body.slice(0, body.indexOf("\n}")).matchAll(/(\w+Detail)\??:/g)].map((m) => m[1]))];
+    };
+    const single = detailsOf(
+      readFileSync("lib/tax-engine/types/transfer-result.types.ts", "utf8"),
+      /export interface TransferTaxResult\b/,
+    );
+    const perProperty = detailsOf(
+      readFileSync("lib/tax-engine/types/transfer-aggregate.types.ts", "utf8"),
+      /interface PerPropertyBreakdown\b/,
+    );
+
+    expect(perProperty.sort()).toEqual([
+      "gbDesignatedLandDetail",
+      "penaltyDetail",
+      "publicExpropriationDetail",
+      "replacementLandDetail",
+    ]);
+    // 단건이 훨씬 풍부하다는 사실 자체를 고정 — 갭이 좁혀지면 이 기준선을 갱신한다(좋은 신호).
+    expect(single.length).toBeGreaterThan(perProperty.length * 5);
+  });
+
+  it("표시 갭은 **계산에 영향이 없다** — 일괄 자산별 양도차익 = 단건", async () => {
+    // 갭을 "경미"로 분류하는 근거. 이 단언이 깨지면 표시 갭이 아니라 계산 결함이다.
+    const sb = await (await POST(req(CB))).json();
+    const bb = await (await POST(req({ ...CB, ...COMPANION }))).json();
+    const bp = bb.data.aggregated.properties.find(
+      (x: { propertyId: string }) => x.propertyId === "primary",
+    );
+    expect(bp.transferGain).toBe(sb.data.result.transferGain);
+    expect(bp.transferGain).toBeGreaterThan(0);
+  });
+
   it("🔴 부담부증여 — §159 gain과 안분 양도가액이 충돌해 **필요경비가 음수**가 된다", async () => {
     // ⚠️ 부담부증여만 메커니즘이 다르다. 겸용·재개발·일반건물은 route 분기가 **미실행**이지만,
     //    부담부증여의 STEP 0.48은 엔진 내부라 **실행된다**. 문제는 route가 transferPrice를
