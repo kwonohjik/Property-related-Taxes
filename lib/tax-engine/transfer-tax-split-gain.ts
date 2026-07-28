@@ -401,8 +401,10 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     ? computeEstimatedDeduction(landStdAtAcq, 0.03, ownRatio)
     : 0;
   // ⚠️ **성분별 독립 floor가 정본이다. 잔액 흡수(「총액분 − 토지분」)를 넣지 말 것.**
-  //    §166⑥은 토지·건물을 구분해 **각각의 양도차익**을 산출하고, §163⑥은 그 각 자산의
-  //    취득당시 기준시가에 율을 곱한다 — 「라목 총액 × 3% 하나가 법정액」을 강제하는 문언이 없다.
+  //    **소득세법 §100②**이 토지·건물 등을 함께 양도한 경우 "이를 **각각 구분하여 기장**"하도록
+  //    규정하고, **소득령 §163⑥**은 1호(토지)·2호가목(건물·주택)을 **별개 호**로 열거해 각각
+  //    자기 base × 3/100으로 정한다 — 「라목 총액 × 3% 하나가 법정액」을 강제하는 문언이 없다.
+  //    (§166⑥은 "가액의 구분이 **불분명한 때**"의 안분방법만 규정 — 근거 조문이 아니다.)
   //    2026-07-28 흡수를 시도했다가 PHD Excel 정본 anchor(`pre-housing-disclosure.test.ts` D-7-2)와
   //    1원 어긋나 14건이 깨졌다. 같은 §166⑥ 구조이므로 여기도 독립 floor로 통일한다. 재시도 방지 기록.
   const buildingAppraisalDed = buildingNonActual
