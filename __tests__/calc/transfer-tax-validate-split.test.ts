@@ -220,3 +220,90 @@ describe("validateSplitDirectInputs — 총액 매핑 다분기 경로는 미검
     expect(err, "100/100을 지분으로 오판하면 검증이 통째로 죽는다").not.toBeNull();
   });
 });
+
+/**
+ * V1·V2·V4 — 별개 취득(토지·건물 취득시기 상이) 취득가액 파트별 필수.
+ *
+ * 엔진(transfer-tax-split-gain.ts calcOnePart)이 미입력을 TaxCalculationError로 차단하므로,
+ * validate가 같은 조건을 **필드 오류로 먼저** 알려야 한다(⑧ — UI 통과 ↔ 엔진 차단 모순 금지).
+ * 판정 게이트는 엔진 전송값과 동일한 `isSeparateAcquisition()` 단일 소스.
+ */
+describe("V1·V2 — 별개 취득 파트별 취득가액 필수", () => {
+  const sepAsset = (over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) =>
+    splitAsset({
+      acquisitionDate: "2018-06-01",
+      landAcquisitionDate: "2015-06-01",
+      saleSplitMode: "actual" as const,
+      landTransferPrice: "600,000,000",
+      buildingTransferPrice: "400,000,000",
+      landStandardPriceAtTransfer: "600,000,000",
+      buildingStandardPriceAtTransfer: "400,000,000",
+      ...over,
+    });
+
+  it("실거래가 + 건물 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({ landAcqMode: "actual", buildingAcqMode: "actual", landAcquisitionPrice: "300,000,000" }),
+      "자산 1",
+    );
+    expect(err).toContain("건물 취득가액");
+  });
+
+  it("실거래가 + 둘 다 입력 → 통과 (합이 상단 총액 4억과 달라도 정상 — V4)", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({
+        landAcqMode: "actual",
+        buildingAcqMode: "actual",
+        landAcquisitionPrice: "300,000,000",
+        buildingAcquisitionPrice: "250,000,000",
+      }),
+      "자산 1",
+    );
+    expect(
+      err,
+      "별개 취득은 잔액 규칙이 폐지돼 '합 = 총액' 불변식이 없다 — 총액 초과 검증이 살아있으면 정당 입력이 막힌다",
+    ).toBeNull();
+  });
+
+  it("매매사례 + 파트 미입력 → §176의2③1호 근거로 차단", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({ landAcqMode: "salesCase", buildingAcqMode: "salesCase" }),
+      "자산 1",
+    );
+    expect(err).toContain("매매사례가액");
+  });
+
+  it("환산은 대상 아님 — 총액 미참조 구조", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({ landAcqMode: "estimated", buildingAcqMode: "estimated" }),
+      "자산 1",
+    );
+    expect(err).toBeNull();
+  });
+
+  it("비소유 파트는 대상 아님 (selfOwns=land_only + 토지만 입력)", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({
+        selfOwns: "land_only",
+        landAcqMode: "actual",
+        buildingAcqMode: "actual",
+        landAcquisitionPrice: "300,000,000",
+      }),
+      "자산 1",
+    );
+    expect(err).toBeNull();
+  });
+
+  it("🔴 취득일 동일 → V1 미적용 (총액 잔액 도출이 정당 — 종전 동작)", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({
+        landAcquisitionDate: "2018-06-01",
+        landAcqMode: "actual",
+        buildingAcqMode: "actual",
+        landAcquisitionPrice: "300,000,000",
+      }),
+      "자산 1",
+    );
+    expect(err, "겸용·selfOwns가 분리를 강제해도 취득일이 같으면 총액이 실재한다").toBeNull();
+  });
+});

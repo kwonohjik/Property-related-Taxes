@@ -35,3 +35,35 @@ export function effectivePartAcqMode(
 ): PartAcqMode {
   return explicit || deriveLegacyPartAcqMode(asset);
 }
+
+interface SeparateAcquisitionFlags {
+  hasSeperateLandAcquisitionDate?: boolean;
+  landAcquisitionDate?: string;
+  acquisitionDate?: string;
+  isMixedUseHouse?: boolean;
+  assetKind?: string;
+}
+
+/**
+ * **별개 취득** 판정 — 토지와 건물을 서로 다른 시점에 각각 취득해 취득가액이 파트별로 실재하는 자산인가.
+ *
+ * `hasSeperateLandAcquisitionDate` 플래그 단독으로는 판정할 수 없다. 이 플래그는
+ * 겸용주택 체크(`MixedUseSection.tsx:48`)와 `selfOwns !== "both"` 선택
+ * (`CompanionAcquisitionCauseSection.tsx:179`)에서도 **강제로 켜지기 때문**이다 —
+ * 그 두 경로는 토지·건물을 같은 날 함께 취득했어도 분리 계산 경로를 타므로,
+ * 취득가액은 여전히 하나의 총액으로 실재한다(§166⑥ "구분할 수 없는 때" 안분이 정당).
+ *
+ * 취득가액을 파트별 완결로 요구해야 하는 것은 **실제로 취득시점이 다른** 경우뿐이다
+ * (소득세법 §97①1호 · §114⑦ · 소득령 §176의2③ — 자산별 추계).
+ *
+ * UI 노출·API 전송·validate·엔진이 **모두** 이 함수를 단일 소스로 사용한다
+ * (memory `feedback_ui_engine_dual_truth_avoidance`).
+ */
+export function isSeparateAcquisition(asset: SeparateAcquisitionFlags): boolean {
+  if (!asset.hasSeperateLandAcquisitionDate) return false;
+  if (!asset.landAcquisitionDate || !asset.acquisitionDate) return false;
+  if (asset.landAcquisitionDate === asset.acquisitionDate) return false;
+  // 겸용주택은 4부분 안분(transfer-tax-mixed-use.ts)이 별도 축을 지배 — 범위 밖.
+  if (asset.assetKind === "housing" && asset.isMixedUseHouse) return false;
+  return true;
+}
