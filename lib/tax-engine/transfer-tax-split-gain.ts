@@ -517,7 +517,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   });
   const phd = calcPreHousingDisclosureGain(
     input.transferPrice,
-    input.preHousingDisclosure!,
+    { ...input.preHousingDisclosure!, ownershipRatio: input.ownershipRatio },
     housingExprVal?.denominator,
   );
 

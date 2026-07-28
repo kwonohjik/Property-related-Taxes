@@ -99,6 +99,7 @@ export function runCommercialBuildingStep(
     {
       ...effectiveCbInput,
       acquisitionYear: input.acquisitionDate.getFullYear(),
+      ownershipRatio: input.ownershipRatio,
       ...(monthsToFirst > 0 && { holdingMonthsToFirstDisclosure: monthsToFirst }),
     },
     input.transferPrice,

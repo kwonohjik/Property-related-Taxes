@@ -261,6 +261,16 @@ export type GeneralBuildingInput = {
   capitalExpenditure?: number;
   /** 양도비 (원, 자산 총액 — §97① 나목). swap 판정용. */
   transferExpense?: number;
+  /**
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
+   * 그대로 내려준다(서브엔진 재판정 금지).
+   *
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
+   */
+  ownershipRatio?: number;
 };
 
 /** 양도가 안분 결과 */

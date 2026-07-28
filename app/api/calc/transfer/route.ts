@@ -577,6 +577,9 @@ export async function POST(request: NextRequest) {
       const mixedAsset = {
         ...data.mixedUse,
         isMixedUseHouse: true as const,
+        // ⑭ 개산공제(§163⑥) 지분 축소 — 자산-수준 `ownershipRatio`를 겸용 서브엔진에 주입.
+        //    `data.mixedUse`에는 없는 top-level 필드라 여기서 명시 전달하지 않으면 조용히 누락된다.
+        ownershipRatio: data.ownershipRatio,
         landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
         buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
         preHousingDisclosure: phdInput,
@@ -637,6 +640,7 @@ export async function POST(request: NextRequest) {
           compensationPerSqm: data.compensationPerSqm,
           compensationBasisStdPrice: data.compensationBasisStdPrice,
         },
+        data.ownershipRatio,
       );
       return NextResponse.json(
         {

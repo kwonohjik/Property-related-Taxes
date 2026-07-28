@@ -267,6 +267,11 @@ export function dispatchGeneralBuilding(
     compensationPerSqm?: number;
     compensationBasisStdPrice?: number;
   },
+  /**
+   * ⑭ 공유지분율 — 개산공제(§163⑥) base 축소 전용. `data.ownershipRatio`(top-level)에서 온다.
+   * `gbRaw`는 `generalBuildingValuation` 서브객체라 이 값을 담고 있지 않다 — 명시 전달이 필수.
+   */
+  ownershipRatio?: number,
 ): GeneralBuildingRouteResult {
   // buildingAcquisitionDate: Zod는 z.string().date()로만 검증 — Date 객체로 변환 안 됨.
   // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
@@ -384,6 +389,7 @@ export function dispatchGeneralBuilding(
     totalTransferPrice,
     transferDate,
     acquisitionDate,
+    ownershipRatio,
     // §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 주입.
     // 환산 경로 엔진이 게이트(수용·환산·2009.02.04·보상 후보) 판정. undefined이면 무영향(회귀 0).
     ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),

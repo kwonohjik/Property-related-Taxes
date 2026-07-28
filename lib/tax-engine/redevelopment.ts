@@ -165,6 +165,7 @@ function runLandContribEstimated(
     landStdPriceAtAcq: redevelopment.landStdPriceAtAcq ?? 0,
     landStdPriceAtApproval: redevelopment.landStdPriceAtApproval ?? 0,
     postApprovalExpenses: redevelopment.postApprovalExpenses ?? 0,
+    ownershipRatio: input.ownershipRatio,
   });
 
   // ─ RedevelopmentBranchDetail 로 변환 ─
@@ -315,6 +316,7 @@ function runHousingContribReceiveEstimated(
     housingStdPriceAtApproval: redevelopment.housingStdPriceAtApproval ?? 0,
     preApprovalExpenses: redevelopment.preApprovalExpenses ?? 0,
     postApprovalExpenses: redevelopment.postApprovalExpenses ?? 0,
+    ownershipRatio: input.ownershipRatio,
   });
 
   // ─ RedevelopmentBranchDetail 로 변환 ─

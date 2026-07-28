@@ -191,7 +191,7 @@ export function calcCarryoverScenarios(
       // PHD/APD 환산 재사용 (M-2 결정: apartmentPreDisclosure도 동일 함수)
       const phdResult = calcPreHousingDisclosureGain(
         rawInput.transferPrice,
-        rawInput.preHousingDisclosure,
+        { ...rawInput.preHousingDisclosure, ownershipRatio: rawInput.ownershipRatio },
       );
       donorAcqPrice = phdResult.totalEstimatedAcquisitionPrice;
     } else {

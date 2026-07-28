@@ -74,6 +74,7 @@ export function calculateRedevelopmentTax(
     priorHouseResidenceMonths: input.redevelopment!.priorHouseResidenceMonths,
     newHouseResidenceMonths: input.redevelopment!.newHouseResidenceMonths,
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
+    ownershipRatio: input.ownershipRatio,
   });
 
   // ─ Step A.5: STEP 3 (12억 안분) — §95③·시행령 §160 ─
