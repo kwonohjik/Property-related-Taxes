@@ -23,6 +23,7 @@
  *   - postApprovalExpenses 미입력 시 0 처리.
  */
 
+import { estimatedDeductionRate } from "./legal-codes";
 import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRedevelopmentValuation } from "./redevelopment-valuation";
 import {
@@ -78,6 +79,12 @@ export interface RedevelopmentSplitInput {
    * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
    */
   ownershipRatio?: number;
+  /**
+   * 미등기양도자산 여부(소득세법 §104③) — §163⑥ 개산공제율 3/100 → **3/1000** 전환.
+   * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다(서브엔진 재판정 금지).
+   * 율 산출은 `estimatedDeductionRate()` 단일 경유.
+   */
+  isUnregistered?: boolean;
 }
 
 /** 3분할 양도차익 결과 (LTHD 미적용 — lthd.ts 에서 별도 적용) */
@@ -178,7 +185,7 @@ export function computeRedevelopmentSplit(
   ) {
     estimatedLumpDeduction = computeEstimatedDeduction(
       valuationMeta.numerator,
-      0.03,
+      estimatedDeductionRate(input.isUnregistered),
       input.ownershipRatio,
     );
     // 표시 산식 base echo — numerator는 물건 전체(100%) 값이다.

@@ -151,6 +151,21 @@ export const ESTIMATED_DEDUCTION_RATE = {
   UNREGISTERED:  0.003,
 } as const;
 
+/**
+ * §163⑥ 개산공제율 선택 — **미등기양도자산(소득세법 §104③) 여부 단일 판정점**.
+ *
+ * 각 산출 지점이 `0.03`을 직접 쓰면 미등기 분기가 조용히 누락된다 — 실제로 split·PHD·겸용·재개발
+ * 경로 15곳이 3% 고정이어서 미등기 자산의 개산공제가 **10배**로 산출됐다(2026-07-28 정정).
+ * 같은 자산이 분리 계산 경로를 타면 다른 율이 적용되는 모순이었다.
+ *
+ * 신규 개산공제 지점은 반드시 이 함수를 경유할 것. 리터럴 `0.03` 사용 금지.
+ */
+export function estimatedDeductionRate(isUnregistered?: boolean): number {
+  return isUnregistered
+    ? ESTIMATED_DEDUCTION_RATE.UNREGISTERED
+    : ESTIMATED_DEDUCTION_RATE.LAND_BUILDING;
+}
+
 // ============================================================
 // 양도소득세 — 소득세법 §89 ~ §104
 // ============================================================
