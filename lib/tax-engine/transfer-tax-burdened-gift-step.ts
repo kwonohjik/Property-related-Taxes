@@ -24,10 +24,13 @@ export function runBurdenedGiftStep(
     rawInput.acquisitionCause === "burdened_gift";
   if (isBurdenedGiftEngine && rawInput.burdenedGiftInfo) {
     // Phase 2 게이트 — propertyType 허용 범위·overshoot fail-fast·고가주택 후속 PR 차단
+    // 공유지분 — §159의 A·C를 지분분으로 축소(scaleBurdenedGiftInfo). 채무는 사용자 입력분 그대로.
+    const ownershipRatio = rawInput.ownershipRatio;
     assertBurdenedGiftEligible({
       propertyType: workingInput.propertyType,
       isOneHousehold: workingInput.isOneHousehold,
       info: rawInput.burdenedGiftInfo,
+      ownershipRatio,
     });
     transferBurdenedGiftBreakdown = buildBurdenedGiftBreakdown({
       landStdPriceAtTransfer: rawInput.burdenedGiftInfo.landStdPriceAtTransfer,
@@ -42,6 +45,7 @@ export function runBurdenedGiftStep(
       transferExpense: rawInput.transferExpense,
       // §104③ 미등기양도자산 — 개산공제율 0.3% (소령 §163⑥1호 단서). transfer 미등기 토글 재사용. (H-25)
       isUnregistered: rawInput.isUnregistered,
+      ownershipRatio,
     });
     const land = transferBurdenedGiftBreakdown.perAsset.land;
     const building = transferBurdenedGiftBreakdown.perAsset.building;
@@ -88,7 +92,14 @@ export function runBurdenedGiftStep(
       // ⚠️ 아래 isK5SelfBuilt spread가 "estimated"로 덮어쓴다(§114조의2 penalty 신호) — 의도된 순서, 재정렬 금지.
       // 계획서: docs/02-design/features/burdened-gift-stale-acquisition-method.plan.md
       acquisitionMethod: "actual" as const,
-      burdenedGiftDenominator: transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
+      // 12억 고가주택 판정·안분 분모.
+      //   단독: 현행 그대로 C(= max) — 국세청 해석례 5건 기반 해석 B 유지.
+      //   지분: **물건 전체** 보충적평가액. 지분분 C를 쓰면 문턱이 1/지분율만큼 올라
+      //         24억 물건의 1/2 지분이 비과세로 빠진다(A4/#849와 동형 결함).
+      burdenedGiftDenominator:
+        ownershipRatio !== undefined && ownershipRatio < 1
+          ? transferBurdenedGiftBreakdown.wholePropertySupplementary
+          : transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
       ...(isK5SelfBuilt
         ? {
             acquisitionMethod: "estimated" as const,

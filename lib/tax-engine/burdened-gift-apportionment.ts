@@ -27,6 +27,7 @@ import {
 import {
   safeMultiplyThenDivide,
   applyRate,
+  applyRatio,
   computeEstimatedDeduction,
   calculateEstimatedAcquisitionPrice,
 } from "./tax-utils";
@@ -36,6 +37,64 @@ import type {
   TransferBurdenedGiftBreakdown,
 } from "./types/transfer-burdened-gift.types";
 import { format } from "date-fns";
+
+// ============================================================
+// 공유지분 스케일 (소령 §159 — A·C는 증여 대상 재산의 값)
+// ============================================================
+
+/**
+ * 공유지분 부담부증여 — **시스템이 물건 전체(100%)로 들고 있는 평가액**을 지분분으로 축소.
+ *
+ * ## 왜 필요한가
+ *
+ * 소령 §159①(KoreanLaw 실측 mst=286211): `취득가액 = A × B/C` · `양도가액 = A × B/C`.
+ * **A(§97①1호 가액 / 상증법 §60~66 평가액)와 C(증여가액)는 모두 "증여 대상 재산"의 값**이므로
+ * 증여 대상이 1/2 지분이면 A·C 모두 지분분이다. **B(채무액)만 절대금액**이다.
+ *
+ * A와 C가 함께 축소되면 산식은 **스케일 불변**이라 결과가 같다 — 이것이 지분 미인지 상태에서도
+ * 대부분 정답이 나오던 이유다. 상쇄가 깨지는 지점은 **C = max(보충적, 담보, 임대)** 의
+ * 담보·임대 항이 **절대금액**이라 지분에 따라 줄지 않는다는 것이다. C가 채무액으로 결정되면
+ * A만 100% 스케일로 남아 약분되지 않고 **취득가액 과대 → 과소과세**가 된다.
+ *
+ * ## 스케일하지 않는 것
+ *
+ * `lendingDepositTotal`·`mortgageDebtAmount`·`annualRentTotal`·`mortgageSetAmount`는
+ * **사용자가 해당 지분의 인수분을 입력**한다. 엔진이 물건 전체 채무를 ×ratio로 쪼개면
+ * **자동 안분 fallback**이 되어 정책 위반이다(`feedback_no_silent_apportion_fallback`).
+ * 인수채무는 계약으로 정해지는 금액이지 지분율로 파생되는 값이 아니다.
+ *
+ * `capitalExpenditure`·`transferExpense`도 제외 — `transfer-tax-api.ts`에서 **이미**
+ * `applyRatio` 적용되어 도달한다(이중 적용 금지).
+ *
+ * ## 절사
+ *
+ * 성분별 **독립 floor**(`applyRatio` = `Math.floor(v × ratio)`). 잔액 흡수는 PR #845에서
+ * 논파되어 규약에서 제외됐다(소득세법 §100② "각각 구분하여 기장"). 재도입 금지.
+ */
+export function scaleBurdenedGiftInfo(
+  info: BurdenedGiftInfo,
+  ownershipRatio?: number,
+): BurdenedGiftInfo {
+  if (ownershipRatio === undefined || ownershipRatio >= 1 || ownershipRatio <= 0) return info;
+  const s = (v: number | undefined) => (v === undefined ? undefined : applyRatio(v, ownershipRatio));
+  return {
+    ...info,
+    // 기준시가 4 (양도·취득 × 토지·건물)
+    landStdPriceAtTransfer: applyRatio(info.landStdPriceAtTransfer, ownershipRatio),
+    buildingStdPriceAtTransfer: applyRatio(info.buildingStdPriceAtTransfer, ownershipRatio),
+    landStdPriceAtAcquisition: applyRatio(info.landStdPriceAtAcquisition, ownershipRatio),
+    buildingStdPriceAtAcquisition: applyRatio(info.buildingStdPriceAtAcquisition, ownershipRatio),
+    // 증여세 평가용 건물 기준시가 (상증법 §61 층별 가감율)
+    giftBuildingStdPriceAtTransfer: s(info.giftBuildingStdPriceAtTransfer),
+    // 시가 모드 2
+    marketValueAtTransfer: s(info.marketValueAtTransfer),
+    marketValueAtAcquisition: s(info.marketValueAtAcquisition),
+    // K-4 실지취득가액 3
+    actualLandAcquisitionPrice: s(info.actualLandAcquisitionPrice),
+    actualBuildingAcquisitionPrice: s(info.actualBuildingAcquisitionPrice),
+    actualAcquisitionTotal: s(info.actualAcquisitionTotal),
+  };
+}
 
 // ============================================================
 // 상증법 §60~§66 Max 평가 산정
@@ -208,15 +267,30 @@ export function buildBurdenedGiftBreakdown(params: {
   transferExpense?: number;
   /** §104③ 미등기양도자산 — 개산공제율 0.3% 적용(소령 §163⑥1호 단서). 기본 false=등기(3%). (H-25) */
   isUnregistered?: boolean;
+  /**
+   * 공유지분율(0<r<1). §159의 A·C를 지분분으로 축소한다 — `scaleBurdenedGiftInfo` 참조.
+   * 미전달·1.0이면 완전 무변경(단독 소유).
+   */
+  ownershipRatio?: number;
 }): TransferBurdenedGiftBreakdown {
-  const {
-    landStdPriceAtTransfer,
-    buildingStdPriceAtTransfer,
-    landStdPriceAtAcquisition,
-    buildingStdPriceAtAcquisition,
-    info,
-    isUnregistered = false,
-  } = params;
+  const { info: rawInfo, isUnregistered = false, ownershipRatio } = params;
+
+  // 지분 축소는 **여기 한 곳**에서만 한다 — 이하 로직은 이미 지분분이 된 값을 그대로 쓴다.
+  // params의 기준시가 4필드는 info와 동일 소스(step 배선)이므로 스케일된 info에서 되읽는다.
+  const info = scaleBurdenedGiftInfo(rawInfo, ownershipRatio);
+  const landStdPriceAtTransfer = info.landStdPriceAtTransfer;
+  const buildingStdPriceAtTransfer = info.buildingStdPriceAtTransfer;
+  const landStdPriceAtAcquisition = info.landStdPriceAtAcquisition;
+  const buildingStdPriceAtAcquisition = info.buildingStdPriceAtAcquisition;
+
+  // 12억 고가주택 판정 분모용 — **물건 전체(100%)** 보충적평가액.
+  // §89 12억은 물건 전체 가액 기준이다(A4/#849). 지분분 C를 쓰면 문턱이 1/지분율만큼 올라
+  // 24억 물건의 1/2 지분이 비과세로 빠진다. max가 아닌 supplementary인 이유는 담보·임대
+  // 평가항이 **지분 인수분**이라 물건 전체 스케일로 되돌릴 수 없기 때문(역산 = 자동 안분).
+  const wholePropertySupplementary =
+    rawInfo.valuationMode === "sangjeungbeop_market"
+      ? (rawInfo.marketValueAtTransfer ?? 0)
+      : rawInfo.landStdPriceAtTransfer + rawInfo.buildingStdPriceAtTransfer;
 
   // STEP 1a: 양도세 보충적평가 (양도시 §99 기준시가) — 자산별 양도가액 안분 분모용
   const sangjeungbeopValuation = computeSangjeungbeopValuation(
@@ -460,6 +534,8 @@ export function buildBurdenedGiftBreakdown(params: {
     assumedDebtAmount,
     sangjeungbeopValuation,
     giftValuation,
+    wholePropertySupplementary,
+    ownershipRatio: ownershipRatio !== undefined && ownershipRatio < 1 ? ownershipRatio : undefined,
     debtRatio,
     gratuitousPortion,
     taxpayer: "donor",
@@ -512,8 +588,14 @@ export function assertBurdenedGiftEligible(args: {
   propertyType: string;
   isOneHousehold?: boolean;
   info: BurdenedGiftInfo;
+  /**
+   * 공유지분율 — 초과부담부 검사도 **지분분 평가액** 기준이어야 한다.
+   * 물건 전체 평가액으로 검사하면 진짜 초과부담부(채무 > 지분 가액)가 조용히 통과한다.
+   */
+  ownershipRatio?: number;
 }): void {
-  const { propertyType, isOneHousehold, info } = args;
+  const { propertyType, isOneHousehold, ownershipRatio } = args;
+  const info = scaleBurdenedGiftInfo(args.info, ownershipRatio);
 
   // F-3 (2026-05-12): commercial_building 확장. general_building_unit은 엔진 내부 타입.
   const SUPPORTED: string[] = ["housing", "land", "building", "general_building", "commercial_building"];

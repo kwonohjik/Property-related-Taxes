@@ -204,6 +204,22 @@ export interface TransferBurdenedGiftBreakdown {
   };
 
   /**
+   * **물건 전체(100%)** 보충적평가액 — §89 12억 고가주택 판정·안분 분모 전용.
+   *
+   * 지분 모드에서 `sangjeungbeopValuation.max`(= 지분분 C)를 12억 분모로 쓰면 문턱이
+   * 1/지분율만큼 올라 24억 물건의 1/2 지분이 비과세로 빠진다(A4/#849와 동형 결함).
+   * 고가주택 가액 요건은 **물건 전체 가액** 기준이므로 이 값을 쓴다.
+   *
+   * max가 아닌 supplementary인 이유: 담보(§66)·임대(§61⑤) 평가항은 사용자가 입력한
+   * **지분 인수분**이라 물건 전체 스케일로 되돌릴 수 없다(역산 = 자동 안분 금지).
+   * 단독 소유에서는 `sangjeungbeopValuation.supplementary`와 항상 같다.
+   */
+  wholePropertySupplementary: number;
+
+  /** 적용된 공유지분율(0<r<1). 단독 소유면 undefined — 결과 화면 표시·감사 추적용. */
+  ownershipRatio?: number;
+
+  /**
    * 무상이전분 = C − B.
    * Phase 2(증여세 통합)에서 증여세 과세대상 가액의 출발점.
    * 사례 34: 8,578,295,360 − 4,120,000,000 = 4,458,295,360원.
