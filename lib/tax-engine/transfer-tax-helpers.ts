@@ -472,8 +472,13 @@ export function calcLongTermHoldingDeduction(
     const ctx = input.primaryContextForCompanionRate;
     // primary 주택 보유기간 기준
     const primaryHoldingYears = Math.floor(ctx.holdingMonths / 12);
-    // 2년 미만이면 단기세율 적용 → LTHD 배제
-    if (ctx.holdingMonths < 24) {
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 게이트가 24개월(2년)이라
+    //   주 주택 2~3년 보유 구간에서 **존재하지 않는 장기보유특별공제**가 부여됐다.
+    //   §95②의 진입요건은 **보유기간 3년 이상**이며, 같은 함수의 일반 경로
+    //   `rateForYears`도 `years < 3 → 0` 게이트를 갖고 있다(내부 불일치였다).
+    //   24개월 게이트는 "2년 미만 = 단기세율"이라는 **다른 규칙**을 LTHD 요건으로
+    //   착각한 것이다 — 단기세율 여부와 LTHD 3년 요건은 별개 판정이다.
+    if (ctx.holdingMonths < 36) {
       const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
       return { deduction: 0, rate: 0, holdingPeriod: { years: holding.years, months: holding.months } };
     }

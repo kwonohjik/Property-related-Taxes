@@ -414,35 +414,6 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     ? computeEstimatedDeduction(buildingStdAtAcq, dedRate, ownRatio)
     : 0;
 
-  // ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
-  // 본문: acqPrice(환산) + appraisalDed(개산공제). directExp는 차감 안 함.
-  // 단서: directExp > (acqPrice + appraisalDed) → directExp로 swap.
-  // 자산 단위(파트별) 독립 적용 — 토지/건물 각각 비교.
-  function applyAssetSwap(
-    acqPrice: number,
-    directExp: number,
-    appraisalDed: number,
-    explicitDirect: boolean,
-    nonActualMode: boolean,
-    isEstimatedMode: boolean,
-  ): { effectiveDirect: number; effectiveAppraisalDed: number; swapApplied: boolean } {
-    if (!nonActualMode) {
-      // 실가 모드 — directExp 그대로 차감, 개산공제 없음
-      return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: false };
-    }
-    if (!explicitDirect) {
-      // 자산별 명시 입력 없음 → 본문만, swap 불가
-      return { effectiveDirect: 0, effectiveAppraisalDed: appraisalDed, swapApplied: false };
-    }
-    const estimatedSide = acqPrice + appraisalDed;
-    // §97② 2호 단서는 취득가액을 '환산취득가액'으로 하는 경우 전용 — 감정·매매사례가액 모드는 swap 없이 본문(개산공제)만.
-    if (isEstimatedMode && directExp > estimatedSide) {
-      // 단서 — directExp로 swap (개산공제 미적용). 필요경비 = directExp 단독이므로 취득가액도 미차감(gain 산식에서 처리).
-      return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: true };
-    }
-    // 본문 — 개산공제만, directExp 차감 안 함
-    return { effectiveDirect: 0, effectiveAppraisalDed: appraisalDed, swapApplied: false };
-  }
   const landSwap = applyAssetSwap(
     landAcqPrice,
     landDirectExp,
@@ -525,6 +496,36 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
  * §164⑤ 경로: 개별주택가격 미공시 취득 + 3-시점 환산취득가 분리 계산.
  * calcPreHousingDisclosureGain() 결과로 SplitGainResult 구성.
  */
+// ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
+// 본문: acqPrice(환산) + appraisalDed(개산공제). directExp는 차감 안 함.
+// 단서: directExp > (acqPrice + appraisalDed) → directExp로 swap.
+// 자산 단위(파트별) 독립 적용 — 토지/건물 각각 비교.
+function applyAssetSwap(
+  acqPrice: number,
+  directExp: number,
+  appraisalDed: number,
+  explicitDirect: boolean,
+  nonActualMode: boolean,
+  isEstimatedMode: boolean,
+): { effectiveDirect: number; effectiveAppraisalDed: number; swapApplied: boolean } {
+  if (!nonActualMode) {
+    // 실가 모드 — directExp 그대로 차감, 개산공제 없음
+    return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: false };
+  }
+  if (!explicitDirect) {
+    // 자산별 명시 입력 없음 → 본문만, swap 불가
+    return { effectiveDirect: 0, effectiveAppraisalDed: appraisalDed, swapApplied: false };
+  }
+  const estimatedSide = acqPrice + appraisalDed;
+  // §97② 2호 단서는 취득가액을 '환산취득가액'으로 하는 경우 전용 — 감정·매매사례가액 모드는 swap 없이 본문(개산공제)만.
+  if (isEstimatedMode && directExp > estimatedSide) {
+    // 단서 — directExp로 swap (개산공제 미적용). 필요경비 = directExp 단독이므로 취득가액도 미차감(gain 산식에서 처리).
+    return { effectiveDirect: directExp, effectiveAppraisalDed: 0, swapApplied: true };
+  }
+  // 본문 — 개산공제만, directExp 차감 안 함
+  return { effectiveDirect: 0, effectiveAppraisalDed: appraisalDed, swapApplied: false };
+}
+
 function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   // §164⑨1호 공익수용 특례 — 양도시 개별주택가격(P_T)을 min(개별주택가격, 보상액, 보상기초)로 낮춰
   // **환산 분모에만** 주입한다(안분은 원 P_T 유지 — D16-GB 동형, 법령 검증 완료). 주택 총액 트랙 재사용.
@@ -549,8 +550,38 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   const landDirectExp = input.landDirectExpenses ?? Math.floor(totalExpenses * landExpRatio);
   const buildingDirectExp = input.buildingDirectExpenses ?? (totalExpenses - landDirectExp);
 
-  const landGain = phd.landTransferPrice - phd.landAcquisitionPrice - phd.landLumpDeduction - landDirectExp;
-  const buildingGain = phd.buildingTransferPrice - phd.buildingAcquisitionPrice - phd.buildingLumpDeduction - buildingDirectExp;
+  // §97②2호 택일(MAX) 적용 — 2026-07-29 정정(#591 감사 R7 — **세액 변경**).
+  //   PHD(§164⑤) 경로는 항상 환산취득가 모드인데, 종전에는
+  //   `환산취득가 + 개산공제 + 자본적지출`을 **전부 합산 차감**해 필요경비를 이중계상했다
+  //   (양도차익 과소 → 세액 과소). 비-PHD 경로(`calcSplitGain`)는 이미 `applyAssetSwap`으로
+  //   가목(환산+개산공제) ↔ 나목(자본적지출) **택일**을 구현하고 있어 두 경로가 어긋나 있었다.
+  //   같은 헬퍼를 모듈 스코프로 올려 **한 곳에서만 정의**되게 했다.
+  const phdLandSwap = applyAssetSwap(
+    phd.landAcquisitionPrice,
+    landDirectExp,
+    phd.landLumpDeduction,
+    input.landDirectExpenses !== undefined,
+    true,  // PHD는 항상 추계(환산) 모드
+    true,  // 환산취득가 모드 — §97②2호 단서 대상
+  );
+  const phdBuildingSwap = applyAssetSwap(
+    phd.buildingAcquisitionPrice,
+    buildingDirectExp,
+    phd.buildingLumpDeduction,
+    input.buildingDirectExpenses !== undefined,
+    true,
+    true,
+  );
+  const landGain =
+    phd.landTransferPrice -
+    (phdLandSwap.swapApplied ? 0 : phd.landAcquisitionPrice) -
+    phdLandSwap.effectiveDirect -
+    phdLandSwap.effectiveAppraisalDed;
+  const buildingGain =
+    phd.buildingTransferPrice -
+    (phdBuildingSwap.swapApplied ? 0 : phd.buildingAcquisitionPrice) -
+    phdBuildingSwap.effectiveDirect -
+    phdBuildingSwap.effectiveAppraisalDed;
 
   const { years: landHoldingYears } = calculateHoldingPeriod(
     input.landAcquisitionDate!,
@@ -564,27 +595,29 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   const landPart: SplitPartResult = {
     transferPrice: phd.landTransferPrice,
     acquisitionPrice: phd.landAcquisitionPrice,
-    directExpenses: landDirectExp,
-    appraisalDeduction: phd.landLumpDeduction,
+    directExpenses: phdLandSwap.effectiveDirect,
+    appraisalDeduction: phdLandSwap.effectiveAppraisalDed,
     stdPriceAtAcq: phd.landHousingAtAcquisition,
     gain: landGain,
     holdingYears: landHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
     acqMode: "estimated",
+    swapApplied: phdLandSwap.swapApplied,
   };
 
   const buildingPart: SplitPartResult = {
     transferPrice: phd.buildingTransferPrice,
     acquisitionPrice: phd.buildingAcquisitionPrice,
-    directExpenses: buildingDirectExp,
-    appraisalDeduction: phd.buildingLumpDeduction,
+    directExpenses: phdBuildingSwap.effectiveDirect,
+    appraisalDeduction: phdBuildingSwap.effectiveAppraisalDed,
     stdPriceAtAcq: phd.buildingHousingAtAcquisition,
     gain: buildingGain,
     holdingYears: buildingHoldingYears,
     longTermRate: 0,
     longTermDeduction: 0,
     acqMode: "estimated",
+    swapApplied: phdBuildingSwap.swapApplied,
   };
 
   return {
