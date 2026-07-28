@@ -146,11 +146,16 @@ describe("F6: 단독소유 → 무변경 (회귀 가드)", () => {
 });
 
 // ════════════════════════════════════════════════════════════
-// F8b — split 항등성: 토지분 + 건물분 = 라목총액 기준 개산공제
-//   §163⑥2호가목. PR #841 H10 anchor가 세운 불변식을 지분 자산에서도 지킨다.
-//   → 잔액 흡수 없이 파트별로 각각 지분을 적용하면 50.8% 확률로 깨진다(설계 §3 E2).
+// F8b — split 지분 적용: 토지분·건물분이 **각각** 자기 기준시가 지분분으로 산출된다.
+//
+// ⚠️ rev.1의 이 anchor는 「토지분 + 건물분 = floor(floor(라목총액 × 지분) × 3%)」라는
+//    **항등성**을 요구했다. 그 전제는 **틀렸다** — §166⑥은 토지·건물을 구분해 각각의
+//    양도차익을 산출하고 §163⑥은 그 각 자산의 취득당시 기준시가에 율을 곱한다. 결합 총액
+//    기준 단일 법정액을 강제하는 문언이 없다. 잔액 흡수로 항등성을 만들려다 PHD Excel 정본
+//    anchor(`pre-housing-disclosure.test.ts` D-7-2)와 1원 어긋나 14건이 깨졌다(2026-07-28).
+//    → **성분별 독립 floor**로 정정. 항등성은 단언하지 않는다.
 // ════════════════════════════════════════════════════════════
-describe("F8b: split 지분 50% → §163⑥2호가목 항등성 보존", () => {
+describe("F8b: split 지분 50% → 파트별 독립 적용", () => {
   const mk = (over: Record<string, unknown> = {}) =>
     baseTransferInput({
       propertyType: "housing",
@@ -176,14 +181,14 @@ describe("F8b: split 지분 50% → §163⑥2호가목 항등성 보존", () => 
       ...over,
     });
 
-  it("✅ P3a 착지 — 토지분 + 건물분 = floor(floor(라목총액 × 0.5) × 3%)", () => {
+  it("✅ P3a 착지 — 각 파트가 자기 기준시가의 지분분 × 3%로 산출된다", () => {
     const r = calcSplitGain(mk());
     expect(r).not.toBeNull();
-    const sum = r!.land.appraisalDeduction + r!.building.appraisalDeduction;
-    expect(
-      sum,
-      "파트별로 각각 지분을 적용하면 floor가 2회씩 걸려 합이 법정액에서 −1~−2원 이탈한다 (잔액 흡수 필요)",
-    ).toBe(expectedDeduction(500_000_001, 0.03, 0.5));
+    // 토지분 = 1,000,001 × 200 = 200,000,200 · 건물분 = 라목총액 − 토지분 = 300,000,199 (역산)
+    const landStd = 1_000_001 * 200;
+    const buildingStd = 500_000_001 - landStd;
+    expect(r!.land.appraisalDeduction).toBe(expectedDeduction(landStd, 0.03, 0.5));
+    expect(r!.building.appraisalDeduction).toBe(expectedDeduction(buildingStd, 0.03, 0.5));
   });
 });
 

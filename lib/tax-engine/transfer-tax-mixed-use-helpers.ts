@@ -5,7 +5,7 @@
  * 소득세법 시행령 §160 ① 단서 / §164 / §168의12 / §95 ②
  */
 
-import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate } from "./tax-utils";
+import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate, computeEstimatedDeduction } from "./tax-utils";
 import { getHousingMultiplier } from "./non-business-land/urban-area";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
@@ -560,10 +560,16 @@ export function calcHousingGainSplit(
 
   // 개산공제(§163⑥, 취득시 기준시가 × 3%). 상속·증여(§163⑨)·매매실가는 미적용 —
   // 실제 필요경비(자본적지출·양도비)를 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
+  // 공유지분 축소만 적용한다 — 성분별 독립 floor가 정본이며 잔액 흡수는 하지 않는다
+  // (§166⑥ 구분 계산. `transfer-tax-pre-housing-disclosure.ts` Step 7 주석 참조).
+  const housingLumpPair = {
+    landAppraisalDed: computeEstimatedDeduction(acqLandStd, 0.03, asset.ownershipRatio),
+    buildingAppraisalDed: computeEstimatedDeduction(acqBuildingStd, 0.03, asset.ownershipRatio),
+  };
   const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition;
   const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
     ? splitDeemedExpense(asset.housingInheritedExpense ?? 0, acqLandStd, acqBuildingStd)
-    : { landAppraisalDed: applyRate(acqLandStd, 0.03), buildingAppraisalDed: applyRate(acqBuildingStd, 0.03) };
+    : housingLumpPair;
 
   const landGain = landTransferPrice - landAcqPrice - landAppraisalDed;
   const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;

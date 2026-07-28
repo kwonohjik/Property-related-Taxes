@@ -53,7 +53,7 @@ describe("R1: PreHousingDisclosureInput → 개산공제 지분 도달", () => {
     expect(r.landLumpDeduction).toBe(PHD_LAND_LUMP_DED);
   });
 
-  it.fails("🔴 지분 50% → 토지분 개산공제 = floor(floor(토지 라목가액 × 0.5) × 3%)", () => {
+  it("✅ P3b 착지 — 지분 50% → 토지분 개산공제 = floor(floor(토지 라목가액 × 0.5) × 3%)", () => {
     const r = calcPreHousingDisclosureGain(PHD_TRANSFER_PRICE, {
       ...PHD_INPUT,
       ownershipRatio: RATIO,
@@ -63,14 +63,16 @@ describe("R1: PreHousingDisclosureInput → 개산공제 지분 도달", () => {
     );
   });
 
-  it.fails("🔴 지분 50% → 토지분 + 건물분 = 라목총액 기준 (§163⑥2호가목 항등성 · 잔액 흡수)", () => {
+  // ⚠️ 이 자리에 있던 「토지분 + 건물분 = 라목총액 기준 (잔액 흡수)」 anchor는 **폐기됐다**.
+  //    §166⑥·§163⑥에 결합총액 기준 단일 법정액을 강제하는 문언이 없고, 실제 구현했더니
+  //    Excel 정본(D-7-2)과 1원 어긋나 14건이 깨졌다(2026-07-28). 성분별 독립이 정본이다.
+  it("✅ P3b 착지 — 건물분도 자기 안분 기준시가로 독립 산출된다", () => {
     const r = calcPreHousingDisclosureGain(PHD_TRANSFER_PRICE, {
       ...PHD_INPUT,
       ownershipRatio: RATIO,
     });
-    const total = PHD_LAND_HOUSING_AT_ACQ + PHD_BLDG_HOUSING_AT_ACQ; // = P_A_est
-    expect(r.landLumpDeduction + r.buildingLumpDeduction).toBe(
-      expectedDeduction(total, 0.03, RATIO),
+    expect(r.buildingLumpDeduction).toBe(
+      expectedDeduction(PHD_BLDG_HOUSING_AT_ACQ, 0.03, RATIO),
     );
   });
 });

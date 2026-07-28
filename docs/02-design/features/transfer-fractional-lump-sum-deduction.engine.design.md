@@ -1,4 +1,4 @@
-# 지분 모드 개산공제 — 엔진 설계 (rev.1)
+# 지분 모드 개산공제 — 엔진 설계 (rev.2)
 
 > 계획서: `transfer-fractional-lump-sum-deduction.plan.md` (rev.2)
 > 대상: `tax-utils.ts` · `types/transfer.types.ts` + 계획서 §4.1의 12파일 26지점
@@ -32,7 +32,7 @@
 ownershipRatio?: number;
 ```
 
-**서브엔진 7종에도 동일 필드 추가**(계획서 §6.3) — `TransferTaxInput` 하나로는 도달하지 않는다.
+**서브엔진 8종에도 동일 필드 추가**(rev.2 — `RedevelopmentSplitInput` 추가 발견)(계획서 §6.3) — `TransferTaxInput` 하나로는 도달하지 않는다.
 전부 grep 실측한 이름·위치다:
 
 | 타입 | 위치 |
@@ -44,6 +44,7 @@ ownershipRatio?: number;
 | `CommercialBuildingValuationInput` | `types/commercial-building.types.ts:15` |
 | `MixedUseAssetInput` | `types/transfer-mixed-use.types.ts:45` |
 | **`MultiParcelInput`** | `multi-parcel-transfer.ts:160` ⟵ rev.1 누락 |
+| **`RedevelopmentSplitInput`** | `redevelopment-split.ts:44` ⟵ rev.1 누락. `RedevelopmentOrchestratorInput`이 extends 하므로 재개발 2경로가 여기 없이는 도달 불가 |
 
 ### 2.2 result — **echo 필드 신설** (표시 drift 차단)
 
@@ -89,39 +90,44 @@ export function computeEstimatedDeduction(
   3줄 순수 정수 헬퍼라 이동 비용이 없고, 엔진·API 변환이 **같은 절사 규약**을 쓰는 것이
   이 작업의 전제(§6.4 floor 순서 통일)이므로 단일 소스가 필수다.
 
-### E2. **잔액 흡수** — 파트 쌍이 있는 모든 지점 (최중요)
+### E2. ~~잔액 흡수~~ → **성분별 독립 적용** (rev.2 — 2026-07-28 반증됨)
 
-파트별로 각각 지분율을 적용하면 §163⑥2호가목 항등성이 깨진다. 실측 10만건:
+> ⚠️ **rev.1의 「잔액 흡수」 설계는 폐기됐다. 재제기 방지용으로 전문을 남긴다.**
 
-| 방식 | 「토지분 + 건물분 = 라목총액 × 3%」 위반 | 최대 편차 |
-|---|---|---|
-| 파트별 독립 | 50,831 / 100,000 (**50.8%**) | −2원 |
-| **잔액 흡수** | **0 / 100,000** | 0 (건물분 음수 0건) |
+**rev.1의 주장**: §163⑥2호가목의 base는 §99①1호 **라목 결합 가액**이므로 법정 개산공제는
+`floor(라목총액 × 3/100)` 하나이고, 토지·건물 분리는 §166⑥ 양도차익 계산을 위한 내부 표현일
+뿐이다 → 마지막 성분이 잔액을 흡수해야 한다. 10만건 실측으로 「파트별 독립 시 50.8% 이탈,
+흡수 시 0%」를 근거로 제시했다.
+
+**반증(P3b 구현 중 발각)**:
+
+1. **문언 근거가 없다.** §166⑥은 토지·건물을 **구분해 각각의 양도차익**을 산출하도록 규정하고,
+   §163⑥은 그 **각 자산의** 취득당시 기준시가에 율을 곱한다. 결합 총액 기준 단일 법정액을
+   강제하는 문언은 어디에도 없다. rev.1의 "법정액은 하나"는 **작성자의 추론**이었다.
+2. **Excel 정본 anchor와 충돌한다.** `pre-housing-disclosure.test.ts` D-7-2
+   「건물 개산공제 = floor(취득시 건물 성분 × 3%)」 = **4,454,759**. 흡수 구현 시 4,454,760으로
+   +1원 어긋나 연쇄 **14건**이 깨졌다. 실무 정본이 성분별 독립 floor임을 보여준다.
+3. rev.1이 근거로 든 PR #841 H10 anchor는 **반례가 되지 못한다** — 라운드 넘버(2억/3억)라
+   두 규약이 같은 값을 낸다. 판별력이 없는 anchor를 근거로 삼은 것이 오류의 출발점이었다.
+
+**정정된 규약**: 모든 성분에 `computeEstimatedDeduction(성분 기준시가, rate, ratio)`를 독립 적용한다.
+성분 합이 `floor(결합총액 × 3%)`와 1~2원 다를 수 있으며 **그것이 정상**이다.
 
 ```
-wholeDed    = computeEstimatedDeduction(전체 기준시가, rate, ratio)
-landDed     = computeEstimatedDeduction(landStd,       rate, ratio)
-buildingDed = wholeDed − landDed          // 별도 floor 금지
+landDed     = computeEstimatedDeduction(landStd,     rate, ratio)
+buildingDed = computeEstimatedDeduction(buildingStd, rate, ratio)   // 독립 floor
 ```
 
-PR #841의 H10 anchor(`split-acq-std-price-independent.test.ts` — 라목 총액 × 3% 불변식)를
-지분 자산에서 스스로 무너뜨리지 않기 위한 필수 조치다(`feedback_floor_residual_absorption`).
+**교훈**: 판별력 없는 anchor(라운드 넘버)로 규약을 확정하지 말 것. 절사 규약 변경은
+**홀수 base fixture**로 먼저 판별한 뒤, 외부 정본(Excel·PDF·신고서)이 있는 경로에서 검증한다.
+(memory `feedback_anchor_correction_legal_priority` · `feedback_numeric_impact_verify_before_bug_claim`)
 
-**지분 게이트를 두지 않는다 (P3a 구현 결정, 2026-07-28)** — 흡수를 `ratio < 1`에만 걸면 **같은 조문이
-소유 형태에 따라 다르게 계산된다**. 홀수 기준시가는 단독소유에서도 동일하게 이탈한다(실측 49.8%).
-법정 개산공제가 `floor(라목총액 × 3/100)` 하나라는 근거는 지분과 무관하므로 무조건 적용한다.
-회귀 0 확인: 양도세 389파일 4,563건 통과(PDF 정본 anchor 포함).
+**적용 지점**: B1·B2(split) · C1·C2(PHD) · C3(겸용 4부분) · D1~D4(겸용 상가·주택) ·
+E(상가) · F · G · I(다필지) — **전 지점 동일 규약**. anchor: `fractional-lump-sum-per-part.test.ts` S1~S4.
 
-**적용 게이트는 「쌍의 성립」이다** — `buildingStdDerivedFromTotal && 양쪽 모두 추계`.
-파트별 독립 공시(가목+나목, `propertyType === "building"` + 별개취득)는 결합 총액이 애초에
-공시되지 않아 지킬 항등식이 없고, 한쪽이 실가면 쌍이 아니다. anchor: `fractional-lump-sum-split-residual.test.ts` S1~S4.
-
-**적용 대상**: B1·B2(split) · C1·C2(PHD) · C3(겸용 4부분 — 마지막 1곳 흡수) · D1~D4(겸용 상가·주택 각 쌍) ·
-F1·F2 · F3~F5 · G1~G3.
-
-**E1·E2(상가) — 총액 1곳만 교체**: `commercial-building-valuation.ts:306-309`가 **이미 잔액 흡수 구조**다
-(`estimatedDeductionBuilding = estimatedDeductionTotal − estimatedDeductionLand`).
-총액(`:302`)에만 지분을 적용하면 파트 분리는 자동으로 정합한다.
+**E1·E2(상가)**: `commercial-building-valuation.ts:306-309`의 기존
+`estimatedDeductionBuilding = estimatedDeductionTotal − estimatedDeductionLand` 구조는
+**이번 변경 대상이 아니다**(기존 동작 보존). 총액(`:302`)에만 지분을 적용한다.
 
 **미적용 — A1~A3·I1** (근거 실측 확정):
 - A1~A3: 단일 값. `:350` `calcNecessaryExpense` 단일 합류점이라 쌍이 없다.
@@ -160,15 +166,16 @@ floor(floor(std × ratio) × rate)     ← 채택 (A)
 
 계획서 §7 F1~F17을 정본으로 한다. 엔진 관점 요약:
 
-| 구조 | 지점 | 잔액 흡수 | echo |
+| 구조 | 지점 | 적용 | echo |
 |---|---|---|---|
-| **합류점 1회** (단일 값) | A1~A3 — `:350` `calcNecessaryExpense` | 불요 | `lumpSumDeductionBase` |
-| **루프 내 독립** | I1 — 필지별, 필지 간 항등식 없음 | **불요**(§3 E2 실측) | 필지별 각각 |
-| **파트 쌍** | B · D · F · G | **필수** | 파트별 각각 |
-| **총액 1회 + 기존 흡수** | E1·E2(상가) | 기존 구조 유지 | 총액 |
-| **4부분** | C3 | **필수**(마지막 1곳) | 4부분 각각 |
+| **합류점 1회** (단일 값) | A1~A3 — `:350` `calcNecessaryExpense` | 성분 1개 | `lumpSumDeductionBase` |
+| **루프 내 독립** | I1 — 필지별 | 필지별 독립 | 필지별 각각 |
+| **파트 쌍** | B(split) · C1·C2(PHD) · D(겸용) · F · G | **성분별 독립**(§3 E2 rev.2) | 파트별 각각 |
+| **총액 1회 + 기존 구조** | E1·E2(상가) | 총액에만 지분 — 기존 분리 구조 보존 | 총액 |
+| **4부분** | C3 | **성분별 독립** | 4부분 각각 |
 
 **anchor 기대값은 산식으로 고정** — 「전체 ÷ 2」는 floor 이중 적용으로 0.48%에서 이탈한다.
+**성분 합 = floor(결합총액 × 3%)를 단언하지 말 것** — §3 E2 rev.2에서 반증됐다.
 
 ---
 
@@ -190,14 +197,14 @@ floor(floor(std × ratio) × rate)     ← 채택 (A)
 |---|---|---|
 | `ownershipRatio` 미전달 | 기본값 1 → 종전 동작 | **차단** — 단독소유(ratio=1)와 배관 누락이 구분되지 않아 조용히 틀린다. primary만이 아니라 **companion · multi route · 서브엔진 7종 각각**에 도달 anchor가 필요하다(§7) |
 | 서브엔진 타입에 필드 미추가 | 지분 미적용 | **차단** — P2b에서 타입 도달을 먼저 확인 |
-| 잔액 흡수 누락 | 항등성 −1~−2원 | **차단** — F8b anchor |
+| ~~잔액 흡수 누락~~ | — | **폐기**(§3 E2 rev.2 반증). 반대로 **흡수를 넣으면** Excel 정본(D-7-2)과 어긋난다 — 회귀 가드 `fractional-lump-sum-per-part.test.ts` S1 |
 | 사이드바 floor 순서 상이 | 0.49% 1원 차 | **차단** — ⑥에서 A로 통일 |
 
 ---
 
 ## 7. 테스트 약속
 
-- **Pre-Do anchor (P0)**: F1(환산 50%) · F4(swap 판정) · F6(단독 무변경) · **F8b(항등성)** — 현행 실패 확인.
+- **Pre-Do anchor (P0)**: F1(환산 50%) · F4(swap 판정) · F6(단독 무변경) · **F8b(→ rev.2에서 성분별 독립으로 정정)** — 현행 실패 확인.
 - **신규**: F2·F3·F7(미등기) · F9b(겸용 PHD 4부분) · F10b(겸용 주택분) · F12b(증축분) · F13b(재개발 인가전) · F16(다필지) · F14(companion).
 - **회귀 가드**: F5(사례 27 — 실거래가라 무변경) · F17(상속·증여 §163⑨ 미적용 경로).
 - **⑫⑬⑭ 배관**: `ownershipRatio` 전송·도달 anchor (companion·multi route 포함).

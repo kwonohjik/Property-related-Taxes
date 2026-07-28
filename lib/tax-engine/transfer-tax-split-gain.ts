@@ -400,25 +400,14 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const landAppraisalDed = landNonActual
     ? computeEstimatedDeduction(landStdAtAcq, 0.03, ownRatio)
     : 0;
-  // 잔액 흡수 — 건물분을 **별도 floor 하지 않고** 「결합 총액분 − 토지분」으로 도출한다.
-  //
-  // 왜: §163⑥2호가목의 base는 라목 **결합 가액**이므로 법정 개산공제는 `floor(총액 × 3%)` 하나다.
-  //     토지·건물 분리는 §166⑥ 양도차익 계산을 위한 내부 표현일 뿐이라, 파트별로 각각 floor 하면
-  //     합이 법정액에서 이탈한다. 지분(floor 2회)에서는 10만건 중 50,831건(50.8%)이 −1~−2원 이탈했다
-  //     (설계 §3 E2 실측). 단독소유에서도 홀수 기준시가면 같은 이탈이 발생한다.
-  //     PR #841 H10 anchor가 세운 불변식을 지분 자산에서 스스로 무너뜨리지 않기 위한 조치다
-  //     (memory `feedback_floor_residual_absorption`).
-  //
-  // 게이트: 건물분이 결합 총액에서 역산된 쌍일 때만. 파트별 독립 공시(건물 + 별개취득)는
-  //         애초에 결합 총액이 공시되지 않아 지킬 항등식이 없다 — 각자 floor가 정본이다.
-  //         한쪽만 개산공제 대상(다른 쪽 실가)이면 쌍이 아니므로 흡수 대상이 아니다.
-  const residualAbsorb = buildingStdDerivedFromTotal && landNonActual && buildingNonActual;
-  const buildingAppraisalDed = !buildingNonActual
-    ? 0
-    : residualAbsorb
-      ? computeEstimatedDeduction(landStdAtAcq + buildingStdAtAcq, 0.03, ownRatio) -
-        landAppraisalDed
-      : computeEstimatedDeduction(buildingStdAtAcq, 0.03, ownRatio);
+  // ⚠️ **성분별 독립 floor가 정본이다. 잔액 흡수(「총액분 − 토지분」)를 넣지 말 것.**
+  //    §166⑥은 토지·건물을 구분해 **각각의 양도차익**을 산출하고, §163⑥은 그 각 자산의
+  //    취득당시 기준시가에 율을 곱한다 — 「라목 총액 × 3% 하나가 법정액」을 강제하는 문언이 없다.
+  //    2026-07-28 흡수를 시도했다가 PHD Excel 정본 anchor(`pre-housing-disclosure.test.ts` D-7-2)와
+  //    1원 어긋나 14건이 깨졌다. 같은 §166⑥ 구조이므로 여기도 독립 floor로 통일한다. 재시도 방지 기록.
+  const buildingAppraisalDed = buildingNonActual
+    ? computeEstimatedDeduction(buildingStdAtAcq, 0.03, ownRatio)
+    : 0;
 
   // ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
   // 본문: acqPrice(환산) + appraisalDed(개산공제). directExp는 차감 안 함.

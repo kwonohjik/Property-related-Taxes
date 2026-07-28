@@ -375,8 +375,9 @@ memory `feedback_floor_residual_absorption` 위반이자 자기모순이다.
 | **P1** ⏸ | 국세청 해석례 `122836` 본문 확인 (§2.3) | 법제처 API가 본문 미제공 → **보류**(§2.1 논거로 충분) |
 | **P2** ✅ | `computeEstimatedDeduction` 이동·확장 + `ownershipRatio` input + ⑫(2곳)⑬⑭(2곳) 배관 + A1~A3 적용 | F1~F4·F6·F7 green |
 | **P2b** ✅ | **서브엔진 input 타입 전파 8종**(§6.3 — `RedevelopmentSplitInput` 추가) + 호출부 9곳 | 도달 anchor 6건 `it.fails` 고정 |
-| **P3a** ✅ | A(비-split — P2에서 선착지) + B(split, **잔액 흡수**) | F8b green 전환 + 게이트 anchor 8건 |
-| **P3b** | C(PHD)·D(겸용) | F9~F10b green |
+| **P3a** ✅ | A(비-split — P2에서 선착지) + B(split) | F8b green 전환 |
+| **P3b** ✅ | C(PHD 2 + 4부분)·D(겸용 주택·상가) | R1 green 전환 + 성분별 anchor 9건 |
+| — | ⚠️ **설계 rev.1 E2「잔액 흡수」 반증·폐기** — Excel 정본(D-7-2)과 1원 충돌로 14건 실패. 전 지점 **성분별 독립 floor**로 통일(engine.design.md §3 E2 rev.2) | 재시도 방지 가드 S1 |
 | **P3c** | E·F·G·I(서브엔진·다필지) | F11~F16 green |
 | **P4** | ⑥ 사이드바 순서 통일 + ⑦ 표시 9+ 지점 + 엔진 rationale 2곳 | RTL + 표시 정합 |
 | **P5** | 전체 회귀 | `npm run check:pre-pr` |

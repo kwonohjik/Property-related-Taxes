@@ -25,6 +25,7 @@
  */
 
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./types/transfer.types";
+import { computeEstimatedDeduction } from "./tax-utils";
 
 /**
  * 개별주택가격 미공시 취득 환산취득가 계산
@@ -144,8 +145,23 @@ export function calcPreHousingDisclosureGain(
   const buildingAcquisitionPrice = totalEstimatedAcquisitionPrice - landAcquisitionPrice;
 
   // ── Step 7: 개산공제 (§163⑥) — 취득시 안분 성분 기준 ──
-  const landLumpDeduction = Math.floor(landHousingAtAcquisition * 0.03);
-  const buildingLumpDeduction = Math.floor(buildingHousingAtAcquisition * 0.03);
+  // 공유지분 축소(§163⑥ base) — 기준시가 입력은 물건 전체(100%)로 유지하고 여기서만 적용한다.
+  //
+  // ⚠️ **성분별 독립 floor가 정본이다. 잔액 흡수를 넣지 말 것.**
+  //    §166⑥은 토지·건물을 구분해 **각각의 양도차익**을 산출하고, §163⑥은 그 각 자산의
+  //    취득당시 기준시가에 율을 곱한다 — "라목 총액 기준 법정액 하나"를 강제하는 문언이 없다.
+  //    잔액 흡수를 시도했다가 Excel 정본 anchor(D-7-2 건물 개산공제 4,454,759)와 1원 어긋나
+  //    14건이 깨졌다(2026-07-28). 재시도 방지용 기록.
+  const landLumpDeduction = computeEstimatedDeduction(
+    landHousingAtAcquisition,
+    0.03,
+    input.ownershipRatio,
+  );
+  const buildingLumpDeduction = computeEstimatedDeduction(
+    buildingHousingAtAcquisition,
+    0.03,
+    input.ownershipRatio,
+  );
 
   // ── Step 8: 안분 비율 계산 (UI 표시용) ──
   const transferApportionRatio = {
@@ -227,10 +243,11 @@ export function calcPreHousingDisclosureGain(
     const commercialBuildingAcqPrice = totalEstAcq - housingLandAcqPrice - housingBuildingAcqPrice - commercialLandAcqPrice;
 
     // 개산공제 4부분 (Row 12) = INT(D35~G35 × 3%)
-    const housingLandLumpDed = Math.floor(housingLandAcqShare * 0.03);
-    const housingBuildingLumpDed = Math.floor(housingBuildingAcqShare * 0.03);
-    const commercialLandLumpDed = Math.floor(commercialLandAcqShare * 0.03);
-    const commercialBuildingLumpDed = Math.floor(commercialBuildingAcqShare * 0.03);
+    // 성분별 독립 floor — Step 7과 같은 이유로 잔액 흡수하지 않는다.
+    const housingLandLumpDed = computeEstimatedDeduction(housingLandAcqShare, 0.03, input.ownershipRatio);
+    const housingBuildingLumpDed = computeEstimatedDeduction(housingBuildingAcqShare, 0.03, input.ownershipRatio);
+    const commercialLandLumpDed = computeEstimatedDeduction(commercialLandAcqShare, 0.03, input.ownershipRatio);
+    const commercialBuildingLumpDed = computeEstimatedDeduction(commercialBuildingAcqShare, 0.03, input.ownershipRatio);
 
     // 양도차익 4부분 (Row 13) — 소수점 이하 절사 (사용자 요청)
     const housingLandGain = Math.floor(housingLandTransferPrice - housingLandAcqPrice - housingLandLumpDed);
