@@ -50,7 +50,16 @@ export interface New99Input {
   standardPriceAt5Years?: number;
   standardPriceAtTransfer?: number;
   /** 양도가액 — 고가주택 판정 */
-  transferPrice: number;
+  /**
+   * **물건 전체(100%) 양도가액** — 고가주택 가액 요건(§99의3·§99) 판정 전용.
+   *
+   * ⚠️ 지분 스케일된 `transferPrice`를 넣지 말 것. 감면 가액 요건은 **물건 전체 가액** 기준이라
+   *    지분분을 쓰면 문턱이 1/지분율만큼 올라가 판정이 뒤집힌다 — 지분 50%면 물건 전체 24억까지
+   *    12억 고가주택 배제를 피해 간다(실측, 2026-07-28 정정).
+   *    §89 12억 안분은 이미 `totalPropertyTransferPrice`(100% echo)로 처리돼 있었고
+   *    (`transfer-tax.ts:447-465`), 같은 고가주택 개념인 이 경로만 남아 있었다.
+   */
+  wholePropertyTransferPrice: number;
   /** 전용면적 (㎡) — 고가주택 면적 기준 (~2002.12.31 정의) */
   exclusiveAreaSqm?: number;
   isResident?: boolean;
@@ -177,7 +186,7 @@ export function evaluateNew99(input: New99Input): New99Result {
 
   // 4) 고가주택 단서 (D-9: §99의3 선례 — 계약·승인·취득 중 우선일 기준 4단계 정의)
   const hvBaseDate = input.contractDate ?? input.usageApprovalDate ?? input.acquisitionDate;
-  if (isHighValueHouseUnder993(hvBaseDate, input.transferPrice, input.exclusiveAreaSqm ?? 0)) {
+  if (isHighValueHouseUnder993(hvBaseDate, input.wholePropertyTransferPrice, input.exclusiveAreaSqm ?? 0)) {
     reasons.push({
       code: "HIGH_VALUE_HOUSE",
       message: `고가주택(소득세법 §89①3호 비과세 제외 대상)은 §99 ① 단서로 적용 배제됩니다 (적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 기준).`,

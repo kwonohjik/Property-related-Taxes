@@ -41,7 +41,7 @@ describe("Phase 1 anchor — §99 PHD 환산 → 5년 안분 연동", () => {
       standardPriceAtAcquisition: phd.estimatedAcquisitionStdPrice, // ← PHD 환산값 투입
       standardPriceAt5Years: 700_000_000,
       standardPriceAtTransfer: 900_000_000,
-      transferPrice: 500_000_000, // 고가주택 배제 회피(6억 이하)
+      wholePropertyTransferPrice: 500_000_000, // 고가주택 배제 회피(6억 이하)
       exclusiveAreaSqm: 84,
       acquisitionType: "from_builder",
     };
@@ -65,7 +65,7 @@ describe("Phase 1 anchor — §99 PHD 환산 → 5년 안분 연동", () => {
       transferIncome: 300_000_000,
       standardPriceAt5Years: 700_000_000,
       standardPriceAtTransfer: 900_000_000,
-      transferPrice: 500_000_000,
+      wholePropertyTransferPrice: 500_000_000,
       exclusiveAreaSqm: 84,
       acquisitionType: "from_builder",
       standardPriceAtAcquisition: 500_000_000, // 수동

@@ -53,7 +53,16 @@ export interface New993Input {
   /** 양도시 기준시가 */
   standardPriceAtTransfer: number;
   /** 양도가액 (고가주택 판정용) */
-  transferPrice: number;
+  /**
+   * **물건 전체(100%) 양도가액** — 고가주택 가액 요건(§99의3·§99) 판정 전용.
+   *
+   * ⚠️ 지분 스케일된 `transferPrice`를 넣지 말 것. 감면 가액 요건은 **물건 전체 가액** 기준이라
+   *    지분분을 쓰면 문턱이 1/지분율만큼 올라가 판정이 뒤집힌다 — 지분 50%면 물건 전체 24억까지
+   *    12억 고가주택 배제를 피해 간다(실측, 2026-07-28 정정).
+   *    §89 12억 안분은 이미 `totalPropertyTransferPrice`(100% echo)로 처리돼 있었고
+   *    (`transfer-tax.ts:447-465`), 같은 고가주택 개념인 이 경로만 남아 있었다.
+   */
+  wholePropertyTransferPrice: number;
   /** 전용면적 (㎡) — 고가주택 면적 기준 (2002.12.31 이전) */
   exclusiveAreaSqm: number;
   /** 지역 — 가격 급등 지역(speculation) 내/외 */
@@ -168,22 +177,23 @@ const HV_2021_12_07 = D("2021-12-07");
  */
 export function isHighValueHouseUnder993(
   baseDate: Date,
-  transferPrice: number,
+  /** **물건 전체(100%) 양도가액**. 지분분을 넘기면 판정이 뒤집힌다 — New993Input 주석 참조. */
+  wholePropertyTransferPrice: number,
   exclusiveAreaSqm: number,
 ): boolean {
   if (baseDate <= HV_2002_09_30) {
-    return exclusiveAreaSqm >= 165 && transferPrice > 600_000_000;
+    return exclusiveAreaSqm >= 165 && wholePropertyTransferPrice > 600_000_000;
   }
   if (baseDate <= HV_2002_12_31) {
-    return exclusiveAreaSqm >= 149 && transferPrice > 600_000_000;
+    return exclusiveAreaSqm >= 149 && wholePropertyTransferPrice > 600_000_000;
   }
   if (baseDate <= HV_2008_10_05) {
-    return transferPrice > 600_000_000;
+    return wholePropertyTransferPrice > 600_000_000;
   }
   if (baseDate <= HV_2021_12_07) {
-    return transferPrice > 900_000_000;
+    return wholePropertyTransferPrice > 900_000_000;
   }
-  return transferPrice > 1_200_000_000;
+  return wholePropertyTransferPrice > 1_200_000_000;
 }
 
 // ============================================================================
@@ -268,7 +278,7 @@ function checkIneligibility(input: New993Input): New993IneligibleReason[] {
   // 6. 고가주택 (단서)
   const hvBaseDate =
     input.contractDate ?? input.usageApprovalDate ?? input.acquisitionDate;
-  if (isHighValueHouseUnder993(hvBaseDate, input.transferPrice, input.exclusiveAreaSqm)) {
+  if (isHighValueHouseUnder993(hvBaseDate, input.wholePropertyTransferPrice, input.exclusiveAreaSqm)) {
     reasons.push({
       code: "HIGH_VALUE_HOUSE",
       message: `고가주택(소득세법 §89①3호)은 §99의3 ① 단서로 적용 배제됩니다 (적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 기준)`,

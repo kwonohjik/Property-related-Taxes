@@ -601,6 +601,8 @@ export function calculateTransferTax(
     acquisitionDate: input.acquisitionDate,
     assetContractDate: input.assetContractDate,
     transferPrice: input.transferPrice,
+    // 고가주택 가액 요건은 물건 전체 기준 — §89 12억 안분(:447-465)과 같은 소스를 쓴다.
+    totalPropertyTransferPrice: input.totalPropertyTransferPrice,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
     transferIncome: transferIncomeBefore993,
   });
