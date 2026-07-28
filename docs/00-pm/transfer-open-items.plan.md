@@ -18,7 +18,7 @@
 | R4 | 지분 부담부증여 정식 지원 | 기능 부재 (차단됨) | 대 | — | 🛑 **보류 확정 (2026-07-29 사용자 결정)** |
 | R5 | 800줄 초과 파일 9개 → **8개** | 없음 (유지보수) | 중 | 없음 | **부분 완료 — 나머지는 기회주의적 유지** |
 | ~~R6~~ | ~~PR #737 집합건물 전유면적~~ | — | — | — | **✅ 실측 완료 + 결함 3건 수정 + 머지** |
-| R7 | #591 양도세 감사 백로그 | 미상 | 대 | 항목별 재검증 | **진행 중 — 99 → 24건** |
+| R7 | #591 양도세 감사 백로그 | 미상 | 대 | 항목별 재검증 | **진행 중 — 99 → 16건** |
 
 ---
 
@@ -455,7 +455,18 @@ anchor 12건 신설(`building-register-expos-query-format.anchor.test.ts`). 전�
 "30개월 = 2년 → 2 × 2% = 4%"로 LTHD > 0을 고정하고 있었는데, 그 산식은 §95②의
 **3년 진입요건을 빠뜨린 것**이었다. 세율 판정(누진 vs 단기)은 별개 규칙이라 그 단언은 유지했다.
 
-### 남은 24건 — 성격이 다르다
+### 종결 8 — 단건·경계 항목 (8건) ✅
+
+| 항목 | 성격 | 근거 |
+|---|---|---|
+| §154①2호가목 수용 특례 fail-open | 세액 변경 | `expropriationDate ?? transferDate` fallback 탓에 `transferDate <= transferDate + 5년`이 **항상 참**이라 5년 요건을 검증하지 않고 무조건 보유·거주 면제를 줬다. 5년은 **수용일 기산**이므로 수용일을 모르면 판정 불가 → 특례 미적용이 맞다. 미입력을 유리하게 추정할 근거가 없다. |
+| §155① 일시적 2주택 §154① 미검증 | 세액 변경 | 타이밍(요건 A·B)만 보고 비과세를 줬다. §155①은 "…1주택을 소유한 것으로 **보아 제154조제1항을 적용**한다"이므로 종전주택이 **보유 2년 + (취득 당시 조정지역이면) 거주 2년**을 충족해야 한다. 바로 아래 E-3.5(합가 §155④⑤)는 이미 그 요건을 명시하고 있어 E-3만 빠진 내부 불일치였다. 메모리에 🟠Gap B로 기록돼 있던 갭이다. |
+| §168의9③7호 상속 임야 3년 윤년 | 세액 변경 | `differenceInDays / 365`가 1,095일을 정확히 3.0으로 만들어 **3년 경과로 오판**했다(2019-03-01 → 2022-02-28). 3년 도래일은 2022-03-01이므로 미경과다. 달력 기준 `addYears`로 교체. |
+| §98 "5년 이상 보유" 2/29 롤오버 | 세액 변경 | `setFullYear`가 존재하지 않는 2001-02-29를 만들어 **3/1로 롤오버**시켜 만료일을 하루 밀었다. 민법 §160③(응당일 없으면 말일 만료) → 1996-02-29 + 5년 = 2001-02-28. date-fns `addYears`로 교체. |
+| override가 매매사례가액을 우회 | 세액 변경 | `resolveAcquisitionOverride`가 `appraisal`만 무력화하고 동일 성격 추계인 `salesCase`는 뒀다. `calcTransferGain`이 `similarSalesValue ?? acquisitionPrice`를 쓰므로 강제 취득가액이 **완전히 우회**됐다(양도차익 400,000,000 → 300,000,000). |
+| 자경 §66⑤ 편입일 안분 (1건) · 금양임야·묘토 §8③ 안분 (2건) | ±1원 | `floor(금액 × 부동소수비율)` → `safeMultiplyThenDivide`. |
+
+### 남은 16건 — 성격이 다르다
 
 여기서부터는 **기대값 조정이 아니라 별도 작업**이 필요하다.
 
@@ -463,9 +474,7 @@ anchor 12건 신설(`building-register-expos-query-format.anchor.test.ts`). 전�
 |---|---|---|
 | `audit-fix-rental-housing-step` | 4 | **fixture가 리팩터 이전 것**이다. `registrationDate`→`businessRegistrationDate`/`rentalRegistrationDate`, `rentalType`→`rentalCategory` 등 `RentalUnitInput` 필드가 전부 바뀌어 특례 경로에 **진입조차 못 한다**. fixture 재구성이 선행돼야 단언을 검증할 수 있다. 다만 지적된 **§103① 기본공제 잔여 반영은 독립적으로 타당**해 엔진은 이미 고쳤다(같은 해 기사용분을 무시하고 250만원을 재차 전액 공제하던 것 → `max(0, 연한도 − 기사용분)`). |
 | `audit-fix-general-building-valuation` | 3 | 무허가 토지에서 전액 0원짜리 **유령 '토지-사업용' 카드** 생성. 카드 조립 구조 변경 필요. |
-| `audit-fix-transfer-tax-exemption` · `-exemption-evaluator` | 4 | 비과세·불산입 평가 |
 | `audit-fix-multi-house-surcharge-count` | 2 | **군위군(27720) 광역시 소속 군** 판정 — 저가주택 배제 기준이 REGION이 아니라 VALUE여야 한다. 행정구역 데이터 검증 선행. |
-| `audit-fix-self-farming`·`forest-nbl`·`unsold-hybrid-p5`·`acquisition-override` | 4 | 각 1건 |
 | `transfer-multi-house-tier-model-a` | 2 | 중과 tier 모델 |
 | `transfer-tax-penalty-rate-boundary` | 2 | **엔진 기능 신설** — `DelayedPaymentResult.breakdown`(이자율 기간분할) 미구현 |
 | `multi-parcel-loss-offset` | 2 | **엔진 기능 신설** — 다필지 손익통산 |
@@ -489,7 +498,7 @@ anchor 12건 신설(`building-register-expos-query-format.anchor.test.ts`). 전�
 4. ~~R6~~ ✅ — 실 API 실측으로 블로커 해소, 결함 3건 수정 후 PR #737 머지.
 5. ~~R5(부분)~~ ✅ — `property-valuation.ts` 1,025 → 653. 나머지 5건(801~840)은 thrash 회피로 유지.
 6. ~~R4~~ 🛑 — 보류 확정(2026-07-29 사용자 결정). 현행 차단 유지가 정답.
-7. **R7 진행 중** — 99 → 24. 기대값 조정으로 끝나는 건은 소진됐다. 남은 24건은 fixture 재구성·구조 변경·엔진 기능 신설이라 건별 착수 판단이 필요하다.
+7. **R7 진행 중** — 99 → 16 (83건 종결). 남은 16건은 fixture 재구성(4)·카드 구조 변경(3)·행정구역 데이터(2)·중과 tier(2)·엔진 기능 신설(4)·기타(1)로, 각각 별도 작업 단위다.
 
 ## 이 계획서의 검증 원칙 (본 세션에서 얻은 것)
 

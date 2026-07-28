@@ -84,8 +84,20 @@ export function resolveAcquisitionOverride(
     acquisitionPrice: acquisitionOverride,
     // 환산취득가 모드 우회: override 시 실가 경로로 강제 (의제·환산 동시 적용 차단)
     useEstimatedAcquisition: false,
-    // 감정가액 모드 우회: appraisalValue 경로 차단
-    acquisitionMethod: input.acquisitionMethod === "appraisal" ? "actual" : input.acquisitionMethod,
+    // 감정가액·매매사례가액 모드 우회: 두 추계 경로 모두 실가로 강제.
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 `appraisal`만 무력화하고
+    //   동일 성격의 추계인 **매매사례가액(`salesCase`)은 그대로 뒀다**.
+    //   `calcTransferGain`의 salesCase 분기가 `similarSalesValue ?? acquisitionPrice`를 쓰므로
+    //   override로 강제한 취득가액이 **완전히 우회**됐다(양도가 7억·override 3억에서
+    //   양도차익 400,000,000 → 300,000,000).
+    //   override(§97의2④ 가업상속 의제취득가액 등)는 §176의2③ 추계보다 우선 강제돼야 하고,
+    //   이 함수의 JSDoc 계약도 "STEP 2 결정 결과 무시하고 본 값 강제"다.
+    acquisitionMethod:
+      input.acquisitionMethod === "appraisal" || input.acquisitionMethod === "salesCase"
+        ? "actual"
+        : input.acquisitionMethod,
+    // 매매사례가액 경로 차단 — acquisitionMethod만 바꾸면 값이 남아 재진입 여지가 생긴다.
+    similarSalesValue: undefined,
     // 환산 모드에서 개산공제를 expenses로 적용하던 legacy 경로도 차단
     // (STEP 0.35 commercial building에서 cbStep이 override 적용 후 skip됨)
     appraisalValue: undefined,

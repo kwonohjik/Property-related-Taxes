@@ -80,7 +80,13 @@ export function resolveExemptionProviso(
     case "expropriation":
       // 2호 가목: 사업인정 고시일 전 취득 + 양도일·수용일부터 5년 이내
       if (p.businessApprovalDate && input.acquisitionDate >= p.businessApprovalDate) return null;
-      return input.transferDate <= addYears(p.expropriationDate ?? input.transferDate, C.EXPROPRIATION_TRANSFER_YEARS)
+      // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): `?? input.transferDate` fallback은
+      //   fail-open이었다. 수용일 미입력 시 `transferDate <= transferDate + 5년`이 **항상 참**이라
+      //   5년 요건을 검증하지 않고 무조건 "both"(보유·거주 면제)를 줬다 → 비과세 과다.
+      //   §154①2호가목의 5년은 **수용일 기산**이므로, 수용일을 모르면 요건을 판정할 수 없다
+      //   → 특례 미적용(null)이 맞다. 미입력을 유리하게 추정할 근거가 없다.
+      if (!p.expropriationDate) return null;
+      return input.transferDate <= addYears(p.expropriationDate, C.EXPROPRIATION_TRANSFER_YEARS)
         ? "both"
         : null;
     case "overseas_migration":
@@ -341,7 +347,15 @@ export function checkExemption(
       deadlineYears,
       oneYearWaived: provisoRelaxesHolding,
     });
-    if (timing.overall) {
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 타이밍(요건 A·B)만 보고
+    //   비과세를 줬다. §155①은 "…국내에 1주택을 소유한 것으로 **보아 제154조제1항을 적용**한다"이므로
+    //   종전주택 자체가 **§154①의 보유 2년 + (취득 당시 조정대상지역이면) 거주 2년**을 충족해야 한다.
+    //   검증이 없어 거주 0년인 조정지역 취득 종전주택도 비과세됐다(비과세 과다 → 세액 과소).
+    //   `meetsOneHouseHoldingResidence`가 §154① 단서(보유·거주 면제 사유)까지 함께 처리하므로
+    //   `provisoRelaxesHolding` 케이스는 종전대로 통과한다.
+    //   바로 아래 E-3.5(합가 §155④⑤)는 이미 "§154① 보유·거주"를 요건으로 명시하고 있어
+    //   같은 조 구조에서 E-3만 빠져 있던 내부 불일치였다.
+    if (timing.overall && meetsOneHouseHoldingResidence(input, rule)) {
       const provisoLabel = provisoRelaxesHolding
         ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason!]})`
         : "";
