@@ -11,6 +11,7 @@ import {
   hasAutoRelatedStockInput,
 } from "./public-interest-stock-limit";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import {
   DISABLED_TRUST_LIMIT,
   findExemptionRuleById,
@@ -55,8 +56,11 @@ function evaluateSingleExemption(
     const limitM2 = rule.limitAreaM2 ?? EXEMPTION.GRAVE_FOREST_LIMIT_M2;
     const claimedM2 = item.claimedAreaM2 ?? item.areaM2 ?? 0;
     if (claimedM2 > limitM2) {
+      // 2026-07-29 정정(#591 감사 R7): 면적 비율이 부동소수라 `floor(금액 × 비율)`이
+      //   1원 과소산정한다(곱이 정수인 입력에서도 발생). 곱셈 선행 정수 분수연산으로 교체
+      //   (memory `feedback_safemul_decimal_apportion_precision`).
       const exemptRatio = limitM2 / claimedM2;
-      exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
+      exemptAmount = safeMultiplyThenDivide(item.claimedAmount, limitM2, claimedM2);
       taxableOverflow = item.claimedAmount - exemptAmount;
       warnings.push(`금양임야 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(9,900㎡ 한도)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③1호)`);
     } else {
@@ -72,8 +76,11 @@ function evaluateSingleExemption(
     const limitM2 = rule.limitAreaM2 ?? EXEMPTION.GRAVE_LAND_LIMIT_M2;
     const claimedM2 = item.claimedAreaM2 ?? item.areaM2 ?? 0;
     if (claimedM2 > limitM2) {
+      // 2026-07-29 정정(#591 감사 R7): 면적 비율이 부동소수라 `floor(금액 × 비율)`이
+      //   1원 과소산정한다(곱이 정수인 입력에서도 발생). 곱셈 선행 정수 분수연산으로 교체
+      //   (memory `feedback_safemul_decimal_apportion_precision`).
       const exemptRatio = limitM2 / claimedM2;
-      exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
+      exemptAmount = safeMultiplyThenDivide(item.claimedAmount, limitM2, claimedM2);
       taxableOverflow = item.claimedAmount - exemptAmount;
       warnings.push(`묘토 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(1,980㎡ 한도)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③2호)`);
     } else {
