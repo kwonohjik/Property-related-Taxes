@@ -15,7 +15,7 @@ import type {
   SplitPartResult,
   SplitLandExpropriationValuationDetail,
 } from "./types/transfer.types";
-import { applyRate, calculateHoldingPeriod } from "./tax-utils";
+import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
@@ -395,8 +395,30 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   //    salesCase 추가에도 무영향 — "환산모드 전용" 정책 유지. 파트별 독립(2026-07-28 mixed-mode).
   const landNonActual = landMode !== "actual";
   const buildingNonActual = buildingMode !== "actual";
-  const landAppraisalDed = landNonActual ? applyRate(landStdAtAcq, 0.03) : 0;
-  const buildingAppraisalDed = buildingNonActual ? applyRate(buildingStdAtAcq, 0.03) : 0;
+  // 공유지분 축소(§163⑥ base) — 기준시가는 물건 전체(100%)로 유지하고 여기서만 지분을 적용한다.
+  const ownRatio = input.ownershipRatio;
+  const landAppraisalDed = landNonActual
+    ? computeEstimatedDeduction(landStdAtAcq, 0.03, ownRatio)
+    : 0;
+  // 잔액 흡수 — 건물분을 **별도 floor 하지 않고** 「결합 총액분 − 토지분」으로 도출한다.
+  //
+  // 왜: §163⑥2호가목의 base는 라목 **결합 가액**이므로 법정 개산공제는 `floor(총액 × 3%)` 하나다.
+  //     토지·건물 분리는 §166⑥ 양도차익 계산을 위한 내부 표현일 뿐이라, 파트별로 각각 floor 하면
+  //     합이 법정액에서 이탈한다. 지분(floor 2회)에서는 10만건 중 50,831건(50.8%)이 −1~−2원 이탈했다
+  //     (설계 §3 E2 실측). 단독소유에서도 홀수 기준시가면 같은 이탈이 발생한다.
+  //     PR #841 H10 anchor가 세운 불변식을 지분 자산에서 스스로 무너뜨리지 않기 위한 조치다
+  //     (memory `feedback_floor_residual_absorption`).
+  //
+  // 게이트: 건물분이 결합 총액에서 역산된 쌍일 때만. 파트별 독립 공시(건물 + 별개취득)는
+  //         애초에 결합 총액이 공시되지 않아 지킬 항등식이 없다 — 각자 floor가 정본이다.
+  //         한쪽만 개산공제 대상(다른 쪽 실가)이면 쌍이 아니므로 흡수 대상이 아니다.
+  const residualAbsorb = buildingStdDerivedFromTotal && landNonActual && buildingNonActual;
+  const buildingAppraisalDed = !buildingNonActual
+    ? 0
+    : residualAbsorb
+      ? computeEstimatedDeduction(landStdAtAcq + buildingStdAtAcq, 0.03, ownRatio) -
+        landAppraisalDed
+      : computeEstimatedDeduction(buildingStdAtAcq, 0.03, ownRatio);
 
   // ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
   // 본문: acqPrice(환산) + appraisalDed(개산공제). directExp는 차감 안 함.

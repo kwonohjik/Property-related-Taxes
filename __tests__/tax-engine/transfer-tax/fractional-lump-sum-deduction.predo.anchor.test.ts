@@ -5,7 +5,7 @@
  * 엔진 설계: 같은 이름 .engine.design.md §3
  * 정책: feedback_pre_anchor_verification — Do 진입 전 **실패하는** anchor로 설계를 환류한다.
  *
- * ⚠️ **`it.fails`로 표기된 4건은 현재 의도적으로 실패한다.** 그것이 목적이다 —
+ * ⚠️ **`it.fails`로 표기했던 4건은 의도적으로 실패하도록 세운 것이었다.** 그것이 목적이었다 —
  *    결함이 실재함을 실행 가능한 형태로 고정한다. 이 저장소는 "회귀 허용치 0"이라
  *    빨간 테스트를 남길 수 없으므로 `it.fails`를 쓴다.
  *
@@ -14,8 +14,9 @@
  *
  *    F6(단독소유 무변경)과 환산취득가 회귀 가드는 지금도 green이며 그대로 `it`다.
  *
- * **진행 상황**: P2(헬퍼·배관) 착지로 F1·F4가 green 전환 완료 → `it`.
- *              F8b(split 항등성)는 P3a(잔액 흡수)에서 전환된다 — 아직 `it.fails`.
+ * **진행 상황**: P2(헬퍼·배관) 착지로 F1·F4 green 전환 → `it`.
+ *              **P3a(split 잔액 흡수) 착지로 F8b도 green 전환 완료** → `it`. 이 파일은 전건 green이다.
+ *              서브엔진 경로의 남은 도달 anchor는 `*.subengine-reach.test.ts`(P3b·P3c 대기)에 있다.
  *
  * 법령 근거:
  *   - 소득세법 §97②2호 가목 — 필요경비 = "환산취득가액과 … 대통령령으로 정하는 금액의 **합계액**".
@@ -175,7 +176,7 @@ describe("F8b: split 지분 50% → §163⑥2호가목 항등성 보존", () => 
       ...over,
     });
 
-  it.fails("🔴 토지분 + 건물분 = floor(floor(라목총액 × 0.5) × 3%)", () => {
+  it("✅ P3a 착지 — 토지분 + 건물분 = floor(floor(라목총액 × 0.5) × 3%)", () => {
     const r = calcSplitGain(mk());
     expect(r).not.toBeNull();
     const sum = r!.land.appraisalDeduction + r!.building.appraisalDeduction;

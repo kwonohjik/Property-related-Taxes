@@ -107,6 +107,15 @@ buildingDed = wholeDed − landDed          // 별도 floor 금지
 PR #841의 H10 anchor(`split-acq-std-price-independent.test.ts` — 라목 총액 × 3% 불변식)를
 지분 자산에서 스스로 무너뜨리지 않기 위한 필수 조치다(`feedback_floor_residual_absorption`).
 
+**지분 게이트를 두지 않는다 (P3a 구현 결정, 2026-07-28)** — 흡수를 `ratio < 1`에만 걸면 **같은 조문이
+소유 형태에 따라 다르게 계산된다**. 홀수 기준시가는 단독소유에서도 동일하게 이탈한다(실측 49.8%).
+법정 개산공제가 `floor(라목총액 × 3/100)` 하나라는 근거는 지분과 무관하므로 무조건 적용한다.
+회귀 0 확인: 양도세 389파일 4,563건 통과(PDF 정본 anchor 포함).
+
+**적용 게이트는 「쌍의 성립」이다** — `buildingStdDerivedFromTotal && 양쪽 모두 추계`.
+파트별 독립 공시(가목+나목, `propertyType === "building"` + 별개취득)는 결합 총액이 애초에
+공시되지 않아 지킬 항등식이 없고, 한쪽이 실가면 쌍이 아니다. anchor: `fractional-lump-sum-split-residual.test.ts` S1~S4.
+
 **적용 대상**: B1·B2(split) · C1·C2(PHD) · C3(겸용 4부분 — 마지막 1곳 흡수) · D1~D4(겸용 상가·주택 각 쌍) ·
 F1·F2 · F3~F5 · G1~G3.
 
