@@ -92,24 +92,26 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     // `app/api/calc/transfer/route.ts`는 **순서 있는 if-체인**이고 일괄 분기가 맨 앞이다:
     //   5-a 일괄(:446, return :555) → 5-a-2 겸용(:568) → 5-a-3 일반건물(:611) → 5-b 단건(:660)
     // 따라서 companion이 하나라도 있으면 **뒤쪽 특수 분기는 실행조차 되지 않는다**.
-    // 부담부증여(§159 STEP 0.48)도 일괄 집계 경로에서 안분 결과에 덮여 결과에 나타나지 않는다.
     //
-    // 화면에는 특수 입력이 그대로 보이는데 계산에서만 빠지므로 사용자가 알 수 없다.
-    // 라우트 하네스 실측(단건 ↔ 함께양도 대조, 2026-07-28):
-    //   겸용   : mode=mixed-use·housingPart 有 → mode=bundled·**소실**(primary가 assetKind=land로 강등)
-    //   재개발 : redevelopment 有 → **소실**
-    //   일반건물: 토지·건물 분리 안분 有 → **소실**. 단건에서 500으로 막히는 필수 검증(zoneType)조차
-    //            일괄에서는 타지 않고 200이 나온다 — 분기 미실행의 결정적 증거
-    //   부담부증여: debtRatio 有 → **소실** (대조군, 판별력 확인됨)
+    // 라우트 하네스 실측(단건 ↔ 함께양도 대조, 2026-07-28) — **메커니즘이 둘로 갈린다**:
+    //   겸용   : mode=mixed-use·housingPart 有 → 일괄에서 **분기 미실행**(primary가 assetKind=land로 강등)
+    //   재개발 : redevelopment 산출물 有 → **분기 미실행**
+    //   일반건물: 토지·건물 분리 안분 有 → **분기 미실행**. 단건이면 500으로 막히는 필수 검증
+    //            (zoneType)조차 일괄에서는 타지 않고 200이 나온다 — 미실행의 결정적 증거
+    //   부담부증여: STEP 0.48은 엔진 내부라 **실행되지만**, route가 transferPrice를 안분값으로
+    //            덮어써 §159 기준 gain과 **스케일 충돌** → 표시 필요경비가 **음수(-91,000,000)**
     //
+    // 화면에는 특수 입력이 그대로 보이는데 계산이 어긋나므로 사용자가 알 수 없다.
     // 다물건 계산기는 이미 같은 이유로 전부 차단한다(`multi-transfer-tax-validate.ts:54~65`
     // — "침묵 오산보다 명시 차단이 안전하다"). 함께양도 경로에도 같은 가드를 둔다.
     //
     // `some()`인 이유: 라우트는 primary만 보지만 companion의 특수 입력도 `buildAssetPayload`가
     // 담지 않아 함께 소실된다. 토글·자산추가 순서에 따라 어느 쪽에든 남을 수 있다.
     //
-    // ⚠️ `commercial_building`은 5-a-3을 타지 않아(전용 분기 없음) 동일 결함인지 **미확인** —
-    //    근거 없이 막지 않는다(잘못된 차단도 해악). 검증 후 판단.
+    // ⚠️ `commercial_building`은 **차단하지 않는다** — 전용 분기가 없어 엔진 내부에서 처리되며,
+    //    실측 결과 **양도차익이 단건과 동일**하고 필요경비도 음수가 아니다(계산 정상).
+    //    일괄 집계 결과에 자산별 상세 카드가 안 실리는 **표시 갭**일 뿐이라 막을 근거가 없다.
+    //    회귀 방어: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`
     if (form.assets.length > 1) {
       const SINGLE_ONLY: Array<[(a: AssetForm) => boolean, string]> = [
         [(a) => a.transferType === "burdened_gift", "부담부증여(소령 §159)"],
