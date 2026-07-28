@@ -37,7 +37,27 @@ npm run seed:tax-rates        # Supabase tax_rates 시딩
 npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 무효화 후)
 ```
 
-**자동 게이트**: husky pre-commit(lint-staged) + pre-push(typecheck + test) + GitHub Actions.
+**자동 게이트**: husky pre-commit(lint-staged) + pre-push(폰트·톤 + typecheck + **범위 선택 테스트**) + GitHub Actions.
+
+### 테스트 범위 정책 (2026-07-28 — 반복 검증에 전체 실행 금지)
+
+전체 `npm test`는 **1036파일 11628테스트 ≈ 152초**다. 작업 중 반복 실행하면 그 자체가 최대 시간 낭비다.
+
+| 상황 | 명령 | 실측 |
+|---|---|---|
+| 작업 중 반복 검증 | `npx vitest run __tests__/tax-engine/{tax}/ __tests__/calc/` | ~36초 |
+| 세목 단위 회귀 | `npm run test:{transfer\|acquisition\|property\|comprehensive\|inheritance\|gift}` | ~59초(transfer) |
+| push 직전·PR 전 | pre-push가 자동 판정 / `npm run check:pre-pr` | ~152초 |
+
+**pre-push는 변경 경로로 범위를 자동 판정**한다(`scripts/select-test-scope.sh`, 판정 회귀 테스트 `scripts/select-test-scope.test.sh` 14케이스):
+
+- `components/calc/{tax}/**` · `app/calc/{tax}-tax/**` · `app/api/calc/{tax}/**` · `lib/calc/{tax}-tax*` · `__tests__/**/{tax}*` **만** 바뀌면 → 그 세목 스크립트만
+- `docs/**`·`*.md`·`e2e/**`만 바뀌면 → vitest 생략(typecheck는 수행)
+- **`lib/tax-engine/**` · `lib/api/**` · `lib/stores/**` · `types/**` · 설정 파일이 하나라도 걸리면 전체** — 세목 간 공유(종부세→재산세 의존, 상속·증여 `property-valuation` 공유, `legal-codes`·`date-coerce` 공용) 때문에 좁히면 타 세목 회귀를 놓친다
+- 두 세목 동시 변경·미분류 신규 경로·판정 불가 → **전체**(안전측 기본값)
+- 강제 전체: `FULL_TEST=1 git push`
+
+**판정 규칙을 넓히려면 반드시 `select-test-scope.test.sh`에 케이스를 먼저 추가**한다. 좁히기 오판정은 회귀 안전망을 뚫는 방향이라 "회귀 허용치 0" 원칙과 정면 충돌한다.
 
 ### 머지 워크플로 — `scripts/ship.sh` (수시 수정 사이클)
 
