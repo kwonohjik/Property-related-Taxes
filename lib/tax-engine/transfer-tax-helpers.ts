@@ -14,6 +14,7 @@
 
 import {
   applyRate,
+  computeEstimatedDeduction,
   calculateEstimatedAcquisitionPrice,
   calculateHoldingPeriod,
   calculateProration,
@@ -308,6 +309,10 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
 
   // 개산공제율 (소득세법 시행령 §163⑥1호·2호가목): 토지·건물·주택 = 3/100.
   // 단, §104③ 미등기양도자산은 3/1000(0.3%).
+  // ⚠️ base는 `computeEstimatedDeduction`이 **지분 기준시가**로 축소한다 —
+  //    `standardPriceAtAcquisition`은 물건 전체(100%) 값이고, 같은 필요경비 산식의 다른 항인
+  //    환산취득가액은 `transferPrice`를 통해 이미 지분 스케일이라 §97②2호 가목의 **합계액**이
+  //    한쪽만 100%면 어긋난다(설계: transfer-fractional-lump-sum-deduction.plan.md §1).
   const estimatedDeductionRate = input.isUnregistered ? 0.003 : 0.03;
 
   if (input.useEstimatedAcquisition) {
@@ -320,7 +325,11 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
       input.standardPriceAtAcquisition ?? 0,
       conv.denominator,
     );
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
+    const deduction = computeEstimatedDeduction(
+      input.standardPriceAtAcquisition ?? 0,
+      estimatedDeductionRate,
+      input.ownershipRatio,
+    );
     acquisitionCostBase = estimated;
     estimatedBase = estimated;
     estimatedDeduction = deduction;
@@ -328,7 +337,11 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   } else if (input.acquisitionMethod === "appraisal") {
     // 감정가액 모드: 소득세법 시행령 §163⑥에 따라 환산취득가와 동일하게 개산공제 자동 적용.
     const appraisal = input.appraisalValue ?? input.acquisitionPrice;
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
+    const deduction = computeEstimatedDeduction(
+      input.standardPriceAtAcquisition ?? 0,
+      estimatedDeductionRate,
+      input.ownershipRatio,
+    );
     acquisitionCostBase = appraisal;
     estimatedBase = appraisal;
     estimatedDeduction = deduction;
@@ -338,7 +351,11 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     // §163⑫(§97①1호나목 매매사례가액)·§97②2호·§163⑥에 따라 환산취득가·감정가액과
     // 동일하게 필요경비 개산공제(취득시 기준시가 × 3%)를 자동 적용한다.
     const salesCase = input.similarSalesValue ?? input.acquisitionPrice;
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
+    const deduction = computeEstimatedDeduction(
+      input.standardPriceAtAcquisition ?? 0,
+      estimatedDeductionRate,
+      input.ownershipRatio,
+    );
     acquisitionCostBase = salesCase;
     estimatedBase = salesCase;
     estimatedDeduction = deduction;

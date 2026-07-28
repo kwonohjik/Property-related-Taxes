@@ -372,8 +372,8 @@ memory `feedback_floor_residual_absorption` 위반이자 자기모순이다.
 | Phase | 내용 | verify |
 |---|---|---|
 | **P0** | pre-Do anchor: F1·F4·F6·**F8b**(항등성) — **현행 실패 확인** | 실패 메시지로 설계 환류 |
-| **P1** | 국세청 해석례 `122836` 본문 확인 (§2.3) | 법령 근거 보강 |
-| **P2** | `computeEstimatedDeduction` 이동·확장 + `ownershipRatio` input + ⑫(2곳)⑬⑭(2곳) 배관 | F1~F3·F6 green |
+| **P1** ⏸ | 국세청 해석례 `122836` 본문 확인 (§2.3) | 법제처 API가 본문 미제공 → **보류**(§2.1 논거로 충분) |
+| **P2** ✅ | `computeEstimatedDeduction` 이동·확장 + `ownershipRatio` input + ⑫(2곳)⑬⑭(2곳) 배관 + A1~A3 적용 | F1~F4·F6·F7 green |
 | **P2b** | **서브엔진 input 타입 7종 전파**(§6.3) + 호출부 | 경로별 도달 anchor |
 | **P3a** | A(비-split) + B(split, 잔액 흡수) — 회귀 위험 최대 | F1~F8b green |
 | **P3b** | C(PHD)·D(겸용) | F9~F10b green |

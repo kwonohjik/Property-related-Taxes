@@ -44,6 +44,57 @@ export function applyRate(amount: number, rate: number): number {
 }
 
 /**
+ * 공유지분율 적용 — 100% 기준 금액에 지분 비율을 곱해 원 단위로 절사.
+ *
+ * 이 저장소의 **지분 적용 단일 규약**이다. API 변환(`transfer-tax-api-helpers.ts`)이 재수출해
+ * 엔진·클라이언트가 같은 절사 규칙을 쓴다 — 순서·절사가 갈리면 사이드바 미리보기와 엔진 결과가
+ * 어긋난다(실측 0.49% 1원 차).
+ */
+export function applyRatio(amount: number, ratio: number): number {
+  return Math.floor(amount * ratio);
+}
+
+/**
+ * 필요경비 개산공제 (소득세법 시행령 §163⑥).
+ *
+ * 공유지분 자산은 **지분 기준시가**를 base로 한다 — 양도자산이 지분이면 그 지분에 상당하는
+ * 기준시가에 율을 곱하는 것이 §163⑥ 문언("취득당시의 개별공시지가 × 3/100")에 부합하고,
+ * §97②2호 가목이 규정한 **합계액**(환산취득가액 + 개산공제)의 두 항이 같은 스케일로 맞는다.
+ * 환산취득가액은 `transferPrice`를 통해 이미 지분 스케일이기 때문이다.
+ *
+ * ⚠️ 기준시가 **입력값 자체는 물건 전체(100%)로 유지**해야 한다 — 환산 산식에서 분자·분모로
+ *    함께 나타나 상쇄되고, §166⑥ 안분 비율(`landStd / total`)도 100% 스케일을 전제한다.
+ *    지분 적용은 **이 함수 안에서만** 한다.
+ *
+ * floor 순서: 지분 기준시가를 먼저 확정한 뒤 율을 적용한다(단일 floor 대비 0.96%에서 1원 작으나,
+ * 지분 기준시가가 결과 표시 산식의 base로 노출되어야 하고 `applyRatio` 규약과 일관해야 한다).
+ *
+ * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.{plan,engine.design}.md
+ *
+ * @param standardPriceAtAcq 물건 전체(100%) 취득시 기준시가
+ * @param rate 3/100 · 미등기양도자산(§104③) 3/1000
+ * @param ownershipRatio 공유지분율 (기본 1 = 단독소유)
+ */
+export function computeEstimatedDeduction(
+  standardPriceAtAcq: number,
+  rate: number,
+  ownershipRatio = 1,
+): number {
+  return applyRate(computeLumpSumDeductionBase(standardPriceAtAcq, ownershipRatio), rate);
+}
+
+/**
+ * 개산공제 base = **지분 기준시가**. 결과 표시 산식(「지분 기준시가 × 3%」)의 base로 echo된다.
+ * 100% 값을 표시하면 산식이 자기 값을 만들지 못한다(feedback_engine_result_display_drift).
+ */
+export function computeLumpSumDeductionBase(
+  standardPriceAtAcq: number,
+  ownershipRatio = 1,
+): number {
+  return ownershipRatio < 1 ? applyRatio(standardPriceAtAcq, ownershipRatio) : standardPriceAtAcq;
+}
+
+/**
  * 엔진 레이어 날짜 변환 — string|Date|undefined → Date|undefined.
  *
  * 엔진 내부에서 직접 `new Date(x)` 호출을 금지하기 위한 안전 헬퍼 (Layer 2 전용).

@@ -154,6 +154,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const ratioed = makeRatioed(primaryRatio, primaryFractional);
   // 파트 필드 전송은 buildSplitPayload 담당 — 여기선 §166⑥ 안분 3요소 게이트로만 쓴다.
   const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift);
+  // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고,
+  // 엔진이 개산공제 계산 지점에서만 적용한다(설계 transfer-fractional-lump-sum-deduction).
+  const ownershipRatioForDeduction = primaryFractional ? primaryRatio : undefined;
   const totalContractPrice = parseAmount(form.contractTotalPrice);
   // 폼-수준 총 양도비 (B3) — 지분 모드 자동 안분의 분자 sourcing.
   // primary.transferExpense가 직접 입력되면 그것이 우선, 미입력시 form.totalTransferExpense × ratio 사용.
@@ -293,6 +296,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       : (isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual"),
     // 감정·매매사례 모드는 `acquisitionPrice`가 0이고 이 값이 취득가액이 된다 →
     // 총액과 동일하게 지분 스케일을 적용해야 한다(종전 raw → 지분 자산 취득가 과대 = 세액 과소).
+    ownershipRatio: ownershipRatioForDeduction,
     appraisalValue: !isMixed && isAppraisal ? (ratioed(primary.fixedAcquisitionPrice) ?? 0) : undefined,
     // ④⑬ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
     similarSalesValue: isSalesCase ? ratioed(primary.similarSalesValue) : undefined,

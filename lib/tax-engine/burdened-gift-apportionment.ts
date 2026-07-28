@@ -27,6 +27,7 @@ import {
 import {
   safeMultiplyThenDivide,
   applyRate,
+  computeEstimatedDeduction,
   calculateEstimatedAcquisitionPrice,
 } from "./tax-utils";
 import { calcGiftTax } from "./gift-tax";
@@ -158,17 +159,24 @@ export function apportionAcquisitionPrice(
 // ============================================================
 
 /**
- * 안분된 자산별 취득가액 × 개산공제율 (소령 §163⑥1호).
+ * 안분된 **취득당시 기준시가** × 개산공제율 (소령 §163⑥1호·2호가목).
  *   등기: 3% · 미등기양도자산(§104③): 0.3% (단서 "미등기 3/1000"). (H-25)
+ *
+ * 계산 본체는 `tax-utils.ts`의 `computeEstimatedDeduction` 단일 소스에 위임한다 —
+ * 같은 §163⑥ 개념 함수가 둘이면 드리프트한다(feedback_ui_engine_dual_truth_avoidance).
+ * 부담부증여 경로는 지분 미인지(경로 전체가 그렇다)이므로 `ownershipRatio`를 넘기지 않는다.
+ *
+ * ⚠️ 종전 파라미터명 `assetAcquisitionPrice`는 **오칭**이었다 — 실제 base는 취득가액이 아니라
+ *    §159 채무비율로 안분된 **기준시가**다(호출부 `landStdApportioned` 참조).
  */
-export function computeEstimatedDeduction(
-  assetAcquisitionPrice: number,
+export function estimatedDeductionForBurdenedGift(
+  standardPriceApportioned: number,
   isUnregistered = false,
 ): number {
   const rate = isUnregistered
     ? UNREGISTERED_ESTIMATED_DEDUCTION_RATE
     : REGISTERED_ESTIMATED_DEDUCTION_RATE;
-  return applyRate(assetAcquisitionPrice, rate);
+  return computeEstimatedDeduction(standardPriceApportioned, rate);
 }
 
 // ============================================================
@@ -360,8 +368,8 @@ export function buildBurdenedGiftBreakdown(params: {
     //   K-5(환산)·legacy(market)만 정정: 종전 환산/market 가액 × 3%였음 (M-4).
     const landStdApportioned = apportionAcquisitionPrice(landStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
     const buildingStdApportioned = apportionAcquisitionPrice(buildingStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
-    landEstimatedDeduction = computeEstimatedDeduction(landStdApportioned, isUnregistered);
-    buildingEstimatedDeduction = computeEstimatedDeduction(buildingStdApportioned, isUnregistered);
+    landEstimatedDeduction = estimatedDeductionForBurdenedGift(landStdApportioned, isUnregistered);
+    buildingEstimatedDeduction = estimatedDeductionForBurdenedGift(buildingStdApportioned, isUnregistered);
   }
 
   // STEP 6: 무상이전분 — 증여재산 평가액(giftValuation.max) − 채무액 (상증법 §47③)

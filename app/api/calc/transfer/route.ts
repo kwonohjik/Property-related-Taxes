@@ -255,6 +255,8 @@ export async function POST(request: NextRequest) {
     landAcqMode: data.landAcqMode,
     buildingAcqMode: data.buildingAcqMode,
     isSeparateAcquisition: data.isSeparateAcquisition,
+    // 개산공제(§163⑥) base 축소 — 기준시가는 raw, 엔진이 개산공제에서만 적용
+    ownershipRatio: data.ownershipRatio,
     buildingStandardPriceAtAcquisition: data.buildingStandardPriceAtAcquisition,
     saleSplitMode: data.saleSplitMode,
     landSalesCaseValue: data.landSalesCaseValue,

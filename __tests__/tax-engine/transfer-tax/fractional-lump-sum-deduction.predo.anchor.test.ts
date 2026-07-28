@@ -14,6 +14,9 @@
  *
  *    F6(단독소유 무변경)과 환산취득가 회귀 가드는 지금도 green이며 그대로 `it`다.
  *
+ * **진행 상황**: P2(헬퍼·배관) 착지로 F1·F4가 green 전환 완료 → `it`.
+ *              F8b(split 항등성)는 P3a(잔액 흡수)에서 전환된다 — 아직 `it.fails`.
+ *
  * 법령 근거:
  *   - 소득세법 §97②2호 가목 — 필요경비 = "환산취득가액과 … 대통령령으로 정하는 금액의 **합계액**".
  *     한 합계식의 두 항이 서로 다른 스케일일 수 없다.
@@ -49,7 +52,7 @@ describe("F1: 환산 + 지분 50% → 개산공제 지분 적용", () => {
       ...over,
     });
 
-  it.fails("🔴 개산공제 = floor(floor(5억 × 0.5) × 3%) = 7,500,000", () => {
+  it("✅ P2 착지 — 개산공제 = floor(floor(5억 × 0.5) × 3%) = 7,500,000", () => {
     const r = calcTransferGain(mk());
     expect(
       r.estimatedDeduction,
@@ -63,7 +66,7 @@ describe("F1: 환산 + 지분 50% → 개산공제 지분 적용", () => {
     expect(r.estimatedBase).toBe(312_500_000);
   });
 
-  it.fails("🔴 §97②2호 가목 합계액의 두 항이 같은 스케일이어야 한다", () => {
+  it("✅ P2 착지 — §97②2호 가목 합계액의 두 항이 같은 스케일이어야 한다", () => {
     const r = calcTransferGain(mk());
     const whole = calcTransferGain(
       mk({ transferPrice: 1_000_000_000, ownershipRatio: undefined }),
@@ -93,7 +96,7 @@ describe("F4: swap 판정이 물건 전체와 지분 50%에서 일치", () => {
       ...over,
     });
 
-  it.fails("🔴 동일 거래의 절반 지분에서 필요경비 모드가 뒤집히면 안 된다", () => {
+  it("✅ P2 착지 — 동일 거래의 절반 지분에서 필요경비 모드가 뒤집히면 안 된다", () => {
     const whole = calcTransferGain(
       mk({
         transferPrice: 1_000_000_000,
@@ -180,5 +183,57 @@ describe("F8b: split 지분 50% → §163⑥2호가목 항등성 보존", () => 
       sum,
       "파트별로 각각 지분을 적용하면 floor가 2회씩 걸려 합이 법정액에서 −1~−2원 이탈한다 (잔액 흡수 필요)",
     ).toBe(expectedDeduction(500_000_001, 0.03, 0.5));
+  });
+});
+
+// ════════════════════════════════════════════════════════════
+// F2·F3 — 감정가액·매매사례가액 모드도 동일 (P2 착지분)
+//   §163⑥은 추계 방식을 가리지 않는다 — 개산공제는 세 모드 공통이다.
+// ════════════════════════════════════════════════════════════
+describe("F2·F3: 감정·매매사례 모드 지분 50%", () => {
+  const mk = (over: Record<string, unknown>) =>
+    baseTransferInput({
+      propertyType: "housing",
+      transferPrice: 500_000_000,
+      useEstimatedAcquisition: false,
+      standardPriceAtAcquisition: 500_000_000,
+      acquisitionPrice: 0,
+      ownershipRatio: 0.5,
+      ...over,
+    });
+
+  it("F2: 감정가액 → 개산공제 = floor(floor(5억 × 0.5) × 3%)", () => {
+    const r = calcTransferGain(
+      mk({ acquisitionMethod: "appraisal", appraisalValue: 200_000_000 }),
+    );
+    expect(r.estimatedDeduction).toBe(expectedDeduction(500_000_000, 0.03, 0.5));
+  });
+
+  it("F3: 매매사례가액 → 동일", () => {
+    const r = calcTransferGain(
+      mk({ acquisitionMethod: "salesCase", similarSalesValue: 225_000_000 }),
+    );
+    expect(r.estimatedDeduction).toBe(expectedDeduction(500_000_000, 0.03, 0.5));
+  });
+});
+
+// ════════════════════════════════════════════════════════════
+// F7 — 미등기양도자산(§104③) 0.3% 율에도 지분이 적용된다
+// ════════════════════════════════════════════════════════════
+describe("F7: 미등기 0.3% + 지분 50%", () => {
+  it("개산공제 = floor(floor(5억 × 0.5) × 0.3%)", () => {
+    const r = calcTransferGain(
+      baseTransferInput({
+        propertyType: "housing",
+        transferPrice: 500_000_000,
+        useEstimatedAcquisition: true,
+        standardPriceAtAcquisition: 500_000_000,
+        standardPriceAtTransfer: 800_000_000,
+        acquisitionPrice: 0,
+        isUnregistered: true,
+        ownershipRatio: 0.5,
+      }),
+    );
+    expect(r.estimatedDeduction).toBe(expectedDeduction(500_000_000, 0.003, 0.5));
   });
 });
