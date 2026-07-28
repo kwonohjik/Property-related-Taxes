@@ -32,6 +32,8 @@ import { PreHousingDisclosureDetailSection } from "@/components/calc/results/tra
 import { RentalHousingExceptionDetailCard } from "@/components/calc/results/transfer/RentalHousingExceptionDetailCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { CarryoverComparisonCard } from "@/components/calc/results/transfer/CarryoverComparisonCard";
+import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
+import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
 
 interface Props {
   result: TransferValuationDetailSource;
@@ -44,6 +46,8 @@ interface Props {
   transferGain?: number;
   longTermDeduction?: number;
   taxableIncome?: number;
+  /** 토지·건물 분리 안내 문구 분기(§99①1호 나목)용 — 자산별로 다르다. */
+  assetKind?: string;
 }
 
 export function ValuationDetailCards({
@@ -52,6 +56,7 @@ export function ValuationDetailCards({
   transferGain,
   longTermDeduction,
   taxableIncome,
+  assetKind,
 }: Props) {
   const hasAny =
     !!result.commercialBuildingValuationDetail ||
@@ -63,7 +68,9 @@ export function ValuationDetailCards({
     !!result.preHousingDisclosureDetail ||
     !!result.rentalHousingExceptionDetail ||
     !!result.familyBusinessDetail ||
-    !!result.carryoverTaxationDetail;
+    !!result.carryoverTaxationDetail ||
+    !!result.splitDetail ||
+    !!result.pre1990LandValuationDetail;
 
   if (!hasAny) return null;
 
@@ -107,6 +114,12 @@ export function ValuationDetailCards({
       )}
       {result.familyBusinessDetail && (
         <FamilyBusinessImputedComparisonCard detail={result.familyBusinessDetail} />
+      )}
+      {result.pre1990LandValuationDetail && (
+        <Pre1990LandValuationDetailCard detail={result.pre1990LandValuationDetail} />
+      )}
+      {result.splitDetail && (
+        <SplitGainDetailSection splitDetail={result.splitDetail} assetKind={assetKind} />
       )}
     </div>
   );

@@ -41,7 +41,7 @@ import {
 
 
 /**
- * 단건 결과 → 자산별 breakdown으로 옮길 **평가·판정 상세 11종** (R1-a).
+ * 단건 결과 → 자산별 breakdown으로 옮길 **평가·판정 상세 13종** (R1-a·R1-b).
  *
  * `pickReductionDetails()`(감면 24종)와 같은 목적·같은 유지 규칙이다.
  * 목록은 `TransferValuationDetailSource`(transfer-result.types.ts)와 **1:1로 맞춘다** —
@@ -61,6 +61,8 @@ function pickValuationDetails(r: SingleResult): TransferValuationDetailSource {
     rentalHousingExceptionDetail: r.rentalHousingExceptionDetail,
     familyBusinessDetail: r.familyBusinessDetail,
     carryoverTaxationDetail: r.carryoverTaxationDetail,
+    splitDetail: r.splitDetail,
+    pre1990LandValuationDetail: r.pre1990LandValuationDetail,
   };
 }
 

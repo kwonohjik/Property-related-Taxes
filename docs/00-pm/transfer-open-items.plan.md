@@ -12,7 +12,7 @@
 | # | 항목 | 사용자 영향 | 규모 | 블로커 | 권고 |
 |---|---|---|---|---|---|
 | ~~R1-a~~ | ~~평가·판정 10종~~ | — | — | — | **✅ 완료 (PR 후속)** |
-| **R1-b** | `splitDetail`·`pre1990LandValuationDetail` | 산출근거 미노출 (세액 무관) | 중 | 컴포넌트 추출 선행 | 그다음 |
+| ~~R1-b~~ | ~~`splitDetail`·`pre1990LandValuationDetail`~~ | — | — | — | **✅ 완료** |
 | **R2** | 초과부담부 가드 구조적 미발동 | 잘못된 입력 미차단 | 소 | 법령 해석 선행 | 그다음 |
 | R3 | §66 담보채권액 지분 대응분 해석 | 없음 (회피 중) | 소 | 해석례 부재 | 조사만 |
 | R4 | 지분 부담부증여 정식 지원 | 기능 부재 (차단됨) | 대 | **제품 결정** | 보류 |
@@ -183,8 +183,12 @@ rebase 완료, `MERGEABLE`, 전체 게이트 통과(1,057파일 11,901테스트)
 
 ## 권고 순서
 
-1. ~~R1-a~~ ✅ — 평가·판정 10종 + `nblSurchargeExcluded` 복구(집계 Detail 25 → 35). 기존 anchor
-   `expropriation-companion.anchor.test.ts`가 고정하던 표시 갭이 해소되어 단언을 뒤집었다.
+1. ~~R1-a·R1-b~~ ✅ — 평가·판정 12종 + `nblSurchargeExcluded` 복구(집계 Detail 25 → 37).
+   - R1-a: 기존 anchor `expropriation-companion.anchor.test.ts`가 고정하던 표시 갭이 해소되어 단언을 뒤집었다.
+   - R1-b: 단건 뷰 인라인 블록을 `SplitGainDetailSection`·`Pre1990LandValuationDetailCard`로 추출
+     (`TransferTaxResultView` 684 → 581줄). **`<PrintSection>` 래퍼는 단건 뷰가 계속 소유**해
+     인쇄 선택 출력 기능을 건드리지 않았다. `formData.assets[0].assetKind` 직접 참조는
+     `assetKind` prop으로 좁혔다 — 다자산에서 자산 0번 고정 참조는 틀린 문구를 낸다.
 2. **R2 조사** → 결과에 따라 수정 여부 결정
 3. **R3 조사** (R2와 함께 KoreanLaw 세션으로 묶으면 효율적)
 4. R1-b · R5는 관련 기능 작업 시 기회주의적으로

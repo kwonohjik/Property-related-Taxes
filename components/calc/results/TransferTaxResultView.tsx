@@ -7,7 +7,6 @@
 
 import { useState, useMemo } from "react";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
-import { cn } from "@/lib/utils";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 // LawArticleModal은 EngineStepsSubToggle로 이전되었으나, 감면 상세 카드 인용 링크화를 위해 재도입 (2026-06-15)
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -33,6 +32,8 @@ import { ExpropriationValuationCard } from "@/components/calc/results/transfer/E
 import { AuctionValuationCard } from "@/components/calc/results/transfer/AuctionValuationCard";
 import { HousingExpropriationValuationCard } from "@/components/calc/results/transfer/HousingExpropriationValuationCard";
 import { SplitLandExpropriationValuationCard } from "@/components/calc/results/transfer/SplitLandExpropriationValuationCard";
+import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
+import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { incomeDeductionRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
@@ -438,41 +439,7 @@ export function TransferTaxResultView({
         )}
 
         {result.pre1990LandValuationDetail && (
-          <div className="rounded-lg border border-amber-500/50 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-2">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              1990.8.30. 이전 취득 토지 기준시가 환산
-            </p>
-            <p className="text-xs text-muted-foreground">{result.pre1990LandValuationDetail.caseLabel}</p>
-            <div className="text-xs space-y-1 mt-2">
-              <div>
-                <span className="text-muted-foreground">공식: </span>
-                <code className="text-caption">{result.pre1990LandValuationDetail.breakdown.formula}</code>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2">
-                <span className="text-muted-foreground">취득시 등급가액</span>
-                <span className="font-mono text-right">{result.pre1990LandValuationDetail.breakdown.gradeValueAtAcquisition.toLocaleString()}</span>
-                <span className="text-muted-foreground">90.8.30. 현재 등급가액</span>
-                <span className="font-mono text-right">{result.pre1990LandValuationDetail.breakdown.gradeValue_1990_0830.toLocaleString()}</span>
-                <span className="text-muted-foreground">90.8.30. 직전 등급가액</span>
-                <span className="font-mono text-right">{result.pre1990LandValuationDetail.breakdown.gradeValuePrev_1990_0830.toLocaleString()}</span>
-                <span className="text-muted-foreground">분모 (min(평균, 현재))</span>
-                <span className="font-mono text-right">{result.pre1990LandValuationDetail.breakdown.appliedDenominator.toLocaleString()}</span>
-                <span className="text-muted-foreground">적용 비율</span>
-                <span className="font-mono text-right">{(result.pre1990LandValuationDetail.breakdown.appliedRatio * 100).toFixed(2)}%</span>
-                <span className="text-muted-foreground">㎡당 가액</span>
-                <span className="font-mono text-right">{result.pre1990LandValuationDetail.pricePerSqmAtAcquisition.toLocaleString()}</span>
-                <span className="text-muted-foreground font-medium">취득시 기준시가</span>
-                <span className="font-mono text-right font-medium">{result.pre1990LandValuationDetail.standardPriceAtAcquisition.toLocaleString()}</span>
-                {/* 양도시 기준시가는 상위 폼 standardPriceAtTransfer 입력값으로 공급 — 서브엔진 미산출 */}
-              </div>
-              {result.pre1990LandValuationDetail.warnings.length > 0 && (
-                <ul className="mt-2 list-disc pl-5 text-destructive">
-                  {result.pre1990LandValuationDetail.warnings.map((w, i) => <li key={i}>{w}</li>)}
-                </ul>
-              )}
-              <p className="text-micro text-muted-foreground pt-1">{result.pre1990LandValuationDetail.breakdown.legalBasis}</p>
-            </div>
-          </div>
+          <Pre1990LandValuationDetailCard detail={result.pre1990LandValuationDetail} />
         )}
       </div>
       </PrintSection>
@@ -487,85 +454,15 @@ export function TransferTaxResultView({
       )}
 
       {/* 토지/건물 분리 양도차익 상세 */}
-      {result.splitDetail && (() => {
-        const selfOwns = result.splitDetail.selfOwns ?? "both";
-        const landIsOwned = selfOwns !== "building_only";
-        const buildingIsOwned = selfOwns !== "land_only";
-        const ownerLabel = selfOwns === "building_only" ? "건물" : selfOwns === "land_only" ? "토지" : null;
-        const colCls = (owned: boolean) =>
-          owned ? "font-mono text-right" : "font-mono text-right text-muted-foreground/50 line-through";
-        const headerCls = (owned: boolean) =>
-          owned ? "font-medium text-center" : "font-medium text-center text-muted-foreground/50";
-        const acqModeLabel = (m?: "actual" | "estimated" | "appraisal" | "salesCase") =>
-          m === "estimated" ? "환산취득가" : m === "appraisal" ? "감정가액" : m === "salesCase" ? "매매사례가액" : "실지취득가액";
-        return (
-          <PrintSection id="split-detail" selectedIds={selectedPrintIds}>
-          <div className="rounded-lg border border-border p-4 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-semibold">토지/건물 분리 양도차익</p>
-                {ownerLabel && (
-                  <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
-                    본인 신고분: {ownerLabel} (소령 §166⑥·§168②)
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="text-xs grid grid-cols-3 gap-x-2 gap-y-1">
-              <span />
-              <span className={headerCls(landIsOwned)}>토지{!landIsOwned && " (타인 소유)"}</span>
-              <span className={headerCls(buildingIsOwned)}>건물{!buildingIsOwned && " (타인 소유)"}</span>
-              <span className="text-muted-foreground">취득 방식</span>
-              <span className={cn(headerCls(landIsOwned), "font-normal")}>{acqModeLabel(result.splitDetail.land.acqMode)}</span>
-              <span className={cn(headerCls(buildingIsOwned), "font-normal")}>{acqModeLabel(result.splitDetail.building.acqMode)}</span>
-              <span className="text-muted-foreground">양도가액</span>
-              <span className={colCls(landIsOwned)}>{result.splitDetail.land.transferPrice.toLocaleString()}</span>
-              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.transferPrice.toLocaleString()}</span>
-              <span className="text-muted-foreground">취득가액</span>
-              <span className={colCls(landIsOwned)}>{result.splitDetail.land.acquisitionPrice.toLocaleString()}</span>
-              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.acquisitionPrice.toLocaleString()}</span>
-              <span className="text-muted-foreground">필요경비 (개산공제)</span>
-              <span className={colCls(landIsOwned)}>
-                {result.splitDetail.land.appraisalDeduction.toLocaleString()}
-                {/* base는 엔진이 실제로 쓴 값(지분 기준시가)을 노출한다 — 100% 값을 쓰면
-                    지분 자산에서 산식이 표시된 개산공제를 못 만든다. */}
-                {result.splitDetail.land.stdPriceAtAcq != null && (
-                  <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {(result.splitDetail.land.lumpDeductionBase ?? result.splitDetail.land.stdPriceAtAcq).toLocaleString()} × 3%</span>
-                )}
-              </span>
-              <span className={colCls(buildingIsOwned)}>
-                {result.splitDetail.building.appraisalDeduction.toLocaleString()}
-                {result.splitDetail.building.stdPriceAtAcq != null && (
-                  <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {(result.splitDetail.building.lumpDeductionBase ?? result.splitDetail.building.stdPriceAtAcq).toLocaleString()} × 3%</span>
-                )}
-              </span>
-              {result.splitDetail.building.stdPriceDerivedFromTotal && (
-                <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug">
-                  {/* 결함 표식이 아니다 — 의미가 propertyType별로 정반대다.
-                      주택(라목)은 부수토지 포함 결합 공시라 역산이 법정 정상 경로이고,
-                      일반 건물은 가목·나목이 각각 공시되므로 역산이 한시 후퇴다. */}
-                  {formData?.assets?.[0]?.assetKind === "building"
-                    ? "건물 취득시 기준시가를 직접 입력하지 않아 결합 총액에서 안분한 값입니다 — 건물 취득일 기준 고시분을 입력하면 더 정확합니다 (소득세법 §99①1호 나목)."
-                    : "개별주택가격(부수토지 포함)에서 토지분을 분리한 값입니다 (소득세법 시행령 §163⑥2호가목)."}
-                </span>
-              )}
-              <span className="text-muted-foreground">양도차익</span>
-              <span className={cn(colCls(landIsOwned), landIsOwned && "font-semibold")}>{result.splitDetail.land.gain.toLocaleString()}</span>
-              <span className={cn(colCls(buildingIsOwned), buildingIsOwned && "font-semibold")}>{result.splitDetail.building.gain.toLocaleString()}</span>
-              <span className="text-muted-foreground">보유연수</span>
-              <span className={colCls(landIsOwned)}>{result.splitDetail.land.holdingYears}년</span>
-              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.holdingYears}년</span>
-              <span className="text-muted-foreground">장특공제율</span>
-              <span className={colCls(landIsOwned)}>{(result.splitDetail.land.longTermRate * 100).toFixed(0)}%</span>
-              <span className={colCls(buildingIsOwned)}>{(result.splitDetail.building.longTermRate * 100).toFixed(0)}%</span>
-              <span className="text-muted-foreground">장특공제액</span>
-              <span className={colCls(landIsOwned)}>{result.splitDetail.land.longTermDeduction.toLocaleString()}</span>
-              <span className={colCls(buildingIsOwned)}>{result.splitDetail.building.longTermDeduction.toLocaleString()}</span>
-            </div>
-          </div>
-          </PrintSection>
-        );
-      })()}
+      {/* 토지/건물 분리 양도차익 상세 */}
+      {result.splitDetail && (
+        <PrintSection id="split-detail" selectedIds={selectedPrintIds}>
+          <SplitGainDetailSection
+            splitDetail={result.splitDetail}
+            assetKind={formData?.assets?.[0]?.assetKind}
+          />
+        </PrintSection>
+      )}
 
       {/* 건물 기준시가 계산서 (모달 스냅샷 재유도 — 스냅샷 있을 때만 렌더) */}
       <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>

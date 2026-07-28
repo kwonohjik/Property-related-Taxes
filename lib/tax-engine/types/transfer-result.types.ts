@@ -398,9 +398,10 @@ export type TransferReductionDetailSource = Pick<
  * 필드를 추가할 때는 `pickValuationDetails()`(transfer-tax-aggregate.ts)에도 함께 넣는다 —
  * 타입만 넓히면 일괄 경로에서 값이 조용히 빈다(침묵 누락).
  *
- * ⚠️ **제외**: `splitDetail`·`pre1990LandValuationDetail`은 단건 결과뷰에 인라인 렌더가
- *    각각 28·13곳이라 컴포넌트 추출이 선행돼야 한다(계획서 R1-b).
- *    `mixedUseDetail`·`redevelopmentDetail`·`generalBuildingValuationDetail`은 해당 자산이
+ * `splitDetail`·`pre1990LandValuationDetail`은 단건 결과뷰의 인라인 렌더를
+ * `SplitGainDetailSection`·`Pre1990LandValuationDetailCard`로 추출한 뒤 편입했다(R1-b).
+ *
+ * ⚠️ **제외**: `mixedUseDetail`·`redevelopmentDetail`·`generalBuildingValuationDetail`은 해당 자산이
  *    일괄에서 차단되어(PR #854) 도달 불가. `amendmentDetail`은 집계 최상위에 이미 있다.
  */
 export type TransferValuationDetailSource = Pick<
@@ -416,4 +417,6 @@ export type TransferValuationDetailSource = Pick<
   | "rentalHousingExceptionDetail"
   | "familyBusinessDetail"
   | "carryoverTaxationDetail"
+  | "splitDetail"
+  | "pre1990LandValuationDetail"
 >;
