@@ -81,6 +81,17 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
       </div>
       <table className="w-full text-xs border-collapse">
         <tbody>
+          {bg.ownershipRatio !== undefined && (
+            <tr>
+              <td colSpan={2} className="py-1 pr-2 text-caption text-fuchsia-800">
+                공유지분 {(bg.ownershipRatio * 100).toFixed(4).replace(/\.?0+$/, "")}% 적용 —
+                아래 평가액은 <b>지분 해당분</b>입니다(소령 §159의 A·C). 인수 채무는 입력한
+                실제 인수액 그대로입니다. 물건 전체 보충적평가액{" "}
+                <span className="font-mono">{fmt(bg.wholePropertySupplementary)}</span>원은
+                12억 고가주택 판정 분모로 별도 사용됩니다.
+              </td>
+            </tr>
+          )}
           <tr>
             <td colSpan={2} className="py-1 pr-2 text-caption font-semibold text-fuchsia-700">
               양도세 보충적평가 (자산별 양도가액 안분 분모)
