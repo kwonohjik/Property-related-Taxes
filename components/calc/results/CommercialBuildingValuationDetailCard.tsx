@@ -15,34 +15,22 @@
  */
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import type { CommercialBuildingValuationResult } from "@/lib/tax-engine/types/commercial-building.types";
 
 /**
- * ⚠️ **엔진 타입의 UI 로컬 재선언** — `lib/tax-engine/types/commercial-building.types.ts`의
- * `CommercialBuildingValuationResult`와 같은 이름·다른 정의다(dual-truth). 엔진에 필드가
- * 늘어도 여기 없으면 UI에서 보이지 않는다. 엔진 타입 직접 import로 통합해야 하나 별건이다.
- * (원 주석: "transfer.types.ts 엔진 구현 완료 후 정확 타입으로 교체" — 아직 미이행)
+ * 엔진 결과 타입 — `lib/tax-engine/types/commercial-building.types.ts` **직접 사용**.
+ *
+ * 종전에는 같은 이름의 인터페이스를 이 파일에서 **로컬 재선언**하고 있었다(dual-truth).
+ * 엔진에 필드가 늘어도 여기 없으면 UI가 못 보는 구조라, 실제로 7개 필드
+ * (`landStdAtAcq`·`buildingStdAtAcq`·`landStdAtFirst`·`buildingStdAtFirst`·
+ * `landStdAtTransfer`·`buildingStdAtTransfer`·`sec164_8AdjustedDenominator`)가 누락돼 있었고
+ * `lumpDeductionBase` 추가 때도 수동 동기화가 필요했다.
+ *
+ * 로컬 정의는 엔진 타입의 **완전한 부분집합**(16/23 필드, optional 불일치 0, UI 전용 필드 0)임을
+ * 확인하고 제거했다. `import type`이므로 번들에 엔진 코드가 실리지 않는다.
+ * 재export는 모듈 공개 표면 보존용(종전 `export interface`와 동일).
  */
-export interface CommercialBuildingValuationResult {
-  floorAreaTotal: number;
-  unitPriceTotalAtTransfer: number;
-  unitPriceTotalAtFirst?: number;
-  combinedStdAtAcq?: number;
-  combinedStdAtFirst?: number;
-  combinedStdAtTransfer?: number;
-  estimatedBasisAtAcq?: number;
-  /** 개산공제 base로 실제 사용된 값(= 지분 기준시가). 엔진 echo — 표시 산식이 자기 값을 만들게 한다. */
-  lumpDeductionBase?: number;
-  estimatedAcquisitionTotal: number;
-  estimatedAcquisitionLand: number;
-  estimatedAcquisitionBuilding: number;
-  estimatedDeductionTotal: number;
-  estimatedDeductionLand: number;
-  estimatedDeductionBuilding: number;
-  /** §164⑥ 단서 — 취득당시 건물 기준시가가 §164⑤ 준용 산정값이어야 하는 구간 */
-  sec164_5ProvisoApplicable?: boolean;
-  /** §164⑥ 산식 괄호 단서 — 취득당시 합계액 == 최초고시당시 합계액 (§164⑧ 준용 대상) */
-  sec164_8ProvisoApplicable?: boolean;
-}
+export type { CommercialBuildingValuationResult };
 
 interface Props {
   detail: CommercialBuildingValuationResult;
