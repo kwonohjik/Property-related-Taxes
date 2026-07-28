@@ -18,7 +18,7 @@
 | R4 | 지분 부담부증여 정식 지원 | 기능 부재 (차단됨) | 대 | — | 🛑 **보류 확정 (2026-07-29 사용자 결정)** |
 | R5 | 800줄 초과 파일 9개 → **8개** | 없음 (유지보수) | 중 | 없음 | **부분 완료 — 나머지는 기회주의적 유지** |
 | ~~R6~~ | ~~PR #737 집합건물 전유면적~~ | — | — | — | **✅ 실측 완료 + 결함 3건 수정 + 머지** |
-| R7 | #591 양도세 감사 백로그 | 미상 | 대 | 항목별 재검증 | **진행 중 — 99 → 16건** |
+| R7 | #591 양도세 감사 백로그 | 미상 | 대 | 항목별 재검증 | **진행 중 — 99 → 12건** |
 
 ---
 
@@ -466,13 +466,35 @@ anchor 12건 신설(`building-register-expos-query-format.anchor.test.ts`). 전�
 | override가 매매사례가액을 우회 | 세액 변경 | `resolveAcquisitionOverride`가 `appraisal`만 무력화하고 동일 성격 추계인 `salesCase`는 뒀다. `calcTransferGain`이 `similarSalesValue ?? acquisitionPrice`를 쓰므로 강제 취득가액이 **완전히 우회**됐다(양도차익 400,000,000 → 300,000,000). |
 | 자경 §66⑤ 편입일 안분 (1건) · 금양임야·묘토 §8③ 안분 (2건) | ±1원 | `floor(금액 × 부동소수비율)` → `safeMultiplyThenDivide`. |
 
-### 남은 16건 — 성격이 다르다
+### 종결 9 — 임대주택 특례 기본공제 fixture 재구성 (4건) ✅
+
+엔진 정정은 이미 종결 8(PR #868)에서 끝나 있었다 — §103①은 기본공제를 **소득별로 해당 과세기간에
+각각 연 250만원** 한도로 규정하는데, 장기임대 거주주택 특례(§155⑳·§161) 조기반환 경로가
+연 한도 **전액**을 고정 적용해 같은 해 기사용분을 무시했다(250만원 재차 전액 공제 → 세액 과소).
+`max(0, 연한도 − 기사용분)`으로 정정.
+
+남아 있던 것은 **감사 fixture가 검증할 수 없는 상태**라는 점이었다. 감사 브랜치(2026-07-14 베이스)
+이후 `RentalUnitInput`이 개편돼 옛 필드명으로는 **특례 경로에 진입조차 못 했다**:
+
+| 감사 fixture | 현행 |
+|---|---|
+| `registrationDate` | `businessRegistrationDate` + `rentalRegistrationDate` (2분리) |
+| `rentalType: "long-8"` | `rentalCategory: "long_general"` |
+| — | `isExcluded918Rule` · `hasMinimum2Units` 추가 |
+
+동작이 확인된 `rental-housing-exception/rh-b1-early-exempt-bypass.anchor.test.ts`의 `rentalUnitOk`를
+기준으로 맞춰 재구성했다. 본 테스트의 검증 대상은 기본공제이므로 임대 요건은 "전부 충족"으로만 둔다.
+⇒ 6건 전부 통과. **복원 검증**: 엔진 정정을 되돌리면 정확히 3건 실패.
+
+이 건은 "감사 지적이 옳아도 **fixture가 낡으면 검증 자체가 불가능**하다"는 사례다 —
+엔진과 fixture를 별개 작업으로 분리한 판단이 맞았다.
+
+### 남은 12건 — 성격이 다르다
 
 여기서부터는 **기대값 조정이 아니라 별도 작업**이 필요하다.
 
 | 파일 | 실패 | 왜 남았나 |
 |---|---|---|
-| `audit-fix-rental-housing-step` | 4 | **fixture가 리팩터 이전 것**이다. `registrationDate`→`businessRegistrationDate`/`rentalRegistrationDate`, `rentalType`→`rentalCategory` 등 `RentalUnitInput` 필드가 전부 바뀌어 특례 경로에 **진입조차 못 한다**. fixture 재구성이 선행돼야 단언을 검증할 수 있다. 다만 지적된 **§103① 기본공제 잔여 반영은 독립적으로 타당**해 엔진은 이미 고쳤다(같은 해 기사용분을 무시하고 250만원을 재차 전액 공제하던 것 → `max(0, 연한도 − 기사용분)`). |
 | `audit-fix-general-building-valuation` | 3 | 무허가 토지에서 전액 0원짜리 **유령 '토지-사업용' 카드** 생성. 카드 조립 구조 변경 필요. |
 | `audit-fix-multi-house-surcharge-count` | 2 | **군위군(27720) 광역시 소속 군** 판정 — 저가주택 배제 기준이 REGION이 아니라 VALUE여야 한다. 행정구역 데이터 검증 선행. |
 | `transfer-multi-house-tier-model-a` | 2 | 중과 tier 모델 |
@@ -498,7 +520,7 @@ anchor 12건 신설(`building-register-expos-query-format.anchor.test.ts`). 전�
 4. ~~R6~~ ✅ — 실 API 실측으로 블로커 해소, 결함 3건 수정 후 PR #737 머지.
 5. ~~R5(부분)~~ ✅ — `property-valuation.ts` 1,025 → 653. 나머지 5건(801~840)은 thrash 회피로 유지.
 6. ~~R4~~ 🛑 — 보류 확정(2026-07-29 사용자 결정). 현행 차단 유지가 정답.
-7. **R7 진행 중** — 99 → 16 (83건 종결). 남은 16건은 fixture 재구성(4)·카드 구조 변경(3)·행정구역 데이터(2)·중과 tier(2)·엔진 기능 신설(4)·기타(1)로, 각각 별도 작업 단위다.
+7. **R7 진행 중** — 99 → 12 (87건 종결). 남은 12건: 카드 구조 변경(3)·행정구역 데이터(2)·중과 tier(2)·엔진 기능 신설(4)·기타(1).
 
 ## 이 계획서의 검증 원칙 (본 세션에서 얻은 것)
 
