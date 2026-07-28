@@ -109,16 +109,23 @@ describe("calculateFilingPenalty — 신고불성실가산세", () => {
     expect(result.filingPenalty).toBe(1_800_000);
   });
 
-  it("T10 세액감면 차감 후 납부세액 기준", () => {
+  it("T10 감면액은 가산세 기준금액에 영향 없음 (2026-07-29 정정)", () => {
+    // ⚠️ 기대값 뒤집음. 종전 T10은 `penaltyBase = 10,000,000 − 감면 2,000,000 = 8,000,000`을
+    //   고정했으나 **법령 근거가 없었다**(주석에 조문 인용 없이 산식만 적혀 있었다).
+    //
+    // 국세기본법 §47의2①·§47의3① 기준은 "무신고납부세액"·"과소신고한 납부세액"이고,
+    // 조문이 기준금액에서 **제외하라고 명시한 것은 가산세와 이자 상당 가산액뿐**이다.
+    // 납부세액은 감면·세액공제를 반영한 뒤의 금액이므로 **감면은 이미 1회 반영**돼 있다.
+    // `FilingPenaltyInput.determinedTax` 주석도 "세액공제·감면 적용 후"라고 명시하고 있었다
+    // — 즉 종전 구현은 **계약 주석과 어긋난 이중차감**이었다(#591 감사 백로그 R7).
     const result = calculateFilingPenalty({
       ...base,
       filingType: "none",
       penaltyReason: "normal",
-      reductionAmount: 2_000_000,
+      reductionAmount: 2_000_000, // 정보값 — 기준금액 불변
     });
-    // penaltyBase = 10_000_000 - 2_000_000 = 8_000_000
-    expect(result.penaltyBase).toBe(8_000_000);
-    expect(result.filingPenalty).toBe(1_600_000);
+    expect(result.penaltyBase).toBe(10_000_000);
+    expect(result.filingPenalty).toBe(2_000_000);
   });
 
   it("T11 steps에 법령 근거 포함", () => {
