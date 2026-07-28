@@ -197,6 +197,12 @@ onCheckedChange={(v) => onChange({
 
 ## 8. 8개 클라이언트 동기화 지점
 
+> **[P5 착지 현황]** ①~⑥·⑧ 완료 · ⑦은 **결과뷰 1파일만** 완료.
+> `FilingFormTableHelpers.ts`(신고서)·`DetailedStatementFormulaBuilders.ts`(상세명세서)의
+> 파트별 산식 반영은 **미착지** — 후자는 현재도 split 분기 0건이라 별개 과제 규모다
+> (`feedback_detailed_statement_formula_sync`).
+
+
 | # | 파일 | 작업 |
 |---|---|---|
 | ① 폼 상태 | `calc-wizard-asset.ts` | `buildingStandardPriceAtAcquisition` (building 전용) |
@@ -220,9 +226,10 @@ onCheckedChange={(v) => onChange({
 |---|---|---|
 | U1 | 분리 토글 ON(날짜 상이) | 상단 "취득가액 산정 방식" 미표시 + `split-acq-total-note` 표시 |
 | U2 | 토지 실가 / 건물 환산 | 토지=금액칸, 건물=기준시가 칸 |
-| U3 | 토지 실가 금액 미입력 → 다음 | validate 오류에 "토지 취득가액" 포함 |
+| ~~U3~~ | 토지 실가 금액 미입력 → 다음 | validate 오류에 "토지 취득가액" 포함 — **미작성**(단위 테스트 `transfer-tax-validate-split.test.ts`가 동일 조건을 커버) |
 | U4 | 양쪽 실가 + 금액 둘 다 입력 | 계산 성공 + 결과에 파트 분리 표시 |
 | U5 | 분리 토글 OFF 복귀 | 상단 입력 복원(폼 상태 보존) |
+| ~~U7~~ | `selfOwns≠both` + 날짜 동일 | **U6에 흡수** — 게이트가 날짜 동일 하나로 판정하므로 진입 경로별 중복 검증 불요 |
 | **U6** | **겸용주택 토글 ON** | 상단 입력 **유지**(게이트 `false`) — 오포섭 회귀 가드 |
 | **U7** | **`selfOwns≠both` + 날짜 동일** | 상단 입력 **유지** — 오포섭 회귀 가드 |
 | **U8** | 분리 모드 + PHD 대상 취득일 | **PHD 토글이 계속 보인다** — 숨김 부작용 회귀 가드 |

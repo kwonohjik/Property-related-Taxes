@@ -537,6 +537,16 @@ export function TransferTaxResultView({
                   <span className="block text-muted-foreground/70 font-normal">취득시 기준시가 {result.splitDetail.building.stdPriceAtAcq.toLocaleString()} × 3%</span>
                 )}
               </span>
+              {result.splitDetail.building.stdPriceDerivedFromTotal && (
+                <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug">
+                  {/* 결함 표식이 아니다 — 의미가 propertyType별로 정반대다.
+                      주택(라목)은 부수토지 포함 결합 공시라 역산이 법정 정상 경로이고,
+                      일반 건물은 가목·나목이 각각 공시되므로 역산이 한시 후퇴다. */}
+                  {formData?.assets?.[0]?.assetKind === "building"
+                    ? "건물 취득시 기준시가를 직접 입력하지 않아 결합 총액에서 안분한 값입니다 — 건물 취득일 기준 고시분을 입력하면 더 정확합니다 (소득세법 §99①1호 나목)."
+                    : "개별주택가격(부수토지 포함)에서 토지분을 분리한 값입니다 (소득세법 시행령 §163⑥2호가목)."}
+                </span>
+              )}
               <span className="text-muted-foreground">양도차익</span>
               <span className={cn(colCls(landIsOwned), landIsOwned && "font-semibold")}>{result.splitDetail.land.gain.toLocaleString()}</span>
               <span className={cn(colCls(buildingIsOwned), buildingIsOwned && "font-semibold")}>{result.splitDetail.building.gain.toLocaleString()}</span>

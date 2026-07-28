@@ -22,6 +22,8 @@ import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandV
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -131,6 +133,24 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isSplitable =
     props.assetKind === "housing" || props.assetKind === "building";
   const isSplit = isSplitable && !!props.hasSeperateLandAcquisitionDate;
+  /**
+   * **별개 취득** — 토지·건물을 서로 다른 시점에 각각 취득해 취득가액이 파트별로 실재하는가.
+   * 상단 축 A(자산 전체 "취득가액 산정 방식"·"취득가액") 표시 여부의 단일 게이트다.
+   *
+   * `isSplit`으로 가르면 안 된다 — 그 플래그는 겸용주택(`MixedUseSection.tsx:48`)과
+   * `selfOwns≠both`(`CompanionAcquisitionCauseSection.tsx:179`)에서도 강제로 켜지는데,
+   * 그 경로는 취득일이 같아 총 취득가액이 실재하므로 상단 입력이 계속 필요하다.
+   * API 변환·validate·엔진과 **같은 헬퍼**를 쓴다(dual-truth 방지).
+   */
+  const isSeparateAcq =
+    isSplitable &&
+    isSeparateAcquisition({
+      hasSeperateLandAcquisitionDate: props.hasSeperateLandAcquisitionDate,
+      landAcquisitionDate: props.landAcquisitionDate,
+      acquisitionDate: props.acquisitionDate,
+      isMixedUseHouse: props.asset?.isMixedUseHouse,
+      assetKind: props.assetKind,
+    });
   // 토지·건물 파트별 취득 방식 — 사용자가 아직 파트별 라디오를 선택하지 않았으면("") 자산 전체
   // 레거시 플래그(취득가액 산정 방식 라디오)에서 파생(단일 소스, dual-truth 방지).
   const effLandAcqMode = effectivePartAcqMode(props.asset?.landAcqMode, props);
@@ -200,6 +220,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           value={props.acquisitionDate}
           onChange={handleAcquisitionDateChange}
           onBlur={handleAcquisitionDateBlur}
+          data-testid="acq-date-building"
         />
         {/* 안내 hint 제거(2026-07-16) — onBlur 자동 클램프 + dateClampMsg + 「의제취득(§98)」 배지가
             이미 §98을 알려주므로 상시 노출 문구는 중복이었다. */}
@@ -305,6 +326,25 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       )}
       {props.asset?.transferType !== "burdened_gift" && props.asset?.assetKind !== "redevelopment_apt" && (
       <>
+      {/* 별개 취득(토지·건물 취득시기 상이) — 자산 전체 축 A 입력을 숨긴다.
+          "총 취득가액"은 사후 합계일 뿐 실재하지 않으므로(소득세법 §97①1호·§114⑦,
+          소득령 §176의2③) 파트별로만 입력받는다. 취득시 기준시가(축 B)·PHD 토글은
+          이 게이트 밖이라 그대로 노출된다 — 함께 숨기면 안분 비율 소스가 사라진다.
+          폼 상태(useEstimatedAcquisition·fixedAcquisitionPrice)는 보존한다(토글 OFF 시 복원).
+          ⚠️ stale 전송 가드는 API 변환이 담당한다(transfer-tax-api-split.ts — 별개 취득이면
+             축 A가 파트 필드만 소비하므로 총액 필드가 엔진 취득가액에 도달하지 않는다). */}
+      {isSeparateAcq && (
+        <div data-testid="split-acq-total-note">
+        <ToneCard tone="amber">
+          <p className="text-sm leading-relaxed">
+            토지·건물의 취득시기가 다르므로 <b>취득가액은 토지·건물 각각</b> 아래에서 산정합니다.
+            별개 거래로 취득한 자산에는 하나의 총 취득가액이 존재하지 않습니다
+            (소득세법 §114⑦·시행령 §176의2③).
+          </p>
+        </ToneCard>
+        </div>
+      )}
+      {!isSeparateAcq && (
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득가액 산정 방식</label>
         <div className={cn(
@@ -429,11 +469,17 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           )}
         </div>
       </div>
+      )}
 
       {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + housing 자산(또는 토지·건물 분리 모드)
          자동 트리거 조건(housing || isMixedUse)과 일치시켜 모순 방지.
          겸용주택 모드에서는 MixedUseStandardPriceInputs 내부의 PHD 토글을 사용하므로 여기서는 숨긴다. */}
-      {!isMixedUse && (props.assetKind === "housing" || isSplit) && props.useEstimatedAcquisition && props.asset && props.onAssetChange && (
+      {/* 별개 취득에서는 상단 환산 라디오가 숨겨지므로 `useEstimatedAcquisition`이 아니라
+          **파트 모드**로 판정한다 — 어느 한 파트든 환산이면 §164⑤ 대상이다. */}
+      {!isMixedUse && (props.assetKind === "housing" || isSplit)
+        && (props.useEstimatedAcquisition
+            || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated")))
+        && props.asset && props.onAssetChange && (
         <ToggleCard
           tone="amber"
           size="sm"
@@ -451,7 +497,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         </ToggleCard>
       )}
 
-      {!props.useEstimatedAcquisition && (
+      {/* 자산 전체 추계·실거래가 금액 입력 — 별개 취득이면 파트 블록이 대신한다(축 A). */}
+      {!props.useEstimatedAcquisition && !isSeparateAcq && (
         <>
           {/* 매매사례가액 추계(§176의2③1호) 모드 */}
           {props.isSalesCaseAcquisition ? (
@@ -651,6 +698,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   value={props.landAcquisitionDate ?? ""}
                   onChange={handleLandAcquisitionDateChange}
                   onBlur={handleLandAcquisitionDateBlur}
+                  data-testid="acq-date-land"
                 />
                 {landDateClampMsg && (
                   <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -689,6 +737,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   onLandDirectExpensesChange={props.onLandDirectExpensesChange ?? (() => {})}
                   buildingDirectExpenses={props.buildingDirectExpenses ?? ""}
                   onBuildingDirectExpensesChange={props.onBuildingDirectExpensesChange ?? (() => {})}
+                  isSeparateAcq={isSeparateAcq}
+                  asset={props.asset}
+                  onAssetChange={props.onAssetChange}
+                  transferDate={props.transferDate}
                 />
               )}
             </div>

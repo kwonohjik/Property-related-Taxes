@@ -377,7 +377,8 @@ rev.1의 물질화 마이그레이션은 **폐기**한다:
 | **P2b** ✅ | 축 B 파트별 독립(E1) — `building` 전용 + V3 | B2~B6 green, housing 축 B 수치 불변(H4·H10) |
 | **P3** ✅ | 지분 `applyRatio`(E5) — 파트 필드 **전 축** + 추계 가액(`appraisalValue`·`similarSalesValue`) | B12 green |
 | **P4** | validate V1~V4 + ⑫⑬⑭ | validate·api-split-gate green |
-| **P5** | UI(U0~U5) + 결과뷰·상세명세서 | RTL + E2E 재작성 green |
+| **P5** ✅ | UI(게이트·숨김·파트 축 B·사이드바) + 결과뷰 fine-print + E2E 6건 | E2E 16/16 green |
+| **P5-잔여** | 신고서(`FilingFormTableHelpers`)·상세명세서(`DetailedStatementFormulaBuilders`) 파트별 산식 | 미착수 |
 | **P6** | 전체 회귀 | `npm run check:pre-pr` |
 
 > **P1은 독립 착지 가능** — 사용자가 실제로 겪은 버그이므로 별도 PR로 먼저 내보낼 수 있다.

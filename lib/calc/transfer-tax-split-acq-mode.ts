@@ -59,6 +59,64 @@ interface SeparateAcquisitionFlags {
  * UI 노출·API 전송·validate·엔진이 **모두** 이 함수를 단일 소스로 사용한다
  * (memory `feedback_ui_engine_dual_truth_avoidance`).
  */
+interface SeparatePartAmounts extends LegacyAcqFlags {
+  selfOwns?: "both" | "building_only" | "land_only";
+  landAcqMode?: PartAcqMode | "";
+  buildingAcqMode?: PartAcqMode | "";
+  landAcquisitionPrice?: string;
+  buildingAcquisitionPrice?: string;
+  landSalesCaseValue?: string;
+  buildingSalesCaseValue?: string;
+}
+
+/** 콤마 제거 후 정수 파싱 (CurrencyInput 저장 규약). */
+function raw(v: string | undefined): number {
+  const n = parseInt((v ?? "").replace(/,/g, ""), 10);
+  return isFinite(n) ? n : 0;
+}
+
+/**
+ * 별개 취득 자산의 **파트 취득가액 합계** — 사이드바 합계 전용.
+ *
+ * 별개 취득에서는 자산 전체 `fixedAcquisitionPrice`가 UI에서 숨겨지므로, 그 필드를 읽는
+ * 종전 합계는 0(또는 stale 총액)을 표시한다. 파트 값을 더해 대체한다.
+ *
+ * 환산(estimated) 파트는 계산 전에는 금액이 없다 → `pending: true`로 알리고 **부분합을
+ * 합계로 표시하지 않는다**(미확정 파트를 뺀 값을 총액으로 오독 — `feedback_engine_result_display_drift`).
+ * 비소유 파트(`selfOwns≠both`)는 애초에 합계 대상이 아니다.
+ */
+export function separateAcqPartsSum(asset: SeparatePartAmounts): { sum: number; pending: boolean } {
+  const selfOwns = asset.selfOwns ?? "both";
+  const parts = [
+    {
+      owned: selfOwns !== "building_only",
+      mode: effectivePartAcqMode(asset.landAcqMode, asset),
+      price: asset.landAcquisitionPrice,
+      salesCase: asset.landSalesCaseValue,
+    },
+    {
+      owned: selfOwns !== "land_only",
+      mode: effectivePartAcqMode(asset.buildingAcqMode, asset),
+      price: asset.buildingAcquisitionPrice,
+      salesCase: asset.buildingSalesCaseValue,
+    },
+  ];
+
+  let sum = 0;
+  let pending = false;
+  for (const p of parts) {
+    if (!p.owned) continue;
+    if (p.mode === "estimated") {
+      pending = true; // 환산은 결과 도착 후에야 확정
+      continue;
+    }
+    const v = p.mode === "salesCase" ? raw(p.salesCase) : raw(p.price);
+    if (v <= 0) pending = true;
+    sum += v;
+  }
+  return { sum, pending };
+}
+
 export function isSeparateAcquisition(asset: SeparateAcquisitionFlags): boolean {
   if (!asset.hasSeperateLandAcquisitionDate) return false;
   if (!asset.landAcquisitionDate || !asset.acquisitionDate) return false;
