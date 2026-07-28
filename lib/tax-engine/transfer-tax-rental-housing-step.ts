@@ -132,7 +132,18 @@ export function runRentalHousingExceptionStep(
     amount: rhe.taxableGain,
     legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
   });
-  const rheBasicDeduction = parsedRates.basicDeductionRules.annualLimit;
+  // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 이 조기반환 경로가 기본공제를
+  //   연 한도(250만) **전액**으로 고정해 `annualBasicDeductionUsed`(같은 해 기사용분)를
+  //   무시했다. 같은 해 다른 양도에서 이미 공제받았어도 250만원을 다시 전액 공제해
+  //   과세표준·세액이 과소했다.
+  //   소득세법 §103①은 기본공제를 **소득별로 해당 과세기간에 각각 연 250만원** 한도로
+  //   규정하므로 잔여 = max(0, 연한도 − 기사용분)이다. 공제액은 과세대상 양도소득금액도
+  //   넘을 수 없다(min).
+  const rheBasicDeductionRemaining = Math.max(
+    0,
+    parsedRates.basicDeductionRules.annualLimit - (effectiveInput.annualBasicDeductionUsed ?? 0),
+  );
+  const rheBasicDeduction = Math.min(rheBasicDeductionRemaining, Math.max(0, rhe.taxableGain));
   const rheTaxBase = truncateToWon(Math.max(0, rhe.taxableGain - rheBasicDeduction));
   const rheTaxResult = calcTax(rheTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
 
