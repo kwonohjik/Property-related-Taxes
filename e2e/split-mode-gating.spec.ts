@@ -81,11 +81,14 @@ test.describe("파트별 취득 방식 게이팅 — 토지", () => {
     await expect(landTransfer(page), "기본값은 일괄양도이므로 양도가액 직접입력 칸 숨김").toHaveCount(0);
   });
 
-  test("감정가액 → 취득가액 칸 노출 (실거래가와 동일 그룹)", async ({ page }) => {
+  // 저장 필드는 실거래가와 같지만(landAcquisitionPrice 재사용) **testid는 분리**한다 —
+  // E2E에서 두 모드를 구분할 수 없으면 모드 전환 회귀를 잡지 못한다.
+  test("감정가액 → 감정가액 칸 노출 (저장 필드는 실거래가와 동일, testid는 분리)", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
     await landAcqGroup(page).getByRole("radio", { name: "감정가액" }).check();
-    await expect(landAcq(page)).toBeVisible();
+    await expect(page.getByTestId("split-land-appraisal-value")).toBeVisible();
+    await expect(landAcq(page), "실거래가 testid로는 잡히지 않아야 모드 구분이 가능하다").toHaveCount(0);
   });
 
   test("환산취득가 → 취득가액 칸 숨김 + 양도시 기준시가 칸 노출", async ({ page }) => {
@@ -141,4 +144,93 @@ test("부담부증여 → 파트별 모드 선택 자체 숨김 + 취득·양도
   await expect(landAcq(page)).toHaveCount(0);
   await expect(landTransfer(page)).toHaveCount(0);
   await expect(page.getByTestId("split-burdened-note")).toBeVisible();
+});
+
+/**
+ * P5 — 별개 취득(토지·건물 취득시기 상이) UI 게이트.
+ *
+ * 게이트는 `isSeparateAcquisition()`(lib/calc/transfer-tax-split-acq-mode.ts) 단일 소스.
+ * 분리 토글만으로는 켜지지 않는다 — 겸용주택·`selfOwns≠both`도 그 토글을 강제로 켜기 때문에,
+ * **취득일이 실제로 다를 때만** 상단 축 A(자산 전체 취득가액)를 숨긴다.
+ */
+async function fillDate(page: Page, testid: string, y: string, m: string, d: string) {
+  const root = page.getByTestId(testid);
+  await root.getByLabel("연도").fill(y);
+  await root.getByLabel("월").fill(m);
+  await root.getByLabel("일").fill(d);
+}
+
+/** 분리 토글 ON + 취득일을 실제로 다르게 입력 (건물 2018-06-01 / 토지 2015-06-01) */
+async function setupSeparateAcq(page: Page) {
+  await setupSplitAsset(page);
+  await fillDate(page, "acq-date-building", "2018", "06", "01");
+  await fillDate(page, "acq-date-land", "2015", "06", "01");
+}
+
+// 상단 축 A 라벨은 분리 섹션의 "취득가액 산정 방식 — 토지·건물 독립 선택"과 substring이 겹친다
+// → exact:true 필수 (e2e/CLAUDE.md §3 substring 오매칭).
+const topAcqModeLabel = (p: Page) => p.getByText("취득가액 산정 방식", { exact: true });
+
+test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
+  test("U1: 취득일 상이 → 상단 '취득가액 산정 방식' 미표시 + 안내 카드 표시", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+    await expect(topAcqModeLabel(page)).toHaveCount(0);
+    await expect(
+      page.getByTestId("split-acq-total-note"),
+      "총 취득가액이 실재하지 않는다는 설명이 없으면 사용자가 입력칸 소실을 결함으로 읽는다",
+    ).toBeVisible();
+  });
+
+  test("U2: 토지 실가 / 건물 환산 → 토지만 금액칸", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+    await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).click();
+    await expect(landAcq(page)).toBeVisible();
+    await expect(page.getByTestId("split-building-acq-price")).toHaveCount(0);
+  });
+
+  test("U4: 양쪽 실가 + 금액 입력 → 파트 금액이 유지된다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+    await landAcq(page).fill("300000000");
+    await page.getByTestId("split-building-acq-price").fill("250000000");
+    // CurrencyInput은 blur 시에만 콤마를 붙인다(포커스 중인 칸은 raw) → 포맷 무관 매칭.
+    // 검증 대상은 "두 파트 값이 각각 보존되는가"이지 표시 포맷이 아니다.
+    await expect(landAcq(page)).toHaveValue(/^300,?000,?000$/);
+    await expect(page.getByTestId("split-building-acq-price")).toHaveValue(/^250,?000,?000$/);
+  });
+
+  test("U5: 분리 토글 OFF 복귀 → 상단 입력 복원 (폼 상태 보존)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+    await expect(topAcqModeLabel(page)).toHaveCount(0);
+    await page.getByRole("switch", { name: /토지·건물 취득일 다름/ }).click();
+    await expect(topAcqModeLabel(page)).toBeVisible();
+  });
+
+  test("🔴 U6: 취득일 동일 → 상단 입력 유지 (오포섭 회귀 가드)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await fillDate(page, "acq-date-building", "2018", "06", "01");
+    await fillDate(page, "acq-date-land", "2018", "06", "01");
+    await expect(
+      topAcqModeLabel(page),
+      "취득일이 같으면 총 취득가액이 실재한다 — 겸용·selfOwns가 분리를 강제해도 상단 입력이 필요하다",
+    ).toBeVisible();
+    await expect(page.getByTestId("split-acq-total-note")).toHaveCount(0);
+  });
+
+  test("🔴 U8: 별개 취득 + 파트 환산 → PHD 토글이 계속 보인다 (숨김 부작용 가드)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    // §164⑤ 대상 취득일(개별주택가격 최초 고시 2005-04-29 이전)
+    await fillDate(page, "acq-date-building", "2003", "06", "01");
+    await fillDate(page, "acq-date-land", "2000", "06", "01");
+    await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).click();
+    await expect(
+      page.getByRole("switch", { name: /개별주택가격 미공시/ }),
+      "상단 축 A를 숨기면서 PHD 토글까지 함께 소실되면 §164⑤ 3-시점 입력 경로가 사라진다",
+    ).toBeVisible();
+  });
 });

@@ -21,6 +21,11 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 export type { PartAcqMode };
@@ -71,12 +76,106 @@ interface Props {
   onLandDirectExpensesChange: (v: string) => void;
   buildingDirectExpenses: string;
   onBuildingDirectExpensesChange: (v: string) => void;
+
+  /** 별개 취득(취득시기 상이) — 축 A 파트별 필수 + 축 B 파트별 독립 입력 게이트 */
+  isSeparateAcq?: boolean;
+  /** 축 B 파트별 독립 입력은 `building`(가목 토지 + 나목 건물 분리 공시) 전용 */
+  asset?: AssetForm;
+  onAssetChange?: (patch: Partial<AssetForm>) => void;
+  transferDate?: string;
+}
+
+/**
+ * 축 B — 취득시 기준시가 파트별 독립 입력 (`building` + 별개 취득 전용).
+ *
+ * 토지는 개별공시지가(§99①1호 **가목**, 기준일 = **토지 취득일**), 건물은 국세청장 산정
+ * 기준시가(**나목**, 기준일 = **건물 취득일**)로 각각 별도 공시된다. 취득시점이 다르면
+ * 각자 자기 취득일의 직전 고시분(소득령 §164③)이어야 하므로, 결합 총액에서 역산하면
+ * 건물분에 토지 취득시점이 섞인다.
+ *
+ * 주택(라목)은 개별·공동주택가격이 부수토지를 포함한 결합 공시라 이 블록을 쓰지 않는다 —
+ * 파트 독립 입력 시 개산공제 합계가 법정액(§163⑥2호가목)을 이탈한다.
+ */
+function PartAcqStdPrice(props: {
+  part: "land" | "building";
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+  transferDate?: string;
+}) {
+  const { asset, onChange } = props;
+  const stdPriceAddress = {
+    road: asset.addressRoad,
+    jibun: asset.addressJibun,
+    building: asset.buildingName,
+    detail: asset.addressDetail,
+    lng: asset.longitude,
+    lat: asset.latitude,
+    pnu: asset.addressPnu,
+  };
+
+  if (props.part === "land") {
+    return (
+      <ToneCard tone="amber" title="토지 취득시 기준시가 (§99①1호 가목)" noDark>
+        <LandPriceLookupField
+          label="취득시 토지 공시지가"
+          pricePerSqm={asset.standardPricePerSqmAtAcq}
+          onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
+          area={parseDecimal(asset.acquisitionArea) || undefined}
+          referenceDate={asset.landAcquisitionDate}
+          jibun={asset.addressJibun}
+          hint="토지 취득일 직전 고시 개별공시지가 (원/㎡) — 건물 취득일이 아니다 (소득령 §164③)"
+        />
+        <FieldCard label="토지 면적" unit="㎡" hint="토지분 기준시가 = ㎡당 공시지가 × 이 면적">
+          <DecimalInput
+            value={asset.acquisitionArea}
+            onChange={(v) => onChange({ acquisitionArea: v })}
+            data-testid="split-land-std-acq-area"
+          />
+        </FieldCard>
+      </ToneCard>
+    );
+  }
+
+  return (
+    <ToneCard tone="amber" title="건물 취득시 기준시가 (§99①1호 나목)" noDark>
+      <FieldCard
+        label="취득시 건물기준시가"
+        unit="원"
+        hint="건물 취득일 직전 고시분. 미입력 시 결합 총액에서 역산하며, 그 값에는 토지 취득시점이 섞인다."
+      >
+        <CurrencyInput
+          label=""
+          hideUnit
+          value={asset.buildingStandardPriceAtAcq}
+          onChange={(v) => onChange({ buildingStandardPriceAtAcq: v })}
+          data-testid="split-building-std-acq"
+        />
+      </FieldCard>
+      <div className="flex justify-end">
+        <BuildingStdPriceModalButton
+          lockedTaxType="transfer"
+          initialAddress={stdPriceAddress}
+          // 「건물 기준시가 계산서」 서식 출력의 스냅샷 소스 — 키가 없으면 서식이 비어 출력된다.
+          snapshotKey={`bsp-${asset.assetId}-split-acq`}
+          applyTimePoint="acquisition"
+          prefill={{
+            landAreaM2: asset.acquisitionArea,
+            acquisitionDate: asset.acquisitionDate,
+            transferDate: props.transferDate,
+          }}
+          onApply={(v: number) => onChange({ buildingStandardPriceAtAcq: String(v) })}
+        />
+      </div>
+    </ToneCard>
+  );
 }
 
 /** 파트 취득 방식별 조건부 입력 (actual/appraisal은 총액 직접입력, salesCase는 매매사례가, estimated는 안내만) */
 function PartAcqInputs(props: {
   part: "land" | "building";
   mode: PartAcqMode;
+  /** 별개 취득 — 총액 잔액 도출·안분이 폐지되어 파트별 입력이 **필수**가 된다 */
+  isSeparateAcq: boolean;
   acquisitionPrice: string;
   onAcquisitionPriceChange: (v: string) => void;
   salesCaseValue: string;
@@ -84,26 +183,45 @@ function PartAcqInputs(props: {
 }) {
   const label = props.part === "land" ? "토지" : "건물";
   if (props.mode === "actual" || props.mode === "appraisal") {
+    const isApr = props.mode === "appraisal";
     return (
-      <FieldCard label={`${label} ${props.mode === "appraisal" ? "감정가액" : "취득가액"}`}>
+      <FieldCard
+        label={`${label} ${isApr ? "감정가액" : "취득가액"}`}
+        hint={
+          props.isSeparateAcq
+            ? "취득시기가 다르므로 나머지 금액에서 자동 계산되지 않습니다 (소득세법 §97①1호·§114⑦)"
+            : undefined
+        }
+      >
         <CurrencyInput
           label=""
           value={props.acquisitionPrice}
           onChange={props.onAcquisitionPriceChange}
-          placeholder="미입력 시 나머지에서 자동 계산"
-          data-testid={`split-${props.part}-acq-price`}
+          required={props.isSeparateAcq}
+          // 별개 취득에서는 잔액 규칙이 폐지되어 "미입력 시 자동 계산" 안내가 거짓이 된다.
+          placeholder={props.isSeparateAcq ? undefined : "미입력 시 나머지에서 자동 계산"}
+          // testid는 방식별로 분리한다 — 저장 필드는 같아도(Q3) E2E에서 두 모드를 구분해야 한다.
+          data-testid={isApr ? `split-${props.part}-appraisal-value` : `split-${props.part}-acq-price`}
         />
       </FieldCard>
     );
   }
   if (props.mode === "salesCase") {
     return (
-      <FieldCard label={`${label} 매매사례가액`} hint="미입력 시 취득시 기준시가 비율로 안분(소득령 §166⑥)">
+      <FieldCard
+        label={`${label} 매매사례가액`}
+        hint={
+          props.isSeparateAcq
+            ? "매매사례 탐색 기간이 파트별 취득일 전후 3개월로 서로 달라 총액을 안분할 수 없습니다 (소득령 §176의2③1호)"
+            : "미입력 시 취득시 기준시가 비율로 안분(소득령 §166⑥)"
+        }
+      >
         <CurrencyInput
           label=""
           value={props.salesCaseValue}
           onChange={props.onSalesCaseValueChange}
-          placeholder="없으면 비워두세요"
+          required={props.isSeparateAcq}
+          placeholder={props.isSeparateAcq ? undefined : "없으면 비워두세요"}
           data-testid={`split-${props.part}-salescase-value`}
         />
       </FieldCard>
@@ -119,6 +237,13 @@ function PartAcqInputs(props: {
 }
 
 export function LandBuildingSplitSection(props: Props) {
+  // 축 B 파트별 독립 입력 — `building`(가목·나목 분리 공시) + 별개 취득 전용.
+  // 주택(라목)은 결합 공시라 상단 공용 3요소를 그대로 쓴다.
+  const showPartStdPrice =
+    !!props.isSeparateAcq &&
+    props.asset?.assetKind === "building" &&
+    !!props.asset &&
+    !!props.onAssetChange;
   const landOwned = props.selfOwns !== "building_only";
   const buildingOwned = props.selfOwns !== "land_only";
   const needsSaleStdPrice =
@@ -165,9 +290,13 @@ export function LandBuildingSplitSection(props: Props) {
               onChange={props.onLandAcqModeChange}
             />
           </div>
+          {showPartStdPrice && (
+            <PartAcqStdPrice part="land" asset={props.asset!} onChange={props.onAssetChange!} transferDate={props.transferDate} />
+          )}
           <PartAcqInputs
             part="land"
             mode={props.landAcqMode}
+            isSeparateAcq={!!props.isSeparateAcq}
             acquisitionPrice={props.landAcquisitionPrice}
             onAcquisitionPriceChange={props.onLandAcquisitionPriceChange}
             salesCaseValue={props.landSalesCaseValue}
@@ -195,9 +324,13 @@ export function LandBuildingSplitSection(props: Props) {
               onChange={props.onBuildingAcqModeChange}
             />
           </div>
+          {showPartStdPrice && (
+            <PartAcqStdPrice part="building" asset={props.asset!} onChange={props.onAssetChange!} transferDate={props.transferDate} />
+          )}
           <PartAcqInputs
             part="building"
             mode={props.buildingAcqMode}
+            isSeparateAcq={!!props.isSeparateAcq}
             acquisitionPrice={props.buildingAcquisitionPrice}
             onAcquisitionPriceChange={props.onBuildingAcquisitionPriceChange}
             salesCaseValue={props.buildingSalesCaseValue}

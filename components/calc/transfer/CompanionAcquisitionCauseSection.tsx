@@ -16,6 +16,7 @@ import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
 import { FamilyBusinessInheritanceTransferSection } from "./FamilyBusinessInheritanceTransferSection";
+import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 const ACQUISITION_CAUSE_OPTIONS = [
   { value: "purchase", label: "매매" },
@@ -181,7 +182,20 @@ export function CompanionAcquisitionCauseSection({
           }}
           hasSeperateLandAcquisitionDate={asset.hasSeperateLandAcquisitionDate}
           onHasSeperateLandAcquisitionDateChange={(v) =>
-            onChange({ hasSeperateLandAcquisitionDate: v })
+            // 분리 진입 시 파트 모드를 자산 전체 레거시 플래그에서 파생해 기록한다.
+            // "actual" 하드코딩 금지 — 상단에서 이미 환산·감정을 고른 사용자의 선택이
+            // 조용히 실거래가로 바뀐다. 상단 라디오는 별개 취득에서 숨겨지므로 복구도 불가능하다.
+            // 다중 키를 한 번에 바꾸므로 **단일 배치 onChange**로 처리
+            // (feedback_multikey_patch_stale_spread_overwrite — 분리 호출 시 stale spread 덮어쓰기).
+            onChange({
+              hasSeperateLandAcquisitionDate: v,
+              ...(v
+                ? {
+                    landAcqMode: asset.landAcqMode || deriveLegacyPartAcqMode(asset),
+                    buildingAcqMode: asset.buildingAcqMode || deriveLegacyPartAcqMode(asset),
+                  }
+                : {}),
+            })
           }
           landAcquisitionDate={asset.landAcquisitionDate}
           onLandAcquisitionDateChange={(v) => onChange({ landAcquisitionDate: v })}

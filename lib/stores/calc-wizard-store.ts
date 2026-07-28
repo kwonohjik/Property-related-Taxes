@@ -13,6 +13,7 @@ import {
   migrateAsset,
 } from "./calc-wizard-asset";
 import type { AssetForm, HouseEntry, PresaleRightEntry, PriorReductionUsageItem, SpecialHouseExclusionFormItem } from "./calc-wizard-asset";
+import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 export type {
   NblBusinessUsePeriod,
@@ -453,7 +454,13 @@ export function computeTransferSummary(
   // 취득가액 합계: 지분 모드 자산은 100% 기준 입력 × ratio 적용으로 합산
   // salesCase 모드는 similarSalesValue를 취득가액으로 사용
   const totalAcqPrice = formData.assets.reduce((acc, a) => {
-    const raw = a.isSalesCaseAcquisition
+    // 별개 취득(토지·건물 취득시기 상이): 자산 전체 취득가액 입력이 UI에서 숨겨지므로
+    // 파트 합계로 대체한다. 미확정 파트(환산·미입력)가 있으면 0 — 부분합을 합계로
+    // 표시하면 총액으로 오독된다(feedback_engine_result_display_drift).
+    const sep = isSeparateAcquisition(a) ? separateAcqPartsSum(a) : null;
+    const raw = sep
+      ? (sep.pending ? 0 : sep.sum)
+      : a.isSalesCaseAcquisition
       ? parseRaw(a.similarSalesValue)
       : a.useEstimatedAcquisition
         ? // 환산취득가 = 양도가액 × (취득기준시가 ÷ 양도기준시가) — 엔진 단일소스(BigInt 가드).
