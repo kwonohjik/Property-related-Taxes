@@ -1,7 +1,7 @@
 /**
  * anchor — 상업용건물 §164⑨ 1호 공익수용 특례 (계획 D16-CB).
  *
- * 종전: `transfer-tax.ts:305` STEP 0.35 `runCommercialBuildingStep`이 §164⑧·§176의2②2호 전용
+ * 종전: `transfer-tax.ts:305` STEP 0.35 `runCommercialBuildingStep`이 §164⑥·§176의2②2호 전용
  * 환산 후 `useEstimatedAcquisition: false`로 교체 → `calcTransferGain`의 §164⑨ 게이트 미진입(우회).
  * ⇒ 상가 + 수용 + 환산 시 특례 미적용 → 세액 86,784,934원 과다(probe 실증).
  *

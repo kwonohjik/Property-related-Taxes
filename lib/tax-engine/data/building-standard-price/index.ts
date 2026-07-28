@@ -88,7 +88,7 @@ export {
 } from "./usage-index";
 
 // D6 산정기준율
-export { ACQ_BASE_RATE, resolveAcqBaseRate } from "./acq-base-rate";
+export { ACQ_BASE_RATE, ACQ_BASE_RATE_MAX_ACQ_YEAR, resolveAcqBaseRate } from "./acq-base-rate";
 
 // D8 구조그룹맵
 export {

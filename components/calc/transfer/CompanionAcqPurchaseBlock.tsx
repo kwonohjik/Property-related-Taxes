@@ -141,7 +141,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
   const isMixedUse = !!props.asset?.isMixedUseHouse;
 
-  // 상업용건물·오피스텔 모드: 환산은 CommercialBuildingBlock(시행령 §164⑧)에서 처리하므로
+  // 상업용건물·오피스텔 모드: 환산은 CommercialBuildingBlock(시행령 §164⑥)에서 처리하므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가)을 숨긴다.
   const isCommercialBuilding = props.assetKind === "commercial_building";
   const isGeneralBuilding = props.assetKind === "general_building";
@@ -530,7 +530,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           취득시/양도시 기준시가는 위 겸용주택 분리계산 영역에서 입력합니다 (개별주택가격·상가건물·공시지가).
         </p>
       ) : isCommercialBuilding ? (
-        // 상업용건물·오피스텔: 환산은 시행령 §164⑧·§176조의2②2호에 따라
+        // 상업용건물·오피스텔: 환산은 시행령 §164⑥·§176조의2②2호에 따라
         // 호별 ㎡당 고시가 + 건물 ㎡당 기준시가 + 개별공시지가로 산정 (CommercialBuildingBlock).
         <p className="text-xs text-muted-foreground italic">
           취득시/양도시 기준시가는 아래 상업용건물·오피스텔 환산 영역에서 입력합니다 (호별 고시가·건물 기준시가·개별공시지가).

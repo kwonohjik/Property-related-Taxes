@@ -667,7 +667,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     standardPriceAtTransferForPhrp?: string;
   };
 
-  // ── 상업용건물·오피스텔 환산취득가 (사례 29, 소득세법 시행령 §164⑧, §176조의2②2호) ──
+  // ── 상업용건물·오피스텔 환산취득가 (사례 29, 소득세법 시행령 §164⑥, §176조의2②2호) ──
   /**
    * 상업용건물·오피스텔 호별고시 시점 분기.
    * - "pre_disclosure": 호별고시 전 취득(~2004.12) → 건물기준시가 3시점 + 역환산 필요
@@ -695,10 +695,33 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   cbUnitPriceAtFirstOrAcq: string;
   /**
    * 건물 기준시가 — 취득시 (원, 총액). cbEra === "pre_disclosure" 시만 필수.
-   * 소득세법 시행령 §164①: 국세청 고시 건물기준시가.
+   * 법 §99①1호 나목의 가액: 국세청 고시 건물기준시가.
    * 사용자(외부)에서 ㎡당 단가 × 연면적(전유+공용 보정계수 반영)을 미리 곱한 총액 입력.
    */
   cbBuildingStdPriceAtAcq: string;
+  /**
+   * §164⑥ 단서 — 취득당시 건물 기준시가를 §164⑤ 준용으로 산정했음을 사용자가 확인.
+   *
+   * 취득연도 ≤ 2000이면 법 §99①1호나목(건물 기준시가)이 고시되기 전이라 그 가액이 없다.
+   * 국세청 「취득당시 건물기준시가 산정기준율표」의 취득연도 축이 1985~2000이고
+   * `resolveAcqBaseRate()`가 `acqYear > 2000`을 잘라내는 것이 그 경계다.
+   * 이때 §164⑥ 단서에 따라 §164⑤을 준용해야 하는데, 준용 산정에는 신축연도·구조·용도가 필요해
+   * 엔진이 자동 산정할 수 없다(AssetForm 미보유 — 건물 기준시가 모달에서만 입력).
+   * → 사용자의 명시적 확인을 남긴다. cbEra === "pre_disclosure" + 취득연도 ≤2000일 때만 의미 있음.
+   */
+  cbAcqBuildingStdBy164_5: boolean;
+  /**
+   * §164⑥ 산식 괄호 단서(§164⑧ 준용) — **B: 전기의 토지 및 건물의 기준시가 합계액** (원, 총액).
+   *
+   * 취득당시 기준시가합 == 최초고시당시 기준시가합인 경우에만 쓰인다. 미입력 시 준용 산정을
+   * 하지 않고(종전 계산 유지) 결과에 경고만 남긴다.
+   * 산식: 취득당시 기준시가 = 최초고시 기준시가 × A / [A + (A−B) × C/D]
+   */
+  cbPrevStdPriceSum: string;
+  /**
+   * §164⑧ 준용 — **D: 토지 및 건물 기준시가 조정월수**. 빈 값이면 12(시행규칙 §80②1호 통상값).
+   */
+  cbStdPriceAdjustMonths: string;
   /**
    * 건물 기준시가 — 최초고시시(2005) (원, 총액). cbEra === "pre_disclosure" 시만 필수.
    */

@@ -31,6 +31,10 @@ export interface CommercialBuildingValuationResult {
   estimatedDeductionTotal: number;
   estimatedDeductionLand: number;
   estimatedDeductionBuilding: number;
+  /** §164⑥ 단서 — 취득당시 건물 기준시가가 §164⑤ 준용 산정값이어야 하는 구간 */
+  sec164_5ProvisoApplicable?: boolean;
+  /** §164⑥ 산식 괄호 단서 — 취득당시 합계액 == 최초고시당시 합계액 (§164⑧ 준용 대상) */
+  sec164_8ProvisoApplicable?: boolean;
 }
 
 interface Props {
@@ -84,15 +88,15 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       <div className="font-semibold text-amber-900 text-sm">
         상업용건물·오피스텔 환산취득가 산정 근거
         <span className="ml-1 text-xs font-normal text-amber-700">
-          (소득세법 시행령 §164⑧, §176조의2②2호)
+          (소득세법 시행령 §164⑥, §176조의2②2호)
         </span>
       </div>
 
       {/* 기준시가합 3시점 표 (pre_disclosure 시) */}
       {isPreDisclosure && (
         <div>
-          <p className="text-xs font-medium text-amber-800 mb-1">기준시가합 (소득세법 시행령 §164①)</p>
-          <p className="text-caption text-muted-foreground mb-2">= 개별공시지가(원/㎡) × 대지면적(㎡) + 건물 기준시가 총액(원)</p>
+          <p className="text-xs font-medium text-amber-800 mb-1">기준시가합 (소득세법 §99①1호 가목·나목)</p>
+          <p className="text-caption text-muted-foreground mb-2">= 가목의 가액(개별공시지가 × 대지면적) + 나목의 가액(건물 기준시가 총액)</p>
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-amber-200">
@@ -126,7 +130,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label={`양도시 호별총액 = 양도시 ㎡당 호별고시가 × 연면적 ${detail.floorAreaTotal.toFixed(2)} ㎡`} value={detail.unitPriceTotalAtTransfer} />
             {isPreDisclosure && detail.estimatedBasisAtAcq !== undefined && (
               <Row
-                label="취득시 환산기준시가 = INT(최초고시 호별총액 × 취득시 기준시가합 ÷ 최초고시시 기준시가합) — 시행령 §164⑧"
+                label="취득시 환산기준시가 = INT(최초고시 호별총액 × 취득시 기준시가합 ÷ 최초고시시 기준시가합) — 시행령 §164⑥"
                 value={detail.estimatedBasisAtAcq}
                 sub
               />
@@ -140,6 +144,19 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label="환산취득가 건물분 = 합계 − 토지분" value={detail.estimatedAcquisitionBuilding} sub />
           </tbody>
         </table>
+        {detail.sec164_8ProvisoApplicable && (
+          <p className="text-caption text-rose-700 mt-1">
+            ※ 취득당시 기준시가합과 최초고시당시 기준시가합이 <b>같습니다</b>. 시행령 §164⑥ 산식
+            괄호 단서에 따라 <b>§164⑧(기준시가 상승률 참작)을 준용</b>해야 하는 사안이며, 위 취득시
+            환산기준시가는 그 준용을 반영하지 않은 값입니다 — 별도 검토가 필요합니다.
+          </p>
+        )}
+        {detail.sec164_5ProvisoApplicable && (
+          <p className="text-caption text-amber-700 mt-1">
+            ※ 취득당시 건물 기준시가는 국세청 고시 전(취득연도 2000년 이전)이므로 시행령 §164⑥ 단서에
+            따라 §164⑤을 준용해 산정한 금액입니다 — 2001년 지수표 금액 × 취득당시 건물기준시가 산정기준율.
+          </p>
+        )}
       </div>
 
       {/* 개산공제 */}

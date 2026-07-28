@@ -3,6 +3,7 @@
  * transfer-tax-api.ts 800줄 정책에 따라 분리.
  */
 
+import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial-bridge";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -96,7 +97,7 @@ export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undef
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 export { toEngineReductions } from "./transfer-tax-api-reductions";
 
-// ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑧, §176조의2②2호) ───
+// ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑥, §176조의2②2호) ───
 
 /**
  * AssetForm cb* 필드 → commercialBuildingValuation 서브객체 변환.
@@ -105,6 +106,7 @@ export { toEngineReductions } from "./transfer-tax-api-reductions";
  */
 export function buildCommercialBuildingValuation(
   asset: AssetForm,
+  transferDate = "",
 ): object | undefined {
   if (asset.assetKind !== "commercial_building" || !asset.useEstimatedAcquisition) {
     return undefined;
@@ -145,12 +147,16 @@ export function buildCommercialBuildingValuation(
     const buildingAtAcq = parseAmount(asset.cbBuildingStdPriceAtAcq);
     const buildingAtFirst = parseAmount(asset.cbBuildingStdPriceAtFirst);
     const buildingAtTransfer = parseAmount(asset.cbBuildingStdPriceAtTransfer);
-    const landAtAcq = parseAmount(asset.cbLandPricePerSqmAtAcq);
+    // §164④ — 취득 1990-08-30 이전이면 가목의 가액이 없어 토지등급 환산값을 쓴다(⑧ 동일 fallback).
+    const landAtAcq = effectiveCommercialLandPriceAtAcq(asset, transferDate);
     const landAtFirst = parseAmount(asset.cbLandPricePerSqmAtFirst);
     if (!buildingAtAcq || !buildingAtFirst || !buildingAtTransfer
         || !landAtAcq || !landAtFirst) {
       return undefined;
     }
+    // §164⑧ 준용(괄호 단서) 보조 입력 — 값이 있을 때만 전달. 미전달 시 엔진은 탐지만 한다.
+    const prevSum = parseAmount(asset.cbPrevStdPriceSum);
+    const adjustMonths = parseInt((asset.cbStdPriceAdjustMonths || "").replace(/,/g, ""), 10);
     return {
       ...base,
       buildingStdPriceAtAcquisition: buildingAtAcq,
@@ -158,11 +164,13 @@ export function buildCommercialBuildingValuation(
       buildingStdPriceAtTransfer: buildingAtTransfer,
       landPriceAtAcquisition: landAtAcq,
       landPriceAtFirstDisclosure: landAtFirst,
+      ...(prevSum > 0 && { prevStdPriceSum: prevSum }),
+      ...(Number.isFinite(adjustMonths) && adjustMonths > 0 && { stdPriceAdjustMonths: adjustMonths }),
     };
   }
 
-  // post_disclosure: 취득시 개별공시지가 필수
-  const landAtAcq = parseAmount(asset.cbLandPricePerSqmAtAcq);
+  // post_disclosure: 취득시 개별공시지가 필수 (취득 ≥2005이므로 §164④ 구간은 아니나 fallback 동일)
+  const landAtAcq = effectiveCommercialLandPriceAtAcq(asset, transferDate);
   if (!landAtAcq) return undefined;
   return { ...base, landPriceAtAcquisition: landAtAcq };
 }

@@ -17,6 +17,13 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
+import { Sec164_5ProvisoNotice } from "@/components/calc/transfer/Sec164_5ProvisoNotice";
+import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { CommercialPre1990LandNotice } from "@/components/calc/transfer/CommercialPre1990LandNotice";
+import { derivePre1990CommercialLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-commercial-bridge";
+import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -83,6 +90,9 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
 
       {/* ② 최초고시(2005) ㎡당 호별고시가 */}
       <ToneCard tone="emerald" sectionNum="2" title="최초고시(2005) 호별 ㎡당 고시가 (원/㎡)" noDark>
+        <div className="flex flex-col items-end gap-1">
+          <CommercialStdPriceLookupModal asset={asset} onChange={onChange} transferDate={transferDate} variant="inheritance" />
+        </div>
         <FieldCard label="최초고시(2005) ㎡당 호별고시가" unit="원/㎡" hint="2005.1.1 최초 고시 시점 ㎡당 가액. 국세청 고시 이력에서 확인.">
           <CurrencyInput label="" value={asset.cbUnitPriceAtFirstOrAcq} onChange={(v) => onChange({ cbUnitPriceAtFirstOrAcq: v })} hideUnit />
         </FieldCard>
@@ -90,6 +100,14 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
 
       {/* ③ 건물 기준시가 (취득시·최초고시) */}
       <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 취득시·최초고시 (원, 총액)" noDark>
+        {isBeforeBuildingStdPriceNotice(inheritanceDate) && (
+          <Sec164_5ProvisoNotice
+            acquisitionDate={inheritanceDate}
+            checked={asset.cbAcqBuildingStdBy164_5}
+            onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
+            timePointLabel="취득당시(상속개시일)"
+          />
+        )}
         <FieldCard label="취득시(상속개시일) 건물 기준시가" unit="원" hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액">
           <CurrencyInput label="" value={asset.cbBuildingStdPriceAtAcq} onChange={(v) => onChange({ cbBuildingStdPriceAtAcq: v })} hideUnit />
         </FieldCard>
@@ -105,9 +123,25 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       <ToneCard tone="amber" sectionNum="4" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3" noDark>
         <div>
           <p className="mb-1 text-caption font-medium text-amber-700">취득시(상속개시일)</p>
+          {isCommercialPre1990Acquisition(asset) && (
+            <>
+              <CommercialPre1990LandNotice acquisitionDate={inheritanceDate} />
+              <Pre1990LandValuationInput
+                form={asset}
+                onChange={onChange}
+                acquisitionArea={asset.cbLandArea}
+                jibun={asset.addressJibun || undefined}
+                acquisitionDate={inheritanceDate}
+                transferDate={transferDate}
+              />
+            </>
+          )}
           <LandPriceLookupField
             label="취득시 개별공시지가"
-            pricePerSqm={asset.cbLandPricePerSqmAtAcq}
+            pricePerSqm={
+              asset.cbLandPricePerSqmAtAcq ||
+              derivePre1990CommercialLandPricePerSqmAtAcqString(asset, transferDate ?? "")
+            }
             onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtAcq: v })}
             area={parseFloat(asset.cbLandArea || "0") || undefined}
             referenceDate={asset.acquisitionDate || undefined}

@@ -4,7 +4,7 @@
  * CommercialBuildingBlock — 상업용건물·오피스텔 환산취득가 입력 섹션
  *
  * assetKind === "commercial_building" + useEstimatedAcquisition 진입 시 렌더.
- * 소득세법 시행령 §164⑧ (호별고시 전 취득 역환산) + §176조의2②2호 (환산취득가).
+ * 소득세법 시행령 §164⑥ (호별고시 전 취득 역환산) + §176조의2②2호 (환산취득가).
  *
  * 구조:
  *  ① 면적 섹션 (sky)
@@ -28,6 +28,14 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
+import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
+import { Sec164_5ProvisoNotice } from "@/components/calc/transfer/Sec164_5ProvisoNotice";
+import { Sec164_8ProvisoInput } from "@/components/calc/transfer/Sec164_8ProvisoInput";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { CommercialPre1990LandNotice } from "@/components/calc/transfer/CommercialPre1990LandNotice";
+import { derivePre1990CommercialLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-commercial-bridge";
+import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 
@@ -42,7 +50,7 @@ const CB_ERA_OPTIONS = [
   {
     value: "pre_disclosure" as const,
     label: "호별 고시 전 취득 (~2004.12)",
-    description: "2004년 12월 31일 이전 취득 — 토지(개공지×면적)·건물(기준시가 총액) 비율로 역환산 (소득세법 시행령 §164⑧)",
+    description: "2004년 12월 31일 이전 취득 — 토지(개공지×면적)·건물(기준시가 총액) 비율로 역환산 (소득세법 시행령 §164⑥)",
   },
   {
     value: "post_disclosure" as const,
@@ -66,6 +74,12 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
   const isPreDisclosure = asset.cbEra === "pre_disclosure";
   const isPostDisclosure = asset.cbEra === "post_disclosure";
   const hasEra = isPreDisclosure || isPostDisclosure;
+  // §164⑥ 단서 — 취득연도 ≤2000은 나목(건물 기준시가) 가액이 없어 §164⑤ 준용 산정이 필요하다.
+  const needs164_5 = isSec164_5ProvisoApplicable(asset.cbEra, asset.acquisitionDate);
+  // §164④ — 취득이 개별공시지가 고시(1990.8.30.) 전이면 가목의 가액이 없어 토지등급 환산이 필요하다.
+  const needs164_4 = isCommercialPre1990Acquisition(asset);
+  // 파생값(store 미저장) — 표시 fallback. API·validate도 같은 함수로 동일 fallback을 쓴다.
+  const pre1990LandAtAcq = derivePre1990CommercialLandPricePerSqmAtAcqString(asset, transferDate ?? "");
 
   // 연면적 자동 계산 표시 (사용자 친화적 피드백)
   const totalFloorArea = useMemo(() => {
@@ -86,7 +100,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
       description="취득일 당시 실거래가 확인 불가 시 기준시가 비율로 환산 (소득세법 §114⑦, 시행령 §176조의2②2호)"
     >
       <div className="space-y-4">
-        {/* 환산취득가 근거 조문 (§164⑧ 환산 관련은 관례 검토중 — 텍스트만 유지) */}
+        {/* 환산취득가 근거 조문 (§164⑥ 환산 관련은 관례 검토중 — 텍스트만 유지) */}
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §114 ⑦" label="§114⑦" />
           <LawArticleModal legalBasis="소득세법 시행령 §176조의2 ② 2호" label="§176의2②2호" />
@@ -151,6 +165,15 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {/* ② 호별 ㎡당 고시가 (emerald/amber) — cbEra 선택 후 표시 */}
         {hasEra && (
           <ToneCard tone="emerald" sectionNum="2" title="호별 ㎡당 고시가 (원/㎡)" noDark>
+            {/* 국세청 고시분 자동조회 — 호 선택 시 단가·전용·공유면적을 단일 배치로 채운다 */}
+            <div className="flex flex-col items-end gap-1">
+              <CommercialStdPriceLookupModal
+                asset={asset}
+                onChange={onChange}
+                transferDate={transferDate}
+                variant="estimated"
+              />
+            </div>
             {/* 양도시 — emerald */}
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
               <FieldCard
@@ -194,6 +217,13 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             <div className="text-xs text-amber-700 mb-1">
               건물분 ㎡당 가액 × 연면적(전유+공용 보정계수 반영) = <b>건물 기준시가 총액</b>으로 환산해 입력
             </div>
+            {needs164_5 && (
+              <Sec164_5ProvisoNotice
+                acquisitionDate={asset.acquisitionDate}
+                checked={asset.cbAcqBuildingStdBy164_5}
+                onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
+              />
+            )}
             {/* 취득시 — amber */}
             <FieldCard
               label="취득시 건물 기준시가"
@@ -257,9 +287,22 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             {/* 취득시 — amber (공통 필수) */}
             <div>
               <p className="mb-1 text-caption font-medium text-amber-700">취득시</p>
+              {needs164_4 && (
+                <>
+                  <CommercialPre1990LandNotice acquisitionDate={asset.acquisitionDate} />
+                  <Pre1990LandValuationInput
+                    form={asset}
+                    onChange={onChange}
+                    acquisitionArea={asset.cbLandArea}
+                    jibun={asset.addressJibun || undefined}
+                    acquisitionDate={asset.acquisitionDate}
+                    transferDate={transferDate}
+                  />
+                </>
+              )}
               <LandPriceLookupField
                 label="취득시 개별공시지가"
-                pricePerSqm={asset.cbLandPricePerSqmAtAcq}
+                pricePerSqm={asset.cbLandPricePerSqmAtAcq || pre1990LandAtAcq}
                 onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtAcq: v })}
                 area={parseFloat(asset.cbLandArea || "0") || undefined}
                 referenceDate={asset.acquisitionDate || undefined}
@@ -296,6 +339,9 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             </div>
           </ToneCard>
         )}
+
+        {/* §164⑥ 산식 괄호 단서 — 두 시점 기준시가합이 같을 때만 노출(③·④ 입력 후 확정) */}
+        {isPreDisclosure && <Sec164_8ProvisoInput asset={asset} onChange={onChange} />}
       </div>
     </ToggleCard>
   );

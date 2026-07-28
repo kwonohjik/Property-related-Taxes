@@ -4,18 +4,18 @@
  * 800줄 정책 준수를 위해 transfer.types.ts에서 분리.
  * transfer.types.ts에서 재수출되어 외부 소비자 경로는 변경 없음.
  *
- * 법령 근거: 소득세법 §97②2호; 시행령 §163⑥·§164①·⑧·§176조의2②2호
+ * 법령 근거: 소득세법 §97②2호·§99①1호 가목·나목; 시행령 §163⑥·§164④⑤⑥·§176조의2②2호
  */
 
 /**
  * 상업용건물·오피스텔 환산취득가 계산 입력
  *
- * 소득세법 시행령 §164⑧ (호별고시 전 취득) + §176조의2②2호 (환산취득가 산식)
+ * 소득세법 시행령 §164⑥ (호별고시 전 취득) + §176조의2②2호 (환산취득가 산식)
  */
 export interface CommercialBuildingValuationInput {
   /**
    * 호별고시 전 취득 여부.
-   * true  = 취득일 < 2005-01-01 → 소령 §164⑧ 최초고시 역환산 경로 (C-01)
+   * true  = 취득일 < 2005-01-01 → 소령 §164⑥ 최초고시 역환산 경로 (C-01)
    * false = 취득일 ≥ 2005-01-01 → 단순 호별고시가 비율 경로 (C-02)
    */
   isPreDisclosure: boolean;
@@ -42,7 +42,7 @@ export interface CommercialBuildingValuationInput {
    */
   unitPriceAtAcquisition?: number;
 
-  // ── 건물 기준시가 총액 (소령 §164①) — C-01 전용 ──
+  // ── 건물 기준시가 총액 = 법 §99①1호 나목의 가액 — C-01 전용 ──
   // 사용자(외부)에서 ㎡당 단가 × 연면적(전유+공용 보정계수 반영)을 미리 곱해 입력하는 총액 (원).
   // 3시점 환산 입력 일관성: 호별고시는 ㎡당 단가, 토지는 개별공시지가×면적, 건물은 총액.
   /**
@@ -61,13 +61,31 @@ export interface CommercialBuildingValuationInput {
    */
   buildingStdPriceAtTransfer?: number;
 
-  // ── 개별공시지가 (소령 §164①) ──
+  // ── 개별공시지가 = 법 §99①1호 가목의 가액(× 대지면적) ──
   /** 취득시 개별공시지가 (원/㎡). C-01/C-02 모두 필수. */
   landPriceAtAcquisition?: number;
   /** 최초고시시(2005) 개별공시지가 (원/㎡). isPreDisclosure === true 일 때 필수. */
   landPriceAtFirstDisclosure?: number;
   /** 양도시 개별공시지가 (원/㎡). C-01 시 필요. */
   landPriceAtTransfer?: number;
+
+  /**
+   * 취득연도 — **§164⑥ 단서 해당 여부 판정 전용**(계산에 쓰지 않는다).
+   *
+   * API를 새로 태우지 않는다 — `runCommercialBuildingStep`이 이미 있는
+   * `TransferTaxInput.acquisitionDate`에서 파생해 주입한다(14 동기화 지점 ⑫⑬⑭ 불필요).
+   * 미지정 시 판정을 생략한다(`sec164_5ProvisoApplicable` undefined).
+   */
+  acquisitionYear?: number;
+
+  // ── §164⑥ 산식 괄호 단서(§164⑧ 준용) 전용 ──
+  // 취득당시 합계액 == 최초고시당시 합계액일 때만 사용된다.
+  /** B — 전기의 토지 및 건물의 기준시가 합계액 (원). 미지정 시 준용 산정 불가(탐지만). */
+  prevStdPriceSum?: number;
+  /** D — 토지 및 건물 기준시가 조정월수. 미지정 시 12(시행규칙 §80②1호 통상값). */
+  stdPriceAdjustMonths?: number;
+  /** C — 취득일부터 최초고시일까지 보유기간 월수. 호출부가 취득일·최초고시일에서 파생해 주입. */
+  holdingMonthsToFirstDisclosure?: number;
 }
 
 /**
@@ -86,7 +104,7 @@ export interface CommercialBuildingValuationResult {
    */
   unitPriceTotalAtFirst?: number;
 
-  // ── 3시점 기준시가합 (소령 §164①) ──
+  // ── 3시점 기준시가합 (가목의 가액 + 나목의 가액 — §164⑥ 산식) ──
   /** 취득시 기준시가합 = 개공지 × 대지면적 + 건물 기준시가(총액) */
   combinedStdAtAcq?: number;
   /** 최초고시시 기준시가합 */
@@ -108,7 +126,7 @@ export interface CommercialBuildingValuationResult {
   buildingStdAtTransfer?: number;
 
   /**
-   * 취득시 환산기준시가 (소령 §164⑧).
+   * 취득시 환산기준시가 (소령 §164⑥).
    * = INT( 최초고시 호별총액 × 취득시 기준시가합 / 최초고시시 기준시가합 )
    * isPreDisclosure === true 일 때만 존재.
    * 이 값이 §163⑥의 '취득당시의 기준시가' — 개산공제 기준으로 사용.
@@ -134,4 +152,36 @@ export interface CommercialBuildingValuationResult {
   estimatedDeductionLand: number;
   /** 개산공제 건물분 (내부 표시용: 건물기준시가 비율로 안분) */
   estimatedDeductionBuilding: number;
+
+  /**
+   * §164⑥ 단서 해당 — 취득당시 건물 기준시가(법 §99①1호나목)가 고시 전이라 존재하지 않아
+   * **§164⑤을 준용해 산정해야 하는 경우**임을 뜻한다.
+   *
+   * ⚠️ 입력값이 실제로 §164⑤로 산정됐는지는 **엔진이 알 수 없다** — 준용에 필요한
+   *    신축연도·구조·용도가 엔진 input에 없기 때문이다. 이 플래그는 **산출 근거 표시용**이며
+   *    계산을 바꾸지 않는다. 실제 준용 여부 확인은 UI 게이트가 담당한다
+   *    (`lib/calc/commercial-164-6-proviso.ts`).
+   *
+   * `acquisitionYear` 미지정 시 undefined(판정 생략).
+   */
+  sec164_5ProvisoApplicable?: boolean;
+
+  /**
+   * §164⑥ 산식 **괄호 단서** 해당 — 취득당시 합계액 == 최초고시당시 합계액.
+   *
+   * > (취득당시의 가액과 최초로 고시한 기준시가 고시당시의 가액이 동일한 경우에는
+   * >  제8항의 규정을 준용한다)
+   *
+   * ⚠️ **산정 미구현** — 준용의 대상·방향·준용 산식(시행규칙 §80①1호 가목/나목)이 확정되지 않았고,
+   *    산정에 전기 개별공시지가·전기 건물 기준시가·기준시가 조정월수가 필요한데 폼에 없다.
+   *    본 플래그는 **탐지 전용**이며 계산을 바꾸지 않는다(비율 = 1 그대로).
+   *    계획서: docs/01-plan/features/commercial-164-6-same-value-164-8-proviso.plan.md
+   */
+  sec164_8ProvisoApplicable?: boolean;
+
+  /**
+   * §164⑧ 준용으로 대체된 **분모** = `A + (A − B) × min(C/D, 1)`.
+   * 준용이 실제로 적용된 경우에만 존재한다(B·C 미입력 시 undefined — 탐지만 하고 계산 미변경).
+   */
+  sec164_8AdjustedDenominator?: number;
 }

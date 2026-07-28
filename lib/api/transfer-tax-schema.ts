@@ -373,7 +373,7 @@ const propertyBaseShape = {
   /** ⑫ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 미정의 시 침묵 stripping 방지 */
   rentalHousingException: rentalHousingExceptionSchema.optional(),
   /**
-   * ⑫ 상업용건물·오피스텔 환산취득가 계산 입력 (소령 §164⑧, §176조의2②2호).
+   * ⑫ 상업용건물·오피스텔 환산취득가 계산 입력 (소령 §164⑥, §176조의2②2호).
    * propertyType === "building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
   commercialBuildingValuation: commercialBuildingValuationSchema.optional(),

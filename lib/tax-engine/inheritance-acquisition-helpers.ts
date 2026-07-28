@@ -97,7 +97,7 @@ const COMMERCIAL_FIRST_DISCLOSURE_DATE = new Date("2005-01-01T00:00:00.000Z");
 /**
  * §164⑥ 취득당시 기준시가(P_A) 산정 — 최초고시(2005) 역환산.
  * P_A = INT(최초고시 호별총액 × 취득시 기준시가합 / 최초고시시 기준시가합).
- * commercial-building-valuation.ts의 §164① 합산·§164⑥ 역환산 함수 재사용(single-source).
+ * commercial-building-valuation.ts의 기준시가합(법 §99①1호 가목·나목)·§164⑥ 역환산 함수 재사용(single-source).
  */
 export function computeCommercial164_6StdPrice(v: CommercialInheritanceValuationInput): number {
   const floorAreaTotal = v.exclusiveArea + v.commonArea;

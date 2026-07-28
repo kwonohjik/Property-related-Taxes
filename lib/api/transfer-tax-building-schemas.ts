@@ -3,7 +3,7 @@
  * transfer-tax-schema.ts 800줄 정책 준수를 위해 분리 (2026-05-12).
  *
  * - generalBuildingValuationSchema: 토지+건물 일괄 환산 (소령 §176조의2②, §163⑥)
- * - commercialBuildingValuationSchema: 상업용건물·오피스텔 환산 (소령 §164⑧, §176조의2②2호)
+ * - commercialBuildingValuationSchema: 상업용건물·오피스텔 환산 (소령 §164⑥, §176조의2②2호)
  *
  * 14개 동기화 지점 ⑫ — 침묵 stripping 방지.
  */
@@ -250,7 +250,7 @@ export const generalBuildingValuationSchema = z.object({
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;
 
 /**
- * ⑫ 상업용건물·오피스텔 환산취득가 서브객체 Zod 스키마 (소령 §164⑧, §176조의2②2호).
+ * ⑫ 상업용건물·오피스텔 환산취득가 서브객체 Zod 스키마 (소령 §164⑥, §176조의2②2호).
  * 미정의 시 침묵 stripping 방지. era 무관 필수 필드는 addPropertyRefines(⑩)에서 검증.
  */
 export const commercialBuildingValuationSchema = z.object({
@@ -284,6 +284,11 @@ export const commercialBuildingValuationSchema = z.object({
   buildingStdPriceAtTransfer: z.number().int().positive().optional(),
   /** 최초고시시(2005) 개별공시지가 (원/㎡) — pre_disclosure 시 필수 */
   landPriceAtFirstDisclosure: z.number().int().positive().optional(),
+  // ── §164⑥ 산식 괄호 단서(§164⑧ 준용) — 취득당시 합계액 == 최초고시당시 합계액일 때만 사용 ──
+  /** B — 전기의 토지 및 건물의 기준시가 합계액 (원) */
+  prevStdPriceSum: z.number().int().positive().optional(),
+  /** D — 토지 및 건물 기준시가 조정월수 (미지정 시 엔진이 12 적용) */
+  stdPriceAdjustMonths: z.number().int().positive().optional(),
 });
 
 /**

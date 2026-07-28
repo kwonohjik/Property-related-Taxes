@@ -288,7 +288,7 @@ export function calculateTransferTax(
     });
   }
 
-  // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑧ + §176조의2②2호 + §164⑨ 수용 특례).
+  // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑥ + §176조의2②2호 + §164⑨ 수용 특례).
   // 성공 시 effectiveInput을 실가 경로로 교체 (helpers로 추출 — 800줄 정책).
   const cbApplied = applyCommercialBuildingStep(effectiveInput);
   effectiveInput = cbApplied.effectiveInput;
