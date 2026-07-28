@@ -83,6 +83,12 @@ export interface PreHousingDisclosureInput {
    * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
    */
   ownershipRatio?: number;
+  /**
+   * 미등기양도자산 여부(소득세법 §104③) — §163⑥ 개산공제율 3/100 → **3/1000** 전환.
+   * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다(서브엔진 재판정 금지).
+   * 율 산출은 `estimatedDeductionRate()` 단일 경유.
+   */
+  isUnregistered?: boolean;
 }
 
 /**

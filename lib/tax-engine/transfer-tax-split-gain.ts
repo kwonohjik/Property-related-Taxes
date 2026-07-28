@@ -9,6 +9,7 @@
  * - 실제 가액 확인 시 그 가액 사용, 미확인 시 기준시가 비율로 안분
  */
 
+import { estimatedDeductionRate } from "./legal-codes";
 import type {
   TransferTaxInput,
   SplitGainResult,
@@ -397,8 +398,10 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const buildingNonActual = buildingMode !== "actual";
   // 공유지분 축소(§163⑥ base) — 기준시가는 물건 전체(100%)로 유지하고 여기서만 지분을 적용한다.
   const ownRatio = input.ownershipRatio;
+  // §104③ 미등기양도자산 → 3/1000 (단일 판정점 경유)
+  const dedRate = estimatedDeductionRate(input.isUnregistered);
   const landAppraisalDed = landNonActual
-    ? computeEstimatedDeduction(landStdAtAcq, 0.03, ownRatio)
+    ? computeEstimatedDeduction(landStdAtAcq, dedRate, ownRatio)
     : 0;
   // ⚠️ **성분별 독립 floor가 정본이다. 잔액 흡수(「총액분 − 토지분」)를 넣지 말 것.**
   //    **소득세법 §100②**이 토지·건물 등을 함께 양도한 경우 "이를 **각각 구분하여 기장**"하도록
@@ -408,7 +411,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   //    2026-07-28 흡수를 시도했다가 PHD Excel 정본 anchor(`pre-housing-disclosure.test.ts` D-7-2)와
   //    1원 어긋나 14건이 깨졌다. 같은 §166⑥ 구조이므로 여기도 독립 floor로 통일한다. 재시도 방지 기록.
   const buildingAppraisalDed = buildingNonActual
-    ? computeEstimatedDeduction(buildingStdAtAcq, 0.03, ownRatio)
+    ? computeEstimatedDeduction(buildingStdAtAcq, dedRate, ownRatio)
     : 0;
 
   // ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
@@ -536,7 +539,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   });
   const phd = calcPreHousingDisclosureGain(
     input.transferPrice,
-    { ...input.preHousingDisclosure!, ownershipRatio: input.ownershipRatio },
+    { ...input.preHousingDisclosure!, ownershipRatio: input.ownershipRatio, isUnregistered: input.isUnregistered },
     housingExprVal?.denominator,
   );
 

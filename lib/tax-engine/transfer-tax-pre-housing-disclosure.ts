@@ -24,6 +24,7 @@
  *  10. landLumpDed = floor(landHousingAtAcq × 3%)
  */
 
+import { estimatedDeductionRate } from "./legal-codes";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./types/transfer.types";
 import { computeEstimatedDeduction } from "./tax-utils";
 
@@ -154,14 +155,15 @@ export function calcPreHousingDisclosureGain(
   //    (§166⑥은 "가액의 구분이 **불분명한 때**"의 안분방법만 규정한다 — 근거 조문이 아니다.)
   //    잔액 흡수를 시도했다가 Excel 정본 anchor(D-7-2 건물 개산공제 4,454,759)와 1원 어긋나
   //    14건이 깨졌다(2026-07-28). 재시도 방지용 기록.
+  const dedRate = estimatedDeductionRate(input.isUnregistered);
   const landLumpDeduction = computeEstimatedDeduction(
     landHousingAtAcquisition,
-    0.03,
+    dedRate,
     input.ownershipRatio,
   );
   const buildingLumpDeduction = computeEstimatedDeduction(
     buildingHousingAtAcquisition,
-    0.03,
+    dedRate,
     input.ownershipRatio,
   );
 
@@ -246,10 +248,10 @@ export function calcPreHousingDisclosureGain(
 
     // 개산공제 4부분 (Row 12) = INT(D35~G35 × 3%)
     // 성분별 독립 floor — Step 7과 같은 이유로 잔액 흡수하지 않는다.
-    const housingLandLumpDed = computeEstimatedDeduction(housingLandAcqShare, 0.03, input.ownershipRatio);
-    const housingBuildingLumpDed = computeEstimatedDeduction(housingBuildingAcqShare, 0.03, input.ownershipRatio);
-    const commercialLandLumpDed = computeEstimatedDeduction(commercialLandAcqShare, 0.03, input.ownershipRatio);
-    const commercialBuildingLumpDed = computeEstimatedDeduction(commercialBuildingAcqShare, 0.03, input.ownershipRatio);
+    const housingLandLumpDed = computeEstimatedDeduction(housingLandAcqShare, dedRate, input.ownershipRatio);
+    const housingBuildingLumpDed = computeEstimatedDeduction(housingBuildingAcqShare, dedRate, input.ownershipRatio);
+    const commercialLandLumpDed = computeEstimatedDeduction(commercialLandAcqShare, dedRate, input.ownershipRatio);
+    const commercialBuildingLumpDed = computeEstimatedDeduction(commercialBuildingAcqShare, dedRate, input.ownershipRatio);
 
     // 양도차익 4부분 (Row 13) — 소수점 이하 절사 (사용자 요청)
     const housingLandGain = Math.floor(housingLandTransferPrice - housingLandAcqPrice - housingLandLumpDed);

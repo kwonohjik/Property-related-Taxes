@@ -18,6 +18,7 @@
  * 평행 구조: redevelopment-land-contribution.ts (§166③ 토지 환산)
  */
 
+import { estimatedDeductionRate } from "./legal-codes";
 import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRightLthd, applyLthdToGain } from "./redevelopment-lthd";
 import { TaxRateNotFoundError } from "./tax-errors";
@@ -56,6 +57,12 @@ export interface RedevHousingContribReceiveEstimatedInput {
    * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
    */
   ownershipRatio?: number;
+  /**
+   * 미등기양도자산 여부(소득세법 §104③) — §163⑥ 개산공제율 3/100 → **3/1000** 전환.
+   * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다(서브엔진 재판정 금지).
+   * 율 산출은 `estimatedDeductionRate()` 단일 경유.
+   */
+  isUnregistered?: boolean;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -150,7 +157,7 @@ export function calcRedevHousingContribReceiveEstimated(
   // applyRate = Math.floor(amount × rate) — 정수 절사
   const estimatedDeduction = computeEstimatedDeduction(
     input.housingStdPriceAtAcq,
-    0.03,
+    estimatedDeductionRate(input.isUnregistered),
     input.ownershipRatio,
   );
 

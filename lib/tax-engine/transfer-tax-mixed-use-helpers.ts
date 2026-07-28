@@ -296,6 +296,7 @@ export function calcHousingEstimatedAcq(
       landAreaAtFirstDisclosure: asset.preHousingDisclosure.landAreaAtFirstDisclosure ?? landAreaAtFirstDisclosure,
       landAreaAtTransfer: asset.preHousingDisclosure.landAreaAtTransfer ?? landAreaAtTransfer,
       ownershipRatio: asset.ownershipRatio,
+      isUnregistered: asset.isUnregistered,
       ...fourPartFields,
     });
     // 상속·증여 취득(소령 §163⑨2호) — 미공시 주택분 = max(신고가액, §164⑦ 환산). 4부분 조합은 Phase 2 범위 밖.

@@ -10,6 +10,7 @@
  * (memory `feedback_800line_split_export_preservation`).
  */
 
+import { estimatedDeductionRate } from "./legal-codes";
 import { calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
 import { buildHousingGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
 import { splitDeemedExpense } from "./transfer-tax-mixed-use-inheritance";
@@ -189,9 +190,10 @@ export function calcHousingGainSplit(
   // 실제 필요경비(자본적지출·양도비)를 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
   // 공유지분 축소만 적용한다 — 성분별 독립 floor가 정본이며 잔액 흡수는 하지 않는다
   // (§166⑥ 구분 계산. `transfer-tax-pre-housing-disclosure.ts` Step 7 주석 참조).
+  const dedRate = estimatedDeductionRate(asset.isUnregistered);
   const housingLumpPair = {
-    landAppraisalDed: computeEstimatedDeduction(acqLandStd, 0.03, asset.ownershipRatio),
-    buildingAppraisalDed: computeEstimatedDeduction(acqBuildingStd, 0.03, asset.ownershipRatio),
+    landAppraisalDed: computeEstimatedDeduction(acqLandStd, dedRate, asset.ownershipRatio),
+    buildingAppraisalDed: computeEstimatedDeduction(acqBuildingStd, dedRate, asset.ownershipRatio),
   };
   const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition;
   const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
