@@ -1,2 +1,28 @@
 echo "▶ pre-push gate: 폰트 크기 + 동적 톤 정본 + typecheck + test (lint은 lint-staged에서 처리)"
-scripts/check-font-sizes.sh && scripts/check-tone-classes.sh && npm run typecheck && npm run test
+
+scripts/check-font-sizes.sh || exit 1
+scripts/check-tone-classes.sh || exit 1
+npm run typecheck || exit 1
+
+# 테스트 범위 — 변경 경로 기반 선택 실행 (scripts/select-test-scope.sh).
+# lib/tax-engine/** · lib/api/** · lib/stores/** · types · 설정 등 공유 경로가 하나라도 걸리면 전체.
+# 판정 불가·변경 없음도 전체(안전측). FULL_TEST=1 로 강제 전체 실행.
+if [ "${FULL_TEST:-0}" = "1" ]; then
+  SCOPE="test"
+else
+  SCOPE="$(scripts/select-test-scope.sh)"
+fi
+
+case "$SCOPE" in
+  none)
+    echo "  · 변경분이 문서·E2E spec뿐 → vitest 생략 (typecheck는 수행됨)"
+    ;;
+  test)
+    echo "  · 전체 테스트 (공유 경로 변경 또는 판정 불가)"
+    npm run test || exit 1
+    ;;
+  *)
+    echo "  · 부분 테스트: npm run $SCOPE   [전체 강제: FULL_TEST=1 git push]"
+    npm run "$SCOPE" || exit 1
+    ;;
+esac
