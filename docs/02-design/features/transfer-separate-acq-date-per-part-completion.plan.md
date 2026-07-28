@@ -375,7 +375,7 @@ rev.1의 물질화 마이그레이션은 **폐기**한다:
 | **P1.5** ✅ | 게이트 헬퍼(`isSeparateAcquisition`) 확정 + 겸용·selfOwns 제외 — **P2a에 흡수**(선행 필수) | H4·H5 green |
 | **P2a** ✅ | **축 A 파트별 완결(E2·E3) — 양 propertyType** + `isSeparateAcquisition` 게이트(P1.5) + V1·V2·V4 | B1~B10 · H2·H3·H5 green |
 | **P2b** ✅ | 축 B 파트별 독립(E1) — `building` 전용 + V3 | B2~B6 green, housing 축 B 수치 불변(H4·H10) |
-| **P3** | 지분 `applyRatio`(E4, Q5 확정 시) | B12 green |
+| **P3** ✅ | 지분 `applyRatio`(E5) — 파트 필드 **전 축** + 추계 가액(`appraisalValue`·`similarSalesValue`) | B12 green |
 | **P4** | validate V1~V4 + ⑫⑬⑭ | validate·api-split-gate green |
 | **P5** | UI(U0~U5) + 결과뷰·상세명세서 | RTL + E2E 재작성 green |
 | **P6** | 전체 회귀 | `npm run check:pre-pr` |
@@ -410,7 +410,8 @@ rev.1의 물질화 마이그레이션은 **폐기**한다:
 - **겸용주택(`isMixedUseHouse`)** — 함께 취득이 정본. `MixedUseStandardPriceInputs`가 별도 기준시가 입력을 이미 갖고 있어 파트 블록 이전 시 이중 입력 충돌.
 - **`selfOwns ≠ both` + 날짜 동일** — 소유자 분리일 뿐 별개 취득 아님.
 - **다건(multi)** — `multi-transfer-tax-validate.ts:87-89`가 split 전면 차단 → 영향 0.
-- **양도 축** — §100② 정당 적용.
+- **양도 축** — §100② 정당 적용. (단 **지분 스케일**은 P3에서 함께 수정 — 취득 축만 스케일하면 `양도 100% − 취득 50%`로 양도차익이 폭증해 부분 수정이 무수정보다 나쁘다. engine.design §4 E5 참조.)
+- **개산공제와 지분율** — 기준시가는 지분 스케일 대상이 아닌데 개산공제(`기준시가 × 3%`)가 지분과 무관하게 산출된다. 엔진에 지분 개념 자체가 없어 분리·비분리 공통 사안. **미검증 — 별건 확인 필요**(P3 실측 중 발견).
 - **양도가액 파트 필드의 지분 미적용**(`transfer-tax-api.ts:348-349`) — 선재 결함, 별건.
 - **🟠 별건 과제 — 감정가액·매매사례 모드 개산공제 미적용 의혹 (2026-07-28 P1 작업 중 발견, 사용자 지시로 분리)**
   - `transfer-tax-helpers.ts:329-341`: `appraisal`·`salesCase` 모드 모두 개산공제를 `applyRate(input.standardPriceAtAcquisition ?? 0, 0.03)`으로 산출한다(§163⑥).
