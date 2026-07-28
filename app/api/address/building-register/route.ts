@@ -12,6 +12,8 @@ import {
   mapStructure,
   mapUsage,
   sumExclusiveCommonArea,
+  toExposQueryDong,
+  toExposQueryHo,
   type RegisterMapConfidence,
   type ExposPubuseAreaItem,
 } from "@/lib/tax-engine/data/building-standard-price/building-register-map";
@@ -57,16 +59,24 @@ function toFloatOrUndef(v: unknown): number | undefined {
 }
 
 /**
- * 집합건물 세대 전유+공용 연면적 조회 (getBrExposPubuseAreaInfo, 접근 B).
- * dong/ho로 서버측 필터 시도 + 클라이언트 재필터(sumExclusiveCommonArea). 실패·미매칭이면 null(수동 fallback).
- * ⚠️ dongNm/hoNm 실 형식·numOfRows 충분성은 배포환경 실측 미검증(계획서 §11). 비차단(throw 금지).
+ * 서버가 강제하는 페이지 크기 상한 — 2026-07-28 실측.
+ * `numOfRows=500`·`1000`을 보내도 응답 body의 `numOfRows`가 **100**으로 되돌아오고
+ * item도 100건만 온다(은마아파트 PNU는 totalCount 24,066). 종전 상수 1000은 무효였다.
  */
-async function fetchExposPubuseArea(
+const EXPOS_MAX_ROWS = 100;
+
+/** 전유공용 응답 body 중 사용하는 필드. */
+interface ExposBody {
+  totalCount?: number | string;
+  items?: { item?: unknown };
+}
+
+/** 한 번의 getBrExposPubuseAreaInfo 호출 — items + totalCount. 실패 시 null. */
+async function callExposApi(
   parts: BuildingRegisterPnuParts,
-  dong: string,
-  ho: string,
   apiKey: string,
-): Promise<number | null> {
+  filters: { dongNm?: string; hoNm?: string },
+): Promise<{ items: ExposPubuseAreaItem[]; totalCount: number } | null> {
   const qs = new URLSearchParams({
     serviceKey: apiKey,
     sigunguCd: parts.sigunguCd,
@@ -75,10 +85,11 @@ async function fetchExposPubuseArea(
     bun: parts.bun,
     ji: parts.ji,
     _type: "json",
-    numOfRows: "1000", // 세대×전유공용 다건. 서버 dongNm/hoNm 필터 되면 소수. 극단값(차단 유발) 회피
+    numOfRows: String(EXPOS_MAX_ROWS),
+    pageNo: "1",
   });
-  if (dong) qs.set("dongNm", dong);
-  if (ho) qs.set("hoNm", ho);
+  if (filters.dongNm) qs.set("dongNm", filters.dongNm);
+  if (filters.hoNm) qs.set("hoNm", filters.hoNm);
   try {
     const res = await fetch(`${EXPOS_BASE}?${qs.toString()}`, {
       cache: "no-store",
@@ -87,7 +98,7 @@ async function fetchExposPubuseArea(
     if (!res.ok) return null;
     const json = (await res.json()) as { response?: unknown };
     const response = json?.response as
-      | { header?: { resultCode?: string }; body?: { items?: { item?: unknown } } }
+      | { header?: { resultCode?: string }; body?: ExposBody }
       | undefined;
     const resultCode = String(response?.header?.resultCode ?? "").trim();
     if (resultCode && resultCode !== "00" && resultCode !== "000") return null;
@@ -97,10 +108,52 @@ async function fetchExposPubuseArea(
       : rawItem
         ? [rawItem as ExposPubuseAreaItem]
         : [];
-    return sumExclusiveCommonArea(items, dong, ho);
+    const totalCount = toIntOrUndef(response?.body?.totalCount) ?? items.length;
+    return { items, totalCount };
   } catch {
     return null;
   }
+}
+
+/**
+ * 집합건물 세대 전유+공용 연면적 조회 (getBrExposPubuseAreaInfo, 접근 B).
+ *
+ * ## 2026-07-28 실 API 실측으로 확정된 3가지 (종전 구현은 전부 어긋나 있었다)
+ *
+ * 1. **서버 필터는 정확 문자열 일치**다. `hoNm`은 "1410호"처럼 **접미 "호"를 포함**해야 하고
+ *    `dongNm`은 "1"처럼 **접미 "동" 없이** 보내야 한다. 폼은 `unitDong="201동"`·`unitHo="3204"`를
+ *    주므로 **양쪽 다 틀린 꼴**이었다 → 서버가 0건을 돌려주고 항상 수동 fallback으로 떨어졌다
+ *    (= 기능이 배포돼도 동작하지 않는 상태). `toExposQueryDong/Ho`가 이 변환을 담당한다.
+ * 2. **`numOfRows`는 100에서 캡**된다(위 `EXPOS_MAX_ROWS`). 종전 1000은 무효.
+ * 3. 따라서 필터가 듣지 않으면 24,066건 중 100건만 손에 들어온다 → 클라이언트 재필터가
+ *    **일부 행만 합산해 과소 연면적을 무경고로 채울** 위험이 있다. 아래 절단 가드로 차단한다.
+ *
+ * 비차단(throw 금지) — 실패·미매칭은 null(수동 입력).
+ */
+async function fetchExposPubuseArea(
+  parts: BuildingRegisterPnuParts,
+  dong: string,
+  ho: string,
+  apiKey: string,
+): Promise<number | null> {
+  const qDong = toExposQueryDong(dong);
+  const qHo = toExposQueryHo(ho);
+  // 호 없이는 세대를 특정할 수 없다(동 전체 합산 = 과대). sumExclusiveCommonArea와 동일 기준.
+  if (!qHo) return null;
+
+  let r = await callExposApi(parts, apiKey, { dongNm: qDong, hoNm: qHo });
+  // 동 명칭 드리프트("가"·"A"·"101" 등 표기 차이) 대비 — 호만으로 1회 재시도.
+  //   클라이언트 재필터가 동까지 다시 대조하므로 잘못된 동이 섞여도 걸러진다.
+  if (qDong && (!r || r.items.length === 0)) {
+    r = await callExposApi(parts, apiKey, { hoNm: qHo });
+  }
+  if (!r || r.items.length === 0) return null;
+
+  // 절단 가드 — 서버가 준 것이 전체의 일부면 합산값을 신뢰할 수 없다.
+  //   부분 합산은 "그럴듯하게 작은" 연면적을 만들어 기준시가를 과소산정한다. 수동 입력이 낫다.
+  if (r.totalCount > r.items.length) return null;
+
+  return sumExclusiveCommonArea(r.items, dong, ho);
 }
 
 export async function GET(

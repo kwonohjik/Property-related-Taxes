@@ -221,12 +221,38 @@ export interface ExposPubuseAreaItem {
 }
 
 /**
- * 동/호명 정규화 — 공백 제거 + 접미 "동"/"호" 제거.
- * ⚠️ API dongNm/hoNm 실 형식은 배포환경 실측 미검증 — 폼 unitDong("201동")/unitHo("3204")와
- *   형식이 어긋날 수 있어 정규화로 방어("201동"→"201", "3204호"→"3204", "3204"→"3204").
+ * 동/호명 정규화 — 공백 제거 + 접두 "제" 제거 + 접미 "동"/"호" 제거.
+ * 비교 전용(양쪽 값을 같은 꼴로 만들어 대조). 서버 필터에 넣는 값은 아래 `toExposQueryDong/Ho` 사용.
+ * ("201동"→"201", "3204호"→"3204", "제13동"→"13", "3204"→"3204")
  */
 function normalizeUnitName(s: string | undefined): string {
-  return (s ?? "").replace(/\s/g, "").replace(/(동|호)$/, "");
+  return (s ?? "")
+    .replace(/\s/g, "")
+    .replace(/^제/, "")
+    .replace(/(동|호)$/, "");
+}
+
+/**
+ * getBrExposPubuseAreaInfo의 `dongNm` 쿼리값 — **접미 "동" 없는 순수 명칭**.
+ *
+ * 2026-07-28 실 API 실측(은마아파트 PNU 1168010600-0316-0000):
+ * `dongNm=1` → totalCount 5 / `dongNm=1동` → 0 / `dongNm=제1동` → 0.
+ * 서버 필터는 **정확 문자열 일치**라 폼이 보내는 "201동" 형식으로는 **영구 0건**이다.
+ */
+export function toExposQueryDong(dong: string | undefined): string {
+  return normalizeUnitName(dong);
+}
+
+/**
+ * getBrExposPubuseAreaInfo의 `hoNm` 쿼리값 — **접미 "호"를 반드시 붙인다**.
+ *
+ * 같은 실측: `hoNm=1410호` → totalCount 5 / `hoNm=1410` → 0 / `hoNm=제1410호` → 0.
+ * 응답의 `hoNm`도 "1410호"·"21호"처럼 접미사를 포함한다.
+ * 폼 `unitHo`는 "3204"(접미사 없음)로 들어오므로 부착이 필요하다.
+ */
+export function toExposQueryHo(ho: string | undefined): string {
+  const bare = normalizeUnitName(ho);
+  return bare ? `${bare}호` : "";
 }
 
 /**
