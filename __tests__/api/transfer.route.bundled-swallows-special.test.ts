@@ -251,15 +251,17 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     expect(bundled.status).toBe(200);
   });
 
-  it("상가·오피스텔 — 계산은 정상, **표시용 상세만** 누락된다 (차단 대상 아님)", async () => {
+  it("상가·오피스텔 — 계산 정상 + 상세도 이제 일괄에 실린다 (R1-a)", async () => {
     // 상가는 전용 route 분기가 없고 `engineInput`에 실려 엔진 내부에서 처리된다(route.ts:363).
-    // → if-체인 순서 결함의 대상이 **아니다**. marker 부재만 보고 결함이라 판정하면 오진이다.
+    // → if-체인 순서 결함의 대상이 **아니다**(차단하지 않은 근거).
+    //   marker 부재만 보고 결함이라 판정했다면 오진이었다 — 산출값까지 봐야 한다.
     const r = await compare(CB, "commercialBuildingValuationDetail");
     expect(r.singleStatus).toBe(200);
     expect(r.inSingle, "단건 대조군이 녹색이어야 판정이 성립한다").toBe(true);
-    expect(r.inBundled, "일괄 집계 결과는 자산별 상세 카드를 담지 않는다").toBe(false);
+    // R1-a 이전에는 false였다(표시 갭). `pickValuationDetails()`가 복구했다.
+    expect(r.inBundled, "🟢 상가 환산 상세가 일괄 자산별 결과에 실린다").toBe(true);
 
-    // 그러나 **양도차익은 동일**하다 — 계산이 죽은 게 아니라 상세가 안 실린 것뿐.
+    // 계산은 처음부터 정상이었다 — 양도차익이 단건과 동일하고 필요경비도 음수가 아니다.
     const sb = await (await POST(req(CB))).json();
     const bb = await (await POST(req({ ...CB, ...COMPANION }))).json();
     const bp = bb.data.aggregated.properties.find(
@@ -279,28 +281,55 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
    * 단건 `TransferTaxResult`의 Detail은 **40개**, 집계는 **4개**.
    * 세액에는 영향이 없으므로 차단 대상이 아니며, 결과 화면 완성도 관점의 후속 항목이다.
    */
-  it("일괄 per-property 타입 ↔ pickReductionDetails 목록이 동기화돼 있다", async () => {
-    // 타입만 넓히고 `pickReductionDetails()`를 빠뜨리면 일괄 경로에서 값이 조용히 비어
-    // 화면에 안 뜬다(침묵 누락). 두 목록의 1:1 동기화를 소스 수준에서 강제한다.
+  /**
+   * 계약 타입 ↔ 주입 헬퍼 **1:1 동기화**를 소스 수준에서 강제한다.
+   *
+   * 가장 위험한 실패 모드는 "타입만 넓히고 헬퍼를 빠뜨리는 것"이다 — TypeScript가 잡지 않고
+   * 일괄 경로에서 값이 조용히 비어 화면에 안 뜬다(⑫⑬⑭ 침묵 strip과 같은 부류).
+   */
+  it.each([
+    ["감면 24종", "TransferReductionDetailSource", "pickReductionDetails", 24],
+    ["평가·판정 11종", "TransferValuationDetailSource", "pickValuationDetails", 11],
+  ])("%s — 계약 ↔ 주입 헬퍼 동기화", async (_label, typeName, fnName, minCount) => {
     const { readFileSync } = await import("node:fs");
     const typeSrc = readFileSync("lib/tax-engine/types/transfer-result.types.ts", "utf8");
     const contract = [
       ...new Set(
         [...typeSrc
-          .slice(typeSrc.indexOf("export type TransferReductionDetailSource"))
+          .slice(typeSrc.indexOf(`export type ${typeName}`))
           .split(">;")[0]
-          .matchAll(/"(\w+Detail)"/g)].map((m) => m[1]),
+          .matchAll(/"(\w+)"/g)].map((m) => m[1]),
       ),
     ].sort();
 
     const engineSrc = readFileSync("lib/tax-engine/transfer-tax-aggregate.ts", "utf8");
-    const body = engineSrc.slice(engineSrc.indexOf("function pickReductionDetails"));
+    const body = engineSrc.slice(engineSrc.indexOf(`function ${fnName}`));
     const picked = [
-      ...new Set([...body.slice(0, body.indexOf("\n}")).matchAll(/(\w+Detail):/g)].map((m) => m[1])),
+      ...new Set([...body.slice(0, body.indexOf("\n}")).matchAll(/^\s+(\w+):/gm)].map((m) => m[1])),
     ].sort();
 
-    expect(contract.length).toBeGreaterThanOrEqual(24);
-    expect(picked, "pickReductionDetails가 계약과 어긋난다").toEqual(contract);
+    expect(contract.length).toBe(minCount);
+    expect(picked, `${fnName}가 ${typeName} 계약과 어긋난다`).toEqual(contract);
+  });
+
+  it("ValuationDetailCards가 계약 필드를 모두 렌더 분기한다", async () => {
+    // 계약·헬퍼가 값을 옮겨도 컴포넌트가 분기하지 않으면 화면에는 여전히 안 나온다.
+    const { readFileSync } = await import("node:fs");
+    const typeSrc = readFileSync("lib/tax-engine/types/transfer-result.types.ts", "utf8");
+    const contract = [
+      ...new Set(
+        [...typeSrc
+          .slice(typeSrc.indexOf("export type TransferValuationDetailSource"))
+          .split(">;")[0]
+          .matchAll(/"(\w+Detail)"/g)].map((m) => m[1]),
+      ),
+    ];
+    const ui = readFileSync("components/calc/results/transfer/ValuationDetailCards.tsx", "utf8");
+    // ⚠️ 파일 전체를 훑으면 상단 `hasAny` 체크에 걸려 **렌더 분기를 지워도 통과**한다.
+    //    JSX(`return (` 이후)로 범위를 좁혀야 실제 렌더 여부를 본다.
+    const jsx = ui.slice(ui.lastIndexOf("return ("));
+    const missing = contract.filter((f) => !jsx.includes(`result.${f}`));
+    expect(missing, "계약에 있으나 컴포넌트가 렌더하지 않는 필드").toEqual([]);
   });
 
   it("🟢 감면 상세가 일괄 자산별 결과에 실린다 (표시 갭 복구)", async () => {

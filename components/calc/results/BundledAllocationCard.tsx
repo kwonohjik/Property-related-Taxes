@@ -2,6 +2,7 @@
 
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -161,6 +162,17 @@ function PropertyCard({
         result={breakdown}
         calculatedTax={breakdown.refCalculatedTax}
         taxBase={breakdown.taxBaseShare}
+      />
+      {/*
+        평가·판정 산출근거 (R1-a) — 상가 환산 §164⑥·비사업용토지·다주택 중과·PHD 등.
+        금액 prop은 **자산별 안분값**을 넘긴다(단건의 총계약가와 의미가 다르다).
+      */}
+      <ValuationDetailCards
+        result={breakdown}
+        transferPrice={breakdown.transferPrice}
+        transferGain={breakdown.transferGain}
+        longTermDeduction={breakdown.longTermHoldingDeduction}
+        taxableIncome={breakdown.incomeAfterOffset}
       />
     </div>
   );

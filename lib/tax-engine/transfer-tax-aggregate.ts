@@ -39,6 +39,31 @@ import {
 } from "./transfer-tax-aggregate-helpers";
 
 
+
+/**
+ * 단건 결과 → 자산별 breakdown으로 옮길 **평가·판정 상세 11종** (R1-a).
+ *
+ * `pickReductionDetails()`(감면 24종)와 같은 목적·같은 유지 규칙이다.
+ * 목록은 `TransferValuationDetailSource`(transfer-result.types.ts)와 **1:1로 맞춘다** —
+ * 타입만 넓히고 여기를 빠뜨리면 일괄 경로에서 값이 조용히 비어 화면에 안 뜬다.
+ * 회귀 가드: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`
+ */
+function pickValuationDetails(r: SingleResult): TransferValuationDetailSource {
+  return {
+    commercialBuildingValuationDetail: r.commercialBuildingValuationDetail,
+    nonBusinessLandJudgmentDetail: r.nonBusinessLandJudgmentDetail,
+    nblSurchargeExcluded: r.nblSurchargeExcluded,
+    multiHouseSurchargeDetail: r.multiHouseSurchargeDetail,
+    expropriationValuationDetail: r.expropriationValuationDetail,
+    housingExpropriationValuationDetail: r.housingExpropriationValuationDetail,
+    auctionValuationDetail: r.auctionValuationDetail,
+    preHousingDisclosureDetail: r.preHousingDisclosureDetail,
+    rentalHousingExceptionDetail: r.rentalHousingExceptionDetail,
+    familyBusinessDetail: r.familyBusinessDetail,
+    carryoverTaxationDetail: r.carryoverTaxationDetail,
+  };
+}
+
 export { classifyRateGroup };
 
 /** 단건 엔진 결과 타입 (import 순환 회피용 별칭) */
@@ -188,7 +213,10 @@ import type {
   LossOffsetRow,
   AggregateTransferResult,
 } from "./types/transfer-aggregate.types";
-import type { TransferReductionDetailSource } from "./types/transfer-result.types";
+import type {
+  TransferReductionDetailSource,
+  TransferValuationDetailSource,
+} from "./types/transfer-result.types";
 
 export type {
   RateGroup,
@@ -603,6 +631,7 @@ export function calculateTransferTaxAggregate(
       reductionAggregated,
       reductionAllocationRatio,
       ...pickReductionDetails(r.result),
+      ...pickValuationDetails(r.result),
       penaltyTax: r.result.isExempt ? 0 : r.result.penaltyTax ?? 0,
       penaltyBase: r.result.isExempt ? 0 : r.result.penaltyBase ?? 0,
       filingDelayedPenaltyTax: r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0,

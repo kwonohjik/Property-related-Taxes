@@ -21,7 +21,10 @@ import type {
   AmendmentInput,
   AmendmentDetail,
 } from "./transfer.types";
-import type { TransferReductionDetailSource } from "./transfer-result.types";
+import type {
+  TransferReductionDetailSource,
+  TransferValuationDetailSource,
+} from "./transfer-result.types";
 
 /** 세율군 (소득세법 §102 ① 각 호 구분) */
 export type RateGroup =
@@ -79,15 +82,18 @@ export interface AggregateTransferInput {
 /**
  * 자산별 breakdown.
  *
- * `TransferReductionDetailSource`를 extends해 감면·취득가액 상세 24종을 승계한다 —
- * 비자발적 양도(§77·§77의2·§77의3)·신축주택·미분양·장기임대·자경농지 등.
- * 덕분에 `ReductionDetailCards`를 단건·일괄 양쪽에서 **같은 컴포넌트로** 렌더한다.
+ * 두 계약 타입을 extends해 상세를 승계한다:
+ *   - `TransferReductionDetailSource` — 감면·취득가액 24종(§77 계열·신축주택·미분양·장기임대·자경농지 등)
+ *   - `TransferValuationDetailSource` — 평가·판정 11종(상가 환산·비사업용토지·다주택 중과·PHD 등)
+ * 덕분에 상세 카드를 단건·일괄 양쪽에서 **같은 컴포넌트로** 렌더한다.
  *
  * 그 상세들은 **echo 전용**이다 — 최종 감면세액은 합산 재계산(`reductionAggregated`·
  * `ReductionBreakdownEntry`)이 담당하고, 상세는 자산별 **산출근거 표시**에만 쓴다.
  * 값 주입은 `pickReductionDetails()`(transfer-tax-aggregate.ts)가 단일 지점에서 한다.
  */
-export interface PerPropertyBreakdown extends TransferReductionDetailSource {
+export interface PerPropertyBreakdown
+  extends TransferReductionDetailSource,
+    TransferValuationDetailSource {
   propertyId: string;
   propertyLabel: string;
   isExempt: boolean;
