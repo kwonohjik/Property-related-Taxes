@@ -389,14 +389,42 @@ export function aggregateByGroup(
       surchargeRate = undefined;
       progressiveDeduction = 0;
     } else {
-      // 누진세율 호(progressive·multi_house_surcharge·non_business_land) 및 미등기 단일 70%는
-      // 동일 호 합산이 정확하므로 그룹 합산 과세표준에 대표 세율을 적용한다.
-      const rep = records[idxList[0]];
-      const taxResult = calcTax(groupTaxBase, parsedRates, rep.correctedSingleInput);
-      groupCalculatedTax = taxResult.calculatedTax;
-      appliedRate = taxResult.appliedRate;
-      surchargeRate = taxResult.surchargeRate;
-      progressiveDeduction = taxResult.progressiveDeduction;
+      // 누진세율 호(progressive·multi_house_surcharge·non_business_land) 및 미등기 단일 70%.
+      //
+      // §104⑤2호 **단서**는 "둘 이상의 자산에 대하여 … **동일한 호**의 세율이 적용되고,
+      // 그 적용세율이 둘 이상인 경우"에만 합산 후 호별 세율을 적용하도록 한다.
+      // ⇒ 한 그룹 안에서 **적용 호가 갈리면** 단서가 아니라 **본문**(자산별 산출세액 합계)이다.
+      //
+      // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): `multi_house_surcharge` 그룹은
+      // §104⑦**1호**(1세대 2주택 +20%p)와 §104⑦**3호**(1세대 3주택 이상 +30%p)가 **섞일 수 있는데**,
+      // 종전에는 `records[idxList[0]]`(입력 첫 자산)의 세율을 그룹 합산 과세표준 전체에 적용했다.
+      //   → 3주택 우선 324,060,000 / 2주택 우선 274,060,000 — **입력 순서에 따라 세액이 달라졌다**.
+      //   → §104⑤2호 본문 도출값은 280,120,000이다
+      //     (3억: 누진 94,060,000 + 30% 90,000,000 / 2억: 누진 56,060,000 + 20% 40,000,000).
+      //
+      // `short_term` 그룹은 위에서 이미 같은 판정을 하고 있었다(세율 혼재 → 자산별 합) —
+      // 누진 호 쪽만 빠져 있던 내부 불일치다. 동일 세율이면 종전대로 합산 1회 floor를 유지한다
+      // (자산별 floor 합산은 floor 횟수 차이로 ±N원이 어긋난다).
+      const perAsset = idxList.map((i) => {
+        const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
+        const tr = calcTax(assetTaxBase, parsedRates, records[i].correctedSingleInput);
+        return { tax: tr.calculatedTax, rate: tr.appliedRate, surcharge: tr.surchargeRate };
+      });
+      // 호 판정 대리값 = 중과 가산율. 가산율이 갈리면 적용 호가 다르다는 뜻이다.
+      const mixedTier = perAsset.some((p) => p.surcharge !== perAsset[0].surcharge);
+      if (mixedTier) {
+        groupCalculatedTax = perAsset.reduce((sum, p) => sum + p.tax, 0);
+        appliedRate = Math.max(...perAsset.map((p) => p.rate)); // 표시용 최고세율
+        surchargeRate = Math.max(...perAsset.map((p) => p.surcharge ?? 0));
+        progressiveDeduction = 0; // 자산별 누진공제가 상이 — 합산 표시 불가
+      } else {
+        const rep = records[idxList[0]];
+        const taxResult = calcTax(groupTaxBase, parsedRates, rep.correctedSingleInput);
+        groupCalculatedTax = taxResult.calculatedTax;
+        appliedRate = taxResult.appliedRate;
+        surchargeRate = taxResult.surchargeRate;
+        progressiveDeduction = taxResult.progressiveDeduction;
+      }
     }
 
     out.push({
