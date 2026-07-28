@@ -651,7 +651,11 @@ export function TransferTaxResultView({
       )}
 
       {/* ⑦ 감면·환산취득가 상세 4건 (자경농지·상속주택·신축주택·장기임대) */}
-      <ReductionDetailCards result={result} />
+      <ReductionDetailCards
+        result={result}
+        calculatedTax={result.calculatedTax}
+        taxBase={result.taxBase}
+      />
 
       {/* 비로그인 안내 */}
       {onLoginPrompt && (

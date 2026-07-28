@@ -1,6 +1,7 @@
 "use client";
 
 import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -148,6 +149,19 @@ function PropertyCard({
           )}
         </tbody>
       </table>
+      {/*
+        감면·취득가액 산출근거 — 단건 결과 화면과 **같은 컴포넌트**를 재사용한다.
+        종전에는 집계가 Detail을 버려서 "감면" 배지만 뜨고 근거를 볼 수 없었다.
+
+        ⚠️ `calculatedTax`·`taxBase`는 자산별 **참고값**(`refCalculatedTax`·`taxBaseShare`)을
+           넘긴다 — 일괄은 합산 과세표준으로 세액을 산출하므로 자산별 값과 다르다.
+           타입 정의(`PerPropertyBreakdown`)가 두 필드를 "다건 컨텍스트, 참고"로 명시한다.
+      */}
+      <ReductionDetailCards
+        result={breakdown}
+        calculatedTax={breakdown.refCalculatedTax}
+        taxBase={breakdown.taxBaseShare}
+      />
     </div>
   );
 }

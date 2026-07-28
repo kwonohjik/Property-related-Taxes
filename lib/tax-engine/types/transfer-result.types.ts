@@ -342,3 +342,48 @@ export interface TransferTaxResult {
    */
   familyBusinessDetail?: FamilyBusinessCgtDetail;
 }
+
+/**
+ * 감면·취득가액 상세 카드가 읽는 필드 묶음 — `ReductionDetailCards`의 **단일 계약**.
+ *
+ * ## 왜 별도 타입인가
+ *
+ * 일괄(bundled) 모드의 `PerPropertyBreakdown`은 자산별로 `calculateTransferTax`를 완전히
+ * 호출하고도(계산은 정상) **결과의 Detail을 버려서** 산출근거 카드가 화면에 나오지 않았다.
+ * 이 타입을 두 곳(`TransferTaxResult` · `PerPropertyBreakdown`)이 함께 만족하게 해서
+ * **같은 컴포넌트를 단건·일괄 양쪽에서 재사용**한다(dual-truth 회피).
+ *
+ * 필드를 추가할 때는 `pickReductionDetails()`(transfer-tax-aggregate.ts)에도 함께 넣는다 —
+ * 타입만 넓히면 일괄 경로에서 값이 조용히 비어 있다.
+ *
+ * ⚠️ `calculatedTax`·`taxBase`는 **포함하지 않는다**. 일괄에서는 합산 과세표준 기준이라
+ *    자산별 값이 다르다(`refCalculatedTax`·`taxBaseShare`가 그 자리를 대신한다).
+ *    호출부가 명시 prop으로 넘겨 의미를 드러낸다.
+ */
+export type TransferReductionDetailSource = Pick<
+  TransferTaxResult,
+  | "selfFarmingReductionDetail"
+  | "inheritedAcquisitionDetail"
+  | "inheritedHouseValuationDetail"
+  | "newHousingReductionDetail"
+  | "rentalReductionDetail"
+  | "rental97LthdDetail"
+  | "rental97TaxDetail"
+  | "new994Detail"
+  | "unsold989Detail"
+  | "new99Detail"
+  | "unsold988Detail"
+  | "unsold987Detail"
+  | "unsold992Detail"
+  | "unsold983Detail"
+  | "unsold985Detail"
+  | "unsold986Detail"
+  | "unsold982Detail"
+  | "unsold984Detail"
+  | "unsold98Detail"
+  | "new993Detail"
+  | "publicExpropriationDetail"
+  | "replacementLandDetail"
+  | "gbDesignatedLandDetail"
+  | "specialHouseExclusionDetail"
+>;

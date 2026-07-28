@@ -288,7 +288,31 @@ A2′의 근본 원인이 부담부증여 고유 문제가 아니라 **라우트
 회귀 방어선 `__tests__/api/transfer.route.bundled-swallows-special.test.ts`(6건)가
 세 메커니즘을 각각 대조 구조로 고정한다.
 
-### 🟡 잔여 (경미·확인 완료) — 일괄 결과에 자산별 상세 카드 미노출
+### ✅ 감면 상세 복구 완료 (2026-07-28)
+
+**감면·취득가액 상세 24종**을 일괄 자산별 결과로 복구했다. 아래 갭 중 감면 부분이 해소된다.
+
+- `TransferReductionDetailSource`(transfer-result.types.ts) — 단건·일괄이 함께 만족하는 **단일 계약**
+- `PerPropertyBreakdown extends TransferReductionDetailSource` — 4 → **28개** Detail
+- `pickReductionDetails()`(transfer-tax-aggregate.ts) — 값 주입 **단일 지점**
+- `ReductionDetailCards` Props를 좁혀 **단건·일괄이 같은 컴포넌트를 재사용**(dual-truth 회피)
+- `BundledAllocationCard`의 `PropertyCard`가 자산별로 렌더
+
+> ⚠️ `calculatedTax`·`taxBase`는 계약에 **넣지 않았다**. 일괄은 합산 과세표준 기준이라 자산별
+> 값이 다르다 — `refCalculatedTax`·`taxBaseShare`를 **명시 prop**으로 넘겨 의미를 드러낸다.
+> 이름이 같은 필드를 별칭으로 추가했다면 두 스케일이 뭉개졌을 것이다.
+
+**회귀 가드**: 타입 계약 ↔ `pickReductionDetails` 목록 **1:1 동기화**를 소스 수준에서 강제
+(타입만 넓히고 헬퍼를 빠뜨리면 값이 조용히 빈다) + 자경농지 감면 행위 anchor +
+E2E `bundled-reduction-detail-cards.spec.ts`(화면 노출까지).
+
+### 🟡 잔여 (경미) — 감면 외 상세
+
+아래는 여전히 일괄 결과에 실리지 않는다(비사업용토지 판정·다주택 중과·PHD §164⑤·
+1990 토지등급 환산·상가 환산 §164⑥·공익수용/경매 평가·토지·건물 분리 등).
+같은 패턴(계약 타입 + `pickReductionDetails` 확장)으로 넓힐 수 있다.
+
+<details><summary>최초 측정 기록 (2026-07-28)</summary>
 
 **계산 손실이 아니다.** `transfer-tax-aggregate.ts:181`이 자산별로 `calculateTransferTax`를
 **완전히 호출**하므로 세액·양도차익은 단건과 동일하다(anchor로 고정).
@@ -298,7 +322,8 @@ A2′의 근본 원인이 부담부증여 고유 문제가 아니라 **라우트
 | | Detail 필드 수 |
 |---|---|
 | 단건 `TransferTaxResult` | **40** |
-| 집계 `PerPropertyBreakdown` | **4** (`penaltyDetail`·`publicExpropriationDetail`·`replacementLandDetail`·`gbDesignatedLandDetail`) |
+| 집계 `PerPropertyBreakdown` (수정 전) | **4** (`penaltyDetail`·`publicExpropriationDetail`·`replacementLandDetail`·`gbDesignatedLandDetail`) |
+| 집계 (수정 후) | **28** — 감면·취득가액 24종 복구 |
 
 **일괄에 실제로 올 수 있는 자산**(겸용·재개발·일반건물·부담부증여는 차단됨 →
 housing·land·building·commercial_building·입주권·분양권)에서 손실되는 주요 상세:
@@ -312,33 +337,19 @@ housing·land·building·commercial_building·입주권·분양권)에서 손실
 
 **영향**: 세액 정확성 무관. 사용자가 **산출근거를 볼 수 없다**(신고서 첨부·검산 관점의 완성도 문제).
 
-**수정하려면 2단**: ① 엔진 — `PerPropertyBreakdown`에 Detail 전달,
-② UI — `BundledAllocationCard`가 자산별 상세 카드 렌더. 신규 UI 렌더 지점이 필요해 **"대" 규모**다.
+**수정 방법(2단)**: ① 엔진 — `PerPropertyBreakdown`에 Detail 전달, ② UI —
+`BundledAllocationCard`가 자산별 상세 카드 렌더. → **감면 24종은 위 ✅ 절에서 완료**,
+나머지는 같은 패턴으로 확장 가능.
 
-**기준선 고정**: `transfer.route.bundled-swallows-special.test.ts`의 소스 스캔 가드가
-현재 4개임을 고정하고, 별도 anchor가 "계산은 영향 없음"을 지킨다. 갭을 좁히면 기준선을 갱신한다.
+**기준선**: 소스 스캔 가드는 이제 "타입 계약 ↔ `pickReductionDetails` 1:1 동기화"를 검증한다
+(최초에는 "4개"를 고정했다). 별도 anchor가 "계산은 영향 없음"을 계속 지킨다.
 
 > 참고: `transferBurdenedGiftBreakdown`은 **일반건물 분기(route:653)에서만** 응답에 실린다.
 > 일괄 분기(route:555)는 넣지 않는다 — dead prop이 아니라 의도된 경로 차이다.
 
-### 🟠 OPEN — (해소됨, 이력 보존)
+</details>
 
-A2′(부담부증여 × 함께양도 침묵 미적용)의 근본 원인은 **엔진 진입 시 `transferPrice`를
-덮어쓰는 기능**과 bundled 안분(`route.ts:512-519`이 `transferPrice`를 안분값으로 덮어씀)의
-충돌이다. 같은 형태를 가진 기능이 더 있는지 확인이 필요하다:
-
-| 기능 | transferPrice 덮어씀? | bundled 차단? | 검증 |
-|---|---|---|---|
-| 부담부증여 §159 | ✅ STEP 0.48 | ✅ **본 작업에서 추가** | 완료 |
-| 재개발 receiveOnly | ✅ `transferPrice = settlementAmount` | fullFractional만 | **미검증** |
-| 겸용주택 분리 | ✅ 주택/상가 분해 | fullFractional만 | **미검증** |
-| 공익수용 | ❌ (감면·장특공 계열) | fullFractional만 | 판별 실패 |
-
-**probe 시도 결과(2026-07-28)**: 겸용·재개발은 fixture 미비로 단건 대조군도 계산에 도달하지
-못해 **판별 불가**. 공익수용은 단건·bundled 모두 marker 미검출 — **marker 선정 오류로 비판별**.
-→ 결론 없음. 제대로 하려면 세 기능의 **완전한 단건 fixture**를 먼저 만들고, 각 기능의 실제
-result 필드명을 확인해 marker로 삼아야 한다.
-
-`fullFractional` 차단 목록(`transfer-tax-validate.ts:72-88`)에 재개발·겸용이 이미 있다는 것은
-**같은 비양립성이 인지돼 있었다는 신호**다. 그 차단이 fullFractional에만 걸려 있고 일반
-bundled에는 없다는 점이 A2′와 정확히 같은 구조다 — 우선순위를 두고 볼 만하다.
+> **이력**: 이 항목은 최초에 "형제 기능 미검증 🟠 OPEN"이었다. 이후 라우트 하네스로 전수
+> 실측해 위 ✅ 절로 해소됐다(겸용·재개발·일반건물 차단 / 상가는 결함 아님).
+> 최초 probe가 실패한 원인은 **fixture 미비와 marker 선정 오류**였다 —
+> 단건 대조군이 녹색이어야 판별이 성립한다는 교훈으로 남는다.
