@@ -34,6 +34,41 @@ const landTransfer = (p: Page) => p.getByTestId("split-land-transfer-price");
 const landSalesCase = (p: Page) => p.getByTestId("split-land-salescase-value");
 const landTransferStdPrice = (p: Page) => p.getByText("토지 양도시 기준시가");
 
+test.describe("P1 — 분리 모드 취득시 기준시가 입력 노출", () => {
+  // 계획서: transfer-separate-acq-date-per-part-completion.plan.md §3.1
+  // 버그: 취득시 기준시가 3요소가 "환산취득가" 모드에서만 렌더돼(CompanionAcqPurchaseBlock.tsx:454),
+  // 실거래가 분리 모드에서는 §166⑥ 안분 비율 소스를 입력할 방법 자체가 없었다
+  // → calcApportionRatio null → calcSplitGain 전체 null → 분리 계산이 오류 없이 비활성.
+  test("실거래가 모드(기본)에서도 '취득시 기준시가' 입력이 노출된다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await expect(
+      page.getByText("취득시 기준시가", { exact: false }).first(),
+      "분리 모드는 실거래가여도 안분 비율 산정에 취득시 기준시가가 필수다",
+    ).toBeVisible();
+  });
+
+  test("실거래가 모드에서 '양도시 기준시가'(환산 분모)는 노출되지 않는다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    // 상단 공용 "양도시 기준시가"는 환산 분모 전용 — 비환산 분리 진입에서는 숨긴다.
+    // (파트별 양도시 기준시가는 LandBuildingSplitSection이 별도로 노출)
+    await expect(page.getByText("양도시 기준시가 (원)", { exact: false })).toHaveCount(0);
+  });
+
+  test("분리 OFF + 실거래가 → 취득시 기준시가 미노출 (회귀 0)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    // 분리 토글을 켜지 않음 — 종전 동작 그대로 숨김
+    await expect(page.getByText("취득시 기준시가", { exact: false })).toHaveCount(0);
+  });
+});
+
 test.describe("파트별 취득 방식 게이팅 — 토지", () => {
   test("실거래가(기본) → 취득가액 칸 노출, 양도가액 칸은 일괄양도 기본이라 숨김", async ({ page }) => {
     test.setTimeout(90_000);

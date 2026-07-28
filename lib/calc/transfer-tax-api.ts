@@ -291,7 +291,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       ? undefined
       : isCarryoverGeneral
         ? (parseAmount(primary.carryover?.donorStandardPriceAtAcquisition ?? "") || undefined)
-        : isEstimated
+        : isEstimated || isSplitActive
+          // 분리 모드(토지·건물 취득일/소유자 상이) 추가 전송 — §166⑥ 안분 비율(calcApportionRatio,
+          // split-gain.ts:26-36)이 취득시 기준시가 3요소를 요구한다. 종전에는 isEstimated에서만
+          // 전송돼, 실거래가·감정·매매사례 분리 모드에서 ratio=null → calcSplitGain 전체가 null →
+          // 토지·건물 분리 계산이 **오류 없이 조용히 비활성**됐다(계획서 §3.1, probe 실측).
           ? parseAmount(primary.standardPriceAtAcq) || undefined
           : undefined,
     // pre1990 모드: 취득시 기준시가는 서브엔진(pre1990Land)이 산출하므로 undefined.
