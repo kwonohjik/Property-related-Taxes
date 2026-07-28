@@ -142,6 +142,13 @@ export interface CommercialBuildingValuationResult {
    * 이 값이 §163⑥의 '취득당시의 기준시가' — 개산공제 기준으로 사용.
    */
   estimatedBasisAtAcq?: number;
+  /**
+   * 개산공제 base로 **실제 사용된 값** = `floor(취득시 기준시가 × 지분율)`.
+   * 표시 산식 「… × 3%」가 표시된 개산공제를 그대로 만들어내게 하는 echo다 — 100% 기준시가를
+   * 노출하면 지분 자산에서 산식이 자기 값을 못 만든다(`feedback_engine_result_display_drift`).
+   * 단독소유면 기준시가와 같다.
+   */
+  lumpDeductionBase?: number;
 
   // ── 환산취득가 (소령 §176조의2②2호) ──
   /** 환산취득가 합계 = INT( 양도가액 × 취득당시기준시가 / 양도시호별총액 ) */

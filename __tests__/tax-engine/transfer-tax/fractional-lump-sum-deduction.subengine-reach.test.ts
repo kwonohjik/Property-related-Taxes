@@ -4,24 +4,22 @@
  * 계획서: docs/02-design/features/transfer-fractional-lump-sum-deduction.plan.md (rev.2) §9 P2b
  * 엔진 설계: 같은 이름 .engine.design.md §2.1(타입 7종) · §6(silent fallback 판정표)
  *
- * ⚠️ **이 파일의 `it.fails` 6건은 현재 의도적으로 실패한다.**
- *    P2b는 **타입 + 호출부 전파**까지만 착지시켰다 — 각 서브엔진의 개산공제 산출 지점은
- *    아직 지분율을 쓰지 않는다(P3a·P3b·P3c). 따라서 값은 종전 그대로다.
+ * ✅ **전건 green — P3c 착지로 완주했다.**
+ *    P2b는 타입 + 호출부 전파까지만 세우고 `it.fails` 6건으로 도달 요건을 고정했으며,
+ *    P3b(R1) · P3c(R2~R5)가 산출식에 지분을 적용하면서 순차로 뒤집혔다.
  *
  *    설계 §6이 "타입 미추가 → 지분 미적용 → **차단**"으로 못박은 이유가 이것이다:
  *    도달 실패와 단독소유(ratio=1)는 결과가 같아 **조용히 구분되지 않는다**.
  *    그래서 도달 요건을 실행 가능한 형태로 먼저 고정한다.
  *
- *    **P3가 착지하면 이 6건이 통과하기 시작해 `it.fails`가 오히려 실패한다** —
- *    그때 `it.fails` → `it`로 바꾸는 것이 경로별 완료 신호다.
+ *    `it.fails`가 통과 전환 시점에 스스로 실패해 완료를 알리는 방식이 경로별로 4회 작동했다.
  *
  * 법령: 소득세법 §97②2호 가목("합계액") · 소득령 §163⑥1호·2호가목.
  * floor 순서: A 확정 — `floor(floor(std × 지분) × rate)` (계획서 §12).
  *
- * **미포함 2경로 (P3c에서 anchor 신설)**: 일반건물(`GeneralBuildingInput`) ·
- * 겸용주택(`MixedUseAssetInput`). 두 경로는 입력 fixture가 커서 P3c의 실제 적용 anchor와
- * 함께 세우는 편이 중복이 없다. **타입·호출부 전파는 P2b에서 이미 완료**했다
- * (`general-building-route-helper.ts` `dispatchGeneralBuilding` 신규 인자 · `route.ts` mixedAsset 주입).
+ * **겸용주택(`MixedUseAssetInput`)** 경로 anchor는 `fractional-lump-sum-per-part.test.ts`가 담당한다
+ * (PHD 성분별 독립 — 겸용 주택분·상가분이 같은 규약을 공유).
+ * **일반건물(`GeneralBuildingInput`)**은 아래 R6.
  */
 import { describe, it, expect } from "vitest";
 import { calcPreHousingDisclosureGain } from "@/lib/tax-engine/transfer-tax-pre-housing-disclosure";
@@ -29,6 +27,7 @@ import { calcRedevLandContribEstimated } from "@/lib/tax-engine/redevelopment-la
 import { calcRedevHousingContribReceiveEstimated } from "@/lib/tax-engine/redevelopment-housing-contribution";
 import { calculateMultiParcelTransfer } from "@/lib/tax-engine/multi-parcel-transfer";
 import { calculateCommercialBuildingValuation } from "@/lib/tax-engine/commercial-building-valuation";
+import { buildGeneralBuildingAssetCards, type GeneralBuildingInput } from "@/lib/tax-engine/general-building-valuation";
 import {
   PHD_INPUT,
   PHD_TRANSFER_PRICE,
@@ -98,7 +97,7 @@ describe("R2: RedevLandContribInput → 개산공제 지분 도달", () => {
     expect(r.estimatedDeduction).toBe(Math.floor(120_000_001 * 0.03));
   });
 
-  it.fails("🔴 지분 50% → floor(floor(120,000,001 × 0.5) × 3%)", () => {
+  it("✅ P3c 착지 — 지분 50% → floor(floor(120,000,001 × 0.5) × 3%)", () => {
     const r = calcRedevLandContribEstimated(mk({ ownershipRatio: RATIO }));
     expect(r.estimatedDeduction).toBe(expectedDeduction(120_000_001, 0.03, RATIO));
   });
@@ -126,7 +125,7 @@ describe("R3: RedevHousingContribReceiveEstimatedInput → 개산공제 지분 �
     expect(r.estimatedDeduction).toBe(Math.floor(180_000_001 * 0.03));
   });
 
-  it.fails("🔴 지분 50% → floor(floor(180,000,001 × 0.5) × 3%)", () => {
+  it("✅ P3c 착지 — 지분 50% → floor(floor(180,000,001 × 0.5) × 3%)", () => {
     const r = calcRedevHousingContribReceiveEstimated(mk({ ownershipRatio: RATIO }));
     expect(r.estimatedDeduction).toBe(expectedDeduction(180_000_001, 0.03, RATIO));
   });
@@ -161,7 +160,7 @@ describe("R4: MultiParcelInput → 필지별 개산공제 지분 도달", () => 
     expect(r.parcelResults[0].estimatedDeduction).toBe(Math.floor(STD_AT_ACQ * 0.03));
   });
 
-  it.fails("🔴 지분 50% → 필지별 floor(floor(기준시가 × 0.5) × 3%)", () => {
+  it("✅ P3c 착지 — 지분 50% → 필지별 floor(floor(기준시가 × 0.5) × 3%)", () => {
     const r = calculateMultiParcelTransfer(mk({ ownershipRatio: RATIO }));
     expect(r.parcelResults[0].estimatedDeduction).toBe(
       expectedDeduction(STD_AT_ACQ, 0.03, RATIO),
@@ -173,7 +172,7 @@ describe("R4: MultiParcelInput → 필지별 개산공제 지분 도달", () => 
 // R5 — 상가·오피스텔 환산 · 소득령 §164⑥ (총액 1곳 + 기존 잔액 흡수 구조)
 // ════════════════════════════════════════════════════════════
 describe("R5: CommercialBuildingValuationInput → 개산공제 지분 도달", () => {
-  it.fails("🔴 지분 50% → 개산공제 합계가 지분 기준시가 기준으로 축소된다", () => {
+  it("✅ P3c 착지 — 지분 50% → 개산공제 합계가 지분 기준시가 기준으로 축소된다", () => {
     const whole = calculateCommercialBuildingValuation(
       CB_VALUATION_INPUT_C01,
       CB_TRANSFER_PRICE,
@@ -192,6 +191,47 @@ describe("R5: CommercialBuildingValuationInput → 개산공제 지분 도달", 
     );
     expect(r.estimatedDeductionLand + r.estimatedDeductionBuilding).toBe(
       r.estimatedDeductionTotal,
+    );
+  });
+});
+
+// ════════════════════════════════════════════════════════════
+// R6 — 일반건물(가목 토지 + 나목 건물) · 성분별 독립 (P3c)
+//   토지는 §99①1호 가목(개별공시지가), 건물은 나목(국세청장 산정)으로 **별도 공시**다.
+//   결합 총액 개념이 없어 잔액 흡수 대상이 아니다.
+// ════════════════════════════════════════════════════════════
+describe("R6: GeneralBuildingInput → 개산공제 지분 도달", () => {
+  const ACQ_LAND_PER_SQM = 500_001;
+  const LAND_AREA = 200;
+  const ACQ_BLDG_STD = 180_000_001;
+  const gb = (over: Record<string, unknown> = {}) => ({
+    landArea: LAND_AREA,
+    buildingArea: 300,
+    buildingFootprintArea: 120,
+    totalTransferPrice: 1_200_000_000,
+    transferDate: new Date("2024-05-01"),
+    acquisitionDate: new Date("2010-03-01"),
+    transferLandPricePerSqm: 3_000_000,
+    transferBuildingStdPrice: 400_000_000,
+    acquisitionLandPricePerSqm: ACQ_LAND_PER_SQM,
+    acquisitionBuildingStdPrice: ACQ_BLDG_STD,
+    zoneType: "commercial",
+    ...over,
+  }) as unknown as GeneralBuildingInput;
+
+  it("도달 전 회귀 가드 — 미전달 시 물건 전체 × 3%", () => {
+    const r = buildGeneralBuildingAssetCards(gb());
+    expect(r.estimatedDeduction.land).toBe(Math.floor(ACQ_LAND_PER_SQM * LAND_AREA * 0.03));
+    expect(r.estimatedDeduction.building).toBe(Math.floor(ACQ_BLDG_STD * 0.03));
+  });
+
+  it("✅ P3c 착지 — 지분 50% → 토지·건물 각각 자기 기준시가 지분분으로", () => {
+    const r = buildGeneralBuildingAssetCards(gb({ ownershipRatio: RATIO }));
+    expect(r.estimatedDeduction.land).toBe(
+      expectedDeduction(ACQ_LAND_PER_SQM * LAND_AREA, 0.03, RATIO),
+    );
+    expect(r.estimatedDeduction.building).toBe(
+      expectedDeduction(ACQ_BLDG_STD, 0.03, RATIO),
     );
   });
 });

@@ -16,7 +16,12 @@
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
-/** 엔진 결과 타입 (transfer.types.ts 엔진 구현 완료 후 정확 타입으로 교체) */
+/**
+ * ⚠️ **엔진 타입의 UI 로컬 재선언** — `lib/tax-engine/types/commercial-building.types.ts`의
+ * `CommercialBuildingValuationResult`와 같은 이름·다른 정의다(dual-truth). 엔진에 필드가
+ * 늘어도 여기 없으면 UI에서 보이지 않는다. 엔진 타입 직접 import로 통합해야 하나 별건이다.
+ * (원 주석: "transfer.types.ts 엔진 구현 완료 후 정확 타입으로 교체" — 아직 미이행)
+ */
 export interface CommercialBuildingValuationResult {
   floorAreaTotal: number;
   unitPriceTotalAtTransfer: number;
@@ -25,6 +30,8 @@ export interface CommercialBuildingValuationResult {
   combinedStdAtFirst?: number;
   combinedStdAtTransfer?: number;
   estimatedBasisAtAcq?: number;
+  /** 개산공제 base로 실제 사용된 값(= 지분 기준시가). 엔진 echo — 표시 산식이 자기 값을 만들게 한다. */
+  lumpDeductionBase?: number;
   estimatedAcquisitionTotal: number;
   estimatedAcquisitionLand: number;
   estimatedAcquisitionBuilding: number;
@@ -162,10 +169,12 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       {/* 개산공제 */}
       <div>
         <p className="text-xs font-medium text-amber-800">기타필요경비 (개산공제)</p>
-        <p className="text-caption text-muted-foreground mb-1">= 환산취득가 × 3% (소득세법 §97②2호 + 시행령 §163⑥ 토지·건물 3%)</p>
+        {/* ⚠️ base 라벨 정정 — 엔진 base는 **취득시 기준시가**(commercial-building-valuation.ts
+            `estimatedBasisAtAcq`/`unitTotalAtAcq`)이지 환산취득가가 아니다. */}
+        <p className="text-caption text-muted-foreground mb-1">= 취득시 기준시가 × 3% (소득세법 §97②2호 + 시행령 §163⑥ 토지·건물 3%)</p>
         <table className="w-full border-collapse">
           <tbody>
-            <Row label={`개산공제 합계 = INT(${formatKRW(detail.estimatedAcquisitionTotal)} × 3%)`} value={detail.estimatedDeductionTotal} highlight />
+            <Row label={`개산공제 합계 = INT(${formatKRW(detail.lumpDeductionBase ?? detail.estimatedBasisAtAcq ?? 0)} × 3%)`} value={detail.estimatedDeductionTotal} highlight />
             <Row label="개산공제 토지분" value={detail.estimatedDeductionLand} sub />
             <Row label="개산공제 건물분" value={detail.estimatedDeductionBuilding} sub />
           </tbody>

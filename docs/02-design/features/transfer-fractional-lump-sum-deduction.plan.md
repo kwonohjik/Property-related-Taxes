@@ -378,9 +378,9 @@ memory `feedback_floor_residual_absorption` 위반이자 자기모순이다.
 | **P3a** ✅ | A(비-split — P2에서 선착지) + B(split) | F8b green 전환 |
 | **P3b** ✅ | C(PHD 2 + 4부분)·D(겸용 주택·상가) | R1 green 전환 + 성분별 anchor 9건 |
 | — | ⚠️ **설계 rev.1 E2「잔액 흡수」 반증·폐기** — Excel 정본(D-7-2)과 1원 충돌로 14건 실패. 전 지점 **성분별 독립 floor**로 통일(engine.design.md §3 E2 rev.2) | 재시도 방지 가드 S1 |
-| **P3c** | E·F·G·I(서브엔진·다필지) | F11~F16 green |
-| **P4** | ⑥ 사이드바 순서 통일 + ⑦ 표시 9+ 지점 + 엔진 rationale 2곳 | RTL + 표시 정합 |
-| **P5** | 전체 회귀 | `npm run check:pre-pr` |
+| **P3c** ✅ | E(상가 2)·F(일반건물 3)·G(재개발 3)·I(다필지) | 도달 anchor **전건 green** — `it.fails` 0건 |
+| **P4** ✅ | ⑥ 사이드바 순서 A 통일 + ⑦ base echo(4 result 타입) + D1·D2·D3·D5·D6 + 엔진 rationale 2곳 | `fractional-lump-sum-display-echo.test.ts` 9건 |
+| **P5** ✅ | 전체 회귀 | `npm run check:pre-pr` |
 
 ### 9.1 리뷰 게이트 결과 (`acquisition-cost-review`, 2026-07-28 · HEAD=d35e9156)
 

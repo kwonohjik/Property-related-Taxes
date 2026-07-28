@@ -198,7 +198,8 @@ export function buildRedevExpenseFormula(
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
     if (lump > 0 && redev.valuationMeta && redev.valuationMeta.numerator !== undefined) {
-      const P_A = redev.valuationMeta.numerator;
+      // base는 엔진 echo(지분 기준시가) 우선 — numerator는 물건 전체(100%) 값이다.
+      const P_A = redev.valuationMeta.lumpDeductionBase ?? redev.valuationMeta.numerator;
       return `개산공제 = floor(${fmt(P_A)} × 3%) = ${fmt(lump)} (§163⑥ — 취득당시 라목값 × 3%)`;
     }
     return "필요경비 없음 (실가 모드)";

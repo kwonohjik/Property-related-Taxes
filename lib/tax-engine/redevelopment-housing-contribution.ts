@@ -18,7 +18,7 @@
  * 평행 구조: redevelopment-land-contribution.ts (§166③ 토지 환산)
  */
 
-import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
+import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRightLthd, applyLthdToGain } from "./redevelopment-lthd";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { REDEVELOPMENT } from "./legal-codes/transfer";
@@ -148,7 +148,11 @@ export function calcRedevHousingContribReceiveEstimated(
 
   // ── Step 2: §163⑥ 개산공제 (주택 3%) ───────────────────────────────────
   // applyRate = Math.floor(amount × rate) — 정수 절사
-  const estimatedDeduction = applyRate(input.housingStdPriceAtAcq, 0.03);
+  const estimatedDeduction = computeEstimatedDeduction(
+    input.housingStdPriceAtAcq,
+    0.03,
+    input.ownershipRatio,
+  );
 
   // ── Step 3: salePriceTotal = 평가액 − 수령청산금 ──────────────────────
   // 가목·나목 공통 기준값 (취득가 안분비율 분자, 가목 공제값)

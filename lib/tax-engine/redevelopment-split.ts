@@ -23,7 +23,7 @@
  *   - postApprovalExpenses 미입력 시 0 처리.
  */
 
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRedevelopmentValuation } from "./redevelopment-valuation";
 import {
   computeSalePriceTotal,
@@ -176,7 +176,16 @@ export function computeRedevelopmentSplit(
     valuationMeta.method !== "successor_member_decree_162_1_4" &&
     valuationMeta.numerator !== undefined
   ) {
-    estimatedLumpDeduction = Math.floor(valuationMeta.numerator * 0.03);
+    estimatedLumpDeduction = computeEstimatedDeduction(
+      valuationMeta.numerator,
+      0.03,
+      input.ownershipRatio,
+    );
+    // 표시 산식 base echo — numerator는 물건 전체(100%) 값이다.
+    valuationMeta.lumpDeductionBase = computeLumpSumDeductionBase(
+      valuationMeta.numerator,
+      input.ownershipRatio,
+    );
   }
 
   // ─ Step C: 인가전 양도차익 ─

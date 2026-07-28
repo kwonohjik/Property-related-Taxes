@@ -16,6 +16,7 @@
  *   산출세액 56,799,400 / 지방소득세 5,679,940 / 세액합계 62,479,340
  */
 
+import { computeLumpSumDeductionBase } from "./tax-utils";
 import {
   computeRedevelopmentSplit,
   type RedevelopmentSplitInput,
@@ -257,8 +258,13 @@ function runLandContribEstimated(
     valuationMeta: {
       method: "estimated_post_disclosure_decree_166_3",
       numerator: redevelopment.landStdPriceAtAcq,
+      // 개산공제 산식 표시 base — 100% 공시지가가 아니라 엔진이 실제로 쓴 지분 기준시가.
+      lumpDeductionBase: computeLumpSumDeductionBase(
+        redevelopment.landStdPriceAtAcq ?? 0,
+        input.ownershipRatio,
+      ),
       denominator: redevelopment.landStdPriceAtApproval,
-      rationale: `§166③ 토지 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()} × 취득시공시지가 ${(redevelopment.landStdPriceAtAcq ?? 0).toLocaleString()} / 인가시공시지가 ${(redevelopment.landStdPriceAtApproval ?? 0).toLocaleString()} = ${landResult.convertedAcquisition.toLocaleString()} / 개산공제 §163⑥ = ${landResult.estimatedDeduction.toLocaleString()}`,
+      rationale: `§166③ 토지 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()} × 취득시공시지가 ${(redevelopment.landStdPriceAtAcq ?? 0).toLocaleString()} / 인가시공시지가 ${(redevelopment.landStdPriceAtApproval ?? 0).toLocaleString()} = ${landResult.convertedAcquisition.toLocaleString()} / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.landStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × 3% = ${landResult.estimatedDeduction.toLocaleString()}`,
     },
     estimatedLumpDeduction: landResult.estimatedDeduction,
     // ── echo 필드 (UI 결과 카드 표시용) ──
@@ -405,13 +411,19 @@ function runHousingContribReceiveEstimated(
     valuationMeta: {
       method: "estimated_post_disclosure_decree_166_3",
       numerator: redevelopment.housingStdPriceAtAcq,
+      // 개산공제 산식 표시 base — 100% PHD가 아니라 엔진이 실제로 쓴 지분 기준시가.
+      lumpDeductionBase: computeLumpSumDeductionBase(
+        redevelopment.housingStdPriceAtAcq ?? 0,
+        input.ownershipRatio,
+      ),
       denominator: redevelopment.housingStdPriceAtApproval,
       rationale:
         `§166③ 주택 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()}` +
         ` × 취득시PHD ${(redevelopment.housingStdPriceAtAcq ?? 0).toLocaleString()}` +
         ` / 인가시PHD ${(redevelopment.housingStdPriceAtApproval ?? 0).toLocaleString()}` +
         ` = ${housingResult.convertedAcquisition.toLocaleString()}` +
-        ` / 개산공제 §163⑥ = ${housingResult.estimatedDeduction.toLocaleString()}`,
+        ` / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.housingStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × 3%` +
+        ` = ${housingResult.estimatedDeduction.toLocaleString()}`,
     },
     estimatedLumpDeduction: housingResult.estimatedDeduction,
     // ── echo 필드 (UI 결과 카드 표시용) ──

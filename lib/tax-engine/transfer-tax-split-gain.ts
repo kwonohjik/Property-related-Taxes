@@ -15,7 +15,7 @@ import type {
   SplitPartResult,
   SplitLandExpropriationValuationDetail,
 } from "./types/transfer.types";
-import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
+import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
@@ -477,6 +477,9 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     directExpenses: landSwap.effectiveDirect,
     appraisalDeduction: landSwap.effectiveAppraisalDed,
     stdPriceAtAcq: landNonActual ? landStdAtAcq : undefined,
+    lumpDeductionBase: landNonActual
+      ? computeLumpSumDeductionBase(landStdAtAcq, ownRatio)
+      : undefined,
     gain: landGain,
     holdingYears: landHoldingYears,
     longTermRate: 0,
@@ -493,6 +496,9 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     directExpenses: buildingSwap.effectiveDirect,
     appraisalDeduction: buildingSwap.effectiveAppraisalDed,
     stdPriceAtAcq: buildingNonActual ? buildingStdAtAcq : undefined,
+    lumpDeductionBase: buildingNonActual
+      ? computeLumpSumDeductionBase(buildingStdAtAcq, ownRatio)
+      : undefined,
     gain: buildingGain,
     holdingYears: buildingHoldingYears,
     longTermRate: 0,

@@ -35,8 +35,15 @@ export interface SplitPartResult {
   acquisitionPrice: number;
   directExpenses: number;
   appraisalDeduction: number;
-  /** 취득시 기준시가 — 개산공제 산식 표시용 (개산공제 = floor(stdPriceAtAcq × 3%)) */
+  /** 취득시 기준시가 — 물건 전체(100%) 값 */
   stdPriceAtAcq?: number;
+  /**
+   * 개산공제 base로 **실제 사용된 값** = `floor(취득시 기준시가 × 지분율)`.
+   * 표시 산식 「… × 3%」가 표시된 개산공제를 그대로 만들어내게 하는 echo다 — 100% 기준시가를
+   * 노출하면 지분 자산에서 산식이 자기 값을 못 만든다(`feedback_engine_result_display_drift`).
+   * 단독소유면 기준시가와 같다.
+   */
+  lumpDeductionBase?: number;
   gain: number;
   holdingYears: number;
   longTermRate: number;

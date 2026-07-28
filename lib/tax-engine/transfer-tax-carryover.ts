@@ -10,7 +10,7 @@
  */
 
 import { addYears } from "date-fns";
-import { calculateHoldingPeriod } from "./tax-utils";
+import { calculateHoldingPeriod, computeLumpSumDeductionBase } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import { TRANSFER } from "./legal-codes";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -77,6 +77,8 @@ export function calcCarryoverScenarios(
     calculatedTax: number;
     localIncomeTax: number;
     totalTax: number;
+    /** §97②2호 단서 swap 발동 여부 — scenarioA 표시 라벨(개산공제 vs 양도비 등) 분기용 */
+    swapApplied?: boolean;
   },
 ): CalcCarryoverResult | null {
 
@@ -305,6 +307,14 @@ export function calcCarryoverScenarios(
     donorCapexGuardApplied,
     effectiveCapex,
     acquisitionWasEstimated: ct.useEstimatedAcquisition,
+    // 표시 라벨·산식 base echo — UI의 금액 자기일치 역추론을 대체한다(types 주석 참조).
+    // swap 발동 시 본문 필요경비는 자본적지출+양도비이므로 개산공제가 아니다.
+    necessaryExpenseIsLumpDeduction:
+      ct.useEstimatedAcquisition === true && resultABeforeGiftTax.swapApplied !== true,
+    lumpDeductionBase:
+      echoStdAtAcq != null
+        ? computeLumpSumDeductionBase(echoStdAtAcq, rawInput.ownershipRatio)
+        : undefined,
     estimatedStdPriceAtAcquisition: echoStdAtAcq,
     estimatedStdPriceAtTransfer: echoStdAtTransfer,
     transferGain: resultA.transferGain,

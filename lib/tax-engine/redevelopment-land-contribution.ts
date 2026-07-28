@@ -11,7 +11,7 @@
  * 지원 범위 (본 PR): 청산금 pay 방향만. receive 방향은 후속 Task.
  */
 
-import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
+import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRightLthd, applyLthdToGain } from "./redevelopment-lthd";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { REDEVELOPMENT } from "./legal-codes/transfer";
@@ -123,7 +123,11 @@ export function calcRedevLandContribEstimated(
 
   // ── Step 2: §163⑥ 개산공제 (토지 3%) ───────────────────────────────────
   // applyRate = Math.floor(amount * rate) — 정수 절사
-  const estimatedDeduction = applyRate(input.landStdPriceAtAcq, 0.03);
+  const estimatedDeduction = computeEstimatedDeduction(
+    input.landStdPriceAtAcq,
+    0.03,
+    input.ownershipRatio,
+  );
 
   // ── Step 3: 인가전 양도차익 ─────────────────────────────────────────────
   // 권리가액 − 환산취득가 − 개산공제 (음수 = 손실 → 0)
