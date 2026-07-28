@@ -289,7 +289,7 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
    */
   it.each([
     ["감면 24종", "TransferReductionDetailSource", "pickReductionDetails", 24],
-    ["평가·판정 11종", "TransferValuationDetailSource", "pickValuationDetails", 11],
+    ["평가·판정 13종", "TransferValuationDetailSource", "pickValuationDetails", 13],
   ])("%s — 계약 ↔ 주입 헬퍼 동기화", async (_label, typeName, fnName, minCount) => {
     const { readFileSync } = await import("node:fs");
     const typeSrc = readFileSync("lib/tax-engine/types/transfer-result.types.ts", "utf8");

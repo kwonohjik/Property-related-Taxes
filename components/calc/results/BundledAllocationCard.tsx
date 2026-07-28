@@ -102,9 +102,12 @@ function Divider() {
 function PropertyCard({
   breakdown,
   ownership,
+  assetKind,
 }: {
   breakdown: PerPropertyBreakdown;
   ownership?: { numerator: number; denominator: number };
+  /** 안분 결과의 자산 종류 — 토지·건물 분리 안내 문구 분기용(자산별로 다르다). */
+  assetKind?: string;
 }) {
   // 지분 모드(분자 < 분모) 시 "지분 X%" 라벨 표시. 단독 소유(분자 === 분모)는 미표시.
   const isFractional =
@@ -173,6 +176,7 @@ function PropertyCard({
         transferGain={breakdown.transferGain}
         longTermDeduction={breakdown.longTermHoldingDeduction}
         taxableIncome={breakdown.incomeAfterOffset}
+        assetKind={assetKind}
       />
     </div>
   );
@@ -640,6 +644,9 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             key={p.propertyId}
             breakdown={p}
             ownership={ownershipMap?.get(p.propertyId)}
+            assetKind={
+              apportionment.apportioned.find((a) => a.assetId === p.propertyId)?.assetKind
+            }
           />
         ))}
       </div>
