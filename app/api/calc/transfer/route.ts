@@ -255,6 +255,7 @@ export async function POST(request: NextRequest) {
     landAcqMode: data.landAcqMode,
     buildingAcqMode: data.buildingAcqMode,
     isSeparateAcquisition: data.isSeparateAcquisition,
+    buildingStandardPriceAtAcquisition: data.buildingStandardPriceAtAcquisition,
     saleSplitMode: data.saleSplitMode,
     landSalesCaseValue: data.landSalesCaseValue,
     buildingSalesCaseValue: data.buildingSalesCaseValue,

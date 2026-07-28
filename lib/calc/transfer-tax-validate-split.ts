@@ -92,6 +92,16 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   if (isSeparateAcquisition(asset)) {
     const partErr = validateSeparateAcqParts(asset, label);
     if (partErr) return partErr;
+
+    // ── V3. 축 B 파트별 독립 — all-or-nothing ──────────────────────────────
+    // `building`에서 건물분 기준시가(§99①1호 나목)를 명시 입력하면 엔진은 결합 총액을 버리고
+    // 토지분을 `㎡당 공시지가 × 면적`으로만 산출한다. 그 3요소 중 하나라도 비면
+    // `calcAcqStdPair`가 null → 분리 계산 전체가 **오류 없이 비활성**된다(§3.1 동형 결함).
+    if (asset.assetKind === "building" && opt(asset.buildingStandardPriceAtAcq) != null) {
+      if (opt(asset.standardPricePerSqmAtAcq) == null || opt(asset.acquisitionArea) == null) {
+        return `${label}: 건물분 취득시 기준시가를 입력하면 토지분도 취득 당시 ㎡당 개별공시지가와 토지 면적으로 산출해야 합니다 — 둘 다 입력하세요(소득세법 §99①1호 가목·나목).`;
+      }
+    }
   }
 
   // §7.2 양도시 기준시가 필수 검증 (2026-07-28 사용자 확정 — feedback_no_silent_apportion_fallback):

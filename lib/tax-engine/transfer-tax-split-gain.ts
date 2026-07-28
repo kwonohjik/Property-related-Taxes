@@ -23,16 +23,57 @@ import {
   applyHousingExpropriationValuation,
 } from "./transfer-tax-expropriation-valuation";
 
-/** 안분 비율 산출 — 토지 기준시가 / 전체 기준시가 */
-function calcApportionRatio(input: TransferTaxInput): { land: number; building: number } | null {
+/**
+ * 취득시 기준시가 — 토지분·건물분 산출 (축 B). 산출 불가 시 null.
+ *
+ * 토지분은 항상 `㎡당 개별공시지가 × 면적`(소득세법 §99①1호 가목)이다.
+ * 건물분은 자산 종류에 따라 **공시 구조가 다르다**:
+ *
+ * - **주택(라목)**: 개별주택가격·공동주택가격은 **부수토지를 포함한 결합 공시**다.
+ *   건물분 단독 공시가 존재하지 않으므로 `결합 총액 − 토지분` 역산이 정본이며,
+ *   이 역산이 `토지분 + 건물분 ≡ 라목 총액` 항등성을 지켜 개산공제 합계를
+ *   법정액(§163⑥2호가목 = 라목 가액 × 3/100)과 일치시킨다.
+ *
+ * - **일반 건물(가목 토지 + 나목 건물)**: 개별공시지가와 국세청장 산정 건물 기준시가가
+ *   **각각 별도로 공시**된다. 결합 총액이라는 공시 자체가 없고 사용자가 더한 값일 뿐이다.
+ *   토지·건물 취득시점이 다르면 각 파트는 **자기 취득일의 고시분**으로 조회해야 하는데
+ *   (§164③ 직전 고시분), 총액에서 역산하면 건물분에 토지 취득시점이 섞인다.
+ *   → 별개 취득 + 건물 기준시가 명시 입력 시 **파트별 독립**으로 전환한다.
+ */
+function calcAcqStdPair(input: TransferTaxInput): { land: number; building: number } | null {
   const sqm = input.standardPricePerSqmAtAcquisition ?? 0;
   const area = input.acquisitionArea ?? 0;
-  const total = input.standardPriceAtAcquisition ?? 0;
-
-  if (sqm <= 0 || area <= 0 || total <= 0) return null;
-
+  if (sqm <= 0 || area <= 0) return null;
   const landStd = Math.floor(sqm * area);
-  const landRatio = Math.min(landStd / total, 1); // 클램핑: 토지 기준시가 > 전체 방지
+
+  const buildingStd = input.buildingStandardPriceAtAcquisition;
+  if (input.propertyType === "building" && input.isSeparateAcquisition === true && buildingStd != null) {
+    // 파트별 독립 — 결합 총액(standardPriceAtAcquisition)을 참조하지 않는다.
+    // 혼합 역산(신규 land + (레거시 총액 − 신규 land)) 금지: 서로 다른 취득시점 값의 뺄셈은 근거가 없다.
+    return { land: landStd, building: buildingStd };
+  }
+
+  // 레거시 역산 — 주택(정상 경로) 및 건물 기준시가 미입력 시(한시 후퇴).
+  const total = input.standardPriceAtAcquisition ?? 0;
+  if (total <= 0) return null;
+  return { land: landStd, building: Math.max(total - landStd, 0) };
+}
+
+/**
+ * 안분 비율 산출 — 토지 기준시가 / (토지 + 건물) 기준시가.
+ *
+ * 분모를 `input.standardPriceAtAcquisition`이 아니라 **파트 합계**로 두는 것이 정본이다.
+ * 레거시 역산 경로에서는 두 값이 항등이라 산출값이 완전히 동일하다:
+ *   · `landStd ≤ total` → `building = total − land` → 합 = total (동일)
+ *   · `landStd > total` → `building = 0` → 합 = landStd → 비율 1 (종전 `min(land/total, 1)`과 동일)
+ * 파트별 독립 경로에서는 합계가 유일하게 옳은 분모다(결합 총액이 애초에 공시되지 않음).
+ */
+function calcApportionRatio(input: TransferTaxInput): { land: number; building: number } | null {
+  const pair = calcAcqStdPair(input);
+  if (!pair) return null;
+  const total = pair.land + pair.building;
+  if (total <= 0) return null;
+  const landRatio = Math.min(pair.land / total, 1);
   return { land: landRatio, building: 1 - landRatio };
 }
 
@@ -290,10 +331,17 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
 
   const { land: landRatio, building: buildingRatio } = ratio;
 
-  // 취득시 기준시가 — 토지/건물 분리
-  const totalStdAtAcq = input.standardPriceAtAcquisition ?? 0;
-  const landStdAtAcq = Math.floor((input.standardPricePerSqmAtAcquisition ?? 0) * (input.acquisitionArea ?? 0));
-  const buildingStdAtAcq = Math.max(totalStdAtAcq - landStdAtAcq, 0);
+  // 취득시 기준시가 — 토지/건물 분리 (축 B). ratio와 **같은 소스**에서 산출한다
+  // (calcAcqStdPair) — 별도 재계산하면 파트별 독립 경로에서 비율과 금액이 어긋난다.
+  const acqStd = calcAcqStdPair(input)!; // ratio가 non-null이면 pair도 non-null
+  const landStdAtAcq = acqStd.land;
+  const buildingStdAtAcq = acqStd.building;
+  // 건물분이 결합 총액에서 역산된 값인가 — 주택(라목)은 **법정 정상 경로**, 건물은 한시 후퇴 표식.
+  const buildingStdDerivedFromTotal = !(
+    input.propertyType === "building" &&
+    input.isSeparateAcquisition === true &&
+    input.buildingStandardPriceAtAcquisition != null
+  );
 
   // ① 양도가액 분리 — saleSplitMode 명시 분기 (Phase B: 부가세령 §64①1호 "양도시" 기준시가 안분으로 정정).
   // 토지·건물 양도시 기준시가가 모두 명시 입력된 경우에만 양도시 비율을 쓰고, 미입력 시 종전
@@ -422,6 +470,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     longTermDeduction: 0,
     swapApplied: landSwap.swapApplied,
     acqMode: landMode,
+    // 토지분은 항상 `㎡당 공시지가 × 면적`(§99①1호 가목) — 역산이 아니다.
+    stdPriceDerivedFromTotal: false,
   };
 
   const buildingPart: SplitPartResult = {
@@ -436,6 +486,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     longTermDeduction: 0,
     swapApplied: buildingSwap.swapApplied,
     acqMode: buildingMode,
+    stdPriceDerivedFromTotal: buildingStdDerivedFromTotal,
   };
 
   return {

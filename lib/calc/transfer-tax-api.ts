@@ -353,6 +353,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           isSeparateAcquisition: separateAcquisition,
         }
       : {}),
+    // 건물분 취득시 기준시가(§99①1호 나목) — `building` + 별개 취득 전용.
+    // 주택(라목)은 부수토지 포함 결합 공시라 파트 독립 입력이 성립하지 않는다(개산공제 법정액 이탈).
+    ...(separateAcquisition && primary.assetKind === "building"
+      ? {
+          buildingStandardPriceAtAcquisition:
+            parseAmount(primary.buildingStandardPriceAtAcq) || undefined,
+        }
+      : {}),
     // 양도가액 2필드 — saleSplitMode==="actual"(구분양도) 게이트.
     ...(saleDirectActive
       ? {

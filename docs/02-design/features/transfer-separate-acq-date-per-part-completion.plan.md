@@ -374,7 +374,7 @@ rev.1의 물질화 마이그레이션은 **폐기**한다:
 | **P1** | **§3.1 게이트 결함 수정 (E0)** — propertyType 무관, 단독 착지 가능 | H1 green + S1~S5 수치 불변 |
 | **P1.5** ✅ | 게이트 헬퍼(`isSeparateAcquisition`) 확정 + 겸용·selfOwns 제외 — **P2a에 흡수**(선행 필수) | H4·H5 green |
 | **P2a** ✅ | **축 A 파트별 완결(E2·E3) — 양 propertyType** + `isSeparateAcquisition` 게이트(P1.5) + V1·V2·V4 | B1~B10 · H2·H3·H5 green |
-| **P2b** | 축 B 파트별 독립(E1) — `building` 전용 | B2~B6 green, housing 축 B 수치 불변(H4·H10) |
+| **P2b** ✅ | 축 B 파트별 독립(E1) — `building` 전용 + V3 | B2~B6 green, housing 축 B 수치 불변(H4·H10) |
 | **P3** | 지분 `applyRatio`(E4, Q5 확정 시) | B12 green |
 | **P4** | validate V1~V4 + ⑫⑬⑭ | validate·api-split-gate green |
 | **P5** | UI(U0~U5) + 결과뷰·상세명세서 | RTL + E2E 재작성 green |

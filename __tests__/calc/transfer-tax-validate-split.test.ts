@@ -307,3 +307,68 @@ describe("V1·V2 — 별개 취득 파트별 취득가액 필수", () => {
     expect(err, "겸용·selfOwns가 분리를 강제해도 취득일이 같으면 총액이 실재한다").toBeNull();
   });
 });
+
+/**
+ * V3 — 축 B 파트별 독립 all-or-nothing (`building` 전용).
+ *
+ * 건물분 기준시가(§99①1호 나목)를 명시 입력하면 엔진은 결합 총액을 버리고 토지분을
+ * `㎡당 개별공시지가 × 면적`(가목)으로만 산출한다. 그 3요소가 비면 calcAcqStdPair가 null →
+ * 분리 계산 전체가 **오류 없이 비활성**된다(PR #837이 고친 §3.1과 동형).
+ */
+describe("V3 — building 축 B 파트별 독립 all-or-nothing", () => {
+  const bAsset = (over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) =>
+    splitAsset({
+      assetKind: "building" as const,
+      acquisitionDate: "2018-06-01",
+      landAcquisitionDate: "2015-06-01",
+      landAcqMode: "actual" as const,
+      buildingAcqMode: "actual" as const,
+      landAcquisitionPrice: "300,000,000",
+      buildingAcquisitionPrice: "250,000,000",
+      landTransferPrice: "600,000,000",
+      buildingTransferPrice: "400,000,000",
+      landStandardPriceAtTransfer: "600,000,000",
+      buildingStandardPriceAtTransfer: "400,000,000",
+      standardPricePerSqmAtAcq: "1,000,000",
+      acquisitionArea: "200",
+      ...over,
+    });
+
+  it("건물분 + 토지 3요소 모두 입력 → 통과", () => {
+    expect(
+      validateSplitDirectInputs(bAsset({ buildingStandardPriceAtAcq: "350,000,000" }), "자산 1"),
+    ).toBeNull();
+  });
+
+  it("🔴 건물분 입력 + ㎡당 공시지가 미입력 → 차단 (조용한 분리 비활성 방지)", () => {
+    const err = validateSplitDirectInputs(
+      bAsset({ buildingStandardPriceAtAcq: "350,000,000", standardPricePerSqmAtAcq: "" }),
+      "자산 1",
+    );
+    expect(err).toContain("공시지가");
+  });
+
+  it("🔴 건물분 입력 + 토지 면적 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(
+      bAsset({ buildingStandardPriceAtAcq: "350,000,000", acquisitionArea: "" }),
+      "자산 1",
+    );
+    expect(err).not.toBeNull();
+  });
+
+  it("건물분 미입력 → V3 미적용 (레거시 총액 역산 한시 허용)", () => {
+    expect(validateSplitDirectInputs(bAsset({ standardPricePerSqmAtAcq: "" }), "자산 1")).toBeNull();
+  });
+
+  it("🔴 주택은 V3 대상 아님 — 라목 결합 공시라 파트 독립 자체가 없다", () => {
+    const err = validateSplitDirectInputs(
+      bAsset({
+        assetKind: "housing",
+        buildingStandardPriceAtAcq: "350,000,000",
+        standardPricePerSqmAtAcq: "",
+      }),
+      "자산 1",
+    );
+    expect(err).toBeNull();
+  });
+});

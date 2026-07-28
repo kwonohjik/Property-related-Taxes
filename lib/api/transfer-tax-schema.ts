@@ -241,6 +241,10 @@ const propertyBaseShape = {
    */
   isSeparateAcquisition: z.boolean().optional(),
   /**
+   * 건물분 취득시 기준시가(§99①1호 나목) — `building` + 별개 취득 전용. ⑫ 침묵 stripping 방지.
+   */
+  buildingStandardPriceAtAcquisition: z.number().int().positive().optional(),
+  /**
    * 양도가액 결정 방식 — 자산 내 토지·건물 분리 축(엔진 명시 입력, §9 M2).
    * "apportioned"(양도시 기준시가 비율 안분, 기본) | "actual"(구분양도 직접입력).
    */
