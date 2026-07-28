@@ -15,6 +15,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
@@ -159,6 +160,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isSplitActive =
     (primary.hasSeperateLandAcquisitionDate === true || primary.selfOwns !== "both") &&
     !isBurdenedGift;
+  // **별개 취득** — 분리 계산 활성(isSplitActive)의 부분집합. 취득시점이 실제로 달라
+  // 취득가액이 파트별로 실재하는 경우만 true(겸용·selfOwns 강제 분리에서 날짜가 같으면 false).
+  // 엔진 취득가액 축의 파트별 완결 게이트(§97①1호·§114⑦) — 판정 단일 소스는 이 헬퍼 1곳.
+  const separateAcquisition = isSplitActive && isSeparateAcquisition(primary);
   // 파트 모드 미선택("") 시 자산 전체 레거시 플래그(위 isSalesCase·isAppraisal·isEstimated와 동일 소스)에서
   // 파생 — UI 표시·validate와 단일 소스(effectivePartAcqMode, dual-truth 방지).
   const landAcqMode = effectivePartAcqMode(primary.landAcqMode, primary);
@@ -345,6 +350,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           landAcqMode,
           buildingAcqMode,
           saleSplitMode,
+          isSeparateAcquisition: separateAcquisition,
         }
       : {}),
     // 양도가액 2필드 — saleSplitMode==="actual"(구분양도) 게이트.
@@ -361,7 +367,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(buildingAcqDirectActive
       ? { buildingAcquisitionPrice: parseAmount(primary.buildingAcquisitionPrice) || undefined }
       : {}),
-    // 파트별 매매사례가액 — salesCase 모드 시만(미입력 시 엔진이 §166⑥ 안분 fallback).
+    // 파트별 매매사례가액 — salesCase 모드 시만. 별개 취득이면 미입력 = 차단(§176의2③1호 —
+    // 탐색 창이 파트별 취득일 ±3개월로 달라 총액 안분 근거 없음), 동시 취득이면 §166⑥ 안분 fallback.
     ...(isSplitActive && landAcqMode === "salesCase"
       ? { landSalesCaseValue: parseAmount(primary.landSalesCaseValue) || undefined }
       : {}),

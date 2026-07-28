@@ -16,6 +16,7 @@ import type {
   SplitLandExpropriationValuationDetail,
 } from "./types/transfer.types";
 import { applyRate, calculateHoldingPeriod } from "./tax-utils";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
   applySplitLandExpropriationValuation,
@@ -141,6 +142,11 @@ function calcSplitAcquisitionPrice(
 } {
   const landMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const buildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
+  // 별개 취득 판정은 엔진이 재판정하지 않는다 — API 변환이 `isSeparateAcquisition`
+  // (lib/calc/transfer-tax-split-acq-mode.ts)로 파생해 전달한다. 엔진은 폼 전용 플래그
+  // (hasSeperateLandAcquisitionDate·isMixedUseHouse)를 볼 수 없으므로 재현이 불가능하고,
+  // 재구현하면 dual-truth가 된다.
+  const isSeparate = input.isSeparateAcquisition === true;
 
   // 환산(estimated) 분모 — 양도시 기준시가 파트별 (기존 로직 승계, 모드 무관 공통 산출).
   const totalStdAtTransfer = input.standardPriceAtTransfer ?? 0;
@@ -167,37 +173,57 @@ function calcSplitAcquisitionPrice(
     splitLandExpropriationValuationDetail = landExprVal?.detail;
   }
 
+  /**
+   * 별개 취득(`isSeparateAcquisition`) 자산에서 **취득가액 축은 파트별로 완결**한다 —
+   * 총액(`acquisitionPrice`·`appraisalValue`·`similarSalesValue`)을 일절 참조하지 않는다.
+   *
+   * 토지를 먼저 사고 건물을 나중에 지은(또는 승계한) 자산은 취득가액이 애초에 **두 개**다.
+   * "총액"은 사후 합계일 뿐 실재하지 않으므로, 그것을 기준으로 잔액(`총액 − 반대편`)을 도출하거나
+   * 기준시가 비율로 안분하면 각 파트의 실지거래가액과 무관한 값이 나온다
+   * (소득세법 §97①1호 "그 자산 취득에 든 실지거래가액" · §114⑦ · 소득령 §176의2③ — **자산별** 추계).
+   *
+   * 매매사례가액도 마찬가지다 — §176의2③1호의 탐색 창이 **각 파트 취득일 전후 3개월**로
+   * 서로 다르므로, 서로 다른 시점의 사례를 하나로 묶어 안분할 법적 근거가 없다.
+   *
+   * 미입력은 `null`로 승격해 호출부가 차단한다. `?? 0`으로 메우면 감정·매매사례 모드에서
+   * "취득가액 0 + 개산공제 3%"라는 그럴듯한 소액이 남아 오답이 눈에 띄지 않는다.
+   */
   function calcOnePart(
     mode: PartAcqMode,
     isLand: boolean,
     partTransferPrice: number,
     partStdAtAcq: number,
     partStdAtTransfer: number,
-  ): number {
+  ): number | null {
     switch (mode) {
       case "estimated":
         // 환산취득가: 파트 양도가 × (파트 취득시 기준시가 / 파트 양도시 기준시가)
+        // — 총액 미참조 구조라 별개 취득 여부와 무관하게 동일.
         return partStdAtTransfer > 0
           ? Math.floor(partTransferPrice * (partStdAtAcq / partStdAtTransfer))
           : 0;
       case "salesCase": {
         // 매매사례가액(소령 §176의2③1호) — 파트별 명시 입력(land/buildingSalesCaseValue) 우선.
-        // 추계액은 토지/건물 개별 실지가액이 존재하지 않는 경우가 일반적이므로, 미입력 시
-        // §166⑥ "구분할 수 없는 때" 예외로 자산 전체 base를 안분한다(임의 fallback 아님).
         const own = isLand ? input.landSalesCaseValue : input.buildingSalesCaseValue;
         if (own != null) return own;
+        if (isSeparate) return null;
+        // 동시 취득(겸용·selfOwns 강제 분리 등) — 총액이 실재하므로 §166⑥ "구분할 수 없는 때" 안분.
         const base = input.similarSalesValue ?? input.acquisitionPrice ?? 0;
         const land = Math.floor(base * landRatio);
         return isLand ? land : base - land;
       }
       case "appraisal": {
         // 감정가액 — 감정평가서가 토지·건물을 각각 평가하는 경우가 많아 직접 입력 허용(실거래가와 동일 구조).
+        const own = isLand ? input.landAcquisitionPrice : input.buildingAcquisitionPrice;
+        if (isSeparate) return own ?? null;
         const base = input.appraisalValue ?? input.acquisitionPrice ?? 0;
         const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
         return isLand ? pair.land : pair.building;
       }
       case "actual":
       default: {
+        const own = isLand ? input.landAcquisitionPrice : input.buildingAcquisitionPrice;
+        if (isSeparate) return own ?? null;
         const base = input.acquisitionPrice ?? 0;
         const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
         return isLand ? pair.land : pair.building;
@@ -205,10 +231,31 @@ function calcSplitAcquisitionPrice(
     }
   }
 
-  const land = calcOnePart(landMode, true, landTransferPrice, landStdAtAcq, landStdAtTransfer);
-  const building = calcOnePart(buildingMode, false, buildingTransferPrice, buildingStdAtAcq, buildingStdAtTransfer);
+  const landRaw = calcOnePart(landMode, true, landTransferPrice, landStdAtAcq, landStdAtTransfer);
+  const buildingRaw = calcOnePart(buildingMode, false, buildingTransferPrice, buildingStdAtAcq, buildingStdAtTransfer);
 
-  return { land, building, landMode, buildingMode, splitLandExpropriationValuationDetail };
+  // 미입력 차단 — **본인 소유 파트만** 대상. `selfOwns≠both`이면 비소유 파트의 gain은
+  // 상위(transfer-tax.ts:315)에서 버려지므로 그 파트의 미입력은 오답을 만들지 않는다.
+  const selfOwns = input.selfOwns ?? "both";
+  const missing: string[] = [];
+  if (landRaw == null && selfOwns !== "building_only") missing.push("토지");
+  if (buildingRaw == null && selfOwns !== "land_only") missing.push("건물");
+  if (missing.length > 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `토지·건물을 서로 다른 시점에 취득한 자산은 ${missing.join("·")} 취득가액을 각각 입력해야 합니다 — `
+        + `나머지 금액에서 자동 계산되지 않습니다 (소득세법 §97①1호·§114⑦, 소득령 §176의2③).`,
+      { missingParts: missing, landMode, buildingMode },
+    );
+  }
+
+  return {
+    land: landRaw ?? 0,
+    building: buildingRaw ?? 0,
+    landMode,
+    buildingMode,
+    splitLandExpropriationValuationDetail,
+  };
 }
 
 /**

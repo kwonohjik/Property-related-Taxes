@@ -236,6 +236,11 @@ const propertyBaseShape = {
   /** 건물 파트 취득 방식 — landAcqMode와 독립 */
   buildingAcqMode: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),
   /**
+   * 별개 취득(토지·건물 취득시점 상이) — 취득가액 축 파트별 완결 게이트. ⑫ 침묵 stripping 방지.
+   * 클라이언트가 `isSeparateAcquisition()`(lib/calc/transfer-tax-split-acq-mode.ts)으로 파생해 전송.
+   */
+  isSeparateAcquisition: z.boolean().optional(),
+  /**
    * 양도가액 결정 방식 — 자산 내 토지·건물 분리 축(엔진 명시 입력, §9 M2).
    * "apportioned"(양도시 기준시가 비율 안분, 기본) | "actual"(구분양도 직접입력).
    */

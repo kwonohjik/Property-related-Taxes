@@ -107,3 +107,43 @@ describe("P1 — 분리 모드 취득시 기준시가 전송 게이트", () => {
     ).toBeUndefined();
   });
 });
+
+/**
+ * P2a ⑬ 배관 — `isSeparateAcquisition`은 TypeScript가 잡지 못하는 침묵 stripping 구간
+ * (body spread → Zod → route → 엔진 input)을 지난다. 미도달 시 엔진이 종전 총액 모델로
+ * 조용히 되돌아가므로 전송 자체를 anchor한다.
+ */
+describe("P2a — 별개 취득 게이트(isSeparateAcquisition) 전송", () => {
+  it("취득일 상이 + 분리 → true 전송", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(makeForm({ useEstimatedAcquisition: false }));
+    expect(cap.body?.isSeparateAcquisition).toBe(true);
+  });
+
+  it("🔴 취득일 동일 → false (겸용·selfOwns가 분리를 강제해도 총액은 실재한다)", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm({ useEstimatedAcquisition: false, landAcquisitionDate: "2025-08-29" }),
+    );
+    expect(
+      cap.body?.isSeparateAcquisition,
+      "취득일이 같으면 취득가액 총액이 실재하므로 §166⑥ 안분이 정당 — 파트별 완결을 강제하면 안 된다",
+    ).toBe(false);
+  });
+
+  it("🔴 겸용주택 → false (4부분 안분이 별도 축을 지배 — 범위 밖)", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm({ useEstimatedAcquisition: false, isMixedUseHouse: true }),
+    );
+    expect(cap.body?.isSeparateAcquisition).toBe(false);
+  });
+
+  it("비분리 → 미전송 (isSplitActive 게이트 밖)", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm({ hasSeperateLandAcquisitionDate: false, useEstimatedAcquisition: false }),
+    );
+    expect(cap.body?.isSeparateAcquisition).toBeUndefined();
+  });
+});
