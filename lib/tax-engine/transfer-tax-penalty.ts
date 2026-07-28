@@ -34,7 +34,19 @@ export type PenaltyReason =
 export interface FilingPenaltyInput {
   /** 결정세액 (세액공제·감면 적용 후, §114조의2 가산세 가산 전) */
   determinedTax: number;
-  /** 세액공제·감면액 합계 */
+  /**
+   * 세액공제·감면액 합계 — **정보값. 가산세 기준금액 산정에 사용하지 않는다.**
+   *
+   * 국세기본법 §47의3①의 기준은 "과소신고한 **납부세액**"이고, 그 납부세액은 감면·세액공제를
+   * 반영한 뒤의 금액이다(§47의2 무신고도 같은 구조). 즉 **감면은 `determinedTax`에서 이미
+   * 1회 반영**되어 있으므로 여기서 다시 빼면 이중차감이 되어 가산세가 과소산정된다.
+   * 조문이 기준금액에서 제외하라고 명시한 것은 **가산세와 이자 상당 가산액**뿐이다
+   * (→ `interestSurcharge`).
+   *
+   * 2026-07-29 정정(#591 감사 백로그 R7): 종전 산식이 이 값을 재차감했다. 계약 주석은
+   * `determinedTax`가 net이라고 명시하고 있었으므로 **주석과 구현이 어긋난 상태**였다
+   * (memory `feedback_engine_comment_vs_impl_drift`).
+   */
   reductionAmount: number;
   /** 기납부세액 (예정신고 납부액 포함) */
   priorPaidTax: number;
@@ -166,10 +178,11 @@ export function calculateFilingPenalty(
   }
 
   // ① 납부세액 산정 (가산세 기준금액)
+  //   국기법 §47의3① — "과소신고한 납부세액 … (가산세와 이자 상당 가산액은 제외)".
+  //   감면은 determinedTax(net)에 이미 반영돼 있어 **재차감하지 않는다**(reductionAmount 주석 참조).
   const penaltyBase = Math.max(
     0,
     input.determinedTax
-      - input.reductionAmount
       - input.priorPaidTax
       - input.originalFiledTax
       - input.interestSurcharge
@@ -180,7 +193,6 @@ export function calculateFilingPenalty(
     label: "납부세액 (가산세 기준)",
     formula: [
       `결정세액 ${input.determinedTax.toLocaleString()}`,
-      input.reductionAmount   > 0 ? `− 감면 ${input.reductionAmount.toLocaleString()}` : null,
       input.priorPaidTax      > 0 ? `− 기납부 ${input.priorPaidTax.toLocaleString()}` : null,
       input.originalFiledTax  > 0 ? `− 당초신고 ${input.originalFiledTax.toLocaleString()}` : null,
       input.interestSurcharge > 0 ? `− 이자상당액 ${input.interestSurcharge.toLocaleString()}` : null,

@@ -158,7 +158,10 @@ export const INHERITANCE_EXEMPTION_RULES: ExemptionRule[] = [
     id: "inh_public_interest",
     category: "inheritance",
     name: "공익법인 출연 재산",
-    lawRef: EXEMPTION.PUBLIC_INTEREST,
+    // 2026-07-29 정정(#591 감사 R7): 상속 경로인데 §48①(증여세, 공익법인이 출연받은 재산)을
+    //   인용하고 있었다. 상속재산 출연은 §16①(상속세 과세가액 불산입)이며, 상수 자체는
+    //   `INH_PUBLIC_CONTRIBUTION`으로 이미 정의돼 있었으나 이 rule만 갈아끼우지 않은 상태였다.
+    lawRef: EXEMPTION.INH_PUBLIC_CONTRIBUTION,
     description: "공익법인(사회복지·학교·의료법인 등)에 출연한 재산 (§16 과세가액 불산입)",
     taxTreatment: "not_included",
     limitType: "unlimited",
@@ -308,7 +311,9 @@ export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
     category: "gift",
     name: "이재구호금품",
     lawRef: EXEMPTION.GIFT_NONTAXABLE,
-    description: "재해 피해자에게 구호 목적으로 지급된 금품 (§46 2호)",
+    // 2026-07-29 정정: 호번호 오기(2호 = 우리사주조합 취득이익). 이재구호금품은 **5호**이며,
+    //   5호는 치료비·피부양자 생활비·교육비까지 포함하는 넓은 항이라 설명도 조문에 맞춘다.
+    description: "사회통념상 인정되는 이재구호금품·치료비·피부양자 생활비·교육비 (§46 5호)",
     limitType: "social_norm",
     riskLevel: "low",
     requirements: ["재해 피해 사실 확인", "구호 목적으로 지급"],
@@ -317,9 +322,12 @@ export const GIFT_EXEMPTION_RULES: ExemptionRule[] = [
   {
     id: "gift_veterans_benefit",
     category: "gift",
-    name: "국가유공자 보훈급여",
+    name: "국가유공자 유족 성금·물품",
     lawRef: EXEMPTION.GIFT_NONTAXABLE,
-    description: "국가유공자·보훈대상자에게 지급되는 보훈급여금 (§46 6호)",
+    // 2026-07-29 정정: 호번호 오기(6호 = 신용보증기금 등 단체가 증여받은 재산). 실제는 **9호**다.
+    //   내용도 어긋나 있었다 — 9호는 "보훈급여금"이 아니라 **국가유공자의 유족·의사자의 유족이
+    //   증여받은 성금 및 물품 등 재산의 가액"이다(보훈급여금 비과세는 소득세법 소관).
+    description: "국가유공자의 유족·의사자의 유족이 증여받은 성금 및 물품 등 재산 (§46 9호)",
     limitType: "unlimited",
     riskLevel: "none",
     requirements: [

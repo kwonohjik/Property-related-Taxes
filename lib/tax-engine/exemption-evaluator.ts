@@ -157,7 +157,8 @@ function evaluateSingleExemption(
     breakdown.push({
       label: `장애인 신탁 한도 (5억 − 기사용 ${priorUsed.toLocaleString()} = 잔여 ${remaining.toLocaleString()})`,
       amount: exemptAmount,
-      lawRef: EXEMPTION.DISABLED_TRUST,
+      // 한도 근거는 본조가 아니라 §52의2③("…합산한 금액은 5억원을 한도로 한다")이다.
+      lawRef: EXEMPTION.DISABLED_TRUST_LIMIT_REF,
     });
     if (taxableOverflow > 0) {
       breakdown.push({ label: "5억 초과 — 일반 증여세 과세", amount: taxableOverflow });
