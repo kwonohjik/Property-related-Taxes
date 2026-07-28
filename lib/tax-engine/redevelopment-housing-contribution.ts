@@ -166,14 +166,29 @@ export function calcRedevHousingContribReceiveEstimated(
   const salePriceTotal = input.rightsValue - input.settlementReceived;
 
   // ── Step 4: §166①2호 나목 — 인가전 양도차익 ───────────────────────────
-  // = floor((권리가액 − 환산취득가 − 개산공제 − 인가전필요경비) × salePriceTotal / 권리가액)
-  // (음수 손실 → 0)
+  // = floor((권리가액 − 환산취득가 − 개산공제) × salePriceTotal / 권리가액)  (음수 손실 → 0)
+  //
+  // ⚠️ 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 개산공제에 더해
+  // `input.preApprovalExpenses`까지 차감해 **이중차감**했다(양도차익 과소 → 세액 과소).
+  //
+  // 근거는 조문 문언이다. §166①2호 나목은 필요경비를
+  //   "법 제97조제1항제2호 및 제3호 **또는** 제163조제6항에 따른 필요경비"
+  // 로 규정한다 — **"또는"(택일)이지 "및"(합산)이 아니다**.
+  //   · 법 §97①2호 = 자본적지출액 · 3호 = 양도비  (= 여기서는 preApprovalExpenses)
+  //   · 시행령 §163⑥ = 개산공제
+  // 취득가액을 확인할 수 없어 §166③ 환산취득가를 쓴 경로이므로 §163⑥ 개산공제 쪽을 택하며,
+  // 이때 실제 필요경비는 별도 가산하지 않는다. (§97②2호 가목·나목 택일=max와 같은 구조 —
+  // memory `feedback_97_2_swap_necessary_expense_max_not_sum` · 조심2016서2576)
+  //
+  // 대비: 같은 호 **가목**(인가후)은 "§97①2호 및 3호에 따른 필요경비"만 규정해 §163⑥ 병기가
+  // 없다 → 아래 Step 5에서 `postApprovalExpenses`를 그대로 차감하는 것이 맞다(무변경).
+  //
+  // 미구현 잔여: §97②2호 단서의 **가목↔나목 max 전환**(실제 필요경비가 환산취득가+개산공제보다
+  // 큰 경우)은 이 경로에 아직 없다. 본 fixture 범위(개산공제 3.6M vs 환산 180M)에서는
+  // 가목이 항상 커서 발동하지 않는다. 별도 항목으로 남긴다.
   const preApprovalGainBase = Math.max(
     0,
-    input.rightsValue -
-      convertedAcquisition -
-      estimatedDeduction -
-      input.preApprovalExpenses,
+    input.rightsValue - convertedAcquisition - estimatedDeduction,
   );
   // safeMultiplyThenDivide: 나목 축소 안분 (overflow 방어)
   const preApprovalGain = safeMultiplyThenDivide(

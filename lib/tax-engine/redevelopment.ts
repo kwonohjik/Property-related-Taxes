@@ -16,7 +16,7 @@
  *   산출세액 56,799,400 / 지방소득세 5,679,940 / 세액합계 62,479,340
  */
 
-import { computeLumpSumDeductionBase } from "./tax-utils";
+import { computeLumpSumDeductionBase, calculateHoldingPeriod } from "./tax-utils";
 import {
   computeRedevelopmentSplit,
   type RedevelopmentSplitInput,
@@ -55,6 +55,44 @@ import type {
  *     residencePeriodMonths: input.residencePeriodMonths,
  *   });
  */
+/**
+ * §166⑤ 분기 보유기간 — 전 세목 공통 `calculateHoldingPeriod`에 위임한다.
+ *
+ * `RedevelopmentBranchDetail.holdingMonths`는 **월 단위**, `holdingDays`는 잔여 일수다.
+ * 종전에는 LTHD용 만년수(`lthdHoldingYears`)에 12를 곱해 재구성해서 잔여월이 통째로 잘렸다
+ * — LTHD 공제율은 만년수만 보므로 세액은 맞았지만 신고서 표시 보유기간이 틀렸다.
+ * (#591 감사 R7, 2026-07-29)
+ */
+function toBranchHolding(
+  from: Date,
+  to: Date,
+): { holdingMonths: number; holdingDays: number } {
+  const hp = calculateHoldingPeriod(from, to);
+  return { holdingMonths: hp.years * 12 + hp.months, holdingDays: hp.days };
+}
+
+/**
+ * §166①2호 나목 인가전 필요경비 — **택일(or)**.
+ *
+ * 조문은 "법 제97조제1항제2호 및 제3호 **또는** 제163조제6항에 따른 필요경비"라고 규정한다.
+ * "및"이 아니라 "**또는**"이므로 합산하지 않는다:
+ *   · §166③ 환산취득가를 쓴 경우 → §163⑥ **개산공제**
+ *   · 실지 취득가액을 쓴 경우      → §97①2·3호 **실제 자본적지출·양도비**
+ *
+ * 2026-07-29 정정(#591 감사 R7): 종전 3개 지점이 모두 `개산공제 + 인가전필요경비`로
+ * 합산해 신고서 표시 필요경비가 과대(→ 표시 행 자기모순)였다. 환산 여부는 개산공제
+ * 존재로 판정한다(실가 모드에서는 §163⑥이 적용되지 않아 0).
+ *
+ * 대비: 같은 호 **가목**(인가후)은 §163⑥ 병기가 없어 실제 필요경비만 차감한다 — 무변경.
+ */
+function preApprovalNecessaryExpense(
+  estimatedDeduction: number,
+  preApprovalExpenses: number,
+): number {
+  return estimatedDeduction > 0 ? estimatedDeduction : preApprovalExpenses;
+}
+
+
 export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput {
   /** 입주권 양도 시 승계조합원 여부 (§95② 단서 — LTHD 0) */
   isSuccessorRightToMoveIn?: boolean;
@@ -171,25 +209,24 @@ function runLandContribEstimated(
   });
 
   // ─ RedevelopmentBranchDetail 로 변환 ─
-  // preApproval: 인가전 분 (LTHD 적용)
+  
+// preApproval: 인가전 분 (LTHD 적용)
   const preApprovalDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: redevelopment.rightsValue,             // 의제 양도가액 = 권리가액
     apportionedAcquisition: landResult.convertedAcquisition,    // §166③ 환산취득가
     gain: landResult.preApprovalGain,
-    holdingMonths: Math.floor(
-      // 취득일 ~ 인가일 보유월수 (§166⑤1호)
-      // computeRightLthd 내부 동일 로직 — lthdResult.preApproval.holdingMonths 재사용 불가(직접 접근)
-      // landResult.lthdHoldingYears × 12 는 연단위 절사 — 월단위 재산출 필요
-      // → redevelopment-lthd.ts computeRightLthd 결과에서 가져오는 것이 일치성 보장
-      // 단, import 순환 방지 위해 landResult.lthdHoldingYears × 12 사용 (표1 공제율 결정에 충분)
-      landResult.lthdHoldingYears * 12,
-    ),
-    holdingDays: undefined,
+    // 취득일 ~ 인가일 보유기간 (§166⑤1호). 2026-07-29 정정(#591 감사 R7 — 표시 전용, 세액 불변):
+    //   종전 `lthdHoldingYears × 12`는 **연단위 절사**라 잔여월·일수가 소실됐다
+    //   (2007-04-09 → 2014-10-23 이 84개월로 표시 — 실제 90개월 13일).
+    //   LTHD 공제율은 만년수만 쓰므로 세액에는 영향이 없었으나 신고서 표시가 틀렸다.
+    //   전 세목 공통 헬퍼 `calculateHoldingPeriod`(윤년·월경계 처리 단일 진실)로 교체한다.
+    ...toBranchHolding(acquisitionDate, redevelopment.approvalDate),
     lthd: landResult.preApprovalLTHD,
     lthdRate: landResult.lthdRate,
     branchAcqDate: acquisitionDate,
     branchTransferDate: redevelopment.approvalDate,             // §166⑤1호 종기 = 인가일
-    expenses: landResult.estimatedDeduction + (redevelopment.preApprovalExpenses ?? 0), // 개산공제 + 인가전필요경비
+    // §166①2호 나목 택일 — 개산공제와 실제 필요경비를 합산하지 않는다.
+    expenses: preApprovalNecessaryExpense(landResult.estimatedDeduction, redevelopment.preApprovalExpenses ?? 0),
     residenceStartDate: undefined,
     residenceEndDate: undefined,
     residenceMonths: undefined,
@@ -335,16 +372,17 @@ function runHousingContribReceiveEstimated(
     // 취득가액 안분 = floor(환산취득가 × salePriceTotal / 권리가액)
     apportionedAcquisition: housingResult.preApprovalApportionedAcquisition,
     gain: housingResult.preApprovalGain,
-    holdingMonths: Math.floor(housingResult.lthdHoldingYears * 12),
-    holdingDays: undefined,
+    // §166⑤1호 — 위 토지 경로와 동일 정정(연단위 절사 → 공통 헬퍼).
+    ...toBranchHolding(acquisitionDate, redevelopment.approvalDate),
     lthd: housingResult.preApprovalLTHD,
     lthdRate: housingResult.lthdRate,
     branchAcqDate: acquisitionDate,
     branchTransferDate: redevelopment.approvalDate,   // §166⑤1호 종기 = 인가일
-    // 필요경비 = 개산공제 + 인가전필요경비 (신고서 양식 표 표시용)
-    expenses:
-      housingResult.estimatedDeduction +
-      (redevelopment.preApprovalExpenses ?? 0),
+    // 필요경비 (신고서 양식 표 표시용) — §166①2호 나목 택일.
+    expenses: preApprovalNecessaryExpense(
+      housingResult.estimatedDeduction,
+      redevelopment.preApprovalExpenses ?? 0,
+    ),
     residenceStartDate: undefined,
     residenceEndDate: undefined,
     residenceMonths: undefined,
@@ -513,7 +551,7 @@ function runOriginalMember(
     lthdRate: lthd.preApproval.applicable ? lthd.preApproval.rate : 0,
     branchAcqDate: acquisitionDate,
     branchTransferDate: isRight ? redevelopment.approvalDate : transferDate,
-    expenses: redevelopment.preApprovalExpenses + (split.estimatedLumpDeduction ?? 0),
+    expenses: preApprovalNecessaryExpense(split.estimatedLumpDeduction ?? 0, redevelopment.preApprovalExpenses),
     residenceStartDate: priorResStart,
     residenceEndDate: priorResEnd,
     residenceMonths: priorMonths,
