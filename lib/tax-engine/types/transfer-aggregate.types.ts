@@ -21,9 +21,7 @@ import type {
   AmendmentInput,
   AmendmentDetail,
 } from "./transfer.types";
-import type { PublicExpropriationReductionResult } from "../public-expropriation-reduction";
-import type { ReplacementLandResult } from "../replacement-land-reduction";
-import type { GbDesignatedLandResult } from "../gb-designated-land-reduction";
+import type { TransferReductionDetailSource } from "./transfer-result.types";
 
 /** 세율군 (소득세법 §102 ① 각 호 구분) */
 export type RateGroup =
@@ -78,8 +76,18 @@ export interface AggregateTransferInput {
   priorPaidLocalTax?: number;
 }
 
-/** 자산별 breakdown */
-export interface PerPropertyBreakdown {
+/**
+ * 자산별 breakdown.
+ *
+ * `TransferReductionDetailSource`를 extends해 감면·취득가액 상세 24종을 승계한다 —
+ * 비자발적 양도(§77·§77의2·§77의3)·신축주택·미분양·장기임대·자경농지 등.
+ * 덕분에 `ReductionDetailCards`를 단건·일괄 양쪽에서 **같은 컴포넌트로** 렌더한다.
+ *
+ * 그 상세들은 **echo 전용**이다 — 최종 감면세액은 합산 재계산(`reductionAggregated`·
+ * `ReductionBreakdownEntry`)이 담당하고, 상세는 자산별 **산출근거 표시**에만 쓴다.
+ * 값 주입은 `pickReductionDetails()`(transfer-tax-aggregate.ts)가 단일 지점에서 한다.
+ */
+export interface PerPropertyBreakdown extends TransferReductionDetailSource {
   propertyId: string;
   propertyLabel: string;
   isExempt: boolean;
@@ -159,14 +167,6 @@ export interface PerPropertyBreakdown {
   reductionAggregated: number;
   /** 배분 비율 (= 이 건 reducibleIncome / 유형별 총 reducibleIncome) */
   reductionAllocationRatio: number;
-  /**
-   * 비자발적 양도 감면 자산별 상세 (조특법 §77·§77의2·§77의3) — echo 전용.
-   * 다건뷰 자산별 카드에서 현금/채권·감면율 등 ①~④ 구성 표시용.
-   * 최종 감면세액은 합산 재계산(reductionAggregated·ReductionBreakdownEntry)이 담당.
-   */
-  publicExpropriationDetail?: PublicExpropriationReductionResult;
-  replacementLandDetail?: ReplacementLandResult;
-  gbDesignatedLandDetail?: GbDesignatedLandResult;
   /** §114조의2 건별 환산가액적용가산세 */
   penaltyTax: number;
   /**

@@ -279,30 +279,60 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
    * 단건 `TransferTaxResult`의 Detail은 **40개**, 집계는 **4개**.
    * 세액에는 영향이 없으므로 차단 대상이 아니며, 결과 화면 완성도 관점의 후속 항목이다.
    */
-  it("일괄 per-property 타입은 Detail을 4개만 담는다 (표시 갭 기준선)", async () => {
-    // 런타임 키는 값이 있을 때만 실리므로(undefined는 JSON에서 탈락) **소스 수준**으로 고정한다.
+  it("일괄 per-property 타입 ↔ pickReductionDetails 목록이 동기화돼 있다", async () => {
+    // 타입만 넓히고 `pickReductionDetails()`를 빠뜨리면 일괄 경로에서 값이 조용히 비어
+    // 화면에 안 뜬다(침묵 누락). 두 목록의 1:1 동기화를 소스 수준에서 강제한다.
     const { readFileSync } = await import("node:fs");
-    const detailsOf = (src: string, from: RegExp) => {
-      const body = src.slice(src.search(from));
-      return [...new Set([...body.slice(0, body.indexOf("\n}")).matchAll(/(\w+Detail)\??:/g)].map((m) => m[1]))];
-    };
-    const single = detailsOf(
-      readFileSync("lib/tax-engine/types/transfer-result.types.ts", "utf8"),
-      /export interface TransferTaxResult\b/,
-    );
-    const perProperty = detailsOf(
-      readFileSync("lib/tax-engine/types/transfer-aggregate.types.ts", "utf8"),
-      /interface PerPropertyBreakdown\b/,
-    );
+    const typeSrc = readFileSync("lib/tax-engine/types/transfer-result.types.ts", "utf8");
+    const contract = [
+      ...new Set(
+        [...typeSrc
+          .slice(typeSrc.indexOf("export type TransferReductionDetailSource"))
+          .split(">;")[0]
+          .matchAll(/"(\w+Detail)"/g)].map((m) => m[1]),
+      ),
+    ].sort();
 
-    expect(perProperty.sort()).toEqual([
-      "gbDesignatedLandDetail",
-      "penaltyDetail",
-      "publicExpropriationDetail",
-      "replacementLandDetail",
-    ]);
-    // 단건이 훨씬 풍부하다는 사실 자체를 고정 — 갭이 좁혀지면 이 기준선을 갱신한다(좋은 신호).
-    expect(single.length).toBeGreaterThan(perProperty.length * 5);
+    const engineSrc = readFileSync("lib/tax-engine/transfer-tax-aggregate.ts", "utf8");
+    const body = engineSrc.slice(engineSrc.indexOf("function pickReductionDetails"));
+    const picked = [
+      ...new Set([...body.slice(0, body.indexOf("\n}")).matchAll(/(\w+Detail):/g)].map((m) => m[1])),
+    ].sort();
+
+    expect(contract.length).toBeGreaterThanOrEqual(24);
+    expect(picked, "pickReductionDetails가 계약과 어긋난다").toEqual(contract);
+  });
+
+  it("🟢 감면 상세가 일괄 자산별 결과에 실린다 (표시 갭 복구)", async () => {
+    // 자경농지 감면(조특법 §69)을 companion에 걸고 그 자산의 breakdown을 확인한다.
+    // 종전에는 감면 **금액**만 반영되고 `selfFarmingReductionDetail`이 버려져
+    // 결과 화면에 "감면" 배지만 뜨고 산출근거를 볼 수 없었다.
+    const withFarmland = {
+      ...COMMON,
+      propertyType: "housing" as const,
+      companionAssets: [
+        {
+          ...COMPANION.companionAssets[0],
+          assetId: "farm",
+          assetLabel: "농지(밭)",
+          assetKind: "land" as const,
+          reductions: [{ type: "self_farming", farmingYears: 18 }],
+        },
+      ],
+      totalSalePrice: 1_000_000_000,
+      standardPriceAtTransferForApportion: 400_000_000,
+    };
+    const res = await POST(req(withFarmland));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const farm = body.data.aggregated.properties.find(
+      (x: { propertyId: string }) => x.propertyId === "farm",
+    );
+    expect(farm, "companion 자산 breakdown이 있어야 한다").toBeDefined();
+    expect(
+      farm.selfFarmingReductionDetail,
+      "🔴 감면 산출근거가 일괄 결과에 실려야 화면에 카드가 뜬다",
+    ).toBeDefined();
   });
 
   it("표시 갭은 **계산에 영향이 없다** — 일괄 자산별 양도차익 = 단건", async () => {

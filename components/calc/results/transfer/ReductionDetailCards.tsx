@@ -15,7 +15,7 @@
  *   - rental97TaxDetail           — §97·§97의2·§97의5 세액감면 (Phase 2)
  */
 
-import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { TransferReductionDetailSource } from "@/lib/tax-engine/types/transfer-result.types";
 import { SelfFarmingReductionDetailCard } from "./SelfFarmingReductionDetailCard";
 import { InheritedAcquisitionDetailCard } from "./InheritedAcquisitionDetailCard";
 import { InheritedHouseValuationDetailCard } from "./InheritedHouseValuationDetailCard";
@@ -34,10 +34,22 @@ import { ReplacementLand77_2DetailCard } from "./ReplacementLand77_2DetailCard";
 import { GbDesignatedLand77_3DetailCard } from "./GbDesignatedLand77_3DetailCard";
 
 interface Props {
-  result: TransferTaxResult;
+  /**
+   * 단건 `TransferTaxResult` · 일괄 `PerPropertyBreakdown` 양쪽이 만족하는 **좁은 계약**.
+   * 덕분에 같은 컴포넌트를 두 모드에서 재사용한다(dual-truth 회피).
+   */
+  result: TransferReductionDetailSource;
+  /**
+   * 감면세액 산출근거(§77·§77의2·§77의3 카드)가 쓰는 기준값.
+   *
+   * ⚠️ `result`에서 읽지 않고 **명시 prop**으로 받는다 — 일괄 모드에서는 합산 과세표준 기준이라
+   * 자산별 값이 다르고(`refCalculatedTax`·`taxBaseShare`), 이름이 같으면 의미가 뭉개진다.
+   */
+  calculatedTax: number;
+  taxBase: number;
 }
 
-export function ReductionDetailCards({ result }: Props) {
+export function ReductionDetailCards({ result, calculatedTax, taxBase }: Props) {
   const hasAny =
     !!result.selfFarmingReductionDetail ||
     !!result.inheritedAcquisitionDetail ||
@@ -140,22 +152,22 @@ export function ReductionDetailCards({ result }: Props) {
       {result.publicExpropriationDetail?.isEligible && (
         <PublicExpropriationDetailCard
           detail={result.publicExpropriationDetail}
-          calculatedTax={result.calculatedTax}
-          taxBase={result.taxBase}
+          calculatedTax={calculatedTax}
+          taxBase={taxBase}
         />
       )}
       {result.replacementLandDetail && (
         <ReplacementLand77_2DetailCard
           detail={result.replacementLandDetail}
-          calculatedTax={result.calculatedTax}
-          taxBase={result.taxBase}
+          calculatedTax={calculatedTax}
+          taxBase={taxBase}
         />
       )}
       {result.gbDesignatedLandDetail && (
         <GbDesignatedLand77_3DetailCard
           detail={result.gbDesignatedLandDetail}
-          calculatedTax={result.calculatedTax}
-          taxBase={result.taxBase}
+          calculatedTax={calculatedTax}
+          taxBase={taxBase}
         />
       )}
       {/* P5 모드 2 — 보유 감면주택 주택수 제외 (2026-06-12 리뷰 H-2) */}
