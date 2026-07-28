@@ -13,7 +13,7 @@ import {
   STOCK_NON_MAJOR_SME_RATE,
   STOCK_NON_MAJOR_NON_SME_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
-import { STOCK_MAJOR_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
+import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 
 export interface SplitModeTaxResult {
   calculatedTax: number;
@@ -45,48 +45,53 @@ export function calcSplitModeTax(
   if (taxBase <= 0 || lotDetail.totalGain <= 0) {
     return { calculatedTax: 0, isMixedRate: false };
   }
-  const isMajorAndNonSME =
+
+  // §104①11호 가목 1) 단기 30%는 "**중소기업 외**의 법인의 주식등"에만 적용된다.
+  //   ⇒ 단기/장기 구분이 세율을 가르는 경우는 **대주주 + 비중소기업**뿐이다.
+  //   중소기업 대주주는 단기 lot이 있어도 전액 가목 2)로 간다.
+  const shortTermSplitsRate =
     !isSME && (taxCategory === "listed_major" || taxCategory === "unlisted_major");
 
-  if (!isMajorAndNonSME) {
-    // 비대주주 — 단일 세율 (sub-lot 분기 무관, §104①11호 나목)
-    // 3개 비대주주 범주(listed_otc/listed_off_market/unlisted) + 중소기업 → 나목 1) 10%
-    // (정상 경로 applyStockTaxRate와 동일 — 범주 일부만 10% 적용하던 버그 수정)
-    const rate =
-      NON_MAJOR_SINGLE_RATE_CATEGORIES.has(taxCategory) && isSME
-        ? STOCK_NON_MAJOR_SME_RATE // 나목 1) 중소기업 10%
-        : STOCK_NON_MAJOR_NON_SME_RATE; // 나목 2) 비중소기업 20%
+  if (!shortTermSplitsRate) {
+    // 세율이 lot에 따라 갈리지 않는다 → **정상(단건) 경로와 완전히 동일**해야 한다.
+    //
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 이 분기가 "비대주주 단일세율"로
+    // 하드코딩돼 있어 두 갈래가 조용히 틀렸다.
+    //   · **중소기업 대주주**(listed_major/unlisted_major + isSME)가 나목 20%로 떨어졌다.
+    //     → 가목 2) 누진(3억 이하 20% / 초과 25%)이 맞다. 과세표준 5억: 100,000,000 → 110,000,000.
+    //   · **기타자산**(other_asset_*)이 20% 단일로 계산됐다. → §55 8단계 누진이 맞다.
+    //     과세표준 5천만: 10,000,000 → 6,240,000 (과대), 10억: 384,060,000 (과소).
+    // 재구현 대신 정본 `applyStockTaxRate`에 위임해 드리프트 자체를 없앤다
+    // (memory `feedback_ui_engine_dual_truth_avoidance`).
     return {
-      calculatedTax: Math.floor(taxBase * rate),
+      calculatedTax: applyStockTaxRate(taxBase, taxCategory, isSME, false).calculatedTax,
       isMixedRate: false,
     };
   }
 
-  // 대주주 + 비SME — sub-lot별 taxBase 안분 + 세율 적용
-  let totalTax = 0;
-  const ratesUsed = new Set<number>();
+  // 대주주 + 비중소기업 — 단기(가목 1, 30%)와 장기(가목 2, 누진)를 **그룹으로 묶어** 각각 계산한다.
+  //
+  // sub-lot마다 누진을 따로 적용하면 3억 구간이 lot 수만큼 반복돼 세액이 과소해진다
+  // (실측: 장기 2 lot·과세표준 4.5억에서 per-lot 90,000,000 vs 집계 97,500,000).
+  // §104⑤2호 단서가 "동일한 호의 세율이 적용되고 그 적용세율이 둘 이상인 경우 **합산**"으로
+  // 같은 취지를 규정한다. 전량 장기이면 장기 그룹 = 전체라 단건 경로와 정확히 일치한다.
+  let shortGain = 0;
   for (const sub of lotDetail.matched) {
-    if (sub.perLotGain <= 0) continue;
-    const subTaxBase = Math.floor((taxBase * sub.perLotGain) / lotDetail.totalGain);
-    if (sub.isShortTerm) {
-      // §104①11호 가목 1) 단기 30%
-      totalTax += Math.floor(subTaxBase * STOCK_SHORT_TERM_RATE);
-      ratesUsed.add(STOCK_SHORT_TERM_RATE);
-    } else {
-      // §104①11호 가목 2) 누진 (3억 이하 20% / 초과 25%)
-      for (const bracket of STOCK_MAJOR_PROGRESSIVE_BRACKETS) {
-        if (bracket.max === undefined || subTaxBase <= bracket.max) {
-          const subTax = Math.max(0, Math.floor(subTaxBase * bracket.rate - bracket.deduction));
-          totalTax += subTax;
-          ratesUsed.add(bracket.rate);
-          break;
-        }
-      }
-    }
+    if (sub.perLotGain > 0 && sub.isShortTerm) shortGain += sub.perLotGain;
   }
+  // 안분 잔액은 장기 그룹이 흡수 — Σ = taxBase 불변식 (memory `feedback_floor_residual_absorption`).
+  const shortBase = shortGain > 0 ? Math.floor((taxBase * shortGain) / lotDetail.totalGain) : 0;
+  const longBase = taxBase - shortBase;
+
+  const shortTax =
+    shortBase > 0 ? applyStockTaxRate(shortBase, taxCategory, isSME, true).calculatedTax : 0;
+  const longTax =
+    longBase > 0 ? applyStockTaxRate(longBase, taxCategory, isSME, false).calculatedTax : 0;
+
+  const isMixedRate = shortBase > 0 && longBase > 0;
   return {
-    calculatedTax: totalTax,
-    isMixedRate: ratesUsed.size > 1,
-    mixedNote: ratesUsed.size > 1 ? "sub-lot별 세율 상이 (lotMatchingDetail 참조)" : undefined,
+    calculatedTax: shortTax + longTax,
+    isMixedRate,
+    mixedNote: isMixedRate ? "단기(가목 1)·장기(가목 2) 세율 상이 (lotMatchingDetail 참조)" : undefined,
   };
 }

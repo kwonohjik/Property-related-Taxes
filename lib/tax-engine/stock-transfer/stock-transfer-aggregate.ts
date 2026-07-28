@@ -169,38 +169,38 @@ export function calculateStockTransferTaxAggregate(
       const deductThis = Math.min(Math.max(0, income), remaining);
       stockUsed += deductThis;
 
-      if (stockUsed - deductThis === 0 || deductThis > 0) {
-        // 기본공제 잔여분 있음 → input 그대로 계산 (엔진이 min(income, 250만) 적용)
-        return calculateStockTransferTaxInternal(input);
-      } else {
-        // 기본공제 소진 → rawItems[i]가 이미 realEstateGroupBasicDeductionUsed=LIMIT으로 계산됨
-        // 하지만 주식 그룹은 그 영향 안 받음 → rawItems[i]에는 basicDeduction=min(income,250만) 포함
-        // → 수동 패치: rawItems[i] 결과에서 basicDeduction을 0으로, taxBase를 income으로 재조정
-        // → 세율·산출세액을 다시 applyStockTaxRate로 계산
-        const taxBaseWithoutDeduction = Math.floor(Math.max(0, income));
-        const rateResult = applyStockTaxRate(
-          taxBaseWithoutDeduction,
-          r.taxCategory,
-          input.isSmallMediumEnterprise,
-          r.isShortTermHolding,
-          r.isExempt, // 비과세 분기 산식 echo
-        );
-        const newCalculatedTax = floorTen(rateResult.calculatedTax);
-        const newFinalize = finalizeStockTax(newCalculatedTax, input);
-        return {
-          ...r,
-          basicDeduction: 0,
-          taxBase: taxBaseWithoutDeduction,
-          appliedRate: rateResult.appliedRate,
-          progressiveDeduction: rateResult.progressiveDeduction,
-          calculatedTax: newCalculatedTax,
-          underReportPenalty: newFinalize.underReportPenalty,
-          latePaymentPenalty: newFinalize.latePaymentPenalty,
-          electronicFilingCredit: newFinalize.electronicFilingCredit,
-          finalTax: newFinalize.finalTax,
-          localIncomeTax: newFinalize.localIncomeTax,
-        };
-      }
+      // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 `deductThis > 0`이면 무조건
+      // 엔진 전량 재계산으로 보냈는데, 순수 엔진 `calcBasicDeduction`은 주식 그룹에 **항상**
+      // `min(income, 2,500,000)`을 적용한다. 그래서 앞 종목이 한도를 일부만 쓴 경우
+      // 뒤 종목이 **250만원 전액을 다시 공제**받아 그룹 한도(§103②2호)를 넘겼다.
+      //   실측: 종목A가 1,000,000 사용 → 종목B가 잔여 1,500,000이 아니라 2,500,000 공제
+      //        → 그룹 합계 3,500,000 (한도 초과) → 과세표준·산출세액 과소.
+      //
+      // 0/전액 두 갈래를 없애고 **항상 정확한 잔여액(deductThis)으로 패치**한다.
+      // (전액 케이스는 deductThis == min(income, 250만)이라 종전 엔진 경로와 결과가 같다.)
+      const taxBaseAfterDeduction = Math.floor(Math.max(0, income - deductThis));
+      const rateResult = applyStockTaxRate(
+        taxBaseAfterDeduction,
+        r.taxCategory,
+        input.isSmallMediumEnterprise,
+        r.isShortTermHolding,
+        r.isExempt, // 비과세 분기 산식 echo
+      );
+      const newCalculatedTax = floorTen(rateResult.calculatedTax);
+      const newFinalize = finalizeStockTax(newCalculatedTax, input);
+      return {
+        ...r,
+        basicDeduction: deductThis,
+        taxBase: taxBaseAfterDeduction,
+        appliedRate: rateResult.appliedRate,
+        progressiveDeduction: rateResult.progressiveDeduction,
+        calculatedTax: newCalculatedTax,
+        underReportPenalty: newFinalize.underReportPenalty,
+        latePaymentPenalty: newFinalize.latePaymentPenalty,
+        electronicFilingCredit: newFinalize.electronicFilingCredit,
+        finalTax: newFinalize.finalTax,
+        localIncomeTax: newFinalize.localIncomeTax,
+      };
     } else {
       // 기타자산 그룹: realEstateGroupBasicDeductionUsed로 직접 제어
       const adjustedInput: StockTransferInput = {
