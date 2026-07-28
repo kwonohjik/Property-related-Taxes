@@ -101,6 +101,35 @@ export function scaleBurdenedGiftInfo(
 // ============================================================
 
 /**
+ * 담보평가의 (근)저당 항 — 상증령 §63①3호 + §63② 전단.
+ *
+ * - **§63①3호**: 근저당권이 설정된 재산의 가액 = "평가기준일 현재 당해 재산이 담보하는 **채권액**".
+ *   즉 원칙은 **설정액(채권최고액)이 아니라 실제 채권액**이다.
+ * - **§63② 전단**: 채권최고액이 담보채권액보다 **적은** 경우에만 채권최고액으로 한다.
+ *   ⇒ 두 조항의 결합은 `min(채권최고액, 채권액)` — 담보로 잡힌 금액의 상한이 최고액이라는 취지.
+ *
+ * ⚠️ **구법 드리프트 주의**(2026-07-28 정정): 구 상속세법 시행령 §5의2 3호는 근저당을
+ * **채권최고액**으로 평가하도록 규정했고, 그 시기의 조세심판례(국심1997부0752 등 1989~1997년)가
+ * 다수 검색된다. 현행 상증령 §63①3호는 **채권액**으로 개정돼 있으므로 그 심판례를 현행 근거로
+ * 인용하면 안 된다. 종전 구현은 `mortgageSetAmount ?? mortgageDebtAmount`로 **설정액을 무조건
+ * 우선**해 구법 규칙을 적용했다 — 설정액이 통상 채권액의 120%이므로 증여가액 C가 과대평가되고,
+ * §159의 채무비율 B/C가 작아져 취득가액이 줄고 **양도차익이 과대**해지는(납세자 불리) 방향이었다.
+ * (memory `feedback_no_unfavorable_application_without_legal_basis`)
+ *
+ * @param info 보증금·차입금·설정액 입력.
+ * @returns 임대보증금 + min(채권최고액, 담보채권액).
+ *          합산 구조의 근거는 §63② 후단 — "동일한 재산이 다수의 채권(전세금채권과 임차보증금채권을
+ *          포함한다)의 담보로 되어 있는 경우에는 그 재산이 담보하는 채권액의 **합계액**으로 한다".
+ */
+export function computeMortgageValuation(info: BurdenedGiftInfo): number {
+  const securedClaim =
+    info.mortgageSetAmount === undefined
+      ? info.mortgageDebtAmount
+      : Math.min(info.mortgageSetAmount, info.mortgageDebtAmount);
+  return info.lendingDepositTotal + securedClaim;
+}
+
+/**
  * 상증법 §60~§66 증여재산 평가 Max 산정.
  *
  * @param landStdPriceAtTransfer  양도시 토지 기준시가 (개별공시지가 × 면적). 시가 모드에서도 입력 가능 (보충적 비교용).
@@ -121,11 +150,9 @@ export function computeSangjeungbeopValuation(
       ? (info.marketValueAtTransfer ?? 0)
       : landStdPriceAtTransfer + buildingStdPriceAtTransfer;
 
-  // ② 담보평가 (상증법 §66):
-  //   = 임대보증금 + (근)저당 설정액
-  //   mortgageSetAmount 미입력 시 mortgageDebtAmount로 fallback.
-  const mortgageSet = info.mortgageSetAmount ?? info.mortgageDebtAmount;
-  const mortgage = info.lendingDepositTotal + mortgageSet;
+  // ② 담보평가 (상증법 §66 · 상증령 §63):
+  //   = 임대보증금 + min(채권최고액, 담보채권액). 상세 근거는 computeMortgageValuation 주석.
+  const mortgage = computeMortgageValuation(info);
 
   // ③ 임대평가 (상증법 §61⑤·시행령 §50⑦):
   //   = 임대보증금 + (연간 임대료 / 12%)  [2009.4.23. 이후 시행분]
@@ -610,7 +637,6 @@ export function assertBurdenedGiftEligible(args: {
   const lending = info.lendingDepositTotal;
   const mortgageDebt = info.mortgageDebtAmount;
   const assumedDebt = lending + mortgageDebt;
-  const mortgageSet = info.mortgageSetAmount ?? mortgageDebt;
   const rentalCap =
     info.annualRentTotal > 0
       ? Math.floor(info.annualRentTotal / ANNUAL_RENT_CAPITALIZATION_RATE_AFTER_2009_04_23)
@@ -622,7 +648,7 @@ export function assertBurdenedGiftEligible(args: {
     info.valuationMode === "sangjeungbeop_market"
       ? info.marketValueAtTransfer ?? 0
       : info.landStdPriceAtTransfer + giftBuildingStd;
-  const mortgageVal = lending + mortgageSet;
+  const mortgageVal = computeMortgageValuation(info);
   const rentalVal = lending + rentalCap;
   const giftValuation = Math.max(supplementary, mortgageVal, rentalVal);
 

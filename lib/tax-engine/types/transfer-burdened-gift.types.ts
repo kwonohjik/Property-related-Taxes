@@ -44,9 +44,13 @@ export interface BurdenedGiftInfo {
 
   // === 담보평가 보조 (선택, v2 본격 분기) ===
   /**
-   * (근)저당권 등 설정액. 미입력 시 mortgageDebtAmount로 fallback.
+   * (근)저당권 등 설정액(채권최고액). 미입력 시 mortgageDebtAmount로 fallback.
    * 실무에서 (근)저당 설정액 ≠ 실제 채무잔액인 경우 분리 입력.
-   * v2 후속 PR에서 분리 anchor.
+   *
+   * ⚠️ 담보평가는 **설정액 자체가 아니라** `min(설정액, 담보채권액)`이다
+   * (상증령 §63①3호 = 채권액 원칙, §63② 전단 = 최고액이 더 작을 때만 최고액).
+   * 즉 이 값은 담보평가의 **상한**으로만 작용한다 — 통상 설정액(채권액의 120%)이
+   * 입력돼도 평가액을 끌어올리지 않는다. 산정은 `computeMortgageValuation()` 단일 지점.
    */
   mortgageSetAmount?: number;
 

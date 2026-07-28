@@ -16,10 +16,12 @@ import { buildBurdenedGiftBreakdown, computeSangjeungbeopValuation } from "@/lib
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
 describe("G-H2 Pre-Do Probe — mortgage selectedMode 양도가액 = B", () => {
-  // 조건: 채무(B) = 700M / supplementary = 500M / mortgage = 900M (→ max=900M)
+  // 조건: 채무(B) = 700M / supplementary = 500M / mortgage = 700M (→ max=700M)
   //   토지 기준시가 300M / 건물 기준시가 200M → supplementary = 500M
-  //   lendingDeposit 200M + mortgageSet 700M = 900M (mortgage)
+  //   lendingDeposit 200M + min(설정액 700M, 채무 500M) = 700M (mortgage — 상증령 §63)
   //   B = lendingDeposit 200M + mortgageDebt 500M = 700M
+  //   ⇒ mortgage == B 는 우연이 아니다: §63①3호가 담보평가를 채권액으로 잡으므로
+  //     설정액 ≥ 채무액인 한 담보평가는 항상 채무액과 같아진다 (아래 §66 하한 anchor 참조).
   // 수정 전: landTransfer = 300M×700M/900M = 233,333,333 / building = 200M×700M/900M = 155,555,555
   //          total ≈ 388,888,888 ≠ 700M (채무액 과소)
   // 수정 후: landTransfer = 300M/500M × 700M = 420,000,000 / building = 200M/500M × 700M = 280,000,000
@@ -37,11 +39,16 @@ describe("G-H2 Pre-Do Probe — mortgage selectedMode 양도가액 = B", () => {
     buildingStdPriceAtAcquisition: 80_000_000,
   };
 
-  it("computeSangjeungbeopValuation: selectedMode=mortgage, max=900M", () => {
+  it("computeSangjeungbeopValuation: selectedMode=mortgage, max=700M (상증령 §63 정정)", () => {
     const sg = computeSangjeungbeopValuation(300_000_000, 200_000_000, info);
-    // mortgage = 200M + 700M = 900M > supplementary 500M
+    // 2026-07-28 정정: 담보평가는 설정액이 아니라 **min(설정액, 담보채권액)**이다.
+    //   상증령 §63①3호 = "평가기준일 현재 당해 재산이 담보하는 **채권액**"(원칙),
+    //   §63② 전단 = 채권최고액이 채권액보다 **적을 때만** 최고액.
+    //   ⇒ 설정액 700M > 채무 500M 이므로 채권액 500M 채택.
+    //   mortgage = 보증금 200M + 500M = 700M  (종전 구현은 200M + 설정액 700M = 900M — 구법 규칙)
     expect(sg.selectedMode).toBe("mortgage");
-    expect(sg.max).toBe(900_000_000);
+    expect(sg.max).toBe(700_000_000);
+    expect(sg.mortgage).toBe(700_000_000);
     expect(sg.supplementary).toBe(500_000_000);
   });
 
