@@ -201,6 +201,23 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     await expect(page.getByTestId("split-building-acq-price")).toHaveValue(/^250,?000,?000$/);
   });
 
+
+  test("🔴 U10: 주택 별개취득 — 취득시 토지 공시지가·면적 입력이 노출된다", async ({ page }) => {
+    // 계획서: transfer-split-acq-std-gate-relaxation.plan.md §4.7 (PR2)
+    // 종전에는 축 B 블록이 assetKind==="building" 전용이라, 주택은 이 두 값을 입력할 칸이
+    // 앱 어디에도 없었다(공용 StandardPriceInput은 주택에서 총액 칸만·면적 블록은 land 전용).
+    // → 엔진 calcAcqStdPair가 항상 null → 환산·감정·매매사례 파트 취득가액이 조용히 0.
+    // setupSplitAsset은 "주택"을 고른다.
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+
+    await expect(page.getByTestId("split-land-std-acq-area")).toBeVisible();
+    await expect(page.getByText("취득시 토지 공시지가")).toBeVisible();
+    // 건물분 명시 입력은 주택에 노출하지 않는다 — 라목 결합 공시(역산이 정본)
+    await expect(page.getByTestId("split-building-std-acq")).toHaveCount(0);
+    await expect(page.getByTestId("split-housing-building-derived-note")).toBeVisible();
+  });
+
   test("U5: 분리 토글 OFF 복귀 → 상단 입력 복원 (폼 상태 보존)", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSeparateAcq(page);

@@ -79,7 +79,7 @@ interface Props {
 
   /** 별개 취득(취득시기 상이) — 축 A 파트별 필수 + 축 B 파트별 독립 입력 게이트 */
   isSeparateAcq?: boolean;
-  /** 축 B 파트별 독립 입력은 `building`(가목 토지 + 나목 건물 분리 공시) 전용 */
+  /** 축 B 취득시 기준시가 — 토지분은 주택·건물 공통, 건물분 명시 입력만 `building` 전용 */
   asset?: AssetForm;
   onAssetChange?: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
@@ -93,14 +93,19 @@ interface Props {
  * 각자 자기 취득일의 직전 고시분(소득령 §164③)이어야 하므로, 결합 총액에서 역산하면
  * 건물분에 토지 취득시점이 섞인다.
  *
- * 주택(라목)은 개별·공동주택가격이 부수토지를 포함한 결합 공시라 이 블록을 쓰지 않는다 —
- * 파트 독립 입력 시 개산공제 합계가 법정액(§163⑥2호가목)을 이탈한다.
+ * **토지분(가목)은 주택에도 노출한다** — `㎡당 공시지가 × 면적`은 자산 종류와 무관하게
+ * 안분 비율·환산 분자·개산공제 base의 유일한 소스다(engine `calcAcqStdPair`).
+ * 반면 **건물분(나목) 명시 입력은 `building` 전용**이다 — 주택(라목)은 부수토지 포함
+ * 결합 공시라 건물분 단독 공시가 없고, `결합 총액 − 토지분` 역산만이 항등성을 지켜
+ * 개산공제 합계를 법정액(§163⑥2호가목)에 맞춘다.
  */
 function PartAcqStdPrice(props: {
   part: "land" | "building";
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
+  /** 주택(라목) — 건물분은 별도 공시가 없어 `결합 총액 − 토지분`으로 도출됨을 안내 */
+  derivedBuildingNote?: boolean;
 }) {
   const { asset, onChange } = props;
   const stdPriceAddress = {
@@ -132,6 +137,13 @@ function PartAcqStdPrice(props: {
             data-testid="split-land-std-acq-area"
           />
         </FieldCard>
+        {props.derivedBuildingNote && (
+          <p className="text-xs text-amber-800" data-testid="split-housing-building-derived-note">
+            건물분 취득시 기준시가는 위 <strong>취득시 기준시가(개별·공동주택가격)</strong>에서 이 토지분을 뺀 값으로
+            자동 도출됩니다 — 주택은 부수토지를 포함한 결합 공시라 건물분이 따로 공시되지 않습니다
+            (소득세법 §99①1호 라목·시행령 §163⑥2호가목).
+          </p>
+        )}
       </ToneCard>
     );
   }
@@ -237,13 +249,27 @@ function PartAcqInputs(props: {
 }
 
 export function LandBuildingSplitSection(props: Props) {
-  // 축 B 파트별 독립 입력 — `building`(가목·나목 분리 공시) + 별개 취득 전용.
-  // 주택(라목)은 결합 공시라 상단 공용 3요소를 그대로 쓴다.
-  const showPartStdPrice =
+  // 축 B 취득시 기준시가 입력 — 별개 취득 전용.
+  //
+  // **토지분은 자산 종류와 무관하게 필요하다** — `㎡당 개별공시지가 × 면적`(§99①1호 가목)이
+  // 안분 비율·환산 분자·개산공제 base의 유일한 소스이기 때문이다(engine `calcAcqStdPair`).
+  // 종전에는 이 블록 전체가 `building` 전용이라, **주택은 이 두 값을 입력할 칸이 앱 어디에도
+  // 없었다** — 공용 `StandardPriceInput`은 주택(`house_individual`)에서 총액 칸만 렌더하고
+  // (area 모드는 land·building_non_residential 전용), 면적 블록은 `assetKind === "land"`
+  // 게이트다(`AssetSectionBasic`). 그래서 주택 별개취득의 환산·감정·매매사례 파트는
+  // 취득가액이 조용히 0으로 산출됐다.
+  //
+  // **건물분 명시 입력은 여전히 `building` 전용**이다 — 주택(라목)은 부수토지를 포함한
+  // 결합 공시라 건물분 단독 공시가 존재하지 않고, `결합 총액 − 토지분` 역산만이
+  // `토지분 + 건물분 ≡ 라목 총액` 항등성을 지켜 개산공제 합계를 법정액(§163⑥2호가목)에
+  // 맞춘다. 주택에 파트 독립 입력을 열면 그 항등성이 깨진다.
+  const isHousingAsset = props.asset?.assetKind === "housing";
+  const showLandStdPrice =
     !!props.isSeparateAcq &&
-    props.asset?.assetKind === "building" &&
+    (props.asset?.assetKind === "building" || isHousingAsset) &&
     !!props.asset &&
     !!props.onAssetChange;
+  const showBuildingStdPrice = showLandStdPrice && !isHousingAsset;
   const landOwned = props.selfOwns !== "building_only";
   const buildingOwned = props.selfOwns !== "land_only";
   const needsSaleStdPrice =
@@ -290,8 +316,14 @@ export function LandBuildingSplitSection(props: Props) {
               onChange={props.onLandAcqModeChange}
             />
           </div>
-          {showPartStdPrice && (
-            <PartAcqStdPrice part="land" asset={props.asset!} onChange={props.onAssetChange!} transferDate={props.transferDate} />
+          {showLandStdPrice && (
+            <PartAcqStdPrice
+              part="land"
+              asset={props.asset!}
+              onChange={props.onAssetChange!}
+              transferDate={props.transferDate}
+              derivedBuildingNote={isHousingAsset}
+            />
           )}
           <PartAcqInputs
             part="land"
@@ -324,7 +356,7 @@ export function LandBuildingSplitSection(props: Props) {
               onChange={props.onBuildingAcqModeChange}
             />
           </div>
-          {showPartStdPrice && (
+          {showBuildingStdPrice && (
             <PartAcqStdPrice part="building" asset={props.asset!} onChange={props.onAssetChange!} transferDate={props.transferDate} />
           )}
           <PartAcqInputs
