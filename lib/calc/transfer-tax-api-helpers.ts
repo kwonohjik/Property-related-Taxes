@@ -25,6 +25,24 @@ import {
 } from "@/lib/tax-engine/legal-codes/transfer";
 
 /**
+ * 상속 주택 개별/공동 구분 — **UI·API 공용 단일 소스**.
+ *
+ * `inheritanceAssetKind`는 미선택("")으로 시작하고, 픽커(InheritanceHouseKindPicker)가
+ * 동·호 유무로 기본값을 **표시**한다. 이 파생을 복제하지 말고 이 함수를 호출할 것 —
+ * 소비처가 raw 비교(`=== "house_individual"`)를 하면 픽커에 "개별"이 선택돼 보이는데도
+ * 그 소비처만 false가 되어, 이미 checked인 라디오를 다시 눌러도 change가 안 나 **막힌다**
+ * (2026-07-30 실측: HouseValuationSection 3시점 일괄 계산 버튼이 초기 진입 시 미노출).
+ * 세액 무관 — 조회 DB(개별주택가격 vs 공동주택가격)·라벨·게이팅용.
+ */
+export function deriveInheritanceHouseKind(
+  asset: AssetForm,
+): "house_individual" | "house_apart" {
+  if (asset.inheritanceAssetKind === "house_individual") return "house_individual";
+  if (asset.inheritanceAssetKind === "house_apart") return "house_apart";
+  return asset.addressDong && asset.addressHo ? "house_apart" : "house_individual";
+}
+
+/**
  * 상속 취득가액 엔진 payload용 assetKind 파생 — 상단 `asset.assetKind` 기준.
  *
  * 엔진(inheritance-acquisition)은 land(단가×면적/legacyFallback) vs house(총액)만 구분하므로
@@ -37,9 +55,7 @@ export function deriveEngineInheritanceAssetKind(
 ): "land" | "house_individual" | "house_apart" {
   if (asset.assetKind === "land") return "land";
   if (asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt") {
-    if (asset.inheritanceAssetKind === "house_individual") return "house_individual";
-    if (asset.inheritanceAssetKind === "house_apart") return "house_apart";
-    return asset.addressDong && asset.addressHo ? "house_apart" : "house_individual";
+    return deriveInheritanceHouseKind(asset);
   }
   return "house_apart";
 }
