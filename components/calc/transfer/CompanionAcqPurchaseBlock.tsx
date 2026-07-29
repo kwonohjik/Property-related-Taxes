@@ -161,7 +161,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         parseAmount(props.buildingStandardPriceAtTransfer ?? "") > 0,
     },
   );
-  const acqDateLabel = isSplit ? "건물 취득일 (사용승인일·매매 등기접수일)" : "취득일";
+  // 2열 배치(2026-07-29)에서 괄호 설명이 두 줄로 접혀 라벨만 남긴다.
+  const acqDateLabel = isSplit ? "건물 취득일" : "취득일";
 
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
