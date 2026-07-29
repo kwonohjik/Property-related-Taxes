@@ -31,6 +31,16 @@ function opt(v: string | undefined): number | undefined {
 }
 
 /**
+ * `requiresAcqStdPrice` ⑥절 인자 보정 — `AssetForm`에는 `expenses` 프로퍼티가 **없다**
+ * (실제 필드는 `directExpenses`). 보정하지 않고 asset을 그대로 넘기면 ⑥절이 validate에서만
+ * 죽어, 엔진(`input.expenses = parseAmount(primary.directExpenses)` — transfer-tax-api.ts:238-243)과
+ * 판정이 갈린다. **같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — 인자까지 같아야 한다.**
+ */
+function withExpenses(asset: AssetForm) {
+  return { ...asset, expenses: parseAmount(asset.directExpenses ?? "") };
+}
+
+/**
  * V1·V2 — 별개 취득 자산의 파트별 취득가액 필수 검증.
  *
  * 토지·건물을 서로 다른 시점에 취득했다면 취득가액은 파트별로 실재하며, 총액에서 잔액을
@@ -99,7 +109,24 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     // `building`에서 건물분 기준시가(§99①1호 나목)를 명시 입력하면 엔진은 결합 총액을 버리고
     // 토지분을 `㎡당 공시지가 × 면적`으로만 산출한다. 그 3요소 중 하나라도 비면
     // `calcAcqStdPair`가 null → 분리 계산 전체가 **오류 없이 비활성**된다(§3.1 동형 결함).
-    if (asset.assetKind === "building" && opt(asset.buildingStandardPriceAtAcq) != null) {
+    //
+    // ⚠️ **술어 게이트 필수**(2026-07-29). UI는 취득시 기준시가 카드를 `requiresAcqStdPrice`로
+    //    게이팅하므로, 실가/실가로 되돌린 사용자에게는 입력 칸이 없다. 그 상태에서 잔존한
+    //    `buildingStandardPriceAtAcq`만 보고 차단하면 **입력 칸이 없는데 막히는 dead-end**가 된다
+    //    (⑧ 규칙 — UI 통과 ↔ validate 차단 모순). 술어가 false면 그 값은 계산에 쓰이지 않으므로
+    //    all-or-nothing을 요구할 이유도 없다.
+    if (
+      asset.assetKind === "building" &&
+      opt(asset.buildingStandardPriceAtAcq) != null &&
+      requiresAcqStdPrice(withExpenses(asset), {
+        landMode: effectivePartAcqMode(asset.landAcqMode, asset),
+        buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
+        isSeparate: true,
+        hasSaleRatio:
+          opt(asset.landStandardPriceAtTransfer) != null &&
+          opt(asset.buildingStandardPriceAtTransfer) != null,
+      })
+    ) {
       if (opt(asset.standardPricePerSqmAtAcq) == null || opt(asset.acquisitionArea) == null) {
         return `${label}: 건물분 취득시 기준시가를 입력하면 토지분도 취득 당시 ㎡당 개별공시지가와 토지 면적으로 산출해야 합니다 — 둘 다 입력하세요(소득세법 §99①1호 가목·나목).`;
       }
@@ -147,7 +174,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   //    취득시 기준시가 요건 자체가 사라지므로, 더 실행 가능한 오류를 먼저 보여야 한다.
   if (
     separateAcq &&
-    requiresAcqStdPrice(asset, { landMode, buildingMode, isSeparate: true, hasSaleRatio })
+    requiresAcqStdPrice(withExpenses(asset), { landMode, buildingMode, isSeparate: true, hasSaleRatio })
   ) {
     if (opt(asset.standardPricePerSqmAtAcq) == null || parseDecimal(asset.acquisitionArea) <= 0) {
       return `${label}: 환산·감정·매매사례 취득가액 계산에는 취득시 ㎡당 개별공시지가와 토지 면적이 필요합니다 (소득세법 §99①1호 가목).`;

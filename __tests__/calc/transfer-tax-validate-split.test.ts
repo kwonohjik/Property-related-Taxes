@@ -348,9 +348,18 @@ describe("V3 — building 축 B 파트별 독립 all-or-nothing", () => {
     ).toBeNull();
   });
 
+  // ⚠️ 아래 2건은 **환산 모드**로 검증한다(2026-07-29). V3는 `requiresAcqStdPrice` 술어를 거치므로
+  //    실가/실가에서는 발동하지 않는다 — 그 조합에서 취득시 기준시가는 계산 어디에도 쓰이지 않고,
+  //    UI도 입력 카드를 숨기므로 차단하면 **입력 칸이 없는 dead-end**가 된다
+  //    (계획서 transfer-split-part-std-card-gating.plan.md Phase 1-a(1) · anchor G10).
+  //    all-or-nothing 불변식 자체는 그대로다 — 적용 범위만 "실제로 필요한 경우"로 좁혔다.
   it("🔴 건물분 입력 + ㎡당 공시지가 미입력 → 차단 (조용한 분리 비활성 방지)", () => {
     const err = validateSplitDirectInputs(
-      bAsset({ buildingStandardPriceAtAcq: "350,000,000", standardPricePerSqmAtAcq: "" }),
+      bAsset({
+        landAcqMode: "estimated",
+        buildingStandardPriceAtAcq: "350,000,000",
+        standardPricePerSqmAtAcq: "",
+      }),
       "자산 1",
     );
     expect(err).toContain("공시지가");
@@ -358,10 +367,20 @@ describe("V3 — building 축 B 파트별 독립 all-or-nothing", () => {
 
   it("🔴 건물분 입력 + 토지 면적 미입력 → 차단", () => {
     const err = validateSplitDirectInputs(
-      bAsset({ buildingStandardPriceAtAcq: "350,000,000", acquisitionArea: "" }),
+      bAsset({ landAcqMode: "estimated", buildingStandardPriceAtAcq: "350,000,000", acquisitionArea: "" }),
       "자산 1",
     );
     expect(err).not.toBeNull();
+  });
+
+  it("실가/실가면 건물분이 잔존해도 차단하지 않는다 (dead-end 방지 — 술어 게이트)", () => {
+    // 환산일 때 건물분을 입력한 뒤 실가로 되돌린 상태. 값은 보존되지만 카드는 숨겨진다.
+    expect(
+      validateSplitDirectInputs(
+        bAsset({ buildingStandardPriceAtAcq: "350,000,000", standardPricePerSqmAtAcq: "", acquisitionArea: "" }),
+        "자산 1",
+      ),
+    ).toBeNull();
   });
 
   it("건물분 미입력 → V3 미적용 (레거시 총액 역산 한시 허용)", () => {

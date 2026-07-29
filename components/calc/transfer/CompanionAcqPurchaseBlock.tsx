@@ -151,6 +151,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       buildingTransferPrice: props.buildingTransferPrice,
       landDirectExpenses: props.landDirectExpenses,
       buildingDirectExpenses: props.buildingDirectExpenses,
+      // ⑥절 인자 — **누락하면 술어가 UI에서만 dead**가 된다. 엔진은
+      // `input.expenses = parseAmount(primary.directExpenses)`(transfer-tax-api.ts:238-243)를 받아
+      // live하므로, 넘기지 않으면 legacy 자산에서 UI 숨김 ↔ 엔진 throw로 갈린다.
+      // 같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — **인자까지 같아야** 한다.
+      expenses: parseAmount(props.asset?.directExpenses ?? ""),
     },
     {
       landMode: effLandAcqMode,
@@ -666,6 +671,14 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   buildingDirectExpenses={props.buildingDirectExpenses ?? ""}
                   onBuildingDirectExpensesChange={props.onBuildingDirectExpensesChange ?? (() => {})}
                   isSeparateAcq={isSeparateAcq}
+                  // 취득시 기준시가 노출 게이트 — 자산 전체 블록(:554)과 **같은 술어**를 공유해야
+                  // 같은 값의 노출/숨김이 어긋나지 않는다. 하위에서 재파생 금지.
+                  acqStdPriceRequired={acqStdPriceRequired}
+                  isPhdBothEstimated={
+                    !!props.asset.usePreHousingDisclosure &&
+                    effLandAcqMode === "estimated" &&
+                    effBuildingAcqMode === "estimated"
+                  }
                   asset={props.asset}
                   onAssetChange={props.onAssetChange}
                   transferDate={props.transferDate}
