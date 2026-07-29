@@ -51,7 +51,11 @@ export function validateMixedUseAsset(
   if (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition) {
     const isAppraisal = asset.isAppraisalAcquisition === true;
     const isSalesCase = asset.isSalesCaseAcquisition === true;
-    const basisLabel = isSalesCase ? "매매사례가액" : isAppraisal ? "감정가액" : "취득 실거래가";
+    // ⚠️ 3종 모두 **받침 있는 "액"으로 끝나게** 유지한다 — `:73`이 `${basisLabel}을`로 조사를
+    //    고정하므로, 받침 없는 라벨("취득 실거래가")을 쓰면 "실거래가을"이 된다(2026-07-29 정정).
+    //    조사 분기 로직을 새로 만들기보다 라벨 어미를 맞추는 쪽이 단순하고, 결과 화면 표기
+    //    (`MixedUseResultCard.tsx:334` "취득 실거래가(취득가액)")와도 어긋나지 않는다.
+    const basisLabel = isSalesCase ? "매매사례가액" : isAppraisal ? "감정가액" : "취득 실거래가액";
     // 엔진 throw 3종 사전 차단(계산기 500 대신 친절 메시지) — 실거래가·감정·매매사례 공통.
     // 실가/추계 안분은 취득시 단일 기준시가 비율이라 PHD(미공시 3-시점)·보유중용도변경(시점별 면적)·공익수용(환산 분모) 조합 미지원.
     if (asset.usePreHousingDisclosure) {
