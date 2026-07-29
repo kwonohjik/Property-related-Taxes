@@ -21,9 +21,10 @@ import { BuildingRegisterLookupField } from "./BuildingRegisterLookupField";
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
 import { BuildingUsageSelect } from "./BuildingUsageSelect";
 import { AdjustmentRateModal } from "./AdjustmentRateModal";
-import { LandParcelsSection } from "./LandParcelsSection";
 import { CompositePartsSection } from "./CompositePartsSection";
 import { ApartmentConversionSection } from "./ApartmentConversionSection";
+import { SectionCard } from "./BuildingStdSectionCard";
+import { BuildingStdValuationSections } from "./BuildingStdValuationSections";
 import {
   type BuildingStdPriceFormState,
   initialBuildingStdPriceForm,
@@ -41,7 +42,6 @@ import {
   type BuildingStandardPriceResult,
 } from "@/lib/tax-engine/building-standard-price";
 import { listStructureOptions, listUsageOptions } from "@/lib/tax-engine/data/building-standard-price";
-import { calcSpecialAdjustmentRate } from "@/lib/tax-engine/building-standard-price-helpers";
 
 interface Props {
   onResult: (
@@ -95,45 +95,6 @@ function YearSelect({
         ))}
       </SelectContent>
     </Select>
-  );
-}
-
-function SectionCard({
-  num,
-  title,
-  tone,
-  children,
-  testId,
-}: {
-  num: number;
-  title: string;
-  tone: "sky" | "amber" | "emerald" | "violet" | "rose";
-  children: React.ReactNode;
-  /**
-   * E2E 스코프용. 취득/양도 시점 블록은 필드 구성이 같아 `nth()` 서수로 집으면
-   * 조건부 렌더(≤2000 취득 공시지가 등)에 서수가 밀려 **다른 시점 칸에 값이 들어간다**.
-   * 시점 단위로 스코프해 그 클래스를 차단한다.
-   */
-  testId?: string;
-}) {
-  const T: Record<string, { border: string; bg: string; badge: string; text: string }> = {
-    sky: { border: "border-sky-200", bg: "bg-sky-50/40", badge: "bg-sky-200 text-sky-800", text: "text-sky-700" },
-    amber: { border: "border-amber-200", bg: "bg-amber-50/40", badge: "bg-amber-200 text-amber-800", text: "text-amber-700" },
-    emerald: { border: "border-emerald-200", bg: "bg-emerald-50/40", badge: "bg-emerald-200 text-emerald-800", text: "text-emerald-700" },
-    violet: { border: "border-violet-200", bg: "bg-violet-50/40", badge: "bg-violet-200 text-violet-800", text: "text-violet-700" },
-    rose: { border: "border-rose-200", bg: "bg-rose-50/40", badge: "bg-rose-200 text-rose-800", text: "text-rose-700" },
-  };
-  const t = T[tone];
-  return (
-    <div data-testid={testId} className={`rounded-lg border p-3 space-y-2.5 ${t.border} ${t.bg}`}>
-      <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold ${t.badge}`}>
-          {num}
-        </span>
-        <span className={`text-sm font-semibold ${t.text}`}>{title}</span>
-      </div>
-      {children}
-    </div>
   );
 }
 
@@ -262,6 +223,12 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
   }, [valYear, f.valStructureKey]);
   const apartmentConv = f.taxType === "transfer" && f.apartmentConversionMode;
   const composite = f.compositeMode && !isMech && !apartmentConv;
+  // 단일 시점 모드 — 모달 applyTimePoint가 폼 상태로 주입. 그 시점 입력만 노출한다.
+  // ⚠️ 동일연도(§164⑧)는 양도값이 취득값에서 파생되므로 2시점 입력을 모두 되살린다
+  //    (엔진·validate와 동일 게이트 — toEngineInput/validateBuildingStdPriceForm 참조).
+  const singleActive = !!f.singleTimePoint && !sameYear && !isMech && !apartmentConv;
+  const acqOnly = singleActive && f.singleTimePoint === "acquisition";
+  const transferOnly = singleActive && f.singleTimePoint === "transfer";
   // 양도 복합 — 취득시 용도지수표 기준 연도(≤2000=2001)
   const acqUsageYear = acqIndexYear;
   // 연면적 입력 불요: 복합구조(부분별)·공동주택 환산(자체 연면적)
@@ -418,8 +385,19 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       {f.taxType === "transfer" && (
         <>
           <SectionCard num={2} title="취득 시점" tone="amber" testId="bsp-section-acq">
-            <div className="grid grid-cols-2 gap-2">
-              <FieldCard label="취득연도" stacked>
+            {/* 양도 전용 모드 — 취득 시점은 양도당시 기준시가 산정에 쓰이지 않는다.
+                다만 §164⑧(취득연도 == 양도연도) 판정에 취득연도가 필요해 연도 칸만 남긴다. */}
+            {transferOnly && (
+              <p
+                className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-xs text-amber-800"
+                data-testid="bsp-transfer-only-note"
+              >
+                양도당시 기준시가는 양도 시점 정보만으로 산정됩니다. 취득연도가 양도연도와 같은 경우에만
+                취득당시 기준시가를 환산해 쓰므로(소득령 §164⑧), 아래 취득연도만 확인합니다.
+              </p>
+            )}
+            <div className={transferOnly ? "" : "grid grid-cols-2 gap-2"}>
+              <FieldCard label="취득연도" stacked={!transferOnly}>
                 <YearSelect
                   years={acqYearOpts}
                   value={f.acquisitionYear}
@@ -428,16 +406,18 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                   }
                 />
               </FieldCard>
-              <FieldCard label="취득일" hint="계산서 일자 표기용(선택)" stacked>
-                <DateInput value={f.acquisitionEventDate} onChange={(v) => set("acquisitionEventDate", v)} />
-              </FieldCard>
+              {!transferOnly && (
+                <FieldCard label="취득일" hint="계산서 일자 표기용(선택)" stacked>
+                  <DateInput value={f.acquisitionEventDate} onChange={(v) => set("acquisitionEventDate", v)} />
+                </FieldCard>
+              )}
             </div>
-            {acqIndexYear === 2001 && !apartmentConv && (
+            {!transferOnly && acqIndexYear === 2001 && !apartmentConv && (
               <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-xs text-violet-700">
                 2000년 이전 취득 — 2001.1.1 ㎡당 금액 × 산정기준율로 환산됩니다. 구조·용도는 2001년 지수표 기준입니다.
               </p>
             )}
-            {!isMech && !apartmentConv && !composite && (
+            {!transferOnly && !isMech && !apartmentConv && !composite && (
               <div className="grid grid-cols-2 gap-2">
                 <FieldCard label="취득당시 구조" stacked>
                   <BuildingStructureSelect year={acqIndexYear} value={f.acqStructureKey} onChange={(v) => set("acqStructureKey", v)} />
@@ -447,7 +427,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 </FieldCard>
               </div>
             )}
-            {!isMech && !apartmentConv &&
+            {!transferOnly && !isMech && !apartmentConv &&
               (acqIndexYear === 2001 ? (
                 // 2000.12.31 이전 취득 — 위치지수는 2001.1.1 현재 공시지가 기준(고시 §6①·소령 §164⑤).
                 // 취득연도 공시지가가 아닌 2001.1.1 값으로 고정. 토지기준시가 표시는 숨김(이 값은
@@ -475,8 +455,9 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               ))}
           </SectionCard>
 
-          {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별). PHD 2시점 미지원 → 숨김 */}
-          {!isMech && !apartmentConv && !phd && (
+          {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별).
+              PHD 2시점·단일 시점 모드는 엔진이 2시점 경로로 되돌리므로 숨김. */}
+          {!isMech && !apartmentConv && !phd && !singleActive && (
             <ToggleCard
               checked={f.compositeMode}
               onCheckedChange={(v) => set("compositeMode", v)}
@@ -498,8 +479,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             </ToggleCard>
           )}
 
-          {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체. PHD 2시점 맥락 미사용 → 숨김 */}
-          {!isMech && !composite && !phd && (
+          {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체. PHD·단일 시점 맥락 미사용 → 숨김 */}
+          {!isMech && !composite && !phd && !singleActive && (
             <ToggleCard
               checked={f.apartmentConversionMode}
               onCheckedChange={(v) => set("apartmentConversionMode", v)}
@@ -517,7 +498,8 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             </ToggleCard>
           )}
 
-          {!apartmentConv && (
+          {/* 취득 전용 모드 — 취득시 기준시가는 취득연도 정보만으로 산정된다(양도 시점 불요) */}
+          {!apartmentConv && !acqOnly && (
           <>
           <SectionCard num={3} title={transferSectionLabel ?? "양도 시점"} tone="emerald" testId="bsp-section-transfer">
             <div className="grid grid-cols-2 gap-2">
@@ -610,159 +592,21 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
         </>
       )}
 
-      {/* 상증 분기 */}
+      {/* 상증 분기(1시점) — 800줄 정책 분리 */}
       {f.taxType === "inheritance_gift" && (
-        <>
-          <SectionCard num={2} title="평가 시점" tone="emerald">
-            <RadioCardGroup
-              name="inheritanceGiftKind"
-              tone="violet"
-              layout="inline"
-              value={f.inheritanceGiftKind}
-              onChange={(v) => set("inheritanceGiftKind", v as BuildingStdPriceFormState["inheritanceGiftKind"])}
-              options={[
-                { value: "inheritance", label: "상속세" },
-                { value: "gift", label: "증여세" },
-              ]}
-            />
-            <FieldCard
-              label="상속·증여일"
-              hint="상속개시일·증여일 — 평가연도가 자동 산정됩니다. 일자 입력 후 구조·용도·공시지가 조회가 활성화됩니다."
-            >
-              <DateInput value={f.eventDate} onChange={setEventDateDeriveYear} />
-            </FieldCard>
-            {!isMech && (
-              <>
-                {/* 복합구조 토글 — 층·구역별 구조·용도 상이 */}
-                <ToggleCard
-                  checked={f.compositeMode}
-                  onCheckedChange={(v) => set("compositeMode", v)}
-                  title="복합구조 (층·구역별 구조·용도 상이)"
-                  tone="violet"
-                  variant="card"
-                >
-                  <CompositePartsSection
-                    year={valYear}
-                    parts={f.compositeParts}
-                    onPartsChange={(parts) => set("compositeParts", parts)}
-                    ancillaryAreas={f.ancillaryAreas}
-                    onAncillaryChange={(a) => set("ancillaryAreas", a)}
-                    ancillaryFloors={f.ancillaryFloors}
-                    onAncillaryFloorsChange={(fl) => set("ancillaryFloors", fl)}
-                    buildingFeatures={f.adjustmentFeatures}
-                    onBuildingFeaturesChange={(features) => set("adjustmentFeatures", features)}
-                    isResidentialUse={f.isResidentialUse}
-                    isApartmentUse={f.isApartmentUse}
-                    onResidentialChange={(v) => set("isResidentialUse", v)}
-                    onApartmentChange={(v) => set("isApartmentUse", v)}
-                  />
-                </ToggleCard>
-
-                {!composite && (
-                  <>
-                    <FieldCard label="건물 구조">
-                      <BuildingStructureSelect
-                        year={valYear}
-                        value={f.valStructureKey}
-                        onChange={(v) => set("valStructureKey", v)}
-                      />
-                    </FieldCard>
-                    <FieldCard label="건물 용도">
-                      <BuildingUsageSelect
-                        year={valYear}
-                        value={f.valUsageNo}
-                        onChange={(v) => set("valUsageNo", v)}
-                      />
-                    </FieldCard>
-                  </>
-                )}
-
-                {/* 다필지 토글 — 위치지수 면적가중평균 */}
-                <ToggleCard
-                  checked={f.landParcelMode}
-                  onCheckedChange={(v) => set("landParcelMode", v)}
-                  title="다필지 부속토지 (위치지수 가중평균)"
-                  tone="sky"
-                  variant="card"
-                  description="부속토지가 여러 필지면 각 필지 면적 × ㎡당 공시지가의 가중평균으로 위치지수를 산정합니다(고시 §6⑥). 활성화 시 아래 단일 공시지가 대신 필지별로 입력합니다."
-                >
-                  <LandParcelsSection
-                    parcels={f.landParcels}
-                    onChange={(parcels) => set("landParcels", parcels)}
-                    jibun={jibun}
-                    referenceDate={landRefFromEvent(f.eventDate, f.valuationYear)}
-                  />
-                </ToggleCard>
-
-                {!f.landParcelMode && (
-                  <LandPriceLookupField
-                    pricePerSqm={f.valLandPrice}
-                    onPricePerSqmChange={(v) => set("valLandPrice", v)}
-                    area={landArea}
-                    jibun={jibun}
-                    referenceDate={landRefFromEvent(f.eventDate, f.valuationYear)}
-                    label="㎡당 개별공시지가"
-                    hint="2001~2002년 평가는 해당연도 1.1 기준"
-                  />
-                )}
-              </>
-            )}
-          </SectionCard>
-
-          {!isMech && !composite && (
-            <SectionCard num={3} title="조정률" tone="violet">
-              <RadioCardGroup
-                name="adjustmentMode"
-                tone="violet"
-                layout="inline"
-                value={f.adjustmentMode}
-                onChange={(v) => {
-                  const mode = v as BuildingStdPriceFormState["adjustmentMode"];
-                  set("adjustmentMode", mode);
-                  // "건물 특성으로 계산" 선택 시 모달 자동 오픈(사용자 클릭 시에만 — useEffect 미사용)
-                  if (mode === "features") setAdjOpen(true);
-                }}
-                options={[
-                  { value: "features", label: "건물 특성으로 계산" },
-                  { value: "manual", label: "직접 입력(%)" },
-                ]}
-              />
-              {f.adjustmentMode === "features" ? (
-                f.adjustmentFeatures && Object.keys(f.adjustmentFeatures).length > 0 ? (
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
-                      특성 {Object.keys(f.adjustmentFeatures).length}개 적용 · 조정률{" "}
-                      {(
-                        calcSpecialAdjustmentRate(
-                          f.adjustmentFeatures,
-                          valStructureIndex || 100,
-                          parseFloat(f.floorArea.replace(/,/g, "")) || 0,
-                          { isResidential: f.isResidentialUse, isApartment: f.isApartmentUse },
-                        ) * 100
-                      ).toFixed(1)}
-                      %
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setAdjOpen(true)}
-                      className="text-xs font-medium text-green-700 underline underline-offset-2 hover:text-green-900"
-                    >
-                      다시 계산
-                    </button>
-                  </div>
-                ) : (
-                  <Button variant="modalLauncher" size="sm" onClick={() => setAdjOpen(true)}>
-                    건물 특성으로 계산 열기
-                  </Button>
-                )
-              ) : (
-                <FieldCard label="조정률" hint="100 = 1.0(미적용)">
-                  <DecimalInput value={f.manualAdjustmentRate} onChange={(v) => set("manualAdjustmentRate", v)} unit="%" placeholder="100" />
-                </FieldCard>
-              )}
-            </SectionCard>
-          )}
-        </>
+        <BuildingStdValuationSections
+          f={f}
+          set={set}
+          onEventDateChange={setEventDateDeriveYear}
+          isMech={isMech}
+          composite={composite}
+          valYear={valYear}
+          valStructureIndex={valStructureIndex}
+          jibun={jibun}
+          landArea={landArea}
+          landRefFromEvent={landRefFromEvent}
+          onOpenAdjustment={() => setAdjOpen(true)}
+        />
       )}
 
       <Button className="w-full" onClick={handleCalc}>

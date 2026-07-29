@@ -109,7 +109,14 @@ export function BuildingStdPriceModalButton({
     prefill?.acqLandPricePerSqm,
     prefill?.acqLandPricePerSqm2001,
   );
-  const prefillForm: Partial<BuildingStdPriceFormState> = prefill
+  // 단일 시점 모드 — applyTimePoint가 지정된 호출부는 그 시점 필드에만 값을 주입하므로
+  // 반대 시점 입력을 요구하지 않는다. onApplyBoth(2시점 동시 적용)·미지정(시점 자유)은 종전 2시점.
+  // ⚠️ 폼 **상태**로 넘겨야 스냅샷 재계산(계산서 서식·PDF)에서 모드가 복원된다.
+  const singleTimePoint = onApplyBoth ? undefined : applyTimePoint;
+  const prefillForm: Partial<BuildingStdPriceFormState> = {
+    // prefill 유무와 무관하게 주입 — 모드는 자동입력값이 아니라 호출부 계약이다
+    ...(singleTimePoint ? { singleTimePoint } : {}),
+    ...(prefill
     ? {
         ...(prefill.floorArea ? { floorArea: prefill.floorArea } : {}),
         ...(prefill.landAreaM2 ? { landAreaM2: prefill.landAreaM2 } : {}),
@@ -125,7 +132,8 @@ export function BuildingStdPriceModalButton({
           ? { eventDate: prefill.transferDate, ...(transYear ? { transferYear: transYear } : {}) }
           : {}),
       }
-    : {};
+    : {}),
+  };
 
   const apply = (v: number, land?: number) => {
     onApply?.(v, land && land > 0 ? land : undefined);
