@@ -129,6 +129,22 @@ export function calcLandStdPriceAtAcq(pricePerSqm: number, area: number): number
   return Math.floor(pricePerSqm * area);
 }
 
+/**
+ * 건물분 취득시 기준시가 — **결합 총액에서 토지분을 뺀 역산** (소득세법 §99①1호 라목).
+ *
+ * 주택의 개별주택가격·공동주택가격은 **부수토지를 포함한 결합 공시**라 건물분 단독 공시가
+ * 존재하지 않는다. 이 역산이 정본이며, `토지분 + 건물분 ≡ 라목 총액` 항등성을 지켜
+ * 개산공제 합계를 법정액(시행령 §163⑥2호가목 = 라목 가액 × 3/100)과 일치시킨다.
+ *
+ * **엔진(`calcAcqStdPair`)과 UI 읽기 전용 표시가 공유하는 단일 소스**다 — UI가 같은 식을
+ * 재구현하면 clamp 규약이 갈려 표시값과 계산값이 어긋난다
+ * (`feedback_ui_engine_dual_truth_avoidance`). 총액 미입력(≤0)은 산출 불가라 `null`이다.
+ */
+export function calcDerivedBuildingStdAtAcq(total: number, landStd: number): number | null {
+  if (!(total > 0)) return null;
+  return Math.max(total - landStd, 0);
+}
+
 export function isSeparateAcquisition(asset: SeparateAcquisitionFlags): boolean {
   if (!asset.hasSeperateLandAcquisitionDate) return false;
   if (!asset.landAcquisitionDate || !asset.acquisitionDate) return false;

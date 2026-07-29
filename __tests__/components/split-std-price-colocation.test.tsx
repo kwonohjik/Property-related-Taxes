@@ -195,6 +195,68 @@ describe("배치 불변식 — 같은 카드가 두 곳에 동시 노출되지 �
   });
 });
 
+/**
+ * 이미지 8 — 주택 + 건물 환산에서 「취득시 건물기준시가」가 화면에 없던 문제(사용자 보고 2026-07-30).
+ *
+ * 주택(§99①1호 라목)은 부수토지 포함 결합 공시라 건물분 단독 입력 칸을 둘 수 없다
+ * (개산공제 법정액 §163⑥2호가목 이탈). 입력은 위쪽 두 곳에 두되 **역산 결과를 건물 섹션에 표시**한다.
+ */
+describe("이미지 8 — 주택 건물분 취득시 기준시가 파생 표시", () => {
+  const CASE8: Init = {
+    ...SPLIT_ACTUAL,
+    assetKind: "housing",
+    landAcqMode: "actual",
+    buildingAcqMode: "estimated",
+    landAcquisitionPrice: "150,000,000",
+  };
+
+  const derivedCard = () => screen.queryAllByTestId("split-building-std-acq-derived-card");
+  const derivedValue = () => screen.queryAllByTestId("split-building-std-acq-derived");
+
+  it("🔴 건물 섹션에 취득시 건물기준시가가 표시된다", () => {
+    render(<Harness init={CASE8} />);
+    expect(derivedCard(), "값이 어디에도 안 보이면 환산 분자를 확인할 수 없다").toHaveLength(1);
+  });
+
+  it("결합 총액 − 토지분 역산값을 보여준다 (엔진 calcAcqStdPair와 같은 산식)", () => {
+    render(
+      <Harness
+        init={{
+          ...CASE8,
+          standardPriceAtAcq: "500,000,000",
+          standardPricePerSqmAtAcq: "1,000,000",
+          acquisitionArea: "200", // 토지분 = 200,000,000
+        }}
+      />,
+    );
+    expect(derivedValue()[0].textContent).toBe("300,000,000");
+  });
+
+  it("총액 미입력 → 어디를 채워야 하는지 안내한다 (조용한 0 금지)", () => {
+    render(<Harness init={{ ...CASE8, standardPriceAtAcq: "" }} />);
+    expect(derivedValue()[0].textContent).toContain("취득시 기준시가(개별·공동주택가격)");
+  });
+
+  it("직접 입력 칸은 두지 않는다 — 라목 항등성 유지", () => {
+    render(<Harness init={CASE8} />);
+    expect(
+      screen.queryAllByTestId("split-building-std-acq"),
+      "주택에 건물분 직접 입력을 열면 토지분+건물분 ≡ 총액이 깨져 개산공제가 법정액을 이탈",
+    ).toHaveLength(0);
+  });
+
+  it("일반건물은 종전대로 직접 입력 카드 — 파생 카드 미노출", () => {
+    render(<Harness init={{ ...CASE8, assetKind: "building" }} />);
+    expect(derivedCard()).toHaveLength(0);
+    expect(screen.queryAllByTestId("split-building-std-acq-card")).toHaveLength(1);
+  });
+
+  it("취득시 기준시가가 계산에 불필요하면(양쪽 실가) 파생 카드도 없다", () => {
+    render(<Harness init={{ ...CASE8, buildingAcqMode: "actual", buildingAcquisitionPrice: "100,000,000" }} />);
+    expect(derivedCard()).toHaveLength(0);
+  });
+});
+
 describe("건물 계산 런처 라벨 — 취득시·양도시 구분", () => {
   it("일반건물 + 양쪽 환산 → 두 런처의 라벨이 시점으로 구분된다", () => {
     render(
