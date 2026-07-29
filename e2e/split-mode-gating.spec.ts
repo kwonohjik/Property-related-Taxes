@@ -159,6 +159,32 @@ test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령
       "라목 역산이 되살아나면 건물 칸이 자동으로 채워진다",
     ).toHaveValue("");
   });
+
+  /**
+   * 「양도시 건물 기준시가 계산」 모달은 양도 시점 필드만 쓴다(applyTimePoint="transfer").
+   * 계획서: docs/02-design/features/building-std-modal-single-timepoint.plan.md
+   */
+  test("양도시 건물 기준시가 모달 — 단일 시점(취득 구조·용도·공시지가 미노출)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+
+    await page.getByRole("button", { name: /양도시 건물 기준시가 계산/ }).click();
+    const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
+    await expect(modal).toBeVisible();
+
+    // 취득 시점 입력은 노출되지 않는다 — §164⑧ 판정용 취득연도 칸만 남는다
+    await expect(modal.getByTestId("bsp-transfer-only-note")).toBeVisible();
+    await expect(modal.getByText("취득당시 구조")).toHaveCount(0);
+    await expect(modal.getByText("취득당시 용도")).toHaveCount(0);
+    await expect(modal.getByText("취득당시 ㎡당 개별공시지가")).toHaveCount(0);
+    // exact:true — 위 안내 문구에도 "취득연도"가 들어가 substring 매칭이면 strict violation
+    await expect(modal.getByText("취득연도", { exact: true })).toBeVisible();
+
+    // 양도 시점 입력은 그대로
+    await expect(modal.getByText("양도당시 구조")).toBeVisible();
+    await expect(modal.getByText("양도당시 용도")).toBeVisible();
+  });
 });
 
 test("부담부증여 → 파트별 모드 선택 자체 숨김 + 취득·양도가액 칸 모두 숨김 (§159 안분 기준)", async ({
