@@ -40,8 +40,6 @@ interface Props {
   onLandTransferPriceChange: (v: string) => void;
   buildingTransferPrice: string;
   onBuildingTransferPriceChange: (v: string) => void;
-  landStandardPriceAtTransfer: string;
-  onLandStandardPriceAtTransferChange: (v: string) => void;
   buildingStandardPriceAtTransfer: string;
   onBuildingStandardPriceAtTransferChange: (v: string) => void;
 
@@ -65,10 +63,12 @@ interface Props {
  * 기준일은 **양도일**이다 — 취득일이 아니다(§164③ 직전 고시분).
  * 자동 계산 후에도 아래 총액 2칸은 수동 편집 가능하다(홈택스 실제 고시액 우선).
  */
-function TransferLandStdPrice(props: {
+function TransferStdPriceCard(props: {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
+  buildingStandardPriceAtTransfer: string;
+  onBuildingStandardPriceAtTransferChange: (v: string) => void;
 }) {
   const { asset, onChange, transferDate } = props;
 
@@ -92,7 +92,7 @@ function TransferLandStdPrice(props: {
   }
 
   return (
-    <ToneCard tone="emerald" title="양도시 토지 기준시가 자동 계산 (§99①1호 가목)" noDark>
+    <ToneCard tone="emerald" title="양도시 기준시가 (§99①1호 가목·나목)" noDark>
       <LandPriceLookupField
         label="양도시 토지 공시지가"
         pricePerSqm={asset.standardPricePerSqmAtTransfer}
@@ -102,14 +102,36 @@ function TransferLandStdPrice(props: {
         referenceDate={transferDate}
         jibun={asset.addressJibun}
         hint="양도일 직전 고시 개별공시지가 (원/㎡) — 취득일이 아니다 (소득령 §164③)"
+        landStdPriceTestId="split-land-std-transfer"
       />
-      <FieldCard label="토지 면적 (양도 당시)" unit="㎡" hint="양도시 토지 기준시가 = ㎡당 공시지가 × 이 면적">
-        <DecimalInput
-          value={asset.transferArea}
-          onChange={(v) => writeLandStd(asset.standardPricePerSqmAtTransfer, v)}
-          data-testid="split-land-std-transfer-area"
-        />
-      </FieldCard>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 items-start">
+        <FieldCard label="토지 면적 (양도 당시)" unit="㎡" hint="양도시 토지 기준시가 = ㎡당 공시지가 × 이 면적">
+          <DecimalInput
+            value={asset.transferArea}
+            onChange={(v) => writeLandStd(asset.standardPricePerSqmAtTransfer, v)}
+            data-testid="split-land-std-transfer-area"
+          />
+        </FieldCard>
+        {/* 건물분(나목)은 국세청장 산정액이라 계산기 결과를 덮어쓸 수 있어야 한다 — 편집 가능 유지.
+            반면 토지분(가목)은 `개별공시지가 × 면적`이 정의 그 자체라 별도 고시 총액이 없어
+            수동 입력 칸을 두지 않는다(위 「토지기준시가」 자동 표시가 최종값). */}
+        <FieldCard label="양도시 건물 기준시가" unit="원" hint="안분 분모 겸 환산취득가 분모 — 계산기로 산정 (§99①1호 나목)">
+          <div className="space-y-1.5">
+            <CurrencyInput
+              label=""
+              hideUnit
+              value={props.buildingStandardPriceAtTransfer}
+              onChange={props.onBuildingStandardPriceAtTransferChange}
+              data-testid="split-building-std-transfer"
+            />
+            <TransferBuildingStdPriceButton
+              asset={asset}
+              onChange={onChange}
+              transferDate={transferDate}
+            />
+          </div>
+        </FieldCard>
+      </div>
     </ToneCard>
   );
 }
@@ -177,7 +199,7 @@ export function LandBuildingSaleSplitSection(props: Props) {
   return (
     <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-muted-foreground">
+        <p className="text-sm font-medium leading-tight">
           이 자산의 토지·건물 양도가액 결정 방식
         </p>
         <div data-testid="sale-split-mode">
@@ -190,7 +212,7 @@ export function LandBuildingSaleSplitSection(props: Props) {
             onChange={props.onSaleSplitModeChange}
           />
         </div>
-        {props.saleSplitMode === "actual" ? (
+        {props.saleSplitMode === "actual" && (
           <div className="grid grid-cols-2 gap-2">
             <FieldCard label="토지 양도가액" hint="소득령 §166⑥">
               <CurrencyInput label="" value={props.landTransferPrice} onChange={props.onLandTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-land-transfer-price" />
@@ -199,38 +221,17 @@ export function LandBuildingSaleSplitSection(props: Props) {
               <CurrencyInput label="" value={props.buildingTransferPrice} onChange={props.onBuildingTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-building-transfer-price" />
             </FieldCard>
           </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            양도시 기준시가 비율로 자동 안분됩니다(부가가치세법 시행령 §64①1호 준용).
-          </p>
         )}
       </div>
 
       {needsSaleStdPrice && props.asset && props.onAssetChange && (
-        <TransferLandStdPrice
+        <TransferStdPriceCard
           asset={props.asset}
           onChange={props.onAssetChange}
           transferDate={props.transferDate}
+          buildingStandardPriceAtTransfer={props.buildingStandardPriceAtTransfer}
+          onBuildingStandardPriceAtTransferChange={props.onBuildingStandardPriceAtTransferChange}
         />
-      )}
-      {needsSaleStdPrice && (
-        <div className="grid grid-cols-2 gap-2">
-          <FieldCard label="양도시 토지 기준시가" hint="안분 분모 겸 환산취득가 분모 — 위 공시지가 × 면적으로 자동 계산">
-            <CurrencyInput label="" value={props.landStandardPriceAtTransfer} onChange={props.onLandStandardPriceAtTransferChange} data-testid="split-land-std-transfer" />
-          </FieldCard>
-          <FieldCard label="양도시 건물 기준시가" hint="안분 분모 겸 환산취득가 분모 — 계산기로 산정 (§99①1호 나목)">
-            <div className="space-y-1.5">
-              <CurrencyInput label="" value={props.buildingStandardPriceAtTransfer} onChange={props.onBuildingStandardPriceAtTransferChange} data-testid="split-building-std-transfer" />
-              {props.asset && props.onAssetChange && (
-                <TransferBuildingStdPriceButton
-                  asset={props.asset}
-                  onChange={props.onAssetChange}
-                  transferDate={props.transferDate}
-                />
-              )}
-            </div>
-          </FieldCard>
-        </div>
       )}
     </div>
   );

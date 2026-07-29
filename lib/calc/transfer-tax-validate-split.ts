@@ -131,7 +131,9 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     opt(asset.buildingTransferPrice) == null &&
     !hasSaleRatio
   ) {
-    return `${label}: 구분양도를 선택했으면 토지·건물 양도가액을 입력하거나, 양도시 토지·건물 기준시가를 입력하세요 (§166⑥ — 양도 당시 기준시가 비율로 안분).`;
+    // ⚠️ 안내 문구는 **실제 입력 칸의 이름**과 일치해야 한다 — 토지분 총액 칸은 표시 전용으로
+    //    바뀌었으므로(2026-07-29) "양도시 토지 기준시가를 입력하세요"라고 하면 없는 칸을 찾게 된다.
+    return `${label}: 구분양도를 선택했으면 토지·건물 양도가액을 입력하거나, 양도시 토지 공시지가·면적과 건물 기준시가를 입력하세요 (§166⑥ — 양도 당시 기준시가 비율로 안분).`;
   }
 
   // ── V5. 취득시 기준시가 — **필요할 때만** 필수 (2026-07-29 사용자 확정 규칙 ③) ──────────
@@ -158,7 +160,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     const landStd = opt(asset.landStandardPriceAtTransfer);
     const buildingStd = opt(asset.buildingStandardPriceAtTransfer);
     if (landStd == null || buildingStd == null) {
-      return `${label}: 일괄양도 안분·환산취득가 계산에는 토지·건물 양도시 기준시가가 필요합니다(§166⑥ 양도 당시 기준시가). 국세청 홈택스 기준시가 조회 후 입력하세요.`;
+      return `${label}: 일괄양도 안분·환산취득가 계산에는 토지·건물 양도시 기준시가가 필요합니다(§166⑥ 양도 당시 기준시가). 토지는 ㎡당 공시지가·면적을, 건물은 기준시가 계산기로 산정해 입력하세요.`;
     }
   }
 

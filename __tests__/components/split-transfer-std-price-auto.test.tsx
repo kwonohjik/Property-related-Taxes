@@ -36,10 +36,6 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
       onSaleSplitModeChange={() => {}}
       landTransferPrice="" onLandTransferPriceChange={() => {}}
       buildingTransferPrice="" onBuildingTransferPriceChange={() => {}}
-      landStandardPriceAtTransfer={asset.landStandardPriceAtTransfer}
-      onLandStandardPriceAtTransferChange={(v: string) =>
-        setAsset((a) => ({ ...a, landStandardPriceAtTransfer: v }))
-      }
       buildingStandardPriceAtTransfer={asset.buildingStandardPriceAtTransfer}
       onBuildingStandardPriceAtTransferChange={(v: string) =>
         setAsset((a) => ({ ...a, buildingStandardPriceAtTransfer: v }))
@@ -53,7 +49,11 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
 
 const perSqmInput = () => screen.getByPlaceholderText("원/㎡") as HTMLInputElement;
 const areaInput = () => screen.getByTestId("split-land-std-transfer-area") as HTMLInputElement;
-const landTotal = () => screen.getByTestId("split-land-std-transfer") as HTMLInputElement;
+/**
+ * 토지 기준시가는 **표시 전용**이다(2026-07-29) — §99①1호 가목상 `개별공시지가 × 면적`이
+ * 정의 그 자체라 별도 고시 총액이 없어 수동 입력 칸을 두지 않는다.
+ */
+const landTotal = () => screen.getByTestId("split-land-std-transfer").textContent ?? "";
 const buildingTotal = () => screen.getByTestId("split-building-std-transfer") as HTMLInputElement;
 
 describe("A. 일반 건물(가목+나목) — 파트 독립 산정", () => {
@@ -62,19 +62,19 @@ describe("A. 일반 건물(가목+나목) — 파트 독립 산정", () => {
     fireEvent.change(perSqmInput(), { target: { value: "5000000" } });
     fireEvent.change(areaInput(), { target: { value: "200" } });
 
-    expect(landTotal().value).toBe("1,000,000,000"); // floor(5,000,000 × 200)
+    expect(landTotal()).toBe("1,000,000,000"); // floor(5,000,000 × 200)
     // 단가·면적도 같은 배치 patch로 보존돼야 한다 (stale spread 덮어쓰기 회귀 가드)
     expect(perSqmInput().value).toBe("5,000,000");
     expect(areaInput().value).toBe("200");
   });
 
-  it("A-2 자동 계산 후 총액 수동 편집 → 수동값 유지 (덮어쓰지 않는다)", () => {
+  it("A-2 토지 총액 수동 입력 칸은 없다 — 가목상 `공시지가 × 면적`이 정의 그 자체", () => {
     render(<Harness init={{ assetKind: "building" }} />);
     fireEvent.change(perSqmInput(), { target: { value: "5000000" } });
     fireEvent.change(areaInput(), { target: { value: "200" } });
-    fireEvent.change(landTotal(), { target: { value: "987654321" } });
-
-    expect(landTotal().value).toBe("987,654,321");
+    // 표시 전용 div — input이 아니다(중복 입력 제거)
+    expect(screen.getByTestId("split-land-std-transfer").tagName).toBe("DIV");
+    expect(landTotal()).toBe("1,000,000,000");
   });
 
   it("A-3 건물분은 「건물 기준시가 계산」 모달로 독립 산정 (나목 별도 공시)", () => {
@@ -87,7 +87,7 @@ describe("A. 일반 건물(가목+나목) — 파트 독립 산정", () => {
     fireEvent.change(perSqmInput(), { target: { value: "3333333" } });
     fireEvent.change(areaInput(), { target: { value: "76.51" } });
 
-    expect(landTotal().value).toBe(Math.floor(3333333 * 76.51).toLocaleString("en-US"));
+    expect(landTotal()).toBe(Math.floor(3333333 * 76.51).toLocaleString("en-US"));
   });
 });
 
@@ -104,7 +104,7 @@ describe("B. 주택(housing) — 일반 건물과 동일하게 파트별 독립 
     fireEvent.change(perSqmInput(), { target: { value: "3000000" } });
     fireEvent.change(areaInput(), { target: { value: "100" } });
 
-    expect(landTotal().value).toBe("300,000,000");
+    expect(landTotal()).toBe("300,000,000");
     expect(
       buildingTotal().value,
       "라목 결합 총액에서 토지분을 뺀 역산이 되살아나면 안 된다 — 건물은 계산기로 독립 산정한다",
@@ -120,7 +120,7 @@ describe("B. 주택(housing) — 일반 건물과 동일하게 파트별 독립 
     render(<Harness init={housingInit} />);
     fireEvent.change(perSqmInput(), { target: { value: "540000" } });
     fireEvent.change(areaInput(), { target: { value: "206.6" } });
-    expect(landTotal().value).toBe(Math.floor(540000 * 206.6).toLocaleString("en-US"));
+    expect(landTotal()).toBe(Math.floor(540000 * 206.6).toLocaleString("en-US"));
   });
 });
 
@@ -138,7 +138,7 @@ describe("C. 게이트 — 회귀 0", () => {
 
   it("라벨은 '양도시 토지/건물 기준시가' 어순 (시점 → 대상)", () => {
     render(<Harness init={{ assetKind: "building" }} />);
-    expect(screen.getByText("양도시 토지 기준시가")).toBeTruthy();
+    expect(screen.getByText("양도시 기준시가 (§99①1호 가목·나목)")).toBeTruthy();
     expect(screen.getByText("양도시 건물 기준시가")).toBeTruthy();
   });
 });
