@@ -58,6 +58,71 @@ const ASSET_KIND_OPTIONS = [
   { value: "presale_right", label: "분양권" },
 ] as const;
 
+type AreaScenario = NonNullable<AssetForm["areaScenario"]>;
+
+/**
+ * 면적 시나리오 허용 자산유형 — **키 부재 = 면적 섹션 미렌더**.
+ *
+ * 자산유형마다 전용 전체면적 필드가 이미 존재하므로(docs/02-design/area-taxonomy.md ·
+ * transfer-asset-area-basic-info.engine.design.md §4.1), 여기 등재하는 것은
+ * `acquisitionArea`/`transferArea`를 소비하면서 **전용 입력 섹션이 없는** 자산유형뿐이다.
+ *
+ *   land    → acquisitionArea/transferArea (본 섹션이 정본)
+ *   housing → acquisitionArea (PHD·환산이 소비. 종전엔 PHD 섹션에만 입력 칸이 있어
+ *             PHD를 끄면 입력 수단이 사라졌다 → 본 섹션으로 승격)
+ *
+ * 등재하지 않는 자산유형과 그 전용 필드:
+ *   housing+겸용        → mixedUseTotalLandArea (MixedUseAreaInputs)
+ *   commercial_building → cbLandArea + cbExclusiveArea + cbSharedArea (§164⑥ 3축)
+ *   general_building    → gbLandArea + gbBuildingArea + gbBuildingFootprintArea
+ *   redevelopment_apt · right_to_move_in → redevLandArea
+ * 이들을 등재하면 같은 면적을 두 곳에서 입력받게 된다.
+ *
+ * 환지(reduction·increase)는 소득령 §162의2 토지 제도이므로 land 전용.
+ */
+const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
+  Record<AssetForm["assetKind"], AreaScenario[]>
+> = {
+  land: ["same", "partial", "reduction", "increase"],
+  housing: ["same", "partial"],
+};
+
+const AREA_SCENARIO_LABEL: Record<AreaScenario, string> = {
+  same: "취득면적 = 양도면적 (일반)",
+  partial: "일부 양도 — 취득 토지 중 일부만 양도",
+  reduction: "환지처분 (감환지) — 교부면적 < 권리면적",
+  increase: "환지처분 (증환지) — 교부면적 > 권리면적",
+};
+
+/** 이 자산에서 선택 가능한 면적 시나리오. 빈 배열 = 면적 섹션 미렌더. */
+function areaScenarioOptions(asset: AssetForm): AreaScenario[] {
+  // 겸용주택은 mixedUseTotalLandArea + 겸용 전용 섹션이 전체 면적을 담당한다.
+  if (asset.assetKind === "housing" && asset.isMixedUseHouse) return [];
+  return AREA_SCENARIOS_BY_ASSET_KIND[asset.assetKind] ?? [];
+}
+
+/**
+ * assetKind 변경 시 함께 보낼 면적 패치.
+ * 새 자산유형에서 허용되지 않는 areaScenario가 stale로 남으면 숨은 분기(환지 3필드 등)가
+ * 계산에 반영된다 → 허용 목록 첫 항목으로 리셋하고 환지 전용 필드를 비운다.
+ * useEffect 미러링 금지 정책상 assetKind onChange와 **단일 배치**로 전달한다.
+ */
+function areaResetPatchForAssetKind(
+  asset: AssetForm,
+  nextKind: AssetForm["assetKind"],
+): Partial<AssetForm> {
+  const allowed = areaScenarioOptions({ ...asset, assetKind: nextKind });
+  const current = asset.areaScenario ?? "same";
+  if (allowed.length === 0 || allowed.includes(current)) return {};
+  return {
+    areaScenario: allowed[0],
+    replottingConfirmDate: "",
+    entitlementArea: "",
+    allocatedArea: "",
+    priorLandArea: "",
+  };
+}
+
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
@@ -136,7 +201,12 @@ export function AssetSectionBasic({
               )}
               <button
                 type="button"
-                onClick={() => onChange({ assetKind: opt.value })}
+                onClick={() =>
+                  onChange({
+                    assetKind: opt.value,
+                    ...areaResetPatchForAssetKind(asset, opt.value),
+                  })
+                }
                 className={cn(
                   "px-3 py-1.5 rounded-md text-sm border transition-colors",
                   asset.assetKind === opt.value
@@ -294,8 +364,9 @@ export function AssetSectionBasic({
         </div>
       )}
 
-      {/* 면적 정보 — 토지 자산만 표시 */}
-      {asset.assetKind === "land" && (
+      {/* 면적 정보 — AREA_SCENARIOS_BY_ASSET_KIND 등재 자산유형만 표시.
+          전용 면적 섹션을 가진 자산유형(겸용·상가·일반건물·재개발)은 미렌더 — 중복 입력 방지. */}
+      {areaScenarioOptions(asset).length > 0 && (
         <div className="space-y-3">
           <div
             className={cn(
@@ -338,28 +409,15 @@ export function AssetSectionBasic({
               >
                 <SelectTrigger className="h-9 w-full" data-testid="area-scenario-select">
                   <span className="text-left">
-                    {asset.areaScenario === "partial"
-                      ? "일부 양도 — 취득 토지 중 일부만 양도"
-                      : asset.areaScenario === "reduction"
-                        ? "환지처분 (감환지) — 교부면적 < 권리면적"
-                        : asset.areaScenario === "increase"
-                          ? "환지처분 (증환지) — 교부면적 > 권리면적"
-                          : "취득면적 = 양도면적 (일반)"}
+                    {AREA_SCENARIO_LABEL[asset.areaScenario ?? "same"]}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="same">
-                    취득면적 = 양도면적 (일반)
-                  </SelectItem>
-                  <SelectItem value="partial">
-                    일부 양도 — 취득 토지 중 일부만 양도
-                  </SelectItem>
-                  <SelectItem value="reduction">
-                    환지처분 (감환지) — 교부면적 &lt; 권리면적
-                  </SelectItem>
-                  <SelectItem value="increase">
-                    환지처분 (증환지) — 교부면적 &gt; 권리면적
-                  </SelectItem>
+                  {areaScenarioOptions(asset).map((sc) => (
+                    <SelectItem key={sc} value={sc}>
+                      {AREA_SCENARIO_LABEL[sc]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -368,7 +426,9 @@ export function AssetSectionBasic({
             {(asset.areaScenario ?? "same") === "same" && (
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">
-                  취득·양도 당시 면적 (㎡)
+                  {asset.assetKind === "housing"
+                    ? "취득·양도 당시 토지 면적 (㎡)"
+                    : "취득·양도 당시 면적 (㎡)"}
                   <span
                     title="취득·양도 기준시가 = ㎡ 단가 × 이 면적. 공시가격 자동 조회 및 환산취득가 계산에 사용됩니다."
                     className="ml-1 cursor-help"
