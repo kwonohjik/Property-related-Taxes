@@ -494,3 +494,54 @@ describe("V5 — 구분양도 선택 시 양도가액 구분 근거 필수 (규�
     ).toBeNull();
   });
 });
+
+/**
+ * P0 anchor — 「양도시 기준시가 자동 계산」 설계 전제 실측.
+ * 계획서: docs/02-design/features/transfer-split-transfer-std-price-auto.plan.md (§6 P0)
+ *
+ * validate는 **총액 필드**(land/buildingStandardPriceAtTransfer)만 본다.
+ * ㎡당 공시지가·면적을 아무리 채워도 총액이 비면 차단된다 → UI가 총액을 기록해야 한다는 설계 근거.
+ * (취득시 축 B는 반대로 3요소를 각각 검증한다 — 엔진이 단가×면적을 스스로 계산하기 때문. §5 대조)
+ */
+describe("P0 anchor — 양도시 기준시가는 총액 필드로만 검증된다 (자동계산 설계 전제)", () => {
+  it("🔴 ㎡당 공시지가 + 양도면적만 입력, 총액 미기록 → 여전히 차단", () => {
+    const err = validateSplitDirectInputs(
+      splitAsset({
+        saleSplitMode: "apportioned",
+        standardPricePerSqmAtTransfer: "5,000,000",
+        transferArea: "200",
+        // landStandardPriceAtTransfer / buildingStandardPriceAtTransfer 미기록
+      }),
+      "자산 1",
+    );
+    expect(err).toContain("양도시 기준시가");
+  });
+
+  it("토지 총액만 기록(건물 미기록) → 여전히 차단 (부분 입력 보완 없음)", () => {
+    const err = validateSplitDirectInputs(
+      splitAsset({
+        saleSplitMode: "apportioned",
+        standardPricePerSqmAtTransfer: "5,000,000",
+        transferArea: "200",
+        landStandardPriceAtTransfer: "1,000,000,000",
+      }),
+      "자산 1",
+    );
+    expect(err).toContain("양도시 기준시가");
+  });
+
+  it("단가 × 면적 = 총액을 UI가 기록하면 통과 (자동계산 목표 상태)", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({
+          saleSplitMode: "apportioned",
+          standardPricePerSqmAtTransfer: "5,000,000",
+          transferArea: "200",
+          landStandardPriceAtTransfer: "1,000,000,000", // floor(5,000,000 × 200)
+          buildingStandardPriceAtTransfer: "300,000,000",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+});

@@ -19,6 +19,7 @@ import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
 import { isPhdEligible } from "./phd-eligibility";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
+import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { validateExprValuationAsset } from "./transfer-tax-validate-expropriation";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import { validateAuctionAsset } from "./transfer-tax-validate-expropriation";
@@ -476,8 +477,17 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   //    ※ 재개발/재건축(assetKind === "redevelopment_apt")은 위 §166 분기에서 이미 return 처리됨.
   if (!isEstimated && !hasPre1990) {
     if (asset.acquisitionCause === "purchase") {
-      if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
-        return `${label}: ${isAppraisal ? "감정가액" : "취득가액"}을 입력하세요.`;
+      // ⚠️ **별개 취득(토지·건물 취득시점 상이)은 총액을 요구하지 않는다**.
+      // UI가 자산 전체 취득가액 칸을 숨기고(`CompanionAcqPurchaseBlock` isSeparateAcq 게이트 —
+      // "별개 취득이면 파트 블록이 대신한다") 파트별 칸으로 대체하므로, 총액을 여기서 요구하면
+      // **입력할 칸이 화면에 없는데 그 칸을 채우라고 막는** 상태가 된다(⑧ 규칙 위반 — 계산 영구 차단).
+      // 파트별 필수는 `validateSplitDirectInputs`(:524) → `validateSeparateAcqParts`(V1·V2)가
+      // 담당하며, 그쪽이 "토지/건물 취득가액을 입력하세요"로 **채울 칸을 지목**한다.
+      // 판정은 엔진·API·UI와 **같은 헬퍼**(isSeparateAcquisition) — 재구현하면 dual-truth가 된다.
+      if (!isSeparateAcquisition(asset)) {
+        if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
+          return `${label}: ${isAppraisal ? "감정가액" : "취득가액"}을 입력하세요.`;
+      }
     } else if (asset.acquisitionCause === "gift") {
       if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
         return `${label}: 증여 신고가액을 입력하세요.`;
