@@ -336,7 +336,33 @@ A안은 표시 문구, Phase 3는 문자열 상수 변경이므로 해당 지점
 
 → ① 취득일을 `acq-date-building` 스코프로, ② 런처를 「③ 상가 기준시가」 섹션 스코프로 한정 → **통과**.
 
-### 🔴 N-2. 같은 rot 가족 2건 + **배후 프로덕션 결함 의심**
+### ✅ N-2. 같은 rot 가족 2건 + **배후 프로덕션 결함 — 해소(2026-07-29)**
+
+**실측 결론: 겸용에서 축 A 입력은 전송되지만 소비되지 않는다.**
+
+| 계층 | 실측 |
+|---|---|
+| UI | 겸용은 `hasSeperate` 강제 ON → `isSplit` true → 축 A 렌더 |
+| API | `isSplitPayloadActive`도 true → 축 A 필드 **전송됨** |
+| **Route** | `app/api/calc/transfer/route.ts:568` 겸용 분기가 **early-return** — `calculateTransferTax`(→ `calcTransferGain` → `calcSplitGain`)를 **호출조차 하지 않는다** |
+| 엔진 | `transfer-tax-mixed-use*.ts`가 `landTransferPrice`·`saleSplitMode`·`buildingStandardPriceAtTransfer`를 읽는 지점 **0건**. 양도가액은 자체 4부분 안분으로 산출(`-commercial.ts:157-158`은 내부 계산값) |
+
+→ 계획서가 정한 ⑵ 경로대로 **겸용에서 축 A를 숨기는 프로덕션 수정**을 적용했다
+(`CompanionAcqDateSection` 축 A 렌더 조건에 `&& !isMixedUse`). 취득일 2열은 **유지** —
+그 값은 엔진이 실제로 소비한다(B안 기각 근거와 동일).
+
+**효과 검증**: 축 A 제거만으로 `mixed-use-transfer-landprice-fallback.spec.ts`가 **원본 그대로 통과**
+(공시지가 칸 4 → 3 복귀). 계획서의 "spec부터 고치면 되돌려야 한다"는 예측이 맞았다.
+
+`mixed-use-asset-major-commercial-modal.spec.ts`는 축 A 제거로 런처 문제는 풀렸으나
+**취득일 rot(N-1 rot ①과 동일)**이 남아 실패 지점이 이동했다 → `acq-date-building` 스코프로 교체해 통과.
+
+anchor: `split-acq-date-mixed-note.test.tsx` E6-a·E6-b(7건 전건 GREEN).
+검증: 겸용 관련 E2E **42건 순차 전건 통과** · 전체 12,251 통과 · tsc·톤·폰트 0건.
+
+---
+
+### (원본 기록) N-2 최초 관측
 
 N-1 수정 후 겸용 E2E를 순차 전수 실행하다 **추가 사전존재 실패 2건**을 발견했다
 (변경분을 `git stash`로 되돌려도 동일 실패 — 본 작업 무관 확인).
