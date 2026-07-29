@@ -654,7 +654,34 @@ export function buildGeneralBuildingAssetCards(
   // 초과분이 있으면 토지를 사업용·비사업용 2장으로 분할 (§104의3 초과분만 중과)
   const assetCards: AssetCardForAggregate[] = [];
 
-  if (!isWithinNblRatio && nonBusinessRatio > 0) {
+  if (!isWithinNblRatio && nonBusinessRatio >= 1) {
+    // 전체 비사업용 (1장) — 인정면적 0이라 사업용분이 존재하지 않는다.
+    //
+    // 2026-07-29 정정(#591 감사 R7 — 표시 전용, 세액 불변): 종전에는 이 경우에도 분할 분기로
+    // 들어가 **전액 0원짜리 "토지-사업용(1001)" 유령 카드**가 생성됐다. 무허가건축물
+    // (`isUnregistered` → `allowedLandArea = 0`)이 대표 케이스다.
+    // 근거: 지방세법 시행령 §101①단서 + 소득세법 §104의3①4호나목 — 무허가건축물 부속토지는
+    // **전체 비사업용**으로 사업용분이 없다. 0원 카드는 양도차익 기여가 0이라 세액은 같지만,
+    // 결과 화면에 존재하지 않는 자산이 한 장 더 뜨고 신고서 행 수가 어긋난다.
+    assetCards.push({
+      propertyId: "land_nbl",
+      propertyLabel: "토지-비사업용(1001)",
+      propertyType: "land",
+      transferPrice: allocation.land,
+      acquisitionPrice: acquisition.land,
+      expenses: estimatedDeduction.land,
+      usedEstimatedAcquisition: true,
+      estimatedBase: acquisition.land,
+      estimatedDeduction: estimatedDeduction.land,
+      acquisitionDate: input.acquisitionDate,
+      transferDate: input.transferDate,
+      isNonBusinessLand: true,
+      landAcquisitionCause: input.landAcquisitionCause,
+      decedentAcquisitionDate: input.decedentAcquisitionDate,
+      donorAcquisitionDate: input.donorAcquisitionDate,
+      carryoverTaxation: input.landCarryoverTaxation,
+    });
+  } else if (!isWithinNblRatio && nonBusinessRatio > 0) {
     // 토지 카드 1: 사업용 (인정면적 직접 안분 — round 의존 제거)
     const landBusinessTransfer = apportionLandByBusinessArea(allocation.land, allowedLandArea, input.landArea);
     const landBusinessAcq = apportionLandByBusinessArea(acquisition.land, allowedLandArea, input.landArea);
