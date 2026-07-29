@@ -125,3 +125,69 @@ export function isSeparateAcquisition(asset: SeparateAcquisitionFlags): boolean 
   if (asset.assetKind === "housing" && asset.isMixedUseHouse) return false;
   return true;
 }
+
+/** 미입력 판정 — `AssetForm`은 string(콤마 포함), 엔진 input은 number라 두 형태를 모두 받는다. */
+function empty(v: string | number | undefined | null): boolean {
+  if (v == null) return true;
+  if (typeof v === "number") return !(v > 0);
+  return !(raw(v) > 0);
+}
+
+interface AcqStdPriceNeedFlags {
+  landAcquisitionPrice?: string | number;
+  buildingAcquisitionPrice?: string | number;
+  landTransferPrice?: string | number;
+  buildingTransferPrice?: string | number;
+  landDirectExpenses?: string | number;
+  buildingDirectExpenses?: string | number;
+  /** 자산 전체 자본적지출 총액 (legacy `directExpenses` 경로에서만 > 0) */
+  expenses?: number;
+}
+
+/** 모드·별개취득·양도안분비 판정은 각 계층의 기존 단일 소스가 파생해 주입한다(재파생 금지). */
+interface AcqStdPriceNeedContext {
+  landMode: PartAcqMode;
+  buildingMode: PartAcqMode;
+  isSeparate: boolean;
+  /** 양도시 기준시가 비율이 산출 가능한가 — 엔진은 `calcSaleApportionRatio() != null` */
+  hasSaleRatio: boolean;
+}
+
+/**
+ * **취득시 기준시가(㎡당 개별공시지가 × 면적)가 실제로 필요한가.**
+ *
+ * 계획서: docs/02-design/features/transfer-split-acq-std-gate-relaxation.plan.md §3·§4.1
+ *
+ * 취득시 기준시가는 취득가액을 **환산해야 할 때만** 필요하다. 토지·건물 양쪽의 실지거래가액을
+ * 아는 경우(케이스 a)에는 계산 어디에도 등장하지 않으므로 요구해서는 안 된다
+ * (2026-07-29 사용자 확정 규칙 ③).
+ *
+ * 아래 4개 절은 `transfer-tax-split-gain.ts`의 소비 지점과 1:1로 대응한다(계획서 §3 표):
+ *   1절 ①환산 분자 · ②개산공제 base(§163⑥) · ⑧stdPriceAtAcq echo · ⑨lumpDeductionBase
+ *   2절 ③취득가액 안분 · ④매매사례 안분   3절 ⑤양도가액 안분 fallback   4절 ⑥자본적지출 안분
+ *
+ * `splitPair`는 **양쪽 다 미입력일 때만** 비율을 쓰므로(한쪽만 있으면 잔액 도출) 2·3·4절의
+ * 조건이 모두 "2칸 모두 미입력"인 것이다.
+ *
+ * **엔진·validate·UI가 이 함수 하나를 공유**한다 — 조건을 각자 재기술하면 dual-truth가 된다
+ * (선례: `isSplitPairOverflow`를 엔진이 export하고 validate가 import).
+ */
+export function requiresAcqStdPrice(
+  a: AcqStdPriceNeedFlags,
+  ctx: AcqStdPriceNeedContext,
+): boolean {
+  // ① 환산 분자 · ② 개산공제 base · ⑧ echo · ⑨ lumpDeductionBase — 실가가 아닌 파트가 하나라도 있으면 필요
+  if (ctx.landMode !== "actual" || ctx.buildingMode !== "actual") return true;
+
+  // ③④ 취득가액 안분 — 별개취득은 파트별 완결이라 안분 자체가 없다(§97①1호·§114⑦).
+  //     비-별개취득에서 파트 2칸이 모두 비면 비율 안분이 유일한 도출 수단이다.
+  if (!ctx.isSeparate && empty(a.landAcquisitionPrice) && empty(a.buildingAcquisitionPrice)) return true;
+
+  // ⑤ 양도가액 안분 — 양도시 기준시가 비율도 없고 구분 입력도 없으면 취득시 비율로 후퇴한다.
+  if (!ctx.hasSaleRatio && empty(a.landTransferPrice) && empty(a.buildingTransferPrice)) return true;
+
+  // ⑥ 자본적지출 — legacy 총액을 안분해야 하는데 파트 2칸이 모두 빈 경우.
+  if ((a.expenses ?? 0) > 0 && empty(a.landDirectExpenses) && empty(a.buildingDirectExpenses)) return true;
+
+  return false;
+}

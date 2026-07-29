@@ -53,8 +53,8 @@ describe("S1: housing 2주택 + 환산취득가 + 안분 모드 (이미지 케�
     expect(result).not.toBeNull();
     // 토지 기준시가 = 2,369,000 × 212 = 502,228,000 → 전체(483,000,000) 초과로 클램핑
     // 토지 안분비율 = 1.0 (클램핑), 건물 = 0
-    expect(result!.apportionRatio.land).toBeCloseTo(1.0, 5);
-    expect(result!.apportionRatio.building).toBeCloseTo(0, 5);
+    expect(result!.apportionRatio!.land).toBeCloseTo(1.0, 5);
+    expect(result!.apportionRatio!.building).toBeCloseTo(0, 5);
   });
 
   it("calcSplitGain: 보유연수 분리 계산", () => {
@@ -194,8 +194,8 @@ describe("S3: building 일반건물 + 환산취득가", () => {
     // 토지 기준시가 = 2,000,000 × 300 = 600,000,000
     // 전체 기준시가 = 800,000,000
     // 토지 안분비율 = 600/800 = 0.75, 건물 = 0.25
-    expect(result!.apportionRatio.land).toBeCloseTo(0.75, 5);
-    expect(result!.apportionRatio.building).toBeCloseTo(0.25, 5);
+    expect(result!.apportionRatio!.land).toBeCloseTo(0.75, 5);
+    expect(result!.apportionRatio!.building).toBeCloseTo(0.25, 5);
   });
 
   it("calcSplitGain: 토지 > 건물 보유연수 (민법 초일불산입 기준)", () => {

@@ -32,7 +32,9 @@ const saleSplitGroup = (p: Page) => p.getByTestId("sale-split-mode");
 const landAcq = (p: Page) => p.getByTestId("split-land-acq-price");
 const landTransfer = (p: Page) => p.getByTestId("split-land-transfer-price");
 const landSalesCase = (p: Page) => p.getByTestId("split-land-salescase-value");
-const landTransferStdPrice = (p: Page) => p.getByText("토지 양도시 기준시가");
+// 라벨 텍스트가 아니라 testid로 잡는다 — "양도시 토지 기준시가"는 자동 계산 블록의 면적 hint에도
+// 부분 문자열로 등장해 getByText가 strict mode violation을 낸다.
+const landTransferStdPrice = (p: Page) => p.getByTestId("split-land-std-transfer");
 
 test.describe("P1 — 분리 모드 취득시 기준시가 입력 노출", () => {
   // 계획서: transfer-separate-acq-date-per-part-completion.plan.md §3.1
@@ -127,6 +129,37 @@ test.describe("양도 방식 게이팅 — 취득과 독립", () => {
   });
 });
 
+test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령 §64①1호 준용)", () => {
+  // 계획서: docs/02-design/features/transfer-split-transfer-std-price-auto.plan.md
+  // setupSplitAsset은 "주택"을 고르지만, 양도가액 안분은 주택이라도 파트별 독립 공시액을 쓴다
+  // (라목 결합 총액 − 토지분 역산 금지 — 2026-07-29 사용자 확정).
+  test("㎡당 공시지가 × 양도면적 → 양도시 토지 기준시가 자동 기록", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+
+    await page.getByPlaceholder("원/㎡").fill("540000");
+    await page.getByTestId("split-land-std-transfer-area").fill("206.6");
+    await expect(landTransferStdPrice(page)).toHaveValue("111,564,000");
+  });
+
+  test("🔴 건물분은 계산기로 산정 — 토지 입력이 건물 칸을 자동 도출하지 않는다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+
+    // 주택이어도 「양도시 건물 기준시가 계산」 런처가 있어야 한다
+    await expect(page.getByRole("button", { name: /양도시 건물 기준시가 계산/ })).toBeVisible();
+
+    await page.getByPlaceholder("원/㎡").fill("540000");
+    await page.getByTestId("split-land-std-transfer-area").fill("206.6");
+    await expect(
+      page.getByTestId("split-building-std-transfer"),
+      "라목 역산이 되살아나면 건물 칸이 자동으로 채워진다",
+    ).toHaveValue("");
+  });
+});
+
 test("부담부증여 → 파트별 모드 선택 자체 숨김 + 취득·양도가액 칸 모두 숨김 (§159 안분 기준)", async ({
   page,
 }) => {
@@ -216,6 +249,22 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     // 건물분 명시 입력은 주택에 노출하지 않는다 — 라목 결합 공시(역산이 정본)
     await expect(page.getByTestId("split-building-std-acq")).toHaveCount(0);
     await expect(page.getByTestId("split-housing-building-derived-note")).toBeVisible();
+  });
+
+  test("🔴 U9: 파트별 취득가액을 다 넣으면 '취득가액을 입력하세요'로 차단하지 않는다", async ({ page }) => {
+    // 버그(2026-07-29 사용자 보고): 별개 취득은 자산 전체 취득가액 칸이 UI에서 사라지는데
+    // validate가 그 총액을 계속 요구해, 파트 금액을 다 넣어도 계산이 영구 차단됐다.
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+    await landAcq(page).fill("150000000");
+    await page.getByTestId("split-building-acq-price").fill("100000000");
+
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+
+    await expect(
+      page.getByText("취득가액을 입력하세요", { exact: false }),
+      "입력할 칸이 화면에 없는 총액을 요구하면 사용자가 오류를 해소할 방법이 없다",
+    ).toHaveCount(0);
   });
 
   test("U5: 분리 토글 OFF 복귀 → 상단 입력 복원 (폼 상태 보존)", async ({ page }) => {
