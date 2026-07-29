@@ -235,6 +235,22 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
   });
 
 
+  test("🔴 U10: 주택 별개취득 — 취득시 토지 공시지가·면적 입력이 노출된다", async ({ page }) => {
+    // 계획서: transfer-split-acq-std-gate-relaxation.plan.md §4.7 (PR2)
+    // 종전에는 축 B 블록이 assetKind==="building" 전용이라, 주택은 이 두 값을 입력할 칸이
+    // 앱 어디에도 없었다(공용 StandardPriceInput은 주택에서 총액 칸만·면적 블록은 land 전용).
+    // → 엔진 calcAcqStdPair가 항상 null → 환산·감정·매매사례 파트 취득가액이 조용히 0.
+    // setupSplitAsset은 "주택"을 고른다.
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+
+    await expect(page.getByTestId("split-land-std-acq-area")).toBeVisible();
+    await expect(page.getByText("취득시 토지 공시지가")).toBeVisible();
+    // 건물분 명시 입력은 주택에 노출하지 않는다 — 라목 결합 공시(역산이 정본)
+    await expect(page.getByTestId("split-building-std-acq")).toHaveCount(0);
+    await expect(page.getByTestId("split-housing-building-derived-note")).toBeVisible();
+  });
+
   test("🔴 U9: 파트별 취득가액을 다 넣으면 '취득가액을 입력하세요'로 차단하지 않는다", async ({ page }) => {
     // 버그(2026-07-29 사용자 보고): 별개 취득은 자산 전체 취득가액 칸이 UI에서 사라지는데
     // validate가 그 총액을 계속 요구해, 파트 금액을 다 넣어도 계산이 영구 차단됐다.
