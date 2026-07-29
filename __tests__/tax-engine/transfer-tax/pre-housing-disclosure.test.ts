@@ -354,6 +354,10 @@ describe("D-11: preHousingDisclosure 미제공 시 기존 경로 회귀", () => 
       acquisitionMethod: "estimated",
       standardPriceAtAcquisition: 484_828_268,
       standardPriceAtTransfer: 627_000_000,
+      // 양도가액 안분 근거(§166⑥ → 부가세령 §64①1호). 폐지된 취득시 비율 fallback이
+      // 산출하던 값과 동일(취득 토지분 500,320,000 > 총액 → 비율 100%)이라 기대값 불변.
+      landStandardPriceAtTransfer: 627_000_000,
+      buildingStandardPriceAtTransfer: 0,
       standardPricePerSqmAtAcquisition: 2_360_000,
       acquisitionArea: PHD_LAND_AREA,
       expenses: 0,

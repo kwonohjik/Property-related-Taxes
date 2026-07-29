@@ -80,7 +80,7 @@ describe("validateSplitDirectInputs — 양도시 기준시가 필수 (§7.2, 20
 
   it("estimated 파트(환산) + 양도시 기준시가 미입력 → 차단", () => {
     const err = validateSplitDirectInputs(
-      splitAsset({ saleSplitMode: "actual", useEstimatedAcquisition: true }),
+      splitAsset({ saleSplitMode: "actual", useEstimatedAcquisition: true, landTransferPrice: "600,000,000" }),
       "자산 1",
     );
     expect(err).toContain("양도시 기준시가");
@@ -100,7 +100,7 @@ describe("validateSplitDirectInputs — 양도시 기준시가 필수 (§7.2, 20
   });
 
   it("actual 구분양도 + 실가 파트 → 양도시 기준시가 불필요(미입력 통과)", () => {
-    expect(validateSplitDirectInputs(splitAsset({ saleSplitMode: "actual" }), "자산 1")).toBeNull();
+    expect(validateSplitDirectInputs(splitAsset({ saleSplitMode: "actual", landTransferPrice: "600,000,000" }), "자산 1")).toBeNull();
   });
 });
 
@@ -126,12 +126,12 @@ describe("validateSplitDirectInputs — 양도가액 (케이스 6·6-b)", () => 
 
 describe("validateSplitDirectInputs — 취득가액 (케이스 6-c)", () => {
   it("정상: 건물만 1.5억 (총 4억) → 통과", () => {
-    expect(validateSplitDirectInputs(splitAsset({ buildingAcquisitionPrice: "150,000,000" }), "자산 1")).toBeNull();
+    expect(validateSplitDirectInputs(splitAsset({ buildingAcquisitionPrice: "150,000,000", landTransferPrice: "600,000,000" }), "자산 1")).toBeNull();
   });
 
   it("케이스 6-c: 토지 2.5억 + 건물 2억 = 4.5억 (총 4억) → 차단", () => {
     const err = validateSplitDirectInputs(
-      splitAsset({ landAcquisitionPrice: "250,000,000", buildingAcquisitionPrice: "200,000,000" }),
+      splitAsset({ landAcquisitionPrice: "250,000,000", buildingAcquisitionPrice: "200,000,000", landTransferPrice: "600,000,000" }),
       "자산 1",
     );
     expect(err).toContain("합이 취득가액");
@@ -154,7 +154,7 @@ describe("validateSplitDirectInputs — 취득가액 (케이스 6-c)", () => {
   it("매매사례가액 모드 → 취득가액 미검증 (추계액 · 칸 숨김)", () => {
     expect(
       validateSplitDirectInputs(
-        splitAsset({ isSalesCaseAcquisition: true, buildingAcquisitionPrice: "9,999,999,999" }),
+        splitAsset({ isSalesCaseAcquisition: true, buildingAcquisitionPrice: "9,999,999,999", landTransferPrice: "600,000,000" }),
         "자산 1",
       ),
     ).toBeNull();
@@ -167,7 +167,7 @@ describe("validateSplitDirectInputs — 자본적지출 (총액 = directExpenses
     // 엔진은 expenses=0 → 독립 입력으로 처리하므로 모순 자체가 없다 → validate도 통과여야 한다.
     expect(
       validateSplitDirectInputs(
-        splitAsset({ capitalExpenditure: "100,000,000", buildingDirectExpenses: "999,999,999" }),
+        splitAsset({ capitalExpenditure: "100,000,000", buildingDirectExpenses: "999,999,999", landTransferPrice: "600,000,000" }),
         "자산 1",
       ),
     ).toBeNull();
@@ -176,7 +176,7 @@ describe("validateSplitDirectInputs — 자본적지출 (총액 = directExpenses
   it("legacy directExpenses 1억 + 건물만 3천만 → 통과(잔액 7천만)", () => {
     expect(
       validateSplitDirectInputs(
-        splitAsset({ directExpenses: "100,000,000", buildingDirectExpenses: "30,000,000" }),
+        splitAsset({ directExpenses: "100,000,000", buildingDirectExpenses: "30,000,000", landTransferPrice: "600,000,000" }),
         "자산 1",
       ),
     ).toBeNull();
@@ -188,6 +188,7 @@ describe("validateSplitDirectInputs — 자본적지출 (총액 = directExpenses
         directExpenses: "100,000,000",
         landDirectExpenses: "70,000,000",
         buildingDirectExpenses: "50,000,000",
+        landTransferPrice: "600,000,000",
       }),
       "자산 1",
     );
@@ -540,6 +541,40 @@ describe("P0 anchor — 양도시 기준시가는 총액 필드로만 검증된�
           landStandardPriceAtTransfer: "1,000,000,000", // floor(5,000,000 × 200)
           buildingStandardPriceAtTransfer: "300,000,000",
         }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+});
+
+/**
+ * V4 범위 확대 — 규칙 ①은 **별개취득 여부와 무관**하다 (2026-07-29 확정).
+ * 양도가액을 나누는 규칙이므로 취득시기 상이 여부와 관계가 없다.
+ */
+describe("V4 — 비-별개취득에서도 양도가액 구분 근거 강제", () => {
+  const nonSep = (over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) =>
+    splitAsset({
+      // 취득일 동일 → 비-별개취득(겸용·소유자분리 경로)
+      acquisitionDate: "2018-06-01",
+      landAcquisitionDate: "2018-06-01",
+      saleSplitMode: "actual" as const,
+      ...over,
+    });
+
+  it("🔴 구분양도 + 양도가액 2칸 미입력 + 양도시 기준시가 없음 → 차단", () => {
+    // 종전에는 엔진이 **취득시** 비율로 조용히 안분했다(fallback 폐지 전).
+    const err = validateSplitDirectInputs(nonSep(), "자산 1");
+    expect(err).toContain("양도시 토지·건물 기준시가");
+  });
+
+  it("양도가액 한쪽 입력 → 통과 (반대쪽 잔액 확정)", () => {
+    expect(validateSplitDirectInputs(nonSep({ landTransferPrice: "600,000,000" }), "자산 1")).toBeNull();
+  });
+
+  it("양도시 기준시가 2필드 → 통과 (§64①1호 양도 당시 비율)", () => {
+    expect(
+      validateSplitDirectInputs(
+        nonSep({ landStandardPriceAtTransfer: "600,000,000", buildingStandardPriceAtTransfer: "400,000,000" }),
         "자산 1",
       ),
     ).toBeNull();
