@@ -26,6 +26,24 @@ export function idOfSnapshotKey(key: string): string {
         .replace(/-red-phd$/, "");
 }
 
+/**
+ * 시점 전용 스냅샷 키가 요구하는 인스턴스 시점 — 없으면 null(2시점 유지).
+ *
+ * 엔진 transfer **2시점** 모드는 취득+양도 2벌을 내므로, 한 시점 필드에만 연결된 스냅샷은
+ * 반대 시점 인스턴스를 걸러야 한다(한 자산이 -acq·-transfer 2스냅샷을 가지면 각 2벌 → 4벌 중복).
+ * 단일 시점 모드(`singleTimePoint`) 스냅샷은 엔진이 애초에 1벌만 내지만, **그 이전 저장분**은
+ * 여전히 2벌이므로 이 필터가 필요하다.
+ *
+ * ⚠️ 화면(BuildingStdPriceReportSection)과 PDF(building-std-pdf-data) **양쪽이 이 함수를 쓴다** —
+ * 한쪽에만 필터가 있으면 같은 계산의 화면과 PDF가 어긋난다(2026-07-30 실측: PDF에만 필터가 없어
+ * 구버전 스냅샷이 PDF에서 2벌로 나왔다). 접두는 `idOfSnapshotKey`와 같은 집합으로 유지할 것.
+ */
+export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | null {
+  if (/-(?:phd|gb|cbinh|cb|split)-acq(?:-commercial)?$/.test(key)) return "acquisition";
+  if (/-(?:gb|cb|split)-transfer$/.test(key)) return "transfer";
+  return null;
+}
+
 /** PHD 시점 라벨(계산서 헤딩용). phd 키가 아니면 null. */
 export function phdTimepointLabel(
   key: string,

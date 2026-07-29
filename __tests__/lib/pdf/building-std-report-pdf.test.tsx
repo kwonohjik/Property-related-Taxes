@@ -12,6 +12,10 @@ import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-pr
 import { buildNtsReportModel, type NtsReportContext } from "@/lib/calc/nts-report-adapter";
 import { BuildingStdReportPdfPages } from "@/lib/pdf/BuildingStdReportPdfPages";
 import { buildBuildingStdReportsFromInput } from "@/lib/calc/building-std-pdf-data";
+import {
+  initialBuildingStdPriceForm,
+  type BuildingStdPriceFormState,
+} from "@/lib/calc/building-std-price-form";
 
 // 실제 엔진 결과 → 계산서 모델 (anchor BSP-03 유형: 조정률 다구분 + 면적⑨)
 const result = calcBuildingStandardPrice({
@@ -67,5 +71,63 @@ describe("건물 기준시가 계산서 서버 PDF", () => {
     expect(buildBuildingStdReportsFromInput(undefined)).toEqual([]);
     expect(buildBuildingStdReportsFromInput({})).toEqual([]);
     expect(buildBuildingStdReportsFromInput({ buildingStdSnapshots: {} })).toEqual([]);
+  });
+});
+
+/**
+ * 시점 전용 스냅샷 — PDF 인스턴스 수가 **화면과 일치**해야 한다 (2026-07-30).
+ *
+ * PDF 어댑터에 시점 필터가 없던 동안, 단일 시점 모드 도입 이전에 저장된 스냅샷이 화면에서는 1벌인데
+ * PDF에서는 취득+양도 2벌로 나왔다. 판정은 `snapshotKeyTimepoint` 단일 소스로 양쪽이 공유한다.
+ * 화면 대응 anchor: __tests__/calc/building-std-report-phd-section.test.tsx S9.
+ */
+describe("건물 기준시가 계산서 PDF — 시점 전용 키 필터", () => {
+  /** 단일 시점 모드 이전에 저장된 2시점 양도 스냅샷(singleTimePoint 없음) */
+  const legacyTwoPoint = (): BuildingStdPriceFormState => ({
+    ...initialBuildingStdPriceForm,
+    taxType: "transfer",
+    builtYear: "2010",
+    floorArea: "200",
+    acquisitionYear: "2015",
+    acqStructureKey: "rc",
+    acqUsageNo: "1",
+    acqLandPrice: "5000000",
+    transferYear: "2025",
+    transStructureKey: "rc",
+    transUsageNo: "1",
+    transLandPrice: "7500000",
+  });
+
+  const marksFor = (key: string) =>
+    buildBuildingStdReportsFromInput({
+      assets: [{ assetId: "a1" }],
+      buildingStdSnapshots: { [key]: legacyTwoPoint() },
+    }).flatMap((m) => m.instances.map((i) => i.markCell));
+
+  it("양도 전용 키(split-transfer·gb-transfer) → 양도 1벌", () => {
+    expect(marksFor("bsp-a1-split-transfer")).toEqual(["transfer"]);
+    expect(marksFor("bsp-a1-gb-transfer")).toEqual(["transfer"]);
+  });
+
+  it("취득 전용 키(split-acq·cbinh-acq·gb-acq) → 취득 1벌", () => {
+    expect(marksFor("bsp-a1-split-acq")).toEqual(["acq2001"]);
+    expect(marksFor("bsp-a1-cbinh-acq")).toEqual(["acq2001"]);
+    expect(marksFor("bsp-a1-gb-acq")).toEqual(["acq2001"]);
+  });
+
+  // 겸용 상가 통합 모달은 한 폼에서 두 시점을 쓰므로 2벌이 정상
+  it("2시점 키(mx-commercial) → 2벌 유지", () => {
+    expect(marksFor("bsp-a1-mx-commercial")).toHaveLength(2);
+  });
+
+  // 단일 시점 모드 스냅샷은 엔진이 애초에 1벌만 낸다(필터 이전 단계에서 이미 해소)
+  it("singleTimePoint 스냅샷 → 필터 없이도 1벌", () => {
+    const marks = buildBuildingStdReportsFromInput({
+      assets: [{ assetId: "a1" }],
+      buildingStdSnapshots: {
+        "bsp-a1-std": { ...legacyTwoPoint(), singleTimePoint: "transfer" },
+      },
+    }).flatMap((m) => m.instances.map((i) => i.markCell));
+    expect(marks).toEqual(["transfer"]);
   });
 });
