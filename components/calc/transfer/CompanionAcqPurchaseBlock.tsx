@@ -15,16 +15,15 @@
 import { useState, useEffect } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import { DateInput } from "@/components/ui/date-input";
 import { cn } from "@/lib/utils";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
+import { CompanionAcqDateSection } from "./CompanionAcqDateSection";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
@@ -32,14 +31,9 @@ import { SalesCaseSection } from "./SalesCaseSection";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 
-const MIN_ACQ_DATE = "1985-01-01";
-
 // ─── 메인 블록 ────────────────────────────────────────────────────
 
 export function CompanionAcqPurchaseBlock(props: BlockProps) {
-  const [dateClampMsg, setDateClampMsg] = useState(false);
-  const [landDateClampMsg, setLandDateClampMsg] = useState(false);
-
   // 내부 fallback state (외부 props 없을 때 사용)
   const [internalPricePerSqmAtAcq, setInternalPricePerSqmAtAcq] = useState("");
   const [internalPricePerSqmAtTransfer, setInternalPricePerSqmAtTransfer] = useState("");
@@ -73,20 +67,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     acqDatePre1990;
 
   const propertyKind = toPropertyKind(props.assetKind);
-
-  // 취득일 1985.1.1. 미만 클램핑 — 입력 완료(포커스 이탈) 시에만 적용
-  function handleAcquisitionDateChange(v: string) {
-    props.onAcquisitionDateChange(v);
-    setDateClampMsg(false);
-  }
-
-  function handleAcquisitionDateBlur() {
-    const v = props.acquisitionDate;
-    if (v && v < MIN_ACQ_DATE) {
-      props.onAcquisitionDateChange(MIN_ACQ_DATE);
-      setDateClampMsg(true);
-    }
-  }
 
   // 환산취득가 + 1990.8.30. 이전 취득 토지 → pre1990Enabled 자동 체크
   // [의도적 예외] "useEffect → store 미러링 금지" 정책의 예외로 유지 — MixedUsePreHousingDisclosureSection
@@ -192,76 +172,17 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isCommercialBuilding = props.assetKind === "commercial_building";
   const isGeneralBuilding = props.assetKind === "general_building";
 
-  // 8-B-4: 의제취득 (1985.1.1) 판정 — 1985.1.1 정확히 일치 또는 그 이전 입력
-  const isDeemedAcquisitionDate = !!(
-    props.acquisitionDate && props.acquisitionDate <= "1985-01-01"
-  );
-  const isLandDeemedAcquisitionDate = !!(
-    props.landAcquisitionDate && props.landAcquisitionDate <= "1985-01-01"
-  );
-
-  function handleLandAcquisitionDateChange(v: string) {
-    props.onLandAcquisitionDateChange?.(v);
-    setLandDateClampMsg(false);
-  }
-
-  function handleLandAcquisitionDateBlur() {
-    const v = props.landAcquisitionDate;
-    if (v && v < MIN_ACQ_DATE) {
-      props.onLandAcquisitionDateChange?.(MIN_ACQ_DATE);
-      setLandDateClampMsg(true);
-    }
-  }
-
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-medium">{acqDateLabel}</span>
-          {isDeemedAcquisitionDate && (
-            <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-micro font-semibold text-amber-900">
-              의제취득(§98)
-            </span>
-          )}
-          {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
-            <ToggleCard
-              variant="chip"
-              tone="amber"
-              title="토지·건물 취득일 다름"
-              description={
-                isMixedUse
-                  ? undefined
-                  : isDeemedAcquisitionDate
-                    ? "의제취득은 동일일 권장"
-                    : "원시취득·신축 등"
-              }
-              checked={!!props.hasSeperateLandAcquisitionDate}
-              onCheckedChange={(v) =>
-                props.onHasSeperateLandAcquisitionDateChange!(v)
-              }
-            />
-          )}
-        </div>
-        <DateInput
-          value={props.acquisitionDate}
-          onChange={handleAcquisitionDateChange}
-          onBlur={handleAcquisitionDateBlur}
-          data-testid="acq-date-building"
-        />
-        {/* 안내 hint 제거(2026-07-16) — onBlur 자동 클램프 + dateClampMsg + 「의제취득(§98)」 배지가
-            이미 §98을 알려주므로 상시 노출 문구는 중복이었다. */}
-        {dateClampMsg && (
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            1985.1.1. 의제 취득일로 취득일 변경했습니다.
-          </p>
-        )}
-        {/* 8-B-5: 의제취득 + 분리 토글 ON 시 안내 (토지·건물 동일일 권장) */}
-        {isDeemedAcquisitionDate && props.hasSeperateLandAcquisitionDate && !isMixedUse && (
-          <p className="text-caption text-amber-700 leading-relaxed">
-            ⚠ 의제취득(1985.1.1)은 토지·건물이 동일 취득일로 의제됩니다. 분리 토글 비활성화 권장.
-          </p>
-        )}
-      </div>
+      <CompanionAcqDateSection
+        block={props}
+        isSplitable={isSplitable}
+        isSplit={isSplit}
+        isMixedUse={isMixedUse}
+        acqDateLabel={acqDateLabel}
+        effLandAcqMode={effLandAcqMode}
+        effBuildingAcqMode={effBuildingAcqMode}
+      />
 
       {/* 매매계약일 입력은 Step4 감면·공제(UnifiedReductionPanel)의 펼침 영역 상단으로 이동 (Round 9 정정 2026-05-06)
           이유: 입력 일관성 + 감면 사용 안 할 때 불필요한 입력 방지 */}
@@ -624,15 +545,18 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         </p>
       ) : (
         <>
-          {/* 취득시 기준시가 */}
+          {/* 취득시 기준시가 — **실제로 필요할 때만** 렌더한다(2026-07-29 사용자 확정 규칙 ③).
+              양쪽 파트가 실지거래가액이면 이 값은 계산 어디에도 등장하지 않는다.
+              ⚠️ 게이트는 여기(5-way 분기의 마지막 else) 안에만 건다 — 최상위 조건에 붙이면
+                 겸용·상가·일반건물·PHD의 「저기서 입력하세요」 길잡이 문구까지 사라진다.
+              ⚠️ 값은 지우지 않는다 — 파트 모드를 환산·감정·매매사례로 되돌리면 입력값과 함께 복귀. */}
+          {acqStdPriceRequired && (
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
               취득시 기준시가 (원){" "}
-              {acqStdPriceRequired && (
-                <span className="text-destructive" data-testid="acq-std-required-mark">
-                  *
-                </span>
-              )}
+              <span className="text-destructive" data-testid="acq-std-required-mark">
+                *
+              </span>
             </label>
             {isLand && acqDatePre1990 && (
               <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -655,15 +579,14 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               hint={
                 props.useEstimatedAcquisition
                   ? "환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
-                  : acqStdPriceRequired
-                    ? "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
-                    : "토지·건물 실지거래가액을 각각 입력했으므로 이 값은 계산에 사용되지 않습니다 (선택 입력)."
+                  : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
               }
               forceYear={pre1990ForceYear}
               enableLookup={!(isLand && acqDatePre1990)}
               pricePerSqmDisabled={isLand && acqDatePre1990}
             />
           </div>
+          )}
 
           {/* 1990.8.30. 이전 취득 토지 환산 */}
           {showPre1990 && (
@@ -719,29 +642,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
 
           {isSplit && (
             <div className="space-y-2 pl-1">
-              <FieldCard
-                label="토지 취득일"
-                trailing={
-                  isLandDeemedAcquisitionDate ? (
-                    <span className="inline-flex items-center rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-micro font-semibold text-amber-900">
-                      의제취득(§98)
-                    </span>
-                  ) : undefined
-                }
-              >
-                <DateInput
-                  value={props.landAcquisitionDate ?? ""}
-                  onChange={handleLandAcquisitionDateChange}
-                  onBlur={handleLandAcquisitionDateBlur}
-                  data-testid="acq-date-land"
-                />
-                {landDateClampMsg && (
-                  <p className="text-xs text-amber-700 dark:text-amber-400">
-                    1985.1.1. 의제 취득일로 취득일 변경했습니다.
-                  </p>
-                )}
-              </FieldCard>
-
+              {/* 토지 취득일·축 A(양도가액 구분)는 토글 직하로 이동(2026-07-29,
+                  CompanionAcqDateSection) — 여기서는 축 B(취득가액 파트별)만 렌더한다. */}
               {props.asset && props.onAssetChange && (
                 <LandBuildingSplitSection
                   selfOwns={props.selfOwns ?? "both"}
@@ -750,12 +652,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   onLandAcqModeChange={(v) => props.onAssetChange!({ landAcqMode: v })}
                   buildingAcqMode={effBuildingAcqMode}
                   onBuildingAcqModeChange={(v) => props.onAssetChange!({ buildingAcqMode: v })}
-                  saleSplitMode={props.asset.saleSplitMode ?? "apportioned"}
-                  onSaleSplitModeChange={(v) => props.onAssetChange!({ saleSplitMode: v })}
-                  landTransferPrice={props.landTransferPrice ?? ""}
-                  onLandTransferPriceChange={props.onLandTransferPriceChange ?? (() => {})}
-                  buildingTransferPrice={props.buildingTransferPrice ?? ""}
-                  onBuildingTransferPriceChange={props.onBuildingTransferPriceChange ?? (() => {})}
                   landAcquisitionPrice={props.landAcquisitionPrice ?? ""}
                   onLandAcquisitionPriceChange={props.onLandAcquisitionPriceChange ?? (() => {})}
                   buildingAcquisitionPrice={props.buildingAcquisitionPrice ?? ""}
@@ -764,10 +660,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   onLandSalesCaseValueChange={(v) => props.onAssetChange!({ landSalesCaseValue: v })}
                   buildingSalesCaseValue={props.asset.buildingSalesCaseValue ?? ""}
                   onBuildingSalesCaseValueChange={(v) => props.onAssetChange!({ buildingSalesCaseValue: v })}
-                  landStandardPriceAtTransfer={props.landStandardPriceAtTransfer ?? ""}
-                  onLandStandardPriceAtTransferChange={props.onLandStandardPriceAtTransferChange ?? (() => {})}
-                  buildingStandardPriceAtTransfer={props.buildingStandardPriceAtTransfer ?? ""}
-                  onBuildingStandardPriceAtTransferChange={props.onBuildingStandardPriceAtTransferChange ?? (() => {})}
                   landDirectExpenses={props.landDirectExpenses ?? ""}
                   onLandDirectExpensesChange={props.onLandDirectExpensesChange ?? (() => {})}
                   buildingDirectExpenses={props.buildingDirectExpenses ?? ""}

@@ -13,7 +13,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { useState } from "react";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
-import { LandBuildingSplitSection } from "@/components/calc/transfer/LandBuildingSplitSection";
+import { LandBuildingSaleSplitSection } from "@/components/calc/transfer/LandBuildingSaleSplitSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -29,30 +29,21 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
   } as AssetForm);
 
   return (
-    <LandBuildingSplitSection
-      selfOwns="both"
+    <LandBuildingSaleSplitSection
       landAcqMode={asset.landAcqMode || "actual"}
-      onLandAcqModeChange={() => {}}
       buildingAcqMode={asset.buildingAcqMode || "actual"}
-      onBuildingAcqModeChange={() => {}}
       saleSplitMode={asset.saleSplitMode ?? "apportioned"}
       onSaleSplitModeChange={() => {}}
       landTransferPrice="" onLandTransferPriceChange={() => {}}
       buildingTransferPrice="" onBuildingTransferPriceChange={() => {}}
-      landAcquisitionPrice="" onLandAcquisitionPriceChange={() => {}}
-      buildingAcquisitionPrice="" onBuildingAcquisitionPriceChange={() => {}}
-      landSalesCaseValue="" onLandSalesCaseValueChange={() => {}}
-      buildingSalesCaseValue="" onBuildingSalesCaseValueChange={() => {}}
       landStandardPriceAtTransfer={asset.landStandardPriceAtTransfer}
-      onLandStandardPriceAtTransferChange={(v) =>
+      onLandStandardPriceAtTransferChange={(v: string) =>
         setAsset((a) => ({ ...a, landStandardPriceAtTransfer: v }))
       }
       buildingStandardPriceAtTransfer={asset.buildingStandardPriceAtTransfer}
-      onBuildingStandardPriceAtTransferChange={(v) =>
+      onBuildingStandardPriceAtTransferChange={(v: string) =>
         setAsset((a) => ({ ...a, buildingStandardPriceAtTransfer: v }))
       }
-      landDirectExpenses="" onLandDirectExpensesChange={() => {}}
-      buildingDirectExpenses="" onBuildingDirectExpensesChange={() => {}}
       asset={asset}
       onAssetChange={(patch) => setAsset((a) => ({ ...a, ...patch }))}
       transferDate="2025-06-01"
