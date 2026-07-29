@@ -19,6 +19,10 @@ describe("idOfSnapshotKey — 소속 자산/재산 id 환원", () => {
     // 상증
     expect(idOfSnapshotKey("bsp-estate-item-7")).toBe("item-7");
     // 양도 자산별 (gb/cb)
+    // 시점 접미 전수 — 누락 시 id가 잘리지 않아 그 자산 계산서가 조용히 미출력된다(2026-07-29 실측)
+    expect(idOfSnapshotKey("bsp-a1-split-acq")).toBe("a1");
+    expect(idOfSnapshotKey("bsp-a1-split-transfer")).toBe("a1");
+    expect(idOfSnapshotKey("bsp-a1-cbinh-acq")).toBe("a1");
     expect(idOfSnapshotKey("bsp-a1-cb-acq")).toBe("a1");
     expect(idOfSnapshotKey("bsp-a1-cb-transfer")).toBe("a1");
     expect(idOfSnapshotKey("bsp-a1-gb-acq")).toBe("a1");
