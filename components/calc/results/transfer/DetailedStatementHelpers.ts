@@ -160,7 +160,7 @@ export function buildStatementItems(
   items.set("holdingPeriod", {
     label: "보유기간",
     value: holdingPeriodFromDates(displayAcqDate, transferDate),
-    formula: `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (월 단위 절사)`,
+    formula: `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (연·월 차이)`,
     legalBasis: "소득세법 §95②",
     perAsset: isAggregate
       ? properties.map((p) => ({

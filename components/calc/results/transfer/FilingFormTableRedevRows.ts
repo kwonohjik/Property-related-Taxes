@@ -36,6 +36,22 @@ export function fmtMonths(m?: number, d?: number): string {
   return `${Math.floor(m / 12)}년 ${m % 12}개월${d && d > 0 ? ` ${d}일` : ""}`;
 }
 
+const toIsoSlice = (d?: Date | string): string | undefined =>
+  d ? (typeof d === "string" ? d.slice(0, 10) : new Date(d).toISOString().slice(0, 10)) : undefined;
+
+/**
+ * 분기 열의 보유기간 — **그 열에 표시된 취득일자·양도일자의 연·월 차이**(2026-07-29 확정 규약).
+ * 신고서 양식 전 표(합계·토지·건물·겸용 4열·자산 합산) 단일 규약이다.
+ *
+ * 엔진 `holdingMonths`(LTHD 산정용 만-개월 절사)를 그대로 쓰지 않는다 — 표시 일자와 어긋난다
+ * (사례 37: 2007-04-09~2014-10-23 → 엔진 만 7년 vs 표시 7년 6월).
+ * 일자가 없으면 종전대로 엔진 값으로 폴백.
+ */
+function branchHoldingPeriod(b: RedevelopmentBranchDetail): string {
+  const s = holdingPeriodFromDates(toIsoSlice(b.branchAcqDate), toIsoSlice(b.branchTransferDate));
+  return s !== "-" ? s : fmtMonths(b.holdingMonths, b.holdingDays);
+}
+
 // ── 4분할 모드 (apt 또는 right+receive) ─────────────────────────
 
 /**
@@ -58,7 +74,7 @@ export function fillRedev4SplitBranchData(
   for (const [key, b] of branches) {
     const hasMonths = (b.residenceMonths ?? 0) > 0;
     const ph = hasMonths ? "(개월수만 입력됨)" : "-";
-    setStr("holdingPeriod", key, fmtMonths(b.holdingMonths, b.holdingDays));
+    setStr("holdingPeriod", key, branchHoldingPeriod(b));
     setStr("acquisitionDate", key, fmtD(b.branchAcqDate));
     setStr("transferDate", key, fmtD(b.branchTransferDate));
     setStr("moveIn", key, b.residenceStartDate || ph);
@@ -161,7 +177,7 @@ export function fillRedevRightReceiveBranchData(
   {
     const hasMonths = (nakkok.residenceMonths ?? 0) > 0;
     const ph = hasMonths ? "(개월수만 입력됨)" : "-";
-    setStr("holdingPeriod", "preApproval", fmtMonths(nakkok.holdingMonths, nakkok.holdingDays));
+    setStr("holdingPeriod", "preApproval", branchHoldingPeriod(nakkok));
     setStr("acquisitionDate", "preApproval", fmtD(nakkok.branchAcqDate));
     setStr("transferDate", "preApproval", fmtD(nakkok.branchTransferDate));
     setStr("moveIn", "preApproval", nakkok.residenceStartDate || ph);
@@ -376,7 +392,7 @@ export function fillRedevRightPayBranchData(
   {
     const hasMonths = (pre.residenceMonths ?? 0) > 0;
     const ph = hasMonths ? "(개월수만 입력됨)" : "-";
-    setStr("holdingPeriod", "preApproval", fmtMonths(pre.holdingMonths, pre.holdingDays));
+    setStr("holdingPeriod", "preApproval", branchHoldingPeriod(pre));
     setStr("acquisitionDate", "preApproval", fmtD(pre.branchAcqDate));
     setStr("transferDate", "preApproval", fmtD(pre.branchTransferDate));
     setStr("moveIn", "preApproval", pre.residenceStartDate || ph);
@@ -388,7 +404,7 @@ export function fillRedevRightPayBranchData(
   {
     const hasMonths = (post.residenceMonths ?? 0) > 0;
     const ph = hasMonths ? "(개월수만 입력됨)" : "-";
-    setStr("holdingPeriod", "postApproval", fmtMonths(post.holdingMonths, post.holdingDays));
+    setStr("holdingPeriod", "postApproval", branchHoldingPeriod(post));
     setStr("acquisitionDate", "postApproval", fmtD(post.branchAcqDate));
     setStr("transferDate", "postApproval", fmtD(post.branchTransferDate));
     setStr("moveIn", "postApproval", post.residenceStartDate || ph);

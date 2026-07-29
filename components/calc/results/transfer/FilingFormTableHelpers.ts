@@ -292,10 +292,14 @@ export function holdingPeriodFromDates(acq?: string, transfer?: string): string 
   const a = new Date(acq);
   const t = new Date(transfer);
   if (isNaN(a.getTime()) || isNaN(t.getTime())) return "-";
-  let months =
+  // 신고서 표시 규약(2026-07-29 사용자 확정): **연·월 숫자 차이만** 센다(일 무시).
+  //   2025-01-08 → 2026-03-06 = 1년 2월 (일 절사 방식의 1년 1월 아님)
+  // 만-개월 절사(일 borrow)는 적용하지 않는다 — 합계·토지·건물 전 열 동일 규약.
+  const months =
     (t.getFullYear() - a.getFullYear()) * 12 + (t.getMonth() - a.getMonth());
-  if (t.getDate() < a.getDate()) months -= 1;
   if (months < 0) return "-";
+  // 같은 달 취득·양도(0개월)도 "-"가 아니라 명시적으로 표시한다.
+  if (months === 0) return "0년 0월";
   return fmtPeriod(months);
 }
 
@@ -495,10 +499,18 @@ export function buildRows(
   } else if (mode === "split-2col" && sp) {
     setStr("transferDate", "land", fmtDate(transferDate));
     setStr("transferDate", "building", fmtDate(transferDate));
-    setStr("acquisitionDate", "land", fmtDate(acquisitionDate));
+    // 토지·건물 취득일은 상이할 수 있다(별개취득) — 열별 자기 취득일 표시 (:477 4열 모드와 동일 규약).
+    const spLandAcqDate = primary?.landAcquisitionDate || acquisitionDate;
+    setStr("acquisitionDate", "land", fmtDate(spLandAcqDate));
     setStr("acquisitionDate", "building", fmtDate(acquisitionDate));
-    setStr("holdingPeriod", "land", fmtPeriod(Math.round(sp.land.holdingYears * 12)));
-    setStr("holdingPeriod", "building", fmtPeriod(Math.round(sp.building.holdingYears * 12)));
+    // 보유기간은 일자 차이(월 단위 절사)로 산정한다. 엔진 holdingYears는 만-연수 정수라
+    // 보유 1년 미만이면 `0 × 12 = 0` → fmtPeriod가 "-"를 반환해 건물 열이 비어 보였다.
+    // 합계 열(:439)·4열 모드(:482)와 동일 소스.
+    const spLandHold = holdingPeriodFromDates(spLandAcqDate, transferDate);
+    const spBuildingHold = holdingPeriodFromDates(acquisitionDate, transferDate);
+    // 일자가 없는 호출 경로(formData 미전달)에서는 종전대로 엔진 만-연수로 폴백.
+    setStr("holdingPeriod", "land", spLandHold !== "-" ? spLandHold : fmtPeriod(Math.round(sp.land.holdingYears * 12)));
+    setStr("holdingPeriod", "building", spBuildingHold !== "-" ? spBuildingHold : fmtPeriod(Math.round(sp.building.holdingYears * 12)));
     // 과세비율 분모는 본인 소유 파트의 gain만 — building_only인데 land.gain을 포함하면
     // 분자(result.taxableGain=건물분)와 불일치해 토지·건물 셀이 모두 오염됨.
     const ownedGain =
