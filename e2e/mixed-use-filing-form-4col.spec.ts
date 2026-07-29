@@ -35,6 +35,11 @@ function mixedUseAsset() {
     mixedAcqLandPricePerSqm: "2500000",
     mixedAcqCommercialBuildingPrice: "50000000",
     mixedIsMetropolitanArea: true,
+    // 겸용주택 실가 모드의 §100② **피안분액** — 없으면 validate가 계산을 차단해
+    // 결과 화면(신고서 양식)에 도달하지 못한다("겸용주택 취득 실거래가을 입력하세요").
+    // 종전 seed는 기준시가 6필드만 넣고 실거래가를 빠뜨려, validate 강화 후 두 테스트가
+    // 20s timeout으로 깨져 있었다(계획서 e2e-preexisting-failures-4.plan.md D-A).
+    fixedAcquisitionPrice: "700000000",
   };
 }
 

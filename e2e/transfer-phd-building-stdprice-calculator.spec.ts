@@ -35,6 +35,19 @@ async function gotoPhdWidget(page: Page) {
     .click();
 }
 
+/**
+ * 건물 취득일 스코프 — **겸용주택 경로 전용**.
+ *
+ * 겸용주택 토글은 `hasSeperateLandAcquisitionDate`를 강제 ON 하므로
+ * (`MixedUseSection.tsx:44-50`) 취득일이 `[토지 취득일 | 건물 취득일]` **2열**이 된다.
+ * 섹션 스코프 + `.first()`로 잡으면 앞 칸인 **토지 취득일**이 채워지고 `acquisitionDate`는
+ * 빈 채로 남는다 → PHD 3시점 모달이 "취득시 (연도 미상) — 계산 제외"로 취득 시점을 통째로
+ * 빼먹어 `모두 적용` 개수가 3→2, 6→4로 어긋났다(계획서 e2e-preexisting-failures-4.plan.md).
+ *
+ * 비-겸용 테스트는 단일 칸이라 종전 섹션 스코프가 정상 동작한다 — 그대로 둔다.
+ */
+const acqDateBuilding = (p: Page) => p.getByTestId("acq-date-building");
+
 // exact 라벨 날짜 채움 — 스위치 aria-label("…취득일 다름")의 "일" substring 오매칭 회피
 async function fillDateExact(
   scope: ReturnType<Page["locator"]>,
@@ -409,7 +422,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("button", { name: "매매", exact: true }).click();
     await page.getByRole("button", { name: "환산취득가" }).click();
 
-    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+    await fillDateExact(acqDateBuilding(page), {
       year: "2010",
       month: "06",
       day: "15",
@@ -453,7 +466,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await expandAssetSection(page, 3);
     await page.getByRole("button", { name: "매매", exact: true }).click();
     await page.getByRole("button", { name: "환산취득가" }).click();
-    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+    await fillDateExact(acqDateBuilding(page), {
       year: "2010",
       month: "06",
       day: "15",
@@ -527,7 +540,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await expandAssetSection(page, 3);
     await page.getByRole("button", { name: "매매", exact: true }).click();
     await page.getByRole("button", { name: "환산취득가" }).click();
-    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+    await fillDateExact(acqDateBuilding(page), {
       year: "2010",
       month: "06",
       day: "15",
@@ -573,7 +586,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await expandAssetSection(page, 3);
     await page.getByRole("button", { name: "매매", exact: true }).click();
     await page.getByRole("button", { name: "환산취득가" }).click();
-    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+    await fillDateExact(acqDateBuilding(page), {
       year: "2010", month: "06", day: "15",
     });
     await page.getByPlaceholder("주택 전용면적").fill("120");
