@@ -668,7 +668,16 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       {isSplitable && props.onHasSeperateLandAcquisitionDateChange && (
         <div className="space-y-2">
 
-          {isSplit && (
+          {/* ⚠️ **겸용주택 제외**(2026-07-29). 겸용은 `hasSeperateLandAcquisitionDate`가 강제
+              ON이라 `isSplit`이 참이 되지만, 축 B 입력은 **엔진에 도달할 수 없다** —
+              겸용 엔진 input 타입(`MixedUseAssetInput`, types/transfer-mixed-use.types.ts:45)에
+              `landAcqMode`·`landAcquisitionPrice`·`landDirectExpenses` 같은 파트 필드가
+              **아예 정의되어 있지 않다**(`landTransferPrice`는 결과 타입의 "산식 표시용" 필드다).
+              겸용 취득가액은 상단 총액(`fixedAcquisitionPrice`)을 §100② 기준시가 비율로 안분하고,
+              자본적지출은 「실제 필요경비」 칸(MixedUseAssetMajorStdPrice.tsx:161·183 →
+              `housingInheritedExpense`)에서 따로 받는다 → 축 B는 **중복이자 무용**이었다.
+              축 A와 같은 클래스(사용자 보고 D1). 취득일 2열은 유지 — 그건 엔진이 소비한다. */}
+          {isSplit && !isMixedUse && (
             <div className="space-y-2 pl-1">
               {/* 토지 취득일·축 A(양도가액 구분)는 토글 직하로 이동(2026-07-29,
                   CompanionAcqDateSection) — 여기서는 축 B(취득가액 파트별)만 렌더한다. */}

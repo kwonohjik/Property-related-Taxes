@@ -170,3 +170,95 @@ describe("E6 — 겸용주택은 축 A(양도가액 구분) 미노출", () => {
     expect(screen.getAllByTestId("sale-split-mode")).toHaveLength(1);
   });
 });
+
+// ── 겸용주택 축 B 미노출 (N-3) ──────────────────────────────────
+//
+// 🔴 축 A와 **같은 클래스**. 겸용 엔진 input 타입(`MixedUseAssetInput`,
+//   `types/transfer-mixed-use.types.ts:45`)에는 `landAcqMode`·`landAcquisitionPrice`·
+//   `landDirectExpenses` 같은 파트 필드가 **아예 정의되어 있지 않다**
+//   (`landTransferPrice`는 결과 타입 `MixedUseHousingPart`의 "산식 표시용" 필드).
+//   겸용 취득가액은 상단 총액을 §100② 기준시가 비율로 안분하고, 자본적지출은
+//   「실제 필요경비」 칸(`MixedUseAssetMajorStdPrice.tsx:161·183` → `housingInheritedExpense`)
+//   에서 따로 받는다 → 축 B는 중복이자 무용이었다(실측: 겸용에서 라디오 2·금액칸·자본적지출 전부 렌더).
+import { CompanionAcqPurchaseBlock } from "@/components/calc/transfer/CompanionAcqPurchaseBlock";
+
+function PurchaseHarness({ isMixedUse }: { isMixedUse: boolean }) {
+  const [asset, setAsset] = useState<AssetForm>({
+    ...makeDefaultAsset(1),
+    assetKind: "housing",
+    acquisitionCause: "purchase",
+    acquisitionDate: "2010-03-15",
+    landAcquisitionDate: "2005-06-10",
+    hasSeperateLandAcquisitionDate: true,
+    isMixedUseHouse: isMixedUse,
+  } as AssetForm);
+  const patch = (p: Partial<AssetForm>) => setAsset((a) => ({ ...a, ...p }));
+  return (
+    <CompanionAcqPurchaseBlock
+      acquisitionDate={asset.acquisitionDate}
+      onAcquisitionDateChange={(v) => patch({ acquisitionDate: v })}
+      useEstimatedAcquisition={false}
+      onUseEstimatedChange={() => {}}
+      fixedAcquisitionPrice={asset.fixedAcquisitionPrice ?? ""}
+      onFixedAcquisitionPriceChange={(v) => patch({ fixedAcquisitionPrice: v })}
+      standardPriceAtAcq={asset.standardPriceAtAcq ?? ""}
+      onStandardPriceAtAcqChange={(v) => patch({ standardPriceAtAcq: v })}
+      standardPriceAtTransfer={asset.standardPriceAtTransfer ?? ""}
+      onStandardPriceAtTransferChange={(v) => patch({ standardPriceAtTransfer: v })}
+      assetKind={asset.assetKind}
+      transferDate="2026-03-06"
+      acquisitionArea={asset.acquisitionArea}
+      onAcquisitionAreaChange={(v) => patch({ acquisitionArea: v })}
+      hasSeperateLandAcquisitionDate={asset.hasSeperateLandAcquisitionDate}
+      onHasSeperateLandAcquisitionDateChange={(v) => patch({ hasSeperateLandAcquisitionDate: v })}
+      landAcquisitionDate={asset.landAcquisitionDate}
+      onLandAcquisitionDateChange={(v) => patch({ landAcquisitionDate: v })}
+      selfOwns={asset.selfOwns ?? "both"}
+      onSelfOwnsChange={(v) => patch({ selfOwns: v })}
+      landTransferPrice={asset.landTransferPrice ?? ""}
+      onLandTransferPriceChange={(v) => patch({ landTransferPrice: v })}
+      buildingTransferPrice={asset.buildingTransferPrice ?? ""}
+      onBuildingTransferPriceChange={(v) => patch({ buildingTransferPrice: v })}
+      landAcquisitionPrice={asset.landAcquisitionPrice ?? ""}
+      onLandAcquisitionPriceChange={(v) => patch({ landAcquisitionPrice: v })}
+      buildingAcquisitionPrice={asset.buildingAcquisitionPrice ?? ""}
+      onBuildingAcquisitionPriceChange={(v) => patch({ buildingAcquisitionPrice: v })}
+      landStandardPriceAtTransfer={asset.landStandardPriceAtTransfer ?? ""}
+      onLandStandardPriceAtTransferChange={(v) => patch({ landStandardPriceAtTransfer: v })}
+      buildingStandardPriceAtTransfer={asset.buildingStandardPriceAtTransfer ?? ""}
+      onBuildingStandardPriceAtTransferChange={(v) => patch({ buildingStandardPriceAtTransfer: v })}
+      landDirectExpenses={asset.landDirectExpenses ?? ""}
+      onLandDirectExpensesChange={(v) => patch({ landDirectExpenses: v })}
+      buildingDirectExpenses={asset.buildingDirectExpenses ?? ""}
+      onBuildingDirectExpensesChange={(v) => patch({ buildingDirectExpenses: v })}
+      asset={asset}
+      onAssetChange={patch}
+    />
+  );
+}
+
+describe("E7 — 겸용주택은 축 B(파트별 취득가액) 미노출", () => {
+  it("E7-a 겸용 — 축 B 전부 미렌더", () => {
+    render(<PurchaseHarness isMixedUse />);
+    expect(screen.queryAllByTestId("part-acq-mode-land")).toHaveLength(0);
+    expect(screen.queryAllByTestId("part-acq-mode-building")).toHaveLength(0);
+    expect(
+      screen.queryAllByText(/토지 자본적지출/),
+      "겸용 자본적지출은 「실제 필요경비」 칸이 정본 — 축 B 칸은 엔진에 도달하지 않는다",
+    ).toHaveLength(0);
+  });
+
+  it("E7-b 겸용 — 상단 총액 취득가액은 유지 (§100② 피안분액)", () => {
+    render(<PurchaseHarness isMixedUse />);
+    expect(
+      screen.queryAllByText(/취득가액 산정 방식/).length,
+      "총액 입력이 사라지면 겸용 안분의 피안분액이 없어진다",
+    ).toBeGreaterThan(0);
+  });
+
+  it("E7-c 비-겸용 분리 — 축 B 종전대로 노출 (회귀 가드)", () => {
+    render(<PurchaseHarness isMixedUse={false} />);
+    expect(screen.queryAllByTestId("part-acq-mode-land")).toHaveLength(1);
+    expect(screen.queryAllByTestId("part-acq-mode-building")).toHaveLength(1);
+  });
+});

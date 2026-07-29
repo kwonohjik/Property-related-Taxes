@@ -322,6 +322,56 @@ A안은 표시 문구, Phase 3는 문자열 상수 변경이므로 해당 지점
 - F3·F4가 **언제부터** 깨졌는지는 미조사 — 수정에 필요하지 않아 생략했다.
 ---
 
+## 10. `hasSeperateLandAcquisitionDate` 플래그 오버로딩 — 전수 점검 (2026-07-29)
+
+N-2에서 축 A 하나를 끊은 뒤, **같은 플래그가 강제하는 다른 UI 분기**를 전수 조사했다.
+
+### 강제 ON 경로 2개 (사용자 의사와 무관하게 켜진다)
+
+| 위치 | 조건 |
+|---|---|
+| `MixedUseSection.tsx:44-50` | 겸용주택 토글 ON |
+| `CompanionAcquisitionCauseSection.tsx:180` | `selfOwns !== "both"` 선택 |
+
+### 플래그로 갈리는 UI 분기 전수 + 판정
+
+| 분기 | 위치 | 겸용에서 정당한가 | 조치 |
+|---|---|---|---|
+| 취득일 2열 | `CompanionAcqDateSection:125` | **정당** — 겸용 엔진이 `landAcquisitionDate`를 소비(`transfer-tax-mixed-use.ts:136-139` LTHD 기산·4부분 안분) | 유지 |
+| 축 A(양도가액 구분·양도시 기준시가) | 〃 `:190` | ❌ `MixedUseAssetInput`에 필드 없음 · route early-return | **N-2에서 제거** |
+| **축 B(파트별 취득가액 방식·금액·자본적지출)** | `CompanionAcqPurchaseBlock:671` | ❌ **동일** — 타입에 `landAcqMode`·`landAcquisitionPrice`·`landDirectExpenses` 미정의 | **N-3에서 제거** |
+| 의제취득(§98) 안내 | `CompanionAcqDateSection:179` | — 이미 `&& !isMixedUse` 가드 존재 | 변경 없음 |
+| 공익수용 `isSplitBuilding`·`isHousingRegularSplit` | `ExpropriationBlock:58·63` | — 소비처(`:79`)에 `&& !isMixedUse` 가드 존재. 겸용은 `showMixedUseValuation`(`:75`) 별도 트랙 | 변경 없음 |
+| `hasSeperateLandAcquisitionDate={false}` 하드코딩 | `GeneralBuildingAcquisitionCards:155` | — 일반건물 전용 경로, 플래그 무관 | 변경 없음 |
+
+### N-3 — 축 B 제거 (실측 근거)
+
+probe 실측(겸용 자산으로 `CompanionAcqPurchaseBlock` 렌더):
+
+```
+{"tag":"A-겸용",  "축B_토지방식라디오":1,"축B_건물방식라디오":1,"축B_토지취득가액칸":1,
+                  "축B_자본적지출":1,"축A_양도가액구분":0,"취득일2열":1}
+{"tag":"B-비겸용","축B_토지방식라디오":1,"축B_건물방식라디오":1,"축B_토지취득가액칸":1,
+                  "축B_자본적지출":1,"축A_양도가액구분":1,"취득일2열":1}
+```
+
+겸용에서 축 B가 **통째로 렌더**되는데, 겸용 엔진 input 타입
+(`types/transfer-mixed-use.types.ts:45 MixedUseAssetInput`)에는 해당 파트 필드가 **아예 없다**
+(`landTransferPrice`는 결과 타입 `MixedUseHousingPart`의 "산식 표시용" 필드다).
+
+**입력 경로 소멸 점검**(이번 세션의 반복 교훈): 겸용 자본적지출은 「실제 필요경비 — 자본적지출·양도비」
+칸(`MixedUseAssetMajorStdPrice.tsx:161·183` → `housingInheritedExpense`/`commercialInheritedExpense`)
+이 정본이고, 취득가액 총액은 상단 「취득가액 산정 방식」이 유지된다(§100② 피안분액) → **소멸 없음**.
+
+→ `CompanionAcqPurchaseBlock:671`에 `&& !isMixedUse` 추가. anchor E7-a·b·c.
+
+### 남은 오버로딩 (조치 안 함)
+
+`selfOwns !== "both"` 강제 경로는 **취득일이 실제로 다를 개연성이 높고**(소유자가 다른 토지·건물),
+축 A·B가 `calcSplitGain` 경로에서 정상 소비되므로 겸용과 성격이 다르다 — 현행 유지가 맞다.
+
+---
+
 ## 9. 후속 작업 (본 계획서 범위 밖 — 별도 착수)
 
 ### ✅ N-1. `mixed-use-commercial-stdprice-landprice-prefill.spec.ts` — 해소(2026-07-29)
