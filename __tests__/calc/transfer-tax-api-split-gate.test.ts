@@ -146,13 +146,19 @@ describe("API 전송 게이트 — 양도시 기준시가 2필드 (§7.2 확장 
     expect(cap.body?.buildingStandardPriceAtTransfer).toBeDefined();
   });
 
-  it('saleSplitMode="actual" + 파트 모두 실가 → 미전송(환산 분모 불필요)', async () => {
+  it('saleSplitMode="actual" + 파트 모두 실가 → **전송된다**(구분양도 안분 근거, S1 해소)', async () => {
+    // 2026-07-29 게이트 확장. 종전에는 "환산 분모 불필요"를 이유로 미전송했으나,
+    // validate V4가 "구분양도 + 양도가액 미입력 + 양도시 기준시가 2필드"를 정당한 입력으로
+    // 인정하므로(§166⑥ → 부가세령 §64①1호) 그 근거가 엔진에 도달해야 한다.
+    // 미전송 시 validate는 통과시키는데 엔진은 `hasSaleRatio=false`로 판정해 throw했다
+    // (계층 간 인자 비대칭 — 계획서 §12-S1). 과잉 전송은 무해하다: 양도가액 2칸이 입력되면
+    // `splitPair`가 비율을 쓰지 않고, 환산 파트가 없으면 분모로도 소비되지 않는다.
     const cap = captureBody();
     await callTransferTaxAPI(
       makeForm({ saleSplitMode: "actual", landAcqMode: "actual", buildingAcqMode: "actual" }),
     );
-    expect(cap.body?.landStandardPriceAtTransfer).toBeUndefined();
-    expect(cap.body?.buildingStandardPriceAtTransfer).toBeUndefined();
+    expect(cap.body?.landStandardPriceAtTransfer).toBeDefined();
+    expect(cap.body?.buildingStandardPriceAtTransfer).toBeDefined();
   });
 
   it('saleSplitMode="actual" + 파트 estimated → 전송된다(환산 분모, §7.2 재발 방지)', async () => {

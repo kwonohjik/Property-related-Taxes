@@ -74,10 +74,17 @@ export function buildSplitPayload(
   // 벗어나도 유령 값이 도달하지 않지만, "기준시가 비율 안분"으로 되돌린 뒤 잔존한 직접 입력값을
   // 사용자 의도와 다르게 전송하지 않기 위해 여전히 게이트로 막는다.
   const saleDirectActive = isSplitActive && saleSplitMode === "actual";
-  // 양도시 기준시가 게이트 — apportioned 양도(안분 분모) 이거나 어느 파트든 환산(분모)이 필요한 경우(§7.2).
-  const saleStdPriceActive =
-    isSplitActive &&
-    (saleSplitMode === "apportioned" || landAcqMode === "estimated" || buildingAcqMode === "estimated");
+  // 양도시 기준시가 — 분리 축이 활성이면 **항상 전송**한다(2026-07-29 S1 해소).
+  //
+  // 종전 게이트는 `apportioned || 어느 파트든 환산`이었다. 그러나 validate V4가
+  // "구분양도 + 양도가액 미입력 + **양도시 기준시가 2필드**"를 정당한 입력으로 인정하므로
+  // (§166⑥ → 부가세령 §64①1호 — 구분이 없으면 양도 당시 기준시가 비율), 그 조합에서 필드가
+  // 전송되지 않아 **validate는 통과시키는데 엔진은 throw**했다(계층 간 `hasSaleRatio` 비대칭 —
+  // UI·validate는 폼값 기준, 엔진은 `calcSaleApportionRatio(input)` 즉 전송값 기준).
+  //
+  // 과잉 전송은 무해하다 — 양도가액 2칸이 입력되면 `splitPair`가 비율을 쓰지 않고(split-gain.ts:99),
+  // 환산 파트가 없으면 분모로도 소비되지 않는다. 기준시가는 물건 속성값이라 지분 스케일 대상도 아니다.
+  const saleStdPriceActive = isSplitActive;
 
   return {
     // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
