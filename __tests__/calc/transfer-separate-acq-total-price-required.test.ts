@@ -34,6 +34,9 @@ function separateAcqAsset(over: Partial<ReturnType<typeof makeDefaultAsset>> = {
     fixedAcquisitionPrice: "", // ← UI에 칸 자체가 없다
     saleSplitMode: "actual" as const,
     actualSalePrice: "500,000,000",
+    // 양도가액 구분 근거 — 구분양도를 골랐으면 §166⑥상 필수다(V4). 이 anchor의 검증 대상은
+    // "자산 전체 취득가액 총액을 요구하지 않는다"이므로, 무관한 V4 오류가 먼저 걸리지 않게 채운다.
+    landTransferPrice: "300,000,000",
     ...over,
   };
 }

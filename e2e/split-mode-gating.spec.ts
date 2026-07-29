@@ -46,7 +46,7 @@ test.describe("P1 — 분리 모드 취득시 기준시가 입력 노출", () =>
     await setupSplitAsset(page);
     await expect(
       page.getByText("취득시 기준시가", { exact: false }).first(),
-      "분리 모드는 실거래가여도 안분 비율 산정에 취득시 기준시가가 필수다",
+      "분리 모드에서는 비-별개취득 안분·환산 파트를 위해 입력칸이 노출된다(필수 여부는 파트 모드에 따른다)",
     ).toBeVisible();
   });
 
@@ -249,6 +249,27 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     // 건물분 명시 입력은 주택에 노출하지 않는다 — 라목 결합 공시(역산이 정본)
     await expect(page.getByTestId("split-building-std-acq")).toHaveCount(0);
     await expect(page.getByTestId("split-housing-building-derived-note")).toBeVisible();
+  });
+
+
+  test("🔴 U11: 취득시 기준시가 필수(*) 표시는 실제로 필요할 때만", async ({ page }) => {
+    // 계획서: transfer-split-acq-std-gate-relaxation.plan.md §4.6 (PR3)
+    // 양쪽 실가 + 양도가액 구분 근거가 있으면 취득시 기준시가는 계산에 쓰이지 않는다(규칙 ③)
+    // → 붉은 별표 필수 표시는 거짓이 된다. 엔진·validate와 같은 술어로 구동한다.
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+
+    // 기본 상태(일괄양도 + 양도시 기준시가 미입력) → 안분 근거가 없어 취득시 기준시가가 필요
+    await expect(page.getByTestId("acq-std-required-mark")).toBeVisible();
+
+    // 구분양도로 바꾸고 양도가액을 입력하면 안분 근거가 생겨 취득시 기준시가는 불요
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await landTransfer(page).fill("600000000");
+    await expect(
+      page.getByTestId("acq-std-required-mark"),
+      "양쪽 실가 + 양도가액 구분이 있으면 취득시 기준시가는 계산에 쓰이지 않는다",
+    ).toHaveCount(0);
+    await expect(page.getByText("계산에 사용되지 않습니다", { exact: false })).toBeVisible();
   });
 
   test("🔴 U9: 파트별 취득가액을 다 넣으면 '취득가액을 입력하세요'로 차단하지 않는다", async ({ page }) => {

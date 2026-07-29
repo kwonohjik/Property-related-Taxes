@@ -21,6 +21,7 @@ import {
 import { computeAmendment } from "./transfer-tax-amendment";
 import { computeSettlement } from "./transfer-tax-settlement";
 import { TRANSFER } from "./legal-codes";
+import { TaxCalculationError } from "./tax-errors";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import {
   applyAnnualLimits,
@@ -246,7 +247,7 @@ export function calculateTransferTaxAggregate(
   validateInput(input);
 
   // M-1: 건별 단건 엔진 호출 (기본공제 스킵, 차손 허용)
-  const perAsset = input.properties.map((item) => {
+  const perAsset = input.properties.map((item, assetIdx) => {
     const singleInput: TransferTaxInput = {
       ...(item as unknown as TransferTaxInput),
       annualBasicDeductionUsed: 0,
@@ -256,7 +257,20 @@ export function calculateTransferTaxAggregate(
       // 누수되지 않도록 strip. 정정은 아래 집계 결정세액에 대해 1회만 계산한다(§3.3 누수 버그 수정).
       amendment: undefined,
     };
-    const result = calculateTransferTax(singleInput, rates);
+    // 자산 단위 계산 오류에 **자산 번호를 붙인다** — 이 루프에는 try/catch가 없어 예외가
+    // 그대로 route까지 전파되는데, 다건에서는 어느 자산이 원인인지 메시지만으로 알 수 없다.
+    let result;
+    try {
+      result = calculateTransferTax(singleInput, rates);
+    } catch (e: unknown) {
+      if (e instanceof TaxCalculationError) {
+        throw new TaxCalculationError(e.code, `자산 ${assetIdx + 1}: ${e.message}`, {
+          ...(e.details ?? {}),
+          assetIndex: assetIdx + 1,
+        });
+      }
+      throw e;
+    }
     // 정밀 NBL 판정이 원시 플래그를 override한 경우, 결과가 노출한 판정값으로 item을 교정.
     // (원시 isNonBusinessLand=사용자 체크박스 vs 정밀판정=사업용 불일치 시 그룹·세율 오적용 방지)
     const nblJudgment = result.nonBusinessLandJudgmentDetail;

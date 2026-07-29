@@ -274,8 +274,15 @@ describe("V1·V2 — 별개 취득 파트별 취득가액 필수", () => {
   });
 
   it("환산은 대상 아님 — 총액 미참조 구조", () => {
+    // V1·V2(파트별 취득가액 필수) 스코프 테스트 — 환산 파트가 요구하는 취득시 기준시가(V4)는
+    // 충족시켜 격리한다. V4 자체는 아래 별도 describe에서 검증.
     const err = validateSplitDirectInputs(
-      sepAsset({ landAcqMode: "estimated", buildingAcqMode: "estimated" }),
+      sepAsset({
+        landAcqMode: "estimated",
+        buildingAcqMode: "estimated",
+        standardPricePerSqmAtAcq: "5,000,000",
+        acquisitionArea: "200",
+      }),
       "자산 1",
     );
     expect(err).toBeNull();
@@ -370,6 +377,121 @@ describe("V3 — building 축 B 파트별 독립 all-or-nothing", () => {
       "자산 1",
     );
     expect(err).toBeNull();
+  });
+});
+
+/**
+ * PR3 — 취득시 기준시가·양도가액 구분 근거 차단 (별개 취득 한정).
+ * 계획서: docs/02-design/features/transfer-split-acq-std-gate-relaxation.plan.md §4.5·§4.8
+ */
+describe("V4 — 취득시 기준시가는 '필요할 때만' 필수 (사용자 확정 규칙 ③)", () => {
+  const sep = (over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) =>
+    splitAsset({
+      acquisitionDate: "2018-06-01",
+      landAcquisitionDate: "2015-06-01",
+      saleSplitMode: "actual" as const,
+      landTransferPrice: "600,000,000",
+      buildingTransferPrice: "400,000,000",
+      landAcqMode: "actual" as const,
+      buildingAcqMode: "actual" as const,
+      landAcquisitionPrice: "150,000,000",
+      buildingAcquisitionPrice: "100,000,000",
+      ...over,
+    });
+
+  it("케이스 a(양쪽 실가) → 취득시 기준시가를 요구하지 않는다", () => {
+    expect(validateSplitDirectInputs(sep(), "자산 1")).toBeNull();
+  });
+
+  it("🔴 케이스 b(건물 환산) + 취득시 기준시가 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(sep({ buildingAcqMode: "estimated" }), "자산 1");
+    expect(err).toContain("개별공시지가");
+  });
+
+  it("케이스 b + 단가·면적 입력 → 통과", () => {
+    expect(
+      validateSplitDirectInputs(
+        sep({
+          buildingAcqMode: "estimated",
+          landStandardPriceAtTransfer: "600,000,000",
+          buildingStandardPriceAtTransfer: "400,000,000",
+          standardPricePerSqmAtAcq: "5,000,000",
+          acquisitionArea: "200",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("🔴 단가만 있고 면적이 없으면 차단 (엔진 calcAcqStdPair는 둘 다 요구)", () => {
+    const err = validateSplitDirectInputs(
+      sep({
+        buildingAcqMode: "estimated",
+        landStandardPriceAtTransfer: "600,000,000",
+        buildingStandardPriceAtTransfer: "400,000,000",
+        standardPricePerSqmAtAcq: "5,000,000",
+        acquisitionArea: "",
+      }),
+      "자산 1",
+    );
+    expect(err).toContain("토지 면적");
+  });
+
+  it("회귀 0 — 비-별개취득(취득일 동일)은 요구하지 않는다", () => {
+    expect(
+      validateSplitDirectInputs(
+        sep({
+          landAcquisitionDate: "2018-06-01", // 건물 취득일과 동일 → 비-별개취득
+          buildingAcqMode: "estimated",
+          // 비-별개취득은 총액에서 잔액이 도출되므로 파트 금액을 넣지 않는다
+          // (넣으면 기존 "합 ≠ 총액" 검증이 먼저 걸린다).
+          landAcquisitionPrice: "",
+          buildingAcquisitionPrice: "",
+          landStandardPriceAtTransfer: "600,000,000",
+          buildingStandardPriceAtTransfer: "400,000,000",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("V5 — 구분양도 선택 시 양도가액 구분 근거 필수 (규칙 ①)", () => {
+  const sepNoBasis = (over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) =>
+    splitAsset({
+      acquisitionDate: "2018-06-01",
+      landAcquisitionDate: "2015-06-01",
+      saleSplitMode: "actual" as const,
+      landAcqMode: "actual" as const,
+      buildingAcqMode: "actual" as const,
+      landAcquisitionPrice: "150,000,000",
+      buildingAcquisitionPrice: "100,000,000",
+      ...over,
+    });
+
+  it("🔴 구분양도 + 양도가액 2칸 미입력 + 양도시 기준시가도 없음 → 차단", () => {
+    // 엔진은 `saleRatio ?? landRatio`로 **취득시** 비율에 후퇴하는데,
+    // 규칙 ①은 "구분이 없으면 **양도시** 기준시가 비율"이라 법령과 어긋난다.
+    const err = validateSplitDirectInputs(sepNoBasis(), "자산 1");
+    expect(err).toContain("양도시 토지·건물 기준시가");
+  });
+
+  it("양도가액 한쪽만 입력해도 통과 (반대쪽은 잔액 도출)", () => {
+    expect(
+      validateSplitDirectInputs(sepNoBasis({ landTransferPrice: "600,000,000" }), "자산 1"),
+    ).toBeNull();
+  });
+
+  it("양도시 기준시가 2필드로도 통과 (§166⑥ 양도 당시 기준시가 안분)", () => {
+    expect(
+      validateSplitDirectInputs(
+        sepNoBasis({
+          landStandardPriceAtTransfer: "600,000,000",
+          buildingStandardPriceAtTransfer: "400,000,000",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
   });
 });
 

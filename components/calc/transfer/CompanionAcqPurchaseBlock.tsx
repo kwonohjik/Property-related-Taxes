@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import { SalesCaseSection } from "./SalesCaseSection";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
+import { requiresAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 const MIN_ACQ_DATE = "1985-01-01";
 
@@ -155,6 +156,31 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   // 레거시 플래그(취득가액 산정 방식 라디오)에서 파생(단일 소스, dual-truth 방지).
   const effLandAcqMode = effectivePartAcqMode(props.asset?.landAcqMode, props);
   const effBuildingAcqMode = effectivePartAcqMode(props.asset?.buildingAcqMode, props);
+
+  /**
+   * 취득시 기준시가가 **실제로 필요한가** — 엔진·validate와 **같은 술어**를 쓴다.
+   * 양쪽 파트의 실지거래가액을 아는 경우 이 값은 계산 어디에도 등장하지 않으므로
+   * 필수(`*`)로 표시하면 거짓이 된다(2026-07-29 사용자 확정 규칙 ③).
+   * 조건을 여기서 다시 쓰면 엔진 요건이 바뀔 때 UI가 조용히 어긋난다(dual-truth).
+   */
+  const acqStdPriceRequired = requiresAcqStdPrice(
+    {
+      landAcquisitionPrice: props.landAcquisitionPrice,
+      buildingAcquisitionPrice: props.buildingAcquisitionPrice,
+      landTransferPrice: props.landTransferPrice,
+      buildingTransferPrice: props.buildingTransferPrice,
+      landDirectExpenses: props.landDirectExpenses,
+      buildingDirectExpenses: props.buildingDirectExpenses,
+    },
+    {
+      landMode: effLandAcqMode,
+      buildingMode: effBuildingAcqMode,
+      isSeparate: isSeparateAcq,
+      hasSaleRatio:
+        parseAmount(props.landStandardPriceAtTransfer ?? "") > 0 &&
+        parseAmount(props.buildingStandardPriceAtTransfer ?? "") > 0,
+    },
+  );
   const acqDateLabel = isSplit ? "건물 취득일 (사용승인일·매매 등기접수일)" : "취득일";
 
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
@@ -565,8 +591,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       )}
 
       {/* 취득시/양도시 기준시가 — 환산 모드 **또는** 토지·건물 분리 모드에서 노출.
-          분리 모드는 §166⑥ 안분 비율(취득시 기준시가 비율) 산정에 3요소(총액·㎡당 공시지가·면적)가
-          필수이므로, 취득가액 산정 방식이 실거래가·감정·매매사례여도 입력받아야 한다.
+          ⚠️ **노출은 유지하되 필수 여부는 파트 모드에 따른다**(2026-07-29). 취득시 기준시가는
+          취득가액을 **환산해야 할 때만** 필요하므로, 양쪽 파트가 실지거래가액이면 계산에 쓰이지
+          않는다(사용자 확정 규칙 ③). 필수 표시(`*`)·hint는 `requiresAcqStdPrice` 술어로 구동한다
+          — 엔진·validate와 같은 단일 소스. 종전 주석은 "실거래가여도 **필수**"라고 단정했었다.
           종전에는 `useEstimatedAcquisition`일 때만 렌더되어, 실거래가 분리 모드에서
           calcApportionRatio(split-gain.ts:26-36)가 null → calcSplitGain 전체가 null이 되어
           토지·건물 분리 계산이 **오류 없이 조용히 비활성화**됐다(계획서 §3.1, probe 실측). */}
@@ -599,7 +627,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           {/* 취득시 기준시가 */}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
-              취득시 기준시가 (원) <span className="text-destructive">*</span>
+              취득시 기준시가 (원){" "}
+              {acqStdPriceRequired && (
+                <span className="text-destructive" data-testid="acq-std-required-mark">
+                  *
+                </span>
+              )}
             </label>
             {isLand && acqDatePre1990 && (
               <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -622,7 +655,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               hint={
                 props.useEstimatedAcquisition
                   ? "환산 분자 — 안분 후 양도가액에 (취득시/양도시) 비율 적용"
-                  : "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
+                  : acqStdPriceRequired
+                    ? "토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
+                    : "토지·건물 실지거래가액을 각각 입력했으므로 이 값은 계산에 사용되지 않습니다 (선택 입력)."
               }
               forceYear={pre1990ForceYear}
               enableLookup={!(isLand && acqDatePre1990)}

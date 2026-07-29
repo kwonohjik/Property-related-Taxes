@@ -16,10 +16,12 @@
  * 그 외 경로는 미검증(엔진이 음수를 그대로 노출 — 눈에 띄는 이상값).
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
@@ -112,6 +114,43 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 조건부 차단이라 엔진 fallback 경로는 이 게이트로 도달이 막히고, actual/legacy 경로는 불변(⑧ 모순 없음).
   const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
   const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  const hasSaleRatio =
+    opt(asset.landStandardPriceAtTransfer) != null && opt(asset.buildingStandardPriceAtTransfer) != null;
+
+  // ── V4. 양도가액 구분 근거 (규칙 ① — §166⑥ → 부가가치세법 시행령 §64①1호) ─────────────
+  // "구분양도"를 골랐는데 토지·건물 양도가액을 **둘 다 비우면** 구분 근거가 없다.
+  // 이때 엔진은 `saleRatio ?? landRatio`로 **취득시** 비율에 후퇴하는데(split-gain),
+  // 규칙 ①은 "구분이 없으면 **양도시** 기준시가 비율"이라 법령과 어긋난다.
+  // → 양도가액 구분 입력 **또는** 양도시 기준시가 2필드 중 하나를 요구한다(자동 fallback 금지).
+  const separateAcq = isSeparateAcquisition(asset);
+  if (
+    separateAcq &&
+    asset.saleSplitMode === "actual" &&
+    opt(asset.landTransferPrice) == null &&
+    opt(asset.buildingTransferPrice) == null &&
+    !hasSaleRatio
+  ) {
+    return `${label}: 구분양도를 선택했으면 토지·건물 양도가액을 입력하거나, 양도시 토지·건물 기준시가를 입력하세요 (§166⑥ — 양도 당시 기준시가 비율로 안분).`;
+  }
+
+  // ── V5. 취득시 기준시가 — **필요할 때만** 필수 (2026-07-29 사용자 확정 규칙 ③) ──────────
+  // 취득시 기준시가는 취득가액을 **환산해야 할 때만** 필요하다. 양쪽 실지거래가액을 아는
+  // 케이스에서는 계산 어디에도 등장하지 않으므로 요구하면 안 된다.
+  // 판정은 엔진과 **같은 술어**를 import해 쓴다 — 조건을 재인코딩하면 엔진 요건이 바뀔 때
+  // validate가 조용히 어긋난다(선례: isSplitPairOverflow).
+  // 엔진 차단과 **같은 범위**(별개 취득)로 한정한다 — 비-별개취득은 총액이 실재해 엔진이
+  // 종전대로 단일 자산 경로로 정상 산출하므로 막을 이유가 없다(⑧ 모순 방지).
+  // ⚠️ V4(양도가액 구분)를 **먼저** 검사한다 — 양도가액 구분이 정해지면 술어 ⑤절이 꺼져
+  //    취득시 기준시가 요건 자체가 사라지므로, 더 실행 가능한 오류를 먼저 보여야 한다.
+  if (
+    separateAcq &&
+    requiresAcqStdPrice(asset, { landMode, buildingMode, isSeparate: true, hasSaleRatio })
+  ) {
+    if (opt(asset.standardPricePerSqmAtAcq) == null || parseDecimal(asset.acquisitionArea) <= 0) {
+      return `${label}: 환산·감정·매매사례 취득가액 계산에는 취득시 ㎡당 개별공시지가와 토지 면적이 필요합니다 (소득세법 §99①1호 가목).`;
+    }
+  }
+
   const needsTransferStd =
     asset.saleSplitMode === "apportioned" || landMode === "estimated" || buildingMode === "estimated";
   if (needsTransferStd) {

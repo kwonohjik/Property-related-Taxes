@@ -361,7 +361,17 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
       hasSaleRatio: saleRatio != null,
     })
   ) {
-    return null;
+    // **별개 취득만 차단한다.** 그 경우 자산 전체 취득가액 칸이 UI에서 사라지므로, 단일 자산
+    // 경로로 흘리면 취득가액 0 → 양도차익이 양도가액 전액이 된다(조용한 과대과세).
+    // 비-별개취득(겸용·소유자분리 등 취득일 동일)은 총액이 실재해 단일 자산 경로가 정상 산출을
+    // 내므로 **종전대로 null**을 유지한다 — 회귀 0.
+    if (input.isSeparateAcquisition !== true) return null;
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "환산·감정·매매사례 취득가액 계산에는 취득시 ㎡당 개별공시지가와 토지 면적이 필요합니다 "
+        + "(소득세법 §99①1호 가목).",
+      { landMode: earlyLandMode, buildingMode: earlyBuildingMode },
+    );
   }
 
   // ratio 미산출(케이스 a) 시 null 전파 — `0`으로 메우면 미래에 소비 지점이 추가됐을 때
