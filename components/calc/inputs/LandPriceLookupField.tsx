@@ -53,6 +53,11 @@ export interface LandPriceLookupFieldProps {
   fixedYear?: number;
   /** 토지기준시가(③열) 미렌더 — ㎡당 공시지가만 필요한 컨텍스트(면적·토지기준시가 무관)에서 2열로 축소. */
   hideLandStdPrice?: boolean;
+  /**
+   * 토지기준시가(③열) 표시값의 testid. 한 화면에 취득시·양도시 두 인스턴스가 뜨므로
+   * 고정 testid를 박으면 중복된다 — 호출부가 필요할 때만 부여한다.
+   */
+  landStdPriceTestId?: string;
 }
 
 export function LandPriceLookupField({
@@ -67,6 +72,7 @@ export function LandPriceLookupField({
   placeholder = "원/㎡",
   fixedYear,
   hideLandStdPrice = false,
+  landStdPriceTestId,
 }: LandPriceLookupFieldProps) {
   const [selectedYear, setSelectedYear] = useState("");
   const [isManual, setIsManual] = useState(false);
@@ -218,7 +224,10 @@ export function LandPriceLookupField({
           unit="원"
           stacked
         >
-          <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+          <div
+            className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground"
+            data-testid={landStdPriceTestId}
+          >
             {landStdPrice !== null
               ? landStdPrice.toLocaleString()
               : <span className="text-muted-foreground/40 text-xs">면적 입력 후 자동 계산</span>}

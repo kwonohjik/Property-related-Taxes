@@ -474,7 +474,7 @@ describe("V5 — 구분양도 선택 시 양도가액 구분 근거 필수 (규�
     // 엔진은 `saleRatio ?? landRatio`로 **취득시** 비율에 후퇴하는데,
     // 규칙 ①은 "구분이 없으면 **양도시** 기준시가 비율"이라 법령과 어긋난다.
     const err = validateSplitDirectInputs(sepNoBasis(), "자산 1");
-    expect(err).toContain("양도시 토지·건물 기준시가");
+    expect(err).toContain("양도시 토지 공시지가·면적과 건물 기준시가");
   });
 
   it("양도가액 한쪽만 입력해도 통과 (반대쪽은 잔액 도출)", () => {
@@ -564,7 +564,7 @@ describe("V4 — 비-별개취득에서도 양도가액 구분 근거 강제", (
   it("🔴 구분양도 + 양도가액 2칸 미입력 + 양도시 기준시가 없음 → 차단", () => {
     // 종전에는 엔진이 **취득시** 비율로 조용히 안분했다(fallback 폐지 전).
     const err = validateSplitDirectInputs(nonSep(), "자산 1");
-    expect(err).toContain("양도시 토지·건물 기준시가");
+    expect(err).toContain("양도시 토지 공시지가·면적과 건물 기준시가");
   });
 
   it("양도가액 한쪽 입력 → 통과 (반대쪽 잔액 확정)", () => {

@@ -179,8 +179,6 @@ export function CompanionAcqDateSection(props: {
             onLandTransferPriceChange={p.onLandTransferPriceChange ?? (() => {})}
             buildingTransferPrice={p.buildingTransferPrice ?? ""}
             onBuildingTransferPriceChange={p.onBuildingTransferPriceChange ?? (() => {})}
-            landStandardPriceAtTransfer={p.landStandardPriceAtTransfer ?? ""}
-            onLandStandardPriceAtTransferChange={p.onLandStandardPriceAtTransferChange ?? (() => {})}
             buildingStandardPriceAtTransfer={p.buildingStandardPriceAtTransfer ?? ""}
             onBuildingStandardPriceAtTransferChange={p.onBuildingStandardPriceAtTransferChange ?? (() => {})}
             landAcqMode={props.effLandAcqMode}

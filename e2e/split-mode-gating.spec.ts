@@ -34,6 +34,7 @@ const landTransfer = (p: Page) => p.getByTestId("split-land-transfer-price");
 const landSalesCase = (p: Page) => p.getByTestId("split-land-salescase-value");
 // 라벨 텍스트가 아니라 testid로 잡는다 — "양도시 토지 기준시가"는 자동 계산 블록의 면적 hint에도
 // 부분 문자열로 등장해 getByText가 strict mode violation을 낸다.
+/** 양도시 토지 기준시가 — 표시 전용(공시지가 × 면적 자동). input이 아니다(2026-07-29). */
 const landTransferStdPrice = (p: Page) => p.getByTestId("split-land-std-transfer");
 
 test.describe("P1 — 분리 모드 취득시 기준시가 입력 노출", () => {
@@ -140,7 +141,7 @@ test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령
 
     await page.getByPlaceholder("원/㎡").fill("540000");
     await page.getByTestId("split-land-std-transfer-area").fill("206.6");
-    await expect(landTransferStdPrice(page)).toHaveValue("111,564,000");
+    await expect(landTransferStdPrice(page)).toHaveText("111,564,000");
   });
 
   test("🔴 건물분은 계산기로 산정 — 토지 입력이 건물 칸을 자동 도출하지 않는다", async ({ page }) => {
