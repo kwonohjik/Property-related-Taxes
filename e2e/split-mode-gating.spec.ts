@@ -269,7 +269,9 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
       page.getByTestId("acq-std-required-mark"),
       "양쪽 실가 + 양도가액 구분이 있으면 취득시 기준시가는 계산에 쓰이지 않는다",
     ).toHaveCount(0);
-    await expect(page.getByText("계산에 사용되지 않습니다", { exact: false })).toBeVisible();
+    // 2026-07-29: 「사용되지 않습니다」 안내로 남겨두던 것을 **숨김**으로 바꿨다 — 계산에 쓰이지
+    // 않는 칸을 띄워두는 것 자체가 노이즈. 술어가 false면 블록 자체가 사라진다.
+    await expect(page.getByText("취득시 기준시가 (원)", { exact: false })).toHaveCount(0);
   });
 
   test("🔴 U9: 파트별 취득가액을 다 넣으면 '취득가액을 입력하세요'로 차단하지 않는다", async ({ page }) => {
@@ -319,5 +321,43 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
       page.getByRole("switch", { name: /개별주택가격 미공시/ }),
       "상단 축 A를 숨기면서 PHD 토글까지 함께 소실되면 §164⑤ 3-시점 입력 경로가 사라진다",
     ).toBeVisible();
+  });
+});
+
+/**
+ * U12 — 입력 흐름 재배치(2026-07-29).
+ * 계획서: docs/02-design/features/transfer-split-input-flow-reorder.plan.md
+ *
+ * 🔴 종전: 「토지·건물 취득일 다름」 토글을 켜도 토지 취득일·양도가액 구분이 약 490줄 아래에
+ * 렌더돼, 취득가액 산정 방식·취득가액·취득시 기준시가 블록을 모두 지나야 보였다.
+ */
+test.describe("U12 — 토글 직하 배치", () => {
+  test("🔴 토글 ON 직후 토지 취득일·양도가액 구분이 토글과 같은 화면에 보인다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+
+    const grid = page.getByTestId("acq-date-split-grid");
+    await expect(grid).toBeVisible();
+
+    const toggleBox = await page.getByText("토지·건물 취득일 다름").first().boundingBox();
+    const gridBox = await grid.boundingBox();
+    const saleBox = await page.getByTestId("sale-split-mode").boundingBox();
+    const viewportH = page.viewportSize()!.height;
+
+    // 토글 → 날짜 2열 → 양도가액 구분 순서 + 한 화면 안
+    expect(gridBox!.y).toBeGreaterThan(toggleBox!.y);
+    expect(saleBox!.y).toBeGreaterThan(gridBox!.y);
+    expect(
+      saleBox!.y - toggleBox!.y,
+      "양도가액 구분이 토글에서 한 화면 이상 떨어져 있으면 입력 흐름이 끊긴다",
+    ).toBeLessThan(viewportH);
+  });
+
+  test("축 A(양도가액 구분)가 축 B(취득가액 파트별)보다 앞에 온다 — 확정 규칙 ①→②", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    const saleBox = await page.getByTestId("sale-split-mode").boundingBox();
+    const acqBox = await page.getByTestId("part-acq-mode-land").boundingBox();
+    expect(saleBox!.y).toBeLessThan(acqBox!.y);
   });
 });

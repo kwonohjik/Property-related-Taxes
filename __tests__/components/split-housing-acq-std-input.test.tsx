@@ -40,16 +40,10 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
       onLandAcqModeChange={() => {}}
       buildingAcqMode={asset.buildingAcqMode || "actual"}
       onBuildingAcqModeChange={() => {}}
-      saleSplitMode="actual"
-      onSaleSplitModeChange={() => {}}
-      landTransferPrice="" onLandTransferPriceChange={() => {}}
-      buildingTransferPrice="" onBuildingTransferPriceChange={() => {}}
       landAcquisitionPrice="" onLandAcquisitionPriceChange={() => {}}
       buildingAcquisitionPrice="" onBuildingAcquisitionPriceChange={() => {}}
       landSalesCaseValue="" onLandSalesCaseValueChange={() => {}}
       buildingSalesCaseValue="" onBuildingSalesCaseValueChange={() => {}}
-      landStandardPriceAtTransfer="" onLandStandardPriceAtTransferChange={() => {}}
-      buildingStandardPriceAtTransfer="" onBuildingStandardPriceAtTransferChange={() => {}}
       landDirectExpenses="" onLandDirectExpensesChange={() => {}}
       buildingDirectExpenses="" onBuildingDirectExpensesChange={() => {}}
       isSeparateAcq
@@ -117,16 +111,11 @@ describe("게이트 — 별개취득이 아니면 미노출 (회귀 0)", () => {
           selfOwns="both"
           landAcqMode="actual" onLandAcqModeChange={() => {}}
           buildingAcqMode="actual" onBuildingAcqModeChange={() => {}}
-          saleSplitMode="actual" onSaleSplitModeChange={() => {}}
-          landTransferPrice="" onLandTransferPriceChange={() => {}}
-          buildingTransferPrice="" onBuildingTransferPriceChange={() => {}}
-          landAcquisitionPrice="" onLandAcquisitionPriceChange={() => {}}
+                  landAcquisitionPrice="" onLandAcquisitionPriceChange={() => {}}
           buildingAcquisitionPrice="" onBuildingAcquisitionPriceChange={() => {}}
           landSalesCaseValue="" onLandSalesCaseValueChange={() => {}}
           buildingSalesCaseValue="" onBuildingSalesCaseValueChange={() => {}}
-          landStandardPriceAtTransfer="" onLandStandardPriceAtTransferChange={() => {}}
-          buildingStandardPriceAtTransfer="" onBuildingStandardPriceAtTransferChange={() => {}}
-          landDirectExpenses="" onLandDirectExpensesChange={() => {}}
+                  landDirectExpenses="" onLandDirectExpensesChange={() => {}}
           buildingDirectExpenses="" onBuildingDirectExpensesChange={() => {}}
           isSeparateAcq={false}
           asset={{ ...makeDefaultAsset(1), assetKind: "housing" } as AssetForm}
