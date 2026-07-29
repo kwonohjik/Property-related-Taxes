@@ -320,10 +320,22 @@ A안은 표시 문구, Phase 3는 문자열 상수 변경이므로 해당 지점
   달라 취득일도 실제로 다른 경우가 많아 안내 필요성이 겸용보다 낮을 수 있다 — Phase 2 착수 시 결정.
 - ~~Phase 3 조사 오류 메시지의 생성 위치~~ → **확정**: `transfer-tax-validate-mixed-use-asset.ts:54·73`.
 - F3·F4가 **언제부터** 깨졌는지는 미조사 — 수정에 필요하지 않아 생략했다.
-- 🟡 **신규 발견(2026-07-29)**: `mixed-use-commercial-stdprice-landprice-prefill.spec.ts`의
-  "취득 ≤2000: 배치 모달의 2001.1.1 공시지가가 상가 모달 취득칸에 자동 채움" 1건이
-  **사전존재 실패**다(A안 변경을 되돌려도 동일 — "2001.1.1. 현재 공시지가" placeholder 미발견).
-  본 계획서 범위 밖. 원인 미조사 — 별도 착수 필요.
+---
+
+## 9. 후속 작업 (본 계획서 범위 밖 — 별도 착수)
+
+### 🟡 N-1. `mixed-use-commercial-stdprice-landprice-prefill.spec.ts` 1건 사전존재 실패
+
+- **테스트**: "취득 ≤2000: 배치 모달의 2001.1.1 공시지가가 상가 모달 취득칸에 자동 채움"
+- **증상**: `getByPlaceholder('2001.1.1. 현재 공시지가')` 대기 timeout(120s)
+- **본 작업 무관 확인**: A안 변경 2파일(`CompanionAcqDateSection` · `PhdBuildingStdPriceModalButton`)을
+  `git stash`로 되돌려 재실행해도 **동일 실패**. 단독 실행(`--workers=1`)에서도 재현되므로
+  병렬 부하 문제도 아니다.
+- **미조사 항목**: 해당 placeholder를 렌더하는 조건(취득 ≤2000 + 최초공시 ≤2000 경로의
+  `landPrice2001PerM2` 입력 칸)이 언제 사라졌는지, spec rot인지 프로덕션 회귀인지.
+  D-A(seed 불완전)·D-B(셀렉터 rot) 어느 유형인지부터 판별해야 한다.
+- **착수 시 첫 단계**: 본 계획서 §2와 동일하게 **Playwright probe로 모달 텍스트를 덤프**해
+  "어느 칸이 없는지"부터 실측할 것(추정 금지).
 
 ---
 
@@ -344,9 +356,10 @@ A안은 표시 문구, Phase 3는 문자열 상수 변경이므로 해당 지점
 7. ✅ A-2 PHD 모달 문구 교체(testid `phd-point-excluded-note`) → E3·E4 GREEN
 8. ✅ 톤·폰트 게이트 0건 · E2E 37건 순차 전건 통과 · tsc 0건 · anchor 5/5
 
-── PR ③ (Phase 3 — 조사 오류) ──────────────────────────────────
-9.  ✅ grep 완료 → 단언 0건(주석만) — 파손 없음
-10. `transfer-tax-validate-mixed-use-asset.ts:54` 라벨 → "취득 실거래가액"
-                                            → verify: 겸용 validate 테스트 통과
-11. `npm run test:transfer`                 → verify: 회귀 0
+── PR ③ (Phase 3 — 조사 오류) ✅ 2026-07-29 완료 ────────────────
+9.  ✅ grep → 단언 0건(주석만) — 파손 없음
+10. ✅ `transfer-tax-validate-mixed-use-asset.ts:54` 라벨 → "취득 실거래가액"
+        (조사 고정 `${basisLabel}을`을 유지하려면 3종 라벨이 모두 받침 있는 "액"으로
+         끝나야 한다는 규약을 주석으로 못박음 — 재발 방지)
+11. ✅ 겸용 validate 23건 통과 · `npm run test:transfer` 4,860건 통과 · tsc 0건
 ```
