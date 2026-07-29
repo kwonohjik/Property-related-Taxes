@@ -651,7 +651,24 @@ G1~G9·G12~G17이 위 컴포넌트 테스트 파일이다.
 
 Phase 1·2·3과 **무관하게 이미 존재**하며, 이번 수정이 유발하지도 악화시키지도 않는다. 별도 항목으로 남긴다.
 
-### S1. `hasSaleRatio` 인자 비대칭 — validate 통과 ↔ 엔진 throw
+### S1. `hasSaleRatio` 인자 비대칭 — validate 통과 ↔ 엔진 throw ✅ **해소(PR ③)**
+
+> **2026-07-29 해소.** anchor `__tests__/calc/split-sale-std-price-transmit.test.ts` 6건.
+>
+> **실측 정정**: 아래 서술은 throw 지점을 `splitPair`(양도가액 축)로 지목했으나, 실제로는 **그 앞
+> 술어 게이트**(`transfer-tax-split-gain.ts:354-375`)에서 먼저 throw한다 — 전송되지 않은 양도시
+> 기준시가 때문에 엔진 `hasSaleRatio=false` → ⑤절 true → `!ratio && requiresAcqStdPrice` →
+> "취득시 ㎡당 개별공시지가와 토지 면적이 필요합니다". 결론(validate 통과 ↔ 엔진 throw)은 동일.
+>
+> **채택안**: 해소안 두 가지 중 **"API가 무조건 전송"**(`saleStdPriceActive = isSplitActive`).
+> UI·validate를 전송 게이트에 맞추는 안은 V4가 "양도시 기준시가 2필드"를 정당한 입력으로 인정하는
+> 설계와 충돌해 **또 다른 dead-end**(입력해도 전송되지 않아 해소 불가)를 만든다.
+> 과잉 전송은 무해하다 — 양도가액 2칸이 입력되면 `splitPair`가 비율을 쓰지 않고(`:99`), 환산 파트가
+> 없으면 분모로도 소비되지 않으며, 기준시가는 물건 속성값이라 지분 스케일 대상도 아니다.
+>
+> 기존 anchor 1건 정정: `transfer-tax-api-split-gate.test.ts`의 "실가/실가 → 미전송" 단언은
+> 최소 전송 원칙을 고정하고 있었다 → 전송으로 반전(같은 파일이 이미 §7.2에서 한 번 게이트를 넓힌
+> 이력이 있어 방향은 일관).
 
 UI·validate는 **폼값**으로, 엔진은 **실제 전송된 필드**로 `hasSaleRatio`를 판정한다. API는
 `saleStdPriceActive`(`transfer-tax-api-split.ts:78-80`)일 때만 양도시 기준시가를 전송하므로,
