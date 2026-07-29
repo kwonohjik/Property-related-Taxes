@@ -123,8 +123,9 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 규칙 ①은 "구분이 없으면 **양도시** 기준시가 비율"이라 법령과 어긋난다.
   // → 양도가액 구분 입력 **또는** 양도시 기준시가 2필드 중 하나를 요구한다(자동 fallback 금지).
   const separateAcq = isSeparateAcquisition(asset);
+  // ⚠️ **별개취득 여부와 무관하게 적용**한다(2026-07-29 확정) — 규칙 ①은 양도가액을 나누는
+  //    규칙이라 취득시기 상이 여부와 관계가 없다. 엔진도 같은 범위로 차단한다(취득시 비율 후퇴 폐지).
   if (
-    separateAcq &&
     asset.saleSplitMode === "actual" &&
     opt(asset.landTransferPrice) == null &&
     opt(asset.buildingTransferPrice) == null &&

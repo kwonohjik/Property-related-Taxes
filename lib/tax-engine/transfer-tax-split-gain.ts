@@ -393,11 +393,18 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     input.buildingStandardPriceAtAcquisition != null
   );
 
-  // ① 양도가액 분리 — saleSplitMode 명시 분기 (Phase B: 부가세령 §64①1호 "양도시" 기준시가 안분으로 정정).
-  // 토지·건물 양도시 기준시가가 모두 명시 입력된 경우에만 양도시 비율을 쓰고, 미입력 시 종전
-  // 취득시 비율(landRatio)로 후퇴한다(회귀 0 — 기존 입력만 있는 케이스는 동작 불변).
+  // ① 양도가액 분리 — 소득령 §166⑥ → 부가가치세법 시행령 §64①1호 준용
+  //    ("공급계약일 = **양도 현재**의 기준시가" 비율).
+  //
+  // ⚠️ **취득시 비율(landRatio)로 후퇴하지 않는다** (2026-07-29 사용자 확정 규칙 ①).
+  //    종전에는 `saleRatio?.land ?? landRatio`로, 양도시 기준시가가 없으면 취득시 비율을
+  //    조용히 썼다(회귀 0 목적의 한시 코드). 그러나 토지는 오르고 건물은 감가하므로 두 시점의
+  //    비율은 크게 다르고(실측: 취득시 40% vs 양도시 80% → 토지 양도가액 4억 차이), 취득시
+  //    비율로 양도대가를 나눌 법령 근거가 없다.
+  //    → 근거가 없으면 `splitPair`가 차단한다(조용한 오답 금지). 사용자는 계약서 구분금액을
+  //      입력하거나 양도시 토지·건물 기준시가를 입력해 해소한다(validate가 선차단).
   const totalTransfer = input.transferPrice;
-  const effectiveSaleLandRatio = saleRatio?.land ?? landRatio;
+  const effectiveSaleLandRatio = saleRatio?.land ?? null;
   const { land: landTransferPrice, building: buildingTransferPrice } = splitPair(
     totalTransfer,
     input.landTransferPrice,

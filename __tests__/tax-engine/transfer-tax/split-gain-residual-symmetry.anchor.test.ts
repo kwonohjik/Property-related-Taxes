@@ -28,6 +28,11 @@ const base = {
   acquisitionArea: 60,
   standardPriceAtAcquisition: 1_000_000,
   standardPriceAtTransfer: 2_000_000,
+  // 양도가액 안분 근거 — 소득령 §166⑥ → 부가세령 §64①1호(양도 **현재** 기준시가 비율).
+  // 종전에는 취득시 비율(60%)로 후퇴하는 엔진 fallback에 의존했으나 그 fallback이 폐지됐다.
+  // 여기 값은 그 fallback이 산출하던 값과 **동일**(2,000,000 × 60%)이라 기대값은 불변이다.
+  landStandardPriceAtTransfer: 1_200_000,
+  buildingStandardPriceAtTransfer: 800_000,
   expenses: 0,
 } as unknown as TransferTaxInput;
 

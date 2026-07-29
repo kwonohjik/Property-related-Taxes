@@ -30,6 +30,10 @@ function bldgSplit(overrides: Partial<TransferTaxInput> = {}): TransferTaxInput 
     residencePeriodMonths: 0,
     useEstimatedAcquisition: true,
     standardPriceAtTransfer: 500_000_000,
+    // 양도가액 안분 근거(§166⑥ → 부가세령 §64①1호). 폐지된 취득시 비율 fallback이
+    // 산출하던 값과 동일(500,000,000 × 50%)이라 기대값 불변.
+    landStandardPriceAtTransfer: 250_000_000,
+    buildingStandardPriceAtTransfer: 250_000_000,
     standardPriceAtAcquisition: 200_000_000,
     standardPricePerSqmAtAcquisition: 500_000,
     acquisitionArea: 200,
