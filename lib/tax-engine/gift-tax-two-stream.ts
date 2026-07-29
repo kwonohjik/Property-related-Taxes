@@ -39,6 +39,7 @@ import {
   filterOrdinaryPriors,
   calcSpecialTreatmentStream,
 } from "./gift-special-stream";
+import { calcAggregationExcludedStream } from "./gift-aggregation-excluded-stream";
 import { formatBracketRate, TAX_BASE_MIN, type GiftTaxEngineOptions } from "./gift-tax-helpers";
 
 /**
@@ -58,9 +59,17 @@ export function calcGiftTaxTwoStream(
   const allLaws: Set<string> = new Set([GIFT_LAW.TAXABLE_VALUE]);
 
   // ─────────────────────────────────────────────
-  // STEP 0.1: 자산 귀속 분류
+  // STEP 0.0: 합산배제증여재산(§41의3·§45의2 등) 분리 — 특례/일반 어느 스트림에도 합산 금지.
+  //   §47② 격리·§55① 호별 과세표준 별도 계산 후 최종 세액에 합산 (H-30·G-4).
+  //   빈 배열이면 twoStreamItems === giftItems → 현행 2-스트림 동작 100% 보존.
   // ─────────────────────────────────────────────
-  const partition = partitionGiftItems(input.giftItems);
+  const aggExclItems = input.giftItems.filter((i) => i.isAggregationExcludedGift);
+  const twoStreamItems = input.giftItems.filter((i) => !i.isAggregationExcludedGift);
+
+  // ─────────────────────────────────────────────
+  // STEP 0.1: 자산 귀속 분류 (합산배제 제외분만 특례/일반 분류)
+  // ─────────────────────────────────────────────
+  const partition = partitionGiftItems(twoStreamItems);
   if (partition.hasUnassignedItems) {
     // validation(⑧)이 차단해야 하지만 방어 처리: 미설정 자산을 일반 스트림으로 분류하고 경고
     allWarnings.push(
@@ -71,13 +80,13 @@ export function calcGiftTaxTwoStream(
   // ─────────────────────────────────────────────
   // STEP 0.2: 자산별 평가
   // ─────────────────────────────────────────────
-  const allValuationResults = evaluateAllEstateItems(input.giftItems);
+  const allValuationResults = evaluateAllEstateItems(twoStreamItems);
   for (const vr of allValuationResults)
     allWarnings.push(...vr.warnings.filter((w) => w !== COLLATERAL_DEBT_NOTICE)); // §14 상속세 전용 제외
 
   // 자산 ID → 평가액 매핑 (id 없으면 인덱스 기반)
   const valuationMap = new Map<EstateItem, number>();
-  input.giftItems.forEach((item, idx) => {
+  twoStreamItems.forEach((item, idx) => {
     valuationMap.set(item, allValuationResults[idx]?.valuatedAmount ?? 0);
   });
 
@@ -235,6 +244,17 @@ export function calcGiftTaxTwoStream(
     hasAppraisalValuation,
     taxType: "gift",
   });
+
+  // 합산배제 스트림 (H-30·G-4) — 특례·일반과 독립. M-2: 일반 스트림이 수수료 차감했으면 재차감 방지.
+  const aggExcl =
+    aggExclItems.length > 0
+      ? calcAggregationExcludedStream(aggExclItems, input, brackets, hasAppraisalValuation)
+      : null;
+  if (aggExcl) {
+    allBreakdown.push(...aggExcl.breakdown);
+    for (const w of aggExcl.warnings) allWarnings.push(w);
+  }
+
   const rawOrdinaryTaxBase = Math.max(
     0,
     aggregatedOrdinaryValue - totalDeduction - appraisalFee.total,
@@ -294,6 +314,7 @@ export function calcGiftTaxTwoStream(
     creditInput: ordinaryCreditInput,
     computedTax: ordinaryComputedTax,
     generationSkipSurcharge: surchargeResult.additionalSurcharge,
+    giftDate: input.giftDate, // §69 신고세액공제율 증여연도 기준 (H-21 — 미전달 시 3% 고정 버그)
     foreignPropertyRatio: options.foreignPropertyRatio,
     giftAmount: ordinaryNetValue,
     priorGiftComputedTax: priorAggregation.totalComputedTax,
@@ -311,7 +332,7 @@ export function calcGiftTaxTwoStream(
     0,
     ordinaryTotalWithSurcharge - creditResult.totalCredit,
   );
-  const finalTax = specialStream.finalTax + ordinaryFinalTax;
+  const finalTax = specialStream.finalTax + ordinaryFinalTax + (aggExcl?.finalTax ?? 0);
 
   allBreakdown.push(
     {
@@ -322,10 +343,15 @@ export function calcGiftTaxTwoStream(
       label: "일반 스트림 납부세액",
       amount: ordinaryFinalTax,
     },
+    ...(aggExcl
+      ? [{ label: "합산배제 스트림 납부세액", amount: aggExcl.finalTax }]
+      : []),
     {
       label: "최종 납부세액 합계",
       amount: finalTax,
-      note: "= 특례 스트림 + 일반 스트림",
+      note: aggExcl
+        ? "= 특례 스트림 + 일반 스트림 + 합산배제 스트림"
+        : "= 특례 스트림 + 일반 스트림",
     },
   );
 
@@ -367,6 +393,9 @@ export function calcGiftTaxTwoStream(
     finalTax: ordinaryFinalTax,
     hasPriorGifts: priorAggregation.matchedPriorGifts.length > 0,
     filingCreditBase: creditResult.filingCreditBase,
+    // §69 신고세액공제율 — 미전달 시 별지 서식 라벨이 3% 고정(gift-filing-form-rows `?? 0.03`)이 되어
+    //   계산이 적용한 증여연도별 율(2017 7%·2018 5%)과 어긋난다 (메인 경로 gift-tax.ts:403과 동일 전달).
+    filingCreditRate: creditResult.filingCreditRate,
     foreignTaxCredit: creditResult.foreignTaxCredit,
     exemptTotal: exemptAmount,
     appraisalFeeTotal: appraisalFee.total,
@@ -420,6 +449,18 @@ export function calcGiftTaxTwoStream(
     publicInterestPenalty: 0,
     installmentPayment: 0,
     cashDeferred: installmentSplit.splitAmount,
+    // 합산배제증여재산 별도 스트림 echo (H-30·G-4) — 결과뷰 별도 카드. 빈 배열이면 undefined(현행 보존).
+    aggregationExcludedDetail: aggExcl
+      ? {
+          grossValue: aggExcl.grossValue,
+          taxBase: aggExcl.taxBase,
+          computedTax: aggExcl.computedTax,
+          generationSkipSurcharge: aggExcl.generationSkipSurcharge,
+          totalCredit: aggExcl.totalCredit,
+          finalTax: aggExcl.finalTax,
+          breakdown: aggExcl.breakdown,
+        }
+      : undefined,
     // 2-스트림 전용 결과 필드 (T-03)
     specialStreamTax: specialStream.finalTax,
     ordinaryStreamTax: ordinaryFinalTax,
@@ -427,10 +468,18 @@ export function calcGiftTaxTwoStream(
     // 특례 자산 §47① 인수 채무 (한도 차감분) — 2-스트림 카드 표시용
     specialStreamDebt: Math.min(specialItemsDebt, specialItemsValue) || undefined,
   };
-  const besshi10Rows = buildBesshi10Rows(input, partialResult, brackets);
+  // H-47: 별지10호 ㊺ 자진납부는 서식 산식(㉞ 산출세액계 − 세액공제)상 일반 스트림 결정세액이어야 한다.
+  //   partialResult.finalTax는 특례+일반(+합산배제) combined이므로 그대로 쓰면 ㊺가 filingFormRows ⑫와 어긋난다.
+  //   → 일반 스트림 결정세액(ordinaryFinalTax)으로 교체. 특례·합산배제는 별도 카드(specialStreamTax·aggregationExcludedDetail).
+  const besshi10Rows = buildBesshi10Rows(
+    input,
+    { ...partialResult, finalTax: ordinaryFinalTax },
+    brackets,
+  );
 
   return {
     ...partialResult,
     besshi10Rows,
+    specialTreatmentType: input.creditInput?.specialTreatment, // M-3: §71② 연부연납 15년 구분 echo
   };
 }

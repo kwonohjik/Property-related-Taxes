@@ -2,18 +2,29 @@
  * 영농상속공제 사후관리 추징 (F-7)
  *
  * 법령 (KoreanLaw MCP 검증 2026-05-21):
- *   - 상증법 §18의3④ (5년 내 처분·종사 중단 추징)
+ *   - 상증법 §18의3④ (5년 내 처분·종사 중단 추징) — 산입액을 "과세가액에 산입하여 상속세를 부과"
  *   - 상증법 §18의3⑥ (조세포탈·회계부정 — 시행령 §16⑨ → §15⑲)
  *   - 상증법 §18의3⑦ (사유 발생일 속하는 달 말일 + 6개월 이내 신고)
  *   - 상증령 §16⑥ (정당한 사유 7종)
- *   - 상증령 §16⑦ ("100분의 100" 추징율)
- *   - 상증령 §16⑧ (이자상당액 = 결정세액 × 일수 × §43의3② 이자율 / 365)
+ *   - 상증령 §16⑦ ("100분의 100" — 과세가액 산입율, 추징세액률 아님)
+ *   - 상증령 §16⑧1호 (이자상당액 기준 = "④ 전단에 따라 결정한 상속세액" = marginal 추징세액)
  *
+ * ⚠️ 추징세액 = 상속세(과세표준 + 산입액) − 상속세(과세표준) = §26 누진 marginal 재계산(2026-07-17 재검증).
+ *    산입액(공제 전액)을 곧 세액으로 보는 것은 오류(과세가액↔세액 차원 혼동, 최고 50%인데 100% 징수).
+ *    가업 §18의2⑤(PR#635)와 동형 — 영농은 자산처분비율 없이 산입액=공제 전액.
  * 정수 연산: 이자상당액 BigInt 단일 floor (applyRate 다중 호출 정밀도 손실 회피)
  */
 
-import { addDays, addMonths, differenceInDays, endOfMonth, parseISO } from "date-fns";
+import {
+  addMonths,
+  addYears,
+  differenceInDays,
+  endOfMonth,
+  isAfter,
+  parseISO,
+} from "date-fns";
 
+import { calcInheritanceGiftTax } from "../inheritance-gift-common";
 import type {
   CalculationStep,
   FarmingPostMgmtInput,
@@ -116,10 +127,49 @@ export function calcFarmingPostMgmt(
   const safeOriginal = Math.max(0, originalDeduction);
   const reportDeadline = calcReportDeadline(input.violationDate);
 
-  // 일수 계산 — filingDeadline 다음날부터 violationDate까지 (inclusive of violation)
-  const startDate = addDays(parseISO(input.filingDeadline), 1);
-  const endDate = parseISO(input.violationDate);
-  const interestDays = Math.max(0, differenceInDays(endDate, startDate));
+  // 일수 — 신고기한 다음날부터 위반일까지 (위반일 포함).
+  //   differenceInDays(위반일, 신고기한)이 곧 그 일수 (신고기한 자체는 제외, 다음날=1일차).
+  //   가업 §18의2 daysFromFilingToViolation과 동일 관행. 종전 addDays(+1) 후 differenceInDays는
+  //   첫날을 이중 배제해 1일 과소였음 (M-9).
+  const interestDays = Math.max(
+    0,
+    differenceInDays(parseISO(input.violationDate), parseISO(input.filingDeadline)),
+  );
+
+  // §18의3④ 5년 사후관리기간 — ④ 트랙(처분·종사중단)만. 5년 경과 후 위반 → 무추징.
+  //   민법 §157·§160② 계산: 상속개시일 기산 5년 만료일 = addYears(start, 5). 그 후 위반은 기간 외.
+  //   §18의3⑥ 트랙(조세포탈·회계부정 형 확정)은 5년 제한 없음 → 게이트 미적용.
+  if (
+    isJustifiedReasonApplicable(input.violation) &&
+    isAfter(
+      parseISO(input.violationDate),
+      addYears(parseISO(input.inheritanceStartDate), 5),
+    )
+  ) {
+    return {
+      recaptureRequired: false,
+      outsideManagementPeriod: true,
+      taxableAmountAddback: 0,
+      recaptureAmount: 0,
+      interestAmount: 0,
+      totalRecapture: 0,
+      reportDeadline,
+      interestDays,
+      breakdown: [
+        {
+          label: `위반 사유: ${VIOLATION_LABEL[input.violation]}`,
+          amount: 0,
+        },
+        {
+          label: "사후관리기간(5년) 경과 — 추징 대상 아님",
+          amount: 0,
+          note: `상속개시일 ${input.inheritanceStartDate} + 5년 < 위반일 ${input.violationDate} (상증법 §18의3④)`,
+        },
+        { label: "추징세액", amount: 0 },
+        { label: "이자상당액", amount: 0 },
+      ],
+    };
+  }
 
   // 정당사유 매칭 — §18의3④ 트랙만
   const exemptedBy = evaluateJustifiedReason(input);
@@ -127,6 +177,7 @@ export function calcFarmingPostMgmt(
     return {
       recaptureRequired: false,
       exemptedBy,
+      taxableAmountAddback: 0,
       recaptureAmount: 0,
       interestAmount: 0,
       totalRecapture: 0,
@@ -148,10 +199,18 @@ export function calcFarmingPostMgmt(
     };
   }
 
-  // 추징 적용
-  const recaptureAmount = safeOriginal;  // §16⑦ "100분의 100"
+  // 추징 적용 — 과세가액 산입 후 상속세 재계산 증가분 (§18의3④ 전단, C-2 동형)
+  //   ① 산입액 = 공제액 × 100%(§16⑦). 영농은 자산처분비율 없이 전액.
+  //   ② 추징세액 = 상속세(과세표준 + 산입액) − 상속세(과세표준) = §26 누진 marginal.
+  const taxableAmountAddback = safeOriginal;
+  const safeBase = Math.max(0, input.baseTaxableAmount);
+  const recaptureAmount = Math.max(
+    0,
+    calcInheritanceGiftTax(safeBase + taxableAmountAddback) - calcInheritanceGiftTax(safeBase),
+  );
+  // 이자상당액 기준세액 = 재계산 증가분(§16⑧1호 "④ 전단에 따라 결정한 상속세액")
   const interestAmount = calcInterestAmount(
-    input.determinedTax,
+    recaptureAmount,
     interestDays,
     input.interestRate,
   );
@@ -189,12 +248,15 @@ export function calcFarmingPostMgmt(
       amount: safeOriginal,
     },
     {
-      label: "추징율 (§16⑦)",
-      amount: 0,
-      note: "100분의 100 — 5년 내 일률 적용",
+      label: "상속세 과세가액 산입액 (§18의3④ 전단·§16⑦ 100%)",
+      amount: taxableAmountAddback,
     },
     {
-      label: "추징세액 = 공제액 × 100%",
+      label: "원래 상속세 과세표준",
+      amount: safeBase,
+    },
+    {
+      label: "추징세액 = 상속세(과세표준+산입액) − 상속세(과세표준)",
       amount: recaptureAmount,
       lawRef: "상증법 §18의3④",
     },
@@ -209,7 +271,7 @@ export function calcFarmingPostMgmt(
       note: `${(input.interestRate * 100).toFixed(3)}% (사용자 입력)`,
     },
     {
-      label: "이자상당액 = 결정세액 × 일수 × 이자율 / 365",
+      label: "이자상당액 = 추징세액 × 일수 × 이자율 / 365",
       amount: interestAmount,
       lawRef: "시행령 §16⑧",
     },
@@ -226,6 +288,7 @@ export function calcFarmingPostMgmt(
 
   return {
     recaptureRequired: true,
+    taxableAmountAddback,
     recaptureAmount,
     interestAmount,
     totalRecapture,

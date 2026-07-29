@@ -22,10 +22,27 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { deriveYearFromEventDate } from "@/lib/calc/building-std-price-form";
 import {
   calcReductionAcquisitionStdPrice,
   canCalcReductionPhd,
 } from "@/lib/tax-engine/transfer-reductions";
+
+/** 국세청 신축가격기준액 고시 최초 연도 — 이전 연도는 위치지수 트랙(2001 공시지가)이 별도 필요. */
+const BUILDING_STD_FIRST_YEAR = 2001;
+
+/**
+ * 모달 land price prefill — §164⑤ 위치지수 트랙 게이팅.
+ * 이벤트연도 ≥2001에서만 해당 연도 ㎡당 공시지가를 주입(위치지수 오산 방지).
+ * ≤2000이면 undefined(모달에서 2001.1.1 공시지가 직접 입력).
+ */
+export function prefillAcqLandPrice(eventDate: string | undefined, landPricePerSqm: string | undefined): string | undefined {
+  if (!eventDate || !landPricePerSqm) return undefined;
+  const year = parseInt(deriveYearFromEventDate(eventDate) || "0", 10);
+  return year >= BUILDING_STD_FIRST_YEAR ? landPricePerSqm : undefined;
+}
 
 // ============================================================================
 // Props
@@ -55,6 +72,16 @@ export interface ReductionPhdInputProps {
   onCopyFromAsset?: () => void;
   /** 자산 카드에 PHD 데이터가 있는지 (버튼 활성 조건) */
   assetHasPhdData?: boolean;
+  /** 양도물건 지번 주소 — 건물 기준시가 계산 모달 소재지 prefill(Vworld 공시지가 조회) */
+  jibun?: string;
+  /** 건물 기준시가 모달 입력 스냅샷 복원 키 prefix(정정 지원) — legacy fallback */
+  snapshotKeyPrefix?: string;
+  /**
+   * 자산 식별자 — 건물 기준시가 계산서 스냅샷 키를 `bsp-${assetId}-red-phd` 규약으로 생성.
+   * 규약 편입 시 idOfSnapshotKey가 assetId를 환원 → 결과탭 「건물 기준시가 계산서」에 노출된다
+   * (미전달 시 legacy `${snapshotKeyPrefix}-bsp` fallback — 결과탭 소속 판정 탈락 상태 유지).
+   */
+  assetId?: string;
 }
 
 // ============================================================================
@@ -68,7 +95,17 @@ export function ReductionPhdInput({
   onApplyResult,
   onCopyFromAsset,
   assetHasPhdData,
+  jibun,
+  snapshotKeyPrefix,
+  assetId,
 }: ReductionPhdInputProps) {
+  // 건물 기준시가 계산서 스냅샷 키 — 취득시·최초공시시 두 모달 버튼이 공유(단일 스냅샷 idempotent 갱신).
+  // assetId 있으면 `bsp-${assetId}-red-phd` 규약(결과탭 노출) — 없으면 legacy prefix fallback.
+  const buildingStdSnapshotKey = assetId
+    ? `bsp-${assetId}-red-phd`
+    : snapshotKeyPrefix
+      ? `${snapshotKeyPrefix}-bsp`
+      : undefined;
   // 자동 활성화 권장 — 취득일 < 최초공시일
   const autoRecommended = useMemo(() => {
     if (!acquisitionDate || !value.firstDisclosureDate) return false;
@@ -126,7 +163,7 @@ export function ReductionPhdInput({
                 value={value.firstDisclosureDate ?? ""}
                 onChange={(v) => onChange({ firstDisclosureDate: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">공동주택가격/개별주택가격 최초 고시일</p>
+              <p className="mt-1 text-micro text-muted-foreground">공동주택가격/개별주택가격 최초 고시일</p>
             </div>
 
             <div>
@@ -136,7 +173,7 @@ export function ReductionPhdInput({
                 value={value.firstDisclosurePrice ?? ""}
                 onChange={(v) => onChange({ firstDisclosurePrice: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">최초고시 P_F 값</p>
+              <p className="mt-1 text-micro text-muted-foreground">최초고시 P_F 값</p>
             </div>
 
             <div>
@@ -149,24 +186,28 @@ export function ReductionPhdInput({
 
             <div></div> {/* 그리드 정렬용 빈 칸 */}
 
-            <div>
-              <label className="mb-1 block text-xs font-medium">취득시 토지 공시지가 (원/㎡)</label>
-              <CurrencyInput
-                label=""
-                value={value.landPricePerSqmAtAcq ?? ""}
-                onChange={(v) => onChange({ landPricePerSqmAtAcq: v })}
+            <div className="sm:col-span-2">
+              <LandPriceLookupField
+                label="취득시 토지 공시지가 (원/㎡)"
+                hint="취득연도 개별공시지가"
+                hideLandStdPrice
+                pricePerSqm={value.landPricePerSqmAtAcq ?? ""}
+                onPricePerSqmChange={(v) => onChange({ landPricePerSqmAtAcq: v })}
+                jibun={jibun}
+                referenceDate={acquisitionDate}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">취득연도 개별공시지가</p>
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium">최초공시시 토지 공시지가 (원/㎡)</label>
-              <CurrencyInput
-                label=""
-                value={value.landPricePerSqmAtFirst ?? ""}
-                onChange={(v) => onChange({ landPricePerSqmAtFirst: v })}
+            <div className="sm:col-span-2">
+              <LandPriceLookupField
+                label="최초공시시 토지 공시지가 (원/㎡)"
+                hint="최초공시연도 개별공시지가"
+                hideLandStdPrice
+                pricePerSqm={value.landPricePerSqmAtFirst ?? ""}
+                onPricePerSqmChange={(v) => onChange({ landPricePerSqmAtFirst: v })}
+                jibun={jibun}
+                referenceDate={value.firstDisclosureDate}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">최초공시연도 개별공시지가</p>
             </div>
 
             <div>
@@ -176,7 +217,25 @@ export function ReductionPhdInput({
                 value={value.buildingStdAtAcq ?? ""}
                 onChange={(v) => onChange({ buildingStdAtAcq: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
+              <div className="mt-1">
+                <BuildingStdPriceModalButton
+                  buttonLabel="건물 기준시가 계산"
+                  transferSectionLabel="최초고시 시점"
+                  initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
+                  snapshotKey={buildingStdSnapshotKey}
+                  prefill={{
+                    landAreaM2: value.landAreaSqm || undefined,
+                    acquisitionDate,
+                    transferDate: value.firstDisclosureDate,
+                    acqLandPricePerSqm: prefillAcqLandPrice(acquisitionDate, value.landPricePerSqmAtAcq),
+                    transferLandPricePerSqm: value.landPricePerSqmAtFirst || undefined,
+                  }}
+                  onApplyBoth={(acq, first) =>
+                    onChange({ buildingStdAtAcq: String(acq), buildingStdAtFirst: String(first) })
+                  }
+                />
+              </div>
+              <p className="mt-1 text-micro text-muted-foreground">국세청 건물기준시가 — 미입력 시 토지만 환산</p>
             </div>
 
             <div>
@@ -186,7 +245,26 @@ export function ReductionPhdInput({
                 value={value.buildingStdAtFirst ?? ""}
                 onChange={(v) => onChange({ buildingStdAtFirst: v })}
               />
-              <p className="mt-1 text-[10px] text-muted-foreground">미입력 시 취득시와 동일 가정</p>
+              <div className="mt-1">
+                <BuildingStdPriceModalButton
+                  buttonLabel="건물 기준시가 계산"
+                  transferSectionLabel="최초고시 시점"
+                  initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
+                  snapshotKey={buildingStdSnapshotKey}
+                  prefill={{
+                    landAreaM2: value.landAreaSqm || undefined,
+                    // 두 버튼 동일 — 취득시 + 최초고시시 2시점을 함께 계산·적용.
+                    acquisitionDate,
+                    transferDate: value.firstDisclosureDate,
+                    acqLandPricePerSqm: prefillAcqLandPrice(acquisitionDate, value.landPricePerSqmAtAcq),
+                    transferLandPricePerSqm: value.landPricePerSqmAtFirst || undefined,
+                  }}
+                  onApplyBoth={(acq, first) =>
+                    onChange({ buildingStdAtAcq: String(acq), buildingStdAtFirst: String(first) })
+                  }
+                />
+              </div>
+              <p className="mt-1 text-micro text-muted-foreground">미입력 시 취득시와 동일 가정</p>
             </div>
           </div>
 
@@ -196,7 +274,7 @@ export function ReductionPhdInput({
               <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
                 환산 결과 (소득세법 §164⑤)
               </p>
-              <div className="space-y-0.5 text-[11px] text-amber-800 dark:text-amber-300">
+              <div className="space-y-0.5 text-caption text-amber-800 dark:text-amber-300">
                 {result.formulaSteps.map((s, i) => (
                   <p key={i}>
                     <span className="opacity-70">{s.label}: </span>
@@ -220,7 +298,7 @@ export function ReductionPhdInput({
           )}
 
           {!result && isOn && (
-            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+            <p className="text-caption text-amber-700 dark:text-amber-400">
               ⚠ 환산을 위해 최초공시일·최초공시가격·토지면적·취득시·최초공시시 토지 공시지가를 모두 입력하세요.
             </p>
           )}

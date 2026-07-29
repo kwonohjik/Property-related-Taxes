@@ -110,7 +110,7 @@ export function StepIndicator({
               )}
               <span
                 className={cn(
-                  "mt-1 text-[10px] font-medium whitespace-nowrap hidden sm:block",
+                  "mt-1 text-micro font-medium whitespace-nowrap hidden sm:block",
                   isCurrent ? "text-primary" : "text-muted-foreground",
                   clickable && "cursor-pointer",
                 )}

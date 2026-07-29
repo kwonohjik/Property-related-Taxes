@@ -179,8 +179,8 @@ export function buildAggregateRows(
         p.replacementLandDetail?.eligibleTransferIncome,
       ),
     );
-    setNum("reductionTargetIncome2", col, 0);
-    setNum("incomeAmountAfter", col, p.incomeAfterOffset);
+    setNum("reductionTargetIncome2", col, p.incomeDeductionReducible ?? 0);
+    setNum("incomeAmountAfter", col, Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)));
     setNum("priorIncomeAmount", col, null); // 신고서 단위 개념 — 자산별 "-" (합계만 산정)
 
     // 합산-only 행 — 자산 셀 null
@@ -252,8 +252,16 @@ export function buildAggregateRows(
       0,
     ),
   );
-  setNum("reductionTargetIncome2", "total", 0);
-  setNum("incomeAmountAfter", "total", aggregated.totalIncomeAfterOffset);
+  setNum(
+    "reductionTargetIncome2",
+    "total",
+    properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0),
+  );
+  setNum(
+    "incomeAmountAfter",
+    "total",
+    properties.reduce((s, p) => s + Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)), 0),
+  );
   // 기신고 양도소득금액 (§103) — 가장 늦은 신고일(확정신고분)보다 신고일이 빠른 자산들의 양도소득금액 합산.
   //   신고일 = form.filingDate(입력값) → 없으면 statutoryFilingDeadline(법정신고기한, 양도일 파생) fallback.
   //   bundled(propertyFormMap 미주입)은 filingDates 전부 "" → maxFiling "" → priorIncome 0 (회귀 0).

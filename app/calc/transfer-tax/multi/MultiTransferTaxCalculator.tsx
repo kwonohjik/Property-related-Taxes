@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, ArrowRight, Calculator, Plus, ChevronLeft } from "lucide-react";
+import { Plus } from "lucide-react";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { AssetTabBar } from "@/components/calc/transfer/AssetTabBar";
 import { AggregateSettingsPanel } from "@/components/calc/transfer/AggregateSettingsPanel";
 import { AmendmentBlock } from "@/components/calc/transfer/AmendmentBlock";
@@ -99,7 +100,7 @@ function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev,
               <Plus className="h-4 w-4" />
               첫 번째 양도 건 추가
             </Button>
-            <Button type="button" variant="outline" onClick={onLoad} data-testid="multi-load-history-btn" className="gap-2">
+            <Button type="button" variant="modalLauncher" onClick={onLoad} data-testid="multi-load-history-btn" className="gap-2">
               📂 이력에서 불러오기
             </Button>
           </div>
@@ -161,7 +162,7 @@ function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev,
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="modalLauncher"
                 className="gap-2"
                 onClick={onLoad}
                 data-testid="multi-load-history-btn"
@@ -181,20 +182,14 @@ function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev,
         </Alert>
       )}
 
-      <div className="flex justify-between pt-4">
-        <Button type="button" variant="ghost" onClick={onPrev} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          이전
-        </Button>
-        <Button
-          type="button"
+      <div className="flex items-center justify-between gap-2 pt-4">
+        <NavButton direction="prev" label="이전" onClick={onPrev} />
+        <NavButton
+          direction="next"
+          label="공통 설정으로"
           disabled={properties.length === 0}
           onClick={onNext}
-          className="gap-2"
-        >
-          공통 설정으로
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+        />
       </div>
     </div>
   );
@@ -236,10 +231,7 @@ function StepEdit({
       </div>
 
       <div className="flex justify-between pt-2">
-        <Button type="button" variant="ghost" onClick={onSaveAndBack} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          자산 목록으로
-        </Button>
+        <NavButton direction="prev" label="자산 목록으로" onClick={onSaveAndBack} />
       </div>
     </div>
   );
@@ -506,11 +498,6 @@ export default function MultiTransferTaxCalculator() {
       {/* 헤더 */}
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <button onClick={() => router.push("/")} className="hover:text-foreground flex items-center gap-1">
-            <ChevronLeft className="h-3.5 w-3.5" />
-            홈으로
-          </button>
-          <span>/</span>
           <button onClick={() => router.push("/calc/transfer-tax")} className="hover:text-foreground">
             양도소득세
           </button>
@@ -578,22 +565,13 @@ export default function MultiTransferTaxCalculator() {
       {form.activeStep === "edit" && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleSaveAndBack}
-              className="gap-1"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              자산 목록으로
-            </Button>
+            <NavButton direction="prev" label="자산 목록으로" onClick={handleSaveAndBack} />
             <span className="text-sm text-muted-foreground">
               편집 중: {form.properties[form.activePropertyIndex]?.propertyLabel}
             </span>
             <Button
               type="button"
-              variant="outline"
+              variant="modalLauncher"
               size="sm"
               onClick={() => setLoadModalOpen(true)}
               data-testid="multi-load-history-btn"
@@ -649,25 +627,11 @@ export default function MultiTransferTaxCalculator() {
               </div>
             )}
 
-            <div className="flex justify-between pt-4 border-t">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setStep("list")}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                자산 목록으로
-              </Button>
-              <Button
-                type="button"
-                onClick={handleCalculate}
-                disabled={isCalculating}
-                className="gap-2"
-              >
-                <Calculator className="h-4 w-4" />
+            <div className="flex items-center justify-between gap-2 pt-4 border-t">
+              <NavButton direction="prev" label="자산 목록으로" onClick={() => setStep("list")} />
+              <CtaButton onClick={handleCalculate} disabled={isCalculating}>
                 {isCalculating ? "계산 중..." : "세액 계산"}
-              </Button>
+              </CtaButton>
             </div>
           </CardContent>
         </Card>
@@ -677,15 +641,7 @@ export default function MultiTransferTaxCalculator() {
       {form.activeStep === "result" && result && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setStep("settings")}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              설정으로 돌아가기
-            </Button>
+            <NavButton direction="prev" label="설정으로 돌아가기" onClick={() => setStep("settings")} />
           </div>
 
           <MultiTransferTaxResultView
@@ -696,33 +652,12 @@ export default function MultiTransferTaxCalculator() {
 
           {/* 결과 화면 하단 네비게이션 — 다른 양도건 추가, 자산 목록, 홈 */}
           <Card className="print:hidden">
-            <CardContent className="pt-6 flex flex-wrap gap-3 justify-center">
-              <Button
-                type="button"
-                onClick={handleAddProperty}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
+            <CardContent className="pt-6 flex flex-wrap items-center gap-2 justify-center">
+              <CtaButton onClick={handleAddProperty}>
                 동일연도 다른 양도건 추가 계산하기
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep("list")}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                자산 목록으로
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/")}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                홈으로
-              </Button>
+              </CtaButton>
+              <NavButton direction="prev" label="자산 목록으로" onClick={() => setStep("list")} />
+              <HomeButton />
             </CardContent>
           </Card>
         </div>

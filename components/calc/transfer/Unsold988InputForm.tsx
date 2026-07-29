@@ -15,6 +15,8 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
+import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold988Form = Extract<AssetReductionForm, { type: "unsold_98_8" }>;
@@ -22,6 +24,13 @@ type Unsold988Form = Extract<AssetReductionForm, { type: "unsold_98_8" }>;
 interface Props {
   value: Unsold988Form;
   onChange: (patch: Partial<Unsold988Form>) => void;
+  acquisitionDate?: string;
+  transferDate?: string;
+  jibun?: string;
+  dong?: string;
+  ho?: string;
+  assetId?: string;
+  assetPhdSnapshot?: ReductionPhdValue;
 }
 
 function SectionShell({
@@ -36,7 +45,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -46,7 +55,17 @@ function SectionShell({
   );
 }
 
-export function Unsold988InputForm({ value, onChange }: Props) {
+export function Unsold988InputForm({
+  value,
+  onChange,
+  acquisitionDate,
+  transferDate,
+  jibun,
+  dong,
+  ho,
+  assetId,
+  assetPhdSnapshot,
+}: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -59,7 +78,7 @@ export function Unsold988InputForm({ value, onChange }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
           <DateInput value={value.contractDate988} onChange={(v) => onChange({ contractDate988: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             2015.1.1~2015.12.31 중 사업주체등과 최초로 체결한 매매계약 (법 §98의8①).
             취득일·양도일은 자산 기본 입력을 사용합니다
           </p>
@@ -74,7 +93,7 @@ export function Unsold988InputForm({ value, onChange }: Props) {
             onChange={(v) => onChange({ acquisitionPrice988: v })}
             label=""
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             6억원 이하 — 취득세 및 그 밖의 부대비용 제외 (조특령 §98의7②1호)
           </p>
         </div>
@@ -84,7 +103,7 @@ export function Unsold988InputForm({ value, onChange }: Props) {
             value={value.exclusiveAreaSqm988}
             onChange={(v) => onChange({ exclusiveAreaSqm988: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             135㎡ 이하 — 취득가액과 면적 요건을 모두 충족해야 합니다 (한쪽만 초과해도 적용 제외)
           </p>
         </div>
@@ -94,7 +113,7 @@ export function Unsold988InputForm({ value, onChange }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시일</label>
           <DateInput value={value.rentalStartDate988} onChange={(v) => onChange({ rentalStartDate988: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             사업자등록(소법 §168)과 임대사업자등록(민특법 §5)을 한 후 임대를 개시한 날부터
             기산합니다 — 등록 전 임대분은 산입되지 않습니다 (조특령 §98의5⑤1호 준용)
           </p>
@@ -109,7 +128,7 @@ export function Unsold988InputForm({ value, onChange }: Props) {
             value={value.inheritedRentalMonths988}
             onChange={(v) => onChange({ inheritedRentalMonths988: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             상속으로 취득한 임대주택은 피상속인의 임대기간을 합산합니다 (조특령 §98의5⑤2호 준용)
           </p>
         </div>
@@ -141,36 +160,54 @@ export function Unsold988InputForm({ value, onChange }: Props) {
 
       {/* 5년 후 양도 안분용 기준시가 */}
       <SectionShell num="⑤" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)" tone="sky">
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득 당시 기준시가</label>
-          <CurrencyInput
-            value={value.standardPriceAtAcquisition988}
-            onChange={(v) => onChange({ standardPriceAtAcquisition988: v })}
-            label=""
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득일부터 5년이 되는 날의 기준시가</label>
-          <CurrencyInput
-            value={value.standardPriceAt5Years988}
-            onChange={(v) => onChange({ standardPriceAt5Years988: v })}
-            label=""
-          />
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §40①)
-          </p>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">양도 당시 기준시가 (비우면 자산 입력값 사용)</label>
-          <CurrencyInput
-            value={value.standardPriceAtTransfer988}
-            onChange={(v) => onChange({ standardPriceAtTransfer988: v })}
-            label=""
-          />
-        </div>
+        <ReductionStdPriceSection
+          phd={{
+            phdMode: value.phdMode988,
+            firstDisclosureDate: value.phdFirstDisclosureDate988,
+            firstDisclosurePrice: value.phdFirstDisclosurePrice988,
+            landAreaSqm: value.phdLandAreaSqm988,
+            landPricePerSqmAtAcq: value.phdLandPricePerSqmAtAcq988,
+            landPricePerSqmAtFirst: value.phdLandPricePerSqmAtFirst988,
+            buildingStdAtAcq: value.phdBuildingStdAtAcq988,
+            buildingStdAtFirst: value.phdBuildingStdAtFirst988,
+          }}
+          onPhdChange={(patch) => {
+            const mapped: Partial<Unsold988Form> = {};
+            if (patch.phdMode !== undefined) mapped.phdMode988 = patch.phdMode;
+            if (patch.firstDisclosureDate !== undefined) mapped.phdFirstDisclosureDate988 = patch.firstDisclosureDate;
+            if (patch.firstDisclosurePrice !== undefined) mapped.phdFirstDisclosurePrice988 = patch.firstDisclosurePrice;
+            if (patch.landAreaSqm !== undefined) mapped.phdLandAreaSqm988 = patch.landAreaSqm;
+            if (patch.landPricePerSqmAtAcq !== undefined) mapped.phdLandPricePerSqmAtAcq988 = patch.landPricePerSqmAtAcq;
+            if (patch.landPricePerSqmAtFirst !== undefined) mapped.phdLandPricePerSqmAtFirst988 = patch.landPricePerSqmAtFirst;
+            if (patch.buildingStdAtAcq !== undefined) mapped.phdBuildingStdAtAcq988 = patch.buildingStdAtAcq;
+            if (patch.buildingStdAtFirst !== undefined) mapped.phdBuildingStdAtFirst988 = patch.buildingStdAtFirst;
+            onChange(mapped);
+          }}
+          stdPriceAtAcquisition={value.standardPriceAtAcquisition988}
+          onStdPriceAtAcquisitionChange={(v) => onChange({ standardPriceAtAcquisition988: v })}
+          stdPriceAt5Years={value.standardPriceAt5Years988}
+          onStdPriceAt5YearsChange={(v) => onChange({ standardPriceAt5Years988: v })}
+          stdPriceAtTransfer={value.standardPriceAtTransfer988}
+          onStdPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer988: v })}
+          exclusiveArea={value.exclusiveAreaSqm988}
+          onExclusiveAreaChange={(v) => onChange({ exclusiveAreaSqm988: v })}
+          showExclusiveArea={false}
+          acquisitionDate={acquisitionDate}
+          transferDate={transferDate}
+          jibun={jibun}
+          dong={dong}
+          ho={ho}
+          assetId={assetId}
+          assetPhdSnapshot={assetPhdSnapshot}
+          testidPrefix="unsold988"
+          snapshotKeyPrefix="red988"
+        />
+        <p className="mt-1 text-micro text-muted-foreground">
+          새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §40①)
+        </p>
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 취득일부터 5년간 발생한 양도소득금액의 100분의 50에 상당하는 금액을
           양도소득세 과세대상소득금액에서 공제합니다 (법 §98의8①).

@@ -205,8 +205,8 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
     expect(s.totalSalePrice).toBe(225_000_000); // 합계 무결성
   });
 
-  // A-8: 상속의제 (post-deemed) 회귀
-  it("A-8 상속의제 post-deemed — 취득가액=신고가액", () => {
+  // A-8: 상속의제 (post-deemed) 회귀 — 신고가액(상증법 평가액)은 엔진 실경로 publishedValueAtInheritance (P3)
+  it("A-8 상속의제 post-deemed — 취득가액=신고가액(publishedValueAtInheritance)", () => {
     useCalcWizardStore.setState((st) => ({
       formData: {
         ...st.formData,
@@ -219,7 +219,7 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
             actualSalePrice: "600000000",
             inheritanceMode: "post-deemed",
             inheritanceStartDate: "2020-01-01",
-            inheritanceReportedValue: "400000000",
+            publishedValueAtInheritance: "400000000",
           },
         ],
       },
@@ -227,5 +227,36 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
 
     const s = compute();
     expect(s.rows[0].acqPrice).toBe(400_000_000);
+  });
+
+  // A-10 (Pre-Do): 겸용주택 계산 후 — result.mode "mixed-use" 처리.
+  // 취득가액 = 주택+상가 환산취득가액 합, 필요경비 = 주택·상가 토지·건물 개산공제(§163⑥) 합.
+  // 수정 전: mode "mixed-use"가 single/bundled 어디에도 안 걸려 acqPrice=0(«-»).
+  it("A-10 겸용주택 계산 후 — mode:mixed-use breakdown 취득가액·필요경비 합계", () => {
+    useCalcWizardStore.setState((st) => ({
+      formData: {
+        ...st.formData,
+        bundledSaleMode: "actual",
+        assets: [
+          { ...makeDefaultAsset(1), assetKind: "housing", isMixedUseHouse: true, actualSalePrice: "2300000000" },
+        ],
+      },
+      result: {
+        mode: "mixed-use",
+        result: {
+          housingPart: { estimatedAcquisitionPrice: 300_000_000, landAppraisalDed: 3_000_000, buildingAppraisalDed: 1_000_000 },
+          commercialPart: { estimatedAcquisitionPrice: 200_000_000, landAppraisalDed: 2_000_000, buildingAppraisalDed: 500_000 },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+    }));
+
+    const s = compute();
+    expect(s.rows).toHaveLength(1);
+    expect(s.rows[0].salePrice).toBe(2_300_000_000);
+    expect(s.rows[0].acqPrice).toBe(500_000_000); // 300M + 200M
+    expect(s.rows[0].expense).toBe(6_500_000); // 3M + 1M + 2M + 0.5M
+    expect(s.rows[0].acqPending).toBe(false);
+    expect(s.rows[0].expensePending).toBe(false);
   });
 });

@@ -42,8 +42,12 @@ export interface FamilyBusinessInterestInput {
 }
 
 export interface FamilyBusinessRecaptureResult {
-  /** 추징세액 (적용공제 × 100% × 자산처분비율) */
-  recaptureAmount: number;
+  /**
+   * 과세가액 산입액 (§18의2⑤ = 적용공제 × 100% × 자산처분비율).
+   * 이 금액을 상속개시 당시 과세가액에 산입해 상속세를 재계산한 '증가분'이 추징세액이다
+   * (공제액 자체가 세액이 아님 — orchestrator가 재계산). C-2 수정.
+   */
+  taxableAmountAddback: number;
   /** 적용 추징율 (100분의 100 일률) */
   recaptureRate: number;
   /** 자산처분비율 (1호 한정, 그 외 1.0) */
@@ -81,7 +85,7 @@ export function calcFamilyBusinessRecapture(
     ? Math.max(0, Math.min(1, assetDisposalRatio))
     : 1.0;
 
-  const recaptureAmount = Math.floor(appliedDeduction * recaptureRate * effectiveRatio);
+  const taxableAmountAddback = Math.floor(appliedDeduction * recaptureRate * effectiveRatio);
 
   const violationLabel: Record<FamilyBusinessViolationType, string> = {
     asset_disposal: "1호 가업용 자산 40% 이상 처분",
@@ -103,10 +107,10 @@ export function calcFamilyBusinessRecapture(
     });
   }
 
-  breakdown.push({ label: "추징세액", amount: recaptureAmount, lawRef });
+  breakdown.push({ label: "과세가액 산입액 (§18의2⑤)", amount: taxableAmountAddback, lawRef });
 
   return {
-    recaptureAmount,
+    taxableAmountAddback,
     recaptureRate,
     effectiveRatio,
     breakdown,

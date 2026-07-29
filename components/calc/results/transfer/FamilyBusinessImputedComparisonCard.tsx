@@ -109,7 +109,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
 
             {/* 구분선 역할 빈 행 */}
             <tr className="bg-muted/20">
-              <td colSpan={2} className="py-1 pl-3 text-[11px] font-semibold text-muted-foreground">
+              <td colSpan={2} className="py-1 pl-3 text-caption font-semibold text-muted-foreground">
                 비교과세 (소법 §97의2④ 본문)
               </td>
             </tr>

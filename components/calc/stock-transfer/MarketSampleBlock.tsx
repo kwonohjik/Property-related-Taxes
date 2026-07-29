@@ -10,6 +10,7 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface MarketSampleBlockProps {
@@ -28,13 +29,7 @@ export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBloc
       )}
 
       {/* 취득 매매사례 (amber tone) */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
-            1
-          </span>
-          <p className="text-xs font-semibold text-amber-700">취득 매매사례가액 (영§176의2③1호)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum={1} title="취득 매매사례가액 (영§176의2③1호)" bodyClassName="space-y-3" noDark>
         <CurrencyInput
           label="1주당 취득 매매사례가액"
           hint="유사 매매사례 가액 (원) — 취득일 전후 3개월 이내"
@@ -56,16 +51,10 @@ export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBloc
             placeholder="거래상대 명의·관계 (예: 제3자, 친족 등)"
           />
         </FieldCard>
-      </div>
+      </ToneCard>
 
       {/* 양도 매매사례 (emerald tone) */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
-            2
-          </span>
-          <p className="text-xs font-semibold text-emerald-700">양도 매매사례가액 (선택)</p>
-        </div>
+      <ToneCard tone="emerald" sectionNum={2} title="양도 매매사례가액 (선택)" bodyClassName="space-y-3" noDark>
         <p className="text-xs text-emerald-700/80">
           입력 시 1주당 양도가액 대신 우선 적용됩니다.
         </p>
@@ -90,7 +79,7 @@ export function MarketSampleBlock({ form, onChange, isListed }: MarketSampleBloc
             placeholder="거래상대 명의·관계"
           />
         </FieldCard>
-      </div>
+      </ToneCard>
     </div>
   );
 }

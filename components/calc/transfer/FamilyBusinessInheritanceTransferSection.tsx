@@ -24,6 +24,7 @@
 import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { Button } from "@/components/ui/button";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
@@ -129,11 +130,17 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
     fb.fbDeductionAppliedRate >= 0;
   const previewValue = canPreview ? calcImputedPreview(fb!) : null;
 
+  // 겸용주택은 §163⑨ 상속개시일 평가액 직접 산정 경로(CompanionAcqInheritanceBlock 안내 참조)를 쓰고
+  // 가업상속공제 의제취득가액(§97의2④)은 겸용 엔진(buildMixedUsePayload)이 미소비 — dead 입력 예방.
+  const isMixedUse = !!asset.isMixedUseHouse;
+
   return (
     <ToggleCard
       tone="emerald"
       checked={isOn}
       onCheckedChange={handleToggle}
+      disabled={isMixedUse}
+      disabledReason={isMixedUse ? "겸용주택은 가업상속공제 의제취득가액 미지원(범위 밖)" : undefined}
       title="가업상속공제 적용 자산 (소법 §97의2④)"
       description={
         isOn
@@ -156,17 +163,18 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           <div className="flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2">
             <div className="text-xs text-emerald-800">
               <p className="font-semibold">상속세 이력에서 자동 채우기</p>
-              <p className="text-[10px] text-emerald-600 mt-0.5">
+              <p className="text-micro text-emerald-600 mt-0.5">
                 적용률·상속개시일·평가액 자동 prefill (원취득가액은 별도 입력)
               </p>
             </div>
-            <button
+            <Button
               type="button"
+              variant="modalLauncher"
+              size="xs"
               onClick={() => setLookupOpen(true)}
-              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
             >
               📋 이력 조회
-            </button>
+            </Button>
           </div>
 
           <FamilyBusinessInheritanceHistoryModal
@@ -254,7 +262,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
                 {" = "}
                 <strong>{previewValue.toLocaleString()}</strong>
               </p>
-              <p className="text-[10px] text-emerald-600">
+              <p className="text-micro text-emerald-600">
                 ※ 최종 의제 취득가액은 엔진 계산 결과로 확인하세요. 일반 §97 산식과 비교과세 후 불리한 경우 §18의2⑩ 공제 적용.
               </p>
             </div>

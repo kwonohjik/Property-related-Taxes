@@ -9,8 +9,9 @@
  *  - 부분(층/구역) 목록 + 카테고리(주택/상가). 층별 구조·용도 상이는 compositeParts로 합산.
  *  - **Option B**: housing(주택분)은 3시점 전부, commercial(상가분)은 **양도시에만** 산출.
  *    취득·최초공시 상가는 당시 주택 용도(세법 미확정) → 배치 미산출·수동 유지. (Phase 2.1로 이월)
- *  - ≥2001만 산출. ≤2000(공동주택 최초고시 등)은 고시표 부재로 unsupported.
- *    취득 ≤2000은 단일 부분 acqBase(2001×산정기준율)만 지원, 다부분은 미지원.
+ *  - ≥2001은 해당연도 지수표(valuation). 취득·최초공시 ≤2000은 acqBase(2001×산정기준율, §164⑤ 준용)
+ *    — 최초공시는 landPrice2001PerM2(2001 기준 공시지가) 필수, 부재 시 unsupported.
+ *    양도 ≤2000은 unsupported 유지.
  */
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
 
@@ -19,20 +20,45 @@ export const BUILDING_STD_FIRST_YEAR = 2001;
 
 export type PhdPartCategory = "housing" | "commercial";
 
-/** 건물 1개 부분(층/구역) — 구조·용도·면적·카테고리 */
+/** 한 시점의 구조·용도 (해당 연도 국세청 체계 기준). */
+export interface PhdBatchPartAtPoint {
+  structureKey: string;
+  usageNo: number;
+}
+
+/**
+ * 건물 1개 부분(층/구역) — 면적·카테고리 + 시점별 구조·용도.
+ * 용도 번호가 국세청 체계 개정마다 재편(2001·2002 단독=#1 / 2003~ 단독=#2 등)되어 연도 간
+ * 안정적이지 않으므로, 각 시점의 구조·용도를 해당 연도 체계로 별도 지정한다(홈택스 동형).
+ */
 export interface PhdBatchPart {
+  floorArea: number;
+  category: PhdPartCategory;
+  /** 양도시(항상 산출). */
+  transfer: PhdBatchPartAtPoint;
+  /** 취득당시(취득 연도 체계). 미지정 시 취득 산출 skip. */
+  acquisition?: PhdBatchPartAtPoint;
+  /**
+   * 최초공시(최초공시 연도 체계). 미지정 시 최초공시 산출 skip.
+   * 겸용 Case A 상가: 모달이 이 값을 당시 주택 부분의 구조·용도로 주입(재일46014-2396).
+   * Case B·단독 상가: 미지정 → 취득·최초공시 상가 미산출.
+   */
+  firstDisclosure?: PhdBatchPartAtPoint;
+}
+
+/** 한 시점으로 해석된 부분(구조·용도·면적). */
+export interface ResolvedPart {
   structureKey: string;
   usageNo: number;
   floorArea: number;
-  category: PhdPartCategory;
-  /**
-   * 겸용 Case A(용도변경 house_to_commercial + 최초공시<용도변경) 상가 부분 전용 —
-   * 취득·최초공시 시점의 당시 실제 용도(주택) 용도번호. 그 시점엔 이 면적이 주택이었으므로
-   * 주택 용도지수로 평가한다(재일46014-2396: 취득시 기준시가 용도=취득일 현재 실제 용도).
-   * 지정 시 acq/first commercial 산출 활성(양도시는 본 부분의 usageNo=상가 용도 그대로).
-   * 미지정 시 acq/first commercial 미산출(Case B·단독 = Phase 2 동작).
-   */
-  acqFirstUsageNo?: number;
+}
+
+/** 부분을 특정 시점의 구조·용도로 해석. 해당 시점 미지정 시 undefined. */
+export function partAtPoint(part: PhdBatchPart, key: PointKey): ResolvedPart | undefined {
+  const tp =
+    key === "acquisition" ? part.acquisition : key === "firstDisclosure" ? part.firstDisclosure : part.transfer;
+  if (!tp) return undefined;
+  return { structureKey: tp.structureKey, usageNo: tp.usageNo, floorArea: part.floorArea };
 }
 
 export interface PhdBatchBuilding {
@@ -51,9 +77,23 @@ export interface PhdBatchInput {
   acquisition?: PhdBatchPoint;
   firstDisclosure?: PhdBatchPoint;
   transfer?: PhdBatchPoint;
+  /**
+   * 2001.1.1 기준 개별공시지가(원/㎡) — **최초공시 ≤2000 산정기준율 환산 전용**.
+   * 산정기준율 경로(2001년 지수표)의 위치지수는 2001년 기준 공시지가를 써야 하므로
+   * 최초공시일 연도 공시지가(firstDisclosure.landPricePerM2)와 별도로 명시 입력받는다.
+   * 미입력 + 최초공시 ≤2000이면 unsupported(자동 fallback 금지).
+   * 취득 ≤2000 경로는 종전대로 acquisition.landPricePerM2(UI가 2001 기준으로 고정) 사용.
+   */
+  landPrice2001PerM2?: number;
 }
 
-type PointKey = "acquisition" | "firstDisclosure" | "transfer";
+export type PointKey = "acquisition" | "firstDisclosure" | "transfer";
+
+const POINT_LABEL_KO: Record<PointKey, string> = {
+  acquisition: "취득당시",
+  firstDisclosure: "최초공시",
+  transfer: "양도당시",
+};
 
 /** 시점별 카테고리 소계(원 정수). 미산출 카테고리는 undefined. */
 export interface PhdPointResult {
@@ -72,11 +112,11 @@ export interface PhdBatchResult {
 const preGosiReason = (year: number) =>
   `${year}년은 국세청 건물기준시가 고시(${BUILDING_STD_FIRST_YEAR}년~) 이전 — 직접 입력 필요`;
 
-const sumArea = (parts: PhdBatchPart[]) => parts.reduce((s, p) => s + p.floorArea, 0);
+const sumArea = (parts: { floorArea: number }[]) => parts.reduce((s, p) => s + p.floorArea, 0);
 
 /** ≥2001 valuation 건물기준시가. 부분 1개=단일 point, 2개↑=compositeParts 합산. */
 function valuationStdPrice(
-  parts: PhdBatchPart[],
+  parts: ResolvedPart[],
   builtYear: number,
   point: PhdBatchPoint,
 ): number | undefined {
@@ -103,35 +143,50 @@ function valuationStdPrice(
   return r.compositeTotal;
 }
 
-/** 취득 ≤2000 acqBase(2001×산정기준율). 단일 부분만 지원 — 다부분은 throw(C1). */
+/**
+ * 취득 ≤2000 acqBase(2001×산정기준율). 단일 부분=acquisition, 다부분=acquisitionComposite로 위임.
+ * 복합은 calcTransferComposite가 단일 산정기준율 그룹만 지원(부분별 그룹 상이 시 throw → 상위 unsupported 기록).
+ */
 function acqBaseStdPrice(
-  parts: PhdBatchPart[],
+  parts: ResolvedPart[],
   builtYear: number,
   point: PhdBatchPoint,
 ): number | undefined {
-  if (parts.length !== 1) {
-    throw new Error(
-      `취득(${point.year}, 2000 이전) 다부분 산정기준율은 미지원 — 해당 상가/주택 부분을 직접 입력하세요.`,
-    );
-  }
   const head = parts[0];
   const pt = { structureKey: head.structureKey, usageNo: head.usageNo, landPricePerM2: point.landPricePerM2 };
-  const r = calcBuildingStandardPrice({
-    taxType: "transfer",
-    floorArea: head.floorArea,
+  const base = {
+    taxType: "transfer" as const,
     builtYear,
     acquisitionYear: point.year,
     // transferYear는 sameYear(§164⑧) 회피 위해 ≥2001 고정
     transferYear: BUILDING_STD_FIRST_YEAR,
     acquisition: pt,
     transfer: pt,
+  };
+  if (parts.length === 1) {
+    const r = calcBuildingStandardPrice({ ...base, floorArea: head.floorArea });
+    return r.acquisition?.standardPrice;
+  }
+  // 복합: compositeParts로 transfer 복합 산정(acqUsageNo=usageNo — 시점 해석 완료된 용도).
+  // ⚠️ 복합 acquisitionComposite.total은 산정기준율 적용 前(base2001)이고, 취득당시 기준시가(적용 後)는
+  //    acqBaseConversion.convertedTotal — 단일 경로 acquisition.standardPrice와 대응.
+  const r = calcBuildingStandardPrice({
+    ...base,
+    floorArea: sumArea(parts),
+    compositeParts: parts.map((p) => ({
+      structureKey: p.structureKey,
+      usageNo: p.usageNo,
+      acqUsageNo: p.usageNo,
+      floorArea: p.floorArea,
+    })),
   });
-  return r.acquisition?.standardPrice;
+  return r.acqBaseConversion?.convertedTotal;
 }
 
 /**
  * 한 시점·한 카테고리 산출. 부분 없으면 skip(undefined). 산출 불가 시 unsupported 기록.
- * @param isAcquisition 취득시(≤2000 acqBase 경로 허용)
+ * ≤2000 산정기준율(§B) 경로: 취득=acquisition.landPricePerM2(2001 기준) / 최초공시=landPrice2001PerM2.
+ * @param landPrice2001PerM2 2001.1.1 기준 공시지가 — 최초공시 ≤2000 환산 전용(부재 시 unsupported)
  */
 function computeCategory(
   result: PhdBatchResult,
@@ -140,16 +195,33 @@ function computeCategory(
   parts: PhdBatchPart[],
   builtYear: number,
   point: PhdBatchPoint | undefined,
-  isAcquisition: boolean,
+  landPrice2001PerM2: number | undefined,
 ): void {
   if (!point || parts.length === 0) return;
   const push = (reason: string) => result.unsupported.push({ point: key, category, reason });
+  // 각 부분을 이 시점의 구조·용도로 해석. 시점 미지정 부분은 제외.
+  const resolved = parts.map((p) => partAtPoint(p, key)).filter((r): r is ResolvedPart => r != null);
+  if (resolved.length === 0) return; // 이 시점 미입력(예: Case B 상가 취득·최초공시) → 조용히 skip
+  if (resolved.length !== parts.length) {
+    push(`일부 부분의 ${POINT_LABEL_KO[key]} 구조·용도가 미입력입니다.`);
+    return;
+  }
   try {
     let v: number | undefined;
     if (point.year >= BUILDING_STD_FIRST_YEAR) {
-      v = valuationStdPrice(parts, builtYear, point);
-    } else if (isAcquisition) {
-      v = acqBaseStdPrice(parts, builtYear, point);
+      v = valuationStdPrice(resolved, builtYear, point);
+    } else if (key === "acquisition") {
+      v = acqBaseStdPrice(resolved, builtYear, point);
+    } else if (key === "firstDisclosure") {
+      // 최초공시 ≤2000 — §164⑦ 분모의 건물분을 §164⑤ 산정기준율로 환산(선례: calcApartmentConversion).
+      // base2001 위치지수는 2001.1.1 기준 공시지가 필수 — 최초공시일 연도 공시지가 대용 금지.
+      if (!(landPrice2001PerM2 != null && landPrice2001PerM2 > 0)) {
+        push(
+          `최초공시 ${point.year}년(고시 전) 건물 환산에는 2001년 기준 공시지가가 필요합니다 — 취득시(2001년 기준) 공시지가를 입력하세요.`,
+        );
+        return;
+      }
+      v = acqBaseStdPrice(resolved, builtYear, { year: point.year, landPricePerM2: landPrice2001PerM2 });
     } else {
       push(preGosiReason(point.year));
       return;
@@ -166,35 +238,29 @@ function computeCategory(
 }
 
 /**
- * 3시점 건물기준시가를 각 시점 독립 산출.
- *  - housing: 취득·최초공시·양도 전부.
+ * 3시점 건물기준시가를 각 시점 독립 산출. 각 부분의 구조·용도는 시점별(`partAtPoint`)로 해석.
+ *  - housing: 취득·최초공시·양도 전부(모달이 3시점 구조·용도 지정).
  *  - commercial 양도시: 항상(상가 용도).
- *  - commercial 취득·최초공시: 상가 부분에 `acqFirstUsageNo`(당시 주택 용도)가 있을 때만(Case A) —
- *    각 부분 usageNo를 acqFirstUsageNo로 매핑해 주택 용도지수로 평가(재일46014-2396). 미주입 시 미산출.
+ *  - commercial 취득·최초공시: 상가 부분에 `acquisition`/`firstDisclosure`(당시 주택 구조·용도)가
+ *    지정됐을 때만 산출(겸용 Case A — 모달이 주택 부분 값을 주입, 재일46014-2396). 미지정 시 skip.
  */
 export function computePhdThreePointStdPrice(input: PhdBatchInput): PhdBatchResult {
-  const { building, acquisition, firstDisclosure, transfer } = input;
+  const { building, acquisition, firstDisclosure, transfer, landPrice2001PerM2 } = input;
   const { builtYear, parts } = building;
   const result: PhdBatchResult = { unsupported: [] };
 
   const housing = parts.filter((p) => p.category === "housing");
   const commercial = parts.filter((p) => p.category === "commercial");
+  const points: [PointKey, PhdBatchPoint | undefined][] = [
+    ["acquisition", acquisition],
+    ["firstDisclosure", firstDisclosure],
+    ["transfer", transfer],
+  ];
 
-  // housing — 3시점
-  computeCategory(result, "acquisition", "housing", housing, builtYear, acquisition, true);
-  computeCategory(result, "firstDisclosure", "housing", housing, builtYear, firstDisclosure, false);
-  computeCategory(result, "transfer", "housing", housing, builtYear, transfer, false);
-
-  // commercial 양도시 — 상가 용도(부분 usageNo 그대로)
-  computeCategory(result, "transfer", "commercial", commercial, builtYear, transfer, false);
-
-  // commercial 취득·최초공시 — Case A(acqFirstUsageNo 주입) 시 당시 주택 용도로 매핑해 산출.
-  // 규약: caller는 모든 commercial 부분에 acqFirstUsageNo를 일괄 주입한다(모달이 그렇게 함).
-  //       미주입 부분은 자기 usageNo(상가) fallback되므로, 부분 혼재 주입은 caller 책임.
-  if (commercial.some((p) => p.acqFirstUsageNo != null)) {
-    const atPreConversion = commercial.map((p) => ({ ...p, usageNo: p.acqFirstUsageNo ?? p.usageNo }));
-    computeCategory(result, "acquisition", "commercial", atPreConversion, builtYear, acquisition, true);
-    computeCategory(result, "firstDisclosure", "commercial", atPreConversion, builtYear, firstDisclosure, false);
+  for (const [key, point] of points) {
+    computeCategory(result, key, "housing", housing, builtYear, point, landPrice2001PerM2);
+    // commercial: 해당 시점 구조·용도가 지정된 부분만 산출(양도=항상 / 취득·최초공시=Case A 주입 시).
+    computeCategory(result, key, "commercial", commercial, builtYear, point, landPrice2001PerM2);
   }
 
   return result;

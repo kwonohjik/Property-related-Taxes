@@ -9,6 +9,8 @@
 
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
+import { computeAmendment } from "./transfer-tax-amendment";
+import type { AmendmentInput } from "./types/transfer-amendment.types";
 import { MIXED_USE } from "./legal-codes/transfer";
 import type {
   MixedUseAssetInput,
@@ -21,6 +23,7 @@ import {
   computeDerivedAreas,
   computeAcqDerivedAreas,
   apportionTransferPrice,
+  apportionAcquisitionPrice,
   calcHousingEstimatedAcq,
   calcHousingGainSplit,
   calcCommercialGainSplit,
@@ -52,12 +55,15 @@ const MIXED_USE_EFFECTIVE_DATE = new Date("2022-01-01");
  * @param transferDate  - 양도일
  * @param asset         - 겸용주택 자산 입력
  * @param rates         - Supabase에서 preload된 세율 맵
+ * @param amendment     - 수정신고·경정청구 (국세기본법 §45·§45의2). 신고서 단위(폼-전역) — 자산-수준 아님.
+ *                        미전달 시 기존 경로 불변. 2022.1.1 이전 양도(거부) 경로에는 부착하지 않음.
  */
 export function calcMixedUseTransferTax(
   transferPrice: number,
   transferDate: Date,
   asset: MixedUseAssetInput,
   rates: TaxRatesMap,
+  amendment?: AmendmentInput,
 ): MixedUseGainBreakdown {
   // STEP 1: 2022.1.1 이전 양도일 거부
   if (transferDate < MIXED_USE_EFFECTIVE_DATE) {
@@ -81,13 +87,22 @@ export function calcMixedUseTransferTax(
   const apportionment = apportionTransferPrice(transferPrice, asset, derived);
   steps.push(buildApportionmentStep(apportionment));
 
-  // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑤ PHD)
+  // STEP 2.5: 취득가액 총액 안분 (법 §100²) — 실거래가(R1) 또는 감정/매매사례(R-B) 총액을
+  // 취득시 기준시가 비율로 주택분/상가분에 안분(양도가액 안분의 취득시 미러). 개산공제 차이는 각 part에서.
+  const acqApportionment =
+    asset.useActualAcquisition || asset.useAppraisalSalesAcquisition
+      ? apportionAcquisitionPrice(asset.acquisitionActualTotalPrice ?? 0, asset, acqDerived)
+      : undefined;
+
+  // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑤ PHD, 또는 실가 안분분)
   // PHD + 보유 중 용도변경 케이스에서 시점별 면적 분리를 위해 acqDerived도 전달
   const housingAcqResult = calcHousingEstimatedAcq(
     apportionment.housingTransferPrice,
     asset,
     derived,
+    transferDate,
     acqDerived,
+    acqApportionment?.housingAcqPrice,
   );
 
   // STEP 4: 주택 양도차익 (토지/건물 분리)
@@ -112,6 +127,7 @@ export function calcMixedUseTransferTax(
     transferDate,
     acqDerived,
     housingAcqResult,
+    acqApportionment?.commercialAcqPrice,
   );
 
   // ─── 용도변경일 기반 LTHD 시간 비례 분할 (집행기준 89-154-24 취지) ───
@@ -133,6 +149,9 @@ export function calcMixedUseTransferTax(
     | ReturnType<typeof applyUsagePeriodSplit>["usagePeriodSplit"]
     | undefined;
 
+  // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 미제공 시 실거주로 fallback(비상속·별도세대 = 실거주).
+  const table2ResidenceYears = asset.table2ResidencePeriodYears ?? asset.residencePeriodYears;
+
   // Case A 4부분 안분 활성화 시 period-split 건너뛰기 — 엑셀 기준 전체 보유기간 단일 LTHD 적용.
   const skipPeriodSplitForFourPart = !!housingAcqResult.phdResult?.fourPartApportionment;
   if (periodInfo && asset.partialUsageChange && !skipPeriodSplitForFourPart) {
@@ -142,6 +161,7 @@ export function calcMixedUseTransferTax(
       apportionment,
       excessResult,
       asset.residencePeriodYears,
+      table2ResidenceYears,
       asset.isOneHouseExempt ?? true,
       periodInfo,
       asset.partialUsageChange.direction,
@@ -157,6 +177,7 @@ export function calcMixedUseTransferTax(
       housingGainSplit,
       excessResult,
       asset.residencePeriodYears,
+      table2ResidenceYears,
       asset.isOneHouseExempt ?? true,  // 미주입 시 true (기존 backward compat)
     );
     commercialPart = buildCommercialPart(commercialGainSplit);
@@ -185,8 +206,15 @@ export function calcMixedUseTransferTax(
   );
   steps.push(buildTotalStep(total));
 
-  // 계산 경로 메타 (학습·검증용)
-  const calculationRoute = buildCalculationRoute(asset, housingPart, excessResult, commercialPart);
+  // 계산 경로 메타 (학습·검증용) — 표2 사유 표시는 게이트에 쓴 통산 값(table2ResidenceYears)을 그대로 주입
+  // (재계산 시 게이트와 drift 위험 — feedback_engine_result_display_drift).
+  const calculationRoute = buildCalculationRoute(
+    asset,
+    housingPart,
+    excessResult,
+    commercialPart,
+    table2ResidenceYears,
+  );
 
   // 보유 중 일부 용도변경 메타 (결과 카드 표시용)
   const partialUsageChange = asset.partialUsageChange
@@ -210,6 +238,15 @@ export function calcMixedUseTransferTax(
       }
     : undefined;
 
+  // 수정신고(경정)·경정청구 — 끝단 append (국세기본법 §45·§45의2).
+  // 기준값은 total.transferTax(본세) — 단건 finalize의 determinedTax와 동일 축(지방소득세 제외).
+  // amendment 없으면 undefined → 무영향(additive). finalize STEP 12.5 · redevelopment Step H.5와 동일 패턴.
+  // ⚠️ buildRejectionResult 경로에는 부착하지 않는다 — 계산 불가 상태이지 '세액 0'이라는 유효한 결과가 아니다
+  //    (determinedTax=0으로 부착 시 refundTax = 당초 전액 오표시).
+  const amendmentDetail = amendment
+    ? computeAmendment(amendment, total.transferTax)
+    : undefined;
+
   return {
     splitMode: "post-2022",
     apportionment,
@@ -222,6 +259,17 @@ export function calcMixedUseTransferTax(
     warnings,
     partialUsageChange,
     usagePeriodSplit,
+    amendmentDetail,
+    // 상속 취득 게이트 echo (소령 §163⑨) — UI 재판정 방지용 단일 소스.
+    acquisitionByInheritance: asset.acquisitionByInheritance,
+    // §164⑨1호 공익수용 특례 산출근거 (계획 P7/D8) — 주택분(라목 총액)·상가분(가목 토지). 적용 시만.
+    expropriationDetail:
+      housingAcqResult.expropriationDetail || commercialGainSplit.expropriationDetail
+        ? {
+            housing: housingAcqResult.expropriationDetail,
+            commercialLand: commercialGainSplit.expropriationDetail,
+          }
+        : undefined,
   };
 }
 
@@ -234,6 +282,8 @@ function buildCalculationRoute(
   housingPart: ReturnType<typeof buildHousingPart>,
   excessResult: ReturnType<typeof calcExcessLandRatio>,
   commercialPart: ReturnType<typeof buildCommercialPart>,
+  // 표2 게이트에 실제로 쓴 통산 거주 연수 — 재계산 없이 주입받아 표시-계산 drift 차단.
+  table2ResidenceYears: number,
 ): MixedUseCalculationRoute {
   const acqHousing = asset.acquisitionStandardPrice.housingPrice;
   const housingAcqPriceSource =
@@ -243,14 +293,29 @@ function buildCalculationRoute(
         ? ("direct_input" as const)
         : ("missing" as const);
 
-  const acquisitionConversionRoute = asset.usePreHousingDisclosure
-    ? ("phd_corrected" as const)
-    : ("section97_direct" as const);
+  // 취득가액 산정 경로 — 상속·증여(§163⑨)·매매실가(§100²)·환산(§176의2) 분기.
+  // 매매실가(useActualAcquisition)는 PHD 미적용(실가 모드는 위 엔진에서 PHD 조합 throw)이라 단일 값.
+  const acquisitionConversionRoute = asset.useActualAcquisition
+    ? ("section97_actual" as const)
+    : asset.useAppraisalSalesAcquisition
+    ? ("section176_2_appraisal_sales" as const)
+    : asset.acquisitionByInheritance
+      ? asset.usePreHousingDisclosure
+        ? ("inheritance_phd_max" as const)
+        : ("inheritance_direct" as const)
+      : asset.acquisitionByGift
+        ? asset.usePreHousingDisclosure
+          ? ("gift_phd_max" as const)
+          : ("gift_direct" as const)
+        : asset.usePreHousingDisclosure
+          ? ("phd_corrected" as const)
+          : ("section97_direct" as const);
 
+  // 표2 게이트는 통산 거주(§154⑧3호) — 사유 서술도 게이트 값으로(통산 케이스에서 "실거주 0년 ≥2년" 모순 방지).
   const housingDeductionTableReason =
     housingPart.longTermDeductionTable === 2
-      ? `거주 ${asset.residencePeriodYears}년 ≥ 2년 → 표2 (보유×4% + 거주×4%, 최대 80%)`
-      : `거주 ${asset.residencePeriodYears}년 < 2년 → 표1 (보유×2%, 최대 30%)`;
+      ? `거주(통산) ${table2ResidenceYears}년 ≥ 2년 → 표2 (보유×4% + 거주×4%, 최대 80%)`
+      : `거주(통산) ${table2ResidenceYears}년 < 2년 → 표1 (보유×2%, 최대 30%)`;
 
   const zoneLabel = asset.zoneType ?? "residential";
   const metroLabel = asset.isMetropolitanArea === false ? "수도권 외" : "수도권";
@@ -312,11 +377,6 @@ function buildPartialUsageChangeReason(
 
 function collectWarnings(asset: MixedUseAssetInput): string[] {
   const warnings: string[] = [];
-  if (asset.usePreHousingDisclosure) {
-    warnings.push(
-      "겸용주택의 PHD 3-시점 환산 적합성은 사례별 검토가 필요합니다. 이미지5 사례는 단순 §97 환산 사용.",
-    );
-  }
   if (asset.isMetropolitanArea === undefined) {
     warnings.push(
       "수도권 여부 미입력 — 수도권(3배 배율)으로 보수 처리됩니다. 정확한 계산을 위해 수도권 여부를 입력하세요.",

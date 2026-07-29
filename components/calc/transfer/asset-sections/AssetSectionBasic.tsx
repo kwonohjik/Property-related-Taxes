@@ -207,6 +207,10 @@ export function AssetSectionBasic({
             if (v.pnu && v.pnu.length >= 10) {
               patch.regionCode = v.pnu.slice(0, 10);
             }
+            // 전체 PNU 19자리 — 건물 기준시가 모달 prefill 시 건축물대장 조회 활성화용(UI 전용).
+            if (v.pnu && v.pnu.length === 19) {
+              patch.addressPnu = v.pnu;
+            }
             // RTMS 매매사례가액 자동조회용 시군구코드 파생 (취득가액 추계 모드).
             const latNum = v.lat ? parseFloat(v.lat) : NaN;
             const lngNum = v.lng ? parseFloat(v.lng) : NaN;
@@ -264,13 +268,13 @@ export function AssetSectionBasic({
                 )}
               >
                 <div className="text-sm font-semibold">{opt.label}</div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-caption text-muted-foreground">
                   {opt.desc}
                 </div>
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             ※ 승계조합원은 장기보유특별공제 미적용 (소득세법 §95② 단서)
           </p>
         </div>

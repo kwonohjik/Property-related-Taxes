@@ -16,17 +16,13 @@ import {
   calculateTransferTaxAggregate,
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
-import {
-  apportionBundledSale,
-  type BundledAssetInput,
-} from "@/lib/tax-engine/bundled-sale-apportionment";
-import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
-import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
 import {
   resolveHousingContextFromCompanion,
   buildCompanionEngineInputs,
+  prepareBundledApportionment,
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
@@ -36,6 +32,7 @@ import {
   propertySchema as inputSchema,
 } from "@/lib/api/transfer-tax-schema";
 import { buildInheritedAcquisition } from "./route-inherited-acquisition";
+import { toRentalHousingExceptionEngineInput } from "./_rental-engine-input";
 
 // ============================================================
 // POST handler (⑫-2, ⑫-3)
@@ -124,12 +121,14 @@ export async function POST(request: NextRequest) {
     useEstimatedAcquisition: data.useEstimatedAcquisition,
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
     standardPriceAtTransfer: data.standardPriceAtTransfer,
-    // ⑭ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) — TypeScript 미감지 영역(침묵 strip 주의)
+    // ⑭ §164⑨ 특례 (TS 미감지 침묵 strip 주의): 1호 per-sqm(가~다목)·2호 공매경락·1호 주택총액(라목)
     transferCause: data.transferCause,
     standardPricePerSqmAtTransfer: data.standardPricePerSqmAtTransfer,
     transferArea: data.transferArea,
-    compensationPerSqm: data.compensationPerSqm,
-    compensationBasisStdPrice: data.compensationBasisStdPrice,
+    compensationPerSqm: data.compensationPerSqm, compensationBasisStdPrice: data.compensationBasisStdPrice,
+    isAuctionTransfer: data.isAuctionTransfer, auctionPrice: data.auctionPrice, // 2호
+    housingCompensationTotal: data.housingCompensationTotal, housingCompensationBasisTotal: data.housingCompensationBasisTotal, // 1호 주택총액
+    splitLandCompensationTotal: data.splitLandCompensationTotal, splitLandCompensationBasisTotal: data.splitLandCompensationBasisTotal, // 1호 건물 split 토지분(P6)
     householdHousingCount: data.householdHousingCount,
     // ⑭ 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 보유 수 (TypeScript 미감지 영역)
     // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback (householdRightCount ?? 0)
@@ -144,6 +143,9 @@ export async function POST(request: NextRequest) {
     isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,
     acquisitionCause: data.acquisitionCause,
     decedentAcquisitionDate: toOptionalDate(data.decedentAcquisitionDate),
+    decedentSameHouseholdBeforeInheritance: data.decedentSameHouseholdBeforeInheritance,
+    decedentCohabitationHoldingStartDate: toOptionalDate(data.decedentCohabitationHoldingStartDate),
+    decedentCohabitationResidenceMonths: data.decedentCohabitationResidenceMonths,
     donorAcquisitionDate: toOptionalDate(data.donorAcquisitionDate),
     carryoverTaxation: data.carryoverTaxation
       ? {
@@ -197,6 +199,8 @@ export async function POST(request: NextRequest) {
     parentalCareMerge: data.parentalCareMerge
       ? { mergeDate: new Date(data.parentalCareMerge.mergeDate) }
       : undefined,
+    isFirstTransferredInMerge: data.isFirstTransferredInMerge,
+    generalHouseGiftedFromDecedentWithin2yr: data.generalHouseGiftedFromDecedentWithin2yr,
     // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
     oneHouseExemptionProviso: data.oneHouseExemptionProviso
       ? {
@@ -247,6 +251,16 @@ export async function POST(request: NextRequest) {
     // 토지/건물 취득일 분리 (선택)
     landAcquisitionDate: toOptionalDate(data.landAcquisitionDate),
     landSplitMode: data.landSplitMode,
+    // ⑭ 파트별 취득 모드 + 양도 분리 모드 — TypeScript 미감지 영역(엔진 명시 입력, §9 M2)
+    landAcqMode: data.landAcqMode,
+    buildingAcqMode: data.buildingAcqMode,
+    isSeparateAcquisition: data.isSeparateAcquisition,
+    // 개산공제(§163⑥) base 축소 — 기준시가는 raw, 엔진이 개산공제에서만 적용
+    ownershipRatio: data.ownershipRatio,
+    buildingStandardPriceAtAcquisition: data.buildingStandardPriceAtAcquisition,
+    saleSplitMode: data.saleSplitMode,
+    landSalesCaseValue: data.landSalesCaseValue,
+    buildingSalesCaseValue: data.buildingSalesCaseValue,
     landTransferPrice: data.landTransferPrice,
     buildingTransferPrice: data.buildingTransferPrice,
     landAcquisitionPrice: data.landAcquisitionPrice,
@@ -294,6 +308,8 @@ export async function POST(request: NextRequest) {
             : undefined,
         }
       : undefined,
+    // ⑭ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (§163⑨2호 max) — 숫자 payload(Date 변환 불요)
+    ...(data.commercialInheritanceValuation ? { commercialInheritanceValuation: data.commercialInheritanceValuation } : {}),
     // 다필지 분리 계산 (환지·합병 등) — 문자열 날짜 → Date 변환
     parcels: data.parcels?.map((p) => ({
       ...p,
@@ -333,29 +349,7 @@ export async function POST(request: NextRequest) {
       : undefined,
     // ⑭ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — Date 변환 필수
     // 주의: toDate()/toOptionalDate() 헬퍼 사용 (lib/api/date-coerce.ts 정책)
-    rentalHousingException: data.rentalHousingException
-      ? {
-          applyException: data.rentalHousingException.applyException,
-          scenario: data.rentalHousingException.scenario,
-          rentalUnits: data.rentalHousingException.rentalUnits.map((u) => ({
-            registrationDate: new Date(u.registrationDate),
-            rentalType: u.rentalType,
-            rentalAcquisitionType: u.rentalAcquisitionType,
-            isApartment: u.isApartment,
-            region: u.region,
-            standardPriceAtRentalStart: u.standardPriceAtRentalStart,
-            rentalMonths: u.rentalMonths,
-            rentalAutoTermination: u.rentalAutoTermination,
-            requirementsConfirmed: u.requirementsConfirmed,
-          })),
-          priorResidenceTransferDate: data.rentalHousingException.priorResidenceTransferDate
-            ? new Date(data.rentalHousingException.priorResidenceTransferDate)
-            : undefined,
-          standardPriceAtAcquisition: data.rentalHousingException.standardPriceAtAcquisitionForPhrp,
-          standardPriceAtPriorTransfer: data.rentalHousingException.standardPriceAtPriorTransfer,
-          standardPriceAtTransfer: data.rentalHousingException.standardPriceAtTransferForPhrp,
-        }
-      : undefined,
+    rentalHousingException: toRentalHousingExceptionEngineInput(data.rentalHousingException),
     // ⑭ 사례 28 — 부수토지 한도 산정 (영 §154⑦). occupancyApprovalDate 등은 UI에서 acquisitionDate로 변환됨.
     buildingFootprintArea: data.buildingFootprintArea,
     isUrbanArea: data.isUrbanArea,
@@ -433,6 +427,10 @@ export async function POST(request: NextRequest) {
     const allCompanionsFractional =
       companions.length > 0 && companions.every((c) => c.totalPropertyTransferPrice !== undefined);
     const isFractionalBundle = primaryIsFractional || allCompanionsFractional;
+    // 완전 지분 모드: primary·전 companion 모두 fractional (같은 물건 지분 분할).
+    // 이때만 각 자산의 확정 양도가액(총계약가×ratio)을 fixedSalePrice로 주입한다.
+    // 혼합(primary만 지분 등)은 비지분 자산의 fixedSalePrice가 미계산이므로 기존 경로 유지.
+    const isFullFractionalBundle = primaryIsFractional && allCompanionsFractional;
     const bundledOk =
       companions.length > 0 &&
       data.totalSalePrice !== undefined &&
@@ -446,119 +444,20 @@ export async function POST(request: NextRequest) {
       );
 
     if (bundledOk) {
-      // (1) 주 자산 상속 보충적평가액 산정 (선택)
-      let primaryFixedAcq: number | undefined;
-      if (data.primaryInheritanceValuation) {
-        const v = data.primaryInheritanceValuation;
-        const r = calculateInheritanceAcquisitionPrice({
-          inheritanceDate: new Date(v.inheritanceDate),
-          assetKind: v.assetKind,
-          landAreaM2: v.landAreaM2,
-          publishedValueAtInheritance: v.publishedValueAtInheritance,
-          marketValue: v.marketValue,
-          appraisalAverage: v.appraisalAverage,
-        });
-        primaryFixedAcq = r.acquisitionPrice;
-      }
-
-      // (2) 컴패니언 자산별 취득가액 (acquisitionCause 분기)
-      //   - inheritance + inheritanceValuation → 보충적평가
-      //   - inheritance manual / gift / purchase(actual) → fixedAcquisitionPrice 그대로
-      //   - purchase(estimated) → undefined (안분 후 사후 환산, 5단계에서 처리)
-      const companionFixedAcq: (number | undefined)[] = companions.map((c) => {
-        if (c.acquisitionCause === "purchase" && c.useEstimatedAcquisition) {
-          return undefined;
-        }
-        if (c.acquisitionCause === "inheritance" && c.inheritanceValuation) {
-          const v = c.inheritanceValuation;
-          return calculateInheritanceAcquisitionPrice({
-            inheritanceDate: new Date(v.inheritanceDate),
-            assetKind: v.assetKind,
-            landAreaM2: v.landAreaM2,
-            publishedValueAtInheritance: v.publishedValueAtInheritance,
-            marketValue: v.marketValue,
-            appraisalAverage: v.appraisalAverage,
-          }).acquisitionPrice;
-        }
-        return c.fixedAcquisitionPrice;
-      });
-
-      // (3) BundledAssetInput 배열 구성
-      const primaryAssetKind: BundledAssetInput["assetKind"] =
-        data.propertyType === "housing"
-          ? "housing"
-          : data.propertyType === "building"
-            ? "building"
-            : "land";
-      const primaryLabel =
-        data.propertyType === "housing"
-          ? "주 자산(주택)"
-          : data.propertyType === "land"
-            ? "주 자산(토지)"
-            : "주 자산";
-
-      const bundleAssets: BundledAssetInput[] = [
+      // (1)~(4.5) 안분 준비·실행 — bundled-split-helpers.ts로 추출 (800줄 정책)
+      const { apportionment, adjustedAcq } = prepareBundledApportionment(
         {
-          assetId: "primary",
-          assetLabel: primaryLabel,
-          assetKind: primaryAssetKind,
-          standardPriceAtTransfer: data.standardPriceAtTransferForApportion ?? 0,
-          directExpenses: data.expenses,
-          fixedAcquisitionPrice:
-            primaryFixedAcq ??
-            (data.acquisitionPrice > 0 ? data.acquisitionPrice : undefined),
-          // actual 모드: 주 자산의 계약서상 양도가액 주입
-          fixedSalePrice: isActualMode ? data.primaryActualSalePrice : undefined,
+          propertyType: data.propertyType,
+          totalSalePrice: data.totalSalePrice,
+          standardPriceAtTransferForApportion: data.standardPriceAtTransferForApportion,
+          expenses: data.expenses,
+          acquisitionPrice: data.acquisitionPrice,
+          primaryActualSalePrice: data.primaryActualSalePrice,
+          primaryInheritanceValuation: data.primaryInheritanceValuation,
         },
-        ...companions.map(
-          (c, i): BundledAssetInput => ({
-            assetId: c.assetId,
-            assetLabel: c.assetLabel,
-            assetKind: c.assetKind,
-            standardPriceAtTransfer: c.standardPriceAtTransfer ?? 0,
-            standardPriceAtAcquisition: c.standardPriceAtAcquisition,
-            directExpenses: c.directExpenses,
-            fixedAcquisitionPrice: companionFixedAcq[i],
-            // actual 모드: 컴패니언의 계약서상 양도가액 주입
-            fixedSalePrice: isActualMode ? c.fixedSalePrice : undefined,
-          }),
-        ),
-      ];
-
-      // (4) 안분 실행
-      const apportionment = apportionBundledSale({
-        totalSalePrice: data.totalSalePrice!,
-        assets: bundleAssets,
-      });
-
-      // (4.5) 매매 estimated 컴패니언: 안분된 양도가액으로 환산취득가 사후 산정
-      // 환산공식: 양도가 × (취득시 기준시가 ÷ 양도시 기준시가)
-      const adjustedAcq = new Map<string, { price: number; used: boolean }>();
-      companions.forEach((c) => {
-        if (
-          c.acquisitionCause === "purchase" &&
-          c.useEstimatedAcquisition &&
-          c.standardPriceAtAcquisition &&
-          c.standardPriceAtTransfer
-        ) {
-          const alloc = apportionment.apportioned.find((a) => a.assetId === c.assetId);
-          if (!alloc) return;
-          const price = calculateEstimatedAcquisitionPrice(
-            alloc.allocatedSalePrice,
-            c.standardPriceAtAcquisition,
-            c.standardPriceAtTransfer,
-          );
-          adjustedAcq.set(c.assetId, { price, used: true });
-        }
-      });
-
-      // apportionment 결과에 usedEstimatedAcquisition 플래그 전파 (결과 표시용)
-      apportionment.apportioned.forEach((a) => {
-        const adj = adjustedAcq.get(a.assetId);
-        if (adj?.used) {
-          a.usedEstimatedAcquisition = true;
-        }
-      });
+        companions,
+        { isActualMode, isFullFractionalBundle },
+      );
 
       // (5) TransferTaxItemInput[] 조립 — 주 자산은 engineInput 파생, 컴패니언은 기본값 + override
       // G-2: companion이 한도 초과 split 대상이면 flatMap으로 두 자산([appurtenant, excess])을 생성.
@@ -678,6 +577,10 @@ export async function POST(request: NextRequest) {
       const mixedAsset = {
         ...data.mixedUse,
         isMixedUseHouse: true as const,
+        // ⑭ 개산공제(§163⑥) 지분 축소 — 자산-수준 `ownershipRatio`를 겸용 서브엔진에 주입.
+        //    `data.mixedUse`에는 없는 top-level 필드라 여기서 명시 전달하지 않으면 조용히 누락된다.
+        ownershipRatio: data.ownershipRatio,
+        isUnregistered: data.isUnregistered,
         landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
         buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
         preHousingDisclosure: phdInput,
@@ -694,6 +597,9 @@ export async function POST(request: NextRequest) {
         new Date(data.transferDate),
         mixedAsset,
         rates,
+        // 신고서 단위 수정신고·경정청구 — engineInput.amendment는 상단(:308~)에서 Date 변환 완료.
+        // ⚠️ raw data.amendment 전달 금지: Zod 출력은 string이라 §48② 감면율 판정(isAfter)이 침묵 오작동.
+        engineInput.amendment,
       );
       return NextResponse.json(
         { data: { mode: "mixed-use" as const, result: mixedResult } },
@@ -729,6 +635,13 @@ export async function POST(request: NextRequest) {
         transferDate.getFullYear(), data.annualBasicDeductionUsed,
         data.priorReductionUsage ?? [], rates,
         burdenedGiftInfoForGb,
+        // ⑭ §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 전달.
+        {
+          transferCause: data.transferCause,
+          compensationPerSqm: data.compensationPerSqm,
+          compensationBasisStdPrice: data.compensationBasisStdPrice,
+        },
+        data.ownershipRatio,
       );
       return NextResponse.json(
         {

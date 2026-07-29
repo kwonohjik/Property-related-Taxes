@@ -1,6 +1,9 @@
 "use client";
 
-import { HomeLinkButton } from "@/components/ui/home-link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -99,9 +102,12 @@ function Divider() {
 function PropertyCard({
   breakdown,
   ownership,
+  assetKind,
 }: {
   breakdown: PerPropertyBreakdown;
   ownership?: { numerator: number; denominator: number };
+  /** 안분 결과의 자산 종류 — 토지·건물 분리 안내 문구 분기용(자산별로 다르다). */
+  assetKind?: string;
 }) {
   // 지분 모드(분자 < 분모) 시 "지분 X%" 라벨 표시. 단독 소유(분자 === 분모)는 미표시.
   const isFractional =
@@ -147,6 +153,31 @@ function PropertyCard({
           )}
         </tbody>
       </table>
+      {/*
+        감면·취득가액 산출근거 — 단건 결과 화면과 **같은 컴포넌트**를 재사용한다.
+        종전에는 집계가 Detail을 버려서 "감면" 배지만 뜨고 근거를 볼 수 없었다.
+
+        ⚠️ `calculatedTax`·`taxBase`는 자산별 **참고값**(`refCalculatedTax`·`taxBaseShare`)을
+           넘긴다 — 일괄은 합산 과세표준으로 세액을 산출하므로 자산별 값과 다르다.
+           타입 정의(`PerPropertyBreakdown`)가 두 필드를 "다건 컨텍스트, 참고"로 명시한다.
+      */}
+      <ReductionDetailCards
+        result={breakdown}
+        calculatedTax={breakdown.refCalculatedTax}
+        taxBase={breakdown.taxBaseShare}
+      />
+      {/*
+        평가·판정 산출근거 (R1-a) — 상가 환산 §164⑥·비사업용토지·다주택 중과·PHD 등.
+        금액 prop은 **자산별 안분값**을 넘긴다(단건의 총계약가와 의미가 다르다).
+      */}
+      <ValuationDetailCards
+        result={breakdown}
+        transferPrice={breakdown.transferPrice}
+        transferGain={breakdown.transferGain}
+        longTermDeduction={breakdown.longTermHoldingDeduction}
+        taxableIncome={breakdown.incomeAfterOffset}
+        assetKind={assetKind}
+      />
     </div>
   );
 }
@@ -202,15 +233,15 @@ function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransfe
               <th className="pb-1 pr-2 text-left font-normal">구분</th>
               <th className="pb-1 pr-2 text-right font-normal">
                 토지
-                <span className="ml-1 text-[10px] text-sky-600">(1001)</span>
+                <span className="ml-1 text-micro text-sky-600">(1001)</span>
               </th>
               <th className="pb-1 pr-2 text-right font-normal">
                 건물1
-                <span className="ml-1 text-[10px] text-emerald-600">(3001)</span>
+                <span className="ml-1 text-micro text-emerald-600">(3001)</span>
               </th>
               <th className="pb-1 pr-2 text-right font-normal">
                 건물2
-                <span className="ml-1 text-[10px] text-fuchsia-600">(3002·증축)</span>
+                <span className="ml-1 text-micro text-fuchsia-600">(3002·증축)</span>
               </th>
               <th className="pb-1 text-right font-normal">합계</th>
             </tr>
@@ -233,7 +264,7 @@ function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransfe
               <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.acquisitionPrice)}</td>
               <td className="py-1 pr-2 text-right font-mono">
                 {formatKRW(bld2.acquisitionPrice)}
-                <span className="ml-1 text-[10px] text-fuchsia-600">(환산)</span>
+                <span className="ml-1 text-micro text-fuchsia-600">(환산)</span>
               </td>
               <td className="py-1 text-right font-mono font-semibold">
                 {formatKRW(land.acquisitionPrice + bld1.acquisitionPrice + bld2.acquisitionPrice)}
@@ -246,7 +277,7 @@ function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransfe
               <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.necessaryExpense)}</td>
               <td className="py-1 pr-2 text-right font-mono">
                 {formatKRW(bld2.necessaryExpense)}
-                <span className="ml-1 text-[10px] text-muted-foreground">(개산공제 §163⑥)</span>
+                <span className="ml-1 text-micro text-muted-foreground">(개산공제 §163⑥)</span>
               </td>
               <td className="py-1 text-right font-mono font-semibold">
                 {formatKRW(land.necessaryExpense + bld1.necessaryExpense + bld2.necessaryExpense)}
@@ -292,7 +323,7 @@ function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransfe
             </tr>
             {/* 영 §102② 통산 흡수 */}
             <tr className="border-b border-border/40">
-              <td className="py-1 pr-2 text-muted-foreground text-[11px]">
+              <td className="py-1 pr-2 text-muted-foreground text-caption">
                 결손 통산 (영§102②)
               </td>
               <td className="py-1 pr-2 text-right font-mono text-rose-600 text-xs">{landOffsetRow}</td>
@@ -530,6 +561,22 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         </table>
       </div>
 
+      {/* §97② 2호 단서 swap 발동 표시 (일반건물 환산 자산총액 판정 — F10) */}
+      {aggregated.swapApplied && aggregated.swapComparison && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1">
+          <p className="font-semibold text-amber-900">
+            필요경비 swap 적용 — 소득세법 §97② 2호 단서
+          </p>
+          <p className="text-xs text-amber-800">
+            환산취득가 + 개산공제 합 {formatKRW(aggregated.swapComparison.estimatedSide)}
+            {" < "}자본적지출 + 양도비 {formatKRW(aggregated.swapComparison.directSide)}
+          </p>
+          <p className="text-xs text-amber-800">
+            → 자본적지출 + 양도비 {formatKRW(aggregated.swapComparison.directSide)}을 필요경비로 적용(환산취득가 미차감, 자산별 비율 배분)
+          </p>
+        </div>
+      )}
+
       {/* 합산 신고서 양식 — 단건과 동일한 32행, 합계 + 자산별 컬럼 */}
       {(() => {
         // landNatureMap: propertyId → "appurtenant" | "standalone" (토지 자산 성격 라벨 suffix용)
@@ -597,6 +644,9 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             key={p.propertyId}
             breakdown={p}
             ownership={ownershipMap?.get(p.propertyId)}
+            assetKind={
+              apportionment.apportioned.find((a) => a.assetId === p.propertyId)?.assetKind
+            }
           />
         ))}
       </div>
@@ -604,27 +654,13 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       {/* 합산 과세 내역 (납부세액 요약 대체) */}
       <AggregatedTaxSummary aggregated={aggregated} />
 
-      {/* 하단 네비게이션 버튼 */}
-      <div className="flex gap-3 print:hidden">
-        <HomeLinkButton className="flex-1" />
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-          >
-            이전 화면
-          </button>
-        )}
-        {onReset && (
-          <button
-            type="button"
-            onClick={onReset}
-            className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            다시 계산하기
-          </button>
-        )}
+      {/* 하단 네비게이션 버튼 — 입력 단계 네비와 통일 (컴팩트 nav + 글자폭 CTA) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <div className="flex items-center gap-2">
+          <HomeButton />
+          {onBack && <NavButton direction="prev" label="이전 화면" onClick={onBack} />}
+        </div>
+        {onReset && <CtaButton onClick={onReset}>다시 계산하기</CtaButton>}
       </div>
     </div>
   );

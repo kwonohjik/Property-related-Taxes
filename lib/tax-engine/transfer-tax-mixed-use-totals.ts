@@ -53,7 +53,13 @@ export function buildTotalTax(
   const applicable = brackets.find((b) => taxBase <= (b.max ?? Infinity)) ?? brackets[brackets.length - 1];
   const appliedRate = taxBase > 0 ? applicable.rate : 0;
   const progressiveDeduction = taxBase > 0 ? applicable.deduction : 0;
-  const nonBusinessSurcharge = applyRate(nonBizIncome, 0.10);
+  // §104①8호 비사업용 토지 +10%p 중과는 **과세표준**(=양도소득금액−기본공제)에 적용된다(단건 엔진
+  // transfer-tax-rate-calc.ts:307-311와 동일 원리). 양도소득기본공제는 세율이 가장 높은 부분(비사업용
+  // +10%p)에 전액 귀속(납세자 유리 원칙) → 중과 base = nonBiz의 과세표준 귀속분 = max(0, nonBiz − 적용공제).
+  // 적용공제 = aggregateIncome − taxBase (= min(aggregate, 기본공제); nonBiz < 공제면 base 0으로 흡수).
+  const appliedDeduction = aggregateIncome - taxBase;
+  const nonBizSurchargeBase = Math.max(0, nonBizIncome - appliedDeduction);
+  const nonBusinessSurcharge = applyRate(nonBizSurchargeBase, 0.10);
   const transferTax = taxByBasicRate + nonBusinessSurcharge;
   const localTax = applyRate(transferTax, 0.10);
 

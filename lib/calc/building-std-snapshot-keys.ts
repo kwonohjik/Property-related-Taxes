@@ -3,16 +3,24 @@
  *
  * 키 규약: 상증 `bsp-estate-${id}` / 양도 `bsp-${assetId}-{gb|cb}-{acq|transfer}`
  *   · PHD 3시점 `bsp-${assetId}-phd-{acq|first|transfer}` (상가분은 `…-commercial` 접미).
+ *   · 겸용 asset-major 상가 통합 모달 `bsp-${assetId}-mx-commercial` — 취득·양도 2시점을 한 폼에서
+ *     계산하므로 시점 세그먼트가 없다(gb/cb와 같은 transfer 모드 단일 스냅샷).
+ *     ⚠️ phd prefix를 쓰면 배치 모달의 replaceSnapshotsByPrefix(`bsp-{id}-phd`)에 삭제된다 → `mx` 분리.
  *
  * `idOfSnapshotKey`는 use-auto-save-calculation(이력 동봉 필터)·BuildingStdPriceReportSection
  * (결과탭 렌더 소속판정) 두 소비처가 공유한다(드리프트 방지).
  */
 
-/** 스냅샷 키에서 자산/재산 id 추출 (소속 판정용). gb/cb/phd + first + -commercial 전부 환원. */
+/** 스냅샷 키에서 자산/재산 id 추출 (소속 판정용). gb/cb/phd + first + -commercial + mx + red-phd 전부 환원. */
 export function idOfSnapshotKey(key: string): string {
   return key.startsWith("bsp-estate-")
     ? key.slice("bsp-estate-".length)
-    : key.replace(/^bsp-/, "").replace(/-(?:gb|cb|phd)-(?:acq|first|transfer)(?:-commercial)?$/, "");
+    : key
+        .replace(/^bsp-/, "")
+        .replace(/-(?:gb|cb|phd)-(?:acq|first|transfer)(?:-commercial)?$/, "")
+        .replace(/-mx-commercial$/, "")
+        // 감면 조문 PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷) — 규약 편입.
+        .replace(/-red-phd$/, "");
 }
 
 /** PHD 시점 라벨(계산서 헤딩용). phd 키가 아니면 null. */

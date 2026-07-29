@@ -8,12 +8,19 @@ import { Plus, Trash2 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 
 interface ParcelListInputProps {
   parcels: ParcelFormItem[];
   totalTransferPrice: number;
   onChange: (parcels: ParcelFormItem[]) => void;
+  /**
+   * 공익수용 §164⑨ 1호 필지별 min[] 특례 입력 노출 여부.
+   * 호출부가 판정한다 — 수용(transferCause) + 양도일 ≥ 2009.02.04.
+   * (필지별 환산 여부는 이 컴포넌트가 p.acquisitionMethod로 추가 판정)
+   */
+  showExpropriationMin?: boolean;
 }
 
 function newParcel(index: number): ParcelFormItem {
@@ -35,6 +42,8 @@ function newParcel(index: number): ParcelFormItem {
     entitlementArea: "",
     allocatedArea: "",
     priorLandArea: "",
+    compensationPerSqm: "",
+    compensationBasisStdPrice: "",
     areaScenario: "same",
   };
 }
@@ -75,7 +84,7 @@ function calcAllocation(parcels: ParcelFormItem[], totalPrice: number): number[]
 const AREA_INPUT_CLASS =
   "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background";
 
-export function ParcelListInput({ parcels, totalTransferPrice, onChange }: ParcelListInputProps) {
+export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExpropriationMin }: ParcelListInputProps) {
   const allocations = calcAllocation(parcels, totalTransferPrice);
 
   function update(index: number, patch: Partial<ParcelFormItem>) {
@@ -429,6 +438,45 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
                 </div>
               )}
 
+              {/*
+                공익수용 §164⑨ 1호 — 양도당시 기준시가 차감 특례 (필지별).
+                양도당시 기준시가를 min[기준시가, 보상액, 보상액 산정 기초 기준시가]로 낮춘다.
+                필지마다 개별공시지가가 달라 min 선택이 **필지별로 독립**이므로 자산-수준이 아닌
+                필지 카드에서 입력받는다.
+              */}
+              {showExpropriationMin && p.acquisitionMethod === "estimated" && (
+                <ToneCard tone="amber" title="공익수용 양도당시 기준시가 특례 (소득령 §164⑨ 1호)">
+                  <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+                    양도당시 기준시가는 위 「양도시 ㎡당 기준시가」·보상가액·보상산정 기초 기준시가 중
+                    가장 작은 금액을 적용합니다. 두 값을 모두 입력해야 적용됩니다.
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">보상가액 (원/㎡)</Label>
+                      <input
+                        type="number"
+                        className={AREA_INPUT_CLASS}
+                        data-testid={`parcel-${i}-compensation-per-sqm`}
+                        value={p.compensationPerSqm}
+                        onChange={(e) => update(i, { compensationPerSqm: e.target.value })}
+                        placeholder="보상가액 단가"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">보상산정 기초 기준시가 (원/㎡)</Label>
+                      <input
+                        type="number"
+                        className={AREA_INPUT_CLASS}
+                        data-testid={`parcel-${i}-compensation-basis-std-price`}
+                        value={p.compensationBasisStdPrice}
+                        onChange={(e) => update(i, { compensationBasisStdPrice: e.target.value })}
+                        placeholder="보상 산정 기준시가 단가"
+                      />
+                    </div>
+                  </div>
+                </ToneCard>
+              )}
+
               {/* 실가 방식 — 취득가액 */}
               {p.acquisitionMethod === "actual" && (
                 <CurrencyInput
@@ -472,7 +520,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange }: Parce
                   />
                 </div>
                 {p.acquisitionMethod === "estimated" && (
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-caption text-muted-foreground">
                     환산 모드: (자본+양도비) &gt; (환산+개산공제) 시 §97② 단서 적용
                   </p>
                 )}

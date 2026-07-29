@@ -17,6 +17,7 @@
 import { useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { Button } from "@/components/ui/button";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { EstateBodySection } from "./EstateBodySection";
@@ -423,26 +424,23 @@ function ValuationAccordionFields({
 
             {/* 아파트 전용 자동조회 버튼 */}
             {cat === "real_estate_apartment" && (
-              <button
+              <Button
                 type="button"
+                variant="modalLauncher"
+                size="xs"
                 disabled={rtmsDisabled}
                 title={rtmsDisabled ? rtmsDisabledReason : "RTMS 실거래가 자동조회 (국토교통부)"}
                 onClick={() => setRtmsModalOpen(true)}
-                className={[
-                  "shrink-0 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  rtmsDisabled
-                    ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500"
-                    : "border-sky-300 bg-sky-100 text-sky-800 hover:bg-sky-200 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-300 dark:hover:bg-sky-900/60",
-                ].join(" ")}
+                className="shrink-0"
               >
                 자동조회
-              </button>
+              </Button>
             )}
           </div>
 
           {/* disabled 사유 안내 (아파트 전용) */}
           {cat === "real_estate_apartment" && rtmsDisabled && (
-            <p className="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+            <p className="text-caption text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
               ⚠️ {rtmsDisabledReason}
             </p>
           )}
@@ -450,10 +448,10 @@ function ValuationAccordionFields({
           {/* RTMS 자동조회 출처 배지 */}
           {item.similarSalesSource === "rtms_auto" && (
             <div className="flex items-center gap-1.5">
-              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
+              <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-micro font-semibold text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
                 RTMS 자동조회
               </span>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500">
+              <span className="text-micro text-gray-400 dark:text-gray-500">
                 국토교통부 실거래가 공개시스템 · 직접 금액 수정 시 배지 제거
               </span>
             </div>

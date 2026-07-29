@@ -31,7 +31,7 @@ const RELATION_LABEL: Record<HeirRelation, string> = {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-200">
+    <span className="inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-caption font-medium text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-200">
       {children}
     </span>
   );
@@ -40,7 +40,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-0.5">
-      <span className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="shrink-0 text-caption text-gray-500 dark:text-gray-400">{label}</span>
       <span className="text-right text-xs font-medium text-gray-800 dark:text-gray-200">
         {value}
       </span>
@@ -118,7 +118,7 @@ export function InheritanceReviewSummary({
       data-testid="inheritance-review-summary"
     >
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-200 text-[11px] text-indigo-800 select-none dark:bg-indigo-800 dark:text-indigo-100">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-200 text-caption text-indigo-800 select-none dark:bg-indigo-800 dark:text-indigo-100">
           ✓
         </span>
         <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
@@ -158,7 +158,7 @@ export function InheritanceReviewSummary({
 
       {/* 적용 예정 공제 */}
       <div className="space-y-1.5 border-t border-indigo-200/70 dark:border-indigo-800/70 pt-2">
-        <p className="text-[11px] font-medium text-indigo-700 dark:text-indigo-300">
+        <p className="text-caption font-medium text-indigo-700 dark:text-indigo-300">
           적용 예정 상속공제
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -172,7 +172,7 @@ export function InheritanceReviewSummary({
         <div className="space-y-1.5 border-t border-indigo-200/70 dark:border-indigo-800/70 pt-2">
           {credits.length > 0 && (
             <div className="space-y-1">
-              <p className="text-[11px] font-medium text-indigo-700 dark:text-indigo-300">
+              <p className="text-caption font-medium text-indigo-700 dark:text-indigo-300">
                 세액공제
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -184,7 +184,7 @@ export function InheritanceReviewSummary({
           )}
           {payments.length > 0 && (
             <div className="space-y-1">
-              <p className="text-[11px] font-medium text-indigo-700 dark:text-indigo-300">
+              <p className="text-caption font-medium text-indigo-700 dark:text-indigo-300">
                 납부 방법
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -197,7 +197,7 @@ export function InheritanceReviewSummary({
         </div>
       )}
 
-      <p className="text-[10px] text-gray-500 dark:text-gray-400">
+      <p className="text-micro text-gray-500 dark:text-gray-400">
         ⓘ 입력 내용을 확인한 뒤 아래 ‘계산하기’를 누르세요. 금액 합계는 좌측 요약에서 확인할 수 있습니다.
       </p>
     </div>

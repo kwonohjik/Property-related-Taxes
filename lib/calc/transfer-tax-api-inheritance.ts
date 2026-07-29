@@ -7,7 +7,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { applyRatio } from "./transfer-tax-api-helpers";
+import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
 
 /**
  * 상속 취득가액 의제 페이로드 빌드.
@@ -22,7 +22,6 @@ export function buildInheritedAcquisitionPayload(
 ): { inheritedAcquisition?: unknown } {
   const triggerable =
     primary.acquisitionCause === "inheritance" &&
-    primary.inheritanceValuationMode === "auto" &&
     (primary.inheritanceAssetKind === "land" ||
       primary.inheritanceAssetKind === "house_individual" ||
       primary.inheritanceAssetKind === "house_apart");
@@ -35,22 +34,23 @@ export function buildInheritedAcquisitionPayload(
   if (isPreDeemed) {
     const stdAtDeemed = parseAmount(primary.standardPriceAtAcq);
     const stdAtTransfer = parseAmount(primary.standardPriceAtTransfer);
-    const hasDecPrice = !!primary.hasDecedentActualPrice;
-    const decPrice = parseAmount(primary.decedentAcquisitionPrice);
-    const decPriceValid = hasDecPrice && decPrice > 0 && !!primary.decedentAcquisitionDate;
+    // ① 상증법 §60~66 평가액(상속세 신고가액) — 지분 모드 시 × ratio (post-deemed와 일관)
+    const reportedRaw = parseAmount(primary.publishedValueAtInheritance);
+    const reportedValue =
+      reportedRaw > 0
+        ? primaryFractional
+          ? applyRatio(reportedRaw, primaryRatio)
+          : reportedRaw
+        : undefined;
 
     return {
       inheritedAcquisition: {
         mode: "pre-deemed" as const,
         inheritanceStartDate,
-        assetKind: primary.inheritanceAssetKind,
+        assetKind: deriveEngineInheritanceAssetKind(primary),
+        ...(reportedValue && { reportedValue }),
         ...(stdAtDeemed > 0 && { standardPriceAtDeemedDate: stdAtDeemed }),
         ...(stdAtTransfer > 0 && { standardPriceAtTransfer: stdAtTransfer }),
-        hasDecedentActualPrice: decPriceValid,
-        ...(decPriceValid && {
-          decedentAcquisitionDate: primary.decedentAcquisitionDate,
-          decedentActualPrice: decPrice,
-        }),
       },
     };
   }
@@ -67,14 +67,70 @@ export function buildInheritedAcquisitionPayload(
     inheritedAcquisition: {
       mode: "post-deemed" as const,
       inheritanceStartDate,
-      assetKind: primary.inheritanceAssetKind,
+      assetKind: deriveEngineInheritanceAssetKind(primary),
       reportedValue,
-      reportedMethod: "supplementary" as const,
+      // 사용자가 고른 평가방법을 엔진에 전달(결과 legalBasis·formula 반영). 공란("")이면 "supplementary" 강제 —
+      // reportedMethod가 비면 calcPostDeemed가 신고가액 경로(inheritance-acquisition-price.ts:164)를 못 넘고
+      // legacyFallback→computeSupplementary(land)로 빠져 post-deemed 총액을 단가로 오인, × 면적 폭증(C2 면적곱 지뢰).
+      reportedMethod: primary.inheritanceValuationMethod || ("supplementary" as const),
       useSupplementaryHelper: true,
       ...(primary.acquisitionArea && parseFloat(primary.acquisitionArea) > 0 && {
         landAreaM2: parseFloat(primary.acquisitionArea),
       }),
       publishedValueAtInheritance: reportedValue,
+    },
+  };
+}
+
+/**
+ * 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 페이로드 빌드 (상업용건물 + 상속개시일 < 2005-01-01).
+ *
+ * §163⑨2호: 상가 기준시가 최초고시(2005-01-01) 전 상속 상가는 max(상증법 평가액, §164⑥ 취득당시 기준시가).
+ * opt-in — 8필드(면적 3 + 취득시·최초고시 개공지·건물기준시가·최초고시 호별고시가) 모두 입력 시에만 전송
+ * (주택 buildInheritedHouseValuationPayload all-or-nothing 미러). cb* 스토어 필드 재사용(환산 섹션과 동일 물리량).
+ */
+export function buildCommercialInheritanceValuationPayload(
+  primary: AssetForm,
+): { commercialInheritanceValuation?: unknown } {
+  if (primary.assetKind !== "commercial_building" || primary.acquisitionCause !== "inheritance") {
+    return {};
+  }
+  const inheritanceDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
+  if (!inheritanceDate || inheritanceDate >= "2005-01-01") return {};
+
+  const exclusiveArea = parseFloat(primary.cbExclusiveArea) || 0;
+  const commonArea = parseFloat(primary.cbSharedArea) || 0;
+  const landArea = parseFloat(primary.cbLandArea) || 0;
+  const unitPriceAtFirstDisclosure = parseAmount(primary.cbUnitPriceAtFirstOrAcq);
+  const landPriceAtAcquisition = parseAmount(primary.cbLandPricePerSqmAtAcq);
+  const landPriceAtFirstDisclosure = parseAmount(primary.cbLandPricePerSqmAtFirst);
+  const buildingStdPriceAtAcquisition = parseAmount(primary.cbBuildingStdPriceAtAcq);
+  const buildingStdPriceAtFirstDisclosure = parseAmount(primary.cbBuildingStdPriceAtFirst);
+
+  // all-or-nothing opt-in — 하나라도 결측이면 §164⑥ 미적용(Phase 1 상증법 평가액만).
+  if (
+    exclusiveArea <= 0 ||
+    commonArea <= 0 ||
+    landArea <= 0 ||
+    unitPriceAtFirstDisclosure <= 0 ||
+    landPriceAtAcquisition <= 0 ||
+    landPriceAtFirstDisclosure <= 0 ||
+    buildingStdPriceAtAcquisition <= 0 ||
+    buildingStdPriceAtFirstDisclosure <= 0
+  ) {
+    return {};
+  }
+
+  return {
+    commercialInheritanceValuation: {
+      exclusiveArea,
+      commonArea,
+      landArea,
+      unitPriceAtFirstDisclosure,
+      landPriceAtAcquisition,
+      landPriceAtFirstDisclosure,
+      buildingStdPriceAtAcquisition,
+      buildingStdPriceAtFirstDisclosure,
     },
   };
 }
@@ -89,9 +145,11 @@ export function buildInheritedHouseValuationPayload(
   primary: AssetForm,
   transferDate: string,
 ): { inheritedHouseValuation?: unknown } {
+  // §164⑦ 주택 환산은 실제 주택 자산(상단 assetKind)에만 적용 — 상속 자산구분 라디오 폐지 대응.
+  const isHouse =
+    primary.assetKind === "housing" || primary.assetKind === "redevelopment_apt";
   const triggerable =
-    (primary.inheritanceAssetKind === "house_individual" ||
-      primary.inheritanceAssetKind === "house_apart") &&
+    isHouse &&
     primary.acquisitionCause === "inheritance" &&
     parseFloat(primary.inhHouseValLandArea) > 0 &&
     parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer) > 0 &&

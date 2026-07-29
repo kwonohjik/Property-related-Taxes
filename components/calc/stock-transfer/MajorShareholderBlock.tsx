@@ -28,6 +28,7 @@ import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -262,7 +263,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               <strong>{form.priorYearEndDate}</strong>은 {priorYearEndTradingStatus.reason}입니다.
               해당 일자 종가가 없는 경우 <strong>직전거래일 최종시세가액</strong>을 사용해야 합니다.
             </p>
-            <p className="mt-1 text-[10px] text-amber-700">
+            <p className="mt-1 text-micro text-amber-700">
               💡 키움증권 자동조회는 비거래일 입력 시 직전거래일 종가를 자동 적용합니다.
               수동 입력 시 사용자가 직전거래일 시세로 시가총액을 산정한 뒤 입력해 주세요.
             </p>
@@ -302,7 +303,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 onChange={(v) => onChange({ judgmentDateOverride: v })}
               />
             </FieldCard>
-            <p className="text-[10px] text-rose-700 bg-rose-100/70 px-2 py-1 rounded">
+            <p className="text-micro text-rose-700 bg-rose-100/70 px-2 py-1 rounded">
               ✓ 입력된 기준일로 대주주 기준 매트릭스가 조회됩니다 (시기별 1%/2%/4% 등). priorYearEndDate는 표시용으로만 사용.
             </p>
           </div>
@@ -388,7 +389,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               />
             </FieldCard>
           ) : (
-            <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+            <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
               <FieldCard label="총 발행주식수" hint="해당 법인의 발행주식 총수 (주). 다른 단계에서도 함께 사용됩니다.">
                 <DecimalInput
                   value={form.totalIssuedShares}
@@ -415,7 +416,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                   총 발행주식수와 본인 보유 주식수를 입력하면 지분율이 자동 산출됩니다.
                 </p>
               )}
-            </div>
+            </ToneCard>
           )}
         </div>
 
@@ -474,7 +475,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 />
               </FieldCard>
             ) : (
-              <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+              <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
                 <FieldCard label="총 발행주식수" hint="해당 법인의 발행주식 총수 (주). 본인 단독 입력과 동일 값.">
                   <DecimalInput
                     value={form.totalIssuedShares}
@@ -501,7 +502,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                     총 발행주식수와 합산 보유 주식수를 입력하면 지분율이 자동 산출됩니다.
                   </p>
                 )}
-              </div>
+              </ToneCard>
             )}
             <CurrencyInput
               label="합산 시가총액"
@@ -519,7 +520,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                   대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
                 </span>
                 {!f15f16Eligible && (
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-micro text-slate-500">
                     {form.transferDate ? `양도일 ${form.transferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
                   </span>
                 )}
@@ -549,7 +550,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 />
               </FieldCard>
               {f15f16Eligible && (parseDecimal(form.lentSharesCount) > 0 || parseDecimal(form.pefIndirectSharesCount) > 0) && (
-                <p className="text-[10px] text-amber-700 bg-amber-100/70 px-2 py-1 rounded">
+                <p className="text-micro text-amber-700 bg-amber-100/70 px-2 py-1 rounded">
                   ✓ 양도일 2013.2.15. 이후 — 엔진이 지분율에 자동 가산합니다.
                   시가총액 가산은 사용자 입력 책임 (가격 외부 의존).
                 </p>

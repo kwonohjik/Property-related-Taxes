@@ -30,7 +30,7 @@ import type {
   Pre1990LandValuationInput,
 } from "../pre-1990-land-valuation";
 import type { ParcelInput } from "../multi-parcel-transfer";
-import type { InheritanceAcquisitionInput } from "./inheritance-acquisition.types";
+import type { InheritanceAcquisitionInput, CommercialInheritanceValuationInput } from "./inheritance-acquisition.types";
 export type { TransferReductionStub } from "./transfer-reductions-stub.types";
 export type { Rental97Result } from "../transfer-reductions/types";
 export type { New994Result } from "../transfer-reductions/types";
@@ -100,8 +100,8 @@ export interface TransferTaxInput {
   standardPriceAtAcquisition?: number;
   /** 양도시 기준시가 (환산취득가 사용 시 필수) */
   standardPriceAtTransfer?: number;
-  // ── #3 공익수용 환산 양도시 기준시가 min[] 특례 (집행기준 99-164-12) — 모두 optional, 미제공 시 현행 ──
-  /** 양도원인 — "public_expropriation" 시 #3 게이트 후보 */
+  // ── 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — 모두 optional, 미제공 시 현행 ──
+  /** 양도원인 — "public_expropriation" 시 §164⑨1호 특례 게이트 후보. 2호(공매·경락)는 아래 isAuctionTransfer. */
   transferCause?: "general" | "public_expropriation";
   /** 양도시 기준시가 (원/㎡) — min[] 첫 후보 */
   standardPricePerSqmAtTransfer?: number;
@@ -111,6 +111,23 @@ export interface TransferTaxInput {
   compensationPerSqm?: number;
   /** 보상산정 기초 기준시가 (원/㎡) — min[] 후보 */
   compensationBasisStdPrice?: number;
+  // ── §164⑨ 2호 공매·경락 특례 (계획 P4) — 1호와 배타(N3). 총액 2후보 ──
+  /** §164⑨2호 대상(국세징수법 공매·민사집행법 강제경매·저당권실행 경매). transferCause와 배타. */
+  isAuctionTransfer?: boolean;
+  /** 그 공매 또는 경락가액 (총액, 원) — min(양도당시 기준시가 총액, 공매·경락가액) 후보 */
+  auctionPrice?: number;
+  // ── §164⑨ 1호 주택(라목) 총액 트랙 (계획 P5) — 개별주택가격은 총액이라 원/㎡ 분해 없음 ──
+  /** 보상액 총액 (원) — 주택 수용 min(개별주택가격, 보상액, 보상기초) 후보 */
+  housingCompensationTotal?: number;
+  /** 보상액 산정 기초 기준시가 총액 (원) — 주택 수용 min 후보 */
+  housingCompensationBasisTotal?: number;
+  // ── §164⑨ 1호 건물 split 토지분 트랙 (계획 P6/D6) — 토지·건물 취득일 분리 양도의 토지분만 ──
+  // 시행규칙 §80⑧: 보상기초=토지 개별공시지가만 → §164⑨1호는 split 토지분에만 적용(건물 무변경).
+  // 값은 **총액**(split의 landStdAtTransfer가 총액이라 min[]도 총액 3후보). 건물 자산·수용·환산 전용.
+  /** 토지분 보상액 총액 (원) — split min(양도시 토지 기준시가 총액, 보상액, 보상기초) 후보 */
+  splitLandCompensationTotal?: number;
+  /** 토지분 보상액 산정 기초 기준시가 총액 (원) — split min 후보 */
+  splitLandCompensationBasisTotal?: number;
   /** 세대 보유 주택 수 */
   householdHousingCount: number;
   /** 세대 보유 조합원입주권 수 (양도일 현재) — §89①4호 가목 판단. 미제공 시 0 */
@@ -208,6 +225,22 @@ export interface TransferTaxInput {
    */
   decedentAcquisitionDate?: Date;
   /**
+   * §154⑧3호 — 상속주택 자체 양도 시 상속개시 당시 상속인·피상속인 동일세대 여부.
+   * true 시 상속개시 전 동일세대 기간을 §154① 비과세·§95② 표2 "대상 판정"에 통산:
+   *  - 보유: decedentCohabitationHoldingStartDate로 기산일 backdate (resolveExemptionHoldingStartDate).
+   *  - 거주: decedentCohabitationResidenceMonths를 통산 (resolveExemptionResidenceMonths).
+   * ⚠️ LTHD 보유분·단기세율(decedentAcquisitionDate) 및 표2 "거주분 공제율"에는 통산 미적용
+   *    (모두 상속개시일 기산 유지 — 사전법령해석재산 2021-202: 통산은 표2 대상 판정 한정).
+   */
+  decedentSameHouseholdBeforeInheritance?: boolean;
+  /** §154⑧3호 — 상속개시 전 상속인·피상속인이 동일세대로서 거주·보유를 시작한 날 (비과세 보유기간 기산 backdate). */
+  decedentCohabitationHoldingStartDate?: Date;
+  /**
+   * §154⑧3호 — 상속개시 전 동일세대 통산 거주 개월. 비과세 거주요건·§95② 표2 "대상 판정"에만 통산.
+   * 표2 거주분 공제율은 residencePeriodMonths(상속개시일부터 실거주)를 별도 사용 — 대상판정/공제율 분리.
+   */
+  decedentCohabitationResidenceMonths?: number;
+  /**
    * 증여 시 증여자 취득일 — 단기보유 단일세율 판정 보유기간 통산용 (이월과세 패턴).
    * 장기보유특별공제 보유기간에는 적용하지 않음.
    */
@@ -242,6 +275,10 @@ export interface TransferTaxInput {
   parentalCareMerge?: {
     mergeDate: Date;
   };
+  /** 합가·혼인 세대 내 먼저 양도하는 주택 여부 (§155④⑤ "먼저 양도" 요건). 비과세 판정용. */
+  isFirstTransferredInMerge?: boolean;
+  /** 양도(일반)주택이 상속개시일부터 소급 2년 내 피상속인 증여분 여부 (§155② 일반주택 제외 게이트). true면 상속주택 특례 미적용. */
+  generalHouseGiftedFromDecedentWithin2yr?: boolean;
   /** 양도 주택 ID (houses 제공 시) */
   sellingHouseId?: string;
   /** 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 한시 배제 2022.5.10~2026.5.9). houses + 유예 윈도우 활성 시 mhInput.gracePeriod로 전달(STEP 0.5). */
@@ -368,6 +405,13 @@ export interface TransferTaxInput {
   inheritedHouseValuation?: InheritanceHouseValuationInput;
 
   /**
+   * 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (자산 종류 = 상업용건물 + 상속개시일 < 2005-01-01 시 사용).
+   * 최초고시(2005) 역환산으로 취득당시 기준시가(P_A)를 산정 → §163⑨2호 max(상증법 평가액, P_A).
+   * 결과는 inheritedAcquisition.commercialValuationStdPrice에 자동 주입(STEP 0.45). opt-in.
+   */
+  commercialInheritanceValuation?: CommercialInheritanceValuationInput;
+
+  /**
    * 겸용주택(1세대 1주택 + 상가) 분리계산 입력.
    * propertyType === "mixed-use-house" 일 때 필수.
    * 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분 강제 분리.
@@ -423,6 +467,55 @@ export interface TransferTaxInput {
    * "actual": 사용자가 각 가액을 직접 입력.
    */
   landSplitMode?: "apportioned" | "actual";
+  /**
+   * 토지 파트 취득 방식 (파트별 독립 4-way, 신설).
+   * 미제공 시 자산 전체 `useEstimatedAcquisition`/`acquisitionMethod`에서 단방향 파생(§6.1 SoT,
+   * 기존 동작 100% 보존). 제공 시 `buildingAcqMode`와 독립적으로 조합 가능
+   * (예: 토지 실가 + 건물 환산) — 소득령 §166⑥·§163⑥.
+   */
+  landAcqMode?: "actual" | "estimated" | "appraisal" | "salesCase";
+  /** 건물 파트 취득 방식 — landAcqMode와 동일 규칙, 파트 독립 */
+  buildingAcqMode?: "actual" | "estimated" | "appraisal" | "salesCase";
+  /**
+   * **별개 취득** — 토지·건물을 서로 다른 시점에 각각 취득해 취득가액이 파트별로 실재하는가.
+   *
+   * true면 취득가액 축이 파트별로 완결된다(총액 잔액 도출·비율 안분 폐지, 소득세법 §97①1호·§114⑦).
+   * 판정은 API 변환의 `isSeparateAcquisition()`(lib/calc/transfer-tax-split-acq-mode.ts)이 담당한다 —
+   * 폼 전용 플래그(`hasSeperateLandAcquisitionDate`·`isMixedUseHouse`)가 필요해 엔진은 재판정할 수 없다.
+   */
+  isSeparateAcquisition?: boolean;
+  /**
+   * 공유지분율 (0 < r ≤ 1, 기본 1) — **필요경비 개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다: 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율(`landStd / total`)과 감면 차분 비율도 100% 스케일을 전제하기 때문이다.
+   * 개산공제만 「지분 기준시가 × 3%」가 되어야 §97②2호 가목의 **합계액**(환산취득가 + 개산공제)이
+   * 같은 스케일로 맞는다.
+   *
+   * API 변환이 `getOwnershipRatio(asset)`로 파생해 전달한다(엔진 재판정 없음).
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.{plan,engine.design}.md
+   */
+  ownershipRatio?: number;
+  /**
+   * **건물분 취득 당시 기준시가** (소득세법 §99①1호 나목 — 국세청장 산정·고시).
+   * 기준일은 `acquisitionDate`(건물 취득일)의 직전 고시분(소득령 §164③).
+   *
+   * `propertyType === "building"` + `isSeparateAcquisition` 전용. 주택(라목)은 개별·공동주택가격이
+   * 부수토지를 포함한 결합 공시라 파트 독립 입력이 성립하지 않는다(§163⑥2호가목 개산공제 법정액 이탈).
+   * 미입력 시 결합 총액 역산으로 후퇴한다(한시).
+   */
+  buildingStandardPriceAtAcquisition?: number;
+  /**
+   * 양도 방식 (구분양도|일괄양도) — 엔진 명시 입력.
+   * "actual": 계약서 등 토지·건물 실지 양도가액 구분 기재(land/buildingTransferPrice 직접).
+   * "apportioned": 구분 불분명 → 양도시 기준시가 비율 안분(부가세령 §64①1호, 소득령 §166⑥).
+   * 미제공 시 land/buildingTransferPrice 존재 여부로 기존 방식대로 자동 판단(회귀 0).
+   */
+  saleSplitMode?: "actual" | "apportioned";
+  /** 토지 파트 매매사례가액 (landAcqMode === "salesCase" 시 직접 입력, §176의2③1호) */
+  landSalesCaseValue?: number;
+  /** 건물 파트 매매사례가액 (buildingAcqMode === "salesCase" 시 직접 입력) */
+  buildingSalesCaseValue?: number;
   /** 토지 양도가액 (실제 모드 or 안분 override 시) */
   landTransferPrice?: number;
   /** 건물 양도가액 (실제 모드 or 안분 override 시) */
@@ -539,7 +632,7 @@ export interface TransferTaxInput {
   /**
    * 상업용건물·오피스텔 환산취득가 계산 입력 (선택).
    * propertyType === "commercial_building" + useEstimatedAcquisition === true 일 때 필수.
-   * 소득세법 시행령 §164⑧·§176조의2②2호.
+   * 소득세법 시행령 §164⑥·§176조의2②2호.
    */
   commercialBuildingValuation?: CommercialBuildingValuationInput;
 
@@ -576,4 +669,8 @@ export type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./tr
 import type { PreHousingDisclosureInput } from "./transfer-phd.types";
 
 // SplitGain 재수출 (./transfer-split-gain.types.ts 분리)
-export type { SplitPartResult, SplitGainResult } from "./transfer-split-gain.types";
+export type {
+  SplitPartResult,
+  SplitGainResult,
+  SplitLandExpropriationValuationDetail,
+} from "./transfer-split-gain.types";

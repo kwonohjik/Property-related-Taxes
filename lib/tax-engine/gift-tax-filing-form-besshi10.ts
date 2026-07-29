@@ -71,16 +71,32 @@ function deriveRelationDeductionSplit(
  * §36 대납분(donorPaidTaxGrossUp.donorPaidTax)은 사전증여가 아니라 재차증여 fold-back.
  * 별지10호 ㉓에 산입하면 과세표준 이중계산 → 명시 차감 필수.
  */
+/**
+ * 사전증여 가산액(㉓·부표1 ⑭) 단일 산식 — 별지10호·부표1 공유 SSOT(dual-truth 방지, H-48).
+ *   netCurrent = max(0, grossGiftValue − exemptAmount − debtAssumed)  (§47① 채무인수 차감)
+ *   ㉓/⑭ = max(0, aggregatedGiftValue − netCurrent − donorPaidTax)   (§36 대납가산 제거)
+ */
+export function computePriorGiftAddition(
+  aggregatedGiftValue: number,
+  grossGiftValue: number,
+  exemptAmount: number,
+  debtAssumed: number,
+  donorPaidTax: number,
+): number {
+  const netCurrent = Math.max(0, grossGiftValue - exemptAmount - debtAssumed);
+  return Math.max(0, aggregatedGiftValue - netCurrent - donorPaidTax);
+}
+
 function derivePriorGiftAddition(
   r: Omit<GiftTaxResult, "besshi10Rows">,
 ): number {
-  // §47① 채무인수 차감 후 netCurrentGiftValue 역산 (debtAssumed echo 활용)
-  // netCurrent = grossGiftValue − exemptAmount − debtAssumed (§47① 차감분)
-  const debtAssumed = r.debtAssumed ?? 0;
-  const netCurrent = Math.max(0, r.grossGiftValue - r.exemptAmount - debtAssumed);
-  // §36 대납가산분 — aggregatedGiftValue에만 가산됐으므로 역산 시 제거
-  const donorPaidTax = r.donorPaidTaxGrossUp?.donorPaidTax ?? 0;
-  return Math.max(0, r.aggregatedGiftValue - netCurrent - donorPaidTax);
+  return computePriorGiftAddition(
+    r.aggregatedGiftValue,
+    r.grossGiftValue,
+    r.exemptAmount,
+    r.debtAssumed ?? 0, // §47① 채무인수 echo
+    r.donorPaidTaxGrossUp?.donorPaidTax ?? 0, // §36 대납가산분
+  );
 }
 
 /**
@@ -121,6 +137,10 @@ export function buildBesshi10Rows(
   const cashDef = r.cashDeferred ?? 0;
   const reportPay = Math.max(0, r.finalTax - installment - cashDef);
 
+  // §71 영농자녀 농지 감면세액 — finalTax에서 totalTaxCredit과 별도로 차감되므로(gift-tax.ts),
+  // 별지10호에서는 "그 밖의 공제·감면세액(㊶)"·"세액공제 합계(㊲)"에 합산해 ㊺=finalTax 자기정합 (M-11).
+  const farmlandReduction = r.farmlandReductionDetail?.reductionAmount ?? 0;
+
   return [
     // ===== LEFT 20행 (⑰~㊱) =====
     { number: "⑰", column: "left", label: "증여재산가액",                    amount: r.grossGiftValue,                          display: "amount", lawRef: "상증법 §60" },
@@ -145,11 +165,11 @@ export function buildBesshi10Rows(
     { number: "㊱", column: "left", label: "박물관자료 등 징수유예세액",      amount: r.museumDeferredTax ?? 0,                  display: "amount", lawRef: "§75" },
 
     // ===== RIGHT 13행 (㊲~㊺ 9 + 납부방법 헤더 1 + ㊻ + ㊼ 2 + 신고납부 도출 1) =====
-    { number: "㊲", column: "right", label: "세액공제 합계",                  amount: r.totalTaxCredit,                          display: "amount", formula: "㊳+㊴+㊵+㊶" },
+    { number: "㊲", column: "right", label: "세액공제 합계",                  amount: r.totalTaxCredit + farmlandReduction,      display: "amount", formula: "㊳+㊴+㊵+㊶" },
     { number: "㊳", column: "right", label: "기납부세액",                     amount: r.creditDetail.giftTaxCredit,              display: "amount", lawRef: "§58" },
     { number: "㊴", column: "right", label: "외국납부세액공제",               amount: r.creditDetail.foreignTaxCredit,           display: "amount", lawRef: "§59" },
     { number: "㊵", column: "right", label: "신고세액공제",                   amount: r.creditDetail.filingCredit,               display: "amount", lawRef: "§69" },
-    { number: "㊶", column: "right", label: "그 밖의 공제·감면세액",          amount: r.creditDetail.specialTreatmentCredit,     display: "amount", lawRef: "조특법 §30의5·§30의6" },
+    { number: "㊶", column: "right", label: "그 밖의 공제·감면세액",          amount: r.creditDetail.specialTreatmentCredit + farmlandReduction, display: "amount", lawRef: "조특법 §30의5·§30의6·§71" },
     { number: "㊷", column: "right", label: "신고불성실가산세",               amount: r.underreportPenalty ?? 0,                 display: "amount", lawRef: "국기법 §47의2·§47의3" },
     { number: "㊸", column: "right", label: "납부지연가산세",                 amount: r.latePaymentPenalty ?? 0,                 display: "amount", lawRef: "국기법 §47의4" },
     { number: "㊹", column: "right", label: "공익법인 등 관련 가산세",        amount: r.publicInterestPenalty ?? 0,              display: "amount", lawRef: "§78" },

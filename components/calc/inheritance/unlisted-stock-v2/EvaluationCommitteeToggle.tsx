@@ -33,6 +33,7 @@ import {
   type EvaluationCommitteeInput,
   type EvaluationCommitteeMethod,
 } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 const DEFAULT_INPUT: EvaluationCommitteeInput = {
   method: "clm",
@@ -98,14 +99,13 @@ export function EvaluationCommitteeToggle({ value, onChange, sectionNum = 8 }: E
 
   return (
     <>
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
-      {/* 섹션 8 헤더 (badge + 라벨) — ToggleCard title("§54⑥...신청 옵션")과 별도 */}
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
-          {sectionNum}
-        </span>
-        <p className="text-xs font-semibold text-emerald-700">평가심의위원회 신청 (선택)</p>
-      </div>
+      <ToneCard
+        tone="emerald"
+        sectionNum={sectionNum}
+        bodyClassName="space-y-3"
+        title="평가심의위원회 신청 (선택)"
+        noDark
+      >
       <ToggleCard
         lawLinks="상증법"
         tone="emerald"
@@ -201,7 +201,7 @@ export function EvaluationCommitteeToggle({ value, onChange, sectionNum = 8 }: E
           </div>
         )}
       </ToggleCard>
-      </div>
+      </ToneCard>
 
       <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
         <DialogContent data-testid="evaluation-committee-discard-dialog">

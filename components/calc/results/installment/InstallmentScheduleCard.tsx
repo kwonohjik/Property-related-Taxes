@@ -184,14 +184,14 @@ export function InstallmentScheduleCard({
                 <td className="py-1.5 px-2 text-center tabular-nums">
                   {row.installmentNo}
                   {row.installmentNo === 0 && (
-                    <span className="ml-1 text-[10px] text-amber-600">즉납</span>
+                    <span className="ml-1 text-micro text-amber-600">즉납</span>
                   )}
                 </td>
                 <td className="py-1.5 px-2 text-left tabular-nums">
                   {format(row.dueDate, "yyyy-MM-dd")}
                 </td>
                 {useFb && (
-                  <td className="py-1.5 px-2 text-center text-[10px] text-gray-500">
+                  <td className="py-1.5 px-2 text-center text-micro text-gray-500">
                     {segLabel(row.segment)}
                   </td>
                 )}
@@ -226,7 +226,7 @@ export function InstallmentScheduleCard({
       </div>
 
       {/* 주석 */}
-      <div className="space-y-1 border-t border-border p-3 text-[11px] text-muted-foreground">
+      <div className="space-y-1 border-t border-border p-3 text-caption text-muted-foreground">
         {decedentType === "non_resident" && (
           <p>※ 비거주자 — 신고기한을 상속개시월 말일부터 9개월로 산정했습니다(§67④).</p>
         )}

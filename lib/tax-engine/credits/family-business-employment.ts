@@ -44,8 +44,9 @@ export function isEmploymentDropViolation(
 }
 
 /**
- * §⑤4호 나목 — 5년 총급여 < 직전 2년 총급여 × 90% → true(위반 나목 충족).
- * 기준 총급여 0이면 미달 불가 → false.
+ * §⑤4호 나목 — 5년 **평균** 총급여 < 직전 2년 **평균** 총급여 × 90% → true(위반 나목 충족).
+ * 두 인자는 모두 연평균 총급여액(합계 아님) — 정규직 가목(calcRegularEmployeeAverage 평균)과 동일 축.
+ * UI는 "5년 평균 총급여액(연평균)"으로 입력받아야 함 (M-1). 기준 총급여 0이면 미달 불가 → false.
  */
 export function isSalaryDropViolation(
   fiveYearSalary: number,

@@ -19,7 +19,7 @@ export function renderDelta(n: number): string {
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-[12px] font-bold border-l-4 border-black pl-2 mb-2 mt-3 print:text-black">
+    <h2 className="text-xs font-bold border-l-4 border-black pl-2 mb-2 mt-3 print:text-black">
       {children}
     </h2>
   );

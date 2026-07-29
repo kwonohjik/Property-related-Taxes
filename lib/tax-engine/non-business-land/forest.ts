@@ -49,8 +49,16 @@ function isBusinessRelatedForest(input: NonBusinessLandInput): {
   // (신 플래그 `inheritedForestWithin3Years` 우선, 레거시 오기 플래그 `inheritedForestWithin5Years`도 수용)
   const inheritedFlag = f?.inheritedForestWithin3Years ?? f?.inheritedForestWithin5Years;
   if (inheritedFlag && f?.forestInheritanceDate) {
-    const years = differenceInDays(input.transferDate, f.forestInheritanceDate) / 365;
-    if (years < 3) return { applies: true, reason: `상속 3년 이내 임야 (${years.toFixed(1)}년 경과)` };
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): `differenceInDays / 365`는 윤년에서
+    //   off-by-one을 낸다. 상속 2019-03-01 → 양도 2022-02-28은 1,095일이라 1095/365 = 3.0이
+    //   되어 `< 3`이 false → **3년 경과로 오판**했지만, 3년 도래일은 2022-03-01이므로
+    //   2022-02-28은 아직 3년 미경과다(§168의9③7호 "상속개시일부터 3년이 **지나지 아니한**").
+    //   달력 기준 `addYears`로 판정한다 — 윤년·월말 경계를 date-fns가 처리한다.
+    const threeYearMark = addYears(f.forestInheritanceDate, 3);
+    if (input.transferDate < threeYearMark) {
+      const years = differenceInDays(input.transferDate, f.forestInheritanceDate) / 365;
+      return { applies: true, reason: `상속 3년 이내 임야 (${years.toFixed(1)}년 경과)` };
+    }
   }
 
   const u = input.unconditionalExemption;

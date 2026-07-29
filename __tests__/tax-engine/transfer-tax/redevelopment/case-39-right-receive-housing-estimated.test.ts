@@ -1,9 +1,9 @@
 /**
- * C39 anchor — 사례 39: 조합원입주권 right+receive + 단독주택 출자 (환산 모드, §164⑤ PHD 2-point)
+ * C39 anchor — 사례 39: 조합원입주권 right+receive + 단독주택 출자 (환산 모드, §166③ PHD 2-point)
  *
  * PDF 출처: 양도코리아 책 사례 39
  * 법령 근거:
- *   - 소득세법 §164⑤     : PHD 환산취득가 = 권리가액 × 취득당시PHD / 인가당시PHD
+ *   - 소득세법 §166③     : PHD 환산취득가 = 권리가액 × 취득당시PHD / 인가당시PHD
  *   - 소득세법 §163⑥     : 개산공제 = floor(취득당시PHD × 3%)
  *   - 소득세법 §166①2호 나목: 인가전 양도차익 = (권리가액 − 환산 − 개산공제) × salePriceTotal / 권리가액
  *   - 소득세법 §166①2호 가목: 인가후 양도차익 = 양도가액 − salePriceTotal − 인가후필요경비
@@ -25,7 +25,7 @@
  * 산식 검증:
  *   salePriceTotal = 300M − 50M = 250,000,000
  *
- *   [§164⑤ 환산취득가]
+ *   [§166③ 환산취득가]
  *   convertedAcquisition = floor(300M × 120M / 200M) = 180,000,000  ← C39-1
  *
  *   [§163⑥ 개산공제]
@@ -96,8 +96,8 @@ function case39RedevInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    housingStdPriceAtAcq: 120_000_000,   // §164⑤ 분자 — 취득당시 개별주택가격
-    housingStdPriceAtApproval: 200_000_000, // §164⑤ 분모 — 인가당시 부근 개별주택가격
+    housingStdPriceAtAcq: 120_000_000,   // §166③ 분자 — 취득당시 개별주택가격
+    housingStdPriceAtApproval: 200_000_000, // §166③ 분모 — 인가당시 부근 개별주택가격
     acquisitionRounding: "floor",
   };
 }
@@ -138,7 +138,7 @@ describe("C39 Pure — calcRedevHousingContribReceiveEstimated 단위 검증", (
 
   // ── Pre-Do anchor ─────────────────────────────────────────────────────────
 
-  it("[C39-1] convertedAcquisition = 180,000,000 (§164⑤: floor(300M × 120M / 200M))", () => {
+  it("[C39-1] convertedAcquisition = 180,000,000 (§166③: floor(300M × 120M / 200M))", () => {
     // floor(300,000,000 × 120,000,000 / 200,000,000) = floor(180,000,000) = 180,000,000
     expect(result.convertedAcquisition).toBe(180_000_000);
   });
@@ -195,7 +195,7 @@ describe("C39 Pure — calcRedevHousingContribReceiveEstimated 단위 검증", (
 // Part 2: 통합 계산 (calculateTransferTax 경유)
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("C39 — 조합원입주권 right+receive 단독주택 환산취득가 (§164⑤ + §166①2호)", () => {
+describe("C39 — 조합원입주권 right+receive 단독주택 환산취득가 (§166③ + §166①2호)", () => {
   const result = case39Input();
   const calcResult = calculateTransferTax(result, mockRates);
   const detail = calcResult.redevelopmentDetail!;

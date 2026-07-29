@@ -27,8 +27,17 @@ const METHOD_LABELS: Record<InheritanceAcquisitionResult["method"], string> = {
   auction_public_sale: "수용·경매·공매가액",
   similar_sale: "유사매매사례가액",
   supplementary: "보충적평가액 (공시가격)",
-  pre_deemed_max: "의제취득일 전 상속 — 환산·물가환산 중 큰 금액",
+  pre_deemed_max: "의제취득일 전 상속·증여 — 상증법 평가액·§164·환산 중 큰 금액",
 };
+
+/** 후보 선택 배지 */
+function SelectedBadge() {
+  return (
+    <span className="ml-1 text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-1.5 py-0.5">
+      선택
+    </span>
+  );
+}
 
 export function InheritedAcquisitionDetailCard({ detail }: Props) {
   const { acquisitionPrice, method, legalBasis, formula, preDeemedBreakdown, warnings } = detail;
@@ -40,8 +49,8 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
         <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
           상속 취득가액 의제 계산
         </p>
-        <span className="text-[10px] text-muted-foreground">{legalBasis}</span>
-        <span className="text-[10px] rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">
+        <span className="text-micro text-muted-foreground">{legalBasis}</span>
+        <span className="text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">
           {METHOD_LABELS[method]}
         </span>
       </div>
@@ -72,42 +81,36 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
         </div>
       )}
 
-      {/* Case A — 의제취득일 전 상속 비교 내역 */}
+      {/* Case A — 의제취득일 전 상속·증여 취득가액 후보 비교 max(①,②,③) */}
       {preDeemedBreakdown && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-            의제취득일(1985.1.1.) 전 상속 — 두 방법 비교
+            의제취득일(1985.1.1.) 전 상속·증여 — 취득가액 후보 비교 (큰 금액 적용)
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs space-y-1">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              {preDeemedBreakdown.reportedAmount !== null && (
+                <>
+                  <span className="text-muted-foreground">
+                    ① 상증법 평가액 (상속세 신고가액)
+                    {preDeemedBreakdown.selectedMethod === "reported" && <SelectedBadge />}
+                  </span>
+                  <span className="font-mono tabular-nums text-right text-foreground">
+                    {formatN(preDeemedBreakdown.reportedAmount)}
+                  </span>
+                </>
+              )}
               <span className="text-muted-foreground">
-                환산취득가액
-                {preDeemedBreakdown.selectedMethod === "converted" && (
-                  <span className="ml-1 text-[10px] rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-1.5 py-0.5">선택</span>
-                )}
+                ③ 환산취득가액
+                {preDeemedBreakdown.selectedMethod === "converted" && <SelectedBadge />}
               </span>
               <span className="font-mono tabular-nums text-right text-foreground">
                 {formatN(preDeemedBreakdown.convertedAmount)}
               </span>
-              <span className="text-muted-foreground">
-                취득실가 × 물가상승률
-                {preDeemedBreakdown.selectedMethod === "inflation_adjusted" && (
-                  <span className="ml-1 text-[10px] rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-1.5 py-0.5">선택</span>
-                )}
-              </span>
-              <span className="font-mono tabular-nums text-right text-foreground">
-                {preDeemedBreakdown.inflationAdjustedAmount !== null
-                  ? formatN(preDeemedBreakdown.inflationAdjustedAmount)
-                  : "피상속인 실지취득가액 미입증"}
-              </span>
             </div>
-            {preDeemedBreakdown.inflationAdjustedAmount !== null && (
-              <p className="text-muted-foreground pt-1">
-                물가상승률 = {preDeemedBreakdown.cpiToYear}년 소비자물가지수 ÷ {preDeemedBreakdown.cpiFromYear}년 소비자물가지수 ={" "}
-                <span className="font-mono text-foreground">{preDeemedBreakdown.cpiRatio.toFixed(4)}</span>
-              </p>
-            )}
-            <p className="text-muted-foreground">두 금액 중 큰 금액을 취득가액으로 적용</p>
+            <p className="text-muted-foreground pt-1">
+              세 금액 중 큰 금액을 취득가액으로 적용 (소령 §163⑨·§176조의2④)
+            </p>
           </div>
         </div>
       )}

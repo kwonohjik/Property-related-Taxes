@@ -36,8 +36,10 @@ interface Props {
    * onFill 과 동시 전달 시 onResponse 만 호출.
    */
   onResponse?: (response: KiwoomValuation2MonthResponse) => void;
-  /** §52의2② 평가구간 단축 — capitalIncreaseDate || mergerDate ∈ [D−2월, D] 일 때 전달 (선택). */
+  /** §52의2②1·3호 평가구간 단축 — 이전 사유 다음날부터 (선택). */
   startOverrideDate?: string;
+  /** §52의2②2·3호 평가구간 단축 — 이후 사유 전일까지 (선택). */
+  endOverrideDate?: string;
   /** 종목명 자동 갱신 여부 (true 시 응답의 stockName으로 덮어쓰기) */
   syncName?: boolean;
   /** 렌더 형태 — "card" 기본(헤더+버튼+결과 통합), "inline" 버튼만. */
@@ -50,6 +52,7 @@ export function KiwoomValuationAutoFetchButton({
   onFill,
   onResponse,
   startOverrideDate,
+  endOverrideDate,
   syncName = false,
   variant = "card",
 }: Props) {
@@ -68,6 +71,7 @@ export function KiwoomValuationAutoFetchButton({
     onFill,
     onResponse,
     startOverrideDate,
+    endOverrideDate,
     syncName,
   });
 

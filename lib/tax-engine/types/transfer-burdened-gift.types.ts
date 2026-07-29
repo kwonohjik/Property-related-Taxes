@@ -44,9 +44,13 @@ export interface BurdenedGiftInfo {
 
   // === 담보평가 보조 (선택, v2 본격 분기) ===
   /**
-   * (근)저당권 등 설정액. 미입력 시 mortgageDebtAmount로 fallback.
+   * (근)저당권 등 설정액(채권최고액). 미입력 시 mortgageDebtAmount로 fallback.
    * 실무에서 (근)저당 설정액 ≠ 실제 채무잔액인 경우 분리 입력.
-   * v2 후속 PR에서 분리 anchor.
+   *
+   * ⚠️ 담보평가는 **설정액 자체가 아니라** `min(설정액, 담보채권액)`이다
+   * (상증령 §63①3호 = 채권액 원칙, §63② 전단 = 최고액이 더 작을 때만 최고액).
+   * 즉 이 값은 담보평가의 **상한**으로만 작용한다 — 통상 설정액(채권액의 120%)이
+   * 입력돼도 평가액을 끌어올리지 않는다. 산정은 `computeMortgageValuation()` 단일 지점.
    */
   mortgageSetAmount?: number;
 
@@ -202,6 +206,22 @@ export interface TransferBurdenedGiftBreakdown {
     selectedMode: "supplementary" | "mortgage" | "rental";
     max: number;
   };
+
+  /**
+   * **물건 전체(100%)** 보충적평가액 — §89 12억 고가주택 판정·안분 분모 전용.
+   *
+   * 지분 모드에서 `sangjeungbeopValuation.max`(= 지분분 C)를 12억 분모로 쓰면 문턱이
+   * 1/지분율만큼 올라 24억 물건의 1/2 지분이 비과세로 빠진다(A4/#849와 동형 결함).
+   * 고가주택 가액 요건은 **물건 전체 가액** 기준이므로 이 값을 쓴다.
+   *
+   * max가 아닌 supplementary인 이유: 담보(§66)·임대(§61⑤) 평가항은 사용자가 입력한
+   * **지분 인수분**이라 물건 전체 스케일로 되돌릴 수 없다(역산 = 자동 안분 금지).
+   * 단독 소유에서는 `sangjeungbeopValuation.supplementary`와 항상 같다.
+   */
+  wholePropertySupplementary: number;
+
+  /** 적용된 공유지분율(0<r<1). 단독 소유면 undefined — 결과 화면 표시·감사 추적용. */
+  ownershipRatio?: number;
 
   /**
    * 무상이전분 = C − B.

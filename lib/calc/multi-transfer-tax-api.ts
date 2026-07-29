@@ -11,6 +11,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import { toEngineReductions, toRentalHousingExceptionApi, buildPre1990LandPayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
+import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 
 const isHousingLike = (pt: string) =>
   pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
@@ -34,7 +35,9 @@ export function buildPropertyPayload(form: TransferFormData) {
       ? [
           {
             id: "selling",
-            region: form.sellingHouseRegion,
+            // 양도 물건 regionCode에서 자동 파생 (수동 선택 폐지)
+            region: deriveHouseRegionFromCode(primary?.regionCode),
+            regionCode: primary?.regionCode || undefined,
             acquisitionDate: primary?.acquisitionDate ?? "",
             officialPrice: primary?.standardPriceAtTransfer
               ? parseAmount(primary.standardPriceAtTransfer)
@@ -50,6 +53,8 @@ export function buildPropertyPayload(form: TransferFormData) {
             .map((h) => ({
               id: h.id,
               region: h.region,
+              // ④' 법정동 10자리 — 단건과 동일 배선 (length(10) 가드 · Zod 400 회피)
+              regionCode: h.regionCode?.length === 10 ? h.regionCode : undefined,
               acquisitionDate: h.acquisitionDate,
               officialPrice: parseInt(h.officialPrice) || 0,
               isInherited: h.isInherited,
@@ -85,7 +90,13 @@ export function buildPropertyPayload(form: TransferFormData) {
     propertyType: primaryKind,
     transferPrice: parseAmount(form.contractTotalPrice),
     transferDate: form.transferDate,
-    acquisitionPrice: (isEstimated || isAppraisal || isSalesCase) ? 0 : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
+    // 상속: (b) 취득가액 소스 단일화 — fixedAcquisitionPrice(현행 직접입력) 우선, 없으면 publishedValueAtInheritance(신고가액).
+    // 통합 UI(P2b)가 상속 fixedAcq 입력을 제거하면 publishedValue로 자동 전환(과도기 fallback, mirror-pattern 3중).
+    acquisitionPrice: (isEstimated || isAppraisal || isSalesCase)
+      ? 0
+      : acquisitionCause === "inheritance"
+        ? parseAmount(primary?.fixedAcquisitionPrice ?? "0") || parseAmount(primary?.publishedValueAtInheritance ?? "0")
+        : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
     acquisitionDate: primary?.acquisitionDate ?? "",
     // 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary?.assetContractDate || undefined,
@@ -127,6 +138,19 @@ export function buildPropertyPayload(form: TransferFormData) {
       acquisitionCause === "inheritance" && primary?.decedentAcquisitionDate
         ? primary.decedentAcquisitionDate
         : undefined,
+    // §154⑧3호 상속주택 자체 양도 보유기간 통산
+    decedentSameHouseholdBeforeInheritance:
+      acquisitionCause === "inheritance"
+        ? primary?.decedentSameHouseholdBeforeInheritance
+        : undefined,
+    decedentCohabitationHoldingStartDate:
+      acquisitionCause === "inheritance" && primary?.decedentCohabitationHoldingStartDate
+        ? primary.decedentCohabitationHoldingStartDate
+        : undefined,
+    decedentCohabitationResidenceMonths:
+      acquisitionCause === "inheritance" && primary?.decedentSameHouseholdBeforeInheritance
+        ? parseInt(primary.decedentCohabitationResidenceMonths) || 0
+        : undefined,
     donorAcquisitionDate:
       acquisitionCause === "gift" && primary?.donorAcquisitionDate
         ? primary.donorAcquisitionDate
@@ -134,11 +158,12 @@ export function buildPropertyPayload(form: TransferFormData) {
     isOneHousehold: form.isOneHousehold,
     reductions,
     ...(form.temporaryTwoHouseSpecial &&
-    form.previousHouseAcquisitionDate &&
+    primary?.acquisitionDate &&
     form.newHouseAcquisitionDate
       ? {
           temporaryTwoHouse: {
-            previousAcquisitionDate: form.previousHouseAcquisitionDate,
+            // 종전주택 취득일 = 양도 자산 취득일(단일소스)
+            previousAcquisitionDate: primary.acquisitionDate,
             newAcquisitionDate: form.newHouseAcquisitionDate,
           },
         }
@@ -147,6 +172,9 @@ export function buildPropertyPayload(form: TransferFormData) {
     // ⑬ 1990.8.30. 이전 취득 토지 환산 (route ⑭·엔진 STEP 0.4 지원) — 단건과 공용 헬퍼
     ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
+    // ⑬ 다주택 중과 한시 유예/경과조치 — houses 제공 시에만 엔진이 소비 (단건 callTransferTaxAPI와 동일 게이트).
+    // 다건은 자산별 form이라 gracePeriod도 native per-property.
+    ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }

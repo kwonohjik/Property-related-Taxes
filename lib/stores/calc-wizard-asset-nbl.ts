@@ -94,6 +94,16 @@ export interface HouseEntry {
   isSpouseOwned?: boolean;
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
+  /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */
+  isCoInherited?: boolean;
+  /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=산입, false·미제공=소수지분 제외후보) */
+  isLargestCoInheritedShareholder?: boolean;
+  /** 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제). isInherited=true 시 의미 */
+  decedentSameHouseholdAtInheritance?: boolean;
+  /** 동거봉양 합가+합가 전 피상속인 보유분 여부 (§155② 단서 예외). 동일세대=true 시에만 의미 */
+  parentalCareMergeInheritedHouse?: boolean;
+  /** 피상속인 2주택↑ 중 순위상 상속주택 아님 (§155②1~4호 순위 부적격 — true=제외 안 함) */
+  isRankingDisqualifiedInheritedHouse?: boolean;
   /**
    * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
    * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.
@@ -142,6 +152,8 @@ export interface HouseEntry {
   isSoldWithin1YearOfCancellation?: boolean;
   /** 자진·자동 말소일 (YYYY-MM-DD) — G (rentalCancelledDate와 별개) */
   rentalCancellationDate?: string;
+  /** 사목(G) base 목 (가·다·라·마) — §167조의3①2호 사목 "해당 목의 다른 요건" 검증 대상 */
+  saMokBaseArticle?: "가" | "다" | "라" | "마";
   /** 2018.9.14 이후 조정지역 취득 제외 해당 여부 — E·H */
   isExcluded918Rule?: boolean;
   /** 2020.7.11 이후 등록 아파트 제외 해당 여부 — D·E */
@@ -170,6 +182,24 @@ export interface HouseEntry {
   isSecondHomeRegistered?: boolean;
   /** 인구감소지역 유형 (다목 decline 9억 / 라목 interest 4억) — 가액한도 구분 */
   populationAreaType?: "decline" | "interest";
+
+  // ── 소재지 주소검색 (AddressSearch 재표시 + regionCode 파생 · 공시가격/전유면적 자동조회) ──
+  addressRoad?: string;
+  addressJibun?: string;
+  buildingName?: string;
+  addressDetail?: string;
+  addressDong?: string;
+  addressHo?: string;
+  longitude?: string;
+  latitude?: string;
+  /** 법정동 10자리 (PNU 앞 10자리) — §167의3 지역기준 판정. 있으면 지역 구분 자동 파생 */
+  regionCode?: string;
+  /** 19자리 PNU — UI 재조회용 */
+  addressPnu?: string;
+  /** 공시가격·전유면적을 주소조회로 자동채움한 표식 — 사용자 수정 시 제거(조회값 배지) */
+  addressLookupFilled?: boolean;
+  /** 공시가격 조회 기준연도 (사용자 선택) — UI 전용, 엔진 미전송 */
+  officialPriceYear?: string;
 }
 
 /**

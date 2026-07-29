@@ -18,6 +18,7 @@ import type { TransferFormData } from "./calc-wizard-store";
 import type { AssetForm } from "./calc-wizard-asset";
 import type { ReductionType } from "./calc-wizard-asset-reduction";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
+import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
@@ -69,8 +70,19 @@ function toBundledKind(kind: AssetForm["assetKind"]): BundledAssetKind {
   return "building";
 }
 
-/** 자산별 직접 취득가액 base (지분 ratio 적용 전 raw). */
+/**
+ * 자산별 직접 취득가액 base (지분 ratio 적용 전 raw).
+ *
+ * 별개 취득(토지·건물 취득시기 상이)은 자산 전체 `fixedAcquisitionPrice`가 UI에서 숨겨지므로
+ * 그 필드를 읽으면 0 또는 stale 총액이 표시된다 → 파트 합계로 대체한다.
+ * 미확정 파트(환산·미입력)가 있으면 0을 돌려 pending 경로(fallback 체인)로 넘긴다 —
+ * 부분합을 합계로 표시하면 총액으로 오독된다.
+ */
 function directAcqRaw(a: AssetForm): number {
+  if (isSeparateAcquisition(a)) {
+    const { sum, pending } = separateAcqPartsSum(a);
+    return pending ? 0 : sum;
+  }
   return a.isSalesCaseAcquisition ? parseRaw(a.similarSalesValue) : parseRaw(a.fixedAcquisitionPrice);
 }
 
@@ -127,6 +139,10 @@ export function computeTransferPerAssetSummary(
   const isSingle = formData.assets.length === 1;
   const bundledResult = result?.mode === "bundled" ? result : null;
   const singleResult = result?.mode === "single" ? result.result : null;
+  // 겸용주택(§160①단서)은 별도 mode "mixed-use"(MixedUseGainBreakdown) — single/bundled 어디에도
+  // 안 걸려, 처리 없으면 취득가액·필요경비가 계산 후에도 «-»로 누락된다. 겸용은 단일 자산 전제
+  // (transfer-tax-api.ts:129 primary만 판정)라 primary 행(i===0)에만 적용.
+  const mixedResult = result?.mode === "mixed-use" ? result.result : null;
 
   // 계산 전 안분 프리뷰 맵 (bundled 결과가 없을 때만 사용)
   const apportionedMap =
@@ -179,12 +195,20 @@ export function computeTransferPerAssetSummary(
     const acqBase = directAcqRaw(a);
     let acqPrice = fractional ? Math.floor(acqBase * ratio) : acqBase;
     let acqPending = false;
-    if (bundledMatch) {
+    if (mixedResult && i === 0) {
+      // 겸용주택: 주택+상가 환산취득가액 합(전용 필드, 라벨 파싱 아님).
+      acqPrice =
+        mixedResult.housingPart.estimatedAcquisitionPrice +
+        mixedResult.commercialPart.estimatedAcquisitionPrice;
+    } else if (bundledMatch) {
       acqPrice = bundledMatch.allocatedAcquisitionPrice;
     } else if (acqPrice === 0 && isSingle) {
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)
       if (a.inheritanceMode === "post-deemed" && a.inheritanceStartDate) {
-        acqPrice = parseRaw(a.inheritanceReportedValue);
+        // 계산 결과(§163⑨2호 max(상증법 평가액, §164⑦)) 우선, 미계산 시 상증법 평가액(엔진 실경로) 프리뷰
+        acqPrice =
+          singleResult?.inheritedAcquisitionDetail?.acquisitionPrice ||
+          parseRaw(a.publishedValueAtInheritance);
       } else if (
         a.inheritanceMode === "pre-deemed" &&
         a.inheritanceStartDate &&
@@ -212,7 +236,13 @@ export function computeTransferPerAssetSummary(
     const expBase = directExpenseRaw(a);
     let expense = fractional ? Math.floor(expBase * ratio) : expBase;
     let expensePending = false;
-    if (bundledMatch) {
+    if (mixedResult && i === 0) {
+      // 겸용주택 필요경비 = 주택·상가 각 토지·건물분 개산공제(§163⑥) 합.
+      // (swap §97② 발동 시 실제 필요경비와 달라질 수 있음 — 계획서 §6 리스크 참조)
+      const { housingPart: h, commercialPart: c } = mixedResult;
+      expense =
+        h.landAppraisalDed + h.buildingAppraisalDed + c.landAppraisalDed + c.buildingAppraisalDed;
+    } else if (bundledMatch) {
       expense = bundledMatch.allocatedExpenses;
     } else if (expense === 0 && isSingle) {
       if (singleResult) {

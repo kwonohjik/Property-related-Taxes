@@ -35,11 +35,14 @@ export { CURRENT_SURCHARGE_RATE } from "../data/installment-surcharge-rates";
 /** 연부연납 신청 가능 최소 세액: 2천만원 (§71 ①) */
 const INSTALLMENT_MIN_TAX = 20_000_000;
 
-/** 일반 최대 연납 기간: 5년 (§71 ①) */
+/** 증여 일반 최대 연납 기간: 5년 (§71②2호나) */
 const GENERAL_MAX_YEARS = 5;
 
-/** 가업상속 최대 연납 기간: 20년 (§71 ① 단서) */
+/** 가업상속 최대 연납 기간: 20년 (§71②1호가) */
 const FAMILY_BUSINESS_MAX_YEARS = 20;
+
+/** 증여 가업승계 특례(조특법 §30의6) 최대 연납 기간: 15년 (§71②2호가) */
+const GIFT_SPECIAL_TREATMENT_MAX_YEARS = 15;
 
 // ============================================================
 // 연부연납 계획 계산
@@ -50,6 +53,8 @@ export interface InstallmentPaymentInput {
   finalTax: number;
   /** 가업상속 여부 (최대 20년 적용) */
   isFamilyBusiness?: boolean;
+  /** 증여 가업승계 특례(조특법 §30의6) 여부 — 최대 15년 적용 (§71②2호가) */
+  giftSpecialTreatment?: boolean;
   /** 납부자 선택 연납 기간 (년) — 미입력 시 최대 기간 적용 */
   requestedYears?: number;
   /**
@@ -95,6 +100,7 @@ export function calcInstallmentPayment(
   const {
     finalTax,
     isFamilyBusiness = false,
+    giftSpecialTreatment = false,
     requestedYears,
     annualInterestRate = 0.018,
   } = input;
@@ -121,8 +127,17 @@ export function calcInstallmentPayment(
 
   const maxYears = isFamilyBusiness
     ? FAMILY_BUSINESS_MAX_YEARS
-    : GENERAL_MAX_YEARS;
-  const appliedYears = Math.min(requestedYears ?? maxYears, maxYears);
+    : giftSpecialTreatment
+      ? GIFT_SPECIAL_TREATMENT_MAX_YEARS
+      : GENERAL_MAX_YEARS;
+  // §71② 단서: 각 회분 분할납부세액(= finalTax/(연납기간+1))이 1천만원을 초과하도록 기간 축소 (M-16).
+  let appliedYears = Math.min(requestedYears ?? maxYears, maxYears);
+  while (
+    appliedYears > 1 &&
+    Math.floor(finalTax / (appliedYears + 1)) <= MIN_PER_INSTALLMENT
+  ) {
+    appliedYears--;
+  }
 
   // 첫 회 납부: 총세액 / (연납 기간 + 1)
   const initialPayment = Math.floor(finalTax / (appliedYears + 1));

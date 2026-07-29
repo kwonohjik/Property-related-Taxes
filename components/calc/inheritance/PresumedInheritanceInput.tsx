@@ -55,16 +55,16 @@ const CATEGORY_META: Record<
       "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   },
   deposit: {
-    label: "예금 인출액",
-    hint: "예금·적금 등의 인출금액 (사용처 미입증 부분)",
+    label: "현금·예금·유가증권 인출·처분액",
+    hint: "현금·예금·적금의 인출액 + 주식·채권 등 유가증권 처분액 (§11⑤1호 단일 종류, 사용처 미입증 부분)",
     buttonClass:
       "border-sky-300 bg-sky-50/60 text-sky-700 hover:bg-sky-100 dark:bg-sky-950/30 dark:text-sky-300 dark:hover:bg-sky-900/40",
     chipClass:
       "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
   },
   other_asset: {
-    label: "기타재산 처분",
-    hint: "영업권·유가증권·회원권 등 기타재산의 처분금액",
+    label: "그 밖의 기타재산 처분",
+    hint: "영업권·회원권 등 그 밖의 기타재산 처분금액 (유가증권은 위 '현금·예금·유가증권'에 입력 — §11⑤1호)",
     buttonClass:
       "border-violet-300 bg-violet-50/60 text-violet-700 hover:bg-violet-100 dark:bg-violet-950/30 dark:text-violet-300 dark:hover:bg-violet-900/40",
     chipClass:
@@ -104,7 +104,7 @@ function PresumedTable({ items, selectedId, onSelect }: PresumedTableProps) {
             <th className="py-2 text-left pl-2 text-gray-500 font-medium">임계</th>
             <th className="py-2 text-right pr-2 text-gray-500 font-medium">가산액</th>
             <th className="py-2 text-left pl-2 text-gray-500 font-medium">분할</th>
-            <th className="w-8 py-2 text-right pr-3 text-gray-400 font-medium text-[10px]">편집</th>
+            <th className="w-8 py-2 text-right pr-3 text-gray-400 font-medium text-micro">편집</th>
           </tr>
         </thead>
         <tbody>
@@ -135,13 +135,13 @@ function PresumedTable({ items, selectedId, onSelect }: PresumedTableProps) {
                 data-testid={`presumed-table-row-${it.id}`}
               >
                 <td className="pl-3 py-1.5 text-xs">
-                  <span className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full ${meta.chipClass}`}>
+                  <span className={`inline-flex items-center text-micro px-1.5 py-0.5 rounded-full ${meta.chipClass}`}>
                     {meta.label}
                   </span>
                 </td>
                 <td className="pl-2 py-1.5 text-xs">
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded ${
+                    className={`text-micro px-1.5 py-0.5 rounded ${
                       result.thresholdTriggered
                         ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
                         : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
@@ -159,7 +159,7 @@ function PresumedTable({ items, selectedId, onSelect }: PresumedTableProps) {
                 </td>
                 <td className="pl-2 py-1.5 text-xs">
                   {hasAllocation ? (
-                    <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                    <span className="inline-flex items-center text-micro px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
                       협의
                     </span>
                   ) : (

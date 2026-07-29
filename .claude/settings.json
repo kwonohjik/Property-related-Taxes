@@ -11,6 +11,10 @@
           {
             "type": "command",
             "command": "jq -r \".tool_input.file_path // empty\" | { read -r f; [ -z \"$f\" ] && exit 0; case \"$f\" in *lib/tax-engine/types/*|*lib/tax-engine/*.types.ts|*lib/tax-engine/transfer-tax.ts|*lib/tax-engine/acquisition-tax.ts|*lib/tax-engine/property-tax.ts|*lib/tax-engine/comprehensive-tax.ts|*lib/tax-engine/inheritance-tax.ts|*lib/tax-engine/gift-tax.ts) jq -nc --arg f \"$f\" \"{hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\", additionalContext:\\\"🔄 ui-sync-precheck — 엔진 타입/엔트리 변경: \\(\\$f). 작업 완료 전 8개 동기화 지점 전수 점검 필수: ① 폼 상태 타입 ② initial value ③ normalize fallback ④ API 변환(lib/calc/{tax}-api.ts) ⑤ UI 입력 위젯 ⑥ 사이드바 합계 ⑦ 결과 카드 산식 ⑧ validation(lib/calc/{tax}-validate.ts). ui-engine-sync-checker 에이전트 호출 권장. 3대 정책 위반 금지: (a) useEffect→store 미러링 금지 (b) 자동 안분 fallback 금지 (c) API/UI fallback 추가 시 validate도 동기화.\\\"}}\" ;; esac; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r \".tool_input.file_path // empty\" | { read -r f; [ -z \"$f\" ] && exit 0; case \"$f\" in *lib/tax-engine/transfer-reductions/*|*lib/tax-engine/legal-codes/*|*lib/tax-engine/valuation/*|*-valuation.ts|*inheritance-acquisition*|*redevelopment*|*mixed-use*|*transfer-tax-acquisition-override.ts|*general-building-converted-acquisition.ts|*bargain-transfer.ts|*pre-1990-land-valuation.ts) jq -nc --arg f \"$f\" \"{hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\", additionalContext:\\\"⚖️ acquisition-cost-precheck — 취득가액/산정·재산평가 로직 변경: \\(\\$f). 정규 리뷰가 놓치는 silent 오세액(§163⑨·§166③ 조건부·max vs sum·연도 기준) 방어를 위해 커밋 전 acquisition-cost-review 에이전트 필수 호출. 점검: [C 법령 체인] C-1 위임 체인 끝까지(KoreanLaw MCP 원문 조회) · C-2 조건부 단서(무조건 적용 아닌지) · C-3 택일/비교 산식(max를 sum으로 오구현?) · C-4 시점 기준(양도연도·§164③ 직전 고시). [D 배관] D-1 신규 필드 ⑫⑬⑭ 엔진 도달 grep · D-2 UI/API/validate 3중 fallback 일치 · D-3 변경 분기 anchor(authoritative 값) GREEN. 추정 금지 — 모든 판정 file:line 또는 조문 원문 근거. 세액 변경 분기는 before→after 실값 확인.\\\"}}\" ;; esac; }"
           }
         ]
       }

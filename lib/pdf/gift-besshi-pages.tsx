@@ -110,6 +110,8 @@ export function GiftSelectedBesshiPages({
           grossGiftValue={giftResult.grossGiftValue}
           exemptAmount={giftResult.exemptAmount}
           aggregatedGiftValue={giftResult.aggregatedGiftValue}
+          debtAssumed={giftResult.debtAssumed}
+          donorPaidTax={giftResult.donorPaidTaxGrossUp?.donorPaidTax}
           publicInterestExclusion={giftResult.publicInterestExclusion}
           publicTrustExclusion={giftResult.publicTrustExclusion}
           disabledTrustExclusion={giftResult.disabledTrustExclusion}

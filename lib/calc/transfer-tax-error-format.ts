@@ -40,7 +40,12 @@ const FIELD_LABEL: Record<string, string> = {
   // 토지/건물 분리
   landAcquisitionDate: "토지 취득일",
   selfOwns: "본인 소유 부분",
-  landSplitMode: "토지/건물 분리 방식",
+  landSplitMode: "토지/건물 분리 방식", // @deprecated — saleSplitMode로 대체, 하위호환 라벨만 유지
+  landAcqMode: "토지 취득가액 방식",
+  buildingAcqMode: "건물 취득가액 방식",
+  saleSplitMode: "토지·건물 양도가액 방식",
+  landSalesCaseValue: "토지 매매사례가액",
+  buildingSalesCaseValue: "건물 매매사례가액",
 
   // PHD §164⑤
   "preHousingDisclosure.firstDisclosureDate": "최초 고시일",
@@ -79,7 +84,7 @@ const FIELD_LABEL: Record<string, string> = {
   "generalBuildingValuation.acquisitionLandPricePerSqm": "취득시 토지 ㎡당 공시지가",
   "generalBuildingValuation.acquisitionBuildingStdPrice": "취득시 건물기준시가 총액",
 
-  // 상업용건물·오피스텔 환산취득가 §164⑧
+  // 상업용건물·오피스텔 환산취득가 §164⑥
   "commercialBuildingValuation.preDisclosure": "호별고시 전 취득 여부",
   "commercialBuildingValuation.firstDisclosureDate": "호별고시 시작일",
   "commercialBuildingValuation.unitArea": "전용면적",

@@ -307,14 +307,12 @@ describe("E-6: Excel 13번 — 상속주택 환산가액 전체 통합 시나리
 
     // inheritedHouseValuationDetail 존재 + anchor 검증
     expect(result.inheritedHouseValuationDetail).toBeDefined();
-    expect(result.inheritedHouseValuationDetail!.totalStdPriceAtInheritance).toBe(
-      fx.expected.autoEstimatedTotalStdAtInheritance,   // 263,583,686 (토지 + P_A_est)
-    );
-    expect(result.inheritedHouseValuationDetail!.totalStdPriceAtTransfer).toBe(
-      fx.expected.totalStdAtTransfer,       // 1,269,486,250 — Excel C36
-    );
+    // §164⑦ 추정 Sum_A(토지+건물) = 110,246,831 + 38,135,580 = 148,382,411 (Excel C37)
+    expect(result.inheritedHouseValuationDetail!.sumAtInheritance).toBe(148_382_411);
+    // 양도 개별주택가격 P_T (환산 분모, Excel C30) — 토지+건물 합계(C36) 아님
+    expect(result.inheritedHouseValuationDetail!.housePriceAtTransfer).toBe(1_287_000_000);
     expect(result.inheritedHouseValuationDetail!.housePriceAtInheritanceUsed).toBe(
-      fx.expected.autoEstimatedHousePrice,   // 153,336,855 — §164⑤ 자동 추정
+      fx.expected.autoEstimatedHousePrice,   // 153,336,855 — §164⑦ 자동 추정 (Excel C31)
     );
     expect(result.inheritedHouseValuationDetail!.pre1990Result).toBeDefined();
     expect(result.inheritedHouseValuationDetail!.pre1990Result!.pricePerSqmAtAcquisition).toBe(
@@ -470,5 +468,88 @@ describe("E-5: inheritedAcquisition 경계 테스트", () => {
     expect(caseA.inheritedAcquisitionDetail?.method).toBe("pre_deemed_max");
     expect(caseB.inheritedAcquisitionDetail?.method).toBe("supplementary");
     expect(caseB.inheritedAcquisitionDetail?.acquisitionPrice).toBe(150_000_000);
+  });
+});
+
+// ─── E-7: post-deemed 미공시 주택 §164⑦ max(①,②) — 소령 §163⑨2호 (국심 2003부602·2003서3266) ──
+// 상속개시일 ≥ 1985-01-01(post-deemed) & 개별주택가격 미공시(< 2005-04-30):
+// 취득가액 = max(① 상증법 평가액[reportedValue], ② §164⑦ 취득당시 기준시가[미스케일])
+// ③(환산취득가/양도가 스케일) 적용 불가. ①·② 실지거래가액 의제 → 개산공제 없음.
+describe("E-7: post-deemed 미공시 주택 §164⑦ max — 소령 §163⑨2호", () => {
+  // §164⑦ 추정: housePriceAtInheritanceUsed = floor(P_F × Sum_A / Sum_F)
+  //   Sum_A = landStdA(500,000×100=50,000,000) + buildingStdA(10,000,000) = 60,000,000
+  //   Sum_F = landStdF(1,000,000×100=100,000,000) + buildingStdF(20,000,000) = 120,000,000
+  //   P_F = 300,000,000 → floor(300,000,000 × 60,000,000/120,000,000) = 150,000,000
+  const SEC_164_7 = 150_000_000; // ② 취득당시 기준시가 (미스케일)
+  const houseVal = {
+    inheritanceDate: new Date("1995-07-01"),
+    transferDate: new Date("2024-01-01"),
+    landArea: 100,
+    landPricePerSqmAtTransfer: 2_000_000,
+    landPricePerSqmAtFirstDisclosure: 1_000_000,
+    landPricePerSqmAtInheritance: 500_000,
+    housePriceAtTransfer: 400_000_000,
+    housePriceAtFirstDisclosure: 300_000_000,
+    buildingStdPriceAtTransfer: 30_000_000,
+    buildingStdPriceAtFirstDisclosure: 20_000_000,
+    buildingStdPriceAtInheritance: 10_000_000,
+  };
+
+  function run(reportedValue: number) {
+    return calculateTransferTax(
+      baseTransferInput({
+        propertyType: "housing",
+        transferPrice: 500_000_000,
+        transferDate: new Date("2024-01-01"),
+        acquisitionDate: new Date("1995-07-01"),
+        acquisitionPrice: 0,
+        useEstimatedAcquisition: false,
+        isOneHousehold: false,
+        householdHousingCount: 1,
+        inheritedHouseValuation: houseVal,
+        inheritedAcquisition: {
+          inheritanceDate: new Date("1995-07-01"),
+          assetKind: "house_individual",
+          reportedValue,
+          reportedMethod: "supplementary",
+          transferDate: new Date("2024-01-01"),
+          transferPrice: 500_000_000,
+        },
+      }),
+      mockRates,
+    );
+  }
+
+  it("E-7a: §164⑦ 값이 self-consistent — housePriceAtInheritanceUsed = 150,000,000", () => {
+    const r = run(0);
+    expect(r.inheritedHouseValuationDetail).toBeDefined();
+    expect(r.inheritedHouseValuationDetail!.housePriceAtInheritanceUsed).toBe(SEC_164_7);
+  });
+
+  it("E-7b: reportedValue 미입력(0) → 취득가액 = ② §164⑦ 단독 (막힘 해소)", () => {
+    const r = run(0);
+    // 현행: 0 (§164⑦ 무시) → 개정: 150,000,000
+    expect(r.inheritedAcquisitionDetail!.acquisitionPrice).toBe(SEC_164_7);
+    expect(r.inheritedAcquisitionDetail!.method).toBe("supplementary");
+  });
+
+  it("E-7c: reportedValue(100M) < ② → max = ② 150,000,000 (양도가 미스케일)", () => {
+    const r = run(100_000_000);
+    // 현행: 100,000,000 (reportedValue 단독) → 개정: max(100M, 150M) = 150M
+    expect(r.inheritedAcquisitionDetail!.acquisitionPrice).toBe(SEC_164_7);
+    // ③(환산취득가=양도가×비율) 아님 — 양도가 500M로 스케일되지 않음
+    expect(r.inheritedAcquisitionDetail!.acquisitionPrice).toBeLessThan(500_000_000);
+  });
+
+  it("E-7d: reportedValue(200M) > ② → max = ① 200,000,000 (상증법 평가액 우선)", () => {
+    const r = run(200_000_000);
+    expect(r.inheritedAcquisitionDetail!.acquisitionPrice).toBe(200_000_000);
+  });
+
+  it("E-7e: 실지거래가액 의제 → 개산공제 없음 (양도차익 = 양도가 − ② − 실제필요경비0)", () => {
+    const r = run(0);
+    // 취득가 150M, 필요경비 0(개산공제 없음) → 양도차익 = 500M − 150M = 350M
+    // 개산공제(§163⑥, 150M×3%=4.5M)가 잘못 붙으면 345.5M
+    expect(r.transferGain).toBe(350_000_000);
   });
 });

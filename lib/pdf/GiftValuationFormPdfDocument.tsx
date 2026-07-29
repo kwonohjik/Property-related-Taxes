@@ -197,6 +197,9 @@ export interface GiftValuationFormPdfProps {
   grossGiftValue: number;
   exemptAmount: number;
   aggregatedGiftValue: number;
+  /** §47① 채무인수·§36 대납가산 — ⑭ 역산 시 반영 (별지10호 ㉓ 정합, H-48) */
+  debtAssumed?: number;
+  donorPaidTax?: number;
   publicInterestExclusion?: number;
   publicTrustExclusion?: number;
   disabledTrustExclusion?: number;
@@ -212,6 +215,8 @@ export function GiftValuationFormPdfPage({
   grossGiftValue,
   exemptAmount,
   aggregatedGiftValue,
+  debtAssumed = 0,
+  donorPaidTax = 0,
   publicInterestExclusion = 0,
   publicTrustExclusion = 0,
   disabledTrustExclusion = 0,
@@ -227,7 +232,7 @@ export function GiftValuationFormPdfPage({
     publicTrustExclusion,
     disabledTrustExclusion,
   );
-  const row14 = computeRow14(aggregatedGiftValue, grossGiftValue, exemptAmount);
+  const row14 = computeRow14(aggregatedGiftValue, grossGiftValue, exemptAmount, debtAssumed, donorPaidTax);
 
   const valuationRows: string[][] = valuationResults.map((vr) => {
     const item = itemMap.get(vr.estateItemId);

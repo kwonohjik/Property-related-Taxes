@@ -205,4 +205,4 @@
 
 ## 10. PDCA 다음 단계
 
-Plan 승인 → Design(엔진/UI 설계 병렬 + 케이스 매트릭스 + `plan-self-review` 13단계 자가검증) → Pre-Do anchor → Do(엔진 타입·헬퍼·anchor 선처리 → UI ⑮~㉑) → Check(`ui-engine-sync-checker` 21지점 + `gap-detector`) → E2E(`e2e/*.spec.ts`) → Report.
+Plan 승인 → Design(엔진/UI 설계 병렬 + 케이스 매트릭스 + `plan-design-self-review-loop` 13단계 자가검증) → Pre-Do anchor → Do(엔진 타입·헬퍼·anchor 선처리 → UI ⑮~㉑) → Check(`ui-engine-sync-checker` 21지점 + `gap-detector`) → E2E(`e2e/*.spec.ts`) → Report.

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Printer, FileDown } from "lucide-react";
 import {
-  resolveGroupCheckState,
   selectPdfSections,
   type PrintSectionGroup,
 } from "@/lib/print/print-sections.types";
@@ -70,22 +69,13 @@ export function PrintSelectionPanel({
   pdfReady?: boolean;
   pdfBusy?: boolean;
 }) {
-  // 가용 노드만 남긴 그룹 트리
-  const groups = useMemo<PrintSectionGroup[]>(
-    () =>
-      allGroups
-        .map((g) => ({
-          ...g,
-          children: g.children.filter((c) => availableIds.has(c.id)),
-        }))
-        .filter((g) => g.children.length > 0),
+  // 그룹 해제 — 가용 leaf만 평면 나열 (그룹 헤더·라벨 제거)
+  const leaves = useMemo(
+    () => allGroups.flatMap((g) => g.children.filter((c) => availableIds.has(c.id))),
     [allGroups, availableIds]
   );
 
-  const allAvailable = useMemo(
-    () => groups.flatMap((g) => g.children.map((c) => c.id)),
-    [groups]
-  );
+  const allAvailable = useMemo(() => leaves.map((c) => c.id), [leaves]);
   const selectedCount = allAvailable.filter((id) => selectedIds.has(id)).length;
 
   // 서버 PDF에 실제 포함될 항목 (선택 ∩ pdf 채널 ∩ 가용) — shared 단일 헬퍼 (groups 명시)
@@ -98,17 +88,6 @@ export function PrintSelectionPanel({
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
-    onChange(next);
-  };
-
-  const toggleGroup = (group: PrintSectionGroup) => {
-    const state = resolveGroupCheckState(group, selectedIds);
-    const next = new Set(selectedIds);
-    if (state === "all") {
-      group.children.forEach((c) => next.delete(c.id));
-    } else {
-      group.children.forEach((c) => next.add(c.id));
-    }
     onChange(next);
   };
 
@@ -147,42 +126,20 @@ export function PrintSelectionPanel({
         </div>
       </div>
 
-      <p className="text-xs text-sky-700 dark:text-sky-300 mb-3">
-        인쇄할 항목을 선택하세요. 선택한 항목만 인쇄됩니다. (브라우저 인쇄 화면에서 “PDF로 저장”도 가능)
-      </p>
-
-      <div className="space-y-3">
-        {groups.map((group) => {
-          const state = resolveGroupCheckState(group, selectedIds);
-          return (
-            <div key={group.id} className="rounded-lg bg-white/60 dark:bg-black/20 p-2.5">
-              <label className="flex items-center gap-2 cursor-pointer font-medium text-sm">
-                <IndeterminateCheckbox
-                  checked={state === "all"}
-                  indeterminate={state === "partial"}
-                  onChange={() => toggleGroup(group)}
-                  aria-label={`${group.label} 전체`}
-                />
-                <span>{group.label}</span>
-              </label>
-              <div className="mt-1.5 ml-6 space-y-1">
-                {group.children.map((leaf) => (
-                  <label
-                    key={leaf.id}
-                    className="flex items-center gap-2 cursor-pointer text-sm text-foreground/90"
-                  >
-                    <IndeterminateCheckbox
-                      checked={selectedIds.has(leaf.id)}
-                      onChange={() => toggleLeaf(leaf.id)}
-                      aria-label={leaf.label}
-                    />
-                    <span>{leaf.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+      <div className="rounded-lg bg-white/60 dark:bg-black/20 p-3 space-y-1">
+        {leaves.map((leaf) => (
+          <label
+            key={leaf.id}
+            className="flex items-center gap-2 cursor-pointer text-sm text-foreground/90"
+          >
+            <IndeterminateCheckbox
+              checked={selectedIds.has(leaf.id)}
+              onChange={() => toggleLeaf(leaf.id)}
+              aria-label={leaf.label}
+            />
+            <span>{leaf.label}</span>
+          </label>
+        ))}
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
@@ -223,7 +180,7 @@ export function PrintSelectionPanel({
         </div>
       </div>
       {onPrintPdf && !pdfReady && (
-        <p className="mt-2 text-[11px] text-sky-600 dark:text-sky-400">
+        <p className="mt-2 text-caption text-sky-600 dark:text-sky-400">
           ※ 서버 PDF는 로그인·저장 후 이용할 수 있습니다. 비로그인 시 “선택 항목 인쇄”의 PDF 저장을 이용하세요.
         </p>
       )}

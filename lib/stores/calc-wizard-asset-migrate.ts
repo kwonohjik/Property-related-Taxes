@@ -7,6 +7,7 @@
 
 import { migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
 import { migrateResidenceFields } from "./calc-wizard-asset-residence";
+import { migrateRentalPeriodFields } from "./calc-wizard-asset-rental-period";
 import { migrateCarryoverFields } from "./calc-wizard-asset-carryover";
 import {
   applyPhase3Normalize,
@@ -33,16 +34,43 @@ export function migrateAsset(raw: unknown): AssetForm {
         ? "partial"
         : "same";
   }
+  // 축 B 파트별 독립(§99①1호 나목) — stale sessionStorage 자산에 필드가 없으면 빈 문자열로 정규화
+  if (a.buildingStandardPriceAtAcq === undefined) a.buildingStandardPriceAtAcq = "";
   if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (감면 시한 판정)
   if (a.assetContractDate === undefined) a.assetContractDate = "";
+  // §154⑧3호 상속주택 자체 양도 통산 (구 세션 복원 방어)
+  if (a.decedentSameHouseholdBeforeInheritance === undefined)
+    a.decedentSameHouseholdBeforeInheritance = false;
+  if (a.decedentCohabitationHoldingStartDate === undefined)
+    a.decedentCohabitationHoldingStartDate = "";
+  if (a.decedentCohabitationResidenceMonths === undefined)
+    a.decedentCohabitationResidenceMonths = "";
   // 공익수용·협의매수 (2026-07-02): 양도원인·사업인정고시일 (구 세션 복원 방어)
   if (a.transferCause === undefined) a.transferCause = "general";
   if (a.expropriationNoticeDate === undefined) a.expropriationNoticeDate = "";
-  // #3 환산 min[] 특례 보상필드 (Phase 2)
+  // §164⑨ 1호 특례 보상필드 — 자산-수준(단건 경로)
   if (a.compensationPerSqm === undefined) a.compensationPerSqm = "";
   if (a.compensationBasisStdPrice === undefined) a.compensationBasisStdPrice = "";
+  // §164⑨ 2호 공매·경락 특례 (P4)
+  if (a.isAuctionTransfer === undefined) a.isAuctionTransfer = false;
+  if (a.auctionPrice === undefined) a.auctionPrice = "";
+  // §164⑨ 1호 주택 총액 트랙 (P5)
+  if (a.housingCompensationTotal === undefined) a.housingCompensationTotal = "";
+  if (a.housingCompensationBasisTotal === undefined) a.housingCompensationBasisTotal = "";
+  // §164⑨ 1호 건물 split 토지분 트랙 (P6/D6)
+  if (a.splitLandCompensationTotal === undefined) a.splitLandCompensationTotal = "";
+  if (a.splitLandCompensationBasisTotal === undefined) a.splitLandCompensationBasisTotal = "";
+  // §164⑨ 1호 특례 보상필드 — **필지별**(다필지 경로, 2026-07-16 신설).
+  // 구 세션의 parcels[]에는 이 2필드가 없어 undefined → React controlled→uncontrolled 경고.
+  // (세액은 parseAmount(undefined)=0이라 무영향)
+  if (Array.isArray(a.parcels)) {
+    for (const p of a.parcels as Record<string, unknown>[]) {
+      if (p && p.compensationPerSqm === undefined) p.compensationPerSqm = "";
+      if (p && p.compensationBasisStdPrice === undefined) p.compensationBasisStdPrice = "";
+    }
+  }
   if (a.isReplotIncrement === undefined) a.isReplotIncrement = false;
   // 갭 3b: NBL 유예기간 구 7-union(type·startDate) → 사유코드. 길이 단정 불가 → other_justifiable(12호 event_window) 일원화(손실 0).
   if (Array.isArray(a.nblGracePeriods)) {
@@ -85,6 +113,7 @@ export function migrateAsset(raw: unknown): AssetForm {
       if (r && (r.type === "new_99_4_rural" || r.type === "new_99_4_hometown")) {
         return {
           ruralHouseAcquisitionDate: "",
+          ruralHouseJibun: "",
           ruralHouseStdPrice: "",
           isRegisteredHanok: false,
           isAdjacentArea: false,
@@ -287,7 +316,21 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.selfOwns) a.selfOwns = "both";
   if (a.hasSeperateLandAcquisitionDate === undefined) a.hasSeperateLandAcquisitionDate = false;
   if (!a.landAcquisitionDate) a.landAcquisitionDate = "";
-  if (!a.landSplitMode) a.landSplitMode = "apportioned";
+  // saleSplitMode 마이그레이션 — legacy landSplitMode(취득·양도 겸용 토글) 값을 이전 후 폐기(계획 §13 Q4).
+  if (a.saleSplitMode === undefined) {
+    a.saleSplitMode =
+      a.landSplitMode === "actual" || a.landSplitMode === "apportioned"
+        ? a.landSplitMode
+        : "apportioned";
+  }
+  delete a.landSplitMode;
+  // landAcqMode/buildingAcqMode — 미선택("") 기본값. 실제 유효값은 API/validate/UI가
+  // `effectivePartAcqMode()`(lib/calc/transfer-tax-split-acq-mode.ts)로 레거시 플래그에서
+  // 매 사용 시점에 파생한다(단일 소스 — migrate 시점 1회 고정 스냅샷 금지, dual-truth 방지).
+  if (a.landAcqMode === undefined) a.landAcqMode = "";
+  if (a.buildingAcqMode === undefined) a.buildingAcqMode = "";
+  if (a.landSalesCaseValue === undefined) a.landSalesCaseValue = "";
+  if (a.buildingSalesCaseValue === undefined) a.buildingSalesCaseValue = "";
   if (!a.landTransferPrice) a.landTransferPrice = "";
   if (!a.buildingTransferPrice) a.buildingTransferPrice = "";
   if (!a.landAcquisitionPrice) a.landAcquisitionPrice = "";
@@ -307,6 +350,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.phdLandPriceYearAtAcq) a.phdLandPriceYearAtAcq = "";
   if (a.phdLandPriceYearAtAcqIsManual === undefined) a.phdLandPriceYearAtAcqIsManual = false;
   if (!a.phdLandPricePerSqmAtAcq) a.phdLandPricePerSqmAtAcq = "";
+  if (!a.phdLandPricePerSqmAtAcq2001) a.phdLandPricePerSqmAtAcq2001 = "";
   if (!a.phdBuildingStdPriceAtAcq) a.phdBuildingStdPriceAtAcq = "";
   if (!a.phdLandPriceYearAtFirst) a.phdLandPriceYearAtFirst = "";
   if (a.phdLandPriceYearAtFirstIsManual === undefined) a.phdLandPriceYearAtFirstIsManual = false;
@@ -324,9 +368,18 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.inheritanceStartDate) a.inheritanceStartDate = "";
   if (a.hasDecedentActualPrice === undefined) a.hasDecedentActualPrice = false;
   if (!a.decedentAcquisitionPrice) a.decedentAcquisitionPrice = "";
-  if (!a.inheritanceReportedValue) a.inheritanceReportedValue = "";
   if (!a.inheritanceValuationMethod) a.inheritanceValuationMethod = "";
-  if (!a.inheritanceValuationEvidence) a.inheritanceValuationEvidence = "";
+  // P2b 통합: 상속 취득가액 manual 모드 폐지 → auto 강제 (기존 세션 호환).
+  // manual 취득가액(fixedAcquisitionPrice)을 신고가액(publishedValueAtInheritance)으로 이전.
+  // P2c: 상속 manual 세션(저장값·loose 접근) 감지 → fixedAcq를 신고가액(publishedValueAtInheritance)으로
+  // 이전, mode 필드 폐기. inheritanceValuationMode는 AssetForm 타입에서 제거됨(항상 신고가액 경로).
+  if ((a.inheritanceValuationMode as string | undefined) === "manual" && a.acquisitionCause === "inheritance") {
+    if (!a.publishedValueAtInheritance && a.fixedAcquisitionPrice) {
+      a.publishedValueAtInheritance = a.fixedAcquisitionPrice;
+    }
+    a.fixedAcquisitionPrice = "";
+  }
+  delete a.inheritanceValuationMode;
   if (a.useSupplementaryHelper === undefined) a.useSupplementaryHelper = false;
   if (!a.supplementaryLandArea) a.supplementaryLandArea = "";
   if (!a.supplementaryLandUnitPrice) a.supplementaryLandUnitPrice = "";
@@ -425,6 +478,10 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevCompletionDate === undefined) a.redevCompletionDate = "";
   // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.cbEra === undefined) a.cbEra = "";
+  // §164⑥ 단서 확인 토글 — 구 세션 미보유 시 false(미확인). 기존 값 보존.
+  if (a.cbAcqBuildingStdBy164_5 === undefined) a.cbAcqBuildingStdBy164_5 = false;
+  if (a.cbPrevStdPriceSum === undefined) a.cbPrevStdPriceSum = "";
+  if (a.cbStdPriceAdjustMonths === undefined) a.cbStdPriceAdjustMonths = "";
   if (a.cbExclusiveArea === undefined) a.cbExclusiveArea = "";
   if (a.cbSharedArea === undefined) a.cbSharedArea = "";
   if (a.cbLandArea === undefined) a.cbLandArea = "";
@@ -474,6 +531,55 @@ export function migrateAsset(raw: unknown): AssetForm {
     if (rhe.applyException === undefined) rhe.applyException = false;
     if (!rhe.scenario) rhe.scenario = 'A';
     if (!Array.isArray(rhe.rentalUnits)) rhe.rentalUnits = [];
+    // 구 스키마 임대주택 유닛 → 신규 스키마 분해 (능동형 UI 개편, 2026-07-25)
+    else {
+      (rhe.rentalUnits as Record<string, unknown>[]).forEach((u) => {
+        // 임대기간 다중 구간 필드 기본값 (interval 모드·rentalPeriods)
+        migrateRentalPeriodFields(u);
+        // 등록일 1필드 → 세무서/지자체 2필드 (구 값을 지자체 신청일로 이전, 세무서는 재입력)
+        if (u.registrationDate !== undefined && u.rentalRegistrationDate === undefined) {
+          u.rentalRegistrationDate = u.registrationDate;
+          if (u.businessRegistrationDate === undefined) u.businessRegistrationDate = "";
+          delete u.registrationDate;
+        }
+        if (u.businessRegistrationDate === undefined) u.businessRegistrationDate = "";
+        if (u.rentalRegistrationDate === undefined) u.rentalRegistrationDate = "";
+        // rentalType 5값 → rentalCategory 3값 (short-4는 pre_2018로: 의무기간 4→5년 상향·재입력 유도)
+        if (u.rentalCategory === undefined) {
+          const t = u.rentalType;
+          u.rentalCategory =
+            t === "short-6" ? "short_6y"
+            : t === "pre-2018" ? "pre_2018"
+            : t === "short-4" ? "pre_2018"
+            : "long_general"; // long-8/long-10/기타
+          delete u.rentalType;
+        }
+        // region 3값 → 2값 + 918 게이트
+        if (u.region === "regulated-area") {
+          u.region = "seoul-metro";
+          if (u.isRegulatedAreaNewAcq === undefined && u.isExcluded918Rule === undefined) u.isRegulatedAreaNewAcq = true;
+        }
+        if (u.region !== "seoul-metro" && u.region !== "non-metro") u.region = "seoul-metro";
+        // 소재지 법정동코드(주소 자동판별 소스) — 미검색 stale unit은 "" (분기 술어는 length>=10)
+        if (u.regionCode === undefined) u.regionCode = "";
+        // isRegulatedAreaNewAcq → isExcluded918Rule rename (Phase 1 데이터 값 보존, C4 D-2)
+        if (u.isRegulatedAreaNewAcq !== undefined) {
+          if (u.isExcluded918Rule === undefined) u.isExcluded918Rule = u.isRegulatedAreaNewAcq;
+          delete u.isRegulatedAreaNewAcq;
+        }
+        if (u.isExcluded918Rule === undefined) u.isExcluded918Rule = false;
+        if (u.hasContractDepositProof === undefined) u.hasContractDepositProof = false;
+        if (u.isExcludedShortToLongChange === undefined) u.isExcludedShortToLongChange = false;
+        if (u.acquisitionOfficialPrice === undefined) u.acquisitionOfficialPrice = "";
+        if (u.isNationalSizeHousing === undefined) u.isNationalSizeHousing = false;
+        if (u.rentalLandArea === undefined) u.rentalLandArea = "";
+        if (u.rentalTotalFloorArea === undefined) u.rentalTotalFloorArea = "";
+        if (u.hasMinimum2Units === undefined) u.hasMinimum2Units = false;
+        if (u.hasMinimum5UnitsInCity === undefined) u.hasMinimum5UnitsInCity = false;
+        if (u.firstSaleContractDate === undefined) u.firstSaleContractDate = "";
+        if (u.rentalAutoTermination === undefined) u.rentalAutoTermination = false;
+      });
+    }
     if (rhe.priorResidenceTransferDate === undefined) rhe.priorResidenceTransferDate = undefined;
     if (rhe.standardPriceAtAcquisitionForPhrp === undefined) rhe.standardPriceAtAcquisitionForPhrp = undefined;
     if (rhe.standardPriceAtPriorTransfer === undefined) rhe.standardPriceAtPriorTransfer = undefined;
@@ -483,6 +589,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   applyPhase3Normalize(a);
   // ③ regionCode normalize — 구 세션에 없으면 undefined (optional, string 아닌 값 제거)
   if (a.regionCode !== undefined && typeof a.regionCode !== "string") a.regionCode = undefined;
+  // addressPnu normalize — 구 세션 미보유 시 undefined(모달 재조회 fallback)
+  if (a.addressPnu !== undefined && typeof a.addressPnu !== "string") a.addressPnu = undefined;
   // ③ §114조의2 Phase2: 증축부분 취득시 기준시가 총액 — 구 세션 복원 방어
   if (a.extensionStdPriceAtAcquisition === undefined) a.extensionStdPriceAtAcquisition = "";
   return a as unknown as AssetForm;

@@ -19,6 +19,8 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { getOwnershipRatio } from "./transfer-tax-api-helpers";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 const SUPPORTED_KINDS = [
@@ -94,9 +96,20 @@ export function validateBurdenedGiftAsset(
       return `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·환산취득가액)을 선택하세요 (소득세법 §100①).`;
     }
     // B/C > 1 차단 (C = bgMarketValueAtTransfer)
-    const giftValuationMarket = parseAmount(asset.bgMarketValueAtTransfer) || 0;
+    //
+    // ⚠️ 지분 모드: 엔진이 §159의 C를 **지분분**으로 축소하므로(`scaleBurdenedGiftInfo`)
+    //    여기서도 같은 스케일로 비교해야 한다. 물건 전체 시가로 비교하면 UI는 통과하는데
+    //    엔진이 EXCESS_BURDENED_GIFT로 죽는 "UI 통과 ↔ 엔진 차단" 모순이 된다.
+    //    채무는 사용자가 **해당 지분 인수분**을 입력하므로 스케일하지 않는다.
+    const ratio = getOwnershipRatio(asset);
+    const marketWhole = parseAmount(asset.bgMarketValueAtTransfer) || 0;
+    const giftValuationMarket = ratio < 1 ? applyRatio(marketWhole, ratio) : marketWhole;
     if (giftValuationMarket > 0 && assumedDebt > giftValuationMarket) {
-      return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuationMarket.toLocaleString()}원)을 초과합니다. 부담부증여로는 성립하지 않습니다(상증법 §47③ 검토 필요). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;
+      const scaleNote =
+        ratio < 1
+          ? ` (지분 ${asset.ownershipNumerator}/${asset.ownershipDenominator} 해당분 — 물건 전체 ${marketWhole.toLocaleString()}원)`
+          : "";
+      return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuationMarket.toLocaleString()}원)${scaleNote}을 초과합니다. 부담부증여로는 성립하지 않습니다(상증법 §47③ 검토 필요). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;
     }
   }
   // 기준시가 모드의 B/C > 1 검사는 엔진에서 fail-fast (giftValuation = Max(보충적·담보·임대) 산정 후).

@@ -9,9 +9,9 @@ import type { Buppyo3Data } from "@/lib/calc/deduction-besshi-data";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { BP3, BP3_COLS, BP3_DEDUCTION_ROWS, PAPER_FOOTER, HANDWRITE_NOTE } from "./deduction-besshi-constants";
 
-const HEAD = "border border-black p-1 bg-gray-100 text-[10px] font-medium text-center align-middle";
-const VAL = "border border-black p-1 text-[10px] align-middle";
-const AMT = "border border-black p-1 text-[10px] text-right font-mono tabular-nums whitespace-nowrap align-middle";
+const HEAD = "border border-black p-1 bg-gray-100 text-micro font-medium text-center align-middle";
+const VAL = "border border-black p-1 text-micro align-middle";
+const AMT = "border border-black p-1 text-micro text-right font-mono tabular-nums whitespace-nowrap align-middle";
 
 function pad(dataLen: number, fixed: number): number[] {
   return Array.from({ length: Math.max(0, fixed - dataLen) }, (_, i) => i);
@@ -35,11 +35,11 @@ function dval(v: number | null, force = false): string {
 export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
   return (
     <div className="bg-white p-3 text-black print:bg-white print:text-black" data-testid="bp3-root">
-      <p className="text-[9px] text-gray-600">{BP3.subtitle}</p>
+      <p className="text-micro text-gray-600">{BP3.subtitle}</p>
       <h3 className="my-1 text-center text-base font-bold">{BP3.title}</h3>
 
       {/* 가. 채무 */}
-      <p className="mb-1 mt-2 text-[11px] font-bold">가. 채무</p>
+      <p className="mb-1 mt-2 text-caption font-bold">가. 채무</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={BP3_COLS.debt} />
         <thead>
@@ -76,7 +76,7 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
       </table>
 
       {/* 나. 공과금 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">나. 공과금</p>
+      <p className="mb-1 mt-3 text-caption font-bold">나. 공과금</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={BP3_COLS.utility} />
         <thead>
@@ -107,7 +107,7 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
       </table>
 
       {/* 다. 장례비용 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">다. 장례비용</p>
+      <p className="mb-1 mt-3 text-caption font-bold">다. 장례비용</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={BP3_COLS.funeral} />
         <thead>
@@ -138,7 +138,7 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
       </table>
 
       {/* 라. 상속공제 */}
-      <p className="mb-1 mt-3 text-[11px] font-bold">라. 상속공제</p>
+      <p className="mb-1 mt-3 text-caption font-bold">라. 상속공제</p>
       <table className="w-full table-fixed border-collapse">
         <ColGroup widths={BP3_COLS.deduction} />
         <tbody>
@@ -149,7 +149,7 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
             return (
               <tr key={row.key}>
                 <td className={VAL}>
-                  {grp ? <span className="mr-1 text-[9px] text-gray-500">[{grp}]</span> : null}
+                  {grp ? <span className="mr-1 text-micro text-gray-500">[{grp}]</span> : null}
                   {row.no} {row.label}
                 </td>
                 <td className={AMT} data-testid={`bp3-${row.no}`}>{txt}</td>
@@ -159,8 +159,8 @@ export function Buppyo3FormTable({ data }: { data: Buppyo3Data }) {
         </tbody>
       </table>
 
-      <p className="mt-2 text-[8px] text-gray-500">{HANDWRITE_NOTE}</p>
-      <p className="mt-1 text-right text-[8px] text-gray-500">{PAPER_FOOTER}</p>
+      <p className="mt-2 text-micro text-gray-500">{HANDWRITE_NOTE}</p>
+      <p className="mt-1 text-right text-micro text-gray-500">{PAPER_FOOTER}</p>
     </div>
   );
 }

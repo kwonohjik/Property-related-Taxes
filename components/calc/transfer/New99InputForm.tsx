@@ -13,10 +13,11 @@
 
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
+import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type New99Form = Extract<AssetReductionForm, { type: "new_99" }>;
@@ -24,6 +25,17 @@ type New99Form = Extract<AssetReductionForm, { type: "new_99" }>;
 interface Props {
   value: New99Form;
   onChange: (patch: Partial<New99Form>) => void;
+  /** 자산 취득일 — PHD 자동 활성화 + 취득/5년 기준시가 referenceDate */
+  acquisitionDate?: string;
+  /** 자산 양도일 — 양도시 기준시가 referenceDate */
+  transferDate?: string;
+  /** 양도물건 지번 — 기준시가 자동조회 */
+  jibun?: string;
+  dong?: string;
+  ho?: string;
+  /** 자산-수준 PHD 스냅샷 — "자산 카드 PHD 가져오기" 소스 */
+  assetId?: string;
+  assetPhdSnapshot?: ReductionPhdValue;
 }
 
 function SectionShell({
@@ -38,7 +50,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -48,7 +60,17 @@ function SectionShell({
   );
 }
 
-export function New99InputForm({ value, onChange }: Props) {
+export function New99InputForm({
+  value,
+  onChange,
+  acquisitionDate,
+  transferDate,
+  jibun,
+  dong,
+  ho,
+  assetId,
+  assetPhdSnapshot,
+}: Props) {
   const isFromBuilder = value.acquisitionType99 === "from_builder";
   const periodEndLabel = value.isNationalHousing99 ? "1999.12.31" : "1999.6.30";
   return (
@@ -92,41 +114,49 @@ export function New99InputForm({ value, onChange }: Props) {
       </SectionShell>
 
       <SectionShell num="②" title="기준시가·면적" tone="amber">
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득 당시 기준시가</label>
-          <CurrencyInput
-            value={value.standardPriceAtAcquisition99}
-            onChange={(v) => onChange({ standardPriceAtAcquisition99: v })}
-            label=""
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득일부터 5년이 되는 날의 기준시가 (5년 후 양도 시 필수)</label>
-          <CurrencyInput
-            value={value.standardPriceAt5Years99}
-            onChange={(v) => onChange({ standardPriceAt5Years99: v })}
-            label=""
-          />
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            새로운 기준시가가 고시되기 전이면 직전 기준시가를 적용합니다 (조특령 §99① 후단)
-          </p>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">양도 당시 기준시가 (비우면 자산 입력값 사용)</label>
-          <CurrencyInput
-            value={value.standardPriceAtTransfer99}
-            onChange={(v) => onChange({ standardPriceAtTransfer99: v })}
-            label=""
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">전용면적 (㎡)</label>
-          <DecimalInput value={value.exclusiveAreaSqm99} onChange={(v) => onChange({ exclusiveAreaSqm99: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            고가주택 판정용 — 1998~2002.9 계약 기준은 전용 165㎡ 이상이면서 양도가 6억 초과 시 적용
-            제외 (법 §99① 단서). 부수토지는 건물 연면적 2배 이내 토지를 포함해 입력합니다
-          </p>
-        </div>
+        <ReductionStdPriceSection
+          phd={{
+            phdMode: value.phdMode99,
+            firstDisclosureDate: value.phdFirstDisclosureDate99,
+            firstDisclosurePrice: value.phdFirstDisclosurePrice99,
+            landAreaSqm: value.phdLandAreaSqm99,
+            landPricePerSqmAtAcq: value.phdLandPricePerSqmAtAcq99,
+            landPricePerSqmAtFirst: value.phdLandPricePerSqmAtFirst99,
+            buildingStdAtAcq: value.phdBuildingStdAtAcq99,
+            buildingStdAtFirst: value.phdBuildingStdAtFirst99,
+          }}
+          onPhdChange={(patch) => {
+            // generic ReductionPhdValue patch → new_99 접미사 필드 매핑. onChange가 patch 병합(배치 안전).
+            const mapped: Partial<New99Form> = {};
+            if (patch.phdMode !== undefined) mapped.phdMode99 = patch.phdMode;
+            if (patch.firstDisclosureDate !== undefined) mapped.phdFirstDisclosureDate99 = patch.firstDisclosureDate;
+            if (patch.firstDisclosurePrice !== undefined) mapped.phdFirstDisclosurePrice99 = patch.firstDisclosurePrice;
+            if (patch.landAreaSqm !== undefined) mapped.phdLandAreaSqm99 = patch.landAreaSqm;
+            if (patch.landPricePerSqmAtAcq !== undefined) mapped.phdLandPricePerSqmAtAcq99 = patch.landPricePerSqmAtAcq;
+            if (patch.landPricePerSqmAtFirst !== undefined) mapped.phdLandPricePerSqmAtFirst99 = patch.landPricePerSqmAtFirst;
+            if (patch.buildingStdAtAcq !== undefined) mapped.phdBuildingStdAtAcq99 = patch.buildingStdAtAcq;
+            if (patch.buildingStdAtFirst !== undefined) mapped.phdBuildingStdAtFirst99 = patch.buildingStdAtFirst;
+            onChange(mapped);
+          }}
+          stdPriceAtAcquisition={value.standardPriceAtAcquisition99}
+          onStdPriceAtAcquisitionChange={(v) => onChange({ standardPriceAtAcquisition99: v })}
+          stdPriceAt5Years={value.standardPriceAt5Years99}
+          onStdPriceAt5YearsChange={(v) => onChange({ standardPriceAt5Years99: v })}
+          stdPriceAtTransfer={value.standardPriceAtTransfer99}
+          onStdPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer99: v })}
+          exclusiveArea={value.exclusiveAreaSqm99}
+          onExclusiveAreaChange={(v) => onChange({ exclusiveAreaSqm99: v })}
+          acquisitionDate={acquisitionDate}
+          transferDate={transferDate}
+          jibun={jibun}
+          dong={dong}
+          ho={ho}
+          assetId={assetId}
+          assetPhdSnapshot={assetPhdSnapshot}
+          testidPrefix="new99"
+          snapshotKeyPrefix="red99"
+          areaHint="고가주택 판정용 — 1998~2002.9 계약 기준은 전용 165㎡ 이상이면서 양도가 6억 초과 시 적용 제외 (법 §99① 단서). 부수토지는 건물 연면적 2배 이내 토지를 포함해 입력합니다"
+        />
       </SectionShell>
 
       <SectionShell num="③" title="재개발·재건축 신축주택 (해당 시)" tone="violet">
@@ -167,7 +197,7 @@ export function New99InputForm({ value, onChange }: Props) {
         />
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 5년 이내 양도 시 취득일부터 양도일까지 발생한 양도소득금액 전액,
           5년 후 양도 시 취득일부터 5년간 발생한 양도소득금액을 과세대상소득금액에서 뺍니다 (법 §99①).

@@ -5,8 +5,11 @@
  * 엔진 결과는 minimal fixture로 모킹 (실제 엔진 회귀는 양도세 anchor 테스트 담당).
  */
 
-import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+
+// 이 프로젝트 setup.ts에는 RTL 자동 cleanup이 없다 → 테스트 간 DOM 누적 방지를 위해 수동 등록.
+afterEach(cleanup);
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -217,6 +220,63 @@ describe("DetailedCalculationStatementCard — 단건 모드", () => {
 
     // ▶/▼ 토글 버튼이 하나도 없어야 함
     expect(screen.queryByLabelText(/자산별 펼치기|자산별 닫기/)).not.toBeInTheDocument();
+  });
+
+  it("T-10: 각 단계 그룹에 접기/펼치기 토글 — 기본 펼침, 클릭 시 접힘 라벨 전환", () => {
+    const result = makeMinimalResult();
+    const asset = makeMinimalAsset();
+    const formData = makeMinimalFormData(asset);
+
+    render(
+      <DetailedCalculationStatementCard
+        result={result}
+        formData={formData}
+        asset={asset}
+        transferPriceOverride={330_000_000}
+      />,
+    );
+
+    // 기본 펼침 → 그룹마다 "▲ 접기" 버튼 존재 + 본문 항목(양도가액) 표시
+    const collapseButtons = screen.getAllByText("▲ 접기");
+    expect(collapseButtons.length).toBeGreaterThan(0);
+    expect(screen.getAllByText("양도가액").length).toBeGreaterThan(0);
+
+    // 첫 그룹 접기 → "▲ 접기" 1개 감소 + "▼ 펼치기" 1개 증가.
+    // ("전체 엔진 계산 과정" 서브토글이 초기부터 "▼ 펼치기"를 노출하므로 절대수 대신 증분으로 검증)
+    const expandBefore = screen.queryAllByText("▼ 펼치기").length;
+    fireEvent.click(collapseButtons[0]);
+    expect(screen.getAllByText("▼ 펼치기").length).toBe(expandBefore + 1);
+    expect(screen.getAllByText("▲ 접기").length).toBe(collapseButtons.length - 1);
+  });
+
+  it("T-11: 헤더 전체 토글 — 한 번에 모든 단계 접기/펼치기", () => {
+    const result = makeMinimalResult();
+    const asset = makeMinimalAsset();
+    const formData = makeMinimalFormData(asset);
+
+    render(
+      <DetailedCalculationStatementCard
+        result={result}
+        formData={formData}
+        asset={asset}
+        transferPriceOverride={330_000_000}
+      />,
+    );
+
+    // 기본 전체 펼침 → 헤더는 "▲ 전체 접기", 개별 그룹은 "▲ 접기" 다수.
+    const groupCount = screen.getAllByText("▲ 접기").length;
+    expect(groupCount).toBeGreaterThan(0);
+    const collapseAll = screen.getByText("▲ 전체 접기");
+
+    // 전체 접기 클릭 → 개별 그룹 "▲ 접기" 0개 + 헤더는 "▼ 전체 펼치기"로 전환.
+    fireEvent.click(collapseAll);
+    expect(screen.queryAllByText("▲ 접기").length).toBe(0);
+    const expandAll = screen.getByText("▼ 전체 펼치기");
+
+    // 전체 펼치기 클릭 → 모든 그룹 "▲ 접기" 복귀 + 헤더는 "▲ 전체 접기"로 전환.
+    fireEvent.click(expandAll);
+    expect(screen.getAllByText("▲ 접기").length).toBe(groupCount);
+    expect(screen.getByText("▲ 전체 접기")).toBeInTheDocument();
   });
 });
 

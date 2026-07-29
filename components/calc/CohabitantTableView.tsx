@@ -43,7 +43,7 @@ function Badge({ text, tone }: { text: string; tone: string }) {
   const cls = BADGE_TONE_CLASSES[tone] ?? BADGE_TONE_CLASSES.sky;
   return (
     <span
-      className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full ${cls}`}
+      className={`inline-flex items-center text-micro px-1.5 py-0.5 rounded-full ${cls}`}
     >
       {text}
     </span>
@@ -72,7 +72,7 @@ function CohabitantTableRow({ dep, isSelected, onSelect, deathDate }: RowProps) 
   if (birthMissing) {
     birthGenderDisplay = (
       <span
-        className={`${BADGE_TONE_CLASSES.amber} inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full`}
+        className={`${BADGE_TONE_CLASSES.amber} inline-flex items-center text-micro px-1.5 py-0.5 rounded-full`}
       >
         미입력
       </span>
@@ -192,7 +192,7 @@ export function CohabitantTableView({
             <th className="py-2 text-left pl-2 text-gray-500 font-medium">
               특이사항
             </th>
-            <th className="w-8 py-2 text-right pr-3 text-gray-400 font-medium text-[10px]">
+            <th className="w-8 py-2 text-right pr-3 text-gray-400 font-medium text-micro">
               편집
             </th>
           </tr>

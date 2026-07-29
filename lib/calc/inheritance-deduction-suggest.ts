@@ -19,11 +19,14 @@ import { sumCollateralFinancialDebt } from "@/lib/tax-engine/inheritance-collate
 import { calcRelationDeduction } from "@/lib/tax-engine/deductions/gift-deductions";
 import { calcCorporateStockAdjustedValue } from "@/lib/tax-engine/property-valuation-corporate";
 import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
+import { resolveFamilyBusinessAssetValue } from "@/lib/tax-engine/deductions/family-business";
+import { resolveEffectiveQualifiedHeirIds } from "@/lib/tax-engine/deductions/inheritance-farming-deduction";
 import { isStatutoryHeir } from "@/lib/calc/heir-allocation-summary";
 import type {
   DebtItem,
   DonorRelation,
   EstateItem,
+  FarmingInheritanceInput,
   Heir,
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -253,14 +256,16 @@ export function suggestFamilyBusinessValue(
       isApplicable: false,
     };
   }
-  const value = eligible.reduce((sum, i) => sum + getCorporateAdjustedAmount(i, deathDate), 0);
+  // §15⑤ 단일 진실(엔진 deriveFamilyBusinessValue와 동일): corporate_stock 사업무관자산 차감(2호) +
+  // 개인가업 담보채무 차감(1호). getCorporateAdjustedAmount(farming 공용)은 담보차감 없어 dual-truth였음.
+  const value = eligible.reduce((sum, i) => sum + resolveFamilyBusinessAssetValue(i, deathDate), 0);
   return {
     value,
-    reason: "isFamilyBusinessAsset=true 자산 합산 (corporate_stock는 사업무관자산 차감)",
+    reason: "isFamilyBusinessAsset=true 자산 합산 (법인=사업무관자산·개인가업=담보채무 차감)",
     breakdown: eligible.map((i) => {
-      const adj = getCorporateAdjustedAmount(i, deathDate);
+      const adj = resolveFamilyBusinessAssetValue(i, deathDate);
       const raw = getValuatedAmount(i);
-      const note = adj !== raw ? ` (사업무관자산 차감 / 평가 ${formatKrw(raw)}원)` : "";
+      const note = adj !== raw ? ` (사업무관자산·담보채무 차감 / 평가 ${formatKrw(raw)}원)` : "";
       return `${i.name}: ${formatKrw(adj)}원${note}`;
     }).concat([
       `가업재산 합계: ${formatKrw(value)}원`,
@@ -354,11 +359,12 @@ export function twoYearsBefore(deathDate: string): string {
  * - estateItems 중 farmingCategory 지정된 자산 합
  * - §16⑤ 단서 — 담보채무(mortgageAmount) 차감
  * - 30억 cap은 엔진에서 적용 (본 헬퍼는 한도 적용 전 값 반환)
- * - farming.qualifiedHeirIds 지정 시 자격자 분배분만 합산 (F-11, §16⑤ 본문)
+ * - 자격자 분배분만 합산 (§16⑤ 본문) — resolveEffectiveQualifiedHeirIds 단일진실로 자격자 도출:
+ *   heirAssessments(부록A 자동도출)·명시 qualifiedHeirIds 모두 반영 (C-14 — 자동도출 모드 미필터 정정).
  */
 export function suggestFarmingAssetValue(
   estateItems: EstateItem[],
-  farming?: { qualifiedHeirIds?: string[] },
+  farming?: FarmingInheritanceInput,
   deathDate?: string,
 ): DeductionSuggestion {
   // D4: §16⑤1호 2년 영농사용 판정 헬퍼 — 자동판정(farmingUseStartDate) 우선, 수동 boolean fallback
@@ -419,7 +425,11 @@ export function suggestFarmingAssetValue(
       notes: earlyNotes.length > 0 ? earlyNotes : undefined,
     };
   }
-  const qualifiedIds = farming?.qualifiedHeirIds;
+  // C-14: 엔진 단일진실. heirAssessments(부록A) 자동도출·명시 override 모두 반영 →
+  // 자동도출 모드에서 미자격 상속인 분배분이 그대로 합산되던 갭 해소 (§16⑤ 본문).
+  const qualifiedIds = farming
+    ? resolveEffectiveQualifiedHeirIds(farming, deathDate)
+    : undefined;
   const useAllocation = qualifiedIds !== undefined;
 
   let totalValue = 0;

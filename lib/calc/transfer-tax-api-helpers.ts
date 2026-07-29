@@ -3,15 +3,102 @@
  * transfer-tax-api.ts 800줄 정책에 따라 분리.
  */
 
+import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial-bridge";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
+import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
+import {
+  isExprValuationEligibleAssetKind,
+  isAuctionEligibleAssetKind,
+  isHousingExprEligibleAssetKind,
+  isSplitLandExprEligibleAssetKind,
+} from "@/lib/tax-engine/expropriation-scope";
+import { differenceInYears } from "date-fns";
+import {
+  isWithinSurchargeSuspensionWindow,
+  MULTI_HOUSE,
+  TEMP_TWO_HOUSE_PROVISO_REASONS,
+} from "@/lib/tax-engine/legal-codes/transfer";
+
+/**
+ * 상속 취득가액 엔진 payload용 assetKind 파생 — 상단 `asset.assetKind` 기준.
+ *
+ * 엔진(inheritance-acquisition)은 land(단가×면적/legacyFallback) vs house(총액)만 구분하므로
+ * land vs 非land 이분으로 매핑한다. housing/redevelopment는 개별/공동 refinement를 유지하되
+ * (조회 DB·라벨용, 세액 무관), 미선택 시 동·호 유무로 도출. 그 외(건물·권리 등)는 총액-safe house_apart.
+ * 상단 자산 구분 라디오 폐지 후에도 §164⑦(helpers.ts:142)·다건 land 안분이 항상 정확하도록 보장.
+ */
+export function deriveEngineInheritanceAssetKind(
+  asset: AssetForm,
+): "land" | "house_individual" | "house_apart" {
+  if (asset.assetKind === "land") return "land";
+  if (asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt") {
+    if (asset.inheritanceAssetKind === "house_individual") return "house_individual";
+    if (asset.inheritanceAssetKind === "house_apart") return "house_apart";
+    return asset.addressDong && asset.addressHo ? "house_apart" : "house_individual";
+  }
+  return "house_apart";
+}
+
+/**
+ * 다주택 중과 한시배제(소득세법 시행령 §167의3①12의2·§167의10①12의2) 여부 —
+ * 양도일 ∈ [2022-05-10, 2026-05-09] AND 양도 주택 보유기간 2년 이상(§95④).
+ * true면 중과 전면배제(일반세율) → UI ④ 섹션 숨김 + 해당 검증 skip(양쪽 단일 술어).
+ * 엔진 determineMultiHouseSurcharge의 배제 조건(양도일 윈도우 + differenceInYears≥2)과 동일.
+ */
+export function isMultiHouseSurchargeSuppressed(
+  transferDate: string | undefined | null,
+  acquisitionDate: string | undefined | null,
+): boolean {
+  if (!isWithinSurchargeSuspensionWindow(transferDate) || !transferDate || !acquisitionDate)
+    return false;
+  return (
+    differenceInYears(new Date(transferDate), new Date(acquisitionDate)) >=
+    MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS
+  );
+}
+
+/** §154① 단서 카드 노출 맥락 — 1주택 / 일시적 2주택 / 미노출. */
+export type ProvisoMode = "one_house" | "temporary_two_house" | null;
+
+/**
+ * §154① 단서 카드 노출 여부 + 맥락(mode) 단일 파생.
+ * 1주택 → one_house. 2주택+일시적특례 → temporary_two_house(§155① 준용). 그 외(순수 2주택·대체주택·3주택+) → 숨김.
+ * UI(Step4 렌더·배치)·API 조립·validation이 이 단일 함수를 공유(mirror-pattern).
+ */
+export function provisoGate(args: {
+  isOneHousehold: boolean;
+  isHousing: boolean;
+  householdHousingCount: string;
+  temporaryTwoHouseSpecial: boolean;
+}): { visible: boolean; mode: ProvisoMode } {
+  if (!args.isOneHousehold || !args.isHousing) return { visible: false, mode: null };
+  const n = parseInt(args.householdHousingCount, 10);
+  if (n === 1) return { visible: true, mode: "one_house" };
+  if (n === 2 && args.temporaryTwoHouseSpecial) return { visible: true, mode: "temporary_two_house" };
+  return { visible: false, mode: null };
+}
+
+/**
+ * §154① 단서 reason 정규화 — temporary_two_house 모드에서 화이트리스트(1·2가·3호) 밖 reason은 "" 로 취급.
+ * UI 선택표시·API 조립·validation 3곳이 단일 소비 → 옵션 필터로 숨긴 stale 무효 reason이 엔진/검증에 도달하지 않음.
+ * (1주택 모드서 나·다목·5호 선택 후 일시적 2주택 전환 시 데드락 방지 — 파생이라 clear-onChange 불필요.)
+ */
+export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undefined | null): string {
+  if (!reason) return "";
+  if (mode === null) return ""; // 카드 숨김(순수 다주택·3주택+·비주택·비1세대) — stale reason 미전송·검증 skip(데드락 방지)
+  if (mode === "temporary_two_house" && !TEMP_TWO_HOUSE_PROVISO_REASONS.has(reason)) return "";
+  return reason;
+}
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 export { toEngineReductions } from "./transfer-tax-api-reductions";
 
-// ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑧, §176조의2②2호) ───
+// ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑥, §176조의2②2호) ───
 
 /**
  * AssetForm cb* 필드 → commercialBuildingValuation 서브객체 변환.
@@ -20,6 +107,7 @@ export { toEngineReductions } from "./transfer-tax-api-reductions";
  */
 export function buildCommercialBuildingValuation(
   asset: AssetForm,
+  transferDate = "",
 ): object | undefined {
   if (asset.assetKind !== "commercial_building" || !asset.useEstimatedAcquisition) {
     return undefined;
@@ -60,12 +148,16 @@ export function buildCommercialBuildingValuation(
     const buildingAtAcq = parseAmount(asset.cbBuildingStdPriceAtAcq);
     const buildingAtFirst = parseAmount(asset.cbBuildingStdPriceAtFirst);
     const buildingAtTransfer = parseAmount(asset.cbBuildingStdPriceAtTransfer);
-    const landAtAcq = parseAmount(asset.cbLandPricePerSqmAtAcq);
+    // §164④ — 취득 1990-08-30 이전이면 가목의 가액이 없어 토지등급 환산값을 쓴다(⑧ 동일 fallback).
+    const landAtAcq = effectiveCommercialLandPriceAtAcq(asset, transferDate);
     const landAtFirst = parseAmount(asset.cbLandPricePerSqmAtFirst);
     if (!buildingAtAcq || !buildingAtFirst || !buildingAtTransfer
         || !landAtAcq || !landAtFirst) {
       return undefined;
     }
+    // §164⑧ 준용(괄호 단서) 보조 입력 — 값이 있을 때만 전달. 미전달 시 엔진은 탐지만 한다.
+    const prevSum = parseAmount(asset.cbPrevStdPriceSum);
+    const adjustMonths = parseInt((asset.cbStdPriceAdjustMonths || "").replace(/,/g, ""), 10);
     return {
       ...base,
       buildingStdPriceAtAcquisition: buildingAtAcq,
@@ -73,11 +165,13 @@ export function buildCommercialBuildingValuation(
       buildingStdPriceAtTransfer: buildingAtTransfer,
       landPriceAtAcquisition: landAtAcq,
       landPriceAtFirstDisclosure: landAtFirst,
+      ...(prevSum > 0 && { prevStdPriceSum: prevSum }),
+      ...(Number.isFinite(adjustMonths) && adjustMonths > 0 && { stdPriceAdjustMonths: adjustMonths }),
     };
   }
 
-  // post_disclosure: 취득시 개별공시지가 필수
-  const landAtAcq = parseAmount(asset.cbLandPricePerSqmAtAcq);
+  // post_disclosure: 취득시 개별공시지가 필수 (취득 ≥2005이므로 §164④ 구간은 아니나 fallback 동일)
+  const landAtAcq = effectiveCommercialLandPriceAtAcq(asset, transferDate);
   if (!landAtAcq) return undefined;
   return { ...base, landPriceAtAcquisition: landAtAcq };
 }
@@ -98,26 +192,50 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
     applyException: true,
     scenario: rh.scenario,
     rentalUnits: rh.rentalUnits.map((u) => ({
-      registrationDate: u.registrationDate
-        ? (u.registrationDate.includes('T') ? u.registrationDate : `${u.registrationDate}T00:00:00.000Z`)
+      businessRegistrationDate: u.businessRegistrationDate
+        ? (u.businessRegistrationDate.includes('T') ? u.businessRegistrationDate : `${u.businessRegistrationDate}T00:00:00.000Z`)
         : undefined,
-      rentalType: u.rentalType,
+      rentalRegistrationDate: u.rentalRegistrationDate
+        ? (u.rentalRegistrationDate.includes('T') ? u.rentalRegistrationDate : `${u.rentalRegistrationDate}T00:00:00.000Z`)
+        : undefined,
+      rentalCategory: u.rentalCategory,
       rentalAcquisitionType: u.rentalAcquisitionType,
-      isApartment: u.isApartment,
+      // boolean 요건 필드는 stale sessionStorage·이력 로드(migrateAsset 우회) 유닛에서 undefined일 수 있어
+      // ?? false로 방어 — Zod required boolean 400 차단(false = 요건 미해당, validate의 !u.X와 동일 관용).
+      isApartment: u.isApartment ?? false,
       region: u.region,
+      isExcluded918Rule: u.isExcluded918Rule ?? false,
+      hasContractDepositProof: u.hasContractDepositProof ?? false,
+      isExcludedShortToLongChange: u.isExcludedShortToLongChange ?? false,
       standardPriceAtRentalStart: parseAmount(u.standardPriceAtRentalStart) || 0,
-      rentalMonths: parseFloat(u.rentalMonths) || 0,
-      rentalAutoTermination: u.rentalAutoTermination,
-      requirementsConfirmed: u.requirementsConfirmed,
+      acquisitionOfficialPrice: parseAmount(u.acquisitionOfficialPrice) || 0,
+      isNationalSizeHousing: u.isNationalSizeHousing ?? false,
+      // 건설임대 규모요건 — 미입력(빈값)이면 undefined 전송(엔진이 SIZE_REQUIRED 판정)
+      landAreaM2: parseDecimal(u.rentalLandArea) || undefined,
+      totalFloorAreaM2: parseDecimal(u.rentalTotalFloorArea) || undefined,
+      hasMinimum2Units: u.hasMinimum2Units ?? false,
+      hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity ?? false,
+      firstSaleContractDate: u.firstSaleContractDate
+        ? (u.firstSaleContractDate.includes('T') ? u.firstSaleContractDate : `${u.firstSaleContractDate}T00:00:00.000Z`)
+        : undefined,
+      rentalMonths: deriveRentalMonths(u),
+      rentalAutoTermination: u.rentalAutoTermination ?? false,
+      requirementsConfirmed: u.requirementsConfirmed ?? false,
     })),
     priorResidenceTransferDate: rh.priorResidenceTransferDate
       ? (rh.priorResidenceTransferDate.includes('T')
         ? rh.priorResidenceTransferDate
         : `${rh.priorResidenceTransferDate}T00:00:00.000Z`)
       : undefined,
-    standardPriceAtAcquisitionForPhrp: parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "") || undefined,
+    // 환산취득가 모드 연동 시 자산-수준 기준시가가 단일 소스 (§161① = 환산 분자·분모와 동일 값).
+    // fallback이 아닌 소스 ternary — stale rhe override가 침묵으로 이기는 경로 차단.
+    standardPriceAtAcquisitionForPhrp: isPhrpStdPriceLinked(asset)
+      ? parseAmount(asset.standardPriceAtAcq) || undefined
+      : parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "") || undefined,
     standardPriceAtPriorTransfer: parseAmount(rh.standardPriceAtPriorTransfer ?? "") || undefined,
-    standardPriceAtTransferForPhrp: parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
+    standardPriceAtTransferForPhrp: isPhrpStdPriceLinked(asset)
+      ? parseAmount(asset.standardPriceAtTransfer) || undefined
+      : parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
   };
 }
 
@@ -128,215 +246,8 @@ export function toEngineAssetKind(
   return kind;
 }
 
-// ─── ④ 사례 33: 증축 extensionInfo 서브객체 변환 헬퍼 ───
-
-/**
- * AssetForm gbExtension* 필드 → extensionInfo 서브객체 변환.
- * gbHasExtension=false 시 undefined 반환.
- * gbHasExtension=true 시 필수 필드 누락은 validate 단계에서 이미 차단됨.
- * → 이 함수에서 undefined 폴백 대신 fail-fast throw (silent 회귀 차단).
- *
- * defensive 아닌 fail-fast — 이 throw에 도달하면 validate 우회 버그.
- * 사례 31 동작으로 silent 회귀하는 경로를 조기에 발각.
- * (자동 안분 fallback 금지 정책 — feedback_no_silent_apportion_fallback.md)
- */
-function buildExtensionInfo(
-  asset: AssetForm,
-): object | undefined {
-  if (!asset.gbHasExtension) return undefined;
-
-  const extensionDate = asset.gbExtensionDate || undefined;
-  const extensionArea = parseDecimal(asset.gbExtensionArea); // 선택 필드 — 0이면 미전달
-  const extensionCause = asset.gbExtensionAcquisitionCause;
-
-  // 취득방식 결정: 빈 문자열은 "estimated" fallback (validate에서 이미 검증됨)
-  const mode: "actual" | "estimated" =
-    asset.gbExtensionAcquisitionMode === "actual" ? "actual" : "estimated";
-
-  // gbHasExtension=true + 공통 필수 필드 누락 → validate 우회 — fail-fast throw
-  if (!extensionDate || !extensionCause) {
-    throw new Error(
-      `[buildExtensionInfo] gbHasExtension=true이지만 필드 누락 — validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
-    );
-  }
-
-  // §114조의2① 85㎡ 게이트: newConstruction 시만 전달. 미입력(0) → 85㎡ 이하 처리로 가산세 미발동.
-  const extensionFloorArea85 =
-    extensionCause === "newConstruction"
-      ? parseDecimal(asset.gbExtensionFloorArea85) || undefined
-      : undefined;
-
-  // 공통 base 필드
-  const base = {
-    extensionDate,                               // string — route handler에서 toOptionalDate 변환 (⑭)
-    ...(extensionArea ? { extensionArea } : {}), // 선택 필드: 미입력 시 미전달
-    extensionAcquisitionCause: extensionCause,
-    acquisitionMode: mode,
-    ...(extensionFloorArea85 ? { extensionFloorArea85 } : {}),
-  };
-
-  if (mode === "estimated") {
-    const transferExtStdPrice = parseAmount(asset.gbTransferExtensionBuildingStdPrice);
-    const acqExtStdPrice = parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice);
-    if (!transferExtStdPrice || !acqExtStdPrice) {
-      throw new Error(
-        `[buildExtensionInfo] 환산 모드 stdPrice 누락 — validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
-      );
-    }
-    return {
-      ...base,
-      transferExtensionBuildingStdPrice: transferExtStdPrice,
-      acquisitionExtensionBuildingStdPrice: acqExtStdPrice,
-    };
-  }
-
-  // mode === "actual"
-  const actualAcq = parseAmount(asset.gbExtensionActualAcquisitionPrice);
-  if (!actualAcq) {
-    throw new Error(
-      `[buildExtensionInfo] 실가 모드 actualAcquisitionPrice 누락 — validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
-    );
-  }
-  return {
-    ...base,
-    actualAcquisitionPrice: actualAcq,
-    actualExpenses: parseAmount(asset.gbExtensionActualExpenses) || 0,
-  };
-}
-
-// ─── ④ 일반건물(토지+건물 일괄) API 변환 헬퍼 (소령 §176의2②, §163⑥, §166⑥) ───
-
-/**
- * AssetForm gb* 필드 → generalBuildingValuation 서브객체 변환.
- *
- * 환산취득가 모드: 취득시 기준시가 포함 — 엔진이 환산·개산공제 계산.
- * 실거래가/감정가 모드: 양도시 기준시가만 — route helper가 §166⑥ 비율로 실거래가 안분 + NBL 판정.
- *   → actualPriceMode: true 플래그로 route helper 분기.
- *
- * 자동 안분 fallback 금지 — 미입력은 validate에서 명확한 오류로 차단.
- */
-export function buildGeneralBuildingValuation(
-  asset: AssetForm,
-): object | undefined {
-  if (asset.assetKind !== "general_building") return undefined;
-
-  const transferLandPricePerSqm = parseAmount(asset.gbTransferLandPricePerSqm);
-  const transferBuildingStdPrice = parseAmount(asset.gbTransferBuildingValue);
-  const landArea = parseDecimal(asset.gbLandArea);
-  const buildingFootprintArea = parseDecimal(asset.gbBuildingFootprintArea);
-
-  // 양도시 기준시가·면적은 모드 무관 필수 (validate에서 사전 차단)
-  if (
-    !transferLandPricePerSqm ||
-    !transferBuildingStdPrice ||
-    !landArea ||
-    !buildingFootprintArea
-  ) return undefined;
-
-  const nblFields = {
-    zoneType: asset.gbZoneType || undefined,
-    isMetropolitan: asset.gbIsMetropolitan,
-    isUnregistered: asset.gbIsUnregistered,
-  };
-
-  // 풀세트 payload 필요 케이스 = 환산취득가 모드 OR 사례 33 일괄 모드 (실가+증축)
-  // 두 경우 모두 취득시 기준시가·extensionInfo·buildingAcquisitionCause 필요.
-  // 사례 33 일괄 모드는 extensionInfo.actualBundledAcquisitionPrice가 정의되어 엔진이 실가 분기.
-  if (asset.useEstimatedAcquisition || asset.gbHasExtension) {
-    // 취득시 기준시가 포함 (양 모드 공통 필요)
-    const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
-    const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
-    const buildingArea = parseDecimal(asset.gbBuildingArea) || parseDecimal(asset.gbBuildingFootprintArea);
-    if (!acquisitionLandPricePerSqm || !acquisitionBuildingStdPrice || !buildingArea) return undefined;
-    return {
-      transferLandPricePerSqm,
-      transferBuildingStdPrice,
-      acquisitionLandPricePerSqm,
-      acquisitionBuildingStdPrice,
-      landArea,
-      buildingArea,
-      buildingFootprintArea,
-      estimatedDeductionRate: 0.03, // §163⑥ 등기 자산 3% 고정
-      buildingAcquisitionDate: asset.gbBuildingAcquisitionDate || undefined,
-      // isSelfBuilt: gbBuildingAcquisitionCause에서 도출 (A안: gbIsSelfBuilt 필드 폐지)
-      isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
-      // buildingAcquisitionCause: 엔진 input 필드 (⑭ route handler 매핑 준비)
-      // 빈 문자열("")도 fallback해야 함 — ?? 는 nullish만 처리하므로 || 사용.
-      buildingAcquisitionCause: asset.gbBuildingAcquisitionCause || "purchase",
-      // #4-a: 토지 취득원인 + 상속·증여 보조 필드
-      // 토지의 acquisitionCause(자산-수준) → landAcquisitionCause(payload)로 전달
-      ...(asset.acquisitionCause && asset.acquisitionCause !== "newConstruction"
-        ? { landAcquisitionCause: asset.acquisitionCause }
-        : {}),
-      ...(asset.decedentAcquisitionDate
-        ? { decedentAcquisitionDate: asset.decedentAcquisitionDate }
-        : {}),
-      ...(asset.donorAcquisitionDate
-        ? { donorAcquisitionDate: asset.donorAcquisitionDate }
-        : {}),
-      // 사례 33: 증축 extensionInfo 서브객체 (gbHasExtension=false 시 undefined → 미포함)
-      extensionInfo: buildExtensionInfo(asset),
-      // 사례 33 증축 경로에서만 사용: 토지+건물1 일괄 취득가·필요경비 (extensionInfo.actualBundled* 주입용).
-      // 환산취득가 모드에서 body.acquisitionPrice=0이므로 여기서 명시 전달. route helper ⑭에서 주입.
-      ...(asset.gbHasExtension
-        ? {
-            bundledAcquisitionPrice: parseAmount(asset.fixedAcquisitionPrice),
-            // 일괄 취득 시 필요경비 — 전용 필드(gbBundledAcquisitionExpenses) 우선.
-            // legacy fallback: 미입력 시 transferExpense·directExpenses (이전 임시 매핑 호환).
-            bundledExpenses:
-              parseAmount(asset.gbBundledAcquisitionExpenses) ||
-              parseAmount(asset.transferExpense) ||
-              parseAmount(asset.directExpenses),
-          }
-        : {}),
-      ...nblFields,
-      // 사례 35: 주택→상가 용도변경 (자산 공통 — 환산 모드도 동일 LTHD 분기)
-      ...(asset.gbHouseToCommercialConversion
-        ? {
-            houseToCommercialConversion: true,
-            conversionDate: asset.gbConversionDate || undefined,
-            wasMultiHouseAtConversion: asset.gbWasMultiHouseAtConversion ?? false,
-          }
-        : {}),
-      // 사례 35 후속-1: §99-164-10 환산주택가격 (환산 모드만, useEstimatedAcquisition=true 분기)
-      ...(asset.gbHasFirstDisclosure
-        ? {
-            hasFirstDisclosure: true,
-            firstDisclosurePrice: parseAmount(asset.gbFirstDisclosurePrice) || undefined,
-            firstDisclosureLandStdPrice: parseAmount(asset.gbFirstDisclosureLandStdPrice) || undefined,
-            firstDisclosureBuildingStdPrice: parseAmount(asset.gbFirstDisclosureBuildingStdPrice) || undefined,
-          }
-        : {}),
-    };
-  }
-
-  // 실거래가/감정가 모드 — 양도시 기준시가만 (route helper에서 §166⑥ 비율 안분)
-  // buildingAcquisitionCause는 Zod schema에서 required이므로 minimal payload에도 포함.
-  // (§114조의2 신축 5년 이내 가산세 판정에 사용 — 실거래가 모드에서도 의미 있음)
-  // 부담부증여 §159①1호 산식용 — 취득시 기준시가 (입력 있을 때만 전달, optional).
-  const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
-  const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
-  return {
-    transferLandPricePerSqm,
-    transferBuildingStdPrice,
-    landArea,
-    buildingFootprintArea,
-    actualPriceMode: true,
-    buildingAcquisitionCause: asset.gbBuildingAcquisitionCause || "purchase",
-    isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
-    ...(acquisitionLandPricePerSqm ? { acquisitionLandPricePerSqm } : {}),
-    ...(acquisitionBuildingStdPrice ? { acquisitionBuildingStdPrice } : {}),
-    ...nblFields,
-    // 사례 35: 주택→상가 용도변경 — actual 모드도 동일 LTHD 분기
-    ...(asset.gbHouseToCommercialConversion
-      ? {
-          houseToCommercialConversion: true,
-          conversionDate: asset.gbConversionDate || undefined,
-          wasMultiHouseAtConversion: asset.gbWasMultiHouseAtConversion ?? false,
-        }
-      : {}),
-  };
-}
+// ─── ④ 일반건물(토지+건물 일괄) API 변환 — transfer-tax-api-gb.ts로 분리 (800줄 정책, 재export 호환) ───
+export { buildGeneralBuildingValuation } from "./transfer-tax-api-gb";
 
 export const isHousingLike = (kind: AssetForm["assetKind"]) =>
   kind === "housing" || kind === "right_to_move_in" || kind === "presale_right";
@@ -379,6 +290,46 @@ export function isFractionalOwnership(asset: AssetForm): boolean {
 }
 
 /**
+ * "진짜 지분 모드(같은 물건 분할 취득)" 판정 — 전 자산이 fractional(분자<분모)인 경우만 true.
+ * route.ts:423 `isFullFractionalBundle`(primary + 전 companion fractional)와 동일 기준.
+ * companion 모드(다른 물건 함께양도)에 우연히 부분소유(1/2) 자산이 섞인 경우(primary=100/100)는
+ * every=false로 배제 — 그 경우 각 자산 basic이 상이하므로 primary 병합을 하면 안 됨.
+ */
+export function isFullFractionalBundle(assets: AssetForm[]): boolean {
+  return (
+    assets.length > 1 &&
+    assets.every((a) =>
+      isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator),
+    )
+  );
+}
+
+/**
+ * 지분 모드 companion 자산에 primary의 기본정보(basic)를 병합한 새 자산 반환(순수 함수).
+ * 같은 물건을 지분(%)별로 나눈 것이므로 자산종류·면적·토지성격은 primary와 동일.
+ * UI에서 companion ① 기본정보를 숨기므로, API 변환·validate가 이 병합값을 사용한다.
+ *
+ * 병합 필드 = 같은 물건·같은 양도 사건이라 전 지분 공통인 값:
+ *  - 기본정보(①): assetKind·acquisitionArea·transferArea·areaScenario·landNature
+ *    (buildAssetPayload emit + validate basic 검사의 합집합. 소재지·좌표는 미emit·미검사 → 제외)
+ *  - 양도정보(②): transferType·transferCause (양도 형태 드라이버 — companion ② UI 숨김 대응.
+ *    지분 분할은 일반 양도만 지원하므로 부담부/수용 하위필드는 불요 — 비양립 조합은 validate 차단)
+ * 취득측(취득원인·취득일·취득가액·지분율·필요경비)은 지분별 상이 → 병합 안 함.
+ */
+export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
+  return {
+    ...a,
+    assetKind: primary.assetKind,
+    acquisitionArea: primary.acquisitionArea,
+    transferArea: primary.transferArea,
+    areaScenario: primary.areaScenario,
+    landNature: primary.landNature,
+    transferType: primary.transferType,
+    transferCause: primary.transferCause,
+  };
+}
+
+/**
  * ⑬ 1990.8.30. 이전 취득 토지 기준시가 환산 sub-object 빌드 (단건·다건 공용 단일 진실).
  *
  * 엔진 STEP 0.4(`transfer-tax.ts`)가 pre1990Land 존재 시 취득기준시가를 grade에서 재산출하고
@@ -415,10 +366,12 @@ export function buildPre1990LandPayload(
   };
 }
 
-/** 100% 기준 금액에 지분 비율을 적용 (정수 floor). */
-export function applyRatio(amount: number, ratio: number): number {
-  return Math.floor(amount * ratio);
-}
+/**
+ * 100% 기준 금액에 지분 비율을 적용 (정수 floor).
+ * 본체는 엔진 `tax-utils.ts` 단일 소스 — 엔진(개산공제 base)과 API 변환이 **같은 절사 규약**을
+ * 써야 사이드바 미리보기와 엔진 결과가 어긋나지 않는다(실측 0.49% 1원 차).
+ */
+export { applyRatio };
 
 /**
  * 자산별 effective transferExpense 계산 (B3 폼-수준 안분 로직).
@@ -460,6 +413,9 @@ export function buildAssetPayload(
   totalContractPrice?: number,
   totalTransferExpense?: number,
   primary?: AssetForm,
+  // 1세대1주택 여부는 세대 단위 — asset.isOneHousehold(기본 false·동기화 부재)가 아닌
+  // form.isOneHousehold(Step4 "1세대 해당" 토글)를 세대 단위 단일 소스로 전달받는다.
+  formIsOneHousehold?: boolean,
 ) {
   const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause, asset.expropriationNoticeDate);
 
@@ -482,10 +438,10 @@ export function buildAssetPayload(
   const fractional = ratio < 1.0;
 
   const inheritanceValuation =
-    asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "auto"
+    asset.acquisitionCause === "inheritance"
       ? {
           inheritanceDate: asset.inheritanceDate || asset.acquisitionDate,
-          assetKind: asset.inheritanceAssetKind,
+          assetKind: deriveEngineInheritanceAssetKind(asset),
           landAreaM2: effectiveLandArea,
           // 지분 모드: 100% 기준 입력값(공동주택가격 등)에 × ratio 적용
           publishedValueAtInheritance: fractional
@@ -497,7 +453,6 @@ export function buildAssetPayload(
   const fixedAcqRaw =
     (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
     (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
-    (asset.acquisitionCause === "inheritance" && asset.inheritanceValuationMode === "manual" && asset.fixedAcquisitionPrice) ||
     // 사례 28 — 신축(자가건축): fixedAcquisitionPrice = 신축비용(취득가액)
     (asset.acquisitionCause === "newConstruction" && asset.fixedAcquisitionPrice)
       ? parseAmount(asset.fixedAcquisitionPrice)
@@ -535,6 +490,37 @@ export function buildAssetPayload(
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
     assetKind: toEngineAssetKind(asset.assetKind),
+    // ④ 공익수용 §164⑨ 1호 특례 — **컴패니언 자산도 지원**(계획 Q5).
+    // `transferCause`는 §77 감면용으로 이미 위 스키마에 있으나, min[] 3후보 값은 여기서 실어야
+    // `buildCompanionEngineInputs`가 엔진 input에 매핑할 수 있다(⑫ 컴패니언 스키마 동반 필수).
+    //
+    // ⚠️ **적격 자산일 때만 전송**(UI 노출 조건과 동일 — `isExprValuationEligibleAssetKind`).
+    //    무게이트로 두면 안 되는 이유: `bundled-split-helpers.ts:190`이 컴패니언 propertyType을
+    //    `housing|building` 외 **전부 "land"로 뭉갠다**. 상가 컴패니언에 stale 보상값이 남아 있으면
+    //    **토지 의미로 특례가 잘못 발동**한다. 여기서 막으면 원천 차단된다.
+    ...(isExprValuationEligibleAssetKind(asset.assetKind)
+      ? {
+          standardPricePerSqmAtTransfer:
+            parseAmount(asset.standardPricePerSqmAtTransfer) || undefined,
+          transferArea: parseFloat(asset.transferArea) || undefined,
+          compensationPerSqm: parseAmount(asset.compensationPerSqm) || undefined,
+          compensationBasisStdPrice: parseAmount(asset.compensationBasisStdPrice) || undefined,
+        }
+      : {}),
+    // §164⑨2호 공매·경락 (P4) — 컴패니언도 지원(1호와 대칭). 적격 자산(land·building·housing)만 전송.
+    ...(isAuctionEligibleAssetKind(asset.assetKind)
+      ? {
+          isAuctionTransfer: asset.isAuctionTransfer || undefined,
+          auctionPrice: parseAmount(asset.auctionPrice) || undefined,
+        }
+      : {}),
+    // §164⑨1호 주택 총액 트랙 (P5) — 컴패니언 주택도 지원. 주택일 때만 전송.
+    ...(isHousingExprEligibleAssetKind(asset.assetKind)
+      ? {
+          housingCompensationTotal: parseAmount(asset.housingCompensationTotal) || undefined,
+          housingCompensationBasisTotal: parseAmount(asset.housingCompensationBasisTotal) || undefined,
+        }
+      : {}),
     standardPriceAtTransfer:
       parseAmount(asset.standardPriceAtTransfer) > 0
         ? parseAmount(asset.standardPriceAtTransfer)
@@ -543,6 +529,8 @@ export function buildAssetPayload(
       asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition && asset.standardPriceAtAcq
         ? parseAmount(asset.standardPriceAtAcq)
         : undefined,
+    // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.
+    ownershipRatio: fractional ? ratio : undefined,
     directExpenses: fractional
       ? applyRatio(parseAmount(asset.directExpenses), ratio)
       : parseAmount(asset.directExpenses),
@@ -561,7 +549,9 @@ export function buildAssetPayload(
     reductions,
     inheritanceValuation,
     fixedAcquisitionPrice,
-    isOneHousehold: asset.isOneHousehold,
+    // 세대 단위 — form.isOneHousehold(토글) 사용. asset.isOneHousehold는 UI 미동기화(기본 false)라
+    // companion 주택이 일괄양도에서 항상 1세대1주택 비과세 미적용되던 버그 정정.
+    isOneHousehold: formIsOneHousehold ?? asset.isOneHousehold,
     fixedSalePrice,
     /** 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정) */
     totalPropertyTransferPrice: fractional ? totalContractPrice : undefined,
@@ -574,6 +564,19 @@ export function buildAssetPayload(
     decedentAcquisitionDate:
       asset.acquisitionCause === "inheritance" && asset.decedentAcquisitionDate
         ? asset.decedentAcquisitionDate
+        : undefined,
+    // §154⑧3호 상속주택 자체 양도 보유기간 통산
+    decedentSameHouseholdBeforeInheritance:
+      asset.acquisitionCause === "inheritance"
+        ? asset.decedentSameHouseholdBeforeInheritance
+        : undefined,
+    decedentCohabitationHoldingStartDate:
+      asset.acquisitionCause === "inheritance" && asset.decedentCohabitationHoldingStartDate
+        ? asset.decedentCohabitationHoldingStartDate
+        : undefined,
+    decedentCohabitationResidenceMonths:
+      asset.acquisitionCause === "inheritance" && asset.decedentSameHouseholdBeforeInheritance
+        ? parseInt(asset.decedentCohabitationResidenceMonths) || 0
         : undefined,
     donorAcquisitionDate:
       asset.acquisitionCause === "gift" && asset.donorAcquisitionDate
@@ -627,17 +630,51 @@ export function buildAssetPayload(
 export { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
 
 /**
- * ⑬ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) 엔진 input 필드.
- * 엔진이 게이트(환산·수용·2009.02.04) 판정 — 여기선 원값만 전달.
+ * ⑬ 공익수용 양도당시 기준시가 차감 특례 (**소득세법 시행령 §164⑨ 1호**) 엔진 input 필드.
+ * 엔진이 게이트(환산·수용·2009.02.04) 판정 — 여기선 원값만 전달(변환 계층 — 게이트 아님).
  * 원/㎡=parseAmount(정수), 면적=parseFloat(소수 ㎡).
+ *
+ * 자산종류 게이트는 **UI·validate·엔진 3층 모두**에 있다(계획 Q4 — 3층 명시).
+ * 판정은 `lib/tax-engine/expropriation-scope.ts` **단일 소스** 위임 — 세 층이 같은 목록을 조회한다.
  */
 export function buildExpropriationInput(primary: AssetForm) {
   return {
     transferCause: primary.transferCause,
-    standardPricePerSqmAtTransfer: parseAmount(primary.standardPricePerSqmAtTransfer) || undefined,
-    transferArea: parseFloat(primary.transferArea) || undefined,
-    compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
-    compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+    // §164⑨1호 per-sqm(가~다목) — **per-sqm 적격 자산일 때만** 전송(`buildAssetPayload` 컴패니언과 대칭).
+    // ⚠️ 무게이트면 land→housing 전환 시 stale per-sqm 값이 주택 총액 트랙을 침묵 shadowing한다
+    //    (엔진도 housing 배제로 방어하나 여기서도 원천 차단 — 코드리뷰 2026-07-16).
+    ...(isExprValuationEligibleAssetKind(primary.assetKind)
+      ? {
+          standardPricePerSqmAtTransfer: parseAmount(primary.standardPricePerSqmAtTransfer) || undefined,
+          transferArea: parseFloat(primary.transferArea) || undefined,
+          compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
+          compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+        }
+      : {}),
+    // §164⑨2호 공매·경락 (P4) — **적격 자산(land·building)일 때만** 전송(UI 노출 조건과 동일).
+    // ⚠️ 무게이트면 assetKind를 land→housing으로 바꿔도 stale isAuctionTransfer가 남아
+    //    housing(2호는 면적 게이트가 없음)에 침묵 발동한다. 여기서 원천 차단(코드리뷰 2026-07-16).
+    ...(isAuctionEligibleAssetKind(primary.assetKind)
+      ? {
+          isAuctionTransfer: primary.isAuctionTransfer || undefined,
+          auctionPrice: parseAmount(primary.auctionPrice) || undefined,
+        }
+      : {}),
+    // §164⑨1호 주택 총액 트랙 (P5) — 주택일 때만 전송(엔진이 게이트).
+    ...(isHousingExprEligibleAssetKind(primary.assetKind)
+      ? {
+          housingCompensationTotal: parseAmount(primary.housingCompensationTotal) || undefined,
+          housingCompensationBasisTotal: parseAmount(primary.housingCompensationBasisTotal) || undefined,
+        }
+      : {}),
+    // §164⑨1호 건물 split 토지분 트랙 (P6/D6) — 건물 자산일 때만 전송(엔진이 split·수용·환산 게이트).
+    // 토지·건물 취득일 분리 양도 시 토지분 환산 분모만 낮춘다. 주택 split은 Q6 미지원(validate 차단).
+    ...(isSplitLandExprEligibleAssetKind(primary.assetKind)
+      ? {
+          splitLandCompensationTotal: parseAmount(primary.splitLandCompensationTotal) || undefined,
+          splitLandCompensationBasisTotal: parseAmount(primary.splitLandCompensationBasisTotal) || undefined,
+        }
+      : {}),
   };
 }
 

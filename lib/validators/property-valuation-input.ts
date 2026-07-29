@@ -94,7 +94,7 @@ import type { AssetCategory } from "@/lib/tax-engine/types/inheritance-gift.type
 import { getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 
 // ============================================================
-// 비과세 항목 스키마 — ExemptionCheckedItem[] 기반 (§11·§12·§46·§46의2)
+// 비과세 항목 스키마 — ExemptionCheckedItem[] 기반 (§11·§12·§46·§52의2)
 // ============================================================
 
 export const exemptionCheckedItemSchema = z.object({
@@ -357,6 +357,7 @@ export const inheritanceDeductionInputSchema = z.object({
   cohabitDirectAmount: z.number().nonnegative().optional(),
   spouseLegalShareOverride: z.number().nonnegative().optional(),
   legateeAmountNonHeir: z.number().nonnegative().optional(),
+  heirWaiverAmount: z.number().nonnegative().optional(), // §24 ②2호 선순위 상속포기→후순위 수령 (H-19)
   priorGiftDeductionTotal: z.number().nonnegative().optional(),
   disasterLossDeduction: z.number().nonnegative().optional(),
   // 영농상속공제 정밀화 (2026-05-21)

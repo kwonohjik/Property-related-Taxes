@@ -5,6 +5,7 @@
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { DeemedFormState } from "./shared";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
@@ -14,7 +15,7 @@ type Props = { form: DeemedFormState; set: SetFn };
 export function AcquisitionFundFields({ form, set }: Props) {
   const isDebt = form.afSubType === "debt_repayment";
   return (
-    <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
+    <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="af-subtype"
@@ -40,7 +41,7 @@ export function AcquisitionFundFields({ form, set }: Props) {
         onChange={(v) => set({ afProvenAmount: v })}
         placeholder="입증된 금액 (원)"
       />
-    </div>
+    </ToneCard>
   );
 }
 
@@ -48,7 +49,7 @@ export function AcquisitionFundFields({ form, set }: Props) {
 export function NomineeTrustFields({ form, set }: Props) {
   const isPerShare = form.ntValuationMode === "per_share";
   return (
-    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="nt-valuation-mode"
@@ -62,7 +63,7 @@ export function NomineeTrustFields({ form, set }: Props) {
         ]}
       />
       {isPerShare ? (
-        <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+        <ToneCard tone="emerald" bodyClassName="space-y-3" noDark>
           <p className="text-xs leading-relaxed text-emerald-800">
             유상증자 신주의 증여재산가액 = <b>명의개서일 현재 §60·§63 평가 1주당 가액 × 명의신탁 신주 수</b>.
             신주인수가액(발행가액)·이론적 권리락가가 아닌 증여일 평가액을 적용합니다 (희석효과 반영, 조심2012중3707·2019서2129).
@@ -123,7 +124,7 @@ export function NomineeTrustFields({ form, set }: Props) {
               aria-label="명의자 성명"
             />
           </div>
-        </div>
+        </ToneCard>
       ) : (
         <CurrencyInput
           label="명의신탁 재산 가액"
@@ -149,6 +150,6 @@ export function NomineeTrustFields({ form, set }: Props) {
         title="배제사유 해당 (§45의2①)"
         description="신탁재산 등기·비거주자 법정대리인 명의 등기 등"
       />
-    </div>
+    </ToneCard>
   );
 }

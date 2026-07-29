@@ -18,6 +18,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -80,13 +81,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-violet-700">등록·신분</p>
-        </div>
+      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
 
         <div>
           <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
@@ -97,7 +92,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           {/* 3개월 검증 배지 */}
           {regBadge && (
             <div
-              className={`mt-1 rounded px-2 py-1 text-[10px] font-medium ${
+              className={`mt-1 rounded px-2 py-1 text-micro font-medium ${
                 regBadge.ok
                   ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                   : "bg-amber-100 text-amber-800 border border-amber-200"
@@ -107,7 +102,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             </div>
           )}
           {!acquisitionDate && (
-            <p className="mt-1 text-[10px] text-muted-foreground">
+            <p className="mt-1 text-micro text-muted-foreground">
               ※ 3개월 검증 배지는 자산 카드의 취득일 입력 후 표시됩니다.
             </p>
           )}
@@ -126,16 +121,10 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           <label className="mb-1 block text-xs font-medium">임대개시일</label>
           <DateInput value={value.rentalStartDate} onChange={(v) => onChange({ rentalStartDate: v })} />
         </div>
-      </div>
+      </ToneCard>
 
       {/* ② 임대 개시 정보 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-violet-700">임대 개시 정보</p>
-        </div>
+      <ToneCard tone="violet" sectionNum="②" title="임대 개시 정보" noDark>
 
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시 당시 기준시가 (원)</label>
@@ -144,7 +133,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             value={value.officialPriceAtStart}
             onChange={(v) => onChange({ officialPriceAtStart: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 확인용
           </p>
         </div>
@@ -163,7 +152,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             ]}
           />
         </div>
-      </div>
+      </ToneCard>
 
       {/* ③④ 공통 필드 */}
       <RentalCommonFields

@@ -12,7 +12,6 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { MixedUseAreaInputs } from "./mixed-use/MixedUseAreaInputs";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
-import { MixedUseResidencyInput } from "./mixed-use/MixedUseResidencyInput";
 import { PartialUsageChangeInputs } from "./mixed-use/PartialUsageChangeInputs";
 
 interface Props {
@@ -91,27 +90,6 @@ export function MixedUseExpandedPanel({
 
   return (
     <div className="mt-4 border-t pt-4 space-y-3">
-      {/* 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 적용 여부 안내 */}
-      <div
-        className={`rounded-md px-3 py-2 text-xs border ${
-          asset.isOneHousehold
-            ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
-            : "bg-amber-50/60 border-amber-200 text-amber-900"
-        }`}
-      >
-        {asset.isOneHousehold ? (
-          <>
-            <span className="font-semibold">✓ 1세대 1주택 비과세 요건 충족</span>{" "}
-            — 주택분 양도가액 12억 이하 비과세, 거주 2년+ 시 표2 거주공제 (최대 80%) 적용 가능
-          </>
-        ) : (
-          <>
-            <span className="font-semibold">⚠ 1세대 1주택 비과세 미적용</span>{" "}
-            — 주택분 전액 과세, 표1 장기보유공제 (다주택자·2년 미거주 등). 자산 정보 영역의 1세대 1주택 토글을 확인하세요.
-          </>
-        )}
-      </div>
-
       {/* 2022.1.1 이전 경고 */}
       {!isAfter2022 && (
         <div className="px-3 py-2 rounded-lg bg-red-50 text-red-800 text-sm">
@@ -141,7 +119,8 @@ export function MixedUseExpandedPanel({
         <PartialUsageChangeInputs asset={asset} onChange={onChange} sectionNum="1-A" />
       )}
 
-      {/* ② 양도시 기준시가 / ③ 취득시 기준시가 */}
+      {/* ② 취득시 기준시가 / ③ 양도시 기준시가 (자산-우선 경로는 ② 주택 / ③ 상가).
+          번호 스왑은 MixedUseStandardPriceInputs의 legacy 분기에서 처리 — 여기 숫자는 고정. */}
       <MixedUseStandardPriceInputs
         asset={asset}
         onChange={onChange}
@@ -152,24 +131,7 @@ export function MixedUseExpandedPanel({
         jibun={jibun}
       />
 
-      {/* ④ 거주 기간 입력 */}
-      <MixedUseResidencyInput asset={asset} onChange={onChange} sectionNum={4} />
-
-      {/* ⑤ 수도권 여부 */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">5</span>
-          <p className="text-xs font-semibold text-rose-700">부수토지 배율 지역</p>
-          <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
-        </div>
-        <ToggleCard
-          tone="rose"
-          title="수도권 지역"
-          description="배율 3배·5배 구분 — 수도권 주·상·공: 3배 / 수도권 녹지·밖: 5배 / 도시 외: 10배 (시행령 §168의12)"
-          checked={!!asset.mixedIsMetropolitanArea}
-          onCheckedChange={(v) => onChange({ mixedIsMetropolitanArea: v })}
-        />
-      </div>
+      {/* 거주기간은 보유상황 단계(1세대1주택)에서 단일 입력 — 자산목록 거주 입력 제거(중복 제거) */}
     </div>
   );
 }

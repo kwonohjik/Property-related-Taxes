@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
-import { ChevronLeft } from "lucide-react";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -37,7 +37,7 @@ import {
 import { isInstallmentSplitEligible } from "@/lib/tax-engine/credits/installment-split";
 import { SplitPaymentCard } from "@/components/calc/results/installment/SplitPaymentCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { addMonths, format } from "date-fns";
+import { getGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
@@ -247,18 +247,8 @@ export function GiftTaxResultView({
     return s;
   }, [result, estateItems, priorGifts, transferTaxResults, transferTaxError, stockTransferTaxResults, simpleGiftResult, simultaneousResults]);
 
-  // 분납기한 (§70② — 증여 신고기한 §68① 증여일+3개월 + 2개월). giftDate 없으면 undefined.
-  const giftDueDates = useMemo(() => {
-    if (!giftDate) return undefined;
-    const base = new Date(giftDate);
-    if (isNaN(base.getTime())) return undefined;
-    const filing = addMonths(base, 3);
-    const installment = addMonths(filing, 2);
-    return {
-      filing: format(filing, "yyyy-MM-dd"),
-      installment: format(installment, "yyyy-MM-dd"),
-    };
-  }, [giftDate]);
+  // 신고기한 §68①(증여일 속하는 달의 말일 + 3개월) · 분납기한 §70②(+2개월). giftDate 없으면 undefined.
+  const giftDueDates = useMemo(() => getGiftFilingDueDates(giftDate), [giftDate]);
 
   return (
     <div className="space-y-5">
@@ -393,7 +383,7 @@ export function GiftTaxResultView({
               </tr>
             </tbody>
           </table>
-          <p className="text-[10px] text-sky-600 dark:text-sky-400">
+          <p className="text-micro text-sky-600 dark:text-sky-400">
             수증자 총 납부세액 합계 = 건 0 결정세액 + 건 1 결정세액 + … + 건 N 결정세액
           </p>
         </div>
@@ -423,7 +413,7 @@ export function GiftTaxResultView({
                   </span>
                   {pg.sourceCalculationId && (
                     <span
-                      className="inline-flex items-center gap-0.5 text-[10px] bg-violet-100 text-violet-800 rounded px-1.5 py-0.5"
+                      className="inline-flex items-center gap-0.5 text-micro bg-violet-100 text-violet-800 rounded px-1.5 py-0.5"
                       title="저장된 증여세 이력에서 자동 입력된 회차"
                     >
                       📋 이력
@@ -575,6 +565,8 @@ export function GiftTaxResultView({
               grossGiftValue={result.grossGiftValue}
               exemptAmount={result.exemptAmount}
               aggregatedGiftValue={result.aggregatedGiftValue}
+              debtAssumed={result.debtAssumed}
+              donorPaidTax={result.donorPaidTaxGrossUp?.donorPaidTax}
               publicInterestExclusion={result.publicInterestExclusion}
               publicTrustExclusion={result.publicTrustExclusion}
               disabledTrustExclusion={result.disabledTrustExclusion}
@@ -597,6 +589,8 @@ export function GiftTaxResultView({
               grossGiftValue={result.grossGiftValue}
               exemptAmount={result.exemptAmount}
               aggregatedGiftValue={result.aggregatedGiftValue}
+              debtAssumed={result.debtAssumed}
+              donorPaidTax={result.donorPaidTaxGrossUp?.donorPaidTax}
               publicInterestExclusion={result.publicInterestExclusion}
               publicTrustExclusion={result.publicTrustExclusion}
               disabledTrustExclusion={result.disabledTrustExclusion}
@@ -640,7 +634,10 @@ export function GiftTaxResultView({
 
       {/* 연부연납 안내 */}
       <PrintSection id="installment" selectedIds={selectedPrintIds}>
-        <InstallmentGuide finalTax={result.finalTax} />
+        <InstallmentGuide
+          finalTax={result.finalTax}
+          specialTreatmentSuccession={result.specialTreatmentType === "family_business"}
+        />
       </PrintSection>
 
       {/* 분납 일정 (§70②) — 증여는 연부연납 입력 없음 (applyLongTermInstallment 생략) */}
@@ -699,31 +696,18 @@ export function GiftTaxResultView({
       <DisclaimerBanner />
 
       {/* 버튼 */}
-      <div className="flex flex-wrap gap-3 print:hidden">
-        <button
-          type="button"
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <NavButton
+          direction="prev"
+          label="뒤로 가기"
           onClick={onBack}
-          className="flex items-center justify-center gap-1 rounded-md border border-border py-2.5 px-4 text-sm font-medium hover:bg-muted transition-colors"
           aria-label="바로 앞 단계로 돌아가기"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          뒤로 가기
-        </button>
-        <button
-          type="button"
-          onClick={onGoToFirst ?? onBack}
-          className="flex-1 min-w-[120px] rounded-md border border-border py-2.5 text-sm font-medium hover:bg-muted transition-colors"
-        >
-          다시 계산
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="flex-1 min-w-[120px] rounded-md bg-primary text-primary-foreground py-2.5 text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          처음으로
-        </button>
-        {onSave && <SaveButton variant="primary" onSave={handleSaveClick} />}
+        />
+        <div className="flex items-center gap-2">
+          <CtaButton tone="outline" onClick={onGoToFirst ?? onBack}>다시 계산</CtaButton>
+          <CtaButton onClick={onReset}>처음으로</CtaButton>
+          {onSave && <SaveButton variant="primary" onSave={handleSaveClick} />}
+        </div>
       </div>
     </div>
   );

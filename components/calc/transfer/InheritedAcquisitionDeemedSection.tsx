@@ -19,10 +19,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 // 1985-01-01 (UTC) — 소득세법 부칙(1985.1.1. 개정) 의제취득일
 const DEEMED_DATE_STR = "1985-01-01";
 
-const LAW_BADGE_CLASS =
-  "inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium " +
-  "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
-  "hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors shrink-0 whitespace-nowrap cursor-pointer";
+import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 
 function computeMode(
   dateStr: string,
@@ -54,12 +51,12 @@ export function InheritedAcquisitionDeemedSection({ asset, onChange, transferDat
         <div className="flex items-center gap-2 min-w-0">
           <p className="text-sm font-semibold shrink-0">취득가액 의제 특례 (소령 §176조의2④·§163⑨)</p>
           {mode === "pre-deemed" && (
-            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-caption font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
               의제취득일 이전
             </span>
           )}
           {mode === "post-deemed" && (
-            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 shrink-0">
+            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-caption font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 shrink-0">
               의제취득일 이후
             </span>
           )}
@@ -72,7 +69,7 @@ export function InheritedAcquisitionDeemedSection({ asset, onChange, transferDat
       </div>
 
       {/* 상속개시일 표시 (읽기 전용 — 위쪽 입력값 자동 반영) */}
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-caption text-muted-foreground">
         상속개시일 {effectiveDate} — 의제취득일(1985.1.1.) 기준{" "}
         {mode === "pre-deemed"
           ? "환산취득가 또는 피상속인 실가 × 물가상승률 적용"
@@ -84,7 +81,7 @@ export function InheritedAcquisitionDeemedSection({ asset, onChange, transferDat
         <PreDeemedInputs asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
       {mode === "post-deemed" && (
-        <PostDeemedInputs asset={asset} onChange={onChange} />
+        <PostDeemedInputs asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
     </div>
   );

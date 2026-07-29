@@ -6,11 +6,12 @@
  */
 
 import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
 import { formatIsoStamp } from "@/lib/utils/file-download";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
 import { calcInheritanceFilingDeadline } from "@/lib/tax-engine/deductions/family-business-autoderive";
+import { netTaxAfterCulturalDeferral } from "@/lib/tax-engine/inheritance-cultural-heritage-deferral";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { SummaryRow } from "./SummaryRow";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -240,7 +241,13 @@ export function InheritanceTaxResultView({
               />
               <SummaryRow
                 label="납부할세액 (징수유예 차감)"
-                value={formatKRW(result.finalTax - (result.culturalHeritageDeferredTax ?? 0))}
+                // H-51: 징수유예(산출세액 기준)가 결정세액 초과 시 음수 방지 — 별지9호 ㊳(b43)와 정합, 납부세액 0 하한
+                value={formatKRW(
+                  netTaxAfterCulturalDeferral(
+                    result.finalTax,
+                    result.culturalHeritageDeferredTax,
+                  ),
+                )}
                 highlight
               />
             </>
@@ -419,12 +426,12 @@ export function InheritanceTaxResultView({
           <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
             영농상속공제 사후관리 안내 (§18의3④ + §16⑦⑧)
           </p>
-          <p className="text-[11px] text-blue-700 dark:text-blue-300">
+          <p className="text-caption text-blue-700 dark:text-blue-300">
             상속개시일부터 5년 이내 영농상속재산을 처분하거나 영농 종사를 중단하면
             공제받은 금액 100%가 추징되고 이자상당액이 가산됩니다. 조세포탈·회계부정 형 확정 시 5년 무관 추징.
           </p>
           <a
-            href={`/calc/inheritance-postmgmt?originalDeduction=${result.deductionDetail.farmingDeduction}${deathDate ? `&deathDate=${deathDate}&filingDeadline=${calcInheritanceFilingDeadline(deathDate)}` : ""}`}
+            href={`/calc/inheritance-postmgmt?originalDeduction=${result.deductionDetail.farmingDeduction}&baseTaxable=${result.taxBase}${deathDate ? `&deathDate=${deathDate}&filingDeadline=${calcInheritanceFilingDeadline(deathDate)}` : ""}`}
             className="inline-block text-xs font-medium text-blue-700 dark:text-blue-300 underline hover:text-blue-900 dark:hover:text-blue-100"
           >
             → 사후관리 추징 시뮬레이터 진입
@@ -438,12 +445,12 @@ export function InheritanceTaxResultView({
           <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
             가업상속공제 사후관리 안내 (§18의2⑤ + §15⑮⑯)
           </p>
-          <p className="text-[11px] text-blue-700 dark:text-blue-300">
+          <p className="text-caption text-blue-700 dark:text-blue-300">
             상속개시일부터 5년 이내 가업용 자산 40% 이상 처분·가업 미종사·지분 감소·고용 미달(정규직&총급여 각 목 모두 90% 미달) 시
             공제받은 금액이 추징되고 이자상당액이 가산됩니다. 위반일 말일부터 6개월 이내 신고·납부 의무.
           </p>
           <a
-            href={`/calc/family-business-postmgmt?originalDeduction=${result.familyBusinessPostMgmtMeta.appliedDeduction}&deathDate=${result.familyBusinessPostMgmtMeta.deathDate}&filingDeadline=${result.familyBusinessPostMgmtMeta.filingDeadline}${result.familyBusinessPostMgmtMeta.ofzExemptionActive ? "&ofz=1" : ""}${result.familyBusinessPostMgmtMeta.usedDirectInput ? "&direct=1" : ""}`}
+            href={`/calc/family-business-postmgmt?originalDeduction=${result.familyBusinessPostMgmtMeta.appliedDeduction}&baseTaxable=${result.familyBusinessPostMgmtMeta.baseTaxableAmount}&deathDate=${result.familyBusinessPostMgmtMeta.deathDate}&filingDeadline=${result.familyBusinessPostMgmtMeta.filingDeadline}${result.familyBusinessPostMgmtMeta.ofzExemptionActive ? "&ofz=1" : ""}${result.familyBusinessPostMgmtMeta.usedDirectInput ? "&direct=1" : ""}`}
             className="inline-block text-xs font-medium text-blue-700 dark:text-blue-300 underline hover:text-blue-900 dark:hover:text-blue-100"
           >
             → 가업 사후관리 추징 시뮬레이터 진입
@@ -595,7 +602,7 @@ export function InheritanceTaxResultView({
           className="rounded-md border border-border bg-muted/30 px-3 py-2 print:hidden"
           data-testid="result-edit-steps"
         >
-          <p className="mb-1.5 text-[11px] text-muted-foreground">
+          <p className="mb-1.5 text-caption text-muted-foreground">
             입력 단계로 돌아가 수정
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -604,7 +611,7 @@ export function InheritanceTaxResultView({
                 key={label}
                 type="button"
                 onClick={() => onEditStep(i)}
-                className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
+                className="rounded-full border border-border bg-background px-2.5 py-1 text-caption font-medium hover:bg-muted transition-colors"
               >
                 {i + 1}. {label}
               </button>
@@ -613,32 +620,17 @@ export function InheritanceTaxResultView({
         </div>
       )}
 
-      {/* 버튼 — 입력 단계 네비게이션과 통일 (justify-between · 컴팩트 px/py) */}
+      {/* 버튼 — 입력 단계 네비게이션과 통일 (컴팩트 nav + 글자폭 CTA) */}
       <div className="flex items-center justify-between gap-2 print:hidden">
-        <button
-          type="button"
+        <NavButton
+          direction="prev"
+          label="뒤로 가기"
           onClick={onBack}
-          className="inline-flex items-center gap-1 rounded-md border border-border px-5 py-2 text-sm font-medium hover:bg-muted transition-colors"
           aria-label="바로 앞 단계로 돌아가기"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          뒤로 가기
-        </button>
+        />
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onGoToFirst ?? onBack}
-            className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2 text-sm font-medium hover:bg-muted transition-colors"
-          >
-            다시 계산
-          </button>
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            처음으로
-          </button>
+          <CtaButton tone="outline" onClick={onGoToFirst ?? onBack}>다시 계산</CtaButton>
+          <CtaButton onClick={onReset}>처음으로</CtaButton>
         </div>
       </div>
     </div>

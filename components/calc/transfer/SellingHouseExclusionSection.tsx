@@ -12,6 +12,7 @@
 
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 type SellingExclusion = NonNullable<TransferFormData["sellingHouseExclusion"]>;
@@ -28,9 +29,8 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2.5">
-      <p className="text-xs font-semibold text-amber-700">양도 주택 중과배제 특례 (3주택 이상 시)</p>
-      <p className="text-[11px] text-muted-foreground/80">
+    <ToneCard tone="amber" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (3주택 이상 시)" noDark>
+      <p className="text-caption text-muted-foreground/80">
         양도하는 주택 자체가 아래 사유에 해당하면 3주택 이상이어도 중과 배제됩니다 (소령 §167의10).
       </p>
 
@@ -53,13 +53,13 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
         description="종업원에게 10년 이상 무상 제공"
       >
         <div className="space-y-1 pt-1">
-          <label className="block text-[11px] text-muted-foreground font-medium">무상 제공 기간 (년)</label>
+          <label className="block text-caption text-muted-foreground font-medium">무상 제공 기간 (년)</label>
           <DecimalInput
             value={v.freeProvisionYears ?? ""}
             onChange={(s) => patch({ freeProvisionYears: s || undefined })}
             placeholder="무상 제공 기간"
           />
-          <p className="text-[11px] text-muted-foreground/70">10년 이상이어야 배제 적용</p>
+          <p className="text-caption text-muted-foreground/70">10년 이상이어야 배제 적용</p>
         </div>
       </ToggleCard>
 
@@ -91,15 +91,15 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
         description="5년 이상 어린이집으로 운영"
       >
         <div className="space-y-1 pt-1">
-          <label className="block text-[11px] text-muted-foreground font-medium">운영 기간 (년)</label>
+          <label className="block text-caption text-muted-foreground font-medium">운영 기간 (년)</label>
           <DecimalInput
             value={v.dayCareOperationYears ?? ""}
             onChange={(s) => patch({ dayCareOperationYears: s || undefined })}
             placeholder="운영 기간"
           />
-          <p className="text-[11px] text-muted-foreground/70">5년 이상이어야 배제 적용</p>
+          <p className="text-caption text-muted-foreground/70">5년 이상이어야 배제 적용</p>
         </div>
       </ToggleCard>
-    </div>
+    </ToneCard>
   );
 }

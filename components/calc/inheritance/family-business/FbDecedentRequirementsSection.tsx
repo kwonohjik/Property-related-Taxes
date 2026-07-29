@@ -122,7 +122,7 @@ export function FbDecedentRequirementsSection({
     <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-3">
       {/* 섹션 헤더 */}
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
           2
         </span>
         <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
@@ -143,13 +143,13 @@ export function FbDecedentRequirementsSection({
 
       {/* ── 가. 지분 요건 ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+        <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">
           가. 최대주주등 지분 {threshold}% × 10년 보유 (상증령 §15③1호 가)
         </p>
 
         {/* 지분율 입력 (% 입력 → store에 /100 소수로 저장) */}
         <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-amber-700 dark:text-amber-300">
+          <label className="block text-micro font-medium text-amber-700 dark:text-amber-300">
             지분율 (%, 특수관계인 합산)
           </label>
           <DecimalInput
@@ -168,7 +168,7 @@ export function FbDecedentRequirementsSection({
 
         {/* 보유시작일 */}
         <div className="space-y-1">
-          <label className="block text-[10px] font-medium text-amber-700 dark:text-amber-300">
+          <label className="block text-micro font-medium text-amber-700 dark:text-amber-300">
             지분 취득(보유 시작)일
           </label>
           <DateInput
@@ -178,7 +178,7 @@ export function FbDecedentRequirementsSection({
         </div>
 
         {/* "계속 보유" 경고 */}
-        <div className="rounded bg-amber-100/70 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-[10px] text-amber-800 dark:text-amber-200">
+        <div className="rounded bg-amber-100/70 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-micro text-amber-800 dark:text-amber-200">
           ⚠️ <strong>&quot;계속 보유&quot;</strong>(매도·재취득 없음) 여부는 자동 확인 불가 — 사실관계 직접 확인 후 수동 보정 필요 시 아래에서 보정하세요.
         </div>
 
@@ -201,28 +201,28 @@ export function FbDecedentRequirementsSection({
           </button>
           {openShare && (
             <div className="mt-1.5 space-y-1" data-testid="fb-override-decedent-share">
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-micro text-muted-foreground">
                 계속 보유 확인 후 수동 보정. undefined로 되돌리면 자동판정으로 복귀합니다.
               </p>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => onChange({ decedentMajorShareholdingMetOverride: true })}
-                  className={`px-2 py-1 text-[10px] rounded border ${fb.decedentMajorShareholdingMetOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
+                  className={`px-2 py-1 text-micro rounded border ${fb.decedentMajorShareholdingMetOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
                 >
                   충족 (수동)
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange({ decedentMajorShareholdingMetOverride: false })}
-                  className={`px-2 py-1 text-[10px] rounded border ${fb.decedentMajorShareholdingMetOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
+                  className={`px-2 py-1 text-micro rounded border ${fb.decedentMajorShareholdingMetOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
                 >
                   미충족 (수동)
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange({ decedentMajorShareholdingMetOverride: undefined })}
-                  className={`px-2 py-1 text-[10px] rounded border ${fb.decedentMajorShareholdingMetOverride === undefined ? "bg-amber-100 border-amber-400 text-amber-800" : "border-border bg-background"}`}
+                  className={`px-2 py-1 text-micro rounded border ${fb.decedentMajorShareholdingMetOverride === undefined ? "bg-amber-100 border-amber-400 text-amber-800" : "border-border bg-background"}`}
                 >
                   자동 복귀
                 </button>
@@ -234,19 +234,19 @@ export function FbDecedentRequirementsSection({
 
       {/* ── 나. 대표이사 종사 요건 ── */}
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+        <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">
           나. 대표이사 50% 이상 재임 또는 소급 10년 중 5년 이상 (상증령 §15③1호 나)
         </p>
 
         {/* 2호(승계) 안내 */}
-        <div className="rounded bg-amber-100/70 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-[10px] text-amber-800 dark:text-amber-200">
+        <div className="rounded bg-amber-100/70 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-micro text-amber-800 dark:text-amber-200">
           ⚠️ <strong>2호(10년 승계 계속재직)</strong>는 &quot;승계일&quot; 자동 확인 불가 — 자동은 1호(50%)·3호(소급 10년 중 5년)만. 2호 해당 시 아래 수동 보정을 사용하세요.
         </div>
 
         {/* 재직 구간 입력 (1건) */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="space-y-1">
-            <label className="block text-[10px] font-medium text-amber-700 dark:text-amber-300">
+            <label className="block text-micro font-medium text-amber-700 dark:text-amber-300">
               대표이사 취임일 (재직 시작)
             </label>
             <DateInput
@@ -255,7 +255,7 @@ export function FbDecedentRequirementsSection({
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-[10px] font-medium text-amber-700 dark:text-amber-300">
+            <label className="block text-micro font-medium text-amber-700 dark:text-amber-300">
               대표이사 퇴임일 (재직 종료, 미퇴임 시 상속개시일)
             </label>
             <DateInput
@@ -267,7 +267,7 @@ export function FbDecedentRequirementsSection({
 
         {/* 개업연월일 미입력 안내 */}
         {!fb.openingDate && (
-          <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1 text-[10px] text-amber-800 dark:text-amber-200">
+          <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1 text-micro text-amber-800 dark:text-amber-200">
             ℹ️ 섹션① 표시 정보의 <strong>개업연월일</strong>을 입력하면 영위기간 대비 재직 비율(1호)이 자동 계산됩니다.
           </div>
         )}
@@ -291,28 +291,28 @@ export function FbDecedentRequirementsSection({
           </button>
           {openCEO && (
             <div className="mt-1.5 space-y-1" data-testid="fb-override-decedent-ceo">
-              <p className="text-[10px] text-muted-foreground">
+              <p className="text-micro text-muted-foreground">
                 2호(10년 승계 계속재직) 해당 또는 자동과 다른 경우. undefined로 되돌리면 자동판정으로 복귀합니다.
               </p>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => onChange({ decedentCEORequirementMetOverride: true })}
-                  className={`px-2 py-1 text-[10px] rounded border ${fb.decedentCEORequirementMetOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
+                  className={`px-2 py-1 text-micro rounded border ${fb.decedentCEORequirementMetOverride === true ? "bg-emerald-100 border-emerald-400 text-emerald-800" : "border-border bg-background"}`}
                 >
                   충족 (수동)
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange({ decedentCEORequirementMetOverride: false })}
-                  className={`px-2 py-1 text-[10px] rounded border ${fb.decedentCEORequirementMetOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
+                  className={`px-2 py-1 text-micro rounded border ${fb.decedentCEORequirementMetOverride === false ? "bg-rose-100 border-rose-400 text-rose-800" : "border-border bg-background"}`}
                 >
                   미충족 (수동)
                 </button>
                 <button
                   type="button"
                   onClick={() => onChange({ decedentCEORequirementMetOverride: undefined })}
-                  className={`px-2 py-1 text-[10px] rounded border ${fb.decedentCEORequirementMetOverride === undefined ? "bg-amber-100 border-amber-400 text-amber-800" : "border-border bg-background"}`}
+                  className={`px-2 py-1 text-micro rounded border ${fb.decedentCEORequirementMetOverride === undefined ? "bg-amber-100 border-amber-400 text-amber-800" : "border-border bg-background"}`}
                 >
                   자동 복귀
                 </button>

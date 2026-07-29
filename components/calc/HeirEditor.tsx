@@ -146,7 +146,7 @@ export function RelationButton({ relation, onAdd, isCurrent }: RelationButtonPro
         {RELATION_LABELS[relation]}
       </span>
       {isCurrent && (
-        <span className="absolute -top-1.5 -right-1.5 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white">
+        <span className="absolute -top-1.5 -right-1.5 rounded-full bg-indigo-500 px-1.5 py-0.5 text-micro font-bold leading-none text-white">
           현재
         </span>
       )}
@@ -181,7 +181,7 @@ export function RelationPickerGrid({
         ))}
       </div>
       <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-[10px] font-medium text-violet-700 dark:text-violet-300 mb-1">
+        <p className="text-micro font-medium text-violet-700 dark:text-violet-300 mb-1">
           수유자(유증)·영리법인 — 상속인 외 (§19·§24 유증액 · §3의2② 부표 5)
         </p>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
@@ -306,7 +306,7 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
           className="rounded-lg border border-indigo-200 bg-indigo-50/50 dark:border-indigo-700 dark:bg-indigo-900/20 p-3 space-y-2"
           data-testid={`heir-relation-picker-${index}`}
         >
-          <p className="text-[11px] font-medium text-indigo-700 dark:text-indigo-300">
+          <p className="text-caption font-medium text-indigo-700 dark:text-indigo-300">
             변경할 관계를 선택하세요 — 관계에 맞지 않는 입력값(법인·자연인 전용)은 자동
             정리됩니다
           </p>
@@ -349,14 +349,14 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
           {hasDerivedBirthDate ? (
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+            <p className="text-caption text-emerald-600 dark:text-emerald-400">
               생년월일 <strong>{parsedRrn!.birthDate}</strong> ·{" "}
               {parsedRrn!.gender === "male" ? "남성" : "여성"} 자동 도출 (미성년·연로자·장애인
               공제 판정에 사용)
             </p>
           ) : (
             heir.residentNumber && (
-              <p className="text-[11px] text-amber-600 dark:text-amber-400">
+              <p className="text-caption text-amber-600 dark:text-amber-400">
                 생년월일을 도출할 수 없습니다. 앞 7자리를 확인하거나, 아래에서 생년월일을 직접
                 입력하세요.
               </p>
@@ -418,7 +418,7 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
           {/* 미성년 3-state override — 세대생략 ON + birthDate 입력 시만 표시 */}
           {heir.isGenerationSkipBeneficiary && heir.birthDate && autoIsMinor !== null && (
             <div className="ml-4 rounded-lg border border-rose-200 bg-rose-50/40 dark:border-rose-700 dark:bg-rose-900/20 p-3 space-y-2">
-              <p className="text-[11px] text-rose-700 dark:text-rose-300">
+              <p className="text-caption text-rose-700 dark:text-rose-300">
                 상속개시일 기준 미성년자 (자동 판정:{" "}
                 <strong>{autoIsMinor ? "예 (미성년)" : "아니오 (성년)"}</strong>)
                 {autoIsMinor && (
@@ -510,7 +510,7 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
             장애인 성별 (§20①4호 — 성별·연령별 기대여명 기준)
           </p>
           {parsedRrn ? (
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+            <p className="text-caption text-emerald-600 dark:text-emerald-400">
               주민등록번호에서 자동 도출:{" "}
               <strong>{parsedRrn.gender === "male" ? "남성" : "여성"}</strong>
             </p>
@@ -528,7 +528,7 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
                 ]}
               />
               {!heir.gender && (
-                <p className="text-[11px] text-violet-600 dark:text-violet-400">
+                <p className="text-caption text-violet-600 dark:text-violet-400">
                   성별을 선택해야 장애인공제 기대여명을 계산합니다.
                 </p>
               )}

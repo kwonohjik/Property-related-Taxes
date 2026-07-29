@@ -5,12 +5,15 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
-import { migrateLegacyForm } from "./calc-wizard-migration";
+import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
+import { calculateEstimatedAcquisitionPrice, computeEstimatedDeduction, applyRatio } from "@/lib/tax-engine/tax-utils";
+import { migrateLegacyForm, migrateGracePeriod } from "./calc-wizard-migration";
 import {
   makeDefaultAsset,
   migrateAsset,
 } from "./calc-wizard-asset";
 import type { AssetForm, HouseEntry, PresaleRightEntry, PriorReductionUsageItem, SpecialHouseExclusionFormItem } from "./calc-wizard-asset";
+import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 export type {
   NblBusinessUsePeriod,
@@ -90,11 +93,14 @@ export interface TransferFormData {
   residencePeriodMonths: string;
   isRegulatedArea: boolean;
   wasRegulatedAtAcquisition: boolean;
+  /** 조정대상지역 토글 수동 조작 여부 (UI 전용 — API 미전송). true면 자동판별 결과를 재반영하지 않음 */
+  isRegulatedAreaTouched: boolean;
+  wasRegulatedAtAcquisitionTouched: boolean;
   /** 양도 자산 법정동코드(10자리 — AddressSearch PNU 앞10). 제공 시 정밀 판정, 미제공 시 boolean fallback */
   regionCode?: string;
   isUnregistered: boolean;
   temporaryTwoHouseSpecial: boolean;
-  previousHouseAcquisitionDate: string;
+  // 종전주택 취득일은 별도 필드를 두지 않고 양도 자산(assets[0])의 acquisitionDate를 단일소스로 사용(§155① 종전주택 = 양도주택).
   newHouseAcquisitionDate: string;
   // §156의2⑤ 대체주택 비과세 특례 FLAT 필드 (API에서 replacementHouse nested로 조립)
   replacementHouseSpecial: boolean;
@@ -103,6 +109,10 @@ export interface TransferFormData {
   replResidenceMonths: string;        // 대체주택 거주개월수 (숫자 문자열)
   replWillResideNewHouse: boolean;    // 신축주택 1년 이상 거주 자기선언
   marriageDate: string;
+  /** §155④⑤ 합가·혼인 세대 내 먼저 양도 주택 여부 (비과세 판정 — 먼저 양도 요건) */
+  isFirstTransferredInMerge: boolean;
+  /** §155② 양도(일반)주택이 상속개시 2년내 피상속인 증여분 여부 (상속주택 특례 배제 게이트) */
+  generalHouseGiftedFromDecedentWithin2yr: boolean;
   parentalCareMergeDate: string;
   // §154① 단서 — 비과세 보유·거주 요건 면제 사유 (FLAT; API에서 oneHouseExemptionProviso로 조립)
   provisoReason:
@@ -120,7 +130,6 @@ export interface TransferFormData {
   houses: HouseEntry[];
   /** 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11) */
   presaleRights: PresaleRightEntry[];
-  sellingHouseRegion: "capital" | "non_capital";
   /**
    * 다주택 중과세 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9).
    * 폼-전역 단수 객체 — undefined면 유예 윈도우 blanket 판정, 객체면 정밀 조건 판정.
@@ -128,8 +137,19 @@ export interface TransferFormData {
    */
   gracePeriod?: {
     contractDate: string;
-    isLandPermitArea: boolean;
-    hasTenantInResidence: boolean;
+    /** 토지거래허가 대상 여부 — true=나목(허가신청·허가·계약금), false=다목(계약·계약금) */
+    isLandPermitTarget?: boolean;
+    /** 나목1) 토지거래허가 신청일 */
+    permitApplicationDate?: string;
+    /** 나목2) 허가 수령 여부 */
+    permitGranted?: boolean;
+    /** 나목3)·다목1) 계약금 수령 증빙 확인 */
+    depositReceiptConfirmed?: boolean;
+    /** @deprecated G3(조건C 근거 없음) — 판정 미사용, 하위호환만 */
+    isLandPermitArea?: boolean;
+    /** @deprecated G3 — 판정 미사용 */
+    hasTenantInResidence?: boolean;
+    /** @deprecated G6(regionCode 명단 판정 대체) — 판정 미사용 */
     areaDesignatedDate?: string;
   };
   /**
@@ -232,9 +252,10 @@ const defaultFormData: TransferFormData = {
   residencePeriodMonths: "0",
   isRegulatedArea: false,
   wasRegulatedAtAcquisition: false,
+  isRegulatedAreaTouched: false,
+  wasRegulatedAtAcquisitionTouched: false,
   isUnregistered: false,
   temporaryTwoHouseSpecial: false,
-  previousHouseAcquisitionDate: "",
   newHouseAcquisitionDate: "",
   replacementHouseSpecial: false,
   replBusinessApprovalDate: "",
@@ -242,6 +263,8 @@ const defaultFormData: TransferFormData = {
   replResidenceMonths: "",
   replWillResideNewHouse: false,
   marriageDate: "",
+  isFirstTransferredInMerge: false,
+  generalHouseGiftedFromDecedentWithin2yr: false,
   parentalCareMergeDate: "",
   provisoReason: "",
   provisoDepartureDate: "",
@@ -250,7 +273,6 @@ const defaultFormData: TransferFormData = {
   provisoPreContractNoHouse: false,
   houses: [],
   presaleRights: [],
-  sellingHouseRegion: "capital",
   annualBasicDeductionUsed: "0",
   priorReductionUsage: [],
   specialHouseExclusions: [],
@@ -289,7 +311,7 @@ export function createDefaultTransferFormData(): TransferFormData {
   };
 }
 
-interface CalcWizardState {
+export interface CalcWizardState {
   currentStep: number;
   formData: TransferFormData;
   result: TransferAPIResult | null;
@@ -337,6 +359,56 @@ export interface TransferSummary {
   };
 }
 
+/**
+ * persist rehydration 병합 — **구 스키마 판별은 `assets` 배열 유무로만** 한다.
+ *
+ * ## 왜 키 화이트리스트를 쓰면 안 되는가 (2026-07-28 정정, 원 보고 2026-07-14)
+ *
+ * 종전에는 `"acquisitionMethod" in form || "appraisalValue" in form || …` 9개 키 중 하나라도
+ * 있으면 구 스키마로 보고 `migrateLegacyForm`을 돌렸다. 그런데 그 키들 중 **4개
+ * (`acquisitionMethod`·`appraisalValue`·`isSelfBuilt`·`pre1990Enabled`)가 현행
+ * `defaultFormData`에 그대로 남아 있다** — 자산-수준 통합(2026-04-25) 후 deprecated로만 표시되고
+ * 필드 자체는 유지됐기 때문이다.
+ *
+ * 결과: **모든 신 스키마 폼이 구 스키마로 오분류**돼 새로고침(F5)마다 마이그레이션이 돌고
+ * 입력한 자산이 전부 소실됐다. 실측(현행 master):
+ *
+ *     자산 2개(상가 3억 + 토지 2억) → **1개(빈 주택)** · contractTotalPrice 10억 → ""
+ *
+ * sessionStorage raw JSON은 정상 보존돼 있었다 — 순수 rehydration 결함이다.
+ * 완료된 계산은 IndexedDB 이력에 별도 저장되므로 영향 범위는 **진행 중 마법사 폼**이다.
+ *
+ * → 판별을 **구조 기반**(`!Array.isArray(assets)`)으로 바꾼다. 신 스키마는 정의상 항상 `assets`
+ *   배열을 갖고 구 스키마는 갖지 않으므로, deprecated 필드가 남아 있든 말든 영향받지 않는다.
+ *   키 목록을 늘리는 방식으로 되돌리지 말 것 — 스키마가 바뀔 때마다 같은 결함이 재발한다.
+ *
+ * export하는 이유는 **테스트 가능성**이다(인라인 클로저는 단위 검증이 불가능했다).
+ */
+export function mergePersistedWizard(
+  persisted: unknown,
+  current: CalcWizardState,
+): CalcWizardState {
+  const ps = persisted as Partial<CalcWizardState>;
+  const legacyForm = ps.formData as Record<string, unknown> | undefined;
+
+  let formData: TransferFormData;
+  if (legacyForm && !Array.isArray(legacyForm.assets)) {
+    formData = migrateLegacyForm(legacyForm, defaultFormData);
+  } else {
+    formData = {
+      ...defaultFormData,
+      ...(ps.formData ?? {}),
+      assets: ((ps.formData as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
+    };
+  }
+
+  // gracePeriod 구 필드(isLandPermitArea) → 신규 isLandPermitTarget 의미 승계 이전
+  formData = { ...formData, gracePeriod: migrateGracePeriod(formData.gracePeriod) };
+
+  // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 잔존값을 무시.
+  return { ...current, ...ps, formData, currentStep: 0 };
+}
+
 export const useCalcWizardStore = create<CalcWizardState>()(
   persist(
     (set) => ({
@@ -371,37 +443,7 @@ export const useCalcWizardStore = create<CalcWizardState>()(
         formData: state.formData,
         pendingMigration: state.pendingMigration,
       }),
-      merge: (persisted, current) => {
-        const ps = persisted as Partial<CalcWizardState>;
-        const legacyForm = ps.formData as Record<string, unknown> | undefined;
-
-        let formData: TransferFormData;
-        if (
-          legacyForm &&
-          (
-            "propertyType" in legacyForm ||
-            "companionAssets" in legacyForm ||
-            "propertyAddressRoad" in legacyForm ||
-            "reductionType" in legacyForm ||
-            "parcelMode" in legacyForm ||
-            "acquisitionMethod" in legacyForm ||
-            "appraisalValue" in legacyForm ||
-            "isSelfBuilt" in legacyForm ||
-            "pre1990Enabled" in legacyForm
-          )
-        ) {
-          formData = migrateLegacyForm(legacyForm, defaultFormData);
-        } else {
-          formData = {
-            ...defaultFormData,
-            ...(ps.formData ?? {}),
-            assets: ((ps.formData as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
-          };
-        }
-
-        // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 currentStep(잔존값)을 무시.
-        return { ...current, ...ps, formData, currentStep: 0 };
-      },
+      merge: mergePersistedWizard,
     },
   ),
 );
@@ -429,9 +471,23 @@ export function computeTransferSummary(
   // 취득가액 합계: 지분 모드 자산은 100% 기준 입력 × ratio 적용으로 합산
   // salesCase 모드는 similarSalesValue를 취득가액으로 사용
   const totalAcqPrice = formData.assets.reduce((acc, a) => {
-    const raw = a.isSalesCaseAcquisition
+    // 별개 취득(토지·건물 취득시기 상이): 자산 전체 취득가액 입력이 UI에서 숨겨지므로
+    // 파트 합계로 대체한다. 미확정 파트(환산·미입력)가 있으면 0 — 부분합을 합계로
+    // 표시하면 총액으로 오독된다(feedback_engine_result_display_drift).
+    const sep = isSeparateAcquisition(a) ? separateAcqPartsSum(a) : null;
+    const raw = sep
+      ? (sep.pending ? 0 : sep.sum)
+      : a.isSalesCaseAcquisition
       ? parseRaw(a.similarSalesValue)
-      : parseRaw(a.fixedAcquisitionPrice);
+      : a.useEstimatedAcquisition
+        ? // 환산취득가 = 양도가액 × (취득기준시가 ÷ 양도기준시가) — 엔진 단일소스(BigInt 가드).
+          // std 2값 + 양도가 입력되면 result 이전에도 즉시 산출.
+          calculateEstimatedAcquisitionPrice(
+            parseRaw(a.actualSalePrice),
+            parseRaw(a.standardPriceAtAcq),
+            parseRaw(a.standardPriceAtTransfer),
+          )
+        : parseRaw(a.fixedAcquisitionPrice);
     const n = parseFloat(a.ownershipNumerator || "100");
     const d = parseFloat(a.ownershipDenominator || "100");
     const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
@@ -439,14 +495,41 @@ export function computeTransferSummary(
   }, 0);
   // 필요경비 합계: 지분 모드 자산은 capex/transferExpense × ratio
   const totalNecessaryExpense = formData.assets.reduce((acc, a) => {
-    const capExp = parseRaw(a.capitalExpenditure);
-    const trExp = parseRaw(a.transferExpense);
-    const splitTotal = capExp + trExp;
-    const baseExp = splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses);
     const n = parseFloat(a.ownershipNumerator || "100");
     const d = parseFloat(a.ownershipDenominator || "100");
     const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
-    return acc + (fractional ? Math.floor(baseExp * (n / d)) : baseExp);
+    const ratio = fractional ? n / d : 1;
+
+    let baseExp: number;
+    if (a.useEstimatedAcquisition || a.isAppraisalAcquisition) {
+      // 환산·감정 모드: 실경비(capex/양도비) 대신 개산공제(§163⑥ = 취득 당시 기준시가 × 3%,
+      // 미등기 0.3%)를 즉시 산출 — result 도착 전에도 표시 가능.
+      //
+      // ⚠️ 산출을 **엔진 헬퍼에 위임**한다. 지분 모드에서 절사 순서가 갈리면
+      //    사이드바 미리보기와 엔진 결과가 1원 어긋난다(실측 0.96%). 종전 이 자리는
+      //    `floor(std × rate)` 후 아래에서 `floor(× 지분)`으로 **율을 먼저** 적용했으나,
+      //    엔진 정본은 순서 A(`floor(floor(std × 지분) × rate)`)다.
+      //    → 여기서 지분까지 적용하고 하단 공통 지분 적용은 건너뛴다.
+      const rate = formData.isUnregistered ? 0.003 : 0.03;
+      return acc + computeEstimatedDeduction(parseRaw(a.standardPriceAtAcq), rate, ratio);
+    } else if (a.assetKind === "housing" && a.isMixedUseHouse) {
+      // 겸용주택은 공통 capex/transferExpense를 엔진이 소비하지 않음 —
+      // 주택/상가 섹션별 실제 필요경비(상속·증여·매매실가 중 활성 1세트만 채워짐)를 합산.
+      baseExp =
+        parseRaw(a.mixedHousingInheritedExpense) +
+        parseRaw(a.mixedCommercialInheritedExpense) +
+        parseRaw(a.mixedHousingGiftExpense) +
+        parseRaw(a.mixedCommercialGiftExpense) +
+        parseRaw(a.mixedHousingActualExpense) +
+        parseRaw(a.mixedCommercialActualExpense);
+    } else {
+      const capExp = parseRaw(a.capitalExpenditure);
+      const trExp = parseRaw(a.transferExpense);
+      const splitTotal = capExp + trExp;
+      baseExp = splitTotal > 0 ? splitTotal : parseRaw(a.directExpenses);
+    }
+    // 실경비(자본적지출·양도비)는 금액 자체가 지분분이므로 단순 스케일 — 순서 문제 없음.
+    return acc + (fractional ? applyRatio(baseExp, ratio) : baseExp);
   }, 0);
   const estimatedTax =
     result?.mode === "single"
@@ -462,15 +545,34 @@ export function computeTransferSummary(
     const residentialFloor = parseFloat(primary.residentialFloorArea || "0") || 0;
     const commercialFloor = parseFloat(primary.nonResidentialFloorArea || "0") || 0;
     const totalLand = parseFloat(primary.mixedUseTotalLandArea || "0") || 0;
-    const totalFloor = residentialFloor + commercialFloor;
-    const housingRatioByArea = totalFloor > 0 ? residentialFloor / totalFloor : 0;
-    // 소수점 2자리 반올림 — 화면 표시와 계산값 일치
-    const residentialLandArea = parseFloat((totalLand * housingRatioByArea).toFixed(2));
-    const commercialLandArea = parseFloat((totalLand - residentialLandArea).toFixed(2));
+    // 부수토지·정착면적 안분 — leaf 헬퍼 단일 소스 + override 반영 (three-state 문자열 분기)
+    const overrideStr = primary.mixedResidentialLandAreaOverride ?? "";
+    const commOverrideStr = primary.mixedCommercialLandAreaOverride ?? "";
+    const fpOverrideStr = primary.mixedResidentialFootprintOverride ?? "";
+    // 부수토지 override는 PHD 무관(2026-07-15 배타 해제 — API·UI·validate 동일)
+    const mixedDerived = computeDerivedAreas({
+      residentialFloorArea: residentialFloor,
+      nonResidentialFloorArea: commercialFloor,
+      buildingFootprintArea: parseFloat(primary.buildingFootprintArea || "0") || 0,
+      totalLandArea: totalLand,
+      ...(overrideStr.trim() !== ""
+        ? { residentialLandAreaOverride: parseFloat(overrideStr) || 0 }
+        : {}),
+      ...(commOverrideStr.trim() !== ""
+        ? { commercialLandAreaOverride: parseFloat(commOverrideStr) || 0 }
+        : {}),
+      ...(fpOverrideStr.trim() !== ""
+        ? { residentialFootprintOverride: parseFloat(fpOverrideStr) || 0 }
+        : {}),
+    });
+    const housingRatioByArea = mixedDerived.residentialRatio;
+    const commercialLandArea = mixedDerived.commercialLandArea;
 
     // 양도가액 안분: 기준시가 합계 비율
     const housingStdPrice = parseRaw(primary.mixedTransferHousingPrice);
-    const transferLandPerSqm = parseRaw(primary.mixedTransferLandPricePerSqm);
+    // PHD ③ 양도시 공시지가 fallback — UI 표시·API 변환과 동일 우선순위(동일 필지 = 단가 공유)
+    const transferLandPerSqm =
+      parseRaw(primary.mixedTransferLandPricePerSqm) || parseRaw(primary.phdLandPricePerSqmAtTransfer);
     const transferCommercialBuilding = parseRaw(primary.mixedTransferCommercialBuildingPrice);
     const commercialStdPrice =
       Math.floor(transferLandPerSqm * commercialLandArea) + transferCommercialBuilding;
@@ -487,7 +589,7 @@ export function computeTransferSummary(
 
     mixedUse = {
       housingRatio: housingRatioByArea,
-      residentialLandArea,
+      residentialLandArea: mixedDerived.residentialLandArea,
       commercialLandArea,
       housingTransferPrice,
       commercialTransferPrice,
@@ -537,11 +639,25 @@ export function computeTransferSummary(
     };
   }
 
+  // result 도착 후 권위값 override — 단건 모드는 엔진이 실제 차감한 필요경비(result.expenses =
+  // expensesApplied)로 확정. 환산 본문은 expenses=개산공제, swap은 expenses=자본·양도비(개산공제는 미차감
+  // echo), 실지는 expenses=실경비. estimatedDeduction과 합산 금지(본문 모드 이중계산 — 실측 확인).
+  const resultNecessaryExpense =
+    result?.mode === "single" ? (result.result.expenses ?? 0) : null;
+  const finalNecessaryExpense = resultNecessaryExpense ?? totalNecessaryExpense;
+
+  // 취득가액도 단건 result 도착 시 엔진 확정값으로 override. estimatedBase = 환산취득가 base(개산공제 제외,
+  // 환산/감정/매매사례 모드에서만 설정) — 실지취득 모드는 undefined라 입력 기반 totalAcqPrice 유지.
+  const finalAcqPrice =
+    result?.mode === "single" && result.result.estimatedBase != null
+      ? result.result.estimatedBase
+      : totalAcqPrice;
+
   return {
     totalSalePrice,
-    totalAcqPrice,
-    totalNecessaryExpense,
-    netTransferIncome: totalSalePrice - totalAcqPrice - totalNecessaryExpense,
+    totalAcqPrice: finalAcqPrice,
+    totalNecessaryExpense: finalNecessaryExpense,
+    netTransferIncome: totalSalePrice - finalAcqPrice - finalNecessaryExpense,
     estimatedTax,
     mixedUse,
     burdenedGift,

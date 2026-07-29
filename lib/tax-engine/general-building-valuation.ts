@@ -15,7 +15,7 @@
  * BigInt 원칙: 분자 ≈ 2.15×10¹⁷ 초과 시 safeMultiplyThenDivide() 자동 fallback.
  */
 
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
@@ -24,6 +24,8 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
 import { applyConvertedHousingPriceOverride } from "./general-building-converted-housing";
+import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
+import { calculateConvertedAcquisition } from "./general-building-converted-acquisition";
 
 // ============================================================
 // 개산공제율 상수 (시행령 §163 ⑥)
@@ -75,6 +77,20 @@ export type GeneralBuildingInput = {
   transferLandPricePerSqm: number;
   /** 양도시 건물기준시가 총액 (원) */
   transferBuildingStdPrice: number;
+
+  // ── §164⑨ 1호 공익수용 특례 (토지 전용 — 계획 D16-GB) ──
+  // 법령 조사 결론(2026-07-16): GB에서 §164⑨은 **토지분(가목)에만** 적용한다.
+  //   - 시행규칙 §80⑧: "보상액 산정 기초 기준시가 = 보상금 산정 당시 해당 **토지**의 개별공시지가" →
+  //     건물분(나목)은 "보상 기초 기준시가" 정의 자체가 없어 대상에서 제외(보수적).
+  //   - 국세청 해석 2건(서면-2016-부동산-4026·사전-2018-법령해석재산-0057)도 전부 토지 사안.
+  //   - 효과: **토지 환산 분모(§176의2②)만** min[]로 낮춘다. **안분(§166⑥)은 원 개별공시지가 유지** —
+  //     안분에 낮춘 값을 넣으면 토지 상대가치 인위적 하락 → 양도가가 건물로 과다 배분(입법의도 밖).
+  /** 양도원인 — "public_expropriation" 시에만 §164⑨ 게이트 진입. */
+  transferCause?: "general" | "public_expropriation";
+  /** 토지 보상가액 (원/㎡) — §164⑨ 1호 후보. */
+  compensationPerSqm?: number;
+  /** 토지 보상산정 기초 개별공시지가 (원/㎡) — §164⑨ 1호 후보(시행규칙 §80⑧). */
+  compensationBasisStdPrice?: number;
 
   // 취득시점 기준시가 (환산 분자)
   /** 취득시 개별공시지가 (원/㎡) */
@@ -237,6 +253,24 @@ export type GeneralBuildingInput = {
   firstDisclosureLandStdPrice?: number;
   /** 최초공시 당시 건물 기준시가 총액 (원). hasFirstDisclosure=true 시 필수. */
   firstDisclosureBuildingStdPrice?: number;
+  // ── §97②2호 단서 swap (환산 전용, 자산-총액 단위) ──
+  /**
+   * 자본적지출 (원, 자산 총액 — §97① 가목). §97②2호 단서 swap 판정용.
+   * 나목(자본적지출+양도비) > 가목(환산취득가+개산공제 합) 시 나목을 필요경비로 적용.
+   */
+  capitalExpenditure?: number;
+  /** 양도비 (원, 자산 총액 — §97① 나목). swap 판정용. */
+  transferExpense?: number;
+  /**
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
+   * 그대로 내려준다(서브엔진 재판정 금지).
+   *
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
+   */
+  ownershipRatio?: number;
 };
 
 /** 양도가 안분 결과 */
@@ -261,6 +295,20 @@ export type GeneralBuildingEstimatedDeduction = {
   land: number;
   /** 건물 개산공제 (원) */
   building: number;
+  /**
+   * 개산공제 base로 **실제 사용된 값** = `floor(취득시 기준시가 × 지분율)`.
+   * 표시 산식 「… × 3%」가 표시된 개산공제를 그대로 만들어내게 하는 echo다 — 100% 기준시가를
+   * 노출하면 지분 자산에서 산식이 자기 값을 못 만든다(`feedback_engine_result_display_drift`).
+   * 단독소유면 기준시가와 같다.
+   */
+  landBase?: number;
+  /**
+   * 개산공제 base로 **실제 사용된 값** = `floor(취득시 기준시가 × 지분율)`.
+   * 표시 산식 「… × 3%」가 표시된 개산공제를 그대로 만들어내게 하는 echo다 — 100% 기준시가를
+   * 노출하면 지분 자산에서 산식이 자기 값을 못 만든다(`feedback_engine_result_display_drift`).
+   * 단독소유면 기준시가와 같다.
+   */
+  buildingBase?: number;
 };
 
 /**
@@ -413,6 +461,17 @@ export type GeneralBuildingOutput = {
   bundledActualAcquisitionPrice?: number;
   /** 일괄 실가 양도비(자본적지출+양도비) (원) — 실가 모드에서만 채움. */
   bundledActualExpenses?: number;
+
+  /**
+   * §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 계획 D16-GB).
+   * 게이트(수용·환산·2009.02.04·보상 후보) 미충족 시 undefined. 결과 카드·anchor 표시용.
+   */
+  expropriationValuationDetail?: ExpropriationValuationDetail;
+
+  /** §163⑨ 상속 취득가액 직접 산정 여부 — 토지분(결과 카드 라벨 분기용, Phase 1 = C1). */
+  acquisitionByInheritance?: boolean;
+  /** §163⑨ 상속 취득가액 직접 산정 여부 — 건물분. */
+  buildingAcquisitionByInheritance?: boolean;
 };
 
 // ============================================================
@@ -452,48 +511,6 @@ function allocateBundledTransferPrice(
 }
 
 /**
- * Step 2: 환산취득가 (소득세법 시행령 §176조의2 ②)
- *
- * 자산별로 취득시/양도시 기준시가 비율을 이용해 환산취득가를 산정한다.
- *
- * 토지 산식:
- *   acqLandStdTotal = INT(취득시 공시지가(원/㎡) × 면적)
- *   landAcq = INT(토지양도가 × acqLandStdTotal / landStdTotal)
- *
- * 건물 산식:
- *   buildingAcq = INT(건물양도가 × 취득시 건물기준시가 / 양도시 건물기준시가)
- *
- * ⚠️ BigInt 필수: 토지 분자 ≈ 904,725,192 × 238,000,000 ≈ 2.15×10¹⁷ > MAX_SAFE_INTEGER
- */
-function calculateConvertedAcquisition(
-  input: GeneralBuildingInput,
-  allocation: GeneralBuildingAllocation,
-): GeneralBuildingAcquisition {
-  const landStdTotal = Math.floor(
-    input.transferLandPricePerSqm * input.landArea,
-  );
-  const acqLandStdTotal = Math.floor(
-    input.acquisitionLandPricePerSqm * input.landArea,
-  );
-
-  // 토지 환산취득가 — BigInt fallback 자동 적용 (분자 ≈ 2.15×10¹⁷)
-  const landAcq = Math.floor(
-    safeMultiplyThenDivide(allocation.land, acqLandStdTotal, landStdTotal),
-  );
-
-  // 건물 환산취득가 — 분자 ≈ 2.0×10¹⁴ (MAX_SAFE_INTEGER 이내지만 safeMultiplyThenDivide로 통일)
-  const buildingAcq = Math.floor(
-    safeMultiplyThenDivide(
-      allocation.building,
-      input.acquisitionBuildingStdPrice,
-      input.transferBuildingStdPrice,
-    ),
-  );
-
-  return { land: landAcq, building: buildingAcq };
-}
-
-/**
  * Step 3: 개산공제 (소득세법 §97 ② 2호 + 시행령 §163 ⑥)
  *
  * 취득시 기준시가에 개산공제율을 곱해 필요경비를 산정한다.
@@ -511,10 +528,24 @@ function calculateEstimatedDeduction(
     input.acquisitionLandPricePerSqm * input.landArea,
   );
 
-  const landDed = Math.floor(acqLandStdTotal * rate);
-  const buildingDed = Math.floor(input.acquisitionBuildingStdPrice * rate);
+  // 공유지분 축소(§163⑥ base) — 성분별 독립 적용. 토지는 §99①1호 가목(개별공시지가),
+  // 건물은 나목(국세청장 산정)으로 **별도 공시**라 결합 총액 개념이 없다.
+  const landDed = computeEstimatedDeduction(acqLandStdTotal, rate, input.ownershipRatio);
+  const buildingDed = computeEstimatedDeduction(
+    input.acquisitionBuildingStdPrice,
+    rate,
+    input.ownershipRatio,
+  );
 
-  return { land: landDed, building: buildingDed };
+  return {
+    land: landDed,
+    building: buildingDed,
+    landBase: computeLumpSumDeductionBase(acqLandStdTotal, input.ownershipRatio),
+    buildingBase: computeLumpSumDeductionBase(
+      input.acquisitionBuildingStdPrice,
+      input.ownershipRatio,
+    ),
+  };
 }
 
 // ============================================================
@@ -563,9 +594,12 @@ export function buildGeneralBuildingAssetCards(
   // 법령 참조: TRANSFER.GENERAL_BUILDING_APPORTIONMENT
   const allocation = allocateBundledTransferPrice(input);
 
-  // Step 2: 환산취득가 (§176의2②)
+  // Step 2: 환산취득가 (§176의2②) — 토지 분모만 §164⑨ 공익수용 특례 override(토지 전용, D16-GB).
   // 법령 참조: TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ
-  const acquisition = calculateConvertedAcquisition(input, allocation);
+  const { acquisition, expropriationValuationDetail } = calculateConvertedAcquisition(
+    input,
+    allocation,
+  );
 
   // Step 3: 개산공제 (§163⑥)
   // 법령 참조: TRANSFER.GENERAL_BUILDING_LUMP_DEDUCTION
@@ -620,7 +654,34 @@ export function buildGeneralBuildingAssetCards(
   // 초과분이 있으면 토지를 사업용·비사업용 2장으로 분할 (§104의3 초과분만 중과)
   const assetCards: AssetCardForAggregate[] = [];
 
-  if (!isWithinNblRatio && nonBusinessRatio > 0) {
+  if (!isWithinNblRatio && nonBusinessRatio >= 1) {
+    // 전체 비사업용 (1장) — 인정면적 0이라 사업용분이 존재하지 않는다.
+    //
+    // 2026-07-29 정정(#591 감사 R7 — 표시 전용, 세액 불변): 종전에는 이 경우에도 분할 분기로
+    // 들어가 **전액 0원짜리 "토지-사업용(1001)" 유령 카드**가 생성됐다. 무허가건축물
+    // (`isUnregistered` → `allowedLandArea = 0`)이 대표 케이스다.
+    // 근거: 지방세법 시행령 §101①단서 + 소득세법 §104의3①4호나목 — 무허가건축물 부속토지는
+    // **전체 비사업용**으로 사업용분이 없다. 0원 카드는 양도차익 기여가 0이라 세액은 같지만,
+    // 결과 화면에 존재하지 않는 자산이 한 장 더 뜨고 신고서 행 수가 어긋난다.
+    assetCards.push({
+      propertyId: "land_nbl",
+      propertyLabel: "토지-비사업용(1001)",
+      propertyType: "land",
+      transferPrice: allocation.land,
+      acquisitionPrice: acquisition.land,
+      expenses: estimatedDeduction.land,
+      usedEstimatedAcquisition: true,
+      estimatedBase: acquisition.land,
+      estimatedDeduction: estimatedDeduction.land,
+      acquisitionDate: input.acquisitionDate,
+      transferDate: input.transferDate,
+      isNonBusinessLand: true,
+      landAcquisitionCause: input.landAcquisitionCause,
+      decedentAcquisitionDate: input.decedentAcquisitionDate,
+      donorAcquisitionDate: input.donorAcquisitionDate,
+      carryoverTaxation: input.landCarryoverTaxation,
+    });
+  } else if (!isWithinNblRatio && nonBusinessRatio > 0) {
     // 토지 카드 1: 사업용 (인정면적 직접 안분 — round 의존 제거)
     const landBusinessTransfer = apportionLandByBusinessArea(allocation.land, allowedLandArea, input.landArea);
     const landBusinessAcq = apportionLandByBusinessArea(acquisition.land, allowedLandArea, input.landArea);
@@ -761,6 +822,8 @@ export function buildGeneralBuildingAssetCards(
     buildingStdTotal: input.transferBuildingStdPrice,
     acqLandStdTotal: acqLandStdTotalForFormula,
     acqBuilding1StdTotal: input.acquisitionBuildingStdPrice,
+    // §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 게이트 미충족 시 undefined)
+    expropriationValuationDetail,
   };
 }
 

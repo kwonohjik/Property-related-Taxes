@@ -13,6 +13,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type {
   RentalCommonFormFields,
@@ -81,13 +82,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
   return (
     <>
       {/* ③ 임대료 증액 제한 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-            {sec3}
-          </span>
-          <p className="text-xs font-semibold text-violet-700">임대료 증액 제한 (§97의3①2호)</p>
-        </div>
+      <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2" noDark>
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
           <RadioCardGroup
@@ -102,7 +97,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
             ]}
           />
           {value.rentIncreaseViolationMode === "" && (
-            <p className="mt-1 text-[10px] text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="mt-1 text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </div>
 
@@ -118,21 +113,21 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
                   <button
                     type="button"
                     onClick={() => removeRentHistory(idx)}
-                    className="text-[10px] text-rose-600 hover:underline"
+                    className="text-micro text-rose-600 hover:underline"
                   >
                     삭제
                   </button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-[11px] font-medium">계약일</label>
+                    <label className="mb-1 block text-caption font-medium">계약일</label>
                     <DateInput
                       value={item.contractDate}
                       onChange={(v) => updateRentHistory(idx, { contractDate: v })}
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[11px] font-medium">계약 유형</label>
+                    <label className="mb-1 block text-caption font-medium">계약 유형</label>
                     <Select
                       value={item.contractType}
                       onValueChange={(v) => v && updateRentHistory(idx, { contractType: v as RentHistoryFormItem["contractType"] })}
@@ -149,7 +144,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
                   </div>
                   {(item.contractType === "monthly" || item.contractType === "semi_jeonse") && (
                     <div>
-                      <label className="mb-1 block text-[11px] font-medium">월세 (원)</label>
+                      <label className="mb-1 block text-caption font-medium">월세 (원)</label>
                       <CurrencyInput
                         label=""
                         value={item.monthlyRent}
@@ -158,7 +153,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
                     </div>
                   )}
                   <div>
-                    <label className="mb-1 block text-[11px] font-medium">보증금 (원)</label>
+                    <label className="mb-1 block text-caption font-medium">보증금 (원)</label>
                     <CurrencyInput
                       label=""
                       value={item.deposit}
@@ -169,7 +164,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
               </div>
             ))}
             {(value.rentHistory ?? []).length < 2 && (
-              <p className="text-[10px] text-amber-700">
+              <p className="text-micro text-amber-700">
                 ※ 최소 2건 입력 필요 (현재 {(value.rentHistory ?? []).length}건)
               </p>
             )}
@@ -182,16 +177,10 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
             </button>
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ④ 공실 기간 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-            {sec4}
-          </span>
-          <p className="text-xs font-semibold text-sky-700">공실 기간</p>
-        </div>
+      <ToneCard tone="sky" sectionNum={sec4} title="공실 기간" bodyClassName="space-y-2" noDark>
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">6개월 이상 공실 구간</p>
           <RadioCardGroup
@@ -206,7 +195,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
             ]}
           />
           {value.hasVacancyOver6Months === null && (
-            <p className="mt-1 text-[10px] text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="mt-1 text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </div>
 
@@ -227,14 +216,14 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
                 <button
                   type="button"
                   onClick={() => removeVacancy(idx)}
-                  className="text-[10px] text-rose-600 hover:underline"
+                  className="text-micro text-rose-600 hover:underline"
                 >
                   삭제
                 </button>
               </div>
             ))}
             {(value.vacancyPeriods ?? []).length === 0 && (
-              <p className="text-[10px] text-amber-700">※ 공실 구간을 1개 이상 추가하세요</p>
+              <p className="text-micro text-amber-700">※ 공실 구간을 1개 이상 추가하세요</p>
             )}
             <button
               type="button"
@@ -245,7 +234,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
             </button>
           </div>
         )}
-      </div>
+      </ToneCard>
     </>
   );
 }

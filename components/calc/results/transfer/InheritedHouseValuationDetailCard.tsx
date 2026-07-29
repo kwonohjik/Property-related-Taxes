@@ -7,6 +7,7 @@
  */
 
 import type { InheritanceHouseValuationResult } from "@/lib/tax-engine/types/inheritance-house-valuation.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: InheritanceHouseValuationResult;
@@ -18,19 +19,22 @@ function formatN(n: number): string {
 
 export function InheritedHouseValuationDetailCard({ detail }: Props) {
   const {
-    totalStdPriceAtInheritance,
-    totalStdPriceAtTransfer,
-    totalStdPriceAtFirstDisclosure,
+    sumAtInheritance,
+    sumAtFirstDisclosure,
     landStdAtInheritance,
-    landStdAtTransfer,
     landStdAtFirstDisclosure,
+    buildingStdAtInheritance,
+    buildingStdAtFirstDisclosure,
+    housePriceAtFirstDisclosure,
     housePriceAtInheritanceUsed,
+    housePriceAtTransfer,
     estimationMethod,
     pre1990Result,
     formula,
     legalBasis,
     warnings,
   } = detail;
+  const isEstimated = estimationMethod === "estimated_phd";
 
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/50 dark:border-sky-800/40 dark:bg-sky-950/20 p-4 space-y-4">
@@ -39,14 +43,14 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
         <p className="text-sm font-semibold text-sky-900 dark:text-sky-200">
           상속주택 환산취득가액 계산
         </p>
-        <span className="text-[10px] text-muted-foreground">{legalBasis}</span>
+        <span className="text-micro text-muted-foreground">{legalBasis}</span>
         {estimationMethod === "estimated_phd" && (
-          <span className="text-[10px] rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5">
-            §164⑤ 토지비율 추정
+          <span className="text-micro rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5">
+            §164⑦ 개별주택가격 추정
           </span>
         )}
         {estimationMethod === "user_override" && (
-          <span className="text-[10px] rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5">
+          <span className="text-micro rounded-full bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 px-2 py-0.5">
             사용자 직접 입력
           </span>
         )}
@@ -72,51 +76,65 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
         </div>
       )}
 
-      {/* 3시점 기준시가 비교표 */}
-      <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">3시점 합계 기준시가</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="bg-sky-100/60 dark:bg-sky-900/30">
-                <th className="px-3 py-2 text-left font-semibold text-sky-800 dark:text-sky-300 whitespace-nowrap">시점</th>
-                <th className="px-3 py-2 text-right font-semibold text-sky-800 dark:text-sky-300 whitespace-nowrap">토지 기준시가</th>
-                <th className="px-3 py-2 text-right font-semibold text-sky-800 dark:text-sky-300 whitespace-nowrap">주택 기준시가</th>
-                <th className="px-3 py-2 text-right font-semibold text-sky-800 dark:text-sky-300 whitespace-nowrap">합계</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sky-100 dark:divide-sky-800/30">
-              <tr>
-                <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">상속개시일</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(landStdAtInheritance)}</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(housePriceAtInheritanceUsed)}</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap font-semibold">{formatN(totalStdPriceAtInheritance)}</td>
-              </tr>
-              <tr>
-                <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">양도일</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(landStdAtTransfer)}</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap text-muted-foreground">—</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap font-semibold">{formatN(totalStdPriceAtTransfer)}</td>
-              </tr>
-              <tr>
-                <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">최초 공시일</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(landStdAtFirstDisclosure)}</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap text-muted-foreground">—</td>
-                <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(totalStdPriceAtFirstDisclosure)}</td>
-              </tr>
-            </tbody>
-          </table>
+      {/* (A) §164⑦ 취득당시 개별주택가격 추정 — 합계기준시가(토지+건물) 비율. estimated 모드만 */}
+      {isEstimated && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">
+            취득당시 개별주택가격 추정 (§164⑦ — 합계기준시가 = 토지 + 건물)
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="bg-sky-100/60 dark:bg-sky-900/30">
+                  <th className="px-3 py-2 text-left font-semibold text-sky-800 dark:text-sky-300 whitespace-nowrap">시점</th>
+                  <th className="px-3 py-2 text-right font-semibold text-sky-800 dark:text-sky-300 whitespace-nowrap">토지 기준시가</th>
+                  <th className="px-3 py-2 text-right font-semibold text-sky-800 dark:text-sky-300 whitespace-nowrap">건물 기준시가</th>
+                  <th className="px-3 py-2 text-right font-semibold text-sky-800 dark:text-sky-300 whitespace-nowrap">합계기준시가</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-sky-100 dark:divide-sky-800/30">
+                <tr>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">취득당시 (상속개시일)</td>
+                  <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(landStdAtInheritance)}</td>
+                  <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(buildingStdAtInheritance)}</td>
+                  <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap font-semibold">{formatN(sumAtInheritance)}</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">최초 공시일</td>
+                  <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(landStdAtFirstDisclosure)}</td>
+                  <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(buildingStdAtFirstDisclosure)}</td>
+                  <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap font-semibold">{formatN(sumAtFirstDisclosure)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-caption text-muted-foreground">
+            취득당시 개별주택가격 = 최초공시 개별주택가격{" "}
+            <span className="font-mono text-foreground">{formatN(housePriceAtFirstDisclosure)}</span>
+            {" "}× <Frac top={formatN(sumAtInheritance)} bottom={formatN(sumAtFirstDisclosure)} /> ={" "}
+            <span className="font-mono text-foreground font-semibold">{formatN(housePriceAtInheritanceUsed)}</span>
+          </p>
         </div>
-      </div>
+      )}
 
-      {/* 환산취득가 산식 요약 */}
+      {/* (B) 환산취득가 산식 요약 — 개별주택가격 비율(취득 ÷ 양도, 부수토지 포함) */}
       <div className="rounded bg-white/70 dark:bg-white/5 border border-sky-100 dark:border-sky-800/30 p-2.5 text-xs space-y-1">
         <p className="text-muted-foreground">
-          환산취득가액 = 양도가액 × (상속개시일 합계 기준시가{" "}
-          <span className="font-mono text-foreground">{formatN(totalStdPriceAtInheritance)}</span>
-          {" "}÷ 양도일 합계 기준시가{" "}
-          <span className="font-mono text-foreground">{formatN(totalStdPriceAtTransfer)}</span>
-          )
+          환산취득가액 = 양도가액 ×{" "}
+          <Frac
+            top={
+              <>
+                취득당시 개별주택가격{" "}
+                <span className="font-mono text-foreground">{formatN(housePriceAtInheritanceUsed)}</span>
+              </>
+            }
+            bottom={
+              <>
+                양도당시 개별주택가격{" "}
+                <span className="font-mono text-foreground">{formatN(housePriceAtTransfer)}</span>
+              </>
+            }
+          />
         </p>
       </div>
 
@@ -125,8 +143,8 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">
             1990.8.30 이전 환산 상세
-            <span className="ml-1 text-[10px] text-muted-foreground font-normal">
-              (소득세법 시행령 제164조 제11항)
+            <span className="ml-1 text-micro text-muted-foreground font-normal">
+              (소득세법 시행령 제164조 제4항)
             </span>
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-sky-100 dark:border-sky-800/30 p-2.5 text-xs space-y-1 text-muted-foreground">

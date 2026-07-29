@@ -15,23 +15,22 @@
  */
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import type { CommercialBuildingValuationResult } from "@/lib/tax-engine/types/commercial-building.types";
 
-/** 엔진 결과 타입 (transfer.types.ts 엔진 구현 완료 후 정확 타입으로 교체) */
-export interface CommercialBuildingValuationResult {
-  floorAreaTotal: number;
-  unitPriceTotalAtTransfer: number;
-  unitPriceTotalAtFirst?: number;
-  combinedStdAtAcq?: number;
-  combinedStdAtFirst?: number;
-  combinedStdAtTransfer?: number;
-  estimatedBasisAtAcq?: number;
-  estimatedAcquisitionTotal: number;
-  estimatedAcquisitionLand: number;
-  estimatedAcquisitionBuilding: number;
-  estimatedDeductionTotal: number;
-  estimatedDeductionLand: number;
-  estimatedDeductionBuilding: number;
-}
+/**
+ * 엔진 결과 타입 — `lib/tax-engine/types/commercial-building.types.ts` **직접 사용**.
+ *
+ * 종전에는 같은 이름의 인터페이스를 이 파일에서 **로컬 재선언**하고 있었다(dual-truth).
+ * 엔진에 필드가 늘어도 여기 없으면 UI가 못 보는 구조라, 실제로 7개 필드
+ * (`landStdAtAcq`·`buildingStdAtAcq`·`landStdAtFirst`·`buildingStdAtFirst`·
+ * `landStdAtTransfer`·`buildingStdAtTransfer`·`sec164_8AdjustedDenominator`)가 누락돼 있었고
+ * `lumpDeductionBase` 추가 때도 수동 동기화가 필요했다.
+ *
+ * 로컬 정의는 엔진 타입의 **완전한 부분집합**(16/23 필드, optional 불일치 0, UI 전용 필드 0)임을
+ * 확인하고 제거했다. `import type`이므로 번들에 엔진 코드가 실리지 않는다.
+ * 재export는 모듈 공개 표면 보존용(종전 `export interface`와 동일).
+ */
+export type { CommercialBuildingValuationResult };
 
 interface Props {
   detail: CommercialBuildingValuationResult;
@@ -50,6 +49,8 @@ interface Props {
   landGain?: number;
   /** 건물 양도차익 */
   buildingGain?: number;
+  /** §97②2호 단서 swap 발동 — true면 개산공제(가목) 대신 자본적지출+양도비(나목)가 필요경비로 적용됨. */
+  swapApplied?: boolean;
 }
 
 function Row({ label, value, sub = false, highlight = false }: {
@@ -68,7 +69,7 @@ function Row({ label, value, sub = false, highlight = false }: {
   );
 }
 
-export function CommercialBuildingValuationDetailCard({ detail, transferPrice, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain }: Props) {
+export function CommercialBuildingValuationDetailCard({ detail, transferPrice, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied }: Props) {
   const isPreDisclosure = detail.estimatedBasisAtAcq !== undefined;
 
   // 보유기간 텍스트
@@ -82,15 +83,15 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       <div className="font-semibold text-amber-900 text-sm">
         상업용건물·오피스텔 환산취득가 산정 근거
         <span className="ml-1 text-xs font-normal text-amber-700">
-          (소득세법 시행령 §164⑧, §176조의2②2호)
+          (소득세법 시행령 §164⑥, §176조의2②2호)
         </span>
       </div>
 
       {/* 기준시가합 3시점 표 (pre_disclosure 시) */}
       {isPreDisclosure && (
         <div>
-          <p className="text-xs font-medium text-amber-800 mb-1">기준시가합 (소득세법 시행령 §164①)</p>
-          <p className="text-[11px] text-muted-foreground mb-2">= 개별공시지가(원/㎡) × 대지면적(㎡) + 건물 기준시가 총액(원)</p>
+          <p className="text-xs font-medium text-amber-800 mb-1">기준시가합 (소득세법 §99①1호 가목·나목)</p>
+          <p className="text-caption text-muted-foreground mb-2">= 가목의 가액(개별공시지가 × 대지면적) + 나목의 가액(건물 기준시가 총액)</p>
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-amber-200">
@@ -124,7 +125,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label={`양도시 호별총액 = 양도시 ㎡당 호별고시가 × 연면적 ${detail.floorAreaTotal.toFixed(2)} ㎡`} value={detail.unitPriceTotalAtTransfer} />
             {isPreDisclosure && detail.estimatedBasisAtAcq !== undefined && (
               <Row
-                label="취득시 환산기준시가 = INT(최초고시 호별총액 × 취득시 기준시가합 ÷ 최초고시시 기준시가합) — 시행령 §164⑧"
+                label="취득시 환산기준시가 = INT(최초고시 호별총액 × 취득시 기준시가합 ÷ 최초고시시 기준시가합) — 시행령 §164⑥"
                 value={detail.estimatedBasisAtAcq}
                 sub
               />
@@ -138,19 +139,39 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label="환산취득가 건물분 = 합계 − 토지분" value={detail.estimatedAcquisitionBuilding} sub />
           </tbody>
         </table>
+        {detail.sec164_8ProvisoApplicable && (
+          <p className="text-caption text-rose-700 mt-1">
+            ※ 취득당시 기준시가합과 최초고시당시 기준시가합이 <b>같습니다</b>. 시행령 §164⑥ 산식
+            괄호 단서에 따라 <b>§164⑧(기준시가 상승률 참작)을 준용</b>해야 하는 사안이며, 위 취득시
+            환산기준시가는 그 준용을 반영하지 않은 값입니다 — 별도 검토가 필요합니다.
+          </p>
+        )}
+        {detail.sec164_5ProvisoApplicable && (
+          <p className="text-caption text-amber-700 mt-1">
+            ※ 취득당시 건물 기준시가는 국세청 고시 전(취득연도 2000년 이전)이므로 시행령 §164⑥ 단서에
+            따라 §164⑤을 준용해 산정한 금액입니다 — 2001년 지수표 금액 × 취득당시 건물기준시가 산정기준율.
+          </p>
+        )}
       </div>
 
       {/* 개산공제 */}
       <div>
         <p className="text-xs font-medium text-amber-800">기타필요경비 (개산공제)</p>
-        <p className="text-[11px] text-muted-foreground mb-1">= 환산취득가 × 3% (소득세법 §97②2호 + 시행령 §163⑥ 토지·건물 3%)</p>
+        {/* ⚠️ base 라벨 정정 — 엔진 base는 **취득시 기준시가**(commercial-building-valuation.ts
+            `estimatedBasisAtAcq`/`unitTotalAtAcq`)이지 환산취득가가 아니다. */}
+        <p className="text-caption text-muted-foreground mb-1">= 취득시 기준시가 × 3% (소득세법 §97②2호 + 시행령 §163⑥ 토지·건물 3%)</p>
         <table className="w-full border-collapse">
           <tbody>
-            <Row label={`개산공제 합계 = INT(${formatKRW(detail.estimatedAcquisitionTotal)} × 3%)`} value={detail.estimatedDeductionTotal} highlight />
+            <Row label={`개산공제 합계 = INT(${formatKRW(detail.lumpDeductionBase ?? detail.estimatedBasisAtAcq ?? 0)} × 3%)`} value={detail.estimatedDeductionTotal} highlight />
             <Row label="개산공제 토지분" value={detail.estimatedDeductionLand} sub />
             <Row label="개산공제 건물분" value={detail.estimatedDeductionBuilding} sub />
           </tbody>
         </table>
+        {swapApplied && (
+          <p className="text-caption text-rose-700 mt-1">
+            ※ §97②2호 단서 swap 발동 — 위 개산공제(가목) 대신 자본적지출+양도비(나목)가 필요경비로 적용되었습니다(환산취득가 미차감).
+          </p>
+        )}
       </div>
 
       {/* 토지/건물 분리 양도차익 */}
@@ -200,10 +221,10 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <tbody>
               <Row label={`양도차익 = 양도가액 ${formatKRW(transferPrice)} − 환산취득가 ${formatKRW(detail.estimatedAcquisitionTotal)} − 개산공제 ${formatKRW(detail.estimatedDeductionTotal)}`} value={acquisitionGain} />
               {holdingText && (
-                <tr><td colSpan={2} className="py-1 text-[11px] text-muted-foreground">보유기간: {holdingText}</td></tr>
+                <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">보유기간: {holdingText}</td></tr>
               )}
               {lthdRatePct && (
-                <tr><td colSpan={2} className="py-1 text-[11px] text-muted-foreground">장특공률: MIN(15, 보유연수) × 2% = {lthdRatePct} (상한 30%, 소법 §95② 표1 일반자산)</td></tr>
+                <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">장특공률: MIN(15, 보유연수) × 2% = {lthdRatePct} (상한 30%, 소법 §95② 표1 일반자산)</td></tr>
               )}
               {longTermDeduction !== undefined && (
                 <Row label={`장기보유특별공제 = INT(양도차익 ${formatKRW(acquisitionGain)} × ${lthdRatePct ?? "장특공률"})`} value={longTermDeduction} />
@@ -226,7 +247,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             </tbody>
           </table>
           {taxAmount !== undefined && localTax !== undefined && (
-            <p className="text-[10px] text-muted-foreground mt-1">
+            <p className="text-micro text-muted-foreground mt-1">
               ※ 지방소득세는 §103조의3 자체 누진세율표 직접 적용 (산출세액 × 10% 가정 금지)
             </p>
           )}

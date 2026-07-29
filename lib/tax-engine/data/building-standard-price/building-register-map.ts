@@ -13,6 +13,7 @@
  *   정규식으로 도달 불가/오매핑 라벨이 있음(`feedback_enum_substring_match_forbidden`).
  */
 import { STRUCTURE_META } from "./structure-group-map";
+import { round2 } from "@/lib/tax-engine/area-utils";
 
 /** 매핑 신뢰도 — high(직접/derive) | medium(대표값·대분류·면적의존). low 등급 없음. */
 export type RegisterMapConfidence = "high" | "medium";
@@ -201,4 +202,94 @@ export function mapUsage(
 
   // 7. 미수록(prefix "28" 등) → null
   return null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 집합건물 전유공용면적 (getBrExposPubuseAreaInfo) — 접근 B
+// ─────────────────────────────────────────────────────────────
+
+/** getBrExposPubuseAreaInfo item(필요 필드만). 국토부는 숫자도 문자열 반환. */
+export interface ExposPubuseAreaItem {
+  /** 동명칭 (예 "201동") */
+  dongNm?: string;
+  /** 호명칭 (예 "3204") */
+  hoNm?: string;
+  /** 전유공용구분코드 "1"=전유 / "2"=공용 */
+  exposPubuseGbCd?: string;
+  /** 면적(㎡) */
+  area?: string | number;
+}
+
+/**
+ * 동/호명 정규화 — 공백 제거 + 접두 "제" 제거 + 접미 "동"/"호" 제거.
+ * 비교 전용(양쪽 값을 같은 꼴로 만들어 대조). 서버 필터에 넣는 값은 아래 `toExposQueryDong/Ho` 사용.
+ * ("201동"→"201", "3204호"→"3204", "제13동"→"13", "3204"→"3204")
+ */
+function normalizeUnitName(s: string | undefined): string {
+  return (s ?? "")
+    .replace(/\s/g, "")
+    .replace(/^제/, "")
+    .replace(/(동|호)$/, "");
+}
+
+/**
+ * getBrExposPubuseAreaInfo의 `dongNm` 쿼리값 — **접미 "동" 없는 순수 명칭**.
+ *
+ * 2026-07-28 실 API 실측(은마아파트 PNU 1168010600-0316-0000):
+ * `dongNm=1` → totalCount 5 / `dongNm=1동` → 0 / `dongNm=제1동` → 0.
+ * 서버 필터는 **정확 문자열 일치**라 폼이 보내는 "201동" 형식으로는 **영구 0건**이다.
+ */
+export function toExposQueryDong(dong: string | undefined): string {
+  return normalizeUnitName(dong);
+}
+
+/**
+ * getBrExposPubuseAreaInfo의 `hoNm` 쿼리값 — **접미 "호"를 반드시 붙인다**.
+ *
+ * 같은 실측: `hoNm=1410호` → totalCount 5 / `hoNm=1410` → 0 / `hoNm=제1410호` → 0.
+ * 응답의 `hoNm`도 "1410호"·"21호"처럼 접미사를 포함한다.
+ * 폼 `unitHo`는 "3204"(접미사 없음)로 들어오므로 부착이 필요하다.
+ */
+export function toExposQueryHo(ho: string | undefined): string {
+  const bare = normalizeUnitName(ho);
+  return bare ? `${bare}호` : "";
+}
+
+/**
+ * 집합건물 전유공용면적 items에서 해당 세대(dong/ho)의 **전유+공용** area 합 (㎡, round2).
+ *
+ * 국세청 「건물 기준시가 계산방법 고시」상 건물면적 = 전유+공용 연면적이므로
+ * exposPubuseGbCd "1"(전유)+"2"(공용) 행을 모두 합산한다(전유만 = 과소산정).
+ * dong/ho는 정규화 후 일치하는 행만(dong 공란=단동이면 dong 조건 생략). 매칭 행 없으면 null(수동 fallback).
+ *
+ * ⚠️ dongNm/hoNm 실 형식·area 행 구조(전유 1행 + 공용 다행)는 배포환경 실측 미검증.
+ *   route가 서버측 dongNm/hoNm 필터도 병행하나, 형식 불일치 대비 클라이언트에서도 재필터.
+ */
+export function sumExclusiveCommonArea(
+  items: ExposPubuseAreaItem[],
+  dong: string,
+  ho: string,
+): number | null {
+  const targetDong = normalizeUnitName(dong);
+  const targetHo = normalizeUnitName(ho);
+  // 집합건물 세대는 '호'로 식별 — 호 없으면 세대 특정 불가 → null(수동).
+  //   호 조건을 생략하면 해당 동 전체 세대 합산 = 잘못된 큰 값이 무경고로 채워짐(과대) → 차단.
+  if (!targetHo) return null;
+  let sum = 0;
+  let matched = 0;
+  for (const it of items) {
+    if (targetDong && normalizeUnitName(it.dongNm) !== targetDong) continue;
+    if (targetHo && normalizeUnitName(it.hoNm) !== targetHo) continue;
+    const gb = String(it.exposPubuseGbCd ?? "").trim();
+    if (gb !== "1" && gb !== "2") continue; // 전유·공용만
+    const a =
+      typeof it.area === "number"
+        ? it.area
+        : parseFloat(String(it.area ?? "").trim());
+    if (Number.isFinite(a) && a > 0) {
+      sum += a;
+      matched++;
+    }
+  }
+  return matched > 0 ? round2(sum) : null;
 }

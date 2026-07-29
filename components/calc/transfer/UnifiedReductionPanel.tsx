@@ -140,6 +140,26 @@ function buildPeriodContext(asset: AssetForm, transferDate: string): PeriodCheck
 // 컴포넌트
 // ============================================================================
 
+/**
+ * §99의3 감면 PHD 위젯 ↔ 자산-수준 PHD(§164⑤) dual-truth 완화 스냅샷.
+ * 자산 PHD 활성(usePreHousingDisclosure) 시 동일 자산의 같은 최초공시·토지단가·건물기준시가를
+ * New993InputForm "자산 카드 PHD 가져오기" 버튼 소스로 노출 → §99의3 감면 PHD 7필드 재입력 footgun 제거.
+ * OFF이거나 값이 하나도 없으면 undefined(버튼 비활성).
+ */
+export function buildAssetPhdSnapshot(asset: AssetForm): ReductionPhdValue | undefined {
+  if (!asset.usePreHousingDisclosure) return undefined;
+  const snap: ReductionPhdValue = {
+    firstDisclosureDate: asset.phdFirstDisclosureDate || undefined,
+    firstDisclosurePrice: asset.phdFirstDisclosureHousingPrice || undefined,
+    landAreaSqm: asset.phdResidentialLandArea || asset.acquisitionArea || undefined,
+    landPricePerSqmAtAcq: asset.phdLandPricePerSqmAtAcq || undefined,
+    landPricePerSqmAtFirst: asset.phdLandPricePerSqmAtFirst || undefined,
+    buildingStdAtAcq: asset.phdBuildingStdPriceAtAcq || undefined,
+    buildingStdAtFirst: asset.phdBuildingStdPriceAtFirst || undefined,
+  };
+  return Object.values(snap).some((v) => v) ? snap : undefined;
+}
+
 export function UnifiedReductionPanel({ asset, transferDate, onChange }: UnifiedReductionPanelProps) {
   const reductions = asset.reductions ?? [];
   const [openCategories, setOpenCategories] = useState<Record<ReductionCategory, boolean>>({
@@ -152,6 +172,9 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
   const periodCtx = useMemo(() => buildPeriodContext(asset, transferDate), [asset, transferDate]);
   const counters = useMemo(() => countActiveReductionsByCategory(periodCtx), [periodCtx]);
   const periodResults = useMemo(() => evaluateAllPeriods(periodCtx), [periodCtx]);
+
+  // §99의3 감면 PHD 위젯 ↔ 자산-수준 PHD dual-truth 완화 (아래 buildAssetPhdSnapshot).
+  const assetPhdSnapshot = useMemo(() => buildAssetPhdSnapshot(asset), [asset]);
 
   // ── standalone 토글(자경·공익) ──
   function toggleStandalone(type: "self_farming" | "public_expropriation" | "gb_designated_land" | "replacement_land_comp") {
@@ -177,6 +200,16 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
     onChange({
       reductions: reductions.map((r) =>
         r.type === "new_99_3" ? ({ ...r, [key]: value } as AssetReductionForm) : r,
+      ),
+    });
+  }
+
+  // 여러 필드 동시 갱신(단일 onChange) — 건물 기준시가 "취득·최초고시 모두 적용"처럼 한 이벤트에서
+  // 2개 이상 필드를 바꿀 때 개별 update993 연속 호출은 stale reductions spread로 서로를 덮어씀. 배치 필수.
+  function update993Many(patch: Partial<Extract<AssetReductionForm, { type: "new_99_3" }>>) {
+    onChange({
+      reductions: reductions.map((r) =>
+        r.type === "new_99_3" ? ({ ...r, ...patch } as AssetReductionForm) : r,
       ),
     });
   }
@@ -316,6 +349,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onSelectId={(id) => toggleGroup(cat, id)}
           new993={new993 && new993.type === "new_99_3" ? new993 : undefined}
           onUpdate993={update993}
+          onUpdate993Many={update993Many}
           onUpdateRentalVariant={updateRentalVariant}
           onUpdate994={update994}
           onUpdate989={update989}
@@ -331,9 +365,13 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onUpdate98={update98}
           assetContractDate={asset.assetContractDate ?? ""}
           onAssetContractDateChange={(v) => onChange({ assetContractDate: v })}
+          assetId={asset.assetId}
           acquisitionDate={asset.acquisitionDate}
           transferDate={transferDate}
-          assetPhdSnapshot={undefined /* 자산-수준 PHD 데이터는 향후 통합 시 매핑 (현재 자산 카드 PHD UI와 별개) */}
+          assetJibun={asset.addressJibun || undefined}
+          assetDong={asset.addressDong || undefined}
+          assetHo={asset.addressHo || undefined}
+          assetPhdSnapshot={assetPhdSnapshot}
         />
       ))}
 
@@ -403,6 +441,7 @@ function GroupCategorySection({
   onSelectId,
   new993,
   onUpdate993,
+  onUpdate993Many,
   onUpdateRentalVariant,
   onUpdate994,
   onUpdate989,
@@ -418,8 +457,12 @@ function GroupCategorySection({
   onUpdate98,
   assetContractDate,
   onAssetContractDateChange,
+  assetId,
   acquisitionDate,
   transferDate,
+  assetJibun,
+  assetDong,
+  assetHo,
   assetPhdSnapshot,
 }: {
   category: ReductionCategory;
@@ -438,6 +481,7 @@ function GroupCategorySection({
     key: K,
     value: Extract<AssetReductionForm, { type: "new_99_3" }>[K],
   ) => void;
+  onUpdate993Many: (patch: Partial<Extract<AssetReductionForm, { type: "new_99_3" }>>) => void;
   onUpdateRentalVariant: (
     id: RentalReductionFormVariant["type"],
     patch: Partial<RentalReductionFormVariant>,
@@ -460,15 +504,33 @@ function GroupCategorySection({
   /** Round 9 (2026-05-06): 매매계약일 (자산-수준, 펼침 시 활성화) */
   assetContractDate: string;
   onAssetContractDateChange: (v: string) => void;
+  /** 자산 식별자 — 감면 PHD 건물 기준시가 계산서 스냅샷 키(bsp-${assetId}-red-phd) 소속 판정용 */
+  assetId?: string;
   /** Round 10 (2026-05-06): 자산 취득일 — PHD 자동 활성화 권장 판정 */
   acquisitionDate?: string;
-  /** 양도일 — 임대 기간 미리보기용 */
+  /** 양도일 — 임대 기간 미리보기용 + §99의3 양도시 기준시가 조회 referenceDate */
   transferDate?: string;
+  /** 양도물건(asset) 지번 주소 — §99의3 기준시가 Vworld 자동조회 소스 */
+  assetJibun?: string;
+  /** 양도물건 공동주택 동 — 세대 식별 */
+  assetDong?: string;
+  /** 양도물건 공동주택 호 — 세대 식별 */
+  assetHo?: string;
   /** Round 10 (2026-05-06): 자산-수준 PHD 데이터 스냅샷 — "자산 카드 PHD 가져오기" 버튼 */
   assetPhdSnapshot?: ReductionPhdValue;
 }) {
   const schema = CATEGORY_UI_SCHEMA[category];
   const items = ALL_REDUCTION_IDS.filter((id) => REDUCTION_METADATA[id].category === category);
+  // 감면 조문 입력 폼 공통 자산 props — 기준시가 조회형 위젯 + PHD 환산용(§99·§99의2·§98의3/5/6/7/8·§99의3).
+  const reductionAssetProps = {
+    assetId,
+    acquisitionDate,
+    transferDate,
+    jibun: assetJibun,
+    dong: assetDong,
+    ho: assetHo,
+    assetPhdSnapshot,
+  };
 
   return (
     <div className="rounded-lg border border-border bg-muted/5">
@@ -511,7 +573,7 @@ function GroupCategorySection({
                 <DateInput value={assetContractDate} onChange={onAssetContractDateChange} />
               </div>
             </div>
-            <p className="mt-1.5 text-[10px] text-muted-foreground leading-relaxed">
+            <p className="mt-1.5 text-micro text-muted-foreground leading-relaxed">
               ※ 분양·매매계약 + 계약금 납부 시점. <strong>신축·미분양·임대 감면 시한 판정의 1차 기준</strong>.
               미입력 시 자산의 취득일을 사용합니다 (조문 단서 &ldquo;매매계약 + 계약금 = 취득&rdquo;).
             </p>
@@ -564,8 +626,8 @@ function GroupCategorySection({
                     <New993InputForm
                       value={new993}
                       onUpdate={onUpdate993}
-                      acquisitionDate={acquisitionDate}
-                      assetPhdSnapshot={assetPhdSnapshot}
+                      onUpdateMany={onUpdate993Many}
+                      {...reductionAssetProps}
                     />
                   )}
                   {/* §97의3 입력 폼 */}
@@ -639,7 +701,7 @@ function GroupCategorySection({
                     (() => {
                       const form99 = reductions.find((r) => r.type === "new_99");
                       return form99 && form99.type === "new_99" ? (
-                        <New99InputForm value={form99} onChange={onUpdate99} />
+                        <New99InputForm value={form99} onChange={onUpdate99} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P1 (2026-06-11): §98의8 준공후미분양 50% 입력 폼 */}
@@ -647,7 +709,7 @@ function GroupCategorySection({
                     (() => {
                       const form988 = reductions.find((r) => r.type === "unsold_98_8");
                       return form988 && form988.type === "unsold_98_8" ? (
-                        <Unsold988InputForm value={form988} onChange={onUpdate988} />
+                        <Unsold988InputForm value={form988} onChange={onUpdate988} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P2 (2026-06-11): §98의7 9억↓ 미분양 입력 폼 */}
@@ -655,7 +717,7 @@ function GroupCategorySection({
                     (() => {
                       const form987 = reductions.find((r) => r.type === "unsold_98_7");
                       return form987 && form987.type === "unsold_98_7" ? (
-                        <Unsold987InputForm value={form987} onChange={onUpdate987} />
+                        <Unsold987InputForm value={form987} onChange={onUpdate987} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P2 (2026-06-11): §99의2 신축·미분양·1세대1주택 입력 폼 */}
@@ -663,7 +725,7 @@ function GroupCategorySection({
                     (() => {
                       const form992 = reductions.find((r) => r.type === "unsold_99_2");
                       return form992 && form992.type === "unsold_99_2" ? (
-                        <Unsold992InputForm value={form992} onChange={onUpdate992} />
+                        <Unsold992InputForm value={form992} onChange={onUpdate992} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P3 (2026-06-12): §98의3 / §98의5 / §98의6 입력 폼 */}
@@ -671,21 +733,21 @@ function GroupCategorySection({
                     (() => {
                       const form983 = reductions.find((r) => r.type === "unsold_98_3");
                       return form983 && form983.type === "unsold_98_3" ? (
-                        <Unsold983InputForm value={form983} onChange={onUpdate983} />
+                        <Unsold983InputForm value={form983} onChange={onUpdate983} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {id === "unsold_98_5" &&
                     (() => {
                       const form985 = reductions.find((r) => r.type === "unsold_98_5");
                       return form985 && form985.type === "unsold_98_5" ? (
-                        <Unsold985InputForm value={form985} onChange={onUpdate985} />
+                        <Unsold985InputForm value={form985} onChange={onUpdate985} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {id === "unsold_98_6" &&
                     (() => {
                       const form986 = reductions.find((r) => r.type === "unsold_98_6");
                       return form986 && form986.type === "unsold_98_6" ? (
-                        <Unsold986InputForm value={form986} onChange={onUpdate986} />
+                        <Unsold986InputForm value={form986} onChange={onUpdate986} {...reductionAssetProps} />
                       ) : null;
                     })()}
                   {/* P5 (2026-06-12): §98 입력 폼 */}

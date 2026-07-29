@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
 import { BuildingUsageSelect } from "./BuildingUsageSelect";
 import {
@@ -39,9 +40,14 @@ export interface PhdThreePointApply {
   acquisition?: { housing?: number; commercial?: number };
   firstDisclosure?: { housing?: number; commercial?: number };
   transfer?: { housing?: number; commercial?: number };
+  /**
+   * 시점별 입력 공시지가(원/㎡, 문자열) — 외부 3시점 섹션 되돌려쓰기용.
+   * 값 입력된 시점만 포함. 취득≤2000 2001값 게이팅은 소비 측(applyBatch)에서 처리.
+   */
+  landPrices?: { acquisition?: string; firstDisclosure?: string; transfer?: string };
 }
 
-interface PointMeta {
+export interface PointMeta {
   key: "acquisition" | "firstDisclosure" | "transfer";
   label: string;
   year: number | undefined;
@@ -68,14 +74,35 @@ interface Props {
    * 미주입 시 스냅샷 저장 생략(종전 동작).
    */
   snapshotPrefix?: string;
+  /**
+   * 지번 주소 — 취득시(≤2000, 2001.1.1 기준) 개별공시지가 Vworld 조회 활성화 조건.
+   * 미주입 시 조회 버튼만 비활성, 수동 입력은 유지.
+   */
+  jibun?: string;
+  /**
+   * 첫 부분(주택) 연면적 자동채움(문자열) — 겸용주택 주택분 등에서 상위 화면의 주택 연면적을
+   * 모달 열 때 첫 행에 시드. 미주입 시 빈 값(종전 동작). 사용자 수정 가능.
+   */
+  housingFloorAreaPrefill?: string;
+  /**
+   * 상가 연면적 자동채움(문자열) — 겸용(enableCommercial)에서 모달 열 때 상가 행을
+   * 이 값으로 함께 시드. 미주입·비겸용 시 주택 행만 시드(종전 동작). 사용자 수정 가능.
+   */
+  commercialFloorAreaPrefill?: string;
+  /** 런처 버튼 `data-testid`(E2E 셀렉터). 미주입 시 미부여. */
+  dataTestId?: string;
 }
 
-/** 편집 중 부분 행(연면적은 문자열 입력) */
+/** 편집 중 부분 행 — 시점별 구조·용도(연도 체계 상이) + 공통 연면적 */
 interface PartRow {
-  structureKey: string;
-  usageNo: string;
   floorArea: string;
   category: PhdPartCategory;
+  acqStructureKey: string;
+  acqUsageNo: string;
+  firstStructureKey: string;
+  firstUsageNo: string;
+  transferStructureKey: string;
+  transferUsageNo: string;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -85,10 +112,14 @@ const POINT_LABEL: Record<PointMeta["key"], string> = {
   transfer: "양도시",
 };
 const emptyRow = (category: PhdPartCategory = "housing"): PartRow => ({
-  structureKey: "",
-  usageNo: "",
   floorArea: "",
   category,
+  acqStructureKey: "",
+  acqUsageNo: "",
+  firstStructureKey: "",
+  firstUsageNo: "",
+  transferStructureKey: "",
+  transferUsageNo: "",
 });
 
 export function PhdBuildingStdPriceModalButton({
@@ -98,6 +129,10 @@ export function PhdBuildingStdPriceModalButton({
   enableCommercial = false,
   commercialAcqFirstMode = false,
   snapshotPrefix,
+  jibun,
+  housingFloorAreaPrefill,
+  commercialFloorAreaPrefill,
+  dataTestId,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [builtYear, setBuiltYear] = useState("");
@@ -112,11 +147,12 @@ export function PhdBuildingStdPriceModalButton({
   const [error, setError] = useState<string | null>(null);
   const replaceSnapshotsByPrefix = useBuildingStdSnapshotStore((s) => s.replaceSnapshotsByPrefix);
 
-  // 구조·용도 옵션 기준 연도 — 최근(양도) 우선(옵션 커버리지 안전)
-  const optionYear =
-    points.find((p) => p.key === "transfer")?.year ??
-    points.find((p) => p.key === "firstDisclosure")?.year ??
-    points.find((p) => p.key === "acquisition")?.year;
+  // 시점별 구조·용도 옵션 기준 연도 — 각 시점의 연도 체계. ≤2000은 2001 체계(엔진 acqBase가 2001표 사용).
+  const yearOf = (k: PointMeta["key"]) => points.find((p) => p.key === k)?.year;
+  const schemeYear = (y: number | undefined) => (y != null && y <= 2000 ? 2001 : y);
+  const acqOptionYear = schemeYear(yearOf("acquisition"));
+  const firstOptionYear = schemeYear(yearOf("firstDisclosure"));
+  const transferOptionYear = schemeYear(yearOf("transfer"));
 
   const label =
     buttonLabel ??
@@ -132,26 +168,51 @@ export function PhdBuildingStdPriceModalButton({
     setError(null);
     setResult(null);
     setComputedInput(null);
+    // Case A(commercialAcqFirstMode)는 취득·최초공시 상가를 주택 행에서 주입(재일46014-2396)
+    // — 주택 행 부재 시 양도 상가만 silent 산출되므로 구성 단계에서 차단.
+    if (commercialAcqFirstMode && !rows.some((r) => r.category === "housing")) {
+      setError(
+        "취득·최초공시 상가분은 당시 실제 용도(주택)의 구조·용도로 산출합니다. " +
+          "주택 부분 행이 필요합니다 — \"+ 부분 추가\" 후 주택을 선택하세요. " +
+          "주택 행 없이 계산하면 양도시 상가만 산출되어 3시점 환산이 불완전합니다.",
+      );
+      return;
+    }
     const built = Math.floor(parseDecimal(builtYear));
     if (built <= 0) {
       setError("신축연도를 입력하세요.");
       return;
     }
+    const at = (sk: string, uno: string) =>
+      sk && uno ? { structureKey: sk, usageNo: Number(uno) } : undefined;
     const parts: PhdBatchPart[] = [];
     for (const r of rows) {
       const area = parseDecimal(r.floorArea);
-      if (!r.structureKey || !r.usageNo || area <= 0) {
-        setError("각 부분의 구조·용도·연면적을 모두 입력하세요.");
+      const transfer = at(r.transferStructureKey, r.transferUsageNo);
+      if (!transfer || area <= 0) {
+        setError("각 부분의 양도당시 구조·용도·연면적을 입력하세요.");
         return;
       }
-      parts.push({ structureKey: r.structureKey, usageNo: Number(r.usageNo), floorArea: area, category: r.category });
+      // 취득·최초공시 구조·용도는 주택 부분에서만(상가는 UI 숨김 → Case A 자동주입/Case B 미산출).
+      // 카테고리 전환 시 잔존값 누수 방지.
+      const isHousing = r.category === "housing";
+      parts.push({
+        floorArea: area,
+        category: r.category,
+        transfer,
+        acquisition: isHousing ? at(r.acqStructureKey, r.acqUsageNo) : undefined,
+        firstDisclosure: isHousing ? at(r.firstStructureKey, r.firstUsageNo) : undefined,
+      });
     }
-    // Case A: 취득·최초공시 상가 = 당시 주택 용도(주된 주택 행 usageNo) 주입 → 자동 산출 활성
+    // Case A: 취득·최초공시 상가 = 당시 주택 구조·용도(주된 주택 행) 주입 → 자동 산출 활성
     if (commercialAcqFirstMode) {
       const firstHousing = parts.find((p) => p.category === "housing");
       if (firstHousing) {
         for (const p of parts) {
-          if (p.category === "commercial") p.acqFirstUsageNo = firstHousing.usageNo;
+          if (p.category === "commercial") {
+            p.acquisition = firstHousing.acquisition;
+            p.firstDisclosure = firstHousing.firstDisclosure;
+          }
         }
       }
     }
@@ -162,12 +223,19 @@ export function PhdBuildingStdPriceModalButton({
       if (land <= 0) return undefined;
       return { year: p.year, landPricePerM2: land };
     };
+    // 최초공시 ≤2000 산정기준율 환산용 2001 기준 공시지가 — 취득 ≤2000이면 취득시 공시지가 필드가
+    // 2001.1.1 기준(LandPriceLookupField fixedYear=2001)이므로 그 값을 전달. 취득 ≥2001이면 미전달
+    // (배치가 unsupported 사유로 안내 — 자동 fallback 금지).
+    const acqYear = yearOf("acquisition");
+    const lp2001 =
+      acqYear != null && acqYear <= 2000 ? (parseAmount(landPrices.acquisition ?? "") ?? 0) : 0;
     try {
       const input: PhdBatchInput = {
         building: { builtYear: built, parts },
         acquisition: pt("acquisition"),
         firstDisclosure: pt("firstDisclosure"),
         transfer: pt("transfer"),
+        ...(lp2001 > 0 ? { landPrice2001PerM2: lp2001 } : {}),
       };
       setComputedInput(input);
       setResult(computePhdThreePointStdPrice(input));
@@ -182,10 +250,16 @@ export function PhdBuildingStdPriceModalButton({
     if (snapshotPrefix && computedInput) {
       replaceSnapshotsByPrefix(snapshotPrefix, phdBatchToSnapshots(computedInput, snapshotPrefix));
     }
+    // 입력된 시점 공시지가만 외부 섹션으로 되돌려쓰기(빈값은 외부 미변경).
+    const lp: NonNullable<PhdThreePointApply["landPrices"]> = {};
+    if ((landPrices.acquisition ?? "").trim()) lp.acquisition = landPrices.acquisition;
+    if ((landPrices.firstDisclosure ?? "").trim()) lp.firstDisclosure = landPrices.firstDisclosure;
+    if ((landPrices.transfer ?? "").trim()) lp.transfer = landPrices.transfer;
     onApply({
       acquisition: result.acquisition,
       firstDisclosure: result.firstDisclosure,
       transfer: result.transfer,
+      landPrices: lp,
     });
     setOpen(false);
     setResult(null);
@@ -205,7 +279,13 @@ export function PhdBuildingStdPriceModalButton({
   // 모달 열 때 현재 위젯 공시지가로 재시드(지연 초기화는 최초 1회뿐 → 신규 입력 stale 방지).
   function handleOpen() {
     setLandPrices(Object.fromEntries(points.map((p) => [p.key, p.landPricePerM2])));
-    setRows([emptyRow()]);
+    // 첫 부분(주택)에 상위 화면 주택 연면적 자동채움(있으면). 사용자 수정 가능.
+    // 겸용은 상가 행도 상가 연면적으로 함께 시드 — 상가 런처 진입 후 chip 전환 시
+    // 주택 면적이 상가에 남는 혼란 방지(각 행이 자기 자산 면적을 갖고 시작).
+    const seed: PartRow[] = [{ ...emptyRow(), floorArea: housingFloorAreaPrefill ?? "" }];
+    if (enableCommercial && commercialFloorAreaPrefill)
+      seed.push({ ...emptyRow("commercial"), floorArea: commercialFloorAreaPrefill });
+    setRows(seed);
     setBuiltYear("");
     setResult(null);
     setComputedInput(null);
@@ -215,7 +295,7 @@ export function PhdBuildingStdPriceModalButton({
 
   return (
     <>
-      <Button type="button" variant="outline" size="xs" onClick={handleOpen}>
+      <Button type="button" variant="modalLauncher" size="xs" onClick={handleOpen} data-testid={dataTestId}>
         {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -270,7 +350,7 @@ export function PhdBuildingStdPriceModalButton({
                         ))}
                       </div>
                     ) : (
-                      <span className="text-[11px] font-medium text-amber-700">부분 {idx + 1}</span>
+                      <span className="text-caption font-medium text-amber-700">부분 {idx + 1}</span>
                     )}
                     {rows.length > 1 && (
                       <Button type="button" variant="ghost" size="xs" onClick={() => setRows((rs) => rs.filter((_, i) => i !== idx))}>
@@ -279,47 +359,111 @@ export function PhdBuildingStdPriceModalButton({
                     )}
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                  <FieldCard label="구조" hint="국세청 구조지수표">
-                    <BuildingStructureSelect year={optionYear} value={row.structureKey} onChange={(v) => updateRow(idx, { structureKey: v })} />
-                  </FieldCard>
-                  <FieldCard label="용도" hint="국세청 용도지수표">
-                    <BuildingUsageSelect year={optionYear} value={row.usageNo} onChange={(v) => updateRow(idx, { usageNo: v })} />
-                  </FieldCard>
+                <div className="space-y-2">
+                  {/* 취득당시 (취득 연도 체계) — 주택만. 상가 취득·최초공시는 Case A 주택값 자동/Case B 미산출 → 숨김 */}
+                  {row.category === "housing" && acqOptionYear != null && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 space-y-2">
+                      <p className="text-caption font-semibold text-amber-700">취득당시 (구조·용도 — {acqOptionYear}년 체계)</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <FieldCard label="구조">
+                          <BuildingStructureSelect year={acqOptionYear} value={row.acqStructureKey} onChange={(v) => updateRow(idx, { acqStructureKey: v })} />
+                        </FieldCard>
+                        <FieldCard label="용도">
+                          <BuildingUsageSelect year={acqOptionYear} value={row.acqUsageNo} onChange={(v) => updateRow(idx, { acqUsageNo: v })} />
+                        </FieldCard>
+                      </div>
+                    </div>
+                  )}
+                  {/* 최초공시 (최초공시 연도 체계) — 주택만(상가 사유 위와 동일) */}
+                  {row.category === "housing" && firstOptionYear != null && (
+                    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2 space-y-2">
+                      <p className="text-caption font-semibold text-violet-700">최초공시 (구조·용도 — {firstOptionYear}년 체계)</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <FieldCard label="구조">
+                          <BuildingStructureSelect year={firstOptionYear} value={row.firstStructureKey} onChange={(v) => updateRow(idx, { firstStructureKey: v })} />
+                        </FieldCard>
+                        <FieldCard label="용도">
+                          <BuildingUsageSelect year={firstOptionYear} value={row.firstUsageNo} onChange={(v) => updateRow(idx, { firstUsageNo: v })} />
+                        </FieldCard>
+                      </div>
+                    </div>
+                  )}
+                  {/* 양도당시 (양도 연도 체계) — 항상 */}
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
+                    <p className="text-caption font-semibold text-emerald-700">양도당시 (구조·용도 — {transferOptionYear}년 체계)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <FieldCard label="구조">
+                        <BuildingStructureSelect year={transferOptionYear} value={row.transferStructureKey} onChange={(v) => updateRow(idx, { transferStructureKey: v })} />
+                      </FieldCard>
+                      <FieldCard label="용도">
+                        <BuildingUsageSelect year={transferOptionYear} value={row.transferUsageNo} onChange={(v) => updateRow(idx, { transferUsageNo: v })} />
+                      </FieldCard>
+                    </div>
+                  </div>
                   <FieldCard label="연면적" unit="㎡">
                     <DecimalInput value={row.floorArea} onChange={(v) => updateRow(idx, { floorArea: v })} placeholder="연면적" />
                   </FieldCard>
                 </div>
               </div>
             ))}
-            {enableCommercial && (
-              <p className="text-[11px] text-amber-700">
-                {commercialAcqFirstMode
-                  ? "취득·최초공시 시점 상가분은 당시 실제 용도(주택)로 자동 산출됩니다 (재일46014-2396)."
-                  : "취득·최초공시 시점 상가분은 자동 산출에서 제외됩니다 — 해당 필드는 홈택스에서 직접 조회·입력하세요."}
-              </p>
-            )}
           </div>
 
           {/* 시점별 공시지가 */}
           <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
-            <p className="text-xs font-semibold text-violet-700">시점별 개별공시지가 (위치지수)</p>
-            {points.map((p) => (
-              <FieldCard
-                key={p.key}
-                label={`${POINT_LABEL[p.key]}${p.year ? ` (${p.year}년)` : " (연도 미상)"} 공시지가`}
-                unit="원/㎡"
-                hint={p.year ? undefined : "해당 시점 날짜 미입력 — 계산 제외"}
-              >
-                <CurrencyInput
-                  label=""
-                  hideUnit
-                  value={landPrices[p.key] ?? ""}
-                  onChange={(v) => setLandPrices((s) => ({ ...s, [p.key]: v }))}
-                  placeholder="원/㎡"
-                />
-              </FieldCard>
-            ))}
+            <p className="text-xs font-semibold text-violet-700">위치지수 산정 공시지가</p>
+            {points.map((p) => {
+              // 취득시 ≤2000 = 2001.1.1 기준(§164⑤ 산정기준율) → Vworld 2001 자동조회 행
+              const isAcqPre2001 =
+                p.key === "acquisition" && p.year != null && p.year <= 2000;
+              if (isAcqPre2001) {
+                return (
+                  <div key={p.key} className="space-y-2 rounded-lg border bg-card px-4 py-3">
+                    {/* 시점 식별 라벨 — 박스 내부 상단(최초공시일 FieldCard와 동일 위치·스타일) */}
+                    <p className="text-sm font-medium leading-tight">
+                      취득시 (2001년 기준) 공시지가
+                    </p>
+                    <LandPriceLookupField
+                      fixedYear={2001}
+                      hideLandStdPrice
+                      jibun={jibun}
+                      pricePerSqm={landPrices[p.key] ?? ""}
+                      onPricePerSqmChange={(v) =>
+                        setLandPrices((s) => ({ ...s, [p.key]: v }))
+                      }
+                      placeholder="2001.1.1. 현재 공시지가"
+                    />
+                  </div>
+                );
+              }
+              // 최초공시 ≤2000: 건물분은 2001 기준시가 × 산정기준율 환산(§164⑤ 준용) —
+              // 이 연도 공시지가는 토지분·외부 3시점 섹션용(건물 산출 미사용) 안내.
+              const isFirstPre2001 =
+                p.key === "firstDisclosure" && p.year != null && p.year <= 2000;
+              return (
+                <FieldCard
+                  key={p.key}
+                  label={`${POINT_LABEL[p.key]}${
+                    p.year ? ` (${p.year}년)` : " (연도 미상)"
+                  } 공시지가`}
+                  unit="원/㎡"
+                  hint={
+                    !p.year
+                      ? "해당 시점 날짜 미입력 — 계산 제외"
+                      : isFirstPre2001
+                        ? "고시(2001년~) 전 최초공시일의 건물분은 2001년 기준시가 × 산정기준율로 환산 — 이 공시지가는 토지분 계산에 사용"
+                        : undefined
+                  }
+                >
+                  <CurrencyInput
+                    label=""
+                    hideUnit
+                    value={landPrices[p.key] ?? ""}
+                    onChange={(v) => setLandPrices((s) => ({ ...s, [p.key]: v }))}
+                    placeholder="원/㎡"
+                  />
+                </FieldCard>
+              );
+            })}
           </div>
 
           <Button type="button" size="sm" onClick={handleCalc}>

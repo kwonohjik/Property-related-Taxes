@@ -235,12 +235,13 @@ describe("§39의2 단일모드 회귀 — shareholders 미존재 시 기존 경
     expect(r.capitalDecreaseMulti).toBeUndefined();
   });
 
-  it("[R-CD-H] 고가 단일모드 = 500,000,000 (변경 금지)", () => {
+  it("[R-CD-H] 고가 단일모드 = 500,000,000 (평가 3000 < 액면 5000)", () => {
     const r = calcCapitalDecreaseGift({
       caseType: "high",
       sharePrice: 3_000,
       redemptionPrice: 8_000,
       ownRedeemedShares: 100_000,
+      faceValue: 5_000, // §29의2①2호 액면 게이트 (C-9)
     });
     expect(r.applied).toBe(true);
     expect(r.deemedGiftValue).toBe(500_000_000);

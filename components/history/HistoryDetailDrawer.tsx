@@ -125,10 +125,22 @@ export function HistoryDetailDrawer({
     // 양도세 전용: zustand store에 inputData hydrate
     if (record.taxType === "transfer") {
       // dynamic import로 store 순환 참조 방지
-      import("@/lib/stores/calc-wizard-store").then(({ useCalcWizardStore }) => {
+      Promise.all([
+        import("@/lib/stores/calc-wizard-store"),
+        import("@/lib/stores/calc-wizard-asset"),
+      ]).then(([{ useCalcWizardStore }, { migrateAsset }]) => {
         const { updateFormData, setStep } = useCalcWizardStore.getState();
         // Date 필드는 string으로 저장되어 있으므로 그대로 복원 (zustand store는 string 허용)
-        updateFormData(record.inputData as Parameters<typeof updateFormData>[0]);
+        const input = record.inputData as Parameters<typeof updateFormData>[0];
+        // ⚠️ 이력 assets는 **migrate를 통과시켜야 한다** — `updateFormData`는 단순 merge라
+        //    assets 배열이 통째로 교체된다. sessionStorage 복원(calc-wizard-store.ts:399)은
+        //    migrateAsset을 거치는데 이 경로만 우회하면, 옛 이력의 신규 필드 디폴트 누락과
+        //    파생 면적의 부동소수점 잔재(구 산식 `round2(T)−r`)가 그대로 엔진에 도달한다
+        //    (잔재는 floor(단가 × 면적)을 1원 깎는다 — 표시만의 문제가 아니다).
+        const migrated = Array.isArray(input?.assets)
+          ? { ...input, assets: input.assets.map((a) => migrateAsset({ ...a })) }
+          : input;
+        updateFormData(migrated);
         setStep(0);
         router.push(route);
       });

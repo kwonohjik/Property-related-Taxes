@@ -6,6 +6,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { TransferModeBlock } from "../TransferModeBlock";
+import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
 import { CompanionSaleModeBlock, type BundledSaleMode } from "../CompanionSaleModeBlock";
 
 interface Props {
@@ -17,6 +18,8 @@ interface Props {
   contractTotalPrice?: string;
   /** 주 자산(assets[0]) — 증환지 증가분의 양도시 기준시가 live fallback 소스 */
   primaryAsset?: AssetForm;
+  /** 지분 분할 모드(splitMode==="fractional") — 양도가액 자동계산·기준시가 안분 입력 숨김 게이트 */
+  isFractionalSplit?: boolean;
 }
 
 export function AssetSectionTransfer({
@@ -27,6 +30,7 @@ export function AssetSectionTransfer({
   transferDate,
   contractTotalPrice,
   primaryAsset,
+  isFractionalSplit,
 }: Props) {
   // 증환지 증가분: 당초분(assets[0]) 양도시 기준시가에서 live fallback (증가분 추가 순서와 무관하게 자동).
   // 사용자가 증가분 카드에서 직접 입력하면 자기 값이 우선(override). API·validate도 동일 fallback.
@@ -52,7 +56,7 @@ export function AssetSectionTransfer({
       {asset.transferType === "burdened_gift" && (
         <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-[10px] font-bold text-fuchsia-800 select-none">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-micro font-bold text-fuchsia-800 select-none">
               §159
             </span>
             <p className="text-sm font-semibold text-fuchsia-900">
@@ -63,7 +67,7 @@ export function AssetSectionTransfer({
             부담부증여(소득세법 시행령 §159)에서는 <b>양도가액 = 인수 채무액 × (자산별 평가가액 ÷ 증여가액)</b>으로
             엔진이 자동 산정합니다. 채무액·평가액은 위 <b>양도 정보</b> 카드(인수 채무 + 임대 평가 보조)에서 입력하세요.
           </p>
-          <p className="text-[11px] text-fuchsia-700">
+          <p className="text-caption text-fuchsia-700">
             ※ 아래 <b>양도시 기준시가</b> 입력은 §159 분모(증여가액 C)의 보충적 평가 산정에 사용됩니다 (기준시가 모드).
           </p>
         </div>
@@ -89,11 +93,24 @@ export function AssetSectionTransfer({
           dong={asset.addressDong || undefined}
           ho={asset.addressHo || undefined}
           transferDate={transferDate}
-          transferArea={asset.assetKind === "land" ? asset.transferArea : undefined}
-          onTransferAreaChange={asset.assetKind === "land" ? (v) => onChange({ transferArea: v }) : undefined}
+          // D11 — §164⑨ 적격 자산은 면적을 **store에 저장**해야 특례 분모(min[] × 면적)가 산출된다.
+          // 종전엔 land만 controlled라 건물·상가는 값이 StandardPriceInput 내부 state로 빠져
+          // 엔진 게이트 `area > 0`에 걸려 **특례가 조용히 죽었다**(게이트만 넓히면 무효인 이유).
+          // ※ 주택은 isAreaMode === false라 면적 칸 자체가 없다(총액 직접입력) — P5 총액 트랙 대상.
+          transferArea={
+            isExprValuationEligibleAssetKind(asset.assetKind) ? asset.transferArea : undefined
+          }
+          onTransferAreaChange={
+            isExprValuationEligibleAssetKind(asset.assetKind)
+              ? (v) => onChange({ transferArea: v })
+              : undefined
+          }
           ownershipNumerator={asset.ownershipNumerator}
           ownershipDenominator={asset.ownershipDenominator}
           contractTotalPrice={contractTotalPrice}
+          // 지분 분할 모드는 양도가액 자동계산 — 기준시가 안분 입력 숨김.
+          // 부담부증여(§159)는 standardPriceAtTransfer가 분모(C) 산정에 필요하므로 제외.
+          isFractionalSplit={isFractionalSplit && asset.transferType !== "burdened_gift"}
           standardPricePerSqmAtTransfer={effPerSqm}
           onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
         />

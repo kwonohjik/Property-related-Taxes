@@ -25,23 +25,40 @@ import {
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { ThreePointAssetMajorRender } from "./ThreePointAssetMajorRender";
 import {
   PhdBuildingStdPriceModalButton,
   type PhdThreePointApply,
 } from "@/components/calc/building-std-price/PhdBuildingStdPriceModalButton";
 import type { AddressValue } from "@/components/ui/address-search";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
+import { isAcq2001LocationIndexTrack } from "@/lib/calc/phd-acq-land-price-track";
+import { pickAcqLocationIndexLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 
 // ─── Props ────────────────────────────────────────────────────────
 
 export interface ThreePointStandardPriceInputProps {
   // 취득시
   acquisitionDate: string;
+  /**
+   * 취득시 **부수토지 개별공시지가** 추천 연도 전용 기준일(선택). 이 값은 부수토지 기준시가
+   * (= 공시지가 × 면적, land value)용이므로 **토지 취득일** 기준이어야 한다(§166⑥ 토지·건물 취득일 상이).
+   * ※ 건물 위치지수용 공시지가가 아니다 — 건물 기준시가·batch·신축연도는 acquisitionDate(건물 취득일) 유지.
+   * 미주입 시 acquisitionDate fallback(토지·건물 취득일 동일 시 동일값).
+   */
+  acqLandReferenceDate?: string;
   landPriceYearAtAcq: string;
   landPriceYearAtAcqIsManual: boolean;
   onLandPriceYearAtAcqChange: (year: string, isManual: boolean) => void;
   landPricePerSqmAtAcq: string;
   onLandPricePerSqmAtAcqChange: (v: string) => void;
+  /**
+   * 취득 ≤2000 — 2001.1.1 현재 공시지가(원/㎡). **위치지수 트랙**(§164⑤·`phd-acq-land-price-track.ts`).
+   * 배치 모달이 입력받은 2001값의 저장처 + 재오픈 시 복원 시드.
+   * 미주입 시 종전 동작(≤2000 취득은 빈 값 시드 + applyBatch 드롭) 유지 — 단독주택 경로 회귀 방어.
+   */
+  landPricePerSqmAtAcq2001?: string;
+  onLandPricePerSqmAtAcq2001Change?: (v: string) => void;
   buildingStdPriceAtAcq: string;
   onBuildingStdPriceAtAcqChange: (v: string) => void;
 
@@ -69,6 +86,13 @@ export interface ThreePointStandardPriceInputProps {
   jibun?: string;
   /** 토지 면적 (㎡) — 토지기준시가 = 공시지가 × 면적 */
   landArea?: string;
+  /**
+   * 주택 건물 연면적 (㎡) — 3시점 일괄 계산 모달의 첫 부분(주택) 연면적 자동채움용.
+   * 겸용주택 주택분 등에서 상위 화면 주택 연면적을 전달. 미주입 시 모달 연면적 빈 값(종전).
+   */
+  housingFloorArea?: string;
+  /** 상가 연면적(문자열) — 겸용 배치 모달 상가 행 자동채움용. 미주입 시 주택 행만 시드. */
+  commercialFloorArea?: string;
   /**
    * 입력값의 대상 명시 — 라벨에 prefix 적용. 겸용주택 PHD 등 주택분과 상가분이
    * 같은 화면에 노출되는 컨텍스트에서 어느 쪽 입력인지 구별 표시용.
@@ -109,16 +133,6 @@ export interface ThreePointStandardPriceInputProps {
   commercialBuildingStdPriceAtTransfer?: string;
   onCommercialBuildingStdPriceAtTransferChange?: (v: string) => void;
   /**
-   * ① 취득시 토지 공시지가/연도가 외부 섹션에서 자동 동기화되는 경우 read-only 표시 + 안내.
-   * 겸용주택 PHD에서 섹션 2의 `mixedAcqLandPricePerSqm`을 미러링할 때 사용.
-   */
-  landAutoSyncAtAcq?: { label: string };
-  /**
-   * ③ 양도시 토지 공시지가/연도가 외부 섹션에서 자동 동기화되는 경우 read-only 표시 + 안내.
-   * 겸용주택 PHD에서 섹션 2의 `mixedTransferLandPricePerSqm`을 미러링할 때 사용.
-   */
-  landAutoSyncAtTransfer?: { label: string };
-  /**
    * true 시 ③ 양도시 컬럼 전체를 렌더링하지 않음.
    * Case A 4-part 통합 모드에서 양도시 섹션이 외부(MixedUseStandardPriceInputs)로 이동 시 사용.
    */
@@ -136,6 +150,11 @@ export interface ThreePointStandardPriceInputProps {
    * (단일 주택 PHD 전용. 미주입 시 기존 필드별 버튼 유지 — mixed-use 회귀 방지.)
    */
   enableBatchCalc?: boolean;
+  /**
+   * 렌더 축. "asset-major"(겸용 Case A 전용) 시 시점별 대신 자산별(주택/상가) 그룹 × 3시점으로 전치.
+   * splitMode(데이터·6값 배치)와 직교 — asset-major는 splitMode=true 유지 전제.
+   */
+  layout?: "time-major" | "asset-major";
 }
 
 // ─── 라벨 매핑 ──────────────────────────────────────────────────
@@ -151,7 +170,6 @@ function resolveLabels(targetLabel?: string, useWholeBuildingLabels?: boolean) {
       landStdPrice: "전체 토지기준시가",
       landStdPriceHint: "공시지가 × 전체 토지면적 (주택+상가 전체)",
       buildingStdPrice: "전체 건물 기준시가",
-      buildingStdPriceHint: "국세청 건물기준시가 — 당시 건물 전체 (주택+상가 합계, 당시는 모두 주택)",
       totalLabel: "건물+토지 기준시가 합계",
     };
   }
@@ -162,7 +180,6 @@ function resolveLabels(targetLabel?: string, useWholeBuildingLabels?: boolean) {
       landStdPrice: "주택부수토지 기준시가",
       landStdPriceHint: "주택부수토지 공시지가 × 면적",
       buildingStdPrice: "주택 건물기준시가",
-      buildingStdPriceHint: "국세청 건물기준시가 — 주택건물(상가건물 제외)",
       totalLabel: "주택분 기준시가 합계",
     };
   }
@@ -172,7 +189,6 @@ function resolveLabels(targetLabel?: string, useWholeBuildingLabels?: boolean) {
     landStdPrice: "토지기준시가",
     landStdPriceHint: "공시지가(원/㎡) × 토지면적(㎡)",
     buildingStdPrice: "건물기준시가",
-    buildingStdPriceHint: "국세청 건물기준시가 (원) — 양도·취득 당시 기준시가",
     totalLabel: "기준시가 합계",
   };
 }
@@ -217,11 +233,6 @@ interface PointBlockProps {
   /** Case A 시 "전체 건물" 의미 라벨로 전환 (취득시·최초공시 시점 전용) */
   useWholeBuildingLabels?: boolean;
   /**
-   * 토지 공시지가·연도가 외부에서 자동 동기화되는 경우 read-only로 표시.
-   * 건물 기준시가는 그대로 입력 유지.
-   */
-  landAutoSync?: { label: string };
-  /**
    * Case A 4부분 분리 모드 — true 일 때 토지·건물 기준시가를 주택분/상가분 2컬럼으로 표시.
    */
   splitMode?: boolean;
@@ -237,9 +248,11 @@ interface PointBlockProps {
   stdPriceAddress?: AddressValue;
   /** true 시 이 시점 필드별 계산기 버튼 미표시(3시점 일괄 버튼으로 대체). */
   hideBuildingCalcButton?: boolean;
+  /** true 시 토지(연도+공시지가)만 렌더하고 건물·합계는 생략 — asset-major 전치에서 토지 3시점 공용 재사용. */
+  landOnly?: boolean;
 }
 
-function PointBlock({
+export function PointBlock({
   label,
   tone,
   referenceDate,
@@ -254,7 +267,6 @@ function PointBlock({
   landArea,
   targetLabel,
   useWholeBuildingLabels,
-  landAutoSync,
   splitMode,
   housingLandArea,
   commercialLandArea,
@@ -264,6 +276,7 @@ function PointBlock({
   commercialBuildingStdSnapshotKey,
   stdPriceAddress,
   hideBuildingCalcButton,
+  landOnly,
 }: PointBlockProps) {
   const toneClasses = tone ? TONE_CLASSES[tone] : null;
   const labels = resolveLabels(targetLabel, useWholeBuildingLabels);
@@ -329,24 +342,104 @@ function PointBlock({
 
   const yearBadge = isManual ? (
     <span className="flex items-center gap-1">
-      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-micro font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
         수동
       </span>
       <button
         type="button"
         onClick={handleResetToAuto}
-        className="text-[10px] text-primary underline underline-offset-2 hover:no-underline"
+        className="text-micro text-primary underline underline-offset-2 hover:no-underline"
       >
         ↻ 자동
       </button>
     </span>
   ) : (
-    <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
+    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
       자동
     </span>
   );
 
   const canLookup = !!jibun && !!effectiveYear;
+
+  // 비-split·비-landOnly 시 연도·공시지가·토지기준시가를 한 행(3열)으로 배치.
+  const rowMode = !splitMode && !landOnly;
+
+  // ── 공시지가 기준 연도 (조회 버튼을 연도 select 오른쪽에 인라인 배치) ──
+  const yearField = (
+    <FieldCard label="공시지가 연도" badge={yearBadge} stacked={rowMode}>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <Select
+            value={effectiveYear}
+            onValueChange={handleYearSelect}
+            disabled={!referenceDate}
+          >
+            <SelectTrigger className="h-9 w-full">
+              <span>
+                {selectedYear
+                  ? `${selectedYear}년${!isManual ? " (자동)" : ""}`
+                  : referenceDate
+                    ? `${recommendedYear}년 (자동)`
+                    : "기준일 미입력"}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((opt) => (
+                <SelectItem key={opt.year} value={String(opt.year)}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <button
+          type="button"
+          onClick={handleLookup}
+          disabled={!canLookup || isLookingUp}
+          className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
+        >
+          {isLookingUp ? "조회 중…" : "공시지가 조회"}
+        </button>
+      </div>
+      {lookupError && (
+        <p className="mt-1 text-xs text-destructive">{lookupError}</p>
+      )}
+    </FieldCard>
+  );
+
+  // ── 공시지가 단가 — Case A 분리 모드와 무관하게 단일 입력 (같은 지번) ──
+  const unitPriceField = (
+    <FieldCard
+      label={labels.landUnitPrice}
+      unit="원/㎡"
+      stacked={rowMode}
+      hint={labels.landUnitPriceHint}
+    >
+      <CurrencyInput
+        label=""
+        value={landPricePerSqm}
+        onChange={onLandPricePerSqmChange}
+        placeholder="원/㎡"
+        hideUnit
+      />
+    </FieldCard>
+  );
+
+  // ── 토지기준시가 (자동 계산) — 비-split 전용, rowMode 시 위 두 필드와 한 행 ──
+  const landStdField = (
+    <FieldCard
+      label={labels.landStdPrice}
+      unit="원"
+      stacked={rowMode}
+      hint={labels.landStdPriceHint}
+    >
+      <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
+        {landStdPrice !== null
+          ? landStdPrice.toLocaleString()
+          : <span className="text-muted-foreground/50">자동 계산</span>}
+      </div>
+    </FieldCard>
+  );
 
   return (
     <div
@@ -360,97 +453,21 @@ function PointBlock({
         {label}
       </p>
 
-      {/* 공시지가 기준 연도 — landAutoSync 시 read-only 표시 */}
-      {landAutoSync ? (
-        <FieldCard
-          label="공시지가 연도"
-          badge={
-            <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
-              자동
-            </span>
-          }
-        >
-          <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
-            {effectiveYear ? (
-              `${effectiveYear}년`
-            ) : (
-              <span className="text-muted-foreground/50">기준일 미입력</span>
-            )}
-          </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">{landAutoSync.label}</p>
-        </FieldCard>
+      {rowMode ? (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {yearField}
+          {unitPriceField}
+          {landStdField}
+        </div>
       ) : (
-        <FieldCard label="공시지가 연도" badge={yearBadge}>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Select
-                value={effectiveYear}
-                onValueChange={handleYearSelect}
-                disabled={!referenceDate}
-              >
-                <SelectTrigger className="h-9 w-full">
-                  <span>
-                    {selectedYear
-                      ? `${selectedYear}년${!isManual ? " (자동)" : ""}`
-                      : referenceDate
-                        ? `${recommendedYear}년 (자동)`
-                        : "기준일 미입력"}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {options.map((opt) => (
-                    <SelectItem key={opt.year} value={String(opt.year)}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <button
-              type="button"
-              onClick={handleLookup}
-              disabled={!canLookup || isLookingUp}
-              className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
-            >
-              {isLookingUp ? "조회 중…" : "공시지가 조회"}
-            </button>
-          </div>
-          {lookupError && (
-            <p className="mt-1 text-xs text-destructive">{lookupError}</p>
-          )}
-          {!canLookup && (
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              지번 주소 입력 후 조회 가능합니다
-            </p>
-          )}
-        </FieldCard>
+        <>
+          {yearField}
+          {unitPriceField}
+        </>
       )}
 
-      {/* 공시지가 단가 — Case A 분리 모드와 무관하게 단일 입력 (같은 지번) */}
-      <FieldCard
-        label={labels.landUnitPrice}
-        unit="원/㎡"
-        hint={landAutoSync ? landAutoSync.label : labels.landUnitPriceHint}
-      >
-        {landAutoSync ? (
-          <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
-            {pricePerSqm > 0 ? (
-              pricePerSqm.toLocaleString()
-            ) : (
-              <span className="text-muted-foreground/40 text-xs">위 섹션에서 입력</span>
-            )}
-          </div>
-        ) : (
-          <CurrencyInput
-            label=""
-            value={landPricePerSqm}
-            onChange={onLandPricePerSqmChange}
-            placeholder="원/㎡"
-            hideUnit
-          />
-        )}
-      </FieldCard>
-
+      {!landOnly && (
+      <>
       {splitMode ? (
         <>
           {/* Case A 분리 모드 — 주택분/상가분 토지기준시가 (자동 계산, 2 컬럼) */}
@@ -538,20 +555,8 @@ function PointBlock({
         </>
       ) : (
         <>
-          {/* 일반 모드 — 단일 토지기준시가 + 단일 건물기준시가 */}
-          <FieldCard
-            label={labels.landStdPrice}
-            unit="원"
-            hint={labels.landStdPriceHint}
-          >
-            <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
-              {landStdPrice !== null
-                ? landStdPrice.toLocaleString()
-                : <span className="text-muted-foreground/50">자동 계산</span>}
-            </div>
-          </FieldCard>
-
-          <FieldCard label={labels.buildingStdPrice} unit="원" hint={labels.buildingStdPriceHint}>
+          {/* 일반 모드 — 토지기준시가는 위 행(rowMode)에 배치, 여기선 건물기준시가만 */}
+          <FieldCard label={labels.buildingStdPrice} unit="원">
             <CurrencyInput
               label=""
               value={buildingStdPrice}
@@ -610,6 +615,8 @@ function PointBlock({
           </div>
         );
       })()}
+      </>
+      )}
     </div>
   );
 }
@@ -636,8 +643,18 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     const y = d && /^\d{4}/.test(d) ? Number(d.slice(0, 4)) : NaN;
     return Number.isFinite(y) && y > 1900 ? y : undefined;
   };
+  // 취득연도 ≤ 2000이면 건물기준시가는 2001.1.1. 체계로 산정하므로 위치지수 공시지가도 2001.1.1. 현재 값이다
+  // (§164⑤). props.landPricePerSqmAtAcq(취득연도 공시지가·**토지 트랙**)를 전용하면 오입력 →
+  // 전용 위치지수 트랙(landPricePerSqmAtAcq2001)에서 시드해 재오픈 시 이전 입력을 복원한다.
+  // 트랙 판정은 phd-acq-land-price-track.ts 단일 소스(모달 prefill 게이트와 동일 규칙).
+  const acqYear = yearOf(props.acquisitionDate);
+  const acqLandPerM2 = pickAcqLocationIndexLandPrice(
+    acqYear,
+    props.landPricePerSqmAtAcq,
+    props.landPricePerSqmAtAcq2001,
+  );
   const batchPoints = [
-    { key: "acquisition" as const, label: "취득시", year: yearOf(props.acquisitionDate), landPricePerM2: props.landPricePerSqmAtAcq },
+    { key: "acquisition" as const, label: "취득시", year: acqYear, landPricePerM2: acqLandPerM2 },
     { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(props.firstDisclosureDate), landPricePerM2: props.landPricePerSqmAtFirst },
     { key: "transfer" as const, label: "양도시", year: yearOf(props.transferDate), landPricePerM2: props.landPricePerSqmAtTransfer },
   ];
@@ -652,25 +669,49 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
       props.onCommercialBuildingStdPriceAtFirstChange?.(String(v.firstDisclosure.commercial));
     if (v.transfer?.commercial != null)
       props.onCommercialBuildingStdPriceAtTransferChange?.(String(v.transfer.commercial));
+    // 공시지가 되돌려쓰기 — 모달에서 입력한 시점 공시지가를 외부 3시점 섹션에 반영.
+    // 최초공시·양도는 동일 연도값이라 그대로 반영.
+    if (v.landPrices?.firstDisclosure != null)
+      props.onLandPricePerSqmAtFirstChange(v.landPrices.firstDisclosure);
+    if (v.landPrices?.transfer != null)
+      props.onLandPricePerSqmAtTransferChange(v.landPrices.transfer);
+    // 취득은 **트랙이 갈린다**(§164⑤): ≤2000이면 모달 입력값은 2001.1.1 기준(위치지수 전용)이라
+    // 취득당시 연도 토지값 필드에 넣으면 오염 → 전용 필드로 라우팅. ≥2001은 두 트랙이 같은 값 → 종전대로.
+    // 종전에는 ≤2000을 **드롭**해 사용자 입력이 소실됐다(받을 그릇 부재). 핸들러 미주입 시 종전 동작 유지.
+    if (v.landPrices?.acquisition != null) {
+      if (isAcq2001LocationIndexTrack(acqYear))
+        props.onLandPricePerSqmAtAcq2001Change?.(v.landPrices.acquisition);
+      else props.onLandPricePerSqmAtAcqChange(v.landPrices.acquisition);
+    }
   };
 
-  // 겸용 — 배치가 산출하는 양도 commercial 라우팅 콜백이 있거나(또는 Case A split) 부분별 주택/상가 입력 노출.
-  // enableCommercial 조건은 applyBatch 라우팅(transfer-commercial=onCommercialBuildingStdPriceAtTransferChange)과 일치시킨다(M1).
-  const enableCommercial =
-    splitMode || props.onCommercialBuildingStdPriceAtTransferChange != null;
+  // 겸용 상가(취득·양도)는 전용 ③ 상가 기준시가 섹션(MixedUseAssetMajorStdPrice/Legacy)이 전담한다.
+  // PHD 3시점 버튼은 주택분 전용 — Case A(splitMode·4부분 분리)만 상가 포함(양도 상가 콜백 라우팅은
+  // splitMode에서만 발화하므로 M1 일치). Case B는 상가 UI 미노출, 양도 상가는 ③ 섹션에서 동일 필드로 입력.
+  const enableCommercial = splitMode;
+
+  // asset-major(Case A)는 상단 단일 버튼 대신 주택/상가 섹션 헤더에 런처 2개를 배치한다(D1) —
+  // 버튼 조립은 자식(ThreePointAssetMajorRender)이 담당, 여기선 배치 데이터만 전달(800줄 정책).
+  // 두 런처 모두 동일한 결합 모달(6값·commercialAcqFirstMode)을 열어 일관성·스냅샷을 보존한다.
+  // (계획: mixed-use-case-a-per-section-stdprice-calculator.plan.md §4)
+  const assetMajor = props.layout === "asset-major";
 
   return (
     <div className="space-y-3">
-      {props.enableBatchCalc && (
+      {props.enableBatchCalc && !assetMajor && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} />
+          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} housingFloorAreaPrefill={props.housingFloorArea} commercialFloorAreaPrefill={props.commercialFloorArea} />
         </div>
       )}
+      {assetMajor ? (
+        <ThreePointAssetMajorRender {...props} batchPoints={batchPoints} onBatchApply={applyBatch} />
+      ) : (
+      <>
       <PointBlock
         label={acqLabel}
         hideBuildingCalcButton={props.enableBatchCalc}
         tone="amber"
-        referenceDate={props.acquisitionDate}
+        referenceDate={props.acqLandReferenceDate ?? props.acquisitionDate}
         selectedYear={props.landPriceYearAtAcq}
         isManual={props.landPriceYearAtAcqIsManual}
         onYearChange={props.onLandPriceYearAtAcqChange}
@@ -681,7 +722,6 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
         jibun={props.jibun}
         landArea={props.landArea}
         targetLabel={props.targetLabel}
-        landAutoSync={props.landAutoSyncAtAcq}
         splitMode={splitMode}
         housingLandArea={props.housingLandArea}
         commercialLandArea={props.commercialLandArea}
@@ -733,7 +773,6 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
           jibun={props.jibun}
           landArea={props.landArea}
           targetLabel={props.targetLabel}
-          landAutoSync={props.landAutoSyncAtTransfer}
           splitMode={splitMode}
           housingLandArea={props.housingLandArea}
           commercialLandArea={props.commercialLandArea}
@@ -743,6 +782,8 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
           commercialBuildingStdSnapshotKey={props.stdPriceSnapshotPrefix ? `${props.stdPriceSnapshotPrefix}-transfer-commercial` : undefined}
           stdPriceAddress={props.stdPriceAddress}
         />
+      )}
+      </>
       )}
     </div>
   );

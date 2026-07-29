@@ -1,0 +1,135 @@
+/**
+ * ④⑬ 토지·건물 분리(소령 §166⑥·§168②) API 페이로드 빌더 — `transfer-tax-api.ts`에서 분리(800줄 정책).
+ *
+ * 분리 축의 게이트 판정과 파트 필드 전송을 **한 곳에 모은다**. 게이트가 본체에 흩어져 있으면
+ * "UI는 칸을 노출하는데 API는 전송하지 않는" 침묵 누락이 재발한다(PR #837 §3.1 실사고).
+ */
+
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { applyRatio } from "./transfer-tax-api-helpers";
+import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+
+/**
+ * 지분 스케일 적용기 — **금액 필드 전용** 단일 진입점.
+ *
+ * UI 입력은 전부 100% 기준값이고(`AssetForm.ownershipNumerator` 규약) API 변환이 × ratio를
+ * 적용한다. 총액(`transferPrice`·`acquisitionPrice`·`capitalExpenditure` 등)은 이미 그렇게
+ * 처리되는데 **파트 필드·추계 가액은 raw로 새어나가고 있었다** — 같은 body 안에서 100%와
+ * 지분 스케일이 섞여 세액이 틀어진다.
+ *
+ * ⚠️ 기준시가는 대상이 아니다 — 소유 지분이 아니라 물건의 속성값이며, 환산 산식에서
+ *    분자·분모로 함께 나타나 비율이 상쇄된다.
+ */
+export function makeRatioed(ratio: number, fractional: boolean) {
+  return (v: string | undefined): number | undefined => {
+    const n = parseAmount(v ?? "");
+    if (!n) return undefined;
+    return fractional ? applyRatio(n, ratio) : n;
+  };
+}
+
+/** 분리 축이 활성인가 — `calcSplitGain` 진입 게이트(transfer-tax-split-gain.ts)와 동일 조건. */
+export function isSplitPayloadActive(primary: AssetForm, isBurdenedGift: boolean): boolean {
+  // ⚠️ 부담부증여 제외 — 엔진이 transferPrice·acquisitionPrice를 §159 안분액으로 override하므로
+  //    (transfer-tax-burdened-gift-step.ts) 사용자가 화면에서 보는 계약 총액과 **다른 총액**이 기준이 된다.
+  //    그 상태로 토지 양도가액을 직접 입력하면 잔액이 계약총액 기준으로 계산돼 음수가 된다
+  //    (계약 10억·§159 채무 4억에서 토지 6억 입력 → 건물 = 4억 − 6억 = −2억).
+  //    부담부증여는 기준시가 비율 안분만 사용한다.
+  return (
+    (primary.hasSeperateLandAcquisitionDate === true || primary.selfOwns !== "both") &&
+    !isBurdenedGift
+  );
+}
+
+/** 분리 축 전송 페이로드 — 본체 body에 그대로 spread한다. */
+export function buildSplitPayload(
+  primary: AssetForm,
+  opts: {
+    isBurdenedGift: boolean;
+    /** §164⑤ PHD 모드 — 취득일 동일이어도 calcSplitGain 진입을 위해 landAcquisitionDate fallback */
+    usesPhd: boolean;
+    ratioed: (v: string | undefined) => number | undefined;
+  },
+): Record<string, unknown> {
+  const { isBurdenedGift, usesPhd, ratioed } = opts;
+  const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift);
+  // **별개 취득** — 분리 활성의 부분집합. 취득시점이 실제로 달라 취득가액이 파트별로 실재하는
+  // 경우만 true(겸용·selfOwns 강제 분리에서 날짜가 같으면 false).
+  // 엔진 취득가액 축의 파트별 완결 게이트(§97①1호·§114⑦) — 판정 단일 소스는 그 헬퍼 1곳.
+  const separateAcquisition = isSplitActive && isSeparateAcquisition(primary);
+
+  // 파트 모드 미선택("") 시 자산 전체 레거시 플래그에서 파생 —
+  // UI 표시·validate와 단일 소스(effectivePartAcqMode, dual-truth 방지).
+  const landAcqMode = effectivePartAcqMode(primary.landAcqMode, primary);
+  const buildingAcqMode = effectivePartAcqMode(primary.buildingAcqMode, primary);
+  const saleSplitMode = primary.saleSplitMode ?? "apportioned";
+
+  // 파트별 취득가액 직접입력 게이트 — actual·appraisal 모드만(환산·매매사례는 총액을 사용자가 입력하지 않음).
+  // UI가 분리 칸을 노출하는 조건과 동일(LandBuildingSplitSection showAcqInputs 파트별 판정).
+  const landAcqDirectActive = isSplitActive && (landAcqMode === "actual" || landAcqMode === "appraisal");
+  const buildingAcqDirectActive = isSplitActive && (buildingAcqMode === "actual" || buildingAcqMode === "appraisal");
+  // 양도가액 직접입력 게이트 — saleSplitMode==="actual"(구분양도) 시만.
+  // 엔진은 saleSplitMode를 명시 입력으로 소비하므로("죽은 모드" 재발 방지, §9 M2) 이 게이트를
+  // 벗어나도 유령 값이 도달하지 않지만, "기준시가 비율 안분"으로 되돌린 뒤 잔존한 직접 입력값을
+  // 사용자 의도와 다르게 전송하지 않기 위해 여전히 게이트로 막는다.
+  const saleDirectActive = isSplitActive && saleSplitMode === "actual";
+  // 양도시 기준시가 게이트 — apportioned 양도(안분 분모) 이거나 어느 파트든 환산(분모)이 필요한 경우(§7.2).
+  const saleStdPriceActive =
+    isSplitActive &&
+    (saleSplitMode === "apportioned" || landAcqMode === "estimated" || buildingAcqMode === "estimated");
+
+  return {
+    // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
+    selfOwns: primary.selfOwns !== "both" ? primary.selfOwns : undefined,
+    landAcquisitionDate:
+      (primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both") && primary.landAcquisitionDate
+        ? primary.landAcquisitionDate
+        : usesPhd
+          ? primary.acquisitionDate
+          : undefined,
+    // 파트별 취득 모드 + 양도 분리 모드 — 엔진 명시 입력(§9 M2, "죽은 모드" 재발 방지).
+    ...(isSplitActive
+      ? { landAcqMode, buildingAcqMode, saleSplitMode, isSeparateAcquisition: separateAcquisition }
+      : {}),
+    // 건물분 취득시 기준시가(§99①1호 나목) — `building` + 별개 취득 전용.
+    // 주택(라목)은 부수토지 포함 결합 공시라 파트 독립 입력이 성립하지 않는다(개산공제 법정액 이탈).
+    ...(separateAcquisition && primary.assetKind === "building"
+      ? { buildingStandardPriceAtAcquisition: parseAmount(primary.buildingStandardPriceAtAcq) || undefined }
+      : {}),
+    // 양도가액 2필드 — 구분양도 게이트.
+    ...(saleDirectActive
+      ? {
+          landTransferPrice: ratioed(primary.landTransferPrice),
+          buildingTransferPrice: ratioed(primary.buildingTransferPrice),
+        }
+      : {}),
+    // 취득가액 2필드.
+    ...(landAcqDirectActive ? { landAcquisitionPrice: ratioed(primary.landAcquisitionPrice) } : {}),
+    ...(buildingAcqDirectActive
+      ? { buildingAcquisitionPrice: ratioed(primary.buildingAcquisitionPrice) }
+      : {}),
+    // 파트별 매매사례가액 — salesCase 모드 시만. 별개 취득이면 미입력 = 차단(§176의2③1호 —
+    // 탐색 창이 파트별 취득일 ±3개월로 달라 총액 안분 근거 없음), 동시 취득이면 §166⑥ 안분 fallback.
+    ...(isSplitActive && landAcqMode === "salesCase"
+      ? { landSalesCaseValue: ratioed(primary.landSalesCaseValue) }
+      : {}),
+    ...(isSplitActive && buildingAcqMode === "salesCase"
+      ? { buildingSalesCaseValue: ratioed(primary.buildingSalesCaseValue) }
+      : {}),
+    // 자본적지출 2필드 — 모드 무관 항상 입력 가능(UI 상시 노출).
+    ...(isSplitActive
+      ? {
+          landDirectExpenses: ratioed(primary.landDirectExpenses),
+          buildingDirectExpenses: ratioed(primary.buildingDirectExpenses),
+        }
+      : {}),
+    // 양도시 기준시가 2필드 — 기준시가는 지분 스케일 대상이 아니다(물건 속성값).
+    ...(saleStdPriceActive
+      ? {
+          landStandardPriceAtTransfer: parseAmount(primary.landStandardPriceAtTransfer) || undefined,
+          buildingStandardPriceAtTransfer: parseAmount(primary.buildingStandardPriceAtTransfer) || undefined,
+        }
+      : {}),
+  };
+}

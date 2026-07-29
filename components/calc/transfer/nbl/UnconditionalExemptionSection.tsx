@@ -18,24 +18,21 @@ export interface UnconditionalExemptionSectionProps {
 }
 
 // 법조문 배지 스타일 (LawArticleModal className override)
-const LAW_BADGE_CLASS =
-  "inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium " +
-  "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
-  "hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors shrink-0 whitespace-nowrap cursor-pointer";
+import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 
 /** 토글별 요건 충족/미충족 뱃지 — ON 토글에만 status가 존재 */
 function ExemptionStatusBadge({ status }: { status?: ToggleExemptionStatus }) {
   if (!status) return null;
   if (status.qualifies) {
     return (
-      <p className="mt-1 flex items-start gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+      <p className="mt-1 flex items-start gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-caption text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
         <span className="shrink-0 font-semibold">요건 충족</span>
         <span>· 이 사유로 사업용 토지로 확정됩니다.</span>
       </p>
     );
   }
   return (
-    <p className="mt-1 flex items-start gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+    <p className="mt-1 flex items-start gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-caption text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
       <span className="shrink-0 font-semibold">요건 미충족</span>
       <span>· {status.requirementHint}</span>
     </p>
@@ -144,7 +141,7 @@ export function UnconditionalExemptionSection({
             onChange={(v) => onAssetChange({ nblExemptPublicNoticeDate: v })}
             data-testid="nbl-expr-notice-date"
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             ①양도정보(공익수용)의 사업인정고시일에서 자동 반영 · 다르면 직접 수정
           </p>
         </div>

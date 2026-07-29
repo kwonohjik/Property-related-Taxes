@@ -97,7 +97,7 @@ export function DebtAllocationResultCard({
           채무·공과·장례비 협의분할 결과 (§14①1·2·3호)
         </h3>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+          <span className="text-micro font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
             협의분할 모드
           </span>
           <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="violet" />
@@ -251,7 +251,7 @@ export function DebtAllocationResultCard({
               </tbody>
             </table>
           </div>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 italic">
+          <p className="text-micro text-gray-500 dark:text-gray-400 italic">
             장례비는 한도 적용 전 입력값 기준. 상속인별 산출세액 배부는 아래 상속인별 배부 표 참조.
           </p>
         </div>
@@ -281,14 +281,14 @@ export function DebtAllocationResultCard({
                     <dt className="flex items-center gap-1.5">
                       <span className="font-medium">{d.creditorName}</span>
                       {d.financialDebtAmount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                        <span className="px-1.5 py-0.5 rounded-full text-micro font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
                           금융채무 {formatKRW(d.financialDebtAmount)} (§22 차감)
                         </span>
                       )}
                     </dt>
                     <dd className="font-mono font-semibold">{formatKRW(d.amount)}</dd>
                   </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 pl-0">
+                  <p className="text-micro text-gray-500 dark:text-gray-400 pl-0">
                     분배: {allocationText}
                   </p>
                 </div>
@@ -303,7 +303,7 @@ export function DebtAllocationResultCard({
               </dd>
             </div>
           </dl>
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 italic">
+          <p className="text-micro text-gray-500 dark:text-gray-400 italic">
             재산평가 담보채권액(저당 + 임대보증금)이 §14①3호 「피상속인의 채무」로 과세가액에서 공제됩니다.
           </p>
         </div>

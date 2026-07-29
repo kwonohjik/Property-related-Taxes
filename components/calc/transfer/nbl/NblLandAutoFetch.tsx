@@ -89,10 +89,10 @@ export function NblLandValueAutoFetchButton({
         {loading ? "조회 중…" : "🔍 토지가액 자동조회 (당해·직전)"}
       </button>
       {disabledReason && (
-        <p className="text-[11px] text-muted-foreground">{disabledReason}</p>
+        <p className="text-caption text-muted-foreground">{disabledReason}</p>
       )}
-      {info && <p className="text-[11px] text-emerald-600 dark:text-emerald-400">{info}</p>}
-      {error && <p className="text-[11px] text-destructive">{error}</p>}
+      {info && <p className="text-caption text-emerald-600 dark:text-emerald-400">{info}</p>}
+      {error && <p className="text-caption text-destructive">{error}</p>}
     </div>
   );
 }
@@ -148,11 +148,11 @@ export function NblUrbanZoneCheckButton({ jibun, transferDate }: ZoneButtonProps
         {loading ? "조회 중…" : "🔍 도시지역 여부 조회"}
       </button>
       {disabledReason && (
-        <p className="text-[11px] text-muted-foreground">{disabledReason}</p>
+        <p className="text-caption text-muted-foreground">{disabledReason}</p>
       )}
-      {error && <p className="text-[11px] text-destructive">{error}</p>}
+      {error && <p className="text-caption text-destructive">{error}</p>}
       {result && (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           현재 용도지역: <span className="font-medium text-foreground">{result.zone}</span>
           {" — "}
           {result.urban ? (

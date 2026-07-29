@@ -95,7 +95,7 @@ export function CorporateNonBusinessAssetsSection({
         <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
           법인 사업무관자산 차감 (시행령 §15⑤2호 + §16⑤2호)
         </p>
-        <p className="text-[10px] text-amber-700 dark:text-amber-300">
+        <p className="text-micro text-amber-700 dark:text-amber-300">
           ⓘ 산식: 평가가액 × (총자산 − 사업무관자산 합) / 총자산. 총자산 미입력 시 차감 미적용 (legacy).
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -185,7 +185,7 @@ export function CorporateNonBusinessAssetsSection({
             hint="요구불예금 + 취득일부터 만기 3개월 이내 금융상품 포함"
             placeholder="보유현금 입력 (원)"
           />
-          <p className="text-[10px] font-medium text-sky-700 dark:text-sky-300">
+          <p className="text-micro font-medium text-sky-700 dark:text-sky-300">
             직전 5개 사업연도 말 현금 (입력한 칸의 평균 사용)
           </p>
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
@@ -222,17 +222,17 @@ export function CorporateNonBusinessAssetsSection({
 
       {preview && (
         <div className="rounded-md border border-amber-300 bg-amber-100/60 dark:bg-amber-900/30 dark:border-amber-700 p-2 space-y-0.5">
-          <p className="text-[11px] font-semibold text-amber-900 dark:text-amber-100">
+          <p className="text-caption font-semibold text-amber-900 dark:text-amber-100">
             ⚖️ 차감 미리보기
           </p>
           {preview.excessCashAuto && (
-            <p className="text-[10px] text-amber-800 dark:text-amber-200">
+            <p className="text-micro text-amber-800 dark:text-amber-200">
               과다현금 자동산정: 보유 {formatKRW(assets?.currentCash ?? 0)} − 5년평균{" "}
               {formatKRW(preview.excessCashAvg5y ?? 0)} × {((preview.excessCashRatio ?? 0) * 100).toFixed(0)}% ={" "}
               {formatKRW(preview.excessCash)}
             </p>
           )}
-          <p className="text-[10px] text-amber-800 dark:text-amber-200">
+          <p className="text-micro text-amber-800 dark:text-amber-200">
             평가가액 {formatKRW(stockValue)} × (총자산 {formatKRW(totalAssets!)} − 사업무관자산 {formatKRW(preview.sumOfNonBusiness)}) / 총자산
           </p>
           <p className="text-xs font-mono text-amber-900 dark:text-amber-100">

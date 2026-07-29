@@ -23,7 +23,8 @@
  *   - postApprovalExpenses 미입력 시 0 처리.
  */
 
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { estimatedDeductionRate } from "./legal-codes";
+import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRedevelopmentValuation } from "./redevelopment-valuation";
 import {
   computeSalePriceTotal,
@@ -68,6 +69,22 @@ export interface RedevelopmentSplitInput {
 
   /** 환산 모드 여부 (true 시 redevelopment-valuation 호출) */
   useEstimatedAcquisition: boolean;
+  /**
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
+   * 그대로 내려준다(서브엔진 재판정 금지).
+   *
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
+   */
+  ownershipRatio?: number;
+  /**
+   * 미등기양도자산 여부(소득세법 §104③) — §163⑥ 개산공제율 3/100 → **3/1000** 전환.
+   * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다(서브엔진 재판정 금지).
+   * 율 산출은 `estimatedDeductionRate()` 단일 경유.
+   */
+  isUnregistered?: boolean;
 }
 
 /** 3분할 양도차익 결과 (LTHD 미적용 — lthd.ts 에서 별도 적용) */
@@ -166,7 +183,16 @@ export function computeRedevelopmentSplit(
     valuationMeta.method !== "successor_member_decree_162_1_4" &&
     valuationMeta.numerator !== undefined
   ) {
-    estimatedLumpDeduction = Math.floor(valuationMeta.numerator * 0.03);
+    estimatedLumpDeduction = computeEstimatedDeduction(
+      valuationMeta.numerator,
+      estimatedDeductionRate(input.isUnregistered),
+      input.ownershipRatio,
+    );
+    // 표시 산식 base echo — numerator는 물건 전체(100%) 값이다.
+    valuationMeta.lumpDeductionBase = computeLumpSumDeductionBase(
+      valuationMeta.numerator,
+      input.ownershipRatio,
+    );
   }
 
   // ─ Step C: 인가전 양도차익 ─

@@ -63,12 +63,15 @@ function makeBaseBInput(overrides: Partial<RentalHousingExceptionInput> = {}): R
     scenario: "B",
     rentalUnits: [
       {
-        registrationDate: new Date("2018-01-01"),
-        rentalType: "long-8",
+        businessRegistrationDate: new Date("2018-01-01"),
+        rentalRegistrationDate: new Date("2018-01-01"),
+        rentalCategory: "long_general",
         rentalAcquisitionType: "purchase",
         isApartment: false,
         region: "non-metro",
+        isExcluded918Rule: false,
         standardPriceAtRentalStart: 200_000_000,
+        hasMinimum2Units: false,
         rentalMonths: 96,
         rentalAutoTermination: false,
         requirementsConfirmed: true,

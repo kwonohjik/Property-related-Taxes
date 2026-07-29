@@ -13,6 +13,7 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleChip } from "@/components/calc/inputs/ToggleChip";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
@@ -211,11 +212,7 @@ export function CorporateInfoSection({
   return (
     <div className="space-y-4">
       {/* 1. 평가대상 비상장법인 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
-          <p className="text-xs font-semibold text-sky-700">평가대상 비상장법인 (별지 1쪽)</p>
-        </div>
+      <ToneCard tone="sky" sectionNum={1} title="평가대상 비상장법인 (별지 1쪽)" bodyClassName="space-y-3" noDark>
         {/* 행 1 — 법인명·사업자등록번호·대표자 (3열, 라벨 상단 stacked) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FieldCard label="법인명" required stacked>
@@ -328,13 +325,13 @@ export function CorporateInfoSection({
         </div>
         {/* 자본금 변동사항 (증자·감자) — 발행주식총수·자본금 바로 아래에 임베드 (sectionNum 미전달 → 번호 없음) */}
         <CapitalChangeTable capitalChanges={capitalChanges} onChange={onCapitalChangesChange} />
-      </div>
+      </ToneCard>
 
       {/* 2. 평가 분기·할증 선택 (칩 그룹 — 평가방식 분기 / 할증 2개 sub-header) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">2</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">2</span>
             <p className="text-xs font-semibold text-violet-700">평가 분기·할증 선택</p>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -344,7 +341,7 @@ export function CorporateInfoSection({
 
         {/* 평가방식 분기 (상증령 §54·§55) */}
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+          <p className="text-caption font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
             평가방식 분기
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -395,7 +392,7 @@ export function CorporateInfoSection({
 
         {/* 할증 (상증법 §63③ · 상증령 §53) */}
         <div className="space-y-1.5 border-t border-violet-100 dark:border-violet-900 pt-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+          <p className="text-caption font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
             할증
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -416,10 +413,10 @@ export function CorporateInfoSection({
         {/* 펼침 영역 — 활성 칩별 옵션·입력 (미니 헤더로 소속 명시) */}
         {isRealEstateHeavy && (
           <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-900/20 p-2.5 space-y-1">
-            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+            <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">
               부동산과다보유법인 — 가중치 반전
             </p>
-            <p className="text-[11px] text-amber-800 dark:text-amber-200">
+            <p className="text-caption text-amber-800 dark:text-amber-200">
               일반 <span className="font-mono">(순손익×3 + 순자산×2)/5</span> → 부동산과다{" "}
               <span className="font-mono">(순손익×2 + 순자산×3)/5</span>
             </p>
@@ -427,10 +424,10 @@ export function CorporateInfoSection({
         )}
         {netAssetOnlyReason && (
           <div className="rounded-md border border-rose-200 bg-rose-50/60 dark:border-rose-800 dark:bg-rose-900/20 p-2.5 space-y-2">
-            <p className="text-[11px] font-semibold text-rose-700 dark:text-rose-300">
+            <p className="text-caption font-semibold text-rose-700 dark:text-rose-300">
               순자산가치만 평가 — 사유 선택 (상증령 §54④)
             </p>
-            <p className="text-[11px] text-rose-700 dark:text-rose-300">
+            <p className="text-caption text-rose-700 dark:text-rose-300">
               ※ KoreanLaw 검증: 4호 삭제 → 5호 (주식 80%). 1·2·6호 무조건 / 3·5호 단서 (가중평균 &lt; 순자산일 때만)
             </p>
             <RadioCardGroup<UnlistedNetAssetOnlyReason>
@@ -445,7 +442,7 @@ export function CorporateInfoSection({
         )}
         {treasuryStock && (
           <div className="rounded-md border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800 dark:bg-emerald-900/20 p-2.5 space-y-2">
-            <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+            <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">
               자기주식 보유 — 목적별 평가 (상증령 §54②·§55①)
             </p>
             <FieldCard label="자기주식수" stacked unit="주" hint="평가기준일 현재 보유한 자기주식 수 — 발행주식총수 미만">
@@ -474,7 +471,7 @@ export function CorporateInfoSection({
         )}
         {isMaxShareholder && (
           <div className="rounded-md border border-violet-200 bg-violet-50/60 dark:border-violet-800 dark:bg-violet-900/20 p-2.5 space-y-2">
-            <p className="text-[11px] font-semibold text-violet-700 dark:text-violet-300">
+            <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">
               최대주주 — 회사 규모 (할증 배제 판정)
             </p>
             <RadioCardGroup<"small" | "medium" | "large">

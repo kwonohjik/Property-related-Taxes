@@ -42,6 +42,36 @@ import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start"; // 로컬 사용(buildExemptEarlyResult) — 421행 re-export와 별개
 import type { AmendmentDetail } from "./types/transfer-amendment.types";
 
+/**
+ * §99의3 2-pass 후 formulaSteps의 농특세 관련 두 step(preliminary 세액 0)을 확정값으로 교체.
+ * computeNew993는 preliminary 호출 시 calculatedTaxBefore/After=0으로 push → finalize에서 실값 반영.
+ */
+function patchNew993SurtaxSteps(
+  steps: New993Result["formulaSteps"],
+  taxBefore: number,
+  taxAfter: number,
+  reduction: number,
+  ruralSurtax: number,
+): New993Result["formulaSteps"] {
+  return steps.map((s) => {
+    if (s.label === "양도세 감면세액 (농특세 기준)") {
+      return {
+        ...s,
+        value: reduction,
+        formula: `감면 전 산출세액 ${taxBefore.toLocaleString()} − 감면 후 산출세액 ${taxAfter.toLocaleString()} = ${reduction.toLocaleString()}`,
+      };
+    }
+    if (s.label === "농어촌특별세 (20%)") {
+      return {
+        ...s,
+        value: ruralSurtax,
+        formula: `감면세액 ${reduction.toLocaleString()} × 20% = ${ruralSurtax.toLocaleString()}`,
+      };
+    }
+    return s;
+  });
+}
+
 export interface FinalizeArgs {
   input: TransferTaxInput;
   effectiveInput: TransferTaxInput;
@@ -173,7 +203,19 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
     ruralSurtax993 = isExempt ? 0 : applyRate(taxReduction993, 0.2);
     const surtaxFields = { taxReductionForRuralSurtax: taxReduction993, ruralSurtax: ruralSurtax993 };
-    if (activePrelim === new993PreliminaryResult) new993FinalResult = { ...new993PreliminaryResult!, ...surtaxFields };
+    if (activePrelim === new993PreliminaryResult)
+      new993FinalResult = {
+        ...new993PreliminaryResult!,
+        ...surtaxFields,
+        // preliminary formulaSteps의 농특세 관련 두 step은 세액 0(2-pass 前) → 확정값으로 교체.
+        formulaSteps: patchNew993SurtaxSteps(
+          new993PreliminaryResult!.formulaSteps,
+          taxResultBefore993.calculatedTax,
+          taxResult.calculatedTax,
+          taxReduction993,
+          ruralSurtax993,
+        ),
+      };
     else if (activePrelim === new99PreliminaryResult) new99FinalResult = { ...new99PreliminaryResult!, ...surtaxFields };
     else if (activePrelim === unsold987PreliminaryResult) unsold987FinalResult = { ...unsold987PreliminaryResult!, ...surtaxFields };
     else if (activePrelim === unsold992PreliminaryResult) unsold992FinalResult = { ...unsold992PreliminaryResult!, ...surtaxFields };
@@ -332,8 +374,17 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     estimatedBase ||
     (input.usedEstimatedAcquisition ? (input.estimatedBase ?? 0) : 0) ||
     (effectiveInput.usedEstimatedAcquisition ? (effectiveInput.estimatedBase ?? 0) : 0);
-  let penaltyBase = input.acquisitionMethod === "appraisal"
-    ? (input.appraisalValue ?? 0)
+  // ⚠️ acquisitionMethod 판정은 **effectiveInput**을 본다(원본 input 아님).
+  // 부담부증여는 §159 스텝이 acquisitionMethod를 정규화하는데(burdened-gift-step: "actual",
+  // K-5는 "estimated"), 원본 input에는 UI가 숨긴 채 보존한 stale 산정방식(감정·매매사례)이 남아 있다.
+  // input을 보면 K-5 + stale 감정가액에서 penalty base가 K-5 건물 환산취득가 대신
+  // stale appraisalValue로 뒤바뀐다(실측: 2,500,000 → 45,000,000, 18배 과다).
+  // 회귀 0 근거: 비-부담부에도 override가 1곳 있으나(transfer-tax-carryover.ts:261 — 환산+증여세 차감
+  // 시나리오 A의 실가 전환에서 undefined), 발동 게이트인 calculateBuildingPenalty가 **이미**
+  // effectiveInput.acquisitionMethod를 읽으므로(rate-calc.ts:58·63-66) 그 경로는 penaltyTax=0으로 수렴한다.
+  // 즉 종전에는 "게이트는 effectiveInput / base는 raw input"으로 층위가 어긋나 있었고 이 변경이 그 불일치를 없앤다.
+  let penaltyBase = effectiveInput.acquisitionMethod === "appraisal"
+    ? (effectiveInput.appraisalValue ?? 0)
     : (isEstimatedMode ? effectiveEstimatedBase : 0);
   // §114조의2① 통상(비-부담부) 증축: penalty base를 증축부분 환산취득가로 교체 (부담부는 step override가 effectiveInput.estimatedBase에 반영).
   // 손실 조기반환(transfer-tax.ts)과 동일 헬퍼 — single-source, dual-truth 방지.
@@ -447,11 +498,16 @@ export function buildTransferResultDetails(ctx: {
   | "commercialBuildingValuationDetail"
   | "splitDetail"
   | "preHousingDisclosureDetail"
+  | "surchargeSuspensionBasis"
+  | "surchargeSuspensionDeadline"
 > {
   return {
     multiHouseSurchargeDetail: ctx.multiHouseSurchargeResult
       ? buildMultiHouseSurchargeDetail(ctx.multiHouseSurchargeResult)
       : undefined,
+    // ⑦ echo — 중과 유예 근거 목(가/나/다)·양도기한 (§167의3①12의2 나·다목 UI 표시용)
+    surchargeSuspensionBasis: ctx.multiHouseSurchargeResult?.surchargeSuspensionBasis,
+    surchargeSuspensionDeadline: ctx.multiHouseSurchargeResult?.surchargeSuspensionDeadline,
     nonBusinessLandJudgmentDetail: ctx.nonBusinessLandJudgment,
     pre1990LandValuationDetail: ctx.pre1990LandResult,
     carryoverTaxationDetail: ctx.carryoverDetail,
@@ -483,6 +539,9 @@ export function buildExemptEarlyResult(p: {
   carryoverDetail?: CarryoverTaxationDetail;
   inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
 }): TransferTaxResult {
+  // [echo] 표시 전용 gross 양도차익 + 환산 내역 — 세액 로직·transferGain(0) 불변. 순수함수 calcTransferGain 1회 호출.
+  // 환산 echo 미노출 시 신고서가 실가 역산 분기로 추락해 취득가액에 개산공제가 합산 표시됨(분리표시 정책 위반).
+  const grossForEcho = calcTransferGain(p.effectiveInput);
   return {
     isExempt: true,
     // [F1] 경정 결과 비과세 → refund면 전액환급 산출(determinedTax=0)
@@ -493,10 +552,12 @@ export function buildExemptEarlyResult(p: {
     specialHouseExclusionDetail: p.specialHouseExclusionDetail,
     warnings: p.warnings,
     transferGain: 0,
-    // [echo] 표시 전용 gross 양도차익 — 세액 로직·transferGain(0) 불변. 순수함수 calcTransferGain 재사용.
-    exemptGrossGain: Math.max(0, calcTransferGain(p.effectiveInput).gain),
+    exemptGrossGain: Math.max(0, grossForEcho.gain),
     taxableGain: 0,
     usedEstimatedAcquisition: p.effectiveInput.useEstimatedAcquisition,
+    ...(grossForEcho.usedEstimated
+      ? { estimatedBase: grossForEcho.estimatedBase, estimatedDeduction: grossForEcho.estimatedDeduction }
+      : {}),
     longTermHoldingDeduction: 0,
     longTermHoldingRate: 0,
     lthdStartDate: resolveLTHDStartDate(p.effectiveInput),

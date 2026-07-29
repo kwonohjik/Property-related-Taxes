@@ -47,6 +47,9 @@ export function calcNomineeTrustGift(input: NomineeTrustInput): DeemedGiftResult
     applied,
     deemedGiftValue: value,
     breakdown,
+    // §47① 합산배제증여재산(§45의2). §55①1호 — 명의신탁재산금액 그대로 과세표준(3천만 공제 없음). (H-40·G-4)
+    aggregationExcluded: true,
+    aggExclClass: "nominee_trust",
     exclusionReason: applied
       ? undefined
       : isExcluded

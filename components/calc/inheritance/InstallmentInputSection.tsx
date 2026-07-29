@@ -109,7 +109,7 @@ export function InstallmentInputSection({
             onCheckedChange={(v) => set({ installmentFamilyBusiness: v })}
           >
             <div className="pt-1">
-              <p className="mb-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+              <p className="mb-1.5 text-caption font-semibold text-emerald-700 dark:text-emerald-300">
                 가업상속 납부방식
               </p>
               <RadioCardGroup

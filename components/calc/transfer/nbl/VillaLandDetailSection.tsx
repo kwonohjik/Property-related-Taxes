@@ -6,6 +6,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -50,13 +51,7 @@ export function VillaLandDetailSection({
       >
         <div className="space-y-3">
           {/* ① 면적 요건 (§168의13①1호) */}
-          <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-                1
-              </span>
-              <p className="text-xs font-semibold text-sky-700">면적 요건 (①1호)</p>
-            </div>
+          <ToneCard tone="sky" sectionNum="1" title="면적 요건 (①1호)" noDark>
             <FieldCard label="건물 연면적" unit="㎡" hint="150㎡ 이내">
               <DecimalInput
                 value={asset.nblVillaBuildingFloorArea}
@@ -69,16 +64,10 @@ export function VillaLandDetailSection({
                 onChange={(v) => onAssetChange({ nblVillaAttachedLandArea: v })}
               />
             </FieldCard>
-          </div>
+          </ToneCard>
 
           {/* ② 기준시가 요건 (§168의13①2호) */}
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
-                2
-              </span>
-              <p className="text-xs font-semibold text-emerald-700">기준시가 요건 (①2호)</p>
-            </div>
+          <ToneCard tone="emerald" sectionNum="2" title="기준시가 요건 (①2호)" noDark>
             <FieldCard label="건물+부속토지 합산 기준시가" unit="원" hint="2억원 이하">
               <CurrencyInput
                 label="합산 기준시가"
@@ -88,16 +77,10 @@ export function VillaLandDetailSection({
                 onChange={(v) => onAssetChange({ nblVillaCombinedStdValue: v })}
               />
             </FieldCard>
-          </div>
+          </ToneCard>
 
           {/* ③ 지역 요건 (§168의13①3호) */}
-          <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
-                3
-              </span>
-              <p className="text-xs font-semibold text-rose-700">지역 요건 (①3호)</p>
-            </div>
+          <ToneCard tone="rose" sectionNum="3" title="지역 요건 (①3호)" noDark>
             <ToggleCard
               tone="rose"
               title="제외지역 소재 (수도권·도시지역·조정대상지역·허가구역)"
@@ -105,7 +88,7 @@ export function VillaLandDetailSection({
               checked={asset.nblVillaIsInRestrictedArea}
               onCheckedChange={(v) => onAssetChange({ nblVillaIsInRestrictedArea: v })}
             />
-          </div>
+          </ToneCard>
         </div>
       </ToggleCard>
     </div>

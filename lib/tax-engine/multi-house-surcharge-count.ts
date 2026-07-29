@@ -13,6 +13,9 @@
 import { differenceInYears } from "date-fns";
 import { MULTI_HOUSE } from "./legal-codes";
 import { classifyPopulationDeclineArea, toSigunguCode } from "./data/population-decline-areas";
+import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/check";
+import { RA_CUT } from "./rental-article/rules";
+import type { SharedRentalArticle } from "./rental-article/types";
 import type {
   RentalHousingType,
   HouseInfo,
@@ -57,9 +60,20 @@ export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VA
     return "REGION";
   }
 
-  // 대구: 달성군(27710) VALUE
+  // 대구: 달성군(27710)·군위군(27720) VALUE
+  //
+  // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 군위군(27720) 누락.
+  //   군위군은 2023.7.1. 경상북도 → **대구광역시**로 편입되며 코드가 47720 → 27720으로 바뀌었다.
+  //   그전에는 sido 47(경북)이라 아래 기본값 VALUE로 떨어졌는데, 편입 후 대구 분기에 걸리면서
+  //   **REGION으로 뒤집혔다** — 행정구역 개편이 세법상 취급을 바꿔버린 셈이다.
+  //   §167의3①은 지역기준에서 **'광역시에 소속된 군'을 제외**한다(이 함수 상단 주석도
+  //   "광역시(**군 제외**)"로 이미 그렇게 적고 있다). 형제 광역시 군이 전부 VALUE인 것과도 일치한다:
+  //   부산 기장 26710 · 대구 달성 27710 · 울산 울주 31710 · 인천 강화 28710 · 옹진 28720.
+  //   REGION이면 가액 불문 주택 수에 산입돼 1주택↔2주택이 뒤바뀌고 중과(+20%p) on/off가
+  //   갈린다(납세자 불리 방향).
+  //   편입 전(47720)·후(27720) 코드 모두 VALUE로 수렴하므로 시점 게이팅은 불필요하다.
   if (sidoCode === "27") {
-    if (sggCode === "27710") return "VALUE";
+    if (sggCode === "27710" || sggCode === "27720") return "VALUE";
     return "REGION";
   }
 
@@ -99,166 +113,43 @@ function hasBasicRegistration(house: HouseInfo): boolean {
   );
 }
 
-/** 가목 — 민간매입임대 5년 (2018.4.2 이전 등록, 5년 이상, 5%룰) */
-function checkRentalType_A(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  const bizDate = house.businessRegistrationDate!;
-  const rentDate = house.rentalRegistrationDate!;
-  if (bizDate > new Date("2018-04-02") || rentDate > new Date("2018-04-02")) return false;
-  if (calcRentalPeriodYears(house) < 5) return false;
-  const price = house.rentalStartOfficialPrice ?? house.officialPrice;
-  const isCapital = house.isCapitalArea ?? house.region === "capital";
-  if (price > (isCapital ? 600_000_000 : 300_000_000)) return false;
-  if (!house.rentIncreaseUnder5Pct) return false;
-  return true;
-}
+/** 다주택 유형 A~I ↔ §167조의3①2호 가~자목 (실측 getRentalTypeLabel 정합). */
+const ARTICLE_BY_RENTAL_TYPE: Record<RentalHousingType, SharedRentalArticle> = {
+  A: "가", B: "나", C: "다", D: "라", E: "마", F: "바", G: "사", H: "아", I: "자",
+};
 
-/** 나목 — 기존사업자 민간매입임대 (2003.10.29 이전 등록, 국민주택 2호+, 3억 이하) */
-function checkRentalType_B(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  if (house.businessRegistrationDate! > new Date("2003-10-29")) return false;
-  if (calcRentalPeriodYears(house) < 5) return false;
-  if (!house.isNationalSizeHousing) return false;
-  if (!house.hasMinimum2Units) return false;
-  const price = house.acquisitionOfficialPrice ?? house.officialPrice;
-  if (price > 300_000_000) return false;
-  return true;
-}
-
-/** 다목 — 민간건설임대 5년 (2018.4.2 이전, 298㎡·149㎡, 6억, 2호+) */
-function checkRentalType_C(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  const bizDate = house.businessRegistrationDate!;
-  const rentDate = house.rentalRegistrationDate!;
-  if (bizDate > new Date("2018-04-02") || rentDate > new Date("2018-04-02")) return false;
-  if (calcRentalPeriodYears(house) < 5 && !house.isConvertedToSale) return false;
-  if (!house.hasMinimum2Units) return false;
-  if ((house.landArea ?? 0) > 298) return false;
-  if ((house.totalFloorArea ?? 0) > 149) return false;
-  const price = house.rentalStartOfficialPrice ?? house.officialPrice;
-  if (price > 600_000_000) return false;
-  if (!house.rentIncreaseUnder5Pct) return false;
-  return true;
-}
-
-/** 라목 — 미분양 매입임대 (2008.6.11~2009.6.30, 비수도권, 3억, 5호+) */
-function checkRentalType_D(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  if (calcRentalPeriodYears(house) < 5) return false;
-  if (!house.firstSaleContractDate) return false;
-  const contractDate = house.firstSaleContractDate;
-  if (contractDate < new Date("2008-06-11") || contractDate > new Date("2009-06-30")) return false;
-  if ((house.landArea ?? 0) > 298) return false;
-  if ((house.totalFloorArea ?? 0) > 149) return false;
-  const price = house.acquisitionOfficialPrice ?? house.officialPrice;
-  if (price > 300_000_000) return false;
-  if (house.isCapitalArea) return false;
-  if (!house.hasMinimum5UnitsInCity) return false;
-  if (house.isExcludedAfter20200711Apt) return false;
-  return true;
+/** HouseInfo → 공용 정규화 입력 (Phase 2 C3 — checkRentalArticle 위임). */
+function toNormalizedFromHouse(house: HouseInfo): NormalizedRentalUnit {
+  return {
+    businessRegistrationDate: house.businessRegistrationDate ?? null,
+    rentalRegistrationDate: house.rentalRegistrationDate ?? null,
+    isCapitalArea: house.isCapitalArea ?? house.region === "capital",
+    isApartment: house.isApartment,
+    rentalStartOfficialPrice: house.rentalStartOfficialPrice ?? house.officialPrice,
+    acquisitionOfficialPrice: house.acquisitionOfficialPrice ?? house.officialPrice,
+    rentalYears: calcRentalPeriodYears(house),
+    landAreaM2: house.landArea,
+    totalFloorAreaM2: house.totalFloorArea,
+    hasMinimum2Units: house.hasMinimum2Units ?? false,
+    hasMinimum5UnitsInCity: house.hasMinimum5UnitsInCity,
+    isNationalSizeHousing: house.isNationalSizeHousing,
+    rentIncreaseUnder5Pct: house.rentIncreaseUnder5Pct ?? false,
+    isExcluded918Rule: house.isExcluded918Rule,
+    hasContractDepositProof: house.hasContractDepositProof,
+    firstSaleContractDate: house.firstSaleContractDate,
+    isConvertedToSale: house.isConvertedToSale,
+    rentalCancellationDate: house.rentalCancellationDate,
+    hasHalfDutyPeriodMet: house.hasHalfDutyPeriodMet,
+    isSoldWithin1YearOfCancellation: house.isSoldWithin1YearOfCancellation,
+    isExcludedAfter20200711Apt: house.isExcludedAfter20200711Apt,
+    isExcludedShortToLongChange: house.isExcludedShortToLongChange,
+    saMokBaseArticle: house.saMokBaseArticle, // 사목 base 목 "해당 목의 다른 요건"
+    // 아목 918 게이트는 양 feature 공용 isExcluded918Rule + hasContractDepositProof(carve-out)로 통일(C4).
+  };
 }
 
 /**
- * 마목 — 장기일반 매입임대 10년
- * 2020.8.18 이전 등록: 8년, 이후: 10년
- */
-function checkRentalType_E(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  const regDate = house.rentalRegistrationDate!;
-  const requiredYears = regDate < new Date("2020-08-18") ? 8 : 10;
-  if (calcRentalPeriodYears(house) < requiredYears) return false;
-  const price = house.rentalStartOfficialPrice ?? house.officialPrice;
-  const isCapital = house.isCapitalArea ?? house.region === "capital";
-  if (price > (isCapital ? 600_000_000 : 300_000_000)) return false;
-  if (!house.rentIncreaseUnder5Pct) return false;
-  if (house.isExcluded918Rule) return false;
-  if (house.isExcludedAfter20200711Apt) return false;
-  if (house.isExcludedShortToLongChange) return false;
-  return true;
-}
-
-/**
- * 바목 — 장기일반 건설임대 10년
- * 2호+, 298㎡·149㎡, 6억(2025.2.28 이후 9억), 5%룰
- */
-function checkRentalType_F(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  if (calcRentalPeriodYears(house) < 10 && !house.isConvertedToSale) return false;
-  if (!house.hasMinimum2Units) return false;
-  if ((house.landArea ?? 0) > 298) return false;
-  if ((house.totalFloorArea ?? 0) > 149) return false;
-  const price = house.rentalStartOfficialPrice ?? house.officialPrice;
-  const bizDate = house.businessRegistrationDate;
-  const rentDate = house.rentalRegistrationDate;
-  const latestRegDate = bizDate && rentDate
-    ? new Date(Math.max(bizDate.getTime(), rentDate.getTime()))
-    : (rentDate ?? bizDate);
-  const priceLimit = latestRegDate && latestRegDate >= new Date("2025-02-28")
-    ? 900_000_000
-    : 600_000_000;
-  if (price > priceLimit) return false;
-  if (!house.rentIncreaseUnder5Pct) return false;
-  if (house.isExcludedShortToLongChange) return false;
-  return true;
-}
-
-/** 사목 — 자진·자동 말소 후 양도 (2020.8.18 이후 말소, 의무기간 1/2+, 1년 내 양도) */
-function checkRentalType_G(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  if (!house.rentalCancellationDate) return false;
-  if (house.rentalCancellationDate < new Date("2020-08-18")) return false;
-  if (!house.hasHalfDutyPeriodMet) return false;
-  if (!house.isSoldWithin1YearOfCancellation) return false;
-  return true;
-}
-
-/**
- * 아목 — 단기 매입임대 6년 (2025.6.4 이후 신설)
- * 아파트 제외, 6년+, 수도권 4억/비수도권 2억, 5%룰
- */
-function checkRentalType_H(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  const bizDate = house.businessRegistrationDate;
-  const rentDate = house.rentalRegistrationDate;
-  const latestRegDate = bizDate && rentDate
-    ? new Date(Math.max(bizDate.getTime(), rentDate.getTime()))
-    : (rentDate ?? bizDate);
-  if (!latestRegDate || latestRegDate < new Date("2025-06-04")) return false;
-  if (house.isApartment) return false;
-  if (calcRentalPeriodYears(house) < 6) return false;
-  const price = house.rentalStartOfficialPrice ?? house.officialPrice;
-  const isCapital = house.isCapitalArea ?? house.region === "capital";
-  if (price > (isCapital ? 400_000_000 : 200_000_000)) return false;
-  if (!house.rentIncreaseUnder5Pct) return false;
-  if (house.isExcluded918Rule && !house.hasContractDepositProof) return false;
-  return true;
-}
-
-/**
- * 자목 — 단기 건설임대 6년 (2025.6.4 이후 신설)
- * 2호+, 아파트 제외, 298㎡·149㎡, 6년+, 6억, 5%룰
- */
-function checkRentalType_I(house: HouseInfo): boolean {
-  if (!hasBasicRegistration(house)) return false;
-  const bizDate = house.businessRegistrationDate;
-  const rentDate = house.rentalRegistrationDate;
-  const latestRegDate = bizDate && rentDate
-    ? new Date(Math.max(bizDate.getTime(), rentDate.getTime()))
-    : (rentDate ?? bizDate);
-  if (!latestRegDate || latestRegDate < new Date("2025-06-04")) return false;
-  if (house.isApartment) return false;
-  if (!house.hasMinimum2Units) return false;
-  if (calcRentalPeriodYears(house) < 6) return false;
-  if ((house.landArea ?? 0) > 298) return false;
-  if ((house.totalFloorArea ?? 0) > 149) return false;
-  const price = house.rentalStartOfficialPrice ?? house.officialPrice;
-  if (price > 600_000_000) return false;
-  if (!house.rentIncreaseUnder5Pct) return false;
-  return true;
-}
-
-/**
- * ② 장기임대주택 중과배제 여부 (가~자목 유형별 검증).
+ * ② 장기임대주택 중과배제 여부 (가~자목 유형별 검증 — 공용 checkRentalArticle 위임, Phase 2 C3).
  * rentalType 미제공 시 legacy boolean 판정으로 폴백.
  */
 export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Date): boolean {
@@ -275,18 +166,22 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
     );
   }
 
-  switch (house.rentalType) {
-    case "A": return checkRentalType_A(house);
-    case "B": return checkRentalType_B(house);
-    case "C": return checkRentalType_C(house);
-    case "D": return checkRentalType_D(house);
-    case "E": return checkRentalType_E(house);
-    case "F": return checkRentalType_F(house);
-    case "G": return checkRentalType_G(house);
-    case "H": return checkRentalType_H(house);
-    case "I": return checkRentalType_I(house);
-    default: return false;
+  // 사업자등록등 완비 — isRegisteredRental flag 포함(공용 predicate가 검사하지 않는 다주택 전용 요건).
+  if (!hasBasicRegistration(house)) return false;
+
+  const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
+
+  // 가·다목 등록상한 2018.4.2 — 다주택 전용 잔여 게이트.
+  // (§155⑳ derive는 2020.7.11 경계로 가/다목을 도출하므로 공용 predicate에 넣으면 §155⑳ 회귀.)
+  // 사목(base 가/다)도 "해당 목의 다른 요건"에 이 등록상한이 포함되므로 동일 검사(F-S1).
+  const regBoundArticle = article === "사" ? house.saMokBaseArticle : article;
+  if (regBoundArticle === "가" || regBoundArticle === "다") {
+    const bizTs = house.businessRegistrationDate!.getTime();
+    const rentTs = house.rentalRegistrationDate!.getTime();
+    if (bizTs > RA_CUT.Y2018_04_02 || rentTs > RA_CUT.Y2018_04_02) return false;
   }
+
+  return checkRentalArticle(article, toNormalizedFromHouse(house)).passed;
 }
 
 export function getRentalTypeLabel(rentalType?: RentalHousingType): string {
@@ -434,25 +329,19 @@ export function countEffectiveHouses(
           : "VALUE");
 
     if (criteria === "VALUE") {
-      if (rules.lowPriceThreshold.local !== undefined) {
-        const priceToCheck = house.transferOfficialPrice ?? house.officialPrice;
-        if (priceToCheck <= rules.lowPriceThreshold.local) {
-          excluded.push({
-            houseId: house.id,
-            reason: "low_price_local_300",
-            detail: `지방(VALUE) 양도 공시가격 ${priceToCheck.toLocaleString()} (${rules.lowPriceThreshold.local.toLocaleString()} 이하)`,
-          });
-          continue;
-        }
-      } else if (!house.regionCriteria && !house.regionCode) {
-        if (house.officialPrice <= rules.lowPriceThreshold.non_capital) {
-          excluded.push({
-            houseId: house.id,
-            reason: "low_price_non_capital",
-            detail: `비수도권 공시가격 ${house.officialPrice.toLocaleString()} (${rules.lowPriceThreshold.non_capital.toLocaleString()} 이하)`,
-          });
-          continue;
-        }
+      // §167의3①1호: 수도권·광역시·특별자치시(소속 군·읍·면 제외) 외 지방 주택으로서
+      // 기준시가(양도 당시) 3억 이하 → 주택 수 제외. regionCode/regionCriteria 유무와 무관하게
+      // 단일 3억 기준 적용(local 우선, 미제공 시 non_capital). 종전 local 미배선(dead code)로
+      // regionCode 주택 미배제 + non_capital 1억 오적용(법령 3억) 정정.
+      const threshold = rules.lowPriceThreshold.local ?? rules.lowPriceThreshold.non_capital;
+      const priceToCheck = house.transferOfficialPrice ?? house.officialPrice;
+      if (priceToCheck <= threshold) {
+        excluded.push({
+          houseId: house.id,
+          reason: house.regionCriteria || house.regionCode ? "low_price_local_300" : "low_price_non_capital",
+          detail: `지방(VALUE) 기준시가 ${priceToCheck.toLocaleString()} (${threshold.toLocaleString()} 이하)`,
+        });
+        continue;
       }
     }
 

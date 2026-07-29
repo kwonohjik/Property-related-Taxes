@@ -83,6 +83,12 @@ export interface InheritanceTaxCreditInput {
 export interface GiftTaxCreditInput {
   /** 외국납부세액 (§59) */
   foreignTaxPaid?: number;
+  /**
+   * 국외 증여재산 과세표준 (상증령 §48→§21① 점유비 한도 분자, H-32).
+   * §59 공제 한도 = 증여세산출세액 × (foreignGiftTaxBase ÷ 증여세 과세표준).
+   * 미입력(undefined) → 한도 미적용(산출세액 전액 한도, 하위호환). foreignTaxPaid>0 시 validate가 요구.
+   */
+  foreignGiftTaxBase?: number;
   /** 법정신고기한 내 신고 여부 (§69 3% 공제) */
   isFiledOnTime: boolean;
   /** 조특법 과세특례 선택 (창업자금 §30의5 / 가업승계 §30의6) */

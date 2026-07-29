@@ -11,6 +11,7 @@ import type {
   Heir,
   InheritanceTaxResult,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { isRealHeir } from "@/lib/tax-engine/inheritance-legal-share";
 
 export type SummaryGroupId =
   | "asset"
@@ -69,14 +70,15 @@ export function sortHeirs(heirs: Heir[]): Heir[] {
 
 /**
  * 법정상속인 여부 — 비상속인(수유자 legatee · 영리법인 corporate · isHeir===false) 제외.
- * 상증법: 부표2 「상속인별」 서식 등 상속인 한정 산출의 단일 진실(enum exact 비교).
+ * 상증법: 부표2 「상속인별」 서식 등 상속인 한정 산출의 단일 진실.
+ *
+ * 엔진 isRealHeir 위임 — 대습상속인(substituteGroupId)은 isHeir:false 잔재와 무관하게 편입(C-1).
+ *   며느리·사위를 "기타"로 추가 시 isHeir:false가 붙고 대습 전환 후에도 잔존하는데, 이 함수가
+ *   그 false로 대습상속인을 탈락시키면 computeLegalShares(대습 편입)와 불일치 →
+ *   부표2 서식에서 대습상속인 시트 누락·실제상속지분율 오류가 발생한다.
  */
 export function isStatutoryHeir(h: Heir): boolean {
-  return (
-    h.relation !== "legatee" &&
-    h.relation !== "corporate" &&
-    h.isHeir !== false
-  );
+  return isRealHeir(h);
 }
 
 export function labelOf(heirId: string, heirs: Heir[]): string {

@@ -12,9 +12,11 @@
 
 import { useMemo } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type New994Rural = Extract<AssetReductionForm, { type: "new_99_4_rural" }>;
@@ -55,45 +57,52 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
       </div>
 
       {/* ① 취득 정보 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-amber-700">{houseLabel} 취득 정보</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="①" title={`${houseLabel} 취득 정보`} noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">{houseLabel} 취득일</label>
           <DateInput
             value={value.ruralHouseAcquisitionDate}
             onChange={(v) => onChange({ ruralHouseAcquisitionDate: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             취득기간 {isHometown ? "2009.1.1" : "2003.8.1"}~2028.12.31 — 일반주택(양도 주택)을 먼저
             취득한 후 취득한 {houseLabel}이어야 합니다 (§99의4①)
           </p>
         </div>
-      </div>
+      </ToneCard>
 
       {/* ② 가액 요건 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-sky-700">가액 요건</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="②" title="가액 요건" noDark>
+        {/* 농어촌주택 주소 — 기준시가 조회 소스(양도물건이 아닌 별개 물건) */}
         <div>
-          <label className="mb-1 block text-xs font-medium">취득 당시 기준시가 합계</label>
-          <CurrencyInput
-            label=""
-            value={value.ruralHouseStdPrice}
-            onChange={(v) => onChange({ ruralHouseStdPrice: v })}
+          <label className="mb-1 block text-xs font-medium">{houseLabel} 주소 (기준시가 조회용)</label>
+          <AddressSearch
+            value={
+              {
+                road: "",
+                jibun: value.ruralHouseJibun ?? "",
+                building: "",
+                detail: "",
+                lng: "",
+                lat: "",
+              } satisfies AddressValue
+            }
+            onChange={(v) => onChange({ ruralHouseJibun: v.jibun })}
+            disableUnits
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            주택과 부속토지 합계 — 3억 이하 (등록 한옥 4억) 요건 (§99의4①)
+          <p className="mt-1 text-micro text-muted-foreground">
+            양도주택이 아닌 {houseLabel}의 주소 — 취득 당시 기준시가 조회에 사용합니다
           </p>
         </div>
+        <HousingStdPriceLookupField
+          label="취득 당시 기준시가 합계"
+          value={value.ruralHouseStdPrice}
+          onChange={(v) => onChange({ ruralHouseStdPrice: v })}
+          jibun={value.ruralHouseJibun}
+          referenceDate={value.ruralHouseAcquisitionDate}
+          hint="주택+부속토지 합계 — 3억 이하 (등록 한옥 4억) 요건 (§99의4①)"
+          testidPrefix="new994-stdprice"
+        />
         <ToggleCard
           variant="chip"
           checked={value.isRegisteredHanok}
@@ -102,16 +111,10 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
           description="지자체 등록 한옥은 한도 4억 (령⑭)"
           tone="sky"
         />
-      </div>
+      </ToneCard>
 
       {/* ③ 소재지·자격 */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
-            ③
-          </span>
-          <p className="text-xs font-semibold text-rose-700">소재지·자격 요건</p>
-        </div>
+      <ToneCard tone="rose" sectionNum="③" title="소재지·자격 요건" noDark>
         <ToggleCard
           checked={value.meetsLocationRequirement}
           onCheckedChange={(v) => onChange({ meetsLocationRequirement: v })}
@@ -139,7 +142,7 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
             tone="violet"
           />
         )}
-      </div>
+      </ToneCard>
 
       {/* emerald 자동 표시 */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1">
@@ -151,12 +154,12 @@ export function New994InputForm({ value, onChange, transferDate }: Props) {
           </span>
         </div>
         {holdingYears !== null && holdingYears < 3 && (
-          <p className="text-[10px] text-amber-700">
+          <p className="text-micro text-amber-700">
             ⚠ 보유 3년 미만 — 양도 후에도 특례는 적용되지만(④), 이후 {houseLabel}을 3년 이상
             보유하지 못하게 되면 줄어든 세액을 2개월 내 납부해야 합니다 (§99의4⑥)
           </p>
         )}
-        <p className="text-[10px] text-emerald-700">
+        <p className="text-micro text-emerald-700">
           ※ 적격 여부·1세대1주택 판정은 계산 시 엔진이 수행합니다. 다주택 중과 주택 수에는
           반영되지 않습니다.
         </p>

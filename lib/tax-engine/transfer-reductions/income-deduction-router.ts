@@ -75,6 +75,12 @@ export interface IncomeDeductionContext {
   /** 자산-수준 매매계약일 (§99의3 contractDate993 fallback — Round 9 우선순위 유지) */
   assetContractDate?: Date;
   transferPrice: number;
+  /**
+   * **물건 전체(100%) 양도가액** — 지분 모드에서만 `transferPrice`와 다르다.
+   * 고가주택 가액 요건(§99의3·§99)은 물건 전체 기준이므로 이 값을 쓴다. 미전달 시 단독소유로 보아
+   * `transferPrice`로 후퇴한다(`TransferTaxInput.totalPropertyTransferPrice`가 지분 모드에서만 채워짐).
+   */
+  totalPropertyTransferPrice?: number;
   standardPriceAtTransfer?: number;
   /** 양도소득금액 (양도차익 − 장특공제). 중과 배제 선판정 시 0 전달 가능 (적격 판정에 무관) */
   transferIncome: number;
@@ -196,7 +202,7 @@ function evalNew993(
       standardPriceAt5Years: (r993.standardPriceAt5Years as number | undefined) ?? 0,
       standardPriceAtTransfer:
         (r993.standardPriceAtTransfer993 as number | undefined) ?? ctx.standardPriceAtTransfer ?? 0,
-      transferPrice: ctx.transferPrice,
+      wholePropertyTransferPrice: ctx.totalPropertyTransferPrice ?? ctx.transferPrice,
       exclusiveAreaSqm: (r993.exclusiveAreaSqm993 as number | undefined) ?? 0, // 고가주택 면적기준(2002.12.31 이전 취득) 판정용
       region: (r993.region993 as "outside_speculation" | "speculation" | undefined) ?? "outside_speculation",
       isResident: (r993.isResident993 as boolean | undefined) ?? true,
@@ -231,7 +237,7 @@ function evalNew99(
       standardPriceAt5Years: r99.standardPriceAt5Years99 as number | undefined,
       standardPriceAtTransfer:
         (r99.standardPriceAtTransfer99 as number | undefined) ?? ctx.standardPriceAtTransfer,
-      transferPrice: ctx.transferPrice,
+      wholePropertyTransferPrice: ctx.totalPropertyTransferPrice ?? ctx.transferPrice,
       exclusiveAreaSqm: r99.exclusiveAreaSqm99 as number | undefined,
       isResident: (r99.isResident99 as boolean | undefined) ?? true,
       isHousingConstructionBusiness: (r99.isHousingConstructionBusiness99 as boolean | undefined) ?? false,

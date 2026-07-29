@@ -46,6 +46,7 @@ const AUTO_META: Record<AutoChecklistKey, { label: string; law: string; group: "
 const MANUAL_META: Record<ManualChecklistKey, { label: string; group: "emerald" | "amber" | "violet" }> = {
   familyBusiness: { label: "가업상속공제 §18의2", group: "emerald" },
   legatee: { label: "상속외자 유증 §19·§24", group: "amber" },
+  heirWaiver: { label: "상속포기 후순위 상속 §24②", group: "amber" },
   priorGiftDeduction: { label: "사전증여 공제합계 §24", group: "amber" },
   disasterAdjust: { label: "§24 분자 보정·재해손실", group: "amber" },
   casualtyLoss: { label: "재해손실공제 §23", group: "amber" },
@@ -59,9 +60,9 @@ const MANUAL_META: Record<ManualChecklistKey, { label: string; group: "emerald" 
 // ────────────────────────────────────────────────────
 
 const GROUP_HEADER: Record<"emerald" | "amber" | "violet", string> = {
-  emerald: "text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] uppercase tracking-wide",
-  amber: "text-amber-700 dark:text-amber-300 font-semibold text-[11px] uppercase tracking-wide",
-  violet: "text-violet-700 dark:text-violet-300 font-semibold text-[11px] uppercase tracking-wide",
+  emerald: "text-emerald-700 dark:text-emerald-300 font-semibold text-caption uppercase tracking-wide",
+  amber: "text-amber-700 dark:text-amber-300 font-semibold text-caption uppercase tracking-wide",
+  violet: "text-violet-700 dark:text-violet-300 font-semibold text-caption uppercase tracking-wide",
 };
 
 const GROUP_DIVIDER: Record<"emerald" | "amber" | "violet", string> = {
@@ -72,9 +73,9 @@ const GROUP_DIVIDER: Record<"emerald" | "amber" | "violet", string> = {
 
 /** 자동 항목 칩 — 감지됨(emerald 진함) / 미감지(emerald 연함, 항상 노출 안내) */
 const AUTO_CHIP_DETECTED =
-  "inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100/80 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 select-none";
+  "inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100/80 px-2.5 py-1 text-caption font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 select-none";
 const AUTO_CHIP_UNDETECTED =
-  "inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 select-none";
+  "inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 text-caption font-medium text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 select-none";
 
 // ────────────────────────────────────────────────────
 // 서브 컴포넌트 — 자동 항목 칩 (읽기전용 상태 배지)
@@ -83,19 +84,19 @@ const AUTO_CHIP_UNDETECTED =
 /** 수동 항목 칩 — 체크(활성) / 미체크 */
 const MANUAL_CHIP_ON: Record<"emerald" | "amber" | "violet", string> = {
   emerald:
-    "inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100/80 px-2.5 py-1 text-[11px] font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 cursor-pointer",
+    "inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100/80 px-2.5 py-1 text-caption font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 cursor-pointer",
   amber:
-    "inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100/80 px-2.5 py-1 text-[11px] font-medium text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200 cursor-pointer",
+    "inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100/80 px-2.5 py-1 text-caption font-medium text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200 cursor-pointer",
   violet:
-    "inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-100/80 px-2.5 py-1 text-[11px] font-medium text-violet-800 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-200 cursor-pointer",
+    "inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-100/80 px-2.5 py-1 text-caption font-medium text-violet-800 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-200 cursor-pointer",
 };
 const MANUAL_CHIP_OFF: Record<"emerald" | "amber" | "violet", string> = {
   emerald:
-    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-[11px] font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/60",
+    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/60",
   amber:
-    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-[11px] font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-amber-300 hover:bg-amber-50/60",
+    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-amber-300 hover:bg-amber-50/60",
   violet:
-    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-[11px] font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-violet-300 hover:bg-violet-50/60",
+    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-violet-300 hover:bg-violet-50/60",
 };
 
 // ────────────────────────────────────────────────────
@@ -131,7 +132,7 @@ function AutoChip({
       >
         <span>✓</span>
         <span>{meta.label}</span>
-        <span className="text-emerald-600 dark:text-emerald-400 text-[10px]">
+        <span className="text-emerald-600 dark:text-emerald-400 text-micro">
           {autoDetected ? "자동 도출" : "입력됨"}
         </span>
       </button>
@@ -147,7 +148,7 @@ function AutoChip({
       title={`${meta.label} — 클릭하여 직접 입력란 열기`}
     >
       <span>{meta.label}</span>
-      <span className="text-emerald-500 dark:text-emerald-500 text-[10px]">직접 입력 가능</span>
+      <span className="text-emerald-500 dark:text-emerald-500 text-micro">직접 입력 가능</span>
     </button>
   );
 }
@@ -221,7 +222,7 @@ function ManualChip({
       {/* 체크박스 역할 시각 표시 */}
       <span
         className={cn(
-          "flex h-3.5 w-3.5 items-center justify-center rounded border text-[9px] font-bold shrink-0",
+          "flex h-3.5 w-3.5 items-center justify-center rounded border text-micro font-bold shrink-0",
           active
             ? group === "emerald"
               ? "border-emerald-500 bg-emerald-500 text-white"
@@ -284,11 +285,11 @@ export function Step4DeductionChecklist({
         <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
           공제 항목 한눈에 보기
         </p>
-        <p className="text-[10px] text-gray-500 dark:text-gray-400">
+        <p className="text-micro text-gray-500 dark:text-gray-400">
           — 해당 항목을 클릭하면 아래 그룹이 펼쳐집니다
         </p>
         {warningCount > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-200">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-micro font-medium text-amber-800 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-200">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
             {warningCount}개 항목 — 입력값 있으나 계산 제외
           </span>
@@ -337,7 +338,7 @@ export function Step4DeductionChecklist({
       </div>
 
       {/* 신고 상태·납부 방법 안내 */}
-      <p className="text-[10px] text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800 pt-2">
+      <p className="text-micro text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800 pt-2">
         ※ 신고 상태(§69 신고세액공제)는 C그룹, 납부 방법(연부연납·분납·물납)은 D그룹에 있습니다. 그룹 헤더를 클릭하거나 위 칩을 클릭하면 열립니다.
       </p>
     </div>

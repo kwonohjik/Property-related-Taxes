@@ -28,6 +28,8 @@ export const priorGiftSchema = z
     giftAmount: z.number().nonnegative(),
     giftTaxPaid: z.number().nonnegative(),
     giftTaxBase: z.number().nonnegative().optional(),
+    // §28① 단서 전단 — 증여세 부과제척기간 만료(국기법 §26의2④⑤) → 상속세 증여세액공제 제외
+    giftTaxTimeBarred: z.boolean().optional(),
     doneeRelation: z
       .enum([
         "spouse",

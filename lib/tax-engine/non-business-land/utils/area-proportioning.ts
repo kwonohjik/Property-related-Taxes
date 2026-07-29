@@ -4,6 +4,7 @@
  * 사업용 면적 = min(전체면적, 기준면적), 비사업용 면적 = max(0, 전체−기준).
  * nonBusinessRatio는 소수 4자리 반올림(면적 비율, 금액 아님).
  */
+import { round2, residualArea } from "../../area-utils";
 import type { AreaProportioning } from "../types";
 
 export function computeAreaProportioning(totalArea: number, standardArea: number): AreaProportioning {
@@ -35,8 +36,10 @@ export function computeMixedUseProportioning(
   totalBuildingArea: number,
 ): AreaProportioning {
   const businessRatio = totalBuildingArea > 0 ? specificUseArea / totalBuildingArea : 0;
-  const businessArea = totalArea * businessRatio;
-  const nonBusinessArea = Math.max(0, totalArea - businessArea);
+  // 면적 안분 규칙 — 사업용분을 round2로 확정하고 비사업용분은 잔액 흡수(전체 − 사업용분).
+  // 비율 재계산 금지. nonBusinessRatio(세액 반영분)는 4자리 반올림이라 수치 영향 없음(실측).
+  const businessArea = round2(totalArea * businessRatio);
+  const nonBusinessArea = Math.max(0, residualArea(totalArea, businessArea));
   const nonBusinessRatio = totalArea > 0 ? Math.round((nonBusinessArea / totalArea) * 10000) / 10000 : 0;
   return {
     totalArea,

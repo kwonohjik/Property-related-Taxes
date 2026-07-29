@@ -149,3 +149,5 @@ export const ANNUAL_RENT_CAPITALIZATION_EFFECTIVE_DATE = new Date("2009-04-23");
 
 /** 등기 토지·건물 개산공제율 = 3%. 부담부증여 자산별 = (취득시 기준시가 × 채무비율) × 3%. */
 export const REGISTERED_ESTIMATED_DEDUCTION_RATE = 0.03;
+/** 미등기양도자산 개산공제율 = 0.3% (소령 §163⑥1호 단서 "미등기 3/1000"). §104③ 미등기 양도분. (H-25) */
+export const UNREGISTERED_ESTIMATED_DEDUCTION_RATE = 0.003;

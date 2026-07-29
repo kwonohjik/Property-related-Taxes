@@ -50,7 +50,10 @@ export function AmendmentResultCard({
     const refund = detail.refundTax ?? 0;
     const noRefund = refund === 0;
     return (
-      <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50/40 p-5 dark:border-emerald-700 dark:bg-emerald-950/20">
+      <div
+        data-testid="amendment-result"
+        className="rounded-xl border-2 border-emerald-400 bg-emerald-50/40 p-5 dark:border-emerald-700 dark:bg-emerald-950/20"
+      >
         <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300 mb-1">
           환급 청구세액
         </p>
@@ -87,7 +90,7 @@ export function AmendmentResultCard({
           <Row label="참고 · 경정 후 전체 세액" value={formatKRW(fullTotalTax)} muted />
         </div>
 
-        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
           ⓘ 환급금에는 국세환급가산금(납부일 다음날~지급결정일, 연 3.1%)이 가산되며 세무서가 산정·지급합니다.
         </p>
 
@@ -106,7 +109,7 @@ export function AmendmentResultCard({
                 <div key={i}>
                   <Row label={s.label} value={formatKRW(s.amount)} />
                   {s.formula && (
-                    <p className="pl-2 text-[11px] text-muted-foreground">{s.formula}</p>
+                    <p className="pl-2 text-caption text-muted-foreground">{s.formula}</p>
                   )}
                 </div>
               ))}
@@ -118,7 +121,10 @@ export function AmendmentResultCard({
   }
 
   return (
-    <div className="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-5 dark:border-amber-700 dark:bg-amber-950/20">
+    <div
+      data-testid="amendment-result"
+      className="rounded-xl border-2 border-amber-400 bg-amber-50/40 p-5 dark:border-amber-700 dark:bg-amber-950/20"
+    >
       <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
         수정신고 추가 납부세액
       </p>
@@ -170,7 +176,7 @@ export function AmendmentResultCard({
               <div key={i}>
                 <Row label={s.label} value={formatKRW(s.amount)} />
                 {s.formula && (
-                  <p className="pl-2 text-[11px] text-muted-foreground">{s.formula}</p>
+                  <p className="pl-2 text-caption text-muted-foreground">{s.formula}</p>
                 )}
               </div>
             ))}

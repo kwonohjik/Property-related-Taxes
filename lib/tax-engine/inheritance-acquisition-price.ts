@@ -2,29 +2,30 @@
  * 상속·증여 자산 취득가액 산정 Pure Engine
  *
  * 양도소득세 계산 시 상속·증여로 취득한 자산의 취득가액은 상속개시일(또는 증여일)
- * 현재 상증법상 평가가액으로 한다. 단, 의제취득일(1985.1.1.) 전 상속 자산은
- * max(환산가액, 취득실가×물가상승률)을 취득가액으로 할 수 있다.
+ * 현재 상증법상 평가가액으로 한다. 단, 의제취득일(1985.1.1.) 전 상속·증여 자산은
+ * max(① 상증법 평가액, ② §164④~⑦ 의제취득일 기준시가, ③ 환산취득가)로 한다.
  *
  * Layer 2 원칙: DB 직접 호출 없음. 순수 함수. 정수 연산(원 단위).
  *
  * 근거 조문:
  *   - 소득세법 §97 — 양도소득 필요경비
- *   - 소득세법 시행령 §163 ⑨ — 상속·증여 자산 취득가액 의제 (의제취득일 이후)
- *   - 소득세법 시행령 §176조의2 ④ — 의제취득일 전 상속: max(환산가액, 취득실가×물가상승률)
- *   - 상증법 §60 — 평가의 원칙 (시가주의 + 보충적평가)
- *   - 상증법 §61 — 부동산 보충적평가 방법
+ *   - 소득세법 시행령 §163 ⑨ — 상속·증여 자산 취득가액 의제 (의제취득일 이후 max①②)
+ *   - 소득세법 시행령 §176조의2 ④·③ — 의제취득일 전 상속·증여: max(①,②,③)
+ *     · 생산자물가상승률 방식(④2호)은 무상취득에 부적용(호2 base 부존재)
+ *     · 국심2003부602·2003서3266, 조심2023서0676
+ *   - 상증법 §60·§61 — 평가 원칙·부동산 보충적평가
  */
 
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
-import { getCpiRatio, getCpiAnnual, CPI_MIN_YEAR, CPI_MAX_YEAR } from "./data/cpi-rates";
 import type {
   InheritanceAcquisitionInput,
   InheritanceAcquisitionResult,
   InheritanceAssetKind,
   InheritanceAcquisitionMethod,
   PreDeemedBreakdown,
+  PreDeemedSelectedMethod,
 } from "./types/inheritance-acquisition.types";
 
 export type {
@@ -61,22 +62,21 @@ function validateInput(input: InheritanceAcquisitionInput): void {
   if (input.reportedValue !== undefined && input.reportedValue < 0) {
     throw new Error("reportedValue는 0 이상이어야 합니다");
   }
-  // case A: 피상속인 실가 입증 시 취득일 필수
-  if (
-    input.decedentActualPrice !== undefined &&
-    input.decedentActualPrice > 0 &&
-    !input.decedentAcquisitionDate
-  ) {
-    throw new Error("피상속인 실지취득가액 입증 시 decedentAcquisitionDate가 필수입니다");
-  }
 }
 
-// ─── Case A: 의제취득일(1985.1.1.) 전 상속 ────────────────────────────────
+// ─── Case A: 의제취득일(1985.1.1.) 전 상속·증여 ───────────────────────────
+//
+// 취득가액 = max(① 상증법 §60~66 평가액, ③ 환산취득가) [Phase 1]
+//   — 소령 §163⑨·§176조의2④, 국심2003부602·2003서3266·조심2023서0676.
+// ※ 생산자물가상승률 방식(§176조의2④2호)은 상속·증여 자산에 부적용
+//   (호2 base=취득당시 실지거래가액·매매·감정가액이 무상취득엔 부존재).
+// ① = 실지거래가액 의제(§163⑨) → 실제 필요경비 공제. ③ = 추계 → 개산공제(§163⑥, 하류 applyResultToInput).
+// ② 소령 §164④~⑦ 취득당시 기준시가는 Phase 2 추가 예정(standardPriceAtDeemedDate[환산 분자]와 구분되는 값·시점 확정 필요).
 
 function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisitionResult {
   const warnings: string[] = [];
 
-  // 1. 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가)
+  // ③ 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가) — §176조의2④·③3호
   let converted = 0;
   if (
     input.transferPrice &&
@@ -89,86 +89,87 @@ function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisiti
       input.standardPriceAtDeemedDate,
       input.standardPriceAtTransfer,
     );
-  } else {
-    warnings.push("환산취득가 산정 정보(양도가·기준시가)가 부족하여 환산가 = 0으로 처리됩니다");
   }
 
-  // 2. 취득실가 × 물가상승률 (피상속인 실가 입증된 경우만)
-  let inflationAdjusted: number | null = null;
-  let cpiFromYear = 0;
-  let cpiToYear = 0;
-  let cpiRatio = 1;
+  // ① 상증법 §60~66 평가액 (상속세 신고가액)
+  const reported =
+    input.reportedValue !== undefined && input.reportedValue > 0
+      ? Math.floor(input.reportedValue)
+      : 0;
 
-  if (
-    input.decedentActualPrice &&
-    input.decedentActualPrice > 0 &&
-    input.decedentAcquisitionDate &&
-    input.transferDate
-  ) {
-    cpiFromYear = input.decedentAcquisitionDate.getFullYear();
-    cpiToYear = input.transferDate.getFullYear();
+  // max(①,③) 선택 (동점 시 ① 우선) — ②(§164 취득당시 기준시가)는 Phase 2
+  const acquisitionPrice = Math.max(reported, converted);
 
-    const fromCpi = getCpiAnnual(cpiFromYear);
-    const toCpi = getCpiAnnual(cpiToYear);
-    if (fromCpi === null || toCpi === null) {
-      warnings.push(
-        `CPI 데이터 범위 외 (${cpiFromYear}~${cpiToYear}). 유효 범위: ${CPI_MIN_YEAR}~${CPI_MAX_YEAR}. 물가상승률 환산을 건너뜁니다.`,
-      );
-    } else {
-      cpiRatio = getCpiRatio(input.decedentAcquisitionDate, input.transferDate);
-      inflationAdjusted = Math.floor(input.decedentActualPrice * cpiRatio);
-    }
-  }
-
-  // 3. max(환산가, 실가×CPI) 선택
-  const isInflationWin =
-    inflationAdjusted !== null && inflationAdjusted > converted;
-  const acquisitionPrice = Math.max(converted, inflationAdjusted ?? 0);
+  const selectedMethod: PreDeemedSelectedMethod =
+    reported > 0 && reported >= converted ? "reported" : "converted";
 
   if (acquisitionPrice === 0) {
-    warnings.push("환산취득가와 물가상승률 산정 정보가 모두 부족합니다. 취득가 = 0으로 처리됩니다.");
+    warnings.push(
+      "취득가액 산정 정보(상증법 평가액·환산취득가)가 모두 부족합니다. 취득가 = 0으로 처리됩니다.",
+    );
   }
 
   const breakdown: PreDeemedBreakdown = {
+    reportedAmount: reported > 0 ? reported : null,
     convertedAmount: converted,
-    inflationAdjustedAmount: inflationAdjusted,
-    selectedMethod: isInflationWin ? "inflation_adjusted" : "converted",
-    cpiFromYear,
-    cpiToYear,
-    cpiRatio,
+    selectedMethod,
   };
 
   return {
     acquisitionPrice,
     method: "pre_deemed_max",
     legalBasis: `${TRANSFER.INHERITED_BEFORE_DEEMED} · ${TRANSFER.PRE1990_STD_PRICE_CONVERSION}`,
-    formula: buildPreDeemedFormula(converted, inflationAdjusted, isInflationWin, cpiRatio, acquisitionPrice),
+    formula: buildPreDeemedFormula(breakdown, acquisitionPrice),
     preDeemedBreakdown: breakdown,
     warnings: warnings.length > 0 ? warnings : undefined,
   };
 }
 
-function buildPreDeemedFormula(
-  converted: number,
-  inflationAdjusted: number | null,
-  isInflationWin: boolean,
-  cpiRatio: number,
-  acquisitionPrice: number,
-): string {
+function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number): string {
   const lines: string[] = [];
-  lines.push(`환산취득가: ${converted.toLocaleString()}`);
-  if (inflationAdjusted !== null) {
-    const ratioStr = cpiRatio.toFixed(3);
-    lines.push(`취득실가 × 물가상승률(${ratioStr}배): ${inflationAdjusted.toLocaleString()}`);
+  if (b.reportedAmount !== null) {
+    lines.push(`① 상증법 평가액(상속세 신고가액): ${b.reportedAmount.toLocaleString()}`);
   }
-  const selectedLabel = isInflationWin ? "취득실가×물가상승률" : "환산취득가";
-  lines.push(`→ 적용 (큰 금액, ${selectedLabel}): ${acquisitionPrice.toLocaleString()}`);
+  lines.push(`③ 환산취득가액: ${b.convertedAmount.toLocaleString()}`);
+  const label = b.selectedMethod === "reported" ? "① 상증법 평가액" : "③ 환산취득가액";
+  lines.push(`→ 적용 (큰 금액, ${label}): ${acquisitionPrice.toLocaleString()}`);
   return lines.join("\n");
 }
 
 // ─── Case B: 의제취득일(1985.1.1.) 이후 상속 ─────────────────────────────
 
 function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisitionResult {
+  // 기준시가 미공시 상속 건물(§163⑨2호): 취득가액 = max(① 상증법 평가액[reportedValue], ② §164 취득당시 기준시가).
+  //   주택(개별주택가격 미공시, <2005.4.30) = §164⑦ houseValuationStdPrice
+  //   상가(기준시가 미공시, <2005.1.1) = §164⑥ commercialValuationStdPrice
+  // 자산은 주택 or 상가(둘 중 하나만 주입). ③(환산취득가/양도가 스케일) 적용 불가.
+  // ①·② 실지거래가액 의제 → 개산공제 없음(추가 처리 없이 acquisitionPrice만 반환).
+  const sec164Std = input.houseValuationStdPrice ?? input.commercialValuationStdPrice;
+  if (sec164Std !== undefined && sec164Std > 0) {
+    const isCommercial164 =
+      input.houseValuationStdPrice === undefined && input.commercialValuationStdPrice !== undefined;
+    const reported =
+      input.reportedValue !== undefined && input.reportedValue >= 0
+        ? Math.floor(input.reportedValue)
+        : 0;
+    const std = Math.floor(sec164Std);
+    const sec164Wins = std >= reported;
+    const acquisitionPrice = sec164Wins ? std : reported;
+    const clause = isCommercial164 ? "§164⑥" : "§164⑦";
+    const disclosureLabel = isCommercial164 ? "상가 기준시가 미공시" : "개별주택가격 미공시";
+    return {
+      acquisitionPrice,
+      method: "supplementary",
+      legalBasis: isCommercial164
+        ? TRANSFER.INHERITED_AFTER_DEEMED_COMMERCIAL_MAX
+        : TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX,
+      formula:
+        `max(상증법 평가액 ${reported.toLocaleString()}, ` +
+        `${clause} 취득당시 기준시가 ${std.toLocaleString()}) = ${acquisitionPrice.toLocaleString()} ` +
+        `(${disclosureLabel} · ${sec164Wins ? `${clause} 채택` : "상증법 평가액 채택"})`,
+    };
+  }
+
   // 상속세 신고가액이 입력된 경우 그대로 취득가액으로 사용
   if (input.reportedValue !== undefined && input.reportedValue >= 0 && input.reportedMethod) {
     return {

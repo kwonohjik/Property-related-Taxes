@@ -26,6 +26,7 @@
     "build:sigungu": "tsx scripts/parse-koedb-txt.ts",
     "build:adjacency": "tsx scripts/build-adjacency-matrix.ts",
     "build:admin-data": "tsx scripts/download-admin-data.ts",
+    "build:stdprice": "NODE_OPTIONS='--max-old-space-size=8192' tsx scripts/build-commercial-stdprice.ts",
     "verify:matrix": "tsx scripts/verify-matrix.ts",
     "build:admin-all": "npm run build:sigungu && npm run build:adjacency && npm run verify:matrix",
     "typecheck": "tsc --noEmit",

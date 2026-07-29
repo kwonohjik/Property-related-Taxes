@@ -45,7 +45,7 @@ export function Buppyo2HeirSheet({
         }`}
       >
         <header className="mb-3">
-          <p className="text-[10px] text-slate-500">{BP2_FORM_SUBTITLE}</p>
+          <p className="text-micro text-slate-500">{BP2_FORM_SUBTITLE}</p>
           <p className="text-center text-lg font-bold tracking-wide text-slate-900 dark:text-slate-50">
             {BP2_FORM_TITLE}
           </p>
@@ -54,7 +54,7 @@ export function Buppyo2HeirSheet({
         <Buppyo2GaSection data={a} idx={idx} />
 
         <div className="mt-3" data-testid={`buppyo2-heir-${idx}-na`}>
-          <p className="mb-1 text-[11px] font-semibold">나. 상속인별 상속재산명세</p>
+          <p className="mb-1 text-caption font-semibold">나. 상속인별 상속재산명세</p>
           <HorizontalScrollContainer hint={SCROLL_HINT} contentPadding="p-0">
             <Buppyo2NaPage1
               rows={page1Rows}
@@ -81,7 +81,7 @@ export function Buppyo2HeirSheet({
           >
             {BP2_NA_SECTION_TITLE}
           </p>
-          <p className="mb-1 text-[11px] text-gray-600">
+          <p className="mb-1 text-caption text-gray-600">
             상속인 {num} {who} (1쪽에서 계속)
           </p>
           <HorizontalScrollContainer hint={SCROLL_HINT} contentPadding="p-0">

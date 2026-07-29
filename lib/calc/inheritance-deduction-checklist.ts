@@ -27,6 +27,7 @@ export type AutoChecklistKey = "spouse" | "financial" | "cohabit" | "farming";
 export type ManualChecklistKey =
   | "familyBusiness"
   | "legatee"
+  | "heirWaiver"
   | "priorGiftDeduction"
   | "disasterAdjust"
   | "casualtyLoss"
@@ -40,6 +41,7 @@ export const AUTO_KEYS: AutoChecklistKey[] = ["spouse", "financial", "cohabit", 
 export const MANUAL_KEYS: ManualChecklistKey[] = [
   "familyBusiness",
   "legatee",
+  "heirWaiver",
   "priorGiftDeduction",
   "disasterAdjust",
   "casualtyLoss",
@@ -72,6 +74,7 @@ export interface ChecklistFormSlice {
   familyBusinessDirectAmount: string;
   familyBusiness?: unknown; // FamilyBusinessInheritanceInput | undefined
   legateeAmountNonHeir: string;
+  heirWaiverAmount: string;
   priorGiftDeductionTotal: string;
   disasterLossDeduction: string;
   casualtyLossEnabled: boolean;
@@ -137,6 +140,8 @@ export function manualItemHasValue(form: ChecklistFormSlice, key: ManualChecklis
       );
     case "legatee":
       return hasStr(form.legateeAmountNonHeir);
+    case "heirWaiver":
+      return hasStr(form.heirWaiverAmount);
     case "priorGiftDeduction":
       return hasStr(form.priorGiftDeductionTotal);
     case "disasterAdjust":

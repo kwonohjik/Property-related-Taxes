@@ -673,3 +673,115 @@ describe("§16⑭2호 hasDisqualifyingGrossReceipt — D-3 2호 결격 분리", 
     expect(ids).toEqual([]);
   });
 });
+
+// ============================================================
+// P-2 — §16⑭ 결격소득은 소득세법 영농(personal)에만 적용 (corporate 제외)
+// 법령: 상증령 §16④/⑭은 §16②1호가목·§16③1호가목(소득세법 영농)에만 걸린다.
+//   법인세법 영농(§16②2호·§16③2호)은 "경영/기업 종사" 요건 — 결격소득 대상 아님.
+// ============================================================
+
+describe("P-2: §16⑭ 결격소득 corporate 트랙 미적용", () => {
+  it("P2-1: corporate + hasDisqualifyingIncome=true → 여전히 적격 (§16⑭ 미적용)", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      corporateOk({ hasDisqualifyingIncome: true }),
+    );
+    expect(r.detail.eligible).toBe(true);
+    expect(r.deduction).toBe(1_000_000_000);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭"))).toBe(false);
+  });
+
+  it("P2-2: corporate + hasDisqualifyingGrossReceipt=true (2026 이후) → 여전히 적격", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      corporateOk({ hasDisqualifyingGrossReceipt: true }),
+      undefined,
+      "2026-03-01",
+    );
+    expect(r.detail.eligible).toBe(true);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭"))).toBe(false);
+  });
+
+  it("P2-3 (회귀): personal + hasDisqualifyingIncome=true → 여전히 결격", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      personalOk({ hasDisqualifyingIncome: true }),
+    );
+    expect(r.detail.eligible).toBe(false);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭1호"))).toBe(true);
+  });
+});
+
+// ============================================================
+// P-4 — §16⑭2호(2026.2.27 신설)는 시행일 이후 상속개시분부터 적용 (부칙 경과규정)
+// 부칙: "영 시행일 이후 상속이 개시되는 분부터 적용" (KACTA 세무사신문·법령 부칙 확인).
+//   구(舊) 상속에 소급 결격 금지. undefined=적용(legacy·엔진은 항상 deathDate 보유, G3 컨벤션).
+// ============================================================
+
+describe("P-4: §16⑭2호 2026.2.27 시행일 게이팅", () => {
+  it("P4-1: 2호=true + 상속 2025-06-01(시행 전) → 적격 (2호 미적용)", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      personalOk({
+        hasDisqualifyingIncome: false,
+        hasDisqualifyingGrossReceipt: true,
+      }),
+      undefined,
+      "2025-06-01",
+    );
+    expect(r.detail.eligible).toBe(true);
+    expect(r.deduction).toBe(1_000_000_000);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭2호"))).toBe(false);
+  });
+
+  it("P4-2: 2호=true + 상속 2026-02-27(시행일) → 결격", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      personalOk({
+        hasDisqualifyingIncome: false,
+        hasDisqualifyingGrossReceipt: true,
+      }),
+      undefined,
+      "2026-02-27",
+    );
+    expect(r.detail.eligible).toBe(false);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭2호"))).toBe(true);
+  });
+
+  it("P4-3 (회귀): 1호=true + 상속 2025-06-01(시행 전) → 결격 (1호는 게이팅 없음)", () => {
+    const r = calcFarmingDeduction(
+      1_000_000_000,
+      personalOk({
+        hasDisqualifyingIncome: true,
+        hasDisqualifyingGrossReceipt: false,
+      }),
+      undefined,
+      "2025-06-01",
+    );
+    expect(r.detail.eligible).toBe(false);
+    expect(r.detail.ineligibleReasons.some((s) => s.includes("§16⑭1호"))).toBe(true);
+  });
+
+  it("P4-4: 자동도출 — 시행 전 상속은 2호 결격 heir도 자격자 포함", () => {
+    const farming = personalOk({
+      hasDisqualifyingIncome: false,
+      hasDisqualifyingGrossReceipt: false,
+      heirAssessments: [
+        {
+          heirId: "h1",
+          heirIsAdult: true,
+          heirTwoYearFarming: true,
+          heirResidenceMet: true,
+          hasDisqualifyingIncome: false,
+          hasDisqualifyingGrossReceipt: true, // 2호 결격이나 시행 전이면 무효
+        },
+      ],
+    });
+    // 시행 전(2025-06-01): 2호 게이팅 → h1 적격
+    expect(deriveQualifiedHeirIds(farming, "2025-06-01")).toEqual(["h1"]);
+    // 시행 후(2026-03-01): 2호 적용 → h1 결격
+    expect(deriveQualifiedHeirIds(farming, "2026-03-01")).toEqual([]);
+    // resolveEffectiveQualifiedHeirIds도 동일 게이팅 전파
+    expect(resolveEffectiveQualifiedHeirIds(farming, "2025-06-01")).toEqual(["h1"]);
+  });
+});

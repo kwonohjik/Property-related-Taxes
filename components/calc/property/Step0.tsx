@@ -4,7 +4,9 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { BuildingStdPriceEtaxLookupField } from "./BuildingStdPriceEtaxLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { UrbanAreaLookup } from "./UrbanAreaLookup";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -103,8 +105,8 @@ export function Step0({
           물건 소재지 <span className="text-muted-foreground font-normal text-xs">(선택)</span>
         </label>
         <AddressSearch
-          value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "" } satisfies AddressValue}
-          onChange={(v) => onChange({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "" })}
+          value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "", pnu: form.pnu } satisfies AddressValue}
+          onChange={(v) => onChange({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "", pnu: v.pnu ?? "" })}
         />
       </div>
 
@@ -130,17 +132,11 @@ export function Step0({
             onLookupSuccess={({ year }) => fillPriorYearPrice(year)}
           />
         ) : (
-          <>
-            <CurrencyInput
-              label=""
-              value={publishedPrice}
-              onChange={onPublishedPriceChange}
-              placeholder="금액 입력 (원)"
-            />
-            <p className="text-xs text-amber-700">
-              ※ 건축물 기준시가는 국세청 홈택스에서 직접 확인 후 입력하세요.
-            </p>
-          </>
+          <BuildingStdPriceEtaxLookupField
+            pnu={form.pnu}
+            publishedPrice={publishedPrice}
+            onPublishedPriceChange={onPublishedPriceChange}
+          />
         )}
       </div>
 
@@ -523,8 +519,7 @@ function OwnershipSection({
         {/* §107①2호: 건물·부속토지 소유자 분리 입력 */}
         {form.ownershipType === "house_split" && (
           <div className="space-y-3">
-            <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-              <p className="text-xs font-semibold text-amber-700">건물·부속토지 소유자 정보 (§107①2호)</p>
+            <ToneCard tone="amber" title="건물·부속토지 소유자 정보 (§107①2호)" bodyClassName="space-y-3" noDark>
               <FieldCard
                 label="건물 소유자"
                 hint="건물(건축물) 소유자 성명 또는 식별자"
@@ -549,9 +544,8 @@ function OwnershipSection({
                   placeholder="부속토지 소유자 성명 또는 식별자"
                 />
               </FieldCard>
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-              <p className="text-xs font-semibold text-amber-700">시가표준액 (안분 기준, §4)</p>
+            </ToneCard>
+            <ToneCard tone="amber" title="시가표준액 (안분 기준, §4)" bodyClassName="space-y-3" noDark>
               <FieldCard
                 label="건축물 시가표준액"
                 hint="§4② 기준 — 재산세 고지서·주택가격 공시의 건물분 가액 (§146④ 소방분 과세표준과 동일 필드)"
@@ -574,7 +568,7 @@ function OwnershipSection({
                   placeholder="금액 입력 (원)"
                 />
               </FieldCard>
-            </div>
+            </ToneCard>
           </div>
         )}
 

@@ -203,8 +203,8 @@ describe("의제취득일(1985.1.1.) 경계 분기 — 소령 §176조의2④", 
 
 // ─── Case A: 의제취득일 전 상속 ──────────────────────────────────────────
 
-describe("Case A — 의제취득일 전 상속 (소령 §176조의2 ④)", () => {
-  it("A-1: 환산만 (피상속인 실가 미입증) — 환산값이 취득가로 선택", () => {
+describe("Case A — 의제취득일 전 상속·증여 max(①,②,③) (소령 §163⑨·§176조의2④)", () => {
+  it("A-1: ③ 환산이 ①보다 큼 → ③ 채택", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...BEFORE_DEEMED,
       assetKind: "house_individual",
@@ -214,63 +214,53 @@ describe("Case A — 의제취득일 전 상속 (소령 §176조의2 ④)", () =
       transferDate: new Date("2023-02-16"),
     });
 
-    // 환산 = 920,000,000 × 50,000,000 / 250,000,000 = 184,000,000
+    // ③ 환산 = 920,000,000 × 50,000,000 / 250,000,000 = 184,000,000, ① 없음 → ③ 채택
     expect(r.acquisitionPrice).toBe(184_000_000);
     expect(r.method).toBe("pre_deemed_max");
     expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
     expect(r.preDeemedBreakdown?.convertedAmount).toBe(184_000_000);
-    expect(r.preDeemedBreakdown?.inflationAdjustedAmount).toBeNull();
+    expect(r.preDeemedBreakdown?.reportedAmount).toBeNull();
   });
 
-  it("A-2: 실가×CPI가 환산보다 큰 경우 → 실가×CPI 채택", () => {
-    // 피상속인 실가 10억, CPI 비율 3배(가정) → 30억 > 환산 18.4억
+  it("A-2: ① 상증법 평가액(신고가액)이 ②③보다 큼 → ① 채택 (실제공제)", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...BEFORE_DEEMED,
       assetKind: "house_individual",
+      reportedValue: 1_000_000_000, // ① 상증법 평가액
       transferPrice: 920_000_000,
       standardPriceAtDeemedDate: 50_000_000,
       standardPriceAtTransfer: 250_000_000,
       transferDate: new Date("2023-02-16"),
-      decedentActualPrice: 1_000_000_000,
-      // decedentAcquisitionDate는 BEFORE_DEEMED에서 1983-07-26 설정됨
     });
 
-    const converted = 184_000_000; // 920M × 50M/250M
-    expect(r.preDeemedBreakdown?.convertedAmount).toBe(converted);
-    expect(r.preDeemedBreakdown?.inflationAdjustedAmount).not.toBeNull();
-    // inflationAdjusted가 환산보다 크면 inflation 채택
-    if (r.preDeemedBreakdown!.inflationAdjustedAmount! > converted) {
-      expect(r.preDeemedBreakdown?.selectedMethod).toBe("inflation_adjusted");
-      expect(r.acquisitionPrice).toBe(r.preDeemedBreakdown!.inflationAdjustedAmount);
-    } else {
-      expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
-      expect(r.acquisitionPrice).toBe(converted);
-    }
+    // ① 1,000,000,000 > ③ 184,000,000 > ② 50,000,000
+    expect(r.acquisitionPrice).toBe(1_000_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
+    expect(r.preDeemedBreakdown?.reportedAmount).toBe(1_000_000_000);
   });
 
-  it("A-3: 환산이 실가×CPI보다 큰 경우 → 환산 채택", () => {
-    // 피상속인 실가 1,000원(미미), 환산은 크게 나오도록 설정
+  it("A-3: ③ 환산이 ①②보다 큼 → ③ 채택 (개산공제)", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...BEFORE_DEEMED,
       assetKind: "house_individual",
+      reportedValue: 1_000, // ① 미미
       transferPrice: 920_000_000,
       standardPriceAtDeemedDate: 200_000_000,
       standardPriceAtTransfer: 250_000_000,
       transferDate: new Date("2023-02-16"),
-      decedentActualPrice: 1_000, // 매우 작은 실가
     });
 
-    // 환산 = 920M × 200M/250M = 736,000,000
+    // ③ 환산 = 920M × 200M/250M = 736,000,000 > ② 200M > ① 1,000
     expect(r.preDeemedBreakdown?.convertedAmount).toBe(736_000_000);
     expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
     expect(r.acquisitionPrice).toBe(736_000_000);
   });
 
-  it("A-4: 양쪽 정보 모두 부족 → acquisitionPrice=0 + warnings", () => {
+  it("A-4: 후보 정보 모두 부족 → acquisitionPrice=0 + warnings", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...BEFORE_DEEMED,
       assetKind: "house_individual",
-      // standardPriceAtDeemedDate, standardPriceAtTransfer, transferPrice 모두 미입력
+      // reportedValue, standardPriceAtDeemedDate, transferPrice 모두 미입력
     });
 
     expect(r.acquisitionPrice).toBe(0);
@@ -279,24 +269,25 @@ describe("Case A — 의제취득일 전 상속 (소령 §176조의2 ④)", () =
     expect(r.warnings!.length).toBeGreaterThan(0);
   });
 
-  it("A-5: standardPriceAtTransfer=0 → converted=0, throw 하지 않음", () => {
+  it("A-5: standardPriceAtTransfer=0 → 환산 불가(=0), ① 없으면 취득가=0 (throw 하지 않음)", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...BEFORE_DEEMED,
       assetKind: "house_individual",
       transferPrice: 920_000_000,
       standardPriceAtDeemedDate: 50_000_000,
-      standardPriceAtTransfer: 0, // 분모 0
+      standardPriceAtTransfer: 0, // ③ 환산 분모 0 → converted=0
     });
 
+    // ③=0, ① 없음 → 취득가=0 + warnings (§164 raw는 후보 아님 — Phase 2)
     expect(r.acquisitionPrice).toBe(0);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
     expect(r.warnings).toBeDefined();
   });
 
-  it("A-6: PDF 첨부 이미지 사례 — 환산취득가 산정 (소령 §176조의2④)", () => {
+  it("A-6: PDF 첨부 이미지 사례 — ③ 환산취득가 채택 (소령 §176조의2④, ① 없음)", () => {
     // 1983.7.26. 상속 / 2023.2.16. 양도 / 양도가 920,000,000원
-    // 의제취득일(1985.1.1.) 개별공시지가 1,100,000원/㎡ × 184.2㎡ = 202,620,000원
-    // 양도시(2022.1.1.) 개별공시지가 6,750,000원/㎡ × 184.2㎡ = 1,243,350,000원
-    // 환산취득가 = 920,000,000 × 202,620,000 / 1,243,350,000 = 149,878,732원(floor)
+    // ③ 환산 = 920,000,000 × (의제취득일 기준시가 ÷ 양도시 기준시가) = 149,878,732원(floor)
+    // ① 상증법 평가액 미입력 → ③ 환산 채택 (Excel/PDF anchor: 환산 선택)
     const r = calculateInheritanceAcquisitionPrice({
       inheritanceDate: PDF_SCENARIO.inheritanceDate,
       assetKind: PDF_SCENARIO.assetKind,
@@ -310,32 +301,30 @@ describe("Case A — 의제취득일 전 상속 (소령 §176조의2 ④)", () =
       920_000_000 * PDF_SCENARIO.standardPriceAtDeemedDate / PDF_SCENARIO.standardPriceAtTransfer,
     );
     expect(r.preDeemedBreakdown?.convertedAmount).toBe(expectedConverted);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
+    expect(r.acquisitionPrice).toBe(expectedConverted);
     expect(r.method).toBe("pre_deemed_max");
   });
 
-  it("A-7: CPI 범위 외 취득 연도 → warnings에 'CPI 데이터 범위 외' 포함", () => {
+  it("A-7: 물가상승률 방식 제거 — 피상속인 실가·취득일 입력해도 무시 (max(①,②,③)만)", () => {
     const r = calculateInheritanceAcquisitionPrice({
-      inheritanceDate: new Date("1960-01-01"), // 의제취득일 전
+      ...BEFORE_DEEMED,
       assetKind: "house_individual",
+      transferPrice: 920_000_000,
+      standardPriceAtDeemedDate: 50_000_000,
+      standardPriceAtTransfer: 250_000_000,
       transferDate: new Date("2023-02-16"),
-      decedentActualPrice: 10_000_000,
-      decedentAcquisitionDate: new Date("1960-01-01"), // CPI_MIN_YEAR(1965) 미만
+      decedentActualPrice: 10_000_000_000, // 100억 — 반영되면 이게 채택될 값(무시되어야 함)
+      decedentAcquisitionDate: new Date("1983-07-26"),
     });
 
-    expect(r.warnings).toBeDefined();
-    expect(r.warnings!.some((w) => w.includes("CPI"))).toBe(true);
-  });
-
-  it("A-8: 피상속인 실가 있는데 취득일 미입력 → throw", () => {
-    expect(() =>
-      calculateInheritanceAcquisitionPrice({
-        ...BEFORE_DEEMED,
-        assetKind: "house_individual",
-        decedentActualPrice: 10_000_000,
-        // decedentAcquisitionDate 없음
-        decedentAcquisitionDate: undefined,
-      }),
-    ).toThrow(/decedentAcquisitionDate/);
+    // 물가상승률 미적용 → max(0, 50M, 184M) = 184M(③ 환산). 100억 무시.
+    expect(r.acquisitionPrice).toBe(184_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
+    // inflationAdjustedAmount 필드 자체가 제거됨
+    expect(
+      (r.preDeemedBreakdown as unknown as Record<string, unknown>).inflationAdjustedAmount,
+    ).toBeUndefined();
   });
 });
 

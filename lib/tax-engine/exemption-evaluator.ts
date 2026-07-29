@@ -1,5 +1,5 @@
 /**
- * 비과세 항목 평가기 (상증법 §11·§12·§46·§46의2)
+ * 비과세 항목 평가기 (상증법 §11·§12·§46·§52의2)
  *
  * 체크리스트 항목 → 차감액 계산
  * 한도 초과분은 일반 과세분으로 분리
@@ -11,6 +11,7 @@ import {
   hasAutoRelatedStockInput,
 } from "./public-interest-stock-limit";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import {
   DISABLED_TRUST_LIMIT,
   findExemptionRuleById,
@@ -55,8 +56,11 @@ function evaluateSingleExemption(
     const limitM2 = rule.limitAreaM2 ?? EXEMPTION.GRAVE_FOREST_LIMIT_M2;
     const claimedM2 = item.claimedAreaM2 ?? item.areaM2 ?? 0;
     if (claimedM2 > limitM2) {
+      // 2026-07-29 정정(#591 감사 R7): 면적 비율이 부동소수라 `floor(금액 × 비율)`이
+      //   1원 과소산정한다(곱이 정수인 입력에서도 발생). 곱셈 선행 정수 분수연산으로 교체
+      //   (memory `feedback_safemul_decimal_apportion_precision`).
       const exemptRatio = limitM2 / claimedM2;
-      exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
+      exemptAmount = safeMultiplyThenDivide(item.claimedAmount, limitM2, claimedM2);
       taxableOverflow = item.claimedAmount - exemptAmount;
       warnings.push(`금양임야 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(9,900㎡ 한도)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③1호)`);
     } else {
@@ -72,8 +76,11 @@ function evaluateSingleExemption(
     const limitM2 = rule.limitAreaM2 ?? EXEMPTION.GRAVE_LAND_LIMIT_M2;
     const claimedM2 = item.claimedAreaM2 ?? item.areaM2 ?? 0;
     if (claimedM2 > limitM2) {
+      // 2026-07-29 정정(#591 감사 R7): 면적 비율이 부동소수라 `floor(금액 × 비율)`이
+      //   1원 과소산정한다(곱이 정수인 입력에서도 발생). 곱셈 선행 정수 분수연산으로 교체
+      //   (memory `feedback_safemul_decimal_apportion_precision`).
       const exemptRatio = limitM2 / claimedM2;
-      exemptAmount = Math.floor(item.claimedAmount * exemptRatio);
+      exemptAmount = safeMultiplyThenDivide(item.claimedAmount, limitM2, claimedM2);
       taxableOverflow = item.claimedAmount - exemptAmount;
       warnings.push(`묘토 면적 ${claimedM2}㎡ 중 ${limitM2}㎡(1,980㎡ 한도)만 비과세, 초과분 ${taxableOverflow.toLocaleString()} 과세 (상증령 §8③2호)`);
     } else {
@@ -147,7 +154,7 @@ function evaluateSingleExemption(
     return { ...base, exemptAmount, taxableOverflow, breakdown, warnings };
   }
 
-  // === 장애인 신탁: 5억 한도 (10년 합산) ===
+  // === 장애인 신탁: 5억 한도 (§52의2③ 생존 중 평생 합산) ===
   if (rule.id === "gift_disabled_trust") {
     const priorUsed = item.priorDisabledTrustUsed ?? 0;
     const remaining = Math.max(0, DISABLED_TRUST_LIMIT - priorUsed);
@@ -155,9 +162,10 @@ function evaluateSingleExemption(
     taxableOverflow = item.claimedAmount - exemptAmount;
 
     breakdown.push({
-      label: `장애인 신탁 한도 (5억 - 기사용 ${priorUsed.toLocaleString()} = 잔여 ${remaining.toLocaleString()}`,
+      label: `장애인 신탁 한도 (5억 − 기사용 ${priorUsed.toLocaleString()} = 잔여 ${remaining.toLocaleString()})`,
       amount: exemptAmount,
-      lawRef: EXEMPTION.PUBLIC_INTEREST,
+      // 한도 근거는 본조가 아니라 §52의2③("…합산한 금액은 5억원을 한도로 한다")이다.
+      lawRef: EXEMPTION.DISABLED_TRUST_LIMIT_REF,
     });
     if (taxableOverflow > 0) {
       breakdown.push({ label: "5억 초과 — 일반 증여세 과세", amount: taxableOverflow });

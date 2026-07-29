@@ -12,6 +12,21 @@ import {
 } from "./calc-wizard-store";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 
+/**
+ * gracePeriod(다주택 중과 한시 유예) 구 필드 마이그레이션 — §167의3①12의2 나·다목 확장(2026-07-24).
+ * 구 `isLandPermitArea`(토지거래허가구역 소재) 값을 신규 `isLandPermitTarget`(허가 대상 여부, 나/다목 분기)
+ * 으로 의미 승계 이전. 이미 신규 필드가 있으면(신규 세션) 손대지 않는다. deprecated 필드는 유지(하위호환).
+ */
+export function migrateGracePeriod(
+  gp: TransferFormData["gracePeriod"],
+): TransferFormData["gracePeriod"] {
+  if (!gp) return gp;
+  if (gp.isLandPermitTarget === undefined && gp.isLandPermitArea !== undefined) {
+    return { ...gp, isLandPermitTarget: gp.isLandPermitArea };
+  }
+  return gp;
+}
+
 /** ParcelListInput 마이그레이션 — store에서 분리된 헬퍼 */
 function migrateParcel(p: unknown): ParcelFormItem {
   const parcel = (p as Partial<ParcelFormItem>) ?? {};
@@ -23,7 +38,13 @@ function migrateParcel(p: unknown): ParcelFormItem {
   } else {
     areaScenario = "partial";
   }
-  return { ...(parcel as unknown as ParcelFormItem), areaScenario };
+  return {
+    ...(parcel as unknown as ParcelFormItem),
+    areaScenario,
+    // §164⑨ 1호 특례 보상필드 (2026-07-16 신설) — legacy 폼엔 없으므로 기본값 주입
+    compensationPerSqm: parcel.compensationPerSqm ?? "",
+    compensationBasisStdPrice: parcel.compensationBasisStdPrice ?? "",
+  };
 }
 
 /** 세션스토리지에 저장된 구 포맷(propertyType + companionAssets / 루트 감면 필드)을 신규 assets[] 포맷으로 변환 */
@@ -39,8 +60,6 @@ export function migrateLegacyForm(
   primaryAsset.standardPriceAtTransfer = String(legacy.standardPriceAtTransfer ?? "");
   primaryAsset.standardPriceAtTransferLabel = String(legacy.standardPriceAtTransferLabel ?? "");
   primaryAsset.directExpenses = String(legacy.expenses ?? "0");
-  primaryAsset.inheritanceValuationMode =
-    (legacy.inheritanceValuationMode as "auto" | "manual") ?? "auto";
   primaryAsset.inheritanceDate = String(legacy.acquisitionDate ?? "");
   primaryAsset.publishedValueAtInheritance = String(
     legacy.inheritanceLandPricePerM2 || legacy.inheritanceHousePrice || ""
@@ -106,9 +125,7 @@ export function migrateLegacyForm(
   if (!primaryAsset.inheritanceStartDate) primaryAsset.inheritanceStartDate = "";
   if (primaryAsset.hasDecedentActualPrice === undefined) primaryAsset.hasDecedentActualPrice = false;
   if (!primaryAsset.decedentAcquisitionPrice) primaryAsset.decedentAcquisitionPrice = "";
-  if (!primaryAsset.inheritanceReportedValue) primaryAsset.inheritanceReportedValue = "";
   if (!primaryAsset.inheritanceValuationMethod) primaryAsset.inheritanceValuationMethod = "";
-  if (!primaryAsset.inheritanceValuationEvidence) primaryAsset.inheritanceValuationEvidence = "";
   if (primaryAsset.useSupplementaryHelper === undefined) primaryAsset.useSupplementaryHelper = false;
   if (!primaryAsset.supplementaryLandArea) primaryAsset.supplementaryLandArea = "";
   if (!primaryAsset.supplementaryLandUnitPrice) primaryAsset.supplementaryLandUnitPrice = "";
@@ -236,7 +253,6 @@ export function migrateLegacyForm(
     standardPriceAtTransfer: _spt,
     standardPriceAtAcquisitionLabel: _spaal,
     standardPriceAtTransferLabel: _spttl,
-    inheritanceValuationMode: _ivm,
     inheritanceLandPricePerM2: _ilpp,
     inheritanceHousePrice: _ihp,
     companionAssets: _ca,
@@ -275,7 +291,7 @@ export function migrateLegacyForm(
 
   // 사용하지 않는 변수 경고 회피
   void _pt; void _isr; void _ac; void _ad; void _dad; void _doad; void _ap; void _exp;
-  void _uea; void _spa; void _spt; void _spaal; void _spttl; void _ivm; void _ilpp;
+  void _uea; void _spa; void _spt; void _spaal; void _spttl; void _ilpp;
   void _ihp; void _ca; void _pasp; void _par; void _paj; void _pbn; void _pad;
   void _plon; void _plat; void _pm; void _parcels; void _rt; void _fy; void _usfi;
   void _sfid; void _sfiz; void _sfspa; void _dfy; void _ry; void _rir; void _rr;

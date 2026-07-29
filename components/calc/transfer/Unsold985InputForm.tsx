@@ -8,10 +8,11 @@
  */
 
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
+import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold985Form = Extract<AssetReductionForm, { type: "unsold_98_5" }>;
@@ -19,6 +20,13 @@ type Unsold985Form = Extract<AssetReductionForm, { type: "unsold_98_5" }>;
 interface Props {
   value: Unsold985Form;
   onChange: (patch: Partial<Unsold985Form>) => void;
+  acquisitionDate?: string;
+  transferDate?: string;
+  jibun?: string;
+  dong?: string;
+  ho?: string;
+  assetId?: string;
+  assetPhdSnapshot?: ReductionPhdValue;
 }
 
 function SectionShell({
@@ -33,7 +41,7 @@ function SectionShell({
   return (
     <div className={`rounded-lg border ${t.box} p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-[10px] font-bold select-none`}>
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.badge} text-micro font-bold select-none`}>
           {num}
         </span>
         <p className={`text-xs font-semibold ${t.title}`}>{title}</p>
@@ -43,7 +51,17 @@ function SectionShell({
   );
 }
 
-export function Unsold985InputForm({ value, onChange }: Props) {
+export function Unsold985InputForm({
+  value,
+  onChange,
+  acquisitionDate,
+  transferDate,
+  jibun,
+  dong,
+  ho,
+  assetId,
+  assetPhdSnapshot,
+}: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -55,7 +73,7 @@ export function Unsold985InputForm({ value, onChange }: Props) {
         <div>
           <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
           <DateInput value={value.contractDate985} onChange={(v) => onChange({ contractDate985: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             2010.2.11 현재 수도권 밖 미분양주택을 2011.4.30까지 사업주체등과 최초 매매계약
             (계약금 납부 포함 — 법 §98의5①)
           </p>
@@ -69,7 +87,7 @@ export function Unsold985InputForm({ value, onChange }: Props) {
             value={value.priceReductionRatePct985}
             onChange={(v) => onChange({ priceReductionRatePct985: v })}
           />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             (최초 입주자 모집공고에 공시된 분양가격 − 실제 매매가격) ÷ 최초 공시 분양가격 × 100.
             10% 이하 = 감면율 60% / 10% 초과 20% 이하 = 80% / 20% 초과 = 100% (법 §98의5①각호)
           </p>
@@ -108,33 +126,49 @@ export function Unsold985InputForm({ value, onChange }: Props) {
       </SectionShell>
 
       <SectionShell num="④" title="기준시가 (취득일부터 5년이 지난 후 양도 시 필수)" tone="amber">
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득 당시 기준시가</label>
-          <CurrencyInput
-            value={value.standardPriceAtAcquisition985}
-            onChange={(v) => onChange({ standardPriceAtAcquisition985: v })}
-            label=""
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">취득일부터 5년이 되는 날의 기준시가</label>
-          <CurrencyInput
-            value={value.standardPriceAt5Years985}
-            onChange={(v) => onChange({ standardPriceAt5Years985: v })}
-            label=""
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium">양도 당시 기준시가 (비우면 자산 입력값 사용)</label>
-          <CurrencyInput
-            value={value.standardPriceAtTransfer985}
-            onChange={(v) => onChange({ standardPriceAtTransfer985: v })}
-            label=""
-          />
-        </div>
+        <ReductionStdPriceSection
+          phd={{
+            phdMode: value.phdMode985,
+            firstDisclosureDate: value.phdFirstDisclosureDate985,
+            firstDisclosurePrice: value.phdFirstDisclosurePrice985,
+            landAreaSqm: value.phdLandAreaSqm985,
+            landPricePerSqmAtAcq: value.phdLandPricePerSqmAtAcq985,
+            landPricePerSqmAtFirst: value.phdLandPricePerSqmAtFirst985,
+            buildingStdAtAcq: value.phdBuildingStdAtAcq985,
+            buildingStdAtFirst: value.phdBuildingStdAtFirst985,
+          }}
+          onPhdChange={(patch) => {
+            const mapped: Partial<Unsold985Form> = {};
+            if (patch.phdMode !== undefined) mapped.phdMode985 = patch.phdMode;
+            if (patch.firstDisclosureDate !== undefined) mapped.phdFirstDisclosureDate985 = patch.firstDisclosureDate;
+            if (patch.firstDisclosurePrice !== undefined) mapped.phdFirstDisclosurePrice985 = patch.firstDisclosurePrice;
+            if (patch.landAreaSqm !== undefined) mapped.phdLandAreaSqm985 = patch.landAreaSqm;
+            if (patch.landPricePerSqmAtAcq !== undefined) mapped.phdLandPricePerSqmAtAcq985 = patch.landPricePerSqmAtAcq;
+            if (patch.landPricePerSqmAtFirst !== undefined) mapped.phdLandPricePerSqmAtFirst985 = patch.landPricePerSqmAtFirst;
+            if (patch.buildingStdAtAcq !== undefined) mapped.phdBuildingStdAtAcq985 = patch.buildingStdAtAcq;
+            if (patch.buildingStdAtFirst !== undefined) mapped.phdBuildingStdAtFirst985 = patch.buildingStdAtFirst;
+            onChange(mapped);
+          }}
+          stdPriceAtAcquisition={value.standardPriceAtAcquisition985}
+          onStdPriceAtAcquisitionChange={(v) => onChange({ standardPriceAtAcquisition985: v })}
+          stdPriceAt5Years={value.standardPriceAt5Years985}
+          onStdPriceAt5YearsChange={(v) => onChange({ standardPriceAt5Years985: v })}
+          stdPriceAtTransfer={value.standardPriceAtTransfer985}
+          onStdPriceAtTransferChange={(v) => onChange({ standardPriceAtTransfer985: v })}
+          showExclusiveArea={false}
+          acquisitionDate={acquisitionDate}
+          transferDate={transferDate}
+          jibun={jibun}
+          dong={dong}
+          ho={ho}
+          assetId={assetId}
+          assetPhdSnapshot={assetPhdSnapshot}
+          testidPrefix="unsold985"
+          snapshotKeyPrefix="red985"
+        />
       </SectionShell>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 5년 이내 양도 시 양도소득세 × 인하율별 감면율을 감면하고, 5년 후 양도 시
           5년간 발생 양도소득금액 × 감면율을 공제합니다 (법 §98의5①).

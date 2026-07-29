@@ -12,6 +12,7 @@
 import { applyRate, calculateHoldingPeriod, truncateToWon } from "./tax-utils";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { calculateRentalHousingException } from "./transfer-tax/rental-housing-exception";
+import { checkEligibility } from "./transfer-tax/rental-housing-exception/eligibility";
 import type {
   TransferTaxInput,
   CalculationStep,
@@ -22,6 +23,46 @@ import { calcTax } from "./transfer-tax-rate-calc";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
+
+/**
+ * §155⑳ 시나리오 B(임대→거주 전환 PHRP) 여부 — STEP 1a 전액 비과세 조기 반환 억제 게이트.
+ * B는 §161①(직전거주주택 양도일 이후 기간분만 비과세) 안분이 필요하므로 일반 1세대1주택
+ * 요건 충족이어도 조기 반환하면 안분 미도달 오답. A(거주주택 양도)는 eligibility 충족 시 전액 비과세가
+ * 정답이므로 조기반환 가능하나, **미충족 시엔 조기반환하면 안 됨**(아래 isPrhpScenarioAIneligible).
+ */
+export function isPrhpScenarioB(effectiveInput: TransferTaxInput): boolean {
+  return (
+    effectiveInput.rentalHousingException?.applyException === true &&
+    effectiveInput.rentalHousingException.scenario === "B"
+  );
+}
+
+/**
+ * §155⑳ 시나리오 A(거주주택 양도) + 임대주택 eligibility 미충족 여부 — STEP 1a 조기반환 억제 게이트.
+ * A는 사용자가 householdHousingCount=1(임대주택 제외 전제)을 입력하면 checkExemption이 isExempt=true를
+ * 내주는데, STEP 1a가 그대로 조기반환하면 STEP 2.5의 checkEligibility가 우회되어 임대 요건 미충족인데도
+ * 전액 비과세되는 over-exemption 버그. 미충족 시 조기반환을 억제하면 STEP 2.5가 "적용 불가"(null)로
+ * 정상 과세 경로에 넘긴다. eligible 케이스는 false 반환 → 현행 조기반환 유지(무변경).
+ */
+export function isPrhpScenarioAIneligible(effectiveInput: TransferTaxInput): boolean {
+  const rhe = effectiveInput.rentalHousingException;
+  if (rhe?.applyException !== true || rhe.scenario !== "A") return false;
+  const holdYears = calculateHoldingPeriod(
+    effectiveInput.acquisitionDate,
+    effectiveInput.transferDate,
+  ).years;
+  const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
+  // 거주주택 보유·거주 연수 = holdYears·liveYears (runRentalHousingExceptionStep와 동일 인자 관례)
+  return !checkEligibility(rhe.rentalUnits, holdYears, liveYears).passed;
+}
+
+/**
+ * STEP 1a 전액 비과세 조기반환 허용 여부 — §155⑳ 두 억제 게이트를 결합(orchestrator 800줄 정책).
+ * B 시나리오(§161 안분 필요)·A 시나리오 eligibility 미충족(over-exemption 차단) 시 false → STEP 2.5 위임.
+ */
+export function canEarlyReturnPrhp(effectiveInput: TransferTaxInput): boolean {
+  return !isPrhpScenarioB(effectiveInput) && !isPrhpScenarioAIneligible(effectiveInput);
+}
 
 export interface RentalHousingStepArgs {
   /** carryover 등 보정 완료된 유효 입력 */
@@ -91,7 +132,18 @@ export function runRentalHousingExceptionStep(
     amount: rhe.taxableGain,
     legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
   });
-  const rheBasicDeduction = parsedRates.basicDeductionRules.annualLimit;
+  // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 이 조기반환 경로가 기본공제를
+  //   연 한도(250만) **전액**으로 고정해 `annualBasicDeductionUsed`(같은 해 기사용분)를
+  //   무시했다. 같은 해 다른 양도에서 이미 공제받았어도 250만원을 다시 전액 공제해
+  //   과세표준·세액이 과소했다.
+  //   소득세법 §103①은 기본공제를 **소득별로 해당 과세기간에 각각 연 250만원** 한도로
+  //   규정하므로 잔여 = max(0, 연한도 − 기사용분)이다. 공제액은 과세대상 양도소득금액도
+  //   넘을 수 없다(min).
+  const rheBasicDeductionRemaining = Math.max(
+    0,
+    parsedRates.basicDeductionRules.annualLimit - (effectiveInput.annualBasicDeductionUsed ?? 0),
+  );
+  const rheBasicDeduction = Math.min(rheBasicDeductionRemaining, Math.max(0, rhe.taxableGain));
   const rheTaxBase = truncateToWon(Math.max(0, rhe.taxableGain - rheBasicDeduction));
   const rheTaxResult = calcTax(rheTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
 

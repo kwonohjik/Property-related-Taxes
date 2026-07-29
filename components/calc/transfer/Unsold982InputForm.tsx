@@ -10,6 +10,7 @@
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Unsold982Form = Extract<AssetReductionForm, { type: "unsold_98_2" }>;
@@ -27,20 +28,18 @@ export function Unsold982InputForm({ value, onChange }: Props) {
         <LawArticleModal legalBasis="조세특례제한법 시행령 §98의2" label="조특령 §98의2" />
       </div>
 
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-sky-700">① 취득·계약 시기</p>
+      <ToneCard tone="sky" title="① 취득·계약 시기" noDark>
         <div>
           <label className="mb-1 block text-xs font-medium">매매계약일 (선택)</label>
           <DateInput value={value.contractDate982} onChange={(v) => onChange({ contractDate982: v })} />
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             취득기간 2008.11.3~2010.12.31 — 자산의 취득일이 기간 내이면 비워 두어도 됩니다.
             취득일이 기간 외라도 2010.12.31까지 매매계약 체결 + 계약금 납부한 경우 포함됩니다 (법 §98의2①)
           </p>
         </div>
-      </div>
+      </ToneCard>
 
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-rose-700">② 자격 요건 확인</p>
+      <ToneCard tone="rose" title="② 자격 요건 확인" noDark>
         <ToggleCard
           tone="rose"
           title="수도권 밖 미분양주택 확인"
@@ -55,9 +54,9 @@ export function Unsold982InputForm({ value, onChange }: Props) {
           checked={value.isFirstOrFcfsContract982}
           onCheckedChange={(v) => onChange({ isFirstOrFcfsContract982: v })}
         />
-      </div>
+      </ToneCard>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과 (특칙 — 감면세액이 아님): 장기보유특별공제는 양도차익 × 소득세법 §95② 표2
           보유기간별 공제율(연 4%, 최대 40%)을 적용하고, 세율은 단기보유 여부와 관계없이 기본

@@ -39,7 +39,7 @@ export function SpouseDeductionDetailCard({ detail, triggerLabel, triggerValue }
           {/* ㉮ 법정상속분 산정 (7행 — legalShareTable 있을 때만) */}
           {detail.legalShareTable && (
             <>
-              <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
+              <div className="px-3 py-1 text-caption font-semibold text-muted-foreground bg-muted/30">
                 ㉮ 법정상속분 산정 (§19 ①1호)
               </div>
               <DetailRow
@@ -109,7 +109,7 @@ export function SpouseDeductionDetailCard({ detail, triggerLabel, triggerValue }
           {/* ㉯ 실제상속액 (actualAmountTable 있을 때만) */}
           {detail.actualAmountTable && (
             <>
-              <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground bg-muted/30">
+              <div className="px-3 py-1 text-caption font-semibold text-muted-foreground bg-muted/30">
                 ㉯ 실제상속액 (집행기준 19-17-1)
               </div>
               <DetailRow
@@ -149,7 +149,7 @@ export function SpouseDeductionDetailCard({ detail, triggerLabel, triggerValue }
           />
 
           {/* Max[Min] 산식 */}
-          <div className="px-3 py-2 text-[11px] text-muted-foreground bg-muted/10">
+          <div className="px-3 py-2 text-caption text-muted-foreground bg-muted/10">
             {detail.actualAmountTable
               ? `Max[Min(법정상속분 ${formatKRW(detail.legalShareCapped)}, 실제상속액 ${formatKRW(detail.actualAmountCapped)}, 30억), 5억]`
               : `Max[Min(법정상속분 ${formatKRW(detail.legalShareCapped)}, 30억), 5억]`}

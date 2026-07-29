@@ -138,6 +138,11 @@ export function resolveEstateItemValue(item: EstateItem): number {
   if (typeof item.appraisedValue === "number" && item.appraisedValue > 0) {
     return item.appraisedValue;
   }
+  // 매매사례가액(§49④ "시가로 본다") — 시가·감정가 미입력 시 시가로 인정 (H-38).
+  // §49② 단서로 해당 재산 시가(market/appraised) 있으면 위에서 먼저 return되어 자연 후순위.
+  if (typeof item.similarSalesValue === "number" && item.similarSalesValue > 0) {
+    return item.similarSalesValue;
+  }
   // 상업용 건물 부수토지 개별공시지가(§61①1호) — 보충평가로 귀결될 때만 합산(시가류 미입력).
   // 엔진 evaluateDetachedHouse 동일 게이트. 매매사례가(§49④) 존재 시는 시가이므로 제외.
   const supplementaryLandAddon =
@@ -152,4 +157,19 @@ export function resolveEstateItemValue(item: EstateItem): number {
     return computeStockValuation(item);
   }
   return supplementaryLandAddon;
+}
+
+/**
+ * 자산에 담보된 채권액 = max(0, 저당액 − 신용보증액) + 임대보증금 (원, 정수).
+ *
+ * 단일 진실(dual-truth 방지):
+ *  - §66 1호·§63② 평가 하한 (property-valuation.ts applyCollateralFloor)
+ *  - §15⑤1호 개인가업 담보채무 차감 (deductions/family-business.ts resolveFamilyBusinessAssetValue)
+ */
+export function computeSecuredClaim(item: EstateItem): number {
+  const mortgageNet = Math.max(
+    0,
+    (item.mortgageAmount ?? 0) - (item.creditGuaranteeAmount ?? 0),
+  );
+  return mortgageNet + (item.leaseDeposit ?? 0);
 }

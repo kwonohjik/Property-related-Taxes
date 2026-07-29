@@ -17,12 +17,15 @@ describe("RH-A1 — 거주주택 양도 (12억 이하)", () => {
     scenario: "A",
     rentalUnits: [
       {
-        registrationDate: new Date("2018-01-01"),
-        rentalType: "long-8",
+        businessRegistrationDate: new Date("2018-01-01"),
+        rentalRegistrationDate: new Date("2018-01-01"),
+        rentalCategory: "long_general",
         rentalAcquisitionType: "purchase",
         isApartment: false,
         region: "seoul-metro",
+        isExcluded918Rule: false,
         standardPriceAtRentalStart: 500_000_000,
+        hasMinimum2Units: false,
         rentalMonths: 96,
         rentalAutoTermination: false,
         requirementsConfirmed: true,

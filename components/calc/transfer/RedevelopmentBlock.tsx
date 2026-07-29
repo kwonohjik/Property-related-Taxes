@@ -25,6 +25,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -36,6 +37,7 @@ import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSpli
 import { RedevelopmentRightExemptionSection } from "./RedevelopmentRightExemptionSection";
 import { SettlementExemptionGuideCard } from "./SettlementExemptionGuideCard";
 import { HousingContribEstimatedSection } from "./HousingContribEstimatedSection";
+import { RedevelopmentDeemedAcquisitionNotice } from "./RedevelopmentDeemedAcquisitionNotice";
 
 interface Props {
   asset: AssetForm;
@@ -109,6 +111,9 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
 
   return (
     <div className="space-y-3">
+      {/* 상속·증여 종전자산 취득가액 안내 — §163⑨: 상속개시일/증여일 평가액을 취득가액(실가)으로 사용 */}
+      <RedevelopmentDeemedAcquisitionNotice acquisitionCause={asset.acquisitionCause} />
+
       {/* §⑥ 1세대1입주권 비과세 카드 (사례 36 — subject="right" 전용) */}
       {isRightSubject && (
         <RedevelopmentRightExemptionSection
@@ -121,7 +126,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
 
       {/* 0️⃣ 1세대1주택 + 12억 안분 적용 가이드 — subject="apt" 시만 노출 */}
       {!isRightSubject && (
-      <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 leading-relaxed">
+      <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 leading-relaxed">
         <p className="font-semibold mb-0.5">⚠️ 1세대1주택 + 12억 초과 비과세 안분 적용 여부</p>
         <p>
           본 자산이 1세대1주택 + 12억 초과인 경우 §95③·시행령 §160 안분이 적용됩니다. 적용 여부는
@@ -136,11 +141,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
       )}
 
       {/* ① sky: 양도 대상 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
-          <p className="text-xs font-semibold text-sky-700">양도 대상 (시행령 §166)</p>
-        </div>
+      <ToneCard tone="sky" sectionNum={1} title="양도 대상 (시행령 §166)" bodyClassName="space-y-2" noDark>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 시행령 §166" label="시행령 §166" />
           <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 단서" />
@@ -161,14 +162,10 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           }))}
           layout="stack"
         />
-      </div>
+      </ToneCard>
 
       {/* ② emerald: 출자 자산 */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">2</span>
-          <p className="text-xs font-semibold text-emerald-700">출자 자산</p>
-        </div>
+      <ToneCard tone="emerald" sectionNum={2} title="출자 자산" bodyClassName="space-y-2" noDark>
         <RadioCardGroup
           name={`redevOriginal-${asset.assetId}`}
           value={asset.redevOriginalAssetType}
@@ -179,18 +176,14 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           }))}
           layout="stack"
         />
-      </div>
+      </ToneCard>
 
       {/* ②-a rose: 조합원 구분 (사례 48 — 승계조합원) */}
       <SuccessorMemberSection asset={asset} onChange={onChange} />
 
       {/* ③ amber: 청산금 방향 (승계조합원 모드 시 숨김 — 본 PR 미지원) */}
       {asset.redevIsSuccessorMember !== "yes" && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">3</span>
-            <p className="text-xs font-semibold text-amber-700">청산금 방향</p>
-          </div>
+        <ToneCard tone="amber" sectionNum={3} title="청산금 방향" bodyClassName="space-y-2" noDark>
           <RadioCardGroup
             name={`redevSettlement-${asset.assetId}`}
             value={asset.redevSettlementDirection || "pay"}
@@ -198,7 +191,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
             options={SETTLEMENT_OPTIONS}
             layout="inline"
           />
-        </div>
+        </ToneCard>
       )}
 
       {/* ③-a rose: 청산금 수령분 단독 신고 토글 (사례 46 — receiveOnlyMode) */}
@@ -219,11 +212,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
       )}
 
       {/* ④ violet: 재개발 일정·금액 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">4</span>
-          <p className="text-xs font-semibold text-violet-700">재개발 일정·금액 (시행령 §166②1호)</p>
-        </div>
+      <ToneCard tone="violet" sectionNum={4} title="재개발 일정·금액 (시행령 §166②1호)" bodyClassName="space-y-2" noDark>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
           <LawArticleModal legalBasis="소득세법 시행령 §166 ④" label="시행령 §166④" />
@@ -262,7 +251,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         {/* 사례 48 — 승계조합원: 권리가액 필드 숨김 + 자산 카드 취득가액 read-only 미리보기 (P5).
             취득가액 출처는 상단 자산 카드 (상속·증여·매매 등 취득원인별 통합 처리). */}
         {asset.redevIsSuccessorMember === "yes" && (
-          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-[11px] text-sky-900 space-y-1 leading-relaxed">
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-caption text-sky-900 space-y-1 leading-relaxed">
             <div className="font-semibold">취득가액 — 자산 카드에서 입력</div>
             <div>
               승계조합원의 취득가액은 <span className="font-semibold">상단 자산 카드 &ldquo;취득가액&rdquo;</span> 입력값을 사용합니다.
@@ -276,7 +265,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
                 </span>
               </div>
             )}
-            <div className="pt-1 text-[10px] text-sky-700">
+            <div className="pt-1 text-micro text-sky-700">
               ※ 시행령 §166④의 &ldquo;권리가액&rdquo;은 관리처분 인가일 기준 평가액이며 원조합원 전용 개념입니다.
               승계조합원의 신축APT 취득가액은 시행령 §162①5호(상속·증여 시점 평가액) 또는 §97①(매매 실가)이 적용됩니다.
             </div>
@@ -350,7 +339,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
             <p className="text-violet-700">
               분양가 = 권리가액 {preview.sign} 청산금 = <span className="font-mono font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
             </p>
-            <p className="text-[11px] text-violet-600">
+            <p className="text-caption text-violet-600">
               ※ §166②1호 인가후 분 양도차익 산정 시 양도가액에서 차감되는 분양가. 상단 일반 &ldquo;취득가액&rdquo; 입력 대신 본 값이 자동 사용됩니다.
             </p>
             <p className="text-violet-700">
@@ -359,19 +348,15 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
             </p>
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ⑤ sky: 인가전 분 종전 주택 취득가 (실가 모드) — useEstimatedAcquisition OFF 시만 표시
           §166①1호 인가전 분 양도차익 산정의 차감 기준 (사례 45/46 실거래가).
           환산 모드 ON 시 비표시 (아래 ⑥ rose 카드의 §164⑦/§166③ 환산으로 자동 도출).
           승계조합원 모드 시 비표시 — 종전주택 미소유 + §166 안분 우회 산식이라 입력 불요. */}
       {!asset.useEstimatedAcquisition && asset.redevIsSuccessorMember !== "yes" && (
-        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">5</span>
-            <p className="text-xs font-semibold text-sky-700">인가전 분 종전 주택 취득가액 (실가 모드)</p>
-          </div>
-          <div className="rounded-md bg-sky-100/60 border border-sky-200 p-2 text-[11px] text-sky-800 leading-relaxed">
+        <ToneCard tone="sky" sectionNum={5} title="인가전 분 종전 주택 취득가액 (실가 모드)" bodyClassName="space-y-2" noDark>
+          <div className="rounded-md bg-sky-100/60 border border-sky-200 p-2 text-caption text-sky-800 leading-relaxed">
             <p>
               <span className="font-semibold">안내</span> — 종전주택의 <span className="font-semibold">취득 실거래가액을 확인할 수 있으면</span> 아래에 입력하세요.
               확인이 불가능하면 본 카드를 비워두고 <span className="font-semibold">아래 &ldquo;환산취득가 사용&rdquo; 토글을 ON</span>으로 전환하면 §166③ 기준시가 비율 환산으로 자동 도출됩니다.
@@ -388,7 +373,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
               hideUnit
             />
           </FieldCard>
-        </div>
+        </ToneCard>
       )}
 
 
@@ -462,7 +447,7 @@ function SettlementAnnouncementDateField({
       <div className="space-y-2">
         <DateInput value={announcementDate} onChange={handleAnnouncementChange} />
         {asset.redevSettlementSaleDate && (
-          <div className="rounded-md bg-rose-100/60 border border-rose-200 px-3 py-2 text-[11px] text-rose-800">
+          <div className="rounded-md bg-rose-100/60 border border-rose-200 px-3 py-2 text-caption text-rose-800">
             <span className="font-semibold">자동 산정 양도일</span>:{" "}
             <span className="font-mono font-semibold">{asset.redevSettlementSaleDate}</span>{" "}
             <span className="text-rose-600">(고시일 + 1일)</span>
@@ -492,7 +477,7 @@ function ReceiveOnlyToggleCard({
       title="청산금 수령분 단독 신고"
       description="신축APT 양도 없이 청산금 수령분만 신고 — 시행령 §166① 본문 + 제1항 제2호 가목 단독 적용 (NTS 집행기준)"
     >
-      <div className="space-y-2 text-[11px] text-rose-800 leading-relaxed">
+      <div className="space-y-2 text-caption text-rose-800 leading-relaxed">
         <p>
           본 모드 ON 시 인가전·인가후 양도차익은 신고 대상이 아니며,{" "}
           <span className="font-semibold">청산금 수령액만 양도가액으로 의제</span>됩니다.
@@ -538,7 +523,7 @@ function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
         분양가액 = 권리가액 {preview.rights.toLocaleString()} − 청산금 수령액 {preview.settle.toLocaleString()}
       </p>
       <p className="text-sky-700 font-mono">= {preview.salePriceTotal.toLocaleString()}</p>
-      <p className="text-[11px] text-sky-600">
+      <p className="text-caption text-sky-600">
         ※ 양도코리아 PDF의 &ldquo;분양가액&rdquo; 칸은 본 마법사에서 권리가액·청산금 입력으로 자동 도출되므로 별도 입력하지 않습니다.
       </p>
     </div>
@@ -584,17 +569,14 @@ function ExemptionAtApprovalCard({
       : `자동 판정: ${auto.eligible ? "충족" : "미충족"} (${Math.floor(auto.months / 12)}년 ${auto.months % 12}개월)`;
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-          ⓘ
-        </span>
-        <p className="text-xs font-semibold text-violet-700">
-          비과세 보유 요건 (관리처분계획인가일 기준 보유 2년)
-        </p>
-      </div>
-
-      <p className="text-[11px] text-violet-800 leading-relaxed">
+    <ToneCard
+      tone="violet"
+      sectionNum="ⓘ"
+      title="비과세 보유 요건 (관리처분계획인가일 기준 보유 2년)"
+      bodyClassName="space-y-2"
+      noDark
+    >
+      <p className="text-caption text-violet-800 leading-relaxed">
         서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 1세대1주택 비과세 판정 시
         보유주택수는 양도일 기준이나 보유·거주요건은 관리처분계획인가일 기준으로 충족 여부를 판단합니다.
       </p>
@@ -608,7 +590,7 @@ function ExemptionAtApprovalCard({
         />
       </div>
 
-      <div className="rounded-md border border-violet-200 bg-white/70 p-2 text-[11px] text-violet-900">
+      <div className="rounded-md border border-violet-200 bg-white/70 p-2 text-caption text-violet-900">
         {labelText}
       </div>
 
@@ -628,7 +610,7 @@ function ExemptionAtApprovalCard({
 
       {effective !== null && (
         <div
-          className={`rounded-md border p-2 text-[11px] ${
+          className={`rounded-md border p-2 text-caption ${
             effective === "yes"
               ? "border-emerald-300 bg-emerald-100/60 text-emerald-900"
               : "border-rose-300 bg-rose-100/60 text-rose-900"
@@ -648,7 +630,7 @@ function ExemptionAtApprovalCard({
 
       {/* 사례 47 settlement 비과세 차감 4분기 안내 (receiveOnly=no + receive 동시신고) */}
       {asset.redevReceiveOnlyMode !== "yes" && <SettlementExemptionGuideCard asset={asset} effective={effective} />}
-    </div>
+    </ToneCard>
   );
 }
 
@@ -704,14 +686,13 @@ function SuccessorMemberSection({
   };
 
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-[10px] font-bold text-rose-800 select-none">
-          2a
-        </span>
-        <p className="text-xs font-semibold text-rose-700">조합원 구분</p>
-      </div>
-
+    <ToneCard
+      tone="rose"
+      sectionNum="2a"
+      title="조합원 구분"
+      bodyClassName="space-y-2"
+      noDark
+    >
       <RadioCardGroup
         name={`redevIsSuccessor-${asset.assetId}`}
         value={(asset.redevIsSuccessorMember as "" | "yes" | "no") || "no"}
@@ -733,12 +714,12 @@ function SuccessorMemberSection({
 
       {/* 자동 추정 안내 — silent 적용 금지 */}
       {autoSuggestionState === "recommend" && (
-        <div className="rounded-md border border-violet-200 bg-violet-50 p-2.5 text-[11px] text-violet-900">
+        <div className="rounded-md border border-violet-200 bg-violet-50 p-2.5 text-caption text-violet-900">
           ⓘ 관리처분 인가일이 취득일보다 이전입니다. 승계조합원 모드 사용을 권장합니다.
         </div>
       )}
       {autoSuggestionState === "ambiguous" && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900">
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-caption text-amber-900">
           ⚠️ 취득일과 관리처분 인가일이 <span className="font-semibold">동일 날짜</span>입니다.
           원조합원·승계조합원 해석이 갈리는 회색지대로, 사전답변례·NTS 해석을 확인 후 적절한 모드를 선택하세요.
         </div>
@@ -762,7 +743,7 @@ function SuccessorMemberSection({
             />
           </FieldCard>
 
-          <div className="rounded-md border border-sky-200 bg-sky-50 p-2.5 text-[11px] text-sky-900 space-y-1 leading-relaxed">
+          <div className="rounded-md border border-sky-200 bg-sky-50 p-2.5 text-caption text-sky-900 space-y-1 leading-relaxed">
             <div className="font-semibold">승계조합원 신축APT 양도 분기</div>
             <ul className="list-disc pl-4 space-y-0.5">
               <li>보유기간 = 양도일 − 준공일 (사전-2019-법령해석재산-0649)</li>
@@ -784,7 +765,7 @@ function SuccessorMemberSection({
             </div>
           </div>
 
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-900">
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-caption text-amber-900">
             <div className="font-semibold">본 PR 미지원 분기 (자동 차단)</div>
             <ul className="list-disc pl-4 space-y-0.5 mt-1">
               <li>승계조합원 + 청산금 분기 (납부·수령) — 후속 PR</li>
@@ -795,6 +776,6 @@ function SuccessorMemberSection({
           </div>
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }

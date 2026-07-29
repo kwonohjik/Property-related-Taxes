@@ -24,6 +24,7 @@ import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { AssetCardForAggregate, GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
+import { resolveGeneralBuildingSwap, type GeneralBuildingSwapDecision } from "@/lib/tax-engine/general-building-swap";
 import { buildBurdenedGiftBreakdown } from "@/lib/tax-engine/burdened-gift-apportionment";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
@@ -58,6 +59,22 @@ export interface GeneralBuildingActualPricePayload {
   houseToCommercialConversion?: boolean;
   conversionDate?: Date;
   wasMultiHouseAtConversion?: boolean;
+  // ── §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1) ──
+  /** 토지 상속 게이트 (§163⑨). */
+  acquisitionByInheritance?: boolean;
+  /** 건물 상속 게이트. */
+  buildingAcquisitionByInheritance?: boolean;
+  /** 상속개시일 토지 평가액 (원) — 취득당시 실지거래가액 의제(§166⑥ 안분 아님). */
+  inheritedLandValue?: number;
+  /** 상속개시일 건물 평가액 (원). */
+  inheritedBuildingValue?: number;
+  // ── §95④ 단기보유 기산점 — actual 분기 기존 결측(회귀 동반 수정) ──
+  /** 토지 취득원인 — 단기보유 기산점 분기(영 §95④). */
+  landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
+  /** 상속 시 피상속인 취득일 (영 §95④). */
+  decedentAcquisitionDate?: Date;
+  /** 증여 시 증여자 취득일 (영 §95④). */
+  donorAcquisitionDate?: Date;
 }
 
 interface BundledLikeApportionmentResult {
@@ -92,16 +109,21 @@ export interface GeneralBuildingRouteResult {
 function buildProperties(
   cards: AssetCardForAggregate[],
   nonBusinessRatio: number,
+  swap?: GeneralBuildingSwapDecision,
 ): TransferTaxItemInput[] {
   return cards.map((card) => {
     const isBuilding = card.propertyType === "general_building_unit";
+    // §97②2호 단서 swap(안 A): 배분된 카드는 환산취득가 미차감(0)·필요경비=배분나목.
+    // (단건 엔진 actual 모드에서 acqCost=0, expensesApplied=expenses → gain=양도가−배분나목.)
+    const swapNabok = swap?.allocation.get(card.propertyId);
+    const isSwapCard = swapNabok !== undefined;
     return {
       propertyId: card.propertyId,
       propertyLabel: card.propertyLabel,
       propertyType: card.propertyType,
       transferPrice: card.transferPrice,
-      acquisitionPrice: card.acquisitionPrice,
-      expenses: card.expenses,
+      acquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice,
+      expenses: isSwapCard ? swapNabok : card.expenses,
       transferDate: card.transferDate,
       acquisitionDate: card.acquisitionDate,
       // useEstimatedAcquisition=false: aggregate 경로에서는 이미 취득가 계산 완료.
@@ -179,6 +201,9 @@ function buildApportionment(
   buildingStdAtAcq: number | null,
   usedEstimated: boolean,
   legalBasis: string,
+  /** §97②2호 단서 swap(안 A) — 발동 자산은 사이드바 표시도 취득가액0·필요경비=배분나목으로 반영
+   *  (엔진 buildProperties와 동일). 미전달 시 swap 미반영(실가 경로 등). */
+  swap?: GeneralBuildingSwapDecision,
 ): BundledLikeApportionmentResult {
   return {
     apportioned: cards.map((card) => {
@@ -190,13 +215,16 @@ function buildApportionment(
       const stdAtAcq = isLandCard
         ? (landStdAtAcq !== null ? landStdAtAcq * landRatio : 0)
         : (buildingStdAtAcq !== null ? buildingStdAtAcq : 0);
+      // swap 발동 카드: 환산취득가 미차감(0)·필요경비=배분나목 (엔진 buildProperties:118-126 정합).
+      const swapNabok = swap?.allocation.get(card.propertyId);
+      const isSwapCard = swapNabok !== undefined;
       return {
         assetId: card.propertyId,
         assetLabel: card.propertyLabel,
         assetKind: isLandCard ? "land" : "building",
         allocatedSalePrice: card.transferPrice,
-        allocatedAcquisitionPrice: card.acquisitionPrice,
-        allocatedExpenses: card.expenses,
+        allocatedAcquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice,
+        allocatedExpenses: isSwapCard ? swapNabok : card.expenses,
         displayRatio: stdAtTransfer / totalStandAtTransfer,
         standardPriceAtTransfer: stdAtTransfer,
         standardPriceAtAcquisition: stdAtAcq,
@@ -230,6 +258,20 @@ export function dispatchGeneralBuilding(
   rates: TaxRatesMap,
   /** 부담부증여 §159 정보 (옵션) — actualPriceMode 분기에서만 사용. */
   burdenedGiftInfo?: BurdenedGiftInfo,
+  /**
+   * §164⑨ 1호 공익수용 특례 — top-level 특례 필드 (토지 전용, 계획 D16-GB).
+   * 환산 경로(calculateGeneralBuildingTransfer)에서만 적용. gbRaw가 아닌 data 최상위에서 옴.
+   */
+  expropriation?: {
+    transferCause?: "general" | "public_expropriation";
+    compensationPerSqm?: number;
+    compensationBasisStdPrice?: number;
+  },
+  /**
+   * ⑭ 공유지분율 — 개산공제(§163⑥) base 축소 전용. `data.ownershipRatio`(top-level)에서 온다.
+   * `gbRaw`는 `generalBuildingValuation` 서브객체라 이 값을 담고 있지 않다 — 명시 전달이 필수.
+   */
+  ownershipRatio?: number,
 ): GeneralBuildingRouteResult {
   // buildingAcquisitionDate: Zod는 z.string().date()로만 검증 — Date 객체로 변환 안 됨.
   // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
@@ -323,6 +365,16 @@ export function dispatchGeneralBuilding(
         houseToCommercialConversion: coercedGbRaw.houseToCommercialConversion as boolean | undefined,
         conversionDate: coercedGbRaw.conversionDate as Date | undefined,
         wasMultiHouseAtConversion: coercedGbRaw.wasMultiHouseAtConversion as boolean | undefined,
+        // §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1) — 명시 전달(침묵 strip 방지)
+        acquisitionByInheritance: coercedGbRaw.acquisitionByInheritance as boolean | undefined,
+        buildingAcquisitionByInheritance: coercedGbRaw.buildingAcquisitionByInheritance as boolean | undefined,
+        inheritedLandValue: coercedGbRaw.inheritedLandValue as number | undefined,
+        inheritedBuildingValue: coercedGbRaw.inheritedBuildingValue as number | undefined,
+        // §95④ 단기보유 기산점 — actual 분기 기존 결측 보강 (decedentAcqDate는 :256에서 Date 변환됨)
+        landAcquisitionCause: coercedGbRaw.landAcquisitionCause as
+          | "purchase" | "inheritance" | "gift" | "carryover_gift" | undefined,
+        decedentAcquisitionDate: coercedGbRaw.decedentAcquisitionDate as Date | undefined,
+        donorAcquisitionDate: coercedGbRaw.donorAcquisitionDate as Date | undefined,
       },
       taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
     );
@@ -337,6 +389,16 @@ export function dispatchGeneralBuilding(
     totalTransferPrice,
     transferDate,
     acquisitionDate,
+    ownershipRatio,
+    // §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 주입.
+    // 환산 경로 엔진이 게이트(수용·환산·2009.02.04·보상 후보) 판정. undefined이면 무영향(회귀 0).
+    ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
+    ...(expropriation?.compensationPerSqm !== undefined
+      ? { compensationPerSqm: expropriation.compensationPerSqm }
+      : {}),
+    ...(expropriation?.compensationBasisStdPrice !== undefined
+      ? { compensationBasisStdPrice: expropriation.compensationBasisStdPrice }
+      : {}),
     ...(coercedExtInfo ? {
       extensionInfo: {
         ...(coercedExtInfo as unknown as NonNullable<GeneralBuildingInput["extensionInfo"]>),
@@ -375,7 +437,9 @@ export function calculateGeneralBuildingTransfer(
     isSelfBuilt: gbv.buildingAcquisitionCause === "newConstruction",
   };
   const gbOut = buildGeneralBuildingAssetCards(normalizedGbv);
-  const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio);
+  // §97②2호 단서 swap 자산총액 판정(안 A) — 환산 카드 estimatedSide 합 vs 나목(자본+양도비).
+  const swap = resolveGeneralBuildingSwap(gbOut.assetCards, gbv.capitalExpenditure, gbv.transferExpense);
+  const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio, swap);
 
   const aggregated = calculateTransferTaxAggregate(
     {
@@ -390,6 +454,15 @@ export function calculateGeneralBuildingTransfer(
   // UI 자산별 산식 인라인 표시용 — gbOut의 분모/분자 변수를 결과에 노출.
   // 사례 31(2-way)·33(3-way) 모두 generalBuildingValuationDetail 통해 UI 가공.
   aggregated.generalBuildingValuationDetail = gbOut;
+  // §97②2호 단서 swap 발동 시 결과뷰 표시용(F10) — 자산총액 판정이라 top-level 1개로 충분.
+  if (swap.swapApplied) {
+    aggregated.swapApplied = true;
+    aggregated.swapComparison = {
+      estimatedSide: swap.estimatedSideTotal,
+      directSide: swap.directSide,
+      chosen: "direct",
+    };
+  }
 
   const landStdAtTransfer = gbv.transferLandPricePerSqm * gbv.landArea;
   const landStdAtAcq = gbv.acquisitionLandPricePerSqm * gbv.landArea;
@@ -401,6 +474,7 @@ export function calculateGeneralBuildingTransfer(
     gbv.transferBuildingStdPrice, gbv.acquisitionBuildingStdPrice,
     true,
     "소득세법 시행령 §166⑥ · §176의2② · §163⑥",
+    swap, // §97②2호 swap 발동 시 사이드바 표시 정합 (환산 경로 전용)
   );
 
   return { apportionment, aggregated };
@@ -430,6 +504,9 @@ export function calculateGeneralBuildingActualTransfer(
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
     burdenedGiftInfo,
     houseToCommercialConversion, conversionDate, wasMultiHouseAtConversion,
+    acquisitionByInheritance, buildingAcquisitionByInheritance,
+    inheritedLandValue, inheritedBuildingValue,
+    landAcquisitionCause, decedentAcquisitionDate, donorAcquisitionDate,
   } = payload;
 
   // §166⑥ 안분 비율
@@ -479,6 +556,18 @@ export function calculateGeneralBuildingActualTransfer(
     landExp = breakdown.perAsset.land.estimatedDeduction; // §163⑥ 개산공제 (3%)
     buildingExp = breakdown.perAsset.building.estimatedDeduction;
     transferBurdenedGiftBreakdown = breakdown; // 증여세 통합 결과 포함 — UI 노출용
+  } else if (acquisitionByInheritance && buildingAcquisitionByInheritance) {
+    // §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1): 토지·건물 각 상속개시일 평가액을
+    // 취득당시 실지거래가액으로 직접 배정. §166⑥ 안분 아님 (KoreanLaw: 상속은 자산별 평가액 명확
+    // → "구분 불분명" 요건 미충족). 양도가액만 §166⑥ 안분 유지.
+    landTransfer = Math.floor(totalTransferPrice * landRatioNum);
+    buildingTransfer = totalTransferPrice - landTransfer;
+    landAcq = inheritedLandValue ?? 0;
+    buildingAcq = inheritedBuildingValue ?? 0;
+    // 필요경비(자본적지출·양도비)는 §166⑥ 비율 안분 유지. 개산공제 아님 —
+    // actual 모드는 이미 전 카드 estimatedDeduction:0(§163⑥ 미적용, §163⑨ 정합).
+    landExp = Math.floor(actualExpenses * landRatioNum);
+    buildingExp = actualExpenses - landExp;
   } else {
     landTransfer = Math.floor(totalTransferPrice * landRatioNum);
     buildingTransfer = totalTransferPrice - landTransfer;
@@ -546,6 +635,20 @@ export function calculateGeneralBuildingActualTransfer(
     acquisitionDate, transferDate, isNonBusinessLand: false,
   } as unknown as AssetCardForAggregate);
 
+  // §95④ 단기보유 기산점 보강 (actual 분기 기존 결측 — 상속·증여 취득원인 + 피상속인/증여자 취득일).
+  // 토지 카드는 landAcquisitionCause, 건물 카드는 buildingAcquisitionCause로 buildProperties가 판독.
+  for (const c of cards) {
+    if (c.propertyType === "land") {
+      if (landAcquisitionCause) c.landAcquisitionCause = landAcquisitionCause;
+      if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;
+      if (donorAcquisitionDate) c.donorAcquisitionDate = donorAcquisitionDate;
+    } else if (buildingAcquisitionByInheritance) {
+      // C1: 건물도 상속 — buildingAcquisitionCause="inheritance" + 피상속인 취득일(동일 피상속인 전제).
+      c.buildingAcquisitionCause = "inheritance";
+      if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;
+    }
+  }
+
   // 사례 35: 주택→상가 용도변경 — 모든 자산 카드에 일괄 propagate
   if (houseToCommercialConversion) {
     for (const c of cards) {
@@ -589,6 +692,9 @@ export function calculateGeneralBuildingActualTransfer(
     acqBuilding1StdTotal: acquisitionBuildingStdPrice ?? undefined,
     bundledActualAcquisitionPrice: actualAcquisitionPrice ?? undefined,
     bundledActualExpenses: actualExpenses ?? undefined,
+    // §163⑨ 상속 취득가액 직접 산정 echo (결과 카드 라벨 분기용).
+    ...(acquisitionByInheritance ? { acquisitionByInheritance } : {}),
+    ...(buildingAcquisitionByInheritance ? { buildingAcquisitionByInheritance } : {}),
   } as GeneralBuildingOutput;
 
   return { apportionment, aggregated, transferBurdenedGiftBreakdown };

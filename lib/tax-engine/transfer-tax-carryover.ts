@@ -10,7 +10,7 @@
  */
 
 import { addYears } from "date-fns";
-import { calculateHoldingPeriod } from "./tax-utils";
+import { calculateHoldingPeriod, computeLumpSumDeductionBase } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import { TRANSFER } from "./legal-codes";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -77,6 +77,8 @@ export function calcCarryoverScenarios(
     calculatedTax: number;
     localIncomeTax: number;
     totalTax: number;
+    /** §97②2호 단서 swap 발동 여부 — scenarioA 표시 라벨(개산공제 vs 양도비 등) 분기용 */
+    swapApplied?: boolean;
   },
 ): CalcCarryoverResult | null {
 
@@ -183,12 +185,15 @@ export function calcCarryoverScenarios(
   // 개산공제 등 필요경비는 아래 necessaryExpenseBeforeGift가 엔진 산출값(swap 반영)에서 역산하므로
   // 여기서 별도로 계산하지 않는다.
   let donorAcqPrice: number;
+  // 표시 전용 echo — 결과뷰 근거 문구 분기용 (환산 산식 재현)
+  let echoStdAtAcq: number | undefined;
+  let echoStdAtTransfer: number | undefined;
   if (ct.useEstimatedAcquisition) {
     if (rawInput.preHousingDisclosure) {
       // PHD/APD 환산 재사용 (M-2 결정: apartmentPreDisclosure도 동일 함수)
       const phdResult = calcPreHousingDisclosureGain(
         rawInput.transferPrice,
-        rawInput.preHousingDisclosure,
+        { ...rawInput.preHousingDisclosure, ownershipRatio: rawInput.ownershipRatio, isUnregistered: rawInput.isUnregistered },
       );
       donorAcqPrice = phdResult.totalEstimatedAcquisitionPrice;
     } else {
@@ -198,6 +203,8 @@ export function calcCarryoverScenarios(
       donorAcqPrice = stdAtTransfer > 0
         ? Math.floor(rawInput.transferPrice * stdAtAcq / stdAtTransfer)
         : 0;
+      echoStdAtAcq = rawInput.standardPriceAtAcquisition;
+      echoStdAtTransfer = rawInput.standardPriceAtTransfer;
     }
   } else {
     donorAcqPrice = ct.donorAcquisitionPrice ?? 0;
@@ -271,10 +278,16 @@ export function calcCarryoverScenarios(
       transferExpense: undefined,
     };
   } else {
-    // 실가 모드이거나 증여세 차감 없는 경우: 기존 방식 유지
+    // 실가 모드(useEstimatedAcquisition=false)이거나 증여세 차감 없는 경우.
+    // ⚠️ inputABase.capitalExpenditure가 항상 정의(effectiveCapex)되어 calcNecessaryExpense의
+    //    swap-aware 경로가 활성화된다(transfer-tax-helpers `swapEligible = capitalExpenditure !== undefined`).
+    //    이 경로는 legacy `expenses`를 무시하므로, 증여세 상당액을 `expenses`에 더하면 필요경비에서 드롭된다.
+    //    → 증여세 상당액은 나목(transferExpense)에 가산해 directSide로 반영한다.
+    //    (증여세 차감 없는 케이스에서는 gift=0이므로 기존 동작과 동일 — transferExpense/expenses 불변.)
     inputAFinal = {
       ...inputABase,
-      expenses: rawInput.expenses + giftTaxAddedToExpense,
+      transferExpense: (rawInput.transferExpense ?? 0) + giftTaxAddedToExpense,
+      expenses: rawInput.expenses,
     };
   }
 
@@ -293,6 +306,17 @@ export function calcCarryoverScenarios(
     donorCapexAddedToExpense: effectiveDonorCapex,
     donorCapexGuardApplied,
     effectiveCapex,
+    acquisitionWasEstimated: ct.useEstimatedAcquisition,
+    // 표시 라벨·산식 base echo — UI의 금액 자기일치 역추론을 대체한다(types 주석 참조).
+    // swap 발동 시 본문 필요경비는 자본적지출+양도비이므로 개산공제가 아니다.
+    necessaryExpenseIsLumpDeduction:
+      ct.useEstimatedAcquisition === true && resultABeforeGiftTax.swapApplied !== true,
+    lumpDeductionBase:
+      echoStdAtAcq != null
+        ? computeLumpSumDeductionBase(echoStdAtAcq, rawInput.ownershipRatio)
+        : undefined,
+    estimatedStdPriceAtAcquisition: echoStdAtAcq,
+    estimatedStdPriceAtTransfer: echoStdAtTransfer,
     transferGain: resultA.transferGain,
     determinedTax: determinedTaxA,
   };

@@ -15,10 +15,28 @@
  *  - acqLandStdTotal·acqBuilding1StdTotal·acqExtensionStdTotal (취득시 분모)
  */
 
+import { createElement, Fragment, type ReactNode } from "react";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+
+/**
+ * 엔진 §95③ 12억 초과 안분 STEP formula(문자열)를 Frac 분수 표기로 변환 (PR #746 표준).
+ * 형식: "<차익> × (<라벨 분자> - 12억) / <라벨 분모>" — 미일치 시 원문 문자열 fallback.
+ * .ts 파일이라 JSX 대신 createElement 사용.
+ */
+export function prorationFormulaAsFrac(formula: string): ReactNode {
+  const m = formula.match(/^(.+?) × \((.+?)\) \/ (.+)$/);
+  if (!m) return formula;
+  return createElement(
+    Fragment,
+    null,
+    `${m[1]} × `,
+    createElement(Frac, { top: m[2], bottom: m[3] }),
+  );
+}
 
 /** propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산 */
 function isLandProp(propertyId: string): boolean {
@@ -335,11 +353,12 @@ export function buildGbExpenseFormula(
 
   if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
     if (!gb.acqLandStdTotal) return undefined;
-    return `취득시 토지기준시가 ${fmt(gb.acqLandStdTotal)} × 3% = ${fmt(displayExp)}`;
+    // base는 엔진 echo(지분 기준시가) 우선 — 100% 값을 쓰면 지분 자산에서 산식이 값을 못 만든다.
+    return `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × 3% = ${fmt(displayExp)}`;
   }
   if (p.propertyId === "building" || p.propertyId === "building1") {
     if (!gb.acqBuilding1StdTotal) return undefined;
-    return `취득시 건물기준시가 ${fmt(gb.acqBuilding1StdTotal)} × 3% = ${fmt(displayExp)}`;
+    return `취득시 건물기준시가 ${fmt(gb.estimatedDeduction?.buildingBase ?? gb.acqBuilding1StdTotal)} × 3% = ${fmt(displayExp)}`;
   }
   if (p.propertyId === "building2") {
     if (!gb.acqExtensionStdTotal) {
@@ -421,6 +440,7 @@ export function buildPenaltyFormula(p: PerPropertyBreakdown): string {
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { StatementItem } from "./DetailedStatementHelpers";
 import { findStepByLabel } from "./DetailedStatementHelpers";
+import { incomeDeductionRuralSurtax } from "./reduction-eligible-income";
 
 /**
  * 다건 합산 절차 3개 항목(차손통산·기본공제 배분·비교과세)을 Map에 추가.
@@ -481,6 +501,90 @@ export function setAggregateProcedureItems(
 }
 
 /**
+ * 7단계 부가세·지방세 4개 항목(농특세·지방소득세 산출/감면/결정)을 Map에 추가.
+ * 자기완결 — items·result·totalPenalty만 사용(단건·다건 공통).
+ */
+export function buildSurtaxAndLocalTaxItems(
+  items: Map<string, StatementItem>,
+  result: TransferTaxResult,
+  totalPenalty: number,
+): void {
+  const ruralSurtaxValue = incomeDeductionRuralSurtax(result);
+  items.set("ruralSurtax", {
+    label: "농어촌특별세",
+    value: ruralSurtaxValue,
+    formula: `(감면 전 산출세액 − 감면 후 산출세액) × 20% = ${ruralSurtaxValue.toLocaleString()} (§99의3·§99·§98의8 등 소득금액차감 감면 적용 시)`,
+    legalBasis: "농어촌특별세법 §3·§5",
+    summaryOnly: true,
+  });
+
+  const localCalc = Math.floor((result.determinedTax + totalPenalty) * 0.1);
+  items.set("localCalculatedTax", {
+    label: "지방소득세 산출세액",
+    value: localCalc,
+    formula: `(결정세액 ${result.determinedTax.toLocaleString()} + 가산세 ${totalPenalty.toLocaleString()}) × 10%`,
+    legalBasis: "지방세법 §103의3",
+    summaryOnly: true,
+  });
+  items.set("localReduction", {
+    label: "지방세 감면세액",
+    value: 0,
+    formula: "현재 미구현 (지방세 감면 정책 미반영)",
+    legalBasis: "지방세법 §92~§103",
+    summaryOnly: true,
+  });
+  items.set("localDeterminedTax", {
+    label: "지방세 결정세액",
+    value: result.localIncomeTax,
+    formula: `지방소득세 산출세액 ${localCalc.toLocaleString()} − 지방세 감면세액 0 = ${result.localIncomeTax.toLocaleString()} (원 미만 절사)`,
+    legalBasis: "지방세법 §103",
+    summaryOnly: true,
+  });
+}
+
+/**
+ * §99의3 소득금액 감면대상(§90② 소득금액차감) 산식 — 실제 변수값 인라인 + 분수 Frac 표기(PR #746 표준).
+ * 5년 이내 = 전액 차감 / 5년 후 = 양도소득금액 × (5년시점−취득) ÷ (양도−취득) 안분.
+ * 부호 케이스(양도시 기준시가 하락 등)로 전액·0 감면인 경우는 Frac 대신 서술.
+ */
+export function buildNew993ReducibleFormula(
+  detail: NonNullable<TransferTaxResult["new993Detail"]>,
+  income: number,
+): ReactNode {
+  const reducible = detail.reducibleTransferIncome;
+  const base = detail.transferIncomeApplied ?? income;
+  // 5년 이내 양도 — 양도소득금액 전액 차감
+  if (detail.isWithin5Years) {
+    return `양도소득금액 ${base.toLocaleString()} 전액 차감 (취득 후 5년 이내 양도 — 조특법 §99의3)`;
+  }
+  if (reducible <= 0) {
+    return "감면 대상 없음 (5년시점·양도시 기준시가 부호 조건 미충족 — 재산 2014-2035)";
+  }
+  const acq = detail.standardPriceAtAcquisition;
+  const y5 = detail.standardPriceAt5Years;
+  const tr = detail.standardPriceAtTransfer;
+  if (acq == null || y5 == null || tr == null) {
+    return `양도소득금액 ${base.toLocaleString()} × 5년 안분비율 = ${reducible.toLocaleString()} (§99의3 §90② 소득금액차감)`;
+  }
+  // 전액 감면(양도시 기준시가 하락 등) — 분수 표기 부적합
+  if (reducible >= base) {
+    return `양도소득금액 ${base.toLocaleString()} 전액 감면 (양도시 기준시가가 5년시점 이하 — 조특법 §99의3)`;
+  }
+  const numerator = y5 - acq;
+  const denominator = tr - acq;
+  return createElement(
+    Fragment,
+    null,
+    `양도소득금액 ${base.toLocaleString()} × `,
+    createElement(Frac, {
+      top: `5년시점 기준시가 ${y5.toLocaleString()} − 취득시 ${acq.toLocaleString()} = ${numerator.toLocaleString()}`,
+      bottom: `양도시 기준시가 ${tr.toLocaleString()} − 취득시 ${acq.toLocaleString()} = ${denominator.toLocaleString()}`,
+    }),
+    ` = ${reducible.toLocaleString()} (§99의3 §90② 소득금액차감)`,
+  );
+}
+
+/**
  * 취득가액 산식 — 단건은 실제 변수값(양도차익 항목과 동일 표기), 다건은 자산별 합계 요약.
  * 환산취득가 모드는 기준시가 비율식까지 풀어쓰되, 기준시가 echo가 없는
  * 감정가액·매매사례가액 모드는 추계 취득가액만 표시(비율식 부적용).
@@ -491,19 +595,60 @@ export function buildAcquisitionPriceFormula(
   totalTransferPrice: number,
   singleAcq: number,
   capEx: number,
-): string {
+): ReactNode {
   const capExStr = capEx > 0 ? ` + 자본적지출 ${capEx.toLocaleString()}` : "";
+  // 환산취득가 = 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가) — 분수를 Frac로 표기 (PR #746 표준).
+  const estFrac = (prefix: string, stdAcq: number, stdTransfer: number, suffix: string): ReactNode =>
+    createElement(
+      Fragment,
+      null,
+      prefix,
+      createElement(Frac, {
+        top: `취득시 기준시가 ${stdAcq.toLocaleString()}`,
+        bottom: `양도시 기준시가 ${stdTransfer.toLocaleString()}`,
+      }),
+      suffix,
+    );
   if (isAggregate) {
     return result.usedEstimatedAcquisition
       ? "자산별 환산취득가 합계 — 시행령 §163·§176의2②"
       : "자산별 실제 거래가액 합계 (자본적지출 §97① 가목 합산)";
+  }
+  // 배우자등 이월과세 Scenario A 채택 — 증여자 취득 당시 취득가액 승계 (§97의2①).
+  // 환산+증여세 경로에서는 엔진이 실가로 전환하므로 result.usedEstimatedAcquisition만으로는
+  // 환산 여부를 알 수 없어 scenarioA echo를 사용한다.
+  const coA = result.carryoverTaxationDetail;
+  if (coA?.adoptedScenario === "A") {
+    const a = coA.scenarioA;
+    const donorCapexNote =
+      a.donorCapexAddedToExpense > 0
+        ? ` (증여자 자본적지출 ${a.donorCapexAddedToExpense.toLocaleString()} 포함 §97의2①2호 후단)`
+        : "";
+    if (a.acquisitionWasEstimated) {
+      const stdAcq = a.estimatedStdPriceAtAcquisition;
+      const stdTransfer = a.estimatedStdPriceAtTransfer;
+      return stdAcq != null && stdTransfer != null
+        ? estFrac(
+            `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
+            stdAcq,
+            stdTransfer,
+            `${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·시행령 §163⑨)`,
+          )
+        : `증여자 취득 당시 환산취득가 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계·환산)`;
+    }
+    return `증여자 취득 당시 취득가액 ${fmt(a.acquisitionPrice)}${capExStr}${donorCapexNote} — 이월과세 §97의2① (증여자 취득가액 승계)`;
   }
   if (result.usedEstimatedAcquisition) {
     const estBase = (result.estimatedBase ?? 0).toLocaleString();
     const stdAcq = result.estimatedStdPriceAtAcquisition;
     const stdTransfer = result.estimatedStdPriceAtTransfer;
     return stdAcq != null && stdTransfer != null
-      ? `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × (취득시 기준시가 ${stdAcq.toLocaleString()} ÷ 양도시 기준시가 ${stdTransfer.toLocaleString()})${capExStr} — 시행령 §163·§176의2②`
+      ? estFrac(
+          `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
+          stdAcq,
+          stdTransfer,
+          `${capExStr} — 시행령 §163·§176의2②`,
+        )
       : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2`;
   }
   return `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
@@ -522,6 +667,40 @@ export function buildNecessaryExpenseFormula(
     return result.usedEstimatedAcquisition
       ? "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥"
       : "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목";
+  }
+  // 배우자등 이월과세 Scenario A 채택 — 필요경비 = 양도비 등 + 증여세 상당액(§163의2).
+  // singleExp = result.expenses − capEx = (양도비 등) + 증여세 상당액 (실가 전환 후 directSide 반영).
+  const coA = result.carryoverTaxationDetail;
+  if (coA?.adoptedScenario === "A") {
+    const a = coA.scenarioA;
+    const gift = a.giftTaxAddedToExpense;
+    const baseExp = Math.max(0, singleExp - gift);
+    // 증여자 취득이 환산(estimated) 모드면 본문 필요경비는 실제 양도비가 아니라
+    // 개산공제(취득시 기준시가 × 3%, 시행령 §163⑥)다.
+    //
+    // ⚠️ 종전에는 **금액 자기일치**(`baseExp === floor(기준시가 × 3%)`)로 이를 역추론했다.
+    //    UI가 §163⑥ 산식을 재구현하는 dual-truth였고, 공유지분 축소처럼 등식이 깨지는 변경이
+    //    들어오면 개산공제를 "양도비 등"으로 **성격 자체를 오표시**한다.
+    //    → 엔진 echo(`necessaryExpenseIsLumpDeduction`)로 판정하고, 산식 base도
+    //      엔진이 실제로 쓴 값(`lumpDeductionBase` = 지분 기준시가)을 노출한다.
+    const stdAcq = a.estimatedStdPriceAtAcquisition;
+    const lumpBase = a.lumpDeductionBase ?? stdAcq;
+    const isLumpDeduction = a.necessaryExpenseIsLumpDeduction === true && lumpBase != null;
+    const baseLabel = isLumpDeduction
+      ? `개산공제 ${baseExp.toLocaleString()} = 취득시 기준시가 ${lumpBase!.toLocaleString()} × 3% — 시행령 §163⑥`
+      : `양도비 등 ${baseExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
+    const parts: string[] = [baseLabel];
+    if (gift > 0) {
+      const limitNote = a.giftTaxLimitApplied
+        ? ` (한도 ${a.giftTaxLimitCap.toLocaleString()} = 증여세 가산 전 양도차익 적용)`
+        : "";
+      parts.push(`증여세 상당액 ${gift.toLocaleString()}${limitNote} — 이월과세 §97의2①2호 전단·시행령 §163의2`);
+    }
+    const guardNote = a.donorCapexGuardApplied
+      ? " ※ 양도일 2024-01-01 전 — 증여자 자본적지출 불산입(§97의2①2호 후단 시행일)"
+      : "";
+    const body = parts.length > 1 ? `${parts.join(" + ")} = ${fmt(singleExp)}` : parts[0];
+    return body + guardNote;
   }
   if (result.usedEstimatedAcquisition) {
     if (result.swapApplied) {

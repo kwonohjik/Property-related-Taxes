@@ -14,16 +14,21 @@
 
 import {
   applyRate,
+  computeEstimatedDeduction,
   calculateEstimatedAcquisitionPrice,
   calculateHoldingPeriod,
   calculateProration,
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
+import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
+import { resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import {
-  applyExpropriationValuation,
+  resolveConversionDenominatorAtTransfer,
   type ExpropriationValuationDetail,
+  type AuctionValuationDetail,
+  type HousingExpropriationValuationDetail,
 } from "./transfer-tax-expropriation-valuation";
 import {
   parseDeductionRules,
@@ -52,16 +57,11 @@ import type {
   TransferTaxInput,
   SplitGainResult,
   TransferTaxResult,
-  CalculationStep,
 } from "./types/transfer.types";
 import type {
   MultiHouseSurchargeResult,
 } from "./multi-house-surcharge";
 import { calcSplitGain } from "./transfer-tax-split-gain";
-import {
-  calculateCommercialBuildingValuation,
-  type CommercialBuildingValuationResult,
-} from "./commercial-building-valuation";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
 
@@ -182,6 +182,7 @@ export {
   meetsOneHouseHoldingResidence,
   resolveExemptionProviso,
   resolveWasRegulatedAtAcquisition,
+  resolveExemptionResidenceMonths,
 } from "./transfer-tax-exemption";
 
 // ============================================================
@@ -209,6 +210,9 @@ interface TransferGainResult {
   };
   /** #3 공익수용 환산 양도시 기준시가 min[] 특례 산출근거 (Record) */
   expropriationValuationDetail?: ExpropriationValuationDetail;
+  /** §164⑨ 2호 공매·경락(총액 2후보) / 1호 주택 총액(총액 3후보) 산출근거 */
+  auctionValuationDetail?: AuctionValuationDetail;
+  housingExpropriationValuationDetail?: HousingExpropriationValuationDetail;
 }
 
 /**
@@ -301,29 +305,31 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   let acquisitionCostBase: number;
   let usedEstimated = false;
   let expropriationValuationDetail: ExpropriationValuationDetail | undefined;
+  let auctionValuationDetail: AuctionValuationDetail | undefined, housingExpropriationValuationDetail: HousingExpropriationValuationDetail | undefined;
 
   // 개산공제율 (소득세법 시행령 §163⑥1호·2호가목): 토지·건물·주택 = 3/100.
   // 단, §104③ 미등기양도자산은 3/1000(0.3%).
+  // ⚠️ base는 `computeEstimatedDeduction`이 **지분 기준시가**로 축소한다 —
+  //    `standardPriceAtAcquisition`은 물건 전체(100%) 값이고, 같은 필요경비 산식의 다른 항인
+  //    환산취득가액은 `transferPrice`를 통해 이미 지분 스케일이라 §97②2호 가목의 **합계액**이
+  //    한쪽만 100%면 어긋난다(설계: transfer-fractional-lump-sum-deduction.plan.md §1).
   const estimatedDeductionRate = input.isUnregistered ? 0.003 : 0.03;
 
   if (input.useEstimatedAcquisition) {
-    // #3 공익수용 환산 양도시 기준시가 min[] 특례 — 게이트 충족 시 분모(양도시 기준시가) override
-    const exprVal = applyExpropriationValuation({
-      useEstimatedAcquisition: input.useEstimatedAcquisition,
-      transferCause: input.transferCause,
-      transferDate: input.transferDate,
-      standardPricePerSqmAtTransfer: input.standardPricePerSqmAtTransfer,
-      transferArea: input.transferArea,
-      compensationPerSqm: input.compensationPerSqm,
-      compensationBasisStdPrice: input.compensationBasisStdPrice,
-    });
-    if (exprVal) expropriationValuationDetail = exprVal.detail;
+    // #3 §164⑨ 특례 — 양도시 기준시가(환산 분모)를 1호(per-sqm·주택총액)·2호(공매경락) 배타로 확정.
+    const conv = resolveConversionDenominatorAtTransfer(input);
+    expropriationValuationDetail = conv.expropriationValuationDetail;
+    auctionValuationDetail = conv.auctionValuationDetail; housingExpropriationValuationDetail = conv.housingExpropriationValuationDetail;
     const estimated = calculateEstimatedAcquisitionPrice(
       input.transferPrice,
       input.standardPriceAtAcquisition ?? 0,
-      exprVal ? exprVal.denominator : (input.standardPriceAtTransfer ?? 0),
+      conv.denominator,
     );
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
+    const deduction = computeEstimatedDeduction(
+      input.standardPriceAtAcquisition ?? 0,
+      estimatedDeductionRate,
+      input.ownershipRatio,
+    );
     acquisitionCostBase = estimated;
     estimatedBase = estimated;
     estimatedDeduction = deduction;
@@ -331,7 +337,11 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   } else if (input.acquisitionMethod === "appraisal") {
     // 감정가액 모드: 소득세법 시행령 §163⑥에 따라 환산취득가와 동일하게 개산공제 자동 적용.
     const appraisal = input.appraisalValue ?? input.acquisitionPrice;
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
+    const deduction = computeEstimatedDeduction(
+      input.standardPriceAtAcquisition ?? 0,
+      estimatedDeductionRate,
+      input.ownershipRatio,
+    );
     acquisitionCostBase = appraisal;
     estimatedBase = appraisal;
     estimatedDeduction = deduction;
@@ -341,7 +351,11 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     // §163⑫(§97①1호나목 매매사례가액)·§97②2호·§163⑥에 따라 환산취득가·감정가액과
     // 동일하게 필요경비 개산공제(취득시 기준시가 × 3%)를 자동 적용한다.
     const salesCase = input.similarSalesValue ?? input.acquisitionPrice;
-    const deduction = applyRate(input.standardPriceAtAcquisition ?? 0, estimatedDeductionRate);
+    const deduction = computeEstimatedDeduction(
+      input.standardPriceAtAcquisition ?? 0,
+      estimatedDeductionRate,
+      input.ownershipRatio,
+    );
     acquisitionCostBase = salesCase;
     estimatedBase = salesCase;
     estimatedDeduction = deduction;
@@ -366,6 +380,8 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
     swapApplied: necessary.mode === "swap_to_direct",
     swapComparison: necessary.swap,
     expropriationValuationDetail,
+    auctionValuationDetail,
+    housingExpropriationValuationDetail,
   };
 }
 
@@ -413,6 +429,8 @@ interface LongTermHoldingResult {
   holdingPeriod: { years: number; months: number };
   /** §97의3·§97의4 평가 결과 echo (Phase 2 — 2026-06-11). 평가 항목이 없으면 undefined. */
   rental97LthdDetail?: Rental97Result;
+  /** 배제 사유 echo — 배제 경로(L-0·L-0a·L-1)에서만. 미배제(공제율 미달 포함)는 undefined. */
+  exclusionReason?: LthdExclusionReason;
 }
 
 export function calcLongTermHoldingDeduction(
@@ -426,20 +444,20 @@ export function calcLongTermHoldingDeduction(
 ): LongTermHoldingResult {
   // L-0: 미등기 — 배제
   if (input.isUnregistered) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "unregistered" };
   }
 
   // L-0a: 분양권·승계입주권 — 배제
   if (input.propertyType === "presale_right") {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "presale_right" };
   }
   if (input.propertyType === "right_to_move_in" && input.isSuccessorRightToMoveIn === true) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "successor_right_to_move_in" };
   }
 
   // L-1: 중과세 적용 중(유예 해제)이면 배제
   if (isSurcharge && !isSuspended) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 } };
+    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "multi_house_surcharge" };
   }
 
   // L-1b: 부수토지 일체과세 (landNature === "appurtenant_to_housing")
@@ -454,8 +472,13 @@ export function calcLongTermHoldingDeduction(
     const ctx = input.primaryContextForCompanionRate;
     // primary 주택 보유기간 기준
     const primaryHoldingYears = Math.floor(ctx.holdingMonths / 12);
-    // 2년 미만이면 단기세율 적용 → LTHD 배제
-    if (ctx.holdingMonths < 24) {
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 게이트가 24개월(2년)이라
+    //   주 주택 2~3년 보유 구간에서 **존재하지 않는 장기보유특별공제**가 부여됐다.
+    //   §95②의 진입요건은 **보유기간 3년 이상**이며, 같은 함수의 일반 경로
+    //   `rateForYears`도 `years < 3 → 0` 게이트를 갖고 있다(내부 불일치였다).
+    //   24개월 게이트는 "2년 미만 = 단기세율"이라는 **다른 규칙**을 LTHD 요건으로
+    //   착각한 것이다 — 단기세율 여부와 LTHD 3년 요건은 별개 판정이다.
+    if (ctx.holdingMonths < 36) {
       const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
       return { deduction: 0, rate: 0, holdingPeriod: { years: holding.years, months: holding.months } };
     }
@@ -463,10 +486,11 @@ export function calcLongTermHoldingDeduction(
     // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유
     const isOneHouseSingleForCompanion =
       input.isOneHousehold && input.householdHousingCount === 1;
-    const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+    const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(거주분 공제율)
+    const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12); // 통산(대상 판정)
     let companionRate: number;
-    if (isOneHouseSingleForCompanion && residenceYears >= 2) {
-      // 표 2 (1세대1주택, §95② 별표): 보유분 4% + 거주분 4%, 각 40% 캡
+    if (isOneHouseSingleForCompanion && table2ResidenceYears >= 2) {
+      // 표 2 (1세대1주택, §95② 별표): 보유분 4% + 거주분 4%(실거주), 각 40% 캡
       const holdingPart = Math.min(primaryHoldingYears * 0.04, 0.40);
       const residencePart = Math.min(residenceYears * 0.04, 0.40);
       companionRate = holdingPart + residencePart;
@@ -502,13 +526,16 @@ export function calcLongTermHoldingDeduction(
 
   const isOneHouseSingle =
     input.isOneHousehold && input.householdHousingCount === 1;
-  const residenceYears = Math.floor(input.residencePeriodMonths / 12);
+  const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(표2 거주분 공제율)
+  // §154⑧3호: 표2 "대상 판정"은 동일세대 상속 통산 거주 (공제율은 실거주 residenceYears 유지).
+  const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
 
   // 공제율 산식 (L-3/L-4 통합 헬퍼)
   const rateForYears = (years: number): number => {
     if (years < 3) return 0;
-    if (isOneHouseSingle && residenceYears >= 2) {
-      // L-3: 1세대1주택 — 보유기간분·거주기간분 각각 40% 캡 후 합산 (소득세법 §95② 별표)
+    if (isOneHouseSingle && table2ResidenceYears >= 2) {
+      // L-3: 1세대1주택 표2 (소득세법 §95② 별표) — 보유분·거주분 각 40% 캡 후 합산.
+      // 대상은 통산(table2ResidenceYears), 공제율 거주분은 상속개시일부터 실거주(residenceYears).
       const holdingPart = Math.min(years * 0.04, 0.40);
       const residencePart = Math.min(residenceYears * 0.04, 0.40);
       return holdingPart + residencePart;
@@ -638,17 +665,15 @@ export function calcBasicDeduction(
 }
 
 // ============================================================
-// H-0.35: 상업용건물·오피스텔 환산취득가 사전 처리
+// H-0.35: 상업용건물·오피스텔 환산취득가 사전 처리 — transfer-tax-commercial-step.ts로 분리 (800줄 정책, 2026-07-20)
+// 외부 import 호환 re-export.
 // ============================================================
 
-export interface CommercialBuildingStepResult {
-  /** 엔진 input 덮어쓰기용 업데이트된 acquisitionPrice·expenses */
-  acquisitionPrice: number;
-  /** 개산공제액 (§163⑥ 취득당시기준시가 × 3%) */
-  lumpSumDeduction: number;
-  /** 상세 결과 (결과 카드 산식 표시용) */
-  detail: CommercialBuildingValuationResult;
-}
+export {
+  runCommercialBuildingStep,
+  applyCommercialBuildingStep,
+  type CommercialBuildingStepResult,
+} from "./transfer-tax-commercial-step";
 
 /**
  * 감면 유형별 법령 조문 매핑 (감면세액 step legalBasis용).
@@ -688,40 +713,7 @@ export function buildMultiHouseSurchargeDetail(
     isRegulatedAtTransfer: result.isRegulatedAtTransfer,
     warnings: result.warnings,
     excludedPresaleRights: result.excludedPresaleRights,
-  };
-}
-
-/**
- * STEP 0.35: 상업용건물·오피스텔 환산취득가 처리 (소령 §164⑧ + §176조의2②2호)
- *
- * propertyType === "commercial_building" + useEstimatedAcquisition === true +
- * commercialBuildingValuation 제공 시 환산취득가·개산공제를 계산하여
- * 파이프라인 input에 주입할 값을 반환.
- *
- * 단방향 의존: transfer-tax.ts → 이 함수 → commercial-building-valuation.ts
- *
- * @returns CommercialBuildingStepResult | undefined (분기 해당 없음 시 undefined)
- */
-export function runCommercialBuildingStep(
-  input: TransferTaxInput,
-): CommercialBuildingStepResult | undefined {
-  if (
-    input.propertyType !== "commercial_building" ||
-    !input.useEstimatedAcquisition ||
-    !input.commercialBuildingValuation
-  ) {
-    return undefined;
-  }
-
-  const detail = calculateCommercialBuildingValuation(
-    input.commercialBuildingValuation,
-    input.transferPrice,
-  );
-
-  return {
-    acquisitionPrice: detail.estimatedAcquisitionTotal,
-    lumpSumDeduction: detail.estimatedDeductionTotal,
-    detail,
+    rateSurchargeStatutoryExcluded: result.rateSurchargeStatutoryExcluded,
   };
 }
 

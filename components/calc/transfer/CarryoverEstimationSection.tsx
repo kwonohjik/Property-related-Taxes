@@ -20,7 +20,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 // ── 법령 배지 ────────────────────────────────────────────────────
 function LegalBadge({ text }: { text: string }) {
   return (
-    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
       {text}
     </span>
   );

@@ -11,12 +11,13 @@
 
 import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 
 // ─── Props ────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ interface Props {
 
 function LegalBadge() {
   return (
-    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+    <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
       소득세법 시행령 §164 ⑤
     </span>
   );
@@ -47,12 +48,6 @@ const HOUSING_TYPE_OPTIONS: { value: HousingType; label: string; description: st
   { value: "apartment",  label: "공동주택 (아파트)", description: "공동주택가격 기준 (부동산공시가격알리미)" },
 ];
 
-// 주택유형별 최초고시일 안내 텍스트
-const FIRST_DISCLOSURE_GUIDE: Record<HousingType, string> = {
-  individual: "개별주택가격이 처음으로 고시된 날짜 — 단독주택 최초고시 2005.4.30 (주택공시가격알리미 확인)",
-  apartment:  "공동주택가격이 처음으로 고시된 날짜 — 아파트 최초고시 1993.2.1 또는 1990.4.30 (주택공시가격알리미 확인)",
-};
-
 // 주택유형별 공시가격 라벨
 const PRICE_LABEL: Record<HousingType, { first: string; transfer: string }> = {
   individual: { first: "최초 고시 개별주택가격",  transfer: "양도시 개별주택가격" },
@@ -66,6 +61,13 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
   const [housingType, setHousingType] = useState<HousingType>("individual");
 
   const priceLabel = PRICE_LABEL[housingType];
+  // §164⑦ 게이트 비교일 — 이월과세(§97의2)는 증여자 취득가액 기준이므로 증여자 취득일
+  const phdCompareDate =
+    asset.acquisitionCause === "carryover_gift"
+      ? (asset.carryover?.donorAcquisitionDate ?? "")
+      : asset.acquisitionDate;
+  // 개별/공동주택 공시가격 자동조회 — StandardPriceInput 재사용 (propertyKind로 분기)
+  const housePropertyKind = housingType === "apartment" ? "house_apart" : "house_individual";
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
   const stdPriceAddress = {
@@ -75,6 +77,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
     detail: asset.addressDetail,
     lng: asset.longitude,
     lat: asset.latitude,
+    pnu: asset.addressPnu,
   };
 
   return (
@@ -101,65 +104,66 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         tone="amber"
       />
 
-      {/* ① 토지 면적 */}
-      <FieldCard
-        label="토지 면적"
-        required
-        hint="단위공시지가(원/㎡) × 면적으로 기준시가 계산 — 등기부등본의 토지 면적 기재"
-        unit="㎡"
-      >
-        <DecimalInput
-          placeholder="토지 면적 입력"
-          value={asset.acquisitionArea}
-          onChange={(v) => onChange({ acquisitionArea: v })}
-        />
-      </FieldCard>
+      {/* ①② 토지 면적 · 최초 고시일 (한 행) */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FieldCard label="토지 면적" required unit="㎡" stacked>
+          <DecimalInput
+            placeholder="토지 면적 입력"
+            value={asset.acquisitionArea}
+            onChange={(v) => onChange({ acquisitionArea: v })}
+          />
+        </FieldCard>
 
-      {/* ② 최초 고시일 */}
-      <FieldCard
-        label="최초 고시일"
-        required
-        hint={FIRST_DISCLOSURE_GUIDE[housingType]}
-      >
-        <DateInput
-          value={asset.phdFirstDisclosureDate}
-          onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
-        />
-      </FieldCard>
+        <FieldCard label="최초 고시일" required stacked>
+          <DateInput
+            value={asset.phdFirstDisclosureDate}
+            onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
+          />
+          {housingType === "apartment" && (
+            <p className="mt-1 text-caption text-amber-700">
+              공동주택은 단지별 최초고시일이 다릅니다. 홈택스 기준시가 조회에서 해당 단지의 최초 고시일을 확인하세요.
+            </p>
+          )}
+        </FieldCard>
+      </div>
 
-      {/* ③ 최초 고시 주택공시가격 P_F */}
-      <FieldCard
-        label={priceLabel.first}
-        required
-        hint="최초 고시일 당시 공시된 주택공시가격 (원) — 부동산공시가격알리미(realtyprice.kr) 조회"
-        unit="원"
-      >
-        <CurrencyInput
-          label=""
-          value={asset.phdFirstDisclosureHousingPrice}
-          onChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
-          placeholder="원"
-          hideUnit
+      {/* §164⑦ 적용가능 게이트 경고 — 취득일(이월과세는 증여자 취득일·의제 1985-01-01 반영) ≥ 최초고시일 (validate ⑧과 동일 게이트) */}
+      {!isPhdEligible(phdCompareDate, asset.phdFirstDisclosureDate) && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs text-rose-900">
+          <p className="font-medium">⚠️ 3-시점 환산(§164⑦) 대상이 아닙니다</p>
+          <p className="mt-0.5 text-caption leading-relaxed text-rose-800">
+            취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로
+            취득 당시 주택공시가격이 이미 고시되어 있습니다. 3-시점 환산을 끄고 취득일 현재 고시된
+            주택공시가격(취득시 기준시가)을 직접 입력하세요. 이 상태로는 계산이 진행되지 않습니다.
+          </p>
+        </div>
+      )}
+
+      {/* ③④ 최초 고시 주택공시가격 P_F · 양도시 주택공시가격 P_T (한 행, StandardPriceInput 자동조회) */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StandardPriceInput
+          propertyKind={housePropertyKind}
+          totalPrice={asset.phdFirstDisclosureHousingPrice}
+          onTotalPriceChange={(v) => onChange({ phdFirstDisclosureHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
+          referenceDate={asset.phdFirstDisclosureDate}
+          label={priceLabel.first}
           required
         />
-      </FieldCard>
-
-      {/* ④ 양도시 주택공시가격 P_T */}
-      <FieldCard
-        label={priceLabel.transfer}
-        required
-        hint="양도일 당시 공시된 주택공시가격 P_T (원) — 양도일 기준 부동산공시가격알리미 조회"
-        unit="원"
-      >
-        <CurrencyInput
-          label=""
-          value={asset.phdTransferHousingPrice}
-          onChange={(v) => onChange({ phdTransferHousingPrice: v })}
-          placeholder="원"
-          hideUnit
+        <StandardPriceInput
+          propertyKind={housePropertyKind}
+          totalPrice={asset.phdTransferHousingPrice}
+          onTotalPriceChange={(v) => onChange({ phdTransferHousingPrice: v })}
+          jibun={asset.addressJibun || undefined}
+          dong={asset.addressDong || undefined}
+          ho={asset.addressHo || undefined}
+          referenceDate={transferDate}
+          label={priceLabel.transfer}
           required
         />
-      </FieldCard>
+      </div>
 
       {/* ⑤ 3-시점 기준시가 입력 */}
       <div className="space-y-2">
@@ -172,9 +176,11 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           stdPriceSnapshotPrefix={`bsp-${asset.assetId}-phd`}
           stdPriceAddress={stdPriceAddress}
           enableBatchCalc
-          // 취득시 — PHD 3시점은 건물 취득일 기준 (§164⑤ 주택 환산·건물 위치지수·신축연도 이후).
-          // 토지 취득일 아님(2026-04 회귀 정정). 토지 취득일은 §166⑥·토지등급 환산 등 별개 경로.
+          // 건물 기준시가·batch·신축연도는 건물 취득일 기준(건물 std valuationYear ≥ 신축연도).
+          // 단, 취득 부수토지 개별공시지가는 토지 취득일 기준(§166⑥, 부수토지 기준시가 = 공시지가 × 면적의
+          // land value — 건물 위치지수용 아님) → acqLandReferenceDate로 분리(2026-07-11, B안).
           acquisitionDate={asset.acquisitionDate}
+          acqLandReferenceDate={asset.landAcquisitionDate || asset.acquisitionDate}
           landPriceYearAtAcq={asset.phdLandPriceYearAtAcq}
           landPriceYearAtAcqIsManual={asset.phdLandPriceYearAtAcqIsManual}
           onLandPriceYearAtAcqChange={(year, isManual) =>
@@ -212,25 +218,6 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
             onChange({ phdBuildingStdPriceAtTransfer: v })
           }
         />
-      </div>
-
-      {/* 안내 문구 */}
-      <div className="space-y-1 text-[11px] text-muted-foreground">
-        <p>
-          주택공시가격은{" "}
-          <span className="font-medium">부동산공시가격알리미(realtyprice.kr)</span>
-          에서 조회하실 수 있습니다.
-        </p>
-        <p>
-          건물기준시가(원)는{" "}
-          <span className="font-medium">국세청 홈택스 &gt; 기준시가 조회</span>에서
-          연도별 값을 직접 확인 후 입력하세요.
-          {housingType === "apartment" && (
-            <span className="block mt-0.5 text-amber-700">
-              공동주택(아파트)의 경우 최초고시 이전 취득 시 1993.2.1 또는 1990.4.30이 최초고시일에 해당합니다.
-            </span>
-          )}
-        </p>
       </div>
     </div>
   );

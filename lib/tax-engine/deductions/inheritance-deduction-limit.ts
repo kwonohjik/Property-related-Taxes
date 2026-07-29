@@ -40,6 +40,7 @@ export function applyDeductionLimit(
     totalPriorGiftAmount?: number;
     priorGiftDeductionTotal?: number;
     legateeAmountNonHeir?: number;
+    heirWaiverAmount?: number;
     disasterLossDeduction?: number;
   },
 ): {
@@ -50,6 +51,7 @@ export function applyDeductionLimit(
 } {
   let ceiling: number;
   let legateeNonHeir: number;
+  let heirWaiver: number;
   let totalGift: number;
   let giftDeductions: number;
   let netPriorGiftDeducted: number;
@@ -61,18 +63,24 @@ export function applyDeductionLimit(
       (params.priorGiftDeductionTotal ?? 0) +
       (params.disasterLossDeduction ?? 0);
     legateeNonHeir = params.legateeAmountNonHeir ?? 0;
+    // §24 ②2호 — 선순위 상속포기로 후순위가 받은 재산 (단서 무관 — 항상 차감). (H-19)
+    heirWaiver = params.heirWaiverAmount ?? 0;
     // §24 단서: 제3호(사전증여 가산가액)는 상속세 과세가액 5억원 초과 시에만 차감.
     // (1·2호 유증·포기는 단서 무관 — 항상 차감.)
     netPriorGiftDeducted =
       taxableEstateValue > SECTION24_GIFT_DEDUCTION_THRESHOLD
         ? Math.max(0, totalGift - giftDeductions)
         : 0;
-    ceiling = Math.max(0, taxableEstateValue - legateeNonHeir - netPriorGiftDeducted);
+    ceiling = Math.max(
+      0,
+      taxableEstateValue - legateeNonHeir - heirWaiver - netPriorGiftDeducted,
+    );
   } else {
     // legacy fallback — §24 단서(제3호 사전증여는 과세가액 5억 초과 시에만 차감)를 Phase D와 동일 적용.
     totalGift = priorGiftToHeirTotal;
     giftDeductions = 0;
     legateeNonHeir = 0;
+    heirWaiver = 0;
     netPriorGiftDeducted =
       taxableEstateValue > SECTION24_GIFT_DEDUCTION_THRESHOLD ? priorGiftToHeirTotal : 0;
     ceiling = Math.max(0, taxableEstateValue - netPriorGiftDeducted);
@@ -84,7 +92,7 @@ export function applyDeductionLimit(
   const ceilingDetail: DeductionLimitCeilingDetail = {
     taxableEstateValue,
     legateeAmountNonHeir: legateeNonHeir,
-    heirWaiverAmount: 0, // §24 ②호 미구현 — 항상 0
+    heirWaiverAmount: heirWaiver, // §24 ②2호 선순위 상속포기→후순위 수령 (H-19)
     totalPriorGiftAmount: totalGift,
     priorGiftDeductionTotal: params?.priorGiftDeductionTotal ?? 0,
     disasterLossDeduction: params?.disasterLossDeduction ?? 0,

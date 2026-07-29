@@ -11,7 +11,8 @@
  * 지원 범위 (본 PR): 청산금 pay 방향만. receive 방향은 후속 Task.
  */
 
-import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
+import { estimatedDeductionRate } from "./legal-codes";
+import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRightLthd, applyLthdToGain } from "./redevelopment-lthd";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { REDEVELOPMENT } from "./legal-codes/transfer";
@@ -74,6 +75,22 @@ export interface RedevLandContribInput {
   landStdPriceAtApproval: number;
   /** 인가후 필요경비 (원) — 사용자 직접 입력. 미입력 시 0 */
   postApprovalExpenses: number;
+  /**
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
+   * 그대로 내려준다(서브엔진 재판정 금지).
+   *
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
+   */
+  ownershipRatio?: number;
+  /**
+   * 미등기양도자산 여부(소득세법 §104③) — §163⑥ 개산공제율 3/100 → **3/1000** 전환.
+   * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다(서브엔진 재판정 금지).
+   * 율 산출은 `estimatedDeductionRate()` 단일 경유.
+   */
+  isUnregistered?: boolean;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -113,7 +130,11 @@ export function calcRedevLandContribEstimated(
 
   // ── Step 2: §163⑥ 개산공제 (토지 3%) ───────────────────────────────────
   // applyRate = Math.floor(amount * rate) — 정수 절사
-  const estimatedDeduction = applyRate(input.landStdPriceAtAcq, 0.03);
+  const estimatedDeduction = computeEstimatedDeduction(
+    input.landStdPriceAtAcq,
+    estimatedDeductionRate(input.isUnregistered),
+    input.ownershipRatio,
+  );
 
   // ── Step 3: 인가전 양도차익 ─────────────────────────────────────────────
   // 권리가액 − 환산취득가 − 개산공제 (음수 = 손실 → 0)

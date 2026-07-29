@@ -188,10 +188,22 @@ export function calcUnlistedValuation(
     const naPerShare = input.transferYearNetAssetPerShare ?? 0;
     const isNetAssetOnly = !!netAssetOnlyReason;
 
-    // STEP 1: 양도기준시가 §165④1
-    const niW = isHeavyRE ? 2 : 3;
-    const naW = isHeavyRE ? 3 : 2;
-    const weighted = isNetAssetOnly
+    // STEP 1: 양도기준시가 §165④1 — **양도일 시기별 연혁**을 따른다.
+    //
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 이 분기만 현행 3:2와 80% 하한을
+    // 하드코딩해 MAIN 경로(`:292` getValuationWeights)와 **같은 함수 안에서 서로 다른 법을**
+    // 적용하고 있었다. 연혁 모델은 이미 `getValuationWeights`에 있다:
+    //   · ~1998.12.31.  순자산 단독 (3:2 아님)
+    //   · 1999.1.1.~2007.2.27.  3:2 가중평균, **80% 하한 없음**
+    //   · 2007.2.28.~  3:2 + 80% 하한(§165④1 단서)
+    // 하드코딩 탓에 2007.2.28. 이전 양도에 하한이 잘못 걸려 양도기준시가↑ → 환산취득가↓ →
+    // **세액 과대**였다.
+    const hist = getValuationWeights(transferDate);
+    // 1999년 전은 순자산 단독이라 부동산과다보유 반전도 의미가 없다(niWeight=0).
+    const useNetAssetOnly = isNetAssetOnly || hist.niWeight === 0;
+    const niW = isHeavyRE ? hist.naWeight : hist.niWeight;
+    const naW = isHeavyRE ? hist.niWeight : hist.naWeight;
+    const weighted = useNetAssetOnly
       ? naPerShare
       : Math.floor((niPerShare * niW + naPerShare * naW) / 5);
 
@@ -202,7 +214,8 @@ export function calcUnlistedValuation(
     // all-zero(ni=0·na=0): floor80=0, `0 > 0`=false → 미발동 → 후속 ≤0 가드가 처리(동작 불변).
     let transferStdPerShare = weighted;
     let floor80Applied = false;
-    if (!isNetAssetOnly) {
+    // 하한은 2007.2.28. 이후 양도에만 존재한다(hist.hasFloor80) — MAIN 경로와 동일 게이팅.
+    if (!useNetAssetOnly && hist.hasFloor80) {
       const floor80 = Math.floor(naPerShare * 0.8);
       if (floor80 > weighted) {
         transferStdPerShare = floor80;
@@ -371,7 +384,10 @@ export function calcUnlistedValuation(
   const naWeight = isHeavyRealEstateForValuation ? 3 : weights.naWeight;
 
   if (isHeavyRealEstateForValuation) {
-    appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_5_POST_LISTING + "가중치반전");
+    // 2026-07-29 정정(#591 감사 R7 — 라벨 전용, 세액 불변): 부동산과다보유 가중치 반전의
+    //   근거는 §165④1(법 §94①4 다목) 괄호이지 **취득후상장 규정 §165⑤이 아니다**.
+    //   같은 파일 `:650` 주석이 이미 "§165④1 괄호"로 옳게 적고 있어 내부 불일치였다.
+    appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_WEIGHTED_AVG + "가중치반전");
     appliedRules.push("부동산과다보유가중치반전");
   }
 

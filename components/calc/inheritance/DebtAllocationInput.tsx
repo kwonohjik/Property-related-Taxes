@@ -152,7 +152,7 @@ export function DebtAllocationInput({
                   <span className="font-mono">{formatKRW(d.amount)}</span>
                   {d.financialDebtAmount > 0 && (
                     <span
-                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${SLATE_CARD.badge}`}
+                      className={`px-1.5 py-0.5 rounded-full text-micro font-semibold ${SLATE_CARD.badge}`}
                     >
                       금융채무 {formatKRW(d.financialDebtAmount)}
                     </span>
@@ -164,7 +164,7 @@ export function DebtAllocationInput({
               );
             })}
           </div>
-          <p className={`text-[10px] ${SLATE_CARD.text}`}>
+          <p className={`text-micro ${SLATE_CARD.text}`}>
             이 채무는 재산평가에서 자동 §14 공제됩니다. 수정은 재산평가 화면에서.
             아래에 중복 입력하지 마세요 (이중 공제 위험).
           </p>

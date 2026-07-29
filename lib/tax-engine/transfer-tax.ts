@@ -7,6 +7,7 @@
  * P0-2 원칙: 세율 × 금액 곱셈은 반드시 applyRate() 사용.
  */
 import { TRANSFER, NBL } from "./legal-codes";
+import { LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import {
   applyRate,
   isSurchargeSuspended,
@@ -27,6 +28,7 @@ import {
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import {
   runInheritedAcquisitionStep,
+  resolveInheritedRedevelopmentAcqPrice,
   type InheritedAcquisitionStepResult,
 } from "./inheritance-acquisition-helpers";
 // 공개 타입 — ./types/transfer.types 참조
@@ -38,7 +40,7 @@ import type {
 } from "./types/transfer.types";
 import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
-import { runRentalHousingExceptionStep } from "./transfer-tax-rental-housing-step";
+import { runRentalHousingExceptionStep, isPrhpScenarioB, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
   resolveIncomeDeduction,
@@ -47,19 +49,18 @@ import {
   buildSurchargeExclusionStep,
   RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
-import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
-import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybrid-p5";
+import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
 
 import {
   parseRatesFromMap,
   checkExemption,
   meetsOneHouseHoldingResidence,
+  resolveExemptionResidenceMonths,
   calcTransferGain,
   calcOneHouseProration,
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
-  runCommercialBuildingStep,
-  type CommercialBuildingStepResult,
+  applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, buildExemptEarlyResult } from "./transfer-tax-finalize";
@@ -240,40 +241,29 @@ export function calculateTransferTax(
   }
 
   // STEP 0.65: 재개발/재건축 분기 — 시행령 §166. STEP 1: 비과세 판단
-  if (isRedevelopmentActive(effectiveInput.propertyType, effectiveInput.redevelopment)) return calculateRedevelopmentTax(effectiveInput, parsedRates, steps);
+  if (isRedevelopmentActive(effectiveInput.propertyType, effectiveInput.redevelopment)) {
+    // 상속 종전자산: §163⑨ 상속개시일 평가액이 확인되면 취득가액이 "확인 가능"하므로 §166③ 환산·
+    // §163⑥ 개산공제를 배제하고 실가(상속평가액)를 종전자산 취득가액으로 사용한다(§166③은 취득가액
+    // 확인 불가 시에만 적용). 미확인 시 override 미발동 → 현행 §166③ 유지.
+    let redevInput = effectiveInput;
+    if (effectiveInput.acquisitionCause === "inheritance") {
+      const inhAcqPrice = resolveInheritedRedevelopmentAcqPrice(inheritedAcquisitionStep);
+      if (inhAcqPrice !== null) {
+        redevInput = { ...effectiveInput, acquisitionPrice: inhAcqPrice, useEstimatedAcquisition: false };
+      }
+    }
+    return calculateRedevelopmentTax(redevInput, parsedRates, steps);
+  }
 
-  // STEP 0.9: §99의4·§98의9 주택수 제외 (소법 §89①3호 의제) — §99의4 우선 1건(F-4) 적용,
-  // 비과세·12억 안분·LTHD 표2에 유효 주택수(count−1) 반영. 중과는 §167의3 별개 — 원본(R-D).
-  const { applied: hceApplied, new994Detail, unsold989Detail } = resolveHouseCountExclusion(
-    effectiveInput.reductions,
-    { generalHouseAcquisitionDate: effectiveInput.acquisitionDate, transferDate: effectiveInput.transferDate },
-  );
-  // STEP 0.95 (P5 모드 2): 보유 감면주택 N-way 주택수 제외 — 7개 조문 ② + §98 령②·⑥ + §99②.
-  // 비과세(§89①3호) 판정 주택수만 차감 — 중과 주택수는 원본 유지 (R-D).
-  const specialHouseExclusionDetail = resolveSpecialHouseExclusions(
-    effectiveInput.specialHouseExclusions,
-    effectiveInput.transferDate,
-  );
-  const totalExcluded = (hceApplied ? 1 : 0) + specialHouseExclusionDetail.excludedCount;
-  const exemptionJudgeInput = totalExcluded > 0
-    ? { ...effectiveInput, householdHousingCount: Math.max(effectiveInput.householdHousingCount - totalExcluded, 0) }
-    : effectiveInput;
-  if (hceApplied) {
-    steps.push(buildHouseCountExclusionStep(hceApplied, effectiveInput.householdHousingCount, Math.max(effectiveInput.householdHousingCount - 1, 0)));
-  }
-  if (specialHouseExclusionDetail.excludedCount > 0) {
-    steps.push({
-      label: "보유 감면주택 주택수 제외 (§89①3호 의제)",
-      formula: `${specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.articleLabel).join(" · ")} — 주택수 ${effectiveInput.householdHousingCount} → ${exemptionJudgeInput.householdHousingCount} (비과세 판정 한정 — 중과 주택수 불변)`,
-      amount: 0,
-      legalBasis: specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.legalBasis).join(" · "),
-    });
-  }
+  // STEP 0.9 + 0.95: 주택수 제외(§99의4·§98의9·보유 감면주택·상속주택) → 비과세 판정용 유효 주택수 산정.
+  // 800줄 정책 분리 — runHouseCountExclusionStep (transfer-tax-house-exclusion-step.ts).
+  const { exemptionJudgeInput, new994Detail, unsold989Detail, specialHouseExclusionDetail } =
+    runHouseCountExclusionStep(effectiveInput, steps);
 
   const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
 
-  // STEP 1a: 전액 비과세 시 조기 반환
-  if (exemptionResult.isExempt) {
+  // STEP 1a: 전액 비과세 조기 반환. §155⑳ B(→STEP 2.5 §161 안분)·A eligibility 미충족(→STEP 2.5 정상과세)은 억제.
+  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput)) {
     steps.push({
       label: "1세대1주택 비과세",
       formula: exemptionResult.exemptReason ?? "비과세",
@@ -298,22 +288,11 @@ export function calculateTransferTax(
     });
   }
 
-  // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑧ + §176조의2②2호)
-  // 성공 시 effectiveInput을 실가 경로로 교체 (useEstimatedAcquisition=false, acquisitionPrice=환산가, expenses=개산공제)
-  let cbStep: CommercialBuildingStepResult | undefined;
-  if (effectiveInput.propertyType === "commercial_building" && effectiveInput.useEstimatedAcquisition) {
-    cbStep = runCommercialBuildingStep(effectiveInput);
-    if (cbStep) {
-      effectiveInput = {
-        ...effectiveInput,
-        useEstimatedAcquisition: false,
-        acquisitionPrice: cbStep.acquisitionPrice,
-        expenses: cbStep.lumpSumDeduction,
-        capitalExpenditure: undefined,
-        transferExpense: undefined,
-      };
-    }
-  }
+  // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑥ + §176조의2②2호 + §164⑨ 수용 특례).
+  // 성공 시 effectiveInput을 실가 경로로 교체 (helpers로 추출 — 800줄 정책).
+  const cbApplied = applyCommercialBuildingStep(effectiveInput);
+  effectiveInput = cbApplied.effectiveInput;
+  const cbStep = cbApplied.cbStep;
 
   // STEP 1.5: 다필지 분리 계산 (환지·합병 등)
   const mpBranchResult = handleMultiParcelBranch(
@@ -322,7 +301,14 @@ export function calculateTransferTax(
   );
   if (mpBranchResult) return mpBranchResult;
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied, swapComparison, expropriationValuationDetail } = calcTransferGain(effectiveInput);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied: gainSwapApplied, swapComparison: gainSwapComparison, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
+  // 상가(CB) swap은 STEP 0.35 재구성 지점(단건 엔진 밖)에서 판정 → cbStep에서 result로 승격.
+  // (calcTransferGain은 CB를 실가 모드로 보므로 swapApplied를 내지 않는다.)
+  const swapApplied = gainSwapApplied || cbStep?.swapApplied;
+  const swapComparison = gainSwapComparison ?? cbStep?.swapComparison;
+  // 상가(CB) 경로는 STEP 0.35에서 useEstimatedAcquisition=false로 교체돼 calcTransferGain이
+  // 특례 detail을 내지 않는다 → cbStep의 산출근거를 result로 승격(§164⑨ CB 배선, D16).
+  const expropriationValuationDetail = gainExprDetail ?? cbStep?.expropriationValuationDetail;
   // 소유자 분리: 본인 신고분 양도차익만 추출 (소령 §166⑥, §168②)
   // splitDetail이 있고 selfOwns !== "both" 이면 본인 소유 파트의 gain만 사용
   const selfOwns = effectiveInput.selfOwns ?? "both";
@@ -335,20 +321,19 @@ export function calculateTransferTax(
   // 양도차익 산출근거 — 파생 입력(effectiveInput) 기준 통일. 경비는 실제 적용 필요경비(appliedExpenses).
   // (원본 input 기준 시 CB 환산은 취득가·개산공제가 0, §97② swap은 개산공제가 실제 경비와 어긋나 산식 불일치.)
   let gainFormula: string;
-  if (effectiveInput.useEstimatedAcquisition) {
-    if (swapApplied) {
-      // §97② 2호 단서: 필요경비 = 자본적지출+양도비 단독 → 환산취득가액은 차감·표시에서 제외.
-      gainFormula = [
-        `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
-        `필요경비(자본적지출+양도비 ${appliedExpenses.toLocaleString()}`,
-      ].join(" - ");
-    } else {
-      gainFormula = [
-        `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
-        `취득가(환산 ${estimatedBase.toLocaleString()}`,
-        `경비(개산공제 ${appliedExpenses.toLocaleString()}`,
-      ].join(" - ");
-    }
+  if (swapApplied) {
+    // §97② 2호 단서: 필요경비 = 자본적지출+양도비 단독 → 환산취득가액은 차감·표시에서 제외.
+    // 상가(CB) swap은 effectiveInput.useEstimatedAcquisition=false라 최상위에서 분기(환산·상가 공통).
+    gainFormula = [
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+      `필요경비(자본적지출+양도비 ${appliedExpenses.toLocaleString()}`,
+    ].join(" - ");
+  } else if (effectiveInput.useEstimatedAcquisition) {
+    gainFormula = [
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+      `취득가(환산 ${estimatedBase.toLocaleString()}`,
+      `경비(개산공제 ${appliedExpenses.toLocaleString()}`,
+    ].join(" - ");
   } else {
     gainFormula = [
       `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
@@ -375,8 +360,10 @@ export function calculateTransferTax(
   // 양도 손실(또는 0): 가산세는 §114조의2 ②에 따라 산출세액 없어도 부과
   // aggregate 엔진에서 skipLossFloor=true로 호출 시 음수 차익도 이 분기로 흡수되어야 함
   if (transferGain <= 0) {
-    let pb0 = input.acquisitionMethod === "appraisal"
-      ? (input.appraisalValue ?? 0)
+    // ⚠️ acquisitionMethod 판정은 effectiveInput 기준 — finalize.ts penaltyBase와 동일 이유·동일 근거
+    // (부담부증여는 §159 스텝이 정규화하나 원본 input에는 UI가 보존한 stale 산정방식이 남는다).
+    let pb0 = effectiveInput.acquisitionMethod === "appraisal"
+      ? (effectiveInput.appraisalValue ?? 0)
       : ((input.useEstimatedAcquisition || effectiveInput.usedEstimatedAcquisition)
           ? (estimatedBase || effectiveInput.estimatedBase || 0)
           : 0);
@@ -450,6 +437,10 @@ export function calculateTransferTax(
       steps,
     });
     if (rheResult) return rheResult;
+    // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.
+    if (isPrhpScenarioB(effectiveInput) && exemptionResult.isExempt) {
+      warnings.push("장기임대주택 거주주택 특례(§155⑳) 요건 미충족 — 임대주택이 주택수에 산입될 수 있어 1세대1주택 전제(주택수 입력)를 재확인하세요. 일반 과세 경로로 계산되었습니다.");
+    }
   }
 
   // STEP 3: 과세 양도차익 (12억 초과분 안분 — 부분과세인 경우)
@@ -475,7 +466,7 @@ export function calculateTransferTax(
     const denomLabel = isBurdened ? "증여가액 C" : isFractional ? "총양도가" : "양도가";
     steps.push({
       label: "과세 양도차익 (12억 초과분)",
-      formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / ${denomLabel}`,
+      formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / ${denomLabel} ${denom.toLocaleString()}`,
       amount: taxableGain,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
@@ -509,8 +500,11 @@ export function calculateTransferTax(
   // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인
   // (소령 §159의4 "그 밖의 규정에 따라 1세대 1주택으로 보는 주택 포함"). 중과 isSurchargeCase는 원본(R-D).
   // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
-  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail } =
+  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, exclusionReason: lthdExclusionReason } =
     calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
+  // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
+  // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
+  const table2ResidenceYearsForStep = Math.floor(resolveExemptionResidenceMonths(exemptionJudgeInput) / 12);
   // STEP 4.05: §98의2 특칙 — 장특 = 양도차익 × §95② 표2 보유기간별 공제율 강제 (법 ①1호, P4).
   // 적격 선판정은 STEP 0.45 (중과 배제 5호 열거 — 동일 신호). 1세대1주택 표2(보유+거주)는
   // ①의 "각 표 외의 부분 본문 불구" 범위 밖 — 특례 적용 시 유지 (항상 ≥ 표2 보유 단독).
@@ -519,7 +513,7 @@ export function calculateTransferTax(
     const isOneHouseSpecial982 =
       exemptionJudgeInput.isOneHousehold &&
       exemptionJudgeInput.householdHousingCount === 1 &&
-      Math.floor(effectiveInput.residencePeriodMonths / 12) >= 2 &&
+      table2ResidenceYearsForStep >= 2 &&
       longTermHoldingDeduction > 0;
     if (!isOneHouseSpecial982) {
       const rate982 = holdingPeriod.years >= 3 ? Math.min(holdingPeriod.years * 0.04, 0.4) : 0;
@@ -536,7 +530,7 @@ export function calculateTransferTax(
   const isOneHouseSpecial =
     exemptionJudgeInput.isOneHousehold &&
     exemptionJudgeInput.householdHousingCount === 1 &&
-    residenceYearsForStep >= 2 &&
+    table2ResidenceYearsForStep >= 2 &&
     longTermHoldingDeduction > 0;
   const lthdFormulaRate = lthd982Applied
     ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${Math.round(longTermHoldingRate * 100)}% (40% 한도, 법 §98의2①1호)`
@@ -547,13 +541,16 @@ export function calculateTransferTax(
         return `보유 ${holdingPeriod.years}년×4%=${hPart}% + 거주 ${residenceYearsForStep}년×4%=${rPart}% = ${Math.round(longTermHoldingRate * 100)}%`;
       })()
     : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
+  const lthdExcluded = lthdExclusionReason !== undefined && !lthd982Applied;
   steps.push({
     label: "장기보유특별공제",
-    formula: [
-      `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
-      lthdFormulaRate,
-      holdingPeriodStr,
-    ].filter(Boolean).join(" | "),
+    formula: lthdExcluded
+      ? `0원 — ${LTHD_EXCLUSION_LABEL[lthdExclusionReason!]}`
+      : [
+          `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
+          lthdFormulaRate,
+          holdingPeriodStr,
+        ].filter(Boolean).join(" | "),
     amount: longTermHoldingDeduction,
     legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
   });
@@ -566,8 +563,10 @@ export function calculateTransferTax(
     const rPart = Math.min(residenceYearsForStep * 4, 40);
     const totalRate = hPart + rPart;
     if (totalRate > 0) {
-      const holdingAmt = Math.floor((longTermHoldingDeduction * hPart) / totalRate);
-      const residenceAmt = longTermHoldingDeduction - holdingAmt;
+      // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 별표 표2). floor 잔액(≤1원)은
+      // 보유분(기저 공제)에 흡수 — 합 = 총 장특공제 불변식 유지. 세액은 총액만 사용(무관).
+      const residenceAmt = Math.floor((longTermHoldingDeduction * rPart) / totalRate);
+      const holdingAmt = longTermHoldingDeduction - residenceAmt;
       steps.push({
         label: "보유 기간분 장특",
         formula: `${longTermHoldingDeduction.toLocaleString()} × ${hPart}% / ${totalRate}% = ${holdingAmt.toLocaleString()} (보유 ${holdingPeriod.years}년 × 4%, 40% 한도)`,
@@ -577,7 +576,7 @@ export function calculateTransferTax(
       });
       steps.push({
         label: "거주 기간분 장특",
-        formula: `${longTermHoldingDeduction.toLocaleString()} × ${rPart}% / ${totalRate}% = ${residenceAmt.toLocaleString()} (거주 ${residenceYearsForStep}년 × 4%, 40% 한도, 잔액 보정)`,
+        formula: `${longTermHoldingDeduction.toLocaleString()} × ${rPart}% / ${totalRate}% = ${residenceAmt.toLocaleString()} (거주 ${residenceYearsForStep}년 × 4%, 40% 한도)`,
         amount: residenceAmt,
         legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
         sub: true,
@@ -602,6 +601,8 @@ export function calculateTransferTax(
     acquisitionDate: input.acquisitionDate,
     assetContractDate: input.assetContractDate,
     transferPrice: input.transferPrice,
+    // 고가주택 가액 요건은 물건 전체 기준 — §89 12억 안분(:447-465)과 같은 소스를 쓴다.
+    totalPropertyTransferPrice: input.totalPropertyTransferPrice,
     standardPriceAtTransfer: input.standardPriceAtTransfer,
     transferIncome: transferIncomeBefore993,
   });
@@ -661,7 +662,7 @@ export function calculateTransferTax(
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",
-    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}${taxResult.shortTermNote ? ` (${taxResult.shortTermNote})` : ""}`,
+    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}${taxResult.progressiveDeduction ? ` - 누진공제 ${taxResult.progressiveDeduction.toLocaleString()}` : ""}${taxResult.shortTermNote ? ` (${taxResult.shortTermNote})` : ""}`,
     amount: taxResult.calculatedTax,
     legalBasis: taxResult.surchargeRate ? TRANSFER.SURCHARGE : TRANSFER.TAX_RATE,
   });
@@ -737,6 +738,8 @@ export function calculateTransferTax(
     swapApplied,
     swapComparison,
     expropriationValuationDetail,
+    auctionValuationDetail,
+    housingExpropriationValuationDetail,
     capitalExpenditureForDisplay: rawInput.capitalExpenditure ?? 0,
     longTermHoldingDeduction,
     longTermHoldingRate,
@@ -749,6 +752,8 @@ export function calculateTransferTax(
     surchargeType: taxResult.surchargeType,
     surchargeRate: taxResult.surchargeRate,
     isSurchargeSuspended: taxResult.surchargeSuspended,
+    rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded,
+    nblSurchargeExcluded: taxResult.nblSurchargeExcluded,
     shortTermNote: taxResult.shortTermNote,
     reductionAmount,
     reductionType,
@@ -774,6 +779,7 @@ export function calculateTransferTax(
     publicExpropriationDetail,
     selfFarmingReductionDetail,
     rental97LthdDetail,
+    lthdExclusionReason,
     rental97TaxDetail,
     new994Detail,
     unsold989Detail,

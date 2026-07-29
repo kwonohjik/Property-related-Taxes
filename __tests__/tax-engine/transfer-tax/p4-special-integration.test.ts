@@ -195,7 +195,12 @@ describe("P4 통합 anchor", () => {
       rates,
     );
     expect(r.unsold984Detail?.isEligible).toBe(true);
+    // §98의4 감면주택은 소령 §167의3①5호(감면주택 다주택 중과배제)에 비열거 → 그 배제 step은 없음(유지).
     expect(r.steps.some((s) => s.label === "감면주택 다주택 중과 배제")).toBe(false);
-    expect(r.surchargeRate).toBe(0.3);
+    // 단, 양도주택 취득일 2009-06-15는 부칙 §9270호 §14① window(2009.3.16~2012.12.31) 내 →
+    // §98의4 미분양주택은 취득기간상 항상 이 window에 포함 → §104⑦ 세율 중과 배제(기본세율).
+    // (재산세제과-1422·서울행정 2024구단72950). 세율만 배제 — §167의3①5호 감면주택 배제와는 별개 축.
+    expect(r.rateSurchargeStatutoryExcluded).toBe(true);
+    expect(r.surchargeRate).toBeUndefined();
   });
 });

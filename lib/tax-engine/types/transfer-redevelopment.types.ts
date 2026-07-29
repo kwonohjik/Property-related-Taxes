@@ -336,6 +336,12 @@ export interface RedevelopmentValuationMeta {
    */
   numerator: number | undefined;
   /**
+   * 개산공제 base로 실제 사용된 값 = `floor(numerator × 지분율)`.
+   * `numerator`는 물건 전체(100%) 값이므로 표시 산식에는 이 값을 써야 자기 값을 만든다
+   * (`feedback_engine_result_display_drift`).
+   */
+  lumpDeductionBase?: number;
+  /**
    * 관리처분 인가일 기준시가 — §166③ 분모.
    * "successor_member_decree_162_1_4" 분기에서는 undefined (안분 미적용).
    */

@@ -624,9 +624,16 @@ describe("resolveCompanionLandRate 단위 테스트", () => {
 // ============================================================
 
 describe("사례 28 Group F — landNature 명시 입력 정책 신규 anchor", () => {
-  it("T-33 부수토지=Yes + 주택 2년 이상 보유 → 토지에 누진세율 + LTHD 주택 기준 표1", () => {
-    // 주택 30개월 보유 → housingRateForHoldingPeriod = "progressive"
-    // LTHD: 표1 기준 30개월 = 2년 → 2 × 2% = 4%
+  it("T-33 부수토지=Yes + 주택 30개월 보유 → 토지에 누진세율, 단 LTHD는 3년 미만이라 배제", () => {
+    // ⚠️ 2026-07-29 기대값 정정(#591 감사 R7). 종전에는 "LTHD: 표1 기준 30개월 = 2년 →
+    //   2 × 2% = 4%"로 **장기보유특별공제 > 0**을 고정했으나, 그 산식은 §95②의
+    //   **진입요건(보유기간 3년 이상)을 빠뜨린 것**이었다.
+    //   소득세법 §95②: "…제94조제1항제1호에 따른 자산 … 으로서 **보유기간이 3년 이상인 것** …에
+    //   대하여 … 표 1에 따른 보유기간별 공제율을 곱하여 계산한 금액" (KoreanLaw 원문 확인).
+    //   30개월 = 2년 6개월 < 3년 → LTHD 0.
+    //   같은 파일의 일반 경로 헬퍼 `rateForYears`도 `years < 3 → 0` 게이트를 갖고 있어,
+    //   부수토지 일체과세 경로만 24개월 게이트를 쓰던 것이 내부 불일치였다.
+    //   세율 판정(누진 vs 단기 60/70%)은 **별개 규칙**이므로 아래 세율 단언은 그대로 유지한다.
     const landInput = makeLandInput({
       acquisitionDate: new Date("2021-01-01"),
       primaryContextForCompanionRate: {
@@ -642,9 +649,9 @@ describe("사례 28 Group F — landNature 명시 입력 정책 신규 anchor", 
     // 누진세율 적용 (0.70 아님)
     expect(result.appliedRate).toBeLessThan(0.70);
     expect(result.appliedRate).toBeGreaterThan(0);
-    // LTHD > 0 (주택 보유기간 기준 적용)
-    expect(result.longTermHoldingDeduction).toBeGreaterThan(0);
-    expect(result.longTermHoldingRate).toBeGreaterThan(0);
+    // LTHD = 0 (§95② 3년 미만 → 진입요건 미충족)
+    expect(result.longTermHoldingDeduction).toBe(0);
+    expect(result.longTermHoldingRate).toBe(0);
   });
 
   it("T-34 부수토지=Yes + 주택 1~2년 보유 → 토지에 60% 단일세율", () => {

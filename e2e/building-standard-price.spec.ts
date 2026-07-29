@@ -3,7 +3,7 @@
  *
  * 검증:
  *   1. 상속·증여 기본(U-01): 2025 평가·rc·아파트·공시지가 7,500,000 → 224,600,000 (BSP-01 anchor)
- *   2. 양도 2시점(U-02): 취득 2015 / 양도 2025 → 취득 81,300,000 / 양도 90,000,000 (BSP-06)
+ *   2. 양도 2시점(U-02): 취득 2015 / 양도 2025 → 취득 80,400,000 / 양도 90,000,000 (BSP-06)
  *   3. 기계식주차(U-08): 토글 ON → 주차대수 50 → 255,000,000 (BSP-MECH)
  *   4. 검증 차단: 미입력 시 오류 메시지
  *
@@ -45,7 +45,7 @@ test("상속·증여 기본 — 224,600,000 (BSP-01)", async ({ page }) => {
   await expect(result).toContainText("224,600,000");
 });
 
-test("양도 2시점 — 취득 82,200,000 / 양도 90,000,000 (BSP-06)", async ({ page }) => {
+test("양도 2시점 — 취득 80,400,000 / 양도 90,000,000 (BSP-06)", async ({ page }) => {
   await page.goto(URL);
   // 기본이 양도 모드
 
@@ -72,7 +72,7 @@ test("양도 2시점 — 취득 82,200,000 / 양도 90,000,000 (BSP-06)", async 
 
   const result = page.getByTestId("bsp-result");
   await expect(result).toBeVisible();
-  await expect(result).toContainText("82,200,000"); // 2015년 50년버킷 잔존율 0.20
+  await expect(result).toContainText("80,400,000"); // 2015 평가·5년경과 RC 잔가율 0.90 (잔가율표 실측 ee4e8905)
   await expect(result).toContainText("90,000,000");
 });
 
@@ -256,9 +256,9 @@ test("계산서 서식 — 양도 양도당시·취득당시 2벌 + ⑪ (BSP-06)
   await page.getByRole("button", { name: /국세청.*계산서/ }).click();
   await expect(page.getByText("양도당시 기준시가 계산")).toBeVisible();
   await expect(page.getByText("취득당시 기준시가 계산")).toBeVisible();
-  // ⑪ 양도당시 90,000,000 / 취득당시 82,200,000
+  // ⑪ 양도당시 90,000,000 / 취득당시 80,400,000
   await expect(page.getByTestId("nts-bsp-6-no11").first()).toContainText("90,000,000");
-  await expect(page.getByTestId("nts-bsp-6-no11").nth(1)).toContainText("82,200,000");
+  await expect(page.getByTestId("nts-bsp-6-no11").nth(1)).toContainText("80,400,000");
   // 인쇄 미디어에서도 서식 렌더(자동 펼침)
   await page.emulateMedia({ media: "print" });
   await expect(page.getByTestId("nts-bsp-report")).toBeVisible();

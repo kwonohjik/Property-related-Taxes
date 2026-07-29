@@ -9,9 +9,18 @@
  * 의존: 산정 헬퍼를 -count에서 import (단방향, 순환 0).
  */
 
-import { addYears, differenceInYears } from "date-fns";
+import { addMonths, addYears, addDays, subDays, differenceInYears } from "date-fns";
 import { isSurchargeSuspended } from "./tax-utils";
-import { MULTI_HOUSE, SURCHARGE_EXCLUSION_WINDOW } from "./legal-codes";
+import {
+  MULTI_HOUSE,
+  SURCHARGE_EXCLUSION_WINDOW,
+  SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
+  SURCHARGE_TRANSITION,
+  SURCHARGE_TRANSITION_FOUR_MONTH_SGG,
+  SURCHARGE_TRANSITION_DESIGNATION_DATE,
+} from "./legal-codes";
+import { REGULATED_REGIONS } from "./data/regulated-areas";
+import type { RegulatedRegion } from "./data/regulated-areas";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import type {
   HouseInfo,
@@ -77,30 +86,125 @@ export function getGroupExcludeReason(house: HouseInfo, transferDate: Date): str
 // 한시 유예 조건부 판정 (2022.5.10 ~ 2026.5.9)
 // ============================================================
 
-const GRACE_PERIOD_END = new Date("2026-05-09");
-const GRACE_NEW_DESIGNATION_DATE = new Date("2025-10-16");
+// 단일 출처: SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end (가목 기한, 드리프트 방지)
+const GRACE_PERIOD_A_DEADLINE = new Date(SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end);
 
-function checkGracePeriodExemption(
+/**
+ * 나목4) 표 지역 판정 — 계약일부터 양도 기한 개월수(4 또는 6).
+ * 강남4구(서초·송파·용산 포함)는 4개월. 그 외 2025-10-16 지정 조정대상지역(서울 나머지 21구 +
+ * 경기 신규지정 12개 시군구)은 6개월. 그 외(용인기흥·구리 등 2026-07-01 지정)는 보수적 4개월.
+ * regionCode 미제공 시에도 보수적 4개월(§7 — 근사 방향은 UI 경고로 안내, 여기선 배제로 이어지지 않음).
+ *
+ * 단일 진실: REGULATED_REGIONS(data/regulated-areas.ts) 데이터에서 직접 파생 — 명단 하드코딩 금지.
+ */
+/**
+ * "기산일부터 N개월 이내"의 만료일 — 국세기본법 §4 → 민법 §157(초일불산입)·§160(역월) 준용.
+ * §157: 초일불산입 → 기산일은 시작일 익일. §160②: 만료 = 최후 월의 기산일 해당날의 전일.
+ * §160③: 최종월에 해당일이 없으면 그 월의 말일로 만료(전일 빼지 않음).
+ * date-fns `addMonths`는 초일산입 응당일이라 월말 계약에서 1~2일 이른 기한(납세자 불리)을 준다 → 교정.
+ * 예: 계약 2026-04-30 +4개월 → addMonths 08-30 vs 민법 08-31 / 계약 02-28 +4개월 → 06-28 vs 06-30.
+ */
+export function civilMonthsDeadline(startDate: Date, months: number): Date {
+  const 기산 = addDays(startDate, 1); // §157 초일불산입
+  const 응당 = addMonths(기산, months);
+  // date-fns가 말일로 clamp했으면(기산일≠응당일 day) §160③ 말일 만료 — 전일 빼지 않음.
+  if (기산.getUTCDate() !== 응당.getUTCDate()) return 응당;
+  return subDays(응당, 1); // §160② 전일
+}
+
+export function transitionExemptionMonths(
+  regionCode: string | undefined,
+  regions: RegulatedRegion[] = REGULATED_REGIONS,
+): number | null {
+  // 소재지 미확보 — 나·다목 대상 지역 판정 불가(근거 없이 배제하지 않음). UI가 소재지 입력 유도.
+  if (!regionCode) return null;
+  const sgg = regionCode.slice(0, 5);
+  if (SURCHARGE_TRANSITION_FOUR_MONTH_SGG.has(sgg)) return SURCHARGE_TRANSITION.MONTHS_DEFAULT;
+
+  const hasDesignation20251016 = (code: string): boolean => {
+    const region = regions.find((r) => r.code === code);
+    if (!region) return false;
+    return region.designations.some((d) => d.designatedDate === SURCHARGE_TRANSITION_DESIGNATION_DATE);
+  };
+
+  // 시군구(5자리) 개별 엔트리(경기 신규지정) 우선, 없으면 서울 전역 "11" 엔트리로 폴백
+  // (서울 나머지 21구는 개별 엔트리 없이 "11" 전역 재지정으로 커버됨).
+  if (hasDesignation20251016(sgg)) return SURCHARGE_TRANSITION.MONTHS_TABLE_REGION;
+  if (sgg.startsWith("11") && hasDesignation20251016("11")) return SURCHARGE_TRANSITION.MONTHS_TABLE_REGION;
+
+  // 강남4구·2025-10-16 지정 지역이 아니면 나·다목 경과조치 대상 아님.
+  // 나·다목은 "2026-05-09까지 허가신청/계약"이 요건이므로, 그 시점에 조정대상지역이 아니었던
+  // 지역(예: 용인 기흥·구리 등 2026-07-01 지정)은 처음부터 대상이 될 수 없다 → null(부적용).
+  return null;
+}
+
+/**
+ * 다주택 중과 한시 배제 판정 — §167의3①12의2 가·나·다목 (§167의10①12의2 미러 동일).
+ *
+ * ★ 가목 우선 게이트: 양도일 ≤ 2026-05-09이면 계약·허가 조건 무관하게 배제(가목).
+ *   (자가검증 발견 — 현행 나·다 조건만 판정하면 가목 해당자가 나·다 미충족 시 오과세되던 버그 정정)
+ * 나목(isLandPermitTarget === true): 허가신청(≤5-09)·허가수령·계약금증빙 + 계약일부터 4/6개월
+ *   (2026-05-10 이후 계약 시 절대기한 2026-09-09/11-09로 한정).
+ * 다목(isLandPermitTarget === false): 계약(≤5-09)+계약금증빙 + 계약일부터 4/6개월(절대기한 자동충족).
+ * 조건C(토지허가구역+임차인 무기한 배제)는 확정 시행령 원문에 근거 없어 제거(G3).
+ */
+export function checkGracePeriodExemption(
   transferDate: Date,
   gracePeriod: NonNullable<MultiHouseSurchargeInput["gracePeriod"]>,
-): boolean {
-  const { contractDate, isLandPermitArea, hasTenantInResidence, areaDesignatedDate } = gracePeriod;
+  sellingRegionCode?: string,
+): { suspended: boolean; basis?: "a" | "na" | "da"; deadline?: Date } {
+  // ★ 가목 우선 게이트 (G3′)
+  if (transferDate <= GRACE_PERIOD_A_DEADLINE) {
+    return { suspended: true, basis: "a" };
+  }
 
-  // 한시 유예는 2022.5.10 ~ 2026.5.9 사이 매매계약에만 적용 — 하한·상한 모두 검증.
-  // (하한 누락 시 유예 시행 전 계약도 조건B/C 충족 시 잘못 배제 — 적대적 리뷰 적발)
-  if (contractDate < new Date(SURCHARGE_EXCLUSION_WINDOW.start)) return false;
-  if (contractDate > GRACE_PERIOD_END) return false;
+  const {
+    contractDate,
+    isLandPermitTarget,
+    permitApplicationDate,
+    permitGranted,
+    depositReceiptConfirmed,
+  } = gracePeriod;
 
-  const isNewlyDesignated = areaDesignatedDate && areaDesignatedDate >= GRACE_NEW_DESIGNATION_DATE;
-  const maxMonths = isNewlyDesignated ? 6 : 4;
+  const deadlineOfMonths = SURCHARGE_TRANSITION.DEADLINE;
+  const months = transitionExemptionMonths(sellingRegionCode);
+  // 소재지가 나·다목 경과조치 대상 지역(강남4구 또는 2025-10-16 지정)이 아니면 부적용.
+  // 미확보·2026-07-01 지정(용인기흥·구리 등)은 2026-05-09 기준 조정대상이 아니므로 나·다목 성립 불가.
+  if (months === null) return { suspended: false };
+  const contractAfter0510 = contractDate > new Date(deadlineOfMonths);
 
-  const deadlineDate = new Date(contractDate);
-  deadlineDate.setMonth(deadlineDate.getMonth() + maxMonths);
-  const conditionB = transferDate <= deadlineDate;
+  if (isLandPermitTarget === true) {
+    // 나목
+    if (!permitApplicationDate || permitApplicationDate > new Date(deadlineOfMonths)) {
+      return { suspended: false };
+    }
+    if (!permitGranted || !depositReceiptConfirmed) return { suspended: false };
 
-  const conditionC = isLandPermitArea && hasTenantInResidence;
+    let deadline = civilMonthsDeadline(contractDate, months);
+    if (contractAfter0510) {
+      const absolute = new Date(
+        months === SURCHARGE_TRANSITION.MONTHS_TABLE_REGION
+          ? SURCHARGE_TRANSITION.ABSOLUTE_DEADLINE_6M
+          : SURCHARGE_TRANSITION.ABSOLUTE_DEADLINE_4M,
+      );
+      if (absolute < deadline) deadline = absolute;
+    }
+    return transferDate <= deadline
+      ? { suspended: true, basis: "na", deadline }
+      : { suspended: false, basis: "na", deadline };
+  }
 
-  return conditionB || conditionC;
+  if (isLandPermitTarget === false) {
+    // 다목
+    if (contractAfter0510 || !depositReceiptConfirmed) return { suspended: false };
+    const deadline = civilMonthsDeadline(contractDate, months);
+    return transferDate <= deadline
+      ? { suspended: true, basis: "da", deadline }
+      : { suspended: false, basis: "da", deadline };
+  }
+
+  // isLandPermitTarget 미제공 — 나·다목 어느 쪽도 판정 불가(허가 대상 여부 필수 입력)
+  return { suspended: false };
 }
 
 function getFirstDesignatedDate(
@@ -131,6 +235,8 @@ export function determineSurchargeExclusion(
   isExcluded: boolean;
   exclusionReasons: ExclusionReason[];
   isSuspended: boolean;
+  suspensionBasis?: "a" | "na" | "da";
+  suspensionDeadline?: Date;
 } {
   const exclusionReasons: ExclusionReason[] = [];
   const sellingHouse = input.houses.find((h) => h.id === input.sellingHouseId);
@@ -318,20 +424,44 @@ export function determineSurchargeExclusion(
     }
   }
 
-  // 한시 유예 판단 (2022.5.10 ~ 2026.5.9)
+  // 한시 유예 판단 (§167의3①12의2·§167의10①12의2: 보유 2년 이상 + 가·나·다목)
   const surchargeKey = effectiveHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2";
   let suspended = false;
+  let suspensionBasis: "a" | "na" | "da" | undefined;
+  let suspensionDeadline: Date | undefined;
 
-  if (input.gracePeriod && suspensionRules?.surcharge_suspended) {
-    const typeMatches =
-      !suspensionRules.suspended_types ||
-      suspensionRules.suspended_types.includes(surchargeKey);
-    if (typeMatches) {
-      suspended = checkGracePeriodExemption(input.transferDate, input.gracePeriod);
+  // 12의2 본문: 양도 주택 보유기간 2년 이상 요건(§95④ 기산). 미충족 시 배제(suspension) 부적용
+  // → 기존 §104 경로(단기 단일세율 vs 기본+중과 비교과세)로 처리. (재개발 조합원 기존건물 기산은
+  //   sellingHouse.acquisitionDate가 그 기산일을 담는다는 전제 — 기존 §167의3 3년 판정 L213과 동일 관례.)
+  const suspensionHoldingYears = sellingHouse
+    ? differenceInYears(input.transferDate, sellingHouse.acquisitionDate)
+    : 0;
+
+  if (suspensionHoldingYears >= MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS) {
+    if (input.gracePeriod && suspensionRules?.surcharge_suspended) {
+      const typeMatches =
+        !suspensionRules.suspended_types ||
+        suspensionRules.suspended_types.includes(surchargeKey);
+      if (typeMatches) {
+        const result = checkGracePeriodExemption(
+          input.transferDate,
+          input.gracePeriod,
+          sellingHouse?.regionCode,
+        );
+        suspended = result.suspended;
+        suspensionBasis = result.basis;
+        suspensionDeadline = result.deadline;
+      }
+    } else if (suspensionRules) {
+      suspended = isSurchargeSuspended(suspensionRules, input.transferDate, surchargeKey);
     }
-  } else if (suspensionRules) {
-    suspended = isSurchargeSuspended(suspensionRules, input.transferDate, surchargeKey);
   }
 
-  return { isExcluded: false, exclusionReasons, isSuspended: suspended };
+  return {
+    isExcluded: false,
+    exclusionReasons,
+    isSuspended: suspended,
+    ...(suspensionBasis ? { suspensionBasis } : {}),
+    ...(suspensionDeadline ? { suspensionDeadline } : {}),
+  };
 }

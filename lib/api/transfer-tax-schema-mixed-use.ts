@@ -40,6 +40,11 @@ export const mixedUseAssetSchema = z.object({
   nonResidentialFloorArea: z.number().positive(),
   buildingFootprintArea: z.number().positive(),
   totalLandArea: z.number().positive(),
+  /** 주택 부수토지 면적 수동 지정 (㎡) — PHD OFF 전용, 0 적법(three-state) */
+  residentialLandAreaOverride: z.number().nonnegative().optional(),
+  // ⚠️ `.nonnegative()` — 0이 적법(three-state: 주택/상가 부수토지 0). `.positive()`면 0이 거부된다.
+  commercialLandAreaOverride: z.number().nonnegative().optional(),
+  residentialFootprintOverride: z.number().nonnegative().optional(),
   landAcquisitionDate: z.string().date(),
   buildingAcquisitionDate: z.string().date(),
   transferStandardPrice: mixedUseStandardPriceSchema,
@@ -50,6 +55,8 @@ export const mixedUseAssetSchema = z.object({
   /** PHD 3-시점 환산 입력 (겸용주택 모드 전용). landArea는 엔진이 주택부수토지로 자동 주입. */
   preHousingDisclosure: phdForMixedUseSchema.optional(),
   residencePeriodYears: z.number().nonnegative(),
+  // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (client-derived). 미제공 시 엔진이 residencePeriodYears fallback.
+  table2ResidencePeriodYears: z.number().int().nonnegative().optional(),
   isMetropolitanArea: z.boolean().optional(),
   zoneType: z.enum([
     "residential", "exclusive_residential", "general_residential", "semi_residential",
@@ -58,6 +65,12 @@ export const mixedUseAssetSchema = z.object({
   ]).optional(),
   /** 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 요건 충족 여부. 다주택자는 false → 12억 비과세 미적용 */
   isOneHouseExempt: z.boolean().optional(),
+  // ⑫ §164⑨1호 공익수용 특례 (계획 P7/D8) — 엔진이 게이트, strip 방지. route가 `...data.mixedUse` 스프레드.
+  transferCause: z.enum(["general", "public_expropriation"]).optional(),
+  housingCompensationTotal: z.number().int().nonnegative().optional(),
+  housingCompensationBasisTotal: z.number().int().nonnegative().optional(),
+  commercialLandCompensationTotal: z.number().int().nonnegative().optional(),
+  commercialLandCompensationBasisTotal: z.number().int().nonnegative().optional(),
   /** 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) */
   partialUsageChange: z.object({
     direction: z.enum(["house_to_commercial", "commercial_to_house"]),
@@ -65,6 +78,18 @@ export const mixedUseAssetSchema = z.object({
     acqCommercialArea: z.number().nonnegative().optional(),
     usageChangeDate: z.string().optional(),
   }).optional(),
+  // 상속·증여 취득가액 엔진 정합 (소령 §163⑨) — 겸용주택. reported 필드(housingInheritedValue 등)는 상속·증여 공용.
+  acquisitionByInheritance: z.boolean().optional(),
+  acquisitionByGift: z.boolean().optional(),
+  housingInheritedValue: z.number().int().positive().optional(),
+  commercialInheritedValue: z.number().int().positive().optional(),
+  housingInheritedExpense: z.number().int().nonnegative().optional(),
+  commercialInheritedExpense: z.number().int().nonnegative().optional(),
+  // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매. 침묵 strip 방지(⑫).
+  useActualAcquisition: z.boolean().optional(),
+  acquisitionActualTotalPrice: z.number().int().positive().optional(),
+  // 감정가액·매매사례가액 추계 안분 (§176의2②③·법 §100², R-B) — acquisitionActualTotalPrice 총액 재사용.
+  useAppraisalSalesAcquisition: z.boolean().optional(),
 }).superRefine((v, ctx) => {
   const total = v.residentialFloorArea + v.nonResidentialFloorArea;
   if (total <= 0) {

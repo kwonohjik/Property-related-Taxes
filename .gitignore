@@ -68,6 +68,11 @@ logs/
 /data/raw/*
 !/data/raw/.gitkeep
 
+# 상가·오피스텔 기준시가 변환 산출물 (build:stdprice) — 파티션 gzip ≈255MB + manifest.
+# 전부 빌드 산출물이므로 manifest도 커밋하지 않는다(클론 환경에 없는 데이터를 있다고 기술하는 모순 방지).
+# 원본은 /data/raw/ 규약을 따른다. 설계: docs/02-design/features/commercial-officetel-standard-price-lookup.engine.design.md
+/data/stdprice/
+
 # lib/geo/*.bak — parse-koedb-txt.ts 자동 백업
 /lib/geo/*.bak
 

@@ -24,6 +24,7 @@ import {
   PART_FEATURE_KEYS,
 } from "@/lib/tax-engine/data/building-standard-price";
 import type { NtsReportContext, NtsPointContext } from "@/lib/calc/nts-report-adapter";
+import type { AddressValue } from "@/components/ui/address-search";
 
 /** 다필지 부속토지 1필지(위치지수 가중평균용) — 폼 문자열 */
 export interface LandParcelForm {
@@ -129,6 +130,9 @@ export interface BuildingStdPriceFormState {
   latitude: string;
   /** PNU(19자리) — 건축물대장 자동조회 파라미터 소스(엔진 미전달, longitude/latitude 성격 동일) */
   pnu: string;
+  /** 집합건물(공동주택) 선택 동/호 — 세대 식별·집합건물 판정(엔진 미전달). 미선택 시 "" */
+  unitDong: string;
+  unitHo: string;
   // 양도
   acquisitionYear: string;
   transferYear: string;
@@ -207,6 +211,8 @@ export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   longitude: "",
   latitude: "",
   pnu: "",
+  unitDong: "",
+  unitHo: "",
   acquisitionYear: "",
   transferYear: "",
   acqStructureKey: "",
@@ -268,6 +274,30 @@ export function availableYears(isMechanical: boolean): number[] {
  */
 export function deriveYearFromEventDate(eventDate: string): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(eventDate) ? eventDate.slice(0, 4) : "";
+}
+
+/**
+ * AddressSearch onChange 값 → 폼 patch (소재지·동/호).
+ *
+ * 동/호(unitDong·unitHo)를 저장해 집합건물 판정에 쓴다.
+ * ⚠️ 전유면적(exclusiveArea=NED prvuseAr=전용면적)은 floorArea에 넣지 않는다 —
+ *   국세청 「건물 기준시가 계산방법 고시」상 건물면적은 "전유+공용 연면적"(types.ts:63-64)이라
+ *   전유면적만 넣으면 공용면적 누락으로 과소산정. 정본 전유+공용은 건축HUB
+ *   getBrExposPubuseAreaInfo(전유공용면적)로 확보(접근 B, 후속). 그 전까지 집합건물 floorArea는 수동.
+ *   설계: docs/02-design/features/building-std-collective-unit-exclusive-area-fix.plan.md §4~§5.
+ */
+export function buildAddressPatch(v: AddressValue): Partial<BuildingStdPriceFormState> {
+  return {
+    addressRoad: v.road,
+    addressJibun: v.jibun,
+    buildingName: v.building,
+    addressDetail: v.detail,
+    longitude: v.lng,
+    latitude: v.lat,
+    pnu: v.pnu ?? "",
+    unitDong: v.dong ?? "",
+    unitHo: v.ho ?? "",
+  };
 }
 
 const intOrUndef = (s: string): number | undefined => {

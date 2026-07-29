@@ -38,7 +38,7 @@ export function New994DetailCard({ detail }: Props) {
             </ul>
           </div>
         )}
-        <p className="text-[10px] text-rose-700 dark:text-rose-400">근거 조문: {detail.legalBasis}</p>
+        <p className="text-micro text-rose-700 dark:text-rose-400">근거 조문: {detail.legalBasis}</p>
       </div>
     );
   }
@@ -70,7 +70,7 @@ export function New994DetailCard({ detail }: Props) {
 
       {detail.clawbackWarning && (
         <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-950/30 px-3 py-2">
-          <p className="text-[11px] text-amber-800 dark:text-amber-300">
+          <p className="text-caption text-amber-800 dark:text-amber-300">
             ⚠ {houseLabel} 보유 3년 미만 — 이후 3년 이상 보유하지 못하게 되면 특례로 줄어든
             세액을 그 사유가 발생한 달의 말일부터 2개월 이내에 납부해야 합니다 (§99의4⑥.
             수용·상속·멸실 등 부득이한 사유는 제외)
@@ -78,7 +78,7 @@ export function New994DetailCard({ detail }: Props) {
         </div>
       )}
 
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-micro text-muted-foreground">
         ※ 다주택 중과 판정의 주택 수에는 반영되지 않습니다 · 근거 조문: {detail.legalBasis}
       </p>
     </div>

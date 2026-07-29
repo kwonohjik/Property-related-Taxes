@@ -13,11 +13,11 @@
 import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { HouseValuationSection } from "./HouseValuationSection";
+import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -26,10 +26,7 @@ const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 /** 1990.8.30. 토지등급 → 개별공시지가 전환일 */
 const PRE_1990_DATE = "1990-08-30";
 
-const LAW_BADGE_CLASS =
-  "inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium " +
-  "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 " +
-  "hover:bg-blue-100 dark:hover:bg-blue-950/70 transition-colors shrink-0 whitespace-nowrap cursor-pointer";
+import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 
 interface Props {
   asset: AssetForm;
@@ -40,7 +37,17 @@ interface Props {
 
 export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isLand = asset.assetKind === "land";
-  const isHouse = asset.inheritanceAssetKind === "house_individual" || asset.inheritanceAssetKind === "house_apart";
+  // 토지/주택 판정은 상단 assetKind로 파생(상속 자산구분 라디오 폐지 대응).
+  const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
+  // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용).
+  const houseKind: "house_individual" | "house_apart" =
+    asset.inheritanceAssetKind === "house_individual"
+      ? "house_individual"
+      : asset.inheritanceAssetKind === "house_apart"
+        ? "house_apart"
+        : asset.addressDong && asset.addressHo
+          ? "house_apart"
+          : "house_individual";
 
   // 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 → 3-시점 보조 입력
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
@@ -194,7 +201,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
     <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20 p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-          의제취득일 이전 상속 — max(환산취득가, 피상속인 실가 × 물가상승률)
+          의제취득일 이전 상속·증여 — max(① 상증법 평가액, ③ 환산취득가)
         </p>
         <LawArticleModal
           legalBasis="소득세법시행령 §176조의2"
@@ -205,11 +212,18 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
 
       {/* 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 3-시점 보조 입력 */}
       {showHouseValuation && (
-        <HouseValuationSection
-          asset={asset}
-          onChange={onChange}
-          transferDate={transferDate}
-        />
+        <>
+          <InheritanceHouseKindPicker
+            value={houseKind}
+            assetId={asset.assetId}
+            onChange={onChange}
+          />
+          <HouseValuationSection
+            asset={asset}
+            onChange={onChange}
+            transferDate={transferDate}
+          />
+        </>
       )}
 
       {/* ① 의제취득일(1985.1.1.) 시점 기준시가 */}
@@ -328,41 +342,30 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         )}
       </div>
 
-      {/* ③ 피상속인 실가 입증 */}
-      <ToggleCard
-        tone="amber"
-        title="피상속인 실지취득가액을 입증할 수 있습니다"
-        description="입증 시 실가 × 물가상승률과 환산취득가 중 큰 금액 적용"
-        checked={asset.hasDecedentActualPrice}
-        onCheckedChange={(v) => {
-          onChange({
-            hasDecedentActualPrice: v,
-            ...(!v && {
-              decedentAcquisitionDate: "",
-              decedentAcquisitionPrice: "",
-            }),
-          });
-        }}
+      {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — max(①,③) 후보 */}
+      <FieldCard
+        label="상속세 신고가액 (상증법 평가액)"
+        unit="원"
+        hint="상속세 신고서·결정통지서상 평가액. 입력 시 환산취득가와 비교하여 큰 금액을 취득가액으로 적용."
+        trailing={
+          <LawArticleModal
+            legalBasis="상속세및증여세법 §60"
+            label="상증법 §60~66"
+            className={LAW_BADGE_CLASS}
+          />
+        }
       >
-        <FieldCard label="피상속인 취득일" required>
-          <DateInput
-            value={asset.decedentAcquisitionDate}
-            onChange={(v) => onChange({ decedentAcquisitionDate: v })}
-          />
-        </FieldCard>
-        <FieldCard label="피상속인 실지취득가액" required unit="원">
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={asset.decedentAcquisitionPrice}
-            onChange={(v) => onChange({ decedentAcquisitionPrice: v })}
-            placeholder="피상속인이 실제 취득한 가액"
-          />
-        </FieldCard>
-      </ToggleCard>
+        <CurrencyInput
+          label=""
+          hideUnit
+          value={asset.publishedValueAtInheritance}
+          onChange={(v) => onChange({ publishedValueAtInheritance: v })}
+          placeholder="신고가액 입력 (원)"
+        />
+      </FieldCard>
 
-      <p className="text-[11px] text-muted-foreground">
-        환산취득가 = 양도가액 × (의제취득일 기준시가 ÷ 양도시 기준시가)
+      <p className="text-caption text-muted-foreground">
+        취득가액 = max(① 상속세 신고가액, ③ 환산취득가). 환산취득가 = 양도가액 × (의제취득일 기준시가 ÷ 양도시 기준시가)
       </p>
     </div>
   );

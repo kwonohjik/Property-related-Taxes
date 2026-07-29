@@ -1,0 +1,165 @@
+/**
+ * CommercialInheritanceStdPriceSection — 상속 상가 §164⑥ 취득당시 기준시가 입력 (소령 §163⑨2호)
+ *
+ * assetKind === "commercial_building" + acquisitionCause === "inheritance" + 상속개시일 < 2005-01-01 시 렌더.
+ * 상가 기준시가 최초고시(2005-01-01) 전 상속 상가는 취득가액 = max(상속개시일 상증법 평가액, §164⑥ 취득당시 기준시가).
+ * §164⑥ 취득당시 기준시가(P_A)는 최초고시(2005) 역환산으로 산정 → 취득시·최초고시 3시점 기준시가 입력.
+ *
+ * cb* 스토어 필드 재사용(환산 섹션과 동일 물리량). opt-in — 미입력 시 상증법 평가액만 사용(Phase 1).
+ * 양도시 값·환산 토글은 불요(P_A는 취득시·최초고시만).
+ */
+"use client";
+
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
+import { Sec164_5ProvisoNotice } from "@/components/calc/transfer/Sec164_5ProvisoNotice";
+import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { CommercialPre1990LandNotice } from "@/components/calc/transfer/CommercialPre1990LandNotice";
+import { derivePre1990CommercialLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-commercial-bridge";
+import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-commercial-bridge";
+import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+
+interface Props {
+  asset: AssetForm;
+  onChange: (data: Partial<AssetForm>) => void;
+  transferDate?: string;
+}
+
+export function CommercialInheritanceStdPriceSection({ asset, onChange, transferDate }: Props) {
+  const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
+  // 상가 기준시가 최초고시(2005-01-01) 전 상속만 §164⑥ 대상.
+  if (
+    asset.assetKind !== "commercial_building" ||
+    asset.acquisitionCause !== "inheritance" ||
+    !inheritanceDate ||
+    inheritanceDate >= "2005-01-01"
+  ) {
+    return null;
+  }
+
+  const exclusive = parseFloat(asset.cbExclusiveArea || "0") || 0;
+  const shared = parseFloat(asset.cbSharedArea || "0") || 0;
+  const totalFloorArea = exclusive + shared > 0 ? parseFloat((exclusive + shared).toFixed(2)) : null;
+  // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(CommercialBuildingBlock와 동일 AddressValue).
+  const stdPriceAddress = {
+    road: asset.addressRoad,
+    jibun: asset.addressJibun,
+    building: asset.buildingName,
+    detail: asset.addressDetail,
+    lng: asset.longitude,
+    lat: asset.latitude,
+    pnu: asset.addressPnu,
+  };
+
+  return (
+    <ToneCard tone="amber" title="§164⑥ 취득당시 기준시가 (선택 — 상증법 평가액과 큰 금액 적용)" noDark>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨ 2호" label="§163⑨2호" />
+        <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥" />
+      </div>
+      <p className="text-xs text-amber-700">
+        상가 기준시가 최초고시(2005.1.1) 전 상속 상가는 <b>max(상속개시일 상증법 평가액, §164⑥ 취득당시 기준시가)</b>를
+        취득가액으로 봅니다. 취득당시 기준시가는 최초고시(2005) 역환산으로 산정합니다. 아래 3시점 입력 시에만 적용되며,
+        미입력 시 상속개시일 평가액만 사용합니다.
+      </p>
+
+      {/* ① 면적 */}
+      <ToneCard tone="sky" sectionNum="1" title="면적 정보 (㎡)" noDark>
+        <FieldCard label="전용면적" unit="㎡" hint="건물 전용면적">
+          <DecimalInput value={asset.cbExclusiveArea} onChange={(v) => onChange({ cbExclusiveArea: v })} placeholder="전용면적 입력" />
+        </FieldCard>
+        <FieldCard label="공유면적" unit="㎡" hint="계단·복도 등 공유부분 면적">
+          <DecimalInput value={asset.cbSharedArea} onChange={(v) => onChange({ cbSharedArea: v })} placeholder="공유면적 입력" />
+        </FieldCard>
+        <FieldCard label="대지면적" unit="㎡" hint="이 호에 귀속되는 대지권 면적">
+          <DecimalInput value={asset.cbLandArea} onChange={(v) => onChange({ cbLandArea: v })} placeholder="대지면적 입력" />
+        </FieldCard>
+        {totalFloorArea !== null && (
+          <div className="rounded bg-sky-100/60 border border-sky-200 px-3 py-2 text-xs text-sky-800">
+            연면적 (전용+공유) = <span className="font-semibold">{totalFloorArea.toLocaleString()} ㎡</span>
+          </div>
+        )}
+      </ToneCard>
+
+      {/* ② 최초고시(2005) ㎡당 호별고시가 */}
+      <ToneCard tone="emerald" sectionNum="2" title="최초고시(2005) 호별 ㎡당 고시가 (원/㎡)" noDark>
+        <div className="flex flex-col items-end gap-1">
+          <CommercialStdPriceLookupModal asset={asset} onChange={onChange} transferDate={transferDate} variant="inheritance" />
+        </div>
+        <FieldCard label="최초고시(2005) ㎡당 호별고시가" unit="원/㎡" hint="2005.1.1 최초 고시 시점 ㎡당 가액. 국세청 고시 이력에서 확인.">
+          <CurrencyInput label="" value={asset.cbUnitPriceAtFirstOrAcq} onChange={(v) => onChange({ cbUnitPriceAtFirstOrAcq: v })} hideUnit />
+        </FieldCard>
+      </ToneCard>
+
+      {/* ③ 건물 기준시가 (취득시·최초고시) */}
+      <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 취득시·최초고시 (원, 총액)" noDark>
+        {isBeforeBuildingStdPriceNotice(inheritanceDate) && (
+          <Sec164_5ProvisoNotice
+            acquisitionDate={inheritanceDate}
+            checked={asset.cbAcqBuildingStdBy164_5}
+            onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
+            timePointLabel="취득당시(상속개시일)"
+          />
+        )}
+        <FieldCard label="취득시(상속개시일) 건물 기준시가" unit="원" hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액">
+          <CurrencyInput label="" value={asset.cbBuildingStdPriceAtAcq} onChange={(v) => onChange({ cbBuildingStdPriceAtAcq: v })} hideUnit />
+        </FieldCard>
+        <div className="flex justify-end">
+          <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cbinh-acq`} applyTimePoint="acquisition" prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
+        </div>
+        <FieldCard label="최초고시시(2005) 건물 기준시가" unit="원" hint="2005.1.1 최초 고시 시점 건물 기준시가 총액">
+          <CurrencyInput label="" value={asset.cbBuildingStdPriceAtFirst} onChange={(v) => onChange({ cbBuildingStdPriceAtFirst: v })} hideUnit />
+        </FieldCard>
+      </ToneCard>
+
+      {/* ④ 개별공시지가 (취득시·최초고시) */}
+      <ToneCard tone="amber" sectionNum="4" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3" noDark>
+        <div>
+          <p className="mb-1 text-caption font-medium text-amber-700">취득시(상속개시일)</p>
+          {isCommercialPre1990Acquisition(asset) && (
+            <>
+              <CommercialPre1990LandNotice acquisitionDate={inheritanceDate} />
+              <Pre1990LandValuationInput
+                form={asset}
+                onChange={onChange}
+                acquisitionArea={asset.cbLandArea}
+                jibun={asset.addressJibun || undefined}
+                acquisitionDate={inheritanceDate}
+                transferDate={transferDate}
+              />
+            </>
+          )}
+          <LandPriceLookupField
+            label="취득시 개별공시지가"
+            pricePerSqm={
+              asset.cbLandPricePerSqmAtAcq ||
+              derivePre1990CommercialLandPricePerSqmAtAcqString(asset, transferDate ?? "")
+            }
+            onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtAcq: v })}
+            area={parseFloat(asset.cbLandArea || "0") || undefined}
+            referenceDate={asset.acquisitionDate || undefined}
+            jibun={asset.addressJibun || undefined}
+          />
+        </div>
+        <div>
+          <p className="mb-1 text-caption font-medium text-amber-700">최초고시시(2005)</p>
+          <LandPriceLookupField
+            label="최초고시시(2005) 개별공시지가"
+            pricePerSqm={asset.cbLandPricePerSqmAtFirst}
+            onPricePerSqmChange={(v) => onChange({ cbLandPricePerSqmAtFirst: v })}
+            area={parseFloat(asset.cbLandArea || "0") || undefined}
+            referenceDate="2005-01-01"
+            jibun={asset.addressJibun || undefined}
+          />
+        </div>
+      </ToneCard>
+    </ToneCard>
+  );
+}

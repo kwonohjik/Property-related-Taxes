@@ -14,6 +14,7 @@
  */
 
 import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: RentalHousingExceptionResult;
@@ -51,7 +52,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
             장기임대주택 거주주택 비과세 특례 — 적용 불가
           </p>
-          <span className="text-[10px] text-amber-800 dark:text-amber-400">
+          <span className="text-micro text-amber-800 dark:text-amber-400">
             소득세법 시행령 제155조 제20항
           </span>
         </div>
@@ -97,7 +98,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           장기임대주택 보유자 거주주택 비과세 특례
         </p>
         <ScenarioBadge id={scenarioId} />
-        <span className="text-[10px] text-muted-foreground">소득세법 시행령 §155⑳</span>
+        <span className="text-micro text-muted-foreground">소득세법 시행령 §155⑳</span>
       </div>
 
       {/* 요건 판정 */}
@@ -118,11 +119,27 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
         {detail.eligibility.failReasons.length > 0 && (
           <ul className="text-xs text-muted-foreground space-y-0.5 pl-3 list-disc">
             {detail.eligibility.failReasons.map((r, i) => (
-              <li key={i}>{typeof r === "string" ? r : `임대주택 요건 미충족`}</li>
+              <li key={i}>{typeof r === "string" ? r : r.message}</li>
             ))}
           </ul>
         )}
       </div>
+
+      {/* 임대주택 호별 판정기준 (도출 목·의무기간·기준시가 상한 — P5) */}
+      {detail.eligibility.perUnitVerdict && detail.eligibility.perUnitVerdict.length > 0 && (
+        <div className="rounded border border-violet-200 bg-white/60 dark:border-violet-800/30 dark:bg-white/5 p-2.5 space-y-1">
+          <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">임대주택 판정 기준</p>
+          <ul className="text-xs text-muted-foreground space-y-0.5">
+            {detail.eligibility.perUnitVerdict.map((v) => (
+              <li key={v.unitIndex}>
+                {v.unitIndex + 1}호: {v.derivedArticle}목 · 의무임대기간 {v.requiredYears}년 · 기준시가 상한{" "}
+                {(v.stdPriceCap / 100_000_000).toFixed(0)}억
+                {v.effectiveRegDate ? ` · 등록기준일 ${v.effectiveRegDate}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* B 시나리오 안분 산식 (소득세법 시행령 제161조 제1항) */}
       {isScenarioB && formulaTrace.ratio161_1 !== undefined && (
@@ -132,8 +149,11 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs space-y-1.5">
             <p className="text-muted-foreground">
-              안분 비율 = (직전 거주주택 양도 당시 기준시가 − 취득 당시 기준시가)
-              ÷ (현 양도 당시 기준시가 − 취득 당시 기준시가)
+              안분 비율 ={" "}
+              <Frac
+                top="직전 거주주택 양도 당시 기준시가 − 취득 당시 기준시가"
+                bottom="현 양도 당시 기준시가 − 취득 당시 기준시가"
+              />
             </p>
             <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
               = {(formulaTrace.ratio161_1 * 100).toFixed(4)}%
@@ -178,19 +198,19 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
             고가주택 과세 비율
             {scenarioId === "RH-A2" && (
-              <span className="ml-1 text-[10px] text-muted-foreground font-normal">
+              <span className="ml-1 text-micro text-muted-foreground font-normal">
                 (소득세법 시행령 제159조의4 — 1세대 1주택 고가주택)
               </span>
             )}
             {scenarioId === "RH-B2" && (
-              <span className="ml-1 text-[10px] text-muted-foreground font-normal">
+              <span className="ml-1 text-micro text-muted-foreground font-normal">
                 (소득세법 시행령 제161조 제2항 제2호 적용)
               </span>
             )}
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs text-muted-foreground">
             <p>
-              과세 비율 = (양도가액 − 12억원) ÷ 양도가액
+              과세 비율 = <Frac top="양도가액 − 12억원" bottom="양도가액" />
               {" "}= <span className="font-mono text-foreground font-semibold">
                 {(formulaTrace.ratioHighValue * 100).toFixed(4)}%
               </span>
@@ -207,7 +227,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
         <div className="space-y-2">
           <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
             과세대상 양도소득금액 산정
-            <span className="ml-1 text-[10px] text-muted-foreground font-normal">
+            <span className="ml-1 text-micro text-muted-foreground font-normal">
               (소득세법 시행령 제161조 제2항)
             </span>
           </p>
@@ -272,7 +292,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
 
       {/* 적용 법령 조문 */}
       {detail.eligibility.laws.length > 0 && (
-        <div className="text-[10px] text-muted-foreground border-t border-violet-100 dark:border-violet-800/30 pt-2">
+        <div className="text-micro text-muted-foreground border-t border-violet-100 dark:border-violet-800/30 pt-2">
           적용 법령: {detail.eligibility.laws.join(" · ")}
         </div>
       )}
@@ -290,13 +310,13 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
       {/* 과세 / 비과세 양도소득금액 요약 — 양도소득금액(§95①) 단계에서 분리 */}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded border border-rose-200 bg-rose-50/60 dark:border-rose-800/30 dark:bg-rose-950/20 p-2.5 text-center">
-          <p className="text-[10px] text-rose-700 dark:text-rose-400 font-medium">과세대상 양도소득금액</p>
+          <p className="text-micro text-rose-700 dark:text-rose-400 font-medium">과세대상 양도소득금액</p>
           <p className="text-sm font-mono font-semibold text-rose-900 dark:text-rose-200 mt-0.5">
             {formatN(taxableGain)}
           </p>
         </div>
         <div className="rounded border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/30 dark:bg-emerald-950/20 p-2.5 text-center">
-          <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">비과세 양도소득금액 (시행령 §161①)</p>
+          <p className="text-micro text-emerald-700 dark:text-emerald-400 font-medium">비과세 양도소득금액 (시행령 §161①)</p>
           <p className="text-sm font-mono font-semibold text-emerald-900 dark:text-emerald-200 mt-0.5">
             {formatN(exemptGain)}
           </p>

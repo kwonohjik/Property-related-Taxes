@@ -1,227 +1,150 @@
 "use client";
 
 /**
- * 동반자산 상속 취득(inheritance) 입력 블록
+ * 상속 취득 입력 통합 셸 (B1 통합 — P2b)
  *
- * 상속 취득가액 산정 모드:
- *   - auto:   상속개시일 직전 공시가격으로 보충적평가액 자동 산정 (상증법 §61)
- *   - manual: 직접 입력 (감정평가액·시가 등)
+ * 상속 취득가액 입력을 단일 흐름으로 통합:
+ *   1. 헤더: 상속개시일·피상속인 취득일
+ *   2. §154⑧3호 동일세대 통산 토글 (주택 전용)
+ *   3. 자산 구분 (토지/개별주택/공동주택)
+ *   4. 취득가액 산정 — InheritedAcquisitionDeemedSection (의제취득일 전후 자동 분기)
  *
- * 자산별 단기보유 통산을 위해 피상속인 취득일을 자체 입력받는다.
+ * 기존 auto/manual 토글·상단 공시가격/직접입력(fixedAcquisitionPrice)을 제거하고,
+ * 취득가액은 하단 평가방법 축(post-deemed)·환산(pre-deemed)으로 일원화한다.
+ * 토지 신고가액은 총액(publishedValueAtInheritance) 단일 의미로 통일 (route 경로 통일, R0″).
  *
- * publishedValueAtInheritance 저장 형식:
- *   - 토지(land):   단가(원/㎡) — 엔진이 × landAreaM2 하여 보충적평가액 산출
- *   - 주택:         총액(원)    — 엔진에 그대로 전달
- * API 스키마 변경 없음.
+ * inheritanceValuationMode는 항상 "auto"(factory 기본·migration 전환) — UI에 토글 없음.
  */
 
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
-const INHERITANCE_ASSET_KIND_OPTIONS = [
-  { value: "land", label: "토지 (공시지가 × 면적)" },
-  { value: "house_individual", label: "개별·다세대주택 (개별주택가격)" },
-  { value: "house_apart", label: "공동주택 (공동주택가격)" },
-] as const;
-
-interface BlockProps {
-  assetId: string;
-  acquisitionDate: string; // 상속개시일과 동일
-  onAcquisitionDateChange: (v: string) => void;
-  decedentAcquisitionDate: string;
-  onDecedentAcquisitionDateChange: (v: string) => void;
-  valuationMode: "auto" | "manual";
-  onValuationModeChange: (mode: "auto" | "manual") => void;
-  // auto 모드용
-  inheritanceAssetKind: "land" | "house_individual" | "house_apart";
-  onInheritanceAssetKindChange: (v: "land" | "house_individual" | "house_apart") => void;
-  inheritanceDate: string;
-  onInheritanceDateChange: (v: string) => void;
-  landAreaM2: string;
-  /**
-   * 토지: 단가(원/㎡) 저장 — 엔진이 면적을 곱해 보충적평가액 산출
-   * 주택: 총액(원) 저장
-   * API 스키마 변경 없음 (기존 publishedValueAtInheritance 필드 그대로)
-   */
-  publishedValueAtInheritance: string;
-  onPublishedValueAtInheritanceChange: (v: string) => void;
-  // manual 모드용
-  fixedAcquisitionPrice: string;
-  onFixedAcquisitionPriceChange: (v: string) => void;
-  /** 공시가격 조회용 지번 주소 */
-  jibun?: string;
-  /** 공동주택 주택가격 조회용 동(예: "201동") — 세대 식별 */
-  dong?: string;
-  /** 공동주택 주택가격 조회용 호(예: "3204") — 세대 식별 */
-  ho?: string;
+interface Props {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+  /** 양도일 — 의제분기 섹션의 환산 계산에 전달 */
+  transferDate?: string;
 }
 
-// ─── 메인 블록 ────────────────────────────────────────────────────
-
-export function CompanionAcqInheritanceBlock(props: BlockProps) {
-  // 토지 모드: 공시지가 단가(원/㎡)를 publishedValueAtInheritance에 저장하되,
-  // StandardPriceInput의 totalPrice에는 단가×면적 계산 결과(총액)를 표시한다.
-  // 단, 엔진은 publishedValueAtInheritance(단가)를 받으므로 별도 totalPrice state로 관리.
-  const [landTotalPrice, setLandTotalPrice] = useState(() => {
-    if (props.inheritanceAssetKind === "land" && props.publishedValueAtInheritance && props.landAreaM2) {
-      const sqm = parseAmount(props.publishedValueAtInheritance);
-      const area = parseFloat(props.landAreaM2);
-      return sqm > 0 && area > 0 ? String(Math.floor(sqm * area)) : "";
-    }
-    return "";
-  });
-
-  /**
-   * 토지 단가 변경 핸들러
-   * pricePerSqm → publishedValueAtInheritance (단가 저장)
-   * totalPrice  → landTotalPrice (표시 전용)
-   */
-  function handleLandPricePerSqmChange(v: string) {
-    props.onPublishedValueAtInheritanceChange(v.replace(/,/g, ""));
-  }
-
-  function handleLandTotalPriceChange(v: string) {
-    setLandTotalPrice(v);
-    // 총액 역산 → 단가 업데이트
-    const total = parseAmount(v);
-    const area = parseFloat(props.landAreaM2);
-    if (total > 0 && area > 0) {
-      const perSqm = Math.round((total / area) * 1000) / 1000;
-      props.onPublishedValueAtInheritanceChange(String(perSqm));
-    }
-  }
-
+export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: Props) {
+  // 겸용주택 모드: 취득가액은 §163⑨ 상속개시일 평가액을 ② 주택·③ 상가 기준시가 섹션에서
+  // 직접 산정(MixedUseAssetMajorStdPrice) — 여기의 자산 구분·취득가액 의제 특례는 겸용 엔진이
+  // 소비하지 않는 dead 입력이라 숨긴다(CompanionAcqPurchaseBlock.tsx의 기존 isMixedUse 파생 패턴 재사용).
+  const isMixedUse = !!asset.isMixedUseHouse;
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">상속개시일</label>
           <DateInput
-            value={props.acquisitionDate}
-            onChange={props.onAcquisitionDateChange}
+            value={asset.acquisitionDate}
+            onChange={(v) =>
+              onChange({ acquisitionDate: v, inheritanceStartDate: v, inheritanceDate: v })
+            }
           />
         </div>
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">피상속인 취득일</label>
           <DateInput
-            value={props.decedentAcquisitionDate}
-            onChange={props.onDecedentAcquisitionDateChange}
+            value={asset.decedentAcquisitionDate}
+            onChange={(v) => onChange({ decedentAcquisitionDate: v })}
           />
-          <p className="text-[11px] text-muted-foreground">단기보유 통산용 (소득세법 §104②1호)</p>
+          <p className="text-caption text-muted-foreground">단기보유 통산용 (소득세법 §104②1호)</p>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">상속 취득가액 산정</label>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />
-          <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => props.onValuationModeChange("auto")}
-            className={cn(
-              "px-3 py-1.5 rounded-md text-sm border transition-colors",
-              props.valuationMode === "auto"
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background border-border hover:bg-muted",
-            )}
-          >
-            자동 (보충적평가액)
-          </button>
-          <button
-            type="button"
-            onClick={() => props.onValuationModeChange("manual")}
-            className={cn(
-              "px-3 py-1.5 rounded-md text-sm border transition-colors",
-              props.valuationMode === "manual"
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background border-border hover:bg-muted",
-            )}
-          >
-            직접 입력
-          </button>
-        </div>
-
-        {props.valuationMode === "auto" && (
-          <div className="pl-4 space-y-3 pt-2">
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium">자산 구분 (상속개시일 기준)</label>
-              <RadioCardGroup
-                name={`inh-kind-${props.assetId}`}
-                tone="amber"
-                layout="stack"
-                options={INHERITANCE_ASSET_KIND_OPTIONS.map((opt) => ({
-                  value: opt.value,
-                  label: opt.label,
-                }))}
-                value={props.inheritanceAssetKind ?? ""}
-                onChange={(v) => props.onInheritanceAssetKindChange(v)}
+      {/* §154⑧3호 상속주택 자체 양도 — 동일세대 보유기간 통산 (주택 전용) */}
+      {asset.assetKind === "housing" && (
+        <ToggleCard
+          variant="card"
+          tone="violet"
+          checked={asset.decedentSameHouseholdBeforeInheritance}
+          onCheckedChange={(v) => {
+            onChange({
+              decedentSameHouseholdBeforeInheritance: v,
+              ...(v ? {} : { decedentCohabitationHoldingStartDate: "", decedentCohabitationResidenceMonths: "" }),
+            });
+          }}
+          title="상속개시 당시 피상속인과 동일세대"
+          description="동일세대로 함께 거주·보유하던 상속주택을 양도하는 경우, 상속개시 전 동일세대 보유·거주기간을 1세대1주택 비과세·표2 장특공제 판정에 통산합니다 (소령 §154⑧3호)"
+        >
+          <div className="space-y-2 pt-1">
+            <div className="space-y-1">
+              <label className="block text-caption text-muted-foreground font-medium">
+                동일세대 거주·보유 개시일
+              </label>
+              <DateInput
+                value={asset.decedentCohabitationHoldingStartDate}
+                onChange={(v) => onChange({ decedentCohabitationHoldingStartDate: v })}
               />
+              <p className="text-caption text-muted-foreground/70">
+                상속개시 전 피상속인과 동일세대로서 이 주택에 거주·보유하기 시작한 날 (비과세 보유기간 기산).
+              </p>
             </div>
-
-            {/* 토지: pricePerSqm = publishedValueAtInheritance (단가), totalPrice = 내부 계산용 */}
-            {props.inheritanceAssetKind === "land" && (
-              <div className="space-y-3">
-                <StandardPriceInput
-                  propertyKind="land"
-                  totalPrice={landTotalPrice}
-                  onTotalPriceChange={handleLandTotalPriceChange}
-                  pricePerSqm={props.publishedValueAtInheritance}
-                  onPricePerSqmChange={handleLandPricePerSqmChange}
-                  area={props.landAreaM2}
-                  jibun={props.jibun}
-                  referenceDate={props.inheritanceDate}
-                  label="상속개시일 직전 고시 개별공시지가 (원/㎡) 및 총액"
-                  hint="보충적평가액 = 공시지가(원/㎡) × 면적(㎡)"
+            <div className="space-y-1">
+              <label className="block text-caption text-muted-foreground font-medium">
+                동일세대 통산 거주기간 (개월)
+              </label>
+              <div className="w-32">
+                <DecimalInput
+                  value={asset.decedentCohabitationResidenceMonths}
+                  onChange={(v) => onChange({ decedentCohabitationResidenceMonths: v })}
                 />
-                {props.landAreaM2 && parseAmount(props.publishedValueAtInheritance) > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    보충적평가액 ≈{" "}
-                    {(
-                      parseFloat(props.landAreaM2) *
-                      parseAmount(props.publishedValueAtInheritance)
-                    ).toLocaleString()}
-                    원
-                  </p>
-                )}
               </div>
-            )}
-
-            {/* 주택: totalPrice = publishedValueAtInheritance (총액 직접 저장) */}
-            {(props.inheritanceAssetKind === "house_individual" ||
-              props.inheritanceAssetKind === "house_apart") && (
-              <StandardPriceInput
-                propertyKind={props.inheritanceAssetKind}
-                totalPrice={props.publishedValueAtInheritance}
-                onTotalPriceChange={props.onPublishedValueAtInheritanceChange}
-                jibun={props.jibun}
-                dong={props.dong}
-                ho={props.ho}
-                referenceDate={props.inheritanceDate}
-                label="상속개시일 직전 고시 주택가격 (원)"
-              />
-            )}
+              <p className="text-caption text-muted-foreground/70">
+                상속개시 전 피상속인과 동일세대로서 이 주택에 실제 거주한 기간(개월). 비과세 거주요건·표2
+                장특공제 대상 판정에 통산됩니다. 상속개시일 이후 상속인 본인 실거주는 &lsquo;거주기간&rsquo;에 별도 입력.
+              </p>
+            </div>
           </div>
-        )}
+        </ToggleCard>
+      )}
 
-        {props.valuationMode === "manual" && (
-          <div className="pl-4 pt-2">
-            <CurrencyInput
-              label="취득가액 (원)"
-              value={props.fixedAcquisitionPrice}
-              onChange={props.onFixedAcquisitionPriceChange}
-              required
-            />
-          </div>
-        )}
-      </div>
+      {/* 상가건물·오피스텔 상속 — 자산구분(토지/주택) 무의미(상증법 §60~66 평가액 직접). 안내만. */}
+      {!isMixedUse && asset.assetKind === "commercial_building" && (
+        <ToneCard
+          tone="amber"
+          title="취득가액 — 상속개시일 상증법 평가액"
+          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
+        >
+          <p className="text-xs text-amber-800">
+            상업용건물·오피스텔은 상속개시일 현재 상증법 §60~66 평가액(상속세 신고가액)을 취득가액으로 봅니다.
+            아래에 신고가액을 직접 입력하세요. (2005.1.1 전 상속은 §164⑥ 취득당시 기준시가와 비교하여 큰 금액 적용 —
+            아래 취득 정보의 §164⑥ 섹션 참조.)
+          </p>
+        </ToneCard>
+      )}
+
+      {/* 자산 구분(토지/개별주택/공동주택)은 상단 라디오를 폐지하고, 취득가액이 실제 필요로 하는
+          맥락에서만 노출한다: 토지/주택 판정은 상단 assetKind로 파생하고, 주택 개별/공동 선택은
+          보충적평가 보조계산·§164⑦ 환산 섹션 내부(InheritanceHouseKindPicker)에서만 물어본다.
+          핵심 입력은 아래 "평가방법 + 신고가액". */}
+
+      {/* 취득가액 산정 — 의제취득일(1985.1.1.) 전후 자동 분기 (pre/post, 비-겸용 전용) */}
+      {!isMixedUse && (
+        <InheritedAcquisitionDeemedSection asset={asset} onChange={onChange} transferDate={transferDate} />
+      )}
+
+      {/* 겸용주택 안내 — 자산 구분·취득가액 의제 특례 대신 §163⑨ 직접 산정 경로로 유도 */}
+      {isMixedUse && (
+        <ToneCard
+          tone="violet"
+          title="취득가액 — 겸용주택 상속개시일 평가액 자동 적용"
+          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
+        >
+          <p className="text-xs text-violet-800">
+            겸용주택(주택+상가)은 상속개시일 현재 상증법 §60~66 평가액을 취득가액으로 직접
+            사용합니다. 아래 &ldquo;주택 기준시가&rdquo;·&ldquo;상가 기준시가&rdquo; 섹션의
+            &ldquo;상속개시일&rdquo; 입력에서 산정하므로, 이 화면의 자산 구분·취득가액 의제
+            특례 입력은 표시하지 않습니다.
+          </p>
+        </ToneCard>
+      )}
     </div>
   );
 }

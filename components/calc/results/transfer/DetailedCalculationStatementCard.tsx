@@ -19,7 +19,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
-import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
+import { ExpandToggleButton, expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import {
   STATEMENT_GROUPS,
@@ -77,6 +77,28 @@ export function DetailedCalculationStatementCard({
     acquisitionDateOverride,
   );
 
+  // 렌더 대상 그룹만 추출 (빈 그룹 제외).
+  const visibleGroups = STATEMENT_GROUPS.map((group) => ({
+    group,
+    groupItems: group.itemKeys
+      .map((key) => items.get(key))
+      .filter((it): it is StatementItem => !!it),
+  })).filter(({ groupItems }) => groupItems.length > 0);
+
+  // 그룹별 펼침 상태 — 기본 전체 펼침(기존 동작 유지). 헤더의 전체 토글로 일괄 제어.
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(STATEMENT_GROUPS.map((g) => [g.id, true])),
+  );
+  const allOpen = visibleGroups.every(({ group }) => openMap[group.id]);
+  const setAllGroups = (value: boolean) =>
+    setOpenMap((prev) => {
+      const next = { ...prev };
+      for (const { group } of visibleGroups) next[group.id] = value;
+      return next;
+    });
+  const toggleGroup = (id: string) =>
+    setOpenMap((prev) => ({ ...prev, [id]: !prev[id] }));
+
   return (
     <div
       data-print-section="detailed-statement"
@@ -89,19 +111,31 @@ export function DetailedCalculationStatementCard({
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
               📋 계산결과 상세명세서
             </h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-caption text-slate-500 mt-0.5">
               신고서 양식 32 항목별 산식·변수값·법령 근거. 다건 모드는 자산별 펼침으로 검증.
             </p>
           </div>
-          {onPrint && (
-            <button
-              type="button"
-              onClick={onPrint}
-              className="print:hidden shrink-0 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium hover:bg-slate-200 transition-colors text-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-            >
-              🖨️ PDF
-            </button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {visibleGroups.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setAllGroups(!allOpen)}
+                aria-expanded={allOpen}
+                className={expandToggleClass("slate")}
+              >
+                {allOpen ? "▲ 전체 접기" : "▼ 전체 펼치기"}
+              </button>
+            )}
+            {onPrint && (
+              <button
+                type="button"
+                onClick={onPrint}
+                className="print:hidden rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium hover:bg-slate-200 transition-colors text-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                🖨️ PDF
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -119,7 +153,7 @@ export function DetailedCalculationStatementCard({
                   사유: {result.exemptReason}
                 </p>
               )}
-              <p className="text-[11px] text-emerald-700/70 mt-1">
+              <p className="text-caption text-emerald-700/70 mt-1">
                 아래 32 항목은 산식·법령 근거 검증용으로 표시됩니다 (대부분 0원).
               </p>
             </div>
@@ -129,13 +163,15 @@ export function DetailedCalculationStatementCard({
 
       {/* 그룹 섹션 — 빈 그룹은 자동 미렌더 (단건 모드 다건 합산 그룹 등) */}
       <div className="p-4 space-y-3">
-        {STATEMENT_GROUPS.map((group) => {
-          const groupItems = group.itemKeys
-            .map((key) => items.get(key))
-            .filter((it): it is StatementItem => !!it);
-          if (groupItems.length === 0) return null;
-          return <GroupSection key={group.id} group={group} items={groupItems} />;
-        })}
+        {visibleGroups.map(({ group, groupItems }) => (
+          <GroupSection
+            key={group.id}
+            group={group}
+            items={groupItems}
+            open={openMap[group.id]}
+            onToggle={() => toggleGroup(group.id)}
+          />
+        ))}
 
         {/* 전체 엔진 계산 과정 — 서브 토글 (이전 'TransferTaxResultView 계산 과정 상세 보기' 통합) */}
         <EngineStepsSubToggle steps={result.steps} />
@@ -220,8 +256,19 @@ function EngineStepsSubToggle({ steps }: { steps: import("@/lib/tax-engine/trans
 
 // ── 그룹 섹션 ──────────────────────────────────────────────────────
 
-function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[] }) {
+function GroupSection({
+  group,
+  items,
+  open,
+  onToggle,
+}: {
+  group: GroupDef;
+  items: StatementItem[];
+  open: boolean;
+  onToggle: () => void;
+}) {
   const tone = TONE_CLASSES[group.tone];
+  // 펼침 상태는 부모가 관리 (헤더의 전체 토글로 일괄 제어) — 인쇄 시 print-only-css-toggle로 항상 표시.
   return (
     <section
       className={cn(
@@ -235,15 +282,24 @@ function GroupSection({ group, items }: { group: GroupDef; items: StatementItem[
       <div className="flex items-center gap-2 mb-1">
         <span
           className={cn(
-            "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold select-none",
+            "flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none",
             tone.badge,
           )}
         >
           §
         </span>
         <h4 className={cn("text-sm font-semibold", tone.text)}>{group.title}</h4>
+        <span className="ml-auto">
+          <ExpandToggleButton open={open} onClick={onToggle} tone={group.tone} />
+        </span>
       </div>
-      <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800">
+      <div
+        className={cn(
+          "rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800",
+          // 화면: open일 때만. 인쇄: 항상 표시.
+          open ? "block" : "hidden print:block",
+        )}
+      >
         {items.map((item, i) => (
           <ItemRow key={i} item={item} />
         ))}
@@ -275,7 +331,7 @@ function ItemRow({ item }: { item: StatementItem }) {
               <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className="print:hidden inline-flex h-4 w-4 items-center justify-center rounded text-[10px] text-muted-foreground hover:text-foreground"
+                className="print:hidden inline-flex h-4 w-4 items-center justify-center rounded text-micro text-muted-foreground hover:text-foreground"
                 aria-label={open ? "자산별 닫기" : "자산별 펼치기"}
               >
                 {open ? "▲" : "▼"}
@@ -291,7 +347,7 @@ function ItemRow({ item }: { item: StatementItem }) {
             </p>
           )}
           {item.note && (
-            <p className="text-[11px] text-amber-700 mt-0.5 ml-6 italic break-words">
+            <p className="text-caption text-amber-700 mt-0.5 ml-6 italic break-words">
               ※ {item.note}
             </p>
           )}
@@ -336,7 +392,7 @@ function PerAssetRow({ row }: { row: PerAssetValue }) {
         </p>
         {row.formula && (
           // 자산별 산식(예: "330,000,000 × 339,492,000 / (...)") 줄바꿈 처리.
-          <p className="text-[10px] text-muted-foreground mt-0.5 ml-3 break-words leading-relaxed">
+          <p className="text-micro text-muted-foreground mt-0.5 ml-3 break-words leading-relaxed">
             {row.formula}
           </p>
         )}

@@ -186,7 +186,7 @@ function calcTransferComposite(
     };
   }
 
-  // 취득 ≤2000 — 2001 지수표 복합 합계 × 산정기준율(소령 §164⑤). 부분 구조 단일 그룹만 지원.
+  // 취득 ≤2000 — 2001 지수표 복합 × 산정기준율(소령 §164⑤). 부분별 구조 그룹이 상이하면 부분별 적용.
   const base2001 = calcCompositeForYear(parts, 2001, acqLandPrice, input.builtYear, {
     usageNoSelector: acqSelector,
     adjustmentEnabled: false,
@@ -197,20 +197,36 @@ function calcTransferComposite(
   if (groups.some((g) => g === undefined)) {
     throw new BuildingStdPriceError("취득(2000이전) 복합: 산정기준율표 미수록 구조(신공법) 포함");
   }
-  if (new Set(groups).size > 1) {
-    throw new BuildingStdPriceError("취득(2000이전) 복합: 부분별 산정기준율 그룹 상이는 미지원(동일 구조로 입력)");
-  }
-  const acqBaseRate = resolveAcqBaseRate(groups[0]!, input.builtYear, acquisitionYear);
-  if (acqBaseRate === undefined) {
+  const rates = groups.map((g) => resolveAcqBaseRate(g!, input.builtYear, acquisitionYear));
+  if (rates.some((r) => r === undefined)) {
     throw new BuildingStdPriceError(
-      `취득(2000이전) 복합: 산정기준율 미수록(그룹 ${groups[0]}·신축 ${input.builtYear}·취득 ${acquisitionYear})`,
+      `취득(2000이전) 복합: 산정기준율 미수록(신축 ${input.builtYear}·취득 ${acquisitionYear})`,
     );
   }
-  const convertedTotal = Math.floor(base2001.total * acqBaseRate);
+  let convertedTotal: number;
+  let acqBaseRate: number | undefined;
+  if (new Set(groups).size === 1) {
+    // 단일 그룹 — 합계 × 단일 산정기준율(기존 산식·회귀 0 유지).
+    acqBaseRate = rates[0]!;
+    convertedTotal = Math.floor(base2001.total * acqBaseRate);
+  } else {
+    // 부분별 산정기준율 그룹 상이 — 각 부분 2001 기준시가 × 부분 그룹 rate 후 합산.
+    // 부속시설 혼재(breakdowns 인터리브) 시 부분 1:1 귀속 불가 → 미지원(명시).
+    if (base2001.breakdowns.length !== parts.length) {
+      throw new BuildingStdPriceError(
+        "취득(2000이전) 복합: 부분별 산정기준율 그룹 상이 + 부속시설 혼재는 미지원(부속 없는 복합으로 입력)",
+      );
+    }
+    acqBaseRate = undefined; // 계산서 ※표는 "부분별" 표기
+    convertedTotal = base2001.breakdowns.reduce(
+      (s, bd, i) => s + Math.floor(bd.standardPrice * rates[i]!),
+      0,
+    );
+  }
   return {
     transferComposite: { breakdowns: transfer.breakdowns, total: transfer.total },
     acquisitionComposite: { breakdowns: base2001.breakdowns, total: base2001.total },
-    acqBaseConversion: { total2001: base2001.total, acqBaseRate, convertedTotal },
+    acqBaseConversion: { total2001: base2001.total, ...(acqBaseRate !== undefined && { acqBaseRate }), convertedTotal },
     ancillaryApportionment: transfer.apportionment,
     warnings,
     legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
@@ -338,6 +354,17 @@ export function calcBuildingStandardPrice(
       ? calcPointBreakdown(acquisitionYear, acqPoint, input.floorArea, input.builtYear, 1.0, "취득시")
       : calcAcqBaseBreakdown(acquisitionYear, acqPoint, input.floorArea, input.builtYear);
 
+  // 취득 ≤2000 단독: 산정기준율 환산 echo(계산서 ※표 소스 — 복합 경로 :213과 대칭).
+  // total2001 = 2001 지수표 ㎡당 × 면적(rate 적용 전, stdPriceFromPerM2로 정수화) / convertedTotal = 적용 후.
+  const acqBaseConversion =
+    acquisition.acqBaseRate !== undefined
+      ? {
+          total2001: stdPriceFromPerM2(acquisition.pricePerM2 ?? 0, input.floorArea).standardPrice,
+          acqBaseRate: acquisition.acqBaseRate,
+          convertedTotal: acquisition.standardPrice,
+        }
+      : undefined;
+
   // 동일연도(§164⑧) 환산 분기
   if (transferYear === acquisitionYear) {
     if (input.holdingMonths === undefined || !(input.holdingMonths > 0)) {
@@ -385,6 +412,7 @@ export function calcBuildingStandardPrice(
     return {
       acquisition,
       transfer,
+      ...(acqBaseConversion && { acqBaseConversion }),
       sameYearAdjusted: true,
       warnings,
       legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
@@ -402,5 +430,11 @@ export function calcBuildingStandardPrice(
     1.0,
     "양도시",
   );
-  return { acquisition, transfer, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
+  return {
+    acquisition,
+    transfer,
+    ...(acqBaseConversion && { acqBaseConversion }),
+    warnings,
+    legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
+  };
 }

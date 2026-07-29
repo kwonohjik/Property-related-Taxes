@@ -16,6 +16,7 @@
 
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface PostListingDetailCardProps {
   result: StockTransferResult;
@@ -32,7 +33,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
         <h3 className="font-semibold text-violet-900">
           취득 후 상장 환산취득가 (소령 §165⑤)
         </h3>
-        <span className="text-[10px] uppercase rounded-full bg-violet-200 text-violet-800 px-2 py-0.5">
+        <span className="text-micro uppercase rounded-full bg-violet-200 text-violet-800 px-2 py-0.5">
           {post.detail?.mode ?? "simple"} mode
         </span>
       </div>
@@ -41,10 +42,12 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
       <div className="space-y-1 text-xs text-violet-800">
         {post.detail?.closing && (
           <p>
-            상장일 이후 1개월 종가평균 = 합계{" "}
-            {post.detail.closing.sum.toLocaleString()} ÷ 거래일{" "}
-            {post.detail.closing.tradingDays}일 ={" "}
-            <strong>{post.detail.closing.avg.toLocaleString()}</strong>
+            상장일 이후 1개월 종가평균 ={" "}
+            <Frac
+              top={`합계 ${post.detail.closing.sum.toLocaleString()}`}
+              bottom={`거래일 ${post.detail.closing.tradingDays}일`}
+            />{" "}
+            = <strong>{post.detail.closing.avg.toLocaleString()}</strong>
           </p>
         )}
         {post.capitalEventTruncation && (
@@ -78,16 +81,23 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             </p>
             <p>
               보정 상장일 평가액 = 직전 {post.acquisitionYearPerShareValue.toLocaleString()}
-              {" "}+ (직전 − 전전) × 보유월수 ÷ 직전사업연도 월수(
-              {post.monthlyAccrualDetail.priorBizYearMonths}) ={" "}
-              <strong>{post.monthlyAccrualDetail.adjustedListingYearPerShareValue.toLocaleString()}</strong>
+              {" "}+ (직전 − 전전) ×{" "}
+              <Frac
+                top="보유월수"
+                bottom={`직전사업연도 월수 ${post.monthlyAccrualDetail.priorBizYearMonths}`}
+              />{" "}
+              = <strong>{post.monthlyAccrualDetail.adjustedListingYearPerShareValue.toLocaleString()}</strong>
             </p>
           </div>
         )}
         <p>
           환산비율 ={" "}
-          {post.monthlyAccrualDetail ? "취득연도 ÷ 보정 상장일 평가액" : "취득연도 ÷ 상장연도"} ={" "}
-          <strong>{post.conversionRatio.toFixed(5)}</strong>
+          {post.monthlyAccrualDetail ? (
+            <Frac top="취득연도" bottom="보정 상장일 평가액" />
+          ) : (
+            <Frac top="취득연도" bottom="상장연도" />
+          )}{" "}
+          = <strong>{post.conversionRatio.toFixed(5)}</strong>
         </p>
         <p className="font-medium">
           1주당 취득기준시가 = 종가평균 × 환산비율 (절사) ={" "}
@@ -95,22 +105,28 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           <span className="text-violet-600">(§163⑨ 분자)</span>
         </p>
         <p className="font-medium text-violet-900">
-          §163⑨ 환산취득가 = 양도가 × (1주당 취득기준 ÷ 1주당 양도기준)
+          §163⑨ 환산취득가 = 양도가 × <Frac top="1주당 취득기준" bottom="1주당 양도기준" />
           <br />
-          = <strong>{result.transferPrice.toLocaleString()}</strong> × (
-          <strong>{(result.valuationDetail?.conversionAcqStdPerShare ?? post.finalPerShareValue).toLocaleString()}</strong> ÷{" "}
-          <strong>{(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()}</strong>) ={" "}
-          <strong>{result.acquisitionPrice.toLocaleString()}</strong>
+          = <strong>{result.transferPrice.toLocaleString()}</strong> ×{" "}
+          <Frac
+            top={
+              <strong>
+                {(result.valuationDetail?.conversionAcqStdPerShare ?? post.finalPerShareValue).toLocaleString()}
+              </strong>
+            }
+            bottom={<strong>{(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()}</strong>}
+          />{" "}
+          = <strong>{result.acquisitionPrice.toLocaleString()}</strong>
         </p>
         {result.valuationDetail?.transferDailyModeUsed && (
-          <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+          <p className="text-caption text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
             ✓ 양도일 직전 1개월 종가 일자별 입력 모드 — 자동 산정 평균{" "}
             <strong>{(result.valuationDetail?.transferDailyAverage ?? 0).toLocaleString()}</strong>
             {" "}을 §163⑨ 환산 분모로 사용
           </p>
         )}
         {result.valuationDetail?.conversionUsedFallback && (
-          <p className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1">
+          <p className="text-caption text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1">
             ⚠ 양도일 직전 1개월 종가평균 미입력 — 1주당 양도가({(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()})를 §163⑨ 환산 분모로 자동 사용.
             정확한 환산을 위해 PostListing 카드의 &quot;양도일 직전 1개월 종가 평균&quot;에 실제 값을 입력하세요.
           </p>
@@ -118,13 +134,13 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
       </div>
 
       {/* 80% 하한 미적용 안내 (Round 4 C-05) */}
-      <div className="mt-2 pt-2 border-t border-violet-200 text-[10px] text-violet-700">
+      <div className="mt-2 pt-2 border-t border-violet-200 text-micro text-violet-700">
         ※ 환산비율 산정에는 80% 하한이 적용되지 않습니다 (양도일 비상장 평가와 별개 — §165④1 단서)
         {post.monthlyAccrualApplied && " · 시행규칙 §81④ 월할 가산 발동"}
       </div>
 
       {/* 법조문 배지 — G-07 LawArticleModal 통합 */}
-      <div className="mt-1 flex flex-wrap gap-1 text-[10px]">
+      <div className="mt-1 flex flex-wrap gap-1 text-micro">
         <LawArticleModal
           legalBasis="소득세법 시행령 §165 ⑤"
           label="§165⑤"

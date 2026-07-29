@@ -74,6 +74,7 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
 
   const creditInput: GiftTaxCreditInput = {
     foreignTaxPaid: parseAmount(form.foreignTaxPaid) || undefined,
+    foreignGiftTaxBase: parseAmount(form.foreignGiftTaxBase) || undefined, // §21① 점유비 한도 분자 (H-32)
     isFiledOnTime: form.isFiledOnTime,
     specialTreatment: form.specialTreatment || undefined,
     // G-M7: startupInvestmentCompleted — startup 선택 시에만 전달

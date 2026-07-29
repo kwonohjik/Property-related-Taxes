@@ -7,8 +7,14 @@
  */
 
 import type { AcquisitionTaxInput, BurdenedGiftBreakdown } from "./types/acquisition.types";
-import { calcBurdenedGiftTax, calcTaxWithAdditional, type AdditionalTaxResult } from "./acquisition-tax-rate";
-import { assessMultiHouseSurcharge, assessGiftSurcharge } from "./acquisition-tax-surcharge";
+import { calcBurdenedGiftTax, calcTaxWithAdditional, SURCHARGE_BASE_STANDARD_RATE, type AdditionalTaxResult } from "./acquisition-tax-rate";
+import {
+  assessMultiHouseSurcharge,
+  assessGiftSurcharge,
+  resolveRegulatedAreaStatus,
+  assessTemporaryTwoHouse,
+  isExemptFromSurcharge_LowValueV2,
+} from "./acquisition-tax-surcharge";
 
 export interface BurdenedGiftComputation {
   acquisitionTax: number;
@@ -37,20 +43,47 @@ export function computeBurdenedGiftResult(
   let onerousSurchargeRate: number | undefined;
   let gratuitousSurchargeRate: number | undefined;
   if (input.propertyType === "housing") {
-    const multi = assessMultiHouseSurcharge({
-      acquiredBy: input.acquiredBy,
-      isHousing: true,
-      isRegulatedArea: input.isRegulatedArea ?? false,
-      houseCount: resolvedHouseCount,
-      isOnerousAcquisition: true, // 유상분(채무인수)은 유상거래로 판정
+    // [C-1] 유상분 §13의2① 다주택 중과에도 메인 assessSurcharge와 동일한 중과배제를 적용:
+    //   §13의2④ 지정 전 계약(조정지역 재정의) · §28의2 1호 저가주택 · §28의5 일시적 2주택.
+    //   (기존에는 assessMultiHouseSurcharge 직접 호출로 배제로직을 우회해 배제 대상도 8/12% 부과.)
+    const effectiveIsRegulatedArea = resolveRegulatedAreaStatus(input.isRegulatedArea, {
+      contractDateBeforeRegulation: input.contractDateBeforeRegulation,
+      hasContractDepositProof: input.hasContractDepositProof,
     });
-    if (multi.isSurcharged && multi.surchargeRate !== undefined) {
-      onerousSurchargeRate = multi.surchargeRate;
+    const stdValue = input.wholeHouseStandardValue ?? 0;
+    const lowValueExcluded =
+      stdValue > 0 &&
+      isExemptFromSurcharge_LowValueV2(
+        stdValue,
+        input.isMetropolitanRegion ?? false,
+        input.isUrbanRegenerationArea ?? false
+      );
+    const tempTwoHouseExcluded = assessTemporaryTwoHouse({
+      houseCount: resolvedHouseCount,
+      isTemporaryTwoHouse: input.isTemporaryTwoHouse,
+      balanceDate: input.balancePaymentDate,
+      previousHouseRegion: input.previousHouseRegion,
+      newHouseRegion: input.newHouseRegion,
+    }).isExcluded;
+
+    if (!lowValueExcluded && !tempTwoHouseExcluded) {
+      const multi = assessMultiHouseSurcharge({
+        acquiredBy: input.acquiredBy,
+        isHousing: true,
+        isRegulatedArea: effectiveIsRegulatedArea,
+        houseCount: resolvedHouseCount,
+        isOnerousAcquisition: true, // 유상분(채무인수)은 유상거래로 판정
+      });
+      if (multi.isSurcharged && multi.surchargeRate !== undefined) {
+        onerousSurchargeRate = multi.surchargeRate;
+      }
     }
     const gift = assessGiftSurcharge({
       isHousing: true,
       isRegulatedArea: input.isRegulatedArea ?? false,
-      wholeStdValue: input.wholeHouseStandardValue ?? 0,
+      // R3-03: 단일주택 부담부증여 무상분도 wholeHouseStandardValue 미입력 시
+      // 해당 주택 시가표준액으로 §13의2② 3억 임계 판정.
+      wholeStdValue: input.wholeHouseStandardValue ?? input.standardValue ?? 0,
       giftorIs1HHHolder: input.giftorIs1HHHolder,
       giftorRelation: input.giftorRelation,
       specialRateType: input.specialRateType,
@@ -66,13 +99,25 @@ export function computeBurdenedGiftResult(
   });
 
   // [M5] 농특세·지방교육세도 유상분(매매세율)·무상분(증여세율)에 각각 산출 후 합산.
+  // [R3-01/R3-02] 표준세율 기준 부가세: §13의2 중과분(유상 §13의2①·무상 §13의2②)은
+  // §11①7나 4% 기준, 비중과분은 실제 적용세율(=표준세율) 기준.
   const onerousAdd = calcTaxWithAdditional(
     onerousTaxBase, bg.onerousRate, bg.onerousTax, input.propertyType, input.areaSqm,
-    { acquisitionCause: "purchase", isSurcharged: onerousSurchargeRate !== undefined, isRuralRegion: input.isRuralRegion }
+    {
+      acquisitionCause: "purchase",
+      isSurcharged: onerousSurchargeRate !== undefined,
+      isRuralRegion: input.isRuralRegion,
+      basicRate: onerousSurchargeRate !== undefined ? SURCHARGE_BASE_STANDARD_RATE : bg.onerousRate,
+    }
   );
   const gratuitousAdd = calcTaxWithAdditional(
     gratuitousTaxBase, bg.gratuitousRate, bg.gratuitousTax, input.propertyType, input.areaSqm,
-    { acquisitionCause: "gift", isSurcharged: gratuitousSurchargeRate !== undefined, isRuralRegion: input.isRuralRegion }
+    {
+      acquisitionCause: "gift",
+      isSurcharged: gratuitousSurchargeRate !== undefined,
+      isRuralRegion: input.isRuralRegion,
+      basicRate: gratuitousSurchargeRate !== undefined ? SURCHARGE_BASE_STANDARD_RATE : bg.gratuitousRate,
+    }
   );
 
   return {

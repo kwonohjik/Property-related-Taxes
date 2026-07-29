@@ -61,6 +61,7 @@ function run(corp: Heir) {
     ],
     presumedItems: [],
     debtItems: [],
+    funeralDeduction: 0,
     priorGifts: [],
     presumedAddedById: new Map(),
     valuatedAmountById: new Map([
@@ -74,6 +75,7 @@ function run(corp: Heir) {
     corporateGiftTaxBase: 0,
     grossEstateWithGifts: 2_000_000_000,
     isFiledOnTime: true,
+    filingCreditRate: 0.03,
   });
 }
 

@@ -7,6 +7,7 @@
  */
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: NonNullable<StockTransferResult["capitalAdjustmentsDetail"]>;
@@ -76,7 +77,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
         <p>
           환산 1주당 단가 ={" "}
           <strong className="font-mono">{fmt(detail.adjustedPerShareCost)}원</strong>{" "}
-          (= 총 취득원가 ÷ 환산 주식수)
+          (= <Frac top="총 취득원가" bottom="환산 주식수" />)
         </p>
         <p>
           총 취득원가 (불변) ={" "}

@@ -13,6 +13,7 @@
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -33,13 +34,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-violet-700">등록·신분</p>
-        </div>
+      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
 
         <RegistrationFields
           registrationDate={value.registrationDate}
@@ -61,7 +56,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             />
             <span className="text-xs text-muted-foreground">년 (1986~2000 신축)</span>
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          <p className="mt-1 text-micro text-muted-foreground">
             §97①1호 — 1986~2000년 사이 신축된 주택
           </p>
         </div>
@@ -74,17 +69,11 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
           description="전용면적 85㎡(수도권 외 읍면 100㎡) 이하"
           tone="sky"
         />
-      </div>
+      </ToneCard>
 
       {/* ② 단서 분기 (rental_97_proviso만) */}
       {isProviso && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
-              ②
-            </span>
-            <p className="text-xs font-semibold text-amber-700">단서 분기 — 100% 감면 요건</p>
-          </div>
+        <ToneCard tone="amber" sectionNum="②" title="단서 분기 — 100% 감면 요건" noDark>
           <RadioCardGroup
             name="provisoCase_97"
             tone="amber"
@@ -108,7 +97,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
               },
             ]}
           />
-        </div>
+        </ToneCard>
       )}
 
       {/* ③④ 공통 필드 */}

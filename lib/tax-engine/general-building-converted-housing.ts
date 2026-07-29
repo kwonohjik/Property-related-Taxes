@@ -9,6 +9,7 @@
  */
 
 import type { GeneralBuildingInput } from "./general-building-valuation";
+import { safeMultiplyThenDivide } from "./tax-utils";
 
 /**
  * §99-164-10 환산주택가격 산식.
@@ -25,7 +26,11 @@ export function calcConvertedHousingPrice(input: GeneralBuildingInput): number {
   const firstDiscTotal = firstDiscLand + firstDiscBuilding;
   if (firstDiscTotal <= 0) return 0;
   const acqTotal = acqLandStd + acqBuildingStd;
-  return Math.floor((input.firstDisclosurePrice ?? 0) * acqTotal / firstDiscTotal);
+  // 2026-07-29 정정(#591 감사 R7): `Math.floor(a * b / c)`는 `a * b`가 2^53을 넘으면
+  //   부동소수 반올림으로 ±1원이 틀어진다(기준시가 억 단위 곱에서 실제 발생).
+  //   곱셈을 BigInt로 안전하게 처리하는 `safeMultiplyThenDivide`로 교체
+  //   (memory `feedback_safemul_decimal_apportion_precision`).
+  return safeMultiplyThenDivide(input.firstDisclosurePrice ?? 0, acqTotal, firstDiscTotal);
 }
 
 /**
@@ -46,7 +51,7 @@ export function applyConvertedHousingPriceOverride(
   if (acqTotal <= 0) return input;
   const converted = calcConvertedHousingPrice(input);
   if (converted <= 0) return input;
-  const convertedLand = Math.floor(converted * acqLandStd / acqTotal);
+  const convertedLand = safeMultiplyThenDivide(converted, acqLandStd, acqTotal);
   const convertedBuilding = converted - convertedLand;
   return {
     ...input,

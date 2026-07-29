@@ -60,7 +60,7 @@ function autoFillValue(raw: string, s: DeductionSuggestion): string {
 
 function EmptyGroupNotice() {
   return (
-    <p className="text-[11px] text-gray-400 dark:text-gray-500 py-1">
+    <p className="text-caption text-gray-400 dark:text-gray-500 py-1">
       위 체크리스트에서 항목을 선택하면 입력 섹션이 열립니다.
     </p>
   );
@@ -99,6 +99,7 @@ export function Step4({
     () => ({
       familyBusiness: isManualItemActive(form, "familyBusiness"),
       legatee: isManualItemActive(form, "legatee"),
+      heirWaiver: isManualItemActive(form, "heirWaiver"),
       priorGiftDeduction: isManualItemActive(form, "priorGiftDeduction"),
       disasterAdjust: isManualItemActive(form, "disasterAdjust"),
       casualtyLoss: isManualItemActive(form, "casualtyLoss"),
@@ -187,7 +188,7 @@ export function Step4({
         <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
           공제·세액공제 입력 (선택)
         </h3>
-        <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-caption text-gray-500 dark:text-gray-400">
           ⓘ 자산 카드·상속인 구성에서 도출 가능한 값은 자동으로 적용됩니다.
           수동 항목은 아래 체크리스트에서 선택하면 입력 섹션이 열립니다.
         </p>
@@ -214,6 +215,7 @@ export function Step4({
           > = {
             familyBusiness: "deduction",
             legatee: "adjust",
+            heirWaiver: "adjust",
             priorGiftDeduction: "adjust",
             disasterAdjust: "adjust",
             casualtyLoss: "adjust",
@@ -374,7 +376,7 @@ export function Step4({
                   <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
                     직접 입력 모드 (Phase E escape hatch)
                   </p>
-                  <p className="text-[10px] text-violet-700 dark:text-violet-300">
+                  <p className="text-micro text-violet-700 dark:text-violet-300">
                     요건 판정 생략 — 입력값 그대로 적용 (한도 600억 유지). 위 가업재산가액 입력보다 우선.
                   </p>
                   <CurrencyInput
@@ -413,6 +415,16 @@ export function Step4({
                 value={form.legateeAmountNonHeir}
                 onChange={(v) => set({ legateeAmountNonHeir: v })}
                 hint="상속인이 아닌 자(수유자 손자녀·기타)에게 유증한 재산가액"
+              />
+            )}
+
+            {/* §24 ②2호 선순위 상속포기 → 후순위 수령 (대습상속 제외) */}
+            {manualActive.heirWaiver && (
+              <CurrencyInput
+                label="상속포기 후순위 상속 금액 (§24② 분자 차감)"
+                value={form.heirWaiverAmount}
+                onChange={(v) => set({ heirWaiverAmount: v })}
+                hint="선순위 상속인의 상속포기로 다음 순위 상속인이 상속받은 재산가액. 대습상속(선순위 사망·결격)은 제외 — 상속포기 시에만 입력"
               />
             )}
 
@@ -466,7 +478,7 @@ export function Step4({
       >
         {/* 세대생략 안내 — 항상 노출(read-only) */}
         {form.heirs.some((h) => h.isGenerationSkipBeneficiary) && (
-          <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20 px-3 py-2 text-[11px] text-sky-800 dark:text-sky-200">
+          <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:border-sky-700 dark:bg-sky-900/20 px-3 py-2 text-caption text-sky-800 dark:text-sky-200">
             ℹ️ <strong>세대생략 할증과세 (§27)</strong> — 상속인 등록 단계에서 수유자에 체크한
             세대생략 대상 정보를 기반으로 자동 산출됩니다. 별도 입력이 필요하지 않습니다.
           </div>
@@ -559,7 +571,7 @@ export function Step4({
 
         {/* 수동 항목 모두 미체크 시 안내 */}
         {groupCManualVisibleCount === 0 && (
-          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+          <p className="text-caption text-gray-400 dark:text-gray-500">
             외국납부세액공제·단기재상속공제가 해당하면 위 체크리스트에서 선택하세요.
           </p>
         )}

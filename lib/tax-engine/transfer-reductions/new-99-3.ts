@@ -29,7 +29,7 @@
 
 import { addYears } from "date-fns";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
-import { applyRate } from "../tax-utils";
+import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 
 // ============================================================================
 // 타입 정의
@@ -53,7 +53,16 @@ export interface New993Input {
   /** 양도시 기준시가 */
   standardPriceAtTransfer: number;
   /** 양도가액 (고가주택 판정용) */
-  transferPrice: number;
+  /**
+   * **물건 전체(100%) 양도가액** — 고가주택 가액 요건(§99의3·§99) 판정 전용.
+   *
+   * ⚠️ 지분 스케일된 `transferPrice`를 넣지 말 것. 감면 가액 요건은 **물건 전체 가액** 기준이라
+   *    지분분을 쓰면 문턱이 1/지분율만큼 올라가 판정이 뒤집힌다 — 지분 50%면 물건 전체 24억까지
+   *    12억 고가주택 배제를 피해 간다(실측, 2026-07-28 정정).
+   *    §89 12억 안분은 이미 `totalPropertyTransferPrice`(100% echo)로 처리돼 있었고
+   *    (`transfer-tax.ts:447-465`), 같은 고가주택 개념인 이 경로만 남아 있었다.
+   */
+  wholePropertyTransferPrice: number;
   /** 전용면적 (㎡) — 고가주택 면적 기준 (2002.12.31 이전) */
   exclusiveAreaSqm: number;
   /** 지역 — 가격 급등 지역(speculation) 내/외 */
@@ -107,6 +116,11 @@ export interface New993Result {
   reducibleTransferIncome: number;
   /** 5년 안분 비율 (5년 후 양도 시) — UI 표시용 */
   fiveYearRatio: number;
+  /** [echo] 감면대상 산식 구성값 — 결과뷰 Frac 산식 표시용(값 인라인). 5년 후 안분 케이스에서 세팅. */
+  transferIncomeApplied?: number;
+  standardPriceAtAcquisition?: number;
+  standardPriceAt5Years?: number;
+  standardPriceAtTransfer?: number;
   /** 부호 케이스 분류 */
   signCase: New993SignCase;
   /** 산식 단계 (UI 표시용) */
@@ -163,22 +177,23 @@ const HV_2021_12_07 = D("2021-12-07");
  */
 export function isHighValueHouseUnder993(
   baseDate: Date,
-  transferPrice: number,
+  /** **물건 전체(100%) 양도가액**. 지분분을 넘기면 판정이 뒤집힌다 — New993Input 주석 참조. */
+  wholePropertyTransferPrice: number,
   exclusiveAreaSqm: number,
 ): boolean {
   if (baseDate <= HV_2002_09_30) {
-    return exclusiveAreaSqm >= 165 && transferPrice > 600_000_000;
+    return exclusiveAreaSqm >= 165 && wholePropertyTransferPrice > 600_000_000;
   }
   if (baseDate <= HV_2002_12_31) {
-    return exclusiveAreaSqm >= 149 && transferPrice > 600_000_000;
+    return exclusiveAreaSqm >= 149 && wholePropertyTransferPrice > 600_000_000;
   }
   if (baseDate <= HV_2008_10_05) {
-    return transferPrice > 600_000_000;
+    return wholePropertyTransferPrice > 600_000_000;
   }
   if (baseDate <= HV_2021_12_07) {
-    return transferPrice > 900_000_000;
+    return wholePropertyTransferPrice > 900_000_000;
   }
-  return transferPrice > 1_200_000_000;
+  return wholePropertyTransferPrice > 1_200_000_000;
 }
 
 // ============================================================================
@@ -263,7 +278,7 @@ function checkIneligibility(input: New993Input): New993IneligibleReason[] {
   // 6. 고가주택 (단서)
   const hvBaseDate =
     input.contractDate ?? input.usageApprovalDate ?? input.acquisitionDate;
-  if (isHighValueHouseUnder993(hvBaseDate, input.transferPrice, input.exclusiveAreaSqm)) {
+  if (isHighValueHouseUnder993(hvBaseDate, input.wholePropertyTransferPrice, input.exclusiveAreaSqm)) {
     reasons.push({
       code: "HIGH_VALUE_HOUSE",
       message: `고가주택(소득세법 §89①3호)은 §99의3 ① 단서로 적용 배제됩니다 (적용기준일 ${hvBaseDate.toISOString().split("T")[0]} 기준)`,
@@ -298,11 +313,22 @@ export function calcSignedAllocation(
 ): FiveYearAllocation {
   // 부호 4가지 케이스 (PDF 부호 표)
   if (numerator > 0 && denominator > 0) {
-    // (+,+) 정상 안분
+    // (+,+) 정상 안분 — 감면대상 = 양도소득금액 × (5년시점 − 취득시) ÷ (양도시 − 취득시)
     const ratio = numerator / denominator;
-    // 양도소득금액 × 비율 (정수 차감, 원 미만 절사)
-    // 원 단위 정확성: 분자·분모 정수 → BigInt 우회 불필요 (값이 커도 Number 충분)
-    const reducible = Math.floor(transferIncome * ratio);
+
+    // ① 정수 분수연산 (2026-07-29 정정, #591 감사 R7 — **1원 과소산정**)
+    //    종전 주석은 "분자·분모 정수 → BigInt 우회 불필요"라고 단정했으나, 문제는 크기가 아니라
+    //    **중간 비율이 부동소수**라는 점이었다: 70,000,000 ÷ 100,000,000 = 0.7 은 2진수로
+    //    정확히 표현되지 않아 700,000,000 × 0.7 = 489,999,999.99999994 → floor 489,999,999.
+    //    곱셈을 먼저 하고 나누는 safeMultiplyThenDivide로 정확값 490,000,000을 얻는다
+    //    (memory `feedback_safemul_decimal_apportion_precision` · `feedback_applyrate_fractional_rate_one_won_error`).
+    const raw = safeMultiplyThenDivide(transferIncome, numerator, denominator);
+
+    // ② 양도소득금액 상한 클램프 (조특법 §99의3① — "5년간 발생한 양도소득금액")
+    //    5년시점 기준시가 > 양도시 기준시가면 numerator > denominator 라 ratio > 1이 되어
+    //    감면 대상 소득금액이 실제 양도소득금액을 넘어섰다. 형제 조문은 이미 같은 상한을 둔다:
+    //    `new-99.ts:267` · `unsold-98-8.ts:302` (둘 다 Math.min(…, max(0, transferIncome))).
+    const reducible = Math.min(raw, Math.max(0, transferIncome));
     return { ratio, signCase: "all_positive", reducibleIncome: reducible };
   }
   if (numerator < 0 && denominator > 0) {
@@ -479,6 +505,11 @@ export function evaluateNew993(input: New993Input): New993Result {
     isWithin5Years,
     reducibleTransferIncome,
     fiveYearRatio,
+    // 결과뷰 Frac 산식 표시용 echo (계산 미사용 — 표시 전용)
+    transferIncomeApplied: input.transferIncome,
+    standardPriceAtAcquisition: input.standardPriceAtAcquisition,
+    standardPriceAt5Years: input.standardPriceAt5Years,
+    standardPriceAtTransfer: input.standardPriceAtTransfer,
     signCase,
     formulaSteps,
     taxReductionForRuralSurtax,

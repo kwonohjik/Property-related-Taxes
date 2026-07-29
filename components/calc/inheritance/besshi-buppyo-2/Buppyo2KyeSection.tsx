@@ -13,12 +13,12 @@ const NBSP = " ";
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
 const KEY =
-  "border border-black p-1 bg-gray-100 dark:bg-gray-800 text-[11px] font-semibold text-center align-middle";
+  "border border-black p-1 bg-gray-100 dark:bg-gray-800 text-caption font-semibold text-center align-middle";
 const GRP =
-  "border border-black p-1 bg-gray-50 dark:bg-gray-900 text-[10px] text-center align-middle";
-const LBL = "border border-black p-1 text-[11px] text-left align-middle";
+  "border border-black p-1 bg-gray-50 dark:bg-gray-900 text-micro text-center align-middle";
+const LBL = "border border-black p-1 text-caption text-left align-middle";
 const AMT =
-  "border border-black p-1 text-[11px] text-right font-mono tabular-nums whitespace-nowrap align-middle";
+  "border border-black p-1 text-caption text-right font-mono tabular-nums whitespace-nowrap align-middle";
 
 /** 계 행 key → 금액. 공란(비과세·과세불산입 세부)은 null. UI 무산술. */
 function valueFor(key: Buppyo2KyeKey, t: Buppyo2SectionTotal): number | null {
@@ -73,7 +73,7 @@ export function Buppyo2KyeSection({
 }) {
   return (
     <div data-testid={`buppyo2-heir-${idx}-kye-wrap`}>
-      <p className="mb-1 text-[11px] font-semibold">계</p>
+      <p className="mb-1 text-caption font-semibold">계</p>
       <table className="w-full border-collapse">
         <tbody>
           {BP2_KYE_ROWS.map((row, i) => {

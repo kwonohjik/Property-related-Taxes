@@ -11,6 +11,7 @@ import { describe, it, expect } from "vitest";
 import { calcGiftTaxCredits } from "@/lib/tax-engine/inheritance-gift-tax-credit";
 import type { GiftTaxCreditInput } from "@/lib/tax-engine/types/inheritance-gift.types";
 
+const GIFT_DATE = "2024-06-01"; // §69 현행 3% (2019~) — giftDate required 승격(G-2)
 const BASE_INPUT: GiftTaxCreditInput = {
   isFiledOnTime: true,
 };
@@ -21,6 +22,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: BASE_INPUT,
       computedTax: 100_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
     });
     expect(result.giftTaxCredit).toBe(0);
     expect(result.totalComputedTaxWithSurcharge).toBe(100_000_000);
@@ -34,6 +36,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: BASE_INPUT,
       computedTax: 200_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       priorGiftComputedTax: 100_000_000,
       priorGiftAddedTaxBase: 800_000_000,
       aggregatedTaxBase: 1_000_000_000,
@@ -49,6 +52,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: BASE_INPUT,
       computedTax: 380_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       priorGiftComputedTax: 240_000_000,
       priorGiftAddedTaxBase: 600_000_000,
       aggregatedTaxBase: 1_000_000_000,
@@ -67,6 +71,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: BASE_INPUT,
       computedTax: 100_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       priorGiftComputedTax: 50_000_000,
       priorGiftAddedTaxBase: 200_000_000,
       aggregatedTaxBase: 0, // <-- 분기 차단
@@ -81,6 +86,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: { ...BASE_INPUT, isFiledOnTime: false },
       computedTax: 100_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
     });
     expect(result.filingCredit).toBe(0);
     expect(result.filingCreditBase).toBe(100_000_000); // echo는 그대로
@@ -92,6 +98,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: BASE_INPUT,
       computedTax: 300_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       priorGiftComputedTax: 300_000_000,
       priorGiftAddedTaxBase: 1_000_000_000,
       aggregatedTaxBase: 1_000_000_000,
@@ -111,6 +118,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: { ...BASE_INPUT, specialTreatment: "startup" },
       computedTax: 300_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       giftAmount: 1_000_000_000,
     });
     expect(result.totalComputedTaxWithSurcharge).toBe(300_000_000); // 일반세액 그대로
@@ -135,6 +143,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       },
       computedTax: 400_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       foreignPropertyRatio: 1,
       priorGiftComputedTax: 100_000_000,
       priorGiftAddedTaxBase: 250_000_000,
@@ -153,6 +162,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: BASE_INPUT,
       computedTax: 380_000_000,
       generationSkipSurcharge: 50_000_000, // 할증 추가
+      giftDate: GIFT_DATE,
       priorGiftComputedTax: 240_000_000,
       priorGiftAddedTaxBase: 600_000_000,
       aggregatedTaxBase: 1_000_000_000,
@@ -174,6 +184,7 @@ describe("calcGiftTaxCredits — §69 산식 echo (filingCreditBase·totalComput
       creditInput: { ...BASE_INPUT, foreignTaxPaid: 100_000_000 },
       computedTax: 100_000_000,
       generationSkipSurcharge: 0,
+      giftDate: GIFT_DATE,
       foreignPropertyRatio: 1,
     });
     expect(result.foreignTaxCredit).toBe(100_000_000);

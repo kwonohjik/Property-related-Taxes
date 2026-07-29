@@ -20,6 +20,7 @@
 
 import { addYears } from "date-fns";
 import { TRANSFER } from "./legal-codes";
+import { safeMultiplyThenDivide } from "./tax-utils";
 
 export interface SelfFarmingReductionInput {
   /**
@@ -209,7 +210,15 @@ export function calculateSelfFarmingReduction(
   const ratio = Math.min(1, Math.max(0, rawRatio));
 
   // 감면대상 소득 (원 단위 절사)
-  const reducibleIncome = Math.floor(transferIncome * ratio);
+  // 2026-07-29 정정(#591 감사 R7): `Math.floor(income × ratio)`는 중간 비율이 부동소수라
+  //   곱이 정수인 입력에서도 1원 과소산정한다(379,247,040 × 7/10 = 265,472,928 정확값이
+  //   float 경로에서는 265,472,927). 곱셈을 먼저 하는 `safeMultiplyThenDivide`로 정확값을 얻는다
+  //   (memory `feedback_safemul_decimal_apportion_precision`).
+  //   비율이 1로 capping된 경우(rawRatio > 1)에는 전액이므로 분수연산을 태우지 않는다.
+  const reducibleIncome =
+    ratio >= 1
+      ? transferIncome
+      : safeMultiplyThenDivide(transferIncome, numerator, denom);
   const nonReducibleIncome = transferIncome - reducibleIncome;
 
   breakdown.push(

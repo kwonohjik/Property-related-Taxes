@@ -70,8 +70,18 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
     label: "매매계약·취득 ~2018.12.31",
     check: (c) =>
       // 조특법 §97의5 ① 1호: "2018.12.31까지 ... 매입임대주택 ... 을 취득(2018.12.31까지 매매계약을 체결하고 계약금을 납부한 경우를 포함한다)"
-      before(c.contractDate ?? c.registrationDate ?? c.acquisitionDate, D("2018-12-31")),
-    failReason: "매매계약/등록일이 2018.12.31 이후 — 조특법 §97의5 적용 시한 외",
+      // 2026-07-29 정정(#591 감사 R7): fallback에서 `registrationDate`를 제거했다.
+      //   §97의5①1호는 "2018.12.31.까지 …매입임대주택…을 **취득**(2018.12.31.까지 **매매계약**을
+      //   체결하고 계약금을 납부한 경우를 포함한다)하고, **취득일로부터 3개월 이내**에 …등록할 것"
+      //   ⇒ 시한 기준은 취득 또는 매매계약이며 **임대사업자 등록일이 아니다**.
+      //   등록이 취득 후 3개월 내여서 registrationDate ≥ acquisitionDate가 항상 성립하므로,
+      //   등록일을 앞에 두면 판정이 **뒤로만 밀려** 시한 내 취득분을 부당 배제했다(납세자 불리).
+      //   (memory `feedback_reduction_sunset_is_acquisition_window` ·
+      //    `feedback_no_unfavorable_application_without_legal_basis`)
+      //   §97의3(:61)·§97의4(:66)의 `registrationDate` 사용은 조문이 **등록 시한**을 직접
+      //   규정한 것이라 정당하다 — 무변경.
+      before(c.contractDate ?? c.acquisitionDate, D("2018-12-31")),
+    failReason: "취득일(또는 매매계약일)이 2018.12.31 이후 — 조특법 §97의5①1호 취득 시한 외",
   },
 
   // ── 신축 §99 시리즈 ──

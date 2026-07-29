@@ -21,6 +21,7 @@ import type {
   Heir,
   PriorGift,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { isStatutoryHeir } from "@/lib/calc/heir-allocation-summary";
 
 // ============================================================
 // 헬퍼
@@ -370,6 +371,60 @@ describe("suggestLegateeAmountNonHeir", () => {
     const r = suggestLegateeAmountNonHeir(items, heirs);
     expect(r.isApplicable).toBe(false);
   });
+
+  it("C-1: 대습상속인 며느리(isHeir:false + substituteGroupId) 분배액은 상속외자 유증에서 제외", () => {
+    const heirs = [
+      heir({ id: "s", relation: "spouse" }),
+      heir({
+        id: "dil",
+        relation: "other",
+        isHeir: false,
+        substituteGroupId: "g1",
+        substituteForRelation: "child",
+        substituteRole: "spouse",
+      }),
+    ];
+    const items = [
+      asset({
+        id: "a1",
+        marketValue: 500_000_000,
+        heirAllocations: [
+          { heirId: "s", amount: 300_000_000 },
+          { heirId: "dil", amount: 200_000_000 },
+        ],
+      }),
+    ];
+    const r = suggestLegateeAmountNonHeir(items, heirs);
+    // 수정 전: 며느리 isHeir:false 잔재 → 비상속인 분류 → 200,000,000이 상속외자 유증으로 오집계
+    //   → §19 배우자 법정지분 numerator 축소 → 법 근거 없이 불리(과세) 프리필.
+    // 수정 후: 대습상속인 → 상속인 → 상속외자 0.
+    expect(r.value).toBe(0);
+    expect(r.isApplicable).toBe(false);
+  });
+});
+
+describe("isStatutoryHeir — 대습상속인 편입 단일진실 (C-1, isRealHeir 위임)", () => {
+  it("대습 며느리(isHeir:false + substituteGroupId) → true (isHeir:false 잔재 무시)", () => {
+    expect(
+      isStatutoryHeir(
+        heir({ id: "dil", relation: "other", isHeir: false, substituteGroupId: "g1" }),
+      ),
+    ).toBe(true);
+  });
+  it("일반 기타(isHeir:false, 대습 아님) → false (회귀: 비상속인 유지)", () => {
+    expect(isStatutoryHeir(heir({ id: "o", relation: "other", isHeir: false }))).toBe(
+      false,
+    );
+  });
+  it("수유자(legatee) → false", () => {
+    expect(isStatutoryHeir(heir({ id: "l", relation: "legatee" }))).toBe(false);
+  });
+  it("영리법인(corporate) → false", () => {
+    expect(isStatutoryHeir(heir({ id: "c", relation: "corporate" }))).toBe(false);
+  });
+  it("자녀(isHeir 미설정) → true (회귀)", () => {
+    expect(isStatutoryHeir(heir({ id: "ch", relation: "child" }))).toBe(true);
+  });
 });
 
 // ============================================================
@@ -543,7 +598,7 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
         ],
       }),
     ];
-    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    const r = suggestFarmingAssetValue(items, { type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true, heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true, qualifiedHeirIds: ["h1"] });
     expect(r.value).toBe(600_000_000);
   });
 
@@ -557,7 +612,7 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
         heirAllocations: [{ heirId: "h1", amount: 1_000_000_000 }],
       }),
     ];
-    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: [] });
+    const r = suggestFarmingAssetValue(items, { type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true, heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true, qualifiedHeirIds: [] });
     expect(r.value).toBe(0);
     expect(r.notes?.some((n) => n.includes("자격 충족 상속인 0명"))).toBe(true);
   });
@@ -572,7 +627,7 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
         // heirAllocations 미입력
       }),
     ];
-    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    const r = suggestFarmingAssetValue(items, { type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true, heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true, qualifiedHeirIds: ["h1"] });
     expect(r.value).toBe(1_000_000_000);
   });
 
@@ -601,6 +656,8 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
       }),
     ];
     const r = suggestFarmingAssetValue(items, {
+      type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true,
+      heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true,
       qualifiedHeirIds: ["h1", "h2"],
     });
     // a1: h1(5억) + h2(3억) = 8억, a2: h1(2억) + (h2 분배 없음) = 2억 → 10억
@@ -621,7 +678,7 @@ describe("suggestFarmingAssetValue — 영농상속재산 §18의3", () => {
         ],
       }),
     ];
-    const r = suggestFarmingAssetValue(items, { qualifiedHeirIds: ["h1"] });
+    const r = suggestFarmingAssetValue(items, { type: "personal", decedentEightYearFarming: true, decedentResidenceMet: true, heirIsAdult: true, heirTwoYearFarming: true, heirResidenceMet: true, qualifiedHeirIds: ["h1"] });
     // h1 분배 = 6억. 담보 비례 = 1억 × 6/10 = 6천만. → 6억 − 6천만 = 5.4억
     expect(r.value).toBe(540_000_000);
   });

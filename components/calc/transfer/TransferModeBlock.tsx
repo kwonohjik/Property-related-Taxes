@@ -24,6 +24,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { BurdenedGiftBlock } from "./BurdenedGiftBlock";
 import { ExpropriationBlock } from "./ExpropriationBlock";
+import { AuctionBlock } from "./AuctionBlock";
 import { getStandaloneDefault } from "./UnifiedReductionPanel-defaults";
 
 interface Props {
@@ -33,28 +34,16 @@ interface Props {
   transferDate: string;
 }
 
+// 설명은 상단 안내 문단이 이미 3지선다 전체를 서술하므로 옵션별 description을 두지 않는다
+// (중복 서술 제거 + inline 레이아웃으로 3항목 1행 배치, 2026-07-16).
 const TRANSFER_TYPE_OPTIONS: {
   value: string;
   label: string;
-  description: string;
   testId?: string;
 }[] = [
-  {
-    value: "regular",
-    label: "일반 양도",
-    description: "매매·교환 등 통상의 양도 (양도가액·취득가액 직접 입력)",
-  },
-  {
-    value: "burdened_gift",
-    label: "부담부증여 (소령 §159)",
-    description: "증여 시 수증자가 채무를 인수 — 채무 인수분을 유상 양도로 의제. 양도자 = 증여자.",
-  },
-  {
-    value: "public_expropriation",
-    label: "공익수용·협의매수",
-    description: "공익사업법 등에 따른 협의매수·수용 — §77 감면·비사업용 토지 사업용 의제 공용.",
-    testId: "expr-cause-radio",
-  },
+  { value: "regular", label: "일반 양도" },
+  { value: "burdened_gift", label: "부담부증여 (소령 §159)" },
+  { value: "public_expropriation", label: "공익수용·협의매수", testId: "expr-cause-radio" },
 ];
 
 // F-3 (2026-05-12): commercial_building 확장 — 부담부증여 지원 자산 종류
@@ -76,6 +65,8 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
       onChange({
         transferType: "regular",
         transferCause: "public_expropriation",
+        // §164⑨ N3 배타 — 수용(1호) 전환 시 공매·경락(2호) 정리
+        isAuctionTransfer: false,
         // #1 NBL 프리필 — 토지만 (NBL = 비사업용 '토지'; 자동 판정 활성 + 수용 의제, Step4서 override 가능)
         ...(asset.assetKind === "land"
           ? { nblUseDetailedJudgment: true, nblExemptPublicExpropriation: true }
@@ -109,7 +100,7 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
   return (
     <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/70 p-4 space-y-3">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-[10px] font-bold text-fuchsia-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-micro font-bold text-fuchsia-800 select-none">
           💎
         </span>
         <p className="text-sm font-semibold text-fuchsia-900">양도 정보</p>
@@ -122,7 +113,7 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
 
       <RadioCardGroup
         name={`transferType-${asset.assetId ?? "primary"}`}
-        layout="stack"
+        layout="inline"
         value={currentMode}
         onChange={selectMode}
         options={TRANSFER_TYPE_OPTIONS}
@@ -147,6 +138,11 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
       {/* 공익수용·협의매수 상세 펼침 */}
       {isExpropriation && (
         <ExpropriationBlock asset={asset} onChange={onChange} transferDate={transferDate} />
+      )}
+
+      {/* §164⑨2호 공매·경락 (P4) — 수용(1호)과 배타(N3)라 수용 미선택 시에만 노출 */}
+      {!isExpropriation && (
+        <AuctionBlock asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
     </div>
   );

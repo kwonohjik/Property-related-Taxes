@@ -6,6 +6,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   infoBannerCls,
   selectCls,
@@ -41,23 +42,22 @@ function OwnedHouseCard({
     onChange({ ...house, [k]: v });
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-            {index + 1}
-          </span>
-          <p className="text-xs font-semibold text-sky-700">보유 주택 #{index + 1}</p>
-        </div>
+    <ToneCard
+      tone="sky"
+      sectionNum={index + 1}
+      title={`보유 주택 #${index + 1}`}
+      bodyClassName="space-y-3"
+      noDark
+      titleExtra={
         <button
           type="button"
           onClick={onRemove}
-          className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+          className="ml-auto text-xs text-muted-foreground hover:text-destructive transition-colors"
         >
           삭제
         </button>
-      </div>
-
+      }
+    >
       {/* 주택 유형 */}
       <div>
         <p className="text-xs font-medium mb-1">주택 유형</p>
@@ -223,7 +223,7 @@ function OwnedHouseCard({
           ]}
         />
       </ToggleCard>
-    </div>
+    </ToneCard>
   );
 }
 
@@ -292,10 +292,13 @@ export function Step2({
       )}
 
       {/* 취득 후 보유 주택 수 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
-          <p className="text-xs font-semibold text-sky-700">취득 후 보유 주택 수</p>
+      <ToneCard
+        tone="sky"
+        sectionNum={1}
+        title="취득 후 보유 주택 수"
+        bodyClassName="space-y-2"
+        noDark
+        titleExtra={
           <TaxHelp
             title="보유 주택 수 산정 — 11개 제외 항목"
             summary="취득일 기준 보유 주택(취득 포함). 아래 11종은 주택 수 산정에서 제외됩니다."
@@ -321,7 +324,8 @@ export function Step2({
 별도 세대 인정 4종은 다음 단계에서 확인하세요.`}
             legalBasis={["지방세법시행령 제28조의4", "지방세법시행령 제28조의2"]}
           />
-        </div>
+        }
+      >
         <select
           className={selectCls}
           value={form.houseCountAfter}
@@ -335,7 +339,7 @@ export function Step2({
         <p className="text-xs text-muted-foreground">
           취득일 기준 보유 주택(취득 대상 포함)의 합계. 상세 주택 목록을 아래에 입력하면 자동 산정됩니다.
         </p>
-      </div>
+      </ToneCard>
 
       {/* 보유 주택 목록 */}
       <div className="space-y-3">
@@ -470,10 +474,13 @@ export function Step2({
       </ToggleCard>
 
       {/* 취득 주택 자체 한시 특례 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">3</span>
-          <p className="text-xs font-semibold text-violet-700">취득 주택 한시 특례 (주택 수 제외)</p>
+      <ToneCard
+        tone="violet"
+        sectionNum={3}
+        title="취득 주택 한시 특례 (주택 수 제외)"
+        bodyClassName="space-y-2"
+        noDark
+        titleExtra={
           <TaxHelp
             title="한시 특례 — 주택 수 제외 (시행령 §28의4②)"
             summary="2024.1.10~2027.12.31 신축 소형주택 등 취득 시 해당 주택은 주택 수에서 제외됩니다."
@@ -500,7 +507,8 @@ export function Step2({
 보유 중인 기존 주택의 한시 특례 해당 여부는 위 보유 주택 목록에서 입력.`}
             legalBasis="지방세법시행령 제28조의4 제2항"
           />
-        </div>
+        }
+      >
         <p className="text-xs text-muted-foreground">
           취득하는 주택 자체가 한시 특례 대상이면 보유 주택 수 산정에서 제외됩니다 (§28의4②)
         </p>
@@ -537,7 +545,7 @@ export function Step2({
           checked={form.isHansiBenefitUnsoldApt}
           onCheckedChange={(v) => set("isHansiBenefitUnsoldApt", v)}
         />
-      </div>
+      </ToneCard>
     </div>
   );
 }

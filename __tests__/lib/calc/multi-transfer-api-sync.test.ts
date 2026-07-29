@@ -105,6 +105,28 @@ describe("[M-2] buildPropertyPayload 자산-수준 취득방식 도출", () => {
     expect(payload.useEstimatedAcquisition).toBe(false);
     expect(payload.acquisitionPrice).toBe(300_000_000);
   });
+
+  it("M-2-4 [A-multi]: 상속 취득가액 — fixedAcq 우선, 공란 시 publishedValue ((b) 단일화)", () => {
+    // 현행 직접입력(fixedAcq) 우선 → 동작 불변
+    const withFixed = baseForm();
+    withFixed.assets[0] = {
+      ...withFixed.assets[0],
+      acquisitionCause: "inheritance",
+      fixedAcquisitionPrice: "500,000,000",
+      publishedValueAtInheritance: "300,000,000",
+    };
+    expect((buildPropertyPayload(withFixed) as Record<string, unknown>).acquisitionPrice).toBe(500_000_000);
+
+    // 통합 UI(P2b) 후 fixedAcq 제거 → publishedValue(신고가액)로 자동 전환
+    const withPublished = baseForm();
+    withPublished.assets[0] = {
+      ...withPublished.assets[0],
+      acquisitionCause: "inheritance",
+      fixedAcquisitionPrice: "",
+      publishedValueAtInheritance: "300,000,000",
+    };
+    expect((buildPropertyPayload(withPublished) as Record<string, unknown>).acquisitionPrice).toBe(300_000_000);
+  });
 });
 
 // ─────────────────────────────────────────────────────────
@@ -133,6 +155,41 @@ describe("[H-2] 지원 스칼라 필드 전송", () => {
     const payload = buildPropertyPayload(baseForm()) as Record<string, unknown>;
     expect(payload.capitalExpenditure).toBeUndefined();
     expect(payload.transferExpense).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// 일시적 2주택 §155① — 종전취득일 = 양도 자산 취득일 단일소스 (다건 경로)
+// 단건(transfer-tax-api.ts)과 대칭 변경의 다건 커버리지(계획 TT-7).
+// ─────────────────────────────────────────────────────────
+
+describe("[§155①] 다건 일시적 2주택 종전취득일 단일소스", () => {
+  it("TT-7: temporaryTwoHouse.previousAcquisitionDate = 양도 자산 취득일", () => {
+    const form = baseForm(); // assets[0].acquisitionDate = "2020-01-01"
+    form.temporaryTwoHouseSpecial = true;
+    form.newHouseAcquisitionDate = "2021-06-01";
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.temporaryTwoHouse).toEqual({
+      previousAcquisitionDate: "2020-01-01",
+      newAcquisitionDate: "2021-06-01",
+    });
+  });
+
+  it("TT-7b: 신규취득일 미입력 → temporaryTwoHouse 미조립(침묵 누락 방지는 validation 담당)", () => {
+    const form = baseForm();
+    form.temporaryTwoHouseSpecial = true;
+    form.newHouseAcquisitionDate = "";
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.temporaryTwoHouse).toBeUndefined();
+  });
+
+  it("TT-7c: 자산 취득일 미입력 → temporaryTwoHouse 미조립", () => {
+    const form = baseForm();
+    form.assets[0] = { ...form.assets[0], acquisitionDate: "" };
+    form.temporaryTwoHouseSpecial = true;
+    form.newHouseAcquisitionDate = "2021-06-01";
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.temporaryTwoHouse).toBeUndefined();
   });
 });
 
@@ -191,32 +248,47 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
     expect(validateMultiSettings(multi)).toBeNull();
   });
 
-  it("[R2-H1] 상속 보충평가(자동) 모드 차단 — 취득가 0 과대 과세 방지", () => {
+  it("[R2-H1] 상속 auto + 신고가액 확정 → 통과 ((b) 취득가액 단일화)", () => {
+    // P2a: 다건은 신고가액(publishedValueAtInheritance)을 취득가액으로 직접 사용 →
+    // auto여도 신고가액이 있으면 통과(과거 '무조건 차단'에서 정밀화, plan §5.2 (b)).
     const form = baseForm();
     form.assets[0] = {
       ...form.assets[0],
       acquisitionCause: "inheritance",
       decedentAcquisitionDate: "2000-01-01",
-      inheritanceValuationMode: "auto",
       inheritanceAssetKind: "house_apart",
       publishedValueAtInheritance: "300,000,000",
       fixedAcquisitionPrice: "",
     };
-    const msg = validateMultiSupportedMode(form);
-    expect(msg).not.toBeNull();
-    expect(msg).toContain("보충적평가");
+    expect(validateMultiSupportedMode(form)).toBeNull();
   });
 
-  it("[R2-H1 대조군] 상속 + 직접입력(manual) 모드는 통과", () => {
+  it("[R2-H1] 상속 auto + 신고가액 공란 → 차단 (단건 전용 산정 필요)", () => {
     const form = baseForm();
     form.assets[0] = {
       ...form.assets[0],
       acquisitionCause: "inheritance",
       decedentAcquisitionDate: "2000-01-01",
-      inheritanceValuationMode: "manual",
-      fixedAcquisitionPrice: "300,000,000",
+      inheritanceAssetKind: "house_apart",
+      publishedValueAtInheritance: "",
+      fixedAcquisitionPrice: "",
     };
-    expect(validateMultiSupportedMode(form)).toBeNull();
+    const msg = validateMultiSupportedMode(form);
+    expect(msg).not.toBeNull();
+    expect(msg).toContain("신고가액");
+  });
+
+  it("[R2-H1] 상속 fixedAcquisitionPrice 폐기 — 신고가액 없으면 차단 (P2c 통합)", () => {
+    const form = baseForm();
+    form.assets[0] = {
+      ...form.assets[0],
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: "2000-01-01",
+      fixedAcquisitionPrice: "300,000,000", // P2c: 상속 fixedAcq 미사용 → 신고가액 없어 차단
+      publishedValueAtInheritance: "",
+    };
+    const msg = validateMultiSupportedMode(form);
+    expect(msg).not.toBeNull();
   });
 
   it("[리뷰 H-1] 모드 2 — 보유 감면주택 주택수 제외(specialHouseExclusions) 차단", () => {
@@ -298,5 +370,81 @@ describe("[R2-H2] 다건 priorReductionUsage 합성·전송", () => {
     }));
     await callMultiTransferTaxAPI(multi, [prop]);
     expect(captured!.priorReductionUsage).toEqual([]);
+  });
+});
+
+// ⑬ F1 — 다건 gracePeriod 배관 (중과 한시 유예/경과조치 §167의3①12의2). 단건 API와 동일 게이트.
+describe("F1 — 다건 gracePeriod per-property 전송", () => {
+  function housingFormWithGrace(gp?: PropertyItem["form"]["gracePeriod"]): PropertyItem["form"] {
+    const form = baseForm();
+    form.assets[0] = { ...form.assets[0], assetKind: "housing", regionCode: "11680" }; // 강남 4개월
+    form.householdHousingCount = "2";
+    form.isOneHousehold = true;
+    form.houses = [
+      {
+        id: "other1",
+        region: "capital",
+        acquisitionDate: "2019-01-01",
+        officialPrice: "800000000",
+        isInherited: false,
+        isLongTermRental: false,
+        isApartment: true,
+        isOfficetel: false,
+        isUnsoldHousing: false,
+        acquisitionPrice: "700000000",
+        exclusiveArea: "84",
+        isUnsoldNewHouse: false,
+        completionDate: "",
+        isSpouseOwned: false,
+        isCoInherited: false,
+        decedentSameHouseholdAtInheritance: false,
+        isRankingDisqualifiedInheritedHouse: false,
+      },
+    ];
+    form.gracePeriod = gp;
+    return form;
+  }
+
+  const NA_GRACE = {
+    contractDate: "2026-06-01",
+    isLandPermitTarget: true,
+    permitApplicationDate: "2026-05-01",
+    permitGranted: true,
+    depositReceiptConfirmed: true,
+  };
+
+  it("housing + houses[] + gracePeriod ON → property payload에 gracePeriod 포함", () => {
+    const payload = buildPropertyPayload(housingFormWithGrace(NA_GRACE)) as Record<string, unknown>;
+    expect(payload.houses).toBeDefined();
+    expect(payload.gracePeriod).toEqual(NA_GRACE);
+  });
+
+  it("gracePeriod 미입력 → payload에서 제외 (게이트)", () => {
+    const payload = buildPropertyPayload(housingFormWithGrace(undefined)) as Record<string, unknown>;
+    expect(payload.gracePeriod).toBeUndefined();
+  });
+
+  it("houses 없음(housesPayload undefined) → gracePeriod 있어도 미전송 (엔진 미소비 정합)", () => {
+    const form = baseForm();
+    form.gracePeriod = NA_GRACE; // houses 미설정 → housesPayload undefined
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.houses).toBeUndefined();
+    expect(payload.gracePeriod).toBeUndefined();
+  });
+
+  it("2자산 독립 — 자산별 form.gracePeriod가 각 property payload로 (native per-property)", async () => {
+    const p1 = makeProperty(housingFormWithGrace(NA_GRACE), "강남");
+    const p2 = makeProperty(housingFormWithGrace(undefined), "미입력");
+    p2.propertyId = "p2";
+    const multi = makeMultiForm([p1, p2]);
+    let captured: Record<string, unknown> | null = null;
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, init: RequestInit) => {
+      captured = JSON.parse(String(init.body));
+      return { ok: true, json: async () => ({ data: {} }) } as Response;
+    }));
+    await callMultiTransferTaxAPI(multi, [p1, p2]);
+    const props = captured!.properties as Record<string, unknown>[];
+    expect(props[0].gracePeriod).toEqual(NA_GRACE);
+    expect(props[1].gracePeriod).toBeUndefined();
   });
 });

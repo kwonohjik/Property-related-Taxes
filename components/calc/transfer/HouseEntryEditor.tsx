@@ -20,25 +20,13 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
+import { HousePriceYearLookup } from "@/components/calc/transfer/HousePriceYearLookup";
+import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
-
-// ============================================================
-// 섹션 색상 클래스 (Tailwind 정적 매핑 — feedback_tailwind_static_tone_mapping)
-// ============================================================
-
-const SKY_SECTION = "rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2.5";
-const SKY_HEADER = "text-xs font-semibold text-sky-700";
-const SKY_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none";
-
-const AMBER_SECTION = "rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2.5";
-const AMBER_HEADER = "text-xs font-semibold text-amber-700";
-const AMBER_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none";
-
-const VIOLET_SECTION = "rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2.5";
-const VIOLET_HEADER = "text-xs font-semibold text-violet-700";
-const VIOLET_BADGE = "flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none";
 
 // ============================================================
 // Props
@@ -57,77 +45,111 @@ interface Props {
 
 function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
   return (
-    <div className={SKY_SECTION}>
-      <div className="flex items-center gap-2">
-        <span className={SKY_BADGE}>①</span>
-        <p className={SKY_HEADER}>기본 정보</p>
+    <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보" noDark>
+
+      {/* 소재지 — Vworld 주소검색 → regionCode·지역구분 자동파생 + (공동주택 동/호 선택 시) 공시가격·전유면적 자동조회 */}
+      <div className="space-y-1">
+        <label className="block text-caption text-muted-foreground font-medium">소재지</label>
+        <AddressSearch
+          value={
+            {
+              road: house.addressRoad ?? "",
+              jibun: house.addressJibun ?? "",
+              building: house.buildingName ?? "",
+              detail: house.addressDetail ?? "",
+              lng: house.longitude ?? "",
+              lat: house.latitude ?? "",
+            } satisfies AddressValue
+          }
+          onChange={(v) => onUpdate(buildHouseAddressPatch(v))}
+        />
+        <p className="text-micro text-muted-foreground">
+          공동주택은 동/호 선택 시 공시가격·전유면적이 자동 입력됩니다 (개별주택은 수동 입력).
+        </p>
       </div>
 
-      {/* 지역 구분 */}
+      {/* 지역 구분 — 소재지 주소 입력 시 자동 판정(읽기전용), 미입력 시 수동 */}
       <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">지역 구분</label>
-        <RadioCardGroup
-          name={`house-region-${house.id}`}
-          layout="inline"
-          tone="rose"
-          value={house.region}
-          onChange={(v) => onUpdate({ region: v as "capital" | "non_capital" })}
-          options={[
-            { value: "capital", label: "수도권" },
-            { value: "non_capital", label: "지방" },
-          ]}
-        />
+        <label className="block text-caption text-muted-foreground font-medium">지역 구분</label>
+        {house.regionCode ? (
+          <ToneCard tone="rose" bodyClassName="" className="px-3 py-2">
+            <span className="text-sm font-medium">
+              {house.region === "capital" ? "수도권·광역시 등" : "지방"}
+            </span>
+            <span className="ml-2 text-xs text-muted-foreground">소재지 주소에서 자동 판정</span>
+          </ToneCard>
+        ) : (
+          <RadioCardGroup
+            name={`house-region-${house.id}`}
+            layout="inline"
+            tone="rose"
+            value={house.region}
+            onChange={(v) => onUpdate({ region: v as "capital" | "non_capital" })}
+            options={[
+              { value: "capital", label: "수도권·광역시 등" },
+              { value: "non_capital", label: "지방" },
+            ]}
+          />
+        )}
       </div>
 
-      {/* 취득일 */}
-      <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">취득일</label>
-        <DateInput
-          value={house.acquisitionDate}
-          onChange={(v) => onUpdate({ acquisitionDate: v })}
-        />
-      </div>
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-6">
+        {/* 취득일 (행1: 취득일·준공일·전용면적 3열) */}
+        <div className="space-y-1 sm:col-span-2">
+          <label className="block text-caption text-muted-foreground font-medium">취득일</label>
+          <DateInput
+            value={house.acquisitionDate}
+            onChange={(v) => onUpdate({ acquisitionDate: v })}
+          />
+        </div>
 
-      {/* 공시가격 */}
-      <CurrencyInput
-        label="공시가격"
-        value={house.officialPrice}
-        onChange={(v) => onUpdate({ officialPrice: v })}
-        hint="취득 시 공동·개별주택가격 (원)"
-      />
+        {/* 준공일 (가목 소형신축 3호) */}
+        <div className="space-y-1 sm:col-span-2">
+          <label className="block text-caption text-muted-foreground font-medium">준공일</label>
+          <DateInput
+            value={house.completionDate ?? ""}
+            onChange={(v) => onUpdate({ completionDate: v })}
+          />
+          <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
+        </div>
 
-      {/* 취득가액 (소형신축·준공후미분양 특례 가액 기준) */}
-      <CurrencyInput
-        label="취득가액"
-        placeholder="취득가액 입력"
-        value={house.acquisitionPrice ?? ""}
-        onChange={(v) => onUpdate({ acquisitionPrice: v })}
-        hint="소형신축·준공후미분양 특례 가액 기준 (원)"
-      />
+        {/* 전용면적 */}
+        <div className="space-y-1 sm:col-span-2">
+          <div className="flex items-center gap-2">
+            <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
+            {house.addressLookupFilled && (
+              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                조회값
+              </span>
+            )}
+          </div>
+          <DecimalInput
+            value={house.exclusiveArea ?? ""}
+            onChange={(v) => onUpdate({ exclusiveArea: v, addressLookupFilled: false })}
+            placeholder="전용면적 ㎡"
+          />
+        </div>
 
-      {/* 전용면적 */}
-      <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">전용면적 (㎡)</label>
-        <DecimalInput
-          value={house.exclusiveArea ?? ""}
-          onChange={(v) => onUpdate({ exclusiveArea: v })}
-          placeholder="전용면적 ㎡"
-        />
-      </div>
+        {/* 취득가액 (행2: 취득가액·공시가격 2열) — 라벨 text-caption 통일(공시가격과 정렬) */}
+        <div className="space-y-1 sm:col-span-3">
+          <label className="block text-caption text-muted-foreground font-medium">취득가액</label>
+          <CurrencyInput
+            label="취득가액"
+            hideLabel
+            placeholder="취득가액 입력"
+            value={house.acquisitionPrice ?? ""}
+            onChange={(v) => onUpdate({ acquisitionPrice: v })}
+            hint="소형신축·준공후미분양 특례 가액 기준 (원)"
+          />
+        </div>
 
-      {/* 준공일 (가목 소형신축 3호) */}
-      <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">준공일</label>
-        <DateInput
-          value={house.completionDate ?? ""}
-          onChange={(v) => onUpdate({ completionDate: v })}
-        />
-        <p className="text-[10px] text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
+        {/* 공시가격 (취득가액과 같은 행) — 기준연도 선택 + Vworld 재조회 */}
+        <HousePriceYearLookup house={house} onUpdate={onUpdate} />
       </div>
 
       {/* 특례 chip */}
       <div className="space-y-1">
-        <label className="block text-[11px] text-muted-foreground font-medium">특례 구분</label>
+        <label className="block text-caption text-muted-foreground font-medium">특례 구분</label>
         <div className="flex flex-wrap gap-2">
           <ToggleCard
             variant="chip"
@@ -164,7 +186,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           판정 필수필드(취득가액·전용면적) 미입력 시 침묵 미적용 안내 (소령 §167의3①12 가·나목) */}
       {(house.isUnsoldNewHouse || !!house.completionDate) &&
         (!house.acquisitionPrice || !house.exclusiveArea) && (
-          <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-[11px] text-amber-700">
+          <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-caption text-amber-700">
             신축·준공후미분양 특례 판정에는 취득가액·전용면적 입력이 필요합니다. 미입력 시 특례가 적용되지 않습니다.
           </p>
         )}
@@ -172,7 +194,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
       {/* #2a 혼인합가 — 배우자 단독 보유 (혼인합가일 입력 시에만 노출) */}
       {showSpouseOwned && (
         <div className="space-y-1">
-          <label className="block text-[11px] text-muted-foreground font-medium">혼인 합가</label>
+          <label className="block text-caption text-muted-foreground font-medium">혼인 합가</label>
           <ToggleCard
             variant="chip"
             tone="violet"
@@ -180,12 +202,12 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
             onCheckedChange={(v) => onUpdate({ isSpouseOwned: v })}
             title="배우자 단독 보유 주택"
           />
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             혼인 전부터 배우자가 보유 — 3주택↑ 혼인 5년내 양도 시 주택 수 차감 (§167의3⑨)
           </p>
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }
 
@@ -195,11 +217,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
 
 function InheritanceSection({ house, onUpdate }: Props) {
   return (
-    <div className={AMBER_SECTION}>
-      <div className="flex items-center gap-2">
-        <span className={AMBER_BADGE}>②</span>
-        <p className={AMBER_HEADER}>상속 정보</p>
-      </div>
+    <ToneCard tone="amber" sectionNum="②" bodyClassName="space-y-2.5" title="상속 정보" noDark>
 
       {/* 상속주택 여부 토글 */}
       <ToggleCard
@@ -207,25 +225,121 @@ function InheritanceSection({ house, onUpdate }: Props) {
         tone="amber"
         checked={house.isInherited}
         onCheckedChange={(v) => {
-          // 상속 OFF 시 상속개시일 초기화 (onChange 직접 set — useEffect 미러링 금지)
-          onUpdate({ isInherited: v, inheritedDate: v ? house.inheritedDate : undefined });
+          // 상속 OFF 시 하위 필드 초기화 (onChange 직접 set — useEffect 미러링 금지)
+          onUpdate({
+            isInherited: v,
+            inheritedDate: v ? house.inheritedDate : undefined,
+            isCoInherited: v ? house.isCoInherited : undefined,
+            isLargestCoInheritedShareholder: v ? house.isLargestCoInheritedShareholder : undefined,
+            decedentSameHouseholdAtInheritance: v
+              ? house.decedentSameHouseholdAtInheritance
+              : undefined,
+            parentalCareMergeInheritedHouse: v ? house.parentalCareMergeInheritedHouse : undefined,
+            isRankingDisqualifiedInheritedHouse: v
+              ? house.isRankingDisqualifiedInheritedHouse
+              : undefined,
+          });
         }}
         title="상속주택"
         description="피상속인으로부터 상속받은 주택 (소령 §167의3①7호 — 상속개시일로부터 5년 이내 주택 수 배제)"
       >
         {/* ON 시만 상속개시일 노출 */}
         <div className="space-y-1 pt-1">
-          <label className="block text-[11px] text-muted-foreground font-medium">상속개시일</label>
+          <label className="block text-caption text-muted-foreground font-medium">상속개시일</label>
           <DateInput
             value={house.inheritedDate ?? ""}
             onChange={(v) => onUpdate({ inheritedDate: v || undefined })}
           />
-          <p className="text-[11px] text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground/70">
             상속 후 5년 이내이면 주택 수 산정에서 자동 배제됩니다.
           </p>
         </div>
+
+        {/* §155③ 공동상속주택 (2-A2) — 일반주택 양도 시 소수지분은 주택 수 제외 */}
+        <div className="pt-2">
+          <ToggleCard
+            variant="card"
+            tone="amber"
+            checked={house.isCoInherited ?? false}
+            onCheckedChange={(v) =>
+              onUpdate({
+                isCoInherited: v,
+                isLargestCoInheritedShareholder: v
+                  ? house.isLargestCoInheritedShareholder
+                  : undefined,
+              })
+            }
+            title="공동상속주택"
+            description="상속인이 2인 이상 공동으로 상속받은 주택인 경우 (소령 §155③)"
+          >
+            <div className="space-y-1 pt-1">
+              <ToggleCard
+                variant="chip"
+                tone="amber"
+                checked={house.isLargestCoInheritedShareholder ?? false}
+                onCheckedChange={(v) => onUpdate({ isLargestCoInheritedShareholder: v })}
+                title="본인이 최대지분 상속인"
+                description="지분이 가장 큰 상속인만 해당 주택 소유로 봅니다. 지분이 같으면 그 주택 거주자, 그다음 최연장자. (§155③ 단서)"
+              />
+              <p className="text-caption text-muted-foreground/70">
+                최대지분 상속인이면 주택 수에 산입되고, 소수지분이면 일반주택 양도 시 주택 수에서
+                제외됩니다.
+              </p>
+            </div>
+          </ToggleCard>
+        </div>
+
+        {/* §155② 단서 — 상속개시 당시 동일세대(동거봉양 예외) */}
+        <div className="pt-2">
+          <ToggleCard
+            variant="card"
+            tone="amber"
+            checked={house.decedentSameHouseholdAtInheritance ?? false}
+            onCheckedChange={(v) =>
+              onUpdate({
+                decedentSameHouseholdAtInheritance: v,
+                parentalCareMergeInheritedHouse: v
+                  ? house.parentalCareMergeInheritedHouse
+                  : undefined,
+              })
+            }
+            title="상속개시 당시 피상속인과 동일세대"
+            description="동일세대에서 상속받으면 상속주택 특례(주택 수 제외)가 원칙적으로 배제됩니다. (소령 §155② 단서)"
+          >
+            <div className="space-y-1 pt-1">
+              <ToggleCard
+                variant="chip"
+                tone="amber"
+                checked={house.parentalCareMergeInheritedHouse ?? false}
+                onCheckedChange={(v) => onUpdate({ parentalCareMergeInheritedHouse: v })}
+                title="동거봉양 합가 + 합가 전 피상속인 보유 주택"
+                description="60세 이상 직계존속 동거봉양을 위해 세대를 합쳐 2주택이 된 경우로서, 합치기 이전부터 피상속인이 보유하던 주택이면 특례가 적용됩니다. (§155② 단서 예외)"
+              />
+              <p className="text-caption text-muted-foreground/70">
+                동거봉양 합가 전 보유분이면 주택 수에서 제외되고, 그 외 동일세대 상속은 제외되지
+                않습니다.
+              </p>
+            </div>
+          </ToggleCard>
+        </div>
+
+        {/* §155②1~4호 순위 — 피상속인 2주택↑ 중 순위 부적격 */}
+        <div className="pt-2">
+          <ToggleCard
+            variant="card"
+            tone="amber"
+            checked={house.isRankingDisqualifiedInheritedHouse ?? false}
+            onCheckedChange={(v) => onUpdate({ isRankingDisqualifiedInheritedHouse: v })}
+            title="피상속인 2주택 이상 — 순위상 상속주택 아님"
+            description="피상속인이 상속개시 당시 2채 이상 보유했고, 이 주택이 순위(소유기간→거주기간→상속개시 당시 거주→기준시가)상 상속주택(1주택)이 아니면 특례에서 제외됩니다. (소령 §155②1~4호)"
+          >
+            <p className="text-caption text-muted-foreground/70 pt-1">
+              순위상 상속주택이 아니면 일반주택 양도 시 주택 수에서 제외되지 않습니다.
+            </p>
+          </ToggleCard>
+        </div>
       </ToggleCard>
-    </div>
+    </ToneCard>
   );
 }
 
@@ -235,11 +349,7 @@ function InheritanceSection({ house, onUpdate }: Props) {
 
 function LongTermRentalSection({ house, onUpdate }: Props) {
   return (
-    <div className={VIOLET_SECTION}>
-      <div className="flex items-center gap-2">
-        <span className={VIOLET_BADGE}>③</span>
-        <p className={VIOLET_HEADER}>장기임대 정보</p>
-      </div>
+    <ToneCard tone="violet" sectionNum="③" bodyClassName="space-y-2.5" title="장기임대 정보" noDark>
 
       {/* 장기임대 여부 토글 */}
       <ToggleCard
@@ -279,14 +389,14 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
           >
             <div className="space-y-2 pt-1">
               <div className="space-y-1">
-                <label className="block text-[11px] text-muted-foreground font-medium">임대사업자 등록일</label>
+                <label className="block text-caption text-muted-foreground font-medium">임대사업자 등록일</label>
                 <DateInput
                   value={house.rentalRegistrationDate ?? ""}
                   onChange={(v) => onUpdate({ rentalRegistrationDate: v || undefined })}
                 />
               </div>
               <div className="space-y-1">
-                <label className="block text-[11px] text-muted-foreground font-medium">사업자 등록일</label>
+                <label className="block text-caption text-muted-foreground font-medium">사업자 등록일</label>
                 <DateInput
                   value={house.businessRegistrationDate ?? ""}
                   onChange={(v) => onUpdate({ businessRegistrationDate: v || undefined })}
@@ -297,18 +407,18 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
 
           {/* 임대기간(년) */}
           <div className="space-y-1">
-            <label className="block text-[11px] text-muted-foreground font-medium">임대기간 (년)</label>
+            <label className="block text-caption text-muted-foreground font-medium">임대기간 (년)</label>
             <DecimalInput
               value={house.rentalPeriodYears ?? ""}
               onChange={(v) => onUpdate({ rentalPeriodYears: v || undefined })}
               placeholder="임대기간 입력"
             />
-            <p className="text-[11px] text-muted-foreground/70">5년 이상 시 주택 수 배제 대상</p>
+            <p className="text-caption text-muted-foreground/70">5년 이상 시 주택 수 배제 대상</p>
           </div>
 
           {/* 임대사업자 말소일 (optional) */}
           <div className="space-y-1">
-            <label className="block text-[11px] text-muted-foreground font-medium">
+            <label className="block text-caption text-muted-foreground font-medium">
               임대사업자 말소일{" "}
               <span className="text-muted-foreground/60 font-normal">(양도 전 말소 시 입력)</span>
             </label>
@@ -316,7 +426,7 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
               value={house.rentalCancelledDate ?? ""}
               onChange={(v) => onUpdate({ rentalCancelledDate: v || undefined })}
             />
-            <p className="text-[11px] text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground/70">
               양도일 이전 말소된 경우 임대 배제 특례가 해제될 수 있습니다.
             </p>
           </div>
@@ -325,7 +435,7 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
           <HouseEntryRentalTypeSection house={house} onUpdate={onUpdate} />
         </div>
       </ToggleCard>
-    </div>
+    </ToneCard>
   );
 }
 

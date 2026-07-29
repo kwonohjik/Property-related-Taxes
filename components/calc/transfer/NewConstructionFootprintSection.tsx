@@ -23,6 +23,7 @@ import { useMemo } from "react";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 type AppurtenantLandZone =
   | "metropolitan_residential"
@@ -116,31 +117,16 @@ export function NewConstructionFootprintSection({
   }, [footprint, companionArea, limitArea, excessArea, isExcess, hasCompanionArea]);
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-      {/* 섹션 헤더 */}
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-          §
-        </span>
-        <p className="text-xs font-semibold text-sky-700">
-          부수토지 한도 산정 (소득세법 시행령 §154⑦)
-        </p>
-      </div>
+    <ToneCard tone="sky" sectionNum="§" bodyClassName="space-y-3" title="부수토지 한도 산정 (소득세법 시행령 §154⑦)" noDark>
 
-      <p className="text-[11px] text-sky-600 leading-relaxed">
+      <p className="text-caption text-sky-600 leading-relaxed">
         주택과 함께 양도되는 부수토지의 인정 한도 = 건물 정착면적 × 배율.
         수도권 도시지역(주거·상업·공업)은 3배, 수도권 녹지·수도권 외 도시지역은 5배, 도시지역 외는 10배입니다.
         한도 초과분은 일반 나대지로 분리하여 토지 보유기간 기준 세율을 적용합니다.
       </p>
 
       {/* ① 건물 정착면적 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-            ①
-          </span>
-          <p className="text-xs font-semibold text-sky-700">건물 정착면적 (㎡)</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="①" title="건물 정착면적 (㎡)" noDark>
         <FieldCard
           label="건물 정착면적 (㎡)"
           hint="건물이 지면에 접한 1층 바닥면적(㎡)입니다. 소수점 2자리까지 입력 가능."
@@ -150,16 +136,10 @@ export function NewConstructionFootprintSection({
             onChange={onBuildingFootprintAreaChange}
           />
         </FieldCard>
-      </div>
+      </ToneCard>
 
       {/* ② 부수토지 zone (3/5/10배) */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-            ②
-          </span>
-          <p className="text-xs font-semibold text-sky-700">소재지 구분 (영 §154⑦)</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="②" title="소재지 구분 (영 §154⑦)" noDark>
         <RadioCardGroup
           name="appurtenantLandZone"
           tone="sky"
@@ -172,14 +152,14 @@ export function NewConstructionFootprintSection({
             description: opt.description,
           }))}
         />
-        <p className="text-[11px] text-sky-600">
+        <p className="text-caption text-sky-600">
           수도권정비계획법·국토계획법상 소재지에 따라 정착면적 배율이 달라집니다. 잘 모르겠으면 가장 보수적인 &quot;수도권 도시지역(주거·상업·공업) 3배&quot;를 선택하세요.
         </p>
-      </div>
+      </ToneCard>
 
       {/* 자동 계산 결과 박스 */}
       {footprint > 0 && (
-        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-[11px] text-sky-800 space-y-1">
+        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-caption text-sky-800 space-y-1">
           <p className="font-semibold">부수토지 인정 한도 계산:</p>
           <p>
             건물 정착면적 {buildingFootprintArea}㎡ × {multiplier}배({zoneLabel(appurtenantLandZone)}) = <strong>{limitArea.toFixed(2)}㎡</strong>
@@ -206,6 +186,6 @@ export function NewConstructionFootprintSection({
           결과 표에서 &quot;토지(부수)&quot;와 &quot;토지(한도초과)&quot; 행이 분리 표시됩니다.
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }

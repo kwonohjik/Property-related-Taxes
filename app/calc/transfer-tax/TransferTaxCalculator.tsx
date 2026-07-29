@@ -30,7 +30,7 @@ import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
-import { ChevronLeft } from "lucide-react";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { Step1 } from "./steps/Step1";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
@@ -180,11 +180,17 @@ export default function TransferTaxCalculator({
     setErrorAssetIndex(null);
   }
 
+  // 스텝 이동 시 새 단계의 맨 위(①번 카드)가 기본으로 보이도록 최상단 스크롤.
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function handleNext() {
     const list = collectStepIssues(currentStep, formData);
     if (list.length > 0) { failWithIssues(list); return; }
     clearError();
     setStep(currentStep + 1);
+    scrollToTop();
   }
 
   function handleBack() {
@@ -193,6 +199,7 @@ export default function TransferTaxCalculator({
       if (!isEmbeddedInMulti) router.push("/");
     } else {
       setStep(currentStep - 1);
+      scrollToTop();
     }
   }
 
@@ -368,7 +375,7 @@ export default function TransferTaxCalculator({
           : stepStatuses[i] === "complete"
             ? "done"
             : "todo",
-    onClick: () => { clearError(); setStep(i); },
+    onClick: () => { clearError(); setStep(i); scrollToTop(); },
   }));
 
   // 사이드바 요약 — 자산별 카드(자산 1·2·…). 안분 모드 양도가액은 §166⑥ 기준시가 비율로
@@ -457,6 +464,15 @@ export default function TransferTaxCalculator({
           <div className="flex items-center gap-2">
             {/* onBeforeNavigate: 결과서 홈 이동 시 setStep(0)→isResult=false로 stale 결과 숨김(결과 step은 indicator 너머·입력 보존) */}
             <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?" onBeforeNavigate={() => { if (isResult) setStep(0); }} />
+            {/* 결과 화면 → 마지막 입력 단계(가산세)로 / 입력 단계(1단계~) → 직전 단계로 복귀. 1단계(자산 목록)는 제외(홈으로가 대신). */}
+            {(isResult || currentStep > 0) && (
+              <NavButton
+                direction="prev"
+                label="이전"
+                onClick={() => { setStep(isResult ? totalSteps - 1 : currentStep - 1); clearError(); }}
+                aria-label="이전 단계로 이동"
+              />
+            )}
             <SaveButton onSave={handleManualSave} />
             <ResetButton onReset={handleReset} />
           </div>
@@ -491,24 +507,20 @@ export default function TransferTaxCalculator({
             <MixedUseResultCard breakdown={result.result} formData={formData} />
             {/* 결과 화면 하단 네비게이션 */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4 mt-4">
-              <button
-                type="button"
-                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted/60 transition-colors"
+              <NavButton
+                direction="prev"
+                label="처음으로 (자산 목록)"
                 onClick={() => { setStep(0); clearError(); }}
-              >
-                ← 처음으로 (자산 목록)
-              </button>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted/60 transition-colors"
+              />
+              <div className="flex items-center gap-2">
+                <NavButton
+                  direction="prev"
+                  label="이전 (가산세)"
                   onClick={() => { setStep(totalSteps - 1); clearError(); }}
-                >
-                  이전 (가산세)
-                </button>
+                />
                 <button
                   type="button"
-                  className="px-4 py-2 text-sm rounded-lg border border-destructive/50 text-destructive hover:bg-destructive/10 transition-colors"
+                  className="rounded-lg border border-destructive/50 px-5 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
                   onClick={handleReset}
                 >
                   초기화
@@ -581,7 +593,7 @@ export default function TransferTaxCalculator({
             {/* 본문 */}
             <main className="min-w-0">
               {/* 단계 제목 */}
-              <h2 className="text-base font-semibold mb-4">
+              <h2 className="text-lg font-semibold mb-4">
                 {STEP_TITLES[currentStep]}
               </h2>
 
@@ -685,74 +697,50 @@ export default function TransferTaxCalculator({
           {/* 네비게이션 — 뒤로가기(항상) + 다음/계산 */}
           <div className="mt-6 space-y-2">
             {isLastStep && formData.enablePenalty && (
-              <button
-                type="button"
-                onClick={handlePenaltyCalc}
-                disabled={isPenaltyLoading}
-                className="w-full rounded-lg border border-primary py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 disabled:opacity-60 transition-colors"
-              >
-                {isPenaltyLoading ? "계산 중..." : "가산세 계산하기"}
-              </button>
+              <div className="flex justify-end">
+                <CtaButton
+                  tone="outline"
+                  onClick={handlePenaltyCalc}
+                  disabled={isPenaltyLoading}
+                >
+                  {isPenaltyLoading ? "계산 중..." : "가산세 계산하기"}
+                </CtaButton>
+              </div>
             )}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={
-                  isEmbeddedInMulti && currentStep === 0
-                    ? () => router.push("/")
-                    : handleBack
-                }
-                className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium hover:bg-muted/40 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                {currentStep === 0 ? "홈으로" : "이전"}
-              </button>
+            <div className="flex items-center justify-between gap-2">
+              <WizardBackNav isFirstStep={currentStep === 0} onBack={handleBack} />
               {isLastStep ? (
                 isEmbeddedInMulti ? (
-                  <>
-                    <button
-                      type="button"
+                  <div className="flex gap-2">
+                    <CtaButton
+                      tone="outline"
                       onClick={() => {
                         const list = collectStepIssues(currentStep, formData);
                         if (list.length > 0) { failWithIssues(list); return; }
                         clearError();
                         onSaveAndAddNext?.();
                       }}
-                      className="flex-1 rounded-lg border border-primary py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
                     >
                       + 양도 건 추가
-                    </button>
-                    <button
-                      type="button"
+                    </CtaButton>
+                    <CtaButton
                       onClick={() => {
                         const list = collectStepIssues(currentStep, formData);
                         if (list.length > 0) { failWithIssues(list); return; }
                         clearError();
                         onSaveAndGoToSettings?.();
                       }}
-                      className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
                     >
                       공통 설정으로 →
-                    </button>
-                  </>
+                    </CtaButton>
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isLoading}
-                    className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 transition-colors"
-                  >
+                  <CtaButton onClick={handleSubmit} disabled={isLoading}>
                     {isLoading ? "계산 중..." : "세금 계산하기"}
-                  </button>
+                  </CtaButton>
                 )
               ) : (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-                >
-                  다음
-                </button>
+                <NavButton direction="next" label="다음" onClick={handleNext} />
               )}
             </div>
             </div>

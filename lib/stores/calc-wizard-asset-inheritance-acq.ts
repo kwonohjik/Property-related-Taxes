@@ -19,8 +19,6 @@ export interface InheritanceAcquisitionFormSlice {
   hasDecedentActualPrice: boolean;
   /** 피상속인 실지취득가액 (원 단위 문자열, hasDecedentActualPrice=true 시) */
   decedentAcquisitionPrice: string;
-  /** 상속세 신고가액 (원 단위 문자열, case B) */
-  inheritanceReportedValue: string;
   /** 상속세 신고 시 적용한 평가방법 (case B) */
   inheritanceValuationMethod:
     | "market_value"
@@ -29,8 +27,6 @@ export interface InheritanceAcquisitionFormSlice {
     | "similar_sale"
     | "supplementary"
     | "";
-  /** 평가 근거 메모 (감정평가서 번호·매매사례 일자 등, 선택) */
-  inheritanceValuationEvidence: string;
   /** 보충적평가 보조계산 사용 여부 (case B + supplementary 선택 시) */
   useSupplementaryHelper: boolean;
   /** 보조계산: 토지 면적 (㎡) */

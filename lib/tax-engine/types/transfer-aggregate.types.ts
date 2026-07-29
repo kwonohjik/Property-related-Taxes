@@ -21,9 +21,10 @@ import type {
   AmendmentInput,
   AmendmentDetail,
 } from "./transfer.types";
-import type { PublicExpropriationReductionResult } from "../public-expropriation-reduction";
-import type { ReplacementLandResult } from "../replacement-land-reduction";
-import type { GbDesignatedLandResult } from "../gb-designated-land-reduction";
+import type {
+  TransferReductionDetailSource,
+  TransferValuationDetailSource,
+} from "./transfer-result.types";
 
 /** 세율군 (소득세법 §102 ① 각 호 구분) */
 export type RateGroup =
@@ -78,8 +79,21 @@ export interface AggregateTransferInput {
   priorPaidLocalTax?: number;
 }
 
-/** 자산별 breakdown */
-export interface PerPropertyBreakdown {
+/**
+ * 자산별 breakdown.
+ *
+ * 두 계약 타입을 extends해 상세를 승계한다:
+ *   - `TransferReductionDetailSource` — 감면·취득가액 24종(§77 계열·신축주택·미분양·장기임대·자경농지 등)
+ *   - `TransferValuationDetailSource` — 평가·판정 11종(상가 환산·비사업용토지·다주택 중과·PHD 등)
+ * 덕분에 상세 카드를 단건·일괄 양쪽에서 **같은 컴포넌트로** 렌더한다.
+ *
+ * 그 상세들은 **echo 전용**이다 — 최종 감면세액은 합산 재계산(`reductionAggregated`·
+ * `ReductionBreakdownEntry`)이 담당하고, 상세는 자산별 **산출근거 표시**에만 쓴다.
+ * 값 주입은 `pickReductionDetails()`(transfer-tax-aggregate.ts)가 단일 지점에서 한다.
+ */
+export interface PerPropertyBreakdown
+  extends TransferReductionDetailSource,
+    TransferValuationDetailSource {
   propertyId: string;
   propertyLabel: string;
   isExempt: boolean;
@@ -114,8 +128,10 @@ export interface PerPropertyBreakdown {
   lossOffsetFromSameGroup: number;
   /** 타군에서 안분 받은 차손 공제 (양수) */
   lossOffsetFromOtherGroup: number;
-  /** 통산 후 소득금액 (≥ 0) */
+  /** 통산 후 소득금액 (≥ 0) — income-deduction 감면 前(양도소득금액 표시 기준) */
   incomeAfterOffset: number;
+  /** §99의3 등 소득금액차감 감면대상 양도소득금액(§90②) — incomeAfterOffset에서 차감되어 과세 */
+  incomeDeductionReducible?: number;
   /** 배분된 기본공제액 */
   allocatedBasicDeduction: number;
   /** 그룹 과세표준 중 본 자산 기여분 */
@@ -157,14 +173,6 @@ export interface PerPropertyBreakdown {
   reductionAggregated: number;
   /** 배분 비율 (= 이 건 reducibleIncome / 유형별 총 reducibleIncome) */
   reductionAllocationRatio: number;
-  /**
-   * 비자발적 양도 감면 자산별 상세 (조특법 §77·§77의2·§77의3) — echo 전용.
-   * 다건뷰 자산별 카드에서 현금/채권·감면율 등 ①~④ 구성 표시용.
-   * 최종 감면세액은 합산 재계산(reductionAggregated·ReductionBreakdownEntry)이 담당.
-   */
-  publicExpropriationDetail?: PublicExpropriationReductionResult;
-  replacementLandDetail?: ReplacementLandResult;
-  gbDesignatedLandDetail?: GbDesignatedLandResult;
   /** §114조의2 건별 환산가액적용가산세 */
   penaltyTax: number;
   /**
@@ -315,6 +323,8 @@ export interface AggregateTransferResult {
 
   /** 지방소득세 = (결정+가산) × 10%, 천원 절사 */
   localIncomeTax: number;
+  /** 농어촌특별세 = §99의3 등 소득금액차감 감면세액 × 20% (농특세법 §3·§5). 감면 없으면 0. */
+  ruralSurtax: number;
   totalTax: number;
 
   steps: CalculationStep[];
@@ -326,4 +336,11 @@ export interface AggregateTransferResult {
    * `landStdTotal`·`buildingStdTotal`·`extensionStdTotal`·`acqLandStdTotal` 등 §166⑥·§176의2② 안분 변수 포함.
    */
   generalBuildingValuationDetail?: import("../general-building-valuation").GeneralBuildingOutput;
+  /**
+   * §97②2호 단서 swap 발동 여부 (일반건물 환산 자산총액 판정 — 안 A).
+   * 나목(자본적지출+양도비) > 가목(환산취득가+개산공제 합) 시 true. 결과뷰 표시용.
+   */
+  swapApplied?: boolean;
+  /** §97②2호 단서 swap 비교 (자산총액). */
+  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
 }

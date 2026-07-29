@@ -40,7 +40,7 @@ function toPropertyTypeDisplay(code: string): React.ReactNode {
   return (
     <>
       <div className="font-medium">{label}</div>
-      <div className="text-[9px] text-gray-500">({code})</div>
+      <div className="text-micro text-gray-500">({code})</div>
     </>
   );
 }
@@ -63,6 +63,10 @@ export interface GiftTaxValuationFormTableProps {
   exemptAmount: number;
   /** ⑮ 합계 = max(0, ⑨−⑩−⑪−⑫−⑬) + ⑭ */
   aggregatedGiftValue: number;
+  /** §47① 채무인수액 — ⑭ 사전증여가산 역산 시 차감 (별지10호 ㉓ 정합, H-48) */
+  debtAssumed?: number;
+  /** §36 대납가산분 — ⑭ 역산 시 제거 (별지10호 ㉓ 정합, H-48) */
+  donorPaidTax?: number;
 
   /** ⑪ §48 공익법인 출연재산가액 */
   publicInterestExclusion?: number;
@@ -94,7 +98,7 @@ function describePriorGift(pg: PriorGift): React.ReactNode {
     return (
       <>
         <div>{loc}</div>
-        <div className="text-[9px] text-gray-500">
+        <div className="text-micro text-gray-500">
           {name ? `${name} · ` : ""}사전증여 ({pg.giftDate})
         </div>
       </>
@@ -104,7 +108,7 @@ function describePriorGift(pg: PriorGift): React.ReactNode {
     return (
       <>
         <div>{name}</div>
-        <div className="text-[9px] text-gray-500">사전증여 ({pg.giftDate})</div>
+        <div className="text-micro text-gray-500">사전증여 ({pg.giftDate})</div>
       </>
     );
   }
@@ -116,7 +120,7 @@ function describePriorGift(pg: PriorGift): React.ReactNode {
 // ============================================================
 
 const ROWS_FIXED = 10; // 부표 1 본문 빈 행 포함 고정 행 수
-const CELL_BASE = "border border-black p-1 align-middle text-[11px]";
+const CELL_BASE = "border border-black p-1 align-middle text-caption";
 const CELL_CENTER = `${CELL_BASE} text-center`;
 const CELL_AMOUNT = `${CELL_BASE} text-right tabular-nums`;
 const CELL_NAME = `${CELL_BASE} text-left`;
@@ -127,6 +131,8 @@ export function GiftTaxValuationFormTable({
   grossGiftValue,
   exemptAmount,
   aggregatedGiftValue,
+  debtAssumed = 0,
+  donorPaidTax = 0,
   publicInterestExclusion = 0,
   publicTrustExclusion = 0,
   disabledTrustExclusion = 0,
@@ -143,7 +149,7 @@ export function GiftTaxValuationFormTable({
     publicTrustExclusion,
     disabledTrustExclusion,
   );
-  const row14 = computeRow14(aggregatedGiftValue, grossGiftValue, exemptAmount);
+  const row14 = computeRow14(aggregatedGiftValue, grossGiftValue, exemptAmount, debtAssumed, donorPaidTax);
 
   return (
     <div
@@ -151,7 +157,7 @@ export function GiftTaxValuationFormTable({
       style={{ width: "277mm" }}
     >
       {/* 양식 헤더 */}
-      <div className="mb-1 flex items-start justify-between text-[10px] font-medium">
+      <div className="mb-1 flex items-start justify-between text-micro font-medium">
         <span>
           ■ 상속세 및 증여세법 시행규칙 [별지 제10호서식 부표 1] 〈개정 2026. 3.
           20.〉
@@ -161,7 +167,7 @@ export function GiftTaxValuationFormTable({
 
       {/* 관리번호 + 제목 */}
       <div className="mb-1 flex items-end gap-3">
-        <div className="border border-black px-2 py-0.5 text-[10px]">
+        <div className="border border-black px-2 py-0.5 text-micro">
           관리번호&nbsp;&nbsp;-
         </div>
         <h3 className="flex-1 text-center text-lg font-bold">
@@ -170,14 +176,14 @@ export function GiftTaxValuationFormTable({
         <div className="w-20" />
       </div>
 
-      <p className="mb-2 text-[10px]">
+      <p className="mb-2 text-micro">
         ※ 뒤쪽의 작성방법을 읽고 작성하시기 바랍니다.
       </p>
 
       {/* 본문 표 — A4 가로 양식, 좁은 뷰포트는 카드 측에서 가로 스크롤 */}
       <div>
         <table
-          className="w-full border-collapse text-[11px]"
+          className="w-full border-collapse text-caption"
           aria-label="증여재산 및 평가명세서 본문 표"
         >
           <caption className="sr-only">
@@ -319,7 +325,7 @@ export function GiftTaxValuationFormTable({
 
       {/* 계 영역 — 본문 표와 별도 표 */}
       <table
-        className="mt-2 w-full border-collapse text-[11px]"
+        className="mt-2 w-full border-collapse text-caption"
         aria-label="증여재산 및 평가명세서 계 영역"
       >
         <tbody>
@@ -396,7 +402,7 @@ export function GiftTaxValuationFormTable({
       </table>
 
       {/* 첨부서류 + 수수료 */}
-      <div className="mt-2 flex items-center justify-between border border-black px-2 py-1 text-[10px]">
+      <div className="mt-2 flex items-center justify-between border border-black px-2 py-1 text-micro">
         <div>
           <span className="font-semibold">첨부서류 </span>
           증여재산 증명서류
@@ -412,7 +418,7 @@ export function GiftTaxValuationFormTable({
         </div>
       </div>
 
-      <p className="mt-1 text-right text-[9px] text-gray-700">
+      <p className="mt-1 text-right text-micro text-gray-700">
         297mm×210mm[백상지 80g/㎡]
       </p>
     </div>

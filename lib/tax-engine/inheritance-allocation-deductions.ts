@@ -118,43 +118,42 @@ export function computeExemptByHeir(
 }
 
 /**
- * T7 (R3): 장례비 §14 한도(식대 1천만·봉안 5백만) 적용 후 채무 인별 배부.
- * funeral을 식대/봉안 category별로 raw 분배 → capped 총액으로 비율 환산(잔액 흡수).
- * 비-funeral 채무는 그대로. Σ debtByHeir == deductedBeforeAggregation(엔진 STEP3 capped)와 정합.
+ * T7 (R3): 채무 인별 배부 + 장례비 §14①2호 인별 안분.
+ *
+ * 장례비는 엔진 총 `funeralDeduction`(상증령 §9② 식대 clamp[500만,1천만]+봉안 min(,500만),
+ * 비거주자 §14② 배제 시 0)을 **단일진실**로 안분 — Σ funeralByHeir == funeralDeduction 불변식.
+ *   - 분배 기준: funeral DebtItems 있으면 그 금액 비율(협의분할 반영), 없으면(레거시 funeralExpense
+ *     scalar 경로) 법정상속분.
+ *   - H-34: 종전 debtItems만 참조 → 레거시 경로 funeral 미반영(각 상속인 과세가액상당액 과다).
+ *   - M-8: 종전 Math.min만(500만 floor 미적용) → §9②1호 최소보장 소실. funeralDeduction 주입으로 정합.
+ * 비-funeral 채무는 그대로. Σ debtByHeir == deductedBeforeAggregation(엔진 STEP3)과 정합.
  */
 export function computeDebtByHeirWithFuneralCap(
   debtItems: DebtItem[],
   legalShares: LegalShareResult,
+  funeralDeduction: number,
 ): {
   debtPrincipalByHeir: Map<string, number>; // ㉡ 채무 §14①3호 (financial+personal)
   publicChargeByHeir: Map<string, number>; // ㉡ 공과금 §14①1호 (tax)
-  funeralByHeir: Map<string, number>; // ㉡ 장례비 §14①2호 (funeral, capped)
+  funeralByHeir: Map<string, number>; // ㉡ 장례비 §14①2호 (funeral, Σ==funeralDeduction)
 } {
-  const mealItems = debtItems.filter((d) => d.category === "funeral" && !d.isBongan);
-  const bonganItems = debtItems.filter((d) => d.category === "funeral" && d.isBongan);
   // ㉡ 분리 — 채무(financial+personal)와 공과금(tax) 별도 안분.
   const principalItems = debtItems.filter(
     (d) => d.category === "financial" || d.category === "personal",
   );
   const taxItems = debtItems.filter((d) => d.category === "tax");
-
-  const rawMeal = mealItems.reduce((s, d) => s + d.amount, 0);
-  const rawBongan = bonganItems.reduce((s, d) => s + d.amount, 0);
-  const cappedMeal = Math.min(rawMeal, 10_000_000);
-  const cappedBongan = Math.min(rawBongan, 5_000_000);
+  const funeralItems = debtItems.filter((d) => d.category === "funeral");
 
   const debtPrincipalByHeir = resolveAllocationsByHeir(principalItems, (it) => it.amount, legalShares);
   const publicChargeByHeir = resolveAllocationsByHeir(taxItems, (it) => it.amount, legalShares);
-  const mealRawByHeir = resolveAllocationsByHeir(mealItems, (it) => it.amount, legalShares);
-  const bonganRawByHeir = resolveAllocationsByHeir(bonganItems, (it) => it.amount, legalShares);
 
-  // 한도 미초과면 capped==raw → scaleMapToTotal이 동일값 반환(잔차 0).
-  const mealByHeir = scaleMapToTotal(mealRawByHeir, cappedMeal);
-  const bonganByHeir = scaleMapToTotal(bonganRawByHeir, cappedBongan);
-
-  const funeralByHeir = new Map<string, number>(mealByHeir);
-  for (const [heirId, amt] of bonganByHeir)
-    funeralByHeir.set(heirId, (funeralByHeir.get(heirId) ?? 0) + amt);
+  // 장례비 — funeral 항목 금액 비율(있으면) 또는 법정상속분(레거시 scalar)으로 raw 분배 후
+  //   엔진 총액(funeralDeduction)으로 환산(잔액 흡수). Σ == funeralDeduction 보장.
+  const funeralRawByHeir =
+    funeralItems.length > 0
+      ? resolveAllocationsByHeir(funeralItems, (it) => it.amount, legalShares)
+      : distributeByLegalShares(funeralDeduction, legalShares);
+  const funeralByHeir = scaleMapToTotal(funeralRawByHeir, funeralDeduction);
 
   return { debtPrincipalByHeir, publicChargeByHeir, funeralByHeir };
 }

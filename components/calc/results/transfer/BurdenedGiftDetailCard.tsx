@@ -11,6 +11,7 @@
  */
 
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const SELECTED_LABEL: Record<string, string> = {
   supplementary: "보충적평가 (상증법 §61)",
@@ -80,8 +81,19 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
       </div>
       <table className="w-full text-xs border-collapse">
         <tbody>
+          {bg.ownershipRatio !== undefined && (
+            <tr>
+              <td colSpan={2} className="py-1 pr-2 text-caption text-fuchsia-800">
+                공유지분 {(bg.ownershipRatio * 100).toFixed(4).replace(/\.?0+$/, "")}% 적용 —
+                아래 평가액은 <b>지분 해당분</b>입니다(소령 §159의 A·C). 인수 채무는 입력한
+                실제 인수액 그대로입니다. 물건 전체 보충적평가액{" "}
+                <span className="font-mono">{fmt(bg.wholePropertySupplementary)}</span>원은
+                12억 고가주택 판정 분모로 별도 사용됩니다.
+              </td>
+            </tr>
+          )}
           <tr>
-            <td colSpan={2} className="py-1 pr-2 text-[11px] font-semibold text-fuchsia-700">
+            <td colSpan={2} className="py-1 pr-2 text-caption font-semibold text-fuchsia-700">
               양도세 보충적평가 (자산별 양도가액 안분 분모)
             </td>
           </tr>
@@ -104,7 +116,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
           {bg.giftValuation && bg.giftValuation.max !== bg.sangjeungbeopValuation.max && (
             <>
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pt-2 text-[11px] font-semibold text-fuchsia-700">
+                <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700">
                   증여재산 평가 (취득가액 안분·채무비율 분모 — 상증법 §61 층별 가감율 적용)
                 </td>
               </tr>
@@ -128,7 +140,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
           </tr>
           {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}
           <tr className="border-t border-fuchsia-300">
-            <td colSpan={2} className="py-1 pr-2 pt-2 text-[11px] font-semibold text-fuchsia-700">
+            <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700">
               자산별 취득가액 ({ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed})
             </td>
           </tr>
@@ -137,9 +149,11 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
               {bg.perAsset.land.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    토지 환산취득가 = 양도가액 {fmt(bg.perAsset.land.transferPrice)} × 취득기준시가{" "}
-                    {fmt(bg.perAsset.land.stdPriceAtAcquisition)} ÷ 양도기준시가{" "}
-                    {fmt(bg.perAsset.land.stdPriceAtTransfer)}
+                    토지 환산취득가 = 양도가액 {fmt(bg.perAsset.land.transferPrice)} ×{" "}
+                    <Frac
+                      top={`취득기준시가 ${fmt(bg.perAsset.land.stdPriceAtAcquisition)}`}
+                      bottom={`양도기준시가 ${fmt(bg.perAsset.land.stdPriceAtTransfer)}`}
+                    />
                   </td>
                   <td className="text-right font-mono">{fmt(bg.perAsset.land.acquisitionPrice)}원</td>
                 </tr>
@@ -147,9 +161,11 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
               {bg.perAsset.building.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    건물 환산취득가 = 양도가액 {fmt(bg.perAsset.building.transferPrice)} × 취득기준시가{" "}
-                    {fmt(bg.perAsset.building.stdPriceAtAcquisition)} ÷ 양도기준시가{" "}
-                    {fmt(bg.perAsset.building.stdPriceAtTransfer)}
+                    건물 환산취득가 = 양도가액 {fmt(bg.perAsset.building.transferPrice)} ×{" "}
+                    <Frac
+                      top={`취득기준시가 ${fmt(bg.perAsset.building.stdPriceAtAcquisition)}`}
+                      bottom={`양도기준시가 ${fmt(bg.perAsset.building.stdPriceAtTransfer)}`}
+                    />
                   </td>
                   <td className="text-right font-mono">{fmt(bg.perAsset.building.acquisitionPrice)}원</td>
                 </tr>
@@ -176,7 +192,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                 </tr>
               )}
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pl-3 text-[11px] text-fuchsia-600">
+                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600">
                   ※ 실지취득가 모드 — 개산공제(§163⑥) 미적용, 자본적지출·양도비를 채무비율 안분하여 필요경비 반영
                 </td>
               </tr>

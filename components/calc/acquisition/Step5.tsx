@@ -148,6 +148,13 @@ export function Step5({
                 unit="㎡"
               />
             </div>
+            <ToggleCard
+              tone="violet"
+              title="농지 소재 시·군·구 또는 인접 시·군·구 거주"
+              description="해당 시 아래 거리(30km) 요건과 무관하게 거주 요건이 충족됩니다 (지특령 §3①2호 선택 요건)"
+              checked={form.residesInSameOrAdjacentJurisdiction}
+              onCheckedChange={(v) => set("residesInSameOrAdjacentJurisdiction", v)}
+            />
             <div>
               <p className="text-xs font-medium mb-1">농지 소재지 ~ 거주지 거리 (km)</p>
               <DecimalInput
@@ -155,6 +162,7 @@ export function Step5({
                 onChange={(v) => set("farmlandLocationDistance", v)}
                 placeholder="농지 경작 거리"
                 unit="km"
+                disabled={form.residesInSameOrAdjacentJurisdiction}
               />
             </div>
             <div className="rounded-md bg-violet-50/70 border border-violet-200 p-2 text-xs text-violet-700 space-y-1">

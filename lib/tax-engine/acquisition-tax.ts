@@ -26,6 +26,7 @@ import {
   decideTaxRate,
   calcLinearInterpolationTax,
   calcTaxWithAdditional,
+  buildLocalEducationTaxFormula,
   type AdditionalTaxResult,
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
@@ -33,6 +34,7 @@ import { computeBurdenedGiftResult } from "./acquisition-tax-burdened";
 import {
   applySpecialRate,
   isValidSpecialRateType,
+  resolveInheritanceSpecialRateGate,
 } from "./acquisition-tax-rate-special";
 import {
   assessCorpSurcharge,
@@ -245,9 +247,14 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // ── Step 5b: [P2-1] §15 세율특례 적용 ──
   // §13①(본점·공장) 중과 대상이면 §15 배제.
   // §13②(대도시 법인) + §15 동시 적용 시 (basicRate - 2%) × 3.
-  const specialRateType = isValidSpecialRateType(input.specialRateType)
+  const rawSpecialRateType = isValidSpecialRateType(input.specialRateType)
     ? input.specialRateType
     : undefined;
+
+  // [C-2] §15①2호 상속특례 요건 게이트(가목 1가구1주택 / 나목 §6① 감면농지) — 헬퍼 위임.
+  const inheritanceGate = resolveInheritanceSpecialRateGate(rawSpecialRateType, input);
+  const specialRateType = inheritanceGate.eligible ? rawSpecialRateType : undefined;
+  if (inheritanceGate.warning) warnings.push(inheritanceGate.warning);
 
   // §11①8 유상거래 주택 여부 — 세율특례 시 (표준−2%)가 아니라 해당세율 × 50% (§15① 단서).
   // §15① 특례 중 유상거래 주택(§11①8)은 환매(§15①1호)뿐 — 재산분할·공유물분할·상속특례·
@@ -304,6 +311,9 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     giftorIs1HHHolder: input.giftorIs1HHHolder,
     // [P1-4] 시가표준액 1억/2억 이중 기준 + 정비구역
     wholeHouseStandardValue: input.wholeHouseStandardValue,
+    // R3-03: §13의2② 3억 임계 fallback — wholeHouseStandardValue 미입력(단일주택 증여 등)
+    // 시 해당 주택 시가표준액으로 12% 중과 발동 판정 (미전달 시 fallback이 죽어 항상 0).
+    standardValue: input.standardValue,
     isMetropolitanRegion: input.isMetropolitanRegion,
     isUrbanRegenerationArea: input.isUrbanRegenerationArea,
     // [P1-5] 일시적 2주택
@@ -370,16 +380,42 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // ── 부가세 계산 ──
   // [P4-2] 사치성 교육세 매트릭스 분기 — surchargeDecision의 appliedBranch 사용
   const surchargeTypeForEdu = ((): import("./acquisition-tax-rate").AdditionalTaxInput["surchargeType"] => {
+    // [R3-05] 법인 §13②(대도시 5년내)·§13⑥(본점+대도시 중복) 비주택 중과 → §151①1가 본문×300%.
+    //   §13①(본점·공장: headquarters_new_build/factory_*)는 §151①1가 열거 제외 → 본문(0.4%).
+    //   §13② 중과는 corpSurchargeResult에서만 isSurcharged=true가 되므로 여기서 매핑.
+    if (
+      corpSurchargeResult.isSurcharged &&
+      input.propertyType !== "housing" &&
+      (corpSurchargeResult.surchargeType === "metro_corp_5yr" ||
+        corpSurchargeResult.surchargeType === "headquarters_metro_combined")
+    ) {
+      return "section13_gamok";
+    }
     if (!surchargeDecision.isSurcharged) return undefined;
     const branch = (surchargeDecision as { appliedBranch?: string }).appliedBranch;
     if (branch === "luxury_solo") return "luxury_solo";
     if (branch === "luxury_multi") return "luxury_multi";
+    // [R3-05] §13⑦(사치성+대도시법인) 비주택 → 가목 ×300%. 주택 §13⑦은 §11①8 주택이면
+    //   나목이나 본 엔진 luxury_corp 주택은 저빈도·별건 → 현행(본문) 유지.
+    if (branch === "luxury_corp") return input.propertyType !== "housing" ? "section13_gamok" : undefined;
     if (branch === "corp_housing") return "corp_metro";
     if (branch === "multi_house_8") return "multi_house_8";
     if (branch === "multi_house_12") return "multi_house_12";
     if (branch === "gift_12") return "gift_12";
     return undefined;
   })();
+
+  // [P2-5] 자경농지 50% 감면 판정 (지특법 §6①) — R3-09 농특세 §4 10호 비과세 선행 판단.
+  const selfCultivResult = assessSelfCultivationReduction({
+    isSelfCultivatedFarmer: input.isSelfCultivatedFarmer,
+    farmingYears: input.farmingYears,
+    farmlandArea: input.farmlandArea,
+    farmlandLocationDistance: input.farmlandLocationDistance,
+    residesInSameOrAdjacentJurisdiction: input.residesInSameOrAdjacentJurisdiction,
+    acquisitionTax,
+    propertyType: effectiveInput.propertyType,
+    acquisitionCause: effectiveInput.acquisitionCause,
+  });
 
   const additional = burdenedAdditional ?? calcTaxWithAdditional(
     taxBase,
@@ -389,15 +425,20 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     input.areaSqm,
     {
       acquisitionCause: effectiveInput.acquisitionCause,
-      // 법인 §13①② 중과도 isSurcharged로 취급 → 교육세 비중과 (표준세율−2%)×20% 분기
-      // 대신 종전 0.4% 분기 유지 (법인 교육세 정확성은 별건 — 본 수정 범위 밖).
       isSurcharged: surchargeDecision.isSurcharged || corpSurchargeResult.isSurcharged,
       surchargeType: surchargeTypeForEdu,
       isRuralRegion: input.isRuralRegion,
+      // [R3-01/R3-02] 부가세 산정 기준 표준세율(중과 전). 사치성=물건 표준율 기준·
+      // §13의2=4% 기준 판정에 사용. 법인 §13② 비주택은 default(basicRate) — R3-05 별도.
+      basicRate: effectiveBasicRate,
     }
   );
 
-  const totalTax = acquisitionTax + additional.ruralSpecialTax + additional.localEducationTax;
+  // [R3-09] 농특세법 §4 10호: 지특법 §6① 적용대상 농지·임야 취득세는 농특세 비과세.
+  //   자경농지 감면 요건 충족 시 농특세를 0으로 처리(감면이 아니라 비과세 — totalTax에서 제외).
+  const ruralSpecialTax = selfCultivResult.isEligible ? 0 : additional.ruralSpecialTax;
+
+  const totalTax = acquisitionTax + ruralSpecialTax + additional.localEducationTax;
 
   // ── Step 8: 감면 적용 — 중복배제 패턴 (지방세특례제한법 §180) ──
   // 동일 과세대상·동일 세목(취득세)에 둘 이상 지방세 특례 적용 시 감면되는 세액이 큰 것 1건만.
@@ -428,17 +469,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     });
   }
 
-  // 후보 2: [P2-5] 자경농지 50% 감면 (지특법 §6)
-  const selfCultivResult = assessSelfCultivationReduction({
-    isSelfCultivatedFarmer: input.isSelfCultivatedFarmer,
-    farmingYears: input.farmingYears,
-    farmlandArea: input.farmlandArea,
-    farmlandLocationDistance: input.farmlandLocationDistance,
-    acquisitionTax,
-    propertyType: effectiveInput.propertyType,
-    acquisitionCause: effectiveInput.acquisitionCause,
-  });
-
+  // 후보 2: [P2-5] 자경농지 50% 감면 (지특법 §6) — selfCultivResult는 위에서 선-계산됨.
   if (selfCultivResult.isEligible) {
     reductionCandidates.push({
       amount: selfCultivResult.reductionAmount,
@@ -464,26 +495,28 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   }
 
   // ── 계산 과정 정리 (결과 UI 상세 표시용) ──
+  // 취득세 본세 세율 표현부(선두 "과세표준 × " 제외) — 과세표준값·결과값 인라인 조립용.
+  const bonseRateExpr = corpSurchargeResult.isSurcharged
+    ? `${corpSurchargeResult.surchargeType} 중과세율 ${(finalRate * 100).toFixed(1)}%`
+    : surchargeDecision.isSurcharged
+      ? `중과세율 ${(finalRate * 100).toFixed(1)}%`
+      : specialRateResult.isApplied
+        ? `§15 세율특례 ${(finalRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`
+        : basicRateDecision.rateType === "linear_interpolation"
+          ? `선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간, 지방세법 §11①8)`
+          : `${(finalRate * 100).toFixed(1)}%`;
   steps.push(
     {
       label: "과세표준",
       formula: taxBaseResult.method === "actual_price" || taxBaseResult.method === "recognized_market"
-        ? "신고가액 (천원 미만 절사)"
-        : "시가표준액 (천원 미만 절사)",
+        ? "신고가액 (원 단위 — 취득세 과세표준 절사 규정 없음)"
+        : "시가표준액 (원 단위 — 취득세 과세표준 절사 규정 없음)",
       amount: taxBase,
       legalBasis: ACQUISITION.TAX_BASE,
     },
     {
       label: "취득세 본세",
-      formula: corpSurchargeResult.isSurcharged
-        ? `과세표준 × ${corpSurchargeResult.surchargeType} 중과세율 ${(finalRate * 100).toFixed(1)}%`
-        : surchargeDecision.isSurcharged
-          ? `과세표준 × 중과세율 ${(finalRate * 100).toFixed(1)}%`
-          : specialRateResult.isApplied
-            ? `과세표준 × §15 세율특례 ${(finalRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`
-            : basicRateDecision.rateType === "linear_interpolation"
-              ? `과세표준 × 선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간, 지방세법 §11①8)`
-              : `과세표준 × ${(finalRate * 100).toFixed(1)}%`,
+      formula: `과세표준 ${taxBase.toLocaleString()} × ${bonseRateExpr} = ${acquisitionTax.toLocaleString()}`,
       amount: acquisitionTax,
       legalBasis: corpSurchargeResult.isSurcharged
         ? corpSurchargeResult.legalBasis[0]
@@ -494,39 +527,42 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
             : ACQUISITION.BASIC_RATE,
     },
   );
-  if (additional.ruralSpecialTax > 0) {
+  if (ruralSpecialTax > 0) {
     steps.push({
       label: "농어촌특별세",
-      formula: `(적용세율 - 표준세율 2%) × 과세표준 × 10% (${ACQUISITION.RURAL_SPECIAL_TAX})`,
-      amount: additional.ruralSpecialTax,
+      formula: `(표준세율 2% + 중과분) × 과세표준 ${taxBase.toLocaleString()} × 10% = ${ruralSpecialTax.toLocaleString()} (${ACQUISITION.RURAL_SPECIAL_TAX})`,
+      amount: ruralSpecialTax,
       legalBasis: ACQUISITION.RURAL_SPECIAL_TAX_RATE_BASIS,
     });
   }
   if (additional.localEducationTax > 0) {
+    // [C-3] 지방교육세 표시 산식을 실제 분기(§151①1)에 맞춰 동적 생성 (하드코딩 0.4% 제거).
     steps.push({
       label: "지방교육세",
-      formula: "과세표준 × 표준세율 2% × 20% = 과세표준 × 0.4%",
+      formula: `${buildLocalEducationTaxFormula(surchargeTypeForEdu, input.propertyType, effectiveInput.acquisitionCause)} = ${additional.localEducationTax.toLocaleString()}`,
       amount: additional.localEducationTax,
       legalBasis: ACQUISITION.LOCAL_EDUCATION_TAX,
     });
   }
   steps.push({
     label: "합계 납부세액 (감면 전)",
-    formula: "취득세 + 농특세 + 지방교육세",
+    formula: `취득세 ${acquisitionTax.toLocaleString()} + 농특세 ${ruralSpecialTax.toLocaleString()} + 지방교육세 ${additional.localEducationTax.toLocaleString()} = ${totalTax.toLocaleString()}`,
     amount: totalTax,
   });
   if (reductionAmount > 0) {
     steps.push({
       label: bestReduction.label,
       formula: reductionType === "self_cultivation"
-        ? `취득세 본세 × 50% (${ACQUISITION.SELF_CULTIVATION_REDUCTION})`
-        : `취득세 본세 × 100% (한도 ${ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION.toLocaleString()}`,
+        ? `취득세 본세 ${acquisitionTax.toLocaleString()} × 50% = ${reductionAmount.toLocaleString()} (${ACQUISITION.SELF_CULTIVATION_REDUCTION})`
+        : `취득세 본세 전액 감면 (한도 ${(input.isSmallHouseFirstHome
+            ? ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION_SMALL
+            : ACQUISITION_CONST.FIRST_HOME_MAX_REDUCTION).toLocaleString()}원) = ${reductionAmount.toLocaleString()}`,
       amount: -reductionAmount,
       legalBasis: bestReduction.legalBasis,
     });
     steps.push({
       label: "감면 후 최종 납부세액",
-      formula: `합계 − ${bestReduction.label}`,
+      formula: `합계 ${totalTax.toLocaleString()} − ${bestReduction.label} ${reductionAmount.toLocaleString()} = ${totalTaxAfterReduction.toLocaleString()}`,
       amount: totalTaxAfterReduction,
     });
   }
@@ -585,7 +621,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       : surchargeDecision.surchargeReason,
 
     acquisitionTax,
-    ruralSpecialTax: additional.ruralSpecialTax,
+    ruralSpecialTax,
     localEducationTax: additional.localEducationTax,
     totalTax,
 

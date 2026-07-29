@@ -111,7 +111,7 @@ export function FbAdditionalBusinessesSection({
 
       {isActive && (
         <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:bg-sky-950/10 dark:border-sky-800 p-3 space-y-3">
-          <p className="text-[11px] text-sky-700 dark:text-sky-300">
+          <p className="text-caption text-sky-700 dark:text-sky-300">
             주 가업(위에서 입력한 가업)에 더해 추가 가업을 입력하세요. 각 추가 가업은 §15③ 요건을
             충족함을 전제로 영위연수·가업상속재산가액만 반영합니다.
           </p>
@@ -122,7 +122,7 @@ export function FbAdditionalBusinessesSection({
               className="rounded-lg border border-sky-200 bg-white/60 dark:bg-sky-950/20 p-3 space-y-2"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
                   {idx + 1}
                 </span>
                 <input
@@ -135,14 +135,14 @@ export function FbAdditionalBusinessesSection({
                 <button
                   type="button"
                   onClick={() => removeItem(idx)}
-                  className="rounded-md px-2 py-1 text-[11px] font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  className="rounded-md px-2 py-1 text-caption font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
                 >
                   삭제
                 </button>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <label className="space-y-1">
-                  <span className="block text-[11px] font-medium text-sky-700 dark:text-sky-300">
+                  <span className="block text-caption font-medium text-sky-700 dark:text-sky-300">
                     영위 연수
                   </span>
                   <DecimalInput
@@ -152,7 +152,7 @@ export function FbAdditionalBusinessesSection({
                   />
                 </label>
                 <label className="space-y-1">
-                  <span className="block text-[11px] font-medium text-sky-700 dark:text-sky-300">
+                  <span className="block text-caption font-medium text-sky-700 dark:text-sky-300">
                     가업상속재산가액
                   </span>
                   <CurrencyInput
@@ -164,7 +164,7 @@ export function FbAdditionalBusinessesSection({
                 </label>
               </div>
               {b.businessValue > 0 && b.operatingYears > 0 && b.operatingYears < 10 && (
-                <p className="text-[10px] text-rose-600 dark:text-rose-400">
+                <p className="text-micro text-rose-600 dark:text-rose-400">
                   ⚠️ 영위 10년 미만은 가업이 아닙니다 (상증법 §18의2① 가업 정의).
                 </p>
               )}
@@ -182,10 +182,10 @@ export function FbAdditionalBusinessesSection({
           {/* 미리보기 — 엔진 단일 소스 순차공제 */}
           {preview && (
             <div className="rounded-md border border-sky-300 bg-sky-100/60 dark:bg-sky-900/30 dark:border-sky-700 p-2 space-y-1.5">
-              <p className="text-[11px] font-semibold text-sky-800 dark:text-sky-200">
+              <p className="text-caption font-semibold text-sky-800 dark:text-sky-200">
                 순차공제 미리보기 (총한도 {formatKRW(preview.totalCap)})
               </p>
-              <div className="space-y-0.5 text-[10px] text-sky-800 dark:text-sky-300">
+              <div className="space-y-0.5 text-micro text-sky-800 dark:text-sky-300">
                 {preview.lineItems.map((li) => (
                   <div key={li.order} className="flex justify-between gap-2">
                     <span>

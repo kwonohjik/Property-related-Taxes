@@ -1,0 +1,374 @@
+/**
+ * 토지/건물 분리 직접 입력 — 총액 초과 차단 (Phase B).
+ *
+ * 계획서: docs/02-design/features/land-building-split-mode-gating-and-salescase-drift.plan.md (§3-B)
+ *
+ * 엔진 splitPair는 한쪽만 입력 시 반대쪽을 잔액으로 도출한다 → 입력 > 총액이면 음수.
+ * 엔진은 clamp하지 않으므로(조용한 오답 방지) validate가 차단한다.
+ * 판정식은 엔진 export(`isSplitPairOverflow`) 단일 소스 — ⑧ 규칙 준수.
+ */
+import { describe, it, expect } from "vitest";
+import { validateSplitDirectInputs } from "@/lib/calc/transfer-tax-validate-split";
+import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+
+function splitAsset(over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) {
+  return {
+    ...makeDefaultAsset(1),
+    assetKind: "housing" as const,
+    hasSeperateLandAcquisitionDate: true,
+    saleSplitMode: "actual" as const,
+    actualSalePrice: "1,000,000,000",
+    fixedAcquisitionPrice: "400,000,000",
+    ...over,
+  };
+}
+
+describe("isSplitPairOverflow — 엔진 판정식 (splitPair 분기와 1:1)", () => {
+  it("둘 다 미입력 → 초과 불가(비율 안분)", () => {
+    expect(isSplitPairOverflow(1000, undefined, undefined)).toBe(false);
+  });
+  it("한쪽만 입력 → 그 값이 총액 초과 시 true", () => {
+    expect(isSplitPairOverflow(1000, 700, undefined)).toBe(false);
+    expect(isSplitPairOverflow(1000, 1200, undefined)).toBe(true);
+    expect(isSplitPairOverflow(1000, undefined, 1200)).toBe(true);
+  });
+  it("둘 다 입력 → 합 ≠ 총액이면 true (초과·미달 **모두**)", () => {
+    expect(isSplitPairOverflow(1000, 700, 300)).toBe(false);
+    expect(isSplitPairOverflow(1000, 700, 400)).toBe(true); // 초과
+    expect(
+      isSplitPairOverflow(1000, 300, 300),
+      "🔴 합 < 총액도 차단해야 한다 — 양도가액 축에서 양도차익 과소 = 세액 과소가 침묵 통과",
+    ).toBe(true);
+  });
+  it("경계: 정확히 총액 → 모순 아님", () => {
+    expect(isSplitPairOverflow(1000, 1000, undefined)).toBe(false);
+    expect(isSplitPairOverflow(1000, 600, 400)).toBe(false);
+  });
+});
+
+describe("validateSplitDirectInputs — 게이트", () => {
+  it("취득일 분리 OFF → 미검증", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({ hasSeperateLandAcquisitionDate: false, buildingTransferPrice: "9,999,999,999" }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it('분리 방식 "기준시가 비율 안분" → 양도가액 overflow 미검증 (칸 미노출, 양도시 기준시가는 입력됨)', () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({
+          saleSplitMode: "apportioned",
+          landStandardPriceAtTransfer: "500,000,000",
+          buildingStandardPriceAtTransfer: "500,000,000",
+          buildingTransferPrice: "9,999,999,999",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("validateSplitDirectInputs — 양도시 기준시가 필수 (§7.2, 2026-07-28 사용자 확정)", () => {
+  it("apportioned 일괄양도 + 양도시 기준시가 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(splitAsset({ saleSplitMode: "apportioned" }), "자산 1");
+    expect(err).toContain("양도시 기준시가");
+  });
+
+  it("estimated 파트(환산) + 양도시 기준시가 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(
+      splitAsset({ saleSplitMode: "actual", useEstimatedAcquisition: true }),
+      "자산 1",
+    );
+    expect(err).toContain("양도시 기준시가");
+  });
+
+  it("apportioned + 양도시 토지·건물 기준시가 모두 입력 → 통과", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({
+          saleSplitMode: "apportioned",
+          landStandardPriceAtTransfer: "500,000,000",
+          buildingStandardPriceAtTransfer: "500,000,000",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("actual 구분양도 + 실가 파트 → 양도시 기준시가 불필요(미입력 통과)", () => {
+    expect(validateSplitDirectInputs(splitAsset({ saleSplitMode: "actual" }), "자산 1")).toBeNull();
+  });
+});
+
+describe("validateSplitDirectInputs — 양도가액 (케이스 6·6-b)", () => {
+  it("정상: 건물만 3억 (총 10억) → 통과", () => {
+    expect(validateSplitDirectInputs(splitAsset({ buildingTransferPrice: "300,000,000" }), "자산 1")).toBeNull();
+  });
+
+  it("케이스 6-b: 건물만 12억 (총 10억) → 차단", () => {
+    const err = validateSplitDirectInputs(splitAsset({ buildingTransferPrice: "1,200,000,000" }), "자산 1");
+    expect(err).toContain("건물 양도가액");
+    expect(err).toContain("음수");
+  });
+
+  it("케이스 6: 토지 7억 + 건물 4억 = 11억 (총 10억) → 차단", () => {
+    const err = validateSplitDirectInputs(
+      splitAsset({ landTransferPrice: "700,000,000", buildingTransferPrice: "400,000,000" }),
+      "자산 1",
+    );
+    expect(err).toContain("합이 양도가액");
+  });
+});
+
+describe("validateSplitDirectInputs — 취득가액 (케이스 6-c)", () => {
+  it("정상: 건물만 1.5억 (총 4억) → 통과", () => {
+    expect(validateSplitDirectInputs(splitAsset({ buildingAcquisitionPrice: "150,000,000" }), "자산 1")).toBeNull();
+  });
+
+  it("케이스 6-c: 토지 2.5억 + 건물 2억 = 4.5억 (총 4억) → 차단", () => {
+    const err = validateSplitDirectInputs(
+      splitAsset({ landAcquisitionPrice: "250,000,000", buildingAcquisitionPrice: "200,000,000" }),
+      "자산 1",
+    );
+    expect(err).toContain("합이 취득가액");
+  });
+
+  it("환산취득가 모드 → 취득가액 미검증 (총액 미입력, 양도시 기준시가는 입력됨)", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({
+          useEstimatedAcquisition: true,
+          landStandardPriceAtTransfer: "500,000,000",
+          buildingStandardPriceAtTransfer: "500,000,000",
+          buildingAcquisitionPrice: "9,999,999,999",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("매매사례가액 모드 → 취득가액 미검증 (추계액 · 칸 숨김)", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({ isSalesCaseAcquisition: true, buildingAcquisitionPrice: "9,999,999,999" }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("validateSplitDirectInputs — 자본적지출 (총액 = directExpenses, 엔진 input.expenses 소스)", () => {
+  it("🔴 capitalExpenditure는 총액이 아니다 — 엔진은 directExpenses(=input.expenses)를 쓴다", () => {
+    // capitalExpenditure를 총액으로 보면 판정식만 공유하고 피연산자가 달라져 단일 소스가 무효화된다.
+    // 엔진은 expenses=0 → 독립 입력으로 처리하므로 모순 자체가 없다 → validate도 통과여야 한다.
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({ capitalExpenditure: "100,000,000", buildingDirectExpenses: "999,999,999" }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("legacy directExpenses 1억 + 건물만 3천만 → 통과(잔액 7천만)", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({ directExpenses: "100,000,000", buildingDirectExpenses: "30,000,000" }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("legacy directExpenses 1억 + 토지 7천만 + 건물 5천만 = 1.2억 → 차단", () => {
+    const err = validateSplitDirectInputs(
+      splitAsset({
+        directExpenses: "100,000,000",
+        landDirectExpenses: "70,000,000",
+        buildingDirectExpenses: "50,000,000",
+      }),
+      "자산 1",
+    );
+    expect(err).toContain("자본적지출");
+  });
+});
+
+describe("validateSplitDirectInputs — 총액 매핑 다분기 경로는 미검증 (dual-truth 회피)", () => {
+  it("부담부증여 → 미검증", () => {
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({ transferType: "burdened_gift", buildingTransferPrice: "9,999,999,999" }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("지분(분수) 모드 → 미검증 (총액이 지분 안분됨)", () => {
+    // 판정은 API 정본 getOwnershipRatio(asset) < 1.0 — 기본 자산은 "100"/"100"(비율 1.0)이라 지분 아님.
+    expect(
+      validateSplitDirectInputs(
+        splitAsset({ ownershipNumerator: "1", ownershipDenominator: "2", buildingTransferPrice: "9,999,999,999" }),
+        "자산 1",
+      ),
+    ).toBeNull();
+  });
+
+  it("기본 자산(100/100)은 지분 모드가 아니다 — 검증 대상 (회귀 방어)", () => {
+    const err = validateSplitDirectInputs(splitAsset({ buildingTransferPrice: "9,999,999,999" }), "자산 1");
+    expect(err, "100/100을 지분으로 오판하면 검증이 통째로 죽는다").not.toBeNull();
+  });
+});
+
+/**
+ * V1·V2·V4 — 별개 취득(토지·건물 취득시기 상이) 취득가액 파트별 필수.
+ *
+ * 엔진(transfer-tax-split-gain.ts calcOnePart)이 미입력을 TaxCalculationError로 차단하므로,
+ * validate가 같은 조건을 **필드 오류로 먼저** 알려야 한다(⑧ — UI 통과 ↔ 엔진 차단 모순 금지).
+ * 판정 게이트는 엔진 전송값과 동일한 `isSeparateAcquisition()` 단일 소스.
+ */
+describe("V1·V2 — 별개 취득 파트별 취득가액 필수", () => {
+  const sepAsset = (over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) =>
+    splitAsset({
+      acquisitionDate: "2018-06-01",
+      landAcquisitionDate: "2015-06-01",
+      saleSplitMode: "actual" as const,
+      landTransferPrice: "600,000,000",
+      buildingTransferPrice: "400,000,000",
+      landStandardPriceAtTransfer: "600,000,000",
+      buildingStandardPriceAtTransfer: "400,000,000",
+      ...over,
+    });
+
+  it("실거래가 + 건물 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({ landAcqMode: "actual", buildingAcqMode: "actual", landAcquisitionPrice: "300,000,000" }),
+      "자산 1",
+    );
+    expect(err).toContain("건물 취득가액");
+  });
+
+  it("실거래가 + 둘 다 입력 → 통과 (합이 상단 총액 4억과 달라도 정상 — V4)", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({
+        landAcqMode: "actual",
+        buildingAcqMode: "actual",
+        landAcquisitionPrice: "300,000,000",
+        buildingAcquisitionPrice: "250,000,000",
+      }),
+      "자산 1",
+    );
+    expect(
+      err,
+      "별개 취득은 잔액 규칙이 폐지돼 '합 = 총액' 불변식이 없다 — 총액 초과 검증이 살아있으면 정당 입력이 막힌다",
+    ).toBeNull();
+  });
+
+  it("매매사례 + 파트 미입력 → §176의2③1호 근거로 차단", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({ landAcqMode: "salesCase", buildingAcqMode: "salesCase" }),
+      "자산 1",
+    );
+    expect(err).toContain("매매사례가액");
+  });
+
+  it("환산은 대상 아님 — 총액 미참조 구조", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({ landAcqMode: "estimated", buildingAcqMode: "estimated" }),
+      "자산 1",
+    );
+    expect(err).toBeNull();
+  });
+
+  it("비소유 파트는 대상 아님 (selfOwns=land_only + 토지만 입력)", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({
+        selfOwns: "land_only",
+        landAcqMode: "actual",
+        buildingAcqMode: "actual",
+        landAcquisitionPrice: "300,000,000",
+      }),
+      "자산 1",
+    );
+    expect(err).toBeNull();
+  });
+
+  it("🔴 취득일 동일 → V1 미적용 (총액 잔액 도출이 정당 — 종전 동작)", () => {
+    const err = validateSplitDirectInputs(
+      sepAsset({
+        landAcquisitionDate: "2018-06-01",
+        landAcqMode: "actual",
+        buildingAcqMode: "actual",
+        landAcquisitionPrice: "300,000,000",
+      }),
+      "자산 1",
+    );
+    expect(err, "겸용·selfOwns가 분리를 강제해도 취득일이 같으면 총액이 실재한다").toBeNull();
+  });
+});
+
+/**
+ * V3 — 축 B 파트별 독립 all-or-nothing (`building` 전용).
+ *
+ * 건물분 기준시가(§99①1호 나목)를 명시 입력하면 엔진은 결합 총액을 버리고 토지분을
+ * `㎡당 개별공시지가 × 면적`(가목)으로만 산출한다. 그 3요소가 비면 calcAcqStdPair가 null →
+ * 분리 계산 전체가 **오류 없이 비활성**된다(PR #837이 고친 §3.1과 동형).
+ */
+describe("V3 — building 축 B 파트별 독립 all-or-nothing", () => {
+  const bAsset = (over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) =>
+    splitAsset({
+      assetKind: "building" as const,
+      acquisitionDate: "2018-06-01",
+      landAcquisitionDate: "2015-06-01",
+      landAcqMode: "actual" as const,
+      buildingAcqMode: "actual" as const,
+      landAcquisitionPrice: "300,000,000",
+      buildingAcquisitionPrice: "250,000,000",
+      landTransferPrice: "600,000,000",
+      buildingTransferPrice: "400,000,000",
+      landStandardPriceAtTransfer: "600,000,000",
+      buildingStandardPriceAtTransfer: "400,000,000",
+      standardPricePerSqmAtAcq: "1,000,000",
+      acquisitionArea: "200",
+      ...over,
+    });
+
+  it("건물분 + 토지 3요소 모두 입력 → 통과", () => {
+    expect(
+      validateSplitDirectInputs(bAsset({ buildingStandardPriceAtAcq: "350,000,000" }), "자산 1"),
+    ).toBeNull();
+  });
+
+  it("🔴 건물분 입력 + ㎡당 공시지가 미입력 → 차단 (조용한 분리 비활성 방지)", () => {
+    const err = validateSplitDirectInputs(
+      bAsset({ buildingStandardPriceAtAcq: "350,000,000", standardPricePerSqmAtAcq: "" }),
+      "자산 1",
+    );
+    expect(err).toContain("공시지가");
+  });
+
+  it("🔴 건물분 입력 + 토지 면적 미입력 → 차단", () => {
+    const err = validateSplitDirectInputs(
+      bAsset({ buildingStandardPriceAtAcq: "350,000,000", acquisitionArea: "" }),
+      "자산 1",
+    );
+    expect(err).not.toBeNull();
+  });
+
+  it("건물분 미입력 → V3 미적용 (레거시 총액 역산 한시 허용)", () => {
+    expect(validateSplitDirectInputs(bAsset({ standardPricePerSqmAtAcq: "" }), "자산 1")).toBeNull();
+  });
+
+  it("🔴 주택은 V3 대상 아님 — 라목 결합 공시라 파트 독립 자체가 없다", () => {
+    const err = validateSplitDirectInputs(
+      bAsset({
+        assetKind: "housing",
+        buildingStandardPriceAtAcq: "350,000,000",
+        standardPricePerSqmAtAcq: "",
+      }),
+      "자산 1",
+    );
+    expect(err).toBeNull();
+  });
+});

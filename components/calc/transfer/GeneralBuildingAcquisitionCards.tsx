@@ -19,12 +19,13 @@ import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 // BurdenedGiftBlock import 제거 — Phase 2 (2026-05-12): TransferModeBlock에서 사용
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
-import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 
 // ── 토지 취득원인 옵션 (이월과세 포함 4종) ──
@@ -77,7 +78,7 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
     <div className="space-y-3">
 
       {/* ── 📌 토지 취득 카드 (sky) ── */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
+      <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
         <div className="flex items-center gap-2">
           <span className="text-base">📌</span>
           <p className="text-xs font-semibold text-sky-700">토지 취득</p>
@@ -155,8 +156,6 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onHasSeperateLandAcquisitionDateChange={() => {}}
             landAcquisitionDate={asset.landAcquisitionDate}
             onLandAcquisitionDateChange={(v) => onChange({ landAcquisitionDate: v })}
-            landSplitMode={asset.landSplitMode}
-            onLandSplitModeChange={(v) => onChange({ landSplitMode: v })}
             landTransferPrice={asset.landTransferPrice}
             onLandTransferPriceChange={(v) => onChange({ landTransferPrice: v })}
             buildingTransferPrice={asset.buildingTransferPrice}
@@ -184,52 +183,11 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
 
         {/* 상속: 취득일 + 피상속인 취득일 + 보충적평가 */}
         {asset.acquisitionCause === "inheritance" && (
-          <>
-            <CompanionAcqInheritanceBlock
-              assetId={asset.assetId}
-              acquisitionDate={asset.acquisitionDate}
-              onAcquisitionDateChange={(v) =>
-                onChange({
-                  acquisitionDate: v,
-                  inheritanceStartDate: v,
-                  ...(asset.inheritanceValuationMode === "auto"
-                    ? { inheritanceDate: v }
-                    : {}),
-                })
-              }
-              decedentAcquisitionDate={asset.decedentAcquisitionDate}
-              onDecedentAcquisitionDateChange={(v) =>
-                onChange({ decedentAcquisitionDate: v })
-              }
-              valuationMode={asset.inheritanceValuationMode}
-              onValuationModeChange={(mode) =>
-                onChange({ inheritanceValuationMode: mode })
-              }
-              inheritanceAssetKind={asset.inheritanceAssetKind}
-              onInheritanceAssetKindChange={(v) =>
-                onChange({ inheritanceAssetKind: v })
-              }
-              inheritanceDate={asset.inheritanceDate}
-              onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
-              landAreaM2={asset.acquisitionArea}
-              publishedValueAtInheritance={asset.publishedValueAtInheritance}
-              onPublishedValueAtInheritanceChange={(v) =>
-                onChange({ publishedValueAtInheritance: v })
-              }
-              fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
-              onFixedAcquisitionPriceChange={(v) =>
-                onChange({ fixedAcquisitionPrice: v })
-              }
-              jibun={asset.addressJibun || undefined}
-              dong={asset.addressDong || undefined}
-              ho={asset.addressHo || undefined}
-            />
-            <InheritedAcquisitionDeemedSection
-              asset={asset}
-              onChange={onChange}
-              transferDate={transferDate}
-            />
-          </>
+          <CompanionAcqInheritanceBlock
+            asset={asset}
+            onChange={onChange}
+            transferDate={transferDate}
+          />
         )}
 
         {/* 증여: 취득일 + 증여자 취득일 + 취득가액 */}
@@ -261,10 +219,10 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
          * Phase 2 (2026-05-12): 부담부증여 BurdenedGiftBlock은 TransferModeBlock(양도 정보 카드)로 이동.
          * 취득 정보 카드에서는 증여자의 당초 취득 정보(매매·상속·증여·이월과세)만 받음.
          */}
-      </div>
+      </ToneCard>
 
       {/* ── 🏗 건물 취득 카드 (amber) ── */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
+      <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
         <div className="flex items-center gap-2">
           <span className="text-base">🏗</span>
           <p className="text-xs font-semibold text-amber-700">건물 취득</p>
@@ -311,14 +269,24 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             <p className="text-xs text-amber-800 font-semibold">
               환산취득가액 가산세 적용 대상 — 건물 환산취득가액의 5% (소득세법 §114조의2 ①)
             </p>
-            <p className="text-[11px] text-amber-700">
+            <p className="text-caption text-amber-700">
               ※ 잠정 안내 — 정확한 가산세 발동 여부는 계산 결과에서 확인
             </p>
           </div>
         )}
 
-        {/* 건물 상속·증여 보조 입력은 후속 PR에서 구현 (본 PR 스코프 미포함) */}
-      </div>
+        {/* §163⑨ 상속개시일 건물 신고가액 (Phase 1 = 토지·건물 모두 상속) */}
+        {asset.gbBuildingAcquisitionCause === "inheritance" && (
+          <ToneCard tone="violet" title="상속개시일 건물 신고가액 (소득세법 시행령 §163⑨)">
+            <CurrencyInput
+              label="건물 평가액"
+              value={asset.gbBuildingInheritedValue}
+              onChange={(v) => onChange({ gbBuildingInheritedValue: v })}
+              hint="상속세 신고서·결정통지서상 건물 평가액(상증법 §60~66). 상속개시일 평가액을 취득가액으로 직접 사용 — 환산·개산공제 미적용"
+            />
+          </ToneCard>
+        )}
+      </ToneCard>
 
     </div>
   );

@@ -544,7 +544,7 @@ export function Step5({
           순차적으로 Phase 2~에서 구현 예정입니다.
         </p>
         <p className="text-sky-700 dark:text-sky-400">
-          현재 화면은 기존 5개 항목만 노출됩니다. 매핑 감사: <code className="text-[10px]">docs/02-design/features/transfer-reduction-mapping-audit.md</code>
+          현재 화면은 기존 5개 항목만 노출됩니다. 매핑 감사: <code className="text-micro">docs/02-design/features/transfer-reduction-mapping-audit.md</code>
         </p>
       </div>
 

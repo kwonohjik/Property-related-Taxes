@@ -66,10 +66,14 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (a.acquisitionCause === "carryover_gift") {
     return "배우자등 이월과세(§97의2)는 단건 계산기에서만 지원됩니다.";
   }
-  if (a.acquisitionCause === "inheritance" && a.inheritanceValuationMode === "auto") {
-    // 자동 모드는 단건 전용 inheritedAcquisition sub-object(소령 §176의2④/§163⑨)가 필요한데
-    // 다건 변환·route가 미지원 → 취득가액 0으로 과대 과세되므로 명시 차단.
-    return "상속 취득가액 보충적평가(자동)는 단건 계산기에서만 지원됩니다. 평가액을 직접 입력하거나 단건 계산기를 사용하세요.";
+  if (
+    a.acquisitionCause === "inheritance" &&
+    parseAmount(a.publishedValueAtInheritance ?? "0") <= 0
+  ) {
+    // (b) 다건은 상속세 신고가액(publishedValueAtInheritance)을 취득가액으로 직접 사용.
+    // 신고가액이 확정되면 허용하고, 공란이면 보충적평가 자동조회·환산 등 단건 전용 산정 경로가
+    // 필요한데 다건 route 미지원 → 취득가액 0 과대과세되므로 신고가액 확정 전까지만 차단.
+    return "상속 취득가액(신고가액)을 입력하거나 단건 계산기를 사용하세요. 보충적평가 자동조회·환산취득가는 단건 계산기에서만 지원됩니다.";
   }
   if (a.usePreHousingDisclosure) {
     return "개별주택가격 미공시 환산취득가(§164⑤)는 단건 계산기에서만 지원됩니다.";

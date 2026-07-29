@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { ChevronLeft } from "lucide-react";
+import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";
 import { callAcquisitionTaxAPI } from "@/lib/calc/acquisition-tax-api";
@@ -222,6 +222,11 @@ export function AcquisitionTaxForm() {
 
       {/* 메인 마법사 */}
       <div className="space-y-6">
+      {step > 0 && (
+        <div className="flex justify-end">
+          <NavButton direction="prev" label="이전" onClick={handleBack} aria-label="이전 단계로 이동" />
+        </div>
+      )}
       <StepIndicator
         steps={activeSteps}
         current={step}
@@ -261,13 +266,9 @@ export function AcquisitionTaxForm() {
                 installmentRows={form.installments?.map((r) => ({ label: r.label, paymentDate: r.paymentDate, amount: r.amount }))}
                 savedId={autoSave.savedId ?? undefined}
               />
-              <button
-                type="button"
-                className="mt-2 w-full rounded-md border border-input bg-background px-4 py-2 text-sm hover:bg-accent"
-                onClick={() => { setResult(null); }}
-              >
+              <CtaButton tone="outline" className="mt-2" onClick={() => { setResult(null); }}>
                 조건 변경 후 재계산
-              </button>
+              </CtaButton>
             </div>
           ) : (
             <Step1
@@ -332,15 +333,9 @@ export function AcquisitionTaxForm() {
                 installmentRows={form.installments?.map((r) => ({ label: r.label, paymentDate: r.paymentDate, amount: r.amount }))}
                 savedId={autoSave.savedId ?? undefined}
               />
-              <button
-                type="button"
-                className="mt-2 w-full rounded-md border border-input bg-background px-4 py-2 text-sm hover:bg-accent"
-                onClick={() => {
-                  setResult(null);
-                }}
-              >
+              <CtaButton tone="outline" className="mt-2" onClick={() => { setResult(null); }}>
                 조건 변경 후 재계산
-              </button>
+              </CtaButton>
             </div>
           ) : (
             <Step5
@@ -362,23 +357,15 @@ export function AcquisitionTaxForm() {
 
       {/* 네비게이션 — 결과 표시 중에는 숨김 */}
       {!result && (
-        <div className="flex gap-3">
-          <button
-            type="button"
-            className="flex-1 rounded-md border border-input bg-background px-4 py-2 text-sm hover:bg-accent"
-            onClick={handleBack}
-          >
-            <ChevronLeft className="w-4 h-4" />
-            {step === 0 ? "홈으로" : "이전"}
-          </button>
-          <button
-            type="button"
-            className="flex-1 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            onClick={handleNext}
-            disabled={loading}
-          >
-            {loading ? "계산 중..." : (isDeemed && step === 1) || isLastStep ? "취득세 계산" : "다음"}
-          </button>
+        <div className="flex items-center justify-between gap-2">
+          <WizardBackNav isFirstStep={step === 0} onBack={handleBack} />
+          {(isDeemed && step === 1) || isLastStep ? (
+            <CtaButton onClick={handleNext} disabled={loading}>
+              {loading ? "계산 중..." : "취득세 계산"}
+            </CtaButton>
+          ) : (
+            <NavButton direction="next" label="다음" onClick={handleNext} disabled={loading} />
+          )}
         </div>
       )}
       <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />

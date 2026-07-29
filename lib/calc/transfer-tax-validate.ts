@@ -15,9 +15,10 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
+import { isMultiHouseSurchargeSuppressed, provisoGate, effectiveProvisoReason, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -63,9 +64,81 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: "총 양도가액을 입력하세요." });
     }
 
-    // 자산별 검증 — 자산당 첫 오류 1건씩 일괄 수집
+    // 지분 모드(같은 물건 분할취득) 여부 — companion ① 기본정보 UI 숨김 대응.
+    const fullFractional = isFullFractionalBundle(form.assets);
+    const primaryAsset = form.assets[0];
+
+    // 지분 모드 미지원 조합 차단 — 지분별 안분 UI 부재 또는 양도가액 모델 비양립.
+    if (fullFractional && primaryAsset) {
+      if (primaryAsset.assetKind === "housing" && primaryAsset.isMixedUseHouse) {
+        issues.push({ step, assetIndex: 0, message: "겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
+      } else if (
+        primaryAsset.assetKind === "commercial_building" ||
+        primaryAsset.assetKind === "general_building" ||
+        primaryAsset.assetKind === "redevelopment_apt"
+      ) {
+        issues.push({ step, assetIndex: 0, message: "해당 자산 종류는 지분 분할 취득 계산을 지원하지 않습니다. 지분 분할 토글을 끄고 계산하세요." });
+      } else if (
+        primaryAsset.transferType === "burdened_gift" ||
+        primaryAsset.transferCause === "public_expropriation"
+      ) {
+        // 지분 분할 양도가액 = 총양도가 × 지분율. 부담부증여(§159 채무액 기반)·공익수용(보상가액)과 비양립.
+        issues.push({ step, assetIndex: 0, message: "부담부증여·공익수용은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
+      }
+    }
+
+    // 특수 계산 경로 × 함께양도(일괄) 차단 — **침묵 오산 방지**.
+    //
+    // `app/api/calc/transfer/route.ts`는 **순서 있는 if-체인**이고 일괄 분기가 맨 앞이다:
+    //   5-a 일괄(:446, return :555) → 5-a-2 겸용(:568) → 5-a-3 일반건물(:611) → 5-b 단건(:660)
+    // 따라서 companion이 하나라도 있으면 **뒤쪽 특수 분기는 실행조차 되지 않는다**.
+    //
+    // 라우트 하네스 실측(단건 ↔ 함께양도 대조, 2026-07-28) — **메커니즘이 둘로 갈린다**:
+    //   겸용   : mode=mixed-use·housingPart 有 → 일괄에서 **분기 미실행**(primary가 assetKind=land로 강등)
+    //   재개발 : redevelopment 산출물 有 → **분기 미실행**
+    //   일반건물: 토지·건물 분리 안분 有 → **분기 미실행**. 단건이면 500으로 막히는 필수 검증
+    //            (zoneType)조차 일괄에서는 타지 않고 200이 나온다 — 미실행의 결정적 증거
+    //   부담부증여: STEP 0.48은 엔진 내부라 **실행되지만**, route가 transferPrice를 안분값으로
+    //            덮어써 §159 기준 gain과 **스케일 충돌** → 표시 필요경비가 **음수(-91,000,000)**
+    //
+    // 화면에는 특수 입력이 그대로 보이는데 계산이 어긋나므로 사용자가 알 수 없다.
+    // 다물건 계산기는 이미 같은 이유로 전부 차단한다(`multi-transfer-tax-validate.ts:54~65`
+    // — "침묵 오산보다 명시 차단이 안전하다"). 함께양도 경로에도 같은 가드를 둔다.
+    //
+    // `some()`인 이유: 라우트는 primary만 보지만 companion의 특수 입력도 `buildAssetPayload`가
+    // 담지 않아 함께 소실된다. 토글·자산추가 순서에 따라 어느 쪽에든 남을 수 있다.
+    //
+    // ⚠️ `commercial_building`은 **차단하지 않는다** — 전용 분기가 없어 엔진 내부에서 처리되며,
+    //    실측 결과 **양도차익이 단건과 동일**하고 필요경비도 음수가 아니다(계산 정상).
+    //    일괄 집계 결과에 자산별 상세 카드가 안 실리는 **표시 갭**일 뿐이라 막을 근거가 없다.
+    //    회귀 방어: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`
+    if (form.assets.length > 1) {
+      const SINGLE_ONLY: Array<[(a: AssetForm) => boolean, string]> = [
+        [(a) => a.transferType === "burdened_gift", "부담부증여(소령 §159)"],
+        [(a) => a.assetKind === "housing" && !!a.isMixedUseHouse, "겸용주택 분리계산"],
+        [(a) => a.assetKind === "redevelopment_apt", "재개발·재건축(시행령 §166)"],
+        [(a) => a.assetKind === "general_building", "일반건물(토지·건물 일괄)"],
+      ];
+      for (const [match, label] of SINGLE_ONLY) {
+        if (form.assets.some(match)) {
+          issues.push({
+            step,
+            assetIndex: 0,
+            message: `${label}은(는) 함께 양도와 같이 계산할 수 없습니다. 함께 양도 토글을 끄고 단건으로 계산하세요.`,
+          });
+        }
+      }
+    }
+
+    // 자산별 검증 — 자산당 첫 오류 1건씩 일괄 수집.
+    // 지분 모드 companion(i>0)은 ① 기본정보를 숨기므로 primary basic을 병합해 검사
+    // (자산종류·면적이 primary값 → basic 미입력 spurious 차단 방지, 취득측은 companion 고유값 유지).
     for (let i = 0; i < form.assets.length; i++) {
-      const message = validateAssetEntry(form.assets[i], i, form);
+      const entry =
+        fullFractional && i > 0 && primaryAsset
+          ? mergePrimaryBasic(form.assets[i], primaryAsset)
+          : form.assets[i];
+      const message = validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });
     }
 
@@ -81,6 +154,22 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
           assetIndex: i,
           message: "지분 분할 취득: 공유 지분율(분자/분모)을 입력하세요.",
         });
+    }
+
+    // 지분 분할 취득 — 전 지분율 합계 = 100% 검증. 미달/초과 시 양도가액(총양도가×지분율) 합이
+    // 총액과 달라져 과소/과대과세. (0.005 = 0.5%p 허용 — 33.33×3=99.99 등 2자리 반올림 흡수.)
+    if (fullFractional) {
+      const sumRatio = form.assets.reduce((s, a) => {
+        const n = parseFloat(a.ownershipNumerator);
+        const d = parseFloat(a.ownershipDenominator);
+        return s + (isFinite(n) && isFinite(d) && d > 0 ? n / d : 0);
+      }, 0);
+      if (Math.abs(sumRatio - 1) > 0.005) {
+        issues.push({
+          step,
+          message: `지분 분할 취득: 전체 지분율 합계가 100%가 되어야 합니다 (현재 ${(sumRatio * 100).toFixed(2)}%).`,
+        });
+      }
     }
 
     // actual 모드 합계 검증 — 지분 모드 자산이 하나라도 있으면 ratio 자동 적용으로 합계 검증 생략.
@@ -105,8 +194,14 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     if (!form.householdHousingCount)
       issues.push({ step, message: "세대 보유 주택 수를 선택하세요." });
 
+    // 다주택 중과 한시배제(양도일 윈도우+보유2년) → ④ 섹션 숨김 ↔ 검증도 skip(보이지 않는 필드 차단 방지, mirror)
+    const surchargeSuppressed = isMultiHouseSurchargeSuppressed(
+      form.transferDate,
+      form.assets?.[0]?.acquisitionDate,
+    );
+
     // P5 모드 2 (⑧): 보유 감면주택 행 — 조문·취득일 필수 (확인 토글은 낙관 — 엔진 불적용 사유)
-    const she = form.specialHouseExclusions ?? [];
+    const she = surchargeSuppressed ? [] : (form.specialHouseExclusions ?? []);
     for (let i = 0; i < she.length; i++) {
       if (!she[i].article) {
         issues.push({ step, message: `보유 감면주택 ${i + 1}: 적용 조문을 선택하세요.` });
@@ -117,7 +212,7 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     }
 
     // ⑧ 세대 보유 주택 목록 — 행별 첫 오류 1건씩 (자동 안분 fallback 금지: 미입력=차단)
-    const houses = form.houses ?? [];
+    const houses = surchargeSuppressed ? [] : (form.houses ?? []);
     for (let i = 0; i < houses.length; i++) {
       const h = houses[i];
       const label = `보유 주택 ${i + 1}`;
@@ -147,8 +242,21 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
             return `${label}: 대지면적·연면적(㎡)을 입력하세요.`;
           if (t === "D" && !h.firstSaleContractDate)
             return `${label}: 최초 분양계약일을 입력하세요.`;
-          if (t === "G" && !h.rentalCancellationDate)
-            return `${label}: 자진·자동 말소일을 입력하세요.`;
+          if (t === "G") {
+            if (!h.rentalCancellationDate)
+              return `${label}: 자진·자동 말소일을 입력하세요.`;
+            // 사목 base 목(가·다·라·마) + 그 목의 "해당 목의 다른 요건"(임대기간요건 외) — 엔진 SAMOK_BASE_REQUIRED·base 게이트와 동기화
+            const base = h.saMokBaseArticle;
+            if (!base) return `${label}: 사목 — 말소 전 base 목(가·다·라·마)을 선택하세요.`;
+            if ((base === "가" || base === "다" || base === "마") && !h.rentalStartOfficialPrice)
+              return `${label}: 사목 base 목의 임대개시 당시 공시가격을 입력하세요.`;
+            if (base === "라" && !h.acquisitionOfficialPrice)
+              return `${label}: 사목 base 라목의 취득 당시 공시가격을 입력하세요.`;
+            if ((base === "다" || base === "라") && (!h.rentalLandArea || !h.rentalTotalFloorArea))
+              return `${label}: 사목 base 목의 대지면적·연면적(㎡)을 입력하세요.`;
+            if (base === "라" && !h.firstSaleContractDate)
+              return `${label}: 사목 base 라목의 최초 분양계약일을 입력하세요.`;
+          }
         }
         // P2 부득이한 사유: 거주기간(년) 필수 (엔진 ≥1년 판정 — 미입력 시 0 간주로 배제 미발동)
         if (h.isUnavoidableReason && (!h.unavoidableResidenceYears || parseFloat(h.unavoidableResidenceYears) <= 0))
@@ -166,16 +274,22 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       issues.push({ step, message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
 
     // ⑧ 세대 보유 분양권·입주권 — 각 행 취득일 필수 (자동 안분 fallback 금지)
-    const presaleRights = form.presaleRights ?? [];
+    const presaleRights = surchargeSuppressed ? [] : (form.presaleRights ?? []);
     for (let i = 0; i < presaleRights.length; i++) {
       if (!presaleRights[i].acquisitionDate)
         issues.push({ step, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });
     }
 
-    // ⑧ 다주택 중과 한시 유예 — 입력(ON) 시 매매계약일 필수 (조건B 기산).
+    // ⑧ 다주택 중과 한시 유예(§167의3①12의2 나·다목) — 입력(ON) 시 목별 필수 입력.
     // houses 0건이면 엔진이 gracePeriod를 소비하지 않고 위젯도 숨김 → 검증도 houses>0 게이트(보이지 않는 필드 차단 방지).
-    if (houses.length > 0 && form.gracePeriod && !form.gracePeriod.contractDate)
-      issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
+    // 허가·계약금 증빙 미확인은 silent 차단이 아닌 "경과조치 부적용으로 계산 진행"(원문 "모두 갖춘" 요건 —
+    // 엔진 checkGracePeriodExemption이 미충족 시 자동으로 suspended:false 처리·차단 대상 아님).
+    if (houses.length > 0 && form.gracePeriod) {
+      if (!form.gracePeriod.contractDate)
+        issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
+      if (form.gracePeriod.isLandPermitTarget === true && !form.gracePeriod.permitApplicationDate)
+        issues.push({ step, message: "중과 한시 유예(나목): 토지거래허가 신청일을 입력하세요." });
+    }
 
     // ⑧ §156의2⑤ 대체주택 특례 — 토글 ON 시 4필드 필수 (자동 안분 fallback 금지)
     if (form.replacementHouseSpecial) {
@@ -189,16 +303,32 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: "대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다." });
     }
 
-    // ⑧ §154① 단서 — 사유별 필수 입력 (미입력 시 침묵 비과세 미적용 차단 — feedback_no_silent_apportion_fallback)
+    // ⑧ §154① 단서 — 사유별 필수 입력. effectiveProvisoReason로 정규화
+    // (카드 숨김·temp-two-house 무효 reason(나·다목·5호)은 검증 skip — Part B/D mirror·데드락 차단)
+    const provisoMode = provisoGate({
+      isOneHousehold: form.isOneHousehold,
+      isHousing: form.assets?.[0]?.assetKind === "housing",
+      householdHousingCount: form.householdHousingCount,
+      temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+    }).mode;
+    // ⑧ 일시적 2주택 특례 — 입력존재만 차단. 요건 미달(1년 미경과·3년 초과)은 정상 통과(특례만 미적용).
+    if (provisoMode === "temporary_two_house") {
+      if (!form.assets?.[0]?.acquisitionDate)
+        issues.push({ step, message: "일시적 2주택: 양도 자산의 취득일을 1단계에서 입력하세요." });
+      if (!form.newHouseAcquisitionDate)
+        issues.push({ step, message: "일시적 2주택: 신규 주택 취득일을 입력하세요." });
+    }
+
+    const provisoReasonEff = effectiveProvisoReason(provisoMode, form.provisoReason);
     if (
-      (form.provisoReason === "overseas_migration" || form.provisoReason === "overseas_residence") &&
+      (provisoReasonEff === "overseas_migration" || provisoReasonEff === "overseas_residence") &&
       !form.provisoDepartureDate
     )
       issues.push({
         step,
         message: "§154① 단서(해외이주·국외거주): 출국일을 입력하세요. (출국일부터 2년 내 양도 판정)",
       });
-    if (form.provisoReason === "pre_designation_contract" && !form.provisoPreContractNoHouse)
+    if (provisoReasonEff === "pre_designation_contract" && !form.provisoPreContractNoHouse)
       issues.push({
         step,
         message: "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요.",

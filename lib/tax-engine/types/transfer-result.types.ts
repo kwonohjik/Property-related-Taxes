@@ -32,7 +32,11 @@ import type { RedevelopmentResult } from "./transfer-redevelopment.types";
 import type { FamilyBusinessCgtDetail } from "../transfer-tax-family-business";
 import type { PreHousingDisclosureResult } from "./transfer-phd.types";
 import type { SplitGainResult } from "./transfer-split-gain.types";
-import type { ExpropriationValuationDetail } from "../transfer-tax-expropriation-valuation";
+import type {
+  ExpropriationValuationDetail,
+  AuctionValuationDetail,
+  HousingExpropriationValuationDetail,
+} from "../transfer-tax-expropriation-valuation";
 
 export interface TransferTaxResult {
   /** 전액 비과세 여부 */
@@ -89,10 +93,19 @@ export interface TransferTaxResult {
   };
   /** #3 공익수용 환산 양도시 기준시가 min[] 특례 산출근거 (Record) — 게이트 충족 시만 */
   expropriationValuationDetail?: ExpropriationValuationDetail;
+  /** §164⑨2호 공매·경락 특례 산출근거 (총액 2후보) — 게이트 충족 시만. 1호와 배타(P4) */
+  auctionValuationDetail?: AuctionValuationDetail;
+  /** §164⑨1호 주택(라목) 총액 트랙 특례 산출근거 (총액 3후보) — 게이트 충족 시만 (P5) */
+  housingExpropriationValuationDetail?: HousingExpropriationValuationDetail;
   /** 장기보유특별공제액 */
   longTermHoldingDeduction: number;
   /** 장기보유특별공제율 */
   longTermHoldingRate: number;
+  /**
+   * 장특공제 배제 사유 echo (§95② 본문 괄호 — 미등기·분양권·승계입주권·§104⑦ 다주택 중과).
+   * 배제 경로에서만 채워짐 — 공제율 미달(보유 3년 미만 등) 0원은 undefined. UI 표시 전용.
+   */
+  lthdExclusionReason?: import("../legal-codes/transfer").LthdExclusionReason;
   /**
    * 장기보유특별공제 보유기간 실제 기산일 (사례 35).
    * - 기본값: acquisitionDate (용도변경 미적용 시)
@@ -123,6 +136,22 @@ export interface TransferTaxResult {
   surchargeRate?: number;
   /** 중과세 유예 여부 */
   isSurchargeSuspended: boolean;
+  /**
+   * 중과 유예 근거 목 — §167의3①12의2 가목(a)/나목(na)/다목(da).
+   * isSurchargeSuspended === true일 때만 유의미 (echo, MultiHouseSurchargeResult에서 전파).
+   */
+  surchargeSuspensionBasis?: "a" | "na" | "da";
+  /** 나·다목 유예 시 계산된 양도 기한(절대기한 반영 후). basis가 na/da일 때만 유의미. */
+  surchargeSuspensionDeadline?: Date;
+  /**
+   * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(조정지역 다주택이어도 기본세율).
+   * 세율만 배제·§95² 장기보유특별공제 배제는 유지(서울행정법원 2024구단72950). echo(MultiHouseSurchargeResult 전파).
+   */
+  rateSurchargeStatutoryExcluded?: boolean;
+  /**
+   * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 비사업용 토지 +10%p 중과배제(기본세율). 장특 표1 유지. echo.
+   */
+  nblSurchargeExcluded?: boolean;
   /** 총 감면세액 */
   reductionAmount: number;
   /** 감면 유형 (표시용 한글 라벨 — "자경농지", "장기임대주택" 등) */
@@ -166,6 +195,8 @@ export interface TransferTaxResult {
     isRegulatedAtTransfer: boolean;
     warnings: string[];
     excludedPresaleRights?: Array<{ id: string; reason: string }>; // #2b §167의4⑤ 배우자 분양권/입주권 차감
+    /** 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(기본세율). 장특 배제는 유지. */
+    rateSurchargeStatutoryExcluded?: boolean;
   };
   /**
    * 비사업용 토지 판정 상세 결과 (nonBusinessLandDetails 제공 시만 포함)
@@ -311,3 +342,81 @@ export interface TransferTaxResult {
    */
   familyBusinessDetail?: FamilyBusinessCgtDetail;
 }
+
+/**
+ * 감면·취득가액 상세 카드가 읽는 필드 묶음 — `ReductionDetailCards`의 **단일 계약**.
+ *
+ * ## 왜 별도 타입인가
+ *
+ * 일괄(bundled) 모드의 `PerPropertyBreakdown`은 자산별로 `calculateTransferTax`를 완전히
+ * 호출하고도(계산은 정상) **결과의 Detail을 버려서** 산출근거 카드가 화면에 나오지 않았다.
+ * 이 타입을 두 곳(`TransferTaxResult` · `PerPropertyBreakdown`)이 함께 만족하게 해서
+ * **같은 컴포넌트를 단건·일괄 양쪽에서 재사용**한다(dual-truth 회피).
+ *
+ * 필드를 추가할 때는 `pickReductionDetails()`(transfer-tax-aggregate.ts)에도 함께 넣는다 —
+ * 타입만 넓히면 일괄 경로에서 값이 조용히 비어 있다.
+ *
+ * ⚠️ `calculatedTax`·`taxBase`는 **포함하지 않는다**. 일괄에서는 합산 과세표준 기준이라
+ *    자산별 값이 다르다(`refCalculatedTax`·`taxBaseShare`가 그 자리를 대신한다).
+ *    호출부가 명시 prop으로 넘겨 의미를 드러낸다.
+ */
+export type TransferReductionDetailSource = Pick<
+  TransferTaxResult,
+  | "selfFarmingReductionDetail"
+  | "inheritedAcquisitionDetail"
+  | "inheritedHouseValuationDetail"
+  | "newHousingReductionDetail"
+  | "rentalReductionDetail"
+  | "rental97LthdDetail"
+  | "rental97TaxDetail"
+  | "new994Detail"
+  | "unsold989Detail"
+  | "new99Detail"
+  | "unsold988Detail"
+  | "unsold987Detail"
+  | "unsold992Detail"
+  | "unsold983Detail"
+  | "unsold985Detail"
+  | "unsold986Detail"
+  | "unsold982Detail"
+  | "unsold984Detail"
+  | "unsold98Detail"
+  | "new993Detail"
+  | "publicExpropriationDetail"
+  | "replacementLandDetail"
+  | "gbDesignatedLandDetail"
+  | "specialHouseExclusionDetail"
+>;
+
+/**
+ * 평가·판정 상세 카드가 읽는 필드 묶음 — `ValuationDetailCards`의 **단일 계약** (R1-a).
+ *
+ * `TransferReductionDetailSource`(감면 24종)와 같은 목적이다. 일괄(bundled) 모드가
+ * 자산별로 `calculateTransferTax`를 완전히 호출하고도 결과의 Detail을 버려
+ * **산출근거가 화면에 안 나오던** 표시 갭을 좁힌다. 계산에는 영향이 없다.
+ *
+ * 필드를 추가할 때는 `pickValuationDetails()`(transfer-tax-aggregate.ts)에도 함께 넣는다 —
+ * 타입만 넓히면 일괄 경로에서 값이 조용히 빈다(침묵 누락).
+ *
+ * `splitDetail`·`pre1990LandValuationDetail`은 단건 결과뷰의 인라인 렌더를
+ * `SplitGainDetailSection`·`Pre1990LandValuationDetailCard`로 추출한 뒤 편입했다(R1-b).
+ *
+ * ⚠️ **제외**: `mixedUseDetail`·`redevelopmentDetail`·`generalBuildingValuationDetail`은 해당 자산이
+ *    일괄에서 차단되어(PR #854) 도달 불가. `amendmentDetail`은 집계 최상위에 이미 있다.
+ */
+export type TransferValuationDetailSource = Pick<
+  TransferTaxResult,
+  | "commercialBuildingValuationDetail"
+  | "nonBusinessLandJudgmentDetail"
+  | "nblSurchargeExcluded"
+  | "multiHouseSurchargeDetail"
+  | "expropriationValuationDetail"
+  | "housingExpropriationValuationDetail"
+  | "auctionValuationDetail"
+  | "preHousingDisclosureDetail"
+  | "rentalHousingExceptionDetail"
+  | "familyBusinessDetail"
+  | "carryoverTaxationDetail"
+  | "splitDetail"
+  | "pre1990LandValuationDetail"
+>;

@@ -105,6 +105,7 @@ const INELIGIBLE_REASON_LABELS: Record<string, string> = {
   heir_ceo_not_scheduled: "2년 내 대표이사 미취임 (상증령 §15③2호 라)",
   medium_other_estate_exceeds_200pct: "가업외 상속재산 200% 초과 (§18의2② + 상증령 §15⑥⑦)",
   tax_fraud_conviction: "조세포탈·회계부정 형 확정 (§18의2⑧1호)",
+  decedent_non_resident: "피상속인 비거주자 (§18의2① — 거주자 사망만 적용)",
 };
 
 /** 신고서 표시 정보 — 짧은 텍스트 입력 (계산 미사용) */
@@ -123,7 +124,7 @@ function FbTextField({
 }) {
   return (
     <div className="space-y-1">
-      <label className="block text-[11px] font-medium text-amber-700 dark:text-amber-300">
+      <label className="block text-caption font-medium text-amber-700 dark:text-amber-300">
         {label}
       </label>
       <input
@@ -235,7 +236,7 @@ export function FamilyBusinessEligibilitySection({
 
           {/* ── 신고서 표시 정보 (별지 제1호서식 가·다·라 식별정보, 계산 미사용) ── */}
           <div className="space-y-2 rounded border border-amber-200 bg-amber-100/40 dark:bg-amber-900/20 p-2">
-            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
+            <p className="text-caption font-semibold text-amber-800 dark:text-amber-200">
               별지 제1호서식 표시 정보 (선택 — 계산에는 사용되지 않음)
             </p>
             {/* 가. 가업현황 */}
@@ -246,7 +247,7 @@ export function FamilyBusinessEligibilitySection({
               <FbTextField label="대표자 주민등록번호" mono value={familyBusiness.representativeResidentNumber} onChange={(v) => update({ representativeResidentNumber: v })} />
             </div>
             <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-amber-700 dark:text-amber-300">개업연월일</label>
+              <label className="block text-caption font-medium text-amber-700 dark:text-amber-300">개업연월일</label>
               <DateInput value={familyBusiness.openingDate ?? ""} onChange={(v) => update({ openingDate: v || undefined })} />
             </div>
             {/* 다. 피상속인 */}
@@ -263,7 +264,7 @@ export function FamilyBusinessEligibilitySection({
           {/* ── 섹션① 가업 기본 (amber) ── */}
           <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-3">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">1</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">1</span>
               <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">가업 기본 정보</p>
             </div>
 
@@ -282,7 +283,7 @@ export function FamilyBusinessEligibilitySection({
 
             {/* 영위 연수 + 제안 */}
             <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">가업 영위 연수</p>
+              <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">가업 영위 연수</p>
               <DecimalInput
                 value={familyBusiness.operatingYears > 0 ? String(familyBusiness.operatingYears) : ""}
                 onChange={(v) => update({ operatingYears: parseDecimal(v) ?? 0 })}
@@ -290,7 +291,7 @@ export function FamilyBusinessEligibilitySection({
               />
               {/* 영위연수 제안 (자동 덮어쓰기 금지 — 버튼 클릭으로만 채움) */}
               {suggestedYears !== null && familyBusiness.operatingYears === 0 && (
-                <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2">
+                <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-caption text-amber-800 dark:text-amber-200 flex items-center justify-between gap-2">
                   <span>
                     개업일~상속개시일 기준 제안값: <strong>{suggestedYears}년</strong>
                     <span className="ml-1 opacity-70">(확인 후 적용 — 자동 덮어쓰기 아님)</span>
@@ -298,14 +299,14 @@ export function FamilyBusinessEligibilitySection({
                   <button
                     type="button"
                     onClick={() => update({ operatingYears: suggestedYears })}
-                    className="shrink-0 px-2 py-0.5 text-[10px] rounded border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-800"
+                    className="shrink-0 px-2 py-0.5 text-micro rounded border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-800"
                   >
                     적용
                   </button>
                 </div>
               )}
               {capPreview !== null && (
-                <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
+                <div className="rounded bg-amber-100/60 dark:bg-amber-900/30 border border-amber-200 px-2 py-1.5 text-caption text-amber-800 dark:text-amber-200">
                   {capPreview === 0
                     ? "⚠️ 10년 미만 — 공제 자격 미충족"
                     : capPreview === 30_000_000_000
@@ -319,7 +320,7 @@ export function FamilyBusinessEligibilitySection({
 
             {/* 기업 규모 */}
             <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">기업 규모 (상증령 §15①②)</p>
+              <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">기업 규모 (상증령 §15①②)</p>
               <RadioCardGroup<"sme" | "medium">
                 name="fb-enterprise-size"
                 layout="inline"
@@ -367,14 +368,14 @@ export function FamilyBusinessEligibilitySection({
               onChange={update}
             />
           ) : isCorporate ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-[11px] text-amber-700 dark:text-amber-300">
+            <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-caption text-amber-700 dark:text-amber-300">
               상속개시일을 입력하면 피상속인 요건 자동판정이 활성화됩니다.
             </div>
           ) : (
             /* 개인사업 — 지분 요건 없음, 대표이사 요건만 레거시 토글 */
             <div className="rounded-md border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">2</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">2</span>
                 <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">피상속인 요건 (상증령 §15③1호)</p>
               </div>
               <ToggleCard
@@ -392,7 +393,7 @@ export function FamilyBusinessEligibilitySection({
           {/* ── 섹션③ 가업상속인 지정 (sky) ── */}
           <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 dark:border-sky-800 p-3 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">3</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">3</span>
               <p className="text-xs font-semibold text-sky-700 dark:text-sky-200">가업상속인 지정 (§15③2호)</p>
             </div>
             {heirs && heirs.length > 0 && deathDate ? (
@@ -404,7 +405,7 @@ export function FamilyBusinessEligibilitySection({
                 onChange={update}
               />
             ) : (
-              <p className="text-[11px] text-sky-600 dark:text-sky-400">
+              <p className="text-caption text-sky-600 dark:text-sky-400">
                 상속인을 먼저 등록하면 가업상속인을 선택할 수 있습니다.
               </p>
             )}
@@ -419,7 +420,7 @@ export function FamilyBusinessEligibilitySection({
               onChange={update}
             />
           ) : (
-            <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 p-3 text-[11px] text-sky-700 dark:text-sky-300">
+            <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 p-3 text-caption text-sky-700 dark:text-sky-300">
               상속개시일을 입력하면 상속인 요건 자동판정이 활성화됩니다.
             </div>
           )}
@@ -432,7 +433,7 @@ export function FamilyBusinessEligibilitySection({
               <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
                 §18의2② 200% 가드 산정 (중견기업 한정)
               </p>
-              <p className="text-[10px] text-amber-700 dark:text-amber-300">
+              <p className="text-micro text-amber-700 dark:text-amber-300">
                 가업상속인의 가업외 상속재산(채무 차감)이 납부세액의 200%를 초과하면 공제 배제됩니다.
                 미입력 시 가드 미계산 (적용 불명확).
               </p>
@@ -493,7 +494,7 @@ export function FamilyBusinessEligibilitySection({
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
               기회발전특구 특례 (상증령 §15㉕)
             </p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-caption text-muted-foreground">
               두 요건 모두 충족 시 신고기한 후 2년 내 대표이사 취임(라목) 요건 면제
             </p>
             <ToggleCard
@@ -545,7 +546,7 @@ export function FamilyBusinessEligibilitySection({
                 <p className="text-xs font-semibold text-rose-800 dark:text-rose-200">
                   ✗ 자격 미충족
                 </p>
-                <ul className="space-y-0.5 text-[10px] text-rose-700 dark:text-rose-300 list-disc pl-4">
+                <ul className="space-y-0.5 text-micro text-rose-700 dark:text-rose-300 list-disc pl-4">
                   {evalResult.reasons.map((r, i) => (
                     <li key={i}>
                       {INELIGIBLE_REASON_LABELS[r] ?? r}

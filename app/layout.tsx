@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import { Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SelectOnFocusProvider } from "@/components/providers/SelectOnFocusProvider";
 import { EnterKeyNavigationProvider } from "@/components/providers/EnterKeyNavigationProvider";
 import { HeaderProfileBadge } from "@/components/layout/HeaderProfileBadge";
 import { HeaderClientBanner } from "@/components/layout/HeaderClientBanner";
+import { HeaderHomeLink } from "@/components/layout/HeaderHomeLink";
 import Link from "next/link";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// 한글+영문 단일 sans — Pretendard Variable self-host (OFL 1.1, app/fonts/).
+// 기존 Geist Sans는 --font-sans 순환참조로 미배선 + 한글 글리프 없음 → Pretendard로 대체.
+const pretendard = localFont({
+  src: "./fonts/PretendardVariable.woff2",
+  variable: "--font-pretendard",
+  display: "swap",
+  weight: "100 900",
 });
 
 const geistMono = Geist_Mono({
@@ -56,7 +62,7 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${pretendard.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
@@ -66,7 +72,8 @@ export default function RootLayout({
             <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
               <div className="mx-auto flex h-14 max-w-4xl items-center px-4">
                 <span className="font-semibold text-sm shrink-0">한국 부동산 세금 계산기</span>
-                <div className="flex-1 flex justify-center">
+                <div className="flex-1 flex items-center justify-center gap-3">
+                  <HeaderHomeLink />
                   <HeaderClientBanner />
                 </div>
                 <div className="flex items-center gap-3 shrink-0">

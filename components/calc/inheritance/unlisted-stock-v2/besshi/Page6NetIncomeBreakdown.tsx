@@ -52,12 +52,12 @@ export function Page6NetIncomeBreakdown({
 
   return (
     <section aria-label="제6쪽 순손익액 명세">
-      <div className="flex items-center justify-between text-[10px] text-gray-600">
+      <div className="flex items-center justify-between text-micro text-gray-600">
         <span>{P6.unitNote}</span>
         <span>{P6.pageNote}</span>
       </div>
       <SectionTitle>{P6.header}</SectionTitle>
-      <table className="w-full border-collapse border border-black mb-3 text-[10px]">
+      <table className="w-full border-collapse border border-black mb-3 text-micro">
         <tbody>
           {/* 사업연도 헤더 */}
           <tr className="bg-gray-100 print:bg-gray-100 font-semibold">
@@ -157,12 +157,12 @@ export function Page6NetIncomeBreakdown({
                   {appliedFlags[i] ? (
                     <span className="text-amber-800 font-semibold">
                       {fmt(fyb[i]?.perShareNetIncome ?? 0)} → {fmt(val)}
-                      <span className="block text-[9px] font-normal text-amber-600">
+                      <span className="block text-micro font-normal text-amber-600">
                         1년 미만 사업연도 ×12/N개월 환산
                       </span>
                     </span>
                   ) : (
-                    <span className="text-gray-400 text-[10px]">12개월(미환산)</span>
+                    <span className="text-gray-400 text-micro">12개월(미환산)</span>
                   )}
                 </td>
               ))}
@@ -173,7 +173,7 @@ export function Page6NetIncomeBreakdown({
       <p className="mb-2">
         <strong>{P6.weightedAvgLabel}</strong> = {fmt(result.weightedNetIncomePerShare)}
         {hasAnnualization && (
-          <span className="ml-2 text-[10px] text-amber-700">※ §17의3② 1년 미만 사업연도 연환산 반영</span>
+          <span className="ml-2 text-micro text-amber-700">※ §17의3② 1년 미만 사업연도 연환산 반영</span>
         )}
       </p>
       <p className="mb-2">
@@ -183,7 +183,7 @@ export function Page6NetIncomeBreakdown({
         <strong>{P6.finalPerShareLabel}</strong> = {fmt(result.netIncomePerShare)} (제1쪽 ⑤)
       </p>
       {result.estimatedProfitResult?.applied && (
-        <p className="mb-3 text-[10px] text-violet-700" data-testid="p6-추정이익">
+        <p className="mb-3 text-micro text-violet-700" data-testid="p6-추정이익">
           ※ §56② 추정이익 갈음 적용 — 위 가중평균(아.) 대신 2 이상 신용평가기관 추정이익 평균가액{" "}
           {fmt(result.estimatedProfitResult.estimatedProfitAverage)} ÷ 환원율로 산출
         </p>

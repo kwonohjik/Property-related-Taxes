@@ -293,10 +293,13 @@ export const PARTIAL_USAGE_CHANGE_ANCHORS = {
     housingIncomeAmount: 576_295_246,
     commercialIncomeAmount: 142_144_520,
     // 합산 세액
+    // 2026-07-21 (#2): 비사업용 +10%p 중과 base를 과세표준 귀속분으로 정정(기본공제 250만 전액 nonBiz 귀속·
+    //   납세자 유리). 중과 base −250만 → 중과 −25만 → transferTax −250,000·localTax −25,000·totalPayable −275,000.
+    //   (이 anchor는 상가건물 기준시가 추정값 기반 "회귀 방어용" 스냅샷 — PDF 정본값 아님, 위 ⚠ 주석 참조.)
     aggregateIncome: 740_079_354,
     taxBase: 737_579_354,
-    transferTax: 276_007_286,
-    localTax: 27_600_728,
-    totalPayable: 303_608_014,
+    transferTax: 275_757_286,
+    localTax: 27_575_728,
+    totalPayable: 303_333_014,
   },
 } as const;

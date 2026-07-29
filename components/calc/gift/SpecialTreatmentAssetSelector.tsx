@@ -18,6 +18,7 @@
 
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   CATEGORY_LABELS,
 } from "@/components/calc/inheritance/estate-card/estate-category-meta";
@@ -62,7 +63,7 @@ export function SpecialTreatmentBadge({
   const label =
     type === "startup" ? "§30의5 창업자금 특례" : "§30의6 가업승계 특례";
   return (
-    <span className="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium">
+    <span className="inline-flex items-center text-micro px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-medium">
       {label}
     </span>
   );
@@ -111,7 +112,7 @@ export function SpecialTreatmentAssetSelector({
             특례 귀속 불가 재산 ({streamLabel})
           </p>
           <p className="text-sm text-amber-800">{label}</p>
-          <p className="text-[11px] text-amber-700">
+          <p className="text-caption text-amber-700">
             {SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[specialTreatment]}. 특례
             선택을 해제하거나 해당 재산 종류로 입력하세요.
           </p>
@@ -119,40 +120,36 @@ export function SpecialTreatmentAssetSelector({
       );
     }
     return (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
-            §
-          </span>
-          <p className="text-xs font-semibold text-emerald-700">
-            특례 귀속 자산 ({streamLabel}) — 자동 귀속
-          </p>
-        </div>
+      <ToneCard
+        tone="emerald"
+        sectionNum="§"
+        bodyClassName="space-y-2"
+        noDark
+        title={<>특례 귀속 자산 ({streamLabel}) — 자동 귀속</>}
+      >
         <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2">
           <span className="text-sm text-emerald-800 font-medium">{label}</span>
           <span className="text-sm font-mono text-emerald-800">
             {val > 0 ? formatKRW(val) : "—"}
           </span>
         </div>
-        <p className="text-[11px] text-emerald-600">
+        <p className="text-caption text-emerald-600">
           자산이 1개이므로 전체가 {streamLabel} 특례 스트림으로 자동 귀속됩니다.
         </p>
-      </div>
+      </ToneCard>
     );
   }
 
   // 자산 N≥2 — 멀티선택 체크박스
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-      <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">
-          §
-        </span>
-        <p className="text-xs font-semibold text-emerald-700">
-          특례 귀속 자산 선택 ({streamLabel})
-        </p>
-      </div>
-      <p className="text-[11px] text-emerald-600">
+    <ToneCard
+      tone="emerald"
+      sectionNum="§"
+      bodyClassName="space-y-2"
+      noDark
+      title={<>특례 귀속 자산 선택 ({streamLabel})</>}
+    >
+      <p className="text-caption text-emerald-600">
         {streamLabel} 과세특례를 적용할 자산을 선택하세요. 미선택 자산은 일반 스트림(§47·§53·§56)으로 계산됩니다.
       </p>
       <div className="space-y-1.5">
@@ -192,12 +189,12 @@ export function SpecialTreatmentAssetSelector({
                 />
                 <span className="text-sm">{label}</span>
                 {isChecked && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-medium">
+                  <span className="text-micro px-1.5 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-medium">
                     특례 스트림
                   </span>
                 )}
                 {!eligible && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
+                  <span className="text-micro px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
                     특례 대상 아님
                   </span>
                 )}
@@ -211,6 +208,6 @@ export function SpecialTreatmentAssetSelector({
           );
         })}
       </div>
-    </div>
+    </ToneCard>
   );
 }

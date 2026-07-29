@@ -14,7 +14,7 @@ Layer 1의 프런트엔드 측. 마법사(StepWizard) 기반 폼 + 결과 화면
 
 ### Step 파일 분리 규칙 (2026-04 리팩터링 후)
 
-Calculator가 800줄 초과 + Step이 3개 이상이면 각 Step을 별도 파일로 분리. 예시:
+Calculator가 800줄 초과 + Step이 3개 이상이면 각 Step을 별도 파일로 분리(착지 목표 ≤700줄 — 루트 File Size Policy). 예시:
 
 ```
 app/calc/transfer-tax/                  # 양도세: Step1↔Step3 통합 후 4단계 (2026-04-25)
@@ -27,10 +27,10 @@ app/calc/transfer-tax/                  # 양도세: Step1↔Step3 통합 후 4�
 # (Step3.tsx 폐지: 취득 정보가 자산 카드 안으로 통합됨)
 
 components/calc/acquisition/
-├── shared.ts       # 상수·FormState·INITIAL_FORM·validateStep·callAPI·CSS classes
-├── Step0.tsx       # 취득 정보
-└── Step1.tsx       # 물건 상세
-# (Step 2/3은 main 파일에 inline — result/setForm 결합이 높음)
+├── shared.ts          # 상수·FormState·INITIAL_FORM·validateStep·CSS classes (API 호출은 lib/calc/acquisition-tax-api.ts)
+├── Step0.tsx ~ Step5.tsx  # 6단계 전부 별도 파일
+├── normalize.ts · deemed/ # 폼 정규화 + 간주취득
+└── AcquisitionSidebar.tsx
 ```
 
 **파일명 vs UI 인덱스 주의 (양도세)**: 파일명은 historical naming(Step1·Step4·Step5·Step6)을 유지하지만 마법사 UI는 0~3 인덱스. `STEPS_SINGLE = ["자산 목록", "보유 상황", "감면·공제", "가산세"]`. `stepComponentsAll`이 매핑.
@@ -57,7 +57,7 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 
 **1990 환산 표시 조건**: `assetKind === "land"` AND `acquisitionDate < "1990-08-30"` AND 환산취득가 모드. 토지 외 자산은 토지등급 환산 미적용 (법령상 토지 전용).
 
-**sessionStorage 마이그레이션**: `lib/stores/calc-wizard-migration.ts`의 `migrateLegacyForm`이 legacy 폼-전역 13필드 → assets[0]로 자동 이전. `currentStep` 5→4 인덱스 매핑(`STEP_MIGRATION`).
+**sessionStorage 마이그레이션**: `lib/stores/calc-wizard-migration.ts`의 `migrateLegacyForm`이 legacy 폼-전역 13필드 → assets[0]로 자동 이전.
 
 ## 공용 입력 컴포넌트 (절대 규칙)
 
@@ -79,6 +79,7 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 | 1990 환산 | `@/components/calc/inputs/Pre1990LandValuationInput.tsx` | 토지 자산 + acquisitionDate < 1990-08-30 시 자동 활성화. 자산-수준 props (`form` = `Pre1990FormSlice`). |
 | 주소 검색 | `@/components/ui/address-search.tsx` | Vworld 주소 검색 API. 조정대상지역·공시가격 조회에 필수 (지번 주소). |
 | 리셋 버튼 | `@/components/calc/shared/ResetButton.tsx` | 1단계에만 배치. 확인 다이얼로그 포함. |
+| 홈으로 버튼 | `@/components/calc/shared/HomeButton.tsx` (`HomeButton`) | 집 아이콘(`Home`) + `rounded-full` 테두리 pill 표준. **native `<Link href="/">`·`<button>` 홈링크·`ChevronLeft` 홈버튼 신규 작성 금지.** `variant`: `pill`(기본, 헤더·breadcrumb) / `block`(전체폭, `flex-1` 결과·에러 화면). `confirmMessage`(입력 이탈 확인)·`onBeforeNavigate`(stale 정리)·`label` prop. |
 
 **포커스 시 전체 선택**: `SelectOnFocusProvider` (`components/providers/SelectOnFocusProvider.tsx`) 가 layout에 전역 등록되어 모든 `<input>`/`<textarea>` 에 자동 적용. 개별 `onFocus={(e) => e.target.select()}` 추가 불필요.
 
@@ -95,11 +96,10 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 
 ## Zustand 마법사 Store (`lib/stores/calc-wizard-store.ts`)
 
-- sessionStorage persist. 비로그인 계산 결과 보존 → 로그인 후 Server Action으로 이력 마이그레이션.
+- sessionStorage persist. 비로그인 계산 결과 보존 → 로그인 후 이력 마이그레이션 (로컬 IndexedDB — Server Action 미경유).
 - **`result` 필드는 partialize에서 제외**: 민감정보 + Date 직렬화 문제.
 - `pendingMigration` 플래그로 마이그레이션 1회성 보장.
 - **legacy 폼 마이그레이션은 `lib/stores/calc-wizard-migration.ts`로 분리** (800줄 정책 준수). `migrateLegacyForm(legacy, defaultFormData)`로 호출.
-- **`currentStep` 자동 마이그레이션**: 5단계→4단계 인덱스 매핑(`STEP_MIGRATION`)이 `merge` 함수에 내장.
 
 ### useTransferSummary — 사이드바 합계 selector
 
@@ -126,17 +126,17 @@ const transferSummary = useMemo(
 | 종합부동산세 | `comprehensive-tax-ui-senior` |
 | 상속·증여 | `inheritance-gift-tax-ui-senior` |
 
-**자동 검증**: 작업 완료 직후 `ui-engine-sync-checker` 호출로 8개 동기화 지점 매핑 누락 점검.
+**자동 검증**: 작업 완료 직후 `ui-engine-sync-checker` 호출로 클라이언트 8개 동기화 지점 매핑 누락 점검.
 
-## UI 통합 8개 동기화 지점 (Definition of Done — 강제)
+## UI 통합 8개 동기화 지점 (Definition of Done — 강제 · 루트 CLAUDE.md 14지점 중 클라이언트 8)
 
 엔진 input·result 타입에 새 필드가 추가되거나 변경될 때 다음이 **모두** 동기화되어야 작업 완료. 하나라도 누락되면 미완료.
 
 | # | 지점 | 위치 |
 |---|---|---|
 | ① | 폼 상태 타입 (FormData/AssetForm) | `lib/stores/calc-wizard-asset.ts` · `calc-wizard-store.ts` 또는 `components/calc/{tax-type}/shared.ts` |
-| ② | initial value | 동상 (`createInitialAssetForm` / `INITIAL_FORM_DATA` / `INITIAL_FORM`) |
-| ③ | normalize fallback | 동상 (`normalizeAsset` 등) — sessionStorage 마이그레이션 호환 |
+| ② | initial value | 동상 (`makeDefaultAsset` / `defaultFormData` / `INITIAL_FORM`) |
+| ③ | normalize fallback | 동상 (`migrateAsset` 등) — sessionStorage 마이그레이션 호환 |
 | ④ | API 변환 | `lib/calc/{tax-type}-api.ts` (없으면 route handler 진입 변환) |
 | ⑤ | UI 입력 위젯 | 마법사 단계 컴포넌트 — 활성화 조건·tone 색상 고려 |
 | ⑥ | 사이드바 합계 (해당 시) | `compute*Summary` selector |
@@ -169,7 +169,7 @@ const transferSummary = useMemo(
 - [ ] **사이드바 합계**: 입력된 값으로 계산 가능한 항목만 표시 (0원·null 제외). 환산 모드의 취득가액처럼 API 결과 후에야 알 수 있는 값은 결과 도착 후 노출
 - [ ] **결과 뷰 산식**: 변수 약어(`P_F`, `Sum_A`) 금지·한국어 풀어쓰기, 법정 용어 우선, 중간 산술 결과 미표시, `floor()` 묵시 처리
 - [ ] **금액 칸 정렬 (모든 표·신고서·보고서 공통)**: 금액(원) 셀은 `text-right font-mono tabular-nums whitespace-nowrap` — 천·백만·십억 콤마 세로 정렬. 공용 `BesshiRow`/`BesshiColumn`(`components/calc/results/shared/BesshiRow.tsx`) 재사용 우선. 상세: `amount-column-align` 스킬
-- [ ] **면적 반올림 일관성**: 비율 계산으로 파생한 면적(부수토지 등)은 단가 곱셈 전 `parseFloat(rawArea.toFixed(2))`로 반올림. 표시 자리수와 계산 자리수를 반드시 일치시킴 (미적용 시 표시 76.51 / 계산 76.508 → 오차 발생)
+- [ ] **면적 안분 (강제)**: `lib/tax-engine/area-utils.ts`의 `round2()` / `residualArea()` 사용. 비율로 파생한 면적은 단가 곱셈 전 `round2()`로 소수 3째 자리 반올림(표시 자리수 = 계산 자리수 — 미적용 시 표시 76.51 / 계산 76.508 오차). **마지막 항목은 `residualArea(전체, ...앞항목)`로 잔액 흡수** — 비율 재계산 금지(미적용 시 100㎡ 3등분 → 33.33×3 = 99.99). 인라인 `parseFloat(x.toFixed(2))` 신규 작성 금지
 - [ ] **개별공시지가 필드는 `LandPriceLookupField` 필수**: `components/calc/inputs/LandPriceLookupField.tsx`. 기준연도 드롭다운 + Vworld 조회 버튼 + 토지기준시가 자동 계산 포함. CurrencyInput 단독 사용 금지.
 - [ ] **다-섹션 입력 폼 색상 카드 + 섹션 번호**: 3개 이상 서브섹션이 연속되는 입력 영역은 반드시 색상 카드 + 섹션 번호 패턴 적용 (아래 참고)
 
@@ -211,7 +211,26 @@ const transferSummary = useMemo(
 
 - 자동 계산 결과 박스도 해당 카드의 색조로 통일 (`bg-*/100/60 border border-*/200`)
 - 카드 간 간격은 `space-y-3`
-- **대표 구현**: `components/calc/transfer/mixed-use/` (MixedUseSection ①~⑤)
+- **대표 구현**: `components/calc/transfer/mixed-use/` (면적·기준시가·거주 섹션 ①~⑤)
+
+### 톤 단일 소스 + `<ToneCard>` (2026-07-10 표준화)
+
+위 색상 가이드의 톤은 **canonical 정적 소스** `components/calc/shared/tones.ts`(`Tone` 6톤 × `TONE[t].card/title/badge/chip/toggle`)에서만 가져온다. **동적 `bg-${tone}` 보간 금지**(production JIT purge silent failure — `feedback_tailwind_static_tone_mapping`) → `scripts/check-tone-classes.sh`가 pre-push 하드블록.
+
+신규 안내/섹션 카드는 인라인 `className` 하드코딩 대신 공용 컴포넌트를 쓴다:
+
+| 상황 | 사용 |
+|---|---|
+| 비접힘 안내/섹션 카드 | `<ToneCard tone [title] [sectionNum]>` (`components/calc/shared/ToneCard.tsx`). `sectionNum` 有=번호배지+제목·`title`만=제목형·둘 다 無=순수 톤 박스. `sectionNum`은 `string`("1-A")·`number`. 외곽 `p`/`space-y`는 `className`/`bodyClassName`으로 조정(cn/twMerge) |
+| 서술형 접힘 도움말(왜·어떻게) | `<CollapsibleHintCard tone summary>` (print 유지) |
+| 상태 배지·자동계산 결과박스 톤 | `TONE[tone].badge`(bg-200) / `TONE[tone].chip`(bg-100) |
+| 도메인 enum 신호등(저율/기본/중과 등 3+단계) | **로컬 정적 `Record<Tone,string>` 허용**(이미 정책준수 — 강제통합 안 함) |
+| 공식 서식 replica 표 | gray/neutral/zinc 유지(원본 재현 — 변경 금지) |
+
+- **2축 주의**: 같은 팔레트가 입력 섹션 성격(amber=취득·violet=거주 등)과 메시지 상태(amber=주의·emerald=성공 등)를 겸한다 — 톤 선택 시 문맥으로 판단.
+- **green≈emerald 중복**: `green`은 `emerald`와 동의어(비과세·긍정)이나 `green-100≠emerald-100` 픽셀 상이 → 신규는 `emerald` 사용 권장(기존 green 미변경).
+- **blue**(법령배지)는 카드 톤 축 아님 → `components/calc/shared/lawBadge.ts`의 `LAW_BADGE_CLASS` 별도 상수.
+- 설계·근거: `docs/02-design/features/ui-color-tone-tokenization.plan.md`.
 
 ## 토글 가시성 원칙 — ToggleCard (강제 규칙)
 
@@ -282,3 +301,45 @@ ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수
 - 잘못된 예: `placeholder="예: 91.78"`, `placeholder="예: 10,000,000"`
 - 올바른 예: `placeholder="양도시 주거용 합계 면적"`, `placeholder="금액 입력 (원)"`
 - 입력 형식 안내가 필요하면 FieldCard의 `hint` prop에 한국어로 작성
+
+## 라벨 타이포그래피 규칙 (전 세목 공통 — 2026-07-10 표준화)
+
+폰트 = **Pretendard**(self-host, `app/fonts/PretendardVariable.woff2`, `app/layout.tsx` next/font/local). 라벨 크기는 **역할 → 정본 클래스**로 고정한다. 임의 크기 폰트(`text-[Npx]`·`text-[Nrem]`·`text-[Nem]`) **금지** — `scripts/check-font-sizes.sh`가 **pre-push에서 하드블록**(CI는 비차단이라 pre-push가 진짜 게이트).
+
+| 역할 | 정본 클래스 | 크기 |
+|---|---|---|
+| 계산기 페이지 제목 (h1) | `text-2xl` | 24px |
+| 마법사 단계 제목 (h2) | `text-lg` | 18px |
+| 섹션 헤더 제목 | `text-base` | 16px |
+| 필드 라벨 · 옵션 제목 | `text-sm` | 14px |
+| hint · 단위 · 배지 · 경고 · 서브섹션 제목 | `text-xs` | 12px |
+| 캡션 · fine print · 보조 본문 | `text-caption` | 11px |
+| 번호배지 · pill · 상첨자 극소 chrome | `text-micro` | 10px |
+
+- **온-스케일(12~24)은 내장 Tailwind 클래스가 정본** — 같은 크기에 새 토큰명 신설 금지(`text-hint` 같은 중복 이름 = 원래 병 재생산).
+- **오프스케일 2종만 커스텀**: `text-caption`(11)·`text-micro`(10) — `app/globals.css` `@utility`, **font-size만**(행간은 기존 `leading-*`가 제어).
+- 굵기는 토큰 미포함 — 역할별 표준 굵기를 `font-medium`/`font-semibold`로 병기.
+- `font-mono`(금액 칼럼)는 대상 아님([amount-column-align] 스킬).
+- 배지·chrome엔 `text-micro`(10), 읽는 보조 텍스트엔 `text-caption`(11) — 크기가 곧 chrome/text 구분.
+- 설계·근거: `docs/02-design/features/ui-label-typography-standardization.plan.md`.
+
+## 모달 런처 버튼 규칙 (전 세목 공통 — 2026-07-10)
+
+하위 모달(Dialog)을 여는 **런처 버튼**(계산·조회 헬퍼·이력 불러오기)은 `<Button variant="modalLauncher">`(연녹색, "자동" 배지 톤 `bg-green-100/text-green-700`) 사용. `components/ui/button.tsx` 단일 소스(dark override 없음 — 배지와 전 테마 동일).
+
+- **native `<button>`로 런처 신규 작성 금지** → `<Button variant="modalLauncher" size={...}>`.
+- **size**: 라벨 12px면 `xs`/`sm`, **14px면 `default`**(Button `sm`·`xs`는 둘 다 12px, `default`만 14px).
+- `data-testid`·`title`·`disabled`는 `<Button>`이 `...props`로 통과 → **그대로 전달**(테스트 셀렉터·툴팁·비활성 사유 보존).
+- **제외**(이 variant 아님): 항목 추가/편집(+add) 에디터, 드롭다운(autocomplete·시군구·주소검색), 도움말 ⓘ(`TaxHelp`), 법조문/판례 인용 링크(`LawArticleModal` 등), 확인/폐기 다이얼로그.
+- 인라인 "다시 계산" 재오픈 링크는 chip 대신 녹색 텍스트 링크(`text-green-700 underline`) 유지 가능.
+- 설계: `docs/02-design/features/modal-launcher-button-style.plan.md`.
+
+## 홈으로 버튼 규칙 (전역 공통 — 2026-07-20 통일)
+
+"홈으로" 이동 버튼은 **반드시 `@/components/calc/shared/HomeButton.tsx`(`HomeButton`)** 사용. 집 아이콘(`Home`) + `rounded-full` 테두리 pill 단일 표준. `components/ui/home-link.tsx`는 폐지·삭제됨(PR #708).
+
+- **신규 작성 금지**: native `<Link href="/">`, `<button onClick={()=>router.push("/")}>`, `ChevronLeft`/`←` 홈링크. 전부 `<HomeButton>`으로.
+- **variant**: `pill`(기본 — 헤더·breadcrumb·페이지 상단) / `block`(전체폭 `rounded-lg` — `flex-1` 결과·에러 화면. `className="flex-1"` 병용).
+- **props**: `confirmMessage`(입력 이탈 확인 다이얼로그 — 미제공 시 즉시 이동), `onBeforeNavigate`(zustand step/result stale 정리), `label`(기본 "홈으로").
+- **마법사 하단 네비 좌측**(2026-07-25 통일): 공용 `WizardBackNav`(`components/calc/shared/WizardNav.tsx`) 사용. **step 0 = `HomeButton` pill**(상단 헤더와 동일 — 이미지10 일치), **step 1+ = `NavButton "이전"`**(ChevronLeft). 하단에서 `NavButton label="홈으로"` 신규 작성 금지. `<WizardBackNav isFirstStep={step === 0} onBack={handleBack} />` — step 0 홈 이동은 항상 HomeButton이 "/"로 처리(즉시 이동, confirm 미적용이 기본). 종전 "겸용 네비 현행 유지" 예외는 폐지.
+- 설계: `docs/02-design/features/home-button-unification.plan.md` · `docs/02-design/features/home-button-bottom-nav-unification.plan.md`.

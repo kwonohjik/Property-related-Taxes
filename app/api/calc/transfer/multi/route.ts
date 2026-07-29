@@ -22,7 +22,7 @@ import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
-import { mapHousesToEngine } from "@/lib/api/transfer-route-multi-house";
+import { mapHousesToEngine, mapGracePeriodToEngine } from "@/lib/api/transfer-route-multi-house";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
@@ -122,6 +122,8 @@ export async function POST(request: NextRequest) {
       householdRightCount: p.householdRightCount,
       useEstimatedAcquisition: p.useEstimatedAcquisition,
       standardPriceAtAcquisition: p.standardPriceAtAcquisition,
+      // 개산공제(§163⑥) base 축소 — 기준시가는 raw, 엔진이 개산공제에서만 적용
+      ownershipRatio: p.ownershipRatio,
       standardPriceAtTransfer: p.standardPriceAtTransfer,
       householdHousingCount: p.householdHousingCount,
       residencePeriodMonths: p.residencePeriodMonths,
@@ -132,6 +134,9 @@ export async function POST(request: NextRequest) {
       isSuccessorRightToMoveIn: p.isSuccessorRightToMoveIn,
       acquisitionCause: p.acquisitionCause,
       decedentAcquisitionDate: toOptionalDate(p.decedentAcquisitionDate),
+      decedentSameHouseholdBeforeInheritance: p.decedentSameHouseholdBeforeInheritance,
+      decedentCohabitationHoldingStartDate: toOptionalDate(p.decedentCohabitationHoldingStartDate),
+      decedentCohabitationResidenceMonths: p.decedentCohabitationResidenceMonths,
       donorAcquisitionDate: toOptionalDate(p.donorAcquisitionDate),
       isOneHousehold: p.isOneHousehold,
       temporaryTwoHouse: p.temporaryTwoHouse
@@ -156,6 +161,8 @@ export async function POST(request: NextRequest) {
       // ⑭ 다건도 단건과 동일 공용 헬퍼 — P2 특례(인구감소·부득이사유·장기임대 등) + ⑬ 소형신축/미분양 전 필드 도달 (선재 strip 갭 해소)
       houses: mapHousesToEngine(p.houses),
       sellingHouseId: p.sellingHouseId,
+      // ⑭ 다주택 중과 한시 유예/경과조치 — 단건 route와 동일 공용 헬퍼(Date 변환). 자산별 gracePeriod.
+      gracePeriod: mapGracePeriodToEngine(p.gracePeriod),
       marriageMerge: p.marriageMerge ? { marriageDate: toDate(p.marriageMerge.marriageDate, "marriageMerge.marriageDate") } : undefined,
       // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
       oneHouseExemptionProviso: p.oneHouseExemptionProviso
@@ -231,12 +238,23 @@ export async function POST(request: NextRequest) {
             applyException: p.rentalHousingException.applyException,
             scenario: p.rentalHousingException.scenario,
             rentalUnits: p.rentalHousingException.rentalUnits.map((u) => ({
-              registrationDate: toDate(u.registrationDate, "rentalUnits.registrationDate"),
-              rentalType: u.rentalType,
+              businessRegistrationDate: toDate(u.businessRegistrationDate, "rentalUnits.businessRegistrationDate"),
+              rentalRegistrationDate: toDate(u.rentalRegistrationDate, "rentalUnits.rentalRegistrationDate"),
+              rentalCategory: u.rentalCategory,
               rentalAcquisitionType: u.rentalAcquisitionType,
               isApartment: u.isApartment,
               region: u.region,
+              isExcluded918Rule: u.isExcluded918Rule,
+              hasContractDepositProof: u.hasContractDepositProof,
+              isExcludedShortToLongChange: u.isExcludedShortToLongChange,
               standardPriceAtRentalStart: u.standardPriceAtRentalStart,
+              acquisitionOfficialPrice: u.acquisitionOfficialPrice,
+              isNationalSizeHousing: u.isNationalSizeHousing,
+              landAreaM2: u.landAreaM2,
+              totalFloorAreaM2: u.totalFloorAreaM2,
+              hasMinimum2Units: u.hasMinimum2Units,
+              hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity,
+              firstSaleContractDate: toOptionalDate(u.firstSaleContractDate),
               rentalMonths: u.rentalMonths,
               rentalAutoTermination: u.rentalAutoTermination,
               requirementsConfirmed: u.requirementsConfirmed,

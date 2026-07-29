@@ -11,6 +11,7 @@
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 export function fmt(n: number): string {
   return n.toLocaleString();
@@ -94,14 +95,23 @@ export function EstimatedValuationBreakdown({
               <p>취득시 보충평가액 (1주당) = 순자산가치 단독 (§165④3) = {fmt(detail.conversionAcqStdPerShare)}</p>
             ) : (
               <p>
-                취득시 보충평가액 (1주당) = (순손익가치 {fmt(detail.niPerShare ?? 0)} × {detail.isHeavyRE ? 2 : 3} +
-                순자산가치 {fmt(detail.naPerShare ?? 0)} × {detail.isHeavyRE ? 3 : 2}) ÷ 5 ={" "}
-                {fmt(detail.conversionAcqStdPerShare)}
+                취득시 보충평가액 (1주당) ={" "}
+                <Frac
+                  top={
+                    <>
+                      순손익가치 {fmt(detail.niPerShare ?? 0)} × {detail.isHeavyRE ? 2 : 3} + 순자산가치{" "}
+                      {fmt(detail.naPerShare ?? 0)} × {detail.isHeavyRE ? 3 : 2}
+                    </>
+                  }
+                  bottom="5"
+                />{" "}
+                = {fmt(detail.conversionAcqStdPerShare)}
               </p>
             )}
             <p>양도시 1개월 종가평균 (1주당) = {fmt(detail.conversionTransferStd ?? 0)}</p>
             <p>
-              환산취득가 = 양도가액 × 취득시 보충평가액 ÷ 양도시 1개월 종가평균 ={" "}
+              환산취득가 = 양도가액 ×{" "}
+              <Frac top="취득시 보충평가액" bottom="양도시 1개월 종가평균" /> ={" "}
               <strong>{fmt(result.acquisitionPrice)}</strong>
             </p>
           </>
@@ -129,8 +139,11 @@ export function EstimatedValuationBreakdown({
             </p>
             <p>
               직전 사업연도 평가 {fmt(detail.section1659Detail.prior)} + (직전 {fmt(detail.section1659Detail.prior)} − 전전{" "}
-              {fmt(detail.section1659Detail.prePrior)}) × {detail.section1659Detail.holdingMonths}개월 ÷{" "}
-              {detail.section1659Detail.priorBizYearMonths}개월
+              {fmt(detail.section1659Detail.prePrior)}) ×{" "}
+              <Frac
+                top={`${detail.section1659Detail.holdingMonths}개월`}
+                bottom={`${detail.section1659Detail.priorBizYearMonths}개월`}
+              />
             </p>
             <p>양도 기준시가가 상향되어 양도차익이 발생합니다 (취득 기준시가는 불변).</p>
           </div>

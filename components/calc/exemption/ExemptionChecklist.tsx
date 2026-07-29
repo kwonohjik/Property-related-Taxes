@@ -112,6 +112,30 @@ function ExemptionRow({
           </div>
         )}
 
+        {/* 장애인 신탁 §52의2③ — 생존 중 평생 합산 기사용액 (5억 한도에서 차감) */}
+        {rule.id === "gift_disabled_trust" && (
+          <div>
+            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+              기존 신탁 불산입액 (생존 중 합산)
+              <span className="ml-1 text-gray-400">§52의2③ · 5억 한도에서 차감</span>
+            </label>
+            <CurrencyInput
+              label=""
+              value={
+                item.priorDisabledTrustUsed && item.priorDisabledTrustUsed > 0
+                  ? String(item.priorDisabledTrustUsed)
+                  : ""
+              }
+              onChange={(v) =>
+                onPatch(rule.id, {
+                  priorDisabledTrustUsed: parseInt(v.replace(/,/g, "") || "0", 10),
+                })
+              }
+              placeholder="과거 장애인 신탁 불산입액 (없으면 0)"
+            />
+          </div>
+        )}
+
         {/* 면적 입력 (금양임야·묘토). 면적 한도는 여기 라벨에 1회만 표기(단일 출처) */}
         {rule.limitType === "area" && (
           <div>
@@ -276,10 +300,10 @@ function ExemptionGroupSection({
           <span className={cn("text-xs font-semibold", headerClass)}>
             {title}
           </span>
-          <span className="text-[10px] font-normal text-gray-400 dark:text-gray-500">
+          <span className="text-micro font-normal text-gray-400 dark:text-gray-500">
             {subtitle}
           </span>
-          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", badgeClass)}>
+          <span className={cn("rounded-full px-2 py-0.5 text-micro font-medium", badgeClass)}>
             {checkedCount}개 선택
           </span>
         </div>

@@ -71,6 +71,12 @@ export type AncillaryLandRegion =
 /** 상속공제 입력 (7종 + §24 종합한도) */
 export interface InheritanceDeductionInput {
   heirs: Heir[];
+  /**
+   * 피상속인 거주자/비거주자 (§18~§24 적용범위 게이트). 미입력=거주자(하위호환).
+   * 비거주자는 §18 기초공제 2억만 적용 — §19 배우자·§20 인적·§21 일괄·§22 금융·§23 재해·
+   * §23의2 동거주택·§18의2 가업·§18의3 영농은 전부 "거주자의 사망으로" 한정(비거주자 배제). C-12·C-13.
+   */
+  decedentType?: "resident" | "non_resident";
   /** 배우자 실제 상속금액 (미입력 시 법정상속분으로 산정) */
   spouseActualAmount?: number;
   /** 순금융재산 (§22 금융재산공제 계산용) */
@@ -121,8 +127,14 @@ export interface InheritanceDeductionInput {
    */
   spouseLegalShareOverride?: number;
   // ===== Phase D §24 분자 보정 (orchestrator → calcInheritanceDeductions 전달) =====
-  /** 상속인 외 자에게 유증한 금액 (§24 분자 차감) */
+  /** 상속인 외 자에게 유증한 금액 (§24 분자 차감 — ①1호) */
   legateeAmountNonHeir?: number;
+  /**
+   * §24 ②2호 — 선순위 상속인의 상속포기로 다음 순위 상속인이 상속받은 재산 가액 (§24 분자 차감).
+   * 대습상속(§27 단서 — 선순위 사망·결격으로 그 직계비속이 대신 상속)은 상속포기가 아니므로 대상 아님 →
+   * 자동도출 금지, 명시 입력. 미입력=0(현행 보존). (H-19)
+   */
+  heirWaiverAmount?: number;
   /** 증여재산공제 합계 (§24 분자 보정용) */
   priorGiftDeductionTotal?: number;
   /** 신고기한 내 재해손실공제 (§24 분자 보정용) */

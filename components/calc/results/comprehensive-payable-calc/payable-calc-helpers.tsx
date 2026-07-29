@@ -31,7 +31,7 @@ export function pct(r: number): string {
 /** 네모 숫자 배지 (①~⑥) */
 function SquareBadge({ label }: { label: string }) {
   return (
-    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[3px] border border-emerald-400 bg-emerald-100 px-0.5 text-[11px] font-bold leading-none text-emerald-800 dark:border-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-200 select-none">
+    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[3px] border border-emerald-400 bg-emerald-100 px-0.5 text-caption font-bold leading-none text-emerald-800 dark:border-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-200 select-none">
       {label}
     </span>
   );
@@ -39,7 +39,7 @@ function SquareBadge({ label }: { label: string }) {
 /** 동그라미 배지 (ⓐⓑⓒ / 원숫자) */
 function CircleBadge({ label }: { label: string }) {
   return (
-    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-emerald-300 bg-white px-0.5 text-[11px] font-bold leading-none text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 select-none">
+    <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-emerald-300 bg-white px-0.5 text-caption font-bold leading-none text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 select-none">
       {label}
     </span>
   );
@@ -81,7 +81,7 @@ export function StepLine({
       <span className={strong ? "font-semibold text-foreground" : "text-foreground"}>
         {label}
         {formula ? (
-          <span className="ml-1 text-[11px] font-normal text-muted-foreground">{formula}</span>
+          <span className="ml-1 text-caption font-normal text-muted-foreground">{formula}</span>
         ) : null}
       </span>
       {amount !== undefined && (
@@ -109,7 +109,7 @@ export function Bullet({
 }) {
   return (
     <div
-      className="flex items-baseline gap-1.5 py-0.5 text-[13px] text-muted-foreground"
+      className="flex items-baseline gap-1.5 py-0.5 text-xs text-muted-foreground"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
       data-testid={testId}
     >
@@ -131,7 +131,7 @@ export function DashBullet({
 }) {
   return (
     <div
-      className="flex items-baseline gap-1.5 py-0.5 text-[13px] text-muted-foreground"
+      className="flex items-baseline gap-1.5 py-0.5 text-xs text-muted-foreground"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
       data-testid={testId}
     >
@@ -145,7 +145,7 @@ export function DashBullet({
 export function ParcelDot({ children, indent = 3 }: { children: ReactNode; indent?: number }) {
   return (
     <div
-      className="flex items-baseline gap-1.5 py-0.5 text-[12px] text-muted-foreground"
+      className="flex items-baseline gap-1.5 py-0.5 text-xs text-muted-foreground"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
     >
       <span className="select-none">•</span>
@@ -158,7 +158,7 @@ export function ParcelDot({ children, indent = 3 }: { children: ReactNode; inden
 export function JurisdictionHeader({ name, indent = 1 }: { name: string; indent?: number }) {
   return (
     <div
-      className="py-0.5 text-[13px] font-semibold text-sky-700 dark:text-sky-300"
+      className="py-0.5 text-xs font-semibold text-sky-700 dark:text-sky-300"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
     >
       ≪{name} 토지≫
@@ -170,7 +170,7 @@ export function JurisdictionHeader({ name, indent = 1 }: { name: string; indent?
 export function Footnote({ children, indent = 2 }: { children: ReactNode; indent?: number }) {
   return (
     <div
-      className="py-0.5 text-[11px] italic text-muted-foreground"
+      className="py-0.5 text-caption italic text-muted-foreground"
       style={{ paddingLeft: `${indent * 14 + 18}px` }}
     >
       * {children}
@@ -206,7 +206,7 @@ export function GaNaDaLine({
       <span className="text-foreground">
         {label}
         {formula ? (
-          <span className="ml-1 text-[11px] font-normal text-muted-foreground">{formula}</span>
+          <span className="ml-1 text-caption font-normal text-muted-foreground">{formula}</span>
         ) : null}
       </span>
       {amount !== undefined && (

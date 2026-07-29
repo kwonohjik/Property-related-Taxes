@@ -14,6 +14,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { AddressSearch } from "@/components/ui/address-search";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -43,38 +44,42 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
   }
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2.5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-sky-700">분양권·입주권</p>
-        <button type="button" onClick={add} className="text-xs text-primary hover:underline">
+    <ToneCard
+      tone="sky"
+      bodyClassName="space-y-2.5"
+      title="분양권·입주권"
+      titleExtra={
+        <button type="button" onClick={add} className="ml-auto text-sm font-medium text-primary hover:underline">
           + 추가
         </button>
-      </div>
-      <p className="text-[11px] text-muted-foreground/80">
+      }
+      noDark
+    >
+      <p className="text-caption text-muted-foreground/80">
         2021.1.1 이후 취득한 분양권·조합원입주권은 주택 수 산정에 포함됩니다 (소령 §167의11).
       </p>
 
       {rights.length === 0 ? (
-        <p className="text-[11px] text-muted-foreground/70">없음</p>
+        <p className="text-caption text-muted-foreground/70">없음</p>
       ) : (
         <div className="space-y-2.5">
           {rights.map((r, idx) => (
             <div key={r.id} className="rounded-md border border-border bg-background/60 p-2.5 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
+                <span className="text-caption font-medium text-muted-foreground tabular-nums">
                   {idx + 1}
                 </span>
                 <button
                   type="button"
                   onClick={() => remove(r.id)}
-                  className="text-[11px] text-destructive hover:underline"
+                  className="text-caption text-destructive hover:underline"
                   aria-label={`분양권·입주권 ${idx + 1} 삭제`}
                 >
                   삭제
                 </button>
               </div>
               <div className="space-y-1">
-                <span className="block text-[11px] text-muted-foreground font-medium">종류</span>
+                <span className="block text-caption text-muted-foreground font-medium">종류</span>
                 <RadioCardGroup
                   name={`presale-type-${r.id}`}
                   layout="inline"
@@ -88,14 +93,14 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
                 />
               </div>
               <div className="space-y-1">
-                <span className="block text-[11px] text-muted-foreground font-medium">취득일</span>
+                <span className="block text-caption text-muted-foreground font-medium">취득일</span>
                 <DateInput
                   value={r.acquisitionDate}
                   onChange={(v) => update(r.id, { acquisitionDate: v })}
                 />
               </div>
               <div className="space-y-1">
-                <span className="block text-[11px] text-muted-foreground font-medium">지역 구분</span>
+                <span className="block text-caption text-muted-foreground font-medium">지역 구분</span>
                 <RadioCardGroup
                   name={`presale-region-${r.id}`}
                   layout="inline"
@@ -131,7 +136,7 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
                 hint="분양권 공급가격/입주권 종전주택가격 — 그 외 지방 3억 이하 시 주택 수 제외 (원)"
               />
               <div className="space-y-1">
-                <span className="block text-[11px] text-muted-foreground font-medium">
+                <span className="block text-caption text-muted-foreground font-medium">
                   소재지 (주소) <span className="text-muted-foreground/60">— 선택</span>
                 </span>
                 <AddressSearch
@@ -143,7 +148,7 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
                     })
                   }
                 />
-                <p className="text-[11px] text-muted-foreground/70">
+                <p className="text-caption text-muted-foreground/70">
                   인구감소지역 세컨드홈 특례의 &ldquo;취득 전 보유주택과 동일 시·군·구&rdquo; 비교에 사용 (소령 §167의3①12 다·라목 2호). 분양권은 공급주택, 입주권은 종전주택 소재지의 주소를 검색하세요.
                 </p>
               </div>
@@ -161,6 +166,6 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
           ))}
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }

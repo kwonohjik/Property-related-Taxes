@@ -7,6 +7,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { DeemedFormState } from "./shared";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -119,7 +120,7 @@ export function ContributionFields({ form, set }: Props) {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+    <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         lawLinks="상증법"
         name="con-case"
@@ -206,6 +207,6 @@ export function ContributionFields({ form, set }: Props) {
           )}
         </div>
       )}
-    </div>
+    </ToneCard>
   );
 }

@@ -28,10 +28,10 @@ export function AssetSectionExtras({ asset, onChange, transferDate }: Props) {
       {(asset.assetKind === "housing" || asset.assetKind === "right_to_move_in") && (
         <RentalHousingExceptionSection
           rh={asset.rentalHousingException ?? { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS }}
+          asset={asset}
           acquisitionDate={asset.acquisitionDate}
           transferDate={transferDate ?? ""}
-          residencePeriodMonthsAsset={asset.residencePeriodMonthsAsset}
-          onChangeResidencePeriodMonths={(v) => onChange({ residencePeriodMonthsAsset: v })}
+          onChangeResidence={(patch) => onChange(patch)}
           onChange={(rh) => onChange({ rentalHousingException: rh })}
         />
       )}

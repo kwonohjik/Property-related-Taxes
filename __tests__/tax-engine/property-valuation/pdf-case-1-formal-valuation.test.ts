@@ -239,8 +239,10 @@ describe("[FY] §17의3② 1년 미만 사업연도 연환산", () => {
     };
     const r = evaluateUnlistedStockV2(input);
     expect(r.annualizationApplied).toEqual([true, false, false]);
-    // 사. 1주당 순손익액 736 → ×12/6 = 1,472
-    expect(r.annualizedPerShareNetIncome?.[0]).toBe(1_472);
+    // H-26: 사업연도 0 개시일 2021-07-01 → 유상증자 2021-06-30은 개시 전 → §56⑤ 조정 0
+    //   (종전 역산 개시 2021-01-01은 증자를 6개월 월할 12,500,000 과대 산입 → 736·1,472 버그값).
+    //   마[0] = 120,000,000 → 1주당 순손익액 666 → ×12/6 = 1,332.
+    expect(r.annualizedPerShareNetIncome?.[0]).toBe(1_332);
     // 가중평균이 환산 반영으로 715에서 변동
     expect(r.weightedNetIncomePerShare).not.toBe(715);
   });

@@ -237,3 +237,37 @@ export function isValidSpecialRateType(value: string | undefined): value is Spec
   if (!value) return false;
   return VALID_SPECIAL_RATE_TYPES.has(value);
 }
+
+// ============================================================
+// [C-2] §15①2호 상속특례 요건 게이트
+// ============================================================
+
+/**
+ * §15①2호(상속 세율특례) 요건 충족 여부 판정.
+ *
+ * 지방세법 §15①2호: 상속으로 인한 취득 중
+ *   - 가목: 대통령령으로 정하는 1가구 1주택의 취득 (isOneHouseHousehold)
+ *   - 나목: 지특법 §6①에 따라 취득세 감면대상이 되는 농지의 취득 (isSelfCultivatedFarmlandInheritance)
+ * 에 한해 (표준세율 − 중과기준세율 2%)를 적용한다. 요건 미충족 시 특례 미적용(표준세율).
+ *
+ * inheritance_one_house 외 특례는 이 게이트와 무관하게 통과(eligible=true).
+ */
+export function resolveInheritanceSpecialRateGate(
+  specialRateType: SpecialRateType | undefined,
+  input: {
+    propertyType: string;
+    isOneHouseHousehold?: boolean;
+    isSelfCultivatedFarmlandInheritance?: boolean;
+  }
+): { eligible: boolean; warning?: string } {
+  if (specialRateType !== "inheritance_one_house") return { eligible: true };
+  const eligible =
+    (input.propertyType === "housing" && input.isOneHouseHousehold === true) ||
+    (input.propertyType === "land_farmland" && input.isSelfCultivatedFarmlandInheritance === true);
+  if (eligible) return { eligible: true };
+  return {
+    eligible: false,
+    warning:
+      "§15①2호 세율특례는 상속 1가구 1주택(주택) 또는 지특법 §6① 감면대상 농지(농지) 요건을 충족하는 경우에만 적용됩니다. 요건 미충족으로 표준세율을 적용합니다.",
+  };
+}

@@ -35,6 +35,7 @@ function params(
     estateItems: [],
     presumedItems,
     debtItems: [],
+    funeralDeduction: 0,
     priorGifts: [],
     presumedAddedById: added,
     valuatedAmountById: new Map(),
@@ -45,6 +46,7 @@ function params(
     corporateGiftTaxBase: 0,
     grossEstateWithGifts: 350_000_000,
     isFiledOnTime: true,
+    filingCreditRate: 0.03,
   };
 }
 

@@ -31,9 +31,11 @@ import {
   addPropertyRefines,
 } from "./transfer-tax-schema-sub";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
+import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
 import {
   generalBuildingValuationSchema,
   commercialBuildingValuationSchema,
+  commercialInheritanceValuationSchema,
 } from "./transfer-tax-building-schemas";
 export {
   generalBuildingValuationSchema,
@@ -50,23 +52,34 @@ export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-buildin
 /** 시나리오: A=거주주택 양도, B=임대주택→거주주택 전환 후 양도(PHRP) */
 export const RentalScenarioEnum = z.enum(['A', 'B']);
 
-/** 임대 유형: 단기(4·6년)·장기(8·10년)·2018 이전 등록 */
-export const RentalTypeEnum = z.enum(['short-4', 'short-6', 'long-8', 'long-10', 'pre-2018']);
+/** 임대구분: 장기일반·단기6년·구 임대주택법·기존사업자(나목)·미분양(라목) (의무기간·cap은 등록기준일·취득방법에서 파생) */
+export const RentalCategoryEnum = z.enum(['long_general', 'short_6y', 'pre_2018', 'existing_business', 'unsold_08_09']);
 
 /** 취득 방법: 매입·건설 */
 export const RentalAcqTypeEnum = z.enum(['purchase', 'construction']);
 
-/** 소재지역: 수도권·비수도권·조정대상지역 */
-export const RentalRegionEnum = z.enum(['seoul-metro', 'non-metro', 'regulated-area']);
+/** 소재지역: 수도권·비수도권 (918 조정취득은 isExcluded918Rule 별도 축) */
+export const RentalRegionEnum = z.enum(['seoul-metro', 'non-metro']);
 
 /** ⑫ 임대주택 1호 Zod 객체 스키마 (미정의 시 침묵 stripping 방지) */
 export const rentalUnitSchema = z.object({
-  registrationDate: z.string().datetime(),
-  rentalType: RentalTypeEnum,
+  businessRegistrationDate: z.string().datetime(),
+  rentalRegistrationDate: z.string().datetime(),
+  rentalCategory: RentalCategoryEnum,
   rentalAcquisitionType: RentalAcqTypeEnum,
   isApartment: z.boolean(),
   region: RentalRegionEnum,
+  isExcluded918Rule: z.boolean(),
+  hasContractDepositProof: z.boolean(),
+  isExcludedShortToLongChange: z.boolean(),
   standardPriceAtRentalStart: z.number().int().nonnegative(),
+  acquisitionOfficialPrice: z.number().int().nonnegative(),
+  isNationalSizeHousing: z.boolean(),
+  landAreaM2: z.number().nonnegative().optional(),
+  totalFloorAreaM2: z.number().nonnegative().optional(),
+  hasMinimum2Units: z.boolean(),
+  hasMinimum5UnitsInCity: z.boolean(),
+  firstSaleContractDate: z.string().datetime().optional(),
   rentalMonths: z.number().nonnegative(),
   rentalAutoTermination: z.boolean(),
   requirementsConfirmed: z.boolean(),
@@ -113,6 +126,9 @@ const propertyBaseShape = {
    */
   transferType: z.enum(["regular", "burdened_gift"]).optional(),
   decedentAcquisitionDate: z.string().date().optional(),
+  decedentSameHouseholdBeforeInheritance: z.boolean().optional(),
+  decedentCohabitationHoldingStartDate: z.string().date().optional(),
+  decedentCohabitationResidenceMonths: z.number().int().nonnegative().optional(),
   donorAcquisitionDate: z.string().date().optional(),
   expenses: z.number().int().nonnegative(),
   /** §97① 가목 자본적 지출 — §97② 단서 swap 분리 입력용 (선택). 미명시 시 swap 비활성, expenses fallback */
@@ -122,12 +138,21 @@ const propertyBaseShape = {
   useEstimatedAcquisition: z.boolean(),
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   standardPriceAtTransfer: z.number().int().positive().optional(),
-  // ⑫ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12) — 엔진이 게이트, strip 방지
+  // ⑫ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — 엔진이 게이트, strip 방지
   transferCause: z.enum(["general", "public_expropriation"]).optional(),
   standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
   transferArea: z.number().positive().optional(),
   compensationPerSqm: z.number().int().nonnegative().optional(),
   compensationBasisStdPrice: z.number().int().nonnegative().optional(),
+  // ⑫ §164⑨2호 공매·경락 특례 (P4) — 엔진이 게이트, strip 방지
+  isAuctionTransfer: z.boolean().optional(),
+  auctionPrice: z.number().int().nonnegative().optional(),
+  // ⑫ §164⑨1호 주택 총액 트랙 (P5) — 엔진이 게이트, strip 방지
+  housingCompensationTotal: z.number().int().nonnegative().optional(),
+  housingCompensationBasisTotal: z.number().int().nonnegative().optional(),
+  // ⑫ §164⑨1호 건물 split 토지분 트랙 (P6/D6) — 엔진이 게이트, strip 방지
+  splitLandCompensationTotal: z.number().int().nonnegative().optional(),
+  splitLandCompensationBasisTotal: z.number().int().nonnegative().optional(),
   householdHousingCount: z.number().int().min(0),
   // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 세대 조합원입주권 보유 수 (양도일 현재).
   // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback householdRightCount ?? 0.
@@ -150,6 +175,8 @@ const propertyBaseShape = {
   presaleRights: z.array(presaleRightSchema).optional(),
   sellingHouseId: z.string().optional(),
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
+  isFirstTransferredInMerge: z.boolean().optional(),
+  generalHouseGiftedFromDecedentWithin2yr: z.boolean().optional(),
   parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
   // ⑨⑩⑫ §154① 단서 — 비과세 보유·거주 요건 면제 사유 (propertyBaseShape 공유 → 단건·다건 동시)
   oneHouseExemptionProviso: z
@@ -167,12 +194,18 @@ const propertyBaseShape = {
       businessApprovalDate: z.string().date().optional(),
     })
     .optional(),
-  // 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9)
+  // 다주택 중과 한시 유예 조건부 판정 — §167의3①12의2 가·나·다목(§167의10①12의2 미러).
+  // 나목(isLandPermitTarget=true): 허가신청·허가·계약금 4요건. 다목(false): 계약·계약금 2요건.
   gracePeriod: z
     .object({
       contractDate: z.string().date(),
-      isLandPermitArea: z.boolean(),
-      hasTenantInResidence: z.boolean(),
+      isLandPermitTarget: z.boolean().optional(),
+      permitApplicationDate: z.string().date().optional(),
+      permitGranted: z.boolean().optional(),
+      depositReceiptConfirmed: z.boolean().optional(),
+      // @deprecated — 확정 시행령 나·다목 원문에 근거 없음(G3)·regionCode 명단 판정 대체(G6). 판정 미사용, 하위호환만.
+      isLandPermitArea: z.boolean().optional(),
+      hasTenantInResidence: z.boolean().optional(),
       areaDesignatedDate: z.string().date().optional(),
     })
     .optional(),
@@ -194,8 +227,37 @@ const propertyBaseShape = {
   // ─── 토지/건물 취득일 분리 (소득령 §166⑥·§168②) ────────────────
   /** 토지 취득일 (건물 acquisitionDate와 다를 때) */
   landAcquisitionDate: z.string().date().optional(),
-  /** 분리 입력 방식 */
+  /** 분리 입력 방식 (@deprecated — landAcqMode/buildingAcqMode + saleSplitMode로 대체. 하위호환용 유지, 엔진 미소비) */
   landSplitMode: z.enum(["apportioned", "actual"]).optional(),
+  /**
+   * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥). ⑫ 침묵 stripping 방지 — 명시 선언 필수.
+   */
+  landAcqMode: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),
+  /** 건물 파트 취득 방식 — landAcqMode와 독립 */
+  buildingAcqMode: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),
+  /**
+   * 별개 취득(토지·건물 취득시점 상이) — 취득가액 축 파트별 완결 게이트. ⑫ 침묵 stripping 방지.
+   * 클라이언트가 `isSeparateAcquisition()`(lib/calc/transfer-tax-split-acq-mode.ts)으로 파생해 전송.
+   */
+  isSeparateAcquisition: z.boolean().optional(),
+  /**
+   * 공유지분율 (0<r≤1) — 필요경비 개산공제(§163⑥) base 축소 전용. ⑫ 침묵 stripping 방지.
+   * 기준시가는 물건 전체 값을 유지하고 개산공제만 「지분 기준시가 × 3%」가 된다.
+   */
+  ownershipRatio: z.number().positive().max(1).optional(),
+  /**
+   * 건물분 취득시 기준시가(§99①1호 나목) — `building` + 별개 취득 전용. ⑫ 침묵 stripping 방지.
+   */
+  buildingStandardPriceAtAcquisition: z.number().int().positive().optional(),
+  /**
+   * 양도가액 결정 방식 — 자산 내 토지·건물 분리 축(엔진 명시 입력, §9 M2).
+   * "apportioned"(양도시 기준시가 비율 안분, 기본) | "actual"(구분양도 직접입력).
+   */
+  saleSplitMode: z.enum(["apportioned", "actual"]).optional(),
+  /** 토지 파트 매매사례가액(추계, §176의2③1호) — landAcqMode==="salesCase" 시 직접입력 */
+  landSalesCaseValue: z.number().int().nonnegative().optional(),
+  /** 건물 파트 매매사례가액 — buildingAcqMode==="salesCase" 시 직접입력 */
+  buildingSalesCaseValue: z.number().int().nonnegative().optional(),
   /** 토지 양도가액 (원) */
   landTransferPrice: z.number().int().positive().optional(),
   /** 건물 양도가액 (원) */
@@ -309,6 +371,8 @@ const propertyBaseShape = {
   inheritedAcquisition: inheritedAcquisitionSchema.optional(),
   /** 상속 주택 환산취득가 보조 입력 — 주택 + 상속개시일 < 2005-04-30 시 3-시점 합계 기준시가 자동 산출 */
   inheritedHouseValuation: inheritanceHouseValuationSchema.optional(),
+  /** ⑫ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 — 상가 + 상속개시일 < 2005-01-01 시 §163⑨2호 max */
+  commercialInheritanceValuation: commercialInheritanceValuationSchema.optional(),
   /** 겸용주택(1세대 1주택 + 상가) 분리계산 입력 — propertyType === "mixed-use-house" 시 필수 */
   mixedUse: mixedUseAssetSchema.optional(),
   /**
@@ -323,7 +387,7 @@ const propertyBaseShape = {
   /** ⑫ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 미정의 시 침묵 stripping 방지 */
   rentalHousingException: rentalHousingExceptionSchema.optional(),
   /**
-   * ⑫ 상업용건물·오피스텔 환산취득가 계산 입력 (소령 §164⑧, §176조의2②2호).
+   * ⑫ 상업용건물·오피스텔 환산취득가 계산 입력 (소령 §164⑥, §176조의2②2호).
    * propertyType === "building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
   commercialBuildingValuation: commercialBuildingValuationSchema.optional(),
@@ -352,86 +416,11 @@ const propertyBaseShape = {
     heirCapitalExpenditure: z.number().int().nonnegative().optional(),
   }).optional(),
   /**
-   * ⑫ 재개발/재건축 입력 (시행령 §166 본문).
+   * ⑫ 재개발/재건축 입력 (시행령 §166 본문) — sibling 파일 분리(800줄 정책).
    * propertyType === "redevelopment_apt" 또는 "right_to_move_in" 시 제공.
    * 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
-  redevelopment: z.object({
-    subject: z.enum(["right", "apt"]),
-    approvalLawBasis: z.enum(["urban_renovation_art_74", "small_housing_art_29"]),
-    approvalDate: z.string().date(),
-    rightsValue: z.number().int().nonnegative(),
-    settlementDirection: z.enum(["pay", "receive"]),
-    settlementAmount: z.number().int().nonnegative(),
-    settlementSaleDate: z.string().date().optional(),
-    preApprovalExpenses: z.number().int().nonnegative(),
-    postApprovalExpenses: z.number().int().nonnegative().optional(),
-    originalAssetType: z.enum(["land", "housing"]).optional(),
-    acquisitionStdPrice: z.number().int().nonnegative().optional(),
-    managementDisposalStdPrice: z.number().int().nonnegative().optional(),
-    firstDisclosureDate: z.string().date().optional(),
-    firstDisclosureHousingPrice: z.number().int().nonnegative().optional(),
-    firstDisclosureStdPrice: z.number().int().nonnegative().optional(),
-    // PHD 패턴 — Sum_A·Sum_F 산정용 (본문 발동 시 필수)
-    landArea: z.number().nonnegative().optional(),
-    landPricePerSqmAtAcq: z.number().int().nonnegative().optional(),
-    buildingStdPriceAtAcq: z.number().int().nonnegative().optional(),
-    landPricePerSqmAtFirst: z.number().int().nonnegative().optional(),
-    buildingStdPriceAtFirst: z.number().int().nonnegative().optional(),
-    // 단일 라목값
-    managementDisposalHousingPrice: z.number().int().nonnegative().optional(),
-    acquisitionHousingPrice: z.number().int().nonnegative().optional(),
-    acquisitionRounding: z.enum(["floor", "round"]).optional(),
-    // 사례 45 — 거주월수 분리 입력 (§155⑰ 통산 + 사전법령해석재산 2020-386)
-    priorHouseResidenceMonths: z.number().int().nonnegative().optional(),
-    newHouseResidenceMonths: z.number().int().nonnegative().optional(),
-    // 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드/신고서 양식 표 산정 근거 표시용 pass-through
-    priorResidenceStartDate: z.string().date().optional(),
-    priorResidenceEndDate: z.string().date().optional(),
-    newResidenceStartDate: z.string().date().optional(),
-    newResidenceEndDate: z.string().date().optional(),
-    // 사례 46 — 청산금 수령분 단독 신고
-    receiveOnlyMode: z.boolean().optional(),
-    exemptionEligibleAtApproval: z.boolean().optional(),
-    // 사례 48 — 승계조합원 신축APT 양도 (관리처분 후 입주권 승계 → 신축APT 양도).
-    // 사전-2019-법령해석재산-0649 + 시행령 §162①4호.
-    isSuccessorMember: z.boolean().optional(),
-    completionDate: z.string().date().optional(),
-    // 사례 36 — 1세대1입주권 비과세 C-1 안전장치 (a) 자동 검증용.
-    // 인가일 기준 종전주택 보유 월수. 24개월 미만 시 UI 경고 카드 노출 (차단 X — 자기선언 우선).
-    // 엔진 계산에는 직접 미사용 (비과세 판단은 exemptionEligibleAtApproval 기준).
-    // §89①4호 가목 → §89①3호 가목 보유 2년 요건 참조.
-    priorHouseHoldingMonths: z.number().int().nonnegative().optional(),
-    // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
-    // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
-    landStdPriceAtAcq: z.number().int().nonnegative().optional(),
-    landStdPriceAtApproval: z.number().int().nonnegative().optional(),
-    // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
-    // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
-    housingStdPriceAtAcq: z.number().int().nonnegative().optional(),
-    housingStdPriceAtApproval: z.number().int().nonnegative().optional(),
-  })
-  .refine(
-    // subject="apt"(완공 APT 양도, 사례 46)에서만 settlementSaleDate 필수.
-    // subject="right"(입주권 양도, 사례 36 R-5)는 신축 완공 전 권리 양도 — 잔금일(saleDate)이 양도일이므로 불필요.
-    (v) => v.subject !== "apt" || v.settlementDirection !== "receive" || v.settlementSaleDate != null,
-    { message: "청산금 수령 + 완공 APT 양도(subject='apt') 시 settlementSaleDate(소유권이전 고시일 다음날) 필수" },
-  )
-  .refine(
-    (v) => v.receiveOnlyMode !== true || v.settlementDirection === "receive",
-    { message: "receiveOnlyMode=true 인 경우 settlementDirection은 'receive' 이어야 함 (사례 46 정합성)" },
-  )
-  .refine(
-    (v) => v.subject !== "apt" || v.originalAssetType != null,
-    { message: "subject='apt' (완공 APT 양도) 시 originalAssetType ('land' | 'housing') 필수" },
-  )
-  .refine(
-    (v) =>
-      (v.acquisitionStdPrice == null && v.managementDisposalStdPrice == null) ||
-      (v.acquisitionStdPrice != null && v.managementDisposalStdPrice != null),
-    { message: "환산 모드: 취득시 기준시가와 관리처분일 기준시가는 함께 입력해야 함" },
-  )
-  .optional(),
+  redevelopment: redevelopmentSchema,
   // ⑩ 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가 Zod refine은
   // addPropertyRefines (transfer-tax-schema-refines.ts)에 추가됨 — route.ts superRefine 내부 호출
 };
@@ -649,16 +638,7 @@ export const propertySchema = z
             });
           }
         } else if (c.acquisitionCause === "inheritance") {
-          // 상속: inheritanceValuation(auto) 또는 fixedAcquisitionPrice(manual) 중 하나 필요
-          const hasAuto = c.inheritanceValuation !== undefined;
-          const hasManual = c.fixedAcquisitionPrice !== undefined && c.fixedAcquisitionPrice > 0;
-          if (!hasAuto && !hasManual) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["companionAssets", i, "fixedAcquisitionPrice"],
-              message: "상속 자산은 보충적평가 또는 직접입력 취득가액 필수",
-            });
-          }
+          // P2c: 상속 취득가액은 inheritanceValuation(신고가액) 경로로 항상 전송 (manual/fixedAcquisitionPrice 폐기).
           if (!c.decedentAcquisitionDate) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,

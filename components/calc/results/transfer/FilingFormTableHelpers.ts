@@ -11,11 +11,6 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type {
-  MixedUseHousingPart,
-  MixedUseCommercialPart,
-} from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import type { SplitPartResult } from "@/lib/tax-engine/types/transfer.types";
-import type {
   AggregateTransferResult,
   PerPropertyBreakdown,
 } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -123,7 +118,7 @@ export interface RowDef {
 
 export type ColumnMode =
   | "fourpart"
-  | "mixed-2col"
+  | "mixed-4col"
   | "split-2col"
   | "single"
   | "aggregate"
@@ -240,24 +235,27 @@ export function deriveColumns(
     };
   }
   if (mu) {
+    // 일반 겸용주택 — 주택분·상가분을 각각 토지/건물로 4분할 (토지-우선).
+    // 컬럼 키는 Case A "fourpart"와 동일 재사용 → fourPartFinancials 채움 로직 공유.
     return {
-      mode: "mixed-2col",
+      mode: "mixed-4col",
       columns: [
         { key: "total", label: "합계" },
-        { key: "housing", label: "주택부분" },
-        { key: "commercial", label: "상가부분" },
+        { key: "housingLand", label: "주택분 토지" },
+        { key: "housingBuilding", label: "주택분 건물" },
+        { key: "commercialLand", label: "상가분 토지" },
+        { key: "commercialBuilding", label: "상가분 건물" },
       ],
     };
   }
   if (sp) {
-    return {
-      mode: "split-2col",
-      columns: [
-        { key: "total", label: "합계" },
-        { key: "land", label: "토지" },
-        { key: "building", label: "건물" },
-      ],
-    };
+    // 토지·건물 소유자 분리 — 본인이 소유하지 않는 파트 컬럼 제거 (소령 §166⑥, §168②).
+    // building_only → 토지 컬럼 없음 / land_only → 건물 컬럼 없음.
+    const selfOwns = sp.selfOwns ?? "both";
+    const columns: Column[] = [{ key: "total", label: "합계" }];
+    if (selfOwns !== "building_only") columns.push({ key: "land", label: "토지" });
+    if (selfOwns !== "land_only") columns.push({ key: "building", label: "건물" });
+    return { mode: "split-2col", columns };
   }
   return {
     mode: "single",
@@ -347,121 +345,23 @@ export function splitLtDeduction(
   const residenceRate = Math.min(rY * 0.04, 0.40);
   const totalRate = holdingRate + residenceRate;
   if (totalRate <= 0) return { holdingAmount: totalAmount, residenceAmount: 0 };
-  const holdingAmount = Math.floor(totalAmount * holdingRate / totalRate);
-  return { holdingAmount, residenceAmount: totalAmount - holdingAmount };
-}
-
-// ── 재무 열 채우기 ─────────────────────────────────────────────
-
-export function fourPartFinancials(
-  hp: MixedUseHousingPart,
-  cp: MixedUseCommercialPart,
-  setNum: (rowKey: string, col: ColumnKey, n: number | null) => void,
-) {
-  setNum("transferPrice", "housingLand", hp.landTransferPrice);
-  setNum("transferPrice", "housingBuilding", hp.buildingTransferPrice);
-  setNum("transferPrice", "commercialLand", cp.landTransferPrice);
-  setNum("transferPrice", "commercialBuilding", cp.buildingTransferPrice);
-  setNum("acquisitionPrice", "housingLand", hp.landAcqPrice);
-  setNum("acquisitionPrice", "housingBuilding", hp.buildingAcqPrice);
-  setNum("acquisitionPrice", "commercialLand", cp.landAcqPrice);
-  setNum("acquisitionPrice", "commercialBuilding", cp.buildingAcqPrice);
-  setNum("expenses", "housingLand", hp.landAppraisalDed);
-  setNum("expenses", "housingBuilding", hp.buildingAppraisalDed);
-  setNum("expenses", "commercialLand", cp.landAppraisalDed);
-  setNum("expenses", "commercialBuilding", cp.buildingAppraisalDed);
-  setNum("transferGain", "housingLand", hp.landTransferGain);
-  setNum("transferGain", "housingBuilding", hp.buildingTransferGain);
-  setNum("transferGain", "commercialLand", cp.landTransferGain);
-  setNum("transferGain", "commercialBuilding", cp.buildingTransferGain);
-  const housingExemptRatio = hp.transferGain > 0 ? hp.proratedTaxableGain / hp.transferGain : 1;
-  setNum("taxableGain", "housingLand", Math.floor(hp.landTransferGain * housingExemptRatio));
-  setNum("taxableGain", "housingBuilding", Math.floor(hp.buildingTransferGain * housingExemptRatio));
-  setNum("taxableGain", "commercialLand", cp.landTransferGain);
-  setNum("taxableGain", "commercialBuilding", cp.buildingTransferGain);
-  setNum("exemptGain", "housingLand", hp.landTransferGain - Math.floor(hp.landTransferGain * housingExemptRatio));
-  setNum("exemptGain", "housingBuilding", hp.buildingTransferGain - Math.floor(hp.buildingTransferGain * housingExemptRatio));
-  setNum("exemptGain", "commercialLand", 0);
-  setNum("exemptGain", "commercialBuilding", 0);
-  const hpLandRatio = hp.transferGain > 0 ? hp.landTransferGain / hp.transferGain : 0.5;
-  const hpBuildRatio = 1 - hpLandRatio;
-  const cpLandRatio = cp.transferGain > 0 ? cp.landTransferGain / cp.transferGain : 0.5;
-  const cpBuildRatio = 1 - cpLandRatio;
-  setNum("ltDeduction", "housingLand", Math.floor(hp.longTermDeductionAmount * hpLandRatio));
-  setNum("ltDeduction", "housingBuilding", Math.floor(hp.longTermDeductionAmount * hpBuildRatio));
-  setNum("ltDeduction", "commercialLand", Math.floor(cp.longTermDeductionAmount * cpLandRatio));
-  setNum("ltDeduction", "commercialBuilding", Math.floor(cp.longTermDeductionAmount * cpBuildRatio));
-  setNum("incomeAmount", "housingLand", Math.floor(hp.incomeAmount * hpLandRatio));
-  setNum("incomeAmount", "housingBuilding", Math.floor(hp.incomeAmount * hpBuildRatio));
-  setNum("incomeAmount", "commercialLand", Math.floor(cp.incomeAmount * cpLandRatio));
-  setNum("incomeAmount", "commercialBuilding", Math.floor(cp.incomeAmount * cpBuildRatio));
-  setNum("incomeAmountAfter", "housingLand", Math.floor(hp.incomeAmount * hpLandRatio));
-  setNum("incomeAmountAfter", "housingBuilding", Math.floor(hp.incomeAmount * hpBuildRatio));
-  setNum("incomeAmountAfter", "commercialLand", Math.floor(cp.incomeAmount * cpLandRatio));
-  setNum("incomeAmountAfter", "commercialBuilding", Math.floor(cp.incomeAmount * cpBuildRatio));
-}
-
-export function mixedTwoColFinancials(
-  hp: MixedUseHousingPart,
-  cp: MixedUseCommercialPart,
-  setNum: (rowKey: string, col: ColumnKey, n: number | null) => void,
-) {
-  setNum("transferPrice", "housing", hp.landTransferPrice + hp.buildingTransferPrice);
-  setNum("transferPrice", "commercial", cp.landTransferPrice + cp.buildingTransferPrice);
-  setNum("acquisitionPrice", "housing", hp.estimatedAcquisitionPrice);
-  setNum("acquisitionPrice", "commercial", cp.estimatedAcquisitionPrice);
-  setNum("expenses", "housing", hp.landAppraisalDed + hp.buildingAppraisalDed);
-  setNum("expenses", "commercial", cp.landAppraisalDed + cp.buildingAppraisalDed);
-  setNum("transferGain", "housing", hp.transferGain);
-  setNum("transferGain", "commercial", cp.transferGain);
-  setNum("exemptGain", "housing", hp.transferGain - hp.proratedTaxableGain);
-  setNum("exemptGain", "commercial", 0);
-  setNum("taxableGain", "housing", hp.proratedTaxableGain);
-  setNum("taxableGain", "commercial", cp.transferGain);
-  setNum("ltDeduction", "housing", hp.longTermDeductionAmount);
-  setNum("ltDeduction", "commercial", cp.longTermDeductionAmount);
-  setNum("incomeAmount", "housing", hp.incomeAmount);
-  setNum("incomeAmount", "commercial", cp.incomeAmount);
-  setNum("incomeAmountAfter", "housing", hp.incomeAmount);
-  setNum("incomeAmountAfter", "commercial", cp.incomeAmount);
-}
-
-export function splitTwoColFinancials(
-  land: SplitPartResult,
-  building: SplitPartResult,
-  taxableRatio: number,
-  setNum: (rowKey: string, col: ColumnKey, n: number | null) => void,
-) {
-  setNum("transferPrice", "land", land.transferPrice);
-  setNum("transferPrice", "building", building.transferPrice);
-  setNum("acquisitionPrice", "land", land.acquisitionPrice);
-  setNum("acquisitionPrice", "building", building.acquisitionPrice);
-  setNum("expenses", "land", land.directExpenses + land.appraisalDeduction);
-  setNum("expenses", "building", building.directExpenses + building.appraisalDeduction);
-  setNum("transferGain", "land", land.gain);
-  setNum("transferGain", "building", building.gain);
-  const landTaxable = Math.floor(land.gain * taxableRatio);
-  const buildingTaxable = Math.floor(building.gain * taxableRatio);
-  setNum("taxableGain", "land", landTaxable);
-  setNum("taxableGain", "building", buildingTaxable);
-  setNum("exemptGain", "land", land.gain - landTaxable);
-  setNum("exemptGain", "building", building.gain - buildingTaxable);
-  setNum("ltDeduction", "land", land.longTermDeduction);
-  setNum("ltDeduction", "building", building.longTermDeduction);
-  const landIncome = landTaxable - land.longTermDeduction;
-  const buildingIncome = buildingTaxable - building.longTermDeduction;
-  setNum("incomeAmount", "land", landIncome);
-  setNum("incomeAmount", "building", buildingIncome);
-  setNum("incomeAmountAfter", "land", landIncome);
-  setNum("incomeAmountAfter", "building", buildingIncome);
+  // §95② 별표 표2: 보유기간분·거주기간분 각각 자기 공제율로 직접 산정(잔액 방식 아님).
+  // floor 잔액(최대 1원)은 보유분(기저 공제)에 흡수 — 합 = 총 장특공제 불변식 유지, 세액 무관.
+  const residenceAmount = Math.floor(totalAmount * residenceRate / totalRate);
+  return { holdingAmount: totalAmount - residenceAmount, residenceAmount };
 }
 
 // ── 행 정의 생성 ───────────────────────────────────────────────
 
+import { fourPartFinancials, splitTwoColFinancials } from "./FilingFormTableFinancials";
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
 import { buildRowsFromOrder } from "./FilingFormTableRowDefs";
-import { reductionEligibleIncome } from "./reduction-eligible-income";
+import {
+  reductionEligibleIncome,
+  incomeDeductionReducible,
+  incomeDeductionRuralSurtax,
+} from "./reduction-eligible-income";
 export { fmtCell } from "./FilingFormTableRowDefs";
 
 export function buildRows(
@@ -564,21 +464,27 @@ export function buildRows(
       fillRedev4SplitBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
     }
     // 합계 열은 아래 공용 매핑에서 result.* 필드로 채워짐
-  } else if (mode === "fourpart" && mu) {
+  } else if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
     setStr("transferDate", "housingLand", fmtDate(transferDate));
     setStr("transferDate", "housingBuilding", fmtDate(transferDate));
     setStr("transferDate", "commercialLand", fmtDate(transferDate));
     setStr("transferDate", "commercialBuilding", fmtDate(transferDate));
-    setStr("acquisitionDate", "housingLand", fmtDate(acquisitionDate));
+    // 토지/건물 취득일 분리 표시 — 토지 열=토지 취득일, 건물 열=건물 취득일.
+    // 건물 취득일 = 기존 acquisitionDate 변수(override 반영, total 열과 정합).
+    // 토지 취득일 = primary.landAcquisitionDate || acquisitionDate (API transfer-tax-api.ts:147 미러 — single-source).
+    const landAcqDate = primary?.landAcquisitionDate || acquisitionDate;
+    setStr("acquisitionDate", "housingLand", fmtDate(landAcqDate));
     setStr("acquisitionDate", "housingBuilding", fmtDate(acquisitionDate));
-    setStr("acquisitionDate", "commercialLand", fmtDate(acquisitionDate));
+    setStr("acquisitionDate", "commercialLand", fmtDate(landAcqDate));
     setStr("acquisitionDate", "commercialBuilding", fmtDate(acquisitionDate));
-    const hold = holdingPeriodFromDates(acquisitionDate, transferDate);
-    for (const c of ["housingLand", "housingBuilding", "commercialLand", "commercialBuilding"]) {
-      setStr("holdingPeriod", c, hold);
-    }
+    const landHold = holdingPeriodFromDates(landAcqDate, transferDate);
+    const buildingHold = holdingPeriodFromDates(acquisitionDate, transferDate);
+    setStr("holdingPeriod", "housingLand", landHold);
+    setStr("holdingPeriod", "housingBuilding", buildingHold);
+    setStr("holdingPeriod", "commercialLand", landHold);
+    setStr("holdingPeriod", "commercialBuilding", buildingHold);
     setStr("moveOut", "housingLand", lastMoveOut ? fmtDate(lastMoveOut) : "-");
     setStr("moveOut", "housingBuilding", lastMoveOut ? fmtDate(lastMoveOut) : "-");
     setStr("moveIn", "housingLand", firstMoveIn ? fmtDate(firstMoveIn) : "-");
@@ -586,18 +492,6 @@ export function buildRows(
     setStr("residencePeriod", "housingLand", fmtPeriod(residenceMonthsTotal));
     setStr("residencePeriod", "housingBuilding", fmtPeriod(residenceMonthsTotal));
     fourPartFinancials(hp, cp, setNum);
-  } else if (mode === "mixed-2col" && mu) {
-    setStr("transferDate", "housing", fmtDate(transferDate));
-    setStr("transferDate", "commercial", fmtDate(transferDate));
-    setStr("acquisitionDate", "housing", fmtDate(acquisitionDate));
-    setStr("acquisitionDate", "commercial", fmtDate(acquisitionDate));
-    const hold = holdingPeriodFromDates(acquisitionDate, transferDate);
-    setStr("holdingPeriod", "housing", hold);
-    setStr("holdingPeriod", "commercial", hold);
-    setStr("moveOut", "housing", lastMoveOut ? fmtDate(lastMoveOut) : "-");
-    setStr("moveIn", "housing", firstMoveIn ? fmtDate(firstMoveIn) : "-");
-    setStr("residencePeriod", "housing", fmtPeriod(residenceMonthsTotal));
-    mixedTwoColFinancials(mu.housingPart, mu.commercialPart, setNum);
   } else if (mode === "split-2col" && sp) {
     setStr("transferDate", "land", fmtDate(transferDate));
     setStr("transferDate", "building", fmtDate(transferDate));
@@ -605,8 +499,12 @@ export function buildRows(
     setStr("acquisitionDate", "building", fmtDate(acquisitionDate));
     setStr("holdingPeriod", "land", fmtPeriod(Math.round(sp.land.holdingYears * 12)));
     setStr("holdingPeriod", "building", fmtPeriod(Math.round(sp.building.holdingYears * 12)));
-    const totalSplitGain = sp.land.gain + sp.building.gain;
-    const taxableRatio = totalSplitGain > 0 ? result.taxableGain / totalSplitGain : 1;
+    // 과세비율 분모는 본인 소유 파트의 gain만 — building_only인데 land.gain을 포함하면
+    // 분자(result.taxableGain=건물분)와 불일치해 토지·건물 셀이 모두 오염됨.
+    const ownedGain =
+      (sp.selfOwns === "building_only" ? 0 : sp.land.gain) +
+      (sp.selfOwns === "land_only" ? 0 : sp.building.gain);
+    const taxableRatio = ownedGain > 0 ? result.taxableGain / ownedGain : 1;
     splitTwoColFinancials(sp.land, sp.building, taxableRatio, setNum);
   }
 
@@ -630,23 +528,27 @@ export function buildRows(
     const inverseAcquisition = (totalTransferPrice || 0) - totalExpensesForInverse - totalGainForInverse;
     setNum("acquisitionPrice", "total", inverseAcquisition);
     // 필요경비 합계는 redev 분기 합으로 이미 설정됨 — 덮어쓰기 금지.
-  } else if (mode === "fourpart" && mu) {
+  } else if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
     const hp = mu.housingPart;
     const cp = mu.commercialPart;
+    // 취득가액 합계 = 4분할 취득가 합 (= hp/cp.estimatedAcquisitionPrice 합과 동일: land+building=est).
     setNum("acquisitionPrice", "total", hp.landAcqPrice + hp.buildingAcqPrice + cp.landAcqPrice + cp.buildingAcqPrice);
     setNum("expenses", "total", hp.landAppraisalDed + hp.buildingAppraisalDed + cp.landAppraisalDed + cp.buildingAppraisalDed);
-  } else if (mode === "mixed-2col" && mu) {
-    setNum("acquisitionPrice", "total", mu.housingPart.estimatedAcquisitionPrice + mu.commercialPart.estimatedAcquisitionPrice);
-    setNum("expenses", "total",
-      mu.housingPart.landAppraisalDed + mu.housingPart.buildingAppraisalDed +
-      mu.commercialPart.landAppraisalDed + mu.commercialPart.buildingAppraisalDed,
-    );
   } else if (mode === "split-2col" && sp) {
-    setNum("acquisitionPrice", "total", sp.land.acquisitionPrice + sp.building.acquisitionPrice);
-    setNum("expenses", "total",
-      sp.land.directExpenses + sp.land.appraisalDeduction +
-      sp.building.directExpenses + sp.building.appraisalDeduction,
-    );
+    if (sp.selfOwns === "building_only" || sp.selfOwns === "land_only") {
+      // 본인이 소유한 파트만 신고 대상 — 합계도 소유 파트 단독 (자기정합 + line 613 override).
+      const p = sp.selfOwns === "building_only" ? sp.building : sp.land;
+      setNum("transferPrice", "total", p.transferPrice || null);
+      setNum("acquisitionPrice", "total", p.acquisitionPrice);
+      setNum("expenses", "total", p.directExpenses + p.appraisalDeduction);
+    } else {
+      // both — 토지+건물 합 (지분 반영 totalTransferPrice는 613에서 유지)
+      setNum("acquisitionPrice", "total", sp.land.acquisitionPrice + sp.building.acquisitionPrice);
+      setNum("expenses", "total",
+        sp.land.directExpenses + sp.land.appraisalDeduction +
+        sp.building.directExpenses + sp.building.appraisalDeduction,
+      );
+    }
   } else if (result.usedEstimatedAcquisition && result.estimatedBase !== undefined) {
     // 환산취득가 모드: 자본적지출(있다면)을 취득가액(=환산취득가)에 합산, 필요경비는 개산공제 + 양도비
     const capExp = result.capitalExpenditureForDisplay ?? 0;
@@ -696,7 +598,7 @@ export function buildRows(
     ? mu.housingPart.longTermDeductionTable === 2
     : (isRHTable1Only ? false : residenceMs >= 24);
 
-  if (mode === "fourpart" && mu) {
+  if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
     const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
     const cpSplit = { holdingAmount: mu.commercialPart.longTermDeductionAmount, residenceAmount: 0 };
     const hpLandRatio = mu.housingPart.transferGain > 0 ? mu.housingPart.landTransferGain / mu.housingPart.transferGain : 0.5;
@@ -713,15 +615,6 @@ export function buildRows(
     setNum("ltResidencePart", "housingBuilding", Math.floor(hpSplit.residenceAmount * hpBuildRatio));
     setNum("ltResidencePart", "commercialLand", 0);
     setNum("ltResidencePart", "commercialBuilding", 0);
-  } else if (mode === "mixed-2col" && mu) {
-    const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
-    const cpSplit = { holdingAmount: mu.commercialPart.longTermDeductionAmount, residenceAmount: 0 };
-    setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount);
-    setNum("ltResidencePart", "total", hpSplit.residenceAmount);
-    setNum("ltHoldingPart", "housing", hpSplit.holdingAmount);
-    setNum("ltResidencePart", "housing", hpSplit.residenceAmount);
-    setNum("ltHoldingPart", "commercial", cpSplit.holdingAmount);
-    setNum("ltResidencePart", "commercial", 0);
   } else if (mode === "split-2col" && sp) {
     const landSplit = splitLtDeduction(sp.land.longTermDeduction, Math.round(sp.land.holdingYears * 12), residenceMs, useTable2);
     const buildSplit = splitLtDeduction(sp.building.longTermDeduction, Math.round(sp.building.holdingYears * 12), residenceMs, useTable2);
@@ -759,16 +652,16 @@ export function buildRows(
       result.replacementLandDetail?.eligibleTransferIncome,
     ),
   );
-  // §99의3 5년 안분 차감액 (소득금액 단계) — Phase 2 result.new993Detail
+  // 소득금액차감방식(§90②) 5년 안분 차감액 — §99의3·§99·§98의8·하이브리드 공용.
   // 산식: 양도소득금액 × (5년시점 공시가격 - 취득시 공시가격) / (양도시 공시가격 - 취득시 공시가격)
-  setNum("reductionTargetIncome2", "total", result.new993Detail?.reducibleTransferIncome ?? 0);
+  const incomeDeductionAmount = incomeDeductionReducible(result);
+  setNum("reductionTargetIncome2", "total", incomeDeductionAmount);
   // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(⑳ §90② 소득금액차감방식)
   // §90①(세액감면방식·§77 등)은 소득금액 미차감 → ⑲(세액감면대상)은 빼지 않는다 (다건·상세명세서와 일치).
   // §161 (장기임대 거주주택 비과세) 케이스는 result.taxableGain이 이미 안분 후 값이므로 별도 처리.
-  const new993Reducible = result.new993Detail?.reducibleTransferIncome ?? 0;
   const incomeAmountAfter = isRH
     ? result.taxableGain
-    : Math.max(0, incomeAmount - new993Reducible);
+    : Math.max(0, incomeAmount - incomeDeductionAmount);
   setNum("incomeAmountAfter", "total", incomeAmountAfter);
   setNum("priorIncomeAmount", "total", 0);
   setNum("basicDeduction", "total", result.basicDeduction);
@@ -779,7 +672,7 @@ export function buildRows(
   setNum("penaltyTax", "total", result.penaltyTax);
   setNum("totalDeterminedTax", "total", result.determinedTax + result.penaltyTax);
   // Round 11 (2026-05-06): §99의3 등 감면 적용 시 농어촌특별세 (감면세액 × 20%, 농특세법 §3·§5)
-  setNum("ruralSurtax", "total", result.new993Detail?.ruralSurtax ?? 0);
+  setNum("ruralSurtax", "total", incomeDeductionRuralSurtax(result));
   const localCalc = Math.floor((result.determinedTax + result.penaltyTax) * 0.1);
   setNum("localCalculatedTax", "total", localCalc);
   setNum("localReduction", "total", 0);

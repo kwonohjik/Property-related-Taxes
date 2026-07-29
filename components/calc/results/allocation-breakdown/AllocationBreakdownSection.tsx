@@ -52,7 +52,7 @@ export function AllocationBreakdownSection({ result, heirs }: Props) {
           <ComputedTaxDetailCard result={result} heirs={heirs} />
           {hasCorporate && <CorporateGiftCreditDetailCard result={result} heirs={heirs} />}
           <HeirGiftCreditDetailCard result={result} heirs={heirs} />
-          <div className="px-4 py-2 text-[10px] text-muted-foreground">
+          <div className="px-4 py-2 text-micro text-muted-foreground">
             산출 근거:
             <LawArticleModal legalBasis="상증법 §26" label="§26" className="ml-1" />
             <LawArticleModal legalBasis="상증법 §27" label="§27" className="ml-1" />

@@ -23,7 +23,7 @@ describe("FB-RECAPTURE — 사후관리 추징세액 (§18의2⑤ + §15⑮)", (
       { appliedDeduction: 30_000_000_000, violationType: "asset_disposal", assetDisposalRatio: 0.5 },
       LAW_REF,
     );
-    expect(r.recaptureAmount).toBe(15_000_000_000);
+    expect(r.taxableAmountAddback).toBe(15_000_000_000);
     expect(r.recaptureRate).toBe(1.0);
     expect(r.effectiveRatio).toBe(0.5);
   });
@@ -33,7 +33,7 @@ describe("FB-RECAPTURE — 사후관리 추징세액 (§18의2⑤ + §15⑮)", (
       { appliedDeduction: 30_000_000_000, violationType: "business_cessation" },
       LAW_REF,
     );
-    expect(r.recaptureAmount).toBe(30_000_000_000);
+    expect(r.taxableAmountAddback).toBe(30_000_000_000);
     expect(r.effectiveRatio).toBe(1.0);
   });
 
@@ -42,7 +42,7 @@ describe("FB-RECAPTURE — 사후관리 추징세액 (§18의2⑤ + §15⑮)", (
       { appliedDeduction: 40_000_000_000, violationType: "share_decrease" },
       LAW_REF,
     );
-    expect(r.recaptureAmount).toBe(40_000_000_000);
+    expect(r.taxableAmountAddback).toBe(40_000_000_000);
   });
 
   it("FB-RECAPTURE-4: 정규직&총급여 (4호) AND → 100% 일률", () => {
@@ -50,7 +50,7 @@ describe("FB-RECAPTURE — 사후관리 추징세액 (§18의2⑤ + §15⑮)", (
       { appliedDeduction: 25_000_000_000, violationType: "employment_drop" },
       LAW_REF,
     );
-    expect(r.recaptureAmount).toBe(25_000_000_000);
+    expect(r.taxableAmountAddback).toBe(25_000_000_000);
   });
 
   it("FB-RECAPTURE-5: 자산처분비율 1.0 초과 입력 → 1.0 clamp", () => {
@@ -59,7 +59,7 @@ describe("FB-RECAPTURE — 사후관리 추징세액 (§18의2⑤ + §15⑮)", (
       LAW_REF,
     );
     expect(r.effectiveRatio).toBe(1.0);
-    expect(r.recaptureAmount).toBe(30_000_000_000);
+    expect(r.taxableAmountAddback).toBe(30_000_000_000);
   });
 
   it("FB-RECAPTURE-6: 자산처분 + assetDisposalRatio undefined → 1.0 fallback", () => {
@@ -137,11 +137,11 @@ describe("FB-INTEGRATION-PHASE-F — 추징 + 이자 통합 시뮬", () => {
       { appliedDeduction: 3_000_000_000, violationType: "asset_disposal", assetDisposalRatio: 0.6 },
       LAW_REF,
     );
-    expect(recapture.recaptureAmount).toBe(1_800_000_000);
+    expect(recapture.taxableAmountAddback).toBe(1_800_000_000);
 
     // 결정세액 = 추징세액 가정 (실제 산정은 orchestrator)
     const interest = calcFamilyBusinessInterest(
-      { determinedTax: recapture.recaptureAmount, daysFromFilingDeadlineToViolation: 365, annualInterestRate: 0.022 },
+      { determinedTax: recapture.taxableAmountAddback, daysFromFilingDeadlineToViolation: 365, annualInterestRate: 0.022 },
       LAW_REF,
     );
     // 18억 × 1년 × 2.2% = 39.6M

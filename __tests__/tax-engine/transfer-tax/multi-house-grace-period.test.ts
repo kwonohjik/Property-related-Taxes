@@ -74,49 +74,106 @@ describe("MHG-02: gracePeriod wiring (TransferTaxInput → mhInput)", () => {
     expect(r.isSurchargeSuspended).toBe(true);
   });
 
-  it("gracePeriod 조건 미충족(계약 2026-06-01·토지허가X) → 정밀 판정으로 유예 해제 (false)", () => {
+  // ⚠️ 2026-07-24 법령정합 재작성: 가목 우선 게이트(양도일 ≤ 2026-05-09 무조건 배제) 도입으로
+  // 아래 두 테스트는 양도일을 가목 윈도우 밖(2026-05-09 이후)으로 이동해 다목 조건이 실제로
+  // 판정에 관여함을 검증한다(anchor 갱신 사유 — plan §7 G3′).
+  it("다목 조건 미충족(계약 2026-06-01 — 다목1 위반, 양도일 가목 이후) → 정밀 판정으로 유예 해제 (false)", () => {
     const input = baseInput({
       transferPrice: 500_000_000,
       acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2020-01-01"),
-      transferDate: new Date("2024-06-01"),
+      transferDate: new Date("2026-08-01"),
       isRegulatedArea: true,
       householdHousingCount: 2,
       isOneHousehold: true,
       sellingHouseId: "h1",
       houses: twoRegulatedHouses(),
       gracePeriod: {
-        contractDate: new Date("2026-06-01"),
-        isLandPermitArea: false,
-        hasTenantInResidence: false,
+        contractDate: new Date("2026-06-01"), // 2026-05-09 이후 → 다목1 위반
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
       },
     });
 
     const r = calculateTransferTax(input, ratesWithSuspensionActive());
     expect(r.multiHouseSurchargeDetail).toBeDefined();
-    // gracePeriod가 엔진에 도달하지 않으면 blanket=true가 되어 이 단언이 깨진다 → wiring 증명
+    // gracePeriod가 엔진에 도달하지 않으면 blanket(가목 이후 만료)=false와 우연히 같아지므로
+    // 계약일을 5-09 이전으로 바꾼 다음 테스트와 대조해 wiring을 증명한다.
     expect(r.isSurchargeSuspended).toBe(false);
   });
 
-  it("gracePeriod 조건 충족(토지거래허가+임차인) → 유예 유지 (true)", () => {
+  it("다목 조건 충족(계약·계약금증빙, 양도일 가목 이후·계약+4개월 이내) → 유예 유지 (true)", () => {
     const input = baseInput({
       transferPrice: 500_000_000,
       acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2020-01-01"),
-      transferDate: new Date("2024-06-01"),
+      transferDate: new Date("2026-08-01"),
       isRegulatedArea: true,
       householdHousingCount: 2,
       isOneHousehold: true,
       sellingHouseId: "h1",
       houses: twoRegulatedHouses(),
       gracePeriod: {
-        contractDate: new Date("2024-01-01"),
-        isLandPermitArea: true,
-        hasTenantInResidence: true,
+        contractDate: new Date("2026-04-01"), // ≤5-09, +4개월(강남 4개월 지역)=2026-08-01
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
       },
     });
 
     const r = calculateTransferTax(input, ratesWithSuspensionActive());
     expect(r.isSurchargeSuspended).toBe(true);
+  });
+});
+
+// ⑦ echo — surchargeSuspensionBasis/Deadline이 MultiHouseSurchargeResult → TransferTaxResult까지
+// 침묵 stripping 없이 도달함을 고정 (결과 카드 표시용, 2026-07-24 UI 통합).
+describe("MHG-03: surchargeSuspensionBasis/Deadline echo — TransferTaxResult 전파", () => {
+  it("다목 유예 유지 시 basis='da' + deadline echo 전파", () => {
+    const input = baseInput({
+      transferPrice: 500_000_000,
+      acquisitionPrice: 300_000_000,
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate: new Date("2026-08-01"),
+      isRegulatedArea: true,
+      householdHousingCount: 2,
+      isOneHousehold: true,
+      sellingHouseId: "h1",
+      houses: twoRegulatedHouses(),
+      gracePeriod: {
+        contractDate: new Date("2026-04-01"), // ≤5-09, +4개월(강남 4개월 지역)=2026-08-01
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: true,
+      },
+    });
+
+    const r = calculateTransferTax(input, ratesWithSuspensionActive());
+    expect(r.isSurchargeSuspended).toBe(true);
+    expect(r.surchargeSuspensionBasis).toBe("da");
+    expect(r.surchargeSuspensionDeadline).toBeInstanceOf(Date);
+    expect((r.surchargeSuspensionDeadline as Date).toISOString().slice(0, 10)).toBe("2026-08-01");
+  });
+
+  it("가목 우선 게이트(양도일 ≤ 2026-05-09) → basis='a' echo", () => {
+    const input = baseInput({
+      transferPrice: 500_000_000,
+      acquisitionPrice: 300_000_000,
+      acquisitionDate: new Date("2020-01-01"),
+      transferDate: new Date("2026-05-09"),
+      isRegulatedArea: true,
+      householdHousingCount: 2,
+      isOneHousehold: true,
+      sellingHouseId: "h1",
+      houses: twoRegulatedHouses(),
+      gracePeriod: {
+        contractDate: new Date("2026-06-01"), // 조건 미충족(다목1 위반)이어도 가목 우선 게이트로 배제
+        isLandPermitTarget: false,
+        depositReceiptConfirmed: false,
+      },
+    });
+
+    const r = calculateTransferTax(input, ratesWithSuspensionActive());
+    expect(r.isSurchargeSuspended).toBe(true);
+    expect(r.surchargeSuspensionBasis).toBe("a");
+    expect(r.surchargeSuspensionDeadline).toBeUndefined();
   });
 });

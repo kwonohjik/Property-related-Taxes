@@ -42,12 +42,12 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
 
   return (
     <section aria-label="제2쪽 4. 순자산가액">
-      <div className="flex items-center justify-between text-[10px] text-gray-600">
+      <div className="flex items-center justify-between text-micro text-gray-600">
         <span>{BESSHI_P2_SECTION4.unitNote}</span>
         <span>{BESSHI_P2_SECTION4.pageNote}</span>
       </div>
       <SectionTitle>{BESSHI_P2_SECTION4.header}</SectionTitle>
-      <table className="w-full border-collapse border border-black mb-3 text-[10px]">
+      <table className="w-full border-collapse border border-black mb-3 text-micro">
         <tbody>
           {/* 가. 자산총액 */}
           <tr className="bg-gray-50 font-bold print:bg-gray-50">
@@ -127,7 +127,7 @@ function NetAssetTr({
       <td className="border border-black p-1 text-center font-mono w-10">{cellNum}</td>
       <td className="border border-black p-1">{label}</td>
       <td className="border border-black p-1 text-right font-mono w-36">{fmt(amount)}</td>
-      <td className="border border-black p-1 text-[9px] text-gray-500 bg-gray-100 print:bg-gray-100 w-44">
+      <td className="border border-black p-1 text-micro text-gray-500 bg-gray-100 print:bg-gray-100 w-44">
         {refText ?? ""}
       </td>
     </tr>

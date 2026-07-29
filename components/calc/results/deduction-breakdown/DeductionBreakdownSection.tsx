@@ -215,13 +215,13 @@ function LegacyDeductionLimitNotice({ breakdown }: { breakdown: CalculationStep[
       <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
         ⓘ §24 종합한도 적용 — 공제 한도 초과
       </p>
-      <ul className="text-[11px] text-amber-700 dark:text-amber-300 space-y-0.5 list-disc list-inside">
+      <ul className="text-caption text-amber-700 dark:text-amber-300 space-y-0.5 list-disc list-inside">
         <li>공제 신청 합계: <span className="font-medium">{formatKRW(rawTotal)}</span></li>
         <li>§24 한도(과세가액 − 사전증여 등): <span className="font-medium">{formatKRW(ceiling)}</span></li>
         <li>한도 적용 공제: <span className="font-medium">{formatKRW(cappedAmount)}</span></li>
         <li>미적용 차감: <span className="font-medium">{formatKRW(excludedAmount)}</span></li>
       </ul>
-      <p className="text-[10px] text-amber-600 dark:text-amber-400 leading-relaxed">
+      <p className="text-micro text-amber-600 dark:text-amber-400 leading-relaxed">
         상속세및증여세법 §24 — 상속공제 총액은 상속세 과세가액에서 상속인·수유자에 대한 사전증여재산
         가산액(증여재산공제·재해손실공제 차감) 및 상속인 외 자에 대한 유증액을 차감한 금액을 한도로 합니다.
       </p>

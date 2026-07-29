@@ -35,9 +35,146 @@ import {
   allocateBasicDeduction,
   aggregateByGroup,
   applyGeneralProgressive,
+  type AssetRecord,
 } from "./transfer-tax-aggregate-helpers";
 
+
+
+/**
+ * 단건 결과 → 자산별 breakdown으로 옮길 **평가·판정 상세 13종** (R1-a·R1-b).
+ *
+ * `pickReductionDetails()`(감면 24종)와 같은 목적·같은 유지 규칙이다.
+ * 목록은 `TransferValuationDetailSource`(transfer-result.types.ts)와 **1:1로 맞춘다** —
+ * 타입만 넓히고 여기를 빠뜨리면 일괄 경로에서 값이 조용히 비어 화면에 안 뜬다.
+ * 회귀 가드: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`
+ */
+function pickValuationDetails(r: SingleResult): TransferValuationDetailSource {
+  return {
+    commercialBuildingValuationDetail: r.commercialBuildingValuationDetail,
+    nonBusinessLandJudgmentDetail: r.nonBusinessLandJudgmentDetail,
+    nblSurchargeExcluded: r.nblSurchargeExcluded,
+    multiHouseSurchargeDetail: r.multiHouseSurchargeDetail,
+    expropriationValuationDetail: r.expropriationValuationDetail,
+    housingExpropriationValuationDetail: r.housingExpropriationValuationDetail,
+    auctionValuationDetail: r.auctionValuationDetail,
+    preHousingDisclosureDetail: r.preHousingDisclosureDetail,
+    rentalHousingExceptionDetail: r.rentalHousingExceptionDetail,
+    familyBusinessDetail: r.familyBusinessDetail,
+    carryoverTaxationDetail: r.carryoverTaxationDetail,
+    splitDetail: r.splitDetail,
+    pre1990LandValuationDetail: r.pre1990LandValuationDetail,
+  };
+}
+
 export { classifyRateGroup };
+
+/** 단건 엔진 결과 타입 (import 순환 회피용 별칭) */
+type SingleResult = ReturnType<typeof calculateTransferTax>;
+
+/**
+ * 단건 결과 → 자산별 breakdown으로 옮길 **감면·취득가액 상세 24종**을 추린다.
+ *
+ * ## 왜 필요한가
+ *
+ * 일괄(bundled) 모드는 자산별로 `calculateTransferTax`를 완전히 호출하므로 **계산은 정상**인데,
+ * `PerPropertyBreakdown` 조립 시 결과의 Detail을 버려서 **산출근거 카드가 화면에 안 나왔다**.
+ * 감면은 금액이 크고 근거 제시 요구가 강해 우선 복구한다.
+ *
+ * ## 유지 규칙
+ *
+ * 필드 목록은 `TransferReductionDetailSource`(transfer-result.types.ts)와 **1:1로 맞춘다**.
+ * 타입만 넓히고 여기를 빠뜨리면 일괄 경로에서 값이 조용히 비어 화면에 안 뜬다(침묵 누락).
+ * 회귀 가드: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`가 두 목록의
+ * 동기화를 소스 수준에서 검증한다.
+ */
+function pickReductionDetails(r: SingleResult): TransferReductionDetailSource {
+  return {
+    selfFarmingReductionDetail: r.selfFarmingReductionDetail,
+    inheritedAcquisitionDetail: r.inheritedAcquisitionDetail,
+    inheritedHouseValuationDetail: r.inheritedHouseValuationDetail,
+    newHousingReductionDetail: r.newHousingReductionDetail,
+    rentalReductionDetail: r.rentalReductionDetail,
+    rental97LthdDetail: r.rental97LthdDetail,
+    rental97TaxDetail: r.rental97TaxDetail,
+    new994Detail: r.new994Detail,
+    unsold989Detail: r.unsold989Detail,
+    new99Detail: r.new99Detail,
+    unsold988Detail: r.unsold988Detail,
+    unsold987Detail: r.unsold987Detail,
+    unsold992Detail: r.unsold992Detail,
+    unsold983Detail: r.unsold983Detail,
+    unsold985Detail: r.unsold985Detail,
+    unsold986Detail: r.unsold986Detail,
+    unsold982Detail: r.unsold982Detail,
+    unsold984Detail: r.unsold984Detail,
+    unsold98Detail: r.unsold98Detail,
+    new993Detail: r.new993Detail,
+    publicExpropriationDetail: r.publicExpropriationDetail,
+    replacementLandDetail: r.replacementLandDetail,
+    gbDesignatedLandDetail: r.gbDesignatedLandDetail,
+    specialHouseExclusionDetail: r.specialHouseExclusionDetail,
+  };
+}
+
+
+/** effectCategory === "income_deduction"인 하이브리드 detail 탐색(§98의3·§98의5·§98의6·§98의7 등 5년후). */
+function activeIncomeDeductionHybrid(r: SingleResult) {
+  return [
+    r.unsold987Detail, r.unsold992Detail, r.unsold983Detail, r.unsold985Detail,
+    r.unsold986Detail, r.unsold982Detail, r.unsold984Detail, r.unsold98Detail,
+  ].find((d) => d?.isEligible && d.effectCategory === "income_deduction");
+}
+
+/**
+ * 자산의 income-deduction 감면(§99의3·§99·§98의8·하이브리드 5년후)이 소득금액에서 차감한 금액.
+ * §127⑦ 택일이라 자산당 최대 1건 → `??` 체인(합산 아님). 단건 엔진이 이미 적용한 값을 집계로 승계.
+ */
+function incomeDeductionReducibleOf(r: SingleResult): number {
+  if (r.isExempt) return 0;
+  return Math.max(0,
+    r.new993Detail?.reducibleTransferIncome ??
+    r.new99Detail?.reducibleTransferIncome ??
+    r.unsold988Detail?.reducibleTransferIncome ??
+    activeIncomeDeductionHybrid(r)?.reducibleTransferIncome ?? 0);
+}
+
+/** 농특세 비과세(§98의3·§98의5 — ruralSurtaxExempt) income-deduction 차감분. 해당분은 농특세 baseline에서 제외. */
+function ruralSurtaxExemptReducibleOf(r: SingleResult): number {
+  if (r.isExempt) return 0;
+  const h = activeIncomeDeductionHybrid(r);
+  return h?.ruralSurtaxExempt === true ? Math.max(0, h.reducibleTransferIncome) : 0;
+}
+
+/** 세율군 집계 + 전체누진 + §104⑤ 비교과세를 income 배열로 1-pass 산출(농특세 2-pass 공용). */
+function computeGroupsAndComparison(
+  records: AssetRecord[],
+  incomeArray: number[],
+  allocatedBasic: number[],
+  rates: TaxRatesMap,
+) {
+  const groupTaxes = aggregateByGroup(records, incomeArray, allocatedBasic, rates);
+  const calculatedTaxByGroups = groupTaxes.reduce((s, g) => s + g.groupCalculatedTax, 0);
+  const totalIncome = incomeArray.reduce((s, v) => s + v, 0);
+  const totalBasic = allocatedBasic.reduce((s, v) => s + v, 0);
+  const generalTaxBase = Math.max(0, totalIncome - totalBasic);
+  const calculatedTaxByGeneral = applyGeneralProgressive(generalTaxBase, rates);
+  const hasSurchargeGroup = groupTaxes.some((g) =>
+    g.group === "multi_house_surcharge" || g.group === "non_business_land" ||
+    g.group === "unregistered" || g.group === "short_term");
+  let calculatedTax: number;
+  let comparedTaxApplied: "groups" | "general" | "none";
+  if (!hasSurchargeGroup) {
+    calculatedTax = calculatedTaxByGroups;
+    comparedTaxApplied = "none";
+  } else if (calculatedTaxByGeneral > calculatedTaxByGroups) {
+    calculatedTax = calculatedTaxByGeneral;
+    comparedTaxApplied = "general";
+  } else {
+    calculatedTax = calculatedTaxByGroups;
+    comparedTaxApplied = "groups";
+  }
+  return { groupTaxes, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied };
+}
 
 /** 감면 유형별 주 법령 조문 매핑 (한도 조문과 별개) */
 function resolveTypeLegalBasis(type: string): string {
@@ -78,6 +215,10 @@ import type {
   LossOffsetRow,
   AggregateTransferResult,
 } from "./types/transfer-aggregate.types";
+import type {
+  TransferReductionDetailSource,
+  TransferValuationDetailSource,
+} from "./types/transfer-result.types";
 
 export type {
   RateGroup,
@@ -163,6 +304,25 @@ export function calculateTransferTaxAggregate(
     unusedLoss,
   } = offsetLosses(assetRecords);
 
+  // income-deduction 감면(§99의3·§99·§98의8·하이브리드 5년후) — 세액 계산용 "감면후 income" 분리.
+  // incomeAfterOffset(pre-감면)는 양도소득금액 표시·차손통산·농특세 감면前 기준으로 보존.
+  //
+  // 시행령 §167의2② — 자산이 통산받은 양도차손은 순양도소득금액:감면소득금액 비율로 안분하고,
+  // 감면소득금액을 감면분 차손만큼 축소한 값을 법 §90 감면소득금액으로 본다. (차손 미수령이면 축소 0.)
+  const incomeDeductionReducible = assetRecords.map((r, i) => {
+    const reducible = incomeDeductionReducibleOf(r.result);
+    if (reducible <= 0) return 0;
+    const income = r.income; // 통산 前 양도소득금액(감면소득금액 포함) — 안분 분모
+    if (income <= 0) return reducible;
+    const lossReceived = lossOffsetFromSame[i] + lossOffsetFromOther[i];
+    const lossToExempt = Math.floor((lossReceived * reducible) / income); // 감면분 흡수 차손(절사·순분 잔여흡수)
+    return Math.max(0, reducible - lossToExempt);
+  });
+  const taxableAfterReduction = incomeAfterOffset.map((v, i) =>
+    Math.max(0, v - incomeDeductionReducible[i]),
+  );
+  const hasIncomeDeduction = incomeDeductionReducible.some((v) => v > 0);
+
   steps.push({
     label: "양도차손 통산 (§102② · 시행령 §167의2)",
     formula: `그룹 내 통산 + 타군 pro-rata 안분 (잔여 차손 ${unusedLoss.toLocaleString()} 소멸, 이월 불인정)`,
@@ -176,7 +336,7 @@ export function calculateTransferTaxAggregate(
   const availableThisCalc = Math.max(0, annualLimit - input.annualBasicDeductionUsed);
 
   const eligibleForBasic = assetRecords
-    .map((r, idx) => ({ idx, rateGroup: r.rateGroup, income: incomeAfterOffset[idx], isExempt: r.result.isExempt, transferDate: r.item.transferDate, rate: r.result.appliedRate }))
+    .map((r, idx) => ({ idx, rateGroup: r.rateGroup, income: taxableAfterReduction[idx], isExempt: r.result.isExempt, transferDate: r.item.transferDate, rate: r.result.appliedRate }))
     .filter((r) => !r.isExempt && r.rateGroup !== "unregistered" && r.income > 0);
 
   const allocation = allocateBasicDeduction(
@@ -195,41 +355,17 @@ export function calculateTransferTaxAggregate(
     legalBasis: TRANSFER.BASIC_DEDUCTION,
   });
 
-  // M-5·M-6: 세율군별 집계 + 세율 적용
-  const groupTaxes = aggregateByGroup(
-    assetRecords,
-    incomeAfterOffset,
-    allocatedBasic,
-    rates,
-  );
-  const calculatedTaxByGroups = groupTaxes.reduce((s, g) => s + g.groupCalculatedTax, 0);
-
-  // M-6: 전체 누진세율 (방법 A)
+  // 표시·결과용 총 양도소득금액(감면前, Σ incomeAfterOffset).
   const totalIncomeAfterOffset = incomeAfterOffset.reduce((s, v) => s + v, 0);
-  const generalTaxBase = Math.max(0, totalIncomeAfterOffset - totalBasicDeduction);
-  const calculatedTaxByGeneral = applyGeneralProgressive(generalTaxBase, rates);
 
-  // M-7: 비교과세 (§104⑤)
-  const hasSurchargeGroup = groupTaxes.some((g) =>
-    g.group === "multi_house_surcharge" ||
-    g.group === "non_business_land" ||
-    g.group === "unregistered" ||
-    g.group === "short_term",
-  );
-  let calculatedTax: number;
-  let comparedTaxApplied: "groups" | "general" | "none";
-  if (!hasSurchargeGroup) {
-    calculatedTax = calculatedTaxByGroups;
-    comparedTaxApplied = "none";
-  } else {
-    if (calculatedTaxByGeneral > calculatedTaxByGroups) {
-      calculatedTax = calculatedTaxByGeneral;
-      comparedTaxApplied = "general";
-    } else {
-      calculatedTax = calculatedTaxByGroups;
-      comparedTaxApplied = "groups";
-    }
-  }
+  // M-5·M-6·M-7: 세율군별 집계 + 전체누진 + 비교과세(§104⑤) — 감면후 income(taxableAfterReduction) 기준.
+  const {
+    groupTaxes,
+    calculatedTaxByGroups,
+    calculatedTaxByGeneral,
+    calculatedTax,
+    comparedTaxApplied,
+  } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates);
 
   steps.push({
     label: "비교과세 (§104⑤)",
@@ -237,6 +373,27 @@ export function calculateTransferTaxAggregate(
     amount: calculatedTax,
     legalBasis: TRANSFER.COMPARATIVE_TAXATION,
   });
+
+  // 농어촌특별세 (§99의3 등 소득금액차감 감면세액 × 20%, 농특세법 §3·§5) — 집계 2-pass.
+  // 감면 前 산출세액 = 비과세분(§98의3·§98의5 ruralSurtaxExempt)만 그대로 둔 income으로 재산출.
+  let ruralSurtax = 0;
+  if (hasIncomeDeduction) {
+    // 비과세(§98의3·§98의5) 감면분은 baseline에 그대로 둔다(농특세 미발생). §167의2② 축소 후 값(=조정 감면소득금액) 사용.
+    const surtaxBaseline = incomeAfterOffset.map((v, i) => {
+      const isExemptAsset = ruralSurtaxExemptReducibleOf(assetRecords[i].result) > 0;
+      return Math.max(0, v - (isExemptAsset ? incomeDeductionReducible[i] : 0));
+    });
+    const beforeTax = computeGroupsAndComparison(assetRecords, surtaxBaseline, allocatedBasic, rates).calculatedTax;
+    ruralSurtax = applyRate(Math.max(0, beforeTax - calculatedTax), 0.2);
+    if (ruralSurtax > 0) {
+      steps.push({
+        label: "농어촌특별세 (감면세액 × 20%)",
+        formula: `(감면 전 산출세액 ${beforeTax.toLocaleString()} − 감면 후 산출세액 ${calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax.toLocaleString()}`,
+        amount: ruralSurtax,
+        legalBasis: TRANSFER.RURAL_SURTAX_993,
+      });
+    }
+  }
 
   // M-8: 감면 합산 — 유형별 비율 재계산 (조특법 §69 + §127의2 + §133)
   // 1) 각 자산이 노출한 reducibleIncome을 유형별로 집계
@@ -246,7 +403,11 @@ export function calculateTransferTaxAggregate(
   //
   // 분모 주의: 반드시 aggregate taxBase(차손 통산 + 기본공제 반영)여야 한다.
   // 합산양도소득금액이나 각 건별 taxBase를 쓰면 과대감면이 발생한다.
-  const aggregateTaxBase = Math.max(0, totalIncomeAfterOffset - totalBasicDeduction);
+  // 세액감면(§69·§77 등) 비율 재계산 분모 — income-deduction 반영 후 과세표준(감면후 기준).
+  const aggregateTaxBase = Math.max(
+    0,
+    taxableAfterReduction.reduce((s, v) => s + v, 0) - totalBasicDeduction,
+  );
   const reducibleByType = new Map<string, { income: number; assetIds: string[] }>();
   for (const r of assetRecords) {
     if (r.result.isExempt) continue;
@@ -373,11 +534,12 @@ export function calculateTransferTaxAggregate(
   // 과세표준 = 결정세액 + §114조의2 건물 가산세만 (단건 엔진 finalize와 동일).
   // 신고불성실·납부지연 가산세(국세기본법 §47의2~5)는 지방소득세 부과대상이 아니므로 base 제외.
   const localIncomeTax = applyRate(determinedTaxBeforePenalty + perAssetBuildingPenalty, 0.1);
-  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax;
+  // 농특세는 지방소득세 base 아님(결정세액+건물가산세만) — totalTax에만 가산.
+  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtax;
 
   steps.push({
     label: "총 납부세액",
-    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`,
+    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtax > 0 ? ` + 농특세 ${ruralSurtax.toLocaleString()}` : ""}`,
     amount: totalTax,
   });
 
@@ -394,6 +556,50 @@ export function calculateTransferTaxAggregate(
     steps.push(settlement.step);
   }
 
+  // ── 감면 배분 선계산 — floor 잔액 말단 흡수 ────────────────────────────
+  //
+  // 2026-07-29 정정(#591 감사 R7 — 표시 자기일관성, 세액 불변): 같은 감면 유형의 자산들이
+  // 각각 독립 floor되어 **Σ배분액이 cappedAggregateReduction과 최대 (n−1)원 어긋났다**.
+  // 화면에는 "감면 합계"와 "자산별 감면"이 나란히 나오므로 1원 차이도 자기모순으로 보인다.
+  //
+  // 정책: 안분은 마지막 항목이 잔액을 흡수해 `Σ = 전체` 불변식을 지킨다
+  // (memory `feedback_floor_residual_absorption`). 총 감면액(capped) 자체는 불변이므로
+  // 세액에는 영향이 없다.
+  const reductionAllocations = new Map<number, number>();
+  {
+    /** 감면유형 → 그 유형에 속하는 자산 인덱스(입력 순서 유지) */
+    const groupIdx = new Map<string, number[]>();
+    assetRecords.forEach((r, idx) => {
+      const type = r.result.reductionTypeApplied;
+      const reducible = r.result.isExempt ? 0 : r.result.reducibleIncome ?? 0;
+      if (!type || reducible <= 0) return;
+      const entry = reductionBreakdown.find((b) => b.type === type);
+      if (!entry || entry.totalReducibleIncome <= 0) return;
+      const list = groupIdx.get(type);
+      if (list) list.push(idx);
+      else groupIdx.set(type, [idx]);
+    });
+
+    for (const [type, idxList] of groupIdx) {
+      const entry = reductionBreakdown.find((b) => b.type === type)!;
+      let allocated = 0;
+      idxList.forEach((idx, i) => {
+        const isLast = i === idxList.length - 1;
+        if (isLast) {
+          // 말단 흡수 — 나머지 전액. floor 누적 오차가 여기로 모인다.
+          reductionAllocations.set(idx, entry.cappedAggregateReduction - allocated);
+          return;
+        }
+        const reducible = assetRecords[idx].result.reducibleIncome ?? 0;
+        const share = Math.floor(
+          entry.cappedAggregateReduction * (reducible / entry.totalReducibleIncome),
+        );
+        reductionAllocations.set(idx, share);
+        allocated += share;
+      });
+    }
+  }
+
   // properties breakdown 조립 — 합산 재계산 후 건별 배분액 포함
   const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => {
     const reductionType = r.result.reductionTypeApplied;
@@ -407,10 +613,8 @@ export function calculateTransferTaxAggregate(
       const entry = reductionBreakdown.find((b) => b.type === reductionType);
       if (entry && entry.totalReducibleIncome > 0) {
         reductionAllocationRatio = reducibleIncome / entry.totalReducibleIncome;
-        // 최종 capped 감면액을 reducibleIncome 비율로 자산에 배분 (원 미만 절사)
-        reductionAggregated = Math.floor(
-          entry.cappedAggregateReduction * reductionAllocationRatio,
-        );
+        // 배분액은 위 선계산(말단 잔액 흡수)에서 가져온다 — 여기서 재-floor하면 드리프트가 되살아난다.
+        reductionAggregated = reductionAllocations.get(idx) ?? reductionAggregated;
       }
     }
 
@@ -431,7 +635,7 @@ export function calculateTransferTaxAggregate(
     // 다건 컨텍스트 자산별 산출세액·결정세액 (참고).
     // 단건 엔진은 skipBasicDeduction=true로 호출되어 r.result.determinedTax는 양도소득금액 기준 부정확.
     // taxBaseShare(= incomeAfterOffset - allocatedBasic) 기준으로 다건 컨텍스트에서 재계산해 노출한다.
-    const taxBaseShare = Math.max(0, incomeAfterOffset[idx] - allocatedBasic[idx]);
+    const taxBaseShare = Math.max(0, taxableAfterReduction[idx] - allocatedBasic[idx]);
     const effectiveRate = r.result.appliedRate + (r.result.surchargeRate ?? 0);
     const refCalculatedTax = r.result.isExempt
       ? 0
@@ -457,6 +661,7 @@ export function calculateTransferTaxAggregate(
       lossOffsetFromSameGroup: lossOffsetFromSame[idx],
       lossOffsetFromOtherGroup: lossOffsetFromOther[idx],
       incomeAfterOffset: incomeAfterOffset[idx],
+      incomeDeductionReducible: incomeDeductionReducible[idx],
       allocatedBasicDeduction: allocatedBasic[idx],
       taxBaseShare,
       appliedRate: r.result.appliedRate,
@@ -469,9 +674,8 @@ export function calculateTransferTaxAggregate(
       reducibleIncome,
       reductionAggregated,
       reductionAllocationRatio,
-      publicExpropriationDetail: r.result.publicExpropriationDetail,
-      replacementLandDetail: r.result.replacementLandDetail,
-      gbDesignatedLandDetail: r.result.gbDesignatedLandDetail,
+      ...pickReductionDetails(r.result),
+      ...pickValuationDetails(r.result),
       penaltyTax: r.result.isExempt ? 0 : r.result.penaltyTax ?? 0,
       penaltyBase: r.result.isExempt ? 0 : r.result.penaltyBase ?? 0,
       filingDelayedPenaltyTax: r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0,
@@ -511,6 +715,7 @@ export function calculateTransferTaxAggregate(
     penaltyTax,
     // 가산세 상세는 자산별로 properties[i].penaltyDetail 에서 노출.
     localIncomeTax,
+    ruralSurtax,
     totalTax,
     steps,
     warnings,

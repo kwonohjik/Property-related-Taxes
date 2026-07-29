@@ -31,7 +31,7 @@ export function Unsold989DetailCard({ detail }: Props) {
             </ul>
           </div>
         )}
-        <p className="text-[10px] text-rose-700 dark:text-rose-400">근거 조문: {detail.legalBasis}</p>
+        <p className="text-micro text-rose-700 dark:text-rose-400">근거 조문: {detail.legalBasis}</p>
       </div>
     );
   }
@@ -54,7 +54,7 @@ export function Unsold989DetailCard({ detail }: Props) {
 
       {detail.dualExclusionWarning && (
         <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-950/30 px-3 py-2">
-          <p className="text-[11px] text-amber-800 dark:text-amber-300">
+          <p className="text-caption text-amber-800 dark:text-amber-300">
             ⚠ §99의4 농어촌·고향주택 특례와 동시 적격 — §99의4를 우선 적용하여 본 특례의
             주택수 제외는 반영되지 않았습니다 (동시 적용 여부는 세무사 확인 권장)
           </p>
@@ -62,13 +62,13 @@ export function Unsold989DetailCard({ detail }: Props) {
       )}
 
       <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
-        <p className="text-[11px] text-sky-800 dark:text-sky-300">
+        <p className="text-caption text-sky-800 dark:text-sky-300">
           종합부동산세 1세대 1주택자 특례(§98의9②)는 본 계산기에 반영되지 않습니다 — 해당 연도
           9월 16일~30일에 관할 세무서장에게 별도 신청해야 합니다 (조특령 §98의8④)
         </p>
       </div>
 
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-micro text-muted-foreground">
         ※ 다주택 중과 판정의 주택 수에는 반영되지 않습니다 · 근거 조문: {detail.legalBasis}
       </p>
     </div>

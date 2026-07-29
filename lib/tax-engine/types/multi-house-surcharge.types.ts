@@ -61,6 +61,34 @@ export interface HouseInfo {
   isInherited: boolean;
   /** 상속개시일 (isInherited === true 시 필수) */
   inheritedDate?: Date;
+  /**
+   * 공동상속주택(여럿이 지분으로 공동소유하는 1주택) 여부 — 소득세법 시행령 §155③ (2-A2).
+   * isInherited === true 인 주택에서만 의미(UI가 isInherited ON 시에만 노출).
+   */
+  isCoInherited?: boolean;
+  /**
+   * 공동상속주택 중 상속지분이 최대인 상속인인지 — §155③ 단서.
+   * true = 산입(주택수 포함, 제외 대상 아님) / false·미제공 = 소수지분(제외 후보).
+   * ⚠️ 자기선언 boolean — 엔진은 다른 공동상속인의 지분을 알 수 없음.
+   */
+  isLargestCoInheritedShareholder?: boolean;
+  /**
+   * 상속개시 당시 피상속인과 동일세대였는지 — 소득세법 시행령 §155② 단서.
+   * true = 동일세대 → 상속주택 특례(주택수 제외) 원칙 배제(parentalCareMergeInheritedHouse로만 예외 허용).
+   * false·미제공 = 별도세대 → 특례 적용(제외). §155③ 공동상속에도 준용.
+   */
+  decedentSameHouseholdAtInheritance?: boolean;
+  /**
+   * 동거봉양 합가로 2주택이 되었고 "합치기 이전부터 피상속인이 보유"하던 주택인지 — §155② 단서 예외.
+   * decedentSameHouseholdAtInheritance === true(동일세대)일 때만 의미. true면 동일세대라도 특례 적용(제외).
+   */
+  parentalCareMergeInheritedHouse?: boolean;
+  /**
+   * 피상속인이 상속개시 당시 2 이상 주택을 소유했고, 이 주택이 §155②1~4호 순위상 상속주택(1주택)이
+   * 아닌지 — 순위 부적격. true = 특례 부적격(제외 안 함) / false·미제공 = 적격(또는 피상속인 단일주택).
+   * ⚠️ 자기선언 boolean — 엔진은 피상속인 전체 포트폴리오(다른 상속인 상속분 포함)를 알 수 없음.
+   */
+  isRankingDisqualifiedInheritedHouse?: boolean;
   // ── 장기임대 관련 ──
   /** 장기임대사업자 등록주택 여부 (true + rentalType 없으면 legacy 판정) */
   isLongTermRental: boolean;
@@ -113,6 +141,11 @@ export interface HouseInfo {
   hasHalfDutyPeriodMet?: boolean;
   /** 말소일 이후 1년 이내 양도 여부 (사목 G형) */
   isSoldWithin1YearOfCancellation?: boolean;
+  /**
+   * 사목(G형) base 목 (가·다·라·마) — §167조의3①2호 사목 "해당 목의 다른 요건" 검증 대상.
+   * 사목은 base 목의 기준시가·면적·호수·5%룰 등을 모두 갖춰야 하며 임대기간요건만 면제된다.
+   */
+  saMokBaseArticle?: "가" | "다" | "라" | "마";
   /** 2018.9.14 이후 조정지역 취득·다주택 제외 해당 여부 (마목·아목) */
   isExcluded918Rule?: boolean;
   /** 2020.7.11 이후 등록 아파트 제외 해당 여부 (마목·라목) */
@@ -245,19 +278,36 @@ export interface PresaleRight {
 
 /** 다주택 중과세 판정 입력 */
 /**
- * 다주택 중과 한시 유예 조건부 판정 입력 (2022.5.10 ~ 2026.5.9).
- * 미제공 시 suspended_until 날짜 기준 blanket 판정. 제공 시 정밀 조건 판정.
+ * 다주택 중과 한시 유예 조건부 판정 입력 — §167의3①12의2 가·나·다목 (2026.5.9 양도분까지 가목,
+ * 이후 양도분은 나·다목 계약·허가 요건). 미제공 시 suspended_until 날짜 기준 blanket 판정.
+ * 제공 시 checkGracePeriodExemption()이 가목 우선 게이트 후 나·다목 정밀 조건 판정.
  * (엔진 입력·TransferTaxInput·폼 변환에서 공유 — 폼 계층은 Date 대신 string 사용.)
  */
 export interface MultiHouseGracePeriodInput {
-  /** 매매계약 체결일 — 조건A: ≤ 2026.5.9 이어야 유예 가능 */
+  /** 매매계약 체결일 — 나목4)·다목1) 기산일(계약일부터 4/6개월 판정) */
   contractDate: Date;
-  /** 토지거래허가구역 여부 — 조건C 판정용 */
-  isLandPermitArea: boolean;
-  /** 임차인 거주 여부 — 조건C 판정용 (토지허가+임차인 → 무기한 연장) */
-  hasTenantInResidence: boolean;
-  /** 해당 조정대상지역 최초 지정일 — 2025.10.16 이후 신규 지정 → 잔금 기한 6개월(기본 4개월) */
+  /**
+   * 주택부수토지가 부동산거래신고법 §11 토지거래허가 "대상"인지 — 나목(true)/다목(false) 분기.
+   * true = 나목(허가신청·허가·계약금 4요건), false = 다목(계약·계약금 2요건).
+   */
+  isLandPermitTarget?: boolean;
+  /** 나목1) 토지거래허가 신청일 — ≤ 2026-05-09 필요 */
+  permitApplicationDate?: Date;
+  /** 나목2) 허가 수령 여부 */
+  permitGranted?: boolean;
+  /** 나목3)·다목1) 공통 — 계약금 수령 증빙 확인 (자기확인) */
+  depositReceiptConfirmed?: boolean;
+  /**
+   * @deprecated regionCode 명단 판정(transitionExemptionMonths)으로 대체 — G6 해소.
+   * 판정 미사용, 하위호환만 유지.
+   */
   areaDesignatedDate?: Date;
+  /**
+   * @deprecated 확정 시행령 나·다목 원문에 근거 없음(G3 — 임차인 조항 전무). 판정 미사용.
+   */
+  isLandPermitArea?: boolean;
+  /** @deprecated G3 — 판정 미사용 */
+  hasTenantInResidence?: boolean;
 }
 
 export interface MultiHouseSurchargeInput {
@@ -350,6 +400,18 @@ export interface MultiHouseSurchargeResult {
   surchargeType: "multi_house_2" | "multi_house_3plus" | "none";
   /** 중과세 한시 유예 중 여부 */
   isSurchargeSuspended: boolean;
+  /**
+   * 한시 유예 근거 목 — §167의3①12의2 가목(a)/나목(na)/다목(da). isSurchargeSuspended === true일 때만 유의미.
+   */
+  surchargeSuspensionBasis?: "a" | "na" | "da";
+  /** 나·다목 유예 시 계산된 양도 기한(절대기한 반영). isSurchargeSuspended === true + basis가 na/da일 때만 유의미. */
+  surchargeSuspensionDeadline?: Date;
+  /**
+   * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(조정지역 다주택이어도 기본세율).
+   * true여도 surchargeType·isSurchargeSuspended는 유지 → §95² 장기보유특별공제 배제는 존속(세율만 배제).
+   * 근거: 기재부 재산세제과-1422(2023.12.26.) · 서울행정법원 2024구단72950(국승).
+   */
+  rateSurchargeStatutoryExcluded?: boolean;
   /** 중과 배제 사유 목록 */
   exclusionReasons: ExclusionReason[];
   /** 경고 메시지 */
@@ -380,8 +442,8 @@ export interface HouseCountExclusionRules {
   /** 저가주택 공시가격 한도 */
   lowPriceThreshold: {
     capital: number | null;    // null = 수도권(REGION) 저가 배제 없음
-    non_capital: number;       // legacy (regionCriteria 미제공 시 사용, 기본값 100_000_000)
-    local?: number;            // VALUE 지역(지방) 기준 (3억 = 300_000_000)
+    non_capital: number;       // 지방(VALUE) 기준시가 배제 한도 (§167의3①1호 = 300_000_000)
+    local?: number;            // 선택적 override (미제공 시 non_capital 사용)
   };
   /** 분양권 주택 수 산정 시작일 */
   presaleRightStartDate: string; // "2021-01-01"

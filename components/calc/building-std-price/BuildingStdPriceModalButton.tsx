@@ -11,16 +11,30 @@ import { Button } from "@/components/ui/button";
 import { BuildingStdPriceForm } from "./BuildingStdPriceForm";
 import { BuildingStdPriceResultCard } from "./BuildingStdPriceResultCard";
 import type { BuildingStandardPriceResult } from "@/lib/tax-engine/building-standard-price";
+import { deriveYearFromEventDate } from "@/lib/calc/building-std-price-form";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import type { AddressValue } from "@/components/ui/address-search";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
+import { pickAcqLocationIndexLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 
 interface Props {
   /**
    * 선택한 시점의 건물 기준시가(원, 정수)를 받아 대상 필드에 주입.
    * 상증 경로 B는 부수토지 평가액(§61①1호, landStandardPrice)도 함께 전달 — 호출부가 부수토지 필드에 자동 채움.
    */
-  onApply: (standardPrice: number, landStandardPrice?: number) => void;
+  onApply?: (standardPrice: number, landStandardPrice?: number) => void;
+  /**
+   * 지정 시 — result.acquisition·result.transfer가 모두 있으면 결과 카드에
+   * "취득·양도 모두 적용" 단일 버튼만 노출(개별 취득/양도 버튼 숨김 → 오적용 방지).
+   * 겸용주택 상가건물처럼 한 번 계산으로 두 시점 필드를 동시 채울 때 사용.
+   */
+  onApplyBoth?: (acquisition: number, transfer: number) => void;
+  /**
+   * 이 모달이 특정 시점 필드에만 연결될 때 지정 — 해당 시점의 적용 버튼만 노출(반대 시점 버튼 숨김).
+   * "acquisition" → "취득시 적용"만, "transfer" → "양도시 적용"만. 오적용(반대 필드 덮어쓰기) 방지.
+   * 단일 시점만 필요한 자산(일반건물 실가 모드의 양도시 등)에도 안전. onApplyBoth 미지정 시 사용.
+   */
+  applyTimePoint?: "acquisition" | "transfer";
   buttonLabel?: string;
   /** 호출 세목 고정 — 양도="transfer" / 상속·증여="inheritance_gift". 지정 시 세목 라디오 숨김 */
   lockedTaxType?: BuildingStdPriceFormState["taxType"];
@@ -31,16 +45,45 @@ interface Props {
    * 규약: 상증 `bsp-estate-${item.id}` / 양도 `bsp-${asset.assetId}-{gb|cb}-{acq|transfer}`.
    */
   snapshotKey?: string;
+  /**
+   * 상위 자산 폼 값 자동입력(prefill) — 지정 시 모달 필드 초기값을 채운다.
+   * 상위 폼 값이 있으면 항상 snapshot 복원값보다 우선(빈 값은 미주입 — 사용자 이전 입력 보존).
+   * 연도는 날짜에서 deriveYearFromEventDate로 파생(완성형 YYYY-MM-DD만 반환).
+   */
+  prefill?: {
+    floorArea?: string;
+    landAreaM2?: string;
+    acquisitionDate?: string;
+    transferDate?: string;
+    /**
+     * 취득당시 연도 기준 ㎡당 개별공시지가 — **취득 ≥2001에서만** 주입.
+     * 취득 ≤2000의 모달 칸은 2001.1.1 기준이라 이 값(토지값 트랙)을 넣으면 위치지수 오산이다(§164⑤).
+     */
+    acqLandPricePerSqm?: string;
+    /** 2001.1.1 현재 ㎡당 개별공시지가(위치지수 트랙) — **취득 ≤2000에서만** 주입. */
+    acqLandPricePerSqm2001?: string;
+    /** 양도당시 ㎡당 개별공시지가 — 트랙 구분 없음(같은 필지·같은 시점). */
+    transferLandPricePerSqm?: string;
+  };
+  /**
+   * 둘째 시점 라벨 override(기본 "양도 시점"). PHD 감면처럼 "취득시 + 최초고시시" 2시점을
+   * 한 번에 계산할 때 "최초고시 시점"으로 표시(복합·공동주택 환산 토글 숨김). onApplyBoth와 함께 사용.
+   */
+  transferSectionLabel?: string;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
 export function BuildingStdPriceModalButton({
   onApply,
+  onApplyBoth,
+  applyTimePoint,
   buttonLabel = "건물 기준시가 계산",
   lockedTaxType,
   initialAddress,
   snapshotKey,
+  prefill,
+  transferSectionLabel,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
@@ -55,8 +98,37 @@ export function BuildingStdPriceModalButton({
     snapshotKey ? s.snapshots[snapshotKey] : undefined,
   );
 
+  // 상위 자산 폼 값 자동입력 — 빈 값은 미주입(사용자 이전 입력 보존). 연도는 완성형 날짜에서만 파생.
+  const acqYear = prefill?.acquisitionDate ? deriveYearFromEventDate(prefill.acquisitionDate) : "";
+  const transYear = prefill?.transferDate ? deriveYearFromEventDate(prefill.transferDate) : "";
+  // 취득 공시지가는 트랙이 갈린다(§164⑤) — 게이트를 여기 단일 관리해 호출부 복제(dual-truth)를 막는다.
+  // 취득일 미입력(acqYear="")이면 취득당시 트랙으로 주입되지만, 사용자가 모달에서 ≤2000 연도를 고르는 순간
+  // BuildingStdPriceForm의 경계 가드(changeYearWithGuard)가 acqLandPrice를 초기화한다.
+  const acqLandPrice = pickAcqLocationIndexLandPrice(
+    acqYear ? parseInt(acqYear, 10) : undefined,
+    prefill?.acqLandPricePerSqm,
+    prefill?.acqLandPricePerSqm2001,
+  );
+  const prefillForm: Partial<BuildingStdPriceFormState> = prefill
+    ? {
+        ...(prefill.floorArea ? { floorArea: prefill.floorArea } : {}),
+        ...(prefill.landAreaM2 ? { landAreaM2: prefill.landAreaM2 } : {}),
+        ...(acqLandPrice ? { acqLandPrice } : {}),
+        ...(prefill.transferLandPricePerSqm ? { transLandPrice: prefill.transferLandPricePerSqm } : {}),
+        ...(prefill.acquisitionDate
+          ? {
+              acquisitionEventDate: prefill.acquisitionDate,
+              ...(acqYear ? { acquisitionYear: acqYear } : {}),
+            }
+          : {}),
+        ...(prefill.transferDate
+          ? { eventDate: prefill.transferDate, ...(transYear ? { transferYear: transYear } : {}) }
+          : {}),
+      }
+    : {};
+
   const apply = (v: number, land?: number) => {
-    onApply(v, land && land > 0 ? land : undefined);
+    onApply?.(v, land && land > 0 ? land : undefined);
     if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, formSnapshot);
     setOpen(false);
     setResult(null);
@@ -64,9 +136,24 @@ export function BuildingStdPriceModalButton({
     setLandStandardPrice(0);
   };
 
+  // 취득·양도 동시 적용 — 겸용 상가건물 등 한 번 계산으로 두 시점 필드를 함께 채움.
+  const applyBoth = (acq: number, transfer: number) => {
+    onApplyBoth?.(acq, transfer);
+    if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, formSnapshot);
+    setOpen(false);
+    setResult(null);
+    setError(null);
+    setLandStandardPrice(0);
+  };
+
+  // onApplyBoth 지정 = 통합 모드 — 개별 취득/양도 버튼을 숨겨 오적용을 원천 차단.
+  const bothMode = !!onApplyBoth;
+  // 통합 버튼은 취득·양도 단일건물 결과가 모두 있을 때만 노출.
+  const showBothButton = bothMode && !!result?.acquisition && !!result?.transfer;
+
   return (
     <>
-      <Button type="button" variant="outline" size="xs" onClick={() => setOpen(true)}>
+      <Button type="button" variant="modalLauncher" size="xs" onClick={() => setOpen(true)}>
         {buttonLabel}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -84,8 +171,9 @@ export function BuildingStdPriceModalButton({
 
           <BuildingStdPriceForm
             lockedTaxType={lockedTaxType}
+            transferSectionLabel={transferSectionLabel}
             initialAddress={initialAddress}
-            initialForm={restoredForm}
+            initialForm={{ ...restoredForm, ...prefillForm }}
             onResult={(r, fa, err, _report, landTotal, snapshot) => {
               setResult(r);
               setFloorArea(fa);
@@ -99,7 +187,11 @@ export function BuildingStdPriceModalButton({
 
           {result && (
             <div className="space-y-3 border-t pt-3">
-              <BuildingStdPriceResultCard result={result} floorArea={floorArea} />
+              <BuildingStdPriceResultCard
+                result={result}
+                floorArea={floorArea}
+                transferSectionLabel={transferSectionLabel}
+              />
               <div className="flex flex-wrap gap-2">
                 {result.valuation && (
                   <Button
@@ -110,15 +202,29 @@ export function BuildingStdPriceModalButton({
                     이 금액 적용 ({fmt(result.valuation.standardPrice)})
                   </Button>
                 )}
-                {result.acquisition && (
+                {showBothButton && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => applyBoth(result.acquisition!.standardPrice, result.transfer!.standardPrice)}
+                  >
+                    취득·{transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도"} 모두 적용 (취득 {fmt(result.acquisition!.standardPrice)} / {transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도"} {fmt(result.transfer!.standardPrice)})
+                  </Button>
+                )}
+                {result.acquisition && !bothMode && applyTimePoint !== "transfer" && (
                   <Button type="button" size="sm" variant="secondary" onClick={() => apply(result.acquisition!.standardPrice)}>
                     취득시 적용 ({fmt(result.acquisition.standardPrice)})
                   </Button>
                 )}
-                {result.transfer && (
+                {result.transfer && !bothMode && applyTimePoint !== "acquisition" && (
                   <Button type="button" size="sm" onClick={() => apply(result.transfer!.standardPrice)}>
                     양도시 적용 ({fmt(result.transfer.standardPrice)})
                   </Button>
+                )}
+                {bothMode && result && !showBothButton && (
+                  <p className="text-xs text-muted-foreground">
+                    취득·양도 두 시점 정보를 모두 입력해 계산하면 한 번에 적용됩니다.
+                  </p>
                 )}
                 {/* 복합구조(상증 1시점) — compositeTotal 합계 + 부수토지 함께 적용 */}
                 {result.compositeTotal != null && (

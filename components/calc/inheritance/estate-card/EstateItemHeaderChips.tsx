@@ -60,7 +60,7 @@ export function EstateItemHeaderChips({
             title={chip.tooltip}
             className={[
               "inline-flex items-center gap-1 rounded-full",
-              "px-2.5 py-0.5 text-[11px] font-medium",
+              "px-2.5 py-0.5 text-caption font-medium",
               "border transition-all duration-150",
               CHIP_TONE_CLASSES[chip.tone],
               chip.isUserOverride
@@ -73,7 +73,7 @@ export function EstateItemHeaderChips({
             ].join(" ")}
           >
             {chip.key === "estimated-value" && (
-              <span className="text-[10px]" aria-hidden>
+              <span className="text-micro" aria-hidden>
                 ⓘ
               </span>
             )}

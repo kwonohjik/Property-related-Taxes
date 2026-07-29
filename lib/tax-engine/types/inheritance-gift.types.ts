@@ -288,6 +288,8 @@ export interface InheritanceTaxInput {
 
 /** 상속세 계산 결과 전체 */
 export interface InheritanceTaxResult extends TaxResultMeta {
+  /** 피상속인 거주자/비거주자 echo — 신고기한 §67④ 비거주자 9개월 표시용 (M-17). */
+  decedentType?: "resident" | "non_resident";
   /** 상속재산가액 (평가 후) */
   grossEstateValue: number;
   /** 비과세 차감액 */
@@ -605,6 +607,12 @@ export interface GiftTaxResult extends TaxResultMeta {
    * Map 금지 — Record/원시값만 사용 (memory: feedback_engine_result_map_json_loss).
    */
   specialStreamTax?: number;
+
+  /**
+   * 적용 특례 유형 echo — "startup"(§30의5 창업자금) / "family_business"(§30의6 가업승계).
+   * 연부연납 안내 §71②2호가 15년 구분(family_business)용 (M-3). 특례 미선택 시 undefined.
+   */
+  specialTreatmentType?: "startup" | "family_business";
 
   /**
    * 일반 스트림 세액 (§47·§53·§56·§57·§58·§69 일반 과세).

@@ -7,28 +7,30 @@
  * Design: docs/02-design/features/rental-housing-residence-exception.engine.design.md
  */
 
+import type { ArticleFailCode } from "../../rental-article/check";
+
 // ============================================================
 // 임대주택 단위 입력
 // ============================================================
 
 /**
- * 임대주택 등록신청일별 임대유형
+ * 임대구분 (사용자 선택 축) — 의무임대기간·기준시가 상한은 등록기준일·취득방법에서 파생.
  *
- * short-4: 단기임대 4년 (2020.7.10 이전 등록 — 현재 신규등록 불가)
- * short-6: 단기임대 6년 (2025.6.4 이후 신설)
- * long-8: 장기일반민간임대 8년 (2020.7.10 이전 등록)
- * long-10: 장기일반민간임대 10년 (2020.7.11 이후 등록)
- * pre-2018: 2018.3.31 이전 등록 (구 임대주택법 적용, 5년 이상)
+ * long_general:      장기일반민간임대 (가/마/다/바목 — 등록기준일로 5/8/10 파생)
+ * short_6y:          단기민간임대 6년 (아/자목, 2025.6.4 신설)
+ * pre_2018:          구 임대주택법 (5년)
+ * existing_business: 기존사업자 매입임대 (나목, 2003.10.29 이전 등록·취득당시 3억·국민주택·2호)
+ * unsold_08_09:      미분양 매입임대 (라목, 2008.6.11~2009.6.30 최초분양·비수도권·취득당시 3억·5호·298/149)
+ * (말소 사목은 다주택 전용 — §155⑳는 §155⑳㉓ 말소 후 5년 특례로 처리)
  */
-export type RentalType =
-  | "short-4"
-  | "short-6"
-  | "long-8"
-  | "long-10"
-  | "pre-2018";
+export type RentalCategory =
+  | "long_general" | "short_6y" | "pre_2018" | "existing_business" | "unsold_08_09";
 
-/** 수도권/비수도권/조정대상지역 구분 */
-export type RegionType = "seoul-metro" | "non-metro" | "regulated-area";
+/** 수도권/비수도권 구분 (조정대상지역은 isExcluded918Rule 별도 축) */
+export type RegionType = "seoul-metro" | "non-metro";
+
+/** 도출 엔진 목 (§167조의3①2호 가~자 — 사목은 다주택 전용이라 §155⑳ 미도출) */
+export type RentalArticle = "가" | "나" | "다" | "라" | "마" | "바" | "아" | "자" | "구법";
 
 /**
  * 임대주택 1호 입력 데이터
@@ -37,21 +39,53 @@ export type RegionType = "seoul-metro" | "non-metro" | "regulated-area";
  * 1호라도 요건을 충족하면 특례 적용 (§155⑳ 호별 검증).
  */
 export type RentalUnitInput = {
-  /** 지자체·세무서 임대사업자 등록신청일 */
-  registrationDate: Date;
-  /** 임대 유형 (등록신청일에 따른 분류) */
-  rentalType: RentalType;
+  /** 세무서 사업자등록일 (소득세법 §168) */
+  businessRegistrationDate: Date;
+  /** 지자체 임대사업자등록신청일 (민특법 §5) */
+  rentalRegistrationDate: Date;
+  /** 임대구분 (도출 목·의무기간·cap의 파생 소스) */
+  rentalCategory: RentalCategory;
   /** 매입임대 / 건설임대 구분 */
   rentalAcquisitionType: "purchase" | "construction";
-  /** 아파트 여부 (2020.7.11 이후 등록 아파트는 장기일반 불가) */
+  /** 아파트 여부 (2020.7.11 이후 등록 아파트는 장기일반 불가·단기/건설은 항상 제외) */
   isApartment: boolean;
-  /** 소재지 구분 */
+  /** 소재지 구분 (수도권/비수도권 — cap 산정축) */
   region: RegionType;
-  /** 임대개시일 당시 기준시가 (원) — §155⑳ 가액요건 검증용 */
+  /**
+   * 918 조정취득 배제 (2018.9.14 이후 조정대상지역 신규취득):
+   * - 마목(장기 매입): hard 배제.
+   * - 아목(단기 매입): 계약금 지급 증빙(hasContractDepositProof) 있으면 carve-out.
+   * (구 isRegulatedAreaNewAcq rename — D-2 아목 게이트 다주택 정합)
+   * ※ 생산 경로는 Zod(rentalUnitSchema)가 required 강제 — 엔진 타입은 미해당 목(가/다/구법 등)
+   *    구성 편의를 위해 optional. 미제공 시 false/0 default(check.ts falsy·adapter).
+   */
+  isExcluded918Rule?: boolean;
+  /** 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */
+  hasContractDepositProof?: boolean;
+  /** 마·바목 단기→장기 변경신고 배제 여부 */
+  isExcludedShortToLongChange?: boolean;
+  /** 임대개시일 당시 기준시가 (원) — 가/다/마/바/아/자/구법 가액요건 */
   standardPriceAtRentalStart: number;
+  /** 취득당시 기준시가 (원) — 나목 가액요건(취득당시 3억, 지역무관). 미제공 시 adapter 0 */
+  acquisitionOfficialPrice?: number;
+  /** 국민주택규모(전용 85㎡·수도권 도시지역 60㎡ 이하) 충족 — 나목 요건 */
+  isNationalSizeHousing?: boolean;
+  /** 대지면적 (㎡) — 건설임대 규모요건(≤298) 판정용 */
+  landAreaM2?: number;
+  /** 주택 연면적/전용면적 (㎡) — 건설임대 규모요건(≤149) 판정용 */
+  totalFloorAreaM2?: number;
+  /** 2호 이상 임대 충족 자기확인 — 건설임대(다/바/자)·나목 호수요건 */
+  hasMinimum2Units: boolean;
+  /** 같은 시·군 5호 이상 임대 충족 — 라목(미분양) 호수요건 */
+  hasMinimum5UnitsInCity?: boolean;
+  /** 최초 분양계약일 — 라목(미분양) 2008.6.11~2009.6.30 판정용 */
+  firstSaleContractDate?: Date;
   /** 실제 임대 개월수 (공실 차감 후) */
   rentalMonths: number;
-  /** 자동말소·자진말소 5년 내 양도 여부 (Phase 2 전용, 현재 무조건 false) */
+  /**
+   * §155⑳㉓ 말소 특례 — 가·다·라·마목 임대주택이 자진말소(의무기간 1/2 이상)·자동말소된 후
+   * 말소 이후 5년 이내 거주주택을 양도하는 경우. true면 의무임대기간요건을 간주 충족(RENTAL_PERIOD_SHORT 억제).
+   */
   rentalAutoTermination: boolean;
   /**
    * 기타 요건 자기확인 체크
@@ -95,17 +129,21 @@ export type RentalHousingExceptionInput = {
 // 결과 타입
 // ============================================================
 
-/** 요건 미충족 임대주택 단위 정보 */
+/** 요건 미충족 임대주택 단위 정보 (code는 공용 predicate check.ts의 ArticleFailCode 단일 소스) */
 export type RentalUnitFailReason = {
   unitIndex: number;
-  code:
-    | "RENTAL_PERIOD_SHORT"      // 의무임대기간 미충족
-    | "STANDARD_PRICE_EXCEEDED"  // 기준시가 상한 초과
-    | "APARTMENT_RESTRICTED"     // 아파트 등록 제한 (2020.7.11 이후)
-    | "REQUIREMENTS_NOT_CONFIRMED" // 기타 요건 미확인
-    | "SHORT_TERM_REGULATED"     // 단기임대 + 조정대상지역 (2025.6.4 이후 신설 유형)
-    | "RENTAL_TERMINATION_RESTRICTED"; // 자동·자진말소 5년 내 양도 제한 (Phase 2)
+  code: ArticleFailCode;
   message: string;
+};
+
+/** 임대주택 호별 판정기준 echo (결과카드 P5 표시용 — 산식 무변경) */
+export type RentalUnitVerdict = {
+  unitIndex: number;
+  derivedArticle: RentalArticle;
+  requiredYears: number;
+  stdPriceCap: number;
+  effectiveRegDate: string; // ISO date (max 두 등록일)
+  sizeRequired: boolean;    // 건설 규모요건 적용 여부
 };
 
 /** 요건 판정 결과 */
@@ -118,6 +156,8 @@ export type EligibilityResult = {
   residenceFailReasons: string[];
   /** 인용된 법령 조문 코드 */
   laws: string[];
+  /** 호별 판정기준 echo (결과카드 표시용) */
+  perUnitVerdict?: RentalUnitVerdict[];
 };
 
 /** §161 안분 산식 추적 데이터 (결과 카드 표기용) */

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export {
   RentalScenarioEnum,
-  RentalTypeEnum,
+  RentalCategoryEnum,
   RentalAcqTypeEnum,
   RentalRegionEnum,
   rentalUnitSchema,
@@ -104,6 +104,19 @@ export const nonBusinessLandRawSchema = z.object({
   // 공익수용 단일 소스 (서버 isExpr·고시일 fallback) — z.object strip 방지
   transferCause: z.enum(["general", "public_expropriation"]).optional(),
   expropriationNoticeDate: z.string().optional(),
+  // ⑫ §164⑨ 1호 환산 min[] 특례 3후보 — **컴패니언 자산 지원**(계획 Q5).
+  // 누락 시 z.object가 조용히 strip → `buildCompanionEngineInputs`가 undefined를 실어 특례 미발동.
+  // 게이트는 엔진이 판정(적격 자산·환산·수용·2009.02.04·후보>0).
+  standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
+  transferArea: z.number().nonnegative().optional(),
+  compensationPerSqm: z.number().int().nonnegative().optional(),
+  compensationBasisStdPrice: z.number().int().nonnegative().optional(),
+  // ⑫ §164⑨2호 공매·경락 특례 — 컴패니언 지원(P4, 1호와 대칭). 누락 시 침묵 strip.
+  isAuctionTransfer: z.boolean().optional(),
+  auctionPrice: z.number().int().nonnegative().optional(),
+  // ⑫ §164⑨1호 주택 총액 트랙 — 컴패니언 지원(P5). 누락 시 침묵 strip.
+  housingCompensationTotal: z.number().int().nonnegative().optional(),
+  housingCompensationBasisTotal: z.number().int().nonnegative().optional(),
   // §168의14③3호나목 취득일 소급 — 상속=피상속인 취득일 / 이월과세=증여자 취득일 (strip 방지)
   acquisitionCause: z.string().optional(),
   decedentAcquisitionDate: z.string().optional(),
@@ -312,6 +325,13 @@ export const houseSchema = z.object({
   isSpouseOwned: z.boolean().optional(),
   // 상속 5년 배제 기산 (소령 §167의3①7호)
   inheritedDate: z.string().date().optional(),
+  // §155③ 공동상속 (2-A2)
+  isCoInherited: z.boolean().optional(),
+  isLargestCoInheritedShareholder: z.boolean().optional(),
+  // §155② 단서(동거봉양·동일세대)·1~4호 순위 게이트
+  decedentSameHouseholdAtInheritance: z.boolean().optional(),
+  parentalCareMergeInheritedHouse: z.boolean().optional(),
+  isRankingDisqualifiedInheritedHouse: z.boolean().optional(),
   // 장기임대 legacy 등록 경로 (등록사업자 + 등록일 2종 + 임대기간 5년↑)
   isRegisteredRental: z.boolean().optional(),
   rentalRegistrationDate: z.string().date().optional(),
@@ -333,6 +353,7 @@ export const houseSchema = z.object({
   hasHalfDutyPeriodMet: z.boolean().optional(),
   isSoldWithin1YearOfCancellation: z.boolean().optional(),
   rentalCancellationDate: z.string().date().optional(),
+  saMokBaseArticle: z.enum(["가", "다", "라", "마"]).optional(),
   isExcluded918Rule: z.boolean().optional(),
   isExcludedAfter20200711Apt: z.boolean().optional(),
   isExcludedShortToLongChange: z.boolean().optional(),
@@ -443,6 +464,11 @@ export const companionAssetSchema = z.object({
   standardPriceAtTransfer: z.number().int().positive().optional(),
   /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 또는 매매 estimated 환산 시 키 */
   standardPriceAtAcquisition: z.number().int().positive().optional(),
+  /**
+   * 공유지분율 (0<r≤1) — 필요경비 개산공제(§163⑥) base 축소 전용. ⑫ 침묵 stripping 방지.
+   * 기준시가는 물건 전체 값을 유지하고 개산공제만 「지분 기준시가 × 3%」가 된다.
+   */
+  ownershipRatio: z.number().positive().max(1).optional(),
   /** 자산 직접 귀속 필요경비 (원, 선택) */
   directExpenses: z.number().int().nonnegative().optional(),
   /** 자본적 지출액 (소득세법 §97① 가목) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */
@@ -488,6 +514,10 @@ export const companionAssetSchema = z.object({
   assetContractDate: z.string().date().optional(),
   /** 상속 시 피상속인 취득일 (자산별 단기보유 통산용) */
   decedentAcquisitionDate: z.string().date().optional(),
+  /** §154⑧3호 상속주택 자체 양도 보유기간 통산 (동일세대 게이트 + 거주·보유 개시일) */
+  decedentSameHouseholdBeforeInheritance: z.boolean().optional(),
+  decedentCohabitationHoldingStartDate: z.string().date().optional(),
+  decedentCohabitationResidenceMonths: z.number().int().nonnegative().optional(),
   /** 증여 시 증여자 취득일 */
   donorAcquisitionDate: z.string().date().optional(),
   /**
@@ -560,6 +590,9 @@ export const parcelSchema = z.object({
   entitlementArea: z.number().positive().optional(),
   allocatedArea: z.number().positive().optional(),
   priorLandArea: z.number().positive().optional(),
+  // 공익수용 §164⑨ 1호 — 필지별 min[] 특례. 엔진이 게이트(수용·환산·2009.02.04) 판정.
+  compensationPerSqm: z.number().int().nonnegative().optional(),
+  compensationBasisStdPrice: z.number().int().nonnegative().optional(),
 }).superRefine((p, ctx) => {
   if (p.acquisitionMethod === "estimated") {
     if (!p.standardPricePerSqmAtAcq || p.standardPricePerSqmAtAcq <= 0) {
@@ -591,7 +624,7 @@ export const parcelSchema = z.object({
 // ─── 상속 부동산 취득가액 의제 스키마 (소령 §176조의2④·§163⑨) ──
 
 export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
-  // case A: 의제취득일(1985.1.1.) 전 상속 — max(환산가액, 피상속인 실가×물가상승률)
+  // case A: 의제취득일(1985.1.1.) 전 상속·증여 — max(① 상증법 평가액, ③ 환산취득가)
   z
     .object({
       mode: z.literal("pre-deemed"),
@@ -599,6 +632,8 @@ export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
       inheritanceStartDate: z.string().date(),
       /** 자산 종류 */
       assetKind: z.enum(["land", "house_individual", "house_apart"]),
+      /** ① 상증법 §60~66 평가액 (상속세 신고가액) — max(①,③) 후보 */
+      reportedValue: z.number().int().nonnegative().optional(),
       /** 의제취득일(1985.1.1.) 시점 기준시가 (원) */
       standardPriceAtDeemedDate: z.number().int().nonnegative().optional(),
       /** 양도시 기준시가 (원) */

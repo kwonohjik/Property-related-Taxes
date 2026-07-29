@@ -3,7 +3,7 @@
  * transfer-tax-schema.ts 800줄 정책 준수를 위해 분리 (2026-05-12).
  *
  * - generalBuildingValuationSchema: 토지+건물 일괄 환산 (소령 §176조의2②, §163⑥)
- * - commercialBuildingValuationSchema: 상업용건물·오피스텔 환산 (소령 §164⑧, §176조의2②2호)
+ * - commercialBuildingValuationSchema: 상업용건물·오피스텔 환산 (소령 §164⑥, §176조의2②2호)
  *
  * 14개 동기화 지점 ⑫ — 침묵 stripping 방지.
  */
@@ -184,6 +184,20 @@ export const generalBuildingValuationSchema = z.object({
    * ⑫ 사례 33 증축: 토지+건물1 일괄 필요경비 (원).
    */
   bundledExpenses: z.number().int().nonnegative().optional(),
+  // ── ⑫ §97②2호 단서 swap (자산총액) — 비-증축 전체환산(G2). 침묵 strip 방지 명시. ──
+  /** 자본적지출 (원, 자산총액 — §97① 가목). */
+  capitalExpenditure: z.number().int().nonnegative().optional(),
+  /** 양도비 (원, 자산총액 — §97① 나목). */
+  transferExpense: z.number().int().nonnegative().optional(),
+  // ── ⑫ §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1). 침묵 stripping 방지 명시 선언. ──
+  /** 토지 상속 취득 게이트 (acquisitionCause==="inheritance" && 취득일>=1985-01-01). */
+  acquisitionByInheritance: z.boolean().optional(),
+  /** 건물 상속 취득 게이트. */
+  buildingAcquisitionByInheritance: z.boolean().optional(),
+  /** 상속개시일 토지 평가액 (원) — §163⑨ 취득당시 실지거래가액 의제. */
+  inheritedLandValue: z.number().int().positive().optional(),
+  /** 상속개시일 건물 평가액 (원). */
+  inheritedBuildingValue: z.number().int().positive().optional(),
   /**
    * ⑫ 사례 35: 주택→상가 용도변경 토글.
    * true 시 conversionDate·wasMultiHouseAtConversion 의미 있음. superRefine에서 필수 강제.
@@ -236,7 +250,7 @@ export const generalBuildingValuationSchema = z.object({
 export type GeneralBuildingValuationSchemaInput = z.infer<typeof generalBuildingValuationSchema>;
 
 /**
- * ⑫ 상업용건물·오피스텔 환산취득가 서브객체 Zod 스키마 (소령 §164⑧, §176조의2②2호).
+ * ⑫ 상업용건물·오피스텔 환산취득가 서브객체 Zod 스키마 (소령 §164⑥, §176조의2②2호).
  * 미정의 시 침묵 stripping 방지. era 무관 필수 필드는 addPropertyRefines(⑩)에서 검증.
  */
 export const commercialBuildingValuationSchema = z.object({
@@ -270,4 +284,33 @@ export const commercialBuildingValuationSchema = z.object({
   buildingStdPriceAtTransfer: z.number().int().positive().optional(),
   /** 최초고시시(2005) 개별공시지가 (원/㎡) — pre_disclosure 시 필수 */
   landPriceAtFirstDisclosure: z.number().int().positive().optional(),
+  // ── §164⑥ 산식 괄호 단서(§164⑧ 준용) — 취득당시 합계액 == 최초고시당시 합계액일 때만 사용 ──
+  /** B — 전기의 토지 및 건물의 기준시가 합계액 (원) */
+  prevStdPriceSum: z.number().int().positive().optional(),
+  /** D — 토지 및 건물 기준시가 조정월수 (미지정 시 엔진이 12 적용) */
+  stdPriceAdjustMonths: z.number().int().positive().optional(),
+});
+
+/**
+ * ⑫ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 Zod 스키마 (소령 §163⑨2호, §164⑥).
+ * 상속개시일 < 2005-01-01 상가의 취득당시 기준시가(P_A) 산정용. opt-in — API가 8필드 all-or-nothing 빌드.
+ * 미정의 시 침묵 stripping 방지. (환산 payload와 별개 — P_A max 전용, 양도시 값 불요.)
+ */
+export const commercialInheritanceValuationSchema = z.object({
+  /** 전용면적 (㎡) */
+  exclusiveArea: z.number().positive(),
+  /** 공유면적 (㎡) */
+  commonArea: z.number().positive(),
+  /** 대지면적 (㎡) */
+  landArea: z.number().positive(),
+  /** 최초고시(2005) ㎡당 호별고시가 (원/㎡) */
+  unitPriceAtFirstDisclosure: z.number().int().positive(),
+  /** 취득시(상속개시일) 개별공시지가 (원/㎡) */
+  landPriceAtAcquisition: z.number().int().positive(),
+  /** 최초고시시(2005) 개별공시지가 (원/㎡) */
+  landPriceAtFirstDisclosure: z.number().int().positive(),
+  /** 취득시(상속개시일) 건물 기준시가 (원, 총액) */
+  buildingStdPriceAtAcquisition: z.number().int().positive(),
+  /** 최초고시시(2005) 건물 기준시가 (원, 총액) */
+  buildingStdPriceAtFirstDisclosure: z.number().int().positive(),
 });

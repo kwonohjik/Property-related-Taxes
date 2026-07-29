@@ -14,6 +14,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { Section53_8_2Input } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
 
 interface Props {
@@ -48,12 +49,14 @@ export function Section53_8_2Fields({ value, onChange, idPrefix, transferTypeDef
   const set = (patch: Partial<Section53_8_2Input>) => onChange({ ...v, ...patch });
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
-      <div className="flex items-center gap-2">
-        <p className="text-xs font-semibold text-emerald-700">§53⑧2호 전부매각 요건</p>
-        <LawArticleModal legalBasis="상속세 및 증여세법 시행령 §49" label="§49①1호" />
-      </div>
-      <p className="text-[11px] text-emerald-700/80">
+    <ToneCard
+      tone="emerald"
+      title="§53⑧2호 전부매각 요건"
+      titleExtra={<LawArticleModal legalBasis="상속세 및 증여세법 시행령 §49" label="§49①1호" />}
+      bodyClassName="space-y-3"
+      noDark
+    >
+      <p className="text-caption text-emerald-700/80">
         ⓘ 매각대금에 경영권 프리미엄이 포함돼 시가로 인정되는 경우 — 요건 모두 충족 시 할증평가
         제외. (상속=평가기준일 ±6월 / 증여=전6·후3월 내 매매계약)
       </p>
@@ -97,6 +100,6 @@ export function Section53_8_2Fields({ value, onChange, idPrefix, transferTypeDef
           />
         </div>
       </FieldCard>
-    </div>
+    </ToneCard>
   );
 }

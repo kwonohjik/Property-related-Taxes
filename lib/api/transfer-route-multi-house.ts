@@ -14,8 +14,13 @@ type HouseInput = z.infer<typeof houseSchema>;
 type PresaleRightInput = z.infer<typeof presaleRightSchema>;
 type GracePeriodInput = {
   contractDate: string;
-  isLandPermitArea: boolean;
-  hasTenantInResidence: boolean;
+  isLandPermitTarget?: boolean;
+  permitApplicationDate?: string;
+  permitGranted?: boolean;
+  depositReceiptConfirmed?: boolean;
+  // @deprecated — G3(조건C 근거 없음)·G6(regionCode 명단 대체). 하위호환만.
+  isLandPermitArea?: boolean;
+  hasTenantInResidence?: boolean;
   areaDesignatedDate?: string;
 };
 
@@ -41,6 +46,13 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     completionDate: toOptionalDate(h.completionDate),
     isSpouseOwned: h.isSpouseOwned,
     inheritedDate: toOptionalDate(h.inheritedDate),
+    // §155③ 공동상속 (2-A2) — boolean pass-through
+    isCoInherited: h.isCoInherited,
+    isLargestCoInheritedShareholder: h.isLargestCoInheritedShareholder,
+    // §155② 단서·1~4호 순위 게이트 — boolean pass-through
+    decedentSameHouseholdAtInheritance: h.decedentSameHouseholdAtInheritance,
+    parentalCareMergeInheritedHouse: h.parentalCareMergeInheritedHouse,
+    isRankingDisqualifiedInheritedHouse: h.isRankingDisqualifiedInheritedHouse,
     isRegisteredRental: h.isRegisteredRental,
     rentalRegistrationDate: toOptionalDate(h.rentalRegistrationDate),
     businessRegistrationDate: toOptionalDate(h.businessRegistrationDate),
@@ -62,6 +74,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     hasHalfDutyPeriodMet: h.hasHalfDutyPeriodMet,
     isSoldWithin1YearOfCancellation: h.isSoldWithin1YearOfCancellation,
     rentalCancellationDate: toOptionalDate(h.rentalCancellationDate),
+    saMokBaseArticle: h.saMokBaseArticle,
     isExcluded918Rule: h.isExcluded918Rule,
     isExcludedAfter20200711Apt: h.isExcludedAfter20200711Apt,
     isExcludedShortToLongChange: h.isExcludedShortToLongChange,
@@ -111,6 +124,11 @@ export function mapGracePeriodToEngine(
   if (!gp) return undefined;
   return {
     contractDate: toDate(gp.contractDate, "gracePeriod.contractDate"),
+    isLandPermitTarget: gp.isLandPermitTarget,
+    permitApplicationDate: toOptionalDate(gp.permitApplicationDate),
+    permitGranted: gp.permitGranted,
+    depositReceiptConfirmed: gp.depositReceiptConfirmed,
+    // @deprecated pass-through — 엔진 판정 미사용(G3·G6)
     isLandPermitArea: gp.isLandPermitArea,
     hasTenantInResidence: gp.hasTenantInResidence,
     areaDesignatedDate: toOptionalDate(gp.areaDesignatedDate),

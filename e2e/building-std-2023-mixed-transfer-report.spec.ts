@@ -65,8 +65,14 @@ test("(1) 양도건물 계산서 — 양도당시 217,230,000 / 취득당시 154
 
   // 토지면적 130 + 공시지가(취득 2,240,000 / 양도 2,500,000)
   await page.getByPlaceholder("부속토지 면적").first().fill("130");
-  await page.getByPlaceholder("원/㎡").nth(0).fill("2240000"); // 취득당시
-  await page.getByPlaceholder("원/㎡").nth(1).fill("2500000"); // 양도당시
+  // ⚠️ `getByPlaceholder("원/㎡").nth(n)` 금지 — 취득연도 ≤2000이면 취득 칸 placeholder가
+  //    "2001.1.1. 현재 공시지가"로 바뀌어(BuildingStdPriceForm.tsx:436 §164⑤ 분기) 매칭이 1개로 줄고,
+  //    nth(0)이 **양도 칸에 취득 값을 채운다**(침묵 오입력). 시점 섹션으로 스코프한다.
+  await page
+    .getByTestId("bsp-section-acq")
+    .getByPlaceholder("2001.1.1. 현재 공시지가")
+    .fill("2240000"); // 취득당시 — 2000년 취득이라 위치지수는 2001.1.1 공시지가 기준
+  await page.getByTestId("bsp-section-transfer").getByPlaceholder("원/㎡").fill("2500000"); // 양도당시
 
   await page.getByRole("button", { name: "기준시가 계산하기" }).click();
   const result = page.getByTestId("bsp-result");

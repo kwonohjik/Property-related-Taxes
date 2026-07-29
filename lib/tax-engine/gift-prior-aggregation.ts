@@ -57,8 +57,9 @@ export function isSameDonorGroup(
 }
 
 /**
- * §71⑥ — §47② 합산 가액. 감면농지 회차(farmlandReductionApplied)이고 과세부분(㉯)이 설정되면
- * giftAmount(전액) 대신 ㉯(farmlandTaxablePortion)로 합산 (감면부분 ㉮ 제외, 조특법 §71⑥).
+ * §71⑦ — §47② 합산 가액. 감면농지 회차(farmlandReductionApplied)이고 과세부분(㉯)이 설정되면
+ * giftAmount(전액) 대신 ㉯(farmlandTaxablePortion)로 합산 (감면부분 ㉮ 제외, 조특법 §71⑦).
+ *   (§71⑥은 상속세 §13① 가산 제외 규정 — 증여 §47② 합산 제외는 §71⑦.)
  * 미설정/비감면이면 giftAmount 전액 (2차 = 재재산-1454 불변). 예규 재산세과-2450·법규재산-2314.
  */
 function priorAggregatedValue(p: PriorGift): number {
@@ -199,6 +200,22 @@ export function aggregatePriorGiftsForGift(
   // giftDate 내림차순: 첫 번째가 가장 최근
   matched.sort((a, b) => b.giftDate.localeCompare(a.giftDate));
 
+  // §47② 임계: 동일인 10년 이내 증여재산가액 합계가 1천만원 미만이면 가산하지 않음.
+  // 임계 미달 시 matched를 비워 totalAmount·§58 기납부세액공제(totalComputedTax·priorAddedTaxBase)·
+  // §57 세대생략 한도 연계값을 일괄 무력화 (부분 잔존 시 §58에서 미가산분 세액이 공제되는 모순 방지).
+  const rawAggregatedTotal = matched.reduce(
+    (s, p) => s + priorAggregatedValue(p),
+    0,
+  );
+  if (rawAggregatedTotal < GIFT.AGGREGATION_THRESHOLD) {
+    if (matched.length > 0) {
+      warnings.push(
+        `동일인 10년 이내 사전증여 합계 ${rawAggregatedTotal.toLocaleString()}원 < 1천만원 → §47② 미달로 합산 제외 (기납부세액공제·세대생략 한도 연계값 무력화)`,
+      );
+      matched.length = 0;
+    }
+  }
+
   const totalAmount = matched.reduce((s, p) => s + priorAggregatedValue(p), 0);
   const totalTaxPaid = matched.reduce((s, p) => s + p.giftTaxPaid, 0);
   const totalComputedTax = matched[0]?.computedTax ?? 0;
@@ -287,7 +304,7 @@ export function aggregatePriorGiftsForGift(
   const breakdown: CalculationStep[] = matched.map((p) => ({
     label:
       p.farmlandReductionApplied && p.farmlandTaxablePortion != null
-        ? `§47 합산 (${p.giftDate}, 증여자=${p.donor}, §71⑥ 농지 과세부분 ㉯)`
+        ? `§47 합산 (${p.giftDate}, 증여자=${p.donor}, §71⑦ 농지 과세부분 ㉯)`
         : `§47 합산 (${p.giftDate}, 증여자=${p.donor})`,
     amount: priorAggregatedValue(p),
     lawRef: GIFT.AGGREGATION_SAME_PERSON,

@@ -7,8 +7,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { Button } from "@/components/ui/button";
 import {
   DeemedTypeSelector,
   DEEMED_TYPE_META,
@@ -103,14 +105,16 @@ export function DeemedGiftCalculator() {
               증여일 {form.giftDate || "미입력"}
             </p>
           </div>
-          <button
+          <Button
             type="button"
+            variant="modalLauncher"
+            size="xs"
             onClick={() => setModalOpen(true)}
             data-testid="deemed-edit-btn"
-            className="shrink-0 rounded-md border border-rose-300 bg-white/70 px-3 py-1.5 text-xs font-medium text-rose-800 hover:bg-rose-100/60"
+            className="shrink-0"
           >
             수정
-          </button>
+          </Button>
         </div>
       )}
 
@@ -128,15 +132,13 @@ export function DeemedGiftCalculator() {
         </p>
       )}
 
-      <button
-        type="button"
+      <CtaButton
         onClick={handleCalc}
         disabled={loading || !form.type}
         data-testid="deemed-calc-btn"
-        className="w-full rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50"
       >
         {loading ? "계산 중..." : "증여이익 계산"}
-      </button>
+      </CtaButton>
 
       {result && (
         <DeemedGiftResultView
@@ -148,9 +150,7 @@ export function DeemedGiftCalculator() {
       )}
 
       <div className="pt-2">
-        <Link href="/" className="text-sm text-muted-foreground hover:underline">
-          ← 홈으로
-        </Link>
+        <HomeButton />
       </div>
     </div>
   );

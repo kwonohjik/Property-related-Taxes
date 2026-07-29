@@ -12,6 +12,7 @@ import {
   computeRow14,
   PROPERTY_TYPE_LABEL,
 } from "@/lib/calc/gift-valuation-besshi";
+import { computePriorGiftAddition } from "@/lib/tax-engine/gift-tax-filing-form-besshi10";
 
 describe("증여세 부표1 계 영역 산식 — Pre-Do anchor (PR-B2)", () => {
   // ⑩ = max(0, 비과세 − ⑪ − ⑫ − ⑬)
@@ -30,6 +31,34 @@ describe("증여세 부표1 계 영역 산식 — Pre-Do anchor (PR-B2)", () => 
     expect(computeRow14(800_000_000, 1_000_000_000, 200_000_000)).toBe(0);
     // 비과세>증여재산: 분모 0 → 전액이 가산분
     expect(computeRow14(500_000_000, 200_000_000, 300_000_000)).toBe(500_000_000);
+  });
+
+  // H-48: 부표1 ⑭ = 별지10호 ㉓ 정합 — §47① 채무인수·§36 대납가산 반영 (dual-truth 제거)
+  it("computeRow14: §47① 채무인수(debtAssumed)·§36 대납(donorPaidTax) 반영", () => {
+    // 기준: aggregated 15억, gross 10억, exempt 2억 → 종전 700M
+    // 부담부증여 채무인수 1억: netCurrent 10억−2억−1억=7억 → ⑭ = 15억−7억 = 8억 (종전 7억 → +1억)
+    expect(computeRow14(1_500_000_000, 1_000_000_000, 200_000_000, 100_000_000)).toBe(
+      800_000_000,
+    );
+    // 대납가산 5천만: ⑭ = 15억 − 8억 − 5천만 = 6.5억 (종전 7억 → −5천만)
+    expect(computeRow14(1_500_000_000, 1_000_000_000, 200_000_000, 0, 50_000_000)).toBe(
+      650_000_000,
+    );
+    // 둘 다: netCurrent 7억, ⑭ = 15억 − 7억 − 5천만 = 7.5억
+    expect(
+      computeRow14(1_500_000_000, 1_000_000_000, 200_000_000, 100_000_000, 50_000_000),
+    ).toBe(750_000_000);
+  });
+
+  it("computeRow14 == computePriorGiftAddition (별지10호 ㉓ 단일 산식 SSOT)", () => {
+    const a = 1_500_000_000,
+      g = 1_000_000_000,
+      e = 200_000_000,
+      debt = 100_000_000,
+      donor = 50_000_000;
+    expect(computeRow14(a, g, e, debt, donor)).toBe(
+      computePriorGiftAddition(a, g, e, debt, donor),
+    );
   });
 
   // ② 재산종류코드 라벨 (KoreanLaw 검증 14종) — 단일 출처 sanity

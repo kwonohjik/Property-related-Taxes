@@ -87,7 +87,7 @@ export function GiftValuationBasisCard({
         ))}
 
         {hasStock && (
-          <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300/80 pt-1">
+          <p className="text-caption text-emerald-700/80 dark:text-emerald-300/80 pt-1">
             ※ 상장·비상장주식의 상세 평가는 아래 주식 평가조서를 참조하세요.
           </p>
         )}
@@ -182,13 +182,13 @@ function BasisRow({ step }: { step: CalculationStep }) {
             {step.label}
           </span>
           {step.lawRef && (
-            <span className="text-[9px] text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700 rounded px-1 leading-tight">
+            <span className="text-micro text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700 rounded px-1 leading-tight">
               {step.lawRef}
             </span>
           )}
         </div>
         {step.note && (
-          <span className="text-[10px] text-gray-500 dark:text-gray-400">
+          <span className="text-micro text-gray-500 dark:text-gray-400">
             {step.note}
           </span>
         )}

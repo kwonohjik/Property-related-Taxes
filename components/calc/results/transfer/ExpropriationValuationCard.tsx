@@ -2,8 +2,10 @@ import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
 /**
- * #3 공익수용 환산 양도시 기준시가 min[] 특례 산출근거 (집행기준 99-164-12).
- * min[공시지가, 보상 ㎡당, 보상산정 기초] × 면적 = 환산 분모.
+ * 공익수용 양도당시 기준시가 차감 특례 산출근거 (**소득세법 시행령 §164⑨ 1호**).
+ * min[기준시가, 보상 ㎡당, 보상산정 기초] × 면적 = 환산 분모.
+ *
+ * ※ 종전 "집행기준 99-164-12" 표기는 국세청 행정규칙 — 법령 근거는 시행령 §164⑨이다(2026-07-16 정정).
  */
 export function ExpropriationValuationCard({
   detail,
@@ -18,10 +20,10 @@ export function ExpropriationValuationCard({
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
       <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-        공익수용 양도시 기준시가 특례 (집행기준 99-164-12)
+        공익수용 양도당시 기준시가 특례 (소득령 §164⑨ 1호)
       </p>
       <p className="mt-1 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
-        수용 토지(2009.02.04 이후) 환산취득가액 계산 시 양도시 기준시가는 아래 셋 중 가장 작은 금액을 적용합니다.
+        수용(2009.02.04 이후) 자산의 환산취득가액 계산 시 양도당시 기준시가는 아래 셋 중 가장 작은 금액을 적용합니다.
       </p>
       <table className="mt-3 w-full text-sm">
         <tbody>

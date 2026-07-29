@@ -27,6 +27,8 @@ import type { UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stoc
  * @param capitalChanges 평가기준일 이전 3년 이내 자본 변동 (paid_in/capital_reduction만 §56⑤ 대상)
  * @param fiscalYearEndDates [1년전, 2년전, 3년전] 사업연도 종료일
  * @param rate 이자율 (기본 0.10 — 상증규 §17 via §17의3⑥)
+ * @param fiscalYearStartDates [1년전, 2년전, 3년전] 사업연도 개시일 — 명시 입력 시 우선(§17의3② 1년미만
+ *   사업연도·결산기 변경). 미제공(undefined)이면 "종료일−1년+1일" 역산(12월 결산 가정) fallback.
  * @returns 사업연도별 라.유상증자·감자 반영액 [1년전, 2년전, 3년전]
  *
  * @example PDF 사례 1 (p1534)
@@ -46,6 +48,7 @@ export function calcCapitalIncreaseAdjustment(
   capitalChanges: UnlistedCapitalChange[],
   fiscalYearEndDates: [Date, Date, Date],
   rate: number = 0.10,
+  fiscalYearStartDates?: [Date | undefined, Date | undefined, Date | undefined],
 ): [number, number, number] {
   const adjustments: [number, number, number] = [0, 0, 0];
 
@@ -70,10 +73,17 @@ export function calcCapitalIncreaseAdjustment(
 
     for (let yearIdx = 0; yearIdx < 3; yearIdx++) {
       const fiscalYearEndDate = fiscalYearEndDates[yearIdx];
-      // 사업연도 시작일 = 종료일 1년 전 + 1일 (12월 결산 가정 시 1.1.~12.31.)
-      const fiscalYearStartDate = new Date(fiscalYearEndDate);
-      fiscalYearStartDate.setFullYear(fiscalYearStartDate.getFullYear() - 1);
-      fiscalYearStartDate.setDate(fiscalYearStartDate.getDate() + 1);
+      // 사업연도 시작일 — 명시 입력(§17의3② 1년미만 사업연도) 우선.
+      //   미제공 시에만 "종료일−1년+1일" 역산(12월 결산·1년 사업연도 가정) fallback.
+      const explicitStart = fiscalYearStartDates?.[yearIdx];
+      let fiscalYearStartDate: Date;
+      if (explicitStart instanceof Date && !isNaN(explicitStart.getTime())) {
+        fiscalYearStartDate = explicitStart;
+      } else {
+        fiscalYearStartDate = new Date(fiscalYearEndDate);
+        fiscalYearStartDate.setFullYear(fiscalYearStartDate.getFullYear() - 1);
+        fiscalYearStartDate.setDate(fiscalYearStartDate.getDate() + 1);
+      }
 
       if (
         changeDate >= fiscalYearStartDate &&

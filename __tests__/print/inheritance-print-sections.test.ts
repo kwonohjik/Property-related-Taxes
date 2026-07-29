@@ -24,6 +24,7 @@ const ALL_LEAVES: PrintSectionId[] = [
   "heir-allocation-summary",
   "deduction-breakdown",
   "allocation-breakdown",
+  "tax-credit",
   "source-data",
   "prior-gift-filing",
   "corporate-exemption",

@@ -28,6 +28,8 @@ export interface HeirAssessmentCardProps {
   heir: Heir;
   assessment: FarmingHeirAssessment;
   onUpdate: (next: FarmingHeirAssessment) => void;
+  /** 상속개시일 — §16⑭2호(2026.2.27 신설) 미리보기 게이팅용 (엔진과 단일 진실) */
+  deathDate?: string;
 }
 
 export function HeirAssessmentCard({
@@ -35,10 +37,11 @@ export function HeirAssessmentCard({
   heir,
   assessment,
   onUpdate,
+  deathDate,
 }: HeirAssessmentCardProps) {
   const evalResult = useMemo(
-    () => evaluateFarmingEligibilityForHeir(farming, assessment),
-    [farming, assessment],
+    () => evaluateFarmingEligibilityForHeir(farming, assessment, deathDate),
+    [farming, assessment, deathDate],
   );
 
   const update = (patch: Partial<FarmingHeirAssessment>) => {
@@ -58,7 +61,7 @@ export function HeirAssessmentCard({
           {heirShortLabel(heir)}
         </p>
         <span
-          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+          className={`text-micro font-semibold px-1.5 py-0.5 rounded ${
             evalResult.eligible
               ? "bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100"
               : "bg-amber-200 text-amber-900 dark:bg-amber-800 dark:text-amber-100"
@@ -161,7 +164,7 @@ export function HeirAssessmentCard({
       />
 
       {!evalResult.eligible && evalResult.reasons.length > 0 && (
-        <ul className="text-[10px] text-amber-800 dark:text-amber-200 list-disc pl-4">
+        <ul className="text-micro text-amber-800 dark:text-amber-200 list-disc pl-4">
           {evalResult.reasons.map((r, i) => (
             <li key={i}>{r}</li>
           ))}

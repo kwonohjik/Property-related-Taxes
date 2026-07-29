@@ -39,7 +39,7 @@ export function FinancialDeductionChip({
           §22 금융재산공제 대상
         </p>
         <span
-          className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+          className={`text-micro px-1.5 py-0.5 rounded-full ${
             isUserOverride
               ? "bg-violet-200 text-violet-800 dark:bg-violet-900 dark:text-violet-200"
               : defaultEligible
@@ -71,7 +71,7 @@ export function FinancialDeductionChip({
           onClick={() =>
             onUpdate({ ...item, isFinancialAssetForDeduction: undefined })
           }
-          className="text-[10px] text-emerald-700 dark:text-emerald-300 underline"
+          className="text-micro text-emerald-700 dark:text-emerald-300 underline"
         >
           기본값으로 되돌리기
         </button>

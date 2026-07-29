@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 구현 현황: 6대 세목 + 주식양도세 전부 엔진·UI·API·결과뷰·테스트 완료. 계산 결과 선택 출력 공통화(8 결과뷰). 상속·증여세는 별지 서식(별지9호·부표2·3·5 등) PDF 재현까지 확장.
 - 최근 완료 이력: [`docs/00-pm/recent-completions.md`](docs/00-pm/recent-completions.md). (초기 로드맵은 현황과 차이 큼 — Next.js 16·6세목 완료 미반영.)
-- 양도세 감면 23개 조문 확장: `lib/tax-engine/transfer-reductions/` 골격 + §99의3 완료, 나머지 후속 대기.
+- 양도세 감면 23개 조문 확장: `lib/tax-engine/transfer-reductions/` 대부분 구현 완료 (`metadata.isFullyImplemented` 기준).
 
 ## ⚠️ Next.js 16 주의사항
 
@@ -37,7 +37,27 @@ npm run seed:tax-rates        # Supabase tax_rates 시딩
 npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 무효화 후)
 ```
 
-**자동 게이트**: husky pre-commit(lint-staged) + pre-push(typecheck + test) + GitHub Actions.
+**자동 게이트**: husky pre-commit(lint-staged) + pre-push(폰트·톤 + typecheck + **범위 선택 테스트**) + GitHub Actions.
+
+### 테스트 범위 정책 (2026-07-28 — 반복 검증에 전체 실행 금지)
+
+전체 `npm test`는 **1036파일 11628테스트 ≈ 152초**다. 작업 중 반복 실행하면 그 자체가 최대 시간 낭비다.
+
+| 상황 | 명령 | 실측 |
+|---|---|---|
+| 작업 중 반복 검증 | `npx vitest run __tests__/tax-engine/{tax}/ __tests__/calc/` | ~36초 |
+| 세목 단위 회귀 | `npm run test:{transfer\|acquisition\|property\|comprehensive\|inheritance\|gift}` | ~59초(transfer) |
+| push 직전·PR 전 | pre-push가 자동 판정 / `npm run check:pre-pr` | ~152초 |
+
+**pre-push는 변경 경로로 범위를 자동 판정**한다(`scripts/select-test-scope.sh`, 판정 회귀 테스트 `scripts/select-test-scope.test.sh` 14케이스):
+
+- `components/calc/{tax}/**` · `app/calc/{tax}-tax/**` · `app/api/calc/{tax}/**` · `lib/calc/{tax}-tax*` · `__tests__/**/{tax}*` **만** 바뀌면 → 그 세목 스크립트만
+- `docs/**`·`*.md`·`e2e/**`만 바뀌면 → vitest 생략(typecheck는 수행)
+- **`lib/tax-engine/**` · `lib/api/**` · `lib/stores/**` · `types/**` · 설정 파일이 하나라도 걸리면 전체** — 세목 간 공유(종부세→재산세 의존, 상속·증여 `property-valuation` 공유, `legal-codes`·`date-coerce` 공용) 때문에 좁히면 타 세목 회귀를 놓친다
+- 두 세목 동시 변경·미분류 신규 경로·판정 불가 → **전체**(안전측 기본값)
+- 강제 전체: `FULL_TEST=1 git push`
+
+**판정 규칙을 넓히려면 반드시 `select-test-scope.test.sh`에 케이스를 먼저 추가**한다. 좁히기 오판정은 회귀 안전망을 뚫는 방향이라 "회귀 허용치 0" 원칙과 정면 충돌한다.
 
 ### 머지 워크플로 — `scripts/ship.sh` (수시 수정 사이클)
 
@@ -59,7 +79,7 @@ scripts/ship.sh <branch> "<commit message>" --auto   # CI 통과 후 자동 머�
 
 ## Tech Stack
 
-Next.js 16 (App Router, React 19, Turbopack) + TS strict / shadcn(BaseUI) + Tailwind v4 + zustand / Next Route Handlers + Server Actions (`actions/calculations.ts`) / Supabase (Auth + Postgres) / vitest + jsdom + RTL / Playwright E2E / Sentry (`tax_type`·`request_id` 태그).
+Next.js 16 (App Router, React 19, Turbopack) + TS strict / shadcn(BaseUI) + Tailwind v4 + zustand / Next Route Handlers (`app/api/**`) / Supabase (Auth + Postgres) / vitest + jsdom + RTL / Playwright E2E / Sentry (`tax_type`·`request_id` 태그).
 
 ## Architecture — 2-Layer Tax Engine
 
@@ -70,7 +90,7 @@ Layer 1: Orchestrator (app/api/calc/{tax-type}/route.ts)
   → Zod 검증 (discriminatedUnion 감면 스키마)
   → preloadTaxRates() Supabase RPC 일괄 로드
   → Pure Engine 호출 (세율 데이터 매개변수 전달)
-  → saveCalculation() Server Action (로그인 시 이력 저장)
+  → (이력 저장은 서버 미경유 — 결과 화면 마운트 시 클라이언트 IndexedDB 자동 저장, lib/storage)
 
 Layer 2: Pure Engine (lib/tax-engine/*.ts)
   → DB 직접 호출 없음, 순수 함수
@@ -86,7 +106,13 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 
 ## File Size Policy (강제)
 
-**모든 파일 800줄 이하**. PostToolUse hook 경고. 위반 감지 시 즉시 분리(orchestrator + helpers/types/sections) — 우회 금지.
+**분리 트리거 800줄 · 착지 목표 ≤700줄**(hard cap 800, PostToolUse hook 경고 — 우회 금지). 800줄 초과 감지 시 즉시 분리(orchestrator + helpers/types/sections).
+
+- **트리거(800)와 착지목표(≤700)를 분리**한다. 800 직하로 착지시키면 기능 1건(≈+50줄)마다 재분리 thrash → `transfer-tax.ts`가 "≈800" 분리 후 801줄로 재초과한 실례. ≤700 착지로 ≈100줄(기능 2건) 데드밴드 확보.
+- **트리거는 낮추지 않는다**: 700~749에 안정적으로 앉은 파일을 커지지도 않는데 미리 쪼개면 순수 낭비(Simplicity/Surgical). 800 초과 시에만 분리하되, 분리할 땐 여유분까지 확보.
+- **줄 수는 응집도에 종속**: ≤700은 여유분 목표이지 숫자 맞추기가 아니다. 자연 이음매로 2분할해 ≤700이 안 되면 3분할하거나 더 깊은 이음매를 찾는다. 억지 조각화 금지(과분할 방지 — ~500 이하로 무리하게 내리지 말 것).
+- **타입 전용 파일 예외**: 로직 없이 타입 선언만 나열된 파일(`*.types.ts` 등)은 분리 가치 낮음(재성장 위험 낮음·import 간접만 증가) — 별도 판단.
+- **기회주의적 분리**: 기능 작업으로 이미 연 파일이 ≥750 위험구간이면 그 김에 깊게 분리 — 미래의 분리 전용 PR(고정비: PR·리뷰·pre-push 전체 테스트) 회피.
 
 ## 세금 엔진 규칙
 
@@ -100,13 +126,13 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 **API Date 직렬화** — `lib/api/date-coerce.ts` 필수. JSON 경유 후 string 도달 → `Date < string` silent false 함정. `toDate(v, "field")` / `toOptionalDate(v)` / `coerceDates(obj, [...])`. 신규 코드 `new Date(x)` 직접 호출 금지.
 
 **설계 원칙 (UI 금지)**:
-- 자동 안분 fallback 금지(예외: PHD §164⑤). 미입력은 검증 오류로 차단.
+- 자동 안분 fallback 금지(예외: PHD §164⑦). 미입력은 검증 오류로 차단.
 - useEffect → store 미러링 금지. cross-field 동기화는 onChange/useMemo.
 - 법령 정확성 최우선. 납세자 유리/불리·절감 표현 금지.
 
 ## UI 작성 원칙 (요약 — 상세: [components/calc/CLAUDE.md](components/calc/CLAUDE.md))
 
-계산 로직 순서 = UI 표시 순서(모드 토글은 영향 필드 직전). 사이드바 합계는 계산 가능한 항목만 0원 제외. 결과 산식은 한국어 풀어쓰기(변수 약어·`floor()` 금지). 토글/라디오는 `ToggleCard`/`RadioCardGroup` 필수, native 신규 금지, OFF도 tone 유지. 공시지가는 `LandPriceLookupField` 필수. 면적 반올림(UI 한정) `parseFloat(toFixed(2))` 후 단가 곱셈. placeholder 숫자 예시 금지 — 형식 설명은 FieldCard `hint`.
+계산 로직 순서 = UI 표시 순서(모드 토글은 영향 필드 직전). 사이드바 합계는 계산 가능한 항목만 0원 제외. 결과 산식은 한국어 풀어쓰기(변수 약어·`floor()` 금지). 토글/라디오는 `ToggleCard`/`RadioCardGroup` 필수, native 신규 금지, OFF도 tone 유지. 공시지가는 `LandPriceLookupField` 필수. 면적 반올림(UI 한정) `parseFloat(toFixed(2))` 후 단가 곱셈. placeholder 숫자 예시 금지 — 형식 설명은 FieldCard `hint`. **신규 카드·라벨 표준화(2026-07-10)**: 안내·섹션 카드는 `<ToneCard>`(인라인 톤 하드코딩 금지·`tones.ts` 단일 소스), 라벨 크기는 역할별 정본 클래스(임의 px `text-[Npx]` 금지·pre-push 게이트), 모달 런처 버튼은 `<Button variant="modalLauncher">`(native 런처 금지). 상세·강제력은 components/calc/CLAUDE.md.
 
 **자산 종류 특수 분기 진입점**: `components/calc/transfer/CompanionAcqPurchaseBlock.tsx` — 상단 일반 "취득가액 산정 방식·취득가액" 영역을 `assetKind`(redevelopment_apt·general_building·commercial_building 등)/`transferType`(burdened_gift)별로 조건부 숨김. 특수 분기 추가 시 violet/fuchsia 안내 카드 패턴 차용. 자산-수준 입력은 해당 자산 전용 Block(`RedevelopmentBlock`/`GeneralBuildingBlock`/`CommercialBuildingBlock`)에 격리.
 
@@ -114,11 +140,11 @@ lib/calc/ — 클라이언트↔API 변환 (14개 동기화 지점 ④⑧ 담당
 
 **Supabase / DB**: `supabase/migrations/`(tax_rates·regulated_areas·standard_prices·users·calculations). 시딩 `npm run seed:tax-rates`. 환경변수 미설정 시 graceful 통과(로컬 개발 가능). `DISTINCT ON` 미지원 → DB Function `preload_tax_rates()`.
 
-**Route Protection (`proxy.ts`)**: 보호 `/history`·`/api/history`·`/api/pdf`. 미보호 `/api/calc/*`·`/api/law/*`(비로그인 계산 허용).
+**Route Protection (`proxy.ts`)**: `updateSession`으로 Auth 세션만 유지 — 이력 로컬 IndexedDB 일원화로 보호 라우트(`/api/history`·`/api/pdf`) 제거됨(proxy.ts:4). 모든 계산·법령 라우트 비로그인 허용.
 
 **로컬 저장소**: IndexedDB(Dexie). 비로그인 sessionStorage 보존→로그인 후 마이그레이션. zustand `result`는 partialize 제외. Store 마이그: `lib/stores/calc-wizard-migration.ts`. 상세: [lib/storage/CLAUDE.md](lib/storage/CLAUDE.md).
 
-**법령 리서치 (`/law`)**: 법제처 Open API 직접 호출(`KOREAN_LAW_OC`). Routes `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain,route-router,applicable-law}/route.ts`. Client barrel `lib/korean-law/client.ts`(5파일). 별칭 52종 `aliases.ts`. 캐시 `.legal-cache/` 7일 TTL.
+**법령 리서치 (`/law`)**: 법제처 Open API 직접 호출(`KOREAN_LAW_OC`). Routes `app/api/law/{search-law,law-text,search-decisions,decision-text,annexes,chain,route-router,applicable-law}/route.ts`. Client barrel `lib/korean-law/client.ts`(5파일). 별칭 다수 `aliases.ts`. 캐시 `.legal-cache/` 7일 TTL.
 
 - **통합 검색 + Query Router**(`lib/korean-law/router/query-router.ts`): 자연어 질의를 정규식 패턴으로 도구 자동 라우팅. 우선순위 0=행위시법(`applicable_law`)·개정신구대조(`amendment_article`), 1=조문(제 포함), 2=조문(제 생략), 10~=개정·판례·별표 등. `UnifiedSearchBar`→`/api/law/route-router`→`LawResearchClient` 탭 전환.
 - **v4.4 고도화(korean-law-mcp 동급)**:

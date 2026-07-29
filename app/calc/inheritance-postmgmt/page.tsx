@@ -66,6 +66,16 @@ function sanitizeDateParam(raw: string | null): string {
   return raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
 }
 
+/**
+ * 원래 상속세 과세표준 prefill — 양수 정수만 수용(비수치·음수·0은 "" → canCalculate 차단).
+ * 과세표준은 30억(공제 한도)을 초과할 수 있으므로 cap 없음(cap은 공제액 전용).
+ */
+function sanitizeBaseTaxableParam(raw: string | null): string {
+  if (!raw) return "";
+  const num = parseAmount(raw);
+  return Number.isFinite(num) && num > 0 ? String(num) : "";
+}
+
 export default function FarmingPostMgmtPage() {
   return (
     <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">로딩 중…</div>}>
@@ -79,15 +89,25 @@ function FarmingPostMgmtPageInner() {
   const initialOriginalDeduction = sanitizeOriginalDeductionParam(
     searchParams.get("originalDeduction"),
   );
-  // 메인 마법사 진입 시 신고기한(§67) prefill — 가업 시뮬레이터와 동형(영농 prefill 강화)
+  // 메인 마법사 진입 시 신고기한(§67)·상속개시일 prefill — 가업 시뮬레이터와 동형(영농 prefill 강화)
   const initialFilingDeadline = sanitizeDateParam(searchParams.get("filingDeadline"));
+  const initialInheritanceStartDate = sanitizeDateParam(
+    searchParams.get("inheritanceStartDate"),
+  );
 
   const [violation, setViolation] = useState<FarmingPostMgmtViolation>("asset_disposed");
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [violationDate, setViolationDate] = useState("");
+  const [inheritanceStartDate, setInheritanceStartDate] = useState(
+    initialInheritanceStartDate,
+  );
   const [filingDeadline, setFilingDeadline] = useState(initialFilingDeadline);
   const [originalDeduction, setOriginalDeduction] = useState(initialOriginalDeduction);
-  const [determinedTax, setDeterminedTax] = useState("");
+  // 원래 상속세 과세표준 (영농공제 반영 후) — §18의3④ 전단 marginal 추징 재계산 기준.
+  //   prefill은 양수 정수만 수용(비수치→"" → canCalculate 차단). cap은 없음(과세표준 > 30억 가능).
+  const [baseTaxableAmount, setBaseTaxableAmount] = useState(
+    sanitizeBaseTaxableParam(searchParams.get("baseTaxable")),
+  );
   const [interestRate, setInterestRate] = useState("0.029");  // 기본 연 2.9%
   const [justifiedReason, setJustifiedReason] = useState<FarmingPostMgmtJustifiedReason | "">("");
   const [maintainsMajorShareholder, setMaintainsMajorShareholder] = useState(false);
@@ -100,20 +120,24 @@ function FarmingPostMgmtPageInner() {
   const canCalculate = useMemo(() => {
     return (
       violationDate.length === 10 &&
+      inheritanceStartDate.length === 10 &&
       filingDeadline.length === 10 &&
       parseAmount(originalDeduction) > 0 &&
-      parseAmount(determinedTax) >= 0 &&
+      // 재계산 base 명시 입력 필수(빈칸=silent 0 방지) — 0도 유효값이라 비어있지 않음으로 판정
+      baseTaxableAmount.trim().length > 0 &&
+      parseAmount(baseTaxableAmount) >= 0 &&
       Number(interestRate) >= 0 &&
       Number(interestRate) <= 1
     );
-  }, [violationDate, filingDeadline, originalDeduction, determinedTax, interestRate]);
+  }, [violationDate, inheritanceStartDate, filingDeadline, originalDeduction, baseTaxableAmount, interestRate]);
 
   const handleCalculate = () => {
     const input: FarmingPostMgmtInput = {
       violation,
       violationDate,
+      inheritanceStartDate,
       filingDeadline,
-      determinedTax: parseAmount(determinedTax),
+      baseTaxableAmount: parseAmount(baseTaxableAmount),
       interestRate: Number(interestRate),
       justifiedReason: justifiedReason || undefined,
       maintainsMajorShareholder: showCorporateMajorToggle
@@ -170,17 +194,26 @@ function FarmingPostMgmtPageInner() {
       <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
+            상속개시일
+          </label>
+          <DateInput value={inheritanceStartDate} onChange={setInheritanceStartDate} />
+          <p className="text-micro text-muted-foreground">
+            §18의3④ 5년 사후관리기간 기산 (경과 후 처분·종사중단은 무추징)
+          </p>
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             상속세 신고기한 (§67 — 상속개시일 + 6개월)
           </label>
           <DateInput value={filingDeadline} onChange={setFilingDeadline} />
-          <p className="text-[10px] text-muted-foreground">이자상당액 기산일 산정용</p>
+          <p className="text-micro text-muted-foreground">이자상당액 기산일 산정용</p>
         </div>
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             위반 발생일
           </label>
           <DateInput value={violationDate} onChange={setViolationDate} />
-          <p className="text-[10px] text-muted-foreground">§18의3④ 또는 §18의3⑥2호 사유 발생일</p>
+          <p className="text-micro text-muted-foreground">§18의3④ 또는 §18의3⑥2호 사유 발생일</p>
         </div>
         <CurrencyInput
           label="공제받은 영농상속공제액"
@@ -189,10 +222,10 @@ function FarmingPostMgmtPageInner() {
           hint="원 상속 시 적용된 §18의3 공제액 (최대 30억)"
         />
         <CurrencyInput
-          label="사유 발생 시점 결정세액"
-          value={determinedTax}
-          onChange={setDeterminedTax}
-          hint="이자상당액 산정 기준액"
+          label="원래 상속세 과세표준 (영농공제 반영 후)"
+          value={baseTaxableAmount}
+          onChange={setBaseTaxableAmount}
+          hint="추징세액은 이 과세표준에 산입액을 더해 재계산한 상속세 증가분(§18의3④ 전단·§26 누진)"
         />
         <div className="space-y-1 md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
@@ -206,7 +239,7 @@ function FarmingPostMgmtPageInner() {
             className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder="0.029"
           />
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-micro text-muted-foreground">
             예: 0.029 = 연 2.9% (시점별 개정 — 국세청 고시 확인)
           </p>
         </div>
@@ -216,7 +249,7 @@ function FarmingPostMgmtPageInner() {
       {isFourthParaViolation && (
         <section className="space-y-2">
           <h2 className="text-sm font-semibold">정당한 사유 (§16⑥, 선택)</h2>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             적용 시 추징 면제. 사유에 해당하지 않으면 빈칸 유지.
           </p>
           <RadioCardGroup<FarmingPostMgmtJustifiedReason | "">
@@ -243,7 +276,7 @@ function FarmingPostMgmtPageInner() {
                   법인주식 처분 후에도 <strong>최대주주 지위 유지</strong> (§16⑥6호 단서)
                 </span>
               </label>
-              <p className="text-[10px] text-emerald-700 dark:text-emerald-300">
+              <p className="text-micro text-emerald-700 dark:text-emerald-300">
                 미체크 시 정당사유 불인정 → 추징 적용
               </p>
             </div>
@@ -267,10 +300,14 @@ function FarmingPostMgmtPageInner() {
           {!result.recaptureRequired ? (
             <div className="space-y-1.5">
               <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
-                ✓ 추징 면제 (정당사유 인정)
+                {result.outsideManagementPeriod
+                  ? "✓ 추징 대상 아님 (5년 사후관리기간 경과)"
+                  : "✓ 추징 면제 (정당사유 인정)"}
               </p>
               <p className="text-xs text-muted-foreground">
-                §16⑥ 정당사유 적용 — 추징세액·이자상당액 모두 0원
+                {result.outsideManagementPeriod
+                  ? "상속개시일부터 5년 경과 후 처분·종사중단 — §18의3④ 추징 대상 아님 (세액·이자 0원)"
+                  : "§16⑥ 정당사유 적용 — 추징세액·이자상당액 모두 0원"}
               </p>
             </div>
           ) : (
@@ -280,7 +317,7 @@ function FarmingPostMgmtPageInner() {
               </p>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-xs text-muted-foreground">추징세액 (§16⑦ 100%)</p>
+                  <p className="text-xs text-muted-foreground">추징세액 (재계산 증가분)</p>
                   <p className="font-semibold">{formatKRW(result.recaptureAmount)}</p>
                 </div>
                 <div>
@@ -314,12 +351,12 @@ function FarmingPostMgmtPageInner() {
               <span>산식 상세 펼침</span>
               <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(breakdownOpen)}</span>
             </button>
-            <ul className={`${breakdownOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-[11px]`}>
+            <ul className={`${breakdownOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-caption`}>
               {result.breakdown.map((step, i) => (
                 <li key={i} className="flex justify-between gap-2">
                   <span className="text-muted-foreground">
                     {step.label}
-                    {step.note && <span className="block text-[10px] text-gray-500">{step.note}</span>}
+                    {step.note && <span className="block text-micro text-gray-500">{step.note}</span>}
                   </span>
                   {step.amount !== 0 && (
                     <span className="font-mono">{formatKRW(step.amount)}</span>

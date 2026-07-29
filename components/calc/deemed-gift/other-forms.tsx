@@ -12,6 +12,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
 import type { DeemedFormState } from "./shared";
@@ -28,29 +29,15 @@ export function ExcessDividendFields({ form, set }: Props) {
   return (
     <div className="space-y-3">
       {/* ── 섹션 1: 주주 입력 (배당지급일=증여일은 상단 공통 증여일 사용 — §41의2①) ── */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
-            1
-          </span>
-          <p className="text-xs font-semibold text-sky-700">
-            주주별 배당 내역 — 비례배당·초과배당금액 자동산정 (시행령 §31의2②)
-          </p>
-        </div>
+      <ToneCard tone="sky" sectionNum="1" title="주주별 배당 내역 — 비례배당·초과배당금액 자동산정 (시행령 §31의2②)" noDark>
         <ExcessShareholderTable
           rows={form.edShareholders}
           onChange={(rows) => set({ edShareholders: rows })}
         />
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 3: 소득세 상당액 모드 ── */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
-            2
-          </span>
-          <p className="text-xs font-semibold text-amber-700">소득세 상당액 확정 여부 — 시행규칙 §10의3</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="2" title="소득세 상당액 확정 여부 — 시행규칙 §10의3" noDark>
         <RadioCardGroup
           name="ed-income-tax-mode"
           tone="amber"
@@ -135,18 +122,10 @@ export function ExcessDividendFields({ form, set }: Props) {
             </p>
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 4: 증여세 계산 맥락 (giftTaxContext) — 정산·구법 결과 표시용 ── */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-            3
-          </span>
-          <p className="text-xs font-semibold text-violet-700">
-            증여자와의 관계 (선택 — 입력 시 정산·구법 세액 추가 표시)
-          </p>
-        </div>
+      <ToneCard tone="violet" sectionNum="3" title="증여자와의 관계 (선택 — 입력 시 정산·구법 세액 추가 표시)" noDark>
         <RadioCardGroup
           name="ed-donor-relationship"
           tone="violet"
@@ -220,7 +199,7 @@ export function ExcessDividendFields({ form, set }: Props) {
             )}
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 5: 정산 (§41의2②③) — 2021.1.1 이후 배당 전용 ── */}
       {/* §0.5 환류: isDiligentFiler 엔진 미사용. isWithinFilingDeadline은 신고세액공제에 사용 */}
@@ -267,7 +246,7 @@ export function ListingGainFields({ form, set }: Props) {
   }, [form.lgTotalNetIncome, form.lgMonthsBusinessStart, form.lgMonthsAcqToSettlement]);
 
   return (
-    <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+    <ToneCard tone="emerald" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         name="lg-event"
         tone="emerald"
@@ -339,10 +318,10 @@ export function ListingGainFields({ form, set }: Props) {
           ]}
         />
         {form.lgCorpGrowthMode === "direct" ? (
-          <CurrencyInput label="1주당 기업가치 실질증가이익" value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤" placeholder="1주당 기업가치 실질증가이익 (원)" />
+          <CurrencyInput label="1주당 기업가치 실질증가이익" allowNegative value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (기업가치 감소 시 음수 입력)" placeholder="1주당 기업가치 실질증가이익 (원)" />
         ) : (
           <>
-            <CurrencyInput label="사업연도별 1주당 순손익액 합계" value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1)" placeholder="1주당 순손익액 합계 (원)" />
+            <CurrencyInput label="사업연도별 1주당 순손익액 합계" allowNegative value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1, 결손 시 음수)" placeholder="1주당 순손익액 합계 (원)" />
             <CurrencyInput label="사업연도개시일~상장전일 월수" value={form.lgMonthsBusinessStart} onChange={(v) => set({ lgMonthsBusinessStart: v })} hint="분모 월수 (1월미만은 1월)" placeholder="월수" />
             <CurrencyInput label="증여·취득일~정산기준일 월수" value={form.lgMonthsAcqToSettlement} onChange={(v) => set({ lgMonthsAcqToSettlement: v })} hint="곱수 월수 (령§31의3⑤2, 1월미만은 1월)" placeholder="월수" />
             <p className="text-xs font-medium text-emerald-800" data-testid="lg-corp-growth-echo">
@@ -384,7 +363,7 @@ export function ListingGainFields({ form, set }: Props) {
           </li>
         </ul>
       </CollapsibleHintCard>
-    </div>
+    </ToneCard>
   );
 }
 
@@ -392,7 +371,7 @@ export function ListingGainFields({ form, set }: Props) {
 export function PropertyServiceUseFields({ form, set }: Props) {
   const isFree = form.psuSubType === "free_use";
   return (
-    <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+    <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         name="psu-subtype"
         tone="violet"
@@ -408,7 +387,7 @@ export function PropertyServiceUseFields({ form, set }: Props) {
       {!isFree && (
         <CurrencyInput label="대가" value={form.psuConsideration} onChange={(v) => set({ psuConsideration: v })} placeholder="대가 (원)" />
       )}
-    </div>
+    </ToneCard>
   );
 }
 
@@ -416,7 +395,7 @@ export function PropertyServiceUseFields({ form, set }: Props) {
 export function OrgChangeFields({ form, set }: Props) {
   const isShare = form.ocSubType === "share_change";
   return (
-    <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
         name="oc-subtype"
         tone="amber"
@@ -441,7 +420,7 @@ export function OrgChangeFields({ form, set }: Props) {
         </>
       )}
       <CurrencyInput label="변동 전 해당 재산가액 (기준금액 산정)" value={form.ocBaseValue} onChange={(v) => set({ ocBaseValue: v })} hint="기준금액 = min(변동전 재산가액 × 30%, 3억)" placeholder="변동 전 재산가액 (원)" />
-    </div>
+    </ToneCard>
   );
 }
 
@@ -456,7 +435,7 @@ const VI_PRESETS: { label: string; testId: string; v: Partial<DeemedFormState> }
 /** §42의3 재산취득 후 가치증가 */
 export function ValueIncreaseFields({ form, set }: Props) {
   return (
-    <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       {/* 계산사례 프리셋 */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-rose-700">계산사례:</span>
@@ -526,7 +505,7 @@ export function ValueIncreaseFields({ form, set }: Props) {
       <FieldCard label="사유발생일">
         <DateInput value={form.viEventDate} onChange={(v) => set({ viEventDate: v })} />
       </FieldCard>
-    </div>
+    </ToneCard>
   );
 }
 
@@ -553,11 +532,7 @@ export function SpecificCorpFields({ form, set }: Props) {
   return (
     <div className="space-y-3">
       {/* ── 섹션 1: 입력 방식 + 거래이익 ── */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">1</span>
-          <p className="text-xs font-semibold text-sky-700">입력 방식 선택</p>
-        </div>
+      <ToneCard tone="sky" sectionNum="1" title="입력 방식 선택" noDark>
         <RadioCardGroup
           name="sc-mode"
           tone="sky"
@@ -583,14 +558,10 @@ export function SpecificCorpFields({ form, set }: Props) {
           hint="증여재산가액·채무면제이익·시가−대가 차액 (시행령 §34의5④1호)"
           data-testid="sc-transaction-benefit"
         />
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 2: 법인세 상당액 ── */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">2</span>
-          <p className="text-xs font-semibold text-amber-700">법인세 상당액 (시행령 §34의5④2호)</p>
-        </div>
+      <ToneCard tone="amber" sectionNum="2" title="법인세 상당액 (시행령 §34의5④2호)" noDark>
         <RadioCardGroup
           name="sc-corp-tax-mode"
           tone="amber"
@@ -643,16 +614,15 @@ export function SpecificCorpFields({ form, set }: Props) {
             )}
           </div>
         )}
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 3: 지분율 or 주주 명단 ── */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">3</span>
-          <p className="text-xs font-semibold text-violet-700">
-            {isRoster ? "발행주식 총수 + 주주 명단" : "지배주주등 주식보유비율"}
-          </p>
-        </div>
+      <ToneCard
+        tone="violet"
+        sectionNum="3"
+        title={isRoster ? "발행주식 총수 + 주주 명단" : "지배주주등 주식보유비율"}
+        noDark
+      >
         {!isRoster && (
           <FieldCard label="지배주주등 주식보유비율" hint="증여의제이익 1억원 이상이면 과세 (§34의5⑤)" unit="%">
             <DecimalInput value={form.scRatioPct} onChange={(v) => set({ scRatioPct: v })} data-testid="sc-shareholder-ratio" />
@@ -673,14 +643,10 @@ export function SpecificCorpFields({ form, set }: Props) {
             />
           </>
         )}
-      </div>
+      </ToneCard>
 
       {/* ── 섹션 4: §45의5② 한도 — 증여재산공제 ── */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-[10px] font-bold text-emerald-800 select-none">4</span>
-          <p className="text-xs font-semibold text-emerald-700">§45의5② 한도 — 증여재산공제 (선택)</p>
-        </div>
+      <ToneCard tone="emerald" sectionNum="4" title="§45의5② 한도 — 증여재산공제 (선택)" noDark>
         <CurrencyInput
           label="증여재산공제"
           value={form.scGiftDeduction}
@@ -688,7 +654,7 @@ export function SpecificCorpFields({ form, set }: Props) {
           hint="§45의5② 한도 ㉮㉠ 계산 시 적용할 증여재산공제액 (미입력 시 0)"
           data-testid="sc-gift-deduction"
         />
-      </div>
+      </ToneCard>
     </div>
   );
 }

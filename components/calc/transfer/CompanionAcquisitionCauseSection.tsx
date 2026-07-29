@@ -13,10 +13,10 @@ import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
-import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
 import { FamilyBusinessInheritanceTransferSection } from "./FamilyBusinessInheritanceTransferSection";
+import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 const ACQUISITION_CAUSE_OPTIONS = [
   { value: "purchase", label: "매매" },
@@ -66,7 +66,7 @@ export function CompanionAcquisitionCauseSection({
                 : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
             )}
           >
-            <div className="text-[13px] font-semibold whitespace-nowrap">{opt.label}</div>
+            <div className="text-sm font-semibold whitespace-nowrap">{opt.label}</div>
           </button>
         ))}
       </div>
@@ -182,12 +182,23 @@ export function CompanionAcquisitionCauseSection({
           }}
           hasSeperateLandAcquisitionDate={asset.hasSeperateLandAcquisitionDate}
           onHasSeperateLandAcquisitionDateChange={(v) =>
-            onChange({ hasSeperateLandAcquisitionDate: v })
+            // 분리 진입 시 파트 모드를 자산 전체 레거시 플래그에서 파생해 기록한다.
+            // "actual" 하드코딩 금지 — 상단에서 이미 환산·감정을 고른 사용자의 선택이
+            // 조용히 실거래가로 바뀐다. 상단 라디오는 별개 취득에서 숨겨지므로 복구도 불가능하다.
+            // 다중 키를 한 번에 바꾸므로 **단일 배치 onChange**로 처리
+            // (feedback_multikey_patch_stale_spread_overwrite — 분리 호출 시 stale spread 덮어쓰기).
+            onChange({
+              hasSeperateLandAcquisitionDate: v,
+              ...(v
+                ? {
+                    landAcqMode: asset.landAcqMode || deriveLegacyPartAcqMode(asset),
+                    buildingAcqMode: asset.buildingAcqMode || deriveLegacyPartAcqMode(asset),
+                  }
+                : {}),
+            })
           }
           landAcquisitionDate={asset.landAcquisitionDate}
           onLandAcquisitionDateChange={(v) => onChange({ landAcquisitionDate: v })}
-          landSplitMode={asset.landSplitMode}
-          onLandSplitModeChange={(v) => onChange({ landSplitMode: v })}
           landTransferPrice={asset.landTransferPrice}
           onLandTransferPriceChange={(v) => onChange({ landTransferPrice: v })}
           buildingTransferPrice={asset.buildingTransferPrice}
@@ -215,37 +226,6 @@ export function CompanionAcquisitionCauseSection({
 
       {asset.acquisitionCause === "inheritance" && (
         <CompanionAcqInheritanceBlock
-          assetId={asset.assetId}
-          acquisitionDate={asset.acquisitionDate}
-          onAcquisitionDateChange={(v) => onChange({
-            acquisitionDate: v,
-            inheritanceStartDate: v,
-            ...(asset.inheritanceValuationMode === "auto" ? { inheritanceDate: v } : {}),
-          })}
-          decedentAcquisitionDate={asset.decedentAcquisitionDate}
-          onDecedentAcquisitionDateChange={(v) => onChange({ decedentAcquisitionDate: v })}
-          valuationMode={asset.inheritanceValuationMode}
-          onValuationModeChange={(mode) => onChange({ inheritanceValuationMode: mode })}
-          inheritanceAssetKind={asset.inheritanceAssetKind}
-          onInheritanceAssetKindChange={(v) => onChange({ inheritanceAssetKind: v })}
-          inheritanceDate={asset.inheritanceDate}
-          onInheritanceDateChange={(v) => onChange({ inheritanceDate: v })}
-          landAreaM2={asset.acquisitionArea}
-          publishedValueAtInheritance={asset.publishedValueAtInheritance}
-          onPublishedValueAtInheritanceChange={(v) =>
-            onChange({ publishedValueAtInheritance: v })
-          }
-          fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
-          onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
-          jibun={asset.addressJibun || undefined}
-          dong={asset.addressDong || undefined}
-          ho={asset.addressHo || undefined}
-        />
-      )}
-
-      {/* 상속 취득가액 의제 특례 */}
-      {asset.acquisitionCause === "inheritance" && (
-        <InheritedAcquisitionDeemedSection
           asset={asset}
           onChange={onChange}
           transferDate={transferDate}

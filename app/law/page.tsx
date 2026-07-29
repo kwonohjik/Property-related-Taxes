@@ -1,4 +1,4 @@
-import { HomeLink } from "@/components/ui/home-link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { LawResearchClient } from "./_components/LawResearchClient";
 
 export const metadata = {
@@ -12,7 +12,7 @@ export default function LawPage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10">
       <div className="mb-3">
-        <HomeLink />
+        <HomeButton />
       </div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">법령 리서치</h1>
@@ -28,7 +28,7 @@ export default function LawPage() {
       )}
 
       <div className="mt-8 pt-6 border-t border-border">
-        <HomeLink />
+        <HomeButton />
       </div>
     </main>
   );

@@ -108,15 +108,15 @@ export function CompositePartsSection({
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-bold text-violet-800">건물 전체 특성 (전 부분 공통)</p>
             <Button
-              variant="default"
+              variant="modalLauncher"
               size="sm"
               onClick={() => setBuildingModalOpen(true)}
-              className="shrink-0 bg-violet-600 hover:bg-violet-700 text-white"
+              className="shrink-0"
             >
               {buildingFeatureCount > 0 ? "다시 계산" : "건물 특성으로 계산"}
             </Button>
           </div>
-          <p className="text-[11px] text-violet-700/80">
+          <p className="text-caption text-violet-700/80">
             최고층수·연면적·지능형·주택유형·지붕 등 건물 단위 특성. 연면적은 부분 면적 합계 + 부속으로 자동 적용됩니다.
           </p>
           {buildingFeatureCount > 0 && (
@@ -135,7 +135,7 @@ export function CompositePartsSection({
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="text-[11px] text-rose-600 underline underline-offset-2 hover:no-underline"
+                className="text-caption text-rose-600 underline underline-offset-2 hover:no-underline"
               >
                 삭제
               </button>
@@ -188,13 +188,13 @@ export function CompositePartsSection({
                     <button
                       type="button"
                       onClick={() => setOpenPartIdx(i)}
-                      className="text-xs font-medium text-violet-700 underline underline-offset-2 hover:text-violet-900"
+                      className="text-xs font-medium text-green-700 underline underline-offset-2 hover:text-green-900"
                     >
                       다시 계산
                     </button>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={() => setOpenPartIdx(i)}>
+                  <Button variant="modalLauncher" size="sm" onClick={() => setOpenPartIdx(i)}>
                     부분 특성으로 계산 열기
                   </Button>
                 )
@@ -269,12 +269,12 @@ export function CompositePartsSection({
           })}
         </div>
         {hasShared && !forTransfer && (
-          <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-[11px] text-violet-700">
+          <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-caption text-violet-700">
             부속시설은 각 부분 주용도 면적비율로 안분됩니다. 안분받을 부분에 위 「공용 조정률」을 입력하세요.
           </p>
         )}
         {hasShared && forTransfer && (
-          <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-[11px] text-violet-700">
+          <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-caption text-violet-700">
             부속시설은 전 부분 주용도 면적비율로 안분됩니다(양도 조정률 미적용).
           </p>
         )}

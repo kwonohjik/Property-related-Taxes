@@ -1,5 +1,16 @@
 import type { ZoneType } from "../non-business-land/types";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer.types";
+import type { AmendmentDetail } from "./transfer-amendment.types";
+import type { ExprTotalValuationDetail } from "../transfer-tax-expropriation-valuation";
+import type { InheritedAcquisitionDetail } from "../transfer-tax-mixed-use-inheritance";
+
+/** §164⑨1호 겸용주택 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분 각 목별. */
+export interface MixedUseExpropriationDetail {
+  /** 주택분(라목 개별주택가격 총액) */
+  housing?: ExprTotalValuationDetail;
+  /** 상가분(가목 토지 기준시가) */
+  commercialLand?: ExprTotalValuationDetail;
+}
 
 /**
  * 겸용주택(1세대 1주택 + 상가) 양도소득세 분리계산 타입
@@ -44,6 +55,29 @@ export interface MixedUseAssetInput {
   buildingFootprintArea: number;
   /** 전체 토지 면적 */
   totalLandArea: number;
+  /**
+   * [신규] 주택 부수토지 면적 수동 지정 (㎡) — PHD OFF(일반 §97) 전용.
+   * ⚠️ 취득·양도 양시점 공통 필지 면적(용도변경 없으면 acqDerived=derived). 시점 무관.
+   * 미제공(undefined) 시 `totalLandArea × 주택연면적비율`로 자동 산출. 0은 적법(three-state).
+   * PHD ON 경로는 preHousingDisclosure.landArea가 담당하므로 배타 —
+   * API 변환에서 usePreHousingDisclosure=false일 때만 주입.
+   */
+  residentialLandAreaOverride?: number;
+
+  /**
+   * [신규] 상가 부수토지 면적 수동 지정 (㎡) — PHD OFF(일반 §97) 전용.
+   * ⚠️ 취득·양도 양시점 공통 필지 면적. `residentialLandAreaOverride`와 동일 축.
+   * 미제공(undefined) 시 `residualArea(totalLandArea, 주택부수토지)` 잔액. 0은 적법(three-state).
+   * 주택·상가 **둘 다 제공** 시 각 값을 그대로 사용(잔액 미적용) → 합계 불일치 가능 → validate가 차단.
+   */
+  commercialLandAreaOverride?: number;
+
+  /**
+   * [신규] 주택 정착면적 수동 지정 (㎡) — §168의12 배율초과 NBL 판정에 사용.
+   * 미제공(undefined) 시 `buildingFootprintArea × 주택연면적비율`. 0은 적법(three-state).
+   * 상가 정착면적은 항상 잔액이며 별도 필드가 없다(엔진 소비처 0건 — UI 표시 전용).
+   */
+  residentialFootprintOverride?: number;
 
   // ── 분리 취득일 ──
   /** 토지 취득일. 사례14 = 1992-01-01 */
@@ -66,8 +100,19 @@ export interface MixedUseAssetInput {
    * 최초 공시 당시 전체가 주택이었던 경우 등 사용자가 직접 지정 가능.
    */
   preHousingDisclosure?: Omit<PreHousingDisclosureInput, "landArea"> & { landArea?: number };
-  /** 거주 연수 — 2년 이상이면 표2(보유 40%+거주 40%), 미만이면 표1(최대 30%) */
+  /**
+   * 실거주 연수. 표2 활성 시 **거주분 공제율**(거주연수×4%, 최대 40%)에 사용.
+   * 표2 게이트(대상 판정)는 `table2ResidencePeriodYears`(통산) 우선 — 미제공 시 이 값으로 fallback.
+   */
   residencePeriodYears: number;
+
+  /**
+   * §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (상속개시 후 실거주 + 상속개시 전 동일세대 통산 거주).
+   * 표2 게이트(`useTable2`)만 이 값을 사용하고, 표2 거주분 공제율은 `residencePeriodYears`(실거주)를 별도 사용
+   * (사전법령해석재산 2021-202: 대상 판정=통산, 공제율=상속개시일 기산). 두 기간은 disjoint.
+   * 미제공 시 `residencePeriodYears`로 fallback(비상속·별도세대 = 실거주) → 기존 회귀 0.
+   */
+  table2ResidencePeriodYears?: number;
 
   /** 수도권 여부 — 배율 판정용 (미제공 시 true로 보수 처리) */
   isMetropolitanArea?: boolean;
@@ -83,6 +128,20 @@ export interface MixedUseAssetInput {
    * 미주입 시 true (기존 겸용주택 사례14 등 backward compat).
    */
   isOneHouseExempt?: boolean;
+
+  // ── §164⑨1호 공익수용 특례 (계획 P7/D8, 일반 §97 전용) ──
+  // 목별 독립 적용: 주택분(라목 개별주택가격 총액) + 상가분(가목 토지 기준시가). 상가 건물분·모든
+  // 안분은 원값(§80⑧·§166⑥·D16-GB). 차감은 각 부분 환산 분모에만. PHD·4부분은 미적용(후속).
+  /** 양도원인 — "public_expropriation" 시 §164⑨1호 게이트 */
+  transferCause?: "general" | "public_expropriation";
+  /** 주택분 보상액 총액 (원) — min(개별주택가격, 보상액, 보상기초) 후보 */
+  housingCompensationTotal?: number;
+  /** 주택분 보상액 산정 기초 기준시가 총액 (원) */
+  housingCompensationBasisTotal?: number;
+  /** 상가분 토지 보상액 총액 (원) — min(상가 토지 기준시가, 보상액, 보상기초) 후보 */
+  commercialLandCompensationTotal?: number;
+  /** 상가분 토지 보상액 산정 기초 개별공시지가 총액 (원) */
+  commercialLandCompensationBasisTotal?: number;
 
   /**
    * 보유 중 일부 용도변경 옵션 — 양도시 겸용이지만 취득시 단일 용도였던 경우.
@@ -105,6 +164,95 @@ export interface MixedUseAssetInput {
      */
     usageChangeDate?: Date;
   };
+
+  // ── 상속 취득가액 엔진 정합 (소령 §163⑨) ──
+
+  /**
+   * 상속 취득 게이트 — true면 취득가액을 환산이 아닌 상속개시일 평가액(직접)으로 산정.
+   * 소령 §163⑨. API 변환에서 `asset.acquisitionCause === "inheritance"`로 단일 소스 파생
+   * (display fallback·API fallback·validate 3중 미러 — mirror-pattern 스킬).
+   * undefined/false → 기존 환산 경로 완전 불변(A-regression).
+   */
+  acquisitionByInheritance?: boolean;
+
+  /**
+   * 주택분 상속개시일 평가액(원) — 상속세 신고 시 시가·감정가로 신고한 경우 그 금액.
+   * 미제공 시 `acquisitionStandardPrice.housingPrice`(보충적평가, 상증법 §61)를
+   * **그대로**(fallback, ??) 사용 — §163⑨ 본문은 단일 값이지 두 후보의 max가 아님.
+   * `usePreHousingDisclosure` 활성 시엔 §164⑦ 환산값과 **max** 비교(§163⑨2호).
+   * acquisitionByInheritance=false면 무시.
+   */
+  housingInheritedValue?: number;
+
+  /**
+   * 상가분(토지+건물 합계) 상속개시일 평가액(원) — 신고가액.
+   * 미제공 시 `acquisitionStandardPrice.landPricePerSqm × 상가부수토지면적 + commercialBuildingPrice`
+   * (보충적평가 합계)를 그대로 사용.
+   * acquisitionByInheritance=false면 무시.
+   */
+  commercialInheritedValue?: number;
+
+  /**
+   * 주택분 실제 필요경비(자본적지출+양도비, 원) — 개산공제 대체.
+   * 상속(실지거래가액 의제) 모드는 개산공제(§163⑥) 적용 대상이 아니므로, 실제 지출이 있으면
+   * 이 필드로 입력. **취득시 토지/건물 기준시가 비율로 안분**(splitDeemedExpense — 개산공제 슬롯과
+   * 동일 기준, 취득시 기준시가 합 0이면 전액 건물분). 미제공 시 0(공제 없음 → 순수 실가만).
+   * acquisitionByInheritance=false면 무시.
+   */
+  housingInheritedExpense?: number;
+
+  /** 상가분 실제 필요경비(원) — 위와 동일 원리(상가부분 전용, 취득시 토지/건물 기준시가 비율 안분). */
+  commercialInheritedExpense?: number;
+
+  /**
+   * 증여 취득가액 직접 산정 게이트(소령 §163⑨) — 순수 증여(§34~§42의3 증여의제 제외).
+   * true면 상속과 **동일하게** reported 필드(housingInheritedValue 등)를 소비 —
+   * 증여일 상증법 §60~66 평가액을 취득당시 실지거래가액으로 직접 사용(환산·개산공제 배제).
+   * API에서 `acquisitionCause === "gift" && 취득일 ≥ 1985-01-01`로 파생. acquisitionByInheritance와 상호배타.
+   * undefined/false → 기존 환산 경로 완전 불변(A-regression).
+   */
+  acquisitionByGift?: boolean;
+
+  /**
+   * 겸용 매매 취득 실거래가 직접 사용 게이트(법 §97①1호가목·§100²).
+   * true면 `acquisitionActualTotalPrice`(총 취득 실거래가)를 법 §100② 취득시 기준시가 비율로
+   * 주택분/상가분·토지/건물에 안분해 취득가액으로 직접 사용(환산·§163⑥ 개산공제 배제).
+   * API에서 `acquisitionCause === "purchase" && !환산 && !감정 && !매매사례`로 파생.
+   * acquisitionByInheritance·acquisitionByGift와 **상호배타**(취득원인 단일).
+   * undefined/false → 기존 환산 경로 완전 불변(A-regression).
+   * ⚠️ 미공시(PHD)·보유중용도변경·공익수용 조합은 미지원(엔진 throw).
+   */
+  useActualAcquisition?: boolean;
+  /**
+   * 겸용 총 취득 실거래가(원) — useActualAcquisition=true일 때만 소비.
+   * 법 §100② 취득시 기준시가 비율로 주택분/상가분 안분 후 각 토지/건물 안분.
+   */
+  acquisitionActualTotalPrice?: number;
+
+  /**
+   * 겸용 감정가액·매매사례가액 취득가액 게이트(법 §97①1호나목·§176의2②③ 추계).
+   * true면 acquisitionActualTotalPrice(감정가액 또는 매매사례가액 총액)를 법 §100² 비율로 안분해
+   * 취득가액으로 사용하되, 개산공제(§163⑥, 취득시 기준시가×3%)는 적용(실거래가와 달리 추계라 개산공제 유지).
+   * API에서 acquisitionCause==="purchase" && (isAppraisal || isSalesCase)로 파생.
+   * useActualAcquisition·byInheritance·byGift와 상호배타. PHD·용도변경·공익수용 조합 미지원(throw).
+   */
+  useAppraisalSalesAcquisition?: boolean;
+  /**
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
+   * 그대로 내려준다(서브엔진 재판정 금지).
+   *
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
+   */
+  ownershipRatio?: number;
+  /**
+   * 미등기양도자산 여부(소득세법 §104③) — §163⑥ 개산공제율 3/100 → **3/1000** 전환.
+   * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다(서브엔진 재판정 금지).
+   * 율 산출은 `estimatedDeductionRate()` 단일 경유.
+   */
+  isUnregistered?: boolean;
 }
 
 // ──────────────────────────────────────────
@@ -181,12 +329,29 @@ export interface MixedUseHousingPart {
   longTermDeductionRate: number;
   /** 장기보유공제액 */
   longTermDeductionAmount: number;
+  /**
+   * echo — 장특공제 보유/거주 기간분 분리 표시용(산식·세액 불변).
+   * 표2: 거주분 = 각 부분 거주율 직접 산정, 보유분 = 총액 − 거주분(잔액 흡수·합 불변식).
+   * 표1: 거주분 0, 보유분 = 총액. 대표 연수·율은 건물 기준(longTermDeductionRate와 동일 관례).
+   */
+  holdingDeductionAmount?: number;
+  residenceDeductionAmount?: number;
+  holdingYears?: number;
+  residenceYears?: number;
+  holdingDeductionRate?: number;
+  residenceDeductionRate?: number;
   /** 양도소득금액 */
   incomeAmount: number;
   /** 주택 토지분 양도차익 중 비사업용으로 이전된 비율 */
   nonBusinessTransferRatio: number;
   /** 비사업용으로 이전된 양도차익 */
   nonBusinessTransferredGain: number;
+
+  /**
+   * 상속 취득가액 산정 상세 — `calculationRoute.acquisitionConversionRoute`가
+   * "inheritance_direct" | "inheritance_phd_max"일 때만 존재. 비상속 시 undefined.
+   */
+  inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
 }
 
 /** 상가부분 계산 결과 */
@@ -219,6 +384,8 @@ export interface MixedUseCommercialPart {
   longTermDeductionRate: number;
   /** 장기보유공제액 */
   longTermDeductionAmount: number;
+  /** echo — 보유연수(표1 대표값·거주 개념 없음). 장특공제 분리 표시용(세액 불변). */
+  holdingYears?: number;
   /** 양도소득금액 */
   incomeAmount: number;
   /**
@@ -237,6 +404,12 @@ export interface MixedUseCommercialPart {
   acqStandardLand: number;
   /** 취득시 상가건물 기준시가 — 산식 표시용 */
   acqStandardBuilding: number;
+
+  /**
+   * 상속 취득가액 산정 상세 — `calculationRoute.acquisitionConversionRoute`가
+   * "inheritance_direct" | "inheritance_phd_max"일 때만 존재. 비상속 시 undefined.
+   */
+  inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
 }
 
 /** 비사업용토지 부분 계산 결과 (배율초과 면적이 있을 때만 생성) */
@@ -296,8 +469,16 @@ export interface MixedUseStep {
 export interface MixedUseCalculationRoute {
   /** 취득시 주택 기준시가 산정 방식 */
   housingAcqPriceSource: "direct_input" | "phd_auto" | "missing";
-  /** 환산취득가액 산정 경로 */
-  acquisitionConversionRoute: "section97_direct" | "phd_corrected";
+  /** 환산취득가액 산정 경로 — 상속 2개 값 추가(소령 §163⑨) */
+  acquisitionConversionRoute:
+    | "section97_direct"        // 비상속 §97 직접환산
+    | "phd_corrected"           // 비상속 PHD §164⑤
+    | "inheritance_direct"      // 상속·공시(§163⑨ 본문)
+    | "inheritance_phd_max"     // 상속·미공시(§163⑨2호 max)
+    | "gift_direct"             // 증여·공시(§163⑨ 본문, 상속과 동일)
+    | "gift_phd_max"            // 증여·미공시(§163⑨2호/§176의2②2호 max)
+    | "section97_actual"        // 매매 취득 실거래가 직접 안분(법 §100²·§97①1호가목)
+    | "section176_2_appraisal_sales"; // 감정가액·매매사례가액 추계 안분(§176의2②③·§100²·개산공제 유지)
   /** 주택 장기보유공제 표 분기 사유 */
   housingDeductionTableReason: string;
   /** 부수토지 배율 적용 근거 (지역 + 배율값) */
@@ -385,4 +566,19 @@ export interface MixedUseGainBreakdown {
     period2CommercialLongTermDeductionRate: number;
     period2CommercialLongTermDeductionAmount: number;
   };
+
+  /**
+   * 수정신고·경정청구 상세 (국세기본법 §45·§45의2).
+   *
+   * 기준값 = `total.transferTax`(본세 — 지방소득세 제외). 단건 finalize의 determinedTax와 동일 축.
+   * `amendment` 미전달 시 undefined — 캐시된 구 결과(IndexedDB)도 안전 통과.
+   * `splitMode === "pre-2022-rejected"`이면 amendment 전달 여부와 무관하게 항상 undefined
+   * (계산 불가 상태에 부착하면 refundTax = 당초 전액 오표시).
+   */
+  amendmentDetail?: AmendmentDetail;
+  /** §164⑨1호 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분. 적용 시만. */
+  expropriationDetail?: MixedUseExpropriationDetail;
+
+  /** 상속 취득 게이트 echo (asset.acquisitionByInheritance 그대로) — UI 재판정 방지용 단일 소스. */
+  acquisitionByInheritance?: boolean;
 }

@@ -180,3 +180,126 @@ describe("M-9: §28 증여세액공제 cutoff 필터 — 일(日) 단위 정합 
     expect(result.giftTaxCredit).toBe(1_000_000);
   });
 });
+
+// ============================================================
+// §28① 단서 전단 — 증여세 부과제척기간 만료(국기법 §26의2④⑤) 배제
+//   giftTaxTimeBarred=true인 사전증여는 공제 합계·§28② 한도 분자 양쪽에서 제외.
+//   §13 가산은 유지(별도 상속 제척기간). KoreanLaw §28①·국기법 §26의2④⑤ 검증 2026-07-18.
+// ============================================================
+describe("§28① 단서 전단 — 제척기간 만료 증여세액공제 배제 (국기법 §26의2④⑤)", () => {
+  const DEATH_DATE = "2026-05-21";
+  const COMPUTED_TAX = 100_000_000;
+  const TAXABLE_ESTATE = 800_000_000; // 8억 (>5억 → 후단 단서 미적용)
+  const TAX_BASE = 700_000_000;
+  const base = (over: object) => ({
+    creditInput: { priorGifts: [], isFiledOnTime: false, ...over },
+    computedTax: COMPUTED_TAX,
+    generationSkipSurcharge: 0,
+    taxableEstateValue: TAXABLE_ESTATE,
+    taxBase: TAX_BASE,
+    deathDate: DEATH_DATE,
+  });
+
+  it("[TB-2] §13 가산 상속인 증여 + 제척만료 → 증여세액공제 0 (mutation: flag 제거 시 500만)", () => {
+    const r = calcInheritanceTaxCredits(
+      base({
+        priorGifts: [
+          {
+            giftDate: "2020-01-01", // 10년 이내 (§13 가산)
+            isHeir: true,
+            giftAmount: 200_000_000,
+            giftTaxBase: 200_000_000,
+            giftTaxPaid: 5_000_000,
+            giftTaxTimeBarred: true, // 국기법 §26의2④⑤ 만료
+          },
+        ],
+      }),
+    );
+    expect(r.giftTaxCredit).toBe(0);
+  });
+
+  it("[TB-1] 무회귀 — flag 미설정이면 기존 공제(500만) 그대로", () => {
+    const r = calcInheritanceTaxCredits(
+      base({
+        priorGifts: [
+          {
+            giftDate: "2020-01-01",
+            isHeir: true,
+            giftAmount: 200_000_000,
+            giftTaxBase: 200_000_000,
+            giftTaxPaid: 5_000_000,
+          },
+        ],
+      }),
+    );
+    // ratioLimit = floor(200M × 100M / 700M) = 28,571,428 > 5M → credit = 5M
+    expect(r.giftTaxCredit).toBe(5_000_000);
+  });
+
+  it("[TB-3] 혼합 — 제척만료분만 제외, 나머지는 정상 공제 (합계·한도 분자 모두)", () => {
+    const r = calcInheritanceTaxCredits(
+      base({
+        priorGifts: [
+          {
+            giftDate: "2020-01-01",
+            isHeir: true,
+            giftAmount: 200_000_000,
+            giftTaxBase: 200_000_000,
+            giftTaxPaid: 5_000_000,
+            giftTaxTimeBarred: true, // 제외
+          },
+          {
+            giftDate: "2021-01-01",
+            isHeir: true,
+            giftAmount: 100_000_000,
+            giftTaxBase: 100_000_000,
+            giftTaxPaid: 2_000_000, // 정상
+          },
+        ],
+      }),
+    );
+    // 제척만료분 제외 → 합계 2M·분자 100M. ratioLimit=floor(100M×100M/700M)=14,285,714
+    // credit = min(2M, 14.28M) = 2M (미제외 시 합계 7M·분자 300M → 7M)
+    expect(r.giftTaxCredit).toBe(2_000_000);
+  });
+
+  it("[TB-4] 제척만료분이 유일 → 공제 0", () => {
+    const r = calcInheritanceTaxCredits(
+      base({
+        priorGifts: [
+          {
+            giftDate: "2020-01-01",
+            isHeir: true,
+            giftAmount: 200_000_000,
+            giftTaxPaid: 5_000_000,
+            giftTaxTimeBarred: true,
+          },
+        ],
+      }),
+    );
+    expect(r.giftTaxCredit).toBe(0);
+  });
+
+  it("[TB-5] 과세가액 ≤5억 + 제척만료 → 후단(5억) 단서 선행 배제 (공제 0)", () => {
+    const r = calcInheritanceTaxCredits({
+      creditInput: {
+        priorGifts: [
+          {
+            giftDate: "2020-01-01",
+            isHeir: true,
+            giftAmount: 200_000_000,
+            giftTaxPaid: 5_000_000,
+            giftTaxTimeBarred: true,
+          },
+        ],
+        isFiledOnTime: false,
+      },
+      computedTax: COMPUTED_TAX,
+      generationSkipSurcharge: 0,
+      taxableEstateValue: 400_000_000, // 4억 ≤ 5억 → 후단 단서
+      taxBase: 300_000_000,
+      deathDate: DEATH_DATE,
+    });
+    expect(r.giftTaxCredit).toBe(0);
+  });
+});

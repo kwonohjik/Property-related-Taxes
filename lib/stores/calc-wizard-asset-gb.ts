@@ -143,26 +143,58 @@ export interface GeneralBuildingFormSlice {
   gbFirstDisclosureLandStdPrice: string;
   /** 최초공시 당시 건물 기준시가 총액 (원). */
   gbFirstDisclosureBuildingStdPrice: string;
+  /**
+   * §163⑨ 상속개시일 건물 신고가액 (원, 문자열). gbBuildingAcquisitionCause === "inheritance" 시 필수.
+   * 상속세 신고서·결정통지서상 건물 평가액(상증법 §60~66). 취득당시 실지거래가액 의제 —
+   * 환산·개산공제(§163⑥) 미적용. Phase 1은 공시된 정상 케이스만(미공시 §163⑨2호 max는 Phase 2).
+   */
+  gbBuildingInheritedValue: string;
 
   // ── 겸용주택 분리계산 (sodt §160①단서, 2022.1.1 이후) ──
   /** 겸용주택 여부 토글 */
   isMixedUseHouse: boolean;
-  /** 주택 연면적 (㎡) */
+  /** 주택 전용면적 (㎡) — 공통면적 안분 전 (연면적 파생 원천) */
+  residentialExclusiveArea: string;
+  /** 상가 전용면적 (㎡) — 공통면적 안분 전 */
+  commercialExclusiveArea: string;
+  /** 공통(공용)면적 (㎡) — 전용면적 비율로 안분 */
+  commonArea: string;
+  /** 주택 연면적 (㎡) — 전용+공통안분 파생 결과 (UI read-only) */
   residentialFloorArea: string;
-  /** 비주택(상가·사무·근린·주차장) 연면적 합계 (㎡) */
+  /** 비주택(상가·사무·근린·주차장) 연면적 합계 (㎡) — 파생 결과 */
   nonResidentialFloorArea: string;
   /** 건물 정착면적 = 1층 면적 (㎡) */
   buildingFootprintArea: string;
   /** 전체 토지 면적 (㎡) — 겸용주택용 */
   mixedUseTotalLandArea: string;
-  /** 거주기간 (년) — 장기보유공제 표2 판정 */
-  mixedUseResidencePeriodYears: string;
+  /**
+   * 주택 부수토지 면적 수동 지정 (㎡) — PHD OFF 전용, 취득·양도 양시점 공통.
+   * 빈값=자동 안분(전체 × 주택연면적비율). UI는 상가칸 편집→역산(전체−상가) 저장.
+   */
+  mixedResidentialLandAreaOverride: string;
+  /**
+   * 상가 부수토지 면적 수동 지정 (㎡) — PHD OFF 전용, 취득·양도 양시점 공통.
+   * 빈값=자동(잔액). 주택·상가 둘 다 지정 시 잔액 미적용 → 합계 불일치는 validate가 차단.
+   */
+  mixedCommercialLandAreaOverride: string;
+  /**
+   * 주택 정착면적 수동 지정 (㎡) — §168의12 배율초과 NBL 판정에 사용.
+   * 빈값=자동(정착면적 × 주택연면적비율). UI는 상가 정착칸 편집→역산(전체−상가) 저장.
+   */
+  mixedResidentialFootprintOverride: string;
   /** 양도시 개별주택공시가격 (원) */
   mixedTransferHousingPrice: string;
   /** 양도시 상가건물 기준시가 (원, 토지 제외) */
   mixedTransferCommercialBuildingPrice: string;
   /** 양도시 개별공시지가 (원/㎡) */
   mixedTransferLandPricePerSqm: string;
+  /**
+   * §164⑨1호 공익수용 — 상가분 토지 보상액 총액 (원) — 겸용 상가분 min 후보 (P7/D8).
+   * 주택분 보상은 P5 필드(housingCompensationTotal·housingCompensationBasisTotal) 재사용.
+   */
+  mixedCommercialLandCompensationTotal: string;
+  /** §164⑨1호 상가분 토지 보상액 산정 기초 개별공시지가 총액 (원) */
+  mixedCommercialLandCompensationBasisTotal: string;
   /** 취득시 개별주택공시가격 (원, PHD 토글 ON 시 비활성) */
   mixedAcqHousingPrice: string;
   /** 취득시 상가건물 기준시가 (원, 신축 시점) */
@@ -171,6 +203,42 @@ export interface GeneralBuildingFormSlice {
   mixedAcqLandPricePerSqm: string;
   /** 수도권 여부 */
   mixedIsMetropolitanArea: boolean;
+
+  // ── 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (엔진 정합, acquisitionByInheritance 파생) ──
+  /**
+   * 상속개시일 주택분 신고가액 override (원, 문자열). 선택 입력.
+   * 시가·감정·매매사례로 상속세 신고한 경우에만 입력. 미입력 시 mixedAcqHousingPrice(보충적평가)로 fallback.
+   * acquisitionCause === "inheritance" 일 때만 UI 노출.
+   */
+  mixedHousingInheritedValueOverride: string;
+  /**
+   * 상속개시일 상가분 신고가액 override (원, 문자열). 선택 입력.
+   * 미입력 시 (mixedAcqCommercialBuildingPrice + mixedAcqLandPricePerSqm×상가부수토지면적)로 fallback.
+   */
+  mixedCommercialInheritedValueOverride: string;
+  /**
+   * 상속(실가) 모드 주택분 실제 필요경비 — 자본적지출·양도비 (원, 문자열). 선택 입력.
+   * 개산공제(§163⑥, 취득시 기준시가×3%) 대체 — 상속은 실지거래가액 의제라 개산공제 미적용.
+   */
+  mixedHousingInheritedExpense: string;
+  /** 상속(실가) 모드 상가분 실제 필요경비 (원, 문자열). 선택 입력. 위와 동일 축. */
+  mixedCommercialInheritedExpense: string;
+
+  // ── 증여 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (D1=옵션B, 상속 필드와 병렬·acquisitionCause==="gift"일 때만 UI 노출) ──
+  /** 증여일 주택분 신고가액 override (원, 문자열). 미입력 시 mixedAcqHousingPrice(보충적평가)로 fallback. */
+  mixedHousingGiftValueOverride: string;
+  /** 증여일 상가분 신고가액 override (원, 문자열). 미입력 시 상가 보충적평가 합계로 fallback. */
+  mixedCommercialGiftValueOverride: string;
+  /** 증여(실가) 모드 주택분 실제 필요경비 (원, 문자열). 개산공제 대체 — 증여도 실지거래가액 의제라 개산공제 미적용. */
+  mixedHousingGiftExpense: string;
+  /** 증여(실가) 모드 상가분 실제 필요경비 (원, 문자열). */
+  mixedCommercialGiftExpense: string;
+
+  // ── 매매 취득 실거래가 겸용주택 — 법 §100² 안분 (R1 후속·상속/증여 실비 필드와 병렬·purchase 실가 모드만 UI 노출) ──
+  /** 매매(실가) 모드 주택분 실제 필요경비 — 자본적지출·양도비 (원, 문자열). 선택 입력(개산공제 대체). */
+  mixedHousingActualExpense: string;
+  /** 매매(실가) 모드 상가분 실제 필요경비 (원, 문자열). 선택 입력. */
+  mixedCommercialActualExpense: string;
 
   // ── 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) ──
   /** 보유 중 일부 용도변경 토글 — 양도시 겸용이지만 취득시 단일 용도였던 경우 */

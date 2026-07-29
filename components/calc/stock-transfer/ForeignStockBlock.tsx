@@ -20,6 +20,8 @@
  */
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import type { Tone } from "@/components/calc/shared/tones";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -106,19 +108,16 @@ function SectionBox({
 }: {
   n: number;
   label: string;
-  tone: string;
+  tone: Tone;
   children: React.ReactNode;
 }) {
+  // 톤은 <ToneCard>(tones.ts 정적 소스) — 기존 동적 `${tone}` 제거(JIT purge 위험).
+  // p-4·space-y-3는 기존 레이아웃 보존. noDark: 이 폼은 원래 dark 미대응(light 전용)이라
+  // dark 변형을 새로 입히지 않아 양 모드 모두 회귀 0.
   return (
-    <div className={`rounded-lg border border-${tone}-200 bg-${tone}-50/40 p-4 space-y-3`}>
-      <div className="flex items-center gap-2">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full bg-${tone}-200 text-[10px] font-bold text-${tone}-800 select-none`}>
-          {n}
-        </span>
-        <p className={`text-xs font-semibold text-${tone}-700`}>{label}</p>
-      </div>
+    <ToneCard tone={tone} sectionNum={n} title={label} className="p-4" bodyClassName="space-y-3" noDark>
       {children}
-    </div>
+    </ToneCard>
   );
 }
 

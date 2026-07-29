@@ -105,6 +105,30 @@ export interface CarryoverScenarioADetail {
   donorCapexGuardApplied: boolean;
   /** 실제 합산 적용된 capex — 수증자 capitalExpenditure + donorCapexAddedToExpense */
   effectiveCapex: number;
+  /**
+   * 취득가액 산정 방식 echo (표시 전용) — true면 증여자 취득 당시 환산취득가(§163⑨·§164⑦),
+   * false면 증여자 취득 당시 실가 승계. 결과뷰 근거 문구 분기용.
+   */
+  acquisitionWasEstimated?: boolean;
+  /**
+   * 본문 필요경비가 **개산공제(§163⑥)로 확정**됐는가 — 표시 라벨 분기 전용.
+   *
+   * 종전에는 UI가 `필요경비 === floor(기준시가 × 3%)` **금액 자기일치**로 이를 역추론했다.
+   * 그 방식은 공유지분 축소·§97② swap 등으로 등식이 깨지면 개산공제를 "양도비 등"으로
+   * **성격 자체를 오표시**한다. 엔진이 아는 사실이므로 엔진이 알려준다
+   * (memory `feedback_ui_engine_dual_truth_avoidance`).
+   */
+  necessaryExpenseIsLumpDeduction?: boolean;
+  /**
+   * 개산공제 base로 **실제 사용된 값**(= 지분 기준시가 = floor(기준시가 × 지분율)).
+   * 표시 산식 「… × 3%」가 표시된 값을 만들어내도록 하는 echo
+   * (memory `feedback_engine_result_display_drift`). 단독소유면 기준시가와 같다.
+   */
+  lumpDeductionBase?: number;
+  /** 환산 모드(기준시가 직접 입력)일 때 취득시 기준시가 echo — 환산 산식 재현용 */
+  estimatedStdPriceAtAcquisition?: number;
+  /** 환산 모드(기준시가 직접 입력)일 때 양도시 기준시가 echo — 환산 산식 재현용 */
+  estimatedStdPriceAtTransfer?: number;
   /** 양도차익 (증여세 상당액 차감 후 최종) */
   transferGain: number;
   /**

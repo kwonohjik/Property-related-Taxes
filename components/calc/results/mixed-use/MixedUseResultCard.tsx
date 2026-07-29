@@ -11,26 +11,74 @@ import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixe
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
+import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
+import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { expandToggleClass } from "@/components/calc/results/shared/ExpandToggleButton";
+import {
+  BuildingStdPriceReportSection,
+  hasBuildingStdReport,
+} from "@/components/calc/results/BuildingStdPriceReportSection";
 import {
   MIXED_USE_PRINT_SECTIONS,
   type MixedUsePrintSectionId,
 } from "@/lib/print/mixed-use-print-sections";
+import {
+  fmt,
+  fmtPlain,
+  fmtPct,
+  fmtSqm,
+  ResultSection,
+  Row,
+  DivRow,
+  Frac,
+  FLine,
+  PartialUsageChangeCard,
+  UsagePeriodSplitCard,
+} from "@/components/calc/results/mixed-use/MixedUseResultCardParts";
 
 /** MixedUseGainBreakdown → TransferTaxResult 어댑터 (FilingFormTable 호환) */
-function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
+export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
   const t = b.total;
   const localTax = t.localTax;
+  // 취득 모드 판별 — 본문 계산 섹션(isDeemedAcq)과 동일 기준. 실가(§100²·§97①1호가목)·상속/증여
+  // 의제(§163⑨)는 실제 취득가액을 표시(개산공제 미표시), 환산·감정/매매사례(§176의2 추계)는 추계 분기.
+  const acqRoute = b.calculationRoute.acquisitionConversionRoute;
+  const isDeemedOrActual =
+    acqRoute === "section97_actual" ||
+    acqRoute === "inheritance_direct" ||
+    acqRoute === "inheritance_phd_max" ||
+    acqRoute === "gift_direct" ||
+    acqRoute === "gift_phd_max";
+  // 취득가액 = 주택분 + 상가분 (해당 모드 값이 estimatedAcquisitionPrice에 담김).
+  const acqPrice = b.housingPart.estimatedAcquisitionPrice + b.commercialPart.estimatedAcquisitionPrice;
+  // 필요경비 = 개산공제 합계(환산·감정/매매사례) 또는 실제 필요경비(의제) — appraisalDed 필드가 담음. 실가는 0.
+  // 상세명세서 실가 분기(취득가액 = 양도가액 − 양도차익 − expenses)가 acqPrice를 정확히 역산하도록 전달.
+  const acqDeduction =
+    b.housingPart.landAppraisalDed +
+    b.housingPart.buildingAppraisalDed +
+    b.commercialPart.landAppraisalDed +
+    b.commercialPart.buildingAppraisalDed;
   return {
     isExempt: false,
     transferGain: b.housingPart.transferGain + b.commercialPart.transferGain,
     taxableGain: b.housingPart.proratedTaxableGain + b.commercialPart.transferGain,
-    usedEstimatedAcquisition: true,
+    usedEstimatedAcquisition: !isDeemedOrActual,
+    // 환산·추계 분기: 취득가액(추계)·개산공제를 실제 값으로 표시. 실가/의제는 undefined(실가 역산 분기 사용).
+    estimatedBase: isDeemedOrActual ? undefined : acqPrice,
+    estimatedDeduction: isDeemedOrActual ? undefined : acqDeduction,
+    expenses: acqDeduction,
     longTermHoldingDeduction: b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount,
-    longTermHoldingRate: 0,
+    // 겸용은 주택분(표2 가능)·상가분(표1)이 서로 다른 공제율이라 단일 rate가 없음 —
+    // 상단 요약 산식용 실효 blended rate = 장특공제 합계 ÷ 과세대상 양도차익 합계.
+    longTermHoldingRate:
+      b.housingPart.proratedTaxableGain + b.commercialPart.transferGain > 0
+        ? (b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount) /
+          (b.housingPart.proratedTaxableGain + b.commercialPart.transferGain)
+        : 0,
     lthdStartDate: new Date(0), // mixed-use 합산 mock: 표시용
     basicDeduction: t.basicDeduction,
     taxBase: t.taxBase,
@@ -44,16 +92,13 @@ function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
     penaltyTax: 0,
     localIncomeTax: localTax,
     totalTax: t.totalPayable,
-    steps: b.steps as never[],
+    // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과
+    // 형태가 달라 재사용 불가. 명세서 카드는 mixedUseDetail·result 필드로 값을 뽑고
+    // formula는 fallback을 쓰므로 빈 배열로 전달 (findStepByLabel 매칭 자연 실패).
+    steps: [],
     mixedUseDetail: b,
   };
 }
-
-// 결과 데이터에 신규 필드가 누락된 캐시 케이스를 안전하게 처리하기 위해 nullish 가드.
-const fmt = (n: number | undefined | null) => (n ?? 0).toLocaleString();
-const fmtPlain = (n: number | undefined | null) => (n ?? 0).toLocaleString();
-const fmtPct = (r: number | undefined | null) => `${((r ?? 0) * 100).toFixed(2)}%`;
-const fmtSqm = (n: number | undefined | null) => `${(n ?? 0).toFixed(2)} ㎡`;
 
 /** 양도소득세 기본세율 8구간 (소득세법 §104) — 캐시된 결과 fallback용 */
 function deriveBasicRateBracket(taxBase: number): { rate: number; deduction: number } {
@@ -67,6 +112,9 @@ function deriveBasicRateBracket(taxBase: number): { rate: number; deduction: num
   return { rate: 0.45, deduction: 65_940_000 };
 }
 
+/** 계산 섹션 id — ④ 비사업용토지는 조건부 렌더 */
+const MIXED_SECTION_IDS = ["apportion", "housing", "commercial", "nbl", "total"] as const;
+
 interface Props {
   breakdown: MixedUseGainBreakdown;
   formData?: TransferFormData;
@@ -77,11 +125,17 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   // ⚠️ pdf 채널 0(ResultPdfDocument에 mixed-use 섹션 부재) → onPrintPdf 미전달.
   //    "선택 항목 인쇄"(window.print → 브라우저 PDF 저장)만 노출. 설계 §2.8.
   const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(() => new Set());
-  // 현재 결과뷰에 실제 렌더되는 leaf id (3종 항상 — 본문·신고서·명세서 항상 렌더)
-  const availablePrintIds = useMemo<Set<MixedUsePrintSectionId>>(
-    () => new Set<MixedUsePrintSectionId>(["calculation", "filing-form", "detailed-statement"]),
-    [],
+  // 계산 섹션(①~④·합산)의 펼침 상태 — 상단 전체 토글로 일괄 제어. 기본 전체 펼침.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(MIXED_SECTION_IDS.map((id) => [id, true])),
   );
+  // 현재 결과뷰에 실제 렌더되는 leaf id (본문·신고서·명세서 항상 + 건물 기준시가 계산서는
+  // 소속 스냅샷이 있을 때만 — 단건 TransferTaxResultView와 동일 판정).
+  const availablePrintIds = useMemo<Set<MixedUsePrintSectionId>>(() => {
+    const ids = new Set<MixedUsePrintSectionId>(["calculation", "filing-form", "detailed-statement"]);
+    if (hasBuildingStdReport({ assets: formData?.assets })) ids.add("building-std-report");
+    return ids;
+  }, [formData?.assets]);
 
   if (breakdown.splitMode === "pre-2022-rejected") {
     return (
@@ -96,6 +150,32 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
 
   const { apportionment: a, housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t } = breakdown;
   const totalTransfer = a.housingTransferPrice + a.commercialTransferPrice;
+  // 상속 취득가액 직접 산정(소령 §163⑨) — 단일 소스: calculationRoute.acquisitionConversionRoute만 판독.
+  // (part-level acqPriceSource는 dual-truth 회피로 미채택 — plan §4.5 정본 결정)
+  const acqRoute = breakdown.calculationRoute.acquisitionConversionRoute;
+  const isInheritedAcq = acqRoute === "inheritance_direct" || acqRoute === "inheritance_phd_max";
+  const isGiftAcq = acqRoute === "gift_direct" || acqRoute === "gift_phd_max";
+  // 매매 취득 실거래가 직접 안분(법 §100²·§97①1호가목) — 실가 산식(개산공제 미표시), 라벨 구분.
+  const isActualAcq = acqRoute === "section97_actual";
+  // 감정가액·매매사례가액 추계 안분(§176의2②③·법 §100²) — 개산공제 표시(환산 산식 분기 재사용), 라벨만 구분.
+  const isAppraisalSalesAcq = acqRoute === "section176_2_appraisal_sales";
+  // 실지거래가액 기반(상속·증여 §163⑨ 의제 / 매매 §100² 실가) — 산식 분기(개산공제 미표시·실비)는 공통, 라벨만 구분.
+  // ⚠️ 감정·매매사례(isAppraisalSalesAcq)는 개산공제 유지라 isDeemedAcq에 포함하지 않음(환산 산식 분기 사용).
+  const isDeemedAcq = isInheritedAcq || isGiftAcq || isActualAcq;
+  // 비-의제(환산·감정·매매사례) 취득가액 용어 — 감정/매매사례는 직접 안분이라 "환산취득가액" 아닌 "취득가액".
+  const nonDeemedAcqTerm = isAppraisalSalesAcq ? "취득가액" : "환산취득가액";
+
+  // 실제 렌더되는 섹션만 전체 토글 대상 (nbl은 nb 있을 때만).
+  const renderedSectionIds = MIXED_SECTION_IDS.filter((id) => id !== "nbl" || !!nb);
+  const allSectionsOpen = renderedSectionIds.every((id) => openSections[id]);
+  const setAllSections = (value: boolean) =>
+    setOpenSections((prev) => {
+      const next = { ...prev };
+      for (const id of renderedSectionIds) next[id] = value;
+      return next;
+    });
+  const toggleSection = (id: string) =>
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <div className="space-y-4">
@@ -107,8 +187,47 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         onChange={setSelectedPrintIds}
       />
 
+      {/* ── 신고서 양식 표 (결과탭 첫번째 보고서) ── */}
+      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+      {(() => {
+        // 겸용주택(propertyType="mixed-use-house")은 재개발과 배타적이므로
+        // redevelopmentDetail이 항상 undefined → redev props 비활성. 일관성 차원에서 전달.
+        const mixedFilingResult = mixedUseToFilingResult(breakdown);
+        const primaryAsset = formData?.assets?.[0];
+        const hasRedev = !!mixedFilingResult.redevelopmentDetail;
+        return (
+          <FilingFormTable
+            result={mixedFilingResult}
+            formData={formData}
+            redevSubject={
+              hasRedev
+                ? ((primaryAsset?.redevSubject || (primaryAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+                : undefined
+            }
+            redevSettlementDirection={
+              hasRedev
+                ? ((primaryAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
+                : undefined
+            }
+          />
+        );
+      })()}
+      </PrintSection>
+
       {/* ── 분리계산 본문 (안분·주택·상가·비사업용·합산세액·계산경로) ── */}
       <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-4">
+      {/* 수정신고·경정청구 hero — 단건 TransferTaxResultView(calculation 섹션 선두)와 동형.
+          PrintSection 밖에 두면 인쇄 선택과 무관하게 항상 출력되므로 반드시 내부에 유지. */}
+      {breakdown.amendmentDetail && (
+        <AmendmentResultCard
+          detail={breakdown.amendmentDetail}
+          fullTotalTax={t.totalPayable}
+        />
+      )}
+      {/* §164⑨1호 공익수용 특례 산출근거 (P7/D8) — 주택분·상가분 */}
+      {breakdown.expropriationDetail && (
+        <MixedUseExpropriationValuationCard detail={breakdown.expropriationDetail} />
+      )}
       {/* 경고 */}
       {breakdown.warnings.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
@@ -150,8 +269,25 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         </span>
       </div>
 
+      {/* 계산 섹션 전체 접기/펼치기 */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setAllSections(!allSectionsOpen)}
+          aria-expanded={allSectionsOpen}
+          className={expandToggleClass("slate")}
+        >
+          {allSectionsOpen ? "▲ 전체 접기" : "▼ 전체 펼치기"}
+        </button>
+      </div>
+
       {/* 1. 양도가액 안분 */}
-      <ResultSection title="① 양도가액 안분" basis="소득세법 §99 + 시행령 §164">
+      <ResultSection
+        title="① 양도가액 안분"
+        basis="소득세법 §99 + 시행령 §164"
+        open={openSections.apportion}
+        onToggle={() => toggleSection("apportion")}
+      >
         <Row
           label="양도시 개별주택공시가격"
           value={fmt(a.housingStandardPrice)}
@@ -166,7 +302,12 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         <Row
           label={`주택비율`}
           value={fmtPct(a.housingRatio)}
-          formula={`${fmtPlain(a.housingStandardPrice)} ÷ (${fmtPlain(a.housingStandardPrice)} + ${fmtPlain(a.commercialStandardPrice)})`}
+          formula={
+            <Frac
+              top={`주택부분 기준시가 ${fmtPlain(a.housingStandardPrice)}`}
+              bottom={`주택부분 ${fmtPlain(a.housingStandardPrice)} + 상가부분 ${fmtPlain(a.commercialStandardPrice)}`}
+            />
+          }
         />
         <Row
           label="주택 양도가액"
@@ -183,27 +324,84 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       </ResultSection>
 
       {/* 2. 주택부분 */}
-      <ResultSection title="② 주택부분" basis="소득세법 §89 ① 3호 단서 + §95 ②">
+      <ResultSection
+        title="② 주택부분"
+        basis="소득세법 §89 ① 3호 단서 + §95 ②"
+        open={openSections.housing}
+        onToggle={() => toggleSection("housing")}
+      >
         <Row
-          label="주택 환산취득가액"
+          label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : isAppraisalSalesAcq ? "주택 감정·매매사례 취득가액" : "주택 환산취득가액"}
           value={fmt(h.estimatedAcquisitionPrice)}
           formula={(() => {
+            if (isDeemedAcq && h.inheritedAcquisitionDetail) {
+              const d = h.inheritedAcquisitionDetail;
+              const base =
+                d.selected === "reported"
+                  ? `상속개시일 신고가액 ${fmtPlain(d.reportedValue)}`
+                  : `상속개시일 보충적평가액(상증법 §60~66) ${fmtPlain(d.standardPriceCandidate)}` +
+                    (acqRoute === "inheritance_phd_max" && d.reportedValue !== null
+                      ? ` (신고가액 ${fmtPlain(d.reportedValue)}과 §164⑦ 환산가액 중 큰 값 — 소령 §163⑨2호)`
+                      : "");
+              return `${base} — 취득당시 실지거래가액으로 의제 (소령 §163⑨)`;
+            }
+            if (isAppraisalSalesAcq) {
+              return `감정가액·매매사례가액 총액을 법 §100²에 따라 취득시 기준시가 비율로 주택분에 안분 (§176의2②③ 추계)`;
+            }
             if (!h.phdEstimatedAcqHousingPrice) {
-              return `§97: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (취득시 개별주택공시가격 ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
+              return (
+                <FLine>
+                  §97: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
+                  <Frac
+                    top="취득시 개별주택공시가격"
+                    bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}
+                  />
+                </FLine>
+              );
             }
             const ph = h.phdResult?.inputs;
             const fp = h.phdResult?.fourPartApportionment;
-            // Case A 4부분 모드 — 주택부분 환산취득가 = 토지분(D11) + 건물분(E11)
+            // Case A 4부분 모드 — 주택부분 환산취득가 = 주택토지분 + 주택건물분 (엔진 내부 D11+E11)
             if (fp) {
-              return `Case A 4부분 안분 — 주택부분 = 토지분(D11) ${fmtPlain(Math.floor(fp.housingLandAcqPrice))} + 건물분(E11) ${fmtPlain(Math.floor(fp.housingBuildingAcqPrice))} | 전체 환산취득가 ${fmtPlain(fp.totalEstAcq)} × (취득시 4부분 주택분 비율 ${fmtPlain(fp.housingLandAcqShare + fp.housingBuildingAcqShare)} ÷ 역산 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)})`;
+              return (
+                <>
+                  <FLine>
+                    Case A 4부분 안분 — 주택부분 = 주택토지분 {fmtPlain(Math.floor(fp.housingLandAcqPrice))} +
+                    주택건물분 {fmtPlain(Math.floor(fp.housingBuildingAcqPrice))}
+                  </FLine>
+                  <FLine>
+                    산출근거: 전체 환산취득가 {fmtPlain(fp.totalEstAcq)} ×{" "}
+                    <Frac
+                      top={`취득시 주택분 기준시가 ${fmtPlain(fp.housingLandAcqShare + fp.housingBuildingAcqShare)}`}
+                      bottom={`역산 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)}`}
+                    />
+                  </FLine>
+                </>
+              );
             }
             const isAreaSplit =
               !!ph &&
               (ph.landAreaAtAcquisition !== ph.landAreaAtTransfer ||
                 ph.landAreaAtFirstDisclosure !== ph.landAreaAtTransfer);
-            const base = `시행령 §164⑤ 역산 환산: 주택 양도가액 ${fmtPlain(a.housingTransferPrice)} × (역산한 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)} ÷ 양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)})`;
+            const base = (
+              <FLine>
+                시행령 §164⑤ 역산 환산: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
+                <Frac
+                  top={`역산한 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)}`}
+                  bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}
+                />
+              </FLine>
+            );
             if (!isAreaSplit || !ph) return base;
-            return `${base} | 시점별 토지면적: 취득시 ${ph.landAreaAtAcquisition.toFixed(2)}㎡ · 최초공시 ${ph.landAreaAtFirstDisclosure.toFixed(2)}㎡ · 양도시 ${ph.landAreaAtTransfer.toFixed(2)}㎡`;
+            return (
+              <>
+                {base}
+                <FLine>
+                  시점별 토지면적: 취득시 {ph.landAreaAtAcquisition.toFixed(2)}㎡ · 최초공시{" "}
+                  {ph.landAreaAtFirstDisclosure.toFixed(2)}㎡ · 양도시 {ph.landAreaAtTransfer.toFixed(2)}㎡
+                </FLine>
+              </>
+            );
           })()}
         />
         {h.phdResult && h.phdEstimatedAcqHousingPrice && (() => {
@@ -211,9 +409,42 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           const ph = r.inputs;
           const fp = r.fourPartApportionment;
           // Case A 4부분 안분 활성 시 — 4부분(주택분토지·주택건물·상가분토지·상가건물) 합산 표시
-          const formula = fp
-            ? `최초공시 개별주택가격 ${fmtPlain(ph.firstDisclosureHousingPrice)} × 취득시 합산기준시가(4부분) ${fmtPlain(r.sumAtAcquisition)} ÷ 최초공시 합산기준시가(4부분) ${fmtPlain(r.sumAtFirstDisclosure)} | 취득시: 주택분토지 ${fmtPlain(fp.housingLandStdAtAcq)} + 주택건물 ${fmtPlain(fp.housingBuildingStdAtAcq)} + 상가분토지 ${fmtPlain(fp.commercialLandStdAtAcq)} + 상가건물 ${fmtPlain(fp.commercialBuildingStdAtAcq)} | 최초공시: 주택분토지 ${fmtPlain(fp.housingLandStdAtFirst)} + 주택건물 ${fmtPlain(fp.housingBuildingStdAtFirst)} + 상가분토지 ${fmtPlain(fp.commercialLandStdAtFirst)} + 상가건물 ${fmtPlain(fp.commercialBuildingStdAtFirst)}`
-            : `최초공시 개별주택가격 ${fmtPlain(ph.firstDisclosureHousingPrice)} × 취득시 합산기준시가 ${fmtPlain(r.sumAtAcquisition)} ÷ 최초공시 합산기준시가 ${fmtPlain(r.sumAtFirstDisclosure)} | 취득시: 토지기준시가 ${fmtPlain(r.landStdAtAcquisition)} + 건물기준시가 ${fmtPlain(r.buildingStdAtAcquisition)} | 최초공시: 토지기준시가 ${fmtPlain(r.landStdAtFirstDisclosure)} + 건물기준시가 ${fmtPlain(r.buildingStdAtFirstDisclosure)}`;
+          const formula = fp ? (
+            <>
+              <FLine>
+                최초공시 개별주택가격 {fmtPlain(ph.firstDisclosureHousingPrice)} ×{" "}
+                <Frac
+                  top={`취득시 합산기준시가(4부분) ${fmtPlain(r.sumAtAcquisition)}`}
+                  bottom={`최초공시 합산기준시가(4부분) ${fmtPlain(r.sumAtFirstDisclosure)}`}
+                />
+              </FLine>
+              <FLine>
+                취득시: 주택분토지 {fmtPlain(fp.housingLandStdAtAcq)} + 주택건물 {fmtPlain(fp.housingBuildingStdAtAcq)} +
+                상가분토지 {fmtPlain(fp.commercialLandStdAtAcq)} + 상가건물 {fmtPlain(fp.commercialBuildingStdAtAcq)}
+              </FLine>
+              <FLine>
+                최초공시: 주택분토지 {fmtPlain(fp.housingLandStdAtFirst)} + 주택건물 {fmtPlain(fp.housingBuildingStdAtFirst)} +
+                상가분토지 {fmtPlain(fp.commercialLandStdAtFirst)} + 상가건물 {fmtPlain(fp.commercialBuildingStdAtFirst)}
+              </FLine>
+            </>
+          ) : (
+            <>
+              <FLine>
+                최초공시 개별주택가격 {fmtPlain(ph.firstDisclosureHousingPrice)} ×{" "}
+                <Frac
+                  top={`취득시 합산기준시가 ${fmtPlain(r.sumAtAcquisition)}`}
+                  bottom={`최초공시 합산기준시가 ${fmtPlain(r.sumAtFirstDisclosure)}`}
+                />
+              </FLine>
+              <FLine>
+                취득시: 토지기준시가 {fmtPlain(r.landStdAtAcquisition)} + 건물기준시가 {fmtPlain(r.buildingStdAtAcquisition)}
+              </FLine>
+              <FLine>
+                최초공시: 토지기준시가 {fmtPlain(r.landStdAtFirstDisclosure)} + 건물기준시가{" "}
+                {fmtPlain(r.buildingStdAtFirstDisclosure)}
+              </FLine>
+            </>
+          );
           return (
             <Row
               label={fp ? "  ▸ 역산한 취득시 개별주택가격 (Case A 4부분 안분)" : "  ▸ 역산한 취득시 개별주택가격"}
@@ -226,19 +457,33 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         <Row
           label="주택 양도차익"
           value={fmt(h.transferGain)}
-          formula="(양도가액 - 환산취득가액 - 개산공제) — 토지/건물 분리 후 합산"
+          formula={
+            isDeemedAcq
+              ? "(양도가액 - 취득가액 - 실제 필요경비) — 토지/건물 분리 후 합산"
+              : `(양도가액 - ${nonDeemedAcqTerm} - 개산공제) — 토지/건물 분리 후 합산`
+          }
         />
         <Row
           label="  ▸ 토지분"
           value={fmt(h.landTransferGain)}
           small
-          formula={`양도가액 ${fmtPlain(h.landTransferPrice)} - 환산취득가액 ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 ${h.landStdPriceAtAcq != null ? fmtPlain(h.landStdPriceAtAcq) + " " : ""}× 3%)`}
+          formula={
+            isDeemedAcq
+              ? `양도가액 ${fmtPlain(h.landTransferPrice)} - 취득가액 ${fmtPlain(h.landAcqPrice)}`
+              : `양도가액 ${fmtPlain(h.landTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(h.landAcqPrice)} - 개산공제 ${fmtPlain(h.landAppraisalDed)} (취득시 토지 기준시가 ${h.landStdPriceAtAcq != null ? fmtPlain(h.landStdPriceAtAcq) + " " : ""}× 3%)`
+          }
         />
         <Row
           label="  ▸ 건물분"
           value={fmt(h.buildingTransferGain)}
           small
-          formula={`양도가액 ${fmtPlain(h.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물 기준시가 ${h.buildingStdPriceAtAcq != null ? fmtPlain(h.buildingStdPriceAtAcq) + " " : ""}× 3%)`}
+          formula={
+            isDeemedAcq
+              ? h.buildingAppraisalDed > 0
+                ? `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 취득가액 ${fmtPlain(h.buildingAcqPrice)} - 실제 필요경비 ${fmtPlain(h.buildingAppraisalDed)}`
+                : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - 취득가액 ${fmtPlain(h.buildingAcqPrice)}`
+              : `양도가액 ${fmtPlain(h.buildingTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(h.buildingAcqPrice)} - 개산공제 ${fmtPlain(h.buildingAppraisalDed)} (취득시 건물 기준시가 ${h.buildingStdPriceAtAcq != null ? fmtPlain(h.buildingStdPriceAtAcq) + " " : ""}× 3%)`
+          }
         />
         <DivRow />
         {h.isExempt ? (
@@ -247,7 +492,19 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           <Row
             label="12억 초과 안분 후 과세대상 양도차익"
             value={fmt(h.proratedTaxableGain)}
-            formula={`주택 양도차익 × ((주택 양도가액 - 12억) ÷ 주택 양도가액) — 비사업용 이전분 제외`}
+            formula={
+              <FLine>
+                (주택 양도차익 {fmtPlain(h.transferGain)}
+                {h.nonBusinessTransferredGain > 0
+                  ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
+                  : ""}
+                ) ×{" "}
+                <Frac
+                  top={`주택 양도가액 ${fmtPlain(a.housingTransferPrice)} - 12억`}
+                  bottom={`주택 양도가액 ${fmtPlain(a.housingTransferPrice)}`}
+                />
+              </FLine>
+            }
           />
         )}
         <Row
@@ -264,7 +521,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           label="주택부분 양도소득금액"
           value={fmt(h.incomeAmount)}
           highlight
-          formula="과세대상 양도차익 - 장기보유공제"
+          formula={`과세대상 양도차익 ${fmtPlain(h.proratedTaxableGain)} - 장기보유공제 ${fmtPlain(h.longTermDeductionAmount)}`}
         />
         {h.nonBusinessTransferRatio > 0 && (
           <Row
@@ -277,7 +534,12 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       </ResultSection>
 
       {/* 3. 상가부분 */}
-      <ResultSection title="③ 상가부분" basis="소득세법 §95 ② 표1">
+      <ResultSection
+        title="③ 상가부분"
+        basis="소득세법 §95 ② 표1"
+        open={openSections.commercial}
+        onToggle={() => toggleSection("commercial")}
+      >
         <Row
           label="취득시 상가부분 기준시가 합계"
           value={fmt(c.acqStandardTotal)}
@@ -285,26 +547,58 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={`상가건물 기준시가 ${fmtPlain(c.acqStandardBuilding)} + 상가부수토지 기준시가 ${fmtPlain(c.acqStandardLand)} (= 개별공시지가 × 상가부수토지 면적, 자동)`}
         />
         <Row
-          label="상가 환산취득가액"
+          label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : isAppraisalSalesAcq ? "상가 감정·매매사례 취득가액" : "상가 환산취득가액"}
           value={fmt(c.estimatedAcquisitionPrice)}
-          formula={`§97: 상가 양도가액 ${fmtPlain(a.commercialTransferPrice)} × (취득시 상가부분 기준시가 ${fmtPlain(c.acqStandardTotal)} ÷ 양도시 상가부분 기준시가 ${fmtPlain(a.commercialStandardPrice)})`}
+          formula={(() => {
+            if (isDeemedAcq && c.inheritedAcquisitionDetail) {
+              const d = c.inheritedAcquisitionDetail;
+              const base =
+                d.selected === "reported"
+                  ? `상속개시일 신고가액 ${fmtPlain(d.reportedValue)}`
+                  : `상속개시일 보충적평가액(상증법 §60~66) ${fmtPlain(d.standardPriceCandidate)}`;
+              return `${base} — 취득당시 실지거래가액으로 의제 (소령 §163⑨)`;
+            }
+            return (
+              <FLine>
+                §97: 상가 양도가액 {fmtPlain(a.commercialTransferPrice)} ×{" "}
+                <Frac
+                  top={`취득시 상가부분 기준시가 ${fmtPlain(c.acqStandardTotal)}`}
+                  bottom={`양도시 상가부분 기준시가 ${fmtPlain(a.commercialStandardPrice)}`}
+                />
+              </FLine>
+            );
+          })()}
         />
         <Row
           label="상가 양도차익"
           value={fmt(c.transferGain)}
-          formula="(양도가액 - 환산취득가액 - 개산공제) — 토지/건물 분리 후 합산"
+          formula={
+            isDeemedAcq
+              ? "(양도가액 - 취득가액 - 실제 필요경비) — 토지/건물 분리 후 합산"
+              : `(양도가액 - ${nonDeemedAcqTerm} - 개산공제) — 토지/건물 분리 후 합산`
+          }
         />
         <Row
           label="  ▸ 토지분"
           value={fmt(c.landTransferGain)}
           small
-          formula={`양도가액 ${fmtPlain(c.landTransferPrice)} - 환산취득가액 ${fmtPlain(c.landAcqPrice)} - 개산공제 ${fmtPlain(c.landAppraisalDed)} (취득시 토지 기준시가 ${c.landStdPriceAtAcq != null ? fmtPlain(c.landStdPriceAtAcq) + " " : ""}× 3%)`}
+          formula={
+            isDeemedAcq
+              ? `양도가액 ${fmtPlain(c.landTransferPrice)} - 취득가액 ${fmtPlain(c.landAcqPrice)}`
+              : `양도가액 ${fmtPlain(c.landTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(c.landAcqPrice)} - 개산공제 ${fmtPlain(c.landAppraisalDed)} (취득시 토지 기준시가 ${c.landStdPriceAtAcq != null ? fmtPlain(c.landStdPriceAtAcq) + " " : ""}× 3%)`
+          }
         />
         <Row
           label="  ▸ 건물분"
           value={fmt(c.buildingTransferGain)}
           small
-          formula={`양도가액 ${fmtPlain(c.buildingTransferPrice)} - 환산취득가액 ${fmtPlain(c.buildingAcqPrice)} - 개산공제 ${fmtPlain(c.buildingAppraisalDed)} (취득시 건물 기준시가 ${c.buildingStdPriceAtAcq != null ? fmtPlain(c.buildingStdPriceAtAcq) + " " : ""}× 3%)`}
+          formula={
+            isDeemedAcq
+              ? c.buildingAppraisalDed > 0
+                ? `양도가액 ${fmtPlain(c.buildingTransferPrice)} - 취득가액 ${fmtPlain(c.buildingAcqPrice)} - 실제 필요경비 ${fmtPlain(c.buildingAppraisalDed)}`
+                : `양도가액 ${fmtPlain(c.buildingTransferPrice)} - 취득가액 ${fmtPlain(c.buildingAcqPrice)}`
+              : `양도가액 ${fmtPlain(c.buildingTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(c.buildingAcqPrice)} - 개산공제 ${fmtPlain(c.buildingAppraisalDed)} (취득시 건물 기준시가 ${c.buildingStdPriceAtAcq != null ? fmtPlain(c.buildingStdPriceAtAcq) + " " : ""}× 3%)`
+          }
         />
         <DivRow />
         <Row
@@ -317,13 +611,18 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           label="상가부분 양도소득금액"
           value={fmt(c.incomeAmount)}
           highlight
-          formula="양도차익 - 장기보유공제"
+          formula={`양도차익 ${fmtPlain(c.transferGain)} - 장기보유공제 ${fmtPlain(c.longTermDeductionAmount)}`}
         />
       </ResultSection>
 
       {/* 4. 비사업용토지 (조건부) */}
       {nb && (
-        <ResultSection title="④ 비사업용토지 (주택부수토지 배율초과)" basis="시행령 §168의12 + §104의3">
+        <ResultSection
+          title="④ 비사업용토지 (주택부수토지 배율초과)"
+          basis="시행령 §168의12 + §104의3"
+          open={openSections.nbl}
+          onToggle={() => toggleSection("nbl")}
+        >
           <Row
             label={`적용 배율`}
             value={`${nb.appliedMultiplier}배`}
@@ -337,7 +636,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           <Row
             label="비사업용 양도차익"
             value={fmt(nb.transferGain)}
-            formula="주택 토지분 양도차익 × (배율초과 면적 ÷ 주택부수토지 면적)"
+            formula={`주택 토지분 양도차익 ${fmtPlain(h.landTransferGain)} × 배율초과 비율 ${fmtPct(h.nonBusinessTransferRatio)}`}
           />
           <Row
             label={`장기보유공제 (표1, ${fmtPct(nb.longTermDeductionRate)})`}
@@ -349,17 +648,24 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
             label="비사업용토지 양도소득금액 (+10%p 가산)"
             value={fmt(nb.incomeAmount)}
             highlight
-            formula="양도차익 - 장기보유공제 (세율 가산은 합산세액에서 처리)"
+            formula={`양도차익 ${fmtPlain(nb.transferGain)} - 장기보유공제 ${fmtPlain(nb.longTermDeductionAmount)} (세율 가산은 합산세액에서 처리)`}
           />
         </ResultSection>
       )}
 
       {/* 합산 세액 */}
-      <ResultSection title="합산 세액" basis="소득세법 §92~§107">
+      <ResultSection
+        title="합산 세액"
+        basis="소득세법 §92~§107"
+        open={openSections.total}
+        onToggle={() => toggleSection("total")}
+      >
         <Row
           label="합산 양도소득금액"
           value={fmt(t.aggregateIncome)}
-          formula="주택부분 + 상가부분 + 비사업용토지 양도소득금액"
+          formula={`주택부분 ${fmtPlain(h.incomeAmount)} + 상가부분 ${fmtPlain(c.incomeAmount)}${
+            nb ? ` + 비사업용토지 ${fmtPlain(nb.incomeAmount)}` : ""
+          }`}
         />
         <Row
           label="기본공제"
@@ -369,7 +675,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         <Row
           label="과세표준"
           value={fmt(t.taxBase)}
-          formula="합산 양도소득금액 - 기본공제"
+          formula={`합산 양도소득금액 ${fmtPlain(t.aggregateIncome)} - 기본공제 ${fmtPlain(t.basicDeduction)}`}
         />
         <DivRow />
         <Row
@@ -388,58 +694,47 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           <Row
             label="비사업용토지 +10%p 가산세"
             value={fmt(t.nonBusinessSurcharge)}
-            formula="비사업용토지 양도소득금액 × 10%"
+            formula={(() => {
+              // 중과 base = 비사업용 양도소득금액 − 기본공제 귀속분(최고세율 부분에 전액 귀속).
+              // 적용공제 = 합산 양도소득금액 − 과세표준 (§104①8호, 납세자 유리 원칙).
+              const surchargeBase = nb
+                ? Math.max(0, nb.incomeAmount - (t.aggregateIncome - t.taxBase))
+                : 0;
+              return `비사업용토지 과세표준 귀속분 ${fmtPlain(surchargeBase)} × 10%`;
+            })()}
           />
         )}
         <Row
           label="양도소득세"
           value={fmt(t.transferTax)}
-          formula="산출세액 + 비사업용토지 가산세"
+          formula={`산출세액 ${fmtPlain(t.taxByBasicRate)}${
+            t.nonBusinessSurcharge > 0
+              ? ` + 비사업용토지 가산세 ${fmtPlain(t.nonBusinessSurcharge)}`
+              : ""
+          }`}
         />
         <Row
           label="지방소득세 (10%)"
           value={fmt(t.localTax)}
-          formula="양도소득세 × 10% (지방세법 §103의3)"
+          formula={`양도소득세 ${fmtPlain(t.transferTax)} × 10% (지방세법 §103의3)`}
         />
         <DivRow />
         <Row
-          label="총 납부세액"
+          // 정정 모드에서는 AmendmentResultCard의 "참고 · 수정/경정 후 전체 세액"과 라벨을 맞춘다
+          // (같은 금액에 다른 라벨이 한 화면에 뜨는 것을 방지).
+          label={
+            breakdown.amendmentDetail
+              ? breakdown.amendmentDetail.correctionKind === "refund_claim"
+                ? "경정 후 전체 세액"
+                : "수정 후 전체 세액"
+              : "총 납부세액"
+          }
           value={fmt(t.totalPayable)}
           highlight
           large
-          formula="양도소득세 + 지방소득세"
+          formula={`양도소득세 ${fmtPlain(t.transferTax)} + 지방소득세 ${fmtPlain(t.localTax)}`}
         />
       </ResultSection>
-
-      {/* 계산 경로 메타 (학습·검증용) */}
-      <CalculationRouteCard route={breakdown.calculationRoute} />
-      </PrintSection>
-
-      {/* ── 신고서 양식 표 ── */}
-      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
-      {(() => {
-        // 겸용주택(propertyType="mixed-use-house")은 재개발과 배타적이므로
-        // redevelopmentDetail이 항상 undefined → redev props 비활성. 일관성 차원에서 전달.
-        const mixedFilingResult = mixedUseToFilingResult(breakdown);
-        const primaryAsset = formData?.assets?.[0];
-        const hasRedev = !!mixedFilingResult.redevelopmentDetail;
-        return (
-          <FilingFormTable
-            result={mixedFilingResult}
-            formData={formData}
-            redevSubject={
-              hasRedev
-                ? ((primaryAsset?.redevSubject || (primaryAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
-                : undefined
-            }
-            redevSettlementDirection={
-              hasRedev
-                ? ((primaryAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
-                : undefined
-            }
-          />
-        );
-      })()}
       </PrintSection>
 
       {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}
@@ -451,275 +746,15 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         asset={formData?.assets[0]}
       />
       </PrintSection>
-    </div>
-  );
-}
 
-// ── 계산 경로 메타 카드 (학습·검증용 — "왜 이 세액인지" 설명) ──
-
-const ACQ_SOURCE_LABEL: Record<string, string> = {
-  direct_input: "직접 입력",
-  phd_auto: "최초공시 기준 역산 (시행령 §164⑤)",
-  missing: "미입력 (환산 불가)",
-};
-
-const CONVERSION_ROUTE_LABEL: Record<string, string> = {
-  section97_direct: "§97 직접 환산 (양도가액 × 취득시 기준시가 / 양도시 기준시가)",
-  phd_corrected: "최초공시 기준 역산 후 §97 환산 (취득 당시 개별주택가격 미공시)",
-};
-
-const HIGH_VALUE_LABEL: Record<string, string> = {
-  below_threshold_exempt: "주택 양도가액 ≤ 12억 → 전액 비과세",
-  above_threshold_prorated: "주택 양도가액 > 12억 → 안분 과세 (§89 ① 3호 단서)",
-};
-
-function CalculationRouteCard({
-  route,
-}: {
-  route: import("@/lib/tax-engine/types/transfer-mixed-use.types").MixedUseCalculationRoute;
-}) {
-  return (
-    <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-2">
-      <div className="flex items-start justify-between mb-1">
-        <h4 className="font-semibold text-sm text-blue-900">계산 경로 (학습·검증용)</h4>
-        <span className="text-[10px] text-blue-700">&quot;왜 이 세액인지&quot; 설명</span>
-      </div>
-      <MetaRow label="취득시 주택공시가격" value={ACQ_SOURCE_LABEL[route.housingAcqPriceSource]} />
-      <MetaRow label="환산취득가액 경로" value={CONVERSION_ROUTE_LABEL[route.acquisitionConversionRoute]} />
-      <MetaRow label="12억 비과세 적용" value={HIGH_VALUE_LABEL[route.highValueRule]} />
-      <MetaRow label="주택 장기보유공제" value={route.housingDeductionTableReason} />
-      <MetaRow label="부수토지 배율" value={route.landMultiplierReason} />
-    </div>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between items-start gap-2 text-xs">
-      <span className="text-blue-800 font-medium whitespace-nowrap">{label}</span>
-      <span className="text-blue-900 text-right">{value}</span>
-    </div>
-  );
-}
-
-// ── 공용 서브 컴포넌트 ──
-
-function ResultSection({
-  title,
-  basis,
-  children,
-}: {
-  title: string;
-  basis: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border bg-card p-4 space-y-2">
-      <div className="flex items-start justify-between mb-2">
-        <h4 className="font-semibold text-sm">{title}</h4>
-        <span className="text-[10px] text-muted-foreground text-right max-w-[140px]">{basis}</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Row({
-  label,
-  value,
-  highlight,
-  large,
-  small,
-  formula,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-  large?: boolean;
-  small?: boolean;
-  formula?: string;
-}) {
-  return (
-    <div className="space-y-0.5">
-      <div className={`flex justify-between items-center ${small ? "text-xs text-muted-foreground" : "text-sm"}`}>
-        <span className={highlight ? "font-medium" : ""}>{label}</span>
-        <span className={`font-mono ${highlight ? "font-semibold text-primary" : ""} ${large ? "text-base" : ""}`}>
-          {value}
-        </span>
-      </div>
-      {formula && (
-        <p className="text-[11px] text-muted-foreground/80 leading-snug pl-2 border-l-2 border-muted">
-          {formula}
-        </p>
+      {/* ── 건물 기준시가 계산서 (PHD 3시점 일괄 스냅샷 소속 시) ── */}
+      {/* 겸용 입력폼 PHD 배치가 bsp-{assetId}-phd-* 스냅샷을 저장 → 여기서 소속 재유도·출력.
+          엔진·스냅샷 생성 무변경, 단건 TransferTaxResultView와 동일 배선(inputData=assets). */}
+      {hasBuildingStdReport({ assets: formData?.assets }) && (
+        <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
+          <BuildingStdPriceReportSection inputData={{ assets: formData?.assets }} />
+        </PrintSection>
       )}
-    </div>
-  );
-}
-
-function DivRow() {
-  return <div className="border-t my-1" />;
-}
-
-/**
- * 보유 중 일부 용도변경 — "취득시점 자산 구성" 섹션.
- * direction별 설명 + 자동/수정 면적 비교표 + commercial_to_house 시 보수 검토 배지.
- */
-function PartialUsageChangeCard({
-  puc,
-  reason,
-}: {
-  puc: NonNullable<MixedUseGainBreakdown["partialUsageChange"]>;
-  reason?: string;
-}) {
-  const isCommToHouse = puc.direction === "commercial_to_house";
-  const isPhdCaseA = puc.phdScopeBranch === "case_a_whole_building";
-  const isPhdCaseB = puc.phdScopeBranch === "case_b_housing_only";
-  return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-2">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-sm font-semibold text-amber-900">
-          취득시점 자산 구성 (보유 중 일부 용도변경)
-        </p>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {isPhdCaseA && (
-            <span className="inline-flex items-center rounded-md border border-rose-300 bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-900">
-              최초공시일 &lt; 용도변경일 — 건물 전체 기준으로 취득시 주택가격 역산
-            </span>
-          )}
-          {isPhdCaseB && (
-            <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">
-              최초공시일 ≥ 용도변경일 — 주택 부분만 기준으로 취득시 주택가격 역산
-            </span>
-          )}
-          {isCommToHouse && (
-            <span className="inline-flex items-center rounded-md border border-yellow-300 bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-900">
-              ⚠ 법령 적용에 보수 검토 필요
-            </span>
-          )}
-        </div>
-      </div>
-      <p className="text-xs text-amber-800">
-        취득시 자산 구성:{" "}
-        <span className="font-semibold">
-          {puc.direction === "house_to_commercial"
-            ? "전체 주택 → 양도시 일부 상가화"
-            : "전체 상가 → 양도시 일부 주택화"}
-        </span>
-      </p>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-md bg-white/60 border border-amber-200 px-3 py-2">
-          <div className="text-[11px] text-amber-700">취득시 주택 연면적</div>
-          <div className="font-mono text-amber-900">{puc.acqResidentialArea.toFixed(2)}㎡</div>
-        </div>
-        <div className="rounded-md bg-white/60 border border-amber-200 px-3 py-2">
-          <div className="text-[11px] text-amber-700">취득시 상가 연면적</div>
-          <div className="font-mono text-amber-900">{puc.acqCommercialArea.toFixed(2)}㎡</div>
-        </div>
-      </div>
-      {puc.isAreaCustomized && (
-        <p className="text-[11px] text-muted-foreground">
-          ※ 사용자가 취득시 면적을 직접 입력함 (자동값 대신 수동값 사용)
-        </p>
-      )}
-      {isPhdCaseA && (
-        <div className="rounded-md bg-rose-50 border border-rose-200 px-3 py-2 text-[11px] text-rose-900 space-y-1 leading-relaxed">
-          <p className="font-semibold">취득시 개별주택가격 역산 산식 — 건물 전체 기준 (시행령 §164⑤)</p>
-          <p>
-            역산한 취득시 개별주택가격 = 최초공시 개별주택가격 × (취득시 토지기준시가 + 취득시 건물기준시가) ÷ (최초공시 토지기준시가 + 최초공시 건물기준시가)
-          </p>
-          <p>
-            · 최초공시 시점에 건물 전체가 주택이었으므로 최초공시 개별주택가격에는 이후 상가로 변한 부분도 포함됩니다. 취득시·최초공시 시점 모두 전체 토지면적·전체 건물 기준시가를 사용하여 비율을 맞춥니다.
-          </p>
-        </div>
-      )}
-      {reason && (
-        <p className="text-[11px] text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed">
-          💡 {reason}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/**
- * 용도변경일 기반 LTHD 시간 비례 분할 카드.
- * 집행기준 89-154-24 취지 — 주택으로 사용한 기간 통산.
- * Period 1 (단일 용도) + Period 2 (혼용)별 양도차익·LTHD 내역 표시.
- */
-function UsagePeriodSplitCard({
-  ups,
-  direction,
-}: {
-  ups: NonNullable<MixedUseGainBreakdown["usagePeriodSplit"]>;
-  direction: "house_to_commercial" | "commercial_to_house";
-}) {
-  const isHtoC = direction === "house_to_commercial";
-  const fmtDays = (d: number) => `${d.toFixed(0)}일 (${(d / 365.25).toFixed(2)}년)`;
-  const period1Label = isHtoC ? "Period 1 (전체 주택)" : "Period 1 (전체 상가)";
-  const period1Cat = isHtoC ? "주택분" : "상가분";
-
-  return (
-    <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-sm font-semibold text-violet-900">
-          용도변경일 기반 LTHD 분리 계산
-        </p>
-        <span className="inline-flex items-center rounded-md border border-violet-300 bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-900">
-          집행기준 89-154-24
-        </span>
-      </div>
-      <p className="text-[11px] text-violet-800 leading-relaxed">
-        용도변경일 입력 시 양도차익을 시간 비례로 분할하여, 각 기간의 보유연수로 장기보유특별공제를 적용합니다.
-        주택으로 사용한 기간을 통산하는 집행기준 취지를 반영.
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-        <div className="rounded-md bg-white/60 border border-violet-200 px-3 py-2 space-y-1">
-          <div className="text-[11px] text-violet-700 font-semibold">{period1Label}</div>
-          <div className="flex justify-between text-xs text-violet-800">
-            <span>기간</span>
-            <span className="font-mono">{fmtDays(ups.period1Days)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-violet-800">
-            <span>{period1Cat} 양도차익</span>
-            <span className="font-mono">{fmt(ups.period1Gain)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-violet-800">
-            <span>LTHD 공제율 / 공제액</span>
-            <span className="font-mono">
-              {fmtPct(ups.period1LongTermDeductionRate)} / {fmt(ups.period1LongTermDeductionAmount)}
-            </span>
-          </div>
-        </div>
-
-        <div className="rounded-md bg-white/60 border border-violet-200 px-3 py-2 space-y-1">
-          <div className="text-[11px] text-violet-700 font-semibold">Period 2 (혼용 — 양도시점 비율)</div>
-          <div className="flex justify-between text-xs text-violet-800">
-            <span>기간</span>
-            <span className="font-mono">{fmtDays(ups.period2Days)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-violet-800">
-            <span>주택분 양도차익</span>
-            <span className="font-mono">{fmt(ups.period2HousingGain)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-violet-800">
-            <span>주택 LTHD 공제율 / 공제액</span>
-            <span className="font-mono">
-              {fmtPct(ups.period2HousingLongTermDeductionRate)} / {fmt(ups.period2HousingLongTermDeductionAmount)}
-            </span>
-          </div>
-          <div className="flex justify-between text-xs text-violet-800">
-            <span>상가분 양도차익</span>
-            <span className="font-mono">{fmt(ups.period2CommercialGain)}</span>
-          </div>
-          <div className="flex justify-between text-xs text-violet-800">
-            <span>상가 LTHD 공제율 / 공제액</span>
-            <span className="font-mono">
-              {fmtPct(ups.period2CommercialLongTermDeductionRate)} / {fmt(ups.period2CommercialLongTermDeductionAmount)}
-            </span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

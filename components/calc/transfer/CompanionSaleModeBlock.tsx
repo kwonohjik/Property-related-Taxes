@@ -42,7 +42,7 @@ export function BundledSaleModeToggle({ value, onChange }: ToggleProps) {
           )}
         >
           <div className="text-sm font-semibold">실가 (계약서 구분 기재)</div>
-          <div className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+          <div className="text-caption text-muted-foreground leading-tight mt-0.5">
             계약서에 자산별 가액이 명시됨 — 그대로 사용
           </div>
         </button>
@@ -57,7 +57,7 @@ export function BundledSaleModeToggle({ value, onChange }: ToggleProps) {
           )}
         >
           <div className="text-sm font-semibold">안분 (기준시가 비율)</div>
-          <div className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+          <div className="text-caption text-muted-foreground leading-tight mt-0.5">
             구분 불분명 — 양도시 기준시가 비율로 안분
           </div>
         </button>
@@ -101,6 +101,12 @@ interface BlockProps {
   ownershipDenominator?: string;
   /** 폼-수준 총 양도가액 (지분 모드 자동 계산: total × ratio) */
   contractTotalPrice?: string;
+  /**
+   * 지분 분할 모드(같은 물건 분할취득) 여부 — splitMode==="fractional".
+   * true면 지분율 미입력(공란→100/100)이라도 양도가액 자동계산 안내로 대체하고
+   * 양도시 기준시가(§166⑥ 안분) 입력을 노출하지 않는다(모드 기반 게이트).
+   */
+  isFractionalSplit?: boolean;
 }
 
 /**
@@ -193,13 +199,13 @@ function FractionalAutoSalePriceCard({
   const ratioPct = ratio > 0 ? (ratio * 100).toFixed(2).replace(/\.?0+$/, "") : "—";
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50/50 px-3 py-2">
-      <div className="text-[11px] font-medium text-amber-700 mb-0.5">
+      <div className="text-caption font-medium text-amber-700 mb-0.5">
         자동 계산 (총 양도가액 × 지분율)
       </div>
       <div className="font-mono text-base font-semibold text-amber-900">
         {allocated.toLocaleString()} 원
       </div>
-      <div className="text-[10px] text-amber-700 mt-0.5">
+      <div className="text-micro text-amber-700 mt-0.5">
         {total.toLocaleString()} × {numerator || "?"}/{denominator || "?"} = {ratioPct}% × 총양도가
       </div>
     </div>
@@ -219,10 +225,10 @@ export function CompanionSaleModeBlock(props: BlockProps) {
   const pricePerSqm = props.standardPricePerSqmAtTransfer ?? internalPricePerSqm;
   const onPricePerSqmChange = props.onStandardPricePerSqmAtTransferChange ?? setInternalPricePerSqm;
 
-  // 지분 모드 판정 — 분자<분모 + contractTotalPrice 존재
+  // 개별 자산 지분율이 입력돼 자동계산 가능한 상태 — 분자<분모 + contractTotalPrice 존재
   const ownN = parseFloat(props.ownershipNumerator || "100");
   const ownD = parseFloat(props.ownershipDenominator || "100");
-  const isFractional =
+  const ratioReady =
     isFinite(ownN) &&
     isFinite(ownD) &&
     ownD > 0 &&
@@ -230,45 +236,42 @@ export function CompanionSaleModeBlock(props: BlockProps) {
     ownN < ownD &&
     !!props.contractTotalPrice;
 
+  // 지분 분할 모드: 양도가액은 총양도가 × 지분율로 자동 결정 → actual 입력·기준시가(§166⑥) 안분 입력
+  // 모두 불필요. 모드(isFractionalSplit)로 게이트해 지분율 미입력(공란) 상태에서도 안분 입력을 숨긴다.
+  const fractionalActive = props.isFractionalSplit || ratioReady;
+  if (fractionalActive) {
+    return (
+      <div className="space-y-2">
+        {ratioReady ? (
+          <FractionalAutoSalePriceCard
+            numerator={props.ownershipNumerator!}
+            denominator={props.ownershipDenominator!}
+            contractTotalPrice={props.contractTotalPrice!}
+          />
+        ) : (
+          <p className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
+            취득 지분율(분자/분모)을 입력하면 양도가액이 총양도가 × 지분율로 자동 계산됩니다.
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground italic px-1">
+          지분 모드 — 양도가액은 총양도가 × 지분율로 자동 결정됩니다. 양도시 기준시가(안분) 입력은 불필요합니다.
+        </p>
+      </div>
+    );
+  }
+
   if (props.bundledSaleMode === "actual") {
-    if (isFractional) {
-      return (
-        <FractionalAutoSalePriceCard
-          numerator={props.ownershipNumerator!}
-          denominator={props.ownershipDenominator!}
-          contractTotalPrice={props.contractTotalPrice!}
-        />
-      );
-    }
     return (
       <CurrencyInput
         label={props.singleMode ? "양도가액 (원)" : "계약서상 양도가액 (원)"}
         value={props.actualSalePrice}
         onChange={props.onActualSalePriceChange}
         required
-        hint={
-          props.singleMode
-            ? "실제 매매계약서상 거래금액"
-            : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"
-        }
+        // 단건 모드는 힌트 없음 — "양도가액" 라벨만으로 자명(2026-07-16).
+        // 다건 모드는 자산별 가액이라는 구분이 필요해 §166⑥ 근거 힌트를 유지한다.
+        hint={props.singleMode ? undefined : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"}
         data-testid="companion-actual-sale-price"
       />
-    );
-  }
-
-  // apportioned 모드 — 지분 모드는 안분 키 입력 면제
-  if (isFractional) {
-    return (
-      <div className="space-y-2">
-        <FractionalAutoSalePriceCard
-          numerator={props.ownershipNumerator!}
-          denominator={props.ownershipDenominator!}
-          contractTotalPrice={props.contractTotalPrice!}
-        />
-        <p className="text-xs text-muted-foreground italic px-1">
-          지분 모드 — 안분 키(양도시 기준시가) 입력 불필요. 양도가액은 총양도가 × 지분율로 자동 결정됩니다.
-        </p>
-      </div>
     );
   }
 

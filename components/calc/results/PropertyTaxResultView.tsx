@@ -96,7 +96,7 @@ function TaxpayerSection({ taxpayer }: { taxpayer: PropertyTaxpayerInfo }) {
   return (
     <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 space-y-2">
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
           §
         </span>
         <p className="text-xs font-semibold text-sky-700">납세의무자 유형</p>
@@ -191,7 +191,7 @@ function CoOwnershipTable({
         </tfoot>
       </table>
       {distribution.roundingDiff !== 0 && (
-        <p className="text-[11px] text-muted-foreground px-3 py-1 border-t">
+        <p className="text-caption text-muted-foreground px-3 py-1 border-t">
           안분 오차 {formatKRW(Math.abs(distribution.roundingDiff))}원이
           마지막 공유자에게 흡수됩니다 (floor 잔액 흡수 원칙).
         </p>
@@ -284,7 +284,7 @@ function HouseSplitDistributionTable({
           </tr>
         </tfoot>
       </table>
-      <p className="text-[11px] text-muted-foreground px-3 py-1.5 border-t">
+      <p className="text-caption text-muted-foreground px-3 py-1.5 border-t">
         건물분 비율 {(buildingRatio * 100).toFixed(1)}% · 안분 잔액은 토지분에 흡수 (floor 잔액 흡수 원칙)
       </p>
     </div>
@@ -453,7 +453,7 @@ export function PropertyTaxResultView({ result }: Props) {
           priorYearTaxBaseEquivalent != null && (
             <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-[10px] font-bold text-sky-800 select-none">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
                   §
                 </span>
                 <p className="text-xs font-semibold text-sky-700">
@@ -474,7 +474,7 @@ export function PropertyTaxResultView({ result }: Props) {
                 />
                 <TaxRow label="과세표준상한액" amount={taxBaseCapLimit} highlight />
               </div>
-              <p className="text-[11px] text-sky-700">
+              <p className="text-caption text-sky-700">
                 당해연도 과세표준이 과세표준상한액보다 커서, 과세표준을 상한액으로 제한합니다.
               </p>
             </div>

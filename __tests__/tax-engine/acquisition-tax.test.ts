@@ -75,7 +75,7 @@ describe("calcRuralSpecialTax", () => {
     expect(result).toBe(0);
   });
 
-  it("세율 2% 이하: 0원", () => {
+  it("비중과 1% 주택(>85㎡): 표준세율 2% 치환 → 0.2%", () => {
     const result = calcRuralSpecialTax({
       taxBase: 500_000_000,
       appliedRate: 0.01,
@@ -83,10 +83,11 @@ describe("calcRuralSpecialTax", () => {
       areaSqm: 100,
       propertyType: "housing",
     });
-    expect(result).toBe(0);
+    // [R3-02] 표준율 1% → 2% 치환 → 5억 × 0.2% = 1,000,000 (구 0원은 오산식)
+    expect(result).toBe(1_000_000);
   });
 
-  it("세율 3%, 100㎡: 취득가액 × 1% × 10% = 과세표준 × 0.1%", () => {
+  it("비중과 3% 주택 100㎡: 표준세율 2% 치환 → 0.2%", () => {
     const taxBase = 1_000_000_000;
     const result = calcRuralSpecialTax({
       taxBase,
@@ -95,11 +96,11 @@ describe("calcRuralSpecialTax", () => {
       areaSqm: 100,
       propertyType: "housing",
     });
-    // (0.03 - 0.02) × 1,000,000,000 × 0.10 = 1,000,000
-    expect(result).toBe(1_000_000);
+    // [R3-02] 10억 × 0.2% = 2,000,000 (표준율 3% 무관 flat)
+    expect(result).toBe(2_000_000);
   });
 
-  it("세율 8% (중과), 100㎡: (8% - 2%) × 1억 × 10%", () => {
+  it("다주택 중과 8%(§13의2): (2% + 중과분 4%) × 과세표준 × 10% = 0.6%", () => {
     const taxBase = 100_000_000;
     const result = calcRuralSpecialTax({
       taxBase,
@@ -107,8 +108,10 @@ describe("calcRuralSpecialTax", () => {
       acquisitionTax: 8_000_000,
       areaSqm: 100,
       propertyType: "housing",
+      isSurcharged: true,
+      surchargeType: "multi_house_8", // §13의2 기준 4%
     });
-    // (0.08 - 0.02) × 100,000,000 × 0.10 = 600,000
+    // [R3-02] (2% + (8%−4%)) × 1억 × 10% = 0.6% = 600,000
     expect(result).toBe(600_000);
   });
 });
@@ -157,8 +160,8 @@ describe("calcAcquisitionTax — 주택 유상취득", () => {
     const result = calcAcquisitionTax(input);
 
     expect(result.rateType).toBe("linear_interpolation");
-    // BigInt 직접 계산: floor(700M × (700M×2 - 900M) / 30B) = floor(700M × 500M / 30B) = 11,666,666
-    expect(result.acquisitionTax).toBe(11_666_666);
+    // [R3-10] §11①8나 4자리 확정세율: (7억×2−9억)/300억 = 0.016666 → 0.0167. floor(7억×0.0167)=11,690,000
+    expect(result.acquisitionTax).toBe(11_690_000);
     expect(result.isSurcharged).toBe(false);
   });
 

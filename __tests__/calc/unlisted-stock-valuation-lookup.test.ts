@@ -290,4 +290,43 @@ describe("[H-10~H-15] candidateToUnlistedStockInput", () => {
   });
 });
 
-// makeRecord 헬퍼는 H-15에서 한 번 더 import 필요 — 위에서 정의됨
+// ============================================================
+// H-27 회귀: §56④ 가감항목·fiscalYearStartDate round-trip 복원
+//   restoreUnlistedStockInput이 존재하지 않는 필드명(addDividendInclude·subCorpTax 등)으로 읽어
+//   §56④ 가산·차감 22항목과 fiscalYearStartDate가 소실됐던 버그. as unknown as 이중 캐스팅이 은폐.
+// ============================================================
+
+describe("[H-27] §56④ 가감항목·fiscalYearStartDate round-trip 복원", () => {
+  it("사업연도별 가산·차감 항목과 fiscalYearStartDate가 저장→복원 왕복에서 보존된다", () => {
+    const v2: UnlistedStockValuationInput = {
+      ...case6V2Input,
+      fiscalYears: [
+        {
+          fiscalYearLabel: "2023",
+          fiscalYearEndDate: new Date("2023-12-31"),
+          fiscalYearStartDate: new Date("2023-07-01"), // §17의3② 1년 미만 → 연환산
+          taxableIncome: 76_842_660,
+          addLossFromDividend: 1_000_000, // ③
+          subCorporateTax: 20_000_000, // ⑧
+          subFines: 5_000_000, // ⑩
+          subForexValuationLoss: 700_000, // ㉑
+        },
+        { fiscalYearLabel: "2022", fiscalYearEndDate: new Date("2022-12-31"), taxableIncome: 62_416_500 },
+        { fiscalYearLabel: "2021", fiscalYearEndDate: new Date("2021-12-31"), taxableIncome: -5_311_910 },
+      ],
+    };
+    const records = [makeRecord("r1", "inheritance", [{ id: "stock-1", v2 }])];
+    const result = filterUnlistedStockCandidates(records, null, "㈜향기", []);
+    expect(result.candidates).toHaveLength(1);
+    const fy0 = result.candidates[0].fullInput.fiscalYears[0];
+    // 수정 전: 틀린 필드명으로 읽어 전부 undefined 소실 → 순손익가치 과대
+    expect(fy0.addLossFromDividend).toBe(1_000_000);
+    expect(fy0.subCorporateTax).toBe(20_000_000);
+    expect(fy0.subFines).toBe(5_000_000);
+    expect(fy0.subForexValuationLoss).toBe(700_000);
+    expect(fy0.taxableIncome).toBe(76_842_660);
+    // fiscalYearStartDate(§17의3② 연환산) 복원 — 수정 전엔 미복원으로 12개월 가정 회귀
+    expect(fy0.fiscalYearStartDate).toBeInstanceOf(Date);
+    expect(fy0.fiscalYearStartDate?.toISOString().slice(0, 10)).toBe("2023-07-01");
+  });
+});

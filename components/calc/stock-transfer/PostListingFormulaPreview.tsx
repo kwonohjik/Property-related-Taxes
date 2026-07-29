@@ -182,7 +182,7 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
       </div>
 
       {/* 80% 하한 미적용 안내 (D-12 강화) */}
-      <div className="mt-3 pt-2 border-t border-violet-200 text-[10px] text-violet-600">
+      <div className="mt-3 pt-2 border-t border-violet-200 text-micro text-violet-600">
         ※ 환산비율 산정에는 80% 하한이 적용되지 않습니다 (양도일 비상장 평가와 별개 — §165④1 단서)
       </div>
     </div>

@@ -345,6 +345,22 @@ describe("[P2-Anchor #P2-5] 자경농지 50% 감면 — §6", () => {
     expect(result.reductionAmount).toBe(0);
   });
 
+  it("#C4b [R3-12] 거리 40km이나 동일·인접 시·군·구 거주 → 감면 가능 (§3①2호 OR)", () => {
+    const result = assessSelfCultivationReduction({
+      isSelfCultivatedFarmer: true,
+      farmingYears: 5,
+      farmlandArea: 5000,
+      farmlandLocationDistance: 40, // 30km 초과이나
+      residesInSameOrAdjacentJurisdiction: true, // 동일·인접 시·군·구 거주 → 거리요건 충족
+      acquisitionTax: 3_000_000,
+      propertyType: "land_farmland",
+      acquisitionCause: "purchase",
+    });
+    // 거주 프롱 충족 → 감면 가능. (구 버그: 거리 40km만으로 부당거부)
+    expect(result.isEligible).toBe(true);
+    expect(result.reductionAmount).toBe(1_500_000); // 3,000,000 × 50%
+  });
+
   it("#C5 면적 25,000㎡ (한도 30,000㎡ 이내) → 전액 감면 (지특령 §3②3호)", () => {
     const result = assessSelfCultivationReduction({
       isSelfCultivatedFarmer: true,
@@ -469,6 +485,7 @@ describe("[P2-Anchor #P2-통합] calcAcquisitionTax P2 모듈 통합", () => {
       standardValue: 500_000_000,
       acquiredBy: "individual",
       specialRateType: "inheritance_one_house",
+      isOneHouseHousehold: true, // [C-2] §15①2호 가목 요건 — 충족 시에만 특례 발동
       balancePaymentDate: "2026-04-01",
     });
     // 기본세율 2.8% → §15 특례 → 0.8%

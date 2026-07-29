@@ -19,7 +19,11 @@ import {
   applyRate,
   calculateHoldingPeriod,
   safeMultiplyThenDivide,
+  computeEstimatedDeduction,
 } from "./tax-utils";
+import { applyExpropriationValuation } from "./transfer-tax-expropriation-valuation";
+import type { TransferTaxInput } from "./types/transfer.types";
+import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
 
 // ============================================================
 // 타입 정의
@@ -56,6 +60,7 @@ export interface ParcelInput {
   /**
    * 양도 당시 단가 (원/㎡, estimated 방식 시 사용).
    * standardAtTransfer = transferArea × standardPricePerSqmAtTransfer
+   * ※ 공익수용 §164⑨ 1호 특례 발동 시에는 이 단가 대신 **min[이 값, 보상액, 보상기초]**가 쓰인다.
    */
   standardPricePerSqmAtTransfer?: number;
   /**
@@ -69,6 +74,16 @@ export interface ParcelInput {
   transferExpense?: number;
   /** 미등기 여부 (true이면 장기보유특별공제 0%) */
   isUnregistered?: boolean;
+
+  // ─── 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) ─────────
+  // **필지별**이다 — 필지마다 개별공시지가(standardPricePerSqmAtTransfer)가 다르므로
+  // min[] 선택도 필지별로 독립 판정된다. 수용 보상도 실무상 필지별로 산정·명시된다.
+  // 게이트: acquisitionMethod === "estimated" + MultiParcelInput.transferCause === "public_expropriation"
+  //         + 양도일 ≥ 2009.02.04 + 두 필드 모두 > 0. 미충족 시 현행 분모 유지.
+  /** 보상가액 (원/㎡) */
+  compensationPerSqm?: number;
+  /** 보상액 산정의 기초가 되는 기준시가 (원/㎡) */
+  compensationBasisStdPrice?: number;
 
   // ─── 환지 감환지/증환지 (소득세법 시행령 §162의2) ─────────────
   // 3필드가 모두 제공되고 entitlementArea > allocatedArea 이면 감환지로 판정하여
@@ -105,6 +120,11 @@ export interface ParcelResult {
    * estimatedDeduction은 0으로 표시(미적용), expenses에 directSide 노출.
    */
   swapApplied?: boolean;
+  /**
+   * 공익수용 §164⑨ 1호 특례 산출근거 — 발동 시에만 존재.
+   * 양도당시 기준시가(환산 분모)를 min[기준시가, 보상액, 보상기초]로 낮춘 근거.
+   */
+  expropriationValuationDetail?: ExpropriationValuationDetail;
   /** 양도차익 (원) = allocatedTransferPrice - acquisitionPrice - estimatedDeduction - expenses */
   transferGain: number;
   /** 보유기간 연수 (장기보유특별공제 계산용) */
@@ -117,7 +137,10 @@ export interface ParcelResult {
   transferIncome: number;
   /** 환산 방식에서의 취득기준시가 합계 (standardAtAcq, 표시용) */
   standardAtAcq?: number;
-  /** 환산 방식에서의 양도기준시가 합계 (standardAtTransfer, 표시용) */
+  /**
+   * 환산 방식에서의 양도기준시가 합계 (환산 분모, 표시용).
+   * 공익수용 §164⑨ 1호 특례 발동 시에는 **min[] 적용 후 값**이다(= expropriationValuationDetail.denominator).
+   */
   standardAtTransfer?: number;
   /**
    * 환산 방식에서 실제 사용된 취득 면적 (㎡).
@@ -140,8 +163,31 @@ export interface MultiParcelInput {
   totalTransferPrice: number;
   /** 양도일 */
   transferDate: Date;
+  /**
+   * 양도원인 — "public_expropriation" 시 필지별 §164⑨ 1호 특례 게이트 후보.
+   * 자산-수준 값이며 필지별로 다를 수 없다(수용은 사업 단위).
+   */
+  transferCause?: "general" | "public_expropriation";
+  /**
+   * 자산 종류 — §164⑨ 적격 판정(가목~라목). 다필지는 정의상 토지(가목)이나
+   * (`transfer-tax-api.ts:96` `parcelModeActive = parcelMode && assetKind === "land"`),
+   * **암묵 가정 대신 명시 전달**한다 — 엔진이 자체 판정하도록 두면 3층 게이트가 갈라진다.
+   *
+   * ⚠️ **필수** — optional이면 호출부 누락 시 특례가 조용히 죽는다(`ExpropriationValuationParams`와 동일 이유).
+   */
+  propertyType: TransferTaxInput["propertyType"];
   /** 필지 목록 (2개 이상 권장, 1개도 허용) */
   parcels: ParcelInput[];
+  /**
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   *
+   * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
+   * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
+   * 그대로 내려준다(서브엔진 재판정 금지).
+   *
+   * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
+   */
+  ownershipRatio?: number;
 }
 
 export interface MultiParcelResult {
@@ -255,6 +301,8 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     let expenses = 0;
     let standardAtAcq: number | undefined;
     let standardAtTransfer: number | undefined;
+    /** §164⑨ 1호 특례 산출근거 — 발동 시에만 채워진다 */
+    let expropriationValuationDetail: ExpropriationValuationDetail | undefined;
     let effectiveAcquisitionArea: number | undefined;
     let exchangeLandReductionApplied = false;
     let swapApplied = false;
@@ -301,11 +349,35 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       standardAtAcq = Math.floor(acqArea * sqmAtAcq);
       standardAtTransfer = Math.floor(parcel.transferArea * sqmAtTransfer);
 
+      // 공익수용 §164⑨ 1호 — 양도당시 기준시가 차감 특례 (필지별 독립 판정).
+      // 판정식은 단건 경로와 **동일 함수**를 재사용한다(dual-truth 회피 — 여기서 min[]을
+      // 재구현하면 단건↔다필지 드리프트가 재발한다).
+      // 게이트의 useEstimatedAcquisition은 **필지별 환산 여부**를 넘긴다 — 다필지는 자산-수준
+      // 플래그가 API에서 false로 강제되므로(transfer-tax-api.ts:256) 그것을 쓰면 항상 미발동한다.
+      const exprVal = applyExpropriationValuation({
+        propertyType: input.propertyType,
+        useEstimatedAcquisition: true, // 이 분기 자체가 parcel.acquisitionMethod === "estimated"
+        transferCause: input.transferCause,
+        transferDate: input.transferDate,
+        standardPricePerSqmAtTransfer: sqmAtTransfer,
+        transferArea: parcel.transferArea,
+        compensationPerSqm: parcel.compensationPerSqm,
+        compensationBasisStdPrice: parcel.compensationBasisStdPrice,
+      });
+      if (exprVal) {
+        standardAtTransfer = exprVal.denominator;
+        expropriationValuationDetail = exprVal.detail;
+      }
+
       // 환산취득가액 = allocatedPrice × (standardAtAcq / standardAtTransfer)
       acquisitionPrice = safeMultiplyThenDivide(allocatedPrice, standardAtAcq, standardAtTransfer);
       // 개산공제 = 취득기준시가 × 3/100 (소득세법 시행령 §163⑥1호·2호가목).
       // 단, §104③ 미등기양도자산은 3/1000(0.3%).
-      estimatedDeduction = applyRate(standardAtAcq, parcel.isUnregistered ? 0.003 : 0.03);
+      estimatedDeduction = computeEstimatedDeduction(
+        standardAtAcq,
+        parcel.isUnregistered ? 0.003 : 0.03,
+        input.ownershipRatio,
+      );
 
       // §97② 단서 swap — 환산 + 개산공제 < 자본 + 양도비 시 자본+양도비 적용
       const capExp = parcel.capitalExpenditure ?? 0;
@@ -338,22 +410,31 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     const rawGain = swapApplied
       ? allocatedPrice - expenses
       : allocatedPrice - acquisitionPrice - expenses;
-    const transferGain = Math.max(0, rawGain);
+    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 손실 필지를 `Math.max(0, rawGain)`으로
+    //   **절사**해 이익 필지와 통산되지 않았다(총차익이 손실분만큼 과대 → 세액 과대).
+    //   소득세법 §102②·시행령 §167의2는 양도소득금액을 **소득별로 통산**하도록 한다 —
+    //   같은 과세기간·같은 소득의 필지 간 차손은 차익에서 공제된다.
+    //   다건 집계 경로(`transfer-tax-aggregate`의 손익통산)는 이미 통산하고 있어
+    //   다필지 경로만 어긋난 내부 불일치였다.
+    //   ⇒ 필지별 차익은 **부호를 보존**하고, 합산 단계에서 통산한다.
+    const transferGain = rawGain;
 
     if (rawGain < 0) {
       warnings.push(
-        `필지 ${parcel.id}: 양도손실 발생 (차익 ${rawGain.toLocaleString()} → 0으로 처리)`,
+        `필지 ${parcel.id}: 양도손실 발생 (차익 ${rawGain.toLocaleString()}) — 이익 필지와 통산 (§102②)`,
       );
     }
 
     // P-4: 장기보유특별공제 (보유기간 기산일: effectiveAcquisitionDate 익일)
+    // 장기보유특별공제는 §95②상 **양도차익에 공제율을 곱한 금액**이므로 차손 필지에는 없다.
+    // (차손에 공제율을 곱하면 손실이 줄어 통산액이 왜곡된다.)
     const holding = calculateHoldingPeriod(effectiveAcquisitionDate, transferDate);
     const holdingYears = holding.years;
     const longTermHoldingRate = calcLandLongTermRate(holdingYears, parcel.isUnregistered ?? false);
-    const longTermHoldingDeduction = applyRate(transferGain, longTermHoldingRate);
+    const longTermHoldingDeduction = rawGain > 0 ? applyRate(rawGain, longTermHoldingRate) : 0;
 
-    // 양도소득금액
-    const transferIncome = Math.max(0, transferGain - longTermHoldingDeduction);
+    // 양도소득금액 — 차손 필지는 음수 그대로 넘겨 합산 단계에서 통산된다.
+    const transferIncome = rawGain > 0 ? Math.max(0, rawGain - longTermHoldingDeduction) : rawGain;
 
     parcelResults.push({
       id: parcel.id,
@@ -367,6 +448,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
           ? (swapApplied ? expenses : 0)
           : expenses,
       swapApplied: swapApplied || undefined,
+      expropriationValuationDetail,
       transferGain,
       holdingYears,
       longTermHoldingRate,
@@ -392,7 +474,11 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
     (sum, r) => sum + r.longTermHoldingDeduction,
     0,
   );
-  const totalTransferIncome = parcelResults.reduce((sum, r) => sum + r.transferIncome, 0);
+  // 통산 후 합계가 음수면 과세 소득은 0이다(결손금 이월은 양도소득에 없다 — §102②).
+  const totalTransferIncome = Math.max(
+    0,
+    parcelResults.reduce((sum, r) => sum + r.transferIncome, 0),
+  );
 
   return {
     parcelResults,

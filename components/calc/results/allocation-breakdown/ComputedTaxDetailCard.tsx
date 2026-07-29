@@ -13,6 +13,7 @@ import type { Heir, InheritanceTaxResult } from "@/lib/tax-engine/types/inherita
 import { sortHeirs, labelOf } from "@/lib/calc/heir-allocation-summary";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DetailTable, DetailRow, SubTotalRow, ExpandButton } from "../deduction-breakdown/shared";
+import { Frac } from "../shared/FormulaParts";
 import { GenerationSkipFormulaRows } from "./GenerationSkipFormulaRows";
 
 export function ComputedTaxDetailCard({
@@ -75,7 +76,13 @@ export function ComputedTaxDetailCard({
                   value={formatKRW(p.computedTaxShare)}
                 />
                 <DetailRow
-                  label={`= ${formatKRW(distributable)} × (${formatKRW(p.taxBaseShare)} ÷ ${formatKRW(denom)}) · *5 부담비율 ${p.burdenRatio?.toFixed(4) ?? "—"}`}
+                  label={
+                    <>
+                      = {formatKRW(distributable)} ×{" "}
+                      <Frac top={formatKRW(p.taxBaseShare)} bottom={formatKRW(denom)} /> · *5 부담비율{" "}
+                      {p.burdenRatio?.toFixed(4) ?? "—"}
+                    </>
+                  }
                   value=""
                   indent
                   muted

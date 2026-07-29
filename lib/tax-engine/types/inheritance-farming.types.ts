@@ -217,10 +217,19 @@ export interface FarmingPostMgmtInput {
   violation: FarmingPostMgmtViolation;
   /** 사유 발생일 (ISO date YYYY-MM-DD) */
   violationDate: string;
+  /**
+   * 상속개시일 (ISO date YYYY-MM-DD). §18의3④ 5년 사후관리기간 기산.
+   * violationDate > addYears(inheritanceStartDate, 5)이면 ④ 트랙(처분·종사중단) 무추징.
+   * §18의3⑥ 트랙(조세포탈·회계부정 형 확정)은 5년 제한 없음(무시).
+   */
+  inheritanceStartDate: string;
   /** 상속세 신고기한 (= 상속개시일 + 6개월, §67) — 이자상당액 기산일 */
   filingDeadline: string;
-  /** 사유 발생 시점의 결정세액 (이자상당액 기준액) */
-  determinedTax: number;
+  /**
+   * 원래 상속세 과세표준 (영농공제 반영 후). §18의3④ 전단 추징세액 marginal 재계산 기준.
+   * 추징세액 = 상속세(과세표준 + 산입액) − 상속세(과세표준). 이자상당액도 이 marginal 기준(§16⑧1호).
+   */
+  baseTaxableAmount: number;
   /**
    * 국세기본법 시행령 §43의3② 이자율 (소수, 예: 0.029 = 연 2.9%).
    * 시점별 개정 — 사용자 직접 입력 권장.
@@ -240,7 +249,11 @@ export interface FarmingPostMgmtResult {
   recaptureRequired: boolean;
   /** 추징 면제 사유 (정당사유 인정 시) */
   exemptedBy?: FarmingPostMgmtJustifiedReason;
-  /** 추징세액 = originalDeduction × 100% (§16⑦) */
+  /** §18의3④ 5년 사후관리기간 경과로 추징 대상 아님 (④ 트랙 한정, 정당사유와 별개) */
+  outsideManagementPeriod?: boolean;
+  /** 상속세 과세가액 산입액 = originalDeduction × 100% (§16⑦) */
+  taxableAmountAddback: number;
+  /** 추징세액 = 상속세(과세표준 + 산입액) − 상속세(과세표준) (§18의3④ 전단 marginal) */
   recaptureAmount: number;
   /** 이자상당액 (§16⑧) */
   interestAmount: number;

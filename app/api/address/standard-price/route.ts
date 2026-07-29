@@ -180,7 +180,10 @@ function pickUnit(
       const iHo   = String(it.hoNm   ?? "").replace(/호$/, "").trim();
       return (!cleanDong || iDong === cleanDong) && (!cleanHo || iHo === cleanHo);
     });
-    if (matched.length > 0) candidates = matched;
+    // 동·호를 지정했으면 정확히 매칭된 세대만 사용. 매치가 없으면 임의 세대로 fallback하지 않고
+    // 조회 실패(null)를 반환 — 잘못된 세대 공시가격이 세금 계산에 들어가는 것을 방지.
+    if (matched.length === 0) return null;
+    candidates = matched;
   }
 
   // 최신 연도 우선

@@ -6,6 +6,9 @@
  * 1·2·3호 = 보유+거주 면제 / 5호 = 거주만 면제 (소득세법 시행령 §154 ① 단서).
  * 폼은 FLAT(provisoReason 등), API 변환에서 oneHouseExemptionProviso로 조립.
  * 거주 충족(1호 5년·3호 1년)은 거주기간 입력(residencePeriodMonths) 재사용 — 별도 입력 없음.
+ *
+ * mode: 일시적 2주택(temporary_two_house)이면 §155① 준용으로 1호·2호가목·3호만 노출(나·다목·5호 제외).
+ *   선택값은 effectiveProvisoReason로 정규화 — 1주택서 나·다목·5호 선택 후 전환 시 stale 무효값 표시 방지.
  */
 
 import { DateInput } from "@/components/ui/date-input";
@@ -13,6 +16,8 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { effectiveProvisoReason, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
+import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
 
 type ProvisoReason =
   | "rental_5yr_residence"
@@ -30,6 +35,8 @@ interface Props {
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
   provisoPreContractNoHouse: boolean;
+  /** 노출 맥락 — one_house(1주택, 전체 옵션) / temporary_two_house(1·2가·3호만) */
+  mode: ProvisoMode;
   onChange: (
     patch: Partial<{
       provisoReason: "" | ProvisoReason;
@@ -87,16 +94,25 @@ export function ExemptionProvisoSection({
   provisoExpropriationDate,
   provisoBusinessApprovalDate,
   provisoPreContractNoHouse,
+  mode,
   onChange,
 }: Props) {
-  const reason: ReasonOrNone = provisoReason === "" ? "none" : provisoReason;
-  const isOverseas =
-    provisoReason === "overseas_migration" || provisoReason === "overseas_residence";
+  // temp-two-house 모드에서 화이트리스트(1·2가·3호) 밖 stale reason은 "" 로 정규화 — 표시·조건 분기 모두 이 값 기준
+  const effReason = effectiveProvisoReason(mode, provisoReason);
+  const reason: ReasonOrNone = effReason === "" ? "none" : (effReason as ProvisoReason);
+  const isOverseas = effReason === "overseas_migration" || effReason === "overseas_residence";
+  // temp-two-house면 해당없음 + 1·2가·3호만 노출(입력오류 예방 — 나·다목·5호는 §155①에서 양립 불가)
+  const visibleOptions = OPTIONS.filter(
+    (o) =>
+      mode !== "temporary_two_house" ||
+      o.value === "none" ||
+      TEMP_TWO_HOUSE_PROVISO_REASONS.has(o.value),
+  );
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
           §
         </span>
         <p className="text-xs font-semibold text-violet-700">
@@ -104,18 +120,23 @@ export function ExemptionProvisoSection({
         </p>
         <LawArticleModal legalBasis="소득세법 시행령 §154①" label="§154① 단서" />
       </div>
-      <p className="text-[11px] text-violet-700">
+      <p className="text-caption text-violet-700">
         보유 2년(조정취득 시 거주 2년) 미달이라도 아래 사유에 해당하면 1세대1주택 비과세가 적용됩니다.
       </p>
+      {mode === "temporary_two_house" && (
+        <p className="text-caption text-violet-700">
+          일시적 2주택 종전주택은 §155① 준용으로 1호·2호가목·3호 사유만 적용됩니다.
+        </p>
+      )}
       <RadioCardGroup<ReasonOrNone>
         name="provisoReason"
         tone="violet"
         value={reason}
         onChange={(v) => onChange({ provisoReason: v === "none" ? "" : v })}
-        options={OPTIONS}
+        options={visibleOptions}
       />
 
-      {provisoReason === "expropriation" && (
+      {effReason === "expropriation" && (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <FieldCard label="사업인정 고시일" hint="고시일 전 취득한 주택만 해당 (미입력 시 검증 생략)">
             <DateInput
@@ -141,7 +162,7 @@ export function ExemptionProvisoSection({
         </FieldCard>
       )}
 
-      {provisoReason === "pre_designation_contract" && (
+      {effReason === "pre_designation_contract" && (
         <ToggleCard
           variant="card"
           tone="violet"
@@ -152,9 +173,9 @@ export function ExemptionProvisoSection({
         />
       )}
 
-      {(provisoReason === "unavoidable" || provisoReason === "rental_5yr_residence") && (
-        <p className="text-[11px] text-violet-700">
-          {provisoReason === "unavoidable"
+      {(effReason === "unavoidable" || effReason === "rental_5yr_residence") && (
+        <p className="text-caption text-violet-700">
+          {effReason === "unavoidable"
             ? "위 거주기간 입력이 1년 이상이어야 적용됩니다."
             : "위 거주기간 입력이 5년 이상이어야 적용됩니다."}
         </p>

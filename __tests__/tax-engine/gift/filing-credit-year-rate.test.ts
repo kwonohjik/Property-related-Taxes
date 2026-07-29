@@ -56,3 +56,26 @@ describe("§69 율 echo — 결과 노출", () => {
     expect(calcGiftTax(mk("2018-06-01")).creditDetail.filingCreditRate).toBe(0.05);
   });
 });
+
+describe("§69 율 — 합산배제 스트림(§41의3 등)도 증여연도 기준 (H-22)", () => {
+  it("2017 합산배제 증여 5억 → §69 7% 반영 (수정 전 giftDate 미전달로 3% 고정)", () => {
+    const r = calcGiftTax({
+      ...mk("2017-06-01"),
+      giftItems: [
+        {
+          id: "g",
+          category: "cash",
+          name: "상장이익(§41의3)",
+          marketValue: 500_000_000,
+          isAggregationExcludedGift: true,
+        },
+      ],
+    });
+    const agg = r.aggregationExcludedDetail!;
+    // §55①3호 과세표준 = 5억 − 3천만 = 4.7억 → 산출세액 = 4.7억×20% − 1천만 = 84,000,000
+    expect(agg.computedTax).toBe(84_000_000);
+    // 2017년 §69 = 7% → 신고세액공제 floor(84,000,000 × 7%) = 5,880,000 (수정 전 3% = 2,520,000)
+    expect(agg.totalCredit).toBe(5_880_000);
+    expect(agg.finalTax).toBe(78_120_000);
+  });
+});

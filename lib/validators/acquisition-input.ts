@@ -122,8 +122,6 @@ const deemedAcquisitionInputSchema = z.object({
     prevShareRatio: z.number().min(0).max(1),
     newShareRatio: z.number().min(0).max(1),
     isListed: z.boolean(),
-    /** 합병·분할로 인한 주식 취득 (형식적 취득 — 과세 제외 처리) */
-    isMergerOrSplitShare: z.boolean().optional(),
     /** 법인 설립 시 주식 취득 (지방세법 §7⑤ 괄호 — 취득으로 보지 아니함) */
     isFoundingShare: z.boolean().optional(),
   }).optional(),
@@ -345,6 +343,7 @@ export const acquisitionTaxInputSchema = z.object({
   farmingYears: z.number().nonnegative().optional(),
   farmlandArea: z.number().nonnegative().optional(),
   farmlandLocationDistance: z.number().nonnegative().optional(),
+  residesInSameOrAdjacentJurisdiction: z.boolean().optional(),
 
   // ─── [P3] 주택 수 자동 산정 ───
   houseCountInput: houseCountInputSchema.optional(),

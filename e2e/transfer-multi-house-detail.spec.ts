@@ -127,6 +127,28 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
     await expect(dialog.getByText("임대료 증액 5% 이하 충족", { exact: false })).toBeVisible();
   });
 
+  test("사목(G) 선택 → base 목 selector + base 목 선택 시 요건 필드 동적 노출", async ({ page }) => {
+    await gotoHoldingStepWithTwoHouses(page);
+    await page.getByRole("button", { name: /주택 추가/ }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 3000 });
+
+    await dialog.getByRole("switch", { name: /장기임대 등록주택/ }).click();
+    await expect(dialog.getByText("장기임대주택 유형", { exact: false })).toBeVisible();
+
+    // 사목(자진·자동 말소 후 양도) 선택 → base 목 selector + 말소 게이트 노출
+    await dialog.getByText("자진·자동 말소 후 양도", { exact: false }).click();
+    await expect(dialog.getByText("말소 전 base 목", { exact: false })).toBeVisible();
+    await expect(dialog.getByText("자진·자동 말소일", { exact: false })).toBeVisible();
+    // base 목 미선택 시 base 요건 필드 없음
+    await expect(dialog.getByText("임대개시 당시 공시가격", { exact: false })).toHaveCount(0);
+
+    // base 마목 선택 → 마목 "해당 목의 다른 요건"(임대개시 공시가격·5%룰) 동적 노출
+    await dialog.getByText("마목(장기일반)", { exact: false }).click();
+    await expect(dialog.getByText("임대개시 당시 공시가격", { exact: false })).toBeVisible();
+    await expect(dialog.getByText("임대료 증액 5% 이하 충족", { exact: false })).toBeVisible();
+  });
+
   test("모달 ④ 특수 배제 — 부득이한 사유 토글 ON → 거주기간 노출", async ({ page }) => {
     await gotoHoldingStepWithTwoHouses(page);
     await page.getByRole("button", { name: /주택 추가/ }).click();

@@ -151,6 +151,21 @@ export const ESTIMATED_DEDUCTION_RATE = {
   UNREGISTERED:  0.003,
 } as const;
 
+/**
+ * §163⑥ 개산공제율 선택 — **미등기양도자산(소득세법 §104③) 여부 단일 판정점**.
+ *
+ * 각 산출 지점이 `0.03`을 직접 쓰면 미등기 분기가 조용히 누락된다 — 실제로 split·PHD·겸용·재개발
+ * 경로 15곳이 3% 고정이어서 미등기 자산의 개산공제가 **10배**로 산출됐다(2026-07-28 정정).
+ * 같은 자산이 분리 계산 경로를 타면 다른 율이 적용되는 모순이었다.
+ *
+ * 신규 개산공제 지점은 반드시 이 함수를 경유할 것. 리터럴 `0.03` 사용 금지.
+ */
+export function estimatedDeductionRate(isUnregistered?: boolean): number {
+  return isUnregistered
+    ? ESTIMATED_DEDUCTION_RATE.UNREGISTERED
+    : ESTIMATED_DEDUCTION_RATE.LAND_BUILDING;
+}
+
 // ============================================================
 // 양도소득세 — 소득세법 §89 ~ §104
 // ============================================================
@@ -222,6 +237,10 @@ export const TRANSFER = {
   INHERITED_BEFORE_DEEMED:            "소득세법 시행령 §176조의2 ④",
   /** 소득세법 시행령 §163 ⑨ — 의제취득일 이후 상속 자산: 상속세 신고가액을 취득가액으로 의제 */
   INHERITED_AFTER_DEEMED:             "소득세법 시행령 §163 ⑨",
+  /** 소득세법 시행령 §163 ⑨ 2호 · §164 ⑦ — 개별주택가격 미공시 상속주택: max(상증법 평가액, §164⑤~⑦ 취득당시 기준시가). 국심 2003부602·2003서3266 */
+  INHERITED_AFTER_DEEMED_HOUSE_MAX:   "소득세법 시행령 §163 ⑨ 2호 · §164 ⑦",
+  /** 소득세법 시행령 §163 ⑨ 2호 · §164 ⑥ — 기준시가 미공시(2005.1.1. 전) 상속 상업용건물·오피스텔: max(상증법 평가액, §164⑥ 취득당시 기준시가) */
+  INHERITED_AFTER_DEEMED_COMMERCIAL_MAX: "소득세법 시행령 §163 ⑨ 2호 · §164 ⑥",
   /** 소득세법 부칙(1985.1.1. 개정) — 의제취득일 정의: 1984.12.31. 이전 취득은 1985.1.1. 취득으로 간주 */
   DEEMED_ACQUISITION_DATE_BASIS:      "소득세법 부칙(1985.1.1. 개정) — 의제취득일",
   /** 상증법 §60 · §61 — 평가의 원칙(시가우선) + 부동산 보충적평가방법 */
@@ -256,6 +275,19 @@ export const TRANSFER = {
   REDUCTION_ANNUAL_LIMIT:        "조특법 §133",
   /** 소득세법 시행령 §168의14 ③ 3호 — 공익사업 수용 토지 당연사업용 인정 (2년/5년) */
   PUBLIC_EXPROPRIATION_NBL_EXCLUSION: "소득세법 시행령 §168의14 ③ 3호",
+  /**
+   * 소득세법 시행령 §164⑨ — 양도당시 기준시가 차감 특례.
+   * 법 §99①1호 **가목부터 라목까지**(토지·건물·오피스텔/상업용 건물·주택) 가액보다 낮은 경우
+   * 그 차액을 차감. 1호=협의매수·수용(보상액과 보상액 산정 기초 기준시가 중 적은 금액),
+   * 2호=공매·강제경매·저당권실행 경매(그 공매 또는 경락가액).
+   * (종전 "집행기준 99-164-12" 인용은 국세청 행정규칙 — 법령 근거는 본 조항.
+   *  법제처 MST 286211 원문 확인 2026-07-16)
+   */
+  EXPROPRIATION_VALUATION:       "소득세법 시행령 §164⑨",
+  /** 소득세법 시행령 §164⑨ 1호 — 협의매수·수용 시 min[기준시가, 보상액, 보상액 산정 기초 기준시가] */
+  EXPROPRIATION_VALUATION_CLAUSE_1: "소득세법 시행령 §164⑨ 1호",
+  /** 소득세법 시행령 §164⑨ 2호 — 공매·경락 시 min[기준시가, 공매 또는 경락가액] (미구현 — 계획 P4) */
+  EXPROPRIATION_VALUATION_CLAUSE_2: "소득세법 시행령 §164⑨ 2호",
   /** 소득세법 §114조의2 — 신축·증축 건물 환산취득가액·감정가액 적용 시 가산세 (5%) */
   BUILDING_PENALTY:              "소득세법 §114조의2",
 
@@ -366,15 +398,27 @@ export const TRANSFER = {
 
   // ── 상업용건물·오피스텔 환산취득가 ──
   /**
-   * 소득세법 시행령 §164 ⑧ — 호별고시 전 취득 시 환산기준시가 추정
+   * 소득세법 시행령 §164 ⑥ — 호별고시 전 취득 시 환산기준시가 추정
    * 취득당시 기준시가 = INT( 최초고시 호별총액 × (취득시 기준시가합) / (최초고시시 기준시가합) )
+   *
+   * ⚠️ §164⑧과 혼동 금지 (2026-07-27 정정 — 종전 상수값이 §164⑧이었음).
+   *    §164⑥ = "기준시가가 고시되기 전에 취득한 오피스텔·상업용 건물의 취득당시 기준시가"(본 상수)
+   *    §164⑧ = "보유기간중 새 기준시가가 고시되지 아니해 양도·취득 기준시가가 동일한 경우" 상승률 환산
+   *            → `legal-codes/building-standard-price.ts` SAME_YEAR_TRANSFER (별개 규정)
    */
-  COMMERCIAL_BUILDING_PRE_DISCLOSURE:  "소득세법 시행령 §164 ⑧",
+  COMMERCIAL_BUILDING_PRE_DISCLOSURE:  "소득세법 시행령 §164 ⑥",
   /**
-   * 소득세법 시행령 §164 ① — ㎡당 기준시가합 산출
-   * 기준시가합 = 개별공시지가(원/㎡) × 대지면적(㎡) + 건물기준시가(원/㎡) × 연면적(㎡)
+   * 소득세법 §99 ① 1호 가목·나목 — §164⑥ 산식의 "기준시가합"
+   * 기준시가합 = 가목의 가액(토지 = 개별공시지가 × 대지면적) + 나목의 가액(건물 기준시가 총액)
+   *
+   * ⚠️ §164①과 혼동 금지 (2026-07-28 정정 — 종전 상수값이 §164①이었음).
+   *    §164⑥ 산식 원문이 분자·분모를 **"법 제99조제1항제1호 가목의 가액과 나목의 가액의 합계액"**
+   *    으로 명시한다 → 합계액의 근거는 법 §99①1호 가목·나목이다.
+   *    §164① = "법 §99①1호가목 **단서**의 '대통령령으로 정하는 방법에 따라 평가한 금액'" =
+   *            개별공시지가가 **없는** 토지(신규등록·분할합병·지목변경·고시누락)의 평가방법
+   *            → 기준시가합 산출 근거가 아니다.
    */
-  COMMERCIAL_BUILDING_STD_PRICE_SUM:   "소득세법 시행령 §164 ①",
+  COMMERCIAL_BUILDING_STD_PRICE_SUM:   "소득세법 §99 ① 1호 가목·나목",
   /**
    * 소득세법 시행령 §176조의2 ②항 2호 — 환산취득가액 (호별총액 비율)
    * 환산취득가합계 = INT( 양도가액 × 취득당시기준시가 / 양도시호별총액 )
@@ -430,6 +474,9 @@ export const EXEMPTION_PROVISO_CONST = {
   UNAVOIDABLE_RESIDENCE_YEARS: 1,
 } as const;
 
+/** 일시적 2주택 종전주택 §154① 단서 보유면제 사유 — §155① 2문 §154①1호(rental)·2호가(expropriation)·3호(unavoidable) 명시 인용(나·다목=출국일 1주택·5호=무주택 양립불가 제외). 엔진·api-helpers 공유 단일소스. */
+export const TEMP_TWO_HOUSE_PROVISO_REASONS: ReadonlySet<string> = new Set(["rental_5yr_residence", "expropriation", "unavoidable"]);
+
 /**
  * §154① 본문 — 취득 당시 조정대상지역 1세대1주택 비과세 거주요건 (단일 소스).
  * 2017.8.3(8·2 대책, 대통령령 제28293호) 이후 취득 + 취득 당시 조정대상지역이면 거주 2년.
@@ -442,15 +489,43 @@ export const ONE_HOUSE_RESIDENCE = {
 } as const;
 
 /**
- * 다주택자 양도소득세 중과 한시적 배제 윈도우.
- * 근거: 조세특례제한법 시행령 §167조의3 (대통령령 제32672호, 2022-05-31 개정)
- *      → 2022-05-10 ~ 2024-05-09 사이 양도 시 일반 누진세율 적용.
- * 본 상수는 코드 내 하드코딩된 동일 날짜를 일괄 치환하는 single source of truth.
+ * 다주택 중과 한시배제 관련 윈도우 — **매매계약일 기준**(gracePeriod 하한).
+ * 근거: 소득세법 시행령 §167의3 (대통령령 제32672호, 2022-05-31 개정, 2022-05-10 소급).
+ * ⚠️ 이 상수는 `.start`(2022-05-10)만 사용된다(gracePeriod 하한 + 취득세 중과 유예 시작).
+ *    `.end`는 미사용 — 양도일 기준 전면배제 종료일은 아래 `SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end`.
  */
 export const SURCHARGE_EXCLUSION_WINDOW = {
   start: "2022-05-10",
-  end: "2024-05-09",
+  end: "2026-05-09",
 } as const;
+
+/**
+ * 다주택 중과 한시배제 — **양도일 기준 전면배제 윈도우**(단일 출처).
+ * 근거(KoreanLaw 실측 2026-07-19): 소득세법 시행령 §167의3①12의2·§167의10①12의2 —
+ *   "법 §95④ 보유기간 2년 이상인 주택으로서 2026년 5월 9일까지 양도하는 주택"은 중과 제외.
+ * 하한(2022-05-10)은 12의2 조항 최초 신설 부칙 시행일(행위시법). 상한(2026-05-09)은 가목.
+ * 엔진 세율시드 `suspended_until` · `GRACE_PERIOD_END` · UI 술어가 모두 이 상수를 참조(3중 드리프트 방지).
+ */
+export const SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW = {
+  start: "2022-05-10",
+  end: "2026-05-09",
+} as const;
+
+/**
+ * 양도일(YYYY-MM-DD 문자열)이 다주택 중과 전면배제 윈도우 내인지. ISO 날짜 문자열 사전식 비교.
+ * 보유 2년 요건은 별도(호출부에서 AND) — 이 술어는 양도일 축만 판정. 미입력/경계 밖 → false.
+ * 엔진 `isSurchargeSuspended`(세율 suspended_until 기반)와 이름 구분 — 클라이언트 표시 게이트 전용.
+ */
+export function isWithinSurchargeSuspensionWindow(transferDate: string | undefined | null): boolean {
+  if (!transferDate) return false;
+  return (
+    transferDate >= SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.start &&
+    transferDate <= SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end
+  );
+}
+
+// 중과 한시배제 경과조치(§167의3①12의2 나·다목) 상수 → `./surcharge-transition.ts`로 분리(800줄 정책).
+// 부칙 §9270호 §14① 취득기간 중과배제 상수(CRISIS_ACQ_EXCLUSION_WINDOW·isCrisisAcqExempt)도 동 파일.
 
 // ============================================================
 // 다주택 중과세 — 소득세법 §104 ② + 시행령 §152·§167의3·§167의10
@@ -461,6 +536,8 @@ export const MULTI_HOUSE = {
   // ── 중과세율 근거 ──
   /** 소득세법 §104 ⑦ — 다주택 중과세율 (+20%p / +30%p) */
   SURCHARGE_RATE:                 "소득세법 §104 ⑦",
+  /** 한시배제(§167의3·167의10 12의2) 양도 주택 보유기간 최소 요건(년) — 2년 이상만 배제 */
+  SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS: 2,
   /** 소득세법 시행령 §152 — 1세대의 범위 */
   ONE_HOUSEHOLD_DEF:              "소득세법 시행령 §152",
 
@@ -510,14 +587,17 @@ export const MULTI_HOUSE = {
 export const INHERITED_HOUSE = {
   /** 개별주택가격 최초 공시일 (2005-04-30) — 이 날 이전 상속 시 PHD 환산 필요 */
   HOUSE_FIRST_DISCLOSURE_DATE: "2005-04-30 (개별주택가격 최초 공시일)",
-  /** 소득세법 시행령 §164⑤ — 개별주택가격 미공시 취득시 기준시가 추정 */
-  PHD_VALUATION: "소득세법 시행령 §164⑤",
+  /** 소득세법 시행령 §164⑦(⑤ 준용) — 개별주택가격(부수토지 포함) 미공시 취득시 기준시가 추정 */
+  PHD_VALUATION: "소득세법 시행령 §164⑦",
   /** 소득세법 시행령 §176조의2④ — 의제취득일 전 상속: max(환산가액, 실가×물가상승률) */
   PRE_DEEMED_MAX: "소득세법 시행령 §176조의2④",
   /** 소득세법 시행령 §163⑥ — 개산공제 = 취득시 기준시가 × 3% */
   LUMP_DEDUCTION: "소득세법 시행령 §163⑥",
   /** 소득세법 시행규칙 §80⑥ — 1990.8.30. 이전 취득 토지 등급가액 환산 */
   PRE1990_GRADE: "소득세법 시행규칙 §80⑥",
+  /** §155②③ 상속(단독)·공동상속(소수지분) 주택 비과세 주택수 제외 근거 — 최대지분자 산입 (2-A2) */
+  EXEMPTION_SOLE_BASIS: "소득세법 시행령 §155②",
+  EXEMPTION_CO_INHERITED_BASIS: "소득세법 시행령 §155③",
 } as const;
 
 // ============================================================
@@ -525,20 +605,9 @@ export const INHERITED_HOUSE = {
 // ============================================================
 
 /** 겸용주택(1세대 1주택 + 상가) 분리계산 관련 법령 상수 */
-export const MIXED_USE = {
-  /** 소득세법 시행령 §160 ① 단서 — 2022.1.1 이후 양도분: 주택연면적 ≥ 상가연면적이라도 강제 분리 */
-  SPLIT_RULE:         "소득세법 시행령 §160 ① 단서",
-  /** 소득세법 §99 + 시행령 §164 — 양도가액을 기준시가 비율로 주택/상가 안분 */
-  APPORTIONMENT:      "소득세법 §99 + 시행령 §164",
-  /** 소득세법 시행령 §168의12 — 주택부수토지 배율 (수도권 주·상·공 3배, 기타 도시 5배, 도시 외 10배) */
-  LAND_RATIO:         "소득세법 시행령 §168의12",
-  /** 소득세법 §89 ① 3호 단서 — 12억 초과 고가주택 비과세 안분 (주택부분에만 적용) */
-  HIGH_VALUE_HOUSE:   "소득세법 §89 ① 3호 단서",
-  /** 소득세법 시행령 §166⑥ — 양도가액 안분비율 ≠ 취득가액 안분비율 (보유 중 일부 용도변경) */
-  PARTIAL_USAGE_CHANGE: "소득세법 시행령 §166⑥",
-  /** 양도소득세 집행기준 99-164-10 — 용도변경 시 취득가액은 개별주택가격을 기준으로 안분 (재산-1384, 2009.7.8.) */
-  PARTIAL_USAGE_CHANGE_BASIS: "양도소득세 집행기준 99-164-10 (재산-1384, 2009.7.8.)",
-} as const;
+// MIXED_USE(겸용주택 분리계산 조문 상수)는 800줄 정책에 따라 ./transfer-mixed-use.ts 로 분리(2026-07-20).
+// 기존 `import { MIXED_USE } from "./legal-codes/transfer"` 호출부 하위 호환을 위해 재export.
+export { MIXED_USE } from "./transfer-mixed-use";
 
 // ============================================================
 // 장기임대주택 보유자의 거주주택 비과세 특례 — 소득세법 시행령 §155⑳ + §161
@@ -750,3 +819,22 @@ export const REDEVELOPMENT = {
    */
   REDEV_EXEMPTION_TIMING_RULING: "서면2016-법령해석재산-2705 (2017.02.13)",
 } as const;
+
+/** 장특공제 배제 사유 (§95② 본문 괄호 — 미등기·§104⑦ 중과 자산 등). UI 표시 전용 echo. */
+export type LthdExclusionReason =
+  | "unregistered"
+  | "presale_right"
+  | "successor_right_to_move_in"
+  | "multi_house_surcharge";
+
+/**
+ * 배제 사유별 산식 문구 — "보유 0년×2%" 오도 표시 방지. 엔진 step 산식·클라이언트 UI 공용 단일 소스.
+ * ⚠️ 클라이언트 컴포넌트가 직접 import — 이 파일(legal-codes)은 서버 전용 모듈(supabase 등) 무의존 유지.
+ */
+export const LTHD_EXCLUSION_LABEL: Record<LthdExclusionReason, string> = {
+  unregistered: "미등기 양도자산 — 장기보유특별공제 배제 (§95② 본문 괄호)",
+  presale_right: "분양권 — 장기보유특별공제 배제 (§95②)",
+  successor_right_to_move_in: "승계취득 조합원입주권 — 장기보유특별공제 배제 (§95②)",
+  multi_house_surcharge:
+    "조정대상지역 다주택 중과 대상 — 장기보유특별공제 배제 (§95② 본문 괄호·§104⑦)",
+};

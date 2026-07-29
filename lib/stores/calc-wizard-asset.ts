@@ -83,7 +83,6 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   reductions: AssetReductionForm[];
 
   /** 상속 취득가액 산정 모드: auto=보충적평가, manual=직접입력 */
-  inheritanceValuationMode: "auto" | "manual";
   /** 상속개시일 (YYYY-MM-DD) */
   inheritanceDate: string;
   /** 자산 종류 (토지/단독주택/공동주택 — 보충적평가용) */
@@ -149,6 +148,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * 미제공 시 isRegulatedArea boolean fallback.
    */
   regionCode?: string;
+  /**
+   * 전체 PNU 19자리 (AddressSearch 결과). UI 전용 — 건물 기준시가 모달 prefill 시
+   * 건축물대장 조회(BuildingRegisterLookupField) 활성화용. 엔진/검증 입력 아님.
+   * 미제공(레거시·PNU 없는 주소) 시 모달에서 재조회 필요(종전 동작).
+   */
+  addressPnu?: string;
 
   // ── 취득시기 상이 필지 분리 (assetKind === "land" 전용) ──
   /** 토지 내 취득시기 상이 필지 분리 계산 여부 (소득세법 시행령 §162①6호) */
@@ -192,17 +197,48 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   transferType: "" | "regular" | "burdened_gift";
 
   // ── 공익수용·협의매수 (양도원인) — #1 NBL 의제·#2 §77 감면·#3 환산 min[] 공용 사실 ──
-  /** 양도원인 — 공익수용·협의매수 여부 (assetKind==="land" 전용). 기본 "general" */
+  /**
+   * 양도원인 — 공익수용·협의매수 여부. 기본 "general".
+   * (종전 주석의 "assetKind==='land' 전용"은 **사실이 아니다** — `TransferModeBlock`의
+   *  `SUPPORTED_ASSET_KINDS` 5종(housing·land·building·general_building·commercial_building)에 노출된다.)
+   */
   transferCause: "general" | "public_expropriation";
   /**
    * 사업인정고시일 (YYYY-MM-DD) — NBL(§168의14③3호)·§77 고시일 단일 소스.
    * NBL publicNoticeDate·§77 businessApprovalDate에 fallback(`섹션필드 || 이 값`)으로 공급.
    */
   expropriationNoticeDate: string;
-  /** #3 보상가액 (원/㎡) — 환산 양도시 기준시가 min[] 특례(집행기준 99-164-12). 환산+토지+양도≥2009.02.04 시만 */
+  /**
+   * 보상가액 (원/㎡) — 양도당시 기준시가 차감 특례(**소득세법 시행령 §164⑨ 1호**)의 후보②.
+   * 현행 노출 조건: 환산 + 토지 + 양도 ≥ 2009.02.04 (게이트가 법령 범위보다 좁음 — 계획 P3).
+   * ※ 다필지는 필지별 값을 쓴다(`ParcelFormItem.compensationPerSqm`) — 필지마다 공시지가가 달라
+   *   min[] 선택이 독립이기 때문. 이 자산-수준 필드는 단건 경로 전용.
+   */
   compensationPerSqm: string;
-  /** #3 보상산정 기초 기준시가 (원/㎡) — 위 min[]의 3번째 후보 */
+  /** 보상액 산정의 기초가 되는 기준시가 (원/㎡) — 위 min[]의 후보③ */
   compensationBasisStdPrice: string;
+  /**
+   * §164⑨2호 공매·경락 대상 여부 (계획 P4). transferCause(1호 수용)와 **배타(N3)**.
+   * ON 시 auctionPrice로 min(양도당시 기준시가 총액, 공매·경락가액). land·building UI 노출.
+   */
+  isAuctionTransfer: boolean;
+  /** 그 공매 또는 경락가액 (총액, 원) — §164⑨2호 min의 후보 */
+  auctionPrice: string;
+  /**
+   * 주택 수용 보상액 총액 (원) — §164⑨1호 주택 총액 트랙(P5). 개별주택가격은 총액이라
+   * 원/㎡ 후보(compensationPerSqm)가 아닌 총액을 쓴다. housing 자산 전용.
+   */
+  housingCompensationTotal: string;
+  /** 주택 수용 보상액 산정 기초 기준시가 총액 (원) — §164⑨1호 주택 총액 min 후보 */
+  housingCompensationBasisTotal: string;
+  /**
+   * 토지분 보상액 총액 (원) — §164⑨1호 건물 split 토지분 트랙(P6/D6). 토지·건물 취득일 분리
+   * 양도 시, **토지분** 환산 분모만 min(양도시 토지 기준시가 총액, 보상액, 보상기초)로 낮춘다.
+   * 건물(나목) split 전용. 주택 split은 총액 미분해라 미지원(Q6 — validate 차단).
+   */
+  splitLandCompensationTotal: string;
+  /** 토지분 보상액 산정 기초 기준시가 총액 (원) — §164⑨1호 건물 split min 후보 */
+  splitLandCompensationBasisTotal: string;
 
   // ── 신축(자가건축) 취득일 4-시점 (영 §162①4호) ──
   /**
@@ -280,6 +316,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   assetContractDate?: string;
   /** 피상속인 취득일 (상속 시 단기보유 통산용, YYYY-MM-DD) */
   decedentAcquisitionDate: string;
+  /** §154⑧3호 — 상속개시 당시 상속인·피상속인 동일세대 여부 (상속주택 자체 양도 보유기간 통산) */
+  decedentSameHouseholdBeforeInheritance: boolean;
+  /** §154⑧3호 — 상속개시 전 동일세대 거주·보유 개시일 (YYYY-MM-DD, 비과세 보유기간 기산) */
+  decedentCohabitationHoldingStartDate: string;
+  /** §154⑧3호 — 상속개시 전 동일세대 통산 거주 개월 (비과세 거주요건·표2 대상 판정용, 공제율은 실거주 별도) */
+  decedentCohabitationResidenceMonths: string;
   /** 증여자 취득일 (YYYY-MM-DD) */
   donorAcquisitionDate: string;
   /** 매매 환산취득가 사용 여부 */
@@ -326,8 +368,24 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   hasSeperateLandAcquisitionDate: boolean;
   /** 토지 취득일 (YYYY-MM-DD) — hasSeperateLandAcquisitionDate === true 시 필수 */
   landAcquisitionDate: string;
-  /** 가액 분리 방식: "apportioned"(기준시가 비율 자동 안분) | "actual"(직접 입력) */
-  landSplitMode: "apportioned" | "actual";
+  /**
+   * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥, 토지·건물 취득일 분리 모드 전용).
+   * `landSplitMode`(구, 취득·양도 겸용 토글)를 대체 — 취득은 이 필드가 단일 소스.
+   * ""(미선택) 시 자산 전체 레거시 플래그에서 파생 — `lib/calc/transfer-tax-split-acq-mode.ts` 참조.
+   */
+  landAcqMode: "" | "actual" | "estimated" | "appraisal" | "salesCase";
+  /** 건물 파트 취득 방식 — landAcqMode와 완전 독립(파트별 4-way) */
+  buildingAcqMode: "" | "actual" | "estimated" | "appraisal" | "salesCase";
+  /**
+   * 양도가액 결정 방식 — 이 자산 **내** 토지·건물 분리 축.
+   * 자산 **간** 일괄양도 안분 축인 `bundledSaleMode`(폼-전역)와 레벨이 달라 공존한다.
+   * "apportioned": 양도시 기준시가 비율 안분 (기본) | "actual": 구분양도 직접 입력.
+   */
+  saleSplitMode: "apportioned" | "actual";
+  /** 토지 파트 매매사례가액 (원) — landAcqMode === "salesCase" 시 직접입력, 미입력 시 §166⑥ 안분 */
+  landSalesCaseValue: string;
+  /** 건물 파트 매매사례가액 (원) — buildingAcqMode === "salesCase" 시 직접입력 */
+  buildingSalesCaseValue: string;
   /** 토지 양도가액 (실제 모드 또는 안분 override) */
   landTransferPrice: string;
   /** 건물 양도가액 (실제 모드 또는 안분 override) */
@@ -356,8 +414,15 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   phdLandPriceYearAtAcq: string;
   /** true = 수동 변경됨, false = 자동추천 */
   phdLandPriceYearAtAcqIsManual: boolean;
-  /** 취득당시 토지 단위 공시지가 (원/㎡) */
+  /** 취득당시 토지 단위 공시지가 (원/㎡) — **토지값 트랙**(부수토지 기준시가 = 공시지가 × 면적). 엔진 입력 */
   phdLandPricePerSqmAtAcq: string;
+  /**
+   * 취득 ≤2000 — 2001.1.1 현재 단위 공시지가 (원/㎡). **위치지수 트랙**(건물 기준시가 산정, 소령 §164⑤).
+   * `phdLandPricePerSqmAtAcq`(취득당시 연도 토지값)와 의미가 달라 혼용 금지 — 트랙 판정은
+   * `lib/calc/phd-acq-land-price-track.ts` 단일 소스.
+   * **엔진 미전달(UI 전용)**: 배치 모달 입력 보존 + 상가건물 모달 prefill 소스.
+   */
+  phdLandPricePerSqmAtAcq2001: string;
   /** 취득당시 건물 기준시가 (원) */
   phdBuildingStdPriceAtAcq: string;
   /** 최초공시일 선택 연도 */
@@ -404,6 +469,15 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   useStandardPriceAtAcqOverride: boolean;
   /** 양도시 기준시가 직접 입력 override 사용 여부 (PreDeemedInputs 전용) */
   useStandardPriceAtTransferOverride: boolean;
+
+  /**
+   * 건물분 취득시 기준시가 (원) — `assetKind==="building"` + 토지·건물 취득시기 상이 전용.
+   *
+   * 소득세법 §99①1호 나목(국세청장 산정·고시). 기준일은 **건물 취득일**의 직전 고시분(소득령 §164③) —
+   * 토지분(㎡당 공시지가 × 면적)은 토지 취득일 기준이라 시점이 다르다.
+   * 미입력 시 `standardPriceAtAcq` 총액에서 역산으로 후퇴한다(한시).
+   */
+  buildingStandardPriceAtAcq: string;
 
   /** 취득 시점 ㎡당 공시지가 (원/㎡, 토지·비주거건물 전용) */
   standardPricePerSqmAtAcq: string;
@@ -541,17 +615,53 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     /** 거주주택 양도(A) / PHRP 양도(B) */
     scenario: 'A' | 'B';
     rentalUnits: Array<{
-      /** 임대사업자 등록일 (YYYY-MM-DD) */
-      registrationDate: string;
-      rentalType: 'short-4' | 'short-6' | 'long-8' | 'long-10' | 'pre-2018';
+      /** 세무서 사업자등록일 §168 (YYYY-MM-DD) */
+      businessRegistrationDate: string;
+      /** 지자체 임대사업자등록신청일 민특법§5 (YYYY-MM-DD) */
+      rentalRegistrationDate: string;
+      /** 임대구분 (의무기간·cap 파생 소스). existing_business=나목·unsold_08_09=라목(미분양) */
+      rentalCategory: 'long_general' | 'short_6y' | 'pre_2018' | 'existing_business' | 'unsold_08_09';
       rentalAcquisitionType: 'purchase' | 'construction';
       isApartment: boolean;
-      region: 'seoul-metro' | 'non-metro' | 'regulated-area';
-      /** 임대개시일 기준시가 (원, 문자열) */
+      /** 소재지역 수도권/비수도권 (918 조정취득은 isExcluded918Rule 별도) */
+      region: 'seoul-metro' | 'non-metro';
+      /** 소재지 법정동코드 10자리 (주소 검색 시 자동 채움 — region 자동판별 소스·자동배지 신호). 미검색 시 "" */
+      regionCode: string;
+      /** 918 조정취득 배제(2018.9.14 이후 조정대상지역 신규취득). 마목 hard·아목 carve-out */
+      isExcluded918Rule: boolean;
+      /** 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */
+      hasContractDepositProof: boolean;
+      /** 마·바목 단기→장기 변경신고 배제 여부 */
+      isExcludedShortToLongChange: boolean;
+      /** 임대개시일 기준시가 (원, 문자열) — 가/다/마/바/아/자/구법 */
       standardPriceAtRentalStart: string;
-      /** 실제 임대 개월 수 */
+      /** 취득당시 기준시가 (원, 문자열) — 나목(취득당시 3억) */
+      acquisitionOfficialPrice: string;
+      /** 국민주택규모 충족 자기확인 — 나목 */
+      isNationalSizeHousing: boolean;
+      /** 대지면적 ㎡ (건설임대 규모요건, 문자열) */
+      rentalLandArea: string;
+      /** 연면적/전용면적 ㎡ (건설임대 규모요건, 문자열) */
+      rentalTotalFloorArea: string;
+      /** 2호 이상 임대 충족 자기확인 (건설임대·나목) */
+      hasMinimum2Units: boolean;
+      /** 같은 시·군 5호 이상 임대 충족 (라목 미분양) */
+      hasMinimum5UnitsInCity: boolean;
+      /** 최초 분양계약일 (라목 미분양 2008.6.11~2009.6.30, YYYY-MM-DD) */
+      firstSaleContractDate: string;
+      /** 실제 임대 개월 수 (direct 모드 값·legacy fallback) */
       rentalMonths: string;
-      /** 자동·자진말소 5년 내 양도 여부 */
+      /** 임대기간 입력 모드 — direct(개월 직접)·interval(시작~종료일 다중 기간) */
+      rentalInputMode: "interval" | "direct";
+      /** 임대 구간 (interval 모드, 비연속 허용). 개월은 API 변환 시 deriveRentalMonths로 합산 */
+      rentalPeriods: Array<{ start: string; end: string }>;
+      /** 임대주택 지번 주소 — 임대개시일 기준시가 Vworld 조회용(UI 상태·엔진 미전송) */
+      rentalAddressJibun: string;
+      /** 공동주택 동(예: "324") — 임대개시일 기준시가 세대 식별용(UI 상태·엔진 미전송) */
+      rentalDong: string;
+      /** 공동주택 호(예: "1004") — 임대개시일 기준시가 세대 식별용(UI 상태·엔진 미전송) */
+      rentalHo: string;
+      /** §155⑳㉓ 말소 특례 — 자진(의무기간 1/2↑)·자동말소 후 5년 내 거주주택 양도 여부 (가·다·라·마목) */
       rentalAutoTermination: boolean;
       /** 기타 요건 충족 자기확인 (5%증액 등) */
       requirementsConfirmed: boolean;
@@ -566,7 +676,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     standardPriceAtTransferForPhrp?: string;
   };
 
-  // ── 상업용건물·오피스텔 환산취득가 (사례 29, 소득세법 시행령 §164⑧, §176조의2②2호) ──
+  // ── 상업용건물·오피스텔 환산취득가 (사례 29, 소득세법 시행령 §164⑥, §176조의2②2호) ──
   /**
    * 상업용건물·오피스텔 호별고시 시점 분기.
    * - "pre_disclosure": 호별고시 전 취득(~2004.12) → 건물기준시가 3시점 + 역환산 필요
@@ -594,10 +704,33 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   cbUnitPriceAtFirstOrAcq: string;
   /**
    * 건물 기준시가 — 취득시 (원, 총액). cbEra === "pre_disclosure" 시만 필수.
-   * 소득세법 시행령 §164①: 국세청 고시 건물기준시가.
+   * 법 §99①1호 나목의 가액: 국세청 고시 건물기준시가.
    * 사용자(외부)에서 ㎡당 단가 × 연면적(전유+공용 보정계수 반영)을 미리 곱한 총액 입력.
    */
   cbBuildingStdPriceAtAcq: string;
+  /**
+   * §164⑥ 단서 — 취득당시 건물 기준시가를 §164⑤ 준용으로 산정했음을 사용자가 확인.
+   *
+   * 취득연도 ≤ 2000이면 법 §99①1호나목(건물 기준시가)이 고시되기 전이라 그 가액이 없다.
+   * 국세청 「취득당시 건물기준시가 산정기준율표」의 취득연도 축이 1985~2000이고
+   * `resolveAcqBaseRate()`가 `acqYear > 2000`을 잘라내는 것이 그 경계다.
+   * 이때 §164⑥ 단서에 따라 §164⑤을 준용해야 하는데, 준용 산정에는 신축연도·구조·용도가 필요해
+   * 엔진이 자동 산정할 수 없다(AssetForm 미보유 — 건물 기준시가 모달에서만 입력).
+   * → 사용자의 명시적 확인을 남긴다. cbEra === "pre_disclosure" + 취득연도 ≤2000일 때만 의미 있음.
+   */
+  cbAcqBuildingStdBy164_5: boolean;
+  /**
+   * §164⑥ 산식 괄호 단서(§164⑧ 준용) — **B: 전기의 토지 및 건물의 기준시가 합계액** (원, 총액).
+   *
+   * 취득당시 기준시가합 == 최초고시당시 기준시가합인 경우에만 쓰인다. 미입력 시 준용 산정을
+   * 하지 않고(종전 계산 유지) 결과에 경고만 남긴다.
+   * 산식: 취득당시 기준시가 = 최초고시 기준시가 × A / [A + (A−B) × C/D]
+   */
+  cbPrevStdPriceSum: string;
+  /**
+   * §164⑧ 준용 — **D: 토지 및 건물 기준시가 조정월수**. 빈 값이면 12(시행규칙 §80②1호 통상값).
+   */
+  cbStdPriceAdjustMonths: string;
   /**
    * 건물 기준시가 — 최초고시시(2005) (원, 총액). cbEra === "pre_disclosure" 시만 필수.
    */

@@ -3,6 +3,7 @@
  * 순수 상수·인터페이스만. buildStatementItems 등 로직은 DetailedStatementHelpers.ts.
  * 하위 호환: DetailedStatementHelpers.ts가 이 파일을 re-export하므로 기존 import 경로 유지.
  */
+import type { ReactNode } from "react";
 
 // ── 자산별 분해 ──────────────────────────────────────────────────
 
@@ -20,8 +21,8 @@ export interface PerAssetValue {
 export interface StatementItem {
   /** 신고서 양식 표의 항목 라벨과 일치 */
   label: string;
-  /** 산식·계산 과정 설명 (예: "양도가액 - 취득가액 - 필요경비") */
-  formula?: string;
+  /** 산식·계산 과정 설명 (예: "양도가액 - 취득가액 - 필요경비"). ReactNode 허용 — Frac 분수 표기(PR #746 표준) */
+  formula?: ReactNode;
   /** 실제 계산 결과 값 — 숫자=금액(formatKRW), 문자열=날짜/기간 */
   value: number | string | null;
   /** 법령 근거 (LawArticleModal에 전달) */
@@ -65,7 +66,17 @@ export const STATEMENT_GROUPS: GroupDef[] = [
     id: "ltDeduction",
     title: "2단계 — 장기보유특별공제 (§95②)",
     tone: "amber",
-    itemKeys: ["ltDeduction", "ltHoldingPart", "ltResidencePart"],
+    // 겸용은 주택분/상가분 키(ltHousing*·ltCommercialPart)만, 그 외는 ltHoldingPart/ltResidencePart만
+    // Map에 set됨 — 미설정 키는 렌더러가 자동 skip(부분별 vs 합산 자동 분기).
+    itemKeys: [
+      "ltDeduction",
+      "ltHousingPart",
+      "ltHousingHolding",
+      "ltHousingResidence",
+      "ltCommercialPart",
+      "ltHoldingPart",
+      "ltResidencePart",
+    ],
   },
   {
     id: "income",
@@ -75,6 +86,7 @@ export const STATEMENT_GROUPS: GroupDef[] = [
       "incomeAmount",
       "nontaxableIncome",
       "reductionTargetIncome",
+      "reductionTargetIncome2",
       "incomeAmountAfter",
       "priorIncomeAmount",
       "basicDeduction",

@@ -24,6 +24,7 @@ import type { BundledSaleMode } from "./CompanionSaleModeBlock";
 import { ASSET_KIND_LABELS } from "./asset-labels";
 import { summarizeAssetSections } from "./asset-section-summary";
 import { AssetSection } from "./AssetSection";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AssetSectionBasic } from "./asset-sections/AssetSectionBasic";
 import { AssetSectionTransfer } from "./asset-sections/AssetSectionTransfer";
 import { AssetSectionAcquisition } from "./asset-sections/AssetSectionAcquisition";
@@ -112,6 +113,9 @@ export function CompanionAssetCard({
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   const isPrimary = asset.isPrimaryForHouseholdFlags;
+  // 지분 모드 companion(자산2+): ① 기본정보·② 양도정보는 같은 물건·같은 양도 사건이라 자산1과
+  // 동일 → 숨김(자산1에서 1회 입력·엔진 mergePrimaryBasic 병합). 자산1(index 0)은 항상 노출.
+  const hideInheritedSections = splitMode === "fractional" && index > 0;
   const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
   const isNewConstruction = asset.acquisitionCause === "newConstruction";
 
@@ -201,17 +205,17 @@ export function CompanionAssetCard({
             자산 {index + 1} — {kindLabel}
           </span>
           {isPrimary && (
-            <span className="inline-flex rounded bg-primary/10 px-2 py-0.5 text-[10px] text-primary font-medium">
+            <span className="inline-flex rounded bg-primary/10 px-2 py-0.5 text-micro text-primary font-medium">
               주 자산
             </span>
           )}
           {bundledSaleMode === "actual" && (
-            <span className="inline-flex rounded bg-amber-100 px-2 py-0.5 text-[10px] text-amber-700">
+            <span className="inline-flex rounded bg-amber-100 px-2 py-0.5 text-micro text-amber-700">
               계약서 가액
             </span>
           )}
           {showUnifiedBadge && (
-            <span className="inline-flex rounded bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] text-amber-800">
+            <span className="inline-flex rounded bg-amber-100 border border-amber-300 px-2 py-0.5 text-micro text-amber-800">
               주택·부수토지 일체과세 자동 적용 중 (§89·영 §154⑦, 재산-53·재산-1354)
             </span>
           )}
@@ -233,6 +237,8 @@ export function CompanionAssetCard({
         {SECTION_CHIPS.map((chip) => {
           const sec = summaryByNum[chip.num];
           if (chip.num === 5 && !sec) return null;
+          // 지분 모드 companion: ① 기본정보·② 양도정보 섹션 미렌더 → 칩도 제외(죽은 칩·no-op jump 방지).
+          if ((chip.num === 1 || chip.num === 2) && hideInheritedSections) return null;
           const filled = !!sec?.filled;
           return (
             <button
@@ -251,52 +257,68 @@ export function CompanionAssetCard({
         })}
       </div>
 
-      {/* ① 기본정보 */}
-      <AssetSection
-        num={1}
-        title="기본정보"
-        tone="sky"
-        summary={summary.basic.label}
-        status={status(summary.basic.filled)}
-        open={!!open[1]}
-        onToggle={() => toggleSection(1)}
-        forceOpen={forceOpenAll}
-      >
-        <AssetSectionBasic
-          asset={asset}
-          onChange={handleBasicChange}
-          isMultiBundled={isMultiBundled}
-          onAddAsset={onAddAsset}
-          showFormDates={showFormDates}
-          transferDate={transferDate}
-          filingDate={filingDate}
-          filingOverdue={filingOverdue}
-          filingDeadline={filingDeadline}
-          onFormChange={onFormChange}
-        />
-      </AssetSection>
+      {/* ①·② — 지분 모드 companion(자산2+)은 자산1과 동일하므로 숨기고 안내배너로 대체.
+          자산1(index 0)은 showFormDates=false가 아니어서 자동펼침·양도일 위젯 정상. */}
+      {hideInheritedSections ? (
+        <ToneCard tone="sky">
+          <p
+            data-testid="fractional-basic-inherited-notice"
+            className="text-xs text-sky-800 dark:text-sky-200"
+          >
+            자산종류·소재지·면적·양도정보는 자산 1과 동일하게 적용됩니다. 양도가액은 총양도가 × 지분율로 자동 계산됩니다.
+          </p>
+        </ToneCard>
+      ) : (
+        <AssetSection
+          num={1}
+          title="기본정보"
+          tone="sky"
+          summary={summary.basic.label}
+          status={status(summary.basic.filled)}
+          open={!!open[1]}
+          onToggle={() => toggleSection(1)}
+          forceOpen={forceOpenAll}
+        >
+          <AssetSectionBasic
+            asset={asset}
+            onChange={handleBasicChange}
+            isMultiBundled={isMultiBundled}
+            onAddAsset={onAddAsset}
+            showFormDates={showFormDates}
+            transferDate={transferDate}
+            filingDate={filingDate}
+            filingOverdue={filingOverdue}
+            filingDeadline={filingDeadline}
+            onFormChange={onFormChange}
+          />
+        </AssetSection>
+      )}
 
-      {/* ② 양도정보 */}
-      <AssetSection
-        num={2}
-        title="양도정보"
-        tone="emerald"
-        summary={summary.transfer.label}
-        status={status(summary.transfer.filled)}
-        open={!!open[2]}
-        onToggle={() => toggleSection(2)}
-        forceOpen={forceOpenAll}
-      >
-        <AssetSectionTransfer
-          asset={asset}
-          onChange={onChange}
-          singleMode={singleMode}
-          bundledSaleMode={bundledSaleMode}
-          transferDate={transferDate}
-          contractTotalPrice={contractTotalPrice}
-          primaryAsset={primaryAsset}
-        />
-      </AssetSection>
+      {/* ② 양도정보 — 지분 모드 companion은 자산1과 동일(같은 양도 사건)하므로 숨김.
+          양도 형태·양도가액은 자산1에서 입력, 엔진은 mergePrimaryBasic로 transferType·transferCause 병합. */}
+      {!hideInheritedSections && (
+        <AssetSection
+          num={2}
+          title="양도정보"
+          tone="emerald"
+          summary={summary.transfer.label}
+          status={status(summary.transfer.filled)}
+          open={!!open[2]}
+          onToggle={() => toggleSection(2)}
+          forceOpen={forceOpenAll}
+        >
+          <AssetSectionTransfer
+            asset={asset}
+            onChange={onChange}
+            singleMode={singleMode}
+            bundledSaleMode={bundledSaleMode}
+            transferDate={transferDate}
+            contractTotalPrice={contractTotalPrice}
+            primaryAsset={primaryAsset}
+            isFractionalSplit={splitMode === "fractional"}
+          />
+        </AssetSection>
+      )}
 
       {/* ③ 취득정보 */}
       <AssetSection
@@ -323,23 +345,26 @@ export function CompanionAssetCard({
         />
       </AssetSection>
 
-      {/* ④ 필요경비 */}
-      <AssetSection
-        num={4}
-        title="자본적 지출, 필요경비"
-        tone="slate"
-        summary={summary.expense.label}
-        status={status(summary.expense.filled)}
-        open={!!open[4]}
-        onToggle={() => toggleSection(4)}
-        forceOpen={forceOpenAll}
-      >
-        <AssetSectionExpense
-          asset={asset}
-          onChange={onChange}
-          totalTransferExpense={totalTransferExpense}
-        />
-      </AssetSection>
+      {/* ④ 필요경비 — 겸용주택은 주택/상가 섹션별 실제 필요경비(취득정보 ③)를 사용하므로
+          공통 자본적지출·양도비 입력은 숨김(겸용 엔진이 capex/transferExpense를 소비하지 않음). */}
+      {!(asset.assetKind === "housing" && asset.isMixedUseHouse) && (
+        <AssetSection
+          num={4}
+          title="자본적 지출, 필요경비"
+          tone="slate"
+          summary={summary.expense.label}
+          status={status(summary.expense.filled)}
+          open={!!open[4]}
+          onToggle={() => toggleSection(4)}
+          forceOpen={forceOpenAll}
+        >
+          <AssetSectionExpense
+            asset={asset}
+            onChange={onChange}
+            totalTransferExpense={totalTransferExpense}
+          />
+        </AssetSection>
+      )}
 
       {/* ⑤ 기타 특례 — 적용 자산일 때만 노출 */}
       {summary.extras && (

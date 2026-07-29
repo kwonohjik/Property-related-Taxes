@@ -29,6 +29,7 @@ import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { GiftCreditChecklist } from "@/components/calc/gift/GiftCreditChecklist";
 import { DoneeMinorField } from "@/components/calc/gift/DoneeMinorField";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 // ============================================================
 // 폼 상태 타입
@@ -83,6 +84,8 @@ export interface FormState extends AppraisalFeeFormFields {
   simultaneousGifts?: Array<{ donorRelation: DonorRelation; taxableValue: string }>;
   isFiledOnTime: boolean;
   foreignTaxPaid: string;
+  /** 국외 증여재산 과세표준 (§59 §21① 점유비 한도 분자, H-32). foreignTaxPaid>0 시 필수. */
+  foreignGiftTaxBase: string;
   specialTreatment: "" | "startup" | "family_business";
   /** 창업자금 §30의5④ — 투자 완료 여부 (startup 선택 시 노출) */
   startupInvestmentCompleted: boolean;
@@ -148,6 +151,7 @@ export const INITIAL_FORM: FormState = {
   priorUsedMarriageBirthDeduction: "",
   isFiledOnTime: true,
   foreignTaxPaid: "",
+  foreignGiftTaxBase: "",
   specialTreatment: "",
   startupInvestmentCompleted: false,
   startupNewHiresAtLeast10: false,
@@ -244,15 +248,7 @@ export function Step0({
 
       {/* Phase A: 증여자 (donor) — §47 합산 그룹 + §57 적용 판정
           G-M3: donor 변경 시 donorRelation 자동 도출 (단일 진실화) */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-[10px] font-bold text-violet-800 select-none">
-            §47
-          </span>
-          <p className="text-xs font-semibold text-violet-700">
-            증여자 (동일인 합산 그룹 + §57 적용 판정)
-          </p>
-        </div>
+      <ToneCard tone="violet" sectionNum="§47" title="증여자 (동일인 합산 그룹 + §57 적용 판정)" bodyClassName="space-y-2" noDark>
         <select
           value={form.donor}
           onChange={(e) => {
@@ -278,7 +274,7 @@ export function Step0({
         </select>
         {/* G-M2b: 세대생략 §57은 donor=grandparent이면 자동 적용됨을 안내 */}
         {form.donor === "grandparent" && (
-          <p className="text-[11px] text-rose-700 bg-rose-50/70 rounded px-2 py-1">
+          <p className="text-caption text-rose-700 bg-rose-50/70 rounded px-2 py-1">
             조부모→손자녀 증여 — 세대생략 §57 할증 30% (또는 미성년+20억 초과 시 40%) 자동 적용됩니다.
           </p>
         )}
@@ -292,7 +288,7 @@ export function Step0({
             onCheckedChange={(v) => set({ isSubstituteGift: v })}
           />
         )}
-      </div>
+      </ToneCard>
 
       {/* G-M2: 수증자 미성년 — 주민번호 자동판정(증여일 기준 만19세) 우선 + 수동 토글 fallback(D-1).
           donor=grandparent 포함 직계존속 전체 노출 (§57① 40% 판정: 미성년 AND 20억 초과) */}
@@ -334,7 +330,7 @@ function SectionAddButton({
       type="button"
       onClick={onClick}
       data-testid={testId}
-      className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-[11px] font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
+      className="shrink-0 rounded-md border border-indigo-300 bg-indigo-100 px-2.5 py-1 text-caption font-medium text-indigo-800 hover:bg-indigo-200 dark:border-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200"
     >
       + {label}
     </button>

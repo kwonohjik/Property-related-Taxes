@@ -88,11 +88,11 @@ export function CarryoverScenarioBFilingCard({
               [B] 이월과세 미적용 (비교용)
             </h3>
             {adopted ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-caption font-bold text-emerald-700">
                 ✓ 신고 채택
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-[11px] font-medium text-zinc-500">
+              <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-caption font-medium text-zinc-500">
                 참고
               </span>
             )}
@@ -107,7 +107,7 @@ export function CarryoverScenarioBFilingCard({
             </button>
           )}
         </div>
-        <p className="text-[11px] text-slate-500 mt-0.5">
+        <p className="text-caption text-slate-500 mt-0.5">
           수증자 기산 보유기간 · 취득가액 = 증여 당시 평가액
         </p>
       </div>
@@ -150,7 +150,7 @@ export function CarryoverScenarioBFilingCard({
           ))}
         </tbody>
       </table>
-      <p className="px-4 py-2 text-[10px] text-muted-foreground border-t border-slate-100">
+      <p className="px-4 py-2 text-micro text-muted-foreground border-t border-slate-100">
         ※ Scenario B는 이월과세 미적용 시 결과. 비교과세(§97조의2 ② 3호) 판정용.
       </p>
     </div>

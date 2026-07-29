@@ -8,8 +8,8 @@ import type { AncillaryApportionment, AncillaryApportionRow } from "@/lib/tax-en
 import type { AncillaryFacilityKind } from "@/lib/tax-engine/types/building-standard-price.types";
 import { AMOUNT_CELL } from "./format";
 
-const TD = "border border-neutral-400 px-1.5 py-1 text-center text-[11px] text-black";
-const TH = "border border-neutral-400 px-1.5 py-1 text-center text-[11px] font-semibold text-black bg-neutral-100";
+const TD = "border border-neutral-400 px-1.5 py-1 text-center text-caption text-black";
+const TH = "border border-neutral-400 px-1.5 py-1 text-center text-caption font-semibold text-black bg-neutral-100";
 
 const KINDS: { kind: AncillaryFacilityKind; label: string }[] = [
   { kind: "parking", label: "주차장(Ci)" },
@@ -26,8 +26,8 @@ export function ReportSection5Apportion({ apportionment }: { apportionment: Anci
   const rowCell = (row: AncillaryApportionRow, kind: AncillaryFacilityKind) => area(row.byKind[kind]);
   return (
     <section className="mb-3 break-inside-avoid">
-      <h4 className="mb-1 text-[12px] font-bold text-black">Ⅴ. 주용도에 의한 부속시설 면적 안분</h4>
-      <p className="mb-1 text-[10px] text-neutral-600">
+      <h4 className="mb-1 text-xs font-bold text-black">Ⅴ. 주용도에 의한 부속시설 면적 안분</h4>
+      <p className="mb-1 text-micro text-neutral-600">
         ＊ At = ΣAi, Bi = Ai ÷ At, Ci = Ct × Bi … Hi = Ht × Bi
       </p>
       <table className="w-full border-collapse text-black">

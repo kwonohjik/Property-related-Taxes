@@ -29,7 +29,7 @@ import { ListedStockBesshiPdfDownloadButton } from "@/components/calc/inheritanc
 import { ListedStockValuationPreviewCard } from "@/components/calc/inheritance/listed-stock/ListedStockValuationPreviewCard";
 import {
   applyKiwoomValuationResponse,
-  resolveStartOverrideDate,
+  resolveOverridePeriod,
 } from "@/lib/calc/listed-stock-besshi";
 import { UnlistedStockSimpleFields } from "@/components/calc/UnlistedStockSimpleFields";
 import {
@@ -52,11 +52,12 @@ function ListedStockAutoFetchIntegration({
   valuationDate: string;
   set: (patch: Partial<EstateItem>) => void;
 }) {
-  const startOverrideDate = resolveStartOverrideDate(item, valuationDate);
+  const { startOverrideDate, endOverrideDate } = resolveOverridePeriod(item, valuationDate);
   const fetchState = useKiwoomValuationFetch({
     stockCode: item.listedStockCode ?? "",
     valuationDate,
     startOverrideDate,
+    endOverrideDate,
     syncName: true,
     onResponse: (response) => {
       // 4그룹 분할 결과를 listedStockDailyGroupsInput 캐시에 channel-fill.
@@ -64,6 +65,7 @@ function ListedStockAutoFetchIntegration({
       //   (listed-stock-besshi-page2-empty-bug-fix.plan §2)
       const adapter = applyKiwoomValuationResponse(response, {
         startOverrideDate,
+        endOverrideDate,
       });
       set({
         listedStockAvgPrice: adapter.listedStockAvgPrice,

@@ -348,7 +348,8 @@ export function calcGiftTax(
   // ─────────────────────────────────────────────
   const aggExcl =
     aggExclItems.length > 0
-      ? calcAggregationExcludedStream(aggExclItems, input, brackets)
+      ? // M-2: 일반 스트림이 이미 폼전역 감정평가수수료를 차감(appraisalFee.total>0)했으면 재차감 방지
+        calcAggregationExcludedStream(aggExclItems, input, brackets, hasAppraisalValuation)
       : null;
   if (aggExcl) {
     allBreakdown.push(...aggExcl.breakdown);
@@ -478,7 +479,14 @@ export function calcGiftTax(
     ...(options._echoGrossUp !== undefined ? { donorPaidTaxGrossUp: options._echoGrossUp } : {}), // gross-up echo 주입 → derivePriorGiftAddition 참조
   };
 
-  const besshi10Rows = buildBesshi10Rows(input, partialResult, brackets);
+  // H-45·H-46: 별지10호는 일반 스트림(§55①4호) 서식 — 합산배제분은 aggregationExcludedDetail 별도 카드.
+  //   partialResult의 grossGiftValue·taxBase·computedTax·totalTaxCredit·finalTax는 합산배제를 더한 combined이므로
+  //   그대로 쓰면 ㉓ 사전증여가산 0붕괴(netCurrent 팽창)·㉚㉜㊲㊺가 서식 산식(㉔−공제)과 어긋난다.
+  //   → 일반 스트림(pre-combine) 로컬로 교체해 서식 자기정합 유지.
+  const besshi10Source = aggExcl
+    ? { ...partialResult, grossGiftValue, taxBase, computedTax, totalTaxCredit, finalTax }
+    : partialResult;
+  const besshi10Rows = buildBesshi10Rows(input, besshi10Source, brackets);
 
   return {
     ...partialResult,

@@ -74,7 +74,7 @@ export function ComprehensiveFilingFormBuppyo3({ result, landArea, buildingArea 
       {/* 헤더 */}
       <div className="text-center mb-2">
         <p className="text-sm font-bold">{header.titleTemplate(year)}</p>
-        <p className="text-[10px] text-gray-500">
+        <p className="text-micro text-gray-500">
           {header.formCode} ({header.revised})
         </p>
       </div>

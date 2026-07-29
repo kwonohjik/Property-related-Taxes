@@ -44,6 +44,7 @@ export const giftDeductionInputSchema = z.object({
 
 export const giftTaxCreditInputSchema = z.object({
   foreignTaxPaid: z.number().nonnegative().optional(),
+  foreignGiftTaxBase: z.number().nonnegative().optional(), // §21① 점유비 한도 분자 (H-32)
   isFiledOnTime: z.boolean(),
   specialTreatment: z.enum(["startup", "family_business"]).optional(),
   startupInvestmentCompleted: z.boolean().optional(),

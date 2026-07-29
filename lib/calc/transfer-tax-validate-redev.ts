@@ -34,6 +34,30 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     return `${label}: 양도 대상이 올바르지 않습니다. (지원: 완공 APT 양도 / 조합원입주권 양도)`;
   }
 
+  // ── §163⑨ 증여 취득 종전자산 (Phase 3 — block 방식) ──
+  // 증여받은 종전자산은 증여일 현재 상증법 §60~66 평가액(증여 신고가액)을 취득당시 실지거래가액으로
+  // 본다(§163⑨) → 취득가액 "확인 가능" → §166③ 환산·§163⑥ 개산공제 배제. 증여 신고가액은 항상
+  // 확인 가능하므로 환산 자체가 법적 불필요 → 원조합원 증여 + 환산 조합을 차단하고 실가 모드(종전자산
+  // 취득가액=증여 신고가액)를 강제한다. 실가 모드의 redevActualAcquisitionPrice 필수 검증(land 분기·
+  // housing 분기 각각)이 증여 신고가액 입력을 보장한다. 승계조합원 증여+환산은 아래(승계 분기)에서 이미 차단.
+  // 상속 재개발은 inheritedAcquisition payload(별도 값 채널)로 환산 모드에서도 graceful override가
+  // 가능했으나(transfer-tax.ts:248), 증여는 그 채널이 없고 신고가액이 항상 확인 가능하므로 block이 정합.
+  // pre-1985 증여는 §176의2④ 의제취득 영역 → 게이트 false(기존 경로 유지).
+  //
+  // ⚠️ land + right(입주권) 조합: #1(A)로 실가가 **pay·receive 모두** 개방됨
+  //    (pay=computeRightPay §166①1호, receive=computeRightReceive §166①2호 — 둘 다 신고가액=actualAcquisitionPrice 사용).
+  //    따라서 land+right+증여+환산은 pay·receive 무관하게 §163⑨ "실가로 전환" 안내가 유효(deadlock 없음).
+  //    → land+right 예외 없이 gift+환산 전체를 아래 가드로 처리(환산 receive 자체의 미지원은 아래 :106 환산-gate가 담당).
+  const isGift163_9 =
+    asset.acquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+  if (
+    isGift163_9 &&
+    asset.redevIsSuccessorMember !== "yes" &&
+    asset.useEstimatedAcquisition
+  ) {
+    return `${label}: 증여 취득 종전자산은 환산취득가를 지원하지 않습니다. 증여일 평가액(증여세 신고가액)이 취득가액이므로 "환산취득가 사용" 토글을 OFF로 전환하고 종전자산 취득가액에 증여 신고가액을 입력하세요. (소득세법 시행령 §163⑨)`;
+  }
+
   // ── subject="right" 전용 검증 (사례 36) ──
   // 형식 가드 A: 객관적·입력 유효성 — 미충족 시 다음 단계 진입 차단.
   if (subject === "right") {
@@ -62,14 +86,15 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     if (subject === "apt" && settlementDirection === "receive" && asset.useEstimatedAcquisition) {
       return `${label}: 토지 출자 + 완공 APT 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR (사례 43) 지원 예정입니다. 취득가액을 확인할 수 있으면 "환산취득가 사용" 토글을 OFF로 전환하세요.`;
     }
-    // land + right + receive: 후속 PR
-    if (subject === "right" && settlementDirection !== "pay") {
-      return `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 조합은 후속 PR에서 지원됩니다.`;
+    // land + right + 환산 + receive: 후속 PR (runLandContribEstimated가 settlementPaid로 pay만 가정 —
+    // §166②2호·§166①2호 수령 산식 미구현). 실가 receive는 아래 #1(A)로 개방.
+    if (subject === "right" && settlementDirection !== "pay" && asset.useEstimatedAcquisition) {
+      return `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR에서 지원됩니다. 취득가액을 확인할 수 있으면 "환산취득가 사용" 토글을 OFF로 전환하세요.`;
     }
-    // land + right + 실가: 후속 PR (사례 37은 환산만 지원)
-    if (subject === "right" && !asset.useEstimatedAcquisition) {
-      return `${label}: 토지 출자 + 입주권 양도 + 실가 모드는 후속 PR에서 지원됩니다. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166③)`;
-    }
+    // land + right + 실가 (pay·receive 모두): #1(A) 지원 — runOriginalMember→computeRightPay(§166①1호, pay)/
+    // computeRightReceive(§166①2호, receive)가 종전자산 actualAcquisitionPrice=신고가액 사용(환산 §166③ 아님).
+    // 아래 실가 취득가액(redevActualAcquisitionPrice) 필수 검증으로 신고가액 입력 보장. subject="right"는
+    // settlementSaleDate 불필요(신축 완공 전 권리 양도 — 잔금일이 양도일).
 
     // ── 청산금 수령 시 settlementSaleDate 필수 (subject="apt"만) ──
     // 사례 42 land+apt+receive (실가) — runOriginalMember 경로에서 settlement 기산일에 사용.

@@ -205,6 +205,9 @@ export function normalizeAcquisitionForm(
     farmingYears: (legacy.farmingYears as string) ?? INITIAL_FORM.farmingYears,
     farmlandArea: (legacy.farmlandArea as string) ?? INITIAL_FORM.farmlandArea,
     farmlandLocationDistance: (legacy.farmlandLocationDistance as string) ?? INITIAL_FORM.farmlandLocationDistance,
+    residesInSameOrAdjacentJurisdiction: typeof legacy.residesInSameOrAdjacentJurisdiction === "boolean"
+      ? (legacy.residesInSameOrAdjacentJurisdiction as boolean)
+      : INITIAL_FORM.residesInSameOrAdjacentJurisdiction,
 
     ownedHouses: Array.isArray(legacy.ownedHouses)
       ? (legacy.ownedHouses as OwnedHouseInfo[])

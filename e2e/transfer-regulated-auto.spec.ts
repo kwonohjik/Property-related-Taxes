@@ -94,6 +94,107 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
     // 미수록 → low 신뢰도 경고 노출
     await expect(page.getByText(/신뢰도: low/)).toBeVisible({ timeout: 15000 });
   });
+
+  test("수동 조작한 토글은 스텝 재진입(재조회) 시 자동판별이 덮어쓰지 않음", async ({ page }) => {
+    // 강남 2017-05-02 취득(지정 고시 2017-08-03 이전 → 취득일 기준 미지정) + 2021-06-01 양도(지정)
+    const ok = await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900",
+        acquisitionDate: "2017-05-02",
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2021-06-01",
+    );
+    expect(ok).toBe(true);
+
+    // 자동판별: 양도일 ON · 취득일 OFF
+    const acqSwitch = page.getByRole("switch", { name: /취득일 기준 조정대상지역/ });
+    await expect(page.getByRole("switch", { name: /양도일 기준 조정대상지역/ })).toBeChecked({
+      timeout: 15000,
+    });
+    await expect(acqSwitch).not.toBeChecked();
+
+    // 사용자가 취득일 토글을 수동 ON
+    await acqSwitch.click();
+    await expect(acqSwitch).toBeChecked();
+
+    // 다른 스텝으로 이탈 → 재진입(재마운트·재조회 발생)
+    // 완료 스텝은 "✓ 자산 목록"으로 name 합쳐짐 → 부분 매칭 (e2e/CLAUDE.md §2)
+    await page.getByRole("button", { name: "자산 목록" }).click();
+    await page.getByRole("button", { name: "보유 상황", exact: true }).click();
+    await page.getByText("보유 상황 입력").waitFor({ timeout: 15000 });
+    await expect(page.getByText("조정대상지역 자동 판별")).toBeVisible({ timeout: 15000 });
+
+    // 수동 ON이 자동판별(미지정=OFF)에 덮여쓰이지 않고 유지
+    await expect(page.getByRole("switch", { name: /취득일 기준 조정대상지역/ })).toBeChecked({
+      timeout: 15000,
+    });
+  });
+
+  // ── 중과 한시배제 팁 3분기 (plan: step4-regulated-tip-surcharge-suspension) ──
+
+  test("B1(회귀): 양도일 ≤ 2026-05-09 + 보유 2년↑ → ④ 섹션이 한시배제 sky 카드로 대체 + 중과검토 경고 부재", async ({ page }) => {
+    const ok = await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900", // 강남 — 지정 유지
+        acquisitionDate: "2018-06-01",
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2026-05-01",
+    );
+    expect(ok).toBe(true);
+
+    // 기존 동작: surchargeSuspended → ④ 주택수·중과 판정 섹션(조정지역 토글·팁 포함) 대신 sky 안내 카드
+    await expect(page.getByTestId("surcharge-suspended-notice")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("switch", { name: /양도일 기준 조정대상지역/ })).toHaveCount(0);
+    await expect(page.getByText("중과세 적용 여부를 검토하세요")).toHaveCount(0);
+  });
+
+  test("B2: 윈도우 내 양도 + 보유 2년 미만 → amber 검토 유지 + 보유 2년 미만 안내", async ({ page }) => {
+    const ok = await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900",
+        acquisitionDate: "2024-06-01", // 양도 2025-01-01 기준 보유 7개월
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2025-01-01",
+    );
+    expect(ok).toBe(true);
+
+    await expect(
+      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
+    ).toBeChecked({ timeout: 15000 });
+    await expect(page.getByText("중과세 적용 여부를 검토하세요")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/보유 2년 미만은 다주택 중과 한시배제/)).toBeVisible();
+    await expect(page.getByText("다주택 중과 한시배제 기간")).toHaveCount(0);
+  });
+
+  test("B3: 양도일 > 2026-05-09 → amber 검토 유지 + 나·다목 경과조치 안내", async ({ page }) => {
+    const ok = await seedStep4(
+      page,
+      {
+        assetKind: "housing",
+        regionCode: "1168010900",
+        acquisitionDate: "2018-06-01",
+        addressJibun: "서울특별시 강남구 역삼동",
+      },
+      "2026-06-01",
+    );
+    expect(ok).toBe(true);
+
+    await expect(
+      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
+    ).toBeChecked({ timeout: 15000 });
+    await expect(page.getByText("중과세 적용 여부를 검토하세요")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/경과조치로 중과가 배제될 수 있습니다/)).toBeVisible();
+    await expect(page.getByText("다주택 중과 한시배제 기간")).toHaveCount(0);
+  });
 });
 
 /**

@@ -74,6 +74,8 @@ export function calculateRedevelopmentTax(
     priorHouseResidenceMonths: input.redevelopment!.priorHouseResidenceMonths,
     newHouseResidenceMonths: input.redevelopment!.newHouseResidenceMonths,
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
+    ownershipRatio: input.ownershipRatio,
+    isUnregistered: input.isUnregistered,
   });
 
   // ─ Step A.5: STEP 3 (12억 안분) — §95③·시행령 §160 ─
@@ -189,7 +191,7 @@ export function calculateRedevelopmentTax(
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",
-    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}`,
+    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.progressiveDeduction ? ` - 누진공제 ${taxResult.progressiveDeduction.toLocaleString()}` : ""}`,
     amount: taxResult.calculatedTax,
     legalBasis: TRANSFER.TAX_RATE,
   });
@@ -640,9 +642,25 @@ function emitRedevelopmentSteps(
   }
 
   // 인가전 분 양도차익
+  //
+  // 2026-07-29 정정(#591 감사 R7 — 표시 전용, 세액 불변): 환산 모드에서는 필요경비에
+  // §163⑥ 개산공제가 함께 차감되는데(`redevelopment.ts:192·516` — expenses = 개산공제 +
+  // 인가전필요경비) 산식 문자열이 그 항을 빠뜨려 **표시 산술 결과와 amount가 어긋났다**.
+  // 사례 44: 219,218,500 − 141,221,534 − 0 = 77,996,966 ≠ amount 75,445,917 (차 = 개산공제 2,551,049).
+  // 실가 모드(개산공제 0)에서는 항을 붙이지 않아 종전 표시가 유지된다.
+  // 결과 루트 필드 — 타입 주석이 "인가전 양도차익에서 차감됨. 실가 모드 시 0 또는 undefined"로
+  // 이 step 전용임을 명시하고 있다(`transfer-redevelopment.types.ts:577-581`).
+  const preApprovalLumpDeduction = redev.estimatedLumpDeduction ?? 0;
   steps.push({
     label: "인가전 분 양도차익",
-    formula: `의제 양도가액 ${redev.preApproval.apportionedTransfer.toLocaleString()} - 취득가 ${redev.preApproval.apportionedAcquisition.toLocaleString()} - 필요경비 ${redevInfo.preApprovalExpenses.toLocaleString()}`,
+    formula:
+      `의제 양도가액 ${redev.preApproval.apportionedTransfer.toLocaleString()}` +
+      ` - 취득가 ${redev.preApproval.apportionedAcquisition.toLocaleString()}` +
+      ` - 필요경비 ${redevInfo.preApprovalExpenses.toLocaleString()}` +
+      // 개산공제 항의 근거(§163⑥)는 step 전체의 legalBasis(§166①·②)와 다르므로 항에 병기한다.
+      (preApprovalLumpDeduction > 0
+        ? ` - 개산공제(시행령 §163⑥) ${preApprovalLumpDeduction.toLocaleString()}`
+        : ""),
     amount: redev.preApproval.gain,
     legalBasis: redevInfo.subject === "apt" ? REDEVELOPMENT.APT_PAY : REDEVELOPMENT.RIGHT_PAY,
   });

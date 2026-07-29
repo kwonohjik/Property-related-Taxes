@@ -13,6 +13,7 @@
  *   §99②만 "다른 주택을 2007.12.31까지 양도"하는 경우 한정.
  */
 
+import { addYears } from "date-fns";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import {
   ineligibleHybrid,
@@ -67,9 +68,13 @@ function withinTrack(d: Date | undefined): boolean {
 
 /** 만 5년 보유 여부 — 취득일 + 5년 당일 포함 (§99의3 isWithin5YearsCheck 경계 해석과 정합) */
 function heldAtLeast5Years(acquisitionDate: Date, transferDate: Date): boolean {
-  const fiveYears = new Date(acquisitionDate);
-  fiveYears.setFullYear(fiveYears.getFullYear() + 5);
-  return transferDate.getTime() >= fiveYears.getTime();
+  // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): `setFullYear`는 2/29 취득일에서
+  //   존재하지 않는 날짜(2001-02-29)를 만들어 **3/1로 롤오버**시킨다. 그 결과 만료일이
+  //   하루 뒤로 밀려 2001-02-28 양도가 부당하게 5년 미달로 거부됐다.
+  //   민법 §160③ — 응당일이 없는 달은 **그 달의 말일**에 만료한다.
+  //   date-fns `addYears`가 이 규칙대로 1996-02-29 + 5년 = 2001-02-28을 준다
+  //   (코드베이스 관례 — `new-99-3`의 5년 판정도 date-fns를 쓴다).
+  return transferDate.getTime() >= addYears(acquisitionDate, 5).getTime();
 }
 
 export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {

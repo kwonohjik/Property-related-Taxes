@@ -13,15 +13,17 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
-import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload } from "./transfer-tax-api-helpers";
+import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
-import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
+import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import {
   buildInheritedAcquisitionPayload,
   buildInheritedHouseValuationPayload,
+  buildCommercialInheritanceValuationPayload,
 } from "./transfer-tax-api-inheritance";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
@@ -44,6 +46,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const primary = form.assets[0];
   if (!primary) throw new Error("자산이 없습니다.");
 
+  // 지분 모드(같은 물건 분할취득) 여부 — companion basic을 primary에서 병합할지 게이트.
+  const fractionalBundleMerge = isFullFractionalBundle(form.assets);
+
   // ── 대표 자산 감면 (자산별 reductions 배열에서 빌드) ──
   const reductions = toEngineReductions(primary.reductions ?? [], primary.acquisitionCause, primary.expropriationNoticeDate);
 
@@ -54,7 +59,6 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 분양권/입주권만 있고 다른 주택은 없는 경우(양도주택 + 분양권)도 정밀 판정되도록 게이트 확장.
   const housesPayload = buildHousesPayload(
     primary,
-    form.sellingHouseRegion,
     form.houses,
     form.presaleRights.length,
     form.sellingHouseExclusion,
@@ -82,7 +86,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isSalesCase = primary.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && primary.isAppraisalAcquisition === true;
   const isEstimated = !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
-  const hasPre1990 = (primary.pre1990Enabled ?? false) && primary.assetKind === "land";
+  // pre1990 토지등급 환산은 §176의2④ 의제취득(pre-1985) 영역. post-1985 증여는 §163⑨ 신고가액이
+  // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
+  // uncleaable 래치(CompanionAcqPurchaseBlock:92)라 gift 실거래가 전환 후 stale true로 남을 수 있으므로
+  // 정의 자체에서 게이트(validate-asset.ts:462 동일 소스식). pre-1985 gift·비-gift는 기존 동작 유지.
+  const hasPre1990 =
+    (primary.pre1990Enabled ?? false) &&
+    primary.assetKind === "land" &&
+    !(primary.acquisitionCause === "gift" && (primary.acquisitionDate ?? "") >= "1985-01-01");
   // §164⑤ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)해도 PHD 경로는 표준시가 직접 입력 불요.
   const usesPhd = primary.usePreHousingDisclosure === true;
@@ -100,8 +111,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
 
   // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
   const isCommercialBuilding = primary.assetKind === "commercial_building";
-  const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition
-    ? buildCommercialBuildingValuation(primary)
+  // §163⑨: 상속 취득 상가는 상속개시일 평가액 직접(환산 아님) → 환산 payload 미빌드.
+  const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition && primary.acquisitionCause !== "inheritance"
+    ? buildCommercialBuildingValuation(primary, form.transferDate)
     : undefined;
 
   // ⑬ 일반건물(토지+건물 일괄) 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
@@ -133,124 +145,18 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     throw new Error("보유 중 일부 용도변경: 취득시 자산 구성을 선택하세요.");
   }
 
-  const mixedUsePayload = isMixed ? {
-    isMixedUseHouse: true as const,
-    // 면적은 소수점 (예: 333.06㎡) — parseAmount(parseInt)는 절단 발생, parseFloat 필수
-    residentialFloorArea: parseFloat(primary.residentialFloorArea) || 0,
-    nonResidentialFloorArea: parseFloat(primary.nonResidentialFloorArea) || 0,
-    buildingFootprintArea: parseFloat(primary.buildingFootprintArea) || 0,
-    totalLandArea: parseFloat(primary.mixedUseTotalLandArea) || 0,
-    landAcquisitionDate: primary.landAcquisitionDate || primary.acquisitionDate,
-    buildingAcquisitionDate: primary.acquisitionDate,
-    transferStandardPrice: {
-      housingPrice: parseAmount(primary.mixedTransferHousingPrice) || 0,
-      commercialBuildingPrice: parseAmount(primary.mixedTransferCommercialBuildingPrice) || 0,
-      landPricePerSqm: parseAmount(primary.mixedTransferLandPricePerSqm) || 0,
-    },
-    acquisitionStandardPrice: {
-      housingPrice: parseAmount(primary.mixedAcqHousingPrice) || undefined,
-      commercialBuildingPrice: (() => {
-        const direct = parseAmount(primary.mixedAcqCommercialBuildingPrice);
-        if (direct > 0) return direct;
-        // house_to_commercial Case A: PHD 전체 건물 기준시가 × (상가면적 / 전체면적) 자동 안분
-        const phdBuilding = parseAmount(primary.phdBuildingStdPriceAtAcq);
-        const residentialArea = parseFloat(primary.residentialFloorArea) || 0;
-        const nonResidentialArea = parseFloat(primary.nonResidentialFloorArea) || 0;
-        const totalFloor = residentialArea + nonResidentialArea;
-        if (phdBuilding > 0 && totalFloor > 0) {
-          return Math.floor(phdBuilding * nonResidentialArea / totalFloor);
-        }
-        return 0;
-      })(),
-      // PHD ① 취득시 공시지가 fallback (마지막 항: 1990.8.30. 이전 취득 토지 환산 — useEffect→store 미러링 제거 대체)
-      landPricePerSqm:
-        parseAmount(primary.mixedAcqLandPricePerSqm) ||
-        parseAmount(primary.phdLandPricePerSqmAtAcq) ||
-        (derivePre1990PhdLandPricePerSqmAtAcq(primary, form.transferDate) ?? 0),
-    },
-    usePreHousingDisclosure: primary.usePreHousingDisclosure,
-    // PHD 페이로드는 모든 필수 필드(.positive() 제약)가 채워졌을 때만 전송.
-    // 누락 시 schema의 z.number().int().positive() 검증에서 0으로 실패하기 때문.
-    preHousingDisclosure: (() => {
-      // 겸용주택 PHD: phdLandPricePerSqm* 미설정 시 섹션 2의 mixed 값으로 fallback
-      const landSqmAtAcq =
-        parseAmount(primary.phdLandPricePerSqmAtAcq) ||
-        parseAmount(primary.mixedAcqLandPricePerSqm) ||
-        (derivePre1990PhdLandPricePerSqmAtAcq(primary, form.transferDate) ?? 0);
-      const landSqmAtTransfer =
-        parseAmount(primary.phdLandPricePerSqmAtTransfer) ||
-        parseAmount(primary.mixedTransferLandPricePerSqm);
-      return primary.usePreHousingDisclosure &&
-        primary.phdFirstDisclosureDate &&
-        parseAmount(primary.phdFirstDisclosureHousingPrice) > 0 &&
-        landSqmAtAcq > 0 &&
-        parseAmount(primary.phdLandPricePerSqmAtFirst) > 0 &&
-        landSqmAtTransfer > 0 &&
-        (parseAmount(primary.phdTransferHousingPrice) > 0 ||
-          parseAmount(primary.mixedTransferHousingPrice) > 0)
-        ? {
-            firstDisclosureDate: primary.phdFirstDisclosureDate,
-            firstDisclosureHousingPrice: parseAmount(primary.phdFirstDisclosureHousingPrice),
-            landPricePerSqmAtAcquisition: landSqmAtAcq,
-            buildingStdPriceAtAcquisition:
-              parseAmount(primary.phdBuildingStdPriceAtAcq) || 0,
-            landPricePerSqmAtFirstDisclosure: parseAmount(primary.phdLandPricePerSqmAtFirst),
-            buildingStdPriceAtFirstDisclosure:
-              parseAmount(primary.phdBuildingStdPriceAtFirst) || 0,
-            transferHousingPrice:
-              parseAmount(primary.phdTransferHousingPrice) ||
-              parseAmount(primary.mixedTransferHousingPrice),
-            landPricePerSqmAtTransfer: landSqmAtTransfer,
-            buildingStdPriceAtTransfer:
-              parseAmount(primary.phdBuildingStdPriceAtTransfer) || 0,
-            // 미공시 취득 당시 토지 면적 직접 지정 — 미입력 시 엔진이 양도시 비율로 자동 계산
-            ...(parseFloat(primary.phdResidentialLandArea) > 0
-              ? { landArea: parseFloat(primary.phdResidentialLandArea) }
-              : {}),
-            // Case A 4부분 안분 — 취득시·최초공시 상가건물 기준시가 + 총양도가액 함께 충족 시 활성화.
-            // 취득시 상가건물은 메인 mixedAcqCommercialBuildingPrice fallback 인식 (UI 통합 후 단일 필드).
-            // 최초공시 상가건물은 PHD-only 필드 (일반 겸용주택 흐름에 없음).
-            ...((parseAmount(primary.phdCommercialBuildingStdPriceAtAcq) ||
-                 parseAmount(primary.mixedAcqCommercialBuildingPrice)) > 0 &&
-                parseAmount(primary.phdCommercialBuildingStdPriceAtFirst) > 0
-              ? {
-                  commercialBuildingStdPriceAtAcq:
-                    parseAmount(primary.phdCommercialBuildingStdPriceAtAcq) ||
-                    parseAmount(primary.mixedAcqCommercialBuildingPrice),
-                  commercialBuildingStdPriceAtFirstDisclosure: parseAmount(primary.phdCommercialBuildingStdPriceAtFirst),
-                  totalTransferPriceForFourPart: parseAmount(form.contractTotalPrice),
-                }
-              : {}),
-          }
-        : undefined;
-    })(),
-    // 거주기간은 소수점 가능 (예: 23.5년) — parseFloat 사용
-    residencePeriodYears: parseFloat(primary.mixedUseResidencePeriodYears) || 0,
-    isMetropolitanArea: primary.mixedIsMetropolitanArea,
-    zoneType: "residential" as const,
-    // 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 요건 충족 여부 (다주택자 분기)
-    // 소득세법 §89①3 — 1세대 + 1주택. 일시적 2주택 특례 적용 시에도 비과세 요건 충족으로 본다.
-    isOneHouseExempt:
-      primary.isOneHousehold &&
-      (form.householdHousingCount === "1" ||
-        (form.householdHousingCount === "2" && form.temporaryTwoHouseSpecial === true)),
-    // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
-    partialUsageChange:
-      primary.hasPartialUsageChange && primary.partialChangeDirection
-        ? {
-            direction: primary.partialChangeDirection,
-            acqResidentialArea: parseFloat(primary.partialChangeAcqResidentialArea) || undefined,
-            acqCommercialArea: parseFloat(primary.partialChangeAcqCommercialArea) || undefined,
-            // 집행기준 89-154-24 취지 — 용도변경일 입력 시 LTHD 시간 비례 분할
-            // 문자열 그대로 전송 → route handler가 date-coerce로 Date 변환 (정책: API 변환에서 new Date() 금지)
-            usageChangeDate: primary.partialChangeDate || undefined,
-          }
-        : undefined,
-  } : undefined;
+  const mixedUsePayload = buildMixedUsePayload(primary, form);
 
   // 공유 지분 — primary 자산의 지분 모드 처리 (다자산 일괄양도는 buildAssetPayload에서 별도 처리)
   const primaryRatio = getOwnershipRatio(primary);
   const primaryFractional = primaryRatio < 1.0;
+  // 지분 스케일 적용기 — 금액 필드 전용 단일 진입점 (transfer-tax-api-split.ts).
+  const ratioed = makeRatioed(primaryRatio, primaryFractional);
+  // 파트 필드 전송은 buildSplitPayload 담당 — 여기선 §166⑥ 안분 3요소 게이트로만 쓴다.
+  const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift);
+  // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고,
+  // 엔진이 개산공제 계산 지점에서만 적용한다(설계 transfer-fractional-lump-sum-deduction).
+  const ownershipRatioForDeduction = primaryFractional ? primaryRatio : undefined;
   const totalContractPrice = parseAmount(form.contractTotalPrice);
   // 폼-수준 총 양도비 (B3) — 지분 모드 자동 안분의 분자 sourcing.
   // primary.transferExpense가 직접 입력되면 그것이 우선, 미입력시 form.totalTransferExpense × ratio 사용.
@@ -355,7 +261,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 상업용건물·일반건물 환산 모드는 STEP 0.35 진입 조건이 useEstimatedAcquisition === true 이므로 true 송신
     // 매매사례가액 추계(salesCase)는 useEstimatedAcquisition과 별개 경로 — false 송신
     useEstimatedAcquisition: hasPre1990 || parcelModeActive || isMixed || isSalesCase ? false
-      : isCommercialBuilding ? primary.useEstimatedAcquisition
+      // §163⑨: 상속 상가는 환산 미적용 → false 송신(STEP 0.35 게이트 무력화·엔진 가드와 이중).
+      : isCommercialBuilding ? (primary.acquisitionCause === "inheritance" ? false : primary.useEstimatedAcquisition)
       : isGeneralBuilding ? primary.useEstimatedAcquisition
       : isCarryoverGeneral ? true
       : isEstimated,
@@ -363,7 +270,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       ? undefined
       : isCarryoverGeneral
         ? (parseAmount(primary.carryover?.donorStandardPriceAtAcquisition ?? "") || undefined)
-        : isEstimated
+        : isEstimated || isSplitActive
+          // 분리 모드(토지·건물 취득일/소유자 상이) 추가 전송 — §166⑥ 안분 비율(calcApportionRatio,
+          // split-gain.ts:26-36)이 취득시 기준시가 3요소를 요구한다. 종전에는 isEstimated에서만
+          // 전송돼, 실거래가·감정·매매사례 분리 모드에서 ratio=null → calcSplitGain 전체가 null →
+          // 토지·건물 분리 계산이 **오류 없이 조용히 비활성**됐다(계획서 §3.1, probe 실측).
           ? parseAmount(primary.standardPriceAtAcq) || undefined
           : undefined,
     // pre1990 모드: 취득시 기준시가는 서브엔진(pre1990Land)이 산출하므로 undefined.
@@ -377,15 +288,18 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           : isEstimated
             ? parseAmount(primary.standardPriceAtTransfer) || undefined
             : undefined,
-    // ⑬ #3 공익수용 환산 양도시 기준시가 min[] (집행기준 99-164-12)
+    // ⑬ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호)
     ...buildExpropriationInput(primary),
     acquisitionMethod: hasPre1990 || isMixed
       ? ("actual" as const)
       : isSalesCase ? "salesCase"
       : (isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual"),
-    appraisalValue: !isMixed && isAppraisal ? parseAmount(primary.fixedAcquisitionPrice) : undefined,
+    // 감정·매매사례 모드는 `acquisitionPrice`가 0이고 이 값이 취득가액이 된다 →
+    // 총액과 동일하게 지분 스케일을 적용해야 한다(종전 raw → 지분 자산 취득가 과대 = 세액 과소).
+    ownershipRatio: ownershipRatioForDeduction,
+    appraisalValue: !isMixed && isAppraisal ? (ratioed(primary.fixedAcquisitionPrice) ?? 0) : undefined,
     // ④⑬ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
-    similarSalesValue: isSalesCase ? parseAmount(primary.similarSalesValue) || undefined : undefined,
+    similarSalesValue: isSalesCase ? ratioed(primary.similarSalesValue) : undefined,
     isSelfBuilt: !isMixed && primary.isSelfBuilt || undefined,
     buildingType: primary.buildingType || undefined,
     constructionDate:
@@ -398,27 +312,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.buildingType === "extension"
         ? parseAmount(primary.extensionStdPriceAtAcquisition) || undefined
         : undefined,
-    // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
-    selfOwns: primary.selfOwns !== "both" ? primary.selfOwns : undefined,
-    // PHD 모드: 취득일 동일이어도 calcSplitGain 진입을 위해 landAcquisitionDate를 acquisitionDate로 fallback.
-    landAcquisitionDate:
-      (primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both") && primary.landAcquisitionDate
-        ? primary.landAcquisitionDate
-        : usesPhd
-          ? primary.acquisitionDate
-          : undefined,
-    landSplitMode:
-      primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both"
-        ? primary.landSplitMode
-        : undefined,
-    landTransferPrice: parseAmount(primary.landTransferPrice) || undefined,
-    buildingTransferPrice: parseAmount(primary.buildingTransferPrice) || undefined,
-    landAcquisitionPrice: parseAmount(primary.landAcquisitionPrice) || undefined,
-    buildingAcquisitionPrice: parseAmount(primary.buildingAcquisitionPrice) || undefined,
-    landDirectExpenses: parseAmount(primary.landDirectExpenses) || undefined,
-    buildingDirectExpenses: parseAmount(primary.buildingDirectExpenses) || undefined,
-    landStandardPriceAtTransfer: parseAmount(primary.landStandardPriceAtTransfer) || undefined,
-    buildingStandardPriceAtTransfer: parseAmount(primary.buildingStandardPriceAtTransfer) || undefined,
+    // ④⑬ 토지·건물 분리 축 (소령 §166⑥·§168②) — 게이트·파트 필드 전체를 sibling 빌더에 위임.
+    ...buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed }),
     standardPricePerSqmAtAcquisition:
       primary.standardPricePerSqmAtAcq
         ? parseFloat(primary.standardPricePerSqmAtAcq) || undefined
@@ -453,6 +348,19 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.acquisitionCause === "inheritance" && primary.decedentAcquisitionDate
         ? primary.decedentAcquisitionDate
         : undefined,
+    // §154⑧3호 상속주택 자체 양도 보유기간 통산
+    decedentSameHouseholdBeforeInheritance:
+      primary.acquisitionCause === "inheritance"
+        ? primary.decedentSameHouseholdBeforeInheritance
+        : undefined,
+    decedentCohabitationHoldingStartDate:
+      primary.acquisitionCause === "inheritance" && primary.decedentCohabitationHoldingStartDate
+        ? primary.decedentCohabitationHoldingStartDate
+        : undefined,
+    decedentCohabitationResidenceMonths:
+      primary.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance
+        ? parseInt(primary.decedentCohabitationResidenceMonths) || 0
+        : undefined,
     donorAcquisitionDate:
       primary.acquisitionCause === "gift" && primary.donorAcquisitionDate
         ? primary.donorAcquisitionDate
@@ -472,11 +380,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         requirementsConfirmed: e.requirementsConfirmed,
       })),
     ...(form.temporaryTwoHouseSpecial &&
-    form.previousHouseAcquisitionDate &&
+    primary?.acquisitionDate &&
     form.newHouseAcquisitionDate
       ? {
           temporaryTwoHouse: {
-            previousAcquisitionDate: form.previousHouseAcquisitionDate,
+            // 종전주택 취득일 = 양도 자산 취득일(단일소스)
+            previousAcquisitionDate: primary.acquisitionDate,
             newAcquisitionDate: form.newHouseAcquisitionDate,
           },
         }
@@ -490,16 +399,28 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
-    ...(form.provisoReason
-      ? {
-          oneHouseExemptionProviso: {
-            reason: form.provisoReason,
-            ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
-            ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
-            ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
-          },
-        }
-      : {}),
+    ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+    ...(form.generalHouseGiftedFromDecedentWithin2yr ? { generalHouseGiftedFromDecedentWithin2yr: true } : {}),
+    ...(() => {
+      // §154① 단서 reason 정규화 — 카드 숨김(mode=null)·temp-two-house 무효 reason(나·다목·5호)은 미전송 (Part D 게이트, mirror)
+      const provisoMode = provisoGate({
+        isOneHousehold: form.isOneHousehold,
+        isHousing: primary.assetKind === "housing",
+        householdHousingCount: form.householdHousingCount,
+        temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+      }).mode;
+      const reason = effectiveProvisoReason(provisoMode, form.provisoReason);
+      return reason
+        ? {
+            oneHouseExemptionProviso: {
+              reason,
+              ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
+              ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
+              ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
+            },
+          }
+        : {};
+    })(),
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
     ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     // 수정신고 모드에서는 무신고/과소신고 가산세 블록을 전송하지 않음 (상호배타)
@@ -555,6 +476,22 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             const scenario = p.areaScenario ?? "partial";
             const isReduction = scenario === "reduction";
 
+            /**
+             * 지분 스케일 — **금액 필드 전용**. 자산-수준 `transferPrice`가 이미
+             * `applyRatio(totalContractPrice, primaryRatio)`로 지분분인데(:212) 필지 금액이
+             * 물건 전체(100%)로 남으면 **양도가액 지분분 − 취득가액 100%** 혼합 스케일이 된다
+             * (실측: 지분 50%에서 양도차익 8,000만 vs 정본 2억 8,000만 — **2억 과소**).
+             * §97② 단서 swap 비교(자본적지출+양도비 vs 환산+개산공제)도 같은 이유로 뒤집힌다.
+             *
+             * ⚠️ **면적·기준시가·보상단가는 스케일하지 않는다** — 면적은 필지 간 안분 비율의
+             *    분자·분모로 함께 나타나 상쇄되고, 기준시가·보상단가는 물건의 단가라
+             *    환산 산식에서 분자·분모로 상쇄된다. `ratioed`(makeRatioed)와 달리 **0을
+             *    undefined로 바꾸지 않아** 기존 필드별 undefined 규약을 보존한다.
+             * (P3 PR #843이 split 파트 필드에서 고친 것과 동형 — 계획서 §10 별건 A3)
+             */
+            const scaleAmt = (n: number) =>
+              primaryFractional ? applyRatio(n, primaryRatio) : n;
+
             // 감환지: 의제 취득면적을 직접 계산해 API에 전달 (스키마 positive() 충족)
             const finalAcqArea = isReduction
               ? (parseFloat(p.priorLandArea) * parseFloat(p.allocatedArea)) /
@@ -574,7 +511,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
                   : p.acquisitionDate,
               acquisitionMethod: p.acquisitionMethod,
               acquisitionPrice:
-                p.acquisitionMethod === "actual" ? parseAmount(p.acquisitionPrice) : undefined,
+                p.acquisitionMethod === "actual" ? scaleAmt(parseAmount(p.acquisitionPrice)) : undefined,
               acquisitionArea: finalAcqArea,
               transferArea: finalTransferArea,
               standardPricePerSqmAtAcq:
@@ -585,16 +522,25 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
                 p.acquisitionMethod === "estimated"
                   ? parseFloat(p.standardPricePerSqmAtTransfer) || 0
                   : undefined,
+              // 공익수용 §164⑨ 1호 — 필지별 min[] 특례. 환산 방식일 때만 의미(엔진이 최종 게이트).
+              compensationPerSqm:
+                p.acquisitionMethod === "estimated"
+                  ? parseAmount(p.compensationPerSqm) || undefined
+                  : undefined,
+              compensationBasisStdPrice:
+                p.acquisitionMethod === "estimated"
+                  ? parseAmount(p.compensationBasisStdPrice) || undefined
+                  : undefined,
               expenses:
-                p.acquisitionMethod === "actual" ? parseAmount(p.expenses) : undefined,
+                p.acquisitionMethod === "actual" ? scaleAmt(parseAmount(p.expenses)) : undefined,
               // §97② 단서 swap — 두 필드 합 > 0이면 분리 전송, 아니면 undefined (swap 비활성)
               capitalExpenditure:
                 (parseAmount(p.capitalExpenditure) || parseAmount(p.transferExpense))
-                  ? parseAmount(p.capitalExpenditure)
+                  ? scaleAmt(parseAmount(p.capitalExpenditure))
                   : undefined,
               transferExpense:
                 (parseAmount(p.capitalExpenditure) || parseAmount(p.transferExpense))
-                  ? parseAmount(p.transferExpense)
+                  ? scaleAmt(parseAmount(p.transferExpense))
                   : undefined,
               useDayAfterReplotting: p.useDayAfterReplotting || undefined,
               replottingConfirmDate:
@@ -669,13 +615,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               ? parseAmount(primary.standardPriceAtTransfer)
               : undefined,
           primaryInheritanceValuation:
-            primary.acquisitionCause === "inheritance" &&
-            primary.inheritanceValuationMode === "auto"
+            primary.acquisitionCause === "inheritance"
               ? {
                   inheritanceDate: primary.acquisitionDate,
-                  // 보충적평가 자산 구분 — inheritanceAssetKind ("land" | "house_individual" | "house_apart")
-                  // assetKind("housing")가 아닌 자산-수준 inheritanceAssetKind를 사용해야 schema enum 일치
-                  assetKind: primary.inheritanceAssetKind,
+                  // 보충적평가 자산 구분 — 상단 assetKind 기준 파생(land vs 非land; housing은 개별/공동).
+                  // 상속 자산구분 라디오 폐지 대응(deriveEngineInheritanceAssetKind). 결과는 schema enum 값.
+                  assetKind: deriveEngineInheritanceAssetKind(primary),
                   landAreaM2: primary.acquisitionArea ? parseFloat(primary.acquisitionArea) : undefined,
                   // 지분 모드: 100% 기준 입력값(공동주택가격 등)에 × ratio 적용
                   publishedValueAtInheritance: primaryFractional
@@ -685,18 +630,20 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               : undefined,
           companionAssets: form.assets
             .slice(1)
-            .map((a) => buildAssetPayload(a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0])),
+            // 지분 모드(같은 물건 분할취득): companion ① 기본정보를 UI에서 숨기므로
+            // primary basic(자산종류·면적·토지성격)을 병합해 엔진에 전달 (mergePrimaryBasic).
+            .map((a) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold)),
           bundledSaleMode: form.bundledSaleMode,
-          // primary 양도가액 (actual 모드 전용).
-          // 지분 모드는 contractTotalPrice × ratio 자동 입력 (companion buildAssetPayload와 일관)
-          // — 사용자 입력란이 비어 있어도 시스템이 자동 결정하므로 zod 검증 통과.
-          primaryActualSalePrice:
-            form.bundledSaleMode === "actual"
-              ? primary.actualSalePrice
-                ? parseAmount(primary.actualSalePrice)
-                : primaryFractional
-                  ? applyRatio(totalContractPrice, primaryRatio)
-                  : undefined
+          // primary 확정 양도가액.
+          //  - 지분 모드: 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —
+          //    companion buildAssetPayload:428 정책과 일관). route가 fixedSalePrice로 주입해
+          //    기준시가 안분 없이 지분율 안분 성립.
+          //  - actual 모드(비지분): 계약서상 양도가액.
+          //  - apportioned 비지분: undefined (양도시 기준시가 비율 안분).
+          primaryActualSalePrice: primaryFractional
+            ? applyRatio(totalContractPrice, primaryRatio)
+            : form.bundledSaleMode === "actual" && primary.actualSalePrice
+              ? parseAmount(primary.actualSalePrice)
               : undefined,
         }
       : {}),
@@ -704,6 +651,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional),
     // ── 상속 주택 환산취득가 보조 입력 (3-시점, < 2005-04-30) — sibling 격리 ──
     ...buildInheritedHouseValuationPayload(primary, form.transferDate),
+    // ── 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (< 2005-01-01, §163⑨2호 max) — sibling 격리 ──
+    ...buildCommercialInheritanceValuationPayload(primary),
     // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용, 단건·다건 공용 헬퍼) ──
     ...(hasPre1990 ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     // 겸용주택 분리계산 입력

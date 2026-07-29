@@ -21,6 +21,7 @@ import {
   expandToggleClass,
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   Dialog,
   DialogContent,
@@ -118,7 +119,7 @@ function CandidateCard({
     : "본인";
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-2">
+    <ToneCard tone="violet" className="p-4" noDark>
       {/* 헤더 — 증여 회차 정보 */}
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-semibold">
@@ -128,7 +129,7 @@ function CandidateCard({
           <button
             type="button"
             onClick={() => setExpandInnerInfo((p) => !p)}
-            className="text-[10px] bg-sky-100 text-sky-800 rounded px-2 py-0.5 cursor-help hover:bg-sky-200"
+            className="text-micro bg-sky-100 text-sky-800 rounded px-2 py-0.5 cursor-help hover:bg-sky-200"
             aria-label="이전 합산 결과 안내 펼치기"
           >
             🔁 이전 합산 결과 포함
@@ -137,7 +138,7 @@ function CandidateCard({
       </div>
 
       {candidate.hasInnerPriorGifts && expandInnerInfo && (
-        <div className="text-[11px] bg-sky-50 border border-sky-200 rounded p-2 text-sky-700">
+        <div className="text-caption bg-sky-50 border border-sky-200 rounded p-2 text-sky-700">
           이 회차의 합산과세표준 ⑤·산출세액 ⑦은 이미 그 시점 이전의 사전증여를 합산한 결과입니다.
           추가로 같은 §47 그룹의 더 과거 회차를 별도로 더하면 이중 합산이 발생할 수 있습니다.
           가장 최근 합산 회차 1건만 선택하는 것을 권장합니다.
@@ -171,7 +172,7 @@ function CandidateCard({
       </div>
 
       {/* 동일 수증자 일치 배지 */}
-      <p className="text-[11px] text-violet-700">
+      <p className="text-caption text-violet-700">
         ✓ 동일 수증자(=의뢰인) 이력
       </p>
 
@@ -195,7 +196,7 @@ function CandidateCard({
           </button>
         )}
       </div>
-    </div>
+    </ToneCard>
   );
 }
 
@@ -377,7 +378,7 @@ export function PriorGiftHistoryModal({
                     {expandToggleLabel(warningsOpen)} · ⚠️ 제외된 이력 {warnings.length}건
                   </button>
                   {warningsOpen && (
-                    <ul className="mt-2 space-y-1 text-[11px] text-amber-700">
+                    <ul className="mt-2 space-y-1 text-caption text-amber-700">
                       {warnings.slice(0, 20).map((w, i) => (
                         <li key={`${w.calculationId}-${i}`}>• {w.message}</li>
                       ))}

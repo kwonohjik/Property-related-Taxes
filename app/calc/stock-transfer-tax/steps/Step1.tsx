@@ -41,7 +41,7 @@ interface Step1Props {
 
 function SectionTitle({ n, title }: { n: number; title: string }) {
   return (
-    <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800 mb-4">
+    <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800 mb-4">
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-bold">
         {n}
       </span>

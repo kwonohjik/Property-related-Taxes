@@ -13,6 +13,7 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -51,18 +52,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
     !!asset.partialChangeAcqCommercialArea;
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-      {/* 섹션 헤더 */}
-      <div className="flex items-center gap-2">
-        {sectionNum !== undefined && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-[10px] font-bold text-amber-800 select-none">
-            {sectionNum}
-          </span>
-        )}
-        <p className="text-xs font-semibold text-amber-700">
-          취득시점 자산 구성 (보유 중 일부 용도변경)
-        </p>
-      </div>
+    <ToneCard tone="amber" sectionNum={sectionNum} title="취득시점 자산 구성 (보유 중 일부 용도변경)" bodyClassName="space-y-3" noDark>
 
       {/* 방향 Select — 양도시점/취득시점 혼동 방지 라벨 */}
       <FieldCard label="취득시 자산 구성" hint="양도시와 다른 경우 선택">
@@ -105,7 +95,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
       </div>
 
       {/* 안내 (이슈 4 — 항상 노출) */}
-      <p className="text-[11px] text-amber-700/80 leading-relaxed">
+      <p className="text-caption text-amber-700/80 leading-relaxed">
         ※ 증축·일부 멸실 등으로 취득시 면적이 양도시 합계와 다른 경우 직접 수정하세요.
       </p>
 
@@ -163,6 +153,6 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
           onChange={(v) => onChange({ partialChangeDate: v })}
         />
       </FieldCard>
-    </div>
+    </ToneCard>
   );
 }
