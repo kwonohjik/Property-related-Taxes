@@ -31,6 +31,7 @@ import { SalesCaseSection } from "./SalesCaseSection";
 import { SplitAcqStdReadonlyPanel } from "./SplitAcqStdReadonlyPanel";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
 
@@ -167,6 +168,23 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         parseAmount(props.buildingStandardPriceAtTransfer ?? "") > 0,
     },
   );
+  /**
+   * 양도시 기준시가 카드의 **배치** — 축 A(양도가액 결정) vs 파트 섹션(축 B).
+   *
+   * 양축의 **공통 조상인 여기서 1회 계산**해 내려준다. 축 A·축 B가 각자 `saleStdPlacement`를
+   * 부르면 인자가 어긋나는 순간 같은 카드가 두 곳에 동시 노출될 수 있고, 같은 `data-testid`가
+   * 2개가 되어 E2E strict mode도 깨진다(계획서 §5.1 불변식). `acqStdPriceRequired`와 같은 패턴.
+   *
+   * `saleSplitMode` fallback은 축 A(:202 상당)·API(transfer-tax-api-split.ts:67)·validate와
+   * 3중으로 맞춘다 — stale sessionStorage 자산은 undefined일 수 있다.
+   */
+  const saleStdPlace = saleStdPlacement({
+    saleSplitMode: props.asset?.saleSplitMode ?? "apportioned",
+    landMode: effLandAcqMode,
+    buildingMode: effBuildingAcqMode,
+    selfOwns: props.selfOwns ?? "both",
+  });
+
   // 2열 배치(2026-07-29)에서 괄호 설명이 두 줄로 접혀 라벨만 남긴다.
   const acqDateLabel = isSplit ? "건물 취득일" : "취득일";
 
@@ -197,8 +215,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         isSplit={isSplit}
         isMixedUse={isMixedUse}
         acqDateLabel={acqDateLabel}
-        effLandAcqMode={effLandAcqMode}
-        effBuildingAcqMode={effBuildingAcqMode}
+        saleStdInSaleAxis={saleStdPlace.saleAxis}
       />
 
       {/* 매매계약일 입력은 Step4 감면·공제(UnifiedReductionPanel)의 펼침 영역 상단으로 이동 (Round 9 정정 2026-05-06)
@@ -710,6 +727,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                     effLandAcqMode === "estimated" &&
                     effBuildingAcqMode === "estimated"
                   }
+                  // 축 A와 **같은 1회 계산**을 공유한다 — 하위 재파생 금지(불변식 보증).
+                  saleStdInLandPart={saleStdPlace.landPart}
+                  saleStdInBuildingPart={saleStdPlace.buildingPart}
                   asset={props.asset}
                   onAssetChange={props.onAssetChange}
                   transferDate={props.transferDate}

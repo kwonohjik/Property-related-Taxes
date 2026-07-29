@@ -45,6 +45,8 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
       selfOwns="both"
       acqStdPriceRequired
       isPhdBothEstimated={false}
+      saleStdInLandPart={false}
+      saleStdInBuildingPart={false}
       landAcqMode={asset.landAcqMode || "actual"}
       onLandAcqModeChange={() => {}}
       buildingAcqMode={asset.buildingAcqMode || "actual"}
@@ -120,6 +122,8 @@ describe("게이트 — 별개취득이 아니면 미노출 (회귀 0)", () => {
           selfOwns="both"
           acqStdPriceRequired
           isPhdBothEstimated={false}
+          saleStdInLandPart={false}
+          saleStdInBuildingPart={false}
           landAcqMode="estimated" onLandAcqModeChange={() => {}}
           buildingAcqMode="estimated" onBuildingAcqModeChange={() => {}}
                   landAcquisitionPrice="" onLandAcquisitionPriceChange={() => {}}

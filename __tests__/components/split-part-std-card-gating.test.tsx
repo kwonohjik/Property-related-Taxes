@@ -224,11 +224,23 @@ describe("G8 — 환산 안내 문구 방향 (D3)", () => {
     ).toHaveLength(0);
   });
 
-  it("G8-b 안내가 위쪽 「양도시 기준시가」 카드를 가리킨다", () => {
+  /**
+   * 2026-07-30 배치 변경 — 구분양도 + 파트 환산에서는 양도시 기준시가 카드가 **그 파트 섹션**에
+   * 있으므로 안내도 「토지 양도시 기준시가」를 가리켜야 한다. 방향("위")은 그대로다.
+   * 일괄양도(축 A 배치)일 때의 문구는 G8-d가 검증한다.
+   */
+  it("G8-b 구분양도+환산 — 안내가 위쪽 「토지 양도시 기준시가」 파트 카드를 가리킨다", () => {
     render(<Harness init={{ ...ACTUAL_SPLIT_SALE, landAcqMode: "estimated" }} />);
     const note = estimatedNote("land")[0];
     expect(note, "testid 없이 텍스트 매칭하면 양쪽 환산 시 2개가 되어 strict 위반").toBeTruthy();
-    expect(note.textContent).toMatch(/위 「양도시 기준시가」/);
+    expect(note.textContent).toMatch(/위 「토지 양도시 기준시가」 카드/);
+  });
+
+  it("G8-d 일괄양도 — 안내가 축 A 「양도시 기준시가」 카드를 가리킨다", () => {
+    render(<Harness init={{ ...ACTUAL_APPORTIONED, landAcqMode: "estimated" }} />);
+    const note = estimatedNote("land")[0];
+    expect(note).toBeTruthy();
+    expect(note.textContent).toMatch(/위 「양도시 기준시가」 카드\(양도가액 결정 방식 아래\)/);
   });
 
   it("G8-c DOM 순서 — 축 A와 취득시 카드가 모두 안내보다 앞", () => {
