@@ -17,7 +17,7 @@
  *   환산: 파트 양도가 × (파트 취득시/양도시 기준시가).
  */
 
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
@@ -167,6 +167,110 @@ function PartAcqStdPrice(props: {
         />
       </div>
     </ToneCard>
+  );
+}
+
+/**
+ * 양도시 기준시가 자동 계산 (§99①1호) — 취득시 `PartAcqStdPrice`의 양도 측 대칭.
+ *
+ * **양도가액 안분(§166⑥ → 부가가치세법 시행령 §64①1호 준용)의 기준시가는 파트별 독립 공시액이다**:
+ *   · 토지 = ㎡당 개별공시지가 × 양도 당시 면적 (§99①1호 가목)
+ *   · 건물 = 국세청장 산정 건물 기준시가 —「건물 기준시가 계산서」 독립 산정 (§99①1호 나목)
+ *
+ * ⚠️ **주택이라도 `라목 결합 총액 − 토지분` 역산을 쓰지 않는다**(2026-07-29 사용자 확정).
+ * 라목 역산은 **취득시** 축(`calcAcqStdPair`·`PartAcqStdPrice`)의 규칙이다 — 그쪽은 개산공제
+ * 합계를 법정액(§163⑥2호가목 = 라목 가액 × 3/100)에 맞춰야 해서 결합 총액과의 항등성이 목적이다.
+ * 양도가액 안분은 목적이 다르다(일괄 양도대가를 토지·건물로 나누는 것) → 부가세령 §64①1호가
+ * 정한 대로 **각 파트의 고유 기준시가**를 쓴다. 취득시 규칙을 양도시로 옮기면 안 된다.
+ *
+ * 기준일은 **양도일**이다 — 취득일이 아니다(§164③ 직전 고시분).
+ * 자동 계산 후에도 아래 총액 2칸은 수동 편집 가능하다(홈택스 실제 고시액 우선).
+ */
+function TransferLandStdPrice(props: {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+  transferDate?: string;
+}) {
+  const { asset, onChange, transferDate } = props;
+
+  /**
+   * 단가·면적 → 토지분 총액 기록.
+   * 다중 키를 **단일 배치 onChange**로 처리 — 분리 호출 시 stale spread 덮어쓰기가 발생한다
+   * (feedback_multikey_patch_stale_spread_overwrite).
+   */
+  function writeLandStd(perSqm: string, area: string) {
+    const patch: Partial<AssetForm> = {
+      standardPricePerSqmAtTransfer: perSqm,
+      transferArea: area,
+    };
+    const p = parseAmount(perSqm);
+    const a = parseFloat((area || "").replace(/,/g, "")) || 0;
+    if (p > 0 && a > 0) {
+      // StandardPriceInput·LandPriceLookupField와 동일 절사
+      patch.landStandardPriceAtTransfer = String(Math.floor(p * a));
+    }
+    onChange(patch);
+  }
+
+  return (
+    <ToneCard tone="emerald" title="양도시 토지 기준시가 자동 계산 (§99①1호 가목)" noDark>
+      <LandPriceLookupField
+        label="양도시 토지 공시지가"
+        pricePerSqm={asset.standardPricePerSqmAtTransfer}
+        onPricePerSqmChange={(v) => writeLandStd(v, asset.transferArea)}
+        area={parseDecimal(asset.transferArea) || undefined}
+        onAreaChange={(v) => writeLandStd(asset.standardPricePerSqmAtTransfer, v)}
+        referenceDate={transferDate}
+        jibun={asset.addressJibun}
+        hint="양도일 직전 고시 개별공시지가 (원/㎡) — 취득일이 아니다 (소득령 §164③)"
+      />
+      <FieldCard label="토지 면적 (양도 당시)" unit="㎡" hint="양도시 토지 기준시가 = ㎡당 공시지가 × 이 면적">
+        <DecimalInput
+          value={asset.transferArea}
+          onChange={(v) => writeLandStd(asset.standardPricePerSqmAtTransfer, v)}
+          data-testid="split-land-std-transfer-area"
+        />
+      </FieldCard>
+    </ToneCard>
+  );
+}
+
+/**
+ * 양도시 건물 기준시가 —「건물 기준시가 계산서」 모달 런처 (§99①1호 나목).
+ * 주택·일반건물 **모두** 이 경로로 산정한다(라목 역산 금지 — 위 주석 참조).
+ */
+function TransferBuildingStdPriceButton(props: {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+  transferDate?: string;
+}) {
+  const { asset, onChange, transferDate } = props;
+  return (
+    <div className="flex justify-end">
+      <BuildingStdPriceModalButton
+        lockedTaxType="transfer"
+        buttonLabel="양도시 건물 기준시가 계산"
+        initialAddress={{
+          road: asset.addressRoad,
+          jibun: asset.addressJibun,
+          building: asset.buildingName,
+          detail: asset.addressDetail,
+          lng: asset.longitude,
+          lat: asset.latitude,
+          pnu: asset.addressPnu,
+        }}
+        // 「건물 기준시가 계산서」 서식 출력의 스냅샷 소스 — 키가 없으면 서식이 비어 출력된다.
+        snapshotKey={`bsp-${asset.assetId}-split-transfer`}
+        applyTimePoint="transfer"
+        prefill={{
+          landAreaM2: asset.transferArea,
+          acquisitionDate: asset.acquisitionDate,
+          transferDate,
+          transferLandPricePerSqm: asset.standardPricePerSqmAtTransfer,
+        }}
+        onApply={(v: number) => onChange({ buildingStandardPriceAtTransfer: String(v) })}
+      />
+    </div>
   );
 }
 
@@ -371,13 +475,29 @@ export function LandBuildingSplitSection(props: Props) {
       </div>
 
       {/* 양도시 기준시가 — apportioned 양도(안분 분모) 또는 파트 환산(분모) 시 필요. 두 용도 겸용(단일 입력). */}
+      {needsSaleStdPrice && props.asset && props.onAssetChange && (
+        <TransferLandStdPrice
+          asset={props.asset}
+          onChange={props.onAssetChange}
+          transferDate={props.transferDate}
+        />
+      )}
       {needsSaleStdPrice && (
         <div className="grid grid-cols-2 gap-2">
-          <FieldCard label="토지 양도시 기준시가" hint="안분 분모 겸 환산취득가 분모">
-            <CurrencyInput label="" value={props.landStandardPriceAtTransfer} onChange={props.onLandStandardPriceAtTransferChange} placeholder="양도시 토지 기준시가" />
+          <FieldCard label="양도시 토지 기준시가" hint="안분 분모 겸 환산취득가 분모 — 위 공시지가 × 면적으로 자동 계산">
+            <CurrencyInput label="" value={props.landStandardPriceAtTransfer} onChange={props.onLandStandardPriceAtTransferChange} data-testid="split-land-std-transfer" />
           </FieldCard>
-          <FieldCard label="건물 양도시 기준시가">
-            <CurrencyInput label="" value={props.buildingStandardPriceAtTransfer} onChange={props.onBuildingStandardPriceAtTransferChange} placeholder="양도시 건물 기준시가" />
+          <FieldCard label="양도시 건물 기준시가" hint="안분 분모 겸 환산취득가 분모 — 계산기로 산정 (§99①1호 나목)">
+            <div className="space-y-1.5">
+              <CurrencyInput label="" value={props.buildingStandardPriceAtTransfer} onChange={props.onBuildingStandardPriceAtTransferChange} data-testid="split-building-std-transfer" />
+              {props.asset && props.onAssetChange && (
+                <TransferBuildingStdPriceButton
+                  asset={props.asset}
+                  onChange={props.onAssetChange}
+                  transferDate={props.transferDate}
+                />
+              )}
+            </div>
           </FieldCard>
         </div>
       )}
