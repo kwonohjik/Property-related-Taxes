@@ -117,6 +117,18 @@ export function separateAcqPartsSum(asset: SeparatePartAmounts): { sum: number; 
   return { sum, pending };
 }
 
+/**
+ * 토지분 취득시 기준시가 = `㎡당 개별공시지가 × 면적` (소득세법 §99①1호 가목).
+ *
+ * **엔진(`calcAcqStdPair`)과 UI 읽기 전용 표시가 공유하는 단일 소스**다. UI가 같은 산식을
+ * 재구현하면 절사 규약이 갈려 표시값과 계산값이 어긋난다(`feedback_ui_engine_dual_truth_avoidance`).
+ * 금액은 원 단위 정수이므로 `Math.floor` — 반올림 금지.
+ */
+export function calcLandStdPriceAtAcq(pricePerSqm: number, area: number): number | null {
+  if (!(pricePerSqm > 0) || !(area > 0)) return null;
+  return Math.floor(pricePerSqm * area);
+}
+
 export function isSeparateAcquisition(asset: SeparateAcquisitionFlags): boolean {
   if (!asset.hasSeperateLandAcquisitionDate) return false;
   if (!asset.landAcquisitionDate || !asset.acquisitionDate) return false;

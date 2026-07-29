@@ -95,7 +95,18 @@ export function buildSplitPayload(
     // 건물분 취득시 기준시가(§99①1호 나목) — `building` + 별개 취득 전용.
     // 주택(라목)은 부수토지 포함 결합 공시라 파트 독립 입력이 성립하지 않는다(개산공제 법정액 이탈).
     ...(separateAcquisition && primary.assetKind === "building"
-      ? { buildingStandardPriceAtAcquisition: parseAmount(primary.buildingStandardPriceAtAcq) || undefined }
+      ? {
+          buildingStandardPriceAtAcquisition: parseAmount(primary.buildingStandardPriceAtAcq) || undefined,
+          // **결합 총액 전송 차단**(2026-07-29 Phase 3). 이 조합에서 자산 전체 취득시 기준시가
+          // 블록은 읽기 전용 파생 표시로 바뀌어 사용자가 총액을 더는 입력하지 않는다. 폼에 남은
+          // 옛 값이 계속 전송되면 엔진이 legacy 역산(calcAcqStdPair :58-61)으로 그 값을 써
+          // **화면에 보이지 않는 값이 계산에 쓰인다**. 폼 값은 지우지 않는다(토글 복귀 시 복원).
+          //
+          // ⚠️ 본체(`transfer-tax-api.ts:269`)가 설정한 값을 **덮어쓰는 방식**이다 —
+          //    이 빌더의 spread(:316)가 뒤에 오므로 override가 성립한다. 별도 플래그를 body에
+          //    넣으면 Zod 스키마에 없는 키가 되어 침묵 strip되거나 검증 오류가 된다.
+          standardPriceAtAcquisition: undefined,
+        }
       : {}),
     // 양도가액 2필드 — 구분양도 게이트.
     ...(saleDirectActive

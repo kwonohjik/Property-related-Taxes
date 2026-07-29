@@ -28,6 +28,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import { SalesCaseSection } from "./SalesCaseSection";
+import { SplitAcqStdReadonlyPanel } from "./SplitAcqStdReadonlyPanel";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 
@@ -168,6 +169,16 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   );
   // 2열 배치(2026-07-29)에서 괄호 설명이 두 줄로 접혀 라벨만 남긴다.
   const acqDateLabel = isSplit ? "건물 취득일" : "취득일";
+
+  /**
+   * 자산 전체 취득시 기준시가 블록을 **읽기 전용 파생 표시**로 대체하는가 (Phase 3 · D5).
+   *
+   * 일반건물(`building`)만 대상 — `toPropertyKind`가 `building_non_residential`로 매핑돼
+   * `StandardPriceInput`이 area 모드(㎡당·면적·총액)로 렌더되는 탓에, 파트 토지 카드와
+   * **같은 폼 필드를 두 번** 입력받는다. 주택(라목)은 총액 모드라 중복이 없고 결합 공시가
+   * 정본이므로 대상이 아니다.
+   */
+  const showAcqStdReadonly = isSeparateAcq && props.assetKind === "building";
 
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
@@ -556,7 +567,18 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               ⚠️ 게이트는 여기(5-way 분기의 마지막 else) 안에만 건다 — 최상위 조건에 붙이면
                  겸용·상가·일반건물·PHD의 「저기서 입력하세요」 길잡이 문구까지 사라진다.
               ⚠️ 값은 지우지 않는다 — 파트 모드를 환산·감정·매매사례로 되돌리면 입력값과 함께 복귀. */}
-          {acqStdPriceRequired && (
+          {/* 일반건물 별개취득 — 입력 정본은 파트 카드다. 자산 전체 블록을 그대로 두면
+              같은 폼 필드(㎡당 공시지가·면적)를 한 화면에서 두 번 입력받게 되고(면적 칸 2개),
+              엔진은 파트 독립 경로에서 결합 총액을 참조하지 않으므로(split-gain.ts:52-56)
+              쓰이지도 않는 총액을 채우게 된다 → 읽기 전용 파생 표시로 대체. */}
+          {acqStdPriceRequired && showAcqStdReadonly && props.asset && (
+            <SplitAcqStdReadonlyPanel
+              pricePerSqmAtAcq={acqPricePerSqm}
+              acquisitionArea={props.acquisitionArea ?? ""}
+              buildingStdPriceAtAcq={props.asset.buildingStandardPriceAtAcq ?? ""}
+            />
+          )}
+          {acqStdPriceRequired && !showAcqStdReadonly && (
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
               취득시 기준시가 (원){" "}

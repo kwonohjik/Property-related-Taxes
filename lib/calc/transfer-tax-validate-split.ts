@@ -131,6 +131,28 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
         return `${label}: 건물분 취득시 기준시가를 입력하면 토지분도 취득 당시 ㎡당 개별공시지가와 토지 면적으로 산출해야 합니다 — 둘 다 입력하세요(소득세법 §99①1호 가목·나목).`;
       }
     }
+
+    // ── V6. 일반건물 별개취득 — 건물분 취득시 기준시가 **필수** (Phase 3) ──────────────
+    // 자산 전체 결합 총액은 이 조합에서 읽기 전용 파생 표시로 바뀌고 전송도 차단되므로
+    // (transfer-tax-api-split.ts), 엔진이 legacy 역산으로 후퇴할 수 없다. 건물분이 비면
+    // `calcAcqStdPair` null → `TaxCalculationError` throw가 되므로 여기서 필드 오류로 먼저 알린다.
+    //
+    // 술어 게이트 필수 — 실가/실가에서는 취득시 기준시가 자체가 계산에 쓰이지 않아
+    // 입력 카드도 숨겨지므로, 요구하면 입력 칸 없는 dead-end가 된다(V3와 동일 원칙).
+    if (
+      asset.assetKind === "building" &&
+      opt(asset.buildingStandardPriceAtAcq) == null &&
+      requiresAcqStdPrice(withExpenses(asset), {
+        landMode: effectivePartAcqMode(asset.landAcqMode, asset),
+        buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
+        isSeparate: true,
+        hasSaleRatio:
+          opt(asset.landStandardPriceAtTransfer) != null &&
+          opt(asset.buildingStandardPriceAtTransfer) != null,
+      })
+    ) {
+      return `${label}: 건물분 취득시 기준시가를 입력하세요 — 토지·건물 취득시기가 달라 각 파트가 자기 취득일의 직전 고시분을 쓰므로, 결합 총액에서 역산하면 건물분에 토지 취득시점이 섞입니다(소득세법 §99①1호 나목·시행령 §164③).`;
+    }
   }
 
   // §7.2 양도시 기준시가 필수 검증 (2026-07-28 사용자 확정 — feedback_no_silent_apportion_fallback):
