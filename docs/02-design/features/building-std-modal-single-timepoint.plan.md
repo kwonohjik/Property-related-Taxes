@@ -99,29 +99,34 @@ prefill 실패 시의 안전망이다.
 
 ### D5. 계산서 서식 시점 필터에 신규 키 편입 (별개 결함 동반 수정)
 
-`BuildingStdPriceReportSection.tsx:67·69`의 시점 필터 정규식이 `gb|cb`만 커버해 **3개 키가
-매칭되지 않는다**. node로 전수 실행 확인:
+키 접두 열거가 **두 곳**에 있고, 둘 다 `gb|cb|phd`만 커버해 3개 키가 누락돼 있다.
 
-| 스냅샷 키 | acq 필터 | transfer 필터 | 현행 출력 |
-|---|---|---|---|
-| `bsp-{id}-gb-acq` | ✅ true | false | 취득 1벌 (정상) |
-| `bsp-{id}-cb-acq` | ✅ true | false | 취득 1벌 (정상) |
-| `bsp-{id}-gb-transfer` | false | ✅ true | 양도 1벌 (정상) |
-| `bsp-{id}-split-acq` | ❌ false | false | **취득·양도 2벌** |
-| `bsp-{id}-split-transfer` | ❌ false | ❌ false | **취득·양도 2벌** |
-| `bsp-{id}-cbinh-acq` | ❌ false | false | **취득·양도 2벌** |
+**⚠️ 초안 정정(2026-07-29 구현 중 실측)**: 초안은 증상을 "취득·양도 2벌 출력"으로 적었으나
+**실제 증상은 계산서 미출력**이다. 더 앞단인 `idOfSnapshotKey`(`lib/calc/building-std-snapshot-keys.ts:15`)가
+시점 접미를 못 잘라 `inputData` 매칭(`inputStr.includes(id)`)이 실패하기 때문이다.
 
-단일 시점 모드가 들어가면 엔진이 애초에 1벌만 반환하므로 신규 스냅샷은 자동 해소되지만,
-**기존 저장 스냅샷**(`singleTimePoint` undefined)은 그대로 2벌이 남는다 → 정규식에 키를 추가한다.
+```
+idOfSnapshotKey("bsp-a1-gb-transfer")     -> "a1"                      ✅ 매칭 → 계산서 출력
+idOfSnapshotKey("bsp-a1-split-transfer")  -> "a1-split-transfer"       ❌ 매칭 실패 → 미출력
+idOfSnapshotKey("bsp-a1-split-acq")       -> "a1-split-acq"            ❌ 미출력
+idOfSnapshotKey("bsp-a1-cbinh-acq")       -> "a1-cbinh-acq"            ❌ 미출력
+```
+
+즉 이미지3 경로(`split-transfer`)·토지건물 분리 취득(`split-acq`)·상속취득 상가(`cbinh-acq`)는
+**지금도 계산서가 아예 안 나온다**. 2벌 중복은 그 뒤에 있는 시점 필터의 문제이므로 함께 고친다.
 
 ```ts
-// 현행
-if (/-(phd|gb|cb)-acq(-commercial)?$/.test(key)) …
-else if (/-(gb|cb)-transfer$/.test(key)) …
-// 변경 — split·cbinh 편입
+// ① lib/calc/building-std-snapshot-keys.ts — id 추출(미출력의 직접 원인)
+.replace(/-(?:gb|cbinh|cb|phd|split)-(?:acq|first|transfer)(?:-commercial)?$/, "")
+//                     ^^^^^ 긴 접두를 짧은 것보다 앞에
+
+// ② BuildingStdPriceReportSection.tsx:67·69 — 반대 시점 인스턴스 제거
 if (/-(phd|gb|cb|cbinh|split)-acq(-commercial)?$/.test(key)) …
 else if (/-(gb|cb|split)-transfer$/.test(key)) …
 ```
+
+단일 시점 모드가 들어가면 엔진이 애초에 1벌만 반환하므로 신규 스냅샷의 ②는 자동 해소되지만,
+①은 무관하게 필요하고 **기존 저장 스냅샷**(`singleTimePoint` undefined)은 ② 역시 필요하다.
 
 ---
 

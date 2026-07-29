@@ -17,7 +17,10 @@ export function idOfSnapshotKey(key: string): string {
     ? key.slice("bsp-estate-".length)
     : key
         .replace(/^bsp-/, "")
-        .replace(/-(?:gb|cb|phd)-(?:acq|first|transfer)(?:-commercial)?$/, "")
+        // ⚠️ 접두는 **전수 열거**한다 — 누락되면 id가 잘리지 않아 inputData 매칭이 실패하고
+        //    그 자산의 계산서가 **조용히 미출력**된다(2026-07-29 실측: split·cbinh 3종이 그 상태였다).
+        //    긴 접두(cbinh)를 짧은 것(cb)보다 앞에 둔다. 신규 키 규약 추가 시 여기도 함께 갱신할 것.
+        .replace(/-(?:gb|cbinh|cb|phd|split)-(?:acq|first|transfer)(?:-commercial)?$/, "")
         .replace(/-mx-commercial$/, "")
         // 감면 조문 PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷) — 규약 편입.
         .replace(/-red-phd$/, "");

@@ -10,6 +10,10 @@ import {
 } from "../../components/calc/results/BuildingStdPriceReportSection";
 import { useBuildingStdSnapshotStore } from "../../lib/stores/building-std-snapshot-store";
 import { phdBatchToSnapshots } from "../../lib/calc/phd-batch-snapshots";
+import {
+  initialBuildingStdPriceForm,
+  type BuildingStdPriceFormState,
+} from "../../lib/calc/building-std-price-form";
 
 const tp = (usageNo: number) => ({ structureKey: "rc", usageNo });
 const INPUT = {
@@ -145,5 +149,67 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
       <BuildingStdPriceReportSection inputData={{ assets: [{ assetId: "other" }] }} />,
     );
     expect(container.firstChild).toBeNull();
+  });
+});
+
+/**
+ * 시점 전용 스냅샷의 반대 시점 인스턴스 제거 (S9)
+ *
+ * 계획서: docs/02-design/features/building-std-modal-single-timepoint.plan.md (§3 D5)
+ * 키 접두 열거가 누락되면 계산서가 **조용히 2벌** 출력된다 — split-acq·split-transfer·cbinh-acq가
+ * 그 상태였다(2026-07-29 실측). 단일 시점 모드 도입 이전에 저장된 2시점 스냅샷이 대상이다.
+ */
+describe("BuildingStdPriceReportSection — 시점 전용 키 필터", () => {
+  /** 단일 시점 모드 이전에 저장된 2시점 양도 스냅샷(플래그 없음) */
+  const legacyTwoPointSnapshot = (): BuildingStdPriceFormState => ({
+    ...initialBuildingStdPriceForm,
+    taxType: "transfer",
+    builtYear: "2010",
+    floorArea: "200",
+    acquisitionYear: "2015",
+    acqStructureKey: "rc",
+    acqUsageNo: "1",
+    acqLandPrice: "5000000",
+    transferYear: "2025",
+    transStructureKey: "rc",
+    transUsageNo: "1",
+    transLandPrice: "7500000",
+  });
+
+  const renderWithKey = (key: string) => {
+    useBuildingStdSnapshotStore.setState({ snapshots: { [key]: legacyTwoPointSnapshot() } });
+    const inputData = { assets: [{ assetId: "asset-x" }] };
+    render(<BuildingStdPriceReportSection inputData={inputData} />);
+  };
+
+  it("S9-a split-transfer: 양도당시 계산서 1벌만", () => {
+    renderWithKey("bsp-asset-x-split-transfer");
+    expect(screen.getAllByText(/양도당시 기준시가 계산/).length).toBe(1);
+    expect(screen.queryAllByText(/취득당시 기준시가 계산/).length).toBe(0);
+  });
+
+  it("S9-b split-acq: 취득당시 계산서 1벌만", () => {
+    renderWithKey("bsp-asset-x-split-acq");
+    expect(screen.getAllByText(/취득당시 기준시가 계산/).length).toBe(1);
+    expect(screen.queryAllByText(/양도당시 기준시가 계산/).length).toBe(0);
+  });
+
+  it("S9-c cbinh-acq(상속취득 상가): 취득당시 계산서 1벌만", () => {
+    renderWithKey("bsp-asset-x-cbinh-acq");
+    expect(screen.getAllByText(/취득당시 기준시가 계산/).length).toBe(1);
+    expect(screen.queryAllByText(/양도당시 기준시가 계산/).length).toBe(0);
+  });
+
+  it("S9-d gb-transfer(기존 커버 키) 회귀", () => {
+    renderWithKey("bsp-asset-x-gb-transfer");
+    expect(screen.getAllByText(/양도당시 기준시가 계산/).length).toBe(1);
+    expect(screen.queryAllByText(/취득당시 기준시가 계산/).length).toBe(0);
+  });
+
+  // 겸용 상가(-mx-commercial)는 onApplyBoth로 취득·양도 두 시점을 모두 쓰므로 2벌이 정상이다
+  it("S9-e 2시점 키(-mx-commercial)는 취득·양도 2벌 그대로", () => {
+    renderWithKey("bsp-asset-x-mx-commercial");
+    expect(screen.getAllByText(/취득당시 기준시가 계산/).length).toBe(1);
+    expect(screen.getAllByText(/양도당시 기준시가 계산/).length).toBe(1);
   });
 });
