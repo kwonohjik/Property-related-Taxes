@@ -94,9 +94,10 @@ describe("케이스 a — 취득시 기준시가 없이도 분리 계산이 성�
   });
 });
 
-describe("케이스 b·c — 환산 파트가 있으면 취득시 기준시가가 필요하다 (PR1은 종전대로 null)", () => {
-  it("b-1 건물만 환산 + 취득시 기준시가 없음 → 종전대로 null (PR3에서 throw로 전환)", () => {
-    expect(calcSplitGain(caseA({ buildingAcqMode: "estimated" }))).toBeNull();
+describe("케이스 b·c — 환산 파트가 있으면 취득시 기준시가가 필요하다 → **차단**", () => {
+  it("b-1 건물만 환산 + 취득시 기준시가 없음 → 차단(throw)", () => {
+    // 조용한 null(단일자산 경로 → 취득가액 0) 대신 명시 오류. feedback_no_silent_apportion_fallback
+    expect(() => calcSplitGain(caseA({ buildingAcqMode: "estimated" }))).toThrow(/개별공시지가/);
   });
 
   it("b-2 건물만 환산 + 취득시 기준시가 있음 → 환산 성립", () => {
@@ -116,15 +117,17 @@ describe("케이스 b·c — 환산 파트가 있으면 취득시 기준시가�
     expect(r!.building.acquisitionPrice).toBe(300_000_000);
   });
 
-  it("c-2 양쪽 환산 + 취득시 기준시가 없음 → 종전대로 null", () => {
-    expect(
+  it("c-2 양쪽 환산 + 취득시 기준시가 없음 → 차단(throw)", () => {
+    expect(() =>
       calcSplitGain(caseA({ landAcqMode: "estimated", buildingAcqMode: "estimated" })),
-    ).toBeNull();
+    ).toThrow(/개별공시지가/);
   });
 });
 
 describe("회귀 0 — 비-별개취득은 종전 동작 유지", () => {
   it("r-1 취득일 동일(겸용·소유자분리 경로) + 파트 금액 미입력 → 종전대로 null", () => {
+    // 비-별개취득은 자산 전체 취득가액이 **UI에 존재**하므로 단일 자산 경로가 정상 산출을 낸다.
+    // 별개취득처럼 "취득가액 0"이 되지 않으므로 차단 대상이 아니다(회귀 0).
     const r = calcSplitGain(
       caseA({
         isSeparateAcquisition: false,
@@ -134,10 +137,31 @@ describe("회귀 0 — 비-별개취득은 종전 동작 유지", () => {
         acquisitionPrice: 250_000_000,
       }),
     );
-    expect(r, "총액이 실재하므로 §166⑥ 안분이 정당 — 비율 없이는 나눌 수 없다").toBeNull();
+    expect(r).toBeNull();
   });
 
-  it("r-2 legacy expenses 총액 + 파트 자본적지출 미입력 → 안분 비율 필요 → null", () => {
-    expect(calcSplitGain(caseA({ expenses: 30_000_000 }))).toBeNull();
+  it("r-2 별개취득 + legacy expenses 총액 + 파트 자본적지출 미입력 → 차단", () => {
+    expect(() => calcSplitGain(caseA({ expenses: 30_000_000 }))).toThrow(/개별공시지가/);
+  });
+});
+
+/**
+ * 다건 집계 — 계산 오류에 자산 번호를 붙인다.
+ * `transfer-tax-aggregate.ts`의 자산 루프에는 try/catch가 없어 예외가 route까지 그대로
+ * 전파되는데, 다건에서는 메시지만으로 어느 자산이 원인인지 알 수 없다.
+ */
+describe("다건 — 오류 메시지에 자산 번호", () => {
+  it("2번째 자산이 원인이면 '자산 2'로 지목한다", async () => {
+    const { calculateTransferTaxAggregate } = await import("@/lib/tax-engine/transfer-tax-aggregate");
+    const { makeMockRates } = await import("../_helpers/mock-rates");
+    const ok = { ...caseA(), propertyId: "A", label: "자산 A" };
+    // 2번째 자산만 결함 — 취득시 기준시가 없이 환산 파트
+    const bad = { ...caseA({ buildingAcqMode: "estimated" }), propertyId: "B", label: "자산 B" };
+    expect(() =>
+      calculateTransferTaxAggregate(
+        { taxYear: 2026, annualBasicDeductionUsed: 0, properties: [ok, bad] } as never,
+        makeMockRates(),
+      ),
+    ).toThrow(/자산 2/);
   });
 });

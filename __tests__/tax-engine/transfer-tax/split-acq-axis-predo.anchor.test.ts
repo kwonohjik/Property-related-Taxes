@@ -162,7 +162,10 @@ describe("P0-D: 케이스 a — 취득시 기준시가 없이도 분리 계산�
     expect(r).not.toBeNull();
   });
 
-  it("환산 파트가 있으면 여전히 필요하다 — 3요소 미입력 시 null (PR3에서 throw 전환)", () => {
+  it("환산 파트가 있으면 여전히 필요하다 — 3요소 미입력 시 null (비-별개취득 경로)", () => {
+    // 이 describe는 `isSeparateAcquisition` 미설정(= 동시 취득) 경로다(:60 주석).
+    // 비-별개취득은 자산 전체 취득가액이 실재해 단일 자산 경로가 정상 산출을 내므로
+    // **종전대로 null**을 유지한다. 별개취득의 차단(throw)은 split-acq-std-gate-case-a.test.ts.
     const r = calcSplitGain(
       housingBase({
         landAcqMode: "actual",
