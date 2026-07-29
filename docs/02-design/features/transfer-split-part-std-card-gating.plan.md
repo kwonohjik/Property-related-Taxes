@@ -446,6 +446,21 @@ tabular-nums text-muted-foreground`, 미입력 시 `<span className="text-muted-
 절차: baseline을 `--reporter=json`으로 먼저 확보 → 변경 후 재실행 → **baseline 대비 신규 실패만** 식별
 (line reporter는 truncate되어 전체 목록 확보 불가). Phase 1·2와 **별도 PR**로 분리한다.
 
+**실행 결과(2026-07-29)**: baseline 40건 중 **4건 사전존재 실패**(겸용주택 신고서 4분할 2건 ·
+PHD 3시점 일괄계산 모달 개수 2건). PR ① 변경 파일 3개를 직전 커밋(`4dcf394f`)으로 되돌려
+재실행해도 **같은 4건이 실패** → PR ① 회귀가 아님을 확인. Phase 3 적용 후에도 동일 4건으로
+**신규 실패 0건**.
+
+**구현 결정 — stale 차단은 별도 플래그가 아니라 override로**: `buildSplitPayload`가 반환하는 객체는
+body에 그대로 spread되므로 `suppressStandardPriceAtAcquisition` 같은 플래그를 넣으면 Zod 스키마에
+없는 키가 되어 침묵 strip되거나 검증 오류가 된다. 대신 `standardPriceAtAcquisition: undefined`를
+반환해 본체(`transfer-tax-api.ts:269`)의 값을 덮어쓴다 — 이 빌더의 spread(`:316`)가 뒤에 오므로 성립.
+
+**절사 산식 단일 소스화**: 계획서 B5 지적대로 UI 재구현을 피해
+`calcLandStdPriceAtAcq(pricePerSqm, area)`를 `lib/calc/transfer-tax-split-acq-mode.ts`에 추출하고
+엔진 `calcAcqStdPair`와 UI 패널이 **같은 함수**를 쓴다. H2-b가 절사 경계값(12,345 × 33.33 =
+411,458.85 → **411,458**)을 고정한다.
+
 ### 기각한 대안
 
 | 대안 | 기각 사유 |

@@ -93,7 +93,17 @@ describe("G11 — 술어 인자 동일성 (expenses)", () => {
   it("G11-b validate가 UI와 같은 판정을 낸다 (directExpenses → expenses 전달)", () => {
     // validate는 asset을 통째로 넘기지만 AssetForm에는 `expenses`가 없다(`directExpenses`가 실제 필드).
     // 인자를 보정하지 않으면 여기서 술어가 false가 되어 엔진과 어긋난다.
-    const a = asset({ ...ACTUAL_BOTH, directExpenses: "30000000", landDirectExpenses: "", buildingDirectExpenses: "" });
+    //
+    // ⚠️ 주택으로 검증한다 — 일반건물은 V6(건물분 필수, Phase 3)가 V5보다 먼저 걸려 다른
+    //    메시지를 낸다. 여기서 보려는 것은 **⑥절 인자가 전달되는가** 하나이므로, V6와 섞이지
+    //    않는 자산 종류를 골라 검증 대상을 좁힌다.
+    const a = asset({
+      ...ACTUAL_BOTH,
+      assetKind: "housing",
+      directExpenses: "30000000",
+      landDirectExpenses: "",
+      buildingDirectExpenses: "",
+    });
     const err = validateSplitDirectInputs(a, "자산 1");
     expect(err, "엔진이 취득시 기준시가를 요구하는 입력이면 validate도 같이 요구해야 한다").toMatch(
       /㎡당 개별공시지가/,

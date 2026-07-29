@@ -19,6 +19,7 @@ import type {
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { requiresAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
   applySplitLandExpropriationValuation,
@@ -43,10 +44,13 @@ import {
  *   → 별개 취득 + 건물 기준시가 명시 입력 시 **파트별 독립**으로 전환한다.
  */
 function calcAcqStdPair(input: TransferTaxInput): { land: number; building: number } | null {
-  const sqm = input.standardPricePerSqmAtAcquisition ?? 0;
-  const area = input.acquisitionArea ?? 0;
-  if (sqm <= 0 || area <= 0) return null;
-  const landStd = Math.floor(sqm * area);
+  // 산식은 `lib/calc`의 단일 소스를 쓴다 — UI 읽기 전용 표시가 같은 함수를 공유해야
+  // 절사 규약이 갈리지 않는다(표시 411,459 vs 계산 411,460 드리프트 방지).
+  const landStd = calcLandStdPriceAtAcq(
+    input.standardPricePerSqmAtAcquisition ?? 0,
+    input.acquisitionArea ?? 0,
+  );
+  if (landStd == null) return null;
 
   const buildingStd = input.buildingStandardPriceAtAcquisition;
   if (input.propertyType === "building" && input.isSeparateAcquisition === true && buildingStd != null) {
